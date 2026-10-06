@@ -7900,6 +7900,24 @@ func _init() -> void:
 			and not r55_rg_desc.contains("幽影") and not r55_rg_desc.contains("终结")
 			and not r55_dr_desc.contains("4 费") and not r55_rg_desc.contains("3 费"),
 			"角色介绍：概括性描述，不再罗列具体卡牌与数值")
+	# R94：机械之心介绍原本写着「素体在手里越攒越多」，但实现是**每场战斗固定 2 张**
+	# （MECH_CORE_PROTO，由 apply_battle_start_relics 发放）且跨战斗不累积 —— 文案与实现对不上。
+	# 这里锁两条不变量：① 文案不许再承诺累积；② 素体只能来自「机械核心」，
+	# 不许被塞进初始卡组或奖励池（否则玩家真能攒起来，文案又变成对的了，判定互相打架）。
+	var r94_mech_desc := PlayerClass.desc_of(PlayerClass.MECH)
+	check(r94_mech_desc != ""
+			and not r94_mech_desc.contains("越攒越多")
+			and not r94_mech_desc.contains("越来越多")
+			and r94_mech_desc.contains("%d 张" % GameEngine.MECH_CORE_PROTO),
+			"R94 机械之心介绍：写明每场战斗 %d 张素体，不承诺「越攒越多」（实际不跨战斗累积）"
+			% GameEngine.MECH_CORE_PROTO)
+	var r94_repo := CardRepo.load_json()
+	var r94_proto_in_pool: Array[CardData] = r94_repo.reward_pool_for(PlayerClass.MECH).filter(
+			func(c: CardData): return c.id == GameEngine.PROTO_ID)
+	check(not PlayerClass.start_deck_ids(PlayerClass.MECH).has(GameEngine.PROTO_ID)
+			and r94_proto_in_pool.is_empty()
+			and r94_repo.get_card(GameEngine.PROTO_ID).rarity == 3,
+			"R94 素体只来自「机械核心」：不在初始卡组、不在奖励池、rarity=3（也抽不到）")
 	var r55_relic := RelicRepo.load_json().get_relic(PlayerClass.relic_of(PlayerClass.DRUID))
 	check(r55_relic != null and r55_relic.relic_name == "荒野形态"
 			and not r55_relic.desc.is_empty(),
