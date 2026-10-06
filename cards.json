@@ -3482,6 +3482,45 @@
       "target_mode": "none",
       "color": "灰",
       "image": ""
+    },
+    {
+      "id": 8044,
+      "name": "加厚装甲",
+      "kind": "技能",
+      "cost": 1,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "改造"
+      ],
+      "effect_text": "使**场上的一个己方盟友**获得改造：生命 +4。这**算一层改造**（侦察塔 / 堡垒 / 无限装甲 / 模仿者都会照常响应）。加成只在它待在场上时有效，离场后还原。",
+      "target_mode": "unit",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8045,
+      "name": "自主升级",
+      "kind": "效果",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "自主改造"
+      ],
+      "effect_text": "**回合开始时**，随机使**抽牌堆**里的一张盟友或工事获得改造：攻击 +2、生命 +1。改造烤进那张卡本身 —— 之后无论哪次抽到它都带着，整场战斗有效。效果区里有多张时**不叠加**（每回合只改造 1 张）。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "蓝",
+      "image": ""
     }
   ]
 }

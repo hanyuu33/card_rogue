@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 171,
-			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者**；实际 %d）"
+	check(repo.all_cards().size() == 173,
+			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,7 +135,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 137 and grp_enemy.size() == 34,
+	check(grp_player.size() == 139 and grp_enemy.size() == 34,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 135 / 34）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -164,8 +164,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 120,
-			"奖励池 120 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者**；实际 %d）"
+	check(pool.size() == 122,
+			"奖励池 122 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -6091,8 +6091,8 @@ func _init() -> void:
 			% [dr_cls_all.size(), str(dr_cls_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 105
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 48
-			and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 18,
-			"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张（期望 105 / 48 / 18）"
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 20,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张（期望 105 / 48 / 20）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0))])
@@ -6349,7 +6349,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 120, "R45+R50~R57：扩展全部进奖励池（总池 120，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 122, "R45+R50~R57：扩展全部进奖励池（总池 122，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -11414,6 +11414,130 @@ func _init() -> void:
 	# ⑦ 次元始终显示（不像疾行/护盾那样用掉就隐藏）
 	check(r93_clone.active_affixes(1, false).has(GameEngine.AFFIX_DIMENSION),
 		"R93「次元」在战场上**恒常显示**（不随行动轮数/护盾与否消失）")
+
+	# ─────────── R95：加厚装甲 8044 / 自主升级 8045（机械之心）───────────
+	var r95_repo := CardRepo.load_json()
+	var r95_plate_def: CardData = r95_repo.get_card(GameEngine.ARMOR_PLATE_ID)
+	var r95_auto_def: CardData = r95_repo.get_card(GameEngine.AUTO_UPGRADE_ID)
+	check(r95_plate_def != null and r95_plate_def.kind == "技能" and r95_plate_def.cost == 1
+			and r95_plate_def.rarity == 0 and r95_plate_def.card_class == PlayerClass.MECH
+			and r95_plate_def.target_mode == "unit"
+			and r95_plate_def.traits.has(GameEngine.UPGRADE_TRAIT),
+		"R95 加厚装甲：技能 / 1 费 / **普通** / 机械之心 / 需选目标 / 带 trait「改造」")
+	check(r95_auto_def != null and r95_auto_def.kind == "效果" and r95_auto_def.cost == 2
+			and r95_auto_def.rarity == 0 and r95_auto_def.card_class == PlayerClass.MECH
+			and r95_auto_def.target_mode == "none"
+			and r95_auto_def.traits.has(GameEngine.AUTO_UPGRADE_TRAIT),
+		"R95 自主升级：效果卡 / 2 费 / **普通** / 机械之心 / 无需目标 / 带 trait「自主改造」")
+
+	# ---- ① 加厚装甲：己方盟友 +4 生命，且**算一层改造** ----
+	var r95_e1 := _new_engine([], 40, 40, -1, false)
+	r95_e1.start_game()
+	var r95_tree: Placement = r95_e1.state.place(
+		CardData.from_dict(r95_repo.get_card(8003).to_dict()), Vector2i(4, 0),
+		GameEngine.SIDE_SELF)
+	var r95_hp0: int = r95_tree.health
+	var r95_msg1: String = r95_e1._armor_plate(Vector2i(4, 0), GameEngine.SIDE_SELF)
+	check(r95_tree.health == r95_hp0 + GameEngine.ARMOR_PLATE_HP
+			and r95_tree.upgrade_hp == GameEngine.ARMOR_PLATE_HP
+			and r95_tree.upgrade_stacks == 1,
+		"R95 加厚装甲：己方盟友生命 +%d（%d→%d）、**算一层改造**（层数 %d）"
+			% [GameEngine.ARMOR_PLATE_HP, r95_hp0, r95_tree.health, r95_tree.upgrade_stacks])
+	# ⚠️ 只在场上有效：卡库原卡不能被改（否则跨 run 泄漏）
+	check(r95_repo.get_card(8003).health == r95_hp0,
+		"R95 加厚装甲：加成**没烤进卡库**（卡库树人仍 %d 血）" % r95_repo.get_card(8003).health)
+
+	# ---- ② 工事不能选（用户口径「一个我方盟友」）----
+	var r95_e2 := _new_engine([], 40, 40, -1, false)
+	r95_e2.start_game()
+	var r95_fence: Placement = r95_e2.state.place(
+		CardData.from_dict(r95_repo.get_card(8001).to_dict()), Vector2i(4, 0),
+		GameEngine.SIDE_SELF)
+	var r95_fence_hp0: int = r95_fence.health
+	var r95_msg2: String = r95_e2._armor_plate(Vector2i(4, 0), GameEngine.SIDE_SELF)
+	check(r95_fence.health == r95_fence_hp0 and r95_msg2.find("不是盟友") >= 0,
+		"R95 加厚装甲：**工事不能选**（木栅栏仍 %d 血，提示「%s」）"
+			% [r95_fence.health, r95_msg2])
+
+	# ---- ③ 敌方单位不能选 ----
+	var r95_e3 := _new_engine([], 40, 40, -1, false)
+	r95_e3.start_game()
+	var r95_foe: Placement = r95_e3.state.place(
+		CardData.from_dict(r95_repo.get_card(8003).to_dict()), Vector2i(1, 0),
+		GameEngine.SIDE_OPPONENT)
+	var r95_foe_hp0: int = r95_foe.health
+	var r95_msg3: String = r95_e3._armor_plate(Vector2i(1, 0), GameEngine.SIDE_SELF)
+	check(r95_foe.health == r95_foe_hp0 and r95_msg3.find("只能改造自己") >= 0,
+		"R95 加厚装甲：**敌方单位不能选**（仍 %d 血，提示「%s」）"
+			% [r95_foe.health, r95_msg3])
+
+	# ---- ④「算一层改造」的连带效果：接通的模仿者照常复制这次改造 ----
+	var r95_e4 := _new_engine([], 40, 40, -1, false)
+	r95_e4.start_game()
+	var r95_t2: Placement = r95_e4.state.place(
+		CardData.from_dict(r95_repo.get_card(8003).to_dict()), Vector2i(4, 0),
+		GameEngine.SIDE_SELF)
+	var r95_mim: Placement = r95_e4.state.place(
+		CardData.from_dict(r95_repo.get_card(GameEngine.MIMIC_ID).to_dict()),
+		Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r95_mim_hp0: int = r95_mim.health
+	r95_e4._armor_plate(Vector2i(4, 0), GameEngine.SIDE_SELF)
+	check(r95_mim.health == r95_mim_hp0 + GameEngine.ARMOR_PLATE_HP,
+		"R95 加厚装甲算「改造」→ 接通的模仿者复制了同量改造（%d→%d）"
+			% [r95_mim_hp0, r95_mim.health])
+
+	# ---- ⑤ 自主升级：回合开始随机改造抽牌堆里 1 张（+2 攻 / +1 血）----
+	var r95_base_p: int = r95_repo.get_card(8003).power
+	var r95_base_h: int = r95_repo.get_card(8003).health
+	var r95_e5 := _new_engine([], 40, 40, -1, false)
+	r95_e5.start_game()
+	r95_e5.state.deck = [
+		CardData.from_dict(r95_repo.get_card(8003).to_dict()),
+		CardData.from_dict(r95_repo.get_card(8003).to_dict())]
+	r95_e5.state.effects.append(CardData.from_dict(r95_auto_def.to_dict()))
+	r95_e5._auto_upgrade(GameEngine.SIDE_SELF)
+	var r95_hit: int = 0
+	for c: CardData in r95_e5.state.deck:
+		if c.power == r95_base_p + GameEngine.AUTO_UPGRADE_ATK \
+				and c.health == r95_base_h + GameEngine.AUTO_UPGRADE_HP:
+			r95_hit += 1
+	check(r95_hit == 1 and r95_e5.state.deck.size() == 2,
+		"R95 自主升级：每回合只改造抽牌堆里 **1 张**（命中 %d 张，牌库仍 %d 张 —— 原位替换）"
+			% [r95_hit, r95_e5.state.deck.size()])
+	check(r95_repo.get_card(8003).power == r95_base_p
+			and r95_repo.get_card(8003).health == r95_base_h,
+		"R95 自主升级：**没污染卡库**（卡库树人仍 %d 攻 / %d 血）"
+			% [r95_base_p, r95_base_h])
+	# 不叠加：效果区有 2 张仍然只改造 1 张
+	r95_e5.state.deck = [
+		CardData.from_dict(r95_repo.get_card(8003).to_dict()),
+		CardData.from_dict(r95_repo.get_card(8003).to_dict()),
+		CardData.from_dict(r95_repo.get_card(8003).to_dict())]
+	r95_e5.state.effects.append(CardData.from_dict(r95_auto_def.to_dict()))
+	r95_e5._auto_upgrade(GameEngine.SIDE_SELF)
+	r95_hit = 0
+	for c: CardData in r95_e5.state.deck:
+		if c.power == r95_base_p + GameEngine.AUTO_UPGRADE_ATK:
+			r95_hit += 1
+	check(r95_hit == 1,
+		"R95 自主升级：**多张不叠加**（效果区 2 张仍只改造 %d 张）" % r95_hit)
+	# 效果区没有这张卡 → 完全不触发
+	var r95_e6 := _new_engine([], 40, 40, -1, false)
+	r95_e6.start_game()
+	r95_e6.state.deck = [CardData.from_dict(r95_repo.get_card(8003).to_dict())]
+	r95_e6._auto_upgrade(GameEngine.SIDE_SELF)
+	check(r95_e6.state.deck[0].power == r95_base_p,
+		"R95 自主升级：效果区没有这张卡时**不触发**（牌库那张仍 %d 攻）"
+			% r95_e6.state.deck[0].power)
+	# 抽牌堆里没有盟友 / 工事 → 落空且不崩
+	var r95_e7 := _new_engine([], 40, 40, -1, false)
+	r95_e7.start_game()
+	r95_e7.state.deck = [CardData.from_dict(r95_repo.get_card(8002).to_dict())]
+	r95_e7.state.effects.append(CardData.from_dict(r95_auto_def.to_dict()))
+	r95_e7._auto_upgrade(GameEngine.SIDE_SELF)
+	check(r95_e7.state.deck.size() == 1 and r95_e7.state.deck[0].power == 0,
+		"R95 自主升级：抽牌堆里没有盟友 / 工事时**落空**（技能卡不会被改造，仍 %d 攻）"
+			% r95_e7.state.deck[0].power)
 
 	RunState.player_class = r91_saved_cls
 

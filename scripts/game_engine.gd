@@ -496,6 +496,24 @@ const CHARGE_HEAL:= 2
 # 三张接通类卡共用一条连通判定。
 const SHIELD_GEN_ID:= 8042      # 护盾生成器：接通的我方单位受伤 → 改由它承受
 const MIMIC_ID:= 8043           # 模仿者：接通的盟友获得改造 → 它获得相同改造
+# ── R95：机械之心 8044 / 8045 ──
+# 「加厚装甲」（8044，1 费**普通**技能）：使**场上的一个己方盟友**获得改造：生命 +4。
+#   口径（已与用户确认）：**算一层改造** → 会照常触发侦察塔（每层 +1 攻）/ 堡垒（每层 +3 血）/
+#   无限装甲（每回合供一张 0 费改造牌）/ 模仿者（传导），与「升级」8027 完全同口径。
+#   加成记在 Placement 上（`upgrade_hp`），离场由 `_card_leaving_field` 还原 —— 别烤进 CardData。
+#   ⚠️ 与「升级」不同：**只吃盟友**（用户原话「一个我方盟友」），工事不能选。
+const ARMOR_PLATE_ID:= 8044
+const ARMOR_PLATE_HP:= 4
+# 「自主升级」（8045，2 费效果卡）：**回合开始时**随机使**抽牌堆**里一张盟友或工事
+#   获得改造：+2 攻 / +1 血。
+#   * 候选只从 `state.deck`（抽牌堆）挑 —— 与「过载」8030 / 「能量屏障」8033 同口径。
+#   * 改造**烤进那张卡**（`from_dict` 复制 + 原位替换）→ 本场战斗永久，且不污染卡库
+#     （下一场 `RunState.build_deck()` 重新取卡库实例 = 原卡）。
+#   * 效果区有多张时**不叠加**（符合效果区一贯惯例）：每回合只改造 1 张。
+const AUTO_UPGRADE_ID:= 8045
+const AUTO_UPGRADE_TRAIT:= "自主改造"
+const AUTO_UPGRADE_ATK:= 2
+const AUTO_UPGRADE_HP:= 1
 ## ── 字段名常量（R91）—— 引擎一律读 `CardData.affixes`，不再按卡名 / 数字硬编码 ──
 const AFFIX_SWIFT:= "疾行"          # 一回合行动两次（判据 actions>=2 / acts_left>1）
 const AFFIX_TAUNT:= "嘲讽"          # 敌方只能攻击这张卡
@@ -934,6 +952,7 @@ func _begin_turn(side: String) -> void :
 		_familiar_growth(SIDE_SELF)   # 使魔之力 9115：回合开始使魔鸭子 +1
 		_demon_summon(SIDE_SELF)      # 恶魔使魔 9117：每 2 回合随机空格召唤使魔鸭子
 		_apply_mech_growth(SIDE_SELF)
+		_auto_upgrade(SIDE_SELF)          # 自主升级 8045（R95）：回合开始随机改造抽牌堆 1 张
 		_dragon_breath(SIDE_SELF)
 		_heal_aura(SIDE_SELF)
 		_kiln_hatch(SIDE_SELF)
@@ -983,6 +1002,7 @@ func _begin_turn(side: String) -> void :
 		_familiar_growth(SIDE_OPPONENT)   # 使魔之力 9115：回合开始使魔鸭子 +1
 		_demon_summon(SIDE_OPPONENT)   # 恶魔使魔 9117：回合开始随机空格召唤使魔鸭子
 		_apply_mech_growth(SIDE_OPPONENT)
+		_auto_upgrade(SIDE_OPPONENT)      # 对称保留（敌方正常拿不到这张卡）
 		_dragon_breath(SIDE_OPPONENT)
 		_heal_aura(SIDE_OPPONENT)
 		_kiln_hatch(SIDE_OPPONENT)
@@ -1649,15 +1669,18 @@ func _autoplay_spell_targets(card: CardData) -> Array[Vector2i]:
 		return out
 	var heal:= card.id in [2002, 7202]
 	var pool:= _side_cells(SIDE_SELF if heal else SIDE_OPPONENT)
-	if card.id == UPGRADE_ID:
-		# 升级 8027（R82，机械之心）：自动出牌时选**己方最值得改造的那一个** ——
-		# 优先级 = 力量（改造 +2 攻的收益最大）。默认分支会选敌方单位，
-		# 那样 `_upgrade_unit` 会拒掉 → 这张牌等于白拿了一张、自动出牌也跳过了。
+	if card.id == UPGRADE_ID or card.id == ARMOR_PLATE_ID:
+		# 升级 8027（R82）/ 加厚装甲 8044（R95，机械之心）：自动出牌时选
+		# **己方最值得改造的那一个** —— 优先级 = 力量。默认分支会选敌方单位，
+		# 那样 `_upgrade_unit` / `_armor_plate` 会拒掉 → 这张牌等于白拿了一张。
+		# ⚠️ 加厚装甲**只吃盟友**（工事会被引擎拒绝），所以这里按卡把候选收窄。
 		var best_up := Vector2i(-1, -1)
 		var best_pow := -1
 		for uc in _side_cells(SIDE_SELF):
 			var up: Placement = state.unit_at(uc)
 			if up == null:
+				continue
+			if card.id == ARMOR_PLATE_ID and up.card.kind != "盟友":
 				continue
 			if up.card.kind != "盟友" and not up.card.is_fort():
 				continue
@@ -2979,6 +3002,83 @@ func _self_repair(target, side:= SIDE_SELF) -> String :
 			"hp": SELF_REPAIR_HP, "regen": SELF_REPAIR_REGEN, "side": side})
 	return "%s 自我修复完成（+%d 血 / 每回合回 %d）" % [
 			p.card.card_name, SELF_REPAIR_HP, SELF_REPAIR_REGEN]
+
+
+func _armor_plate(target, side:= SIDE_SELF) -> String :
+	## 「加厚装甲」（8044，R95，机械之心 1 费普通技能）：使**场上的一个己方盟友**
+	## 获得改造：生命 +ARMOR_PLATE_HP（**再加它自己的 `upgrade_hp_bonus`** ——
+	## 那张卡的「被改造时额外加成」，素体 +1 血那种，读卡面字段不硬编码）。
+	##
+	## ⚠️ **只吃盟友**（用户原话「一个我方盟友」），工事会被拒 —— 与「升级」8027 不同。
+	##
+	## 加成**记在 Placement 上、绝不烤进 CardData**（与 `_upgrade_unit` 同一条纪律）：
+	## 加血进 `upgrade_hp` 并抬 `p.card.health`（场上副本）与 `p.health`，
+	## 离场由 `_card_leaving_field` 统一减回去。
+	var p:= _target_placement(side, target)
+	if p == null:
+		return "（没有目标）"
+	if p.owner != side:
+		return "只能改造自己的单位"
+	if p.card.kind != "盟友":
+		return "%s 不是盟友" % p.card.card_name
+	# 场上那张换成独立副本再改（卡库是共享实例，直接改会跨 run 泄漏）
+	p.card = CardData.from_dict(p.card.to_dict())
+	p.card.traits = (p.card.traits as Array).duplicate()
+	var atk_gain: int = p.card.upgrade_atk_bonus       # 卡面自己写的「被改造时 +N 力」
+	var hp_gain: int = ARMOR_PLATE_HP + p.card.upgrade_hp_bonus
+	p.upgrade_atk += atk_gain
+	p.upgrade_hp += hp_gain
+	# 算一层改造（用户口径）：侦察塔每层 +1 攻、模仿者传导、无限装甲供牌都靠它。
+	p.upgrade_stacks += 1
+	# 「堡垒」（8034）：每层改造 +STACK_HP_PER 生命（与侦察塔是两套 trait，别混）。
+	if p.card.traits.has(STACK_HP_TRAIT):
+		p.upgrade_hp += STACK_HP_PER
+		p.card.health += STACK_HP_PER
+		p.health += STACK_HP_PER
+	p.card.health += hp_gain
+	p.health += hp_gain
+	_log("加厚装甲：%s 被改造 → 生命 +%d（%d 血，第 %d 层）" % [
+			p.card.card_name, hp_gain, p.health, p.upgrade_stacks])
+	action.emit("upgrade", {"cell": target, "card": p.card, "placement": p,
+			"atk": atk_gain, "hp": hp_gain})
+	# 「模仿者」8043（R92）：接通的模仿者获得**相同改造**。
+	# 传 atk_gain / hp_gain —— 含受体自己的改造奖励，**不含**「堡垒」的额外 +STACK_HP_PER
+	# （那是受体自身的特性，不该被模仿出去）。
+	_mimic_relay(p, atk_gain, hp_gain)
+	# 「无限装甲」8038（R89）：被改造时**每回合一次**供一张 0 费改造牌到手。
+	_feed_upgrade_card(p)
+	return "%s 加装完成（+%d 血）" % [p.card.card_name, hp_gain]
+
+
+func _auto_upgrade(side: String) -> void :
+	## 「自主升级」（8045，R95，机械之心 2 费效果卡）的唯一结算口，挂在 `_begin_turn()`。
+	##
+	## ⚠️ **必须 `from_dict` 复制成新实例再原位替换**：卡库里是**共享实例**，直接改
+	## `state.deck[i].power` 会连**卡库**那份一起改 —— 本场之后、甚至下一场抽到就已经是
+	## 强化版（等于把「自主升级」变成永久强化，且跨 run 泄漏）。
+	##
+	## 原位替换不改牌库顺序 → 洗牌序列不变，录像回放天然一致。
+	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
+	if not _zone_has(zone, AUTO_UPGRADE_TRAIT):
+		return
+	var cand: Array[int] = []
+	for i in state.deck.size():
+		var c: CardData = state.deck[i]
+		if c.kind == "盟友" or c.is_fort():
+			cand.append(i)
+	if cand.is_empty():
+		_log("自主升级：抽牌堆里没有盟友 / 工事，本回合落空")
+		action.emit("auto_upgrade", {"card": null, "ok": false, "side": side})
+		return
+	var pick: int = cand[rng.randi() % cand.size()]
+	var before: CardData = state.deck[pick]
+	var up := CardData.from_dict(before.to_dict())
+	up.power += AUTO_UPGRADE_ATK
+	up.health += AUTO_UPGRADE_HP
+	state.deck[pick] = up        # 原位替换：牌库顺序不变
+	_log("自主升级：「%s」在牌库里被改造 → 力量 +%d（%d）、生命 +%d（%d）" % [
+			before.card_name, AUTO_UPGRADE_ATK, up.power, AUTO_UPGRADE_HP, up.health])
+	action.emit("auto_upgrade", {"card": up, "ok": true, "from": before, "side": side})
 
 
 func _regen_tick(side: String) -> void :
@@ -4453,6 +4553,9 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 			# 走 _run_spell_effect 而不是 use_spell 的分支 → 蓄力（9085）叠它会叠多次，
 			# 与「连刺 / 火焰箭」等普通技能同一口径。
 			return _upgrade_unit(target, side)
+		ARMOR_PLATE_ID:
+			# 加厚装甲 8044（R95，机械之心）：改造一个己方**盟友** → +4 生命（算一层改造）。
+			return _armor_plate(target, side)
 		OVERLOAD_ID:
 			# 过载 8030（R85，机械之心）：从牌库随机一张盟友改成双动。无目标、不可选。
 			return _overload_grant(side)

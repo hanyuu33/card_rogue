@@ -2085,6 +2085,8 @@ func _use_hand_card(i: int) -> void:
 				target_hint = "一个自己的工事"
 			elif card.id == GameEngine.UPGRADE_ID:
 				target_hint = "**自己的一个盟友或工事**（+2 攻 / +8 血）"
+			elif card.id == GameEngine.ARMOR_PLATE_ID:
+				target_hint = "**自己的一个盟友**（生命 +4，算一层改造）"
 			elif card.id == GameEngine.WHIRL_BLADE_ID:
 				target_hint = "十字中心格"
 			status_text = "%s：点击%s（右键取消）" % [card.card_name, target_hint]
@@ -2956,6 +2958,14 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 			var up: Placement = engine.state.board[c]
 			if up.owner == GameEngine.SIDE_SELF \
 					and (up.card.kind == "盟友" or up.card.is_fort()):
+				out.append(c)
+		out.sort()
+	elif card.id == GameEngine.ARMOR_PLATE_ID:
+		# 加厚装甲 8044（R95，机械之心）：只列**己方盟友**（工事不能选，
+		# 与「升级」不同）。同样必须在这里过滤，别等玩家付了费才被拒。
+		for c: Vector2i in engine.state.board:
+			var ap: Placement = engine.state.board[c]
+			if ap.owner == GameEngine.SIDE_SELF and ap.card.kind == "盟友":
 				out.append(c)
 		out.sort()
 	elif card.id == GameEngine.FIRE_WALL_SPELL_ID:
@@ -5303,6 +5313,21 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			else:
 				# 落空要说清原因，否则玩家以为白花了 2 费
 				_say("过载：牌库里没有「没有一回合行动两次」的盟友，效果落空")
+		"auto_upgrade":
+			# 自主升级 8045（R95，机械之心）：回合开始随机改造抽牌堆里一张盟友 / 工事。
+			# 目标在**牌库**里（不在场上），所以飘字落在抽牌堆旁边 —— 与「过载」同一套路。
+			if bool(data.get("ok", false)) and data.get("card") is CardData:
+				var au_card: CardData = data["card"]
+				sfx.play("spell")
+				_say("✦ 自主升级：牌库里的「%s」被改造（+%d 攻 / +%d 血，之后抽到就带）" % [
+						au_card.card_name,
+						GameEngine.AUTO_UPGRADE_ATK, GameEngine.AUTO_UPGRADE_HP])
+				_floaters.append({"pos": Vector2(DECK_X + CARD_W / 2, DECK_Y - 14),
+						"text": "%s · +%d 攻 +%d 血" % [au_card.card_name,
+							GameEngine.AUTO_UPGRADE_ATK, GameEngine.AUTO_UPGRADE_HP],
+						"col": Color("ffc94d"), "start": n, "dur": 2200, "size": 14})
+			else:
+				_say("自主升级：抽牌堆里没有盟友 / 工事，本回合落空")
 		"upgrade":
 			# 「升级」8027（R82）/ 改造工厂 8037（R88）：改造一个盟友 / 工事 → 在**那一格**上飘字。
 			# ⚠️ 「升级」技能与改造工厂**共用这个事件**，所以提示要按 `field` 字段分文案 ——
