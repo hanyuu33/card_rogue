@@ -490,6 +490,12 @@ const BATCH_TRANSFER_DRAW:= 1    # 批量传输：改造完抽 1 张卡
 const CHARGE_STATION_ID:= 8041
 const CHARGE_TRAIT:= "接通"
 const CHARGE_HEAL:= 2
+# ── R92：接通家族第 2、3 张（护盾生成器 8042 / 模仿者 8043）──
+# 「接通」判定仍是同一套 `_connected_components()`，但不再各写一份扫描：
+# 统一走助手 **`_component_of_cell(cell)`**（在 `_charge_tick` 下面），
+# 三张接通类卡共用一条连通判定。
+const SHIELD_GEN_ID:= 8042      # 护盾生成器：接通的我方单位受伤 → 改由它承受
+const MIMIC_ID:= 8043           # 模仿者：接通的盟友获得改造 → 它获得相同改造
 ## ── 字段名常量（R91）—— 引擎一律读 `CardData.affixes`，不再按卡名 / 数字硬编码 ──
 const AFFIX_SWIFT:= "疾行"          # 一回合行动两次（判据 actions>=2 / acts_left>1）
 const AFFIX_TAUNT:= "嘲讽"          # 敌方只能攻击这张卡
@@ -2675,6 +2681,10 @@ func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 			p.effective_power(), p.health, p.upgrade_stacks])
 	action.emit("upgrade", {"cell": target, "card": p.card, "placement": p,
 			"atk": atk_gain, "hp": hp_gain})
+	# 「模仿者」8043（R92）：与它接通的我方模仿者获得**相同改造**。
+	# 传的是 `atk_gain` / `hp_gain` —— 含受体自己的改造奖励（upgrade_*_bonus），
+	# 但**不含**「堡垒」trait 的额外 +STACK_HP_PER：那是**受体自身**的特性，不该被模仿出去。
+	_mimic_relay(p, atk_gain, hp_gain)
 	# 「无限装甲」8038（R89）：被改造时**每回合一次**供一张 0 费改造牌到手。
 	# 挂在**改造结算之后**（卡面写的是「被改造时」，那是改造完成的那一刻）。
 	_feed_upgrade_card(p)
@@ -2958,6 +2968,10 @@ func _self_repair(target, side:= SIDE_SELF) -> String :
 	_log("自我修复：%s → 最大生命 +%d（%d）、每回合结束回 %d（%d/%d）" % [
 			p.card.card_name, SELF_REPAIR_HP, p.card.health, SELF_REPAIR_REGEN,
 			p.health, p.card.health])
+	# 「模仿者」8043（R92）：自我修复**也算一次改造**（用户口径：所有此类卡都算）→
+	# 接通的模仿者复制**最大生命**那半（+SELF_REPAIR_HP）；
+	# **不复制 `regen`** —— 每回合回 4 是这张技能给的治疗，不是「改造」的量。
+	_mimic_relay(p, 0, SELF_REPAIR_HP)
 	action.emit("self_repair", {"cell": target, "card": p.card, "placement": p,
 			"hp": SELF_REPAIR_HP, "regen": SELF_REPAIR_REGEN, "side": side})
 	return "%s 自我修复完成（+%d 血 / 每回合回 %d）" % [
@@ -3023,6 +3037,97 @@ func _charge_tick(side: String) -> void :
 				"amount": got, "hp": p.health, "max_hp": p.card.health, "side": side})
 	if healed > 0:
 		_log("充电装置：%d 个接通的己方单位回复了生命" % healed)
+
+
+func _component_of_cell(cell: Vector2i) -> Array[Vector2i]:
+	## **「接通」判定的公共助手**（R92）—— 返回 `cell` 所在的那个连通分量（含自身）。
+	## 「接通」一律是闪电链 `_connected_components()` 的四方向相邻关系
+	## （隔着敌方单位也算连通），三张接通类卡（8041 / 8042 / 8043）共用这一份，别各写扫描。
+	## 找不到返回空数组。
+	for comp: Array in _connected_components():
+		for c: Vector2i in comp:
+			if c == cell:
+				return comp
+	return [] as Array[Vector2i]
+
+
+func _shield_gen_for(p: Placement) -> Placement:
+	## **护盾生成器**（8042，R92，机械之心 2 费普通工事 0/9/0）的选取口。
+	## 卡面：「接通的我方单位受到伤害时，改为让这张卡承受（溢出部分不再结算）」。
+	## 四个判据：① **只护我方**（用户口径，与充电装置一致）；
+	## ② 必须与 p 在**同一连通分量**；③ p 自己是生成器时不参与（否则重复扣自己）；
+	## ④ 多张候选取**剩余血量最多**的（最能扛的先上），血相同取离 p 最近、再按格子序 —— 保证确定性。
+	## 返回 null = 没人挡。
+	if p == null or p.owner != SIDE_SELF:
+		return null
+	var cell:= _cell_of(p)
+	if cell.x < 0:
+		return null
+	var best: Placement = null
+	var best_hp:= -1
+	var best_dist:= 1 << 30
+	var best_cell:= Vector2i(-1, -1)
+	for c: Vector2i in _component_of_cell(cell):
+		var q: Placement = state.unit_at(c)
+		if q == null or q == p or q.card.id != SHIELD_GEN_ID or q.owner != SIDE_SELF:
+			continue
+		if q.health <= 0:
+			continue
+		var dist: int = absi(cell.x - c.x) + absi(cell.y - c.y)
+		var better:= false
+		if best == null:
+			better = true
+		elif q.health > best_hp:
+			better = true
+		elif q.health == best_hp and dist < best_dist:
+			better = true
+		elif q.health == best_hp and dist == best_dist \
+				and (c.y < best_cell.y or (c.y == best_cell.y and c.x < best_cell.x)):
+			better = true
+		if better:
+			best = q
+			best_hp = q.health
+			best_dist = dist
+			best_cell = c
+	return best
+
+
+func _mimic_relay(src: Placement, atk_gain: int, hp_gain: int) -> void :
+	## **模仿者**（8043，R92，机械之心 2 费史诗盟友 0/10/1/1）的唯一结算口。
+	## 卡面：「与这张卡接通的盟友获得改造时，这张卡获得相同改造」。
+	##
+	## ⚠️ 挂在**所有会给场上单位加改造的地方**（用户口径：所有此类卡都算），共三处：
+	##   `_upgrade_unit`（升级 8027）/ `_self_repair`（自我修复 8035）/
+	##   `_field_aura_tick` 的持续改造分支（改造工厂 8037）。
+	##
+	## ⚠️ **不连锁**（用户口径）：这里给模仿者的加成是**直接落字段**、
+	## 不会再调一次 `_mimic_relay`，所以「模仿者 → 另一张模仿者」的传播天然不存在。
+	## 两张模仿者同时与受害者接通时，**各自独立**复制一次（不是 A 传给 B）。
+	if src == null or src.owner != SIDE_SELF:
+		return
+	if atk_gain <= 0 and hp_gain <= 0:
+		return
+	var cell:= _cell_of(src)
+	if cell.x < 0:
+		return
+	for c: Vector2i in _component_of_cell(cell):
+		var q: Placement = state.unit_at(c)
+		if q == null or q == src or q.card.id != MIMIC_ID or q.owner != SIDE_SELF:
+			continue
+		# 卡库是共享实例 → 先换成独立副本（与 _upgrade_unit 同一条纪律）
+		q.card = CardData.from_dict(q.card.to_dict())
+		q.card.traits = (q.card.traits as Array).duplicate()
+		if atk_gain > 0:
+			q.upgrade_atk += atk_gain
+		if hp_gain > 0:
+			q.upgrade_hp += hp_gain
+			q.card.health += hp_gain
+			q.health += hp_gain
+		q.upgrade_stacks += 1
+		_log("模仿者模仿 %s 的改造：+%d 攻 / +%d 血（现在是 %d 攻 / %d 血）" % [
+				src.card.card_name, atk_gain, hp_gain, q.effective_power(), q.health])
+		action.emit("mimic_upgrade", {"cell": c, "card": q.card, "placement": q,
+				"from": src.card.card_name, "atk": atk_gain, "hp": hp_gain})
 
 
 func _aether_guard_enter(p: Placement) -> void :
@@ -5172,7 +5277,7 @@ func _effect_damage_reduction() -> int:
 	return total
 
 
-func _hit_unit(p: Placement, amount: int, source:= "效果") -> int:
+func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= true) -> int:
 
 
 	if amount <= 0:
@@ -5186,6 +5291,20 @@ func _hit_unit(p: Placement, amount: int, source:= "效果") -> int:
 		action.emit("barrier", {"cell": _cell_of(p), "card": p.card,
 				"blocked": amount, "side": p.owner})
 		return 0
+	# 护盾生成器（8042，R92）：**接通的我方单位**受伤 → **改由它承受**，
+	# 溢出部分**不再结算**（不回传给原单位）。挂在能量屏障**之后** ——
+	# 目标自带的一次性护盾先消耗，才轮到外部的墙，符合「自己的防御先挡」的直觉。
+	# ⚠️ 转过去那一下必须 `allow_redirect = false`，否则两个生成器互相转发会无限递归。
+	if allow_redirect:
+		var gen:= _shield_gen_for(p)
+		if gen != null:
+			_log("%s：伤害被接通的护盾生成器接下（原本 %d 点%s伤害）" % [
+					p.card.card_name, amount, source])
+			action.emit("shield_redirect", {"cell": _cell_of(p), "card": p.card,
+					"to": _cell_of(gen), "to_card": gen.card, "amount": amount,
+					"source": source, "side": p.owner})
+			_hit_unit(gen, amount, source, false)
+			return 0
 	var dmg:= amount
 	if p.owner == SIDE_SELF:
 		dmg = _relic_damage_taken(dmg)
@@ -6372,6 +6491,9 @@ func _field_aura_tick(side: String) -> void :
 			action.emit("upgrade", {"cell": cell, "card": p.card, "placement": p,
 				"atk": UPGRADE_FACTORY_ATK, "hp": UPGRADE_FACTORY_HP,
 				"field": f.card_name})
+		# 「模仿者」8043（R92）：改造工厂给的 +1/+1 也是一次改造（用户口径）→
+		# 接通的模仿者同步获得 +1 力 / +1 血。每回合触发一次，**可无限叠加**。
+		_mimic_relay(p, UPGRADE_FACTORY_ATK, UPGRADE_FACTORY_HP)
 	if healed > 0:
 		_log("持续型场地：%d 个单位在自己回合结束时回复了生命" % healed)
 	if upgraded > 0:

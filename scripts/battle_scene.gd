@@ -5241,6 +5241,37 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var ch_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
 			_floaters.append({"pos": ch_pos, "text": "+%d" % int(data.get("amount", 0)),
 				"col": COL_FIELD_PERSIST, "start": n, "dur": 1400, "size": 18})
+		"shield_redirect":
+			# 护盾生成器（8042，R92）：接通的我方单位受伤 → 伤害**改由它承受**，溢出不再结算。
+			# 演出分两头：受害格「接下 N」+ 生成器格爆点「-N」，让玩家看清伤害到底去了哪里。
+			sfx.play("heal")
+			var sr_src := data.get("cell", Vector2i(-1, -1)) as Vector2i
+			var sr_dst := data.get("to", Vector2i(-1, -1)) as Vector2i
+			var sr_n: int = int(data.get("amount", 0))
+			_say("◈ %s 受到的 %d 点伤害被护盾生成器接下（溢出不再结算）"
+					% [str((data.get("card", null) as CardData).card_name), sr_n])
+			if sr_src.x >= 0:
+				_floaters.append({"pos": _cell_center(sr_src) + Vector2(0, -14),
+						"text": "接下 %d" % sr_n, "col": COL_FIELD_PERSIST,
+						"start": n, "dur": 1600, "size": 16})
+			if sr_dst.x >= 0:
+				_bursts.append({"pos": _cell_center(sr_dst), "start": n,
+						"dur": 520, "col": COL_FIELD_PERSIST, "big": true})
+				_floaters.append({"pos": _cell_center(sr_dst) + Vector2(0, -14),
+						"text": "-%d" % sr_n, "col": Color("f0a0a0"),
+						"start": n, "dur": 1600, "size": 17})
+		"mimic_upgrade":
+			# 模仿者（8043，R92）：接通的我方盟友获得改造 → 它获得**相同改造**。
+			var mu_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
+			var mu_atk: int = int(data.get("atk", 0))
+			var mu_hp: int = int(data.get("hp", 0))
+			sfx.play("heal")
+			_say("✧ 模仿者模仿 %s 的改造：+%d 攻 / +%d 血"
+					% [str(data.get("from", "")), mu_atk, mu_hp])
+			if mu_cell.x >= 0:
+				_floaters.append({"pos": _cell_center(mu_cell),
+						"text": "+%d 攻 / +%d 血" % [mu_atk, mu_hp],
+						"col": Color("8ce09a"), "start": n, "dur": 1800, "size": 15})
 		"regen":
 			# 自我修复的每回合回血（R87）：在该单位格上飘字。
 			var rg_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))

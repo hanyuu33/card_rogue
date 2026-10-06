@@ -3432,6 +3432,52 @@
       "target_mode": "none",
       "color": "灰",
       "image": ""
+    },
+    {
+      "id": 8042,
+      "name": "护盾生成器",
+      "kind": "工事",
+      "cost": 2,
+      "power": 0,
+      "health": 9,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "工事",
+        "接通",
+        "伤害转移"
+      ],
+      "affixes": [],
+      "effect_text": "**接通**（闪电链那种四方向相邻传导，**只算我方单位**）的我方单位**受到伤害时**，改为由这张卡来承受。**溢出的伤害不再结算**（不会转回原单位）。此效果只在它待在场上时有效。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8043,
+      "name": "模仿者",
+      "kind": "盟友",
+      "cost": 2,
+      "power": 0,
+      "health": 10,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 2,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "接通",
+        "模仿改造"
+      ],
+      "affixes": [],
+      "effect_text": "与这张卡**接通**（闪电链那种四方向相邻传导，**只算我方单位**）的我方盟友**获得「改造」时**，这张卡也获得**相同的改造**。由别的模仿者复制来的改造不会再往外传。",
+      "target_mode": "none",
+      "color": "灰",
+      "image": ""
     }
   ]
 }

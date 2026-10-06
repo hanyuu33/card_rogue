@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 169,
-			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82**；实际 %d）"
+	check(repo.all_cards().size() == 171,
+			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,7 +135,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 135 and grp_enemy.size() == 34,
+	check(grp_player.size() == 137 and grp_enemy.size() == 34,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 135 / 34）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -164,8 +164,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 118,
-			"奖励池 115 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置；实际 %d）"
+	check(pool.size() == 120,
+			"奖励池 120 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -6091,8 +6091,8 @@ func _init() -> void:
 			% [dr_cls_all.size(), str(dr_cls_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 105
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 48
-			and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 16,
-			"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张（期望 105 / 48 / 16）"
+			and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 18,
+			"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张（期望 105 / 48 / 18）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0))])
@@ -6349,7 +6349,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 118, "R45+R50~R57：扩展全部进奖励池（总池 118，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 120, "R45+R50~R57：扩展全部进奖励池（总池 120，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -11177,6 +11177,154 @@ func _init() -> void:
 	r91_e5.end_turn()
 	check(r91_e5.state.hand.is_empty(),
 		"R91 幻影：回合结束时消失（%d 张手牌）" % r91_e5.state.hand.size())
+
+	# ---- R92：护盾生成器 8042（伤害转移）/ 模仿者 8043（改造传导）----
+	var r92_repo := CardRepo.load_json()
+	var r92_gen_def: CardData = r92_repo.get_card(GameEngine.SHIELD_GEN_ID)
+	var r92_mim_def: CardData = r92_repo.get_card(GameEngine.MIMIC_ID)
+	check(r92_gen_def != null and r92_gen_def.kind == "工事" and r92_gen_def.cost == 2
+			and r92_gen_def.power == 0 and r92_gen_def.health == 9
+			and r92_gen_def.attack_range == 0 and r92_gen_def.move_speed == 0
+			and r92_gen_def.rarity == 0 and r92_gen_def.card_class == PlayerClass.MECH,
+		"R92 护盾生成器：工事 / 2 费 0 攻 9 血 / 攻程 0 / 移速 0 / **普通** / 机械之心")
+	check(r92_gen_def.traits.has(GameEngine.CHARGE_TRAIT)
+			and r92_gen_def.traits.has("伤害转移"),
+		"R92 护盾生成器：带 trait「接通」与「伤害转移」")
+	check(r92_mim_def != null and r92_mim_def.kind == "盟友" and r92_mim_def.cost == 2
+			and r92_mim_def.power == 0 and r92_mim_def.health == 10
+			and r92_mim_def.attack_range == 1 and r92_mim_def.move_speed == 1
+			and r92_mim_def.rarity == 2 and r92_mim_def.card_class == PlayerClass.MECH,
+		"R92 模仿者：盟友 / 2 费 0 攻 10 血 / 攻程 1 / 移速 1 / **史诗** / 机械之心")
+	check(r92_mim_def.traits.has(GameEngine.CHARGE_TRAIT)
+			and r92_mim_def.traits.has("模仿改造"),
+		"R92 模仿者：带 trait「接通」与「模仿改造」")
+
+	# ---- ① 护盾生成器：接通的己方单位受伤 → 改由它承受 ----
+	var r92_foe_def := _card(9201, "测试骷髅", "怪物", 1, 3, 6, 1, 1)
+	var r92_e1 := _new_engine([], 40, 40, -1, false)
+	r92_e1.start_game()
+	var r92_tree: Placement = r92_e1.state.place(
+		CardData.from_dict(r92_repo.get_card(8003).to_dict()), Vector2i(4, 0),
+		GameEngine.SIDE_SELF)
+	var r92_gen: Placement = r92_e1.state.place(
+		CardData.from_dict(r92_gen_def.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r92_tree_hp0: int = r92_tree.health
+	var r92_gen_hp0: int = r92_gen.health
+	r92_e1._hit_unit(r92_tree, 5, "测试")
+	check(r92_tree.health == r92_tree_hp0
+			and r92_gen.health == r92_gen_hp0 - 5,
+		"R92 护盾生成器：接通的己方单位受伤 → **改由它承受**（树人仍 %d / 生成器 %d→%d）"
+			% [r92_tree.health, r92_gen_hp0, r92_gen.health])
+	# ⚠️ 溢出部分**不再结算**：不回传给原单位
+	r92_e1._hit_unit(r92_tree, 20, "测试")
+	check(r92_tree.health == r92_tree_hp0 and r92_gen.health < 0,
+		"R92 护盾生成器：**溢出部分不再结算**（叠加 20 点伤害后原单位仍满血 %d，生成器被击穿到 %d）"
+			% [r92_tree.health, r92_gen.health])
+	# 生成器血量耗尽 → 保护失效
+	r92_e1._hit_unit(r92_tree, 3, "测试")
+	check(r92_tree.health == r92_tree_hp0 - 3,
+		"R92 护盾生成器：血量耗尽后**不再保护**（树人掉到 %d）" % r92_tree.health)
+
+	# ---- ②「**只护我方**」+「**必须在同一连通块**」----
+	var r92_e2 := _new_engine([], 40, 40, -1, false)
+	r92_e2.start_game()
+	var r92_gen2: Placement = r92_e2.state.place(
+		CardData.from_dict(r92_gen_def.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r92_foe2: Placement = r92_e2.state.place(
+		CardData.from_dict(r92_foe_def.to_dict()), Vector2i(3, 1),
+		GameEngine.SIDE_OPPONENT)
+	var r92_iso: Placement = r92_e2.state.place(
+		CardData.from_dict(r92_repo.get_card(8003).to_dict()), Vector2i(0, 0),
+		GameEngine.SIDE_SELF)
+	var r92_foe_hp0: int = r92_foe2.health
+	var r92_iso_hp0: int = r92_iso.health
+	r92_e2._hit_unit(r92_foe2, 3, "测试")
+	check(r92_foe2.health == r92_foe_hp0 - 3 and r92_gen2.health == 9,
+		"R92 护盾生成器「**只护我方**」：相邻的敌方单位照常受伤（%d→%d），生成器没掉血（%d）"
+			% [r92_foe_hp0, r92_foe2.health, r92_gen2.health])
+	r92_e2._hit_unit(r92_iso, 3, "测试")
+	check(r92_iso.health == r92_iso_hp0 - 3 and r92_gen2.health == 9,
+		"R92 护盾生成器：孤立的 (0,0) **不接通** → 不受保护（%d→%d），生成器仍 %d"
+			% [r92_iso_hp0, r92_iso.health, r92_gen2.health])
+
+	# ---- ③ 模仿者：三种改造来源全部传导 ----
+	var r92_e3 := _new_engine([], 40, 40, -1, false)
+	r92_e3.start_game()
+	var r92_src: Placement = r92_e3.state.place(
+		CardData.from_dict(r92_repo.get_card(8003).to_dict()), Vector2i(4, 0),
+		GameEngine.SIDE_SELF)
+	var r92_mim: Placement = r92_e3.state.place(
+		CardData.from_dict(r92_mim_def.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r92_mim_atk0: int = r92_mim.effective_power()
+	var r92_mim_hp0: int = r92_mim.health
+	# ③-a「升级」8027（技能改造）
+	r92_e3._upgrade_unit(Vector2i(4, 0), GameEngine.SIDE_SELF)
+	check(r92_mim.upgrade_atk == GameEngine.UPGRADE_ATK
+			and r92_mim.upgrade_hp == GameEngine.UPGRADE_HP
+			and r92_mim.effective_power() == r92_mim_atk0 + GameEngine.UPGRADE_ATK
+			and r92_mim.health == r92_mim_hp0 + GameEngine.UPGRADE_HP,
+		"R92 模仿者：接通的盟友被「升级」改造 → 获得**相同改造**（+%d 攻 / +%d 血 → %d 攻 / %d 血）"
+			% [GameEngine.UPGRADE_ATK, GameEngine.UPGRADE_HP,
+				r92_mim.effective_power(), r92_mim.health])
+	# ③-b「自我修复」8035（也算一次改造，只复制最大生命那半，**不复制回血**）
+	var r92_mim_hp1: int = r92_mim.health
+	var r92_mim_atk1: int = r92_mim.effective_power()
+	r92_e3._self_repair(Vector2i(4, 0), GameEngine.SIDE_SELF)
+	check(r92_mim.health == r92_mim_hp1 + GameEngine.SELF_REPAIR_HP
+			and r92_mim.effective_power() == r92_mim_atk1
+			and r92_mim.regen <= 0,
+		"R92 模仿者：模仿「自我修复」→ 只有最大生命 +%d（攻仍 %d），**不复制每回合回血**"
+			% [GameEngine.SELF_REPAIR_HP, r92_mim.effective_power()])
+	# ③-c「改造工厂」8037（每回合自动改造）
+	var r92_mim_atk2: int = r92_mim.effective_power()
+	var r92_mim_hp2: int = r92_mim.health
+	r92_e3.state.set_field(CardData.from_dict(r92_repo.get_card(8037).to_dict()),
+		Vector2i(4, 0), GameEngine.SIDE_SELF)
+	r92_e3.end_turn()
+	check(r92_mim.effective_power() == r92_mim_atk2 + GameEngine.UPGRADE_FACTORY_ATK
+			and r92_mim.health == r92_mim_hp2 + GameEngine.UPGRADE_FACTORY_HP,
+		"R92 模仿者：模仿「改造工厂」→ +%d 攻 / +%d 血（%d 攻 / %d 血）"
+			% [GameEngine.UPGRADE_FACTORY_ATK, GameEngine.UPGRADE_FACTORY_HP,
+				r92_mim.effective_power(), r92_mim.health])
+	# ⚠️ 不污染卡库（卡库里那张模仿者仍是 0/10）
+	check(r92_repo.get_card(GameEngine.MIMIC_ID).health == 10
+			and r92_repo.get_card(GameEngine.MIMIC_ID).power == 0,
+		"R92 模仿者：**没有污染卡库**（仍是 0 攻 / %d 血）"
+			% r92_repo.get_card(GameEngine.MIMIC_ID).health)
+	# 离场还原
+	var r92_restored: CardData = r92_e3._card_leaving_field(r92_mim)
+	check(r92_restored != null and r92_restored.health == 10,
+		"R92 模仿者：离场时**还原成原卡**（%d 血 → 10 血）"
+			% (r92_restored.health if r92_restored != null else -1))
+
+	# ---- ④ 模仿者：**不接通不受益** ----
+	var r92_e4 := _new_engine([], 40, 40, -1, false)
+	r92_e4.start_game()
+	var r92_src4: Placement = r92_e4.state.place(
+		CardData.from_dict(r92_repo.get_card(8003).to_dict()), Vector2i(4, 0),
+		GameEngine.SIDE_SELF)
+	var r92_far_mim: Placement = r92_e4.state.place(
+		CardData.from_dict(r92_mim_def.to_dict()), Vector2i(0, 0), GameEngine.SIDE_SELF)
+	r92_e4._upgrade_unit(Vector2i(4, 0), GameEngine.SIDE_SELF)
+	check(r92_far_mim.upgrade_atk == 0 and r92_far_mim.upgrade_hp == 0,
+		"R92 模仿者：孤立的 (0,0) **不接通** → 不复制改造（仍 0 攻加成 / 血量 %d）"
+			% r92_far_mim.health)
+
+	# ---- ⑤ **不连锁**：X—A—B 链里 B 只拿自己那一份，不会「再 Copy 一次」 ----
+	var r92_e5 := _new_engine([], 40, 40, -1, false)
+	r92_e5.start_game()
+	var r92_x: Placement = r92_e5.state.place(
+		CardData.from_dict(r92_repo.get_card(8003).to_dict()), Vector2i(4, 0),
+		GameEngine.SIDE_SELF)
+	var r92_ma: Placement = r92_e5.state.place(
+		CardData.from_dict(r92_mim_def.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r92_mb: Placement = r92_e5.state.place(
+		CardData.from_dict(r92_mim_def.to_dict()), Vector2i(4, 2), GameEngine.SIDE_SELF)
+	r92_e5._upgrade_unit(Vector2i(4, 0), GameEngine.SIDE_SELF)
+	check(r92_ma.upgrade_atk == GameEngine.UPGRADE_ATK
+			and r92_mb.upgrade_atk == GameEngine.UPGRADE_ATK,
+		"R92 模仿者「**不连锁**」：A、B 各自**只复制一次**（A +%d / B +%d，不是 B 拿双份 %d）"
+			% [r92_ma.upgrade_atk, r92_mb.upgrade_atk, 2 * GameEngine.UPGRADE_ATK])
 
 	RunState.player_class = r91_saved_cls
 
