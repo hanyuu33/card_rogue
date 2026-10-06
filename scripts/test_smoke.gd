@@ -1,0 +1,967 @@
+extends SceneTree
+## 冒烟测试（基本功能自检）—— 把每个场景按真实进入条件实例化、渲染若干帧，
+## 检查是否存在脚本错误（缺失方法 / 空引用 / 解析错误 / _draw 崩溃）。
+##
+## 用法：
+##   Godot_v4.3-stable_win64_console.exe --path . --script res://scripts/test_smoke.gd
+## 说明：
+##   * 必须**非 headless** 运行 —— headless 不渲染，_draw() 里的错误抓不到
+##     （历史上出现过的 rel.kind_color() 崩溃就是这类）。
+##   * 每个场景前会重置 RunState 并铺一套「进入该场景所需的最小状态」
+##     （例如 card_reward 需要 reward_context，relic_pick 需要 relic_choice）。
+##   * 错误不会被脚本捕获，而是由引擎打到 stderr —— 由外层脚本 grep
+##     「SCRIPT ERROR / Nonexistent / Invalid call」判定失败。
+
+const FRAMES_PER_SCENE := 8
+
+# 每个场景的进入前置：用 [_reset, 说明] 的形式，_reset 为 Callable
+var _plan: Array = []
+var _cur: Node = null
+var _idx := -1
+var _frames := 0
+var _ok := 0
+var _fail := 0
+var _check := Callable()   # 用例可选的「加进场景后第 2 帧」行为断言
+var _pair_reported := {}  # R66：已打印过「牌库/遗物成对」的场景名，避免同一场景重复刷屏
+
+
+func _initialize() -> void:
+	_plan = [
+		["res://scenes/title.tscn", func(): _reset()],
+		# 角色选择（R43 新增：定角色 → 发专属卡与赠品道具 → 进地图）
+		["res://scenes/class_pick.tscn", func(): _reset()],
+		# 角色选择 + 机械之心（R82：第三个角色，3 张卡面要放得下 1280 视口）
+		["res://scenes/class_pick.tscn", func():
+				_reset()
+				RunState.player_class = PlayerClass.MECH],
+		# 地图场景（R69 的 14 层 + 第 9 层固定休息层）。
+		# `relic_choice = []` 是**必须的**：start_run 会填 3 个待选初始道具，
+		# 而 map_scene._ready 见它非空就 `change_scene_to_file(relic_pick)` 直接 return，
+		# _clamp_scroll / _scroll_to_current 都不会跑 → 滚动范围停在默认 0。
+		["res://scenes/map.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relic_choice = [],
+			_check_map_scene],
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_battle],
+		# 战斗场景 + 机械之心（R82）：开场「机械核心」6025 要往手牌塞 2 张素体，
+		# 且素体带「留手」—— 这一路能跑通就说明新道具 / 新卡 / 衍生物判定都接好了。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				var mrng := RandomNumberGenerator.new()
+				mrng.seed = 20261005
+				RunState.start_run(RogueMap.generate(mrng), GameLayers.LAYER_DEFAULT,
+						PlayerClass.MECH)
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"})],
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "rest"}],
+		["res://scenes/card_reward.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.reward_context = "battle"
+				RunState.reward_type = "normal"],
+		["res://scenes/relic_pick.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relic_choice = [6001, 6002, 6003]],
+		["res://scenes/deck_edit.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relics = [6004]
+				RunState.pending_relic = 6004],
+		# 卡组编辑的「鸭血」多选模式（R81）—— 唯一 limit=2 的模式，
+		# 顺带在这里真的走一遍「选 2 张 → 复制」的完整路径。
+		["res://scenes/deck_edit.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relics = [RunState.DUCK_BLOOD_RELIC_ID]
+				RunState.pending_relic = RunState.DUCK_BLOOD_RELIC_ID,
+			_check_deck_duck_blood],
+		["res://scenes/gallery.tscn", func(): _reset()],
+		# 回放列表场景（R46）
+		["res://scenes/replay_list.tscn", func(): _reset()],
+		# 事件场景的其它子类型
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "event"}
+				RunState.pending_event = "treasure"],
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "event"}
+				RunState.pending_event = "whisper"],
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "event"}
+				RunState.pending_event = "struggle"],
+		# 鸭之凝视（一袋米抗几楼）—— 现在是**第二层**事件
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "event"}
+				RunState.pending_event = "gaze"],
+		# 奥秘之泉（第一层专属：护符 / 喝泉水）—— R71：**已经戴过护符也要能选「喝下泉水」**
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "event"}
+				RunState.pending_event = "arcane",
+			_check_arcane_with_charm],
+		# 遗忘之泉（全层通用：删一张卡 / 离开）
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "event"}
+				RunState.pending_event = "oblivion"],
+		# 遗忘之泉的后续：卡组编辑场景的「删卡」模式
+		["res://scenes/deck_edit.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_event = "oblivion"
+				RunState.pending_deck_edit = "delete"],
+		# 宝箱层（第六层：开箱得 1 个随机奖励道具）
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "chest"}],
+	]
+	print("SMOKE === 开始（%d 项场景用例）===" % _plan.size())
+	_next()
+
+
+func _reset() -> void:
+	RunState.end_run()
+	RunState.reset()
+
+
+func _map() -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20260928
+	return RogueMap.generate(rng)
+
+
+func _check_deck_duck_blood(scene: Variant) -> void:
+	## 卡组编辑的「鸭血」模式（R81）：多选上限 2，且选中/确定真的会复制卡。
+	## 这里直接调场景内部方法（与 _check_map_scene 同一套路），比截图可靠。
+	if str(scene._mode()) != "duplicate":
+		_smoke_fail("鸭血卡组编辑：模式应为 duplicate，实际 %s" % str(scene._mode()))
+		return
+	if int(scene._limit()) != 2:
+		_smoke_fail("鸭血卡组编辑：可选上限应为 2，实际 %d" % int(scene._limit()))
+		return
+	# 选 3 张 → 只留最早选中的被替换掉，最终恰好 2 张
+	scene._toggle_sel(0)
+	scene._toggle_sel(1)
+	scene._toggle_sel(2)
+	if (scene._sel as Array).size() != 2 or not (scene._sel as Array).has(1) \
+			or not (scene._sel as Array).has(2):
+		_smoke_fail("鸭血卡组编辑：选 3 张后应保留最新 2 张，实际 %s" % str(scene._sel))
+		return
+	# 再点已选中的 → 取消选中
+	scene._toggle_sel(1)
+	if (scene._sel as Array).has(1):
+		_smoke_fail("鸭血卡组编辑：再点已选中的卡应取消选中")
+		return
+	scene._toggle_sel(1)
+	# 走真实结算：卡组 +2，标题与按钮文案对得上
+	var before: int = RunState.deck_ids.size()
+	var nm0: String = scene.confirm_btn.text
+	scene._on_confirm()
+	if RunState.deck_ids.size() != before + 2:
+		_smoke_fail("鸭血卡组编辑：确定后卡组应 +2（%d → %d），按钮原为「%s」"
+				% [before, RunState.deck_ids.size(), nm0])
+		return
+	if RunState.pending_relic != -1:
+		_smoke_fail("鸭血卡组编辑：确定后应解除待选")
+		return
+	print("SMOKE OK 鸭血卡组编辑：多选上限 2 / 选 3 张保留最新 2 张 / 确定后卡组 %d → %d"
+			% [before, RunState.deck_ids.size()])
+
+
+func _check_map_scene(scene: Variant) -> void:
+	## 地图场景（R69）：14 层布局 + **第 9 层固定休息层**在场景里真的能走。
+	## 只断言状态与几何（能滚、节点在范围内、固定层是 rest），
+	## 真正的绘制由 smoke 非 headless 跑满帧验证（面板保持可见）。
+	var cols: Array = RunState.map_columns
+	if cols.size() != RogueMap.COLS:
+		_smoke_fail("地图场景：应有 %d 层，实际 %d" % [RogueMap.COLS, cols.size()])
+		return
+	# 固定休息层：整层是 rest，且场景能定位到它（点得进去）
+	var rc: Array = cols[RogueMap.REST_COL]
+	var rest_ok := rc.size() >= RogueMap.MIN_NODES
+	for n in rc:
+		if str(n["type"]) != "rest":
+			rest_ok = false
+	if not rest_ok:
+		_smoke_fail("地图场景：第 %d 层应整层是休息" % RogueMap.REST_COL)
+		return
+	var rc_pos: Vector2 = scene._node_pos(rc[0])
+	var b: Vector2 = scene._map_content_bounds()
+	if rc_pos.y < b.x or rc_pos.y > b.y:
+		_smoke_fail("地图场景：第 %d 层休息节点落在内容范围外（y=%.1f，范围 %.1f..%.1f）"
+				% [RogueMap.REST_COL, rc_pos.y, b.x, b.y])
+		return
+	# 14 层必然高于 720 视口 → 必须可滚，否则高层看不到
+	if scene._scroll_max <= scene._scroll_min:
+		_smoke_fail("地图场景：%d 层应可上下滚动（scroll_min=%.1f max=%.1f）"
+				% [RogueMap.COLS, scene._scroll_min, scene._scroll_max])
+		return
+	# 所有节点都要落在内容范围内（纵向不越界）
+	var out := 0
+	for c in cols:
+		for n2 in c:
+			var p: Vector2 = scene._node_pos(n2)
+			if p.y < b.x or p.y > b.y:
+				out += 1
+	if out > 0:
+		_smoke_fail("地图场景：%d 个节点落在内容范围外" % out)
+		return
+	print("SMOKE OK 地图场景：%d 层 / 第 %d 层整层休息 / 纵向可滚 %.0fpx / 全部节点在范围内"
+			% [cols.size(), RogueMap.REST_COL, scene._scroll_max - scene._scroll_min])
+	_check_relic_bar(scene)
+
+
+func _check_relic_bar(scene: Variant) -> void:
+	## R75：**道具悬浮即看说明；只有一行放不下时才允许点开详情**，且详情字号更大。
+	## 地图侧断言：徽章不越界、装得下时无 +N、装不下时恰好一个 +N 且可点。
+	var n_max: int = scene.RELIC_BADGE_MAX
+	# 徽章行整体不能压到标题（最左一个徽章的左沿要在标题右侧）
+	var left: float = scene._relic_rect(n_max - 1).position.x
+	if left < 470.0:
+		_smoke_fail("道具徽章：一行 %d 个时最左徽章左沿 %.1f，压到标题区"
+				% [n_max, left])
+		return
+	var saved: Array = RunState.relics.duplicate()
+	# 少：装得下 → 不该有 +N，也就不该给点击入口
+	RunState.relics = [6001, 6003, 6005]
+	if scene._relic_bar_overflowed():
+		_smoke_fail("道具徽章：3 件（上限 %d）却判定为溢出" % n_max)
+		return
+	if scene._relic_shown() != 3:
+		_smoke_fail("道具徽章：装得下时只应列出全部 3 件，实际 %d" % scene._relic_shown())
+		return
+	# 多：装不下 → 恰好留一个 +N，且 +N 落在允许点击的位置
+	RunState.relics = [6001, 6002, 6003, 6005, 6006, 6007, 6008, 6009, 6013, 6015]
+	if not scene._relic_bar_overflowed():
+		_smoke_fail("道具徽章：10 件（上限 %d）却判定为装得下" % n_max)
+		return
+	var shown: int = scene._relic_shown()
+	if shown != n_max - 1:
+		_smoke_fail("道具徽章：溢出时应留 1 个 +N 位（列 %d 个），实际 %d" % [n_max - 1, shown])
+		return
+	var more: Rect2 = scene._relic_rect(shown)
+	if more.size.x <= 0.0 or more.position.y < 0.0 or more.end.y > 44.0:
+		_smoke_fail("道具徽章：+N 摘要块不在顶部徽章行内（%s）" % str(more))
+		return
+	if not more.has_point(more.get_center()):
+		_smoke_fail("道具徽章：+N 摘要块自身中心不在块内（%s）" % str(more))
+		return
+	# 详情面板：能列出全部 10 件，且说明字号 > 悬浮提示字号
+	var rows: Array = scene._relic_panel_rows()
+	if rows.size() != RunState.relics.size():
+		_smoke_fail("道具详情面板：应列出全部 %d 件，实际 %d"
+				% [RunState.relics.size(), rows.size()])
+		return
+	if int(scene.RELIC_P_NAME) <= 14 or int(scene.RELIC_P_DESC) <= 12:
+		_smoke_fail("道具详情面板：字号没放大（名称 %d / 说明 %d，悬浮是 14 / 12）"
+				% [int(scene.RELIC_P_NAME), int(scene.RELIC_P_DESC)])
+		return
+	if scene.RELIC_P_DESC <= 12:
+		_smoke_fail("道具详情面板：说明字号 %d 未大于悬浮提示的 12" % int(scene.RELIC_P_DESC))
+		return
+	RunState.relics = saved
+	print("SMOKE OK 道具查看：地图徽章上限 %d 个 / 3 件不溢出无 +N / 10 件留 1 个 +N 可点 / 详情 %d 件全列且字号 %d>%d"
+			% [n_max, rows.size(), int(scene.RELIC_P_NAME), int(scene.RELIC_P_DESC)])
+
+
+func _next() -> void:
+	if _cur != null:
+		root.remove_child(_cur)
+		_cur.free()
+		_cur = null
+	_idx += 1
+	_frames = 0
+	if _idx >= _plan.size():
+		print("SMOKE === 结束：%d 通过 / %d 失败 ===" % [_ok, _fail])
+		quit()
+		return
+	var entry: Array = _plan[_idx]
+	var path: String = entry[0]
+	var note: String = str(entry[1])
+	(entry[1] as Callable).call()
+	_check = Callable()
+	if entry.size() > 2 and entry[2] is Callable:
+		_check = entry[2]   # 第 3 项：场景就绪后的行为断言（见 _process）
+	var packed: PackedScene = load(path)
+	if packed == null:
+		print("SMOKE FAIL %s：资源加载失败" % path)
+		_fail += 1
+		_next()
+		return
+	var inst: Node = packed.instantiate()
+	if inst == null:
+		print("SMOKE FAIL %s：instantiate 返回 null" % path)
+		_fail += 1
+		_next()
+		return
+	_cur = inst
+	root.add_child(inst)
+	print("SMOKE OK %s  [用例 %d/%d]" % [path, _idx + 1, _plan.size()])
+
+
+func _process(_delta: float) -> bool:
+	if _cur == null:
+		return false
+	_frames += 1
+	if _frames == 2 and _check.is_valid():
+		var c := _check
+		_check = Callable()
+		c.call(_cur)
+	# R66：凡是挂了「牌库 N」按钮的界面，都必须也有「遗物 N」按钮（两个查看器对等）。
+	# 同一个场景在 _plan 里可能重复出现（不同前置），打印只出一次，免得刷屏。
+	var dv: int = 0
+	var rv: int = 0
+	for child in _cur.get_children():
+		if child is DeckViewer:
+			dv += 1
+		elif child is RelicViewer:
+			rv += 1
+	if dv > 0 and rv == 0:
+		_smoke_fail("遗物查看：挂了 %d 个牌库查看器却没有遗物查看器" % dv)
+	elif dv > 0 and not _pair_reported.has(str(_cur.name)):
+		_pair_reported[str(_cur.name)] = true
+		print("SMOKE OK 遗物查看：%s 牌库 %d 个 / 遗物 %d 个（两个查看器成对）"
+				% [_cur.name, dv, rv])
+	if _frames >= FRAMES_PER_SCENE:
+		_ok += 1
+		_next()
+	return false
+
+
+func _smoke_fail(msg: String) -> void:
+	print("SMOKE FAIL %s" % msg)
+	_fail += 1
+
+
+func _hand_card_extent(scene: Variant, i: int) -> Vector2:
+	## 第 i 张手牌**旋转后**的左右极值 (x_left, x_right)。
+	## 卡是绕底部中心转的，两端的卡会向左/右探出去，只看未旋转矩形会漏判越界。
+	var r: Rect2 = scene._hand_rect(i)
+	var p: Vector2 = scene._hand_pivot(i)
+	var a: float = scene._hand_angle(i)
+	var lo := 99999.0
+	var hi := -99999.0
+	for corner in [Vector2(0, 0), Vector2(r.size.x, 0), Vector2(0, r.size.y),
+			Vector2(r.size.x, r.size.y)]:
+		var q: Vector2 = p + (r.position + corner - p).rotated(a)
+		lo = minf(lo, q.x)
+		hi = maxf(hi, q.x)
+	return Vector2(lo, hi)
+
+
+func _check_hand_fan(scene: Variant) -> void:
+	## 扇形手牌：绘制时卡是**转着画的**，命中判定必须用同一个角度反向旋转。
+	## 这里先把牌抽到满手（覆盖重叠 + hand_full），再用「旋转后的卡牌中心」回测。
+	var n0: int = scene.engine.state.hand.size()
+	if n0 < 3:
+		_smoke_fail("扇形手牌：起手只有 %d 张，不足 3 张" % n0)
+		return
+	scene.engine._draw_many(FieldState.HAND_LIMIT)   # 抽到上限（会广播一次 hand_full）
+	var n: int = scene.engine.state.hand.size()
+	if n != FieldState.HAND_LIMIT:
+		_smoke_fail("扇形手牌：应抽到上限 %d 张，实际 %d" % [FieldState.HAND_LIMIT, n])
+		return
+	if not scene.engine.state.hand_full():
+		_smoke_fail("扇形手牌：满手后 hand_full() 仍为假")
+	var bad := 0
+	for i in n:
+		var r: Rect2 = scene._hand_rect(i)
+		var pivot: Vector2 = scene._hand_pivot(i)
+		var center := Vector2(r.position.x + r.size.x / 2, r.position.y + r.size.y / 2)
+		var hit_pos: Vector2 = pivot + (center - pivot).rotated(scene._hand_angle(i))
+		if not scene._hand_hit(i, hit_pos):
+			bad += 1
+	if bad > 0:
+		_smoke_fail("扇形手牌：%d/%d 张的命中判定与绘制角度不一致" % [bad, n])
+	# 两端要有倾角、左右对称、且倾角随下标单调递增（真扇形而不是一排）。
+	# 注意：张数为偶数时没有「正好 0°」的中间那张，所以只要求左右对称。
+	var left_deg: float = rad_to_deg(scene._hand_angle(0))
+	var right_deg: float = rad_to_deg(scene._hand_angle(n - 1))
+	var monotonic := true
+	for i in range(1, n):
+		if scene._hand_angle(i) <= scene._hand_angle(i - 1):
+			monotonic = false
+	if not (left_deg < -1.0 and right_deg > 1.0 and monotonic
+			and absf(left_deg + right_deg) < 0.01):
+		_smoke_fail("扇形手牌：倾角不对（左 %.2f° / 右 %.2f° / 单调 %s）"
+				% [left_deg, right_deg, monotonic])
+	# 重叠：满手时步进必须小于卡宽
+	if scene._hand_step(n) >= scene.HAND_CARD_W:
+		_smoke_fail("扇形手牌：%d 张的步进 %.1f 不小于卡宽 %.1f，没有重叠"
+				% [n, scene._hand_step(n), scene.HAND_CARD_W])
+	# 尺寸：手牌明显比战场小卡大（空间换来的放大）
+	if scene.HAND_CARD_H <= scene.CARD_H * 1.4:
+		_smoke_fail("手牌尺寸：应比战场卡大 1.4 倍以上，实际 %.1f / %.1f（×%.2f）"
+				% [scene.HAND_CARD_H, scene.CARD_H, scene.HAND_CARD_H / scene.CARD_H])
+	# 卡底**沉出**窗口下沿：底部那截被裁掉。卡面仍是整张排版（不重锚、不补偿），
+	# 所以这里只管「沉出量符合预期」和「别沉过头把卡片淹了」，不再断言内容必须可见。
+	var bottom: float = scene.OWN_HAND_Y + scene.HAND_CARD_H
+	if scene.HAND_CROP_BOTTOM <= 0.0:
+		_smoke_fail("手牌位置：卡底没有沉出窗口下沿（HAND_CROP_BOTTOM=%.1f）"
+				% scene.HAND_CROP_BOTTOM)
+	if absf((bottom - scene.WINDOW_H) - scene.HAND_CROP_BOTTOM) > 0.5:
+		_smoke_fail("手牌位置：沉出量应为 %.1f，实际 %.1f"
+				% [scene.HAND_CROP_BOTTOM, bottom - scene.WINDOW_H])
+	# 沉出量不能吃掉半张卡（否则手牌看着只剩一条边）
+	var vis_min := 99999.0
+	for i in n:
+		vis_min = minf(vis_min, scene._hand_vis_h(i))
+	if vis_min < scene.HAND_CARD_H * 0.5:
+		_smoke_fail("手牌位置：露出高度只有 %.1f（卡高 %.1f 的一半以下），沉得太狠"
+				% [vis_min, scene.HAND_CARD_H])
+	# 卡顶不能顶进战场（否则会盖住棋盘单位）
+	if scene.OWN_HAND_Y - scene.HAND_FAN_HOVER_LIFT < scene.GRID_Y + scene.GRID_H - 2.0:
+		_smoke_fail("手牌位置：抬手后卡顶 %.1f 盖住了战场下沿 %.1f"
+				% [scene.OWN_HAND_Y - scene.HAND_FAN_HOVER_LIFT,
+					scene.GRID_Y + scene.GRID_H])
+	# 两端要比中间下沉（弧线）
+	if scene._hand_rect(0).position.y <= scene._hand_rect(n / 2).position.y:
+		_smoke_fail("扇形手牌：两端没有下沉，缺少弧线")
+	# 越界：卡放大后最容易压到右侧道具栏（x=900 起）或左侧信息栏
+	var rz: Rect2 = scene._relic_zone_rect()
+	var er: Vector2 = _hand_card_extent(scene, n - 1)
+	var el: Vector2 = _hand_card_extent(scene, 0)
+	if er.y > rz.position.x - 2.0:
+		_smoke_fail("手牌越界：满手时最右一张到 %.1f，压到右侧道具栏（%.1f 起）"
+				% [er.y, rz.position.x])
+	if el.x < scene.INFO_X + scene.INFO_W + 4.0:
+		_smoke_fail("手牌越界：最左一张到 %.1f，压到左侧信息栏（右沿 %.1f）"
+				% [el.x, scene.INFO_X + scene.INFO_W])
+	# 从上往下取最上层：最后一张的旋转中心必须命中最后一张
+	var rl: Rect2 = scene._hand_rect(n - 1)
+	var pl: Vector2 = scene._hand_pivot(n - 1)
+	var cl := Vector2(rl.position.x + rl.size.x / 2, rl.position.y + rl.size.y / 2)
+	var pl_hit: Vector2 = pl + (cl - pl).rotated(scene._hand_angle(n - 1))
+	if scene._hand_index_at(pl_hit) != n - 1:
+		_smoke_fail("扇形手牌：重叠区没有取最上层那张（期望 %d，实际 %d）"
+				% [n - 1, scene._hand_index_at(pl_hit)])
+	else:
+		var msg := "SMOKE OK 扇形手牌：满手 %d 张，%.0f×%.0f（战场卡 %.0f×%.0f 的 %.2f 倍，" % [
+				n, scene.HAND_CARD_W, scene.HAND_CARD_H, scene.CARD_W, scene.CARD_H,
+				scene.HAND_CARD_H / scene.CARD_H]
+		msg += "卡底沉出下沿 %.0f，露出 %.0f）" % [
+				bottom - scene.WINDOW_H, vis_min]
+		msg += " / 倾角 左 %.1f° 右 %.1f° / 横向 %.0f~%.0f（不越界）" % [
+				left_deg, right_deg, el.x, er.y]
+		print(msg)
+
+func _dist_to_seg(p: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab: Vector2 = b - a
+	var l2: float = ab.length_squared()
+	if l2 < 0.0001:
+		return p.distance_to(a)
+	var k: float = clampf((p - a).dot(ab) / l2, 0.0, 1.0)
+	return p.distance_to(a + ab * k)
+
+
+func _dist_to_polyline(p: Vector2, pts: Array) -> float:
+	var best := 99999.0
+	for i in pts.size() - 1:
+		best = minf(best, _dist_to_seg(p, pts[i], pts[i + 1]))
+	return best
+
+
+func _check_move_path(scene: Variant) -> void:
+	## 多格移动动画必须沿「真实路径」走，而不是从起点直连终点。
+	## 链路：引擎 move_path 逐格路径 → move 事件 → 场景 _slides 的 pts →
+	##      _display_center 按 pts 分段插值。这里采样 9 个时刻，
+	##      位置必须落在折线上（相差不得超过 1 像素）。
+	var st: FieldState = scene.engine.state
+	if st.unit_at(Vector2i(3, 0)) != null or st.unit_at(Vector2i(4, 0)) != null \
+			or st.unit_at(Vector2i(3, 1)) != null or st.unit_at(Vector2i(4, 1)) != null:
+		_smoke_fail("多格移动：(3,0)/(4,0)/(3,1)/(4,1) 已被占用，用例前提不成立")
+		return
+	var repo := CardRepo.load_json()
+	var fast: CardData = repo.get_card(9027)    # 夜鸭：移动距离 2
+	var wall: CardData = repo.get_card(8001)    # 木栅栏：占住 (4,0) 逼出 L 形走法
+	st.place(fast, Vector2i(3, 0), "self")
+	st.place(wall, Vector2i(4, 0), "opponent")
+	scene.engine.move(Vector2i(3, 0), Vector2i(4, 1), "self")
+	var pl2: Placement = st.unit_at(Vector2i(4, 1))
+	if pl2 == null or not scene._slides.has(pl2):
+		_smoke_fail("多格移动：单位没到 (4,1) 或场景没排队滑行动画")
+		return
+	var sl: Dictionary = scene._slides[pl2]
+	var pts: Array = sl.get("pts", [])
+	var want: Array[Vector2] = []
+	for c in [Vector2i(3, 0), Vector2i(3, 1), Vector2i(4, 1)]:
+		want.append(scene._cell_center(c))
+	if pts != want:
+		_smoke_fail("多格移动：动画途经点与真实路径不符（%s）" % str(pts))
+		return
+	# 滑行时长随格数增加：2 格 = MOVE_SLIDE_BASE + PER_STEP * 2
+	var two_dur: int = scene.MOVE_SLIDE_BASE_MS + scene.MOVE_SLIDE_PER_STEP_MS * 2
+	if int(sl.get("dur", 0)) != two_dur:
+		_smoke_fail("多格移动：2 格滑行时长应为 %d，实际 %d"
+				% [two_dur, int(sl.get("dur", 0))])
+	# 采样整段动画：任一时刻的位置都必须落在那条 L 形折线上
+	var worst := 0.0
+	var dur: int = int(sl.get("dur", 0))
+	for i in 9:
+		var frac: float = float(i) / 8.0
+		sl["start"] = Time.get_ticks_msec() - int(float(dur) * frac)
+		var pos: Vector2 = scene._display_center(pl2, Vector2i(4, 1))
+		worst = maxf(worst, _dist_to_polyline(pos, want))
+	# 反证：直线插值（修复前的行为）在这条 L 形路径上必然偏得很远，
+	# 否则说明这条用例根本抓不到回归。
+	var diag := 0.0
+	for i in 9:
+		var f2: float = float(i) / 8.0
+		var e2: float = 1.0 - pow(1.0 - f2, 3.0)
+		diag = maxf(diag, _dist_to_polyline(want[0].lerp(want[2], e2), want))
+	if worst > 1.0:
+		_smoke_fail("多格移动：最大偏离真实路径 %.1f 像素（动画走了捷径）" % worst)
+	elif diag < 20.0:
+		_smoke_fail("多格移动：直线插值只偏离 %.1f 像素，这条用例抓不到回归" % diag)
+	else:
+		print("SMOKE OK 多格移动走真实路径：途经点 %d 个 / 时长 %dms / 最大偏离 %.2f 像素（直线插值会偏 %.0f）" % [pts.size(), dur, worst, diag])
+	st.board.erase(Vector2i(4, 1))
+	st.board.erase(Vector2i(4, 0))
+
+func _check_battle(scene: Variant) -> void:
+	## 战斗场景的所有行为断言：扇形手牌 + 多格移动动画走真实路径 + 效果/道具溢出兜底
+	## + 战斗内地图总览（R64）。
+	_check_hand_fan(scene)
+	_check_move_path(scene)
+	_check_overflow(scene)
+	_check_map_panel(scene)
+	_check_frozen_aura(scene)
+	_check_sleep_aura(scene)
+	_check_turn_gate(scene)
+	_check_relic_gate(scene)
+
+
+func _check_relic_gate(scene: Variant) -> void:
+	## R75：战斗右栏道具 —— 悬浮已能逐个看说明，**装得下时不允许点开浏览面板**。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("道具查看：拿不到 engine")
+		return
+	var cap: int = scene._relic_max_slots()
+	if cap < 1:
+		_smoke_fail("道具栏：可见槽位数 %d（应 >= 1）" % cap)
+		return
+	var saved: Array[int] = eng.self_relics.duplicate()
+	eng.self_relics = [6001, 6003]
+	if scene._relic_bar_overflowed():
+		_smoke_fail("道具栏：2 件（容量 %d）却判定为装不下" % cap)
+		return
+	# 装满不溢出：点道具栏不该打开面板
+	eng.self_relics = []
+	for i in cap:
+		eng.self_relics.append(6001)
+	scene._relics_visible = false
+	scene._on_left_click(scene._relic_zone_rect().get_center())
+	if scene._relics_visible:
+		_smoke_fail("道具栏：装得下（%d/%d）却仍能点开浏览面板" % [cap, cap])
+		eng.self_relics = saved
+		return
+	# 超出容量：必须能点开
+	for i in range(0, cap + 2):
+		eng.self_relics.append(6001)
+	if not scene._relic_bar_overflowed():
+		_smoke_fail("道具栏：%d 件（容量 %d）却判定为装得下" % [eng.self_relics.size(), cap])
+		eng.self_relics = saved
+		return
+	scene._on_left_click(scene._relic_zone_rect().get_center())
+	if not scene._relics_visible:
+		_smoke_fail("道具栏：装不下（%d>%d）却点不开浏览面板" % [eng.self_relics.size(), cap])
+		eng.self_relics = saved
+		return
+	scene._relics_visible = false
+	# 详情面板：能列出全部，且字号比悬浮提示大
+	if scene._relic_panel_rows().size() != eng.self_relics.size():
+		_smoke_fail("道具浏览面板：应列出全部 %d 件，实际 %d"
+				% [eng.self_relics.size(), scene._relic_panel_rows().size()])
+		eng.self_relics = saved
+		return
+	if int(scene.RELIC_P_NAME) <= 10 or int(scene.RELIC_P_DESC) <= 9:
+		_smoke_fail("道具浏览面板：字号没放大（名称 %d / 说明 %d，原为 10 / 9）"
+				% [int(scene.RELIC_P_NAME), int(scene.RELIC_P_DESC)])
+		eng.self_relics = saved
+		return
+	eng.self_relics = saved
+	print("SMOKE OK 道具查看：战斗道具栏容量 %d 个 / 装满点不开 / %d 件可点开 / 详情全列且字号 %d>%d"
+			% [cap, cap + 2, int(scene.RELIC_P_NAME), int(scene.RELIC_P_DESC)])
+
+
+func _check_turn_gate(scene: Variant) -> void:
+	## R71：**玩家只能在自己（我方）的回合操作我方单位**。
+	## 原来 `_on_board_click` / 手牌点击 / `_finish_drag` 三条出手路径**都没有回合门禁**
+	## → 敌方 AI 正在行动时玩家仍能点选/移动/攻击自己的单位，
+	## 看起来就像「AI 错误地操作了我方没行动过的单位」。
+	## 这里逐条路径验证：敌方回合时点击/拖拽都不该改变任何我方单位状态。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("回合门禁：拿不到 engine")
+		return
+	# 摆一个我方单位 + 一个目标格，记录初始状态
+	var src := Vector2i(4, 3)
+	var dst := Vector2i(4, 2)
+	var card := CardData.new()
+	card.id = 7901
+	card.card_name = "门禁 Dummy"
+	card.kind = "盟友"
+	card.power = 3
+	card.health = 9
+	card.attack_range = 1
+	card.move_speed = 2
+	card.rarity = 0
+	card.group = "player"
+	card.card_class = "森林精魄"
+	if eng.state.unit_at(src) == null:
+		eng.state.place(CardData.from_dict(card.to_dict()), src, GameEngine.SIDE_SELF)
+	var me: Placement = eng.state.unit_at(src)
+	if me == null:
+		_smoke_fail("回合门禁：没能摆下我方单位")
+		return
+
+	# ① 我方回合：点击应当**能**选中（门禁不能挡掉正常操作）
+	eng.current_side = GameEngine.SIDE_SELF
+	eng.state.reset_units(GameEngine.SIDE_SELF)
+	scene._on_board_click(src)
+	if scene.selection == null or scene.selection[0] != "board":
+		_smoke_fail("回合门禁：我方回合点我方单位应能选中（门禁挡错了）")
+		return
+	scene._clear_selection()
+
+	# ② 敌方回合：点击 / 拖拽都不应动我方单位
+	eng.current_side = GameEngine.SIDE_OPPONENT
+	eng.state.reset_units(GameEngine.SIDE_OPPONENT)
+	var hp0: int = me.health
+	var cell0: Vector2i = src
+	scene._on_board_click(src)               # 点自己 → 不该被选中
+	var picked: bool = scene.selection != null and scene.selection[0] == "board"
+	scene._on_board_click(dst)               # 点目标格 → 不该触发移动/攻击
+	var moved: bool = eng.state.unit_at(dst) != null
+	# 拖拽路径也挡一道（它独立于 _on_board_click）
+	scene._drag_idx = 0
+	scene._finish_drag(dst)
+	var moved2: bool = eng.state.unit_at(dst) != null
+	if picked or moved or moved2 or me.health != hp0 \
+			or eng.state.unit_at(cell0) != me:
+		_smoke_fail("回合门禁：敌方回合仍能操作我方单位（选中=%s 移动=%s 拖拽移动=%s 血 %d→%d）"
+				% [str(picked), str(moved), str(moved2), hp0, me.health])
+		return
+	eng.current_side = GameEngine.SIDE_SELF
+	print("SMOKE OK 回合门禁：敌方回合点棋盘/点目标格/拖牌都动不了我方单位；我方回合正常可操作")
+
+
+func _check_arcane_with_charm(scene: Variant) -> void:
+	## 奥秘之泉（R71 修复）：**已经持有「奥秘护符」时，「喝下泉水」选项依然可用**。
+	## 原来那条分支把 bbq_btn 一起 `visible = false` 了 → 玩家只能点「继续」，
+	## 第二个选项形同虚设。而且闸门用的是 `_arcane_charm_taken`（护符已到手）而不是
+	## `_arcane_drunk`（是否已喝过）→ 已戴护符的玩家连泉水都喝不到。
+	RunState.gain_relic(6020)                 # 先戴上护符，复现「已有护符」的局面
+	scene._setup_arcane()                     # 重铺选项（UI 平时只在 _ready 里建一次）
+	await process_frame
+	var bbq: Button = scene.get_node_or_null("Center/BBQBtn")
+	var rest: Button = scene.get_node_or_null("Center/RestBtn")
+	if bbq == null or rest == null:
+		_smoke_fail("奥秘之泉：找不到 RestBtn / BBQBtn 节点")
+		return
+	# 拿到护符之后也照样能点「喝下泉水」→ 去卡牌奖励（限定 效果/技能）
+	scene._ui_bbq()
+	await process_frame
+	var kinds: Array = RunState.reward_kinds
+	if not ("效果" in kinds and "技能" in kinds) or RunState.reward_context != "event":
+		_smoke_fail("奥秘之泉：已有护符时点「喝下泉水」应进入卡牌奖励（限定 效果/技能），实际 kinds=%s ctx=%s"
+				% [str(kinds), RunState.reward_context])
+		return
+	if not scene._arcane_drunk:
+		_smoke_fail("奥秘之泉：点「喝下泉水」应记下 _arcane_drunk（防重复喝）")
+		return
+	print("SMOKE OK 奥秘之泉：已有护符时「喝下泉水」仍可选 → 进入卡牌奖励（限定 效果/技能）")
+
+
+func _check_frozen_aura(scene: Variant) -> void:
+	## 冰封特效（R68）：`Placement.frozen` 必须常驻可见 —— 这是个**看卡面看不出来**的状态。
+	## ① 引擎施加冰封 → 界面发出 frozen 事件（会加飘字/爆点）；
+	## ② 场上被冰封的单位 → `_board_has_frozen()` 为真（_process 靠它逐帧重绘脉冲）；
+	## ③ 常驻光环与「嘲讽光环」互不重叠：同时具备两个状态时冰封徽标要往下错开。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("冰封特效：拿不到 engine")
+		return
+	# 场上摆一个我方单位，直接置 frozen（走引擎真实字段，界面判据同源）
+	var cell := Vector2i(4, 1)
+	if eng.state.unit_at(cell) == null:
+		var cd := CardData.new()
+		cd.id = 7901
+		cd.card_name = "冰封烟测 Dummy"
+		cd.kind = "盟友"
+		cd.health = 10     # _apply_frozen 对血量 ≤ 0 的单位不施加（死单位冰封没意义）
+		cd.power = 2
+		eng.state.place(cd, cell, GameEngine.SIDE_SELF)
+	var pl: Placement = eng.state.unit_at(cell)
+	pl.frozen = true
+	if not scene._board_has_frozen():
+		_smoke_fail("冰封特效：场上有 frozen 单位时 _board_has_frozen() 应为真")
+		return
+	# 常驻光环：直接调（内部只读 frozen，不改状态）——真渲染在后面的帧里发生
+	var c2: Vector2 = scene._display_center(pl, cell)
+	scene._draw_frozen_aura(c2, 40.0, 56.0, 0)
+	scene._draw_frozen_aura(c2, 40.0, 56.0, 1)   # 徽标在第 2 行（上方留给嘲讽）
+	if not scene._board_has_taunt():
+		pass   # 本用例没放嘲讽单位，这里只是确认函数可共存调用
+	# frozen 事件：引擎唯一入口会 emit，界面据此演飘字
+	var got := [0]
+	eng.action.connect(func(what: String, _d: Variant) -> void:
+			if what == "frozen":
+				got[0] = int(got[0]) + 1)
+	eng._apply_frozen(pl, "烟测")
+	if int(got[0]) != 1 or not pl.frozen:
+		_smoke_fail("冰封特效：_apply_frozen 应发出 1 次 frozen 事件并置位 frozen（实际 %d）"
+				% int(got[0]))
+		return
+	pl.frozen = false
+	if pl.card.card_name == "冰封烟测 Dummy" and eng.state.unit_at(cell) == pl:
+		eng.state.board.erase(cell)   # 清场：别把 dummy 留给后续用例
+	print("SMOKE OK 冰封特效：frozen 事件 + 常驻寒霜光环 + 与嘲讽徽标错开，三者同源于 Placement.frozen")
+
+
+func _check_sleep_aura(scene: Variant) -> void:
+	## 沉睡特效（R72）：恶魔鸭 9116「还不能动」是**看卡面看不出来**的
+	## 隐藏状态，而且「还差几下」直接决定「现在打不打它」（R76：挨一下 -1、打空立刻醒）。
+	##   ① `Placement.sleep_left > 0` → `_board_has_sleep()` 为真（_process 靠它逐帧重绘）；
+	##   ② 常驻光环 + 徽标（「沉睡 N」）与冰封/嘲讽共用底座，按行号错开不重叠；
+	##   ③ 苏醒事件 wake → 挣脱环进 `_wake_rings` 并被 `_tick_anims` 认作「还在演」。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("沉睡特效：拿不到 engine")
+		return
+	# ⚠️ 格子必须避开其它用例的占位：回合门禁用 (4,3)→(4,2)、冰封用 (4,1)。
+	# 本轮最初摆在 (4,2)，结果门禁用例的 dst 本来就有单位 → 被误判成「移动成功」。
+	#
+	# R76：这里**不能**沿用「格子空着才建卡」的老写法 —— 整套跑时敌方 AI 可能已经
+	# 在这一格部署了单位（实测拿到过「爆炎鸭」），于是 sp 变成别人的卡：没有「沉睡」
+	# trait，挨打当然不会醒（表现为 wake 0 次 / sleep_left 仍 1）。
+	# 改成**先清场再摆自己的卡**，让这个用例与场上其它单位彻底无关。
+	var cell := Vector2i(2, 2)
+	eng.state.board.erase(cell)
+	var cd := CardData.new()
+	cd.id = 7902
+	cd.card_name = "沉睡烟测 Dummy"
+	cd.kind = "盟友"
+	cd.health = 10
+	cd.power = 2
+	# 必须带「沉睡」trait，否则 _demon_duck_hurt 不会分派、挨打也不会醒。
+	cd.traits = [FieldState.SLEEP_TRAIT]
+	eng.state.place(cd, cell, GameEngine.SIDE_SELF)
+	var sp: Placement = eng.state.unit_at(cell)
+	# 记下这是我们摆的，用完挪走（不给后面的用例留垃圾）
+	var ours := sp != null and sp.card.card_name == "沉睡烟测 Dummy"
+	if sp == null:
+		_smoke_fail("沉睡特效：在 %s 摆烟测卡失败" % str(cell))
+		return
+	sp.sleep_left = 2
+	if not scene._board_has_sleep():
+		_smoke_fail("沉睡特效：场上有 sleep_left > 0 的单位时 _board_has_sleep() 应为真")
+		return
+	# 徽标行号 0/1/2 都画一遍 → 三个状态同时成立时也不该有绘制错误/重叠
+	var cs: Vector2 = scene._display_center(sp, cell)
+	for row in 3:
+		scene._draw_sleep_aura(cs, 40.0, 56.0, 2, row)
+	# 徽标宽度随文案长度自适应（「沉睡 2」比「冰封」长，写死宽度会被截断）
+	var bw2 := maxf(40.0, 14.0 + float("沉睡 2".length()) * 11.0)
+	if bw2 <= 40.0:
+		_smoke_fail("沉睡特效：徽标宽度应随文案自适应（实际 %.1f）" % bw2)
+		return
+	# 苏醒事件 → 挣脱环（用引擎真实入口走一遍，不手搓事件）
+	# R76 改口径：沉睡是「挨打计数」—— _sleep_tick **不再**递减也不再发 wake，
+	# 唯一的醒来路径是 `_hit_unit` → _demon_duck_hurt（挨够次数 sleep_left 归零）。
+	# 所以这里必须用受伤来触发苏醒；用 _sleep_tick 的话 R76 之后永远醒不了。
+	sp.sleep_left = 1
+	var woke := [0]
+	eng.action.connect(func(what: String, _d: Variant) -> void:
+			if what == "wake":
+				woke[0] = int(woke[0]) + 1)
+	var rings_before: int = scene._wake_rings.size()
+	eng._hit_unit(sp, 1, "沉睡烟测")
+	if int(woke[0]) != 1 or sp.sleep_left != 0:
+		_smoke_fail(("沉睡特效：挨打应发 1 次 wake 并把 sleep_left 归零（实际 %d / %d；卡=%s 有沉睡trait=%s ours=%s）"
+				% [int(woke[0]), sp.sleep_left, sp.card.card_name,
+					str(sp.card.traits.has(FieldState.SLEEP_TRAIT)), str(ours)]))
+		return
+	# 顺带锁住 R76 的核心：_sleep_tick 不再偷偷递减（回合不参与沉睡计数）
+	# —— 放在「醒来后 _board_has_sleep() 转假」之后断言，否则会把 sleep_left 改回 2。
+	if scene._wake_rings.size() <= rings_before:
+		_smoke_fail("沉睡特效：wake 事件应往 _wake_rings 加挣脱环（%d → %d）"
+				% [rings_before, scene._wake_rings.size()])
+		return
+	if scene._board_has_sleep():
+		_smoke_fail("沉睡特效：醒来后 _board_has_sleep() 应转为假（光环不该再画）")
+		return
+	sp.sleep_left = 2
+	eng._sleep_tick(sp.owner)
+	if sp.sleep_left != 2:
+		_smoke_fail("沉睡特效：R76 起 _sleep_tick 不该递减沉睡（应仍为 2，实际 %d）"
+				% sp.sleep_left)
+		eng.state.board.erase(cell)
+		return
+	scene._wake_rings.clear()
+	scene._draw_wake_rings()   # 真渲染空/非空两种状态都不出错
+	if ours and eng.state.unit_at(cell) == sp:
+		eng.state.board.erase(cell)   # 清场：别把 dummy 留给后续用例
+	print("SMOKE OK 沉睡特效：常驻紫环 + 「沉睡 N」徽标（3 行互不重叠）+ 苏醒挣脱环，同源于 Placement.sleep_left")
+
+
+func _check_map_panel(scene: Variant) -> void:
+	## 战斗内地图总览（R64）：
+	##   ① 「重开一局」按钮已删除、换成「地图」按钮；
+	##   ② 打开面板 → 画出可走/当前位置标记，滚轮能滚，关掉后复原；
+	##   ③ 面板只读：点节点不会改路线（current_node_id 不变）。
+	## 断言打在真实状态上，不靠截图。
+	var tb: Variant = scene.get_node_or_null("Toolbar")
+	if tb == null:
+		_smoke_fail("战斗内地图：找不到 Toolbar 节点")
+		return
+	if tb.get_node_or_null("RestartBtn") != null:
+		_smoke_fail("战斗内地图：「重开一局」按钮应已删除")
+		return
+	if tb.get_node_or_null("MapBtn") == null:
+		_smoke_fail("战斗内地图：Toolbar 里没有 MapBtn")
+		return
+	# run 中（有地图）→ 按钮可见
+	if not scene.map_btn.visible:
+		_smoke_fail("战斗内地图：run 中「地图」按钮应可见")
+		return
+	# 打开：_mapview_scroll_max>0（层数装不下，层数见 RogueMap.COLS）+ 出现可走节点
+	scene._toggle_map()
+	if not scene._map_visible:
+		_smoke_fail("战斗内地图：_toggle_map 后面板没有打开")
+		return
+	if scene._mapview_scroll_max() <= 0.0:
+		_smoke_fail("战斗内地图：%d 层应超出面板高度（scroll_max 应 > 0，实际 %.1f）"
+				% [RogueMap.COLS, scene._mapview_scroll_max()])
+		return
+	# 打开时视野应对准当前层（滚到接近底部）
+	if scene._map_scroll < scene._mapview_scroll_max() - 1.0:
+		_smoke_fail("战斗内地图：打开时应把视野对准当前层（scroll %.1f / max %.1f）"
+				% [scene._map_scroll, scene._mapview_scroll_max()])
+		return
+	# 可走节点判定与 RunState 同源：至少标出 1 个「下一步」
+	var nxt := 0
+	for n in RunState.available_nodes():
+		if scene._mapview_is_next(n):
+			nxt += 1
+	if nxt != RunState.available_nodes().size():
+		_smoke_fail("战斗内地图：%d/%d 个可走节点被标出"
+				% [nxt, RunState.available_nodes().size()])
+		return
+	# 滚轮：往下滚到顶
+	var before: float = scene._map_scroll
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	wheel.pressed = true
+	scene._gui_input(wheel)
+	if not (scene._map_scroll > before or scene._map_scroll >= scene._mapview_scroll_max()):
+		_smoke_fail("战斗内地图：滚轮下滚没生效（%.1f → %.1f）"
+				% [before, scene._map_scroll])
+		return
+	# 只读：点面板里的节点不改路线
+	var cur_before := RunState.current_node_id
+	var some_node: Dictionary = {}
+	for col_nodes in RunState.map_columns:
+		for node in col_nodes:
+			if scene._mapview_is_next(node):
+				some_node = node
+				break
+		if not some_node.is_empty():
+			break
+	if not some_node.is_empty():
+		scene._on_left_click(scene._mapview_node_pos(some_node))
+		if RunState.current_node_id != cur_before:
+			_smoke_fail("战斗内地图：面板应当只读，点节点却把路线改到了 %d"
+					% RunState.current_node_id)
+			return
+	# 点任意处 = 关闭（上面那次点击已经把它关掉了，这里确认状态）
+	if scene._map_visible:
+		_smoke_fail("战斗内地图：点任意处应关闭面板")
+		return
+	scene._toggle_map()
+	if not scene._map_visible:
+		_smoke_fail("战斗内地图：关闭后应能再次打开")
+		return
+	# 几何：扫一圈滚动位置，**画出来的节点不能越出面板**；两端（起点/Boss）也必须在可视区。
+	var pr: Rect2 = scene._mapview_panel_rect()
+	var view: Rect2 = scene._mapview_view_rect()
+	var out_of_panel := 0
+	for s in 13:
+		scene._map_scroll = scene._mapview_scroll_max() * float(s) / 12.0
+		for col_nodes in RunState.map_columns:
+			for node in col_nodes:
+				var pos: Vector2 = scene._mapview_node_pos(node)
+				if not view.grow(scene.MAPVIEW_NODE_R + 32.0).has_point(pos):
+					continue   # 被剔除的不画，不算越界
+				if not pr.has_point(pos):
+					out_of_panel += 1
+	if out_of_panel > 0:
+		_smoke_fail("战斗内地图：%d 个可见节点画到了面板外" % out_of_panel)
+		return
+	scene._map_scroll = 0.0
+	if not view.has_point(scene._mapview_node_pos(RunState.map_columns[0][0])):
+		_smoke_fail("战斗内地图：滚到顶时起点层不在可视区内")
+		return
+	scene._map_scroll = scene._mapview_scroll_max()
+	var boss_col: Array = RunState.map_columns[RunState.map_columns.size() - 1]
+	if not view.has_point(scene._mapview_node_pos(boss_col[0])):
+		_smoke_fail("战斗内地图：滚到底时 Boss 层不在可视区内")
+		return
+	# **保持面板打开**：test_smoke 剩下的几帧会真的把 _draw_map_panel 画出来 ——
+	# 面板里的绘制错误（越界访问 / 空引用）只有真渲染才抓得到（headless 抓不到）。
+	print("SMOKE OK 战斗内地图：重开按钮已换成地图按钮，面板可开关/滚轮翻动/只读（可走 %d 个），几何不越界，保持打开供后续帧渲染"
+			% nxt)
+
+
+func _check_overflow(scene: Variant) -> void:
+	## 效果区 / 敌方效果区 / 道具栏：可见槽位数必须 >= 1，且**最后一个可见槽位不得越出区域外框**。
+	## 超出可见槽位的部分改画成「+N」摘要卡（点区域可查看全部）—— 这条锁保证
+	## 「效果或道具再多，也不会溢出画到屏幕外、或者把后面的卡遮没」。
+	var zb: float = scene.GRID_Y + scene.GRID_H
+	var cap_eff: int = scene._effect_zone_max_slots()
+	var last_eff: Rect2 = scene._effect_rect(cap_eff - 1)
+	if cap_eff < 1:
+		_smoke_fail("效果区：可见槽位数为 %d（应 >= 1）" % cap_eff)
+	elif last_eff.position.y + last_eff.size.y > zb + 0.5:
+		_smoke_fail("效果区：第 %d 张卡底部 %.1f 越出区域下沿 %.1f"
+				% [cap_eff, last_eff.position.y + last_eff.size.y, zb])
+	var rz: Rect2 = scene._relic_zone_rect()
+	var cap_rel: int = scene._relic_max_slots()
+	var last_rel: Rect2 = scene._relic_rect(cap_rel - 1)
+	if cap_rel < 1:
+		_smoke_fail("道具栏：可见槽位数为 %d（应 >= 1）" % cap_rel)
+	elif last_rel.position.y + last_rel.size.y > rz.position.y + rz.size.y + 0.5:
+		_smoke_fail("道具栏：第 %d 个徽章底部 %.1f 越出区域下沿 %.1f"
+				% [cap_rel, last_rel.position.y + last_rel.size.y, rz.position.y + rz.size.y])
+	var ez: Rect2 = scene._enemy_zone_rect()
+	var cap_ee: int = scene._enemy_effect_zone_max_slots()
+	var last_ee: Rect2 = scene._enemy_effect_rect(cap_ee - 1)
+	if cap_ee < 1:
+		_smoke_fail("敌方效果区：可见槽位数为 %d（应 >= 1）" % cap_ee)
+	elif last_ee.position.y + last_ee.size.y > ez.position.y + ez.size.y + 0.5:
+		_smoke_fail("敌方效果区：第 %d 张卡底部 %.1f 越出区域下沿 %.1f"
+				% [cap_ee, last_ee.position.y + last_ee.size.y, ez.position.y + ez.size.y])
+	else:
+		print("SMOKE OK 溢出兜底：效果区 %d 槽 / 敌方效果 %d 槽 / 道具 %d 槽（末位均不越界，超出改画 +N 摘要）"
+				% [cap_eff, cap_ee, cap_rel])

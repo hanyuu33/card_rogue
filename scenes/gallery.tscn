@@ -1,0 +1,270 @@
+[gd_scene load_steps=4 format=3 uid="uid://cgallery0card0"]
+
+[ext_resource type="Script" path="res://scripts/gallery_scene.gd" id="1_gallery"]
+
+[sub_resource type="SystemFont" id="SysFont_cjk"]
+font_names = PackedStringArray("Microsoft YaHei UI", "Microsoft YaHei", "SimHei")
+
+[sub_resource type="ButtonGroup" id="BG_gallery"]
+
+[node name="Gallery" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_gallery")
+
+[node name="BG" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.914, 0.906, 0.886, 1)
+
+[node name="TopBar" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 44.0
+grow_horizontal = 2
+
+[node name="TitleLabel" type="Label" parent="TopBar"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 9.0
+offset_right = 152.0
+offset_bottom = 35.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 18
+text = "卡牌图鉴"
+
+[node name="PlayerTab" type="Button" parent="TopBar"]
+layout_mode = 0
+offset_left = 158.0
+offset_top = 6.0
+offset_right = 298.0
+offset_bottom = 38.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 15
+toggle_mode = true
+button_pressed = true
+button_group = SubResource("BG_gallery")
+text = "玩家卡牌图鉴"
+
+[node name="EnemyTab" type="Button" parent="TopBar"]
+layout_mode = 0
+offset_left = 304.0
+offset_top = 6.0
+offset_right = 416.0
+offset_bottom = 38.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 15
+toggle_mode = true
+button_group = SubResource("BG_gallery")
+text = "敌人图鉴"
+
+[node name="CountLabel" type="Label" parent="TopBar"]
+layout_mode = 0
+offset_left = 430.0
+offset_top = 10.0
+offset_right = 900.0
+offset_bottom = 34.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.86, 0.87, 0.9, 1)
+text = ""
+
+[node name="BackBtn" type="Button" parent="TopBar"]
+layout_mode = 0
+offset_left = 1130.0
+offset_top = 6.0
+offset_right = 1264.0
+offset_bottom = 38.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 15
+text = "← 返回标题"
+
+[node name="LeftPanel" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 52.0
+offset_right = 220.0
+offset_bottom = 412.0
+
+[node name="KindTitle" type="Label" parent="LeftPanel"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 12.0
+offset_right = 200.0
+offset_bottom = 34.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "种类"
+
+[node name="KindOpt" type="OptionButton" parent="LeftPanel"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 38.0
+offset_right = 200.0
+offset_bottom = 66.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+
+[node name="CostTitle" type="Label" parent="LeftPanel"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 82.0
+offset_right = 200.0
+offset_bottom = 104.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "费用"
+
+[node name="CostOpt" type="OptionButton" parent="LeftPanel"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 108.0
+offset_right = 200.0
+offset_bottom = 136.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+
+[node name="ClassTitle" type="Label" parent="LeftPanel"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 152.0
+offset_right = 200.0
+offset_bottom = 174.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "职业"
+
+[node name="ClassOpt" type="OptionButton" parent="LeftPanel"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 178.0
+offset_right = 200.0
+offset_bottom = 206.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+
+[node name="SearchTitle" type="Label" parent="LeftPanel"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 210.0
+offset_right = 200.0
+offset_bottom = 232.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "搜索"
+
+[node name="SearchEdit" type="LineEdit" parent="LeftPanel"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 236.0
+offset_right = 200.0
+offset_bottom = 264.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+placeholder_text = "输入卡名…"
+
+[node name="Hint" type="Label" parent="LeftPanel"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 280.0
+offset_right = 206.0
+offset_bottom = 402.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.45, 0.47, 0.5, 1)
+text = "左键点卡牌查看详情"
+autowrap_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="."]
+layout_mode = 0
+offset_left = 232.0
+offset_top = 52.0
+offset_right = 988.0
+offset_bottom = 712.0
+horizontal_scroll_mode = 0
+
+[node name="Grid" type="Control" parent="Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 0
+
+[node name="DetailPanel" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 1000.0
+offset_top = 52.0
+offset_right = 1272.0
+offset_bottom = 712.0
+
+[node name="NameLabel" type="Label" parent="DetailPanel"]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 14.0
+offset_right = 254.0
+offset_bottom = 44.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 19
+text = ""
+
+[node name="KindLabel" type="Label" parent="DetailPanel"]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 48.0
+offset_right = 254.0
+offset_bottom = 72.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.35, 0.38, 0.44, 1)
+text = ""
+
+[node name="StatsLabel" type="Label" parent="DetailPanel"]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 82.0
+offset_right = 254.0
+offset_bottom = 106.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = ""
+
+[node name="TraitsLabel" type="Label" parent="DetailPanel"]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 112.0
+offset_right = 254.0
+offset_bottom = 136.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.35, 0.38, 0.44, 1)
+text = ""
+
+[node name="TextLabel" type="Label" parent="DetailPanel"]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 150.0
+offset_right = 254.0
+offset_bottom = 380.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 15
+autowrap_mode = 2
+text = ""
+
+[node name="TargetBadge" type="Label" parent="DetailPanel"]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 400.0
+offset_right = 254.0
+offset_bottom = 430.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.42, 0.29, 0.84, 1)
+text = "需要选择目标"
+visible = false

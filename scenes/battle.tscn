@@ -1,0 +1,112 @@
+[gd_scene load_steps=3 format=3 uid="uid://cbattle0card0"]
+
+[ext_resource type="Script" path="res://scripts/battle_scene.gd" id="1_battle"]
+
+[sub_resource type="SystemFont" id="SysFont_cjk"]
+font_names = PackedStringArray("Microsoft YaHei UI", "Microsoft YaHei", "SimHei")
+
+[node name="Battle" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_battle")
+
+[node name="Toolbar" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 36.0
+grow_horizontal = 2
+
+[node name="TurnLabel" type="Label" parent="Toolbar"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 6.0
+offset_right = 210.0
+offset_bottom = 30.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "我方回合"
+
+[node name="HpLabel" type="Label" parent="Toolbar"]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 6.0
+offset_right = 470.0
+offset_bottom = 30.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "我方 HP 20 · 敌方 HP 5"
+
+[node name="StatusLabel" type="Label" parent="Toolbar"]
+layout_mode = 0
+offset_left = 480.0
+offset_top = 6.0
+offset_right = 790.0
+offset_bottom = 30.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 13
+text = ""
+
+[node name="LogBtn" type="Button" parent="Toolbar"]
+layout_mode = 0
+offset_left = 796.0
+offset_top = 4.0
+offset_right = 844.0
+offset_bottom = 32.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "记录"
+
+[node name="SndBtn" type="Button" parent="Toolbar"]
+layout_mode = 0
+offset_left = 850.0
+offset_top = 4.0
+offset_right = 906.0
+offset_bottom = 32.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "音效:开"
+
+[node name="TitleBtn" type="Button" parent="Toolbar"]
+layout_mode = 0
+offset_left = 912.0
+offset_top = 4.0
+offset_right = 978.0
+offset_bottom = 32.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "标题"
+
+[node name="LevelBtn" type="Button" parent="Toolbar"]
+layout_mode = 0
+offset_left = 984.0
+offset_top = 4.0
+offset_right = 1056.0
+offset_bottom = 32.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "选关"
+
+[node name="EndTurnBtn" type="Button" parent="Toolbar"]
+layout_mode = 0
+offset_left = 1062.0
+offset_top = 4.0
+offset_right = 1152.0
+offset_bottom = 32.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "回合结束"
+
+[node name="MapBtn" type="Button" parent="Toolbar"]
+layout_mode = 0
+offset_left = 1158.0
+offset_top = 4.0
+offset_right = 1250.0
+offset_bottom = 32.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "地图"

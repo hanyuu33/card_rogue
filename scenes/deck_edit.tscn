@@ -1,0 +1,69 @@
+[gd_scene load_steps=3 format=3 uid="uid://deckedit0demo00"]
+
+[ext_resource type="Script" path="res://scripts/deck_edit_scene.gd" id="1_deckedit"]
+
+[sub_resource type="SystemFont" id="SysFont_cjk"]
+font_names = PackedStringArray("Microsoft YaHei UI", "Microsoft YaHei", "SimHei")
+
+[node name="DeckEdit" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_deckedit")
+
+[node name="TopBar" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 44.0
+grow_horizontal = 2
+
+[node name="TitleLabel" type="Label" parent="TopBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.92, 0.9, 0.86, 1)
+text = "卡组编辑"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HintLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 52.0
+offset_bottom = 96.0
+grow_horizontal = 2
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.72, 0.7, 0.66, 1)
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="ConfirmBtn" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -170.0
+offset_top = -58.0
+offset_right = 170.0
+offset_bottom = -18.0
+grow_horizontal = 2
+grow_vertical = 0
+disabled = true
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 16
+text = "请先选择一张卡"

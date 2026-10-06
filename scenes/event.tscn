@@ -1,0 +1,124 @@
+[gd_scene load_steps=4 format=3 uid="uid://cevent0rest0demo0"]
+
+[ext_resource type="Script" path="res://scripts/event_scene.gd" id="1_event"]
+[ext_resource type="Script" path="res://scripts/campfire.gd" id="2_campfire"]
+
+[sub_resource type="SystemFont" id="SysFont_cjk"]
+font_names = PackedStringArray("Microsoft YaHei UI", "Microsoft YaHei", "SimHei")
+
+[node name="EventScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_event")
+
+[node name="BG" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.145, 0.161, 0.204, 1)
+
+[node name="Campfire" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_campfire")
+
+[node name="TopBar" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 44.0
+grow_horizontal = 2
+
+[node name="TitleLabel" type="Label" parent="TopBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.92, 0.9, 0.86, 1)
+text = "事  件"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Center" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -230.0
+offset_top = 60.0
+offset_right = 230.0
+offset_bottom = 280.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 18
+
+[node name="EventName" type="Label" parent="Center"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 34
+theme_override_colors/font_color = Color(0.95, 0.87, 0.6, 1)
+text = "休息"
+horizontal_alignment = 1
+
+[node name="Desc" type="Label" parent="Center"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.78, 0.76, 0.72, 1)
+text = "前路的战斗还在等着你。
+在篝火旁休息，恢复 50% 最大生命。"
+horizontal_alignment = 1
+
+[node name="HPLabel" type="Label" parent="Center"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
+text = "当前生命 20 / 最大生命 20"
+horizontal_alignment = 1
+
+[node name="ResultLabel" type="Label" parent="Center"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.4, 0.85, 0.4, 1)
+text = ""
+horizontal_alignment = 1
+
+[node name="RestBtn" type="Button" parent="Center"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 46)
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 17
+text = "在这里休息"
+
+[node name="BBQBtn" type="Button" parent="Center"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 42)
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 16
+text = "烤肉（获得「烤肉」）"
+
+[node name="LeaveBtn" type="Button" parent="Center"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 38)
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 14
+text = "离开（不休息）"

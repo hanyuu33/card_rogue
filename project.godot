@@ -1,0 +1,24 @@
+; Engine configuration file.
+; Godot 4.3 项目配置 —— 卡牌对战 Godot 副本
+
+config_version=5
+
+[application]
+
+config/name="卡牌肉鸽"
+run/main_scene="res://scenes/title.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+config/icon="res://assets/cardback.png"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true

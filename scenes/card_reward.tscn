@@ -1,0 +1,132 @@
+[gd_scene load_steps=3 format=3 uid="uid://cardreward0demo0"]
+
+[ext_resource type="Script" path="res://scripts/card_reward_scene.gd" id="1_reward"]
+
+[sub_resource type="SystemFont" id="SysFont_cjk"]
+font_names = PackedStringArray("Microsoft YaHei UI", "Microsoft YaHei", "SimHei")
+
+[node name="CardReward" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_reward")
+
+[node name="BG" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.914, 0.906, 0.886, 1)
+
+[node name="CardArea" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TopBar" type="Panel" parent="."]layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 44.0
+grow_horizontal = 2
+
+[node name="TitleLabel" type="Label" parent="TopBar"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 8.0
+offset_right = 500.0
+offset_bottom = 36.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 20
+text = "卡牌奖励"
+
+[node name="BackBtn" type="Button" parent="TopBar"]
+layout_mode = 0
+offset_left = 1130.0
+offset_top = 6.0
+offset_right = 1264.0
+offset_bottom = 38.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 15
+text = "← 返回标题"
+
+[node name="ProbLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 442.0
+offset_bottom = 470.0
+grow_horizontal = 2
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.32, 0.34, 0.38, 1)
+horizontal_alignment = 1
+text = "出现概率"
+
+[node name="ResultLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 486.0
+offset_bottom = 524.0
+grow_horizontal = 2
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 1
+text = ""
+
+[node name="Bottom" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="SkipBtn" type="Button" parent="Bottom"]
+layout_mode = 0
+offset_left = 556.0
+offset_top = 596.0
+offset_right = 724.0
+offset_bottom = 632.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 17
+text = "跳过奖励"
+
+[node name="NormalBtn" type="Button" parent="Bottom"]
+layout_mode = 0
+offset_left = 296.0
+offset_top = 596.0
+offset_right = 500.0
+offset_bottom = 632.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 15
+text = "普通过关奖励"
+
+[node name="BossBtn" type="Button" parent="Bottom"]
+layout_mode = 0
+offset_left = 780.0
+offset_top = 596.0
+offset_right = 984.0
+offset_bottom = 632.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 15
+text = "Boss过关奖励"
+
+[node name="ContinueBtn" type="Button" parent="Bottom"]
+layout_mode = 0
+offset_left = 556.0
+offset_top = 644.0
+offset_right = 724.0
+offset_bottom = 680.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 16
+text = "继续 →"
