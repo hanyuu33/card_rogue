@@ -11010,8 +11010,8 @@ func _init() -> void:
 		"R91 充电装置：带 trait「接通」（与闪电链同一个 trait 族）")
 
 	# ---- ② 字段系统：定义表 / 判定口 / 序列化往返 ----
-	check(CardData.AFFIX_DEFS.size() == 5,
-		"R91 字段表：5 个字段（疾行 / 嘲讽 / 死亡 / 幻影 / 护盾），实际 %d"
+	check(CardData.AFFIX_DEFS.size() == 6,
+		"R91 字段表：6 个字段（疾行 / 嘲讽 / 死亡 / 幻影 / 护盾 / **次元** R93），实际 %d"
 			% CardData.AFFIX_DEFS.size())
 	var r91_all: Dictionary = {}
 	for c91 in r91_repo.all_cards():
@@ -11325,6 +11325,77 @@ func _init() -> void:
 			and r92_mb.upgrade_atk == GameEngine.UPGRADE_ATK,
 		"R92 模仿者「**不连锁**」：A、B 各自**只复制一次**（A +%d / B +%d，不是 B 拿双份 %d）"
 			% [r92_ma.upgrade_atk, r92_mb.upgrade_atk, 2 * GameEngine.UPGRADE_ATK])
+
+	# ---- R93：字段「次元」= 使用后 / 离场后消失，不进弃牌区 ----
+	var r93_repo := CardRepo.load_json()
+	check(CardData.AFFIX_DEFS.has(GameEngine.AFFIX_DIMENSION)
+			and CardData.affix_label(GameEngine.AFFIX_DIMENSION) == "次元"
+			and CardData.affix_desc(GameEngine.AFFIX_DIMENSION) != ""
+			and CardData.affix_colors(GameEngine.AFFIX_DIMENSION).size() == 2,
+		"R93「次元」已登记进字段表：label/desc/配色三者齐备（加新字段只改一处）")
+	# ① 静态 7 张：全部带上「次元」
+	var r93_static: Array[int] = [9022, 9050, 9080, 9097, 9098, 9109, 8010]
+	var r93_miss: Array[int] = []
+	for r93_id in r93_static:
+		if not r93_repo.get_card(r93_id).has_affix(GameEngine.AFFIX_DIMENSION):
+			r93_miss.append(r93_id)
+	check(r93_miss.is_empty(),
+		"R93「次元」覆盖 7 张消失卡（鸭蛋/鲸鱼之怒/魔像/预判/拒绝命运/警觉/荧光草；缺：%s）"
+			% str(r93_miss))
+	# ② 不变量一：引擎 trait「离场消失」的卡必须都有次元（以后加新 token 也不会漏）
+	var r93_vanish_all: Array[int] = []
+	var r93_vanish_bad: Array[int] = []
+	for r93_c: CardData in r93_repo.all_cards():
+		if r93_c.traits.has(FieldState.VANISH_TRAIT):
+			r93_vanish_all.append(r93_c.id)
+			if not r93_c.has_affix(GameEngine.AFFIX_DIMENSION):
+				r93_vanish_bad.append(r93_c.id)
+	check(r93_vanish_bad.is_empty() and r93_vanish_all.size() >= 3,
+		"R93 不变量：带 trait「离场消失」的卡（%s）**全部**带次元（漏：%s）"
+			% [str(r93_vanish_all), str(r93_vanish_bad)])
+	# ③ 不变量二：卡面**不再手写**「消失」——全部交给字段解释
+	var r93_left: Array[int] = []
+	for r93_d: CardData in r93_repo.all_cards():
+		if "消失" in r93_d.effect_text:
+			r93_left.append(r93_d.id)
+	check(r93_left.is_empty(),
+		"R93 不变量：全库 effect_text **不再出现「消失」**（残留：%s）" % str(r93_left))
+	# ④ 野兔本体：**没有**次元（它自己不会消失，消失的是它产出的复制品）
+	check(r93_repo.get_card(9032).has_affix(GameEngine.AFFIX_PHANTOM)
+			and not r93_repo.get_card(9032).has_affix(GameEngine.AFFIX_DIMENSION),
+		"R93 野兔本体只有「幻影」、**没有**次元（消失的是复制品，不是它自己）")
+	# ⑤ to_dict / from_dict 往返保留次元
+	var r93_egg: CardData = r93_repo.get_card(9022)
+	var r93_egg2 := CardData.from_dict(r93_egg.to_dict())
+	check(r93_egg2.has_affix(GameEngine.AFFIX_DIMENSION)
+			and (r93_egg2.affixes as Array).size() == (r93_egg.affixes as Array).size(),
+		"R93 to_dict/from_dict 保留「次元」（复制/改造/离场还原都走这条通道）")
+
+	# ---- ⑥ 衍生物：手牌里不带次元，**上场那一刻**才挂上 ----
+	var r93_e := _new_engine([], 40, 40, -1, false)
+	r93_e.start_game()
+	r93_e.state.hand.clear()
+	var r93_hare: CardData = CardData.from_dict(r93_repo.get_card(9032).to_dict())
+	r93_e._spawn_self_clone(r93_hare)
+	var r93_clone: CardData = r93_e.state.hand[0]
+	check(r93_clone.is_ephemeral and r93_clone.has_affix(GameEngine.AFFIX_PHANTOM)
+			and not r93_clone.has_affix(GameEngine.AFFIX_DIMENSION),
+		"R93 衍生物在**手牌里**不带次元（那是「幻影」的回合结束消失，两者刻意区分）")
+	var r93_clone_p: Placement = r93_e.state.place(r93_clone, Vector2i(4, 1),
+			GameEngine.SIDE_SELF)
+	check(r93_clone_p.card.has_affix(GameEngine.AFFIX_DIMENSION)
+			and r93_clone_p.card.has_affix(GameEngine.AFFIX_PHANTOM),
+		"R93 衍生物**上场后**挂上「次元」（离场即消失，不进弃牌区）")
+	# 正常单位上场**不会**被误挂（卡库原卡没有 is_ephemeral）
+	var r93_tree_p: Placement = r93_e.state.place(
+		CardData.from_dict(r93_repo.get_card(8003).to_dict()), Vector2i(4, 0),
+		GameEngine.SIDE_SELF)
+	check(not r93_tree_p.card.has_affix(GameEngine.AFFIX_DIMENSION)
+			and not r93_repo.get_card(8003).has_affix(GameEngine.AFFIX_DIMENSION),
+		"R93 正常单位与**卡库原卡**都不会被挂上「次元」（没污染卡库）")
+	# ⑦ 次元始终显示（不像疾行/护盾那样用掉就隐藏）
+	check(r93_clone.active_affixes(1, false).has(GameEngine.AFFIX_DIMENSION),
+		"R93「次元」在战场上**恒常显示**（不随行动轮数/护盾与否消失）")
 
 	RunState.player_class = r91_saved_cls
 

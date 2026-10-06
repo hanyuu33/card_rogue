@@ -501,6 +501,9 @@ const AFFIX_SWIFT:= "疾行"          # 一回合行动两次（判据 actions>=
 const AFFIX_TAUNT:= "嘲讽"          # 敌方只能攻击这张卡
 const AFFIX_DEATH:= "死亡"          # 被破坏时生效（只做标记，内容看卡面）
 const AFFIX_PHANTOM:= "幻影"        # 手牌里给它加一张自身的短暂复制（回合结束消失）
+## 「次元」（R93）：使用后 / 离场后消失，不进弃牌区。
+## 与「幻影」区分见 `CardData.AFFIX_DEFS` 注释：幻影说的是**手牌里回合结束**消失那种。
+const AFFIX_DIMENSION:= "次元"
 ## 「能量屏障」8033 赋的护盾也登记成字段（R91）—— 否则这张牌被强化后
 ## 玩家在任何地方都看不到「它有护盾」。
 const FIELD_BARRIER:= "护盾"

@@ -295,6 +295,14 @@ func place(card: CardData, cell: Vector2i, owner := "self") -> Placement:
 	# 放在 place 里 = **唯一初始化口**，于是无论它是手牌打出来的、关卡摆位的、
 	# 还是效果卡召唤出来的，都一致（漏了某条路径 = 那条路径出来的没有护盾）。
 	p.first_hit_shield = card.traits.has(GameEngine.BARRIER_TRAIT)
+	# 次元（R93）：**衍生物**上场那一刻挂上字段 —— 它们在场上离场即消失、不进弃牌区。
+	# 放在 place 里 = 唯一初始化口，与「沉睡 / 护盾」同一套路。
+	# ⚠️ 只在这里加，**手牌里那份复制品不加** —— 手牌那份是「幻影」
+	#   （回合结束消失），两种消失刻意由两个字段分别表示，玩家一眼能分清。
+	# ⚠️ `is_ephemeral` 只打在 `_spawn_self_clone` 产出的副本上，**卡库原卡没有**，
+	#   所以不会误伤正常单位。副本是 `from_dict` 出来的独立实例 → 改它不污染卡库。
+	if card.is_ephemeral:
+		card.add_affix(GameEngine.AFFIX_DIMENSION)
 	board[cell] = p
 	return p
 
