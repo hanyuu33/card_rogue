@@ -514,6 +514,27 @@ const AUTO_UPGRADE_ID:= 8045
 const AUTO_UPGRADE_TRAIT:= "自主改造"
 const AUTO_UPGRADE_ATK:= 2
 const AUTO_UPGRADE_HP:= 1
+# ── R96：机械之心 8046 / 8047 / 8048 ──
+# 「零件回收者」（8046，3 费**普通**盟友 1/14/1/1）：与这张卡**接通**的己方盟友或工事被
+#   **破坏**时，这张卡攻击力 += 被销毁卡的力量，并往手牌加一张「素体」。
+#   * 触发口唯一 = `_destroy`（全游戏唯一破坏口），在 erase 之前先抓同连通块里的回收者。
+#   * 「接通」= `_component_of_cell`（四方向相邻，隔敌也算连通），但此处只认 SIDE_SELF 回收者
+#     + 受害者必须是己方盟友/工事（卡面明写「己方」）。
+#   * 攻力加成记 `upgrade_atk`（离场还原），不加 `atk_buff`（那个有 GROW_CAP 封顶）。
+#   * 加素体 = 独立副本 append 到手牌，与机械核心 6025 同口径（手牌满就停）。
+const RECYCLER_ID:= 8046
+# 「嵌合暴君」（8047，4 费**史诗**盟友 3/20/1/1，**嘲讽**）：**使用时**（play_from_hand 入场钩子）
+#   破坏所有与这张卡**接通的己方**卡，并将那些卡的力量与生命加到自己身上（永久，离场还原）。
+#   * 范围按用户口径**只己方**（不含敌方、不含自己）；用 `_component_of_cell` 取连通块过滤。
+#   * 吸收的攻/血落 `upgrade_atk`/`upgrade_hp` + 抬 `card.health`/`p.health`（与 `_upgrade_unit` 同口径），
+#     故意**不**走 `_upgrade_unit` / 不调 `_mimic_relay` → 不会触发侦察塔层数 / 模仿者传导（这是专属吸收）。
+#   * 吸收的「生命」取被吞卡**场上副本的最大生命**（`u.card.health`，含其受到的场上加成）。
+const CHIMERA_ID:= 8047
+# 「生产订单」（8048，1 费**普通**技能）：将两张「素体」加入**抽牌堆**，各获得改造 +1 攻 +4 血
+#   （永久、烤进副本，不污染卡库；与「过载」8030 / 「自主升级」8045 同口径）。
+const PROD_ORDER_ID:= 8048
+const PROD_ORDER_ATK:= 1
+const PROD_ORDER_HP:= 4
 ## ── 字段名常量（R91）—— 引擎一律读 `CardData.affixes`，不再按卡名 / 数字硬编码 ──
 const AFFIX_SWIFT:= "疾行"          # 一回合行动两次（判据 actions>=2 / acts_left>1）
 const AFFIX_TAUNT:= "嘲讽"          # 敌方只能攻击这张卡
@@ -2608,6 +2629,9 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	if card.id == TURTLE_DOVE_ID:
 		_dove_trigger()
 
+	if card.id == CHIMERA_ID:
+		_chimera_fuse(p)
+
 	if card.traits.has(CLONE_TRAIT) or card.has_affix(AFFIX_PHANTOM):
 		# 【字段「幻影」R91】**使用后**手牌增加一张自己的复制。
 		# 判据 = 「带幻影字段」或「带自我复制 trait」（旧字段，保留兼容）——
@@ -4559,6 +4583,9 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 		OVERLOAD_ID:
 			# 过载 8030（R85，机械之心）：从牌库随机一张盟友改成双动。无目标、不可选。
 			return _overload_grant(side)
+		PROD_ORDER_ID:
+			# 生产订单 8048（R96，机械之心）：往抽牌堆加两张改造过的「素体」。无目标、不可选。
+			return _production_order(side)
 		BATCH_UPGRADE_ID:
 			# 批量改造 8031（R86，机械之心）：手牌里所有盟友 / 工事 +1 生命。
 			return _batch_upgrade(side)
@@ -6058,10 +6085,101 @@ func _tick_enemy_growth() -> void :
 		action.emit("enemy_growth", {"stacks": want, "count": n})
 
 
+func _recycler_trigger(r: Placement, victim_power: int) -> void :
+	## 「零件回收者」（8046，R96）的唯一结算口，由 `_destroy` 在 erase 之后调用。
+	if r == null or r.owner != SIDE_SELF or r.card.id != RECYCLER_ID:
+		return
+	r.upgrade_atk += victim_power
+	_log("零件回收者：回收 %d 力量（现 +%d 攻）" % [victim_power, r.upgrade_atk])
+	# 往手牌加一张「素体」（独立副本，与机械核心 6025 同口径；手牌满就停）。
+	if state.hand_full():
+		_log("零件回收者：手牌已满，未加入「素体」")
+	else:
+		var repo := CardRepo.load_json()
+		var proto: CardData = repo.get_card(PROTO_ID)
+		if proto != null:
+			state.hand.append(CardData.from_dict(proto.to_dict()))
+			_log("零件回收者：手牌 +1 张「素体」")
+	action.emit("recycler", {"cell": _cell_of(r), "power": victim_power, "side": SIDE_SELF})
+
+
+func _chimera_fuse(tyrant: Placement) -> void :
+	## 「嵌合暴君」（8047，R96）的入场效果，由 `play_from_hand` 在 place 之后调用。
+	## 破坏所有与这张卡**接通的己方**卡，并将其力量与生命吸收到自身（永久，离场还原）。
+	if tyrant == null or tyrant.owner != SIDE_SELF or tyrant.card.id != CHIMERA_ID:
+		return
+	var comp:= _component_of_cell(_cell_of(tyrant))
+	var targets: Array[Vector2i] = []
+	for c: Vector2i in comp:
+		if c == _cell_of(tyrant):
+			continue
+		var u: Placement = state.unit_at(c)
+		if u == null or u.owner != SIDE_SELF:
+			continue
+		targets.append(c)
+	if targets.is_empty():
+		_log("嵌合暴君：周围没有己方卡可融合，未获得加成")
+		action.emit("chimera", {"cell": _cell_of(tyrant), "absorbed": 0, "side": SIDE_SELF})
+		return
+	var got_atk:= 0
+	var got_hp:= 0
+	for c: Vector2i in targets:
+		var u: Placement = state.unit_at(c)
+		if u == null:
+			continue
+		got_atk += u.effective_power()
+		got_hp += u.card.health
+		_destroy(c)
+	# 吸收到的攻/血落到嵌合暴君（与 _upgrade_unit 同口径，离场由 _card_leaving_field 还原）。
+	tyrant.upgrade_atk += got_atk
+	tyrant.upgrade_hp += got_hp
+	tyrant.card.health += got_hp
+	tyrant.health += got_hp
+	_log("嵌合暴君：融合 %d 张卡 → 力量 +%d、生命 +%d（现 %d 攻 / %d 血）" % [
+		targets.size(), got_atk, got_hp, tyrant.effective_power(), tyrant.health])
+	action.emit("chimera", {"cell": _cell_of(tyrant), "absorbed": targets.size(),
+		"atk": got_atk, "hp": got_hp, "side": SIDE_SELF})
+
+
+func _production_order(side: String) -> String :
+	## 「生产订单」（8048，R96，机械之心 1 费普通技能）：往抽牌堆加两张改造过的「素体」。
+	var repo := CardRepo.load_json()
+	if repo == null:
+		return "（没有卡库，无法生产）"
+	var proto: CardData = repo.get_card(PROTO_ID)
+	if proto == null:
+		return "卡库缺少「素体」"
+	var added:= 0
+	for _i in 2:
+		# ⚠️ 必须 from_dict 复制成新实例再烤改造：卡库里是共享实例，直接改会污染卡库。
+		var up:= CardData.from_dict(proto.to_dict())
+		up.power += PROD_ORDER_ATK
+		up.health += PROD_ORDER_HP
+		state.deck.append(up)        # 加进抽牌堆（末尾），本场之后抽到即改造版素体
+		added += 1
+	_log("生产订单：卡组 +%d 张改造「素体」（各 +%d 攻 / +%d 血，永久）"
+		% [added, PROD_ORDER_ATK, PROD_ORDER_HP])
+	action.emit("prod_order", {"count": added, "atk": PROD_ORDER_ATK,
+		"hp": PROD_ORDER_HP, "side": side})
+	return "卡组 +%d 张改造素体" % added
+
+
 func _destroy(cell: Vector2i) -> void :
 	if not state.board.has(cell):
 		return
 	var p: Placement = state.board[cell]
+	# R96：零件回收者触发预判 —— 在 erase 之前抓同连通块的回收者与被销毁卡的力量。
+	var _rec_power:= p.effective_power() if (p != null) else 0
+	var _rec_victim_ok:= false
+	var _rec_list: Array[Placement] = []
+	if p != null and p.owner == SIDE_SELF \
+			and (p.card.kind == "盟友" or p.card.is_fort()):
+		_rec_victim_ok = true
+		for rc in _component_of_cell(cell):
+			var ru: Placement = state.unit_at(rc)
+			if ru != null and ru != p and ru.card.id == RECYCLER_ID \
+					and ru.owner == SIDE_SELF:
+				_rec_list.append(ru)
 	state.board.erase(cell)
 	_credit_kill(p)
 	if p.owner == SIDE_SELF:
@@ -6104,6 +6222,10 @@ func _destroy(cell: Vector2i) -> void :
 	# 标记挂在格子上（state.field_chains），触发口唯一 = _field_trigger 末尾的
 	# _twin_field_chain。所以这里**不再**有任何 twin_trap 分支。
 	_check_game_over()
+	# R96：零件回收者 —— 被销毁的是己方盟友/工事时，连通块内的回收者回收其力量 + 手牌加素体。
+	if _rec_victim_ok:
+		for _r in _rec_list:
+			_recycler_trigger(_r, _rec_power)
 
 
 

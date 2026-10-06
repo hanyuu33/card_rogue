@@ -3521,6 +3521,67 @@
       "value": 0,
       "color": "蓝",
       "image": ""
+    },
+    {
+      "id": 8046,
+      "name": "零件回收者",
+      "kind": "盟友",
+      "cost": 3,
+      "power": 1,
+      "health": 14,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "effect_text": "与这张卡**接通**的己方盟友或工事被**破坏**时：这张卡的攻击力 += 那张卡的力量，并往你的手牌加一张「素体」。",
+      "target_mode": "none",
+      "color": "橙",
+      "image": ""
+    },
+    {
+      "id": 8047,
+      "name": "嵌合暴君",
+      "kind": "盟友",
+      "cost": 4,
+      "power": 3,
+      "health": 20,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 3,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "嘲讽"
+      ],
+      "affixes": [
+        "嘲讽"
+      ],
+      "effect_text": "**嘲讽**。**使用时**：破坏所有与这张卡**接通**的**己方**卡，并将那些卡的力量与生命加到这张卡上（永久，离场后还原）。",
+      "target_mode": "none",
+      "color": "紫",
+      "image": ""
+    },
+    {
+      "id": 8048,
+      "name": "生产订单",
+      "kind": "技能",
+      "cost": 1,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "改造"
+      ],
+      "effect_text": "将两张「素体」加入你的卡组（抽牌堆），那两张卡获得改造：力量 +1、生命 +4（永久，之后每次抽到都带着）。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
     }
   ]
 }

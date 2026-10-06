@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 173,
-			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级**；实际 %d）"
+	check(repo.all_cards().size() == 176,
+			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,7 +135,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 139 and grp_enemy.size() == 34,
+	check(grp_player.size() == 142 and grp_enemy.size() == 34,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 135 / 34）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -164,8 +164,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 122,
-			"奖励池 122 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级**；实际 %d）"
+	check(pool.size() == 124,
+			"奖励池 124 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 为史诗不入池）；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -6091,8 +6091,8 @@ func _init() -> void:
 			% [dr_cls_all.size(), str(dr_cls_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 105
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 48
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 20,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张（期望 105 / 48 / 20）"
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 23,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张（期望 105 / 48 / 23）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0))])
@@ -6349,7 +6349,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 122, "R45+R50~R57：扩展全部进奖励池（总池 122，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 124, "R45+R50~R57：扩展全部进奖励池（总池 124，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -11538,6 +11538,153 @@ func _init() -> void:
 	check(r95_e7.state.deck.size() == 1 and r95_e7.state.deck[0].power == 0,
 		"R95 自主升级：抽牌堆里没有盟友 / 工事时**落空**（技能卡不会被改造，仍 %d 攻）"
 			% r95_e7.state.deck[0].power)
+
+	# ─────────── R96：零件回收者 8046 / 嵌合暴君 8047 / 生产订单 8048（机械之心）───────────
+	var r96_repo := CardRepo.load_json()
+	var r96_rec_def: CardData = r96_repo.get_card(GameEngine.RECYCLER_ID)
+	var r96_chi_def: CardData = r96_repo.get_card(GameEngine.CHIMERA_ID)
+	var r96_ord_def: CardData = r96_repo.get_card(GameEngine.PROD_ORDER_ID)
+	check(r96_rec_def != null and r96_rec_def.kind == "盟友" and r96_rec_def.cost == 3
+			and r96_rec_def.power == 1 and r96_rec_def.health == 14
+			and r96_rec_def.attack_range == 1 and r96_rec_def.move_speed == 1
+			and r96_rec_def.rarity == 0 and r96_rec_def.card_class == PlayerClass.MECH
+			and not r96_rec_def.has_affix("嘲讽"),
+		"R96 零件回收者：盟友 / 3 费 1 攻 14 血 / 攻程 1 / 移速 1 / **普通** / 机械之心")
+	check(r96_rec_def.traits.has("机械"),
+		"R96 零件回收者：带 trait「机械」")
+	check(r96_chi_def != null and r96_chi_def.kind == "盟友" and r96_chi_def.cost == 4
+			and r96_chi_def.power == 3 and r96_chi_def.health == 20
+			and r96_chi_def.attack_range == 1 and r96_chi_def.move_speed == 1
+			and r96_chi_def.rarity == 3 and r96_chi_def.card_class == PlayerClass.MECH
+			and r96_chi_def.traits.has("嘲讽") and r96_chi_def.has_affix("嘲讽"),
+		"R96 嵌合暴君：盟友 / 4 费 3 攻 20 血 / 攻程 1 / 移速 1 / **史诗** / 机械之心 / 带嘲讽")
+	check(r96_ord_def != null and r96_ord_def.kind == "技能" and r96_ord_def.cost == 1
+			and r96_ord_def.rarity == 0 and r96_ord_def.card_class == PlayerClass.MECH
+			and r96_ord_def.target_mode == "none"
+			and r96_ord_def.traits.has("改造"),
+		"R96 生产订单：技能 / 1 费 / **普通** / 机械之心 / 无需目标 / 带 trait「改造」")
+
+	# ---- ① 零件回收者：接通的己方盟友被销毁 → 力量回收 + 手牌 +1 素体 ----
+	var r96_e1 := _new_engine([], 40, 40, -1, false)
+	r96_e1.start_game()
+	var r96_rec1: Placement = r96_e1.state.place(
+		CardData.from_dict(r96_rec_def.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r96_tree1: Placement = r96_e1.state.place(
+		CardData.from_dict(r96_repo.get_card(8003).to_dict()), Vector2i(4, 0),
+		GameEngine.SIDE_SELF)
+	var r96_tree_pow: int = r96_tree1.effective_power()
+	var r96_hand0: int = r96_e1.state.hand.size()
+	r96_e1._destroy(Vector2i(4, 0))
+	check(r96_rec1.upgrade_atk == r96_tree_pow,
+		"R96 零件回收者：接通的己方盟友被销毁 → 攻击力 += 那张卡的力量（%d → +%d）"
+			% [r96_tree_pow, r96_rec1.upgrade_atk])
+	check(r96_e1.state.hand.size() == r96_hand0 + 1
+			and r96_e1.state.hand[r96_e1.state.hand.size() - 1].id == GameEngine.PROTO_ID,
+		"R96 零件回收者：同步往手牌加 1 张「素体」（手牌 %d→%d，末张 id=%d）"
+			% [r96_hand0, r96_e1.state.hand.size(), GameEngine.PROTO_ID])
+	check(not r96_e1.state.board.has(Vector2i(4, 0)),
+		"R96 零件回收者：被销毁的盟友确实已离场")
+
+	# ---- ② 零件回收者：**不接通不触发** ----
+	var r96_e2 := _new_engine([], 40, 40, -1, false)
+	r96_e2.start_game()
+	var r96_rec2: Placement = r96_e2.state.place(
+		CardData.from_dict(r96_rec_def.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r96_iso2: Placement = r96_e2.state.place(
+		CardData.from_dict(r96_repo.get_card(8003).to_dict()), Vector2i(0, 0),
+		GameEngine.SIDE_SELF)
+	var r96_hand2: int = r96_e2.state.hand.size()
+	r96_e2._destroy(Vector2i(0, 0))
+	check(r96_rec2.upgrade_atk == 0 and r96_e2.state.hand.size() == r96_hand2,
+		"R96 零件回收者：孤立的 (0,0) 不接通 → 不回收、不加素体（仍 %d 攻 / 手牌 %d）"
+			% [r96_rec2.upgrade_atk, r96_e2.state.hand.size()])
+
+	# ---- ③ 零件回收者：**只回收己方**销毁（相邻敌方被销毁不触发）----
+	var r96_e3 := _new_engine([], 40, 40, -1, false)
+	r96_e3.start_game()
+	var r96_rec3: Placement = r96_e3.state.place(
+		CardData.from_dict(r96_rec_def.to_dict()), Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r96_e3.state.place(
+		CardData.from_dict(_card(9201, "测试骷髅", "怪物", 1, 3, 6, 1, 1).to_dict()),
+		Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r96_hand3: int = r96_e3.state.hand.size()
+	r96_e3._destroy(Vector2i(2, 1))
+	check(r96_rec3.upgrade_atk == 0 and r96_e3.state.hand.size() == r96_hand3,
+		"R96 零件回收者：**只回收己方**——相邻敌方被销毁不触发（仍 %d 攻 / 手牌 %d）"
+			% [r96_rec3.upgrade_atk, r96_e3.state.hand.size()])
+
+	# ---- ④ 嵌合暴君：使用时破坏接通的己方卡并吸收攻/血 ----
+	var r96_e4 := _new_engine([], 40, 40, -1, false)
+	r96_e4.start_game()
+	var r96_tree4: Placement = r96_e4.state.place(
+		CardData.from_dict(r96_repo.get_card(8003).to_dict()), Vector2i(4, 0),
+		GameEngine.SIDE_SELF)
+	var r96_tree4_pow: int = r96_tree4.effective_power()
+	var r96_tree4_hp: int = r96_tree4.card.health
+	var r96_chi4: Placement = r96_e4.state.place(
+		CardData.from_dict(r96_chi_def.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r96_chi4_atk0: int = r96_chi4.effective_power()
+	var r96_chi4_hp0: int = r96_chi4.health
+	r96_e4._chimera_fuse(r96_chi4)
+	check(not r96_e4.state.board.has(Vector2i(4, 0)),
+		"R96 嵌合暴君：接通的己方盟友被**破坏**（(4,0) 已离场）")
+	check(r96_chi4.upgrade_atk == r96_tree4_pow
+			and r96_chi4.upgrade_hp == r96_tree4_hp
+			and r96_chi4.effective_power() == r96_chi4_atk0 + r96_tree4_pow
+			and r96_chi4.health == r96_chi4_hp0 + r96_tree4_hp,
+		"R96 嵌合暴君：吸收力量 %d / 生命 %d（现 %d 攻 / %d 血）"
+			% [r96_tree4_pow, r96_tree4_hp, r96_chi4.effective_power(), r96_chi4.health])
+
+	# ---- ⑤ 嵌合暴君：**只吸收己方**（相邻敌方未被破坏也未吸收）----
+	var r96_e5 := _new_engine([], 40, 40, -1, false)
+	r96_e5.start_game()
+	r96_e5.state.place(
+		CardData.from_dict(_card(9201, "测试骷髅", "怪物", 1, 3, 6, 1, 1).to_dict()),
+		Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r96_chi5: Placement = r96_e5.state.place(
+		CardData.from_dict(r96_chi_def.to_dict()), Vector2i(3, 1), GameEngine.SIDE_SELF)
+	var r96_chi5_atk0: int = r96_chi5.effective_power()
+	var r96_chi5_hp0: int = r96_chi5.health
+	r96_e5._chimera_fuse(r96_chi5)
+	check(r96_e5.state.board.has(Vector2i(2, 1))
+			and r96_chi5.upgrade_atk == 0 and r96_chi5.upgrade_hp == 0
+			and r96_chi5.effective_power() == r96_chi5_atk0
+			and r96_chi5.health == r96_chi5_hp0,
+		"R96 嵌合暴君：**只吸收己方**——相邻敌方卡未被破坏也未吸收（敌 %d 仍在场，暴君仍 %d 攻 / %d 血）"
+			% [9201, r96_chi5.effective_power(), r96_chi5.health])
+
+	# ---- ⑥ 嵌合暴君：离场还原成原卡，不污染卡库 ----
+	var r96_leave: CardData = r96_e4._card_leaving_field(r96_chi4)
+	check(r96_leave != null and r96_leave.health == 20 and r96_leave.power == 3
+			and r96_repo.get_card(GameEngine.CHIMERA_ID).health == 20
+			and r96_repo.get_card(GameEngine.CHIMERA_ID).power == 3,
+		"R96 嵌合暴君：离场还原成原卡（%d 攻 / %d 血），且卡库未被污染"
+			% [r96_leave.power if r96_leave != null else -1,
+				r96_leave.health if r96_leave != null else -1])
+
+	# ---- ⑦ 生产订单：抽牌堆加 2 张改造素体，不污染卡库 ----
+	var r96_e7 := _new_engine([], 40, 40, -1, false)
+	r96_e7.start_game()
+	r96_e7.state.deck = [CardData.from_dict(r96_repo.get_card(8003).to_dict())]
+	var r96_deck0: int = r96_e7.state.deck.size()
+	var r96_proto_pow: int = r96_repo.get_card(GameEngine.PROTO_ID).power
+	var r96_proto_hp: int = r96_repo.get_card(GameEngine.PROTO_ID).health
+	r96_e7._production_order(GameEngine.SIDE_SELF)
+	check(r96_e7.state.deck.size() == r96_deck0 + 2,
+		"R96 生产订单：抽牌堆 +2 张（%d→%d）" % [r96_deck0, r96_e7.state.deck.size()])
+	var r96_added: int = 0
+	for c: CardData in r96_e7.state.deck:
+		if c.id == GameEngine.PROTO_ID and c.power == r96_proto_pow + GameEngine.PROD_ORDER_ATK \
+				and c.health == r96_proto_hp + GameEngine.PROD_ORDER_HP:
+			r96_added += 1
+	check(r96_added == 2,
+		"R96 生产订单：新增的 2 张都是改造素体（力量 %d→%d / 生命 %d→%d，命中 %d 张）"
+			% [r96_proto_pow, r96_proto_pow + GameEngine.PROD_ORDER_ATK,
+				r96_proto_hp, r96_proto_hp + GameEngine.PROD_ORDER_HP, r96_added])
+	check(r96_repo.get_card(GameEngine.PROTO_ID).power == r96_proto_pow
+			and r96_repo.get_card(GameEngine.PROTO_ID).health == r96_proto_hp,
+		"R96 生产订单：**没污染卡库**（卡库素体仍 %d 攻 / %d 血）"
+			% [r96_proto_pow, r96_proto_hp])
 
 	RunState.player_class = r91_saved_cls
 

@@ -5280,8 +5280,42 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					% [str(data.get("from", "")), mu_atk, mu_hp])
 			if mu_cell.x >= 0:
 				_floaters.append({"pos": _cell_center(mu_cell),
-						"text": "+%d 攻 / +%d 血" % [mu_atk, mu_hp],
-						"col": Color("8ce09a"), "start": n, "dur": 1800, "size": 15})
+					"text": "+%d 攻 / +%d 血" % [mu_atk, mu_hp],
+					"col": Color("8ce09a"), "start": n, "dur": 1800, "size": 15})
+		"chimera":
+			# 嵌合暴君（8047，R96）：使用时破坏接通的己方卡并吸收其攻/血。
+			var ch_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
+			var ch_abs: int = int(data.get("absorbed", 0))
+			var ch_atk: int = int(data.get("atk", 0))
+			var ch_hp: int = int(data.get("hp", 0))
+			if ch_abs <= 0:
+				_say("嵌合暴君：周围没有己方卡可融合")
+			else:
+				sfx.play("attack")
+				_say("嵌合暴君融合 %d 张卡：+%d 攻 / +%d 血" % [ch_abs, ch_atk, ch_hp])
+				if ch_cell.x >= 0:
+					_bursts.append({"pos": _cell_center(ch_cell), "start": n,
+							"dur": 420, "col": COL_SPELL})
+					_floaters.append({"pos": _cell_center(ch_cell),
+							"text": "+%d 攻 / +%d 血" % [ch_atk, ch_hp],
+							"col": Color("caa6ff"), "start": n, "dur": 1900, "size": 16})
+		"recycler":
+			# 零件回收者（8046，R96）：接通的己方卡被销毁 → 回收其力量 + 手牌加素体。
+			var rc_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
+			var rc_pow: int = int(data.get("power", 0))
+			sfx.play("spell")
+			_say("零件回收者回收 %d 力量，手牌 +1 张「素体」" % rc_pow)
+			if rc_cell.x >= 0:
+				_floaters.append({"pos": _cell_center(rc_cell),
+						"text": "+%d 攻" % rc_pow,
+						"col": Color("ffa41f"), "start": n, "dur": 1700, "size": 16})
+		"prod_order":
+			# 生产订单（8048，R96）：往抽牌堆加两张改造「素体」。
+			var po_cnt: int = int(data.get("count", 0))
+			var po_atk: int = int(data.get("atk", 0))
+			var po_hp: int = int(data.get("hp", 0))
+			sfx.play("place")
+			_say("生产订单：卡组 +%d 张改造「素体」（各 +%d 攻 / +%d 血）" % [po_cnt, po_atk, po_hp])
 		"regen":
 			# 自我修复的每回合回血（R87）：在该单位格上飘字。
 			var rg_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
