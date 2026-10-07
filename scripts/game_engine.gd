@@ -535,6 +535,18 @@ const CHIMERA_ID:= 8047
 const PROD_ORDER_ID:= 8048
 const PROD_ORDER_ATK:= 1
 const PROD_ORDER_HP:= 4
+# ── R97：机械之心 8049「拆解」──
+# 1 费**稀有**技能：指定自己一个己方盟友或工事，**破坏**它，回复 3 点费用，往手牌加一张
+# 「素体」；若目标**被改造**（upgrade_stacks>0 或 upgrade_atk!=0 或 upgrade_hp!=0，
+# 覆盖「升级」技能 / 「改造工厂」场地 / 「自我修复」三种来源），额外获得一张「升级」8027。
+# * 破坏走唯一破坏口 `_destroy` → 自然联动「零件回收者」8046（体系一致）。
+# * 回费用 `state.energy += 3`（与「契约签订者」/「奥秘精通」同口径：不污染
+#   `self_energy_spent`，且允许当回合超额 —— 回合开始重置为 5）。
+# * 「额外获得升级」= 往手牌 append 一张「升级」8027 的独立副本。
+# * 拖拽到「被改造」的合法目标上时，界面金色高亮 + 「额外获得升级」文字提示（见 battle_scene）。
+const DEMOLISH_ID:= 8049
+const DEMOLISH_REFUND:= 3
+const DEMOLISH_UPGRADE_BONUS:= 8027   # 「额外获得升级」给的卡
 ## ── 字段名常量（R91）—— 引擎一律读 `CardData.affixes`，不再按卡名 / 数字硬编码 ──
 const AFFIX_SWIFT:= "疾行"          # 一回合行动两次（判据 actions>=2 / acts_left>1）
 const AFFIX_TAUNT:= "嘲讽"          # 敌方只能攻击这张卡
@@ -1707,6 +1719,21 @@ func _autoplay_spell_targets(card: CardData) -> Array[Vector2i]:
 				continue
 			if up.effective_power() > best_pow:
 				best_pow = up.effective_power()
+				best_up = uc
+		if best_up.x >= 0:
+			out.append(best_up)
+		return out
+	if card.id == DEMOLISH_ID:
+		# 拆解 8049（R97，机械之心）：自动出牌时优先拆**己方被改造**的盟友/工事
+		# （能拿到额外「升级」），没有则退而拆任意己方盟友/工事。
+		var best_up := Vector2i(-1, -1)
+		for uc in _side_cells(SIDE_SELF):
+			var up: Placement = state.unit_at(uc)
+			if up == null:
+				continue
+			if up.card.kind != "盟友" and not up.card.is_fort():
+				continue
+			if best_up.x < 0 or (not _is_upgraded(state.unit_at(best_up)) and _is_upgraded(up)):
 				best_up = uc
 		if best_up.x >= 0:
 			out.append(best_up)
@@ -4586,6 +4613,10 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 		PROD_ORDER_ID:
 			# 生产订单 8048（R96，机械之心）：往抽牌堆加两张改造过的「素体」。无目标、不可选。
 			return _production_order(side)
+		DEMOLISH_ID:
+			# 拆解 8049（R97，机械之心）：破坏自己一个己方盟友/工事，回 3 费，手牌+素体；
+			# 被改造则额外手牌+升级。需要 target（棋盘单位格）。
+			return _demolish(target, side)
 		BATCH_UPGRADE_ID:
 			# 批量改造 8031（R86，机械之心）：手牌里所有盟友 / 工事 +1 生命。
 			return _batch_upgrade(side)
@@ -6162,6 +6193,54 @@ func _production_order(side: String) -> String :
 	action.emit("prod_order", {"count": added, "atk": PROD_ORDER_ATK,
 		"hp": PROD_ORDER_HP, "side": side})
 	return "卡组 +%d 张改造素体" % added
+
+
+func _is_upgraded(p: Placement) -> bool :
+	## 「被改造」统一判定（R97「拆解」用）：覆盖三种来源 ——
+	## 「升级」技能（升级层数 upgrade_stacks + 攻/血）、「改造工厂」场地（只攻/血）、
+	## 「自我修复」（加成 upgrade_hp）。只要任意一项非零即视为已改造。
+	if p == null:
+		return false
+	return p.upgrade_stacks > 0 or p.upgrade_atk != 0 or p.upgrade_hp != 0
+
+
+func _demolish(target: Vector2i, side: String) -> String :
+	## 「拆解」（8049，R97，机械之心 1 费稀有技能）：破坏自己一个己方盟友/工事，
+	## 回复 3 费，手牌 +1「素体」；若目标被改造，额外手牌 +1「升级」8027。
+	## 破坏走唯一破坏口 `_destroy` → 自然联动「零件回收者」8046。
+	var p: Placement = state.unit_at(target)
+	if p == null:
+		return "拆解：目标格子上没有单位"
+	if p.owner != SIDE_SELF or (p.card.kind != "盟友" and not p.card.is_fort()):
+		return "拆解：只能拆解自己的盟友或工事"
+	var was_upgraded:= _is_upgraded(p)
+	# 先记力量用于日志（_destroy 后单位已离场）。
+	var victim_name:= p.card.card_name
+	_destroy(target)        # 唯一破坏口：联动回收者 / 离场即消失 / 进弃牌区 等全部一致
+	# 回复费用（与契约签订者 / 奥秘精通同口径：不污染 self_energy_spent，允许当回合超额）。
+	state.energy += DEMOLISH_REFUND
+	# 手牌 +1「素体」（独立副本，与机械核心 6025 / 零件回收者同口径）。
+	var got_proto:= 0
+	var repo := CardRepo.load_json()
+	var proto: CardData = repo.get_card(PROTO_ID) if repo != null else null
+	if proto != null and not state.hand_full():
+		state.hand.append(CardData.from_dict(proto.to_dict()))
+		got_proto += 1
+	var got_upg:= 0
+	if was_upgraded and not state.hand_full():
+		var up_repo := CardRepo.load_json()
+		var up_proto: CardData = up_repo.get_card(DEMOLISH_UPGRADE_BONUS) if up_repo != null else null
+		if up_proto != null:
+			state.hand.append(CardData.from_dict(up_proto.to_dict()))
+			got_upg += 1
+	_log("拆解：破坏了%s（%s），回复 %d 费，手牌 +%d 素体%s"
+		% [victim_name, "已改造" if was_upgraded else "未改造", DEMOLISH_REFUND,
+			got_proto, ("，额外 +%d 升级" % got_upg) if was_upgraded else ""])
+	action.emit("demolish", {"cell": target, "upgraded": was_upgraded,
+		"refund": DEMOLISH_REFUND, "got_proto": got_proto, "got_upg": got_upg,
+		"side": side})
+	return "拆解：破坏%s，回复 %d 费%s" % [victim_name, DEMOLISH_REFUND,
+		("，额外获得升级" if was_upgraded else "")]
 
 
 func _destroy(cell: Vector2i) -> void :

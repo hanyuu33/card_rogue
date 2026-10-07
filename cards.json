@@ -3582,6 +3582,23 @@
       "target_mode": "none",
       "color": "蓝",
       "image": ""
+    },
+    {
+      "id": 8049,
+      "name": "拆解",
+      "kind": "技能",
+      "cost": 1,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "改造"
+      ],
+      "effect_text": "指定自己一个己方盟友或工事，将其**破坏**，回复 3 点费用，并将一张「素体」加入手卡。若目标**被改造**，则额外获得一张「升级」。",
+      "target_mode": "unit",
+      "color": "蓝",
+      "image": ""
     }
   ]
 }

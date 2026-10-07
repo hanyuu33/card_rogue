@@ -2087,6 +2087,8 @@ func _use_hand_card(i: int) -> void:
 				target_hint = "**自己的一个盟友或工事**（+2 攻 / +8 血）"
 			elif card.id == GameEngine.ARMOR_PLATE_ID:
 				target_hint = "**自己的一个盟友**（生命 +4，算一层改造）"
+			elif card.id == GameEngine.DEMOLISH_ID:
+				target_hint = "**自己的一个盟友或工事**：破坏它、回 3 费、手牌+素体；被改造则额外+升级"
 			elif card.id == GameEngine.WHIRL_BLADE_ID:
 				target_hint = "十字中心格"
 			status_text = "%s：点击%s（右键取消）" % [card.card_name, target_hint]
@@ -2966,6 +2968,15 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 		for c: Vector2i in engine.state.board:
 			var ap: Placement = engine.state.board[c]
 			if ap.owner == GameEngine.SIDE_SELF and ap.card.kind == "盟友":
+				out.append(c)
+		out.sort()
+	elif card.id == GameEngine.DEMOLISH_ID:
+		# 拆解 8049（R97，机械之心）：只列**己方盟友或工事**（与升级同口径）。
+		# ⚠️ 必须在这里过滤掉敌方 —— 引擎侧 `_demolish` 也会拒，但那时已付费。
+		for c: Vector2i in engine.state.board:
+			var dp: Placement = engine.state.board[c]
+			if dp.owner == GameEngine.SIDE_SELF \
+					and (dp.card.kind == "盟友" or dp.card.is_fort()):
 				out.append(c)
 		out.sort()
 	elif card.id == GameEngine.FIRE_WALL_SPELL_ID:
@@ -5316,6 +5327,22 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var po_hp: int = int(data.get("hp", 0))
 			sfx.play("place")
 			_say("生产订单：卡组 +%d 张改造「素体」（各 +%d 攻 / +%d 血）" % [po_cnt, po_atk, po_hp])
+		"demolish":
+			# 拆解 8049（R97，机械之心）：破坏己方单位、回 3 费、手牌+素体；被改造则额外+升级。
+			var dm_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
+			var dm_up := bool(data.get("upgraded", false))
+			var dm_refund: int = int(data.get("refund", 0))
+			var dm_proto: int = int(data.get("got_proto", 0))
+			var dm_upg: int = int(data.get("got_upg", 0))
+			sfx.play("attack")
+			if dm_up:
+				_say("拆解：破坏被改造单位，回复 %d 费，手牌 +%d 素体 +%d 升级" % [dm_refund, dm_proto, dm_upg])
+			else:
+				_say("拆解：破坏单位，回复 %d 费，手牌 +%d 素体" % [dm_refund, dm_proto])
+			if dm_cell.x >= 0:
+				_floaters.append({"pos": _cell_center(dm_cell),
+					"text": "+%d 费" % dm_refund,
+					"col": Color("6ec6ff"), "start": n, "dur": 1500, "size": 16})
 		"regen":
 			# 自我修复的每回合回血（R87）：在该单位格上飘字。
 			var rg_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
@@ -6720,6 +6747,22 @@ func _draw_drag() -> void:
 			else:
 				_hl(cell, COL_MOVE)
 	var card := engine.state.hand[_drag_idx]
+	if card.id == GameEngine.DEMOLISH_ID and not _drag_spell_cells.is_empty():
+		# 拆解 8049（R97）：拖到「被改造」的合法目标上时，金色高亮 + 「额外获得升级」提示。
+		var near := _drag_spell_cells[0]
+		var bestd := 999999
+		for c in _drag_spell_cells:
+			var d := int(_cell_center(c).distance_squared_to(_drag_pos))
+			if d < bestd:
+				bestd = d
+				near = c
+		var up: Placement = engine.state.unit_at(near)
+		if up != null and (up.upgrade_stacks > 0 or up.upgrade_atk != 0 or up.upgrade_hp != 0):
+			_hl(near, Color("ffd24a"))
+			var nc := _cell_center(near)
+			draw_arc(nc, CELL * 0.66, 0, TAU, 32, Color("ffd24a"), 4.0)
+			_draw_string_center(_font_bold, 12, "额外获得升级",
+				nc + Vector2(0, CELL * 0.44), Color("ffd24a"))
 	# 跟着光标走的卡与手牌同尺寸（从手牌里"拿起来"不会突然变小）；
 	var rect := Rect2(_drag_pos - Vector2(HAND_CARD_W, HAND_CARD_H) / 2.0,
 			Vector2(HAND_CARD_W, HAND_CARD_H))
