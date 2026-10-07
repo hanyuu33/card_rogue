@@ -6081,21 +6081,28 @@ func _init() -> void:
 	# 角色写在 cards.json 的 class 字段（CardData.card_class）；每张卡的 class 必须是可选角色之一。
 	var dr_cls_all := repo.all_cards()
 	var dr_cls_bad: Array = []
+	var dr_cls_enemy_bad: Array = []
 	var dr_cls_count := {}
 	for c in dr_cls_all:
-		if not PlayerClass.ids().has(c.card_class):
-			dr_cls_bad.append(c.id)
+		if c.is_enemy_card():
+			if c.card_class != "敌人":
+				dr_cls_enemy_bad.append(c.id)
+		else:
+			if not PlayerClass.ids().has(c.card_class):
+				dr_cls_bad.append(c.id)
 		dr_cls_count[c.card_class] = int(dr_cls_count.get(c.card_class, 0)) + 1
-	check(dr_cls_bad.is_empty(),
-			"角色系统：%d 张卡的 class 都是可选角色之一（异常 %s）"
-			% [dr_cls_all.size(), str(dr_cls_bad)])
-	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 105
+	check(dr_cls_bad.is_empty() and dr_cls_enemy_bad.is_empty(),
+			"角色系统：非敌方卡 class 都在可选角色内、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
+			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
+	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 48
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 28,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张（期望 105 / 48 / 28）"
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 28
+			and int(dr_cls_count.get("敌人", 0)) == 34,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 48 / 28 / 34）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
-				int(dr_cls_count.get(PlayerClass.MECH, 0))])
+				int(dr_cls_count.get(PlayerClass.MECH, 0)),
+				int(dr_cls_count.get("敌人", 0))])
 	check(PlayerClass.ids() == ["森林精魄", "暗影刺客", "机械之心"]
 			and PlayerClass.default_id() == "森林精魄",
 			"R82 角色系统：可选角色 = 森林精魄 / 暗影刺客 / **机械之心**（默认森林精魄）")
@@ -6653,7 +6660,7 @@ func _init() -> void:
 	var r45_cls_count := {}
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
-	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 105
+	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 71
 			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 48,
 			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),

@@ -13,7 +13,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "战士",
         "守卫",
@@ -38,7 +38,7 @@
       "move_speed": 2,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "龙",
         "战吼"
@@ -63,7 +63,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "龙",
         "亡语"
@@ -87,7 +87,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "法师",
         "战吼"
@@ -108,7 +108,7 @@
       "move_speed": 2,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "亡灵",
         "亡语"
@@ -132,7 +132,7 @@
       "move_speed": 2,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "亡灵",
         "巨人",
@@ -159,7 +159,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "亡灵"
       ],
@@ -179,7 +179,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "亡灵",
         "亡语"
@@ -203,7 +203,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "亡灵",
         "战士",
@@ -228,7 +228,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "机械",
         "亡语"
@@ -252,7 +252,7 @@
       "move_speed": 2,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "巨人",
         "法术免疫"
@@ -376,7 +376,7 @@
       "move_speed": 2,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "骑士"
@@ -519,7 +519,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "施法者"
@@ -540,7 +540,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "使魔"
@@ -601,7 +601,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "队长"
@@ -626,7 +626,7 @@
       "move_speed": 0,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "成长"
       ],
@@ -647,7 +647,7 @@
       "move_speed": 2,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "龙",
         "亡灵"
@@ -668,7 +668,7 @@
       "move_speed": 0,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "召唤"
       ],
@@ -709,7 +709,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "弓手"
@@ -772,7 +772,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "爆炎"
@@ -793,7 +793,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "治疗",
@@ -860,7 +860,7 @@
       "move_speed": 0,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "哈气"
       ],
@@ -881,7 +881,7 @@
       "move_speed": 0,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "工事",
         "孵化"
@@ -903,7 +903,7 @@
       "move_speed": 2,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "陶瓷"
@@ -924,7 +924,7 @@
       "move_speed": 2,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "夜行"
@@ -946,7 +946,7 @@
       "move_speed": 1,
       "rarity": 5,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "龙"
       ],
@@ -966,7 +966,7 @@
       "move_speed": 1,
       "rarity": 5,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "亡灵"
       ],
@@ -1310,7 +1310,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "机械",
@@ -1333,7 +1333,7 @@
       "move_speed": 1,
       "rarity": 5,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "齿轮"
@@ -1354,7 +1354,7 @@
       "move_speed": 0,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "机械成长"
       ],
@@ -3012,7 +3012,7 @@
       "move_speed": 0,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "使魔成长"
       ],
@@ -3053,7 +3053,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "恶魔",
@@ -3075,7 +3075,7 @@
       "move_speed": 0,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "使魔成长",
         "恶魔召唤"
@@ -3097,7 +3097,7 @@
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
-      "class": "森林精魄",
+      "class": "敌人",
       "traits": [
         "鸭",
         "恶魔",
