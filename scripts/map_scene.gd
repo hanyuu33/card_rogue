@@ -524,7 +524,8 @@ func _draw_deck_panel() -> void:
 			draw_string(_font, r.position + Vector2(68, 45),
 					"费用 %d · %s" % [c.cost, CardFace.stats_line(c)],
 					HORIZONTAL_ALIGNMENT_LEFT, 372, 11, Color("9a968c"))
-			var eff: String = c.effect_text.replace("\n", " ")
+			# R106：卡组浏览的一行摘要也走「纯文本降级」（去 Markdown 标记 + 隐藏括号补注）。
+			var eff: String = CardText.naturalize(c.effect_text).replace("\n", " ")
 			if eff.length() > 30:
 				eff = eff.substr(0, 29) + "…"
 			draw_string(_font, r.position + Vector2(68, 63), eff,

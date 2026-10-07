@@ -599,7 +599,7 @@ func _on_main() -> void:
 		$Center/LeaveBtn.disabled = true
 		desc.text = BLUEFISH_TAKEN_DESC
 		result_label.text = "「%s」已加入卡组：%s" % [wname,
-				wcard.effect_text if wcard != null else ""]
+				CardText.naturalize(wcard.effect_text) if wcard != null else ""]
 		result_label.add_theme_color_override("font_color", Color("1f5fbf"))
 		_redraw()
 		return

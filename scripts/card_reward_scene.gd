@@ -225,15 +225,14 @@ func _draw_hover_detail() -> void:
 		card_area.draw_string(_font, Vector2(box.position.x + pad, y), stats,
 				HORIZONTAL_ALIGNMENT_LEFT, inner_w, 11, Color("444444"))
 		y += 18.0
-	# 效果文本（自动换行）
+	# 效果文本（自动换行 + R106：Markdown 富文本，隐藏「（…）」补注）
 	y += 4.0
 	card_area.draw_string(_font, Vector2(box.position.x + pad, y), "效果",
 			HORIZONTAL_ALIGNMENT_LEFT, inner_w, 11, Color("2a5a8a"))
 	y += 17.0
-	for line: String in _wrap_text(card.effect_text, inner_w, 12):
-		card_area.draw_string(_font, Vector2(box.position.x + pad, y), line,
-				HORIZONTAL_ALIGNMENT_LEFT, inner_w, 12, Color("2a5a8a"))
-		y += 17.0
+	CardText.draw_wrapped(card_area, _font, _font_bold,
+			CardText.parse(card.effect_text), box.position.x + pad, y, inner_w, 12,
+			17.0, Color("2a5a8a"))
 
 
 func _wrap_text(text: String, max_w: float, size: int) -> Array[String]:

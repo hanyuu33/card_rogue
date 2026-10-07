@@ -549,6 +549,80 @@ func _check_battle(scene: Variant) -> void:
 	_check_sleep_aura(scene)
 	_check_turn_gate(scene)
 	_check_relic_gate(scene)
+	_check_r106(scene)
+
+
+func _check_r106(scene: Variant) -> void:
+	## R106：① 效果卡可以**直接拖到左侧效果区**松手启用（真跑一遍拖动调用栈）；
+	##       ② 战场单位「已获得的增益/减益」列表与卡面徽标能正常产出（并让后续帧真实绘制）。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("R106：拿不到 engine")
+		return
+	# ---- ① 效果区矩形：点击浏览与拖拽投放必须共用同一个矩形 ----
+	var zone: Rect2 = scene._own_effect_zone_rect()
+	if zone.size.x <= 0.0 or zone.size.y <= 0.0:
+		_smoke_fail("R106：效果区矩形尺寸异常 %s" % str(zone.size))
+		return
+	eng.over = false
+	eng.current_side = GameEngine.SIDE_SELF
+	# 从**真实卡库**取一张效果卡（不手搓假卡，保证 class / traits 齐全）。
+	var eff: CardData = null
+	for c in scene.repo.all_cards():
+		if c.is_effect():
+			eff = c
+			break
+	if eff == null:
+		_smoke_fail("R106：卡库里找不到效果卡，无法验证「拖到效果区」")
+		return
+	eng.state.hand.insert(0, CardData.from_dict(eff.to_dict()))
+	eng.state.energy = 99
+	var n_effects: int = eng.state.effects.size()
+	var n_hand: int = eng.state.hand.size()
+	scene._start_drag(0, zone.get_center())
+	if not scene._drag_to_effects:
+		_smoke_fail("R106：效果卡起拖后没有置起「可拖到效果区」标记")
+		return
+	scene._finish_drag(zone.get_center())
+	if eng.state.effects.size() != n_effects + 1:
+		_smoke_fail("R106：效果卡拖到效果区没有启用（效果区 %d → %d）"
+				% [n_effects, eng.state.effects.size()])
+		return
+	if eng.state.hand.size() != n_hand - 1:
+		_smoke_fail("R106：效果卡启用后没离开手牌（手牌 %d → %d）"
+				% [n_hand, eng.state.hand.size()])
+		return
+	# 反面：拖到效果区**之外**的空白处 → 取消，不进效果区
+	eng.state.hand.insert(0, CardData.from_dict(eff.to_dict()))
+	var n_effects2: int = eng.state.effects.size()
+	scene._start_drag(0, Vector2(2, 2))
+	scene._finish_drag(Vector2(2, 2))
+	if eng.state.effects.size() != n_effects2:
+		_smoke_fail("R106：效果卡拖到空白处却生效了（效果区 %d → %d）"
+				% [n_effects2, eng.state.effects.size()])
+		return
+	# ---- ② 状态列表 / 卡面徽标：给场上一个单位叠 buff + debuff ----
+	var cell := Vector2i(FieldState.OPPONENT_ROWS, 0)
+	var unit: Placement = eng.state.unit_at(cell)
+	if unit == null:
+		unit = eng.state.place(scene.repo.get_card(8003), cell, GameEngine.SIDE_SELF)
+	unit.atk_buff = 2
+	unit.atk_debuff = 1
+	unit.debuff_stage = 1
+	unit.upgrade_stacks = 1
+	unit.frozen = true
+	if unit.status_entries().size() < 3 or unit.status_badges().is_empty():
+		_smoke_fail("R106：状态列表/徽标没有产出（列表 %d 条 / 徽标 %d 条）"
+				% [unit.status_entries().size(), unit.status_badges().size()])
+		return
+	# 悬停到它 → 后续帧会真实走 _draw_info_panel（状态逐条 + 富文本效果）与卡面徽标
+	scene._hover_card = unit.card
+	scene._hover_pl = unit
+	scene._drag_idx = -1
+	scene.queue_redraw()
+	print("SMOKE OK R106：效果卡拖入效果区即启用（%d→%d）/ 悬停单位列出 %d 条状态 + %d 个徽标"
+			% [n_effects, eng.state.effects.size(), unit.status_entries().size(),
+			unit.status_badges().size()])
 
 
 func _check_relic_gate(scene: Variant) -> void:

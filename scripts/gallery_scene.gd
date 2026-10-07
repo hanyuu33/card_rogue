@@ -254,7 +254,9 @@ func _refresh_detail() -> void:
 			c.color, cls_txt]
 	detail_stats.text = CardFace.stats_line(c)
 	detail_traits.text = "特性：" + ("、".join(PackedStringArray(c.traits)) if not c.traits.is_empty() else "无")
-	detail_text.text = c.effect_text
+	# R106：图鉴正文同样是「纯文本降级」—— 隐藏「（…）」补注、去掉 `**加粗**` 标记，
+	# 免得 Label 里出现裸星号（这里是 Label 不是 RichTextLabel，用 naturalize 而非 bbcode）。
+	detail_text.text = CardText.naturalize(c.effect_text)
 	# 编号附在名字后
 	detail_name.text = "%s（#%d）" % [c.card_name, c.id]
 	detail_badge.visible = c.needs_target()

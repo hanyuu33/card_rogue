@@ -144,6 +144,10 @@ var _drag_spell_cells: Array[Vector2i] = []   # 拖拽中技能的有效目标�
 var _drag_anywhere := false     # 拖到棋盘任意处即可释放（无目标技能/效果卡）
 var _drag_place := false        # 拖拽的是随从/工事：落到自己半场空格放置
 var _drag_place_cells: Array[Vector2i] = []   # 随从/工事的合法放置格（自己半场空格）
+var _drag_to_effects := false   # R106：拖的是效果卡 → 可**直接拖到左侧效果区**启用
+## R106：战场单位顶部徽标里**状态类**（增益/减益）最多画几条 —— 徽标是往上叠的，
+## 条数多了会盖住上面一行的卡；完整逐条列表在左侧信息栏（悬停/选中可见）。
+const MAX_STATUS_BADGES := 3
 
 
 func _say(text: String) -> void:
@@ -1945,7 +1949,7 @@ func _on_left_click(pos: Vector2) -> void:
 		queue_redraw()
 		return
 	# 效果区：点击查看全部效果卡（持续生效中）
-	var effects_rect := Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, GRID_H - ENERGY_H)
+	var effects_rect := _own_effect_zone_rect()
 	if effects_rect.has_point(pos) and not engine.state.effects.is_empty():
 		_pass_moved_pending()
 		_effects_visible = true
@@ -2127,6 +2131,7 @@ func _start_drag(i: int, pos: Vector2) -> void:
 	_drag_pos = pos
 	_drag_place = false
 	_drag_place_cells = []
+	_drag_to_effects = false
 	if not card.is_spell() and not card.is_effect():
 		# 随从 / 工事：拖到自己半场（下 3 行）的空格放置；
 		# 持「栅栏修复术」且手里是栅栏 → 已有栅栏的格子也可落（叠栅栏，橙色）
@@ -2177,8 +2182,10 @@ func _start_drag(i: int, pos: Vector2) -> void:
 	else:
 		_drag_spell_cells = []
 		_drag_anywhere = true   # 无目标技能 / 效果卡：拖到棋盘任意处生效
+	# R106：效果卡除了拖到棋盘，还能**直接拖到左侧效果区**上松手启用（那是它的「家」）。
+	_drag_to_effects = card.is_effect()
 	if card.is_effect():
-		status_text = "%s：拖到棋盘上启用" % card.card_name
+		status_text = "%s：拖到左侧效果区（或棋盘任意处）启用" % card.card_name
 	elif not _drag_spell_cells.is_empty():
 		status_text = "%s：拖到高亮目标上释放" % card.card_name
 	else:
@@ -2255,6 +2262,7 @@ func _finish_drag(pos: Vector2) -> void:
 		_drag_anywhere = false
 		_drag_place = false
 		_drag_place_cells = []
+		_drag_to_effects = false
 		_say("鸭语耳环正在自动出牌，等它出完（%d 张）" % engine.earring_played)
 		return
 	if engine == null or engine.over or engine.current_side != GameEngine.SIDE_SELF:
@@ -2264,6 +2272,7 @@ func _finish_drag(pos: Vector2) -> void:
 		_drag_anywhere = false
 		_drag_place = false
 		_drag_place_cells = []
+		_drag_to_effects = false
 		_say("现在是敌方回合，等对手行动完再出牌")
 		return
 	var i := _drag_idx
@@ -2272,11 +2281,26 @@ func _finish_drag(pos: Vector2) -> void:
 	var anywhere := _drag_anywhere
 	var place := _drag_place
 	var place_cells := _drag_place_cells
+	var to_effects := _drag_to_effects
 	_drag_spell_cells = []
 	_drag_anywhere = false
 	_drag_place = false
 	_drag_place_cells = []
+	_drag_to_effects = false
 	var card := engine.state.hand[i]
+	# R106：效果卡拖到**左侧效果区**上松手 = 直接启用（与「拖到棋盘任意处」等效，
+	# 但落点就是它以后待着的地方，手感更自然）。必须放在 `_cell_at(pos)` 之前 ——
+	# 效果区不在棋盘格上，走那条路会被判成「无效落点」而取消。
+	if to_effects and _own_effect_zone_rect().has_point(pos):
+		if not engine.can_pay_card(card):
+			_say("能量不足：%s 需要 %d，当前能量 %d" % [
+					card.card_name, engine.cost_of(card), engine.energy_of()])
+			return
+		engine.use_effect(i)
+		_net_send({"type": "action", "act": "effect", "card": card.to_dict()})
+		status_text = "%s：已放入效果区，持续生效" % card.card_name
+		queue_redraw()
+		return
 	var infil_drop = _cell_at(pos)
 	if card.id == GameEngine.INFILTRATE_ID and cells.has(infil_drop):
 		# R76 潜入第一段：拖到己方盟友 = 选定它，然后高亮所有可去的空格。
@@ -4701,6 +4725,8 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	# 于是「过载给这张牌加了疾行」「能量屏障给了护盾」这类**后续赋予**的字段
 	# 也会自动出现在战场上 —— 不需要在这里为每个字段写一段。
 	_badge_row = _draw_affix_badges(center, w, h, p, _badge_row)
+	# 【R106】最上面再叠「已获得的增益 / 减益」摘要（限量）：完整逐条列表在左侧信息栏。
+	_draw_status_badges(center, w, h, p, _badge_row)
 
 
 ## 字段徽标（R91）：把 `p.card` 此刻生效的字段逐个画成顶部徽标。
@@ -4721,6 +4747,26 @@ func _draw_affix_badges(center: Vector2, w: float, h: float, p: Placement,
 				cols[0], cols[1], cols[1], Color(0.02, 0.02, 0.02, 0.75))
 		row += 1
 	return row
+
+
+func _draw_status_badges(center: Vector2, w: float, h: float, p: Placement,
+		start_row: int) -> void:
+	## 【R106】把这张卡**已获得**的增益 / 减益摘要画成顶部徽标。
+	## 数据来自 `Placement.status_badges()`（与信息栏的逐条列表同源），只挑最要紧的几项，
+	## 并且**限量** MAX_STATUS_BADGES 条 —— 徽标是往上叠的，多了会盖住上面一行的卡。
+	if p == null or p.card == null:
+		return
+	var row := start_row
+	var shown := 0
+	for b in p.status_badges():
+		if shown >= MAX_STATUS_BADGES:
+			break
+		var col: Color = b["col"]
+		_draw_state_badge(center, w, h, row, str(b["text"]),
+				Color(col.r * 0.20, col.g * 0.20, col.b * 0.20, 0.90), col,
+				Color(1, 1, 1, 0.96), Color(0.04, 0.04, 0.04, 0.72))
+		row += 1
+		shown += 1
 
 
 func _draw_frozen_aura(center: Vector2, w: float, h: float, badge_row: int) -> void:
@@ -6858,6 +6904,13 @@ func _effect_rect(i: int) -> Rect2:
 			TAP_W, TAP_H)
 
 
+func _own_effect_zone_rect() -> Rect2:
+	## 【R106】我方「效果区」的外框（左栏能量面板下方那一整块）。
+	## 点它 = 打开浏览面板；把手里的一张**效果卡**拖到它上面松手 = 直接启用。
+	## 两处共用这一个矩形 —— 免得点得到的范围和拖得到的范围对不上。
+	return Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, GRID_H - ENERGY_H)
+
+
 func _draw_deck_and_discard() -> void:
 	var state := engine.state
 	_draw_string_center(_font_bold, 9, "卡组 %d" % state.deck.size(),
@@ -6969,6 +7022,17 @@ func _draw_drag() -> void:
 			draw_arc(nc, CELL * 0.66, 0, TAU, 32, Color("ffd24a"), 4.0)
 			_draw_string_center(_font_bold, 12, "额外获得升级",
 				nc + Vector2(0, CELL * 0.44), Color("ffd24a"))
+	# R106：拖的是效果卡 → 高亮左侧效果区（落点就是它以后待着的地方）。
+	# 悬停在区域上时加亮 + 加粗描边 + 换文案，明确「松手 = 启用」。
+	if _drag_to_effects:
+		var ez := _own_effect_zone_rect()
+		var over := ez.has_point(_drag_pos)
+		draw_rect(ez, Color(0.30, 0.75, 0.55, 0.22 if over else 0.10), true)
+		draw_rect(ez, Color(0.28, 0.82, 0.58, 0.95 if over else 0.45), false,
+				3.0 if over else 1.5)
+		_draw_string_center(_font_bold, 10, "松手启用" if over else "拖到这里启用",
+				ez.position + Vector2(ez.size.x / 2.0, ez.size.y - 12.0),
+				Color(0.12, 0.42, 0.30))
 	# 跟着光标走的卡与手牌同尺寸（从手牌里"拿起来"不会突然变小）；
 	var rect := Rect2(_drag_pos - Vector2(HAND_CARD_W, HAND_CARD_H) / 2.0,
 			Vector2(HAND_CARD_W, HAND_CARD_H))
@@ -7066,17 +7130,29 @@ func _draw_info_panel() -> void:
 			tt += (" · " if tt != "" else "") + str(t)
 		_draw_string_nw(_font, 9, "词条：" + tt, Vector2(left, y), Color("886000"))
 		y += 17.0
+	# 【R106】状态：这张战场单位**此刻已获得**的增益 / 减益，逐条一行。
+	# 空态不画（免得每张卡都顶着一行「状态：无」占地方）。放在「效果」之前 ——
+	# 状态是本回合临时、最该被看见的信息，压在长文案后面会被省略号吃掉。
+	if pl != null:
+		var st: Array[Dictionary] = pl.status_entries()
+		if not st.is_empty():
+			_draw_string_nw(_font_bold, 9, "状态", Vector2(left, y), Color("8a4a00"))
+			y += 15.0
+			for e in st:
+				if y > top + GRID_H - 14.0:
+					_draw_string_nw(_font, 9, "……", Vector2(left, y), Color("8a4a00"))
+					y += 14.0
+					break
+				_draw_string_nw(_font, 9, "· " + str(e["label"]), Vector2(left, y),
+						e["col"])
+				y += 14.0
 	_draw_string_nw(_font_bold, 9, "效果", Vector2(left, y), Color("2a5a8a"))
 	y += 15.0
-	# 效果描述：按面板宽度自动换行（不再单行溢出面板）。
-	var shown_lines := 0
-	for ln: String in CardFace.wrap_text(_font, card.effect_text, inner_w, 9):
-		if shown_lines > 0 and y > top + GRID_H - 12.0:
-			_draw_string_nw(_font, 9, "……", Vector2(left, y), Color("2a5a8a"))
-			break   # 超出面板底部就不再绘制
-		_draw_string_nw(_font, 9, ln, Vector2(left, y), Color("2a5a8a"))
-		y += 14.0
-		shown_lines += 1
+	# 效果描述：按面板宽度自动换行 + **Markdown 富文本**（R106）。
+	# `CardText` 顺手隐藏「（…）」补注 —— 补注是规则说明，不该挤在句子主干里。
+	CardText.draw_wrapped(self, _font, _font_bold,
+			CardText.parse(card.effect_text), left, y, inner_w, 9, 14.0,
+			Color("2a5a8a"), top + GRID_H - 12.0)
 
 
 func _draw_game_over() -> void:

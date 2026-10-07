@@ -3586,7 +3586,7 @@
       "id": 8048,
       "name": "生产订单",
       "kind": "技能",
-      "cost": 1,
+      "cost": 2,
       "rarity": 0,
       "group": "player",
       "class": "机械之心",

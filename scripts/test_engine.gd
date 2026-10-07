@@ -11565,11 +11565,11 @@ func _init() -> void:
 			and r96_chi_def.rarity == 3 and r96_chi_def.card_class == PlayerClass.MECH
 			and r96_chi_def.traits.has("嘲讽") and r96_chi_def.has_affix("嘲讽"),
 		"R96 嵌合暴君：盟友 / 4 费 3 攻 20 血 / 攻程 1 / 移速 1 / **史诗** / 机械之心 / 带嘲讽")
-	check(r96_ord_def != null and r96_ord_def.kind == "技能" and r96_ord_def.cost == 1
+	check(r96_ord_def != null and r96_ord_def.kind == "技能" and r96_ord_def.cost == 2
 			and r96_ord_def.rarity == 0 and r96_ord_def.card_class == PlayerClass.MECH
 			and r96_ord_def.target_mode == "none"
 			and r96_ord_def.traits.has("改造"),
-		"R96 生产订单：技能 / 1 费 / **普通** / 机械之心 / 无需目标 / 带 trait「改造」")
+		"R96 生产订单：技能 / 2 费 / **普通** / 机械之心 / 无需目标 / 带 trait「改造」")
 
 	# ---- ① 零件回收者：接通的己方盟友被销毁 → 力量回收 + 手牌 +1 素体 ----
 	var r96_e1 := _new_engine([], 40, 40, -1, false)
@@ -12450,6 +12450,83 @@ func _init() -> void:
 	check(r101_lib_tree.power == r101_lib_tree_power,
 		"R101 代达罗斯：卡库里的树人未被污染（仍 %d 力）" % r101_lib_tree.power)
 
+
+	# ============================================================
+	#  R106：卡面文本显示层（隐藏括号补注 + Markdown 富文本）与战场状态列表
+	# ============================================================
+	# ---- ① 隐藏「（…）」补注（**只在显示层**，不动 cards.json）----
+	var r106_s1: String = CardText.naturalize("对每个被连到的单位造成 11 点伤害（不分敌我）。")
+	check(r106_s1 == "对每个被连到的单位造成 11 点伤害。",
+		"R106 卡面文本：显示层隐藏「（…）」补注（实际「%s」）" % r106_s1)
+	# ---- ② Markdown：**加粗** 解析成片段，纯文本降级不留裸星号 ----
+	var r106_seg: Array = CardText.parse("**接通**的单位不计算距离。")
+	check(r106_seg.size() == 2 and str(r106_seg[0]["text"]) == "接通"
+			and bool(r106_seg[0]["bold"]) and not bool(r106_seg[1]["bold"]),
+		"R106 卡面文本：**加粗** 解析成富文本片段（不再把星号画给玩家看）")
+	check(not CardText.naturalize("**移动经过**此格时立刻触发").contains("*"),
+		"R106 卡面文本：纯文本降级后没有残留的 Markdown 标记")
+	# ---- ③ 词句归一：术语统一 + 数值与汉字之间补空格 ----
+	var r106_s2: String = CardText.naturalize("费用变为0（离开手卡重置）。")
+	check(r106_s2 == "费用变为 0。",
+		"R106 卡面文本：术语归一 + 补空格（实际「%s」）" % r106_s2)
+	var r106_s3: String = CardText.naturalize("每次获得改造时，攻击距离+1。")
+	check(r106_s3 == "每次获得改造时，攻击距离 +1。",
+		"R106 卡面文本：汉字与 +N 之间补空格（实际「%s」）" % r106_s3)
+	var r106_s4: String = CardText.naturalize("场上所有自己盟友获得+3生命。")
+	check(r106_s4 == "场上所有自己盟友获得 +3 生命。",
+		"R106 卡面文本：数字与汉字之间补空格（实际「%s」）" % r106_s4)
+	# ---- ④ 权威数据毫发无损（大括号补注仍留在 cards.json 里）----
+	check(repo.get_card(8054).effect_text.contains("返回手卡")
+			and repo.get_card(8054).effect_text.contains("（离开手卡重置）"),
+		"R106 卡面文本：cards.json 仍是带补注的权威版本（数据未被动过）")
+	# ---- ⑤ BBCode 转义（RichTextLabel 用）----
+	check(CardText.to_bbcode("**加粗**与`代码`") == "[b]加粗[/b]与[code]代码[/code]",
+		"R106 卡面文本：to_bbcode 产出 BBCode（实际「%s」）"
+			% CardText.to_bbcode("**加粗**与`代码`"))
+
+	# ---- ⑥ 战场单位的 buff / debuff 逐条列出 ----
+	var r106_e := _new_engine([], 30, 30)
+	var r106_p: Placement = r106_e.state.place(
+			_card(1061, "状态测试体", "盟友", 3, 6, 60, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	check(r106_p.status_entries().is_empty(),
+		"R106 状态列表：干净单位没有任何增益/减益（空列表、不占版面）")
+	r106_p.atk_buff = 3
+	r106_p.upgrade_stacks = 2
+	r106_p.upgrade_hp = 8
+	r106_p.frozen = true
+	var r106_labels: Array[String] = []
+	for e in r106_p.status_entries():
+		r106_labels.append(str(e["label"]))
+	check(r106_labels.size() == 3 and r106_labels[0] == "改造 ×2 生 +8"
+			and r106_labels[1] == "力量 +3（成长光环）"
+			and r106_labels[2] == "冰封：下回合不能行动",
+		"R106 状态列表：增益在前、减益在后，逐条各占一行（实际 %s）" % str(r106_labels))
+	# 削弱：还没到生效回合（debuff_stage == 0）**不算**「已获得」
+	r106_p.atk_debuff = 2
+	r106_p.debuff_stage = 0
+	var r106_has_debuff := false
+	for e in r106_p.status_entries():
+		if str(e["label"]).begins_with("力量 -"):
+			r106_has_debuff = true
+	check(not r106_has_debuff,
+		"R106 状态列表：削弱未到生效回合（stage=0）不算已获得")
+	r106_p.debuff_stage = 1
+	var r106_debuff_txt := ""
+	for e in r106_p.status_entries():
+		if str(e["label"]).begins_with("力量 -"):
+			r106_debuff_txt = str(e["label"])
+	check(r106_debuff_txt == "力量 -2（本回合）",
+		"R106 状态列表：生效中的削弱逐条列出（实际「%s」）" % r106_debuff_txt)
+	# 卡面徽标摘要：力量净变化（6+3-2=7 → +1）+ 改造层数（冰封另有既有徽标，不重复）
+	var r106_badge: Array[String] = []
+	for b in r106_p.status_badges():
+		r106_badge.append(str(b["text"]))
+	check(r106_badge == ["力 +1", "改造 ×2"],
+		"R106 状态徽标：卡面摘要 = 力量净变化 + 改造层数（实际 %s）" % str(r106_badge))
+	check(r106_e.state.place(_card(1062, "白板", "盟友", 1, 2, 5, 1, 1),
+			Vector2i(3, 2), GameEngine.SIDE_SELF).status_badges().is_empty(),
+		"R106 状态徽标：无任何增益/减益的单位不画徽标")
 
 	RunState.player_class = r91_saved_cls
 

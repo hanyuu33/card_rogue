@@ -60,3 +60,93 @@ func effective_power() -> int:
 			and card.traits.has("改造层数") else 0
 	return maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
 			+ end_atk + upgrade_atk + stack_bonus - debuff)
+
+
+## 【R106】这张卡**此刻已获得**的增益 / 减益，逐条列出（一条一个 Dictionary）。
+##
+## 键：`label`（正文）、`col`（颜色）、`kind`（"buff" / "debuff" / "info"）。
+## 左侧信息栏按行显示、战场卡面顶部徽标另取 `status_badges()` —— 两处读的是同一份
+## 字段，保证「栏里写了什么，卡面就有什么」，不会两边各算各的。
+##
+## 只列**此刻真的成立**的项：`atk_debuff` 未到生效回合（debuff_stage==0）不算，
+## 满血（regen 等）该显示的还是显示 —— 它是「拥有」这个状态，不是「正在生效的数值」。
+func status_entries() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var COL_B := Color("2f8f4f")   # 增益：绿
+	var COL_D := Color("c0392b")   # 减益：红
+	var COL_I := Color("6a5a8a")   # 中性提示：紫灰
+	var debuff := atk_debuff if debuff_stage == 1 else 0
+
+	# ---------------- 增益 ----------------
+	if upgrade_stacks > 0:
+		var extra := ""
+		if upgrade_atk != 0:
+			extra += " 力 +%d" % upgrade_atk
+		if upgrade_hp != 0:
+			extra += " 生 +%d" % upgrade_hp
+		if upgrade_range != 0:
+			extra += " 程 +%d" % upgrade_range
+		if upgrade_speed != 0:
+			extra += " 速 +%d" % upgrade_speed
+		out.append({"label": "改造 ×%d%s" % [upgrade_stacks, extra],
+				"col": COL_B, "kind": "buff"})
+	if atk_buff > 0:
+		out.append({"label": "力量 +%d（成长光环）" % atk_buff, "col": COL_B, "kind": "buff"})
+	if atk_buff_turn > 0:
+		out.append({"label": "本回合力量 +%d" % atk_buff_turn, "col": COL_B, "kind": "buff"})
+	if atk_growth != 0:
+		out.append({"label": "关卡成长 %+d" % atk_growth,
+				"col": COL_B if atk_growth > 0 else COL_D,
+				"kind": "buff" if atk_growth > 0 else "debuff"})
+	if ramp_atk > 0:
+		out.append({"label": "潜影累计 +%d" % ramp_atk, "col": COL_B, "kind": "buff"})
+	if end_atk > 0:
+		out.append({"label": "回合结束成长 +%d" % end_atk, "col": COL_B, "kind": "buff"})
+	if regen > 0:
+		out.append({"label": "自我修复：每回合回复 %d" % regen, "col": COL_B, "kind": "buff"})
+	if first_hit_shield:
+		out.append({"label": "护盾：免疫下一次伤害", "col": COL_B, "kind": "buff"})
+	if guarding:
+		out.append({"label": "守护：代我方承受伤害", "col": COL_B, "kind": "buff"})
+	if acts_left > 1:
+		out.append({"label": "额外行动 ×%d" % acts_left, "col": COL_B, "kind": "buff"})
+	if fence_bonus_hp > 0:
+		out.append({"label": "栅栏加固：额外生命 +%d" % fence_bonus_hp, "col": COL_B, "kind": "buff"})
+	if upgrade_feed_turn >= 0:
+		out.append({"label": "本回合已供过能", "col": COL_I, "kind": "info"})
+
+	# ---------------- 减益 ----------------
+	if debuff > 0:
+		out.append({"label": "力量 -%d（本回合）" % debuff, "col": COL_D, "kind": "debuff"})
+	if frozen:
+		out.append({"label": "冰封：下回合不能行动", "col": COL_D, "kind": "debuff"})
+	if sleep_left > 0:
+		out.append({"label": "沉睡：还需 %d 次受伤" % sleep_left, "col": COL_D, "kind": "debuff"})
+	if rooted > 0:
+		out.append({"label": "禁足：本回合不能移动", "col": COL_D, "kind": "debuff"})
+	if poison_left > 0:
+		out.append({"label": "中毒：剩 %d 跳，每跳 %d 伤" % [poison_left, poison_dmg],
+				"col": COL_D, "kind": "debuff"})
+	return out
+
+
+## 【R106】战场卡面顶部**徽标**用的紧凑摘要（信息栏里是逐条列出的，这里只挑最要紧的）。
+## 顺序即重要性：力量净变化 → 改造层数 → 护盾 → 中毒 → 禁足 → 守护。
+## 调用方负责截断（徽标多了会盖住上一行的卡）。
+func status_badges() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var net: int = effective_power() - card.power if card != null else 0
+	if net != 0:
+		out.append({"text": "力 %+d" % net,
+				"col": Color("2f8f4f") if net > 0 else Color("c0392b")})
+	if upgrade_stacks > 0:
+		out.append({"text": "改造 ×%d" % upgrade_stacks, "col": Color("1d6fb8")})
+	if first_hit_shield:
+		out.append({"text": "护盾", "col": Color("2f8f4f")})
+	if poison_left > 0:
+		out.append({"text": "中毒 %d" % poison_left, "col": Color("5a9e2f")})
+	if rooted > 0:
+		out.append({"text": "禁足", "col": Color("8a6d1f")})
+	if guarding:
+		out.append({"text": "守护", "col": Color("2f8f4f")})
+	return out
