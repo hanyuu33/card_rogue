@@ -1,6 +1,6 @@
 class_name RelicData
 extends RefCounted
-## 道具（肉鸽遗物）数据 —— 与 CardData 同风格，从 relics.json 读取。
+## 道具数据 —— 与 CardData 同风格，从 relics.json 读取。
 ##
 ## kind 分类（生效时机，仅描述性，不再决定颜色）：
 ##   即时  获得时当场生效一次（可能有后续选择，见 needs_pick）；

@@ -22,7 +22,7 @@ var _frames := 0
 var _ok := 0
 var _fail := 0
 var _check := Callable()   # 用例可选的「加进场景后第 2 帧」行为断言
-var _pair_reported := {}  # R66：已打印过「牌库/遗物成对」的场景名，避免同一场景重复刷屏
+var _pair_reported := {}  # R66：已打印过「牌库/道具成对」的场景名，避免同一场景重复刷屏
 
 
 func _initialize() -> void:
@@ -327,7 +327,7 @@ func _process(_delta: float) -> bool:
 		var c := _check
 		_check = Callable()
 		c.call(_cur)
-	# R66：凡是挂了「牌库 N」按钮的界面，都必须也有「遗物 N」按钮（两个查看器对等）。
+	# R66：凡是挂了「牌库 N」按钮的界面，都必须也有「道具 N」按钮（两个查看器对等）。
 	# 同一个场景在 _plan 里可能重复出现（不同前置），打印只出一次，免得刷屏。
 	var dv: int = 0
 	var rv: int = 0
@@ -337,10 +337,10 @@ func _process(_delta: float) -> bool:
 		elif child is RelicViewer:
 			rv += 1
 	if dv > 0 and rv == 0:
-		_smoke_fail("遗物查看：挂了 %d 个牌库查看器却没有遗物查看器" % dv)
+		_smoke_fail("道具查看：挂了 %d 个牌库查看器却没有道具查看器" % dv)
 	elif dv > 0 and not _pair_reported.has(str(_cur.name)):
 		_pair_reported[str(_cur.name)] = true
-		print("SMOKE OK 遗物查看：%s 牌库 %d 个 / 遗物 %d 个（两个查看器成对）"
+		print("SMOKE OK 道具查看：%s 牌库 %d 个 / 道具 %d 个（两个查看器成对）"
 				% [_cur.name, dv, rv])
 	if _frames >= FRAMES_PER_SCENE:
 		_ok += 1

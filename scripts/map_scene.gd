@@ -777,7 +777,7 @@ func _draw_relic_panel() -> void:
 	draw_rect(Rect2(px, py, RELIC_P_W, ph), Color("f5f2ea"))
 	draw_rect(Rect2(px, py, RELIC_P_W, ph), Color("555555"), false, 2.0)
 	draw_string(_font_bold, Vector2(px + 22, py + 36),
-			"我的遗物（共 %d 件 · 完整效果 · 滚轮翻页 · 点击任意处关闭）"
+			"我的道具（共 %d 件 · 完整效果 · 滚轮翻页 · 点击任意处关闭）"
 			% RunState.relics.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, RELIC_P_W - 44, 20, Color("333333"))
 	var y := py + 56.0 - _relic_scroll

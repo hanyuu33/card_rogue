@@ -7376,23 +7376,37 @@ func _draw_relic_panel() -> void:
 		y += row_h
 
 
+## 道具悬浮说明面板的排版常量（R107）：四周留白一致，每行基线取**行槽中心**，
+## 于是文字块上下留白相等。原来「首行基线写死 y+22、面板高 = 24 + 18n」是贴顶的
+## （上 ~6px / 下 ~17px），配合折行处行首多出的空格，看着就是「说明文字错位」。
+const RELIC_TIP_W := 480.0
+const RELIC_TIP_PAD := 12.0
+const RELIC_TIP_SIZE := 13
+const RELIC_TIP_LINE := 18.0
+
+
 func _draw_relic_tip_panel() -> void:
-	## 道具悬停说明：浮动折行面板画在道具栏上方（长描述如「叠加态的鸭」不溢出）。
+	## 道具悬停说明：浮动折行面板（长描述如「叠加态的鸭」不溢出）。
+	## 位置优先贴在道具栏上方；上方放不下就翻到下方。两个轴都夹进窗口内。
 	if _hover_relic_tip == "":
 		return
-	var w := 480.0
-	var lines := CardFace.wrap_text(_font, _hover_relic_tip, w - 24.0, 13)
-	var h := 14.0 + lines.size() * 18.0 + 10.0
+	var w := RELIC_TIP_W
+	var inner := w - RELIC_TIP_PAD * 2.0
+	var lines := CardFace.wrap_text(_font, _hover_relic_tip, inner, RELIC_TIP_SIZE)
+	var h := RELIC_TIP_PAD * 2.0 + lines.size() * RELIC_TIP_LINE
 	var z := _relic_zone_rect()
 	var x: float = clampf(z.position.x + z.size.x - w, 8.0, WINDOW_W - w - 8.0)
 	var y: float = z.position.y - h - 10.0
-	if y < 46.0:
-		y = 46.0
+	if y < 8.0:
+		y = clampf(z.position.y + z.size.y + 10.0, 8.0, WINDOW_H - h - 8.0)
 	draw_rect(Rect2(x, y, w, h), Color(0.10, 0.11, 0.15, 0.95), true)
 	draw_rect(Rect2(x, y, w, h), Color("c8951c"), false, 1.2)
 	for li in lines.size():
-		draw_string(_font, Vector2(x + 12, y + 22.0 + li * 18.0), lines[li],
-				HORIZONTAL_ALIGNMENT_LEFT, w - 24.0, 13, Color("f0ead8"))
+		# 行槽 = [y+pad + li*line, +line]，基线取槽中心下方 0.36em（与 _draw_string_center 同约定）
+		var by: float = y + RELIC_TIP_PAD + RELIC_TIP_LINE * (float(li) + 0.5) \
+				+ RELIC_TIP_SIZE * 0.36
+		draw_string(_font, Vector2(x + RELIC_TIP_PAD, by), lines[li],
+				HORIZONTAL_ALIGNMENT_LEFT, inner, RELIC_TIP_SIZE, Color("f0ead8"))
 
 
 func _draw_log_panel() -> void:

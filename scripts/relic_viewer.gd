@@ -1,13 +1,13 @@
 class_name RelicViewer
 extends CanvasLayer
-## 通用「遗物查看」悬浮层 —— 与 DeckViewer（牌库查看）**完全对等**的一对。
+## 通用「道具查看」悬浮层 —— 与 DeckViewer（牌库查看）**完全对等**的一对。
 ##
-## 右上角一个「遗物 N」按钮。**看描述不用点**：鼠标悬浮在按钮上（或速览浮层上）
-## 就展开一张速览浮层，逐条列出本局全部遗物 —— 名称 + 来源标签 + 完整效果说明
+## 右上角一个「道具 N」按钮。**看描述不用点**：鼠标悬浮在按钮上（或速览浮层上）
+## 就展开一张速览浮层，逐条列出本局全部道具 —— 名称 + 来源标签 + 完整效果说明
 ## （长文本自动折行）+ 来源色块（初始白 / 奖励黄 / 事件紫 / 二层青 / 角色绿），
 ## 鼠标移开即消失。
 ##
-## 只有当遗物多到速览浮层**装不下全部**（条目数 > FOLD_MAX 或总高 > HOVER_MAX_H）时，
+## 只有当道具多到速览浮层**装不下全部**（条目数 > FOLD_MAX 或总高 > HOVER_MAX_H）时，
 ## 按钮才**可点击**：此时点开的是一份**字号明显更大**的完整面板（滚轮翻页、
 ## 点击任意处关闭）。装得下时按钮是禁用态 —— 悬浮即已看全，不需要点。
 ##
@@ -44,7 +44,7 @@ var _font_bold: SystemFont
 var _open := false
 var _hover_on := false           # 鼠标当前在按钮或速览浮层上
 var _demo_lock := false          # 命令行演示：锁住状态不被 _process 的鼠标判定改掉
-var _cached_n := -1              # 上次刷新按钮时的遗物数（变了就重刷 + 重判可否点击）
+var _cached_n := -1              # 上次刷新按钮时的道具数（变了就重刷 + 重判可否点击）
 var _scroll := 0.0               # 已滚动的行数（浮点，按行步进）
 
 
@@ -101,7 +101,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if _btn == null or _demo_lock:
 		return
-	# 遗物增减（战斗掉落 / 事件给予）后按钮文案与「可否点击」要跟着变
+	# 道具增减（战斗掉落 / 事件给予）后按钮文案与「可否点击」要跟着变
 	if _cached_n != RunState.relics.size():
 		_refresh_btn()
 	_hover_layer.queue_redraw()   # 速览浮层跟随鼠标（提示要画在鼠标旁边）
@@ -134,14 +134,14 @@ func _hover_rect() -> Rect2:
 
 func _refresh_btn() -> void:
 	_cached_n = RunState.relics.size()
-	_btn.text = "遗物 %d" % _cached_n
+	_btn.text = "道具 %d" % _cached_n
 	var clickable := _need_detail()
 	_btn.disabled = not clickable
-	_btn.tooltip_text = "悬浮查看全部遗物" if not clickable else "悬浮速览 · 点击看完整详情"
+	_btn.tooltip_text = "悬浮查看全部道具" if not clickable else "悬浮速览 · 点击看完整详情"
 
 
 func _need_detail() -> bool:
-	## 速览浮层装不下全部遗物时，才需要（允许）点开大字号详情面板。
+	## 速览浮层装不下全部道具时，才需要（允许）点开大字号详情面板。
 	## 判定唯一口：条目数超 FOLD_MAX，或按完整行高累加超 HOVER_MAX_H。
 	var list := _entries()
 	if list.size() > FOLD_MAX:
@@ -172,7 +172,7 @@ func _force_panel() -> bool:
 # ------------------------------------------------------------ 数据
 
 func _entries() -> Array:
-	## 本局遗物条目：[{relic, note}]，按获得顺序（RunState.relics 的顺序）。
+	## 本局道具条目：[{relic, note}]，按获得顺序（RunState.relics 的顺序）。
 	## 拿不到定义的 id 跳过（与卡组查看器对未知 id 的处理一致）。
 	var repo := RelicRepo.load_json()
 	var out: Array = []
@@ -185,7 +185,7 @@ func _entries() -> Array:
 
 
 func _body_text(e: Dictionary) -> String:
-	## 单条遗物的说明正文：完整效果 + 动态状态备注（如「当前复活概率 100%」）。
+	## 单条道具的说明正文：完整效果 + 动态状态备注（如「当前复活概率 100%」）。
 	var rel: RelicData = e["relic"]
 	var note := str(e["note"])
 	return rel.desc if note == "" else ("%s  （%s）" % [rel.desc, note])
@@ -209,7 +209,7 @@ func _wrap(text: String, max_w: float, px: int) -> PackedStringArray:
 
 
 func _row_block(e: Dictionary, max_lines: int) -> Dictionary:
-	## 浮层里单条遗物的排版块：{name, tag, lines, scol, h}。
+	## 浮层里单条道具的排版块：{name, tag, lines, scol, h}。
 	## max_lines = 说明最多折几行（99 = 不截断，用于估算真实高度）。
 	var rel: RelicData = e["relic"]
 	var lines := _wrap(_body_text(e), HOVER_W - PAD * 2.0 - 16.0, 12)
@@ -244,11 +244,11 @@ func _on_hover_draw() -> void:
 	_hover_layer.draw_rect(r, Color("c8951c"), false, 1.2)
 	if list.is_empty():
 		_hover_layer.draw_string(_font, r.position + Vector2(PAD * 0.6, 26),
-				"还没有获得任何遗物。", HORIZONTAL_ALIGNMENT_LEFT,
+				"还没有获得任何道具。", HORIZONTAL_ALIGNMENT_LEFT,
 				r.size.x - 24.0, 12, Color("b8b4aa"))
 		return
 	_hover_layer.draw_string(_font_bold, r.position + Vector2(PAD * 0.6, 20),
-			"我的遗物（共 %d 件 · 悬浮查看）" % list.size(),
+			"我的道具（共 %d 件 · 悬浮查看）" % list.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, 13, Color("f0ead8"))
 	var y := r.position.y + 30.0
 	var bottom := r.end.y - 22.0
@@ -279,11 +279,11 @@ func _on_hover_draw() -> void:
 	# 底部：装不下就引导点按钮；装得下就明说「不用点」
 	if shown < list.size():
 		_hover_layer.draw_string(_font, Vector2(r.position.x + PAD * 0.6, r.end.y - 8),
-				"…另有 %d 件，点「遗物 %d」看完整详情" % [list.size() - shown, list.size()],
+				"…另有 %d 件，点「道具 %d」看完整详情" % [list.size() - shown, list.size()],
 				HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, 11, Color("c8951c"))
 	elif _need_detail():
 		_hover_layer.draw_string(_font, Vector2(r.position.x + PAD * 0.6, r.end.y - 8),
-				"点「遗物 %d」看完整详情（字号更大）" % list.size(),
+				"点「道具 %d」看完整详情（字号更大）" % list.size(),
 				HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, 11, Color("9a927f"))
 	else:
 		_hover_layer.draw_string(_font, Vector2(r.position.x + PAD * 0.6, r.end.y - 8),
@@ -304,7 +304,7 @@ func _layout(n: int) -> Dictionary:
 
 
 func _row_lines(e: Dictionary) -> PackedStringArray:
-	## 详情面板里单条遗物的说明折行（更宽 + 更大字号）。
+	## 详情面板里单条道具的说明折行（更宽 + 更大字号）。
 	var lines := _wrap(_body_text(e), PANEL_W - PAD * 2.0 - 130.0, P_DESC)
 	if lines.size() > 3:
 		lines = lines.slice(0, 3)
@@ -322,11 +322,11 @@ func _on_panel_draw() -> void:
 	_panel.draw_rect(Rect2(px, py, PANEL_W, PANEL_H), Color("f5f2ea"))
 	_panel.draw_rect(Rect2(px, py, PANEL_W, PANEL_H), Color("555555"), false, 2.0)
 	_panel.draw_string(_font_bold, Vector2(px + PAD, py + 40),
-			"我的遗物（共 %d 件 · 完整效果 · 滚轮翻页 · 点击任意处关闭）" % n,
+			"我的道具（共 %d 件 · 完整效果 · 滚轮翻页 · 点击任意处关闭）" % n,
 			HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - PAD * 2.0, 20, Color("333333"))
 	if n == 0:
 		_panel.draw_string(_font, Vector2(px + PAD, py + 96),
-				"还没有获得任何遗物。",
+				"还没有获得任何道具。",
 				HORIZONTAL_ALIGNMENT_LEFT, 300, 16, Color("888888"))
 		return
 	var grid_y: float = L["grid_y"]

@@ -137,14 +137,20 @@ static func stats_line(card: CardData, hp := -1) -> String:
 
 static func wrap_text(font: Font, text: String, max_w: float, size: int) -> Array[String]:
 	## 中文友好的字符级换行（draw_string 不自动折行）——按逐字累加测量宽度。
+	## ⚠️ 折行点上的空格**留在上一行、不要带到新行首**：否则续行会比首行缩进一格，
+	## 看上去就是「说明文字错位」。典型例子（道具「叠加态的鸭」）：
+	##   `…概率永久降低 25%（100 → 75 → 50`
+	##   ` → 25 → 0），降到 0 后不再复活。`   ← 这行原来行首多一个空格
 	var out: Array[String] = []
 	for para in text.split("\n"):
 		var cur := ""
 		for ch in para:
+			if cur == "" and ch == " ":
+				continue          # 行首不留空格（折行处吃掉那个空格）
 			if font.get_string_size(cur + ch, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > max_w \
 					and cur != "":
 				out.append(cur)
-				cur = ch
+				cur = "" if ch == " " else ch
 			else:
 				cur += ch
 		out.append(cur)

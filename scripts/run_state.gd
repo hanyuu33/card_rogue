@@ -64,7 +64,7 @@ const DIFFICULTY_REST_PCT: Array[float] = [0.40, 0.40, 0.25]  # 休息回复百�
 static var run_seed: int = 0                 # 本局种子（录像回放的根：run 层全部随机由它派生）
 static var run_rng := RandomNumberGenerator.new()   # 本局随机源（地图/道具/关卡/掉落/五换一）
 
-# ---- 道具（遗物） ----
+# ---- 道具 ----
 static var relics: Array[int] = []           # 已拥有的道具 id（跨战斗保留）
 static var skipped_relics: Array[int] = []   # 奖励掉落里被「跳过」的道具 id：本局后续不再随机出来
 static var relic_choice: Array[int] = []     # 起点三选一的候选（选定后清空）
@@ -282,7 +282,7 @@ static func advance_layer(layer: int) -> int:
 	return current_node_id
 
 
-# ---- 道具（遗物） ----
+# ---- 道具 ----
 
 
 static func _roll_boss(layer: int) -> Dictionary:
