@@ -16,10 +16,10 @@
 | 网页地址 | https://github.com/hanyuu33/card_rogue |
 | 可见性 | **私有**（仅本人 GitHub 账号可见） |
 | 默认分支 | `main` |
-| 当前最新提交 | `eb4635a`（R99）；更早 `6bba751`(手册R98) / `208e694`(R98) / `7173260`(R97) / `04eaf71`(手册) / `e6dc5bb`(R96) / `bbca24b`(R95) / `0391a24`(R92) / `1ef3d04`(首提交) |
+| 当前最新提交 | `f371ccd`（R101+R102）；更早 `f2f24e4`(R100) / `ebc7514`(手册R99) / `eb4635a`(R99) / `6bba751`(手册R98) / `208e694`(R98) / `7173260`(R97) / `04eaf71`(手册) / `e6dc5bb`(R96) / `bbca24b`(R95) / `0391a24`(R92) / `1ef3d04`(首提交) |
 | 入库文件数 | 约 188+（源码 + 素材；`.godot/` 缓存、`dist/` 产物、运行日志均排除） |
 | 认证方式 | **SSH 密钥**（GitHub 自 2021-08 起不接受账号密码推送，只认 SSH 或 PAT） |
-| 当前基线 | **engine 2237✓ / reward 26✓ / replay 28✓ / smoke 21 通过**（R99） |
+| 当前基线 | **engine 2279✓ / reward 26✓ / replay 28✓ / smoke 21 通过**（R102） |
 | 卡库规模 | **181 张**（玩家 147 / 敌方 34；其中机械之心 28） |
 
 > ⚠️ 完整提交历史随时用 `git log --oneline` 看，上面只列关键节点。
@@ -81,7 +81,7 @@ git config core.quotepath false
 python _verify.py
 ```
 
-看到 `engine 2237✓ / reward 26✓ / replay 28✓ / smoke 21` 即环境一致。
+看到 `engine 2279✓ / reward 26✓ / replay 28✓ / smoke 21` 即环境一致。
 
 ## 3. 每天的双机工作流
 
@@ -109,7 +109,7 @@ git push
 ## 4. 提交前自检
 
 1. 跑回归：`python _verify.py`
-   当前基线（R99）：**engine 2237✓ / reward 26✓ / replay 28✓ / smoke 21 通过**（判绿看中文收尾串）。
+   当前基线（R102）：**engine 2279✓ / reward 26✓ / replay 28✓ / smoke 21 通过**（判绿看中文收尾串）。
    ⚠️ 每加一张新卡，卡数基线断言会变（`_verify.py` 会报 ✗），这是**正常的**，按实际数字更新断言即可。
 2. 确认没有把缓存和产物提交进去：`git status --short`，正常只应看到源码类文件。
    `.godot/`、`dist/`、`_e.txt`、调试截图都已在 `.gitignore` 里，不该出现。
