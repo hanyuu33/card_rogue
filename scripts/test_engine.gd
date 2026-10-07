@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 183,
-			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士**；实际 %d）"
+	check(repo.all_cards().size() == 189,
+			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 149 and grp_enemy.size() == 34,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 149 / 34）"
+	check(grp_player.size() == 155 and grp_enemy.size() == 34,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 154 / 34）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -164,8 +164,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 130,
-			"奖励池 128 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）；实际 %d）"
+	check(pool.size() == 135,
+			"奖励池 128 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -2127,42 +2127,38 @@ func _init() -> void:
 	#                                      铁栅栏 9072 / 猫头鹰 9073 / 小精灵 9074
 	# ============================================================
 
-	# ---- 群起攻之（9070）：2 费稀有效果；己方盟友算攻击距离时友方格不计入 ----
+	# ---- 群起攻之（9070）：2 费稀有效果；接通单位攻击不计算距离 ----
 	var nc_rally := repo.get_card(9070)
 	check(nc_rally.card_name == "群起攻之" and nc_rally.is_effect() and nc_rally.cost == 2
-			and nc_rally.rarity == 1 and nc_rally.traits.has("群起攻之"),
-			"群起攻之：稀有 2 费效果卡，trait 群起攻之")
+			and nc_rally.rarity == 1 and nc_rally.traits.has("群起攻之")
+			and nc_rally.traits.has("接通"),
+			"群起攻之：稀有 2 费效果卡，trait 群起攻之 + 接通")
 	var rl_e := _new_engine([], 20, 20, -1, false)
 	rl_e.start_game(0)
-	var rl_ally := _card(8003, "农民", "盟友", 3, 3, 8, 1, 1)
-	rl_e.state.place(rl_ally, Vector2i(5, 1), GameEngine.SIDE_SELF)
-	rl_e.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(2, 1),
+	# 接通盟友（模仿者 8043，攻程 1）放在第 5 行，敌人放在第 2 行（曼哈顿距离 3）
+	var rl_charge := CardData.from_dict(repo.get_card(8043).to_dict())
+	rl_e.state.place(rl_charge, Vector2i(5, 1), GameEngine.SIDE_SELF)
+	rl_e.state.place(_card(8003, "农民", "盟友", 3, 3, 8, 1, 1), Vector2i(2, 1),
 			GameEngine.SIDE_OPPONENT)
 	check(not rl_e.attack_targets(Vector2i(5, 1), GameEngine.SIDE_SELF,
 			rl_e.state.unit_at(Vector2i(5, 1)).card).has(Vector2i(2, 1)),
-			"群起攻之：没这张效果卡时，第 5 行打不到第 2 行的敌人（曼哈顿距离 3）")
+			"群起攻之：没这张效果卡时，接通盟友打不到第 2 行（曼哈顿 3 > 攻程 1）")
 	rl_e.state.effects.append(repo.get_card(9070))	# 效果区放入群起攻之
-	check(not rl_e.attack_targets(Vector2i(5, 1), GameEngine.SIDE_SELF,
-			rl_e.state.unit_at(Vector2i(5, 1)).card).has(Vector2i(2, 1)),
-			"群起攻之：中间没有友方能借力时仍然打不到（顺着同列走全是空格）")
-	rl_e.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(4, 1),
-			GameEngine.SIDE_SELF)
-	rl_e.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(3, 1),
-			GameEngine.SIDE_SELF)
 	check(rl_e.attack_targets(Vector2i(5, 1), GameEngine.SIDE_SELF,
 			rl_e.state.unit_at(Vector2i(5, 1)).card).has(Vector2i(2, 1)),
-			"群起攻之：第 4、3 行站着友方单位 → 这两格不计数 → 距离 1 打得到第 2 行")
+			"群起攻之：激活后，接通盟友不计算距离 → 打得到第 2 行")
 	check(rl_e.attack_distance(Vector2i(5, 1), Vector2i(2, 1), GameEngine.SIDE_SELF,
-			rl_e.state.unit_at(Vector2i(5, 1)).card) == 1,
-			"群起攻之：借力后的攻击距离 = 1")
-	var rl_fort := _card(8001, "箭塔", "工事", 2, 3, 10, 1, 0)
-	check(rl_e.attack_distance(Vector2i(5, 1), Vector2i(2, 1), GameEngine.SIDE_SELF,
-			rl_fort) == 3,
-			"群起攻之：只帮「盟友」，工事仍按曼哈顿距离算")
+			rl_e.state.unit_at(Vector2i(5, 1)).card) == 0,
+			"群起攻之：接通单位攻击距离 = 0")
+	# 非接通盟友（农民 8003，攻程 1）放在第 5 行另一列，激活群起攻之后仍按曼哈顿距离
+	var rl_plain := _card(8003, "农民", "盟友", 3, 3, 8, 1, 1)
+	rl_e.state.place(rl_plain, Vector2i(5, 0), GameEngine.SIDE_SELF)
+	check(not rl_e.attack_targets(Vector2i(5, 0), GameEngine.SIDE_SELF,
+			rl_e.state.unit_at(Vector2i(5, 0)).card).has(Vector2i(2, 1)),
+			"群起攻之：非接通盟友仍按曼哈顿距离算（打不到第 2 行）")
 	check(rl_e.attack_distance(Vector2i(2, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT,
 			rl_e.state.unit_at(Vector2i(2, 1)).card) == 3,
 			"群起攻之：敌方效果区没有这张卡 → 敌人不受影响")
-
 	# ---- 在启动了（9071）：3 费普通技能；召唤铁栅栏 0/12，替我方 HP 承伤 ----
 	var nc_lock := repo.get_card(9071)
 	check(nc_lock.card_name == "在启动了" and nc_lock.is_spell() and nc_lock.cost == 3
@@ -6096,9 +6092,9 @@ func _init() -> void:
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 48
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 30
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
 			and int(dr_cls_count.get("敌人", 0)) == 34,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 48 / 28 / 34）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 48 / 36 / 34）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -6356,7 +6352,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 130, "R45+R50~R57：扩展全部进奖励池（总池 128，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 135, "R45+R50~R57：扩展全部进奖励池（总池 129，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -11035,8 +11031,8 @@ func _init() -> void:
 		"R91 充电装置：带 trait「接通」（与闪电链同一个 trait 族）")
 
 	# ---- ② 字段系统：定义表 / 判定口 / 序列化往返 ----
-	check(CardData.AFFIX_DEFS.size() == 7,
-		"R91 字段表：7 个字段（疾行 / 嘲讽 / 死亡 / 幻影 / 护盾 / **次元** R93 / **超负荷** R98），实际 %d"
+	check(CardData.AFFIX_DEFS.size() == 8,
+		"R91 字段表：8 个字段（疾行 / 嘲讽 / 死亡 / 幻影 / 护盾 / **次元** R93 / **超负荷** R98 / **交换** R101），实际 %d"
 		% CardData.AFFIX_DEFS.size())
 	var r91_all: Dictionary = {}
 	for c91 in r91_repo.all_cards():
@@ -11993,6 +11989,211 @@ func _init() -> void:
 		r100_pool_ids[c.id] = true
 	check(r100_pool_ids.has(8054) and r100_pool_ids.has(8055),
 		"R100：重启 8054 与钢铁卫士 8055 均进入奖励池（稀有 rarity=1）")
+
+	# R102 测试：双向传送 8061（两段式：点单位甲 → 点单位乙 → 交换位置）
+	# ══════════════════════════════════════════════════════════════
+	var r102_repo := CardRepo.load_json()
+	# ---- 卡面定义校验 ----
+	var r102_swap := r102_repo.get_card(8061)
+	check(r102_swap != null and r102_swap.is_spell() and r102_swap.cost == 0
+			and r102_swap.rarity == 1 and r102_swap.card_class == "机械之心",
+		"R102 双向传送 8061：0 费稀有技能，机械之心")
+	var r102_pool := r102_repo.reward_pool()
+	var r102_pool_ids := {}
+	for c in r102_pool:
+		r102_pool_ids[c.id] = true
+	check(r102_pool_ids.has(8061),
+		"R102：双向传送 8061 进入奖励池（稀有 rarity=1）")
+
+	# ---- 两段交换：两个单位换位置 ----
+	var r102_e1 := _new_engine([], 40, 40, -1, false)
+	r102_e1.start_game()
+	r102_e1.state.place(
+		CardData.from_dict(r102_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)   # 己方树人 A
+	r102_e1.state.place(
+		CardData.from_dict(r102_repo.get_card(8004).to_dict()), Vector2i(2, 1),
+		GameEngine.SIDE_OPPONENT)   # 敌方熊 B
+	check(r102_e1.state.unit_at(Vector2i(4, 1)).card.id == 8003
+			and r102_e1.state.unit_at(Vector2i(2, 1)).card.id == 8004,
+		"R102 双向传送：前置——(4,1) 是我方树人，(2,1) 是敌方熊")
+	r102_e1.state.hand.append(CardData.from_dict(r102_repo.get_card(8061).to_dict()))
+	var r102_hi := r102_e1.state.hand.size() - 1
+	var r102_hand0 := r102_e1.state.hand.size()
+	var r102_energy0 := r102_e1.state.energy_of(GameEngine.SIDE_SELF)
+	var r102_msg := r102_e1.cast_swap_units(r102_hi, Vector2i(4, 1), Vector2i(2, 1))
+	check(r102_e1.state.unit_at(Vector2i(4, 1)).card.id == 8004
+			and r102_e1.state.unit_at(Vector2i(2, 1)).card.id == 8003,
+		"R102 双向传送：两个单位真的交换了位置（(4,1)↔(2,1)）")
+	check(r102_e1.state.unit_at(Vector2i(4, 1)).owner == GameEngine.SIDE_OPPONENT,
+		"R102 双向传送：跟着位置走的还有归属（敌方熊换到了我方半场那格）")
+	check(r102_e1.state.hand.size() == r102_hand0 - 1,
+		"R102 双向传送：技能离手进弃牌区（手牌 -1）")
+	check(r102_e1.state.energy_of(GameEngine.SIDE_SELF) == r102_energy0,
+		"R102 双向传送：0 费 → 能量不变（%d）" % r102_e1.state.energy_of(GameEngine.SIDE_SELF))
+	check(r102_msg.contains("交换"), "R102 双向传送：结算有回执（实际 %s）" % r102_msg)
+
+	# ---- 状态跟着单位走（横置/已移动不留在原格）----
+	var r102_e2 := _new_engine([], 40, 40, -1, false)
+	r102_e2.start_game()
+	r102_e2.state.place(
+		CardData.from_dict(r102_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)
+	var r102_e2b := r102_e2.state.place(
+		CardData.from_dict(r102_repo.get_card(8003).to_dict()), Vector2i(3, 1),
+		GameEngine.SIDE_SELF)
+	r102_e2b.tapped = true
+	r102_e2.state.hand.append(CardData.from_dict(r102_repo.get_card(8061).to_dict()))
+	r102_e2.cast_swap_units(0, Vector2i(4, 1), Vector2i(3, 1))
+	check(r102_e2.state.unit_at(Vector2i(4, 1)).tapped,
+		"R102 双向传送：横置状态跟着单位换到了另一格")
+
+	# ---- 守卫：两格相同 / 空格 / 手上不是这张卡 ----
+	var r102_e3 := _new_engine([], 40, 40, -1, false)
+	r102_e3.start_game()
+	r102_e3.state.place(
+		CardData.from_dict(r102_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)
+	r102_e3.state.hand.append(CardData.from_dict(r102_repo.get_card(8061).to_dict()))
+	check(r102_e3.cast_swap_units(0, Vector2i(4, 1), Vector2i(4, 1)).contains("不同"),
+		"R102 双向传送：同一格被拒（需要两个不同的单位）")
+	check(r102_e3.cast_swap_units(0, Vector2i(4, 1), Vector2i(1, 2)).contains("两个都在场上"),
+		"R102 双向传送：目标格是空格被拒")
+	check(r102_e3.state.hand.size() == 1 and r102_e3.state.unit_at(Vector2i(4, 1)).card.id == 8003,
+		"R102 双向传送：被拒时**不扣费、不离手、棋盘不变**")
+	# 单段入口必须在付费前拦掉（否则 use_spell 会自己挑一对自动交换）
+	check(r102_e3.use_spell(0).contains("双向传送"),
+		"R102 双向传送：单段 use_spell 入口被拦（提示先点两个单位）")
+	check(r102_e3.state.hand.size() == 1,
+		"R102 双向传送：单段入口被拦时手牌不变（没被 use_spell 消耗掉）")
+
+	# R101 测试：救援构装体 8056 / 榴弹击手 8057 / 重甲战车 8058 / 机器鸟 8059 / 代达罗斯 8060
+	# ══════════════════════════════════════════════════════════════
+	var r101_repo := CardRepo.load_json()
+	# ---- 卡面定义校验 ----
+	var r101_rescue := r101_repo.get_card(8056)
+	check(r101_rescue != null and r101_rescue.kind == "盟友" and r101_rescue.cost == 2
+			and r101_rescue.power == 2 and r101_rescue.health == 8
+			and r101_rescue.attack_range == 1 and r101_rescue.move_speed == 1
+			and r101_rescue.rarity == 0 and r101_rescue.card_class == "机械之心"
+			and r101_rescue.has_affix("交换"),
+		"R101 救援构装体 8056：2 费普通盟友 2/8/1/1，机械之心，带字段「交换」"
+		% [r101_rescue.kind])
+	var r101_gren := r101_repo.get_card(8057)
+	check(r101_gren != null and r101_gren.kind == "盟友" and r101_gren.cost == 2
+			and r101_gren.power == 3 and r101_gren.health == 5
+			and r101_gren.rarity == 0 and r101_gren.card_class == "机械之心"
+			and r101_gren.traits.has("改造攻程"),
+		"R101 榴弹击手 8057：2 费普通盟友 3/5/1/1，机械之心，带 trait「改造攻程」"
+		% [r101_gren.kind])
+	var r101_tank := r101_repo.get_card(8058)
+	check(r101_tank != null and r101_tank.kind == "盟友" and r101_tank.cost == 3
+			and r101_tank.power == 3 and r101_tank.health == 13
+			and r101_tank.rarity == 1 and r101_tank.card_class == "机械之心"
+			and r101_tank.traits.has("改造移速"),
+		"R101 重甲战车 8058：3 费稀有盟友 3/13/1/1，机械之心，带 trait「改造移速」"
+		% [r101_tank.kind])
+	var r101_bird := r101_repo.get_card(8059)
+	check(r101_bird != null and r101_bird.kind == "盟友" and r101_bird.cost == 1
+			and r101_bird.power == 2 and r101_bird.health == 1
+			and r101_bird.rarity == 0 and r101_bird.card_class == "机械之心"
+			and r101_bird.traits.has("改造抽牌"),
+		"R101 机器鸟 8059：1 费普通盟友 2/1/1/1，机械之心，带 trait「改造抽牌」"
+		% [r101_bird.kind])
+	var r101_dae := r101_repo.get_card(8060)
+	check(r101_dae != null and r101_dae.kind == "盟友" and r101_dae.cost == 5
+			and r101_dae.power == 5 and r101_dae.health == 19
+			and r101_dae.rarity == 3 and r101_dae.card_class == "机械之心",
+		"R101 代达罗斯 8060：5 费史诗盟友 5/19/1/1，机械之心（实际 %s/%s/%s/%s/%s）"
+		% [r101_dae.kind, r101_dae.cost, r101_dae.power, r101_dae.health, r101_dae.rarity])
+
+	# ---- ① 交换：放在己方单位上 → 原单位回手，新卡占据该格 ----
+	var r101_e1 := _new_engine([], 40, 40, -1, false)
+	r101_e1.start_game()
+	r101_e1.state.energy = 99
+	r101_e1.state.place(
+		CardData.from_dict(r101_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)   # 树人 3/8
+	check(r101_e1.state.unit_at(Vector2i(4, 1)).card.id == 8003, "R101 交换：前置——(4,1) 是树人")
+	r101_e1.state.hand.append(CardData.from_dict(r101_repo.get_card(8056).to_dict()))
+	var r101_hi := r101_e1.state.hand.size() - 1
+	var r101_hand0 := r101_e1.state.hand.size()
+	r101_e1.play_from_hand(r101_hi, Vector2i(4, 1))
+	check(r101_e1.state.unit_at(Vector2i(4, 1)) != null
+			and r101_e1.state.unit_at(Vector2i(4, 1)).card.id == 8056,
+		"R101 交换：救援构装体占据了 (4,1)")
+	check(r101_e1.state.hand.size() == r101_hand0,
+		"R101 交换：手牌数不变（救援构装体离手、被顶回的树人进手）")
+	var r101_back_in_hand := false
+	for c in r101_e1.state.hand:
+		if c.id == 8003:
+			r101_back_in_hand = true
+	check(r101_back_in_hand, "R101 交换：被顶下的树人回到手牌")
+
+	# ---- ② 改造攻程（榴弹击手）：获得改造时攻击距离+1 ----
+	var r101_e2 := _new_engine([], 40, 40, -1, false)
+	r101_e2.start_game()
+	var r101_g: Placement = r101_e2.state.place(
+		CardData.from_dict(r101_repo.get_card(8057).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)   # 榴弹击手 3/5 攻程1
+	var r101_ar0 := r101_g.card.attack_range
+	r101_e2._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r101_g.card.attack_range == r101_ar0 + 1,
+		"R101 改造攻程：榴弹击手获得改造 → 攻击距离 %d→%d" % [r101_ar0, r101_g.card.attack_range])
+	check(r101_g.upgrade_range == 1, "R101 改造攻程：upgrade_range 累计=1")
+
+	# ---- ③ 改造移速（重甲战车）：获得改造时移动速度+1 ----
+	var r101_e3 := _new_engine([], 40, 40, -1, false)
+	r101_e3.start_game()
+	var r101_t: Placement = r101_e3.state.place(
+		CardData.from_dict(r101_repo.get_card(8058).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)   # 重甲战车 3/13 移速1
+	var r101_ms0 := r101_t.card.move_speed
+	r101_e3._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r101_t.card.move_speed == r101_ms0 + 1,
+		"R101 改造移速：重甲战车获得改造 → 移动速度 %d→%d" % [r101_ms0, r101_t.card.move_speed])
+	check(r101_t.upgrade_speed == 1, "R101 改造移速：upgrade_speed 累计=1")
+
+	# ---- ④ 改造抽牌（机器鸟）：获得改造时（己方）抽 1 张 ----
+	var r101_e4 := _new_engine([], 40, 40, -1, false)
+	r101_e4.start_game()
+	r101_e4.state.deck.append(CardData.from_dict(r101_repo.get_card(8001).to_dict()))  # 保证能抽到
+	var r101_b: Placement = r101_e4.state.place(
+		CardData.from_dict(r101_repo.get_card(8059).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)   # 机器鸟 2/1
+	var r101_hand4 := r101_e4.state.hand.size()
+	r101_e4._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r101_e4.state.hand.size() == r101_hand4 + 1,
+		"R101 改造抽牌：机器鸟获得改造（己方）→ 手牌 +1（%d→%d）" % [r101_hand4, r101_e4.state.hand.size()])
+
+	# ---- ⑤ 代达罗斯：群改手/库/弃 + 其他友方单位力量+1，不污染卡库 ----
+	var r101_e5 := _new_engine([], 40, 40, -1, false)
+	r101_e5.start_game()
+	r101_e5.state.hand.append(CardData.from_dict(r101_repo.get_card(8003).to_dict()))  # 树人 3/8
+	r101_e5.state.deck.append(CardData.from_dict(r101_repo.get_card(8001).to_dict()))  # 木栅栏
+	r101_e5.state.discard.append(CardData.from_dict(r101_repo.get_card(8004).to_dict()))  # 熊
+	var r101_d: Placement = r101_e5.state.place(
+		CardData.from_dict(r101_repo.get_card(8060).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)   # 代达罗斯 5/19
+	var r101_ally: Placement = r101_e5.state.place(
+		CardData.from_dict(r101_repo.get_card(8003).to_dict()), Vector2i(4, 2),
+		GameEngine.SIDE_SELF)   # 另一张树人 3/8
+	var r101_ally_atk0 := r101_ally.upgrade_atk
+	var r101_lib_tree := r101_repo.get_card(8003)
+	var r101_lib_tree_power := r101_lib_tree.power
+	r101_e5._daedalus_upgrade(r101_d)
+	check(r101_ally.upgrade_atk == r101_ally_atk0 + 1,
+		"R101 代达罗斯：场上其他友方盟友力量+1（upgrade_atk %d→%d）" % [r101_ally_atk0, r101_ally.upgrade_atk])
+	check(r101_ally.card.power == 3,
+		"R101 代达罗斯：场上友方盟友卡面力量不变（仍 3，加成在 upgrade_atk）")
+	var r101_hand_tree_power := -1
+	for c in r101_e5.state.hand:
+		if c.id == 8003:
+			r101_hand_tree_power = c.power
+	check(r101_hand_tree_power == 4, "R101 代达罗斯：手牌中的树人力量+1（%d）" % r101_hand_tree_power)
+	check(r101_lib_tree.power == r101_lib_tree_power,
+		"R101 代达罗斯：卡库里的树人未被污染（仍 %d 力）" % r101_lib_tree.power)
+
 
 	RunState.player_class = r91_saved_cls
 

@@ -72,6 +72,9 @@ const COL_ATTACK := Color(0.831, 0.227, 0.184, 0.55)
 const COL_HP := Color(0.545, 0.102, 0.102, 0.75)
 const COL_SPELL := Color(0.416, 0.290, 0.839, 0.55)
 const COL_FENCE_MERGE := Color(0.851, 0.545, 0.098, 0.60)   # 叠栅栏（栅栏修复术）：目标格 = 已有栅栏
+## R102：两段式技能「已选中第一个单位」的标记 —— 金黄粗描边 + 角标「已选」。
+## 与 COL_SPELL（候选目标）刻意区分开：那个是"还能点"，这个是"已经点过了"。
+const COL_PICKED := Color(1.0, 0.784, 0.0, 0.95)
 const COL_OPP_BACKROW := Color(0.541, 0.353, 0.165, 0.5)
 const COL_OWN_BACKROW := Color(0.165, 0.353, 0.541, 0.5)
 const COL_WIN := Color("c1121f")
@@ -117,6 +120,9 @@ var hp_targets_arr: Array[Vector2i] = []
 var spell_pending: int = -1     # 手牌序号（-1 = 不在选目标模式）
 var spell_targets: Array[Vector2i] = []
 var _infiltrate_src := Vector2i(-1, -1)   # 潜入（9100）第一段选中的己方盟友格
+## 「双向传送」（8061，R102）的**两段式**第一段：已选中的**第一个单位**所在格
+## （敌我皆可，所以不像 `_infiltrate_src` 那样限己方）。第二段点另一个单位即交换。
+var _swap_src := Vector2i(-1, -1)
 ## 「系统升级」（8039，R90）的**两段式**第一段：已选中的「系统升级」手牌下标（-1 = 未选）。
 ## 它的目标是**手牌里**的卡（不是棋盘），所以不能走 `spell_targets`（那套是棋盘格），
 ## 选中后要**点手牌**完成第二段 —— 靠这个变量标记「正在等玩家选手牌」。
@@ -1666,6 +1672,8 @@ func _clear_selection() -> void:
 	spell_pending = -1
 	spell_targets = []
 	_infiltrate_src = Vector2i(-1, -1)
+	# R102：「双向传送」的两段式状态同样在这里收掉 —— 右键取消 / 换牌 / 敌方回合都走它。
+	_swap_src = Vector2i(-1, -1)
 	# R90：「系统升级」的两段式状态也在这里收掉 —— 它不在棋盘选中体系里，
 	# 但换关 / 敌方回合 / 选别的牌时都该自动取消（否则面板会一直挂着）。
 	_sys_upgrade_idx = -1
@@ -2081,6 +2089,8 @@ func _use_hand_card(i: int) -> void:
 				target_hint = "一条横行（点该行任意一格）"
 			elif card.id == GameEngine.INFILTRATE_ID:
 				target_hint = "一个自己的盟友（之后再点目的格）"
+			elif card.id == GameEngine.SWAP_UNITS_ID:
+				target_hint = "第一个单位（之后再点第二个单位）"
 			elif card.id == GameEngine.DOUBLE_TRAP_ID:
 				target_hint = "一个自己的工事"
 			elif card.id == GameEngine.UPGRADE_ID:
@@ -2129,6 +2139,8 @@ func _start_drag(i: int, pos: Vector2) -> void:
 					card.card_name, engine.cost_of(card), engine.energy_of()]
 		elif engine.fence_merge_allowed(card):
 			status_text = "%s：拖到绿色格子放置；拖到橙色「叠」格 = 与已有栅栏合并" % card.card_name
+		elif card.has_affix(GameEngine.AFFIX_SWAP):
+			status_text = "%s：拖到绿色空格放置；也可拖到己方单位上 → 把它顶回手" % card.card_name
 		else:
 			status_text = "%s：拖到绿色格子放置（自己半场空格）" % card.card_name
 		queue_redraw()
@@ -2144,6 +2156,18 @@ func _start_drag(i: int, pos: Vector2) -> void:
 			_drag_spell_cells = []
 		else:
 			status_text = "潜入：拖到一个己方盟友上（第二段再拖到目的格）"
+		queue_redraw()
+		return
+	if card.id == GameEngine.SWAP_UNITS_ID:
+		# R102：双向传送同样是**两段式**，拖拽也必须走两段（否则会掉进 use_spell
+		# 的单段分支被引擎拒绝，或者自动挑一对自动交换掉）。
+		_drag_spell_cells = _spell_target_cells(card)
+		_drag_anywhere = false
+		if _drag_spell_cells.size() < 2:
+			status_text = "双向传送：场上不足两个单位（已取消）"
+			_drag_spell_cells = []
+		else:
+			status_text = "双向传送：拖到第一个单位上（第二段再拖到另一个单位）"
 		queue_redraw()
 		return
 	if card.is_spell() and card.needs_target():
@@ -2175,6 +2199,8 @@ func _own_place_cells(card: CardData) -> Array[Vector2i]:
 		return _field_place_cells(card)
 	## 普通随从/工事：自己半场（下 3 行）的空格 + 可合并的己方栅栏格
 	## （持「栅栏修复术」且手里是栅栏卡时，栅栏可以打在已有栅栏上）。
+	## 带「交换」字段的卡（R101，救援构装体）：还能打在**已有己方单位**的格子上
+	## （原单位被顶回手、新卡占据该格；引擎 play_from_hand 里的交换分支负责顶回手）。
 	var out: Array[Vector2i] = []
 	for x in range(FieldState.OPPONENT_ROWS, FieldState.BOARD_ROWS):
 		for y in FieldState.BOARD_COLS:
@@ -2182,6 +2208,9 @@ func _own_place_cells(card: CardData) -> Array[Vector2i]:
 			if not engine.state.board.has(c):
 				out.append(c)
 			elif engine.fence_merge_target(c, card):
+				out.append(c)
+			elif card.has_affix(GameEngine.AFFIX_SWAP) \
+					and engine.state.board[c].owner == GameEngine.SIDE_SELF:
 				out.append(c)
 	return out
 
@@ -2258,6 +2287,42 @@ func _finish_drag(pos: Vector2) -> void:
 			_clear_selection()
 			_drag_idx = -1
 			_say("潜入：没有可去的空格，技能仍在手牌")
+			return
+		spell_pending = i
+		spell_targets = _drag_spell_cells
+		_drag_idx = -1
+		queue_redraw()
+		return
+	if card.id == GameEngine.SWAP_UNITS_ID and _swap_src.x >= 0 \
+			and infil_drop != null and cells.has(infil_drop) \
+			and infil_drop != _swap_src:
+		# R102 双向传送第二段：拖到另一个单位 = 真正交换（清选中 → 引擎两段结算）。
+		var sw_a := _swap_src
+		_clear_selection()
+		spell_pending = -1
+		spell_targets = []
+		if not engine.can_pay_card(card):
+			_say("能量不足：%s 需要 %d，当前能量 %d" % [
+					card.card_name, engine.cost_of(card), engine.energy_of()])
+			return
+		status_text = "双向传送 → %s" % engine.cast_swap_units(i, sw_a, infil_drop)
+		_net_send({"type": "action", "act": "spell", "card": card.to_dict(),
+				"target": null})
+		queue_redraw()
+		return
+	if card.id == GameEngine.SWAP_UNITS_ID and cells.has(infil_drop):
+		# R102 双向传送第一段：拖到任意单位 = 选定它，然后高亮其余单位。
+		_swap_src = infil_drop
+		_drag_spell_cells = []
+		for c: Vector2i in engine.state.board:
+			if c != infil_drop:
+				_drag_spell_cells.append(c)
+		_drag_spell_cells.sort()
+		var sw_pick: Placement = engine.state.unit_at(_swap_src)
+		if _drag_spell_cells.is_empty():
+			_clear_selection()
+			_drag_idx = -1
+			_say("双向传送：场上只有 %s 一个单位，技能仍在手牌" % sw_pick.card.card_name)
 			return
 		spell_pending = i
 		spell_targets = _drag_spell_cells
@@ -2346,6 +2411,19 @@ func _cast_spell(i: int, cell: Vector2i, card: CardData) -> void:
 		var src := _infiltrate_src
 		_clear_selection()
 		status_text = "潜入 → %s" % engine.cast_infiltrate(i, src, cell)
+		_net_send({"type": "action", "act": "spell", "card": card.to_dict(),
+				"target": null})
+		queue_redraw()
+		return
+	# R102：双向传送的两段判定同样收在 _swap_src 上（与潜入同套路）。
+	if card.id == GameEngine.SWAP_UNITS_ID and _swap_src.x < 0:
+		_clear_selection()
+		_say("双向传送：先点第一个单位，再点第二个单位")
+		return
+	if card.id == GameEngine.SWAP_UNITS_ID and _swap_src.x >= 0:
+		var sw_a := _swap_src
+		_clear_selection()
+		status_text = "双向传送 → %s" % engine.cast_swap_units(i, sw_a, cell)
 		_net_send({"type": "action", "act": "spell", "card": card.to_dict(),
 				"target": null})
 		queue_redraw()
@@ -3028,6 +3106,12 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 				var c := Vector2i(x, y)
 				if not engine.state.board.has(c):
 					out.append(c)
+	elif card.id == GameEngine.SWAP_UNITS_ID:
+		# 双向传送（8061，R102）：第一段 = 场上**任意单位**（敌我皆可）；
+		# 第二段的可选集合在 _on_board_click 里按「除已选那个」现算。
+		for c: Vector2i in engine.state.board:
+			out.append(c)
+		out.sort()
 	elif card.id == GameEngine.INFILTRATE_ID:
 		# 潜入：第一段只认己方「盟友」（工事不能动）；第二段目的格另给
 		for c: Vector2i in engine.state.board:
@@ -3101,6 +3185,25 @@ func _on_board_click(cell: Vector2i) -> void:
 					status_text = "潜入：再点一个空格作为目的地（右键取消）"
 				queue_redraw()
 				return
+			# 双向传送（8061，R102）两段操作：第一段点单位甲 → 第二段点单位乙
+			if sp_card.id == GameEngine.SWAP_UNITS_ID and _swap_src.x < 0:
+				_swap_src = cell
+				# 第二段的可选集合 = 场上**除它以外**的所有单位（敌我皆可）
+				spell_targets = []
+				for c: Vector2i in engine.state.board:
+					if c != cell:
+						spell_targets.append(c)
+				spell_targets.sort()
+				var picked: Placement = engine.state.unit_at(_swap_src)
+				if spell_targets.is_empty():
+					_clear_selection()
+					status_text = "双向传送：场上只有 %s 一个单位，技能仍在手牌" % \
+							picked.card.card_name
+				else:
+					status_text = "双向传送：已选 %s，再点另一个单位交换位置（右键取消）" % \
+							picked.card.card_name
+				queue_redraw()
+				return
 			_cast_spell(idx, cell, sp_card)
 		else:
 			_clear_selection()
@@ -3149,7 +3252,10 @@ func _on_board_click(cell: Vector2i) -> void:
 		var i: int = selection[1]
 		var card := engine.state.hand[i]
 		if not card.is_spell():
-			if p != null and not engine.fence_merge_target(cell, card):
+			# 带「交换」字段的卡（R101）可以落在己方已有单位上 → 顶回手；其余占用格拒绝
+			if p != null and not engine.fence_merge_target(cell, card) \
+					and not (card.has_affix(GameEngine.AFFIX_SWAP) \
+					and p.owner == GameEngine.SIDE_SELF):
 				_say("那格已有 %s，换一格放置" % p.card.card_name)
 			elif FieldState.cell_owner(cell.x) != "self":
 				_say("%s 只能放到自己半场（下 3 行）" % card.card_name)
@@ -3208,8 +3314,14 @@ func _on_right_click() -> void:
 		queue_redraw()
 		return
 	_pass_moved_pending()  # 右键取消 = 已移动单位放弃攻击（横置）
+	var pick_src := _picked_src()   # R102：两段式技能「已选的第一个单位」（潜伏/双向传送共用）
 	_clear_selection()
-	status_text = "已取消"
+	if pick_src.x >= 0 and engine.state.board.has(pick_src):
+		# 明确告诉玩家"取消的是哪一个" —— 否则金黄标记消失后不知道刚才点的是谁。
+		status_text = "已取消：%s 的选择已撤销，技能仍在手牌（右键取消）" % \
+				engine.state.board[pick_src].card.card_name
+	else:
+		status_text = "已取消"
 
 
 func _on_hover(pos: Vector2) -> void:
@@ -4796,6 +4908,8 @@ func _replay_tick() -> void:
 			engine.use_effect(int(a[0]))
 		"cast_infiltrate":
 			engine.cast_infiltrate(int(a[0]), ReplayLog.vec(a[1]), ReplayLog.vec(a[2]))
+		"cast_swap_units":
+			engine.cast_swap_units(int(a[0]), ReplayLog.vec(a[1]), ReplayLog.vec(a[2]))
 		"move":
 			engine.move(ReplayLog.vec(a[0]), ReplayLog.vec(a[1]))
 		"attack":
@@ -6411,6 +6525,9 @@ func _draw_highlights() -> void:
 		_draw_string_center(_font_bold, 14, "HP", _cell_center(cell), Color.WHITE)
 	for cell in spell_targets:
 		_hl(cell, COL_SPELL)
+	# R102：两段式技能**已选中第一个单位**的标记（金黄粗描边 + 角标「已选」）。
+	# 潜伏 9100 与双向传送 8061 共用这一套 —— 满足「选中哪个要看得见、右键能取消」。
+	_draw_picked_marker()
 	# 叠栅栏（栅栏修复术 6021）：选中的手牌是栅栏时，把可合并的己方栅栏格标成橙色「叠」
 	if selection != null and selection[0] == "hand" \
 			and selection[1] >= 0 and selection[1] < engine.state.hand.size():
@@ -6418,6 +6535,31 @@ func _draw_highlights() -> void:
 		for mcell in _fence_merge_cells(sel_card):
 			_hl(mcell, COL_FENCE_MERGE)
 			_draw_string_center(_font_bold, 13, "叠", _cell_center(mcell), Color.WHITE)
+
+
+func _picked_src() -> Vector2i:
+	## 当前「两段式技能已选中的第一个单位」格 —— 潜入与双向传送共用一个入口。
+	if _infiltrate_src.x >= 0:
+		return _infiltrate_src
+	if _swap_src.x >= 0:
+		return _swap_src
+	return Vector2i(-1, -1)
+
+
+func _draw_picked_marker() -> void:
+	## 在**已选中**的那个单位格上画金黄粗描边 + 角标「已选」。
+	## 用描边而不是 `_hl` 的整格填充：填充会把单位本体盖住，正好违背"标明选中了哪个"。
+	var src := _picked_src()
+	if src.x < 0 or not engine.state.board.has(src):
+		return
+	var r := Rect2(GRID_X + src.y * CELL + 1, GRID_Y + src.x * CELL + 1,
+			CELL - 2, CELL - 2)
+	draw_rect(r, COL_PICKED, false, 4.0)
+	# 角标：右上角小方块 + 「已选」两字
+	var tag := Rect2(r.position.x + r.size.x - 34.0, r.position.y + 1.0, 33.0, 14.0)
+	draw_rect(tag, COL_PICKED)
+	_draw_string_center(_font_bold, 10, "已选",
+			tag.position + tag.size / 2.0, Color.BLACK)
 
 
 func _cell_center(cell: Vector2i) -> Vector2:

@@ -807,7 +807,9 @@
     },
     {
       "id": 9022,
-      "affixes": ["次元"],
+      "affixes": [
+        "次元"
+      ],
       "name": "鸭蛋",
       "kind": "工事",
       "cost": 0,
@@ -1366,7 +1368,9 @@
     },
     {
       "id": 9050,
-      "affixes": ["次元"],
+      "affixes": [
+        "次元"
+      ],
       "name": "鲸鱼之怒",
       "kind": "技能",
       "cost": 1,
@@ -1782,9 +1786,10 @@
       "group": "player",
       "class": "森林精魄",
       "traits": [
-        "群起攻之"
+        "群起攻之",
+        "接通"
       ],
-      "effect_text": "己方盟友计算攻击距离时，有友方单位的格子不计入距离。",
+      "effect_text": "**接通**的单位在自己攻击时不计算距离（全场可达）。",
       "target_mode": "none",
       "value": 0,
       "color": "绿",
@@ -1989,7 +1994,10 @@
         "嘲讽",
         "离场消失"
       ],
-      "affixes": ["嘲讽", "次元"],
+      "affixes": [
+        "嘲讽",
+        "次元"
+      ],
       "effect_text": "由「魔像术」召唤。嘲讽：敌方单位必须优先攻击它。",
       "target_mode": "none",
       "color": "灰",
@@ -2362,7 +2370,9 @@
     },
     {
       "id": 9097,
-      "affixes": ["次元"],
+      "affixes": [
+        "次元"
+      ],
       "name": "预判",
       "kind": "技能",
       "cost": 0,
@@ -2381,7 +2391,9 @@
     },
     {
       "id": 9098,
-      "affixes": ["次元"],
+      "affixes": [
+        "次元"
+      ],
       "name": "拒绝命运",
       "kind": "技能",
       "cost": 2,
@@ -2418,7 +2430,9 @@
     },
     {
       "id": 8010,
-      "affixes": ["次元"],
+      "affixes": [
+        "次元"
+      ],
       "name": "荧光草",
       "kind": "工事",
       "cost": 0,
@@ -2782,7 +2796,9 @@
     },
     {
       "id": 9109,
-      "affixes": ["次元"],
+      "affixes": [
+        "次元"
+      ],
       "name": "警觉",
       "kind": "技能",
       "cost": 2,
@@ -3720,6 +3736,132 @@
         "嘲讽"
       ],
       "effect_text": "超负荷；嘲讽。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8056,
+      "name": "救援构装体",
+      "kind": "盟友",
+      "cost": 2,
+      "power": 2,
+      "health": 8,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [
+        "交换"
+      ],
+      "effect_text": "交换：也可以放在已有友方单位的格子上，原本在那个格子上的友方单位返回手卡。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8057,
+      "name": "榴弹击手",
+      "kind": "盟友",
+      "cost": 2,
+      "power": 3,
+      "health": 5,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "改造攻程"
+      ],
+      "affixes": [],
+      "effect_text": "每次获得改造时，攻击距离+1。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8058,
+      "name": "重甲战车",
+      "kind": "盟友",
+      "cost": 3,
+      "power": 3,
+      "health": 13,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "改造移速"
+      ],
+      "affixes": [],
+      "effect_text": "每次获得改造时，移动速度+1。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8059,
+      "name": "机器鸟",
+      "kind": "盟友",
+      "cost": 1,
+      "power": 2,
+      "health": 1,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "改造抽牌"
+      ],
+      "affixes": [],
+      "effect_text": "每次获得改造时，抽一张卡。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8060,
+      "name": "代达罗斯",
+      "kind": "盟友",
+      "cost": 5,
+      "power": 5,
+      "health": 19,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 3,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [],
+      "effect_text": "使用时，手卡、抽牌库、弃牌区，以及场上其他所有盟友和工事获得改造：力量+1。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8061,
+      "name": "双向传送",
+      "kind": "技能",
+      "cost": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "effect_text": "指定战场上的**两个单位**，**交换它们的位置**（敌我皆可，两个单位的状态也跟着换）。第一段点单位甲、第二段点单位乙；**右键取消**。场上不足两个单位时无法使用。",
       "target_mode": "none",
       "color": "蓝",
       "image": ""

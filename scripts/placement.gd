@@ -35,6 +35,8 @@ var fence_bonus_traits: Array[String] = []   # 同上，叠加时**新加进**�
 var upgrade_atk: int = 0      # 改造累计加攻（无上限）
 var upgrade_hp: int = 0       # 改造累计加血（含「素体被改造时额外 +1」那部分）
 var upgrade_stacks: int = 0   # **改造层数**（R86）：被改造过几次
+var upgrade_range: int = 0   # 改造加攻程累计（R101，榴弹击手）：只在场上有效，离场由 _card_leaving_field 还原
+var upgrade_speed: int = 0   # 改造加移速累计（R101，重甲战车）：只在场上有效，离场由 _card_leaving_field 还原
 # 「侦察塔」（8032，trait「改造层数」）：攻击伤害 **+1 / 层**。
 # ⚠️ 只对**带该 trait** 的卡生效 —— 别的卡（树人 / 木栅栏…）改造后 `upgrade_stacks`
 # 也会 +1，但它们**不该**因此加攻（否则 0 攻工事改造几次就能自己打人）。

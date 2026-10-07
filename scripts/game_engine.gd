@@ -572,6 +572,19 @@ const WALL_ID:= 8052
 const TRANSCEND_ID:= 8053
 const REBOOT_ID:= 8054
 const STEEL_GUARD_ID:= 8055
+const RESCUE_ID:= 8056
+const GRENADIER_ID:= 8057
+const HEAVY_TANK_ID:= 8058
+const MECH_BIRD_ID:= 8059
+const DAEDALUS_ID:= 8060
+const AFFIX_SWAP:= "交换"
+const UPGRADE_RANGE_TRAIT:= "改造攻程"
+const UPGRADE_SPEED_TRAIT:= "改造移速"
+const UPGRADE_DRAW_TRAIT:= "改造抽牌"
+## 双向传送（8061 技能，R102）：0 费；指定战场上**两个单位**，交换它们的位置。
+# 两段操作：UI 先点单位甲、再点单位乙 → engine.cast_swap_units()；
+# 敌方 AI / 自动出牌走 use_spell 的自动兜底（见 _run_spell_effect）。
+const SWAP_UNITS_ID:= 8061
 ## 「能量屏障」8033 赋的护盾也登记成字段（R91）—— 否则这张牌被强化后
 ## 玩家在任何地方都看不到「它有护盾」。
 const FIELD_BARRIER:= "护盾"
@@ -2625,13 +2638,18 @@ func _card_leaving_field(p: Placement) -> CardData:
 	## 「离场还原只有唯一口」这条约定不被绕过。
 	if p == null:
 		return null
-	if p.fence_bonus_hp <= 0 and p.fence_bonus_traits.is_empty() and p.upgrade_hp <= 0:
+	if p.fence_bonus_hp <= 0 and p.fence_bonus_traits.is_empty() and p.upgrade_hp <= 0 \
+			and p.upgrade_range <= 0 and p.upgrade_speed <= 0:
 		return p.card
 	var out:= CardData.from_dict(p.card.to_dict())
 	out.traits = (p.card.traits as Array).duplicate()   # 同上：必须切断与卡库的共享引用
 	out.health = maxi(1, p.card.health - p.fence_bonus_hp - p.upgrade_hp)
 	for t in p.fence_bonus_traits:
 		out.traits.erase(t)
+	if p.upgrade_range > 0:
+		out.attack_range = maxi(1, p.card.attack_range - p.upgrade_range)
+	if p.upgrade_speed > 0:
+		out.move_speed = maxi(0, p.card.move_speed - p.upgrade_speed)
 	return out
 
 
@@ -2673,8 +2691,27 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 			"replaced": old_field != null})
 		_note_card_played(SIDE_SELF, card)
 		return null
+	# 交换（R101）：放在已有己方单位的格子上 → 原单位回手，新卡占据该格
+	if card.has_affix(AFFIX_SWAP):
+		var occ := state.unit_at(cell)
+		if occ != null and occ.owner == SIDE_SELF:
+			var back := _card_leaving_field(occ)
+			back = CardData.from_dict(back.to_dict())
+			back.traits = (back.traits as Array).duplicate()
+			state.board.erase(cell)
+			if state.hand_full():
+				state.discard.append(back)
+				_log("交换：%s 被顶回手失败（手牌已满）→ 进弃牌区" % occ.card.card_name)
+			else:
+				state.hand.append(back)
+				_log("交换：%s 返回手卡，%s 占据 %s" % [occ.card.card_name, card.card_name, cell])
+			action.emit("swap", {"cell": cell, "old": occ.card, "new": card})
+
 	var p:= state.place(card, cell, SIDE_SELF)
 	state.hand.remove_at(hand_index)
+
+	if card.id == DAEDALUS_ID:
+		_daedalus_upgrade(p)
 
 	if card.id == FOX_ID:
 		_fox_trigger()
@@ -2751,6 +2788,35 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	return p
 
 
+func _daedalus_upgrade(self_p: Placement) -> void :
+	## 代达罗斯 8060（R101，史诗，机械之心）：使用时，手卡/抽牌库/弃牌区/
+	## 场上其他所有友方盟友和工事获得改造：力量+1。
+	# 手牌/牌库/弃牌区：烤进副本（与 系统升级/批量改造 同口径，本场永久、不污染卡库）
+	for zone in [state.hand, state.deck, state.discard]:
+		for i in zone.size():
+			var c: CardData = zone[i]
+			if c.kind == "盟友" or c.is_fort():
+				var up := CardData.from_dict(c.to_dict())
+				up.traits = (up.traits as Array).duplicate()
+				up.power += 1
+				zone[i] = up
+	# 场上其他友方盟友/工事：走改造路径（力量+1，触发其改造反应），不连锁镜像/供牌
+	for cell in state.board.keys():
+		var q: Placement = state.board[cell]
+		if q == self_p:
+			continue
+		if q.owner != SIDE_SELF:
+			continue
+		if q.card.kind == "盟友" or q.card.is_fort():
+			q.card = CardData.from_dict(q.card.to_dict())
+			q.card.traits = (q.card.traits as Array).duplicate()
+			q.upgrade_atk += 1
+			q.upgrade_stacks += 1
+			_on_unit_upgraded(q)
+			_log("代达罗斯：%s 获得改造（力量+1）" % q.card.card_name)
+	_log("代达罗斯：群体改造完成")
+	action.emit("daedalus", {"self": self_p.card})
+
 func _spawn_self_clone(card: CardData) -> void :
 	## 野兔 9032（R82）：把**自己**复制一份塞进手牌。
 	##
@@ -2779,6 +2845,25 @@ func _spawn_self_clone(card: CardData) -> void :
 	_log("%s：手牌增加一张复制（回合结束前可打出）" % card.card_name)
 	action.emit("self_clone", {"card": clone, "from": card})
 
+
+func _on_unit_upgraded(p: Placement) -> void :
+	## R101：「每次获得改造时」触发（榴弹击手/重甲战车/机器鸟）。
+	## 在**所有**给这张单位施加改造的入口末尾调用（升级/自我修复/加厚装甲/
+	## 超越极限/模仿者传导/代达罗斯 群体改造）。
+	if p == null or p.card == null:
+		return
+	if p.card.traits.has(UPGRADE_RANGE_TRAIT):      # 榴弹击手：攻击距离+1
+		p.upgrade_range += 1
+		p.card.attack_range += 1
+		_log("改造触发：%s 攻击距离+1（→%d）" % [p.card.card_name, p.card.attack_range])
+	if p.card.traits.has(UPGRADE_SPEED_TRAIT):      # 重甲战车：移动速度+1
+		p.upgrade_speed += 1
+		p.card.move_speed += 1
+		_log("改造触发：%s 移动速度+1（→%d）" % [p.card.card_name, p.card.move_speed])
+	if p.card.traits.has(UPGRADE_DRAW_TRAIT):        # 机器鸟：抽1张
+		if p.owner == SIDE_SELF:
+			state.draw()
+		_log("改造触发：%s 改造时抽1张" % p.card.card_name)
 
 func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	## 「升级」（8027，R82，机械之心）：改造一个**己方盟友或工事** →
@@ -2834,6 +2919,7 @@ func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	# 「无限装甲」8038（R89）：被改造时**每回合一次**供一张 0 费改造牌到手。
 	# 挂在**改造结算之后**（卡面写的是「被改造时」，那是改造完成的那一刻）。
 	_feed_upgrade_card(p)
+	_on_unit_upgraded(p)
 	return "%s 改造完成（+%d 攻 / +%d 血）" % [p.card.card_name, atk_gain, hp_gain]
 
 
@@ -2932,6 +3018,7 @@ func _transcend(target, side:= SIDE_SELF) -> String :
 	_mimic_relay(p, 0, 0, AFFIX_OVERLOAD)
 	# 「无限装甲」8038（R89）：被改造时每回合供一张 0 费改造牌（与 _upgrade_unit 同）。
 	_feed_upgrade_card(p)
+	_on_unit_upgraded(p)
 	return "%s 获得超负荷" % p.card.card_name
 
 
@@ -3197,6 +3284,7 @@ func _self_repair(target, side:= SIDE_SELF) -> String :
 	_mimic_relay(p, 0, SELF_REPAIR_HP)
 	action.emit("self_repair", {"cell": target, "card": p.card, "placement": p,
 			"hp": SELF_REPAIR_HP, "regen": SELF_REPAIR_REGEN, "side": side})
+	_on_unit_upgraded(p)
 	return "%s 自我修复完成（+%d 血 / 每回合回 %d）" % [
 			p.card.card_name, SELF_REPAIR_HP, SELF_REPAIR_REGEN]
 
@@ -3244,6 +3332,7 @@ func _armor_plate(target, side:= SIDE_SELF) -> String :
 	_mimic_relay(p, atk_gain, hp_gain)
 	# 「无限装甲」8038（R89）：被改造时**每回合一次**供一张 0 费改造牌到手。
 	_feed_upgrade_card(p)
+	_on_unit_upgraded(p)
 	return "%s 加装完成（+%d 血）" % [p.card.card_name, hp_gain]
 
 
@@ -3428,6 +3517,7 @@ func _mimic_relay(src: Placement, atk_gain: int, hp_gain: int, affix: String = "
 		if affix != "":
 			q.card.add_affix(affix)
 		q.upgrade_stacks += 1
+		_on_unit_upgraded(q)
 		_log("模仿者模仿 %s 的改造：+%d 攻 / +%d 血（现在是 %d 攻 / %d 血）" % [
 				src.card.card_name, atk_gain, hp_gain, q.effective_power(), q.health])
 		action.emit("mimic_upgrade", {"cell": c, "card": q.card, "placement": q,
@@ -3715,6 +3805,11 @@ func use_spell(hand_index: int, target = null) -> String:
 	# 费用已经扣了、卡也已经从手牌里拿走了。
 	if card.id == SYS_UPGRADE_ID:
 		return "系统升级：先点手牌里的一张盟友或工事"
+	# 双向传送（8061，R102）：**两段式**技能 —— 要选**两个**单位，单段入口没有
+	# 第二个目标的信息。必须在**付费之前**拦截，否则玩家发现场上不足两个单位时
+	# 费用已经扣了、卡也已经从手牌里拿走了。
+	if card.id == SWAP_UNITS_ID:
+		return "双向传送：先点第一个单位，再点第二个单位（右键取消）"
 	# 回旋斩（9096）：本回合使用 4 张以上其他卡后才能使用（付费用之前拦截）。
 	if card.id == WHIRL_BLADE_ID and state.self_card_plays < WHIRL_BLADE_NEED:
 		return "回旋斩：本回合还需先使用 %d 张其他卡（已用 %d）" % [
@@ -4385,6 +4480,75 @@ func cast_infiltrate(hand_index: int, ally_cell: Vector2i, dst: Vector2i) -> Str
 	return detail
 
 
+func cast_swap_units(hand_index: int, cell_a: Vector2i, cell_b: Vector2i) -> String:
+	## 「双向传送」（8061，R102，机械之心 0 费稀有）的两段施放入口：
+	## UI 先点单位甲、再点单位乙。
+	##
+	## 与「潜入」9100 同一套路：`use_spell` 已在**付费之前**拦掉单段入口，
+	## 所以 `_pay` 在**这里**扣。两格必须**不同**、都必须有单位
+	##（交换是「两个单位换位置」，空格不参与）。
+	if ReplayLog.recording:
+		ReplayLog.act("cast_swap_units", [hand_index, cell_a, cell_b])
+	if hand_index < 0 or hand_index >= state.hand.size():
+		return "（双向传送：手牌序号无效）"
+	var card: CardData = state.hand[hand_index]
+	if card == null or card.id != SWAP_UNITS_ID:
+		return "（这不是双向传送）"
+	if cell_a == cell_b:
+		return "（请指定两个不同的单位）"
+	var pa := state.unit_at(cell_a)
+	var pb := state.unit_at(cell_b)
+	if pa == null or pb == null:
+		return "（需要指定两个都在场上的单位）"
+	_pay(card)
+	state.hand.remove_at(hand_index)
+	var detail := _swap_two_units(cell_a, cell_b)
+	_log("使用技能 %s → %s" % [card.card_name, detail])
+	action.emit("spell", {"card": card, "detail": detail})
+	_note_card_played(SIDE_SELF, card)
+	state.discard.append(card)
+	return detail
+
+
+func _swap_two_units(cell_a: Vector2i, cell_b: Vector2i) -> String:
+	## 交换两格上的单位（敌我皆可 —— 卡面写的是「战场上两个单位」）。
+	## 只换**位置**：Placement 上的全部状态（横置 / 已移动 / 沉睡 / 冰封…）跟着单位走。
+	var pa: Placement = state.board[cell_a]
+	var pb: Placement = state.board[cell_b]
+	state.board[cell_a] = pb
+	state.board[cell_b] = pa
+	var detail := "%s ⇄ %s 交换了位置" % [pa.card.card_name, pb.card.card_name]
+	action.emit("swap_units", {"a": cell_a, "b": cell_b,
+			"card_a": pa.card, "card_b": pb.card})
+	return detail
+
+
+func _swap_auto_cells(side: String) -> Array:
+	## AI / 自动出牌的兜底落点：场上**最靠前的两个单位**（我方优先，跨敌我皆可）。
+	## 敌方 AI 拿不到「玩家点了哪两个格」，所以自己挑一对 —— 优先换开前后排，
+	## 对玩家才有点意义（把敌方前排甩到后排）。
+	var mine: Array = []
+	var foes: Array = []
+	for c: Vector2i in state.board:
+		var p: Placement = state.board[c]
+		if p.owner == side:
+			mine.append(c)
+		else:
+			foes.append(c)
+	mine.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+			return a.x > b.x)
+	foes.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+			return a.x < b.x)
+	var out: Array = []
+	if mine.size() >= 2:
+		out = [mine[0], mine[1]]
+	elif mine.size() == 1 and foes.size() >= 1:
+		out = [mine[0], foes[0]]
+	elif foes.size() >= 2:
+		out = [foes[0], foes[1]]
+	return out
+
+
 func cast_sys_upgrade(hand_index: int, target_hand_index: int) -> String:
 	## 「系统升级」（8039，R90，机械之心 1 费稀有）的两段施放入口：
 	## UI 先点「系统升级」→ 再点**手牌里**一张盟友 / 工事。
@@ -4997,6 +5161,13 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 			if if_p == null:
 				return "（潜入：需要指定一个自己的盟友）"
 			return _infiltrate_cast(side, _cell_of(if_p), _infiltrate_auto_cell(side), card)
+		SWAP_UNITS_ID:
+			# 玩家侧已在 use_spell 入口拦掉（付费之前）；走到这里的只可能是敌方 AI / 自动出牌，
+			# 没有「玩家点了哪两个格」的概念 → 自己挑一对（见 _swap_auto_cells）。
+			var sw := _swap_auto_cells(side)
+			if sw.size() < 2:
+				return "（双向传送：场上不足两个单位）"
+			return _swap_two_units(sw[0], sw[1])
 		ECHO_ID:
 			return _echo_spell(side, card)
 		DODGE_ID:
@@ -6577,41 +6748,14 @@ func _rally_active(side: String) -> bool:
 func attack_distance(from: Vector2i, to: Vector2i, side: String, card: CardData) -> int:
 
 
-
-	if card == null or card.kind != "盟友" or not _rally_active(side):
+	if card == null or not _rally_active(side):
 		return manhattan(from, to)
-	var inf:= 9999
-	var dist: Dictionary = {}
-	var done: Dictionary = {}
-	for x in FieldState.BOARD_ROWS:
-		for y in FieldState.BOARD_COLS:
-			var c:= Vector2i(x, y)
-			dist[c] = inf
-			done[c] = false
-	if not dist.has(from) or not dist.has(to):
+	# 群起攻之（新效果）：接通单位攻击不计算距离 → 全场可达
+	if card.traits.has(CHARGE_TRAIT):
+		if card.attack_range > 0:
+			return 0
 		return manhattan(from, to)
-	dist[from] = 0
-	while true:
-		var cur:= Vector2i(-1, -1)
-		var bd:= inf
-		for c: Vector2i in dist:
-			if not done[c] and int(dist[c]) < bd:
-				bd = int(dist[c])
-				cur = c
-		if cur == Vector2i(-1, -1) or bd == inf:
-			break
-		done[cur] = true
-		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-			var nx: Vector2i = cur + d
-			if not dist.has(nx):
-				continue
-			var occ = state.board.get(nx)
-			var w:= 1
-			if occ is Placement and (occ as Placement).owner == side:
-				w = 0
-			if bd + w < int(dist[nx]):
-				dist[nx] = bd + w
-	return int(dist[to])
+	return manhattan(from, to)
 
 
 func attack_targets(cell: Vector2i, side:= "", card: CardData = null) -> Array[Vector2i]:
