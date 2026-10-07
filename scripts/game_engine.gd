@@ -555,6 +555,9 @@ const AFFIX_PHANTOM:= "幻影"        # 手牌里给它加一张自身的短暂�
 ## 「次元」（R93）：使用后 / 离场后消失，不进弃牌区。
 ## 与「幻影」区分见 `CardData.AFFIX_DEFS` 注释：幻影说的是**手牌里回合结束**消失那种。
 const AFFIX_DIMENSION:= "次元"
+## 「超负荷」（R98，旧式机兵 8050）：生命降到 0 以下不会立即死亡，以负数血量继续存活；
+## 伤害不会溢出（不触发后排「溢出伤害」漏给玩家 HP）；己方回合结束时若仍为负则死亡。
+const AFFIX_OVERLOAD:= "超负荷"
 ## 「能量屏障」8033 赋的护盾也登记成字段（R91）—— 否则这张牌被强化后
 ## 玩家在任何地方都看不到「它有护盾」。
 const FIELD_BARRIER:= "护盾"
@@ -1783,6 +1786,8 @@ func end_turn() -> void :
 	# 充电装置（8041，R91）：被「接通」的**己方**单位每回合结束回 2 点生命。
 	# 放在 `_regen_tick` 之后：两者都是「自己回合结束的回血」，叠在相邻格里会一起回。
 	_charge_tick(current_side)
+	# 超负荷（旧式机兵 8050，R98）：己方回合结束时，生命仍为负数的超负荷单位死亡。
+	_overload_tick(current_side)
 
 	if current_side == SIDE_SELF:
 		var n:= state.discard_hand()
@@ -5911,13 +5916,42 @@ func _death_blast(center: Vector2i, amount: int, card: CardData) -> void :
 	action.emit("blast", {"center": center, "cells": cells, "amount": amount, "card": card})
 
 
+func _overload_tick(side: String) -> void :
+	## 「超负荷」（旧式机兵 8050，R98）：**己方回合结束时**，
+	## 带「超负荷」且生命为负的单位**真正死亡**（直接 _destroy，不触发后排「溢出伤害」）。
+	## 生命已回到 0 或以上（本回合被治疗拉回）的单位则继续存活。
+	var dead_cells: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var p: Placement = state.unit_at(cell)
+		if p != null and p.owner == side and p.card.has_affix(AFFIX_OVERLOAD) \
+				and p.health < 0:
+			dead_cells.append(cell)
+	for cell: Vector2i in dead_cells:
+		var p: Placement = state.unit_at(cell)
+		if p == null:
+			continue
+		_log("超负荷：%s 生命仍是 %d，己方回合结束死亡" % [p.card.card_name, p.health])
+		action.emit("overload_die", {"cell": cell, "card": p.card,
+			"health": p.health, "side": side})
+		_destroy(cell)
+
+
 func _destroy_dead() -> void :
 
 
 
 	var dead: Array[Vector2i] = []
 	for cell: Vector2i in state.board:
-		if state.board[cell].health <= 0:
+		var _pu: Placement = state.unit_at(cell)
+		if _pu != null and _pu.health <= 0:
+			if _pu.card.has_affix(AFFIX_OVERLOAD):
+				# 超负荷（旧式机兵 8050，R98）：死亡推迟到己方回合结束，
+				# 现在以负数血量继续存活，且不触发「溢出伤害」漏给玩家 HP。
+				action.emit("overload_neg", {"cell": cell, "card": _pu.card,
+					"health": _pu.health, "side": _pu.owner})
+				_log("超负荷：%s 生命降至 %d，暂不死亡（己方回合结束若仍为负则死亡）"
+					% [_pu.card.card_name, _pu.health])
+				continue
 			dead.append(cell)
 	for cell: Vector2i in dead:
 		var p:= state.unit_at(cell)

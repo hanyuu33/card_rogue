@@ -3599,6 +3599,30 @@
       "target_mode": "unit",
       "color": "蓝",
       "image": ""
+    },
+    {
+      "id": 8050,
+      "name": "旧式机兵",
+      "kind": "盟友",
+      "cost": 3,
+      "power": 3,
+      "health": 12,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "改造"
+      ],
+      "affixes": [
+        "超负荷"
+      ],
+      "effect_text": "**超负荷**：生命降到 0 或以下时不会立即死亡，会以负数血量继续存活（伤害不会溢出）；在自己回合结束时若生命仍是负数则死亡。",
+      "target_mode": "none",
+      "color": "橙",
+      "image": ""
     }
   ]
 }

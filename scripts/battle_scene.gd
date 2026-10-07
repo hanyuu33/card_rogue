@@ -5343,6 +5343,24 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_floaters.append({"pos": _cell_center(dm_cell),
 					"text": "+%d 费" % dm_refund,
 					"col": Color("6ec6ff"), "start": n, "dur": 1500, "size": 16})
+		"overload_die":
+			# 超负荷（旧式机兵 8050，R98）：己方回合结束、生命仍为负 → 真正死亡。
+			var od_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
+			var od_card = data.get("card", null)
+			var od_name: String = od_card.card_name if od_card != null else "单位"
+			sfx.play("death")
+			_say("超负荷：%s 生命仍为负（%d），回合结束死亡" % [od_name, int(data.get("health", 0))])
+			if od_cell.x >= 0:
+				_floaters.append({"pos": _cell_center(od_cell),
+					"text": "超负荷死亡", "col": Color("ff7a3c"),
+					"start": n, "dur": 1500, "size": 15})
+		"overload_neg":
+			# 超负荷（旧式机兵 8050，R98）：受到伤害后仍以负数血量存活 → 一格提示。
+			var on_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
+			if on_cell.x >= 0:
+				_floaters.append({"pos": _cell_center(on_cell),
+					"text": "负血存活 %d" % int(data.get("health", 0)),
+					"col": Color("ff7a3c"), "start": n, "dur": 1400, "size": 14})
 		"regen":
 			# 自我修复的每回合回血（R87）：在该单位格上飘字。
 			var rg_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
