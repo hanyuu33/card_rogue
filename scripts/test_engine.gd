@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 189,
-			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯**；实际 %d）"
+	check(repo.all_cards().size() == 192,
+			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 155 and grp_enemy.size() == 34,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 154 / 34）"
+	check(grp_player.size() == 158 and grp_enemy.size() == 34,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 158 / 34）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -164,7 +164,7 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 135,
+	check(pool.size() == 138,
 			"奖励池 128 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
@@ -6091,7 +6091,7 @@ func _init() -> void:
 			"角色系统：非敌方卡 class 都在可选角色内、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
-			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 48
+			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 51
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
 			and int(dr_cls_count.get("敌人", 0)) == 34,
 		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 48 / 36 / 34）"
@@ -6352,7 +6352,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 135, "R45+R50~R57：扩展全部进奖励池（总池 129，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 138, "R45+R50~R57：扩展全部进奖励池（总池 136，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -6657,7 +6657,7 @@ func _init() -> void:
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
 	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 71
-			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 48,
+			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 51,
 			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
@@ -6729,7 +6729,7 @@ func _init() -> void:
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
 			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法师）")
-	check(r47_dr.size() == 60 and r47_rg.size() == 45
+	check(r47_dr.size() == 60 and r47_rg.size() == 48
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
 			"奖励池过滤：森林精魄 %d 张 / 暗影刺客 %d 张（两者之和 + 机械之心 %d = 完整池 %d）"
@@ -9213,8 +9213,8 @@ func _init() -> void:
 				r79_bad.append("%d@row%d(判定%s实际%s)" % [fid3, x6, str(allowed3), str(placed3)])
 			if not allowed3 and e3.state.energy != before3:
 				r79_bad.append("%d@row%d 拒放但没退费(%d→%d)" % [fid3, x6, before3, e3.state.energy])
-	check(r79_bad.is_empty() and r79_ids.size() == 9
-			and r79_enemy_cards == 6 and r79_both_cards == 1 and r79_ally_cards == 2,
+	check(r79_bad.is_empty() and r79_ids.size() == 10
+			and r79_enemy_cards == 7 and r79_both_cards == 1 and r79_ally_cards == 2,
 			"R79 玩家放场地：%d 张卡（%d 敌生效 / %d 双生效（清泉 8028）/ %d 友生效（维修间 8036 + 改造工厂 8037）），"
 			% [r79_ids.size(), r79_enemy_cards, r79_both_cards, r79_ally_cards]
 			+ "%d 张 × %d 行「判定 == 实际」且拒放退费（%s）" % [
@@ -10696,13 +10696,17 @@ func _init() -> void:
 		"R89 无限装甲：带 trait「改造供能」（引擎按 trait 判定，走卡面不硬编码卡名）")
 
 	# ---- ② 候选池：奖励卡池里「技能 + effect_text 含『改造』」的卡 ----
+	# ⚠️ 只收**卡面原费 > 0**的牌：这张测试要验证的是「供能后费用被压成 0」，
+	# 若抽中原费就是 0 的牌（如超越极限），压费前后都是 0、断言 `cost > 0` 会假失败。
+	# （R103 之前这个筛选没写，随机序列一变就会踩中——已修成确定性选取。）
 	var r89_pool: Array[CardData] = r89_repo.reward_pool_for(PlayerClass.MECH)
 	var r89_up_spells: Array[CardData] = []
 	var r89_has_armor := false
 	for pc in r89_pool:
 		if pc.id == GameEngine.INF_ARMOR_ID:
 			r89_has_armor = true
-		if pc.is_spell() and GameEngine.UPGRADE_KEYWORD in pc.effect_text:
+		if pc.is_spell() and GameEngine.UPGRADE_KEYWORD in pc.effect_text \
+				and pc.cost > 0:
 			r89_up_spells.append(pc)
 	check(r89_has_armor, "R89 无限装甲：史诗 → 进机械之心的奖励池（能摇到）")
 	check(r89_up_spells.size() >= 3,
@@ -12032,6 +12036,258 @@ func _init() -> void:
 	check(r102_e1.state.energy_of(GameEngine.SIDE_SELF) == r102_energy0,
 		"R102 双向传送：0 费 → 能量不变（%d）" % r102_e1.state.energy_of(GameEngine.SIDE_SELF))
 	check(r102_msg.contains("交换"), "R102 双向传送：结算有回执（实际 %s）" % r102_msg)
+
+	# R103 测试：夜蚀 8062（回合结束 · 按剩余费用回复生命）
+	# ══════════════════════════════════════════════════════════════
+	var r103_repo := CardRepo.load_json()
+	# ---- 卡面定义校验 ----
+	var r103_ne := r103_repo.get_card(8062)
+	check(r103_ne != null and r103_ne.kind == "盟友" and r103_ne.cost == 2
+			and r103_ne.power == 2 and r103_ne.health == 8
+			and r103_ne.attack_range == 1 and r103_ne.move_speed == 1
+			and r103_ne.rarity == 2 and r103_ne.card_class == "暗影刺客",
+		"R103 夜蚀 8062：2 费史诗盟友 2/8/1/1，暗影刺客（实际 %s）" % r103_ne.card_name)
+	check(r103_ne.traits.has(GameEngine.NIGHT_EROSION_TRAIT),
+		"R103 夜蚀 8062：带「夜蚀」trait")
+	var r103_pool := r103_repo.reward_pool()
+	var r103_pool_ids := {}
+	for c in r103_pool:
+		r103_pool_ids[c.id] = true
+	check(r103_pool_ids.has(8062),
+		"R103：夜蚀 8062 进入奖励池（史诗 rarity=2）")
+
+	# ---- ① 受伤 + 剩余费用 3 → 回 3 点血 ----
+	var r103_e1 := _new_engine([], 40, 40, -1, false)
+	r103_e1.start_game()
+	r103_e1.state.place(
+		CardData.from_dict(r103_repo.get_card(8062).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)   # 夜蚀上场，8 血满
+	var r103_p: Placement = r103_e1.state.unit_at(Vector2i(4, 1))
+	r103_p.health = 5                 # 先打成 5 血（已损失 3）
+	r103_e1.state.energy = 3                   # 本回合剩 3 点没花
+	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
+	check(r103_p.health == 8,
+		"R103 夜蚀：剩余费用 3 → 5 血回满到 8（实际 %d）" % r103_p.health)
+
+	# ---- ② 回复量 = 剩余费用，且**不超过生命上限** ----
+	# 造一个「上限被抬高」的场景：卡面 8 血、当前 3 血、剩 7 点费用 → 只应回 5 点到 8。
+	r103_e1.state.energy = 7
+	r103_p.health = 3
+	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
+	check(r103_p.health == 8,
+		"R103 夜蚀：剩余费用 7 但只能回 5（3→8 不越界，实际 %d）" % r103_p.health)
+
+	# ---- ③ **回复不是成长**：卡面生命上限不该被这次结算抬高 ----
+	var r103_card_max := r103_p.card.health
+	r103_e1.state.energy = 5
+	r103_p.health = 2
+	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
+	check(r103_p.health == 7 and r103_p.card.health == r103_card_max,
+		"R103 夜蚀：回复**不抬生命上限**（卡面仍 %d，当前 %d）"
+			% [r103_p.card.health, r103_p.health])
+
+	# ---- ④ 剩余费用 0 → 不回复（也不越界）----
+	r103_p.health = 6
+	r103_e1.state.energy = 0
+	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
+	check(r103_p.health == 6,
+		"R103 夜蚀：剩余费用 0 → 不回复（仍 %d）" % r103_p.health)
+
+	# ---- ⑤ 满血时不结算（静默跳过，不产生「回复 0」噪声）----
+	r103_p.health = r103_p.card.health
+	r103_e1.state.energy = 4
+	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
+	check(r103_p.health == r103_p.card.health,
+		"R103 夜蚀：满血时跳过（仍 %d/%d）" % [r103_p.health, r103_p.card.health])
+
+	# ---- ⑥ 敌方回合结束**不该**给这张卡回血（口径是「自己回合结束」）----
+	r103_p.health = 4
+	r103_e1.state.energy = 5          # 我方剩5（不结算）
+	r103_e1.state.opp_energy = 5                # 敌方剩 5
+	r103_e1._end_turn_surplus(GameEngine.SIDE_OPPONENT)
+	check(r103_p.health == 4,
+		"R103 夜蚀：敌方回合结束不触发（仍 %d）" % r103_p.health)
+
+	# ---- ⑦ 卡库里的那张没被污染（回复只动场上实例）----
+	check(r103_repo.get_card(8062).health == 8,
+		"R103 夜蚀：卡库里的夜蚀仍是 8 血（未被场上的结算改动）")
+
+	# ══════════════════════════════════════════════════════════════
+	# R104 测试：起手式 9119（1 费 · 对目标 4 伤 → 抽 1 张）
+	# ══════════════════════════════════════════════════════════════
+	# ---- 卡面定义校验 ----
+	var r104_om := r103_repo.get_card(GameEngine.OPENING_MOVE_ID)
+	check(r104_om != null and r104_om.kind == "技能" and r104_om.cost == 1
+			and r104_om.rarity == 0 and r104_om.card_class == "暗影刺客"
+			and r104_om.target_mode == "unit" and r104_om.needs_target(),
+		"R104 起手式 9119：1 费普通技能，暗影刺客，需选单位目标（实际 %s）"
+			% (r104_om.card_name if r104_om != null else "null"))
+	check(r103_pool_ids.has(GameEngine.OPENING_MOVE_ID),
+		"R104：起手式 9119 进入奖励池（普通 rarity=0）")
+
+	# ---- ① 对目标造成 4 点伤害 ----
+	var r104_e1 := _new_engine([], 30, 30)
+	r104_e1.start_game()
+	var r104_foe := r104_e1.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	# 牌库塞 3 张，保证「抽 1 张」抽得到（也用来核对牌库真的少了一张）
+	r104_e1.state.deck.append(_card(9095, "怒涛", "技能", 2, 0, 0, 0, 0))
+	r104_e1.state.deck.append(_card(9096, "疾风", "技能", 1, 0, 0, 0, 0))
+	r104_e1.state.deck.append(_card(9097, "预判", "技能", 1, 0, 0, 0, 0))
+	var r104_deck0 := r104_e1.state.deck.size()
+	var r104_hand0 := r104_e1.state.hand.size()
+	r104_e1.state.hand.append(
+		CardData.from_dict(r103_repo.get_card(GameEngine.OPENING_MOVE_ID).to_dict()))
+	r104_e1.use_spell(r104_e1.state.hand.size() - 1, Vector2i(2, 1))
+	check(r104_foe.health == 51,
+		"R104 起手式：对目标 4 伤（55 → %d）" % r104_foe.health)
+	# 打出这张牌（-1）→ 抽 1 张（+1），净 +1
+	check(r104_e1.state.hand.size() == r104_hand0 + 1,
+		"R104 起手式：结算后抽 1 张（手牌 %d → %d）"
+			% [r104_hand0, r104_e1.state.hand.size()])
+	check(r104_e1.state.deck.size() == r104_deck0 - 1,
+		"R104 起手式：抽的牌来自牌库（%d → %d）" % [r104_deck0, r104_e1.state.deck.size()])
+
+	# ---- ② 伤害走 _spell_dmg：吃荧光草（8010）这类既有加成 ----
+	# 场上每株荧光草 +1 → 4 伤应变 5 伤（与连刺 9087 同口径）。
+	var r104_e2 := _new_engine([], 30, 30)
+	r104_e2.start_game()
+	var r104_foe2 := r104_e2.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r104_e2.state.place(_card(8010, "荧光草", "盟友", 1, 0, 3, 0, 0),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r104_e2.state.deck.append(_card(9095, "怒涛", "技能", 2, 0, 0, 0, 0))
+	r104_e2.state.hand.append(
+		CardData.from_dict(r103_repo.get_card(GameEngine.OPENING_MOVE_ID).to_dict()))
+	r104_e2.use_spell(r104_e2.state.hand.size() - 1, Vector2i(2, 1))
+	check(r104_foe2.health == 50,
+		"R104 起手式：荧光草加成下 4+1=5 伤（55 → %d）" % r104_foe2.health)
+
+	# ---- ③ 敌方 AI 用这张卡：只结算伤害，**不抽牌**（不偷我方牌库的牌）----
+	var r104_e3 := _new_engine([], 30, 30)
+	r104_e3.start_game()
+	var r104_me := r104_e3.state.place(_card(8003, "树人", "盟友", 2, 3, 4, 1, 1),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r104_e3.state.deck.append(_card(9095, "怒涛", "技能", 2, 0, 0, 0, 0))
+	var r104_deck3 := r104_e3.state.deck.size()
+	r104_e3.state.opp_hand_count = 5
+	var r104_oph0 := r104_e3.state.opp_hand_count
+	r104_e3.remote_spell(
+		CardData.from_dict(r103_repo.get_card(GameEngine.OPENING_MOVE_ID).to_dict()),
+		Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r104_me.health == 0,
+		"R104 起手式：敌方 AI 用这张卡也造成 4 伤（4 血单位 → %d）" % r104_me.health)
+	check(r104_e3.state.opp_hand_count == r104_oph0 - 1,
+		"R104 起手式：敌方 AI 不抽牌（对方手牌 %d → %d，只扣打出的那张）"
+			% [r104_oph0, r104_e3.state.opp_hand_count])
+	check(r104_e3.state.deck.size() == r104_deck3,
+		"R104 起手式：敌方 AI 不动我方牌库（仍 %d 张）" % r104_e3.state.deck.size())
+
+	# ---- ④ 没有目标时打在玩家身上（与连刺 / 攻击 同口径）----
+	var r104_e4 := _new_engine([], 30, 30)
+	r104_e4.start_game()
+	r104_e4.state.deck.append(_card(9095, "怒涛", "技能", 2, 0, 0, 0, 0))
+	var r104_foe_hp0 := r104_e4.state.hp_opponent
+	r104_e4.state.hand.append(
+		CardData.from_dict(r103_repo.get_card(GameEngine.OPENING_MOVE_ID).to_dict()))
+	r104_e4.use_spell(r104_e4.state.hand.size() - 1, null)
+	check(r104_e4.state.hp_opponent == r104_foe_hp0 - 4,
+		"R104 起手式：无目标时打对方玩家 4 点（%d → %d）"
+			% [r104_foe_hp0, r104_e4.state.hp_opponent])
+
+	# ══════════════════════════════════════════════════════════════
+	# R105 测试：黑暗陷阱 8063（0 费场地 · 路过即中 → 本回合力量 -1）
+	# ══════════════════════════════════════════════════════════════
+	# ---- 卡面定义校验 ----
+	var r105_dt := r103_repo.get_card(GameEngine.DARK_TRAP_ID)
+	check(r105_dt != null and r105_dt.kind == "场地" and r105_dt.cost == 0
+			and r105_dt.rarity == 0 and r105_dt.card_class == "暗影刺客"
+			and r105_dt.is_field() and not GameEngine.is_persistent_field(r105_dt)
+			and r105_dt.target_mode == "none",
+		"R105 黑暗陷阱 8063：0 费普通场地卡，暗影刺客，一次性（实际 %s）"
+			% (r105_dt.card_name if r105_dt != null else "null"))
+	check(r105_dt.traits.has(GameEngine.DARK_TRAP_TRAIT)
+			and r105_dt.traits.has("场地生效·敌"),
+		"R105 黑暗陷阱：带「黑暗陷阱」+「场地生效·敌」词条")
+	check(r103_pool_ids.has(GameEngine.DARK_TRAP_ID),
+		"R105：黑暗陷阱 8063 进入奖励池（普通 rarity=0）")
+
+	# ---- ① 敌人移动进入 → 力量 -1（立即生效），**不造成伤害**，场地消失 ----
+	var r105_e1 := _new_engine([], 30, 30)
+	var r105_foe: Placement = r105_e1.state.place(
+			_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	r105_e1.state.hand.append(CardData.from_dict(
+			r103_repo.get_card(GameEngine.DARK_TRAP_ID).to_dict()))
+	r105_e1.play_from_hand(0, Vector2i(4, 1))
+	check(r105_e1.state.field_at(Vector2i(4, 1)) != null,
+		"R105 黑暗陷阱：从手牌放到 (4,1) 成功")
+	r105_e1.end_turn()   # → 敌方回合（下面由敌方移动踩上去）
+	r105_e1.current_side = GameEngine.SIDE_OPPONENT
+	r105_e1.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r105_foe.atk_debuff == GameEngine.DARK_TRAP_DEBUFF
+			and r105_foe.debuff_stage == 1,
+		"R105 黑暗陷阱：踩中者力量 -%d 且**立即生效**（atk_debuff=%d / stage=%d）"
+			% [GameEngine.DARK_TRAP_DEBUFF, r105_foe.atk_debuff, r105_foe.debuff_stage])
+	check(r105_foe.effective_power() == 8 - GameEngine.DARK_TRAP_DEBUFF,
+		"R105 黑暗陷阱：实际力量 8 → %d" % r105_foe.effective_power())
+	check(r105_foe.health == 55,
+		"R105 黑暗陷阱：**不造成伤害**（仍 55 血，实际 %d）" % r105_foe.health)
+	check(r105_e1.state.field_at(Vector2i(4, 1)) == null,
+		"R105 黑暗陷阱：触发后该格场地消失（一次性）")
+
+	# ---- ② 路过即中 + **立即停止这次移动**（2 格移动被截在途经的陷阱格）----
+	# ⚠️ 敌方不能进我方后排（第 5 行），所以终点取 (4,1)、陷阱放在途经的 (3,1)。
+	var r105_e2 := _new_engine([], 30, 30)
+	var r105_runner: Placement = r105_e2.state.place(
+			_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 3),   # 移动力 3：够走到 (4,1)
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r105_e2.state.hand.append(CardData.from_dict(
+			r103_repo.get_card(GameEngine.DARK_TRAP_ID).to_dict()))
+	r105_e2.play_from_hand(0, Vector2i(3, 1))
+	r105_e2.end_turn()
+	r105_e2.current_side = GameEngine.SIDE_OPPONENT
+	r105_e2.move(Vector2i(2, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r105_e2.state.unit_at(Vector2i(3, 1)) == r105_runner
+			and r105_e2.state.unit_at(Vector2i(4, 1)) == null,
+		"R105 黑暗陷阱：路过即中并**立刻停止移动**（停在 (3,1)，没走到 (4,1)）")
+	check(r105_runner.atk_debuff == GameEngine.DARK_TRAP_DEBUFF,
+		"R105 黑暗陷阱：只是**路过**也照样中（atk_debuff=%d）" % r105_runner.atk_debuff)
+
+	# ---- ③ 原本就站在该格上的单位**不触发**（起点格跳过）----
+	var r105_e3 := _new_engine([], 30, 30)
+	var r105_stayer: Placement = r105_e3.state.place(
+			_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	r105_e3.state.hand.append(CardData.from_dict(
+			r103_repo.get_card(GameEngine.DARK_TRAP_ID).to_dict()))
+	r105_e3.play_from_hand(0, Vector2i(3, 1))
+	r105_e3.end_turn()
+	r105_e3.current_side = GameEngine.SIDE_OPPONENT
+	r105_e3.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r105_stayer.atk_debuff == 0
+			and r105_e3.state.field_at(Vector2i(3, 1)) != null,
+		"R105 黑暗陷阱：**原本站在该格**的单位不触发（debuff=%d、场地仍在）"
+			% r105_stayer.atk_debuff)
+
+	# ---- ④ 时效：该单位所属方（敌方）回合结束时清除 ----
+	var r105_e4 := _new_engine([], 30, 30)
+	var r105_foe4: Placement = r105_e4.state.place(
+			_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	r105_e4.state.hand.append(CardData.from_dict(
+			r103_repo.get_card(GameEngine.DARK_TRAP_ID).to_dict()))
+	r105_e4.play_from_hand(0, Vector2i(4, 1))
+	r105_e4.end_turn()
+	r105_e4.current_side = GameEngine.SIDE_OPPONENT
+	r105_e4.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r105_foe4.atk_debuff == GameEngine.DARK_TRAP_DEBUFF,
+		"R105 黑暗陷阱：踩中的当下 debuff 在（%d）" % r105_foe4.atk_debuff)
+	r105_e4.end_turn()   # 敌方回合结束 → debuff 清除
+	check(r105_foe4.atk_debuff == 0 and r105_foe4.debuff_stage == 0
+			and r105_foe4.effective_power() == 8,
+		"R105 黑暗陷阱：**只限本回合** —— 敌方回合结束即清除（debuff=%d、力量回 8→%d）"
+			% [r105_foe4.atk_debuff, r105_foe4.effective_power()])
 
 	# ---- 状态跟着单位走（横置/已移动不留在原格）----
 	var r102_e2 := _new_engine([], 40, 40, -1, false)

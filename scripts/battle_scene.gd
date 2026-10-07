@@ -5512,6 +5512,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var rg_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
 			_floaters.append({"pos": rg_pos, "text": "+%d" % int(data.get("amount", 0)),
 					"col": Color("8ce09a"), "start": n, "dur": 1400, "size": 16})
+		"night_erosion":
+			# 夜蚀 8062（R103）：回合结束按剩余费用回复生命 —— 绿色回血飘字（同自我修复口径）。
+			var ne_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
+			_floaters.append({"pos": ne_pos, "text": "+%d" % int(data.get("amount", 0)),
+					"col": Color("8ce09a"), "start": n, "dur": 1400, "size": 16})
+			sfx.play("heal")
 		"batch_upgrade":
 			# 批量改造 8031（R86）：手牌里所有盟友/工事各 +1 生命。
 			var bu_n: int = int(data.get("count", 0))
@@ -6064,6 +6070,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": sb_pos + Vector2(0, -12),
 					"text": "敲晕 力量 -%d" % int(data.get("amount", 0)),
 					"col": Color("b8860b"), "start": n, "dur": 1300, "size": 16})
+		"dark_trap":
+			# 黑暗陷阱（8063，R105）：踩中者本回合攻击时力量 -1（暗紫爆点 + 飘字）
+			var dt_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
+			_bursts.append({"pos": dt_pos, "start": n, "dur": 480,
+					"col": Color("9b6bd6"), "big": false})
+			_floaters.append({"pos": dt_pos + Vector2(0, -12),
+					"text": "黑暗 力量 -%d" % int(data.get("amount", 0)),
+					"col": Color("6a3fa0"), "start": n, "dur": 1300, "size": 16})
 		"gale":
 			# 疾风（9091）：随机敌人吃 2 伤
 			var ga_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))

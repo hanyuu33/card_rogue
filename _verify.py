@@ -9,8 +9,36 @@ import os
 import subprocess
 import sys
 
-GODOT = r"C:\Users\Administrator\.workbuddy\binaries\godot\Godot_v4.3-stable_win64_console.exe"
-ROOT = r"D:\work\card_rogue"
+# 引擎定位顺序：环境变量 GODOT_BIN > 同目录 console 版 > 普通版 > PATH 里的 godot。
+# 官方只发布普通版（*_win64.exe），console 版（*_console.exe）并非每个版本都有，
+# 所以这里做多路回退，换机器 / 换版本都不会因为文件名对不上而直接报错。
+_GODOT_DIR = os.path.join(os.path.expanduser("~"), ".workbuddy", "binaries", "godot")
+_GODOT_CANDIDATES = [
+    os.environ.get("GODOT_BIN", ""),
+    os.path.join(_GODOT_DIR, "Godot_v4.3-stable_win64_console.exe"),
+    os.path.join(_GODOT_DIR, "Godot_v4.3-stable_win64.exe"),
+    "godot",
+]
+
+
+def _find_godot():
+    for p in _GODOT_CANDIDATES:
+        if not p:
+            continue
+        if os.path.isabs(p) and os.path.isfile(p):
+            return p
+        if not os.path.isabs(p):
+            from shutil import which
+            found = which(p)
+            if found:
+                return found
+    sys.exit("[_verify] 找不到 Godot 4.3：请安装到 %s，"
+             "或用环境变量 GODOT_BIN 指定引擎路径" % _GODOT_DIR)
+
+
+# 以脚本自身位置推导工程根目录，双机（D:\work / E:\work）通用
+ROOT = os.path.dirname(os.path.abspath(__file__))
+GODOT = _find_godot()
 OK = "\u2713"
 BAD = "\u2717"
 

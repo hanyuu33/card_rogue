@@ -604,6 +604,19 @@ const DOUBLE_TRAP_ID:= 9108
 const MASS_TRAP_ID:= 8017
 const MASS_TRAP_TRAIT:= "巨物陷阱"
 const MASS_TRAP_DMG:= 12
+
+# ---- R105（2026-10-08）黑暗陷阱 8063 ----
+# 黑暗陷阱（8063 场地，暗影刺客·普通）：**0 费**；敌人**移动经过**此格时立刻触发
+#   （R80 口径：路过即中，不必停留）并**立即停止这次移动** →
+#   **那个敌人本回合攻击时力量 -1**。
+# 与冰霜陷阱（8012 禁足）/ 冻结陷阱（8013 冰冻）同族：都不造成伤害，只给**状态**。
+# 降力量复用「威慑 / 敲晕 / 幻影斗篷 / 回响」那套 `atk_debuff + debuff_stage = 1`：
+#   debuff_stage=1 = **立即生效**，在**该单位所属方的回合结束时**清除 ——
+#   陷阱是敌方移动时踩的（= 敌方回合内），所以正好覆盖「它本回合剩下的攻击」。
+# ⚠️ 0 费 → 场地精通（9105）加成是 2×0 = 0；这张本来就不造成伤害，加成无意义。
+const DARK_TRAP_ID:= 8063
+const DARK_TRAP_TRAIT:= "黑暗陷阱"
+const DARK_TRAP_DEBUFF:= 1      # 本回合攻击时力量 -1
 # 活体栅栏（8018 工事，R54）：2 费稀有；2/8/1。可攻击的【栅栏】类工事（带 FENCE_TRAIT，
 #   可参与「叠栅栏」）；本身无其它特殊机制。
 const LIVING_FENCE_ID:= 8018
@@ -681,6 +694,30 @@ const ENDLESS_DARK_ID:= 9114
 const ENDLESS_DARK_TRAIT:= "无尽黑暗"
 const ENDLESS_DARK_DISCARD:= 1     # 每次触发弃几张
 const ENDLESS_DARK_ENERGY:= 2      # 每次触发换几点费用
+
+# ---- R103（2026-10-07）夜蚀 8062 ----
+# 夜蚀8062（2 费史诗盟友 2/8/程1/速1）：**自己回合结束时**，回复 X 点生命值，
+#   X = **自己剩余费用**（state.energy_of(side)，即这张卡读的是「本回合没用完的钱」，
+#   与地狱猫 8019 / 鲜血堡垒 8020 / 活力转移 9110 / 暗影锁链 9112 同一口径）。
+# 与那几张的**关键区别**：那几张给的是**永久成长**（Placement.end_atk / 直接加 p.health，
+#   等于抬上限），夜蚀是**回复**（把已损失的血补回来，**上限仍是卡面 health**），
+#   所以走的是 _regen_tick 那一套「不满血才回、mini 夹上限」的口径。
+# 结算入口同样挂在 _end_turn_surplus()（能量清零之前），读同一个 left。
+# 满血时不结算也不刷飘字（与 _regen_tick / _charge_tick 一致，避免「回复 0」噪声）。
+const NIGHT_EROSION_ID:= 8062
+const NIGHT_EROSION_TRAIT:= "夜蚀"
+const NIGHT_EROSION_PER_ENERGY:= 1    # 每 1 点剩余费用 → 回复 1 点生命
+
+# ---- R104（2026-10-08）起手式 9119 ----
+# 起手式（9119 技能，暗影刺客·普通）：1 费；**对目标造成 4 点伤害，然后抽 1 张卡**。
+# 定位是「连刺 9087」的平行变体：同为 1 费 4 伤，连刺补的是「卡组随机 0 费技能卡入手」，
+# 起手式补的是**确定性的抽 1 张**（不挑费用、不依赖卡组里有没有 0 费技能）。
+# 伤害走 _spell_dmg()（吃荧光草 / 魔法塔 / 魔力核心 / 鸭之眼等既有加成，与连刺同口径）；
+# 抽牌走 _draw_many()（手牌满则停，与批量传输 8040 同口径）。
+# ⚠️ 抽牌是**玩家侧收益**，敌方 AI 用这张卡只结算伤害、不抽牌（与准备 9094 同口径）。
+const OPENING_MOVE_ID:= 9119
+const OPENING_MOVE_DMG:= 4       # 基础伤害
+const OPENING_MOVE_DRAW:= 1      # 结算后抽几张
 
 # 白魔法师（9021）「精进」：自己的回合开始时，本方带此 trait 的单位力量 +MAGE_GROW_BUFF
 # （永久累计，无上限）—— 已去掉「只剩它自己」的前置条件，任何场面都稳定成长。
@@ -5103,6 +5140,15 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 				if side == SIDE_SELF and state.draw() != null:
 					ct_s += "；抽 1 张"
 			return ct_s
+		OPENING_MOVE_ID:
+			# 起手式 9119（R104）：1 费，对目标 4 伤 → **抽 1 张**（玩家侧才抽）。
+			var om_s := str(_op_deal_damage(side, _spell_dmg(side, OPENING_MOVE_DMG, card),
+					target))
+			if side != SIDE_SELF:
+				return om_s
+			var om_got := _draw_many(OPENING_MOVE_DRAW)
+			_log("起手式：结算后抽 %d 张卡" % om_got)
+			return om_s + ("；抽 %d 张" % om_got)
 		PREPARE_ID:
 			if side != SIDE_SELF:
 				var pp_m := 0
@@ -6912,7 +6958,7 @@ func _field_kind(c: CardData) -> String:
 	if not c.is_field():
 		return ""
 	for t: String in [TRAP_TRAIT, FROST_TRAP_TRAIT, FREEZE_TRAP_TRAIT, POISON_TRAP_TRAIT,
-			PIERCE_TRAP_TRAIT, MASS_TRAP_TRAIT]:
+			PIERCE_TRAP_TRAIT, MASS_TRAP_TRAIT, DARK_TRAP_TRAIT]:
 		if c.traits.has(t):
 			return t
 	return ""
@@ -7012,6 +7058,16 @@ func _field_trigger(cell: Vector2i, mover: Placement) -> void :
 			_log("穿刺场地：%s 受到 %d 点伤害" % [mover.card.card_name, pr_dmg])
 			action.emit("trap_hit", {"cell": _cell_of(mover), "amount": pr_dmg,
 				"kind": "穿刺", "name": mover.card.card_name})
+		elif card.traits.has(DARK_TRAP_TRAIT):
+			# 黑暗陷阱（8063，R105）：**不造成伤害**，只让踩上来的那个敌人
+			# **本回合攻击时力量 -1**（atk_debuff + debuff_stage=1，与敲晕同源）。
+			mover.atk_debuff += DARK_TRAP_DEBUFF
+			mover.debuff_stage = 1
+			_log("黑暗场地：%s 力量 -%d（当前 %d），本回合内有效" % [
+					mover.card.card_name, DARK_TRAP_DEBUFF, mover.effective_power()])
+			action.emit("dark_trap", {"cell": _cell_of(mover),
+				"amount": DARK_TRAP_DEBUFF, "power": mover.effective_power(),
+				"name": mover.card.card_name})
 	# 双重场地（9108，R74）：这个场地触发后 → 同一格随机追加一个随机场地效果。
 	# owner_side 显式传进去：field_owner 已被上面的 clear_field 擦掉，这里读不到。
 	_twin_field_chain(cell, owner_side)
@@ -7304,6 +7360,11 @@ func _end_turn_surplus(side: String) -> void :
 		var p: Placement = state.unit_at(cell)
 		if p == null or p.owner != side:
 			continue
+		# 夜蚀8062（R103）：**回复**剩余费用那么多点生命 —— 与上面几张的「永久加血」不同，
+		# 这里只是把已损失的血补回来，上限仍读卡面 health（不满血才结算，满血跳过不刷噪声）。
+		if p.card.traits.has(NIGHT_EROSION_TRAIT):
+			_night_erosion_heal(p, left, side)
+			continue
 		var atk_gain := 0
 		var hp_gain := 0
 		if p.card.traits.has(HELL_CAT_TRAIT):
@@ -7390,6 +7451,34 @@ func _dark_spread_strike(side: String, left: int) -> void :
 	_log("黑暗扩散：剩余费用 %d → 对 %d 个敌人各造成 %d 点伤害"
 			% [left, total, dmg])
 	action.emit("dark_spread", {"dmg": dmg, "left": left, "hits": total, "side": side})
+
+
+func _night_erosion_heal(p: Placement, left: int, side: String) -> void :
+	## 夜蚀 8062（R103，2 费史诗盟友 2/8/程1/速1）：自己回合结束时，
+	## 回复 X = **剩余费用** 点生命值。
+	##
+	## 口径与 _regen_tick / _charge_tick 严格一致：
+	##   * 剩余费用为 0 → 不结算（不刷「回复 0」的噪声日志）；
+	##   * **满血跳过** —— 回复不是成长，满血时不该有任何表现；
+	##   * 上限读 p.card.health（当前卡面上限，被改造过的上限更高 → 能回更多），
+	##     用 mini 夹住，绝不越界。
+	## 注意这里**不改 p.card.health 也不加 end_atk**：回复只动当前血量 p.health，
+	## 所以这张卡不会像地狱猫那样永久堆血上限。
+	if left <= 0:
+		_log("%s：剩余费用 0 → 本次不回复" % p.card.card_name)
+		return
+	if p.health >= p.card.health:
+		return     # 满血：静默跳过
+	var amount: int = mini(left * NIGHT_EROSION_PER_ENERGY,
+			p.card.health - p.health)
+	if amount <= 0:
+		return
+	p.health += amount
+	_log("%s：剩余费用 %d → 回复 %d 点生命（%d / %d）" % [
+			p.card.card_name, left, amount, p.health, p.card.health])
+	action.emit("night_erosion", {"cell": _cell_of(p), "card": p.card,
+			"amount": amount, "hp": p.health, "max_hp": p.card.health,
+			"left": left, "side": side})
 
 
 func _endless_dark(side: String) -> void :
