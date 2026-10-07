@@ -2093,6 +2093,8 @@ func _use_hand_card(i: int) -> void:
 				target_hint = "**自己的一个盟友或工事**：回复至满生命"
 			elif card.id == GameEngine.TRANSCEND_ID:
 				target_hint = "**自己的一个盟友或工事**（还没超负荷）：挂上超负荷 + 算一层改造"
+			elif card.id == GameEngine.REBOOT_ID:
+				target_hint = "**自己的一个盟友或工事**：返回手卡（0 费，离手重置）"
 			elif card.id == GameEngine.WHIRL_BLADE_ID:
 				target_hint = "十字中心格"
 			status_text = "%s：点击%s（右键取消）" % [card.card_name, target_hint]
@@ -2999,6 +3001,14 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 			if tp.owner == GameEngine.SIDE_SELF \
 					and (tp.card.kind == "盟友" or tp.card.is_fort()) \
 					and not tp.card.has_affix(GameEngine.AFFIX_OVERLOAD):
+				out.append(c)
+		out.sort()
+	elif card.id == GameEngine.REBOOT_ID:
+		# 重启 8054（R100，机械之心）：只列**己方盟友或工事**（与升级同口径）。
+		for c: Vector2i in engine.state.board:
+			var rp: Placement = engine.state.board[c]
+			if rp.owner == GameEngine.SIDE_SELF \
+					and (rp.card.kind == "盟友" or rp.card.is_fort()):
 				out.append(c)
 		out.sort()
 	elif card.id == GameEngine.FIRE_WALL_SPELL_ID:

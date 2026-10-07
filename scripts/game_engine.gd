@@ -570,6 +570,8 @@ const AFFIX_OVERLOAD:= "超负荷"
 const REORG_ID:= 8051
 const WALL_ID:= 8052
 const TRANSCEND_ID:= 8053
+const REBOOT_ID:= 8054
+const STEEL_GUARD_ID:= 8055
 ## 「能量屏障」8033 赋的护盾也登记成字段（R91）—— 否则这张牌被强化后
 ## 玩家在任何地方都看不到「它有护盾」。
 const FIELD_BARRIER:= "护盾"
@@ -1785,6 +1787,24 @@ func _autoplay_spell_targets(card: CardData) -> Array[Vector2i]:
 			out.append(uc)
 		out.sort()
 		return out
+	if card.id == REBOOT_ID:
+		# 重启 8054（R100，机械之心）：自动出牌时只选**受伤**的己方盟友/工事
+		# （返回手卡能救回它并 0 费重铺，没受伤就不必浪费这张牌）。
+		var best_r := Vector2i(-1, -1)
+		var worst := 1 << 30
+		for uc in _side_cells(SIDE_SELF):
+			var up: Placement = state.unit_at(uc)
+			if up == null:
+				continue
+			if up.card.kind != "盟友" and not up.card.is_fort():
+				continue
+			var missing := up.card.health - up.health
+			if missing > 0 and missing < worst:
+				worst = missing
+				best_r = uc
+		if best_r.x >= 0:
+			out.append(best_r)
+		return out
 	var best:= Vector2i(-1, -1)
 	var best_key:= 1 << 30
 	for c: Vector2i in pool:
@@ -2913,6 +2933,36 @@ func _transcend(target, side:= SIDE_SELF) -> String :
 	# 「无限装甲」8038（R89）：被改造时每回合供一张 0 费改造牌（与 _upgrade_unit 同）。
 	_feed_upgrade_card(p)
 	return "%s 获得超负荷" % p.card.card_name
+
+
+func _reboot(target, side:= SIDE_SELF) -> String :
+	## 「重启」（8054，R100，机械之心）：指定一个己方盟友或工事，返回手卡且费用变 0
+	## （费用由 state.hand_free 标记，cost_of 用 hand.has(card) 判据在离手时自动恢复原价）。
+	var p:= _target_placement(side, target)
+	if p == null:
+		return "（没有目标）"
+	if p.owner != side:
+		return "只能重启自己的单位"
+	if p.card.kind != "盟友" and not p.card.is_fort():
+		return "%s 不能被重启" % p.card.card_name
+	# 离场还原（栅栏修复术/加厚装甲等场上加固不带走），拿回手卡的是原本那张卡。
+	var back:= _card_leaving_field(p)
+	# 切断与卡库共享引用（_card_leaving_field 在「无场上加成」时直接交还原实例）。
+	back = CardData.from_dict(back.to_dict())
+	back.traits = (back.traits as Array).duplicate()
+	state.board.erase(target)
+	if state.hand_full():
+		_log("重启：%s 返回手卡被手牌上限挡下 → 进弃牌区" % p.card.card_name)
+		state.discard.append(back)
+		action.emit("reboot", {"cell": target, "card": p.card, "placement": p})
+		return "%s 返回手卡被上限挡下，进弃牌区" % p.card.card_name
+	state.hand.append(back)
+	# ⚠️ 按实例标记「在手里期间免费」：cost_of 验 hand.has(back) → 打出/弃掉后自动原价。
+	# 不烤 trait、不另开离手口清标记（与 R89 供能牌同口径）。
+	state.hand_free[back] = true
+	_log("重启：%s 返回手卡（0 费，离手重置）" % p.card.card_name)
+	action.emit("reboot", {"cell": target, "card": p.card, "placement": p})
+	return "%s 返回手卡（0 费）" % p.card.card_name
 
 
 func _batch_upgrade(_side: String) -> String :
@@ -4723,6 +4773,9 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 		TRANSCEND_ID:
 			# 超越极限 8053（R99，机械之心）：给一个己方盟友/工事挂超负荷 + 算一层改造。
 			return _transcend(target, side)
+		REBOOT_ID:
+			# 重启 8054（R100，机械之心）：将己方一个盟友/工事返回手卡（0 费，离手重置）。
+			return _reboot(target, side)
 		BATCH_UPGRADE_ID:
 			# 批量改造 8031（R86，机械之心）：手牌里所有盟友 / 工事 +1 生命。
 			return _batch_upgrade(side)

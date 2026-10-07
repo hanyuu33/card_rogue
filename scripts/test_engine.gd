@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 181,
-			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限**；实际 %d）"
+	check(repo.all_cards().size() == 183,
+			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 147 and grp_enemy.size() == 34,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 147 / 34）"
+	check(grp_player.size() == 149 and grp_enemy.size() == 34,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 149 / 34）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -164,8 +164,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 128,
-			"奖励池 128 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）；实际 %d）"
+	check(pool.size() == 130,
+			"奖励池 128 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -6096,7 +6096,7 @@ func _init() -> void:
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 48
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 28
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 30
 			and int(dr_cls_count.get("敌人", 0)) == 34,
 		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 48 / 28 / 34）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
@@ -6356,7 +6356,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 128, "R45+R50~R57：扩展全部进奖励池（总池 128，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 130, "R45+R50~R57：扩展全部进奖励池（总池 128，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -11934,6 +11934,65 @@ func _init() -> void:
 	r99_e4.end_turn()   # _overload_tick(SIDE_SELF)
 	check(r99_e4.state.unit_at(Vector2i(4, 1)) == null,
 		"R99 城墙：己方回合结束、生命仍为负 → 死亡")
+	# R100 测试：重启 8054 / 钢铁卫士 8055
+	# ══════════════════════════════════════════════════════════════
+	var r100_repo := CardRepo.load_json()
+	# ---- 卡面定义校验 ----
+	var r100_reboot := r100_repo.get_card(8054)
+	check(r100_reboot != null and r100_reboot.kind == "技能" and r100_reboot.cost == 1
+			and r100_reboot.rarity == 1 and r100_reboot.card_class == "机械之心"
+			and r100_reboot.target_mode == "unit"
+			and r100_reboot.effect_text.contains("返回手卡"),
+		"R100 重启 8054：1 费稀有技能，机械之心，target=unit，返回手卡0费（实际 %s）"
+		% [r100_reboot.kind, r100_reboot.cost, r100_reboot.rarity, r100_reboot.target_mode])
+	var r100_sg := r100_repo.get_card(8055)
+	check(r100_sg != null and r100_sg.kind == "盟友" and r100_sg.cost == 2
+			and r100_sg.power == 2 and r100_sg.health == 7
+			and r100_sg.attack_range == 1 and r100_sg.move_speed == 1
+			and r100_sg.rarity == 1 and r100_sg.card_class == "机械之心"
+			and r100_sg.has_affix("超负荷") and r100_sg.has_affix("嘲讽"),
+		"R100 钢铁卫士 8055：2 费稀有盟友 2/7/1/1，超负荷+嘲讽，机械之心（实际 %s）"
+		% [r100_sg.kind, r100_sg.cost, r100_sg.power, r100_sg.health,
+			r100_sg.attack_range, r100_sg.move_speed, r100_sg.rarity])
+
+	# ---- ① 重启：将己方单位返回手卡，费用变 0；离手重置；手牌满则进弃牌区 ----
+	var r100_e1 := _new_engine([], 40, 40, -1, false)
+	r100_e1.start_game()
+	var r100_u: Placement = r100_e1.state.place(
+		CardData.from_dict(r100_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)   # 树人 3/8
+	var r100_before_hand := r100_e1.state.hand.size()
+	r100_e1._reboot(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r100_e1.state.unit_at(Vector2i(4, 1)) == null, "R100 重启：场上单位已离场")
+	check(r100_e1.state.hand.size() == r100_before_hand + 1, "R100 重启：手牌 +1（返回手卡）")
+	var r100_back: CardData = r100_e1.state.hand[-1]
+	check(r100_e1.cost_of(r100_back) == 0, "R100 重启：返回手卡期间费用 = 0（实际 %d）" % r100_e1.cost_of(r100_back))
+	check(r100_back.id == 8003, "R100 重启：返回的是那张树人")
+	# 离手重置：把它从手牌移除（模拟打出去）→ 费用恢复原价（3）
+	r100_e1.state.hand.remove_at(r100_e1.state.hand.size() - 1)
+	check(r100_e1.cost_of(r100_back) == 3, "R100 重启：离开手卡后费用恢复原价 3（实际 %d）" % r100_e1.cost_of(r100_back))
+	# 手牌满 → 进弃牌区
+	var r100_e2 := _new_engine([], 40, 40, -1, false)
+	r100_e2.start_game()
+	var r100_disc0 := r100_e2.state.discard.size()
+	while not r100_e2.state.hand_full():
+		r100_e2.state.hand.append(CardData.from_dict(r100_repo.get_card(8001).to_dict()))
+	var r100_full := r100_e2.state.hand.size()
+	var r100_u2: Placement = r100_e2.state.place(
+		CardData.from_dict(r100_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)
+	r100_e2._reboot(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r100_e2.state.unit_at(Vector2i(4, 1)) == null, "R100 重启（手满）：场上单位已离场")
+	check(r100_e2.state.hand.size() == r100_full, "R100 重启（手满）：手牌未被加（已满）")
+	check(r100_e2.state.discard.size() == r100_disc0 + 1, "R100 重启（手满）：返回卡进弃牌区")
+
+	# ---- ② 两张卡均进入奖励池（稀有 rarity=1）----
+	var r100_pool := r100_repo.reward_pool()
+	var r100_pool_ids := {}
+	for c in r100_pool:
+		r100_pool_ids[c.id] = true
+	check(r100_pool_ids.has(8054) and r100_pool_ids.has(8055),
+		"R100：重启 8054 与钢铁卫士 8055 均进入奖励池（稀有 rarity=1）")
 
 	RunState.player_class = r91_saved_cls
 

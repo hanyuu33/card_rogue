@@ -3683,6 +3683,46 @@
       "target_mode": "unit",
       "color": "蓝",
       "image": ""
+    },
+    {
+      "id": 8054,
+      "name": "重启",
+      "kind": "技能",
+      "cost": 1,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "effect_text": "将场上一张友方单位返回手卡，费用变为0（离开手卡重置）。",
+      "target_mode": "unit",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8055,
+      "name": "钢铁卫士",
+      "kind": "盟友",
+      "cost": 2,
+      "power": 2,
+      "health": 7,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [
+        "超负荷",
+        "嘲讽"
+      ],
+      "effect_text": "超负荷；嘲讽。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
     }
   ]
 }
