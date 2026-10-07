@@ -558,6 +558,18 @@ const AFFIX_DIMENSION:= "次元"
 ## 「超负荷」（R98，旧式机兵 8050）：生命降到 0 以下不会立即死亡，以负数血量继续存活；
 ## 伤害不会溢出（不触发后排「溢出伤害」漏给玩家 HP）；己方回合结束时若仍为负则死亡。
 const AFFIX_OVERLOAD:= "超负荷"
+# ── R99：机械之心 8051 / 8052 / 8053 ──
+# 「重组」（8051，1 费**史诗**技能）：指定一个己方盟友或工事，使其**回复至满生命**
+#   （= 当前场上最大生命，即 card.health + upgrade_hp）。
+#   * 自动出牌只在有**受伤**的己方盟友/工事时出（否则不浪费这张史诗牌）。
+# 「城墙」（8052，2 费**普通**工事 0/10/0）：带「超负荷」字段 —— 纯数据卡，
+#   走全局超负荷机制（_destroy_dead 跳过 / _overload_tick 在己方回合结束杀负血单位），引擎无需特判。
+# 「超越极限」（8053，0 费**稀有**技能，次元）：指定一个己方盟友或工事，
+#   **挂上「超负荷」字段 + 算一层改造** —— 与「升级」8027 同口径：侦察塔/堡垒读 upgrade_stacks
+#   自动反应，无限装甲走 _feed_upgrade_card，接通的模仿者走 _mimic_relay(AFFIX_OVERLOAD)。
+const REORG_ID:= 8051
+const WALL_ID:= 8052
+const TRANSCEND_ID:= 8053
 ## 「能量屏障」8033 赋的护盾也登记成字段（R91）—— 否则这张牌被强化后
 ## 玩家在任何地方都看不到「它有护盾」。
 const FIELD_BARRIER:= "护盾"
@@ -1741,6 +1753,38 @@ func _autoplay_spell_targets(card: CardData) -> Array[Vector2i]:
 		if best_up.x >= 0:
 			out.append(best_up)
 		return out
+	if card.id == REORG_ID:
+		# 重组 8051（R99，机械之心）：自动出牌时只选**受伤**的己方盟友/工事
+		# （生命未满），没有受伤单位就不自动出，免得浪费这张史诗牌。
+		var best_r := Vector2i(-1, -1)
+		var worst := 1 << 30
+		for uc in _side_cells(SIDE_SELF):
+			var up: Placement = state.unit_at(uc)
+			if up == null:
+				continue
+			if up.card.kind != "盟友" and not up.card.is_fort():
+				continue
+			var missing := up.card.health - up.health
+			if missing > 0 and missing < worst:
+				worst = missing
+				best_r = uc
+		if best_r.x >= 0:
+			out.append(best_r)
+		return out
+	if card.id == TRANSCEND_ID:
+		# 超越极限 8053（R99，机械之心）：自动出牌时选一个**还没有超负荷**的
+		# 己方盟友/工事（有了就跳过，避免重复给；全部都有则不出）。
+		for uc in _side_cells(SIDE_SELF):
+			var up: Placement = state.unit_at(uc)
+			if up == null:
+				continue
+			if up.card.kind != "盟友" and not up.card.is_fort():
+				continue
+			if up.card.has_affix(AFFIX_OVERLOAD):
+				continue
+			out.append(uc)
+		out.sort()
+		return out
 	var best:= Vector2i(-1, -1)
 	var best_key:= 1 << 30
 	for c: Vector2i in pool:
@@ -2824,6 +2868,53 @@ func _feed_upgrade_card(p: Placement) -> void :
 	action.emit("inf_armor", {"card": got, "ok": true, "placement": p})
 
 
+func _reorganize(target, side:= SIDE_SELF) -> String :
+	## 「重组」（8051，R99，机械之心）：指定一个己方盟友或工事，回复至满生命。
+	## 「满生命」= 当前场上最大生命 `card.health` —— 改造加的血已经烤进 `card.health`
+	## （见 `_upgrade_unit`），`upgrade_hp` 只是离场还原用的记账字段，不能再叠加算一次。
+	var p:= _target_placement(side, target)
+	if p == null:
+		return "（没有目标）"
+	if p.owner != side:
+		return "只能回复自己的单位"
+	if p.card.kind != "盟友" and not p.card.is_fort():
+		return "%s 不能被回复" % p.card.card_name
+	var max_hp: int = p.card.health
+	var before:= p.health
+	p.health = max_hp
+	_log("重组：%s 回复至满生命（%d → %d）" % [p.card.card_name, before, p.health])
+	action.emit("reorganize", {"cell": target, "card": p.card, "placement": p})
+	return "%s 回复至满生命" % p.card.card_name
+
+
+func _transcend(target, side:= SIDE_SELF) -> String :
+	## 「超越极限」（8053，R99，机械之心）：指定一个己方盟友或工事，挂上「超负荷」
+	## 字段并算一层改造 —— 与「升级」8027 同口径，让体系把它当一次改造来反应。
+	var p:= _target_placement(side, target)
+	if p == null:
+		return "（没有目标）"
+	if p.owner != side:
+		return "只能强化自己的单位"
+	if p.card.kind != "盟友" and not p.card.is_fort():
+		return "%s 不能被强化" % p.card.card_name
+	if p.card.has_affix(AFFIX_OVERLOAD):
+		return "%s 已拥有超负荷" % p.card.card_name
+	# 换成独立副本再改（卡库共享实例纪律，与 _upgrade_unit 同）：否则直接改
+	# `p.card.affixes` 会连卡库那份一起加字段，下一场/本场再抽到就已是超负荷版。
+	p.card = CardData.from_dict(p.card.to_dict())
+	p.card.traits = (p.card.traits as Array).duplicate()
+	p.card.add_affix(AFFIX_OVERLOAD)
+	p.upgrade_stacks += 1   # 算一层改造 → 侦察塔/堡垒按层数反应
+	_log("超越极限：%s 获得改造·超负荷（第 %d 层改造）" % [p.card.card_name, p.upgrade_stacks])
+	action.emit("transcend", {"cell": target, "card": p.card, "placement": p})
+	# 「模仿者」8043（R92）：接通的我方模仿者获得相同改造（超负荷）。
+	# 传 affix=AFFIX_OVERLOAD 且 atk/hp 增益为 0 —— _mimic_relay 的 guard 在 affix 非空时放行。
+	_mimic_relay(p, 0, 0, AFFIX_OVERLOAD)
+	# 「无限装甲」8038（R89）：被改造时每回合供一张 0 费改造牌（与 _upgrade_unit 同）。
+	_feed_upgrade_card(p)
+	return "%s 获得超负荷" % p.card.card_name
+
+
 func _batch_upgrade(_side: String) -> String :
 	## 「批量改造」（8031，R86，机械之心）：手卡里**所有盟友和工事**生命 +1。
 	##
@@ -3251,20 +3342,22 @@ func _shield_gen_for(p: Placement) -> Placement:
 	return best
 
 
-func _mimic_relay(src: Placement, atk_gain: int, hp_gain: int) -> void :
+func _mimic_relay(src: Placement, atk_gain: int, hp_gain: int, affix: String = "") -> void :
 	## **模仿者**（8043，R92，机械之心 2 费史诗盟友 0/10/1/1）的唯一结算口。
 	## 卡面：「与这张卡接通的盟友获得改造时，这张卡获得相同改造」。
 	##
 	## ⚠️ 挂在**所有会给场上单位加改造的地方**（用户口径：所有此类卡都算），共三处：
 	##   `_upgrade_unit`（升级 8027）/ `_self_repair`（自我修复 8035）/
 	##   `_field_aura_tick` 的持续改造分支（改造工厂 8037）。
+	##   R99 新增：`_transcend`（超越极限 8053）—— 它给的改造**没有攻/血增益**，
+	##   所以额外传 `affix` 参数（如 AFFIX_OVERLOAD）让模仿者也挂上同一字段。
 	##
 	## ⚠️ **不连锁**（用户口径）：这里给模仿者的加成是**直接落字段**、
 	## 不会再调一次 `_mimic_relay`，所以「模仿者 → 另一张模仿者」的传播天然不存在。
 	## 两张模仿者同时与受害者接通时，**各自独立**复制一次（不是 A 传给 B）。
 	if src == null or src.owner != SIDE_SELF:
 		return
-	if atk_gain <= 0 and hp_gain <= 0:
+	if atk_gain <= 0 and hp_gain <= 0 and affix == "":
 		return
 	var cell:= _cell_of(src)
 	if cell.x < 0:
@@ -3282,6 +3375,8 @@ func _mimic_relay(src: Placement, atk_gain: int, hp_gain: int) -> void :
 			q.upgrade_hp += hp_gain
 			q.card.health += hp_gain
 			q.health += hp_gain
+		if affix != "":
+			q.card.add_affix(affix)
 		q.upgrade_stacks += 1
 		_log("模仿者模仿 %s 的改造：+%d 攻 / +%d 血（现在是 %d 攻 / %d 血）" % [
 				src.card.card_name, atk_gain, hp_gain, q.effective_power(), q.health])
@@ -4622,6 +4717,12 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 			# 拆解 8049（R97，机械之心）：破坏自己一个己方盟友/工事，回 3 费，手牌+素体；
 			# 被改造则额外手牌+升级。需要 target（棋盘单位格）。
 			return _demolish(target, side)
+		REORG_ID:
+			# 重组 8051（R99，机械之心）：回复一个己方盟友/工事至满生命。
+			return _reorganize(target, side)
+		TRANSCEND_ID:
+			# 超越极限 8053（R99，机械之心）：给一个己方盟友/工事挂超负荷 + 算一层改造。
+			return _transcend(target, side)
 		BATCH_UPGRADE_ID:
 			# 批量改造 8031（R86，机械之心）：手牌里所有盟友 / 工事 +1 生命。
 			return _batch_upgrade(side)

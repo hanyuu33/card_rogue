@@ -3623,6 +3623,66 @@
       "target_mode": "none",
       "color": "橙",
       "image": ""
+    },
+    {
+      "id": 8051,
+      "name": "重组",
+      "kind": "技能",
+      "cost": 1,
+      "rarity": 3,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "effect_text": "指定一个我方单位，使其回复至满生命。",
+      "target_mode": "unit",
+      "color": "紫",
+      "image": ""
+    },
+    {
+      "id": 8052,
+      "name": "城墙",
+      "kind": "工事",
+      "cost": 2,
+      "power": 0,
+      "health": 10,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "工事",
+        "机械"
+      ],
+      "affixes": [
+        "超负荷"
+      ],
+      "effect_text": "**超负荷**：生命降到 0 或以下时不会立即死亡，会以负数血量继续存活（伤害不会溢出）；在自己回合结束时若生命仍是负数则死亡。",
+      "target_mode": "none",
+      "color": "灰",
+      "image": ""
+    },
+    {
+      "id": 8053,
+      "name": "超越极限",
+      "kind": "技能",
+      "cost": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "改造"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "指定一个我方盟友或工事，使其获得改造：挂上「超负荷」字段，并算作一层改造（侦察塔 / 堡垒 / 无限装甲会把它当一次改造来反应）。",
+      "target_mode": "unit",
+      "color": "蓝",
+      "image": ""
     }
   ]
 }

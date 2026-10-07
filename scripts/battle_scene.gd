@@ -2089,6 +2089,10 @@ func _use_hand_card(i: int) -> void:
 				target_hint = "**自己的一个盟友**（生命 +4，算一层改造）"
 			elif card.id == GameEngine.DEMOLISH_ID:
 				target_hint = "**自己的一个盟友或工事**：破坏它、回 3 费、手牌+素体；被改造则额外+升级"
+			elif card.id == GameEngine.REORG_ID:
+				target_hint = "**自己的一个盟友或工事**：回复至满生命"
+			elif card.id == GameEngine.TRANSCEND_ID:
+				target_hint = "**自己的一个盟友或工事**（还没超负荷）：挂上超负荷 + 算一层改造"
 			elif card.id == GameEngine.WHIRL_BLADE_ID:
 				target_hint = "十字中心格"
 			status_text = "%s：点击%s（右键取消）" % [card.card_name, target_hint]
@@ -2977,6 +2981,24 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 			var dp: Placement = engine.state.board[c]
 			if dp.owner == GameEngine.SIDE_SELF \
 					and (dp.card.kind == "盟友" or dp.card.is_fort()):
+				out.append(c)
+		out.sort()
+	elif card.id == GameEngine.REORG_ID:
+		# 重组 8051（R99，机械之心）：只列**己方盟友或工事**（与升级同口径）。
+		for c: Vector2i in engine.state.board:
+			var rp: Placement = engine.state.board[c]
+			if rp.owner == GameEngine.SIDE_SELF \
+					and (rp.card.kind == "盟友" or rp.card.is_fort()):
+				out.append(c)
+		out.sort()
+	elif card.id == GameEngine.TRANSCEND_ID:
+		# 超越极限 8053（R99，机械之心）：只列**己方盟友或工事**，且**还没有超负荷**
+		# （有了就别列，避免点上去被引擎拒「已拥有超负荷」）。
+		for c: Vector2i in engine.state.board:
+			var tp: Placement = engine.state.board[c]
+			if tp.owner == GameEngine.SIDE_SELF \
+					and (tp.card.kind == "盟友" or tp.card.is_fort()) \
+					and not tp.card.has_affix(GameEngine.AFFIX_OVERLOAD):
 				out.append(c)
 		out.sort()
 	elif card.id == GameEngine.FIRE_WALL_SPELL_ID:

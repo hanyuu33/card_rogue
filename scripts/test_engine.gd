@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 178,
-			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵**；实际 %d）"
+	check(repo.all_cards().size() == 181,
+			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 144 and grp_enemy.size() == 34,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 144 / 34）"
+	check(grp_player.size() == 147 and grp_enemy.size() == 34,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 147 / 34）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -164,8 +164,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 126,
-			"奖励池 126 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）；实际 %d）"
+	check(pool.size() == 128,
+			"奖励池 128 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -6091,8 +6091,8 @@ func _init() -> void:
 			% [dr_cls_all.size(), str(dr_cls_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 105
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 48
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 25,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张（期望 105 / 48 / 25）"
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 28,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张（期望 105 / 48 / 28）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0))])
@@ -6349,7 +6349,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 126, "R45+R50~R57：扩展全部进奖励池（总池 126，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 128, "R45+R50~R57：扩展全部进奖励池（总池 128，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -11832,6 +11832,101 @@ func _init() -> void:
 		"R98 超负荷：己方回合结束、生命已回正 → 继续存活（(4,2) 仍在）")
 	check(r98_e3.state.unit_at(Vector2i(4, 2)).health > 0,
 		"R98 超负荷：存活单位生命保持正数 %d" % r98_e3.state.unit_at(Vector2i(4, 2)).health)
+
+	# ══════════════════════════════════════════════════════════════
+	# R99 测试：重组 8051 / 城墙 8052 / 超越极限 8053
+	# ══════════════════════════════════════════════════════════════
+	var r99_repo := CardRepo.load_json()
+	# ---- 卡面定义校验 ----
+	var r99_reorg := r99_repo.get_card(8051)
+	check(r99_reorg != null and r99_reorg.kind == "技能" and r99_reorg.cost == 1
+			and r99_reorg.rarity == 3 and r99_reorg.card_class == "机械之心"
+			and r99_reorg.target_mode == "unit"
+			and r99_reorg.effect_text.contains("满生命"),
+		"R99 重组 8051：1 费史诗技能，机械之心，target=unit，回满生命（实际 %s）"
+			% [r99_reorg.kind, r99_reorg.cost, r99_reorg.rarity, r99_reorg.target_mode])
+	var r99_wall := r99_repo.get_card(8052)
+	check(r99_wall != null and r99_wall.kind == "工事" and r99_wall.cost == 2
+			and r99_wall.power == 0 and r99_wall.health == 10
+			and r99_wall.rarity == 0 and r99_wall.has_affix("超负荷")
+			and r99_wall.card_class == "机械之心",
+		"R99 城墙 8052：2 费普通工事 0/10/0，带超负荷，机械之心（实际 %s）"
+			% [r99_wall.kind, r99_wall.cost, r99_wall.power, r99_wall.health, r99_wall.rarity])
+	var r99_trans := r99_repo.get_card(8053)
+	check(r99_trans != null and r99_trans.kind == "技能" and r99_trans.cost == 0
+			and r99_trans.rarity == 1 and r99_trans.card_class == "机械之心"
+			and r99_trans.has_affix("次元") and r99_trans.target_mode == "unit"
+			and r99_trans.effect_text.contains("超负荷"),
+		"R99 超越极限 8053：0 费稀有技能，次元，机械之心，target=unit，挂超负荷（实际 %s）"
+			% [r99_trans.kind, r99_trans.cost, r99_trans.rarity, r99_trans.target_mode])
+
+	# ---- ① 重组：把受伤单位回满（含改造后的上限）----
+	var r99_e1 := _new_engine([], 40, 40, -1, false)
+	r99_e1.start_game()
+	var r99_u1: Placement = r99_e1.state.place(
+		CardData.from_dict(r99_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)   # 树人 3/8
+	r99_e1._hit_unit(r99_u1, 5, "测试")   # 8 → 3
+	check(r99_u1.health == 3, "R99 前置：树人被打到 %d 血" % r99_u1.health)
+	r99_e1._reorganize(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r99_u1.health == 8, "R99 重组：受伤单位被回复至满生命 8（实际 %d）" % r99_u1.health)
+	var r99_u2: Placement = r99_e1.state.place(
+		CardData.from_dict(r99_repo.get_card(8025).to_dict()), Vector2i(4, 2),
+		GameEngine.SIDE_SELF)   # 素体 0/1
+	r99_e1._upgrade_unit(Vector2i(4, 2), GameEngine.SIDE_SELF)  # +2 攻 +8 血 → 卡面 0/9
+	check(r99_u2.card.health == 10, "R99 前置：素体被改造后卡面生命 %d" % r99_u2.card.health)
+	r99_e1._reorganize(Vector2i(4, 2), GameEngine.SIDE_SELF)
+	check(r99_u2.health == 10, "R99 重组：已满血单位回满不变（仍为 %d）" % r99_u2.health)
+
+	# ---- ② 超越极限：挂超负荷 + 算一层改造；不污染卡库；重复被拒 ----
+	var r99_e2 := _new_engine([], 40, 40, -1, false)
+	r99_e2.start_game()
+	var r99_t1: Placement = r99_e2.state.place(
+		CardData.from_dict(r99_repo.get_card(8025).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)   # 素体 0/1，未改造、无超负荷
+	var stacks0: int = r99_t1.upgrade_stacks
+	r99_e2._transcend(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r99_t1.card.has_affix("超负荷"),
+		"R99 超越极限：目标获得「超负荷」字段（实际 %s）" % str(r99_t1.card.affixes))
+	check(r99_t1.upgrade_stacks == stacks0 + 1,
+		"R99 超越极限：目标改造层数 +1（%d → %d）" % [stacks0, r99_t1.upgrade_stacks])
+	check(not r99_repo.get_card(8025).has_affix("超负荷"),
+		"R99 超越极限：卡库里的素体未被污染（仍无超负荷）")
+	var dup_res := r99_e2._transcend(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(dup_res.contains("已拥有"), "R99 超越极限：对已超负荷单位重复给被拒（%s）" % dup_res)
+
+	# ---- ③ 超越极限 + 模仿者：接通的己方模仿者同样获得超负荷 + 一层改造；不连锁 ----
+	var r99_e3 := _new_engine([], 40, 40, -1, false)
+	r99_e3.start_game()
+	var r99_mim: Placement = r99_e3.state.place(
+		CardData.from_dict(r99_repo.get_card(8043).to_dict()), Vector2i(4, 2),
+		GameEngine.SIDE_SELF)   # 模仿者 0/10
+	r99_e3.state.place(
+		CardData.from_dict(r99_repo.get_card(8025).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)   # 素体 0/1（与模仿者四方向相邻 → 接通）
+	var mim_stacks0: int = r99_mim.upgrade_stacks
+	r99_e3._transcend(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r99_mim.card.has_affix("超负荷"),
+		"R99 超越极限：接通的模仿者也被传导获得「超负荷」（实际 %s）" % str(r99_mim.card.affixes))
+	check(r99_mim.upgrade_stacks == mim_stacks0 + 1,
+		"R99 超越极限：模仿者改造层数 +1（%d → %d）" % [mim_stacks0, r99_mim.upgrade_stacks])
+	var r99_tgt: Placement = r99_e3.state.unit_at(Vector2i(4, 1))
+	check(r99_tgt.upgrade_stacks == 1,
+		"R99 超越极限：不连锁 —— 素体只被改一次（层数 %d）" % r99_tgt.upgrade_stacks)
+
+	# ---- ④ 城墙：带超负荷，负血存活、己方回合结束负血则死 ----
+	var r99_e4 := _new_engine([], 40, 40, -1, false)
+	r99_e4.start_game()
+	var r99_wall_u: Placement = r99_e4.state.place(
+		CardData.from_dict(r99_repo.get_card(8052).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)   # 城墙 0/10
+	check(r99_wall_u.card.has_affix("超负荷"), "R99 前置：城墙带超负荷")
+	r99_e4._hit_unit(r99_wall_u, 50, "测试")   # 10 → -40
+	check(r99_wall_u.health < 0 and r99_e4.state.unit_at(Vector2i(4, 1)) != null,
+		"R99 城墙：负血仍存活（生命 %d，仍在场）" % r99_wall_u.health)
+	r99_e4.end_turn()   # _overload_tick(SIDE_SELF)
+	check(r99_e4.state.unit_at(Vector2i(4, 1)) == null,
+		"R99 城墙：己方回合结束、生命仍为负 → 死亡")
 
 	RunState.player_class = r91_saved_cls
 
