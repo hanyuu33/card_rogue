@@ -12515,11 +12515,14 @@ func _init() -> void:
 	var r110_fence := r110_repo.get_card(RunState.FENCE_CARD_ID)
 	check(r110_fence != null and r110_fence.card_name == "铁栅栏"
 			and r110_fence.kind == "工事" and r110_fence.health == 12,
-		"R110 鸭鸭工匠：目标卡 = 铁栅栏 %d（工事 0/12）" % RunState.FENCE_CARD_ID)
-	check(RunState.SMITH_COST == 2,
-		"R110 鸭鸭工匠：产物费用按 %d 费计（卡面铁栅栏本身是 0 费）" % RunState.SMITH_COST)
+		"R110 鸭鸭工匠：目标卡 = 铁栅栏 %d（工事 · 0 攻 12 血）" % RunState.FENCE_CARD_ID)
+	# ⚠️ R112：卡面费用**就是 2 费**（早前是「卡面 0 费 + 运行时按 2 费计」，
+	# 会造成「图鉴 0 费 / 卡组 2 费」两处不一致 —— 用户拍板「只保留 2 费」）。
+	check(r110_fence.cost == 2,
+		"R112 铁栅栏：卡面费用 = %d 费（0 费版本已删除，不再有运行时费用改写）"
+			% r110_fence.cost)
 
-	# ---- ② 锻造：选中的那张卡变成铁栅栏，且费用记成 2 ----
+	# ---- ② 锻造：选中的那张卡变成铁栅栏（只换 id；费用来自卡面） ----
 	var r110_saved_deck: Array[int] = RunState.deck_ids.duplicate()
 	RunState.deck_ids = [8003, 8004, 9095]
 	var r110_res := RunState.smith_deck_card(1)     # 锻造第 2 张（树人）
@@ -12529,24 +12532,29 @@ func _init() -> void:
 		"R110 鸭鸭工匠：卡组第 2 张变成铁栅栏（8004 → %d）" % RunState.deck_ids[1])
 	check(RunState.deck_ids.size() == 3,
 		"R110 鸭鸭工匠：**替换**而不是新增（卡组仍是 %d 张）" % RunState.deck_ids.size())
-	check(RunState.deck_cost_at_index(1) == 2,
-		"R110 鸭鸭工匠：产物费用记成 2（不是卡面的 0，实际 %d）"
-			% RunState.deck_cost_at_index(1))
-	# 没被锻造的那两张费用仍按卡库原值（树人 3 / 怒涛 2）
-	check(RunState.deck_cost_at_index(0) == 3 and RunState.deck_cost_at_index(2) == 2,
+	check(int(r110_res.get("cost", 0)) == 2
+			and r110_repo.get_card(RunState.deck_ids[1]).cost == 2,
+		"R112 鸭鸭工匠：产物 = 2 费铁栅栏（返回值 %d / 卡面 %d）"
+			% [int(r110_res.get("cost", 0)),
+				r110_repo.get_card(RunState.deck_ids[1]).cost])
+	# 没被锻造的那两张费用仍是各自卡面价（不因为别处变了而跟着变）
+	check(r110_repo.get_card(RunState.deck_ids[0]).cost == 3
+			and r110_repo.get_card(RunState.deck_ids[2]).cost == 2,
 		"R110 鸭鸭工匠：未选中的卡费用不受影响（%d / %d）"
-			% [RunState.deck_cost_at_index(0), RunState.deck_cost_at_index(2)])
-	# ⚠️ 不污染卡库：铁栅栏卡面仍是 0 费
-	check(r110_repo.get_card(RunState.FENCE_CARD_ID).cost == 0,
-		"R110 鸭鸭工匠：**不烤进卡库**（卡库铁栅栏仍是 0 费，2 费只记在本局卡组）")
+			% [r110_repo.get_card(RunState.deck_ids[0]).cost,
+				r110_repo.get_card(RunState.deck_ids[2]).cost])
+	# ⚠️ 锻造只换卡组里的 id、**不碰卡库实例**（卡库是共享实例，改写会污染本局之外）
+	check(r110_repo.get_card(8004) != null
+			and r110_repo.get_card(8004).card_name != "铁栅栏",
+		"R110 鸭鸭工匠：不污染卡库（8004 仍是「%s」）"
+			% r110_repo.get_card(8004).card_name)
 	# 越界保护
 	check(not bool(RunState.smith_deck_card(99).get("ok", false)),
 		"R110 鸭鸭工匠：下标越界 → 拒绝")
 
-	# ---- ②-b 「2 费」真的被**消费**：build_deck 里那张铁栅栏按 2 费出 ----
-	# ⚠️ R110 初版只把 2 费写进平行数组、**没有任何地方读它** —— 牌库浏览 / 地图卡组 /
-	# 进战斗的 build_deck 全按卡面 0 费走，玩家根本看不到那 2 费（死数据）。
-	# 现在改为 deck_cost_at_index() 现算 + build_deck 消费；这几条断言就是防它再退化。
+	# ---- ②-b 2 费真的被**消费**：build_deck 里那张铁栅栏按 2 费出 ----
+	# ⚠️ R110 初版只把 2 费写进平行数组、**没有任何地方读它**（死数据）；
+	# R112 把卡面直接改成 2 费 → 费用由 cards.json 单点保证，build_deck 照常读卡面即可。
 	var r110_bd := RunState.build_deck(r110_repo)
 	var r110_bf: CardData = null
 	for bcard: CardData in r110_bd:
@@ -12554,14 +12562,15 @@ func _init() -> void:
 			r110_bf = bcard
 	check(r110_bf != null and r110_bf.cost == 2,
 		"R110 鸭鸭工匠：build_deck 里那张铁栅栏**费用 = 2**（真的带进战斗，不是死数据）")
-	check(r110_bf != null and r110_bf != r110_repo.get_card(RunState.FENCE_CARD_ID),
-		"R110 鸭鸭工匠：只对改写费用的那张取**副本**（不污染卡库共享实例）")
+	check(r110_bf != null and r110_bf == r110_repo.get_card(RunState.FENCE_CARD_ID),
+		"R112 鸭鸭工匠：无需再取副本改写费用（卡面即 2 费，直接用卡库共享实例）")
 	check(r110_bd.size() == 3 and (r110_bd[0] as CardData).cost == 3,
 		"R110 鸭鸭工匠：没被锻造的卡照旧（3 张；第 1 张树人仍是 3 费）")
 	# 删掉卡组第 1 张（树人）后，铁栅栏的费用**跟着它自己走**（下标变了也不会串）
-	check(RunState.delete_deck_card(0) and RunState.deck_cost_at_index(0) == 2
-			and RunState.deck_ids[0] == RunState.FENCE_CARD_ID,
-		"R110 鸭鸭工匠：删卡后费用**不会错位**（原第 2 张铁栅栏仍在第 1 位、仍 2 费）")
+	check(RunState.delete_deck_card(0)
+			and RunState.deck_ids[0] == RunState.FENCE_CARD_ID
+			and r110_repo.get_card(RunState.deck_ids[0]).cost == 2,
+		"R112 鸭鸭工匠：删卡后铁栅栏仍在第 1 位、仍 2 费（费用跟着卡走，不会串位）")
 
 	# ---- ③ 绝赞五换一：同名张数越多越容易被选中 ----
 	# 卡组：铁栅栏 ×4、树人 ×2、熊/怒涛/疾风/预判 ×1 各 1 → 6 种不同名（≥5 可交易）。

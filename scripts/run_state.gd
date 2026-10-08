@@ -19,11 +19,9 @@ static var hp: int = 50          # 玩家当前生命（跨战斗保留）
 # ---- run 进度 ----
 static var run_active := false               # 是否在肉鸽 run 中（false = 单关/演示模式）
 static var deck_ids: Array[int] = []         # 当前卡组（卡 id，可重复）
-## ⚠️ 卡组的「实际费用」**不存表**（R110 鸭鸭工匠）：
-## 铁栅栏 9072 只要进了卡组就一定是工匠锻造出来的（没有任何别的途径把它放进卡组），
-## 所以它的费用可以**现算** —— 见 `deck_cost_at_index()`。
-## 为什么不用平行数组：那玩意儿要跟着删卡 / 换卡 / 鸭血复制一起搬，
-## 漏一处就整表错位；现算则天然不可能错位。
+## 卡组费用**一律以卡面为准**（R112）：早前鸭鸭工匠产物靠 `deck_cost_at_index()` 把卡组里的
+## 铁栅栏现算成 2 费、而卡面是 0 费 → 「图鉴 0 费 / 卡组 2 费」两处不一致。用户拍板
+## 「只保留 2 费」后，直接把 **9072 的卡面改成 2 费**，那套运行时费用改写已整块删除。
 static var map_columns: Array = []           # RogueMap.generate 的结果（起点 + 12 层 + Boss）
 static var current_layer := GameLayers.LAYER_DEFAULT  # 本局地图所属的层（第一层）
 static var current_node_id := -1             # 玩家所在节点（-1 = 还没出发）
@@ -96,9 +94,9 @@ const DUCK_BLOOD_MAX := 2
 const HERO_CARD_ID := 9023
 
 # 事件「鸭鸭工匠」（R110）：把卡组里选中的那张卡变成一张「铁栅栏」（FENCE_CARD_ID）。
-# 产物费用**统一改成 2 费**（卡面铁栅栏本身是 0 费，但工匠产物按 2 费计）。
+# ⚠️ R112：铁栅栏 9072 的**卡面费用就是 2 费**（早前是 0 费卡 + 运行时按 2 费计）。
+# 费用只有一个来源（cards.json），所以这里只记 id，不再有 SMITH_COST / 覆盖表。
 const FENCE_CARD_ID := 9072
-const SMITH_COST := 2                 # 产物铁栅栏的费用（覆盖卡面的 0 费）
 
 # 即时道具
 const SOURCE_POWER_ID := 6002     # 源数之力（改造卡组中的一张卡）
@@ -464,38 +462,19 @@ static func transform_deck_card(repo: CardRepo, index: int) -> Dictionary:
 static func smith_deck_card(index: int) -> Dictionary:
 	## 事件「鸭鸭工匠」：把卡组中第 index 张卡**变成一张铁栅栏**。
 	##
-	## 费用口径（用户确认）：产物是「**2 费**铁栅栏」—— 卡面铁栅栏是 0 费，但这里
-	## 统一按 SMITH_COST(=2) 记。原卡的费用不再影响结果（反正已经被替换掉了）。
+	## 费用口径：产物是「**2 费**铁栅栏」—— R112 起 9072 的**卡面本身就是 2 费**，
+	## 所以这里只换 id，费用天然正确，不需要任何覆盖 / 平行表（单一数据源 = cards.json）。
 	##
 	## ⚠️ 为什么不直接改卡库：卡库是**共享实例**，改它会连本局之外都污染。
-	## 所以这里只换 id；「2 费」由 `deck_cost_at_index()` **现算**出来
-	## （卡组里的铁栅栏 = 工匠锻造的 = SMITH_COST 费），不存平行数组、不会错位。
 	## 纯确定性操作，不走随机源 → 录像回放天然一致。
 	if index < 0 or index >= deck_ids.size():
 		return {"ok": false, "old_id": 0, "new_id": 0}
 	var old_id: int = deck_ids[index]
 	deck_ids[index] = FENCE_CARD_ID
 	pending_deck_edit = ""
-	# 「2 费」不用在这里记 —— `deck_cost_at_index()` 会把卡组里的铁栅栏一律算成 SMITH_COST。
-	return {"ok": true, "old_id": old_id, "new_id": FENCE_CARD_ID, "cost": SMITH_COST}
-
-
-static func deck_cost_at_index(i: int) -> int:
-	## 卡组里第 i 张卡的**实际费用**。
-	## 规则：**铁栅栏（FENCE_CARD_ID）进了卡组 = 工匠锻造的 → 一律按 SMITH_COST(2) 计**
-	## （卡面是 0 费）；其余卡一律用卡库原价。
-	## ⚠️ **现算、不存表**：现算不可能与 deck_ids 错位（删卡 / 换卡 / 鸭血复制都天然正确）。
-	## 代价是「铁栅栏进卡组就按 2 费算」成了硬规则 —— 9072 目前**只有**鸭鸭工匠能放进
-	## 卡组（栅栏修复术只把它放到**场上**），所以规则成立；将来若新增别的渠道把铁栅栏
-	## 塞进卡组，要回来改这里。
-	if i < 0 or i >= deck_ids.size():
-		return 0
-	var id: int = deck_ids[i]
-	if id == FENCE_CARD_ID:
-		return SMITH_COST
-	var c := CardRepo.load_json().get_card(id)
-	return c.cost if c != null else 0
-
+	var fc := CardRepo.load_json().get_card(FENCE_CARD_ID)
+	return {"ok": true, "old_id": old_id, "new_id": FENCE_CARD_ID,
+			"cost": fc.cost if fc != null else 0}
 
 static func duplicate_deck_cards(repo: CardRepo, indices: Array) -> Dictionary:
 	## 鸭血（DUCK_BLOOD_RELIC_ID）：把选中的每张卡**各复制一份**加入卡组（原卡保留）。
@@ -736,20 +715,12 @@ static func add_card(id: int) -> void:
 
 static func build_deck(repo: CardRepo) -> Array[CardData]:
 	## 按 deck_ids 构建实际牌库（缺定义的 id 跳过）。
-	## ⚠️ 费用以 **deck_cost_at_index** 为准（工匠锻造的铁栅栏是 2 费、卡面却是 0 费）：
-	## 只有「与卡面费用不同」的那些才取**副本**改写费用，其余照旧用卡库**共享实例** ——
-	## 没锻造过铁栅栏时，行为与以前**完全一致**（不会到处多出复制品）。
+	## 一律用卡库**共享实例** —— R112 起卡组里不再有「费用与卡面不同」的卡
+	## （铁栅栏 9072 的卡面就是 2 费），所以不需要取副本改写费用。
 	var cards: Array[CardData] = []
-	for i in deck_ids.size():
-		var c := repo.get_card(deck_ids[i])
-		if c == null:
-			continue
-		var want := deck_cost_at_index(i)
-		if want != c.cost:
-			var cp := CardData.from_dict(c.to_dict())
-			cp.cost = want
-			cards.append(cp)
-		else:
+	for id in deck_ids:
+		var c := repo.get_card(id)
+		if c != null:
 			cards.append(c)
 	return cards
 

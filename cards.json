@@ -1820,7 +1820,7 @@
       "id": 9072,
       "name": "铁栅栏",
       "kind": "工事",
-      "cost": 0,
+      "cost": 2,
       "power": 0,
       "health": 12,
       "attack_range": 0,
@@ -1833,7 +1833,7 @@
         "铁栅栏",
         "栅栏"
       ],
-      "effect_text": "由「在启动了」召唤的墙。替你的 HP 承受伤害。",
+      "effect_text": "由「在启动了」召唤的墙；鸭鸭工匠也能把卡组里的一张卡锻造成它。替你的 HP 承受伤害。",
       "target_mode": "none",
       "color": "灰",
       "image": ""

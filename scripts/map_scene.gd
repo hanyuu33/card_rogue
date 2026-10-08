@@ -50,7 +50,7 @@ var _records_scroll := 0.0
 var _records: Array = []
 var _deck_visible := false       # 卡组查看面板
 var _deck_scroll := 0.0
-var _deck_rows: Array = []       # [{id, count}] 按卡组首次出现顺序聚合
+var _deck_rows: Array = []       # [{id, card, count}] 按卡组首次出现顺序聚合
 var _hover_deck := -1
 var _mouse := Vector2.ZERO      # 鼠标位置（道具徽章悬停提示用）
 var _relics_visible := false    # 道具详情面板（R75：徽章装不下时才可点开，字号放大）
@@ -455,28 +455,22 @@ func _toggle_deck() -> void:
 
 
 func _build_deck_rows() -> Array:
-	## 卡组聚合：[{id, cost, card, count}]（按首次出现顺序）。
-	## ⚠️ 按**（id, 实际费用）**聚合：工匠锻造出的铁栅栏 2 费，与图鉴那张 0 费各占一行；
-	## card 已经带好实际费用（有改造时是一份副本），下面的绘制处直接用它。
+	## 卡组聚合：[{id, card, count}]（按首次出现顺序）。
+	## ⚠️ R112 起卡组里不再有「运行时改写费用」的卡（铁栅栏 9072 卡面就是 2 费），
+	## 同名卡费用必然相同 → 按 id 聚合即可。
 	var repo := CardRepo.load_json()
 	var seen := {}
 	var out: Array = []
 	for i in RunState.deck_ids.size():
 		var id: int = RunState.deck_ids[i]
-		var cost := RunState.deck_cost_at_index(i)
-		var key := "%d@%d" % [id, cost]
-		if seen.has(key):
-			out[seen[key]]["count"] += 1
-		else:
-			var c := repo.get_card(id)
-			if c == null:
-				continue
-			var show := c
-			if cost != c.cost:
-				show = CardData.from_dict(c.to_dict())
-				show.cost = cost
-			seen[key] = out.size()
-			out.append({"id": id, "cost": cost, "card": show, "count": 1})
+		if seen.has(id):
+			out[seen[id]]["count"] += 1
+			continue
+		var c := repo.get_card(id)
+		if c == null:
+			continue
+		seen[id] = out.size()
+		out.append({"id": id, "card": c, "count": 1})
 	return out
 
 
