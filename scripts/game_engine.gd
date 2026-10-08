@@ -31,6 +31,9 @@ var crow_pending:= false
 var whale_pending:= false
 var revive_pending:= false   # 复活术（9078）：等玩家从弃牌区选盟友
 var revive_remaining:= 0     # 还要选几张（蓄力让这张卡生效 2 次 → 2 张，一张一张选）
+var shadow_step_pending:= false   # 暗影步（9121）：等玩家从弃牌区选一张（任意 kind）
+var shadow_step_remaining:= 0     # 还要选几张（蓄力让这张卡生效 2 次 → 2 张）
+var shadow_step_label:= "暗影步" # 面板标题（复用复活术那套面板时区分文案）
 var whale_remaining:= 0
 var foresight_mode:= false  # 预判（9097）：等玩家选效果①/②
 var foresight_pick:= false  # 预判①：等玩家从弃牌区选一张 0 费技能卡
@@ -719,6 +722,27 @@ const OPENING_MOVE_ID:= 9119
 const OPENING_MOVE_DMG:= 4       # 基础伤害
 const OPENING_MOVE_DRAW:= 1      # 结算后抽几张
 
+
+# ---- R108（2026-10-08）影袭 9120 / 暗影步 9121 ----
+# 影袭（9120 技能，暗影刺客·稀有）：1 费；对目标造成 8 点伤害，
+#   若**含本卡**本回合已使用 3 张卡，回复 1 点费用。
+# 判定读 `state.self_card_plays + 1`（self_card_plays 在 _note_card_played 里已含本卡，
+#   但结算伤害发生在记卡之前，所以这里 +1 才是「含本卡」的最终张数）—— 与连环戏法 9093 同源。
+# 伤害走 _spell_dmg()（吃荧光草 / 魔法塔 / 魔力核心等既有加成）；回费走 state.energy += 1
+#   （与活力转移 9110 / 契约签订者 / 奥秘精通同口径：不污染 self_energy_spent，允许当回合超额）。
+const SHADOW_STRIKE_ID:= 9120
+const SHADOW_STRIKE_DMG:= 8         # 基础伤害
+const SHADOW_STRIKE_NEED:= 3        # 含本卡累计用满几张
+const SHADOW_STRIKE_REFUND:= 1      # 达标回费
+
+# 暗影步（9121 技能，暗影刺客·稀有）：2 费；先对目标造成 8 点伤害，
+#   再从**弃牌区任选一张**（任意 kind，不限盟友）返回手卡。
+# 取牌面板与复活术 9078 同构但用**独立变量**（shadow_step_pending / _remaining）——
+# 复活术的候选是「仅盟友」，口径不同，混用同一套变量会互相污染。
+# ⚠️ 取牌是**玩家侧收益**：敌方 AI 用这张卡只结算伤害、不取牌（与起手式 9119 同口径）。
+const SHADOW_STEP_ID:= 9121
+const SHADOW_STEP_DMG:= 8
+const SHADOW_STEP_NEED:= 1          # 要从弃牌区取回几张
 # 白魔法师（9021）「精进」：自己的回合开始时，本方带此 trait 的单位力量 +MAGE_GROW_BUFF
 # （永久累计，无上限）—— 已去掉「只剩它自己」的前置条件，任何场面都稳定成长。
 # 注：本卡 value=10 归「治疗」用（回血量），所以成长量走常量，不读卡面 value。
@@ -4184,7 +4208,7 @@ func _sleepless_tick(side: String) -> void:
 	# 少一个就出 bug：面板期间回合收尾会照常结算，把「手牌空了 → 抽 1 张」之类
 	# 的效果打乱玩家正在做的选择。
 	if revive_pending or crow_pending or whale_pending or foresight_pick or fate_pending \
-			or endless_pending or sys_upgrade_pending:
+			or endless_pending or sys_upgrade_pending or shadow_step_pending:
 		return
 	if not _zone_has_id(side, SLEEPLESS_ID) or not state.hand.is_empty():
 		return
@@ -5149,6 +5173,34 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 			var om_got := _draw_many(OPENING_MOVE_DRAW)
 			_log("起手式：结算后抽 %d 张卡" % om_got)
 			return om_s + ("；抽 %d 张" % om_got)
+
+		SHADOW_STRIKE_ID:
+			# 影袭 9120（R108）：1 费稀有；对目标 8 伤 → 若**含本卡**本回合已用满 3 张，回 1 费。
+			# self_card_plays 在 _note_card_played 里累加，但**结算发生在记卡之前**，
+			# 所以这里 +1 才是「含本卡」的最终张数（与连环戏法 9093 同源口径）。
+			var ss_plays := state.self_card_plays if side == SIDE_SELF else state.opp_card_plays
+			var ss_cards := ss_plays + 1
+			var ss_s := str(_op_deal_damage(side, _spell_dmg(side, SHADOW_STRIKE_DMG, card), target))
+			if ss_cards >= SHADOW_STRIKE_NEED:
+				if side == SIDE_SELF:
+					state.energy += SHADOW_STRIKE_REFUND
+					_log("影袭：含本卡本回合第 %d 张 → 回复 %d 点费用（当前 %d）" % [
+							ss_cards, SHADOW_STRIKE_REFUND, state.energy_of(side)])
+					ss_s += "；回复 %d 点费用" % SHADOW_STRIKE_REFUND
+				else:
+					state.opp_energy += SHADOW_STRIKE_REFUND
+					ss_s += "；回复 %d 点费用" % SHADOW_STRIKE_REFUND
+			else:
+				_log("影袭：含本卡本回合第 %d 张（未满 %d 张）→ 不回费" % [
+						ss_cards, SHADOW_STRIKE_NEED])
+			return ss_s
+		SHADOW_STEP_ID:
+			# 暗影步 9121（R108）：2 费稀有；先对目标 8 伤 → 再从弃牌区任选一张回手卡。
+			# 取牌是**玩家侧收益** → 敌方 AI 只结算伤害（与起手式 9119 同口径）。
+			var sh_s := str(_op_deal_damage(side, _spell_dmg(side, SHADOW_STEP_DMG, card), target))
+			if side != SIDE_SELF:
+				return sh_s
+			return sh_s + "；" + _shadow_step_spell(side)
 		PREPARE_ID:
 			if side != SIDE_SELF:
 				var pp_m := 0
@@ -5412,6 +5464,58 @@ func revive_recall(discard_index: int) -> bool:
 		revive_remaining = 0
 	_log("复活术：%s 从弃牌区回到手牌（还要选 %d 张）" % [c.card_name, revive_remaining])
 	action.emit("revive_recall", {"card": c})
+	return true
+
+
+func _shadow_step_spell(side: String) -> String:
+	## 暗影步（9121，R108）：伤害结算**之后**打开弃牌区取牌面板。
+	## 候选 = 弃牌区**任意 kind**（与复活术「仅盟友」口径不同，故用独立变量）。
+	if shadow_step_options().is_empty():
+		_log("暗影步：弃牌区是空的，效果落空")
+		shadow_step_pending = false
+		shadow_step_remaining = 0
+		return "弃牌区是空的"
+	if state.hand_full():
+		_log("暗影步：手牌已满（%d 张），无法取回" % FieldState.HAND_LIMIT)
+		shadow_step_pending = false
+		shadow_step_remaining = 0
+		return "手牌已满，无法取回"
+	# 叠加记账：蓄力让这张卡生效 2 次 → 可以取回 2 张（一张一张选）
+	shadow_step_remaining += 1
+	shadow_step_pending = true
+	shadow_step_label = "暗影步"
+	_log("暗影步：从弃牌区选择 %d 张卡回到手牌" % shadow_step_remaining)
+	return "从弃牌区选择 %d 张卡回到手牌" % shadow_step_remaining
+
+
+func shadow_step_options() -> Array[int]:
+	## 暗影步的面板候选：弃牌区里的**全部卡**（任意 kind）。
+	var out: Array[int] = []
+	for i in state.discard.size():
+		out.append(i)
+	return out
+
+
+func shadow_step_recall(discard_index: int) -> bool:
+	if ReplayLog.recording:
+		ReplayLog.act("shadow_step_recall", [discard_index])
+
+	if not shadow_step_pending:
+		return false
+	if discard_index < 0 or discard_index >= state.discard.size():
+		return false
+	var c: CardData = state.discard[discard_index]
+	if state.hand_full():
+		_log("暗影步：手牌已满，无法取回 %s" % c.card_name)
+		return false
+	state.discard.remove_at(discard_index)
+	state.hand.append(c)
+	shadow_step_remaining -= 1
+	if shadow_step_remaining <= 0:
+		shadow_step_pending = false
+		shadow_step_remaining = 0
+	_log("暗影步：%s 从弃牌区回到手牌（还要选 %d 张）" % [c.card_name, shadow_step_remaining])
+	action.emit("shadow_step_recall", {"card": c})
 	return true
 
 

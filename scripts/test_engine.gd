@@ -121,7 +121,7 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 192,
+	check(repo.all_cards().size() == 194,
 			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
@@ -135,7 +135,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 158 and grp_enemy.size() == 34,
+	check(grp_player.size() == 160 and grp_enemy.size() == 34,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 158 / 34）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -164,7 +164,7 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 138,
+	check(pool.size() == 140,
 			"奖励池 128 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
@@ -6091,10 +6091,10 @@ func _init() -> void:
 			"角色系统：非敌方卡 class 都在可选角色内、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
-			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 51
+			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 53
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
 			and int(dr_cls_count.get("敌人", 0)) == 34,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 48 / 36 / 34）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 53 / 36 / 34）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -6352,7 +6352,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 138, "R45+R50~R57：扩展全部进奖励池（总池 136，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 140, "R45+R50~R57：扩展全部进奖励池（总池 138，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -6657,7 +6657,7 @@ func _init() -> void:
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
 	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 71
-			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 51,
+			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 53,
 			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
@@ -6729,7 +6729,7 @@ func _init() -> void:
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
 			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法师）")
-	check(r47_dr.size() == 60 and r47_rg.size() == 48
+	check(r47_dr.size() == 60 and r47_rg.size() == 50
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
 			"奖励池过滤：森林精魄 %d 张 / 暗影刺客 %d 张（两者之和 + 机械之心 %d = 完整池 %d）"
@@ -12194,6 +12194,157 @@ func _init() -> void:
 	check(r104_e4.state.hp_opponent == r104_foe_hp0 - 4,
 		"R104 起手式：无目标时打对方玩家 4 点（%d → %d）"
 			% [r104_foe_hp0, r104_e4.state.hp_opponent])
+
+	# ══════════════════════════════════════════════════════════════
+	# ══════════════════════════════════════════════════════════════
+	# R108 测试：影袭 9120（1 费 · 8 伤 · 含本卡本回合满 3 张 → 回 1 费）
+	#           暗影步 9121（2 费 · 8 伤 → 弃牌区任选一张回手卡）
+	# ══════════════════════════════════════════════════════════════
+	var r108_repo := CardRepo.load_json()
+	var r108_pool_ids := {}
+	for c in r108_repo.reward_pool():
+		r108_pool_ids[c.id] = true
+
+	# ---- 卡面定义校验 ----
+	var r108_strike := r108_repo.get_card(GameEngine.SHADOW_STRIKE_ID)
+	check(r108_strike != null and r108_strike.kind == "技能" and r108_strike.cost == 1
+			and r108_strike.rarity == 1 and r108_strike.card_class == "暗影刺客"
+			and r108_strike.target_mode == "unit" and r108_strike.needs_target(),
+		"R108 影袭 9120：1 费稀有技能，暗影刺客，需选单位目标（实际 %s）"
+			% (r108_strike.card_name if r108_strike != null else "null"))
+	var r108_step := r108_repo.get_card(GameEngine.SHADOW_STEP_ID)
+	check(r108_step != null and r108_step.kind == "技能" and r108_step.cost == 2
+			and r108_step.rarity == 1 and r108_step.card_class == "暗影刺客"
+			and r108_step.target_mode == "unit" and r108_step.needs_target(),
+		"R108 暗影步 9121：2 费稀有技能，暗影刺客，需选单位目标（实际 %s）"
+			% (r108_step.card_name if r108_step != null else "null"))
+	check(r108_pool_ids.has(GameEngine.SHADOW_STRIKE_ID)
+			and r108_pool_ids.has(GameEngine.SHADOW_STEP_ID),
+		"R108：影袭 9120 与暗影步 9121 均进入奖励池（稀有 rarity=1）")
+
+	# ---- ① 影袭：基础 8 伤，未满 3 张不回费 ----
+	var r108_e1 := _new_engine([], 30, 30)
+	r108_e1.start_game()
+	var r108_foe := r108_e1.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r108_e1.state.hand.append(
+		CardData.from_dict(r108_repo.get_card(GameEngine.SHADOW_STRIKE_ID).to_dict()))
+	r108_e1.state.energy = 5
+	r108_e1.use_spell(r108_e1.state.hand.size() - 1, Vector2i(2, 1))
+	check(r108_foe.health == 47,
+		"R108 影袭：对目标 8 伤（55 → %d）" % r108_foe.health)
+	# 本回合第 1 张卡：1 - 1 = 0 张（含本卡），未满 3 → 不回费
+	check(r108_e1.state.energy == 4,
+		"R108 影袭：本回合第 1 张（未满 3 张）→ 不回费（能量 5 → %d）" % r108_e1.state.energy)
+
+	# ---- ② 影袭：含本卡累计第 3 张 → 回 1 费 ----
+	var r108_e2 := _new_engine([], 30, 30)
+	r108_e2.start_game()
+	var r108_foe2 := r108_e2.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	# 「本回合已用张数」的累积由 _note_card_played 负责（连环戏法 9093 已覆盖），
+	# 本组只验影袭的**阈值判定**读 self_card_plays + 1，所以直接摆前置。
+	r108_e2.state.self_card_plays = 2
+	check(r108_e2.state.self_card_plays == 2,
+		"R108 前置：本回合已用 2 张卡（实际 %d）" % r108_e2.state.self_card_plays)
+	r108_e2.state.hand.append(
+		CardData.from_dict(r108_repo.get_card(GameEngine.SHADOW_STRIKE_ID).to_dict()))
+	var r108_e2_before := r108_e2.state.energy
+	r108_e2.use_spell(r108_e2.state.hand.size() - 1, Vector2i(2, 1))
+	# 打出这张（-1）再回费（+1）→ 净 0
+	check(r108_e2.state.energy == r108_e2_before,
+		"R108 影袭：含本卡本回合第 3 张 → 回 1 费，抵消本次 1 费（能量 %d → %d）"
+			% [r108_e2_before, r108_e2.state.energy])
+	check(r108_foe2.health == 47,
+		"R108 影袭：回费分支同样打出 8 伤（55 → %d）" % r108_foe2.health)
+
+	# ---- ③ 影袭：满 3 张后**第 4 张**仍回费（阈值是「≥3」不是「恰好 3」）----
+	var r108_e3 := _new_engine([], 30, 30)
+	r108_e3.start_game()
+	var r108_foe3 := r108_e3.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r108_e3.state.self_card_plays = 3	# 已用 3 张 → 含本卡是第 4 张
+	r108_e3.state.hand.append(
+		CardData.from_dict(r108_repo.get_card(GameEngine.SHADOW_STRIKE_ID).to_dict()))
+	var r108_e3_before := r108_e3.state.energy
+	r108_e3.use_spell(r108_e3.state.hand.size() - 1, Vector2i(2, 1))
+	check(r108_e3.state.energy == r108_e3_before,
+		"R108 影袭：含本卡第 4 张（≥3）→ 仍回 1 费（能量 %d → %d）"
+			% [r108_e3_before, r108_e3.state.energy])
+	check(r108_foe3.health == 47,
+		"R108 影袭：第 4 张照样打出 8 伤（55 → %d）" % r108_foe3.health)
+
+	# ---- ④ 暗影步：8 伤 + 弃牌区任选一张回手卡（**任意 kind**）----
+	var r108_e4 := _new_engine([], 30, 30)
+	r108_e4.start_game()
+	var r108_foe4 := r108_e4.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	# 弃牌区塞三种不同 kind：技能 / 效果 / 盟友
+	r108_e4.state.discard.append(_card(9095, "怒涛", "技能", 2, 0, 0, 0, 0))
+	r108_e4.state.discard.append(_card(8010, "荧光草", "效果", 3, 0, 0, 0, 0))
+	r108_e4.state.discard.append(_card(8003, "树人", "盟友", 3, 3, 8, 1, 1))
+	check(r108_e4.shadow_step_options().size() == 3,
+		"R108 暗影步：候选 = 弃牌区**全部**卡（任意 kind），实际 %d 张"
+			% r108_e4.shadow_step_options().size())
+	r108_e4.state.hand.append(
+		CardData.from_dict(r108_repo.get_card(GameEngine.SHADOW_STEP_ID).to_dict()))
+	var r108_e4_hand0 := r108_e4.state.hand.size()
+	r108_e4.use_spell(r108_e4.state.hand.size() - 1, Vector2i(2, 1))
+	check(r108_foe4.health == 47,
+		"R108 暗影步：先结算 8 伤（55 → %d）" % r108_foe4.health)
+	check(r108_e4.shadow_step_pending,
+		"R108 暗影步：伤害结算后打开弃牌区取牌面板")
+	# 取回一张**技能卡**（复活术只让取盟友，这张任意 kind）
+	var r108_pick := -1
+	for i in r108_e4.shadow_step_options():
+		if (r108_e4.state.discard[i] as CardData).kind == "技能":
+			r108_pick = i
+			break
+	check(r108_pick >= 0, "R108 暗影步：候选里能挑到技能卡（证明不限盟友）")
+	check(r108_e4.shadow_step_recall(r108_pick),
+		"R108 暗影步：选中弃牌区的技能卡 → 取回成功")
+	check(r108_e4.state.hand.size() == r108_e4_hand0,
+		"R108 暗影步：技能离手（-1）+ 取回一张（+1）→ 手牌数不变（%d）"
+			% r108_e4.state.hand.size())
+	check(not r108_e4.shadow_step_pending,
+		"R108 暗影步：选完 1 张 → 面板关闭（选满即结束）")
+
+	# ---- ⑤ 暗影步：弃牌区为空时伤害照给、取牌落空 ----
+	var r108_e5 := _new_engine([], 30, 30)
+	r108_e5.start_game()
+	var r108_foe5 := r108_e5.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r108_e5.state.hand.append(
+		CardData.from_dict(r108_repo.get_card(GameEngine.SHADOW_STEP_ID).to_dict()))
+	r108_e5.use_spell(r108_e5.state.hand.size() - 1, Vector2i(2, 1))
+	check(r108_foe5.health == 47,
+		"R108 暗影步：弃牌区为空也照样打出 8 伤（55 → %d）" % r108_foe5.health)
+	check(not r108_e5.shadow_step_pending,
+		"R108 暗影步：弃牌区为空 → 不开面板（取牌落空，伤害不打折）")
+
+	# ---- ⑥ 敌方 AI 用暗影步：只结算伤害，**不取牌**（不偷我方弃牌区）----
+	var r108_e6 := _new_engine([], 30, 30)
+	r108_e6.start_game()
+	var r108_me6 := r108_e6.state.place(_card(8003, "树人", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r108_e6_mark := _card(9095, "怒涛", "技能", 2, 0, 0, 0, 0)
+	r108_e6.state.discard.append(r108_e6_mark)
+	r108_e6.state.opp_hand_count = 5
+	r108_e6.remote_spell(
+		CardData.from_dict(r108_repo.get_card(GameEngine.SHADOW_STEP_ID).to_dict()),
+		Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r108_me6.health == 0,
+		"R108 暗影步：敌方 AI 用这张卡也造成 8 伤（8 血单位 → %d）" % r108_me6.health)
+	# ⚠️ 不能数弃牌区**总数**：树人被打死，它自己的卡会合法地进弃牌区，总数会 +1。
+	# 真正的不变量是「我弃牌区里那张**指定的**卡没有被取走」。
+	var r108_e6_still := false
+	for c in r108_e6.state.discard:
+		if c == r108_e6_mark:
+			r108_e6_still = true
+	check(r108_e6_still,
+		"R108 暗影步：敌方 AI 不取走我方弃牌区的卡（那张怒涛还在）")
+	check(not r108_e6.shadow_step_pending,
+		"R108 暗影步：敌方 AI 不打开取牌面板")
 
 	# ══════════════════════════════════════════════════════════════
 	# R105 测试：黑暗陷阱 8063（0 费场地 · 路过即中 → 本回合力量 -1）

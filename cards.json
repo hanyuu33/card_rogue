@@ -3928,6 +3928,44 @@
       "target_mode": "none",
       "color": "紫",
       "image": ""
+    },
+    {
+      "id": 9120,
+      "name": "影袭",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "对目标造成 8 点伤害。若**含这张卡**本回合已经使用了 3 张卡，回复 1 点费用。",
+      "target_mode": "unit",
+      "color": "紫",
+      "image": ""
+    },
+    {
+      "id": 9121,
+      "name": "暗影步",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "对目标造成 8 点伤害，然后从**弃牌区任选一张卡**（任意类型）返回你的手卡。",
+      "target_mode": "unit",
+      "color": "紫",
+      "image": ""
     }
   ]
 }

@@ -1916,8 +1916,8 @@ func _on_left_click(pos: Vector2) -> void:
 	if engine.endless_pending:
 		_on_endless_pick_click(pos)
 		return
-	# 复活术的取牌面板：必须选一张盟友（开着时只处理面板内的点击）
-	if engine.revive_pending:
+	# 取牌面板（复活术 9078 / 暗影步 9121）：开着时只处理面板内的点击
+	if _recall_pending():
 		_on_revive_pick_click(pos)
 		return
 	# 预判（9097）：二选一面板
@@ -2095,6 +2095,10 @@ func _use_hand_card(i: int) -> void:
 				target_hint = "一个自己的盟友（之后再点目的格）"
 			elif card.id == GameEngine.SWAP_UNITS_ID:
 				target_hint = "第一个单位（之后再点第二个单位）"
+			elif card.id == GameEngine.SHADOW_STRIKE_ID:
+				target_hint = "**一个目标**（8 伤；本回合含这张卡已用 3 张 → 回 1 费）"
+			elif card.id == GameEngine.SHADOW_STEP_ID:
+				target_hint = "**一个目标**（8 伤；之后从弃牌区任选一张卡回手）"
 			elif card.id == GameEngine.DOUBLE_TRAP_ID:
 				target_hint = "一个自己的工事"
 			elif card.id == GameEngine.UPGRADE_ID:
@@ -2978,9 +2982,43 @@ func _on_fate_pick_click(pos: Vector2) -> void:
 			return
 
 
+func _recall_mode() -> String:
+	## 当前开着的是哪个「从弃牌区取牌」面板：""（无）/ "复活术" / "暗影步"。
+	## R108：两套面板同构，只是候选口径不同（复活术仅盟友、暗影步任意卡），
+	## 所以共用绘制/点击代码，由本函数分流，**不去改复活术的既有行为**。
+	if engine.shadow_step_pending:
+		return "暗影步"
+	if engine.revive_pending:
+		return "复活术"
+	return ""
+
+
+func _recall_pending() -> bool:
+	## 任一取牌面板开着（点棋盘/手牌时的模态拦截）。
+	return engine.revive_pending or engine.shadow_step_pending
+
+
+func _recall_options() -> Array[int]:
+	if engine.shadow_step_pending:
+		return engine.shadow_step_options()
+	return engine.revive_options()
+
+
+func _recall_remaining() -> int:
+	if engine.shadow_step_pending:
+		return engine.shadow_step_remaining
+	return engine.revive_remaining
+
+
+func _recall_discard_index(idx: int) -> bool:
+	if engine.shadow_step_pending:
+		return engine.shadow_step_recall(idx)
+	return engine.revive_recall(idx)
+
+
 func _revive_panel_layout() -> Dictionary:
-	## 复活术（9078）取牌面板布局（与乌鸦/鲸鱼面板同款：网格排布 + 略缩小卡面）。
-	var opts := engine.revive_options()
+	## 复活术（9078）/ 暗影步（9121）取牌面板布局（与乌鸦/鲸鱼面板同款：网格排布 + 略缩小卡面）。
+	var opts := _recall_options()
 	var n := maxi(opts.size(), 1)
 	var cw := CARD_W * 0.8
 	var ch := CARD_H * 0.8
@@ -3011,7 +3049,11 @@ func _draw_revive_pick() -> void:
 	var L := _revive_panel_layout()
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color("555555"), false, 2.0)
-	_draw_string_center(_font_bold, 13, "复活术：选择弃牌区一张盟友回到手卡（必须选一张）",
+	var rmode := _recall_mode()
+	var rtitle := "复活术：选择弃牌区一张盟友回到手卡（必须选一张）"
+	if rmode == "暗影步":
+		rtitle = "暗影步：选择弃牌区一张卡回到手卡（必须选一张）"
+	_draw_string_center(_font_bold, 13, rtitle,
 			Vector2(WINDOW_W / 2, L["py"] + 26), Color("333333"))
 	var opts: Array = L["opts"]
 	for k in opts.size():
@@ -3019,8 +3061,9 @@ func _draw_revive_pick() -> void:
 		var c: CardData = engine.state.discard[idx]
 		_draw_card_face(c, _revive_panel_rect(L, k), c.health, false, false)
 	var rv_tip := "点击一张卡：它立即回到你的手牌"
-	if engine.revive_remaining > 1:
-		rv_tip = "点击一张卡：它立即回到你的手牌（还要选 %d 张）" % engine.revive_remaining
+	var rleft := _recall_remaining()
+	if rleft > 1:
+		rv_tip = "点击一张卡：它立即回到你的手牌（还要选 %d 张）" % rleft
 	_draw_string_center(_font, 9, rv_tip,
 			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 12.0), Color("666666"))
 
@@ -3034,8 +3077,8 @@ func _on_revive_pick_click(pos: Vector2) -> void:
 			var nm := "?"
 			if idx >= 0 and idx < engine.state.discard.size():
 				nm = engine.state.discard[idx].card_name
-			if engine.revive_recall(idx):
-				status_text = "复活术：%s 从弃牌区回到手牌" % nm
+			if _recall_discard_index(idx):
+				status_text = "%s：%s 从弃牌区回到手牌" % [_recall_mode(), nm]
 			_clear_selection()
 			queue_redraw()
 			return
@@ -3316,9 +3359,9 @@ func _on_right_click() -> void:
 	if engine.endless_pending:
 		_say("无尽黑暗：必须从手牌里选一张弃掉（不能不选）")
 		return
-	# 复活术的取牌面板：必须选一张（不接受取消）
-	if engine.revive_pending:
-		_say("复活术：必须从弃牌区选择一张盟友回到手牌")
+	# 取牌面板：必须选一张（不接受取消）
+	if _recall_pending():
+		_say("%s：必须从弃牌区选择一张卡回到手牌" % _recall_mode())
 		return
 	if engine.foresight_mode:
 		_say("预判：必须选择一个效果")
@@ -4361,8 +4404,8 @@ func _on_end_turn() -> void:
 	if engine.endless_pending:
 		_say("无尽黑暗：请先从手牌里选一张弃掉（不能不选）")
 		return
-	if engine.revive_pending:
-		_say("复活术：请先选择一张要回到手牌的盟友")
+	if _recall_pending():
+		_say("%s：请先选择一张要回到手牌的卡" % _recall_mode())
 		return
 	if engine.foresight_mode or engine.foresight_pick:
 		_say("预判：请先完成选择")
@@ -4494,8 +4537,8 @@ func _draw() -> void:
 	# 无尽黑暗的弃牌面板（R70）：同样画在横幅之后
 	if engine.endless_pending:
 		_draw_endless_pick()
-	# 复活术的取牌面板：同样画在横幅之后
-	if engine.revive_pending:
+	# 取牌面板：同样画在横幅之后
+	if _recall_pending():
 		_draw_revive_pick()
 	if engine.foresight_mode:
 		_draw_foresight_mode()
@@ -4928,7 +4971,7 @@ func _replay_tick() -> void:
 	if e.is_empty() or str(e.get("k", "")) != "act":
 		return   # 其余条目（battle_end 等）由对应时机消费
 	# 玩家回合才执行（回合之间等 AI 动作跑完；面板类操作随时可执行）
-	var panel_f: bool = str(e.get("f", "")) in ["revive_recall", "whale_pick",
+	var panel_f: bool = str(e.get("f", "")) in ["revive_recall", "shadow_step_recall", "whale_pick",
 			"whale_skip", "crow_recall", "foresight_choose", "foresight_pick_card",
 			"fate_pick", "endless_pick"]
 	if not panel_f and engine.current_side != GameEngine.SIDE_SELF:
@@ -4968,6 +5011,8 @@ func _replay_tick() -> void:
 			engine.pass_attack(ReplayLog.vec(a[0]))
 		"revive_recall":
 			engine.revive_recall(int(a[0]))
+		"shadow_step_recall":
+			engine.shadow_step_recall(int(a[0]))
 		"whale_pick":
 			engine.whale_pick(int(a[0]))
 		"whale_skip":
@@ -5696,6 +5741,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if data.get("card") is CardData:
 				rv_name = (data["card"] as CardData).card_name
 			_say("复活术：%s 从弃牌区回到手牌" % rv_name)
+		"shadow_step_recall":
+			sfx.play("place")
+			var ss_name := "?"
+			if data.get("card") is CardData:
+				ss_name = (data["card"] as CardData).card_name
+			_say("暗影步：%s 从弃牌区回到手牌" % ss_name)
 		"golem":
 			sfx.play("place")
 			_say("魔像术：在己方半场召唤一个魔像")
