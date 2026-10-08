@@ -3966,6 +3966,25 @@
       "target_mode": "unit",
       "color": "紫",
       "image": ""
+    },
+    {
+      "id": 9122,
+      "name": "专注",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "从抽牌库中**选择 2 张卡**，这 2 张卡在本次对战中**被移除**（既不进手牌也不进弃牌区）。面板按卡组视角列出，**与抽牌顺序无关**。右键取消剩余的移除。",
+      "target_mode": "none",
+      "color": "紫",
+      "image": ""
     }
   ]
 }

@@ -1940,12 +1940,12 @@ func _on_left_click(pos: Vector2) -> void:
 		return
 	if _discard_visible or _effects_visible or _enemy_effects_visible or _relics_visible\
 			or _deck_visible:
-		_discard_visible = false
-		_effects_visible = false
-		_enemy_effects_visible = false
-		_relics_visible = false
-		_deck_visible = false
-		_relic_scroll = 0.0
+		# 专注（9122）挂起时：先让点击落到「面板内选牌」上，别被这里直接关掉。
+		if engine.focus_pending:
+			if _on_focus_panel_click(pos):
+				queue_redraw()
+				return
+		_close_zone_panels()
 		queue_redraw()
 		return
 	# 效果区：点击查看全部效果卡（持续生效中）
@@ -3016,6 +3016,48 @@ func _recall_discard_index(idx: int) -> bool:
 	return engine.revive_recall(idx)
 
 
+func _on_focus_panel_click(pos: Vector2) -> bool:
+	## 专注（9122）面板点击：**面板内点一张卡 = 从抽牌库移除它**（按 id 找第一张）。
+	## 返回 true 表示这次点击被面板吃掉了（不该再冒泡去关面板）。
+	if not engine.focus_pending:
+		return false
+	var zp := _zone_panel_cards()
+	if zp.is_empty():
+		return false
+	var L := _zone_panel_layout(zp.size())
+	for i in zp.size():
+		if _zone_card_rect(i, L).has_point(pos):
+			var picked: CardData = zp[i]
+			var di := -1
+			for k in engine.state.deck.size():
+				if engine.state.deck[k].id == picked.id:
+					di = k
+					break
+			if di < 0:
+				_say("专注：牌堆里已经没有 %s 了" % picked.card_name)
+				return true
+			var nm := picked.card_name
+			engine.focus_pick(di)
+			if engine.focus_pending:
+				status_text = "专注：已移除 %s，还要移除 %d 张（右键取消）" % [
+						nm, engine.focus_remaining]
+			else:
+				status_text = "专注：已移除 %d 张卡，它们本次对战中消失" % GameEngine.FOCUS_NEED
+				_close_zone_panels()
+			return true
+	return false
+
+
+func _close_zone_panels() -> void:
+	## 关掉所有区域浏览面板（专注选完 / 取消后收干净）。
+	_discard_visible = false
+	_effects_visible = false
+	_enemy_effects_visible = false
+	_relics_visible = false
+	_deck_visible = false
+	_relic_scroll = 0.0
+
+
 func _revive_panel_layout() -> Dictionary:
 	## 复活术（9078）/ 暗影步（9121）取牌面板布局（与乌鸦/鲸鱼面板同款：网格排布 + 略缩小卡面）。
 	var opts := _recall_options()
@@ -3362,6 +3404,13 @@ func _on_right_click() -> void:
 	# 取牌面板：必须选一张（不接受取消）
 	if _recall_pending():
 		_say("%s：必须从弃牌区选择一张卡回到手牌" % _recall_mode())
+		return
+	# 专注（9122）：右键 = 取消剩余的移除（已移除的**不回收**，它们已经消失了）
+	if engine.focus_pending:
+		engine.focus_cancel()
+		_close_zone_panels()
+		status_text = "专注：已取消剩余的移除"
+		queue_redraw()
 		return
 	if engine.foresight_mode:
 		_say("预判：必须选择一个效果")
@@ -4511,7 +4560,10 @@ func _draw() -> void:
 	if _discard_visible:
 		_draw_discard_panel()
 	if _deck_visible:
-		_draw_zone_panel("卡组 %d 张（相同卡合并，不显示抽牌顺序）" % engine.state.deck.size(),
+		var deck_title := "卡组 %d 张（相同卡合并，不显示抽牌顺序）" % engine.state.deck.size()
+		if engine.focus_pending:
+			deck_title = "专注：从卡组中移除 %d 张卡（点一张就移除它｜右键取消）" % engine.focus_remaining
+		_draw_zone_panel(deck_title,
 				_zone_panel_cards(), _zone_panel_counts())
 	if _effects_visible:
 		_draw_zone_panel("效果区 %d 张（同名合并，正面朝上，持续生效中）" % engine.state.effects.size(),
@@ -4971,7 +5023,7 @@ func _replay_tick() -> void:
 	if e.is_empty() or str(e.get("k", "")) != "act":
 		return   # 其余条目（battle_end 等）由对应时机消费
 	# 玩家回合才执行（回合之间等 AI 动作跑完；面板类操作随时可执行）
-	var panel_f: bool = str(e.get("f", "")) in ["revive_recall", "shadow_step_recall", "whale_pick",
+	var panel_f: bool = str(e.get("f", "")) in ["revive_recall", "shadow_step_recall", "focus_pick", "whale_pick",
 			"whale_skip", "crow_recall", "foresight_choose", "foresight_pick_card",
 			"fate_pick", "endless_pick"]
 	if not panel_f and engine.current_side != GameEngine.SIDE_SELF:
@@ -5013,6 +5065,8 @@ func _replay_tick() -> void:
 			engine.revive_recall(int(a[0]))
 		"shadow_step_recall":
 			engine.shadow_step_recall(int(a[0]))
+		"focus_pick":
+			engine.focus_pick(int(a[0]))
 		"whale_pick":
 			engine.whale_pick(int(a[0]))
 		"whale_skip":

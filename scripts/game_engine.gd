@@ -34,6 +34,8 @@ var revive_remaining:= 0     # 还要选几张（蓄力让这张卡生效 2 次 
 var shadow_step_pending:= false   # 暗影步（9121）：等玩家从弃牌区选一张（任意 kind）
 var shadow_step_remaining:= 0     # 还要选几张（蓄力让这张卡生效 2 次 → 2 张）
 var shadow_step_label:= "暗影步" # 面板标题（复用复活术那套面板时区分文案）
+var focus_pending:= false      # 专注（9122）：等玩家从**抽牌库**里选 2 张卡移除
+var focus_remaining:= 0        # 还要移除几张
 var whale_remaining:= 0
 var foresight_mode:= false  # 预判（9097）：等玩家选效果①/②
 var foresight_pick:= false  # 预判①：等玩家从弃牌区选一张 0 费技能卡
@@ -743,7 +745,17 @@ const SHADOW_STRIKE_REFUND:= 1      # 达标回费
 const SHADOW_STEP_ID:= 9121
 const SHADOW_STEP_DMG:= 8
 const SHADOW_STEP_NEED:= 1          # 要从弃牌区取回几张
-# 白魔法师（9021）「精进」：自己的回合开始时，本方带此 trait 的单位力量 +MAGE_GROW_BUFF
+
+
+# ---- R109（2026-10-08）专注 9122 ----
+# 专注（9122 技能，暗影刺客·稀有）：0 费；从**抽牌库**里选 2 张卡，这 2 张卡
+#   **本次对战中消失**（既不进手牌也不进弃牌区，等于把这 2 张从本场牌组里抹掉）。
+# ⚠️ **不抽牌**：这是「减牌库」而非「取牌」。定位是压缩牌组、减少之后的废抽。
+# 候选面板复用界面既有的「卡组」浏览面板（按 id 合并 + 按 (费用,id) 排序），
+# 所以玩家**推不出抽牌顺序** —— 面板给的是卡组视角，不是牌堆顶视角。
+# ⚠️ 敌方 AI 不使用这张卡（改牌组是玩家侧决策，AI 用了会污染玩家牌序；与预判 9097 同口径）。
+const FOCUS_ID:= 9122
+const FOCUS_NEED:= 2            # 要从抽牌库移除几张# 白魔法师（9021）「精进」：自己的回合开始时，本方带此 trait 的单位力量 +MAGE_GROW_BUFF
 # （永久累计，无上限）—— 已去掉「只剩它自己」的前置条件，任何场面都稳定成长。
 # 注：本卡 value=10 归「治疗」用（回血量），所以成长量走常量，不读卡面 value。
 const MAGE_GROW_TRAIT:= "精进"
@@ -4208,7 +4220,8 @@ func _sleepless_tick(side: String) -> void:
 	# 少一个就出 bug：面板期间回合收尾会照常结算，把「手牌空了 → 抽 1 张」之类
 	# 的效果打乱玩家正在做的选择。
 	if revive_pending or crow_pending or whale_pending or foresight_pick or fate_pending \
-			or endless_pending or sys_upgrade_pending or shadow_step_pending:
+			or endless_pending or sys_upgrade_pending or shadow_step_pending \
+			or focus_pending:
 		return
 	if not _zone_has_id(side, SLEEPLESS_ID) or not state.hand.is_empty():
 		return
@@ -5201,6 +5214,10 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 			if side != SIDE_SELF:
 				return sh_s
 			return sh_s + "；" + _shadow_step_spell(side)
+
+		FOCUS_ID:
+			# 专注 9122（R109）：0 费稀有；从抽牌库移除 2 张卡（本场消失，不抽牌）。
+			return _focus_spell(side)
 		PREPARE_ID:
 			if side != SIDE_SELF:
 				var pp_m := 0
@@ -5517,6 +5534,62 @@ func shadow_step_recall(discard_index: int) -> bool:
 	_log("暗影步：%s 从弃牌区回到手牌（还要选 %d 张）" % [c.card_name, shadow_step_remaining])
 	action.emit("shadow_step_recall", {"card": c})
 	return true
+
+
+func _focus_spell(side: String) -> String:
+	## 专注（9122，R109）：打开「从抽牌库移除 N 张卡」面板。
+	## ⚠️ **不抽牌**：被选中的卡直接销毁（不进手牌 / 不进弃牌区）。
+	if side != SIDE_SELF:
+		return "（专注：敌方 AI 不使用这张卡）"
+	if focus_options().is_empty():
+		_log("专注：抽牌库是空的，效果落空")
+		return "抽牌库是空的"
+	# 牌组不足 N 张：按实际能选的张数开面板（选完即结束，不会卡住）
+	var can := mini(FOCUS_NEED, state.deck.size())
+	focus_remaining = can
+	focus_pending = true
+	_log("专注：从抽牌库移除 %d 张卡（本次对战中消失）" % can)
+	return "从抽牌库移除 %d 张卡" % can
+
+
+func focus_options() -> Array[int]:
+	## 专注的面板候选：**全部**卡（按卡组视角给，见 battle_scene 的「卡组」面板：
+	## 按 id 合并、按 (费用,id) 排序 —— 不泄露抽牌顺序）。
+	var out: Array[int] = []
+	for i in state.deck.size():
+		out.append(i)
+	out.reverse()   # pop_back() 是抽牌顶 → 反转让面板第 1 张更接近「牌组开头」
+	return out
+
+
+func focus_pick(deck_index: int) -> bool:
+	## 移除抽牌库里第 deck_index 张卡 —— 它**本次对战中消失**（不进手牌也不进弃牌区）。
+	if ReplayLog.recording:
+		ReplayLog.act("focus_pick", [deck_index])
+
+	if not focus_pending:
+		return false
+	if deck_index < 0 or deck_index >= state.deck.size():
+		return false
+	var c: CardData = state.deck[deck_index]
+	state.deck.remove_at(deck_index)
+	focus_remaining -= 1
+	_log("专注：%s 从抽牌库移除（本次对战中消失，还要移除 %d 张）"
+			% [c.card_name, maxi(0, focus_remaining)])
+	action.emit("focus_pick", {"card": c})
+	if focus_remaining <= 0:
+		focus_pending = false
+		focus_remaining = 0
+	return true
+
+
+func focus_cancel() -> void:
+	## 专注面板取消（清挂起状态；已移除的卡**不回收** —— 它已经消失了）。
+	if not focus_pending:
+		return
+	_log("专注：已取消剩余的移除")
+	focus_pending = false
+	focus_remaining = 0
 
 
 func _golem_spell(side: String, target) -> String:

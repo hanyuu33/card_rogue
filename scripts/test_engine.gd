@@ -121,7 +121,7 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 194,
+	check(repo.all_cards().size() == 195,
 			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
@@ -135,7 +135,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 160 and grp_enemy.size() == 34,
+	check(grp_player.size() == 161 and grp_enemy.size() == 34,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 158 / 34）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -164,7 +164,7 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 140,
+	check(pool.size() == 141,
 			"奖励池 128 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
@@ -6091,10 +6091,10 @@ func _init() -> void:
 			"角色系统：非敌方卡 class 都在可选角色内、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
-			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 53
+			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 54
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
 			and int(dr_cls_count.get("敌人", 0)) == 34,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 53 / 36 / 34）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 54 / 36 / 34）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -6352,7 +6352,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 140, "R45+R50~R57：扩展全部进奖励池（总池 138，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 141, "R45+R50~R57：扩展全部进奖励池（总池 139，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -6657,7 +6657,7 @@ func _init() -> void:
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
 	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 71
-			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 53,
+			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 54,
 			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
@@ -6729,7 +6729,7 @@ func _init() -> void:
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
 			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法师）")
-	check(r47_dr.size() == 60 and r47_rg.size() == 50
+	check(r47_dr.size() == 60 and r47_rg.size() == 51
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
 			"奖励池过滤：森林精魄 %d 张 / 暗影刺客 %d 张（两者之和 + 机械之心 %d = 完整池 %d）"
@@ -12345,6 +12345,143 @@ func _init() -> void:
 		"R108 暗影步：敌方 AI 不取走我方弃牌区的卡（那张怒涛还在）")
 	check(not r108_e6.shadow_step_pending,
 		"R108 暗影步：敌方 AI 不打开取牌面板")
+
+	# ══════════════════════════════════════════════════════════════
+	# ══════════════════════════════════════════════════════════════
+	# R109 测试：专注 9122（0 费稀有 · 从抽牌库移除 2 张卡 · 本次对战中消失）
+	# ══════════════════════════════════════════════════════════════
+	var r109_repo := CardRepo.load_json()
+	var r109_pool_ids := {}
+	for c in r109_repo.reward_pool():
+		r109_pool_ids[c.id] = true
+
+	# ---- 卡面定义校验 ----
+	var r109_focus := r109_repo.get_card(GameEngine.FOCUS_ID)
+	check(r109_focus != null and r109_focus.kind == "技能" and r109_focus.cost == 0
+			and r109_focus.rarity == 1 and r109_focus.card_class == "暗影刺客"
+			and r109_focus.target_mode == "none" and not r109_focus.needs_target(),
+		"R109 专注 9122：0 费稀有技能，暗影刺客，无目标（实际 %s）"
+			% (r109_focus.card_name if r109_focus != null else "null"))
+	check(r109_pool_ids.has(GameEngine.FOCUS_ID),
+		"R109：专注 9122 进入奖励池（稀有 rarity=1）")
+
+	# ---- ① 打开面板：从抽牌库移除 2 张，被移除的**不进手牌也不进弃牌区** ----
+	var r109_e1 := _new_engine([], 30, 30)
+	r109_e1.start_game()
+	# 牌库放 4 张不同 id 的牌，便于核对「移除哪两张」
+	r109_e1.state.deck.append(_card(8003, "树人", "盟友", 3, 3, 8, 1, 1))
+	r109_e1.state.deck.append(_card(8004, "熊", "盟友", 3, 3, 8, 1, 1))
+	r109_e1.state.deck.append(_card(9095, "怒涛", "技能", 2, 0, 0, 0, 0))
+	r109_e1.state.deck.append(_card(9096, "疾风", "技能", 1, 0, 0, 0, 0))
+	var r109_deck0 := r109_e1.state.deck.size()
+	var r109_hand0 := r109_e1.state.hand.size()
+	var r109_disc0 := r109_e1.state.discard.size()
+	r109_e1.state.hand.append(
+		CardData.from_dict(r109_repo.get_card(GameEngine.FOCUS_ID).to_dict()))
+	r109_e1.use_spell(r109_e1.state.hand.size() - 1)
+	check(r109_e1.focus_pending,
+		"R109 专注：结算后打开「从抽牌库移除」面板")
+	check(r109_e1.focus_remaining == GameEngine.FOCUS_NEED,
+		"R109 专注：待移除张数 = %d（实际 %d）"
+			% [GameEngine.FOCUS_NEED, r109_e1.focus_remaining])
+	check(r109_e1.focus_options().size() == r109_deck0,
+		"R109 专注：候选 = 全部卡组（%d 张）" % r109_e1.focus_options().size())
+	# 移除第 1 张
+	var r109_i1 := r109_e1.focus_options()[0]
+	var r109_nm1: String = r109_e1.state.deck[r109_i1].card_name
+	check(r109_e1.focus_pick(r109_i1),
+		"R109 专注：移除第 1 张（%s）" % r109_nm1)
+	check(r109_e1.state.deck.size() == r109_deck0 - 1,
+		"R109 专注：牌库少一张（%d → %d）" % [r109_deck0, r109_e1.state.deck.size()])
+	check(r109_e1.focus_remaining == GameEngine.FOCUS_NEED - 1
+			and r109_e1.focus_pending,
+		"R109 专注：还剩 %d 张、面板仍开着" % r109_e1.focus_remaining)
+	# 移除第 2 张 → 面板关闭
+	var r109_i2 := r109_e1.focus_options()[0]
+	check(r109_e1.focus_pick(r109_i2),
+		"R109 专注：移除第 2 张")
+	check(r109_e1.state.deck.size() == r109_deck0 - 2,
+		"R109 专注：牌库少两张（%d → %d）" % [r109_deck0, r109_e1.state.deck.size()])
+	check(not r109_e1.focus_pending and r109_e1.focus_remaining == 0,
+		"R109 专注：选满 2 张 → 面板关闭")
+	# ⚠️ 关键：**不抽牌** —— 手牌没增加（专注自己离手 -1），弃牌区也没有那两张
+	# 净 0：打出专注 -1、不抽回任何牌 → 手牌数回到「打出前」的水位。
+	# （start_game 默认 starting_hand=0，所以手牌本来就是空的，别拿它当"有 N 张"的基准。）
+	check(r109_e1.state.hand.size() == r109_hand0,
+		"R109 专注：**不抽牌** —— 打出 -1、不抽回任何牌，手牌数回到打出前（%d → %d）"
+			% [r109_hand0, r109_e1.state.hand.size()])
+	check(r109_e1.state.discard.size() == r109_disc0 + 1,
+		"R109 专注：被移除的 2 张**不进弃牌区**（弃牌区只多了专注自己：%d → %d）"
+			% [r109_disc0, r109_e1.state.discard.size()])
+	# 被移除的两张确实不在任何区里了
+	var r109_gone := true
+	for c in r109_e1.state.deck:
+		if c.card_name == r109_nm1:
+			r109_gone = false
+	for c in r109_e1.state.discard:
+		if c.card_name == r109_nm1:
+			r109_gone = false
+	check(r109_gone,
+		"R109 专注：%s 从本场彻底消失（牌库与弃牌区都找不到）" % r109_nm1)
+
+	# ---- ② 牌库不足 2 张：按实际张数开面板，不卡死 ----
+	var r109_e2 := _new_engine([], 30, 30)
+	r109_e2.start_game()
+	r109_e2.state.deck.append(_card(8003, "树人", "盟友", 3, 3, 8, 1, 1))
+	r109_e2.state.hand.append(
+		CardData.from_dict(r109_repo.get_card(GameEngine.FOCUS_ID).to_dict()))
+	r109_e2.use_spell(r109_e2.state.hand.size() - 1)
+	check(r109_e2.focus_pending and r109_e2.focus_remaining == 1,
+		"R109 专注：牌库只有 1 张 → 待移除数按实际 = 1（实际 %d）" % r109_e2.focus_remaining)
+	r109_e2.focus_pick(r109_e2.focus_options()[0])
+	check(not r109_e2.focus_pending,
+		"R109 专注：选完这 1 张就结束（不会卡在面板里等第 2 张）")
+
+	# ---- ③ 牌库为空：效果落空，不开面板 ----
+	var r109_e3 := _new_engine([], 30, 30)
+	r109_e3.start_game()
+	r109_e3.state.deck.clear()
+	r109_e3.state.hand.append(
+		CardData.from_dict(r109_repo.get_card(GameEngine.FOCUS_ID).to_dict()))
+	r109_e3.use_spell(r109_e3.state.hand.size() - 1)
+	check(not r109_e3.focus_pending,
+		"R109 专注：牌库为空 → 不开面板（效果落空）")
+
+	# ---- ④ 右键取消：已移除的**不回收** ----
+	var r109_e4 := _new_engine([], 30, 30)
+	r109_e4.start_game()
+	r109_e4.state.deck.append(_card(8003, "树人", "盟友", 3, 3, 8, 1, 1))
+	r109_e4.state.deck.append(_card(8004, "熊", "盟友", 3, 3, 8, 1, 1))
+	r109_e4.state.deck.append(_card(9095, "怒涛", "技能", 2, 0, 0, 0, 0))
+	r109_e4.state.deck.append(_card(9096, "疾风", "技能", 1, 0, 0, 0, 0))
+	r109_e4.state.hand.append(
+		CardData.from_dict(r109_repo.get_card(GameEngine.FOCUS_ID).to_dict()))
+	r109_e4.use_spell(r109_e4.state.hand.size() - 1)
+	var r109_e4_deck0 := r109_e4.state.deck.size()
+	r109_e4.focus_pick(r109_e4.focus_options()[0])
+	check(r109_e4.state.deck.size() == r109_e4_deck0 - 1,
+		"R109 专注（取消前）：已移除 1 张（%d → %d）"
+			% [r109_e4_deck0, r109_e4.state.deck.size()])
+	r109_e4.focus_cancel()
+	check(not r109_e4.focus_pending and r109_e4.focus_remaining == 0,
+		"R109 专注：focus_cancel 清掉挂起状态")
+	check(r109_e4.state.deck.size() == r109_e4_deck0 - 1,
+		"R109 专注：取消**不回收**已移除的那张（仍 %d 张）" % r109_e4.state.deck.size())
+
+	# ---- ⑤ 敌方 AI 不使用这张卡（改牌组是玩家侧决策）----
+	var r109_e5 := _new_engine([], 30, 30)
+	r109_e5.start_game()
+	r109_e5.state.deck.append(_card(8003, "树人", "盟友", 3, 3, 8, 1, 1))
+	r109_e5.state.deck.append(_card(8004, "熊", "盟友", 3, 3, 8, 1, 1))
+	var r109_e5_deck0 := r109_e5.state.deck.size()
+	r109_e5.state.opp_hand_count = 5
+	r109_e5.remote_spell(
+		CardData.from_dict(r109_repo.get_card(GameEngine.FOCUS_ID).to_dict()),
+		null, GameEngine.SIDE_OPPONENT)
+	check(r109_e5.state.deck.size() == r109_e5_deck0,
+		"R109 专注：敌方 AI 不动我方牌库（仍 %d 张）" % r109_e5.state.deck.size())
+	check(not r109_e5.focus_pending,
+		"R109 专注：敌方 AI 不打开选择面板")
 
 	# ══════════════════════════════════════════════════════════════
 	# R105 测试：黑暗陷阱 8063（0 费场地 · 路过即中 → 本回合力量 -1）
