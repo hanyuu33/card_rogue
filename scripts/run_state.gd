@@ -19,6 +19,11 @@ static var hp: int = 50          # 玩家当前生命（跨战斗保留）
 # ---- run 进度 ----
 static var run_active := false               # 是否在肉鸽 run 中（false = 单关/演示模式）
 static var deck_ids: Array[int] = []         # 当前卡组（卡 id，可重复）
+## ⚠️ 卡组的「实际费用」**不存表**（R110 鸭鸭工匠）：
+## 铁栅栏 9072 只要进了卡组就一定是工匠锻造出来的（没有任何别的途径把它放进卡组），
+## 所以它的费用可以**现算** —— 见 `deck_cost_at_index()`。
+## 为什么不用平行数组：那玩意儿要跟着删卡 / 换卡 / 鸭血复制一起搬，
+## 漏一处就整表错位；现算则天然不可能错位。
 static var map_columns: Array = []           # RogueMap.generate 的结果（起点 + 12 层 + Boss）
 static var current_layer := GameLayers.LAYER_DEFAULT  # 本局地图所属的层（第一层）
 static var current_node_id := -1             # 玩家所在节点（-1 = 还没出发）
@@ -89,6 +94,11 @@ const DUCK_BLOOD_MAX := 2
 
 # 二层事件「绝赞五换一」的奖励卡（cards.json）：5 费 5/25 程1 速1，须弃 4 张手牌才能使用
 const HERO_CARD_ID := 9023
+
+# 事件「鸭鸭工匠」（R110）：把卡组里选中的那张卡变成一张「铁栅栏」（FENCE_CARD_ID）。
+# 产物费用**统一改成 2 费**（卡面铁栅栏本身是 0 费，但工匠产物按 2 费计）。
+const FENCE_CARD_ID := 9072
+const SMITH_COST := 2                 # 产物铁栅栏的费用（覆盖卡面的 0 费）
 
 # 即时道具
 const SOURCE_POWER_ID := 6002     # 源数之力（改造卡组中的一张卡）
@@ -451,6 +461,41 @@ static func transform_deck_card(repo: CardRepo, index: int) -> Dictionary:
 	pending_relic = -1
 	return {"ok": true, "old_id": old_id, "new_id": new_id}
 
+static func smith_deck_card(index: int) -> Dictionary:
+	## 事件「鸭鸭工匠」：把卡组中第 index 张卡**变成一张铁栅栏**。
+	##
+	## 费用口径（用户确认）：产物是「**2 费**铁栅栏」—— 卡面铁栅栏是 0 费，但这里
+	## 统一按 SMITH_COST(=2) 记。原卡的费用不再影响结果（反正已经被替换掉了）。
+	##
+	## ⚠️ 为什么不直接改卡库：卡库是**共享实例**，改它会连本局之外都污染。
+	## 所以这里只换 id；「2 费」由 `deck_cost_at_index()` **现算**出来
+	## （卡组里的铁栅栏 = 工匠锻造的 = SMITH_COST 费），不存平行数组、不会错位。
+	## 纯确定性操作，不走随机源 → 录像回放天然一致。
+	if index < 0 or index >= deck_ids.size():
+		return {"ok": false, "old_id": 0, "new_id": 0}
+	var old_id: int = deck_ids[index]
+	deck_ids[index] = FENCE_CARD_ID
+	pending_deck_edit = ""
+	# 「2 费」不用在这里记 —— `deck_cost_at_index()` 会把卡组里的铁栅栏一律算成 SMITH_COST。
+	return {"ok": true, "old_id": old_id, "new_id": FENCE_CARD_ID, "cost": SMITH_COST}
+
+
+static func deck_cost_at_index(i: int) -> int:
+	## 卡组里第 i 张卡的**实际费用**。
+	## 规则：**铁栅栏（FENCE_CARD_ID）进了卡组 = 工匠锻造的 → 一律按 SMITH_COST(2) 计**
+	## （卡面是 0 费）；其余卡一律用卡库原价。
+	## ⚠️ **现算、不存表**：现算不可能与 deck_ids 错位（删卡 / 换卡 / 鸭血复制都天然正确）。
+	## 代价是「铁栅栏进卡组就按 2 费算」成了硬规则 —— 9072 目前**只有**鸭鸭工匠能放进
+	## 卡组（栅栏修复术只把它放到**场上**），所以规则成立；将来若新增别的渠道把铁栅栏
+	## 塞进卡组，要回来改这里。
+	if i < 0 or i >= deck_ids.size():
+		return 0
+	var id: int = deck_ids[i]
+	if id == FENCE_CARD_ID:
+		return SMITH_COST
+	var c := CardRepo.load_json().get_card(id)
+	return c.cost if c != null else 0
+
 
 static func duplicate_deck_cards(repo: CardRepo, indices: Array) -> Dictionary:
 	## 鸭血（DUCK_BLOOD_RELIC_ID）：把选中的每张卡**各复制一份**加入卡组（原卡保留）。
@@ -492,8 +537,10 @@ static func can_trade_five(repo: CardRepo) -> bool:
 
 
 static func trade_five_for_one(repo: CardRepo) -> Dictionary:
-	## 二层事件「绝赞五换一」：随机删除卡组中 **5 张不同名**的卡（每种名各删 1 张），
+	## 二层事件「绝赞五换一」：删除卡组中 **5 张不同名**的卡（每种名各删 1 张），
 	## 再把一张「英雄」（9023）加入卡组。
+	## ⚠️ 抽样是**按同名张数加权**的：某个名字在卡组里有 k 张，它被选中的概率就是 k 倍
+	##（R110；原为等概率）。理由：卡组里堆同名的废牌本就是最大的负担，该让它有机会被换掉。
 	## 返回 {ok, removed: [{id, name}, ...], new_id}；不同名的卡不足 5 种 → ok=false 且卡组不变。
 	var by_name := {}     # 卡名 -> 该名在 deck_ids 里的所有下标
 	for i in deck_ids.size():
@@ -506,10 +553,37 @@ static func trade_five_for_one(repo: CardRepo) -> Dictionary:
 		by_name[nm] = arr
 	if by_name.size() < 5:
 		return {"ok": false, "removed": [], "new_id": 0}
-	var bag: Array = by_name.keys()
+	# 2026-10-08（R110）：**同名张数越多越容易被选中** ——
+	# 原实现是 `run_rng.randi() % bag.size()` 的等概率抽样；改成按「该名在卡组里的张数」加权。
+	# 为什么这么设计：卡组里堆了 5 张同名的废牌，本来就是这局最大的负担，
+	# 让人家有机会把它换掉才合理；等概率等于让「最该被处理的那张」和「只抽到一张的」一样难被选中。
+	# 权重 = **该名张数的平方根**（isqrt(k*1000)），不是线性 k。
+	# 为什么不直接用 k：这里抽的是「6 种里选 5 种」，线性权重下只要某名权重够大就**必被选中**
+	# （实测权重 4/11 时命中率 0.97）—— 概率弹性消失，玩家感受到的是"锁定"而不是"概率变高"。
+	# 平方根把 4 张压成 2 倍于 1 张：重复卡确实更容易被换掉，但不会被抽 5/6 的结构锁死。
+	# 用自写的整数平方根 _isqrt(k*1000)（GDScript 没有内置 isqrt，也不是为了跨平台确定性）。
+	# ⚠️ 必须走 run_rng（不能全局随机），否则破坏 R46 录像回放的确定性。
+	var pool_names: Array = by_name.keys()
+	var weights: Array[int] = []
+	for nm_w in pool_names:
+		weights.append(_isqrt(int((by_name[nm_w] as Array).size()) * 1000))
 	var picked: Array = []
 	for _k in 5:
-		picked.append(bag.pop_at(run_rng.randi() % bag.size()))
+		var total_w := 0
+		for w in weights:
+			total_w += w
+		# 加权抽一个：落在 weights 的累积区间里 → 命中对应名字 → 从候选池删掉它并同步权重
+		var roll := run_rng.randi_range(0, total_w - 1)
+		var acc := 0
+		var chosen := 0
+		for wi in weights.size():
+			acc += int(weights[wi])
+			if roll < acc:
+				chosen = wi
+				break
+		picked.append(pool_names[chosen])
+		pool_names.remove_at(chosen)
+		weights.remove_at(chosen)
 	var drop_idx: Array[int] = []
 	for nm2 in picked:
 		var arr2: Array = by_name[nm2]
@@ -524,6 +598,18 @@ static func trade_five_for_one(repo: CardRepo) -> Dictionary:
 		deck_ids.remove_at(i2)
 	deck_ids.append(HERO_CARD_ID)
 	return {"ok": true, "removed": removed, "new_id": HERO_CARD_ID}
+
+
+## 整数平方根（floor(sqrt(n)))——GDScript **没有**内置 isqrt()，这里自己实现。
+## 纯整数运算（不用 sqrtf），保证同一输入永远得同一结果 —— 回放录像依赖这个确定性。
+## 算法：从 0 开始每次加 1 直到 x*x > n；n 很小（权重 = 张数×1000 ≤ 几十千），够快。
+static func _isqrt(n: int) -> int:
+	if n <= 0:
+		return 0
+	var x := 0
+	while (x + 1) * (x + 1) <= n:
+		x += 1
+	return x
 
 
 static func _find_node(node_id: int) -> Dictionary:
@@ -650,10 +736,20 @@ static func add_card(id: int) -> void:
 
 static func build_deck(repo: CardRepo) -> Array[CardData]:
 	## 按 deck_ids 构建实际牌库（缺定义的 id 跳过）。
+	## ⚠️ 费用以 **deck_cost_at_index** 为准（工匠锻造的铁栅栏是 2 费、卡面却是 0 费）：
+	## 只有「与卡面费用不同」的那些才取**副本**改写费用，其余照旧用卡库**共享实例** ——
+	## 没锻造过铁栅栏时，行为与以前**完全一致**（不会到处多出复制品）。
 	var cards: Array[CardData] = []
-	for id in deck_ids:
-		var c := repo.get_card(id)
-		if c != null:
+	for i in deck_ids.size():
+		var c := repo.get_card(deck_ids[i])
+		if c == null:
+			continue
+		var want := deck_cost_at_index(i)
+		if want != c.cost:
+			var cp := CardData.from_dict(c.to_dict())
+			cp.cost = want
+			cards.append(cp)
+		else:
 			cards.append(c)
 	return cards
 

@@ -77,7 +77,7 @@ static func builtin_levels() -> Array:
 			_white_mage_guard(), _night_ducks(),
 			_knight_charge(), _wizard(), _duck_kiln(),
 		_captain(), _captain_wizard(), _legion(), _breath_charge(), _frost_line(), _undead_legion(), _dragon_nest(),
-		_mech_giant(), _boss_dragon(), _boss_demon_duck(), _mech_duck_boss()]
+		_mech_giant(), _boss_dragon(), _boss_demon_duck(), _mech_duck_boss(), _boss_duck_darkside()]
 
 
 static func layer_of(level: Dictionary) -> int:
@@ -427,6 +427,35 @@ static func _mech_duck_boss() -> Dictionary:
 			[9047, "机械巨鸭", 10, 150, 3, 1, Vector2i(0, 1)],
 		],
 		"enemy_effects": [9049],
+		"tutorial": [],
+	}
+
+
+static func _boss_duck_darkside() -> Dictionary:
+	## 第二层 Boss「鸭之暗面」（R111）：后排中央一只鸭之暗面（9124，9/150，程1 速1），
+	## 敌方效果卡「暗影召唤 9125」——**开局**以及**每 3 个回合**召唤一只鸭子暗杀者（9123，6/30）。
+	##   * 鸭之暗面「穿行」= 移动**无视单位阻挡**（可穿过任何单位，不能停在上面）；
+	##   * 鸭之暗面「暗影领主」= **每个存活暗杀者** +3 力 +1 速（死了立刻掉）；
+	##   * 暗杀者被动：只要场上还有非暗杀单位（= 鸭之暗面还在），它就不能打我方 HP，
+	##     但可以**闪现**到任意空格 —— 于是它专门绕后咬你的后排，而不是傻推脸。
+	## 打法：暗杀者会自己滚起来，要么尽快点掉暗杀者压住鸭之暗面的成长，
+	##   要么直接顶着脸硬拆 150 血（但每多一只暗杀者它就多疼一下）。
+	return {
+		"name": "鸭之暗面",
+		"tier": TIER_BOSS,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"intro": "……别回头看。",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9124, "鸭之暗面", 9, 150, 1, 1, Vector2i(0, 1)],
+		],
+		"enemy_effects": [9125],
 		"tutorial": [],
 	}
 

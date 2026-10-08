@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 195,
-			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063**；实际 %d）"
+	check(repo.all_cards().size() == 198,
+			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 161 and grp_enemy.size() == 34,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 158 / 34）"
+	check(grp_player.size() == 161 and grp_enemy.size() == 37,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 161 / 37）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -149,10 +149,10 @@ func _init() -> void:
 	for c: CardData in grp_enemy:
 		if c.is_level_effect():
 			enemy_eff.append(c.id)
-	check(enemy_eff.size() == 6 and enemy_eff.has(9013) and enemy_eff.has(9015)
+	check(enemy_eff.size() == 7 and enemy_eff.has(9013) and enemy_eff.has(9015)
 			and enemy_eff.has(9024) and enemy_eff.has(9049) and enemy_eff.has(9115)
-			and enemy_eff.has(9117),
-			"图鉴分组：敌人图鉴含 6 张敌方关卡效果 9013/9015/9024/9049/9115/9117（实际 %s）" % str(enemy_eff))
+			and enemy_eff.has(9117) and enemy_eff.has(9125),
+			"图鉴分组：敌人图鉴含 7 张敌方关卡效果 9013/9015/9024/9049/9115/9117/9125（实际 %s）" % str(enemy_eff))
 	check(repo.get_card(9022).group == "player" and repo.get_card(9044).group == "player"
 			and repo.get_card(9072).group == "player" and repo.get_card(9018).group == "player"
 			and repo.get_card(9023).group == "player" and repo.get_card(9050).group == "player",
@@ -4219,7 +4219,7 @@ func _init() -> void:
 
 	# ---- 新关卡：使魔鸭群 / 骑士冲锋 / 队长与巫师 / 爆炎鸭阵 / 白魔法师护阵 ----
 	var lvls := GameLevels.builtin_levels()
-	check(lvls.size() == 20, "内置关卡共 20 关（7 普简 + 4 普难 + 3 精英简单 + 3 精英困难 + 3 Boss）")
+	check(lvls.size() == 21, "内置关卡共 21 关（7 普简 + 4 普难 + 3 精英简单 + 3 精英困难 + 4 Boss）")
 	var lva: Dictionary = _level_named("使魔鸭群")
 	check(str(lva["name"]) == "使魔鸭群"
 			and int(lva["tier"]) == GameLevels.TIER_NORMAL_EASY
@@ -4575,8 +4575,8 @@ func _init() -> void:
 	# ---- 分层：各层内容互不串层（第一层 [1] / 第二层 [2]，各自专属） ----
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_DEFAULT).size() == lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
 			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关）" % [lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(), GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size()])
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 9,
-			"第二层自带 9 关（白魔法师护阵 / 夜鸭阵 / 鸭子窑 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / 机械巨鸭Boss）")
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 10,
+			"第二层自带 10 关（白魔法师护阵 / 夜鸭阵 / 鸭子窑 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / 机械巨鸭Boss / 鸭之暗面Boss）")
 	# 内容池：第一层 = [1]；第二层 = [2]（各层内容互不串层）
 	var cl1 := GameLayers.content_layers(GameLayers.LAYER_DEFAULT)
 	var cl2 := GameLayers.content_layers(GameLayers.LAYER_TWO)
@@ -4803,7 +4803,7 @@ func _init() -> void:
 			elif om_ecard.group != "enemy" or not om_ecard.is_level_effect():
 				om_drift += " %s/关卡效果%d" % [om_lvl2["name"], int(om_e)]
 	check(om_drift == "", "关卡 enemy_units 的 力/生/程/速 与 cards.json 同源（漂移:%s）" % om_drift)
-	check(om_lv_eff == 7, "关卡共挂 7 个敌方关卡效果（4 + 使魔之力 9115 挂 2 个巫师关卡 + 恶魔使魔 9117 挂 1 个 Boss 关卡），且都属敌人图鉴（实际 %d）" % om_lv_eff)
+	check(om_lv_eff == 8, "关卡共挂 8 个敌方关卡效果（4 + 使魔之力 9115 挂 2 个巫师关卡 + 恶魔使魔 9117 + 暗影召唤 9125 各挂 1 个 Boss 关卡），且都属敌人图鉴（实际 %d）" % om_lv_eff)
 
 	# ---- 二层强力怪物：一回合行动两次（2026-09-30 新增）----
 	# 挑选三只「巨兽 / 领主」级单位赋予双动：后排也能一回合绕开前排再出手。
@@ -4836,12 +4836,12 @@ func _init() -> void:
 	# 「凝视 / 一袋米抗几楼」已挪到第二层；第一层换成「奥秘之泉」，
 	# 「遗忘之泉」是写进每一层事件表的全层通用事件。
 	var ev_kinds_layer := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
-	check(ev_kinds_layer.size() == 6 and ev_kinds_layer.has("monster") \
+	check(ev_kinds_layer.size() == 7 and ev_kinds_layer.has("monster") \
 			and ev_kinds_layer.has("treasure") and ev_kinds_layer.has("arcane") \
-			and not ev_kinds_layer.has("gaze"),
+			and ev_kinds_layer.has("smith") and not ev_kinds_layer.has("gaze"),
 			"第一层事件池：6 种子类型（怪物/低语/挣扎/奥秘之泉/遗忘之泉/卡牌宝箱；无凝视）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
-	check(l2_ev_kinds.size() == 5,
+	check(l2_ev_kinds.size() == 6 and l2_ev_kinds.has("smith"),
 			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 + 凝视 + 遗忘之泉 = 5 种子类型")
 	var pear_ev_kinds := l2_ev_kinds        # 旧用例里沿用的变量名（保持后文读到本地变量）
 	check(l2_ev_kinds.has("gaze") and not ev_kinds_layer.has("gaze"),
@@ -4854,6 +4854,13 @@ func _init() -> void:
 	check(ev_kinds_layer.has("oblivion") and l2_ev_kinds.has("oblivion"),
 			"遗忘之泉是全层通用事件（第一层与第二层的事件池都有）")
 	check(GameLayers.event_name("oblivion") == "遗忘之泉", "遗忘之泉事件的显示名")
+	# 「鸭鸭工匠」同为全层通用事件（R110）：两层都有、显示名已登记、权重 > 0
+	check(ev_kinds_layer.has("smith") and l2_ev_kinds.has("smith"),
+			"鸭鸭工匠是全层通用事件（第一层与第二层的事件池都有）")
+	check(GameLayers.event_name("smith") == "鸭鸭工匠", "鸭鸭工匠事件的显示名")
+	check(int(GameLayers.event_weights(GameLayers.LAYER_DEFAULT).get("smith", 0)) > 0
+			and int(GameLayers.event_weights(GameLayers.LAYER_TWO).get("smith", 0)) > 0,
+			"鸭鸭工匠在两层的权重都 > 0（可被抽到）")
 	check(ev_kinds_layer.has("arcane") and not l2_ev_kinds.has("arcane"),
 			"奥秘之泉只在第一层事件池（第二层不会串到）")
 	check(GameLayers.event_name("arcane") == "奥秘之泉", "奥秘之泉事件的显示名")
@@ -6093,8 +6100,8 @@ func _init() -> void:
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 54
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
-			and int(dr_cls_count.get("敌人", 0)) == 34,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 54 / 36 / 34）"
+			and int(dr_cls_count.get("敌人", 0)) == 37,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 54 / 36 / 37）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -8793,8 +8800,8 @@ func _init() -> void:
 		r63_bp_names.append(str(b["name"]))
 	check(r63_bp_names.has("恶魔鸭") and r63_bp_names.has("远古虚骨龙"),
 			"R63 第一层 Boss 池 = 远古虚骨龙 + 恶魔鸭（%s）" % str(r63_bp_names))
-	check(GameLevels.boss_pool(GameLayers.LAYER_TWO).size() == 1,
-			"R63 第二层 Boss 池仍只有 1 关（机械巨鸭，不受影响）")
+	check(GameLevels.boss_pool(GameLayers.LAYER_TWO).size() == 2,
+			"R63 第二层 Boss 池 2 关：机械巨鸭 + R111 鸭之暗面（boss_level() 仍取第一个 = 机械巨鸭）")
 	# RunState 开局摇定的 boss_pick 一定落在本层池内，且next_level("boss") 返回它
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
 	var r63_roll_ok := false
@@ -8911,8 +8918,8 @@ func _init() -> void:
 	for b4: Dictionary in GameLevels.boss_pool(GameLayers.LAYER_TWO):
 		r73_p2.append(str(b4["name"]))
 	check(not r73_p1.has("恶魔鸭（复仇）") and not r73_p2.has("恶魔鸭（复仇）")
-			and r73_p2.size() == 1 and r73_p2[0] == "机械巨鸭",
-			"R73 彩蛋关**不进 boss_pool**（第一层 %s / 第二层 %s —— 第二层仍只有机械巨鸭）"
+			and r73_p2.size() == 2 and r73_p2[0] == "机械巨鸭",
+			"R73 彩蛋关**不进 boss_pool**（第一层 %s / 第二层 %s —— 第二层 = 机械巨鸭 + R111 鸭之暗面，仍无恶魔鸭（复仇））"
 			% [str(r73_p1), str(r73_p2)])
 	# 也不该出现在关卡选择菜单里（不在 builtin_levels）
 	var r73_in_menu := false
@@ -8932,10 +8939,18 @@ func _init() -> void:
 	RunState.run_rng.seed = 20261004
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
 	RunState.revenge_pending = false
+	# ⚠️ start_run 内部会**重摇 run_rng**（见 RunState.start_run），种子必须在这里再定一次，
+	#    否则每次跑抽到的第二层 Boss 不一样（R111 起第二层有 2 只，会时中时不中）。
+	RunState.run_rng.seed = 20261004
 	var r73_no := RunState._roll_boss(GameLayers.LAYER_TWO)
-	check(str(r73_no.get("name", "")) == "机械巨鸭"
+	var r73_no_name := str(r73_no.get("name", ""))
+	var r73_pool2_names: Array = []
+	for r73_bx: Dictionary in GameLevels.boss_pool(GameLayers.LAYER_TWO):
+		r73_pool2_names.append(str(r73_bx["name"]))
+	check(r73_pool2_names.has(r73_no_name) and r73_no_name != "恶魔鸭（复仇）"
 			and not RunState.revenge_pending,
-			"R73 未触发时第二层 boss 仍是机械巨鸭（实际 %s）" % str(r73_no.get("name", "")))
+			"R73 未触发时第二层 boss 取自本层正常池 %s（实际 %s），不是复仇关"
+			% [str(r73_pool2_names), r73_no_name])
 	# 已触发时：第二层 boss 被顶替成复仇关，且**一次性消费**（复位）
 	RunState.revenge_pending = true
 	var r73_yes := RunState._roll_boss(GameLayers.LAYER_TWO)
@@ -11378,13 +11393,19 @@ func _init() -> void:
 	check(r93_vanish_bad.is_empty() and r93_vanish_all.size() >= 3,
 		"R93 不变量：带 trait「离场消失」的卡（%s）**全部**带次元（漏：%s）"
 			% [str(r93_vanish_all), str(r93_vanish_bad)])
-	# ③ 不变量二：卡面**不再手写**「消失」——全部交给字段解释
-	var r93_left: Array[int] = []
-	for r93_d: CardData in r93_repo.all_cards():
-		if "消失" in r93_d.effect_text:
-			r93_left.append(r93_d.id)
-	check(r93_left.is_empty(),
-		"R93 不变量：全库 effect_text **不再出现「消失」**（残留：%s）" % str(r93_left))
+	# ③ 不变量二（2026-10-08 修正）：卡面**允许**明文写「消失」——
+	# 「消失」就是「本次战斗中移除」的简明表达（专注 9122 的「从牌库移除」也用它）。
+	# 锁的是**单向**硬规则：带 trait「离场消失」的卡**必须**有次元字段。
+	# ⚠️ 反向不成立、不做断言：9050 鲸鱼之怒 / 9097 预判 / 9098 拒绝命运 / 9109 警觉 /
+	# 8053 超越极限 带次元是因为**打出后一次性消失**（use_spell 里不进弃牌区那条路），
+	# 并不靠 trait —— 所以「有次元 ⇒ 有消失 trait」是错的。
+	var r93_vanish_nodim: Array[int] = []
+	for r93_d2: CardData in r93_repo.all_cards():
+		if r93_d2.traits.has(FieldState.VANISH_TRAIT) \
+				and not r93_d2.has_affix(GameEngine.AFFIX_DIMENSION):
+			r93_vanish_nodim.append(r93_d2.id)
+	check(r93_vanish_nodim.is_empty(),
+		"R93 不变量：带 trait「离场消失」的卡**全部**有次元（漏：%s）" % str(r93_vanish_nodim))
 	# ④ 野兔本体：**没有**次元（它自己不会消失，消失的是它产出的复制品）
 	check(r93_repo.get_card(9032).has_affix(GameEngine.AFFIX_PHANTOM)
 			and not r93_repo.get_card(9032).has_affix(GameEngine.AFFIX_DIMENSION),
@@ -11789,7 +11810,7 @@ func _init() -> void:
 			% ("" if r98_def == null else str(r98_def.affixes)))
 	check(r98_def.rarity == 0 and r98_def.card_class == "机械之心"
 		and r98_def.kind == "盟友" and r98_def.power == 3 and r98_def.health == 12,
-		"R98 旧式机兵：3 费普通盟友 3/12/1/1，机械之心（实际 %s）"
+		"R98 旧式机兵：3 费普通盟友 3/12/1/1，机械之心（实际 稀有度%s / 职业%s / %s / %s力 / %s血）"
 			% [r98_def.rarity, r98_def.card_class, r98_def.kind, r98_def.power, r98_def.health])
 
 	# ---- ① 超负荷单位：负血仍存活，且不触发溢出伤害 ----
@@ -11850,21 +11871,21 @@ func _init() -> void:
 			and r99_reorg.rarity == 3 and r99_reorg.card_class == "机械之心"
 			and r99_reorg.target_mode == "unit"
 			and r99_reorg.effect_text.contains("满生命"),
-		"R99 重组 8051：1 费史诗技能，机械之心，target=unit，回满生命（实际 %s）"
+		"R99 重组 8051：1 费史诗技能，机械之心，target=unit，回满生命（实际 %s / %s费 / 稀有度%s / target=%s）"
 			% [r99_reorg.kind, r99_reorg.cost, r99_reorg.rarity, r99_reorg.target_mode])
 	var r99_wall := r99_repo.get_card(8052)
 	check(r99_wall != null and r99_wall.kind == "工事" and r99_wall.cost == 2
 			and r99_wall.power == 0 and r99_wall.health == 10
 			and r99_wall.rarity == 0 and r99_wall.has_affix("超负荷")
 			and r99_wall.card_class == "机械之心",
-		"R99 城墙 8052：2 费普通工事 0/10/0，带超负荷，机械之心（实际 %s）"
+		"R99 城墙 8052：2 费普通工事 0/10/0，带超负荷，机械之心（实际 %s / %s费 / %s攻 / %s血 / 稀有度%s）"
 			% [r99_wall.kind, r99_wall.cost, r99_wall.power, r99_wall.health, r99_wall.rarity])
 	var r99_trans := r99_repo.get_card(8053)
 	check(r99_trans != null and r99_trans.kind == "技能" and r99_trans.cost == 0
 			and r99_trans.rarity == 1 and r99_trans.card_class == "机械之心"
 			and r99_trans.has_affix("次元") and r99_trans.target_mode == "unit"
 			and r99_trans.effect_text.contains("超负荷"),
-		"R99 超越极限 8053：0 费稀有技能，次元，机械之心，target=unit，挂超负荷（实际 %s）"
+		"R99 超越极限 8053：0 费稀有技能，次元，机械之心，target=unit，挂超负荷（实际 %s / %s费 / 稀有度%s / target=%s）"
 			% [r99_trans.kind, r99_trans.cost, r99_trans.rarity, r99_trans.target_mode])
 
 	# ---- ① 重组：把受伤单位回满（含改造后的上限）----
@@ -11943,7 +11964,7 @@ func _init() -> void:
 			and r100_reboot.rarity == 1 and r100_reboot.card_class == "机械之心"
 			and r100_reboot.target_mode == "unit"
 			and r100_reboot.effect_text.contains("返回手卡"),
-		"R100 重启 8054：1 费稀有技能，机械之心，target=unit，返回手卡0费（实际 %s）"
+		"R100 重启 8054：1 费稀有技能，机械之心，target=unit，返回手卡0费（实际 %s / %s费 / 稀有度%s / target=%s）"
 		% [r100_reboot.kind, r100_reboot.cost, r100_reboot.rarity, r100_reboot.target_mode])
 	var r100_sg := r100_repo.get_card(8055)
 	check(r100_sg != null and r100_sg.kind == "盟友" and r100_sg.cost == 2
@@ -11951,7 +11972,7 @@ func _init() -> void:
 			and r100_sg.attack_range == 1 and r100_sg.move_speed == 1
 			and r100_sg.rarity == 1 and r100_sg.card_class == "机械之心"
 			and r100_sg.has_affix("超负荷") and r100_sg.has_affix("嘲讽"),
-		"R100 钢铁卫士 8055：2 费稀有盟友 2/7/1/1，超负荷+嘲讽，机械之心（实际 %s）"
+		"R100 钢铁卫士 8055：2 费稀有盟友 2/7/1/1，超负荷+嘲讽，机械之心（实际 %s / %s费 / %s攻 / %s血 / 程%s / 速%s / 稀有度%s）"
 		% [r100_sg.kind, r100_sg.cost, r100_sg.power, r100_sg.health,
 			r100_sg.attack_range, r100_sg.move_speed, r100_sg.rarity])
 
@@ -12484,6 +12505,144 @@ func _init() -> void:
 		"R109 专注：敌方 AI 不打开选择面板")
 
 	# ══════════════════════════════════════════════════════════════
+	# ══════════════════════════════════════════════════════════════
+	# R110 测试：鸭鸭工匠（事件 · 卡组一张卡 → 2 费铁栅栏）
+	#           绝赞五换一（同名张数越多越容易被选中）
+	# ══════════════════════════════════════════════════════════════
+	var r110_repo := CardRepo.load_json()
+
+	# ---- ① 铁栅栏 9072 就是「在启动了」召出的那道墙 ----
+	var r110_fence := r110_repo.get_card(RunState.FENCE_CARD_ID)
+	check(r110_fence != null and r110_fence.card_name == "铁栅栏"
+			and r110_fence.kind == "工事" and r110_fence.health == 12,
+		"R110 鸭鸭工匠：目标卡 = 铁栅栏 %d（工事 0/12）" % RunState.FENCE_CARD_ID)
+	check(RunState.SMITH_COST == 2,
+		"R110 鸭鸭工匠：产物费用按 %d 费计（卡面铁栅栏本身是 0 费）" % RunState.SMITH_COST)
+
+	# ---- ② 锻造：选中的那张卡变成铁栅栏，且费用记成 2 ----
+	var r110_saved_deck: Array[int] = RunState.deck_ids.duplicate()
+	RunState.deck_ids = [8003, 8004, 9095]
+	var r110_res := RunState.smith_deck_card(1)     # 锻造第 2 张（树人）
+	check(bool(r110_res.get("ok", false)) and int(r110_res.get("old_id", 0)) == 8004,
+		"R110 鸭鸭工匠：锻造成功（原卡 id 8004）")
+	check(RunState.deck_ids[1] == RunState.FENCE_CARD_ID,
+		"R110 鸭鸭工匠：卡组第 2 张变成铁栅栏（8004 → %d）" % RunState.deck_ids[1])
+	check(RunState.deck_ids.size() == 3,
+		"R110 鸭鸭工匠：**替换**而不是新增（卡组仍是 %d 张）" % RunState.deck_ids.size())
+	check(RunState.deck_cost_at_index(1) == 2,
+		"R110 鸭鸭工匠：产物费用记成 2（不是卡面的 0，实际 %d）"
+			% RunState.deck_cost_at_index(1))
+	# 没被锻造的那两张费用仍按卡库原值（树人 3 / 怒涛 2）
+	check(RunState.deck_cost_at_index(0) == 3 and RunState.deck_cost_at_index(2) == 2,
+		"R110 鸭鸭工匠：未选中的卡费用不受影响（%d / %d）"
+			% [RunState.deck_cost_at_index(0), RunState.deck_cost_at_index(2)])
+	# ⚠️ 不污染卡库：铁栅栏卡面仍是 0 费
+	check(r110_repo.get_card(RunState.FENCE_CARD_ID).cost == 0,
+		"R110 鸭鸭工匠：**不烤进卡库**（卡库铁栅栏仍是 0 费，2 费只记在本局卡组）")
+	# 越界保护
+	check(not bool(RunState.smith_deck_card(99).get("ok", false)),
+		"R110 鸭鸭工匠：下标越界 → 拒绝")
+
+	# ---- ②-b 「2 费」真的被**消费**：build_deck 里那张铁栅栏按 2 费出 ----
+	# ⚠️ R110 初版只把 2 费写进平行数组、**没有任何地方读它** —— 牌库浏览 / 地图卡组 /
+	# 进战斗的 build_deck 全按卡面 0 费走，玩家根本看不到那 2 费（死数据）。
+	# 现在改为 deck_cost_at_index() 现算 + build_deck 消费；这几条断言就是防它再退化。
+	var r110_bd := RunState.build_deck(r110_repo)
+	var r110_bf: CardData = null
+	for bcard: CardData in r110_bd:
+		if bcard.id == RunState.FENCE_CARD_ID:
+			r110_bf = bcard
+	check(r110_bf != null and r110_bf.cost == 2,
+		"R110 鸭鸭工匠：build_deck 里那张铁栅栏**费用 = 2**（真的带进战斗，不是死数据）")
+	check(r110_bf != null and r110_bf != r110_repo.get_card(RunState.FENCE_CARD_ID),
+		"R110 鸭鸭工匠：只对改写费用的那张取**副本**（不污染卡库共享实例）")
+	check(r110_bd.size() == 3 and (r110_bd[0] as CardData).cost == 3,
+		"R110 鸭鸭工匠：没被锻造的卡照旧（3 张；第 1 张树人仍是 3 费）")
+	# 删掉卡组第 1 张（树人）后，铁栅栏的费用**跟着它自己走**（下标变了也不会串）
+	check(RunState.delete_deck_card(0) and RunState.deck_cost_at_index(0) == 2
+			and RunState.deck_ids[0] == RunState.FENCE_CARD_ID,
+		"R110 鸭鸭工匠：删卡后费用**不会错位**（原第 2 张铁栅栏仍在第 1 位、仍 2 费）")
+
+	# ---- ③ 绝赞五换一：同名张数越多越容易被选中 ----
+	# 卡组：铁栅栏 ×4、树人 ×2、熊/怒涛/疾风/预判 ×1 各 1 → 6 种不同名（≥5 可交易）。
+	# ⚠️ **指标选对**：6 种里抽 5 种 = 只排除 1 种，所以「被选中率」在等概率下就已经 5/6≈0.83，
+	# 加权后也在 0.7~0.97 —— 拿它当指标看不出加权效果（我一开始就踩了这个坑）。
+	# 正确指标是**排除概率**（某名最终被留下的概率）：等概率基线 1/6≈0.167，
+	# 加权后应按权重占比上升 —— 铁栅栏 4 张 ≈0.27、树人 2 张 ≈0.19、单张 ≈0.13。
+	# ⚠️ run_rng 在 Godot 4 里默认**随机**播种（start_run 用的是 randi()）——
+	# 统计型断言必须自己钉死种子，否则每次跑出来的频率都不同（假红/假绿）。
+	var r110_saved_rng := RunState.run_rng
+	RunState.run_rng = RandomNumberGenerator.new()
+	RunState.run_rng.seed = 20261008
+	var r110_trials := 1000
+	var r110_left_fence := 0     # 铁栅栏被「留下」（没被换走）的次数
+	var r110_left_tree := 0      # 树人（2 张）被留下的次数
+	var r110_left_single := 0    # 单张的（熊/怒涛/疾风/预判）被留下的总次数
+	var r110_single_slots := 0
+	for _t in r110_trials:
+		RunState.deck_ids = [9072, 9072, 9072, 9072, 8003, 8003, 8004, 9095, 9096, 9097]
+		var r110_r: Dictionary = RunState.trade_five_for_one(r110_repo)
+		if not bool(r110_r.get("ok", false)):
+			continue
+		var r110_gone := {}
+		for it in r110_r["removed"]:
+			r110_gone[int(it["id"])] = true
+		if not r110_gone.has(RunState.FENCE_CARD_ID):
+			r110_left_fence += 1
+		if not r110_gone.has(8003):
+			r110_left_tree += 1
+		# 4 种单张名，每种留 1 次 → 分母 4×trials
+		r110_single_slots += 4
+		for sid in [8004, 9095, 9096, 9097]:
+			if not r110_gone.has(sid):
+				r110_left_single += 1
+	var r110_p_fence := float(r110_left_fence) / float(r110_trials)
+	var r110_p_tree := float(r110_left_tree) / float(r110_trials)
+	var r110_p_single := float(r110_left_single) / float(r110_single_slots)
+	# ⚠️ 「被留下」与「被选中」是**反的**：加权让重复卡更常被选中 → 它**更少**被留下。
+	# 所以判据是「留下概率随同名张数**递减**」：4 张 < 2 张 < 1 张。
+	check(r110_p_fence < r110_p_tree and r110_p_tree < r110_p_single,
+		"R110 五换一：同名越多越不容易被留下（留下概率 4 张 %.3f < 2 张 %.3f < 1 张 %.3f）"
+			% [r110_p_fence, r110_p_tree, r110_p_single])
+	# 相对等概率基线（1/6≈0.167）的位移 = 「加权」的可观测证据：
+	# 重复卡被留下的概率**下移**（更容易被换掉），单张的**上移**。
+	check(r110_p_fence < 0.11,
+		"R110 五换一：4 张的卡被留下概率 %.3f < 0.11（等概率基线 0.167，加权后下移）"
+			% r110_p_fence)
+	check(r110_p_single > 0.18,
+		"R110 五换一：单张的卡被留下概率 %.3f > 0.18（等概率基线 0.167，加权后上移）"
+			% r110_p_single)
+
+	# ---- ④ 加权不破坏原有保证：仍是 5 张、仍互不重名、同名只删一张 ----
+	RunState.deck_ids = [9072, 9072, 9072, 9072, 8003, 8003, 8004, 9095, 9096, 9097]
+	var r110_r2: Dictionary = RunState.trade_five_for_one(r110_repo)
+	check(bool(r110_r2.get("ok", false)) and (r110_r2["removed"] as Array).size() == 5,
+		"R110 五换一（加权后）：仍然换走 5 张")
+	var r110_names := {}
+	var r110_dup := false
+	for it2 in r110_r2["removed"]:
+		var n2: String = it2["name"]
+		if r110_names.has(n2):
+			r110_dup = true
+		r110_names[n2] = true
+	check(not r110_dup,
+		"R110 五换一（加权后）：5 张仍然**互不重名**（每种名各删 1 张）")
+	check(RunState.deck_ids.has(RunState.HERO_CARD_ID),
+		"R110 五换一（加权后）：照样拿到「英雄」")
+	var r110_fence_left := 0
+	for x in RunState.deck_ids:
+		if x == RunState.FENCE_CARD_ID:
+			r110_fence_left += 1
+	check(r110_fence_left >= 3,
+		"R110 五换一（加权后）：同名多张只删其中一张（铁栅栏剩 %d 张，原 4 张）"
+			% r110_fence_left)
+
+	# ---- 还原现场，别影响后续用例 ----
+	RunState.deck_ids = r110_saved_deck
+	RunState.pending_deck_edit = ""
+	RunState.run_rng = r110_saved_rng   # 别把钉死的种子留给后面的用例
+
+	# ══════════════════════════════════════════════════════════════
 	# R105 测试：黑暗陷阱 8063（0 费场地 · 路过即中 → 本回合力量 -1）
 	# ══════════════════════════════════════════════════════════════
 	# ---- 卡面定义校验 ----
@@ -12621,28 +12780,28 @@ func _init() -> void:
 			and r101_rescue.attack_range == 1 and r101_rescue.move_speed == 1
 			and r101_rescue.rarity == 0 and r101_rescue.card_class == "机械之心"
 			and r101_rescue.has_affix("交换"),
-		"R101 救援构装体 8056：2 费普通盟友 2/8/1/1，机械之心，带字段「交换」"
+		"R101 救援构装体 8056：2 费普通盟友 2/8/1/1，机械之心，带字段「交换」（实际 kind=%s）"
 		% [r101_rescue.kind])
 	var r101_gren := r101_repo.get_card(8057)
 	check(r101_gren != null and r101_gren.kind == "盟友" and r101_gren.cost == 2
 			and r101_gren.power == 3 and r101_gren.health == 5
 			and r101_gren.rarity == 0 and r101_gren.card_class == "机械之心"
 			and r101_gren.traits.has("改造攻程"),
-		"R101 榴弹击手 8057：2 费普通盟友 3/5/1/1，机械之心，带 trait「改造攻程」"
+		"R101 榴弹击手 8057：2 费普通盟友 3/5/1/1，机械之心，带 trait「改造攻程」（实际 kind=%s）"
 		% [r101_gren.kind])
 	var r101_tank := r101_repo.get_card(8058)
 	check(r101_tank != null and r101_tank.kind == "盟友" and r101_tank.cost == 3
 			and r101_tank.power == 3 and r101_tank.health == 13
 			and r101_tank.rarity == 1 and r101_tank.card_class == "机械之心"
 			and r101_tank.traits.has("改造移速"),
-		"R101 重甲战车 8058：3 费稀有盟友 3/13/1/1，机械之心，带 trait「改造移速」"
+		"R101 重甲战车 8058：3 费稀有盟友 3/13/1/1，机械之心，带 trait「改造移速」（实际 kind=%s）"
 		% [r101_tank.kind])
 	var r101_bird := r101_repo.get_card(8059)
 	check(r101_bird != null and r101_bird.kind == "盟友" and r101_bird.cost == 1
 			and r101_bird.power == 2 and r101_bird.health == 1
 			and r101_bird.rarity == 0 and r101_bird.card_class == "机械之心"
 			and r101_bird.traits.has("改造抽牌"),
-		"R101 机器鸟 8059：1 费普通盟友 2/1/1/1，机械之心，带 trait「改造抽牌」"
+		"R101 机器鸟 8059：1 费普通盟友 2/1/1/1，机械之心，带 trait「改造抽牌」（实际 kind=%s）"
 		% [r101_bird.kind])
 	var r101_dae := r101_repo.get_card(8060)
 	check(r101_dae != null and r101_dae.kind == "盟友" and r101_dae.cost == 5
@@ -12815,6 +12974,180 @@ func _init() -> void:
 	check(r106_e.state.place(_card(1062, "白板", "盟友", 1, 2, 5, 1, 1),
 			Vector2i(3, 2), GameEngine.SIDE_SELF).status_badges().is_empty(),
 		"R106 状态徽标：无任何增益/减益的单位不画徽标")
+
+	# ══════════════════════════════════════════════════════════════
+	# R111 测试：鸭子暗杀者 9123 / 鸭之暗面 9124 / 暗影召唤 9125
+	# ══════════════════════════════════════════════════════════════
+	var r111_repo := CardRepo.load_json()
+	var r111_assi := r111_repo.get_card(9123)
+	check(r111_assi != null and r111_assi.card_name == "鸭子暗杀者"
+			and r111_assi.kind == "盟友" and r111_assi.group == "enemy"
+			and r111_assi.power == 6 and r111_assi.health == 30
+			and r111_assi.attack_range == 1 and r111_assi.move_speed == 1
+			and r111_assi.traits.has(GameEngine.ASSASSIN_TRAIT) and r111_assi.rarity == 4,
+		"R111 鸭子暗杀者 9123：6/30 程1 速1 敌人卡，trait 暗杀")
+	var r111_boss := r111_repo.get_card(9124)
+	check(r111_boss != null and r111_boss.card_name == "鸭之暗面"
+			and r111_boss.kind == "盟友" and r111_boss.group == "enemy"
+			and r111_boss.power == 9 and r111_boss.health == 150
+			and r111_boss.attack_range == 1 and r111_boss.move_speed == 1
+			and r111_boss.traits.has(GameEngine.SHADOW_LORD_TRAIT)
+			and r111_boss.traits.has(GameEngine.PHASE_TRAIT) and r111_boss.rarity == 4,
+		"R111 鸭之暗面 9124：9/150 程1 速1 敌人卡，trait 暗影领主 + 穿行")
+	var r111_sum := r111_repo.get_card(9125)
+	check(r111_sum != null and r111_sum.card_name == "暗影召唤" and r111_sum.kind == "效果"
+			and r111_sum.traits.has(GameEngine.ASSASSIN_SUMMON_TRAIT)
+			and r111_sum.value == 3 and r111_sum.is_level_effect()
+			and r111_sum.group == "enemy",
+		"R111 暗影召唤 9125：敌方关卡效果卡，trait 暗杀召唤、value=3")
+
+	# ---- 关卡：第二层 Boss「鸭之暗面」 ----
+	var r111_lv := _level_named("鸭之暗面")
+	var r111_units: Array = r111_lv.get("enemy_units", [])
+	var r111_effs: Array = r111_lv.get("enemy_effects", [])
+	check(str(r111_lv.get("name", "")) == "鸭之暗面"
+			and int(r111_lv.get("tier", -1)) == GameLevels.TIER_BOSS
+			and GameLevels.layer_of(r111_lv) == GameLayers.LAYER_TWO
+			and r111_units.size() == 1 and int(r111_units[0][0]) == 9124
+			and int(r111_units[0][2]) == r111_boss.power
+			and int(r111_units[0][3]) == r111_boss.health
+			and int(r111_units[0][4]) == r111_boss.attack_range
+			and int(r111_units[0][5]) == r111_boss.move_speed
+			and r111_effs.size() == 1 and int(r111_effs[0]) == 9125,
+		"R111 鸭之暗面关：第二层 Boss 关（1 鸭之暗面 + 敌方效果卡 暗影召唤），数值与 cards.json 同源")
+	check(GameLevels.boss_pool(GameLayers.LAYER_TWO).size() == 2
+			and str(GameLevels.boss_level(GameLayers.LAYER_TWO)["name"]) == "机械巨鸭",
+		"R111 鸭之暗面进第二层 Boss 池（2 关；默认 boss_level() 仍取第一个 = 机械巨鸭）")
+
+	# ---- ① 穿行：可以**穿过**单位，但不能停在上面 ----
+	var r111_pa := _new_engine([], 20, 20)
+	var r111_ba := r111_pa.state.place(CardData.from_dict(r111_boss.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	check(r111_ba.effective_power() == 9 and r111_ba.effective_speed() == 1,
+		"R111 鸭之暗面：没有存活暗杀者时 = 基础 9 力 / 速 1")
+	# 正前方 (1,1) 放一个**敌方**暗杀者当墙 —— 它同时是「墙」也是「存活暗杀者」（+1 速）
+	r111_pa.state.place(CardData.from_dict(r111_assi.to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r111_pa._refresh_dark_lord(GameEngine.SIDE_OPPONENT)
+	check(r111_ba.effective_speed() == 2,
+		"R111 暗影领主：1 个存活暗杀者 → 鸭之暗面速 1→%d" % r111_ba.effective_speed())
+	check(r111_pa._reachable(Vector2i(0, 1), GameEngine.SIDE_OPPONENT).has(Vector2i(2, 1)),
+		"R111 穿行：能**穿过**挡在正前方的单位、走到它身后")
+	check(r111_pa.move_path(Vector2i(0, 1), Vector2i(1, 1), GameEngine.SIDE_OPPONENT).is_empty(),
+		"R111 穿行：可以穿过，但**不能停在**被占用的格子上")
+	# 对照：不带「穿行」的单位走不过去
+	var r111_pb := _new_engine([], 20, 20)
+	r111_pb.state.place(r111_repo.get_card(9001), Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r111_pb.state.place(_card(8010, "木桩", "盟友", 1, 0, 10, 0, 0),
+			Vector2i(1, 1), GameEngine.SIDE_SELF)
+	check(not r111_pb._reachable(Vector2i(0, 1), GameEngine.SIDE_OPPONENT).has(Vector2i(2, 1)),
+		"R111 穿行对照：不带「穿行」的单位被墙挡住，走不到它身后")
+
+	# ---- ② 暗影领主：每个存活暗杀者 +3 力 +1 速；暗杀者被打死立刻掉 ----
+	var r111_pc := _new_engine([], 20, 20)
+	var r111_bc := r111_pc.state.place(CardData.from_dict(r111_boss.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r111_pc.state.place(CardData.from_dict(r111_assi.to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r111_pc.state.place(CardData.from_dict(r111_assi.to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	r111_pc._refresh_dark_lord(GameEngine.SIDE_OPPONENT)
+	check(r111_bc.effective_power() == 9 + 2 * 3 and r111_bc.effective_speed() == 1 + 2,
+		"R111 暗影领主：2 个存活暗杀者 → 力 %d / 速 %d（基础 9/1）"
+			% [r111_bc.effective_power(), r111_bc.effective_speed()])
+	r111_pc._destroy(Vector2i(1, 0))
+	check(r111_bc.effective_power() == 9 + 3 and r111_bc.effective_speed() == 1 + 1,
+		"R111 暗影领主：暗杀者被击破 → 立刻掉 3 力 1 速（力 %d / 速 %d）"
+			% [r111_bc.effective_power(), r111_bc.effective_speed()])
+	check(r111_repo.get_card(9124).move_speed == 1 and r111_repo.get_card(9124).power == 9,
+		"R111 暗影领主：**不烤进卡库**（卡库鸭之暗面仍是 9 力 / 速 1）")
+
+	# ---- ③ 暗杀者被动：还有非暗杀单位才「不能打 HP + 可闪现」----
+	var r111_pd := _new_engine([], 20, 20)
+	r111_pd.state.place(r111_repo.get_card(9001), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	var r111_ad := r111_pd.state.place(CardData.from_dict(r111_assi.to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r111_pd._assassin_passive(r111_ad),
+		"R111 暗杀者被动：己方还有非暗杀单位（鸭子骑士）→ 被动成立")
+	check(r111_pd.hp_targets(Vector2i(4, 1), GameEngine.SIDE_OPPONENT).is_empty(),
+		"R111 暗杀者被动：被动成立时**不能攻击对方 HP**（hp_targets 为空）")
+	r111_pd.state.board.erase(Vector2i(3, 1))
+	check(not r111_pd._assassin_passive(r111_ad),
+		"R111 暗杀者被动：只剩暗杀者时被动关闭")
+	check(not r111_pd.hp_targets(Vector2i(4, 1), GameEngine.SIDE_OPPONENT).is_empty(),
+		"R111 暗杀者被动：被动关闭后恢复「可攻击对方 HP」")
+
+	# ---- ④ 闪现：一次行动落到任意空格（不看移速、不看阻挡）----
+	var r111_pe := _new_engine([], 20, 20)
+	r111_pe.state.place(r111_repo.get_card(9001), Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	r111_pe.state.place(CardData.from_dict(r111_assi.to_dict()),
+			Vector2i(0, 2), GameEngine.SIDE_OPPONENT)
+	r111_pe.move(Vector2i(0, 2), Vector2i(0, 0), GameEngine.SIDE_OPPONENT, true)
+	check(r111_pe.state.unit_at(Vector2i(0, 2)) != null,
+		"R111 闪现：落点已有单位 → 拒绝（原地不动）")
+	r111_pe.move(Vector2i(0, 2), Vector2i(5, 1), GameEngine.SIDE_OPPONENT, true)
+	check(r111_pe.state.unit_at(Vector2i(0, 2)) != null,
+		"R111 闪现：对方后排行是移动禁区 → 拒绝")
+	r111_pe.move(Vector2i(0, 2), Vector2i(4, 0), GameEngine.SIDE_OPPONENT, true)
+	check(r111_pe.state.unit_at(Vector2i(4, 0)) != null
+			and r111_pe.state.unit_at(Vector2i(0, 2)) == null,
+		"R111 闪现：一次行动落到任意空格（曼哈顿 6 步，远超速 1）")
+
+	# ---- ⑤ 暗影召唤：开局召 1 只 + 每 3 回合再召 ----
+	var r111_pf := _new_engine([], 20, 20)
+	var r111_bf := r111_pf.state.place(CardData.from_dict(r111_boss.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r111_pf.enable_enemy_effects([CardData.from_dict(r111_sum.to_dict())])
+	var r111_cf := 0
+	var r111_half_ok := true
+	for c5: Vector2i in r111_pf.state.board:
+		var q5: Placement = r111_pf.state.board[c5]
+		if q5.card.traits.has(GameEngine.ASSASSIN_TRAIT):
+			r111_cf += 1
+			if c5.x >= FieldState.OPPONENT_ROWS:
+				r111_half_ok = false
+	check(r111_cf == 1 and r111_half_ok,
+		"R111 暗影召唤：战斗开始时召唤 1 只鸭子暗杀者，且落在**己方半场**（实际 %d 只）" % r111_cf)
+	check(r111_bf.dark_lord_atk == 3 and r111_bf.dark_lord_speed == 1,
+		"R111 暗影召唤：开局召唤后**立刻重算**暗影领主（鸭之暗面 +3 力 +1 速）")
+	r111_pf.opp_turns = 2
+	r111_pf._assassin_summon(GameEngine.SIDE_OPPONENT, false)
+	var r111_cf2 := 0
+	for c6: Vector2i in r111_pf.state.board:
+		if r111_pf.state.board[c6].card.traits.has(GameEngine.ASSASSIN_TRAIT):
+			r111_cf2 += 1
+	check(r111_cf2 == 1,
+		"R111 暗影召唤：第 2 个回合不是召唤回合（仍 %d 只）" % r111_cf2)
+	r111_pf.opp_turns = 3
+	r111_pf._assassin_summon(GameEngine.SIDE_OPPONENT, false)
+	var r111_cf3 := 0
+	for c7: Vector2i in r111_pf.state.board:
+		if r111_pf.state.board[c7].card.traits.has(GameEngine.ASSASSIN_TRAIT):
+			r111_cf3 += 1
+	check(r111_cf3 == 2,
+		"R111 暗影召唤：第 3 个回合再召 1 只（共 %d 只）" % r111_cf3)
+	check(r111_bf.dark_lord_atk == 6 and r111_bf.dark_lord_speed == 2,
+		"R111 暗影召唤：第 2 只到位后鸭之暗面 → 力 +6 / 速 +2")
+
+	# ---- ⑥ 专属 AI：闪现到能打到的位置并攻击，全程不打 HP ----
+	var r111_pg := _new_engine([], 20, 20)
+	r111_pg.state.place(r111_repo.get_card(9001), Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r111_pg.state.place(CardData.from_dict(r111_assi.to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	var r111_tg := r111_pg.state.place(_card(8003, "树人", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(5, 0), GameEngine.SIDE_SELF)
+	r111_pg.current_side = GameEngine.SIDE_OPPONENT
+	r111_pg.ai_enabled = true
+	r111_pg.run_ai_unit(Vector2i(0, 0))
+	check(r111_pg.state.unit_at(Vector2i(0, 0)) == null,
+		"R111 暗杀者 AI：会**闪现**离开原地（(0,0) 已空）")
+	check(r111_pg.state.unit_at(Vector2i(4, 0)) != null
+			and r111_pg.state.unit_at(Vector2i(4, 0)).tapped,
+		"R111 暗杀者 AI：落到能攻击到树人的唯一空格 (4,0)，并完成行动（已横置）")
+	check(r111_tg.health == 8 - 6,
+		"R111 暗杀者 AI：闪现后打了树人（8 → %d 血）" % r111_tg.health)
+	check(r111_pg.state.hp_self == 20,
+		"R111 暗杀者 AI：全程**不打我方 HP**（仍 %d）" % r111_pg.state.hp_self)
 
 	RunState.player_class = r91_saved_cls
 

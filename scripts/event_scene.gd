@@ -95,6 +95,14 @@ const OBLIVION_DESC := """泉水不映星光，也不照人脸——你把脸凑
 const OBLIVION_DONE_DESC := """什么意思都没有的那张脸，又浮了上来——
 卡组里少了些什么，可你再也想不起那是什么了。"""
 
+const SMITH_DESC := """铁匠铺里叮叮当当，有人正把一张牌按进炉子——
+「这张，我给你改成一道墙。」
+选择锻造：从卡组中挑一张卡，把它变成一张**铁栅栏**（费用按 2 费计）。
+（不想改的话，也可以转身离开。）"""
+
+const SMITH_DONE_DESC := """炉火熄了，锻件出炉。
+你手里那张牌，已经变成了一道铁栅栏。"""
+
 const STRUGGLE_DESC := """体内的血液在翻涌，某种东西正挣扎着想要破体而出……
 若你愿意献出生命，它会听见你——
 失去 21 点生命，将一张「金属龙」加入你的卡组；
@@ -127,6 +135,7 @@ var _bbq_taken := false       # 烤肉：本次是否已在休息处烤好（获
 var _arcane_charm_taken := false  # 奥秘之泉：是否已收下道具「奥秘护符」
 var _arcane_drunk := false    # 奥秘之泉：是否已选择「喝下泉水」（选卡去了卡牌奖励界面）
 var _oblivion_done := false   # 遗忘之泉：是否已经遗忘过一张卡（或已选择去删卡）
+var _smith_done := false      # 鸭鸭工匠：是否已经锻造过（或已选择去锻造）
 
 @onready var event_name: Label = $Center/EventName
 @onready var desc: Label = $Center/Desc
@@ -179,6 +188,11 @@ func _is_oblivion() -> bool:
 	return _is_event_node() and RunState.pending_event == "oblivion"
 
 
+func _is_smith() -> bool:
+	## 鸭鸭工匠（R110，全层通用事件）：从卡组挑一张卡变成 2 费铁栅栏，或离开。
+	return _is_event_node() and RunState.pending_event == "smith"
+
+
 func _is_struggle() -> bool:
 	return _is_event_node() and RunState.pending_event == "struggle"
 
@@ -194,7 +208,7 @@ func _is_treasure() -> bool:
 	return _is_event_node() and not _is_whisper() and not _is_struggle() \
 			and not _is_gaze() and not _is_pear() and not _is_hero() \
 			and not _is_bluefish() and not _is_relic_chest() \
-			and not _is_arcane() and not _is_oblivion()
+			and not _is_arcane() and not _is_oblivion() and not _is_smith()
 
 
 func _kind() -> String:
@@ -213,6 +227,8 @@ func _kind() -> String:
 		return "arcane"
 	if _is_oblivion():
 		return "oblivion"
+	if _is_smith():
+		return "smith"
 	if _is_bluefish():
 		return "bluefish"
 	if _is_struggle():
@@ -453,6 +469,21 @@ func _ready() -> void:
 			rest_btn.disabled = RunState.deck_ids.is_empty()
 			$Center/LeaveBtn.text = "离开（不删卡）"
 			result_label.text = ""
+	elif _is_smith():
+		event_name.text = "鸭 鸭 工 匠"
+		desc.text = SMITH_DONE_DESC if _smith_done else SMITH_DESC
+		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
+		if _smith_done:
+			rest_btn.text = "继续"
+			$Center/LeaveBtn.text = "已完成"
+			$Center/LeaveBtn.disabled = true
+			result_label.text = "你已经在工匠那里锻造过一张卡了。"
+			result_label.add_theme_color_override("font_color", Color("8a6a3a"))
+		else:
+			rest_btn.text = "锻造：把卡组中的一张卡变成 2 费铁栅栏"
+			rest_btn.disabled = RunState.deck_ids.is_empty()
+			$Center/LeaveBtn.text = "离开（不锻造）"
+			result_label.text = ""
 	elif _is_relic_chest():
 		event_name.text = "宝 箱 层"
 		desc.text = CHEST_LAYER_DESC
@@ -662,6 +693,19 @@ func _on_main() -> void:
 		_oblivion_done = true
 		RunState.complete_current()
 		RunState.pending_deck_edit = "delete"
+		get_tree().change_scene_to_file("res://scenes/deck_edit.tscn")
+		return
+	if _is_smith():
+		if _smith_done:
+			_on_leave()
+			return
+		if RunState.deck_ids.is_empty():
+			return
+		# 锻造同样交给卡组编辑场景（pending_deck_edit = "smith"）——
+		# 选牌 UI 与「遗忘之泉」共用，不新造一套。
+		_smith_done = true
+		RunState.complete_current()
+		RunState.pending_deck_edit = "smith"
 		get_tree().change_scene_to_file("res://scenes/deck_edit.tscn")
 		return
 	if _is_relic_chest():

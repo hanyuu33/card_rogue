@@ -877,6 +877,23 @@ const REVENGE_END_ATK_PER_HIT:= 1  # R77：同时保留恶魔鸭（9116）原本
 const DEMON_SUMMON_TRAIT:= "恶魔召唤"
 const DEMON_SUMMON_EVERY:= 2       # 召唤间隔（回合）：turn_number % 2 == 0 时召唤
 
+# ---- R111：鸭子暗杀者 / 鸭之暗面 / 暗影召唤 ----
+# 鸭子暗杀者 9123（trait「暗杀」）：只要**己方场上还有「暗杀」以外的单位**，就进入特殊模式 ——
+#   ① **不能攻击对方 HP**（`hp_targets` 直接返回空 → UI 与 AI 同时被拦）；
+#   ② 可以**改用一次行动闪现**到战场上任意空格（`move(..., blink=true)`，不看移速、不看阻挡）。
+#   只剩它自己（或只剩暗杀者）时被动关闭 → 变回普通 6/30 单位，能正常打 HP。
+# 鸭之暗面 9124（trait「暗影领主」+「穿行」）：
+#   * 穿行 = 移动可**穿过**任何单位（不能停在上面）；
+#   * 暗影领主 = **每个存活的鸭子暗杀者**给它 +3 力 +1 速（记在 Placement，见 `_refresh_dark_lord`）。
+# 暗影召唤 9125（trait「暗杀召唤」，value = 间隔回合数）：开局 + 每 N 回合召唤一只鸭子暗杀者。
+const ASSASSIN_TRAIT:= "暗杀"
+const ASSASSIN_ID:= 9123
+const SHADOW_LORD_TRAIT:= "暗影领主"
+const DARK_LORD_ATK_PER_ASSASSIN:= 3    # 每个存活暗杀者 +3 力
+const DARK_LORD_SPEED_PER_ASSASSIN:= 1  # 每个存活暗杀者 +1 速
+const PHASE_TRAIT:= "穿行"              # 移动无视单位阻挡
+const ASSASSIN_SUMMON_TRAIT:= "暗杀召唤"
+
 
 func _init(state_: FieldState) -> void :
 	state = state_
@@ -1097,6 +1114,8 @@ func _begin_turn(side: String) -> void :
 		_latent_turn_draw(SIDE_SELF)
 		_glowgrass_supply(SIDE_SELF)
 		_ghost_self_destruct(SIDE_SELF)
+		_assassin_summon(SIDE_SELF)
+		_refresh_dark_lord(SIDE_SELF)
 		_run_battlecries(SIDE_SELF)
 		_log("── 我方第 %d 回合：能量重置为 %d%s%s%s%s%s%s（共 %d），抽 %d 张" % [
 			turn_number, FieldState.ENERGY_PER_TURN,
@@ -1147,6 +1166,8 @@ func _begin_turn(side: String) -> void :
 		_latent_turn_draw(SIDE_OPPONENT)
 		_glowgrass_supply(SIDE_OPPONENT)
 		_ghost_self_destruct(SIDE_OPPONENT)
+		_assassin_summon(SIDE_OPPONENT)
+		_refresh_dark_lord(SIDE_OPPONENT)
 		_run_battlecries(SIDE_OPPONENT)
 		_log("── 对手回合开始：能量 %d（上回合结束已清零，本回合重新发放基础费用），手牌 +%d" % [
 			FieldState.ENERGY_PER_TURN, FieldState.HAND_DRAW_PER_TURN])
@@ -1165,6 +1186,9 @@ func enable_enemy_effects(cards: Array[CardData]) -> void :
 
 
 	state.apply_extra_actions(SIDE_OPPONENT)
+	# R111 暗影召唤：「战斗开始时」那一半的召唤（另一半点在敌方回合开始里）。
+	_assassin_summon(SIDE_OPPONENT, true)
+	_refresh_dark_lord(SIDE_OPPONENT)
 
 
 func _apply_growth(side: String) -> void :
@@ -6887,22 +6911,29 @@ func _destroy(cell: Vector2i) -> void :
 	if _rec_victim_ok:
 		for _r in _rec_list:
 			_recycler_trigger(_r, _rec_power)
+	# R111 暗影领主：场上少了一个单位 → 重算（死的是暗杀者时鸭之暗面立刻掉 3 力 1 速）。
+	_refresh_dark_lord(p.owner)
 
 
 
 
 func _move_bfs(start: Vector2i, side: String, freed:= Vector2i(-1, -1), 
-		speed_override:= -1) -> Dictionary:
+		speed_override:= -1, phasing_override:= -1) -> Dictionary:
 
 
 
+	var p_self:= state.unit_at(start)
+	# 穿行（R111 鸭之暗面）：移动可以**经过**被占用的格子，但不允许停在上面（落点由 move_path 拦）。
+	# 自动判定读起点上的单位；两次行动绕行时起点是空格，所以由调用方显式传 phasing_override。
+	var phasing:= phasing_override
+	if phasing < 0:
+		phasing = 1 if (p_self != null and p_self.card.traits.has(PHASE_TRAIT)) else 0
 	var speed:= speed_override
 	if speed < 0:
-		var p:= state.unit_at(start)
-		if p == null or p.card.is_fort():
+		if p_self == null or p_self.card.is_fort():
 			return {}
-		speed = p.card.move_speed
-		if self_relics.has(HEAVY_DUCK_RELIC_ID) and p.owner != SIDE_SELF and speed > 1:
+		speed = p_self.effective_speed()
+		if self_relics.has(HEAVY_DUCK_RELIC_ID) and p_self.owner != SIDE_SELF and speed > 1:
 			speed = 1
 	var banned_row:= forbidden_row_for(side)
 	var parent:= {}
@@ -6917,7 +6948,11 @@ func _move_bfs(start: Vector2i, side: String, freed:= Vector2i(-1, -1),
 			if nxt.x < 0 or nxt.x >= FieldState.BOARD_ROWS\
 			or nxt.y < 0 or nxt.y >= FieldState.BOARD_COLS:
 				continue
-			if dist.has(nxt) or (state.board.has(nxt) and nxt != freed):
+			if phasing == 1:
+				# 穿行：被占格可**路过**（照样记 dist/parent 让 BFS 继续），落点合法性另判
+				if dist.has(nxt):
+					continue
+			elif dist.has(nxt) or (state.board.has(nxt) and nxt != freed):
 				continue
 			dist[nxt] = dist[cur] + 1
 			if nxt.x == banned_row:
@@ -6931,6 +6966,10 @@ func move_path(src: Vector2i, dst: Vector2i, side: String) -> Array[Vector2i]:
 
 
 	var par:= _move_bfs(src, side)
+	# R111 穿行：BFS 允许「穿过」被占格（于是它们也在 parent 里）——
+	# 但**落点**必须是空格，统一在这里拦。
+	if state.board.has(dst) and dst != src:
+		return []
 	if not par.has(dst):
 		return []
 	var path: Array[Vector2i] = [dst]
@@ -6945,16 +6984,21 @@ func _reachable(cell: Vector2i, side: String) -> Array[Vector2i]:
 
 	var result: Array[Vector2i] = []
 	for c: Vector2i in _move_bfs(cell, side).keys():
+		# 穿行会把「路过的被占格」也记进来 —— 那不是合法落点，要剔除。
+		if state.board.has(c) and c != cell:
+			continue
 		result.append(c)
 	return result
 
 
 func _reachable_with(start: Vector2i, freed: Vector2i, side: String, 
-		speed_override:= -1) -> Array[Vector2i]:
+		speed_override:= -1, phasing:= -1) -> Array[Vector2i]:
 
 
 	var result: Array[Vector2i] = []
-	for c: Vector2i in _move_bfs(start, side, freed, speed_override).keys():
+	for c: Vector2i in _move_bfs(start, side, freed, speed_override, phasing).keys():
+		if state.board.has(c) and c != start:
+			continue
 		result.append(c)
 	return result
 
@@ -7002,6 +7046,11 @@ func attack_targets(cell: Vector2i, side:= "", card: CardData = null) -> Array[V
 
 
 func hp_targets(cell: Vector2i, side:= SIDE_SELF, card: CardData = null) -> Array[Vector2i]:
+	# R111 鸭子暗杀者：被动生效期间**不能攻击对方 HP** → 候选恒为空。
+	# 放在这个唯一口上 = UI 的候选高亮与 AI 的目标选择**同时**被拦，不会各漏一处。
+	var _hp_guard:= state.unit_at(cell)
+	if _hp_guard != null and _assassin_passive(_hp_guard):
+		return []
 
 
 
@@ -7023,7 +7072,7 @@ func hp_targets(cell: Vector2i, side:= SIDE_SELF, card: CardData = null) -> Arra
 	return result
 
 
-func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
+func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void :
 	if ReplayLog.recording and side == SIDE_SELF:
 		ReplayLog.act("move", [src, dst])
 	var p:= state.unit_at(src)
@@ -7040,7 +7089,7 @@ func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 
 
 
-		if p.acts_left > 1 and not p.card.is_fort() and p.card.move_speed > 0:
+		if p.acts_left > 1 and not p.card.is_fort() and p.effective_speed() > 0:
 			p.acts_left -= 1
 			p.tapped = false
 			p.moved = false
@@ -7052,13 +7101,28 @@ func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	if p.card.is_fort():
 		_log("工事不能移动")
 		return
-	if dst.x == forbidden_row_for(side):
-		_log("不能移动到对方后排")
-		return
-	var path:= move_path(src, dst, side)
-	if path.is_empty():
-		_log("不能移动到 %s（超出移动速度或被阻挡）" % dst)
-		return
+	var path: Array[Vector2i] = []
+	if blink:
+		# R111 鸭子暗杀者：消耗一次行动**闪现**到任意空格 ——
+		# 不看移动速度、不看路径阻挡，只要求「落点是空格 + 不在对方后排行」。
+		if dst == src:
+			return
+		if state.board.has(dst):
+			_log("闪现落点 %s 已有单位" % dst)
+			return
+		if dst.x == forbidden_row_for(side):
+			_log("不能移动到对方后排")
+			return
+		path.append(src)
+		path.append(dst)
+	else:
+		if dst.x == forbidden_row_for(side):
+			_log("不能移动到对方后排")
+			return
+		path = move_path(src, dst, side)
+		if path.is_empty():
+			_log("不能移动到 %s（超出移动速度或被阻挡）" % dst)
+			return
 	# 场地卡（R80）：**移动经过**路径上任何一格就触发，并**立刻停在这一格**。
 	# 落点计算唯一口 = _field_block_index：只看「走过的这几格」，不看终点 ——
 	# 于是「路过」和「停在上面」是同一个口径，玩家不需要区分。
@@ -8340,7 +8404,7 @@ func _blocks_front_ally(t: Vector2i, sniper_cell: Vector2i) -> bool:
 			continue
 		if manhattan(fcell, t) <= f.card.attack_range:
 			return true
-		if f.card.move_speed > 0:
+		if f.effective_speed() > 0:
 			var base:= _wall_depth(fcell, f)
 			if base > 0 and _wall_depth(fcell, f, [t]) < base:
 				return true
@@ -8387,9 +8451,9 @@ func _ai_best_step(cell: Vector2i, p: Placement) -> Variant:
 			best_score = s
 	if best != cell:
 		return best
-	if p.acts_left < 2 or p.card.is_fort() or p.card.move_speed == 0:
+	if p.acts_left < 2 or p.card.is_fort() or p.effective_speed() == 0:
 		return null
-	var spd:= p.card.move_speed
+	var spd:= p.effective_speed()
 	if self_relics.has(HEAVY_DUCK_RELIC_ID) and p.owner != SIDE_SELF and spd > 1:
 		spd = 1
 
@@ -8399,7 +8463,8 @@ func _ai_best_step(cell: Vector2i, p: Placement) -> Variant:
 	var best2_score:= best_score
 	var via:= Vector2i(-1, -1)
 	for mid in reachable:
-		for dst2 in _reachable_with(mid, cell, SIDE_OPPONENT, spd):
+		for dst2 in _reachable_with(mid, cell, SIDE_OPPONENT, spd,
+				1 if p.card.traits.has(PHASE_TRAIT) else 0):
 			if dst2 == cell or reachable.has(dst2):
 				continue
 			var s2:= _step_score(cell, dst2, p)
@@ -8507,6 +8572,10 @@ func _ai_attack_if_any(cell: Vector2i, p: Placement) -> bool:
 
 
 func _ai_act(cell: Vector2i, p: Placement) -> void :
+	# R111 鸭子暗杀者：被动生效时走**专属 AI**（闪现游走 + 只打单位、不打 HP）。
+	if _assassin_passive(p):
+		_assassin_act(cell, p)
+		return
 
 
 
@@ -8524,7 +8593,7 @@ func _ai_act(cell: Vector2i, p: Placement) -> void :
 			return
 		_tap(p, "AI：本轮已推进")
 		return
-	if p.card.is_fort() or p.card.move_speed == 0:
+	if p.card.is_fort() or p.effective_speed() == 0:
 
 		if _ai_attack_if_any(cell, p):
 			return
@@ -8575,3 +8644,159 @@ func _ai_act(cell: Vector2i, p: Placement) -> void :
 
 		attack(dst, _ai_pick_card_target(atk_targets, moved), SIDE_OPPONENT)
 	return
+
+# ================= R111：鸭子暗杀者专属 AI =================
+
+func _assassin_other_ally(p: Placement) -> bool:
+	## 被动条件：**己方场上还有「暗杀」以外的单位**（含鸭之暗面这种非暗杀怪物）。
+	## 只剩暗杀者（或只剩它自己）→ 条件不成立，被动关闭。
+	for c: Vector2i in state.board:
+		var q: Placement = state.board[c]
+		if q != p and q.owner == p.owner and not q.card.traits.has(ASSASSIN_TRAIT):
+			return true
+	return false
+
+
+func _assassin_passive(p: Placement) -> bool:
+	## 带「暗杀」trait 且被动条件成立 → 「不能打 HP + 可闪现」模式。
+	## **引擎里唯一的判定口**：hp_targets 门禁、move 的 blink、AI 分派都读它。
+	if p == null or not p.card.traits.has(ASSASSIN_TRAIT):
+		return false
+	return _assassin_other_ally(p)
+
+
+func _assassin_cells(src: Vector2i) -> Array[Vector2i]:
+	## 闪现候选：全场空格（排除对方后排行）+ 起点自身（原地也是一种选择）。
+	var out: Array[Vector2i] = [src]
+	var banned:= forbidden_row_for(SIDE_OPPONENT)
+	for r in FieldState.BOARD_ROWS:
+		if r == banned:
+			continue
+		for col in FieldState.BOARD_COLS:
+			var c:= Vector2i(r, col)
+			if not state.board.has(c):
+				out.append(c)
+	return out
+
+
+func _nearest_foe_dist(dst: Vector2i) -> int:
+	## 到最近我方单位的曼哈顿距离；场上没有我方单位时退回「到我方后排最近格」的距离。
+	## 用曼哈顿（不是走位 BFS）—— 这里是**闪现**，不走路、不受阻挡影响。
+	var best:= AI_NO_ROUTE
+	for c: Vector2i in state.board:
+		var q: Placement = state.board[c]
+		if q.owner == SIDE_SELF:
+			best = mini(best, manhattan(dst, c))
+	if best != AI_NO_ROUTE:
+		return best
+	var row:= back_row(SIDE_SELF)
+	for col in FieldState.BOARD_COLS:
+		best = mini(best, manhattan(dst, Vector2i(row, col)))
+	return best
+
+
+func _assassin_cell_key(src: Vector2i, dst: Vector2i, p: Placement) -> Array:
+	## 闪现候选排序键（字典序，越小越好）：
+	##   ① 能打到我方单位优先（0 优于 1）；
+	##   ② 能打时：目标血量越低越好（易击杀）、力量越高越好（威胁大）；
+	##   ③ 打不到时：离最近我方单位越近越好（逼近施压，下回合就能咬上）；
+	##   ④ 平手时**原地优先**（manhattan 0）→ 不会无意义乱跳；末位按格位定序（确定性可复现）。
+	var targets:= attack_targets(dst, SIDE_OPPONENT, p.card)
+	var can_hit:= 1 if targets.is_empty() else 0
+	var t_hp:= 999
+	var t_pow:= 0
+	if not targets.is_empty():
+		var q:= state.unit_at(_ai_pick_card_target(targets, p))
+		if q != null:
+			t_hp = q.health if q.health > 0 else 999
+			t_pow = q.effective_power()
+	return [can_hit, t_hp, - t_pow, _nearest_foe_dist(dst) * 10,
+			manhattan(src, dst), dst.x, dst.y]
+
+
+func _assassin_step(src: Vector2i, p: Placement) -> Variant:
+	## 选出要闪现到的格子；null = 原地更好（不动）。
+	var best: Vector2i = src
+	var best_key:= _assassin_cell_key(src, src, p)
+	for dst in _assassin_cells(src):
+		if dst == src:
+			continue
+		var k:= _assassin_cell_key(src, dst, p)
+		if k < best_key:
+			best_key = k
+			best = dst
+	if best == src:
+		return null
+	return best
+
+
+func _assassin_act(cell: Vector2i, p: Placement) -> void :
+	## 鸭子暗杀者专属 AI（R111）：行动时先闪现到最优空格，再打射程内的我方单位。
+	## 它打不到对方 HP（hp_targets 已门禁），所以只要「找最好落点 → 打得到就打」。
+	var dst = _assassin_step(cell, p)
+	if dst != null:
+		move(cell, dst, SIDE_OPPONENT, true)
+		if over:
+			return
+		var moved:= state.unit_at(dst)
+		if moved == null:
+			return
+		cell = dst
+		p = moved
+	if _ai_attack_if_any(cell, p):
+		return
+	_tap(p, "AI：暗杀者游走（本轮无可攻击目标）")
+
+
+# ================= R111：暗影领主成长 / 暗杀召唤 =================
+
+func _refresh_dark_lord(side: String) -> void :
+	## 鸭之暗面（9124）：「暗影领主」单位按**己方存活暗杀者数**获得 +3 力 / +1 速。
+	## ⚠️ 只改 Placement 字段（`dark_lord_atk` / `dark_lord_speed`），**不碰 card** ——
+	## 敌方关卡单位用的是卡库共享实例，写 card 会跨局泄漏；不写 card 也就无需离场还原。
+	## 调用点 = 数量会变的三处：开局/召唤、单位被击破、每个回合开始。
+	var n:= 0
+	for c: Vector2i in state.board:
+		var q: Placement = state.board[c]
+		if q.owner == side and q.card.traits.has(ASSASSIN_TRAIT):
+			n += 1
+	for c2: Vector2i in state.board:
+		var p: Placement = state.board[c2]
+		if p.owner != side or not p.card.traits.has(SHADOW_LORD_TRAIT):
+			continue
+		p.dark_lord_atk = n * DARK_LORD_ATK_PER_ASSASSIN
+		p.dark_lord_speed = n * DARK_LORD_SPEED_PER_ASSASSIN
+
+
+func _assassin_summon(side: String, initial:= false) -> void :
+	## 暗影召唤（9125，R111）：效果区有「暗杀召唤」时，**战斗开始时**（initial=true）
+	## 以及**每 value 个回合**召唤一只鸭子暗杀者 —— 落在**己方半场**的空格
+	## （不空手压到对面半场）；半场满则跳过。召唤后立刻重算暗影领主加成。
+	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
+	var interval:= 0
+	var src:= "暗杀召唤"
+	for c: CardData in zone:
+		if c.traits.has(ASSASSIN_SUMMON_TRAIT) and c.value > interval:
+			interval = c.value
+			src = c.card_name
+	if interval <= 0:
+		return
+	if not initial:
+		var tick:= turn_number if side == SIDE_SELF else opp_turns
+		if tick % interval != 0:
+			return
+	var repo:= CardRepo.load_json()
+	var card: CardData = repo.get_card(ASSASSIN_ID)
+	if card == null:
+		return
+	var spot:= _random_free_half_cell(side)
+	if spot == Vector2i(-1, -1):
+		_log("%s：己方半场已满，无法召唤鸭子暗杀者" % src)
+		return
+	var copy:= CardData.from_dict(card.to_dict())
+	var summoned:= state.place(copy, spot, side)
+	_log("%s%s：召唤了一只鸭子暗杀者（%s）" % [
+			src, "（开局）" if initial else "（每 %d 回合）" % interval, spot])
+	action.emit("place", {"cell": spot, "card": copy, "side": side})
+	_on_ally_entered(summoned, side)
+	_refresh_dark_lord(side)

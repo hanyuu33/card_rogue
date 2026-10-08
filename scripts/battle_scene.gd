@@ -3476,7 +3476,7 @@ func _on_hover(pos: Vector2) -> void:
 			_hover_card = p.card
 			_hover_pl = p
 			tip = "%s 力%d 生%d 程%d 速%d" % [p.card.card_name,
-					p.effective_power(), p.health, p.card.attack_range, p.card.move_speed]
+					p.effective_power(), p.health, p.card.attack_range, p.effective_speed()]
 			# R68：冰封 / 禁足是看不见的状态，悬停时直接说明「为什么它动不了」
 			if p.frozen:
 				tip += "　❄ 冰封（本回合不能行动）"

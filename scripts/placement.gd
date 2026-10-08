@@ -51,6 +51,12 @@ var regen: int = 0           # 自我修复（8035，R87）：每回合结束回
 ## 且这张被打死离场后额度随之消失（新的那张重新算，符合「这张卡每回合一次」的字面）。
 var upgrade_feed_turn: int = -1
 var sleep_left: int = 0       # 沉睡（恶魔鸭 9116，R63）：还要睡几个己方回合（>0 = 本回合不行动）；受伤时 -1，提前醒来
+## 「暗影领主」（鸭之暗面 9124，R111）：每个**存活的鸭子暗杀者**给它 +3 力 +1 速。
+## ⚠️ 只记在 Placement 上、**绝不烤进 CardData** —— 敌方关卡单位用的是卡库共享实例，
+## 直接改 card 会把加成写进卡库、跨局泄漏（R111 特意不走 R101 那条 `p.card.move_speed +=` 的路）。
+## 因此无需 `_card_leaving_field` 还原：单位一离场，这两个字段随之消失。
+var dark_lord_atk: int = 0     # +3 × 存活暗杀者数（进 effective_power）
+var dark_lord_speed: int = 0   # +1 × 存活暗杀者数（进 effective_speed）
 
 
 func effective_power() -> int:
@@ -59,7 +65,15 @@ func effective_power() -> int:
 	var stack_bonus := upgrade_stacks if card != null \
 			and card.traits.has("改造层数") else 0
 	return maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
-			+ end_atk + upgrade_atk + stack_bonus - debuff)
+			+ end_atk + upgrade_atk + stack_bonus + dark_lord_atk - debuff)
+
+
+func effective_speed() -> int:
+	## 实际移动速度（R111）：卡面移速 + 场上加成（鸭之暗面的暗影领主）。最低 0。
+	## 与 effective_power 对称：**不写回 card**，所以 `_move_bfs` / AI 都要读这个口。
+	if card == null:
+		return 0
+	return maxi(0, card.move_speed + dark_lord_speed)
 
 
 ## 【R106】这张卡**此刻已获得**的增益 / 减益，逐条列出（一条一个 Dictionary）。
@@ -89,6 +103,9 @@ func status_entries() -> Array[Dictionary]:
 		if upgrade_speed != 0:
 			extra += " 速 +%d" % upgrade_speed
 		out.append({"label": "改造 ×%d%s" % [upgrade_stacks, extra],
+				"col": COL_B, "kind": "buff"})
+	if dark_lord_atk > 0 or dark_lord_speed > 0:
+		out.append({"label": "暗影领主：力 +%d 速 +%d" % [dark_lord_atk, dark_lord_speed],
 				"col": COL_B, "kind": "buff"})
 	if atk_buff > 0:
 		out.append({"label": "力量 +%d（成长光环）" % atk_buff, "col": COL_B, "kind": "buff"})

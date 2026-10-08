@@ -455,15 +455,28 @@ func _toggle_deck() -> void:
 
 
 func _build_deck_rows() -> Array:
-	## 卡组聚合：[{id, count}]（按首次出现顺序）。
+	## 卡组聚合：[{id, cost, card, count}]（按首次出现顺序）。
+	## ⚠️ 按**（id, 实际费用）**聚合：工匠锻造出的铁栅栏 2 费，与图鉴那张 0 费各占一行；
+	## card 已经带好实际费用（有改造时是一份副本），下面的绘制处直接用它。
+	var repo := CardRepo.load_json()
 	var seen := {}
 	var out: Array = []
-	for id in RunState.deck_ids:
-		if seen.has(id):
-			out[seen[id]]["count"] += 1
+	for i in RunState.deck_ids.size():
+		var id: int = RunState.deck_ids[i]
+		var cost := RunState.deck_cost_at_index(i)
+		var key := "%d@%d" % [id, cost]
+		if seen.has(key):
+			out[seen[key]]["count"] += 1
 		else:
-			seen[id] = out.size()
-			out.append({"id": id, "count": 1})
+			var c := repo.get_card(id)
+			if c == null:
+				continue
+			var show := c
+			if cost != c.cost:
+				show = CardData.from_dict(c.to_dict())
+				show.cost = cost
+			seen[key] = out.size()
+			out.append({"id": id, "cost": cost, "card": show, "count": 1})
 	return out
 
 
@@ -502,14 +515,13 @@ func _draw_deck_panel() -> void:
 		draw_string(_font, rect.position + Vector2(20, 90), "卡组是空的。",
 				HORIZONTAL_ALIGNMENT_LEFT, 300, 14, Color("8a867c"))
 		return
-	var repo := CardRepo.load_json()
 	var max_scroll := maxi(0, ceili(_deck_rows.size() / 2.0) - 4)
 	_deck_scroll = clampf(_deck_scroll, 0.0, float(max_scroll))
 	for i in _deck_rows.size():
 		var r := _deck_row_rect(i)
 		if r.end.y < DECK_INNER.position.y or r.position.y > DECK_INNER.end.y:
 			continue
-		var c := repo.get_card(_deck_rows[i]["id"])
+		var c: CardData = _deck_rows[i]["card"]
 		var hovered := i == _hover_deck
 		if hovered:
 			draw_rect(r.grow(4.0), Color(1, 1, 1, 0.16), true)

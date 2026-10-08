@@ -4,6 +4,7 @@ extends Control
 ##   RunState.pending_relic = 6002 源数之力：从卡组中选一张卡，变成一张随机奖励卡牌；
 ##   RunState.pending_relic = 6024 鸭血：从卡组中**最多选 2 张**卡，各复制一份加入卡组；
 ##   RunState.pending_deck_edit = "delete" 遗忘之泉（事件）：从卡组中选一张卡删除。
+##   RunState.pending_deck_edit = "smith" 鸭鸭工匠（事件，R110）：从卡组中选一张卡锻造成 2 费铁栅栏。
 ## 模式判定见 _mode()：「遗忘之泉」优先于道具（两者不会同时存在）。
 ##
 ## 交互（v2：平铺网格 + 选中高亮 + 确定）：
@@ -91,9 +92,11 @@ func _process(_delta: float) -> void:
 
 func _mode() -> String:
 	## 当前模式："oblivion" = 事件「遗忘之泉」删卡 / "delete" = 失忆药水删卡 /
-	## "transform" = 源数之力改造 / "duplicate" = 鸭血复制卡 / "" = 无待办（只读浏览）。
+	## "smith" = 鸭鸭工匠锻造（把选中那张变成 2 费铁栅栏，R110）/ "" = 无待办（只读浏览）。
 	if RunState.pending_deck_edit == "delete":
 		return "oblivion"
+	if RunState.pending_deck_edit == "smith":
+		return "smith"
 	if RunState.pending_relic == 6004:
 		return "delete"
 	if RunState.pending_relic == RunState.SOURCE_POWER_ID:
@@ -123,6 +126,9 @@ func _refresh_title() -> void:
 		"transform":
 			title_label.text = "源数之力 — 选择一张卡改造"
 			hint_label.text = "点一张卡选中（高亮），再点下方「确定」，把它变成一张随机奖励卡牌。"
+		"smith":
+			title_label.text = "鸭鸭工匠 — 选择一张卡锻造成铁栅栏"
+			hint_label.text = "点一张卡选中（高亮），再点下方「确定」，把它锻造成一张 2 费铁栅栏。"
 		"duplicate":
 			title_label.text = "鸭血 — 选择最多 %d 张卡复制" % _limit()
 			hint_label.text = "点卡选中（可多选，已选 %d/%d），再点下方「确定」；每张被选中的卡都会复制一份加入卡组，原卡保留。一张都不选也可以。" % [_sel.size(), _limit()]
@@ -365,6 +371,13 @@ func _apply(pick: int) -> void:
 			_result = "「%s」已从卡组中删除（失忆药水）" % cname
 		else:
 			_result = "删除失败：卡组里没有这一张"
+	elif _mode() == "smith":
+		var sres := RunState.smith_deck_card(pick)
+		if bool(sres.get("ok", false)):
+			_result = "「%s」被锻造成了一张 %d 费铁栅栏（卡组里那张的费用按 %d 计）" % [
+					cname, int(sres.get("cost", 2)), int(sres.get("cost", 2))]
+		else:
+			_result = "锻造失败：卡组里没有这一张"
 	elif RunState.pending_relic == RunState.SOURCE_POWER_ID:
 		var res := RunState.transform_deck_card(repo, pick)
 		var nc := repo.get_card(int(res["new_id"]))

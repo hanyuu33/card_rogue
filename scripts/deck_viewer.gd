@@ -80,19 +80,28 @@ func _toggle() -> void:
 # ------------------------------------------------------------ 数据
 
 func _merged() -> Array:
-	## 卡组按 id 聚合：[{card, count}]，按（费用, id）排序。
+	## 卡组按**（id, 实际费用）**聚合：[{card, count}]，按（费用, id）排序。
+	## ⚠️ 费用也进聚合键：工匠锻造出的铁栅栏是 2 费、图鉴那张是 0 费，两者要**各占一格**
+	## （否则合并成一格、玩家在牌库里看不到那 2 费）。实际费用走 RunState.deck_cost_at_index。
 	var repo := CardRepo.load_json()
 	var order: Array = []
 	var by_id := {}
-	for id in RunState.deck_ids:
-		if not by_id.has(id):
-			var c := repo.get_card(id)
-			if c == null:
-				continue
-			var e := {"card": c, "count": 0}
-			by_id[id] = e
+	for i in RunState.deck_ids.size():
+		var id: int = RunState.deck_ids[i]
+		var c := repo.get_card(id)
+		if c == null:
+			continue
+		var cost := RunState.deck_cost_at_index(i)
+		var key := "%d@%d" % [id, cost]
+		if not by_id.has(key):
+			var show := c
+			if cost != c.cost:
+				show = CardData.from_dict(c.to_dict())
+				show.cost = cost
+			var e := {"card": show, "count": 0}
+			by_id[key] = e
 			order.append(e)
-		by_id[id]["count"] += 1
+		by_id[key]["count"] += 1
 	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ca: CardData = a["card"]
 		var cb: CardData = b["card"]
