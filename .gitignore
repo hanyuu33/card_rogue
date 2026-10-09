@@ -20,8 +20,8 @@ _rp.txt
 # 调试截图（可重建）
 shot_*.png
 shot_*.import
-screenshot_*.png
-screenshot_*.import
+screenshot*.png
+screenshot*.import
 
 # Python
 __pycache__/
