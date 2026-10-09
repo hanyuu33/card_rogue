@@ -370,7 +370,9 @@ static func _draw_center_outlined(canvas: CanvasItem, font: Font, size: int, tex
 		center: Vector2, col: Color) -> void:
 	## 有图标素材时数字压在图上，而图标可能是花哨的插画 → 先描一圈深色再填字，
 	## 保证**任何素材**上数字都能读（素材是玩家往后自己换的，不能假设它够素）。
-	var o: float = maxf(0.8, size * 0.18)
+	## 描边宽度：R114 出图实测 0.18 在 14px 的小卡徽章上太粗（白字+粗边会把 14px 圆盘占满，
+	## 图标只剩边角），收到 0.13 —— 白卡面上仍然可读，但给图标让出一点面积。
+	var o: float = maxf(0.7, size * 0.13)
 	for d: Vector2 in [Vector2(-o, 0), Vector2(o, 0), Vector2(0, -o), Vector2(0, o)]:
 		_draw_center(canvas, font, size, text, center + d, UiTheme.BADGE_OUTLINE)
 	_draw_center(canvas, font, size, text, center, col)
