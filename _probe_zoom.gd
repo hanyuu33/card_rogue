@@ -18,8 +18,10 @@ func _init() -> void:
 	var err := img.load("res://screenshot.png")
 	print("screenshot.png load=", err, " size=", img.get_size())
 	if err == OK:
-		# 一整张战场小卡（58×70）+ 四周留量：能同时看到徽章「骑在框上」的样子
-		_crop(img, Rect2i(538, 196, 110, 108), 8, "_zoom_board.png")
+		# 一整张战场小卡（58×70）+ 四周留量：能同时看到数值「骑在框上」的样子
+		_crop(img, Rect2i(528, 190, 130, 122), 7, "_zoom_board.png")
 		# 手牌一排（含悬停抬起的那张）
 		_crop(img, Rect2i(320, 578, 480, 142), 3, "_zoom_hand.png")
+		# 手牌**单张卡的整个下半**（文字区 + 底部一排数值）—— 检查文字是否被挤
+		_crop(img, Rect2i(388, 600, 130, 120), 6, "_zoom_hand1.png")
 	quit()

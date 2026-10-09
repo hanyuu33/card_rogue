@@ -7363,15 +7363,20 @@ func _merged_deck(cards: Array) -> Array:
 	return order
 
 
+## 区域浏览面板里卡与卡的间距（R115）：卡 58×70 + 18 → 正好装下骑在框上的
+## 数值（图标半径 8.5，左右各一份 = 17 ≤ 18）。绘制与悬停判定**共用**这一个常数。
+const ZONE_CARD_GAP := 18.0
+
+
 func _zone_panel_layout(n: int) -> Dictionary:
 	## 区域浏览面板的网格布局：绘制与悬停判定共用一份，改一处即可。
 	# 先按可用宽度尽量多排几列（至少 1 列），再按张数算行数
-	var cols := maxi(1, int((WINDOW_W - 180.0) / (CARD_W + 10.0)))
+	var cols := maxi(1, int((WINDOW_W - 180.0) / (CARD_W + ZONE_CARD_GAP)))
 	cols = mini(cols, maxi(n, 1))
 	var rows := maxi(1, int(ceil(float(n) / float(cols))))
-	var grid_w := cols * (CARD_W + 10.0) - 10.0
+	var grid_w := cols * (CARD_W + ZONE_CARD_GAP) - ZONE_CARD_GAP
 	var pw := minf(WINDOW_W - 80.0, grid_w + 60.0)
-	var ph := minf(WINDOW_H - 40.0, rows * (CARD_H + 10.0) + 86.0)
+	var ph := minf(WINDOW_H - 40.0, rows * (CARD_H + ZONE_CARD_GAP) + 86.0)
 	var px := (WINDOW_W - pw) / 2
 	var py := (WINDOW_H - ph) / 2
 	var x0 := px + (pw - grid_w) / 2
@@ -7381,8 +7386,8 @@ func _zone_panel_layout(n: int) -> Dictionary:
 func _zone_card_rect(i: int, L: Dictionary) -> Rect2:
 	## 面板里第 i 张卡的矩形（悬停判定用）。
 	var cols: int = L["cols"]
-	return Rect2(L["x0"] + (i % cols) * (CARD_W + 10.0),
-			L["py"] + 42.0 + int(i / cols) * (CARD_H + 10.0), CARD_W, CARD_H)
+	return Rect2(L["x0"] + (i % cols) * (CARD_W + ZONE_CARD_GAP),
+			L["py"] + 42.0 + int(i / cols) * (CARD_H + ZONE_CARD_GAP), CARD_W, CARD_H)
 
 
 func _draw_zone_panel(title: String, cards: Array, counts: Array = []) -> void:

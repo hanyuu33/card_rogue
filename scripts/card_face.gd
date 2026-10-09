@@ -3,27 +3,27 @@ class_name CardFace
 ##
 ## 全部为静态方法：接收 CanvasItem 与两套字体，无实例状态。
 ##
-## ## 卡面版式（R114：上半卡图 / 下半文字 / 数值以徽章「挂在框上」）
+## ## 卡面版式（R115：上半卡图 / 下半文字 / 数值「挂在框上」）
 ##
-##              ①
-##     ┌─────────────────────────┐
-##     │         ← 卡图 →         │  ① 卡图区 = 卡片高度的 CARD_ART_RATIO（0.50）
-##     ├─────────────────────────┤  ← 卡图 / 文字 的分界线
-##     │          卡名            │  ② 文字区：卡名 → 种类·字段 → 效果文字
-##     │        种类 · 字段        │
-##     │     效果文字（可折行）…   │
-##     └─────────────────────────┘
-##          ②   ③        ④   ⑤
+##    ┌───────────────────────┐  ① 费用     = 卡框**左上角**
+##    │ ①      ← 卡图 →       │  ② 力量     = 卡框**左下角**（与 ① 同一条竖线）
+##    ├───────────────────────┤  ③ 攻击距离 = ② 右侧
+##    │         卡名           │  ④ 移动距离 = ⑤ 左侧
+##    │       种类 · 字段       │  ⑤ 生命     = 卡框**右下角**（与 ① 左右反向）
+##    │    效果文字（可折行）…  │
+##    └───────────────────────┘
+##     ②力 ③程         ④速 ⑤
 ##
-## ①费用在**左上角**、②力 ③程 在**下边缘左侧**、④生 ⑤速 在**下边缘右侧**。
-## ⚠️ 每个徽章的**圆心就落在卡框上** —— 一半在卡内、一半露在卡外。
-##   这不是装饰偏好：**这样才能把卡片内部完整让给卡图与文字**。
-##   代价是容器必须让出 UiTheme.CARD_BLEED，否则徽章会骑到邻卡身上。
+## ⚠️ 每个数值的**圆心就落在卡框上** —— 一半在卡内、一半露在卡外。
+##   力量与生命因此**分别向左右探出卡框**（R115 用户口径「攻击力和生命都可以
+##   左右方向超出卡片范围」）—— 这不是装饰偏好：它把「四个数值都得挤进卡宽」
+##   松成「只有中间两个受卡宽限制」，图标于是能画得更大（R 7 → 8.5），
+##   同时卡片内部依然完整让给卡图与文字。代价是容器必须让出 UiTheme.CARD_BLEED。
 ##
-## 徽章 = **图标为底 + 数字压在图标上**。图标素材走 `assets/ui/icon_*.png`：
+## 数值 = **图标为底 + 数字压在图标上**，且**不垫圆盘**（R115 用户口径
+## 「并不需要严格的圆盘，直接用图标 + 数字就可以」）。图标素材走 `assets/ui/icon_*.png`：
 ##   剑=力量 / 弓=攻击距离 / 鞋=移动距离 / 血=生命 / 水晶=费用
 ## 缺图时回退成该数值的**语义色圆盘 + 数字**（永远不空白、不报错）。
-## 位置固定：左上=费用、左下=力量·攻击距离、右下=生命·移动距离。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
@@ -73,15 +73,16 @@ static func badge_font(rect: Rect2) -> int:
 
 
 static func cost_badge_center(rect: Rect2) -> Vector2:
-	## 左上费用徽章的圆心 = **卡片的左上角**（圆心压在框线上，一半露在框外）。
+	## 左上费用数值的圆心 = **卡片的左上角**（圆心压在框线上，一半露在框外）。
+	## R115 起「力量」的圆心在**左下角**，与这个点同一条竖线 —— 两者左右对齐。
 	## battle_scene 的「动态减费」要在同位置重画绿色数字，所以这里对外暴露 ——
 	## 它是费用徽章位置的**唯一口**。
 	return rect.position
 
 
 static func text_zone_bottom(rect: Rect2) -> float:
-	## 文字区下界 = 底部徽章的**内半圈**上沿（圆心在卡框上，只侵入卡片一个半径）。
-	## 徽章不再占用卡片内部空间，所以这一版比初版多了约 1.5R 的文字高度。
+	## 文字区下界 = 底部数值的**内半圈**上沿（圆心在卡框上，只侵入卡片一个半径）。
+	## 数值不再占用卡片内部空间，所以这一版比初版多了约 1.5R 的文字高度。
 	return rect.end.y - badge_radius(rect)
 
 
@@ -181,15 +182,24 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	var cx: float = rect.position.x + rect.size.x / 2.0
 	var maxw: float = rect.size.x - pad * 2.0
 	var kind_col: Color = UiTheme.kind_color(card.kind)
-	# 卡名（粗体、墨色）
-	var y: float = top + sz * 0.88
+	# ⚠️ 行距必须用**字体真实行高**（`get_height`），不能按字号估：
+	#   雅黑 9px 的行高是 13（ascent 10 + descent 3），而旧写法 `sz * 1.12 = 10.08 < 13`
+	#   → 卡名与种类的墨迹**必然叠在一起**（R115 出图实测：手牌上「木栅栏 / 工事」
+	#   糊成一片，战场小卡上也叠着，只是叠得少些）。两个字体取大者，粗体度量可能略不同。
+	var row_h: float = maxf(font.get_height(sz), font_bold.get_height(sz))
+	# 卡名（粗体、墨色）：基线 = `top + ascent`，让首行**墨顶正好贴住**文字区上沿
+	# （旧写法 `top + sz * 0.88` 偏低约 1.2px，白占了下面那行的空间）。
+	# 居中短行的下界用**卡框内沿**：它居中且短，撞不到左右角上骑着的数值；
+	# 左对齐、横跨整卡宽的效果文字才必须让开数值（继续用 text_zone_bottom）。
+	var line_bottom: float = rect.end.y - pad
+	var y: float = top + float(font_bold.get_ascent(sz)) - sz * 0.36
 	_draw_center(canvas, font_bold, sz, _ellipsize(font_bold, card.card_name, maxw, sz),
 			Vector2(cx, y), UiTheme.INK_900)
 	# 种类 · 字段（一行两段，分别着色；整体居中）
 	# ⚠️ 不硬编码任何字段：画的就是 `card.affix_line()`，所以「过载给某张牌加了疾行」
 	# 这类**后续赋予**的字段也会自动出现在卡面上。
-	y += sz * 1.12
-	if y + sz * 0.25 > bottom:
+	y += row_h
+	if y + sz * 0.36 + float(font.get_descent(sz)) > line_bottom:
 		return
 	var meta_a: String = card.kind
 	var meta_b: String = (" · " + card.affix_line()) if not card.affixes.is_empty() else ""
@@ -238,12 +248,16 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 
 static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, rect: Rect2,
 		k: float, kc: float, hp: int, power_override: int) -> void:
-	## 数值徽章（额外挂载）。位置固定，与卡片种类无关的部分永远在同一处 ——
-	## 玩家的眼睛只需要记一次坐标。
+	## 数值「额外挂载」。位置是**固定槽位**，与卡的种类无关 ——
+	## 玩家的眼睛只需要记一次坐标：
+	##   ① 费用 = 卡框左上角 · ② 力量 = 卡框左下角（与 ① 同一条竖线）
+	##   ③ 攻击距离 = ② 右侧 · ④ 移动距离 = ⑤ 左侧 · ⑤ 生命 = 卡框右下角
+	## ⚠️ 于是 ② 与 ⑤ **分别向左右探出卡框**（R115 用户口径）—— 容器必须让出
+	##    `UiTheme.CARD_BLEED`，少让一点这两张就会骑到邻卡身上。
 	var r: float = UiTheme.CARD_BADGE_R * kc
 	var gap: float = UiTheme.CARD_BADGE_GAP * kc
 	var fs: int = maxi(7, roundi(UiTheme.CARD_FS_BADGE * kc))
-	# ── 左上角：费用（水晶）—— 圆心压在卡框左上角上 ──
+	# ── ① 左上角：费用（水晶）—— 圆心压在卡框左上角上 ──
 	# X 费卡（流星雨 9083）：费用不是定值 → 徽章上直接画「X」
 	_badge(canvas, font_bold, cost_badge_center(rect), r, fs, "cost",
 			"X" if card.x_cost else str(card.cost), UiTheme.BADGE_COST)
@@ -252,57 +266,57 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	if not is_unit and card.kind != "工事":
 		return
 	# ── 底部一排：圆心落在卡片**下边缘**上（一半挂在卡外）──
-	# 最外侧两张贴住卡的左右边（圆心距边一个半径），四张都在卡宽范围内 →
-	# 横向不外溢，只有纵向露出去一个半径。
+	# 最外两张的圆心就压在**卡的左右框线**上 → 整排比卡宽左右各多一个半径。
 	var bar_y: float = rect.end.y
-	var power_x: float = rect.position.x + r
-	var range_x: float = power_x + 2.0 * r + gap
-	var speed_x: float = rect.end.x - r
-	var health_x: float = speed_x - 2.0 * r - gap
-	# ── 左下：力量（剑） + 攻击距离（弓）──
+	var step: float = 2.0 * r + gap
+	var power_x: float = rect.position.x      # ② 与 ① 同一条竖线（卡框左沿）
+	var range_x: float = power_x + step       # ③
+	var health_x: float = rect.end.x          # ⑤ 与 ① 左右反向（卡框右沿）
+	var speed_x: float = health_x - step      # ④
+	# ── ② 力量（剑） + ③ 攻击距离（弓）──
 	var shown_power: int = power_override if power_override >= 0 else card.power
 	_badge(canvas, font_bold, Vector2(power_x, bar_y), r, fs, "power",
 			str(shown_power), UiTheme.BADGE_POWER)
 	_badge(canvas, font_bold, Vector2(range_x, bar_y), r, fs, "range",
 			str(card.attack_range), UiTheme.BADGE_RANGE)
-	# ── 右下：生命（血） + 移动距离（鞋；工事不会移动，不画）──
-	# ⚠️ 顺序与左下组保持**同一阅读方向**（力 程 → 生 速）。
-	# 先前按「离卡角最近的是第一个」做成镜像（力 程 速 生），出图一看就读反了 ——
+	# ── ④ 移动距离（鞋）+ ⑤ 生命（血）──
+	# ⚠️ 阅读方向必须与左半排一致（力 程 … 速 生）：跨过中间空档后仍是「先读到的在左」。
+	# 先前按「离卡角最近的是第一个」做成镜像（力 程 速 生 → 生 速），出图一看就读反了 ——
 	# 两组之间「先读到的那个」忽左忽右，比单纯难看更糟：会读错数值。
-	# 工事没有移速 → 生命直接占最外侧那张（贴右边）。
+	# 工事不会移动 → 不画鞋，生命直接占最外侧那张（贴右框线）。
 	if is_unit:
-		_badge(canvas, font_bold, Vector2(health_x, bar_y), r, fs, "health",
-				str(hp), UiTheme.BADGE_HEALTH)
 		_badge(canvas, font_bold, Vector2(speed_x, bar_y), r, fs, "speed",
 				str(card.move_speed), UiTheme.BADGE_SPEED)
-	else:
-		_badge(canvas, font_bold, Vector2(speed_x, bar_y), r, fs, "health",
-				str(hp), UiTheme.BADGE_HEALTH)
+	_badge(canvas, font_bold, Vector2(health_x, bar_y), r, fs, "health",
+			str(hp), UiTheme.BADGE_HEALTH)
 
 
 static func _badge(canvas: CanvasItem, font_bold: Font, center: Vector2, r: float, fs: int,
 		key: String, value: String, disc: Color) -> void:
-	## 单个数值徽章：**图标为底、数字压在图标上**。
-	## 缺图标素材 → 回退成该数值的语义色圆盘 + 数字（信息不丢、观感不塌）。
+	## 单个数值挂件：**图标为底、数字压在图标上**。
 	##
-	## 数字按宽度自适应缩号：三位数（如鸭之暗面的 150 血）在 58px 小卡的 12px 圆上
-	## 必然顶出圆盘，缩到刚好放得下为止；缩到 6px 仍是极限就让它略微出格
+	## R115 用户口径：「并不需要严格的圆盘，直接用图标 + 数字就可以」——
+	## 有图标时**不再垫那层深色圆盘**：图标素材本身就是一枚圆形徽记，再垫一层
+	## 只是白占一圈面积（也就没法把图标画大了）。
+	## ⚠️ 但**缺图标时仍然回退成语义色圆盘**：零素材下若只剩一个白色数字，
+	##    在浅色卡面上会直接看不见 —— 信息不能丢。
+	##
+	## 数字按宽度自适应缩号：三位数（如鸭之暗面的 150 血）在 58px 小卡的图标上
+	## 必然顶出去，缩到刚好放得下为止；缩到 6px 仍是极限就让它略微出格
 	## （宁可略宽也不缩成看不出来的小点）。
 	var icon: Texture2D = UiAssets.badge_icon(key)
 	if icon != null:
-		canvas.draw_circle(center, r, UiTheme.BADGE_BACK)
 		canvas.draw_texture_rect(icon, Rect2(center - Vector2(r, r), Vector2(r, r) * 2.0), false)
 	else:
 		canvas.draw_circle(center, r, disc)
 		canvas.draw_arc(center, r, 0.0, TAU, 20, disc.darkened(0.34),
 				maxf(1.0, r * 0.16), true)
 	var sz: int = fs
-	while sz > 6 and font_bold.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x \
-			> r * 1.75:
+	while sz > 6 and font_bold.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x 			> r * 1.75:
 		sz -= 1
 	# **数字一律描边**（不只是有图标时）：
-	#   · 有图标：图标可能是花哨插画，不描边压不住；
-	#   · 无图标：语义色圆盘只有 12k 直径，两位/三位数必然会溢出圆盘边缘
+	#   · 有图标：图标是花哨插画，不描边压不住；
+	#   · 无图标：语义色圆盘只有 2R 直径，两位/三位数必然会溢出圆盘边缘
 	#     （鸭之暗面 150 血、铁壁卫兵 30 血），溢出后白字落在白卡面上＝看不见。
 	# 描边让「数字出格」从缺陷降级成可接受的排版。
 	_draw_center_outlined(canvas, font_bold, sz, value, center, UiTheme.BADGE_VALUE)

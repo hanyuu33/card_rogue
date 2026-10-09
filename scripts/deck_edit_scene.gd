@@ -19,7 +19,11 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
-const GAP := 20.0            # 网格间距（R114：要装得下骑在框上的数值徽章）
+# ⚠️ 网格间距**不写死**：卡高是算出来的（卡组张数一变就变），而间距必须 ≥
+# 2 × 图标半径，图标半径又由卡高决定 —— 两者互相依赖。写死常数两头都错：
+# 卡小的时候白白浪费空间（28 张的卡组会从卡高 124 掉到 105），卡大的时候又装不下。
+# 所以 _layout() 排两次，用第一次的卡高反算真实间距（见那里的注释）。
+const GAP_BASE := 20.0       # 间距下限（也当第一次试排用的基准值）
 const MARGIN := 40.0         # 网格左右留白
 const TOP_Y := 108.0         # 网格顶部（标题栏 + 提示之下）
 const BOTTOM_RESERVE := 96.0 # 底部留给「确定」按钮与结果文字
@@ -41,6 +45,7 @@ var _done := false
 var _cw := 92.0
 var _ch := 112.0
 var _cols := 1
+var _gap := GAP_BASE       # 实际间距（_layout() 里按卡高反算）
 var _grid_y := TOP_Y
 
 @onready var title_label: Label = $TopBar/TitleLabel
@@ -149,17 +154,37 @@ func _refresh_title() -> void:
 func _layout() -> void:
 	## 平铺网格：先在「列数 1..n」里挑出让卡面最大的那种排法，
 	## 同等大小时优先「每行都排满」的列数，其次列数更多（更扁更顺眼）。
+	##
+	## ⚠️ 间距与卡高**互相依赖**：间距必须装得下骑在框上的数值（≥ 2 × 图标半径），
+	## 而图标半径由卡高决定。所以**排两次**：先用基准间距试排出卡高，
+	## 用它反算真实间距，再排一次。两次就收敛，两个方向都不会出错。
 	var n := _cards.size()
 	if n <= 0:
 		return
 	var area_w: float = maxf(120.0, size.x - MARGIN * 2.0)
 	var area_h: float = maxf(60.0, size.y - TOP_Y - BOTTOM_RESERVE)
+	var probe := _fit(area_w, area_h, GAP_BASE)
+	_gap = maxf(GAP_BASE, 2.0 * UiTheme.CARD_BLEED
+			* minf(float(probe[0]) / CardFace.CARD_H_DESIGN, UiTheme.CARD_BADGE_SCALE_CAP))
+	var best := _fit(area_w, area_h, _gap)
+	_ch = maxf(float(best[0]), CARD_MIN_H)
+	_cw = _ch * RATIO
+	_cols = int(best[1])
+	var rows2 := int(ceil(float(n) / float(_cols)))
+	var grid_h: float = rows2 * _ch + (rows2 - 1) * _gap
+	_grid_y = TOP_Y + maxf(0.0, (area_h - grid_h) / 2.0)   # 网格整块垂直居中
+
+
+func _fit(area_w: float, area_h: float, gap: float) -> Array:
+	## 在**给定间距**下挑「卡面最大」的列数 → `[卡高, 列数]`。
+	## 抽成独立函数是为了让 `_layout()` 能换着间距排两次（间距与卡高互相依赖）。
+	var n := _cards.size()
 	var best_h := 0.0
 	var best_cols := 1
 	for cols in range(1, n + 1):
 		var rows := int(ceil(float(n) / float(cols)))
-		var w_limit: float = (area_w - GAP * (cols - 1)) / float(cols)   # 列宽上限
-		var h_limit: float = (area_h - GAP * (rows - 1)) / float(rows)   # 行高上限
+		var w_limit: float = (area_w - gap * (cols - 1)) / float(cols)   # 列宽上限
+		var h_limit: float = (area_h - gap * (rows - 1)) / float(rows)   # 行高上限
 		# 卡面高度同时受行高、列宽（按宽高比换算）与上限约束
 		var ch: float = minf(minf(h_limit, w_limit / RATIO), CARD_MAX_H)
 		if ch <= 0.0:
@@ -175,12 +200,7 @@ func _layout() -> void:
 		if better:
 			best_h = ch
 			best_cols = cols
-	_ch = maxf(best_h, CARD_MIN_H)
-	_cw = _ch * RATIO
-	_cols = best_cols
-	var rows2 := int(ceil(float(n) / float(_cols)))
-	var grid_h: float = rows2 * _ch + (rows2 - 1) * GAP
-	_grid_y = TOP_Y + maxf(0.0, (area_h - grid_h) / 2.0)   # 网格整块垂直居中
+	return [best_h, best_cols]
 
 
 func _row_count(r: int) -> int:
@@ -191,7 +211,7 @@ func _row_count(r: int) -> int:
 func _row_x0(r: int) -> float:
 	## 每行单独水平居中，最后一行不满时也居中（不左对齐留空）。
 	var cnt := _row_count(r)
-	var w: float = cnt * _cw + maxf(0.0, cnt - 1) * GAP
+	var w: float = cnt * _cw + maxf(0.0, cnt - 1) * _gap
 	return MARGIN + maxf(0.0, (size.x - MARGIN * 2.0 - w) / 2.0)
 
 
@@ -200,7 +220,7 @@ func _card_rect(i: int) -> Rect2:
 		return Rect2()
 	var r := i / _cols
 	var c := i % _cols
-	return Rect2(Vector2(_row_x0(r) + c * (_cw + GAP), _grid_y + r * (_ch + GAP)),
+	return Rect2(Vector2(_row_x0(r) + c * (_cw + _gap), _grid_y + r * (_ch + _gap)),
 			Vector2(_cw, _ch))
 
 
@@ -222,8 +242,8 @@ func _draw() -> void:
 		var hovered := i == _hover and not _done and not selected
 		# 高亮底衬：选中 = 红底 + 金边发光；悬停 = 白色微亮
 		if selected:
-			draw_rect(rect.grow(7.0), Color(0.80, 0.18, 0.14, 0.34), true)
-			draw_rect(rect.grow(7.0), UiTheme.ACCENT_GOLD, false, 2.0)
+			draw_rect(rect.grow(UiTheme.CARD_BLEED), Color(0.80, 0.18, 0.14, 0.34), true)
+			draw_rect(rect.grow(UiTheme.CARD_BLEED), UiTheme.ACCENT_GOLD, false, 2.0)
 		elif hovered:
 			draw_rect(rect.grow(5.0), Color(1, 1, 1, 0.10), true)
 		var c := repo.get_card(_cards[i])

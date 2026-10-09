@@ -15,10 +15,10 @@ const WINDOW_H := 720.0
 const GRID_X := 232.0
 const GRID_Y := 52.0
 const GRID_W := 756.0
-# 卡 76x92 + 间隙。R114：间隙必须装得下**骑在框上的数值徽章**
-# （UiTheme.CARD_BLEED × k = 7 × 1.314 ≈ 9.2，上下各一份 → 至少 20）。
-const CELL_W := 96.0
-const CELL_H := 112.0
+# 卡 76x92 + 间隙。R115：间隙必须装得下**骑在框上的数值**
+# （UiTheme.CARD_BLEED × k = 8.5 × 1.314 ≈ 11.2 → 单元格至少 76+22.4 / 92+22.4）。
+const CELL_W := 100.0
+const CELL_H := 116.0
 const CARD_W := 76.0
 const CARD_H := 92.0
 const DETAIL_X := 1000.0
@@ -215,7 +215,7 @@ func _on_grid_draw() -> void:
 		# +10 而不是 +4：首行的费用徽章会露到卡片上方一个半径，得留在网格内部
 		# （网格在 ScrollContainer 里，露出去会被裁掉）。
 		var rect := Rect2(col * CELL_W + (CELL_W - CARD_W) / 2.0,
-				r * CELL_H + 10, CARD_W, CARD_H)
+				r * CELL_H + (CELL_H - CARD_H) / 2.0, CARD_W, CARD_H)
 		CardFace.draw(grid, _shown[i], rect, _shown[i].health,
 				_shown[i] == _selected, false, _font, _font_bold)
 
@@ -226,7 +226,7 @@ func _on_grid_input(event: InputEvent) -> void:
 		var pos: Vector2 = event.position + Vector2(0, scroll.scroll_vertical)
 		var cols := int(GRID_W / CELL_W)
 		var col := int(pos.x / CELL_W)
-		var r := int((pos.y - 10) / CELL_H)
+		var r := int((pos.y - (CELL_H - CARD_H) / 2.0) / CELL_H)
 		if col >= 0 and col < cols and r >= 0:
 			var idx := r * cols + col
 			if idx < _shown.size():

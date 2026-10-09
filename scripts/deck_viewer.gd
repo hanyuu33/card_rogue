@@ -13,8 +13,11 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const CARD_W := 76.0
 const CARD_H := 92.0
-## R114：间距要装得下骑在框上的数值徽章（CARD_BLEED × k = 7 × 1.314 ≈ 9.2，上下各一份）。
-const GAP := 20.0
+## R115：间距要装得下骑在框上的数值（CARD_BLEED × k = 8.5 × 1.314 ≈ 11.17，左右各一份）。
+## ⚠️ 22 是**算出来的上限**：每侧 11.0，比需要的 11.17 少 0.17px —— 亚像素，出图看不出
+## （视觉上就是「相邻两卡最外侧那两个数值刚好相接」，正是想要的紧凑感）。
+## 再大 1 就会让 `_layout()` 的列数从 11 掉到 10，得不偿失。
+const GAP := 22.0
 
 var _btn: Button
 var _panel: Control
