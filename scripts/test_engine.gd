@@ -10741,6 +10741,14 @@ func _init() -> void:
 
 	# ---- ③ 核心：被改造时供一张 0 费改造牌到手 ----
 	var r89_e1 := _new_engine([], 30, 30, -1, false)
+	# ⚠️ **钉死引擎随机种子**：供能池里有 0 费卡「超越极限」8053，而 `_inf_armor_feed`
+	#    用的是 `rng.randi_range(0, pool.size()-1)`，`GameEngine.rng` 又是默认随机播种。
+	#    摇到 0 费卡时，「在手牌里被压成 0」与「卡面原费」都是 0 → `cost > 0` 那条断言
+	#    变成 0→0 空转并假失败（实测 32s 全量门禁里约 1/9 概率翻红，R113 抓到一次）。
+	#    种子 1 → 抽到「生产订单」8048（原费 2）。
+	#    ⚠️ 若以后改了机械之心的奖励池导致这条断言翻红，重跑 `_probe_feed_seed.gd`
+	#    换一个种子即可 —— 这是**确定性**失败（不是偶发），看到就等于收到提醒。
+	r89_e1.rng.seed = 1
 	r89_e1.start_game()
 	var r89_p: Placement = r89_e1.state.place(
 		CardData.from_dict(r89_armor.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
@@ -10764,7 +10772,7 @@ func _init() -> void:
 			% ("?" if r89_got == null else r89_got.card_name))
 	check(r89_got != null and r89_e1.cost_of(r89_got) == GameEngine.INF_ARMOR_FEED_COST
 			and r89_got.cost > 0,
-		"R89 供能牌在手牌里费用为 %d（卡面原费 %d）"
+		"R89 供能牌在手牌里费用为 %d（卡面原费 %d；原费 0 = 种子 1 已失效，重跑 _probe_feed_seed.gd 换种子）"
 			% [GameEngine.INF_ARMOR_FEED_COST, 0 if r89_got == null else r89_got.cost])
 	check(r89_p.upgrade_feed_turn == r89_e1.turn_total,
 		"R89 「每回合一次」：供能后记下本回合号（%d）" % r89_e1.turn_total)
@@ -10791,6 +10799,7 @@ func _init() -> void:
 
 	# ---- ⑤ 每回合一次：同回合内第二次改造不再供能 ----
 	var r89_e2 := _new_engine([], 30, 30, -1, false)
+	r89_e2.rng.seed = 1   # 同上：整段 R89 用例可复现
 	r89_e2.start_game()
 	var r89_p2: Placement = r89_e2.state.place(
 		CardData.from_dict(r89_armor.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)

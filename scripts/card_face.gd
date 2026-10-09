@@ -5,10 +5,11 @@ class_name CardFace
 ## 卡面结构（与 tkinter 版 draw_card_face 一致）：
 ##   白底黑边 + 左上费用圆 + 插图 + 名字 + 种类（着色）+ 数值行。
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 const CARD_H_DESIGN := 70.0   # 缩放基准高（battle 版小卡高）
 
-const COL_POWER := Color("b8860b")    # 力量数值：金黄（左下）
-const COL_HEALTH := Color("c1121f")   # 生命数值：红（右下）
+## 力量 / 生命数值色改读 UiTheme（R113 顺带修掉 #b8860b 只有 3.25:1 的对比度问题）。
 
 static var _art_cache := {}   # id -> Texture2D / null（找不到图也缓存，避免反复查盘）
 
@@ -37,20 +38,19 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	## （作者口径：卡片是一个整体，排版要与正常状态完全一致，别为了躲裁剪挪数值）。
 	var k := rect.size.y / CARD_H_DESIGN
 	var bottom: float = rect.end.y
-	canvas.draw_rect(rect, Color.WHITE)
+	canvas.draw_rect(rect, UiTheme.SURFACE)
 	# 边框颜色即稀有度：普通=黑 稀有=蓝 史诗=紫（选中时红色高亮优先）
-	var frame: Color = Color("c1121f") if selected else card.rarity_color()
+	var frame: Color = UiTheme.SELECT_RING if selected else card.rarity_color()
 	canvas.draw_rect(rect, frame, false, 2.0 if selected else 1.5)
 	# 费用圆
 	var cost_r := 7.0 * k
 	var cost_c := rect.position + Vector2(cost_r + 3, cost_r + 3)
-	canvas.draw_circle(cost_c, cost_r, Color("2255aa"))
+	canvas.draw_circle(cost_c, cost_r, UiTheme.COST_BG)
 	# X 费卡（流星雨 9083）：费用不是定值 → 费用圆直接画「X」
 	var cost_txt: String = "X" if card.x_cost else str(card.cost)
-	_draw_center(canvas, font_bold, int(9 * k), cost_txt, cost_c, Color.WHITE)
+	_draw_center(canvas, font_bold, int(9 * k), cost_txt, cost_c, UiTheme.SURFACE)
 	# 种类 + 数值：力量在左下（黄）、生命在右下（红），射程/速度收成中间一行
-	var kind_col: Color = {"盟友": Color("2a7a2a"), "技能": Color("7a2a7a"),
-			"效果": Color("1d7a4f"), "工事": Color("7a5a2a")}.get(card.kind, Color.GRAY)
+	var kind_col: Color = UiTheme.kind_color(card.kind)
 	var is_unit: bool = card.kind == "盟友" or card.kind == "工事"
 	# 插图区（横置的卡放不下）
 	if not is_tapped:
@@ -63,7 +63,7 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	# 名字
 	var nm := card.card_name if card.card_name.length() <= 6 else card.card_name.substr(0, 5) + "…"
 	_draw_center(canvas, font_bold, int(9 * k), nm,
-			rect.position + Vector2(rect.size.x / 2, 12 * k), Color.BLACK)
+			rect.position + Vector2(rect.size.x / 2, 12 * k), UiTheme.INK_900)
 	var cx := rect.position.x + rect.size.x / 2
 	if is_unit:
 		_draw_center(canvas, font, int(8 * k), card.kind,
@@ -71,14 +71,14 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		var sub: String = "程%d 速%d" % [card.attack_range, card.move_speed] \
 				if card.kind == "盟友" else "程%d" % card.attack_range
 		_draw_center(canvas, font, int(7.5 * k), sub,
-				Vector2(cx, bottom - 19 * k), Color("777777"))
+				Vector2(cx, bottom - 19 * k), UiTheme.INK_500)
 		var shown_power: int = power_override if power_override >= 0 else card.power
 		_draw_corner_stats(canvas, font, font_bold, k, rect, shown_power, hp)
 	else:
 		_draw_center(canvas, font, int(8 * k), card.kind,
 				Vector2(cx, bottom - 28 * k), kind_col)
 		_draw_center(canvas, font, int(8 * k), "直接使用",
-				Vector2(cx, bottom - 12 * k), Color("444444"))
+				Vector2(cx, bottom - 12 * k), UiTheme.INK_600)
 	# 【字段系统 R91】在插图区底与「kind」之间的空隙里追加一行字段提示。
 	# ⚠️ **不硬编码任何字段**：画的就是 `card.affixes`（引擎赋给它的、或卡面自带的），
 	# 所以「过载给某张牌加了疾行」「能量屏障给了护盾」这类**后续赋予**的字段
@@ -94,15 +94,15 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		if card.affix_line() != line:
 			line += "…"
 		_draw_center(canvas, font, int(7 * k), line,
-				Vector2(cx, bottom - 37 * k), Color("8a5a00"))
+				Vector2(cx, bottom - 37 * k), UiTheme.STAT_POWER)
 
 
 static func _draw_corner_stats(canvas: CanvasItem, font: Font, font_bold: Font,
 		k: float, rect: Rect2, power: int, hp: int) -> void:
 	## 单位数值角标：左下「力N」金黄、右下「生N」红 —— 大号加粗，一眼可分。
 	var base_y := rect.end.y - 5.0 * k
-	_stat_corner(canvas, font, font_bold, k, rect, "力", power, COL_POWER, base_y, false)
-	_stat_corner(canvas, font, font_bold, k, rect, "生", hp, COL_HEALTH, base_y, true)
+	_stat_corner(canvas, font, font_bold, k, rect, "力", power, UiTheme.STAT_POWER, base_y, false)
+	_stat_corner(canvas, font, font_bold, k, rect, "生", hp, UiTheme.STAT_HEALTH, base_y, true)
 
 
 static func _stat_corner(canvas: CanvasItem, font: Font, font_bold: Font, k: float,

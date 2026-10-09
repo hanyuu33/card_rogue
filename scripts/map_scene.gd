@@ -12,11 +12,13 @@ extends Control
 ## 分层：本张地图属于 RunState.current_layer（当前为第一层），标题栏会显示层名；
 ## 地图上的战斗关卡与事件都只从该层的内容池里取（见 GameLayers）。
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 const NODE_R := 17.5                 # 节点半径（留出层间呼吸空间）
 const SLOT_CX := 640.0               # 横向槽位中心 = 窗口水平中线（起点/Boss 居中）
 const SLOT_DX := 210.0               # 槽位间距（5 个槽位：640±2×210）
-const COL_Y0 := 668.0                # 起点层 y（下）
-const COL_DY := -96.0                # 层间距（向上推进；起点 + 12 层 + Boss = 14 层，见 RogueMap.COLS）
+const LAYOUT_Y0 := 668.0                # 起点层 y（下）
+const LAYOUT_DY := -96.0                # 层间距（向上推进；起点 + 12 层 + Boss = 14 层，见 RogueMap.COLS）
 ## 层间距 96px × 12 层 = 1152px，远超 720 的视口高度 —— 所以地图支持
 ## 上下拖动 + 滚轮滚动（见 _scroll_y / _clamp_scroll），把纵向空间让出来。
 
@@ -70,10 +72,8 @@ var _boss_name := ""      # 本层 Boss 关卡名（Boss 节点上方名牌；�
 
 
 func _ready() -> void:
-	_font = SystemFont.new()
-	_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
-	_font_bold = SystemFont.new()
-	_font_bold.font_names = _font.font_names
+	_font = UiTheme.font()
+	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
 	add_child(sfx)
 	_records = RunState.load_records()
@@ -220,15 +220,15 @@ func _node_pos(node: Dictionary) -> Vector2:
 	var col := int(node["col"])
 	var slot := int(node.get("slot", 2))
 	var x := SLOT_CX + (slot - 2) * SLOT_DX
-	var y := COL_Y0 + col * COL_DY + _scroll_y
+	var y := LAYOUT_Y0 + col * LAYOUT_DY + _scroll_y
 	return Vector2(x, y)
 
 
 func _map_content_bounds() -> Vector2:
 	## 地图内容在没有滚动时的纵向范围 [顶, 底]（世界坐标，未加 _scroll_y）。
 	## 顶部留出标题栏的空间，底部留出节点半径，避免拖到边界时节点被切掉。
-	var top := COL_Y0 + (RogueMap.COLS - 1) * COL_DY - NODE_R - 40.0
-	var bottom := COL_Y0 + NODE_R + 28.0
+	var top := LAYOUT_Y0 + (RogueMap.COLS - 1) * LAYOUT_DY - NODE_R - 40.0
+	var bottom := LAYOUT_Y0 + NODE_R + 28.0
 	return Vector2(top, bottom)
 
 
@@ -261,7 +261,7 @@ func _scroll_to_current() -> void:
 			break
 	_clamp_scroll()
 	# 让当前层落在视口偏上位置（上方留出将要走的几层）
-	var want := COL_Y0 + col * COL_DY + _scroll_y
+	var want := LAYOUT_Y0 + col * LAYOUT_DY + _scroll_y
 	var target := SCROLL_TOP_MARGIN + (VIEW_H - SCROLL_TOP_MARGIN) * 0.55
 	_scroll_y += target - want
 	_clamp_scroll()
@@ -820,8 +820,8 @@ func _draw_title() -> void:
 func _edge_points(a: Vector2, b: Vector2) -> PackedVector2Array:
 	## 层间连线：两端竖直切线的 S 形贝塞尔 —— 比直线柔和，交叉处更容易分辨。
 	var pts := PackedVector2Array()
-	var c1 := a + Vector2(0, COL_DY * 0.45)
-	var c2 := b - Vector2(0, COL_DY * 0.45)
+	var c1 := a + Vector2(0, LAYOUT_DY * 0.45)
+	var c2 := b - Vector2(0, LAYOUT_DY * 0.45)
 	for i in 17:
 		pts.append(a.bezier_interpolate(c1, c2, b, float(i) / 16.0))
 	return pts

@@ -7,6 +7,8 @@ extends Control
 ##   中间：卡牌网格（滚动），点选高亮
 ##   右栏：大卡详情（卡面 + 数值 + 效果文本）
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
 
@@ -54,10 +56,8 @@ var _font_bold: SystemFont
 
 
 func _ready() -> void:
-	_font = SystemFont.new()
-	_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
-	_font_bold = SystemFont.new()
-	_font_bold.font_names = _font.font_names
+	_font = UiTheme.font()
+	_font_bold = UiTheme.font_bold()
 	repo = CardRepo.load_json()
 	_all = repo.all_cards()
 	for t: String in ["费用不限", "1 费", "2 费", "3 费", "4 费", "5 费+"]:

@@ -9,6 +9,8 @@ extends CanvasLayer
 ## 用法：在场景 _ready 里 `DeckViewer.attach(self)`（可选第二参数指定按钮位置）。
 ## 命令行 -- --deckview：打开后自动展开面板（截图验证用）。
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 const CARD_W := 76.0
 const CARD_H := 92.0
 const GAP := 10.0
@@ -34,10 +36,8 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	_font = SystemFont.new()
-	_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
-	_font_bold = SystemFont.new()
-	_font_bold.font_names = _font.font_names
+	_font = UiTheme.font()
+	_font_bold = UiTheme.font_bold()
 
 	_btn = Button.new()
 	_btn.custom_minimum_size = Vector2(114, 32)

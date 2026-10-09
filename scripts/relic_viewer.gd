@@ -18,6 +18,8 @@ extends CanvasLayer
 ## 命令行 -- relicpanel：强制点开完整详情面板（截图验证用）
 
 # ---- 悬浮速览浮层（R75：看描述的唯一日常入口，不用点） ----
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 const HOVER_W := 430.0            # 浮层宽
 const HOVER_MAX_H := 430.0        # 浮层最大高（超过就装不下 → 允许点开详情）
 const FOLD_MAX := 6               # 浮层最多完整列出的条目数（超过同样允许点开详情）
@@ -61,10 +63,8 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	_font = SystemFont.new()
-	_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
-	_font_bold = SystemFont.new()
-	_font_bold.font_names = _font.font_names
+	_font = UiTheme.font()
+	_font_bold = UiTheme.font_bold()
 
 	_btn = Button.new()
 	_btn.custom_minimum_size = Vector2(100, 32)

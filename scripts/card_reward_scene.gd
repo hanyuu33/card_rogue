@@ -6,6 +6,8 @@ extends Control
 ## 未来接入肉鸽流程时：设置 reward_type → change_scene 进入本场景，
 ## 连接 reward_chosen / reward_skipped 信号即可，不需要改本界面的内部逻辑。
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 signal reward_chosen(card: CardData)
 signal reward_skipped
 
@@ -48,10 +50,8 @@ var _relic_btn: Button = null         # 「待决定道具」重新打开按钮
 
 
 func _ready() -> void:
-	_font = SystemFont.new()
-	_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
-	_font_bold = SystemFont.new()
-	_font_bold.font_names = _font.font_names
+	_font = UiTheme.font()
+	_font_bold = UiTheme.font_bold()
 	repo = CardRepo.load_json()
 	# 牌库任何时候都可以查看（无论在哪个界面）；返回按钮占着右上 → 按钮往左挪
 	DeckViewer.attach(self, Vector2(1000, 6))

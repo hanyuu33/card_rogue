@@ -20,10 +20,12 @@ extends RefCounted
 ## 收在显示层既拿到自然语言，又让 `cards.json` 保持「带完整补注的权威版本」。
 
 ## 是否在显示层隐藏「（…）」括号补注。设 false 可一键恢复原样显示。
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 const HIDE_PARENS := true
 
 ## 代码片段（`反引号`）的着色 —— 与正文的蓝色刻意分开，一眼能认出来。
-const COL_CODE := Color("a8621f")
+## 关键字高亮色统一由 UiTheme 提供（R113）。
 
 ## 词句归一：把卡面里**对不上自然语言**的写法改正过来。**按顺序**做替换，
 ## 所以长词要排在短词前面（「返回手卡」必须早于「手卡」）。
@@ -254,7 +256,7 @@ static func draw_wrapped(canvas: CanvasItem, font: Font, font_bold: Font, segs: 
 			var f: Font = fnt_b if bool(seg.get("bold", false)) else font
 			var col: Color = base_col
 			if bool(seg.get("code", false)):
-				col = COL_CODE
+				col = UiTheme.CODE_TEXT
 			elif bool(seg.get("bold", false)):
 				col = bold_col
 			var t: String = str(seg.get("text", ""))

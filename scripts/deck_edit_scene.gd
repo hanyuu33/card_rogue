@@ -17,6 +17,8 @@ extends Control
 ## 选中状态统一存在 `_sel: Array[int]`（格子下标集合）里：单选模式的 limit 是 1，
 ## 于是「点新的替换旧的」是同一套代码的自然结果，不另开一条通道。
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 const GAP := 14.0            # 网格间距
 const MARGIN := 40.0         # 网格左右留白
 const TOP_Y := 108.0         # 网格顶部（标题栏 + 提示之下）
@@ -47,10 +49,8 @@ var _grid_y := TOP_Y
 
 
 func _ready() -> void:
-	_font = SystemFont.new()
-	_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
-	_font_bold = SystemFont.new()
-	_font_bold.font_names = _font.font_names
+	_font = UiTheme.font()
+	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
 	add_child(sfx)
 	repo = CardRepo.load_json()

@@ -2,8 +2,9 @@ extends Control
 ## 标题界面（肉鸽版）—— 标题 → 图鉴 / 录像回放 / 开始冒险。
 ## R58：移除了「卡牌奖励（演示）」「事件：休息（演示）」两个入口（开发调试用，正式流程已覆盖）。
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 var _bg_tex: Texture2D
-var _back_tex: Texture2D
 var _font: SystemFont
 var sfx: Sfx
 var _t := 0.0
@@ -18,21 +19,18 @@ func _ready() -> void:
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_title("卡牌肉鸽")
 	_bg_tex = load("res://assets/battle_bg.png")
-	_back_tex = load("res://assets/cardback.png")
-	_font = SystemFont.new()
-	_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
+	_font = UiTheme.font()
 	sfx = Sfx.new()
 	add_child(sfx)
 	$Buttons/StartBtn.pressed.connect(_on_start)
 	$Buttons/GalleryBtn.pressed.connect(_on_gallery)
 	$Buttons/QuitBtn.pressed.connect(_on_quit)
 	# 录像回放入口（R46）：插在「退出」之前
-	var cjk := SystemFont.new()
-	cjk.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
+	var cjk := UiTheme.font()
 	var rp_btn := Button.new()
 	rp_btn.text = "录像回放"
 	rp_btn.add_theme_font_override("font", cjk)
-	rp_btn.add_theme_font_size_override("font_size", 20)
+	rp_btn.add_theme_font_size_override("font_size", UiTheme.FS_SUBHEAD)
 	$Buttons.add_child(rp_btn)
 	$Buttons.move_child(rp_btn, $Buttons.get_child_count() - 2)
 	rp_btn.pressed.connect(_on_replays)
@@ -46,7 +44,7 @@ func _ready() -> void:
 	# 漂浮卡背：随机初速/相位/大小，缓慢上飘
 	for i in 6:
 		_float_cards.append({
-			"x": randf() * 1280.0,
+			"x": _ghost_x(),
 			"y": randf() * 720.0,
 			"spd": randf_range(10.0, 26.0),
 			"ph": randf() * TAU,
@@ -66,6 +64,14 @@ func _ready() -> void:
 		t.start()
 
 
+func _ghost_x() -> float:
+	## 幽灵卡的横向出生点：只在左右留白区，**永不压住居中的标题与按钮**。
+	## （原先是 `randf() * 1280.0`，会随机落在标题/按钮正后方 —— 截图里能看到压字。）
+	var m := UiTheme.GHOST_CARD_MARGIN
+	var left := randf() < 0.5
+	return (randf() * m if left else 1.0 - m + randf() * m) * size.x
+
+
 func _build_difficulty_row() -> void:
 	## 难度档位选择（R47）：0 宽松 / 1 标准 / 2 困难 —— 和角色一起在开局前定好。
 	## 0 = 战斗+3 血、休息 40%；1 = 战斗不回血、休息 40%；2 = 战斗不回血、休息 25%（原状）。
@@ -82,8 +88,8 @@ func _build_difficulty_row() -> void:
 	var label := Label.new()
 	label.text = "难度档位"
 	label.add_theme_font_override("font", _font)
-	label.add_theme_font_size_override("font_size", 15)
-	label.add_theme_color_override("font_color", Color("3a4152"))
+	label.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
+	label.add_theme_color_override("font_color", UiTheme.INK_900)
 	row.add_child(label)
 	for i in RunState.DIFFICULTY_COUNT:
 		var b := Button.new()
@@ -91,7 +97,7 @@ func _build_difficulty_row() -> void:
 		b.toggle_mode = true
 		b.tooltip_text = RunState.DIFFICULTY_NOTES[i]
 		b.add_theme_font_override("font", _font)
-		b.add_theme_font_size_override("font_size", 15)
+		b.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
 		b.pressed.connect(_on_pick_difficulty.bind(i))
 		row.add_child(b)
 		_diff_btns.append(b)
@@ -103,8 +109,8 @@ func _build_difficulty_row() -> void:
 	note.offset_bottom = 366.0
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	note.add_theme_font_override("font", _font)
-	note.add_theme_font_size_override("font_size", 12)
-	note.add_theme_color_override("font_color", Color("6a7280"))
+	note.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
+	note.add_theme_color_override("font_color", UiTheme.INK_600)
 	add_child(note)
 	_diff_note = note
 	_refresh_difficulty()
@@ -131,7 +137,7 @@ func _process(delta: float) -> void:
 		f.y -= float(f.spd) * delta
 		if float(f.y) < -110.0:
 			f.y = 830.0
-			f.x = randf() * 1280.0
+			f.x = _ghost_x()
 	queue_redraw()
 
 
@@ -139,23 +145,25 @@ func _draw() -> void:
 	if _bg_tex != null:
 		draw_texture_rect(_bg_tex, Rect2(Vector2.ZERO, size), false)
 		# 半透明白色罩层，让按钮和标题更清晰
-		draw_rect(Rect2(Vector2.ZERO, size), Color(1, 1, 1, 0.55))
+		draw_rect(Rect2(Vector2.ZERO, size), UiTheme.OVERLAY_TITLE)
 	else:
-		draw_rect(Rect2(Vector2.ZERO, size), Color("e9e7e2"))
-	# 漂浮卡背（淡）+ 左右摇曳
-	if _back_tex != null:
-		for f: Dictionary in _float_cards:
-			var pos := Vector2(float(f.x) + sin(_t * 0.7 + float(f.ph)) * 18.0, float(f.y))
-			draw_set_transform(pos, float(f.rot), Vector2(float(f.sc), float(f.sc)))
-			draw_texture_rect(_back_tex, Rect2(-29, -35, 58, 70), false,
-					Color(0.25, 0.28, 0.38, 0.14))
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		draw_rect(Rect2(Vector2.ZERO, size), UiTheme.BOARD_BG)
+	# 幽灵卡母题（R113）：浅色卡 + 描边，只出现在左右留白区。
+	# 这里**故意不用** cardback.png —— 深海军蓝贴图在浅米黄底上，任何低透明度都会兑成中灰，
+	# 菱形花纹的对比度被同比例压缩，最后只剩一个「灰色占位块」。详见 ui_theme.gd 的注释。
+	for f: Dictionary in _float_cards:
+		var pos := Vector2(float(f.x) + sin(_t * 0.7 + float(f.ph)) * 18.0, float(f.y))
+		draw_set_transform(pos, float(f.rot), Vector2(float(f.sc), float(f.sc)))
+		draw_rect(Rect2(-29, -35, 58, 70), UiTheme.GHOST_CARD_FILL)
+		draw_rect(Rect2(-29, -35, 58, 70), UiTheme.GHOST_CARD_LINE, false, 1.0)
+		draw_rect(Rect2(-22, -28, 44, 56), UiTheme.GHOST_CARD_INNER, false, 1.0)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	# 底部信息
 	var ver := "v1.0-rogue · 肉鸽开发版"
 	draw_string(_font, Vector2(size.x - 250, size.y - 16), ver,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("8a8a8a"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	draw_string(_font, Vector2(14, size.y - 16), "Godot 4.3 自包含副本",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("8a8a8a"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
 
 
 func _on_start() -> void:

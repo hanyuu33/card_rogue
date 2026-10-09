@@ -21,6 +21,8 @@ extends Control
 ##   事件 = rest / treasure / whisper / struggle / gaze / pear / bluefish / relic_chest。
 ## 缺图时回退内置绘制（所有事件共用的篝火动画 / 深灰底色）。
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 const WHISPER_ID := 6010
 const RICE_ID := 6012             # 一袋米抗几楼（鸭之凝视事件道具）
 const PEAR_ID := 6019             # 鸭梨（鸭梨山大事件道具）
@@ -280,8 +282,7 @@ func _apply_ui_assets() -> void:
 
 
 func _ready() -> void:
-	_font = SystemFont.new()
-	_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
+	_font = UiTheme.font()
 	sfx = Sfx.new()
 	add_child(sfx)
 	# 牌库任何时候都可以查看（无论在哪个界面）

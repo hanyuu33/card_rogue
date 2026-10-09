@@ -11,6 +11,8 @@ extends Control
 
 # ------------------------------------------------------------ 布局常量（设计坐标 1280x720）
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
 const CARD_W := 58.0
@@ -249,10 +251,8 @@ var _net_wait := 0.0
 func _ready() -> void:
 	_bg_tex = load("res://assets/battle_bg.png")
 	_back_tex = load("res://assets/cardback.png")
-	_font = SystemFont.new()
-	_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
-	_font_bold = SystemFont.new()
-	_font_bold.font_names = _font.font_names
+	_font = UiTheme.font()
+	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
 	add_child(sfx)
 	map_btn.pressed.connect(_toggle_map)
@@ -7217,9 +7217,9 @@ func _draw_info_panel() -> void:
 		if pl != null and pw_now != card.power:
 			pw_txt = "%d（原 %d）" % [pw_now, card.power]
 		_draw_string_nw(_font_bold, 10, "力量 %s" % pw_txt, Vector2(left, y),
-				CardFace.COL_POWER)
+				UiTheme.STAT_POWER)
 		_draw_string_nw(_font_bold, 10, "生命 %s" % hp_txt, Vector2(left + inner_w / 2, y),
-				CardFace.COL_HEALTH)
+				UiTheme.STAT_HEALTH)
 		y += 17.0
 		var mv: String = "射程 %d   移速 %d" % [card.attack_range, card.move_speed] \
 				if card.kind == "盟友" else "射程 %d" % card.attack_range

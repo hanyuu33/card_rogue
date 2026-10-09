@@ -6,6 +6,8 @@ extends Control
 ## 往 PlayerClass.ids() 加新角色，这里会自动多出一张卡面（卡面数 × CARD_W + 间隙
 ## 需放得下视口 1280：3 张 = 1056px OK；4 张 = 1448px 就要改 CARD_W/GAP 了）。
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 const CARD_W := 320.0
 const CARD_H := 400.0
 const GAP := 48.0
@@ -20,10 +22,8 @@ var _picked := false
 
 
 func _ready() -> void:
-	_font = SystemFont.new()
-	_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
-	_font_bold = SystemFont.new()
-	_font_bold.font_names = _font.font_names
+	_font = UiTheme.font()
+	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
 	add_child(sfx)
 	DeckViewer.attach(self)

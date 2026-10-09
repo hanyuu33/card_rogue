@@ -3,6 +3,8 @@ extends Control
 ## RunState.relic_choice 里是 3 个随机不重复的初始道具，选 1 个收下。
 ## 即时道具需要再选卡的（源数之力 / 失忆药水）→ 转交卡组编辑场景。
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 const CARD_W := 264.0
 const CARD_H := 336.0
 const GAP := 56.0
@@ -19,10 +21,8 @@ var _picked := false
 
 
 func _ready() -> void:
-	_font = SystemFont.new()
-	_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
-	_font_bold = SystemFont.new()
-	_font_bold.font_names = _font.font_names
+	_font = UiTheme.font()
+	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
 	add_child(sfx)
 	# 牌库任何时候都可以查看（无论在哪个界面）

@@ -4,6 +4,8 @@ extends Control
 ## 回放时从 run 种子重建全部随机，再逐条执行录下的玩家决策。
 ## 文件保存在 user://replays/（自动保留最近 30 份）。
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 var _font: SystemFont
 var _font_bold: SystemFont
 var sfx: Sfx
@@ -14,10 +16,8 @@ var _hover_del := -1
 
 
 func _ready() -> void:
-	_font = SystemFont.new()
-	_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"])
-	_font_bold = SystemFont.new()
-	_font_bold.font_names = _font.font_names
+	_font = UiTheme.font()
+	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
 	add_child(sfx)
 	DeckViewer.attach(self)
