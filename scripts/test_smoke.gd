@@ -149,6 +149,25 @@ func _initialize() -> void:
 				_reset()
 				RunState.start_run(_map())
 				RunState.pending_node = {"type": "chest"}],
+		# R121：覆盖层让位 —— 奖励悬浮窗盖住道具栏时，道具悬停必须停止响应
+		#   ① 事件页：RelicViewer 的速览浮层与按钮 tooltip 读的是**鼠标坐标**，不认覆盖层
+		#   ② 战斗页：右栏道具栏的悬浮说明由 _on_hover 跟着鼠标画
+		# 注意顺序：_seed_rewards() 会把 relics 清空，所以道具要**之后**再给。
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "rest"}
+				_seed_rewards()
+				RunState.relics = [6001, 6002],
+			_check_relic_hover_gate],
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"})
+				_seed_rewards()
+				RunState.relics = [6001, 6002],
+			_check_battle_hover_gate],
 	]
 	print("SMOKE === 开始（%d 项场景用例）===" % _plan.size())
 	_next()
@@ -160,6 +179,9 @@ func _reset() -> void:
 	# R119：end_run **故意**不清待领奖励队列（通关那一场的战利品要留在结算面板上给玩家看），
 	# 但冒烟用例之间必须互不污染 → 在这里显式清掉。
 	RunState.pending_rewards = []
+	# R121：同理清掉覆盖层登记 —— 用例里 open() 过面板又没 close() 就结束的话，
+	# 阻塞态会漏给后面的用例，让那些用例的道具悬停莫名其妙全部失灵。
+	UiGate.reset()
 
 
 func _map() -> Array:
@@ -217,6 +239,103 @@ func _check_reward_panel_view(scene: Variant, want_view: int, label: String) -> 
 	p._root.queue_redraw()
 	print("SMOKE OK R119 奖励悬浮窗：%s 视图渲染（%d 条待领，宿主 %s）"
 			% [label, RunState.pending_reward_count(), str(scene.name)])
+
+
+func _check_relic_hover_gate(scene: Variant) -> void:
+	## R121：奖励悬浮窗（满屏覆盖层）盖着时，RelicViewer 的道具悬停必须让位。
+	## ⚠️ 这里**不**读真实鼠标位置 —— 直接调悬停判定的唯一口 `_want_hover()`。
+	##    否则断言会随鼠标停在哪里而飘（同一份代码在不同机器上结果不同）。
+	var rv: Variant = null
+	for c in scene.get_children():
+		if c is RelicViewer:
+			rv = c
+	if rv == null:
+		_smoke_fail("R121 覆盖层让位：事件场景没有挂上 RelicViewer")
+		return
+	if RunState.relics.is_empty():
+		_smoke_fail("R121 覆盖层让位：用例需要先给玩家道具，否则悬停判定本就是空跑")
+		return
+	var p: Variant = scene._reward_panel
+	if p == null:
+		_smoke_fail("R121 覆盖层让位：事件场景没有挂上 RewardPanel")
+		return
+	var btn_pt: Vector2 = Rect2(rv._btn.position, rv._btn.size).get_center()
+	var far_pt := Vector2(200, 640)
+	# ① 面板关着：指着「道具 N」按钮 → 该悬停；指着远端 → 不该悬停
+	p.close()
+	if not bool(rv._want_hover(btn_pt)):
+		_smoke_fail("R121 覆盖层让位：没有覆盖层时，指着「道具 N」按钮应判定为悬停")
+		return
+	if bool(rv._want_hover(far_pt)):
+		_smoke_fail("R121 覆盖层让位：鼠标在远端时不该判定为悬停")
+		return
+	# ② 面板开着：哪怕指着按钮也必须让位。
+	#    ⚠️ `_want_hover()` 是纯判定（立刻生效）；按钮的显隐 / tooltip 与速览浮层
+	#       是**逐帧**刷的 → 断言前必须先跑一帧 `_process()`，与真实运行一致。
+	p.open()
+	if not UiGate.blocked():
+		_smoke_fail("R121 覆盖层让位：奖励悬浮窗打开后 UiGate 应处于阻塞态（push 漏了）")
+		return
+	if bool(rv._want_hover(btn_pt)):
+		_smoke_fail("R121 覆盖层让位：奖励悬浮窗盖着时，指着按钮仍判定为悬停")
+		return
+	rv._hover_on = true          # 故意留一个「已经亮着的速览浮层」看它会不会被灭掉
+	rv._hover_layer.visible = true
+	rv._process(0.016)
+	if bool(rv._hover_on) or bool(rv._hover_layer.visible):
+		_smoke_fail("R121 覆盖层让位：面板盖着时已展开的速览浮层没有被灭掉")
+		return
+	if str(rv._btn.tooltip_text) != "":
+		_smoke_fail("R121 覆盖层让位：奖励悬浮窗盖着时道具按钮仍有 tooltip「%s」"
+				% str(rv._btn.tooltip_text))
+		return
+	# ③ 关掉面板：阻塞解除，按钮 / tooltip / 悬停全部回来（证明 pop 接在同一个唯一口上）
+	p.close()
+	if UiGate.blocked():
+		_smoke_fail("R121 覆盖层让位：面板关闭后 UiGate 仍在阻塞态（pop 漏了）")
+		return
+	rv._process(0.016)
+	if not bool(rv._want_hover(btn_pt)):
+		_smoke_fail("R121 覆盖层让位：面板关闭后道具悬停没有恢复")
+		return
+	if str(rv._btn.tooltip_text) == "":
+		_smoke_fail("R121 覆盖层让位：面板关闭后道具按钮的 tooltip 没有恢复")
+		return
+	print("SMOKE OK R121 覆盖层让位：奖励悬浮窗开/关 → 道具速览浮层与 tooltip 正确让位/恢复")
+
+
+func _check_battle_hover_gate(scene: Variant) -> void:
+	## R121：战斗页右栏道具栏的悬浮说明（`_hover_relic_tip`）同样要给覆盖层让位。
+	var p: Variant = scene._reward_panel
+	if p == null:
+		_smoke_fail("R121 覆盖层让位（战斗）：场景没有挂上 RewardPanel")
+		return
+	if scene.engine == null or (scene.engine.self_relics as Array).is_empty():
+		_smoke_fail("R121 覆盖层让位（战斗）：用例需要先在道具栏里放几件道具")
+		return
+	var probe_pt: Vector2 = scene._relic_rect(0).get_center()
+	# ① 面板关着：悬停道具徽章 → 该出说明（正向对照，证明断言不是空跑）
+	p.close()
+	scene._on_hover(probe_pt)
+	if str(scene._hover_relic_tip) == "":
+		_smoke_fail("R121 覆盖层让位（战斗）：没有覆盖层时，悬停道具徽章应弹出说明")
+		return
+	# ② 面板开着：同一个位置必须什么都不弹（旧说明也要被清掉）
+	p.open()
+	scene._on_hover(probe_pt)
+	if str(scene._hover_relic_tip) != "" or scene._hover_card != null:
+		_smoke_fail("R121 覆盖层让位（战斗）：奖励悬浮窗盖着时仍弹了说明（tip=「%s」）"
+				% str(scene._hover_relic_tip))
+		return
+	# ③ 场景自带的全屏面板（道具浏览）同理
+	p.close()
+	scene._relics_visible = true
+	scene._on_hover(probe_pt)
+	scene._relics_visible = false
+	if str(scene._hover_relic_tip) != "":
+		_smoke_fail("R121 覆盖层让位（战斗）：道具浏览面板开着时仍弹了道具说明")
+		return
+	print("SMOKE OK R121 覆盖层让位：战斗道具栏说明在奖励悬浮窗 / 道具浏览面板下正确让位")
 
 
 func _check_deck_duck_blood(scene: Variant) -> void:

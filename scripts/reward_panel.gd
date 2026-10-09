@@ -31,6 +31,10 @@ const VIEW_LIST := 0
 const VIEW_RELIC := 1
 const VIEW_CARDS := 2
 
+## R121：本面板是「满屏 + 接管鼠标」的覆盖层 → 打开/关闭时在 UiGate 登记/撤销，
+## 让下层的道具悬停（RelicViewer 速览浮层等）自动让位。
+const GATE_ID := "reward_panel"
+
 const PANEL_W := 1020.0
 const PANEL_H := 584.0
 const PAD := 24.0
@@ -121,6 +125,7 @@ func open() -> void:
 	if RunState.pending_rewards.is_empty():
 		return
 	_open = true
+	UiGate.push(GATE_ID)   # R121：登记覆盖层 —— 下层的道具悬停就此让位
 	_root.visible = true
 	_view = VIEW_LIST
 	_sel = _first_pending("")
@@ -135,10 +140,17 @@ func open() -> void:
 
 func close() -> void:
 	_open = false
+	UiGate.pop(GATE_ID)
 	_root.visible = false
 	_view = VIEW_LIST
 	_scroll = 0.0
 	_refresh_btn()
+
+
+func _exit_tree() -> void:
+	## R121：场景被切掉时也必须撤销登记 —— 否则「阻塞态」会漏进下一个场景，
+	## 那边的道具悬停会莫名其妙全部失灵（而且再也恢复不了）。
+	UiGate.pop(GATE_ID)
 
 
 func _process(_delta: float) -> void:

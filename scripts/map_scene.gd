@@ -631,6 +631,11 @@ func _relic_shown() -> int:
 func _draw_relics() -> void:
 	if not RunState.run_active or RunState.relics.is_empty():
 		return
+	# R121：被覆盖层（奖励悬浮窗 / 本场景的牌库·记录·道具面板）盖住时不认悬停 ——
+	# 否则鼠标划过看不见的道具栏，说明面板会自己冒出来。
+	var hover_ok := not (_deck_visible or _records_visible or _relics_visible) \
+			and not UiGate.blocked() \
+			and (_reward_panel == null or not _reward_panel.is_open())
 	var repo := RelicRepo.load_json()
 	var hovered := -1
 	var shown := _relic_shown()
@@ -648,7 +653,7 @@ func _draw_relics() -> void:
 		draw_rect(chip, Color(0, 0, 0, 0.55), false, 1.0)
 		draw_string(_font_bold, rect.position + Vector2(14, 18), rel.relic_name,
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 18, UiTheme.FS_LABEL, Color("eee6c8"))
-		if rect.has_point(_mouse):
+		if hover_ok and rect.has_point(_mouse):
 			hovered = i
 	# 装不下 → 末位换成「+N 点击看详情」摘要块
 	if _relic_bar_overflowed():
@@ -658,7 +663,7 @@ func _draw_relics() -> void:
 		draw_string(_font_bold, more.position + Vector2(0, 18),
 				"+%d" % (RunState.relics.size() - shown),
 				HORIZONTAL_ALIGNMENT_CENTER, more.size.x, UiTheme.FS_BODY, Color("6a6040"))
-		if more.has_point(_mouse):
+		if hover_ok and more.has_point(_mouse):
 			hovered = -2      # -2 = 悬停在「+N」摘要上
 	if hovered >= 0:
 		var rel2 := repo.get_relic(RunState.relics[hovered])

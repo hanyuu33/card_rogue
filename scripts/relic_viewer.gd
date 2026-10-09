@@ -45,6 +45,7 @@ var _font: SystemFont
 var _font_bold: SystemFont
 var _open := false
 var _hover_on := false           # 鼠标当前在按钮或速览浮层上
+var _blocked := false            # R121：被满屏覆盖层压着（UiGate 登记非空）→ 悬停让位
 var _demo_lock := false          # 命令行演示：锁住状态不被 _process 的鼠标判定改掉
 var _cached_n := -1              # 上次刷新按钮时的道具数（变了就重刷 + 重判可否点击）
 var _scroll := 0.0               # 已滚动的行数（浮点，按行步进）
@@ -100,18 +101,41 @@ func _ready() -> void:
 # ------------------------------------------------------------ 悬浮检测（每帧）
 
 func _process(_delta: float) -> void:
-	if _btn == null or _demo_lock:
+	if _btn == null:
+		return
+	# R121：本层悬停判定读的是**鼠标坐标**（见 _want_hover），完全不认覆盖层 ——
+	# 所以必须显式问一句 UiGate：被奖励悬浮窗 / 牌库面板盖住时一律让位，
+	# 否则鼠标划过看不见的「道具 N」按钮，速览浮层会从面板背后冒出来。
+	var blocked := UiGate.blocked()
+	if blocked != _blocked:
+		_blocked = blocked
+		# 让位 = 灭掉悬停 + 摘掉按钮 tooltip。**不动按钮显隐**（那会让「道具 N」
+		# 与「牌库 N」两个并列入口看起来一缺一留）。
+		# tooltip 必须处理：它是**顶层弹窗**，不认 CanvasLayer 层级，会直接浮在
+		# 奖励悬浮窗上面（用户看到的「看不见道具栏却有悬浮效果」之一）。
+		if blocked:
+			_hover_on = false
+			_hover_layer.visible = false
+		_refresh_btn()
+	if _demo_lock:
 		return
 	# 道具增减（战斗掉落 / 事件给予）后按钮文案与「可否点击」要跟着变
 	if _cached_n != RunState.relics.size():
 		_refresh_btn()
 	_hover_layer.queue_redraw()   # 速览浮层跟随鼠标（提示要画在鼠标旁边）
-	var mp := get_viewport().get_mouse_position()
-	var want := not _open and not RunState.relics.is_empty() \
-			and (Rect2(_btn.position, _btn.size).has_point(mp) or _hover_rect().has_point(mp))
+	var want := _want_hover(get_viewport().get_mouse_position())
 	if want != _hover_on:
 		_hover_on = want
 		_hover_layer.visible = want
+
+
+func _want_hover(mp: Vector2) -> bool:
+	## 悬停速览浮层的**唯一判定口**（绘制与测试都走这里）。
+	## R121：被覆盖层盖住时恒 false —— 玩家看不到道具栏，就不该弹出道具速览。
+	if UiGate.blocked():
+		return false
+	return not _open and not RunState.relics.is_empty() \
+			and (Rect2(_btn.position, _btn.size).has_point(mp) or _hover_rect().has_point(mp))
 
 
 func _btn_rect() -> Rect2:
@@ -138,7 +162,12 @@ func _refresh_btn() -> void:
 	_btn.text = "道具 %d" % _cached_n
 	var clickable := _need_detail()
 	_btn.disabled = not clickable
-	_btn.tooltip_text = "悬浮查看全部道具" if not clickable else "悬浮速览 · 点击看完整详情"
+	# R121：覆盖层盖着时**不给按钮挂 tooltip** —— Button 的 tooltip 是顶层弹窗，
+	# 不认 CanvasLayer 层级，会直接浮在奖励悬浮窗上（用户看到的「看不见道具栏却有悬浮效果」）。
+	if _blocked:
+		_btn.tooltip_text = ""
+	else:
+		_btn.tooltip_text = "悬浮查看全部道具" if not clickable else "悬浮速览 · 点击看完整详情"
 
 
 func _need_detail() -> bool:

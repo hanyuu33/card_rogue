@@ -3664,20 +3664,40 @@ func _on_right_click() -> void:
 		status_text = "已取消"
 
 
-func _on_hover(pos: Vector2) -> void:
-	## 悬停任何有信息的卡（战场/手牌/费用区/弃牌区）→ 左侧信息栏 + 状态栏。
-	## 操作反馈保护期只保护状态栏文字；信息栏始终跟随悬停。
-	# 英雄的弃牌代价面板开着时：不跟手牌/棋盘（面板挡在上面，避免信息栏乱跳）
-	if _hero_pick_idx >= 0:
-		_hover_card = null
-		_hover_pl = null
-		_hover_hand = -1
-		return
+func _clear_hover_state() -> void:
+	## 清空全部悬停态（左侧信息栏 + 状态栏提示 + 道具浮动说明）。
 	_hover_card = null
 	_hover_pl = null
 	_hover_hand = -1
-	var tip := ""
 	_hover_relic_tip = ""
+
+
+func _hover_covered() -> bool:
+	## R121：当前有没有「满屏覆盖层」压住了道具栏 / 棋盘。
+	##   * `UiGate` 登记的外部覆盖层（奖励悬浮窗等跨场景面板）；
+	##   * 战斗内自带的全屏面板：地图总览 / 道具浏览 / 对局记录。
+	## 它们的共同点：鼠标坐标仍落在下层元素上，但玩家看不见 —— 此时再按鼠标位置
+	## 弹说明，就会出现「看不见道具栏却在它上面弹出悬浮效果」（R121 用户报告）。
+	## ⚠️ **不含** `_effects_visible` / `_enemy_effects_visible` / `_deck_visible` /
+	##    `_discard_visible` —— 那些区域面板里的卡是**要**悬停查看的，
+	##    由 `_on_hover` 的 ⓪ 分支单独处理，别在这里误杀。
+	if UiGate.blocked():
+		return true
+	if _reward_panel != null and _reward_panel.is_open():
+		return true
+	return _map_visible or _relics_visible or _log_visible
+
+
+func _on_hover(pos: Vector2) -> void:
+	## 悬停任何有信息的卡（战场/手牌/费用区/弃牌区）→ 左侧信息栏 + 状态栏。
+	## 操作反馈保护期只保护状态栏文字；信息栏始终跟随悬停。
+	## 英雄的弃牌代价面板、以及 R121 的各类满屏覆盖层：都不跟手牌/棋盘
+	## （面板挡在上面，避免信息栏乱跳、避免在看不见的道具栏上弹说明）。
+	if _hero_pick_idx >= 0 or _hover_covered():
+		_clear_hover_state()
+		return
+	_clear_hover_state()
+	var tip := ""
 	# ⓪ 区域浏览面板（效果区 / 敌方效果区 / 弃牌区）开着时：面板盖住了棋盘与手牌，
 	#    只认面板里的卡 → 悬停哪张就在左侧信息栏看哪张，面板空白处什么都不显示。
 	var zp := _zone_panel_cards()
