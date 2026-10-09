@@ -2904,7 +2904,9 @@ func _daedalus_upgrade(self_p: Placement) -> void :
 			if c.kind == "盟友" or c.is_fort():
 				var up := CardData.from_dict(c.to_dict())
 				up.traits = (up.traits as Array).duplicate()
-				up.power += 1
+				# R120：改造奖励走**唯一口**（手/库/弃里的素体也 +1 血）。
+				up.power += _upgrade_atk_gain(up, 1)
+				up.health += _upgrade_hp_gain(up, 0)
 				zone[i] = up
 	# 场上其他友方盟友/工事：走改造路径（力量+1，触发其改造反应），不连锁镜像/供牌
 	for cell in state.board.keys():
@@ -2916,7 +2918,14 @@ func _daedalus_upgrade(self_p: Placement) -> void :
 		if q.card.kind == "盟友" or q.card.is_fort():
 			q.card = CardData.from_dict(q.card.to_dict())
 			q.card.traits = (q.card.traits as Array).duplicate()
-			q.upgrade_atk += 1
+			# R120：改造奖励走**唯一口**（场上的素体也 +1 血；侦察塔不加攻）。
+			var da_atk: int = _upgrade_atk_gain(q.card, 1)
+			var da_hp: int = _upgrade_hp_gain(q.card, 0)
+			q.upgrade_atk += da_atk
+			if da_hp > 0:
+				q.upgrade_hp += da_hp
+				q.card.health += da_hp
+				q.health += da_hp
 			q.upgrade_stacks += 1
 			_on_unit_upgraded(q)
 			_log("代达罗斯：%s 获得改造（力量+1）" % q.card.card_name)
@@ -2950,6 +2959,64 @@ func _spawn_self_clone(card: CardData) -> void :
 	state.hand.append(clone)
 	_log("%s：手牌增加一张复制（回合结束前可打出）" % card.card_name)
 	action.emit("self_clone", {"card": clone, "from": card})
+
+
+## ── R120：**改造奖励的唯一口**（素体 / 战斗骨骼这类卡面字段）──
+##
+##   R84 起「被改造时 +N 力 / +M 血」改读**卡面字段**（`CardData.upgrade_atk_bonus` /
+##   `upgrade_hp_bonus`），但当时只有「升级」8027 与「加厚装甲」8044 两个入口真的读了它 ——
+##   自我修复 8035 / 改造工厂 8037 / 超越极限 8053 / 批量改造 8031 / 系统升级 8039 /
+##   批量传输 8040 / 自主升级 8045 / 生产订单 8048 / 代达罗斯 8060 全都漏掉，
+##   于是素体（+1 生命）在这些改造下**白挨**（用户 R120 报的缺陷）。
+##
+##   现在**所有**施加改造的入口都必须调这两个函数取增量，不许再手写 `+ c.upgrade_hp_bonus`。
+##   口径（用户确认）：**任何**改造都生效，含手牌与牌库里的改造。
+##
+##   两张卡定义了这个口的两个特例：
+##   * 素体 8025（`upgrade_hp_bonus = 1`）：任何改造额外 +1 生命。
+##   * 侦察塔 8032（trait「改造层数」）：改造**不**加自身攻击力（恒为 0）——
+##     它的收益是光环易伤（见 `_scout_aura_bonus`），加在敌人身上而不是塔自己身上。
+func _upgrade_atk_gain(c: CardData, base_atk: int = 0) -> int:
+	## 一次改造给这张卡加的**力量** = 来源给的基数 + 卡面自己的改造奖励；
+	## 带 trait「改造层数」（侦察塔）的卡**恒为 0** —— 它 0 攻就是 0 攻。
+	if c == null:
+		return base_atk
+	if c.traits.has(STACK_DAMAGE_TRAIT):
+		return 0
+	return base_atk + c.upgrade_atk_bonus
+
+
+func _upgrade_hp_gain(c: CardData, base_hp: int = 0) -> int:
+	## 一次改造给这张卡加的**生命** = 来源给的基数 + 卡面自己的改造奖励（素体 +1）。
+	if c == null:
+		return base_hp
+	return base_hp + c.upgrade_hp_bonus
+
+
+func _scout_aura_bonus(victim: Placement, victim_cell: Vector2i) -> int:
+	## 「侦察塔」（8032，trait「改造层数」）的**光环易伤**（R120 用户口径）：
+	## 站在它**攻击范围内**的敌人，受到**任何来源**的伤害都 +1 / 层改造。
+	##
+	##   * 「敌人」= **不同 owner** 的单位 —— 敌方的侦察塔照样罩我方（敌我对称）。
+	##   * 多座塔 / 多层改造**可叠加**（每座塔各算各的层）。
+	##   * 距离用**曼哈顿**（= `attack_distance` 的常态口径），范围读塔自己的
+	##     `attack_range`（塔被改造加过攻程也算数）。
+	##   * 塔自己掉血时不计（它是施放者）；`upgrade_stacks == 0` 的塔不贡献。
+	##   * 只作用于**单位**：敌方 HP（玩家血条）不在光环范围内（卡面写的是「敌人」）。
+	if victim == null or victim.card == null:
+		return 0
+	var bonus := 0
+	for other: Vector2i in state.board:
+		var u: Placement = state.board[other]
+		if u == victim or u.card == null or u.upgrade_stacks <= 0:
+			continue
+		if not u.card.traits.has(STACK_DAMAGE_TRAIT):
+			continue
+		if u.owner == victim.owner:
+			continue
+		if manhattan(other, victim_cell) <= u.card.attack_range:
+			bonus += u.upgrade_stacks
+	return bonus
 
 
 func _on_unit_upgraded(p: Placement) -> void :
@@ -2995,8 +3062,9 @@ func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	# 无条件复制最省心 —— 哪怕它本来就是独立副本，多一次 from_dict 也不影响正确性。
 	p.card = CardData.from_dict(p.card.to_dict())
 	p.card.traits = (p.card.traits as Array).duplicate()
-	var atk_gain: int = UPGRADE_ATK + p.card.upgrade_atk_bonus
-	var hp_gain: int = UPGRADE_HP + p.card.upgrade_hp_bonus
+	# R120：改造奖励走**唯一口**（素体 +1 血 / 战斗骨骼 +1 力 +1 血 / 侦察塔不加攻）。
+	var atk_gain: int = _upgrade_atk_gain(p.card, UPGRADE_ATK)
+	var hp_gain: int = _upgrade_hp_gain(p.card, UPGRADE_HP)
 	p.upgrade_atk += atk_gain
 	p.upgrade_hp += hp_gain
 	# 改造**层数**（R86）：被改造一次 +1 层。侦察塔（trait「改造层数」）靠它
@@ -3116,12 +3184,22 @@ func _transcend(target, side:= SIDE_SELF) -> String :
 	p.card = CardData.from_dict(p.card.to_dict())
 	p.card.traits = (p.card.traits as Array).duplicate()
 	p.card.add_affix(AFFIX_OVERLOAD)
-	p.upgrade_stacks += 1   # 算一层改造 → 侦察塔/堡垒按层数反应
-	_log("超越极限：%s 获得改造·超负荷（第 %d 层改造）" % [p.card.card_name, p.upgrade_stacks])
-	action.emit("transcend", {"cell": target, "card": p.card, "placement": p})
+	p.upgrade_stacks += 1   # 算一层改造 → 侦察塔光环 / 堡垒按层数反应
+	# R120：改造奖励走**唯一口**。超越极限自己不给攻/血，但**卡面自己**的改造奖励照给
+	# （素体 +1 血）—— 以前这里写死 0/0，素体被它改造白挨。
+	var atk_gain: int = _upgrade_atk_gain(p.card, 0)
+	var hp_gain: int = _upgrade_hp_gain(p.card, 0)
+	p.upgrade_atk += atk_gain
+	p.upgrade_hp += hp_gain
+	p.card.health += hp_gain
+	p.health += hp_gain
+	_log("超越极限：%s 获得改造·超负荷（第 %d 层改造，+%d 攻 / +%d 血）" % [
+			p.card.card_name, p.upgrade_stacks, atk_gain, hp_gain])
+	action.emit("transcend", {"cell": target, "card": p.card, "placement": p,
+			"atk": atk_gain, "hp": hp_gain})
 	# 「模仿者」8043（R92）：接通的我方模仿者获得相同改造（超负荷）。
-	# 传 affix=AFFIX_OVERLOAD 且 atk/hp 增益为 0 —— _mimic_relay 的 guard 在 affix 非空时放行。
-	_mimic_relay(p, 0, 0, AFFIX_OVERLOAD)
+	# affix 非空 → `_mimic_relay` 的 guard 放行（哪怕攻/血增益都是 0）。
+	_mimic_relay(p, atk_gain, hp_gain, AFFIX_OVERLOAD)
 	# 「无限装甲」8038（R89）：被改造时每回合供一张 0 费改造牌（与 _upgrade_unit 同）。
 	_feed_upgrade_card(p)
 	_on_unit_upgraded(p)
@@ -3178,10 +3256,13 @@ func _batch_upgrade(_side: String) -> String :
 		if c.kind != "盟友" and not c.is_fort():
 			continue
 		var up := CardData.from_dict(c.to_dict())
-		up.health += 1
+		# R120：改造奖励走**唯一口** —— 素体在手牌里被「批量改造」也额外 +1 血
+		#（用户口径：任何改造都生效，含手牌与牌库）；战斗骨骼同理 +1 力 +1 血。
+		up.power += _upgrade_atk_gain(up, 0)
+		up.health += _upgrade_hp_gain(up, BATCH_UPGRADE_HP)
 		state.hand[i] = up
 		touched += 1
-		names.append("%s %d血" % [c.card_name, c.health + 1])
+		names.append("%s %d血" % [c.card_name, up.health])
 	if touched == 0:
 		_log("批量改造：手牌里没有盟友或工事，效果落空")
 		action.emit("batch_upgrade", {"count": 0, "cards": []})
@@ -3216,15 +3297,17 @@ func _sys_upgrade_hand_card(hand_index: int) -> String :
 	var up := CardData.from_dict(c.to_dict())
 	up.traits = (up.traits as Array).duplicate()   # 切断与卡库的共享引用
 	up.cost += SYS_UPGRADE_COST_ADD
-	up.power += SYS_UPGRADE_ATK
-	up.health += SYS_UPGRADE_HP
+	# R120：改造奖励走**唯一口**（素体被「系统升级」也额外 +1 血）。
+	var su_atk: int = _upgrade_atk_gain(up, SYS_UPGRADE_ATK)
+	var su_hp: int = _upgrade_hp_gain(up, SYS_UPGRADE_HP)
+	up.power += su_atk
+	up.health += su_hp
 	state.hand[hand_index] = up
 	_log("系统升级：%s 改造完成（费用 +%d / 力量 +%d / 生命 +%d → %d 费 %d 攻 %d 血，本场战斗永久）"
 		% [c.card_name, SYS_UPGRADE_COST_ADD, SYS_UPGRADE_ATK, SYS_UPGRADE_HP,
 			up.cost, up.power, up.health])
 	action.emit("sys_upgrade", {"card": up, "hand_index": hand_index,
-		"cost_add": SYS_UPGRADE_COST_ADD, "atk": SYS_UPGRADE_ATK,
-		"hp": SYS_UPGRADE_HP})
+		"cost_add": SYS_UPGRADE_COST_ADD, "atk": su_atk, "hp": su_hp})
 	return "%s 改造完成（%d 费 / %d 攻 / %d 血）" % [up.card_name, up.cost, up.power, up.health]
 
 
@@ -3251,8 +3334,9 @@ func _batch_transfer(side: String) -> String :
 		var up := CardData.from_dict(c.to_dict())
 		up.traits = (up.traits as Array).duplicate()
 		up.cost += SYS_UPGRADE_COST_ADD
-		up.power += SYS_UPGRADE_ATK
-		up.health += SYS_UPGRADE_HP
+		# R120：改造奖励走**唯一口**（与「系统升级」同口径）。
+		up.power += _upgrade_atk_gain(up, SYS_UPGRADE_ATK)
+		up.health += _upgrade_hp_gain(up, SYS_UPGRADE_HP)
 		state.hand[i] = up
 		touched += 1
 		names.append("%s（%d 费 %d 攻 %d 血）" % [c.card_name, up.cost, up.power, up.health])
@@ -3376,23 +3460,28 @@ func _self_repair(target, side:= SIDE_SELF) -> String :
 	# 场上那张换成独立副本再改（卡库是共享实例）
 	p.card = CardData.from_dict(p.card.to_dict())
 	p.card.traits = (p.card.traits as Array).duplicate()
-	p.upgrade_hp += SELF_REPAIR_HP
+	# R120：改造奖励走**唯一口** —— 以前这里只加 SELF_REPAIR_HP，素体被「自我修复」
+	# 改造白挨 +1 血（用户报的缺陷）。
+	var atk_gain: int = _upgrade_atk_gain(p.card, 0)
+	var hp_gain: int = _upgrade_hp_gain(p.card, SELF_REPAIR_HP)
+	p.upgrade_atk += atk_gain
+	p.upgrade_hp += hp_gain
 	p.upgrade_stacks += 1        # 也算一次改造（用户口径：任何改造手段都记层）
-	p.card.health += SELF_REPAIR_HP
-	p.health += SELF_REPAIR_HP
+	p.card.health += hp_gain
+	p.health += hp_gain
 	p.regen += SELF_REPAIR_REGEN
 	_log("自我修复：%s → 最大生命 +%d（%d）、每回合结束回 %d（%d/%d）" % [
-			p.card.card_name, SELF_REPAIR_HP, p.card.health, SELF_REPAIR_REGEN,
+			p.card.card_name, hp_gain, p.card.health, SELF_REPAIR_REGEN,
 			p.health, p.card.health])
 	# 「模仿者」8043（R92）：自我修复**也算一次改造**（用户口径：所有此类卡都算）→
 	# 接通的模仿者复制**最大生命**那半（+SELF_REPAIR_HP）；
 	# **不复制 `regen`** —— 每回合回 4 是这张技能给的治疗，不是「改造」的量。
-	_mimic_relay(p, 0, SELF_REPAIR_HP)
+	_mimic_relay(p, atk_gain, hp_gain)
 	action.emit("self_repair", {"cell": target, "card": p.card, "placement": p,
-			"hp": SELF_REPAIR_HP, "regen": SELF_REPAIR_REGEN, "side": side})
+			"hp": hp_gain, "regen": SELF_REPAIR_REGEN, "side": side})
 	_on_unit_upgraded(p)
 	return "%s 自我修复完成（+%d 血 / 每回合回 %d）" % [
-			p.card.card_name, SELF_REPAIR_HP, SELF_REPAIR_REGEN]
+			p.card.card_name, hp_gain, SELF_REPAIR_REGEN]
 
 
 func _armor_plate(target, side:= SIDE_SELF) -> String :
@@ -3415,8 +3504,9 @@ func _armor_plate(target, side:= SIDE_SELF) -> String :
 	# 场上那张换成独立副本再改（卡库是共享实例，直接改会跨 run 泄漏）
 	p.card = CardData.from_dict(p.card.to_dict())
 	p.card.traits = (p.card.traits as Array).duplicate()
-	var atk_gain: int = p.card.upgrade_atk_bonus       # 卡面自己写的「被改造时 +N 力」
-	var hp_gain: int = ARMOR_PLATE_HP + p.card.upgrade_hp_bonus
+	# R120：走**唯一口**（原来是手写的 `p.card.upgrade_*_bonus`，容易与别的入口分叉）。
+	var atk_gain: int = _upgrade_atk_gain(p.card, 0)
+	var hp_gain: int = _upgrade_hp_gain(p.card, ARMOR_PLATE_HP)
 	p.upgrade_atk += atk_gain
 	p.upgrade_hp += hp_gain
 	# 算一层改造（用户口径）：侦察塔每层 +1 攻、模仿者传导、无限装甲供牌都靠它。
@@ -3465,11 +3555,14 @@ func _auto_upgrade(side: String) -> void :
 	var pick: int = cand[rng.randi() % cand.size()]
 	var before: CardData = state.deck[pick]
 	var up := CardData.from_dict(before.to_dict())
-	up.power += AUTO_UPGRADE_ATK
-	up.health += AUTO_UPGRADE_HP
+	# R120：改造奖励走**唯一口**（牌库里的素体被改造也额外 +1 血）。
+	var au_atk: int = _upgrade_atk_gain(up, AUTO_UPGRADE_ATK)
+	var au_hp: int = _upgrade_hp_gain(up, AUTO_UPGRADE_HP)
+	up.power += au_atk
+	up.health += au_hp
 	state.deck[pick] = up        # 原位替换：牌库顺序不变
 	_log("自主升级：「%s」在牌库里被改造 → 力量 +%d（%d）、生命 +%d（%d）" % [
-			before.card_name, AUTO_UPGRADE_ATK, up.power, AUTO_UPGRADE_HP, up.health])
+			before.card_name, au_atk, up.power, au_hp, up.health])
 	action.emit("auto_upgrade", {"card": up, "ok": true, "from": before, "side": side})
 
 
@@ -6028,6 +6121,21 @@ func _effect_damage_reduction() -> int:
 
 
 func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= true) -> int:
+	# 「侦察塔」（8032）光环易伤（R120）：攻击范围内的敌人，受到**任何来源**的伤害 +1/层。
+	# ⚠️ 必须放在 `amount <= 0` **之前**：0 攻的侦察塔自己攻击时基础伤害是 0，
+	#    而卡面口径是「自己打也算」—— 光环得先加进去，否则那一下会被直接吞掉。
+	# 挂在这里 = 与能量屏障同一个「所有伤害路径的唯一口」，漏在这里的路径会被光环绕过。
+	# ⚠️ 只在**最外层**调用加（`allow_redirect`）—— 护盾生成器转发时传的是同一笔伤害，
+	#    在那儿再加一次会**双算**。
+	if allow_redirect:
+		var aura:= _scout_aura_bonus(p, _cell_of(p))
+		if aura > 0:
+			_log("侦察塔光环：%s 受到的伤害 +%d（%d → %d）" % [
+					p.card.card_name, aura, amount, amount + aura])
+			action.emit("scout_aura", {"cell": _cell_of(p), "card": p.card,
+					"bonus": aura, "base": amount, "amount": amount + aura,
+					"side": p.owner})
+			amount += aura
 
 
 	if amount <= 0:
@@ -6826,8 +6934,9 @@ func _production_order(side: String) -> String :
 	for _i in 2:
 		# ⚠️ 必须 from_dict 复制成新实例再烤改造：卡库里是共享实例，直接改会污染卡库。
 		var up:= CardData.from_dict(proto.to_dict())
-		up.power += PROD_ORDER_ATK
-		up.health += PROD_ORDER_HP
+		# R120：改造奖励走**唯一口** —— 素体自己的 +1 生命也算上（1 攻 / 4+1=5 血）。
+		up.power += _upgrade_atk_gain(up, PROD_ORDER_ATK)
+		up.health += _upgrade_hp_gain(up, PROD_ORDER_HP)
 		state.deck.append(up)        # 加进抽牌堆（末尾），本场之后抽到即改造版素体
 		added += 1
 	_log("生产订单：卡组 +%d 张改造「素体」（各 +%d 攻 / +%d 血，永久）"
@@ -7477,23 +7586,31 @@ func _field_aura_tick(side: String) -> void :
 		# ⚠️ 卡库是**共享实例**：直接改 `p.card.health` 会连卡库那份一起改（跨 run 泄漏），
 		# 所以动手前先换成**独立副本** —— 与 `_upgrade_unit` 同一套纪律（那里也是无条件复制：
 		# 哪怕本来就是副本，多一次 from_dict 也不影响正确性，比判断「是不是共享实例」省心）。
+		var fac_atk: int = 0
+		var fac_hp: int = 0
 		if f.traits.has(PERSIST_UPGRADE_TRAIT):
 			p.card = CardData.from_dict(p.card.to_dict())
 			p.card.traits = (p.card.traits as Array).duplicate()
-			p.upgrade_atk += UPGRADE_FACTORY_ATK
-			p.upgrade_hp += UPGRADE_FACTORY_HP
-			p.card.health += UPGRADE_FACTORY_HP
-			p.health += UPGRADE_FACTORY_HP
+			# R120：① 改造奖励走**唯一口**（素体 +1 血 / 侦察塔不加攻）；
+			#       ② **补记一层 `upgrade_stacks`** —— 以前这里不加层，于是「改造工厂」
+			#          写着「每回合一次改造」却不给侦察塔光环层（用户报的缺陷之一）。
+			fac_atk = _upgrade_atk_gain(p.card, UPGRADE_FACTORY_ATK)
+			fac_hp = _upgrade_hp_gain(p.card, UPGRADE_FACTORY_HP)
+			p.upgrade_atk += fac_atk
+			p.upgrade_hp += fac_hp
+			p.upgrade_stacks += 1
+			p.card.health += fac_hp
+			p.health += fac_hp
 			upgraded += 1
-			_log("%s：%s 改造 +%d 力 / +%d 血（%d 攻 / %d 血）" % [
-				p.card.card_name, f.card_name, UPGRADE_FACTORY_ATK,
-				UPGRADE_FACTORY_HP, p.effective_power(), p.health])
+			_log("%s：%s 改造 +%d 力 / +%d 血（第 %d 层，%d 攻 / %d 血）" % [
+				p.card.card_name, f.card_name, fac_atk, fac_hp, p.upgrade_stacks,
+				p.effective_power(), p.health])
 			action.emit("upgrade", {"cell": cell, "card": p.card, "placement": p,
-				"atk": UPGRADE_FACTORY_ATK, "hp": UPGRADE_FACTORY_HP,
+				"atk": fac_atk, "hp": fac_hp, "stacks": p.upgrade_stacks,
 				"field": f.card_name})
 		# 「模仿者」8043（R92）：改造工厂给的 +1/+1 也是一次改造（用户口径）→
 		# 接通的模仿者同步获得 +1 力 / +1 血。每回合触发一次，**可无限叠加**。
-		_mimic_relay(p, UPGRADE_FACTORY_ATK, UPGRADE_FACTORY_HP)
+		_mimic_relay(p, fac_atk, fac_hp)
 	if healed > 0:
 		_log("持续型场地：%d 个单位在自己回合结束时回复了生命" % healed)
 	if upgraded > 0:

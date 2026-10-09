@@ -10231,7 +10231,7 @@ func _init() -> void:
 			and r86_tw.card_class == PlayerClass.MECH,
 		"R86 侦察塔 8032：机械之心的 3 费普通工事，0 攻 / 12 血 / 攻程 2")
 	check(r86_tw.traits.has(GameEngine.STACK_DAMAGE_TRAIT),
-		"R86 侦察塔：带 trait「改造层数」—— 每层改造 +1 攻击伤害（引擎按这个 trait 判定）")
+		"R86/R120 侦察塔：带 trait「改造层数」—— **光环易伤**按这个 trait 判定")
 	# ---- ④ 0 攻工事**能攻击**（用户口径：只有 0 攻程不能攻击）----
 	var r86_e4 := _new_engine([], 30, 30, -1, false)
 	r86_e4.start_game()
@@ -10244,40 +10244,59 @@ func _init() -> void:
 	r86_foe.card = CardData.from_dict(r86_foe.card.to_dict())
 	r86_foe.card.health = 30
 	r86_foe.health = 30
+	# 攻程**外**的敌人（曼哈顿 (4,1)→(2,0) = 3 > 攻程 2）—— 用来证明光环**有范围**
+	var r86_far: Placement = r86_e4.state.place(
+			_card(1054, "骷髅兵乙", "怪物", 3, 2, 1, 1, 1), Vector2i(2, 0),
+			GameEngine.SIDE_OPPONENT)
+	r86_far.card = CardData.from_dict(r86_far.card.to_dict())
+	r86_far.card.health = 30
+	r86_far.health = 30
 	var r86_tg: Array[Vector2i] = r86_e4.legal_attack_targets(Vector2i(4, 1),
 			GameEngine.SIDE_SELF)
 	check(r86_tg.has(Vector2i(2, 1)),
 		"R86 侦察塔：**0 攻也能攻击**（攻程 2 内的 (2,1) 是合法目标）")
-	# 没改造 → 攻击 0 伤
+	# 0 层：既没有攻击力、也没有光环
+	check(r86_e4._scout_aura_bonus(r86_foe, Vector2i(2, 1)) == 0,
+		"R120 侦察塔：0 层改造 → 光环 +0（范围内的敌人不多受伤）")
 	r86_e4.attack(Vector2i(4, 1), Vector2i(2, 1), GameEngine.SIDE_SELF)
 	check(r86_foe.health == 30,
 		"R86 侦察塔：0 层改造时攻击造成 0 伤（还是 %d 血）" % r86_foe.health)
-	# ---- ⑤ 每层改造 +1 伤（叠在改造的 +2 力量之上）----
+	# ---- ⑤ R120：改造**不给塔加攻**，改的是「攻击范围内的敌人受到的伤害 +1/层」----
 	r86_e4.state.hand = [CardData.from_dict(
 			r86_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
 	r86_e4.state.energy = 5
 	r86_e4.use_spell(0, Vector2i(4, 1))
-	check(r86_tp.upgrade_stacks == 1
-			and r86_tp.effective_power() == 0 + GameEngine.UPGRADE_ATK + 1,
-		"R86 侦察塔：改造 1 次 → %d 层 / 攻 %d（0 + 改造 2 + 层数 1）"
-			% [r86_tp.upgrade_stacks, r86_tp.effective_power()])
+	check(r86_tp.upgrade_stacks == 1,
+		"R120 侦察塔：改造 1 次 → %d 层改造（光环 +1）" % r86_tp.upgrade_stacks)
+	check(r86_tp.effective_power() == 0,
+		"R120 侦察塔：改造**不给它加攻** → 自身攻击力仍是 %d（0 攻就是 0 攻）"
+			% r86_tp.effective_power())
+	check(r86_e4._scout_aura_bonus(r86_foe, Vector2i(2, 1)) == 1
+			and r86_e4._scout_aura_bonus(r86_far, Vector2i(2, 0)) == 0,
+		"R120 侦察塔光环：**范围内**的敌人 +1、**范围外**的不加（(2,1) 曼哈顿 2 / (2,0) 曼哈顿 3）")
+	# 「任何来源」：**不是塔打的**也 +1（直接走 _hit_unit = 所有伤害路径的唯一口）
+	r86_e4._hit_unit(r86_foe, 5, "R120：队友造成的伤害")
+	check(r86_foe.health == 30 - 5 - 1,
+		"R120 侦察塔光环：队友造成 5 伤 → 实际掉 %d（5 + 光环 1），与塔的攻击无关"
+			% (30 - r86_foe.health))
 	# ⚠️ 上一次 attack 已经把侦察塔**横置**了（`attack()` 结尾会 _tap），
 	#    不重置行动的话这次 attack 会被 `attacker.tapped` 直接拦下（我先踩了这个坑）。
 	r86_e4.state.reset_units(GameEngine.SIDE_SELF)
+	var r86_before: int = r86_foe.health
 	r86_e4.attack(Vector2i(4, 1), Vector2i(2, 1), GameEngine.SIDE_SELF)
-	check(r86_foe.health == 27,
-		"R86 侦察塔：1 层改造后攻击造成 **3** 伤（30 → %d = 改造 2 + 层数 1）"
-			% r86_foe.health)
-	# 再改一次 → 2 层 / 攻 6（0 + 4 + 2）
+	check(r86_foe.health == r86_before - 1,
+		"R120 侦察塔：自己攻击 = 0 攻 + 光环 1 → **1** 伤（%d → %d）"
+			% [r86_before, r86_foe.health])
+	# 再改一次 → 2 层，光环可叠
 	r86_e4.state.hand = [CardData.from_dict(
 			r86_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
 	r86_e4.state.energy = 5
 	r86_e4.use_spell(0, Vector2i(4, 1))
-	check(r86_tp.upgrade_stacks == 2
-			and r86_tp.effective_power() == 0 + GameEngine.UPGRADE_ATK * 2 + 2,
-		"R86 侦察塔：改造 2 次 → %d 层 / 攻 %d（0 + 改造 4 + 层数 2）"
-			% [r86_tp.upgrade_stacks, r86_tp.effective_power()])
-
+	check(r86_tp.upgrade_stacks == 2 and r86_tp.effective_power() == 0
+			and r86_e4._scout_aura_bonus(r86_foe, Vector2i(2, 1)) == 2,
+		"R120 侦察塔：改造 2 次 → %d 层 / 攻仍 %d / 光环 +%d（层数可叠）"
+			% [r86_tp.upgrade_stacks, r86_tp.effective_power(),
+				r86_e4._scout_aura_bonus(r86_foe, Vector2i(2, 1))])
 	# ---- ⑥ ⚠️ 层数**只对带该 trait 的卡生效**（否则 0 攻工事改造几次就能自己打人）----
 	var r86_e5 := _new_engine([], 30, 30, -1, false)
 	r86_e5.start_game()
@@ -10314,6 +10333,102 @@ func _init() -> void:
 	var r86_tw_lib: CardData = r86_repo.get_card(GameEngine.SCOUT_TOWER_ID)
 	check(r86_tw_lib.power == 0 and r86_tw_lib.health == 12,
 		"R86 侦察塔：离场后**没有污染卡库**（仍 0 攻 / %d 血）" % r86_tw_lib.health)
+	# ================================================================
+	# R120：改造奖励的**唯一口**（素体）+ 侦察塔光环易伤
+	# ================================================================
+	var r120_repo := CardRepo.load_json()
+	var r120_proto: CardData = r120_repo.get_card(GameEngine.PROTO_ID)
+	check(r120_proto.upgrade_hp_bonus == 1 and r120_proto.upgrade_atk_bonus == 0,
+		"R120 素体：卡面 upgrade_hp_bonus = 1 —— **任何**改造都额外 +1 生命")
+	# ① 升级 8027（原本就对，做回归护栏）
+	var r120_e1 := _new_engine([], 30, 30, -1, false)
+	r120_e1.start_game()
+	var r120_p1: Placement = r120_e1.state.place(
+			CardData.from_dict(r120_proto.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r120_e1.state.hand = [CardData.from_dict(
+			r120_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
+	r120_e1.state.energy = 5
+	r120_e1.use_spell(0, Vector2i(4, 1))
+	check(r120_p1.health == 1 + GameEngine.UPGRADE_HP + 1,
+		"R120 素体 + 升级：1 + 8 + 素体 1 = %d 血" % r120_p1.health)
+	# ② 自我修复 8035（R120 前漏掉素体那 +1）
+	var r120_e2 := _new_engine([], 30, 30, -1, false)
+	r120_e2.start_game()
+	var r120_p2: Placement = r120_e2.state.place(
+			CardData.from_dict(r120_proto.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r120_e2._self_repair(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r120_p2.health == 1 + GameEngine.SELF_REPAIR_HP + 1,
+		"R120 素体 + 自我修复：1 + 2 + 素体 1 = %d 血（以前白挨）" % r120_p2.health)
+	# ③ 超越极限 8053（R120 前这里写死 0/0，素体白挨）
+	var r120_e3 := _new_engine([], 30, 30, -1, false)
+	r120_e3.start_game()
+	var r120_p3: Placement = r120_e3.state.place(
+			CardData.from_dict(r120_proto.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r120_e3._transcend(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r120_p3.upgrade_stacks == 1 and r120_p3.health == 1 + 1,
+		"R120 素体 + 超越极限：记 1 层改造 + 素体那 1 血（1 → %d）" % r120_p3.health)
+	# ④ 改造工厂 8037（R120 前既漏素体 +1，又**不记层**）
+	var r120_e4 := _new_engine([], 30, 30, -1, false)
+	r120_e4.start_game()
+	var r120_p4: Placement = r120_e4.state.place(
+			CardData.from_dict(r120_proto.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r120_e4.state.set_field(CardData.from_dict(
+			r120_repo.get_card(GameEngine.UPGRADE_FACTORY_ID).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r120_e4._field_aura_tick(GameEngine.SIDE_SELF)
+	check(r120_p4.upgrade_stacks == 1
+			and r120_p4.health == 1 + GameEngine.UPGRADE_FACTORY_HP + 1,
+		"R120 素体 + 改造工厂：+1 血 + 素体 1 = %d 血，且**记 1 层改造**（层 %d）"
+			% [r120_p4.health, r120_p4.upgrade_stacks])
+	# ⑤ 改造工厂给**侦察塔**记层（R120 前不记层 → 光环永远 0）
+	var r120_e5 := _new_engine([], 30, 30, -1, false)
+	r120_e5.start_game()
+	var r120_t5: Placement = r120_e5.state.place(
+			CardData.from_dict(r120_repo.get_card(GameEngine.SCOUT_TOWER_ID).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r120_f5: Placement = r120_e5.state.place(
+			_card(1053, "骷髅兵", "怪物", 3, 2, 1, 1, 1), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
+	r120_e5.state.set_field(CardData.from_dict(
+			r120_repo.get_card(GameEngine.UPGRADE_FACTORY_ID).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r120_e5._field_aura_tick(GameEngine.SIDE_SELF)
+	check(r120_t5.upgrade_stacks == 1
+			and r120_e5._scout_aura_bonus(r120_f5, Vector2i(2, 1)) == 1
+			and r120_t5.effective_power() == 0,
+		"R120 侦察塔 + 改造工厂：结算记 %d 层 → 光环 +%d，自身攻仍 %d（改造工厂也不给塔加攻）"
+			% [r120_t5.upgrade_stacks, r120_e5._scout_aura_bonus(r120_f5, Vector2i(2, 1)),
+				r120_t5.effective_power()])
+	# ⑥ 批量改造 8031（**手牌**路径：用户口径「含手牌与牌库」）
+	var r120_e6 := _new_engine([], 30, 30, -1, false)
+	r120_e6.start_game()
+	r120_e6.state.hand = [CardData.from_dict(r120_proto.to_dict()),
+			CardData.from_dict(r120_repo.get_card(GameEngine.BATCH_UPGRADE_ID).to_dict())]
+	r120_e6.state.energy = 5
+	r120_e6.use_spell(1)
+	var r120_hand_hp := -1
+	for c: CardData in r120_e6.state.hand:
+		if c.id == GameEngine.PROTO_ID:
+			r120_hand_hp = c.health
+	check(r120_hand_hp == 1 + GameEngine.BATCH_UPGRADE_HP + 1,
+		"R120 素体 + 批量改造（手牌）：1 + 1 + 素体 1 = %d 血" % r120_hand_hp)
+	# ⑦ 光环只对**敌人**生效：己方单位站在塔的范围内不掉血
+	var r120_e7 := _new_engine([], 30, 30, -1, false)
+	r120_e7.start_game()
+	var r120_t7: Placement = r120_e7.state.place(
+			CardData.from_dict(r120_repo.get_card(GameEngine.SCOUT_TOWER_ID).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r120_t7.upgrade_stacks = 3
+	var r120_ally: Placement = r120_e7.state.place(
+			CardData.from_dict(r120_repo.get_card(8003).to_dict()), Vector2i(4, 0),
+			GameEngine.SIDE_SELF)
+	var r120_enemy: Placement = r120_e7.state.place(
+			_card(1053, "骷髅兵", "怪物", 3, 2, 30, 1, 1), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
+	check(r120_e7._scout_aura_bonus(r120_ally, Vector2i(4, 0)) == 0
+			and r120_e7._scout_aura_bonus(r120_enemy, Vector2i(2, 1)) == 3,
+		"R120 侦察塔光环：只加在**敌人**身上（己方 +0 / 敌方 +%d，3 层）"
+			% r120_e7._scout_aura_bonus(r120_enemy, Vector2i(2, 1)))
 
 	# ================================================================
 	# R87：能量屏障 8033 / 堡垒 8034 / 自我修复 8035（都是「机械之心」= 机械师）
@@ -11706,18 +11821,20 @@ func _init() -> void:
 	var r96_deck0: int = r96_e7.state.deck.size()
 	var r96_proto_pow: int = r96_repo.get_card(GameEngine.PROTO_ID).power
 	var r96_proto_hp: int = r96_repo.get_card(GameEngine.PROTO_ID).health
+	var r96_proto_bonus_h: int = r96_repo.get_card(GameEngine.PROTO_ID).upgrade_hp_bonus
 	r96_e7._production_order(GameEngine.SIDE_SELF)
 	check(r96_e7.state.deck.size() == r96_deck0 + 2,
 		"R96 生产订单：抽牌堆 +2 张（%d→%d）" % [r96_deck0, r96_e7.state.deck.size()])
 	var r96_added: int = 0
 	for c: CardData in r96_e7.state.deck:
 		if c.id == GameEngine.PROTO_ID and c.power == r96_proto_pow + GameEngine.PROD_ORDER_ATK \
-				and c.health == r96_proto_hp + GameEngine.PROD_ORDER_HP:
+				and c.health == r96_proto_hp + GameEngine.PROD_ORDER_HP + r96_proto_bonus_h:
 			r96_added += 1
 	check(r96_added == 2,
 		"R96 生产订单：新增的 2 张都是改造素体（力量 %d→%d / 生命 %d→%d，命中 %d 张）"
 			% [r96_proto_pow, r96_proto_pow + GameEngine.PROD_ORDER_ATK,
-				r96_proto_hp, r96_proto_hp + GameEngine.PROD_ORDER_HP, r96_added])
+				r96_proto_hp, r96_proto_hp + GameEngine.PROD_ORDER_HP + r96_proto_bonus_h,
+				r96_added])
 	check(r96_repo.get_card(GameEngine.PROTO_ID).power == r96_proto_pow
 			and r96_repo.get_card(GameEngine.PROTO_ID).health == r96_proto_hp,
 		"R96 生产订单：**没污染卡库**（卡库素体仍 %d 攻 / %d 血）"

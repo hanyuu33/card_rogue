@@ -37,10 +37,13 @@ var upgrade_hp: int = 0       # 改造累计加血（含「素体被改造时额
 var upgrade_stacks: int = 0   # **改造层数**（R86）：被改造过几次
 var upgrade_range: int = 0   # 改造加攻程累计（R101，榴弹击手）：只在场上有效，离场由 _card_leaving_field 还原
 var upgrade_speed: int = 0   # 改造加移速累计（R101，重甲战车）：只在场上有效，离场由 _card_leaving_field 还原
-# 「侦察塔」（8032，trait「改造层数」）：攻击伤害 **+1 / 层**。
-# ⚠️ 只对**带该 trait** 的卡生效 —— 别的卡（树人 / 木栅栏…）改造后 `upgrade_stacks`
-# 也会 +1，但它们**不该**因此加攻（否则 0 攻工事改造几次就能自己打人）。
-# 判据放在 `effective_power()` 里读 `card.traits`，与鸭子之眼那类「按卡面加成」同一套路。
+# 「侦察塔」（8032，trait「改造层数」）：**光环易伤**（R120 用户口径）——
+# 它**攻击范围内**的敌人，受到**任何来源**的伤害都 +1 / 层改造。
+# 判据 = trait「改造层数」+ `upgrade_stacks`，结算在
+# `GameEngine._scout_aura_bonus()`（挂在 `_hit_unit` 开头 = 所有伤害路径的唯一口）。
+# ⚠️ **不进 `effective_power()`**：塔自身 0 攻就是 0 攻、改造也不给它加攻
+# （见 `GameEngine._upgrade_atk_gain`），它的改造收益全在**敌人身上**。
+# 别的卡（树人 / 木栅栏…）改造后 `upgrade_stacks` 也会 +1，但没有这个 trait 就没有光环。
 # 「堡垒」（8034，trait「改造生命层」）：**每层 +3 生命**（R87）——
 # 加的血并进 `upgrade_hp`，于是离场还原走的是同一条路。
 var first_hit_shield: bool = false   # 能量屏障（8033，R87）：**本场战斗中第一次受伤免掉**
@@ -61,11 +64,14 @@ var dark_lord_speed: int = 0   # +1 × 存活暗杀者数（进 effective_speed�
 
 func effective_power() -> int:
 	## 实际攻击力：卡面力量 + 生效中的增益 + 关卡成长修正 - 生效中的削弱，最低 0。
+	##
+	## ⚠️ R120：这里**不再**加「改造层数」。侦察塔（8032，trait「改造层数」）的改造收益
+	## 从「加自己的攻击力」纠正为**光环易伤** —— 「攻击范围内的敌人受到的伤害 +1 / 层」，
+	## 由 `GameEngine._scout_aura_bonus()` 加在**敌人身上**（用户原话：是敌人**受到**的伤害
+	## +1，不是这张卡攻击时 +1）。于是塔自身 0 攻就是 0 攻，定位 = 标记一片区域的增伤辅助。
 	var debuff := atk_debuff if debuff_stage == 1 else 0
-	var stack_bonus := upgrade_stacks if card != null \
-			and card.traits.has("改造层数") else 0
 	return maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
-			+ end_atk + upgrade_atk + stack_bonus + dark_lord_atk - debuff)
+			+ end_atk + upgrade_atk + dark_lord_atk - debuff)
 
 
 func effective_speed() -> int:
@@ -103,6 +109,11 @@ func status_entries() -> Array[Dictionary]:
 		if upgrade_speed != 0:
 			extra += " 速 +%d" % upgrade_speed
 		out.append({"label": "改造 ×%d%s" % [upgrade_stacks, extra],
+				"col": COL_B, "kind": "buff"})
+	# R120：侦察塔的光环要说清楚「加成去哪里了」——它自己不加攻，是**范围内的敌人**受伤 +N。
+	# 只写「改造 ×N」会让玩家以为塔的攻击力涨了（那正是改掉的那个误解）。
+	if upgrade_stacks > 0 and card != null and card.traits.has("改造层数"):
+		out.append({"label": "光环：范围内敌人受伤 +%d" % upgrade_stacks,
 				"col": COL_B, "kind": "buff"})
 	if dark_lord_atk > 0 or dark_lord_speed > 0:
 		out.append({"label": "暗影领主：力 +%d 速 +%d" % [dark_lord_atk, dark_lord_speed],

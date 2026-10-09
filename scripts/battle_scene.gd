@@ -475,6 +475,36 @@ func _ready() -> void:
 		status_text += "② 误点空位只上膛 —— 琥珀「取消?」= 再点一次才取消"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r120" in args and engine != null:
+		# 演示（R120）—— 侦察塔 8032 的**光环易伤**：
+		#   * 塔落 (4,1)，攻程 2；改造**两次** —— 改造**不给它加攻**（塔面仍是 0 攻 / 血厚了 16）。
+		#   * (3,1) 与 (4,2) 两个敌人**在范围内**，(0,0) 那个**在范围外**（曼哈顿 5）。
+		#     （放 (0,0) 而不是 (1,x)：中部「我方回合」横幅会盖住第 1 行，截图上看不见。）
+		#   * 打一下范围内的敌人 → 飘字「光环 +2」；范围外那个只吃基础伤害（没有飘字）。
+		#   左栏信息面板里应能看到一条「光环：范围内敌人受伤 +2」。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		engine.state.place(CardData.from_dict(
+				repo.get_card(GameEngine.SCOUT_TOWER_ID).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(0, 2), GameEngine.SIDE_OPPONENT)   # 范围外对照（曼哈顿 4）
+		engine._hit_unit(engine.state.unit_at(Vector2i(3, 1)), 6, "演示")
+		engine._hit_unit(engine.state.unit_at(Vector2i(0, 0)), 6, "演示：范围外")
+		var r120_tp2 := engine.state.unit_at(Vector2i(4, 1))
+		status_text = "R120：塔 %d攻/%d血/%d层（改造不给塔加攻）→ 范围内(3,1) 6伤变8；范围外(0,0) 只吃6" % [
+				r120_tp2.effective_power(), r120_tp2.health, r120_tp2.upgrade_stacks]
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--xtext" in args and engine != null:
 		# 演示（2026-10-01）：长描述效果卡。
 		# 悬停最长的那张（空间守护 9064）→ 左栏信息面板用于像素级核验「长描述不溢出」。
@@ -5919,6 +5949,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						"col": Color("ffc94d"), "start": n, "dur": 2200, "size": 14})
 			else:
 				_say("自主升级：抽牌堆里没有盟友 / 工事，本回合落空")
+		"scout_aura":
+			# 「侦察塔」8032 光环易伤（R120）：攻击范围内的敌人受到**任何来源**的伤害 +N。
+			# ⚠️ 飘字落在**受害者那一格** —— 加的是「敌人受到的伤害」，不是塔自己的攻击力
+			# （「改造给塔加攻」的旧口径已废，见 GameEngine._upgrade_atk_gain）。
+			var sa_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var sa_bonus := int(data.get("bonus", 0))
+			if sa_cell.x >= 0 and sa_bonus > 0:
+				_floaters.append({"pos": _cell_center(sa_cell) + Vector2(0, -18),
+						"text": "光环 +%d" % sa_bonus, "col": Color("e08a2e"),
+						"start": n, "dur": 1100})
 		"upgrade":
 			# 「升级」8027（R82）/ 改造工厂 8037（R88）：改造一个盟友 / 工事 → 在**那一格**上飘字。
 			# ⚠️ 「升级」技能与改造工厂**共用这个事件**，所以提示要按 `field` 字段分文案 ——
