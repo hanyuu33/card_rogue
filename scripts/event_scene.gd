@@ -283,6 +283,10 @@ func _apply_ui_assets() -> void:
 
 func _ready() -> void:
 	_font = UiTheme.font()
+	# R113：事件底色 #252A34 = 暗底 → on_dark = true。
+	# 事件是**选择类界面**：三个选项等价，所以全部是次按钮（「一屏最多一个主按钮」的例外）。
+	for _b: Button in [rest_btn, bbq_btn, leave_btn]:
+		UiTheme.apply_button(_b, false, true)
 	sfx = Sfx.new()
 	add_child(sfx)
 	# 牌库任何时候都可以查看（无论在哪个界面）

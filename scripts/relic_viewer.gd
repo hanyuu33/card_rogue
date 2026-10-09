@@ -74,6 +74,7 @@ func _ready() -> void:
 	# 禁用态（悬浮就能看全时）保持正常配色，别灰得看不出是什么
 	_btn.add_theme_color_override("font_disabled_color", UiTheme.SAND)
 	_btn.pressed.connect(_toggle)
+	UiTheme.apply_chip(_btn, false, true)   # 关闭按钮：面板是 PAPER 亮底 + 固定 32px 高 → 浅底 compact
 	add_child(_btn)
 
 	# 速览浮层：IGNORE = 不吃点击也不挡下层界面（纯展示）

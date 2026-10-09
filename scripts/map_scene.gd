@@ -104,19 +104,19 @@ func _ready() -> void:
 			ReplayLog.finish("quit")
 		ReplayLog.stop_playback()
 		get_tree().change_scene_to_file("res://scenes/title.tscn"))
-	_style_button(quit_btn)
+	UiTheme.apply_chip(quit_btn, true)
 	add_child(quit_btn)
 	var rec_btn := Button.new()
 	rec_btn.text = "战斗记录"
 	rec_btn.position = Vector2(120, 14)
 	rec_btn.pressed.connect(_toggle_records)
-	_style_button(rec_btn)
+	UiTheme.apply_chip(rec_btn, true)
 	add_child(rec_btn)
 	var deck_btn := Button.new()
 	deck_btn.text = "查看卡组"
 	deck_btn.position = Vector2(226, 14)
 	deck_btn.pressed.connect(_toggle_deck)
-	_style_button(deck_btn)
+	UiTheme.apply_chip(deck_btn, true)
 	add_child(deck_btn)
 	# 道具「鸭之低语」（6010）：玩家失去选择权 → 系统随机挑路并自动前进
 	if RunState.run_active and RunState.has_relic(6010) and not ReplayLog.playing:
@@ -147,30 +147,11 @@ func _rng() -> RandomNumberGenerator:
 	return r
 
 
-func _style_button(b: Button) -> void:
-	## 顶部按钮统一暗色圆角胶囊风格（替代引擎默认的灰白按钮）。
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color("343947")
-	sb.set_corner_radius_all(7)
-	sb.content_margin_left = 14.0
-	sb.content_margin_right = 14.0
-	sb.content_margin_top = 6.0
-	sb.content_margin_bottom = 6.0
-	sb.border_width_bottom = 2
-	sb.border_color = Color(0, 0, 0, 0.35)
-	b.add_theme_stylebox_override("normal", sb)
-	var hv := sb.duplicate() as StyleBoxFlat
-	hv.bg_color = Color("414860")
-	b.add_theme_stylebox_override("hover", hv)
-	var pr := sb.duplicate() as StyleBoxFlat
-	pr.bg_color = Color("272b37")
-	b.add_theme_stylebox_override("pressed", pr)
-	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	b.add_theme_color_override("font_color", Color("e6e2d8"))
-	b.add_theme_color_override("font_hover_color", UiTheme.SURFACE)
-	b.add_theme_color_override("font_pressed_color", Color("cfcabb"))
-	b.add_theme_font_override("font", _font_bold)
-	b.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
+## 顶部按钮样式统一走 `UiTheme.apply_chip(b, true)`。
+## ⚠️ 这里原本有一套本地 `_style_button`，取值与现在的 chip 实心档**完全一致**，
+## 但它把 `focus` 设成了 `StyleBoxEmpty` —— 键盘焦点环直接消失。R113 批 4 已删除。
+## 说明：地图页底色是**暗**的，按钮反而是实心暗底（深底上再深一档反而跳得出来），
+## 所以这里用 solid 档而不是浅底档。
 
 
 func _start_whisper() -> void:

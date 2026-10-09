@@ -286,13 +286,20 @@ const RADIUS_LG := 12
 const BTN_PAD_X := 18   ## 按钮左右内距
 const BTN_PAD_Y := 9    ## 按钮上下内距
 
-# ── 主按钮（一屏只应有一个）──
+# ── 主按钮（一屏**最多**一个；选择类界面可以全是次按钮）──
 const BTN_PRIMARY_BG := Color("22304a")        ## 深墨蓝（日式西幻的夜色）
 const BTN_PRIMARY_BG_HOVER := Color("2c3f61")
 const BTN_PRIMARY_BG_PRESS := Color("1a2438")
 const BTN_PRIMARY_LINE := Color("c8951c")      ## 金线
 const BTN_PRIMARY_LINE_FOCUS := Color("f2c14e") ## 焦点环（更亮，键盘可达性）
 const BTN_PRIMARY_TEXT := Color("f5efe0")
+
+## 暗底上的主按钮：深墨蓝在暗底上会「沉下去」，所以换金底 + 墨色字。
+const BTN_PRIMARY_DARK_BG := Color("c8951c")
+const BTN_PRIMARY_DARK_BG_HOVER := Color("d9a52c")
+const BTN_PRIMARY_DARK_BG_PRESS := Color("a87a12")
+const BTN_PRIMARY_DARK_LINE := Color("f2c14e")
+const BTN_PRIMARY_DARK_TEXT := Color("1a1c22")
 
 # ── 次按钮 ──
 const BTN_SECONDARY_BG := Color(1, 1, 1, 0.42)
@@ -302,10 +309,18 @@ const BTN_SECONDARY_LINE := Color("b8b4aa")
 const BTN_SECONDARY_LINE_FOCUS := Color("8a5f00")
 const BTN_SECONDARY_TEXT := Color("1a1c22")
 
+## 暗底上的次按钮：半透明白 + 亮字（亮底那套的深字在暗底上根本读不出来）。
+const BTN_SECONDARY_DARK_BG := Color(1, 1, 1, 0.10)
+const BTN_SECONDARY_DARK_BG_HOVER := Color(1, 1, 1, 0.22)
+const BTN_SECONDARY_DARK_BG_PRESS := Color(1, 1, 1, 0.06)
+const BTN_SECONDARY_DARK_LINE := Color(1, 1, 1, 0.30)
+const BTN_SECONDARY_DARK_TEXT := Color("e6e2d8")
+
 const BTN_DISABLED_LINE := Color("b8b4aa")
 const BTN_DISABLED_TEXT := Color("7a7a78")
 
-# ── 小切换按钮（chip）：难度档位、筛选、多选标签 ──
+# ── 小按钮（chip）：顶部工具条 / HUD、难度档位、筛选、多选标签 ──
+## 浅底档（默认）：半透明白 + 深字 —— 成组出现于**亮底**（如标题页的难度档位）。
 const CHIP_BG := Color(1, 1, 1, 0.34)
 const CHIP_BG_HOVER := Color(1, 1, 1, 0.62)
 const CHIP_LINE := Color("b8b4aa")
@@ -313,85 +328,157 @@ const CHIP_TEXT := Color("1a1c22")
 const CHIP_PAD_X := 12
 const CHIP_PAD_Y := 5
 
+## 实心档（solid）：实心暗蓝灰 + 亮字 —— 顶部工具条 / HUD，要从背景里跳出来。
+## 取值沿用 `map_scene` 原本手写的样式，所以地图页观感**不变**，只是收进唯一口、并补回焦点环
+## （原来那里把 focus 设成了 `StyleBoxEmpty`，键盘可达性直接没了）。
+const CHIP_SOLID_BG := Color("343947")
+const CHIP_SOLID_BG_HOVER := Color("414860")
+const CHIP_SOLID_BG_PRESS := Color("272b37")
+const CHIP_SOLID_LINE := Color(0, 0, 0, 0.35)
+const CHIP_SOLID_TEXT := Color("e6e2d8")
+const CHIP_SOLID_TEXT_HOVER := Color("ffffff")
+const CHIP_SOLID_TEXT_PRESS := Color("cfcabb")
+## compact：更小的内距，给**固定高度**的工具条用（battle 顶栏按钮只有 28px 高）。
+const CHIP_COMPACT_PAD_X := 10
+const CHIP_COMPACT_PAD_Y := 3
 
-static func _btn_box(bg: Color, line: Color, width: int, radius: int) -> StyleBoxFlat:
+
+static func _btn_box(bg: Color, line: Color, width: int, radius: int,
+		px := BTN_PAD_X, py := BTN_PAD_Y) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
 	sb.border_color = line
 	sb.set_border_width_all(width)
 	sb.set_corner_radius_all(radius)
-	sb.content_margin_left = BTN_PAD_X
-	sb.content_margin_right = BTN_PAD_X
-	sb.content_margin_top = BTN_PAD_Y
-	sb.content_margin_bottom = BTN_PAD_Y
+	sb.content_margin_left = px
+	sb.content_margin_right = px
+	sb.content_margin_top = py
+	sb.content_margin_bottom = py
 	return sb
 
 
-static func apply_button(btn: Button, primary := false) -> void:
+static func _chip_box(bg: Color, line: Color, width: int, px: int, py: int,
+		bottom_only := false) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = line
+	if bottom_only:
+		sb.border_width_bottom = width      # 只留底边 → 胶囊的「落地感」
+	else:
+		sb.set_border_width_all(width)
+	sb.set_corner_radius_all(RADIUS_SM)
+	sb.content_margin_left = px
+	sb.content_margin_right = px
+	sb.content_margin_top = py
+	sb.content_margin_bottom = py
+	return sb
+
+
+static func apply_button(btn: Button, primary := false, on_dark := false) -> void:
 	## 给按钮套上统一规格（**唯一口**）。新界面写按钮就调这一行，别自己画 StyleBox。
-	## primary = 主行动（一屏只应有一个，如标题页的「开始对战」）。
+	##   primary = 主行动。**一屏最多一个**；选择类界面（多个等价选项）可以全是次按钮。
+	##   on_dark = 按钮坐在**暗底**上。除标题页外，本作其余界面底色都是暗的，
+	##             **暗底上必须传 true**，否则深字压暗底读不出来。
 	if btn == null:
 		return
 	var r := RADIUS_MD
+	var bg := BTN_SECONDARY_BG
+	var bg_h := BTN_SECONDARY_BG_HOVER
+	var bg_p := BTN_SECONDARY_BG_PRESS
+	var line := BTN_SECONDARY_LINE
+	var line_focus := BTN_SECONDARY_LINE_FOCUS
+	var txt := BTN_SECONDARY_TEXT
+	var txt_h := Color("1a1c22")
+	var font_size := FS_SUBHEAD
+	var use_bold := false
 	if primary:
-		btn.add_theme_stylebox_override("normal", _btn_box(BTN_PRIMARY_BG, BTN_PRIMARY_LINE, 2, r))
-		btn.add_theme_stylebox_override("hover", _btn_box(BTN_PRIMARY_BG_HOVER, BTN_PRIMARY_LINE, 2, r))
-		btn.add_theme_stylebox_override("pressed", _btn_box(BTN_PRIMARY_BG_PRESS, BTN_PRIMARY_LINE, 2, r))
-		btn.add_theme_stylebox_override("disabled", _btn_box(BTN_PRIMARY_BG, BTN_DISABLED_LINE, 2, r))
-		btn.add_theme_stylebox_override("focus", _btn_box(Color(0, 0, 0, 0), BTN_PRIMARY_LINE_FOCUS, 3, r))
-		btn.add_theme_color_override("font_color", BTN_PRIMARY_TEXT)
-		btn.add_theme_color_override("font_hover_color", Color("ffffff"))
-		btn.add_theme_color_override("font_pressed_color", BTN_PRIMARY_TEXT)
-		btn.add_theme_color_override("font_focus_color", BTN_PRIMARY_TEXT)
-		btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
-		btn.add_theme_font_override("font", font_bold())
-		btn.add_theme_font_size_override("font_size", FS_HEADING)
-	else:
-		btn.add_theme_stylebox_override("normal", _btn_box(BTN_SECONDARY_BG, BTN_SECONDARY_LINE, 1, r))
-		btn.add_theme_stylebox_override("hover", _btn_box(BTN_SECONDARY_BG_HOVER, BTN_SECONDARY_LINE, 1, r))
-		btn.add_theme_stylebox_override("pressed", _btn_box(BTN_SECONDARY_BG_PRESS, BTN_SECONDARY_LINE, 1, r))
-		btn.add_theme_stylebox_override("disabled", _btn_box(Color(1, 1, 1, 0.18), BTN_DISABLED_LINE, 1, r))
-		btn.add_theme_stylebox_override("focus", _btn_box(Color(0, 0, 0, 0), BTN_SECONDARY_LINE_FOCUS, 3, r))
-		btn.add_theme_color_override("font_color", BTN_SECONDARY_TEXT)
-		btn.add_theme_color_override("font_hover_color", Color("1a1c22"))
-		btn.add_theme_color_override("font_pressed_color", BTN_SECONDARY_TEXT)
-		btn.add_theme_color_override("font_focus_color", BTN_SECONDARY_TEXT)
-		btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
-		btn.add_theme_font_override("font", font())
-		btn.add_theme_font_size_override("font_size", FS_SUBHEAD)
+		font_size = FS_HEADING
+		use_bold = true
+		line_focus = BTN_PRIMARY_LINE_FOCUS
+		txt_h = Color("ffffff")
+		if on_dark:
+			bg = BTN_PRIMARY_DARK_BG
+			bg_h = BTN_PRIMARY_DARK_BG_HOVER
+			bg_p = BTN_PRIMARY_DARK_BG_PRESS
+			line = BTN_PRIMARY_DARK_LINE
+			txt = BTN_PRIMARY_DARK_TEXT
+		else:
+			bg = BTN_PRIMARY_BG
+			bg_h = BTN_PRIMARY_BG_HOVER
+			bg_p = BTN_PRIMARY_BG_PRESS
+			line = BTN_PRIMARY_LINE
+			txt = BTN_PRIMARY_TEXT
+	elif on_dark:
+		bg = BTN_SECONDARY_DARK_BG
+		bg_h = BTN_SECONDARY_DARK_BG_HOVER
+		bg_p = BTN_SECONDARY_DARK_BG_PRESS
+		line = BTN_SECONDARY_DARK_LINE
+		txt = BTN_SECONDARY_DARK_TEXT
+		txt_h = Color("ffffff")
+		line_focus = BTN_PRIMARY_LINE_FOCUS
+	var w := 2 if primary else 1
+	btn.add_theme_stylebox_override("normal", _btn_box(bg, line, w, r))
+	btn.add_theme_stylebox_override("hover", _btn_box(bg_h, line, w, r))
+	btn.add_theme_stylebox_override("pressed", _btn_box(bg_p, line, w, r))
+	btn.add_theme_stylebox_override("disabled", _btn_box(bg, BTN_DISABLED_LINE, w, r))
+	btn.add_theme_stylebox_override("focus", _btn_box(Color(0, 0, 0, 0), line_focus, 3, r))
+	btn.add_theme_color_override("font_color", txt)
+	btn.add_theme_color_override("font_hover_color", txt_h)
+	btn.add_theme_color_override("font_pressed_color", txt)
+	btn.add_theme_color_override("font_focus_color", txt)
+	btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
+	btn.add_theme_font_override("font", font_bold() if use_bold else font())
+	btn.add_theme_font_size_override("font_size", font_size)
 
 
-static func apply_chip(btn: Button) -> void:
-	## 小切换按钮规格（**唯一口**）：难度档位、筛选、多选标签用。
-	## 用法：`btn.toggle_mode = true` + `UiTheme.apply_chip(btn)` —— 选中态由
-	## `button_pressed` 驱动（Godot 在按下态画 "pressed" 样式），所以**不需要**每次刷新重设。
+static func apply_chip(btn: Button, solid := false, compact := false) -> void:
+	## 小按钮规格（**唯一口**）：顶部工具条 / HUD、难度档位、筛选、多选标签。
+	##   solid   = 实心暗蓝灰 + 亮字（**工具条 / HUD**，要从背景里跳出来）
+	##   compact = 更小的内距（给固定高度的工具条用，如 battle 顶栏按钮只有 28px 高）
+	##
+	## 切换按钮（`toggle_mode = true`）的**选中态由 `button_pressed` 驱动** —— Godot 在按下态
+	## 画 "pressed" 样式，所以**不需要**每次刷新重设样式。
 	if btn == null:
 		return
-
-	var box := func(bg: Color, line: Color):
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = bg
-		sb.border_color = line
-		sb.set_border_width_all(1)
-		sb.set_corner_radius_all(RADIUS_SM)
-		sb.content_margin_left = CHIP_PAD_X
-		sb.content_margin_right = CHIP_PAD_X
-		sb.content_margin_top = CHIP_PAD_Y
-		sb.content_margin_bottom = CHIP_PAD_Y
-		return sb
-
-	btn.add_theme_stylebox_override("normal", box.call(CHIP_BG, CHIP_LINE))
-	btn.add_theme_stylebox_override("hover", box.call(CHIP_BG_HOVER, CHIP_LINE))
-	# 选中态：深墨蓝 + 金线（与主按钮同族，但体量更小）
-	btn.add_theme_stylebox_override("pressed", box.call(BTN_PRIMARY_BG, BTN_PRIMARY_LINE))
-	btn.add_theme_stylebox_override("hover_pressed", box.call(BTN_PRIMARY_BG_HOVER, BTN_PRIMARY_LINE))
-	btn.add_theme_stylebox_override("disabled", box.call(Color(1, 1, 1, 0.16), BTN_DISABLED_LINE))
-	btn.add_theme_stylebox_override("focus", box.call(Color(0, 0, 0, 0), BTN_SECONDARY_LINE_FOCUS))
-	btn.add_theme_color_override("font_color", CHIP_TEXT)
-	btn.add_theme_color_override("font_hover_color", Color("1a1c22"))
-	btn.add_theme_color_override("font_pressed_color", BTN_PRIMARY_TEXT)      # = 选中态文字
-	btn.add_theme_color_override("font_hover_pressed_color", Color("ffffff"))
-	btn.add_theme_color_override("font_focus_color", CHIP_TEXT)
-	btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
+	var px: int = CHIP_COMPACT_PAD_X if compact else CHIP_PAD_X
+	var py: int = CHIP_COMPACT_PAD_Y if compact else CHIP_PAD_Y
+	if solid:
+		# 常态：只留底边；选中 / 按下：**整圈金线 + 更亮的底**（明确「已打开」）
+		btn.add_theme_stylebox_override("normal",
+				_chip_box(CHIP_SOLID_BG, CHIP_SOLID_LINE, 2, px, py, true))
+		btn.add_theme_stylebox_override("hover",
+				_chip_box(CHIP_SOLID_BG_HOVER, CHIP_SOLID_LINE, 2, px, py, true))
+		btn.add_theme_stylebox_override("pressed",
+				_chip_box(CHIP_SOLID_BG_HOVER, BTN_PRIMARY_LINE, 2, px, py))
+		btn.add_theme_stylebox_override("hover_pressed",
+				_chip_box(CHIP_SOLID_BG_HOVER, BTN_PRIMARY_LINE_FOCUS, 2, px, py))
+		btn.add_theme_stylebox_override("disabled",
+				_chip_box(CHIP_SOLID_BG, BTN_DISABLED_LINE, 2, px, py, true))
+		btn.add_theme_stylebox_override("focus",
+				_chip_box(Color(0, 0, 0, 0), BTN_PRIMARY_LINE_FOCUS, 3, px, py))
+		btn.add_theme_color_override("font_color", CHIP_SOLID_TEXT)
+		btn.add_theme_color_override("font_hover_color", CHIP_SOLID_TEXT_HOVER)
+		btn.add_theme_color_override("font_pressed_color", BTN_PRIMARY_TEXT)
+		btn.add_theme_color_override("font_hover_pressed_color", Color("ffffff"))
+		btn.add_theme_color_override("font_focus_color", CHIP_SOLID_TEXT)
+		btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
+	else:
+		# 选中 / 按下 = 深墨蓝 + 金线（与主按钮同族，但体量更小）
+		btn.add_theme_stylebox_override("normal", _chip_box(CHIP_BG, CHIP_LINE, 1, px, py))
+		btn.add_theme_stylebox_override("hover", _chip_box(CHIP_BG_HOVER, CHIP_LINE, 1, px, py))
+		btn.add_theme_stylebox_override("pressed",
+				_chip_box(BTN_PRIMARY_BG, BTN_PRIMARY_LINE, 1, px, py))
+		btn.add_theme_stylebox_override("hover_pressed",
+				_chip_box(BTN_PRIMARY_BG_HOVER, BTN_PRIMARY_LINE, 1, px, py))
+		btn.add_theme_stylebox_override("disabled",
+				_chip_box(Color(1, 1, 1, 0.16), BTN_DISABLED_LINE, 1, px, py))
+		btn.add_theme_stylebox_override("focus",
+				_chip_box(Color(0, 0, 0, 0), BTN_SECONDARY_LINE_FOCUS, 3, px, py))
+		btn.add_theme_color_override("font_color", CHIP_TEXT)
+		btn.add_theme_color_override("font_hover_color", Color("1a1c22"))
+		btn.add_theme_color_override("font_pressed_color", BTN_PRIMARY_TEXT)
+		btn.add_theme_color_override("font_hover_pressed_color", Color("ffffff"))
+		btn.add_theme_color_override("font_focus_color", CHIP_TEXT)
+		btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
 	btn.add_theme_font_override("font", font())
 	btn.add_theme_font_size_override("font_size", FS_LABEL)

@@ -264,6 +264,9 @@ func _ready() -> void:
 	log_btn.pressed.connect(_toggle_log)
 	snd_btn.pressed.connect(_toggle_sound)
 	_load_entry_level()
+	# R113：顶栏按钮统一走 chip（实心 + compact —— 顶栏按钮只有 28px 高，标准内距会撑出格子）
+	for _tb: Button in [log_btn, snd_btn, title_btn, level_btn, end_turn_btn, map_btn]:
+		UiTheme.apply_chip(_tb, true, true)
 	# 命令行 -- --screenshot / -- --demo：自动化演示与截图（验证视觉效果用）
 	var args := OS.get_cmdline_user_args()
 	_demo_args = args
@@ -3688,6 +3691,8 @@ func _build_tut_bar() -> void:
 	_tut_close_btn.size = Vector2(136, 28)
 	_tut_close_btn.pressed.connect(_tut_close)
 	_tut_bar.add_child(_tut_close_btn)
+	for _tbtn: Button in [_tut_next_btn, _tut_close_btn]:
+		UiTheme.apply_chip(_tbtn, true, true)
 
 
 func _build_level_menu() -> void:
@@ -3734,13 +3739,11 @@ func _build_over_panel() -> void:
 	_over_btn_restart = Button.new()
 	_over_btn_restart.text = "再来一局"
 	_over_btn_restart.custom_minimum_size = Vector2(220, 40)
-	_over_btn_restart.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	_over_btn_restart.pressed.connect(_on_over_restart)
 	box.add_child(_over_btn_restart)
 	_over_btn_level = Button.new()
 	_over_btn_level.text = "选关"
 	_over_btn_level.custom_minimum_size = Vector2(220, 40)
-	_over_btn_level.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	_over_btn_level.pressed.connect(func():
 		_level_menu.position = _over_panel.get_screen_position() + Vector2(30, 60)
 		_level_menu.popup())
@@ -3748,10 +3751,13 @@ func _build_over_panel() -> void:
 	_over_btn_title = Button.new()
 	_over_btn_title.text = "回到标题"
 	_over_btn_title.custom_minimum_size = Vector2(220, 40)
-	_over_btn_title.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	_over_btn_title.pressed.connect(_on_back_to_title)
 	box.add_child(_over_btn_title)
+	UiTheme.apply_button(_over_btn_restart, true)     # 结算面板的**唯一主按钮**
+	UiTheme.apply_button(_over_btn_level, false)
+	UiTheme.apply_button(_over_btn_title, false)
 	for b: Button in [_over_btn_restart, _over_btn_level, _over_btn_title]:
+		b.custom_minimum_size = Vector2(220, 46)      # 24px 字 + 内距需要的高度
 		b.pressed.connect(func(): sfx.play("click"))
 
 

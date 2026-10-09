@@ -45,6 +45,7 @@ func _ready() -> void:
 	_btn.add_theme_font_override("font", _font)
 	_btn.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
 	_btn.pressed.connect(_toggle)
+	UiTheme.apply_chip(_btn, false, true)   # 关闭按钮：面板是 PAPER 亮底 + 固定 32px 高 → 浅底 compact
 	add_child(_btn)
 
 	_panel = Control.new()

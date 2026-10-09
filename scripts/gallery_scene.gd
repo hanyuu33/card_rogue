@@ -58,6 +58,9 @@ var _font_bold: SystemFont
 func _ready() -> void:
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
+	# R113：图鉴页底色 #E9E7E2 = 亮底 → 浅底 chip；两个 tab 是 toggle，选中态由 button_pressed 驱动
+	for _b: Button in [player_tab, enemy_tab, back_btn]:
+		UiTheme.apply_chip(_b, false)
 	repo = CardRepo.load_json()
 	_all = repo.all_cards()
 	for t: String in ["费用不限", "1 费", "2 费", "3 费", "4 费", "5 费+"]:

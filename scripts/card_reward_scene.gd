@@ -52,6 +52,11 @@ var _relic_btn: Button = null         # 「待决定道具」重新打开按钮
 func _ready() -> void:
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
+	# R113：按钮统一走唯一口（本页底色 #E9E7E2 = 亮底，on_dark 保持 false）
+	UiTheme.apply_button(continue_btn, true)      # 「继续」= 本页唯一主按钮
+	UiTheme.apply_button(back_btn, false)
+	for _b: Button in [skip_btn, normal_btn, boss_btn]:
+		UiTheme.apply_button(_b, false)
 	repo = CardRepo.load_json()
 	# 牌库任何时候都可以查看（无论在哪个界面）；返回按钮占着右上 → 按钮往左挪
 	DeckViewer.attach(self, Vector2(1000, 6))
@@ -409,6 +414,9 @@ func _build_relic_panel() -> void:
 	later.custom_minimum_size = Vector2(150, 40)
 	later.pressed.connect(_on_relic_later)
 	hbox.add_child(later)
+	UiTheme.apply_button(take, true)               # 「收下道具」= 弹窗的主行动
+	UiTheme.apply_button(skip, false)
+	UiTheme.apply_button(later, false)
 
 	# 「待决定道具」常驻按钮：关闭弹窗后可随时重新打开（已决定则不显示）
 	_relic_btn = Button.new()
@@ -422,6 +430,7 @@ func _build_relic_panel() -> void:
 	_relic_btn.offset_top = -186.0
 	_relic_btn.offset_bottom = -154.0
 	_relic_btn.visible = false
+	UiTheme.apply_chip(_relic_btn, false, true)   # 常驻胶囊，用 compact 内距
 	_relic_btn.pressed.connect(func(): _relic_panel.visible = true)
 	add_child(_relic_btn)
 

@@ -51,6 +51,8 @@ var _grid_y := TOP_Y
 func _ready() -> void:
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
+	# R113：本页底色 #252A35 = 暗底 → 用暗底主按钮（金底墨字；深墨蓝在暗底上会沉下去）
+	UiTheme.apply_button(confirm_btn, true, true)
 	sfx = Sfx.new()
 	add_child(sfx)
 	repo = CardRepo.load_json()
