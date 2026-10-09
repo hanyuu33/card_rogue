@@ -82,27 +82,50 @@ static func font_bold() -> SystemFont:
 
 
 # ══════════════════════════════════════════════════════════════════════
-# 字号阶（7 档）
+# 字号阶（9 档）
 # ══════════════════════════════════════════════════════════════════════
 #
-# 现状是 19 档（8~64px），其中 17/18/19/22/24/26/30/34 都是只出现一两次的孤值，
-# 而 15 与 16、17 与 18 肉眼几乎分不出 —— 它们只把层级搅浑，让人读不出谁更重要。
+# 体检时是 19 档（8~64px）：17/18/19/22/26/30/34 全是只出现一两次的孤值，
+# 15 与 16、17 与 18 肉眼几乎分不出 —— 它们只把层级搅浑。
+#
+# ⚠️ 为什么是 **9 档而不是 7 档**：R113 实测全工程 213 处设置点，其中 8~14px 段占了
+#   绝大多数（8/9/10/11/12/13/14 共 149 处）。这是一块 1280×720 的**信息密集**策略界面，
+#   底部确实需要一档「微型字」（棋盘表头、能量、卡组计数…）。若硬压成 7 档，
+#   这些 9px 文字会被顶到 12px（+33%），在紧凑区块里直接溢出。
+#   所以补 `FS_MICRO`（微型）与 `FS_HERO`（游戏主标题）—— 最大变动幅度因此从 +50% 降到 +25%。
 
-const FS_CAPTION := 12   ## 说明文字、次要信息
-const FS_LABEL := 14     ## 标签、次要正文、按钮
-const FS_BODY := 16      ## 正文
-const FS_SUBHEAD := 20   ## 小标题、重要数字
-const FS_HEADING := 24   ## 区块标题
-const FS_TITLE := 32     ## 大面板标题、结算大字
-const FS_DISPLAY := 48   ## 标题页主标题
+const FS_MICRO := 10    ## 微型：棋盘表头、计数徽章、悬停面板脚注（信息密集区专用）
+const FS_CAPTION := 12  ## 说明文字、次要信息
+const FS_LABEL := 14    ## 标签、次要正文
+const FS_BODY := 16     ## 正文、按钮
+const FS_SUBHEAD := 20  ## 小标题、重要数字
+const FS_HEADING := 24  ## 区块标题、主按钮
+const FS_TITLE := 32    ## 大面板标题、结算大字
+const FS_DISPLAY := 48  ## 分层/结算的大号标题
+const FS_HERO := 64     ## 仅用于标题页游戏名
 
-## 全部合法字号。新增界面字号**必须**落在这 7 个值上。
+## 全部合法字号。新增界面字号**必须**落在这 9 个值上。
 ## ⚠️ 用**数组字面量**（`Array[int]` 类型标注的常量不可靠）。
-const FS_STEPS := [FS_CAPTION, FS_LABEL, FS_BODY, FS_SUBHEAD, FS_HEADING, FS_TITLE, FS_DISPLAY]
+const FS_STEPS := [FS_MICRO, FS_CAPTION, FS_LABEL, FS_BODY, FS_SUBHEAD,
+		FS_HEADING, FS_TITLE, FS_DISPLAY, FS_HERO]
+
+## 旧值 → 新档的**吸附表**（迁移用；已全部落地的对照见 UI设计规范.md）。
+## 19 档 → 9 档，最大变动 ±25%（仅 8→10 与 64 保留）。
+const FS_SNAP_MAP := {
+	8: FS_MICRO, 9: FS_MICRO, 10: FS_MICRO,
+	11: FS_CAPTION, 12: FS_CAPTION, 13: FS_LABEL, 14: FS_LABEL,
+	15: FS_BODY, 16: FS_BODY, 17: FS_BODY,
+	18: FS_SUBHEAD, 19: FS_SUBHEAD, 20: FS_SUBHEAD,
+	22: FS_HEADING, 24: FS_HEADING, 26: FS_HEADING,
+	30: FS_TITLE, 34: FS_TITLE,
+	64: FS_HERO,
+}
 
 
 static func nearest_font(px: int) -> int:
 	## 把任意字号吸附到最近的合法档位（迁移存量用；**不要**用在卡面尺寸上）。
+	if FS_SNAP_MAP.has(px):
+		return FS_SNAP_MAP[px]
 	var best: int = FS_STEPS[0]
 	var best_d: int = absi(px - best)
 	for s in FS_STEPS:
@@ -211,3 +234,129 @@ static func kind_color(kind: String) -> Color:
 		"工事":
 			return KIND_FORT
 	return KIND_FALLBACK
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 圆角与组件规格
+# ══════════════════════════════════════════════════════════════════════
+#
+# ⚠️ 这一节是给「以后会有许多其他界面」准备的：**任何新界面都不该自己画按钮**，
+#    一律 `UiTheme.apply_button(btn, primary)`。这样主次、圆角、内距、焦点环
+#    永远只有一处定义，新界面不可能跟旧界面长得不一样。
+
+const RADIUS_SM := 6
+const RADIUS_MD := 8
+const RADIUS_LG := 12
+
+const BTN_PAD_X := 18   ## 按钮左右内距
+const BTN_PAD_Y := 9    ## 按钮上下内距
+
+# ── 主按钮（一屏只应有一个）──
+const BTN_PRIMARY_BG := Color("22304a")        ## 深墨蓝（日式西幻的夜色）
+const BTN_PRIMARY_BG_HOVER := Color("2c3f61")
+const BTN_PRIMARY_BG_PRESS := Color("1a2438")
+const BTN_PRIMARY_LINE := Color("c8951c")      ## 金线
+const BTN_PRIMARY_LINE_FOCUS := Color("f2c14e") ## 焦点环（更亮，键盘可达性）
+const BTN_PRIMARY_TEXT := Color("f5efe0")
+
+# ── 次按钮 ──
+const BTN_SECONDARY_BG := Color(1, 1, 1, 0.42)
+const BTN_SECONDARY_BG_HOVER := Color(1, 1, 1, 0.72)
+const BTN_SECONDARY_BG_PRESS := Color(1, 1, 1, 0.28)
+const BTN_SECONDARY_LINE := Color("b8b4aa")
+const BTN_SECONDARY_LINE_FOCUS := Color("8a5f00")
+const BTN_SECONDARY_TEXT := Color("1a1c22")
+
+const BTN_DISABLED_LINE := Color("b8b4aa")
+const BTN_DISABLED_TEXT := Color("7a7a78")
+
+# ── 小切换按钮（chip）：难度档位、筛选、多选标签 ──
+const CHIP_BG := Color(1, 1, 1, 0.34)
+const CHIP_BG_HOVER := Color(1, 1, 1, 0.62)
+const CHIP_LINE := Color("b8b4aa")
+const CHIP_TEXT := Color("1a1c22")
+const CHIP_PAD_X := 12
+const CHIP_PAD_Y := 5
+
+
+static func _btn_box(bg: Color, line: Color, width: int, radius: int) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = line
+	sb.set_border_width_all(width)
+	sb.set_corner_radius_all(radius)
+	sb.content_margin_left = BTN_PAD_X
+	sb.content_margin_right = BTN_PAD_X
+	sb.content_margin_top = BTN_PAD_Y
+	sb.content_margin_bottom = BTN_PAD_Y
+	return sb
+
+
+static func apply_button(btn: Button, primary := false) -> void:
+	## 给按钮套上统一规格（**唯一口**）。新界面写按钮就调这一行，别自己画 StyleBox。
+	## primary = 主行动（一屏只应有一个，如标题页的「开始对战」）。
+	if btn == null:
+		return
+	var r := RADIUS_MD
+	if primary:
+		btn.add_theme_stylebox_override("normal", _btn_box(BTN_PRIMARY_BG, BTN_PRIMARY_LINE, 2, r))
+		btn.add_theme_stylebox_override("hover", _btn_box(BTN_PRIMARY_BG_HOVER, BTN_PRIMARY_LINE, 2, r))
+		btn.add_theme_stylebox_override("pressed", _btn_box(BTN_PRIMARY_BG_PRESS, BTN_PRIMARY_LINE, 2, r))
+		btn.add_theme_stylebox_override("disabled", _btn_box(BTN_PRIMARY_BG, BTN_DISABLED_LINE, 2, r))
+		btn.add_theme_stylebox_override("focus", _btn_box(Color(0, 0, 0, 0), BTN_PRIMARY_LINE_FOCUS, 3, r))
+		btn.add_theme_color_override("font_color", BTN_PRIMARY_TEXT)
+		btn.add_theme_color_override("font_hover_color", Color("ffffff"))
+		btn.add_theme_color_override("font_pressed_color", BTN_PRIMARY_TEXT)
+		btn.add_theme_color_override("font_focus_color", BTN_PRIMARY_TEXT)
+		btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
+		btn.add_theme_font_override("font", font_bold())
+		btn.add_theme_font_size_override("font_size", FS_HEADING)
+	else:
+		btn.add_theme_stylebox_override("normal", _btn_box(BTN_SECONDARY_BG, BTN_SECONDARY_LINE, 1, r))
+		btn.add_theme_stylebox_override("hover", _btn_box(BTN_SECONDARY_BG_HOVER, BTN_SECONDARY_LINE, 1, r))
+		btn.add_theme_stylebox_override("pressed", _btn_box(BTN_SECONDARY_BG_PRESS, BTN_SECONDARY_LINE, 1, r))
+		btn.add_theme_stylebox_override("disabled", _btn_box(Color(1, 1, 1, 0.18), BTN_DISABLED_LINE, 1, r))
+		btn.add_theme_stylebox_override("focus", _btn_box(Color(0, 0, 0, 0), BTN_SECONDARY_LINE_FOCUS, 3, r))
+		btn.add_theme_color_override("font_color", BTN_SECONDARY_TEXT)
+		btn.add_theme_color_override("font_hover_color", Color("1a1c22"))
+		btn.add_theme_color_override("font_pressed_color", BTN_SECONDARY_TEXT)
+		btn.add_theme_color_override("font_focus_color", BTN_SECONDARY_TEXT)
+		btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
+		btn.add_theme_font_override("font", font())
+		btn.add_theme_font_size_override("font_size", FS_SUBHEAD)
+
+
+static func apply_chip(btn: Button) -> void:
+	## 小切换按钮规格（**唯一口**）：难度档位、筛选、多选标签用。
+	## 用法：`btn.toggle_mode = true` + `UiTheme.apply_chip(btn)` —— 选中态由
+	## `button_pressed` 驱动（Godot 在按下态画 "pressed" 样式），所以**不需要**每次刷新重设。
+	if btn == null:
+		return
+
+	var box := func(bg: Color, line: Color):
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = bg
+		sb.border_color = line
+		sb.set_border_width_all(1)
+		sb.set_corner_radius_all(RADIUS_SM)
+		sb.content_margin_left = CHIP_PAD_X
+		sb.content_margin_right = CHIP_PAD_X
+		sb.content_margin_top = CHIP_PAD_Y
+		sb.content_margin_bottom = CHIP_PAD_Y
+		return sb
+
+	btn.add_theme_stylebox_override("normal", box.call(CHIP_BG, CHIP_LINE))
+	btn.add_theme_stylebox_override("hover", box.call(CHIP_BG_HOVER, CHIP_LINE))
+	# 选中态：深墨蓝 + 金线（与主按钮同族，但体量更小）
+	btn.add_theme_stylebox_override("pressed", box.call(BTN_PRIMARY_BG, BTN_PRIMARY_LINE))
+	btn.add_theme_stylebox_override("hover_pressed", box.call(BTN_PRIMARY_BG_HOVER, BTN_PRIMARY_LINE))
+	btn.add_theme_stylebox_override("disabled", box.call(Color(1, 1, 1, 0.16), BTN_DISABLED_LINE))
+	btn.add_theme_stylebox_override("focus", box.call(Color(0, 0, 0, 0), BTN_SECONDARY_LINE_FOCUS))
+	btn.add_theme_color_override("font_color", CHIP_TEXT)
+	btn.add_theme_color_override("font_hover_color", Color("1a1c22"))
+	btn.add_theme_color_override("font_pressed_color", BTN_PRIMARY_TEXT)      # = 选中态文字
+	btn.add_theme_color_override("font_hover_pressed_color", Color("ffffff"))
+	btn.add_theme_color_override("font_focus_color", CHIP_TEXT)
+	btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
+	btn.add_theme_font_override("font", font())
+	btn.add_theme_font_size_override("font_size", FS_LABEL)

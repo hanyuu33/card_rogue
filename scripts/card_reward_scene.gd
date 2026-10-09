@@ -187,7 +187,7 @@ func _on_cards_draw() -> void:
 		var lw := 60.0
 		card_area.draw_string(_font_bold, rect.position +
 				Vector2(CARD_W / 2.0 - lw / 2.0, CARD_H + 26), _cards[i].rarity_name(),
-				HORIZONTAL_ALIGNMENT_CENTER, lw, 17, rc)
+				HORIZONTAL_ALIGNMENT_CENTER, lw, UiTheme.FS_BODY, rc)
 		# 已决定后：未选中的卡蒙一层白，突出结果
 		if _decided and not (_chosen == _cards[i] and not _skipped):
 			card_area.draw_rect(rect, Color(1, 1, 1, 0.62), true)
@@ -214,21 +214,21 @@ func _draw_hover_detail() -> void:
 	var y := box.position.y + 24.0
 	# 名称 + 编号
 	card_area.draw_string(_font_bold, Vector2(box.position.x + pad, y),
-			"%s" % card.card_name, HORIZONTAL_ALIGNMENT_LEFT, inner_w, 15, Color.BLACK)
+			"%s" % card.card_name, HORIZONTAL_ALIGNMENT_LEFT, inner_w, UiTheme.FS_BODY, Color.BLACK)
 	y += 20.0
 	card_area.draw_string(_font, Vector2(box.position.x + pad, y),
 			"#%d  %s · %d 费 · %s" % [card.id, card.kind, card.cost, card.rarity_name()],
-			HORIZONTAL_ALIGNMENT_LEFT, inner_w, 11, Color("555555"))
+			HORIZONTAL_ALIGNMENT_LEFT, inner_w, UiTheme.FS_CAPTION, Color("555555"))
 	y += 18.0
 	var stats := CardFace.stats_line(card)
 	if stats != "":
 		card_area.draw_string(_font, Vector2(box.position.x + pad, y), stats,
-				HORIZONTAL_ALIGNMENT_LEFT, inner_w, 11, Color("444444"))
+				HORIZONTAL_ALIGNMENT_LEFT, inner_w, UiTheme.FS_CAPTION, Color("444444"))
 		y += 18.0
 	# 效果文本（自动换行 + R106：Markdown 富文本，隐藏「（…）」补注）
 	y += 4.0
 	card_area.draw_string(_font, Vector2(box.position.x + pad, y), "效果",
-			HORIZONTAL_ALIGNMENT_LEFT, inner_w, 11, Color("2a5a8a"))
+			HORIZONTAL_ALIGNMENT_LEFT, inner_w, UiTheme.FS_CAPTION, Color("2a5a8a"))
 	y += 17.0
 	CardText.draw_wrapped(card_area, _font, _font_bold,
 			CardText.parse(card.effect_text), box.position.x + pad, y, inner_w, 12,
@@ -347,7 +347,7 @@ func _build_relic_panel() -> void:
 	title.position = Vector2(0, 14)
 	title.size = Vector2(W, 26)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 17)
+	title.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	title.add_theme_color_override("font_color", Color("7a5a10"))
 	panel.add_child(title)
 
@@ -356,7 +356,7 @@ func _build_relic_panel() -> void:
 	name_lbl.position = Vector2(0, 48)
 	name_lbl.size = Vector2(W, 24)
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_lbl.add_theme_font_size_override("font_size", 15)
+	name_lbl.add_theme_font_size_override("font_size", UiTheme.FS_BODY)
 	name_lbl.add_theme_color_override("font_color", Color("3a3010"))
 	panel.add_child(name_lbl)
 
@@ -367,7 +367,7 @@ func _build_relic_panel() -> void:
 	desc.position = Vector2(20, 80)
 	desc.size = Vector2(W - 40, desc_h)
 	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	desc.add_theme_font_size_override("font_size", 13)
+	desc.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
 	desc.add_theme_color_override("font_color", Color("5a4c28"))
 	panel.add_child(desc)
 
@@ -377,7 +377,7 @@ func _build_relic_panel() -> void:
 	hint.size = Vector2(W - 40, 40)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
 	hint.add_theme_color_override("font_color", Color("8a7a50"))
 	panel.add_child(hint)
 
@@ -478,11 +478,11 @@ func _draw_granted_banner() -> void:
 	card_area.draw_string(_font_bold,
 			Vector2(rect.position.x + 14, rect.position.y + 22),
 			"✦ 掉落道具：获得「%s」（已加入道具栏）" % _granted_relic.relic_name,
-			HORIZONTAL_ALIGNMENT_LEFT, w - 28, 15, Color("7a5a10"))
+			HORIZONTAL_ALIGNMENT_LEFT, w - 28, UiTheme.FS_BODY, Color("7a5a10"))
 	for di in dlines.size():
 		card_area.draw_string(_font,
 				Vector2(rect.position.x + 14, rect.position.y + 42.0 + di * 16.0),
-				dlines[di], HORIZONTAL_ALIGNMENT_LEFT, w - 28, 12,
+				dlines[di], HORIZONTAL_ALIGNMENT_LEFT, w - 28, UiTheme.FS_CAPTION,
 				Color("6a5a30"))
 
 

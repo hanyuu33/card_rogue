@@ -209,7 +209,7 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("252a35"))
 	if _cards.is_empty():
 		draw_string(_font, Vector2(0, size.y / 2), "卡组是空的……（点击继续）",
-				HORIZONTAL_ALIGNMENT_CENTER, size.x, 16, Color("8a867c"))
+				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("8a867c"))
 		return
 	_layout()
 	for i in _cards.size():
@@ -231,7 +231,7 @@ func _draw() -> void:
 			_draw_check_badge(rect)
 	if _result != "":
 		draw_string(_font_bold, Vector2(0, size.y - 72), _result,
-				HORIZONTAL_ALIGNMENT_CENTER, size.x, 16, Color("c8e6a0"))
+				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("c8e6a0"))
 
 
 func _draw_check_badge(rect: Rect2) -> void:

@@ -54,7 +54,7 @@ offset_top = 6.0
 offset_right = 1264.0
 offset_bottom = 38.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 16
 text = "← 返回标题"
 
 [node name="ProbLabel" type="Label" parent="."]
@@ -65,7 +65,7 @@ offset_top = 442.0
 offset_bottom = 470.0
 grow_horizontal = 2
 theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 16
 theme_override_colors/font_color = Color(0.32, 0.34, 0.38, 1)
 horizontal_alignment = 1
 text = "出现概率"
@@ -78,7 +78,7 @@ offset_top = 486.0
 offset_bottom = 524.0
 grow_horizontal = 2
 theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 24
 horizontal_alignment = 1
 text = ""
 
@@ -98,7 +98,7 @@ offset_top = 596.0
 offset_right = 724.0
 offset_bottom = 632.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 17
+theme_override_font_sizes/font_size = 16
 text = "跳过奖励"
 
 [node name="NormalBtn" type="Button" parent="Bottom"]
@@ -108,7 +108,7 @@ offset_top = 596.0
 offset_right = 500.0
 offset_bottom = 632.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 16
 text = "普通过关奖励"
 
 [node name="BossBtn" type="Button" parent="Bottom"]
@@ -118,7 +118,7 @@ offset_top = 596.0
 offset_right = 984.0
 offset_bottom = 632.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 16
 text = "Boss过关奖励"
 
 [node name="ContinueBtn" type="Button" parent="Bottom"]

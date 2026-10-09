@@ -7,6 +7,8 @@ class_name UiAssets
 ##   地图节点图标   map_<类型>.png    类型 = start/battle/elite/rest/event/chest/boss
 ##   事件插图       event_<事件>.png  事件 = rest/treasure/whisper/struggle/gaze/pear/hero/relic_chest
 ##   事件背景       bg_<事件>.png     事件同上
+##   卡面纸底       card_paper.png
+##   稀有度边框     frame_<0..5>.png  下标同 CardData.RARITY_COLORS
 ##
 ## 说明：加载策略双保险 —— 优先用 Godot 的导入资源（编辑器导入 / 导出后的 .ctex），
 ## 失败则直接读原始 PNG（往 assets/ui/ 丢进去还没让编辑器导入也能立刻生效）。
@@ -50,6 +52,18 @@ static func event_pic(kind: String) -> Texture2D:
 
 static func event_bg(kind: String) -> Texture2D:
 	return get_tex("bg_" + kind)
+
+
+static func card_paper() -> Texture2D:
+	## 卡面纸底（R113）。设计基准 58 × 70（与 CARD_W:CARD_H 同比）。
+	## 卡面宽高比恒定，只是整体缩放，所以**不需要九宫格**，直接拉伸即可。
+	return get_tex("card_paper")
+
+
+static func card_frame(rarity: int) -> Texture2D:
+	## 稀有度边框（R113）。下标与 `CardData.RARITY_COLORS` 对齐：
+	##   0 普通 / 1 稀有 / 2 史诗 / 3 初始 / 4 怪物 / 5 事件。
+	return get_tex("frame_%d" % clampi(rarity, 0, 5))
 
 
 static func clear_cache() -> void:

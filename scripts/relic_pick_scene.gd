@@ -70,7 +70,7 @@ func _draw() -> void:
 		return
 	var repo := RelicRepo.load_json()
 	draw_string(_font, Vector2(0, 120), "起点处的一位行商愿意送你一件随身之物……",
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, 16, Color("b8b4aa"))
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("b8b4aa"))
 	for i in RunState.relic_choice.size():
 		var rel := repo.get_relic(RunState.relic_choice[i])
 		if rel == null:
@@ -85,18 +85,18 @@ func _draw() -> void:
 		var band := Rect2(rect.position, Vector2(rect.size.x, 34))
 		draw_rect(band, Color(rel.source_color(), 0.30), true)
 		draw_string(_font_bold, band.position + Vector2(0, 23), "道具 · %s" % rel.kind,
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 15, rel.source_color())
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_BODY, rel.source_color())
 		# 名称
 		draw_string(_font_bold, rect.position + Vector2(0, 78), rel.relic_name,
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 26, Color("f2ead0"))
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_HEADING, Color("f2ead0"))
 		# 描述（字符级换行）
 		var y := 116.0
 		for line: String in _wrap_text(rel.desc, rect.size.x - 40.0, 15):
 			draw_string(_font, rect.position + Vector2(20, y), line,
-					HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 40.0, 15, Color("cfcabb"))
+					HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 40.0, UiTheme.FS_BODY, Color("cfcabb"))
 			y += 24.0
 		draw_string(_font, rect.position + Vector2(0, rect.size.y - 18),
-				"点击收下", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 13, Color("8a867c"))
+				"点击收下", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_LABEL, Color("8a867c"))
 
 
 func _wrap_text(text: String, max_w: float, px: int) -> Array[String]:

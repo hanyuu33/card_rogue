@@ -26,17 +26,20 @@ func _ready() -> void:
 	$Buttons/GalleryBtn.pressed.connect(_on_gallery)
 	$Buttons/QuitBtn.pressed.connect(_on_quit)
 	# 录像回放入口（R46）：插在「退出」之前
-	var cjk := UiTheme.font()
 	var rp_btn := Button.new()
 	rp_btn.text = "录像回放"
-	rp_btn.add_theme_font_override("font", cjk)
-	rp_btn.add_theme_font_size_override("font_size", UiTheme.FS_SUBHEAD)
 	$Buttons.add_child(rp_btn)
 	$Buttons.move_child(rp_btn, $Buttons.get_child_count() - 2)
 	rp_btn.pressed.connect(_on_replays)
 	for b: Button in [$Buttons/StartBtn, $Buttons/GalleryBtn, $Buttons/QuitBtn]:
 		b.pressed.connect(func(): sfx.play("click"))
 	rp_btn.pressed.connect(func(): sfx.play("click"))
+	# R113 按钮主次：**一屏只有一个主按钮**（开始对战）。规格全部来自 UiTheme.apply_button，
+	# 这里不写任何字号 / 圆角 / 颜色 —— 以后新界面照抄这几行即可。
+	UiTheme.apply_button($Buttons/StartBtn, true)
+	UiTheme.apply_button($Buttons/GalleryBtn, false)
+	UiTheme.apply_button(rp_btn, false)
+	UiTheme.apply_button($Buttons/QuitBtn, false)
 	_build_difficulty_row()
 	# 回放中途回到标题（整局播完 / 中途退出）→ 停止回放状态
 	if ReplayLog.playing:
@@ -83,21 +86,22 @@ func _build_difficulty_row() -> void:
 	row.offset_top = 306.0
 	row.offset_bottom = 338.0
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", UiTheme.SP_3)
 	add_child(row)
 	var label := Label.new()
 	label.text = "难度档位"
 	label.add_theme_font_override("font", _font)
 	label.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
-	label.add_theme_color_override("font_color", UiTheme.INK_900)
+	# 行标签用次要色，让 chip 的选中态（深墨蓝）跳出来
+	label.add_theme_color_override("font_color", UiTheme.INK_600)
 	row.add_child(label)
 	for i in RunState.DIFFICULTY_COUNT:
 		var b := Button.new()
 		b.text = "%d · %s" % [i, RunState.DIFFICULTY_NAMES[i]]
 		b.toggle_mode = true
 		b.tooltip_text = RunState.DIFFICULTY_NOTES[i]
-		b.add_theme_font_override("font", _font)
-		b.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
+		# R113：小切换按钮也走唯一口（此前是 Godot 默认样式，与主按钮不是一套）
+		UiTheme.apply_chip(b)
 		b.pressed.connect(_on_pick_difficulty.bind(i))
 		row.add_child(b)
 		_diff_btns.append(b)

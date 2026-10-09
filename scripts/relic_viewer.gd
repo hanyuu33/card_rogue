@@ -70,7 +70,7 @@ func _ready() -> void:
 	_btn.custom_minimum_size = Vector2(100, 32)
 	_btn.size = Vector2(100, 32)
 	_btn.add_theme_font_override("font", _font)
-	_btn.add_theme_font_size_override("font_size", 14)
+	_btn.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
 	# 禁用态（悬浮就能看全时）保持正常配色，别灰得看不出是什么
 	_btn.add_theme_color_override("font_disabled_color", Color("e8e4da"))
 	_btn.pressed.connect(_toggle)
@@ -245,11 +245,11 @@ func _on_hover_draw() -> void:
 	if list.is_empty():
 		_hover_layer.draw_string(_font, r.position + Vector2(PAD * 0.6, 26),
 				"还没有获得任何道具。", HORIZONTAL_ALIGNMENT_LEFT,
-				r.size.x - 24.0, 12, Color("b8b4aa"))
+				r.size.x - 24.0, UiTheme.FS_CAPTION, Color("b8b4aa"))
 		return
 	_hover_layer.draw_string(_font_bold, r.position + Vector2(PAD * 0.6, 20),
 			"我的道具（共 %d 件 · 悬浮查看）" % list.size(),
-			HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, 13, Color("f0ead8"))
+			HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, UiTheme.FS_LABEL, Color("f0ead8"))
 	var y := r.position.y + 30.0
 	var bottom := r.end.y - 22.0
 	var shown := 0
@@ -266,29 +266,29 @@ func _on_hover_draw() -> void:
 				Color(0, 0, 0, 0.5), false, 1.0)
 		_hover_layer.draw_string(_font_bold, r.position + Vector2(PAD * 0.6 + 12, y + 15),
 				"「%s」" % rel.relic_name, HORIZONTAL_ALIGNMENT_LEFT,
-				180.0, 13, Color("f4eeda"))
+				180.0, UiTheme.FS_LABEL, Color("f4eeda"))
 		_hover_layer.draw_string(_font, r.position + Vector2(PAD * 0.6 + 196, y + 15),
-				str(b["tag"]), HORIZONTAL_ALIGNMENT_LEFT, 180.0, 11, Color("9a927f"))
+				str(b["tag"]), HORIZONTAL_ALIGNMENT_LEFT, 180.0, UiTheme.FS_CAPTION, Color("9a927f"))
 		var lines: PackedStringArray = b["lines"]
 		for j in lines.size():
 			_hover_layer.draw_string(_font, r.position + Vector2(PAD * 0.6 + 12,
 					y + H_NAME + j * H_LINE), lines[j], HORIZONTAL_ALIGNMENT_LEFT,
-					r.size.x - PAD * 1.2, 12, Color("ddd6c4"))
+					r.size.x - PAD * 1.2, UiTheme.FS_CAPTION, Color("ddd6c4"))
 		y += b.h
 		shown += 1
 	# 底部：装不下就引导点按钮；装得下就明说「不用点」
 	if shown < list.size():
 		_hover_layer.draw_string(_font, Vector2(r.position.x + PAD * 0.6, r.end.y - 8),
 				"…另有 %d 件，点「道具 %d」看完整详情" % [list.size() - shown, list.size()],
-				HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, 11, Color("c8951c"))
+				HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, UiTheme.FS_CAPTION, Color("c8951c"))
 	elif _need_detail():
 		_hover_layer.draw_string(_font, Vector2(r.position.x + PAD * 0.6, r.end.y - 8),
 				"点「道具 %d」看完整详情（字号更大）" % list.size(),
-				HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, 11, Color("9a927f"))
+				HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, UiTheme.FS_CAPTION, Color("9a927f"))
 	else:
 		_hover_layer.draw_string(_font, Vector2(r.position.x + PAD * 0.6, r.end.y - 8),
 				"已全部显示，无需点击", HORIZONTAL_ALIGNMENT_LEFT,
-				r.size.x - 24.0, 11, Color("6f6a5e"))
+				r.size.x - 24.0, UiTheme.FS_CAPTION, Color("6f6a5e"))
 
 
 # ------------------------------------------------------------ 完整详情面板
@@ -323,11 +323,11 @@ func _on_panel_draw() -> void:
 	_panel.draw_rect(Rect2(px, py, PANEL_W, PANEL_H), Color("555555"), false, 2.0)
 	_panel.draw_string(_font_bold, Vector2(px + PAD, py + 40),
 			"我的道具（共 %d 件 · 完整效果 · 滚轮翻页 · 点击任意处关闭）" % n,
-			HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - PAD * 2.0, 20, Color("333333"))
+			HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - PAD * 2.0, UiTheme.FS_SUBHEAD, Color("333333"))
 	if n == 0:
 		_panel.draw_string(_font, Vector2(px + PAD, py + 96),
 				"还没有获得任何道具。",
-				HORIZONTAL_ALIGNMENT_LEFT, 300, 16, Color("888888"))
+				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_BODY, Color("888888"))
 		return
 	var grid_y: float = L["grid_y"]
 	var view_rows: int = L["view_rows"]
@@ -360,7 +360,7 @@ func _on_panel_draw() -> void:
 	if max_scroll > 0:
 		_panel.draw_string(_font, Vector2(px + PANEL_W - 220, py + PANEL_H - 14),
 				"第 %d/%d 屏" % [skip + 1, max_scroll + 1],
-				HORIZONTAL_ALIGNMENT_LEFT, 200, 12, Color("888888"))
+				HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_CAPTION, Color("888888"))
 
 
 func _tag_of(e: Dictionary) -> String:

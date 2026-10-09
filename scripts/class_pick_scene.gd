@@ -59,7 +59,7 @@ func _draw() -> void:
 	if _picked:
 		return
 	draw_string(_font, Vector2(0, 110), "出发之前，先决定你以什么身份走进这片森林……",
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, 16, Color("b8b4aa"))
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("b8b4aa"))
 	var ids := PlayerClass.ids()
 	var relics := RelicRepo.load_json()
 	for i in ids.size():
@@ -72,18 +72,18 @@ func _draw() -> void:
 		var band := Rect2(rect.position, Vector2(rect.size.x, 34))
 		draw_rect(band, Color(0.30, 0.69, 0.31, 0.30), true)
 		draw_string(_font_bold, band.position + Vector2(0, 23), "角色",
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 15, Color("8ce09a"))
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_BODY, Color("8ce09a"))
 		draw_string(_font_bold, rect.position + Vector2(0, 82), PlayerClass.name_of(cid),
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 30, Color("f2ead0"))
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_TITLE, Color("f2ead0"))
 		var y := 116.0
 		draw_string(_font, rect.position + Vector2(0, y), PlayerClass.subtitle_of(cid),
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 14, Color("9fd7a5"))
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_LABEL, Color("9fd7a5"))
 		y += 26.0
 		# 概括性介绍（PlayerClass.desc_of）：只讲打法取向，**不列具体卡牌**。
 		for para: String in PlayerClass.desc_of(cid).split("\n"):
 			for line: String in _wrap_text(para, rect.size.x - 40.0, 14):
 				draw_string(_font, rect.position + Vector2(20, y), line,
-						HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 40.0, 14, Color("cfcabb"))
+						HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 40.0, UiTheme.FS_LABEL, Color("cfcabb"))
 				y += 22.0
 			y += 6.0
 		# 初始道具：名字 + 完整效果（读 relics.json 的 desc，R55 起展示；不列初始卡组明细）。
@@ -94,17 +94,17 @@ func _draw() -> void:
 					Vector2(rect.size.x - 40.0, 1)), Color(1, 1, 1, 0.10), true)
 			draw_string(_font_bold, rect.position + Vector2(20, y + 2.0),
 					"初始道具：%s" % rel.relic_name, HORIZONTAL_ALIGNMENT_LEFT,
-					rect.size.x - 40.0, 14, Color("e0b23c"))
+					rect.size.x - 40.0, UiTheme.FS_LABEL, Color("e0b23c"))
 			y += 20.0
 			# 预折行再逐行画（Godot 的 draw_string 不自动换行，长文本会溢出卡面）。
 			for line: String in _wrap_text(rel.desc, rect.size.x - 40.0, 12):
 				if y > rect.size.y - 34.0:
 					break
 				draw_string(_font, rect.position + Vector2(20, y), line,
-						HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 40.0, 12, Color("b8b0a0"))
+						HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 40.0, UiTheme.FS_CAPTION, Color("b8b0a0"))
 				y += 17.0
 		draw_string(_font, rect.position + Vector2(0, rect.size.y - 18),
-				"点击选择", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 13, Color("8a867c"))
+				"点击选择", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_LABEL, Color("8a867c"))
 
 
 func _wrap_text(t: String, max_w: float, px: int) -> Array[String]:

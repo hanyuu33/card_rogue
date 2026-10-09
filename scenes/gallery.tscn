@@ -39,7 +39,7 @@ offset_top = 9.0
 offset_right = 152.0
 offset_bottom = 35.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 20
 text = "卡牌图鉴"
 
 [node name="PlayerTab" type="Button" parent="TopBar"]
@@ -49,7 +49,7 @@ offset_top = 6.0
 offset_right = 298.0
 offset_bottom = 38.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 16
 toggle_mode = true
 button_pressed = true
 button_group = SubResource("BG_gallery")
@@ -62,7 +62,7 @@ offset_top = 6.0
 offset_right = 416.0
 offset_bottom = 38.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 16
 toggle_mode = true
 button_group = SubResource("BG_gallery")
 text = "敌人图鉴"
@@ -85,7 +85,7 @@ offset_top = 6.0
 offset_right = 1264.0
 offset_bottom = 38.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 16
 text = "← 返回标题"
 
 [node name="LeftPanel" type="Panel" parent="."]
@@ -211,7 +211,7 @@ offset_top = 14.0
 offset_right = 254.0
 offset_bottom = 44.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 19
+theme_override_font_sizes/font_size = 20
 text = ""
 
 [node name="KindLabel" type="Label" parent="DetailPanel"]
@@ -253,7 +253,7 @@ offset_top = 150.0
 offset_right = 254.0
 offset_bottom = 380.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 16
 autowrap_mode = 2
 text = ""
 

@@ -43,7 +43,7 @@ func _ready() -> void:
 	_btn.custom_minimum_size = Vector2(114, 32)
 	_btn.size = Vector2(114, 32)
 	_btn.add_theme_font_override("font", _font)
-	_btn.add_theme_font_size_override("font_size", 14)
+	_btn.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
 	_btn.pressed.connect(_toggle)
 	add_child(_btn)
 
@@ -135,10 +135,10 @@ func _on_panel_draw() -> void:
 	_panel.draw_rect(Rect2(px, py, pw, ph), Color("555555"), false, 2.0)
 	_panel.draw_string(_font_bold, Vector2(px + 20, py + 32),
 			"我的卡组（共 %d 张 · 相同卡合并 · 滚轮翻页 · 点击任意处关闭）" % RunState.deck_ids.size(),
-			HORIZONTAL_ALIGNMENT_LEFT, pw - 40, 16, Color("333333"))
+			HORIZONTAL_ALIGNMENT_LEFT, pw - 40, UiTheme.FS_BODY, Color("333333"))
 	if n == 0:
 		_panel.draw_string(_font, Vector2(px + 20, py + 80), "卡组是空的。",
-				HORIZONTAL_ALIGNMENT_LEFT, 300, 14, Color("888888"))
+				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_LABEL, Color("888888"))
 		return
 	var cols: int = L["cols"]
 	var view_rows: int = L["view_rows"]
@@ -160,12 +160,12 @@ func _on_panel_draw() -> void:
 			_panel.draw_rect(badge, Color(0.15, 0.18, 0.15, 0.88))
 			_panel.draw_rect(badge, Color("a8d8a8"), false, 1.0)
 			_panel.draw_string(_font_bold, badge.position + Vector2(0, 12),
-					"×%d" % cnt, HORIZONTAL_ALIGNMENT_CENTER, 26, 11, Color("d8f0d8"))
+					"×%d" % cnt, HORIZONTAL_ALIGNMENT_CENTER, 26, UiTheme.FS_CAPTION, Color("d8f0d8"))
 	# 滚动提示
 	if max_scroll > 0:
 		_panel.draw_string(_font, Vector2(px + pw - 220, py + ph - 12),
 				"第 %d/%d 屏" % [skip_rows + 1, int(max_scroll) + 1],
-				HORIZONTAL_ALIGNMENT_LEFT, 200, 11, Color("888888"))
+				HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_CAPTION, Color("888888"))
 
 
 func _on_panel_input(event: InputEvent) -> void:

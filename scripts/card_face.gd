@@ -38,10 +38,24 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	## （作者口径：卡片是一个整体，排版要与正常状态完全一致，别为了躲裁剪挪数值）。
 	var k := rect.size.y / CARD_H_DESIGN
 	var bottom: float = rect.end.y
-	canvas.draw_rect(rect, UiTheme.SURFACE)
-	# 边框颜色即稀有度：普通=黑 稀有=蓝 史诗=紫（选中时红色高亮优先）
-	var frame: Color = UiTheme.SELECT_RING if selected else card.rarity_color()
-	canvas.draw_rect(rect, frame, false, 2.0 if selected else 1.5)
+	# ① 卡面纸底：素材槽 assets/ui/card_paper.png 优先，缺图回退纯色（R113 起可换皮）
+	var paper: Texture2D = UiAssets.card_paper()
+	if paper != null:
+		canvas.draw_texture_rect(paper, rect, false)
+	else:
+		canvas.draw_rect(rect, UiTheme.SURFACE)
+	# ② 选中态：**外发光**，不占用边框颜色（边框是稀有度的唯一通道，见 UI设计规范 §规则 5）
+	if selected:
+		for gi in 3:
+			var glow := UiTheme.SELECT_RING
+			glow.a = 0.42 - 0.11 * gi
+			canvas.draw_rect(rect.grow(1.0 + gi), glow, false, 1.0)
+	# ③ 边框：素材槽 assets/ui/frame_<稀有度>.png 优先，缺图回退色描边
+	var frame_tex: Texture2D = UiAssets.card_frame(card.rarity)
+	if frame_tex != null:
+		canvas.draw_texture_rect(frame_tex, rect, false)
+	else:
+		canvas.draw_rect(rect, card.rarity_color(), false, 2.0 if selected else 1.5)
 	# 费用圆
 	var cost_r := 7.0 * k
 	var cost_c := rect.position + Vector2(cost_r + 3, cost_r + 3)
