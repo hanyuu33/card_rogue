@@ -22,7 +22,7 @@ const RARITY_COLORS: Array[Color] = [Color("2c2c2a"), Color("1f5fbf"),
 ##   ② **战场**：`_draw_affix_badges()` 在单位上方**轮流显示**（复用状态徽标底座）；
 ##   ③ **悬停**：列出该单位 / 该卡当前的全部字段。
 ##
-## 现有 5 个字段（引擎判据都读这里，**不再按卡名 / trait 硬编码**）：
+## 现有 8 个字段（引擎判据都读这里，**不再按卡名 / trait 硬编码**）：
 ##   * **疾行** = 一回合行动两次（判据 `actions >= 2`；场上读 `acts_left > 1`）
 ##   * **嘲讽** = 敌方只能攻击这张卡
 ##   * **死亡** = 被破坏时生效（**只做标记**，具体内容看卡面 effect_text）
@@ -34,15 +34,28 @@ const RARITY_COLORS: Array[Color] = [Color("2c2c2a"), Color("1f5fbf"),
 ##       · 幻影 = 复制品**躺在手牌里**到回合结束消失 —— 那种**不给**次元。
 ##       所以衍生物（野兔 9032 / 幻影的复制卡）是**上场那一刻**才挂上次元
 ##       （唯一写入口 `FieldState.place`，与「沉睡 / 护盾」同一套路）。
+##   * **超负荷** = 生命降到 0 以下不会立即死亡、以负血继续存活（R98）
+##   * **交换** = 可放置在已有友方单位的格子上，把原单位顶回手（R101）
+##
+## ⚠️ **`on_board`（R118）**：字段定义里多一个键，回答「这张卡**已经站在场上**
+##   之后，这个字段还有意义吗」—— 默认 true，只有**打出手 / 放置那一刻的规则**
+##   才写 false：
+##     · 交换 = 管的是「能不能放在已有友方单位上」，卡一落到格子上就再无作用；
+##     · 幻影 = 管的是「打出时往手牌塞一张复制」，同样只在出手那一刻说话。
+##   于是**战场卡面**（`CardFace.draw(..., on_board=true)` → `field_affix_line()`）
+##   与**战场徽标 / 悬停**（`active_affixes()`）都会把它们滤掉 —— 用户口径
+##   「像交换这种、在场后已经不再有用的字段，就不需要标明了」。
+##   ⚠️ **手牌 / 图鉴 / 牌库 / 卡组编辑不过滤**：那几处正是这两种字段唯一有意义的
+##   地方（玩家要靠它知道「这张牌能顶掉我场上的单位」）。
 const AFFIX_DEFS: Dictionary = {
 	"疾行": {"label": "疾行", "desc": "一回合行动两次。", "bg": "0e2e1a", "fg": "3fbf6f"},
 	"嘲讽": {"label": "嘲讽", "desc": "敌方只能攻击这张卡。", "bg": "331c05", "fg": "ffa41f"},
 	"死亡": {"label": "死亡", "desc": "这张卡被破坏时生效（具体效果见卡面）。", "bg": "330f14", "fg": "ff7a7a"},
-	"幻影": {"label": "幻影", "desc": "打出后手牌里多一张这张卡的短暂复制（回合结束消失）。", "bg": "1f1a38", "fg": "b79cff"},
+	"幻影": {"label": "幻影", "desc": "打出后手牌里多一张这张卡的短暂复制（回合结束消失）。", "on_board": false, "bg": "1f1a38", "fg": "b79cff"},
 	"护盾": {"label": "护盾", "desc": "第一次受到的伤害为 0（一次性，用完消失）。", "bg": "0f2a33", "fg": "6ec6ff"},
 	"次元": {"label": "次元", "desc": "使用后 / 离开战场后消失，不会进入弃牌区。", "bg": "2a0d33", "fg": "e58cff"},
 	"超负荷": {"label": "超负荷", "desc": "生命降到 0 以下不会立即死亡，会以负数血量继续存活；在自己回合结束时若生命仍是负数则死亡（伤害不会溢出）。", "bg": "33120a", "fg": "ff7a3c"},
-	"交换": {"label": "交换", "desc": "可放置在已有友方单位的格子上，原本在那个格子上的友方单位返回手卡。", "bg": "0a2a2e", "fg": "5fe0d0"},
+	"交换": {"label": "交换", "desc": "可放置在已有友方单位的格子上，原本在那个格子上的友方单位返回手卡。", "on_board": false, "bg": "0a2a2e", "fg": "5fe0d0"},
 }
 
 var id: int = 0
@@ -241,6 +254,16 @@ static func affix_desc(name: String) -> String:
 	return str(d.get("desc", ""))
 
 
+## 这个字段在这张卡**已经站在场上**之后还有意义吗（R118，`AFFIX_DEFS.on_board`）。
+## 只有「打出手 / 放置那一刻的规则」才是 false（当前：交换 / 幻影），其余一律 true。
+## **唯一判定口** —— 战场卡面（`field_affix_line`）、战场徽标与悬停
+## （`active_affixes`）都读它，不许各处自己写白名单。
+## ⚠️ 未注册字段回退 true：宁可多标一个陌生字段，也不能凭空把它吞掉。
+static func affix_on_board(name: String) -> bool:
+	var d: Dictionary = AFFIX_DEFS.get(name, {})
+	return bool(d.get("on_board", true))
+
+
 ## 字段徽标配色（战场用），返回 [底色, 字色]。
 ## 色值是**十六进制字符串**（const 里不能放 Color(...) 构造），这里运行时构造 ——
 ## 底色统一 0.92 透明度，保证字能读清；未注册字段回退到中性灰。
@@ -262,12 +285,28 @@ func affix_line() -> String:
 	return "　".join(parts)
 
 
+## **战场卡面**要写的那一行字段（`affix_line()` 的战场版，R118）：
+## 滤掉「上场之后已经不再有用」的字段（`affix_on_board()` 为 false 的那些）。
+## ⚠️ 与 `affix_line()` 是两个口、刻意不合并：手牌 / 图鉴 / 牌库正需要完整的那一行。
+func field_affix_line() -> String:
+	var parts: Array[String] = []
+	for a in affixes:
+		if not affix_on_board(a):
+			continue
+		parts.append(affix_label(a))
+	return "　".join(parts)
+
+
 ## 战场单位「此刻生效的字段」—— 与卡面 `affixes` 的差别：
-## ① 疾行看**场上剩余行动轮数**（`acts_left`），用掉一轮就不该再显示；
-## ② 护盾用掉了就不显示（`shield` 传 false）。
+## ① 上场之后已经不起作用的字段根本不进来（R118：交换 / 幻影，见 `affix_on_board()`）——
+##    它的消费者是**战场徽标**与**悬停列表**，两处都在讲「这个单位此刻有什么」；
+## ② 疾行看**场上剩余行动轮数**（`acts_left`），用掉一轮就不该再显示；
+## ③ 护盾用掉了就不显示（`shield` 传 false）。
 func active_affixes(acts_left: int, shield: bool) -> Array[String]:
 	var out: Array[String] = []
 	for a in affixes:
+		if not affix_on_board(a):
+			continue    # R118：交换 / 幻影 —— 上场后已无作用，不进战场徽标
 		if a == "护盾" and not shield:
 			continue    # 护盾已用掉 → 不再显示
 		out.append(a)

@@ -550,6 +550,7 @@ func _check_battle(scene: Variant) -> void:
 	_check_turn_gate(scene)
 	_check_relic_gate(scene)
 	_check_r106(scene)
+	_check_cancel_armed(scene)
 
 
 func _check_r106(scene: Variant) -> void:
@@ -739,6 +740,150 @@ func _check_turn_gate(scene: Variant) -> void:
 		return
 	eng.current_side = GameEngine.SIDE_SELF
 	print("SMOKE OK 回合门禁：敌方回合点棋盘/点目标格/拖牌都动不了我方单位；我方回合正常可操作")
+
+
+func _smoke_free(eng: GameEngine, cell: Vector2i) -> bool:
+	## R118 用例专用：这一格既没有单位也没有场地（场上「空位」的判据）。
+	return eng.state.unit_at(cell) == null and eng.state.field_at(cell) == null
+
+
+func _check_cancel_armed(scene: Variant) -> void:
+	## R118：**左键点空位不再一步取消**。
+	## 误点一下草地就把「已移动、还没攻击」的单位就地横置（放弃攻击、不可逆）是玩家最常
+	## 踩的坑 —— 用户口径「不应该直接取消攻击，而是在第二次点击才取消，这个状态点击目标
+	## 卡片依然可以攻击」。这里把三条路都真跑一遍：
+	##   ① 第一次点空位 → 只「上膛」：选区 / 攻击目标**原样保留**、单位**没有**横置；
+	##   ② 上膛之后点敌方单位 → **照样打出去**（用户口径的核心，也是「误点不致命」的前提）；
+	##   ③ 再点一次空位 → 才真取消（单位横置 = 放弃攻击、选区清空、上膛归位）。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("R118 误点空位：拿不到 engine")
+		return
+	# 找两个相邻空格（我方半场）放「我方单位 + 敌方靶子」
+	var src := Vector2i(-1, -1)
+	var tgt := Vector2i(-1, -1)
+	for r: int in [3, 4, 5]:
+		for c: int in range(FieldState.BOARD_COLS - 1):
+			if _smoke_free(eng, Vector2i(r, c)) and _smoke_free(eng, Vector2i(r, c + 1)):
+				src = Vector2i(r, c)
+				tgt = Vector2i(r, c + 1)
+				break
+		if src.x >= 0:
+			break
+	if src.x < 0:
+		_smoke_fail("R118 误点空位：我方半场找不到两个相邻空格，用例前提不成立")
+		return
+	var far := Vector2i(-1, -1)
+	eng.current_side = GameEngine.SIDE_SELF
+	scene._clear_selection()
+	var base := CardData.new()
+	base.id = 7904
+	base.card_name = "取消烟测 Dummy"
+	base.kind = "盟友"
+	base.power = 4
+	base.health = 12
+	base.attack_range = 1
+	base.move_speed = 2
+	base.rarity = 0
+	base.group = "player"
+	base.card_class = "森林精魄"
+	var foe_card := CardData.from_dict(base.to_dict())
+	foe_card.id = 7905
+	foe_card.card_name = "烟测靶子"
+	foe_card.health = 30
+	foe_card.group = "enemy"
+	var me: Placement = eng.state.place(
+			CardData.from_dict(base.to_dict()), src, GameEngine.SIDE_SELF)
+	var foe: Placement = eng.state.place(foe_card, tgt, GameEngine.SIDE_OPPONENT)
+	# 「已移动、还没攻击」= 危险态：任何一次非攻击点击都会让它就地横置
+	me.moved = true
+	me.tapped = false
+	me.acts_left = 1
+	scene._on_board_click(src)          # 选中它（此时只剩攻击权）
+	if scene.selection == null or scene.selection[0] != "board" or scene.selection[1] != src:
+		_smoke_fail("R118 误点空位：点自己应当选中它，实际 %s" % str(scene.selection))
+		_cleanup_cancel_dummy(eng, src, tgt)
+		return
+	if not scene.attack_targets_arr.has(tgt):
+		_smoke_fail("R118 误点空位：靶子应当在攻击目标里（用例前提不成立）")
+		_cleanup_cancel_dummy(eng, src, tgt)
+		return
+	# 「空位」= 空格 且 **不在** move / attack / hp 任何一个目标集里 ——
+	# 这才是「点下去会掉到上膛分支」的定义，与关卡占了哪些格无关。
+	for r2: int in range(FieldState.BOARD_ROWS):
+		for c2: int in range(FieldState.BOARD_COLS):
+			var cell := Vector2i(r2, c2)
+			if not _smoke_free(eng, cell) or cell == src or cell == tgt:
+				continue
+			if scene.move_targets.has(cell) or scene.attack_targets_arr.has(cell) \
+					or scene.hp_targets_arr.has(cell):
+				continue
+			far = cell
+			break
+		if far.x >= 0:
+			break
+	if far.x < 0:
+		_smoke_fail("R118 误点空位：全盘找不到一个「空位」，用例前提不成立")
+		_cleanup_cancel_dummy(eng, src, tgt)
+		return
+
+	# ---- ① 第一次点空位：只上膛，绝不取消 ----
+	scene._on_board_click(far)
+	var bad: Array[String] = []
+	if scene.selection == null or scene.selection[0] != "board" or scene.selection[1] != src:
+		bad.append("① 选区被清掉了（应当原样保留），实际 %s" % str(scene.selection))
+	if me.tapped:
+		bad.append("① 单位被就地横置了（放弃攻击）—— 这正是要修掉的误操作")
+	if not scene.attack_targets_arr.has(tgt):
+		bad.append("① 攻击目标消失了（那也就不叫「依然可以攻击」）")
+	if not bool(scene._cancel_armed):
+		bad.append("① 没有进入「待取消」状态（_cancel_armed 仍为假）")
+	if not bad.is_empty():
+		_smoke_fail("R118 误点空位 " + "；".join(bad))
+		_cleanup_cancel_dummy(eng, src, tgt)
+		return
+
+	# ---- ② 上膛之后点敌方单位 → 照样打出去（用户口径的核心）----
+	var foe_hp0: int = foe.health
+	scene._on_board_click(tgt)
+	if foe.health >= foe_hp0:
+		_smoke_fail("R118 ② 上膛之后点目标应当照常攻击（靶子 %d → %d 血）" % [foe_hp0, foe.health])
+		_cleanup_cancel_dummy(eng, src, tgt)
+		return
+	if bool(scene._cancel_armed):
+		_smoke_fail("R118 ② 攻击真的打出去之后，上膛状态应当归位")
+		_cleanup_cancel_dummy(eng, src, tgt)
+		return
+
+	# ---- ③ 第二次点空位 → 才真取消（单位横置 = 放弃攻击、选区清空）----
+	me.tapped = false
+	me.moved = true
+	me.acts_left = 1
+	# 用 `_select_board` 直接选中：`_on_board_click(src)` 走的是「点自己」那条会先把
+	# 「已移动未攻击」的单位放弃攻击（横置）的路径，拿不到干净的前置状态。
+	scene._select_board(src)
+	scene._on_board_click(far)          # 第一次：上膛
+	scene._on_board_click(far)          # 第二次：取消
+	bad = []
+	if scene.selection != null:
+		bad.append("③ 第二次点空位没有取消选择（实际 %s）" % str(scene.selection))
+	if not me.tapped:
+		bad.append("③ 第二次点空位没有把「已移动未攻击」的单位横置（放弃攻击没生效）")
+	if bool(scene._cancel_armed):
+		bad.append("③ 取消之后上膛状态没有归位")
+	if not bad.is_empty():
+		_smoke_fail("R118 误点空位 " + "；".join(bad))
+	else:
+		print("SMOKE OK R118 误点空位：① 第一次点只上膛（选区/目标全保留、不横置）"
+				+ " ② 上膛后点目标照常打（%d→%d 血）" % [foe_hp0, foe.health]
+				+ " ③ 第二次点空位才真取消（单位横置）")
+	_cleanup_cancel_dummy(eng, src, tgt)
+
+
+func _cleanup_cancel_dummy(eng: GameEngine, src: Vector2i, tgt: Vector2i) -> void:
+	## R118 用例收尾：别把 dummy 留给后续用例（与 `_check_frozen_aura` 同一套路）。
+	eng.state.board.erase(src)
+	eng.state.board.erase(tgt)
 
 
 func _check_arcane_with_charm(scene: Variant) -> void:

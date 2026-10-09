@@ -24,6 +24,10 @@ class_name CardFace
 ## 「并不需要严格的圆盘，直接用图标 + 数字就可以」）。图标素材走 `assets/ui/icon_*.png`：
 ##   剑=力量 / 弓=攻击距离 / 鞋=移动距离 / 血=生命 / 水晶=费用
 ## 缺图时回退成该数值的**语义色圆盘 + 数字**（永远不空白、不报错）。
+##
+## ⚠️ R118：`draw(..., on_board=true)` = **战场卡面**模式 ——「种类 · 字段」那一行
+##   会滤掉「上场之后已无作用」的字段（交换 / 幻影，判据 `CardData.affix_on_board()`）。
+##   手牌 / 图鉴 / 牌库 / 卡组编辑保持**完整字段**（默认 false）—— 那几处正需要它。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
@@ -90,7 +94,7 @@ static func text_zone_bottom(rect: Rect2) -> float:
 
 static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		selected: bool, is_tapped: bool, font: Font, font_bold: Font,
-		power_override := -1) -> void:
+		power_override := -1, on_board := false) -> void:
 	## 卡面一律按 rect **完整排版**，与图鉴/战场小卡同一套比例，没有「按可见高度重锚」
 	## 之类的特例 —— 手牌卡底沉出窗口下沿时，被挡住的那截就让它挡住
 	## （作者口径：卡片是一个整体，排版要与正常状态完全一致，别为了躲裁剪挪数值）。
@@ -123,7 +127,7 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	canvas.draw_line(Vector2(rect.position.x + pad * 0.5, sep_y),
 			Vector2(rect.end.x - pad * 0.5, sep_y), UiTheme.INK_300, maxf(1.0, 0.6 * k))
 	# ⑥ 文字区（下半）
-	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold)
+	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold, on_board)
 	# ⑦ 数值徽章 —— 最后画，压在卡图与文字之上（「额外挂载」的字面意思）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, hp, power_override)
 
@@ -166,7 +170,8 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 
 
 static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,
-		k: float, pad: float, sep_y: float, hp: int, font: Font, font_bold: Font) -> void:
+		k: float, pad: float, sep_y: float, hp: int, font: Font, font_bold: Font,
+		on_board: bool) -> void:
 	## 文字区（下半）：**卡名 → 种类 · 字段 → 效果文字**，按这个优先级往下排，
 	## 排不下的整块省略。
 	##
@@ -202,7 +207,11 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	if y + sz * 0.36 + float(font.get_descent(sz)) > line_bottom:
 		return
 	var meta_a: String = card.kind
-	var meta_b: String = (" · " + card.affix_line()) if not card.affixes.is_empty() else ""
+	# R118：战场卡面（`on_board`）只写**上场之后仍然有用**的字段 —— 交换 / 幻影是
+	# 「打出那一刻」的规则，卡一落到格子上就再无作用，继续写在这里只会误导玩家。
+	# ⚠️ 判空不能用 `card.affixes.is_empty()`：过滤之后**可能整段为空**（只剩种类的卡）。
+	var affix_txt: String = card.field_affix_line() if on_board else card.affix_line()
+	var meta_b: String = (" · " + affix_txt) if affix_txt != "" else ""
 	var wa: float = font.get_string_size(meta_a, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
 	var wb: float = font.get_string_size(meta_b, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
 	# ⚠️⚠️ 这里踩过一个**让整个游戏未响应**的坑，改这一行前务必读完：

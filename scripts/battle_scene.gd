@@ -108,6 +108,10 @@ const COL_HAND_BONUS := UiTheme.ACCENT_LIT
 const COL_DROP_ZONE := Color(0.13, 0.55, 0.86, 0.85)
 ## 拖拽「将要命中的那一格」的光圈色（原来直接写在 _draw_drag 里，R117 收成令牌）。
 const COL_SPELL_RING := Color(0.55, 0.90, 1.00, 0.90)
+## R118：左键误点空位后的「再点一次就取消」上膛色 —— 偏橙，与两段式技能的「已选」
+## 金黄（COL_PICKED 1.0/0.784/0.0）明确分开，也压得住 `_draw_grid()` 已经画在
+## 同一格上的绿 / 暗红**敌我框**（0.7 透明度的琥珀压上去会混成说不清的黄绿）。
+const COL_CANCEL_ARMED := Color(1.00, 0.55, 0.10, 1.0)
 
 # 战斗内地图总览（R64）的节点配色与字形 —— **与 map_scene 保持同一套**，
 # 这样「地图场景看到的颜色」和「战斗里回看地图的颜色」是同一种语义。
@@ -146,6 +150,13 @@ var _swap_src := Vector2i(-1, -1)
 var _sys_upgrade_idx := -1
 var status_text := ""
 var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本不覆盖
+## R118：左键点「空位」**不再一步取消**。为 true = 本轮的第一次空位点击已经发生 ——
+## 选区、绿色移动格、红色攻击格、深红 HP 格**全部原样保留**（于是这时点目标照样能打），
+## **再点一次空位**才真取消（含「已移动未攻击 → 放弃攻击并就地横置」）。
+## 为什么：取消是不可逆的 —— 误点一下草地就永久废掉这一击，是玩家最常踩的坑。
+## 右键 / Esc 仍是一步取消（想快速撤销的人并没有被拿走快路）。
+## 归位口：`_clear_selection()` / `_select_board()`（选区一变就重新计）
+var _cancel_armed := false
 var _whisper_txt := ""          # 道具「鸭之低语」：本回合随机到的强化（常驻显示）
 var _hover_relic_tip := ""      # 道具悬停：完整说明走浮动折行面板（工具栏一行放不下）
 var _demo_tip_text := ""       # --relictip 演示：每帧重设悬停提示（warp 的合成移动会清掉一次性设置）
@@ -422,6 +433,43 @@ func _ready() -> void:
 		_hover_hand = 0
 		_hover_card = engine.state.hand[0]
 		status_text = "R116：捕兽大师亡语 → 在原地留下一张随机陷阱（斜纹格；原地已有场地则不覆盖）"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r118" in args and engine != null:
+		# 演示（R118）—— 一屏同时看两件事：
+		#   ① 救援构装体 8056 同时放**手牌**与**战场**：手牌卡面写「盟友 · 交换」，
+		#      战场卡面**不再写**（上场之后这个字段已经不起作用）。两处可直接对照。
+		#   ② 一个「已移动、还没攻击」的单位 + 一次**误点空位**之后的状态：
+		#      选区 / 绿色移动格 / 红色攻击格全部留着，选中格挂琥珀「取消?」角标
+		#      —— 再点一次空位才真取消（放弃攻击并横置）。
+		engine.state.hand.clear()
+		engine.state.hand.append(repo.get_card(8056))
+		engine.state.hand.append(repo.get_card(8001))
+		engine.state.energy = 9
+		engine.state.place(repo.get_card(8056), Vector2i(4, 1), GameEngine.SIDE_SELF)
+		var r118_u := engine.state.unit_at(Vector2i(4, 1))
+		if r118_u != null:
+			r118_u.moved = true
+			r118_u.tapped = false
+		_hover_hand = 0
+		_hover_card = engine.state.hand[0]
+		_on_board_click(Vector2i(4, 1))        # 选中它（已移动 → 只剩攻击权）
+		var r118_far := Vector2i(-1, -1)
+		for r118_r in FieldState.BOARD_ROWS:
+			for r118_c in FieldState.BOARD_COLS:
+				var r118_cl := Vector2i(r118_r, r118_c)
+				if engine.state.unit_at(r118_cl) != null:
+					continue
+				if (r118_cl - Vector2i(4, 1)).length() < 3.0:
+					continue
+				r118_far = r118_cl
+				break
+			if r118_far.x >= 0:
+				break
+		if r118_far.x >= 0:
+			_on_board_click(r118_far)          # 误点一个空位 → 只「上膛」
+		status_text = "R118：① 战场卡面不再标「交换」（手牌上仍写）"
+		status_text += "② 误点空位只上膛 —— 琥珀「取消?」= 再点一次才取消"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--xtext" in args and engine != null:
@@ -1775,6 +1823,9 @@ func load_level(lvl: Dictionary) -> void:
 # ------------------------------------------------------------ 选中 / 高亮
 
 func _clear_selection() -> void:
+	# R118：选区被清掉 = 这一轮结束，上膛状态一并归位（否则下一次选中的单位会带着
+	# 「再点一次就取消」的旧账）。
+	_cancel_armed = false
 	selection = null
 	move_targets = []
 	attack_targets_arr = []
@@ -1790,6 +1841,7 @@ func _clear_selection() -> void:
 
 
 func _select_board(cell: Vector2i) -> void:
+	_cancel_armed = false   # R118：换了个选中目标 → 上膛重新计
 	selection = ["board", cell]
 	var p := engine.state.unit_at(cell)
 	if p != null and p.moved and not p.tapped:
@@ -3460,10 +3512,38 @@ func _on_board_click(cell: Vector2i) -> void:
 			else:
 				_clear_selection()
 			return
-		# 没点中任何有效目标：说明可做的事（随后按放弃/切换处理）
+		# 落到这里 = 没点中任何有效目标（空格 / 打不到的敌人）——
+		# 说明可做的事，然后按「切换选中 / 上膛 / 取消」处理。
 		var sel_p := engine.state.unit_at(src)
-		if sel_p != null and hp_targets_arr.size() + attack_targets_arr.size() + move_targets.size() > 0:
-			_say("%s 到不了那里：绿色=可移动，红色=可攻击，深红=打HP" % sel_p.card.card_name)
+		var reachable: bool = hp_targets_arr.size() + attack_targets_arr.size() + move_targets.size() > 0
+		# ── R118：点到的若是**另一个还能被选中的己方单位** → 这是「切换选中」，
+		#    不是误点空位 —— 保持老语义一步到位（并放弃已移动单位的攻击）。──
+		var nxt := engine.state.unit_at(cell)
+		if nxt != null and nxt.owner == GameEngine.SIDE_SELF and not nxt.tapped:
+			_pass_moved_pending()
+			_select_board(cell)
+			status_text = "%s：绿色=移动 红色=攻击 深红=打HP" % nxt.card.card_name
+			return
+		# ── R118：其余（空格 / 打不到的敌人）都算「空位」，**第一次点只上膛** ──
+		# 已移动未攻击的单位，「取消」= 就地横置、这一击**永久作废**且不可逆。
+		# 用户口径：「不应该直接取消攻击，而是在第二次点击才取消，这个状态点击目标
+		# 卡片依然可以攻击」。所以第一次只把选区标记成「待取消」：选区、绿色移动格、
+		# 红色攻击格、深红 HP 格**一个都不动** → 这时点红/深红目标照样打出去；
+		# 再点一次空位才真的取消。右键 / Esc 仍是一步取消。
+		if _cancel_armed:
+			_cancel_armed = false
+			_pass_moved_pending()
+			_clear_selection()
+			status_text = "已取消选择"
+			return
+		_cancel_armed = true
+		# ⚠️ 消息长度受顶栏 StatusLabel 限制（310px，超了会省略尾部）：
+		#    只写到「取消」为止，「点红/深红仍可攻击」由**留着的红格**自己说明。
+		if sel_p != null and reachable:
+			_say("%s 到不了那里 · 再点空位=取消" % sel_p.card.card_name)
+		else:
+			_say("再点空位=取消选择")
+		return
 	# 已移动未攻击的单位：非攻击操作 = 放弃攻击（横置）
 	_pass_moved_pending()
 	# 点自己半场空格 + 手牌选中 → 上场（分步给失败原因）
@@ -4727,13 +4807,16 @@ func _art(card: CardData, rect: Rect2) -> void:
 
 
 func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_tapped: bool,
-		cost_override := -1, power_override := -1) -> void:
+		cost_override := -1, power_override := -1, on_board := false) -> void:
 	## 卡面一律按 rect 完整排版（含手牌）—— 卡底沉出窗口下沿的那截由视口裁掉，
 	## 卡面内容**不做**任何偏移补偿：卡片是一个整体，被挡住就挡住。
 	## cost_override >= 0 且不等于卡面费用 → 在费用圆上重画**绿色**数字，
 	## 让玩家一眼看出「这张卡现在更便宜」（协同攻击等动态减费）。
 	## power_override >= 0 → 用实际力量重画左下角标（战场单位传 effective_power()）。
-	CardFace.draw(self, card, rect, hp, selected, is_tapped, _font, _font_bold, power_override)
+	## on_board = true → 卡面的「种类 · 字段」行只写**上场之后仍然有用**的字段
+	##   （R118：交换 / 幻影 是打出那一刻的规则，落在格子上之后再标就是噪音）。
+	CardFace.draw(self, card, rect, hp, selected, is_tapped, _font, _font_bold, power_override,
+			on_board)
 	if not card.x_cost and cost_override >= 0 and cost_override != card.cost:
 		# 位置 / 半径 / 字号一律取 CardFace 的口径。这里原来自己算「7k 半径 + 3 偏移」，
 		# R114 换了卡面版式（费用徽章变大、位置改由 CARD_BADGE_* 决定）就会错位。
@@ -4900,8 +4983,10 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	var h := TAP_H if p.tapped else CARD_H
 	# 顶部状态徽标的行号：嘲讽 → 冰封 → 沉睡，按出现顺序往下排（共用底座 _draw_state_badge）
 	var _badge_row := 0
+	# R118：`on_board = true` —— 战场卡面的「种类 · 字段」行**不再标出**上场后已无作用的
+	# 字段（交换 / 幻影）。判据在 `CardData.affix_on_board()`，这里只负责声明「我在战场上」。
 	_draw_card_face(p.card, Rect2(center - Vector2(w, h) / 2.0, Vector2(w, h)),
-			_show_hp(p, p.health), selected, p.tapped, -1, p.effective_power())
+			_show_hp(p, p.health), selected, p.tapped, -1, p.effective_power(), true)
 	if engine.absorbs_for_hp(p):
 		# 替己方 HP 承伤的统一表现（森林守护 9037 / 以太守卫 9067 / 铁栅栏 9072）：
 		# 判定直接问引擎 absorbs_for_hp()，保证「同一机制 = 同一特效」，不再各写各的。
@@ -6817,6 +6902,8 @@ func _draw_highlights() -> void:
 	# R102：两段式技能**已选中第一个单位**的标记（金黄粗描边 + 角标「已选」）。
 	# 潜伏 9100 与双向传送 8061 共用这一套 —— 满足「选中哪个要看得见、右键能取消」。
 	_draw_picked_marker()
+	# R118：误点空位之后进入「再点一次才取消」的过渡态 —— 同样必须看得见。
+	_draw_cancel_armed_marker()
 	# 叠栅栏（栅栏修复术 6021）：选中的手牌是栅栏时，把可合并的己方栅栏格标成橙色「叠」
 	if selection != null and selection[0] == "hand" \
 			and selection[1] >= 0 and selection[1] < engine.state.hand.size():
@@ -6851,12 +6938,47 @@ func _draw_picked_marker() -> void:
 			tag.position + tag.size / 2.0, Color.BLACK)
 
 
+func _draw_cancel_armed_marker() -> void:
+	## R118：`_cancel_armed` 为真时，在**选中的那个单位格**上挂脉冲橙环 + 角标「取消?」。
+	## 为什么非要画：状态栏只有 310px、而且 2.5 秒后就被悬停信息接管 ——
+	## 这时玩家手上还捏着一次「已移动、未攻击」的行动，必须一眼看得见
+	## 「还差一次点击才会丢掉它」，否则会以为点一下就已经取消了。
+	## ⚠️ 环必须**画粗 + 近乎不透明**（与 `_draw_picked_marker` 同为 4px 量级）：
+	##    `_draw_grid()` 早在每张单位卡所在格上画了一圈 3px 的**敌我框**
+	##    （`COL_OWN_FRAME` 绿 / `COL_ENEMY_FRAME` 暗红），同一位置上压一层半透明的
+	##    琥珀会混成说不清的黄绿（R118 出图实测：0.7 透明度的琥珀 + 绿框 = 黄绿，读不出
+	##    「这是额外的状态」）。所以这里用**近乎不透明的橙**明确盖住那一圈几帧：
+	##    这是个瞬时状态，拿归属色换「一眼看出还差一次点击」是划算的。
+	## 用描边 + 角标而不是整格填充：填充会盖住单位本体（与 `_draw_picked_marker` 同款理由）。
+	if not _cancel_armed or selection == null or selection[0] != "board":
+		return
+	var cell: Vector2i = selection[1]
+	if not engine.state.board.has(cell):
+		return
+	var r := Rect2(GRID_X + cell.y * CELL_W + 1, GRID_Y + cell.x * CELL + 1,
+			CELL_W - 2, CELL - 2)
+	var t := float(_now()) / 1000.0
+	var pulse := (sin(t * 4.2) + 1.0) * 0.5          # 0..1 呼吸
+	var col := Color(COL_CANCEL_ARMED.r, COL_CANCEL_ARMED.g, COL_CANCEL_ARMED.b,
+			0.90 + 0.10 * pulse)
+	draw_rect(r, col, false, 3.0 + 2.0 * pulse)
+	var tag := Rect2(r.position.x + r.size.x - 45.0, r.position.y + 2.0, 44.0, 15.0)
+	draw_rect(tag, COL_CANCEL_ARMED)
+	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "取消?",
+			tag.position + tag.size / 2.0, Color(0.10, 0.07, 0.02))
+
+
 func _cell_center(cell: Vector2i) -> Vector2:
 	return Vector2(GRID_X + cell.y * CELL_W + CELL_W / 2, GRID_Y + cell.x * CELL + CELL / 2)
 
 
 func _hl(cell: Vector2i, col: Color) -> void:
-	draw_rect(Rect2(GRID_X + cell.y * CELL + 2, GRID_Y + cell.x * CELL + 2, CELL - 4, CELL - 4), col)
+	# ⚠️ R118 订正：R117 把格子拆成双轴（`CELL_W 102` × `CELL 90`）时**漏了这一处** ——
+	# 横边仍按 `CELL` 算，于是移动 / 攻击 / HP / 法术格的高亮框整体**左移且变窄**
+	# （最右一列偏 24px、宽 86 而非 98），与格子线、与卡牌位置都对不上。
+	# 高亮是「这一格能做什么」的唯一通道，错位会直接读成「旁边那格能做什么」。
+	draw_rect(Rect2(GRID_X + cell.y * CELL_W + 2, GRID_Y + cell.x * CELL + 2,
+			CELL_W - 4, CELL - 4), col)
 
 
 func _draw_hp_banner() -> void:
@@ -7798,6 +7920,8 @@ func _process(delta: float) -> void:
 		queue_redraw()  # 沉睡环 + 飘「Zzz」同样是脉冲动画（R72）
 	if _board_has_shield():
 		queue_redraw()  # 能量屏障的青色呼吸环 + 护盾徽标（R87）
+	if _cancel_armed:
+		queue_redraw()  # R118：「再点一次就取消」的橙环是脉冲动画
 	if engine != null and _board_has_pulsing_field():
 		queue_redraw()  # 场地标记的呼吸描边是脉冲动画（R74）；持续型场地静止不重绘（R83）
 	if not _confetti.is_empty():

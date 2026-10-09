@@ -13274,6 +13274,47 @@ func _init() -> void:
 		"R116 亡语：池里没有一次性陷阱时不落空（持续型场地不算陷阱）")
 	RunState.player_class = r116_saved_cls
 
+	# ---- R118：字段「上场之后还有没有用」+ 战场卡面/徽标不再标出交换 / 幻影 ----
+	# 用户口径「像交换这种、在场后已经不再有用的字段，就不需要标明了」。
+	# 判据收在 CardData 的两个口上：affix_on_board()（归属）与 field_affix_line()
+	# （战场卡面那一行的唯一来源）；active_affixes() 是战场徽标 / 悬停列表的同一口。
+	var r118_repo := CardRepo.load_json()
+	check(not CardData.affix_on_board(GameEngine.AFFIX_SWAP)
+			and not CardData.affix_on_board(GameEngine.AFFIX_PHANTOM),
+		"R118 字段归属：交换 / 幻影都是**打出那一刻**的规则 → on_board=false")
+	check(CardData.affix_on_board(GameEngine.AFFIX_SWIFT)
+			and CardData.affix_on_board(GameEngine.AFFIX_TAUNT)
+			and CardData.affix_on_board(GameEngine.AFFIX_DEATH)
+			and CardData.affix_on_board(GameEngine.FIELD_BARRIER)
+			and CardData.affix_on_board(GameEngine.AFFIX_DIMENSION)
+			and CardData.affix_on_board(GameEngine.AFFIX_OVERLOAD),
+		"R118 字段归属：其余 6 个字段在场上一律仍然生效 → on_board=true")
+	check(CardData.affix_on_board("外星字段"),
+		"R118 未注册字段回退 on_board=true（宁可多标一个，也不能凭空吞掉陌生机制）")
+	# 救援构装体 8056 = 唯一带「交换」的卡：手牌 / 图鉴要写，战场卡面不能写
+	var r118_swap := r118_repo.get_card(8056)
+	check(r118_swap != null and r118_swap.has_affix(GameEngine.AFFIX_SWAP),
+		"R118 救援构装体 8056：带「交换」字段（用例前提）")
+	check(r118_swap != null and r118_swap.affix_line().contains("交换"),
+		"R118 手牌 / 图鉴卡面**照写**「交换」—— 那是它唯一有意义的地方")
+	check(r118_swap != null and r118_swap.field_affix_line() == "",
+		"R118 战场卡面**不写**「交换」（在场后已无作用，实际「%s」）"
+		% ("" if r118_swap == null else r118_swap.field_affix_line()))
+	# 混合字段：疾行留下、幻影滤掉（白狼 9031 自带疾行）
+	var r118_mix := CardData.from_dict(r118_repo.get_card(9031).to_dict())
+	r118_mix.add_affix(GameEngine.AFFIX_PHANTOM)
+	check(r118_mix.field_affix_line() == "疾行"
+			and r118_mix.affix_line().contains("幻影"),
+		"R118 混合字段：战场那一行只剩在场仍生效的（实际「%s」）"
+		% r118_mix.field_affix_line())
+	var r118_af := r118_mix.active_affixes(2, false)
+	check(not r118_af.has(GameEngine.AFFIX_PHANTOM)
+			and r118_af.has(GameEngine.AFFIX_SWIFT),
+		"R118 active_affixes：幻影不进战场徽标 / 悬停列表（实际 %s）" % str(r118_af))
+	# 「交换」这个机制本身一个字节都没改，只是不再标在战场上
+	check(CardData.affix_desc(GameEngine.AFFIX_SWAP).contains("友方单位"),
+		"R118 交换：字段说明仍是「可放置在已有友方单位上」（机制未动，只是不标在战场）")
+
 	RunState.player_class = r91_saved_cls
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
