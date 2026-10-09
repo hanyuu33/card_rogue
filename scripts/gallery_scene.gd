@@ -15,10 +15,11 @@ const WINDOW_H := 720.0
 const GRID_X := 232.0
 const GRID_Y := 52.0
 const GRID_W := 756.0
-# 卡 76x92 + 间隙。R115：间隙必须装得下**骑在框上的数值**
-# （UiTheme.CARD_BLEED × k = 8.5 × 1.314 ≈ 11.2 → 单元格至少 76+22.4 / 92+22.4）。
-const CELL_W := 100.0
-const CELL_H := 116.0
+# 卡 76x92 + 间隙。R117：间隙必须装得下**骑在框上的数值**
+# （UiTheme.CARD_BLEED × k = 9.2 × 1.314 ≈ 12.1 → 单元格至少 76+24.2 / 92+24.2）。
+# 取 101/117：列数 `int(756/101) = 7`，仍是 7 列（与 R115 相同）。
+const CELL_W := 101.0
+const CELL_H := 117.0
 const CARD_W := 76.0
 const CARD_H := 92.0
 const DETAIL_X := 1000.0

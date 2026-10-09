@@ -13,11 +13,12 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const CARD_W := 76.0
 const CARD_H := 92.0
-## R115：间距要装得下骑在框上的数值（CARD_BLEED × k = 8.5 × 1.314 ≈ 11.17，左右各一份）。
-## ⚠️ 22 是**算出来的上限**：每侧 11.0，比需要的 11.17 少 0.17px —— 亚像素，出图看不出
-## （视觉上就是「相邻两卡最外侧那两个数值刚好相接」，正是想要的紧凑感）。
-## 再大 1 就会让 `_layout()` 的列数从 11 掉到 10，得不偿失。
-const GAP := 22.0
+## R117：间距要装得下骑在框上的数值（CARD_BLEED × k = 9.2 × 1.314 ≈ 12.09，左右各一份）
+## → 需要 24.18，取 24（每侧 12.0，差 0.09px 亚像素）。
+## ⚠️ 间距被**列数**反卡住：`cols = int((pw - 40) / (CARD_W + GAP))`。
+##    直接把面板留在 1120 的话，GAP 24 会让列数从 11 掉到 10 —— 所以改成
+##    **加宽面板**（1120 → 1150）把这一格吃回来：`int(1110 / 100) = 11` 仍是 11 列。
+const GAP := 24.0
 
 var _btn: Button
 var _panel: Control
@@ -112,7 +113,7 @@ func _merged() -> Array:
 
 func _layout(n: int) -> Dictionary:
 	## 面板网格布局（绘制与滚动共用）。
-	var pw := 1120.0
+	var pw := 1150.0
 	var ph := 560.0
 	var cols := maxi(1, int((pw - 40.0) / (CARD_W + GAP)))
 	var rows := maxi(1, int(ceil(float(n) / float(cols))))

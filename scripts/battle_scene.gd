@@ -15,14 +15,23 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
-const CARD_W := 58.0
-const CARD_H := 70.0
-const CELL := 76.0
-const TAP_W := 70.0
-const TAP_H := 58.0
-const GRID_X := 560.0
-const GRID_Y := 136.0
-const GRID_W := 3.0 * CELL
+const CARD_W := 63.0
+const CARD_H := 76.0
+## R117：格子**不再是正方形**。
+##   · 横边 `CELL_W` 的约束是「横置卡牌 + 左右各一个数值徽章半径」——
+##     卡横置时盒宽 = CARD_H、徽章又一左一右骑在框上，横边不够就会让**相邻两列的
+##     横置卡数字互相压住**（用户实测反馈）。102 对 76 + 2×8.3 = 92.6 留 9px 余量。
+##   · 纵边就是历史名 `CELL`，受「6 行要塞进工具栏(36)与手牌(619)之间」的硬约束，
+##     只能到 90（GRID_H = 540，棋盘下沿仍是 592，手牌不变量因此完全不动）。
+const CELL_W := 102.0
+const CELL := 90.0
+const TAP_W := CARD_H
+const TAP_H := CARD_W
+## 棋盘整体右沿保持 R116 的 776（= 470 + 306）附近，于是右栏（敌方效果区 / 敌方 HP /
+## 道具栏 / 牌库）**一个像素都不用挪**；让出来的只有左侧那块原本 168px 的死白。
+const GRID_X := 470.0
+const GRID_Y := 52.0
+const GRID_W := 3.0 * CELL_W
 const GRID_H := 6.0 * CELL
 const COST_X := 310.0
 const COST_Y := GRID_Y
@@ -31,7 +40,6 @@ const DECK_X := WINDOW_W - CARD_W - 60.0
 const DECK_Y := WINDOW_H - CARD_H - 44.0
 const DISCARD_X := DECK_X
 const DISCARD_Y := DECK_Y - CARD_H - 52.0
-const OPP_HAND_Y := 14.0
 # ---- 手牌：比战场小卡大一号，卡身一路长到窗口下沿之外 ----
 # 空间账：手牌区只有 592~720 这 128px。既然「底部不必完全显示」，
 # 就把卡底往屏幕外沉 HAND_CROP_BOTTOM 像素，省下的位置全换成卡面尺寸：
@@ -45,9 +53,13 @@ const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（恶魔鸭 9116）
 const COL_FIELD_SELF := Color("ffb03a")         # 场地效果（R74）：我方放的 —— 琥珀色斜纹 + 名字角标
 const COL_FIELD_FOE := Color("ff5d5d")          # 敌方放的场地 —— 红斜纹（一眼分清敌我）
 const COL_FIELD_PERSIST := Color("5ad0e6")      # 持续型场地（R83：清泉）—— 冷青，静止描边（不是陷阱）
-const HAND_CARD_SCALE := 1.70                   # 手牌相对战场小卡的放大倍数
+## ⚠️ R117：这个倍数**由不变量反推**，不能随手取。手牌卡高被「抬手后卡顶
+## 不盖战场下沿」卡死在 ≈119（见下面 OWN_HAND_Y 的推导）；战场卡从 70 长到 76
+## 之后，倍数必须同步降下来（1.70 → 1.565），否则手牌会顶穿棋盘下沿。
+## 手牌卡尺寸因此与 R116 完全一致（98.6 × 119）——手牌扇形布局一行都不用改。
+const HAND_CARD_SCALE := 1.565                  # ≈ 119 / 76
 const HAND_CARD_W := CARD_W * HAND_CARD_SCALE   # ≈ 98.6
-const HAND_CARD_H := CARD_H * HAND_CARD_SCALE   # = 119.0（整张，含沉出屏幕的部分）
+const HAND_CARD_H := CARD_H * HAND_CARD_SCALE   # ≈ 119.0（整张，含沉出屏幕的部分）
 const HAND_CROP_BOTTOM := 18.0                  # 卡底沉到窗口下沿之外多少像素
 const OWN_HAND_Y := WINDOW_H - HAND_CARD_H + HAND_CROP_BOTTOM   # = 619（卡顶）
 # ---- 手牌扇形布局 ----
@@ -91,6 +103,11 @@ const COL_LOSE := Color("1d3557")
 const COL_INFO_BG := Color("f7f5f0")
 ## 手卡「现在打出能吃到额外效果」的金色高亮（R65）：与「减费绿」区分开，一眼看出是收益提醒。
 const COL_HAND_BONUS := UiTheme.ACCENT_LIT
+## R117：拖拽时「松手即生效」的**区域**外框色。与目标格填充（绿=移动 / 紫=技能 /
+## 橙=叠栅栏）和选中态（金黄）都不撞色 —— 它表达的是「一整块区域」，不是某一格。
+const COL_DROP_ZONE := Color(0.13, 0.55, 0.86, 0.85)
+## 拖拽「将要命中的那一格」的光圈色（原来直接写在 _draw_drag 里，R117 收成令牌）。
+const COL_SPELL_RING := Color(0.55, 0.90, 1.00, 0.90)
 
 # 战斗内地图总览（R64）的节点配色与字形 —— **与 map_scene 保持同一套**，
 # 这样「地图场景看到的颜色」和「战斗里回看地图的颜色」是同一种语义。
@@ -167,7 +184,11 @@ var tutorial_step := 0
 var _tutorial_finished := true
 var _level_menu: PopupMenu
 const TUT_BAR_TOP := 36.0       # 工具栏高度之下
-const TUT_BAR_MAX_H := 98.0     # 顶到棋盘第一行（GRID_Y=136）之前
+## R117：棋盘第一行从 y=136 上移到 52，引导条只剩 36..52 这 16px —— 装不下正文。
+## 当前各级关卡的 `tutorial` 数组**全为空**（引导条是休眠代码），所以这里只把上限
+## 收到 46（仍会盖住棋盘第一行上沿 30px）。⚠️ 将来若要真正启用教程，
+## **必须先改版引导条**（改成侧栏或收窄成单行），否则会挡住敌方后排教学卡。
+const TUT_BAR_MAX_H := 46.0
 
 # 教程引导条控件（_ready 里构建）
 var _tut_bar: Panel
@@ -1379,6 +1400,8 @@ func _demo_tick() -> void:
 	if "--bypassshot" in _demo_args and _demo_frame == 80:
 		_on_end_turn()          # 交给 AI 行动，让它自己选路线
 		_shot_t0 = _now()
+	if _shot_pending and "--dragshot" in _demo_args:
+		_demo_dragshot()          # R117 临时演示：钉住一次拖拽（见函数注释）
 	var shot_due := _shot_pending and _demo_frame == _shot_frame
 	if _shot_pending and _shot_t0 > 0 and _now() - _shot_t0 >= _shot_ms \
 			and "--shotms" in _demo_args:
@@ -1387,6 +1410,69 @@ func _demo_tick() -> void:
 		var img := get_viewport().get_texture().get_image()
 		img.save_png(ProjectSettings.globalize_path("res://screenshot.png"))
 		get_tree().quit()
+
+
+func _demo_dragshot() -> void:
+	## R117 演示（配合 `--screenshot --dragshot --shotframe N`）：把一次拖拽**钉住**在
+	## 屏幕上若干帧，让截图能拍到「拖拽进行中」的画面。与 `--fan` / `--projshot` /
+	## `--killshot` / `--bypassshot` / `--trapper` 同族。可核两件事 ——
+	##   ① 「松手即生效」的区域外框（`_drag_zone_rect`）画得对不对；
+	##   ② 光标被推到区域**之外**（松手 = 取消）时，目标光圈**不再**画出
+	##      （`_drag_hit_cell` 返回 null）。
+	## 参数：`--dragpos x,y` 指定光标（不给 = 钉在第一个合法目标格的中心，即区域内）；
+	##       `--dragkind effect` 改拖效果卡 9002（投放区 = `_effect_drop_rect()`）。
+	## ⚠️ 只服务出图，不进任何正式流程。
+	if engine == null:
+		return
+	if _drag_idx < 0:
+		# 摆三个靶子：一个敌方（前排）、两个己方（后排左右）—— 目标格连成一大片，
+		# 「可释放区域」的外框才有意义（只有一个目标格时外框 = 那一格，看不出效果）。
+		if not engine.state.board.has(Vector2i(1, 1)):
+			engine.state.place(repo.get_card(1053), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+			engine.state.place(repo.get_card(8003), Vector2i(3, 0), GameEngine.SIDE_SELF)
+			engine.state.place(repo.get_card(8003), Vector2i(3, 2), GameEngine.SIDE_SELF)
+			# 再补一个**正下方**的单位（row2,col1 在 row1,col1 骷髅兵的正下方）——
+			# 用来目视核对「上下相邻行的数值徽章会不会互相压住」。
+			engine.state.place(repo.get_card(8003), Vector2i(2, 1), GameEngine.SIDE_SELF)
+		# 手牌里找一张**目标型技能**来拖（攻击 8002，初始卡组 ×5，稳在手里）。
+		var idx := -1
+		if "--dragkind" in _demo_args and "effect" in _demo_args:
+			# 效果卡（`is_effect()`）：投放区是**左栏整条**，不是效果区那一小块。
+			var eff := repo.get_card(9002)   # 迅捷，2 费效果卡
+			if eff == null:
+				return
+			engine.state.hand[0] = eff
+			idx = 0
+		else:
+			for i in engine.state.hand.size():
+				if engine.state.hand[i].id == 8002:   # 攻击：target_mode=unit，初始卡组 ×5
+					idx = i
+					break
+		if idx < 0:
+			return
+		_start_drag(idx, _cell_center(Vector2i(3, 0)))
+		queue_redraw()
+		return
+	# 已经在拖了 → 每帧把光标钉回目标点（截图窗口打开时系统鼠标会往别处跑）。
+	var p := _demo_drag_pos()
+	if p != Vector2.ZERO:
+		_drag_pos = p
+	queue_redraw()
+
+
+func _demo_drag_pos() -> Vector2:
+	## `--dragpos x,y` 指定的光标；不给则取「第一个合法目标格的中心」（落在区域内）。
+	for i in _demo_args.size():
+		if _demo_args[i] == "--dragpos" and i + 1 < _demo_args.size():
+			var parts := str(_demo_args[i + 1]).split(",")
+			if parts.size() == 2:
+				return Vector2(float(parts[0]), float(parts[1]))
+	if _drag_to_effects:
+		var ez := _effect_drop_rect()
+		return ez.position + ez.size / 2.0
+	if not _drag_spell_cells.is_empty():
+		return _cell_center(_drag_spell_cells[0])
+	return Vector2.ZERO
 
 
 func _load_entry_level() -> void:
@@ -1912,7 +1998,7 @@ func _hand_hit(i: int, pos: Vector2) -> bool:
 
 
 func _cell_at(pos: Vector2) -> Variant:
-	var c := int(floor((pos.x - GRID_X) / CELL))
+	var c := int(floor((pos.x - GRID_X) / CELL_W))
 	var r := int(floor((pos.y - GRID_Y) / CELL))
 	if r >= 0 and r < FieldState.BOARD_ROWS and c >= 0 and c < FieldState.BOARD_COLS:
 		return Vector2i(r, c)
@@ -2315,7 +2401,8 @@ func _finish_drag(pos: Vector2) -> void:
 	# R106：效果卡拖到**左侧效果区**上松手 = 直接启用（与「拖到棋盘任意处」等效，
 	# 但落点就是它以后待着的地方，手感更自然）。必须放在 `_cell_at(pos)` 之前 ——
 	# 效果区不在棋盘格上，走那条路会被判成「无效落点」而取消。
-	if to_effects and _own_effect_zone_rect().has_point(pos):
+	# R117：可用投放区从「效果区那 88px」放大到**左栏整条**（见 _effect_drop_rect）。
+	if to_effects and _effect_drop_rect().has_point(pos):
 		if not engine.can_pay_card(card):
 			_say("能量不足：%s 需要 %d，当前能量 %d" % [
 					card.card_name, engine.cost_of(card), engine.energy_of()])
@@ -2325,7 +2412,9 @@ func _finish_drag(pos: Vector2) -> void:
 		status_text = "%s：已放入效果区，持续生效" % card.card_name
 		queue_redraw()
 		return
-	var infil_drop = _cell_at(pos)
+	# R117：技能落点走 `_drop_cell()` —— 光标没正压在目标格上时，只要**卡牌本身**
+	# 盖住了那个格就算命中（可用区域从「一个点」放大到「整张卡」）。
+	var infil_drop = _drop_cell(pos, cells)
 	if card.id == GameEngine.INFILTRATE_ID and cells.has(infil_drop):
 		# R76 潜入第一段：拖到己方盟友 = 选定它，然后高亮所有可去的空格。
 		# 这里**不结算**（卡还在手上、也没扣费），等第二段点/拖目的格才真正施放。
@@ -2412,13 +2501,15 @@ func _finish_drag(pos: Vector2) -> void:
 		return
 	if card.is_spell():
 		if not cells.is_empty():
-			# 需要目标：必须落在有效目标格（目标单位/格子）上
-			if cell != null and cells.has(cell):
+			# 需要目标：必须落在有效目标格（目标单位/格子）上。
+			# R117：这里同样走吸附（`_drop_cell`）——判定口径与 `_draw_drag` 的光圈完全同源。
+			var spell_drop = _drop_cell(pos, cells)
+			if spell_drop != null:
 				if not engine.can_pay_card(card):
 					_say("能量不足：%s 需要 %d，当前能量 %d" % [
 							card.card_name, engine.cost_of(card), engine.energy_of()])
 					return
-				_cast_spell(i, cell, card)
+				_cast_spell(i, spell_drop, card)
 			else:
 				_say("%s：拖到高亮目标上释放（已取消）" % card.card_name)
 			return
@@ -3490,7 +3581,7 @@ func _on_hover(pos: Vector2) -> void:
 		return
 	# ① 战场单位（双方都可查看）
 	for cell: Vector2i in engine.state.board:
-		var rect := Rect2(GRID_X + cell.y * CELL, GRID_Y + cell.x * CELL, CELL, CELL)
+		var rect := Rect2(GRID_X + cell.y * CELL_W, GRID_Y + cell.x * CELL, CELL_W, CELL)
 		if rect.has_point(pos):
 			var p: Placement = engine.state.board[cell]
 			_hover_card = p.card
@@ -3532,7 +3623,7 @@ func _on_hover(pos: Vector2) -> void:
 	#   这是 trigger 字段的**第一个消费者**：玩家在战场上就能看到「这格踩上去会发生什么」。
 	if _hover_card == null and tip == "":
 		for cell2: Vector2i in engine.state.field_effects:
-			var frect := Rect2(GRID_X + cell2.y * CELL, GRID_Y + cell2.x * CELL, CELL, CELL)
+			var frect := Rect2(GRID_X + cell2.y * CELL_W, GRID_Y + cell2.x * CELL, CELL_W, CELL)
 			if not frect.has_point(pos):
 				continue
 			var fc: CardData = engine.state.field_at(cell2)
@@ -3655,7 +3746,8 @@ func _on_hover(pos: Vector2) -> void:
 # ------------------------------------------------------------ 教程引导条
 
 func _build_tut_bar() -> void:
-	## 教程关卡的引导条：叠放在顶部对手手牌区上（教程对手不用手牌）。
+	## 教程关卡的引导条：叠放在棋盘上方那条空档里
+	## （R117 起顶部**已没有**对手手牌区，见 `TUT_BAR_MAX_H` 的说明）。
 	_tut_bar = Panel.new()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color("fff3d6")
@@ -4206,9 +4298,10 @@ func _tut_update_bar() -> void:
 	_tut_body.text = str(step["text"])
 	_tut_task.text = "▶ %s" % step["task"]
 	_tut_check.text = ""
-	# 高度按正文行数自适应（上限 TUT_BAR_MAX_H，不遮敌方后排教学卡）
+	# 高度按正文行数自适应。⚠️ 上限 TUT_BAR_MAX_H(46) **就是**实际高度：
+	# 棋盘上沿已上移到 52，36..52 只有 16px，正文行数再多也装不下（引导条现为休眠代码）。
 	var lines: int = str(step["text"]).split("\n").size()
-	var h: float = clampf(24.0 + lines * 14.0 + 26.0, 72.0, TUT_BAR_MAX_H)
+	var h: float = clampf(24.0 + lines * 14.0 + 26.0, 40.0, TUT_BAR_MAX_H)
 	_tut_bar.size = Vector2(WINDOW_W, h)
 	_tut_task.position.y = h - 22.0
 	_tut_next_btn.position.y = h - 68.0
@@ -4386,7 +4479,7 @@ func _tutorial_cue_rects() -> Array:
 
 
 func _cell_rect(cell: Vector2i) -> Rect2:
-	return Rect2(GRID_X + cell.y * CELL, GRID_Y + cell.x * CELL, CELL, CELL)
+	return Rect2(GRID_X + cell.y * CELL_W, GRID_Y + cell.x * CELL, CELL_W, CELL)
 
 
 func _control_rect(c: Control) -> Rect2:
@@ -4557,7 +4650,6 @@ func _draw() -> void:
 		draw_set_transform(_shake_offset())
 		shook = true
 	_draw_grid()
-	_draw_opponent_hand()
 	_draw_cost_zone()
 	_draw_deck_and_discard()
 	_draw_attack_fx()
@@ -4692,7 +4784,7 @@ func _draw_grid() -> void:
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "战场", Vector2(GRID_X + GRID_W / 2, GRID_Y - 12), UiTheme.INK_600)
 	for row in FieldState.BOARD_ROWS:
 		for col in FieldState.BOARD_COLS:
-			var rect := Rect2(GRID_X + col * CELL, GRID_Y + row * CELL, CELL, CELL)
+			var rect := Rect2(GRID_X + col * CELL_W, GRID_Y + row * CELL, CELL_W, CELL)
 			draw_rect(rect, Color(1, 1, 1, 0.02))
 			draw_rect(rect, COL_CELL_LINE, false, 1.0)
 	# 场地效果（R74）：画在格子底纹之上、单位之下 —— 它不是单位，只是格子上的标记。
@@ -4712,10 +4804,10 @@ func _draw_grid() -> void:
 	# 敌我框 + 单位标记
 	for cell: Vector2i in engine.state.board:
 		var p: Placement = engine.state.board[cell]
-		var rect := Rect2(GRID_X + cell.y * CELL, GRID_Y + cell.x * CELL, CELL, CELL)
+		var rect := Rect2(GRID_X + cell.y * CELL_W, GRID_Y + cell.x * CELL, CELL_W, CELL)
 		draw_rect(rect, COL_OWN_FRAME if p.owner == GameEngine.SIDE_SELF else COL_ENEMY_FRAME, false, 3.0)
 		if p.tapped:
-			_draw_string_nw(_font_bold, UiTheme.FS_MICRO, "→", rect.position + Vector2(CELL - 14, 14), UiTheme.INK_500)
+			_draw_string_nw(_font_bold, UiTheme.FS_MICRO, "→", rect.position + Vector2(CELL_W - 14, 14), UiTheme.INK_500)
 
 
 func _board_has_pulsing_field() -> bool:
@@ -4740,7 +4832,7 @@ func _draw_field_markers() -> void:
 		var card: CardData = engine.state.field_at(cell)
 		if card == null:
 			continue
-		var rect := Rect2(GRID_X + cell.y * CELL, GRID_Y + cell.x * CELL, CELL, CELL)
+		var rect := Rect2(GRID_X + cell.y * CELL_W, GRID_Y + cell.x * CELL, CELL_W, CELL)
 		var mine: bool = str(engine.state.field_owner.get(cell, "")) == GameEngine.SIDE_SELF
 		# 持续型场地（清泉 8028，R83）用**冷色**（青蓝）+ 静止描边 ——
 		# 一次性场地是琥珀/红 + 呼吸描边（=「活的、会被踩爆」）。两族必须一眼能分开：
@@ -4757,21 +4849,21 @@ func _draw_field_markers() -> void:
 		# 右下角小标签（场地名，缩到能塞进角里）
 		var tag := card.card_name
 		var px := 10
-		while px > 7 and _font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > CELL - 10.0:
+		while px > 7 and _font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > CELL_W - 10.0:
 			px -= 1
 		_draw_string_nw(_font_bold, px, tag,
 				rect.position + Vector2(5, CELL - 6), col, 3, Color(0.06, 0.05, 0.09))
 		# 双场地标记（9108）：左上角加一个「×2」提示
 		if int(engine.state.field_chains.get(cell, 0)) > 0:
 			_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "×2",
-					rect.position + Vector2(CELL - 26, 15), Color("ffd24a"), 3,
+					rect.position + Vector2(CELL_W - 26, 15), Color("ffd24a"), 3,
 					Color(0.10, 0.06, 0.0))
 		# R84：触发类型角标（一次性场地）。「范围伤害」这类标签太长塞不进 6 字宽的角，
 		#   缩字号 + 靠左排；清泉是持续型、**没有** trigger，不画这个（别误导成「会被触发」）。
 		if not persistent and card.trigger != "":
 			var tpx := 9
 			while tpx > 6 and _font.get_string_size(card.trigger,
-					HORIZONTAL_ALIGNMENT_LEFT, -1, tpx).x > CELL - 8.0:
+					HORIZONTAL_ALIGNMENT_LEFT, -1, tpx).x > CELL_W - 8.0:
 				tpx -= 1
 			_draw_string_nw(_font_bold, tpx, card.trigger,
 					rect.position + Vector2(4, 13), col, 3, Color(0.06, 0.05, 0.09))
@@ -4783,7 +4875,7 @@ func _draw_field_markers() -> void:
 		for cell2: Vector2i in engine.state.field_effects:
 			if GameEngine.is_persistent_field(engine.state.field_at(cell2)):
 				continue
-			var r2 := Rect2(GRID_X + cell2.y * CELL, GRID_Y + cell2.x * CELL, CELL, CELL)
+			var r2 := Rect2(GRID_X + cell2.y * CELL_W, GRID_Y + cell2.x * CELL, CELL_W, CELL)
 			draw_rect(r2, Color(1.0, 0.85, 0.35, 0.10 + pulse * 0.14), false, 2.0)
 
 
@@ -6698,6 +6790,9 @@ func _draw_floaters() -> void:
 			continue  # 延迟启动的飘字
 		var alpha := 1.0 - t * t
 		var pos: Vector2 = f.pos + Vector2(0, -30.0 * t)
+		# R117：棋盘上沿从 136 移到 52，`GRID_Y - 36 / -62` 这类飘字起点会钻到顶栏
+		# 底下（顶栏 36px，且是子节点、画在本层之上）→ 统一压在顶栏之下。
+		pos.y = maxf(pos.y, 44.0)
 		var col: Color = f.col
 		# 伤害数字更大更醒目；文字类（法术/击破）保持原字号
 		var size := int(f.get("size", 20 if str(f.text).begins_with("-") else 15))
@@ -6746,8 +6841,8 @@ func _draw_picked_marker() -> void:
 	var src := _picked_src()
 	if src.x < 0 or not engine.state.board.has(src):
 		return
-	var r := Rect2(GRID_X + src.y * CELL + 1, GRID_Y + src.x * CELL + 1,
-			CELL - 2, CELL - 2)
+	var r := Rect2(GRID_X + src.y * CELL_W + 1, GRID_Y + src.x * CELL + 1,
+			CELL_W - 2, CELL - 2)
 	draw_rect(r, COL_PICKED, false, 4.0)
 	# 角标：右上角小方块 + 「已选」两字
 	var tag := Rect2(r.position.x + r.size.x - 34.0, r.position.y + 1.0, 33.0, 14.0)
@@ -6757,7 +6852,7 @@ func _draw_picked_marker() -> void:
 
 
 func _cell_center(cell: Vector2i) -> Vector2:
-	return Vector2(GRID_X + cell.y * CELL + CELL / 2, GRID_Y + cell.x * CELL + CELL / 2)
+	return Vector2(GRID_X + cell.y * CELL_W + CELL_W / 2, GRID_Y + cell.x * CELL + CELL / 2)
 
 
 func _hl(cell: Vector2i, col: Color) -> void:
@@ -6898,20 +6993,10 @@ func _draw_relic_bar() -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, z.size.x, UiTheme.FS_CAPTION, Color("7b34b8"))
 
 
-func _draw_opponent_hand() -> void:
-	var count := engine.state.opp_hand_count
-	if count <= 0:
-		_draw_string_center(_font, UiTheme.FS_MICRO, "（对手手牌区）",
-				Vector2(WINDOW_W / 2, OPP_HAND_Y + CARD_H / 2), Color("aaaaaa"))
-		return
-	var spacing: float = minf(CARD_W + 8, maxf(40, (WINDOW_W - 200) / count))
-	var total: float = spacing * (count - 1) + CARD_W
-	var x: float = (WINDOW_W - total) / 2
-	for i in count:
-		_draw_card_back(Rect2(x, OPP_HAND_Y, CARD_W, CARD_H))
-		x += spacing
-
-
+## R117：这里原本是 `_draw_opponent_hand()`（顶部一排**卡背** + 「（对手手牌区）」占位字）。
+## 用户口径「敌人手牌实际不需要」→ 整段显示删掉，腾出的纵向空间全部给战场。
+## ⚠️ 删的只是**显示**：`engine.state.opp_hand_count` 仍是敌方 AI 的施法依据
+## （remote_spell 先扣它再结算），引擎侧一行都没动。
 func _draw_cost_zone() -> void:
 	## 左栏：顶部能量面板 + 下方效果区（效果卡正面朝上，持续生效）。
 	var state := engine.state
@@ -6936,8 +7021,11 @@ func _draw_cost_zone() -> void:
 		_draw_string_center(_font_bold, UiTheme.FS_MICRO, "闪躲：伤害由盟友代受",
 				Vector2(mid_x, COST_Y + 96), UiTheme.KIND_EFFECT)
 	# 角色（左栏常驻）：本局选定的角色
+	# R117：棋盘上移到 y=52 之后，原来的 `COST_Y - 26`（=26）会落进顶栏（36px 高，
+	# 且顶栏是子节点、画在本层之上）→ 被整条吃掉。收进能量面板上方的空档：
+	# 面板是 56..148，大数字在 +46、副标题在 +70，这一带原本就是空的。
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "角色：%s" % RunState.player_class,
-			Vector2(mid_x, COST_Y - 26), UiTheme.KIND_EFFECT)
+			Vector2(mid_x, COST_Y + 14), UiTheme.KIND_EFFECT)
 	# 效果区
 	var zone := Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, bottom - COST_Y - ENERGY_H)
 	draw_rect(zone, Color(0.72, 0.86, 0.72, 0.30), true)
@@ -7046,6 +7134,100 @@ func _own_effect_zone_rect() -> Rect2:
 	## 点它 = 打开浏览面板；把手里的一张**效果卡**拖到它上面松手 = 直接启用。
 	## 两处共用这一个矩形 —— 免得点得到的范围和拖得到的范围对不上。
 	return Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, GRID_H - ENERGY_H)
+
+
+func _effect_drop_rect() -> Rect2:
+	## R117：效果卡的「可用投放区」= **左半边整片**（信息栏 + 能量面板 + 效果区 + 棋盘）。
+	## 此前只认效果区那 88px 宽的一小块（用户口径「拖拽使用的区域加大」）。
+	## ⚠️ 为什么连**棋盘**也算：`_finish_drag` 里效果卡落到棋盘格上同样调 `use_effect()`
+	##    （R106 起就是两条等效路径）。区域只画左栏、棋盘不画的话，玩家把卡拖到棋盘上时
+	##    外框会显示「不在区域内」—— 而松手其实**会**生效，正是本次要消灭的那种
+	##    「画的和做的不一致」。所以一次覆盖到棋盘右沿，让**外框 = 真判定域**。
+	## 右栏（敌方效果区 / 道具栏 / 牌库 / 弃牌堆）不在内：松手会被拒。
+	## ⚠️ 它**包含** `_own_effect_zone_rect()`（卡片真正待着的地方），所以两者不冲突：
+	##    外框 = 可以松手的范围，内层高亮 = 它将会落在哪里。
+	return Rect2(INFO_X, GRID_Y, (GRID_X + GRID_W) - INFO_X, GRID_H)
+
+
+func _drag_footprint(pos: Vector2) -> Rect2:
+	## 拖拽中那张卡在屏幕上的矩形。**吸附判定与绘制共用它**（`_draw_drag` 也调它），
+	## 否则「看起来盖住了」和「算起来盖住了」会各算一份，迟早对不上。
+	return Rect2(pos - Vector2(HAND_CARD_W, HAND_CARD_H) / 2.0,
+			Vector2(HAND_CARD_W, HAND_CARD_H))
+
+
+func _drop_cell(pos: Vector2, cells: Array) -> Variant:
+	## R117 拖拽落点解析（**唯一口**：`_finish_drag` 与 `_draw_drag` 共用）。
+	##   ① 光标所在格若就是合法格 → 直接命中；
+	##   ② 否则**吸附**：取「拖拽卡牌所占矩形」覆盖到的合法格里、离光标最近的那个；
+	##   ③ 都不沾边 → null（松手 = 取消）。
+	## 这就是用户口径「技能牌的拖拽可用区域加大」：从「光标那一个点」放大到整张卡的 footprint
+	## （手牌卡 98.6×119 ≈ 1.3×1.6 个格子）。
+	if cells.is_empty():
+		return null
+	var direct: Variant = _cell_at(pos)
+	if direct != null and cells.has(direct):
+		return direct
+	var sweep := _drag_footprint(pos)
+	var best = null
+	var best_d := INF
+	for c: Vector2i in cells:
+		if _cell_rect(c).intersects(sweep):
+			var d: float = _cell_center(c).distance_squared_to(pos)
+			if d < best_d:
+				best_d = d
+				best = c
+	return best
+
+
+func _drag_hit_cell() -> Variant:
+	## 拖拽落点**实际会命中的那一格**（松手会取消则 null）。
+	## ⚠️ 与 `_finish_drag` 必须同源：放置类**不吸附**（与那里一致，避免误放），
+	## 技能类走 `_drop_cell`（按卡牌 footprint 吸附）。
+	var cells: Array = _drag_place_cells if _drag_place else _drag_spell_cells
+	if cells.is_empty():
+		return null
+	if _drag_place:
+		var direct: Variant = _cell_at(_drag_pos)
+		return direct if direct != null and cells.has(direct) else null
+	return _drop_cell(_drag_pos, cells)
+
+
+func _cells_bbox(cells: Array) -> Rect2:
+	## 一组格子的外接矩形（画「可释放区域」外框用）。空集合返回零矩形。
+	if cells.is_empty():
+		return Rect2()
+	var r: Rect2 = _cell_rect(cells[0])
+	for c: Vector2i in cells:
+		r = r.merge(_cell_rect(c))
+	return r
+
+
+func _drag_zone_rect() -> Rect2:
+	## 本次拖拽「松手即生效」的区域（R117 用户口径「标明拖拽后可以使用的区域」）。
+	## 没在拖拽、或这一类拖拽没有区域概念时返回零矩形。
+	if _drag_idx < 0 or engine == null or _drag_idx >= engine.state.hand.size():
+		return Rect2()
+	if _drag_to_effects:
+		return _effect_drop_rect()
+	if _drag_place:
+		return _cells_bbox(_drag_place_cells)
+	if not _drag_spell_cells.is_empty():
+		return _cells_bbox(_drag_spell_cells)
+	if _drag_anywhere:
+		return Rect2(GRID_X, GRID_Y, GRID_W, GRID_H)
+	return Rect2()
+
+
+func _drag_zone_label() -> String:
+	## 区域外框上的短标签（第一屏里玩家只需要知道「这里能不能松手」）。
+	if _drag_to_effects:
+		return "可释放区域"
+	if _drag_place:
+		return "可放置区域"
+	if not _drag_spell_cells.is_empty() or _drag_anywhere:
+		return "可释放区域"
+	return ""
 
 
 func _draw_deck_and_discard() -> void:
@@ -7159,36 +7341,47 @@ func _draw_drag() -> void:
 			draw_arc(nc, CELL * 0.66, 0, TAU, 32, Color("ffd24a"), 4.0)
 			_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "额外获得升级",
 				nc + Vector2(0, CELL * 0.44), Color("ffd24a"))
-	# R106：拖的是效果卡 → 高亮左侧效果区（落点就是它以后待着的地方）。
-	# 悬停在区域上时加亮 + 加粗描边 + 换文案，明确「松手 = 启用」。
+	# R106：拖的是效果卡 → 高亮左侧效果区（**落点**就是它以后待着的地方）。
+	# R117 订正文案：原来写「松手启用 / 拖到这里启用」，但 R117 把「松手生效的范围」
+	# 扩到了**左半边整片**（见 `_effect_drop_rect`，外框由 `_drag_zone_rect` 统一画）。
+	# 于是这块绿框只剩一个含义 —— **它会落在哪** —— 文案就直说这一件事，
+	# 免得同一屏里出现两句都在说「松手点这里」的话（玩家要在两块高亮之间做选择）。
 	if _drag_to_effects:
 		var ez := _own_effect_zone_rect()
-		var over := ez.has_point(_drag_pos)
+		var over := _drag_zone_rect().has_point(_drag_pos)
 		draw_rect(ez, Color(0.30, 0.75, 0.55, 0.22 if over else 0.10), true)
 		draw_rect(ez, Color(0.28, 0.82, 0.58, 0.95 if over else 0.45), false,
 				3.0 if over else 1.5)
-		_draw_string_center(_font_bold, UiTheme.FS_MICRO, "松手启用" if over else "拖到这里启用",
+		_draw_string_center(_font_bold, UiTheme.FS_MICRO, "效果卡放这里",
 				ez.position + Vector2(ez.size.x / 2.0, ez.size.y - 12.0),
 				Color(0.12, 0.42, 0.30))
+	# ── R117：标出「松手即生效」的**区域**（用户口径「标明拖拽后可以使用的区域」）──
+	# 目标格一个个高亮只说了「这些格可以」，说不出「这块地方整体都能松手」；
+	# 外框把可用范围一次讲清，光标进入时加粗 —— 松手前就知道会不会生效。
+	var zone := _drag_zone_rect()
+	if zone.size.x > 0.0:
+		var in_zone := zone.has_point(_drag_pos)
+		# ⚠️ 填充要**很淡**：R117 的区域最大能到「左半边整片 / 整个棋盘」，
+		# 0.14 会把卡面一起罩成蓝紫（出图实见）。区域越大，边框越是主角。
+		draw_rect(zone, Color(COL_DROP_ZONE.r, COL_DROP_ZONE.g, COL_DROP_ZONE.b,
+				0.09 if in_zone else 0.04), true)
+		draw_rect(zone, COL_DROP_ZONE, false, 2.5 if in_zone else 1.5)
+		_draw_string_center(_font_bold, UiTheme.FS_CAPTION, _drag_zone_label(),
+				Vector2(zone.position.x + zone.size.x / 2.0, zone.position.y - 8.0),
+				COL_DROP_ZONE)
 	# 跟着光标走的卡与手牌同尺寸（从手牌里"拿起来"不会突然变小）；
-	var rect := Rect2(_drag_pos - Vector2(HAND_CARD_W, HAND_CARD_H) / 2.0,
-			Vector2(HAND_CARD_W, HAND_CARD_H))
+	var rect := _drag_footprint(_drag_pos)
 	_draw_card_face(card, rect, card.health, true, false, engine.cost_of(card))
-	# 目标提示光圈（技能=紫色目标格 / 放置=绿色落点格）
-	var ring_cells := _drag_spell_cells if not _drag_place else _drag_place_cells
-	if not ring_cells.is_empty():
-		var nearest := ring_cells[0]
-		var best := 999999
-		for c in ring_cells:
-			var d := int(_cell_center(c).distance_squared_to(_drag_pos))
-			if d < best:
-				best = d
-				nearest = c
-		var cc := _cell_center(nearest)
-		var rc := Color(0.55, 0.9, 1.0, 0.9)
+	# 目标光圈：**只在松手真的会生效时画，并且画在真的会命中的那一格上**。
+	# 旧版无条件画「离光标最近的候选格」—— 光标已经在可释放区域之外（松手会取消）时，
+	# 光圈还挂在一个目标上，玩家会以为已经打出去了（用户口径「有误导性」）。
+	var hit = _drag_hit_cell()
+	if hit != null:
+		var cc := _cell_center(hit)
+		var rc := COL_SPELL_RING
 		if _drag_place:
-			rc = COL_FENCE_MERGE if engine.state.board.has(nearest) else COL_MOVE
-		draw_arc(cc, CELL * 0.62, 0, TAU, 32, rc, 3.0)
+			rc = COL_FENCE_MERGE if engine.state.board.has(hit) else COL_MOVE
+		draw_arc(cc, minf(CELL, CELL_W) * 0.62, 0, TAU, 32, rc, 3.0)
 
 
 func _draw_info_panel() -> void:
@@ -7386,7 +7579,9 @@ func _merged_deck(cards: Array) -> Array:
 
 ## 区域浏览面板里卡与卡的间距（R115）：卡 58×70 + 18 → 正好装下骑在框上的
 ## 数值（图标半径 8.5，左右各一份 = 17 ≤ 18）。绘制与悬停判定**共用**这一个常数。
-const ZONE_CARD_GAP := 18.0
+## R117：卡从 58×70 长到 63×76（k = 76/70 ≈ 1.086）→ 每侧外溢 9.2×1.086 ≈ 10px。
+## 18 只够 9px，抬到 20。代价是每行列数 14 → 13（卡本来就变大了，可接受）。
+const ZONE_CARD_GAP := 20.0
 
 
 func _zone_panel_layout(n: int) -> Dictionary:

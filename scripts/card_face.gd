@@ -303,6 +303,9 @@ static func _badge(canvas: CanvasItem, font_bold: Font, center: Vector2, r: floa
 	##
 	## 数字按宽度自适应缩号：三位数（如鸭之暗面的 150 血）在 58px 小卡的图标上
 	## 必然顶出去，缩到刚好放得下为止；缩到 6px 仍是极限就让它略微出格
+	## ⚠️ R117：`CARD_FS_BADGE` 提到 12 之后，**两位数**（力量 1~30、生命 30~50 常见）
+	##   在 20px 的战场徽章上正好卡在阈值内（sz=13 →「30」量宽 17 ≤ r×1.75 ≈ 17.5），
+	##   不会再被悄悄缩小；三位数（如 150 血）仍会缩到 9px，属预期。
 	## （宁可略宽也不缩成看不出来的小点）。
 	var icon: Texture2D = UiAssets.badge_icon(key)
 	if icon != null:
