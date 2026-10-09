@@ -448,7 +448,8 @@ func _build_deck_rows() -> Array:
 
 # ------------------------------------------------------------ 卡组面板
 
-const DECK_ROW_H := 80.0
+## R114：行距要装得下骑在框上的数值徽章（58×70 的卡，徽章上下各露 7px）。
+const DECK_ROW_H := 84.0
 const DECK_COL_W := 470.0
 const DECK_INNER := Rect2(180, 142, 920, 350)   # 与记录面板内区一致
 

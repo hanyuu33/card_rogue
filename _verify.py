@@ -46,7 +46,14 @@ SUITES = [
     ("engine", ["--headless", "--path", ROOT, "--script", "res://scripts/test_engine.gd"], "_e.txt"),
     ("reward", ["--headless", "--path", ROOT, "--script", "res://scripts/test_reward.gd"], "_r.txt"),
     ("replay", ["--headless", "--path", ROOT, "--script", "res://scripts/test_replay.gd"], "_rp.txt"),
-    ("smoke", ["--path", ROOT, "--script", "res://scripts/test_smoke.gd"], "_s.txt"),
+    # ⚠️ smoke **必须** 也带 --headless：它原本是唯一一条不带  的套件，
+    # 于是每次跑门禁都会**真的弹出一个游戏窗口**，在窗口里依次加载 21 个场景。
+    # 后果有二：① 用户屏幕上冒出一个看起来「未响应」的游戏窗口；
+    #          ② 那个窗口一旦被关闭/失去响应，smoke 进程就带着一个垃圾退出码死掉，
+    #             门禁报  而**看不到任何有用信息**。
+    # 已核实 test_smoke.gd **完全不依赖真实渲染**（无 viewport / 截图 / DisplayServer 调用），
+    # 所以加 --headless 只是把窗口去掉，断言一条都不会变。
+    ("smoke", ["--headless", "--path", ROOT, "--script", "res://scripts/test_smoke.gd"], "_s.txt"),
 ]
 
 

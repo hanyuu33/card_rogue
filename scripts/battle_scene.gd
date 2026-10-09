@@ -58,8 +58,15 @@ const HAND_FAN_MIN_STEP := 0.40   # 最小步进 = 卡宽 × 此比例（即最�
 const HAND_FAN_MAX_DEG := 12.0    # 两端最大倾角（度）
 const HAND_FAN_DEG_PER := 4.0     # 相邻两张的倾角差（度）
 const HAND_FAN_DROP := 4.0        # 扇弧两端相对扇心的下沉像素（正好把底边框沉掉）
-const HAND_FAN_HOVER_LIFT := 16.0 # 悬停时抬手高度（纯显示，不影响命中判定）
-const HAND_SELECT_RAISE := 16.0   # 选中手牌时抬起的高度
+# R114：数值徽章改成**骑在卡框上**（圆心在框线、一半露在框外）之后，
+# 沉在窗口下沿之外的那截从「底部留白」变成了「四个数值徽章」——
+# 抬手高度必须补上徽章外露的一个半径（手牌 k=1.7 → 约 12px）才看得见。
+# ⚠️ 上限被一条**既有不变量**卡住（见 test_smoke `_check_hand_fan`）：
+#     OWN_HAND_Y - HAND_FAN_HOVER_LIFT >= GRID_Y + GRID_H - 2   （= 590）
+#   即「抬手后的卡顶不能盖住战场下沿」。619 - 28 = 591 ≥ 590 ✓ —— 28 就是安全上限，
+#   不要为了露出更多徽章而调大它（会盖住棋盘单位）。徽章此时约 92% 可见，数字读得全。
+const HAND_FAN_HOVER_LIFT := 28.0 # 悬停时抬手高度（纯显示，不影响命中判定）
+const HAND_SELECT_RAISE := 28.0   # 选中手牌时抬起的高度
 const INFO_X := 8.0
 const INFO_W := 272.0   # 左栏（详细效果 / 对局记录）：宽一点，效果正文少折几行
 
@@ -4620,11 +4627,12 @@ func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_ta
 	## power_override >= 0 → 用实际力量重画左下角标（战场单位传 effective_power()）。
 	CardFace.draw(self, card, rect, hp, selected, is_tapped, _font, _font_bold, power_override)
 	if not card.x_cost and cost_override >= 0 and cost_override != card.cost:
-		var k := rect.size.y / CardFace.CARD_H_DESIGN
-		var cost_r := 7.0 * k
-		var cost_c := rect.position + Vector2(cost_r + 3, cost_r + 3)
-		draw_circle(cost_c, cost_r, COL_COST_LOW_BG)
-		_draw_string_center(_font_bold, int(9 * k), str(cost_override), cost_c, COL_COST_LOW_FG)
+		# 位置 / 半径 / 字号一律取 CardFace 的口径。这里原来自己算「7k 半径 + 3 偏移」，
+		# R114 换了卡面版式（费用徽章变大、位置改由 CARD_BADGE_* 决定）就会错位。
+		var cost_c := CardFace.cost_badge_center(rect)
+		draw_circle(cost_c, CardFace.badge_radius(rect), COL_COST_LOW_BG)
+		_draw_string_center(_font_bold, CardFace.badge_font(rect), str(cost_override),
+				cost_c, COL_COST_LOW_FG)
 
 
 func _draw_card_back(rect: Rect2, tags := "") -> void:
@@ -6951,12 +6959,14 @@ func _merged_effects(cards: Array) -> Array:
 
 
 func _draw_count_badge(rect: Rect2, count: int) -> void:
-	## 同名合并的张数角标（左下角「×N」）：只有合并了 2 张以上才画。
+	## 同名合并的张数角标（「×N」）：只有合并了 2 张以上才画。
+	## ⚠️ R114 起改画在**右上角** —— 卡片底部现在是数值徽章的地盘
+	## （左下力/程、右下生/速），原来在左下会被「力」徽章整个盖住。
 	if count < 2:
 		return
 	var bw := 26.0
-	var badge := Rect2(rect.position.x + 2.0,
-			rect.position.y + rect.size.y - 18.0, bw, 16.0)
+	var badge := Rect2(rect.end.x - bw - 2.0,
+			rect.position.y + 2.0, bw, 16.0)
 	draw_rect(badge, Color(0.15, 0.18, 0.15, 0.88), true)
 	draw_rect(badge, Color("a8d8a8"), false, 1.0)
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "×%d" % count,
@@ -6972,8 +6982,9 @@ func _draw_counter_badge(c: CardData, rect: Rect2) -> void:
 	if left < 0:
 		return
 	var bw := 30.0
-	var badge := Rect2(rect.position.x + rect.size.x - bw - 2.0,
-			rect.position.y + rect.size.y - 18.0, bw, 16.0)
+	## R114：同样让开底部数值条，堆在「×N」角标之下（两者可以同时出现）。
+	var badge := Rect2(rect.end.x - bw - 2.0,
+			rect.position.y + 20.0, bw, 16.0)
 	draw_rect(badge, Color(0.15, 0.15, 0.18, 0.88), true)
 	draw_rect(badge, Color("d8cfa8"), false, 1.0)
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "剩 %d" % left,

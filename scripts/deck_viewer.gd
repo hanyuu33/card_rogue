@@ -13,7 +13,8 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const CARD_W := 76.0
 const CARD_H := 92.0
-const GAP := 10.0
+## R114：间距要装得下骑在框上的数值徽章（CARD_BLEED × k = 7 × 1.314 ≈ 9.2，上下各一份）。
+const GAP := 20.0
 
 var _btn: Button
 var _panel: Control
@@ -156,7 +157,8 @@ func _on_panel_draw() -> void:
 		CardFace.draw(_panel, c, rect, c.health, false, false, _font, _font_bold)
 		var cnt: int = merged[i]["count"]
 		if cnt > 1:
-			var badge := Rect2(rect.position + Vector2(2, rect.size.y - 18),
+			# R114：右上角。卡片底部已归数值徽章（左下力/程、右下生/速）。
+			var badge := Rect2(rect.position + Vector2(rect.size.x - 28, 2),
 					Vector2(26, 16))
 			_panel.draw_rect(badge, Color(0.15, 0.18, 0.15, 0.88))
 			_panel.draw_rect(badge, Color("a8d8a8"), false, 1.0)

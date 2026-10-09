@@ -19,7 +19,7 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
-const GAP := 14.0            # 网格间距
+const GAP := 20.0            # 网格间距（R114：要装得下骑在框上的数值徽章）
 const MARGIN := 40.0         # 网格左右留白
 const TOP_Y := 108.0         # 网格顶部（标题栏 + 提示之下）
 const BOTTOM_RESERVE := 96.0 # 底部留给「确定」按钮与结果文字
