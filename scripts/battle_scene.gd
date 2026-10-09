@@ -3726,10 +3726,10 @@ func _on_hover(pos: Vector2) -> void:
 				tip += "　❄ 冰封（本回合不能行动）"
 			elif p.rooted > 0:
 				tip += "　⊥ 禁足（不能移动，仍可攻击）"
-			# R76：沉睡是**挨打计数**（初始 2，每挨一下 -1，归零立刻能行动），
-			# 不是回合计数 —— 所以要写清「还差几下」，玩家才知道该不该现在就打。
+			# R122：沉睡有**两个**递减口 —— 自己的回合结束 -1（回合口）、每次受伤 -1
+			#（受伤口）。写清「还剩几点」，玩家才知道该不该现在就打。
 			if p.sleep_left > 0:
-				tip += "　💤 沉睡（再挨 %d 下就醒，醒后立刻行动）" % p.sleep_left
+				tip += "　💤 沉睡（还剩 %d：自己的回合结束 -1，挨打也 -1）" % p.sleep_left
 			# R87：护盾 / 自我修复都是隐藏状态，悬停必须写明「为什么它没掉血」。
 			if p.first_hit_shield:
 				tip += "　🛡 能量屏障（**第一次受到的伤害为 0**，用完消失）"
@@ -4878,12 +4878,14 @@ func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_ta
 	CardFace.draw(self, card, rect, hp, selected, is_tapped, _font, _font_bold, power_override,
 			on_board)
 	if not card.x_cost and cost_override >= 0 and cost_override != card.cost:
-		# 位置 / 半径 / 字号一律取 CardFace 的口径。这里原来自己算「7k 半径 + 3 偏移」，
-		# R114 换了卡面版式（费用徽章变大、位置改由 CARD_BADGE_* 决定）就会错位。
-		var cost_c := CardFace.cost_badge_center(rect)
-		draw_circle(cost_c, CardFace.badge_radius(rect), COL_COST_LOW_BG)
-		_draw_string_center(_font_bold, CardFace.badge_font(rect), str(cost_override),
-				cost_c, COL_COST_LOW_FG)
+		# ⚠️ R122：**必须走 CardFace.draw_badge()**（同一个槽位的唯一绘制口）。
+		# 这里原来自己 `draw_circle` 盖一个纯色圆盘 —— R115 把费用徽章换成
+		# 「水晶图标 + 数字」之后，那一圈圆盘会把图标整个盖掉，于是「降费后
+		# 宝石图标不再能正确显示」（用户实测反馈）。改调公开口之后，
+		# 图标照旧、只有**数字**变绿，减费的信号一点没丢。
+		CardFace.draw_badge(self, _font_bold, CardFace.cost_badge_center(rect),
+				CardFace.badge_radius(rect), CardFace.badge_font(rect), "cost",
+				str(cost_override), COL_COST_LOW_BG, COL_COST_LOW_FG)
 
 
 func _draw_card_back(rect: Rect2, tags := "") -> void:
@@ -5158,7 +5160,8 @@ func _draw_frozen_aura(center: Vector2, w: float, h: float, badge_row: int) -> v
 func _draw_sleep_aura(center: Vector2, w: float, h: float, left: int, badge_row: int) -> void:
 	## 沉睡特效（`Placement.sleep_left` 的唯一表现口）：**紫色**脉冲环（与冰封的冷蓝
 	## 明显区分）+ 卡面暗紫薄纱 + 右上角飘「Zzz」+ 顶部「沉睡 N」徽标。
-	## 徽标**写出还差几下**是刻意的：沉睡的代价是「白挨几下」，
+	## 徽标**写出还剩几点**是刻意的：沉睡的代价是「白站几回合」，R122 起
+	## 「自己回合结束 -1」和「每次受伤 -1」两条都会减它，
 	## 玩家得能一眼判断「现在打它值不值」（R76：每挨一下沉睡 -1、打空立刻能行动），
 	## 光写「沉睡」等于把这个决策藏起来。
 	var t := float(_now()) / 1000.0

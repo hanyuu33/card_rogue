@@ -860,11 +860,12 @@ const CONTRACTOR_TRAIT:= "契约签订者"
 const CONTRACTOR_GAIN:= 4          # 登场回复的费用
 const CONTRACTOR_RAISE:= 4         # 本回合手卡涨价
 # 恶魔鸭（9116 敌方盟友 5/100 程2 速1）：
-#   ① 开场即「沉睡」SLEEP_TURNS(2) —— Placement.sleep_left > 0 时不能行动；
-#      睡满后自己在回合开始醒来（唯一递减口 = end_turn 里的 _sleep_tick）。
-#   ② 受到伤害时（唯一判定口 = _hit_unit）：还在睡 → sleep_left -1，**减到 0 立刻能行动**
-#      （R76 用户口径：不是「提前 1 回合」，而是每次挨打 -1、打空即醒）；
-#      已醒 → end_atk +1（永久加攻，进 effective_power）。
+#   ① 开场即「沉睡」SLEEP_TURNS(2) —— Placement.sleep_left > 0 时不能行动。
+#      递减有**两个口**，减到 0 都**立刻**能行动：
+#        · 回合口 = end_turn 里的 _sleep_tick（**自己**的回合结束 -1，R122 用户口径）；
+#        · 受伤口 = _hit_unit 里的 _demon_duck_hurt（每次受伤 -1，R76 用户口径）。
+#      两个口并存：既保证「没人打它也一定会醒」，又保留「打它 = 帮它提前醒」的决策。
+#   ② 已醒之后再受伤 → end_atk +1（永久加攻，进 effective_power）。
 const DEMON_DUCK_ID:= 9116
 const DEMON_DUCK_ATK_GAIN:= 1      # 醒着受伤时永久 +1 力量
 # 恶魔鸭（复仇）（9118 敌方盟友 5/100 程2 速1，R73）：
@@ -1106,14 +1107,19 @@ func _begin_turn(side: String) -> void :
 		state.reset_units(SIDE_SELF)
 		_poison_tick(SIDE_SELF)   # 剧毒陷阱：我方回合开始结算中毒
 		_arm_debuffs(SIDE_SELF)
-		_summon_familiars(SIDE_SELF)
-		_effect_summons(SIDE_SELF)
+		# ── ① 回合开始的**成长**先结算 ──
 		_apply_growth(SIDE_SELF)
 		_night_growth(SIDE_SELF)
 		_mage_growth(SIDE_SELF)
 		_familiar_growth(SIDE_SELF)   # 使魔之力 9115：回合开始使魔鸭子 +1
-		_demon_summon(SIDE_SELF)      # 恶魔使魔 9117：每 2 回合随机空格召唤使魔鸭子
 		_apply_mech_growth(SIDE_SELF)
+		# ── ② R122：**召唤**排在成长之后 ──
+		# 「回合开始成长」算的是**这一刻已在场**的单位；刚召唤出来的单位这一回合才上场，
+		# 成长结算时它还不存在 → 它不该吃到本回合的这一口（用户：召唤的使魔
+		# 「享受了效果卡的加攻」）。放在成长之后，它从**下一回合**起才加入成长。
+		_summon_familiars(SIDE_SELF)
+		_effect_summons(SIDE_SELF)
+		_demon_summon(SIDE_SELF)      # 恶魔使魔 9117：每 2 回合随机空格召唤使魔鸭子
 		_auto_upgrade(SIDE_SELF)          # 自主升级 8045（R95）：回合开始随机改造抽牌堆 1 张
 		_dragon_breath(SIDE_SELF)
 		_heal_aura(SIDE_SELF)
@@ -1158,14 +1164,16 @@ func _begin_turn(side: String) -> void :
 		state.reset_units(SIDE_OPPONENT)
 		_poison_tick(SIDE_OPPONENT)   # 剧毒陷阱：对方回合开始结算中毒
 		_arm_debuffs(SIDE_OPPONENT)
-		_summon_familiars(SIDE_OPPONENT)
-		_effect_summons(SIDE_OPPONENT)
+		# ── ① 成长先结算 ──
 		_apply_growth(SIDE_OPPONENT)
 		_night_growth(SIDE_OPPONENT)
 		_mage_growth(SIDE_OPPONENT)
 		_familiar_growth(SIDE_OPPONENT)   # 使魔之力 9115：回合开始使魔鸭子 +1
-		_demon_summon(SIDE_OPPONENT)   # 恶魔使魔 9117：回合开始随机空格召唤使魔鸭子
 		_apply_mech_growth(SIDE_OPPONENT)
+		# ── ② R122：召唤排在成长之后（同我方）──
+		_summon_familiars(SIDE_OPPONENT)
+		_effect_summons(SIDE_OPPONENT)
+		_demon_summon(SIDE_OPPONENT)   # 恶魔使魔 9117：回合开始随机空格召唤使魔鸭子
 		_auto_upgrade(SIDE_OPPONENT)      # 对称保留（敌方正常拿不到这张卡）
 		_dragon_breath(SIDE_OPPONENT)
 		_heal_aura(SIDE_OPPONENT)
@@ -1289,7 +1297,7 @@ func _demon_summon(side: String) -> void :
 		card = _fallback_familiar()
 	# 召唤物用独立副本：避免与库内实例共享（后续谁给它挂减费/状态不会串到别处）
 	var copy:= CardData.from_dict(card.to_dict())
-	var summoned:= state.place(copy, spot, side)
+	var summoned:= state.place(copy, spot, side, true)
 	_log("恶魔使魔：召唤了一只使魔鸭子（%s）" % spot)
 	action.emit("demon_summon", {"cell": spot, "card": copy, "side": side})
 	_on_ally_entered(summoned, side)
@@ -1337,7 +1345,7 @@ func _effect_summons(side: String) -> void :
 	if spot == Vector2i(-1, -1):
 		_log("效果卡：己方半场已满，无法召唤鸭子骑士")
 		return
-	var summoned:= state.place(card, spot, side)
+	var summoned:= state.place(card, spot, side, true)
 	_log("效果卡（每 %d 回合）召唤了鸭子骑士（%s）" % [interval, spot])
 	action.emit("place", {"cell": spot, "card": card, "side": side})
 	_on_ally_entered(summoned, side)
@@ -1435,8 +1443,11 @@ func _summon_familiars(side: String) -> void :
 		var spot:= _free_cell_near(cell, side)
 		if spot == Vector2i(-1, -1):
 			continue
+		# ⚠️ R122：召唤物 `summon = true` → 当回合恰好 1 轮行动（不吃哈气/双动）；
+		# 且本函数已排在 `_familiar_growth` **之后** → 新使魔当回合不吃使魔之力的 +1
+		# （它这一回合才上场，本回合的「回合开始成长」结算时它还不存在）。
 		var card:= familiar if familiar != null else _fallback_familiar()
-		var summoned:= state.place(card, spot, side)
+		var summoned:= state.place(card, spot, side, true)
 		p.tapped = true
 		_log("%s 召唤了使魔鸭子（%s），自己横置" % [p.card.card_name, spot])
 		action.emit("place", {"cell": spot, "card": card, "side": side})
@@ -1613,7 +1624,7 @@ func _kiln_hatch(side: String) -> void :
 			# 直接改它会污染全局（第 29 轮实例级减费踩过同类坑）。
 			var body: CardData = CardData.from_dict(spawn.to_dict())
 			body.health = x
-			var hatched:= state.place(body, c, p.owner)
+			var hatched:= state.place(body, c, p.owner, true)
 			born += 1
 			action.emit("place", {"cell": c, "card": body, "side": p.owner})
 			_on_ally_entered(hatched, p.owner)
@@ -1660,7 +1671,7 @@ func _clockwork_summon(_side: String) -> void :
 			var spot:= _token_spot(cell, p.owner)
 			if spot == Vector2i(-1, -1):
 				break
-			var hatched:= state.place(spawn, spot, p.owner)
+			var hatched:= state.place(spawn, spot, p.owner, true)
 			born += 1
 			action.emit("place", {"cell": spot, "card": spawn, "side": p.owner})
 			_on_ally_entered(hatched, p.owner)
@@ -1957,9 +1968,10 @@ func end_turn() -> void :
 			p.atk_buff_turn = 0
 			if p.rooted == 2:
 				p.rooted = 0   # 禁足（冰霜陷阱）：生效回合结束解除
-	# 沉睡（恶魔鸭 9116，R63）：**沉睡递减的唯一口** —— 本方回合结束时，
-	# 本方还在睡的单位 sleep_left -1；减到 0 就此醒来（下一回合可行动）。
-	# 恶魔鸭 SLEEP_TURNS=2 → 第 1、2 个己方回合不行动，第 3 回合起正常。
+	# 沉睡（恶魔鸭 9116）：**回合递减口** —— 本方回合结束时，本方还在睡的单位
+	# sleep_left -1；减到 0 就此醒来（下一回合可行动）。
+	# R122 用户口径：沉睡**随着回合减少**（与「受伤也 -1」并存，见 _demon_duck_hurt）。
+	# 恶魔鸭 SLEEP_TURNS=2 → 没人打它时：第 1、2 个己方回合不行动，第 3 回合起正常。
 	_sleep_tick(current_side)
 	# 清泉（8028，R83）：持续型场地 —— 本方回合结束时，站在清泉上的本方单位回血。
 	# 放在 `_sleep_tick` 之后：两者都是「本方回合结束的收尾」，挨着才好读。
@@ -7619,23 +7631,32 @@ func _field_aura_tick(side: String) -> void :
 
 
 func _sleep_tick(side: String) -> void :
-	## 沉睡（恶魔鸭 9116，R76 改口径）：**只播「仍在沉睡」的提示，不再递减**。
-	## 沉睡现在是「挨打计数」而不是「回合计数」：初始 SLEEP_TURNS(2)，
-	## 每挨一下 -1（唯一递减口 = _demon_duck_hurt），**减到 0 立刻恢复行动**。
-	## 原来这里每回合结束 -1，等于沉睡 2 会被回合偷偷减掉 2 次、挨一下打就能动 ——
-	## 与用户要的「初始 2、每次受伤 -1、归零直接行动」完全不符。
+	## 沉睡（恶魔鸭 9116）：**回合递减口**（R122 用户口径「沉睡应该随着回合减少」）。
+	## 本方回合结束时，本方还在睡的单位 sleep_left -1；减到 0 就此醒来（下一回合可行动）。
+	## ⚠️ 与 R76 的「受伤递减口」`_demon_duck_hurt` **并存**，各减各的：
+	##   · 只挨打不过回合 → 挨够 SLEEP_TURNS 下就醒（R76 保留的决策：打它 = 帮它提前醒）；
+	##   · 只过回合不挨打 → 过满 SLEEP_TURNS 个自己的回合也一定会醒
+	##     （这是 R122 修掉的边界：原来没人打它就永远站着不动）。
+	## 两个口减到 0 都走同一句话术（「醒来」），所以不会出现「减到 -1 还睡着」。
 	for cell: Vector2i in state.board:
 		var p: Placement = state.unit_at(cell)
 		if p == null or p.owner != side or p.sleep_left <= 0:
 			continue
-		_log("%s 仍在沉睡（还需挨 %d 下才会醒）" % [p.card.card_name, p.sleep_left])
+		p.sleep_left -= 1
+		if p.sleep_left <= 0:
+			_log("%s 睡满了本轮，从沉睡中醒来（下一回合可以行动）" % p.card.card_name)
+			action.emit("wake", {"cell": cell, "card": p.card, "side": side,
+					"hurt": false, "awake": true})
+		else:
+			_log("%s 仍在沉睡（还剩 %d 点：回合结束 -1，挨打也 -1）" % [
+					p.card.card_name, p.sleep_left])
 
 
 func _demon_duck_hurt(p: Placement, cell: Vector2i) -> void :
 	## 恶魔鸭家族的受伤反应：**受击判定的唯一口**（挂在 _hit_unit 里，
 	## 所以普通攻击 / 技能 / 效果 / 直伤全都算，不只是普通攻击）。
 	## 按 trait 分派两种互斥的「挨打变强」：
-	##   沉睡（9116 恶魔鸭）→ 还在睡：sleep_left -1（提前 1 回合醒来，绝不会从 2 直接跳到能行动）；
+	##   沉睡（9116 恶魔鸭）→ 还在睡：sleep_left -1（受伤口；与回合口 _sleep_tick 并存）；
 	##                              已醒：end_atk +1（**永久**，不受 GROW_CAP 封顶）。
 	##   复仇（9118 恶魔鸭（复仇））→ **本回合** atk_buff_turn +1（可叠加，回合开始清零）。
 	## 两者都只认 trait，所以任何带该 trait 的单位都吃这套。
@@ -7646,9 +7667,8 @@ func _demon_duck_hurt(p: Placement, cell: Vector2i) -> void :
 		return
 	if p.sleep_left > 0:
 		p.sleep_left -= 1
-		# R76：沉睡是「挨打计数」而不是「回合计数」—— 每次受伤 -1，减到 0 **立刻**恢复行动。
-		# 原来这里只发 hurt 事件，由 _sleep_tick 在本方回合结束时才真醒，
-		# 于是「沉睡 2」实际会睡满 2 个回合外加回合结束才醒，和用户要的完全不是一回事。
+		# 受伤口：每次受伤 -1，减到 0 **立刻**恢复行动（R76 口径保留）。
+		# R122 补上「回合口」（_sleep_tick 也会 -1）—— 两个口并存，谁先减到 0 谁让它醒。
 		if p.sleep_left <= 0:
 			_log("%s 被打够次数，从沉睡中醒来（立即可以行动）" % p.card.card_name)
 			action.emit("wake", {"cell": cell, "card": p.card, "side": p.owner,
@@ -8964,7 +8984,7 @@ func _assassin_summon(side: String, initial:= false) -> void :
 		_log("%s：己方半场已满，无法召唤鸭子暗杀者" % src)
 		return
 	var copy:= CardData.from_dict(card.to_dict())
-	var summoned:= state.place(copy, spot, side)
+	var summoned:= state.place(copy, spot, side, true)
 	_log("%s%s：召唤了一只鸭子暗杀者（%s）" % [
 			src, "（开局）" if initial else "（每 %d 回合）" % interval, spot])
 	action.emit("place", {"cell": spot, "card": copy, "side": side})

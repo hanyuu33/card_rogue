@@ -8426,8 +8426,9 @@ func _init() -> void:
 			and r63_dd.traits.has(FieldState.SLEEP_TRAIT),
 			"R63 恶魔鸭 9116：敌方怪物 5/100 程2 速1，带「沉睡」trait")
 
-	# **R76 改口径**：沉睡是「挨打计数」不是「回合计数」—— 上场即沉睡 SLEEP_TURNS，
-	# 每挨一下 -1、归零**立刻**能行动；回合结束**不再**递减（见 R76-A 的完整链路）。
+	# **R122 口径**：沉睡有**两个**递减口 —— ① 自己的回合结束 -1（_sleep_tick）；
+	# ② 每次受伤 -1（_demon_duck_hurt，R76 保留）。上场即沉睡 SLEEP_TURNS，
+	# 两个口减到 0 都**立刻**能行动。
 	var r63_e := _new_engine([], 30, 30)
 	var r63_dd_p := r63_e.state.place(CardData.from_dict(r63_dd.to_dict()),
 			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
@@ -8444,7 +8445,7 @@ func _init() -> void:
 			Vector2i(1, 1), GameEngine.SIDE_SELF)
 	r63_e.attack(Vector2i(1, 1), Vector2i(0, 1), GameEngine.SIDE_SELF)
 	check(r63_dd_p.sleep_left == FieldState.SLEEP_TURNS - 1,
-			"R76 恶魔鸭：挨第 1 下 → 沉睡 %d（回合不参与递减）" % r63_dd_p.sleep_left)
+			"R122 恶魔鸭：挨第 1 下 → 沉睡 %d（受伤递减口）" % r63_dd_p.sleep_left)
 	var r63_e_hit := r63_e.state.unit_at(Vector2i(1, 1))
 	r63_e_hit.tapped = false
 	r63_e.attack(Vector2i(1, 1), Vector2i(0, 1), GameEngine.SIDE_SELF)
@@ -8512,14 +8513,14 @@ func _init() -> void:
 			and r72_p.sleep_left == FieldState.SLEEP_TURNS,
 			"R72 沉睡判据：card.traits「沉睡」+ Placement.sleep_left（界面特效唯一数据源）")
 	check(FieldState.SLEEP_TURNS == 2,
-			"R76 沉睡初值：初始沉睡 %d（挨 %d 下才醒）"
-			% [FieldState.SLEEP_TURNS, FieldState.SLEEP_TURNS])
-	# R76：_sleep_tick **不再递减**（只播「仍在沉睡」提示）——回合结束不该偷偷减沉睡。
+			"沉睡初值：初始沉睡 %d（回合与受伤各减 1）" % FieldState.SLEEP_TURNS)
+	# R122 用户口径：沉睡**随着回合减少** —— 每过一个自己的回合结束 -1。
 	r72._sleep_tick(GameEngine.SIDE_OPPONENT)
+	check(r72_p.sleep_left == FieldState.SLEEP_TURNS - 1,
+			"R122 沉睡（回合口）：自己回合结束 2 → %d" % r72_p.sleep_left)
 	r72._sleep_tick(GameEngine.SIDE_OPPONENT)
-	check(r72_p.sleep_left == FieldState.SLEEP_TURNS,
-			"R76 沉睡只算挨打：连过 2 个回合结束 sleep_left 仍是 %d（没被回合偷偷减掉）"
-			% r72_p.sleep_left)
+	check(r72_p.sleep_left == 0,
+			"R122 沉睡（回合口）：再过 1 个自己的回合 → %d（归零即醒）" % r72_p.sleep_left)
 	# 沉睡与冰封**可以同时成立**（冰冻术士战吼打中正在沉睡的恶魔鸭）：
 	# 所以三个状态徽标（嘲讽/冰封/沉睡）必须能靠行号错开，不能各画各的重叠。
 	var r72_b := _new_engine([], 30, 30)
@@ -8538,10 +8539,9 @@ func _init() -> void:
 
 	# ================= R76：四项修复 =================
 
-	# ---- R76-A：恶魔鸭沉睡 = 「挨打计数」，不是「回合计数」----
-	# 用户口径：初始沉睡 2，每次受伤沉睡 -1，沉睡归零**立刻**能行动。
-	# 原来：受伤只「提前 1 回合」（-1 但要等本方回合结束才真醒）+ 每回合结束还自动 -1
-	#→ 沉睡 2 会被回合偷偷减掉，玩家挨一下就直接能动了，完全不是这回事。
+	# ---- 恶魔鸭沉睡：R76 给「受伤递减」，R122 补回「回合递减」----
+	# 现行口径（两个口并存）：初始沉睡 2；每次受伤 -1 **且** 每个自己的回合结束 -1；
+	# 任一递减到 0 都**立刻**能行动。R122 修的是「没人打它就永远不醒」这个边界。
 	var r76_sleep := _new_engine([], 30, 30)
 	var r76_sp := r76_sleep.state.place(CardData.from_dict(r63_dd.to_dict()),
 			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
@@ -8565,19 +8565,128 @@ func _init() -> void:
 	check(r76_sp.sleep_left == 0 and r76_sp.end_atk == r76_pw_before + 1,
 			"R76-A 醒后再挨：沉睡仍 0、力量永久 +1（end_atk %d→%d）"
 			% [r76_pw_before, r76_sp.end_atk])
-	# 中间夹一个敌方回合结束：沉睡**不能**被回合减掉（这是本次修复的核心）
-	var r76_sleep2 := _new_engine([], 30, 30)
-	var r76_sp2 := r76_sleep2.state.place(CardData.from_dict(r63_dd.to_dict()),
+	# ---- R122：沉睡**随着回合减少**（回合口），与受伤口并存且互不干扰 ----
+	var r122_sleep := _new_engine([], 30, 30)
+	var r122_sp := r122_sleep.state.place(CardData.from_dict(r63_dd.to_dict()),
 			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
-	var r76_hero2 := r76_sleep2.state.place(_card(1051, "测试打手", "盟友", 8, 3, 60, 1, 1),
+	var r122_hero := r122_sleep.state.place(_card(1051, "测试打手", "盟友", 8, 3, 60, 1, 1),
 			Vector2i(1, 1), GameEngine.SIDE_SELF)
-	r76_sleep2.attack(Vector2i(1, 1), Vector2i(0, 1), GameEngine.SIDE_SELF)
-	var r76_mid := r76_sp2.sleep_left
-	r76_sleep2.current_side = GameEngine.SIDE_OPPONENT
-	r76_sleep2.end_turn()
-	check(r76_mid == 1 and r76_sp2.sleep_left == 1,
-			"R76-A 关键：挨 1 下后过完整回合，沉睡仍是 1（回合不再递减，%d→%d）"
-			% [r76_mid, r76_sp2.sleep_left])
+	r122_sleep.attack(Vector2i(1, 1), Vector2i(0, 1), GameEngine.SIDE_SELF)
+	check(r122_sp.sleep_left == 1,
+			"R122 沉睡：挨 1 下 2→%d（受伤口仍在）" % r122_sp.sleep_left)
+	# 对方阵营的回合结束**不该**减它（只认「它自己那一方」的回合）
+	r122_sleep._sleep_tick(GameEngine.SIDE_SELF)
+	check(r122_sp.sleep_left == 1,
+			"R122 沉睡：别人那一方的回合结束不减它（sleep_left=%d）" % r122_sp.sleep_left)
+	# 它自己那一方回合结束 → 1 → 0，立刻醒
+	r122_sleep._sleep_tick(GameEngine.SIDE_OPPONENT)
+	check(r122_sp.sleep_left == 0,
+			"R122 沉睡：自己回合结束 1→%d（回合口，归零即醒）" % r122_sp.sleep_left)
+	# 一次都不打它：过满 SLEEP_TURNS 个自己的回合也一定会醒（R122 修掉的边界）
+	var r122_pure := _new_engine([], 30, 30)
+	var r122_pp := r122_pure.state.place(CardData.from_dict(r63_dd.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	for _i in FieldState.SLEEP_TURNS:
+		r122_pure._sleep_tick(GameEngine.SIDE_OPPONENT)
+	check(r122_pp.sleep_left == 0 and not r122_pp.card.traits.is_empty(),
+			"R122 沉睡：没人打它也一定会醒（连过 %d 个自己的回合 → sleep_left=%d）"
+			% [FieldState.SLEEP_TURNS, r122_pp.sleep_left])
+
+	# ---- R122-E：召唤物的「当回合」口径（能行动，但轮数与成长都要对）----
+	# 用户口径原话：「当回合仍然可以行动，只是回合计数要正确，召唤的回合行动 2 格肯定
+	# 是有问题的」——所以**不**禁止召唤物当回合行动，修的是「当回合吃成长 + 当回合
+	# 多跑一轮」。两个口分别由 ②③ 与 ① 守住。
+	# ① 召唤落场 = **固定 1 轮**（不吃哈气 / 双动的额外轮）；从手里正常落场才拿 card.actions
+	var r122_hq := _new_engine([], 30, 30)
+	r122_hq.state.self_turn_no = FieldState.HASTE_START_TURN
+	r122_hq.state.effects.append(CardData.from_dict(repo.get_card(9024).to_dict()))   # 哈气
+	var r122_norm := r122_hq.state.place(_card(7903, "正常落场", "盟友", 2, 3, 10, 1, 1),
+			Vector2i(4, 2), GameEngine.SIDE_SELF)
+	var r122_hq_summ := r122_hq.state.place(_card(7904, "被召唤的", "盟友", 2, 3, 10, 1, 1),
+			Vector2i(4, 3), GameEngine.SIDE_SELF, true)
+	check(r122_norm.acts_left == 2,
+			"R122-E 正常落场吃哈气双动：acts_left=%d" % r122_norm.acts_left)
+	check(r122_hq_summ.acts_left == 1,
+			"R122-E 召唤落场固定 1 轮：acts_left=%d（不吃哈气双动）" % r122_hq_summ.acts_left)
+
+	# ② 回合开始**已在场**的使魔照常吃「使魔之力」+1（成长口没被搬走）
+	var r122_ga := _new_engine([], 30, 30)
+	r122_ga.state.enemy_effects.append(CardData.from_dict(repo.get_card(9115).to_dict()))
+	var r122_ga_old := r122_ga.state.place(CardData.from_dict(repo.get_card(9009).to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	r122_ga._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(r122_ga_old.effective_power() == 5,
+			"R122-E 回合开始已在场的使魔吃成长：力量 4→%d" % r122_ga_old.effective_power())
+
+	# ③ 召唤排在**成长之后** → 本回合才上场的使魔不吃当回合的这一口
+	var r122_gb := _new_engine([], 30, 30)
+	r122_gb.state.enemy_effects.append(CardData.from_dict(repo.get_card(9115).to_dict()))
+	r122_gb.state.place(CardData.from_dict(repo.get_card(9008).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)          # 鸭子巫师 → 本回合召唤使魔
+	r122_gb._begin_turn(GameEngine.SIDE_OPPONENT)
+	var r122_gb_new: Placement = null
+	for r122_gb_cell: Vector2i in r122_gb.state.board:
+		var r122_gb_q: Placement = r122_gb.state.unit_at(r122_gb_cell)
+		if (r122_gb_q != null and r122_gb_q.owner == GameEngine.SIDE_OPPONENT
+				and r122_gb_q.card.id == 9009):
+			r122_gb_new = r122_gb_q
+			break
+	var r122_gb_pw: String = "（没召唤出来）"
+	if r122_gb_new != null:
+		r122_gb_pw = "力量是 %d（应为 4）" % r122_gb_new.effective_power()
+	check(r122_gb_new != null,
+			"R122-E 鸭子巫师回合开始召唤使魔：场上出现 9009")
+	check(r122_gb_new != null and r122_gb_new.effective_power() == 4,
+			"R122-E 本回合新召唤的使魔**不吃**当回合成长：%s" % r122_gb_pw)
+	check(r122_gb_new != null and r122_gb_new.acts_left == 1,
+			"R122-E 新召唤使魔当回合恰好 1 轮：acts_left=%s"
+			% ("-" if r122_gb_new == null else str(r122_gb_new.acts_left)))
+	check(r122_gb_new != null and not r122_gb_new.tapped,
+			"R122-E 新召唤使魔当回合**未横置**（还能行动 1 轮）")
+
+	# ---- R122-F：卡面几何守卫（横置铺满 + 减费重画的唯一口）----
+	# ① cover_region：等比裁切铺满（源更宽 → 左右各裁一点；不拉伸、不留白）
+	var r122_cv1 := CardFace.cover_region(Vector2(100, 50), Rect2(0, 0, 40, 40))
+	check(is_equal_approx(r122_cv1.size.x, 50.0) and is_equal_approx(r122_cv1.size.y, 50.0)
+			and is_equal_approx(r122_cv1.position.x, 25.0),
+			"R122-F cover_region：100x50 → 40x40 应裁成 50x50 居中（得 %s）" % str(r122_cv1))
+	var r122_cv2 := CardFace.cover_region(Vector2(50, 100), Rect2(0, 0, 40, 40))
+	check(is_equal_approx(r122_cv2.size.x, 50.0) and is_equal_approx(r122_cv2.size.y, 50.0)
+			and is_equal_approx(r122_cv2.position.y, 25.0),
+			"R122-F cover_region：50x100 → 40x40 应上下各裁一点（得 %s）" % str(r122_cv2))
+	# ② 降费重画必须走**唯一口** CardFace.draw_badge（自己 draw_circle 会盖掉水晶图标）
+	var r122_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check(r122_src.find("CardFace.draw_badge(") >= 0,
+			"R122-F 降费重画走 CardFace.draw_badge（唯一绘制口，不再盖掉水晶图标）")
+	check(r122_src.find("draw_circle(cost_c") < 0,
+			"R122-F 降费路径不再自己 draw_circle（旧写法会把水晶图标整个盖掉）")
+
+	# ---- R122-G：事件文案「卡名 / 道具名」悬浮 —— 解析层 ----
+	# 用户口径：「事件中提到道具或卡片时，应该可以在悬浮到卡名的时候显示那个道具 /
+	# 那张卡片」。几何层靠出图核验，解析层必须钉死：名字扫不出来，画面上完全看不出来。
+	var r122ev := load("res://scripts/event_scene.gd")
+	var r122_mk: Array = r122ev._markers(
+			"获得「鸭之低语」：也可以把它改成一张**铁栅栏**；「这就是为了胜利我的挣扎。」")
+	var r122_mk_names: Array = []
+	for r122_m: Dictionary in r122_mk:
+		r122_mk_names.append(str(r122_m["name"]))
+	check(r122_mk_names == ["鸭之低语", "铁栅栏", "这就是为了胜利我的挣扎。"],
+			"R122-G 标记扫描：`「…」` 与 `**…**` 两种写法都摘得出来（得 %s）"
+			% str(r122_mk_names))
+	var r122_idx: Dictionary = r122ev._ref_index()
+	var r122_c: Variant = r122_idx.get("鲸鱼之怒")
+	check(r122_c != null and str(r122_c["kind"]) == "card" and int(r122_c["id"]) == 9050,
+			"R122-G 名字表：卡名「鲸鱼之怒」→ card / 9050")
+	var r122_r: Variant = r122_idx.get("鸭之低语")
+	check(r122_r != null and str(r122_r["kind"]) == "relic" and int(r122_r["id"]) == 6010,
+			"R122-G 名字表：道具名「鸭之低语」→ relic / 6010")
+	check(not r122_idx.has("这就是为了胜利我的挣扎。") and not r122_idx.has("不同名"),
+			"R122-G 纯引用（既不是卡也不是道具）不进名字表 → 不会被标成可悬浮")
+	check(r122ev._same_ref({"kind": "card", "id": 9050}, {"kind": "card", "id": 9050})
+			and not r122ev._same_ref({"kind": "card", "id": 9050},
+					{"kind": "relic", "id": 9050})
+			and r122ev._same_ref({}, {}),
+			"R122-G _same_ref：同类同 id 才算同一个（否则提示浮层会每帧闪烁）")
 
 	# ---- R76-B：潜入 9100 必须是两段式（拖到卡上不能自己挑落点）----
 	# 原来拖到盟友身上会一路走到 use_spell 的 INFILTRATE 分支，引擎自己挑

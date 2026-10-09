@@ -141,6 +141,20 @@ var _smith_done := false      # 鸭鸭工匠：是否已经锻造过（或已选
 var _treasure_taken := false  # 宝箱（支付生命换卡牌奖励）：是否已开
 var _reward_panel: RewardPanel = null   # R119：奖励悬浮窗（开箱 / 泉水 / 宝箱都在这里看）
 
+# ── R122：事件文案里的「卡名 / 道具名」可以悬浮查看（用户口径）──
+#   取巧的一点：**完全不动 Label 的排版**（27 处 `desc.text = …` 一行不改），
+#   只在顶层浮层里按同一套几何（居中 + 字体度量）算出名字的命中矩形；
+#   命中后画提示 —— 卡牌画**真实卡面**，道具画名称 + 完整说明。
+var _font_bold: SystemFont
+var _tip_layer: Control = null
+var _ref_names: Array = []       # [{token, name, kind, id}] —— 当前文案里可悬浮的名字
+var _ref_hits: Array = []        # [{rect(屏幕坐标), ref}] —— 命中表（文本或几何一变就重建）
+var _ref_key := ""               # 命中表缓存键（文本 + 描述框矩形）
+var _hover_ref := {}             # 当前鼠标悬停到的引用（{} = 没悬停）
+var _tip_anchor := Vector2.ZERO  # 提示面板的锚点（鼠标位置 / 演示时名字的右端）
+var _tip_demo := ""              # 演示参数 --tip <名字>：锁住悬浮供出图核验
+static var _name_index := {}     # 名字 → 引用（卡牌 / 道具同表；全库只建一次）
+
 @onready var event_name: Label = $Center/EventName
 @onready var desc: Label = $Center/Desc
 @onready var hp_label: Label = $Center/HPLabel
@@ -285,6 +299,7 @@ func _apply_ui_assets() -> void:
 
 func _ready() -> void:
 	_font = UiTheme.font()
+	_font_bold = UiTheme.font_bold()
 	# R113：事件底色 #252A34 = 暗底 → on_dark = true。
 	# 事件是**选择类界面**：三个选项等价，所以全部是次按钮（「一屏最多一个主按钮」的例外）。
 	for _b: Button in [rest_btn, bbq_btn, leave_btn]:
@@ -297,6 +312,12 @@ func _ready() -> void:
 	# R119：奖励悬浮窗 —— 宝箱层开箱 / 宝箱事件 / 奥秘之泉「喝下泉水」都先入队，
 	# 由它展示完整介绍（长描述不再塞进下面那一行 Label）。
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
+	# R122：描述文案的悬浮提示层 —— 挂在最后（画在所有子节点之上）、IGNORE（不吃点击）。
+	_tip_layer = Control.new()
+	_tip_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_tip_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tip_layer.draw.connect(_on_tip_draw)
+	add_child(_tip_layer)
 	# 演示参数：--dmg N 先扣 N 点生命，方便截图/试玩验证休息效果
 	var args := OS.get_cmdline_user_args()
 	for i in args.size():
@@ -368,6 +389,8 @@ func _ready() -> void:
 		if args[i] == "--bbq":  # 演示：已在休息处烤好肉（截图验证取走后的状态）
 			RunState.gain_relic(RunState.BARBECUE_RELIC_ID)
 			_bbq_taken = true
+		if args[i] == "--tip" and i + 1 < args.size():
+			_tip_demo = args[i + 1]   # 演示：锁住某个名字的悬浮提示（截图核验用）
 	bbq_btn.visible = false   # 「烤肉」只在休息处出现，事件节点隐藏
 	if _is_whisper():
 		event_name.text = "鸭鸭低语"
@@ -935,3 +958,229 @@ func _on_leave() -> void:
 		get_tree().change_scene_to_file("res://scenes/map.tscn")
 	else:
 		get_tree().change_scene_to_file("res://scenes/title.tscn")
+
+
+# ──────────────────────────────────────────────────────────────────────
+# R122：描述文本里的「卡名 / 道具名」可悬浮查看
+# ──────────────────────────────────────────────────────────────────────
+# 用户口径：「事件中提到道具或卡片时，应该可以在悬浮到卡名的时候显示那个道具 /
+# 那张卡片」。实现上刻意**不动 Label 的排版**：不换 RichTextLabel、不加 BBCode，
+# 27 处 `desc.text = …` 一处不改 —— 只按同一套几何复算命中矩形，再在顶层浮层里画。
+
+func _process(_delta: float) -> void:
+	if _tip_layer == null:
+		return
+	var key := "%s@%s" % [desc.text, str(desc.get_global_rect())]
+	if key != _ref_key:
+		_ref_key = key
+		_ref_scan()
+		_ref_layout()
+	var ref := {}
+	if _tip_demo != "":
+		# 演示：锁住某个名字（合成鼠标在 headless 下永远是 (0,0)，没法真悬停）
+		for e: Dictionary in _ref_names:
+			if e["name"] == _tip_demo:
+				ref = e
+				break
+		for h: Dictionary in _ref_hits:
+			if h["ref"]["name"] == _tip_demo:
+				_tip_anchor = h["rect"].end + Vector2(0, 6)
+				break
+	elif not UiGate.blocked():
+		# UiGate：奖励悬浮窗 / 牌库面板盖着时一律让位（R121 的既有约定）
+		var mp := get_viewport().get_mouse_position()
+		for h: Dictionary in _ref_hits:
+			if h["rect"].has_point(mp):
+				ref = h["ref"]
+				break
+		_tip_anchor = mp
+	if not _same_ref(ref, _hover_ref):
+		_hover_ref = ref
+	_tip_layer.queue_redraw()
+
+
+static func _same_ref(a: Dictionary, b: Dictionary) -> bool:
+	if a.is_empty() != b.is_empty():
+		return false
+	if a.is_empty():
+		return true
+	return str(a["kind"]) == str(b["kind"]) and int(a["id"]) == int(b["id"])
+
+
+static func _ref_index() -> Dictionary:
+	## 名字 → 引用。**全库只建一次**（卡 200+ / 道具 40+，每帧重建太浪费）。
+	## 卡牌优先：万一某张卡与某件道具同名，以卡面为准。
+	if not _name_index.is_empty():
+		return _name_index
+	var idx := {}
+	for c: CardData in CardRepo.load_json().all_cards():
+		if c.card_name != "":
+			idx[c.card_name] = {"kind": "card", "id": c.id}
+	for r: RelicData in RelicRepo.load_json().all_relics():
+		if r.relic_name != "" and not idx.has(r.relic_name):
+			idx[r.relic_name] = {"kind": "relic", "id": r.id}
+	_name_index = idx
+	return _name_index
+
+
+static func _markers(txt: String) -> Array:
+	## 摘出 `「…」` 与 `**…**` 里的内容（返回 [{token(含标记), name}]）。
+	## 两种都认：事件文案惯用「」，强调写法用 `**`（如工匠事件的 **铁栅栏**）。
+	var out: Array = []
+	var i := 0
+	while i < txt.length():
+		if txt[i] == "「":
+			var j := txt.find("」", i + 1)
+			if j < 0:
+				break
+			out.append({"token": txt.substr(i, j - i + 1),
+					"name": txt.substr(i + 1, j - i - 1)})
+			i = j + 1
+			continue
+		if txt[i] == "*" and i + 1 < txt.length() and txt[i + 1] == "*":
+			var k := txt.find("**", i + 2)
+			if k < 0:
+				break
+			var nm := txt.substr(i + 2, k - i - 2)
+			if nm != "":
+				out.append({"token": txt.substr(i, k - i + 2), "name": nm})
+			i = k + 2
+			continue
+		i += 1
+	return out
+
+
+func _ref_scan() -> void:
+	## 登记「能对上卡名 / 道具名」的片段；对不上的一律忽略
+	## （所以「这就是为了胜利我的挣扎。」这种纯引用不会被误标）。
+	_ref_names = []
+	var idx := _ref_index()
+	var seen := {}
+	for mk: Dictionary in _markers(desc.text):
+		var nm: String = mk["name"]
+		if nm == "" or seen.has(nm) or not idx.has(nm):
+			continue
+		seen[nm] = true
+		var e: Dictionary = (idx[nm] as Dictionary).duplicate()
+		e["token"] = mk["token"]
+		e["name"] = nm
+		_ref_names.append(e)
+
+
+func _ref_layout() -> void:
+	## 命中表（**屏幕坐标**）：把 Label 的排版复算一遍 —— 每行水平居中、
+	## 行高 = `get_line_height()`、行距 = `line_spacing` 主题常量。
+	_ref_hits = []
+	if _ref_names.is_empty():
+		return
+	var box := desc.get_global_rect()
+	var font: Font = desc.get_theme_font("font")
+	if font == null:
+		return
+	var fs: int = desc.get_theme_font_size("font_size")
+	var lh: float = float(desc.get_line_height())
+	var gap: float = float(desc.get_theme_constant("line_spacing"))
+	var lines := desc.text.split("\n")
+	var y := box.position.y
+	for li in lines.size():
+		var line: String = lines[li]
+		var lw := font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var x0 := box.position.x + (box.size.x - lw) * 0.5
+		for e: Dictionary in _ref_names:
+			var tok: String = e["token"]
+			var from := 0
+			while true:
+				var at := line.find(tok, from)
+				if at < 0:
+					break
+				var ax := x0 + font.get_string_size(line.substr(0, at),
+						HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+				var bx := ax + font.get_string_size(tok,
+						HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+				_ref_hits.append({"rect": Rect2(ax, y, bx - ax, lh), "ref": e})
+				from = at + tok.length()
+		y += lh + gap
+
+
+func _on_tip_draw() -> void:
+	# ① 每个可悬浮的名字画一条淡金细线 —— 这是「这里能悬浮」的唯一提示
+	#    （不悬停 34% 不透明，不喧宾夺主；悬停时点亮）。
+	for h: Dictionary in _ref_hits:
+		var rr: Rect2 = h["rect"]
+		var col := UiTheme.ACCENT_GOLD
+		col.a = 0.85 if _same_ref(h["ref"], _hover_ref) else 0.34
+		_tip_layer.draw_line(Vector2(rr.position.x, rr.end.y - 1.0),
+				Vector2(rr.end.x, rr.end.y - 1.0), col, 1.0)
+	# ② 悬停提示面板
+	if _hover_ref.is_empty():
+		return
+	if _hover_ref["kind"] == "relic":
+		_draw_relic_tip()
+	else:
+		_draw_card_tip()
+
+
+func _tip_place(pw: float, ph: float) -> Rect2:
+	## 面板贴**描述框的两侧**，不跟着鼠标走 ——
+	## 要悬浮的名字本身就在描述文字里，贴着鼠标画会正好压住玩家正在读的那一段。
+	## 优先右侧；右边放不下换左边；两边都放不下才贴窗口右缘（宁可轻微压字，
+	## 也不能让面板跑出屏幕）。纵向跟随名字所在行，并夹进窗口。
+	## ⚠️ 参考矩形必须是 `desc` 的**实际**矩形，不能假设它只有 460 宽 ——
+	##    文案长于中间那一列时 Label 会溢出（「绝赞五换一」第一行就有 750 宽）。
+	var vp := get_viewport_rect().size
+	var box := desc.get_global_rect()
+	var x: float = box.end.x + 10.0
+	if x + pw > vp.x - 8.0:
+		x = box.position.x - pw - 10.0
+	if x < 8.0:
+		x = vp.x - pw - 12.0
+	x = clampf(x, 8.0, maxf(8.0, vp.x - pw - 8.0))
+	var y := clampf(_tip_anchor.y - ph * 0.5, 60.0, maxf(60.0, vp.y - ph - 10.0))
+	return Rect2(Vector2(x, y), Vector2(pw, ph))
+
+
+func _tip_frame(r: Rect2) -> void:
+	_tip_layer.draw_rect(r, Color(0.10, 0.11, 0.15, 0.96), true)
+	_tip_layer.draw_rect(r, UiTheme.ACCENT_GOLD, false, 1.4)
+
+
+func _draw_card_tip() -> void:
+	## 卡牌 → 画**真实卡面**（与图鉴 / 战场同一套 CardFace，所见即所得）。
+	var card: CardData = CardRepo.load_json().get_card(int(_hover_ref["id"]))
+	if card == null:
+		return
+	var ch := 76.0 * 2.4
+	var cw := ch * 63.0 / 76.0
+	# ⚠️ 内边距必须 ≥ 徽章半径：数值徽章的**圆心骑在卡框上**（R115 起的力量/生命
+	#    还分别向左右探出卡框），`CARD_BADGE_R × CARD_BADGE_SCALE_CAP = 20.24`。
+	#    给 24 → 四边的徽章都完整落在金边里，不会被裁掉半圈。
+	var pad := 24.0
+	var frame := _tip_place(cw + pad * 2.0, ch + pad * 2.0)
+	_tip_frame(frame)
+	CardFace.draw(_tip_layer, card, Rect2(frame.position + Vector2(pad, pad),
+			Vector2(cw, ch)), card.health, false, false, _font, _font_bold, -1, false)
+
+
+func _draw_relic_tip() -> void:
+	## 道具 → 名称 + 完整说明（说明按面板宽折行，长的「叠加态的鸭」也不溢出）。
+	var rel: RelicData = RelicRepo.load_json().get_relic(int(_hover_ref["id"]))
+	if rel == null:
+		return
+	var w := 352.0
+	var pad := 14.0
+	var lines := CardFace.wrap_text(_font, rel.desc, w - pad * 2.0, UiTheme.FS_LABEL)
+	var h := pad * 2.0 + 30.0 + float(lines.size()) * 19.0
+	var frame := _tip_place(w, h)
+	_tip_frame(frame)
+	_tip_layer.draw_string(_font_bold, frame.position + Vector2(pad, pad + 16.0),
+			rel.relic_name, HORIZONTAL_ALIGNMENT_LEFT, w - pad * 2.0,
+			UiTheme.FS_SUBHEAD, rel.source_color())
+	_tip_layer.draw_string(_font, frame.position + Vector2(pad, pad + 34.0),
+			"%s · %s" % [rel.kind, rel.source_label()], HORIZONTAL_ALIGNMENT_LEFT,
+			w - pad * 2.0, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
+	var y := frame.position.y + pad + 30.0 + 15.0
+	for t: String in lines:
+		_tip_layer.draw_string(_font, Vector2(frame.position.x + pad, y), t,
+				HORIZONTAL_ALIGNMENT_LEFT, w - pad * 2.0, UiTheme.FS_LABEL,
+				Color("f0ead8"))
+		y += 19.0

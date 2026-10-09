@@ -1205,9 +1205,8 @@ func _check_sleep_aura(scene: Variant) -> void:
 		_smoke_fail("沉睡特效：徽标宽度应随文案自适应（实际 %.1f）" % bw2)
 		return
 	# 苏醒事件 → 挣脱环（用引擎真实入口走一遍，不手搓事件）
-	# R76 改口径：沉睡是「挨打计数」—— _sleep_tick **不再**递减也不再发 wake，
-	# 唯一的醒来路径是 `_hit_unit` → _demon_duck_hurt（挨够次数 sleep_left 归零）。
-	# 所以这里必须用受伤来触发苏醒；用 _sleep_tick 的话 R76 之后永远醒不了。
+	# 这里是**受伤递减口**：`_hit_unit` → `_demon_duck_hurt`，挨够次数 sleep_left 归零。
+	# （R122 起**回合递减口** `_sleep_tick` 也回来了，两个口并存 —— 见本用例末尾。）
 	sp.sleep_left = 1
 	var woke := [0]
 	eng.action.connect(func(what: String, _d: Variant) -> void:
@@ -1220,8 +1219,8 @@ func _check_sleep_aura(scene: Variant) -> void:
 				% [int(woke[0]), sp.sleep_left, sp.card.card_name,
 					str(sp.card.traits.has(FieldState.SLEEP_TRAIT)), str(ours)]))
 		return
-	# 顺带锁住 R76 的核心：_sleep_tick 不再偷偷递减（回合不参与沉睡计数）
-	# —— 放在「醒来后 _board_has_sleep() 转假」之后断言，否则会把 sleep_left 改回 2。
+	# 顺带锁住 R122 的**回合递减口** —— 放在「醒来后 _board_has_sleep() 转假」之后断言，
+	# 否则会把 sleep_left 改回 2。
 	if scene._wake_rings.size() <= rings_before:
 		_smoke_fail("沉睡特效：wake 事件应往 _wake_rings 加挣脱环（%d → %d）"
 				% [rings_before, scene._wake_rings.size()])
@@ -1229,10 +1228,22 @@ func _check_sleep_aura(scene: Variant) -> void:
 	if scene._board_has_sleep():
 		_smoke_fail("沉睡特效：醒来后 _board_has_sleep() 应转为假（光环不该再画）")
 		return
+	# ① 它自己那一方回合结束 → -1（R76 曾把这一步删掉，于是「没人打它就永远不醒」，
+	#    R122 用户实测反馈后补回；与之并存的受伤口就是上面刚走过的那一段）。
 	sp.sleep_left = 2
 	eng._sleep_tick(sp.owner)
-	if sp.sleep_left != 2:
-		_smoke_fail("沉睡特效：R76 起 _sleep_tick 不该递减沉睡（应仍为 2，实际 %d）"
+	if sp.sleep_left != 1:
+		_smoke_fail("沉睡特效：R122 起 _sleep_tick 应在自己那一方回合结束 -1（2 → 1，实际 %d）"
+				% sp.sleep_left)
+		eng.state.board.erase(cell)
+		return
+	# ② 别人那一方的回合结束**不该**减它（只认「它自己那一方」）
+	var r122_other: String = GameEngine.SIDE_OPPONENT
+	if sp.owner == GameEngine.SIDE_OPPONENT:
+		r122_other = GameEngine.SIDE_SELF
+	eng._sleep_tick(r122_other)
+	if sp.sleep_left != 1:
+		_smoke_fail("沉睡特效：别人那一方的回合结束不该减它的沉睡（应仍为 1，实际 %d）"
 				% sp.sleep_left)
 		eng.state.board.erase(cell)
 		return
@@ -1240,7 +1251,7 @@ func _check_sleep_aura(scene: Variant) -> void:
 	scene._draw_wake_rings()   # 真渲染空/非空两种状态都不出错
 	if ours and eng.state.unit_at(cell) == sp:
 		eng.state.board.erase(cell)   # 清场：别把 dummy 留给后续用例
-	print("SMOKE OK 沉睡特效：常驻紫环 + 「沉睡 N」徽标（3 行互不重叠）+ 苏醒挣脱环，同源于 Placement.sleep_left")
+	print("SMOKE OK 沉睡特效：常驻紫环 + 「沉睡 N」徽标（3 行互不重叠）+ 苏醒挣脱环，同源于 Placement.sleep_left；R122 起回合口与受伤口并存（都在减）")
 
 
 func _check_map_panel(scene: Variant) -> void:

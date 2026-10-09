@@ -25,6 +25,10 @@ class_name CardFace
 ##   剑=力量 / 弓=攻击距离 / 鞋=移动距离 / 血=生命 / 水晶=费用
 ## 缺图时回退成该数值的**语义色圆盘 + 数字**（永远不空白、不报错）。
 ##
+## ⚠️ R122：单个数值挂件的绘制口是 `draw_badge()`（**对外公开**）——
+##   battle_scene 的「动态减费」要把同一个费用槽重画成绿色数字，
+##   必须走这里（自己 draw_circle 会在 R115 起把水晶图标整个盖掉）。
+##
 ## ⚠️ R118：`draw(..., on_board=true)` = **战场卡面**模式 ——「种类 · 字段」那一行
 ##   会滤掉「上场之后已无作用」的字段（交换 / 幻影，判据 `CardData.affix_on_board()`）。
 ##   手牌 / 图鉴 / 牌库 / 卡组编辑保持**完整字段**（默认 false）—— 那几处正需要它。
@@ -50,6 +54,23 @@ static func fit_rect(src: Vector2, box: Rect2) -> Rect2:
 	var s: float = minf(box.size.x / src.x, box.size.y / src.y)
 	var sz := src * s
 	return Rect2(box.position + (box.size - sz) / 2.0, sz)
+
+
+static func cover_region(src: Vector2, box: Rect2) -> Rect2:
+	## 「铺满」（cover）：按 box 的宽高比，从 src 里裁出一块**等比**区域 ——
+	## 配合 `draw_texture_rect_region` 画出来正好填满 box：不拉伸、不留白。
+	## 横置卡面（76×63，横向）上的卡图用它铺满整张卡（R122 用户口径）。
+	if src.x <= 0.0 or src.y <= 0.0 or box.size.x <= 0.0 or box.size.y <= 0.0:
+		return Rect2(Vector2.ZERO, src)
+	var src_r: float = src.x / src.y
+	var box_r: float = box.size.x / box.size.y
+	if src_r > box_r:
+		# 源更宽 → 左右各裁掉一点
+		var cw: float = src.y * box_r
+		return Rect2((src.x - cw) / 2.0, 0.0, cw, src.y)
+	# 源更高 → 上下各裁掉一点
+	var ch: float = src.x / box_r
+	return Rect2(0.0, (src.y - ch) / 2.0, src.x, ch)
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -123,11 +144,13 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	# ④ 卡图区（上半）
 	_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold)
 	# ⑤ 卡图与文字区的分隔线
+	# ⚠️ R122：**横置时不画** —— 那时卡图铺满整卡（见 _draw_art），横一道线很突兀。
 	var sep_y: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
-	canvas.draw_line(Vector2(rect.position.x + pad * 0.5, sep_y),
-			Vector2(rect.end.x - pad * 0.5, sep_y), UiTheme.INK_300, maxf(1.0, 0.6 * k))
+	if not is_tapped:
+		canvas.draw_line(Vector2(rect.position.x + pad * 0.5, sep_y),
+				Vector2(rect.end.x - pad * 0.5, sep_y), UiTheme.INK_300, maxf(1.0, 0.6 * k))
 	# ⑥ 文字区（下半）
-	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold, on_board)
+	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold, on_board, is_tapped)
 	# ⑦ 数值徽章 —— 最后画，压在卡图与文字之上（「额外挂载」的字面意思）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, hp, power_override)
 
@@ -142,16 +165,19 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 	if box.size.x < 6.0 or box.size.y < 6.0:
 		return
 	if is_tapped:
-		# 横置（本回合已行动）：卡图**压暗保留**。此前是直接不画，上半张变成一片空白，
-		# 玩家反而更难认出「躺在场上的是哪张卡」。
-		var dim := Color(1, 1, 1, 0.26)
+		# 横置（本回合已行动）：卡图**铺满整张卡** + 压暗（R122 用户口径）。
+		# ⚠️ 原来是「画进上半条 70×28 + `Color(1,1,1,0.26)`」—— 0.26 是**透明度**而不是
+		#    「压暗」，于是卡图被缩成一个小方块还几乎看不见，玩家认不出躺在那的是哪张卡。
+		#    现在用 cover 裁切铺满整卡，再用一层黑纱压暗 —— 看得清，也一眼知道它已行动。
 		var tapped_tex := art_for(card.id)
 		if tapped_tex != null:
-			canvas.draw_texture_rect(tapped_tex, fit_rect(tapped_tex.get_size(), box), false, dim)
+			canvas.draw_texture_rect_region(tapped_tex, rect,
+					cover_region(tapped_tex.get_size(), rect), Color(0.72, 0.72, 0.76))
 		else:
 			var tc: Color = UiTheme.kind_color(card.kind)
-			tc.a = 0.05
-			canvas.draw_rect(box, tc)
+			tc.a = 0.20
+			canvas.draw_rect(rect, tc)
+		canvas.draw_rect(rect, Color(0.05, 0.06, 0.10, 0.30))
 		return
 	var tex := art_for(card.id)
 	if tex != null:
@@ -171,7 +197,7 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 
 static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,
 		k: float, pad: float, sep_y: float, hp: int, font: Font, font_bold: Font,
-		on_board: bool) -> void:
+		on_board: bool, is_tapped := false) -> void:
 	## 文字区（下半）：**卡名 → 种类 · 字段 → 效果文字**，按这个优先级往下排，
 	## 排不下的整块省略。
 	##
@@ -183,6 +209,11 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	var top: float = sep_y + maxf(1.5, 1.2 * kt)
 	if bottom - top < 6.0:
 		return
+	# ⚠️ R122：横置时卡图铺满整卡 → 名字/种类直接压在图上。铺一层**浅色薄纱**，
+	#    深墨色的字才读得清（不透太多，卡图仍然是主角）。
+	if is_tapped:
+		canvas.draw_rect(Rect2(rect.position.x + pad * 0.5, sep_y,
+				rect.size.x - pad, rect.end.y - sep_y), Color(1, 1, 1, 0.62))
 	var sz: int = maxi(7, roundi(UiTheme.CARD_FS_TEXT * kt))
 	var cx: float = rect.position.x + rect.size.x / 2.0
 	var maxw: float = rect.size.x - pad * 2.0
@@ -268,7 +299,7 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	var fs: int = maxi(7, roundi(UiTheme.CARD_FS_BADGE * kc))
 	# ── ① 左上角：费用（水晶）—— 圆心压在卡框左上角上 ──
 	# X 费卡（流星雨 9083）：费用不是定值 → 徽章上直接画「X」
-	_badge(canvas, font_bold, cost_badge_center(rect), r, fs, "cost",
+	draw_badge(canvas, font_bold, cost_badge_center(rect), r, fs, "cost",
 			"X" if card.x_cost else str(card.cost), UiTheme.BADGE_COST)
 	# 技能 / 效果卡没有攻防数值，只有费用
 	var is_unit: bool = card.kind == "盟友"
@@ -284,9 +315,9 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	var speed_x: float = health_x - step      # ④
 	# ── ② 力量（剑） + ③ 攻击距离（弓）──
 	var shown_power: int = power_override if power_override >= 0 else card.power
-	_badge(canvas, font_bold, Vector2(power_x, bar_y), r, fs, "power",
+	draw_badge(canvas, font_bold, Vector2(power_x, bar_y), r, fs, "power",
 			str(shown_power), UiTheme.BADGE_POWER)
-	_badge(canvas, font_bold, Vector2(range_x, bar_y), r, fs, "range",
+	draw_badge(canvas, font_bold, Vector2(range_x, bar_y), r, fs, "range",
 			str(card.attack_range), UiTheme.BADGE_RANGE)
 	# ── ④ 移动距离（鞋）+ ⑤ 生命（血）──
 	# ⚠️ 阅读方向必须与左半排一致（力 程 … 速 生）：跨过中间空档后仍是「先读到的在左」。
@@ -294,15 +325,20 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	# 两组之间「先读到的那个」忽左忽右，比单纯难看更糟：会读错数值。
 	# 工事不会移动 → 不画鞋，生命直接占最外侧那张（贴右框线）。
 	if is_unit:
-		_badge(canvas, font_bold, Vector2(speed_x, bar_y), r, fs, "speed",
+		draw_badge(canvas, font_bold, Vector2(speed_x, bar_y), r, fs, "speed",
 				str(card.move_speed), UiTheme.BADGE_SPEED)
-	_badge(canvas, font_bold, Vector2(health_x, bar_y), r, fs, "health",
+	draw_badge(canvas, font_bold, Vector2(health_x, bar_y), r, fs, "health",
 			str(hp), UiTheme.BADGE_HEALTH)
 
 
-static func _badge(canvas: CanvasItem, font_bold: Font, center: Vector2, r: float, fs: int,
-		key: String, value: String, disc: Color) -> void:
+static func draw_badge(canvas: CanvasItem, font_bold: Font, center: Vector2, r: float, fs: int,
+		key: String, value: String, disc: Color,
+		value_col := UiTheme.BADGE_VALUE) -> void:
 	## 单个数值挂件：**图标为底、数字压在图标上**。
+	##
+	## ⚠️ R122 起对外公开：battle_scene 的「动态减费」把费用槽重画成绿色数字时
+	##    必须走这里（`disc` = 缺图标时的回退色，`value_col` = 数字颜色）。
+	##    自己 draw_circle 会盖掉水晶图标 —— 那正是 R115 之后「降费看不见宝石」的原因。
 	##
 	## R115 用户口径：「并不需要严格的圆盘，直接用图标 + 数字就可以」——
 	## 有图标时**不再垫那层深色圆盘**：图标素材本身就是一枚圆形徽记，再垫一层
@@ -331,7 +367,7 @@ static func _badge(canvas: CanvasItem, font_bold: Font, center: Vector2, r: floa
 	#   · 无图标：语义色圆盘只有 2R 直径，两位/三位数必然会溢出圆盘边缘
 	#     （鸭之暗面 150 血、铁壁卫兵 30 血），溢出后白字落在白卡面上＝看不见。
 	# 描边让「数字出格」从缺陷降级成可接受的排版。
-	_draw_center_outlined(canvas, font_bold, sz, value, center, UiTheme.BADGE_VALUE)
+	_draw_center_outlined(canvas, font_bold, sz, value, center, value_col)
 
 
 static func stats_line(card: CardData, hp := -1) -> String:

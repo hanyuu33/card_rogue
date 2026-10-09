@@ -53,7 +53,7 @@ var regen: int = 0           # 自我修复（8035，R87）：每回合结束回
 ## ⚠️ 记在**这个单位实例**上而不是全局 → 换一张装甲上场就有一份额度，
 ## 且这张被打死离场后额度随之消失（新的那张重新算，符合「这张卡每回合一次」的字面）。
 var upgrade_feed_turn: int = -1
-var sleep_left: int = 0       # 沉睡（恶魔鸭 9116，R63）：还要睡几个己方回合（>0 = 本回合不行动）；受伤时 -1，提前醒来
+var sleep_left: int = 0       # 沉睡（恶魔鸭 9116）：还要睡几点（>0 = 本回合不行动）；自己的回合结束 -1，受伤也 -1（R122）
 ## 「暗影领主」（鸭之暗面 9124，R111）：每个**存活的鸭子暗杀者**给它 +3 力 +1 速。
 ## ⚠️ 只记在 Placement 上、**绝不烤进 CardData** —— 敌方关卡单位用的是卡库共享实例，
 ## 直接改 card 会把加成写进卡库、跨局泄漏（R111 特意不走 R101 那条 `p.card.move_speed +=` 的路）。
@@ -149,7 +149,8 @@ func status_entries() -> Array[Dictionary]:
 	if frozen:
 		out.append({"label": "冰封：下回合不能行动", "col": COL_D, "kind": "debuff"})
 	if sleep_left > 0:
-		out.append({"label": "沉睡：还需 %d 次受伤" % sleep_left, "col": COL_D, "kind": "debuff"})
+		out.append({"label": "沉睡：还剩 %d（回合/受伤各 -1）" % sleep_left,
+				"col": COL_D, "kind": "debuff"})
 	if rooted > 0:
 		out.append({"label": "禁足：本回合不能移动", "col": COL_D, "kind": "debuff"})
 	if poison_left > 0:

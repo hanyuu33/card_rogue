@@ -24,7 +24,7 @@ const CLONE_TRAIT := "自我复制"
 # 上面这个 trait 只回答「**这张卡会不会自己复制**」；
 # 「是不是衍生物（离场就消失）」看 `CardData.is_ephemeral` —— 卡库原卡也带 CLONE_TRAIT，
 # 两者必须分开判，否则原卡被打死/被弃时也会被当成衍生物抹掉。
-## 沉睡（恶魔鸭 9116，R63）：Placement.sleep_left = 还要睡几个己方回合。
+## 沉睡（恶魔鸭 9116）：Placement.sleep_left = 还要睡几点（回合/受伤各 -1）。
 ## 引擎在 end_turn 里对该方单位 -1；>0 时不能移动 / 攻击 / 直击 HP。
 const SLEEP_TRAIT := "沉睡"
 const SLEEP_TURNS := 2
@@ -280,14 +280,19 @@ func apply_extra_actions(side: String) -> void:
 			p.acts_left = maxi(p.acts_left, extra)
 
 
-func place(card: CardData, cell: Vector2i, owner := "self") -> Placement:
+func place(card: CardData, cell: Vector2i, owner := "self",
+		summon := false) -> Placement:
 	var p := Placement.new()
 	p.card = card
 	p.owner = owner
 	p.health = card.health
-	# 哈气：已到生效回合且效果区有哈气时，上场即可行动 extra 次（与卡自带的 actions 取大者）
-	p.acts_left = maxi(card.actions, extra_actions(owner))
-	# 沉睡（恶魔鸭 9116）：带「沉睡」trait 的单位一上场就开始睡（SLEEP_TURNS 个己方回合）。
+	# 哈气：已到生效回合且效果区有哈气时，上场即可行动 extra 次（与卡自带的 actions 取大者）。
+	# ⚠️ R122：`summon = true`（**被召唤**出来的，不是玩家从手牌打出来的）固定 **1 轮** ——
+	#    召唤物当回合**恰好行动一次**，不继承哈气 / 双动字段。
+	#    用户口径：「当回合仍然可以行动，只是回合计数要正确，召唤的回合行动 2 格肯定是有问题的」。
+	#    玩家主动出牌（play_from_hand）照旧吃哈气 —— 那是「他自己花费用打出来的」。
+	p.acts_left = 1 if summon else maxi(card.actions, extra_actions(owner))
+	# 沉睡（恶魔鸭 9116）：带「沉睡」trait 的单位一上场就开始睡（SLEEP_TURNS 点）。
 	# 放在 place 里 = 唯一初始化口，关卡摆位 / 效果卡召唤出来的都算。
 	if card.traits.has(SLEEP_TRAIT):
 		p.sleep_left = SLEEP_TURNS
