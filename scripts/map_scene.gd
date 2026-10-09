@@ -54,6 +54,7 @@ var _whisper_next: Dictionary = {}   # 系统为本次选定的前进节点
 var _scroll_y := 0.0            # 地图纵向偏移（0 = 起点层贴着视口底部）
 var _scroll_min := 0.0          # 偏移下界（不能往下拖过头）
 var _scroll_max := 0.0          # 偏移上界（不能往上拖过头）
+var _reward_panel: RewardPanel = null   # R119：奖励悬浮窗（宝箱事件的卡牌奖励）
 var _drag_press_pos := Vector2.ZERO   # 按下位置
 var _drag_press_scroll := 0.0        # 按下时的 scroll
 var _press_active := false           # 左键当前还按着
@@ -118,6 +119,8 @@ func _ready() -> void:
 	deck_btn.pressed.connect(_toggle_deck)
 	UiTheme.apply_chip(deck_btn, true)
 	add_child(deck_btn)
+	# R119：奖励悬浮窗 —— 宝箱事件（卡牌奖励）就在地图上弹窗，不再切走界面
+	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
 	# 道具「鸭之低语」（6010）：玩家失去选择权 → 系统随机挑路并自动前进
 	if RunState.run_active and RunState.has_relic(6010) and not ReplayLog.playing:
 		_start_whisper()
@@ -402,9 +405,13 @@ func _enter_node(node: Dictionary) -> void:
 				RunState.pending_event = "struggle"
 				get_tree().change_scene_to_file("res://scenes/event.tscn")
 			else:
-				RunState.pending_event = "treasure"
-				RunState.reward_context = "event"
-				get_tree().change_scene_to_file("res://scenes/card_reward.tscn")
+				# 宝箱事件：卡牌奖励**先入队** → 就地弹出奖励悬浮窗（看完再挑一张），
+				# 不再切到独立的卡牌奖励场景（切走就看不到「还掉了别的东西」）。
+				RunState.queue_card_reward("normal")
+				RunState.complete_current()
+				queue_redraw()
+				if _reward_panel != null:
+					_reward_panel.open()
 
 
 func _toggle_records() -> void:

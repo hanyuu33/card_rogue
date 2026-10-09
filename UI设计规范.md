@@ -460,6 +460,75 @@ R117 收敛成三个**唯一口**，任何新的「可拖到某处释放」的�
 **非破坏性的取消不必二次确认**（对着技能选目标时点空位取消，卡还在手牌、费用没付，
 一步取消更好用）——这条规则的适用范围就是「取消会付出不可逆代价」的那一处。
 
+### 4.7 奖励悬浮窗：**先入队、后领取**（R119）
+
+**问题**：奖励的展示方式在每个来源里各写各的 —— 打完 Boss 掉落道具**当场自动发放**，玩家只看到
+结算面板上一行「掉落道具「××」」，**点不进介绍**（道具描述动辄三四行，Boss 打完最想看的就是它）；
+宝箱层的长描述被硬塞进事件页一行 `desc` Label，**溢出直接被裁**。而且一次战斗可能同时给
+「道具 + 卡牌三选一」，当场发放在语义上也不对：**玩家还没做选择，奖励就已经到手了**。
+
+**架构**：只有一个数据源、一个界面。
+
+| 角色 | 是谁 | 职责 |
+|---|---|---|
+| 数据源 | `RunState.pending_rewards` | 所有奖励来源都**先入队**，不直接发放 |
+| 界面 | `RewardPanel`（`class_name`，`CanvasLayer` `layer=18`） | 唯一入口，`static func attach(host, pos)` 挂到任意场景 |
+
+`layer = 18` 压在 `DeckViewer` / `RelicViewer` 的 15 之上：奖励面板打开时**它就是最上层**，
+不会被「卡组查看 / 道具查看」盖住。
+
+条目形状（`run_state.gd`）：
+
+```gdscript
+{"kind": "relic", "id": int, "state": String}
+{"kind": "cards", "type": String, "kinds": Array[String],
+ "candidates": Array[int], "picked": int, "state": String}
+```
+
+**三个视图**（`_view`）：`VIEW_LIST`（列表）/ `VIEW_RELIC`（单件道具详情）/ `VIEW_CARDS`（卡牌三选一 + 右侧详情）。
+
+| 需求（用户原话） | 实现 |
+|---|---|
+| 「自行决定查看顺序」 | 列表按入队顺序排列，**点哪条看哪条**，不强制按序 |
+| 「查看一个奖励后，可以返回悬浮窗界面，保留再次查看并获取奖励的权利」 | `_view` 切回 `VIEW_LIST` **不消耗任何东西**；条目的 `state` 只会在 `_claim_entry` / `_skip_entry` / `_pick_card` 里改 —— 光看不会领 |
+| 「选择获取一个奖励后，悬浮窗中奖励变灰」 | `state` 三值（`pending` / `claimed` / `skipped`）**直接就是置灰的判据**，不另外存一份 UI 状态 |
+
+**「领取 / 放弃 / 返回」三件套都保留**（用户口径）。`claim_all_relic_rewards()` **只收拾道具** ——
+卡牌奖励是**三选一**，不存在「一键领会」，界面上也明确写「『领取全部道具』不碰卡牌奖励」。
+卡牌奖励里**空候选组会被拒绝领取**（`claim_pending_reward` 里挡住），避免领到一个空手牌。
+
+**未领的留在常驻入口**（用户口径）：`_refresh_btn()` 在非打开状态显示 `✦ 待领奖励 N`，
+`_cached_n = RunState.pending_reward_count()`；`N == 0` 或面板已打开时自动隐藏。
+玩家**随时可以回来**，不会被下一次操作顶掉。
+
+**覆盖来源**（用户口径「所有来源，包括卡牌奖励也是先通过浮窗」）：
+
+| 来源 | 场景 | 入口 |
+|---|---|---|
+| 普通 / 精英战斗奖励 | `battle_scene._show_over` | 卡牌奖励 `queue_card_reward` |
+| Boss 掉落 | `battle_scene._show_over` | 道具 `queue_relic_reward`（**不再当场发放**） |
+| 宝箱层（开箱得道具） | `event_scene` | 道具入队 + `open()` |
+| 宝箱事件（付费生命换卡牌） | `event_scene` | `queue_card_reward("normal")` + `open()` |
+| 奥秘之泉（喝泉水得技能/效果） | `event_scene` | `queue_card_reward("normal", arcane_kinds)` |
+| 地图上的宝箱节点 | `map_scene._enter_node` | 就地入队 + `complete_current()` + `open()` |
+
+卡牌奖励并入浮窗后，**`scenes/card_reward.tscn` 与 `scripts/card_reward_scene.gd` 整文件删除**，
+`battle_scene._on_over_restart()` 的非 Boss 分支改为 `RunState.complete_current()` + 回 `map.tscn`。
+
+**两条硬纪律**（都对应实际踩过的坑）：
+
+1. **`pending_rewards` 只在 `start_run` 清，`end_run` 故意不清。** 通关那一场的战利品是
+   「打完才弹窗看」的，而 `end_run` 在**结算面板里就跑了** —— 此时清掉会让最后一击的战利品
+   凭空消失。冒烟用例之间靠 `_reset()` 里**显式**清来隔离。
+2. **录像（R46）要兼容。** 老录像里的 `drop_later` 条目**直接消费、什么都不做**（新界面本来
+   就能随时进出，不需要旧语义）；`reward_pick` 按 id 反查 `_cards_entry_with` 定位到卡牌条目。
+   `blocks_replay()`：面板开着**且还有待领**时，回放不给外层抢点主按钮。
+
+**可复用的教训**：**「展示」和「发放」要拆开。** 只要奖励是「当场发放」，展示就永远只能是
+一句事后说明（介绍点不开、长文被裁）；改成「先入队、由玩家在浮窗里点领取」，展示、查看顺序、
+多次回看、置灰反馈全都变成同一个数据结构的自然结果 —— **不需要为「能不能再看一次」写任何额外状态**。
+
+
 ## 5. 无障碍底线
 
 - 文字对比度：正文 ≥ **4.5:1**，大字（≥18px 或 ≥14px 粗体）≥ **3:1**。
@@ -532,7 +601,7 @@ R113 把「溢出策略」的说明写进了 `battle.tscn` 的 StatusLabel 节�
 ### 6.5 怎么验证（界面层没有自动化断言）
 
 1. 改动文件各跑一次 `--headless --check-only --script res://scripts/xxx.gd`。
-2. 跑 `python _verify.py`，看四套基线：**engine 2445✓ / reward 26✓ / replay 28✓ / smoke 21**。
+2. 跑 `python _verify.py`，看四套基线：**engine 2465✓ / reward 26✓ / replay 28✓ / smoke 23**。
    ⚠️ 门禁只把 `Parse Error` / `SCRIPT ERROR` 判红，普通 `ERROR:` 不判红，要自己抽。
    ⚠️ 四套都要 `--headless`（smoke 早期漏了，每次都会**真的弹出游戏窗口**）。
 3. 视觉用「出图」：`godot --path . -- --screenshot`（非 headless 才渲染）出 PNG 后**看图**。
@@ -541,9 +610,16 @@ R113 把「溢出策略」的说明写进了 `battle.tscn` 的 StatusLabel 节�
      `_probe_badge.gd`（字宽）、`_probe_crop.gd`（裁一块放大看：`-- <src.png> <前缀> <倍率> x,y,w,h`）。
    - 需要「某个交互进行中」的画面（拖拽中的区域外框、光圈）用一个**演示开关**把它钉住：
      `--screenshot --dragshot [--dragkind effect] [--dragpos x,y] [--shotframe N]`，
-     同一族的还有 `--fan` / `--projshot` / `--killshot` / `--bypassshot` / `--trapper` / `--r118`。
+     同一族的还有 `--fan` / `--projshot` / `--killshot` / `--bypassshot` / `--trapper` / `--r118` /
+     `--r119`（族：`--r119relic` / `--r119cards` / `--r119chip`）。
      ⚠️ `--r118` 钉的是两件事同屏：战场卡面**不标**「交换」而同一张卡在手牌里**仍标**，
      以及「误点空位之后」的上膛态（橙环 + 「取消?」角标，绿/红目标格全留着）。
+     ⚠️ `--r119` 一族钉奖励悬浮窗：`--r119` 列表三视图（叠加态的鸭 / 卡牌奖励 / 鸭蹼 + 「领取全部道具」）、
+     `--r119relic` 单件道具详情（长描述完整折行 + 放弃 / 领取 / 返回列表）、
+     `--r119cards` 卡牌三选一（+ 右侧详情 + 「放弃这组」）、`--r119chip` 常驻「✦ 待领奖励 3」按钮。
+   - **新增 / 删除 `class_name` 之后，先跑一次 `--headless --path . --import`。**
+     `.godot/global_script_class_cache.cfg` 是**旧的**时，新类会报 `Identifier not found: RewardPanel`
+     ——**看起来像语法错，其实是缓存过期**。`_verify.py` 已在开跑前内置这一次 `--import`。
 4. **视觉改动必须出图看**，语法过 ≠ 没坏。
 5. 字号类改动额外做一次**档位复核**（跑 `_ui_s2_scan.py`），确认没有游离值。
 
@@ -616,6 +692,9 @@ while meta_b != "" and wa + wb > maxw and meta_b.length() > 2:
 | **订正 R117 漏改的一处单轴残留**：`_hl()` 的横边仍按 `CELL` 算 → 移动/攻击/HP/法术格的高亮框整体**左移并变窄**（最右列偏 24px、宽 86 而非 98），与格子线对不上 | ✅ R118 |
 | **战场卡面不再标「上场后已无作用」的字段**（交换 / 幻影；判据收在 `AFFIX_DEFS.on_board`，战场徽标与悬停同源滤掉） | ✅ R118，见 §4.4 |
 | **左键点空位改为二次取消**（第一次只上膛，期间点目标照样能打；右键 / Esc 仍一步取消） | ✅ R118，见 §4.6 |
+| **奖励统一走悬浮窗**：所有来源（Boss 掉落 / 宝箱层 / 精英 / 宝箱事件 / 奥秘之泉 / 卡牌奖励）**先入队、后领取**；Boss 掉落不再当场自动发放，宝箱长描述不再塞一行 Label | ✅ R119，见 §4.7 |
+| **卡牌奖励并入浮窗**：删除 `scenes/card_reward.tscn` + `scripts/card_reward_scene.gd`，`battle_scene` 非 Boss 结算改回 `map.tscn` | ✅ R119，见 §4.7 |
+| **奖励悬浮窗三视图 + 常驻入口**：列表 / 道具详情 / 卡牌三选一；`state` 三值即置灰判据；「✦ 待领奖励 N」常驻按钮 | ✅ R119，见 §4.7 |
 | 剩余颜色的**局部命名**（162 种单次特效色 → `## 视觉常量` 区） | ⏳ 批 4（需按特效逐个命名） |
 | 卡面**补图**（198 张里 183 张缺图） | ⏳ 待素材 |
 | 字体文件内置（`assets/fonts/` + `FontFile`） | ⏳ 待定，见 §9 |

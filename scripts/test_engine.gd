@@ -13315,6 +13315,123 @@ func _init() -> void:
 	check(CardData.affix_desc(GameEngine.AFFIX_SWAP).contains("友方单位"),
 		"R118 交换：字段说明仍是「可放置在已有友方单位上」（机制未动，只是不标在战场）")
 
+	# ---- R119：待领奖励队列（奖励悬浮窗的数据源） ----
+	# 统一口径：奖励先入队 → 悬浮窗逐项展示 → 玩家自己点「领取」/「放弃」→ 该条置灰。
+	var r119_relics: Array[int] = RunState.relics.duplicate()
+	var r119_skipped: Array[int] = RunState.skipped_relics.duplicate()
+	var r119_deck: Array[int] = RunState.deck_ids.duplicate()
+	var r119_drop := RunState.pending_relic_drop
+	var r119_active := RunState.run_active
+	RunState.relics = []
+	RunState.skipped_relics = []
+	RunState.pending_relic_drop = -1
+	RunState.pending_rewards = []
+	RunState.run_active = true
+	RunState.run_rng = RandomNumberGenerator.new()
+	RunState.run_rng.seed = 20261009
+
+	check(RunState.pending_rewards.is_empty() and RunState.pending_reward_count() == 0
+			and not RunState.has_pending_rewards(),
+		"R119 队列起点：空队列 → 待领 0 / has_pending_rewards() false")
+
+	RunState.queue_relic_reward(6005)
+	RunState.queue_relic_reward(6006)
+	check(RunState.pending_rewards.size() == 2 and RunState.pending_reward_count() == 2,
+		"R119 道具入队：两条 → 队列 2 条、待领 2 条")
+	check(str((RunState.pending_rewards[0] as Dictionary).get("state", "")) == RunState.REWARD_PENDING,
+		"R119 入队后 state = pending（还没发放 —— 玩家要自己点「领取」）")
+	check(not RunState.has_relic(6005),
+		"R119 **入队不等于发放**：此时道具栏里还没有 6005")
+
+	check(RunState.claim_pending_reward(0) and RunState.has_relic(6005),
+		"R119 领取：道具真的进了道具栏")
+	check(str((RunState.pending_rewards[0] as Dictionary).get("state", "")) == RunState.REWARD_CLAIMED
+			and RunState.pending_reward_count() == 1,
+		"R119 领取后该条 state = claimed（悬浮窗里置灰）、待领数 -1")
+	check(not RunState.claim_pending_reward(0),
+		"R119 同一条不能领两次（已置灰的条目拒绝再次领取）")
+
+	check(RunState.skip_pending_reward(1)
+			and str((RunState.pending_rewards[1] as Dictionary).get("state", "")) == RunState.REWARD_SKIPPED
+			and RunState.skipped_relics.has(6006) and not RunState.has_relic(6006),
+		"R119 放弃：state = skipped、登记进 skipped_relics（本局不再随机出来）、不入道具栏")
+
+	# 卡牌奖励：候选在入队那一刻摇定
+	RunState.pending_rewards = []
+	var r119_ci := RunState.queue_card_reward("boss")
+	check(r119_ci == 0 and RunState.pending_rewards.size() == 1,
+		"R119 卡牌奖励入队：返回队列下标 0")
+	var r119_ce: Dictionary = RunState.pending_rewards[0]
+	var r119_c1: Array = r119_ce.get("candidates", [])
+	check(r119_c1.size() == 3 and str(r119_ce.get("type", "")) == "boss",
+		"R119 卡牌奖励：候选 3 张、类型 boss（实际 %d 张）" % r119_c1.size())
+	RunState.pending_rewards = []
+	RunState.run_rng = RandomNumberGenerator.new()
+	RunState.run_rng.seed = 777
+	var r119_ia := RunState.queue_card_reward("normal")
+	var r119_ca: Array = (RunState.pending_rewards[r119_ia] as Dictionary).get("candidates", [])
+	RunState.pending_rewards = []
+	RunState.run_rng = RandomNumberGenerator.new()
+	RunState.run_rng.seed = 777
+	var r119_ib := RunState.queue_card_reward("normal")
+	var r119_cb: Array = (RunState.pending_rewards[r119_ib] as Dictionary).get("candidates", [])
+	check(JSON.stringify(r119_ca) == JSON.stringify(r119_cb),
+		"R119 卡牌候选在入队时摇定：同 run_rng 种子 → 同一组候选（录像可复现）")
+	check(not RunState.claim_pending_reward(r119_ib),
+		"R119 卡牌奖励不能「空组领取」（必须先在三选一里选一张）")
+	var r119_d0 := RunState.deck_ids.size()
+	check(RunState.pick_pending_card(r119_ib, int(r119_cb[0]))
+			and RunState.deck_ids.size() == r119_d0 + 1
+			and RunState.deck_ids[r119_d0] == int(r119_cb[0]),
+		"R119 三选一选中即入卡组（%d → %d）" % [r119_d0, RunState.deck_ids.size()])
+	check(str((RunState.pending_rewards[r119_ib] as Dictionary).get("state", "")) == RunState.REWARD_CLAIMED
+			and int((RunState.pending_rewards[r119_ib] as Dictionary).get("picked", -1)) == int(r119_cb[0]),
+		"R119 选完即置灰（state = claimed，并记下 picked）")
+	check(not RunState.pick_pending_card(r119_ib, int(r119_cb[1])),
+		"R119 已处理的卡牌奖励不接受第二次选择")
+	RunState.pending_rewards = []
+	var r119_ic := RunState.queue_card_reward("boss")
+	check(not RunState.pick_pending_card(r119_ic, 8001),
+		"R119 不在候选里的卡不能被打发进卡组（返回 false）")
+
+	# 一键领取：只收拾道具，卡牌组留给玩家自己挑
+	RunState.pending_rewards = []
+	RunState.relics = []
+	RunState.queue_relic_reward(6007)
+	RunState.queue_card_reward("normal")
+	RunState.queue_relic_reward(6008)
+	var r119_n := RunState.claim_all_relic_rewards()
+	check(r119_n == 2 and RunState.has_relic(6007) and RunState.has_relic(6008),
+		"R119 一键领取：待领道具全入袋（实际 %d 件）" % r119_n)
+	check(RunState.pending_reward_count() == 1
+			and str((RunState.pending_rewards[1] as Dictionary).get("kind", "")) == "cards",
+		"R119 一键领取后卡牌奖励仍然待处理（要玩家自己挑一张）")
+
+	# 与掉落道具联动：offer_relic_drop 登记的 pending_relic_drop 在领取时顺带清空
+	RunState.pending_rewards = []
+	RunState.relics = []
+	RunState.pending_relic_drop = -1
+	var r119_did := RunState.offer_relic_drop("elite")
+	if r119_did > 0:
+		RunState.queue_relic_reward(r119_did)
+		RunState.claim_pending_reward(0)
+	check(r119_did > 0 and RunState.has_relic(r119_did) and RunState.pending_relic_drop == -1,
+		"R119 掉落联动：offer_relic_drop → 入队 → 领取，pending_relic_drop 顺带清空")
+	RunState.pending_relic = -1   # 奖励池里的鸭血会合法地置 pending_relic，清掉免得污染后续
+
+	RunState.clear_pending_rewards()
+	check(RunState.pending_rewards.is_empty() and RunState.pending_reward_count() == 0
+			and not RunState.has_pending_rewards(),
+		"R119 clear_pending_rewards：队列清空")
+
+	# 还原（后面的断言与收尾要看到原来的状态）
+	RunState.pending_rewards = []
+	RunState.relics = r119_relics
+	RunState.skipped_relics = r119_skipped
+	RunState.deck_ids = r119_deck
+	RunState.pending_relic_drop = r119_drop
+	RunState.run_active = r119_active
+
 	RunState.player_class = r91_saved_cls
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")

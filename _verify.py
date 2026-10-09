@@ -58,6 +58,12 @@ SUITES = [
 
 
 def main():
+    # ⚠️ 先跑一次 `--import`：新增 / 删除 `class_name`（如 R119 的 RewardPanel）之后，
+    # `.godot/global_script_class_cache.cfg` 还是**旧的** —— 直接跑套件会报
+    # 「Identifier not found: RewardPanel / RelicViewer」这种**看起来像语法错**的假失败。
+    # `--import` 只刷新「脚本类缓存 + 资源导入表」，不跑游戏逻辑，几秒钟。
+    subprocess.call([GODOT, "--headless", "--path", ROOT, "--import"],
+                    cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     fail = False
     for name, args, out_name in SUITES:
         out = os.path.join(ROOT, out_name)

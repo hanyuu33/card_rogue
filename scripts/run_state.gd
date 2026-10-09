@@ -73,6 +73,20 @@ static var skipped_relics: Array[int] = []   # 奖励掉落里被「跳过」的
 static var relic_choice: Array[int] = []     # 起点三选一的候选（选定后清空）
 static var pending_relic := -1               # 等待卡组选择的即时道具 id（-1 = 无）
 static var pending_relic_drop := -1          # 精英/Boss 掉落的道具 id（-1 = 无，领取后清空）
+
+# ---- R119：待领奖励队列（奖励悬浮窗的数据源）----
+## 「获得奖励」不再当场发放，而是**先入队** → 由 RewardPanel 悬浮窗逐项展示。
+## 玩家自行决定查看顺序，看过可以退回列表再看、再领取；领取 / 放弃过的那一条置灰。
+## 每项字典（kind 决定字段）：
+##   {"kind": "relic", "id": int, "state": String}
+##   {"kind": "cards", "type": String, "kinds": Array[String],
+##    "candidates": Array[int], "picked": int, "state": String}
+## ⚠️ 只在 start_run 清空（**end_run 故意不清**）：通关那一场的奖励是「打完才弹窗看」的，
+##    end_run 在结算面板里就跑了，此时清掉会让最后一击的战利品凭空消失。
+static var pending_rewards: Array = []
+const REWARD_PENDING := "pending"    # 待领（悬浮窗里正常显示）
+const REWARD_CLAIMED := "claimed"    # 已领取（置灰）
+const REWARD_SKIPPED := "skipped"    # 已放弃（置灰）
 static var duck_revive_chance := 100         # 叠加态的鸭（6013）：当前复活概率（每次复活 -25）
 
 # 事件道具 id
@@ -212,6 +226,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	skipped_relics = []
 	pending_relic = -1
 	pending_relic_drop = -1
+	pending_rewards = []   # R119：开新 run 清空待领奖励
 	duck_revive_chance = 100
 	pending_event = ""
 	# 角色赠品道具（森林精魄 → 荒野形态 6022）：不入随机池，也不占起点三选一的名额
@@ -418,6 +433,123 @@ static func roll_reward_relic() -> int:
 	if pool.is_empty():
 		return -1
 	return pool[run_rng.randi() % pool.size()]
+
+
+static func queue_relic_reward(id: int) -> void:
+	## 一件道具奖励入队（精英 / Boss 掉落、宝箱层开箱）。
+	## **入队不等于发放** —— 玩家在奖励悬浮窗里看过、点「领取」才真进道具栏。
+	if id <= 0:
+		return
+	pending_rewards.append({"kind": "relic", "id": id, "state": REWARD_PENDING})
+
+
+static func queue_card_reward(reward_type: String = "normal",
+		kinds: Array[String] = []) -> int:
+	## 一组卡牌奖励（三选一）入队。**候选在这一刻**用 run_rng 摇定 ——
+	## 候选早就定了，玩家只是稍后才看、才选，所以录像回放逐帧一致。
+	## 返回队列下标（-1 = 卡池空，没有可给的卡）。
+	var roll_rng: RandomNumberGenerator = run_rng if run_active else null
+	var rolled := CardReward.roll(CardRepo.load_json(), reward_type,
+			CardReward.CHOICES, roll_rng, kinds)
+	var ids: Array[int] = []
+	for c: CardData in rolled:
+		ids.append(c.id)
+	if ids.is_empty():
+		return -1
+	pending_rewards.append({"kind": "cards", "type": reward_type,
+			"kinds": kinds.duplicate(), "candidates": ids, "picked": -1,
+			"state": REWARD_PENDING})
+	return pending_rewards.size() - 1
+
+
+static func pending_reward_count() -> int:
+	## 还没处理的奖励条数（state = pending）—— 就是常驻入口上那个「N」。
+	var n := 0
+	for e: Dictionary in pending_rewards:
+		if str(e.get("state", REWARD_PENDING)) == REWARD_PENDING:
+			n += 1
+	return n
+
+
+static func has_pending_rewards() -> bool:
+	return not pending_rewards.is_empty()
+
+
+static func claim_pending_reward(idx: int) -> bool:
+	## 领取第 idx 条：道具 → 进道具栏。成功后 state = claimed（悬浮窗里那条置灰）。
+	## ⚠️ 卡牌奖励**不走这里**：卡牌必须先在三选一里选一张（pick_pending_card），
+	##    没有「空组领取」这回事。
+	if idx < 0 or idx >= pending_rewards.size():
+		return false
+	var e: Dictionary = pending_rewards[idx]
+	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
+		return false
+	if str(e.get("kind", "")) != "relic":
+		return false
+	var rid := int(e.get("id", 0))
+	if pending_relic_drop == rid:
+		claim_relic_drop()   # 精英 / Boss 掉落走原路径（顺带清掉 pending_relic_drop）
+	else:
+		gain_relic(rid)      # 宝箱层等：直接进道具栏
+	e["state"] = REWARD_CLAIMED
+	return true
+
+
+static func skip_pending_reward(idx: int) -> bool:
+	## 放弃第 idx 条：道具 → 登记「本局不再随机出来」；卡牌 → 放弃这组候选。
+	## 同样置灰（state = skipped）—— 对玩家来说都是「这条已经处理过了」。
+	if idx < 0 or idx >= pending_rewards.size():
+		return false
+	var e: Dictionary = pending_rewards[idx]
+	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
+		return false
+	if str(e.get("kind", "")) == "relic":
+		var rid := int(e.get("id", 0))
+		if pending_relic_drop == rid:
+			skip_relic_drop()
+		elif not skipped_relics.has(rid):
+			skipped_relics.append(rid)
+	e["state"] = REWARD_SKIPPED
+	return true
+
+
+static func pick_pending_card(idx: int, card_id: int) -> bool:
+	## 卡牌奖励：在三选一里选下 card_id —— 既记下选择、也当场入卡组
+	## （卡牌没有「先存着」的说法），该条随即置灰。
+	if idx < 0 or idx >= pending_rewards.size():
+		return false
+	var e: Dictionary = pending_rewards[idx]
+	if str(e.get("kind", "")) != "cards":
+		return false
+	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
+		return false
+	var cands: Array = e.get("candidates", [])
+	if not cands.has(card_id):
+		return false
+	e["picked"] = card_id
+	e["state"] = REWARD_CLAIMED
+	add_card(card_id)
+	return true
+
+
+static func claim_all_relic_rewards() -> int:
+	## 一键领取**所有待领的道具**（卡牌组各有各的选择，不参与一键领取）。
+	## 返回实际领取条数。
+	var n := 0
+	for i in pending_rewards.size():
+		var e: Dictionary = pending_rewards[i]
+		if str(e.get("kind", "")) != "relic":
+			continue
+		if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
+			continue
+		if claim_pending_reward(i):
+			n += 1
+	return n
+
+
+static func clear_pending_rewards() -> void:
+	## 清空待领队列（只在 start_run 调 —— 见 pending_rewards 声明的说明）。
+	pending_rewards = []
 
 
 static func relic_state_note(id: int) -> String:

@@ -259,6 +259,7 @@ var _over_btn_level: Button
 var _over_btn_title: Button
 var _run_boss_win := false      # run 结算：本场是否为 Boss 通关（决定按钮路由）
 var _run_next_layer := 0        # Boss 通关后要进入的下一层（0 = 没有下一层 → 结束 run）
+var _reward_panel: RewardPanel = null   # R119：奖励悬浮窗（掉落道具 / 卡牌奖励都在这里处理）
 
 # 联机模式（NetSession.active 时启用）：镜像引擎 + 动作收发回放
 var _net_mode := false
@@ -306,6 +307,8 @@ func _ready() -> void:
 	# R113：顶栏按钮统一走 chip（实心 + compact —— 顶栏按钮只有 28px 高，标准内距会撑出格子）
 	for _tb: Button in [log_btn, snd_btn, title_btn, level_btn, end_turn_btn, map_btn]:
 		UiTheme.apply_chip(_tb, true, true)
+	# R119：奖励悬浮窗 —— 战斗胜利后的掉落道具 / 卡牌奖励都先入队，由它逐项展示
+	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
 	# 命令行 -- --screenshot / -- --demo：自动化演示与截图（验证视觉效果用）
 	var args := OS.get_cmdline_user_args()
 	_demo_args = args
@@ -3965,8 +3968,10 @@ func _on_over_restart() -> void:
 		RunState.advance_layer(_run_next_layer)
 		get_tree().change_scene_to_file("res://scenes/relic_pick.tscn")
 	elif RunState.run_active and not _run_boss_win:
-		RunState.reward_context = "battle"
-		get_tree().change_scene_to_file("res://scenes/card_reward.tscn")
+		# R119：卡牌奖励已由奖励悬浮窗处理（没收的会留在「待领奖励」入口里），
+		# 这里只把节点标记完成、回地图 —— 不再切到独立的卡牌奖励场景。
+		RunState.complete_current()
+		get_tree().change_scene_to_file("res://scenes/map.tscn")
 	else:
 		get_tree().change_scene_to_file("res://scenes/title.tscn")
 
@@ -4004,16 +4009,18 @@ func _show_over(win: bool) -> void:
 					true, RunState.hp)
 			_run_boss_win = tier == GameLevels.TIER_BOSS
 			RunState.reward_type = "boss" if _run_boss_win else "normal"
-			# 精英 / Boss 掉落道具（不与已拥有的重复；奖励池掉空则不掉）。
-			# Boss 通关无奖励页：当场发放；精英：奖励页弹出「掉落道具」弹窗，
-			# 由玩家决定收下或跳过（可先浏览卡牌奖励再决定）。
+			# R119：奖励**先入队**，交给结算面板上的奖励悬浮窗 ——
+			#   * 精英 / Boss 掉落道具（不与已拥有的重复；奖励池掉空则不掉）；
+			#   * 普通 / 精英战斗的卡牌奖励（Boss 通关不给卡牌奖励，与本轮之前一致）。
+			# 「入队」不等于「发放」：玩家在悬浮窗里看过介绍、点过「领取」才真进袋子。
 			var dropped := RunState.offer_relic_drop(node_type)
 			var rname := ""
 			if dropped > 0:
-				if _run_boss_win:
-					RunState.claim_relic_drop()
+				RunState.queue_relic_reward(dropped)
 				var rel := RelicRepo.load_json().get_relic(dropped)
 				rname = rel.relic_name if rel != null else str(dropped)
+			if not _run_boss_win:
+				RunState.queue_card_reward(RunState.reward_type)
 			if _run_boss_win:
 				# Boss 通关：本层打完了 —— 有下一层就推进（满血 + 新地图 + 起始道具
 				# 三选一），没有下一层才结束整局 run。
@@ -4023,13 +4030,12 @@ func _show_over(win: bool) -> void:
 					_over_btn_restart.text = "通关%s！进入%s（恢复全部生命 + 起始道具三选一）%s" % [
 							GameLayers.layer_name(RunState.current_layer),
 							GameLayers.layer_name(_run_next_layer),
-							"　｜　获得道具「%s」" % rname if dropped > 0 else ""]
+							"　｜　掉落道具「%s」见奖励悬浮窗" % rname if dropped > 0 else ""]
 				else:
-					_over_btn_restart.text = ("通关！获得道具「%s」→ 返回标题" % rname) \
+					_over_btn_restart.text = ("通关！返回标题（掉落道具「%s」见悬浮窗）" % rname) \
 							if dropped > 0 else "通关！返回标题"
 			else:
-				_over_btn_restart.text = "领取奖励（有道具掉落待决定）" \
-						if dropped > 0 else "领取奖励"
+				_over_btn_restart.text = "领取奖励并继续 →"
 			_over_btn_restart.visible = true
 			_over_btn_restart.disabled = false
 			_over_btn_level.visible = false
@@ -4074,6 +4080,10 @@ func _show_over(win: bool) -> void:
 	sfx.play("win" if win else "lose")
 	if win:
 		_spawn_confetti()
+	# R119：有奖励入队 → 弹出奖励悬浮窗（压在结算面板之上；先看清战利品再决定去向）。
+	# 关掉它不会丢奖励 —— 左上角常驻「✦ 待领奖励 N」可以随时回来。
+	if win and _reward_panel != null and RunState.pending_reward_count() > 0:
+		_reward_panel.open()
 
 
 func _spawn_confetti() -> void:
@@ -5212,6 +5222,10 @@ func _replay_tick() -> void:
 	if _now() < _replay_next_at:
 		return
 	if engine.over:
+		# R119：奖励悬浮窗还开着且有待领条目 → 先把里面的决策放完，再点主按钮
+		#（否则会跳过录像里记录的 drop_claim / reward_pick）。
+		if _reward_panel != null and _reward_panel.blocks_replay():
+			return
 		# 结算面板出现后自动点主按钮（领奖励 / 进下一层 / 返回标题）
 		if _over_shown and _over_panel.visible:
 			_replay_next_at = _now() + int(ReplayLog.delay(1600.0))

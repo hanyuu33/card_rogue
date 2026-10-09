@@ -8,7 +8,7 @@ extends SceneTree
 ##   * 必须**非 headless** 运行 —— headless 不渲染，_draw() 里的错误抓不到
 ##     （历史上出现过的 rel.kind_color() 崩溃就是这类）。
 ##   * 每个场景前会重置 RunState 并铺一套「进入该场景所需的最小状态」
-##     （例如 card_reward 需要 reward_context，relic_pick 需要 relic_choice）。
+##     （例如 relic_pick 需要 relic_choice）。
 ##   * 错误不会被脚本捕获，而是由引擎打到 stderr —— 由外层脚本 grep
 ##     「SCRIPT ERROR / Nonexistent / Invalid call」判定失败。
 
@@ -63,11 +63,26 @@ func _initialize() -> void:
 				_reset()
 				RunState.start_run(_map())
 				RunState.pending_node = {"type": "rest"}],
-		["res://scenes/card_reward.tscn", func():
+		# R119：奖励悬浮窗 —— 列表 / 道具详情 / 卡牌三选一，三个视图各渲染一遍。
+		# 面板由 event 场景自带（battle / event / map 都挂了），这里只负责铺奖励 + 切视图。
+		["res://scenes/event.tscn", func():
 				_reset()
 				RunState.start_run(_map())
-				RunState.reward_context = "battle"
-				RunState.reward_type = "normal"],
+				RunState.pending_node = {"type": "rest"}
+				_seed_rewards(),
+			func(s): _check_reward_panel_view(s, RewardPanel.VIEW_LIST, "列表")],
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "rest"}
+				_seed_rewards(),
+			func(s): _check_reward_panel_view(s, RewardPanel.VIEW_RELIC, "道具详情")],
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "rest"}
+				_seed_rewards(),
+			func(s): _check_reward_panel_view(s, RewardPanel.VIEW_CARDS, "卡牌三选一")],
 		["res://scenes/relic_pick.tscn", func():
 				_reset()
 				RunState.start_run(_map())
@@ -142,12 +157,66 @@ func _initialize() -> void:
 func _reset() -> void:
 	RunState.end_run()
 	RunState.reset()
+	# R119：end_run **故意**不清待领奖励队列（通关那一场的战利品要留在结算面板上给玩家看），
+	# 但冒烟用例之间必须互不污染 → 在这里显式清掉。
+	RunState.pending_rewards = []
 
 
 func _map() -> Array:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20260928
 	return RogueMap.generate(rng)
+
+
+func _seed_rewards() -> void:
+	## R119：给奖励悬浮窗铺一批奖励 —— 一件长描述道具 + 一组卡牌三选一 + 一件普通道具。
+	## 走真实入队口，顺带覆盖 queue_relic_reward / queue_card_reward。
+	RunState.relics = []
+	RunState.skipped_relics = []
+	RunState.pending_relic_drop = -1
+	RunState.pending_rewards = []
+	RunState.queue_relic_reward(6013)   # 叠加态的鸭：desc 最长的一件（专治「介绍太长」）
+	RunState.queue_card_reward("normal")
+	RunState.queue_relic_reward(6005)
+
+
+func _check_reward_panel_view(scene: Variant, want_view: int, label: String) -> void:
+	## R119：奖励悬浮窗 —— 打开并切到指定视图，后面几帧会真的把它画出来。
+	## ⚠️ 逻辑断言（入队 / 领取置灰 / 三选一入卡组）在 test_engine；这里只管「三个视图都渲染得出」，
+	##    因为面板里的绘制错误（越界 / 空引用）只有真渲染才抓得到。
+	var p: Variant = scene._reward_panel
+	if p == null:
+		_smoke_fail("R119 奖励悬浮窗（%s）：场景没有挂上 RewardPanel" % label)
+		return
+	if RunState.pending_reward_count() != 3:
+		_smoke_fail("R119 奖励悬浮窗（%s）：应入队 3 条待领，实际 %d"
+				% [label, RunState.pending_reward_count()])
+		return
+	p.open()
+	if not p.is_open():
+		_smoke_fail("R119 奖励悬浮窗（%s）：open() 之后应处于打开态" % label)
+		return
+	if want_view != RewardPanel.VIEW_LIST:
+		var idx := -1
+		for i in RunState.pending_rewards.size():
+			var e: Dictionary = RunState.pending_rewards[i]
+			var is_cards := str(e.get("kind", "")) == "cards"
+			if (want_view == RewardPanel.VIEW_CARDS) == is_cards:
+				idx = i
+				break
+		if idx < 0:
+			_smoke_fail("R119 奖励悬浮窗（%s）：找不到要展示的条目" % label)
+			return
+		p._open_entry(idx)
+		if int(p._view) != want_view:
+			_smoke_fail("R119 奖励悬浮窗（%s）：视图应为 %d，实际 %d"
+					% [label, want_view, int(p._view)])
+			return
+	p._hover_row = 0
+	p._hover_card = 0
+	p._root.queue_redraw()
+	print("SMOKE OK R119 奖励悬浮窗：%s 视图渲染（%d 条待领，宿主 %s）"
+			% [label, RunState.pending_reward_count(), str(scene.name)])
 
 
 func _check_deck_duck_blood(scene: Variant) -> void:
@@ -899,18 +968,28 @@ func _check_arcane_with_charm(scene: Variant) -> void:
 	if bbq == null or rest == null:
 		_smoke_fail("奥秘之泉：找不到 RestBtn / BBQBtn 节点")
 		return
-	# 拿到护符之后也照样能点「喝下泉水」→ 去卡牌奖励（限定 效果/技能）
+	# 拿到护符之后也照样能点「喝下泉水」→ **卡牌奖励入队**（限定 效果/技能）＋ 奖励悬浮窗弹出
 	scene._ui_bbq()
 	await process_frame
-	var kinds: Array = RunState.reward_kinds
-	if not ("效果" in kinds and "技能" in kinds) or RunState.reward_context != "event":
-		_smoke_fail("奥秘之泉：已有护符时点「喝下泉水」应进入卡牌奖励（限定 效果/技能），实际 kinds=%s ctx=%s"
-				% [str(kinds), RunState.reward_context])
+	var kinds: Array = []
+	var queued := -1
+	for i in RunState.pending_rewards.size():
+		var e: Dictionary = RunState.pending_rewards[i]
+		if str(e.get("kind", "")) == "cards":
+			queued = i
+			kinds = e.get("kinds", [])
+	if queued < 0 or not ("效果" in kinds and "技能" in kinds):
+		_smoke_fail("奥秘之泉：已有护符时点「喝下泉水」应把卡牌奖励入队（限定 效果/技能），实际 kinds=%s（队列 %d 条）"
+				% [str(kinds), RunState.pending_rewards.size()])
+		return
+	var panel: Variant = scene._reward_panel
+	if panel == null or not panel.is_open():
+		_smoke_fail("奥秘之泉：喝下泉水后奖励悬浮窗应当自动打开")
 		return
 	if not scene._arcane_drunk:
 		_smoke_fail("奥秘之泉：点「喝下泉水」应记下 _arcane_drunk（防重复喝）")
 		return
-	print("SMOKE OK 奥秘之泉：已有护符时「喝下泉水」仍可选 → 进入卡牌奖励（限定 效果/技能）")
+	print("SMOKE OK 奥秘之泉：已有护符时「喝下泉水」仍可选 → 卡牌奖励入队（限定 效果/技能）并弹出奖励悬浮窗")
 
 
 func _check_frozen_aura(scene: Variant) -> void:

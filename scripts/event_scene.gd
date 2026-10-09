@@ -138,6 +138,8 @@ var _arcane_charm_taken := false  # 奥秘之泉：是否已收下道具「奥�
 var _arcane_drunk := false    # 奥秘之泉：是否已选择「喝下泉水」（选卡去了卡牌奖励界面）
 var _oblivion_done := false   # 遗忘之泉：是否已经遗忘过一张卡（或已选择去删卡）
 var _smith_done := false      # 鸭鸭工匠：是否已经锻造过（或已选择去锻造）
+var _treasure_taken := false  # 宝箱（支付生命换卡牌奖励）：是否已开
+var _reward_panel: RewardPanel = null   # R119：奖励悬浮窗（开箱 / 泉水 / 宝箱都在这里看）
 
 @onready var event_name: Label = $Center/EventName
 @onready var desc: Label = $Center/Desc
@@ -292,6 +294,9 @@ func _ready() -> void:
 	# 牌库任何时候都可以查看（无论在哪个界面）
 	DeckViewer.attach(self)
 	RelicViewer.attach(self, Vector2(1044, 6))
+	# R119：奖励悬浮窗 —— 宝箱层开箱 / 宝箱事件 / 奥秘之泉「喝下泉水」都先入队，
+	# 由它展示完整介绍（长描述不再塞进下面那一行 Label）。
+	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
 	# 演示参数：--dmg N 先扣 N 点生命，方便截图/试玩验证休息效果
 	var args := OS.get_cmdline_user_args()
 	for i in args.size():
@@ -727,21 +732,39 @@ func _on_main() -> void:
 			result_label.text = "宝箱是空的（奖励道具已全部拥有）"
 			result_label.add_theme_color_override("font_color", Color("9a968c"))
 		else:
-			RunState.gain_relic(_chest_relic)
+			# R119：**不在这里把 desc 塞进一行 Label**（长描述会画出框外）——
+			# 奖励先入队，由奖励悬浮窗展示完整介绍，玩家看过再决定收下 / 放弃。
+			RunState.queue_relic_reward(_chest_relic)
 			var rc := RelicRepo.load_json().get_relic(_chest_relic)
 			var rname := rc.relic_name if rc != null else str(_chest_relic)
-			desc.text = "箱盖吱呀一声打开——里面躺着一件道具。\n你把「%s」收进了道具栏。" % rname
-			result_label.text = "开出道具「%s」：%s" % [rname,
-					rc.desc if rc != null else ""]
+			desc.text = "箱盖吱呀一声打开——里面躺着一件道具。\n「%s」已放进待领奖励，请在上面弹出的奖励悬浮窗里查看。" % rname
+			result_label.text = "开出道具「%s」（待领：见奖励悬浮窗）" % rname
 			result_label.add_theme_color_override("font_color",
 					rc.source_color() if rc != null else Color("d89a2e"))
+			if _reward_panel != null:
+				_reward_panel.open()
 		_redraw()
 		return
 	if _is_treasure():
+		if _treasure_taken:
+			_on_leave()
+			return
 		if RunState.hp <= 5:
 			return
 		RunState.take_damage(5)
-		get_tree().change_scene_to_file("res://scenes/card_reward.tscn")
+		_treasure_taken = true
+		# R119：卡牌奖励**先入队** → 奖励悬浮窗里看完三张候选再挑一张。
+		RunState.queue_card_reward("normal")
+		rest_btn.text = "继续"
+		rest_btn.disabled = false
+		leave_btn.text = "离开"
+		leave_btn.disabled = false
+		desc.text = "箱盖掀开，里面是一叠卡牌……\n请在上面的奖励悬浮窗里查看并挑走一张。"
+		result_label.text = "已支付 5 生命（当前 %d/%d）" % [RunState.hp, RunState.max_hp]
+		result_label.add_theme_color_override("font_color", Color("9a968c"))
+		if _reward_panel != null:
+			_reward_panel.open()
+		_redraw()
 		return
 	if _is_struggle():
 		if _struggled:
@@ -851,10 +874,14 @@ func _on_bbq() -> void:
 		if _arcane_drunk:
 			return
 		_arcane_drunk = true
-		RunState.reward_type = "normal"
-		RunState.reward_context = "event"
-		RunState.reward_kinds = ["效果", "技能"]
-		get_tree().change_scene_to_file("res://scenes/card_reward.tscn")
+		# R119：泉水给的卡牌奖励同样**先入队**（限定 效果 / 技能），由奖励悬浮窗处理。
+		var arcane_kinds: Array[String] = ["效果", "技能"]
+		RunState.queue_card_reward("normal", arcane_kinds)
+		result_label.text = "「喝下泉水」：请在奖励悬浮窗里从 3 张效果 / 技能牌中挑一张。"
+		result_label.add_theme_color_override("font_color", Color("2f7fa8"))
+		if _reward_panel != null:
+			_reward_panel.open()
+		_redraw()
 		return
 	if RunState.has_relic(RunState.BARBECUE_RELIC_ID):
 		return
