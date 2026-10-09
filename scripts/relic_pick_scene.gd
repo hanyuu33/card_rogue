@@ -70,7 +70,7 @@ func _draw() -> void:
 		return
 	var repo := RelicRepo.load_json()
 	draw_string(_font, Vector2(0, 120), "起点处的一位行商愿意送你一件随身之物……",
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("b8b4aa"))
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_300)
 	for i in RunState.relic_choice.size():
 		var rel := repo.get_relic(RunState.relic_choice[i])
 		if rel == null:
@@ -96,7 +96,7 @@ func _draw() -> void:
 					HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 40.0, UiTheme.FS_BODY, Color("cfcabb"))
 			y += 24.0
 		draw_string(_font, rect.position + Vector2(0, rect.size.y - 18),
-				"点击收下", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_LABEL, Color("8a867c"))
+				"点击收下", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 
 
 func _wrap_text(text: String, max_w: float, px: int) -> Array[String]:

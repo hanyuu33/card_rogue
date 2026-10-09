@@ -420,7 +420,7 @@ func _ready() -> void:
 			$Center/LeaveBtn.text = "已获得"
 			$Center/LeaveBtn.disabled = true
 			result_label.text = "「鲸鱼之怒」已加入卡组——用掉之后本场战斗里不再出现。"
-			result_label.add_theme_color_override("font_color", Color("1f5fbf"))
+			result_label.add_theme_color_override("font_color", UiTheme.RARITY_RARE)
 		else:
 			rest_btn.text = "收下「鲸鱼之怒」（加入卡组）"
 			rest_btn.disabled = false
@@ -436,7 +436,7 @@ func _ready() -> void:
 			$Center/LeaveBtn.disabled = true
 			desc.text = HERO_TAKEN_DESC
 			result_label.text = "交易完成：「英雄」已加入卡组（换走 %d 张）" % _hero_removed.size()
-			result_label.add_theme_color_override("font_color", Color("b8860b"))
+			result_label.add_theme_color_override("font_color", UiTheme.STAT_POWER)
 		else:
 			var repo_h := CardRepo.load_json()
 			var kinds_h: int = RunState.deck_distinct_names(repo_h)
@@ -445,7 +445,7 @@ func _ready() -> void:
 				rest_btn.disabled = false
 				$Center/LeaveBtn.text = "不换（退出事件）"
 				result_label.text = "卡组现有 %d 种不同的卡——够换。" % kinds_h
-				result_label.add_theme_color_override("font_color", Color("1b5e20"))
+				result_label.add_theme_color_override("font_color", UiTheme.SIDE_SELF_TEXT)
 			else:
 				# 卡组不足 5 种不同名 → 只能退出事件
 				rest_btn.text = "凑不出 %d 种不同的卡" % HERO_TRADE_NEED
@@ -632,7 +632,7 @@ func _on_main() -> void:
 		desc.text = BLUEFISH_TAKEN_DESC
 		result_label.text = "「%s」已加入卡组：%s" % [wname,
 				CardText.naturalize(wcard.effect_text) if wcard != null else ""]
-		result_label.add_theme_color_override("font_color", Color("1f5fbf"))
+		result_label.add_theme_color_override("font_color", UiTheme.RARITY_RARE)
 		_redraw()
 		return
 	if _is_hero():
@@ -658,7 +658,7 @@ func _on_main() -> void:
 		desc.text = HERO_TAKEN_DESC
 		result_label.text = "换走 %d 张（%s）——「%s」已加入卡组" % [
 				_hero_removed.size(), "、".join(names_t), hname]
-		result_label.add_theme_color_override("font_color", Color("b8860b"))
+		result_label.add_theme_color_override("font_color", UiTheme.STAT_POWER)
 		_redraw()
 		return
 	if _is_arcane():
@@ -814,7 +814,7 @@ func _refresh() -> void:
 		rest_btn.text = "继续"
 		result_label.text = "篝火的温暖涌上心头……生命回复 +%d（当前 %d/%d）" % [
 				_gained, RunState.hp, RunState.max_hp]
-		result_label.add_theme_color_override("font_color", Color("1b5e20"))
+		result_label.add_theme_color_override("font_color", UiTheme.SIDE_SELF_TEXT)
 	elif _bbq_taken:
 		# 选过烤肉 → 本次休息处到此为止（不能再休息，只能继续前进）
 		rest_btn.text = "继续"

@@ -156,7 +156,7 @@ func _refresh() -> void:
 		result_label.text = ""
 		if _cards.is_empty():
 			result_label.text = "暂无可获得的卡牌（奖励卡池中还没有普通/稀有/史诗卡）"
-			result_label.add_theme_color_override("font_color", Color("888888"))
+			result_label.add_theme_color_override("font_color", UiTheme.INK_500)
 		continue_btn.visible = false
 		skip_btn.disabled = false
 		normal_btn.disabled = false
@@ -195,7 +195,7 @@ func _on_cards_draw() -> void:
 	if _decided and not _skipped and _chosen != null:
 		var idx := _cards.find(_chosen)
 		if idx >= 0:
-			card_area.draw_rect(_card_rect(idx).grow(4.0), Color("c8951c"), false, 3.0)
+			card_area.draw_rect(_card_rect(idx).grow(4.0), UiTheme.ACCENT_GOLD, false, 3.0)
 	# 悬停候选卡：右侧显示完整详情（卡面放不下效果文本）
 	_draw_hover_detail()
 	# 精英/Boss 掉落道具横幅（已自动发放，只做展示）
@@ -218,12 +218,12 @@ func _draw_hover_detail() -> void:
 	y += 20.0
 	card_area.draw_string(_font, Vector2(box.position.x + pad, y),
 			"#%d  %s · %d 费 · %s" % [card.id, card.kind, card.cost, card.rarity_name()],
-			HORIZONTAL_ALIGNMENT_LEFT, inner_w, UiTheme.FS_CAPTION, Color("555555"))
+			HORIZONTAL_ALIGNMENT_LEFT, inner_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
 	y += 18.0
 	var stats := CardFace.stats_line(card)
 	if stats != "":
 		card_area.draw_string(_font, Vector2(box.position.x + pad, y), stats,
-				HORIZONTAL_ALIGNMENT_LEFT, inner_w, UiTheme.FS_CAPTION, Color("444444"))
+				HORIZONTAL_ALIGNMENT_LEFT, inner_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
 		y += 18.0
 	# 效果文本（自动换行 + R106：Markdown 富文本，隐藏「（…）」补注）
 	y += 4.0
@@ -289,7 +289,7 @@ func _on_skip() -> void:
 	_chosen = null
 	_skipped = true
 	result_label.text = "已跳过本次奖励"
-	result_label.add_theme_color_override("font_color", Color("666666"))
+	result_label.add_theme_color_override("font_color", UiTheme.INK_600)
 	_after_decide()
 	reward_skipped.emit()
 
@@ -328,7 +328,7 @@ func _build_relic_panel() -> void:
 	var panel := Panel.new()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(1.0, 0.985, 0.94)
-	sb.border_color = Color("c8951c")
+	sb.border_color = UiTheme.ACCENT_GOLD
 	sb.set_border_width_all(2)
 	sb.set_corner_radius_all(8)
 	panel.add_theme_stylebox_override("panel", sb)
@@ -448,7 +448,7 @@ func _on_relic_skip() -> void:
 	_relic_decided = true
 	_close_relic_panel()
 	result_label.text = "已放弃道具「%s」（本局不会再出现）" % _pending_relic.relic_name
-	result_label.add_theme_color_override("font_color", Color("666666"))
+	result_label.add_theme_color_override("font_color", UiTheme.INK_600)
 
 
 func _on_relic_later() -> void:
@@ -474,7 +474,7 @@ func _draw_granted_banner() -> void:
 	var h := 30.0 + dlines.size() * 16.0 + 10.0
 	var rect := Rect2((card_area.size.x - w) / 2.0, 530.0, w, h)
 	card_area.draw_rect(rect, Color(1.0, 0.965, 0.85), true)
-	card_area.draw_rect(rect, Color("c8951c"), false, 2.0)
+	card_area.draw_rect(rect, UiTheme.ACCENT_GOLD, false, 2.0)
 	card_area.draw_string(_font_bold,
 			Vector2(rect.position.x + 14, rect.position.y + 22),
 			"✦ 掉落道具：获得「%s」（已加入道具栏）" % _granted_relic.relic_name,

@@ -209,7 +209,7 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("252a35"))
 	if _cards.is_empty():
 		draw_string(_font, Vector2(0, size.y / 2), "卡组是空的……（点击继续）",
-				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("8a867c"))
+				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_ON_DARK)
 		return
 	_layout()
 	for i in _cards.size():
@@ -221,7 +221,7 @@ func _draw() -> void:
 		# 高亮底衬：选中 = 红底 + 金边发光；悬停 = 白色微亮
 		if selected:
 			draw_rect(rect.grow(7.0), Color(0.80, 0.18, 0.14, 0.34), true)
-			draw_rect(rect.grow(7.0), Color("c8951c"), false, 2.0)
+			draw_rect(rect.grow(7.0), UiTheme.ACCENT_GOLD, false, 2.0)
 		elif hovered:
 			draw_rect(rect.grow(5.0), Color(1, 1, 1, 0.10), true)
 		var c := repo.get_card(_cards[i])
@@ -238,7 +238,7 @@ func _draw_check_badge(rect: Rect2) -> void:
 	## 选中角标：卡面右上角的红色对勾圆（不依赖字体，一定画得出来）。
 	var r := clampf(rect.size.y * 0.075, 7.0, 12.0)
 	var c := rect.position + Vector2(rect.size.x - r - 2.0, r + 2.0)
-	draw_circle(c, r, Color("c1121f"))
+	draw_circle(c, r, UiTheme.STAT_HEALTH)
 	draw_circle(c, r, Color("f4d47a"), false, 1.5)
 	var s := r / 9.0
 	draw_line(c + Vector2(-4.0, 0.0) * s, c + Vector2(-1.0, 3.4) * s, Color.WHITE, 2.0 * s)

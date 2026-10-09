@@ -39,9 +39,9 @@ const OPP_HAND_Y := 14.0
 const COL_COST_LOW_BG := Color("1d7a3f")        # 减费后的费用圆（深绿底）
 const COL_COST_LOW_FG := Color("b9f6ca")        # 减费后的费用数字（浅绿字，绿色系）
 const COL_GUARD := Color("1d9e4f")              # 替 HP 承伤（森林守护/以太守卫/铁栅栏）：绿环标记
-const COL_TAUNT := Color("ff8f00")              # 嘲讽：战场单位的橙色脉冲光环（必须优先打它）
-const COL_FROZEN := Color("6ec6ff")             # 冰封（寒冰箭/冻结陷阱/冰冻战吼）：冷蓝脉冲环 + 寒霜（这回合动不了）
-const COL_SLEEP := Color("b07bff")              # 沉睡（恶魔鸭 9116）：紫脉冲环 + Zzz（还差 N 下挨打就醒）
+const COL_TAUNT := UiTheme.STATE_TAUNT              # 嘲讽：战场单位的橙色脉冲光环（必须优先打它）
+const COL_FROZEN := UiTheme.STATE_FROZEN             # 冰封（寒冰箭/冻结陷阱/冰冻战吼）：冷蓝脉冲环 + 寒霜（这回合动不了）
+const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（恶魔鸭 9116）：紫脉冲环 + Zzz（还差 N 下挨打就醒）
 const COL_FIELD_SELF := Color("ffb03a")         # 场地效果（R74）：我方放的 —— 琥珀色斜纹 + 名字角标
 const COL_FIELD_FOE := Color("ff5d5d")          # 敌方放的场地 —— 红斜纹（一眼分清敌我）
 const COL_FIELD_PERSIST := Color("5ad0e6")      # 持续型场地（R83：清泉）—— 冷青，静止描边（不是陷阱）
@@ -65,10 +65,10 @@ const INFO_W := 272.0   # 左栏（详细效果 / 对局记录）：宽一点，
 
 # ------------------------------------------------------------ 颜色
 
-const COL_BG := Color("e9e7e2")
-const COL_CELL_LINE := Color("9a9a9a")
-const COL_OWN_FRAME := Color("2e7d32")
-const COL_ENEMY_FRAME := Color("c62828")
+const COL_BG := UiTheme.BOARD_BG
+const COL_CELL_LINE := UiTheme.BOARD_GRID_LINE
+const COL_OWN_FRAME := UiTheme.SIDE_SELF
+const COL_ENEMY_FRAME := UiTheme.SIDE_FOE
 const COL_MOVE := Color(0.184, 0.682, 0.306, 0.55)
 const COL_ATTACK := Color(0.831, 0.227, 0.184, 0.55)
 const COL_HP := Color(0.545, 0.102, 0.102, 0.75)
@@ -79,24 +79,15 @@ const COL_FENCE_MERGE := Color(0.851, 0.545, 0.098, 0.60)   # 叠栅栏（栅栏
 const COL_PICKED := Color(1.0, 0.784, 0.0, 0.95)
 const COL_OPP_BACKROW := Color(0.541, 0.353, 0.165, 0.5)
 const COL_OWN_BACKROW := Color(0.165, 0.353, 0.541, 0.5)
-const COL_WIN := Color("c1121f")
+const COL_WIN := UiTheme.STAT_HEALTH
 const COL_LOSE := Color("1d3557")
 const COL_INFO_BG := Color("f7f5f0")
 ## 手卡「现在打出能吃到额外效果」的金色高亮（R65）：与「减费绿」区分开，一眼看出是收益提醒。
-const COL_HAND_BONUS := Color("f2c14e")
+const COL_HAND_BONUS := UiTheme.ACCENT_LIT
 
 # 战斗内地图总览（R64）的节点配色与字形 —— **与 map_scene 保持同一套**，
 # 这样「地图场景看到的颜色」和「战斗里回看地图的颜色」是同一种语义。
 # （map_scene 里那份是它自己的 const，改这里时两边要一起改。）
-const MAPVIEW_TYPE_COLORS := {
-	"start": Color("7a94b8"),    # 起点 蓝灰
-	"battle": Color("c6503c"),   # 普通战斗 红
-	"elite": Color("8a30b8"),    # 精英 紫
-	"rest": Color("3f9b5f"),     # 休息 绿
-	"event": Color("d1a12a"),    # 事件 金
-	"chest": Color("e0912a"),    # 宝箱层 橙金
-	"boss": Color("33323b"),     # Boss 黑
-}
 const MAPVIEW_TYPE_GLYPHS := {
 	"start": "起", "battle": "战", "elite": "英", "rest": "息",
 	"event": "事", "chest": "箱", "boss": "王",
@@ -1663,7 +1654,7 @@ func load_level(lvl: Dictionary) -> void:
 	var intro := str(lvl.get("intro", ""))
 	if intro != "":
 		# 关卡开场台词（如「哈气骑士团」的「我要闹了」）：盖过回合横幅，停留更久
-		_show_banner(intro, Color("b8860b"), 2400)
+		_show_banner(intro, UiTheme.STAT_POWER, 2400)
 	else:
 		_show_banner("我方回合 · 第 1 回合")
 	queue_redraw()
@@ -2537,10 +2528,10 @@ func _draw_hero_pick() -> void:
 	var need := GameEngine.HERO_DISCARD
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
 	draw_rect(Rect2(L.px, L.py, L.pw, L.ph), Color.WHITE)
-	draw_rect(Rect2(L.px, L.py, L.pw, L.ph), Color("555555"), false, 2.0)
+	draw_rect(Rect2(L.px, L.py, L.pw, L.ph), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "英雄的代价：选择 %d 张手牌丢弃（已选 %d/%d）"
 					% [need, _hero_pick_sel.size(), need],
-			Vector2(WINDOW_W / 2, L.py + 26), Color("333333"))
+			Vector2(WINDOW_W / 2, L.py + 26), UiTheme.INK_800)
 	var opts: Array = L["opts"]
 	for k in opts.size():
 		var idx: int = opts[k]
@@ -2548,10 +2539,10 @@ func _draw_hero_pick() -> void:
 		var r := Rect2(L["x0"] + L["spacing"] * k, L["card_y"], CARD_W, CARD_H)
 		var picked := _hero_pick_sel.has(idx)
 		if picked:
-			draw_rect(r.grow(5.0), Color("c1121f"), false, 2.0)
+			draw_rect(r.grow(5.0), UiTheme.STAT_HEALTH, false, 2.0)
 		_draw_card_face(c, r, c.health, picked, false, engine.cost_of(c))
 	var full: bool = _hero_pick_sel.size() == need
-	draw_rect(L["ok"], Color("2e7d32") if full else Color("b0aaa0"))
+	draw_rect(L["ok"], UiTheme.SIDE_SELF if full else Color("b0aaa0"))
 	_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "确定（丢弃 %d 张）" % _hero_pick_sel.size(),
 			Vector2(L["ok"].position.x + L["ok"].size.x / 2.0,
 					L["ok"].position.y + L["ok"].size.y / 2.0 + 4.0), Color.WHITE)
@@ -2561,7 +2552,7 @@ func _draw_hero_pick() -> void:
 					L["cancel"].position.y + L["cancel"].size.y / 2.0 + 4.0), Color.WHITE)
 	_draw_string_center(_font, UiTheme.FS_MICRO,
 			"点卡牌选中 / 取消；选满 %d 张后点确定 —— 英雄随即上场" % need,
-			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 12.0), Color("666666"))
+			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 12.0), UiTheme.INK_600)
 
 
 func _on_hero_pick_click(pos: Vector2) -> void:
@@ -2643,16 +2634,16 @@ func _draw_crow_pick() -> void:
 	var L := _crow_panel_layout()
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color("555555"), false, 2.0)
+	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "乌鸦：选择弃牌堆一张盟友回到手卡（必须选一张）",
-			Vector2(WINDOW_W / 2, L["py"] + 26), Color("333333"))
+			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
 	var opts: Array = L["opts"]
 	for k in opts.size():
 		var idx: int = opts[k]
 		var c: CardData = engine.state.discard[idx]
 		_draw_card_face(c, _crow_panel_rect(L, k), c.health, false, false)
 	_draw_string_center(_font, UiTheme.FS_MICRO, "点击一张卡：它立即回到你的手牌",
-			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 12.0), Color("666666"))
+			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 12.0), UiTheme.INK_600)
 
 
 func _on_crow_pick_click(pos: Vector2) -> void:
@@ -2711,10 +2702,10 @@ func _draw_whale_pick() -> void:
 	var L := _whale_panel_layout()
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color("555555"), false, 2.0)
+	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
 			"鲸鱼之怒：从弃牌堆取卡加入手卡（还可取 %d 张）" % engine.whale_remaining,
-			Vector2(WINDOW_W / 2, L["py"] + 26), Color("333333"))
+			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
 	var opts: Array = L["opts"]
 	for k in opts.size():
 		var idx: int = opts[k]
@@ -2722,7 +2713,7 @@ func _draw_whale_pick() -> void:
 		_draw_card_face(c, _whale_panel_rect(L, k), c.health, false, false)
 	var sk := _whale_skip_rect(L)
 	draw_rect(sk, Color("dcdcdc"))
-	draw_rect(sk, Color("777777"), false, 1.5)
+	draw_rect(sk, UiTheme.INK_500, false, 1.5)
 	_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "不选了（结束取牌）",
 			sk.position + sk.size / 2.0, Color("222222"))
 
@@ -2783,11 +2774,11 @@ func _draw_endless_pick() -> void:
 	## 无尽黑暗（9114，R70）面板：每回合抽牌后强制弃 1 张手牌，**不能不选**，所以没有跳过按钮。
 	var L := _endless_panel_layout()
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color("555555"), false, 2.0)
+	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
 			"无尽黑暗：选择 1 张手牌弃掉（不能不选）→ 之后费用 +%d"
 			% GameEngine.ENDLESS_DARK_ENERGY,
-			Vector2(WINDOW_W / 2, L["py"] + 26), Color("333333"))
+			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
 	var opts: Array = L["opts"]
 	for k in opts.size():
 		var idx: int = opts[k]
@@ -2839,9 +2830,9 @@ func _draw_foresight_mode() -> void:
 	var box := Rect2(rs[0].position.x - 26.0, rs[0].position.y - 54.0,
 			rs[0].size.x + 52.0, 168.0)
 	draw_rect(box, Color.WHITE)
-	draw_rect(box, Color("555555"), false, 2.0)
+	draw_rect(box, UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "预判：选择一个效果",
-			Vector2(WINDOW_W / 2, rs[0].position.y - 28), Color("333333"))
+			Vector2(WINDOW_W / 2, rs[0].position.y - 28), UiTheme.INK_800)
 	var labels := [
 		"① 从弃牌区选一张费用为 0 的技能卡加入手卡（之后本卡消失）",
 		"② 从卡组将一张随机费用不为 0 的技能卡加入手卡",
@@ -2895,17 +2886,17 @@ func _draw_foresight_pick() -> void:
 	## 预判①「从弃牌区选一张 0 费技能卡」面板：只列 0 费技能卡，点哪张拿哪张。
 	var L := _foresight_panel_layout()
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color("555555"), false, 2.0)
+	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
 			"预判①：选择弃牌区一张费用为 0 的技能卡（必须选一张，之后本卡消失）",
-			Vector2(WINDOW_W / 2, L["py"] + 26), Color("333333"))
+			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
 	var opts: Array = L["opts"]
 	for k in opts.size():
 		var idx: int = opts[k]
 		var c: CardData = engine.state.discard[idx]
 		_draw_card_face(c, _foresight_panel_rect(L, k), c.health, false, false)
 	_draw_string_center(_font, UiTheme.FS_MICRO, "点击一张卡：它立即回到你的手牌",
-			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 30), Color("555555"))
+			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 30), UiTheme.INK_600)
 
 
 func _on_foresight_pick_click(pos: Vector2) -> void:
@@ -2956,17 +2947,17 @@ func _draw_fate_pick() -> void:
 	## 拒绝命运（9098）面板：从弃牌区选回等量的卡（必须选满，本卡已消失不在列表里）。
 	var L := _fate_panel_layout()
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color("555555"), false, 2.0)
+	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
 			"拒绝命运：从弃牌区选 %d 张卡加入手卡（必须选满）" % engine.fate_count,
-			Vector2(WINDOW_W / 2, L["py"] + 26), Color("333333"))
+			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
 	var opts: Array = L["opts"]
 	for k in opts.size():
 		var idx: int = opts[k]
 		var c: CardData = engine.state.discard[idx]
 		_draw_card_face(c, _fate_panel_rect(L, k), c.health, false, false)
 	_draw_string_center(_font, UiTheme.FS_MICRO, "点击一张卡：它立即回到你的手牌（还要选 %d 张）" % engine.fate_count,
-			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 30), Color("555555"))
+			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 30), UiTheme.INK_600)
 
 
 func _on_fate_pick_click(pos: Vector2) -> void:
@@ -3093,13 +3084,13 @@ func _draw_revive_pick() -> void:
 	## 复活术（9078）「从弃牌区选一张盟友回到手牌」面板：只列盟友，点哪张拿哪张。
 	var L := _revive_panel_layout()
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color("555555"), false, 2.0)
+	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
 	var rmode := _recall_mode()
 	var rtitle := "复活术：选择弃牌区一张盟友回到手卡（必须选一张）"
 	if rmode == "暗影步":
 		rtitle = "暗影步：选择弃牌区一张卡回到手卡（必须选一张）"
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL, rtitle,
-			Vector2(WINDOW_W / 2, L["py"] + 26), Color("333333"))
+			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
 	var opts: Array = L["opts"]
 	for k in opts.size():
 		var idx: int = opts[k]
@@ -3110,7 +3101,7 @@ func _draw_revive_pick() -> void:
 	if rleft > 1:
 		rv_tip = "点击一张卡：它立即回到你的手牌（还要选 %d 张）" % rleft
 	_draw_string_center(_font, UiTheme.FS_MICRO, rv_tip,
-			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 12.0), Color("666666"))
+			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 12.0), UiTheme.INK_600)
 
 
 func _on_revive_pick_click(pos: Vector2) -> void:
@@ -3666,7 +3657,7 @@ func _build_tut_bar() -> void:
 	_tut_check = Label.new()
 	_tut_check.position = Vector2(WINDOW_W - 190, 2)
 	_tut_check.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
-	_tut_check.add_theme_color_override("font_color", Color("2e7d32"))
+	_tut_check.add_theme_color_override("font_color", UiTheme.SIDE_SELF)
 	_tut_bar.add_child(_tut_check)
 
 	_tut_body = Label.new()
@@ -3737,7 +3728,7 @@ func _build_over_panel() -> void:
 	hint.name = "Hint"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
-	hint.add_theme_color_override("font_color", Color("666666"))
+	hint.add_theme_color_override("font_color", UiTheme.INK_600)
 	box.add_child(hint)
 	_over_hint = hint
 	_over_btn_restart = Button.new()
@@ -3783,7 +3774,7 @@ func _show_over(win: bool) -> void:
 	_over_shown = true
 	_run_next_layer = 0
 	_over_hint.text = ""
-	_over_hint.add_theme_color_override("font_color", Color("666666"))
+	_over_hint.add_theme_color_override("font_color", UiTheme.INK_600)
 	# 叠加态的鸭（6013）：本场消耗掉的复活概率写回 run（跨战斗永久保留）
 	RunState.duck_revive_chance = engine.duck_revive_chance
 	# 自愈（9065）：战斗结束后回复生命（写回 run 血量之前结算，才不会白回）
@@ -3805,7 +3796,7 @@ func _show_over(win: bool) -> void:
 				_over_hint.text = "难度 %d · %s：战斗结束回复 %d 点生命（当前 %d/%d）" % [
 						RunState.difficulty, RunState.difficulty_name(), healed,
 						RunState.hp, RunState.max_hp]
-				_over_hint.add_theme_color_override("font_color", Color("1b5e20"))
+				_over_hint.add_theme_color_override("font_color", UiTheme.SIDE_SELF_TEXT)
 			var node_type := str(RunState.pending_node.get("type", ""))
 			RunState.on_battle_won(node_type)
 			RunState.record_battle(repo, str(lvl.get("name", "?")), tier,
@@ -4038,7 +4029,7 @@ func _draw_map_panel() -> void:
 	draw_rect(pr, Color("6a6f7d"), false, 2.0)
 	# 标题行：层名 + 进度 + 关闭提示
 	_draw_string_center(_font_bold, UiTheme.FS_BODY, "冒 险 地 图（战斗中查看）",
-			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 26.0), Color("e8e4da"))
+			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 26.0), UiTheme.SAND)
 	var cleared := RunState.cleared_ids.size()
 	var total := 0
 	for col_nodes in RunState.map_columns:
@@ -4047,7 +4038,7 @@ func _draw_map_panel() -> void:
 			"%s    已通过 %d / %d 个节点    生命 %d/%d    卡组 %d 张" % [
 				GameLayers.layer_name(RunState.current_layer), cleared, total,
 				RunState.hp, RunState.max_hp, RunState.deck_ids.size()],
-			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 48.0), Color("b8b4aa"))
+			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 48.0), UiTheme.INK_300)
 	_draw_string_center(_font, UiTheme.FS_CAPTION, "M / 地图 按钮 或 点击任意处关闭（战斗中不能改路线）· 滚轮上下翻",
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 68.0), Color("8f8b80"))
 	# 地图区可视范围：层数 × MAPVIEW_COL_DY（层数见 RogueMap.COLS）通常装不进面板高度
@@ -4102,23 +4093,23 @@ func _draw_map_nodes(view: Rect2) -> void:
 			var done: bool = RunState.cleared_ids.has(id)
 			var cur := _mapview_is_current(node)
 			var nxt := _mapview_is_next(node)
-			var base: Color = MAPVIEW_TYPE_COLORS.get(type, Color("888888"))
+			var base: Color = UiTheme.MAP_NODE_COLORS.get(type, UiTheme.INK_500)
 			draw_circle(pos, MAPVIEW_NODE_R, base.darkened(0.45))
 			draw_circle(pos, MAPVIEW_NODE_R - 2.0, base.darkened(0.5) if done else base)
 			var label: String = str(MAPVIEW_TYPE_GLYPHS.get(type, "?"))
 			draw_string(_font_bold, pos + Vector2(-10, 5), label,
 					HORIZONTAL_ALIGNMENT_CENTER, 20, UiTheme.FS_LABEL,
-					Color(1, 1, 1, 0.45) if done else Color("f7f4ec"))
+					Color(1, 1, 1, 0.45) if done else UiTheme.PAPER)
 			if cur:
 				# 当前位置：金双环（与地图场景同一套「当前位置」标记）
-				draw_arc(pos, MAPVIEW_NODE_R + 4.0, 0, TAU, 28, Color("f2c14e"), 2.2, true)
+				draw_arc(pos, MAPVIEW_NODE_R + 4.0, 0, TAU, 28, UiTheme.ACCENT_LIT, 2.2, true)
 				draw_arc(pos, MAPVIEW_NODE_R + 7.0, 0, TAU, 28, Color("f2c14e", 0.45), 1.1, true)
 				var cw := 66.0
 				var crect := Rect2(pos.x - cw * 0.5, pos.y + MAPVIEW_NODE_R + 5.0, cw, 16.0)
 				draw_rect(crect, Color(0.09, 0.09, 0.12, 0.9), true)
-				draw_rect(crect, Color("f2c14e"), false, 1.1)
+				draw_rect(crect, UiTheme.ACCENT_LIT, false, 1.1)
 				draw_string(_font_bold, crect.position + Vector2(0, 12.5), "当前位置",
-						HORIZONTAL_ALIGNMENT_CENTER, cw, UiTheme.FS_CAPTION, Color("f2c14e"))
+						HORIZONTAL_ALIGNMENT_CENTER, cw, UiTheme.FS_CAPTION, UiTheme.ACCENT_LIT)
 			elif nxt:
 				var pulse := 0.5 + 0.5 * sin(t * 3.0)
 				draw_arc(pos, MAPVIEW_NODE_R + 3.0 + pulse * 1.6, 0, TAU, 28,
@@ -4139,7 +4130,7 @@ func _draw_map_boss_chip(pos: Vector2) -> void:
 	var h := 20.0
 	var rect := Rect2(pos.x - w * 0.5, pos.y - MAPVIEW_NODE_R - 6.0 - h, w, h)
 	draw_rect(rect, Color(0.10, 0.09, 0.13, 0.92), true)
-	draw_rect(rect, Color("f2c14e"), false, 1.2)
+	draw_rect(rect, UiTheme.ACCENT_LIT, false, 1.2)
 	draw_string(_font_bold, rect.position + Vector2(0, 14.0), text,
 			HORIZONTAL_ALIGNMENT_CENTER, w, UiTheme.FS_CAPTION, Color("f7e6b0"))
 
@@ -4149,7 +4140,7 @@ func _draw_map_legend(pr: Rect2) -> void:
 	var y := pr.position.y + pr.size.y - MAPVIEW_BOT + 22.0
 	var x := pr.position.x + 14.0
 	for type in ["start", "battle", "elite", "rest", "event", "chest", "boss"]:
-		var base: Color = MAPVIEW_TYPE_COLORS.get(type, Color("888888"))
+		var base: Color = UiTheme.MAP_NODE_COLORS.get(type, UiTheme.INK_500)
 		draw_circle(Vector2(x + 6.0, y - 4.0), 6.0, base)
 		draw_string(_font, Vector2(x + 16.0, y), str(RogueMap.TYPE_LABELS.get(type, type)),
 				HORIZONTAL_ALIGNMENT_LEFT, 60, UiTheme.FS_CAPTION, Color("cfd3da"))
@@ -4490,7 +4481,7 @@ func _on_end_turn() -> void:
 		# 教程关：对手不行动，直接轮回我方
 		engine.end_turn()
 		status_text = "第 %d 回合：能量重置为 5，抽 5 张%s" % [engine.turn_number, _whisper_suffix()]
-		_show_banner("我方回合 · 第 %d 回合" % engine.turn_number, Color("1b5e20"))
+		_show_banner("我方回合 · 第 %d 回合" % engine.turn_number, UiTheme.SIDE_SELF_TEXT)
 		sfx.play("turn")
 		queue_redraw()
 		return
@@ -4513,7 +4504,7 @@ func _ai_step() -> void:
 		engine.end_turn()
 		if not engine.over:
 			status_text = "第 %d 回合：能量重置为 5，抽 5 张%s" % [engine.turn_number, _whisper_suffix()]
-			_show_banner("我方回合 · 第 %d 回合" % engine.turn_number, Color("1b5e20"))
+			_show_banner("我方回合 · 第 %d 回合" % engine.turn_number, UiTheme.SIDE_SELF_TEXT)
 			sfx.play("turn")
 		queue_redraw()
 		return
@@ -4644,7 +4635,7 @@ func _draw_card_back(rect: Rect2, tags := "") -> void:
 
 
 func _draw_string_center(font: Font, px: int, text: String, center: Vector2, col: Color,
-		outline := 0, outline_col := Color(1, 1, 1)) -> void:
+		outline := 0, outline_col := UiTheme.SURFACE) -> void:
 	if px < 7:
 		px = 7
 	# Godot 4 在 width=-1（不换行）时会忽略对齐参数，文字会从 pos 点向右延伸（即左对齐）。
@@ -4658,7 +4649,7 @@ func _draw_string_center(font: Font, px: int, text: String, center: Vector2, col
 
 
 func _draw_string_nw(font: Font, px: int, text: String, pos: Vector2, col: Color,
-		outline := 0, outline_col := Color(1, 1, 1)) -> void:
+		outline := 0, outline_col := UiTheme.SURFACE) -> void:
 	if px < 7:
 		px = 7
 	if outline > 0:
@@ -4668,7 +4659,7 @@ func _draw_string_nw(font: Font, px: int, text: String, pos: Vector2, col: Color
 
 
 func _draw_grid() -> void:
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "战场", Vector2(GRID_X + GRID_W / 2, GRID_Y - 12), Color("555555"))
+	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "战场", Vector2(GRID_X + GRID_W / 2, GRID_Y - 12), UiTheme.INK_600)
 	for row in FieldState.BOARD_ROWS:
 		for col in FieldState.BOARD_COLS:
 			var rect := Rect2(GRID_X + col * CELL, GRID_Y + row * CELL, CELL, CELL)
@@ -4680,7 +4671,7 @@ func _draw_grid() -> void:
 	draw_rect(Rect2(GRID_X, GRID_Y, GRID_W, CELL), COL_OPP_BACKROW)
 	draw_rect(Rect2(GRID_X, GRID_Y + 5 * CELL, GRID_W, CELL), COL_OWN_BACKROW)
 	var mid_y := GRID_Y + 3 * CELL
-	draw_line(Vector2(GRID_X, mid_y), Vector2(GRID_X + GRID_W, mid_y), Color("666666"), 2.0)
+	draw_line(Vector2(GRID_X, mid_y), Vector2(GRID_X + GRID_W, mid_y), UiTheme.INK_600, 2.0)
 	# 火墙术（9084）：正在燃烧的横行（引擎是唯一数据源，施放方下次回合开始自动熄灭）
 	for fw_row in engine.fire_wall_rows():
 		var fw_rect := Rect2(GRID_X, GRID_Y + fw_row * CELL, GRID_W, CELL)
@@ -4694,7 +4685,7 @@ func _draw_grid() -> void:
 		var rect := Rect2(GRID_X + cell.y * CELL, GRID_Y + cell.x * CELL, CELL, CELL)
 		draw_rect(rect, COL_OWN_FRAME if p.owner == GameEngine.SIDE_SELF else COL_ENEMY_FRAME, false, 3.0)
 		if p.tapped:
-			_draw_string_nw(_font_bold, UiTheme.FS_MICRO, "→", rect.position + Vector2(CELL - 14, 14), Color("777777"))
+			_draw_string_nw(_font_bold, UiTheme.FS_MICRO, "→", rect.position + Vector2(CELL - 14, 14), UiTheme.INK_500)
 
 
 func _board_has_pulsing_field() -> bool:
@@ -5373,14 +5364,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			sfx.play("heal" if int(data["card"].id) in [2002, 7202] else "spell")
 			var detail := str(data.get("detail", ""))
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y - 36),
-					"text": detail, "col": Color("7a2a7a"),
+					"text": detail, "col": UiTheme.KIND_SKILL,
 					"start": n, "dur": 1600})
 		"effect":
 			sfx.play("place")
 			var ecard: CardData = data["card"]
 			_say("✦ 效果卡「%s」启用，持续生效中" % ecard.card_name)
 			_floaters.append({"pos": Vector2(COST_X + (TAP_W + 12) / 2, COST_Y + ENERGY_H + 70),
-					"text": "%s 生效" % ecard.card_name, "col": Color("1d7a4f"),
+					"text": "%s 生效" % ecard.card_name, "col": UiTheme.KIND_EFFECT,
 					"start": n, "dur": 1500})
 		"hand_full":
 			# 手牌达上限（FieldState.HAND_LIMIT）：不再抽牌
@@ -5636,7 +5627,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if dm_cell.x >= 0:
 				_floaters.append({"pos": _cell_center(dm_cell),
 					"text": "+%d 费" % dm_refund,
-					"col": Color("6ec6ff"), "start": n, "dur": 1500, "size": 16})
+					"col": UiTheme.STATE_FROZEN, "start": n, "dur": 1500, "size": 16})
 		"overload_die":
 			# 超负荷（旧式机兵 8050，R98）：己方回合结束、生命仍为负 → 真正死亡。
 			var od_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
@@ -5865,7 +5856,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			sfx.play("spell")
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y - 62),
 					"text": "闪躲：伤害由随机盟友代受",
-					"col": Color("1d7a4f"), "size": 16, "outline": 6,
+					"col": UiTheme.KIND_EFFECT, "size": 16, "outline": 6,
 					"start": n, "dur": 2200})
 			_say("闪躲：本回合你受到的伤害由随机盟友代替承受")
 		"dodge_absorb":
@@ -5875,7 +5866,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var da_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
 			_floaters.append({"pos": da_pos + Vector2(0, -12),
 					"text": "闪躲 → %s -%d" % [da_name, int(data.get("absorbed", 0))],
-					"col": Color("1d7a4f"), "start": n, "dur": 1500, "size": 15})
+					"col": UiTheme.KIND_EFFECT, "start": n, "dur": 1500, "size": 15})
 			_say("闪躲：%s 替我方 HP 承受 %d 点伤害%s" % [
 					da_name, int(data.get("absorbed", 0)),
 					("（超出 %d 由自己承担）" % int(data.get("rest", 0)))
@@ -5888,7 +5879,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					else Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H / 2)
 			_floaters.append({"pos": fn_pos + Vector2(0, -12),
 					"text": "收尾 -%d" % int(data.get("dmg", 0)),
-					"col": Color("b8860b") if fn_last else Color("6a4aa0"),
+					"col": UiTheme.STAT_POWER if fn_last else Color("6a4aa0"),
 					"outline": 6 if fn_last else 0,
 					"start": n, "dur": 1800 if fn_last else 1400,
 					"size": 21 if fn_last else 15})
@@ -5928,7 +5919,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					else Vector2(WINDOW_W / 2, OWN_HAND_Y - 30)
 			_floaters.append({"pos": kg_center + Vector2(0, -24),
 					"text": "+%d 攻" % int(data.get("amount", 0)),
-					"col": Color("ff8f00"), "start": _now(), "dur": 1500, "size": 20})
+					"col": UiTheme.STATE_TAUNT, "start": _now(), "dur": 1500, "size": 20})
 			_say("%s 击杀敌人 → 攻击力 +%d（当前 %d）" % [
 					kg_name, int(data.get("amount", 0)), int(data.get("power", 0))])
 		"deterrence":
@@ -5951,7 +5942,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				ng_name = (data["card"] as CardData).card_name
 			_floaters.append({"pos": ng_center + Vector2(0, -24),
 					"text": "夜行 +%d 攻" % int(data.get("amount", 0)),
-					"col": Color("ff8f00"), "start": n, "dur": 1500, "size": 18})
+					"col": UiTheme.STATE_TAUNT, "start": n, "dur": 1500, "size": 18})
 			_say("%s 夜行：回合开始力量 +%d（当前 %d）" % [
 					ng_name, int(data.get("amount", 0)), int(data.get("power", 0))])
 		"mage_grow":
@@ -5963,7 +5954,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				mg_name = (data["card"] as CardData).card_name
 			_floaters.append({"pos": mg_center + Vector2(0, -24),
 					"text": "精进 +%d 攻" % int(data.get("amount", 0)),
-					"col": Color("ff8f00"), "start": n, "dur": 1500, "size": 18})
+					"col": UiTheme.STATE_TAUNT, "start": n, "dur": 1500, "size": 18})
 			_say("%s 精进：回合开始力量 +%d（当前 %d）" % [
 				mg_name, int(data.get("amount", 0)), int(data.get("power", 0))])
 		"familiar_grow":
@@ -5981,7 +5972,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"enemy_growth":
 			_floaters.append({"pos": Vector2(WINDOW_W / 2, GRID_Y - 16),
 					"text": "敌方攻击力 %+d" % int(data.get("stacks", 0)),
-					"col": Color("c62828"), "start": _now(), "dur": 1800, "size": 20})
+					"col": UiTheme.SIDE_FOE, "start": _now(), "dur": 1800, "size": 20})
 			_say("关卡成长：敌方 %d 个单位攻击力 %+d" % [
 					int(data.get("count", 0)), int(data.get("stacks", 0))])
 		"self_heal":
@@ -6067,11 +6058,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var hu_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
 			var hu_big := bool(data.get("big", false))
 			_bursts.append({"pos": hu_pos, "start": n, "dur": 560,
-					"col": Color("8a30b8"), "big": hu_big})
+					"col": UiTheme.RARITY_EPIC, "big": hu_big})
 			_floaters.append({"pos": hu_pos + Vector2(0, -12),
 					"text": ("狩猎翻倍！-%d" if hu_big else "暗影狩猎 -%d")
 							% int(data.get("dmg", 0)),
-					"col": Color("8a30b8"), "start": n, "dur": 1400,
+					"col": UiTheme.RARITY_EPIC, "start": n, "dur": 1400,
 					"size": 22 if hu_big else 18})
 		"twin_trap":
 			# 双重场地 9108：给某格挂上「触发后追加一个场地」的标记
@@ -6126,7 +6117,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 双重场地（9108，R74 由「双重陷阱」改名）：给格子上的场地挂连锁 —— 紫色微光 + 飘字
 			var dt_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
 			_bursts.append({"pos": dt_pos, "start": n, "dur": 420,
-					"col": Color("8a30b8"), "big": false})
+					"col": UiTheme.RARITY_EPIC, "big": false})
 			_floaters.append({"pos": dt_pos + Vector2(0, -12), "text": "双重场地",
 					"col": Color("5e35b1"), "start": n, "dur": 1400, "size": 18})
 			_say("♻ 双重场地：%s 的场地触发并结束后 → 同格补一张随机场地" % str(data.get("name", "该格")))
@@ -6137,7 +6128,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("⚡ 蓄力 ×%d：下一张技能生效 %d 次" % [ch_n, ch_n + 1])
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y - 62),
 					"text": "蓄力 ×%d → 下一张技能生效 %d 次" % [ch_n, ch_n + 1],
-					"col": Color("b8860b"), "size": 16, "outline": 6,
+					"col": UiTheme.STAT_POWER, "size": 16, "outline": 6,
 					"start": n, "dur": 2200})
 		"bear_heal":
 			# 熊（8004）发动回春：绿色爆点 + 「+N」飘字
@@ -6147,7 +6138,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("4caf50"), "big": false})
 			_floaters.append({"pos": bh_pos + Vector2(0, -12),
 					"text": "回春 +%d" % int(data.get("amount", 0)),
-					"col": Color("1d7a4f"), "start": n, "dur": 1400, "size": 18})
+					"col": UiTheme.KIND_EFFECT, "start": n, "dur": 1400, "size": 18})
 			_say("❦ %s 发动回春：回复 %d 点生命，之后横置" % [
 					str(data.get("name", "熊")), int(data.get("amount", 0))])
 		"wild_form_guard":
@@ -6185,7 +6176,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("9b59d0"), "big": false})
 			_floaters.append({"pos": m_pos + Vector2(0, -12),
 					"text": "-%d" % int(data.get("dmg", 0)),
-					"col": Color("7a2a7a"), "start": n, "dur": 1200})
+					"col": UiTheme.KIND_SKILL, "start": n, "dur": 1200})
 		"fire_wall":
 			# 火墙术（9084）：整行燃起 —— 三格同时起火 + 一行提示
 			sfx.play("spell")
@@ -6223,7 +6214,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("ffd54f"), "big": false})
 			_floaters.append({"pos": sb_pos + Vector2(0, -12),
 					"text": "敲晕 力量 -%d" % int(data.get("amount", 0)),
-					"col": Color("b8860b"), "start": n, "dur": 1300, "size": 16})
+					"col": UiTheme.STAT_POWER, "start": n, "dur": 1300, "size": 16})
 		"dark_trap":
 			# 黑暗陷阱（8063，R105）：踩中者本回合攻击时力量 -1（暗紫爆点 + 飘字）
 			var dt_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
@@ -6320,14 +6311,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				"col": Color("8a2be2"), "start": n, "dur": 1800, "size": 17})
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 60),
 				"text": "本回合手卡费用 +%d" % int(data.get("raise", 0)),
-				"col": Color("b8860b"), "start": n, "dur": 2200, "size": 16})
+				"col": UiTheme.STAT_POWER, "start": n, "dur": 2200, "size": 16})
 			sfx.play("heal")
 		"earring_autoplay_begin":
 			# 鸭语耳环自动出牌开始（R77）：横幅提示 + 复位播放状态。
 			_earring_at = _now()
 			_earring_i = 0
 			_earring_done = false
-			_banner = {"text": "鸭语耳环 · 自动出牌", "col": Color("b07bff"),
+			_banner = {"text": "鸭语耳环 · 自动出牌", "col": UiTheme.STATE_SLEEP,
 					"start": _now(), "dur": 1600}
 			status_text = "鸭语耳环：第 1 回合不抽牌，开始自动出牌（会一张一张出）"
 			_say("鸭语耳环：自动出牌开始（逐张播放）")
@@ -6344,7 +6335,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var ee_why: String = str(data.get("why", ""))
 			var ee_played: int = int(data.get("played", 0))
 			_banner = {"text": "鸭语耳环 · 自动出牌 %d 张" % ee_played,
-					"col": Color("b07bff"), "start": _now(), "dur": 1500}
+					"col": UiTheme.STATE_SLEEP, "start": _now(), "dur": 1500}
 			status_text = "鸭语耳环：自动出牌结束（%d 张 · %s），可以行动了" % [ee_played, ee_why]
 			_say("♬ 鸭语耳环：自动出牌 %d 张结束（%s）" % [ee_played, ee_why])
 		"wake":
@@ -6442,7 +6433,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var al_disc := int(data.get("discount", 0))
 			_floaters.append({"pos": Vector2(WINDOW_W / 2, GRID_Y + GRID_H - 60),
 					"text": "警觉 · %s -%d 费" % [al_name, al_disc],
-					"col": Color("7a2a7a"), "start": n, "dur": 1800, "size": 18})
+					"col": UiTheme.KIND_SKILL, "start": n, "dur": 1800, "size": 18})
 			_say("🃏 警觉：随机工事「%s」进入手卡（费用 -%d）" % [al_name, al_disc])
 
 
@@ -6564,7 +6555,7 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 			_bursts.append({"pos": d.pos, "start": n, "dur": 520,
 					"col": Color("ffb300"), "big": false})
 			_floaters.append({"pos": (d.pos as Vector2) + Vector2(0, -10),
-					"text": "-%d" % int(d.dmg), "col": Color("c62828"),
+					"text": "-%d" % int(d.dmg), "col": UiTheme.SIDE_FOE,
 					"start": n, "dur": 1150})
 			_shake(5.0, 260)
 		"hp_hit":
@@ -6578,7 +6569,7 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 					"col": Color("ff7043"), "big": true})
 			_floaters.append({"pos": (d.pos as Vector2) + Vector2(0, -6),
 					"text": str(d.get("label", "-%d" % int(d.dmg))),
-					"col": Color("c62828"), "start": n, "dur": 1250, "size": 20})
+					"col": UiTheme.SIDE_FOE, "start": n, "dur": 1250, "size": 20})
 			_shake(6.5, 320)
 
 
@@ -6590,7 +6581,7 @@ func _play_destroy_fx(center: Vector2, card: CardData) -> void:
 	_bursts.append({"pos": center, "start": _now(), "dur": 640,
 			"col": Color("e53935"), "big": true})
 	_floaters.append({"pos": center + Vector2(0, -14), "text": "击破",
-			"col": Color("555555"), "start": _now(), "dur": 1000})
+			"col": UiTheme.INK_600, "start": _now(), "dur": 1000})
 	_shake(9.0, 380)
 
 
@@ -6678,7 +6669,7 @@ func _draw_floaters() -> void:
 		# 白色描边：浅色棋盘上飘字才够醒目（粗细随字号走；"outline": 0 可单条关掉）
 		var ow := int(f.get("outline", clampi(int(round(size * 0.26)), 2, 5)))
 		col.a = alpha
-		var oc: Color = f.get("outline_col", Color(1, 1, 1))
+		var oc: Color = f.get("outline_col", UiTheme.SURFACE)
 		oc.a = alpha
 		_draw_string_center(_font_bold, size, str(f.text), pos, col, ow, oc)
 
@@ -6743,15 +6734,15 @@ func _draw_hp_banner() -> void:
 	_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "敌方 HP\n%d" % _show_hp("hp_opp", engine.state.hp_opponent),
 			Vector2(mid_x, GRID_Y + 8), COL_LOSE)
 	_draw_string_nw(_font, UiTheme.FS_MICRO, "敌方能量 %d" % engine.state.opp_energy,
-			Vector2(mid_x, GRID_Y + 66), Color("8a5a00"))
+			Vector2(mid_x, GRID_Y + 66), UiTheme.STAT_POWER)
 	_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "我方 HP\n%d/%d" % [_show_hp("hp_self", engine.state.hp_self),
 			engine.state.max_hp_self],
-			Vector2(mid_x, GRID_Y + GRID_H - 30), Color("1b5e20"))
+			Vector2(mid_x, GRID_Y + GRID_H - 30), UiTheme.SIDE_SELF_TEXT)
 	_draw_string_nw(_font, UiTheme.FS_MICRO, "能量 %d" % engine.state.energy,
-			Vector2(mid_x, GRID_Y + GRID_H - 56), Color("1b5e20"))
+			Vector2(mid_x, GRID_Y + GRID_H - 56), UiTheme.SIDE_SELF_TEXT)
 	if engine.state.level_name != "":
 		_draw_string_center(_font, UiTheme.FS_MICRO, "关卡：%s" % engine.state.level_name,
-				Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 16), Color("666666"))
+				Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 16), UiTheme.INK_600)
 
 
 func _enemy_zone_rect() -> Rect2:
@@ -6892,26 +6883,26 @@ func _draw_cost_zone() -> void:
 	var mid_x := COST_X + (TAP_W + 12) / 2
 	var bottom := GRID_Y + GRID_H
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "能量",
-			Vector2(mid_x, COST_Y - 12), Color("555555"))
+			Vector2(mid_x, COST_Y - 12), UiTheme.INK_600)
 	var epanel := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
 	draw_rect(epanel, Color(1, 1, 1, 0.55), true)
-	draw_rect(epanel, Color("c0bdb6"), false, 1.0)
+	draw_rect(epanel, UiTheme.INK_300, false, 1.0)
 	_draw_string_center(_font_bold, UiTheme.FS_HEADING, str(state.energy),
-			Vector2(mid_x, COST_Y + 46), Color("8a5a00"))
+			Vector2(mid_x, COST_Y + 46), UiTheme.STAT_POWER)
 	_draw_string_center(_font, UiTheme.FS_MICRO, "每回合重置为 5",
-			Vector2(mid_x, COST_Y + 70), Color("888888"))
+			Vector2(mid_x, COST_Y + 70), UiTheme.INK_500)
 	# 蓄力（9085）：待用层数（0 层不画）—— 下一张技能的结算次数 = 1 + 层数
 	var chg := engine.charge_count(GameEngine.SIDE_SELF)
 	if chg > 0:
 		_draw_string_center(_font_bold, UiTheme.FS_MICRO, "蓄力 ×%d（下一张技能 ×%d）" % [chg, chg + 1],
-				Vector2(mid_x, COST_Y + 84), Color("8a5a00"))
+				Vector2(mid_x, COST_Y + 84), UiTheme.STAT_POWER)
 	# 闪躲（9103）：盟友代受窗口（未开启不画）
 	if engine.dodge_active(GameEngine.SIDE_SELF):
 		_draw_string_center(_font_bold, UiTheme.FS_MICRO, "闪躲：伤害由盟友代受",
-				Vector2(mid_x, COST_Y + 96), Color("1d7a4f"))
+				Vector2(mid_x, COST_Y + 96), UiTheme.KIND_EFFECT)
 	# 角色（左栏常驻）：本局选定的角色
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "角色：%s" % RunState.player_class,
-			Vector2(mid_x, COST_Y - 26), Color("1d7a4f"))
+			Vector2(mid_x, COST_Y - 26), UiTheme.KIND_EFFECT)
 	# 效果区
 	var zone := Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, bottom - COST_Y - ENERGY_H)
 	draw_rect(zone, Color(0.72, 0.86, 0.72, 0.30), true)
@@ -7022,17 +7013,17 @@ func _own_effect_zone_rect() -> Rect2:
 func _draw_deck_and_discard() -> void:
 	var state := engine.state
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "卡组 %d" % state.deck.size(),
-			Vector2(DECK_X + CARD_W / 2, DECK_Y - 14), Color("555555"))
+			Vector2(DECK_X + CARD_W / 2, DECK_Y - 14), UiTheme.INK_600)
 	if state.deck.is_empty():
 		draw_rect(Rect2(DECK_X, DECK_Y, CARD_W, CARD_H), Color(0, 0, 0, 0), false)
-		draw_rect(Rect2(DECK_X, DECK_Y, CARD_W, CARD_H), Color("c0bdb6"), false, 1.0)
+		draw_rect(Rect2(DECK_X, DECK_Y, CARD_W, CARD_H), UiTheme.INK_300, false, 1.0)
 	else:
 		_draw_card_back(Rect2(DECK_X, DECK_Y, CARD_W, CARD_H))
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "弃牌区 %d" % state.discard.size(),
-			Vector2(DISCARD_X + CARD_W / 2, DISCARD_Y - 14), Color("555555"))
+			Vector2(DISCARD_X + CARD_W / 2, DISCARD_Y - 14), UiTheme.INK_600)
 	if state.discard.is_empty():
 		draw_rect(Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H), Color(0, 0, 0, 0), false)
-		draw_rect(Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H), Color("c0bdb6"), false, 1.0)
+		draw_rect(Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H), UiTheme.INK_300, false, 1.0)
 	else:
 		_draw_card_face(state.discard.back(), Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H),
 				state.discard.back().health, false, false)
@@ -7046,7 +7037,7 @@ func _draw_hand() -> void:
 	var left: float = _hand_rect(0).position.x if n > 0 else WINDOW_W / 2
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "手牌 %d/%d" % [n, FieldState.HAND_LIMIT],
 			Vector2(minf(WINDOW_W / 2 - 330, left - 56), label_y),
-			Color("c0392b") if full else Color("555555"))
+			Color("c0392b") if full else UiTheme.INK_600)
 	# 悬停的那张抬起来、并压在最上层（重叠时才看得清）
 	var order: Array[int] = []
 	for i in n:
@@ -7183,7 +7174,7 @@ func _draw_info_panel() -> void:
 		return
 	var top := GRID_Y
 	draw_rect(Rect2(INFO_X, top, INFO_W, GRID_H), COL_INFO_BG)
-	draw_rect(Rect2(INFO_X, top, INFO_W, GRID_H), Color("c0bdb6"), false, 1.0)
+	draw_rect(Rect2(INFO_X, top, INFO_W, GRID_H), UiTheme.INK_300, false, 1.0)
 	var left := INFO_X + 10.0
 	var right := INFO_X + INFO_W - 10.0
 	var inner_w := INFO_W - 20.0
@@ -7207,7 +7198,7 @@ func _draw_info_panel() -> void:
 		# X 费卡（流星雨）：费用随剩余能量浮动 → 左栏直接写「费用 X（消耗全部能量）」
 		cost_line = "%s · 费用 X（消耗全部能量）· %s" % [card.kind, card.rarity_name()]
 	_draw_string_nw(_font, UiTheme.FS_MICRO, cost_line,
-			Vector2(left, y), COL_COST_LOW_BG if cost_low else Color("444444"))
+			Vector2(left, y), COL_COST_LOW_BG if cost_low else UiTheme.INK_600)
 	y += 13.0
 	draw_line(Vector2(left, y), Vector2(right, y), Color("cfcbc2"), 1.0)
 	y += 17.0
@@ -7226,11 +7217,11 @@ func _draw_info_panel() -> void:
 		y += 17.0
 		var mv: String = "射程 %d   移速 %d" % [card.attack_range, card.move_speed] \
 				if card.kind == "盟友" else "射程 %d" % card.attack_range
-		_draw_string_nw(_font, UiTheme.FS_MICRO, mv, Vector2(left, y), Color("444444"))
+		_draw_string_nw(_font, UiTheme.FS_MICRO, mv, Vector2(left, y), UiTheme.INK_600)
 		y += 17.0
 	if card.actions > 1:
 		_draw_string_nw(_font, UiTheme.FS_MICRO, "每回合可行动 %d 次" % card.actions, Vector2(left, y),
-				Color("444444"))
+				UiTheme.INK_600)
 		y += 17.0
 	if not card.traits.is_empty():
 		var tt := ""
@@ -7271,7 +7262,7 @@ func _draw_game_over() -> void:
 	draw_rect(Rect2(GRID_X + 12, cy - 58, GRID_W - 24, 116), Color.WHITE)
 	draw_rect(Rect2(GRID_X + 12, cy - 58, GRID_W - 24, 116), col, false, 3.0)
 	_draw_string_center(_font_bold, UiTheme.FS_HEADING, "胜  利" if win else "失  败", Vector2(cx, cy - 20), col)
-	_draw_string_center(_font, UiTheme.FS_MICRO, engine.result_reason, Vector2(cx, cy + 28), Color("444444"))
+	_draw_string_center(_font, UiTheme.FS_MICRO, engine.result_reason, Vector2(cx, cy + 28), UiTheme.INK_600)
 
 
 func _draw_banner() -> void:
@@ -7389,9 +7380,9 @@ func _draw_zone_panel(title: String, cards: Array, counts: Array = []) -> void:
 	var py: float = L["py"]
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
 	draw_rect(Rect2(px, py, pw, ph), Color.WHITE)
-	draw_rect(Rect2(px, py, pw, ph), Color("555555"), false, 2.0)
+	draw_rect(Rect2(px, py, pw, ph), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "%s — 点击任意处关闭" % title,
-			Vector2(WINDOW_W / 2, py + 24), Color("333333"))
+			Vector2(WINDOW_W / 2, py + 24), UiTheme.INK_800)
 	if n == 0:
 		return
 	for i in n:
@@ -7456,15 +7447,15 @@ func _draw_relic_panel() -> void:
 	_relic_scroll = clampf(_relic_scroll, 0.0, scroll_max)
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
 	draw_rect(Rect2(px, py, pw, ph), Color.WHITE)
-	draw_rect(Rect2(px, py, pw, ph), Color("555555"), false, 2.0)
+	draw_rect(Rect2(px, py, pw, ph), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_SUBHEAD,
 			"道具 %d 个 — 悬浮即可看说明，这里是放大版%s" % [n,
 					"（滚轮翻动 · 点击任意处关闭）" if scroll_max > 0.0
 					else "（点击任意处关闭）"],
-			Vector2(WINDOW_W / 2, py + 30), Color("333333"))
+			Vector2(WINDOW_W / 2, py + 30), UiTheme.INK_800)
 	if n == 0:
 		_draw_string_center(_font, UiTheme.FS_BODY, "本局还没有道具",
-				Vector2(WINDOW_W / 2, py + 76), Color("888888"))
+				Vector2(WINDOW_W / 2, py + 76), UiTheme.INK_500)
 		return
 	var y := py + 56.0 - _relic_scroll
 	for r in rows:
@@ -7480,7 +7471,7 @@ func _draw_relic_panel() -> void:
 			for d_i in dlines.size():
 				_draw_string_nw(_font, RELIC_P_DESC, dlines[d_i],
 						Vector2(px + 36, y + RELIC_P_ROWH - 8.0 + d_i * RELIC_P_LINE),
-						Color("555555"))
+						UiTheme.INK_600)
 		y += row_h
 
 
@@ -7508,7 +7499,7 @@ func _draw_relic_tip_panel() -> void:
 	if y < 8.0:
 		y = clampf(z.position.y + z.size.y + 10.0, 8.0, WINDOW_H - h - 8.0)
 	draw_rect(Rect2(x, y, w, h), Color(0.10, 0.11, 0.15, 0.95), true)
-	draw_rect(Rect2(x, y, w, h), Color("c8951c"), false, 1.2)
+	draw_rect(Rect2(x, y, w, h), UiTheme.ACCENT_GOLD, false, 1.2)
 	for li in lines.size():
 		# 行槽 = [y+pad + li*line, +line]，基线取槽中心下方 0.36em（与 _draw_string_center 同约定）
 		var by: float = y + RELIC_TIP_PAD + RELIC_TIP_LINE * (float(li) + 0.5) \
@@ -7521,7 +7512,7 @@ func _draw_log_panel() -> void:
 	## 对局记录面板：覆盖左侧信息栏区域，显示引擎日志尾部。
 	var rect := Rect2(INFO_X, GRID_Y, INFO_W, GRID_H)
 	draw_rect(rect, Color("2b2b2b"))
-	draw_rect(rect, Color("c0bdb6"), false, 1.0)
+	draw_rect(rect, UiTheme.INK_300, false, 1.0)
 	_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "对局记录（L 关闭）",
 			Vector2(INFO_X + 10, GRID_Y + 18), Color("f0f0f0"))
 	var lines := engine.log

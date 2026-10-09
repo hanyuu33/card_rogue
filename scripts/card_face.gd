@@ -62,7 +62,8 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	canvas.draw_circle(cost_c, cost_r, UiTheme.COST_BG)
 	# X 费卡（流星雨 9083）：费用不是定值 → 费用圆直接画「X」
 	var cost_txt: String = "X" if card.x_cost else str(card.cost)
-	_draw_center(canvas, font_bold, int(9 * k), cost_txt, cost_c, UiTheme.SURFACE)
+	_draw_center(canvas, font_bold, roundi(UiTheme.CARD_FS_TEXT * k), cost_txt, cost_c,
+			UiTheme.SURFACE)
 	# 种类 + 数值：力量在左下（黄）、生命在右下（红），射程/速度收成中间一行
 	var kind_col: Color = UiTheme.kind_color(card.kind)
 	var is_unit: bool = card.kind == "盟友" or card.kind == "工事"
@@ -74,24 +75,35 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 			var tex := art_for(card.id)
 			if tex != null:
 				canvas.draw_texture_rect(tex, fit_rect(tex.get_size(), art_box), false)
+			else:
+				# 无图回退（R113 批 3）：卡库 198 张只有 15 张有图，绝大多数卡原本是**一片白**。
+				# 改成「按卡种着色的淡底纹 + 首字水印」——留下信息（这是什么卡）而不是留白。
+				var plate := kind_col
+				plate.a = 0.13
+				canvas.draw_rect(art_box, plate)
+				var mark := card.card_name.substr(0, 1)
+				var glyph := kind_col
+				glyph.a = 0.34
+				_draw_center(canvas, font_bold, int(art_box.size.y * 0.86), mark,
+						art_box.get_center(), glyph)
 	# 名字
 	var nm := card.card_name if card.card_name.length() <= 6 else card.card_name.substr(0, 5) + "…"
-	_draw_center(canvas, font_bold, int(9 * k), nm,
+	_draw_center(canvas, font_bold, roundi(UiTheme.CARD_FS_TEXT * k), nm,
 			rect.position + Vector2(rect.size.x / 2, 12 * k), UiTheme.INK_900)
 	var cx := rect.position.x + rect.size.x / 2
 	if is_unit:
-		_draw_center(canvas, font, int(8 * k), card.kind,
+		_draw_center(canvas, font, roundi(UiTheme.CARD_FS_TEXT * k), card.kind,
 				Vector2(cx, bottom - 28 * k), kind_col)
 		var sub: String = "程%d 速%d" % [card.attack_range, card.move_speed] \
 				if card.kind == "盟友" else "程%d" % card.attack_range
-		_draw_center(canvas, font, int(7.5 * k), sub,
+		_draw_center(canvas, font, roundi(UiTheme.CARD_FS_TEXT * k), sub,
 				Vector2(cx, bottom - 19 * k), UiTheme.INK_500)
 		var shown_power: int = power_override if power_override >= 0 else card.power
 		_draw_corner_stats(canvas, font, font_bold, k, rect, shown_power, hp)
 	else:
-		_draw_center(canvas, font, int(8 * k), card.kind,
+		_draw_center(canvas, font, roundi(UiTheme.CARD_FS_TEXT * k), card.kind,
 				Vector2(cx, bottom - 28 * k), kind_col)
-		_draw_center(canvas, font, int(8 * k), "直接使用",
+		_draw_center(canvas, font, roundi(UiTheme.CARD_FS_TEXT * k), "直接使用",
 				Vector2(cx, bottom - 12 * k), UiTheme.INK_600)
 	# 【字段系统 R91】在插图区底与「kind」之间的空隙里追加一行字段提示。
 	# ⚠️ **不硬编码任何字段**：画的就是 `card.affixes`（引擎赋给它的、或卡面自带的），
@@ -103,11 +115,11 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		# 太长就截断并补「+N」（字段最多 5 个，但名字长短不一）
 		var maxw: float = rect.size.x - 8.0 * k
 		while line.length() > 2 and font.get_string_size(line + "…",
-				HORIZONTAL_ALIGNMENT_LEFT, -1, int(7 * k)).x > maxw:
+				HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(UiTheme.CARD_FS_TEXT * k)).x > maxw:
 			line = line.substr(0, line.length() - 1)
 		if card.affix_line() != line:
 			line += "…"
-		_draw_center(canvas, font, int(7 * k), line,
+		_draw_center(canvas, font, roundi(UiTheme.CARD_FS_TEXT * k), line,
 				Vector2(cx, bottom - 37 * k), UiTheme.STAT_POWER)
 
 
@@ -122,8 +134,8 @@ static func _draw_corner_stats(canvas: CanvasItem, font: Font, font_bold: Font,
 static func _stat_corner(canvas: CanvasItem, font: Font, font_bold: Font, k: float,
 		rect: Rect2, label: String, value: int, col: Color, base_y: float, right: bool) -> void:
 	## 角标绘制：小号「力/生」标签 + 大号加粗数值，同基线排布（右下角右对齐）。
-	var sz_l := int(8 * k)
-	var sz_v := int(12 * k)
+	var sz_l := roundi(UiTheme.CARD_FS_TEXT * k)
+	var sz_v := roundi(UiTheme.CARD_FS_VALUE * k)
 	var lw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_l).x
 	var vw := font_bold.get_string_size(str(value), HORIZONTAL_ALIGNMENT_LEFT, -1, sz_v).x
 	var x0 := rect.end.x - 5.0 * k - lw - vw if right else rect.position.x + 5.0 * k

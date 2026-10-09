@@ -154,7 +154,7 @@ func _result_color(result: String) -> Color:
 			return Color("7fd18a")
 		"lose":
 			return Color("e07a6a")
-	return Color("b8b4aa")
+	return UiTheme.INK_300
 
 
 func _draw() -> void:
@@ -166,10 +166,10 @@ func _draw() -> void:
 		draw_rect(Rect2(0, size.y * float(i) / 36.0, size.x, size.y / 36.0 + 1.0),
 				top.lerp(bottom, t), true)
 	draw_string(_font_bold, Vector2(0, 62), "录 像 回 放",
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_HEADING, Color("e8e4da"))
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_HEADING, UiTheme.SAND)
 	draw_string(_font, Vector2(0, 92),
 			"完整记录并回放一局冒险：地图 / 战斗 / 事件 / 奖励（文件在 user://replays/，保留最近 %d 份）" % ReplayLog.KEEP,
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, Color("8a867c"))
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
 	draw_rect(back, Color("414860") if hov_back else Color("343947"), true)
@@ -182,7 +182,7 @@ func _draw() -> void:
 	if _items.is_empty():
 		draw_string(_font, Vector2(0, LIST_Y + 60),
 				"还没有录像 —— 先从标题「开始冒险」打一局，之后就能在这里完整回放。",
-				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("8a867c"))
+				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_ON_DARK)
 		return
 	var max_rows := int((size.y - LIST_Y - 20.0) / ROW_H)
 	var count := mini(_items.size(), max_rows)
@@ -194,7 +194,7 @@ func _draw() -> void:
 		draw_rect(r, Color("6a768c") if hov else Color("4a4e58"), false, 1.6)
 		draw_string(_font_bold, r.position + Vector2(16, 26),
 				str(meta.get("time", "?")),
-				HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_BODY, Color("e8e4da"))
+				HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_BODY, UiTheme.SAND)
 		draw_string(_font_bold, r.position + Vector2(230, 26),
 				"角色：%s" % PlayerClass.legacy_id(str(meta.get("class", "?"))),
 				HORIZONTAL_ALIGNMENT_LEFT, 180, UiTheme.FS_BODY, Color("9fd7a5"))
@@ -205,7 +205,7 @@ func _draw() -> void:
 		draw_string(_font, r.position + Vector2(540, 26),
 				"战斗 %d 场 · 种子 %d" % [int(meta.get("battles", 0)),
 				int(meta.get("run_seed", 0))],
-				HORIZONTAL_ALIGNMENT_LEFT, 240, UiTheme.FS_LABEL, Color("b8b4aa"))
+				HORIZONTAL_ALIGNMENT_LEFT, 240, UiTheme.FS_LABEL, UiTheme.INK_300)
 		draw_string(_font, r.position + Vector2(16, 48),
 				"点击播放（空格切倍速）· 难度 %d" % int(meta.get("difficulty", 2)),
 				HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_CAPTION, Color("7d8590"))
@@ -220,4 +220,4 @@ func _draw() -> void:
 	if _items.size() > count:
 		draw_string(_font, Vector2(0, size.y - 18),
 				"（只显示最近 %d 份）" % count, HORIZONTAL_ALIGNMENT_CENTER,
-				size.x, UiTheme.FS_CAPTION, Color("8a867c"))
+				size.x, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)

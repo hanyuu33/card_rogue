@@ -59,7 +59,7 @@ func _draw() -> void:
 	if _picked:
 		return
 	draw_string(_font, Vector2(0, 110), "出发之前，先决定你以什么身份走进这片森林……",
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("b8b4aa"))
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_300)
 	var ids := PlayerClass.ids()
 	var relics := RelicRepo.load_json()
 	for i in ids.size():
@@ -104,7 +104,7 @@ func _draw() -> void:
 						HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 40.0, UiTheme.FS_CAPTION, Color("b8b0a0"))
 				y += 17.0
 		draw_string(_font, rect.position + Vector2(0, rect.size.y - 18),
-				"点击选择", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_LABEL, Color("8a867c"))
+				"点击选择", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 
 
 func _wrap_text(t: String, max_w: float, px: int) -> Array[String]:

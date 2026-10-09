@@ -140,12 +140,17 @@ static func nearest_font(px: int) -> int:
 # 卡面字号子阶（随缩放比 k 派生，保持比例）
 # ══════════════════════════════════════════════════════════════════════
 #
-# 基阶从 6 档（7 / 7.5 / 8 / 9 / 10 / 12）收到 3 档。取值用 float 保留比例，
-# 调用点必须 `roundi(CARD_FS_* * k)`，**不要 `int()`**。
+# 基阶从 6 档（7 / 7.5 / 8 / 9 / 10 / 12）收到 **2 档**。原计划 3 档，实现时发现
+# 「卡名」与「附属信息」都落在 9.0 —— 两个同值令牌是纯冗余，合并为 `CARD_FS_TEXT`。
+#
+# 卡面从 58×70（战场）缩到手上也就 119×143，塞不下字号层级；所以**卡面靠字重与颜色
+# 拉层级**（卡名=粗+墨色、种类=卡种色、力量=金、生命=红），不靠字号。
+#
+# 取值用 float 保留比例，调用点必须 `roundi(CARD_FS_* * k)`，**不要 `int()`** ——
+# `int(7.5 * k)` 在 k=1 会被截成 7，比低一档还小。
 
-const CARD_FS_NAME := 9.0    ## 卡名
-const CARD_FS_VALUE := 12.0  ## 力/生数值角标
-const CARD_FS_META := 9.0    ## 种类 / 程速 / 字段（原为 7~8px，提至 9px 以进入可读区）
+const CARD_FS_TEXT := 9.0    ## 卡名 / 费用数字 / 种类 / 程速 / 字段 / 力·生小标签（原 7~9px）
+const CARD_FS_VALUE := 12.0  ## 力 / 生 的数值（卡面上唯一的大字）
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -166,6 +171,7 @@ const SP_6 := 32
 
 # ── 中性 / 文字 ──
 const INK_900 := Color("1a1c22")      ## 主文字
+const INK_800 := Color("333333")      ## 次强文字（弹窗标题、亮底上的正文）
 const INK_600 := Color("555555")      ## 次要文字（替代散落的 #444444 / #666666）
 const INK_500 := Color("6b6b6b")      ## 弱化文字（5.33:1；原 #777777 只有 4.48:1，未过 AA）
 const INK_ON_DARK := Color("8a867c")  ## 暗底上的提示文字
@@ -176,6 +182,9 @@ const SURFACE := Color("ffffff")      ## 卡面 / 面板底
 const PAPER := Color("f7f5f0")        ## 纸面底
 const SAND := Color("e8e4da")         ## 卡片槽底
 const BOARD_BG := Color("e9e7e2")     ## 棋盘底
+## 棋盘格线。原为 `#9a9a9a`，在 `BOARD_BG` 上只有 **2.28:1** —— 对非文字元素低于 WCAG 的 3:1，
+## 玩家分不清格子边界。`#7d7b74` 是 **3.43:1**，既能看清又不抢单位的视觉重量。
+const BOARD_GRID_LINE := Color("7d7b74")
 
 # ── 阵营 ──
 const SIDE_SELF := Color("2e7d32")       ## 我方：框 / 标记
@@ -213,6 +222,14 @@ const GHOST_CARD_INNER := Color(0.78, 0.76, 0.70, 0.30)  ## 内嵌描边（卡�
 ## 幽灵卡的横向活动区间（占窗口宽度比例）：只出现在左右留白区，**永不压住标题与按钮**。
 const GHOST_CARD_MARGIN := 0.23
 
+# ── 稀有度（对映 CardData.RARITY_COLORS / RARITY_NAMES 的下标）──
+const RARITY_COMMON := Color("2c2c2a")   ## 0 普通
+const RARITY_RARE := Color("1f5fbf")     ## 1 稀有
+const RARITY_EPIC := Color("8a30b8")     ## 2 史诗
+const RARITY_STARTER := Color("1d7a4f")  ## 3 初始
+const RARITY_MONSTER := Color("7a1f1f")  ## 4 怪物
+const RARITY_EVENT := Color("a44ad0")    ## 5 事件
+
 # ── 强调 / 状态 ──
 const ACCENT_GOLD := Color("c8951c")  ## 装饰 / 描边
 const ACCENT_LIT := Color("f2c14e")   ## 高亮 / 奖励
@@ -234,6 +251,24 @@ static func kind_color(kind: String) -> Color:
 		"工事":
 			return KIND_FORT
 	return KIND_FALLBACK
+
+
+## 地图节点配色（**唯一出处**）。此前 `battle_scene.gd` 的 `MAPVIEW_TYPE_COLORS` 与
+## `map_scene.gd` 的 `TYPE_COLORS` 各存一份一模一样的表，两边的注释里都写着「改这里时
+## 两边要一起改」—— 那就说明它本来就该只有一份。
+##
+## ⚠️ 必须是 `static var` 而不是 `const`：**const 字典里不能放 `Color()`**（也不是
+## `UiTheme.X` 这种跨脚本常量引用），否则整份文件 `Parse Error`。
+## ⚠️ 只读使用；不要往这个字典里写（static 是共享对象）。
+static var MAP_NODE_COLORS := {
+	"start": Color("7a94b8"),   # 起点 蓝灰
+	"battle": Color("c6503c"),  # 普通战斗 红
+	"elite": RARITY_EPIC,       # 精英 紫
+	"rest": Color("3f9b5f"),    # 休息 绿
+	"event": Color("d1a12a"),   # 事件 金
+	"chest": Color("e0912a"),   # 宝箱层 橙金（与事件金区分）
+	"boss": Color("33323b"),    # Boss 黑
+}
 
 
 # ══════════════════════════════════════════════════════════════════════

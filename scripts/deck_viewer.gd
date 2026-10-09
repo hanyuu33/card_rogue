@@ -131,14 +131,14 @@ func _on_panel_draw() -> void:
 	var pw: float = L["pw"]
 	var ph: float = L["ph"]
 	# 面板不压暗背景（用户要求：点开面板时后面区域不要变暗）
-	_panel.draw_rect(Rect2(px, py, pw, ph), Color("f5f2ea"))
-	_panel.draw_rect(Rect2(px, py, pw, ph), Color("555555"), false, 2.0)
+	_panel.draw_rect(Rect2(px, py, pw, ph), UiTheme.PAPER)
+	_panel.draw_rect(Rect2(px, py, pw, ph), UiTheme.INK_600, false, 2.0)
 	_panel.draw_string(_font_bold, Vector2(px + 20, py + 32),
 			"我的卡组（共 %d 张 · 相同卡合并 · 滚轮翻页 · 点击任意处关闭）" % RunState.deck_ids.size(),
-			HORIZONTAL_ALIGNMENT_LEFT, pw - 40, UiTheme.FS_BODY, Color("333333"))
+			HORIZONTAL_ALIGNMENT_LEFT, pw - 40, UiTheme.FS_BODY, UiTheme.INK_800)
 	if n == 0:
 		_panel.draw_string(_font, Vector2(px + 20, py + 80), "卡组是空的。",
-				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_LABEL, Color("888888"))
+				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_LABEL, UiTheme.INK_500)
 		return
 	var cols: int = L["cols"]
 	var view_rows: int = L["view_rows"]
@@ -165,7 +165,7 @@ func _on_panel_draw() -> void:
 	if max_scroll > 0:
 		_panel.draw_string(_font, Vector2(px + pw - 220, py + ph - 12),
 				"第 %d/%d 屏" % [skip_rows + 1, int(max_scroll) + 1],
-				HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_CAPTION, Color("888888"))
+				HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_CAPTION, UiTheme.INK_500)
 
 
 func _on_panel_input(event: InputEvent) -> void:

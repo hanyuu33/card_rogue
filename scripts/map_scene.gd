@@ -32,15 +32,6 @@ const COL_LINE_DONE := Color("e6c86a")            # 已走过的连线（金）
 const COL_LINE_NEXT := Color("a8d8ff")            # 当前可走的连线（亮青白）
 const COL_EDGE_DARK := Color(0.07, 0.08, 0.11, 0.60)   # 连线暗描边
 
-const TYPE_COLORS := {
-	"start": Color("7a94b8"),    # 起点 蓝灰
-	"battle": Color("c6503c"),   # 普通战斗 红
-	"elite": Color("8a30b8"),    # 精英 紫
-	"rest": Color("3f9b5f"),     # 休息 绿
-	"event": Color("d1a12a"),    # 事件 金
-	"chest": Color("e0912a"),    # 宝箱层 橙金（与事件金区分）
-	"boss": Color("33323b"),     # Boss 黑
-}
 
 var _font: SystemFont
 var _font_bold: SystemFont
@@ -176,7 +167,7 @@ func _style_button(b: Button) -> void:
 	b.add_theme_stylebox_override("pressed", pr)
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	b.add_theme_color_override("font_color", Color("e6e2d8"))
-	b.add_theme_color_override("font_hover_color", Color("ffffff"))
+	b.add_theme_color_override("font_hover_color", UiTheme.SURFACE)
 	b.add_theme_color_override("font_pressed_color", Color("cfcabb"))
 	b.add_theme_font_override("font", _font_bold)
 	b.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
@@ -504,10 +495,10 @@ func _draw_deck_panel() -> void:
 	draw_rect(rect, Color("6a665c"), false, 2.0)
 	draw_string(_font_bold, rect.position + Vector2(20, 34),
 			"我的卡组（共 %d 张 · 滚轮翻页 · 点击空白处关闭）" % RunState.deck_ids.size(),
-			HORIZONTAL_ALIGNMENT_LEFT, 520, UiTheme.FS_BODY, Color("e8e4da"))
+			HORIZONTAL_ALIGNMENT_LEFT, 520, UiTheme.FS_BODY, UiTheme.SAND)
 	if _deck_rows.is_empty():
 		draw_string(_font, rect.position + Vector2(20, 90), "卡组是空的。",
-				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_LABEL, Color("8a867c"))
+				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 		return
 	var max_scroll := maxi(0, ceili(_deck_rows.size() / 2.0) - 4)
 	_deck_scroll = clampf(_deck_scroll, 0.0, float(max_scroll))
@@ -693,7 +684,7 @@ func _draw_relics() -> void:
 		var tx2: float = clampf(_mouse.x - w2 / 2, 8, size.x - w2 - 8)
 		var panel2 := Rect2(tx2, 46, w2, 12.0 + lines2.size() * 18.0)
 		draw_rect(panel2, Color(0.10, 0.11, 0.15, 0.95), true)
-		draw_rect(panel2, Color("c8951c"), false, 1.2)
+		draw_rect(panel2, UiTheme.ACCENT_GOLD, false, 1.2)
 		for i in lines2.size():
 			draw_string(_font, panel2.position + Vector2(10, 22 + i * 18), lines2[i],
 					HORIZONTAL_ALIGNMENT_LEFT, w2 - 20, UiTheme.FS_LABEL, Color("eee6c8"))
@@ -780,12 +771,12 @@ func _draw_relic_panel() -> void:
 	var ph: float = minf(float(M["h"]) + 70.0, size.y - py - 60.0)
 	var smax := maxf(0.0, float(M["h"]) + 70.0 - ph)
 	_relic_scroll = clampf(_relic_scroll, 0.0, smax)
-	draw_rect(Rect2(px, py, RELIC_P_W, ph), Color("f5f2ea"))
-	draw_rect(Rect2(px, py, RELIC_P_W, ph), Color("555555"), false, 2.0)
+	draw_rect(Rect2(px, py, RELIC_P_W, ph), UiTheme.PAPER)
+	draw_rect(Rect2(px, py, RELIC_P_W, ph), UiTheme.INK_600, false, 2.0)
 	draw_string(_font_bold, Vector2(px + 22, py + 36),
 			"我的道具（共 %d 件 · 完整效果 · 滚轮翻页 · 点击任意处关闭）"
 			% RunState.relics.size(),
-			HORIZONTAL_ALIGNMENT_LEFT, RELIC_P_W - 44, UiTheme.FS_SUBHEAD, Color("333333"))
+			HORIZONTAL_ALIGNMENT_LEFT, RELIC_P_W - 44, UiTheme.FS_SUBHEAD, UiTheme.INK_800)
 	var y := py + 56.0 - _relic_scroll
 	for r in rows:
 		var row_h: float = float(r[3])
@@ -803,18 +794,18 @@ func _draw_relic_panel() -> void:
 	if smax > 0.0:
 		draw_string(_font, Vector2(px + RELIC_P_W - 240, py + ph - 14),
 				"滚轮翻页（已滚 %.0f / %.0f）" % [_relic_scroll, smax],
-				HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_CAPTION, Color("888888"))
+				HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_CAPTION, UiTheme.INK_500)
 
 
 func _draw_title() -> void:
 	draw_string(_font_bold, Vector2(size.x / 2 - 90, 28), "冒 险 地 图",
-			HORIZONTAL_ALIGNMENT_CENTER, 180, UiTheme.FS_HEADING, Color("e8e4da"))
+			HORIZONTAL_ALIGNMENT_CENTER, 180, UiTheme.FS_HEADING, UiTheme.SAND)
 	# 地图所属层级（内容按层隔离：本层的事件与关卡只从本层的内容池里取）
 	var hp_txt := "%s    生命 %d/%d    卡组 %d 张" % [
 			GameLayers.layer_name(RunState.current_layer),
 			RunState.hp, RunState.max_hp, RunState.deck_ids.size()]
 	draw_string(_font, Vector2(size.x / 2 - 140, 54), hp_txt,
-			HORIZONTAL_ALIGNMENT_CENTER, 280, UiTheme.FS_LABEL, Color("b8b4aa"))
+			HORIZONTAL_ALIGNMENT_CENTER, 280, UiTheme.FS_LABEL, UiTheme.INK_300)
 
 
 func _edge_points(a: Vector2, b: Vector2) -> PackedVector2Array:
@@ -863,7 +854,7 @@ func _draw_nodes() -> void:
 		var avail := _is_available(node)
 		var boss := type == "boss"
 		var r := NODE_R + (5.0 if boss else 0.0)
-		var base: Color = TYPE_COLORS.get(type, Color("888888"))
+		var base: Color = UiTheme.MAP_NODE_COLORS.get(type, UiTheme.INK_500)
 		# 立体圆牌：投影 → 深色底盘 → 类型色内芯（走过的整体压暗）
 		draw_circle(pos + Vector2(0, 2.5), r, Color(0, 0, 0, 0.35))
 		draw_circle(pos, r, base.darkened(0.45))
@@ -873,14 +864,14 @@ func _draw_nodes() -> void:
 			_boss_name_chip(pos, r)
 		# 当前位置：金色双环 + 下方小牌
 		if current:
-			draw_arc(pos, r + 4.0, 0, TAU, 40, Color("f2c14e"), 2.5, true)
+			draw_arc(pos, r + 4.0, 0, TAU, 40, UiTheme.ACCENT_LIT, 2.5, true)
 			draw_arc(pos, r + 7.0, 0, TAU, 40, Color("f2c14e", 0.45), 1.2, true)
 			var cw := 78.0
 			var crect := Rect2(pos.x - cw / 2, pos.y + r + 6, cw, 17)
 			draw_rect(crect, Color(0.09, 0.09, 0.12, 0.85), true)
-			draw_rect(crect, Color("f2c14e"), false, 1.2)
+			draw_rect(crect, UiTheme.ACCENT_LIT, false, 1.2)
 			draw_string(_font_bold, crect.position + Vector2(0, 13.5), "当前位置",
-					HORIZONTAL_ALIGNMENT_CENTER, cw, UiTheme.FS_CAPTION, Color("f2c14e"))
+					HORIZONTAL_ALIGNMENT_CENTER, cw, UiTheme.FS_CAPTION, UiTheme.ACCENT_LIT)
 		elif avail:
 			var pulse := 0.5 + 0.5 * sin(_t * 4.0)
 			draw_arc(pos, r + 3.5 + pulse * 2.0, 0, TAU, 40,
@@ -908,7 +899,7 @@ func _draw_nodes() -> void:
 					HORIZONTAL_ALIGNMENT_CENTER, 20, gs, Color(0, 0, 0, 0.45))
 			draw_string(_font_bold, pos + Vector2(-10, 6.5), label,
 					HORIZONTAL_ALIGNMENT_CENTER, 20, gs,
-					Color("f7f4ec") if not done else Color(1, 1, 1, 0.45))
+					UiTheme.PAPER if not done else Color(1, 1, 1, 0.45))
 		# 类型名：只在悬停 / 命运指定时显示（平时不再铺一屏文字）
 		var show_label := _hover_id == id \
 				or (_whisper_auto and not _whisper_next.is_empty() \
@@ -934,7 +925,7 @@ func _boss_name_chip(pos: Vector2, r: float) -> void:
 	var h := 22.0
 	var rect := Rect2(pos.x - w / 2.0, pos.y - r - 8.0 - h, w, h)
 	draw_rect(rect, Color(0.10, 0.09, 0.13, 0.90), true)
-	draw_rect(rect, Color("f2c14e"), false, 1.3)
+	draw_rect(rect, UiTheme.ACCENT_LIT, false, 1.3)
 	draw_string(_font_bold, rect.position + Vector2(0, 15.0), text,
 			HORIZONTAL_ALIGNMENT_CENTER, w, UiTheme.FS_LABEL, Color("f7e6b0"))
 
@@ -973,9 +964,9 @@ func _draw_sidebar() -> void:
 			var box := Rect2(cx, cy + 2.0, 14.0, 14.0)
 			draw_texture_rect(iicon, CardFace.fit_rect(iicon.get_size(), box), false)
 		else:
-			draw_circle(Vector2(cx + 7, cy + 9), 7, TYPE_COLORS[itype])
+			draw_circle(Vector2(cx + 7, cy + 9), 7, UiTheme.MAP_NODE_COLORS[itype])
 		draw_string(_font, Vector2(cx + 20, cy + 13.5), str(items[i][0]),
-				HORIZONTAL_ALIGNMENT_LEFT, 66, UiTheme.FS_LABEL, Color("c8c4ba"))
+				HORIZONTAL_ALIGNMENT_LEFT, 66, UiTheme.FS_LABEL, UiTheme.INK_300)
 	# 右下：提示
 	if _whisper_auto:
 		draw_string(_font_bold, Vector2(size.x - 430, size.y - 20),
@@ -984,7 +975,7 @@ func _draw_sidebar() -> void:
 	else:
 		draw_string(_font, Vector2(size.x - 430, size.y - 20),
 				"点击发绿光的节点前进 · 拖动 / 滚轮上下浏览 · 打败 Boss 通关",
-				HORIZONTAL_ALIGNMENT_RIGHT, 410, UiTheme.FS_LABEL, Color("8a867c"))
+				HORIZONTAL_ALIGNMENT_RIGHT, 410, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 
 
 func _draw_records_panel() -> void:
@@ -994,7 +985,7 @@ func _draw_records_panel() -> void:
 	draw_rect(rect, Color("6a665c"), false, 2.0)
 	draw_string(_font_bold, rect.position + Vector2(20, 34),
 			"战斗记录（共 %d 场，滚动：滚轮）" % _records.size(),
-			HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_BODY, Color("e8e4da"))
+			HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_BODY, UiTheme.SAND)
 	var inner := Rect2(rect.position + Vector2(20, 52),
 			rect.size - Vector2(40, 70))
 	var line_h := 40.0
@@ -1013,23 +1004,23 @@ func _draw_records_panel() -> void:
 				str(r["time"]), HORIZONTAL_ALIGNMENT_LEFT, 150, UiTheme.FS_LABEL, Color("9a968c"))
 		draw_string(_font_bold, Vector2(inner.position.x + 155, y + 14),
 				"%s（%s）" % [r["level"], GameLevels.tier_name(int(r["tier"]))],
-				HORIZONTAL_ALIGNMENT_LEFT, 240, UiTheme.FS_LABEL, Color("e8e4da"))
+				HORIZONTAL_ALIGNMENT_LEFT, 240, UiTheme.FS_LABEL, UiTheme.SAND)
 		draw_string(_font_bold, Vector2(inner.position.x + 400, y + 14),
 				res_txt, HORIZONTAL_ALIGNMENT_LEFT, 40, UiTheme.FS_LABEL, res_col)
 		draw_string(_font, Vector2(inner.position.x + 445, y + 14),
 				"最终血量 %d/%d" % [int(r["final_hp"]), int(r["max_hp"])],
-				HORIZONTAL_ALIGNMENT_LEFT, 130, UiTheme.FS_LABEL, Color("c8c4ba"))
+				HORIZONTAL_ALIGNMENT_LEFT, 130, UiTheme.FS_LABEL, UiTheme.INK_300)
 		# 卡组摘要（一行）
 		var parts: Array[String] = []
 		for d in r["deck"]:
 			parts.append("%s×%d" % [d["name"], d["count"]])
 		draw_string(_font, Vector2(inner.position.x, y + 32),
 				"卡组：" + "、".join(parts), HORIZONTAL_ALIGNMENT_LEFT,
-				inner.size.x, UiTheme.FS_CAPTION, Color("8a867c"))
+				inner.size.x, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
 	if _records.is_empty():
 		draw_string(_font, inner.position + Vector2(0, 30),
 				"还没有战斗记录——去打第一场吧！", HORIZONTAL_ALIGNMENT_LEFT,
-				400, UiTheme.FS_LABEL, Color("8a867c"))
+				400, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 
 
 func _scroll_by_scrollbar(pos_y: float) -> void:

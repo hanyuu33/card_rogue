@@ -72,7 +72,7 @@ func _ready() -> void:
 	_btn.add_theme_font_override("font", _font)
 	_btn.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
 	# 禁用态（悬浮就能看全时）保持正常配色，别灰得看不出是什么
-	_btn.add_theme_color_override("font_disabled_color", Color("e8e4da"))
+	_btn.add_theme_color_override("font_disabled_color", UiTheme.SAND)
 	_btn.pressed.connect(_toggle)
 	add_child(_btn)
 
@@ -241,11 +241,11 @@ func _on_hover_draw() -> void:
 	var list := _entries()
 	var r := _hover_rect()
 	_hover_layer.draw_rect(r, Color(0.10, 0.11, 0.15, 0.96), true)
-	_hover_layer.draw_rect(r, Color("c8951c"), false, 1.2)
+	_hover_layer.draw_rect(r, UiTheme.ACCENT_GOLD, false, 1.2)
 	if list.is_empty():
 		_hover_layer.draw_string(_font, r.position + Vector2(PAD * 0.6, 26),
 				"还没有获得任何道具。", HORIZONTAL_ALIGNMENT_LEFT,
-				r.size.x - 24.0, UiTheme.FS_CAPTION, Color("b8b4aa"))
+				r.size.x - 24.0, UiTheme.FS_CAPTION, UiTheme.INK_300)
 		return
 	_hover_layer.draw_string(_font_bold, r.position + Vector2(PAD * 0.6, 20),
 			"我的道具（共 %d 件 · 悬浮查看）" % list.size(),
@@ -280,7 +280,7 @@ func _on_hover_draw() -> void:
 	if shown < list.size():
 		_hover_layer.draw_string(_font, Vector2(r.position.x + PAD * 0.6, r.end.y - 8),
 				"…另有 %d 件，点「道具 %d」看完整详情" % [list.size() - shown, list.size()],
-				HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, UiTheme.FS_CAPTION, Color("c8951c"))
+				HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, UiTheme.FS_CAPTION, UiTheme.ACCENT_GOLD)
 	elif _need_detail():
 		_hover_layer.draw_string(_font, Vector2(r.position.x + PAD * 0.6, r.end.y - 8),
 				"点「道具 %d」看完整详情（字号更大）" % list.size(),
@@ -319,15 +319,15 @@ func _on_panel_draw() -> void:
 	var px: float = L["px"]
 	var py: float = L["py"]
 	# 面板不压暗背景（与 DeckViewer 同款）
-	_panel.draw_rect(Rect2(px, py, PANEL_W, PANEL_H), Color("f5f2ea"))
-	_panel.draw_rect(Rect2(px, py, PANEL_W, PANEL_H), Color("555555"), false, 2.0)
+	_panel.draw_rect(Rect2(px, py, PANEL_W, PANEL_H), UiTheme.PAPER)
+	_panel.draw_rect(Rect2(px, py, PANEL_W, PANEL_H), UiTheme.INK_600, false, 2.0)
 	_panel.draw_string(_font_bold, Vector2(px + PAD, py + 40),
 			"我的道具（共 %d 件 · 完整效果 · 滚轮翻页 · 点击任意处关闭）" % n,
-			HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - PAD * 2.0, UiTheme.FS_SUBHEAD, Color("333333"))
+			HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - PAD * 2.0, UiTheme.FS_SUBHEAD, UiTheme.INK_800)
 	if n == 0:
 		_panel.draw_string(_font, Vector2(px + PAD, py + 96),
 				"还没有获得任何道具。",
-				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_BODY, Color("888888"))
+				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_BODY, UiTheme.INK_500)
 		return
 	var grid_y: float = L["grid_y"]
 	var view_rows: int = L["view_rows"]
@@ -360,7 +360,7 @@ func _on_panel_draw() -> void:
 	if max_scroll > 0:
 		_panel.draw_string(_font, Vector2(px + PANEL_W - 220, py + PANEL_H - 14),
 				"第 %d/%d 屏" % [skip + 1, max_scroll + 1],
-				HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_CAPTION, Color("888888"))
+				HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_CAPTION, UiTheme.INK_500)
 
 
 func _tag_of(e: Dictionary) -> String:
