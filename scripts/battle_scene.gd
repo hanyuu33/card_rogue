@@ -6090,8 +6090,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var fp_col := COL_FIELD_PERSIST if fp_persist else (
 					COL_FIELD_SELF if str(data.get("side", GameEngine.SIDE_SELF)) == GameEngine.SIDE_SELF
 					else COL_FIELD_FOE)
+			# R116：亡语落下的陷阱（捕兽大师 9126）飘字区分一下 —— 否则玩家会以为
+			# 是自己什么时候放的。同一个 `field_place` 事件，靠 `deathrattle` 标记分流。
+			var fp_text := "持续生效" if fp_persist else "场地就位"
+			if bool(data.get("deathrattle", false)):
+				fp_text = "亡语 · 陷阱就位"
 			_floaters.append({"pos": fp_pos + Vector2(0, -6),
-					"text": "持续生效" if fp_persist else "场地就位",
+					"text": fp_text,
 					"col": fp_col, "start": n, "dur": 1200, "size": 15})
 			_bursts.append({"pos": fp_pos, "start": n, "dur": 420,
 				"col": fp_col, "big": false})

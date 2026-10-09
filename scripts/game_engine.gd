@@ -622,6 +622,15 @@ const MASS_TRAP_DMG:= 12
 const DARK_TRAP_ID:= 8063
 const DARK_TRAP_TRAIT:= "黑暗陷阱"
 const DARK_TRAP_DEBUFF:= 1      # 本回合攻击时力量 -1
+
+# ---- R116（2026-10-09）捕兽大师 9126 ----
+# 捕兽大师（9126 盟友，暗影刺客·**史诗**）：3 费 2/8 程1 速1。
+#   **亡语：在原地留下一张随机陷阱。**
+# * 「随机陷阱」= 本角色奖励池里的**一次性场地**（唯一口 `_trap_card_pool`）；
+#   与「双重场地」9108 / 机关工坊 8015 同一来源。判据**不写死卡名 / id** ——
+#   往后加新陷阱、或给别的角色加陷阱，这里一行都不用改。
+# * 原地已有场地效果时**不覆盖**（那张多半是玩家自己埋的）→ 见 `_deathrattle_place_trap`。
+const TRAPPER_ID:= 9126
 # 活体栅栏（8018 工事，R54）：2 费稀有；2/8/1。可攻击的【栅栏】类工事（带 FENCE_TRAIT，
 #   可参与「叠栅栏」）；本身无其它特殊机制。
 const LIVING_FENCE_ID:= 8018
@@ -6403,6 +6412,9 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 			action.emit("deathrattle", {"cell": cell, "card": p.card, "kind": "summon"})
 		MECH_ID:
 			_death_wipe(cell, MECH_DMG, p.card)
+		TRAPPER_ID:
+			# R116 捕兽大师：在原地留下一张随机陷阱（唯一口见该函数）
+			_deathrattle_place_trap(cell, p)
 		_:
 			pass
 
@@ -6444,6 +6456,30 @@ func _can_hold(cell: Vector2i, side: String) -> bool:
 	if state.board.has(cell):
 		return false
 	return cell.x != forbidden_row_for(side)
+
+
+func _deathrattle_place_trap(cell: Vector2i, p: Placement) -> void :
+	## 捕兽大师（9126，R116）亡语：**在原地**留下一张随机陷阱。
+	## 来源与「双重场地」9108 / 机关工坊 8015 同一个池（唯一口 `_trap_card_pool`）；
+	## 随机走引擎 rng → 回放同种子可复现。
+	## ⚠️ 原地**已有场地效果就不覆盖** —— 那张很可能是玩家自己精心埋的陷阱，
+	##    覆盖掉等于把「亡语」打成了负收益。卡面已写明这一条。
+	## ⚠️ 刻意**不查 `field_place_allowed`**：口径是「**在原地**」，哪怕它死在我方后排
+	##    （row 5 —— 敌人永远走不到，这张陷阱够不着）也照放。挪一格会让玩家困惑
+	##    「我的陷阱怎么跑那边去了」；而「把捕兽大师停在后排」是玩家自己的选择。
+	if state.field_at(cell) != null:
+		_log("捕兽大师亡语：原地已有场地「%s」，不再覆盖"
+				% str(state.field_at(cell).card_name))
+		return
+	var pool := _trap_card_pool(p.owner)
+	if pool.is_empty():
+		_log("捕兽大师亡语：奖励池里没有陷阱可放")
+		return
+	var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
+	state.set_field(pick, cell, p.owner)
+	_log("捕兽大师亡语：在原地留下陷阱「%s」（%s）" % [pick.card_name, cell])
+	action.emit("field_place", {"cell": cell, "card": pick, "side": p.owner,
+			"replaced": false, "deathrattle": true})
 
 
 func _death_wipe(center: Vector2i, amount: int, card: CardData) -> void :
@@ -7216,6 +7252,34 @@ func _field_mastery(field_side: String, field_card: CardData) -> int:
 	return 0
 
 
+func _field_card_pool(side: String) -> Array[CardData]:
+	## **「本角色奖励池里的场地卡」的唯一口**（R116 抽出）。
+	## 原先有 4 处各抄了一份同样的三行：机关工坊 8015 供牌 / 警觉 9109 取场地 /
+	## 双重场地 9108 连锁 / 捕兽大师 9126 亡语 —— 加新角色或改池子口径时极易漏改。
+	## `side == SIDE_SELF` 取**当前角色**；敌方侧退化为**完整奖励池**
+	## （敌方正常拿不到这些卡，这是既有口径）。
+	## ⚠️ 返回的是**卡库共享实例** —— 进手前必须 `CardData.from_dict(...)` 复制；
+	##    落格子那条路安全（`FieldState.set_field` 内部已复制）。
+	var pool: Array[CardData] = []
+	var cid := RunState.player_class if side == SIDE_SELF else ""
+	for c: CardData in CardRepo.load_json().reward_pool_for(cid):
+		if c.is_field():
+			pool.append(c)
+	return pool
+
+
+func _trap_card_pool(side: String) -> Array[CardData]:
+	## `_field_card_pool` 里**只留一次性触发的陷阱**（R116，捕兽大师 9126 用）。
+	## 判据 = `_field_kind(c) != ""` —— 「是不是陷阱」这件事**只有 `_field_kind` 说了算**
+	## （它列出的那 7 个 trait 就是引擎认的 7 张陷阱），持续型场地（清泉 / 维修间 /
+	## 改造工厂）自然落空。**别再按卡名 / kind 自己判一遍**（两处判据迟早会分叉）。
+	var out: Array[CardData] = []
+	for c: CardData in _field_card_pool(side):
+		if _field_kind(c) != "":
+			out.append(c)
+	return out
+
+
 func _field_block_index(path: Array[Vector2i]) -> int:
 	## **场地「经过即触发 + 立刻停止」的落点计算唯一口**（R80）。
 	## 沿移动路径逐格找**第一个**挂着场地效果的格子，返回它在 path 里的下标；
@@ -7549,12 +7613,9 @@ func _workshop_supply(side: String) -> void :
 			workshops += 1
 	if workshops <= 0:
 		return
-	var pool: Array[CardData] = []
-	var cid := RunState.player_class if side == SIDE_SELF else ""
 	# R76：供给口径从「工事」改成「场地」（机关工坊本身仍是工事，只是它造的是场地）。
-	for c: CardData in CardRepo.load_json().reward_pool_for(cid):
-		if c.is_field():
-			pool.append(c)
+	# R116：池子构造抽成唯一口 `_field_card_pool`（原先 4 处各抄一份）。
+	var pool := _field_card_pool(side)
 	if pool.is_empty():
 		_log("机关工坊：奖励池中没有场地卡")
 		return
@@ -7880,12 +7941,8 @@ func _alertness(side: String) -> String:
 		_log("警觉：手牌已满（%d 张），场地卡无法加入" % FieldState.HAND_LIMIT)
 		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
 		return "（警觉：手牌已满）"
-	var pool: Array[CardData] = []
-	var cid := RunState.player_class if side == SIDE_SELF else ""
-	# R77：取「场地」而不是「工事」
-	for c: CardData in CardRepo.load_json().reward_pool_for(cid):
-		if c.is_field():
-			pool.append(c)
+	# R77：取「场地」而不是「工事」；R116：池子构造走唯一口 `_field_card_pool`
+	var pool := _field_card_pool(side)
 	if pool.is_empty():
 		return "（警觉：奖励池中没有场地卡）"
 	var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
@@ -7953,11 +8010,7 @@ func _twin_field_chain(cell: Vector2i, owner_side: String) -> void :
 	if marked <= 0:
 		return
 	state.field_chains.erase(cell)
-	var pool: Array[CardData] = []
-	var cid := RunState.player_class if owner_side == SIDE_SELF else ""
-	for c: CardData in CardRepo.load_json().reward_pool_for(cid):
-		if c.is_field():
-			pool.append(c)
+	var pool := _field_card_pool(owner_side)
 	if pool.is_empty():
 		_log("双重场地：奖励卡池里没有场地卡")
 		return

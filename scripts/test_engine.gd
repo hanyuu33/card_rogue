@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 198,
-			"图鉴 = 163 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤**；实际 %d）"
+	check(repo.all_cards().size() == 199,
+			"图鉴 = 199 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 161 and grp_enemy.size() == 37,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 161 / 37）"
+	check(grp_player.size() == 162 and grp_enemy.size() == 37,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 162 / 37）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -164,8 +164,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 141,
-			"奖励池 128 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池**；实际 %d）"
+	check(pool.size() == 142,
+			"奖励池 142 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -6098,10 +6098,10 @@ func _init() -> void:
 			"角色系统：非敌方卡 class 都在可选角色内、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
-			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 54
+			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 55
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
 			and int(dr_cls_count.get("敌人", 0)) == 37,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 54 / 36 / 37）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 55 / 36 / 37）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -6359,7 +6359,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 141, "R45+R50~R57：扩展全部进奖励池（总池 139，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 142, "R45+R50~R57：扩展全部进奖励池（总池 142，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -6664,7 +6664,7 @@ func _init() -> void:
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
 	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 71
-			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 54,
+			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 55,
 			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
@@ -6736,7 +6736,7 @@ func _init() -> void:
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
 			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法师）")
-	check(r47_dr.size() == 60 and r47_rg.size() == 51
+	check(r47_dr.size() == 60 and r47_rg.size() == 52
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
 			"奖励池过滤：森林精魄 %d 张 / 暗影刺客 %d 张（两者之和 + 机械之心 %d = 完整池 %d）"
@@ -13166,6 +13166,113 @@ func _init() -> void:
 		"R111 暗杀者 AI：闪现后打了树人（8 → %d 血）" % r111_tg.health)
 	check(r111_pg.state.hp_self == 20,
 		"R111 暗杀者 AI：全程**不打我方 HP**（仍 %d）" % r111_pg.state.hp_self)
+
+	# ---- R116：捕兽大师 9126（暗影刺客史诗盟友 3 费 2/8）+ 亡语「原地留下一个随机陷阱」----
+	var r116_saved_cls: String = RunState.player_class
+	var r116_repo := CardRepo.load_json()
+	# 「是不是陷阱」的判据借引擎自己的 `_field_kind()`（唯一口）——
+	# 测试里**不再抄一份 trait 列表**，否则两处判据迟早在某次加卡后分叉。
+	var r116_judge := _new_engine([], 20, 20, -1, false)
+	var r116_c := r116_repo.get_card(9126)
+	check(r116_c != null and r116_c.card_name == "捕兽大师" and r116_c.kind == "盟友"
+			and r116_c.cost == 3 and r116_c.power == 2 and r116_c.health == 8
+			and r116_c.attack_range == 1 and r116_c.move_speed == 1
+			and r116_c.rarity == 2 and r116_c.group == "player"
+			and r116_c.card_class == "暗影刺客",
+		"R116 捕兽大师 9126：3 费**史诗**盟友 2/8/1/1，暗影刺客（实际 %s %d费 %d/%d/%d/%d 稀有度%d）"
+		% [r116_c.card_name, r116_c.cost, r116_c.power, r116_c.health,
+			r116_c.attack_range, r116_c.move_speed, r116_c.rarity])
+	check(r116_c != null and r116_c.traits.has("亡语") and r116_c.affixes.has("死亡"),
+		"R116 捕兽大师：trait「亡语」+ 字段「死亡」（%s / %s）"
+		% [str(r116_c.traits), str(r116_c.affixes)])
+	var r116_in_rogue := 0
+	for c1: CardData in r116_repo.reward_pool_for("暗影刺客"):
+		if c1.id == 9126:
+			r116_in_rogue += 1
+	var r116_in_druid := 0
+	for c2: CardData in r116_repo.reward_pool_for("森林精魄"):
+		if c2.id == 9126:
+			r116_in_druid += 1
+	check(r116_in_rogue == 1 and r116_in_druid == 0,
+		"R116 捕兽大师：进暗影刺客奖励池、不进森林精魄池（%d / %d）"
+		% [r116_in_rogue, r116_in_druid])
+	# 「陷阱」= 本角色池里的**一次性**场地：森林精魄只有持续型「清泉」→ 池子必须为空
+	var r116_druid_traps: Array = []
+	for c3: CardData in r116_repo.reward_pool_for("森林精魄"):
+		if c3.is_field() and r116_judge._field_kind(c3) != "":
+			r116_druid_traps.append(c3.id)
+	check(r116_druid_traps.is_empty(),
+		"R116 陷阱判据：森林精魄池里没有一次性陷阱（清泉是持续型场地，实际 %s）"
+		% str(r116_druid_traps))
+	var r116_rogue_traps: Array = []
+	for c4: CardData in r116_repo.reward_pool_for("暗影刺客"):
+		if c4.is_field() and r116_judge._field_kind(c4) != "":
+			r116_rogue_traps.append(c4.id)
+	check(r116_rogue_traps.size() == 7,
+		"R116 陷阱判据：暗影刺客池里正好 7 张一次性陷阱（实际 %d 张 %s）"
+		% [r116_rogue_traps.size(), str(r116_rogue_traps)])
+
+	# ① 亡语落地：死在空格 → 原地出现一张陷阱，归属跟着单位走
+	RunState.player_class = "暗影刺客"
+	var r116_e := _new_engine([], 20, 20, -1, false)
+	r116_e.rng.seed = 20261009
+	r116_e.state.place(CardData.from_dict(r116_c.to_dict()), Vector2i(3, 1), GameEngine.SIDE_SELF)
+	var r116_disc0: int = r116_e.state.discard.size()
+	r116_e._destroy(Vector2i(3, 1))
+	var r116_f: CardData = r116_e.state.field_at(Vector2i(3, 1))
+	check(r116_e.state.unit_at(Vector2i(3, 1)) == null,
+		"R116 亡语：捕兽大师已离场（原地不再有单位）")
+	check(r116_f != null and r116_f.is_field() and r116_e._field_kind(r116_f) != "",
+		"R116 亡语：原地留下了一张陷阱（实际 %s）"
+		% (str(r116_f.card_name) if r116_f != null else "null"))
+	check(r116_f != null and [8011, 8012, 8013, 8014, 8016, 8017, 8063].has(r116_f.id),
+		"R116 亡语：留下的属于本角色那 7 张陷阱之一（实际 id=%s —— 加新陷阱要同步这条）"
+		% (str(r116_f.id) if r116_f != null else "null"))
+	check(str(r116_e.state.field_owner.get(Vector2i(3, 1), "")) == GameEngine.SIDE_SELF,
+		"R116 亡语：陷阱归属 = 该单位的所有方（我方）")
+	check(r116_e.state.discard.size() == r116_disc0 + 1,
+		"R116 亡语：捕兽大师本体照常进弃牌区（%d → %d）"
+		% [r116_disc0, r116_e.state.discard.size()])
+
+	# ② 随机走引擎 rng → 同种子同结果（回放可复现）
+	var r116_e2 := _new_engine([], 20, 20, -1, false)
+	r116_e2.rng.seed = 20261009
+	r116_e2.state.place(CardData.from_dict(r116_c.to_dict()), Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r116_e2._destroy(Vector2i(3, 1))
+	var r116_f2: CardData = r116_e2.state.field_at(Vector2i(3, 1))
+	check(r116_f2 != null and r116_f != null and r116_f2.id == r116_f.id,
+		"R116 亡语：随机取陷阱走引擎 rng → 同种子同结果（%s vs %s）"
+		% [str(r116_f.id if r116_f != null else -1), str(r116_f2.id if r116_f2 != null else -1)])
+
+	# ③ 原地已有场地效果 → **不覆盖**（那张多半是玩家自己埋的陷阱）
+	var r116_e3 := _new_engine([], 20, 20, -1, false)
+	r116_e3.rng.seed = 20261009
+	r116_e3.state.place(CardData.from_dict(r116_c.to_dict()), Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r116_e3.state.set_field(r116_repo.get_card(8011), Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r116_e3._destroy(Vector2i(3, 1))
+	var r116_f3: CardData = r116_e3.state.field_at(Vector2i(3, 1))
+	check(r116_f3 != null and r116_f3.id == 8011,
+		"R116 亡语：原地已有场地时不覆盖（仍是爆炸陷阱 8011，实际 %s）"
+		% (str(r116_f3.card_name) if r116_f3 != null else "null"))
+
+	# ④ 敌方侧的捕兽大师同样留陷阱（走完整奖励池，归属 = 该单位所有方）
+	var r116_e4 := _new_engine([], 20, 20, -1, false)
+	r116_e4.rng.seed = 20261009
+	r116_e4.state.place(CardData.from_dict(r116_c.to_dict()), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r116_e4._destroy(Vector2i(2, 1))
+	var r116_f4: CardData = r116_e4.state.field_at(Vector2i(2, 1))
+	check(r116_f4 != null and r116_e4._field_kind(r116_f4) != ""
+			and str(r116_e4.state.field_owner.get(Vector2i(2, 1), "")) == GameEngine.SIDE_OPPONENT,
+		"R116 亡语：敌方侧的捕兽大师也留陷阱，且归属 = 敌方")
+
+	# ⑤ 角色池里没有一次性陷阱时（森林精魄只有持续型「清泉」）→ 什么都不落
+	RunState.player_class = "森林精魄"
+	var r116_e5 := _new_engine([], 20, 20, -1, false)
+	r116_e5.state.place(CardData.from_dict(r116_c.to_dict()), Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r116_e5._destroy(Vector2i(3, 1))
+	check(r116_e5.state.field_at(Vector2i(3, 1)) == null,
+		"R116 亡语：池里没有一次性陷阱时不落空（持续型场地不算陷阱）")
+	RunState.player_class = r116_saved_cls
 
 	RunState.player_class = r91_saved_cls
 

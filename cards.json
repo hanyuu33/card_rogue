@@ -4052,6 +4052,29 @@
       "value": 3,
       "color": "黑",
       "image": ""
+    },
+    {
+      "id": 9126,
+      "name": "捕兽大师",
+      "kind": "盟友",
+      "cost": 3,
+      "power": 2,
+      "health": 8,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 2,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [
+        "亡语"
+      ],
+      "affixes": [
+        "死亡"
+      ],
+      "effect_text": "亡语：在原地留下一个**随机陷阱**（该格已有场地效果时不覆盖）。",
+      "target_mode": "none",
+      "color": "黑",
+      "image": ""
     }
   ]
 }
