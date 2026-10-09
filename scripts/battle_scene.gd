@@ -387,6 +387,22 @@ func _ready() -> void:
 		status_text = "三张新卡：协同攻击（2 盟友 → 费用 3→1，绿色）+ 森林守护（绿环）"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--trapper" in args and engine != null:
+		# 演示（R116）：捕兽大师 9126 的**亡语** —— 先上场、再当场打死它 →
+		# 它倒下的那一格变成一张**随机陷阱**（斜纹格 + 角标）。
+		# ⚠️ 必须先把角色设成暗影刺客：陷阱池按 `RunState.player_class` 取
+		#    （捕兽大师本身就是暗影刺客卡，实战里天然成立；裸跑战斗演示时要显式设）。
+		RunState.player_class = "暗影刺客"
+		engine.state.hand.clear()
+		engine.state.hand.append(repo.get_card(GameEngine.TRAPPER_ID))
+		engine.state.energy = 5
+		engine.state.place(repo.get_card(GameEngine.TRAPPER_ID), Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine._destroy(Vector2i(4, 1))
+		_hover_hand = 0
+		_hover_card = engine.state.hand[0]
+		status_text = "R116：捕兽大师亡语 → 在原地留下一张随机陷阱（斜纹格；原地已有场地则不覆盖）"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--xtext" in args and engine != null:
 		# 演示（2026-10-01）：长描述效果卡。
 		# 悬停最长的那张（空间守护 9064）→ 左栏信息面板用于像素级核验「长描述不溢出」。
