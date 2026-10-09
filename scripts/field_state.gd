@@ -148,10 +148,13 @@ func draw() -> CardData:
 	if deck.is_empty():
 		return null
 	var card: CardData = deck.pop_back()
-	# 「按张记账」的卡（陨石术「留手」/ 魔像术「魔像」）：抽到的这一张换成独立副本，
+	# 「按张记账」的卡（陨石术「留手」/ 魔像术「魔像」）：**第一次**抽到换成独立副本，
 	# 否则同名卡共享库内实例 → 一张的减费会串到卡组里其它同名卡上（见 GameEngine 的实例级减费）。
-	if _needs_own_instance(card):
+	# R123：副本离开手卡再抽回来**不再换新副本**（own_copy 已标记）——
+	# 否则实例级永久减费（陨石术「每用一张技能 -1」）会在每次循环后静默归零。
+	if _needs_own_instance(card) and not card.own_copy:
 		card = CardData.from_dict(card.to_dict())
+		card.own_copy = true
 	hand.append(card)
 	return card
 

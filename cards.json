@@ -7,7 +7,7 @@
       "name": "铁壁卫兵",
       "kind": "盟友",
       "cost": 4,
-      "power": 4,
+      "power": 3,
       "health": 40,
       "attack_range": 1,
       "move_speed": 1,
@@ -22,7 +22,7 @@
       "affixes": [
         "嘲讽"
       ],
-      "effect_text": "嘲讽：敌方单位必须优先攻击它。这张卡登场时攻击力 -1，之后每 2 个回合 +1，最多累计 +4。",
+      "effect_text": "嘲讽：敌方单位必须优先攻击它。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "白",
       "image": ""
@@ -32,7 +32,7 @@
       "name": "灰烬龙",
       "kind": "盟友",
       "cost": 7,
-      "power": 9,
+      "power": 6,
       "health": 45,
       "attack_range": 1,
       "move_speed": 2,
@@ -46,7 +46,7 @@
       "affixes": [
         "疾行"
       ],
-      "effect_text": "登场：对所有敌方单位造成 4 点伤害。每回合可以行动两次。这张卡登场时攻击力 -3，之后每 2 个回合 +1，最多累计 +4。",
+      "effect_text": "登场：对所有敌方单位造成 4 点伤害。每回合可以行动两次。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "actions": 2,
       "color": "红",
@@ -57,7 +57,7 @@
       "name": "幼龙",
       "kind": "盟友",
       "cost": 5,
-      "power": 6,
+      "power": 5,
       "health": 25,
       "attack_range": 2,
       "move_speed": 1,
@@ -71,7 +71,7 @@
       "affixes": [
         "死亡"
       ],
-      "effect_text": "亡语：召唤一只龙裔。这张卡登场时攻击力 -1，之后每 2 个回合 +1，最多累计 +4。",
+      "effect_text": "亡语：召唤一只龙裔。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "红",
       "image": ""
@@ -81,7 +81,7 @@
       "name": "冰冻术士",
       "kind": "盟友",
       "cost": 5,
-      "power": 5,
+      "power": 4,
       "health": 24,
       "attack_range": 3,
       "move_speed": 1,
@@ -92,7 +92,7 @@
         "法师",
         "战吼"
       ],
-      "effect_text": "登场：冰封一个敌方单位，使其下回合无法行动。这张卡登场时攻击力 -1，之后每 2 个回合 +1，最多累计 +4。",
+      "effect_text": "登场：冰封一个敌方单位，使其下回合无法行动。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "蓝",
       "image": ""
@@ -102,7 +102,7 @@
       "name": "腐化尸鬼",
       "kind": "盟友",
       "cost": 3,
-      "power": 5,
+      "power": 4,
       "health": 18,
       "attack_range": 1,
       "move_speed": 2,
@@ -116,7 +116,7 @@
       "affixes": [
         "死亡"
       ],
-      "effect_text": "亡语：对敌方 HP 造成 5 点伤害。这张卡登场时攻击力 -1，之后每 2 个回合 +1，最多累计 +4。",
+      "effect_text": "亡语：对敌方 HP 造成 5 点伤害。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "黑",
       "image": ""
@@ -126,7 +126,7 @@
       "name": "亡灵领主",
       "kind": "盟友",
       "cost": 8,
-      "power": 8,
+      "power": 5,
       "health": 55,
       "attack_range": 1,
       "move_speed": 2,
@@ -142,7 +142,7 @@
         "疾行",
         "死亡"
       ],
-      "effect_text": "亡语：召唤两只骷髅。每回合可以行动两次。这张卡登场时攻击力 -3，之后每 2 个回合 +1，最多累计 +4。",
+      "effect_text": "亡语：召唤两只骷髅。每回合可以行动两次。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "actions": 2,
       "color": "黑",
@@ -153,7 +153,7 @@
       "name": "骷髅兵",
       "kind": "盟友",
       "cost": 2,
-      "power": 3,
+      "power": 2,
       "health": 10,
       "attack_range": 1,
       "move_speed": 1,
@@ -163,7 +163,7 @@
       "traits": [
         "亡灵"
       ],
-      "effect_text": "这张卡登场时攻击力 -1，之后每 2 个回合 +1，最多累计 +4。",
+      "effect_text": "关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "黑",
       "image": ""
@@ -173,7 +173,7 @@
       "name": "骷髅兵",
       "kind": "盟友",
       "cost": 3,
-      "power": 4,
+      "power": 3,
       "health": 14,
       "attack_range": 1,
       "move_speed": 1,
@@ -187,7 +187,7 @@
       "affixes": [
         "死亡"
       ],
-      "effect_text": "亡语：召唤一只骷髅。这张卡登场时攻击力 -1，之后每 2 个回合 +1，最多累计 +4。",
+      "effect_text": "亡语：召唤一只骷髅。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "黑",
       "image": ""
@@ -197,7 +197,7 @@
       "name": "骷髅兵",
       "kind": "盟友",
       "cost": 3,
-      "power": 3,
+      "power": 2,
       "health": 28,
       "attack_range": 1,
       "move_speed": 1,
@@ -212,7 +212,7 @@
       "affixes": [
         "嘲讽"
       ],
-      "effect_text": "嘲讽：敌方单位必须优先攻击它。这张卡登场时攻击力 -1，之后每 2 个回合 +1，最多累计 +4。",
+      "effect_text": "嘲讽：敌方单位必须优先攻击它。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "黑",
       "image": ""
@@ -222,7 +222,7 @@
       "name": "爆裂机甲",
       "kind": "盟友",
       "cost": 6,
-      "power": 7,
+      "power": 4,
       "health": 30,
       "attack_range": 2,
       "move_speed": 1,
@@ -236,7 +236,7 @@
       "affixes": [
         "死亡"
       ],
-      "effect_text": "亡语：对场上其它所有单位造成 8 点伤害，不分敌我。这张卡登场时攻击力 -3，之后每 2 个回合 +1，最多累计 +4。",
+      "effect_text": "亡语：对场上其它所有单位造成 8 点伤害，不分敌我。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "黄",
       "image": ""
@@ -246,7 +246,7 @@
       "name": "熔岩巨人",
       "kind": "盟友",
       "cost": 9,
-      "power": 12,
+      "power": 9,
       "health": 70,
       "attack_range": 1,
       "move_speed": 2,
@@ -260,7 +260,7 @@
       "affixes": [
         "疾行"
       ],
-      "effect_text": "无法被法术指定为目标。每回合可以行动两次。这张卡登场时攻击力 -3，之后每 2 个回合 +1，最多累计 +4。",
+      "effect_text": "无法被法术指定为目标。每回合可以行动两次。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "actions": 2,
       "color": "红",

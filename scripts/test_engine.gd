@@ -2332,7 +2332,7 @@ func _init() -> void:
 	kk_e2.attack(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
 	check(kk_plain.atk_buff == 0, "鸭子骑士：没有骑士词条的普通单位击杀不成长")
 
-	# ---- 二层关卡成长曲线（低开高走：开局削攻击力，每 2 回合 +1，最多 +4）----
+	# ---- 二层关卡成长曲线（低开高走：开局 0 层，每 2 回合 +1，最多 +4；R123 起始力量在卡面）----
 	var gl_frost := _level_named("寒冰防线")
 	check(gl_frost.has("enemy_growth")
 			and int((gl_frost["enemy_growth"] as Dictionary).get("cap", 0)) == 4,
@@ -2344,13 +2344,13 @@ func _init() -> void:
 	check(not gl_l1.has("enemy_growth"), "一层关卡不带成长曲线")
 	var gl_e := _new_engine([], 20, 20, -1, false)
 	gl_e.start_game(0)
-	gl_e.state.place(repo.get_card(1011), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)   # 铁壁卫兵 4 攻
-	gl_e.state.place(repo.get_card(1071), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)   # 熔岩巨人 12 攻
+	gl_e.state.place(repo.get_card(1011), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)   # 铁壁卫兵 3 攻
+	gl_e.state.place(repo.get_card(1071), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)   # 熔岩巨人 9 攻
 	gl_e.configure_growth(GameLevels.LAYER2_GROWTH)
 	check(gl_e.state.unit_at(Vector2i(2, 1)).effective_power() == 3,
-			"成长曲线：杂兵（4 攻）开局 -1 → 3")
+			"成长曲线：杂兵（卡面 3 攻，R123 无开局修正）→ 3")
 	check(gl_e.state.unit_at(Vector2i(1, 1)).effective_power() == 9,
-			"成长曲线：强力怪（12 攻）开局 -3 → 9")
+			"成长曲线：强力怪（卡面 9 攻，R123 无开局修正）→ 9")
 	gl_e.turn_number = 2
 	gl_e._tick_enemy_growth()
 	check(gl_e._growth_stacks == 1
@@ -2380,8 +2380,8 @@ func _init() -> void:
 	var gl_mine := gl_e2.state.place(repo.get_card(1011), Vector2i(4, 1),
 			GameEngine.SIDE_SELF)
 	gl_e2.configure_growth(GameLevels.LAYER2_GROWTH)
-	check(gl_mine.atk_growth == 0 and gl_mine.effective_power() == 4,
-			"成长曲线：只削敌方，我方单位攻击力不变")
+	check(gl_mine.atk_growth == 0 and gl_mine.effective_power() == 3,
+			"成长曲线：只削敌方，我方单位攻击力不变（卡面 3）")
 
 	# 斑鸠（9052）：1 费 1/1/1/1；本回合使用下一个盟友费用 -1（用掉即清零）
 	var nc_dove := repo.get_card(9052)
@@ -3195,15 +3195,18 @@ func _init() -> void:
 	eng_rice.end_turn()
 	check(eng_rice.turn_spell_bonus == 0,
 			"一袋米抗几楼：一轮结束（我方回合末）技能加成清零")
-	# 我方场上单位中招也算「受到伤害」（与鸭嘴 6006 的判据一致）
+	# R123：只有**我方 HP** 受伤才触发 —— 我方场上单位中招不算（与鸭梨 6019 同一口径）
 	var eng_rice2 := _new_engine(rice_deck, 20, 20, -1, false)
 	eng_rice2.self_relics = [6012]
 	eng_rice2.start_game()
 	var rice_p := eng_rice2.state.place(_card(8003, "农民", "盟友", 3, 3, 8),
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
 	eng_rice2._hit_unit(rice_p, 2, "测试")
+	check(eng_rice2.turn_spell_bonus == 0,
+			"R123 一袋米抗几楼：我方单位中招**不再**触发（HP 没掉）")
+	eng_rice2._damage_player(GameEngine.SIDE_SELF, 3, "测试")
 	check(eng_rice2.turn_spell_bonus == 1,
-			"一袋米抗几楼：我方单位中招同样算首次受伤")
+			"一袋米抗几楼：我方 HP 受伤才算首次受伤 → 技能 +1")
 	# 没有道具时不受影响
 	var eng_rice3 := _new_engine(rice_deck, 20, 20, -1, false)
 	eng_rice3.start_game()
@@ -3212,6 +3215,68 @@ func _init() -> void:
 	check(eng_rice3.turn_spell_bonus == 0
 			and eng_rice3.state.hand.size() == rice_hand3,
 			"一袋米抗几楼：未持有道具时受伤无任何加成")
+
+	# ---- R123：多格效果对同一方 HP 只结算一次（溢出也算）----
+	# 回旋斩 17 伤打穿两个 16 血的后排单位 → 各溢出 1 点；旧口径敌方 HP -2，新口径 -1。
+	var r123_wh := _new_engine([], 30, 30, -1, false)
+	r123_wh.start_game(0)
+	r123_wh.state.place(_card(8003, "脆皮", "盟友", 1, 1, 16, 1, 1),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r123_wh.state.place(_card(8003, "脆皮", "盟友", 1, 1, 16, 1, 1),
+			Vector2i(0, 2), GameEngine.SIDE_OPPONENT)
+	r123_wh.state.self_card_plays = GameEngine.WHIRL_BLADE_NEED
+	r123_wh.state.hand.clear()
+	r123_wh.state.hand.append(CardData.from_dict(repo.get_card(9096).to_dict()))
+	r123_wh.state.energy = 30
+	var r123_hp0 := r123_wh.state.hp_opponent
+	r123_wh.use_spell(0, Vector2i(0, 1))
+	check(r123_wh.state.hp_opponent == r123_hp0 - 1,
+			"R123 多格 HP：回旋斩打穿 2 个后排（各溢出 1）→ 敌方 HP 只吃一次（-1，实际 -%d）"
+					% (r123_hp0 - r123_wh.state.hp_opponent))
+	# 陨石术同理：空格直击 + 溢出共用同一次机会
+	var r123_mt := _new_engine([], 30, 500, -1, false)
+	r123_mt.start_game(0)
+	r123_mt.state.hp_opponent = 500
+	r123_mt.state.max_hp_opponent = 500
+	r123_mt.state.place(_card(8003, "脆皮", "盟友", 1, 1, 38, 1, 1),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r123_mt.state.hand.clear()
+	r123_mt.state.hand.append(CardData.from_dict(repo.get_card(9077).to_dict()))
+	r123_mt.state.energy = 30
+	var r123_mhp := r123_mt.state.hp_opponent
+	r123_mt.use_spell(0, Vector2i(0, 1))
+	check(r123_mt.state.hp_opponent == r123_mhp - 40,
+			"R123 多格 HP：陨石术直击 HP 40 + 溢出 2×2 → 只算最大的一次机会（-40，实际 -%d）"
+					% (r123_mhp - r123_mt.state.hp_opponent))
+
+	# ---- R123：陨石术永久减费离开手卡（打出 → 弃牌区 → 洗回 → 再抽到）不重置 ----
+	var r123_km_e := _new_engine([], 20, 20, -1, false)
+	r123_km_e.start_game(0)
+	r123_km_e.state.hand.clear()
+	r123_km_e.state.deck.clear()
+	r123_km_e.state.discard.clear()
+	r123_km_e.state.deck.append(repo.get_card(9077))   # 牌库里是共享实例
+	var r123_km: CardData = r123_km_e.state.draw()
+	check(r123_km != null and r123_km.own_copy,
+			"R123：陨石术第一次抽到换成独立副本（own_copy）")
+	r123_km_e.state.hand.append(repo.get_card(8002))
+	r123_km_e.state.energy = 30
+	r123_km_e.use_spell(1, null)
+	check(r123_km_e.cost_of(r123_km) == 9, "陨石术：用一张技能 → 9 费")
+	r123_km_e.use_spell(0, Vector2i(2, 1))   # 打出陨石术本身 → 进弃牌区
+	check(r123_km_e.state.discard.has(r123_km), "陨石术：打出后进弃牌区")
+	r123_km_e.state.deck = r123_km_e.state.discard.duplicate()
+	r123_km_e.state.discard.clear()
+	var r123_km2: CardData = r123_km_e.state.draw()
+	check(r123_km2 == r123_km,
+			"R123：再抽到的是**同一张实例**（不再换新副本）")
+	check(r123_km_e.cost_of(r123_km2) == 9,
+			"R123 陨石术：离开手卡再抽回来，减费不重置（仍 9，旧口径会回到 10）")
+	r123_km_e.state.hand.append(repo.get_card(8002))
+	r123_km_e.state.energy = 30
+	r123_km_e.use_spell(1, null)
+	check(r123_km_e.cost_of(r123_km2) == 8,
+			"R123 陨石术：永久减费继续累加（9 → 8）")
 
 	# ---- 叠加态的鸭（6013）：HP 归零 → 复活（回复 1 点），概率每次 -25 ----
 	var duck_deck: Array[CardData] = []
@@ -4616,16 +4681,16 @@ func _init() -> void:
 	# 旧版怪物（1011~1071）复用进第二层：数值 + 嘲讽 / 战吼 / 亡语 / 法术免疫
 	# ============================================================
 	var om_repo := CardRepo.load_json()
-	var om_wall := om_repo.get_card(1011)      # 铁壁卫兵 4/40 嘲讽（2026-09-30 由 45 下调到 40）
-	check(om_wall != null and om_wall.power == 4 and om_wall.health == 40,
-			"铁壁卫兵 1011 → 4/40（二层坦克，HP 削弱到 40）")
-	var om_ash := om_repo.get_card(1013)       # 灰烬龙 9/45（2026-09-30 由 40 增强到 45）
-	check(om_ash != null and om_ash.power == 9 and om_ash.health == 45,
-			"灰烬龙 1013 → 9/45（HP 增强到 45）")
+	var om_wall := om_repo.get_card(1011)      # 铁壁卫兵 3/40 嘲讽（R123：开局 -1 直接写进力量）
+	check(om_wall != null and om_wall.power == 3 and om_wall.health == 40,
+			"铁壁卫兵 1011 → 3/40（二层坦克，R123 起始力量写在卡面）")
+	var om_ash := om_repo.get_card(1013)       # 灰烬龙 6/45（R123：开局 -3 直接写进力量）
+	check(om_ash != null and om_ash.power == 6 and om_ash.health == 45,
+			"灰烬龙 1013 → 6/45（R123 起始力量写在卡面）")
 	check(om_wall != null and om_wall.traits.has("嘲讽"), "铁壁卫兵带「嘲讽」trait")
 	var om_giant := om_repo.get_card(1071)     # 熔岩巨人 12/70 法术免疫
-	check(om_giant != null and om_giant.power == 12 and om_giant.health == 70,
-			"熔岩巨人 1071 → 12/70")
+	check(om_giant != null and om_giant.power == 9 and om_giant.health == 70,
+			"熔岩巨人 1071 → 9/70（R123 起始力量写在卡面）")
 	check(om_giant != null and om_giant.traits.has("法术免疫"), "熔岩巨人带「法术免疫」trait")
 	var om_cost_ok := true
 	for om_id in [1011, 1013, 1014, 1031, 1050, 1051, 1053, 1054, 1055, 1061, 1071]:
@@ -5693,19 +5758,19 @@ func _init() -> void:
 	check(int(L2G.get("start_turn", 0)) == 2 and int(L2G.get("period", 0)) == 2
 			and int(L2G.get("inc", 0)) == 1 and int(L2G.get("cap", 0)) == 4,
 			"二层成长脚本：第 2 回合起每 2 回合 +1、上限 +4（卡面文案按这套参数写）")
+	check(not L2G.has("mod_strong") and not L2G.has("mod_weak"),
+			"R123：成长脚本不再带开局削减（mod_strong / mod_weak 已删除）")
 	var dc_repo := CardRepo.load_json()
-	# 这 11 张 = 二层四关（带 enemy_growth）的全部敌方单位
+	# 这 11 张 = 二层四关（带 enemy_growth）的全部敌方单位（R123：力量 = 起始攻击力）
 	for gid in [1011, 1013, 1014, 1031, 1050, 1051, 1053, 1054, 1055, 1061, 1071]:
 		var gc: CardData = dc_repo.get_card(gid)
 		if gc == null:
 			check(false, "缺少二层怪物卡 id=%d" % gid)
 			continue
-		var strong_atk := int(L2G.get("strong_atk", 7))
-		var want_mod := int(L2G.get("mod_strong", 0)) if gc.power >= strong_atk\
-			else int(L2G.get("mod_weak", 0))
-		check(gc.effect_text.contains("攻击力 %d" % want_mod)
+		check(not gc.effect_text.contains("登场时攻击力 -")
 				and gc.effect_text.contains("最多累计 +%d" % int(L2G.get("cap", 0))),
-				"卡面写明成长参数：%s（基础攻击 %d → 开局 %+d）" % [gc.card_name, gc.power, want_mod])
+				"R123 卡面不再写开局削减、保留成长参数：%s（力量 %d）"
+						% [gc.card_name, gc.power])
 	# 召唤 token 会被同一条成长脚本改攻击力 → 召唤文案不再写死它的数值
 	var fledgling: CardData = dc_repo.get_card(1014)
 	check(fledgling.effect_text.contains("龙裔") and not fledgling.effect_text.contains("4/12"),
@@ -5845,7 +5910,7 @@ func _init() -> void:
 	eng_pear.attack_hp(Vector2i(4, 0), Vector2i(5, 0), GameEngine.SIDE_OPPONENT)
 	check(eng_pear.state.hp_self == 10 and eng_pear.state.max_hp_self == 23,
 			"鸭梨：敌方直击我方 HP 也算（生命 15→10，上限 22→23）")
-	# 关键边界：我方「单位」中招不算 —— 那不是我方 HP（区别于「一袋米抗几楼」）
+	# 关键边界：我方「单位」中招不算 —— 那不是我方 HP（R123 起与「一袋米抗几楼」同一口径）
 	var pear_before_max: int = eng_pear.state.max_hp_self
 	var pear_unit := eng_pear.state.place(_card(8001, "木栅栏", "工事", 2, 0, 6),
 			Vector2i(5, 1), GameEngine.SIDE_SELF)

@@ -78,6 +78,10 @@ var actions: int = 1
 var rarity: int = 0             # 0普通 1稀有 2史诗 3初始 4怪物 5事件
 var group: String = "player"
 var card_class: String = "森林精魄"
+## R123：「按张记账」的卡（留手 / 魔像）**第一次**抽到时已换成独立副本的标记
+## （见 FieldState.draw）。副本离开手卡（打出 → 弃牌区 → 洗回牌库 → 再抽到）沿用
+## 同一个对象 → 实例级**永久**减费（陨石术 9077）不再重置。
+var own_copy := false
 ## X 费卡（流星雨 9083）：费用 = 施放瞬间该方剩余的全部能量（一次性消耗），卡面显示「X」。
 var x_cost: bool = false
 ## **陷阱 / 场地的触发类型**（R84，**纯数据**）：「范围伤害」/「伤害·禁足」/「伤害·冰封」/
@@ -134,6 +138,7 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.upgrade_atk_bonus = int(d.get("upgrade_atk_bonus", 0))
 	c.upgrade_hp_bonus = int(d.get("upgrade_hp_bonus", 0))
 	c.field_heal = int(d.get("field_heal", 0))
+	c.own_copy = bool(d.get("own_copy", false))
 	# ⚠️ 数组字段**必须逐个 append**（不能直接接字典里那个 Array）：
 	# `from_dict` 只接引用的话，赋给场上那张副本后引擎往里 append 字段会
 	# **连带改到卡库**（MEMORY 里「from_dict 只复制壳」那个老坑）。
@@ -160,6 +165,8 @@ func to_dict() -> Dictionary:
 		# 改造 / 离场还原 / 联机序列化的统一通道，漏了它字段会静默归 0
 		#（持续型场地直接失效）。
 		"field_heal": field_heal,
+		# R123：独立副本标记随序列化走 —— 复制 / 离场还原之后减费记账仍跟着这一张。
+		"own_copy": own_copy,
 		# ⚠️ `affixes` 同样**必须**在这里 —— 漏了字段会静默清空
 		#（「这张卡被别的卡赋了疾行/幻影/护盾」的强化就没了）。
 		"affixes": affixes.duplicate(),

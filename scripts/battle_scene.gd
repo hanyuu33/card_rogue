@@ -23,16 +23,28 @@ const CARD_H := 76.0
 ##     横置卡数字互相压住**（用户实测反馈）。102 对 76 + 2×8.3 = 92.6 留 9px 余量。
 ##   · 纵边就是历史名 `CELL`，受「6 行要塞进工具栏(36)与手牌(619)之间」的硬约束，
 ##     只能到 90（GRID_H = 540，棋盘下沿仍是 592，手牌不变量因此完全不动）。
-const CELL_W := 102.0
-const CELL := 90.0
+## R123：格子整体放大 —— 棋盘格子区改成**可上下滚动**（滚轮 / 空格左键拖动），
+## 6 行内容不再受「必须塞进 540px」的约束：
+##   · 横向占满「效果区(398) → 右栏(776)」：左沿 404（效果区右沿 398 + 6px 间隙），
+##     右沿 404 + 372 = 776 —— 右栏（敌方效果区 / 敌方 HP / 道具栏 / 牌库）一像素不动；
+##   · 格子 102×90 → 124×110，战场卡随格子等比放大（BOARD_SCALE ≈ 1.216）；
+##   · 内容总高 6×110 = 660 超出可视窗 540 → 最多可下滚 120px（_grid_scroll_max）。
+const CELL_W := 124.0
+const CELL := 110.0
 const TAP_W := CARD_H
 const TAP_H := CARD_W
-## 棋盘整体右沿保持 R116 的 776（= 470 + 306）附近，于是右栏（敌方效果区 / 敌方 HP /
-## 道具栏 / 牌库）**一个像素都不用挪**；让出来的只有左侧那块原本 168px 的死白。
-const GRID_X := 470.0
+const GRID_X := 404.0
 const GRID_Y := 52.0
 const GRID_W := 3.0 * CELL_W
-const GRID_H := 6.0 * CELL
+const GRID_H := 540.0               # **可视窗**高度（下沿 592 不变；内容总高见下）
+const GRID_CONTENT_H := 6.0 * CELL  # 6 行内容的总高（超出可视窗 → 需要滚动）
+## 战场卡随格子等比放大（102 → 124 的比例）。
+const BOARD_SCALE := CELL_W / 102.0
+const BOARD_CARD_W := CARD_W * BOARD_SCALE
+const BOARD_CARD_H := CARD_H * BOARD_SCALE
+const BOARD_TAP_W := TAP_W * BOARD_SCALE
+const BOARD_TAP_H := TAP_H * BOARD_SCALE
+const GRID_SCROLL_STEP := 56.0      # 滚轮一步
 const COST_X := 310.0
 const COST_Y := GRID_Y
 const ENERGY_H := 96.0         # 左栏顶部能量面板高度（下面是效果区）
@@ -149,6 +161,13 @@ var _swap_src := Vector2i(-1, -1)
 ## 选中后要**点手牌**完成第二段 —— 靠这个变量标记「正在等玩家选手牌」。
 var _sys_upgrade_idx := -1
 var status_text := ""
+## R123：棋盘滚动偏移（0 .. _grid_scroll_max()）；滚轮 / 空格左键拖动改变它。
+var _grid_scroll := 0.0
+## 左键在棋盘**空格**上按下 → 可能是想拖动棋盘：先不上膛「取消」，拖过阈值才算滚动；
+## 松手时没拖过阈值就照常补发这次点击（保留原有点击语义）。
+var _grid_drag_arm := false
+var _grid_dragging := false
+var _grid_drag_pos := Vector2.ZERO
 var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本不覆盖
 ## R118：左键点「空位」**不再一步取消**。为 true = 本轮的第一次空位点击已经发生 ——
 ## 选区、绿色移动格、红色攻击格、深红 HP 格**全部原样保留**（于是这时点目标照样能打），
@@ -1923,7 +1942,14 @@ func _gui_input(event: InputEvent) -> void:
 			# 手牌按下：先不触发点击逻辑，等松手判定是点击还是拖拽
 			_press_idx = _hand_index_at(event.position)
 			_press_pos = event.position
-			if _press_idx < 0:
+			# R123：按下点在棋盘可视窗内的**空格**上（且当前没有选中单位 / 没上膛取消）
+			# → 先不立即结算点击，可能是想拖动棋盘；松手时没拖过阈值再补发这次点击。
+			_grid_drag_arm = _press_idx < 0 and _grid_scroll_max() > 0.0 \
+					and _cell_in_view(event.position) and _cell_at(event.position) == null \
+					and selection == null and not _cancel_armed
+			_grid_dragging = false
+			_grid_drag_pos = event.position
+			if _press_idx < 0 and not _grid_drag_arm:
 				_on_left_click(event.position)
 		else:
 			# 松手：拖拽中 → 落点结算；否则按点击处理
@@ -1931,7 +1957,17 @@ func _gui_input(event: InputEvent) -> void:
 				_finish_drag(event.position)
 			elif _press_idx >= 0:
 				_on_left_click(event.position)
+			elif _grid_drag_arm and not _grid_dragging:
+				_on_left_click(event.position)   # 没拖动 → 还是原来那下点击
+			_grid_drag_arm = false
+			_grid_dragging = false
 			_press_idx = -1
+		queue_redraw()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE:
+		# R123：中键按下 = 直接进入棋盘拖动（不用管点在空格还是单位上）
+		_grid_drag_arm = event.pressed and _cell_in_view(event.position)
+		_grid_dragging = false
+		_grid_drag_pos = event.position
 		queue_redraw()
 	elif event is InputEventMouseButton and event.pressed \
 			and (event.button_index == MOUSE_BUTTON_WHEEL_UP
@@ -1949,11 +1985,29 @@ func _gui_input(event: InputEvent) -> void:
 		if _relics_visible:
 			_relic_scroll += -34.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 34.0
 			queue_redraw()
+			return
+		# R123：棋盘可视窗内容超高 → 滚轮上下滚动
+		if _grid_scroll_max() > 0.0 and _cell_in_view(event.position):
+			_grid_scroll = clampf(_grid_scroll
+					+ (-GRID_SCROLL_STEP if event.button_index == MOUSE_BUTTON_WHEEL_UP
+							else GRID_SCROLL_STEP), 0.0, _grid_scroll_max())
+			queue_redraw()
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_RIGHT:
 		_on_right_click()
 		queue_redraw()
 	elif event is InputEventMouseMotion:
+		# R123：棋盘拖动滚动（空格左键 / 中键，拖过阈值生效；向上拖 = 内容上移）
+		if _grid_drag_arm and _drag_idx < 0:
+			if not _grid_dragging and event.position.distance_to(_grid_drag_pos) > DRAG_THRESHOLD:
+				_grid_dragging = true
+			if _grid_dragging:
+				_grid_scroll = clampf(
+						_grid_scroll - (event.position.y - _grid_drag_pos.y),
+						0.0, _grid_scroll_max())
+				_grid_drag_pos = event.position
+				queue_redraw()
+				return
 		if _press_idx >= 0 and _drag_idx < 0 \
 				and event.position.distance_to(_press_pos) > DRAG_THRESHOLD:
 			_start_drag(_press_idx, event.position)
@@ -2082,10 +2136,21 @@ func _hand_hit(i: int, pos: Vector2) -> bool:
 	return Rect2(_hand_rect(i).position, Vector2(HAND_CARD_W, HAND_CARD_H)).has_point(local)
 
 
+func _grid_scroll_max() -> float:
+	## R123：可滚动的最大距离（内容总高 - 可视窗高）。
+	return maxf(0.0, GRID_CONTENT_H - GRID_H)
+
+
+func _cell_in_view(pos: Vector2) -> bool:
+	## 这一点是否落在棋盘**可视窗**里（滚动手势与格子命中只认窗内）。
+	return Rect2(GRID_X, GRID_Y, GRID_W, GRID_H).has_point(pos)
+
+
 func _cell_at(pos: Vector2) -> Variant:
 	var c := int(floor((pos.x - GRID_X) / CELL_W))
-	var r := int(floor((pos.y - GRID_Y) / CELL))
-	if r >= 0 and r < FieldState.BOARD_ROWS and c >= 0 and c < FieldState.BOARD_COLS:
+	var r := int(floor((pos.y - GRID_Y + _grid_scroll) / CELL))
+	if r >= 0 and r < FieldState.BOARD_ROWS and c >= 0 and c < FieldState.BOARD_COLS \
+			and _cell_in_view(pos):
 		return Vector2i(r, c)
 	return null
 
@@ -3714,7 +3779,7 @@ func _on_hover(pos: Vector2) -> void:
 		return
 	# ① 战场单位（双方都可查看）
 	for cell: Vector2i in engine.state.board:
-		var rect := Rect2(GRID_X + cell.y * CELL_W, GRID_Y + cell.x * CELL, CELL_W, CELL)
+		var rect := _cell_rect(cell)
 		if rect.has_point(pos):
 			var p: Placement = engine.state.board[cell]
 			_hover_card = p.card
@@ -3756,7 +3821,7 @@ func _on_hover(pos: Vector2) -> void:
 	#   这是 trigger 字段的**第一个消费者**：玩家在战场上就能看到「这格踩上去会发生什么」。
 	if _hover_card == null and tip == "":
 		for cell2: Vector2i in engine.state.field_effects:
-			var frect := Rect2(GRID_X + cell2.y * CELL_W, GRID_Y + cell2.x * CELL, CELL_W, CELL)
+			var frect := _cell_rect(cell2)
 			if not frect.has_point(pos):
 				continue
 			var fc: CardData = engine.state.field_at(cell2)
@@ -4574,7 +4639,8 @@ func _tutorial_cue_rects() -> Array:
 	var rects: Array = []
 	match cue:
 		GameLevels.CUE_OWN_HALF:
-			rects.append(Rect2(GRID_X, GRID_Y + 3 * CELL, GRID_W, 3 * CELL))
+			rects.append(Rect2(GRID_X, GRID_Y + 3 * CELL - _grid_scroll, GRID_W,
+					3 * CELL).intersection(Rect2(GRID_X, GRID_Y, GRID_W, GRID_H)))
 		GameLevels.CUE_HAND:
 			var n := engine.state.hand.size()
 			if n > 0:
@@ -4619,7 +4685,9 @@ func _tutorial_cue_rects() -> Array:
 
 
 func _cell_rect(cell: Vector2i) -> Rect2:
-	return Rect2(GRID_X + cell.y * CELL_W, GRID_Y + cell.x * CELL, CELL_W, CELL)
+	## R123：格子矩形容器 = 屏幕位置（y 带滚动偏移）。
+	return Rect2(GRID_X + cell.y * CELL_W, GRID_Y + cell.x * CELL - _grid_scroll,
+			CELL_W, CELL)
 
 
 func _control_rect(c: Control) -> Rect2:
@@ -4802,6 +4870,10 @@ func _draw() -> void:
 	_draw_enemy_effects()
 	_draw_bursts()
 	_draw_wake_rings()
+	_draw_grid_mask()
+	if engine.state.level_name != "":
+		_draw_string_center(_font, UiTheme.FS_MICRO, "关卡：%s" % engine.state.level_name,
+				Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 16), UiTheme.INK_600)
 	_draw_floaters()
 	if shook:
 		draw_set_transform(Vector2.ZERO)  # 结束震动，后续 UI 不抖
@@ -4929,27 +5001,28 @@ func _draw_grid() -> void:
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "战场", Vector2(GRID_X + GRID_W / 2, GRID_Y - 12), UiTheme.INK_600)
 	for row in FieldState.BOARD_ROWS:
 		for col in FieldState.BOARD_COLS:
-			var rect := Rect2(GRID_X + col * CELL_W, GRID_Y + row * CELL, CELL_W, CELL)
+			var rect := _cell_rect(Vector2i(row, col))
 			draw_rect(rect, Color(1, 1, 1, 0.02))
 			draw_rect(rect, COL_CELL_LINE, false, 1.0)
 	# 场地效果（R74）：画在格子底纹之上、单位之下 —— 它不是单位，只是格子上的标记。
 	_draw_field_markers()
 	# 后排色罩 + 半场分界线
-	draw_rect(Rect2(GRID_X, GRID_Y, GRID_W, CELL), COL_OPP_BACKROW)
-	draw_rect(Rect2(GRID_X, GRID_Y + 5 * CELL, GRID_W, CELL), COL_OWN_BACKROW)
-	var mid_y := GRID_Y + 3 * CELL
+	draw_rect(Rect2(GRID_X, GRID_Y - _grid_scroll, GRID_W, CELL), COL_OPP_BACKROW)
+	draw_rect(Rect2(GRID_X, GRID_Y + 5 * CELL - _grid_scroll, GRID_W, CELL), COL_OWN_BACKROW)
+	var mid_y := GRID_Y + 3 * CELL - _grid_scroll
 	draw_line(Vector2(GRID_X, mid_y), Vector2(GRID_X + GRID_W, mid_y), UiTheme.INK_600, 2.0)
 	# 火墙术（9084）：正在燃烧的横行（引擎是唯一数据源，施放方下次回合开始自动熄灭）
 	for fw_row in engine.fire_wall_rows():
-		var fw_rect := Rect2(GRID_X, GRID_Y + fw_row * CELL, GRID_W, CELL)
+		var fw_rect := Rect2(GRID_X, GRID_Y + fw_row * CELL - _grid_scroll, GRID_W, CELL)
 		draw_rect(fw_rect, Color(1.0, 0.42, 0.10, 0.20))
 		draw_rect(fw_rect, Color("ff6a00"), false, 2.0)
 		_draw_string_center(_font_bold, UiTheme.FS_MICRO, "火墙",
-				Vector2(GRID_X + GRID_W - 18, GRID_Y + fw_row * CELL + 11), Color("ff6a00"))
+				Vector2(GRID_X + GRID_W - 18, GRID_Y + fw_row * CELL + 11 - _grid_scroll),
+				Color("ff6a00"))
 	# 敌我框 + 单位标记
 	for cell: Vector2i in engine.state.board:
 		var p: Placement = engine.state.board[cell]
-		var rect := Rect2(GRID_X + cell.y * CELL_W, GRID_Y + cell.x * CELL, CELL_W, CELL)
+		var rect := _cell_rect(cell)
 		draw_rect(rect, COL_OWN_FRAME if p.owner == GameEngine.SIDE_SELF else COL_ENEMY_FRAME, false, 3.0)
 		if p.tapped:
 			_draw_string_nw(_font_bold, UiTheme.FS_MICRO, "→", rect.position + Vector2(CELL_W - 14, 14), UiTheme.INK_500)
@@ -4977,7 +5050,7 @@ func _draw_field_markers() -> void:
 		var card: CardData = engine.state.field_at(cell)
 		if card == null:
 			continue
-		var rect := Rect2(GRID_X + cell.y * CELL_W, GRID_Y + cell.x * CELL, CELL_W, CELL)
+		var rect := _cell_rect(cell)
 		var mine: bool = str(engine.state.field_owner.get(cell, "")) == GameEngine.SIDE_SELF
 		# 持续型场地（清泉 8028，R83）用**冷色**（青蓝）+ 静止描边 ——
 		# 一次性场地是琥珀/红 + 呼吸描边（=「活的、会被踩爆」）。两族必须一眼能分开：
@@ -5020,7 +5093,7 @@ func _draw_field_markers() -> void:
 		for cell2: Vector2i in engine.state.field_effects:
 			if GameEngine.is_persistent_field(engine.state.field_at(cell2)):
 				continue
-			var r2 := Rect2(GRID_X + cell2.y * CELL_W, GRID_Y + cell2.x * CELL, CELL_W, CELL)
+			var r2 := _cell_rect(cell2)
 			draw_rect(r2, Color(1.0, 0.85, 0.35, 0.10 + pulse * 0.14), false, 2.0)
 
 
@@ -5041,8 +5114,8 @@ func _draw_board_cards() -> void:
 func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	var center := _display_center(p, cell)
 	var selected: bool = selection != null and selection[0] == "board" and selection[1] == cell
-	var w := TAP_W if p.tapped else CARD_W
-	var h := TAP_H if p.tapped else CARD_H
+	var w := BOARD_TAP_W if p.tapped else BOARD_CARD_W
+	var h := BOARD_TAP_H if p.tapped else BOARD_CARD_H
 	# 顶部状态徽标的行号：嘲讽 → 冰封 → 沉睡，按出现顺序往下排（共用底座 _draw_state_badge）
 	var _badge_row := 0
 	# R118：`on_board = true` —— 战场卡面的「种类 · 字段」行**不再标出**上场后已无作用的
@@ -5260,7 +5333,8 @@ func _draw_dying() -> void:
 	for d: Dictionary in _dying:
 		var cell: Vector2i = d.cell
 		var center := _cell_center(cell)
-		var rect := Rect2(center - Vector2(CARD_W, CARD_H) / 2.0, Vector2(CARD_W, CARD_H))
+		var rect := Rect2(center - Vector2(BOARD_CARD_W, BOARD_CARD_H) / 2.0,
+				Vector2(BOARD_CARD_W, BOARD_CARD_H))
 		_draw_card_face(d.card as CardData, rect, 0, false, false)
 		draw_rect(rect, Color(0.85, 0.12, 0.1, 0.30))
 
@@ -5699,9 +5773,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 							int(data.get("amount", 0)), int(data.get("left", 0))],
 					"col": Color("4a7fd8"), "size": 15, "start": n, "dur": 2000})
 		"rice":
-			# 道具「一袋米抗几楼」：本轮首次受伤 → 抽 1 张卡 + 本回合技能伤害 +1
+			# 道具「一袋米抗几楼」（R123）：我方 HP 首次受伤 → 抽 1 张卡 + 技能伤害 +1
 			sfx.play("heal")
-			_say("✦ 一袋米抗几楼：首次受伤 → 抽 1 张卡，本回合技能伤害 +1")
+			_say("✦ 一袋米抗几楼：我方 HP 受伤 → 抽 1 张卡，本回合技能伤害 +1")
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 30),
 					"text": "一袋米抗几楼 · 抽 1 张 / 技能 +1", "col": Color("d7a54a"),
 					"start": n, "dur": 2100})
@@ -6748,11 +6822,11 @@ func _draw_flashes() -> void:
 	var items: Array = []
 	for pair: Array in engine.state.iter_board():
 		var pl: Placement = pair[1]
-		items.append([pl, pair[0], TAP_W if pl.tapped else CARD_W,
-				TAP_H if pl.tapped else CARD_H])
+		items.append([pl, pair[0], BOARD_TAP_W if pl.tapped else BOARD_CARD_W,
+				BOARD_TAP_H if pl.tapped else BOARD_CARD_H])
 	for d: Dictionary in _dying:
 		if d.get("p") != null:
-			items.append([d.p, d.cell, CARD_W, CARD_H])
+			items.append([d.p, d.cell, BOARD_CARD_W, BOARD_CARD_H])
 	for it: Array in items:
 		var p: Placement = it[0]
 		if not _flashes.has(p):
@@ -6937,7 +7011,8 @@ func _draw_ghosts() -> void:
 		var t := clampf(float(n - int(g.start)) / int(g.dur), 0.0, 1.0)
 		var alpha := 1.0 - t
 		var center: Vector2 = g.center
-		var rect := Rect2(center - Vector2(CARD_W, CARD_H) / 2.0, Vector2(CARD_W, CARD_H))
+		var rect := Rect2(center - Vector2(BOARD_CARD_W, BOARD_CARD_H) / 2.0,
+				Vector2(BOARD_CARD_W, BOARD_CARD_H))
 		draw_rect(rect, Color(1, 1, 1, 0.85 * alpha))
 		draw_rect(rect, Color(0.6, 0.6, 0.6, alpha), false, 1.5)
 		_draw_string_center(_font, UiTheme.FS_MICRO, str(g.name), center + Vector2(0, 4),
@@ -7005,8 +7080,7 @@ func _draw_picked_marker() -> void:
 	var src := _picked_src()
 	if src.x < 0 or not engine.state.board.has(src):
 		return
-	var r := Rect2(GRID_X + src.y * CELL_W + 1, GRID_Y + src.x * CELL + 1,
-			CELL_W - 2, CELL - 2)
+	var r := _cell_rect(src).grow(-1.0)
 	draw_rect(r, COL_PICKED, false, 4.0)
 	# 角标：右上角小方块 + 「已选」两字
 	var tag := Rect2(r.position.x + r.size.x - 34.0, r.position.y + 1.0, 33.0, 14.0)
@@ -7032,8 +7106,7 @@ func _draw_cancel_armed_marker() -> void:
 	var cell: Vector2i = selection[1]
 	if not engine.state.board.has(cell):
 		return
-	var r := Rect2(GRID_X + cell.y * CELL_W + 1, GRID_Y + cell.x * CELL + 1,
-			CELL_W - 2, CELL - 2)
+	var r := _cell_rect(cell).grow(-1.0)
 	var t := float(_now()) / 1000.0
 	var pulse := (sin(t * 4.2) + 1.0) * 0.5          # 0..1 呼吸
 	var col := Color(COL_CANCEL_ARMED.r, COL_CANCEL_ARMED.g, COL_CANCEL_ARMED.b,
@@ -7046,7 +7119,8 @@ func _draw_cancel_armed_marker() -> void:
 
 
 func _cell_center(cell: Vector2i) -> Vector2:
-	return Vector2(GRID_X + cell.y * CELL_W + CELL_W / 2, GRID_Y + cell.x * CELL + CELL / 2)
+	return Vector2(GRID_X + cell.y * CELL_W + CELL_W / 2,
+			GRID_Y + cell.x * CELL + CELL / 2 - _grid_scroll)
 
 
 func _hl(cell: Vector2i, col: Color) -> void:
@@ -7054,8 +7128,36 @@ func _hl(cell: Vector2i, col: Color) -> void:
 	# 横边仍按 `CELL` 算，于是移动 / 攻击 / HP / 法术格的高亮框整体**左移且变窄**
 	# （最右一列偏 24px、宽 86 而非 98），与格子线、与卡牌位置都对不上。
 	# 高亮是「这一格能做什么」的唯一通道，错位会直接读成「旁边那格能做什么」。
-	draw_rect(Rect2(GRID_X + cell.y * CELL_W + 2, GRID_Y + cell.x * CELL + 2,
-			CELL_W - 4, CELL - 4), col)
+	draw_rect(_cell_rect(cell).grow(-2.0), col)
+
+
+func _draw_grid_mask() -> void:
+	## R123：把滚出棋盘可视窗的内容盖掉 —— 上面是工具栏、下面是手牌。
+	## 有背景纹理时按同一比例采样对应区域补上，棋盘上下沿看起来就是「被窗口裁掉」；
+	## 顺带在右沿画一条细滚动条（有滚动空间才显示）。
+	if _grid_scroll_max() <= 0.0:
+		return
+	# 下沿一直盖到窗口底部：手牌画在遮罩**之后**，有牌时自然会盖回来；
+	# 没牌（空手牌区）也不能让棋盘内容漏到 619 以下。
+	var bands: Array[Rect2] = [
+		Rect2(GRID_X, 0, GRID_W, GRID_Y),
+		Rect2(GRID_X, GRID_Y + GRID_H, GRID_W, WINDOW_H - (GRID_Y + GRID_H)),
+	]
+	for r: Rect2 in bands:
+		if r.size.y <= 0.0:
+			continue
+		if _bg_tex != null:
+			var ts := _bg_tex.get_size()
+			draw_texture_rect_region(_bg_tex, r,
+					Rect2(Vector2(r.position.x / WINDOW_W, r.position.y / WINDOW_H) * ts,
+							Vector2(r.size.x / WINDOW_W, r.size.y / WINDOW_H) * ts))
+		else:
+			draw_rect(r, COL_BG)
+	var track := Rect2(GRID_X + GRID_W + 4, GRID_Y, 4, GRID_H)
+	draw_rect(track, Color(0, 0, 0, 0.10))
+	var th := GRID_H * GRID_H / GRID_CONTENT_H
+	var ty := GRID_Y + _grid_scroll / GRID_CONTENT_H * GRID_H
+	draw_rect(Rect2(track.position.x, ty, 4, th), Color(0, 0, 0, 0.28))
 
 
 func _draw_hp_banner() -> void:
@@ -7069,9 +7171,6 @@ func _draw_hp_banner() -> void:
 			Vector2(mid_x, GRID_Y + GRID_H - 30), UiTheme.SIDE_SELF_TEXT)
 	_draw_string_nw(_font, UiTheme.FS_MICRO, "能量 %d" % engine.state.energy,
 			Vector2(mid_x, GRID_Y + GRID_H - 56), UiTheme.SIDE_SELF_TEXT)
-	if engine.state.level_name != "":
-		_draw_string_center(_font, UiTheme.FS_MICRO, "关卡：%s" % engine.state.level_name,
-				Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 16), UiTheme.INK_600)
 
 
 func _enemy_zone_rect() -> Rect2:

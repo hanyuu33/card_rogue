@@ -848,7 +848,6 @@ const FENCE_REPAIR_RELIC_ID:= 6021
 const KNIGHT_TRAIT:= "骑士"
 const KNIGHT_KILL_BUFF:= 2
 # 关卡成长曲线（二层「低开高走」）：开局削攻击力、之后随回合回升。见 configure_growth()。
-const GROWTH_STRONG_ATK:= 7       # 基础攻击力 >= 这个数 → 算「强力怪」，吃 mod_strong
 
 # ── R63（2026-10-04）：契约签订者 8024 / 恶魔鸭 9116 / 恶魔使魔 9117 ──
 # 契约签订者（8024 盟友 3 费 2/8）：登场时**回复 4 点费用**（state.energy 直接加），
@@ -2409,6 +2408,7 @@ func _fire_wall_spell(side: String, target, card: CardData) -> String:
 	var hits:= 0
 	var total:= 0
 	var blocked:= 0
+	_begin_hp_once()
 	for col in FieldState.BOARD_COLS:
 		var c:= Vector2i(row, col)
 		var p: Placement = state.unit_at(c)
@@ -2427,6 +2427,7 @@ func _fire_wall_spell(side: String, target, card: CardData) -> String:
 	action.emit("fire_wall", {"row": row, "side": side, "card": card})
 	if hits > 0:
 		_destroy_dead()
+	_end_hp_once()
 	_log("火墙术：第 %d 行燃起（%d 个敌人共 -%d；经过者 -%d，同一单位上限 %d）" % [
 			row, hits, total, pass_dmg, FIRE_WALL_CAP])
 	var msg:= "第 %d 行火墙：%d 个敌人 -%d" % [row, hits, dmg]
@@ -4451,6 +4452,7 @@ func _whirl_blade(side: String, target, card: CardData) -> String:
 		cells.append(c)
 	var amount := _spell_dmg(side, WHIRL_BLADE_DMG, card)
 	var hits := 0
+	_begin_hp_once()
 	for c2: Vector2i in cells:
 		var q := state.unit_at(c2)
 		if q == null or q.owner == side or q.card.traits.has(SPELL_IMMUNE_TRAIT):
@@ -4458,6 +4460,7 @@ func _whirl_blade(side: String, target, card: CardData) -> String:
 		_hit_unit(q, amount, "回旋斩")
 		hits += 1
 	_destroy_dead()
+	_end_hp_once()
 	_log("回旋斩：十字 %d 格命中敌方单位 %d 个（各 %d 伤）" % [cells.size(), hits, amount])
 	action.emit("whirl_blade", {"center": center, "hits": hits, "dmg": amount})
 	return "命中 %d 个敌方单位（各 %d 伤）" % [hits, amount]
@@ -5536,6 +5539,7 @@ func _meteor(side: String, target, card: CardData) -> String:
 
 	## 陨石术（9077）：十字范围（中心 + 四邻）各受 40 点伤害，**不分敌我**。
 	## 空格落在 HP 行上 → 溢出伤害直击那一方的 HP（与火球术/爆炎同一条 damage_cell 规则）。
+	## R123：同一方 HP 在这一次结算里只吃一次（含溢出）。
 	if not (target is Vector2i):
 		return "（需要一个目标格子）"
 	var center: Vector2i = target
@@ -5547,20 +5551,16 @@ func _meteor(side: String, target, card: CardData) -> String:
 		cells.append(c)
 	var amount:= _spell_dmg(side, METEOR_DMG, card)
 	var hits:= 0
-	var hp_hit:= {}
+	# R123：HP 去重上收到统一窗口（空格直击 + 后排溢出，同一方只算一次）。
+	_begin_hp_once()
 	for c2: Vector2i in cells:
 		var q:= state.unit_at(c2)
 		if q != null and q.card.traits.has(SPELL_IMMUNE_TRAIT):
 			continue
-		if q == null:
-			var ow:= hp_row_owner(c2.x)
-			if ow != "":
-				if hp_hit.has(ow):
-					continue
-				hp_hit[ow] = true
 		if damage_cell(c2, amount, "陨石") > 0:
 			hits += 1
 	_destroy_dead()
+	_end_hp_once()
 	_log("陨石术：十字 %d 格各受 %d 点伤害（不分敌我），命中 %d 个目标" % [
 		cells.size(), amount, hits])
 	return "十字 %d 格各 %d 伤（命中 %d）" % [cells.size(), amount, hits]
@@ -6184,10 +6184,10 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	# 死了就不再触发（沉睡了也没意义），所以只在活着的分支调。
 	if p.health > 0:
 		_demon_duck_hurt(p, _cell_of(p))
-	if p.owner == SIDE_SELF:
-		_on_self_damaged()
-	else:
+	if p.owner != SIDE_SELF:
 		_mark_spell_enemy_hit()
+	# R123：己方**单位**受伤不再触发「一袋米抗几楼」—— 它只认我方 HP 受伤
+	#（_damage_player 的两条路径 + attack_hp 直击，与鸭梨 6019 同一口径）。
 	return dmg
 
 
@@ -6312,15 +6312,15 @@ func _turn_dmg_bonus(side: String) -> int:
 
 
 func _on_self_damaged() -> void :
-
-
+	## R123：只在我方 **HP** 受伤时调用（_damage_player / attack_hp 两条路径）；
+	## 己方场上单位受伤不再走这里（_hit_unit 已摘掉这个调用）。
 
 	if not self_relics.has(6012) or _rice_used:
 		return
 	_rice_used = true
 	turn_spell_bonus += 1
 	var drawn:= _draw_many(1)
-	_log("一袋米抗几楼：本轮首次受伤 → 抽 %d 张卡，本回合技能伤害 +1" % drawn)
+	_log("一袋米抗几楼：我方 HP 首次受伤 → 抽 %d 张卡，本回合技能伤害 +1" % drawn)
 	action.emit("rice", {"drawn": drawn, "spell_bonus": turn_spell_bonus})
 
 
@@ -6393,6 +6393,7 @@ func _connected_components() -> Array:
 func _chain_lightning(amount: int) -> String:
 
 	var hits:= 0
+	_begin_hp_once()
 	for comp: Array in _connected_components():
 		if comp.size() < 2:
 			continue
@@ -6405,6 +6406,7 @@ func _chain_lightning(amount: int) -> String:
 			_hit_unit(p, amount, "闪电")
 			hits += 1
 	_destroy_dead()
+	_end_hp_once()
 	return "闪电击中 %d 个相连单位" % hits
 
 
@@ -6416,6 +6418,7 @@ func _blast(amount: int, target, radius: int) -> String:
 		return "（需要一个目标格子）"
 	var center: Vector2i = target
 	var hits:= 0
+	_begin_hp_once()
 	for cell: Vector2i in state.board.keys():
 		if manhattan(cell, center) <= radius:
 			if state.unit_at(cell) == null:
@@ -6440,6 +6443,7 @@ func _blast(amount: int, target, radius: int) -> String:
 		if best_c != Vector2i(-1, -1) and damage_cell(best_c, amount, "火球") > 0:
 			hits += 1
 	_destroy_dead()
+	_end_hp_once()
 	return "火球命中 %d 个目标" % hits
 
 
@@ -6472,6 +6476,7 @@ func _battlecry_ash(cell: Vector2i, p: Placement) -> void :
 
 	var foe:= SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
 	var hits:= 0
+	_begin_hp_once()
 	for c: Vector2i in state.board.keys().duplicate():
 		var q:= state.unit_at(c)
 		if q == null or q.owner != foe:
@@ -6480,6 +6485,7 @@ func _battlecry_ash(cell: Vector2i, p: Placement) -> void :
 		hits += 1
 	if hits > 0:
 		_destroy_dead()
+	_end_hp_once()
 	_log("%s 战吼：对 %d 个敌方单位造成 %d 点伤害" % [p.card.card_name, hits, ASH_DRAGON_AOE])
 	action.emit("battlecry", {"cell": cell, "card": p.card, "kind": "ash", 
 		"amount": ASH_DRAGON_AOE, "hits": hits})
@@ -6610,12 +6616,14 @@ func _death_wipe(center: Vector2i, amount: int, card: CardData) -> void :
 			continue
 		cells.append(c)
 	_log("%s 死亡爆炸：全场 %d 个单位各受到 %d 点伤害" % [card.card_name, cells.size(), amount])
+	_begin_hp_once()
 	for c2: Vector2i in cells:
 		var q:= state.unit_at(c2)
 		if q == null:
 			continue
 		_hit_unit(q, amount, "爆裂")
 	_destroy_dead()
+	_end_hp_once()
 	action.emit("blast", {"center": center, "cells": cells, "amount": amount, "card": card})
 
 
@@ -6631,16 +6639,11 @@ func _death_blast(center: Vector2i, amount: int, card: CardData) -> void :
 		cells.append(c)
 	_log("%s 死亡爆炸：周围 %d 格各受到 %d 点伤害" % [card.card_name, cells.size(), amount])
 
-	var blasted_hp:= {}
+	_begin_hp_once()
 	for c2: Vector2i in cells:
-		if state.unit_at(c2) == null:
-			var ow:= hp_row_owner(c2.x)
-			if ow != "":
-				if blasted_hp.has(ow):
-					continue
-				blasted_hp[ow] = true
 		damage_cell(c2, amount, "爆炎")
 	_destroy_dead()
+	_end_hp_once()
 	action.emit("blast", {"center": center, "cells": cells, "amount": amount, "card": card})
 
 
@@ -6749,7 +6752,35 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 	return "对玩家造成 %d 伤害" % amount
 
 
+## ── R123：一次「多格结算」里，对同一方 HP 的伤害**只结算一次** ──
+## 多格效果（陨石术 / 爆炎 / 火球 / 灰烬龙战吼 / 火墙 / 回旋斩 / 闪电 / 黑暗扩散）
+## 在窗口内，两条 HP 路径都汇入 _damage_player，在这里按方去重：**先到先结算，后面全跳过**：
+##   * 空格落在 HP 行 → 直击那一方 HP（原先陨石 / 爆炎各自去重，现在统一到这一处）；
+##   * 打破**后排**单位 → 溢出漏到那一方 HP（_destroy_dead 的通用溢出）。
+## 窗口可嵌套（亡语在窗口里再炸一轮）：嵌套层共用同一份记录，不重复给机会。
+var _hp_once_depth := 0
+var _hp_once_sides := {}
+
+func _begin_hp_once() -> void :
+	_hp_once_depth += 1
+	if _hp_once_depth == 1:
+		_hp_once_sides.clear()
+
+func _end_hp_once() -> void :
+	_hp_once_depth = maxi(0, _hp_once_depth - 1)
+	if _hp_once_depth == 0:
+		_hp_once_sides.clear()
+
 func _damage_player(side: String, amount: int, source:= "") -> int:
+	## R123：多格窗口内，同一方 HP 已经在这次结算里吃过一次 → 这笔直接跳过。
+	if _hp_once_depth > 0 and _hp_once_sides.has(side):
+		if side == SIDE_SELF:
+			_log("（同一次多格结算：我方 HP 已吃过一次，这笔 %d 点不再重复）" % amount)
+			return state.hp_self
+		_log("（同一次多格结算：敌方 HP 已吃过一次，这笔 %d 点不再重复）" % amount)
+		return state.hp_opponent
+	if _hp_once_depth > 0:
+		_hp_once_sides[side] = true
 	if side == SIDE_SELF:
 		# 闪躲（9103）：窗口期内先让随机盟友代受（不足的部分才落到自己的 HP 上）。
 		if _dodge_active and amount > 0:
@@ -6822,22 +6853,13 @@ func _credit_kill(victim: Placement) -> void :
 
 
 func configure_growth(cfg: Dictionary) -> void :
-	## 关卡成长曲线（二层「低开高走」）：开局按体型削攻击力，之后每 period 个回合 +inc，最多 cap。
+	## 关卡成长曲线（二层「低开高走」）：开局 0 层，之后每 period 个回合 +inc，最多 cap。
+	## R123：**不再有「开局削减攻击力」的 debuff** —— 起始力量直接写在卡牌数据里。
 	## cfg 为空 = 不启用。摆好敌方单位后调用；只对 SIDE_OPPONENT 生效。
-	## cfg 字段：mod_strong / mod_weak / strong_atk / start_turn / period / inc / cap
+	## cfg 字段：start_turn / period / inc / cap
 	growth_cfg = cfg
 	_growth_stacks = 0
 	_sync_enemy_growth()
-
-
-func _growth_mod(card: CardData) -> int:
-	## 开局攻击力修正：强力怪（基础攻击力 >= strong_atk）mod_strong，其余 mod_weak（可为负）。
-	if growth_cfg.is_empty():
-		return 0
-	var strong_atk:= int(growth_cfg.get("strong_atk", GROWTH_STRONG_ATK))
-	if card.power >= strong_atk:
-		return int(growth_cfg.get("mod_strong", 0))
-	return int(growth_cfg.get("mod_weak", 0))
 
 
 func _sync_enemy_growth() -> void :
@@ -6850,7 +6872,7 @@ func _sync_enemy_growth() -> void :
 		var p: Placement = state.board[cell]
 		if p.owner != SIDE_OPPONENT:
 			continue
-		p.atk_growth = _growth_mod(p.card) + _growth_stacks * inc
+		p.atk_growth = _growth_stacks * inc
 
 
 func _tick_enemy_growth() -> void :
@@ -7880,6 +7902,7 @@ func _dark_spread_strike(side: String, left: int) -> void :
 		_log("黑暗扩散：场上没有敌人，效果落空（剩余费用 %d）" % left)
 		return
 	var total := 0
+	_begin_hp_once()
 	for cell: Vector2i in foes:
 		var q: Placement = state.unit_at(cell)
 		if q == null or q.health <= 0:
@@ -7887,6 +7910,7 @@ func _dark_spread_strike(side: String, left: int) -> void :
 		_hit_unit(q, dmg, "黑暗扩散")
 		total += 1
 	_destroy_dead()
+	_end_hp_once()
 	_log("黑暗扩散：剩余费用 %d → 对 %d 个敌人各造成 %d 点伤害"
 			% [left, total, dmg])
 	action.emit("dark_spread", {"dmg": dmg, "left": left, "hits": total, "side": side})
