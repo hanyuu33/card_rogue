@@ -22,10 +22,15 @@ static var deck_ids: Array[int] = []         # 当前卡组（卡 id，可重复
 ## 卡组费用**一律以卡面为准**（R112）：早前鸭鸭工匠产物靠 `deck_cost_at_index()` 把卡组里的
 ## 铁栅栏现算成 2 费、而卡面是 0 费 → 「图鉴 0 费 / 卡组 2 费」两处不一致。用户拍板
 ## 「只保留 2 费」后，直接把 **9072 的卡面改成 2 费**，那套运行时费用改写已整块删除。
-static var map_columns: Array = []           # RogueMap.generate 的结果（起点 + 12 层 + Boss）
+static var map_cells: Array = []             # RogueMap.generate 的结果（5×7 = 35 个房间，下标即 id）
 static var current_layer := GameLayers.LAYER_DEFAULT  # 本局地图所属的层（第一层）
-static var current_node_id := -1             # 玩家所在节点（-1 = 还没出发）
-static var cleared_ids: Array = []           # 已完成的节点 id
+static var current_node_id := -1             # 玩家所在房间（-1 = 还没出发）
+## 已**走过**的房间 id（R128 语义）：既决定回溯是否免费，也决定该房间的门是否可见。
+static var cleared_ids: Array = []
+## R128 巧克力：每层固定 RogueMap.MAX_STEPS 块。进入**没走过**的房间扣 1 块，
+## 原路返回走过的房间不扣。扣到 0 → 本房间内容结算完立刻开 Boss 战（boss_pending）。
+static var chocolate := 0
+static var boss_pending := false             # 巧克力已耗尽，等当前房间结算完就开 Boss 战
 static var pending_level: Dictionary = {}    # 即将进入的战斗关卡（地图 → 战斗）
 static var pending_node: Dictionary = {}     # 即将进入的地图节点（地图 → 休息/事件）
 static var reward_context := ""              # 奖励来源："battle" / "event" / ""（演示）
@@ -91,6 +96,9 @@ static var duck_revive_chance := 100         # 叠加态的鸭（6013）：当�
 
 # 事件道具 id
 const WHISPER_RELIC_ID := 6010   # 鸭之低语（事件节点获得）
+## 鹰哨（R128 奖励道具）：地图上**所有房间的门全部可见**（含没走过的房间）。
+## 消费方只有 map_scene（决定是否画未访问房间的门），引擎侧不参与。
+const EAGLE_WHISTLE_RELIC_ID := 6026
 const BARBECUE_RELIC_ID := 6011  # 烤肉（休息处获得，进入 Boss 战时消耗）
 const RICE_RELIC_ID := 6012      # 一袋米抗几楼（鸭之凝视事件获得）
 const STACK_DUCK_RELIC_ID := 6013  # 叠加态的鸭（复活道具，奖励池）
@@ -202,9 +210,11 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	run_rng.seed = run_seed
 	run_active = true
 	player_class = cid if cid != "" else PlayerClass.default_id()
-	map_columns = map if not map.is_empty() else RogueMap.generate(run_rng, layer)
+	map_cells = map if not map.is_empty() else RogueMap.generate(run_rng, layer)
 	current_layer = layer
 	cleared_ids = []
+	chocolate = RogueMap.MAX_STEPS
+	boss_pending = false
 	battle_log = []
 	pending_level = {}
 	pending_node = {}
@@ -235,10 +245,14 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 		gain_relic(cls_relic)
 	# 起点三选一：从初始道具池随机抽 3 个不重复的
 	relic_choice = _roll_relic_choice()
-	if not map.is_empty() and not map[0].is_empty():
-		current_node_id = int(map[0][0]["id"])
-	else:
-		current_node_id = -1
+	current_node_id = -1
+	if not map_cells.is_empty():
+		var sc := RogueMap.start_cell(map_cells)
+		if not sc.is_empty():
+			current_node_id = int(sc["id"])
+			# ⚠️ 起点开局就记「已走过」：规则是「初始点和已经走过的房间除外」，
+			# 漏掉这一步的话，玩家从别处**走回起点会被当成新房间误扣一块巧克力**。
+			cleared_ids.append(current_node_id)
 
 
 static func end_run() -> void:
@@ -246,10 +260,12 @@ static func end_run() -> void:
 	run_active = false
 	player_class = PlayerClass.default_id()
 	deck_ids = []
-	map_columns = []
+	map_cells = []
 	current_layer = GameLayers.LAYER_DEFAULT
 	current_node_id = -1
 	cleared_ids = []
+	chocolate = 0
+	boss_pending = false
 	pending_level = {}
 	pending_node = {}
 	reward_context = ""
@@ -275,7 +291,7 @@ static func end_run() -> void:
 static func advance_layer(layer: int) -> int:
 	## 进入下一层（打败上一层 Boss 后由 battle_scene 调用）：
 	##   * **恢复所有生命**（第二层起始节点：满血重新出发）；
-	##   * 生成本层地图（RogueMap.generate(rng, layer)）；
+	##   * 生成本层地图（RogueMap.generate(rng, layer)，5×7 格子）；
 	##   * 掷本层起始道具三选一（第一层 = 初始池，第二层 = 二层起始池）；
 	##   * 重置层内进度（战斗计数 / 选关记录 / 已清节点），**卡组与道具跨层保留**。
 	## 返回本层起点节点 id（-1 = 地图为空）。
@@ -296,12 +312,16 @@ static func advance_layer(layer: int) -> int:
 	reward_kinds = []
 	reward_type = "normal"
 	# 本层地图用本局种子续摇（同一 run 的随机链条：start_run → 各次 advance_layer）
-	map_columns = RogueMap.generate(run_rng, layer)
+	map_cells = RogueMap.generate(run_rng, layer)
 	relic_choice = _roll_relic_choice()
-	if not map_columns.is_empty() and not (map_columns[0] as Array).is_empty():
-		current_node_id = int(map_columns[0][0]["id"])
-	else:
-		current_node_id = -1
+	chocolate = RogueMap.MAX_STEPS      # 新一层：巧克力重新满上
+	boss_pending = false
+	current_node_id = -1
+	if not map_cells.is_empty():
+		var sc2 := RogueMap.start_cell(map_cells)
+		if not sc2.is_empty():
+			current_node_id = int(sc2["id"])
+			cleared_ids.append(current_node_id)   # 起点同样算「初始点」
 	return current_node_id
 
 
@@ -723,50 +743,79 @@ static func _isqrt(n: int) -> int:
 	return x
 
 
-static func _find_node(node_id: int) -> Dictionary:
-	for col_nodes in map_columns:
-		for node in col_nodes:
-			if int(node["id"]) == node_id:
-				return node
-	return {}
+static func cell_of(node_id: int) -> Dictionary:
+	## 地图房间（按 id 取；id 就是 map_cells 的下标 —— 见 RogueMap.idx）。
+	if node_id < 0 or node_id >= map_cells.size():
+		return {}
+	return map_cells[node_id]
 
 
 static func current_node() -> Dictionary:
-	## 玩家当前所在节点。
-	for col_nodes in map_columns:
-		for node in col_nodes:
-			if int(node["id"]) == current_node_id:
-				return node
-	return {}
+	## 玩家当前所在房间。
+	return cell_of(current_node_id)
 
 
 static func available_nodes() -> Array:
-	## 从当前节点可以走到的下一列节点（起点前 = 第 0 列节点）。
+	## 当前房间**有门**的相邻房间 —— 包含已经走过的（可以零消耗原路返回）。
+	## 门是双向的，所以「有门」用 doors_between 校验（两边都认），防单向 bug。
 	if current_node_id < 0:
-		return (map_columns[0] if not map_columns.is_empty() else [])
-	for col_nodes in map_columns:
-		for node in col_nodes:
-			if int(node["id"]) == current_node_id:
-				var out: Array = []
-				for nid in node["next"]:
-					var n := _find_node(int(nid))
-					if not n.is_empty():
-						out.append(n)
-				return out
-	return []
+		return []
+	var out: Array = []
+	for nid in RogueMap.neighbor_ids(current_node()):
+		out.append(map_cells[int(nid)])
+	return out
 
 
-static func advance(node_id: int) -> void:
-	## 走到一个节点（完成当前节点并移动）。
-	if current_node_id >= 0 and not cleared_ids.has(current_node_id):
-		cleared_ids.append(current_node_id)
+static func can_move_to(node_id: int) -> bool:
+	## 从当前房间能否走到目标（必须真的有门 —— 与地图场景的点击判定同源）。
+	if node_id < 0 or node_id >= map_cells.size():
+		return false
+	if current_node_id < 0:
+		return true          # 还没出发：允许站上起点
+	return RogueMap.doors_between(map_cells, current_node_id, node_id)
+
+
+static func advance(node_id: int) -> Dictionary:
+	## 走进一个房间。返回本次移动的结果：
+	##   {"ok", "is_new", "cost", "revealed", "chocolate"}
+	## * **没走过**的房间：扣 1 块巧克力 + 标记已走过 +（若是「?」房）揭晓真实类型；
+	## * **走过**的房间：零消耗、不结算 —— 按设计「什么都不会发生」。
+	## ⚠️ 扣到 0 只置 `boss_pending`，**不立刻开战**：当前房间的内容（可能是一场战斗）
+	##    要先结算完，回到地图时才由 map_scene 触发 Boss 战。
+	if not can_move_to(node_id):
+		return {"ok": false, "is_new": false, "cost": 0, "revealed": false,
+				"chocolate": chocolate}
+	var is_new: bool = not cleared_ids.has(node_id)
+	var cost := 0
+	var revealed := false
+	if is_new:
+		cost = 1
+		cleared_ids.append(node_id)
+		var c: Dictionary = map_cells[node_id]
+		if bool(c.get("hidden", false)) and not bool(c.get("revealed", false)):
+			c["revealed"] = true
+			revealed = true
+		chocolate = maxi(0, chocolate - cost)
+		if chocolate <= 0:
+			boss_pending = true
 	current_node_id = node_id
+	return {"ok": true, "is_new": is_new, "cost": cost, "revealed": revealed,
+			"chocolate": chocolate}
 
 
 static func complete_current() -> void:
-	## 当前节点内容完成（战斗胜利 / 休息 / 事件）。
+	## 当前房间内容结算完成（战斗胜利 / 休息 / 事件 / 大宝箱）。
+	## 进房时已经标过「已走过」，这里是幂等的兜底口。
 	if current_node_id >= 0 and not cleared_ids.has(current_node_id):
 		cleared_ids.append(current_node_id)
+
+
+static func boss_level() -> Dictionary:
+	## 巧克力耗尽触发 Boss 战时取的关卡。开局已用 run_rng 摇定（boss_pick），
+	## 与玩家在地图上看到的 Boss 名牌读**同一份** —— 看到谁就打谁。
+	if not boss_pick.is_empty():
+		return boss_pick
+	return GameLevels.boss_level(current_layer)
 
 
 # ---- 动态难度（战斗节点不预写关卡，进入时按进度决定） ----

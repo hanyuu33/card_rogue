@@ -13,14 +13,13 @@ extends RefCounted
 ## 各层内容互不串层：第二层地图不会出现第一层的关卡/事件，反之亦然。
 ##
 ## 新增一层：
-##   1) 在 LAYERS 里加一条 {name, content_layers, events, treasure_col}；
+##   1) 在 LAYERS 里加一条 {name, content_layers, events}；
 ##   2) 给该层的关卡打上 `"layer": <层号>`，事件写进该层的 events 表。
 ##
 ## 层内字段：
 ##   * name            层名（地图标题栏显示）
 ##   * content_layers  本层内容池包含哪些层（决定关卡/事件从哪几层取）
 ##   * events          事件节点子类型的权重（相对权重，本层内归一化；0 = 本层不出现）
-##   * treasure_col    本层固定的「宝箱层」所在列（-1 = 本层没有宝箱层）
 ##
 ## 「全层通用」的事件写进**每一层**的 events 表（如遗忘之泉 oblivion）。
 ## 内容仍按层隔离 —— 没有「继承上一层事件」这种隐式行为，都要显式登记。
@@ -34,8 +33,8 @@ const LAYERS := {
 		"content_layers": [1],
 		# 事件子类型权重（相对权重，本层内归一化；0 = 本层不出现）。
 		# 「鸭之凝视 / 一袋米抗几楼」已挪到第二层 —— 本层不再出 gaze。
+		# R128：**事件房间不再遭遇战斗** —— 原先的 "monster"（遭遇怪物）条目已移除。
 		"events": {
-			"monster": 10,    # 遭遇怪物（按普通战斗处理）
 			"whisper": 27,    # 鸭鸭低语（事件道具）
 			"struggle": 18,   # 挣扎（失去生命换金属龙）
 			"arcane": 18,     # 奥秘之泉（第一层专属）：奥秘护符 / 随机效果或技能牌三选一
@@ -43,7 +42,6 @@ const LAYERS := {
 			"smith": 12,       # 鸭鸭工匠（R110，全层通用）：把卡组里一张卡变成「2 费铁栅栏」
 			"treasure": 31,   # 宝箱（卡牌奖励）
 		},
-		"treasure_col": 6,    # 第六层固定为宝箱层（整层开箱得奖励道具）
 	},
 	2: {
 		"name": "第二层",
@@ -61,14 +59,13 @@ const LAYERS := {
 			"oblivion": 14,   # 遗忘之泉（全层通用）：可从卡组删一张卡，或离开
 			"smith": 12,       # 鸭鸭工匠（R110，全层通用）：把卡组里一张卡变成「2 费铁栅栏」
 		},
-		"treasure_col": 6,    # 第二层同样把第 6 层设为宝箱层
 	},
 }
 
 # 事件子类型 → 显示名（日志 / 界面用）。
-# relic_chest 不是随机事件，而是宝箱层（treasure_col）整层的固定内容。
+# relic_chest 不是随机事件，而是 event_scene 里「开箱得道具」的固定分支。
+# R128：5×7 格子地图里它由「大宝箱房」（固定两角）触发，不再有「整层宝箱」的概念。
 const EVENT_NAMES := {
-	"monster": "遭遇怪物",
 	"whisper": "鸭鸭低语",
 	"struggle": "挣扎",
 	"gaze": "鸭之凝视",
@@ -146,16 +143,6 @@ static func event_kinds(layer: int) -> Array[String]:
 
 static func event_name(kind: String) -> String:
 	return str(EVENT_NAMES.get(kind, kind))
-
-
-static func treasure_col(layer: int) -> int:
-	## 本层固定的宝箱层列号。
-	## **未配置的层返回 -1（没有宝箱层）** —— 宝箱层同样是「该层的内容」，
-	## 不会自动出现在别的层里。
-	var cfg: Variant = LAYERS.get(layer, null)
-	if cfg == null:
-		return -1
-	return int(cfg.get("treasure_col", -1))
 
 
 static func roll_event_kind(layer: int, rng: RandomNumberGenerator,

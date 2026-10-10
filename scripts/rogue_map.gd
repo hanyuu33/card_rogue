@@ -1,282 +1,417 @@
 class_name RogueMap
 extends RefCounted
-## 肉鸽地图生成（参考杀戮尖塔）：起点 + 12 个普通层 + Boss，共 14 层，
-## 自下而上推进，最上层为 Boss。
-## 节点类型七种：起点 start / 普通战斗 battle / 精英战斗 elite / 休息 rest /
-## 事件 event / 宝箱层 chest / Boss boss。
+## 格子地图生成（R128 重写）—— 7 列 × 5 行的相接正方形格子。
 ##
-## 分层（layer）：一张地图属于某一层（generate 的 layer 参数，默认第一层），
-## 每个节点都带 `layer` 字段。节点类型不变，但「事件子类型」与「宝箱层所在列」
-## 都按层从 GameLayers 取 —— 所以第一层地图只会出现第一层的事件，
-## 日后新增的层可以有完全不同的事件池 / 宝箱层配置。
+## 与旧版的根本区别：旧版是「14 个分层列、每列 2~5 个圆节点、层间连边」，
+## 新版是**一张固定 5×7 的网格**，每格一个房间，房间之间由「门」相连。
+## 玩家从最下一行中间出发，可以在网格上自由走动（走过的地方可以零消耗返回）。
 ##
-## 结构规则：
-##   * 第 0 层（起点）1 个起点节点（非战斗，玩家从这里出发）；
-##     最后一层 1 个 Boss 节点；中间 12 层各 2~5 个节点
-##     （除起点/Boss 外每层至少 2 个节点，不留只有 1 个节点的孤单层）；
-##   * **第 REST_COL（9）层整层固定为休息**（R69）：所有路线都会经过这一层，
-##     且这一层必定能休息回血。它前后的两层（第 8、10 层）**禁止出休息**，
-##     否则会与固定休息层连成两连休（见 _assign_types 里的 rest_blocked_by_fixed_layer）；
-##   * 宝箱层固定在 GameLayers.treasure_col(layer) 指定的那一列
-##     （第一层 = 第 6 层）：该层节点全部是宝箱，开箱即得 1 个随机奖励道具
-##     （不与已拥有的重复），不参与普通类型抽取；配置为 -1 时本层没有宝箱层；
-##   * 严格逐层推进：N 层只能连到 N+1 层（不跳跃、不返回）；
-##   * 连边为直线且互不交叉：层内节点按 slot 排序（row = slot 的名次），
-##     目标节点按比例单调映射到源节点（单调 ⇒ 直线不交叉），
-##     额外边只允许「共享相邻源的边界目标」，同样不交叉；
-##   * 每个节点至少 1 条出边（无死路）、每个目标至少 1 条入边（全部可达）；
-##   * 每层节点随机分布到 5 个横向槽位（slot 0~4，同层不重复），
-##     起点与 Boss 固定居中（slot 2）；
-##   * 类型按层加权抽取：休息/精英出现概率较低，且沿任意一条路线
-##     （起点 → Boss 的路径）最多 REST_CAP 个休息、最多 ELITE_CAP 个精英；
-##     **固定休息层必然占用 1 个休息额度**（rest_cnt 从它开始至少为 1）；
-##   * 休息点不出现在第一层（col == 1），且**不会连续出现**——
-##     只要有一个前驱是休息，该节点就不能再是休息（见 _assign_types）；
-##   * 战斗关卡不在生成时分配——由 RunState.next_level 在进入节点时
-##     按「本局已胜利的战斗数」动态决定难度（前 2 场简单，之后困难）。
+## 坐标：col 0..6 横向（宽 7），row 0..4 纵向（高 5），**row = 0 是最上一行**。
+## 玩家起点在最下一行中间 = (col 3, row 4)。
 ##
-## 节点结构：{id, col, row, slot, type, layer, next: [下节点 id],
-##            event_kind（type=event 时：本层事件池里的一个子类型，见 GameLayers）,
-##            rest_cnt/elite_cnt（内部：起点到此的路径最大累计数）}
+## 门的方向数约束（用户口径）：
+##   * 四个角：**只有 1 个方向**（死路尽头）；
+##   * 起点：2~3 个方向；
+##   * 其他边缘格：1~3 个方向；
+##   * 内部格：2~4 个方向。
+## 门是**双向**的：A 有通往 B 的门 ⇔ B 有通往 A 的门（doors 对称，生成时保证）。
+##
+## 房间类型：
+##   start 起点 / battle 战斗 / elite 精英 / rest 休息 / event 事件 /
+##   chest 普通宝箱 / bigchest 大宝箱 / unknown 「?」（走进才揭晓）
+## 固定格：起点 (3,4)；**左上 (0,0) 与右上 (6,0) 固定为大宝箱**。
+## 「?」房的实际类型在**生成时**就定好（而非进入时抽）—— 这样休息点的
+## 「不与起点相邻 / 不与另一个休息相邻」两条约束对隐藏房同样成立。
+##
+## 生成算法（R128 实验选定：平均 1.46 次重试、68% 一次成功、0 失败）：
+##   1) 骨架：每行横向全连（端点得 1 度、中间列得 2 度）；
+##      相邻两行之间在「非角列」随机连 1~3 条垂直边（保证行间连通）；
+##   2) 随机加边：两端都还没到度数上限的边，按概率加（制造分支感）；
+##   3) 随机删边：删后仍连通、且两端度数都不低于下界才真删（制造死路与岔路）；
+##   4) 校验：度数区间 / 全连通 / 起点到两个大宝箱都不超过 MAX_STEPS 步；
+##      任一项不过 → 整张重摇（最多 MAX_ATTEMPTS 次）。
+##
+## 「12 步内不可能同时进两个大宝箱」是**几何必然**，不用额外控制：
+##   起点→上角曼哈顿距离 ≥ 3+4 = 7，两个上角之间 ≥ 6，所以
+##   「先到任一大宝箱再赶去另一个」最少 13 步 > 12 步。生成时只需保证
+##   **两个大宝箱各自 ≤ 12 步可达**（见 _validate）。
 
-const COLS := 14                 # 起点 + 12 个普通层（含第 6 层宝箱层 + 第 9 层固定休息层）+ Boss
-const REST_COL := 9              # 固定休息层（R69）：整层都是休息，所有路线必经
-const TREASURE_COL := 6          # 第一层宝箱层的列号（= GameLayers.treasure_col(1)，仅作引用兼容）
-const MIN_NODES := 2             # 中间层最少节点数（除起点/Boss，不留单节点层）
-const MAX_NODES := 5             # 中间层最多节点数
-const REST_CAP := 3              # 任意一条路线上最多 3 个休息（含固定休息层那 1 个）
-const ELITE_CAP := 3             # 任意一条路线上最多 3 个精英
+const COLS := 7                      # 横向格数
+const ROWS := 5                      # 纵向格数
+const CELLS := COLS * ROWS           # 35
+const MAX_STEPS := 12                # 每层的巧克力块数 = 可探索的新房间数
+
+## ⚠️ 门的存储口径：`cell["doors"]` 是**邻居房间的 id 列表**（不是方向索引）。
+## 生成时邻接表就是按 id 建的，直接沿用最不容易出错；
+## 需要「哪条边」时用 `dir_between(a_id, b_id)` 从两格坐标反算（只有画门用到）。
+
+const START_COL := 3
+const START_ROW := 4                                        # 最下一行
+const START_POS := Vector2i(START_COL, START_ROW)
+const BIGCHEST_POS := [Vector2i(0, 0), Vector2i(6, 0)]        # 左上 / 右上
 
 const TYPE_LABELS := {
-	"start": "起点", "battle": "战斗", "elite": "精英",
-	"rest": "休息", "event": "事件", "chest": "宝箱层", "boss": "Boss",
+	"start": "起点", "battle": "战斗", "elite": "精英", "rest": "休息",
+	"event": "事件", "chest": "宝箱", "bigchest": "大宝箱", "unknown": "未知",
+}
+## 格子正中间的短标记（没有对应图标素材时用）。
+const TYPE_MARKS := {
+	"start": "起", "battle": "战", "elite": "英", "rest": "息",
+	"event": "事", "chest": "箱", "bigchest": "大", "unknown": "?",
 }
 
+const P_UNKNOWN := 0.28              # 「?」房占比（其余格直接写明类型）
+const REST_MIN := 2                  # 每张地图的休息点数量区间
+const REST_MAX := 4
+## 普通格的类型权重（战斗为主，精英与宝箱略少）。
+const WEIGHTS := {"battle": 6, "event": 3, "elite": 2, "chest": 2}
+## 「?」房的实际类型权重 —— 用户口径：**精英与普通宝箱出现概率略低**。
+const WEIGHTS_UNKNOWN := {"battle": 7, "event": 4, "elite": 1, "chest": 1}
+
+const MAX_ATTEMPTS := 200
+
+
+# ------------------------------------------------------------ 坐标工具
+
+static func idx(col: int, row: int) -> int:
+	return row * COLS + col
+
+
+static func col_of(i: int) -> int:
+	return i % COLS
+
+
+static func row_of(i: int) -> int:
+	return int(i / COLS) if i >= 0 else 0
+
+
+static func in_bounds(col: int, row: int) -> bool:
+	return col >= 0 and col < COLS and row >= 0 and row < ROWS
+
+
+static func is_corner(col: int, row: int) -> bool:
+	return (col == 0 or col == COLS - 1) and (row == 0 or row == ROWS - 1)
+
+
+static func is_edge(col: int, row: int) -> bool:
+	return col == 0 or col == COLS - 1 or row == 0 or row == ROWS - 1
+
+
+static func limits(col: int, row: int) -> Vector2i:
+	## 该格门数的允许区间 (下界, 上界)。
+	if is_corner(col, row):
+		return Vector2i(1, 1)          # 四角只有 1 个方向
+	if col == START_COL and row == START_ROW:
+		return Vector2i(2, 3)          # 初始房间 2~3 个方向
+	if is_edge(col, row):
+		return Vector2i(1, 3)          # 其他边缘房间 1~3 个方向
+	return Vector2i(2, 4)              # 内部房间 2~4 个方向
+
+
+static func lo_of(i: int) -> int:
+	return limits(col_of(i), row_of(i)).x
+
+
+static func hi_of(i: int) -> int:
+	return limits(col_of(i), row_of(i)).y
+
+
+static func is_bigchest(i: int) -> bool:
+	for p in BIGCHEST_POS:
+		if idx(p.x, p.y) == i:
+			return true
+	return false
+
+
+# ------------------------------------------------------------ 生成
 
 static func generate(rng: RandomNumberGenerator,
 		layer := GameLayers.LAYER_DEFAULT) -> Array:
-	## 生成整张地图：columns[col] = [node, ...]（node.row 按 slot 升序编号）。
-	## layer = 本张地图所属的层（决定事件池与宝箱层位置，默认第一层）；
-	## 生成的每个节点都带上该 layer，关卡/事件在进入节点时按层取。
-	var columns: Array = []
-	var nid := 0
-	for col in COLS:
-		var count := 1 if (col == 0 or col == COLS - 1) \
-				else rng.randi_range(MIN_NODES, MAX_NODES)
-		var slots := _slots_for(count, rng)
-		var col_nodes: Array = []
-		for i in count:
-			var node := {
-				"id": nid, "col": col, "row": i, "slot": slots[i],
-				"type": "start" if col == 0 else "boss" if col == COLS - 1 else "battle",
-				"layer": layer, "level": {}, "next": [],
-			}
-			nid += 1
-			col_nodes.append(node)
-		columns.append(col_nodes)
-	_connect(columns, rng)
-	# 不变量：固定休息层不能与本层宝箱层撞列（两者都是「整层强制类型」，
-	# 撞列时谁生效取决于 _assign_types 里的分支先后，太脆）。源头挡掉 + 交给回归锁。
-	var tcol := GameLayers.treasure_col(layer)
-	if tcol == REST_COL:
-		push_error("RogueMap：宝箱层列号 %d 与固定休息层 REST_COL 撞列，本层地图不可用" % tcol)
-	_assign_types(columns, rng, layer)
-	return columns
+	## 生成一整张 5×7 地图（返回 35 个 cell 的数组，下标即 id）。
+	## 完全确定：同一 rng 状态必然得到同一张图（重试次数也确定）。
+	for attempt in MAX_ATTEMPTS:
+		var adj := _build_adjacency(rng)
+		if adj.is_empty():
+			continue
+		return _make_cells(adj, rng, layer)
+	push_error("RogueMap：%d 次尝试仍未生成满足约束的 5×7 地图" % MAX_ATTEMPTS)
+	return []
 
 
-static func _slots_for(count: int, rng: RandomNumberGenerator) -> Array:
-	## 从 5 个横向槽位随机抽 count 个不重复槽位（升序返回 ⇒ row 按 slot 排序）。
-	## 单节点层（起点/Boss）固定居中槽位 2。
-	if count == 1:
-		return [2]
-	var all := [0, 1, 2, 3, 4]
-	for i in range(all.size() - 1, 0, -1):
+static func _shuffle(arr: Array, rng: RandomNumberGenerator) -> void:
+	## ⚠️ 只能用这个，**不要用 `Array.shuffle()`** —— 后者走全局随机源，
+	## 录像回放（同一种子）会得到不同的地图。Fisher-Yates 手工版走传入的 rng。
+	for i in range(arr.size() - 1, 0, -1):
 		var j := rng.randi_range(0, i)
-		var tmp: int = all[i]
-		all[i] = all[j]
-		all[j] = tmp
-	var out: Array = all.slice(0, count)
-	out.sort()
-	return out
+		var t: Variant = arr[i]
+		arr[i] = arr[j]
+		arr[j] = t
 
 
-static func _connect(columns: Array, rng: RandomNumberGenerator) -> void:
-	## 相邻层连边：只连下一层（严格逐层推进），直线且互不交叉。
-	## 构造：层内节点按 row 排序，对下一层目标 t 令 s(t) = t*m/n
-	## （单调不减 ⇒ 任意两条边不交叉）；没有出边的源节点补一条
-	## 「前一源的最大目标」（保持单调）；再按概率加共享边界目标的
-	## 额外分叉边（max_t(i) ≤ min_t(i+1) 恒成立 ⇒ 依然不交叉）。
-	for col in columns.size() - 1:
-		var cur: Array = columns[col]
-		var nxt: Array = columns[col + 1]
-		var m := cur.size()
-		var n := nxt.size()
-		var tgt_of: Array = []
-		for i in m:
-			tgt_of.append([])
-		# 主边：目标 t → 源 s(t) = t*m/n（覆盖所有目标，映射单调）
-		for t in n:
-			(tgt_of[mini(t * m / n, m - 1)] as Array).append(t)
-		# 没有出边的源节点：补「前一个源的最大目标」（或后继源的首目标）
-		for i in m:
-			if (tgt_of[i] as Array).is_empty():
-				for j in range(i - 1, -1, -1):
-					if not (tgt_of[j] as Array).is_empty():
-						(tgt_of[i] as Array).append((tgt_of[j] as Array)[-1])
-						break
-				if (tgt_of[i] as Array).is_empty():
-					for j in range(i + 1, m):
-						if not (tgt_of[j] as Array).is_empty():
-							(tgt_of[i] as Array).append((tgt_of[j] as Array)[0])
-							break
-		# 写入主边；每个层间边界最多加一条共享边（前向/后向二选一，
-		# 否则两侧扇形区间重叠会交叉），保持 max_t(i) ≤ min_t(i+1)。
-		for i in m:
-			for t in (tgt_of[i] as Array):
-				var tid: int = int(nxt[t]["id"])
-				if not cur[i]["next"].has(tid):
-					cur[i]["next"].append(tid)
-		for i in m - 1:
-			var roll := rng.randf()
-			if roll < 0.4:
-				# 前向共享：源 i 额外连到源 i+1 的首目标
-				if not (tgt_of[i + 1] as Array).is_empty():
-					var tid2: int = int(nxt[(tgt_of[i + 1] as Array)[0]]["id"])
-					if not cur[i]["next"].has(tid2):
-						cur[i]["next"].append(tid2)
-			elif roll < 0.6:
-				# 后向共享：源 i+1 额外连到源 i 的末目标
-				if not (tgt_of[i] as Array).is_empty():
-					var tid3: int = int(nxt[(tgt_of[i] as Array)[-1]]["id"])
-					if not cur[i + 1]["next"].has(tid3):
-						cur[i + 1]["next"].append(tid3)
+static func _link(adj: Array, a: int, b: int) -> void:
+	if not (adj[a] as Array).has(b):
+		(adj[a] as Array).append(b)
+	if not (adj[b] as Array).has(a):
+		(adj[b] as Array).append(a)
 
 
-static func _elite_weight(col: int) -> int:
-	## 精英权重随层数缓升（概率保持较低）：1-3 层 0，4-6 层 1，7-9 层 2，10 层起 3。
-	## 公式按 col 算，地图加长（R69：中间层 11 → 12）不用改这里 —— 只是末档多一层。
-	return clampi((col - 1) / 3, 0, 3)
+static func _unlink(adj: Array, a: int, b: int) -> void:
+	(adj[a] as Array).erase(b)
+	(adj[b] as Array).erase(a)
 
 
-static func _pick_type(col: int, rng: RandomNumberGenerator,
-		allow_rest: bool, allow_elite: bool, allow_event: bool) -> String:
-	## 中间层类型加权抽取：战斗为主，休息/事件低概率，精英随层数缓升。
-	## allow_event = 本层是否配了事件内容（没配就不生成事件节点）。
-	if col <= 0:
-		return "start"
-	if col >= COLS - 1:
-		return "boss"
-	var weights := {
-		"battle": 6,
-		"event": 1 if allow_event else 0,
-		"rest": 1 if allow_rest else 0,
-		"elite": _elite_weight(col) if allow_elite else 0,
-	}
+static func _build_adjacency(rng: RandomNumberGenerator) -> Array:
+	## 生成门的邻接表（Array[35] of Array[int]）。不满足约束时返回空数组。
+	var adj: Array = []
+	for i in CELLS:
+		adj.append([])
+
+	# --- 骨架 1：每行横向全连（端点得 1 度，中间列得 2 度；四角因此恰好 1 度）
+	for row in ROWS:
+		for col in COLS - 1:
+			_link(adj, idx(col, row), idx(col + 1, row))
+
+	# --- 骨架 2：相邻两行之间随机连 1~3 条垂直边（行间连通）
+	#     ⚠️ 角的垂直边**永不加**：角的上限就是 1，那条额度必须留给水平边，
+	#     否则角会变成 2 度。
+	for row in ROWS - 1:
+		var cols: Array = []
+		for col in COLS:
+			if is_corner(col, row) or is_corner(col, row + 1):
+				continue
+			cols.append(col)
+		_shuffle(cols, rng)
+		var k: int = mini(rng.randi_range(1, 3), cols.size())
+		for j in k:
+			_link(adj, idx(int(cols[j]), row), idx(int(cols[j]), row + 1))
+
+	# --- 随机加边（两端都还没到上限才加）
+	var extra: Array = []
+	for row in ROWS:
+		for col in COLS:
+			if col + 1 < COLS:
+				extra.append([idx(col, row), idx(col + 1, row)])
+			if row + 1 < ROWS and not is_corner(col, row) and not is_corner(col, row + 1):
+				extra.append([idx(col, row), idx(col, row + 1)])
+	_shuffle(extra, rng)
+	for e: Array in extra:
+		var a: int = e[0]
+		var b: int = e[1]
+		if (adj[a] as Array).size() < hi_of(a) and (adj[b] as Array).size() < hi_of(b) \
+				and not (adj[a] as Array).has(b):
+			if rng.randf() < 0.55:
+				_link(adj, a, b)
+
+	# --- 随机删边：制造死路与不规则岔口（删后必须仍连通且不破度数下界）
+	var cur: Array = []
+	for a in CELLS:
+		for b: int in adj[a]:
+			if b > a:
+				cur.append([a, b])
+	_shuffle(cur, rng)
+	var quota: int = rng.randi_range(6, 16)
+	var done := 0
+	var start_i := idx(START_COL, START_ROW)
+	for e: Array in cur:
+		if done >= quota:
+			break
+		var a: int = e[0]
+		var b: int = e[1]
+		if not (adj[a] as Array).has(b):
+			continue
+		_unlink(adj, a, b)
+		if (adj[a] as Array).size() >= lo_of(a) and (adj[b] as Array).size() >= lo_of(b) \
+				and _reach_count(adj, start_i) == CELLS:
+			done += 1
+		else:
+			_link(adj, a, b)
+
+	return _validate(adj, start_i)
+
+
+static func _validate(adj: Array, start_i: int) -> Array:
+	## 校验并返回邻接表；任一项不过就返回空数组（交给上层重摇）。
+	for i in CELLS:
+		var n: int = (adj[i] as Array).size()
+		if n < lo_of(i) or n > hi_of(i):
+			return []
+	if _reach_count(adj, start_i) != CELLS:
+		return []
+	var dist := _bfs(adj, start_i)
+	for p in BIGCHEST_POS:
+		if int(dist.get(idx(p.x, p.y), 9999)) > MAX_STEPS:
+			return []      # 大宝箱必须在 12 步内可达
+	return adj
+
+
+static func _reach_count(adj: Array, src: int) -> int:
+	var seen := {src: true}
+	var queue: Array = [src]
+	while not queue.is_empty():
+		var u: int = queue.pop_front()
+		for v: int in adj[u]:
+			if not seen.has(v):
+				seen[v] = true
+				queue.append(v)
+	return seen.size()
+
+
+static func _bfs(adj: Array, src: int) -> Dictionary:
+	## 从 src 出发的步数表（id -> 步数）。
+	var dist := {src: 0}
+	var queue: Array = [src]
+	while not queue.is_empty():
+		var u: int = queue.pop_front()
+		for v: int in adj[u]:
+			if not dist.has(v):
+				dist[v] = int(dist[u]) + 1
+				queue.append(v)
+	return dist
+
+
+static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> Array:
+	## 把邻接表定型成 35 个 cell 字典。
+	var start_i := idx(START_COL, START_ROW)
+
+	# --- 休息点位置：全局先定（起点与两个大宝箱不参与）
+	var rest_set := {}
+	var cands: Array = []
+	for i in CELLS:
+		if i == start_i or is_bigchest(i):
+			continue
+		cands.append(i)
+	_shuffle(cands, rng)
+	var want_rest: int = rng.randi_range(REST_MIN, REST_MAX)
+	for i: int in cands:
+		if rest_set.size() >= want_rest:
+			break
+		# 约束：休息点不与起点相邻，也不与另一个休息点相邻
+		var ok := true
+		for nb: int in adj[i]:
+			if nb == start_i or rest_set.has(nb):
+				ok = false
+				break
+		if ok:
+			rest_set[i] = true
+
+	# --- 逐格定类型
+	var used_events := {}
+	var cells: Array = []
+	for i in CELLS:
+		var type := "battle"
+		var hidden := false
+		if i == start_i:
+			type = "start"
+		elif is_bigchest(i):
+			type = "bigchest"
+		elif rest_set.has(i):
+			type = "rest"
+		else:
+			# 「?」房的实际类型在生成时就定（约束才对隐藏房生效），
+			# 只是**先不告诉玩家**，走进才揭晓。
+			hidden = rng.randf() < P_UNKNOWN
+			type = _weighted(WEIGHTS_UNKNOWN if hidden else WEIGHTS, rng)
+		var cell := {
+			"id": i,
+			"col": col_of(i), "row": row_of(i),
+			"type": type,
+			"hidden": hidden,             # 是「?」房（揭晓前不显示真实类型）
+			"revealed": not hidden,       # 是否已揭晓（非隐藏房一开始就是明的）
+			"doors": (adj[i] as Array).duplicate(),
+			"layer": layer,
+			"event_kind": "",
+		}
+		if type == "event":
+			# 事件子类型：本张地图上不重复（全出过一遍后才允许重复）。
+			cell["event_kind"] = GameLayers.roll_event_kind(layer, rng, used_events)
+		cells.append(cell)
+	return cells
+
+
+static func _weighted(w: Dictionary, rng: RandomNumberGenerator) -> String:
 	var total := 0
-	for t in weights:
-		total += int(weights[t])
+	for k in w:
+		total += int(w[k])
+	if total <= 0:
+		return "battle"
 	var roll := rng.randi_range(1, total)
-	for t in weights:
-		roll -= int(weights[t])
+	for k in w:
+		roll -= int(w[k])
 		if roll <= 0:
-			return str(t)
+			return str(k)
 	return "battle"
 
 
-static func _assign_types(columns: Array, rng: RandomNumberGenerator,
-		layer := GameLayers.LAYER_DEFAULT) -> void:
-	## 逐层确定中间层节点类型。rest_cnt/elite_cnt = 从起点到该节点的
-	## 任意路径上的最大累计数；达到上限的层不再出休息/精英，
-	## 从而保证任意一条完整路线 ≤ REST_CAP 个休息、≤ ELITE_CAP 个精英。
-	## **休息不连续**：若本节点任一前驱是休息，则本节点禁止出休息
-	##（前驱类型在上一列就已定，所以逐层向下走时判定是可靠的）。
-	## **固定休息层（R69）**：第 REST_COL 层整层强制休息，且它**前后两层禁止出休息**
-	##（`_adjacent_to_rest_col`）—— 否则会连成两连休，而「看前驱」那条规则管不到它。
-	## 事件子类型与宝箱层位置都按 layer 从 GameLayers 取（内容按层隔离）。
-	var tcol := GameLayers.treasure_col(layer)          # 本层宝箱层列号（-1 = 无）
-	var layer_has_events := GameLayers.has_events(layer)  # 本层有没有事件内容
-	# R68：本张地图已出过的**事件子类型**。同一张地图上一种事件只出一次，
-	# 全部子类型都出过了才允许重复（规则与清空逻辑都在 GameLayers.roll_event_kind）。
-	var used_event_kinds := {}
-	for col in range(1, columns.size()):
-		for node in columns[col]:
-			if col >= columns.size() - 1:
-				continue   # Boss 层固定
-			var r := 0
-			var e := 0
-			var parent_rest := false      # 有没有前驱是休息（连续休息判定）
-			for parent in columns[col - 1]:
-				if (parent["next"] as Array).has(int(node["id"])):
-					r = maxi(r, int(parent.get("rest_cnt", 0)))
-					e = maxi(e, int(parent.get("elite_cnt", 0)))
-					if str(parent.get("type", "")) == "rest":
-						parent_rest = true
-			# 宝箱层（本层由 GameLayers 指定的那一列）：整层都是宝箱，
-			# 不参与普通类型抽取，计数原样继承（宝箱既不算休息也不算精英）。
-			if col == tcol:
-				node["type"] = "chest"
-				node["rest_cnt"] = r
-				node["elite_cnt"] = e
-				continue
-			# **固定休息层（R69）**：整层必定是休息，所有路线都经过它。
-			# 这层不算「随机抽取」，所以也不受 allow_rest 的两种限制
-			# （起步不出休息 / 前驱是休息）影响 —— 它就是设计上的必经回血点。
-			# rest_cnt 从这里开始至少为 1（那 1 个额度已用掉，后面只剩 REST_CAP-1 次随机休息）。
-			if col == REST_COL:
-				node["type"] = "rest"
-				node["rest_cnt"] = r + 1
-				node["elite_cnt"] = e
-				continue
-			# 休息点不出现在第一层（col == 1）：起步就休息太安逸；
-			# 也不允许连续休息（parent_rest）：连着两层休息太廉价。
-			# **固定休息层前后两层额外禁休息**（R69）：那一层必定是休息，若它前后
-			# 还随机出休息就会连成两连休，而这条规则是「逐节点看前驱」判定不出来的
-			#（第 8 层的前驱在第 7 层，第 10 层的前驱才是固定休息层）。
-			var rest_ok: bool = r < REST_CAP and col > 1 and not parent_rest \
-					and not _adjacent_to_rest_col(col)
-			var type := _pick_type(col, rng,
-					rest_ok, e < ELITE_CAP,
-					layer_has_events)
-			node["type"] = type
-			node["rest_cnt"] = r + (1 if type == "rest" else 0)
-			node["elite_cnt"] = e + (1 if type == "elite" else 0)
-			if type == "event":
-				# 事件子类型：按本层的事件池加权抽取（第一层的事件与权重见
-				# GameLayers.LAYERS；别的层可以配一套完全不同的事件）。
-				# R68：传 used_event_kinds → 本张地图上不重复，全出过一遍后才重复。
-				node["event_kind"] = GameLayers.roll_event_kind(layer, rng, used_event_kinds)
+# ------------------------------------------------------------ 查询（消费方 / 测试共用）
+
+static func cell_at(cells: Array, col: int, row: int) -> Dictionary:
+	if not in_bounds(col, row):
+		return {}
+	return cells[idx(col, row)]
 
 
-static func _adjacent_to_rest_col(col: int) -> bool:
-	## 本层是否**紧邻固定休息层**（R69）—— 那两层禁止出休息，否则连成两连休。
-	return col == REST_COL - 1 or col == REST_COL + 1
+static func start_cell(cells: Array) -> Dictionary:
+	if cells.size() != CELLS:
+		return {}
+	return cells[idx(START_COL, START_ROW)]
 
 
-# ------------------------------------------------------------ 校验（测试用）
-
-static func reachable_ids(columns: Array) -> Array[int]:
-	## 从起点沿 next 边可达的全部节点 id（应等于全部节点）。
-	var out: Array[int] = []
-	if columns.is_empty() or columns[0].is_empty():
-		return out
-	var queue: Array = [int(columns[0][0]["id"])]
-	var seen := {}
-	while not queue.is_empty():
-		var id: int = queue.pop_front()
-		if seen.has(id):
-			continue
-		seen[id] = true
-		out.append(id)
-		for node in _all_nodes(columns):
-			if int(node["id"]) == id:
-				for nid in node["next"]:
-					queue.append(int(nid))
-				break
-	return out
+static func neighbor_ids(cell: Dictionary) -> Array:
+	## 该格所有「有门」的邻居房间 id（`doors` 本身就是 id 列表）。
+	if cell.is_empty():
+		return []
+	return (cell["doors"] as Array).duplicate()
 
 
-static func _all_nodes(columns: Array) -> Array:
-	var out: Array = []
-	for col_nodes in columns:
-		out.append_array(col_nodes)
-	return out
+static func dir_between(a_id: int, b_id: int) -> Vector2i:
+	## 从格 a 指向格 b 的**方向增量**（只用于画门；不是正交相邻则返回 ZERO）。
+	if a_id < 0 or b_id < 0 or a_id >= CELLS or b_id >= CELLS:
+		return Vector2i.ZERO
+	var d := Vector2i(col_of(b_id) - col_of(a_id), row_of(b_id) - row_of(a_id))
+	if absi(d.x) + absi(d.y) != 1:
+		return Vector2i.ZERO
+	return d
+
+
+static func has_door_to(cell: Dictionary, other_id: int) -> bool:
+	return neighbor_ids(cell).has(other_id)
+
+
+static func doors_between(cells: Array, a_id: int, b_id: int) -> bool:
+	## 两个格之间是否真的有门（双向校验，防单向 bug）。
+	if a_id < 0 or b_id < 0 or a_id >= cells.size() or b_id >= cells.size():
+		return false
+	return neighbor_ids(cells[a_id]).has(b_id) \
+			and neighbor_ids(cells[b_id]).has(a_id)
+
+
+static func steps_from(cells: Array, from_id: int) -> Dictionary:
+	## 从某格出发的步数表（id -> 步数）。只走有门的相邻格。
+	var adj: Array = []
+	for c: Dictionary in cells:
+		adj.append(neighbor_ids(c))
+	if from_id < 0 or from_id >= adj.size():
+		return {}
+	return _bfs(adj, from_id)
+
+
+static func display_type(cell: Dictionary) -> String:
+	## 玩家**当前能看到**的类型：隐藏房未揭晓时一律显示「?」。
+	if cell.is_empty():
+		return ""
+	if bool(cell.get("hidden", false)) and not bool(cell.get("revealed", false)):
+		return "unknown"
+	return str(cell["type"])
+
+
+static func type_label(type: String) -> String:
+	return str(TYPE_LABELS.get(type, type))
+
+
+static func type_mark(type: String) -> String:
+	return str(TYPE_MARKS.get(type, "?"))
+
+
+static func all_nodes(cells: Array) -> Array:
+	## 兼容旧调用点的别名（旧版是 columns 的扁平化）。返回全部 cell。
+	return cells

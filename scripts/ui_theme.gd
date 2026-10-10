@@ -358,7 +358,9 @@ static var MAP_NODE_COLORS := {
 	"elite": RARITY_EPIC,       # 精英 紫
 	"rest": Color("3f9b5f"),    # 休息 绿
 	"event": Color("d1a12a"),   # 事件 金
-	"chest": Color("e0912a"),   # 宝箱层 橙金（与事件金区分）
+	"chest": Color("e0912a"),   # 宝箱 橙金（与事件金区分）
+	"bigchest": Color("f5c84c"),  # 大宝箱（R128）：更亮的金 —— 全图只有两格，要跳出来
+	"unknown": Color("6f7a8c"),   # 「?」房（R128）：灰蓝，走进才揭晓
 	"boss": Color("33323b"),    # Boss 黑
 }
 

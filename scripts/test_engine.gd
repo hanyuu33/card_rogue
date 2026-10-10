@@ -3076,16 +3076,15 @@ func _init() -> void:
 	var ev_pool := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
 	for i in 40:
 		var em: Array = RogueMap.generate(ev_rng, GameLayers.LAYER_DEFAULT)
-		for col_nodes in em:
-			for node in col_nodes:
-				if int(node.get("layer", -1)) != GameLayers.LAYER_DEFAULT:
-					ev_layer_ok = false
-				if str(node["type"]) != "event":
-					continue
-				var ek := str(node.get("event_kind", ""))
-				seen_kinds[ek] = true
-				if not ev_pool.has(ek):
-					kind_ok = false
+		for node: Dictionary in em:
+			if int(node.get("layer", -1)) != GameLayers.LAYER_DEFAULT:
+				ev_layer_ok = false
+			if str(node["type"]) != "event":
+				continue
+			var ek := str(node.get("event_kind", ""))
+			seen_kinds[ek] = true
+			if not ev_pool.has(ek):
+				kind_ok = false
 	check(kind_ok, "事件节点：event_kind 全部取自本层事件池（不会串到别的层）")
 	check(ev_layer_ok, "地图节点都带着本图所属的层（第一层）")
 	check(seen_kinds.has("treasure") and seen_kinds.has("whisper"),
@@ -3095,7 +3094,8 @@ func _init() -> void:
 			"多次生成：第一层新事件（奥秘之泉 / 遗忘之泉）会出现")
 	check(not seen_kinds.has("gaze"),
 			"鸭之凝视已挪到第二层：第一层地图不再生成 gaze 事件")
-	check(seen_kinds.has("monster"), "多次生成：事件节点遭遇怪物（monster）会出现")
+	check(not seen_kinds.has("monster"),
+			"R128：事件池已移除 monster —— 第一层地图不再生成「遭遇怪物」")
 
 	# ---- 事件道具：鸭之低语（6010）获得 / 去重 ----
 	var saved_relics2: Array[int] = RunState.relics.duplicate()
@@ -4922,10 +4922,10 @@ func _init() -> void:
 	# 「凝视 / 一袋米抗几楼」已挪到第二层；第一层换成「奥秘之泉」，
 	# 「遗忘之泉」是写进每一层事件表的全层通用事件。
 	var ev_kinds_layer := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
-	check(ev_kinds_layer.size() == 7 and ev_kinds_layer.has("monster") \
+	check(ev_kinds_layer.size() == 6 and not ev_kinds_layer.has("monster") \
 			and ev_kinds_layer.has("treasure") and ev_kinds_layer.has("arcane") \
 			and ev_kinds_layer.has("smith") and not ev_kinds_layer.has("gaze"),
-			"第一层事件池：6 种子类型（怪物/低语/挣扎/奥秘之泉/遗忘之泉/卡牌宝箱；无凝视）")
+			"第一层事件池：6 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/卡牌宝箱；无凝视、无怪物）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
 	check(l2_ev_kinds.size() == 6 and l2_ev_kinds.has("smith"),
 			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 + 凝视 + 遗忘之泉 = 5 种子类型")
@@ -4977,315 +4977,290 @@ func _init() -> void:
 			pear_seen = true
 			break
 	check(pear_seen, "第二层事件抽取能掷出「鸭梨山大」（权重生效）")
-	check(GameLayers.treasure_col(GameLayers.LAYER_DEFAULT) == RogueMap.TREASURE_COL,
-			"第一层宝箱层列号与 RogueMap.TREASURE_COL 一致（第 %d 层）" % RogueMap.TREASURE_COL)
-	check(GameLayers.treasure_col(GameLayers.LAYER_TWO) == RogueMap.TREASURE_COL,
-			"第二层同样设宝箱层（第 %d 层）" % RogueMap.TREASURE_COL)
 	check(GameLayers.layer_name(GameLayers.LAYER_DEFAULT) == "第一层",
 			"层名显示：第一层")
 	check(GameLayers.layer_name(GameLayers.LAYER_TWO) == "第二层", "层名显示：第二层")
 	check(GameLayers.next_layer(GameLayers.LAYER_DEFAULT) == GameLayers.LAYER_TWO
 			and GameLayers.next_layer(GameLayers.LAYER_TWO) == 0,
 			"层推进：第一层 → 第二层 → 无（打完第二层 Boss 即通关）")
-	check(GameLayers.treasure_col(9) == -1 and not GameLayers.has_events(9),
-			"未配置的层：没有宝箱层、没有事件池（不会顺手拿到第一层的内容）")
+	check(not GameLayers.has_events(9),
+			"未配置的层：没有事件池（不会顺手拿到第一层的内容）")
+	# R128：**事件房间不再遭遇战斗** —— 事件池里的 monster（遭遇怪物）已移除
+	check(not GameLayers.event_weights(GameLayers.LAYER_DEFAULT).has("monster")
+			and not GameLayers.event_kinds(GameLayers.LAYER_TWO).has("monster"),
+			"事件池已移除 monster（两层都不再出「遭遇怪物」）")
 
-	# 地图按层生成：第二层地图带第二层的层号，事件/宝箱层来自第二层专属内容
-	var l2_rng := RandomNumberGenerator.new()
-	l2_rng.seed = 424242
-	var l2 := RogueMap.generate(l2_rng, GameLayers.LAYER_TWO)
-	var l2_bad := false
-	var l2_ev_bad := false
-	var l2_total := 0
-	var l2_event := false
-	var l2_chest := false
-	for l2_col in l2:
-		for l2_node in l2_col:
-			l2_total += 1
-			if int(l2_node.get("layer", -1)) != GameLayers.LAYER_TWO:
-				l2_bad = true
-			if str(l2_node["type"]) == "event":
-				l2_event = true
-				# 对照**第二层事件池本身**判，而不是写死几个名字 ——
-				# 第二层池里还有 gaze（鸭之凝视）与 oblivion（遗忘之泉，全层通用），
-				# 写死白名单会漏掉它们，地图变长后这些事件一出现就误报。
-				# 「不串第一层」由下面的 event_kinds(L1) 交集为空来保证。
-				if not GameLayers.event_kinds(GameLayers.LAYER_TWO).has(
-						str(l2_node.get("event_kind", ""))):
-					l2_ev_bad = true
-			if str(l2_node["type"]) == "chest":
-				l2_chest = true
-	check(not l2_bad, "第二层地图：每个节点都标记 layer = 2")
-	check(not l2_ev_bad, "第二层地图：事件节点只出第二层事件池里的事件（不串第一层）")
-	# 「不串第一层」要单独锁：第二层池里 oblivion 是**两层通用**的，光比对池子
-	# 证明不了没串 —— 这里直接断言「只属于第一层的子类型」一个都不出现。
-	var l2_only_l1 := ["monster", "whisper", "struggle", "arcane", "treasure"]
-	var l2_leak := ""
-	for l2_c in l2:
-		for l2_n in l2_c:
-			if str(l2_n["type"]) == "event" \
-					and l2_only_l1.has(str(l2_n.get("event_kind", ""))):
-				l2_leak = str(l2_n["event_kind"])
-	check(l2_leak == "", "第二层地图：绝不出现第一层专属事件（本次泄漏：%s）"
-			% ("无" if l2_leak == "" else l2_leak))
-	check(l2_event and l2_chest,
-			"第二层地图：会出事件节点（专属事件）与宝箱层")
-	check(RogueMap.reachable_ids(l2).size() == l2_total,
-			"第二层地图结构照常连通（%d 个节点）" % l2_total)
+	# ==== R128：5×7 格子地图 ====
+	check(RogueMap.COLS == 7 and RogueMap.ROWS == 5 and RogueMap.CELLS == 35,
+			"地图尺寸：横 7 × 竖 5 = 35 格")
+	check(RogueMap.MAX_STEPS == 12, "每层 12 块巧克力（= 最多探索 12 个新房间）")
+	check(RogueMap.START_POS == Vector2i(3, 4), "起点固定在最下一行中间 (3,4)")
+	check(RogueMap.BIGCHEST_POS[0] == Vector2i(0, 0)
+			and RogueMap.BIGCHEST_POS[1] == Vector2i(6, 0),
+			"左上 (0,0) 与右上 (6,0) 固定为大宝箱")
 
-	# 多次生成第二层地图：事件节点只出第二层专属事件（绝不串到第一层）
-	var l2_ev_ok := true
-	var l2_ev_seen := {}
-	var l2_ev_rng := RandomNumberGenerator.new()
-	l2_ev_rng.randomize()
-	for l2_i in 40:
-		var l2m: Array = RogueMap.generate(l2_ev_rng, GameLayers.LAYER_TWO)
-		for l2m_col in l2m:
-			for l2m_node in l2m_col:
-				if str(l2m_node["type"]) != "event":
-					continue
-				var l2m_kind := str(l2m_node.get("event_kind", ""))
-				l2_ev_seen[l2m_kind] = true
-				if not GameLayers.event_kinds(GameLayers.LAYER_TWO).has(l2m_kind):
-					l2_ev_ok = false
-	check(l2_ev_ok, "第二层地图：event_kind 全部取自第二层事件池（不串到第一层）")
-	check(l2_ev_seen.has("pear") or l2_ev_seen.has("hero") or l2_ev_seen.has("bluefish"),
+	var q_mrng := RandomNumberGenerator.new()
+	q_mrng.seed = 424242
+	var q_map1: Array = RogueMap.generate(q_mrng, GameLayers.LAYER_DEFAULT)
+	check(q_map1.size() == RogueMap.CELLS, "生成一张地图：35 个房间")
+	var q_scol: Dictionary = RogueMap.start_cell(q_map1)
+	check(not q_scol.is_empty() and str(q_scol["type"]) == "start", "起点房类型为 start")
+	check(str(RogueMap.cell_at(q_map1, 0, 0)["type"]) == "bigchest"
+			and str(RogueMap.cell_at(q_map1, 6, 0)["type"]) == "bigchest",
+			"左上 / 右上角固定是大宝箱房")
+	check(int(RogueMap.cell_at(q_map1, 3, 4)["id"]) == int(q_scol["id"]),
+			"起点就是 (3,4) 那一格")
+
+	# 门必须双向（A 有通往 B 的门 ⇔ B 有通往 A 的门）
+	var q_sym_ok := true
+	for q_c: Dictionary in q_map1:
+		for q_nid in RogueMap.neighbor_ids(q_c):
+			if not RogueMap.neighbor_ids(q_map1[int(q_nid)]).has(int(q_c["id"])):
+				q_sym_ok = false
+	check(q_sym_ok, "地图：门是双向的（A 通向 B ⇔ B 通向 A）")
+
+	# 方向数约束（用户口径：四角 1 / 起点 2~3 / 其他边缘 1~3 / 内部 2~4）
+	var q_deg_ok := true
+	var q_deg_bad := ""
+	for q_c: Dictionary in q_map1:
+		var q_d: int = (q_c["doors"] as Array).size()
+		var q_lim: Vector2i = RogueMap.limits(int(q_c["col"]), int(q_c["row"]))
+		if q_d < q_lim.x or q_d > q_lim.y:
+			q_deg_ok = false
+			q_deg_bad = "(%d,%d) 有 %d 个方向，应在 %d~%d" % [
+					int(q_c["col"]), int(q_c["row"]), q_d, q_lim.x, q_lim.y]
+	check(q_deg_ok, "地图：每个房间的方向数都在规定范围内（%s）"
+			% ("符合" if q_deg_ok else q_deg_bad))
+	check((RogueMap.cell_at(q_map1, 0, 0)["doors"] as Array).size() == 1
+			and (RogueMap.cell_at(q_map1, 6, 0)["doors"] as Array).size() == 1
+			and (RogueMap.cell_at(q_map1, 0, 4)["doors"] as Array).size() == 1
+			and (RogueMap.cell_at(q_map1, 6, 4)["doors"] as Array).size() == 1,
+			"地图：四个角只有 1 个方向")
+	check((q_scol["doors"] as Array).size() >= 2 and (q_scol["doors"] as Array).size() <= 3,
+			"地图：初始房间有 2~3 个方向")
+
+	# 连通 + 大宝箱可达性 + 「12 步只能进一个大宝箱」
+	var q_map_steps: Dictionary = RogueMap.steps_from(q_map1, int(q_scol["id"]))
+	check(q_map_steps.size() == RogueMap.CELLS, "地图：35 个房间全部从起点可达（连通）")
+	var q_bA := RogueMap.idx(0, 0)
+	var q_bB := RogueMap.idx(6, 0)
+	var q_dA: int = int(q_map_steps.get(q_bA, 999))
+	var q_dB: int = int(q_map_steps.get(q_bB, 999))
+	check(q_dA <= RogueMap.MAX_STEPS and q_dB <= RogueMap.MAX_STEPS,
+			"地图：两个大宝箱都在 %d 步内可达（左上 %d 步 / 右上 %d 步）"
+			% [RogueMap.MAX_STEPS, q_dA, q_dB])
+	var q_dAB: int = int(RogueMap.steps_from(q_map1, q_bA).get(q_bB, 999))
+	check(q_dA + q_dAB > RogueMap.MAX_STEPS and q_dB + q_dAB > RogueMap.MAX_STEPS,
+			"地图：12 步内不可能两个大宝箱都进（先到一个再赶去另一个最少 %d 步）"
+			% (q_dA + q_dAB))
+
+	# 休息点：不与起点相邻、也不与另一个休息点相邻
+	var q_rest_ok := true
+	var q_rest_bad := ""
+	for q_c: Dictionary in q_map1:
+		if str(q_c["type"]) != "rest":
+			continue
+		if RogueMap.neighbor_ids(q_c).has(int(q_scol["id"])):
+			q_rest_ok = false
+			q_rest_bad = "休息点 (%d,%d) 与起点相邻" % [int(q_c["col"]), int(q_c["row"])]
+		for q_nid in RogueMap.neighbor_ids(q_c):
+			if str(q_map1[int(q_nid)]["type"]) == "rest":
+				q_rest_ok = false
+				q_rest_bad = "休息点 (%d,%d) 与另一个休息点相邻" % [int(q_c["col"]), int(q_c["row"])]
+	check(q_rest_ok, "地图：休息点不与起点相邻、也不与另一个休息点相邻（%s）"
+			% ("符合" if q_rest_ok else q_rest_bad))
+
+	# 类型合法 / 都带 layer / 固定格不会藏成「?」
+	var q_type_ok := true
+	var q_layer_ok := true
+	var q_hidden_ok := true
+	var q_hidden_seen := false
+	for q_c: Dictionary in q_map1:
+		if not RogueMap.TYPE_LABELS.has(str(q_c["type"])):
+			q_type_ok = false
+		if int(q_c.get("layer", -1)) != GameLayers.LAYER_DEFAULT:
+			q_layer_ok = false
+		if bool(q_c.get("hidden", false)):
+			q_hidden_seen = true
+			if str(q_c["type"]) == "start" or str(q_c["type"]) == "bigchest":
+				q_hidden_ok = false
+	check(q_type_ok, "地图：房间类型全部合法")
+	check(q_layer_ok, "地图：每个房间都标记了所属层（第一层）")
+	check(q_hidden_ok, "地图：「?」房不会盖住起点 / 大宝箱（那两种固定写明）")
+	check(q_hidden_seen, "地图：会出「?」房（本张 %s）"
+			% ("有" if q_hidden_seen else "没有"))
+
+	# 「?」房：走进前显示为未知，揭晓后永久显示真实类型
+	var q_hc: Dictionary = {}
+	for q_c: Dictionary in q_map1:
+		if bool(q_c.get("hidden", false)):
+			q_hc = q_c
+			break
+	if not q_hc.is_empty():
+		check(RogueMap.display_type(q_hc) == "unknown", "「?」房揭晓前显示为未知")
+		q_hc["revealed"] = true
+		check(RogueMap.display_type(q_hc) == str(q_hc["type"]), "「?」房揭晓后显示真实类型")
+		q_hc["revealed"] = false
+
+	# 事件房的 event_kind 必须取自本层事件池
+	var q_ev_kind_ok := true
+	for q_c: Dictionary in q_map1:
+		if str(q_c["type"]) == "event":
+			if not GameLayers.event_kinds(GameLayers.LAYER_DEFAULT).has(
+					str(q_c.get("event_kind", ""))):
+				q_ev_kind_ok = false
+	check(q_ev_kind_ok, "地图：事件房的 event_kind 全部取自本层事件池")
+
+	# 批量生成：60 张都必须满足全部约束（生成算法必须稳定，不允许偶发失败）
+	var q_bulk_ok := true
+	var q_bulk_msg := "全部通过"
+	var q_bulk_rng := RandomNumberGenerator.new()
+	q_bulk_rng.seed = 777001
+	var q_bulk_rest := 0
+	var q_bulk_unknown := 0
+	var q_bulk_types := {}
+	for q_trial in 60:
+		var q_mp: Array = RogueMap.generate(q_bulk_rng, GameLayers.LAYER_DEFAULT)
+		if q_mp.size() != RogueMap.CELLS:
+			q_bulk_ok = false
+			q_bulk_msg = "第 %d 张生成失败（%d 格）" % [q_trial, q_mp.size()]
+			break
+		var q_st: Dictionary = RogueMap.steps_from(q_mp, int(RogueMap.start_cell(q_mp)["id"]))
+		if q_st.size() != RogueMap.CELLS:
+			q_bulk_ok = false
+			q_bulk_msg = "第 %d 张不连通" % q_trial
+			break
+		if int(q_st.get(RogueMap.idx(0, 0), 999)) > RogueMap.MAX_STEPS \
+				or int(q_st.get(RogueMap.idx(6, 0), 999)) > RogueMap.MAX_STEPS:
+			q_bulk_ok = false
+			q_bulk_msg = "第 %d 张有大宝箱超过 %d 步" % [q_trial, RogueMap.MAX_STEPS]
+			break
+		for q_c: Dictionary in q_mp:
+			var q_lim2: Vector2i = RogueMap.limits(int(q_c["col"]), int(q_c["row"]))
+			var q_dd: int = (q_c["doors"] as Array).size()
+			if q_dd < q_lim2.x or q_dd > q_lim2.y:
+				q_bulk_ok = false
+				q_bulk_msg = "第 %d 张 (%d,%d) 方向数 %d 越界" % [
+						q_trial, int(q_c["col"]), int(q_c["row"]), q_dd]
+				break
+			if str(q_c["type"]) == "rest":
+				q_bulk_rest += 1
+			if bool(q_c.get("hidden", false)):
+				q_bulk_unknown += 1
+			q_bulk_types[str(q_c["type"])] = int(q_bulk_types.get(str(q_c["type"]), 0)) + 1
+		if not q_bulk_ok:
+			break
+	check(q_bulk_ok, "地图：连生成 60 张都满足全部约束（%s）" % q_bulk_msg)
+	check(int(q_bulk_types.get("bigchest", 0)) == 120
+			and int(q_bulk_types.get("start", 0)) == 60,
+			"地图 60 张统计：大宝箱恰好 2×60、起点恰好 60（固定格不参与随机）")
+	check(q_bulk_rest >= 60 and q_bulk_unknown >= 60,
+			"地图 60 张统计：休息点 %d 个、「?」房 %d 个（两类都真实出现）"
+			% [q_bulk_rest, q_bulk_unknown])
+
+	# ---- 第二层地图：layer 标记 + 事件不串层 ----
+	var q_l2_rng := RandomNumberGenerator.new()
+	q_l2_rng.seed = 424242
+	var q_l2: Array = RogueMap.generate(q_l2_rng, GameLayers.LAYER_TWO)
+	var q_l2_bad := false
+	var q_l2_ev_bad := false
+	var q_l2_leak := ""
+	# 「只属于第一层」的事件子类型（第二层地图里一个都不该出现）
+	var q_l2_only_l1 := ["whisper", "struggle", "arcane", "treasure"]
+	for q_l2_n: Dictionary in q_l2:
+		if int(q_l2_n.get("layer", -1)) != GameLayers.LAYER_TWO:
+			q_l2_bad = true
+		if str(q_l2_n["type"]) == "event":
+			var q_l2k := str(q_l2_n.get("event_kind", ""))
+			if not GameLayers.event_kinds(GameLayers.LAYER_TWO).has(q_l2k):
+				q_l2_ev_bad = true
+			if q_l2_only_l1.has(q_l2k):
+				q_l2_leak = q_l2k
+	check(not q_l2_bad, "第二层地图：每个房间都标记 layer = 2")
+	check(not q_l2_ev_bad, "第二层地图：事件房只出第二层事件池里的事件（不串第一层）")
+	check(q_l2_leak == "", "第二层地图：绝不出现第一层专属事件（本次泄漏：%s）"
+			% ("无" if q_l2_leak == "" else q_l2_leak))
+	check(RogueMap.steps_from(q_l2, int(RogueMap.start_cell(q_l2)["id"])).size()
+			== RogueMap.CELLS, "第二层地图结构照常连通（%d 格）" % RogueMap.CELLS)
+
+	# 多次生成第二层地图：只出第二层专属事件
+	var q_l2_ev_ok := true
+	var q_l2_ev_seen := {}
+	var q_l2_ev_rng := RandomNumberGenerator.new()
+	q_l2_ev_rng.randomize()
+	for q_l2_i in 40:
+		var q_l2m: Array = RogueMap.generate(q_l2_ev_rng, GameLayers.LAYER_TWO)
+		for q_l2m_n: Dictionary in q_l2m:
+			if str(q_l2m_n["type"]) != "event":
+				continue
+			var q_l2m_kind := str(q_l2m_n.get("event_kind", ""))
+			q_l2_ev_seen[q_l2m_kind] = true
+			if not GameLayers.event_kinds(GameLayers.LAYER_TWO).has(q_l2m_kind):
+				q_l2_ev_ok = false
+	check(q_l2_ev_ok, "第二层地图：event_kind 全部取自第二层事件池（不串到第一层）")
+	check(q_l2_ev_seen.has("pear") or q_l2_ev_seen.has("hero") or q_l2_ev_seen.has("bluefish"),
 			"第二层地图多次生成：出鸭梨山大/绝赞五换一/蓝色大肥鱼专属事件")
 
 	# ---- R68：同一张地图上事件子类型不重复（全出过一遍后才允许重复）----
-	# roll_event_kind 传 used 时按「本轮候选 = 池子 - 已出过」抽；
-	# 候选被抽空（全都出过一次）才清空 used 开新一轮。
-	var r68_u := {}
-	var r68_l1 := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
-	var r68_round1 := []
-	for _i in r68_l1.size():
-		r68_round1.append(GameLayers.roll_event_kind(GameLayers.LAYER_DEFAULT, l2_ev_rng, r68_u))
-	var r68_uniq := {}
-	for k in r68_round1:
-		r68_uniq[k] = true
-	check(r68_round1.size() == r68_uniq.size()
-			and r68_uniq.size() == r68_l1.size(),
+	var q_r68_u := {}
+	var q_r68_l1 := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
+	var q_r68_round1 := []
+	for _i in q_r68_l1.size():
+		q_r68_round1.append(GameLayers.roll_event_kind(GameLayers.LAYER_DEFAULT, q_l2_ev_rng, q_r68_u))
+	var q_r68_uniq := {}
+	for q_k in q_r68_round1:
+		q_r68_uniq[q_k] = true
+	check(q_r68_round1.size() == q_r68_uniq.size() and q_r68_uniq.size() == q_r68_l1.size(),
 			"R68 事件不重复：连抽 %d 次得到 %d 种互不相同的事件（第一层池子正好 %d 种）"
-			% [r68_round1.size(), r68_uniq.size(), r68_l1.size()])
-	# 池子抽空后再抽 → 允许重复（清空 used 开新一轮），且仍然只出池子里的
-	var r68_round2 := []
-	for _i2 in r68_l1.size():
-		var r68_k := GameLayers.roll_event_kind(GameLayers.LAYER_DEFAULT, l2_ev_rng, r68_u)
-		r68_round2.append(r68_k)
-		if not r68_l1.has(r68_k):
-			r68_uniq["__bad__"] = true
-	check(not r68_uniq.has("__bad__")
-			and r68_round2.size() == r68_l1.size(),
-			"R68 全部事件都出过一次后才允许重复（第二轮 %d 次仍是池内事件）" % r68_round2.size())
-	# 不传 used（旧调用方式）→ 仍是纯按权重抽、不报错
+			% [q_r68_round1.size(), q_r68_uniq.size(), q_r68_l1.size()])
+	var q_r68_round2 := []
+	for _i2 in q_r68_l1.size():
+		var q_r68_k := GameLayers.roll_event_kind(GameLayers.LAYER_DEFAULT, q_l2_ev_rng, q_r68_u)
+		q_r68_round2.append(q_r68_k)
+		if not q_r68_l1.has(q_r68_k):
+			q_r68_uniq["__bad__"] = true
+	check(not q_r68_uniq.has("__bad__") and q_r68_round2.size() == q_r68_l1.size(),
+			"R68 全部事件都出过一次后才允许重复（第二轮 %d 次仍是池内事件）" % q_r68_round2.size())
 	check(GameLayers.event_kinds(GameLayers.LAYER_TWO).has(
-			GameLayers.roll_event_kind(GameLayers.LAYER_TWO, l2_ev_rng)),
+			GameLayers.roll_event_kind(GameLayers.LAYER_TWO, q_l2_ev_rng)),
 			"R68 roll_event_kind 不传 used 时行为不变（按权重抽本层事件）")
-	# 整张地图级别：**首轮**（事件节点数 ≤ 池子大小时）任何一种事件只出现一次。
-	# 池子抽空后允许重复 —— 这正是需求里的「除非全都出现过了」，
-	# 所以第二层（池子 5 种）出现 8 个事件节点的地图，第 6 个起重复是正确行为。
-	var r68_map_ok := true
-	var r68_map_repeat := ""
-	var r68_map_rng := RandomNumberGenerator.new()
-	var r68_max_first_round := 0
-	for r68_m in 60:
-		var r68_cols: Array = RogueMap.generate(r68_map_rng, GameLayers.LAYER_DEFAULT)
-		var r68_cnt := {}
-		var r68_pool_n: int = GameLayers.event_kinds(GameLayers.LAYER_DEFAULT).size()
-		var r68_ev_total := 0
-		for r68_c in r68_cols:
-			for r68_n in r68_c:
-				if str(r68_n["type"]) != "event":
-					continue
-				r68_ev_total += 1
-				var r68_kind := str(r68_n.get("event_kind", ""))
-				if r68_cnt.has(r68_kind) and r68_ev_total <= r68_pool_n:
-					# 首轮内重复 = 违反「一轮不重复」
-					r68_map_ok = false
-					r68_map_repeat = "%s ×%d" % [r68_kind, int(r68_cnt[r68_kind]) + 1]
-				r68_cnt[r68_kind] = int(r68_cnt.get(r68_kind, 0)) + 1
-		r68_max_first_round = maxi(r68_max_first_round,
-				mini(r68_ev_total, r68_pool_n))
-	check(r68_map_ok, "R68 整图：60 张第一层地图上事件子类型均不重复（首个轮次内），违例 %s"
-			% ("无" if r68_map_ok else r68_map_repeat))
-	# 第二层同规则：首轮（≤5 个事件节点）不重复；超过池子大小时按「全都出过才重复」轮转
-	var r68_l2_ok := true
-	var r68_l2_bad := ""
-	var r68_l2_pool_n: int = GameLayers.event_kinds(GameLayers.LAYER_TWO).size()
-	var r68_l2_overflow := false     # 确实见到过「节点数 > 池子」的情况（说明轮转被验证到）
-	for r68_m2 in 60:
-		var r68_cols2: Array = RogueMap.generate(r68_map_rng, GameLayers.LAYER_TWO)
-		var r68_cnt2 := {}
-		var r68_seen2 := 0
-		for r68_c2 in r68_cols2:
-			for r68_n2 in r68_c2:
-				if str(r68_n2["type"]) != "event":
-					continue
-				r68_seen2 += 1
-				var r68_k2 := str(r68_n2.get("event_kind", ""))
-				if r68_cnt2.has(r68_k2) and r68_seen2 <= r68_l2_pool_n:
-					r68_l2_ok = false
-					r68_l2_bad = "%s（第 %d 个事件节点）" % [r68_k2, r68_seen2]
-				r68_cnt2[r68_k2] = int(r68_cnt2.get(r68_k2, 0)) + 1
-		if r68_seen2 > r68_l2_pool_n:
-			r68_l2_overflow = true
-	check(r68_l2_ok, "R68 第二层地图：首轮 %d 种事件互不重复，违例 %s"
-			% [r68_l2_pool_n, ("无" if r68_l2_ok else r68_l2_bad)])
-	check(r68_l2_overflow,
-			"R68 池子小于事件节点数时进入第二轮（第二层池 %d 种，本次样本里出现过 >%d 个事件节点的地图）"
-			% [r68_l2_pool_n, r68_l2_pool_n])
-
-	# ---- 肉鸽地图：14 层、连通、类型合法、宝箱层固定、固定休息层、路线休息/精英上限 ----
-	var tcol := GameLayers.treasure_col(GameLayers.LAYER_DEFAULT)
-	check(RogueMap.COLS == 14 and RogueMap.REST_COL == 9,
-			"R69 地图规格：共 %d 层（起点 + 12 层 + Boss），固定休息层 = 第 %d 层"
-			% [RogueMap.COLS, RogueMap.REST_COL])
-	check(RogueMap.REST_COL != tcol and GameLayers.treasure_col(GameLayers.LAYER_TWO) \
-			!= RogueMap.REST_COL,
-			"R69 固定休息层不与任一层的宝箱层撞列（休息 %d / 宝箱 %d）"
-			% [RogueMap.REST_COL, tcol])
-	var map_layer_ok := true
-	for trial in 20:
-		var rng := RandomNumberGenerator.new()
-		rng.seed = trial * 7919 + 13
-		var cols := RogueMap.generate(rng, GameLayers.LAYER_DEFAULT)
-		check(cols.size() == RogueMap.COLS,
-				"地图 %d：共 %d 层（起点 + 12 层（含第 6 层宝箱层 + 第 9 层固定休息层）+ Boss）"
-				% [trial, RogueMap.COLS])
-		check(cols[0].size() == 1 and str(cols[0][0]["type"]) == "start",
-				"地图 %d：起点 1 个起点节点（非战斗）" % trial)
-		check(cols[RogueMap.COLS - 1].size() == 1
-				and str(cols[RogueMap.COLS - 1][0]["type"]) == "boss",
-				"地图 %d：最上层 1 个 Boss 节点" % trial)
-		check(int(cols[0][0]["slot"]) == 2 and int(cols[cols.size() - 1][0]["slot"]) == 2,
-				"地图 %d：起点与 Boss 横向居中（slot 2）" % trial)
-		var col1_has_rest := false
-		for n in cols[1]:
-			if str(n["type"]) == "rest":
-				col1_has_rest = true
-		check(not col1_has_rest, "地图 %d：第一层不出现休息点" % trial)
-		# 宝箱层：tcol 那一列整层都是 chest，其它层一个都没有；
-		# 顺带校验每个节点都带着本图所属的层。
-		var chest_ok := true
-		for chk_col in cols.size():
-			for chk_node in cols[chk_col]:
-				if int(chk_node.get("layer", -1)) != GameLayers.LAYER_DEFAULT:
-					map_layer_ok = false
-				if (str(chk_node["type"]) == "chest") != (chk_col == tcol):
-					chest_ok = false
-		check(chest_ok, "地图 %d：第 %d 列固定为宝箱层，且该层全是宝箱（别处没有）"
-				% [trial, tcol])
-		check((cols[tcol] as Array).size() >= RogueMap.MIN_NODES,
-				"地图 %d：宝箱层至少 %d 个节点" % [trial, RogueMap.MIN_NODES])
-		# **R69 固定休息层**：第 9 层整层必定是休息（所有路线都经过、都能回血），
-		# 且它**前后两层（第 8、10）一个休息都不能有** —— 否则连成两连休。
-		# 这条是「逐节点看前驱」的原有规则**管不到**的：第 8 层的前驱在第 7 层，
-		# 只有显式禁止才拦得住。
-		var rc_ok := true
-		for rc_node in cols[RogueMap.REST_COL]:
-			if str(rc_node["type"]) != "rest":
-				rc_ok = false
-		var rc_adj_ok := true
-		for rc_c in [RogueMap.REST_COL - 1, RogueMap.REST_COL + 1]:
-			for rc_node2 in cols[rc_c]:
-				if str(rc_node2["type"]) == "rest":
-					rc_adj_ok = false
-		check(rc_ok and (cols[RogueMap.REST_COL] as Array).size() >= RogueMap.MIN_NODES,
-				"地图 %d：第 %d 层整层固定为休息（必定能回血），且不少于 %d 个节点"
-				% [trial, RogueMap.REST_COL, RogueMap.MIN_NODES])
-		check(rc_adj_ok, "地图 %d：固定休息层前后两层（第 %d、%d 层）不出休息（避免两连休）"
-				% [trial, RogueMap.REST_COL - 1, RogueMap.REST_COL + 1])
-		var reach := RogueMap.reachable_ids(cols)
-		var total := 0
-		for col_nodes in cols:
-			total += col_nodes.size()
-		check(reach.size() == total, "地图 %d：全部 %d 个节点从起点可达" % [trial, total])
-		# 每层 2~5 个节点（起点/Boss 除外，不留单节点层）、槽位不重复且在 0~4；
-		# 连边严格逐层；直线不交叉
-		var size_ok := true
-		var slots_ok := true
-		var adjacent_only := true
-		var no_cross := true
-		for col in cols.size():
-			var cnt: int = (cols[col] as Array).size()
-			if col == 0 or col == cols.size() - 1:
-				if cnt != 1:
-					size_ok = false
-			elif cnt < RogueMap.MIN_NODES or cnt > RogueMap.MAX_NODES:
-				size_ok = false
-			var seen_slots := {}
-			for node in cols[col]:
-				var s := int(node.get("slot", -1))
-				if s < 0 or s > 4 or seen_slots.has(s):
-					slots_ok = false
-				seen_slots[s] = true
-		check(size_ok, "地图 %d：起点/Boss 各 1 个，中间层 %d~%d 个节点（不存在单节点层）"
-				% [trial, RogueMap.MIN_NODES, RogueMap.MAX_NODES])
-		check(slots_ok, "地图 %d：每层槽位 0~4 且互不重复（均衡分布）" % trial)
-		for col in range(cols.size() - 1):
-			var edges: Array = []   # [源 slot 名次(row), 目标 slot 名次(row)]
-			for a in cols[col]:
-				for nid2 in a["next"]:
-					var tgt: Dictionary = {}
-					for b in cols[col + 1]:
-						if int(b["id"]) == int(nid2):
-							tgt = b
-					if tgt.is_empty():
-						adjacent_only = false
-						continue
-					edges.append([int(a["row"]), int(tgt["row"])])
-			for ea in edges:
-				for eb in edges:
-					# 源 slot 递增时目标 slot 必须不递减，否则直线相交
-					if int(ea[0]) < int(eb[0]) and int(ea[1]) > int(eb[1]):
-						no_cross = false
-		check(adjacent_only, "地图 %d：连边只指向相邻下一层（不跳跃不返回）" % trial)
-		check(no_cross, "地图 %d：连线为直线且互不交叉" % trial)
-		var types_ok := true
-		var no_preset_level := true
-		var caps_ok := true
-		for col_nodes in cols:
-			for node in col_nodes:
-				if not RogueMap.TYPE_LABELS.has(str(node["type"])):
-					types_ok = false
-				# 关卡不预先写在地图上（进入节点时才动态决定）
-				if str(node["type"]) in ["battle", "elite", "boss"] \
-						and not (node["level"] as Dictionary).is_empty():
-					no_preset_level = false
-				# rest_cnt/elite_cnt = 起点到该节点路径的最大累计数
-				# 全部 ≤ 3 ⇒ 任意一条完整路线最多 3 休息 / 3 精英
-				if int(node.get("rest_cnt", 0)) > RogueMap.REST_CAP \
-						or int(node.get("elite_cnt", 0)) > RogueMap.ELITE_CAP:
-					caps_ok = false
-		check(types_ok, "地图 %d：节点类型全部合法" % trial)
-		check(no_preset_level, "地图 %d：地图节点不预写关卡（动态难度）" % trial)
-		check(caps_ok, "地图 %d：任意路线休息/精英 ≤ 3" % trial)
-		check(map_layer_ok, "地图 %d：每个节点都标记了所属层（第一层）" % trial)
-		#休息不连续：任何一条边上都不能两端都是休息
-		#（玩家能连着点两层休息就太廉价了；R69 的固定休息层也受这条约束）
-		var id_type := {}
-		for c in cols:
-			for n in c:
-				id_type[int(n["id"])] = str(n["type"])
-		var rest_adjacent := false
-		for c in cols:
-			for n in c:
-				if str(n["type"]) != "rest":
-					continue
-				for nid2 in n["next"]:
-					if str(id_type.get(int(nid2), "")) == "rest":
-						rest_adjacent = true
-		check(not rest_adjacent, "地图 %d：休息节点不会连续出现（相邻两层都不是休息）" % trial)
-		# **固定休息层必然占用休息额度**：经过第 9 层的路线上，休息计数至少为 1，
-		# 且整条路线仍 ≤ REST_CAP（所以 9 之后最多只剩 REST_CAP-1 次随机休息）。
-		var fixed_cnt_ok := true
-		for fc_node in cols[RogueMap.REST_COL]:
-			if int(fc_node.get("rest_cnt", 0)) < 1:
-				fixed_cnt_ok = false
-		check(fixed_cnt_ok,
-				"地图 %d：固定休息层的 rest_cnt ≥ 1（那一格已占用 1 次休息额度）" % trial)
-		if fails > 0:
-			break
+	var q_r68_map_ok := true
+	var q_r68_map_repeat := ""
+	var q_r68_map_rng := RandomNumberGenerator.new()
+	for q_r68_m in 60:
+		var q_r68_map: Array = RogueMap.generate(q_r68_map_rng, GameLayers.LAYER_DEFAULT)
+		var q_r68_cnt := {}
+		var q_r68_pool_n: int = GameLayers.event_kinds(GameLayers.LAYER_DEFAULT).size()
+		var q_r68_ev_total := 0
+		for q_r68_n: Dictionary in q_r68_map:
+			if str(q_r68_n["type"]) != "event":
+				continue
+			q_r68_ev_total += 1
+			var q_r68_kind := str(q_r68_n.get("event_kind", ""))
+			if q_r68_cnt.has(q_r68_kind) and q_r68_ev_total <= q_r68_pool_n:
+				q_r68_map_ok = false
+				q_r68_map_repeat = "%s ×%d" % [q_r68_kind, int(q_r68_cnt[q_r68_kind]) + 1]
+			q_r68_cnt[q_r68_kind] = int(q_r68_cnt.get(q_r68_kind, 0)) + 1
+	check(q_r68_map_ok, "R68 整图：60 张第一层地图上事件子类型均不重复（首个轮次内），违例 %s"
+			% ("无" if q_r68_map_ok else q_r68_map_repeat))
+	var q_r68_l2_ok := true
+	var q_r68_l2_bad := ""
+	var q_r68_l2_pool_n: int = GameLayers.event_kinds(GameLayers.LAYER_TWO).size()
+	for q_r68_m2 in 60:
+		var q_r68_map2: Array = RogueMap.generate(q_r68_map_rng, GameLayers.LAYER_TWO)
+		var q_r68_cnt2 := {}
+		var q_r68_seen2 := 0
+		for q_r68_n2: Dictionary in q_r68_map2:
+			if str(q_r68_n2["type"]) != "event":
+				continue
+			q_r68_seen2 += 1
+			var q_r68_k2 := str(q_r68_n2.get("event_kind", ""))
+			if q_r68_cnt2.has(q_r68_k2) and q_r68_seen2 <= q_r68_l2_pool_n:
+				q_r68_l2_ok = false
+				q_r68_l2_bad = "%s（第 %d 个事件房）" % [q_r68_k2, q_r68_seen2]
+			q_r68_cnt2[q_r68_k2] = int(q_r68_cnt2.get(q_r68_k2, 0)) + 1
+	check(q_r68_l2_ok, "R68 第二层地图：首轮 %d 种事件互不重复，违例 %s"
+			% [q_r68_l2_pool_n, ("无" if q_r68_l2_ok else q_r68_l2_bad)])
 
 	# ---- run 流程：开局 / 走节点 / 卡组增长 / 战斗记录持久化 ----
 	RunState.end_run()
@@ -5330,7 +5305,7 @@ func _init() -> void:
 			== GameLevels.TIER_ELITE_HARD, "第 3 场精英：精英敌人-困难")
 	check(int(RunState.next_level({"type": "boss"})["tier"]) == GameLevels.TIER_BOSS,
 			"Boss 节点：固定 Boss 关")
-	# 地图上 Boss 节点上方的名牌（map_scene._boss_name_chip）取自 **RunState.boss_pick**
+	# 地图上常驻的 Boss 名牌（map_scene._draw_boss_chip）取自 **RunState.boss_pick**
 	#（R63：同层可能有多个 Boss，开局用 run_rng 摇定一个），必须与实际走进去的那只
 	# 是同一只，否则地图会「说谎」。这里 start_run 已跑过 → boss_pick 一定有值。
 	check(not RunState.boss_pick.is_empty()
@@ -5338,16 +5313,55 @@ func _init() -> void:
 			== str(RunState.next_level({"type": "boss"})["name"]),
 			"Boss 名牌 = 实际进入的 Boss 关（本层从 boss_pool 摇定的那只）")
 	check(RunState.deck_ids.size() == 13, "初始卡组 13 张（含角色卡熊×1）")
-	check(RunState.current_node_id == int(RunState.map_columns[0][0]["id"]),
-			"起点 = 第 0 列唯一节点")
+	check(RunState.deck_ids.size() == 13, "初始卡组 13 张（含角色卡熊×1）")
+	var start_cell_d: Dictionary = RogueMap.start_cell(RunState.map_cells)
+	check(RunState.current_node_id == int(start_cell_d["id"]),
+			"起点 = 最下一行中间 (3,4) 那一格")
+	check(RunState.chocolate == RogueMap.MAX_STEPS,
+			"开局：每层 12 块巧克力（当前 %d）" % RunState.chocolate)
+	check(RunState.cleared_ids.size() == 1
+			and RunState.cleared_ids.has(int(start_cell_d["id"])),
+			"开局：足迹里只有起点（初始点算「已走过」，走回去不扣巧克力）")
 	var avail := RunState.available_nodes()
-	check(not avail.is_empty() and int(avail[0]["col"]) == 1,
-			"从起点可选第 1 列节点")
-	var first_battle: Dictionary = RunState.map_columns[0][0]
-	RunState.advance(int(avail[0]["id"]))
-	check(RunState.cleared_ids.has(int(first_battle["id"]))
-			and RunState.current_node_id == int(avail[0]["id"]),
-			"前进：原节点标记完成，当前位置更新")
+	check(avail.size() == (start_cell_d["doors"] as Array).size()
+			and avail.size() >= 2,
+			"从起点可选的房间 = 起点有门的相邻房（%d 个）" % avail.size())
+	var first_new: Dictionary = avail[0]
+	var choco_before := RunState.chocolate
+	var mv := RunState.advance(int(first_new["id"]))
+	check(bool(mv["ok"]) and bool(mv["is_new"]) and int(mv["cost"]) == 1,
+			"走进没走过的房间：标记为新房间、消耗 1 块巧克力")
+	check(RunState.chocolate == choco_before - 1,
+			"巧克力 %d → %d" % [choco_before, RunState.chocolate])
+	check(RunState.cleared_ids.has(int(start_cell_d["id"]))
+			and RunState.cleared_ids.has(int(first_new["id"]))
+			and RunState.current_node_id == int(first_new["id"]),
+			"前进：起点与新房间都记为已走过，当前位置更新")
+	var back := RunState.advance(int(start_cell_d["id"]))
+	check(bool(back["ok"]) and not bool(back["is_new"]) and int(back["cost"]) == 0
+			and RunState.chocolate == choco_before - 1,
+			"回到走过的房间：不消耗巧克力（仍是 %d 块）、不结算内容" % RunState.chocolate)
+	var far_ok := true
+	for fc: Dictionary in RunState.map_cells:
+		if not RogueMap.doors_between(RunState.map_cells, int(start_cell_d["id"]),
+				int(fc["id"])) and RunState.can_move_to(int(fc["id"])):
+			far_ok = false
+	check(far_ok, "不能走到没有门的房间（移动只沿门）")
+	# 最后一块巧克力用掉 → 置 boss_pending（等本房间内容结算完才真的开战）
+	var unvisited := -1
+	for ac: Dictionary in RunState.available_nodes():
+		if not RunState.cleared_ids.has(int(ac["id"])):
+			unvisited = int(ac["id"])
+			break
+	RunState.chocolate = 1
+	if unvisited >= 0:
+		RunState.advance(unvisited)
+		check(RunState.chocolate == 0 and RunState.boss_pending,
+				"最后一块巧克力用掉 → 巧克力 0 且置 boss_pending（不立刻开战）")
+	RunState.boss_pending = false
+	RunState.chocolate = RogueMap.MAX_STEPS
+	check(str(RunState.boss_level().get("name", "")) != "",
+			"boss_level 能取到本层 Boss 名（地图名牌与开战用同一份）")
 	var deck_cnt := RunState.deck_ids.size()
 	RunState.add_card(9007)
 	var rebuilt := RunState.build_deck(repo)
@@ -5439,9 +5453,13 @@ func _init() -> void:
 	check(RunState.current_layer == GameLayers.LAYER_TWO
 			and RunState.hp == RunState.max_hp and RunState.max_hp > 0,
 			"进入第二层：恢复所有生命（满血 %d/%d）" % [RunState.hp, RunState.max_hp])
-	check(l2_start == int(RunState.map_columns[0][0]["id"])
-			and int(RunState.map_columns[0][0].get("layer", -1)) == GameLayers.LAYER_TWO,
-			"进入第二层：生成本层地图，起点节点 layer = 2")
+	check(l2_start == int(RogueMap.start_cell(RunState.map_cells)["id"])
+			and int(RogueMap.start_cell(RunState.map_cells).get("layer", -1))
+					== GameLayers.LAYER_TWO,
+			"进入第二层：生成本层地图，起点房 layer = 2")
+	check(RunState.chocolate == RogueMap.MAX_STEPS
+			and RunState.cleared_ids.size() == 1 and not RunState.boss_pending,
+			"进入第二层：巧克力重新满上（%d 块）、足迹只剩新起点" % RunState.chocolate)
 	check(RunState.relic_choice.size() == 3, "第二层起始：重新掷出道具三选一")
 	var c2_from_pool := 0
 	for rid2 in RunState.relic_choice:

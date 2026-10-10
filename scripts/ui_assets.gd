@@ -79,6 +79,18 @@ static func badge_icon(key: String) -> Texture2D:
 	return get_tex("icon_" + key)
 
 
+static func map_bg(layer: int) -> Texture2D:
+	## 冒险地图背景（R128）：**每层一张**，1280 × 720 铺满。
+	## 缺图时返回 null，`map_scene` 回退成内置的纵向渐变底 —— 不空白也不报错。
+	return get_tex("map_bg_%d" % layer)
+
+
+static func chocolate() -> Texture2D:
+	## 巧克力（R128）：地图 HUD 的「每层行动力」图标，建议 64 × 64（带透明通道）。
+	## 缺图时返回 null，`map_scene` 回退成程序画的圆角方块 —— 不会变成空白洞。
+	return get_tex("chocolate")
+
+
 static func clear_cache() -> void:
 	## 运行中换了图想立刻生效时可以调（正常流程不需要）。
 	_cache.clear()

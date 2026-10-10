@@ -129,13 +129,8 @@ const COL_SPELL_RING := Color(0.55, 0.90, 1.00, 0.90)
 ## 同一格上的绿 / 暗红**敌我框**（0.7 透明度的琥珀压上去会混成说不清的黄绿）。
 const COL_CANCEL_ARMED := Color(1.00, 0.55, 0.10, 1.0)
 
-# 战斗内地图总览（R64）的节点配色与字形 —— **与 map_scene 保持同一套**，
-# 这样「地图场景看到的颜色」和「战斗里回看地图的颜色」是同一种语义。
-# （map_scene 里那份是它自己的 const，改这里时两边要一起改。）
-const MAPVIEW_TYPE_GLYPHS := {
-	"start": "起", "battle": "战", "elite": "英", "rest": "息",
-	"event": "事", "chest": "箱", "boss": "王",
-}
+# 战斗内地图总览（R128）：房间配色统一走 `UiTheme.MAP_NODE_COLORS`，
+# 短标记 / 类型名统一走 `RogueMap.type_mark` / `type_label` —— 不再各存一份表。
 
 # 攻击投射演出时间轴（比例 × ATK_DUR_MS）
 const ATK_DUR_MS := 1500        # 总时长
@@ -257,7 +252,6 @@ var _banner := {}               # {text, col, start, dur}  回合切换大字横
 var _confetti: Array = []       # {pos, vel, rot, vr, size, col}  胜利彩带
 var _log_visible := false       # 对局记录面板开关
 var _map_visible := false       # 冒险地图总览面板开关（R64：战斗内查看地图，只读）
-var _map_scroll := 0.0# 地图总览的纵向滚动量（层数放不进 720px 视口，层数见 RogueMap.COLS）
 # R127：滚动容器的「上下还能滚」提示开关 —— **只在**新玩家第一局为真（判据见 ScrollHint.is_new_player）。
 # 地图总览 / 棋盘格子区都**不再画滚动条**，改画半透明双箭头（画法见 ScrollHint，规范 §4.12）。
 var _show_scroll_hint := false
@@ -1192,22 +1186,20 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--mapview" in args and engine != null:
-		# 演示（R64）：战斗内地图总览面板 —— 打开并把视野对准当前位置。
-		# R127：演示模式默认没有 run（run_active=false → _mapview_available() 为
-		#   false，_toggle_map 会直接 return，面板打不开）→ 先开一局假 run 生成地图。
+		# 演示（R64）：战斗内地图总览面板。
+		# R128：演示模式默认没有 run（run_active=false → 面板打不开）→ 先开一局假 run。
 		if not RunState.run_active:
-			seed(0x127)   # R127：固定演示种子 → 截图可复现（新旧两张才能 diff 出箭头）
+			seed(0x128)   # 固定演示种子 → 截图可复现
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		_toggle_map()
 		_demo_hover_idx = -1
 		_hover_hand = -1
-		status_text = "战斗内地图总览：金色双环＝当前位置，绿环＝下一步可走，顶部写本层 Boss 名"
+		status_text = "战斗内地图总览：金框＝当前房间，绿框＝可以走过去"
 		_shot_t0 = _now()
 		queue_redraw()
-	if "--mapmid" in args and _map_visible:
-		# R127 核验用：视野放到**中段** → 上下都还有内容，一次截图同时看到两组双箭头。
-		# （默认打开是对准当前层的，只画下箭头，核验不到上箭头。）
-		_map_scroll = _mapview_scroll_max() * 0.5
+	if "--mapwalk" in args and _map_visible:
+		# R128 核验用：伪造「从起点向上走过 3 格」→ 看清「门只在走过的房间里露出来」。
+		_mapview_demo_walk()
 		queue_redraw()
 	if "--guard" in args and engine != null:
 		# 演示（2026-10-01）：「替己方 HP 承伤」的三种卡必须**同一特效** ——
@@ -1890,7 +1882,7 @@ func load_level(lvl: Dictionary) -> void:
 	_over_shown = false
 	_confetti.clear()
 	var limit: int = int(lvl["turn_limit"])
-	map_btn.visible = RunState.run_active and not RunState.map_columns.is_empty()
+	map_btn.visible = RunState.run_active and not RunState.map_cells.is_empty()
 	level_btn.disabled = RunState.run_active
 	if limit > 0:
 		status_text = "%s：%d 回合内把敌方 HP（%d）打到 0！" % [
@@ -2014,14 +2006,8 @@ func _gui_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton and event.pressed \
 			and (event.button_index == MOUSE_BUTTON_WHEEL_UP
 					or event.button_index == MOUSE_BUTTON_WHEEL_DOWN):
-		# 地图总览：内容比面板高时用滚轮翻动
+		# 地图总览（R128）：5×7 格子整屏装得下 → 不再滚动，滚轮在此吞掉
 		if _map_visible:
-			var m_smax := _mapview_scroll_max()
-			if m_smax > 0.0:
-				_map_scroll = clampf(_map_scroll
-						+ (-46.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 46.0),
-						0.0, m_smax)
-				queue_redraw()
 			return
 		# 道具浏览面板：内容放不下时用滚轮翻动
 		if _relics_visible:
@@ -4293,31 +4279,23 @@ func _toggle_log() -> void:
 # ------------------------------------------------------------ 战斗内地图总览（R64）
 #
 # 布局约定（**唯一来源就是这几个常量 + _mapview_view_rect**）：
-#   面板 = 标题区(MAPVIEW_TOP) + 地图可视区 + 底部图例区(MAPVIEW_BOT)；
-#   地图纵向 = 起点层(col 0)在**下**、Boss 层(col COLS-1)在**上**（与地图场景同向）；
-#   层数 × MAPVIEW_COL_DY 的总高通常 > 可视区高 → 用 _map_scroll 纵向滚动。
-const MAPVIEW_COL_DY := 46.0# 总览里每层的纵向间距（比地图场景紧凑得多）
-const MAPVIEW_NODE_R := 11.0         # 总览节点半径
-const MAPVIEW_SLOT_DX := 62.0# 总览槽位间距（5 槽 = 248px，横向塞得进面板）
-const MAPVIEW_TOP := 92.0            # 面板内标题区高度（下面才是地图）
+#   面板 = 标题区(MAPVIEW_TOP) + 地图区 + 底部图例区(MAPVIEW_BOT)。
+#   R128：地图是固定的 5×7 网格，7×74 = 518 宽、5×74 = 370 高 —— 面板装得下，
+#   所以旧的「纵向滚动 + 双箭头提示」整块移除（滑块/箭头都不再需要）。
+const MAPVIEW_CELL := 74.0           # 总览里的格子边长（正方形，彼此相接）
+const MAPVIEW_TOP := 92.0            # 面板内标题区高度
 const MAPVIEW_BOT := 70.0            # 面板内底部图例区高度
-const MAPVIEW_PAD := 16.0            # 地图内容上下留白（节点不贴边）
-# R127：双箭头相对可视区上下沿的内缩量。取 ScrollHint.GAP + 6 → 整组箭头（朝外伸展 GAP）
-#   完全落在可视区**内**，不会探进上面的标题区 / 下面的图例区。
-const MAPVIEW_HINT_INSET := 22.0
 
 
 func _mapview_available() -> bool:
-	## 能不能看地图：必须在 run 中且本局确实有地图（单关/演示模式没有地图可看）。
-	return RunState.run_active and not RunState.map_columns.is_empty()
+	## 能不能看地图：必须在 run 中且本局确实有地图。
+	return RunState.run_active and not RunState.map_cells.is_empty()
 
 
 func _toggle_map() -> void:
 	## 「地图」按钮 / M 键：开关战斗内的地图总览面板。
-	## 单关与演示模式没有地图 → 按钮不可见，这里也直接忽略。
 	if not _mapview_available():
 		return
-	# 互斥：地图与其它浏览面板不同时开（免得叠在一起看不清）
 	_map_visible = not _map_visible
 	if _map_visible:
 		_discard_visible = false
@@ -4326,8 +4304,31 @@ func _toggle_map() -> void:
 		_deck_visible = false
 		_relics_visible = false
 		_log_visible = false
-		_map_scroll = _mapview_scroll_max()   # 打开时视野对准玩家当前所在层
 	queue_redraw()
+
+
+func _mapview_demo_walk() -> void:
+	## 核验用：伪造「从起点一路向上走过 3 格」的状态。
+	var cells := RunState.map_cells
+	if cells.size() != RogueMap.CELLS:
+		return
+	RunState.cleared_ids = []
+	var cur := int(RogueMap.start_cell(cells)["id"])
+	RunState.cleared_ids.append(cur)
+	for step in 3:
+		var nxt := -1
+		for nid in RogueMap.neighbor_ids(cells[cur]):
+			var c: Dictionary = cells[int(nid)]
+			if int(c["row"]) < int(cells[cur]["row"]) \
+					and not RunState.cleared_ids.has(int(nid)):
+				nxt = int(nid)
+				break
+		if nxt < 0:
+			break
+		RunState.cleared_ids.append(nxt)
+		cur = nxt
+	RunState.current_node_id = cur
+	RunState.chocolate = RogueMap.MAX_STEPS - (RunState.cleared_ids.size() - 1)
 
 
 func _mapview_panel_rect() -> Rect2:
@@ -4338,48 +4339,21 @@ func _mapview_panel_rect() -> Rect2:
 
 
 func _mapview_view_rect() -> Rect2:
-	## 地图**可视区**（标题区与图例区之间的那块）—— 节点位置与剔除都以它为准，
-	## 避免「位置算一套、裁剪算另一套」导致节点被剔掉却还占着滚动高度。
+	## 地图**可视区**（标题区与图例区之间的那块）。
 	var pr := _mapview_panel_rect()
 	return Rect2(pr.position.x, pr.position.y + MAPVIEW_TOP,
 			pr.size.x, maxf(40.0, pr.size.y - MAPVIEW_TOP - MAPVIEW_BOT))
 
 
-func _mapview_content_h() -> float:
-	## 地图内容总高（未滚动）：层数 × 层间距 + 上下留白（层数直接读 RogueMap.COLS）。
-	return (RogueMap.COLS - 1) * MAPVIEW_COL_DY + MAPVIEW_NODE_R * 2.0 + MAPVIEW_PAD * 2.0
-
-
-func _mapview_view_h() -> float:
-	## 兼容旧调用：可视区高度。
-	return _mapview_view_rect().size.y
-
-
-func _mapview_scroll_max() -> float:
-	## 可滚动的最大距离（内容比视口矮时锁死为 0）。
-	return maxf(0.0, _mapview_content_h() - _mapview_view_h())
-
-
-func _mapview_node_pos(node: Dictionary) -> Vector2:
-	## 节点在窗口里的坐标：**唯一入口**。
-	## 纵向 = 起点层在下、Boss 层在上（col 越大越靠上，与地图场景同向）；
-	## 横向按 slot 分布；纵向再加 _map_scroll（往下滚 = 看起点，往上滚 = 看 Boss）。
+func _mapview_cell_rect(cell: Dictionary) -> Rect2:
+	## 某一格在窗口里的矩形 —— **唯一入口**（格子位置与命中都以它为准）。
 	var view := _mapview_view_rect()
-	var col := int(node["col"])
-	var slot := int(node.get("slot", 2))
-	# 横向中线取可视区正中 → 面板尺寸变了也不会偏
-	var x := view.position.x + view.size.x * 0.5 + (slot - 2) * MAPVIEW_SLOT_DX
-	var y := view.position.y + view.size.y - MAPVIEW_PAD - MAPVIEW_NODE_R \
-			- col * MAPVIEW_COL_DY + _map_scroll
-	return Vector2(x, y)
-
-
-func _mapview_find_node(id: int) -> Dictionary:
-	for col_nodes in RunState.map_columns:
-		for node in col_nodes:
-			if int(node["id"]) == id:
-				return node
-	return {}
+	var w := RogueMap.COLS * MAPVIEW_CELL
+	var h := RogueMap.ROWS * MAPVIEW_CELL
+	var x0 := view.position.x + (view.size.x - w) * 0.5
+	var y0 := view.position.y + (view.size.y - h) * 0.5
+	return Rect2(x0 + int(cell["col"]) * MAPVIEW_CELL,
+			y0 + int(cell["row"]) * MAPVIEW_CELL, MAPVIEW_CELL, MAPVIEW_CELL)
 
 
 func _mapview_is_current(node: Dictionary) -> bool:
@@ -4387,7 +4361,7 @@ func _mapview_is_current(node: Dictionary) -> bool:
 
 
 func _mapview_is_next(node: Dictionary) -> bool:
-	## 「下一步可走」：RunState.available_nodes 是唯一判定口（与地图场景点击判定同源）。
+	## 「可以走过去」：RunState.available_nodes 是唯一判定口（与地图场景点击判定同源）。
 	for n in RunState.available_nodes():
 		if int(n["id"]) == int(node["id"]):
 			return true
@@ -4395,137 +4369,90 @@ func _mapview_is_next(node: Dictionary) -> bool:
 
 
 func _draw_map_panel() -> void:
-	## 战斗内地图总览：**只读**的全局地图 —— 看清自己在第几层、走过哪些节点、
-	## 前面还有多少、顶层 Boss 是谁。战斗进行中不能在这里改路线，所以不可点节点。
-	##数据全部来自 RunState（地图本体就存在那），这里只负责画。
+	## 战斗内地图总览：**只读**的全局地图 —— 看清走过哪些房间、还剩几块巧克力、
+	## 本层 Boss 是谁。战斗进行中不能在这里改路线，所以不可点房间。
 	var pr := _mapview_panel_rect()
-	# 背景遮罩（比面板本体先画，压暗战场让面板更清楚）
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.55))
 	draw_rect(pr, Color("1b1c22"))
 	draw_rect(pr, Color("6a6f7d"), false, 2.0)
-	# 标题行：层名 + 进度 + 关闭提示
 	_draw_string_center(_font_bold, UiTheme.FS_BODY, "冒 险 地 图（战斗中查看）",
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 26.0), UiTheme.SAND)
-	var cleared := RunState.cleared_ids.size()
-	var total := 0
-	for col_nodes in RunState.map_columns:
-		total += col_nodes.size()
 	_draw_string_center(_font, UiTheme.FS_CAPTION,
-			"%s    已通过 %d / %d 个节点    生命 %d/%d    卡组 %d 张" % [
-				GameLayers.layer_name(RunState.current_layer), cleared, total,
-				RunState.hp, RunState.max_hp, RunState.deck_ids.size()],
+			"%s    已探索 %d / %d 间    巧克力 ×%d    生命 %d/%d    卡组 %d 张" % [
+				GameLayers.layer_name(RunState.current_layer),
+				RunState.cleared_ids.size(), RunState.map_cells.size(),
+				RunState.chocolate, RunState.hp, RunState.max_hp,
+				RunState.deck_ids.size()],
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 48.0), UiTheme.INK_300)
-	_draw_string_center(_font, UiTheme.FS_CAPTION, "M / 地图 按钮 或 点击任意处关闭（战斗中不能改路线）· 滚轮上下翻",
+	_draw_string_center(_font, UiTheme.FS_CAPTION,
+			"本层 Boss：%s　·　M / 地图 按钮 或 点击任意处关闭（战斗中不能改路线）"
+			% str(RunState.boss_level().get("name", "")),
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 68.0), Color("8f8b80"))
-	# 地图区可视范围：层数 × MAPVIEW_COL_DY（层数见 RogueMap.COLS）通常装不进面板高度
-	# → 按可视矩形**逐节点剔除**（Godot 4 的 CanvasItem 没有 draw_set_clip，面板外的东西要自己跳掉）。
-	var view := _mapview_view_rect()
-	_draw_map_edges(view)
-	_draw_map_nodes(view)
-	# R127：**不再画滚动条** → 改用半透明双箭头（画法见 ScrollHint，规范 §4.12）。
-	# 方向：内容偏移是 `+ _map_scroll` → 越大看得越靠**上**（Boss 方向）：
-	#   未到 smax = 还能往上；> 0 = 还能往下。⚠️ 棋盘格子区是 `- _grid_scroll`，方向相反。
-	var smax := _mapview_scroll_max()
-	if _show_scroll_hint and smax > 0.0:
-		ScrollHint.draw(self, view.position.x + view.size.x * 0.5,
-				view.position.y + MAPVIEW_HINT_INSET,
-				view.position.y + view.size.y - MAPVIEW_HINT_INSET,
-				_map_scroll < smax - 0.5,   # 还能往上（Boss 方向）
-				_map_scroll > 0.5,          # 还能往下（起点方向）
-				ScrollHint.breath())
-	# 底部图例
+	_draw_map_doors()
+	_draw_map_nodes()
 	_draw_map_legend(pr)
 
 
-func _draw_map_edges(view: Rect2) -> void:
-	## 层间连线：已走过 = 金，其余 = 暗蓝白（总览里不需要「可走」高亮，
-	##当前位置与可走节点用节点本身的金环/绿环表示就够了）。
-	## view 之外的两个端点都不在可视矩形里就整条跳过。
-	var vpad := view.grow(MAPVIEW_NODE_R + 10.0)
-	for col_nodes in RunState.map_columns:
-		for node in col_nodes:
-			var from := _mapview_node_pos(node)
-			for nid in node["next"]:
-				var tnode := _mapview_find_node(int(nid))
-				if tnode.is_empty():
-					continue
-				var to := _mapview_node_pos(tnode)
-				if not vpad.has_point(from) and not vpad.has_point(to):
-					continue
-				var done: bool = RunState.cleared_ids.has(int(node["id"]))
-				draw_line(from, to,
-						Color("e6c86a") if done else Color(0.70, 0.81, 1.00, 0.40),
-						2.6 if done else 1.6, true)
-
-
-func _draw_map_nodes(view: Rect2) -> void:
-	var t := float(Time.get_ticks_msec()) * 0.004
-	# Boss 名牌挂在节点上方约 30px 处，所以剔除时要多留这段余量
-	var vpad := view.grow(MAPVIEW_NODE_R + 32.0)
-	for col_nodes in RunState.map_columns:
-		for node in col_nodes:
-			var pos := _mapview_node_pos(node)
-			if not vpad.has_point(pos):
+func _draw_map_doors() -> void:
+	## 门：与冒险地图同一套视野规则 —— 只有**走过**的房间才画它通向哪几间；
+	## 持有「鹰哨」时全图的门都可见。
+	var reveal_all := RunState.has_relic(RunState.EAGLE_WHISTLE_RELIC_ID)
+	for cell: Dictionary in RunState.map_cells:
+		var done: bool = RunState.cleared_ids.has(int(cell["id"]))
+		if not done and not reveal_all:
+			continue
+		var r := _mapview_cell_rect(cell)
+		var ctr := r.position + r.size * 0.5
+		for nid in cell["doors"]:
+			var v := RogueMap.dir_between(int(cell["id"]), int(nid))
+			if v == Vector2i.ZERO:
 				continue
-			var id := int(node["id"])
-			var type := str(node["type"])
-			var done: bool = RunState.cleared_ids.has(id)
-			var cur := _mapview_is_current(node)
-			var nxt := _mapview_is_next(node)
-			var base: Color = UiTheme.MAP_NODE_COLORS.get(type, UiTheme.INK_500)
-			draw_circle(pos, MAPVIEW_NODE_R, base.darkened(0.45))
-			draw_circle(pos, MAPVIEW_NODE_R - 2.0, base.darkened(0.5) if done else base)
-			var label: String = str(MAPVIEW_TYPE_GLYPHS.get(type, "?"))
-			draw_string(_font_bold, pos + Vector2(-10, 5), label,
-					HORIZONTAL_ALIGNMENT_CENTER, 20, UiTheme.FS_LABEL,
-					Color(1, 1, 1, 0.45) if done else UiTheme.PAPER)
-			if cur:
-				# 当前位置：金双环（与地图场景同一套「当前位置」标记）
-				draw_arc(pos, MAPVIEW_NODE_R + 4.0, 0, TAU, 28, UiTheme.ACCENT_LIT, 2.2, true)
-				draw_arc(pos, MAPVIEW_NODE_R + 7.0, 0, TAU, 28, Color("f2c14e", 0.45), 1.1, true)
-				var cw := 66.0
-				var crect := Rect2(pos.x - cw * 0.5, pos.y + MAPVIEW_NODE_R + 5.0, cw, 16.0)
-				draw_rect(crect, Color(0.09, 0.09, 0.12, 0.9), true)
-				draw_rect(crect, UiTheme.ACCENT_LIT, false, 1.1)
-				draw_string(_font_bold, crect.position + Vector2(0, 12.5), "当前位置",
-						HORIZONTAL_ALIGNMENT_CENTER, cw, UiTheme.FS_CAPTION, UiTheme.ACCENT_LIT)
-			elif nxt:
-				var pulse := 0.5 + 0.5 * sin(t * 3.0)
-				draw_arc(pos, MAPVIEW_NODE_R + 3.0 + pulse * 1.6, 0, TAU, 28,
-						Color(0.45, 0.9, 0.5, 0.45 + 0.30 * pulse), 2.0, true)
-			if type == "boss":
-				_draw_map_boss_chip(pos)
+			var dir := Vector2(v.x, v.y)
+			var mid := ctr + dir * (MAPVIEW_CELL * 0.5)
+			var perp := Vector2(-dir.y, dir.x)
+			var half := perp * (MAPVIEW_CELL * 0.15)
+			draw_line(mid - half, mid + half,
+					Color("e6c86a") if done else Color(0.66, 0.70, 0.78, 0.50),
+					3.0, true)
 
 
-func _draw_map_boss_chip(pos: Vector2) -> void:
-	## Boss 节点上方的名牌：名字源与地图场景一致（RunState.boss_pick）。
-	var lv: Dictionary = RunState.boss_pick
-	if lv.is_empty():
-		lv = GameLevels.boss_level(RunState.current_layer)
-	var text := "Boss：" + str(lv.get("name", ""))
-	if text == "Boss：":
-		return
-	var w := maxf(text.length() * 12.0 + 16.0, 58.0)
-	var h := 20.0
-	var rect := Rect2(pos.x - w * 0.5, pos.y - MAPVIEW_NODE_R - 6.0 - h, w, h)
-	draw_rect(rect, Color(0.10, 0.09, 0.13, 0.92), true)
-	draw_rect(rect, UiTheme.ACCENT_LIT, false, 1.2)
-	draw_string(_font_bold, rect.position + Vector2(0, 14.0), text,
-			HORIZONTAL_ALIGNMENT_CENTER, w, UiTheme.FS_CAPTION, Color("f7e6b0"))
+func _draw_map_nodes() -> void:
+	var t := float(Time.get_ticks_msec()) * 0.004
+	for cell: Dictionary in RunState.map_cells:
+		var r := _mapview_cell_rect(cell)
+		var id := int(cell["id"])
+		var dtype := RogueMap.display_type(cell)
+		var done: bool = RunState.cleared_ids.has(id)
+		var base: Color = UiTheme.MAP_NODE_COLORS.get(dtype, UiTheme.INK_500)
+		draw_rect(r, Color(base.r, base.g, base.b, 0.22 if done else 0.13), true)
+		draw_rect(r, Color(base.r, base.g, base.b, 0.85), false, 1.4)
+		draw_string(_font_bold, Vector2(r.position.x, r.position.y + 32.0),
+				RogueMap.type_mark(dtype), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
+				UiTheme.FS_SUBHEAD, Color(1, 1, 1, 0.45) if done else UiTheme.PAPER)
+		draw_string(_font, Vector2(r.position.x, r.position.y + 54.0),
+				RogueMap.type_label(dtype), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
+				UiTheme.FS_CAPTION,
+				Color(0.90, 0.87, 0.80) if not done else Color(0.72, 0.69, 0.62))
+		if _mapview_is_current(cell):
+			draw_rect(r.grow(2.5), UiTheme.ACCENT_LIT, false, 2.2)
+		elif _mapview_is_next(cell):
+			var pulse := 0.5 + 0.5 * sin(t * 3.0)
+			draw_rect(r.grow(2.0), Color(0.45, 0.9, 0.5, 0.45 + 0.30 * pulse), false, 2.0)
 
 
 func _draw_map_legend(pr: Rect2) -> void:
-	## 底部图例：七种节点类型各一格，附「已通过 / 可走 / 当前位置」说明。
-	var y := pr.position.y + pr.size.y - MAPVIEW_BOT + 22.0
-	var x := pr.position.x + 14.0
-	for type in ["start", "battle", "elite", "rest", "event", "chest", "boss"]:
+	## 底部图例：八种房间类型各一格 + 两条状态说明。
+	var y := pr.position.y + pr.size.y - MAPVIEW_BOT + 20.0
+	var x := pr.position.x + 12.0
+	for type in ["start", "battle", "elite", "rest", "event", "chest", "bigchest", "unknown"]:
 		var base: Color = UiTheme.MAP_NODE_COLORS.get(type, UiTheme.INK_500)
-		draw_circle(Vector2(x + 6.0, y - 4.0), 6.0, base)
-		draw_string(_font, Vector2(x + 16.0, y), str(RogueMap.TYPE_LABELS.get(type, type)),
-				HORIZONTAL_ALIGNMENT_LEFT, 60, UiTheme.FS_CAPTION, Color("cfd3da"))
-		x += 74.0
-	draw_string(_font, Vector2(x + 4.0, y), "金环＝当前位置　绿环＝下一步可走",
-			HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - (x - pr.position.x) - 8.0, UiTheme.FS_CAPTION, Color("9aa0aa"))
+		draw_rect(Rect2(x, y - 10.0, 12.0, 12.0), base, true)
+		draw_string(_font, Vector2(x + 16.0, y), RogueMap.type_label(type),
+				HORIZONTAL_ALIGNMENT_LEFT, 58, UiTheme.FS_CAPTION, Color("cfd3da"))
+		x += 73.0
+	draw_string(_font, Vector2(pr.position.x + 12.0, y + 24.0),
+			"金框＝当前房间　绿框＝可以走过去　（只有走过的房间才看得到门）",
+			HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 24.0, UiTheme.FS_CAPTION, Color("9aa0aa"))
 
 
 func _toggle_sound() -> void:

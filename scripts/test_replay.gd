@@ -97,15 +97,14 @@ func _test_record_roundtrip() -> void:
 
 # ──────────────────────────── 3. run 层随机可复现 ────────────────────────────
 
-func _map_sig(columns: Array) -> String:
-	## 地图结构签名：id/类型/槽位/连边（与绘制无关的字段剔除）。
+func _map_sig(cards: Array) -> String:
+	## 地图结构签名：id/坐标/类型/是否「?」房/门（与绘制无关的字段剔除）。
+	## R128：5×7 格子地图 —— 每格独立成项（不再分层嵌套）。
 	var out := []
-	for col_nodes in columns:
-		var col := []
-		for n: Dictionary in col_nodes:
-			col.append([int(n["id"]), str(n["type"]), int(n.get("slot", 0)),
-					str(n.get("event_kind", "")), (n["next"] as Array).duplicate()])
-		out.append(col)
+	for c: Dictionary in cards:
+		out.append([int(c["id"]), int(c["col"]), int(c["row"]), str(c["type"]),
+				bool(c.get("hidden", false)), str(c.get("event_kind", "")),
+				(c["doors"] as Array).duplicate()])
 	return JSON.stringify(out)
 
 
@@ -116,7 +115,7 @@ func _test_run_rng_reproducible() -> void:
 	r2.seed = 424242
 	var m1 := RogueMap.generate(r1, GameLayers.LAYER_DEFAULT)
 	var m2 := RogueMap.generate(r2, GameLayers.LAYER_DEFAULT)
-	check(_map_sig(m1) == _map_sig(m2), "同种子 → 同一张地图（13 列 %d 节点）"
+	check(_map_sig(m1) == _map_sig(m2), "同种子 → 同一张地图（%d 格）"
 			% [m1.size()])
 	var m3 := RogueMap.generate(r1, GameLayers.LAYER_DEFAULT)
 	check(_map_sig(m1) != _map_sig(m3), "不同随机状态 → 不同地图")

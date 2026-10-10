@@ -377,45 +377,70 @@ func _check_deck_duck_blood(scene: Variant) -> void:
 
 
 func _check_map_scene(scene: Variant) -> void:
-	## 地图场景（R69）：14 层布局 + **第 9 层固定休息层**在场景里真的能走。
-	## 只断言状态与几何（能滚、节点在范围内、固定层是 rest），
-	## 真正的绘制由 smoke 非 headless 跑满帧验证（面板保持可见）。
-	var cols: Array = RunState.map_columns
-	if cols.size() != RogueMap.COLS:
-		_smoke_fail("地图场景：应有 %d 层，实际 %d" % [RogueMap.COLS, cols.size()])
+	## 地图场景（R128）：**5×7 相接正方形格子** + 起点固定 (3,4) + 两角固定大宝箱。
+	## 只断言状态与几何（格子数 / 位置 / 相接 / 点击判定同源），真正的绘制
+	## 由 smoke 非 headless 跑满帧验证。
+	var cells: Array = RunState.map_cells
+	if cells.size() != RogueMap.CELLS:
+		_smoke_fail("地图场景：应有 %d 格，实际 %d" % [RogueMap.CELLS, cells.size()])
 		return
-	# 固定休息层：整层是 rest，且场景能定位到它（点得进去）
-	var rc: Array = cols[RogueMap.REST_COL]
-	var rest_ok := rc.size() >= RogueMap.MIN_NODES
-	for n in rc:
-		if str(n["type"]) != "rest":
-			rest_ok = false
-	if not rest_ok:
-		_smoke_fail("地图场景：第 %d 层应整层是休息" % RogueMap.REST_COL)
+	var sc: Dictionary = RogueMap.start_cell(cells)
+	if sc.is_empty() or str(sc["type"]) != "start":
+		_smoke_fail("地图场景：起点房缺失或类型不对")
 		return
-	var rc_pos: Vector2 = scene._node_pos(rc[0])
-	var b: Vector2 = scene._map_content_bounds()
-	if rc_pos.y < b.x or rc_pos.y > b.y:
-		_smoke_fail("地图场景：第 %d 层休息节点落在内容范围外（y=%.1f，范围 %.1f..%.1f）"
-				% [RogueMap.REST_COL, rc_pos.y, b.x, b.y])
+	if int(sc["col"]) != RogueMap.START_COL or int(sc["row"]) != RogueMap.START_ROW:
+		_smoke_fail("地图场景：起点应在 (%d,%d)，实际 (%d,%d)"
+				% [RogueMap.START_COL, RogueMap.START_ROW, int(sc["col"]), int(sc["row"])])
 		return
-	# 14 层必然高于 720 视口 → 必须可滚，否则高层看不到
-	if scene._scroll_max <= scene._scroll_min:
-		_smoke_fail("地图场景：%d 层应可上下滚动（scroll_min=%.1f max=%.1f）"
-				% [RogueMap.COLS, scene._scroll_min, scene._scroll_max])
+	for bp: Vector2i in RogueMap.BIGCHEST_POS:
+		var bc: Dictionary = RogueMap.cell_at(cells, bp.x, bp.y)
+		if str(bc["type"]) != "bigchest":
+			_smoke_fail("地图场景：(%d,%d) 应是大宝箱房，实际 %s"
+					% [bp.x, bp.y, str(bc["type"])])
+			return
+	# 几何：格子是正方形、彼此相接、整体落在窗口内
+	var c0: Rect2 = scene._cell_rect(cells[0])
+	var c_last: Rect2 = scene._cell_rect(cells[RogueMap.CELLS - 1])
+	var cell_sz: float = scene.CELL
+	if absf(c0.size.x - cell_sz) > 0.01 or absf(c0.size.y - cell_sz) > 0.01:
+		_smoke_fail("地图场景：格子应为正方形 %.0f，实际 %.1f×%.1f"
+				% [cell_sz, c0.size.x, c0.size.y])
 		return
-	# 所有节点都要落在内容范围内（纵向不越界）
-	var out := 0
-	for c in cols:
-		for n2 in c:
-			var p: Vector2 = scene._node_pos(n2)
-			if p.y < b.x or p.y > b.y:
-				out += 1
-	if out > 0:
-		_smoke_fail("地图场景：%d 个节点落在内容范围外" % out)
+	var nb0: Rect2 = scene._cell_rect(RogueMap.cell_at(cells, 1, 0))
+	if absf(nb0.position.x - (c0.position.x + c0.size.x)) > 0.01 \
+			or absf(nb0.position.y - c0.position.y) > 0.01:
+		_smoke_fail("地图场景：相邻格子没有相接（横向间隙 %.1f、纵向偏移 %.1f）"
+				% [nb0.position.x - (c0.position.x + c0.size.x),
+					nb0.position.y - c0.position.y])
 		return
-	print("SMOKE OK 地图场景：%d 层 / 第 %d 层整层休息 / 纵向可滚 %.0fpx / 全部节点在范围内"
-			% [cols.size(), RogueMap.REST_COL, scene._scroll_max - scene._scroll_min])
+	if c0.position.x < 0.0 or c0.position.y < 0.0 \
+			or c_last.end.x > 1280.0 or c_last.end.y > 720.0:
+		_smoke_fail("地图场景：地图整体超出窗口（左上 %.0f,%.0f 右下 %.0f,%.0f）"
+				% [c0.position.x, c0.position.y, c_last.end.x, c_last.end.y])
+		return
+	# 格子中心反查回同一格
+	var hit: Dictionary = scene._cell_at(c0.position + c0.size * 0.5)
+	if hit.is_empty() or int(hit["id"]) != int(cells[0]["id"]):
+		_smoke_fail("地图场景：格子坐标反查不对（期望 id 0，得到 %s）"
+				% str(hit.get("id", -1)))
+		return
+	# 可走房间 = RunState.available_nodes（场景与状态同源）
+	var avail := RunState.available_nodes()
+	if avail.is_empty():
+		_smoke_fail("地图场景：起点应至少有 1 个可走的相邻房")
+		return
+	for a: Dictionary in avail:
+		if not scene._is_available(a):
+			_smoke_fail("地图场景：可走房间 %d 未被场景认作可走" % int(a["id"]))
+			return
+	# 视野规则的前提：走过的房间必须至少有一个门（不然玩家会被困死）
+	for c: Dictionary in cells:
+		if RunState.cleared_ids.has(int(c["id"])) and (c["doors"] as Array).is_empty():
+			_smoke_fail("地图场景：走过的房间 %d 竟然一个门都没有" % int(c["id"]))
+			return
+	print("SMOKE OK 地图场景：5×7 = %d 格相接正方形 / 起点 (%d,%d) / 两角大宝箱 / 巧克力 ×%d / 可走 %d 间"
+			% [RogueMap.CELLS, RogueMap.START_COL, RogueMap.START_ROW,
+				RunState.chocolate, avail.size()])
 	_check_relic_bar(scene)
 
 
@@ -1255,11 +1280,10 @@ func _check_sleep_aura(scene: Variant) -> void:
 
 
 func _check_map_panel(scene: Variant) -> void:
-	## 战斗内地图总览（R64）：
+	## 战斗内地图总览（R128）：**格子视图**、只读、整屏装得下（不再滚动）。
 	##   ① 「重开一局」按钮已删除、换成「地图」按钮；
-	##   ② 打开面板 → 画出可走/当前位置标记，滚轮能滚，关掉后复原；
-	##   ③ 面板只读：点节点不会改路线（current_node_id 不变）。
-	## 断言打在真实状态上，不靠截图。
+	##   ② 打开面板 → 标出可走 / 当前房间，关掉后复原；
+	##   ③ 面板只读：点房间不会改路线（current_node_id 不变）。
 	var tb: Variant = scene.get_node_or_null("Toolbar")
 	if tb == null:
 		_smoke_fail("战斗内地图：找不到 Toolbar 节点")
@@ -1270,60 +1294,35 @@ func _check_map_panel(scene: Variant) -> void:
 	if tb.get_node_or_null("MapBtn") == null:
 		_smoke_fail("战斗内地图：Toolbar 里没有 MapBtn")
 		return
-	# run 中（有地图）→ 按钮可见
 	if not scene.map_btn.visible:
 		_smoke_fail("战斗内地图：run 中「地图」按钮应可见")
 		return
-	# 打开：_mapview_scroll_max>0（层数装不下，层数见 RogueMap.COLS）+ 出现可走节点
 	scene._toggle_map()
 	if not scene._map_visible:
 		_smoke_fail("战斗内地图：_toggle_map 后面板没有打开")
 		return
-	if scene._mapview_scroll_max() <= 0.0:
-		_smoke_fail("战斗内地图：%d 层应超出面板高度（scroll_max 应 > 0，实际 %.1f）"
-				% [RogueMap.COLS, scene._mapview_scroll_max()])
-		return
-	# 打开时视野应对准当前层（滚到接近底部）
-	if scene._map_scroll < scene._mapview_scroll_max() - 1.0:
-		_smoke_fail("战斗内地图：打开时应把视野对准当前层（scroll %.1f / max %.1f）"
-				% [scene._map_scroll, scene._mapview_scroll_max()])
-		return
-	# 可走节点判定与 RunState 同源：至少标出 1 个「下一步」
+	# 可走判定与 RunState 同源
 	var nxt := 0
-	for n in RunState.available_nodes():
+	var avail := RunState.available_nodes()
+	for n in avail:
 		if scene._mapview_is_next(n):
 			nxt += 1
-	if nxt != RunState.available_nodes().size():
-		_smoke_fail("战斗内地图：%d/%d 个可走节点被标出"
-				% [nxt, RunState.available_nodes().size()])
+	if nxt != avail.size():
+		_smoke_fail("战斗内地图：%d/%d 个可走房间被标出" % [nxt, avail.size()])
 		return
-	# 滚轮：往下滚到顶
-	var before: float = scene._map_scroll
-	var wheel := InputEventMouseButton.new()
-	wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
-	wheel.pressed = true
-	scene._gui_input(wheel)
-	if not (scene._map_scroll > before or scene._map_scroll >= scene._mapview_scroll_max()):
-		_smoke_fail("战斗内地图：滚轮下滚没生效（%.1f → %.1f）"
-				% [before, scene._map_scroll])
-		return
-	# 只读：点面板里的节点不改路线
+	# 只读：点面板里的房间不改路线
 	var cur_before := RunState.current_node_id
-	var some_node: Dictionary = {}
-	for col_nodes in RunState.map_columns:
-		for node in col_nodes:
-			if scene._mapview_is_next(node):
-				some_node = node
-				break
-		if not some_node.is_empty():
+	var some_cell: Dictionary = {}
+	for node: Dictionary in RunState.map_cells:
+		if scene._mapview_is_next(node):
+			some_cell = node
 			break
-	if not some_node.is_empty():
-		scene._on_left_click(scene._mapview_node_pos(some_node))
+	if not some_cell.is_empty():
+		scene._on_left_click(scene._mapview_cell_rect(some_cell).get_center())
 		if RunState.current_node_id != cur_before:
-			_smoke_fail("战斗内地图：面板应当只读，点节点却把路线改到了 %d"
+			_smoke_fail("战斗内地图：面板应当只读，点房间却把路线改到了 %d"
 					% RunState.current_node_id)
 			return
-	# 点任意处 = 关闭（上面那次点击已经把它关掉了，这里确认状态）
 	if scene._map_visible:
 		_smoke_fail("战斗内地图：点任意处应关闭面板")
 		return
@@ -1331,35 +1330,19 @@ func _check_map_panel(scene: Variant) -> void:
 	if not scene._map_visible:
 		_smoke_fail("战斗内地图：关闭后应能再次打开")
 		return
-	# 几何：扫一圈滚动位置，**画出来的节点不能越出面板**；两端（起点/Boss）也必须在可视区。
-	var pr: Rect2 = scene._mapview_panel_rect()
+	# 几何：35 个格子必须**完整**落在可视区内（整屏装得下，所以不再需要滚动）
 	var view: Rect2 = scene._mapview_view_rect()
-	var out_of_panel := 0
-	for s in 13:
-		scene._map_scroll = scene._mapview_scroll_max() * float(s) / 12.0
-		for col_nodes in RunState.map_columns:
-			for node in col_nodes:
-				var pos: Vector2 = scene._mapview_node_pos(node)
-				if not view.grow(scene.MAPVIEW_NODE_R + 32.0).has_point(pos):
-					continue   # 被剔除的不画，不算越界
-				if not pr.has_point(pos):
-					out_of_panel += 1
-	if out_of_panel > 0:
-		_smoke_fail("战斗内地图：%d 个可见节点画到了面板外" % out_of_panel)
+	var out_cnt := 0
+	for node: Dictionary in RunState.map_cells:
+		if not view.encloses(scene._mapview_cell_rect(node)):
+			out_cnt += 1
+	if out_cnt > 0:
+		_smoke_fail("战斗内地图：%d 个格子越出了可视区（应当整屏装得下）" % out_cnt)
 		return
-	scene._map_scroll = 0.0
-	if not view.has_point(scene._mapview_node_pos(RunState.map_columns[0][0])):
-		_smoke_fail("战斗内地图：滚到顶时起点层不在可视区内")
-		return
-	scene._map_scroll = scene._mapview_scroll_max()
-	var boss_col: Array = RunState.map_columns[RunState.map_columns.size() - 1]
-	if not view.has_point(scene._mapview_node_pos(boss_col[0])):
-		_smoke_fail("战斗内地图：滚到底时 Boss 层不在可视区内")
-		return
-	# **保持面板打开**：test_smoke 剩下的几帧会真的把 _draw_map_panel 画出来 ——
+	# **保持面板打开**：剩下的几帧会真的把 _draw_map_panel 画出来 ——
 	# 面板里的绘制错误（越界访问 / 空引用）只有真渲染才抓得到（headless 抓不到）。
-	print("SMOKE OK 战斗内地图：重开按钮已换成地图按钮，面板可开关/滚轮翻动/只读（可走 %d 个），几何不越界，保持打开供后续帧渲染"
-			% nxt)
+	print("SMOKE OK 战斗内地图：格子总览可开关 / 只读（可走 %d 间）/ %d 个格子全部完整落在面板内 / 保持打开供后续帧渲染"
+			% [nxt, RogueMap.CELLS])
 
 
 func _check_overflow(scene: Variant) -> void:

@@ -1,74 +1,70 @@
 extends Control
-## 肉鸽冒险地图（参考杀戮尖塔）—— 起点 + 11 个普通层 + Boss，自下而上推进。
-## 节点类型：起点（初始位置，非战斗）/ 普通战斗 / 精英战斗 / 休息 / 事件 /
-## 宝箱层（第六层：整层都是宝箱，开箱得 1 个随机奖励道具）/ Boss。
-## 玩家从起点（最下列）出发，点击当前节点可达的下一列节点前进；
-## 战斗胜利领卡牌奖励回地图，失败返回标题。侧栏显示生命 / 卡组 / 战斗记录。
+## 肉鸽冒险地图（R128 重写）—— **7 列 × 5 行的相接正方形格子**。
 ##
-## 节点图标可换：assets/ui/map_<类型>.png（start/battle/elite/rest/event/chest/boss），
-## 缺图时回退为内置的彩色圆牌 + 「起/战/英/息/事/箱/王」文字。
-## 详见 assets/ui/图片命名说明.txt。
+## 与旧版的根本区别：旧版是「14 个分层列 + 圆节点 + 连线 + 上下滚动」，新版是一张
+## 固定 5×7 的网格 —— 每格一个房间，房间之间用「门」相连，玩家在网格上自由走动。
 ##
-## 分层：本张地图属于 RunState.current_layer（当前为第一层），标题栏会显示层名；
-## 地图上的战斗关卡与事件都只从该层的内容池里取（见 GameLayers）。
+## 规则（与 RogueMap 的生成约束一一对应）：
+##   * 起点固定在最下一行中间 (3,4)；**左上 (0,0) 与右上 (6,0) 固定为大宝箱**；
+##   * 每一格都写明房间类型；**「?」房要走进才揭晓**（揭晓后永久显示真实类型）；
+##   * **只有走过的房间，玩家才看得到它通向哪些房间**（门）—— 这是本版的核心视野规则；
+##     奖励道具「鹰哨」（6026）可以让全图的门立刻全部可见；
+##   * 每层 12 块巧克力：进入**没走过**的房间扣 1 块（悬浮会提示 -1），
+##     原路返回走过的房间不扣、并且什么都不发生；
+##   * 巧克力扣到 0 → 当前房间结算完 → 「入夜了，强大的敌人来袭」→ Boss 战。
+##
+## 界面：每层一张背景图（缺图回退渐变）+ **半透明格子**（尽量不把背景图挡死）。
+## 地图整体（826 × 590）能完整放进视口 —— 所以旧版的滚动 / 滚动提示 / 滚动条已全部移除。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
-const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 
-const NODE_R := 17.5                 # 节点半径（留出层间呼吸空间）
-const SLOT_CX := 640.0               # 横向槽位中心 = 窗口水平中线（起点/Boss 居中）
-const SLOT_DX := 210.0               # 槽位间距（5 个槽位：640±2×210）
-const LAYOUT_Y0 := 668.0                # 起点层 y（下）
-const LAYOUT_DY := -96.0                # 层间距（向上推进；起点 + 12 层 + Boss = 14 层，见 RogueMap.COLS）
-## 层间距 96px × 12 层 = 1152px，远超 720 的视口高度 —— 所以地图支持
-## 上下拖动 + 滚轮滚动（见 _scroll_y / _clamp_scroll），把纵向空间让出来。
+const CELL := 118.0                  # 格子边长（正方形，相邻格共享边）
+const MAP_W := 826.0                 # 7 × 118
+const MAP_H := 590.0                 # 5 × 118
+const MAP_X0 := 227.0                # (1280 - 826) / 2，水平居中
+const MAP_Y0 := 94.0                 # 标题行 + 信息行之下
 
-const VIEW_H := 720.0                # 视口高度（project.godot 的 viewport_height）
-const SCROLL_TOP_MARGIN := 78.0      # 顶部让开标题栏
-const SCROLL_BOT_MARGIN := 16.0      # 底部留白
-const DRAG_THRESHOLD := 6.0          # 按下后移动超过这个距离才算「拖动」而非点击
+const VIEW_H := 720.0
+const DRAG_THRESHOLD := 6.0          # 弃用（保留：点击判定仍用它区分按下/拖动）
 
-# R126：地图滚动的提示 —— **不再画滚动条**，改用半透明**双箭头**（只给新玩家看）。
-# 形状 / 颜色 / 呼吸统一收在 `ScrollHint`（三个滚动容器共用），这里只留**地图页自己的**坐标。
-## ⚠️ 位置要落在**没有节点的空白边带**里：上方那条在标题栏下沿、内容顶边之上；
-## 下方那条贴住窗口底边（首版把箭头放在内容区里，正好压在顶上那排节点上）。
-const HINT_TOP_Y := 72.0    # 上箭头第一枚的尖点 y（整组向上伸展 ScrollHint.GAP）
-const HINT_BOT_Y := 694.0   # 下箭头第一枚的尖点 y（整组向下伸展）
-
-const COL_LINE := Color(0.70, 0.81, 1.00, 0.52)   # 未走过的连线（芯·亮蓝白，不用灰）
-const COL_LINE_DONE := Color("e6c86a")            # 已走过的连线（金）
-const COL_LINE_NEXT := Color("a8d8ff")            # 当前可走的连线（亮青白）
-const COL_EDGE_DARK := Color(0.07, 0.08, 0.11, 0.60)   # 连线暗描边
-
+# ---- 视觉常量（只服务本文件；跨文件的房间类型色在 UiTheme.MAP_NODE_COLORS）----
+const COL_CELL_FILL := Color(0.06, 0.08, 0.12, 0.40)        # 未走过的格子底（半透明，露出背景图）
+const COL_CELL_FILL_DONE := Color(0.14, 0.17, 0.22, 0.46)   # 走过的格子底（稍实一点）
+const COL_CELL_LINE := Color(1, 1, 1, 0.14)                 # 格子分隔线
+const COL_CELL_LINE_DONE := Color(0.90, 0.78, 0.42, 0.42)   # 走过的格子边（金）
+const COL_DOOR_DONE := Color("e6c86a")                      # 已探索的门（金）
+const COL_DOOR_LIT := Color("a8d8ff")                       # 从当前房可走的门（亮青白）
+const COL_DOOR_UNSEEN := Color(0.66, 0.70, 0.78, 0.50)      # 鹰哨揭示的「还没走过」的门
+const COL_DOOR_DARK := Color(0.04, 0.05, 0.08, 0.80)        # 门的暗描边（压底色用）
+const COL_PANEL := Color(0.08, 0.09, 0.13, 0.74)            # HUD 小面板底
+const COL_PANEL_LINE := Color(1, 1, 1, 0.12)
+const COL_CHOCO_FALLBACK := Color("6b3f24")                 # 巧克力缺图时的兜底色
 
 var _font: SystemFont
 var _font_bold: SystemFont
 var sfx: Sfx
 var _t := 0.0
 var _hover_id := -1
+var _mouse := Vector2.ZERO
 var _records_visible := false
 var _records_scroll := 0.0
 var _records: Array = []
-var _deck_visible := false       # 卡组查看面板
+var _deck_visible := false
 var _deck_scroll := 0.0
-var _deck_rows: Array = []       # [{id, card, count}] 按卡组首次出现顺序聚合
+var _deck_rows: Array = []
 var _hover_deck := -1
-var _mouse := Vector2.ZERO      # 鼠标位置（道具徽章悬停提示用）
-var _relics_visible := false    # 道具详情面板（R75：徽章装不下时才可点开，字号放大）
+var _relics_visible := false
 var _relic_scroll := 0.0
-var _whisper_auto := false      # 道具「鸭之低语」：前进方向由系统随机决定
-var _whisper_next: Dictionary = {}   # 系统为本次选定的前进节点
-# -- 纵向拖动 / 滚动 --
-var _scroll_y := 0.0            # 地图纵向偏移（0 = 起点层贴着视口底部）
-var _scroll_min := 0.0          # 偏移下界（不能往下拖过头）
-var _scroll_max := 0.0          # 偏移上界（不能往上拖过头）
-var _reward_panel: RewardPanel = null   # R119：奖励悬浮窗（宝箱事件的卡牌奖励）
-var _drag_press_pos := Vector2.ZERO   # 按下位置
-var _drag_press_scroll := 0.0        # 按下时的 scroll
-var _press_active := false           # 左键当前还按着
-var _dragging := false               # 本次按下是否已越过阈值（越过后松手不触发点击）
-var _show_scroll_hint := false   # R126：画不画「上下可滚」的双箭头（只在**新玩家第一局**）
-var _boss_name := ""      # 本层 Boss 关卡名（Boss 节点上方名牌；懒加载一次）
+var _whisper_auto := false
+var _whisper_next: Dictionary = {}
+var _reward_panel: RewardPanel = null
+var _drag_press_pos := Vector2.ZERO
+var _press_active := false
+var _dragging := false
+var _boss_name := ""            # 本层 Boss 关卡名（名牌显示；懒加载一次）
+var _boss_alert := false        # 「入夜了…」提示是否正在显示（防止重复触发）
+var _move_note := ""            # 上一次移动的短提示（如「你已走过这里」）
+var _move_note_t := 0.0
 
 
 func _ready() -> void:
@@ -77,42 +73,38 @@ func _ready() -> void:
 	sfx = Sfx.new()
 	add_child(sfx)
 	_records = RunState.load_records()
-	# R126：地图滚动提示（半透明双箭头）**只给新玩家** —— 判据 = 还没有任何战斗记录。
-	# 老兵早就知道地图能上下滚，再弹箭头就是打扰。复用上面刚读到的 _records，不额外读盘。
-	# `-- --newplayer` 可强制打开，供截图核验（本机有战绩时默认看不到）。
-	_show_scroll_hint = ScrollHint.is_new_player()
-	if not RunState.run_active or RunState.map_columns.is_empty():
-		# 直接打开地图（调试）：临时开一局（第一层），避免空场景
+	# 兜底：直接打开地图场景（调试）时临时开一局，避免空场景
+	if not RunState.run_active or RunState.map_cells.is_empty():
 		RunState.start_run(RogueMap.generate(_rng(), GameLayers.LAYER_DEFAULT),
 				GameLayers.LAYER_DEFAULT)
-	if RunState.current_node_id < 0 and not RunState.map_columns.is_empty():
-		RunState.current_node_id = int(RunState.map_columns[0][0]["id"])
-	# -- --relics：演示道具栏（截图验证用；须在重定向检查前，模拟已选完道具的状态）
+	# -- --relics：演示道具栏（截图验证用）
 	if "--relics" in OS.get_cmdline_user_args():
-		RunState.relics = [6001, 6005, 6010]   # 初始白 / 奖励黄 / 事件紫
+		RunState.relics = [6001, 6005, 6010]
 		RunState.relic_choice = []
-	# -- --deck：直接打开卡组查看面板（截图验证用）
+	# -- --whistle：演示鹰哨（全图的门都可见）
+	if "--whistle" in OS.get_cmdline_user_args():
+		RunState.relics = [6001, 6005, 6026]
+		RunState.relic_choice = []
+	# -- --midway：演示「走过一片区域」的状态（截图核验视野规则用）
+	if "--midway" in OS.get_cmdline_user_args():
+		_prep_midway_demo()
+	# -- --deck：直接打开卡组查看面板
 	if "--deck" in OS.get_cmdline_user_args():
 		_deck_rows = _build_deck_rows()
 		_deck_visible = true
-	# 起点三选一：本局还没选初始道具 → 先进道具选择（选完回地图）
-	if RunState.run_active and not RunState.relic_choice.is_empty():
-		get_tree().change_scene_to_file.call_deferred("res://scenes/relic_pick.tscn")
-		return
-	# 有即时道具等待卡组选择（源数之力 / 失忆药水）→ 先进卡组编辑
-	if RunState.run_active and RunState.pending_relic > 0:
-		get_tree().change_scene_to_file.call_deferred("res://scenes/deck_edit.tscn")
-		return
-	# 事件「遗忘之泉」留下的待办：从卡组删一张卡（删完回地图）
-	if RunState.run_active and RunState.pending_deck_edit != "":
-		get_tree().change_scene_to_file.call_deferred("res://scenes/deck_edit.tscn")
-		return
-	# 纵向视野初始化：先夹一次范围，再把视野对准玩家当前所在层
-	_scroll_to_current()
-	# -- --scrollmid：把视野放到地图正中（截图核验「上下都有内容」用；
-	#    默认对准当前层时只会出现其中一个方向的双箭头）。
-	if "--scrollmid" in OS.get_cmdline_user_args():
-		set_scroll_ratio(0.5)
+	# 起点三选一 / 待办卡组操作：先走它们，别停在地图上。
+	# ⚠️ **截图核验模式要跳过**：否则刚开的一局带着「起点道具三选一」，
+	# 会立刻把场景切走 → 截图截到的是别的界面（甚至什么都截不到）。
+	if "--screenshot" not in OS.get_cmdline_user_args():
+		if RunState.run_active and not RunState.relic_choice.is_empty():
+			get_tree().change_scene_to_file.call_deferred("res://scenes/relic_pick.tscn")
+			return
+		if RunState.run_active and RunState.pending_relic > 0:
+			get_tree().change_scene_to_file.call_deferred("res://scenes/deck_edit.tscn")
+			return
+		if RunState.run_active and RunState.pending_deck_edit != "":
+			get_tree().change_scene_to_file.call_deferred("res://scenes/deck_edit.tscn")
+			return
 	var quit_btn := Button.new()
 	quit_btn.text = "回到标题"
 	quit_btn.position = Vector2(14, 14)
@@ -135,12 +127,14 @@ func _ready() -> void:
 	deck_btn.pressed.connect(_toggle_deck)
 	UiTheme.apply_chip(deck_btn, true)
 	add_child(deck_btn)
-	# R119：奖励悬浮窗 —— 宝箱事件（卡牌奖励）就在地图上弹窗，不再切走界面
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
 	# 道具「鸭之低语」（6010）：玩家失去选择权 → 系统随机挑路并自动前进
 	if RunState.run_active and RunState.has_relic(6010) and not ReplayLog.playing:
 		_start_whisper()
-	# 命令行 -- --screenshot：自动截图退出（视觉验证用）
+	# -- --bossalert：演示「入夜了」提示（只显示不切场景，截图核验用）
+	if "--bossalert" in OS.get_cmdline_user_args():
+		_boss_alert = true
+	# 命令行 -- --screenshot：自动截图退出
 	if "--screenshot" in OS.get_cmdline_user_args():
 		var t := Timer.new()
 		t.wait_time = 0.6
@@ -151,7 +145,7 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(t)
 		t.start()
-	# 回放模式：自动执行下一条「前进」决策（R46）
+	# 回放模式：自动执行下一条「前进」决策
 	if ReplayLog.playing:
 		var rt := Timer.new()
 		rt.wait_time = 0.5
@@ -166,124 +160,66 @@ func _rng() -> RandomNumberGenerator:
 	return r
 
 
-## 顶部按钮样式统一走 `UiTheme.apply_chip(b, true)`。
-## ⚠️ 这里原本有一套本地 `_style_button`，取值与现在的 chip 实心档**完全一致**，
-## 但它把 `focus` 设成了 `StyleBoxEmpty` —— 键盘焦点环直接消失。R113 批 4 已删除。
-## 说明：地图页底色是**暗**的，按钮反而是实心暗底（深底上再深一档反而跳得出来），
-## 所以这里用 solid 档而不是浅底档。
-
-
-func _start_whisper() -> void:
-	## 道具「鸭之低语」：玩家不再能自己选路 —— 随机挑一个可走的节点，
-	## 高亮展示片刻后自动走进去（战斗/休息/事件照常结算）。
-	_whisper_auto = true
-	var opts := RunState.available_nodes()
-	if opts.is_empty():
+func _prep_midway_demo() -> void:
+	## 演示：把玩家挪到中路，并标记一条走过的路线 —— 用于核验
+	## 「只有走过的房间才画门」「走过的格子边变金」这两条视野规则。
+	var cells := RunState.map_cells
+	if cells.size() != RogueMap.CELLS:
 		return
-	_whisper_next = opts[RunState.run_rng.randi() % opts.size()]
-	queue_redraw()
-	var t := Timer.new()
-	t.wait_time = 1.6
-	t.one_shot = true
-	t.timeout.connect(_whisper_advance)
-	add_child(t)
-	t.start()
-
-
-func _whisper_advance() -> void:
-	## 鸭之低语：定时器到点 → 自动走进系统选定的节点。
-	if not RunState.run_active or not RunState.has_relic(6010):
-		return
-	if _whisper_next.is_empty() or not _is_available(_whisper_next):
-		return
-	sfx.play("click")
-	_enter_node(_whisper_next)
-
-
-func _process(delta: float) -> void:
-	_t += delta
-	queue_redraw()
-
-
-func _node_pos(node: Dictionary) -> Vector2:
-	## 节点屏幕坐标：层（列）自下而上，横向按随机槽位分布（起点/Boss 居中）。
-	## 纵向加上 _scroll_y —— 拖动/滚轮改的就是这个偏移量。
-	var col := int(node["col"])
-	var slot := int(node.get("slot", 2))
-	var x := SLOT_CX + (slot - 2) * SLOT_DX
-	var y := LAYOUT_Y0 + col * LAYOUT_DY + _scroll_y
-	return Vector2(x, y)
-
-
-func _map_content_bounds() -> Vector2:
-	## 地图内容在没有滚动时的纵向范围 [顶, 底]（世界坐标，未加 _scroll_y）。
-	## 顶部留出标题栏的空间，底部留出节点半径，避免拖到边界时节点被切掉。
-	var top := LAYOUT_Y0 + (RogueMap.COLS - 1) * LAYOUT_DY - NODE_R - 40.0
-	var bottom := LAYOUT_Y0 + NODE_R + 28.0
-	return Vector2(top, bottom)
-
-
-func _clamp_scroll() -> void:
-	## 把 _scroll_y 夹到合法范围：地图内容始终至少有一部分留在视口内。
-	## 内容比视口矮时（横屏放大 / 节点少）直接居中，不允许拖动。
-	var b := _map_content_bounds()
-	var content_h := b.y - b.x
-	if content_h <= VIEW_H - SCROLL_TOP_MARGIN - SCROLL_BOT_MARGIN:
-		# GDScript 不支持链式赋值，分两句写
-		_scroll_min = 0.5 * (VIEW_H - b.x - b.y)
-		_scroll_max = _scroll_min
-		_scroll_y = _scroll_min
-		return
-	# scroll 越大 = 看得越靠上（Boss 方向）。上界：内容顶边贴到标题栏下方。
-	_scroll_max = SCROLL_TOP_MARGIN - b.x
-	# 下界：内容底边贴到视口底部。
-	_scroll_min = _scroll_max - (content_h - (VIEW_H - SCROLL_TOP_MARGIN - SCROLL_BOT_MARGIN))
-	if _scroll_min > _scroll_max:
-		_scroll_min = _scroll_max
-	_scroll_y = clampf(_scroll_y, _scroll_min, _scroll_max)
-
-
-func _scroll_to_current() -> void:
-	## 进入地图时把视野对准玩家当前所在层（起点在最下面时就是底部视图）。
-	var col := 0
-	for node in _all_nodes():
-		if int(node["id"]) == RunState.current_node_id:
-			col = int(node["col"])
+	RunState.cleared_ids = []
+	# 沿起点一路向上走 3 格（找有门的邻居）
+	var cur := int(RogueMap.start_cell(cells)["id"])
+	RunState.cleared_ids.append(cur)
+	for step in 3:
+		var nxt := -1
+		for nid in RogueMap.neighbor_ids(cells[cur]):
+			var c: Dictionary = cells[int(nid)]
+			if int(c["row"]) < int(cells[cur]["row"]) and not RunState.cleared_ids.has(int(nid)):
+				nxt = int(nid)
+				break
+		if nxt < 0:
 			break
-	_clamp_scroll()
-	# 让当前层落在视口偏上位置（上方留出将要走的几层）
-	var want := LAYOUT_Y0 + col * LAYOUT_DY + _scroll_y
-	var target := SCROLL_TOP_MARGIN + (VIEW_H - SCROLL_TOP_MARGIN) * 0.55
-	_scroll_y += target - want
-	_clamp_scroll()
+		RunState.cleared_ids.append(nxt)
+		cur = nxt
+	RunState.current_node_id = cur
+	RunState.chocolate = RogueMap.MAX_STEPS - (RunState.cleared_ids.size() - 1)
 
 
-func _node_at(pos: Vector2) -> Dictionary:
-	for node in _all_nodes():
-		if _node_pos(node).distance_to(pos) <= NODE_R + 8.0:
-			return node
-	return {}
+## 顶部按钮样式统一走 `UiTheme.apply_chip(b, true)`（地图页底色是暗的 → 实心档）。
 
 
-func _is_available(node: Dictionary) -> bool:
-	for n in RunState.available_nodes():
-		if int(n["id"]) == int(node["id"]):
-			return true
-	return false
+# ------------------------------------------------------------ 坐标
+
+func _cell_rect(cell: Dictionary) -> Rect2:
+	var col := int(cell["col"])
+	var row := int(cell["row"])
+	return Rect2(MAP_X0 + col * CELL, MAP_Y0 + row * CELL, CELL, CELL)
 
 
-func _all_nodes() -> Array:
-	var out: Array = []
-	for col_nodes in RunState.map_columns:
-		out.append_array(col_nodes)
-	return out
+func _cell_center(cell: Dictionary) -> Vector2:
+	var r := _cell_rect(cell)
+	return r.position + r.size * 0.5
 
 
-func _find_node(id: int) -> Dictionary:
-	for node in _all_nodes():
-		if int(node["id"]) == id:
-			return node
-	return {}
+func _cell_at(pos: Vector2) -> Dictionary:
+	var col := int((pos.x - MAP_X0) / CELL)
+	var row := int((pos.y - MAP_Y0) / CELL)
+	if not RogueMap.in_bounds(col, row):
+		return {}
+	return RunState.map_cells[RogueMap.idx(col, row)]
+
+
+func _is_available(cell: Dictionary) -> bool:
+	## 从当前房间能否走到它（必须真的有门 —— 与 RunState.can_move_to 同源）。
+	return RunState.can_move_to(int(cell["id"]))
+
+
+func _visited(cell: Dictionary) -> bool:
+	return RunState.cleared_ids.has(int(cell["id"]))
+
+
+func _is_current(cell: Dictionary) -> bool:
+	return int(cell["id"]) == RunState.current_node_id
 
 
 # ------------------------------------------------------------ 输入
@@ -291,25 +227,12 @@ func _find_node(id: int) -> Dictionary:
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		_mouse = event.position
-		# 拖动中：纵向跟手移动地图（横向不拖，地图只有纵向自由度）
-		if _dragging:
-			_scroll_y = _drag_press_scroll + (event.position.y - _drag_press_pos.y)
-			_clamp_scroll()
-			queue_redraw()
-			return
-		# 按下后还没动：累计位移，越过阈值才算拖动（否则松手会误进节点）
-		if _press_active and not _dragging \
-				and event.position.distance_to(_drag_press_pos) > DRAG_THRESHOLD:
-			_dragging = true
-			_scroll_y = _drag_press_scroll + (event.position.y - _drag_press_pos.y)
-			_clamp_scroll()
-			queue_redraw()
-			return
 		if _deck_visible:
 			_hover_deck = _deck_row_at(event.position)
 			queue_redraw()
 			return
-		var nid := int(_node_at(event.position).get("id", -1))
+		var c := _cell_at(event.position)
+		var nid := int(c.get("id", -1))
 		if nid != _hover_id:
 			_hover_id = nid
 			queue_redraw()
@@ -323,221 +246,128 @@ func _gui_input(event: InputEvent) -> void:
 			_records_visible = false
 			queue_redraw()
 			return
-		# 道具「+N」摘要块：装不下全部道具时的详情入口（悬浮已能看已列出的那些）
 		if _relic_bar_overflowed() and _relic_rect(_relic_shown()).has_point(event.position):
 			_relics_visible = true
 			_relic_scroll = 0.0
 			queue_redraw()
 			return
 		if _deck_visible:
-			# 点在卡牌行上保持打开（暂无操作），点空白处关闭
 			if _deck_row_at(event.position) < 0:
 				_deck_visible = false
 			queue_redraw()
 			return
-		# 按下：先记下起点，还不动地图（超过阈值才算拖动）
 		_drag_press_pos = event.position
-		_drag_press_scroll = _scroll_y
 		_press_active = true
 		_dragging = false
 	elif event is InputEventMouseButton and not event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
 		_press_active = false
-		# 松手：拖过就不算点击（避免「想拖地图却走进了节点」）
 		if _dragging:
 			_dragging = false
 			return
 		if ReplayLog.playing:
 			return   # 回放模式：前进由驱动执行
-		var node := _node_at(event.position)
-		if node.is_empty() or not _is_available(node):
+		var cell := _cell_at(event.position)
+		if cell.is_empty() or not _is_available(cell):
 			return
 		if _whisper_auto:
-			return# 鸭之低语：前路由命运决定，玩家点不动
+			return   # 鸭之低语：前路由命运决定，玩家点不动
 		sfx.play("click")
-		_enter_node(node)
+		_enter_node(cell)
 
 
-func _enter_node(node: Dictionary) -> void:
-	## 走进一个节点：按类型分流（战斗 → battle 场景；休息/事件 → event 场景）。
-	ReplayLog.ev("map", {"node": int(node["id"])})   # 录像：地图前进
-	RunState.advance(int(node["id"]))
-	match str(node["type"]):
-		"battle", "elite", "boss":
-			# 战斗不写在地图上：进入时按本局进度决定难度与具体关卡
-			RunState.pending_level = RunState.next_level(node)
-			RunState.pending_node = node
+func _enter_node(cell: Dictionary) -> void:
+	## 走进一个房间。按类型分流；**回到走过的房间什么都不发生**。
+	if cell.is_empty():
+		return
+	var id := int(cell["id"])
+	var res := RunState.advance(id)
+	if not bool(res.get("ok", false)):
+		return
+	ReplayLog.ev("map", {"node": id})
+	if not bool(res.get("is_new", false)):
+		# 原路返回：不扣巧克力、不结算 —— 给一句轻提示，免得玩家以为点击失效。
+		_set_note("这里是走过的房间，什么都不会发生（不消耗巧克力）")
+		return
+	RunState.pending_node = cell
+	var dtype := RogueMap.display_type(cell)
+	match dtype:
+		"battle", "elite":
+			RunState.pending_level = RunState.next_level(cell)
 			get_tree().change_scene_to_file("res://scenes/battle.tscn")
-		"rest":
-			RunState.pending_node = node
+		"rest", "event":
+			# 事件房不再遭遇战斗：本层事件池已去掉「遭遇怪物」（见 GameLayers）。
 			get_tree().change_scene_to_file("res://scenes/event.tscn")
 		"chest":
-			# 宝箱层（第六层整层）：进事件场景的开箱分支 → 获得 1 个随机奖励道具
-			RunState.pending_node = node
-			RunState.pending_event = "relic_chest"
-			get_tree().change_scene_to_file("res://scenes/event.tscn")
-		"event":
-			RunState.pending_node = node
-			# 事件子类型在生成地图时已定：宝箱（卡牌奖励）/ 鸭鸭低语（事件道具）/
-			# 挣扎（失去生命换金属龙）/ 鸭之凝视（一袋米抗几楼）/ 鸭梨山大（鸭梨）/
-			# 蓝色大肥鱼（鲸鱼之怒）/ 怪物（遭遇战）。已经拥有对应的事件道具时不再
-			# 重复出现该事件，退回卡牌宝箱。
-			var kind := str(node.get("event_kind", "treasure"))
-			if kind == "monster":
-				# 事件节点遭遇怪物 → 按普通战斗进入（难度同普通战斗节点）
-				RunState.pending_level = RunState.next_level(node)
-				get_tree().change_scene_to_file("res://scenes/battle.tscn")
-			elif kind == "whisper" and not RunState.has_relic(RunState.WHISPER_RELIC_ID):
-				RunState.pending_event = "whisper"
-				get_tree().change_scene_to_file("res://scenes/event.tscn")
-			elif kind == "gaze" and not RunState.has_relic(RunState.RICE_RELIC_ID):
-				RunState.pending_event = "gaze"
-				get_tree().change_scene_to_file("res://scenes/event.tscn")
-			elif kind == "arcane":
-				# 奥秘之泉（第一层专属）：获得「奥秘护符」 / 或者从 3 张随机效果·技能牌里选一张
-				RunState.pending_event = "arcane"
-				get_tree().change_scene_to_file("res://scenes/event.tscn")
-			elif kind == "oblivion":
-				# 遗忘之泉（全层通用）：从卡组删一张卡，或直接离开
-				RunState.pending_event = "oblivion"
-				get_tree().change_scene_to_file("res://scenes/event.tscn")
-			elif kind == "pear" and not RunState.has_relic(RunState.PEAR_RELIC_ID):
-				RunState.pending_event = "pear"
-				get_tree().change_scene_to_file("res://scenes/event.tscn")
-			elif kind == "bluefish":
-				# 蓝色大肥鱼（第二层专属）：可将一张「鲸鱼之怒」加入卡组
-				RunState.pending_event = "bluefish"
-				get_tree().change_scene_to_file("res://scenes/event.tscn")
-			elif kind == "hero":
-				# 绝赞五换一（第二层专属）：卡组不足 5 种不同名的卡时，
-				# 仍然进事件界面（界面里只留「退出事件」一个选项）。
-				RunState.pending_event = "hero"
-				get_tree().change_scene_to_file("res://scenes/event.tscn")
-			elif kind == "struggle":
-				RunState.pending_event = "struggle"
-				get_tree().change_scene_to_file("res://scenes/event.tscn")
-			else:
-				# 宝箱事件：卡牌奖励**先入队** → 就地弹出奖励悬浮窗（看完再挑一张），
-				# 不再切到独立的卡牌奖励场景（切走就看不到「还掉了别的东西」）。
-				RunState.queue_card_reward("normal")
-				RunState.complete_current()
-				queue_redraw()
-				if _reward_panel != null:
-					_reward_panel.open()
+			# 普通宝箱：一次卡牌奖励（就地弹奖励悬浮窗，不切界面）
+			RunState.queue_card_reward("normal")
+			_open_reward_panel()
+		"bigchest":
+			# 大宝箱：**1 个道具 + 一次卡牌奖励**
+			RunState.queue_relic_reward(RunState.roll_reward_relic())
+			RunState.queue_card_reward("normal")
+			_open_reward_panel()
 
 
-func _toggle_records() -> void:
-	sfx.play("click")
-	_records = RunState.load_records()
-	_records_visible = not _records_visible
-	if _records_visible:
-		_deck_visible = false
+func _open_reward_panel() -> void:
+	queue_redraw()
+	if _reward_panel != null:
+		_reward_panel.open()
+
+
+func _set_note(text: String) -> void:
+	_move_note = text
+	_move_note_t = 2.4
 	queue_redraw()
 
 
-func _toggle_deck() -> void:
-	sfx.play("click")
-	if _records_visible:
-		_records_visible = false
-	_deck_rows = _build_deck_rows()
-	_deck_scroll = 0.0
-	_deck_visible = not _deck_visible
+# ------------------------------------------------------------ Boss 触发
+
+func _process(delta: float) -> void:
+	_t += delta
+	if _move_note_t > 0.0:
+		_move_note_t = maxf(0.0, _move_note_t - delta)
 	queue_redraw()
+	# 巧克力耗尽 → 等当前房间的内容结算完（奖励弹窗关掉 / 战斗与事件回来）再开 Boss 战。
+	# ⚠️ 回放模式同样要触发（boss_pending 由 advance 确定性地置位），只是不等那 2 秒。
+	if RunState.run_active and RunState.boss_pending and not _boss_alert \
+			and (_reward_panel == null or not _reward_panel.is_open()):
+		_trigger_boss_alert()
 
 
-func _build_deck_rows() -> Array:
-	## 卡组聚合：[{id, card, count}]（按首次出现顺序）。
-	## ⚠️ R112 起卡组里不再有「运行时改写费用」的卡（铁栅栏 9072 卡面就是 2 费），
-	## 同名卡费用必然相同 → 按 id 聚合即可。
-	var repo := CardRepo.load_json()
-	var seen := {}
-	var out: Array = []
-	for i in RunState.deck_ids.size():
-		var id: int = RunState.deck_ids[i]
-		if seen.has(id):
-			out[seen[id]]["count"] += 1
-			continue
-		var c := repo.get_card(id)
-		if c == null:
-			continue
-		seen[id] = out.size()
-		out.append({"id": id, "card": c, "count": 1})
-	return out
+func _trigger_boss_alert() -> void:
+	_boss_alert = true
+	sfx.play("click")
+	queue_redraw()
+	var t := Timer.new()
+	t.wait_time = 0.1 if ReplayLog.playing else 2.2
+	t.one_shot = true
+	t.timeout.connect(_start_boss_battle)
+	add_child(t)
+	t.start()
 
 
-# ------------------------------------------------------------ 卡组面板
-
-## R117：行距要装得下骑在框上的数值（58×70 的卡，上下各露 9.2px → 70 + 18.4 = 88.4）。
-const DECK_ROW_H := 89.0
-const DECK_COL_W := 470.0
-const DECK_INNER := Rect2(180, 142, 920, 350)   # 与记录面板内区一致
-
-
-func _deck_row_rect(i: int) -> Rect2:
-	## 双列布局：左列 180 起，右列 650 起；行高 80（含间距）。
-	var col := i % 2
-	var row := int(i / 2.0)
-	return Rect2(DECK_INNER.position.x + col * DECK_COL_W,
-			DECK_INNER.position.y + row * DECK_ROW_H - _deck_scroll * DECK_ROW_H,
-			450.0, 72.0)
+func _start_boss_battle() -> void:
+	RunState.boss_pending = false
+	RunState.pending_level = RunState.boss_level()
+	RunState.pending_node = {"type": "boss"}
+	get_tree().change_scene_to_file("res://scenes/battle.tscn")
 
 
-func _deck_row_at(pos: Vector2) -> int:
-	for i in _deck_rows.size():
-		if _deck_row_rect(i).has_point(pos):
-			return i
-	return -1
-
-
-func _draw_deck_panel() -> void:
-	## 卡组查看面板：双列卡行（小卡面 + 数值 + 效果），滚轮翻页。
-	var rect := Rect2(160, 90, size.x - 320, size.y - 150)
-	draw_rect(rect, Color("22242c"), true)
-	draw_rect(rect, Color("6a665c"), false, 2.0)
-	draw_string(_font_bold, rect.position + Vector2(20, 34),
-			"我的卡组（共 %d 张 · 滚轮翻页 · 点击空白处关闭）" % RunState.deck_ids.size(),
-			HORIZONTAL_ALIGNMENT_LEFT, 520, UiTheme.FS_BODY, UiTheme.SAND)
-	if _deck_rows.is_empty():
-		draw_string(_font, rect.position + Vector2(20, 90), "卡组是空的。",
-				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
-		return
-	var max_scroll := maxi(0, ceili(_deck_rows.size() / 2.0) - 4)
-	_deck_scroll = clampf(_deck_scroll, 0.0, float(max_scroll))
-	for i in _deck_rows.size():
-		var r := _deck_row_rect(i)
-		if r.end.y < DECK_INNER.position.y or r.position.y > DECK_INNER.end.y:
-			continue
-		var c: CardData = _deck_rows[i]["card"]
-		var hovered := i == _hover_deck
-		if hovered:
-			draw_rect(r.grow(4.0), Color(1, 1, 1, 0.16), true)
-		if c != null:
-			CardFace.draw(self, c,
-					Rect2(r.position + Vector2(0, 1), Vector2(58, 70)),
-					c.health, false, false, _font, _font_bold)
-			var kcol := Color("d8c890") if hovered else Color("eee6c8")
-			draw_string(_font_bold, r.position + Vector2(68, 24),
-					"%s × %d" % [c.card_name, _deck_rows[i]["count"]],
-					HORIZONTAL_ALIGNMENT_LEFT, 340, UiTheme.FS_BODY, kcol)
-			draw_string(_font, r.position + Vector2(68, 45),
-					"费用 %d · %s" % [c.cost, CardFace.stats_line(c)],
-					HORIZONTAL_ALIGNMENT_LEFT, 372, UiTheme.FS_CAPTION, Color("9a968c"))
-			# R106：卡组浏览的一行摘要也走「纯文本降级」（去 Markdown 标记 + 隐藏括号补注）。
-			var eff: String = CardText.naturalize(c.effect_text).replace("\n", " ")
-			if eff.length() > 30:
-				eff = eff.substr(0, 29) + "…"
-			draw_string(_font, r.position + Vector2(68, 63), eff,
-					HORIZONTAL_ALIGNMENT_LEFT, 372, UiTheme.FS_CAPTION, Color("7d8590"))
+func _boss_label() -> String:
+	if _boss_name == "":
+		_boss_name = str(RunState.boss_level().get("name", ""))
+	return _boss_name
 
 
 # ------------------------------------------------------------ 绘制
 
 func _draw() -> void:
 	_draw_background()
-	_draw_title()
-	_draw_edges()
-	_draw_nodes()
-	_draw_scroll_hints()
+	_draw_cells()
+	_draw_doors()
+	_draw_states()
+	_draw_hud()
 	_draw_sidebar()
 	_draw_relics()
 	if _relics_visible:
@@ -546,26 +376,19 @@ func _draw() -> void:
 		_draw_deck_panel()
 	if _records_visible:
 		_draw_records_panel()
-
-
-func _draw_scroll_hints() -> void:
-	## R126：**不再画滚动条**，改用「半透明双上箭头 / 双下箭头」提示上下还有内容。
-	## 只在**新玩家第一局**出现（判据见 ScrollHint.is_new_player），老兵不再被打扰。
-	## 方向：`_scroll_y` 越大 = 看得越靠上（Boss 方向）→
-	##   还能往上（未到 `_scroll_max`）画双上箭头；还能往下画双下箭头。
-	## R127：画法收进 ScrollHint，与战斗内地图总览 / 棋盘格子区同一套视觉。
-	if not _show_scroll_hint:
-		return
-	if _scroll_max <= _scroll_min + 0.5:
-		return                          # 内容装得下 → 没有任何可滚方向，什么都不画
-	ScrollHint.draw(self, SLOT_CX, HINT_TOP_Y, HINT_BOT_Y,
-			_scroll_y < _scroll_max - 0.5,   # 还能往上（Boss 方向）
-			_scroll_y > _scroll_min + 0.5,   # 还能往下（起点方向）
-			ScrollHint.breath())
+	_draw_move_note()
+	if _boss_alert:
+		_draw_boss_alert()
 
 
 func _draw_background() -> void:
-	## 深色纵向渐变 + 极淡点阵 + Boss/起点柔光 —— 告别一块平板底色。
+	## 本层背景图铺满整屏（保持比例裁切）；缺图时回退成纵向渐变 —— 不空白也不报错。
+	var tex := UiAssets.map_bg(RunState.current_layer)
+	if tex != null:
+		draw_texture_rect(tex, Rect2(0, 0, size.x, size.y), false)
+		# 压一层很淡的暗罩：保证格子上的文字在任何背景上都读得清。
+		draw_rect(Rect2(0, 0, size.x, size.y), Color(0.02, 0.03, 0.05, 0.42), true)
+		return
 	var top := Color("1c1f28")
 	var bottom := Color("303443")
 	var bands := 36
@@ -573,56 +396,253 @@ func _draw_background() -> void:
 		var t := float(i) / float(bands - 1)
 		draw_rect(Rect2(0, size.y * float(i) / bands, size.x, size.y / bands + 1.0),
 				top.lerp(bottom, t), true)
-	# 细点阵（只提供质感，不抢戏）
-	var dot := Color(1, 1, 1, 0.03)
-	var gy := 64.0
-	while gy < size.y - 8.0:
-		var gx := 44.0
-		while gx < size.x - 8.0:
-			draw_circle(Vector2(gx, gy), 1.0, dot)
-			gx += 48.0
-		gy += 48.0
-	# Boss 层（顶）暖金光晕 / 起点层（底）冷蓝光晕
-	if not RunState.map_columns.is_empty():
-		_soft_glow(_node_pos(RunState.map_columns.back()[0]), 88.0,
-				Color(0.95, 0.80, 0.45))
-		_soft_glow(_node_pos(RunState.map_columns[0][0]), 80.0,
-				Color(0.45, 0.65, 0.95))
 
 
-func _soft_glow(center: Vector2, radius: float, col: Color) -> void:
-	## 多层同心圆叠出的柔光（中心最亮，向外衰减）。
-	for i in 6:
-		var k := float(i) / 5.0
-		draw_circle(center, lerpf(radius, radius * 0.3, k),
-				Color(col.r, col.g, col.b, 0.042 * (1.0 - k)))
+func _draw_cells() -> void:
+	## 半透明格子 + 房间类型。**格子底刻意做得很淡**，让背景图透出来。
+	for cell: Dictionary in RunState.map_cells:
+		var r := _cell_rect(cell)
+		var done := _visited(cell)
+		var dtype := RogueMap.display_type(cell)
+		var base: Color = UiTheme.MAP_NODE_COLORS.get(dtype, UiTheme.INK_500)
+		# 底：未走过的更淡（还没探索），走过的稍实
+		draw_rect(r, COL_CELL_FILL_DONE if done else COL_CELL_FILL, true)
+		# 类型色只做**极淡的染色**，不铺满（否则背景图被挡死）
+		draw_rect(r, Color(base.r, base.g, base.b, 0.14 if done else 0.09), true)
+		# 分隔线（走过的变金，一眼看出探索范围）
+		draw_rect(r, COL_CELL_LINE_DONE if done else COL_CELL_LINE, false, 1.4)
+		# 内容：图标（有素材时）或短标记，下面再写类型名
+		var cx := r.position.x + r.size.x * 0.5
+		var icon := UiAssets.node_icon(dtype)
+		if icon != null:
+			var ib := 46.0
+			var box := Rect2(cx - ib * 0.5, r.position.y + 20.0, ib, ib)
+			draw_texture_rect(icon, CardFace.fit_rect(icon.get_size(), box), false,
+					Color(1, 1, 1, 0.55) if done else Color.WHITE)
+		else:
+			var mark := RogueMap.type_mark(dtype)
+			var gs := 34
+			draw_string(_font_bold, Vector2(cx - 26.0 + 1.5, r.position.y + 60.0 + 1.5), mark,
+					HORIZONTAL_ALIGNMENT_CENTER, 52, gs, Color(0, 0, 0, 0.55))
+			draw_string(_font_bold, Vector2(cx - 26.0, r.position.y + 60.0), mark,
+					HORIZONTAL_ALIGNMENT_CENTER, 52, gs,
+					Color(0.96, 0.93, 0.86) if not done else Color(0.82, 0.78, 0.66))
+		# 类型名（「每个格子上会写明房间是什么」）
+		var name_col := Color(0.95, 0.92, 0.84) if not done else Color(0.80, 0.76, 0.64)
+		draw_string(_font_bold, Vector2(r.position.x, r.position.y + 96.0),
+				RogueMap.type_label(dtype), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
+				UiTheme.FS_LABEL, name_col)
+
+
+func _draw_doors() -> void:
+	## 门：画在格子边界中点的一小段亮线。
+	## **视野规则**：只有**走过的**房间才把它通向哪几间画出来；
+	## 道具「鹰哨」（6026）在场时 → 全图的门立刻可见。
+	var reveal_all := RunState.has_relic(RunState.EAGLE_WHISTLE_RELIC_ID)
+	for cell: Dictionary in RunState.map_cells:
+		var seen := _visited(cell)
+		if not seen and not reveal_all:
+			continue
+		var cur := _is_current(cell)
+		var r := _cell_rect(cell)
+		var ctr := r.position + r.size * 0.5
+		for nid in cell["doors"]:
+			var v := RogueMap.dir_between(int(cell["id"]), int(nid))
+			if v == Vector2i.ZERO:
+				continue
+			var dir := Vector2(v.x, v.y)
+			var mid := ctr + dir * (CELL * 0.5)
+			var perp := Vector2(-dir.y, dir.x)
+			var half := perp * (CELL * 0.17)
+			var a := mid - half
+			var b := mid + half
+			var col := COL_DOOR_DONE
+			if not seen:
+				col = COL_DOOR_UNSEEN          # 鹰哨揭示的、还没走过的门（更灰更淡）
+			elif cur:
+				# 站在这里能走的门 → 亮青白（与「可走房间」的绿框呼应）
+				if _is_available(RunState.map_cells[int(nid)]):
+					col = COL_DOOR_LIT
+			draw_line(a, b, COL_DOOR_DARK, 9.0, true)
+			draw_line(a, b, col, 4.5, true)
+
+
+func _draw_states() -> void:
+	## 当前房间（金框 + 光晕）/ 可走房间（绿脉动框）/ 悬停（白框）。
+	for cell: Dictionary in RunState.map_cells:
+		var r := _cell_rect(cell)
+		var id := int(cell["id"])
+		if _is_current(cell):
+			draw_rect(r.grow(3.0), UiTheme.ACCENT_LIT, false, 3.0)
+			draw_rect(r.grow(8.0), Color(0.95, 0.76, 0.31, 0.28), false, 5.0)
+		elif _is_available(cell):
+			var pulse := 0.5 + 0.5 * sin(_t * 4.0)
+			draw_rect(r.grow(2.0),
+					Color(0.45, 0.90, 0.50, 0.42 + 0.42 * pulse), false, 2.6)
+		if _hover_id == id and _is_available(cell):
+			draw_rect(r.grow(5.0), Color(1, 1, 1, 0.75), false, 2.0)
+		# 鸭之低语：命运替玩家选中的那间（紫色脉动圈）
+		if _whisper_auto and not _whisper_next.is_empty() and id == int(_whisper_next["id"]):
+			var p2 := 0.5 + 0.5 * sin(_t * 6.0)
+			draw_rect(r.grow(4.0 + p2 * 3.0),
+					Color(0.72, 0.38, 0.95, 0.55 + 0.40 * p2), false, 3.0)
+
+
+func _draw_hud() -> void:
+	# 标题行
+	draw_string(_font_bold, Vector2(size.x / 2 - 90, 30), "冒 险 地 图",
+			HORIZONTAL_ALIGNMENT_CENTER, 180, UiTheme.FS_HEADING, UiTheme.SAND)
+	var hp_txt := "%s    生命 %d/%d    卡组 %d 张" % [
+			GameLayers.layer_name(RunState.current_layer),
+			RunState.hp, RunState.max_hp, RunState.deck_ids.size()]
+	draw_string(_font, Vector2(size.x / 2 - 140, 52), hp_txt,
+			HORIZONTAL_ALIGNMENT_CENTER, 280, UiTheme.FS_LABEL, UiTheme.INK_300)
+	# 信息行：左边 Boss 名牌（玩家要能提前知道打谁），右边巧克力计数
+	_draw_boss_chip()
+	_draw_chocolate()
+
+
+func _draw_boss_chip() -> void:
+	var text := "本层 Boss：%s" % _boss_label()
+	var w := 320.0
+	var h := 26.0
+	var rect := Rect2(14, 60, w, h)
+	draw_rect(rect, COL_PANEL, true)
+	draw_rect(rect, UiTheme.ACCENT_LIT, false, 1.3)
+	draw_string(_font_bold, rect.position + Vector2(10, 18), _ellipsis(text, w - 20.0,
+			UiTheme.FS_LABEL), HORIZONTAL_ALIGNMENT_LEFT, w - 20, UiTheme.FS_LABEL,
+			Color("f7e6b0"))
+
+
+func _draw_chocolate() -> void:
+	## 每层行动力：图标 + ×N（素材在左，数量在右 —— 用户口径）。
+	var n := RunState.chocolate
+	var icon := UiAssets.chocolate()
+	var sz := 30.0
+	var x := size.x - 24.0 - 92.0
+	var rect := Rect2(x, 58, 92, 30)
+	draw_rect(rect, COL_PANEL, true)
+	draw_rect(rect, COL_PANEL_LINE, false, 1.2)
+	if icon != null:
+		draw_texture_rect(icon, Rect2(x + 4, 60, sz - 4, sz - 4), false)
+	else:
+		# 缺图回退：棕色圆角块 + 浅色高光（还是能读出「一块巧克力」）
+		draw_rect(Rect2(x + 5, 61, sz - 6, sz - 6), COL_CHOCO_FALLBACK, true)
+		draw_rect(Rect2(x + 5, 61, sz - 6, (sz - 6) * 0.45), Color(0.83, 0.72, 0.55, 0.55), true)
+		draw_rect(Rect2(x + 5, 61, sz - 6, sz - 6), Color(0.20, 0.12, 0.07, 0.85), false, 1.4)
+	var col := Color("f4e3c8") if n > 0 else Color("e07a6a")
+	draw_string(_font_bold, Vector2(x + sz + 4, 79), "×%d" % n,
+			HORIZONTAL_ALIGNMENT_LEFT, 52, UiTheme.FS_BODY, col)
+	# 悬停在「没走过」的相邻房间上 → 提示这次移动要花 1 块
+	if _hover_id >= 0 and _hover_id < RunState.map_cells.size():
+		var hc: Dictionary = RunState.map_cells[_hover_id]
+		if _is_available(hc) and not _visited(hc) and hc["type"] != "start":
+			_draw_cost_tip()
+
+
+func _draw_cost_tip() -> void:
+	## 悬浮提示：巧克力图标 -1
+	var icon := UiAssets.chocolate()
+	var w := 104.0
+	var h := 30.0
+	var px: float = clampf(_mouse.x + 14.0, 8.0, size.x - w - 8.0)
+	var py: float = clampf(_mouse.y - h - 8.0, 8.0, size.y - h - 8.0)
+	var rect := Rect2(px, py, w, h)
+	draw_rect(rect, Color(0.08, 0.09, 0.13, 0.94), true)
+	draw_rect(rect, UiTheme.ACCENT_GOLD, false, 1.3)
+	if icon != null:
+		draw_texture_rect(icon, Rect2(px + 5, py + 4, 22, 22), false)
+	else:
+		draw_rect(Rect2(px + 5, py + 5, 20, 20), COL_CHOCO_FALLBACK, true)
+		draw_rect(Rect2(px + 5, py + 5, 20, 20), Color(0.20, 0.12, 0.07, 0.85), false, 1.3)
+	draw_string(_font_bold, Vector2(px + 32, py + 20), "-1",
+			HORIZONTAL_ALIGNMENT_LEFT, 60, UiTheme.FS_BODY, Color("f2c14e"))
+
+
+func _draw_sidebar() -> void:
+	## 底部一行：图例（横排）+ 右下提示。
+	var items := [["起点", "start"], ["战斗", "battle"], ["精英", "elite"], ["休息", "rest"],
+			["事件", "event"], ["宝箱", "chest"], ["大宝箱", "bigchest"], ["未知", "unknown"]]
+	var x := 14.0
+	var y := size.y - 30.0
+	for it: Array in items:
+		var ty := str(it[1])
+		var icon := UiAssets.node_icon(ty)
+		if icon != null:
+			draw_texture_rect(icon, CardFace.fit_rect(icon.get_size(),
+					Rect2(x, y + 1, 16, 16)), false)
+		else:
+			draw_rect(Rect2(x + 1, y + 2, 14, 14),
+					UiTheme.MAP_NODE_COLORS.get(ty, UiTheme.INK_500), true)
+			draw_rect(Rect2(x + 1, y + 2, 14, 14), Color(0, 0, 0, 0.5), false, 1.0)
+		draw_string(_font, Vector2(x + 20, y + 14), str(it[0]),
+				HORIZONTAL_ALIGNMENT_LEFT, 64, UiTheme.FS_CAPTION, UiTheme.INK_300)
+		x += 84.0
+	# 右下提示
+	var hint := "点击发绿光的房间前进 · 走过的房间可以随时免费返回 · 巧克力用完就要打 Boss"
+	if _whisper_auto:
+		hint = "【鸭之低语】前路已被命运选定，你无法自主选择……"
+	if RunState.has_relic(RunState.EAGLE_WHISTLE_RELIC_ID):
+		hint += "　｜　鹰哨：全图的门已全部可见"
+	draw_string(_font, Vector2(size.x - 600.0, size.y - 30.0 + 14.0),
+			_ellipsis(hint, 586.0, UiTheme.FS_CAPTION),
+			HORIZONTAL_ALIGNMENT_RIGHT, 586.0, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
+
+
+func _draw_move_note() -> void:
+	if _move_note_t <= 0.0 or _move_note == "":
+		return
+	var w := 460.0
+	var rect := Rect2(size.x / 2 - w / 2, MAP_Y0 + MAP_H + 2.0, w, 24.0)
+	draw_rect(rect, Color(0.08, 0.09, 0.13, 0.88), true)
+	draw_rect(rect, Color(1, 1, 1, 0.16), false, 1.1)
+	draw_string(_font, rect.position + Vector2(10, 17), _move_note,
+			HORIZONTAL_ALIGNMENT_CENTER, w - 20, UiTheme.FS_CAPTION, UiTheme.INK_300)
+
+
+func _draw_boss_alert() -> void:
+	## 巧克力耗尽：整屏暗罩 + 大字提示（2 秒后自动进 Boss 战）。
+	draw_rect(Rect2(0, 0, size.x, size.y), Color(0.02, 0.01, 0.03, 0.72), true)
+	draw_string(_font_bold, Vector2(0, size.y / 2 - 26), "入 夜 了",
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_TITLE, Color("e8c27a"))
+	draw_string(_font_bold, Vector2(0, size.y / 2 + 18), "强大的敌人来袭",
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_HEADING, Color("f2d79a"))
+	draw_string(_font_bold, Vector2(0, size.y / 2 + 54), "—— %s ——" % _boss_label(),
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.INK_300)
+
+
+func _ellipsis(text: String, max_w: float, px: int) -> String:
+	## 自绘文字的溢出策略（规范规则 6）：先量宽，超了就截断补 …
+	if _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x <= max_w:
+		return text
+	var out := text
+	while out.length() > 1 and _font.get_string_size(out + "…",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > max_w:
+		out = out.substr(0, out.length() - 1)
+	return out + "…"
 
 
 # ------------------------------------------------------------ 道具栏
 
-## 地图顶部道具徽章区（R75：悬浮即看说明；一行放不下时才出现「+N」可点开详情）
-const RELIC_BADGE_W := 106.0     # 单个徽章占位宽（含间隔）
-const RELIC_BADGE_MAX := 7       # 一行最多几个徽章（再多就压到标题了）
-const RELIC_P_W := 900.0         # 详情面板宽
-const RELIC_P_NAME := 17         # 详情面板：名称字号（徽章上是 14）
+const RELIC_BADGE_W := 106.0
+const RELIC_BADGE_MAX := 7
+const RELIC_P_W := 900.0
+const RELIC_P_NAME := 17
 const RELIC_P_TAG := 13
-const RELIC_P_DESC := 13         # 详情面板：说明字号（悬浮提示是 12）
+const RELIC_P_DESC := 13
 const RELIC_P_ROWH := 24.0
 const RELIC_P_LINE := 17.0
 
 
 func _relic_rect(i: int) -> Rect2:
-	## 顶部右侧道具徽章矩形（从右往左排）。
 	return Rect2(size.x - 24.0 - (i + 1) * RELIC_BADGE_W, 14.0, 98.0, 26.0)
 
 
 func _relic_bar_overflowed() -> bool:
-	## 徽章行装不下全部道具 —— 点开详情面板的**唯一**判定口。
 	return RunState.relics.size() > RELIC_BADGE_MAX
 
 
 func _relic_shown() -> int:
-	## 实际画几个徽章：装不下时末位让给「+N」摘要块。
 	var n := RunState.relics.size()
 	return (RELIC_BADGE_MAX - 1) if _relic_bar_overflowed() else n
 
@@ -630,8 +650,6 @@ func _relic_shown() -> int:
 func _draw_relics() -> void:
 	if not RunState.run_active or RunState.relics.is_empty():
 		return
-	# R121：被覆盖层（奖励悬浮窗 / 本场景的牌库·记录·道具面板）盖住时不认悬停 ——
-	# 否则鼠标划过看不见的道具栏，说明面板会自己冒出来。
 	var hover_ok := not (_deck_visible or _records_visible or _relics_visible) \
 			and not UiGate.blocked() \
 			and (_reward_panel == null or not _reward_panel.is_open())
@@ -646,7 +664,6 @@ func _draw_relics() -> void:
 		var scol := rel.source_color()
 		draw_rect(rect, Color(scol, 0.18), true)
 		draw_rect(rect, scol, false, 1.4)
-		# 来源色块：初始白 / 奖励黄 / 事件紫（白色描边在深底上不够醒目，配实心块）
 		var chip := Rect2(rect.position + Vector2(5, 5), Vector2(7, rect.size.y - 10))
 		draw_rect(chip, scol, true)
 		draw_rect(chip, Color(0, 0, 0, 0.55), false, 1.0)
@@ -654,7 +671,6 @@ func _draw_relics() -> void:
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 18, UiTheme.FS_LABEL, Color("eee6c8"))
 		if hover_ok and rect.has_point(_mouse):
 			hovered = i
-	# 装不下 → 末位换成「+N 点击看详情」摘要块
 	if _relic_bar_overflowed():
 		var more := _relic_rect(shown)
 		draw_rect(more, Color(0.96, 0.95, 0.88, 0.92), true)
@@ -663,7 +679,7 @@ func _draw_relics() -> void:
 				"+%d" % (RunState.relics.size() - shown),
 				HORIZONTAL_ALIGNMENT_CENTER, more.size.x, UiTheme.FS_BODY, Color("6a6040"))
 		if hover_ok and more.has_point(_mouse):
-			hovered = -2      # -2 = 悬停在「+N」摘要上
+			hovered = -2
 	if hovered >= 0:
 		var rel2 := repo.get_relic(RunState.relics[hovered])
 		if rel2 != null:
@@ -684,7 +700,6 @@ func _draw_relics() -> void:
 
 
 func _relic_names_tail(from_i: int) -> String:
-	## 未列出部分的道具名（顿号连接，最多 6 个，超出用「等」收尾）。
 	var names: Array[String] = []
 	for i in range(from_i, RunState.relics.size()):
 		var rel := RelicRepo.load_json().get_relic(RunState.relics[i])
@@ -696,8 +711,6 @@ func _relic_names_tail(from_i: int) -> String:
 
 
 func _draw_relic_tip(repo: RelicRepo, rel: RelicData, note: String) -> void:
-	## 单个道具的悬浮说明：浮动折行面板画在徽章行下方。
-	# 叠加态的鸭之类的动态状态备注并到说明末尾
 	var text := "「%s」（%s · %s）：%s%s" % [rel.relic_name, rel.source_label(),
 			rel.kind, rel.desc, ("  " + note) if note != "" else ""]
 	var w := 480.0
@@ -712,7 +725,6 @@ func _draw_relic_tip(repo: RelicRepo, rel: RelicData, note: String) -> void:
 
 
 func _relic_panel_rows() -> Array:
-	## 详情面板的每行：[名称行, 说明折行, 来源色, 行高]
 	var repo := RelicRepo.load_json()
 	var rows: Array = []
 	for id in RunState.relics:
@@ -754,7 +766,6 @@ func _relic_panel_metrics(rows: Array) -> Dictionary:
 
 
 func _draw_relic_panel() -> void:
-	## 道具详情面板：徽章行装不下时的兜底入口，**字号比悬浮提示大一档**。
 	var rows := _relic_panel_rows()
 	if rows.is_empty():
 		return
@@ -790,197 +801,113 @@ func _draw_relic_panel() -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_CAPTION, UiTheme.INK_500)
 
 
-func _draw_title() -> void:
-	draw_string(_font_bold, Vector2(size.x / 2 - 90, 28), "冒 险 地 图",
-			HORIZONTAL_ALIGNMENT_CENTER, 180, UiTheme.FS_HEADING, UiTheme.SAND)
-	# 地图所属层级（内容按层隔离：本层的事件与关卡只从本层的内容池里取）
-	var hp_txt := "%s    生命 %d/%d    卡组 %d 张" % [
-			GameLayers.layer_name(RunState.current_layer),
-			RunState.hp, RunState.max_hp, RunState.deck_ids.size()]
-	draw_string(_font, Vector2(size.x / 2 - 140, 54), hp_txt,
-			HORIZONTAL_ALIGNMENT_CENTER, 280, UiTheme.FS_LABEL, UiTheme.INK_300)
+# ------------------------------------------------------------ 面板
+
+func _toggle_records() -> void:
+	sfx.play("click")
+	_records = RunState.load_records()
+	_records_visible = not _records_visible
+	if _records_visible:
+		_deck_visible = false
+	queue_redraw()
 
 
-func _edge_points(a: Vector2, b: Vector2) -> PackedVector2Array:
-	## 层间连线：两端竖直切线的 S 形贝塞尔 —— 比直线柔和，交叉处更容易分辨。
-	var pts := PackedVector2Array()
-	var c1 := a + Vector2(0, LAYOUT_DY * 0.45)
-	var c2 := b - Vector2(0, LAYOUT_DY * 0.45)
-	for i in 17:
-		pts.append(a.bezier_interpolate(c1, c2, b, float(i) / 16.0))
-	return pts
+func _toggle_deck() -> void:
+	sfx.play("click")
+	if _records_visible:
+		_records_visible = false
+	_deck_rows = _build_deck_rows()
+	_deck_scroll = 0.0
+	_deck_visible = not _deck_visible
+	queue_redraw()
 
 
-func _draw_edges() -> void:
-	## 三层叠画：同色柔光（只给已走/可走）→ 暗描边 → 亮芯线。
-	## 已走 = 金、当前可走 = 亮青白、其余 = 暗灰白，一眼分得清。
-	for node in _all_nodes():
-		var from := _node_pos(node)
-		var fid := int(node["id"])
-		var done: bool = RunState.cleared_ids.has(fid)
-		for nid in node["next"]:
-			var tnode := _find_node(int(nid))
-			var pts := _edge_points(from, _node_pos(tnode))
-			var next_edge: bool = fid == RunState.current_node_id \
-					and _is_available(tnode)
-			var col := COL_LINE
-			var w := 2.2
-			if done:
-				col = COL_LINE_DONE
-				w = 3.0
-			elif next_edge:
-				col = COL_LINE_NEXT
-				w = 2.8
-			if done or next_edge:
-				draw_polyline(pts, Color(col.r, col.g, col.b, 0.10), w + 7.0, true)
-			draw_polyline(pts, COL_EDGE_DARK, w + 2.4, true)
-			draw_polyline(pts, col, w, true)
+func _build_deck_rows() -> Array:
+	## 卡组聚合：[{id, card, count}]（按首次出现顺序）。
+	## ⚠️ R112 起卡组里不再有「运行时改写费用」的卡，同名卡费用必然相同 → 按 id 聚合即可。
+	var repo := CardRepo.load_json()
+	var seen := {}
+	var out: Array = []
+	for i in RunState.deck_ids.size():
+		var id: int = RunState.deck_ids[i]
+		if seen.has(id):
+			out[seen[id]]["count"] += 1
+			continue
+		var c := repo.get_card(id)
+		if c == null:
+			continue
+		seen[id] = out.size()
+		out.append({"id": id, "card": c, "count": 1})
+	return out
 
 
-func _draw_nodes() -> void:
-	for node in _all_nodes():
-		var pos := _node_pos(node)
-		var id := int(node["id"])
-		var type := str(node["type"])
-		var done: bool = RunState.cleared_ids.has(id)
-		var current: bool = id == RunState.current_node_id
-		var avail := _is_available(node)
-		var boss := type == "boss"
-		var r := NODE_R + (5.0 if boss else 0.0)
-		var base: Color = UiTheme.MAP_NODE_COLORS.get(type, UiTheme.INK_500)
-		# 立体圆牌：投影 → 深色底盘 → 类型色内芯（走过的整体压暗）
-		draw_circle(pos + Vector2(0, 2.5), r, Color(0, 0, 0, 0.35))
-		draw_circle(pos, r, base.darkened(0.45))
-		draw_circle(pos, r - 2.5, base.darkened(0.5) if done else base)
-		# Boss 节点：上方小牌写明本层要打的是谁（与 next_level 的 boss 分支同源）
-		if boss:
-			_boss_name_chip(pos, r)
-		# 当前位置：金色双环 + 下方小牌
-		if current:
-			draw_arc(pos, r + 4.0, 0, TAU, 40, UiTheme.ACCENT_LIT, 2.5, true)
-			draw_arc(pos, r + 7.0, 0, TAU, 40, Color("f2c14e", 0.45), 1.2, true)
-			var cw := 78.0
-			var crect := Rect2(pos.x - cw / 2, pos.y + r + 6, cw, 17)
-			draw_rect(crect, Color(0.09, 0.09, 0.12, 0.85), true)
-			draw_rect(crect, UiTheme.ACCENT_LIT, false, 1.2)
-			draw_string(_font_bold, crect.position + Vector2(0, 13.5), "当前位置",
-					HORIZONTAL_ALIGNMENT_CENTER, cw, UiTheme.FS_CAPTION, UiTheme.ACCENT_LIT)
-		elif avail:
-			var pulse := 0.5 + 0.5 * sin(_t * 4.0)
-			draw_arc(pos, r + 3.5 + pulse * 2.0, 0, TAU, 40,
-					Color(0.45, 0.9, 0.5, 0.50 + 0.35 * pulse), 2.4, true)
-		# 鸭之低语：命运替玩家选中的那个节点（紫色脉动圈）
-		if _whisper_auto and not _whisper_next.is_empty() \
-				and id == int(_whisper_next["id"]):
-			var p2 := 0.5 + 0.5 * sin(_t * 6.0)
-			draw_arc(pos, r + 6.0 + p2 * 3.0, 0, TAU, 40,
-					Color(0.72, 0.38, 0.95, 0.6 + 0.4 * p2), 3.0, true)
-		if _hover_id == id and avail:
-			draw_arc(pos, r + 8.5, 0, TAU, 40, Color(1, 1, 1, 0.8), 2.0, true)
-		# 节点图标：assets/ui/map_<类型>.png 存在则用图片，否则画内置文字。
-		var icon := UiAssets.node_icon(type)
-		if icon != null:
-			var ib := r * 1.7
-			var box := Rect2(pos - Vector2(ib, ib) * 0.5, Vector2(ib, ib))
-			draw_texture_rect(icon, CardFace.fit_rect(icon.get_size(), box), false,
-					Color(1, 1, 1, 0.45) if done else Color.WHITE)
-		else:
-			var label: String = str({"start": "起", "battle": "战", "elite": "英",
-					"rest": "息", "event": "事", "chest": "箱", "boss": "王"}.get(type, "?"))
-			var gs := 20 if boss else 17
-			draw_string(_font_bold, pos + Vector2(-10, 6.5) + Vector2(1, 1), label,
-					HORIZONTAL_ALIGNMENT_CENTER, 20, gs, Color(0, 0, 0, 0.45))
-			draw_string(_font_bold, pos + Vector2(-10, 6.5), label,
-					HORIZONTAL_ALIGNMENT_CENTER, 20, gs,
-					UiTheme.PAPER if not done else Color(1, 1, 1, 0.45))
-		# 类型名：只在悬停 / 命运指定时显示（平时不再铺一屏文字）
-		var show_label := _hover_id == id \
-				or (_whisper_auto and not _whisper_next.is_empty() \
-						and id == int(_whisper_next["id"]))
-		if show_label:
-			_type_chip(pos, r, base, str(RogueMap.TYPE_LABELS.get(type, type)))
+const DECK_ROW_H := 89.0
+const DECK_COL_W := 470.0
+const DECK_INNER := Rect2(180, 142, 920, 350)
 
 
-func _boss_name_chip(pos: Vector2, r: float) -> void:
-	## Boss 节点上方的名牌：进本层 Boss 战前就知道要打谁。
-	## 关卡名取自 RunState.boss_pick —— 开局用 run_rng 从本层 Boss 池摇定的那一份，
-	## 与 RunState.next_level 的 boss 分支读的是**同一个字段**（R63：同层可能有多个 Boss），
-	## 所以地图上写的就是真会遇到的那只。
-	if _boss_name == "":
-		var lv: Dictionary = RunState.boss_pick
-		if lv.is_empty():
-			lv = GameLevels.boss_level(RunState.current_layer)
-		_boss_name = str(lv.get("name", ""))
-	if _boss_name == "":
+func _deck_row_rect(i: int) -> Rect2:
+	var col := i % 2
+	var row := int(i / 2.0)
+	return Rect2(DECK_INNER.position.x + col * DECK_COL_W,
+			DECK_INNER.position.y + row * DECK_ROW_H - _deck_scroll * DECK_ROW_H,
+			450.0, 72.0)
+
+
+func _deck_row_at(pos: Vector2) -> int:
+	for i in _deck_rows.size():
+		if _deck_row_rect(i).has_point(pos):
+			return i
+	return -1
+
+
+func _draw_deck_panel() -> void:
+	var rect := Rect2(160, 90, size.x - 320, size.y - 150)
+	draw_rect(rect, Color("22242c"), true)
+	draw_rect(rect, Color("6a665c"), false, 2.0)
+	draw_string(_font_bold, rect.position + Vector2(20, 34),
+			"我的卡组（共 %d 张 · 滚轮翻页 · 点击空白处关闭）" % RunState.deck_ids.size(),
+			HORIZONTAL_ALIGNMENT_LEFT, 520, UiTheme.FS_BODY, UiTheme.SAND)
+	if _deck_rows.is_empty():
+		draw_string(_font, rect.position + Vector2(20, 90), "卡组是空的。",
+				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 		return
-	var text := "Boss：" + _boss_name
-	var w := maxf(text.length() * 13.0 + 18.0, 62.0)
-	var h := 22.0
-	var rect := Rect2(pos.x - w / 2.0, pos.y - r - 8.0 - h, w, h)
-	draw_rect(rect, Color(0.10, 0.09, 0.13, 0.90), true)
-	draw_rect(rect, UiTheme.ACCENT_LIT, false, 1.3)
-	draw_string(_font_bold, rect.position + Vector2(0, 15.0), text,
-			HORIZONTAL_ALIGNMENT_CENTER, w, UiTheme.FS_LABEL, Color("f7e6b0"))
-
-
-func _type_chip(pos: Vector2, r: float, base: Color, text: String) -> void:
-	## 悬停时节点旁的小标签牌（节点靠右时标签挪到左侧，避免出屏）。
-	var w := maxf(text.length() * 14.0 + 16.0, 44.0)
-	var lx: float = pos.x - r - 8.0 - w if pos.x > size.x - 150.0 \
-			else pos.x + r + 8.0
-	var rect := Rect2(lx, pos.y - 11.0, w, 22.0)
-	draw_rect(rect, Color(0.08, 0.09, 0.12, 0.88), true)
-	draw_rect(rect, Color(base, 0.85), false, 1.2)
-	draw_string(_font, rect.position + Vector2(8, 15), text,
-			HORIZONTAL_ALIGNMENT_LEFT, w - 14, UiTheme.FS_LABEL, Color("eee9dc"))
-
-
-func _draw_sidebar() -> void:
-	# 左下：图例（双列小面板，收拢不占地方）
-	var items := [["起点", "start"], ["战斗", "battle"], ["精英", "elite"],
-			["休息", "rest"], ["事件", "event"], ["宝箱层", "chest"], ["Boss", "boss"]]
-	var pad := 10.0
-	var cell_w := 92.0
-	var cell_h := 26.0
-	var rows := int(ceil(float(items.size()) / 2.0))
-	var pw := pad * 2.0 + cell_w * 2.0
-	var ph := pad * 2.0 + cell_h * rows
-	var prect := Rect2(14, size.y - ph - 14, pw, ph)
-	draw_rect(prect, Color(0.09, 0.10, 0.14, 0.55), true)
-	draw_rect(prect, Color(1, 1, 1, 0.08), false, 1.0)
-	for i in items.size():
-		var cx: float = prect.position.x + pad + (i % 2) * cell_w
-		var cy: float = prect.position.y + pad + float(i / 2) * cell_h
-		var itype := str(items[i][1])
-		var iicon := UiAssets.node_icon(itype)
-		if iicon != null:
-			var box := Rect2(cx, cy + 2.0, 14.0, 14.0)
-			draw_texture_rect(iicon, CardFace.fit_rect(iicon.get_size(), box), false)
-		else:
-			draw_circle(Vector2(cx + 7, cy + 9), 7, UiTheme.MAP_NODE_COLORS[itype])
-		draw_string(_font, Vector2(cx + 20, cy + 13.5), str(items[i][0]),
-				HORIZONTAL_ALIGNMENT_LEFT, 66, UiTheme.FS_LABEL, UiTheme.INK_300)
-	# 右下：提示
-	if _whisper_auto:
-		draw_string(_font_bold, Vector2(size.x - 430, size.y - 20),
-				"【鸭之低语】前路已被命运选定，你无法自主选择……",
-				HORIZONTAL_ALIGNMENT_RIGHT, 410, UiTheme.FS_LABEL, Color("c9a0f0"))
-	else:
-		draw_string(_font, Vector2(size.x - 430, size.y - 20),
-				"点击发绿光的节点前进 · 拖动 / 滚轮上下浏览 · 打败 Boss 通关",
-				HORIZONTAL_ALIGNMENT_RIGHT, 410, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
+	var max_scroll := maxi(0, ceili(_deck_rows.size() / 2.0) - 4)
+	_deck_scroll = clampf(_deck_scroll, 0.0, float(max_scroll))
+	for i in _deck_rows.size():
+		var r := _deck_row_rect(i)
+		if r.end.y < DECK_INNER.position.y or r.position.y > DECK_INNER.end.y:
+			continue
+		var c: CardData = _deck_rows[i]["card"]
+		var hovered := i == _hover_deck
+		if hovered:
+			draw_rect(r.grow(4.0), Color(1, 1, 1, 0.16), true)
+		if c != null:
+			CardFace.draw(self, c,
+					Rect2(r.position + Vector2(0, 1), Vector2(58, 70)),
+					c.health, false, false, _font, _font_bold)
+			var kcol := Color("d8c890") if hovered else Color("eee6c8")
+			draw_string(_font_bold, r.position + Vector2(68, 24),
+					"%s × %d" % [c.card_name, _deck_rows[i]["count"]],
+					HORIZONTAL_ALIGNMENT_LEFT, 340, UiTheme.FS_BODY, kcol)
+			draw_string(_font, r.position + Vector2(68, 45),
+					"费用 %d · %s" % [c.cost, CardFace.stats_line(c)],
+					HORIZONTAL_ALIGNMENT_LEFT, 372, UiTheme.FS_CAPTION, Color("9a968c"))
+			var eff: String = CardText.naturalize(c.effect_text).replace("\n", " ")
+			if eff.length() > 30:
+				eff = eff.substr(0, 29) + "…"
+			draw_string(_font, r.position + Vector2(68, 63), eff,
+					HORIZONTAL_ALIGNMENT_LEFT, 372, UiTheme.FS_CAPTION, Color("7d8590"))
 
 
 func _draw_records_panel() -> void:
-	## 战斗记录面板：所有持久化记录（新在前），含卡组内容 / 胜负 / 最终血量。
 	var rect := Rect2(160, 90, size.x - 320, size.y - 150)
 	draw_rect(rect, Color("22242c"), true)
 	draw_rect(rect, Color("6a665c"), false, 2.0)
 	draw_string(_font_bold, rect.position + Vector2(20, 34),
 			"战斗记录（共 %d 场，滚动：滚轮）" % _records.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_BODY, UiTheme.SAND)
-	var inner := Rect2(rect.position + Vector2(20, 52),
-			rect.size - Vector2(40, 70))
+	var inner := Rect2(rect.position + Vector2(20, 52), rect.size - Vector2(40, 70))
 	var line_h := 40.0
 	var max_lines := int(inner.size.y / line_h)
 	_records_scroll = clampf(_records_scroll, 0.0,
@@ -1003,7 +930,6 @@ func _draw_records_panel() -> void:
 		draw_string(_font, Vector2(inner.position.x + 445, y + 14),
 				"最终血量 %d/%d" % [int(r["final_hp"]), int(r["max_hp"])],
 				HORIZONTAL_ALIGNMENT_LEFT, 130, UiTheme.FS_LABEL, UiTheme.INK_300)
-		# 卡组摘要（一行）
 		var parts: Array[String] = []
 		for d in r["deck"]:
 			parts.append("%s×%d" % [d["name"], d["count"]])
@@ -1014,13 +940,6 @@ func _draw_records_panel() -> void:
 		draw_string(_font, inner.position + Vector2(0, 30),
 				"还没有战斗记录——去打第一场吧！", HORIZONTAL_ALIGNMENT_LEFT,
 				400, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
-
-
-func set_scroll_ratio(t: float) -> void:
-	## 按 0~1 的比例定位视野（0 = 起点侧底部，1 = Boss 侧顶部）。
-	_clamp_scroll()
-	_scroll_y = lerpf(_scroll_min, _scroll_max, clampf(t, 0.0, 1.0))
-	queue_redraw()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -1048,17 +967,32 @@ func _unhandled_input(event: InputEvent) -> void:
 			and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
 		_deck_scroll = maxf(0.0, _deck_scroll - 1.0)
 		queue_redraw()
-	elif not _records_visible and not _deck_visible and event is InputEventMouseButton \
-			and event.pressed:
-		# 地图纵向滚动：滚轮向上=往 Boss 方向看，滚轮向下=往起点方向看
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			_scroll_y += 64.0
-			_clamp_scroll()
-			get_viewport().set_input_as_handled()
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			_scroll_y -= 64.0
-			_clamp_scroll()
-			get_viewport().set_input_as_handled()
+
+
+# ------------------------------------------------------------ 鸭之低语 / 回放
+
+func _start_whisper() -> void:
+	_whisper_auto = true
+	var opts := RunState.available_nodes()
+	if opts.is_empty():
+		return
+	_whisper_next = opts[RunState.run_rng.randi() % opts.size()]
+	queue_redraw()
+	var t := Timer.new()
+	t.wait_time = 1.6
+	t.one_shot = true
+	t.timeout.connect(_whisper_advance)
+	add_child(t)
+	t.start()
+
+
+func _whisper_advance() -> void:
+	if not RunState.run_active or not RunState.has_relic(6010):
+		return
+	if _whisper_next.is_empty() or not _is_available(_whisper_next):
+		return
+	sfx.play("click")
+	_enter_node(_whisper_next)
 
 
 func _replay_tick() -> void:
@@ -1069,9 +1003,9 @@ func _replay_tick() -> void:
 	if e.is_empty() or str(e.get("k", "")) != "map":
 		return
 	ReplayLog.advance()
-	var node := _find_node(int(e.get("node", -1)))
-	if node.is_empty():
+	var cell := RunState.cell_of(int(e.get("node", -1)))
+	if cell.is_empty():
 		ReplayLog.stop_playback()
 		return
 	sfx.play("click")
-	_enter_node(node)
+	_enter_node(cell)
