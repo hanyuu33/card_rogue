@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 199,
-			"图鉴 = 199 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126**；实际 %d）"
+	check(repo.all_cards().size() == 201,
+			"图鉴 = 201 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 162 and grp_enemy.size() == 37,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 162 / 37）"
+	check(grp_player.size() == 162 and grp_enemy.size() == 39,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 162 / 39）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -4305,7 +4305,8 @@ func _init() -> void:
 
 	# ---- 新关卡：使魔鸭群 / 骑士冲锋 / 队长与巫师 / 爆炎鸭阵 / 白魔法师护阵 ----
 	var lvls := GameLevels.builtin_levels()
-	check(lvls.size() == 21, "内置关卡共 21 关（7 普简 + 4 普难 + 3 精英简单 + 3 精英困难 + 4 Boss）")
+	check(lvls.size() == 22, "内置关卡共 22 关（7 普简 + 5 普难 + 3 精英简单 + 3 精英困难 + 4 Boss；"
+			+ "R135 太阳熔炉进第二层普通困难）")
 	var lva: Dictionary = _level_named("使魔鸭群")
 	check(str(lva["name"]) == "使魔鸭群"
 			and int(lva["tier"]) == GameLevels.TIER_NORMAL_EASY
@@ -4661,8 +4662,8 @@ func _init() -> void:
 	# ---- 分层：各层内容互不串层（第一层 [1] / 第二层 [2]，各自专属） ----
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_DEFAULT).size() == lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
 			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关）" % [lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(), GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size()])
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 10,
-			"第二层自带 10 关（白魔法师护阵 / 夜鸭阵 / 鸭子窑 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / 机械巨鸭Boss / 鸭之暗面Boss）")
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 11,
+			"第二层自带 11 关（白魔法师护阵 / 夜鸭阵 / 鸭子窑 / 太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / 机械巨鸭Boss / 鸭之暗面Boss）")
 	# 内容池：第一层 = [1]；第二层 = [2]（各层内容互不串层）
 	var cl1 := GameLayers.content_layers(GameLayers.LAYER_DEFAULT)
 	var cl2 := GameLayers.content_layers(GameLayers.LAYER_TWO)
@@ -4670,8 +4671,8 @@ func _init() -> void:
 	check(cl2.size() == 1 and int(cl2[0]) == 2,
 			"第二层内容池 = [2]（只用第二层内容，不再混用第一层）")
 	check(GameLayers.content_layers(9).is_empty(), "未配置的层：内容池为空（拿不到任何内容）")
-	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 5,
-			"第二层普通池 5 关（专属：普通简单 3 + 普通困难 2）")
+	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 6,
+			"第二层普通池 6 关（专属：普通简单 3 + 普通困难 3；R135 太阳熔炉）")
 	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 3,
 			"第二层精英池 3 关（专属：精英简单 2 + 精英困难 1）")
 	var l2_battle_pool: Array[Dictionary] = []
@@ -6237,7 +6238,7 @@ func _init() -> void:
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 55
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
-			and int(dr_cls_count.get("敌人", 0)) == 37,
+			and int(dr_cls_count.get("敌人", 0)) == 39,
 		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 55 / 36 / 37）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
@@ -13861,6 +13862,110 @@ func _init() -> void:
 	# ⑤ 熊：生命 14（数据从 cards.json 单一来源读）
 	var r125_bear := repo.get_card(GameEngine.BEAR_ID)
 	check(r125_bear.health == 14, "R125 熊：生命 12 → 14（实际 %d）" % r125_bear.health)
+
+	# ================= R135：太阳熔炉（第二层 · 普通困难）=================
+	# 新增两张敌方单位：赫利俄斯（9130 工事 0/50 程0 速0） /
+	# 量产型俄倪厄（9131 盟友 5/30 程1 速1）。
+	# 赫利俄斯是**场上的光环源**（不是效果卡）：它在场时，本方的俄倪厄
+	# ① 一回合行动两次 ② 每回合结束回复 2 点生命；拆掉它两条立刻断。
+	var r135_helios := repo.get_card(GameEngine.SUN_FORGE_HELIOS_ID)
+	var r135_fury := repo.get_card(GameEngine.SUN_FORGE_FURY_ID)
+	check(r135_helios != null and r135_helios.kind == "工事"
+			and r135_helios.power == 0 and r135_helios.health == 50
+			and r135_helios.attack_range == 0 and r135_helios.move_speed == 0,
+			"R135 赫利俄斯：工事 0/50 程0 速0（实际 %s %d/%d 程%d 速%d）"
+			% [r135_helios.kind, r135_helios.power, r135_helios.health,
+				r135_helios.attack_range, r135_helios.move_speed])
+	check(r135_fury != null and r135_fury.kind == "盟友"
+			and r135_fury.power == 5 and r135_fury.health == 30
+			and r135_fury.attack_range == 1 and r135_fury.move_speed == 1,
+			"R135 量产型俄倪厄：盟友 5/30 程1 速1（实际 %s %d/%d 程%d 速%d）"
+			% [r135_fury.kind, r135_fury.power, r135_fury.health,
+				r135_fury.attack_range, r135_fury.move_speed])
+	check(r135_helios.group == "enemy" and r135_fury.group == "enemy"
+			and r135_helios.effect_text != "" and r135_fury.effect_text != "",
+			"R135 两张都是敌方卡（group=enemy）且卡面写明效果")
+
+	var r135_lv: Dictionary = _level_named("太阳熔炉")
+	check(not r135_lv.is_empty()
+			and int(r135_lv["tier"]) == GameLevels.TIER_NORMAL_HARD
+			and GameLevels.layer_of(r135_lv) == GameLayers.LAYER_TWO
+			and GameLevels.bg_key(r135_lv) == "sun_forge",
+			"R135 太阳熔炉：第二层·普通敌人-困难，key=sun_forge")
+	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).has(r135_lv),
+			"R135 太阳熔炉进第二层普通战斗池（地图会抽到）")
+	var r135_units: Array = r135_lv["enemy_units"]
+	check(r135_units.size() == 3
+			and int(r135_units[0][0]) == 9130 and r135_units[0][6] == Vector2i(0, 1)
+			and int(r135_units[1][0]) == 9131 and r135_units[1][6] == Vector2i(2, 0)
+			and int(r135_units[2][0]) == 9131 and r135_units[2][6] == Vector2i(2, 2),
+			"R135 太阳熔炉站位：赫利俄斯 (0,1)；两只俄倪厄 (2,0) / (2,2)")
+	# 关卡元组与卡面同源：引擎读的是卡库那份（元组只是文档），所以四处必须一致，
+	# 否则「改卡面不改元组」会出现「界面看到的和实际打到的不一样」。
+	check(int(r135_units[0][2]) == r135_helios.power
+			and int(r135_units[0][3]) == r135_helios.health
+			and int(r135_units[0][4]) == r135_helios.attack_range
+			and int(r135_units[0][5]) == r135_helios.move_speed
+			and int(r135_units[1][2]) == r135_fury.power
+			and int(r135_units[1][3]) == r135_fury.health
+			and int(r135_units[1][4]) == r135_fury.attack_range
+			and int(r135_units[1][5]) == r135_fury.move_speed,
+			"R135 太阳熔炉元组与卡面同源（力/生/程/速 逐项一致）")
+
+	# ① 光环：赫利俄斯在场 → 俄倪厄行动两次；赫利俄斯自己不受影响
+	var r135_e := _new_engine([], 30, 30)
+	var r135_h := r135_e.state.place(CardData.from_dict(r135_helios.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var r135_f := r135_e.state.place(CardData.from_dict(r135_fury.to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r135_e.state.reset_units(GameEngine.SIDE_OPPONENT)
+	check(r135_f.acts_left == GameEngine.SUN_FORGE_ACTIONS,
+			"R135 赫利俄斯在场：量产型俄倪厄行动 %d 次（实际 %d）"
+			% [GameEngine.SUN_FORGE_ACTIONS, r135_f.acts_left])
+	check(r135_h.acts_left == 1,
+			"R135 光环只给俄倪厄：赫利俄斯自己仍 1 次行动（实际 %d）" % r135_h.acts_left)
+
+	# ② 赫利俄斯离场 → 俄倪厄回到每回合 1 次（光环源不在就没有双动）
+	r135_e.state.board.erase(Vector2i(0, 1))
+	r135_e.state.reset_units(GameEngine.SIDE_OPPONENT)
+	check(r135_f.acts_left == 1,
+			"R135 拆掉赫利俄斯：俄倪厄回到每回合 1 次行动（实际 %d）" % r135_f.acts_left)
+
+	# ③ 回血：赫利俄斯在场时**敌方回合结束**回 2；我方回合结束不回（「自己回合」口径）
+	var r135_e2 := _new_engine([], 30, 30)
+	r135_e2.state.place(CardData.from_dict(r135_helios.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var r135_f2 := r135_e2.state.place(CardData.from_dict(r135_fury.to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r135_f2.health = 20
+	r135_e2.start_game()
+	r135_e2.end_turn()      # 我方回合结束 → 敌方单位不该回血
+	check(r135_f2.health == 20,
+			"R135 太阳熔炉：**我方**回合结束敌方俄倪厄不回血（仍 %d）" % r135_f2.health)
+	r135_e2.end_turn()      # 敌方回合结束 → 俄倪厄 +2
+	check(r135_f2.health == 22,
+			"R135 太阳熔炉：敌方回合结束俄倪厄回复 %d 点（20 → %d）"
+			% [GameEngine.SUN_FORGE_REGEN, r135_f2.health])
+
+	# ④ 回血以「赫利俄斯还在场」为前提：场上没有它，敌方回合结束也不回
+	var r135_e3 := _new_engine([], 30, 30)
+	var r135_f3 := r135_e3.state.place(CardData.from_dict(r135_fury.to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r135_f3.health = 20
+	r135_e3.start_game()
+	r135_e3.end_turn()
+	r135_e3.end_turn()
+	check(r135_f3.health == 20,
+			"R135 场上没有赫利俄斯：俄倪厄不回血（仍 %d）" % r135_f3.health)
+
+	# ⑤ 徽标：俄倪厄卡面**没有**「疾行」字段（双动来自场上光环），但战场上必须照样标出来 ——
+	#    「能打两次」与冰封 / 护盾同性质，是看卡面看不出来的隐藏状态。
+	#    （实机出图发现：改判据前这两只在战场上没有任何双动标识。）
+	check(not r135_fury.has_affix(GameEngine.AFFIX_SWIFT),
+			"R135 前置：量产型俄倪厄卡面没有「疾行」字段（双动来自场上光环）")
+	check(r135_fury.active_affixes(2, false).has(GameEngine.AFFIX_SWIFT)
+			and not r135_fury.active_affixes(1, false).has(GameEngine.AFFIX_SWIFT),
+			"R135 徽标：光环给的双动也显示「疾行」（acts_left=2 显示 / =1 不显示）")
 
 	RunState.player_class = r91_saved_cls
 

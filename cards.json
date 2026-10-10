@@ -4075,6 +4075,47 @@
       "target_mode": "none",
       "color": "黑",
       "image": ""
+    },
+    {
+      "id": 9130,
+      "name": "赫利俄斯",
+      "kind": "工事",
+      "cost": 0,
+      "power": 0,
+      "health": 50,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "工事",
+        "机械"
+      ],
+      "effect_text": "在场时，场上的「量产型俄倪厄」一回合行动两次，且每回合回复 2 点生命。",
+      "target_mode": "none",
+      "color": "金",
+      "image": ""
+    },
+    {
+      "id": 9131,
+      "name": "量产型俄倪厄",
+      "kind": "盟友",
+      "cost": 5,
+      "power": 5,
+      "health": 30,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "机械"
+      ],
+      "effect_text": "「赫利俄斯」在场时：一回合行动两次，且每回合回复 2 点生命。",
+      "target_mode": "none",
+      "color": "灰",
+      "image": ""
     }
   ]
 }

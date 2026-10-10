@@ -307,7 +307,8 @@ func field_affix_line() -> String:
 ## 战场单位「此刻生效的字段」—— 与卡面 `affixes` 的差别：
 ## ① 上场之后已经不起作用的字段根本不进来（R118：交换 / 幻影，见 `affix_on_board()`）——
 ##    它的消费者是**战场徽标**与**悬停列表**，两处都在讲「这个单位此刻有什么」；
-## ② 疾行看**场上剩余行动轮数**（`acts_left`），用掉一轮就不该再显示；
+## ② 疾行看**场上剩余行动轮数**（`acts_left`）—— **不要求卡面自带这个字段**（R135 改）：
+##    判据是「此刻还能不能多打一轮」，因为双动还有两个**不写在卡面上**的来源；
 ## ③ 护盾用掉了就不显示（`shield` 传 false）。
 func active_affixes(acts_left: int, shield: bool) -> Array[String]:
 	var out: Array[String] = []
@@ -316,8 +317,14 @@ func active_affixes(acts_left: int, shield: bool) -> Array[String]:
 			continue    # R118：交换 / 幻影 —— 上场后已无作用，不进战场徽标
 		if a == "护盾" and not shield:
 			continue    # 护盾已用掉 → 不再显示
+		if a == "疾行":
+			continue    # 疾行不在这趟里判，见下面（判据是场上实况而不是卡面）
 		out.append(a)
-	# 疾行：卡面有字段但本回合只剩 1 轮行动时不显示（场上判据优先）
-	if out.has("疾行") and acts_left <= 1:
-		out.erase("疾行")
+	# 疾行（R135 改判据）：从「**卡面有没有这个字段**」改成「**此刻还能不能多打一轮**」。
+	# 原因：双动有两个**不写在卡面上**的来源 —— 效果卡「哈气」（所属阵营整方生效）
+	# 与场上的赫利俄斯（只给量产型俄倪厄）。按卡面判的话，这两类单位身上
+	# **一个徽标都没有**，玩家看不出「它这回合能打两次」。
+	# 而「能打两次」正是**看卡面看不出来的隐藏状态**（与冰封 / 护盾同性质），必须常驻可见。
+	if acts_left > 1:
+		out.append("疾行")
 	return out

@@ -74,12 +74,12 @@ static func level_names() -> Array[String]:
 
 
 static func builtin_levels() -> Array:
-	## 按分级从低到高：普通简单×6（含第二层 2 关）→ 普通困难×2 →
-	## 精英简单×2（含第二层「哈气骑士团」）→ 精英困难×2 → Boss。
+	## 按分级从低到高：普通简单×7（第一层 4 + 第二层 3）→ 普通困难×5（第一层 2 + 第二层 3）→
+	## 精英简单×3 → 精英困难×3 → Boss×4（两层各 2）。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_white_mage_guard(), _night_ducks(),
-			_knight_charge(), _wizard(), _duck_kiln(),
+			_knight_charge(), _wizard(), _duck_kiln(), _sun_forge(),
 		_captain(), _captain_wizard(), _legion(), _breath_charge(), _frost_line(), _undead_legion(), _dragon_nest(),
 		_mech_giant(), _boss_dragon(), _boss_demon_duck(), _mech_duck_boss(), _boss_duck_darkside()]
 
@@ -736,6 +736,38 @@ static func _duck_kiln() -> Dictionary:
 		"starting_hand": 0,
 		"enemy_units": [
 			[9025, "鸭子窑", 0, 100, 0, 0, Vector2i(0, 1)],
+		],
+		"tutorial": [],
+	}
+
+
+static func _sun_forge() -> Dictionary:
+	## 第二层·普通敌人-困难（R135）：后排中央一座太阳装置「赫利俄斯」
+	## （9130，**工事** 0 力 50 血 / 程 0 / 速 0 —— 不会打人也不会移动）。
+	## 它在场时，本方的「量产型俄倪厄」（9131，5/30 程1 速1）获得两条光环：
+	##   ① 一回合行动两次；② 每回合结束回复 2 点生命。
+	## ⚠️ 两条都**以「赫利俄斯还在场」为前提** —— 先拆掉太阳装置，两只俄倪厄
+	##    立刻回到「每回合 1 次行动、不回血」。这是这关的核心取舍：
+	##    打兵（30×2 血）还是拆塔（50 血，但它自己回不了血）。
+	## ⚠️ 摆放顺序：赫利俄斯写**在数组最前**。`place()` 是算完 `acts_left` 才落子，
+	##    光环源先上场 → 后面两只俄倪厄上场时就吃到了双动；battle_scene 摆完还会
+	##    统一 `apply_extra_actions` 补一次，两条保险都留着（顺序反过来也不会漏）。
+	return {
+		"name": "太阳熔炉",
+		"key": "sun_forge",
+		"tier": TIER_NORMAL_HARD,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9130, "赫利俄斯", 0, 50, 0, 0, Vector2i(0, 1)],
+			[9131, "量产型俄倪厄", 5, 30, 1, 1, Vector2i(2, 0)],
+			[9131, "量产型俄倪厄", 5, 30, 1, 1, Vector2i(2, 2)],
 		],
 		"tutorial": [],
 	}

@@ -272,15 +272,38 @@ func extra_actions(side: String) -> int:
 	return best
 
 
+func has_sun_forge(side: String) -> bool:
+	## 「太阳熔炉」的太阳装置（赫利俄斯 9130）是否在**该方场上**。
+	## 它是「量产型俄倪厄双动」与「俄倪厄每回合回血」两条光环的**唯一开关**，
+	## 所以两条都调这里判 —— 两处各写一遍扫描迟早会漏一处（改了一处忘另一处）。
+	for p: Placement in board.values():
+		if p.owner == side and p.card.id == GameEngine.SUN_FORGE_HELIOS_ID:
+			return true
+	return false
+
+
+func unit_actions(p: Placement, side: String) -> int:
+	## 单位本回合的**行动轮数**（唯一口）。三个来源取最大：
+	##   ① 卡面自带 `actions`（疾行，如鸭子队长）；
+	##   ② 效果区「哈气」9024 给的 `extra_actions`（整方生效）；
+	##   ③ 太阳熔炉：本方场上有赫利俄斯 → 量产型俄倪厄（9131）额外行动一次。
+	## ⚠️ 所有写 `acts_left` 的地方（place / reset_units / apply_extra_actions）
+	##   都必须走这个口 —— 漏一处就会出现「上场那回合不动、下回合才双动」的错位。
+	var n := maxi(p.card.actions, extra_actions(side))
+	if p.card.id == GameEngine.SUN_FORGE_FURY_ID and has_sun_forge(side):
+		n = maxi(n, GameEngine.SUN_FORGE_ACTIONS)
+	return n
+
+
 func apply_extra_actions(side: String) -> void:
-	## 效果区发生变动后，给该阵营**已经在场**的单位补上额外的行动轮数
-	## （关卡开局是先摆单位、再启用效果卡，所以必须补这一次）。
-	var extra := extra_actions(side)
-	if extra <= 0:
-		return
+	## 场上有新单位落地 / 效果区发生变动后，给该阵营**已经在场**的单位补上额外行动轮数。
+	## 原本只有「哈气」一个来源（关卡开局是先摆单位、再启用效果卡，所以必须补这一次）；
+	## R135 起来源多了「场上的赫利俄斯」—— 它的上场顺序**不由效果区决定**，
+	## 所以判据统一收敛到 `unit_actions`，不再只看效果区（那条 `extra <= 0 → return`
+	## 的短路也必须去掉，否则「没有哈气」的关卡整段被跳过）。
 	for p: Placement in board.values():
 		if p.owner == side:
-			p.acts_left = maxi(p.acts_left, extra)
+			p.acts_left = maxi(p.acts_left, unit_actions(p, side))
 
 
 func place(card: CardData, cell: Vector2i, owner := "self",
@@ -294,7 +317,7 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	#    召唤物当回合**恰好行动一次**，不继承哈气 / 双动字段。
 	#    用户口径：「当回合仍然可以行动，只是回合计数要正确，召唤的回合行动 2 格肯定是有问题的」。
 	#    玩家主动出牌（play_from_hand）照旧吃哈气 —— 那是「他自己花费用打出来的」。
-	p.acts_left = 1 if summon else maxi(card.actions, extra_actions(owner))
+	p.acts_left = 1 if summon else unit_actions(p, owner)
 	# 沉睡（恶魔鸭 9116）：带「沉睡」trait 的单位一上场就开始睡（SLEEP_TURNS 点）。
 	# 放在 place 里 = 唯一初始化口，关卡摆位 / 效果卡召唤出来的都算。
 	if card.traits.has(SLEEP_TRAIT):
@@ -337,8 +360,9 @@ func reset_units(side: String) -> void:
 			if p.rooted == 1:
 				p.rooted = 2
 			p.moved = p.rooted > 0
-			# 哈气：回合开始时被刷新成「行动两次」（未到生效回合 / 原本就双动 → 不叠加）
-			p.acts_left = maxi(p.card.actions, extra_actions(side))
+			# 哈气 / 太阳熔炉：回合开始时刷新成「行动两次」
+			# （未到生效回合 / 原本就双动 → 不叠加，取最大）
+			p.acts_left = unit_actions(p, side)
 
 
 func iter_board() -> Array:

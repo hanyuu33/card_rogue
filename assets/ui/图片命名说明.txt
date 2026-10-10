@@ -109,7 +109,7 @@ map_bg_<层号>.png        当层底图（没做专属图时自动用它）     
 battle_bg.png            全局兜底（在 `assets/` 下，非本目录） 1280 × 720
   · 取哪一张由 `UiAssets.battle_bg_path(key, layer)` **唯一决定**（返回完整路径）：
     丢一张 `battle_bg_<key>.png` 进本目录就**立刻生效**，不用改任何代码。
-  · 关卡 key 全表（**稳定 ASCII，关卡改名不影响**）——21 个内置关卡，外加
+  · 关卡 key 全表（**稳定 ASCII，关卡改名不影响**）——22 个内置关卡，外加
     复仇版「恶魔鸭（复仇）」（不在 builtin_levels 里，走 revenge_boss()）：
       duck_knight 鸭子骑士来袭 / wizard 巫师的召唤 / frost_line 寒冰防线
       undead_legion 亡灵军团 / dragon_nest 龙族巢穴 / mech_giant 机甲巨兵
@@ -118,7 +118,8 @@ battle_bg.png            全局兜底（在 `assets/` 下，非本目录） 1280
       boss_duck_darkside 鸭之暗面 / legion 骑士军团 / familiars 使魔鸭群 /
       knight_charge 骑士冲锋 / captain_wizard 队长与巫师 / archer_knight 弓手与骑士 /
       blaze_pack 爆炎鸭阵 / white_mage_guard 白魔法师护阵 / night_ducks 夜鸭阵 /
-      breath_charge 哈气骑士团 / duck_kiln 鸭子窑 / captain 鸭子队长登场
+      breath_charge 哈气骑士团 / duck_kiln 鸭子窑 / captain 鸭子队长登场 /
+      sun_forge 太阳熔炉（R135）
   · ⚠️ `battle_bg.png` 在**仓库根 `assets/`**（不在本目录）—— 历史遗留的位置，
     标题页也在用它，别搬走；**新做的图一律放本目录**。
 

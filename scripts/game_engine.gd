@@ -75,6 +75,15 @@ const BLAZE_DUCK_DAMAGE:= 10
 const HEALER_TRAIT:= "治疗"
 const KILN_TRAIT:= "孵化"
 const KILN_CARD_ID:= 9025
+# ---- 「太阳熔炉」关卡（R135，第二层普通困难）----
+# 与「哈气」那种**效果卡**不同，这里的双动来源是**场上的工事单位**赫利俄斯：
+# 它在场 → 本方的量产型俄倪厄 ① 一回合行动两次 ② 每回合结束回 SUN_FORGE_REGEN 点。
+# 两条都以「赫利俄斯还在场」为前提：行动数在 FieldState.unit_actions 里实时判定，
+# 回血在 `_regen_tick` 里实时判定 —— 拆掉它两条立刻断，不需要任何收尾钩子。
+const SUN_FORGE_HELIOS_ID:= 9130   # 赫利俄斯（太阳装置，工事 0/50 程0 速0）
+const SUN_FORGE_FURY_ID:= 9131     # 量产型俄倪厄（盟友 5/30 程1 速1）
+const SUN_FORGE_REGEN:= 2          # 赫利俄斯在场时，每只俄倪厄每回合结束的回复量
+const SUN_FORGE_ACTIONS:= 2        # 赫利俄斯在场时，俄倪厄每回合的行动次数
 const CERAMIC_CARD_ID:= 9026
 const EGG_CARD_ID:= 9022
 
@@ -3599,17 +3608,31 @@ func _regen_tick(side: String) -> void :
 	## **每回合结束回血**的唯一口（R87）——「自我修复」8035 给的 `Placement.regen`。
 	## 口径：只结算 `p.owner == side` 的单位（「自己回合结束」）；
 	## 满血 `continue`（不越界、不刷噪声）；回血上限读 `p.card.health`（当前卡面上限）。
+	##
+	## R135：多了第二个来源 ——「太阳熔炉」的赫利俄斯（9130）在场时，本方的量产型俄倪厄
+	## （9131）每回合额外回 `SUN_FORGE_REGEN` 点。两者**相加走同一次收尾**
+	## （满血跳过 / `mini` 夹上限），所以「自我修复 + 赫利俄斯」不会互相顶掉，也不会越界。
+	## ⚠️ 光环是**实时判定**的（每回合读一次场面），拆掉赫利俄斯下个回合就断 —— 不需要
+	## 在离场处回收，因此这条不会重蹈「把场上加成烤进 CardData」的覆辙。
 	for cell: Vector2i in state.board.keys():
 		var p: Placement = state.unit_at(cell)
-		if p == null or p.owner != side or p.regen <= 0:
+		if p == null or p.owner != side:
+			continue
+		var aura: int = 0
+		var origin := "自我修复"
+		if p.card.id == SUN_FORGE_FURY_ID and state.has_sun_forge(side):
+			aura = SUN_FORGE_REGEN
+			origin = "太阳熔炉"
+		var amount: int = p.regen + aura
+		if amount <= 0:
 			continue
 		if p.health >= p.card.health:
 			continue
 		var before: int = p.health
-		p.health = mini(p.card.health, p.health + p.regen)
+		p.health = mini(p.card.health, p.health + amount)
 		var got: int = p.health - before
-		_log("%s：自我修复回复 %d 点生命（%d / %d）" % [
-				p.card.card_name, got, p.health, p.card.health])
+		_log("%s：%s回复 %d 点生命（%d / %d）" % [
+				p.card.card_name, origin, got, p.health, p.card.health])
 		action.emit("regen", {"cell": cell, "card": p.card, "amount": got,
 			"hp": p.health, "max_hp": p.card.health, "side": side})
 

@@ -1845,6 +1845,10 @@ func load_level(lvl: Dictionary) -> void:
 			card.attack_range = int(e[4])
 			card.move_speed = int(e[5])
 		engine.state.place(card, e[6], GameEngine.SIDE_OPPONENT)
+	# 太阳熔炉（R135）：双动光环的来源是**场上的单位**（赫利俄斯），而 `enemy_units`
+	# 的摆放顺序不保证「光环源先上场」→ 摆完统一补一次（与 `enable_enemy_effects`
+	# 里那句同理，只是那次是因为效果卡在单位之后才启用）。
+	engine.state.apply_extra_actions(GameEngine.SIDE_OPPONENT)
 	# 关卡成长曲线（二层「低开高走」）：开局削攻击力、之后随回合回升。
 	# 必须在敌方单位摆好之后调用（它要按每张卡的基础攻击力算开局修正）。
 	engine.configure_growth(lvl.get("enemy_growth", {}))
