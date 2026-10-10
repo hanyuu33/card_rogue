@@ -13,6 +13,7 @@ extends Control
 ## 地图上的战斗关卡与事件都只从该层的内容池里取（见 GameLayers）。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 
 const NODE_R := 17.5                 # 节点半径（留出层间呼吸空间）
 const SLOT_CX := 640.0               # 横向槽位中心 = 窗口水平中线（起点/Boss 居中）
@@ -28,14 +29,11 @@ const SCROLL_BOT_MARGIN := 16.0      # 底部留白
 const DRAG_THRESHOLD := 6.0          # 按下后移动超过这个距离才算「拖动」而非点击
 
 # R126：地图滚动的提示 —— **不再画滚动条**，改用半透明**双箭头**（只给新玩家看）。
-const HINT_W := 24.0        # 单枚箭头的半宽
-const HINT_H := 9.0         # 单枚箭头的高度（尖点到两端）
-const HINT_GAP := 16.0      # 两枚箭头之间的纵向间距
+# 形状 / 颜色 / 呼吸统一收在 `ScrollHint`（三个滚动容器共用），这里只留**地图页自己的**坐标。
 ## ⚠️ 位置要落在**没有节点的空白边带**里：上方那条在标题栏下沿、内容顶边之上；
 ## 下方那条贴住窗口底边（首版把箭头放在内容区里，正好压在顶上那排节点上）。
-const HINT_TOP_Y := 72.0    # 上箭头第一枚的尖点 y
-const HINT_BOT_Y := 694.0   # 下箭头第一枚的尖点 y
-const HINT_LINE := 3.0      # 折线粗细
+const HINT_TOP_Y := 72.0    # 上箭头第一枚的尖点 y（整组向上伸展 ScrollHint.GAP）
+const HINT_BOT_Y := 694.0   # 下箭头第一枚的尖点 y（整组向下伸展）
 
 const COL_LINE := Color(0.70, 0.81, 1.00, 0.52)   # 未走过的连线（芯·亮蓝白，不用灰）
 const COL_LINE_DONE := Color("e6c86a")            # 已走过的连线（金）
@@ -82,7 +80,7 @@ func _ready() -> void:
 	# R126：地图滚动提示（半透明双箭头）**只给新玩家** —— 判据 = 还没有任何战斗记录。
 	# 老兵早就知道地图能上下滚，再弹箭头就是打扰。复用上面刚读到的 _records，不额外读盘。
 	# `-- --newplayer` 可强制打开，供截图核验（本机有战绩时默认看不到）。
-	_show_scroll_hint = _records.is_empty() or "--newplayer" in OS.get_cmdline_user_args()
+	_show_scroll_hint = ScrollHint.is_new_player()
 	if not RunState.run_active or RunState.map_columns.is_empty():
 		# 直接打开地图（调试）：临时开一局（第一层），避免空场景
 		RunState.start_run(RogueMap.generate(_rng(), GameLayers.LAYER_DEFAULT),
@@ -552,36 +550,18 @@ func _draw() -> void:
 
 func _draw_scroll_hints() -> void:
 	## R126：**不再画滚动条**，改用「半透明双上箭头 / 双下箭头」提示上下还有内容。
-	## 只在**新玩家第一局**出现（判据见 _ready：还没有任何战斗记录），老兵不再被打扰。
+	## 只在**新玩家第一局**出现（判据见 ScrollHint.is_new_player），老兵不再被打扰。
 	## 方向：`_scroll_y` 越大 = 看得越靠上（Boss 方向）→
 	##   还能往上（未到 `_scroll_max`）画双上箭头；还能往下画双下箭头。
+	## R127：画法收进 ScrollHint，与战斗内地图总览 / 棋盘格子区同一套视觉。
 	if not _show_scroll_hint:
 		return
 	if _scroll_max <= _scroll_min + 0.5:
 		return                          # 内容装得下 → 没有任何可滚方向，什么都不画
-	# 呼吸（0.72~1.0）：比静态更容易被看见，又不至于抢戏（地图本来就一直在重绘）
-	var k := 0.72 + 0.28 * (0.5 + 0.5 * sin(_t * 2.6))
-	if _scroll_y < _scroll_max - 0.5:
-		_draw_double_chevron(Vector2(SLOT_CX, HINT_TOP_Y), -1.0, k)
-	if _scroll_y > _scroll_min + 0.5:
-		_draw_double_chevron(Vector2(SLOT_CX, HINT_BOT_Y), 1.0, k)
-
-
-func _draw_double_chevron(base: Vector2, dir: float, k: float) -> void:
-	## 两枚同向箭头叠放（dir = -1 朝上 / +1 朝下）；base = 第一枚（离内容更近那枚）的尖点。
-	## 透明度由 UiTheme 的令牌乘呼吸系数得来 —— 不是新颜色，只是把令牌调暗。
-	for i in 2:
-		var col := UiTheme.HINT_CHEVRON if i == 0 else UiTheme.HINT_CHEVRON_DIM
-		var y := base.y + dir * float(i) * HINT_GAP
-		var pts := PackedVector2Array([
-				Vector2(base.x - HINT_W, y - dir * HINT_H),
-				Vector2(base.x, y),
-				Vector2(base.x + HINT_W, y - dir * HINT_H)])
-		# 先垫一道更粗的暗色（描边）→ 与亮节点重叠时也读得清
-		var halo := UiTheme.HINT_CHEVRON_HALO
-		draw_polyline(pts, Color(halo.r, halo.g, halo.b, halo.a * k),
-				HINT_LINE + 2.5, true)
-		draw_polyline(pts, Color(col.r, col.g, col.b, col.a * k), HINT_LINE, true)
+	ScrollHint.draw(self, SLOT_CX, HINT_TOP_Y, HINT_BOT_Y,
+			_scroll_y < _scroll_max - 0.5,   # 还能往上（Boss 方向）
+			_scroll_y > _scroll_min + 0.5,   # 还能往下（起点方向）
+			ScrollHint.breath())
 
 
 func _draw_background() -> void:

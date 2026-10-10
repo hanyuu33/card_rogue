@@ -12,6 +12,7 @@ extends Control
 # ------------------------------------------------------------ 布局常量（设计坐标 1280x720）
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 
 const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
@@ -45,6 +46,9 @@ const BOARD_CARD_H := CARD_H * BOARD_SCALE
 const BOARD_TAP_W := TAP_W * BOARD_SCALE
 const BOARD_TAP_H := TAP_H * BOARD_SCALE
 const GRID_SCROLL_STEP := 56.0      # 滚轮一步
+# R127：双箭头相对棋盘可视窗上下沿的内缩量（ScrollHint.GAP + 6）。
+#   ⚠️ 必须**小于** 128（棋盘下沿到手牌顶的距离），否则下箭头会被手牌盖掉。
+const GRID_HINT_INSET := 22.0
 const COST_X := 310.0
 const COST_Y := GRID_Y
 const ENERGY_H := 96.0         # 左栏顶部能量面板高度（下面是效果区）
@@ -254,6 +258,9 @@ var _confetti: Array = []       # {pos, vel, rot, vr, size, col}  胜利彩带
 var _log_visible := false       # 对局记录面板开关
 var _map_visible := false       # 冒险地图总览面板开关（R64：战斗内查看地图，只读）
 var _map_scroll := 0.0# 地图总览的纵向滚动量（层数放不进 720px 视口，层数见 RogueMap.COLS）
+# R127：滚动容器的「上下还能滚」提示开关 —— **只在**新玩家第一局为真（判据见 ScrollHint.is_new_player）。
+# 地图总览 / 棋盘格子区都**不再画滚动条**，改画半透明双箭头（画法见 ScrollHint，规范 §4.12）。
+var _show_scroll_hint := false
 var _discard_visible := false   # 弃牌区浏览面板开关（点弃牌区切换）
 var _effects_visible := false   # 效果区浏览面板开关（点左侧效果区查看）
 var _enemy_effects_visible := false  # 敌方效果区浏览面板开关
@@ -332,6 +339,7 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	_demo_args = args
 	_shot_pending = "--screenshot" in args or "--demo" in args
+	_show_scroll_hint = ScrollHint.is_new_player()   # ⚠️ 会读盘 → 只在 _ready 调一次
 	_demo_pending = "--demo" in args
 	if _shot_pending:
 		_demo_frame = 0
@@ -1185,11 +1193,21 @@ func _ready() -> void:
 		queue_redraw()
 	if "--mapview" in args and engine != null:
 		# 演示（R64）：战斗内地图总览面板 —— 打开并把视野对准当前位置。
+		# R127：演示模式默认没有 run（run_active=false → _mapview_available() 为
+		#   false，_toggle_map 会直接 return，面板打不开）→ 先开一局假 run 生成地图。
+		if not RunState.run_active:
+			seed(0x127)   # R127：固定演示种子 → 截图可复现（新旧两张才能 diff 出箭头）
+			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		_toggle_map()
 		_demo_hover_idx = -1
 		_hover_hand = -1
 		status_text = "战斗内地图总览：金色双环＝当前位置，绿环＝下一步可走，顶部写本层 Boss 名"
 		_shot_t0 = _now()
+		queue_redraw()
+	if "--mapmid" in args and _map_visible:
+		# R127 核验用：视野放到**中段** → 上下都还有内容，一次截图同时看到两组双箭头。
+		# （默认打开是对准当前层的，只画下箭头，核验不到上箭头。）
+		_map_scroll = _mapview_scroll_max() * 0.5
 		queue_redraw()
 	if "--guard" in args and engine != null:
 		# 演示（2026-10-01）：「替己方 HP 承伤」的三种卡必须**同一特效** ——
@@ -4284,6 +4302,9 @@ const MAPVIEW_SLOT_DX := 62.0# 总览槽位间距（5 槽 = 248px，横向塞得
 const MAPVIEW_TOP := 92.0            # 面板内标题区高度（下面才是地图）
 const MAPVIEW_BOT := 70.0            # 面板内底部图例区高度
 const MAPVIEW_PAD := 16.0            # 地图内容上下留白（节点不贴边）
+# R127：双箭头相对可视区上下沿的内缩量。取 ScrollHint.GAP + 6 → 整组箭头（朝外伸展 GAP）
+#   完全落在可视区**内**，不会探进上面的标题区 / 下面的图例区。
+const MAPVIEW_HINT_INSET := 22.0
 
 
 func _mapview_available() -> bool:
@@ -4401,14 +4422,17 @@ func _draw_map_panel() -> void:
 	var view := _mapview_view_rect()
 	_draw_map_edges(view)
 	_draw_map_nodes(view)
-	# 滚动条（内容比视口高时）
+	# R127：**不再画滚动条** → 改用半透明双箭头（画法见 ScrollHint，规范 §4.12）。
+	# 方向：内容偏移是 `+ _map_scroll` → 越大看得越靠**上**（Boss 方向）：
+	#   未到 smax = 还能往上；> 0 = 还能往下。⚠️ 棋盘格子区是 `- _grid_scroll`，方向相反。
 	var smax := _mapview_scroll_max()
-	if smax > 0.0:
-		var track := Rect2(pr.position.x + pr.size.x - 12.0, view.position.y, 6.0, view.size.y)
-		draw_rect(track, Color(1, 1, 1, 0.08), true)
-		var kh := maxf(28.0, view.size.y * (view.size.y / _mapview_content_h()))
-		var ky := track.position.y + (track.size.y - kh) * (_map_scroll / smax)
-		draw_rect(Rect2(track.position.x, ky, track.size.x, kh), Color("a8d8ff"), true)
+	if _show_scroll_hint and smax > 0.0:
+		ScrollHint.draw(self, view.position.x + view.size.x * 0.5,
+				view.position.y + MAPVIEW_HINT_INSET,
+				view.position.y + view.size.y - MAPVIEW_HINT_INSET,
+				_map_scroll < smax - 0.5,   # 还能往上（Boss 方向）
+				_map_scroll > 0.5,          # 还能往下（起点方向）
+				ScrollHint.breath())
 	# 底部图例
 	_draw_map_legend(pr)
 
@@ -7163,7 +7187,7 @@ func _hl(cell: Vector2i, col: Color) -> void:
 func _draw_grid_mask() -> void:
 	## R123：把滚出棋盘可视窗的内容盖掉 —— 上面是工具栏、下面是手牌。
 	## 有背景纹理时按同一比例采样对应区域补上，棋盘上下沿看起来就是「被窗口裁掉」；
-	## 顺带在右沿画一条细滚动条（有滚动空间才显示）。
+	## 顺带画「上下还能滚」的双箭头（R127 起不再画右沿滚动条；只在第一局给新玩家）。
 	if _grid_scroll_max() <= 0.0:
 		return
 	# 下沿一直盖到窗口底部：手牌画在遮罩**之后**，有牌时自然会盖回来；
@@ -7182,11 +7206,18 @@ func _draw_grid_mask() -> void:
 							Vector2(r.size.x / WINDOW_W, r.size.y / WINDOW_H) * ts))
 		else:
 			draw_rect(r, COL_BG)
-	var track := Rect2(GRID_X + GRID_W + 4, GRID_Y, 4, GRID_H)
-	draw_rect(track, Color(0, 0, 0, 0.10))
-	var th := GRID_H * GRID_H / GRID_CONTENT_H
-	var ty := GRID_Y + _grid_scroll / GRID_CONTENT_H * GRID_H
-	draw_rect(Rect2(track.position.x, ty, 4, th), Color(0, 0, 0, 0.28))
+	# R127：**不再画滚动条** → 改用半透明双箭头。棋盘只有 120px 滚动余量，
+	#   滑块短得几乎读不出比例，箭头反而更直接。
+	# ⚠️ 方向与地图两处**相反**：这里的内容偏移是 `- _grid_scroll` →
+	#   越大看得越靠**下**（第 5、6 行），所以「还能往下」对应**未到顶**。
+	if _show_scroll_hint:
+		var sm := _grid_scroll_max()
+		ScrollHint.draw(self, GRID_X + GRID_W * 0.5,
+				GRID_Y + GRID_HINT_INSET,
+				GRID_Y + GRID_H - GRID_HINT_INSET,
+				_grid_scroll > 0.5,        # 还能往上（回到第 1 行）
+				_grid_scroll < sm - 0.5,   # 还能往下（看第 5、6 行）
+				ScrollHint.breath())
 
 
 func _draw_hp_banner() -> void:
@@ -8145,6 +8176,11 @@ func _process(delta: float) -> void:
 		_show_over(engine.result == "胜利")
 	# 地图总览的「下一步可走」绿环是脉冲动画 → 开着时需持续重绘
 	if _map_visible:
+		queue_redraw()
+	# R127：棋盘的双箭头是呼吸脉动 → 新玩家第一局且棋盘有滚动余量时需持续重绘。
+	#   ⚠️ `_grid_scroll_max()` 恒为 120 > 0，所以这条**在第一局内始终成立** ——
+	#   代价是逐帧重绘整个战场；只在「还没打过一场」时付出，越过后自动停。
+	if _show_scroll_hint and _grid_scroll_max() > 0.0:
 		queue_redraw()
 	if not _tutorial_finished:
 		_tut_poll()
