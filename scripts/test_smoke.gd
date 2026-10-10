@@ -453,6 +453,11 @@ func _check_map_scene(scene: Variant) -> void:
 			or not MapBridge.is_vertical(Vector2(0, 0), Vector2(0, 100)):
 		_smoke_fail("通路朝向：左右相邻应判为横向、上下相邻应判为竖向")
 		return
+	# 素材只有一张**竖直的俯视图**：上下照画（0°），左右转 90°（R132）。
+	if absf(MapBridge.rotation_of(Vector2(0, 0), Vector2(0, 100))) > 0.001 \
+			or absf(MapBridge.rotation_of(Vector2(0, 0), Vector2(100, 0)) - PI * 0.5) > 0.001:
+		_smoke_fail("通路朝向：上下相邻应不旋转、左右相邻应转 90°")
+		return
 	# 几何：桥心必须落在**两格共用的那面墙的中点**，且整座桥小于一格
 	# （否则会横穿格子、把房间图标压住）。
 	var bh: Rect2 = MapBridge.box_of(Vector2(0, 0), Vector2(118, 0), MapBridge.DONE, 118.0)

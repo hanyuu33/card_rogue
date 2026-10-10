@@ -1,9 +1,12 @@
 extends RefCounted
 ## 地图「通路」的唯一绘制口（R130）。**冒险地图页与战斗内地图总览共用**。
 ##
-## 通路 = **两格之间的墙上盖一枚小桥图标**：
-##   * 左右连通 → 桥的**侧视图** `map_bridge_h`（桥身横跨屏幕）
-##   * 上下连通 → 桥的**俯视图** `map_bridge_v`（俯视桥面，桥身在屏幕上竖着）
+## 通路 = **两格之间的墙上盖一枚小桥图标** —— 只有**一张**素材：
+##   `map_bridge` = 小桥的**俯视图**，桥身在画面上**竖着**；
+##   上下连通直接画它，**左右连通绕桥心转 90°**（`rotation_of()`）。
+## ⚠️ R132 起**不再用侧视图**：那张图（`map_bridge_h`）的栏杆只长在左右两段、
+##    中间一大段光秃，怎么看都别扭（用户否掉）。俯视图两个方向共用反而干净一致，
+##    而且换图时只需换一张 —— 两个方向一起变。
 ##
 ## ⚠️ 为什么不是「画一块色块 / 门洞」来示意连接：
 ##    R130 的第一版就是横跨共用墙的一条宽色块 + 暗描边。出图后发现
@@ -44,8 +47,14 @@ static func kind_for(a_seen: bool, b_seen: bool, lit: bool) -> int:
 
 
 static func is_vertical(ctr_a: Vector2, ctr_b: Vector2) -> bool:
-	## 上下相邻（含斜向的理论情况）→ 用俯视图；左右相邻 → 用侧视图。
+	## 上下相邻（含斜向的理论情况）→ 桥**不用转**；左右相邻 → 要转 90°。
 	return absf(ctr_b.y - ctr_a.y) > absf(ctr_b.x - ctr_a.x)
+
+
+static func rotation_of(ctr_a: Vector2, ctr_b: Vector2) -> float:
+	## 桥的旋转角（弧度）。素材画的是**竖直**方向的俯视图：
+	## 上下相邻照画（0），左右相邻绕桥心转 90° 把桥身转成横向。
+	return 0.0 if is_vertical(ctr_a, ctr_b) else PI * 0.5
 
 
 static func box_of(ctr_a: Vector2, ctr_b: Vector2, kind: int, cell: float) -> Rect2:
@@ -80,14 +89,23 @@ static func draw_bridge(ci: CanvasItem, ctr_a: Vector2, ctr_b: Vector2, kind: in
 	var col := tint_of(kind)
 	if kind == LIT:
 		col = col.lerp(Color.WHITE, 0.35 * clampf(pulse, 0.0, 1.0))
-	var tex := UiAssets.bridge_icon(vertical)
+	var tex := UiAssets.bridge_icon()
 	if tex == null:
 		_fallback(ci, box, vertical, kind, col)
 		return
 	# 图本身是浅色的（便于染色），自带深色线稿描边 → 不需要再垫暗底。
-	# ⚠️ 用 `fit_rect` **等比**缩放，绝不拉伸：拉伸会把侧视图的拱拉高成「拱门」、
-	#    把俯视图的栏杆拉糊。素材比盒子瘦时宁可小一点，也不要变形。
-	ci.draw_texture_rect(tex, CardFace.fit_rect(tex.get_size(), box), false, col)
+	# ⚠️ 用 `fit_rect` **等比**缩放，绝不拉伸：素材比盒子瘦会被 fit 成一根线。
+	if vertical:
+		ci.draw_texture_rect(tex, CardFace.fit_rect(tex.get_size(), box), false, col)
+		return
+	# 左右连通：把这张**竖直的俯视图**绕桥心转 90°，桥身就成了横向。
+	# ⚠️ `draw_set_transform` 是 CanvasItem 的**共享状态** —— 画完必须立刻复位，
+	#    否则后面所有绘制（房间图标、HUD…）会跟着一起转 90°。
+	ci.draw_set_transform(box.get_center(), rotation_of(ctr_a, ctr_b), Vector2.ONE)
+	# 预旋转矩形要把宽高**对调**（转完正好落回 box）
+	var pre := Rect2(-box.size.y * 0.5, -box.size.x * 0.5, box.size.y, box.size.x)
+	ci.draw_texture_rect(tex, CardFace.fit_rect(tex.get_size(), pre), false, col)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 static func _fallback(ci: CanvasItem, box: Rect2, vertical: bool, kind: int,

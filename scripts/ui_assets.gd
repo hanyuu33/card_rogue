@@ -85,13 +85,15 @@ static func map_bg(layer: int) -> Texture2D:
 	return get_tex("map_bg_%d" % layer)
 
 
-static func bridge_icon(vertical: bool) -> Texture2D:
-	## 地图「通路」的桥（R130）。两个朝向**各一枚**（键名即素材契约）：
-	##   map_bridge_h  左右连通 → 桥的**侧视图**（桥身横跨屏幕）
-	##   map_bridge_v  上下连通 → 桥的**俯视图**（俯视桥面，桥身在屏幕上竖着）
-	## ⚠️ 两枚都要在：缺一个就有一半方向的通路画不出来。
+static func bridge_icon() -> Texture2D:
+	## 地图「通路」的桥（R130；R132 起**只有一张**）：
+	##   map_bridge  = 小桥的**俯视图**，桥身在画面上**竖着**
+	## 左右连通时由 `map_bridge.gd` 绕桥心**转 90°** —— 所以**换一次图两个方向一起变**，
+	## 这正是「以后换更好的图标能无缝替换」想要的效果。
+	## ⚠️ R132 起不再有侧视图（`map_bridge_h`）：那张图的栏杆只有左右两段、中间光秃，
+	##    怎么看都别扭；俯视图两个方向共用反而干净一致。
 	## 缺图时返回 null，`map_bridge.gd` 回退成一小段发光横条 —— 不会空白也不报错。
-	return get_tex("map_bridge_v" if vertical else "map_bridge_h")
+	return get_tex("map_bridge")
 
 
 static func chocolate() -> Texture2D:
