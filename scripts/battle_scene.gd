@@ -47,11 +47,25 @@ const BOARD_CARD_H := CARD_H * BOARD_SCALE
 const BOARD_TAP_W := TAP_W * BOARD_SCALE
 const BOARD_TAP_H := TAP_H * BOARD_SCALE
 const GRID_SCROLL_STEP := 56.0      # 滚轮一步
+## R137：棋盘边框（日漫西幻风）。四只角花来自 AI 生成素材 assets/ui/grid_frame.png
+## （贴图按「内开口 = 棋盘可视窗 + 下面四个每边厚度」定制，2x 分辨率）；四条直边
+## 用程序画的「暗石底 + 双金线」衔接 —— AI 原框接近方形，直边要拉长 2 倍以上才能
+## 包住 3:4.6 的棋盘窗，花纹会拉成色斑，角块是局部采样（压 3~4 倍）仍在可读范围。
+## 每边厚度由现场空间逐边定：边带全部落在可视窗**外侧**的空白里，不遮任何战场卡——
+##   左 12（392 起，效果卡右沿 390）/ 上 16（工具栏高 36）/ 右 16（右栏 794 起）/
+##   下 10（602 止，「关卡」文字顶在 603.5）。角花向棋盘内伸 PROTRUDE(14px)，
+## 只盖角格的空白边距（战场卡距格沿 23.7/8.8px，四个角都碰不到卡面）。
+const GRID_FRAME_BAND_L := 12.0
+const GRID_FRAME_BAND_T := 16.0
+const GRID_FRAME_BAND_R := 16.0
+const GRID_FRAME_BAND_B := 10.0
+const GRID_FRAME_PROTRUDE := 14.0
 ## R136：开场巡场 —— 战斗开始的前 2 秒，镜头从自己这半场推到对方那半场。
-## 三段式：先在自己半场停 HOLD0，再平滑推过去，最后在对方半场停 HOLD1。
-const GRID_INTRO_DUR := 2.0
-const GRID_INTRO_HOLD0 := 0.30
-const GRID_INTRO_HOLD1 := 0.40
+## 三段式：先在自己半场停 HOLD0（R137：0.30 -> 0.70，用户要求「至少停 0.5 秒」，
+## 太短的话玩家还没看清自己这半场就滑走了），再平滑推过去，最后在对方半场停 HOLD1。
+const GRID_INTRO_DUR := 2.5
+const GRID_INTRO_HOLD0 := 0.70
+const GRID_INTRO_HOLD1 := 0.50
 # R127：双箭头相对棋盘可视窗上下沿的内缩量（ScrollHint.GAP + 6）。
 #   ⚠️ 必须**小于** 128（棋盘下沿到手牌顶的距离），否则下箭头会被手牌盖掉。
 const GRID_HINT_INSET := 22.0
@@ -66,6 +80,10 @@ const DISCARD_Y := DECK_Y - CARD_H - 52.0
 # 空间账：手牌区只有 592~720 这 128px。既然「底部不必完全显示」，
 # 就把卡底往屏幕外沉 HAND_CROP_BOTTOM 像素，省下的位置全换成卡面尺寸：
 # 卡顶下移 → 卡看着更贴底、也更大；沉出去的那截只有底部留白（内容按可见高度重锚）。
+const COL_FRAME_STONE := Color("221a10")       # 边框直边的暗石底（与角花素材的深色石头同系）
+const COL_FRAME_GOLD := Color("b9924a")        # 边框外沿金线
+const COL_FRAME_GOLD_DIM := Color("6b5426")    # 边框外沿内侧的暗金细线
+const COL_FRAME_GOLD_IN := Color("e6c87e")     # 边框内沿亮金收边（压住可视窗边界）
 const COL_COST_LOW_BG := Color("1d7a3f")        # 减费后的费用圆（深绿底）
 const COL_COST_LOW_FG := Color("b9f6ca")        # 减费后的费用数字（浅绿字，绿色系）
 const COL_GUARD := Color("1d9e4f")              # 替 HP 承伤（森林守护/以太守卫/铁栅栏）：绿环标记
@@ -217,6 +235,7 @@ func _say(text: String) -> void:
 var _ai_timer: Timer
 var _bg_tex: Texture2D
 var _back_tex: Texture2D
+var _frame_tex: Texture2D      # R137：棋盘边框角花素材（assets/ui/grid_frame.png）
 var _font: SystemFont
 var _font_bold: SystemFont
 
@@ -320,6 +339,7 @@ func _ready() -> void:
 	# 战斗背景（R133）：默认按**当层**取（关卡专属图在 load_level 里换）。
 	_bg_tex = UiAssets.battle_bg("", RunState.current_layer)
 	_back_tex = load("res://assets/cardback.png")
+	_frame_tex = load("res://assets/ui/grid_frame.png")
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
@@ -4213,7 +4233,7 @@ func _build_over_panel() -> void:
 func _on_over_restart() -> void:
 	## 结算面板主按钮：
 	##   * Boss 通关且有下一层 → 推进到下一层（满血 + 新地图）→ 起始道具三选一；
-	##   * run 中（非 Boss 通关）→ 领取卡牌奖励回地图；
+	##   * run 中（非 Boss 通关）→ 回冒险地图（奖励已由结算悬浮窗处理，R137 文案同步）；
 	##   * 其余（通关无下一层 / 失败 / 单关）→ 回标题。
 	if RunState.run_active and _run_next_layer > 0:
 		RunState.advance_layer(_run_next_layer)
@@ -4286,7 +4306,9 @@ func _show_over(win: bool) -> void:
 					_over_btn_restart.text = ("通关！返回标题（掉落道具「%s」见悬浮窗）" % rname) \
 							if dropped > 0 else "通关！返回标题"
 			else:
-				_over_btn_restart.text = "领取奖励并继续 →"
+					# R137：奖励在结算悬浮窗里就已经领过了，这里只是「回去」——
+				# 再写「领取奖励」会让人以为按钮才是领取入口。
+				_over_btn_restart.text = "返回冒险地图 →"
 			_over_btn_restart.visible = true
 			_over_btn_restart.disabled = false
 			_over_btn_level.visible = false
@@ -4980,9 +5002,10 @@ func _draw() -> void:
 	_draw_bursts()
 	_draw_wake_rings()
 	_draw_grid_mask()
+	_draw_grid_frame()
 	if engine.state.level_name != "":
 		_draw_string_center(_font, UiTheme.FS_MICRO, "关卡：%s" % engine.state.level_name,
-				Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 16), UiTheme.INK_600)
+				Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 20), UiTheme.INK_600)
 	_draw_floaters()
 	if shook:
 		draw_set_transform(Vector2.ZERO)  # 结束震动，后续 UI 不抖
@@ -5107,7 +5130,7 @@ func _draw_string_nw(font: Font, px: int, text: String, pos: Vector2, col: Color
 
 
 func _draw_grid() -> void:
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "战场", Vector2(GRID_X + GRID_W / 2, GRID_Y - 12), UiTheme.INK_600)
+	# R137：「战场」标题挪到 _draw_grid_frame 里画 —— 顶带（36~52）会盖住原位置。
 	for row in FieldState.BOARD_ROWS:
 		for col in FieldState.BOARD_COLS:
 			var rect := _cell_rect(Vector2i(row, col))
@@ -7277,6 +7300,55 @@ func _draw_grid_mask() -> void:
 				_grid_scroll > 0.5,        # 还能往上（回到第 1 行）
 				_grid_scroll < sm - 0.5,   # 还能往下（看第 5、6 行）
 				ScrollHint.breath())
+
+
+func _draw_grid_frame() -> void:
+	## R137：棋盘边框。直边 = 暗石底带 + 双金线（全在可视窗外侧）；四角 = AI 角花
+	## （_frame_tex 按「每边厚度 + PROTRUDE」定制的角块，2x 贴图 1:1 落到逻辑块）。
+	## 「战场」标题也挪到这里、画在顶带之上（深棕字 + 浅金描边才压得住金饰带）。
+	var outer := Rect2(GRID_X - GRID_FRAME_BAND_L, GRID_Y - GRID_FRAME_BAND_T,
+			GRID_W + GRID_FRAME_BAND_L + GRID_FRAME_BAND_R,
+			GRID_H + GRID_FRAME_BAND_T + GRID_FRAME_BAND_B)
+	# 外圈柔和投影：把边框从地图底图上托出来
+	draw_rect(outer.grow(2.0), Color(0, 0, 0, 0.30), false, 3.0)
+	# 暗石底带（四条，均不进入可视窗）
+	draw_rect(Rect2(outer.position.x, outer.position.y, outer.size.x, GRID_FRAME_BAND_T), COL_FRAME_STONE)
+	draw_rect(Rect2(outer.position.x, GRID_Y + GRID_H, outer.size.x, GRID_FRAME_BAND_B), COL_FRAME_STONE)
+	draw_rect(Rect2(outer.position.x, GRID_Y, GRID_FRAME_BAND_L, GRID_H), COL_FRAME_STONE)
+	draw_rect(Rect2(GRID_X + GRID_W, GRID_Y, GRID_FRAME_BAND_R, GRID_H), COL_FRAME_STONE)
+	# 双金线：外沿金线 + 外沿内侧暗金细线；内沿亮金收边压住可视窗边界
+	draw_rect(outer, COL_FRAME_GOLD, false, 1.5)
+	draw_rect(outer.grow(-3.0), COL_FRAME_GOLD_DIM, false, 1.0)
+	draw_rect(Rect2(GRID_X, GRID_Y, GRID_W, GRID_H).grow(1.0), COL_FRAME_GOLD_IN, false, 1.5)
+	# 四只角花（素材角块与这里的逻辑块一一对应）
+	if _frame_tex != null:
+		var pr := GRID_FRAME_PROTRUDE
+		var tw := float(_frame_tex.get_width())
+		var th := float(_frame_tex.get_height())
+		_draw_frame_corner(Rect2(0, 0,
+				(GRID_FRAME_BAND_L + pr) * 2.0, (GRID_FRAME_BAND_T + pr) * 2.0),
+				Vector2(outer.position.x, outer.position.y),
+				Vector2(GRID_FRAME_BAND_L + pr, GRID_FRAME_BAND_T + pr))
+		_draw_frame_corner(Rect2(tw - (GRID_FRAME_BAND_R + pr) * 2.0, 0,
+				(GRID_FRAME_BAND_R + pr) * 2.0, (GRID_FRAME_BAND_T + pr) * 2.0),
+				Vector2(outer.end.x - GRID_FRAME_BAND_R - pr, outer.position.y),
+				Vector2(GRID_FRAME_BAND_R + pr, GRID_FRAME_BAND_T + pr))
+		_draw_frame_corner(Rect2(0, th - (GRID_FRAME_BAND_B + pr) * 2.0,
+				(GRID_FRAME_BAND_L + pr) * 2.0, (GRID_FRAME_BAND_B + pr) * 2.0),
+				Vector2(outer.position.x, outer.end.y - GRID_FRAME_BAND_B - pr),
+				Vector2(GRID_FRAME_BAND_L + pr, GRID_FRAME_BAND_B + pr))
+		_draw_frame_corner(Rect2(tw - (GRID_FRAME_BAND_R + pr) * 2.0,
+				th - (GRID_FRAME_BAND_B + pr) * 2.0,
+				(GRID_FRAME_BAND_R + pr) * 2.0, (GRID_FRAME_BAND_B + pr) * 2.0),
+				Vector2(outer.end.x - GRID_FRAME_BAND_R - pr, outer.end.y - GRID_FRAME_BAND_B - pr),
+				Vector2(GRID_FRAME_BAND_R + pr, GRID_FRAME_BAND_B + pr))
+	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "战场",
+			Vector2(GRID_X + GRID_W / 2, GRID_Y - 12), Color("2b1c08"), 2, Color(1.0, 0.9, 0.62))
+
+
+func _draw_frame_corner(src: Rect2, at: Vector2, sz: Vector2) -> void:
+	## R137：画一只角花（_frame_tex 的 2x 角块区域 -> 同尺寸逻辑块）。
+	draw_texture_rect_region(_frame_tex, Rect2(at, sz), src)
 
 
 func _draw_hp_banner() -> void:
