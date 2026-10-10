@@ -30,7 +30,8 @@ const CARD_H := 76.0
 ##   · 横向占满「效果区(398) → 右栏(776)」：左沿 404（效果区右沿 398 + 6px 间隙），
 ##     右沿 404 + 372 = 776 —— 右栏（敌方效果区 / 敌方 HP / 道具栏 / 牌库）一像素不动；
 ##   · 格子 102×90 → 124×110，战场卡随格子等比放大（BOARD_SCALE ≈ 1.216）；
-##   · 内容总高 6×110 = 660 超出可视窗 540 → 最多可下滚 120px（_grid_scroll_max）。
+##   · 内容总高 6×110 = 660 超出可视窗 540 → 需要滚动；R139 起边框贴着战场本体、
+##     跟着一起滚，所以滚动范围把上下边框带也算进去（见 _grid_scroll_min/_max）。
 const CELL_W := 124.0
 const CELL := 110.0
 const TAP_W := CARD_H
@@ -48,12 +49,15 @@ const BOARD_TAP_W := TAP_W * BOARD_SCALE
 const BOARD_TAP_H := TAP_H * BOARD_SCALE
 const GRID_SCROLL_STEP := 56.0      # 滚轮一步
 ## R137：棋盘边框（日漫西幻风）。四只角花来自 AI 生成素材 assets/ui/grid_frame.png
-## （贴图按「内开口 = 棋盘可视窗 + 下面四个每边厚度」定制，2x 分辨率）；四条直边
-## 用程序画的「暗石底 + 双金线」衔接 —— AI 原框接近方形，直边要拉长 2 倍以上才能
-## 包住 3:4.6 的棋盘窗，花纹会拉成色斑，角块是局部采样（压 3~4 倍）仍在可读范围。
-## 每边厚度由现场空间逐边定：边带全部落在可视窗**外侧**的空白里，不遮任何战场卡——
+## （2x 分辨率）；四条直边用程序画的「暗石底 + 双金线」衔接 —— AI 原框接近方形，
+## 直边要拉长 2 倍以上才能包住 3:4.6 的战场，花纹会拉成色斑，角块是局部采样
+## （压 3~4 倍）仍在可读范围。
+## ⚠️ R139：边框**锚在 3×6 战场本体（GRID_CONTENT_H）上**，不再是围可视窗的固定框 ——
+## 拖动 / 滚轮滚动时边框跟着内容一起上下走。纵向溢出由后画的 _draw_grid_mask()
+## 用不透明背景纹理裁掉，所以 _draw() 里**边框必须排在遮罩前面**。
+## 每边厚度由现场空间逐边定（相对内容区外侧）：
 ##   左 12（392 起，效果卡右沿 390）/ 上 16（工具栏高 36）/ 右 16（右栏 794 起）/
-##   下 10（602 止，「关卡」文字顶在 603.5）。角花向棋盘内伸 PROTRUDE(14px)，
+##   下 10（滚到底时下沿 592 = 可视窗下沿）。角花向内容区伸 PROTRUDE(14px)，
 ## 只盖角格的空白边距（战场卡距格沿 23.7/8.8px，四个角都碰不到卡面）。
 const GRID_FRAME_BAND_L := 12.0
 const GRID_FRAME_BAND_T := 16.0
@@ -385,6 +389,13 @@ func _ready() -> void:
 			_shot_frame = maxi(int(args[i + 1]), 10)  # 截图时机（帧），捕弹体/爆点用
 		if args[i] == "--shotms" and i + 1 < args.size():
 			_shot_ms = maxi(int(args[i + 1]), 10)  # 截图时机（距演示动作的毫秒数）
+		if args[i] == "--gridscroll" and i + 1 < args.size():
+			# R139 演示：直接把棋盘滚动量钉在指定值（出图核验「边框跟着 3×6 战场本体滚」）。
+			# 免等 2.5 秒巡场动画 —— 900 帧出图在本机要跑好几分钟（实测 ~5fps）。
+			# ⚠️ 要写在 --level **之后**；load_level 会把 _grid_scroll 重置成 max。
+			_grid_intro_t = -1.0
+			_grid_scroll = clampf(float(int(args[i + 1])),
+					_grid_scroll_min(), _grid_scroll_max())
 	if "--over" in args:
 		# 演示：直接进入结算（验证结算覆盖层 / 彩带 / 胜利音效）
 		engine._finish("胜利", "演示：结算界面")
@@ -1990,7 +2001,7 @@ func load_level(lvl: Dictionary) -> void:
 		_show_banner("我方回合 · 第 1 回合")
 	# R136：开场巡场 —— 镜头先停在自己这半场，2 秒里推到对方那半场（看出 3×6 的规模）。
 	# 回放不播（回放按录像节奏走，不额外加动画）。
-	if _grid_scroll_max() > 0.0 and not ReplayLog.playing:
+	if _grid_scrollable() and not ReplayLog.playing:
 		_grid_scroll = _grid_scroll_max()
 		_grid_intro_t = 0.0
 	else:
@@ -2075,7 +2086,7 @@ func _gui_input(event: InputEvent) -> void:
 			# 可能是想上下拖动棋盘；松手时没拖过阈值再补发这次点击。
 			# ⚠️ R123 这里还要求「点在空格 / 无选中 / 未上膛」，而可视窗内几乎每一处
 			# 都落在某一格上（_cell_at 恒不为 null）→ 左键拖动实际从未接上。
-			_grid_drag_arm = _press_idx < 0 and _grid_scroll_max() > 0.0 \
+			_grid_drag_arm = _press_idx < 0 and _grid_scrollable() \
 					and _cell_in_view(event.position)
 			_grid_dragging = false
 			_grid_drag_pos = event.position
@@ -2111,10 +2122,10 @@ func _gui_input(event: InputEvent) -> void:
 			queue_redraw()
 			return
 		# R123：棋盘可视窗内容超高 → 滚轮上下滚动
-		if _grid_scroll_max() > 0.0 and _cell_in_view(event.position):
+		if _grid_scrollable() and _cell_in_view(event.position):
 			_grid_scroll = clampf(_grid_scroll
 					+ (-GRID_SCROLL_STEP if event.button_index == MOUSE_BUTTON_WHEEL_UP
-							else GRID_SCROLL_STEP), 0.0, _grid_scroll_max())
+							else GRID_SCROLL_STEP), _grid_scroll_min(), _grid_scroll_max())
 			queue_redraw()
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_RIGHT:
@@ -2128,7 +2139,7 @@ func _gui_input(event: InputEvent) -> void:
 			if _grid_dragging:
 				_grid_scroll = clampf(
 						_grid_scroll - (event.position.y - _grid_drag_pos.y),
-						0.0, _grid_scroll_max())
+						_grid_scroll_min(), _grid_scroll_max())
 				_grid_drag_pos = event.position
 				queue_redraw()
 				return
@@ -2260,27 +2271,40 @@ func _hand_hit(i: int, pos: Vector2) -> bool:
 	return Rect2(_hand_rect(i).position, Vector2(HAND_CARD_W, HAND_CARD_H)).has_point(local)
 
 
+func _grid_scroll_min() -> float:
+	## R139：边框贴着 3×6 战场本体之后，滚动范围要把**上边框带**也算进来 ——
+	## 滚到最上时外框上沿正好落在可视窗上沿（顶带 + 上面两只角花能看全）。
+	return -GRID_FRAME_BAND_T
+
+
 func _grid_scroll_max() -> float:
 	## R123：可滚动的最大距离（内容总高 - 可视窗高）。
-	return maxf(0.0, GRID_CONTENT_H - GRID_H)
+	## ⚠️ R139：左端要多留一个**下边框带**，滚到底时外框下沿正好落在可视窗下沿。
+	return maxf(_grid_scroll_min(), GRID_CONTENT_H + GRID_FRAME_BAND_B - GRID_H)
+
+
+func _grid_scrollable() -> bool:
+	## R139：内容 + 边框超出可视窗 → 有得滚（原先到处都是 `_grid_scroll_max() > 0.0`）。
+	return _grid_scroll_max() - _grid_scroll_min() > 0.5
 
 
 func _grid_intro_tick(delta: float) -> void:
 	## R136：开场巡场 —— 战斗开始的前 2 秒里，镜头从**自己这半场**平滑推到
-	## **对方那半场**（_grid_scroll 由 max 回到 0）。目的只有一个：让玩家第一眼
-	## 就知道战场是 3×6，而不是「眼前看到的这一块」。玩家一动就停（见下面）。
+	## **对方那半场**（_grid_scroll 由 max 回到 min，R139 起 min = 外框上沿贴窗）。
+	## 目的只有一个：让玩家第一眼就知道战场是 3×6，而不是「眼前看到的这一块」。
+	## 玩家一动就停（见下面）。
 	if _grid_intro_t < 0.0:
 		return
 	_grid_intro_t += delta
 	if _grid_intro_t >= GRID_INTRO_DUR:
 		_grid_intro_t = -1.0
-		_grid_scroll = 0.0
+		_grid_scroll = _grid_scroll_min()
 		queue_redraw()
 		return
 	var pan := clampf((_grid_intro_t - GRID_INTRO_HOLD0)
 			/ (GRID_INTRO_DUR - GRID_INTRO_HOLD0 - GRID_INTRO_HOLD1), 0.0, 1.0)
 	var e := pan * pan * (3.0 - 2.0 * pan)      # smoothstep：两头慢、中间快
-	_grid_scroll = _grid_scroll_max() * (1.0 - e)
+	_grid_scroll = lerpf(_grid_scroll_max(), _grid_scroll_min(), e)
 	queue_redraw()
 
 
@@ -2289,7 +2313,7 @@ func _grid_intro_stop() -> void:
 	## 既不吞掉这次操作，也不会让棋盘继续在指针底下滑走。
 	if _grid_intro_t >= 0.0:
 		_grid_intro_t = -1.0
-		_grid_scroll = clampf(_grid_scroll, 0.0, _grid_scroll_max())
+		_grid_scroll = clampf(_grid_scroll, _grid_scroll_min(), _grid_scroll_max())
 
 
 func _cell_in_view(pos: Vector2) -> bool:
@@ -5001,8 +5025,11 @@ func _draw() -> void:
 	_draw_enemy_effects()
 	_draw_bursts()
 	_draw_wake_rings()
-	_draw_grid_mask()
+	# R139：边框跟着战场本体滚动 → 顶带 / 底带会越过可视窗上下沿，必须**先画边框、
+	# 再画遮罩**把溢出裁掉；顺序反了边框就会糊在工具栏与手牌上。
 	_draw_grid_frame()
+	_draw_grid_mask()
+	_draw_grid_caption()
 	_draw_floaters()
 	if shook:
 		draw_set_transform(Vector2.ZERO)  # 结束震动，后续 UI 不抖
@@ -7283,13 +7310,18 @@ func _draw_grid_mask() -> void:
 	## R123：把滚出棋盘可视窗的内容盖掉 —— 上面是工具栏、下面是手牌。
 	## 有背景纹理时按同一比例采样对应区域补上，棋盘上下沿看起来就是「被窗口裁掉」；
 	## 顺带画「上下还能滚」的双箭头（R127 起不再画右沿滚动条；只在第一局给新玩家）。
-	if _grid_scroll_max() <= 0.0:
+	if not _grid_scrollable():
 		return
 	# 下沿一直盖到窗口底部：手牌画在遮罩**之后**，有牌时自然会盖回来；
 	# 没牌（空手牌区）也不能让棋盘内容漏到 619 以下。
+	# ⚠️ R139：横向必须盖到**边框外沿**（GRID_X - BAND_L .. GRID_X + GRID_W + BAND_R）——
+	#    边框跟着内容滚动后，它的顶带 / 底带会越过可视窗上下沿；只按 GRID_W 盖，
+	#    左右两条竖直边带就会漏出石色（背景纹理不透明，盖住才是干净的裁断）。
+	var fx := GRID_X - GRID_FRAME_BAND_L
+	var fw := GRID_W + GRID_FRAME_BAND_L + GRID_FRAME_BAND_R
 	var bands: Array[Rect2] = [
-		Rect2(GRID_X, 0, GRID_W, GRID_Y),
-		Rect2(GRID_X, GRID_Y + GRID_H, GRID_W, WINDOW_H - (GRID_Y + GRID_H)),
+		Rect2(fx, 0, fw, GRID_Y),
+		Rect2(fx, GRID_Y + GRID_H, fw, WINDOW_H - (GRID_Y + GRID_H)),
 	]
 	for r: Rect2 in bands:
 		if r.size.y <= 0.0:
@@ -7313,7 +7345,7 @@ func _draw_grid_mask() -> void:
 		ScrollHint.draw(self, GRID_X + GRID_W * 0.5,
 				GRID_Y + GRID_HINT_INSET,
 				GRID_Y + GRID_H - GRID_HINT_INSET,
-				_grid_scroll > 0.5,        # 还能往上（回到第 1 行）
+				_grid_scroll > _grid_scroll_min() + 0.5,   # 还能往上（回到第 1 行）
 				_grid_scroll < sm - 0.5,   # 还能往下（看第 5、6 行）
 				ScrollHint.breath())
 
@@ -7344,23 +7376,28 @@ func _draw_level_plate() -> void:
 
 
 func _draw_grid_frame() -> void:
-	## R137：棋盘边框。直边 = 暗石底带 + 双金线（全在可视窗外侧）；四角 = AI 角花
-	## （_frame_tex 按「每边厚度 + PROTRUDE」定制的角块，2x 贴图 1:1 落到逻辑块）。
-	## 「战场」标题也挪到这里、画在顶带之上（深棕字 + 浅金描边才压得住金饰带）。
-	var outer := Rect2(GRID_X - GRID_FRAME_BAND_L, GRID_Y - GRID_FRAME_BAND_T,
+	## R139：棋盘边框 —— 锚在 **3×6 战场本体**上（R137 那版围的是可视窗，固定不动）。
+	## 现在它跟着 `_grid_scroll` 一起上下走：拖动 / 滚轮滚棋盘时边框跟着动，
+	## 滚到两头能看全顶带与底带、以及四只角花。
+	## ⚠️ 纵向溢出靠**后画的** `_draw_grid_mask()`（不透明背景纹理）裁掉 ——
+	##    所以 _draw() 里这个函数必须排在遮罩**前面**，顺序反了边框会糊到工具栏上。
+	var top := GRID_Y - _grid_scroll          # 内容区上沿（屏幕坐标）
+	var outer := Rect2(GRID_X - GRID_FRAME_BAND_L, top - GRID_FRAME_BAND_T,
 			GRID_W + GRID_FRAME_BAND_L + GRID_FRAME_BAND_R,
-			GRID_H + GRID_FRAME_BAND_T + GRID_FRAME_BAND_B)
+			GRID_CONTENT_H + GRID_FRAME_BAND_T + GRID_FRAME_BAND_B)
 	# 外圈柔和投影：把边框从地图底图上托出来
 	draw_rect(outer.grow(2.0), Color(0, 0, 0, 0.30), false, 3.0)
-	# 暗石底带（四条，均不进入可视窗）
-	draw_rect(Rect2(outer.position.x, outer.position.y, outer.size.x, GRID_FRAME_BAND_T), COL_FRAME_STONE)
-	draw_rect(Rect2(outer.position.x, GRID_Y + GRID_H, outer.size.x, GRID_FRAME_BAND_B), COL_FRAME_STONE)
-	draw_rect(Rect2(outer.position.x, GRID_Y, GRID_FRAME_BAND_L, GRID_H), COL_FRAME_STONE)
-	draw_rect(Rect2(GRID_X + GRID_W, GRID_Y, GRID_FRAME_BAND_R, GRID_H), COL_FRAME_STONE)
-	# 双金线：外沿金线 + 外沿内侧暗金细线；内沿亮金收边压住可视窗边界
+	# 暗石底带（四条，全部落在内容区之外）
+	draw_rect(Rect2(outer.position.x, outer.position.y, outer.size.x, GRID_FRAME_BAND_T),
+			COL_FRAME_STONE)
+	draw_rect(Rect2(outer.position.x, outer.end.y - GRID_FRAME_BAND_B, outer.size.x,
+			GRID_FRAME_BAND_B), COL_FRAME_STONE)
+	draw_rect(Rect2(outer.position.x, top, GRID_FRAME_BAND_L, GRID_CONTENT_H), COL_FRAME_STONE)
+	draw_rect(Rect2(GRID_X + GRID_W, top, GRID_FRAME_BAND_R, GRID_CONTENT_H), COL_FRAME_STONE)
+	# 双金线：外沿金线 + 外沿内侧暗金细线；内沿亮金收边压住内容区边界
 	draw_rect(outer, COL_FRAME_GOLD, false, 1.5)
 	draw_rect(outer.grow(-3.0), COL_FRAME_GOLD_DIM, false, 1.0)
-	draw_rect(Rect2(GRID_X, GRID_Y, GRID_W, GRID_H).grow(1.0), COL_FRAME_GOLD_IN, false, 1.5)
+	draw_rect(Rect2(GRID_X, top, GRID_W, GRID_CONTENT_H).grow(1.0), COL_FRAME_GOLD_IN, false, 1.5)
 	# 四只角花（素材角块与这里的逻辑块一一对应）
 	if _frame_tex != null:
 		var pr := GRID_FRAME_PROTRUDE
@@ -7383,6 +7420,9 @@ func _draw_grid_frame() -> void:
 				(GRID_FRAME_BAND_R + pr) * 2.0, (GRID_FRAME_BAND_B + pr) * 2.0),
 				Vector2(outer.end.x - GRID_FRAME_BAND_R - pr, outer.end.y - GRID_FRAME_BAND_B - pr),
 				Vector2(GRID_FRAME_BAND_R + pr, GRID_FRAME_BAND_B + pr))
+func _draw_grid_caption() -> void:
+	## R139：边框会滚了，「战场」标题就**不能再挂在边框上**（否则跟着飘走）——
+	## 改成固定在可视窗正上方的栏目标题（深棕字 + 浅金描边，压得住金饰带）。
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "战场",
 			Vector2(GRID_X + GRID_W / 2, GRID_Y - 12), Color("2b1c08"), 2, Color(1.0, 0.9, 0.62))
 
