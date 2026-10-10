@@ -8741,11 +8741,19 @@ func _init() -> void:
 			and is_equal_approx(r122_cv2.position.y, 25.0),
 			"R122-F cover_region：50x100 → 40x40 应上下各裁一点（得 %s）" % str(r122_cv2))
 	# ② 降费重画必须走**唯一口** CardFace.draw_badge（自己 draw_circle 会盖掉水晶图标）
-	var r122_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
-	check(r122_src.find("CardFace.draw_badge(") >= 0,
-			"R122-F 降费重画走 CardFace.draw_badge（唯一绘制口，不再盖掉水晶图标）")
-	check(r122_src.find("draw_circle(cost_c") < 0,
-			"R122-F 降费路径不再自己 draw_circle（旧写法会把水晶图标整个盖掉）")
+	# ⚠️ 这是**源码守卫**，只在 dev 工程里成立：导出包（.pck）里脚本是**二进制 token**，
+	#    get_file_as_string 读不到源文本（R124 发布实测：pck 里 `CardFace.draw_badge(` /
+	#    `func cost_of` 均 0 次命中）→ 打包环境显式**跳过**，而不是假装通过或误判失败。
+	#    判 dev / 打包沿用上面 6102 行同一口径（`export_presets.cfg` 不进 pck）。
+	var r122_in_dev := FileAccess.file_exists("res://export_presets.cfg")
+	if not r122_in_dev:
+		print("    · R122-F 源码守卫：打包环境读不到 .gd 源文本 → 跳过（只在 dev 工程/门禁生效）")
+	else:
+		var r122_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+		check(r122_src.find("CardFace.draw_badge(") >= 0,
+				"R122-F 降费重画走 CardFace.draw_badge（唯一绘制口，不再盖掉水晶图标）")
+		check(r122_src.find("draw_circle(cost_c") < 0,
+				"R122-F 降费路径不再自己 draw_circle（旧写法会把水晶图标整个盖掉）")
 
 	# ---- R122-G：事件文案「卡名 / 道具名」悬浮 —— 解析层 ----
 	# 用户口径：「事件中提到道具或卡片时，应该可以在悬浮到卡名的时候显示那个道具 /
