@@ -85,6 +85,15 @@ static func map_bg(layer: int) -> Texture2D:
 	return get_tex("map_bg_%d" % layer)
 
 
+static func bridge_icon(vertical: bool) -> Texture2D:
+	## 地图「通路」的桥（R130）。两个朝向**各一枚**（键名即素材契约）：
+	##   map_bridge_h  左右连通 → 桥的**侧视图**（桥身横跨屏幕）
+	##   map_bridge_v  上下连通 → 桥的**俯视图**（俯视桥面，桥身在屏幕上竖着）
+	## ⚠️ 两枚都要在：缺一个就有一半方向的通路画不出来。
+	## 缺图时返回 null，`map_bridge.gd` 回退成一小段发光横条 —— 不会空白也不报错。
+	return get_tex("map_bridge_v" if vertical else "map_bridge_h")
+
+
 static func chocolate() -> Texture2D:
 	## 巧克力（R128）：地图 HUD 的「每层行动力」图标，建议 64 × 64（带透明通道）。
 	## 缺图时返回 null，`map_scene` 回退成程序画的圆角方块 —— 不会变成空白洞。

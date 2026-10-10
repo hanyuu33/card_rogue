@@ -12,6 +12,8 @@ extends SceneTree
 ##   * 错误不会被脚本捕获，而是由引擎打到 stderr —— 由外层脚本 grep
 ##     「SCRIPT ERROR / Nonexistent / Invalid call」判定失败。
 
+const MapBridge = preload("res://scripts/map_bridge.gd")
+
 const FRAMES_PER_SCENE := 8
 
 # 每个场景的进入前置：用 [_reset, 说明] 的形式，_reset 为 Callable
@@ -433,6 +435,36 @@ func _check_map_scene(scene: Variant) -> void:
 		if not scene._is_available(a):
 			_smoke_fail("地图场景：可走房间 %d 未被场景认作可走" % int(a["id"]))
 			return
+	# 通路（R130）：判定口 `scene._bridge_kind` + `MapBridge` 的真值表 + 几何。
+	# 起点就是当前房 → 它每个门都通向「真能走过去」的房 → 一律亮青；
+	# 两端都没走过的格子之间只能是「鹰哨」档。
+	var bridge_start: Dictionary = RogueMap.start_cell(cells)
+	for nid2 in bridge_start["doors"]:
+		if scene._bridge_kind(bridge_start, cells[int(nid2)]) != MapBridge.LIT:
+			_smoke_fail("地图场景：从起点通向 %d 的通路应为「可以走」语义" % int(nid2))
+			return
+	if MapBridge.kind_for(true, false, false) != MapBridge.DONE \
+			or MapBridge.kind_for(false, false, false) != MapBridge.UNSEEN \
+			or MapBridge.kind_for(false, false, true) != MapBridge.LIT:
+		_smoke_fail("通路语义：kind_for 真值表不对（走过→暖白 / 都没走过→灰蓝 / 可走→亮青）")
+		return
+	# 朝向：左右相邻用侧视图、上下相邻用俯视图（两枚素材缺一就有半个方向没桥）。
+	if MapBridge.is_vertical(Vector2(0, 0), Vector2(100, 0)) \
+			or not MapBridge.is_vertical(Vector2(0, 0), Vector2(0, 100)):
+		_smoke_fail("通路朝向：左右相邻应判为横向、上下相邻应判为竖向")
+		return
+	# 几何：桥心必须落在**两格共用的那面墙的中点**，且整座桥小于一格
+	# （否则会横穿格子、把房间图标压住）。
+	var bh: Rect2 = MapBridge.box_of(Vector2(0, 0), Vector2(118, 0), MapBridge.DONE, 118.0)
+	var bv: Rect2 = MapBridge.box_of(Vector2(0, 0), Vector2(0, 118), MapBridge.DONE, 118.0)
+	if absf(bh.get_center().x - 59.0) > 0.01 or absf(bh.get_center().y) > 0.01 \
+			or absf(bv.get_center().y - 59.0) > 0.01 or absf(bv.get_center().x) > 0.01:
+		_smoke_fail("通路几何：桥心应落在两格中点（横向 %s / 竖向 %s）"
+				% [str(bh.get_center()), str(bv.get_center())])
+		return
+	if bh.size.x <= 0.0 or bh.size.x >= 118.0 or bv.size.y <= 0.0 or bv.size.y >= 118.0:
+		_smoke_fail("通路几何：桥应小于一格（横 %s / 竖 %s）" % [str(bh.size), str(bv.size)])
+		return
 	# 视野规则的前提：走过的房间必须至少有一个门（不然玩家会被困死）
 	for c: Dictionary in cells:
 		if RunState.cleared_ids.has(int(c["id"])) and (c["doors"] as Array).is_empty():
@@ -1310,6 +1342,16 @@ func _check_map_panel(scene: Variant) -> void:
 	if nxt != avail.size():
 		_smoke_fail("战斗内地图：%d/%d 个可走房间被标出" % [nxt, avail.size()])
 		return
+	# 通路（R130）：面板与冒险地图同一套语义 —— 当前房 → 可走房 = 亮青
+	for node2: Dictionary in RunState.map_cells:
+		if not scene._mapview_is_current(node2):
+			continue
+		for node3: Dictionary in RunState.map_cells:
+			if scene._mapview_is_next(node3) \
+					and scene._mapview_bridge_kind(node2, node3) != MapBridge.LIT:
+				_smoke_fail("战斗内地图：当前房 → 可走房 %d 的通路语义不对"
+						% int(node3["id"]))
+				return
 	# 只读：点面板里的房间不改路线
 	var cur_before := RunState.current_node_id
 	var some_cell: Dictionary = {}

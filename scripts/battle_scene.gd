@@ -13,6 +13,7 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
+const MapBridge = preload("res://scripts/map_bridge.gd")
 
 const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
@@ -4388,32 +4389,55 @@ func _draw_map_panel() -> void:
 			"本层 Boss：%s　·　M / 地图 按钮 或 点击任意处关闭（战斗中不能改路线）"
 			% str(RunState.boss_level().get("name", "")),
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 68.0), Color("8f8b80"))
-	_draw_map_doors()
+	# ⚠️ 顺序不可换：格子底 → 通路（小桥） → 图标（与冒险地图同一套）。
+	_draw_map_tiles()
+	_draw_map_bridges()
 	_draw_map_nodes()
 	_draw_map_legend(pr)
 
 
-func _draw_map_doors() -> void:
-	## 门：与冒险地图同一套视野规则 —— 只有**走过**的房间才画它通向哪几间；
-	## 持有「鹰哨」时全图的门都可见。
+func _mapview_bridge_kind(cell: Dictionary, nb: Dictionary) -> int:
+	## 通路语义：与冒险地图 `map_scene._bridge_kind` **同一口径**
+	## （判定口 = MapBridge.kind_for，这里只负责把三个 bool 算出来）。
+	var lit := (_mapview_is_current(cell) and _mapview_is_next(nb)) \
+			or (_mapview_is_current(nb) and _mapview_is_next(cell))
+	return MapBridge.kind_for(RunState.cleared_ids.has(int(cell["id"])),
+			RunState.cleared_ids.has(int(nb["id"])), lit)
+
+
+func _draw_map_bridges() -> void:
+	## 通路（R130）：与冒险地图**同一套视觉**（都走 MapBridge 唯一绘制口）、
+	## 同一套视野规则 —— 只有**走过**的房间才画它通向哪几间；
+	## 持有「鹰哨」（6026）时全图都可见。
+	## 画在格子底之上、图标之下（调用顺序 tiles → bridges → nodes）。
 	var reveal_all := RunState.has_relic(RunState.EAGLE_WHISTLE_RELIC_ID)
+	var pulse := 0.5 + 0.5 * sin(float(Time.get_ticks_msec()) * 0.004)
+	var drawn := {}          # 去重：两格之间只盖一座桥
 	for cell: Dictionary in RunState.map_cells:
-		var done: bool = RunState.cleared_ids.has(int(cell["id"]))
-		if not done and not reveal_all:
+		if not RunState.cleared_ids.has(int(cell["id"])) and not reveal_all:
 			continue
-		var r := _mapview_cell_rect(cell)
-		var ctr := r.position + r.size * 0.5
+		var ctr := _mapview_cell_rect(cell).get_center()
 		for nid in cell["doors"]:
-			var v := RogueMap.dir_between(int(cell["id"]), int(nid))
-			if v == Vector2i.ZERO:
+			var nb: Dictionary = RunState.map_cells[int(nid)]
+			var key := mini(int(cell["id"]), int(nid)) * RogueMap.CELLS \
+					+ maxi(int(cell["id"]), int(nid))
+			if drawn.has(key):
 				continue
-			var dir := Vector2(v.x, v.y)
-			var mid := ctr + dir * (MAPVIEW_CELL * 0.5)
-			var perp := Vector2(-dir.y, dir.x)
-			var half := perp * (MAPVIEW_CELL * 0.15)
-			draw_line(mid - half, mid + half,
-					Color("e6c86a") if done else Color(0.66, 0.70, 0.78, 0.50),
-					3.0, true)
+			drawn[key] = true
+			var kind := _mapview_bridge_kind(cell, nb)
+			MapBridge.draw_bridge(self, ctr, _mapview_cell_rect(nb).get_center(), kind,
+					MAPVIEW_CELL, pulse if kind == MapBridge.LIT else 0.0)
+
+
+func _draw_map_tiles() -> void:
+	## 格子底 + 类型色描边（与冒险地图同一套）。与图标分两趟画 —— 中间夹一层通路。
+	for cell: Dictionary in RunState.map_cells:
+		var r := _mapview_cell_rect(cell)
+		var dtype := RogueMap.display_type(cell)
+		var done: bool = RunState.cleared_ids.has(int(cell["id"]))
+		var base: Color = UiTheme.MAP_NODE_COLORS.get(dtype, UiTheme.INK_500)
+		draw_rect(r, Color(base.r, base.g, base.b, 0.22 if done else 0.13), true)
+		draw_rect(r, Color(base.r, base.g, base.b, 0.85), false, 1.4)
 
 
 func _draw_map_nodes() -> void:
@@ -4423,9 +4447,6 @@ func _draw_map_nodes() -> void:
 		var id := int(cell["id"])
 		var dtype := RogueMap.display_type(cell)
 		var done: bool = RunState.cleared_ids.has(id)
-		var base: Color = UiTheme.MAP_NODE_COLORS.get(dtype, UiTheme.INK_500)
-		draw_rect(r, Color(base.r, base.g, base.b, 0.22 if done else 0.13), true)
-		draw_rect(r, Color(base.r, base.g, base.b, 0.85), false, 1.4)
 		# 内容：与冒险地图同一套 —— **只用图标**，缺图才回退汉字。
 		var icon := UiAssets.node_icon(dtype)
 		if icon != null:
@@ -4456,7 +4477,7 @@ func _draw_map_legend(pr: Rect2) -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, 58, UiTheme.FS_CAPTION, Color("cfd3da"))
 		x += 73.0
 	draw_string(_font, Vector2(pr.position.x + 12.0, y + 24.0),
-			"金框＝当前房间　绿框＝可以走过去　（只有走过的房间才看得到门）",
+			"金框＝当前房间　绿框＝可以走过去　（只有走过的房间才看得到通路）",
 			HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 24.0, UiTheme.FS_CAPTION, Color("9aa0aa"))
 
 

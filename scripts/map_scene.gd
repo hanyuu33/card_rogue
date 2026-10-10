@@ -17,6 +17,7 @@ extends Control
 ## 地图整体（826 × 590）能完整放进视口 —— 所以旧版的滚动 / 滚动提示 / 滚动条已全部移除。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const MapBridge = preload("res://scripts/map_bridge.gd")
 
 const CELL := 118.0                  # 格子边长（正方形，相邻格共享边）
 const MAP_W := 826.0                 # 7 × 118
@@ -31,11 +32,11 @@ const DRAG_THRESHOLD := 6.0          # 弃用（保留：点击判定仍用它�
 const COL_CELL_FILL := Color(0.06, 0.08, 0.12, 0.40)        # 未走过的格子底（半透明，露出背景图）
 const COL_CELL_FILL_DONE := Color(0.14, 0.17, 0.22, 0.46)   # 走过的格子底（稍实一点）
 const COL_CELL_LINE := Color(1, 1, 1, 0.14)                 # 格子分隔线
-const COL_CELL_LINE_DONE := Color(0.90, 0.78, 0.42, 0.42)   # 走过的格子边（金）
-const COL_DOOR_DONE := Color("e6c86a")                      # 已探索的门（金）
-const COL_DOOR_LIT := Color("a8d8ff")                       # 从当前房可走的门（亮青白）
-const COL_DOOR_UNSEEN := Color(0.66, 0.70, 0.78, 0.50)      # 鹰哨揭示的「还没走过」的门
-const COL_DOOR_DARK := Color(0.04, 0.05, 0.08, 0.80)        # 门的暗描边（压底色用）
+const COL_CELL_LINE_DONE := Color(0.94, 0.88, 0.72, 0.30)   # 走过的格子边（暖白）
+                                                            # ⚠️ R130 起**不再是金**：
+                                                            # 旧版金色格边与金色通路撞色 →
+                                                            # 连接根本看不出来
+# 通路（小桥）的画法与染色统一在 scripts/map_bridge.gd + UiTheme.MAP_BRIDGE_*。
 const COL_PANEL := Color(0.08, 0.09, 0.13, 0.74)            # HUD 小面板底
 const COL_PANEL_LINE := Color(1, 1, 1, 0.12)
 const COL_CHOCO_FALLBACK := Color("6b3f24")                 # 巧克力缺图时的兜底色
@@ -162,12 +163,12 @@ func _rng() -> RandomNumberGenerator:
 
 func _prep_midway_demo() -> void:
 	## 演示：把玩家挪到中路，并标记一条走过的路线 —— 用于核验
-	## 「只有走过的房间才画门」「走过的格子边变金」这两条视野规则。
+	## 「只有走过的房间才画通路（小桥）」「走过的格子边变暖白」这两条视野规则。
 	var cells := RunState.map_cells
 	if cells.size() != RogueMap.CELLS:
 		return
 	RunState.cleared_ids = []
-	# 沿起点一路向上走 3 格（找有门的邻居）
+	# 沿起点一路向上走 3 格（找有路的邻居）
 	var cur := int(RogueMap.start_cell(cells)["id"])
 	RunState.cleared_ids.append(cur)
 	for step in 3:
@@ -364,8 +365,11 @@ func _boss_label() -> String:
 
 func _draw() -> void:
 	_draw_background()
-	_draw_cells()
-	_draw_doors()
+	# ⚠️ 顺序不可换：格子底 → **通路（小桥）** → 图标。
+	#    桥夹在中间，两端才会被房间图标盖住（可见部分正好是「两间房之间那一段」）。
+	_draw_cell_tiles()
+	_draw_bridges()
+	_draw_cell_icons()
 	_draw_states()
 	_draw_hud()
 	_draw_sidebar()
@@ -398,8 +402,10 @@ func _draw_background() -> void:
 				top.lerp(bottom, t), true)
 
 
-func _draw_cells() -> void:
-	## 半透明格子 + 房间类型。**格子底刻意做得很淡**，让背景图透出来。
+func _draw_cell_tiles() -> void:
+	## 半透明格子底 + 类型染色 + 分隔线。**格子底刻意做得很淡**，让背景图透出来。
+	## ⚠️ 与图标分两趟画：中间要夹一层「通路（小桥）」—— 桥必须压在格子底之上、
+	##    房间图标之下。
 	for cell: Dictionary in RunState.map_cells:
 		var r := _cell_rect(cell)
 		var done := _visited(cell)
@@ -409,15 +415,22 @@ func _draw_cells() -> void:
 		draw_rect(r, COL_CELL_FILL_DONE if done else COL_CELL_FILL, true)
 		# 类型色只做**极淡的染色**，不铺满（否则背景图被挡死）
 		draw_rect(r, Color(base.r, base.g, base.b, 0.14 if done else 0.09), true)
-		# 分隔线（走过的变金，一眼看出探索范围）
+		# 分隔线（走过的偏暖白，一眼看出探索范围）
 		draw_rect(r, COL_CELL_LINE_DONE if done else COL_CELL_LINE, false, 1.4)
-		# 内容：**只用图标**（R129 起地图上不再写文字 —— 房间类型全靠图标区分）。
-		# 图标缺图时才回退成格子中央的汉字（规范要求「缺图不空白也不报错」）。
+
+
+func _draw_cell_icons() -> void:
+	## 房间内容：**只用图标**（R129 起地图上不再写文字 —— 房间类型全靠图标区分）。
+	## 图标缺图时才回退成格子中央的汉字（规范要求「缺图不空白也不报错」）。
+	for cell: Dictionary in RunState.map_cells:
+		var r := _cell_rect(cell)
+		var done := _visited(cell)
+		var dtype := RogueMap.display_type(cell)
 		var cx := r.position.x + r.size.x * 0.5
 		var cy := r.position.y + r.size.y * 0.5
 		var icon := UiAssets.node_icon(dtype)
 		if icon != null:
-			# 图标占格子约 62%：四周留出格子边框与「门」的位置，不互相压。
+			# 图标占格子约 62%：四周留出格子边框与「通路」的位置，不互相压。
 			var ib := CELL * 0.62
 			var box := Rect2(cx - ib * 0.5, cy - ib * 0.5, ib, ib)
 			draw_texture_rect(icon, CardFace.fit_rect(icon.get_size(), box), false,
@@ -432,37 +445,43 @@ func _draw_cells() -> void:
 					Color(0.96, 0.93, 0.86) if not done else Color(0.82, 0.78, 0.66))
 
 
-func _draw_doors() -> void:
-	## 门：画在格子边界中点的一小段亮线。
+func _bridge_kind(cell: Dictionary, nb: Dictionary) -> int:
+	## 通路语义（本函数是判定口，绘制只是消费）—— 与战斗内地图总览同一口径。
+	##   LIT    一端是当前房、另一端是它**真能走过去**的房 → 亮青（会呼吸）
+	##   DONE   两端至少一端走过 → 暖白（已知的通道）
+	##   UNSEEN 两端都没走过（只在鹰哨下出现）→ 灰蓝、更小
+	var lit := (_is_current(cell) and _is_available(nb)) \
+			or (_is_current(nb) and _is_available(cell))
+	return MapBridge.kind_for(_visited(cell), _visited(nb), lit)
+
+
+func _draw_bridges() -> void:
+	## 通路（R130）：**两格之间的墙上盖一枚小桥图标** —— 左右连通用侧视图、
+	## 上下连通用俯视图（见 `scripts/map_bridge.gd`）。
+	## 画在格子底之上、图标之下（`_draw()` 里夹在 `_draw_cell_tiles` 与
+	## `_draw_cell_icons` 之间）→ 桥的两端被图标盖住，可见部分正好是「两间房之间
+	## 那一段」。
+	## ⚠️ 旧版是在墙中点画一小段与「走过的格子边」**同色**的金线 → 不站在那格上、
+	##    没有金色高亮时根本看不出连接；鹰哨全揭示时更糊（灰 0.50 半透明压在暗格子上）。
 	## **视野规则**：只有**走过的**房间才把它通向哪几间画出来；
-	## 道具「鹰哨」（6026）在场时 → 全图的门立刻可见。
+	## 道具「鹰哨」（6026）在场时 → 全图的通路立刻可见。
 	var reveal_all := RunState.has_relic(RunState.EAGLE_WHISTLE_RELIC_ID)
+	var pulse := 0.5 + 0.5 * sin(_t * 4.0)
+	var drawn := {}          # 去重：两格之间只盖一座桥（两个方向是同一处）
 	for cell: Dictionary in RunState.map_cells:
-		var seen := _visited(cell)
-		if not seen and not reveal_all:
+		if not _visited(cell) and not reveal_all:
 			continue
-		var cur := _is_current(cell)
-		var r := _cell_rect(cell)
-		var ctr := r.position + r.size * 0.5
+		var ctr := _cell_center(cell)
 		for nid in cell["doors"]:
-			var v := RogueMap.dir_between(int(cell["id"]), int(nid))
-			if v == Vector2i.ZERO:
+			var nb: Dictionary = RunState.map_cells[int(nid)]
+			var key := mini(int(cell["id"]), int(nid)) * RogueMap.CELLS \
+					+ maxi(int(cell["id"]), int(nid))
+			if drawn.has(key):
 				continue
-			var dir := Vector2(v.x, v.y)
-			var mid := ctr + dir * (CELL * 0.5)
-			var perp := Vector2(-dir.y, dir.x)
-			var half := perp * (CELL * 0.17)
-			var a := mid - half
-			var b := mid + half
-			var col := COL_DOOR_DONE
-			if not seen:
-				col = COL_DOOR_UNSEEN          # 鹰哨揭示的、还没走过的门（更灰更淡）
-			elif cur:
-				# 站在这里能走的门 → 亮青白（与「可走房间」的绿框呼应）
-				if _is_available(RunState.map_cells[int(nid)]):
-					col = COL_DOOR_LIT
-			draw_line(a, b, COL_DOOR_DARK, 9.0, true)
-			draw_line(a, b, col, 4.5, true)
+			drawn[key] = true
+			var kind := _bridge_kind(cell, nb)
+			MapBridge.draw_bridge(self, ctr, _cell_center(nb), kind, CELL,
+					pulse if kind == MapBridge.LIT else 0.0)
 
 
 func _draw_states() -> void:
