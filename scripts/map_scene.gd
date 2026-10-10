@@ -39,7 +39,42 @@ const COL_CELL_LINE_DONE := Color(0.94, 0.88, 0.72, 0.30)   # 走过的格子边
 # 通路（小桥）的画法与染色统一在 scripts/map_bridge.gd + UiTheme.MAP_BRIDGE_*。
 const COL_PANEL := Color(0.08, 0.09, 0.13, 0.74)            # HUD 小面板底
 const COL_PANEL_LINE := Color(1, 1, 1, 0.12)
-const COL_CHOCO_FALLBACK := Color("6b3f24")                 # 巧克力缺图时的兜底色
+const COL_CHOCO_FALLBACK := Color("6b3f24")                 # 巧克力缺图时的兜底「整块」底
+const COL_CHOCO_SEG := Color("8c5a2e")                      # 兜底：小方格填充
+const COL_CHOCO_SEG_HI := Color(0.86, 0.65, 0.40, 0.45)     # 兜底：小方格上沿高光
+const COL_CHOCO_EDGE := Color(0.20, 0.12, 0.07, 0.90)       # 兜底：外描边
+
+# ---- 进场过场（R131）----
+## 走进**没去过的**房间时先播一段过场：那一格的图标一边放大一边飞到屏幕中心，
+## 亮出房间类型文字，同时在右侧巧克力计数旁亮出「巧克力 -1」。播完才真的进入房间。
+## ⚠️ **换图标不用改这里的任何一行**：房间图标走 `UiAssets.node_icon()`、
+##    巧克力走 `UiAssets.chocolate()`，都按 `CardFace.fit_rect` **等比**缩放
+##    （不预设素材长宽比、不拉伸），缺图各自有程序化回退。
+const ANIM_DUR := 1.45            # 过场总时长（秒）
+const ANIM_ICON_S := 168.0        # 图标放大到的边长
+const ANIM_TEXT_DY := 122.0       # 类型文字在图标中心下方多少 px
+const ANIM_COST_W := 82.0         # 过场里「巧克力 -1」小牌的宽度
+## 房间类型 → 过场文字（**唯一出处**）。其余界面要同一套文案就读这里。
+## 「unknown」= 玩家点它时还是「?」，所以是「不确定的命运」。
+const ENTER_LABELS := {
+	"battle": "战斗",
+	"elite": "精英战斗",
+	"event": "随机事件",
+	"rest": "片刻休息",
+	"unknown": "不确定的命运",
+	"chest": "宝箱",
+	"bigchest": "大宝箱",
+	"start": "起点",
+}
+
+# ---- 巧克力计数（R131：素材改成「长方形整块」→ 图标槽改成横向的）----
+const CHOCO_PANEL_W := 118.0
+const CHOCO_PANEL_H := 30.0
+const CHOCO_PANEL_Y := 56.0
+const CHOCO_ICON_W := 52.0
+const CHOCO_ICON_H := 24.0
+const CHOCO_ROWS := 2             # 缺图兜底的小方格行数（与新素材的「2 行」呼应）
+const CHOCO_COLS := 4
 
 var _font: SystemFont
 var _font_bold: SystemFont
@@ -66,6 +101,9 @@ var _boss_name := ""            # 本层 Boss 关卡名（名牌显示；懒加�
 var _boss_alert := false        # 「入夜了…」提示是否正在显示（防止重复触发）
 var _move_note := ""            # 上一次移动的短提示（如「你已走过这里」）
 var _move_note_t := 0.0
+var _anim_cell: Dictionary = {}  # 正在播进场过场的房间（空 = 没在播）
+var _anim_t := 0.0               # 过场已播时长（秒）
+var _anim_hold := false          # 演示用：停在过场末尾不真的进入（截图核验）
 
 
 func _ready() -> void:
@@ -135,10 +173,24 @@ func _ready() -> void:
 	# -- --bossalert：演示「入夜了」提示（只显示不切场景，截图核验用）
 	if "--bossalert" in OS.get_cmdline_user_args():
 		_boss_alert = true
+	# -- --enteranim：演示进场过场（截图核验用；停在过场末尾不真的进入）
+	if "--enteranim" in OS.get_cmdline_user_args():
+		_anim_hold = true
+		for c: Dictionary in RunState.available_nodes():
+			if not _visited(c) and str(c["type"]) != "start":
+				_anim_cell = c
+				_anim_t = 0.0
+				break
 	# 命令行 -- --screenshot：自动截图退出
+	#（`-- --enteranim --shotwait 1.0` 可以指定延迟，用来截过场的不同时刻）
 	if "--screenshot" in OS.get_cmdline_user_args():
+		var wait := 0.6
+		var args := OS.get_cmdline_user_args()
+		var si := args.find("--shotwait")
+		if si >= 0 and si + 1 < args.size():
+			wait = maxf(0.05, float(args[si + 1]))
 		var t := Timer.new()
-		t.wait_time = 0.6
+		t.wait_time = wait
 		t.one_shot = true
 		t.timeout.connect(func():
 			var img := get_viewport().get_texture().get_image()
@@ -226,6 +278,9 @@ func _is_current(cell: Dictionary) -> bool:
 # ------------------------------------------------------------ 输入
 
 func _gui_input(event: InputEvent) -> void:
+	# 进场过场播放中：屏蔽一切输入（这 1.5 秒地图不接受操作，免得点穿）
+	if not _anim_cell.is_empty():
+		return
 	if event is InputEventMouseMotion:
 		_mouse = event.position
 		if _deck_visible:
@@ -277,10 +332,22 @@ func _gui_input(event: InputEvent) -> void:
 		_enter_node(cell)
 
 
-func _enter_node(cell: Dictionary) -> void:
-	## 走进一个房间。按类型分流；**回到走过的房间什么都不发生**。
-	if cell.is_empty():
+func _enter_node(cell: Dictionary, animate := true) -> void:
+	## 走进一个房间。
+	## * **没去过的**房间 → 先播一段进场过场（`animate = false` 可跳过，回放用）；
+	## * 回到**走过的**房间 → 不播过场，直接走原逻辑（什么都不会发生）。
+	if cell.is_empty() or not _anim_cell.is_empty():
 		return
+	if animate and not _visited(cell) and RunState.can_move_to(int(cell["id"])):
+		_anim_cell = cell
+		_anim_t = 0.0
+		queue_redraw()
+		return
+	_commit_enter(cell)
+
+
+func _commit_enter(cell: Dictionary) -> void:
+	## 真正的「进入」：结算 + 按房间类型分流。**只能由过场结束（或回放）调用。**
 	var id := int(cell["id"])
 	var res := RunState.advance(id)
 	if not bool(res.get("ok", false)):
@@ -328,6 +395,13 @@ func _process(delta: float) -> void:
 	_t += delta
 	if _move_note_t > 0.0:
 		_move_note_t = maxf(0.0, _move_note_t - delta)
+	# 进场过场：走完才**真的进房间**（过场期间 RunState 一动不动）
+	if not _anim_cell.is_empty():
+		_anim_t += delta
+		if _anim_t >= ANIM_DUR and not _anim_hold:
+			var entered := _anim_cell
+			_anim_cell = {}
+			_commit_enter(entered)
 	queue_redraw()
 	# 巧克力耗尽 → 等当前房间的内容结算完（奖励弹窗关掉 / 战斗与事件回来）再开 Boss 战。
 	# ⚠️ 回放模式同样要触发（boss_pending 由 advance 确定性地置位），只是不等那 2 秒。
@@ -383,6 +457,8 @@ func _draw() -> void:
 	_draw_move_note()
 	if _boss_alert:
 		_draw_boss_alert()
+	if not _anim_cell.is_empty():
+		_draw_enter_anim()          # 过场永远在最上层
 
 
 func _draw_background() -> void:
@@ -531,25 +607,51 @@ func _draw_boss_chip() -> void:
 			Color("f7e6b0"))
 
 
+func _choco_panel_rect() -> Rect2:
+	## 巧克力计数面板（HUD 右上角）。过场里的「-1」小牌贴它的左边。
+	return Rect2(size.x - 24.0 - CHOCO_PANEL_W, CHOCO_PANEL_Y,
+			CHOCO_PANEL_W, CHOCO_PANEL_H)
+
+
+func _draw_choco_icon(box: Rect2, alpha: float = 1.0) -> void:
+	## 巧克力图标的**唯一画法** —— 计数区 / 悬浮提示 / 过场「-1」小牌三处共用。
+	## ⚠️ 用 `fit_rect` **等比**缩放：以后换成任何长宽比的巧克力都不会被压扁
+	##    （R131 就是从正方形换成长方形整块的，这里一行都没改）。
+	var icon := UiAssets.chocolate()
+	if icon != null:
+		draw_texture_rect(icon, CardFace.fit_rect(icon.get_size(), box), false,
+				Color(1, 1, 1, alpha))
+		return
+	# 缺图回退：**照新素材的形态画**（长方块 + 小方格刻痕），不是一块圆角砖
+	draw_rect(box, Color(COL_CHOCO_FALLBACK.r, COL_CHOCO_FALLBACK.g,
+			COL_CHOCO_FALLBACK.b, alpha), true)
+	var gap := maxf(1.0, box.size.x * 0.03)
+	var cw := (box.size.x - gap * (CHOCO_COLS + 1)) / CHOCO_COLS
+	var ch := (box.size.y - gap * (CHOCO_ROWS + 1)) / CHOCO_ROWS
+	for r in CHOCO_ROWS:
+		for c in CHOCO_COLS:
+			var seg := Rect2(box.position.x + gap + c * (cw + gap),
+					box.position.y + gap + r * (ch + gap), cw, ch)
+			draw_rect(seg, Color(COL_CHOCO_SEG.r, COL_CHOCO_SEG.g,
+					COL_CHOCO_SEG.b, alpha), true)
+			draw_rect(seg, Color(COL_CHOCO_SEG_HI.r, COL_CHOCO_SEG_HI.g,
+					COL_CHOCO_SEG_HI.b, COL_CHOCO_SEG_HI.a * alpha), true)
+	draw_rect(box, Color(COL_CHOCO_EDGE.r, COL_CHOCO_EDGE.g,
+			COL_CHOCO_EDGE.b, COL_CHOCO_EDGE.a * alpha), false, 1.2)
+
+
 func _draw_chocolate() -> void:
 	## 每层行动力：图标 + ×N（素材在左，数量在右 —— 用户口径）。
 	var n := RunState.chocolate
-	var icon := UiAssets.chocolate()
-	var sz := 30.0
-	var x := size.x - 24.0 - 92.0
-	var rect := Rect2(x, 58, 92, 30)
+	var rect := _choco_panel_rect()
 	draw_rect(rect, COL_PANEL, true)
 	draw_rect(rect, COL_PANEL_LINE, false, 1.2)
-	if icon != null:
-		draw_texture_rect(icon, Rect2(x + 4, 60, sz - 4, sz - 4), false)
-	else:
-		# 缺图回退：棕色圆角块 + 浅色高光（还是能读出「一块巧克力」）
-		draw_rect(Rect2(x + 5, 61, sz - 6, sz - 6), COL_CHOCO_FALLBACK, true)
-		draw_rect(Rect2(x + 5, 61, sz - 6, (sz - 6) * 0.45), Color(0.83, 0.72, 0.55, 0.55), true)
-		draw_rect(Rect2(x + 5, 61, sz - 6, sz - 6), Color(0.20, 0.12, 0.07, 0.85), false, 1.4)
+	_draw_choco_icon(Rect2(rect.position.x + 5.0, rect.position.y + 3.0,
+			CHOCO_ICON_W, CHOCO_ICON_H))
 	var col := Color("f4e3c8") if n > 0 else Color("e07a6a")
-	draw_string(_font_bold, Vector2(x + sz + 4, 79), "×%d" % n,
-			HORIZONTAL_ALIGNMENT_LEFT, 52, UiTheme.FS_BODY, col)
+	draw_string(_font_bold, Vector2(rect.position.x + 5.0 + CHOCO_ICON_W + 6.0,
+			rect.position.y + 21.0), "×%d" % n,
+			HORIZONTAL_ALIGNMENT_LEFT, 46, UiTheme.FS_BODY, col)
 	# 悬停在「没走过」的相邻房间上 → 提示这次移动要花 1 块
 	if _hover_id >= 0 and _hover_id < RunState.map_cells.size():
 		var hc: Dictionary = RunState.map_cells[_hover_id]
@@ -558,8 +660,7 @@ func _draw_chocolate() -> void:
 
 
 func _draw_cost_tip() -> void:
-	## 悬浮提示：巧克力图标 -1
-	var icon := UiAssets.chocolate()
+	## 悬浮提示：巧克力图标 -1（图标槽与计数区/过场共用同一个画法）
 	var w := 104.0
 	var h := 30.0
 	var px: float = clampf(_mouse.x + 14.0, 8.0, size.x - w - 8.0)
@@ -567,13 +668,90 @@ func _draw_cost_tip() -> void:
 	var rect := Rect2(px, py, w, h)
 	draw_rect(rect, Color(0.08, 0.09, 0.13, 0.94), true)
 	draw_rect(rect, UiTheme.ACCENT_GOLD, false, 1.3)
-	if icon != null:
-		draw_texture_rect(icon, Rect2(px + 5, py + 4, 22, 22), false)
-	else:
-		draw_rect(Rect2(px + 5, py + 5, 20, 20), COL_CHOCO_FALLBACK, true)
-		draw_rect(Rect2(px + 5, py + 5, 20, 20), Color(0.20, 0.12, 0.07, 0.85), false, 1.3)
-	draw_string(_font_bold, Vector2(px + 32, py + 20), "-1",
+	_draw_choco_icon(Rect2(px + 5.0, py + 5.0, 34.0, 20.0))
+	draw_string(_font_bold, Vector2(px + 43, py + 20), "-1",
 			HORIZONTAL_ALIGNMENT_LEFT, 60, UiTheme.FS_BODY, Color("f2c14e"))
+
+
+# ------------------------------------------------------------ 进场过场
+
+func _enter_label(cell: Dictionary) -> String:
+	## 过场文字。读 `display_type`：「?」房此刻**还没**揭晓 → 落到「不确定的命运」。
+	var dt := RogueMap.display_type(cell)
+	return str(ENTER_LABELS.get(dt, RogueMap.type_label(dt)))
+
+
+func _ramp(p: float, a: float, b: float) -> float:
+	## 过场的每一层各占一段时间：把总进度 p 映射到 [a,b] 段内的 0→1。
+	if b <= a:
+		return 1.0 if p >= b else 0.0
+	return clampf((p - a) / (b - a), 0.0, 1.0)
+
+
+func _draw_enter_anim() -> void:
+	## 进场过场：压暗全屏 → 那一格的图标一边放大一边飞到屏幕中心 → 亮出类型文字 →
+	## 同时右侧巧克力计数旁亮出「巧克力图标 -1」。
+	## ⚠️ 各段时机都写成 ANIM_DUR 的比例（下面只出现数字），改总时长不用动别处。
+	var p := clampf(_anim_t / ANIM_DUR, 0.0, 1.0)
+	var dim := _ramp(p, 0.0, 0.18)
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.03, 0.05, 0.66 * dim), true)
+	# 图标：先快后慢地飞到屏幕中心（略微上移，给文字留位置），同时放大
+	var fly := 1.0 - pow(1.0 - _ramp(p, 0.0, 0.62), 3.0)
+	var to := Vector2(size.x * 0.5, size.y * 0.44)
+	var ctr := _cell_center(_anim_cell).lerp(to, fly)
+	var s := lerpf(CELL * 0.62, ANIM_ICON_S, fly)
+	# 图标后面垫一块暗光晕：任何背景上图标与文字都读得清
+	# ⚠️ 半径别太大 —— 出图验证过，超过 0.62×图标就会读成「一块黑贴纸」。
+	draw_circle(ctr, s * 0.58, Color(0.03, 0.04, 0.07, 0.48 * dim))
+	_draw_anim_icon(_anim_cell, Rect2(ctr.x - s * 0.5, ctr.y - s * 0.5, s, s), dim)
+	# 房间类型文字（淡入 + 轻微上浮）
+	var ta := _ramp(p, 0.42, 0.64)
+	if ta > 0.0:
+		var label := _enter_label(_anim_cell)
+		var w := 460.0
+		var tx := size.x * 0.5 - w * 0.5
+		var ty := ctr.y + ANIM_TEXT_DY + (1.0 - ta) * 10.0
+		draw_string(_font_bold, Vector2(tx + 2.0, ty + 2.0), label,
+				HORIZONTAL_ALIGNMENT_CENTER, w, UiTheme.FS_TITLE,
+				Color(0, 0, 0, 0.62 * ta))
+		draw_string(_font_bold, Vector2(tx, ty), label,
+				HORIZONTAL_ALIGNMENT_CENTER, w, UiTheme.FS_TITLE,
+				Color(UiTheme.SAND.r, UiTheme.SAND.g, UiTheme.SAND.b, ta))
+	# 巧克力 -1：在右侧计数旁（图标槽与计数区同源）
+	_draw_anim_cost(_ramp(p, 0.34, 0.52), fly)
+
+
+func _draw_anim_icon(cell: Dictionary, box: Rect2, alpha: float) -> void:
+	## 过场里放大的房间图标。**槽位与地图格子完全同源**（`node_icon`）→ 换素材两边一起变。
+	var dtype := RogueMap.display_type(cell)
+	var icon := UiAssets.node_icon(dtype)
+	if icon != null:
+		draw_texture_rect(icon, CardFace.fit_rect(icon.get_size(), box), false,
+				Color(1, 1, 1, alpha))
+		return
+	# 缺图回退：与格子里的兜底同一套（汉字），只是字号放大
+	draw_string(_font_bold, Vector2(box.position.x, box.position.y + box.size.y * 0.8),
+			RogueMap.type_mark(dtype), HORIZONTAL_ALIGNMENT_CENTER, box.size.x,
+			UiTheme.FS_DISPLAY, Color(0.96, 0.93, 0.86, alpha))
+
+
+func _draw_anim_cost(alpha: float, pop: float) -> void:
+	## 过场里在**巧克力计数旁**（左侧）亮出「巧克力图标 -1」。
+	if alpha <= 0.0:
+		return
+	var panel := _choco_panel_rect()
+	var k := lerpf(0.86, 1.0, pop)          # 跟着图标一起「落定」的小弹跳
+	var w := ANIM_COST_W * k
+	var h := CHOCO_PANEL_H * k
+	var rect := Rect2(panel.position.x - 10.0 - w,
+			panel.position.y + (CHOCO_PANEL_H - h) * 0.5, w, h)
+	draw_rect(rect, Color(0.10, 0.08, 0.05, 0.92 * alpha), true)
+	draw_rect(rect, Color(0.95, 0.76, 0.31, 0.92 * alpha), false, 1.4)
+	var ib := Rect2(rect.position.x + 5.0, rect.position.y + 3.0, 36.0, rect.size.y - 6.0)
+	_draw_choco_icon(ib, alpha)
+	draw_string(_font_bold, Vector2(ib.end.x + 3.0, rect.position.y + rect.size.y * 0.7),
+			"-1", HORIZONTAL_ALIGNMENT_LEFT, 40, UiTheme.FS_BODY,
+			Color(0.95, 0.76, 0.31, alpha))
 
 
 func _draw_sidebar() -> void:
@@ -1025,4 +1203,5 @@ func _replay_tick() -> void:
 		ReplayLog.stop_playback()
 		return
 	sfx.play("click")
-	_enter_node(cell)
+	# 回放要一口气跑完一整局 → 跳过过场（过场只是给玩家看的）
+	_enter_node(cell, false)

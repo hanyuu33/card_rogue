@@ -465,6 +465,49 @@ func _check_map_scene(scene: Variant) -> void:
 	if bh.size.x <= 0.0 or bh.size.x >= 118.0 or bv.size.y <= 0.0 or bv.size.y >= 118.0:
 		_smoke_fail("通路几何：桥应小于一格（横 %s / 竖 %s）" % [str(bh.size), str(bv.size)])
 		return
+	# 进场过场（R131）：文字表齐全 / 走过的房间不播 / 没去过的会播，且**播完才动 RunState**。
+	for ty2 in ["battle", "elite", "event", "rest", "unknown", "chest", "bigchest", "start"]:
+		if not scene.ENTER_LABELS.has(ty2):
+			_smoke_fail("进场过场：房间类型 %s 没有文字（过场会空着）" % ty2)
+			return
+	if str(scene.ENTER_LABELS["unknown"]) != "不确定的命运" \
+			or str(scene.ENTER_LABELS["elite"]) != "精英战斗":
+		_smoke_fail("进场过场：「不确定的命运」/「精英战斗」文案不对")
+		return
+	if scene.CHOCO_ICON_W < scene.CHOCO_ICON_H:
+		_smoke_fail("巧克力计数：图标槽要做成横向的（素材是长方形整块，竖槽会把它压扁）")
+		return
+	# 回到走过的房间（起点）→ 不该起过场
+	scene._anim_cell = {}
+	scene._anim_t = 0.0
+	scene._enter_node(RogueMap.start_cell(cells), true)
+	if not scene._anim_cell.is_empty():
+		_smoke_fail("进场过场：走进走过的房间不该播过场")
+		return
+	# 走进没去过的房间 → 起过场，且**过场中 RunState 一动不动**
+	var anim_nid := -1
+	for a3: Dictionary in RunState.available_nodes():
+		if not RunState.cleared_ids.has(int(a3["id"])):
+			anim_nid = int(a3["id"])
+			break
+	if anim_nid < 0:
+		_smoke_fail("进场过场：起点居然没有没走过的邻居（无法核验）")
+		return
+	var anim_cell_d: Dictionary = cells[anim_nid]
+	var cur_before2 := RunState.current_node_id
+	var choco_before2 := RunState.chocolate
+	scene._enter_node(anim_cell_d, true)
+	if scene._anim_cell.is_empty() or int(scene._anim_cell["id"]) != anim_nid:
+		_smoke_fail("进场过场：走进没去过的房间没有起过场")
+		return
+	if RunState.current_node_id != cur_before2 or RunState.chocolate != choco_before2:
+		_smoke_fail("进场过场：过场还没播完就改了 RunState（应该等播完才 advance）")
+		return
+	if scene._enter_label(anim_cell_d) \
+			!= str(scene.ENTER_LABELS[RogueMap.display_type(anim_cell_d)]):
+		_smoke_fail("进场过场：文字映射与 display_type 不同源")
+		return
+	scene._anim_cell = {}      # 复原：别影响后面的用例
 	# 视野规则的前提：走过的房间必须至少有一个门（不然玩家会被困死）
 	for c: Dictionary in cells:
 		if RunState.cleared_ids.has(int(c["id"])) and (c["doors"] as Array).is_empty():
