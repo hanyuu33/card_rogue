@@ -27,6 +27,16 @@ const SCROLL_TOP_MARGIN := 78.0      # 顶部让开标题栏
 const SCROLL_BOT_MARGIN := 16.0      # 底部留白
 const DRAG_THRESHOLD := 6.0          # 按下后移动超过这个距离才算「拖动」而非点击
 
+# R126：地图滚动的提示 —— **不再画滚动条**，改用半透明**双箭头**（只给新玩家看）。
+const HINT_W := 24.0        # 单枚箭头的半宽
+const HINT_H := 9.0         # 单枚箭头的高度（尖点到两端）
+const HINT_GAP := 16.0      # 两枚箭头之间的纵向间距
+## ⚠️ 位置要落在**没有节点的空白边带**里：上方那条在标题栏下沿、内容顶边之上；
+## 下方那条贴住窗口底边（首版把箭头放在内容区里，正好压在顶上那排节点上）。
+const HINT_TOP_Y := 72.0    # 上箭头第一枚的尖点 y
+const HINT_BOT_Y := 694.0   # 下箭头第一枚的尖点 y
+const HINT_LINE := 3.0      # 折线粗细
+
 const COL_LINE := Color(0.70, 0.81, 1.00, 0.52)   # 未走过的连线（芯·亮蓝白，不用灰）
 const COL_LINE_DONE := Color("e6c86a")            # 已走过的连线（金）
 const COL_LINE_NEXT := Color("a8d8ff")            # 当前可走的连线（亮青白）
@@ -59,7 +69,7 @@ var _drag_press_pos := Vector2.ZERO   # 按下位置
 var _drag_press_scroll := 0.0        # 按下时的 scroll
 var _press_active := false           # 左键当前还按着
 var _dragging := false               # 本次按下是否已越过阈值（越过后松手不触发点击）
-var _scrollbar := Rect2()# 右侧滚动条（绘制 + 命中拖动）
+var _show_scroll_hint := false   # R126：画不画「上下可滚」的双箭头（只在**新玩家第一局**）
 var _boss_name := ""      # 本层 Boss 关卡名（Boss 节点上方名牌；懒加载一次）
 
 
@@ -69,6 +79,10 @@ func _ready() -> void:
 	sfx = Sfx.new()
 	add_child(sfx)
 	_records = RunState.load_records()
+	# R126：地图滚动提示（半透明双箭头）**只给新玩家** —— 判据 = 还没有任何战斗记录。
+	# 老兵早就知道地图能上下滚，再弹箭头就是打扰。复用上面刚读到的 _records，不额外读盘。
+	# `-- --newplayer` 可强制打开，供截图核验（本机有战绩时默认看不到）。
+	_show_scroll_hint = _records.is_empty() or "--newplayer" in OS.get_cmdline_user_args()
 	if not RunState.run_active or RunState.map_columns.is_empty():
 		# 直接打开地图（调试）：临时开一局（第一层），避免空场景
 		RunState.start_run(RogueMap.generate(_rng(), GameLayers.LAYER_DEFAULT),
@@ -97,6 +111,10 @@ func _ready() -> void:
 		return
 	# 纵向视野初始化：先夹一次范围，再把视野对准玩家当前所在层
 	_scroll_to_current()
+	# -- --scrollmid：把视野放到地图正中（截图核验「上下都有内容」用；
+	#    默认对准当前层时只会出现其中一个方向的双箭头）。
+	if "--scrollmid" in OS.get_cmdline_user_args():
+		set_scroll_ratio(0.5)
 	var quit_btn := Button.new()
 	quit_btn.text = "回到标题"
 	quit_btn.position = Vector2(14, 14)
@@ -288,10 +306,6 @@ func _gui_input(event: InputEvent) -> void:
 			_scroll_y = _drag_press_scroll + (event.position.y - _drag_press_pos.y)
 			_clamp_scroll()
 			queue_redraw()
-			return
-		# 拖动滚动条
-		if _scrollbar.size.y > 0.0 and _scrollbar.has_point(event.position):
-			_scroll_by_scrollbar(event.position.y)
 			return
 		if _deck_visible:
 			_hover_deck = _deck_row_at(event.position)
@@ -525,7 +539,7 @@ func _draw() -> void:
 	_draw_title()
 	_draw_edges()
 	_draw_nodes()
-	_draw_scrollbar()
+	_draw_scroll_hints()
 	_draw_sidebar()
 	_draw_relics()
 	if _relics_visible:
@@ -536,33 +550,38 @@ func _draw() -> void:
 		_draw_records_panel()
 
 
-func _draw_scrollbar() -> void:
-	## 右侧纵向滚动条：地图比视口高时给出「还有内容」的可视提示，
-	## 同时可点可拖。滑块位置反映 _scroll_y 在 [_scroll_min, _scroll_max] 里的比例。
-	var track_top := SCROLL_TOP_MARGIN
-	var track_h := VIEW_H - SCROLL_TOP_MARGIN - SCROLL_BOT_MARGIN
-	if track_h <= 0.0:
-		_scrollbar = Rect2()
+func _draw_scroll_hints() -> void:
+	## R126：**不再画滚动条**，改用「半透明双上箭头 / 双下箭头」提示上下还有内容。
+	## 只在**新玩家第一局**出现（判据见 _ready：还没有任何战斗记录），老兵不再被打扰。
+	## 方向：`_scroll_y` 越大 = 看得越靠上（Boss 方向）→
+	##   还能往上（未到 `_scroll_max`）画双上箭头；还能往下画双下箭头。
+	if not _show_scroll_hint:
 		return
-	var b := _map_content_bounds()
-	var content_h := b.y - b.x
-	var view_h := VIEW_H - SCROLL_TOP_MARGIN - SCROLL_BOT_MARGIN
-	# 内容不够高（横屏放大 / 节点少）→ 不需要滚动条
-	if content_h <= view_h or _scroll_max <= _scroll_min + 0.5:
-		_scrollbar = Rect2()
-		return
-	var track := Rect2(size.x - 14.0, track_top, 6.0, track_h)
-	draw_rect(track, Color(1, 1, 1, 0.06), true)
-	var knob_h: float = maxf(28.0, track_h * (view_h / content_h))
-	var t: float = clampf((_scroll_y - _scroll_min) / maxf(1.0, _scroll_max - _scroll_min),
-			0.0, 1.0)
-	# t=0（看得最靠下/起点侧）时滑块在底部
-	var knob_y: float = track.position.y + (track_h - knob_h) * (1.0 - t)
-	draw_rect(Rect2(track.position.x, knob_y, track.size.x, knob_h),
-			Color(0.85, 0.87, 0.93, 0.42), true)
-	# 整个轨道都可拖（命中区比视觉宽，好点）
-	_scrollbar = Rect2(track.position.x - 5.0, track.position.y,
-			track.size.x + 10.0, track_h)
+	if _scroll_max <= _scroll_min + 0.5:
+		return                          # 内容装得下 → 没有任何可滚方向，什么都不画
+	# 呼吸（0.72~1.0）：比静态更容易被看见，又不至于抢戏（地图本来就一直在重绘）
+	var k := 0.72 + 0.28 * (0.5 + 0.5 * sin(_t * 2.6))
+	if _scroll_y < _scroll_max - 0.5:
+		_draw_double_chevron(Vector2(SLOT_CX, HINT_TOP_Y), -1.0, k)
+	if _scroll_y > _scroll_min + 0.5:
+		_draw_double_chevron(Vector2(SLOT_CX, HINT_BOT_Y), 1.0, k)
+
+
+func _draw_double_chevron(base: Vector2, dir: float, k: float) -> void:
+	## 两枚同向箭头叠放（dir = -1 朝上 / +1 朝下）；base = 第一枚（离内容更近那枚）的尖点。
+	## 透明度由 UiTheme 的令牌乘呼吸系数得来 —— 不是新颜色，只是把令牌调暗。
+	for i in 2:
+		var col := UiTheme.HINT_CHEVRON if i == 0 else UiTheme.HINT_CHEVRON_DIM
+		var y := base.y + dir * float(i) * HINT_GAP
+		var pts := PackedVector2Array([
+				Vector2(base.x - HINT_W, y - dir * HINT_H),
+				Vector2(base.x, y),
+				Vector2(base.x + HINT_W, y - dir * HINT_H)])
+		# 先垫一道更粗的暗色（描边）→ 与亮节点重叠时也读得清
+		var halo := UiTheme.HINT_CHEVRON_HALO
+		draw_polyline(pts, Color(halo.r, halo.g, halo.b, halo.a * k),
+				HINT_LINE + 2.5, true)
+		draw_polyline(pts, Color(col.r, col.g, col.b, col.a * k), HINT_LINE, true)
 
 
 func _draw_background() -> void:
@@ -1015,19 +1034,6 @@ func _draw_records_panel() -> void:
 		draw_string(_font, inner.position + Vector2(0, 30),
 				"还没有战斗记录——去打第一场吧！", HORIZONTAL_ALIGNMENT_LEFT,
 				400, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
-
-
-func _scroll_by_scrollbar(pos_y: float) -> void:
-	## 拖右侧滚动条：把点击位置映射到 scroll 区间。
-	var track_top := SCROLL_TOP_MARGIN
-	var track_h := VIEW_H - SCROLL_TOP_MARGIN - SCROLL_BOT_MARGIN
-	if track_h <= 0.0:
-		return
-	var t := clampf((pos_y - track_top) / track_h, 0.0, 1.0)
-	# 滚动条上端对应「看得最靠上」= _scroll_max
-	_scroll_y = lerpf(_scroll_max, _scroll_min, t)
-	_clamp_scroll()
-	queue_redraw()
 
 
 func set_scroll_ratio(t: float) -> void:

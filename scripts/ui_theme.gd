@@ -321,6 +321,15 @@ const STATE_TAUNT := Color("ff8f00")  ## 嘲讽
 const STATE_FROZEN := Color("6ec6ff") ## 冰冻
 const STATE_SLEEP := Color("b07bff")  ## 沉睡
 
+# ── 滚动提示（R126）──
+## 地图「还能上下滚」的半透明双箭头。第一枚亮、第二枚更淡 → 形成层次，
+## 读起来就是「双箭头」（= 还有更多），而不是两个孤立的三角。
+## ⚠️ 地图上会与节点重叠（地图节点是亮橙/亮绿）→ 箭头的**下沿再垫一道更粗的暗色折线**
+## （与卡面数字描边同一手法），否则浅色箭头会被亮节点淹没。
+const HINT_CHEVRON := Color(1, 1, 1, 0.52)      ## 第一枚（离内容更近的那枚）
+const HINT_CHEVRON_DIM := Color(1, 1, 1, 0.26)  ## 第二枚（更淡）
+const HINT_CHEVRON_HALO := Color(0.05, 0.06, 0.09, 0.55)  ## 垫底的暗色描边
+
 
 static func kind_color(kind: String) -> Color:
 	## 卡种 → 颜色。**唯一口**：卡面与悬停面板都读这里，避免两处各写一份字典。
