@@ -246,8 +246,29 @@ func _init() -> void:
 	check(ms_e.state.hp_opponent == 30,
 			"流星雨：场上还有敌人时，没有一颗落到敌方 HP")
 	ms_e.state.hand.append(CardData.from_dict(ms_card.to_dict()))
-	check(ms_e.cost_of(ms_e.state.hand[0]) == 0 and not ms_e.can_pay_card(ms_e.state.hand[0]),
-			"流星雨：0 能量时费用 0 且不可使用（免得空放浪费）")
+	# ---- R124：X 费卡 0 能量也能使用（X 记 0）----
+	# 口径来自用户：「费用为 X 的牌即使当前没有费用也能使用，那个场合 X 当作 0 计算」。
+	check(ms_e.cost_of(ms_e.state.hand[0]) == 0 and ms_e.can_pay_card(ms_e.state.hand[0]),
+			"R124 流星雨：0 能量时费用 0 但**可以使用**（X 记 0）")
+	check(ms_e.can_pay_card(CardData.from_dict(ms_card.to_dict()), GameEngine.SIDE_OPPONENT),
+			"R124 流星雨：敌方 0 能量同样可施放（同一口径）")
+	check(not ms_e.can_pay_card(repo.get_card(9002)),
+			"R124：这条只对 X 费卡生效 —— 普通 2 费牌在 0 能量时仍不可用")
+	var r124_hp := ms_e.state.hp_opponent
+	var r124_units := ms_pa.health + ms_pb.health + ms_pc.health
+	var r124_disc := ms_e.state.discard.size()
+	var r124_detail := ms_e.use_spell(0)
+	check(ms_pa.health + ms_pb.health + ms_pc.health == r124_units
+			and ms_e.state.hp_opponent == r124_hp,
+			"R124 流星雨：0 能量施放 → 单位与 HP 都不掉血（%s）" % r124_detail)
+	check(ms_e.state.hand.is_empty() and ms_e.state.discard.size() == r124_disc + 1,
+			"R124 流星雨：0 能量施放后照常离手进弃牌区（弃牌 %d 张）" % ms_e.state.discard.size())
+	var r124_e := _new_engine([], 30, 30)
+	r124_e.state.hand.clear()
+	r124_e.state.hand.append(CardData.from_dict(ms_card.to_dict()))
+	r124_e.state.energy = 0
+	check(r124_e.can_play_from_hand(0),
+			"R124 流星雨：0 能量时 can_play_from_hand 也放行（界面/AI 共用这个口）")
 	# 场上没有敌方单位 → 每一颗直击敌方 HP
 	var ms_empty := _new_engine([], 30, 30)
 	ms_empty.state.hand.clear()

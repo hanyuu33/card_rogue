@@ -258,6 +258,8 @@ const VOID_LORD_DMG_DISCOUNT:= 2
 # X 费卡：施放瞬间 X = 该方剩余的全部能量，一次性全部消耗（类杀戮尖塔）。
 # 对随机敌人造成 METEOR_SHOWER_DMG 点伤害、重复 X 次，每次独立随机选目标；
 # 费用挂 cost_of（显示=判定=实扣），X 在 use_spell / remote_spell 里**扣费之前**抓取。
+# R124：**0 能量时也能使用**（此时 X 记 0）—— can_pay_card 对 X 费卡一律放行，
+#       不再是「0 能量打不出/不可点」；空放会照常把这张卡消耗掉（离手进弃牌区）。
 const METEOR_SHOWER_ID:= 9083
 const METEOR_SHOWER_DMG:= 9
 
@@ -1775,7 +1777,9 @@ func _autoplay_play(hand_index: int) -> bool:
 		return false
 	var card: CardData = state.hand[hand_index]
 	if card.x_cost:
-		# X 费卡（流星雨）：会一口气吃掉全部能量 → 自动出牌不碰它（留在手里）
+		# X 费卡（流星雨）：会一口气吃掉全部能量 → 自动出牌不碰它（留在手里）。
+		# ⚠️ R124 起它在 0 能量时也算「可打出」（X 记 0）→ 自动出牌**更**不该碰它，
+		#    否则等于白白丢掉一张手牌。
 		_log("鸭语耳环：%s 是 X 费卡，自动出牌跳过" % card.card_name)
 		return false
 	if card.is_spell():
@@ -2114,9 +2118,11 @@ func _fort_discount(card: CardData, side: String) -> int:
 
 func can_pay_card(card: CardData, side:= SIDE_SELF) -> bool:
 
-	# X 费卡：只要有 >=1 点能量就能打（X = 剩下的全部能量）；0 能量时不允许，免得空放浪费。
+	# X 费卡（流星雨 9083）：**任何时候都能打** —— 0 能量时 X 记 0（R124 用户口径：
+	# 「费用为 X 的牌即使当前没有费用也能使用，那个场合 X 当作 0 计算」）。
+	# ⚠️ 这里**不再**要求 energy >= 1：要不要空放由玩家自己决定，卡照常离手进弃牌区。
 	if card != null and card.x_cost:
-		return state.energy_of(side) >= 1
+		return true
 	return state.energy_of(side) >= cost_of(card, side)
 
 
@@ -2347,7 +2353,8 @@ func _meteor_shower(side: String, card: CardData) -> String:
 	## 命中带「法术免疫」的单位 → 那一颗被拦下（与龙息同一判据）。
 	var times:= maxi(0, _x_spell_value)
 	if times <= 0:
-		return "流星雨：没有能量，坠落 0 颗"
+		# R124：0 能量施放是**合法**的（X 记 0），不是出错 —— 文案据实描述即可。
+		return "流星雨：X = 0（没有能量），一颗流星都没落下"
 	var hit:= _spell_dmg(side, METEOR_SHOWER_DMG, card)
 	var foe:= SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
 	var total:= 0
@@ -5105,6 +5112,7 @@ func remote_play(card: CardData, cell: Vector2i) -> Placement:
 func remote_spell(card: CardData, target, side:= SIDE_OPPONENT) -> String:
 
 	if card != null and card.x_cost:
+		# R124：敌我同一口径 —— 0 能量也能施放，此时 X = 0（pay_energy(0) 分文不扣）。
 		_x_spell_value = maxi(0, state.energy_of(side))
 		state.pay_energy(state.energy_of(side), side)
 	else:

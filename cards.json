@@ -2054,7 +2054,7 @@
       "group": "player",
       "class": "森林精魄",
       "traits": [],
-      "effect_text": "对随机敌人造成 9 点伤害，重复 X 次，X 为你消耗的全部能量；每次的目标随机。",
+      "effect_text": "对随机敌人造成 9 点伤害，重复 X 次，X 为你消耗的全部能量；每次的目标随机。没有能量时也能使用（此时 X 为 0）。",
       "target_mode": "none",
       "x_cost": true,
       "color": "紫",

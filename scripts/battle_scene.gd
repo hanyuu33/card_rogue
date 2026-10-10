@@ -551,9 +551,11 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--meteor" in args and engine != null:
-		# 演示（2026-10-01）：流星雨（9083）—— X 费：消耗全部能量，对随机敌人打 9 伤 X 次。
+		# 演示（2026-10-01；R124 改）：流星雨（9083）—— X 费：消耗全部能量，打 9 伤 X 次。
 		# 先用 5 能量打一次（5 颗、每次随机选目标）→ 看陨石爆点/飘字；
-		# 再补一张进手牌并悬停 → 看卡面费用圆的「X」与左栏「费用 X（消耗全部能量）」。
+		# 再把能量清零、补一张进手牌并悬停。R124 的核验点有两个：
+		#   ① 0 能量时这张卡**仍然可点**（不再提示「能量不足」）；
+		#   ② 左栏写「费用 X（消耗全部能量）」、卡面费用圆是「X」。
 		engine.state.hand.clear()
 		engine.state.hand.append(repo.get_card(GameEngine.METEOR_SHOWER_ID))
 		engine.state.energy = 5
@@ -564,10 +566,10 @@ func _ready() -> void:
 		engine.state.place(CardData.from_dict(repo.get_card(1053).to_dict()),
 				Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
 		engine.use_spell(0)
-		engine.state.energy = 3
+		engine.state.energy = 0
 		engine.state.hand.append(repo.get_card(GameEngine.METEOR_SHOWER_ID))
 		_demo_hover_idx = 0
-		status_text = "流星雨：X 费（消耗全部能量）→ 随机敌人挨 9 点伤害，重复 X 次"
+		status_text = "R124：流星雨 0 能量也能用（X 记 0）—— 点它只会空放，不砸任何流星"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--fire" in args and engine != null:
@@ -2280,8 +2282,13 @@ func _on_left_click(pos: Vector2) -> void:
 			elif card.is_spell() and card.needs_target():
 				status_text = "%s（技能）：再点一次使用，需点击一个目标" % card.card_name
 			elif card.is_spell() and card.x_cost:
-				status_text = "%s（技能）：再点一次使用 —— 消耗当前全部能量 %d 点，随机砸 %d 次" % [
-						card.card_name, engine.energy_of(), engine.energy_of()]
+				# R124：0 能量也能用（X 记 0）—— 这时别再说「消耗 0 点」，
+				# 直接讲清「这一下砸不出流星」，玩家自己决定要不要空放。
+				if engine.energy_of() > 0:
+					status_text = "%s（技能）：再点一次使用 —— 消耗当前全部能量 %d 点，随机砸 %d 次" % [
+							card.card_name, engine.energy_of(), engine.energy_of()]
+				else:
+					status_text = "%s（技能）：再点一次使用 —— 当前没有能量，X 记 0（砸不出流星）" % card.card_name
 			elif card.is_spell():
 				status_text = "%s（技能）：再点一次使用" % card.card_name
 			elif engine.discard_cost_of(card) > 0:
