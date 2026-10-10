@@ -5003,12 +5003,10 @@ func _draw() -> void:
 	_draw_wake_rings()
 	_draw_grid_mask()
 	_draw_grid_frame()
-	if engine.state.level_name != "":
-		_draw_string_center(_font, UiTheme.FS_MICRO, "关卡：%s" % engine.state.level_name,
-				Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 20), UiTheme.INK_600)
 	_draw_floaters()
 	if shook:
 		draw_set_transform(Vector2.ZERO)  # 结束震动，后续 UI 不抖
+	_draw_level_plate()
 	_draw_hand()
 	_draw_drag()
 	_draw_info_panel()
@@ -5105,6 +5103,17 @@ func _draw_card_back(rect: Rect2, tags := "") -> void:
 	draw_rect(rect, Color("20283f"), false, 1.5)
 
 
+## R138：背景换成**当层地图底图**（R133）之后，直接画在图上的文字必须自带描边才看得清。
+## 两个文字助手在**没有显式指定**描边时（`outline <= 0`）自动补一圈近黑的暖色描边，
+## 宽度随字号自适应（`_auto_outline`）—— 亮底（信息栏 / 各类面板）上几乎看不出，
+## 底图上却能压住杂色。徽标那套**显式**白描边（传 `outline > 0`）完全不受影响。
+const TEXT_OUTLINE_COL := Color(0.05, 0.04, 0.03, 0.85)
+
+
+func _auto_outline(px: int) -> int:
+	return clampi(int(round(px / 4.0)), 2, 5)
+
+
 func _draw_string_center(font: Font, px: int, text: String, center: Vector2, col: Color,
 		outline := 0, outline_col := UiTheme.SURFACE) -> void:
 	if px < 7:
@@ -5113,6 +5122,9 @@ func _draw_string_center(font: Font, px: int, text: String, center: Vector2, col
 	# 因此这里手动按文本宽度计算偏移，使文字真正以 center 为中心居中。
 	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 	var pos := Vector2(center.x - w * 0.5, center.y + px * 0.36)
+	if outline <= 0:
+		outline = _auto_outline(px)
+		outline_col = TEXT_OUTLINE_COL
 	if outline > 0:
 		draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px,
 				outline, outline_col)
@@ -5123,6 +5135,9 @@ func _draw_string_nw(font: Font, px: int, text: String, pos: Vector2, col: Color
 		outline := 0, outline_col := UiTheme.SURFACE) -> void:
 	if px < 7:
 		px = 7
+	if outline <= 0:
+		outline = _auto_outline(px)
+		outline_col = TEXT_OUTLINE_COL
 	if outline > 0:
 		draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px,
 				outline, outline_col)
@@ -7165,10 +7180,11 @@ func _draw_floaters() -> void:
 		var col: Color = f.col
 		# 伤害数字更大更醒目；文字类（法术/击破）保持原字号
 		var size := int(f.get("size", 20 if str(f.text).begins_with("-") else 15))
-		# 白色描边：浅色棋盘上飘字才够醒目（粗细随字号走；"outline": 0 可单条关掉）
+		# R138：描边默认改成**暗色** —— 棋盘底下现在是地图底图，白描边在亮色地块上反而糊。
+		# 粗细随字号走；单条可用 "outline": 0 / "outline_col" 覆盖（少数条目仍传白）。
 		var ow := int(f.get("outline", clampi(int(round(size * 0.26)), 2, 5)))
 		col.a = alpha
-		var oc: Color = f.get("outline_col", UiTheme.SURFACE)
+		var oc: Color = f.get("outline_col", TEXT_OUTLINE_COL)
 		oc.a = alpha
 		_draw_string_center(_font_bold, size, str(f.text), pos, col, ow, oc)
 
@@ -7300,6 +7316,31 @@ func _draw_grid_mask() -> void:
 				_grid_scroll > 0.5,        # 还能往上（回到第 1 行）
 				_grid_scroll < sm - 0.5,   # 还能往下（看第 5、6 行）
 				ScrollHint.breath())
+
+
+func _draw_level_plate() -> void:
+	## R138：关卡名从「棋盘下沿 10px 灰字」挪到**右上角**的独立铭牌 ——
+	## 深底 + 金边 + 更大字号，压在当层地图底图上也一眼可见。
+	## ⚠️ 新手指引条（`_tut_bar`，横跨 y 36~82）会盖住这里 → 它开着时不画，少一层重复文字。
+	if engine == null or engine.state == null or engine.state.level_name == "":
+		return
+	if _tut_bar != null and _tut_bar.visible:
+		return
+	var txt := "关卡：%s" % engine.state.level_name
+	var px := UiTheme.FS_LABEL
+	var tw := _font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	var pad_x := 18.0
+	var ph := 30.0
+	var rect := Rect2(WINDOW_W - 18.0 - (tw + pad_x * 2.0), 40.0, tw + pad_x * 2.0, ph)
+	draw_rect(rect.grow(2.0), Color(0, 0, 0, 0.22), true)          # 投影：把铭牌从底图上托出来
+	draw_rect(rect, Color(0.09, 0.075, 0.05, 0.78), true)          # 深色铭牌底
+	draw_rect(rect, UiTheme.ACCENT_GOLD, false, 1.5)               # 金边
+	var dm := rect.position + Vector2(pad_x * 0.42, ph * 0.5)       # 左侧小菱形（与角花呼应）
+	draw_colored_polygon(PackedVector2Array([dm + Vector2(0, -5), dm + Vector2(5, 0),
+			dm + Vector2(0, 5), dm + Vector2(-5, 0)]), UiTheme.ACCENT_GOLD)
+	_draw_string_center(_font_bold, px, txt,
+			rect.position + Vector2(rect.size.x / 2.0 + 6.0, ph * 0.5),
+			Color("f6e6bc"), 3, Color(0.04, 0.03, 0.02, 0.92))
 
 
 func _draw_grid_frame() -> void:

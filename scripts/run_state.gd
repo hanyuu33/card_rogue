@@ -455,11 +455,22 @@ static func roll_reward_relic() -> int:
 	return pool[run_rng.randi() % pool.size()]
 
 
+static func _drop_settled_batch() -> void:
+	## R138：开始**新一批**奖励之前，把上一批已经处理过的条目扔掉 ——
+	## 悬浮窗列表只显示「当前这一批」（用户反馈：过去的奖励还留在列表里）。
+	## ⚠️ 只在**待领为 0**（上一批全部处理完）时才清：同一批内「领了一个 → 另一个置灰」
+	##   是 R119 的设计（置灰反馈），那一批没处理完就不许动。
+	if pending_reward_count() > 0:
+		return
+	pending_rewards.clear()
+
+
 static func queue_relic_reward(id: int) -> void:
 	## 一件道具奖励入队（精英 / Boss 掉落、宝箱层开箱）。
 	## **入队不等于发放** —— 玩家在奖励悬浮窗里看过、点「领取」才真进道具栏。
 	if id <= 0:
 		return
+	_drop_settled_batch()
 	pending_rewards.append({"kind": "relic", "id": id, "state": REWARD_PENDING})
 
 
@@ -476,6 +487,7 @@ static func queue_card_reward(reward_type: String = "normal",
 		ids.append(c.id)
 	if ids.is_empty():
 		return -1
+	_drop_settled_batch()
 	pending_rewards.append({"kind": "cards", "type": reward_type,
 			"kinds": kinds.duplicate(), "candidates": ids, "picked": -1,
 			"state": REWARD_PENDING})

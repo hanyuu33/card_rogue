@@ -3057,6 +3057,25 @@ func _scout_aura_bonus(victim: Placement, victim_cell: Vector2i) -> int:
 	return bonus
 
 
+func _apply_scout_aura(p: Placement, amount: int) -> int:
+	## R138：「侦察塔」光环易伤的**统一施加口** —— 返回加成后的伤害。
+	## ⚠️ 单位扣血有**两个落地口**（见 `_unit_damage_taken` 的注释）：`_hit_unit`
+	##   （普通攻击 / 多格效果 / 陷阱 / 亡语…）与 `_op_deal_damage`（**单目标技能卡**那条）。
+	##   原来光环只挂在 `_hit_unit` → **技能卡打上去时被绕过**（用户实测反馈）。
+	##   现在两边都调本函数，口径一致。
+	if p == null or p.card == null:
+		return amount
+	var aura:= _scout_aura_bonus(p, _cell_of(p))
+	if aura <= 0:
+		return amount
+	_log("侦察塔光环：%s 受到的伤害 +%d（%d → %d）" % [
+			p.card.card_name, aura, amount, amount + aura])
+	action.emit("scout_aura", {"cell": _cell_of(p), "card": p.card,
+			"bonus": aura, "base": amount, "amount": amount + aura,
+			"side": p.owner})
+	return amount + aura
+
+
 func _on_unit_upgraded(p: Placement) -> void :
 	## R101：「每次获得改造时」触发（榴弹击手/重甲战车/机器鸟）。
 	## 在**所有**给这张单位施加改造的入口末尾调用（升级/自我修复/加厚装甲/
@@ -6199,14 +6218,7 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	# ⚠️ 只在**最外层**调用加（`allow_redirect`）—— 护盾生成器转发时传的是同一笔伤害，
 	#    在那儿再加一次会**双算**。
 	if allow_redirect:
-		var aura:= _scout_aura_bonus(p, _cell_of(p))
-		if aura > 0:
-			_log("侦察塔光环：%s 受到的伤害 +%d（%d → %d）" % [
-					p.card.card_name, aura, amount, amount + aura])
-			action.emit("scout_aura", {"cell": _cell_of(p), "card": p.card,
-					"bonus": aura, "base": amount, "amount": amount + aura,
-					"side": p.owner})
-			amount += aura
+		amount = _apply_scout_aura(p, amount)
 
 
 	if amount <= 0:
@@ -6793,7 +6805,9 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 		if p.card.traits.has(SPELL_IMMUNE_TRAIT):
 			_log("%s 免疫法术，未受到伤害" % p.card.card_name)
 			return "%s 免疫法术" % p.card.card_name
-		var amount2:= _unit_damage_taken(p, amount)
+		# R138：技能卡伤害也要吃「侦察塔」光环易伤 —— 与 `_hit_unit` 同一条口径
+		# （原先只挂在 `_hit_unit`，单目标技能走这里 → 光环被绕过）。
+		var amount2:= _unit_damage_taken(p, _apply_scout_aura(p, amount))
 		p.health -= amount2
 		if p.owner == SIDE_OPPONENT and amount2 > 0:
 			_mark_spell_enemy_hit()

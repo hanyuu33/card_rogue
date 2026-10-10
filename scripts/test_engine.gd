@@ -10706,6 +10706,23 @@ func _init() -> void:
 			and r120_e7._scout_aura_bonus(r120_enemy, Vector2i(2, 1)) == 3,
 		"R120 侦察塔光环：只加在**敌人**身上（己方 +0 / 敌方 +%d，3 层）"
 			% r120_e7._scout_aura_bonus(r120_enemy, Vector2i(2, 1)))
+	# ⑧ R138：光环易伤必须对**技能卡**也生效 —— 单目标技能走 `_op_deal_damage`，
+	#    原来光环只挂在 `_hit_unit` → 技能卡打上去被绕过（用户实测反馈）。
+	var r138_e := _new_engine([], 30, 30, -1, false)
+	r138_e.start_game()
+	var r138_t: Placement = r138_e.state.place(
+			CardData.from_dict(r120_repo.get_card(GameEngine.SCOUT_TOWER_ID).to_dict()),
+			Vector2i(2, 0), GameEngine.SIDE_SELF)
+	r138_t.upgrade_stacks = 2
+	var r138_foe: Placement = r138_e.state.place(
+			_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
+	r138_e.state.energy = 9
+	r138_e.state.hand = [CardData.from_dict(
+			r120_repo.get_card(GameEngine.GOUGE_ID).to_dict())]
+	r138_e.use_spell(0, Vector2i(2, 1))
+	check(r138_foe.health == 55 - GameEngine.GOUGE_DMG - 2,
+		"R138 侦察塔光环对**技能卡**生效：连刺 4 + 光环 2 = 6 伤（55 → %d）" % r138_foe.health)
 
 	# ================================================================
 	# R87：能量屏障 8033 / 堡垒 8034 / 自我修复 8035（都是「机械之心」= 机械师）
@@ -13817,6 +13834,21 @@ func _init() -> void:
 	check(RunState.pending_rewards.is_empty() and RunState.pending_reward_count() == 0
 			and not RunState.has_pending_rewards(),
 		"R119 clear_pending_rewards：队列清空")
+
+	# ---- R138：奖励列表只显示**当前这一批**（过去的奖励不再显示）----
+	RunState.pending_rewards = []
+	RunState.relics = []
+	RunState.queue_relic_reward(6005)
+	RunState.claim_pending_reward(0)          # 第一批处理完（state = claimed）
+	check(RunState.pending_rewards.size() == 1 and RunState.pending_reward_count() == 0,
+		"R138 同批内：处理完的条目仍留在列表里（置灰）→ 待领归 0（实 %d 条）"
+			% RunState.pending_rewards.size())
+	RunState.queue_relic_reward(6006)         # 第二批开始
+	check(RunState.pending_rewards.size() == 1
+			and int((RunState.pending_rewards[0] as Dictionary).get("id", 0)) == 6006,
+		"R138 新一批入队 → 上一批已处理条目被清掉，列表只剩当前奖励（实 %d 条）"
+			% RunState.pending_rewards.size())
+	RunState.pending_rewards = []
 
 	# 还原（后面的断言与收尾要看到原来的状态）
 	RunState.pending_rewards = []
