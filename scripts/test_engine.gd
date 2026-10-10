@@ -2296,7 +2296,7 @@ func _init() -> void:
 	check(sp_e.state.self_next_effect_reduction == 2, "小精灵：上场后挂上 -2 的效果卡减费")
 	check(sp_e.cost_of(repo.get_card(9002)) == 0,
 			"小精灵：下一张效果卡费用 -2（迅捷 2 → 0）")
-	check(sp_e.cost_of(repo.get_card(9016)) == 4, "小精灵：盟友不吃这个减费（骑兵仍 4 费）")
+	check(sp_e.cost_of(repo.get_card(9016)) == 4, "小精灵：盟友不吃这个减费（犀牛仍 4 费）")
 	sp_e.state.hand = [repo.get_card(9002)]
 	sp_e.state.energy = 9
 	sp_e.use_effect(0)
@@ -2436,12 +2436,12 @@ func _init() -> void:
 	eng_dove._begin_turn(GameEngine.SIDE_SELF)
 	check(eng_dove.state.self_next_ally_reduction == 0, "斑鸠：回合开始清空减免")
 
-	# 新卡数值：骑兵 / 鸭子弓手 / 金属龙
+	# 新卡数值：犀牛（原「骑兵」）/ 鸭子弓手 / 金属龙
 	var nc_rider := repo.get_card(9016)
-	check(nc_rider.card_name == "骑兵" and nc_rider.cost == 4 and nc_rider.power == 6
+	check(nc_rider.card_name == "犀牛" and nc_rider.cost == 4 and nc_rider.power == 6
 			and nc_rider.health == 12 and nc_rider.attack_range == 1
 			and nc_rider.move_speed == 2 and nc_rider.rarity == 0,
-			"骑兵：普通 4 费 6/12 程1 速2")
+			"犀牛（R125 由「骑兵」改名）：普通 4 费 6/12 程1 速2")
 	var nc_archer := repo.get_card(9017)
 	check(nc_archer.card_name == "鸭子弓手" and nc_archer.power == 3
 			and nc_archer.health == 18 and nc_archer.attack_range == 2
@@ -5513,7 +5513,7 @@ func _init() -> void:
 	var eng_pc4 := _new_engine(wm_deck, 20, 20, -1, false)
 	eng_pc4.self_relics = [6014]
 	eng_pc4.start_game()
-	eng_pc4.state.place(_card(9016, "骑兵", "盟友", 4, 6, 12, 1, 2),
+	eng_pc4.state.place(_card(9016, "犀牛", "盟友", 4, 6, 12, 1, 2),
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
 	eng_pc4.state.hp_self = 10
 	eng_pc4.move(Vector2i(4, 1), Vector2i(2, 1))
@@ -5823,7 +5823,7 @@ func _init() -> void:
 	check(hv_foe.size() < hv_plain.size(),
 			"重鸭：敌方速2 单位可达格 2 → 1（%d < 无道具时 %d）"
 			% [hv_foe.size(), hv_plain.size()])
-	eng_hv.state.place(_card(9016, "骑兵", "盟友", 4, 6, 12, 1, 2),
+	eng_hv.state.place(_card(9016, "犀牛", "盟友", 4, 6, 12, 1, 2),
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
 	check(eng_hv._reachable(Vector2i(4, 1), GameEngine.SIDE_SELF).size() > 4,
 			"重鸭：只限制敌方 —— 我方速2 单位照样能走 2 格")
@@ -6023,7 +6023,7 @@ func _init() -> void:
 	var tf_ids: Array[int] = [8001, 8001, 8001, 8002, 8002, 8003, 9003, 9016, 9019]
 	RunState.deck_ids = tf_ids.duplicate()
 	check(RunState.deck_distinct_names(repo) == 6,
-			"卡组 9 张 = 6 种不同名（栅栏/攻击/农民/火焰箭/骑兵/箭塔）")
+			"卡组 9 张 = 6 种不同名（栅栏/攻击/农民/火焰箭/犀牛/箭塔）")
 	check(RunState.can_trade_five(repo), "卡组 ≥5 种不同名 → 这笔交易做得成")
 	var tf := RunState.trade_five_for_one(repo)
 	check(bool(tf.get("ok", false)) and int(tf.get("new_id", 0)) == 9023,
@@ -6065,7 +6065,7 @@ func _init() -> void:
 	# 同名不同 id 只算一种（骷髅兵 1053/1054/1055）
 	var tf_same: Array[int] = [1053, 1054, 1055, 8001, 8002, 8003, 9003, 9016]
 	RunState.deck_ids = tf_same.duplicate()
-	# 骷髅兵×3 同名（1053/1054/1055）+ 木栅栏/攻击/农民/火焰箭/骑兵 → 共 6 种
+	# 骷髅兵×3 同名（1053/1054/1055）+ 木栅栏/攻击/农民/火焰箭/犀牛 → 共 6 种
 	check(RunState.deck_distinct_names(repo) == 6,
 			"同名不同 id（骷髅兵×3）只算 1 种：8 张 = 6 种")
 	var tf_init: Array[int] = [8001, 8001, 8001, 8001, 8001, 8002, 8002, 8002, 8002,
@@ -6210,12 +6210,12 @@ func _init() -> void:
 	check(dr_treant.card_name == "树人" and dr_treant.traits.has("树人"),
 			"农民已改名为树人（%s / %s）" % [dr_treant.card_name, str(dr_treant.traits)])
 
-	# 熊（8004）：4 费初始卡组卡 3/12 程1 速1，带「回春」
+	# 熊（8004）：4 费初始卡组卡 3/14 程1 速1，带「回春」（R125：生命 12 → 14）
 	var dr_bear_card := repo.get_card(GameEngine.BEAR_ID)
 	check(dr_bear_card != null and dr_bear_card.cost == 4 and dr_bear_card.power == 3
-			and dr_bear_card.health == 12 and dr_bear_card.attack_range == 1
+			and dr_bear_card.health == 14 and dr_bear_card.attack_range == 1
 			and dr_bear_card.move_speed == 1 and dr_bear_card.rarity == 3,
-			"熊：4 费 3/12 程1 速1 初始卡组卡")
+			"熊：4 费 3/14 程1 速1 初始卡组卡（R125 生命 12 → 14）")
 	check(dr_bear_card.traits.has(GameEngine.BEAR_TRAIT) and dr_bear_card.card_class == "森林精魄",
 			"熊：带「回春」词条、角色森林精魄（%s）" % str(dr_bear_card.traits))
 	var dr_bear_in_pool := false
@@ -6247,8 +6247,8 @@ func _init() -> void:
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
 	dr_br_p3.health = 11
 	dr_br_e2.activate(Vector2i(4, 1))
-	check(dr_br_p3.health == 12,
-			"熊：回复不超过生命上限（11 + 6 → 12，实际 %d）" % dr_br_p3.health)
+	check(dr_br_p3.health == 14,
+			"熊：回复不超过生命上限（11 + 6 → 14，实际 %d）" % dr_br_p3.health)
 
 	# 荒野形态（6022，R60 重做）：每场战斗中第一次自己的 HP 被敌方**普通攻击**打中 →
 	# 这次伤害 -4（最少 1）+ 对攻击者反伤 4。旧的「打熊/打 HP 的敌人受 3 伤」已移除。
@@ -13751,6 +13751,65 @@ func _init() -> void:
 	RunState.deck_ids = r119_deck
 	RunState.pending_relic_drop = r119_drop
 	RunState.run_active = r119_active
+
+	# ---- R125：骑兵 9016 → 犀牛（受到伤害 -1，最低 1）+ 熊 8004 生命 12 → 14 ----
+	var r125_rhino := repo.get_card(9016)
+	check(r125_rhino != null and r125_rhino.card_name == "犀牛"
+			and r125_rhino.traits.has(GameEngine.RHINO_TRAIT)
+			and not r125_rhino.traits.has("骑兵")
+			and r125_rhino.cost == 4 and r125_rhino.power == 6 and r125_rhino.health == 12
+			and r125_rhino.attack_range == 1 and r125_rhino.move_speed == 2
+			and r125_rhino.rarity == 0 and r125_rhino.card_class == "森林精魄",
+			"R125 犀牛：4 费 6/12 程1 速2 森林精魄（词条由「骑兵」改为「犀牛」）")
+	check(r125_rhino.effect_text.contains("伤害") and r125_rhino.effect_text.contains("1"),
+			"R125 犀牛：卡面写明受到伤害 -1（%s）" % r125_rhino.effect_text)
+	var r125_named := 0
+	for r125_c: CardData in repo.all_cards():
+		if r125_c.card_name == "骑兵":
+			r125_named += 1
+	check(r125_named == 0, "R125：卡库里不再有叫「骑兵」的卡（%d）" % r125_named)
+
+	# ① 普通攻击（走 _hit_unit）：攻击力**从卡库读**，不手抄（第一次就是抄成 8，实际 5 攻）
+	var r125_atk: CardData = repo.get_card(1051)               # 亡灵领主（程1，够得着）
+	var r125_e := _new_engine([], 30, 30)
+	var r125_rh := r125_e.state.place(CardData.from_dict(repo.get_card(9016).to_dict()),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r125_e.state.place(CardData.from_dict(r125_atk.to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r125_e.attack(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	check(r125_rh.health == 12 - (r125_atk.power - 1),
+			"R125 犀牛：挨 %d 攻普通攻击 → 只掉 %d（剩余 %d）"
+			% [r125_atk.power, r125_atk.power - 1, r125_rh.health])
+
+	# ② 最低 1：2 攻打它仍掉 1（不会被减成 0）
+	var r125_e2 := _new_engine([], 30, 30)
+	var r125_rh2 := r125_e2.state.place(CardData.from_dict(repo.get_card(9016).to_dict()),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r125_e2.state.place(CardData.from_dict(repo.get_card(1053).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)      # 骷髅兵 2 攻
+	r125_e2.attack(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	check(r125_rh2.health == 11, "R125 犀牛：2 攻 → 仍掉 1（最低 1 点，剩余 %d）" % r125_rh2.health)
+
+	# ③ 单目标**技能**同样减（这条走的是另一个落地口 _op_deal_damage，不修就会被绕过）
+	var r125_e3 := _new_engine([], 30, 30)
+	var r125_foe_rh := r125_e3.state.place(CardData.from_dict(repo.get_card(9016).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r125_e3.state.hand.clear()
+	r125_e3.state.hand.append(CardData.from_dict(repo.get_card(9003).to_dict()))  # 火焰箭 17
+	r125_e3.state.energy = 9
+	var r125_e3_before := r125_foe_rh.health
+	r125_e3.use_spell(0, Vector2i(2, 1))
+	check(r125_e3_before - r125_foe_rh.health == 17 - 1,
+			"R125 犀牛：17 点技能伤害 → 只掉 16（实际掉 %d）"
+			% (r125_e3_before - r125_foe_rh.health))
+
+	# ④ 0 伤害仍为 0（减伤不能把 0 加成 1）
+	check(r125_e._unit_damage_taken(r125_rh, 0) == 0,
+			"R125 犀牛：0 点伤害仍是 0（减伤不会反过来加成）")
+
+	# ⑤ 熊：生命 14（数据从 cards.json 单一来源读）
+	var r125_bear := repo.get_card(GameEngine.BEAR_ID)
+	check(r125_bear.health == 14, "R125 熊：生命 12 → 14（实际 %d）" % r125_bear.health)
 
 	RunState.player_class = r91_saved_cls
 

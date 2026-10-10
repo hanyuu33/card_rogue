@@ -330,7 +330,7 @@
       "kind": "盟友",
       "cost": 4,
       "power": 3,
-      "health": 12,
+      "health": 14,
       "attack_range": 1,
       "move_speed": 1,
       "rarity": 3,
@@ -680,7 +680,7 @@
     },
     {
       "id": 9016,
-      "name": "骑兵",
+      "name": "犀牛",
       "kind": "盟友",
       "cost": 4,
       "power": 6,
@@ -691,9 +691,9 @@
       "group": "player",
       "class": "森林精魄",
       "traits": [
-        "骑兵"
+        "犀牛"
       ],
-      "effect_text": "",
+      "effect_text": "受到伤害减少 1 点，但至少仍要受到 1 点。",
       "target_mode": "none",
       "color": "白",
       "image": ""

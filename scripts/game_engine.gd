@@ -284,12 +284,21 @@ const CHARGE_SPELL_ID:= 9085
 # 「普通攻击」打中时（直击 HP 的那条路径，技能/效果伤害不算），这次伤害 -4（最少 1），
 # 并对攻击者造成 4 点伤害。用 state.wild_form_used 记「本场已触发」。
 # 触发点：_hp_damage_taken 走不动（它管所有 HP 伤害），所以单独在 attack_hp 里判。
+# R125：熊 生命 12 → 14（用户口径）。数值只写在 cards.json 上，此处不留副本。
 const BEAR_ID:= 8004
 const BEAR_TRAIT:= "回春"
 const BEAR_HEAL:= 6
 const WILD_FORM_RELIC_ID:= 6022
 const WILD_FORM_REDUCE:= 4        # 第一次受击减伤
 const WILD_FORM_RETALIATE:= 4     # 并对攻击者反伤
+
+# 犀牛（9016，R125 由「骑兵」改名）：**受到的伤害 -1，但每次至少仍受 1 点**。
+# 口径与「迅捷」9002（减 2 但至少 1）、荒野形态（maxi(1, raw - 4)）一致 ——
+# 因此 1 点伤害仍会掉 1 血，不会被减成完全免疫。
+# 判定走 `_unit_damage_taken()` 唯一口（见该函数注释：单位扣血有两个落地口，
+# 只挂一处就会被绕过）。词条「骑兵」在本卡改名后无任何消费方，已一并移除。
+const RHINO_TRAIT:= "犀牛"
+const RHINO_DAMAGE_REDUCE:= 1
 
 # ── 角色：暗影刺客（2026-10-01）──
 # 终结（9086，角色专属初始卡，0 费技能）：对一个目标造成 RAID_BASE_DMG + X 点伤害，
@@ -6140,6 +6149,25 @@ func _effect_damage_reduction() -> int:
 	return total
 
 
+func _unit_damage_taken(p: Placement, amount: int) -> int:
+	## 单位**受击前的减伤唯一口** —— 普通攻击 / 单目标技能 / 多格效果 / 陷阱 / 亡语 /
+	## 反伤，全都要经过这里，否则减伤会被绕过。
+	## ⚠️ 引擎里单位扣血有**两个落地口**：`_hit_unit`（普通攻击、多格、陷阱、亡语…）与
+	##   `_op_deal_damage`（**单目标技能**那条）。两边都必须调本函数 —— 此前
+	##   道具「护心」的 `_relic_damage_taken` 就是在这两处各写了一遍，正是收口的原因。
+	##   判定顺序：① 自身减伤（犀牛 9016，R125）→ ② 道具减伤（护心 6006，仅己方）。
+	## ⚠️ 只有 `amount > 0` 才减：否则 `maxi(1, 0 - 1)` 会把「0 伤害」**加成 1 点**。
+	var dmg:= amount
+	if p != null and p.card != null and dmg > 0 and p.card.traits.has(RHINO_TRAIT):
+		var before:= dmg
+		dmg = maxi(1, dmg - RHINO_DAMAGE_REDUCE)
+		if dmg != before:
+			_log("犀牛：受到的伤害 %d → %d" % [before, dmg])
+	if p != null and p.owner == SIDE_SELF:
+		dmg = _relic_damage_taken(dmg)
+	return dmg
+
+
 func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= true) -> int:
 	# 「侦察塔」（8032）光环易伤（R120）：攻击范围内的敌人，受到**任何来源**的伤害 +1/层。
 	# ⚠️ 必须放在 `amount <= 0` **之前**：0 攻的侦察塔自己攻击时基础伤害是 0，
@@ -6183,9 +6211,7 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 					"source": source, "side": p.owner})
 			_hit_unit(gen, amount, source, false)
 			return 0
-	var dmg:= amount
-	if p.owner == SIDE_SELF:
-		dmg = _relic_damage_taken(dmg)
+	var dmg:= _unit_damage_taken(p, amount)
 	p.health -= dmg
 	_log("%s 受到 %d 点%s伤害（剩余 %d）" % [p.card.card_name, dmg, source, p.health])
 	# 恶魔鸭 9116（R63）：受击反应挂在这里 = 所有伤害路径（普通攻击 / 技能 / 效果）的唯一口。
@@ -6744,9 +6770,7 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 		if p.card.traits.has(SPELL_IMMUNE_TRAIT):
 			_log("%s 免疫法术，未受到伤害" % p.card.card_name)
 			return "%s 免疫法术" % p.card.card_name
-		var amount2:= amount
-		if p.owner == SIDE_SELF:
-			amount2 = _relic_damage_taken(amount)
+		var amount2:= _unit_damage_taken(p, amount)
 		p.health -= amount2
 		if p.owner == SIDE_OPPONENT and amount2 > 0:
 			_mark_spell_enemy_hit()

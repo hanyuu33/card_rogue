@@ -608,7 +608,7 @@ func _ready() -> void:
 	if "--druid" in args and engine != null:
 		# 演示（2026-10-01）：角色「森林精魄」—— 熊（8004）上场 / 发动回春 / 荒野形态反伤。
 		# 亡灵领主（8/55）贴脸打熊 → 自己吃到「荒野形态」3 点（55→52）；
-		# 熊被压到 6 血后发动回春 → 6→12 并横置。
+		# 熊被压到 9 血后发动回春 → 9+6 被**生命上限**截到 **14**（R125 上限 12 → 14），横置。
 		RunState.player_class = PlayerClass.DRUID   # 左栏「角色：」也要跟着演示走
 		engine.self_relics = [GameEngine.WILD_FORM_RELIC_ID]
 		engine.state.hand.clear()
@@ -618,12 +618,34 @@ func _ready() -> void:
 		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
 				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 		engine.attack(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
-		dr_bear.health = 6
+		dr_bear.health = 9
 		engine.activate(Vector2i(3, 1))
 		engine.state.hand.append(repo.get_card(GameEngine.BEAR_ID))
 		_demo_hover_idx = 0
 		_hover_hand = 0
-		status_text = "森林精魄：熊发动回春 6→12 并横置；打它的敌人吃到「荒野形态」3 点反伤"
+		status_text = "森林精魄：熊发动回春 9+6 被上限截到 14 并横置；打它的敌人吃「荒野形态」3 点反伤"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--rhino" in args and engine != null:
+		# 演示（R125）：犀牛（9016，原「骑兵」）—— **受到的伤害 -1，最低 1 点**。
+		#   亡灵领主（程 1）贴脸打它：5 点伤害 → 只掉 4；同时把熊（生命 14）摆在场上，
+		#   一眼能看出新的生命上限。开着战斗记录，日志里能读到减伤那一行。
+		_log_visible = true
+		log_btn.text = "记录*"
+		engine.state.hand.clear()
+		engine.state.hand.append(CardData.from_dict(repo.get_card(9016).to_dict()))
+		engine.state.energy = 5
+		engine.state.place(CardData.from_dict(repo.get_card(9016).to_dict()),
+				Vector2i(3, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(repo.get_card(GameEngine.BEAR_ID).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
+				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+		engine.attack(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+		_demo_hover_idx = 0
+		_hover_hand = 0
+		_hover_card = engine.state.hand[0]
+		status_text = "R125：犀牛（原「骑兵」）受到伤害 -1（亡灵领主 5 攻 → 只掉 4）；右侧熊生命 14"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--rogue" in args and engine != null:

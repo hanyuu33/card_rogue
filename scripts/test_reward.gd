@@ -73,7 +73,7 @@ func _init() -> void:
 			and pool_ids.has(9056) and pool_ids.has(9057) and pool_ids.has(9058)
 			and pool_ids.has(9059) and pool_ids.has(9060) and pool_ids.has(9061)
 			and pool_ids.has(9062) and pool_ids.has(9084) and pool_ids.has(9085),
-			"奖励池含 削弱/寒冰箭/骑兵/箭塔 以及 9035~9062 全部新卡")
+			"奖励池含 削弱/寒冰箭/犀牛/箭塔 以及 9035~9062 全部新卡")
 	check(pool_ids.has(8019) and pool_ids.has(8020) and pool_ids.has(9110),
 			"奖励池含 R55 三张新卡：地狱猫 8019 / 鲜血堡垒 8020 / 活力转移 9110")
 	check(pool_ids.has(9111) and pool_ids.has(8021) and pool_ids.has(9112),
