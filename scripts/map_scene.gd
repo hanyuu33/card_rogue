@@ -411,27 +411,25 @@ func _draw_cells() -> void:
 		draw_rect(r, Color(base.r, base.g, base.b, 0.14 if done else 0.09), true)
 		# 分隔线（走过的变金，一眼看出探索范围）
 		draw_rect(r, COL_CELL_LINE_DONE if done else COL_CELL_LINE, false, 1.4)
-		# 内容：图标（有素材时）或短标记，下面再写类型名
+		# 内容：**只用图标**（R129 起地图上不再写文字 —— 房间类型全靠图标区分）。
+		# 图标缺图时才回退成格子中央的汉字（规范要求「缺图不空白也不报错」）。
 		var cx := r.position.x + r.size.x * 0.5
+		var cy := r.position.y + r.size.y * 0.5
 		var icon := UiAssets.node_icon(dtype)
 		if icon != null:
-			var ib := 46.0
-			var box := Rect2(cx - ib * 0.5, r.position.y + 20.0, ib, ib)
+			# 图标占格子约 62%：四周留出格子边框与「门」的位置，不互相压。
+			var ib := CELL * 0.62
+			var box := Rect2(cx - ib * 0.5, cy - ib * 0.5, ib, ib)
 			draw_texture_rect(icon, CardFace.fit_rect(icon.get_size(), box), false,
 					Color(1, 1, 1, 0.55) if done else Color.WHITE)
 		else:
 			var mark := RogueMap.type_mark(dtype)
-			var gs := 34
-			draw_string(_font_bold, Vector2(cx - 26.0 + 1.5, r.position.y + 60.0 + 1.5), mark,
-					HORIZONTAL_ALIGNMENT_CENTER, 52, gs, Color(0, 0, 0, 0.55))
-			draw_string(_font_bold, Vector2(cx - 26.0, r.position.y + 60.0), mark,
-					HORIZONTAL_ALIGNMENT_CENTER, 52, gs,
+			var gs := 40
+			draw_string(_font_bold, Vector2(cx - 30.0 + 1.5, cy + 15.0 + 1.5), mark,
+					HORIZONTAL_ALIGNMENT_CENTER, 60, gs, Color(0, 0, 0, 0.55))
+			draw_string(_font_bold, Vector2(cx - 30.0, cy + 15.0), mark,
+					HORIZONTAL_ALIGNMENT_CENTER, 60, gs,
 					Color(0.96, 0.93, 0.86) if not done else Color(0.82, 0.78, 0.66))
-		# 类型名（「每个格子上会写明房间是什么」）
-		var name_col := Color(0.95, 0.92, 0.84) if not done else Color(0.80, 0.76, 0.64)
-		draw_string(_font_bold, Vector2(r.position.x, r.position.y + 96.0),
-				RogueMap.type_label(dtype), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
-				UiTheme.FS_LABEL, name_col)
 
 
 func _draw_doors() -> void:

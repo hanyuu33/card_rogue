@@ -4426,13 +4426,18 @@ func _draw_map_nodes() -> void:
 		var base: Color = UiTheme.MAP_NODE_COLORS.get(dtype, UiTheme.INK_500)
 		draw_rect(r, Color(base.r, base.g, base.b, 0.22 if done else 0.13), true)
 		draw_rect(r, Color(base.r, base.g, base.b, 0.85), false, 1.4)
-		draw_string(_font_bold, Vector2(r.position.x, r.position.y + 32.0),
-				RogueMap.type_mark(dtype), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
-				UiTheme.FS_SUBHEAD, Color(1, 1, 1, 0.45) if done else UiTheme.PAPER)
-		draw_string(_font, Vector2(r.position.x, r.position.y + 54.0),
-				RogueMap.type_label(dtype), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
-				UiTheme.FS_CAPTION,
-				Color(0.90, 0.87, 0.80) if not done else Color(0.72, 0.69, 0.62))
+		# 内容：与冒险地图同一套 —— **只用图标**，缺图才回退汉字。
+		var icon := UiAssets.node_icon(dtype)
+		if icon != null:
+			var ib := MAPVIEW_CELL * 0.62
+			var box := Rect2(r.position.x + (r.size.x - ib) * 0.5,
+					r.position.y + (r.size.y - ib) * 0.5, ib, ib)
+			draw_texture_rect(icon, CardFace.fit_rect(icon.get_size(), box), false,
+					Color(1, 1, 1, 0.55) if done else Color.WHITE)
+		else:
+			draw_string(_font_bold, Vector2(r.position.x, r.position.y + 44.0),
+					RogueMap.type_mark(dtype), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
+					UiTheme.FS_SUBHEAD, Color(1, 1, 1, 0.45) if done else UiTheme.PAPER)
 		if _mapview_is_current(cell):
 			draw_rect(r.grow(2.5), UiTheme.ACCENT_LIT, false, 2.2)
 		elif _mapview_is_next(cell):
