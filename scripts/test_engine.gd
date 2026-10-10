@@ -6112,6 +6112,39 @@ func _init() -> void:
 			"事件背景命名：bg_<事件>.png（bg_rest.png）")
 	check(UiAssets.get_tex("__no_such_image__") == null,
 			"UI 图片缺失时返回 null（调用方回退内置程序化绘制）")
+	# ---- 战斗背景的三级回退（R133）----
+	# ① 每个关卡都要有**稳定的 ASCII key** —— 「按关卡替换素材」全靠它；
+	#    空 / 重名 / 带中文都会让槽位名对不上（关卡改名不该影响素材名）。
+	var bgkeys := GameLevels.all_keys()
+	check(bgkeys.size() == GameLevels.builtin_levels().size(),
+			"战斗背景：每个关卡都有 key（%d / %d）"
+			% [bgkeys.size(), GameLevels.builtin_levels().size()])
+	var bgseen := {}
+	var bgkey_ok := true
+	for bk in bgkeys:
+		if bk == "" or bgseen.has(bk):
+			bgkey_ok = false
+		bgseen[bk] = true
+		for bi in bk.length():
+			var bc := bk[bi]
+			if not ((bc >= "a" and bc <= "z") or (bc >= "0" and bc <= "9") \
+					or bc == "_"):
+				bgkey_ok = false
+	check(bgkey_ok, "战斗背景：关卡 key 非空、不重复、只用小写字母/数字/下划线（%d 个）"
+			% bgkeys.size())
+	# ② 没有关卡专属图时 → 退到**当层**底图（这就是「战斗中也用当层背景」）。
+	check(UiAssets.battle_bg_path("", 1) == "res://assets/ui/map_bg_1.png",
+			"战斗背景：没给专属图时取当层底图（第一层 → assets/ui/map_bg_1.png）")
+	check(UiAssets.battle_bg_path("", 2) == "res://assets/ui/map_bg_2.png",
+			"战斗背景：第二层 → assets/ui/map_bg_2.png")
+	check(UiAssets.battle_bg_path("__no_such_level__", 1) == "res://assets/ui/map_bg_1.png",
+			"战斗背景：key 没有对应素材时也要退到当层（不许空白）")
+	check(UiAssets.battle_bg_path("", 99) == "res://assets/battle_bg.png",
+			"战斗背景：层号没有对应底图时退到全局（在仓库根 assets/，不在 assets/ui/）")
+	check(UiAssets.battle_bg("", 1) != null,
+			"战斗背景：第一层底图能真的加载出来（map_bg_1.png）")
+	check(UiAssets.battle_bg("", 99) != null,
+			"战斗背景：全局兜底也能真的加载出来（battle_bg.png）")
 	var doc_path := "res://assets/ui/图片命名说明.txt"
 	# 导出版按设计排除 *.txt（export_presets.cfg 的 exclude_filter），说明文本不随包发布，
 	# 此时文档断言不适用 → 跳过（不算失败）。用「export_presets.cfg 是否存在」判断是否在

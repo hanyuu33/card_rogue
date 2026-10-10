@@ -102,6 +102,10 @@ const INFO_W := 272.0   # 左栏（详细效果 / 对局记录）：宽一点，
 # ------------------------------------------------------------ 颜色
 
 const COL_BG := UiTheme.BOARD_BG
+## R133：战斗背景改成「当层的地图底图」后，画面比原来那张平涂米黄**亮得多、也花得多**
+## （实测平均亮度 165→180、标准差 14→33）→ 压一层暗罩，棋盘格线与右栏白字才读得清。
+## 与地图页同一手法，只是**更淡**（战斗界面密得多，罩太厚会把底图闷死）。
+const COL_BG_SCRIM := Color(0.03, 0.04, 0.07, 0.34)
 const COL_CELL_LINE := UiTheme.BOARD_GRID_LINE
 const COL_OWN_FRAME := UiTheme.SIDE_SELF
 const COL_ENEMY_FRAME := UiTheme.SIDE_FOE
@@ -304,7 +308,8 @@ func _ready() -> void:
 	# 顶栏的 HpLabel / StatusLabel 在 battle.tscn 里声明了溢出策略：
 	# clip_text + text_overrun_behavior=3（省略号）。状态行会串进战斗日志，长度不可控，
 	# 固定 310px 会把后半句静默切掉（R113 修的）。⚠️ .tscn 里不能写 # 注释，说明只能挂在这里。
-	_bg_tex = load("res://assets/battle_bg.png")
+	# 战斗背景（R133）：默认按**当层**取（关卡专属图在 load_level 里换）。
+	_bg_tex = UiAssets.battle_bg("", RunState.current_layer)
 	_back_tex = load("res://assets/cardback.png")
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
@@ -1772,6 +1777,14 @@ func _on_back_to_title() -> void:
 	get_tree().change_scene_to_file("res://scenes/title.tscn")
 
 
+func _refresh_bg_texture() -> void:
+	## 战斗背景（R133）：**每关独立可替换** —— 三级取图见 `UiAssets.battle_bg_name()`。
+	## 关卡换一次就重取一次，所以「同一场景里换关」也会跟着换背景。
+	## ⚠️ 必须在 `_cur_level = lvl` **之后**调：先知道是哪一关，才知道取哪张图。
+	_bg_tex = UiAssets.battle_bg(GameLevels.bg_key(_cur_level),
+			GameLevels.layer_of(_cur_level))
+
+
 func load_level(lvl: Dictionary) -> void:
 	## 按关卡配置开局（对应 Python 版 Level.build_engine）。
 	repo = CardRepo.load_json()
@@ -1875,6 +1888,7 @@ func load_level(lvl: Dictionary) -> void:
 	_hover_card = null
 	_hover_pl = null
 	_cur_level = lvl
+	_refresh_bg_texture()
 	_tutorial = lvl["tutorial"]
 	tutorial_step = 0
 	_tutorial_finished = _tutorial.is_empty()
@@ -4853,9 +4867,10 @@ func _ai_step() -> void:
 func _draw() -> void:
 	if engine == null:
 		return
-	# 背景：铺满整个控件
+	# 背景：铺满整个控件（R133 起是**当层的地图底图**，见 _refresh_bg_texture）
 	if _bg_tex != null:
 		draw_texture_rect(_bg_tex, Rect2(Vector2.ZERO, size), false)
+		draw_rect(Rect2(Vector2.ZERO, size), COL_BG_SCRIM, true)
 	else:
 		draw_rect(Rect2(Vector2.ZERO, size), COL_BG)
 	# 屏幕震动：棋盘相关绘制整体偏移（面板/结算不受影响）
@@ -7157,6 +7172,9 @@ func _draw_grid_mask() -> void:
 			draw_texture_rect_region(_bg_tex, r,
 					Rect2(Vector2(r.position.x / WINDOW_W, r.position.y / WINDOW_H) * ts,
 							Vector2(r.size.x / WINDOW_W, r.size.y / WINDOW_H) * ts))
+			# ⚠️ 与主背景**同一个暗罩**：漏了这一条，棋盘上下沿补出来的那两条
+			#    会比别处亮一截，看着像两块补丁。
+			draw_rect(r, COL_BG_SCRIM, true)
 		else:
 			draw_rect(r, COL_BG)
 	# R127：**不再画滚动条** → 改用半透明双箭头。棋盘只有 120px 滚动余量，

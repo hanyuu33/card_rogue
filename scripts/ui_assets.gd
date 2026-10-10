@@ -7,6 +7,8 @@ class_name UiAssets
 ##   地图节点图标   map_<类型>.png    类型 = start/battle/elite/rest/event/chest/boss
 ##   事件插图       event_<事件>.png  事件 = rest/treasure/whisper/struggle/gaze/pear/hero/relic_chest
 ##   事件背景       bg_<事件>.png     事件同上
+##   战斗背景       battle_bg_<关卡key>.png（每关专属）/ map_bg_<层号>.png（当层）/
+##                    battle_bg.png（全局）—— 三级回退，见 battle_bg_name()
 ##   卡面纸底       card_paper.png
 ##   稀有度边框     frame_<0..5>.png  下标同 CardData.RARITY_COLORS
 ##   数值徽章图标   icon_<键>.png     键 = cost 水晶 / power 剑 / range 弓 /
@@ -16,6 +18,9 @@ class_name UiAssets
 ## 失败则直接读原始 PNG（往 assets/ui/ 丢进去还没让编辑器导入也能立刻生效）。
 
 const DIR := "res://assets/ui/"
+## ⚠️ 全局兜底的战斗背景**在仓库根 `assets/`**（不在 `assets/ui/`）—— 历史遗留位置，
+##    标题页也在用它，所以单独列出来，别让 `get_tex()` 去 ui/ 里找。
+const FALLBACK_BATTLE_BG := "res://assets/battle_bg.png"
 
 static var _cache := {}   # 文件名 -> Texture2D / null（缺图也缓存，避免反复查盘）
 
@@ -83,6 +88,36 @@ static func map_bg(layer: int) -> Texture2D:
 	## 冒险地图背景（R128）：**每层一张**，1280 × 720 铺满。
 	## 缺图时返回 null，`map_scene` 回退成内置的纵向渐变底 —— 不空白也不报错。
 	return get_tex("map_bg_%d" % layer)
+
+
+static func battle_bg_path(key: String, layer: int) -> String:
+	## 战斗背景**取哪一张**的唯一口径（R133）—— 三级回退，返回**完整资源路径**：
+	##   ① `res://assets/ui/battle_bg_<关卡key>.png` —— 这一关**专属**（每关独立可替换）
+	##   ② `res://assets/ui/map_bg_<层号>.png`       —— **当层**的地图底图（与地图页观感统一）
+	##   ③ `res://assets/battle_bg.png`              —— 全局兜底
+	## ⚠️ 这里返**完整路径**而不是「槽位名」：兜底那张在**仓库根 `assets/`**（不在 `assets/ui/`），
+	##    用槽位名再拼一次目录就会拼错（R133 第一版就是这么翻车的，被断言抓出来）。
+	## ⚠️ 判存在要 `FileAccess` **或** `ResourceLoader`：导出包里原始 png 不在、只有导入后的
+	##    `.ctex`，只看 `FileAccess.file_exists` 会在包里全部落空。
+	if key != "" and _path_exists(path_for("battle_bg_" + key)):
+		return path_for("battle_bg_" + key)
+	var lp := path_for("map_bg_%d" % layer)
+	if _path_exists(lp):
+		return lp
+	return FALLBACK_BATTLE_BG
+
+
+static func battle_bg(key: String, layer: int) -> Texture2D:
+	## 战斗背景（R133）。取名口径见 `battle_bg_path()`。
+	## 全缺时返回 null，`battle_scene` 回退成内置纯色 —— 不空白也不报错。
+	var p := battle_bg_path(key, layer)
+	if not _cache.has(p):
+		_cache[p] = _load(p)
+	return _cache[p]
+
+
+static func _path_exists(p: String) -> bool:
+	return FileAccess.file_exists(p) or ResourceLoader.exists(p)
 
 
 static func bridge_icon() -> Texture2D:

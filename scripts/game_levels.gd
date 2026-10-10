@@ -7,6 +7,10 @@ extends RefCounted
 ## battle_scene 的 dormant 代码仍引用它们（tutorial 数组为空即不触发）。
 ## 未来肉鸽波次模式将替换 builtin_levels。
 ##
+## 标识（key）：每个关卡都带 `"key"` —— **稳定的 ASCII 标识**，与关卡名解耦
+## （关卡改名不影响它）。用途：按关卡替换的素材槽位名，例如战斗背景
+## `assets/ui/battle_bg_<key>.png`（见 GameLevels.bg_key / UiAssets.battle_bg_name）。
+##
 ## 分层（layer）：每个关卡都带 `"layer"` 字段，标明它属于哪一层。
 ## 地图只会从「本层内容池」里抽关（见 levels_of_tier / normal_pool 等），
 ## 内容池由 GameLayers.content_layers 决定：第一层 = [1]（只用第一层关卡），
@@ -85,6 +89,20 @@ static func layer_of(level: Dictionary) -> int:
 	return int(level.get("layer", GameLayers.LAYER_DEFAULT))
 
 
+static func bg_key(level: Dictionary) -> String:
+	## 该关卡专属战斗背景的槽位名（`assets/ui/battle_bg_<key>.png` 里的那段 key）。
+	## 没标 key 的关卡返回空串 → 取图会直接退到「当层背景」。
+	return str(level.get("key", ""))
+
+
+static func all_keys() -> Array[String]:
+	## 所有关卡的 key（测试用：查空、查重、查字符集）。
+	var out: Array[String] = []
+	for lvl in builtin_levels():
+		out.append(bg_key(lvl))
+	return out
+
+
 static func levels_of_layer(layer: int) -> Array[Dictionary]:
 	## 取属于该层的所有关卡（保持 builtin_levels 顺序）。
 	var out: Array[Dictionary] = []
@@ -161,6 +179,7 @@ static func _encounter() -> Dictionary:
 	## enemy_units: [id, 名称, 力, 生, 程, 速, 格子]
 	return {
 		"name": "鸭子骑士来袭",
+		"key": "duck_knight",
 		"tier": TIER_NORMAL_EASY,
 		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
@@ -185,6 +204,7 @@ static func _wizard() -> Dictionary:
 	## 巫师本来就会源源补使魔，加上这个成长后越拖越难打。
 	return {
 		"name": "巫师的召唤",
+		"key": "wizard",
 		"tier": TIER_NORMAL_HARD,
 		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
@@ -219,6 +239,7 @@ static func _frost_line() -> Dictionary:
 	## 两翼各一个骷髅兵。嘲讽会逼停在它面前的敌方单位。
 	return {
 		"name": "寒冰防线",
+		"key": "frost_line",
 		"tier": TIER_NORMAL_EASY,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
@@ -244,6 +265,7 @@ static func _undead_legion() -> Dictionary:
 	## 前排骷髅兵（嘲讽）+ 腐化尸鬼（4/18 速2，亡语打我方 HP）+ 骷髅兵（亡语召唤一只骷髅）。
 	return {
 		"name": "亡灵军团",
+		"key": "undead_legion",
 		"tier": TIER_NORMAL_HARD,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
@@ -269,6 +291,7 @@ static func _dragon_nest() -> Dictionary:
 	## 中排两翼幼龙（5/25 程2，亡语召唤龙裔 4/12），前排中央铁壁卫兵（嘲讽）挡路。
 	return {
 		"name": "龙族巢穴",
+		"key": "dragon_nest",
 		"tier": TIER_ELITE_EASY,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
@@ -294,6 +317,7 @@ static func _mech_giant() -> Dictionary:
 	## 中排两翼爆裂机甲（4/30 程2，亡语对全场单位 8 伤），前排中央铁壁卫兵（嘲讽）。
 	return {
 		"name": "机甲巨兵",
+		"key": "mech_giant",
 		"tier": TIER_ELITE_HARD,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
@@ -319,6 +343,7 @@ static func _boss_dragon() -> Dictionary:
 	## 敌方效果卡「鸭子号角」——每 3 个回合召唤一只鸭子骑士。
 	return {
 		"name": "远古虚骨龙",
+		"key": "boss_dragon",
 		"tier": TIER_BOSS,
 		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
@@ -347,6 +372,7 @@ static func _boss_demon_duck() -> Dictionary:
 	## 于是打这场是一场「抢节奏」：要么速攻在它醒来前打死，要么先清使魔鸭群别让它们滚起来。
 	return {
 		"name": "恶魔鸭",
+		"key": "boss_demon_duck",
 		"tier": TIER_BOSS,
 		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
@@ -379,6 +405,7 @@ static func _boss_demon_duck_revenge() -> Dictionary:
 	## 而它的 5 攻正好够把你的前排敲开。
 	return {
 		"name": "恶魔鸭（复仇）",
+		"key": "boss_demon_duck_revenge",
 		"tier": TIER_BOSS,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
@@ -411,6 +438,7 @@ static func _mech_duck_boss() -> Dictionary:
 	## 敌方效果卡「齿轮升腾」——每回合开始时所有敌方单位**永久 +2 力量（无上限）**。
 	return {
 		"name": "机械巨鸭",
+		"key": "mech_duck_boss",
 		"tier": TIER_BOSS,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
@@ -440,6 +468,7 @@ static func _boss_duck_darkside() -> Dictionary:
 	##   要么直接顶着脸硬拆 150 血（但每多一只暗杀者它就多疼一下）。
 	return {
 		"name": "鸭之暗面",
+		"key": "boss_duck_darkside",
 		"tier": TIER_BOSS,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
@@ -463,6 +492,7 @@ static func _legion() -> Dictionary:
 	## 「鸭子之力」——所有友方每回合力量 +1，最多累计 +5。
 	return {
 		"name": "骑士军团",
+		"key": "legion",
 		"tier": TIER_ELITE_HARD,
 		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
@@ -489,6 +519,7 @@ static func _familiars() -> Dictionary:
 	## 普通敌人-简单：使魔鸭群——前排 3 只 + 中排左右各 1 只使魔鸭子。
 	return {
 		"name": "使魔鸭群",
+		"key": "familiars",
 		"tier": TIER_NORMAL_EASY,
 		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
@@ -513,6 +544,7 @@ static func _knight_charge() -> Dictionary:
 	## 普通敌人-困难：中排三只鸭子骑士一字排开正面冲锋（3/30，速 2，击杀成长）。
 	return {
 		"name": "骑士冲锋",
+		"key": "knight_charge",
 		"tier": TIER_NORMAL_HARD,
 		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
@@ -536,6 +568,7 @@ static func _captain_wizard() -> Dictionary:
 	## 敌方效果卡「使魔之力 9115」：使魔鸭子每回合开始力量 +1（永久）。
 	return {
 		"name": "队长与巫师",
+		"key": "captain_wizard",
 		"tier": TIER_ELITE_HARD,
 		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
@@ -559,6 +592,7 @@ static func _archer_knight() -> Dictionary:
 	## 普通敌人-简单：后排左右各一名鸭子弓手（程 2 远程），后排中间一名鸭子骑士护卫。
 	return {
 		"name": "弓手与骑士",
+		"key": "archer_knight",
 		"tier": TIER_NORMAL_EASY,
 		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
@@ -584,6 +618,7 @@ static func _blaze_pack() -> Dictionary:
 	## 注意：两只爆炎鸭都与骑士相邻 —— 打死爆炎鸭会把骑士也炸伤。
 	return {
 		"name": "爆炎鸭阵",
+		"key": "blaze_pack",
 		"tier": TIER_NORMAL_EASY,
 		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
@@ -609,6 +644,7 @@ static func _white_mage_guard() -> Dictionary:
 	## 前排三名鸭子骑士护阵。
 	return {
 		"name": "白魔法师护阵",
+		"key": "white_mage_guard",
 		"tier": TIER_NORMAL_EASY,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
@@ -633,6 +669,7 @@ static func _night_ducks() -> Dictionary:
 	## 前排左右各一只使魔鸭子（4/15，程 1 速 1）护阵，AI 推进。
 	return {
 		"name": "夜鸭阵",
+		"key": "night_ducks",
 		"tier": TIER_NORMAL_EASY,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
@@ -658,6 +695,7 @@ static func _breath_charge() -> Dictionary:
 	## （移动 + 攻击重来一遍；骑士速 2 → 一回合最多推进 4 格；前 2 回合仍是单动）。
 	return {
 		"name": "哈气骑士团",
+		"key": "breath_charge",
 		"tier": TIER_ELITE_EASY,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
@@ -686,6 +724,7 @@ static func _duck_kiln() -> Dictionary:
 	## （8 力，生命 = 当前己方回合数，程1 速2）。越界/被占用的邻格跳过。
 	return {
 		"name": "鸭子窑",
+		"key": "duck_kiln",
 		"tier": TIER_NORMAL_HARD,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
@@ -707,6 +746,7 @@ static func _captain() -> Dictionary:
 	## 中排左右各一只鸭子骑士护航，AI 推进。
 	return {
 		"name": "鸭子队长登场",
+		"key": "captain",
 		"tier": TIER_ELITE_EASY,
 		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
