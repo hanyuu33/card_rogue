@@ -53,6 +53,11 @@ var opp_card_plays := 0         # 同上，敌方（对称保留：敌方若拿�
 var wild_form_used := false     # 荒野形态 6022（R60）：本场战斗中是否已触发过「第一次受击减伤+反伤」
 var void_dmg_spells := 0       # 虚空主宰 9082：本次对战中「用技能牌对敌方造成伤害」的次数
 #                              （每发生一次，手卡里的虚空主宰费用 -2；只在本场战斗内累计）
+## R140：本局「消失」的卡数（消耗区计数）—— 离场消失 / 用后消失 / 从抽牌库抹除，
+## 共同点 = **不进弃牌区、也不回手牌**，等于从本场牌组里抹掉。累加口见各处
+## `void_count += 1`（FieldState.discard_hand / GameEngine 的 use_spell·_destroy·
+## focus_pick·foresight_pick_card·_melt_ice_walls），战斗结束即作废。
+var void_count := 0
 var self_next_energy := 0      # 活力转移 9110（R55）：剩余费用换来的「下个回合开始时」额外费用（发放后清零）
 var opp_next_energy := 0       # 同上，敌方（对称保留）
 var self_energy_spent := 0     # 本回合**已花掉**的费用（暗影之刃 9111 的 X；回合开始清零）
@@ -172,9 +177,11 @@ func discard_hand() -> int:
 	for c: CardData in hand:
 		if c.traits.has(VANISH_TRAIT):
 			n += 1
+			void_count += 1   # R140：离场消失 → 计入消耗区
 			continue
 		if c.is_ephemeral:
 			n += 1
+			void_count += 1   # R140：衍生物回合结束消失 → 计入消耗区
 			continue
 		if c.traits.has(KEEP_HAND_TRAIT):
 			kept.append(c)

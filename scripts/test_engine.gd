@@ -12788,6 +12788,48 @@ func _init() -> void:
 		"R108 暗影步：敌方 AI 不打开取牌面板")
 
 	# ══════════════════════════════════════════════════════════════
+	# R140 测试：「消耗区」= 本局**消失**的卡计数（离场消失 / 用后消失 / 从牌库抹除）
+	# ══════════════════════════════════════════════════════════════
+	var r140_repo := CardRepo.load_json()
+	# ① 手牌回合结束：带「离场消失」的卡（鸭蛋 9022）直接消失、不进弃牌区
+	var r140_e1 := _new_engine([], 30, 30)
+	r140_e1.start_game()
+	r140_e1.state.hand.append(CardData.from_dict(r140_repo.get_card(9022).to_dict()))
+	r140_e1.state.discard_hand()
+	check(r140_e1.state.void_count == 1 and r140_e1.state.discard.is_empty(),
+		"R140 消耗区：手牌里的消失卡回合结束消失 → void_count = 1（实际 %d）"
+			% r140_e1.state.void_count)
+	# ② 用后消失的技能（警觉 9109）
+	var r140_e2 := _new_engine([], 30, 30)
+	r140_e2.start_game()
+	r140_e2.state.hand.append(
+			CardData.from_dict(r140_repo.get_card(GameEngine.ALERT_ID).to_dict()))
+	r140_e2.use_spell(r140_e2.state.hand.size() - 1)
+	check(r140_e2.state.void_count == 1,
+		"R140 消耗区：警觉用后消失 → void_count = 1（实际 %d）" % r140_e2.state.void_count)
+	# ③ 场上被击破消失（带「离场消失」的单位）
+	var r140_e3 := _new_engine([], 30, 30)
+	r140_e3.start_game()
+	var r140_p := r140_e3.state.place(
+			CardData.from_dict(r140_repo.get_card(9022).to_dict()), Vector2i(4, 1),
+			GameEngine.SIDE_SELF)
+	r140_p.health = 0
+	r140_e3._destroy(Vector2i(4, 1))
+	check(r140_e3.state.void_count == 1,
+		"R140 消耗区：场上消失单位被击破 → void_count = 1（实际 %d）"
+			% r140_e3.state.void_count)
+	# ④ 普通卡被击破**不进**消耗区（只进弃牌区）—— 反向守卫
+	var r140_e4 := _new_engine([], 30, 30)
+	r140_e4.start_game()
+	var r140_p4 := r140_e4.state.place(_card(8003, "树人", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(4, 2), GameEngine.SIDE_SELF)
+	r140_p4.health = 0
+	r140_e4._destroy(Vector2i(4, 2))
+	check(r140_e4.state.void_count == 0 and r140_e4.state.discard.size() == 1,
+		"R140 消耗区：普通卡被击破只进弃牌区、不计消耗（void=%d / 弃牌=%d）"
+			% [r140_e4.state.void_count, r140_e4.state.discard.size()])
+
+	# ══════════════════════════════════════════════════════════════
 	# ══════════════════════════════════════════════════════════════
 	# R109 测试：专注 9122（0 费稀有 · 从抽牌库移除 2 张卡 · 本次对战中消失）
 	# ══════════════════════════════════════════════════════════════
@@ -12864,6 +12906,8 @@ func _init() -> void:
 			r109_gone = false
 	check(r109_gone,
 		"R109 专注：%s 从本场彻底消失（牌库与弃牌区都找不到）" % r109_nm1)
+	check(r109_e1.state.void_count == 2,
+		"R140 消耗区：专注抹除 2 张 → void_count = 2（实际 %d）" % r109_e1.state.void_count)
 
 	# ---- ② 牌库不足 2 张：按实际张数开面板，不卡死 ----
 	var r109_e2 := _new_engine([], 30, 30)
@@ -12908,6 +12952,9 @@ func _init() -> void:
 		"R109 专注：focus_cancel 清掉挂起状态")
 	check(r109_e4.state.deck.size() == r109_e4_deck0 - 1,
 		"R109 专注：取消**不回收**已移除的那张（仍 %d 张）" % r109_e4.state.deck.size())
+	check(r109_e4.state.void_count == 1,
+		"R140 消耗区：取消**不回滚**计数（已消失 1 张 → 仍为 1，实际 %d）"
+			% r109_e4.state.void_count)
 
 	# ---- ⑤ 敌方 AI 不使用这张卡（改牌组是玩家侧决策）----
 	var r109_e5 := _new_engine([], 30, 30)

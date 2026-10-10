@@ -4114,12 +4114,15 @@ func use_spell(hand_index: int, target = null) -> String:
 	_on_turn_first_play(SIDE_SELF, card)
 	_note_card_played(SIDE_SELF, card)
 	if card.id == WHALE_WRATH_ID:
+		state.void_count += 1   # R140：消耗区计数（用后消失）
 		_log("鲸鱼之怒：使用后消失（不进弃牌区，本场不再出现）")
 	elif card.id == FATE_REJECT_ID:
+		state.void_count += 1   # R140：消耗区计数（用后消失）
 		_log("拒绝命运：使用后消失（不进弃牌区，本场不再出现）")
 	elif card.id == ALERT_ID:
 		# 警觉（9109，R60）：使用后消失（不进弃牌区，本场不再出现）
 		# —— 警觉是「第 1 回合必定抽到」的一次性启动牌，不该在弃牌区里再滚回来。
+		state.void_count += 1   # R140：消耗区计数（用后消失）
 		_log("警觉：使用后消失（不进弃牌区，本场不再出现）")
 	elif card.id == ECHO_ID:
 		# 回响（9102）：使用后**返回手卡**（循环代价只有费用，下限见 ECHO_MIN_COST）。
@@ -4692,6 +4695,7 @@ func foresight_pick_card(discard_index: int) -> bool:
 		if state.discard[v_i].id == FORESIGHT_ID:
 			_log("预判：用后消失（不进弃牌区，本场不再出现）")
 			state.discard.remove_at(v_i)
+			state.void_count += 1   # R140：消耗区计数（预判自身用后消失）
 			break
 	_log("预判：%s 回到手牌" % c.card_name)
 	action.emit("foresight_pick", {"card": c})
@@ -5770,6 +5774,7 @@ func focus_pick(deck_index: int) -> bool:
 		return false
 	var c: CardData = state.deck[deck_index]
 	state.deck.remove_at(deck_index)
+	state.void_count += 1   # R140：消耗区计数（专注从牌库抹除）
 	focus_remaining -= 1
 	_log("专注：%s 从抽牌库移除（本次对战中消失，还要移除 %d 张）"
 			% [c.card_name, maxi(0, focus_remaining)])
@@ -5848,6 +5853,7 @@ func _melt_ice_walls(side: String) -> void :
 		if p == null or p.owner != side or p.card.id != ICE_WALL_ID:
 			continue
 		state.board.erase(cell)
+		state.void_count += 1   # R140：消耗区计数（冰墙融化消失）
 		melted += 1
 		action.emit("destroy", {"cell": cell, "card": p.card, "placement": p})
 	if melted > 0:
@@ -7117,15 +7123,16 @@ func _destroy(cell: Vector2i) -> void :
 	_credit_kill(p)
 	if p.owner == SIDE_SELF:
 		if p.card.traits.has(EGG_VANISH_TRAIT):
-
+			state.void_count += 1   # R140：消耗区计数（场上次元单位被击破）
 			_log("%s 被击破，移出场外（离场即消失，不进弃牌区）" % p.card.card_name)
 		elif p.card.is_ephemeral:
 			# 野兔 9032 的**复制**（R82）：**场上这段也消失**，不进弃牌区、不洗回牌库。
 			# 判据是 `is_ephemeral`（衍生物标记）而**不是** trait「自我复制」——
 			# 卡库里的原卡也带那个 trait，它被打死时应该照常进弃牌区。
+			state.void_count += 1   # R140：消耗区计数（场上衍生物被击破）
 			_log("%s（复制）被击破，移出场外（消失，不进弃牌区）" % p.card.card_name)
 		elif p.card.id == ICE_WALL_ID:
-
+			state.void_count += 1   # R140：消耗区计数（冰墙不进弃牌区）
 			_log("%s 被击破，移出场外（冰墙不进弃牌区）" % p.card.card_name)
 		elif p.card.id == LYNX_ID:
 
