@@ -5020,7 +5020,7 @@ func _init() -> void:
 				q_sym_ok = false
 	check(q_sym_ok, "地图：门是双向的（A 通向 B ⇔ B 通向 A）")
 
-	# 方向数约束（用户口径：四角 1 / 起点 2~3 / 其他边缘 1~3 / 内部 2~4）
+	# 方向数约束（用户口径：四角 1 / 起点 2~3 / 其他边缘 2~3 / 内部 2~4）
 	var q_deg_ok := true
 	var q_deg_bad := ""
 	for q_c: Dictionary in q_map1:
@@ -5039,6 +5039,23 @@ func _init() -> void:
 			"地图：四个角只有 1 个方向")
 	check((q_scol["doors"] as Array).size() >= 2 and (q_scol["doors"] as Array).size() <= 3,
 			"地图：初始房间有 2~3 个方向")
+	# R136：用户口径修正 —— **边缘但不是角**的房间至少 2 个方向（旧口径允许 1）。
+	# 角仍然是 1（「死路尽头」是设计），起点 2~3、内部 2~4 都不动。
+	var q_edge_ok := true
+	var q_edge_bad := ""
+	var q_edge_min := 9
+	for q_c: Dictionary in q_map1:
+		var q_ec: int = int(q_c["col"])
+		var q_er: int = int(q_c["row"])
+		if not RogueMap.is_edge(q_ec, q_er) or RogueMap.is_corner(q_ec, q_er):
+			continue
+		var q_ed: int = (q_c["doors"] as Array).size()
+		q_edge_min = mini(q_edge_min, q_ed)
+		if q_ed < 2:
+			q_edge_ok = false
+			q_edge_bad = "(%d,%d) 只有 %d 个方向" % [q_ec, q_er, q_ed]
+	check(q_edge_ok, "R136 地图：边缘但非角的房间至少 2 个方向（最少 %d 个，%s）"
+			% [q_edge_min, "符合" if q_edge_ok else q_edge_bad])
 
 	# 连通 + 大宝箱可达性 + 「12 步只能进一个大宝箱」
 	var q_map_steps: Dictionary = RogueMap.steps_from(q_map1, int(q_scol["id"]))
@@ -5120,8 +5137,10 @@ func _init() -> void:
 	var q_bulk_rest := 0
 	var q_bulk_unknown := 0
 	var q_bulk_types := {}
+	var q_bulk_worst := 0          # R136：单张最差重摇次数（下限提到 2 后要盯住生成成本）
 	for q_trial in 60:
 		var q_mp: Array = RogueMap.generate(q_bulk_rng, GameLayers.LAYER_DEFAULT)
+		q_bulk_worst = maxi(q_bulk_worst, RogueMap.last_attempts)
 		if q_mp.size() != RogueMap.CELLS:
 			q_bulk_ok = false
 			q_bulk_msg = "第 %d 张生成失败（%d 格）" % [q_trial, q_mp.size()]
@@ -5158,6 +5177,9 @@ func _init() -> void:
 	check(q_bulk_rest >= 60 and q_bulk_unknown >= 60,
 			"地图 60 张统计：休息点 %d 个、「?」房 %d 个（两类都真实出现）"
 			% [q_bulk_rest, q_bulk_unknown])
+	# R136：边缘非角下限 1 → 2 之后，生成器必须仍然够便宜（实测 300 张最差 9 次）。
+	check(q_bulk_worst <= 40,
+			"R136 地图：60 张里单张最多重摇 %d 次（上限 40，0 失败）" % q_bulk_worst)
 
 	# ---- 第二层地图：layer 标记 + 事件不串层 ----
 	var q_l2_rng := RandomNumberGenerator.new()

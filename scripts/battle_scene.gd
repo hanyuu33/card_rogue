@@ -47,6 +47,11 @@ const BOARD_CARD_H := CARD_H * BOARD_SCALE
 const BOARD_TAP_W := TAP_W * BOARD_SCALE
 const BOARD_TAP_H := TAP_H * BOARD_SCALE
 const GRID_SCROLL_STEP := 56.0      # 滚轮一步
+## R136：开场巡场 —— 战斗开始的前 2 秒，镜头从自己这半场推到对方那半场。
+## 三段式：先在自己半场停 HOLD0，再平滑推过去，最后在对方半场停 HOLD1。
+const GRID_INTRO_DUR := 2.0
+const GRID_INTRO_HOLD0 := 0.30
+const GRID_INTRO_HOLD1 := 0.40
 # R127：双箭头相对棋盘可视窗上下沿的内缩量（ScrollHint.GAP + 6）。
 #   ⚠️ 必须**小于** 128（棋盘下沿到手牌顶的距离），否则下箭头会被手牌盖掉。
 const GRID_HINT_INSET := 22.0
@@ -167,11 +172,15 @@ var _sys_upgrade_idx := -1
 var status_text := ""
 ## R123：棋盘滚动偏移（0 .. _grid_scroll_max()）；滚轮 / 空格左键拖动改变它。
 var _grid_scroll := 0.0
-## 左键在棋盘**空格**上按下 → 可能是想拖动棋盘：先不上膛「取消」，拖过阈值才算滚动；
+## 左键在棋盘**可视窗内**按下 → 可能是想拖动棋盘：拖过阈值才算滚动（不再结算点击）；
 ## 松手时没拖过阈值就照常补发这次点击（保留原有点击语义）。
+## ⚠️ 别再要求「点在空格」：可视窗里几乎每一点都落在某一格上（_cell_at 恒不为 null），
+## 那条件恒不成立 —— 左键拖动会整个失效（R136 修的就是这个）。
 var _grid_drag_arm := false
 var _grid_dragging := false
 var _grid_drag_pos := Vector2.ZERO
+## R136：开场巡场已播时长（秒）；< 0 = 没在播（播完 / 被玩家打断 / 回放模式）。
+var _grid_intro_t := -1.0
 var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本不覆盖
 ## R118：左键点「空位」**不再一步取消**。为 true = 本轮的第一次空位点击已经发生 ——
 ## 选区、绿色移动格、红色攻击格、深红 HP 格**全部原样保留**（于是这时点目标照样能打），
@@ -1439,6 +1448,9 @@ var _shot_t0 := 0               # 演示动作起始时刻（_now）
 
 func _demo_tick() -> void:
 	_demo_frame += 1
+	if "--griddrag" in _demo_args:
+		# ⚠️ 这里**不能 return** —— 截图与退出在 _demo_tick 末尾，提前返回游戏永远不退出。
+		_demo_grid_drag()      # R136：左键拖棋盘的出图演示（只服务截图）
 	if _shot_pending and "--fan" in _demo_args and not engine.state.hand.is_empty():
 		# 截图窗口打开时系统鼠标会触发一次真实 _on_hover，把 _ready 里设置的
 		# 悬停清掉 → 截图期间每帧重新钉住（验证「抬手 + 左栏详情面板」用）
@@ -1613,6 +1625,40 @@ func _demo_drag_pos() -> Vector2:
 	if not _drag_spell_cells.is_empty():
 		return _cell_center(_drag_spell_cells[0])
 	return Vector2.ZERO
+
+
+func _demo_grid_drag() -> void:
+	## R136 演示：合成一串「按住棋盘 → 往下拖 60px → 松手」的输入事件，
+	## **直接喂给 `_gui_input`** 走完整的上膛 / 阈值 / 滚动 / 松手流程，
+	## 用来验证左键拖动真的在滚棋盘。配合 `-- --screenshot --shotframe 80`：
+	## 巡场动画会在按下那一刻被打断在半路（scroll=120），随后拖动把它推到 60 ——
+	## 动画自己永远只会停在 0 或 120，停成半路只能是拖出来的。
+	## ⚠️ 只服务出图，不进任何正式流程。
+	if _demo_frame == 40:
+		_feed_mouse_btn(MOUSE_BUTTON_LEFT, true, Vector2(GRID_X + 60, GRID_Y + 300))
+	elif _demo_frame > 40 and _demo_frame <= 50:
+		_feed_mouse_motion(Vector2(GRID_X + 60, GRID_Y + 300 + (_demo_frame - 40) * 6.0))
+	elif _demo_frame == 51:
+		_feed_mouse_btn(MOUSE_BUTTON_LEFT, false, Vector2(GRID_X + 60, GRID_Y + 360))
+		_say("演示：左键在棋盘上拖动 60px → 滚动了 %d px" % int(_grid_scroll))
+
+
+func _feed_mouse_btn(btn: MouseButton, pressed: bool, pos: Vector2) -> void:
+	## 合成鼠标按键事件（局部坐标 = 设计坐标）直接喂给 _gui_input（出图演示用）。
+	var ev := InputEventMouseButton.new()
+	ev.button_index = btn
+	ev.pressed = pressed
+	ev.position = pos
+	_gui_input(ev)
+	queue_redraw()
+
+
+func _feed_mouse_motion(pos: Vector2) -> void:
+	## 合成鼠标移动事件（同上）。
+	var ev := InputEventMouseMotion.new()
+	ev.position = pos
+	_gui_input(ev)
+	queue_redraw()
 
 
 func _load_entry_level() -> void:
@@ -1922,6 +1968,13 @@ func load_level(lvl: Dictionary) -> void:
 		_show_banner(intro, UiTheme.STAT_POWER, 2400)
 	else:
 		_show_banner("我方回合 · 第 1 回合")
+	# R136：开场巡场 —— 镜头先停在自己这半场，2 秒里推到对方那半场（看出 3×6 的规模）。
+	# 回放不播（回放按录像节奏走，不额外加动画）。
+	if _grid_scroll_max() > 0.0 and not ReplayLog.playing:
+		_grid_scroll = _grid_scroll_max()
+		_grid_intro_t = 0.0
+	else:
+		_grid_intro_t = -1.0
 	queue_redraw()
 
 
@@ -1990,16 +2043,20 @@ func _pass_moved_pending() -> void:
 func _gui_input(event: InputEvent) -> void:
 	if engine == null or engine.over or _net_locked() or ReplayLog.playing:
 		return
+	# R136：巡场动画播放中，玩家一按鼠标就停（动画只是提示，绝不吞操作）。
+	if event is InputEventMouseButton and event.pressed and _grid_intro_t >= 0.0:
+		_grid_intro_stop()
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			# 手牌按下：先不触发点击逻辑，等松手判定是点击还是拖拽
 			_press_idx = _hand_index_at(event.position)
 			_press_pos = event.position
-			# R123：按下点在棋盘可视窗内的**空格**上（且当前没有选中单位 / 没上膛取消）
-			# → 先不立即结算点击，可能是想拖动棋盘；松手时没拖过阈值再补发这次点击。
+			# R136：按下点落在棋盘**可视窗内**（且不是在手牌上）→ 先不立即结算点击，
+			# 可能是想上下拖动棋盘；松手时没拖过阈值再补发这次点击。
+			# ⚠️ R123 这里还要求「点在空格 / 无选中 / 未上膛」，而可视窗内几乎每一处
+			# 都落在某一格上（_cell_at 恒不为 null）→ 左键拖动实际从未接上。
 			_grid_drag_arm = _press_idx < 0 and _grid_scroll_max() > 0.0 \
-					and _cell_in_view(event.position) and _cell_at(event.position) == null \
-					and selection == null and not _cancel_armed
+					and _cell_in_view(event.position)
 			_grid_dragging = false
 			_grid_drag_pos = event.position
 			if _press_idx < 0 and not _grid_drag_arm:
@@ -2186,6 +2243,33 @@ func _hand_hit(i: int, pos: Vector2) -> bool:
 func _grid_scroll_max() -> float:
 	## R123：可滚动的最大距离（内容总高 - 可视窗高）。
 	return maxf(0.0, GRID_CONTENT_H - GRID_H)
+
+
+func _grid_intro_tick(delta: float) -> void:
+	## R136：开场巡场 —— 战斗开始的前 2 秒里，镜头从**自己这半场**平滑推到
+	## **对方那半场**（_grid_scroll 由 max 回到 0）。目的只有一个：让玩家第一眼
+	## 就知道战场是 3×6，而不是「眼前看到的这一块」。玩家一动就停（见下面）。
+	if _grid_intro_t < 0.0:
+		return
+	_grid_intro_t += delta
+	if _grid_intro_t >= GRID_INTRO_DUR:
+		_grid_intro_t = -1.0
+		_grid_scroll = 0.0
+		queue_redraw()
+		return
+	var pan := clampf((_grid_intro_t - GRID_INTRO_HOLD0)
+			/ (GRID_INTRO_DUR - GRID_INTRO_HOLD0 - GRID_INTRO_HOLD1), 0.0, 1.0)
+	var e := pan * pan * (3.0 - 2.0 * pan)      # smoothstep：两头慢、中间快
+	_grid_scroll = _grid_scroll_max() * (1.0 - e)
+	queue_redraw()
+
+
+func _grid_intro_stop() -> void:
+	## R136：巡场只是提示 —— 玩家一按鼠标（点击 / 滚轮 / 拖动）就立刻停在当前位置，
+	## 既不吞掉这次操作，也不会让棋盘继续在指针底下滑走。
+	if _grid_intro_t >= 0.0:
+		_grid_intro_t = -1.0
+		_grid_scroll = clampf(_grid_scroll, 0.0, _grid_scroll_max())
 
 
 func _cell_in_view(pos: Vector2) -> bool:
@@ -8115,6 +8199,7 @@ func _process(delta: float) -> void:
 		_net_poll(delta)
 	if ReplayLog.playing:
 		_replay_tick()
+	_grid_intro_tick(delta)         # R136：开场巡场（自己半场 → 对方半场）
 	# R77：鸭语耳环逐张出牌 —— 放在 _tick_anims 之前，优先把「下一张」推出去，
 	# 这样同一帧里刚出的牌动画能立刻开始播。
 	var earring_busy := _tick_earring_autoplay()

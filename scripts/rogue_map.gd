@@ -12,7 +12,7 @@ extends RefCounted
 ## 门的方向数约束（用户口径）：
 ##   * 四个角：**只有 1 个方向**（死路尽头）；
 ##   * 起点：2~3 个方向；
-##   * 其他边缘格：1~3 个方向；
+##   * 其他边缘格：**2~3** 个方向（R136：边缘但不是角的房间至少通 2 个）；
 ##   * 内部格：2~4 个方向。
 ## 门是**双向**的：A 有通往 B 的门 ⇔ B 有通往 A 的门（doors 对称，生成时保证）。
 ##
@@ -23,8 +23,11 @@ extends RefCounted
 ## 「?」房的实际类型在**生成时**就定好（而非进入时抽）—— 这样休息点的
 ## 「不与起点相邻 / 不与另一个休息相邻」两条约束对隐藏房同样成立。
 ##
-## 生成算法（R128 实验选定：平均 1.46 次重试、68% 一次成功、0 失败）：
+## 生成算法（R128 实验选定；R136 把「边缘非角」的下限提到 2 后重测 300 张：
+##   平均 1.997 次重试、51% 一次成功、最差 9 次、0 失败）：
 ##   1) 骨架：每行横向全连（端点得 1 度、中间列得 2 度）；
+##      **最左 / 最右两列的非角格再纵向串成链**（R136：边缘非角至少 2 个方向，
+##      而这两列横向只有 1 条门，不补纵向就永远不达标）；
 ##      相邻两行之间在「非角列」随机连 1~3 条垂直边（保证行间连通）；
 ##   2) 随机加边：两端都还没到度数上限的边，按概率加（制造分支感）；
 ##   3) 随机删边：删后仍连通、且两端度数都不低于下界才真删（制造死路与岔路）；
@@ -69,6 +72,9 @@ const WEIGHTS := {"battle": 6, "event": 3, "elite": 2, "chest": 2}
 const WEIGHTS_UNKNOWN := {"battle": 7, "event": 4, "elite": 1, "chest": 1}
 
 const MAX_ATTEMPTS := 200
+## 上一次 generate() 实际用了几次重摇（1 = 一次成功）。仅供测试与调参看；
+## 生成结果本身与它无关（同一 rng 状态必然得到同一张图）。
+static var last_attempts := 0
 
 
 # ------------------------------------------------------------ 坐标工具
@@ -104,7 +110,7 @@ static func limits(col: int, row: int) -> Vector2i:
 	if col == START_COL and row == START_ROW:
 		return Vector2i(2, 3)          # 初始房间 2~3 个方向
 	if is_edge(col, row):
-		return Vector2i(1, 3)          # 其他边缘房间 1~3 个方向
+		return Vector2i(2, 3)          # 其他边缘房间 2~3 个方向（R136：下限提到 2）
 	return Vector2i(2, 4)              # 内部房间 2~4 个方向
 
 
@@ -133,6 +139,7 @@ static func generate(rng: RandomNumberGenerator,
 		var adj := _build_adjacency(rng)
 		if adj.is_empty():
 			continue
+		last_attempts = attempt + 1
 		return _make_cells(adj, rng, layer)
 	push_error("RogueMap：%d 次尝试仍未生成满足约束的 5×7 地图" % MAX_ATTEMPTS)
 	return []
@@ -170,6 +177,15 @@ static func _build_adjacency(rng: RandomNumberGenerator) -> Array:
 	for row in ROWS:
 		for col in COLS - 1:
 			_link(adj, idx(col, row), idx(col + 1, row))
+
+	# --- 骨架 1.5（R136）：最左 / 最右两列的**非角**格横向只有 1 条门，
+	#     而「边缘非角 ≥ 2 个方向」是硬约束 → 这两列必须各自纵向串成一条链：
+	#     (0,1)-(0,2)-(0,3) 与 (6,1)-(6,2)-(6,3)。缺任何一条，那一格就只剩 1 度，
+	#     整张图判不合格 → 实测会让生成几乎必然失败（只能靠重摇，代价极高）。
+	#     角格的垂直边仍然**永不加**（角的上限 1 要留给水平边）。
+	for c in [0, COLS - 1]:
+		for row in range(1, ROWS - 2):
+			_link(adj, idx(c, row), idx(c, row + 1))
 
 	# --- 骨架 2：相邻两行之间随机连 1~3 条垂直边（行间连通）
 	#     ⚠️ 角的垂直边**永不加**：角的上限就是 1，那条额度必须留给水平边，
