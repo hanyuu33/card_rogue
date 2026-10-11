@@ -64,6 +64,11 @@ var _charge: Dictionary = {}
 # 闪躲（9103）：自己直到**下个回合开始**前，HP 伤害改由随机一个己方盟友代受。
 # 用法：施放时置 true；_begin_turn(SIDE_SELF) 时清 false（覆盖了中间的敌方回合）。
 var _dodge_active:= false
+# R145：**最近一次真正落到玩家 HP 上**的伤害（减伤 / 挡下之后的值）。
+# `attack_hp` 与各处「溢出伤害」发出的 `action.emit("hp"/"trample")` 要报
+# 「实际掉了几点」，而不是「攻击力是多少」—— 只扣 1 点却飘一个「-12」是错的。
+# 0 = 这一笔被完全挡下（森林守护 / 闪躲吸收）。
+var _last_hp_damage:= 0
 var growth_cfg: Dictionary = {}   # 关卡成长曲线配置（空 = 不启用）；只对敌方单位生效
 var _growth_stacks:= 0            # 已累计的成长层数（+1 层 = 每人 +inc 攻击力）
 
@@ -6792,8 +6797,10 @@ func _destroy_dead() -> void :
 		if over > 0:
 			_log("溢出伤害：%d 点越过 %s 漏到 %s HP" % [
 				over, pname, "我方" if pside == SIDE_SELF else "敌方"])
-			action.emit("trample", {"side": pside, "amount": over, "def_name": pname})
+			# R145：同上 —— 先结算再播，报实际掉血。
 			_damage_player(pside, over, "溢出")
+			action.emit("trample", {"side": pside, "amount": _last_hp_damage,
+				"def_name": pname})
 	_sync_enemy_growth()
 	_check_game_over()
 
@@ -6869,6 +6876,7 @@ func _end_hp_once() -> void :
 func _damage_player(side: String, amount: int, source:= "") -> int:
 	## R123：多格窗口内，同一方 HP 已经在这次结算里吃过一次 → 这笔直接跳过。
 	if _hp_once_depth > 0 and _hp_once_sides.has(side):
+		_last_hp_damage = 0        # 这笔没落地（同一次结算里已经吃过）
 		if side == SIDE_SELF:
 			_log("（同一次多格结算：我方 HP 已吃过一次，这笔 %d 点不再重复）" % amount)
 			return state.hp_self
@@ -6881,13 +6889,16 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 		if _dodge_active and amount > 0:
 			amount = _dodge_absorb(amount)
 			if amount <= 0:
+				_last_hp_damage = 0     # 全被盟友代受 → 玩家 HP 一点没掉
 				_check_game_over()
 				return state.hp_self
 
 		if _absorb_by_guard(amount):
+			_last_hp_damage = 0         # 替己方 HP 承伤的单位全挡下了
 			return state.hp_self
 
 		var dmg:= _hp_damage_taken(amount)
+		_last_hp_damage = dmg           # R145：减伤之后**真正**掉的血
 		state.hp_self = maxi(0, state.hp_self - dmg)
 		if dmg != amount:
 			_log("减伤（迅捷/鸭嘴）：伤害 %d → %d" % [amount, dmg])
@@ -6900,6 +6911,7 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 	if amount > 0:
 		_mark_spell_enemy_hit()
 	state.hp_opponent = maxi(0, state.hp_opponent - amount)
+	_last_hp_damage = amount      # R145：敌方 HP 没有减伤链，实际 = 账面
 	var left2:= state.hp_opponent
 	_log("敌方 HP -%d（%s），剩余 %d" % [amount, source, left2])
 	_check_game_over()
@@ -8329,10 +8341,11 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		if overflow > 0:
 			var foe:= defender.owner
 			_log("溢出伤害：%d 点越过 %s 漏到玩家 HP" % [overflow, defender.card.card_name])
-			action.emit("trample", {"side": foe, "amount": overflow, "src": src, "dst": dst, 
-				"atk_name": attacker.card.card_name, 
-				"def_name": defender.card.card_name})
+			# R145：先结算、再播出 —— `amount` 报实际掉血（溢出也可能被石肤 / 护心压掉）。
 			_damage_player(foe, overflow, "溢出")
+			action.emit("trample", {"side": foe, "amount": _last_hp_damage, "src": src,
+				"dst": dst, "atk_name": attacker.card.card_name,
+				"def_name": defender.card.card_name})
 	if defender.health <= 0 and defender.card.traits.has(WORKSHOP_TRAIT) and state.board.has(src):
 		# 机关工坊（8015；R74 由「陷阱工坊」改名，仍是工事）：被敌人的攻击**破坏** → 对破坏它的敌人造成 8 伤。
 		# 攻击者若已先倒下（如踩了别的反伤）则不再追伤；同样记「触发过工事」供暗影狩猎判定。
@@ -8370,27 +8383,33 @@ func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		return
 	var power:= attacker.effective_power() + _turn_dmg_bonus(side)\
 	+ _ally_dmg_bonus(attacker.card, side)
+	# R145：`dealt` = 真正落到 HP 上的伤害（减伤 / 挡下之后）。0 = 被完全挡下。
+	var dealt:= power
 	if side == SIDE_SELF:
 		state.hp_opponent = maxi(0, state.hp_opponent - power)
 		_log("%s 攻击敌方 HP（从后排 %s）：敌方 -%d，剩余 %d" % [
 			attacker.card.card_name, dst, power, state.hp_opponent])
 	else:
 		if _absorb_by_guard(power):
-
+			dealt = 0
 			_log("森林守护盟友替我方挡下 %s 的攻击" % attacker.card.card_name)
 		else:
 			# 荒野形态 6022：每场第一次「普通攻击直击我方 HP」→ 减伤 + 反伤。
 			# 只挂在普通攻击这条路径上：技能 / 效果 / 溢出的 HP 伤害都走
 			# _damage_player → _hp_damage_taken，不会触发它。
 			var self_dmg:= _wild_form_first_hit(attacker, power)
+			dealt = self_dmg
 			state.hp_self = maxi(0, state.hp_self - self_dmg)
 			_log("%s 攻击我方 HP：我方 -%d，剩余 %d" % [
 				attacker.card.card_name, self_dmg, state.hp_self])
 			if self_dmg > 0:
 				_on_self_damaged()
 				_on_self_hp_damaged()
-	action.emit("hp", {"src": src, "dst": dst, "damage": power, "side": side,
-		"atk_name": attacker.card.card_name})
+	# R145：飘字 / 战斗记录 / 横幅冻结一律用**实际掉的血**（`dealt`）——
+	# 石肤 / 荒野形态 / 护心 / 挡下之后只掉 1 点却飘「-12」是错的。
+	# `raw` 另存原始攻击力，留给「本该多少」这类显示（目前无人读）。
+	action.emit("hp", {"src": src, "dst": dst, "damage": dealt, "raw": power,
+		"side": side, "atk_name": attacker.card.card_name})
 	if attacker.card.id == LURKER_ID and attacker.ramp_atk > 0:
 		attacker.ramp_atk = 0
 		_log("潜影者：攻击 HP 后力量重置（当前 %d）" % attacker.effective_power())

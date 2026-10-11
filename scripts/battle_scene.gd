@@ -1277,11 +1277,12 @@ func _ready() -> void:
 		_toggle_map()
 		_demo_hover_idx = -1
 		_hover_hand = -1
-		status_text = "战斗内地图总览：金框＝当前房间，绿框＝可以走过去"
+		status_text = "战斗内地图总览：金框＝当前房间，绿框＝可以走过去，迷雾＝看不清里面"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--mapwalk" in args and _map_visible:
-		# R128 核验用：伪造「从起点向上走过 3 格」→ 看清「门只在走过的房间里露出来」。
+		# R128/R145 核验用：伪造「从起点向上走过 3 格」→ 看清
+		# 「通路全图可见 + 内容迷雾（走过的 / 下一步看得见）」。
 		_mapview_demo_walk()
 		queue_redraw()
 	if "--guard" in args and engine != null:
@@ -4629,6 +4630,7 @@ func _draw_map_panel() -> void:
 	# ⚠️ 顺序不可换：格子底 → 通路（小桥） → 图标（与冒险地图同一套）。
 	_draw_map_tiles()
 	_draw_map_bridges()
+	_draw_map_fog()          # R145：内容看不见的格子盖迷雾（桥不盖）
 	_draw_map_nodes()
 	_draw_map_legend(pr)
 
@@ -4644,15 +4646,11 @@ func _mapview_bridge_kind(cell: Dictionary, nb: Dictionary) -> int:
 
 func _draw_map_bridges() -> void:
 	## 通路（R130）：与冒险地图**同一套视觉**（都走 MapBridge 唯一绘制口）、
-	## 同一套视野规则 —— 只有**走过**的房间才画它通向哪几间；
-	## 持有「鹰哨」（6026）时全图都可见。
-	## 画在格子底之上、图标之下（调用顺序 tiles → bridges → nodes）。
-	var reveal_all := RunState.has_relic(RunState.EAGLE_WHISTLE_RELIC_ID)
+	## **同一套视野规则**（R145：通路全图可见 —— 路线要看得见，玩家才规划得了）。
+	## 画在格子底之上、图标之下（调用顺序 tiles → bridges → fog → nodes）。
 	var pulse := 0.5 + 0.5 * sin(float(Time.get_ticks_msec()) * 0.004)
 	var drawn := {}          # 去重：两格之间只盖一座桥
 	for cell: Dictionary in RunState.map_cells:
-		if not RunState.cleared_ids.has(int(cell["id"])) and not reveal_all:
-			continue
 		var ctr := _mapview_cell_rect(cell).get_center()
 		for nid in cell["doors"]:
 			var nb: Dictionary = RunState.map_cells[int(nid)]
@@ -4666,10 +4664,41 @@ func _draw_map_bridges() -> void:
 					MAPVIEW_CELL, pulse if kind == MapBridge.LIT else 0.0)
 
 
+func _draw_map_fog() -> void:
+	## 总览里的迷雾：与冒险地图**同一口径**（判定口 = RunState.known_node），
+	## 只是格子小一圈 → 云团也按比例缩小（半径都取 `r.size.x` 的百分比）。
+	## ⚠️ 只在总览面板内部画，绝不越出面板。
+	for cell: Dictionary in RunState.map_cells:
+		var id := int(cell["id"])
+		if RunState.known_node(id):
+			continue
+		_draw_map_fog_cell(_mapview_cell_rect(cell), id)
+
+
+func _draw_map_fog_cell(r: Rect2, id: int) -> void:
+	var inner := r.grow(-1.5)
+	var phase := float(id) * 2.399
+	draw_rect(inner, Color(0.11, 0.13, 0.19, 0.90), true)
+	for i in 5:
+		var fx := 0.28 + 0.44 * float((id * 7 + i * 3) % 5) / 4.0
+		var fy := 0.26 + 0.48 * float((id * 5 + i * 2) % 4) / 3.0
+		var ctr := Vector2(inner.position.x + inner.size.x * fx,
+				inner.position.y + inner.size.y * fy)
+		var rad := inner.size.x * (0.20 + 0.05 * sin(phase + float(i) * 0.9))
+		draw_circle(ctr, rad, Color(0.34, 0.40, 0.52, 0.22))
+		draw_circle(ctr + Vector2(0.0, rad * 0.42), rad * 0.7, Color(0.03, 0.04, 0.07, 0.30))
+	draw_rect(inner, Color(1, 1, 1, 0.05), false, 1.0)
+
+
 func _draw_map_tiles() -> void:
 	## 格子底 + 类型色描边（与冒险地图同一套）。与图标分两趟画 —— 中间夹一层通路。
+	## R145：看不见内容的格子走**中性底**（按类型染色等于把内容漏出去）。
 	for cell: Dictionary in RunState.map_cells:
 		var r := _mapview_cell_rect(cell)
+		if not RunState.known_node(int(cell["id"])):
+			draw_rect(r, Color(0.10, 0.12, 0.17, 0.62), true)
+			draw_rect(r, Color(1, 1, 1, 0.10), false, 1.2)
+			continue
 		var dtype := RogueMap.display_type(cell)
 		var done: bool = RunState.cleared_ids.has(int(cell["id"]))
 		var base: Color = UiTheme.MAP_NODE_COLORS.get(dtype, UiTheme.INK_500)
@@ -4682,17 +4711,19 @@ func _draw_map_nodes() -> void:
 	for cell: Dictionary in RunState.map_cells:
 		var r := _mapview_cell_rect(cell)
 		var id := int(cell["id"])
-		var dtype := RogueMap.display_type(cell)
+		var known := RunState.known_node(id)
+		# R145：看得见的才画内容（迷雾格的图标一个像素都不画）。
+		var dtype := RogueMap.display_type(cell) if known else ""
 		var done: bool = RunState.cleared_ids.has(id)
 		# 内容：与冒险地图同一套 —— **只用图标**，缺图才回退汉字。
-		var icon := UiAssets.node_icon(dtype)
+		var icon := UiAssets.node_icon(dtype) if known else null
 		if icon != null:
 			var ib := MAPVIEW_CELL * 0.62
 			var box := Rect2(r.position.x + (r.size.x - ib) * 0.5,
 					r.position.y + (r.size.y - ib) * 0.5, ib, ib)
 			draw_texture_rect(icon, CardFace.fit_rect(icon.get_size(), box), false,
 					Color(1, 1, 1, 0.55) if done else Color.WHITE)
-		else:
+		elif known:
 			draw_string(_font_bold, Vector2(r.position.x, r.position.y + 44.0),
 					RogueMap.type_mark(dtype), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
 					UiTheme.FS_SUBHEAD, Color(1, 1, 1, 0.45) if done else UiTheme.PAPER)
@@ -4714,7 +4745,7 @@ func _draw_map_legend(pr: Rect2) -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, 58, UiTheme.FS_CAPTION, Color("cfd3da"))
 		x += 73.0
 	draw_string(_font, Vector2(pr.position.x + 12.0, y + 24.0),
-			"金框＝当前房间　绿框＝可以走过去　（只有走过的房间才看得到通路）",
+			"金框＝当前房间　绿框＝可以走过去　小桥＝通路（全图可见）　迷雾＝还看不清里面是什么",
 			HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 24.0, UiTheme.FS_CAPTION, Color("9aa0aa"))
 
 
@@ -6025,7 +6056,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 哪一方 HP 在掉：self 方攻击 → 敌方 HP 掉；opponent 方攻击 → 我方 HP 掉
 			var hp_key: String = "hp_opp" if hp_side == GameEngine.SIDE_SELF \
 					else "hp_self"
-			_freeze_hp(hp_key, int(data["damage"]))   # 横幅数字冻结到撞击演出才掉
+			# R145：`damage` 现在是**实际掉的血**（石肤 / 荒野形态 / 护心 / 挡下之后）。
+			# 被完全挡下（0）时不冻结横幅、不飘字、不震屏 —— 引擎日志已经写了原因。
+			var hp_dmg := int(data.get("damage", 0))
+			if hp_dmg > 0:
+				_freeze_hp(hp_key, hp_dmg)   # 横幅数字冻结到撞击演出才掉
 			var hp_atk := engine.state.unit_at(data["src"])
 			var h_start := n
 			if hp_atk != null:
@@ -6034,16 +6069,17 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				var hd := _cell_center(data["dst"])
 				var hdir: Vector2 = (hd - hs).normalized()
 				_attacks[hp_atk] = {"kind": "hp", "dir": hdir, "src": hs, "dst": hd,
-						"start": h_start, "dur": ATK_DUR_MS, "dmg": int(data["damage"])}
-			# 撞击时刻才出爆点/飘字/震屏，与单位动作对齐
-			_delayed.append({"at": h_start + int(ATK_IMPACT_T * ATK_DUR_MS),
-					"kind": "hp_hit",
-					"data": {"pos": Vector2(GRID_X + GRID_W + 46, banner_y),
-					"dmg": int(data["damage"]), "hpkey": hp_key}})
-			if hp_side == GameEngine.SIDE_SELF:
-				_say("⚔ %s 直击敌方 HP！-%d" % [data.get("atk_name", "?"), int(data["damage"])])
-			else:
-				_say("⚔ %s 直击我方 HP！-%d" % [data.get("atk_name", "?"), int(data["damage"])])
+						"start": h_start, "dur": ATK_DUR_MS, "dmg": hp_dmg}
+			if hp_dmg > 0:
+				# 撞击时刻才出爆点/飘字/震屏，与单位动作对齐
+				_delayed.append({"at": h_start + int(ATK_IMPACT_T * ATK_DUR_MS),
+						"kind": "hp_hit",
+						"data": {"pos": Vector2(GRID_X + GRID_W + 46, banner_y),
+						"dmg": hp_dmg, "hpkey": hp_key}})
+				if hp_side == GameEngine.SIDE_SELF:
+					_say("⚔ %s 直击敌方 HP！-%d" % [data.get("atk_name", "?"), hp_dmg])
+				else:
+					_say("⚔ %s 直击我方 HP！-%d" % [data.get("atk_name", "?"), hp_dmg])
 		"trample":
 			# 打穿挡在 HP 前面的单位 → 多出来的伤害漏到玩家 HP。
 			# 排在这次攻击「命中」之后再播：弹体命中 → 击破 → 漏伤。
@@ -6052,7 +6088,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					else GRID_Y + GRID_H - 20.0
 			var tr_key: String = "hp_self" if tr_side == GameEngine.SIDE_SELF \
 					else "hp_opp"
-			_freeze_hp(tr_key, int(data["amount"]))   # 溢出也冻结到溢出演出才掉
+			# R145：`amount` 现在是**实际掉的血**（溢出也可能被石肤 / 护心压掉、或被全挡）。
+			var tr_amt := int(data.get("amount", 0))
+			if tr_amt > 0:
+				_freeze_hp(tr_key, tr_amt)   # 溢出也冻结到溢出演出才掉
 			var tr_at := n
 			# 溢出可能来自攻击（带 src，等弹体命中后再漏），也可能来自爆炎鸭炸击 /
 			# 范围伤害的批量击杀收尾（没有 src）→ 那种就当场播。
@@ -6061,18 +6100,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if tr_atk != null and _attacks.has(tr_atk):
 				var la: Dictionary = _attacks[tr_atk]
 				tr_at = int(la.start) + int(ATK_IMPACT_T * int(la.dur)) + 140
-			_delayed.append({"at": maxi(tr_at, n), "kind": "hp_hit",
-					"data": {"pos": Vector2(GRID_X + GRID_W + 46, tr_y),
-					"dmg": int(data["amount"]),
-					"label": "溢出 -%d" % int(data["amount"]),
-					"hpkey": tr_key}})
-			var tr_side_cn := "我方" if tr_side == GameEngine.SIDE_SELF else "敌方"
-			if data.has("atk_name"):
-				_say("⚔ %s 打穿 %s，溢出 %d 点直击%s HP！" % [data["atk_name"],
-						data.get("def_name", "?"), int(data["amount"]), tr_side_cn])
-			else:
-				_say("💥 溢出伤害：%d 点越过 %s 直击%s HP！" % [int(data["amount"]),
-						data.get("def_name", "?"), tr_side_cn])
+			if tr_amt > 0:
+				_delayed.append({"at": maxi(tr_at, n), "kind": "hp_hit",
+						"data": {"pos": Vector2(GRID_X + GRID_W + 46, tr_y),
+						"dmg": tr_amt,
+						"label": "溢出 -%d" % tr_amt,
+						"hpkey": tr_key}})
+				var tr_side_cn := "我方" if tr_side == GameEngine.SIDE_SELF else "敌方"
+				if data.has("atk_name"):
+					_say("⚔ %s 打穿 %s，溢出 %d 点直击%s HP！" % [data["atk_name"],
+							data.get("def_name", "?"), tr_amt, tr_side_cn])
+				else:
+					_say("💥 溢出伤害：%d 点越过 %s 直击%s HP！" % [tr_amt,
+							data.get("def_name", "?"), tr_side_cn])
 		"spell":
 			sfx.play("heal" if int(data["card"].id) in [2002, 7202] else "spell")
 			var detail := str(data.get("detail", ""))

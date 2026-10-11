@@ -451,8 +451,9 @@ func _check_map_scene(scene: Variant) -> void:
 			_smoke_fail("地图场景：可走房间 %d 未被场景认作可走" % int(a["id"]))
 			return
 	# 通路（R130）：判定口 `scene._bridge_kind` + `MapBridge` 的真值表 + 几何。
-	# 起点就是当前房 → 它每个门都通向「真能走过去」的房 → 一律亮青；
-	# 两端都没走过的格子之间只能是「鹰哨」档。
+	# 起点就是当前房 → 它每个门都通向「真能走过去」的房 → 一律亮青。
+	# ⚠️ R145 起**通路全图可见**（不再按「走过没走过」过滤），所以
+	# 「两端都没走过」的格子之间同样有桥 —— 那种是灰蓝的 UNSEEN 档。
 	var bridge_start: Dictionary = RogueMap.start_cell(cells)
 	for nid2 in bridge_start["doors"]:
 		if scene._bridge_kind(bridge_start, cells[int(nid2)]) != MapBridge.LIT:
@@ -462,6 +463,30 @@ func _check_map_scene(scene: Variant) -> void:
 			or MapBridge.kind_for(false, false, false) != MapBridge.UNSEEN \
 			or MapBridge.kind_for(false, false, true) != MapBridge.LIT:
 		_smoke_fail("通路语义：kind_for 真值表不对（走过→暖白 / 都没走过→灰蓝 / 可走→亮青）")
+		return
+	# R145 迷雾：内容可见性的**唯一判定口**是 RunState.known_node
+	#（地图页与战斗内总览同源）；通路不再看它，所以两件事必须各自成立。
+	if not RunState.known_node(int(bridge_start["id"])):
+		_smoke_fail("R145 迷雾：当前房间必须看得见")
+		return
+	for a5: Dictionary in RunState.available_nodes():
+		if not RunState.known_node(int(a5["id"])):
+			_smoke_fail("R145 迷雾：「下一步」能走到的房间 %d 必须看得见" % int(a5["id"]))
+			return
+	for lp: Vector2i in RogueMap.BIGCHEST_POS:
+		if not RunState.known_node(RogueMap.idx(lp.x, lp.y)):
+			_smoke_fail("R145 迷雾：大宝箱 (%d,%d) 是地标，不能被迷雾遮住"
+					% [lp.x, lp.y])
+			return
+	var fog_hidden := 0
+	for c5: Dictionary in cells:
+		if not RunState.known_node(int(c5["id"])):
+			fog_hidden += 1
+	if fog_hidden <= 0:
+		_smoke_fail("R145 迷雾：开局竟然一格迷雾都没有（规则失效）")
+		return
+	if not scene.has_method("_draw_fog") or not scene.has_method("_draw_fog_cell"):
+		_smoke_fail("R145 迷雾：地图场景缺少迷雾绘制口")
 		return
 	# 朝向：左右相邻用侧视图、上下相邻用俯视图（两枚素材缺一就有半个方向没桥）。
 	if MapBridge.is_vertical(Vector2(0, 0), Vector2(100, 0)) \

@@ -2007,6 +2007,55 @@ func _init() -> void:
 			"R144：1 点伤害走到石肤也不扣次数（HP %d，剩 %d 次）"
 			% [sk_wf.state.hp_self, sk_wf._stoneskin_left])
 
+	# ---- R145：直击 HP 的 `action.emit("hp")` 必须报**实际掉血**，不是攻击力 ----
+	# 旧口径报的是 `power`（减伤前）→ 石肤 / 荒野形态之后只掉 1 点却飘「-12」，
+	# 战斗记录跟着说错（用户口径：「所有此类显示需要修改」）。
+	# 现在 `damage` = 实际；`raw` 另存原始攻击力。
+	var hp_seen: Array = []
+	var hp_e := _new_engine([], 30, 30)
+	hp_e._stoneskin_left = 2
+	hp_e.action.connect(func(kind: String, data: Dictionary) -> void:
+		if kind == "hp":
+			hp_seen.append(data))
+	hp_e.state.place(_card(9014, "远古虚骨龙", "盟友", 12, 12, 100, 2, 2),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	hp_e.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	var hp_got := int(hp_seen[0].get("damage", -1)) if hp_seen.size() > 0 else -1
+	var hp_raw := int(hp_seen[0].get("raw", -1)) if hp_seen.size() > 0 else -1
+	check(hp_seen.size() == 1 and hp_got == 1 and hp_raw == 12
+			and hp_e.state.hp_self == 29,
+			"R145 显示：12 攻直击 → 石肤压成 1，`hp` 报 damage=%d / raw=%d（HP %d）"
+			% [hp_got, hp_raw, hp_e.state.hp_self])
+
+	# 被「替己方 HP 承伤」的单位全挡下 → 报 0（界面据此不飘字、不震屏）
+	var hp_seen2: Array = []
+	var hp_g := _new_engine([], 30, 30)
+	hp_g.action.connect(func(kind: String, data: Dictionary) -> void:
+		if kind == "hp":
+			hp_seen2.append(data))
+	hp_g.state.place(_card(9037, "森林守护盟友", "盟友", 1, 1, 20, 1, 1),
+			Vector2i(4, 2), GameEngine.SIDE_SELF)
+	hp_g._forest_guard(GameEngine.SIDE_SELF, Vector2i(4, 2))
+	hp_g.state.place(_card(9014, "远古虚骨龙", "盟友", 12, 12, 100, 2, 2),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	hp_g.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(hp_seen2.size() == 1 and int(hp_seen2[0].get("damage", -1)) == 0
+			and hp_g.state.hp_self == 30,
+			"R145 显示：替 HP 承伤全挡下时 `hp` 报 0（玩家 HP 不掉，界面不飘字）")
+
+	# 溢出伤害走同一条链：`_last_hp_damage` 记的是减伤之后的数（trample 直接读它）
+	var hp_t := _new_engine([], 30, 30)
+	hp_t._stoneskin_left = 2
+	hp_t._damage_player(GameEngine.SIDE_SELF, 12, "溢出")
+	check(hp_t._last_hp_damage == 1 and hp_t.state.hp_self == 29,
+			"R145 显示：溢出 12 点被石肤压成 1 → `_last_hp_damage`=%d（HP %d）"
+			% [hp_t._last_hp_damage, hp_t.state.hp_self])
+	var hp_t2 := _new_engine([], 30, 30)
+	hp_t2._damage_player(GameEngine.SIDE_SELF, 4, "溢出")
+	check(hp_t2._last_hp_damage == 4 and hp_t2.state.hp_self == 26,
+			"R145 显示：没有减伤时 `_last_hp_damage` = 账面伤害（%d）"
+			% hp_t2._last_hp_damage)
+
 	# ---- 以太守卫（9067）：1 费稀有盟友 1/1/1/1；替我方 HP 承伤 ----
 	var nc_ag := repo.get_card(9067)
 	check(nc_ag.card_name == "以太守卫" and nc_ag.kind == "盟友" and nc_ag.cost == 1
@@ -5466,6 +5515,50 @@ func _init() -> void:
 	check(avail.size() == (start_cell_d["doors"] as Array).size()
 			and avail.size() >= 2,
 			"从起点可选的房间 = 起点有门的相邻房（%d 个）" % avail.size())
+
+	# ==== R145：迷雾视野规则（判定口 = RunState.known_node）====
+	# 规则：**通路全图可见**，但「格子里是什么」默认被迷雾遮住；看得见的只有
+	# ①走过的房间 ②当前房间 ③当前房间有门的邻居（=「下一步」）④地标（起点 + 大宝箱）。
+	var fog_here := int(start_cell_d["id"])
+	var fog_nbs: Array = RogueMap.neighbor_ids(start_cell_d)
+	var fog_here_ok := RunState.known_node(fog_here)
+	for fid in fog_nbs:
+		if not RunState.known_node(int(fid)):
+			fog_here_ok = false
+	check(fog_here_ok,
+			"R145 迷雾：当前房间与「下一步」的 %d 间相邻房都看得见" % fog_nbs.size())
+	check(RunState.known_node(RogueMap.idx(0, 0))
+			and RunState.known_node(RogueMap.idx(6, 0))
+			and RunState.is_landmark_node(RogueMap.idx(0, 0))
+			and RunState.is_landmark_node(fog_here),
+			"R145 迷雾：地标（起点 + 两个大宝箱）不被迷雾遮住 —— 玩家才找得到去大宝箱的路")
+	var fog_far_n := 0
+	var fog_far_known := 0
+	var fog_far_id := -1
+	for fc: Dictionary in RunState.map_cells:
+		var fid2 := int(fc["id"])
+		if fid2 == fog_here or fog_nbs.has(fid2) \
+				or RunState.is_landmark_node(fid2):
+			continue
+		fog_far_n += 1
+		if RunState.known_node(fid2):
+			fog_far_known += 1
+		else:
+			fog_far_id = fid2
+	check(fog_far_n > 0 and fog_far_known == 0,
+			"R145 迷雾：其余 %d 格全部看不见（意外可见 %d 格）" % [fog_far_n, fog_far_known])
+	# 鹰哨（6026）→ 全图迷雾散尽；摘掉又回到迷雾
+	var fog_saved_relics: Array = RunState.relics.duplicate()
+	RunState.relics.append(RunState.EAGLE_WHISTLE_RELIC_ID)
+	var fog_all_ok := true
+	for fc: Dictionary in RunState.map_cells:
+		if not RunState.known_node(int(fc["id"])):
+			fog_all_ok = false
+	check(fog_all_ok, "R145 迷雾：持有鹰哨（6026）时 %d 格全部可见"
+			% RunState.map_cells.size())
+	RunState.relics = fog_saved_relics
+	check(fog_far_id >= 0 and not RunState.known_node(fog_far_id),
+			"R145 迷雾：摘掉鹰哨后远处的格子重新被迷雾遮住")
 	var first_new: Dictionary = avail[0]
 	var choco_before := RunState.chocolate
 	var mv := RunState.advance(int(first_new["id"]))
@@ -5477,6 +5570,13 @@ func _init() -> void:
 			and RunState.cleared_ids.has(int(first_new["id"]))
 			and RunState.current_node_id == int(first_new["id"]),
 			"前进：起点与新房间都记为已走过，当前位置更新")
+	# R145：换房间后「下一步」跟着更新（新位置门后的房间立刻看得见）
+	var fog_next_ok := true
+	for n5: Dictionary in RunState.available_nodes():
+		if not RunState.known_node(int(n5["id"])):
+			fog_next_ok = false
+	check(fog_next_ok, "R145 迷雾：走到新房间后，「下一步」换成新位置的相邻房"
+			+ "（走过的房间仍然可见）")
 	var back := RunState.advance(int(start_cell_d["id"]))
 	check(bool(back["ok"]) and not bool(back["is_new"]) and int(back["cost"]) == 0
 			and RunState.chocolate == choco_before - 1,

@@ -778,6 +778,40 @@ static func available_nodes() -> Array:
 	return out
 
 
+static func known_node(id: int) -> bool:
+	## R145 迷雾规则的**唯一判定口**：玩家「看得见这一格里是什么」吗？
+	##   * 持有「鹰哨」（6026）→ 全图都看得见；
+	##   * **地标**（`is_landmark_node`）：起点与两个大宝箱 —— 它们不是随机内容，
+	##     位置固定、开局就该知道；全图的通路又是可见的，玩家才有办法「朝大宝箱走」；
+	##   * 走过的房间（`cleared_ids`）—— 去过就记得；
+	##   * 当前房间；
+	##   * **当前房间有门的邻居** = 「下一步」能选的这几间。
+	## 其余格子在界面上盖一层迷雾（**内容**不可见，但通路（小桥）仍然可见）。
+	## ⚠️ 地图页与战斗内总览**必须**都读这个函数 —— 两处各写一份必然走形。
+	if id < 0 or id >= map_cells.size():
+		return false
+	if has_relic(EAGLE_WHISTLE_RELIC_ID):
+		return true
+	if is_landmark_node(id):
+		return true
+	if current_node_id < 0:
+		return false
+	if id == current_node_id or cleared_ids.has(id):
+		return true
+	return RogueMap.neighbor_ids(current_node()).has(id)
+
+
+static func is_landmark_node(id: int) -> bool:
+	## 迷雾永远盖不住的地标格：起点 + 两个大宝箱。
+	## 「找不到通往大宝箱的路」是 R145 要解决的问题 —— 通路可见 + 目标可见，
+	## 玩家才规划得了路线；剩下「路上会遇到什么」才是迷雾要藏的东西。
+	if id < 0 or id >= map_cells.size():
+		return false
+	if RogueMap.is_bigchest(id):
+		return true
+	return str(map_cells[id].get("type", "")) == "start"
+
+
 static func can_move_to(node_id: int) -> bool:
 	## 从当前房间能否走到目标（必须真的有门 —— 与地图场景的点击判定同源）。
 	if node_id < 0 or node_id >= map_cells.size():

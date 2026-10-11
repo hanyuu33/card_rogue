@@ -7,8 +7,12 @@ extends Control
 ## 规则（与 RogueMap 的生成约束一一对应）：
 ##   * 起点固定在最下一行中间 (3,4)；**左上 (0,0) 与右上 (6,0) 固定为大宝箱**；
 ##   * 每一格都写明房间类型；**「?」房要走进才揭晓**（揭晓后永久显示真实类型）；
-##   * **只有走过的房间，玩家才看得到它通向哪些房间**（门）—— 这是本版的核心视野规则；
-##     奖励道具「鹰哨」（6026）可以让全图的门立刻全部可见；
+##   * **R145 视野规则（本版核心，两条要分开看）**：
+##     ① **通路（小桥）全图可见** —— 路线看得见，玩家才规划得了「怎么走到大宝箱」；
+##     ② **格子里是什么默认被迷雾遮住**，只有以下四处看得见：走过的房间 /
+##        当前房间 / 当前房间**有门的邻居**（=「下一步」能选的几间）/ 两处大宝箱地标。
+##        判定口只有一个：`RunState.known_node()`（战斗内的地图总览也读它）。
+##     奖励道具「鹰哨」（6026）可以让全图的迷雾立刻散尽；
 ##   * 每层 12 块巧克力：进入**没走过**的房间扣 1 块（悬浮会提示 -1），
 ##     原路返回走过的房间不扣、并且什么都不发生；
 ##   * 巧克力扣到 0 → 当前房间结算完 → 「入夜了，强大的敌人来袭」→ Boss 战。
@@ -43,6 +47,18 @@ const COL_CHOCO_FALLBACK := Color("6b3f24")                 # 巧克力缺图时
 const COL_CHOCO_SEG := Color("8c5a2e")                      # 兜底：小方格填充
 const COL_CHOCO_SEG_HI := Color(0.86, 0.65, 0.40, 0.45)     # 兜底：小方格上沿高光
 const COL_CHOCO_EDGE := Color(0.20, 0.12, 0.07, 0.90)       # 兜底：外描边
+
+# ---- 迷雾（R145）----
+## 「还看不清里面是什么」的格子：**只盖内容，不盖通路**。小桥画在两格之间的墙上、
+## 本来就不在格子里 —— 所以「路线可见 / 内容不可见」这两件事互不打扰，
+## 不需要任何裁剪或遮挡技巧。
+const COL_CELL_FOG_FILL := Color(0.13, 0.16, 0.22, 0.60)    # 迷雾格的格子底
+                                                            # ⚠️ **中性色，不按类型染色** ——
+                                                            # 类型色一染就等于把内容漏了
+const COL_FOG_BASE := Color(0.15, 0.18, 0.25, 0.85)         # 云雾底色（青灰，别太黑）
+const COL_FOG_HI := Color(0.42, 0.49, 0.62, 0.13)           # 云团高光（低透明度 → 融成一片）
+const COL_FOG_LO := Color(0.05, 0.06, 0.10, 0.16)           # 云团阴影
+const FOG_PUFFS := 10       # 每格画几团云（位置/大小按格子 id 抖动，见 _fog_rand）
 
 # ---- 进场过场（R131）----
 ## 走进**没去过的**房间时先播一段过场：那一格的图标一边放大一边飞到屏幕中心，
@@ -120,7 +136,7 @@ func _ready() -> void:
 	if "--relics" in OS.get_cmdline_user_args():
 		RunState.relics = [6001, 6005, 6010]
 		RunState.relic_choice = []
-	# -- --whistle：演示鹰哨（全图的门都可见）
+	# -- --whistle：演示鹰哨（R145 起 = 全图迷雾散尽，每格内容都可见）
 	if "--whistle" in OS.get_cmdline_user_args():
 		RunState.relics = [6001, 6005, 6026]
 		RunState.relic_choice = []
@@ -214,8 +230,8 @@ func _rng() -> RandomNumberGenerator:
 
 
 func _prep_midway_demo() -> void:
-	## 演示：把玩家挪到中路，并标记一条走过的路线 —— 用于核验
-	## 「只有走过的房间才画通路（小桥）」「走过的格子边变暖白」这两条视野规则。
+	## 演示：把玩家挪到中路，并标记一条走过的路线 —— 用于核验 R145 的三条规则：
+	## 「走过的格子边变暖白」「走过的房间 + 下一步看得见内容」「其余盖迷雾」。
 	var cells := RunState.map_cells
 	if cells.size() != RogueMap.CELLS:
 		return
@@ -225,11 +241,18 @@ func _prep_midway_demo() -> void:
 	RunState.cleared_ids.append(cur)
 	for step in 3:
 		var nxt := -1
+		var fallback := -1      # 没有向上的门时的兜底（起点可能只有左右两个门）
 		for nid in RogueMap.neighbor_ids(cells[cur]):
 			var c: Dictionary = cells[int(nid)]
-			if int(c["row"]) < int(cells[cur]["row"]) and not RunState.cleared_ids.has(int(nid)):
+			if RunState.cleared_ids.has(int(nid)):
+				continue
+			if fallback < 0:
+				fallback = int(nid)
+			if int(c["row"]) < int(cells[cur]["row"]):
 				nxt = int(nid)
 				break
+		if nxt < 0:
+			nxt = fallback
 		if nxt < 0:
 			break
 		RunState.cleared_ids.append(nxt)
@@ -444,6 +467,7 @@ func _draw() -> void:
 	_draw_cell_tiles()
 	_draw_bridges()
 	_draw_cell_icons()
+	_draw_fog()          # R145：内容看不见的格子盖迷雾（**桥不盖** —— 通路要可见）
 	_draw_states()
 	_draw_hud()
 	_draw_sidebar()
@@ -482,9 +506,14 @@ func _draw_cell_tiles() -> void:
 	## 半透明格子底 + 类型染色 + 分隔线。**格子底刻意做得很淡**，让背景图透出来。
 	## ⚠️ 与图标分两趟画：中间要夹一层「通路（小桥）」—— 桥必须压在格子底之上、
 	##    房间图标之下。
+	## R145：内容看不见的格子走**中性底** —— 按类型染色等于把「里面是什么」漏出去。
 	for cell: Dictionary in RunState.map_cells:
 		var r := _cell_rect(cell)
 		var done := _visited(cell)
+		if not RunState.known_node(int(cell["id"])):
+			draw_rect(r, COL_CELL_FOG_FILL, true)
+			draw_rect(r, COL_CELL_LINE, false, 1.4)
+			continue
 		var dtype := RogueMap.display_type(cell)
 		var base: Color = UiTheme.MAP_NODE_COLORS.get(dtype, UiTheme.INK_500)
 		# 底：未走过的更淡（还没探索），走过的稍实
@@ -498,9 +527,12 @@ func _draw_cell_tiles() -> void:
 func _draw_cell_icons() -> void:
 	## 房间内容：**只用图标**（R129 起地图上不再写文字 —— 房间类型全靠图标区分）。
 	## 图标缺图时才回退成格子中央的汉字（规范要求「缺图不空白也不报错」）。
+	## R145：`known_node` 说不看得见的，**一个像素都不画**（迷雾下面不许漏内容）。
 	for cell: Dictionary in RunState.map_cells:
 		var r := _cell_rect(cell)
 		var done := _visited(cell)
+		if not RunState.known_node(int(cell["id"])):
+			continue
 		var dtype := RogueMap.display_type(cell)
 		var cx := r.position.x + r.size.x * 0.5
 		var cy := r.position.y + r.size.y * 0.5
@@ -521,6 +553,50 @@ func _draw_cell_icons() -> void:
 					Color(0.96, 0.93, 0.86) if not done else Color(0.82, 0.78, 0.66))
 
 
+func _draw_fog() -> void:
+	## R145 迷雾：**看不清里面是什么**的格子盖一层云雾。
+	## ⚠️ 桥**不**在这里盖（它画在两格之间的墙上、不在格子里）→ 路线始终可见。
+	## 判定口只有 `RunState.known_node()` 一个（战斗内地图总览读同一个）。
+	for cell: Dictionary in RunState.map_cells:
+		var id := int(cell["id"])
+		if RunState.known_node(id):
+			continue
+		_draw_fog_cell(_cell_rect(cell), id)
+
+
+func _fog_rand(id: int, i: int, salt: int) -> float:
+	## 迷雾专用的**确定性伪随机**（0..1）：同一格、同一索引永远同一个值 ——
+	## 所以雾的形状稳定（不会逐帧乱跳），而**相邻格的雾长得不一样**。
+	## ⚠️ 不能用 `randf()`：那会让迷雾每帧换一个形状（看起来像在闪雪花）。
+	var v := sin(float(id) * 12.9898 + float(i) * 78.233 + float(salt) * 37.719) * 43758.5453
+	return v - floor(v)
+
+
+func _draw_fog_cell(r: Rect2, id: int) -> void:
+	## 一格的云雾：青灰底 + 几团**低透明度**的云（重叠后融成一片，不是一圈圈波点）。
+	## 云的位置 / 大小 / 明暗都由 `_fog_rand` 从格子 id 推出来 —— 同格稳定、格与格不同。
+	## 整体只做极慢的呼吸，读起来是「雾」，不是「贴了块灰纸」。
+	## ⚠️ 云团必须**整团留在本格内**：半径决定中心的可取范围（`m`）——
+	##    否则雾会溢到旁边**看得见**的格子上，把别人的图标蒙上一层灰。
+	##    Godot 4.3 没有 `draw_set_clip_rect`（§4.11），只能用几何约束代替裁剪。
+	var breathe := 0.90 + 0.10 * sin(_t * 0.9 + float(id) * 1.7)
+	var inner := r.grow(-2.0)
+	draw_rect(inner, Color(COL_FOG_BASE.r, COL_FOG_BASE.g, COL_FOG_BASE.b,
+			COL_FOG_BASE.a * breathe), true)
+	for i in FOG_PUFFS:
+		var rad := inner.size.x * (0.15 + 0.13 * _fog_rand(id, i, 3))
+		var m := rad / inner.size.x            # 中心离边至少一个半径 → 整团不越界
+		var span := maxf(0.0, 1.0 - 2.0 * m)
+		var fx := m + span * _fog_rand(id, i, 1)
+		var fy := m + span * _fog_rand(id, i, 2)
+		var ctr := Vector2(inner.position.x + inner.size.x * fx,
+				inner.position.y + inner.size.y * fy)
+		var light := _fog_rand(id, i, 4) > 0.42
+		var src := COL_FOG_HI if light else COL_FOG_LO
+		draw_circle(ctr, rad, Color(src.r, src.g, src.b, src.a * breathe))
+	draw_rect(inner, Color(1, 1, 1, 0.05), false, 1.0)
+
+
 func _bridge_kind(cell: Dictionary, nb: Dictionary) -> int:
 	## 通路语义（本函数是判定口，绘制只是消费）—— 与战斗内地图总览同一口径。
 	##   LIT    一端是当前房、另一端是它**真能走过去**的房 → 亮青（会呼吸）
@@ -539,14 +615,12 @@ func _draw_bridges() -> void:
 	## 那一段」。
 	## ⚠️ 旧版是在墙中点画一小段与「走过的格子边」**同色**的金线 → 不站在那格上、
 	##    没有金色高亮时根本看不出连接；鹰哨全揭示时更糊（灰 0.50 半透明压在暗格子上）。
-	## **视野规则**：只有**走过的**房间才把它通向哪几间画出来；
-	## 道具「鹰哨」（6026）在场时 → 全图的通路立刻可见。
-	var reveal_all := RunState.has_relic(RunState.EAGLE_WHISTLE_RELIC_ID)
+	## **R145 视野规则**：通路**全图可见**（路线看得见，玩家才规划得了去大宝箱的路），
+	## 所以这里**不再按「走过没走过」过滤**。三档颜色仍然区分：
+	##   亮青 = 当前房真能走过去的 / 暖白 = 至少一端走过 / 灰蓝最小 = 两端都还在雾里。
 	var pulse := 0.5 + 0.5 * sin(_t * 4.0)
 	var drawn := {}          # 去重：两格之间只盖一座桥（两个方向是同一处）
 	for cell: Dictionary in RunState.map_cells:
-		if not _visited(cell) and not reveal_all:
-			continue
 		var ctr := _cell_center(cell)
 		for nid in cell["doors"]:
 			var nb: Dictionary = RunState.map_cells[int(nid)]
@@ -756,6 +830,13 @@ func _draw_anim_cost(alpha: float, pop: float) -> void:
 
 func _draw_sidebar() -> void:
 	## 底部一行：图例（横排）+ 右下提示。
+	## ⚠️ R145：这一行直接压在**彩绘背景图**上，12px 的灰字根本读不清（提示还很长）。
+	##    按既定口径「画在底图上的文字要带底条」给它垫一条半透明底带，字色同步提亮。
+	##    底带从地图下沿之下开始（`MAP_Y0 + MAP_H + 2`）—— 绝不压到棋盘最下一行。
+	var bar_y := MAP_Y0 + MAP_H + 2.0
+	var bar := Rect2(0.0, bar_y, size.x, maxf(0.0, size.y - bar_y))
+	draw_rect(bar, Color(0.03, 0.04, 0.06, 0.60), true)
+	draw_rect(Rect2(bar.position, Vector2(size.x, 1.2)), Color(1, 1, 1, 0.10), true)
 	var items := [["起点", "start"], ["战斗", "battle"], ["精英", "elite"], ["休息", "rest"],
 			["事件", "event"], ["宝箱", "chest"], ["大宝箱", "bigchest"], ["未知", "unknown"]]
 	var x := 14.0
@@ -771,17 +852,17 @@ func _draw_sidebar() -> void:
 					UiTheme.MAP_NODE_COLORS.get(ty, UiTheme.INK_500), true)
 			draw_rect(Rect2(x + 1, y + 2, 14, 14), Color(0, 0, 0, 0.5), false, 1.0)
 		draw_string(_font, Vector2(x + 20, y + 14), str(it[0]),
-				HORIZONTAL_ALIGNMENT_LEFT, 64, UiTheme.FS_CAPTION, UiTheme.INK_300)
+				HORIZONTAL_ALIGNMENT_LEFT, 64, UiTheme.FS_CAPTION, UiTheme.SAND)
 		x += 84.0
 	# 右下提示
-	var hint := "点击发绿光的房间前进 · 走过的房间可以随时免费返回 · 巧克力用完就要打 Boss"
+	var hint := "小桥＝通路，全图可见 · 迷雾遮住房间内容，只看得清「下一步」的几间 · 走过的房间可免费返回 · 巧克力用完即打 Boss"
 	if _whisper_auto:
 		hint = "【鸭之低语】前路已被命运选定，你无法自主选择……"
-	if RunState.has_relic(RunState.EAGLE_WHISTLE_RELIC_ID):
-		hint += "　｜　鹰哨：全图的门已全部可见"
+	elif RunState.has_relic(RunState.EAGLE_WHISTLE_RELIC_ID):
+		hint = "鹰哨：全图迷雾已散，每一格都看得见 · 小桥＝通路 · 巧克力用完即打 Boss"
 	draw_string(_font, Vector2(size.x - 600.0, size.y - 30.0 + 14.0),
 			_ellipsis(hint, 586.0, UiTheme.FS_CAPTION),
-			HORIZONTAL_ALIGNMENT_RIGHT, 586.0, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
+			HORIZONTAL_ALIGNMENT_RIGHT, 586.0, UiTheme.FS_CAPTION, Color("efe9db"))
 
 
 func _draw_move_note() -> void:

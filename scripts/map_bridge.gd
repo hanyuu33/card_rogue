@@ -17,7 +17,7 @@ extends RefCounted
 ## 三种语义（与视野规则一致，判定口 = `kind_for`）：
 ##   LIT    当前房 → 可走的相邻房：亮青（会呼吸）
 ##   DONE   走过的房 → 已知的相邻房：暖白
-##   UNSEEN 只在鹰哨下出现的「已知但没走过」：灰蓝、更小
+##   UNSEEN 两端都在迷雾里（R145 起地图上到处都有）：灰蓝、更小
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const UiAssets = preload("res://scripts/ui_assets.gd")
