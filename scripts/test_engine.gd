@@ -5577,6 +5577,105 @@ func _init() -> void:
 			fog_next_ok = false
 	check(fog_next_ok, "R145 迷雾：走到新房间后，「下一步」换成新位置的相邻房"
 			+ "（走过的房间仍然可见）")
+	# ==== R146：开场巡场的「放大 + 拖回我方并还原大小」（battle_scene）====
+	# 时间轴是纯函数 `intro_pose(t)` → 直接钉死四段；几何（不漏色）靠出图 + 像素比对核验。
+	var r146bs := load("res://scripts/battle_scene.gd")
+	var r146_k: Dictionary = r146bs.get_script_constant_map()
+	var r146_dur := float(r146_k["GRID_INTRO_DUR"])
+	var r146_zoom := float(r146_k["GRID_INTRO_ZOOM"])
+	var r146_hold0 := float(r146_k["GRID_INTRO_HOLD0"])
+	var r146_hold1 := float(r146_k["GRID_INTRO_HOLD1"])
+	var r146_back := float(r146_k["GRID_INTRO_BACK"])
+	var r146_pan := r146_dur - r146_hold0 - r146_hold1 - r146_back
+	var r146_smax := float(r146bs._grid_scroll_max())
+	var r146_smin := float(r146bs._grid_scroll_min())
+	check(r146_pan > 0.4 and r146_back > 0.4,
+			"R146 巡场时间轴：四段都有料（平移 %.2fs / 回程 %.2fs，总 %.1fs）"
+			% [r146_pan, r146_back, r146_dur])
+	var r146_start: Dictionary = r146bs.intro_pose(0.0)
+	check(is_equal_approx(float(r146_start["scroll"]), r146_smax)
+			and is_equal_approx(float(r146_start["zoom"]), 1.0),
+			"R146 巡场起点：停在自己半场（scroll=%.0f）、原大小" % r146_smax)
+	var r146_end: Dictionary = r146bs.intro_pose(r146_dur)
+	check(is_equal_approx(float(r146_end["scroll"]), r146_smax)
+			and is_equal_approx(float(r146_end["zoom"]), 1.0),
+			"R146 巡场终点：**回到我方半场 + 还原原大小**（%.1f / %.2f —— 用户口径的最后一段）"
+			% [float(r146_end["scroll"]), float(r146_end["zoom"])])
+	# 敌方半场停留：滚到最上（min）且**放大到 ZOOM**（用户口径：拖向敌人那边时适当放大）
+	var r146_hold: Dictionary = r146bs.intro_pose(r146_hold0 + r146_pan + r146_hold1 * 0.5)
+	check(is_equal_approx(float(r146_hold["scroll"]), r146_smin)
+			and is_equal_approx(float(r146_hold["zoom"]), r146_zoom),
+			"R146 敌方半场停留：滚到最上（%.0f）+ 放大到 %.2f" % [r146_smin, r146_zoom])
+	check(r146_zoom > 1.0 and r146_zoom <= 1.25,
+			"R146 放大倍率 %.2f 属于「适当放大」（>1 且不激进 —— 棋盘左右只有 6px 余量）"
+			% r146_zoom)
+	# 去程 / 回程中点：位置与大小**同步**（两段是同一条路径的正反走）
+	var r146_mid_a: Dictionary = r146bs.intro_pose(r146_hold0 + r146_pan * 0.5)
+	var r146_mid_b: Dictionary = r146bs.intro_pose(r146_dur - r146_back * 0.5)
+	check(is_equal_approx(float(r146_mid_a["zoom"]), (1.0 + r146_zoom) * 0.5)
+			and float(r146_mid_a["scroll"]) < r146_smax - 1.0
+			and float(r146_mid_a["scroll"]) > r146_smin + 1.0,
+			"R146 去程中点：位置离开我方半场、大小已在放大途中（%.1f / %.3f）"
+			% [float(r146_mid_a["scroll"]), float(r146_mid_a["zoom"])])
+	check(is_equal_approx(float(r146_mid_b["zoom"]), (1.0 + r146_zoom) * 0.5)
+			and is_equal_approx(float(r146_mid_b["scroll"]), float(r146_mid_a["scroll"])),
+			"R146 回程中点：与去程中点同一条路径（位置 %.1f、大小 %.3f 都对得上）"
+			% [float(r146_mid_b["scroll"]), float(r146_mid_b["zoom"])])
+	# 单调性：去程缩放只增、回程只减（别出现「先缩一下再放大」的抖）
+	var r146_mono := true
+	var r146_prev := 1.0
+	for r146_i in 20:
+		var r146_zz := float(r146bs.intro_pose(r146_hold0 + r146_pan * (float(r146_i) / 19.0))["zoom"])
+		if r146_zz < r146_prev - 0.0001:
+			r146_mono = false
+		r146_prev = r146_zz
+	for r146_j in 20:
+		var r146_zz2 := float(r146bs.intro_pose(
+				r146_dur - r146_back + r146_back * (float(r146_j) / 19.0))["zoom"])
+		if r146_zz2 > r146_prev + 0.0001:
+			r146_mono = false
+		r146_prev = r146_zz2
+	check(r146_mono, "R146 缩放单调：去程只放大、回程只还原（不会来回抖）")
+	check(is_equal_approx(r146bs._intro_ease(0.0), 0.0)
+			and is_equal_approx(r146bs._intro_ease(1.0), 1.0)
+			and is_equal_approx(r146bs._intro_ease(0.5), 0.5),
+			"R146 缓动：两端 0/1、中点 0.5（smoothstep）")
+	var r146_c: Vector2 = r146bs._board_zoom_center()
+	check(is_equal_approx(r146_c.x, float(r146_k["GRID_X"]) + float(r146_k["GRID_W"]) * 0.5)
+			and is_equal_approx(r146_c.y,
+				float(r146_k["GRID_Y"]) + float(r146_k["GRID_H"]) * 0.5),
+			"R146 放大中心 = 棋盘可视窗中心（%.0f, %.0f —— 窗不动、只有内容放大）"
+			% [r146_c.x, r146_c.y])
+	check(float(r146_k["GRID_MASK_PAD"]) >= 4.0,
+			"R146 遮罩余量 %.1fpx ≥ 4（放大的边框金线 / 外圈投影不外漏到侧栏）"
+			% float(r146_k["GRID_MASK_PAD"]))
+	# ---- R146 源码守卫：几何靠出图核验，这几条是「接线」不能断 ----
+	if not FileAccess.file_exists("res://export_presets.cfg"):
+		print("    · R146 源码守卫：打包环境读不到 .gd 源文本 → 跳过（只在 dev 工程/门禁生效）")
+	else:
+		var r146_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+		var r146_i_frame := r146_src.find("\t_draw_grid_frame()")
+		var r146_i_reset := r146_src.find("draw_set_transform(shake, 0.0, Vector2.ONE)")
+		var r146_i_mask := r146_src.find("\t_draw_grid_mask()")
+		check(r146_i_frame >= 0 and r146_i_mask > r146_i_frame
+				and r146_i_reset > r146_i_frame and r146_i_reset < r146_i_mask,
+				"R146 绘制顺序：棋盘区（含边框）→ **复位变换** → 遮罩（缩放不外漏 / 遮罩先于面板）")
+		check(r146_src.find("\t_begin_board_transform(shake)") >= 0
+				and r146_src.find("func _begin_board_transform") >= 0,
+				"R146 棋盘区只从 `_begin_board_transform` 进（震动 + 缩放一条口）")
+		# ⚠️ 别用跨行字面量配这里的代码（本文件是 CRLF，`\n` 单字符配不上 `\r\n`）——
+		#    改成先切出 `_grid_intro_stop` 的函数体再在体内找（对行尾不敏感）。
+		var r146_i_stop := r146_src.find("func _grid_intro_stop")
+		var r146_i_stop_end := r146_src.find("\nfunc ", r146_i_stop + 1)
+		var r146_stop_body := ""
+		if r146_i_stop >= 0 and r146_i_stop_end > r146_i_stop:
+			r146_stop_body = r146_src.substr(r146_i_stop, r146_i_stop_end - r146_i_stop)
+		check(r146_stop_body.find("_grid_zoom = 1.0") >= 0,
+				"R146 打断即归位：`_grid_intro_stop` 里立刻 `_grid_zoom = 1.0`"
+				+ "（命中判定 `_cell_at` 不认识缩放）")
+		check(r146_src.find("var z := _grid_zoom") >= 0
+				and r146_src.find("var pad := GRID_MASK_PAD") >= 0,
+				"R146 遮罩范围跟着缩放摊开 + 余量常量接上（放大后左右边带不漏色）")
 	var back := RunState.advance(int(start_cell_d["id"]))
 	check(bool(back["ok"]) and not bool(back["is_new"]) and int(back["cost"]) == 0
 			and RunState.chocolate == choco_before - 1,

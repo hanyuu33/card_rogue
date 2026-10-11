@@ -64,12 +64,25 @@ const GRID_FRAME_BAND_T := 16.0
 const GRID_FRAME_BAND_R := 16.0
 const GRID_FRAME_BAND_B := 10.0
 const GRID_FRAME_PROTRUDE := 14.0
-## R136：开场巡场 —— 战斗开始的前 2 秒，镜头从自己这半场推到对方那半场。
-## 三段式：先在自己半场停 HOLD0（R137：0.30 -> 0.70，用户要求「至少停 0.5 秒」，
-## 太短的话玩家还没看清自己这半场就滑走了），再平滑推过去，最后在对方半场停 HOLD1。
-const GRID_INTRO_DUR := 2.5
+## R146：遮罩（`_draw_grid_mask`）横向范围的**额外余量**。边框的金色描边（1.5px 线宽）与
+## 外圈投影（`outer.grow(2.0)` + 3px 线宽）还会再往外探出几个像素 —— 开场放大时棋盘外溢，
+## 余量不够就会在侧栏上漏出一条**通高竖金线**（实测 z=1.15 在 x≈822 处一条到底的金线）。
+## ⚠️ 别调小于 4：漏出来的是 1px 级线条，肉眼在整图上极难发现，靠像素比对才抓得到。
+const GRID_MASK_PAD := 6.0
+## R136/R146：开场巡场 —— 镜头按**四段**走一遍战场，让玩家第一眼就知道它是 3×6：
+##   ① 停在自己这半场（HOLD0）；② 平移到对方那半场、**同时放大到 ZOOM**；
+##   ③ 停在对方那半场（HOLD1）；④ **拖回我方这边、同时还原到原大小**（BACK）。
+## R137 把 HOLD0 从 0.30 提到 0.70（用户要求「至少停 0.5 秒」，太短还没看清自己半场就滑走）。
+## R146 按用户口径补上 ② 的放大与 ④ 的「拖回来 + 还原」——
+##   时间轴由 `intro_pose(t)` **唯一**给出（回归直接钉死它），这里只放各段时长。
+const GRID_INTRO_DUR := 3.0
 const GRID_INTRO_HOLD0 := 0.70
 const GRID_INTRO_HOLD1 := 0.50
+const GRID_INTRO_BACK := 0.90
+## 推到对方那半场时的放大倍率（1.0 = 原大小）。⚠️ 别随手调大：棋盘左右几乎没有余量
+## （左沿 404 距效果区右沿 398 只有 6px），放大后棋盘/边框的外溢全靠 `_draw_grid_mask`
+## 把遮罩范围按同一比例摊开来裁 —— 调大要先看那张遮罩还盖不盖得住。
+const GRID_INTRO_ZOOM := 1.15
 # R127：双箭头相对棋盘可视窗上下沿的内缩量（ScrollHint.GAP + 6）。
 #   ⚠️ 必须**小于** 128（棋盘下沿到手牌顶的距离），否则下箭头会被手牌盖掉。
 const GRID_HINT_INSET := 22.0
@@ -212,6 +225,9 @@ var _grid_dragging := false
 var _grid_drag_pos := Vector2.ZERO
 ## R136：开场巡场已播时长（秒）；< 0 = 没在播（播完 / 被玩家打断 / 回放模式）。
 var _grid_intro_t := -1.0
+## R146：开场巡场当前的**棋盘缩放倍率**（1.0 = 原大小）。只由 `intro_pose()` 驱动；
+## 玩家一打断就立刻归 1.0 —— 命中判定 `_cell_at` 不认识缩放，留在半路会整体错位。
+var _grid_zoom := 1.0
 var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本不覆盖
 ## R118：左键点「空位」**不再一步取消**。为 true = 本轮的第一次空位点击已经发生 ——
 ## 选区、绿色移动格、红色攻击格、深红 HP 格**全部原样保留**（于是这时点目标照样能打），
@@ -406,11 +422,16 @@ func _ready() -> void:
 			_shot_ms = maxi(int(args[i + 1]), 10)  # 截图时机（距演示动作的毫秒数）
 		if args[i] == "--gridscroll" and i + 1 < args.size():
 			# R139 演示：直接把棋盘滚动量钉在指定值（出图核验「边框跟着 3×6 战场本体滚」）。
-			# 免等 2.5 秒巡场动画 —— 900 帧出图在本机要跑好几分钟（实测 ~5fps）。
+			# 免等 3 秒巡场动画 —— 900 帧出图在本机要跑好几分钟（实测 ~5fps）。
 			# ⚠️ 要写在 --level **之后**；load_level 会把 _grid_scroll 重置成 max。
 			_grid_intro_t = -1.0
 			_grid_scroll = clampf(float(int(args[i + 1])),
 					_grid_scroll_min(), _grid_scroll_max())
+		if args[i] == "--gridzoom" and i + 1 < args.size():
+			# R146 演示：把开场巡场的**缩放**钉在指定值（配 --gridscroll 出图核验
+			# 「拖向敌方那半场时放大 / 拖回我方时还原大小」）。
+			_grid_intro_t = -1.0
+			_grid_zoom = clampf(float(args[i + 1]), 1.0, 2.0)
 	if "--over" in args:
 		# 演示：直接进入结算（验证结算覆盖层 / 彩带 / 胜利音效）
 		engine._finish("胜利", "演示：结算界面")
@@ -1743,8 +1764,8 @@ func _demo_grid_drag() -> void:
 	## R136 演示：合成一串「按住棋盘 → 往下拖 60px → 松手」的输入事件，
 	## **直接喂给 `_gui_input`** 走完整的上膛 / 阈值 / 滚动 / 松手流程，
 	## 用来验证左键拖动真的在滚棋盘。配合 `-- --screenshot --shotframe 80`：
-	## 巡场动画会在按下那一刻被打断在半路（scroll=120），随后拖动把它推到 60 ——
-	## 动画自己永远只会停在 0 或 120，停成半路只能是拖出来的。
+	## 巡场动画会在按下那一刻被打断（或已播完，终点 = 我方半场 = max），随后拖动把它
+	## 推到别处 —— 巡场自己只会停在两端（max 我方 / min 敌方），中间值只能是拖出来的。
 	## ⚠️ 只服务出图，不进任何正式流程。
 	if _demo_frame == 40:
 		_feed_mouse_btn(MOUSE_BUTTON_LEFT, true, Vector2(GRID_X + 60, GRID_Y + 300))
@@ -2080,13 +2101,15 @@ func load_level(lvl: Dictionary) -> void:
 		_show_banner(intro, UiTheme.STAT_POWER, 2400)
 	else:
 		_show_banner("我方回合 · 第 1 回合")
-	# R136：开场巡场 —— 镜头先停在自己这半场，2 秒里推到对方那半场（看出 3×6 的规模）。
+	# R136/R146：开场巡场 —— 停自己半场 → 推进到对方半场（放大）→ **拖回我方 + 还原大小**。
 	# 回放不播（回放按录像节奏走，不额外加动画）。
 	if _grid_scrollable() and not ReplayLog.playing:
 		_grid_scroll = _grid_scroll_max()
+		_grid_zoom = 1.0
 		_grid_intro_t = 0.0
 	else:
 		_grid_intro_t = -1.0
+		_grid_zoom = 1.0
 	queue_redraw()
 
 
@@ -2352,13 +2375,15 @@ func _hand_hit(i: int, pos: Vector2) -> bool:
 	return Rect2(_hand_rect(i).position, Vector2(HAND_CARD_W, HAND_CARD_H)).has_point(local)
 
 
-func _grid_scroll_min() -> float:
+## ⚠️ R146：这两个是 **static** —— `intro_pose()` 要当纯函数被回归直接调用
+##   （static 也能从实例方法里照常 `_grid_scroll_min()` 调用）。
+static func _grid_scroll_min() -> float:
 	## R139：边框贴着 3×6 战场本体之后，滚动范围要把**上边框带**也算进来 ——
 	## 滚到最上时外框上沿正好落在可视窗上沿（顶带 + 上面两只角花能看全）。
 	return -GRID_FRAME_BAND_T
 
 
-func _grid_scroll_max() -> float:
+static func _grid_scroll_max() -> float:
 	## R123：可滚动的最大距离（内容总高 - 可视窗高）。
 	## ⚠️ R139：左端要多留一个**下边框带**，滚到底时外框下沿正好落在可视窗下沿。
 	return maxf(_grid_scroll_min(), GRID_CONTENT_H + GRID_FRAME_BAND_B - GRID_H)
@@ -2369,32 +2394,75 @@ func _grid_scrollable() -> bool:
 	return _grid_scroll_max() - _grid_scroll_min() > 0.5
 
 
+static func intro_pose(t: float) -> Dictionary:
+	## R146：开场巡场在 t 秒时的**位置 + 缩放** —— 时间轴的唯一来源（纯函数，回归直接钉它）。
+	## 四段：停自己半场 → 推到对方半场（同时放大）→ 停对方半场 → **拖回我方 + 还原大小**。
+	## 返回 {"scroll": float, "zoom": float}。
+	## ⚠️ 终点（t = GRID_INTRO_DUR）必须落在 `_grid_scroll_max()` + 缩放 1.0：
+	##    巡场结束后玩家就在自己这半场出牌，镜头绝不能停在对方那边、更不能停在放大态。
+	var pan := GRID_INTRO_DUR - GRID_INTRO_HOLD0 - GRID_INTRO_HOLD1 - GRID_INTRO_BACK
+	if t < GRID_INTRO_HOLD0:
+		return {"scroll": _grid_scroll_max(), "zoom": 1.0}
+	if t < GRID_INTRO_HOLD0 + pan:
+		var e := _intro_ease((t - GRID_INTRO_HOLD0) / pan)
+		return {"scroll": lerpf(_grid_scroll_max(), _grid_scroll_min(), e),
+				"zoom": lerpf(1.0, GRID_INTRO_ZOOM, e)}
+	if t < GRID_INTRO_HOLD0 + pan + GRID_INTRO_HOLD1:
+		return {"scroll": _grid_scroll_min(), "zoom": GRID_INTRO_ZOOM}
+	var e2 := _intro_ease((t - GRID_INTRO_HOLD0 - pan - GRID_INTRO_HOLD1) / GRID_INTRO_BACK)
+	return {"scroll": lerpf(_grid_scroll_min(), _grid_scroll_max(), e2),
+			"zoom": lerpf(GRID_INTRO_ZOOM, 1.0, e2)}
+
+
+static func _intro_ease(u: float) -> float:
+	## smoothstep：两头慢、中间快（两段平移共用同一条缓动，别各写一份）。
+	var p := clampf(u, 0.0, 1.0)
+	return p * p * (3.0 - 2.0 * p)
+
+
 func _grid_intro_tick(delta: float) -> void:
-	## R136：开场巡场 —— 战斗开始的前 2 秒里，镜头从**自己这半场**平滑推到
-	## **对方那半场**（_grid_scroll 由 max 回到 min，R139 起 min = 外框上沿贴窗）。
-	## 目的只有一个：让玩家第一眼就知道战场是 3×6，而不是「眼前看到的这一块」。
-	## 玩家一动就停（见下面）。
+	## R136/R146：开场巡场的推进 —— 只把 `intro_pose()` 的结果写进
+	## `_grid_scroll` / `_grid_zoom`，自己不掺任何时间逻辑。
+	## 目的：让玩家第一眼就知道战场是 3×6，再回到自己半场准备出牌。玩家一动就停。
 	if _grid_intro_t < 0.0:
 		return
 	_grid_intro_t += delta
 	if _grid_intro_t >= GRID_INTRO_DUR:
 		_grid_intro_t = -1.0
-		_grid_scroll = _grid_scroll_min()
+		var end := intro_pose(GRID_INTRO_DUR)
+		_grid_scroll = end["scroll"]
+		_grid_zoom = end["zoom"]
 		queue_redraw()
 		return
-	var pan := clampf((_grid_intro_t - GRID_INTRO_HOLD0)
-			/ (GRID_INTRO_DUR - GRID_INTRO_HOLD0 - GRID_INTRO_HOLD1), 0.0, 1.0)
-	var e := pan * pan * (3.0 - 2.0 * pan)      # smoothstep：两头慢、中间快
-	_grid_scroll = lerpf(_grid_scroll_max(), _grid_scroll_min(), e)
+	var pose := intro_pose(_grid_intro_t)
+	_grid_scroll = pose["scroll"]
+	_grid_zoom = pose["zoom"]
 	queue_redraw()
+
+
+static func _board_zoom_center() -> Vector2:
+	## R146：放大**绕棋盘可视窗中心**（窗在屏幕上不动，只有内容放大）——
+	## 于是 transform 的偏移 = 中心 × (1 - 缩放)。
+	return Vector2(GRID_X + GRID_W / 2.0, GRID_Y + GRID_H / 2.0)
+
+
+func _begin_board_transform(shake: Vector2) -> void:
+	## R146：棋盘区（含边框）**唯一的绘制入口变换** —— 震动 + 开场缩放叠在一条 transform 上。
+	## ⚠️ `draw_set_transform` 是 CanvasItem 的共享状态：画完棋盘区必须复位。
+	var z := _grid_zoom
+	var c := _board_zoom_center()
+	draw_set_transform(shake + c * (1.0 - z), 0.0, Vector2(z, z))
 
 
 func _grid_intro_stop() -> void:
 	## R136：巡场只是提示 —— 玩家一按鼠标（点击 / 滚轮 / 拖动）就立刻停在当前位置，
 	## 既不吞掉这次操作，也不会让棋盘继续在指针底下滑走。
+	## ⚠️ R146：缩放必须**当场归位**（不能停在半路）—— 命中判定不认识缩放，
+	##    留着 1.15 会让「看到的那一格」和「点中的那一格」整体错开。
 	if _grid_intro_t >= 0.0:
 		_grid_intro_t = -1.0
 		_grid_scroll = clampf(_grid_scroll, _grid_scroll_min(), _grid_scroll_max())
+		_grid_zoom = 1.0
 
 
 func _cell_in_view(pos: Vector2) -> bool:
@@ -5128,31 +5196,37 @@ func _draw() -> void:
 	else:
 		draw_rect(Rect2(Vector2.ZERO, size), COL_BG)
 	# 屏幕震动：棋盘相关绘制整体偏移（面板/结算不受影响）
-	var shook := false
+	var shake := Vector2.ZERO
 	if _now() < _shake_until:
-		draw_set_transform(_shake_offset())
-		shook = true
+		shake = _shake_offset()
+	# ---- R146：棋盘区（唯一受开场缩放影响的段落）----
+	# 震动与缩放叠在**同一条 transform** 上。`draw_set_transform` 是 CanvasItem 的共享
+	# 状态 → 棋盘区画完必须复位，下面的遮罩 / 面板 / 手牌全在屏幕空间。
+	_begin_board_transform(shake)
 	_draw_grid()
-	_draw_cost_zone()
-	_draw_deck_and_discard()
 	_draw_attack_fx()
 	_draw_board_cards()
 	_draw_dying()
 	_draw_flashes()
 	_draw_ghosts()
 	_draw_highlights()
-	_draw_hp_banner()
-	_draw_enemy_effects()
 	_draw_bursts()
 	_draw_wake_rings()
 	# R139：边框跟着战场本体滚动 → 顶带 / 底带会越过可视窗上下沿，必须**先画边框、
 	# 再画遮罩**把溢出裁掉；顺序反了边框就会糊在工具栏与手牌上。
+	# R146：放大后边框的**左右边带**也会外推 → 遮罩范围要四周一起按比例摊开（见该函数）。
 	_draw_grid_frame()
+	draw_set_transform(shake, 0.0, Vector2.ONE)   # 复位缩放，回到屏幕空间（只留震动）
 	_draw_grid_mask()
 	_draw_grid_caption()
 	_draw_floaters()
-	if shook:
-		draw_set_transform(Vector2.ZERO)  # 结束震动，后续 UI 不抖
+	# ---- 面板区：一律画在遮罩**之后** ----
+	# R146 起遮罩会横向加宽（棋盘放大时把外溢的石色裁掉）→ 两侧栏位若先画就会被裁掉。
+	_draw_cost_zone()
+	_draw_deck_and_discard()
+	_draw_hp_banner()
+	_draw_enemy_effects()
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)  # 结束震动，后续 UI 不抖
 	_draw_level_plate()
 	_draw_hand()
 	_draw_drag()
@@ -7545,14 +7619,27 @@ func _draw_grid_mask() -> void:
 	# ⚠️ R139：横向必须盖到**边框外沿**（GRID_X - BAND_L .. GRID_X + GRID_W + BAND_R）——
 	#    边框跟着内容滚动后，它的顶带 / 底带会越过可视窗上下沿；只按 GRID_W 盖，
 	#    左右两条竖直边带就会漏出石色（背景纹理不透明，盖住才是干净的裁断）。
-	var fx := GRID_X - GRID_FRAME_BAND_L
-	var fw := GRID_W + GRID_FRAME_BAND_L + GRID_FRAME_BAND_R
+	# R146：开场放大时整块棋盘（含边框）绕**可视窗中心**放大 → 边框的左右边带会推到
+	#   原位之外。遮罩范围必须按同一比例摊开，否则石色边带会漏到左右两栏上。
+	#   ⚠️ 可视窗本身在屏幕上不动（缩放中心就是它）→ 上下两条仍按 GRID_Y / GRID_Y+GRID_H 切；
+	#      横向两条带的宽度 = 边带外推的那一段（不放大时正好 0 宽，被下面的守卫跳过）。
+	var z := _grid_zoom
+	var zc := GRID_X + GRID_W * 0.5
+	# ⚠️ 余量只加在遮罩**范围**上（不是把带子变宽去盖别的东西）：带内取的是背景纹理 →
+	#    z=1 时多出来的那几像素本来就是背景，看不出差别；左右两条新带也因此照旧无害。
+	var pad := GRID_MASK_PAD
+	var fx := zc + (GRID_X - GRID_FRAME_BAND_L - zc) * z - pad
+	var fx2 := zc + (GRID_X + GRID_W + GRID_FRAME_BAND_R - zc) * z + pad
+	var fl := GRID_X - GRID_FRAME_BAND_L
+	var fr := GRID_X + GRID_W + GRID_FRAME_BAND_R
 	var bands: Array[Rect2] = [
-		Rect2(fx, 0, fw, GRID_Y),
-		Rect2(fx, GRID_Y + GRID_H, fw, WINDOW_H - (GRID_Y + GRID_H)),
+		Rect2(fx, 0, fx2 - fx, GRID_Y),
+		Rect2(fx, GRID_Y + GRID_H, fx2 - fx, WINDOW_H - (GRID_Y + GRID_H)),
+		Rect2(fx, GRID_Y, fl - fx, GRID_H),
+		Rect2(fr, GRID_Y, fx2 - fr, GRID_H),
 	]
 	for r: Rect2 in bands:
-		if r.size.y <= 0.0:
+		if r.size.x <= 0.0 or r.size.y <= 0.0:
 			continue
 		if _bg_tex != null:
 			var ts := _bg_tex.get_size()
@@ -8627,7 +8714,7 @@ func _process(delta: float) -> void:
 		_net_poll(delta)
 	if ReplayLog.playing:
 		_replay_tick()
-	_grid_intro_tick(delta)         # R136：开场巡场（自己半场 → 对方半场）
+	_grid_intro_tick(delta)         # R136/R146：开场巡场（自己半场 → 对方半场放大 → 拖回我方）
 	# R77：鸭语耳环逐张出牌 —— 放在 _tick_anims 之前，优先把「下一张」推出去，
 	# 这样同一帧里刚出的牌动画能立刻开始播。
 	var earring_busy := _tick_earring_autoplay()
