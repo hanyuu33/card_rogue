@@ -97,6 +97,9 @@ const COL_FRAME_GOLD_IN := Color("e6c87e")     # 边框内沿亮金收边（压�
 const COL_COST_LOW_BG := Color("1d7a3f")        # 减费后的费用圆（深绿底）
 const COL_COST_LOW_FG := Color("b9f6ca")        # 减费后的费用数字（浅绿字，绿色系）
 const COL_GUARD := Color("1d9e4f")              # 替 HP 承伤（森林守护/以太守卫/铁栅栏）：绿环标记
+## R142：**可主动发动**（熊 8004「回春」）—— 亮黄绿脉动环 + 四向内箭头 + 「可发动 F」徽标。
+## 用「黄绿」而不是普通绿：我方单位框本身就是深绿（SIDE_SELF），同色环会被读成「框变粗了」。
+const COL_ACTIVATABLE := Color(0.78, 1.0, 0.35)
 const COL_TAUNT := UiTheme.STATE_TAUNT              # 嘲讽：战场单位的橙色脉冲光环（必须优先打它）
 const COL_FROZEN := UiTheme.STATE_FROZEN             # 冰封（寒冰箭/冻结陷阱/冰冻战吼）：冷蓝脉冲环 + 寒霜（这回合动不了）
 const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（恶魔鸭 9116）：紫脉冲环 + Zzz（还差 N 下挨打就醒）
@@ -684,6 +687,28 @@ func _ready() -> void:
 		_demo_hover_idx = 0
 		_hover_hand = 0
 		status_text = "森林精魄：熊发动回春 9+6 被上限截到 14 并横置；打它的敌人吃「荒野形态」3 点反伤"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--activate" in args and engine != null:
+		# 演示（R142）：场上「可主动发动」的**常驻**提示。两只熊并排 ——
+		# 左边那只**已经发动过**（横置 → 环与徽标都消失），右边那只**现在能发动**
+		# （亮黄绿脉动环 + 四向指向卡面的内箭头 + 顶部「可发动 F」徽标）。
+		# ⚠️ 判据是引擎的 `can_activate()` —— 所以左边那只连徽标都不该有。
+		RunState.player_class = PlayerClass.DRUID   # 左栏「角色：」也跟着演示走
+		engine.self_relics = [GameEngine.WILD_FORM_RELIC_ID]
+		engine.state.hand.clear()
+		var ab_left := engine.state.place(
+				CardData.from_dict(repo.get_card(GameEngine.BEAR_ID).to_dict()),
+				Vector2i(3, 1), GameEngine.SIDE_SELF)
+		ab_left.health = 9
+		engine.activate(Vector2i(3, 1))             # 左：发动 → 横置 + ability_used
+		var ab_right := engine.state.place(
+				CardData.from_dict(repo.get_card(GameEngine.BEAR_ID).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		ab_right.health = 9
+		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
+				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+		status_text = "R142：左熊已发动（环消失）；右熊可发动（黄绿环 + 内箭头 +「可发动 F」）"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--rhino" in args and engine != null:
@@ -2060,7 +2085,7 @@ func _select_board(cell: Vector2i) -> void:
 	attack_targets_arr = engine.legal_attack_targets(cell)
 	# 主动发动（熊 8004「回春」）：可发动时把发动方式写进提示
 	if p != null and engine.can_activate(cell, GameEngine.SIDE_SELF):
-		status_text = ("%s：绿色=移动 红色=攻击 深红=打HP；再点它一次或按 F = 发动（回复 %d 生命，之后横置）"
+		status_text = ("%s：绿色=移动 红色=攻击 深红=打HP；再点它一次或按 F = 主动发动（回复 %d 生命，之后横置）"
 				% [p.card.card_name, GameEngine.BEAR_HEAL])
 	# 嘲讽：射程内有对方嘲讽单位 → 只能打它，不能直击 HP（隐藏深红 HP 格）
 	if engine.taunt_in_range(cell, GameEngine.SIDE_SELF):
@@ -5394,6 +5419,14 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 		var sh_r := Vector2(w, h).length() * 0.5 + 2.0 + sh_pulse * 2.5
 		draw_arc(center, sh_r, 0.0, TAU, 40,
 				Color(0.50, 0.84, 0.94, 0.40 + sh_pulse * 0.30), 2.0)
+	# R142：**可以主动发动**的我方单位（熊 8004「回春」）—— 原来的提示只有
+	# 「选中它之后状态栏写一句」，没选中就等于看不见。这里加一层**常驻**的
+	# 亮黄绿脉动环 + 四向指向卡面的内箭头 + 顶部「可发动 F」徽标。
+	# ⚠️ 判据走引擎的 `can_activate`（与「再点一次」/ 按 F 完全同源），不在这里重判 traits；
+	#    **只标我方**：敌人也可能能发动，但玩家点不动它，标成「按 F」是误导。
+	if p.owner == GameEngine.SIDE_SELF and engine.can_activate(cell, GameEngine.SIDE_SELF):
+		_draw_activatable_aura(center, w, h, _badge_row)
+		_badge_row += 1
 	# 【字段系统 R91】把这张卡**此刻生效**的字段逐个画在卡上方（轮流显示 = 依次往下排）。
 	# ⚠️ **不硬编码任何字段**：判据是 `CardData.active_affixes()`，它读 `card.affixes`
 	# 并按场上实况过滤（疾行用掉一轮就不显示、护盾用掉就不显示）。
@@ -5534,6 +5567,51 @@ func _draw_taunt_aura(center: Vector2, w: float, h: float, badge_row: int) -> vo
 	_draw_state_badge(center, w, h, badge_row, "嘲讽",
 			Color(0.20, 0.11, 0.02, 0.92), Color(1.0, 0.62, 0.12, 0.95),
 			Color(1.0, 0.84, 0.40), Color(0.12, 0.06, 0.01))
+
+
+func _draw_activatable_aura(center: Vector2, w: float, h: float, badge_row: int) -> void:
+	## 可主动发动特效（R142）：**黄绿双环脉动 + 四向指向卡面的内箭头 + 「可发动 F」徽标**。
+	## 为什么不用又一个纯色圆环：嘲讽（橙）/ 冰封（冷蓝）/ 沉睡（紫）/ 屏障（青）已经把
+	## 圆环用满了，再来一个只能靠颜色区分；箭头是**动作**语义（「点它 / 按 F」），
+	## 形状上就和那四种「状态」分开 —— 瞄一眼就知道这张卡现在还能操作。
+	var t := float(_now()) / 1000.0
+	var pulse := (sin(t * 5.0) + 1.0) * 0.5                # 0..1（比嘲讽 3.4 更快 = 更「催」）
+	var base := Vector2(w, h).length() * 0.5
+	var r1 := base + 1.0 + pulse * 3.0
+	draw_arc(center, r1, 0.0, TAU, 48,
+			Color(COL_ACTIVATABLE.r, COL_ACTIVATABLE.g, COL_ACTIVATABLE.b, 0.55 + pulse * 0.40), 3.0)
+	# 外环：四段短弧随时间绕着转（相位错开 = 「在等你操作」的转动感，不引入新素材）
+	var spin := fposmod(t * 0.9, 1.0) * TAU
+	for i in 4:
+		var a0 := spin + float(i) * TAU / 4.0
+		draw_arc(center, r1 + 5.0, a0, a0 + 0.55, 8,
+				Color(0.96, 1.0, 0.72, 0.30 + pulse * 0.35), 2.0)
+	# 四向内箭头：箭头指向卡面中心 = 「对它做点什么」
+	var arm := 4.0 + pulse * 3.5
+	var rr := base + 7.0
+	var dirs: Array[Vector2] = [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]
+	for d: Vector2 in dirs:
+		var tip := center + d * rr
+		var back := tip - d * arm
+		var side := Vector2(-d.y, d.x) * (arm * 0.45)
+		draw_colored_polygon(PackedVector2Array([tip, back + side, back - side]),
+				Color(COL_ACTIVATABLE.r, COL_ACTIVATABLE.g, COL_ACTIVATABLE.b, 0.55 + pulse * 0.40))
+	_draw_state_badge(center, w, h, badge_row, "可发动 F",
+			Color(0.08, 0.20, 0.06, 0.94), COL_ACTIVATABLE,
+			Color(0.94, 1.0, 0.82), Color(0.02, 0.10, 0.02))
+
+
+func _board_has_activatable() -> bool:
+	## 棋盘上是否有「我方现在就能主动发动」的单位 —— 那层环与内箭头是脉冲动画，
+	## 需要逐帧重绘（R142）。判据与绘制同源（都走 `engine.can_activate`）。
+	if engine == null:
+		return false
+	for c: Vector2i in engine.state.board:
+		var p: Placement = engine.state.board[c]
+		if p != null and p.owner == GameEngine.SIDE_SELF \
+				and engine.can_activate(c, GameEngine.SIDE_SELF):
+			return true
+	return false
 
 
 func _board_has_taunt() -> bool:
@@ -8483,6 +8561,8 @@ func _process(delta: float) -> void:
 		queue_redraw()  # 沉睡环 + 飘「Zzz」同样是脉冲动画（R72）
 	if _board_has_shield():
 		queue_redraw()  # 能量屏障的青色呼吸环 + 护盾徽标（R87）
+	if _board_has_activatable():
+		queue_redraw()  # R142：可主动发动的黄绿环 + 四向内箭头同样是脉冲动画
 	if _cancel_armed:
 		queue_redraw()  # R118：「再点一次就取消」的橙环是脉冲动画
 	if engine != null and _board_has_pulsing_field():

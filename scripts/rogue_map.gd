@@ -31,8 +31,16 @@ extends RefCounted
 ##      相邻两行之间在「非角列」随机连 1~3 条垂直边（保证行间连通）；
 ##   2) 随机加边：两端都还没到度数上限的边，按概率加（制造分支感）；
 ##   3) 随机删边：删后仍连通、且两端度数都不低于下界才真删（制造死路与岔路）；
-##   4) 校验：度数区间 / 全连通 / 起点到两个大宝箱都不超过 MAX_STEPS 步；
+##   4) 校验（结构层，`_validate`）：度数区间 / 全连通 /
+##      起点到两个大宝箱都不超过 MAX_STEPS 步；
+##   5) 校验（内容层，`exits_reach_chest`，R142）：**起点的每一个邻居都必须
+##      「不经过起点也能走到某个宝箱房」** —— 否则玩家第一步拐进那条路，
+##      之后就只能原路折返才能到宝箱（用户口径：无论第一步走哪格，
+##      都应该能一路向前走到宝箱）。宝箱房 = chest / bigchest，
+##      「?」房按它生成时定好的真实类型算。
 ##      任一项不过 → 整张重摇（最多 MAX_ATTEMPTS 次）。
+##   内容层的校验必须**等类型摇完**才判得出来（宝箱是一种「类型」）→ 第 5 步只能
+##   放在 `_make_cells` 之后，重摇的单位因此是「结构 + 类型」一整轮。
 ##
 ## 「12 步内不可能同时进两个大宝箱」是**几何必然**，不用额外控制：
 ##   起点→上角曼哈顿距离 ≥ 3+4 = 7，两个上角之间 ≥ 6，所以
@@ -70,6 +78,10 @@ const REST_MAX := 4
 const WEIGHTS := {"battle": 6, "event": 3, "elite": 2, "chest": 2}
 ## 「?」房的实际类型权重 —— 用户口径：**精英与普通宝箱出现概率略低**。
 const WEIGHTS_UNKNOWN := {"battle": 7, "event": 4, "elite": 1, "chest": 1}
+
+## R142：卡牌宝箱（事件子类型 treasure）有**一半概率**装的是一件道具（而不是卡牌三选一）。
+## 摇在**地图生成期**（走本局 run_rng 的链条）→ 录像回放同一张图必然同一个结果。
+const TREASURE_RELIC_CHANCE := 0.5
 
 const MAX_ATTEMPTS := 200
 ## 上一次 generate() 实际用了几次重摇（1 = 一次成功）。仅供测试与调参看；
@@ -135,12 +147,18 @@ static func generate(rng: RandomNumberGenerator,
 		layer := GameLayers.LAYER_DEFAULT) -> Array:
 	## 生成一整张 5×7 地图（返回 35 个 cell 的数组，下标即 id）。
 	## 完全确定：同一 rng 状态必然得到同一张图（重试次数也确定）。
+	## ⚠️ R142：内容层校验（每个起点邻居都能不回头走到宝箱）**必须等类型摇完**才判 ——
+	##    宝箱是一种「类型」，而类型在 `_make_cells` 里才摇。所以一次重摇 =
+	##    「重新连边 + 重新定类型」，不是只重摇结构。
 	for attempt in MAX_ATTEMPTS:
 		var adj := _build_adjacency(rng)
 		if adj.is_empty():
 			continue
+		var cells := _make_cells(adj, rng, layer)
+		if not exits_reach_chest(cells):
+			continue
 		last_attempts = attempt + 1
-		return _make_cells(adj, rng, layer)
+		return cells
 	push_error("RogueMap：%d 次尝试仍未生成满足约束的 5×7 地图" % MAX_ATTEMPTS)
 	return []
 
@@ -260,6 +278,50 @@ static func _validate(adj: Array, start_i: int) -> Array:
 	return adj
 
 
+static func exits_reach_chest(cells: Array) -> bool:
+	## R142：**起点的每一个邻居都必须能「不往回走」走到一个宝箱。**
+	##
+	## 为什么要有这一条：地图上走过的房间可以零消耗返回（「原路返回」什么都不发生），
+	## 但每层只有 MAX_STEPS 块巧克力。如果起点的某个邻居属于一条
+	## 「只能经过起点才连得回主路」的死胡同，玩家第一步走进去就注定要白花步数折返。
+	## 用户口径：无论第一步走哪一格，都应该能一路向前走到宝箱。
+	##
+	## 形式化：「不往回走」= 不重复经过任何房间 = 存在一条**简单路径**；
+	## 于是它等价于「**把起点从图里摘掉**之后，该邻居仍能到达某个宝箱房」。
+	## 宝箱房 = chest / bigchest（「?」房按它生成时定好的真实类型算）。
+	if cells.size() != CELLS:
+		return false
+	var start_i := idx(START_COL, START_ROW)
+	var nbs: Array = (cells[start_i] as Dictionary).get("doors", [])
+	if nbs.is_empty():
+		return false
+	for n: int in nbs:
+		if not _reaches_chest_without(cells, int(n), start_i):
+			return false
+	return true
+
+
+static func _reaches_chest_without(cells: Array, src: int, banned: int) -> bool:
+	## 从 src 出发能否走到宝箱房（**绝不经过 banned**）。src 自己就是宝箱也算命中。
+	var seen := {src: true, banned: true}
+	var queue: Array = [src]
+	while not queue.is_empty():
+		var u: int = queue.pop_front()
+		if is_chest_cell(cells[u]):
+			return true
+		for v in (cells[u] as Dictionary)["doors"]:
+			if not seen.has(int(v)):
+				seen[int(v)] = true
+				queue.append(int(v))
+	return false
+
+
+static func is_chest_cell(cell: Dictionary) -> bool:
+	## 宝箱房 = 普通宝箱 / 大宝箱（「?」房按生成时定好的真实类型算）。
+	var t := str(cell.get("type", ""))
+	return t == "chest" or t == "bigchest"
+
+
 static func _reach_count(adj: Array, src: int) -> int:
 	var seen := {src: true}
 	var queue: Array = [src]
@@ -336,10 +398,16 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 			"doors": (adj[i] as Array).duplicate(),
 			"layer": layer,
 			"event_kind": "",
+			"treasure_relic": false,      # R142：卡牌宝箱里装的是道具还是卡牌（下面摇）
 		}
 		if type == "event":
 			# 事件子类型：本张地图上不重复（全出过一遍后才允许重复）。
 			cell["event_kind"] = GameLayers.roll_event_kind(layer, rng, used_events)
+			# R142：卡牌宝箱一半概率装的是一件道具（其余照旧是卡牌三选一）。
+			# ⚠️ 只在**真是卡牌宝箱**时才摇这个随机数：别的子类型不消耗它 →
+			#    同一 seed 的前面那些地图的随机链条不会整体错位。
+			if str(cell["event_kind"]) == "treasure":
+				cell["treasure_relic"] = rng.randf() < TREASURE_RELIC_CHANCE
 		cells.append(cell)
 	return cells
 

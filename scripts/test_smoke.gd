@@ -111,6 +111,21 @@ func _initialize() -> void:
 				RunState.start_run(_map())
 				RunState.pending_node = {"type": "event"}
 				RunState.pending_event = "treasure"],
+		# R142：卡牌宝箱的「箱子里是道具」那一半（旗标由地图生成期摇定）
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "event", "event_kind": "treasure",
+						"treasure_relic": true}
+				RunState.pending_event = "treasure",
+			_check_treasure_relic_loot],
+		# R142：**真实流程**的事件房只塞 pending_node（不写 pending_event）→ 子类型必须
+		# 从节点自带的 event_kind 读出来（R128 漏了这一步，所有事件房都变成卡牌宝箱）。
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "event", "event_kind": "oblivion"},
+			_check_event_kind_from_node],
 		["res://scenes/event.tscn", func():
 				_reset()
 				RunState.start_run(_map())
@@ -1177,6 +1192,52 @@ func _cleanup_cancel_dummy(eng: GameEngine, src: Vector2i, tgt: Vector2i) -> voi
 	## R118 用例收尾：别把 dummy 留给后续用例（与 `_check_frozen_aura` 同一套路）。
 	eng.state.board.erase(src)
 	eng.state.board.erase(tgt)
+
+
+func _check_treasure_relic_loot(scene: Variant) -> void:
+	## R142：卡牌宝箱「装道具」的那一半 —— 支付 5 生命后应得**一件道具**（入队待领），
+	## 而不是卡牌三选一。旗标读的是地图节点自带的 `treasure_relic`。
+	if not bool(scene._is_treasure()) or not bool(scene._is_treasure_relic()):
+		_smoke_fail("R142 宝箱：treasure_relic 旗标没有被认出来")
+		return
+	RunState.pending_rewards = []          # 清干净，免得别的用例的残留进来搅局
+	var before_hp: int = RunState.hp
+	scene._on_main()
+	if RunState.hp != maxi(1, before_hp - 5):
+		_smoke_fail("R142 宝箱：应付 5 生命（%d → %d）" % [before_hp, RunState.hp])
+		return
+	var has_relic := false
+	var has_cards := false
+	for e: Dictionary in RunState.pending_rewards:
+		if str(e.get("kind", "")) == "relic":
+			has_relic = true
+		elif str(e.get("kind", "")) == "cards":
+			has_cards = true
+	if not has_relic or has_cards:
+		_smoke_fail("R142 宝箱：待领奖励应只有道具，实际 relic=%s cards=%s"
+				% [str(has_relic), str(has_cards)])
+		return
+	if scene._reward_panel == null or not scene._reward_panel.is_open():
+		_smoke_fail("R142 宝箱：开箱后奖励悬浮窗应当自动打开")
+		return
+	print("SMOKE OK R142 宝箱：支付 5 生命 → 开出道具（入队待领 + 悬浮窗自动打开），不给卡牌")
+
+
+func _check_event_kind_from_node(scene: Variant) -> void:
+	## R142 回归：**真实流程**（地图 → 事件场景）只塞了 pending_node，没有 pending_event。
+	## 事件子类型必须能从节点的 `event_kind` 读出来 —— R128 重做地图时漏了这一步，
+	## 于是 `_is_treasure()`（兜底分支）把**所有**事件房都吞成了「卡牌宝箱」。
+	if str(scene._pending_kind()) != "oblivion":
+		_smoke_fail("R142 事件子类型：应从未写 pending_event 的节点读出 oblivion，实际「%s」"
+				% str(scene._pending_kind()))
+		return
+	if bool(scene._is_treasure()):
+		_smoke_fail("R142 事件子类型：遗忘之泉被兜底分支误判成「卡牌宝箱」")
+		return
+	if not bool(scene._is_oblivion()):
+		_smoke_fail("R142 事件子类型：读出了 oblivion 却没走遗忘之泉分支")
+		return
+	print("SMOKE OK R142 事件子类型：只给 event_kind 也能认出遗忘之泉（不再一律变成卡牌宝箱）")
 
 
 func _check_arcane_with_charm(scene: Variant) -> void:

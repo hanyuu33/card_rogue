@@ -3,7 +3,8 @@ extends Control
 ##   * rest  休息处：恢复 25% 最大生命（向上取整，不超过上限）；
 ##            另有「烤肉」选项：获得事件道具「烤肉」（进入 Boss 战时自动消耗
 ##            并回复 25% 最大生命）。持有烤肉时不能再选，消耗后可再次烤制。
-##   * event + treasure 宝箱：支付 5 生命获得一组卡牌奖励（选 1 张入卡组），或跳过；
+##   * event + treasure 宝箱：支付 5 生命开箱 —— **一半概率**是一组卡牌奖励（选 1 张入卡组）、
+##     另一半是一件道具（R142；箱子里装什么在地图生成时就摇定了）；也可以跳过不付生命；
 ##   * event + whisper  鸭鸭低语：获得事件道具「鸭之低语」，或放弃；
 ##   * event + struggle 挣扎：失去 21 点生命，将一张「金属龙」加入卡组，或离开；
 ##   * event + gaze     鸭之凝视：获得事件道具「一袋米抗几楼」，或放弃；
@@ -173,52 +174,71 @@ func _is_chest_layer() -> bool:
 	return RunState.run_active and str(RunState.pending_node.get("type", "")) == "chest"
 
 
+func _pending_kind() -> String:
+	## 当前事件房的**子类型**。两个来源，按优先级：
+	##   ① `RunState.pending_event`（演示参数 / 冒烟用例显式指定）；
+	##   ② **地图节点自带的 `event_kind`**（真实流程：地图把整个 cell 塞进了 pending_node）。
+	## ⚠️ R128 重做 5×7 地图时，map_scene 只写了 pending_node、**漏了写 pending_event**，
+	##    而 `_is_treasure()` 是「其余子类型都没认领」的**兜底分支** →
+	##    于是**所有**事件房都退化成了「卡牌宝箱」，低语 / 挣扎 / 泉水 / 工匠 从没出现过。
+	##    R142 把兜底补在这一层：读 pending_node 就够了，map_scene 一行都不用改。
+	if RunState.pending_event != "":
+		return RunState.pending_event
+	return str(RunState.pending_node.get("event_kind", ""))
+
+
+func _is_treasure_relic() -> bool:
+	## R142：这只卡牌宝箱里装的是**道具**而不是卡牌 —— 旗标在地图生成期就摇定
+	## （`RogueMap._make_cells`，走本局 run_rng → 录像回放一致）。
+	return bool(RunState.pending_node.get("treasure_relic", false))
+
+
 func _is_whisper() -> bool:
-	return _is_event_node() and RunState.pending_event == "whisper"
+	return _is_event_node() and _pending_kind() == "whisper"
 
 
 func _is_gaze() -> bool:
-	return _is_event_node() and RunState.pending_event == "gaze"
+	return _is_event_node() and _pending_kind() == "gaze"
 
 
 func _is_pear() -> bool:
 	## 鸭梨山大（第二层专属事件）：获得事件道具「鸭梨」。
-	return _is_event_node() and RunState.pending_event == "pear"
+	return _is_event_node() and _pending_kind() == "pear"
 
 
 func _is_bluefish() -> bool:
 	## 蓝色大肥鱼（第二层专属事件）：可将一张「鲸鱼之怒」（9050）加入卡组。
-	return _is_event_node() and RunState.pending_event == "bluefish"
+	return _is_event_node() and _pending_kind() == "bluefish"
 
 
 func _is_hero() -> bool:
 	## 绝赞五换一（第二层专属）：随机删 5 张不同名的卡 → 得一张「英雄」（9023）。
-	return _is_event_node() and RunState.pending_event == "hero"
+	return _is_event_node() and _pending_kind() == "hero"
 
 
 func _is_arcane() -> bool:
 	## 奥秘之泉（第一层专属）：获得道具「奥秘护符」/ 或者喝泉水抽 3 张效果·技能牌选 1。
-	return _is_event_node() and RunState.pending_event == "arcane"
+	return _is_event_node() and _pending_kind() == "arcane"
 
 
 func _is_oblivion() -> bool:
 	## 遗忘之泉（全层通用事件）：从卡组删一张卡，或离开。
-	return _is_event_node() and RunState.pending_event == "oblivion"
+	return _is_event_node() and _pending_kind() == "oblivion"
 
 
 func _is_smith() -> bool:
 	## 鸭鸭工匠（R110，全层通用事件）：从卡组挑一张卡变成 2 费铁栅栏，或离开。
-	return _is_event_node() and RunState.pending_event == "smith"
+	return _is_event_node() and _pending_kind() == "smith"
 
 
 func _is_struggle() -> bool:
-	return _is_event_node() and RunState.pending_event == "struggle"
+	return _is_event_node() and _pending_kind() == "struggle"
 
 
 func _is_relic_chest() -> bool:
 	## 宝箱层开箱：节点类型 chest，或（演示参数）事件节点 + pending_event。
 	return _is_chest_layer() \
-			or (_is_event_node() and RunState.pending_event == "relic_chest")
+			or (_is_event_node() and _pending_kind() == "relic_chest")
 
 
 func _is_treasure() -> bool:
@@ -329,6 +349,11 @@ func _ready() -> void:
 		if args[i] == "--treasure":  # 演示：伪装 run 宝箱节点（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "treasure"
+		if args[i] == "--treasureRelic":  # 演示：伪装「箱子里是道具」的卡牌宝箱（截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event", "event_kind": "treasure",
+					"treasure_relic": true}
 			RunState.pending_event = "treasure"
 		if args[i] == "--whisper":  # 演示：伪装 run 鸭鸭低语事件（截图验证）
 			RunState.run_active = true
@@ -527,7 +552,10 @@ func _ready() -> void:
 		result_label.text = ""
 	elif _is_treasure():
 		event_name.text = "宝  箱"
-		desc.text = "路旁放着一只落满灰尘的宝箱……\n支付 5 生命打开它，获得一组卡牌奖励（选 1 张加入卡组）；\n也可以转身离开，分文不取。"
+		# R142：箱子里可能是**卡牌**、也可能是**道具**（开箱前不告诉玩家是哪一种）。
+		desc.text = "路旁放着一只落满灰尘的宝箱……\n" \
+				+ "支付 5 生命打开它——箱子里可能是一组卡牌（选 1 张加入卡组），\n" \
+				+ "也可能是一件道具（直接进道具栏）。也可以转身离开，分文不取。"
 		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 		rest_btn.text = "支付 5 生命，打开宝箱"
 		rest_btn.disabled = RunState.hp <= 5   # 至少保留 1 点生命
@@ -776,15 +804,34 @@ func _on_main() -> void:
 			return
 		RunState.take_damage(5)
 		_treasure_taken = true
-		# R119：卡牌奖励**先入队** → 奖励悬浮窗里看完三张候选再挑一张。
-		RunState.queue_card_reward("normal")
 		rest_btn.text = "继续"
 		rest_btn.disabled = false
 		leave_btn.text = "离开"
 		leave_btn.disabled = false
-		desc.text = "箱盖掀开，里面是一叠卡牌……\n请在上面的奖励悬浮窗里查看并挑走一张。"
 		result_label.text = "已支付 5 生命（当前 %d/%d）" % [RunState.hp, RunState.max_hp]
 		result_label.add_theme_color_override("font_color", Color("9a968c"))
+		# R142：箱子内容在**生成地图时**就摇定（`treasure_relic` 旗标）：
+		# 一半概率是一件道具，否则是原来的卡牌三选一。
+		if _is_treasure_relic():
+			var got := RunState.roll_reward_relic()
+			if got > 0:
+				RunState.queue_relic_reward(got)
+				var rc := RelicRepo.load_json().get_relic(got)
+				var rname := rc.relic_name if rc != null else str(got)
+				desc.text = "箱盖掀开——里面躺着一件道具！\n「%s」已放进待领奖励，请在上面的奖励悬浮窗里查看。" % rname
+				result_label.text = "开出道具「%s」（待领：见奖励悬浮窗）" % rname
+				result_label.add_theme_color_override("font_color",
+						rc.source_color() if rc != null else Color("d89a2e"))
+				if _reward_panel != null:
+					_reward_panel.open()
+				_redraw()
+				return
+			# 奖励道具已全部拥有 / 全被跳过 → 退回卡牌奖励，绝不让这 5 点生命白花。
+			result_label.text = "已支付 5 生命（当前 %d/%d）——箱底没有道具了，改给卡牌" \
+					% [RunState.hp, RunState.max_hp]
+		# R119：卡牌奖励**先入队** → 奖励悬浮窗里看完三张候选再挑一张。
+		RunState.queue_card_reward("normal")
+		desc.text = "箱盖掀开，里面是一叠卡牌……\n请在上面的奖励悬浮窗里查看并挑走一张。"
 		if _reward_panel != null:
 			_reward_panel.open()
 		_redraw()

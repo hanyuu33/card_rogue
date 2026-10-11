@@ -5168,6 +5168,10 @@ func _init() -> void:
 			if bool(q_c.get("hidden", false)):
 				q_bulk_unknown += 1
 			q_bulk_types[str(q_c["type"])] = int(q_bulk_types.get(str(q_c["type"]), 0)) + 1
+		# R142：起点每个邻居都必须能「不回头」走到宝箱
+		if q_bulk_ok and not RogueMap.exits_reach_chest(q_mp):
+			q_bulk_ok = false
+			q_bulk_msg = "第 %d 张有起点邻居走不到宝箱" % q_trial
 		if not q_bulk_ok:
 			break
 	check(q_bulk_ok, "地图：连生成 60 张都满足全部约束（%s）" % q_bulk_msg)
@@ -5180,6 +5184,73 @@ func _init() -> void:
 	# R136：边缘非角下限 1 → 2 之后，生成器必须仍然够便宜（实测 300 张最差 9 次）。
 	check(q_bulk_worst <= 40,
 			"R136 地图：60 张里单张最多重摇 %d 次（上限 40，0 失败）" % q_bulk_worst)
+
+	# ==== R142：起点的每一个邻居都必须「不回头也能走到宝箱」====
+	check(RogueMap.exits_reach_chest(q_map1),
+			"R142 地图：起点的每个邻居都能不经过起点走到宝箱")
+	# 反例守卫：手工造一张「起点左边是条没有宝箱的死胡同」的图 → 必须判不合格。
+	# ⚠️ 不靠随机图碰运气，直接喂一张最小的合成图，把判定本身钉死。
+	var q_neg_cells: Array = []
+	for q_ni in RogueMap.CELLS:
+		q_neg_cells.append({"id": q_ni, "type": "battle", "doors": []})
+	var q_sid := RogueMap.idx(RogueMap.START_POS.x, RogueMap.START_POS.y)
+	var q_nl := RogueMap.idx(2, 4)      # 死胡同邻居
+	var q_nr := RogueMap.idx(4, 4)      # 通向宝箱的邻居
+	var q_nb := RogueMap.idx(4, 3)      # 那个宝箱
+	q_neg_cells[q_sid]["type"] = "start"
+	q_neg_cells[q_sid]["doors"] = [q_nl, q_nr]
+	q_neg_cells[q_nl]["doors"] = [q_sid]
+	q_neg_cells[q_nr]["doors"] = [q_sid, q_nb]
+	q_neg_cells[q_nb]["type"] = "chest"
+	q_neg_cells[q_nb]["doors"] = [q_nr]
+	check(not RogueMap.exits_reach_chest(q_neg_cells),
+			"R142 守卫：起点某邻居是「没有宝箱的死胡同」→ 判定不合格（整张重摇）")
+	q_neg_cells[q_nl]["type"] = "chest"
+	check(RogueMap.exits_reach_chest(q_neg_cells),
+			"R142 守卫：那条死胡同本身就是宝箱 → 判定合格（走过去就拿到了）")
+	# 批量：连生成 80 张，每张都必须满足（生成器不允许偶发漏网）
+	var q_exit_ok := true
+	var q_exit_bad := ""
+	var q_exit_rng := RandomNumberGenerator.new()
+	q_exit_rng.seed = 90210
+	for q_et in 80:
+		var q_em: Array = RogueMap.generate(q_exit_rng, GameLayers.LAYER_DEFAULT)
+		if not RogueMap.exits_reach_chest(q_em):
+			q_exit_ok = false
+			q_exit_bad = "第 %d 张有邻居走不到宝箱" % q_et
+			break
+	check(q_exit_ok, "R142 地图：连生成 80 张全部满足「起点邻居不回头可达宝箱」（%s）"
+			% ("全部通过" if q_exit_ok else q_exit_bad))
+
+	# ==== R142：卡牌宝箱「一半概率装道具」的旗标 ====
+	var q_tr_bad := ""
+	var q_tr_true := false
+	var q_tr_false := false
+	var q_tr_rng := RandomNumberGenerator.new()
+	q_tr_rng.seed = 31337
+	for q_ti in 120:
+		var q_tm: Array = RogueMap.generate(q_tr_rng, GameLayers.LAYER_DEFAULT)
+		for q_tc: Dictionary in q_tm:
+			if str(q_tc["type"]) != "event":
+				continue
+			var q_flag2: Variant = q_tc.get("treasure_relic", null)
+			if typeof(q_flag2) != TYPE_BOOL:
+				q_tr_bad = "事件房 treasure_relic 不是 bool（%s）" % str(q_flag2)
+				break
+			if str(q_tc.get("event_kind", "")) == "treasure":
+				if bool(q_flag2):
+					q_tr_true = true
+				else:
+					q_tr_false = true
+			elif bool(q_flag2):
+				q_tr_bad = "非卡牌宝箱的事件 %s 带上了 treasure_relic" % str(q_tc.get("event_kind", ""))
+				break
+		if q_tr_bad != "":
+			break
+	check(q_tr_bad == "", "R142 地图：treasure_relic 是 bool，且只有卡牌宝箱才可能为真（%s）"
+			% ("符合" if q_tr_bad == "" else q_tr_bad))
+	check(q_tr_true and q_tr_false,
+			"R142 地图：120 张里卡牌宝箱的两种内容（道具 / 卡牌）都出现过")
 
 	# ---- 第二层地图：layer 标记 + 事件不串层 ----
 	var q_l2_rng := RandomNumberGenerator.new()
