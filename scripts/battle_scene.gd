@@ -315,6 +315,7 @@ var sfx: Sfx
 var _banner := {}               # {text, col, start, dur}  回合切换大字横幅
 var _confetti: Array = []       # {pos, vel, rot, vr, size, col}  胜利彩带
 var _log_visible := false       # 对局记录面板开关
+var _menu: UiMenu = null         # Esc 主菜单（R148）—— 顶栏「记录/音效/标题/选关/地图」的收容所
 var _map_visible := false       # 冒险地图总览面板开关（R64：战斗内查看地图，只读）
 # R127：滚动容器的「上下还能滚」提示开关 —— **只在**新玩家第一局为真（判据见 ScrollHint.is_new_player）。
 # 地图总览 / 棋盘格子区都**不再画滚动条**，改画半透明双箭头（画法见 ScrollHint，规范 §4.12）。
@@ -358,11 +359,7 @@ var _net_wait := 0.0
 @onready var hp_label: Label = $Toolbar/HpLabel
 @onready var status_label: Label = $Toolbar/StatusLabel
 @onready var end_turn_btn: Button = $Toolbar/EndTurnBtn
-@onready var map_btn: Button = $Toolbar/MapBtn
-@onready var level_btn: Button = $Toolbar/LevelBtn
-@onready var title_btn: Button = $Toolbar/TitleBtn
-@onready var log_btn: Button = $Toolbar/LogBtn
-@onready var snd_btn: Button = $Toolbar/SndBtn
+@onready var menu_btn: Button = $Toolbar/MenuBtn
 
 
 func _ready() -> void:
@@ -379,10 +376,11 @@ func _ready() -> void:
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
 	add_child(sfx)
-	map_btn.pressed.connect(_toggle_map)
 	end_turn_btn.pressed.connect(_on_end_turn)
-	title_btn.pressed.connect(_on_back_to_title)
-	for b: Button in [map_btn, end_turn_btn, title_btn, level_btn]:
+	menu_btn.pressed.connect(_open_menu)
+	# 齿轮图标**自绘**（字体里的 ⚙ 不保证有，缺字会变成一个方框）—— 见 UiTheme.draw_gear
+	menu_btn.draw.connect(_draw_menu_gear)
+	for b: Button in [end_turn_btn, menu_btn]:
 		b.pressed.connect(func(): sfx.play("click"))
 	_ai_timer = Timer.new()
 	_ai_timer.wait_time = 1.6
@@ -391,11 +389,9 @@ func _ready() -> void:
 	_build_tut_bar()
 	_build_level_menu()
 	_build_over_panel()
-	log_btn.pressed.connect(_toggle_log)
-	snd_btn.pressed.connect(_toggle_sound)
 	_load_entry_level()
 	# R113：顶栏按钮统一走 chip（实心 + compact —— 顶栏按钮只有 28px 高，标准内距会撑出格子）
-	for _tb: Button in [log_btn, snd_btn, title_btn, level_btn, end_turn_btn, map_btn]:
+	for _tb: Button in [end_turn_btn, menu_btn]:
 		UiTheme.apply_chip(_tb, true, true)
 	# R119：奖励悬浮窗 —— 战斗胜利后的掉落道具 / 卡牌奖励都先入队，由它逐项展示
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
@@ -737,7 +733,6 @@ func _ready() -> void:
 		#   亡灵领主（程 1）贴脸打它：5 点伤害 → 只掉 4；同时把熊（生命 14）摆在场上，
 		#   一眼能看出新的生命上限。开着战斗记录，日志里能读到减伤那一行。
 		_log_visible = true
-		log_btn.text = "记录*"
 		engine.state.hand.clear()
 		engine.state.hand.append(CardData.from_dict(repo.get_card(9016).to_dict()))
 		engine.state.energy = 5
@@ -1562,6 +1557,14 @@ func _ready() -> void:
 		queue_redraw()
 	if NetSession.active:
 		_setup_net()   # 联机已停用：NetSession.active 恒为 false（大厅已移除）
+	# R148：Esc 主菜单（齿轮按钮 / Esc 键都走它）—— 顶栏原来那排按钮全收进这里。
+	# ⚠️ items 传的是**函数引用**：每次打开菜单重新求值，文案 / 禁用态因此总是最新的
+	#    （比如「查看地图」要看本局有没有地图）。
+	# （`--menu` 演示由 UiMenu 自己识别：它开着菜单出图时会强制不暂停）
+	_menu = UiMenu.attach(self, _menu_items, {
+		"back": "返回战斗",
+		"sub": "战斗中 · 按 Esc 返回",
+	})
 
 
 # R77：鸭语耳环（6015）逐张自动出牌的播放状态。
@@ -1677,7 +1680,6 @@ func _demo_tick() -> void:
 		# 演示：摆两格「不拦路」的工事（中路 + 我方后排），
 		# 看 AI 是绕过去直击 HP（而不是像以前那样见工事就拆）。
 		_log_visible = true
-		log_btn.text = "记录*"
 		engine.state.place(repo.get_card(8001), Vector2i(4, 1), GameEngine.SIDE_SELF)
 		engine.state.place(repo.get_card(8001), Vector2i(5, 0), GameEngine.SIDE_SELF)
 		status_text = "演示：工事不拦路 → AI 应当绕行直击 HP"
@@ -1815,7 +1817,6 @@ func _setup_net() -> void:
 	## 联机开局（对应 Python 版 NetFieldWindow）：双方各跑一份镜像引擎，
 	## 我方动作发出去、对方动作收进来按 450ms 间隔回放。
 	_net_mode = true
-	level_btn.disabled = true
 	var deck: Array[CardData] = repo.starter_deck()
 	var state := FieldState.new(deck, 20, 20, -1, "联机对战", true)
 	engine = GameEngine.new(state)
@@ -2080,8 +2081,6 @@ func load_level(lvl: Dictionary) -> void:
 	_over_shown = false
 	_confetti.clear()
 	var limit: int = int(lvl["turn_limit"])
-	map_btn.visible = RunState.run_active and not RunState.map_cells.is_empty()
-	level_btn.disabled = RunState.run_active
 	if limit > 0:
 		status_text = "%s：%d 回合内把敌方 HP（%d）打到 0！" % [
 				lvl["name"], limit, GameLevels.enemy_hp_of(lvl)]
@@ -2265,11 +2264,16 @@ func _hand_index_at(pos: Vector2) -> int:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	## 键盘快捷键：Esc 取消 / E 结束回合 / M 地图 / L 记录面板 / F 主动发动。
+	## 键盘快捷键：Esc 主菜单（R148 改，原来是「取消选中」）/ E 结束回合 / M 地图 /
+	## L 记录面板 / F 主动发动。
 	if engine == null or not (event is InputEventKey):
 		return
 	var k := event as InputEventKey
 	if not k.pressed or k.echo:
+		return
+	# 菜单开着时屏蔽其余快捷键。正常路径上 `paused` 已经替我们挡住了（菜单打开会暂停
+	# 场景树，PAUSABLE 的节点收不到输入），这里是**演示模式（不暂停）**的双保险。
+	if _menu != null and _menu.is_open() and k.keycode != KEY_ESCAPE:
 		return
 	if ReplayLog.playing:
 		# 回放模式：空格切换倍速（1→2→4→8 循环），其余快捷键接管
@@ -2280,14 +2284,19 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	match k.keycode:
 		KEY_ESCAPE:
-			# 地图总览开着时，Esc 只关地图（不动手牌/选中的取消逻辑）
+			# R148：Esc = 主菜单。层级仍是「先关更上层的浮层」：菜单自己 → 地图总览 →
+			# 才轮到开菜单。⚠️ 原来这里做的是「取消选中」，那一支交给右键
+			# （`_on_right_click` / 再点一次，两个口子都还在）。
+			if _menu != null and _menu.is_open():
+				_menu.close()
+				return
 			if _map_visible:
 				_map_visible = false
 				queue_redraw()
 				return
-			if not engine.over:
-				_on_right_click()
-				queue_redraw()
+			if _menu != null:
+				_menu.open()
+			return
 		KEY_E:
 			_on_end_turn()
 			queue_redraw()
@@ -4353,9 +4362,6 @@ func _build_level_menu() -> void:
 	_level_menu.id_pressed.connect(func(idx: int):
 		load_level(GameLevels.builtin_levels()[idx]))
 	add_child(_level_menu)
-	level_btn.pressed.connect(func():
-		_level_menu.position = level_btn.get_screen_position() + Vector2(0, level_btn.size.y)
-		_level_menu.popup())
 
 
 # ------------------------------------------------------------ 结算覆盖层 / 横幅 / 彩带 / 记录面板
@@ -4577,9 +4583,53 @@ func _whisper_suffix() -> String:
 	return "（鸭之低语：%s）" % _whisper_txt if _whisper_txt != "" else ""
 
 
+func _menu_items() -> Array:
+	## 战斗中的主菜单项（R148）—— **顶栏原来那排按钮全在这里**：
+	## 地图 / 记录 / 音效 / 选关 / 标题。以后战斗里再加「设置类」功能也只往这里加，
+	## 顶栏永远只有「回合结束 + 齿轮」。
+	##
+	## ⚠️ 本函数**每次打开菜单都会重新调用**（attach 传的是函数引用），所以
+	##    这里的 `_mapview_available()` / `sfx.enabled` / `_net_mode` 读到的一定是当下值。
+	return [
+		{"text": "查看地图", "fn": _toggle_map,
+			"disabled": not _mapview_available()},
+		{"text": "战斗记录", "fn": _toggle_log},
+		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+			"fn": _toggle_sound, "keep_open": true},
+		{"text": "选择关卡", "fn": _open_level_menu, "disabled": _net_mode},
+		{"text": "返回标题", "fn": _on_back_to_title},
+	]
+
+
+func _open_menu() -> void:
+	## 顶栏齿轮按钮。
+	if _menu != null:
+		_menu.open()
+
+
+func _open_level_menu() -> void:
+	## 菜单项「选择关卡」：按下时场景树还在暂停态 → **延后一帧**再弹，
+	## 那时菜单已经关闭、暂停也恢复了（否则 PopupMenu 会卡在一个暂停的帧里）。
+	_pop_level_menu.call_deferred()
+
+
+func _pop_level_menu() -> void:
+	_level_menu.position = Vector2i(int(GRID_X + GRID_W * 0.5 - 60.0),
+			int(GRID_Y + 60.0))
+	_level_menu.popup()
+
+
+func _draw_menu_gear() -> void:
+	## 顶栏齿轮图标（自绘）：hover 时提亮，轴孔的底色跟着按钮底板走
+	## —— 孔用死色的话，hover 换底会在中心留一个突兀的深点。
+	var hot := menu_btn.is_hovered()
+	var col: Color = UiTheme.CHIP_SOLID_TEXT_HOVER if hot else UiTheme.CHIP_SOLID_TEXT
+	var bg: Color = UiTheme.CHIP_SOLID_BG_HOVER if hot else UiTheme.CHIP_SOLID_BG
+	UiTheme.draw_gear(menu_btn, menu_btn.size * 0.5, 8.2, col, bg)
+
+
 func _toggle_log() -> void:
 	_log_visible = not _log_visible
-	log_btn.text = "记录*" if _log_visible else "记录"
 	queue_redraw()
 
 
@@ -4819,7 +4869,6 @@ func _draw_map_legend(pr: Rect2) -> void:
 
 func _toggle_sound() -> void:
 	sfx.enabled = not sfx.enabled
-	snd_btn.text = "音效:开" if sfx.enabled else "音效:关"
 	if sfx.enabled:
 		sfx.play("click")
 

@@ -35,6 +35,8 @@ var _cost_filter := 0            # 0=全部，1..5=费用，6=5+
 var _search := ""
 var _class_filter := "全部"       # R77：按职业查找（"" = 无归属 / 通用）
 
+var _menu: UiMenu = null      # Esc 主菜单（R148）
+
 var _font: SystemFont
 var _font_bold: SystemFont
 
@@ -100,6 +102,24 @@ func _ready() -> void:
 	_selected = _shown[0] if not _shown.is_empty() else null
 	_refresh_detail()
 	grid.queue_redraw()
+	# R148：Esc 主菜单（图鉴页没有 sfx → 菜单里不给音效项）
+	_menu = UiMenu.attach(self, _menu_items, {
+		"back": "继续看图鉴",
+		"sub": "卡图鉴 · 按 Esc 返回",
+	})
+
+
+func _menu_items() -> Array:
+	## 本界面的 Esc 菜单项（R148）。图鉴页**没有音效开关**（本场景没建 Sfx）→ 只给返回标题。
+	return [
+		{"text": "返回标题", "fn": _on_back},
+	]
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# R148：Esc = 主菜单（菜单开着时它自己关掉自己）
+	if _menu != null and _menu.handle_esc(event):
+		return
 
 
 func _group_title() -> String:

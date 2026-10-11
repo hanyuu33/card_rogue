@@ -9,6 +9,7 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 var _font: SystemFont
 var _font_bold: SystemFont
 var sfx: Sfx
+var _menu: UiMenu = null      # Esc 主菜单（R148）
 var _items: Array[Dictionary] = []   # ReplayLog.list_replays() 结果
 var _err := ""                       # 读取失败提示
 var _hover := -1
@@ -34,6 +35,33 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(t)
 		t.start()
+	# R148：Esc 主菜单
+	_menu = UiMenu.attach(self, _menu_items, {
+		"back": "继续",
+		"sub": "录像回放 · 按 Esc 返回",
+	})
+
+
+func _menu_items() -> Array:
+	## 本界面的 Esc 菜单项（R148）。「返回标题」走**已有的** `_back_to_title`
+	## （它会先停掉正在播放的录像 —— 别另写一份）。
+	return [
+		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+			"fn": _toggle_sound, "keep_open": true},
+		{"text": "返回标题", "fn": _back_to_title},
+	]
+
+
+func _toggle_sound() -> void:
+	sfx.enabled = not sfx.enabled
+	if sfx.enabled:
+		sfx.play("click")
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# R148：Esc = 主菜单（菜单开着时它自己关掉自己）
+	if _menu != null and _menu.handle_esc(event):
+		return
 
 
 func _refresh() -> void:
@@ -106,7 +134,9 @@ func _gui_input(event: InputEvent) -> void:
 			sfx.play("click")
 			_play(str(_items[pick]["path"]))
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
-		_back_to_title()
+		# R148：Esc 改成呼出主菜单（「返回标题」挪进菜单里）
+		if _menu != null:
+			_menu.toggle()
 
 
 func _back_to_title() -> void:

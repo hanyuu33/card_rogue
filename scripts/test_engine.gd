@@ -5720,6 +5720,74 @@ func _init() -> void:
 				"R147 喝泉水这条路：先过 `_arcane_taken()` 闸门、发完奖励再 `_claim_reward(bbq_btn)`")
 		check(r147_src.find("if _rested:   # R147：本次休息处只领一份") >= 0,
 				"R147 休息处「烤肉」同样带闸门（先休息过就不能再烤肉）")
+	# ==== R148：Esc 主菜单 + 战场顶栏只留「回合结束 + 齿轮」 ====
+	# 行为面（open → 暂停场景树 / close → 恢复 / UiGate 让位 / 菜单项与主按钮唯一）
+	# 在 test_smoke 里拿真场景跑；这里锁的是「接线」与「上栏那排按钮不会再长回来」。
+	if not FileAccess.file_exists("res://export_presets.cfg"):
+		print("    · R148 源码守卫：打包环境读不到 .gd 源文本 → 跳过（只在 dev 工程/门禁生效）")
+	else:
+		var r148_tscn := FileAccess.get_file_as_string("res://scenes/battle.tscn")
+		for gone: String in ["LogBtn", "SndBtn", "TitleBtn", "LevelBtn", "MapBtn"]:
+			check(r148_tscn.find('[node name="%s"' % gone) < 0,
+					"R148 战场顶栏不该再有 %s 节点（五颗按钮全收进菜单）" % gone)
+		check(r148_tscn.find('[node name="MenuBtn"') >= 0
+				and r148_tscn.find('[node name="EndTurnBtn"') >= 0,
+				"R148 战场顶栏 = 状态文字 + 回合结束 + 齿轮(MenuBtn)")
+		var r148_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+		check(r148_bs.find("$Toolbar/MenuBtn") >= 0, "R148 battle_scene 接上顶栏齿轮")
+		var r148_leak := 0
+		for gone2: String in ["$Toolbar/MapBtn", "$Toolbar/LogBtn", "$Toolbar/SndBtn",
+				"$Toolbar/TitleBtn", "$Toolbar/LevelBtn"]:
+			if r148_bs.find(gone2) >= 0:
+				r148_leak += 1
+		check(r148_leak == 0,
+				"R148 battle_scene 不再引用任何下线的顶栏按钮（漏 %d 处）" % r148_leak)
+		# Esc 分支：切出 `_unhandled_key_input` 的函数体再在体内找
+		# ⚠️ 本文件是 CRLF → 别用跨行字面量配源码（`\n` 单个字符配不上 `\r\n`）。
+		var r148_i_key := r148_bs.find("func _unhandled_key_input")
+		var r148_i_key_e := r148_bs.find("\nfunc ", r148_i_key + 1)
+		var r148_key_body := ""
+		if r148_i_key >= 0 and r148_i_key_e > r148_i_key:
+			r148_key_body = r148_bs.substr(r148_i_key, r148_i_key_e - r148_i_key)
+		# 战场**自己排层级**（菜单自己 → 地图总览 → 才开菜单），所以这里不走 handle_esc，
+		# 而是要求三个分支按顺序出现 —— 顺序反了就会「地图还开着就弹出菜单」。
+		var r148_i_close := r148_key_body.find("_menu.close()")
+		var r148_i_map := r148_key_body.find("_map_visible")
+		var r148_i_open := r148_key_body.find("_menu.open()")
+		check(r148_i_close >= 0 and r148_i_map > r148_i_close and r148_i_open > r148_i_map,
+				"R148 战场 Esc → 主菜单（层级：菜单自己 → 地图总览 → 才开菜单）")
+		# 全界面覆盖：任何一个游戏内界面少了菜单，玩家就会遇到「按 Esc 没反应」
+		var r148_scenes := ["battle_scene", "map_scene", "event_scene", "class_pick_scene",
+				"relic_pick_scene", "deck_edit_scene", "replay_list_scene", "gallery_scene"]
+		var r148_missing := ""
+		for s: String in r148_scenes:
+			if FileAccess.get_file_as_string("res://scripts/%s.gd" % s).find("UiMenu.attach(") < 0:
+				r148_missing += s + " "
+		check(r148_missing == "",
+				"R148 每个游戏内界面都挂上了主菜单（缺：%s）" % r148_missing)
+		var r148_um := FileAccess.get_file_as_string("res://scripts/ui_menu.gd")
+		check(r148_um.find("get_tree().paused = true") >= 0
+				and r148_um.find("func _exit_tree") >= 0
+				and r148_um.find("t.paused = false") >= 0,
+				"R148 菜单暂停有「开启 + 关闭 + _exit_tree 兜底」三处（漏恢复 = 整个游戏假死）")
+		check(r148_um.find("func handle_esc(") >= 0 and r148_um.find("UiGate.push") >= 0,
+				"R148 菜单：Esc 入口 + UiGate 登记都在")
+		# ⚠️ 这条是实测踩出来的：关闭必须在 `_input` 阶段、并且要消费事件。
+		check(r148_um.find("func _input(event: InputEvent)") >= 0
+				and r148_um.find("func _unhandled_input") < 0
+				and r148_um.find("set_input_as_handled()") >= 0,
+				"R148 菜单的 Esc 关闭挂在 `_input`（挂 `_unhandled_input` 会被同一事件先开后关；"
+				+ "不消费事件则场景又把菜单开回来）")
+		check(r148_um.find("_items.call() if _items is Callable") >= 0,
+				"R148 菜单项支持传函数引用（每次打开重新求值 → 文案 / 禁用态不过期）")
+		# ⚙ 不能靠字体（微软雅黑 / SimHei 不保证有 U+2699，缺字会变方框）→ 必须程序绘制
+		var r148_ui := FileAccess.get_file_as_string("res://scripts/ui_theme.gd")
+		check(r148_ui.find("static func draw_gear(") >= 0
+				and r148_bs.find("UiTheme.draw_gear(") >= 0,
+				"R148 齿轮图标程序绘制（字体缺 ⚙ 会变成方框）＋ 战场自绘调用接上")
+		check(r148_bs.find("log_btn") < 0 and r148_bs.find("snd_btn") < 0
+				and r148_bs.find("map_btn") < 0,
+				"R148 战斗场景不再引用 log_btn / snd_btn / map_btn（按钮文案与禁用态一并下线）")
 	var back := RunState.advance(int(start_cell_d["id"]))
 	check(bool(back["ok"]) and not bool(back["is_new"]) and int(back["cost"]) == 0
 			and RunState.chocolate == choco_before - 1,

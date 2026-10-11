@@ -106,6 +106,8 @@ var _deck_scroll := 0.0
 var _deck_rows: Array = []
 var _hover_deck := -1
 var _relics_visible := false
+var _menu: UiMenu = null          # Esc 主菜单（R148）
+var _menu_btn: Button = null      # 上栏那个齿轮（**自绘图标**，需要它算尺寸/hover）
 var _relic_scroll := 0.0
 var _whisper_auto := false
 var _whisper_next: Dictionary = {}
@@ -160,28 +162,19 @@ func _ready() -> void:
 		if RunState.run_active and RunState.pending_deck_edit != "":
 			get_tree().change_scene_to_file.call_deferred("res://scenes/deck_edit.tscn")
 			return
-	var quit_btn := Button.new()
-	quit_btn.text = "回到标题"
-	quit_btn.position = Vector2(14, 14)
-	quit_btn.pressed.connect(func():
-		if ReplayLog.recording:
-			ReplayLog.finish("quit")
-		ReplayLog.stop_playback()
-		get_tree().change_scene_to_file("res://scenes/title.tscn"))
-	UiTheme.apply_chip(quit_btn, true)
-	add_child(quit_btn)
-	var rec_btn := Button.new()
-	rec_btn.text = "战斗记录"
-	rec_btn.position = Vector2(120, 14)
-	rec_btn.pressed.connect(_toggle_records)
-	UiTheme.apply_chip(rec_btn, true)
-	add_child(rec_btn)
-	var deck_btn := Button.new()
-	deck_btn.text = "查看卡组"
-	deck_btn.position = Vector2(226, 14)
-	deck_btn.pressed.connect(_toggle_deck)
-	UiTheme.apply_chip(deck_btn, true)
-	add_child(deck_btn)
+	# R148：上栏原来挂着「回到标题 / 战斗记录 / 查看卡组」三个 chip —— 全部收进
+	# Esc 菜单（点齿轮或按 Esc 打开），上栏只留**一个齿轮**。
+	_menu_btn = Button.new()
+	_menu_btn.position = Vector2(14, 14)
+	_menu_btn.size = Vector2(44, 28)
+	_menu_btn.pressed.connect(_open_menu)
+	_menu_btn.draw.connect(_draw_menu_gear)
+	UiTheme.apply_chip(_menu_btn, true)
+	add_child(_menu_btn)
+	_menu = UiMenu.attach(self, _menu_items, {
+		"back": "返回地图",
+		"sub": "冒险地图 · 按 Esc 返回",
+	})
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
 	# 道具「鸭之低语」（6010）：玩家失去选择权 → 系统随机挑路并自动前进
 	if RunState.run_active and RunState.has_relic(6010) and not ReplayLog.playing:
@@ -1079,6 +1072,46 @@ func _draw_relic_panel() -> void:
 
 # ------------------------------------------------------------ 面板
 
+func _open_menu() -> void:
+	## 上栏齿轮按钮 / Esc 键。
+	if _menu != null:
+		_menu.open()
+
+
+func _menu_items() -> Array:
+	## 冒险地图的菜单项（R148）—— 上栏原来那三个 chip 都搬到这里了。
+	## ⚠️ 每次打开菜单都会重新调用本函数（attach 传的是函数引用）→ 音效文案是当下值。
+	return [
+		{"text": "战斗记录", "fn": _toggle_records},
+		{"text": "查看卡组", "fn": _toggle_deck},
+		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+			"fn": _toggle_sound, "keep_open": true},
+		{"text": "回到标题", "fn": _on_back_to_title},
+	]
+
+
+func _toggle_sound() -> void:
+	sfx.enabled = not sfx.enabled
+	if sfx.enabled:
+		sfx.play("click")
+
+
+func _on_back_to_title() -> void:
+	## 回到标题：正在录像就先收尾（已录内容照常保存）。
+	if ReplayLog.recording:
+		ReplayLog.finish("quit")
+	ReplayLog.stop_playback()
+	get_tree().change_scene_to_file("res://scenes/title.tscn")
+
+
+func _draw_menu_gear() -> void:
+	## 齿轮图标（**自绘** —— 字体里的 ⚙ 不保证有）：hover 提亮，轴孔跟着底板走。
+	var hot := _menu_btn.is_hovered()
+	var col: Color = UiTheme.CHIP_SOLID_TEXT_HOVER if hot else UiTheme.CHIP_SOLID_TEXT
+	var bg: Color = UiTheme.CHIP_SOLID_BG_HOVER if hot else UiTheme.CHIP_SOLID_BG
+	UiTheme.draw_gear(_menu_btn, _menu_btn.size * 0.5, 8.0, col, bg)
+
+
 func _toggle_records() -> void:
 	sfx.play("click")
 	_records = RunState.load_records()
@@ -1219,6 +1252,9 @@ func _draw_records_panel() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# R148：Esc = 主菜单（菜单开着时它自己关掉自己）
+	if _menu != null and _menu.handle_esc(event):
+		return
 	if _records_visible and event is InputEventMouseButton \
 			and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 		_records_scroll += 1.0

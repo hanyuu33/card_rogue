@@ -213,6 +213,9 @@ func _reset() -> void:
 	# R121：同理清掉覆盖层登记 —— 用例里 open() 过面板又没 close() 就结束的话，
 	# 阻塞态会漏给后面的用例，让那些用例的道具悬停莫名其妙全部失灵。
 	UiGate.reset()
+	# R148：菜单用例可能把场景树留在暂停态（组件自己会恢复，这里是**跨用例**兜底 ——
+	# 一旦漏一个，后面所有用例的画面都会冻住）。
+	paused = false
 
 
 func _map() -> Array:
@@ -898,6 +901,7 @@ func _check_battle(scene: Variant) -> void:
 	_check_relic_gate(scene)
 	_check_r106(scene)
 	_check_cancel_armed(scene)
+	_check_menu(scene)
 
 
 func _check_r106(scene: Variant) -> void:
@@ -1545,6 +1549,55 @@ func _check_sleep_aura(scene: Variant) -> void:
 	print("SMOKE OK 沉睡特效：常驻紫环 + 「沉睡 N」徽标（3 行互不重叠）+ 苏醒挣脱环，同源于 Placement.sleep_left；R122 起回合口与受伤口并存（都在减）")
 
 
+func _check_menu(scene: Variant) -> void:
+	## R148：Esc 主菜单。
+	##   ① 打开 → 暂停场景树（战斗中敌人 AI 计时器必须停）+ UiGate 登记（下层悬停让位）；
+	##   ② 关闭 → **一定要恢复**（忘了恢复就是整个游戏假死，本组件最危险的一处）；
+	##   ③ 菜单项由场景自己给（战斗里要有「查看地图 / 战斗记录 / 返回标题」）。
+	var menu: Variant = scene.get("_menu")
+	if menu == null:
+		_smoke_fail("R148：战斗场景没有挂主菜单")
+		return
+	if menu.is_open():
+		_smoke_fail("R148：主菜单默认不该是打开状态")
+		return
+	menu.open()
+	if not menu.is_open():
+		_smoke_fail("R148：menu.open() 之后应处于打开状态")
+		return
+	if not paused:
+		_smoke_fail("R148：菜单打开应暂停场景树（否则战斗中敌人会继续行动）")
+		return
+	if not UiGate.blocked():
+		_smoke_fail("R148：菜单打开应向 UiGate 登记（下层悬停让位）")
+		return
+	menu.close()
+	if menu.is_open() or paused:
+		_smoke_fail("R148：菜单关闭必须恢复暂停（is_open=%s paused=%s）"
+				% [str(menu.is_open()), str(paused)])
+		return
+	if UiGate.blocked():
+		_smoke_fail("R148：菜单关闭应撤销 UiGate 登记")
+		return
+	# 菜单项：**首项「返回战斗」由组件自动补**（primary），场景项里要有这几个入口。
+	var texts: Array = []
+	var primaries := 0
+	var list: Array = menu._menu_list()
+	for it: Dictionary in list:
+		texts.append(str(it.get("text", "")))
+		if bool(it.get("primary", false)):
+			primaries += 1
+	for want: String in ["返回战斗", "查看地图", "战斗记录", "返回标题"]:
+		if not texts.has(want):
+			_smoke_fail("R148：战斗菜单缺少「%s」项（实际 %s）" % [want, str(texts)])
+			return
+	if primaries != 1:
+		_smoke_fail("R148：菜单里应**只有一个**主按钮（实际 %d 个）" % primaries)
+		return
+	print("SMOKE OK R148 主菜单：打开暂停 + UiGate 让位 → 关闭恢复；战斗菜单项 %s"
+			% str(texts))
+
+
 func _check_map_panel(scene: Variant) -> void:
 	## 战斗内地图总览（R128）：**格子视图**、只读、整屏装得下（不再滚动）。
 	##   ① 「重开一局」按钮已删除、换成「地图」按钮；
@@ -1557,11 +1610,14 @@ func _check_map_panel(scene: Variant) -> void:
 	if tb.get_node_or_null("RestartBtn") != null:
 		_smoke_fail("战斗内地图：「重开一局」按钮应已删除")
 		return
-	if tb.get_node_or_null("MapBtn") == null:
-		_smoke_fail("战斗内地图：Toolbar 里没有 MapBtn")
-		return
-	if not scene.map_btn.visible:
-		_smoke_fail("战斗内地图：run 中「地图」按钮应可见")
+	# R148：顶栏那排按钮（记录 / 音效 / 标题 / 选关 / 地图）**全部下线**，
+	# 只剩「回合结束 + 齿轮」—— 地图入口挪进了 Esc 菜单。
+	for gone: String in ["MapBtn", "LogBtn", "SndBtn", "TitleBtn", "LevelBtn"]:
+		if tb.get_node_or_null(gone) != null:
+			_smoke_fail("R148：顶栏不该再有 %s" % gone)
+			return
+	if tb.get_node_or_null("MenuBtn") == null or tb.get_node_or_null("EndTurnBtn") == null:
+		_smoke_fail("R148：顶栏应只剩「回合结束 + 齿轮(MenuBtn)」")
 		return
 	scene._toggle_map()
 	if not scene._map_visible:

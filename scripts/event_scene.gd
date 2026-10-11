@@ -128,6 +128,7 @@ func _rest_desc() -> String:
 
 var _font: SystemFont
 var sfx: Sfx
+var _menu: UiMenu = null      # Esc 主菜单（R148）
 var _rested := false          # 是否已休息（休息后按钮变「继续」）
 var _gained := 0              # 本次实际回复量
 var _whisper_taken := false   # 鸭鸭低语：是否已收下道具
@@ -615,6 +616,12 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(t)
 		t.start()
+	# R148：Esc 主菜单。事件页是**选择类界面** —— 内容选项（休息 / 烤肉 / 离开）留在
+	# 场景自己身上，菜单里只放「画面之外」的操作：返回事件 / 音效 / 返回标题。
+	_menu = UiMenu.attach(self, _menu_items, {
+		"back": "返回事件",
+		"sub": "事件 · 按 Esc 返回",
+	})
 
 
 func _redraw() -> void:
@@ -1072,6 +1079,37 @@ func _on_leave() -> void:
 # 用户口径：「事件中提到道具或卡片时，应该可以在悬浮到卡名的时候显示那个道具 /
 # 那张卡片」。实现上刻意**不动 Label 的排版**：不换 RichTextLabel、不加 BBCode，
 # 27 处 `desc.text = …` 一处不改 —— 只按同一套几何复算命中矩形，再在顶层浮层里画。
+
+func _menu_items() -> Array:
+	## 事件页的菜单项（R148）。⚠️ 每次打开菜单都重新调用 → 音效文案是当下值。
+	return [
+		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+			"fn": _toggle_sound, "keep_open": true},
+		{"text": "返回标题", "fn": _on_back_to_title},
+	]
+
+
+func _toggle_sound() -> void:
+	sfx.enabled = not sfx.enabled
+	if sfx.enabled:
+		sfx.play("click")
+
+
+func _on_back_to_title() -> void:
+	## 事件里直接回标题 = **放弃本局**（与战斗里「返回标题」同一口径）。
+	if ReplayLog.recording:
+		ReplayLog.finish("quit")
+	ReplayLog.stop_playback()
+	if RunState.run_active:
+		RunState.end_run()
+	get_tree().change_scene_to_file("res://scenes/title.tscn")
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# R148：Esc = 主菜单（菜单开着时它自己关掉自己）
+	if _menu != null and _menu.handle_esc(event):
+		return
+
 
 func _process(_delta: float) -> void:
 	if _tip_layer == null:

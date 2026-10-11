@@ -34,6 +34,7 @@ const CARD_MIN_H := 46.0     # 卡面最小高度（卡很多时仍可辨认）
 var _font: SystemFont
 var _font_bold: SystemFont
 var sfx: Sfx
+var _menu: UiMenu = null      # Esc 主菜单（R148）
 var repo: CardRepo
 var _cards: Array[int] = []   # 卡组每一张卡（按卡组顺序；重复卡各占一格）
 var _sel: Array[int] = []     # 已选中的格子下标（单选模式最多 1 个，鸭血最多 2 个）
@@ -91,6 +92,11 @@ func _ready() -> void:
 		add_child(t)
 		t.start()
 	queue_redraw()
+	# R148：Esc 主菜单
+	_menu = UiMenu.attach(self, _menu_items, {
+		"back": "继续",
+		"sub": "卡组编辑 · 按 Esc 返回",
+	})
 
 
 func _process(_delta: float) -> void:
@@ -269,6 +275,32 @@ func _draw_check_badge(rect: Rect2) -> void:
 
 # ------------------------------------------------------------ 交互
 
+func _menu_items() -> Array:
+	## 本界面的 Esc 菜单项（R148）。⚠️ 每次打开菜单都会重新调用（见 UiMenu.attach 注释），
+	## 所以音效这类随状态变的文案永远是最新的。
+	return [
+		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+			"fn": _toggle_sound, "keep_open": true},
+		{"text": "返回标题", "fn": _on_back_to_title},
+	]
+
+
+func _toggle_sound() -> void:
+	sfx.enabled = not sfx.enabled
+	if sfx.enabled:
+		sfx.play("click")
+
+
+func _on_back_to_title() -> void:
+	## 流程界面里直接回标题 = **放弃本局**（与战斗中「返回标题」同一口径）。
+	if ReplayLog.recording:
+		ReplayLog.finish("quit")
+	ReplayLog.stop_playback()
+	if RunState.run_active:
+		RunState.end_run()
+	get_tree().change_scene_to_file("res://scenes/title.tscn")
+
+
 func _gui_input(event: InputEvent) -> void:
 	if _done:
 		return
@@ -429,6 +461,9 @@ func _go_back() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# R148：Esc = 主菜单（菜单开着时它自己关掉自己）
+	if _menu != null and _menu.handle_esc(event):
+		return
 	# 卡组为空时点击任意处继续（防御：正常流程卡组不会为空）
 	if _cards.is_empty() and event is InputEventMouseButton \
 			and event.pressed and not _done:

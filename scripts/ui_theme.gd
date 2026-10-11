@@ -348,6 +348,26 @@ const MAP_BRIDGE_UNSEEN := Color(0.68, 0.73, 0.82, 0.90) ## 鹰哨揭示、还�
 ##    而「鹰哨全揭示」恰恰是最需要看清通路的时候。
 
 
+## R148：齿轮图标（「设置 / 菜单」按钮用）。
+## ⚠️ 必须**程序绘制**：字体里的 ⚙（U+2699）在微软雅黑 / SimHei 上不保证有，
+##    缺字时按钮上会变成一个方框。齿形用「内圈-外圈-外圈-内圈」四点一齿拼成多边形，
+##    中心再挖一个底色圆当轴孔（`hole` 传按钮底色 —— hover 时底色变了要跟着传新的）。
+static func draw_gear(cv: CanvasItem, center: Vector2, r_out: float,
+		col: Color, hole: Color, teeth := 8) -> void:
+	var n := maxi(teeth, 3)
+	var r_in := r_out * 0.74
+	var step := TAU / float(n)
+	var pts := PackedVector2Array()
+	for i in n:
+		var a := float(i) * step
+		pts.append(center + Vector2.from_angle(a - step * 0.36) * r_in)
+		pts.append(center + Vector2.from_angle(a - step * 0.22) * r_out)
+		pts.append(center + Vector2.from_angle(a + step * 0.22) * r_out)
+		pts.append(center + Vector2.from_angle(a + step * 0.36) * r_in)
+	cv.draw_colored_polygon(pts, col)
+	cv.draw_circle(center, r_out * 0.36, hole)
+
+
 static func kind_color(kind: String) -> Color:
 	## 卡种 → 颜色。**唯一口**：卡面与悬停面板都读这里，避免两处各写一份字典。
 	match kind:
