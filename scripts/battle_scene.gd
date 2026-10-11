@@ -1418,6 +1418,32 @@ func _ready() -> void:
 				% [wk_pl.atk_debuff, wk_pl.effective_power()]
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--stonelimit" in args and engine != null:
+		# 演示（R144）：**荒野形态先结算 + 石肤只在 >= 2 点伤害时才挡**。
+		# 出图：--screenshot --level 0 --gridscroll 0 --stonelimit --shotframe 20
+		#   ① 12 攻敌人直击 HP：荒野形态 12 → 8，再交给石肤（8 >= 2）→ 1（石肤 2 → 1 次）
+		#   ② 1 攻敌人直击 HP：1 点本来就只掉 1，石肤**不触发**（次数仍 1）
+		RunState.player_class = PlayerClass.DRUID
+		engine.self_relics = [GameEngine.WILD_FORM_RELIC_ID]
+		engine.state.effects.append(repo.get_card(GameEngine.STONESKIN_ID))
+		engine._stoneskin_left = 2
+		engine.state.hand.clear()
+		engine.state.place(repo.get_card(9014), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+		engine.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+		var sk_weak: Placement = engine.state.place(
+				CardData.from_dict(repo.get_card(1051).to_dict()),
+				Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+		sk_weak.card.power = 1
+		engine.attack_hp(Vector2i(4, 2), Vector2i(5, 2), GameEngine.SIDE_OPPONENT)
+		var sk_badge: CardData = engine.state.effects[0] if engine.state.effects.size() > 0 else null
+		if sk_badge != null:
+			_hover_card = sk_badge
+		status_text = "石肤只在 >=2 点伤害时触发：荒野形态先结算（12→8），石肤再压成 1（剩 %d 次）；1 点伤害不扣次数" % engine._stoneskin_left
+		# 演示是「瞬间打完两下」，不等撞击演出 —— 清掉 HP 横幅的待扣冻结数，
+		# 否则截图会停在「扣血前」的中间态（2026-10-11 实测过 48 显示成 61）。
+		_hp_pending.clear()
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--whale" in args and engine != null:
 		# 演示：鲸鱼之怒（9050）—— 打出后弹出「从弃牌堆取 2 张」面板（可选、可跳过）
 		engine.state.energy = 5

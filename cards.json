@@ -1704,7 +1704,7 @@
       "traits": [
         "石肤"
       ],
-      "effect_text": "己方 HP 接下来受到的 2 次伤害变为 1，次数可叠加。",
+      "effect_text": "己方 HP 接下来受到的 2 次伤害，若达到 2 点或以上则变为 1，次数可叠加。",
       "target_mode": "none",
       "value": 2,
       "color": "绿",

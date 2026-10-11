@@ -1969,6 +1969,44 @@ func _init() -> void:
 	sk_e._damage_player(GameEngine.SIDE_SELF, 7, "测试")
 	check(sk_e.state.hp_self == 9, "石肤：次数用完后照常受伤（16-7=9）")
 
+	# ---- R144：石肤只在「这笔伤害 >= 2」时才触发 ----
+	# 1 点伤害本来就只掉 1 点，再「压成 1」等于白扣一次次数（玩家会觉得被吞了）。
+	var sk_e2 := _new_engine([], 20, 20, -1, false)
+	sk_e2.start_game(0)
+	sk_e2.state.hand = [repo.get_card(9066)]
+	sk_e2.state.energy = 9
+	sk_e2.use_effect(0)
+	check(sk_e2._stoneskin_left == 2, "石肤 R144：先攒 2 次")
+	sk_e2._damage_player(GameEngine.SIDE_SELF, 1, "测试")
+	check(sk_e2.state.hp_self == 19 and sk_e2._stoneskin_left == 2,
+			"石肤 R144：1 点伤害**不触发**（HP 20→%d，次数仍 %d）"
+			% [sk_e2.state.hp_self, sk_e2._stoneskin_left])
+	sk_e2._damage_player(GameEngine.SIDE_SELF, 2, "测试")
+	check(sk_e2.state.hp_self == 18 and sk_e2._stoneskin_left == 1,
+			"石肤 R144：2 点伤害**触发**（压成 1 → HP %d，剩 %d 次）"
+			% [sk_e2.state.hp_self, sk_e2._stoneskin_left])
+
+	# ---- R144：荒野形态**先结算**，石肤看的是减完之后的数值 ----
+	# 旧写法在荒野形态触发时直接 `return _relic_damage_taken(dmg)` → **短路**掉
+	# 石肤 / 以太屏障 / 效果减伤（持有荒野形态反而「免疫」石肤）。
+	var sk_wf := _new_engine([], 30, 30)
+	sk_wf.self_relics = [GameEngine.WILD_FORM_RELIC_ID]
+	sk_wf.state.effects.append(repo.get_card(9066))
+	sk_wf._stoneskin_left = 2
+	sk_wf.state.place(_card(9014, "远古虚骨龙", "盟友", 12, 12, 100, 2, 2),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	sk_wf.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(sk_wf.state.hp_self == 29 and sk_wf._stoneskin_left == 1,
+			"R144：荒野形态先结算（12→8）→ 石肤再压成 1（30 → %d，剩 %d 次）"
+			% [sk_wf.state.hp_self, sk_wf._stoneskin_left])
+	# 荒野形态已用完、这一击只有 1 点 → 石肤不触发（次数不再掉）
+	sk_wf.state.place(_card(1051, "亡灵领主", "盟友", 1, 1, 55, 1, 1),
+			Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+	sk_wf.attack_hp(Vector2i(4, 2), Vector2i(5, 2), GameEngine.SIDE_OPPONENT)
+	check(sk_wf.state.hp_self == 28 and sk_wf._stoneskin_left == 1,
+			"R144：1 点伤害走到石肤也不扣次数（HP %d，剩 %d 次）"
+			% [sk_wf.state.hp_self, sk_wf._stoneskin_left])
+
 	# ---- 以太守卫（9067）：1 费稀有盟友 1/1/1/1；替我方 HP 承伤 ----
 	var nc_ag := repo.get_card(9067)
 	check(nc_ag.card_name == "以太守卫" and nc_ag.kind == "盟友" and nc_ag.cost == 1

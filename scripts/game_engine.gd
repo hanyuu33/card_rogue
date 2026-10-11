@@ -6319,8 +6319,11 @@ func _relic_damage_taken(dmg: int) -> int:
 func _hp_damage_taken(amount: int) -> int:
 	## 玩家 HP 伤害的**统一入口**：以太屏障 / 石肤（都把这次伤害压成 1）→
 	## 效果牌减伤（_effect_damage_reduction）→ 道具减伤（_relic_damage_taken）。
-	## 注意：荒野形态 6022 的「第一次受击 -4」**不走这里**（它只认普通攻击直击 HP，
+	## 注意：荒野形态 6022 的「第一次受击 -4」不在这里判（它只认普通攻击直击 HP，
 	## 挂在 attack_hp 里单独判），否则法术 / 效果伤害也会被算进去。
+	## ⚠️ R144 顺序：荒野形态**先结算** —— `_wild_form_first_hit` 先把这次伤害减到
+	## max(1, raw - 4)，**再交给这里**，所以石肤看到的是减完之后的数值
+	## （12 → 荒野形态 8 → 石肤 1）。荒野形态不再「短路」掉后面整条减伤链。
 	if amount <= 0:
 		return 0
 	if _aether_left > 0:
@@ -6329,7 +6332,9 @@ func _hp_damage_taken(amount: int) -> int:
 		action.emit("aether_hit", {"left": _aether_left, "amount": amount})
 		return 1
 
-	if _stoneskin_left > 0:
+	# 石肤（R144）：只在**这笔伤害 >= 2** 时触发 —— 1 点伤害本来就只掉 1 点，
+	# 再「压成 1」毫无意义，白扣一次次数（玩家会觉得被吞了一次）。
+	if _stoneskin_left > 0 and amount >= 2:
 		_stoneskin_left -= 1
 		_log("石肤：这次伤害变为 1（原本 %d，还剩 %d 次）" % [amount, _stoneskin_left])
 		action.emit("stoneskin_hit", {"left": _stoneskin_left, "amount": amount})
@@ -6347,6 +6352,10 @@ func _wild_form_first_hit(attacker: Placement, raw: int) -> int:
 	## 纯减伤 + 反伤，不再有「打熊 / 打 HP 的敌人受 3 伤」那套。
 	## 返回实际 HP 伤害（调用方拿去扣血）；反伤在内部结算完毕。
 	## state.wild_form_used 保证每场只触发一次（战斗重置时随 state 一起清零）。
+	## ⚠️ R144：减完 4 点**继续交给 `_hp_damage_taken`**（石肤 / 以太屏障 / 效果减伤 /
+	## 道具减伤照常生效）。旧写法直接 `return _relic_damage_taken(dmg)` 等于**短路**掉
+	## 整条链 —— 持有荒野形态时第一次受击反而绕过石肤，与 R138 的「光环只挂一个扣血口」
+	## 同源：减伤 / 触发类机制必须挂在同一条链上。
 	if not self_relics.has(WILD_FORM_RELIC_ID) or state.wild_form_used:
 		return _hp_damage_taken(raw)
 	if attacker == null or attacker.owner != SIDE_OPPONENT or attacker.health <= 0:
@@ -6362,7 +6371,7 @@ func _wild_form_first_hit(attacker: Placement, raw: int) -> int:
 			attacker.card.card_name, back, attacker.effective_power()])
 	if attacker.health <= 0:
 		_destroy_dead()
-	return _relic_damage_taken(dmg)
+	return _hp_damage_taken(dmg)
 
 
 func _bear_on_field(side:= SIDE_SELF) -> bool:
