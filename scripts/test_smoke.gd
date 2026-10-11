@@ -149,6 +149,20 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "event"}
 				RunState.pending_event = "arcane",
 			_check_arcane_with_charm],
+		# R147：奥秘之泉「一次访问只领一份」—— 护符 ↔ 泉水**双向**锁死（R71 只保住了
+		# 「本来就戴着护符也能喝泉水」，没管住「本次取走护符之后还能不能再喝」）。
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "event"}
+				RunState.pending_event = "arcane",
+			_check_arcane_one_reward],
+		# R147：同一条规则也管休息处 —— 休息过之后「烤肉」必须锁死。
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "rest"},
+			_check_rest_one_reward],
 		# 遗忘之泉（全层通用：删一张卡 / 离开）
 		["res://scenes/event.tscn", func():
 				_reset()
@@ -1300,6 +1314,92 @@ func _check_arcane_with_charm(scene: Variant) -> void:
 		_smoke_fail("奥秘之泉：点「喝下泉水」应记下 _arcane_drunk（防重复喝）")
 		return
 	print("SMOKE OK 奥秘之泉：已有护符时「喝下泉水」仍可选 → 卡牌奖励入队（限定 效果/技能）并弹出奖励悬浮窗")
+
+
+func _check_arcane_one_reward(scene: Variant) -> void:
+	## R147：奥秘之泉「一次访问只领一份」——
+	##   ① 先取护符 → 「喝下泉水」锁死（**硬点也不发奖励**，闸门在 `_arcane_taken()`）；
+	##   ② 先喝泉水 → 「获取护符」锁死（拿不到第二份）。
+	## ⚠️ 全程**不点「继续」** —— `_on_leave()` 会换场景，冒烟用例里不能换。
+	var rest: Button = scene.get_node_or_null("Center/RestBtn")
+	var bbq: Button = scene.get_node_or_null("Center/BBQBtn")
+	if rest == null or bbq == null:
+		_smoke_fail("R147 奥秘之泉：找不到 RestBtn / BBQBtn 节点")
+		return
+	# ── ① 先取护符 ──
+	RunState.relics = []
+	scene._arcane_charm_taken = false
+	scene._arcane_drunk = false
+	scene._reward_claimed = false
+	scene._setup_arcane()
+	await process_frame
+	if not bbq.visible or bbq.disabled:
+		_smoke_fail("R147 奥秘之泉：刚进来「喝下泉水」应当可用")
+		return
+	scene._ui_main()
+	await process_frame
+	if not RunState.has_relic(6020):
+		_smoke_fail("R147 奥秘之泉：点「获取护符」应拿到「奥秘护符」")
+		return
+	if not scene._arcane_taken() or not scene._reward_claimed:
+		_smoke_fail("R147 奥秘之泉：取走护符后应记下「本次已领」（_arcane_taken / _reward_claimed）")
+		return
+	if not bbq.disabled:
+		_smoke_fail("R147 奥秘之泉：取走护符后「喝下泉水」必须锁死")
+		return
+	var n0: int = RunState.pending_reward_count()
+	scene._ui_bbq()
+	await process_frame
+	if RunState.pending_reward_count() != n0:
+		_smoke_fail("R147 奥秘之泉：取走护符后再点「喝下泉水」不该再发奖励（%d → %d）"
+				% [n0, RunState.pending_reward_count()])
+		return
+	# ── ② 先喝泉水 ──
+	RunState.relics = []
+	RunState.pending_rewards = []
+	scene._arcane_charm_taken = false
+	scene._arcane_drunk = false
+	scene._reward_claimed = false
+	scene._setup_arcane()
+	await process_frame
+	scene._ui_bbq()
+	await process_frame
+	if not scene._arcane_drunk:
+		_smoke_fail("R147 奥秘之泉：点「喝下泉水」应记下 _arcane_drunk")
+		return
+	if not scene._arcane_taken():
+		_smoke_fail("R147 奥秘之泉：喝过泉水后 _arcane_taken() 应为真")
+		return
+	if not rest.disabled:
+		_smoke_fail("R147 奥秘之泉：喝过泉水后「获取护符」必须锁死")
+		return
+	if RunState.has_relic(6020):
+		_smoke_fail("R147 奥秘之泉：喝过泉水后不该已经拿到护符")
+		return
+	print("SMOKE OK R147 奥秘之泉：一次访问只领一份（护符 ↔ 泉水双向锁死，硬点也不发奖励）")
+
+
+func _check_rest_one_reward(scene: Variant) -> void:
+	## R147：休息处也走同一条规则 —— 休息过之后「烤肉」必须锁死（一次访问只领一份）。
+	var bbq: Button = scene.get_node_or_null("Center/BBQBtn")
+	if bbq == null:
+		_smoke_fail("R147 休息处：找不到 BBQBtn 节点")
+		return
+	if not bbq.visible or bbq.disabled:
+		_smoke_fail("R147 休息处：刚进来「烤肉」应当可用")
+		return
+	scene._ui_main()
+	await process_frame
+	if not scene._rested:
+		_smoke_fail("R147 休息处：点「在这里休息」应记下 _rested")
+		return
+	if not scene._reward_claimed:
+		_smoke_fail("R147 休息处：休息后应记下 _reward_claimed")
+		return
+	if bbq.visible and not bbq.disabled:
+		_smoke_fail("R147 休息处：休息过之后「烤肉」必须锁死（现在还能点）")
+		return
+	print("SMOKE OK R147 休息处：休息过之后「烤肉」锁死（一次访问只领一份）")
 
 
 func _check_frozen_aura(scene: Variant) -> void:

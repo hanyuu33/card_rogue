@@ -5676,6 +5676,50 @@ func _init() -> void:
 		check(r146_src.find("var z := _grid_zoom") >= 0
 				and r146_src.find("var pad := GRID_MASK_PAD") >= 0,
 				"R146 遮罩范围跟着缩放摊开 + 余量常量接上（放大后左右边带不漏色）")
+	# ==== R147：事件「一次访问只领一份奖励」 + 滚动箭头改浅蓝 ====
+	# 行为面（护符 ↔ 泉水互斥）在 test_smoke 里真点按钮跑；这里锁常量与「接线」。
+	var r147_ui_gd := load("res://scripts/ui_theme.gd")
+	var r147_ui: Dictionary = r147_ui_gd.get_script_constant_map()
+	var r147_col: Color = r147_ui["HINT_CHEVRON"]
+	var r147_dim: Color = r147_ui["HINT_CHEVRON_DIM"]
+	var r147_halo: Color = r147_ui["HINT_CHEVRON_HALO"]
+	check(r147_col.b > r147_col.r + 0.15 and r147_col.g > r147_col.r,
+			"R147 滚动箭头改浅蓝：HINT_CHEVRON rgb(%.2f/%.2f/%.2f) —— 蓝分量明显高于红"
+			% [r147_col.r, r147_col.g, r147_col.b])
+	check(r147_col.a >= 0.8 and r147_dim.a >= 0.5,
+			"R147 箭头不再「太浅」：主箭头不透明度 %.2f / 次箭头 %.2f（原 0.52 / 0.26）"
+			% [r147_col.a, r147_dim.a])
+	check(r147_col.a > r147_dim.a and r147_halo.a >= 0.6 and r147_halo.v < 0.3,
+			"R147 双箭头层次保留 + 描边加深（halo a=%.2f v=%.2f）—— 压在亮色块上仍可辨"
+			% [r147_halo.a, r147_halo.v])
+	# 源码守卫：事件奖励互斥是**一条口**（`_claim_reward`），不是每个事件各写一遍。
+	if not FileAccess.file_exists("res://export_presets.cfg"):
+		print("    · R147 源码守卫：打包环境读不到 .gd 源文本 → 跳过（只在 dev 工程/门禁生效）")
+	else:
+		var r147_src := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+		check(r147_src.find("var _reward_claimed := false") >= 0
+				and r147_src.find("func _claim_reward(") >= 0,
+				"R147 事件奖励互斥：`_reward_claimed` + `_claim_reward` 唯一口存在")
+		var r147_n_main := r147_src.count("_claim_reward(rest_btn)")
+		var r147_n_bbq := r147_src.count("_claim_reward(bbq_btn)")
+		check(r147_n_main >= 12 and r147_n_bbq >= 2,
+				"R147 每个发放奖励的分支都调 `_claim_reward`（主按钮 %d 处 / 次按钮 %d 处）"
+				% [r147_n_main, r147_n_bbq])
+		var r147_i_at := r147_src.find("func _arcane_taken")
+		check(r147_i_at >= 0 and r147_src.find(
+				"return _arcane_charm_taken or _arcane_drunk", r147_i_at) >= 0,
+				"R147 奥秘之泉「本次是否已领」只看本次的两个旗标（不看 RunState.has_relic）")
+		# ⚠️ 本文件是 CRLF → 别用跨行字面量配源码；先切出 `_on_bbq` 的函数体再在体内找。
+		var r147_i_bbq := r147_src.find("func _on_bbq")
+		var r147_i_bbq_e := r147_src.find("\nfunc ", r147_i_bbq + 1)
+		var r147_bbq_body := ""
+		if r147_i_bbq >= 0 and r147_i_bbq_e > r147_i_bbq:
+			r147_bbq_body = r147_src.substr(r147_i_bbq, r147_i_bbq_e - r147_i_bbq)
+		check(r147_bbq_body.find("if _arcane_taken():") >= 0
+				and r147_bbq_body.find("_claim_reward(bbq_btn)") >= 0,
+				"R147 喝泉水这条路：先过 `_arcane_taken()` 闸门、发完奖励再 `_claim_reward(bbq_btn)`")
+		check(r147_src.find("if _rested:   # R147：本次休息处只领一份") >= 0,
+				"R147 休息处「烤肉」同样带闸门（先休息过就不能再烤肉）")
 	var back := RunState.advance(int(start_cell_d["id"]))
 	check(bool(back["ok"]) and not bool(back["is_new"]) and int(back["cost"]) == 0
 			and RunState.chocolate == choco_before - 1,

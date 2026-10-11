@@ -13,9 +13,14 @@ extends Control
 ##   * event + gaze     鸭之凝视（**第二层**）：获得事件道具「一袋米抗几楼」，或放弃；
 ##   * event + arcane   奥秘之泉（第一层专属）：获得道具「奥秘护符」（每回合第一张效果牌费用 -1），
 ##                      或「喝下泉水」从随机 3 张效果 / 技能牌中选 1 张加入卡组（也可什么都不拿）；
+##                      ⚠️ R147：一次访问只领一份 —— 取走护符后就不能再喝泉水，反之亦然。
 ##   * event + oblivion 遗忘之泉（**全层通用**）：从卡组中删一张卡，或直接离开；
 ##   * chest  宝箱层（第六层）：开启后获得 1 个随机奖励道具（不与已拥有的重复）。
 ## 生命保存在 RunState（跨战斗保留的最大/当前双值）。
+##
+## R147 通用规则：**一次访问只能领走一份奖励** —— 任一奖励到手后，本事件里其它奖励
+##   选项立刻锁死（天生带两个奖励选项的只有「奥秘之泉」；休息处的「休息 / 烤肉」同理）。
+##   落地点是 `_claim_reward(keep)`：每个发放奖励的分支都要调一次。
 ##
 ## 插图与背景走 assets/ui/ 的可替换图片（详见 assets/ui/图片命名说明.txt）：
 ##   event_<事件>.png 插图（标题下方） / bg_<事件>.png 整屏背景；
@@ -135,8 +140,10 @@ var _struggled := false       # 挣扎：是否已接受（失去生命换金属
 var _hero_traded := false     # 绝赞五换一：是否已交易（删 5 张换英雄）
 var _hero_removed: Array = [] # 绝赞五换一：本次被换走的卡（[{id,name}]）
 var _bbq_taken := false       # 烤肉：本次是否已在休息处烤好（获得道具）
-var _arcane_charm_taken := false  # 奥秘之泉：是否已收下道具「奥秘护符」
+var _arcane_charm_taken := false  # 奥秘之泉：**本次访问**是否取走了道具「奥秘护符」
+                              #   （≠「本来就戴着」—— 后者只是不重复给，不影响喝泉水，见 R71 / R147）
 var _arcane_drunk := false    # 奥秘之泉：是否已选择「喝下泉水」（选卡去了卡牌奖励界面）
+var _reward_claimed := false  # R147：本次事件访问是否已领过奖励（一次访问只领一份，见 _claim_reward）
 var _oblivion_done := false   # 遗忘之泉：是否已经遗忘过一张卡（或已选择去删卡）
 var _smith_done := false      # 鸭鸭工匠：是否已经锻造过（或已选择去锻造）
 var _treasure_taken := false  # 宝箱（支付生命换卡牌奖励）：是否已开
@@ -582,6 +589,14 @@ func _ready() -> void:
 	_refresh()
 	_fit_center()   # 布局就位后先校准一次
 	_fit_center.call_deferred()   # 字体异步就位后最小尺寸可能再变 → 延迟一帧补一次
+	# R147 演示：自动点一次泉水选项，出图核验「已领一份 → 另一个选项锁死」的界面。
+	#   选项是在上面的 if/elif 链里铺好的，所以必须放在链**之后**（放进 args 循环会太早）。
+	if "--arcanetake" in args:      # 先取护符 → 「喝下泉水」应锁死
+		_on_main()
+	elif "--arcanebrew" in args:    # 先喝泉水 → 「获取护符」应锁死
+		_on_bbq()
+		if _reward_panel != null:
+			_reward_panel.close()   # 演示：关掉奖励窗，露出「两个选项都锁死」的界面
 	# 回放模式：自动执行下一条事件决策（R46）
 	if ReplayLog.playing:
 		var rt := Timer.new()
@@ -638,6 +653,7 @@ func _on_main() -> void:
 			return
 		RunState.gain_relic(WHISPER_ID)
 		_whisper_taken = true
+		_claim_reward(rest_btn)   # R147：本次访问的奖励只领一份（其它选项若有则锁死）
 		var rel := RelicRepo.load_json().get_relic(WHISPER_ID)
 		rest_btn.text = "继续"
 		$Center/LeaveBtn.text = "已获得"
@@ -653,6 +669,7 @@ func _on_main() -> void:
 			return
 		RunState.gain_relic(RICE_ID)
 		_gaze_taken = true
+		_claim_reward(rest_btn)   # R147
 		var rel_g := RelicRepo.load_json().get_relic(RICE_ID)
 		rest_btn.text = "继续"
 		$Center/LeaveBtn.text = "已获得"
@@ -669,6 +686,7 @@ func _on_main() -> void:
 			return
 		RunState.gain_relic(PEAR_ID)
 		_pear_taken = true
+		_claim_reward(rest_btn)   # R147
 		var rel_p := RelicRepo.load_json().get_relic(PEAR_ID)
 		rest_btn.text = "继续"
 		$Center/LeaveBtn.text = "已获得"
@@ -684,6 +702,7 @@ func _on_main() -> void:
 			return
 		RunState.add_card(WHALE_CARD_ID)
 		_bluefish_taken = true
+		_claim_reward(rest_btn)   # R147
 		var wcard := CardRepo.load_json().get_card(WHALE_CARD_ID)
 		var wname := wcard.card_name if wcard != null else "鲸鱼之怒"
 		rest_btn.text = "继续"
@@ -707,6 +726,7 @@ func _on_main() -> void:
 			return
 		_hero_traded = true
 		_hero_removed = res.get("removed", [])
+		_claim_reward(rest_btn)   # R147
 		var names_t: Array[String] = []
 		for r: Variant in _hero_removed:
 			names_t.append(str((r as Dictionary).get("name", "?")))
@@ -722,23 +742,23 @@ func _on_main() -> void:
 		_redraw()
 		return
 	if _is_arcane():
-		if _arcane_charm_taken:
+		# R147：已经领过（护符 / 泉水）→ 这颗按钮只剩「继续」的意思。
+		if _arcane_taken():
 			_on_leave()
 			return
 		RunState.gain_relic(ARCANE_CHARM_ID)
 		_arcane_charm_taken = true
 		var rel_a := RelicRepo.load_json().get_relic(ARCANE_CHARM_ID)
-		rest_btn.text = "继续（已戴护符）"
-		rest_btn.disabled = true
-		# R71：拿到护符**之后**仍然保留「喝下泉水」—— 这次点击只是把「拿护符」这一步用掉了，
-		# 玩家还可以转向第二个选项。原代码在这里 `bbq_btn.visible = false` 直接把路堵死。
-		bbq_btn.visible = true
-		bbq_btn.text = "喝下泉水：随机 3 张效果 / 技能牌中选 1 张加入卡组"
-		bbq_btn.disabled = false
-		leave_btn.text = "离开（不要新的牌）"
+		rest_btn.text = "继续"
+		rest_btn.disabled = false
+		leave_btn.text = "离开"
 		leave_btn.disabled = false
 		desc.text = ARCANE_CHARM_TAKEN_DESC
-		result_label.text = "「奥秘护符」已加入道具栏：%s（还可以喝泉水）" \
+		# R147：一次访问只领一份 —— 取走护符后「喝下泉水」立刻锁死（用户口径）。
+		#（R71 那条「拿到护符还能喝泉水」的口径到此为止：那是「本来就戴着老护符」的待遇。）
+		bbq_btn.text = "（已获得护符——本次不能再喝泉水）"
+		_claim_reward(rest_btn)
+		result_label.text = "「奥秘护符」已加入道具栏：%s（本次泉水只给一份奖励）" \
 				% (rel_a.desc if rel_a != null else "")
 		result_label.add_theme_color_override("font_color", Color("2f7fa8"))
 		_redraw()
@@ -752,6 +772,7 @@ func _on_main() -> void:
 		# 删卡由卡组编辑场景完成（RunState.pending_deck_edit 是它的待办标记）；
 		# 事件节点在这里就算走完 —— 回地图后不会再被送回同一个事件。
 		_oblivion_done = true
+		_claim_reward(rest_btn)   # R147：删卡也是「本次唯一的一份奖励」
 		RunState.complete_current()
 		RunState.pending_deck_edit = "delete"
 		get_tree().change_scene_to_file("res://scenes/deck_edit.tscn")
@@ -765,6 +786,7 @@ func _on_main() -> void:
 		# 锻造同样交给卡组编辑场景（pending_deck_edit = "smith"）——
 		# 选牌 UI 与「遗忘之泉」共用，不新造一套。
 		_smith_done = true
+		_claim_reward(rest_btn)   # R147：锻造也算「本次唯一的一份奖励」
 		RunState.complete_current()
 		RunState.pending_deck_edit = "smith"
 		get_tree().change_scene_to_file("res://scenes/deck_edit.tscn")
@@ -774,6 +796,7 @@ func _on_main() -> void:
 			_on_leave()
 			return
 		_chest_opened = true
+		_claim_reward(rest_btn)   # R147
 		_chest_relic = RunState.roll_reward_relic()
 		rest_btn.text = "继续"
 		$Center/LeaveBtn.text = "已开启"
@@ -804,6 +827,7 @@ func _on_main() -> void:
 			return
 		RunState.take_damage(5)
 		_treasure_taken = true
+		_claim_reward(rest_btn)   # R147
 		rest_btn.text = "继续"
 		rest_btn.disabled = false
 		leave_btn.text = "离开"
@@ -845,6 +869,7 @@ func _on_main() -> void:
 		RunState.take_damage(STRUGGLE_LIFE)
 		RunState.add_card(STRUGGLE_CARD_ID)
 		_struggled = true
+		_claim_reward(rest_btn)   # R147
 		var card := CardRepo.load_json().get_card(STRUGGLE_CARD_ID)
 		var cname := card.card_name if card != null else "金属龙"
 		desc.text = STRUGGLE_TAKEN_DESC
@@ -862,9 +887,31 @@ func _on_main() -> void:
 		return
 	_gained = RunState.rest()
 	_rested = true
+	_claim_reward(rest_btn)   # R147：本次休息处只领一份 → 「烤肉」锁死
 	rest_btn.disabled = false
 	_refresh()
 	_redraw()
+
+
+func _claim_reward(keep: Button) -> void:
+	## R147：**一次事件访问只能领走一份奖励**。
+	## 用户口径：「任意获得一个奖励之后，应该不再能获取其他奖励。（任何事件都应该做成这样）」
+	## 任一奖励到手后，本事件里**其它**奖励按钮立刻锁死（`keep` = 刚发过奖励的那个按钮，
+	## 它会变成「继续」，保留可用）。单奖励事件里另一个按钮本来就不可见 → 这里是空操作，
+	## 所以「所有事件共用同一条规则」不需要每个事件各写一遍。
+	_reward_claimed = true
+	for b: Button in [rest_btn, bbq_btn]:
+		if b == null or b == keep or not b.visible:
+			continue
+		b.disabled = true
+
+
+func _arcane_taken() -> bool:
+	## R147：本次访问是否已从泉里领走奖励（护符 / 泉水任一份）。
+	## ⚠️ 只看「本次」的两个旗标，**不能**用 `RunState.has_relic(ARCANE_CHARM_ID)` ——
+	##    后者会把上一处泉水给的 / 奖励池抽到的「老护符」也算成「本次已领」，
+	##    于是已戴护符的玩家连泉水都喝不到（R71 修过的那个 bug 会原地复发）。
+	return _arcane_charm_taken or _arcane_drunk
 
 
 func _setup_arcane() -> void:
@@ -872,19 +919,20 @@ func _setup_arcane() -> void:
 	## R71：**已经戴过奥秘护符也照样能「喝下泉水」** ——
 	## 原来「已有护符」那条分支把 bbq_btn 一起 `visible = false` 了 → 玩家只能点「继续」，
 	## 第二个选项形同虚设。护符不重复给，但「从 3 张效果/技能牌里选 1 张加入卡组」永远可用。
+	## R147：`_arcane_charm_taken` 只表示「**本次**取走了护符」，所以**不再**在铺选项时置位
+	##（那是「本来就戴着」，拿它当闸门就退回 R71 的 bug 了）。
 	event_name.text = "奥 秘 之 泉"
 	hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 	bbq_btn.visible = true
 	bbq_btn.text = "喝下泉水：随机 3 张效果 / 技能牌中选 1 张加入卡组"
 	bbq_btn.disabled = false
 	if RunState.has_relic(ARCANE_CHARM_ID):
-		_arcane_charm_taken = true
 		desc.text = ARCANE_CHARM_TAKEN_DESC
 		rest_btn.text = "继续（已戴护符）"
 		rest_btn.disabled = true
 		leave_btn.text = "离开（不要新的牌）"
 		leave_btn.disabled = false
-		result_label.text = "「奥秘护符」你已经戴在身上了——不过泉水还是可以喝。"
+		result_label.text = "「奥秘护符」你已经戴在身上了——不过泉水还是可以喝（本次只给一份）。"
 		result_label.add_theme_color_override("font_color", Color("2f7fa8"))
 	else:
 		desc.text = ARCANE_DESC
@@ -938,25 +986,36 @@ func _on_bbq() -> void:
 	ReplayLog.ev("event_bbq")   # 录像：烤肉 / 喝泉水
 	sfx.play("click")
 	if _is_arcane():
-		# R71：判断「能不能喝泉水」用**独立的 `_arcane_drunk`**，
-		# 不用 `_arcane_charm_taken` —— 后者只是「护符已到手」，
-		# 拿它当闸门会让「已戴护符的玩家」连泉水都喝不到（等于第二个选项失效）。
-		if _arcane_drunk:
+		# R71：判断「能不能喝泉水」只看 `_arcane_drunk`（喝过）与 `_arcane_charm_taken`
+		#（**本次**取走过护符）—— **不能**用 `RunState.has_relic()`：那会把上一处泉水 /
+		# 奖励池给的老护符也当成「本次已领」，已戴护符的玩家就再也喝不到泉水。
+		# R147：一次访问只领一份 —— 本次取走过护符就不能再喝。
+		if _arcane_taken():
 			return
 		_arcane_drunk = true
 		# R119：泉水给的卡牌奖励同样**先入队**（限定 效果 / 技能），由奖励悬浮窗处理。
 		var arcane_kinds: Array[String] = ["效果", "技能"]
 		RunState.queue_card_reward("normal", arcane_kinds)
-		result_label.text = "「喝下泉水」：请在奖励悬浮窗里从 3 张效果 / 技能牌中挑一张。"
+		rest_btn.text = "（已喝泉水——本次不能再拿护符）"
+		bbq_btn.text = "已喝下泉水（在奖励窗里选一张牌）"
+		bbq_btn.disabled = true
+		leave_btn.text = "离开"
+		leave_btn.disabled = false
+		# R147：喝过之后「获取护符」立刻锁死。
+		_claim_reward(bbq_btn)
+		result_label.text = "「喝下泉水」：请在奖励悬浮窗里从 3 张效果 / 技能牌中挑一张（本次只给一份）。"
 		result_label.add_theme_color_override("font_color", Color("2f7fa8"))
 		if _reward_panel != null:
 			_reward_panel.open()
 		_redraw()
 		return
+	if _rested:   # R147：本次休息处只领一份（先休息过 → 不能再烤肉）
+		return
 	if RunState.has_relic(RunState.BARBECUE_RELIC_ID):
 		return
 	RunState.gain_relic(RunState.BARBECUE_RELIC_ID)
 	_bbq_taken = true
+	_claim_reward(bbq_btn)
 	_refresh()
 	_redraw()
 
