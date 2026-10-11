@@ -1401,6 +1401,23 @@ func _ready() -> void:
 		status_text = "嘲讽：带嘲讽的单位有橙色脉冲光环 + 嘲讽徽标（敌方必须先打它）"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--weaken" in args and engine != null:
+		# 演示（R143）：削弱（9010）**打出当场生效并显示** —— 敌方那个单位的力量立刻变小、
+		# 左侧信息栏当场列出「力量 -9」，不必等结束回合、轮到对手才显示。
+		# 出图：--screenshot --level 0 --gridscroll 0 --weaken --shotframe 20
+		engine.state.energy = 5
+		var wk_cell := Vector2i(1, 1)
+		engine.state.place(repo.get_card(9014), wk_cell, GameEngine.SIDE_OPPONENT)
+		engine.state.hand.clear()
+		engine.state.hand.append(repo.get_card(9010))
+		engine.use_spell(0, wk_cell)
+		var wk_pl: Placement = engine.state.unit_at(wk_cell)
+		_hover_card = wk_pl.card
+		_hover_pl = wk_pl
+		status_text = "削弱：打出**当场**生效并显示 —— 力量 -%d（当前 %d），信息栏已列出" \
+				% [wk_pl.atk_debuff, wk_pl.effective_power()]
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--whale" in args and engine != null:
 		# 演示：鲸鱼之怒（9050）—— 打出后弹出「从弃牌堆取 2 张」面板（可选、可跳过）
 		engine.state.energy = 5

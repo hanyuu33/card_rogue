@@ -4216,7 +4216,7 @@ func _init() -> void:
 			summoned = summoned or (cell_row >= 0 and cell_row < 3)
 	check(summoned, "召唤的骑士落在敌方半场（前 3 行）")
 
-	# ---- 削弱：下回合攻击力 -9，回合结束恢复 ----
+	# ---- 削弱（R143）：**使用后当场生效并显示**，持续到自己下个回合开始 ----
 	var eng_de := _new_engine([], 20, 30)
 	var foe := _card(9001, "鸭子骑士", "盟友", 6, 5, 30, 1, 2)
 	eng_de.state.place(foe, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
@@ -4224,15 +4224,23 @@ func _init() -> void:
 	eng_de.state.hand.append(_card(9010, "削弱", "技能", 1, 0, 0))
 	eng_de.use_spell(eng_de.state.hand.size() - 1, Vector2i(2, 1))
 	var weakened := eng_de.state.unit_at(Vector2i(2, 1))
-	check(weakened != null and weakened.atk_debuff == 9 and weakened.debuff_stage == 0,
-			"施放削弱：减值已记录，尚未生效（本回合攻击力不变）")
-	check(weakened != null and weakened.effective_power() == 5, "当前回合攻击力仍为 5")
-	eng_de.end_turn()   # 进入对手回合 → 削弱生效
+	check(weakened != null and weakened.atk_debuff == 9 and weakened.debuff_stage == 1,
+			"施放削弱：**当场生效**（atk_debuff=9 / stage=1，与威慑同源）")
+	check(weakened != null and weakened.effective_power() == 0,
+			"施放削弱当回合：卡面力量 5-9 → 0（当场可读）")
+	var de_has := false
+	for e in weakened.status_entries():
+		if str(e["label"]).begins_with("力量 -"):
+			de_has = true
+	check(de_has, "施放削弱当回合：状态列表已列出「力量 -9」")
+	eng_de.end_turn()   # 我方 → 敌方：削弱挺过我方回合结束
 	check(eng_de.state.unit_at(Vector2i(2, 1)).effective_power() == 0,
-			"对手回合：攻击力 5-9 → 0")
-	eng_de.end_turn()   # 对手回合结束 → 恢复
-	check(eng_de.state.unit_at(Vector2i(2, 1)).effective_power() == 5,
-			"对手回合结束：攻击力恢复 5")
+			"敌方回合：攻击力仍是 0（没在我方回合结束被清）")
+	eng_de.end_turn()   # 敌方 → 我方：下个自己回合开始，削弱解除
+	var de_after := eng_de.state.unit_at(Vector2i(2, 1))
+	check(de_after.atk_debuff == 0 and de_after.debuff_stage == 0
+			and de_after.effective_power() == 5,
+			"下个自己回合开始：削弱解除（回到 5）")
 
 	# ---- 寒冰箭：3 伤害 + 下回合开始不重置 ----
 	var eng_fr := _new_engine([], 20, 30)
@@ -13496,7 +13504,9 @@ func _init() -> void:
 			and r106_labels[1] == "力量 +3（成长光环）"
 			and r106_labels[2] == "冰封：下回合不能行动",
 		"R106 状态列表：增益在前、减益在后，逐条各占一行（实际 %s）" % str(r106_labels))
-	# 削弱：还没到生效回合（debuff_stage == 0）**不算**「已获得」
+	# R143：力量减益**一经施加即生效** —— 六个施加口都直接置 debuff_stage=1，
+	# 于是「用了当场显示」。下面这条走的是机制的**兜底**分支（防将来新卡漏置 stage），
+	# 正常流程到不了；「当场显示」本身另有一条断言（见「削弱」那段）。
 	r106_p.atk_debuff = 2
 	r106_p.debuff_stage = 0
 	var r106_has_debuff := false
@@ -13504,7 +13514,7 @@ func _init() -> void:
 		if str(e["label"]).begins_with("力量 -"):
 			r106_has_debuff = true
 	check(not r106_has_debuff,
-		"R106 状态列表：削弱未到生效回合（stage=0）不算已获得")
+		"R143 状态列表：未生效的减值（stage=0，兜底分支）不算已获得")
 	r106_p.debuff_stage = 1
 	var r106_debuff_txt := ""
 	for e in r106_p.status_entries():
@@ -13512,6 +13522,22 @@ func _init() -> void:
 			r106_debuff_txt = str(e["label"])
 	check(r106_debuff_txt == "力量 -2（本回合）",
 		"R106 状态列表：生效中的削弱逐条列出（实际「%s」）" % r106_debuff_txt)
+	# R143：「禁足」按阶段分写文案（rooted=1 已挂待生效 / rooted=2 生效中）
+	r106_p.rooted = 1
+	var r106_root_txt := ""
+	for e in r106_p.status_entries():
+		if str(e["label"]).begins_with("禁足："):
+			r106_root_txt = str(e["label"])
+	check(r106_root_txt == "禁足：下回合不能移动",
+		"R143 状态列表：刚挂上的禁足（rooted=1）写「下回合不能移动」（实际「%s」）" % r106_root_txt)
+	r106_p.rooted = 2
+	r106_root_txt = ""
+	for e in r106_p.status_entries():
+		if str(e["label"]).begins_with("禁足："):
+			r106_root_txt = str(e["label"])
+	check(r106_root_txt == "禁足：本回合不能移动",
+		"R143 状态列表：生效中的禁足（rooted=2）写「本回合不能移动」（实际「%s」）" % r106_root_txt)
+	r106_p.rooted = 0   # 还原：下面的徽标断言不该带「禁足」
 	# 卡面徽标摘要：力量净变化（6+3-2=7 → +1）+ 改造层数（冰封另有既有徽标，不重复）
 	var r106_badge: Array[String] = []
 	for b in r106_p.status_badges():

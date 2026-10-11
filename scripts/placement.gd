@@ -152,7 +152,10 @@ func status_entries() -> Array[Dictionary]:
 		out.append({"label": "沉睡：还剩 %d（回合/受伤各 -1）" % sleep_left,
 				"col": COL_D, "kind": "debuff"})
 	if rooted > 0:
-		out.append({"label": "禁足：本回合不能移动", "col": COL_D, "kind": "debuff"})
+		# R143：区分「已挂待生效」（rooted=1，本次只是挂上，**下个**自己回合才拦移动）
+		# 与「生效中」（rooted=2）—— 两种都写「本回合不能移动」会让玩家以为现在就走不动。
+		out.append({"label": "禁足：下回合不能移动" if rooted == 1 else "禁足：本回合不能移动",
+				"col": COL_D, "kind": "debuff"})
 	if poison_left > 0:
 		out.append({"label": "中毒：剩 %d 跳，每跳 %d 伤" % [poison_left, poison_dmg],
 				"col": COL_D, "kind": "debuff"})

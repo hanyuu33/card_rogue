@@ -1432,6 +1432,12 @@ func _max_buff(side: String) -> int:
 	return m
 
 
+## 把「已记录但还没生效」的力量减益转成生效（debuff_stage 0 → 1）。
+##
+## ⚠️ R143 起这是**兜底**：所有力量减益的施加口（威慑 / 敲晕 / 幻影斗篷 / 回响 /
+## 黑暗陷阱 / 削弱）都**当场**置 1，不再有「下回合才生效」的延迟 —— 正常不会触发。
+## 保留它是为了防止将来某张新卡「只加了 atk_debuff、忘了置 stage」时减值永远不生效
+## （那种情况下至少会在目标方下个回合开始补上，而不是静默丢失）。
 func _arm_debuffs(side: String) -> void :
 
 	for cell: Vector2i in state.board:
@@ -5256,7 +5262,12 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 			if wp == null:
 				return "（没有目标）"
 			wp.atk_debuff += 9
-			_log("%s 被削弱：下回合攻击力 -9" % wp.card.card_name)
+			# R143：与威慑 / 敲晕 / 幻影斗篷 / 回响 / 黑暗陷阱同源 —— **当场生效**（stage=1）。
+			# 卡面 / 详情面板立刻显示削弱后的力量，持续到该单位所属方的回合结束
+			# （= 我下个回合开始之前恢复）。此前这里留空 debuff_stage、交给
+			# `_arm_debuffs` 在**对方回合开始**才置 1 → 玩家「这回合用了当场看不见」。
+			wp.debuff_stage = 1
+			_log("%s 被削弱：力量 -9（持续到你下个回合开始）" % wp.card.card_name)
 			return "%s 攻击力 -9" % wp.card.card_name
 		9011:
 			var fp:= _target_placement(side, target)
