@@ -66,6 +66,18 @@ func _ready() -> void:
 	# R113：图鉴页底色 #E9E7E2 = 亮底 → 浅底 chip；两个 tab 是 toggle，选中态由 button_pressed 驱动
 	for _b: Button in [player_tab, enemy_tab, back_btn]:
 		UiTheme.apply_chip(_b, false)
+	# R154：左 / 右栏默认冷灰 Panel → 羊皮纸面板（清单 §2.5；顶栏保持默认，压住页面即可）
+	UiTheme.apply_paper_panel($LeftPanel)
+	UiTheme.apply_paper_panel($DetailPanel)
+	# ⚠️ 面板里的 Label 默认是**白字**（给默认深灰 Panel 配的）→ 纸面上必须改墨色
+	for lb: Label in [$LeftPanel/KindTitle, $LeftPanel/CostTitle, $LeftPanel/ClassTitle,
+			$LeftPanel/SearchTitle, $LeftPanel/Hint]:
+		lb.add_theme_color_override("font_color", UiTheme.INK_600)
+	detail_name.add_theme_color_override("font_color", UiTheme.INK_900)
+	detail_kind.add_theme_color_override("font_color", UiTheme.INK_600)
+	detail_stats.add_theme_color_override("font_color", UiTheme.INK_800)
+	detail_traits.add_theme_color_override("font_color", UiTheme.INK_600)
+	detail_text.add_theme_color_override("font_color", UiTheme.INK_800)
 	repo = CardRepo.load_json()
 	_all = repo.all_cards()
 	for t: String in ["费用不限", "1 费", "2 费", "3 费", "4 费", "5 费+"]:

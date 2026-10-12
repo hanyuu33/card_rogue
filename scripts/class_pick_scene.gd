@@ -61,7 +61,7 @@ func _card_rect(i: int) -> Rect2:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("252a35"))
+	draw_rect(Rect2(Vector2.ZERO, size), UiTheme.SCREEN_BG)   # R154：墨蓝夜色锚点（清单 §2.6）
 	if _picked:
 		return
 	draw_string(_font, Vector2(0, 110), "出发之前，先决定你以什么身份走进这片森林……",
@@ -71,19 +71,29 @@ func _draw() -> void:
 	for i in ids.size():
 		var cid: String = ids[i]
 		var rect := _card_rect(i)
+		# R154：边框 / 标签带 / 副标题全部随职业色（UiTheme.class_color 唯一口），
+		# 不再三张卡共用一种绿；「角色」小标签 → 职业徽标 + 职业名（清单 §2.2）。
+		var cc: Color = UiTheme.class_color(cid)
+		var cc_text := cc.lightened(0.55)
 		if i == _hover:
 			draw_rect(rect.grow(10.0), Color(1, 1, 1, 0.10), true)
-		draw_rect(rect, Color(0.16, 0.18, 0.23), true)
-		draw_rect(rect, Color("4caf50"), false, 2.5)
+		draw_rect(rect, UiTheme.PANEL_DARK, true)   # R154：暗底锚点
+		draw_rect(rect, cc, false, 2.5)
 		var band := Rect2(rect.position, Vector2(rect.size.x, 34))
-		draw_rect(band, Color(0.30, 0.69, 0.31, 0.30), true)
-		draw_string(_font_bold, band.position + Vector2(0, 23), "角色",
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_BODY, Color("8ce09a"))
+		draw_rect(band, Color(cc, 0.30), true)
+		var badge := UiAssets.class_badge(cid)
+		var text_x := 0.0
+		if badge != null:
+			var br := Rect2(rect.position + Vector2(10, 4), Vector2(26, 26))
+			draw_texture_rect(badge, br, false)
+			text_x = 18.0   # 文本略右移，给徽标让位
+		draw_string(_font_bold, band.position + Vector2(text_x, 23), PlayerClass.name_of(cid),
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_BODY, cc_text)
 		draw_string(_font_bold, rect.position + Vector2(0, 82), PlayerClass.name_of(cid),
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_TITLE, Color("f2ead0"))
 		var y := 116.0
 		draw_string(_font, rect.position + Vector2(0, y), PlayerClass.subtitle_of(cid),
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_LABEL, Color("9fd7a5"))
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_LABEL, cc_text)
 		y += 26.0
 		# 概括性介绍（PlayerClass.desc_of）：只讲打法取向，**不列具体卡牌**。
 		for para: String in PlayerClass.desc_of(cid).split("\n"):

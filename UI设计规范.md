@@ -174,7 +174,12 @@ UiTheme.<颜色|字号|间距令牌>            # 其余
 | 事件背景 ×8 | `assets/ui/bg_<事件>.png` | 1280 × 720 | 1.78 | 深灰单色 |
 | 战斗背景（**三级回退**） | `assets/ui/battle_bg_<关卡key>.png`（每关专属）→<br>`assets/ui/map_bg_<层号>.png`（当层）→<br>`assets/battle_bg.png`（全局兜底） | 1280 × 720 | 1.78 | 当层底图 → 米黄渐变 |
 | 卡背 / 窗口图标 | `assets/cardback.png` | 120 × 160 | 0.75 | — |
-| 标题页背景 | `assets/ui/title_bg.png` | 1280 × 720 | 1.78 | 现有渐变（**待挂接** title_scene.gd） |
+| 标题页背景 | `assets/ui/title_bg.png` | 1280 × 720 | 1.78 | 战斗背景 → 纯色（R154 已挂接） |
+| 主按钮底 | `assets/ui/btn_primary.png` | 256 × 72（透明角胶囊） | 3.56 | 程序 StyleBoxFlat（R154） |
+| 次按钮底 | `assets/ui/btn_plain.png` | 256 × 72（透明角胶囊） | 3.56 | 程序 StyleBoxFlat（R154） |
+| 卡背 v2 | `assets/ui/card_back.png` | 256 × 384 | 0.67 | 旧 `assets/cardback.png` → 程序叉线（R154） |
+| 战争迷雾云 | `assets/ui/map_fog.png` | 256 × 256（四周渐隐） | 1:1 | 程序云团（R154） |
+| 职业徽标 ×3 | `assets/ui/class_<forest｜rogue｜mech>.png` | 128 × 128（透明圆徽） | 1:1 | 不画徽标、只写字（R154） |
 
 **技术要点**
 
@@ -1255,6 +1260,45 @@ R138 先补了一层「自动暗描边」兜底；**实机再看仍然不够清�
 2. 小旗与竖条都按 `scale_of(rect)`（k）缩放，徽章体系（§ R115）不变。
 3. 名称/种类/效果文字按现有「排不下整块省略」机制兜底（v2 文字区变窄，战场小卡上
    效果文字行更容易被省略——这是换底图换来的装饰空间，属预期）。
+
+---
+
+### 4.32 素材按钮 / 暗底锚点 / 羊皮纸面板（R154）
+
+**素材按钮（`apply_button` 内层：有素材画素材）**
+
+| 项 | 口径 |
+|---|---|
+| 素材 | 主 `btn_primary.png`（墨蓝金线胶囊）/ 次 `btn_plain.png`（羊皮纸奶油胶囊），256×72 透明角 |
+| 画法 | `StyleBoxTexture`，左右各 40px 不拉伸（保金线圆弧）、纵向自由；缺图回退原 StyleBoxFlat |
+| ⚠️ 字色 | **跟素材明暗走，不看 `on_dark`**：素材底自带明暗（墨蓝 / 奶油），奶油胶囊压浅色字 = 直接隐身（事件页实测翻车）。hover/pressed 的反馈 = 字色不变 + `UiPressFx` 缩放 |
+| hover 态 | 素材只有常态一张 → hover 由 `UiPressFx` 按下缩放承担，不再变色 |
+
+**暗底锚点（清单 §2.6，一处改全局生效）**
+
+- `UiTheme.SCREEN_BG`（#1A1C22 墨蓝夜色）= 全屏界面暗底唯一口：选角 / 道具 / 卡组编辑 / 事件页（tscn ColorRect）。
+- `UiTheme.PANEL_DARK`（#222630）= 暗底上的卡片 / 面板。
+- ⚠️ 别再散落 `Color("252a35")` 之类的冷灰 —— 与羊皮纸 / 墨蓝的美术方向不一致。
+
+**羊皮纸面板（清单 §2.5）**
+
+- `UiTheme.apply_paper_panel(panel)` 唯一口：奶油纸底 `PANEL_PAPER_BG` + 细金边 `PANEL_PAPER_LINE`。图鉴左 / 右栏已换。
+- ⚠️ 面板里的 Label 默认是**白字**（给默认深灰 Panel 配的）→ 换纸底**必须同步把文字改墨色**（INK_900/800/600），否则整栏隐身。
+
+**标题页（清单 §2.1，已落地）**
+
+- 背景 `title_bg.png`（缺图回退 battle_bg → 纯色）；标题描金 = tscn `font_outline_color` 金 + `_draw_title_ornaments()` 两侧金线卷草（程序画）。
+- 「漂浮白方块」= 旧幽灵卡背，已换**飘落花瓣 + 光尘**（程序画，低透明度可全屏飘）。
+
+**迷雾 / 卡背素材（清单 §2.3 / §2.4）**
+
+- `map_fog.png`：冒险地图 `_draw_fog_cell` 与战斗总览 `_draw_map_fog_cell` 共用；主云 + 碎云两层，位置 / 大小 / **半数水平镜像**都按格 id 定死（`_fog_rand`，纪律同 §4.24），缺图回退程序云团。素材四周已渐隐 → 贴边画也不越界。
+- `card_back.png`：牌堆与抽牌动画共用 `_draw_card_back*`，换 `_back_tex` 一处全跟着变。
+- 手牌区羊皮纸底板 = 程序画（`_draw_hand_base`，画在 `_draw_hand` 之前）；结算面板白底 → 羊皮纸奶油底（边框仍按胜负染色）。
+
+**⚠️ .tscn 属性行不能写 `#` 注释**（R154 实测翻车）：`color = Color(...)   # 注释`
+这种行内注释会让场景解析器**吃掉紧随其后的整个节点**（事件页的 Campfire 就是这么丢的，
+运行时报 `Node not found`）。tscn 里要留说明，只能写进脚本的注释。
 
 ---
 

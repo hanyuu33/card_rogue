@@ -284,7 +284,7 @@ func _card_rect(i: int) -> Rect2:
 
 func _draw() -> void:
 	# 背景（根节点自绘在子节点之下，BG 色块会盖住 _draw，故在这里画）
-	draw_rect(Rect2(Vector2.ZERO, size), Color("252a35"))
+	draw_rect(Rect2(Vector2.ZERO, size), UiTheme.SCREEN_BG)   # R154：墨蓝夜色锚点（清单 §2.6）
 	if _cards.is_empty():
 		draw_string(_font, Vector2(0, size.y / 2), "卡组是空的……（点击继续）",
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_ON_DARK)

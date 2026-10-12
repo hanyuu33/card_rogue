@@ -265,6 +265,13 @@ const SURFACE := Color("ffffff")      ## 卡面 / 面板底
 const PAPER := Color("f7f5f0")        ## 纸面底
 const SAND := Color("e8e4da")         ## 卡片槽底
 const BOARD_BG := Color("e9e7e2")     ## 棋盘底
+## R154 暗底锚点（清单 §2.6）：全屏界面的暗底**只许读这两个**，别再散落 Color("252a35")。
+## 冷灰（252a35）与羊皮纸/墨蓝的美术方向不一致 → 统一锚到墨蓝夜色。
+const SCREEN_BG := Color("1a1c22")      ## 全屏界面暗底（选角 / 道具 / 卡组编辑 / 事件）
+const PANEL_DARK := Color("222630")      ## 暗底上的卡片 / 面板底（略亮于 SCREEN_BG 一档）
+## R154 羊皮纸面板（清单 §2.5）：图鉴左右栏这类「纸面上的面板」。
+const PANEL_PAPER_BG := Color("f1e9d5")  ## 羊皮纸奶油底
+const PANEL_PAPER_LINE := Color(0.78, 0.68, 0.45, 0.60)   ## 纸面细金边
 ## 棋盘格线。原为 `#9a9a9a`，在 `BOARD_BG` 上只有 **2.28:1** —— 对非文字元素低于 WCAG 的 3:1，
 ## 玩家分不清格子边界。`#7d7b74` 是 **3.43:1**，既能看清又不抢单位的视觉重量。
 const BOARD_GRID_LINE := Color("7d7b74")
@@ -509,6 +516,23 @@ static func _btn_box(bg: Color, line: Color, width: int, radius: int,
 	return sb
 
 
+static func _btn_tex_box(tex: Texture2D, px := BTN_PAD_X, py := BTN_PAD_Y) -> StyleBoxTexture:
+	## R154：素材按钮底（btn_primary / btn_plain）。胶囊两端 40px 不拉伸（保金线圆弧），
+	## 纵向上下各留 6px、中段自由拉伸 —— 按钮比素材矮时圆弧略扁，可接受。
+	## hover / pressed 的反馈由**字色变化 + UiPressFx 缩放**承担（素材只有常态一张）。
+	var sb := StyleBoxTexture.new()
+	sb.texture = tex
+	sb.texture_margin_left = 40.0
+	sb.texture_margin_right = 40.0
+	sb.texture_margin_top = 6.0
+	sb.texture_margin_bottom = 6.0
+	sb.content_margin_left = px
+	sb.content_margin_right = px
+	sb.content_margin_top = py
+	sb.content_margin_bottom = py
+	return sb
+
+
 static func _chip_box(bg: Color, line: Color, width: int, px: int, py: int,
 		bottom_only := false) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
@@ -572,9 +596,20 @@ static func apply_button(btn: Button, primary := false, on_dark := false) -> voi
 		txt_h = Color("ffffff")
 		line_focus = BTN_PRIMARY_LINE_FOCUS
 	var w := 2 if primary else 1
-	btn.add_theme_stylebox_override("normal", _btn_box(bg, line, w, r))
-	btn.add_theme_stylebox_override("hover", _btn_box(bg_h, line, w, r))
-	btn.add_theme_stylebox_override("pressed", _btn_box(bg_p, line, w, r))
+	# R154：有素材画素材（墨蓝金线胶囊 / 羊皮纸胶囊），缺图回退程序 StyleBoxFlat。
+	var tex: Texture2D = UiAssets.btn_primary() if primary else UiAssets.btn_plain()
+	if tex != null:
+		btn.add_theme_stylebox_override("normal", _btn_tex_box(tex))
+		btn.add_theme_stylebox_override("hover", _btn_tex_box(tex))
+		btn.add_theme_stylebox_override("pressed", _btn_tex_box(tex))
+		# ⚠️ 素材底**自带明暗**（主 = 墨蓝 / 次 = 奶油），字色必须跟着素材走、
+		# 不再看 on_dark：奶油胶囊上压浅色字 = 直接隐身（事件页实测翻车）。
+		txt = Color("ffffff") if primary else Color("1a1c22")
+		txt_h = txt
+	else:
+		btn.add_theme_stylebox_override("normal", _btn_box(bg, line, w, r))
+		btn.add_theme_stylebox_override("hover", _btn_box(bg_h, line, w, r))
+		btn.add_theme_stylebox_override("pressed", _btn_box(bg_p, line, w, r))
 	btn.add_theme_stylebox_override("disabled", _btn_box(bg, BTN_DISABLED_LINE, w, r))
 	btn.add_theme_stylebox_override("focus", _btn_box(Color(0, 0, 0, 0), line_focus, 3, r))
 	btn.add_theme_color_override("font_color", txt)
@@ -585,6 +620,20 @@ static func apply_button(btn: Button, primary := false, on_dark := false) -> voi
 	btn.add_theme_font_override("font", font_bold() if use_bold else font())
 	btn.add_theme_font_size_override("font_size", font_size)
 	UiPressFx.attach(btn)   # R151 P1-8：按下 scale 0.96 / 100ms（样式唯一口统一挂）
+
+
+static func apply_paper_panel(panel: Panel) -> void:
+	## 羊皮纸面板（**唯一口**，R154）：图鉴左 / 右栏这类亮底界面上的面板。
+	## 奶油纸底 + 细金边 + 圆角 —— 换掉 Godot 默认的冷灰 Panel。
+	if panel == null:
+		return
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = PANEL_PAPER_BG
+	sb.border_color = PANEL_PAPER_LINE
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(10)
+	sb.set_content_margin_all(12.0)
+	panel.add_theme_stylebox_override("panel", sb)
 
 
 static func apply_chip(btn: Button, solid := false, compact := false) -> void:

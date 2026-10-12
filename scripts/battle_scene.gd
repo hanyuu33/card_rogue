@@ -135,6 +135,11 @@ const OWN_HAND_Y := WINDOW_H - HAND_CARD_H + HAND_CROP_BOTTOM   # = 619（卡顶
 # 手牌整体可用宽度：卡变宽（98.6）后要留神右边 x=900 起的道具栏 —— 最右那张会绕底部中心
 # 转出去（sin12° × 露出高度 ≈ 21px），356 是「满手也不越界」的上限（见 test_smoke 的越界断言）。
 const HAND_FAN_WIDTH := 356.0     # 手牌整体可用宽度（装不下就靠重叠压缩）
+# R154：手牌羊皮纸底板的几何（扇形居中于 WINDOW_W/2；底板略宽于扇形活动范围）
+const HAND_BASE_W := 420.0
+const HAND_BASE_X := (WINDOW_W - HAND_BASE_W) / 2.0
+const HAND_BASE_Y := 600.0        # 扇形卡顶 619、抬手最高 ~590 —— 板顶压在两者之间
+const HAND_BASE_H := WINDOW_H - HAND_BASE_Y
 const HAND_FAN_MIN_STEP := 0.40   # 最小步进 = 卡宽 × 此比例（即最多 60% 重叠）
 const HAND_FAN_MAX_DEG := 12.0    # 两端最大倾角（度）
 const HAND_FAN_DEG_PER := 4.0     # 相邻两张的倾角差（度）
@@ -393,7 +398,11 @@ func _ready() -> void:
 	# 固定 310px 会把后半句静默切掉（R113 修的）。⚠️ .tscn 里不能写 # 注释，说明只能挂在这里。
 	# 战斗背景（R133）：默认按**当层**取（关卡专属图在 load_level 里换）。
 	_bg_tex = UiAssets.battle_bg("", RunState.current_layer)
-	_back_tex = load("res://assets/cardback.png")
+	# R154：卡背换新素材（assets/ui/card_back.png，清单 §2.4）—— 右下「卡组」牌堆
+	# 与抽牌动画共用 `_draw_card_back` / `_draw_card_back_fade`，换这里一处全跟着变。
+	_back_tex = UiAssets.card_back()
+	if _back_tex == null:
+		_back_tex = load("res://assets/cardback.png")
 	_frame_tex = load("res://assets/ui/grid_frame.png")
 	_discard_tex = load("res://assets/ui/discard_icon.png")
 	_void_tex = load("res://assets/ui/void_icon.png")
@@ -4455,10 +4464,12 @@ func _build_level_menu() -> void:
 func _build_over_panel() -> void:
 	## 胜负结算覆盖层：弹出「再来一局 / 选关 / 回到标题」。
 	_over_panel = PanelContainer.new()
+	# R154：白底红框 → 羊皮纸底（清单 §2.4）。边框色照旧在 _show_over 按胜负染
+	# （胜 = 金 COL_WIN / 败 = 墨 COL_LOSE）；ribbon 飘带是 P2 素材待办，暂不做。
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(1, 1, 1, 0.97)
+	sb.bg_color = Color(0.945, 0.914, 0.835, 0.97)   # 羊皮纸奶油底
 	sb.set_border_width_all(3)
-	sb.set_corner_radius_all(10)
+	sb.set_corner_radius_all(12)
 	sb.set_content_margin_all(20.0)
 	_over_panel.add_theme_stylebox_override("panel", sb)
 	_over_panel.position = Vector2(GRID_X + GRID_W / 2 - 140, GRID_Y + GRID_H / 2 - 150)
@@ -4887,6 +4898,23 @@ func _draw_map_fog_cell(r: Rect2, id: int) -> void:
 	var inner := r.grow(-1.5)
 	var phase := float(id) * 2.399
 	draw_rect(inner, Color(0.11, 0.13, 0.19, 0.90), true)
+	# R154：与冒险地图同一张云雾素材（清单 §2.3）；缺图回退下面的程序云团。
+	var fog_tex := UiAssets.map_fog()
+	if fog_tex != null:
+		var jx := sin(phase) * 0.06
+		var jy := cos(phase * 1.3) * 0.06
+		var sz: Vector2 = inner.size * 1.05
+		var ctr := inner.get_center() + Vector2(inner.size.x * jx, inner.size.y * jy)
+		if sin(phase * 2.7) > 0.0:
+			draw_set_transform(ctr, 0.0, Vector2(-1, 1))
+			draw_texture_rect(fog_tex, Rect2(-sz * 0.5, sz), false,
+					Color(0.92, 0.96, 1.0, 0.92))
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		else:
+			draw_texture_rect(fog_tex, Rect2(ctr - sz * 0.5, sz), false,
+					Color(0.92, 0.96, 1.0, 0.92))
+		draw_rect(inner, Color(1, 1, 1, 0.05), false, 1.0)
+		return
 	for i in 5:
 		var fx := 0.28 + 0.44 * float((id * 7 + i * 3) % 5) / 4.0
 		var fy := 0.26 + 0.48 * float((id * 5 + i * 2) % 4) / 3.0
@@ -5367,6 +5395,7 @@ func _draw() -> void:
 	_draw_enemy_effects()
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)  # 结束震动，后续 UI 不抖
 	_draw_level_plate()
+	_draw_hand_base()
 	_draw_hand()
 	_draw_hand_fly()
 	_draw_turn_owner_fx()
@@ -8604,6 +8633,21 @@ func _draw_zone_count(rect: Rect2, count: int) -> void:
 	draw_rect(r, Color(0.12, 0.10, 0.07, 0.94), true)
 	draw_rect(r, UiTheme.ACCENT_GOLD, false, 1.5)
 	_draw_string_center(_font_bold, px, txt, r.get_center(), Color("f6e6bc"))
+
+
+func _draw_hand_base() -> void:
+	## R154：手牌区垫一条**半透明羊皮纸**圆角条（清单 §2.4）—— 手牌直接浮在
+	## 当层地图底图上时，森林/钢铁花纹会咬卡面下缘；垫一层暖纸色把扇形「托」住。
+	## 程序画（素材 panel_paper 是 P2 待办，先用程序色），只铺在手牌活动范围内。
+	if engine.state.hand.is_empty():
+		return
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.93, 0.89, 0.78, 0.34)
+	sb.border_color = Color(0.82, 0.72, 0.48, 0.42)
+	sb.set_border_width_all(1)
+	sb.corner_radius_top_left = 16
+	sb.corner_radius_top_right = 16
+	draw_style_box(sb, Rect2(HAND_BASE_X, HAND_BASE_Y, HAND_BASE_W, HAND_BASE_H))
 
 
 func _draw_hand() -> void:

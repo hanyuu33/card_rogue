@@ -603,16 +603,44 @@ func _fog_rand(id: int, i: int, salt: int) -> float:
 
 
 func _draw_fog_cell(r: Rect2, id: int) -> void:
-	## 一格的云雾：青灰底 + 几团**低透明度**的云（重叠后融成一片，不是一圈圈波点）。
+	## 一格的云雾：青灰底 + 云。**R154 起优先用 `map_fog.png`**（柔和蓝白云雾素材，
+	## 替换深蓝程序云块 —— 清单 §2.3：旧云块与森林背景断裂）；缺图回退程序云团。
 	## 云的位置 / 大小 / 明暗都由 `_fog_rand` 从格子 id 推出来 —— 同格稳定、格与格不同。
 	## 整体只做极慢的呼吸，读起来是「雾」，不是「贴了块灰纸」。
-	## ⚠️ 云团必须**整团留在本格内**：半径决定中心的可取范围（`m`）——
-	##    否则雾会溢到旁边**看得见**的格子上，把别人的图标蒙上一层灰。
+	## ⚠️ 云团必须**整团留在本格内**：素材四周已做渐隐（透明边），所以即使贴边画，
+	##    可见部分也不会溢到隔壁**看得见**的格子；程序云团走老的几何约束（`m`）。
 	##    Godot 4.3 没有 `draw_set_clip_rect`（§4.11），只能用几何约束代替裁剪。
 	var breathe := 0.90 + 0.10 * sin(_t * 0.9 + float(id) * 1.7)
 	var inner := r.grow(-2.0)
 	draw_rect(inner, Color(COL_FOG_BASE.r, COL_FOG_BASE.g, COL_FOG_BASE.b,
 			COL_FOG_BASE.a * breathe), true)
+	var fog_tex := UiAssets.map_fog()
+	if fog_tex != null:
+		# 主云：盖满整格（素材透明边 ≈15%，可见云体仍在格内）；位置按 id 轻抖。
+		var jx := (_fog_rand(id, 0, 1) - 0.5) * 0.10
+		var jy := (_fog_rand(id, 0, 2) - 0.5) * 0.10
+		var grow := 1.02 + 0.10 * _fog_rand(id, 0, 3)
+		var sz: Vector2 = inner.size * grow
+		var ctr := inner.get_center() + Vector2(inner.size.x * jx, inner.size.y * jy)
+		var tint := 0.82 + 0.18 * breathe
+		# 半数格子水平镜像（按 id 定死）—— 相邻格不都是「同一张贴纸」。
+		if _fog_rand(id, 2, 5) > 0.5:
+			draw_set_transform(ctr, 0.0, Vector2(-1, 1))
+			draw_texture_rect(fog_tex, Rect2(-sz * 0.5, sz), false,
+					Color(0.92, 0.96, 1.0, tint))
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		else:
+			draw_texture_rect(fog_tex, Rect2(ctr - sz * 0.5, sz), false,
+					Color(0.92, 0.96, 1.0, tint))
+		# 碎云：小一号、错位，让相邻格不重复（仍靠 _fog_rand 定死）。
+		var sz2: Vector2 = inner.size * (0.42 + 0.14 * _fog_rand(id, 1, 3))
+		var ctr2 := inner.get_center() + Vector2(
+				inner.size.x * (0.20 - 0.40 * _fog_rand(id, 1, 1)),
+				inner.size.y * (0.20 - 0.40 * _fog_rand(id, 1, 2)))
+		draw_texture_rect(fog_tex, Rect2(ctr2 - sz2 * 0.5, sz2), false,
+				Color(0.88, 0.94, 1.0, 0.55 * breathe))
+		draw_rect(inner, Color(1, 1, 1, 0.05), false, 1.0)
+		return
 	for i in FOG_PUFFS:
 		var rad := inner.size.x * (0.15 + 0.13 * _fog_rand(id, i, 3))
 		var m := rad / inner.size.x            # 中心离边至少一个半径 → 整团不越界

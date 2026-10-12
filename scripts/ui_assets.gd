@@ -137,6 +137,50 @@ static func chocolate() -> Texture2D:
 	return get_tex("chocolate")
 
 
+static func btn_primary() -> Texture2D:
+	## 主按钮底（R154）：墨蓝金线胶囊 256×72，透明角。
+	## 缺图时返回 null，`UiTheme.apply_button` 回退 StyleBoxFlat 程序样式。
+	return get_tex("btn_primary")
+
+
+static func btn_plain() -> Texture2D:
+	## 次按钮底（R154）：羊皮纸奶油胶囊 256×72，透明角。缺图回退同上。
+	return get_tex("btn_plain")
+
+
+static func title_bg() -> Texture2D:
+	## 标题页背景（R153 入库 / R154 挂接）：1280×720 晨光小镇。
+	## 缺图时返回 null，`title_scene` 回退 battle_bg → 再退纯色渐变。
+	return get_tex("title_bg")
+
+
+static func card_back() -> Texture2D:
+	## 卡背（R154）：牌堆 / 抽牌动画用 256×384。缺图回退程序绘制。
+	return get_tex("card_back")
+
+
+static func map_fog() -> Texture2D:
+	## 战争迷雾云团（R154）：256×256 透明、四周渐隐。缺图回退程序云团。
+	return get_tex("map_fog")
+
+
+static func class_badge(cls: String) -> Texture2D:
+	## 职业徽标（R154）：class_forest / class_rogue / class_mech，128×128 透明圆徽。
+	## ⚠️ 传**职业 id**（森林精魄 / 暗影刺客 / 机械之心），英文素材键在这里映射 ——
+	## 调用方不该各自猜键名。未知职业返回 null（调用方跳过画图）。
+	var key := ""
+	match cls:
+		"森林精魄":
+			key = "forest"
+		"暗影刺客":
+			key = "rogue"
+		"机械之心":
+			key = "mech"
+	if key == "":
+		return null
+	return get_tex("class_" + key)
+
+
 static func clear_cache() -> void:
 	## 运行中换了图想立刻生效时可以调（正常流程不需要）。
 	_cache.clear()

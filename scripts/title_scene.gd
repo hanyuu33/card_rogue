@@ -8,7 +8,7 @@ var _bg_tex: Texture2D
 var _font: SystemFont
 var sfx: Sfx
 var _t := 0.0
-var _float_cards: Array = []    # {x, y, spd, ph, sc, rot}  漂浮卡背
+var _petals: Array = []         # {x, y, spd, ph, sc, rot, kind}  R154 飘落花瓣 / 光尘（换掉漂浮白方块）
 var _diff_btns: Array = []      # 难度档位按钮（0 / 1 / 2）
 var _diff_note: Label           # 当前档位说明
 
@@ -18,7 +18,10 @@ func _ready() -> void:
 	# 「(DEBUG)」（打包成独立版后同样如此），这里显式覆盖掉。headless 下跳过。
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_title("卡牌肉鸽")
-	_bg_tex = load("res://assets/battle_bg.png")
+	# R154：标题页专用背景（晨光小镇）；缺图回退战斗背景 → 再退纯色（_draw 里的 BOARD_BG）
+	_bg_tex = UiAssets.title_bg()
+	if _bg_tex == null:
+		_bg_tex = load("res://assets/battle_bg.png")
 	_font = UiTheme.font()
 	sfx = Sfx.new()
 	add_child(sfx)
@@ -44,15 +47,17 @@ func _ready() -> void:
 	# 回放中途回到标题（整局播完 / 中途退出）→ 停止回放状态
 	if ReplayLog.playing:
 		ReplayLog.stop_playback()
-	# 漂浮卡背：随机初速/相位/大小，缓慢上飘
-	for i in 6:
-		_float_cards.append({
-			"x": _ghost_x(),
+	# R154：飘落花瓣 + 光尘（替换「漂浮白方块」—— 浅色卡背贴在浅底上只剩一个灰色占位块，
+	# UI 检视报告点名它像没删干净的占位符）。花瓣缓慢下落、横向轻摆；光尘微微闪烁。
+	for i in 14:
+		_petals.append({
+			"x": randf() * 1280.0,
 			"y": randf() * 720.0,
-			"spd": randf_range(10.0, 26.0),
+			"spd": randf_range(14.0, 34.0),
 			"ph": randf() * TAU,
-			"sc": randf_range(0.9, 1.8),
-			"rot": randf_range(-0.22, 0.22),
+			"sc": randf_range(0.7, 1.5),
+			"rot": randf() * TAU,
+			"kind": (1 if i % 4 == 0 else 0),   # 1/4 光尘，其余花瓣
 		})
 	# 命令行 -- --screenshot：打开后自动截图退出（视觉验证用）
 	if "--screenshot" in OS.get_cmdline_user_args():
@@ -65,14 +70,6 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(t)
 		t.start()
-
-
-func _ghost_x() -> float:
-	## 幽灵卡的横向出生点：只在左右留白区，**永不压住居中的标题与按钮**。
-	## （原先是 `randf() * 1280.0`，会随机落在标题/按钮正后方 —— 截图里能看到压字。）
-	var m := UiTheme.GHOST_CARD_MARGIN
-	var left := randf() < 0.5
-	return (randf() * m if left else 1.0 - m + randf() * m) * size.x
 
 
 func _build_difficulty_row() -> void:
@@ -137,11 +134,11 @@ func _refresh_difficulty() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	for f: Dictionary in _float_cards:
-		f.y -= float(f.spd) * delta
-		if float(f.y) < -110.0:
-			f.y = 830.0
-			f.x = _ghost_x()
+	for f: Dictionary in _petals:
+		f.y += float(f.spd) * delta
+		if float(f.y) > 770.0:
+			f.y = -30.0
+			f.x = randf() * 1280.0
 	queue_redraw()
 
 
@@ -152,22 +149,62 @@ func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), UiTheme.OVERLAY_TITLE)
 	else:
 		draw_rect(Rect2(Vector2.ZERO, size), UiTheme.BOARD_BG)
-	# 幽灵卡母题（R113）：浅色卡 + 描边，只出现在左右留白区。
-	# 这里**故意不用** cardback.png —— 深海军蓝贴图在浅米黄底上，任何低透明度都会兑成中灰，
-	# 菱形花纹的对比度被同比例压缩，最后只剩一个「灰色占位块」。详见 ui_theme.gd 的注释。
-	for f: Dictionary in _float_cards:
-		var pos := Vector2(float(f.x) + sin(_t * 0.7 + float(f.ph)) * 18.0, float(f.y))
-		draw_set_transform(pos, float(f.rot), Vector2(float(f.sc), float(f.sc)))
-		draw_rect(Rect2(-29, -35, 58, 70), UiTheme.GHOST_CARD_FILL)
-		draw_rect(Rect2(-29, -35, 58, 70), UiTheme.GHOST_CARD_LINE, false, 1.0)
-		draw_rect(Rect2(-22, -28, 44, 56), UiTheme.GHOST_CARD_INNER, false, 1.0)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# R154：飘落花瓣（两瓣错开的扁椭圆）+ 光尘（四点小星、明灭）。低透明度，可全屏飘。
+	for f: Dictionary in _petals:
+		var pos := Vector2(float(f.x) + sin(_t * 0.8 + float(f.ph)) * 16.0, float(f.y))
+		var sc := float(f.sc)
+		var rot := float(f.rot) + sin(_t * 0.9 + float(f.ph)) * 0.35
+		if int(f.kind) == 1:
+			# 光尘：四点小星，alpha 呼吸
+			var a := 0.28 + 0.22 * sin(_t * 2.2 + float(f.ph))
+			var col := Color(1.0, 0.95, 0.75, a)
+			var r := 3.2 * sc
+			draw_colored_polygon(PackedVector2Array([
+				pos + Vector2(0, -r * 1.6), pos + Vector2(r * 0.55, 0),
+				pos + Vector2(0, r * 1.6), pos + Vector2(-r * 0.55, 0)]), col)
+		else:
+			var col: Color = PETAL_COLORS[int(f.ph * 7.0) % PETAL_COLORS.size()]
+			draw_set_transform(pos, rot, Vector2(sc, sc * 0.58))
+			draw_circle(Vector2.ZERO, 7.0, col)
+			draw_set_transform(pos + Vector2(cos(rot), sin(rot)) * 4.5 * sc, rot + 0.9,
+					Vector2(sc * 0.7, sc * 0.42))
+			draw_circle(Vector2.ZERO, 6.0, Color(col, col.a * 0.85))
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# R154：标题两侧的金线卷草（程序画）—— 描金标题在 title.tscn 用 font_outline 做。
+	_draw_title_ornaments()
 	# 底部信息
 	var ver := "v1.0-rogue · 肉鸽开发版"
 	draw_string(_font, Vector2(size.x - 250, size.y - 16), ver,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	draw_string(_font, Vector2(14, size.y - 16), "Godot 4.3 自包含副本",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
+
+
+const PETAL_COLORS: Array[Color] = [
+	Color(1.00, 0.83, 0.86, 0.52),   # 樱粉
+	Color(1.00, 0.93, 0.80, 0.48),   # 奶油
+	Color(0.98, 0.87, 0.68, 0.44),   # 淡金
+]
+
+
+func _draw_title_ornaments() -> void:
+	## 标题「卡 牌 肉 鸽」两侧的金线卷草：金线 + 外端小菱 + 内端小珠，左右对称。
+	var cy := 205.0
+	var tw := _font.get_string_size("卡 牌 肉 鸽", HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x
+	var gold := Color("c8951c")
+	var gold_soft := Color(0.784, 0.584, 0.11, 0.55)
+	for side: float in [-1.0, 1.0]:
+		var xi: float = size.x * 0.5 + side * (tw * 0.5 + 30.0)   # 内端（贴标题）
+		var xo: float = xi + side * 96.0                          # 外端
+		draw_line(Vector2(xi, cy), Vector2(xo, cy), gold_soft, 4.0)
+		draw_line(Vector2(xi, cy), Vector2(xo, cy), gold, 1.6)
+		# 外端小菱
+		var d := Vector2(xo, cy)
+		draw_colored_polygon(PackedVector2Array([
+			d + Vector2(0, -5.5), d + Vector2(4.0, 0),
+			d + Vector2(0, 5.5), d + Vector2(-4.0, 0)]), gold)
+		# 内端小珠
+		draw_circle(Vector2(xi, cy), 2.6, gold)
 
 
 func _on_start() -> void:
