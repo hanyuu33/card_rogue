@@ -101,6 +101,20 @@ const FUSE_TRAIT:= "铸造"           # 只做标记（与「亡语 / 孵化」�
 const HECATE_ID:= 9133              # 量产型赫卡同克瑞斯（盟友 3/35 程1 速1）
 const STEEL_FORTRESS_ID:= 9134      # 钢铁要塞（工事 5/100 程2 速0，嘲讽）
 const FUSE_TURNS:= 5                # 铸造倒计时的初始回合数（与卡面 effect_text 同源）
+# ---- 「赫菲斯托斯工坊」关卡（R150，第二层 Boss）----
+# 赫菲斯托斯（9135，盟友 5/120 程1 速1）带「锻造」trait，两条效果挂在两个**唯一口**上：
+#   ① **亲手击杀**敌人 → 在**己方半场随机空格**锻造一只量产型俄倪厄（9131，5/30）
+#      —— 挂 `_credit_kill`（击杀记功唯一口），并**清零**空转计数；
+#   ② 连续 FORGE_PERIOD 个**我方回合**没能亲手击杀 → 力量 +1、攻击距离 +1（永久累计）
+#      —— 挂 `_forge_tick`（`end_turn` 的 SIDE_SELF 分支，与 R149 铸造倒计时同一处）。
+# 于是这关的取舍是：往前顶着送头（它一直在杀 → 一直在生小兵），还是缩着不接触
+#   （它杀不到 → 每 3 个回合自己长 1 力 1 程，射程越长越难躲）。
+# ⚠️ 射程记 `Placement.forge_range`（走 `effective_range`），**不写回 card**。
+const HEPHAESTUS_ID:= 9135        # 赫菲斯托斯（第二层 Boss）
+const FORGE_TRAIT:= "锻造"         # 只做标记（与「沉睡 / 铸造」同套路），数值放 Placement
+const FORGE_PERIOD:= 3            # 连续几个我方回合没击杀 → 成长一次
+const FORGE_ATK:= 1               # 每次成长：力量 +1（走 atk_buff，永久累计无上限）
+const FORGE_RANGE:= 1             # 每次成长：攻击距离 +1（走 Placement.forge_range）
 
 
 const TAUNT_TRAIT:= "嘲讽"
@@ -2030,6 +2044,7 @@ func end_turn() -> void :
 	#    若按归属判就变成「敌方回合结束才减」，和卡面写的那句话对不上。
 	if current_side == SIDE_SELF:
 		_fuse_tick()
+		_forge_tick()      # R150 赫菲斯托斯：连续空转 → 力量 / 攻程 +1
 
 	if current_side == SIDE_SELF:
 		var n:= state.discard_hand()
@@ -3078,7 +3093,7 @@ func _scout_aura_bonus(victim: Placement, victim_cell: Vector2i) -> int:
 			continue
 		if u.owner == victim.owner:
 			continue
-		if manhattan(other, victim_cell) <= u.card.attack_range:
+		if manhattan(other, victim_cell) <= u.effective_range():
 			bonus += u.upgrade_stacks
 	return bonus
 
@@ -6782,6 +6797,60 @@ func _overload_tick(side: String) -> void :
 		_destroy(cell)
 
 
+func _forge_tick() -> void :
+	## 赫菲斯托斯（9135，R150）的「锻造」：**我方回合结束**时清点 —— 这一个回合它还是
+	## 没亲手击杀过敌人 → 空转 +1；满 FORGE_PERIOD → 力量 +1、攻击距离 +1，计数清零。
+	## ⚠️ 挂在 `end_turn()` 的 `current_side == SIDE_SELF` 分支里（与 R149 铸造倒计时
+	##    同一处），所以「3 个回合」= **玩家的** 3 个回合，与卡面那句话对得上。
+	## ⚠️ 射程记 `Placement.forge_range`（走 `effective_range`）、力量记 `atk_buff`，
+	##    **都不写回 card** —— 关卡敌方单位是卡库共享实例，改卡面会跨局泄漏。
+	for cell: Vector2i in state.board:
+		var p: Placement = state.unit_at(cell)
+		if p == null or p.forge_period <= 0:
+			continue
+		p.forge_idle += 1
+		if p.forge_idle < p.forge_period:
+			_log("%s 空转 %d/%d 个我方回合（还没亲手击杀敌人）" % [
+					p.card.card_name, p.forge_idle, p.forge_period])
+			continue
+		p.forge_idle = 0
+		p.atk_buff += FORGE_ATK
+		p.forge_range += FORGE_RANGE
+		_log("%s 连续 %d 个回合没能击杀 → 锻造：力量 +%d（当前 %d）、攻击距离 +%d（当前 %d）" % [
+				p.card.card_name, p.forge_period, FORGE_ATK, p.effective_power(),
+				FORGE_RANGE, p.effective_range()])
+		action.emit("heph_grow", {"cell": cell, "card": p.card,
+				"power": p.effective_power(), "range": p.effective_range()})
+
+
+func _heph_kill_forge(killer: Placement) -> void :
+	## 赫菲斯托斯（9135，R150）**亲手击杀**敌人 → 在**己方半场随机空格**锻造一只
+	## 量产型俄倪厄（9131，5/30 程1 速1），并**清零**空转计数 —— 它一直在杀人，
+	## 就一直不变强（「杀一只抵三回合」这种钻空子的路因此被堵死）。
+	## 落点走 `_random_free_half_cell`（引擎 rng → 回放同种子可复现），召唤物走
+	## `place(summon = true)`：当回合恰好 1 轮行动，与恶魔召唤 / 暗杀召唤同口径。
+	if over or killer == null or killer.card == null:
+		return
+	if killer.forge_period <= 0:
+		return
+	killer.forge_idle = 0
+	var proto: CardData = CardRepo.load_json().get_card(SUN_FORGE_FURY_ID)
+	if proto == null:
+		_log("锻造失败：卡牌库里没有 id=%d" % SUN_FORGE_FURY_ID)
+		return
+	var spot:= _random_free_half_cell(killer.owner)
+	if spot == Vector2i(-1, -1):
+		_log("%s 亲手击杀 → 想锻造量产型俄倪厄，但己方半场没有空格"
+				% killer.card.card_name)
+		return
+	var copy:= CardData.from_dict(proto.to_dict())   # 独立副本：不与卡库实例共享
+	var spawned:= state.place(copy, spot, killer.owner, true)
+	_log("%s 亲手击杀 → 锻造出一只量产型俄倪厄（%s）" % [killer.card.card_name, spot])
+	action.emit("heph_forge", {"cell": spot, "card": copy, "side": killer.owner})
+	if spawned != null:
+		_on_ally_entered(spawned, killer.owner)
+
+
 func _fuse_tick() -> void :
 	## 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：**我方回合结束** -1；
 	## 减到 0 → 破坏自身，并**在原地**立起一座「钢铁要塞」（9134，工事 5/100 程2 嘲讽）。
@@ -7005,6 +7074,10 @@ func _credit_kill(victim: Placement) -> void :
 	var killer:= state.unit_at(victim.last_hit_by)
 	if killer == null or killer.owner == victim.owner:
 		return
+	# R150 赫菲斯托斯「亲手击杀 → 锻造量产型俄倪厄」。
+	# ⚠️ 必须排在骑士那条 `if not ... has(KNIGHT_TRAIT): return` **之前** ——
+	#    那条一 return，Boss 的击杀效果就永远走不到。
+	_heph_kill_forge(killer)
 	if not killer.card.traits.has(KNIGHT_TRAIT):
 		return
 	killer.atk_buff += KNIGHT_KILL_BUFF
@@ -7367,6 +7440,16 @@ func attack_distance(from: Vector2i, to: Vector2i, side: String, card: CardData)
 	return manhattan(from, to)
 
 
+func eff_range(cell: Vector2i, c: CardData) -> int:
+	## 攻击距离（R150）：卡面射程 + **只在场上有效**的加成（赫菲斯托斯的锻造成长）。
+	## ⚠️ 统一走这个口 —— 直接读 `card.attack_range` 会漏掉场上加成，于是
+	##    「AI 以为够得着、UI 说够不着」（或反过来）就有了温床。
+	var p:= state.unit_at(cell)
+	if p != null and p.card == c:
+		return p.effective_range()
+	return 0 if c == null else c.attack_range
+
+
 func attack_targets(cell: Vector2i, side:= "", card: CardData = null) -> Array[Vector2i]:
 
 	var s:= side
@@ -7382,7 +7465,7 @@ func attack_targets(cell: Vector2i, side:= "", card: CardData = null) -> Array[V
 	var result: Array[Vector2i] = []
 	for other: Vector2i in state.board:
 		var q: Placement = state.board[other]
-		if q.owner != s and attack_distance(cell, other, s, c) <= c.attack_range:
+		if q.owner != s and attack_distance(cell, other, s, c) <= eff_range(cell, c):
 			result.append(other)
 	return result
 
@@ -7409,7 +7492,7 @@ func hp_targets(cell: Vector2i, side:= SIDE_SELF, card: CardData = null) -> Arra
 		var t:= Vector2i(row, col)
 		if state.board.has(t):
 			continue
-		if attack_distance(cell, t, side, c) <= c.attack_range:
+		if attack_distance(cell, t, side, c) <= eff_range(cell, c):
 			result.append(t)
 	return result
 
@@ -8493,7 +8576,7 @@ func ai_action_queue() -> Array[Vector2i]:
 	var promoted: Array[Vector2i] = []
 	for cell in cells:
 		var p: Placement = state.board[cell]
-		if p.card.attack_range >= 2 and _clear_shot_target(cell, p) != null:
+		if p.effective_range() >= 2 and _clear_shot_target(cell, p) != null:
 			promoted.append(cell)
 	if promoted.is_empty():
 		return cells
@@ -8700,7 +8783,7 @@ func _hp_cells_open(cell: Vector2i, p: Placement, cleared: Array = []) -> Array[
 		var t:= Vector2i(row, col)
 		if state.board.has(t) and not cleared.has(t):
 			continue
-		if attack_distance(cell, t, p.owner, c) <= c.attack_range:
+		if attack_distance(cell, t, p.owner, c) <= eff_range(cell, c):
 			out.append(t)
 	return out
 
@@ -8786,7 +8869,7 @@ func _blocks_front_ally(t: Vector2i, sniper_cell: Vector2i) -> bool:
 			continue
 		if fcell.x <= sniper_cell.x:
 			continue
-		if manhattan(fcell, t) <= f.card.attack_range:
+		if manhattan(fcell, t) <= f.effective_range():
 			return true
 		if f.effective_speed() > 0:
 			var base:= _wall_depth(fcell, f)
@@ -8800,7 +8883,7 @@ func _clear_shot_target(cell: Vector2i, p: Placement) -> Variant:
 	## 「能一击打死、且挡在前排友军路上」的我方卡。有则返回该目标格；没有返回 null。
 	## ai_action_queue（先出手排序）与 _ai_target_choice（目标优先级）共用这个判断，
 	## 保证「先出手」的单位确实去打那张挡路卡。
-	if p.card.attack_range < 2:
+	if p.effective_range() < 2:
 		return null
 	var targets:= legal_attack_targets(cell, SIDE_OPPONENT, p.card)
 	if targets.is_empty():
@@ -8865,7 +8948,7 @@ func _ai_best_step(cell: Vector2i, p: Placement) -> Variant:
 func _engage_distance(cell: Vector2i, p: Placement) -> int:
 	## 接战距离：从 cell 出发走到「能攻击到某个我方单位」的位置要几步。
 	## BFS 把被占用的格子当墙（真实走位）—— 打不到 HP 时也会绕过障碍贴向敌人破局。
-	var atk_range:= p.card.attack_range
+	var atk_range:= p.effective_range()
 	var foes: Array[Vector2i] = []
 	for c: Vector2i in state.board:
 		var q: Placement = state.board[c]
@@ -8901,7 +8984,7 @@ func _hp_pos_distance(cell: Vector2i, p: Placement) -> int:
 
 
 	var row:= back_row(SIDE_SELF)
-	var atk_range:= p.card.attack_range
+	var atk_range:= p.effective_range()
 	var seen:= {cell: true}
 	var queue: Array = [[cell, 0]]
 	while not queue.is_empty():

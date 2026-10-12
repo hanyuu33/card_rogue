@@ -59,6 +59,18 @@ var sleep_left: int = 0       # 沉睡（恶魔鸭 9116）：还要睡几点（>
 ## ⚠️ 递减口只有一处（`GameEngine._fuse_tick`，我方回合结束），且**不是亡语** ——
 ##    被提前打掉时 `fuse_left` 随单位一起消失，什么都不会留下。
 var fuse_left: int = 0
+## 「锻造」（赫菲斯托斯 9135，R150，第二层 Boss）：
+##   * `forge_period` —— 连续**几个我方回合**没能亲手击杀就会成长（上场时由
+##     `place()` 按 trait「锻造」**唯一初始化**，0 = 不带这个机制）；
+##   * `forge_idle` —— 已经空转了几个我方回合（亲手击杀即清零）；
+##   * `forge_range` —— 已累计的**攻击距离**加成（每满 period 一次 +1）。
+## ⚠️ 同 R111 暗影领主 / R149 铸造：只记在 Placement、**绝不烤进 CardData** ——
+##    关卡敌方单位用的是卡库共享实例（battle_scene 直接 `repo.get_card`），
+##    直接改 `card.attack_range` 会把加成写进卡库、跨局泄漏。
+##    力量那一半走 `atk_buff`（与鸭子骑士同口径：永久累计、无上限），所以这里只存射程。
+var forge_period: int = 0
+var forge_idle: int = 0
+var forge_range: int = 0
 ## 「暗影领主」（鸭之暗面 9124，R111）：每个**存活的鸭子暗杀者**给它 +3 力 +1 速。
 ## ⚠️ 只记在 Placement 上、**绝不烤进 CardData** —— 敌方关卡单位用的是卡库共享实例，
 ## 直接改 card 会把加成写进卡库、跨局泄漏（R111 特意不走 R101 那条 `p.card.move_speed +=` 的路）。
@@ -85,6 +97,16 @@ func effective_speed() -> int:
 	if card == null:
 		return 0
 	return maxi(0, card.move_speed + dark_lord_speed)
+
+
+func effective_range() -> int:
+	## 实际攻击距离（R150）：卡面射程 + **只在场上有效**的加成（赫菲斯托斯的锻造成长）。
+	## 与 `effective_power` / `effective_speed` 对称：**不写回 card**。
+	## ⚠️ 引擎里凡是判断「够不够得着」的地方都要走这个口（或 `GameEngine.eff_range`），
+	##    别再直接读 `card.attack_range` —— 那个不含场上加成。
+	if card == null:
+		return 0
+	return maxi(0, card.attack_range + forge_range)
 
 
 ## 【R106】这张卡**此刻已获得**的增益 / 减益，逐条列出（一条一个 Dictionary）。
@@ -150,6 +172,10 @@ func status_entries() -> Array[Dictionary]:
 	if fuse_left > 0:
 		out.append({"label": "铸造：还剩 %d 个我方回合 → 原地变钢铁要塞" % fuse_left,
 				"col": COL_I, "kind": "info"})
+	if forge_period > 0:
+		out.append({"label": "锻造：空转 %d/%d 个我方回合 → 已 +%d 力、+%d 程（亲手击杀则清零）"
+				% [forge_idle, forge_period, forge_range, forge_range],
+				"col": COL_I, "kind": "info"})
 
 	# ---------------- 减益 ----------------
 	if debuff > 0:
@@ -189,4 +215,6 @@ func status_badges() -> Array[Dictionary]:
 		out.append({"text": "禁足", "col": Color("8a6d1f")})
 	if guarding:
 		out.append({"text": "守护", "col": Color("2f8f4f")})
+	if forge_period > 0:
+		out.append({"text": "锻 %d/%d" % [forge_idle, forge_period], "col": Color("ff7043")})
 	return out

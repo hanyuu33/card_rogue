@@ -334,6 +334,11 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	# FUSE_TURNS，与卡面 effect_text 写的是同一句话 —— 改一处必须一起改。
 	if card.traits.has(GameEngine.FUSE_TRAIT):
 		p.fuse_left = GameEngine.FUSE_TURNS
+	# 锻造（赫菲斯托斯 9135，R150）：带「锻造」trait 的单位一上场就挂上空转计数。
+	# 同样放在 place 里 = **唯一初始化口**（与沉睡 / 铸造同一套路）；周期取引擎常量
+	# FORGE_PERIOD，与卡面 effect_text 写的是同一句话 —— 改一处必须一起改。
+	if card.traits.has(GameEngine.FORGE_TRAIT):
+		p.forge_period = GameEngine.FORGE_PERIOD
 	# 能量屏障（8033，R87）：带该 trait 的单位一上场就获得「首次受伤免掉」的一次性护盾。
 	# 放在 place 里 = **唯一初始化口**，于是无论它是手牌打出来的、关卡摆位的、
 	# 还是效果卡召唤出来的，都一致（漏了某条路径 = 那条路径出来的没有护盾）。

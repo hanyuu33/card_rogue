@@ -4130,7 +4130,7 @@ func _on_hover(pos: Vector2) -> void:
 			_hover_card = p.card
 			_hover_pl = p
 			tip = "%s 力%d 生%d 程%d 速%d" % [p.card.card_name,
-					p.effective_power(), p.health, p.card.attack_range, p.effective_speed()]
+					p.effective_power(), p.health, p.effective_range(), p.effective_speed()]
 			# R68：冰封 / 禁足是看不见的状态，悬停时直接说明「为什么它动不了」
 			if p.frozen:
 				tip += "　❄ 冰封（本回合不能行动）"
@@ -8459,8 +8459,9 @@ func _draw_info_panel() -> void:
 		_draw_string_nw(_font_bold, UiTheme.FS_MICRO, "生命 %s" % hp_txt, Vector2(left + inner_w / 2, y),
 				UiTheme.STAT_HEALTH)
 		y += 17.0
-		var mv: String = "射程 %d   移速 %d" % [card.attack_range, card.move_speed] \
-				if card.kind == "盟友" else "射程 %d" % card.attack_range
+		var rng_shown := pl.effective_range() if pl != null else card.attack_range
+		var mv: String = "射程 %d   移速 %d" % [rng_shown, card.move_speed] \
+				if card.kind == "盟友" else "射程 %d" % rng_shown
 		_draw_string_nw(_font, UiTheme.FS_MICRO, mv, Vector2(left, y), UiTheme.INK_600)
 		y += 17.0
 	if card.actions > 1:

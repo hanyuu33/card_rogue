@@ -75,13 +75,14 @@ static func level_names() -> Array[String]:
 
 static func builtin_levels() -> Array:
 	## 按分级从低到高：普通简单×7（第一层 4 + 第二层 3）→ 普通困难×5（第一层 2 + 第二层 3）→
-	## 精英简单×3 → 精英困难×4（第一层 2 + 第二层 2）→ Boss×4（两层各 2）。
+	## 精英简单×3 → 精英困难×4（第一层 2 + 第二层 2）→ Boss×5（第一层 2 + 第二层 3）。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_white_mage_guard(), _night_ducks(),
 			_knight_charge(), _wizard(), _duck_kiln(), _sun_forge(),
 		_captain(), _captain_wizard(), _legion(), _breath_charge(), _frost_line(), _undead_legion(), _dragon_nest(),
-		_mech_giant(), _steel_fortress(), _boss_dragon(), _boss_demon_duck(), _mech_duck_boss(), _boss_duck_darkside()]
+		_mech_giant(), _steel_fortress(), _boss_dragon(), _boss_demon_duck(), _mech_duck_boss(), _boss_duck_darkside(),
+		_hephaestus()]
 
 
 static func layer_of(level: Dictionary) -> int:
@@ -483,6 +484,36 @@ static func _boss_duck_darkside() -> Dictionary:
 			[9124, "鸭之暗面", 9, 150, 1, 1, Vector2i(0, 1)],
 		],
 		"enemy_effects": [9125],
+		"tutorial": [],
+	}
+
+
+static func _hephaestus() -> Dictionary:
+	## 第二层 Boss「赫菲斯托斯工坊」（R150）：后排中央一只赫菲斯托斯（9135，5/120 程1 速1）。
+	## 它带 trait「锻造」，两条效果都由引擎在**唯一口**结算：
+	##   * **亲手击杀**我方单位 → 在**己方半场随机空格**锻造一只量产型俄倪厄（9131，5/30）
+	##     （挂 `_credit_kill`），并**清零**空转计数 —— 它一直在杀就一直不变强；
+	##   * 连续 3 个**我方回合**没能亲手击杀 → 力量 +1、攻击距离 +1（挂 `_forge_tick`，
+	##     永久累计、无上限）。
+	## 打法：一味往前顶着送头 = 它一直在生小兵；缩着完全不接触 = 每 3 回合自己长 1 力
+	##   1 程、射程越来越难躲。中间路线是**压住血线但别让它拿到最后一刀** —— 击杀那一下
+	##   由别的来源打出（法术 / 陷阱 / 溢出）就不会触发锻造。
+	return {
+		"name": "赫菲斯托斯工坊",
+		"key": "hephaestus_forge",
+		"tier": TIER_BOSS,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"intro": "……铁砧还热着。",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9135, "赫菲斯托斯", 5, 120, 1, 1, Vector2i(0, 1)],
+		],
 		"tutorial": [],
 	}
 
