@@ -189,7 +189,7 @@ const CARD_FS_BADGE := 12.0
 ## ⚠️ 这个值不是「好看就行」：下半要同时装下**卡名 + 种类·字段 + 效果文字**三样。
 ## 数值不占内部空间（它们骑在卡框上，见 `CARD_BLEED`），所以 0.50 是安全的；
 ## 但 R114 实测 0.52 时 k=1.7 的手牌上「种类」会被挤掉 —— 想调大先按最坏情况算一遍。
-const CARD_ART_RATIO := 0.50
+const CARD_ART_RATIO := 0.745  ## R153：对齐 card_paper.png v2 底图的分隔金条（PIL 实测 0.742）
 const CARD_PAD := 3.0             ## 卡面内距（基准）
 ## 数值图标半径（基准）。R117 从 8.5 提到 9.2 —— 战场卡 k ≈ 1.086
 ## → 实到 10.0（**直径 20**，正是用户口径「徽章直径 17 → 约 20」）。
@@ -313,6 +313,12 @@ const RARITY_STARTER := Color("1d7a4f")  ## 3 初始
 const RARITY_MONSTER := Color("7a1f1f")  ## 4 怪物
 const RARITY_EVENT := Color("a44ad0")    ## 5 事件
 
+# ── 职业色（CardData.card_class → 卡面左侧竖条，R153）──
+const CLASS_DRUID := Color("3a7d44")   ## 森林精魄 自然绿
+const CLASS_ROGUE := Color("5b3a8e")   ## 暗影刺客 幽紫
+const CLASS_MECH := Color("b8860b")    ## 机械之心 黄铜
+const CLASS_ENEMY := Color("7a1f1f")   ## 敌人 暗红
+
 # ── 强调 / 状态 ──
 const ACCENT_GOLD := Color("c8951c")  ## 装饰 / 描边
 const ACCENT_LIT := Color("f2c14e")   ## 高亮 / 奖励
@@ -367,6 +373,20 @@ static func draw_gear(cv: CanvasItem, center: Vector2, r_out: float,
 		pts.append(center + Vector2.from_angle(a + step * 0.36) * r_in)
 	cv.draw_colored_polygon(pts, col)
 	cv.draw_circle(center, r_out * 0.36, hole)
+
+
+static func class_color(card_class: String) -> Color:
+	## 职业 → 左侧竖条颜色。**唯一口**（R153）。中立卡（""）返回透明（调用方跳过）。
+	match card_class:
+		"森林精魄":
+			return CLASS_DRUID
+		"暗影刺客":
+			return CLASS_ROGUE
+		"机械之心":
+			return CLASS_MECH
+		"敌人":
+			return CLASS_ENEMY
+	return Color(0, 0, 0, 0)
 
 
 static func kind_color(kind: String) -> Color:

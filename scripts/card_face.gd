@@ -36,6 +36,12 @@ class_name CardFace
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const CARD_H_DESIGN := 70.0   # 缩放基准高（battle 版小卡高）
+# R153 卡面 v2：card_paper.png 底图内框（卡图窗）的归一化矩形（PIL 从底图实测）。
+# 卡图画在这个窗里；名字/种类/效果文字在金线分隔之下、名称条（中心 ≈0.78）往下排。
+const ART_WIN_X0 := 0.065
+const ART_WIN_Y0 := 0.085
+const ART_WIN_X1 := 0.935
+const ART_WIN_Y1 := 0.715
 
 static var _art_cache := {}   # id -> Texture2D / null（找不到图也缓存，避免反复查盘）
 
@@ -135,20 +141,33 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 			var glow := UiTheme.SELECT_RING
 			glow.a = 0.42 - 0.11 * gi
 			canvas.draw_rect(rect.grow(1.0 + gi), glow, false, 1.0)
-	# ③ 边框：素材槽 assets/ui/frame_<稀有度>.png 优先，缺图回退色描边
-	var frame_tex: Texture2D = UiAssets.card_frame(card.rarity)
-	if frame_tex != null:
-		canvas.draw_texture_rect(frame_tex, rect, false)
-	else:
-		canvas.draw_rect(rect, card.rarity_color(), false, 2.0 if selected else 1.5)
+	# ③ 边框 + 角标（R153）：底图自带金线外框，稀有度走**程序描边 2.5px**（稀有度色，
+	#    唯一视觉通道）+ 右上角小旗（同色）—— 不再用 frame_*.png 素材（v2 底图自带装饰框，
+	#    再叠一层素材框会盖住底图的卷草纹）。
+	var rar_col: Color = card.rarity_color()
+	canvas.draw_rect(rect, rar_col, false, maxf(1.5, 2.0 * k))
+	var flag_w: float = 5.0 * k
+	var flag_h: float = 9.0 * k
+	var fx: float = rect.end.x - UiTheme.CARD_PAD * k - flag_w
+	var fy: float = rect.position.y + UiTheme.CARD_PAD * k
+	var flag := PackedVector2Array([
+			Vector2(fx, fy), Vector2(fx + flag_w, fy),
+			Vector2(fx + flag_w, fy + flag_h),
+			Vector2(fx + flag_w / 2.0, fy + flag_h * 0.72),
+			Vector2(fx, fy + flag_h)])
+	canvas.draw_colored_polygon(flag, rar_col)
+	# ③b 职业色条（R153）：卡面**左侧 3px 竖条**（CardData.card_class），中立卡（class 为空）不画。
+	#    它是「一眼区分职业」的新通道 —— 稀有度给边框，职业给侧边，两条不抢。
+	var cls_col: Color = UiTheme.class_color(card.card_class)
+	if cls_col.a > 0.01:
+		canvas.draw_rect(Rect2(rect.position.x + 2.0 * k, rect.position.y + 2.0 * k,
+				3.0 * k, rect.size.y - 4.0 * k), cls_col)
 	# ④ 卡图区（上半）
 	_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold)
 	# ⑤ 卡图与文字区的分隔线
+	# ⚠️ R153：v2 底图**自带金线分隔**（CARD_ART_RATIO 0.745 处的金条），不再手画灰线。
 	# ⚠️ R122：**横置时不画** —— 那时卡图铺满整卡（见 _draw_art），横一道线很突兀。
 	var sep_y: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
-	if not is_tapped:
-		canvas.draw_line(Vector2(rect.position.x + pad * 0.5, sep_y),
-				Vector2(rect.end.x - pad * 0.5, sep_y), UiTheme.INK_300, maxf(1.0, 0.6 * k))
 	# ⑥ 文字区（下半）
 	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold, on_board, is_tapped)
 	# ⑦ 数值徽章 —— 最后画，压在卡图与文字之上（「额外挂载」的字面意思）
@@ -159,9 +178,9 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 		is_tapped: bool, font_bold: Font) -> void:
 	## 卡图区 = 卡片的**上半部分**（R114 起。此前是「顶部让出名字行、底部让出三行数值」，
 	## 58×70 的小卡只剩 50×22 的窄条，卡图几乎是装饰）。
-	var art_h: float = rect.size.y * UiTheme.CARD_ART_RATIO - pad
-	var box := Rect2(rect.position + Vector2(pad, pad),
-			Vector2(rect.size.x - pad * 2.0, art_h))
+	# R153：卡图区 = 底图卡图窗的**内沿矩形**（归一化常量，见 ART_WIN_*）。
+	var box := Rect2(rect.position + Vector2(rect.size.x * ART_WIN_X0, rect.size.y * ART_WIN_Y0),
+			Vector2(rect.size.x * (ART_WIN_X1 - ART_WIN_X0), rect.size.y * (ART_WIN_Y1 - ART_WIN_Y0)))
 	if box.size.x < 6.0 or box.size.y < 6.0:
 		return
 	if is_tapped:
