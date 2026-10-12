@@ -142,7 +142,7 @@ func _on_back_to_title() -> void:
 	ReplayLog.stop_playback()
 	if RunState.run_active:
 		RunState.end_run()
-	get_tree().change_scene_to_file("res://scenes/title.tscn")
+	SceneFx.goto("res://scenes/title.tscn")
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -179,6 +179,6 @@ func _choose(id: int) -> void:
 	RunState.choose_start_relic(id)
 	if RunState.pending_relic > 0:
 		# 即时道具需要再选一张卡（源数之力 / 失忆药水）
-		get_tree().change_scene_to_file("res://scenes/deck_edit.tscn")
+		SceneFx.goto("res://scenes/deck_edit.tscn")
 	else:
-		get_tree().change_scene_to_file("res://scenes/map.tscn")
+		SceneFx.goto("res://scenes/map.tscn")

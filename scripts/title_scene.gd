@@ -174,11 +174,11 @@ func _on_start() -> void:
 	## 开始肉鸽 run：先选角色（角色决定初始卡组追加卡 + 战斗赠品道具）→
 	## 满血 + 初始卡组 + 生成 14 层地图（第一层，含第 6 层宝箱层 + 第 9 层固定休息层）→ 进冒险地图。
 	## 地图层级决定本局出现的战斗关卡与事件（见 GameLayers）。
-	get_tree().change_scene_to_file("res://scenes/class_pick.tscn")
+	SceneFx.goto("res://scenes/class_pick.tscn")
 
 
 func _on_gallery() -> void:
-	get_tree().change_scene_to_file("res://scenes/gallery.tscn")
+	SceneFx.goto("res://scenes/gallery.tscn")
 
 
 func _on_quit() -> void:
@@ -186,4 +186,4 @@ func _on_quit() -> void:
 
 
 func _on_replays() -> void:
-	get_tree().change_scene_to_file("res://scenes/replay_list.tscn")
+	SceneFx.goto("res://scenes/replay_list.tscn")

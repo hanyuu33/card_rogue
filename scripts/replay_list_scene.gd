@@ -144,7 +144,7 @@ func _back_to_title() -> void:
 	## 再切场景 —— 否则中途退出回放会留下一份「正在播放」的录像。
 	if ReplayLog.playing:
 		ReplayLog.stop_playback()
-	get_tree().change_scene_to_file("res://scenes/title.tscn")
+	SceneFx.goto("res://scenes/title.tscn")
 
 
 func _play(path: String) -> void:
@@ -162,7 +162,7 @@ func _play(path: String) -> void:
 	# 角色名走 legacy_id：旧录像 meta 里存的是改名前的「德鲁伊 / 游荡者」
 	RunState.start_run([], GameLayers.LAYER_DEFAULT,
 			PlayerClass.legacy_id(str(meta.get("class", PlayerClass.default_id()))))
-	get_tree().change_scene_to_file("res://scenes/map.tscn")
+	SceneFx.goto("res://scenes/map.tscn")
 
 
 # ------------------------------------------------------------ 绘制

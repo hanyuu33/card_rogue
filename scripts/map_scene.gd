@@ -22,6 +22,7 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const MapBridge = preload("res://scripts/map_bridge.gd")
+const UiRoll = preload("res://scripts/ui_roll.gd")
 
 const CELL := 118.0                  # 格子边长（正方形，相邻格共享边）
 const MAP_W := 826.0                 # 7 × 118
@@ -101,6 +102,7 @@ var _mouse := Vector2.ZERO
 var _records_visible := false
 var _records_scroll := 0.0
 var _records: Array = []
+var _shot := false            # --screenshot 探针钉帧（R151：滚动类动画一律钉死）
 var _deck_visible := false
 var _deck_scroll := 0.0
 var _deck_rows: Array = []
@@ -127,6 +129,7 @@ var _anim_hold := false          # 演示用：停在过场末尾不真的进入
 func _ready() -> void:
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
+	_shot = "--screenshot" in OS.get_cmdline_user_args()
 	sfx = Sfx.new()
 	add_child(sfx)
 	_records = RunState.load_records()
@@ -154,13 +157,13 @@ func _ready() -> void:
 	# 会立刻把场景切走 → 截图截到的是别的界面（甚至什么都截不到）。
 	if "--screenshot" not in OS.get_cmdline_user_args():
 		if RunState.run_active and not RunState.relic_choice.is_empty():
-			get_tree().change_scene_to_file.call_deferred("res://scenes/relic_pick.tscn")
+			SceneFx.goto("res://scenes/relic_pick.tscn", true)
 			return
 		if RunState.run_active and RunState.pending_relic > 0:
-			get_tree().change_scene_to_file.call_deferred("res://scenes/deck_edit.tscn")
+			SceneFx.goto("res://scenes/deck_edit.tscn", true)
 			return
 		if RunState.run_active and RunState.pending_deck_edit != "":
-			get_tree().change_scene_to_file.call_deferred("res://scenes/deck_edit.tscn")
+			SceneFx.goto("res://scenes/deck_edit.tscn", true)
 			return
 	# R148：上栏原来挂着「回到标题 / 战斗记录 / 查看卡组」三个 chip —— 全部收进
 	# Esc 菜单（点齿轮或按 Esc 打开），上栏只留**一个齿轮**。
@@ -378,10 +381,10 @@ func _commit_enter(cell: Dictionary) -> void:
 	match dtype:
 		"battle", "elite":
 			RunState.pending_level = RunState.next_level(cell)
-			get_tree().change_scene_to_file("res://scenes/battle.tscn")
+			SceneFx.goto("res://scenes/battle.tscn")
 		"rest", "event":
 			# 事件房不再遭遇战斗：本层事件池已去掉「遭遇怪物」（见 GameLayers）。
-			get_tree().change_scene_to_file("res://scenes/event.tscn")
+			SceneFx.goto("res://scenes/event.tscn")
 		"chest":
 			# 普通宝箱：一次卡牌奖励（就地弹奖励悬浮窗，不切界面）
 			RunState.queue_card_reward("normal")
@@ -442,7 +445,7 @@ func _start_boss_battle() -> void:
 	RunState.boss_pending = false
 	RunState.pending_level = RunState.boss_level()
 	RunState.pending_node = {"type": "boss"}
-	get_tree().change_scene_to_file("res://scenes/battle.tscn")
+	SceneFx.goto("res://scenes/battle.tscn")
 
 
 func _boss_label() -> String:
@@ -709,7 +712,9 @@ func _draw_choco_icon(box: Rect2, alpha: float = 1.0) -> void:
 
 func _draw_chocolate() -> void:
 	## 每层行动力：图标 + ×N（素材在左，数量在右 —— 用户口径）。
-	var n := RunState.chocolate
+	## R151 P0-3：数量滚动（战斗/事件回来少了一块时从旧值滚到新值）；
+	## 变化量反馈已有 R131 的「-1 小牌」过场，这里只补滚动。
+	var n := _choco_shown()
 	var rect := _choco_panel_rect()
 	draw_rect(rect, COL_PANEL, true)
 	draw_rect(rect, COL_PANEL_LINE, false, 1.2)
@@ -724,6 +729,15 @@ func _draw_chocolate() -> void:
 		var hc: Dictionary = RunState.map_cells[_hover_id]
 		if _is_available(hc) and not _visited(hc) and hc["type"] != "start":
 			_draw_cost_tip()
+
+
+func _choco_shown() -> int:
+	## 巧克力计数的显示值：探针钉帧（--screenshot）直接钉死，否则走滚动唯一口。
+	var target := float(RunState.chocolate)
+	if _shot:
+		UiRoll.snap("map.choco", target)
+		return roundi(target)
+	return roundi(UiRoll.value("map.choco", target))
 
 
 func _draw_cost_tip() -> void:
@@ -1101,7 +1115,7 @@ func _on_back_to_title() -> void:
 	if ReplayLog.recording:
 		ReplayLog.finish("quit")
 	ReplayLog.stop_playback()
-	get_tree().change_scene_to_file("res://scenes/title.tscn")
+	SceneFx.goto("res://scenes/title.tscn")
 
 
 func _draw_menu_gear() -> void:

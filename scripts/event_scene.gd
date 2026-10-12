@@ -782,7 +782,7 @@ func _on_main() -> void:
 		_claim_reward(rest_btn)   # R147：删卡也是「本次唯一的一份奖励」
 		RunState.complete_current()
 		RunState.pending_deck_edit = "delete"
-		get_tree().change_scene_to_file("res://scenes/deck_edit.tscn")
+		SceneFx.goto("res://scenes/deck_edit.tscn")
 		return
 	if _is_smith():
 		if _smith_done:
@@ -796,7 +796,7 @@ func _on_main() -> void:
 		_claim_reward(rest_btn)   # R147：锻造也算「本次唯一的一份奖励」
 		RunState.complete_current()
 		RunState.pending_deck_edit = "smith"
-		get_tree().change_scene_to_file("res://scenes/deck_edit.tscn")
+		SceneFx.goto("res://scenes/deck_edit.tscn")
 		return
 	if _is_relic_chest():
 		if _chest_opened:
@@ -1068,9 +1068,9 @@ func _on_leave() -> void:
 	ReplayLog.ev("event_leave")   # 录像：离开事件
 	if RunState.run_active:
 		RunState.complete_current()   # 事件/休息完成 → 节点标记完成
-		get_tree().change_scene_to_file("res://scenes/map.tscn")
+		SceneFx.goto("res://scenes/map.tscn")
 	else:
-		get_tree().change_scene_to_file("res://scenes/title.tscn")
+		SceneFx.goto("res://scenes/title.tscn")
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -1102,7 +1102,7 @@ func _on_back_to_title() -> void:
 	ReplayLog.stop_playback()
 	if RunState.run_active:
 		RunState.end_run()
-	get_tree().change_scene_to_file("res://scenes/title.tscn")
+	SceneFx.goto("res://scenes/title.tscn")
 
 
 func _unhandled_input(event: InputEvent) -> void:

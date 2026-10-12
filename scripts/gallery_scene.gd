@@ -295,7 +295,7 @@ func _refresh_detail() -> void:
 # ------------------------------------------------------------ 信号
 
 func _on_back() -> void:
-	get_tree().change_scene_to_file("res://scenes/title.tscn")
+	SceneFx.goto("res://scenes/title.tscn")
 
 
 func _on_group_toggled(on: bool, g: String) -> void:

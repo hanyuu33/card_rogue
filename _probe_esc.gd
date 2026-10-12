@@ -21,7 +21,7 @@ var _bad := 0
 
 
 func _initialize() -> void:
-	change_scene_to_file("res://scenes/battle.tscn")
+	SceneFx.goto("res://scenes/battle.tscn", true)   # R151：场景切换唯一口；探针引导走 instant
 
 
 func _process(_delta: float) -> bool:

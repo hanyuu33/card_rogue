@@ -14,6 +14,7 @@ extends Control
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 const MapBridge = preload("res://scripts/map_bridge.gd")
+const UiRoll = preload("res://scripts/ui_roll.gd")
 
 const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
@@ -303,6 +304,19 @@ var _ghosts: Array = []         # {center, name, start, dur}                  �
 var _dying: Array = []          # {cell, card, p, hide_at}                    已归零但仍要显示到命中时刻的卡
 var _floaters: Array = []       # {pos, text, col, start, dur}                伤害/治疗飘字
 var _flashes := {}              # Placement -> {col, start, dur}              受击闪色覆盖
+# R151 批 1（动效设计 §三）：手牌因果动画 —— 抽牌飞入（P0-1）/ 弃牌·消耗飞出（P0-2）
+var _hand_fly: Array = []       # {mode:"in"|"out_d"|"out_v"|"fade", card?, from/from_rect, slot?, start, dur}
+var _hand_known: Array = []     # 手牌 id 快照（保序双指针 diff，见 _hand_sync）
+var _hand_known_init := false   # 首次 sync 只建快照不播（开场发牌不飞，留给巡场）
+var _flyout_skip: Array = []    # 本帧「是打出不是消失」的卡 id（place/spell/effect 事件喂入，sync 消费并清空）
+var _flyout_skip_all := false   # batch_transfer（手牌洗回牌库）：整批移除不播飞出
+var _flyin_skip: Array = []     # 本帧「来源不是抽牌堆」的入手卡 id（swap 顶回手）
+var _earring_missed := 0        # 耳环连出期间压下的飞出数（>3 → 收尾合并一次整体淡出）
+var _void_known := 0            # void_count 快照：增量 = 这段时间被「消耗」的张数（飞出改上飞）
+# R151 批 1 · P0-4：出牌落位 —— 「place」事件用它把 _slides 的 from 换成真实松手/手牌位置
+var _place_from := {}           # {pos, card_id, at}；_finish_play 武装，"place" 事件消费
+# R151 批 1 · P0-3：能量变化量飘字（HP 掉血已有飘字体系，能量原来什么都没有）
+var _energy_known := -1
 var _hp_pending: Dictionary = {} # 尚未在「命中演出」中体现的待扣生命：
 								 #   单位卡面 / HP 横幅 把显示数字冻结在「实际值 + 未演出伤害之和」，
 								 #   等对应的 hit / hp_hit 定时特效触发时才移除这一笔，数字才往下掉。
@@ -441,6 +455,45 @@ func _ready() -> void:
 		engine.self_relics = [6016, 6018]
 		engine.apply_battle_start_relics(repo)
 		status_text = "第二层起始道具：生蛋鸭（开场鸭蛋）+ 冰淇淋与汽水（开场 -3 生命）"
+		queue_redraw()
+	if "--handfly" in args and engine != null:
+		# R151 演示：P0 手牌因果动画钉在飞行中段（dur 拉长 → 慢帧截图也截得到）。
+		# 出图命令：`-- --screenshot --level 0 --handfly --shotframe 20`
+		var hf_n := _now()
+		# ① P0-4 落位：走真实武装 + 出牌路径，再把 slide 拉长钉住（from_scale 视觉）
+		var play_idx := -1
+		for hi in engine.state.hand.size():
+			var hc: CardData = engine.state.hand[hi]
+			if (hc.kind == "盟友" or hc.is_fort()) and engine.cost_of(hc) <= engine.state.energy:
+				play_idx = hi
+				break
+		if play_idx >= 0 and engine.state.unit_at(Vector2i(4, 1)) == null:
+			_place_from = {"pos": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 60),
+					"card_id": (engine.state.hand[play_idx] as CardData).id, "at": hf_n}
+			engine.play_from_hand(play_idx, Vector2i(4, 1))
+			var placed: Placement = engine.state.unit_at(Vector2i(4, 1))
+			if placed != null and _slides.has(placed):
+				_slides[placed]["start"] = hf_n - 60
+				_slides[placed]["dur"] = 180000
+		# ② P0-1/2：飞入卡背 ×2 + 弃牌飞出 + 消耗上飞（t 钉在 ~0.35）
+		_hand_known = []
+		for c in engine.state.hand:
+			_hand_known.append(c.id)
+		_hand_known_init = true
+		var hn: int = engine.state.hand.size()
+		if hn >= 1:
+			_hand_fly.append({"mode": "in", "card": engine.state.hand[0],
+					"from": Vector2(DECK_X + CARD_W / 2.0, DECK_Y + CARD_H / 2.0),
+					"slot": 0, "start": hf_n - 21000, "dur": 60000})
+		if hn >= 2:
+			_hand_fly.append({"mode": "out_d", "card": engine.state.hand[1],
+					"from_rect": _hand_old_rect(maxi(hn, 4), 2),
+					"start": hf_n - 21000, "dur": 60000})
+		if hn >= 3:
+			_hand_fly.append({"mode": "out_v", "card": engine.state.hand[2],
+					"from_rect": _hand_old_rect(maxi(hn, 4), 1),
+					"start": hf_n - 21000, "dur": 60000})
+		status_text = "演示：手牌飞行动画钉帧（飞入 ×1 / 弃牌 ×1 / 消耗 ×1 / 落位缩放 ×1）"
 		queue_redraw()
 	if "--icecream" in args and engine != null:
 		# 演示：冰淇淋与汽水（6016）—— 第 1 回合 +4 能量 / 多抽 3 张 → 台词飘字。
@@ -1940,7 +1993,7 @@ func _net_disconnect() -> void:
 	var t := Timer.new()
 	t.wait_time = 2.0
 	t.one_shot = true
-	t.timeout.connect(func(): get_tree().change_scene_to_file("res://scenes/title.tscn"))
+	t.timeout.connect(func(): SceneFx.goto("res://scenes/title.tscn"))
 	add_child(t)
 	t.start()
 
@@ -1955,7 +2008,7 @@ func _on_back_to_title() -> void:
 	if _net_mode:
 		_net_send({"type": "bye"})
 	NetSession.clear()
-	get_tree().change_scene_to_file("res://scenes/title.tscn")
+	SceneFx.goto("res://scenes/title.tscn")
 
 
 func _refresh_bg_texture() -> void:
@@ -2969,7 +3022,7 @@ func _finish_drag(pos: Vector2) -> void:
 				_say("能量不足：%s 需要 %d，当前能量 %d" % [
 						card.card_name, engine.cost_of(card), engine.energy_of()])
 				return
-			_try_play_hand_card(i, drop)   # 英雄要先付「弃 4 张」的代价
+			_try_play_hand_card(i, drop, pos)   # 英雄要先付「弃 4 张」的代价；pos = 松手点（P0-4 落位起点）
 		elif engine.fence_merge_allowed(card):
 			_say("%s：拖到绿色空格；或拖到橙色「叠」格与已有栅栏合并（已取消）" % card.card_name)
 		else:
@@ -3075,13 +3128,13 @@ func _cast_spell(i: int, cell: Vector2i, card: CardData) -> void:
 
 # ------------------------------------------------------------ 英雄（9023）的弃牌代价
 
-func _try_play_hand_card(i: int, cell: Vector2i) -> void:
+func _try_play_hand_card(i: int, cell: Vector2i, from_pos := Vector2.ZERO) -> void:
 	## 手牌落到自己半场空格：普通卡直接上场；
 	## 「英雄」这类有额外代价的卡 → 先弹「选择 N 张手牌丢弃」面板，由玩家自己挑。
 	var card := engine.state.hand[i]
 	var need := engine.discard_cost_of(card)
 	if need <= 0:
-		_finish_play(i, cell)
+		_finish_play(i, cell, from_pos)
 		return
 	var others: int = engine.state.hand.size() - 1
 	if others < need:
@@ -3095,10 +3148,14 @@ func _try_play_hand_card(i: int, cell: Vector2i) -> void:
 	queue_redraw()
 
 
-func _finish_play(i: int, cell: Vector2i) -> void:
+func _finish_play(i: int, cell: Vector2i, from_pos := Vector2.ZERO) -> void:
 	## 手牌上场（无额外代价的普通卡）：清选中 → 放置 → 联机同步。
 	_clear_selection()
 	var card := engine.state.hand[i]
+	# R151 P0-4：武装落位动画的起点 —— 拖拽路径 = 松手时光标；点击路径 = 手牌槽位中心
+	if from_pos == Vector2.ZERO:
+		from_pos = _hand_rect(i).get_center()
+	_place_from = {"pos": from_pos, "card_id": card.id, "at": _now()}
 	engine.play_from_hand(i, cell)
 	_net_send({"type": "action", "act": "play", "card": card.to_dict(),
 			"cell": [cell.x, cell.y]})
@@ -4426,14 +4483,14 @@ func _on_over_restart() -> void:
 	##   * 其余（通关无下一层 / 失败 / 单关）→ 回标题。
 	if RunState.run_active and _run_next_layer > 0:
 		RunState.advance_layer(_run_next_layer)
-		get_tree().change_scene_to_file("res://scenes/relic_pick.tscn")
+		SceneFx.goto("res://scenes/relic_pick.tscn")
 	elif RunState.run_active and not _run_boss_win:
 		# R119：卡牌奖励已由奖励悬浮窗处理（没收的会留在「待领奖励」入口里），
 		# 这里只把节点标记完成、回地图 —— 不再切到独立的卡牌奖励场景。
 		RunState.complete_current()
-		get_tree().change_scene_to_file("res://scenes/map.tscn")
+		SceneFx.goto("res://scenes/map.tscn")
 	else:
-		get_tree().change_scene_to_file("res://scenes/title.tscn")
+		SceneFx.goto("res://scenes/title.tscn")
 
 
 func _show_over(win: bool) -> void:
@@ -5279,6 +5336,7 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)  # 结束震动，后续 UI 不抖
 	_draw_level_plate()
 	_draw_hand()
+	_draw_hand_fly()
 	_draw_drag()
 	_draw_info_panel()
 	if _log_visible:
@@ -5396,6 +5454,7 @@ const TXT_SELF := Color("9fe0a6")     # 我方（绿）
 const TXT_FOE := Color("ffb3b3")      # 敌方（红）
 const TXT_POWER := Color("ffd27a")    # 能量 / 力量（金）
 const TXT_WARN := Color("ff9a76")     # 警示（手牌满 / 闪躲）
+const FX_ENERGY_SPEND := Color("8fb4d8")  # 能量支出飘字（收入复用 TXT_POWER 金）
 
 
 func _auto_outline(px: int) -> int:
@@ -5583,6 +5642,17 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	var selected: bool = selection != null and selection[0] == "board" and selection[1] == cell
 	var w := BOARD_TAP_W if p.tapped else BOARD_CARD_W
 	var h := BOARD_TAP_H if p.tapped else BOARD_CARD_H
+	# R151 P0-4：从手牌飞来的落位动画带缩放回稳（from_scale → 1，与位移同一条 ease-out）
+	if _slides.has(p):
+		var sl: Dictionary = _slides[p]
+		var fs := float(sl.get("from_scale", 1.0))
+		if not is_equal_approx(fs, 1.0):
+			var n2 := _now()
+			if n2 >= int(sl.start):
+				var t2 := clampf(float(n2 - int(sl.start)) / int(sl.dur), 0.0, 1.0)
+				var sc2 := lerpf(fs, 1.0, 1.0 - pow(1.0 - t2, 3.0))
+				w *= sc2
+				h *= sc2
 	# 顶部状态徽标的行号：嘲讽 → 冰封 → 沉睡，按出现顺序往下排（共用底座 _draw_state_badge）
 	var _badge_row := 0
 	# R118：`on_board = true` —— 战场卡面的「种类 · 字段」行**不再标出**上场后已无作用的
@@ -6092,6 +6162,153 @@ func _tick_earring_autoplay() -> bool:
 	return true
 
 
+func _hand_sync() -> void:
+	## R151 P0-1/2：手牌差异 → 抽牌飞入 / 弃牌·消耗飞出（每帧调用）。
+	## 手牌只有「尾部追加 / 按 index 移除」→ 保序双指针 walk 出 (移除 id+旧下标) 与 (新增卡+新下标)；
+	## 中间插入（罕见）也能正确识别（分支 ③：当前指针后的剩余里还有它 → 是插入不是移除）。
+	if engine == null:
+		return
+	var cur: Array = []
+	for c in engine.state.hand:
+		cur.append(c.id)
+	if not _hand_known_init:
+		_hand_known = cur
+		_hand_known_init = true
+		_void_known = engine.state.void_count
+		# R151 P0-3：新一场战斗的滚动从「当前实际值」起锚（UiRoll 是 static 跨场景共享，
+		# 不起锚会从上一场的残值滚过来 —— 观感 = 血条空降 / 能量乱跳）
+		UiRoll.snap("hp_self", engine.state.hp_self)
+		UiRoll.snap("hp_opp", engine.state.hp_opponent)
+		UiRoll.snap("hp_self_bar", engine.state.hp_self)
+		UiRoll.snap("hp_opp_bar", engine.state.hp_opponent)
+		UiRoll.snap("energy", engine.state.energy)
+		UiRoll.snap("opp_energy", engine.state.opp_energy)
+		_energy_known = engine.state.energy
+		return
+	if cur == _hand_known:
+		_flyout_skip.clear()
+		_flyin_skip.clear()
+		_flyout_skip_all = false
+		_void_known = engine.state.void_count
+		return
+	var old_n := _hand_known.size()
+	var removed: Array = []   # {id, idx}
+	var added: Array = []     # {card, idx}
+	var j := 0
+	var k := 0
+	while j < old_n:
+		if k >= cur.size():
+			removed.append({"id": _hand_known[j], "idx": j})
+			j += 1
+		elif _hand_known[j] == cur[k]:
+			j += 1
+			k += 1
+		elif cur.slice(k + 1).has(_hand_known[j]):
+			added.append({"card": engine.state.hand[k], "idx": k})   # ③ 中间插入
+			k += 1
+		else:
+			removed.append({"id": _hand_known[j], "idx": j})
+			j += 1
+	while k < cur.size():
+		added.append({"card": engine.state.hand[k], "idx": k})
+		k += 1
+	_hand_known = cur
+	var vd: int = engine.state.void_count - _void_known   # 这段时间被「消耗」的张数
+	_void_known = engine.state.void_count
+	if _shot_pending:
+		# 探针 / 演示钉帧：只维护快照、不播（否则 --shotframe 会截到飞行中的卡）
+		_flyout_skip.clear()
+		_flyin_skip.clear()
+		_flyout_skip_all = false
+		_earring_missed = 0
+		return
+	var n := _now()
+	# 新增 → 卡背从抽牌堆飞入手牌位（逐张错开 60ms）
+	var seq := 0
+	for a in added:
+		var card: CardData = a["card"]
+		if _flyin_skip.has(card.id):
+			_flyin_skip.erase(card.id)
+			continue
+		_hand_fly.append({"mode": "in", "card": card,
+				"from": Vector2(DECK_X + CARD_W / 2.0, DECK_Y + CARD_H / 2.0),
+				"slot": int(a["idx"]), "start": n + 60 * seq, "dur": 260})
+		seq += 1
+	# 移除 → 默认飞弃牌区；消耗的份额（void 增量）改上飞；skip 名单 / 耳环连出不播
+	var earring := engine.earring_autoplay_active()
+	for r0 in removed:
+		var rid := int(r0["id"])
+		if _flyout_skip_all:
+			continue
+		if _flyout_skip.has(rid):
+			_flyout_skip.erase(rid)
+			if earring:
+				_earring_missed += 1
+			continue
+		if earring:
+			_earring_missed += 1
+			continue
+		var card: CardData = repo.get_card(rid) if repo != null else null
+		if card == null:
+			continue
+		var mode := "out_d"
+		if vd > 0:
+			mode = "out_v"
+			vd -= 1
+		_hand_fly.append({"mode": mode, "card": card,
+				"from_rect": _hand_old_rect(old_n, int(r0["idx"])),
+				"start": n, "dur": 220})
+	_flyout_skip.clear()
+	_flyin_skip.clear()
+	_flyout_skip_all = false
+
+
+func _hand_old_rect(n: int, idx: int) -> Rect2:
+	## 移除发生前、手牌还是 n 张时第 idx 张的未旋转矩形（飞出动画起点；与 _hand_rect 同一套扇形数学）。
+	var step := _hand_step(n)
+	var total: float = step * (n - 1) + HAND_CARD_W
+	var x: float = (WINDOW_W - total) / 2 + step * idx
+	var kk := 0.0
+	if n > 1:
+		kk = (float(idx) - float(n - 1) / 2.0) / (float(n - 1) / 2.0)
+	return Rect2(x, OWN_HAND_Y + HAND_FAN_DROP * kk * kk, HAND_CARD_W, HAND_CARD_H)
+
+
+func _hand_fly_in_slot(i: int) -> bool:
+	## 第 i 张手牌是否还在飞入中（在 → 静态卡不画，由 _draw_hand_fly 画卡背）。
+	var n := _now()
+	for f in _hand_fly:
+		if str(f["mode"]) == "in" and int(f["slot"]) == i and n - int(f["start"]) < int(f["dur"]):
+			return true
+	return false
+
+
+func _energy_tick() -> void:
+	## R151 P0-3：能量变化量飘字（打出 −N / 回合重置 +N）；滚动数字本身走 _roll（UiRoll）。
+	if engine == null:
+		return
+	if _shot_pending:
+		_energy_known = engine.state.energy
+		return
+	var e := engine.state.energy
+	if _energy_known >= 0 and e != _energy_known:
+		var d := e - _energy_known
+		var sign := "+" if d > 0 else ""
+		_floaters.append({"pos": Vector2(COST_X + (TAP_W + 12) / 2.0, COST_Y + 30),
+				"text": "%s%d 能量" % [sign, d],
+				"col": TXT_POWER if d > 0 else FX_ENERGY_SPEND, "size": 15,
+				"start": _now(), "dur": 900})
+	_energy_known = e
+
+
+func _roll(key: String, target: float) -> int:
+	## P0-3：探针钉帧（--screenshot/--demo）直接钉死、不出中间值；否则走滚动唯一口。
+	if _shot_pending:
+		UiRoll.snap(key, target)
+		return roundi(target)
+	return roundi(UiRoll.value(key, target))
+
+
 func _tick_anims() -> bool:
 	## 清理过期动画，返回是否仍有活动动画。
 	var n := _now()
@@ -6140,14 +6357,40 @@ func _tick_anims() -> bool:
 func _on_engine_action(kind: String, data: Dictionary) -> void:
 	## 引擎动作 → 动画 + 音效。
 	var n := _now()
+	# R151 P0-2：「打出 / 转移」不是「消失」—— 这些事件对应的移除不播飞出
+	# （单位有 P0-4 落位、效果卡进效果区、技能当场结算，都已经看得见去向）。
+	if kind == "spell" or kind == "effect" \
+			or (kind == "place" and str(data.get("side", "")) == GameEngine.SIDE_SELF):
+		if data.get("card") is CardData:
+			_flyout_skip.append((data["card"] as CardData).id)
+	elif kind == "batch_transfer":
+		_flyout_skip_all = true     # 手牌洗回牌库（不是弃牌）→ 整批移除不播
+	elif kind == "swap" and data.get("old") is CardData:
+		# 交换：原单位从场上顶回手牌（不是抽的）→ 不播「从抽牌堆飞入」
+		_flyin_skip.append((data["old"] as CardData).id)
 	match kind:
 		"place":
 			sfx.play("place")
 			var cell: Vector2i = data["cell"]
 			var pl := engine.state.unit_at(cell)
 			if pl != null:
-				_slides[pl] = {"from": _cell_center(cell) + Vector2(0, -110),
-						"to": _cell_center(cell), "start": n, "dur": 450}
+				# R151 P0-4：玩家亲手放置 → 从松手/手牌真实位置飞来（缩放回稳），
+				# 不再统一从 −110px 天上掉下来（AI / 效果召唤仍走默认）。
+				var pl_from := _cell_center(cell) + Vector2(0, -110)
+				var pl_dur := 450
+				var pl_sc := 1.0
+				if not _place_from.is_empty() and data.get("card") is CardData \
+						and str(data.get("side", "")) == GameEngine.SIDE_SELF \
+						and (data["card"] as CardData).id == int(_place_from.get("card_id", -1)) \
+						and n - int(_place_from.get("at", 0)) < 2000:
+					pl_from = _place_from["pos"]
+					pl_dur = 180
+					pl_sc = HAND_CARD_H / BOARD_CARD_H
+					_place_from = {}
+				_slides[pl] = {"from": pl_from, "to": _cell_center(cell),
+						"start": n, "dur": pl_dur}
+				if pl_sc != 1.0:
+					_slides[pl]["from_scale"] = pl_sc
 		"fence_merge":
 			# 栅栏修复术（6021）：两张栅栏合并 → 加固爆点 + 「生+N」飘字
 			sfx.play("place")
@@ -7261,6 +7504,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": UiTheme.STATE_SLEEP, "start": _now(), "dur": 1500}
 			status_text = "鸭语耳环：自动出牌结束（%d 张 · %s），可以行动了" % [ee_played, ee_why]
 			_say("♬ 鸭语耳环：自动出牌 %d 张结束（%s）" % [ee_played, ee_why])
+			# R151 P0-2：连出期间压下的飞出 —— 超过 3 张时合并成一次整体淡出（别一张一张等）
+			if _earring_missed > 3 and not _shot_pending:
+				_hand_fly.append({"mode": "fade", "start": n, "dur": 300})
+			_earring_missed = 0
 		"wake":
 			# 恶魔鸭（9116，R63 / R72 补特效）：沉睡结束 / 被击中提前醒来。
 			# R72：原来只有一圈爆点 + 飘字，「挣脱束缚」的观感不足；补一圈向外扩散的
@@ -7832,14 +8079,16 @@ func _draw_frame_corner(src: Rect2, at: Vector2, sz: Vector2) -> void:
 func _draw_hp_banner() -> void:
 	## R140：这四条以前是「深色字 + 描边」压在底图上，读不清；改成带底条的亮字。
 	var mid_x := GRID_X + GRID_W + 18
-	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION, "敌方 HP\n%d" % _show_hp("hp_opp", engine.state.hp_opponent),
+	# R151 P0-3：HP / 能量数字滚动 —— HP 的目标值仍走 _show_hp（命中演出前冻结），
+	# 滚动接在「冻结解除」之后自然发生（_drop_hp → 目标值掉 → 起滚），不与冻结并行。
+	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION, "敌方 HP\n%d" % _roll("hp_opp", _show_hp("hp_opp", engine.state.hp_opponent)),
 			Vector2(mid_x, GRID_Y + 8 + UiTheme.FS_CAPTION), TXT_FOE)
-	_draw_string_box_nw(_font, UiTheme.FS_MICRO, "敌方能量 %d" % engine.state.opp_energy,
+	_draw_string_box_nw(_font, UiTheme.FS_MICRO, "敌方能量 %d" % _roll("opp_energy", engine.state.opp_energy),
 			Vector2(mid_x, GRID_Y + 66 + UiTheme.FS_MICRO), TXT_POWER)
-	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION, "我方 HP\n%d/%d" % [_show_hp("hp_self", engine.state.hp_self),
+	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION, "我方 HP\n%d/%d" % [_roll("hp_self", _show_hp("hp_self", engine.state.hp_self)),
 			engine.state.max_hp_self],
 			Vector2(mid_x, GRID_Y + GRID_H - 30 + UiTheme.FS_CAPTION), TXT_SELF)
-	_draw_string_box_nw(_font, UiTheme.FS_MICRO, "能量 %d" % engine.state.energy,
+	_draw_string_box_nw(_font, UiTheme.FS_MICRO, "能量 %d" % _roll("energy", engine.state.energy),
 			Vector2(mid_x, GRID_Y + GRID_H - 56 + UiTheme.FS_MICRO), TXT_SELF)
 
 
@@ -7975,7 +8224,7 @@ func _draw_cost_zone() -> void:
 	var epanel := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
 	draw_rect(epanel, Color(1, 1, 1, 0.55), true)
 	draw_rect(epanel, UiTheme.INK_300, false, 1.0)
-	_draw_string_center(_font_bold, UiTheme.FS_HEADING, str(state.energy),
+	_draw_string_center(_font_bold, UiTheme.FS_HEADING, str(_roll("energy", state.energy)),
 			Vector2(mid_x, COST_Y + 46), UiTheme.STAT_POWER)
 	_draw_string_center(_font, UiTheme.FS_MICRO, "每回合重置为 5",
 			Vector2(mid_x, COST_Y + 70), UiTheme.INK_500)
@@ -8279,6 +8528,8 @@ func _draw_hand() -> void:
 	if _hover_hand >= 0 and _hover_hand < n:
 		order.append(_hover_hand)
 	for i in order:
+		if _hand_fly_in_slot(i):
+			continue  # R151 P0-1：这张还在从抽牌堆飞过来，由 _draw_hand_fly 画卡背
 		var card := engine.state.hand[i]
 		var sel: bool = selection != null and selection[0] == "hand" and selection[1] == i
 		_draw_hand_card(i, card, sel, HAND_FAN_HOVER_LIFT if i == _hover_hand else 0.0)
@@ -8308,6 +8559,70 @@ func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> voi
 		_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "可改造", hr.position + Vector2(6, 14),
 				Color("1a5f7a"), 3, Color(0.92, 0.98, 1.0))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_hand_fly() -> void:
+	## R151 P0-1/2：抽牌飞入（卡背，错开 60ms）/ 弃牌·消耗飞出（缩小移动）/ 耳环合并淡出。
+	## ⚠️ 飞出的卡面不做整体 alpha：卡面是自绘的、没有统一调制口（CardFace.draw 签名无 alpha）。
+	##    「淡出」用等价手段 —— 弃牌 = 缩小进牌堆（终段被弃牌区板盖回，「滑进牌堆」）；
+	##    消耗 = 边升边缩（缩到 0.55 自然读成消散）；只有合并淡出用真 alpha（卡背有 modulate 口）。
+	var n := _now()
+	for f in _hand_fly:
+		var t := float(n - int(f["start"])) / int(f["dur"])
+		if t < 0.0:
+			continue                      # 还在等错开（逐张 60ms）
+		t = clampf(t, 0.0, 1.0)
+		var mode := str(f["mode"])
+		if mode == "in":
+			var e := 1.0 - pow(1.0 - t, 3.0)          # ease-out
+			var slot: Rect2 = _hand_rect(int(f["slot"]))
+			var pos: Vector2 = (f["from"] as Vector2).lerp(slot.get_center(), e)
+			var sc := lerpf(0.62, 1.0, e)
+			# 落位回弹：最后 80ms 从 1.06 收到 1.0（设计稿口径）
+			var tail := 80.0 / int(f["dur"])
+			if t > 1.0 - tail:
+				sc *= lerpf(1.06, 1.0, (t - (1.0 - tail)) / tail)
+			_draw_card_back(Rect2(pos - slot.size * sc / 2.0, slot.size * sc))
+		elif mode == "fade":
+			# 耳环合并淡出：手牌区中央一张卡背整体淡掉
+			var r3 := Rect2(Vector2(WINDOW_W / 2.0, OWN_HAND_Y + 40) - Vector2(CARD_W, CARD_H) / 2.0,
+					Vector2(CARD_W, CARD_H))
+			_draw_card_back_fade(r3, 1.0 - t)
+		else:
+			var e2 := 1.0 - pow(1.0 - t, 2.0)
+			var fr: Rect2 = f["from_rect"]
+			var pos2 := fr.get_center()
+			var sc2 := 1.0
+			if mode == "out_d":
+				pos2 = fr.get_center().lerp(
+						Vector2(DISCARD_X + CARD_W / 2.0, DISCARD_Y + CARD_H / 2.0), e2)
+				sc2 = lerpf(1.0, 0.6, e2)
+			else:  # out_v：消耗 → 向上飞 + 缩小消散（与弃牌区分）
+				pos2 = fr.get_center() + Vector2(0, -140.0 * e2)
+				sc2 = lerpf(1.0, 0.55, e2)
+			var card: CardData = f["card"]
+			_draw_card_face(card, Rect2(pos2 - fr.size * sc2 / 2.0, fr.size * sc2),
+					card.health, false, false, engine.cost_of(card))
+			if mode == "out_d" and t > 0.8:
+				# 终段：把弃牌区板盖回飞来卡的上面 →「滑进牌堆」而不是「停在牌堆上」
+				_draw_zone_icon(_discard_tex, Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H),
+						Color("a08a52"))
+
+
+func _draw_card_back_fade(rect: Rect2, alpha: float) -> void:
+	## 带透明度的卡背（耳环合并淡出用）：有素材走 modulate，兜底图形用 alpha 色。
+	if _back_tex != null:
+		draw_texture_rect(_back_tex, rect, false, Color(1, 1, 1, alpha))
+	else:
+		draw_rect(rect, Color(0, 0, 0, alpha))
+		var inset: float = minf(rect.size.x, rect.size.y) * 0.18
+		draw_line(rect.position + Vector2(inset, inset),
+				rect.end - Vector2(inset, inset), Color(1, 1, 1, alpha), 2.0)
+		draw_line(Vector2(rect.end.x - inset, rect.position.y + inset),
+				Vector2(rect.position.x + inset, rect.end.y - inset), Color(1, 1, 1, alpha), 2.0)
+	var edge := Color("20283f")
+	edge.a = alpha
+	draw_rect(rect, edge, false, 1.5)
 
 
 func _draw_hand_bonus_mark(r: Rect2) -> void:
@@ -8801,6 +9116,17 @@ func _process(delta: float) -> void:
 	# 这样同一帧里刚出的牌动画能立刻开始播。
 	var earring_busy := _tick_earring_autoplay()
 	var anim_busy := _tick_anims()
+	_hand_sync()          # R151 P0-1/2：手牌差异 → 抽牌飞入 / 弃牌·消耗飞出
+	_energy_tick()        # R151 P0-3：能量变化量飘字
+	if not _hand_fly.is_empty():
+		var n3 := _now()
+		_hand_fly = _hand_fly.filter(func(f): return n3 - int(f.start) < int(f.dur))
+		if not _hand_fly.is_empty():
+			queue_redraw()  # 手牌飞行动画播放中
+	if UiRoll.rolling("energy") or UiRoll.rolling("hp_self") or UiRoll.rolling("hp_opp") \
+			or UiRoll.rolling("opp_energy") or UiRoll.rolling("hp_self_bar") \
+			or UiRoll.rolling("hp_opp_bar"):
+		queue_redraw()      # P0-3：数字滚动中
 	if anim_busy:
 		queue_redraw()  # 动画播放中逐帧重绘
 	if earring_busy:
@@ -8856,6 +9182,6 @@ func _process(delta: float) -> void:
 		turn_label.text = "对局结束"
 	else:
 		turn_label.text = "对手回合"
-	hp_label.text = "我方 HP %d/%d · 敌方 HP %d/%d" % [engine.state.hp_self,
-			engine.state.max_hp_self, engine.state.hp_opponent, engine.state.max_hp_opponent]
+	hp_label.text = "我方 HP %d/%d · 敌方 HP %d/%d" % [_roll("hp_self_bar", engine.state.hp_self),
+			engine.state.max_hp_self, _roll("hp_opp_bar", engine.state.hp_opponent), engine.state.max_hp_opponent]
 	status_label.text = status_text

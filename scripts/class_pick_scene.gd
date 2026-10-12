@@ -150,7 +150,7 @@ func _on_back_to_title() -> void:
 	ReplayLog.stop_playback()
 	if RunState.run_active:
 		RunState.end_run()
-	get_tree().change_scene_to_file("res://scenes/title.tscn")
+	SceneFx.goto("res://scenes/title.tscn")
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -187,4 +187,4 @@ func _choose(cid: String) -> void:
 	# 地图由 RunState.start_run 用本局种子生成（R46：录像回放可完整复现）。
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, cid)
 	ReplayLog.begin_run(cid)   # 从这里开始录制本局完整流程
-	get_tree().change_scene_to_file("res://scenes/map.tscn")
+	SceneFx.goto("res://scenes/map.tscn")

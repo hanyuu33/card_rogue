@@ -298,7 +298,7 @@ func _on_back_to_title() -> void:
 	ReplayLog.stop_playback()
 	if RunState.run_active:
 		RunState.end_run()
-	get_tree().change_scene_to_file("res://scenes/title.tscn")
+	SceneFx.goto("res://scenes/title.tscn")
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -457,7 +457,7 @@ func _go_back() -> void:
 	# 事件「遗忘之泉」的删卡待办：无论如何离开都清掉，免得地图反复把人送回来
 	if RunState.pending_deck_edit != "":
 		RunState.pending_deck_edit = ""
-	get_tree().change_scene_to_file("res://scenes/map.tscn")
+	SceneFx.goto("res://scenes/map.tscn")
 
 
 func _unhandled_input(event: InputEvent) -> void:
