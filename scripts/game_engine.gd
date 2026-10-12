@@ -91,6 +91,16 @@ const SUN_FORGE_REGEN:= 2          # 赫利俄斯在场时，每只俄倪厄每�
 const SUN_FORGE_ACTIONS:= 2        # 赫利俄斯在场时，俄倪厄每回合的行动次数
 const CERAMIC_CARD_ID:= 9026
 const EGG_CARD_ID:= 9022
+# ---- 「钢铁要塞」关卡（R149，第二层精英困难）----
+# 量产型赫卡同克瑞斯（9133）上场就带铸造倒计时：**我方回合结束** -1，
+# 减到 0 → 破坏自身并在**原地**立起一座钢铁要塞（9134，工事 5/100 程2 嘲讽）。
+# ⚠️ **这不是亡语**：只有「倒计时走完」这一条路径会铸出要塞。被玩家提前打掉
+#    走的是常规 `_destroy`，什么都不留下（卡面 effect_text 已写明这一条），
+#    所以刻意**不进 `_deathrattle`** —— 进那里就变成「怎么死都要塞照出」。
+const FUSE_TRAIT:= "铸造"           # 只做标记（与「亡语 / 孵化」同套路），回合数在引擎
+const HECATE_ID:= 9133              # 量产型赫卡同克瑞斯（盟友 3/35 程1 速1）
+const STEEL_FORTRESS_ID:= 9134      # 钢铁要塞（工事 5/100 程2 速0，嘲讽）
+const FUSE_TURNS:= 5                # 铸造倒计时的初始回合数（与卡面 effect_text 同源）
 
 
 const TAUNT_TRAIT:= "嘲讽"
@@ -2015,6 +2025,11 @@ func end_turn() -> void :
 	_charge_tick(current_side)
 	# 超负荷（旧式机兵 8050，R98）：己方回合结束时，生命仍为负数的超负荷单位死亡。
 	_overload_tick(current_side)
+	# 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：**我方回合结束** -1（用户口径）。
+	# ⚠️ 由「是谁的回合在结束」驱动，而**不看单位归属** —— 场上只有敌方单位带这个字段，
+	#    若按归属判就变成「敌方回合结束才减」，和卡面写的那句话对不上。
+	if current_side == SIDE_SELF:
+		_fuse_tick()
 
 	if current_side == SIDE_SELF:
 		var n:= state.discard_hand()
@@ -6765,6 +6780,46 @@ func _overload_tick(side: String) -> void :
 		action.emit("overload_die", {"cell": cell, "card": p.card,
 			"health": p.health, "side": side})
 		_destroy(cell)
+
+
+func _fuse_tick() -> void :
+	## 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：**我方回合结束** -1；
+	## 减到 0 → 破坏自身，并**在原地**立起一座「钢铁要塞」（9134，工事 5/100 程2 嘲讽）。
+	## ⚠️ **不是亡语**（不进 `_deathrattle`）：只有倒计时走完才铸出要塞；
+	##    被玩家提前打掉走的是常规 `_destroy`，什么都不留。
+	## ⚠️ 破坏与落地都走唯一口 `_destroy` + `state.place`，离场记账 / 击杀记功 /
+	##    战场事件与别处完全一致，不在这里另起一套。
+	var ready: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var p: Placement = state.unit_at(cell)
+		if p != null and p.fuse_left > 0:
+			p.fuse_left -= 1
+			if p.fuse_left > 0:
+				_log("%s 铸造倒计时：还剩 %d 个我方回合" % [p.card.card_name, p.fuse_left])
+			else:
+				ready.append(cell)
+	for cell: Vector2i in ready:
+		var q: Placement = state.unit_at(cell)
+		if q == null:
+			continue
+		var side := q.owner
+		_log("%s 铸造完成：破坏自身，在原地立起一座钢铁要塞" % q.card.card_name)
+		action.emit("fuse", {"cell": cell, "card": q.card, "side": side})
+		_destroy(cell)
+		if over:
+			# 它是场上最后一个敌人 → 那一下破坏已经判出胜负，别再往已结束的战场落子
+			return
+		if state.board.has(cell):
+			continue
+		var fort: CardData = CardRepo.load_json().get_card(STEEL_FORTRESS_ID)
+		if fort == null:
+			_log("铸造失败：卡牌库里没有 id=%d" % STEEL_FORTRESS_ID)
+			continue
+		var built := state.place(fort, cell, side)
+		_log("钢铁要塞落成（%s）：5/100，攻程 2，嘲讽" % cell)
+		action.emit("place", {"cell": cell, "card": fort, "side": side, "fuse": true})
+		if built != null:
+			_on_ally_entered(built, side)
 
 
 func _destroy_dead() -> void :

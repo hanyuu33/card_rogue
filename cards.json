@@ -4116,6 +4116,76 @@
       "target_mode": "none",
       "color": "灰",
       "image": ""
+    },
+    {
+      "id": 9132,
+      "name": "俄倪厄",
+      "kind": "盟友",
+      "cost": 5,
+      "power": 10,
+      "health": 50,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "机械"
+      ],
+      "effect_text": "一回合可以行动两次。",
+      "target_mode": "none",
+      "color": "金",
+      "image": "",
+      "actions": 2,
+      "affixes": [
+        "疾行"
+      ]
+    },
+    {
+      "id": 9133,
+      "name": "量产型赫卡同克瑞斯",
+      "kind": "盟友",
+      "cost": 5,
+      "power": 3,
+      "health": 35,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "机械",
+        "铸造"
+      ],
+      "effect_text": "铸造：我方回合结束时倒计时 -1；减到 0 时破坏自身，并在原地立起一座「钢铁要塞」（5/100，攻程 2，嘲讽）。被提前击破则什么都不会留下。",
+      "target_mode": "none",
+      "color": "灰",
+      "image": ""
+    },
+    {
+      "id": 9134,
+      "name": "钢铁要塞",
+      "kind": "工事",
+      "cost": 5,
+      "power": 5,
+      "health": 100,
+      "attack_range": 2,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "工事",
+        "机械",
+        "嘲讽"
+      ],
+      "effect_text": "嘲讽：敌方单位必须优先攻击它。",
+      "target_mode": "none",
+      "color": "金",
+      "image": "",
+      "affixes": [
+        "嘲讽"
+      ]
     }
   ]
 }

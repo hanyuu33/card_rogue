@@ -116,6 +116,7 @@ const COL_ACTIVATABLE := Color(0.78, 1.0, 0.35)
 const COL_TAUNT := UiTheme.STATE_TAUNT              # 嘲讽：战场单位的橙色脉冲光环（必须优先打它）
 const COL_FROZEN := UiTheme.STATE_FROZEN             # 冰封（寒冰箭/冻结陷阱/冰冻战吼）：冷蓝脉冲环 + 寒霜（这回合动不了）
 const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（恶魔鸭 9116）：紫脉冲环 + Zzz（还差 N 下挨打就醒）
+const COL_FUSE := UiTheme.STATE_FUSE                # 铸造倒计时（R149）：橙红脉冲环 +「倒数 N」徽标
 const COL_FIELD_SELF := Color("ffb03a")         # 场地效果（R74）：我方放的 —— 琥珀色斜纹 + 名字角标
 const COL_FIELD_FOE := Color("ff5d5d")          # 敌方放的场地 —— 红斜纹（一眼分清敌我）
 const COL_FIELD_PERSIST := Color("5ad0e6")      # 持续型场地（R83：清泉）—— 冷青，静止描边（不是陷阱）
@@ -5607,6 +5608,12 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 		# 每挨一下 -1、**归零立刻恢复行动**。徽标写出「还差几下」而不是「几回合」。
 		_draw_sleep_aura(center, w, h, p.sleep_left, _badge_row)
 		_badge_row += 1
+	if p.fuse_left > 0:
+		# 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：**还剩几个我方回合就会变成钢铁要塞**
+		# 是看卡面看不出来的隐藏状态 → 必须常驻可见，而且要写出**数字**：光写「铸造」
+		# 等于把「还能拖几回合 / 要不要现在就拆」这个决策藏起来（与「沉睡 N」同一套路）。
+		_draw_fuse_aura(center, w, h, p.fuse_left, _badge_row)
+		_badge_row += 1
 	if p.first_hit_shield:
 		# 能量屏障（8033，R87）：**首次受伤免掉**的一次性护盾。
 		# 徽标同样交给字段系统（字段「护盾」），这里只留**呼吸青环**提示「还剩一次」——
@@ -5735,6 +5742,20 @@ func _draw_sleep_aura(center: Vector2, w: float, h: float, left: int, badge_row:
 			Color(0.93, 0.86, 1.0), Color(0.08, 0.04, 0.16))
 
 
+func _draw_fuse_aura(center: Vector2, w: float, h: float, left: int, badge_row: int) -> void :
+	## 铸造倒计时（`Placement.fuse_left` 的唯一表现口）：橙红脉冲环 + 顶部「倒数 N」徽标。
+	## 徽标**写出还剩几回合**是刻意的：玩家要靠它判断「先拆它还是先处理别的」。
+	## ⚠️ 颜色刻意与嘲讽（STATE_TAUNT 橙 ff8f00）拉开：钢铁要塞身上两个状态会同时出现。
+	var t := float(_now()) / 1000.0
+	var pulse := (sin(t * 4.0) + 1.0) * 0.5                # 0..1（比沉睡快 = 更「催」）
+	var base := Vector2(w, h).length() * 0.5
+	draw_arc(center, base + 2.0 + pulse * 2.5, 0.0, TAU, 40,
+			Color(COL_FUSE.r, COL_FUSE.g, COL_FUSE.b, 0.45 + pulse * 0.40), 2.5)
+	_draw_state_badge(center, w, h, badge_row, "倒数 %d" % left,
+			Color(0.28, 0.09, 0.03, 0.92), COL_FUSE,
+			Color(1.0, 0.93, 0.86), Color(0.16, 0.05, 0.02))
+
+
 func _draw_state_badge(center: Vector2, w: float, h: float, row: int, text: String,
 		bg: Color, border: Color, fg: Color, shadow: Color) -> void:
 	## 战场单位顶部**状态徽标**的共用底座：嘲讽 / 冰封 / 沉睡三者位置完全相同，
@@ -5842,6 +5863,17 @@ func _board_has_sleep() -> bool:
 	## 棋盘上是否有沉睡中的单位（沉睡环 + 飘 Zzz 是动画 → 需要逐帧重绘）。
 	for _cell: Vector2i in engine.state.board:
 		if engine.state.board[_cell].sleep_left > 0:
+			return true
+	return false
+
+
+func _board_has_fuse() -> bool:
+	## 棋盘上是否有「铸造倒计时」中的单位（脉冲环是动画 → 需要逐帧重绘）。
+	## 判据读 `Placement.fuse_left`，与绘制同源（R149）。
+	if engine == null:
+		return false
+	for _cell: Vector2i in engine.state.board:
+		if engine.state.board[_cell].fuse_left > 0:
 			return true
 	return false
 
@@ -8778,6 +8810,8 @@ func _process(delta: float) -> void:
 		queue_redraw()  # 冰封寒霜环同样是脉冲动画（R68）
 	if _board_has_sleep():
 		queue_redraw()  # 沉睡环 + 飘「Zzz」同样是脉冲动画（R72）
+	if _board_has_fuse():
+		queue_redraw()  # R149：铸造倒计时的橙红脉冲环 + 「倒数 N」徽标
 	if _board_has_shield():
 		queue_redraw()  # 能量屏障的青色呼吸环 + 护盾徽标（R87）
 	if _board_has_activatable():

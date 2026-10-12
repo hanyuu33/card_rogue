@@ -329,6 +329,11 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	# 放在 place 里 = 唯一初始化口，关卡摆位 / 效果卡召唤出来的都算。
 	if card.traits.has(SLEEP_TRAIT):
 		p.sleep_left = SLEEP_TURNS
+	# 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：带「铸造」trait 的单位一上场就挂表。
+	# 同样放在 place 里 = **唯一初始化口**（与沉睡 / 护盾同一套路）；回合数取引擎常量
+	# FUSE_TURNS，与卡面 effect_text 写的是同一句话 —— 改一处必须一起改。
+	if card.traits.has(GameEngine.FUSE_TRAIT):
+		p.fuse_left = GameEngine.FUSE_TURNS
 	# 能量屏障（8033，R87）：带该 trait 的单位一上场就获得「首次受伤免掉」的一次性护盾。
 	# 放在 place 里 = **唯一初始化口**，于是无论它是手牌打出来的、关卡摆位的、
 	# 还是效果卡召唤出来的，都一致（漏了某条路径 = 那条路径出来的没有护盾）。

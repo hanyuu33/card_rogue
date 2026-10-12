@@ -54,6 +54,11 @@ var regen: int = 0           # 自我修复（8035，R87）：每回合结束回
 ## 且这张被打死离场后额度随之消失（新的那张重新算，符合「这张卡每回合一次」的字面）。
 var upgrade_feed_turn: int = -1
 var sleep_left: int = 0       # 沉睡（恶魔鸭 9116）：还要睡几点（>0 = 本回合不行动）；自己的回合结束 -1，受伤也 -1（R122）
+## 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：还剩几个**我方回合**就会「破坏自身、
+## 在原地立起一座钢铁要塞」。0 = 不带这个倒计时。
+## ⚠️ 递减口只有一处（`GameEngine._fuse_tick`，我方回合结束），且**不是亡语** ——
+##    被提前打掉时 `fuse_left` 随单位一起消失，什么都不会留下。
+var fuse_left: int = 0
 ## 「暗影领主」（鸭之暗面 9124，R111）：每个**存活的鸭子暗杀者**给它 +3 力 +1 速。
 ## ⚠️ 只记在 Placement 上、**绝不烤进 CardData** —— 敌方关卡单位用的是卡库共享实例，
 ## 直接改 card 会把加成写进卡库、跨局泄漏（R111 特意不走 R101 那条 `p.card.move_speed +=` 的路）。
@@ -142,6 +147,9 @@ func status_entries() -> Array[Dictionary]:
 		out.append({"label": "栅栏加固：额外生命 +%d" % fence_bonus_hp, "col": COL_B, "kind": "buff"})
 	if upgrade_feed_turn >= 0:
 		out.append({"label": "本回合已供过能", "col": COL_I, "kind": "info"})
+	if fuse_left > 0:
+		out.append({"label": "铸造：还剩 %d 个我方回合 → 原地变钢铁要塞" % fuse_left,
+				"col": COL_I, "kind": "info"})
 
 	# ---------------- 减益 ----------------
 	if debuff > 0:

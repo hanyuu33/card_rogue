@@ -75,13 +75,13 @@ static func level_names() -> Array[String]:
 
 static func builtin_levels() -> Array:
 	## 按分级从低到高：普通简单×7（第一层 4 + 第二层 3）→ 普通困难×5（第一层 2 + 第二层 3）→
-	## 精英简单×3 → 精英困难×3 → Boss×4（两层各 2）。
+	## 精英简单×3 → 精英困难×4（第一层 2 + 第二层 2）→ Boss×4（两层各 2）。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_white_mage_guard(), _night_ducks(),
 			_knight_charge(), _wizard(), _duck_kiln(), _sun_forge(),
 		_captain(), _captain_wizard(), _legion(), _breath_charge(), _frost_line(), _undead_legion(), _dragon_nest(),
-		_mech_giant(), _boss_dragon(), _boss_demon_duck(), _mech_duck_boss(), _boss_duck_darkside()]
+		_mech_giant(), _steel_fortress(), _boss_dragon(), _boss_demon_duck(), _mech_duck_boss(), _boss_duck_darkside()]
 
 
 static func layer_of(level: Dictionary) -> int:
@@ -768,6 +768,36 @@ static func _sun_forge() -> Dictionary:
 			[9130, "赫利俄斯", 0, 50, 0, 0, Vector2i(0, 1)],
 			[9131, "量产型俄倪厄", 5, 30, 1, 1, Vector2i(2, 0)],
 			[9131, "量产型俄倪厄", 5, 30, 1, 1, Vector2i(2, 2)],
+		],
+		"tutorial": [],
+	}
+
+
+static func _steel_fortress() -> Dictionary:
+	## 第二层·精英敌人-困难（R149）：后排右边一只俄倪厄（9132，10/50 程1 速1，
+	## **自带双动**），后排左边一只量产型赫卡同克瑞斯（9133，3/35 程1 速1）。
+	##
+	## 赫卡同克瑞斯身上带**铸造倒计时**：**我方回合结束** -1，减到 0 时破坏自身、
+	## 在**原地**立起一座钢铁要塞（9134，工事 5/100 程2，嘲讽）。
+	## ⚠️ 这不是亡语 —— 被玩家提前打掉就什么都不会留下（卡面已写明）。
+	## 于是这关的取舍是：**5 个回合内**是先把 35 血的赫卡同克瑞斯拆掉（要塞就永远
+	## 不会出现），还是先应付那只每回合打两轮的 10 攻俄倪厄（50 血）。
+	## 真让要塞立起来，玩家要面对 100 血 + 嘲讽 + 攻程 2 的工事，再往后才轮得到俄倪厄。
+	return {
+		"name": "钢铁要塞",
+		"key": "steel_fortress",
+		"tier": TIER_ELITE_HARD,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9133, "量产型赫卡同克瑞斯", 3, 35, 1, 1, Vector2i(0, 0)],
+			[9132, "俄倪厄", 10, 50, 1, 1, Vector2i(0, 2)],
 		],
 		"tutorial": [],
 	}

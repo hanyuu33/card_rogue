@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 201,
-			"图鉴 = 201 张（+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126**；实际 %d）"
+	check(repo.all_cards().size() == 204,
+			"图鉴 = 204 张（+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 162 and grp_enemy.size() == 39,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 162 / 39）"
+	check(grp_player.size() == 162 and grp_enemy.size() == 42,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 162 / 42；R149 +3 张敌方卡）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -4400,8 +4400,8 @@ func _init() -> void:
 
 	# ---- 新关卡：使魔鸭群 / 骑士冲锋 / 队长与巫师 / 爆炎鸭阵 / 白魔法师护阵 ----
 	var lvls := GameLevels.builtin_levels()
-	check(lvls.size() == 22, "内置关卡共 22 关（7 普简 + 5 普难 + 3 精英简单 + 3 精英困难 + 4 Boss；"
-			+ "R135 太阳熔炉进第二层普通困难）")
+	check(lvls.size() == 23, "内置关卡共 23 关（7 普简 + 5 普难 + 3 精英简单 + 4 精英困难 + 4 Boss；"
+			+ "R135 太阳熔炉进第二层普通困难 / R149 钢铁要塞进第二层精英困难）")
 	var lva: Dictionary = _level_named("使魔鸭群")
 	check(str(lva["name"]) == "使魔鸭群"
 			and int(lva["tier"]) == GameLevels.TIER_NORMAL_EASY
@@ -4757,8 +4757,8 @@ func _init() -> void:
 	# ---- 分层：各层内容互不串层（第一层 [1] / 第二层 [2]，各自专属） ----
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_DEFAULT).size() == lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
 			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关）" % [lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(), GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size()])
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 11,
-			"第二层自带 11 关（白魔法师护阵 / 夜鸭阵 / 鸭子窑 / 太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / 机械巨鸭Boss / 鸭之暗面Boss）")
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 12,
+			"第二层自带 12 关（白魔法师护阵 / 夜鸭阵 / 鸭子窑 / 太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞** / 机械巨鸭Boss / 鸭之暗面Boss）")
 	# 内容池：第一层 = [1]；第二层 = [2]（各层内容互不串层）
 	var cl1 := GameLayers.content_layers(GameLayers.LAYER_DEFAULT)
 	var cl2 := GameLayers.content_layers(GameLayers.LAYER_TWO)
@@ -4768,8 +4768,8 @@ func _init() -> void:
 	check(GameLayers.content_layers(9).is_empty(), "未配置的层：内容池为空（拿不到任何内容）")
 	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 6,
 			"第二层普通池 6 关（专属：普通简单 3 + 普通困难 3；R135 太阳熔炉）")
-	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 3,
-			"第二层精英池 3 关（专属：精英简单 2 + 精英困难 1）")
+	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 4,
+			"第二层精英池 4 关（专属：精英简单 2 + 精英困难 2；R149 钢铁要塞）")
 	var l2_battle_pool: Array[Dictionary] = []
 	l2_battle_pool.append_array(GameLevels.normal_pool(GameLayers.LAYER_TWO))
 	l2_battle_pool.append_array(GameLevels.elite_pool(GameLayers.LAYER_TWO))
@@ -6688,8 +6688,8 @@ func _init() -> void:
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 55
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
-			and int(dr_cls_count.get("敌人", 0)) == 39,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 55 / 36 / 37）"
+			and int(dr_cls_count.get("敌人", 0)) == 42,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 55 / 36 / 42）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -14513,6 +14513,133 @@ func _init() -> void:
 	check(r135_fury.active_affixes(2, false).has(GameEngine.AFFIX_SWIFT)
 			and not r135_fury.active_affixes(1, false).has(GameEngine.AFFIX_SWIFT),
 			"R135 徽标：光环给的双动也显示「疾行」（acts_left=2 显示 / =1 不显示）")
+
+	# ==========================================================
+	# R149：新关卡「钢铁要塞」（第二层·精英困难）+ 铸造倒计时机制
+	# 量产型赫卡同克瑞斯（9133）**我方回合结束** -1，减到 0 时破坏自身、
+	# 在原地立起钢铁要塞（9134）。⚠️ **不是亡语** —— 提前打掉什么都不留。
+	# ==========================================================
+	var r149_repo := CardRepo.load_json()
+	var r149_oni: CardData = r149_repo.get_card(9132)
+	var r149_hecate: CardData = r149_repo.get_card(9133)
+	var r149_steel: CardData = r149_repo.get_card(9134)
+	check(r149_oni != null and r149_hecate != null and r149_steel != null,
+			"R149 三张新卡都在卡库里（9132 俄倪厄 / 9133 量产型赫卡同克瑞斯 / 9134 钢铁要塞）")
+	check(r149_oni.kind == "盟友" and r149_oni.power == 10 and r149_oni.health == 50
+			and r149_oni.attack_range == 1 and r149_oni.move_speed == 1
+			and r149_oni.actions == 2 and r149_oni.has_affix(GameEngine.AFFIX_SWIFT),
+			"R149 俄倪厄：盟友 10/50 程1 速1，自带双动（actions=2 +「疾行」字段）")
+	check(r149_hecate.kind == "盟友" and r149_hecate.power == 3 and r149_hecate.health == 35
+			and r149_hecate.attack_range == 1 and r149_hecate.move_speed == 1
+			and r149_hecate.traits.has(GameEngine.FUSE_TRAIT),
+			"R149 量产型赫卡同克瑞斯：盟友 3/35 程1 速1，带「铸造」trait")
+	check(r149_steel.kind == "工事" and r149_steel.power == 5 and r149_steel.health == 100
+			and r149_steel.attack_range == 2 and r149_steel.move_speed == 0
+			and r149_steel.traits.has(GameEngine.TAUNT_TRAIT)
+			and r149_steel.has_affix(GameEngine.AFFIX_TAUNT),
+			"R149 钢铁要塞：工事 5/100 程2 速0，嘲讽")
+	check(r149_oni.group == "enemy" and r149_hecate.group == "enemy"
+			and r149_steel.group == "enemy",
+			"R149 三张都是敌方卡（group=enemy）")
+
+	var r149_lv: Dictionary = _level_named("钢铁要塞")
+	check(not r149_lv.is_empty()
+			and int(r149_lv["tier"]) == GameLevels.TIER_ELITE_HARD
+			and GameLevels.layer_of(r149_lv) == GameLayers.LAYER_TWO
+			and GameLevels.bg_key(r149_lv) == "steel_fortress",
+			"R149 钢铁要塞：第二层·精英敌人-困难，key=steel_fortress")
+	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).has(r149_lv),
+			"R149 钢铁要塞进第二层精英战斗池（地图会抽到）")
+	var r149_units: Array = r149_lv["enemy_units"]
+	check(r149_units.size() == 2
+			and int(r149_units[0][0]) == 9133 and r149_units[0][6] == Vector2i(0, 0)
+			and int(r149_units[1][0]) == 9132 and r149_units[1][6] == Vector2i(0, 2),
+			"R149 站位：赫卡同克瑞斯 (0,0) 后排左 / 俄倪厄 (0,2) 后排右")
+	# 元组只是**文档**：引擎读的是卡库那份 → 两者必须逐项一致，
+	# 否则会出现「界面上看到的和真打到的不是一回事」。
+	check(int(r149_units[0][2]) == r149_hecate.power
+			and int(r149_units[0][3]) == r149_hecate.health
+			and int(r149_units[0][4]) == r149_hecate.attack_range
+			and int(r149_units[0][5]) == r149_hecate.move_speed
+			and int(r149_units[1][2]) == r149_oni.power
+			and int(r149_units[1][3]) == r149_oni.health
+			and int(r149_units[1][4]) == r149_oni.attack_range
+			and int(r149_units[1][5]) == r149_oni.move_speed,
+			"R149 元组与卡面同源（力/生/程/速 逐项一致）")
+
+	# ① 上场挂表（`place()` 是唯一初始化口）
+	var r149_e := _new_engine([], 30, 30)
+	var r149_h := r149_e.state.place(CardData.from_dict(r149_hecate.to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	r149_e.start_game()
+	check(r149_h.fuse_left == GameEngine.FUSE_TURNS,
+			"R149 上场挂表：铸造倒计时 = %d（实际 %d）"
+			% [GameEngine.FUSE_TURNS, r149_h.fuse_left])
+	# ② 递减口径：**我方回合结束** -1；敌方回合结束不动（用户口径）
+	r149_e.end_turn()      # 我方回合结束 → -1
+	var r149_a1 := r149_h.fuse_left
+	r149_e.end_turn()      # 敌方回合结束 → 不动
+	check(r149_a1 == GameEngine.FUSE_TURNS - 1 and r149_h.fuse_left == r149_a1,
+			"R149 递减：我方回合结束 -1（%d → %d），敌方回合结束不动（仍 %d）"
+			% [GameEngine.FUSE_TURNS, r149_a1, r149_h.fuse_left])
+	# ③ 走完 5 个我方回合 → 破坏自身 + 原地立起钢铁要塞
+	for r149_i in 7:
+		r149_e.end_turn()
+	var r149_built := r149_e.state.unit_at(Vector2i(0, 0))
+	check(r149_built != null and r149_built.card.id == GameEngine.STEEL_FORTRESS_ID,
+			"R149 铸造完成：原位置立起钢铁要塞")
+	check(r149_built != null and r149_built.health == 100
+			and r149_built.owner == GameEngine.SIDE_OPPONENT,
+			"R149 要塞满血 100 落地且归属敌方")
+	var r149_enemy_n := 0
+	for r149_c2: Vector2i in r149_e.state.board:
+		var r149_p2: Placement = r149_e.state.unit_at(r149_c2)
+		if r149_p2 != null and r149_p2.owner == GameEngine.SIDE_OPPONENT:
+			r149_enemy_n += 1
+	check(r149_enemy_n == 1,
+			"R149 铸成后场上只剩要塞 1 只（赫卡同克瑞斯已自毁，实际 %d）" % r149_enemy_n)
+
+	# ④ **不是亡语**：提前被打掉 → 什么都不留下（这条最能防「写进 _deathrattle」）
+	var r149_e2 := _new_engine([], 30, 30)
+	var r149_h2 := r149_e2.state.place(CardData.from_dict(r149_hecate.to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	r149_e2.start_game()
+	r149_e2.end_turn()
+	r149_e2._destroy(Vector2i(0, 0))
+	for r149_j in 8:
+		r149_e2.end_turn()
+	var r149_fort2 := false
+	for r149_c3: Vector2i in r149_e2.state.board:
+		var r149_p3: Placement = r149_e2.state.unit_at(r149_c3)
+		if r149_p3 != null and r149_p3.card.id == GameEngine.STEEL_FORTRESS_ID:
+			r149_fort2 = true
+	check(not r149_fort2,
+			"R149 **不是亡语**：被提前击破 → 不会铸出要塞")
+
+	# ⑤ 可见性：倒计时要显示在信息栏（战场另有「倒数 N」徽标，只能靠出图核）
+	var r149_e4 := _new_engine([], 30, 30)
+	var r149_h4 := r149_e4.state.place(CardData.from_dict(r149_hecate.to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r149_show := false
+	for r149_ent in r149_h4.status_entries():
+		if str(r149_ent["label"]).contains("铸造"):
+			r149_show = true
+	check(r149_show, "R149 信息栏：倒计时期间显示「铸造：还剩 N 个我方回合」")
+	r149_h4.fuse_left = 0
+	var r149_show2 := false
+	for r149_ent2 in r149_h4.status_entries():
+		if str(r149_ent2["label"]).contains("铸造"):
+			r149_show2 = true
+	check(not r149_show2, "R149 倒计时归零后不再显示该条目")
+
+	# ⑥ 俄倪厄：上场即双动，且自己不带铸造倒计时
+	var r149_e5 := _new_engine([], 30, 30)
+	var r149_o5 := r149_e5.state.place(CardData.from_dict(r149_oni.to_dict()),
+			Vector2i(0, 2), GameEngine.SIDE_OPPONENT)
+	check(r149_o5.acts_left == 2,
+			"R149 俄倪厄上场即双动（acts_left=%d）" % r149_o5.acts_left)
+	check(r149_o5.fuse_left == 0,
+			"R149 俄倪厄不带铸造倒计时（fuse_left=%d）" % r149_o5.fuse_left)
 
 	RunState.player_class = r91_saved_cls
 
