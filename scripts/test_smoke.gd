@@ -1579,7 +1579,8 @@ func _check_menu(scene: Variant) -> void:
 	if UiGate.blocked():
 		_smoke_fail("R148：菜单关闭应撤销 UiGate 登记")
 		return
-	# 菜单项：**首项「返回战斗」由组件自动补**（primary），场景项里要有这几个入口。
+	# 菜单项：**首项「返回战斗」由组件自动补**（primary）。
+	# R155：地图 / 记录 / 卡组上了顶栏专属按钮、「选择关卡」下线 → 菜单只剩设置类。
 	var texts: Array = []
 	var primaries := 0
 	var list: Array = menu._menu_list()
@@ -1587,9 +1588,13 @@ func _check_menu(scene: Variant) -> void:
 		texts.append(str(it.get("text", "")))
 		if bool(it.get("primary", false)):
 			primaries += 1
-	for want: String in ["返回战斗", "查看地图", "战斗记录", "返回标题"]:
+	for want: String in ["返回战斗", "音效：开", "返回标题"]:
 		if not texts.has(want):
-			_smoke_fail("R148：战斗菜单缺少「%s」项（实际 %s）" % [want, str(texts)])
+			_smoke_fail("R155：战斗菜单缺少「%s」项（实际 %s）" % [want, str(texts)])
+			return
+	for gone: String in ["查看地图", "战斗记录", "选择关卡", "查看卡组"]:
+		if texts.has(gone):
+			_smoke_fail("R155：「%s」不该再出现在 Esc 菜单（已上顶栏 / 已下线）" % gone)
 			return
 	if primaries != 1:
 		_smoke_fail("R148：菜单里应**只有一个**主按钮（实际 %d 个）" % primaries)
@@ -1610,15 +1615,16 @@ func _check_map_panel(scene: Variant) -> void:
 	if tb.get_node_or_null("RestartBtn") != null:
 		_smoke_fail("战斗内地图：「重开一局」按钮应已删除")
 		return
-	# R148：顶栏那排按钮（记录 / 音效 / 标题 / 选关 / 地图）**全部下线**，
-	# 只剩「回合结束 + 齿轮」—— 地图入口挪进了 Esc 菜单。
-	for gone: String in ["MapBtn", "LogBtn", "SndBtn", "TitleBtn", "LevelBtn"]:
+	# R155：顶栏新布局 —— 记录（偏左）+ 卡组 / 地图（右侧）+ 回合结束 + 齿轮；
+	# 音效 / 标题 / 选关按钮不下顶栏（音效在 Esc 菜单，选关下线）。
+	for gone: String in ["SndBtn", "TitleBtn", "LevelBtn"]:
 		if tb.get_node_or_null(gone) != null:
-			_smoke_fail("R148：顶栏不该再有 %s" % gone)
+			_smoke_fail("R155：顶栏不该有 %s" % gone)
 			return
-	if tb.get_node_or_null("MenuBtn") == null or tb.get_node_or_null("EndTurnBtn") == null:
-		_smoke_fail("R148：顶栏应只剩「回合结束 + 齿轮(MenuBtn)」")
-		return
+	for want2: String in ["LogBtn", "DeckBtn", "MapBtn", "EndTurnBtn", "MenuBtn", "HpStrip"]:
+		if tb.get_node_or_null(want2) == null:
+			_smoke_fail("R155：顶栏缺少 %s（记录偏左 / 卡组·地图右侧 / HpStrip 血量条）" % want2)
+			return
 	scene._toggle_map()
 	if not scene._map_visible:
 		_smoke_fail("战斗内地图：_toggle_map 后面板没有打开")

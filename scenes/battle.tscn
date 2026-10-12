@@ -21,33 +21,39 @@ anchor_right = 1.0
 offset_bottom = 36.0
 grow_horizontal = 2
 
-[node name="TurnLabel" type="Label" parent="Toolbar"]
+[node name="LogBtn" type="Button" parent="Toolbar"]
 layout_mode = 0
 offset_left = 12.0
+offset_top = 4.0
+offset_right = 96.0
+offset_bottom = 32.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 13
+text = "记录"
+
+[node name="TurnLabel" type="Label" parent="Toolbar"]
+layout_mode = 0
+offset_left = 104.0
 offset_top = 6.0
-offset_right = 210.0
+offset_right = 296.0
 offset_bottom = 30.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
 theme_override_font_sizes/font_size = 14
 text = "我方回合"
 
-[node name="HpLabel" type="Label" parent="Toolbar"]
+[node name="HpStrip" type="Control" parent="Toolbar"]
 layout_mode = 0
-offset_left = 220.0
-offset_top = 6.0
-offset_right = 470.0
-offset_bottom = 30.0
-theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 14
-text = "我方 HP 20 · 敌方 HP 5"
-clip_text = true
-text_overrun_behavior = 3
+offset_left = 304.0
+offset_top = 2.0
+offset_right = 564.0
+offset_bottom = 34.0
+mouse_filter = 2
 
 [node name="StatusLabel" type="Label" parent="Toolbar"]
 layout_mode = 0
-offset_left = 480.0
+offset_left = 572.0
 offset_top = 6.0
-offset_right = 790.0
+offset_right = 836.0
 offset_bottom = 30.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
 theme_override_font_sizes/font_size = 14
@@ -55,11 +61,31 @@ text = ""
 clip_text = true
 text_overrun_behavior = 3
 
+[node name="DeckBtn" type="Button" parent="Toolbar"]
+layout_mode = 0
+offset_left = 844.0
+offset_top = 4.0
+offset_right = 930.0
+offset_bottom = 32.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 13
+text = "卡组"
+
+[node name="MapBtn" type="Button" parent="Toolbar"]
+layout_mode = 0
+offset_left = 936.0
+offset_top = 4.0
+offset_right = 1022.0
+offset_bottom = 32.0
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 13
+text = "地图"
+
 [node name="EndTurnBtn" type="Button" parent="Toolbar"]
 layout_mode = 0
-offset_left = 1062.0
+offset_left = 1028.0
 offset_top = 4.0
-offset_right = 1152.0
+offset_right = 1118.0
 offset_bottom = 32.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
 theme_override_font_sizes/font_size = 14

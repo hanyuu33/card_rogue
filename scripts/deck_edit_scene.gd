@@ -37,6 +37,8 @@ var sfx: Sfx
 var _menu: UiMenu = null      # Esc 主菜单（R148）
 var repo: CardRepo
 var _cards: Array[int] = []   # 卡组每一张卡（按卡组顺序；重复卡各占一格）
+var _uids: Array[int] = []    # R157：每张卡的实例号（与 _cards 平行）—— 补间键用它，重复 id 各归各位
+var _uid_next := 0
 var _sel: Array[int] = []     # 已选中的格子下标（单选模式最多 1 个，鸭血最多 2 个）
 var _hover := -1
 var _result := ""             # 完成提示（显示后 1.4s 回地图）
@@ -75,6 +77,7 @@ func _ready() -> void:
 			if RunState.pending_relic <= 0:
 				RunState.pending_relic = mid  # 兜底：该道具不需要选卡
 	_cards = RunState.deck_ids.duplicate()
+	_reset_uids()
 	confirm_btn.pressed.connect(_on_confirm)
 	resized.connect(_layout)
 	_refresh_title()
@@ -97,12 +100,15 @@ func _ready() -> void:
 		# 新局卡组是空的 → 自备 6 张演示卡组（补间要有卡可滑）
 		RunState.deck_ids = [1011, 1013, 1050, 1051, 1053, 1055]
 		_cards = RunState.deck_ids.duplicate()
+		_reset_uids()
 		var tw_t := Timer.new()
 		tw_t.wait_time = 0.25
 		tw_t.one_shot = true
 		tw_t.timeout.connect(func():
 			if _cards.size() >= 4:
-				_cards.remove_at(_cards.size() / 2))
+				var di: int = _cards.size() / 2
+				_cards.remove_at(di)
+				_uids.remove_at(di))   # R157：与 _cards 平行
 		add_child(tw_t)
 		tw_t.start()
 		var tw_s := Timer.new()
@@ -181,8 +187,17 @@ func _refresh_title() -> void:
 # ------------------------------------------------------------ 网格布局
 
 # R151 P1-11：增删补间 —— 每张卡按 id 记「当前显示位置」，目标位变了就从旧位滑过去（200ms）。
-var _tween := {}   # id(int) -> {from: Vector2, t0: int}
-var _shown := {}   # id(int) -> Vector2（当前显示位置；没有 = 还没画过，直接落目标位）
+var _tween := {}   # uid(int) -> {from: Vector2, t0: int}（R157：键从卡 id 改成实例号）
+var _shown := {}   # uid(int) -> Vector2（当前显示位置；没有 = 还没画过，直接落目标位）
+
+
+func _reset_uids() -> void:
+	## R157：给每张卡发实例号。⚠️ 补间键**不能用卡 id** —— 重复 id 会共享一条位置记录，
+	## 后画的同 id 卡发现「当前位置 ≠ 目标位」就从**另一张同名卡的位置**起滑（失忆药水乱飞案）。
+	_uids.clear()
+	for _c in _cards:
+		_uids.append(_uid_next)
+		_uid_next += 1
 
 
 func _layout() -> void:
@@ -239,7 +254,7 @@ func _fit(area_w: float, area_h: float, gap: float) -> Array:
 
 func _tweened_rect(i: int, target: Rect2, now_ms: int) -> Rect2:
 	## R151 P1-11：第 i 张卡的显示矩形 —— 增删后目标位变了，从旧位置平滑滑到新位置（200ms）。
-	var id: int = _cards[i]
+	var id: int = _uids[i]   # R157：键 = 实例号（同名卡各有记录，不再互相顶位置）
 	var tp := target.position
 	if not _shown.has(id):
 		_shown[id] = tp
@@ -311,7 +326,7 @@ func _draw() -> void:
 			_draw_check_badge(rect)
 	# R151 P1-11：清理已移除卡的残留位置记录（它们的槽位已被别的卡滑过来补上）
 	for old_id in _shown.keys():
-		if not _cards.has(old_id):
+		if not _uids.has(old_id):
 			_shown.erase(old_id)
 			_tween.erase(old_id)
 	if _result != "":

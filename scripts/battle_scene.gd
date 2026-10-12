@@ -275,6 +275,8 @@ var _back_tex: Texture2D
 var _frame_tex: Texture2D      # R137：棋盘边框角花素材（assets/ui/grid_frame.png）
 var _discard_tex: Texture2D    # R140：弃牌区图标（assets/ui/discard_icon.png）
 var _void_tex: Texture2D       # R140：消耗（消失）区次元图标（assets/ui/void_icon.png）
+var _hp_icon: Texture2D        # R156：双方血量图标（icon_health.png，与生命徽章同款血滴）
+var _energy_icon: Texture2D    # R156：能量图标（icon_cost.png，与费用徽章同款水晶）
 var _font: SystemFont
 var _font_bold: SystemFont
 
@@ -356,6 +358,8 @@ var _discard_visible := false   # 弃牌区浏览面板开关（点弃牌区切�
 var _effects_visible := false   # 效果区浏览面板开关（点左侧效果区查看）
 var _enemy_effects_visible := false  # 敌方效果区浏览面板开关
 var _deck_visible := false      # 卡组（抽牌堆）浏览面板开关（点卡组牌堆查看，不显示顺序）
+var _void_visible := false      # 消耗区浏览面板开关（R155：点消耗区图标回看本局消失的卡）
+var _zone_page := 0             # 区域浏览面板页码（R155 分页：滚轮 / ‹ › 翻页）
 var _relics_visible := false    # 道具浏览面板开关（道具栏装不下时点它查看全部）
 var _relic_scroll := 0.0        # 道具浏览面板滚动量（道具太多时滚轮翻动）
 # 「英雄」（9023）的弃牌代价：上场前让玩家自己挑 4 张手牌丢掉
@@ -386,8 +390,11 @@ var _net_wait := 0.0
 
 @onready var toolbar: Panel = $Toolbar
 @onready var turn_label: Label = $Toolbar/TurnLabel
-@onready var hp_label: Label = $Toolbar/HpLabel
+@onready var hp_strip: Control = $Toolbar/HpStrip
 @onready var status_label: Label = $Toolbar/StatusLabel
+@onready var log_btn: Button = $Toolbar/LogBtn
+@onready var deck_btn: Button = $Toolbar/DeckBtn
+@onready var map_btn: Button = $Toolbar/MapBtn
 @onready var end_turn_btn: Button = $Toolbar/EndTurnBtn
 @onready var menu_btn: Button = $Toolbar/MenuBtn
 
@@ -406,15 +413,22 @@ func _ready() -> void:
 	_frame_tex = load("res://assets/ui/grid_frame.png")
 	_discard_tex = load("res://assets/ui/discard_icon.png")
 	_void_tex = load("res://assets/ui/void_icon.png")
+	_hp_icon = load("res://assets/ui/icon_health.png")
+	_energy_icon = load("res://assets/ui/icon_cost.png")
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
 	add_child(sfx)
 	end_turn_btn.pressed.connect(_on_end_turn)
 	menu_btn.pressed.connect(_open_menu)
+	# R155：顶栏操作按钮 —— 记录（偏左）/ 卡组·地图（右侧）。不再只藏在 Esc 菜单里。
+	log_btn.pressed.connect(_toggle_log)
+	deck_btn.pressed.connect(_toggle_deck_panel)
+	map_btn.pressed.connect(_toggle_map)
+	hp_strip.draw.connect(_draw_hp_strip)
 	# 齿轮图标**自绘**（字体里的 ⚙ 不保证有，缺字会变成一个方框）—— 见 UiTheme.draw_gear
 	menu_btn.draw.connect(_draw_menu_gear)
-	for b: Button in [end_turn_btn, menu_btn]:
+	for b: Button in [log_btn, deck_btn, map_btn, end_turn_btn, menu_btn]:
 		b.pressed.connect(func(): sfx.play("click"))
 	_ai_timer = Timer.new()
 	_ai_timer.wait_time = 1.6
@@ -425,7 +439,7 @@ func _ready() -> void:
 	_build_over_panel()
 	_load_entry_level()
 	# R113：顶栏按钮统一走 chip（实心 + compact —— 顶栏按钮只有 28px 高，标准内距会撑出格子）
-	for _tb: Button in [end_turn_btn, menu_btn]:
+	for _tb: Button in [log_btn, deck_btn, map_btn, end_turn_btn, menu_btn]:
 		UiTheme.apply_chip(_tb, true, true)
 	# R119：奖励悬浮窗 —— 战斗胜利后的掉落道具 / 卡牌奖励都先入队，由它逐项展示
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
@@ -1533,6 +1547,30 @@ func _ready() -> void:
 				% [wk_pl.atk_debuff, wk_pl.effective_power()]
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--zoneview" in args and engine != null:
+		# 演示（R155）：区域浏览面板 facelift —— 羊皮纸 + 标题栏 + × + 分页。
+		#   --zoneview deck：卡组面板；--zoneview void：消耗区面板（塞 6 张演示消失卡）。
+		# 出图：--screenshot --level 0 --zoneview deck --shotframe 20
+		_close_zone_panels()
+		var zv_i := args.find("--zoneview")
+		if zv_i >= 0 and zv_i + 1 < args.size() and args[zv_i + 1] == "void":
+			engine.state.hand.clear()
+			for vid: int in [9010, 9010, 9102, 9078, 8001, 9032]:
+				var vc: CardData = repo.get_card(vid)
+				if vc != null:
+					engine.state.void_cards.append(vc)
+					engine.state.void_count += 1
+			_void_visible = true
+		else:
+			_deck_visible = true
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--logview" in args and engine != null:
+		# 演示（R155）：对局记录面板（顶栏「记录」按钮同一个）。
+		# 出图：--screenshot --level 0 --logview --shotframe 20
+		_log_visible = true
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--stonelimit" in args and engine != null:
 		# 演示（R144）：**荒野形态先结算 + 石肤只在 >= 2 点伤害时才挡**。
 		# 出图：--screenshot --level 0 --gridscroll 0 --stonelimit --shotframe 20
@@ -2317,6 +2355,15 @@ func _gui_input(event: InputEvent) -> void:
 		# 地图总览（R128）：5×7 格子整屏装得下 → 不再滚动，滚轮在此吞掉
 		if _map_visible:
 			return
+		# R155：区域浏览面板（卡组/弃牌/消耗/效果区）开着 → 滚轮翻页
+		if _discard_visible or _effects_visible or _enemy_effects_visible \
+				or _deck_visible or _void_visible:
+			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+				_zone_page = maxi(0, _zone_page - 1)
+			else:
+				_zone_page += 1   # 上限在绘制处钳
+			queue_redraw()
+			return
 		# 道具浏览面板：内容放不下时用滚轮翻动
 		if _relics_visible:
 			_relic_scroll += -34.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 34.0
@@ -2390,6 +2437,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				return
 			if _map_visible:
 				_map_visible = false
+				queue_redraw()
+				return
+			# R155：区域浏览面板（卡组/弃牌/消耗/效果/道具）也是一层浮层 → 先关它再轮到自己开菜单
+			if _discard_visible or _effects_visible or _enemy_effects_visible or _relics_visible \
+					or _deck_visible or _void_visible:
+				_close_zone_panels()
 				queue_redraw()
 				return
 			if _menu != null:
@@ -2626,14 +2679,25 @@ func _on_left_click(pos: Vector2) -> void:
 		queue_redraw()
 		return
 	if _discard_visible or _effects_visible or _enemy_effects_visible or _relics_visible\
-			or _deck_visible:
+			or _deck_visible or _void_visible:
 		# 专注（9122）挂起时：先让点击落到「面板内选牌」上，别被这里直接关掉。
 		if engine.focus_pending:
 			if _on_focus_panel_click(pos):
 				queue_redraw()
 				return
-		_close_zone_panels()
-		queue_redraw()
+		# R155：‹ › 翻页 / 右上「×」/ 点面板**外**才关闭 —— 旧版「点任意处关闭」
+		# 让面板内的点击（想看另一页、想细看）都变成了关面板，太毛躁。
+		if _zone_prev_page_rect().has_point(pos):
+			_zone_page = maxi(0, _zone_page - 1)
+			queue_redraw()
+			return
+		if _zone_next_page_rect().has_point(pos):
+			_zone_page += 1   # 上限在绘制处钳（页数随卡数变）
+			queue_redraw()
+			return
+		if _zone_close_rect().has_point(pos) or not _zone_panel_rect().has_point(pos):
+			_close_zone_panels()
+			queue_redraw()
 		return
 	# 效果区：点击查看全部效果卡（持续生效中）
 	var effects_rect := _own_effect_zone_rect()
@@ -2661,10 +2725,11 @@ func _on_left_click(pos: Vector2) -> void:
 		_discard_visible = true
 		queue_redraw()
 		return
-	# R140 消耗（消失）区：只是个计数图标，点它给一行说明（不改任何状态，也不清选区）
-	if Rect2(VOID_X, VOID_Y, CARD_W, CARD_H).has_point(pos):
+	# R155 消耗（消失）区：点开浏览面板 —— 本局消失的卡逐张可回看（相同卡合并 ×N）
+	if Rect2(VOID_X, VOID_Y, CARD_W, CARD_H).has_point(pos) and engine.state.void_count > 0:
 		_pass_moved_pending()
-		_say("消耗区：本局已有 %d 张卡从牌组 / 场上消失（不进弃牌区）" % engine.state.void_count)
+		_close_zone_panels()
+		_void_visible = true
 		queue_redraw()
 		return
 	# 卡组（抽牌堆）：点开浏览 —— 相同卡合并显示张数，不泄露抽牌顺序
@@ -3756,6 +3821,8 @@ func _close_zone_panels() -> void:
 	_enemy_effects_visible = false
 	_relics_visible = false
 	_deck_visible = false
+	_void_visible = false
+	_zone_page = 0
 	_relic_scroll = 0.0
 
 
@@ -4208,7 +4275,11 @@ func _on_hover(pos: Vector2) -> void:
 	if not zp.is_empty():
 		var zl := _zone_panel_layout(zp.size())
 		for i in zp.size():
-			if _zone_card_rect(i, zl).has_point(pos):
+			# R155 分页：非当前页的卡（矩形落在面板外）不响应悬停
+			var zr := _zone_card_rect(i, zl)
+			if zr.position.y < float(zl["py"]) + 30.0 or zr.end.y > float(zl["py"]) + float(zl["ph"]) - 30.0:
+				continue
+			if zr.has_point(pos):
 				var zc: CardData = zp[i]
 				_hover_card = zc
 				if Time.get_ticks_msec() >= _status_hold_until:
@@ -4685,19 +4756,14 @@ func _whisper_suffix() -> String:
 
 
 func _menu_items() -> Array:
-	## 战斗中的主菜单项（R148）—— **顶栏原来那排按钮全在这里**：
-	## 地图 / 记录 / 音效 / 选关 / 标题。以后战斗里再加「设置类」功能也只往这里加，
-	## 顶栏永远只有「回合结束 + 齿轮」。
+	## 战斗中的主菜单项 —— R155 起**只放设置类**（音效 / 返回标题）：
+	## 地图 / 战斗记录 / 卡组都有顶栏专属按钮（用户口径：不该只藏在设置里），
+	## 「选择关卡」从菜单下线（用户口径）。
 	##
-	## ⚠️ 本函数**每次打开菜单都会重新调用**（attach 传的是函数引用），所以
-	##    这里的 `_mapview_available()` / `sfx.enabled` / `_net_mode` 读到的一定是当下值。
+	## ⚠️ 本函数**每次打开菜单都会重新调用**（attach 传的是函数引用），音效文案总是当下值。
 	return [
-		{"text": "查看地图", "fn": _toggle_map,
-			"disabled": not _mapview_available()},
-		{"text": "战斗记录", "fn": _toggle_log},
 		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
 			"fn": _toggle_sound, "keep_open": true},
-		{"text": "选择关卡", "fn": _open_level_menu, "disabled": _net_mode},
 		{"text": "返回标题", "fn": _on_back_to_title},
 	]
 
@@ -4732,6 +4798,41 @@ func _draw_menu_gear() -> void:
 func _toggle_log() -> void:
 	_log_visible = not _log_visible
 	queue_redraw()
+
+
+func _toggle_deck_panel() -> void:
+	## 顶栏「卡组」按钮（R155）：开关卡组浏览面板 —— 与点右下牌堆是**同一个**面板。
+	if engine.state.deck.is_empty() and not _deck_visible:
+		return
+	if _deck_visible:
+		_close_zone_panels()
+	else:
+		_close_zone_panels()
+		_deck_visible = true
+	queue_redraw()
+
+
+func _draw_hp_strip() -> void:
+	## 顶栏血量条（R156）：双方 HP 图标化 —— 血滴素材 + 滚动数字（取代纯文字 HpLabel）。
+	## 颜色沿用战场语言：我方绿 / 敌方红；画在 HpStrip 自己的画布上（顶栏子节点）。
+	if engine == null:
+		return
+	var cy := hp_strip.size.y / 2.0
+	var icon := 20.0
+	var x := 2.0
+	if _hp_icon != null:
+		hp_strip.draw_texture_rect(_hp_icon, Rect2(x, cy - icon / 2.0, icon, icon), false)
+	x += icon + 4.0
+	var self_txt := "%d/%d" % [_roll("hp_self_bar", engine.state.hp_self), engine.state.max_hp_self]
+	hp_strip.draw_string(_font_bold, Vector2(x, cy + 5), self_txt,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("a9e6a0"))
+	x += _font_bold.get_string_size(self_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 16.0
+	if _hp_icon != null:
+		hp_strip.draw_texture_rect(_hp_icon, Rect2(x, cy - icon / 2.0, icon, icon), false, Color("ffb0a8"))
+	x += icon + 4.0
+	hp_strip.draw_string(_font_bold, Vector2(x, cy + 5),
+			"%d/%d" % [_roll("hp_opp_bar", engine.state.hp_opponent), engine.state.max_hp_opponent],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("f0a89e"))
 
 
 # ------------------------------------------------------------ 战斗内地图总览（R64）
@@ -5417,6 +5518,9 @@ func _draw() -> void:
 		if engine.focus_pending:
 			deck_title = "专注：从卡组中移除 %d 张卡（点一张就移除它｜右键取消）" % engine.focus_remaining
 		_draw_zone_panel(deck_title,
+				_zone_panel_cards(), _zone_panel_counts())
+	if _void_visible:
+		_draw_zone_panel("消耗区 %d 张（相同卡合并；消失的卡本场对战不再出现）" % engine.state.void_count,
 				_zone_panel_cards(), _zone_panel_counts())
 	if _effects_visible:
 		_draw_zone_panel("效果区 %d 张（同名合并，正面朝上，持续生效中）" % engine.state.effects.size(),
@@ -6229,10 +6333,53 @@ func _tick_earring_autoplay() -> bool:
 	return true
 
 
+static func _hand_diff(old: Array, cur: Array) -> Dictionary:
+	## 手牌差异（R157）：LCS 最长公共子序列 —— **同 id 重复卡也各归各位**。
+	## 旧的保序双指针在重复 id 时必然错配：[A,B,A] 打出首张 A → B 被误判「新增」
+	## （播抽卡飞入）、尾张 A 被判移除 —— 「用一张卡，其它卡播放抽卡动画」的病灶。
+	## LCS 取**最长**匹配 → 增删条目最少且唯一确定。手牌 ≤ 12 张，O(n·m) 可忽略。
+	## 返回 {"removed": [{id, idx}], "added": [{id, idx}]}（idx 各属旧/新数组）。
+	var n := old.size()
+	var m := cur.size()
+	var dp: Array = []
+	dp.resize(n + 1)
+	for i in n + 1:
+		var row: Array = []
+		row.resize(m + 1)
+		row.fill(0)
+		dp[i] = row
+	for i in range(n - 1, -1, -1):
+		for j in range(m - 1, -1, -1):
+			if old[i] == cur[j]:
+				dp[i][j] = int(dp[i + 1][j + 1]) + 1
+			else:
+				dp[i][j] = maxi(int(dp[i + 1][j]), int(dp[i][j + 1]))
+	var removed: Array = []
+	var added: Array = []
+	var i2 := 0
+	var j2 := 0
+	while i2 < n and j2 < m:
+		if old[i2] == cur[j2]:
+			i2 += 1
+			j2 += 1
+		elif int(dp[i2 + 1][j2]) >= int(dp[i2][j2 + 1]):
+			removed.append({"id": old[i2], "idx": i2})
+			i2 += 1
+		else:
+			added.append({"id": cur[j2], "idx": j2})
+			j2 += 1
+	while i2 < n:
+		removed.append({"id": old[i2], "idx": i2})
+		i2 += 1
+	while j2 < m:
+		added.append({"id": cur[j2], "idx": j2})
+		j2 += 1
+	return {"removed": removed, "added": added}
+
+
 func _hand_sync() -> void:
 	## R151 P0-1/2：手牌差异 → 抽牌飞入 / 弃牌·消耗飞出（每帧调用）。
-	## 手牌只有「尾部追加 / 按 index 移除」→ 保序双指针 walk 出 (移除 id+旧下标) 与 (新增卡+新下标)；
-	## 中间插入（罕见）也能正确识别（分支 ③：当前指针后的剩余里还有它 → 是插入不是移除）。
+	## R157：diff 改走 `_hand_diff`（LCS）—— 重复 id 卡不再错配（旧双指针 [A,B,A] 打 A → B 误播抽卡）。
 	if engine == null:
 		return
 	var cur: Array = []
@@ -6259,26 +6406,12 @@ func _hand_sync() -> void:
 		_void_known = engine.state.void_count
 		return
 	var old_n := _hand_known.size()
-	var removed: Array = []   # {id, idx}
-	var added: Array = []     # {card, idx}
-	var j := 0
-	var k := 0
-	while j < old_n:
-		if k >= cur.size():
-			removed.append({"id": _hand_known[j], "idx": j})
-			j += 1
-		elif _hand_known[j] == cur[k]:
-			j += 1
-			k += 1
-		elif cur.slice(k + 1).has(_hand_known[j]):
-			added.append({"card": engine.state.hand[k], "idx": k})   # ③ 中间插入
-			k += 1
-		else:
-			removed.append({"id": _hand_known[j], "idx": j})
-			j += 1
-	while k < cur.size():
-		added.append({"card": engine.state.hand[k], "idx": k})
-		k += 1
+	# R157：diff 走 LCS 纯函数（重复 id 不错配；回归可直接调 _hand_diff 验证）
+	var d: Dictionary = _hand_diff(_hand_known, cur)
+	var removed: Array = d["removed"]   # {id, idx}（旧数组下标）
+	var added: Array = []               # {card, idx}（新数组下标）
+	for a: Dictionary in d["added"]:
+		added.append({"card": engine.state.hand[int(a["idx"])], "idx": int(a["idx"])})
 	_hand_known = cur
 	var vd: int = engine.state.void_count - _void_known   # 这段时间被「消耗」的张数
 	_void_known = engine.state.void_count
@@ -8201,19 +8334,20 @@ func _draw_frame_corner(src: Rect2, at: Vector2, sz: Vector2) -> void:
 
 
 func _draw_hp_banner() -> void:
-	## R140：这四条以前是「深色字 + 描边」压在底图上，读不清；改成带底条的亮字。
+	## R156：双方血量图标化 —— 血滴素材（与生命徽章同款）+ 滚动数字（底条亮字保留）。
+	## 能量不再出现在这里：我方能量只有**左上能量面板**一处；敌方能量数值不再显示
+	##（两条都是用户口径）。
 	var mid_x := GRID_X + GRID_W + 18
-	# R151 P0-3：HP / 能量数字滚动 —— HP 的目标值仍走 _show_hp（命中演出前冻结），
-	# 滚动接在「冻结解除」之后自然发生（_drop_hp → 目标值掉 → 起滚），不与冻结并行。
-	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION, "敌方 HP\n%d" % _roll("hp_opp", _show_hp("hp_opp", engine.state.hp_opponent)),
-			Vector2(mid_x, GRID_Y + 8 + UiTheme.FS_CAPTION), TXT_FOE)
-	_draw_string_box_nw(_font, UiTheme.FS_MICRO, "敌方能量 %d" % _roll("opp_energy", engine.state.opp_energy),
-			Vector2(mid_x, GRID_Y + 66 + UiTheme.FS_MICRO), TXT_POWER)
-	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION, "我方 HP\n%d/%d" % [_roll("hp_self", _show_hp("hp_self", engine.state.hp_self)),
+	# R151 P0-3：HP 数字滚动 —— 目标值仍走 _show_hp（命中演出前冻结），滚动接在冻结解除后。
+	if _hp_icon != null:
+		draw_texture_rect(_hp_icon, Rect2(mid_x - 3, GRID_Y + 4, 24, 24), false)
+	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION, "敌方 HP %d" % _roll("hp_opp", _show_hp("hp_opp", engine.state.hp_opponent)),
+			Vector2(mid_x + 26, GRID_Y + 8 + UiTheme.FS_CAPTION), TXT_FOE)
+	if _hp_icon != null:
+		draw_texture_rect(_hp_icon, Rect2(mid_x - 3, GRID_Y + GRID_H - 34, 24, 24), false)
+	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION, "我方 HP %d/%d" % [_roll("hp_self", _show_hp("hp_self", engine.state.hp_self)),
 			engine.state.max_hp_self],
-			Vector2(mid_x, GRID_Y + GRID_H - 30 + UiTheme.FS_CAPTION), TXT_SELF)
-	_draw_string_box_nw(_font, UiTheme.FS_MICRO, "能量 %d" % _roll("energy", engine.state.energy),
-			Vector2(mid_x, GRID_Y + GRID_H - 56 + UiTheme.FS_MICRO), TXT_SELF)
+			Vector2(mid_x + 26, GRID_Y + GRID_H - 30 + UiTheme.FS_CAPTION), TXT_SELF)
 
 
 func _enemy_zone_rect() -> Rect2:
@@ -8348,8 +8482,15 @@ func _draw_cost_zone() -> void:
 	var epanel := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
 	draw_rect(epanel, Color(1, 1, 1, 0.55), true)
 	draw_rect(epanel, UiTheme.INK_300, false, 1.0)
-	_draw_string_center(_font_bold, UiTheme.FS_HEADING, str(_roll("energy", state.energy)),
-			Vector2(mid_x, COST_Y + 46), UiTheme.STAT_POWER)
+	# R156：能量数值配水晶图标（与费用徽章同款素材），图标 + 数字作为一对整体居中
+	var e_txt := str(_roll("energy", state.energy))
+	var e_w := _font_bold.get_string_size(e_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_HEADING).x
+	var gem := 26.0
+	var pair_x := mid_x - (gem + 4.0 + e_w) / 2.0
+	if _energy_icon != null:
+		draw_texture_rect(_energy_icon, Rect2(pair_x, COST_Y + 46 - gem / 2.0, gem, gem), false)
+	_draw_string_center(_font_bold, UiTheme.FS_HEADING, e_txt,
+			Vector2(pair_x + gem + 4.0 + e_w / 2.0, COST_Y + 46), UiTheme.STAT_POWER)
 	_draw_string_center(_font, UiTheme.FS_MICRO, "每回合重置为 5",
 			Vector2(mid_x, COST_Y + 70), UiTheme.INK_500)
 	# 蓄力（9085）：待用层数（0 层不画）—— 下一张技能的结算次数 = 1 + 层数
@@ -8726,12 +8867,6 @@ func _draw_turn_owner_fx() -> void:
 			var r := Rect2(ctr - Vector2(BOARD_CARD_W, BOARD_CARD_H) / 2.0,
 					Vector2(BOARD_CARD_W, BOARD_CARD_H))
 			draw_rect(r.grow(2.0), Color(0.85, 0.20, 0.15, 0.16 + 0.14 * pulse), false, 1.5)
-		# 敌方能量框提亮（呼吸金框）——「轮到对面了」的第二个信号
-		var et := "敌方能量 %d" % engine.state.opp_energy
-		var etw := _font.get_string_size(et, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_MICRO).x
-		var er := Rect2(GRID_X + GRID_W + 18 - TEXT_BG_PAD_X, GRID_Y + 66 - TEXT_BG_PAD_Y,
-				etw + TEXT_BG_PAD_X * 2, UiTheme.FS_MICRO + TEXT_BG_PAD_Y * 2 + 2)
-		draw_rect(er, Color(0.95, 0.76, 0.31, 0.35 + 0.30 * pulse), false, 1.2)
 
 
 func _draw_pow_fx() -> void:
@@ -9129,6 +9264,9 @@ func _zone_panel_cards() -> Array:
 	if _deck_visible:
 		return _merged_deck(engine.state.deck).map(
 				func(m: Dictionary) -> CardData: return m["card"])
+	if _void_visible:
+		return _merged_deck(engine.state.void_cards).map(
+				func(m: Dictionary) -> CardData: return m["card"])
 	if _discard_visible:
 		return engine.state.discard
 	return []
@@ -9144,6 +9282,9 @@ func _zone_panel_counts() -> Array:
 				func(m: Dictionary) -> int: return m["count"])
 	if _deck_visible:
 		return _merged_deck(engine.state.deck).map(
+				func(m: Dictionary) -> int: return m["count"])
+	if _void_visible:
+		return _merged_deck(engine.state.void_cards).map(
 				func(m: Dictionary) -> int: return m["count"])
 	return []
 
@@ -9177,44 +9318,95 @@ const ZONE_CARD_GAP := 20.0
 
 func _zone_panel_layout(n: int) -> Dictionary:
 	## 区域浏览面板的网格布局：绘制与悬停判定共用一份，改一处即可。
+	## R155 分页：面板高度封顶 → 放不下的行走**翻页**（page_rows / pages）。
+	## ⚠️ 不做滚动 —— Godot 4.3 画布没有裁剪，滚到一半的行会画出面板外。
 	# 先按可用宽度尽量多排几列（至少 1 列），再按张数算行数
 	var cols := maxi(1, int((WINDOW_W - 180.0) / (CARD_W + ZONE_CARD_GAP)))
 	cols = mini(cols, maxi(n, 1))
 	var rows := maxi(1, int(ceil(float(n) / float(cols))))
 	var grid_w := cols * (CARD_W + ZONE_CARD_GAP) - ZONE_CARD_GAP
 	var pw := minf(WINDOW_W - 80.0, grid_w + 60.0)
-	var ph := minf(WINDOW_H - 40.0, rows * (CARD_H + ZONE_CARD_GAP) + 86.0)
+	var rows_fit := maxi(1, int((WINDOW_H - 40.0 - 86.0 + ZONE_CARD_GAP) / (CARD_H + ZONE_CARD_GAP)))
+	var page_rows := mini(rows, rows_fit)
+	var pages := maxi(1, int(ceil(float(rows) / float(page_rows))))
+	var ph := minf(WINDOW_H - 40.0, page_rows * (CARD_H + ZONE_CARD_GAP) + 86.0)
 	var px := (WINDOW_W - pw) / 2
 	var py := (WINDOW_H - ph) / 2
 	var x0 := px + (pw - grid_w) / 2
-	return {"cols": cols, "px": px, "py": py, "pw": pw, "ph": ph, "x0": x0}
+	return {"cols": cols, "px": px, "py": py, "pw": pw, "ph": ph, "x0": x0,
+			"page_rows": page_rows, "pages": pages}
 
 
 func _zone_card_rect(i: int, L: Dictionary) -> Rect2:
-	## 面板里第 i 张卡的矩形（悬停判定用）。
+	## 面板里第 i 张卡的矩形（悬停判定用）。R155：y 按**页内行号**算（非本页的卡落到面板外）。
 	var cols: int = L["cols"]
+	var row_in_page := int(i / cols) - _zone_page * int(L["page_rows"])
 	return Rect2(L["x0"] + (i % cols) * (CARD_W + ZONE_CARD_GAP),
-			L["py"] + 42.0 + int(i / cols) * (CARD_H + ZONE_CARD_GAP), CARD_W, CARD_H)
+			L["py"] + 42.0 + row_in_page * (CARD_H + ZONE_CARD_GAP), CARD_W, CARD_H)
+
+
+func _zone_panel_rect() -> Rect2:
+	## 当前打开的区域面板外框（R155「点面板外才关闭」的判定；绘制与输入共用）。
+	var L := _zone_panel_layout(maxi(_zone_panel_cards().size(), 1))
+	return Rect2(L["px"], L["py"], L["pw"], L["ph"])
+
+
+func _zone_close_rect() -> Rect2:
+	## 面板右上「×」关闭按钮。
+	var L := _zone_panel_layout(maxi(_zone_panel_cards().size(), 1))
+	return Rect2(L["px"] + L["pw"] - 36.0, L["py"] + 8.0, 26.0, 26.0)
+
+
+func _zone_prev_page_rect() -> Rect2:
+	var L := _zone_panel_layout(maxi(_zone_panel_cards().size(), 1))
+	return Rect2(L["px"] + 16.0, L["py"] + L["ph"] - 32.0, 34.0, 26.0)
+
+
+func _zone_next_page_rect() -> Rect2:
+	var L := _zone_panel_layout(maxi(_zone_panel_cards().size(), 1))
+	return Rect2(L["px"] + L["pw"] - 50.0, L["py"] + L["ph"] - 32.0, 34.0, 26.0)
 
 
 func _draw_zone_panel(title: String, cards: Array, counts: Array = []) -> void:
-	## 区域浏览面板：全部卡按网格换行铺开（卡再多也能一张不漏地看清），点击任意处关闭。
+	## 区域浏览面板（R155 facelift）：羊皮纸 + 金边（与奖励悬浮窗同一语言）、标题栏、
+	## 右上「×」、**分页**（滚轮或点 ‹ ›；旧版「点任意处关闭」改成「点面板外 / × 关闭」）。
 	## 悬停任意一张 → 左侧信息栏显示它的明细（判定走 _zone_card_rect）。
 	## counts 非空时与 cards 平行：>1 的在左下角画「×N」合并张数角标。
 	var n := cards.size()
 	var L := _zone_panel_layout(n)
+	var pages: int = L["pages"]
+	_zone_page = clampi(_zone_page, 0, pages - 1)   # 卡数会变 → 页码钳回合法区间
 	var pw: float = L["pw"]
 	var ph: float = L["ph"]
 	var px: float = L["px"]
 	var py: float = L["py"]
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
-	draw_rect(Rect2(px, py, pw, ph), Color.WHITE)
-	draw_rect(Rect2(px, py, pw, ph), UiTheme.INK_600, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "%s — 点击任意处关闭" % title,
+	draw_rect(Rect2(px, py, pw, ph), UiTheme.PAPER)
+	draw_rect(Rect2(px, py, pw, ph), UiTheme.ACCENT_GOLD, false, 2.0)
+	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "%s — 点击面板外关闭" % title,
 			Vector2(WINDOW_W / 2, py + 24), UiTheme.INK_800)
+	if pages > 1:
+		_draw_string_center(_font, UiTheme.FS_CAPTION, "第 %d/%d 页（滚轮翻页）" % [_zone_page + 1, pages],
+				Vector2(WINDOW_W / 2, py + ph - 15), UiTheme.INK_500)
+		_draw_string_center(_font_bold, UiTheme.FS_HEADING, "<",
+				_zone_prev_page_rect().get_center() + Vector2(0, 1),
+				UiTheme.INK_600 if _zone_page > 0 else UiTheme.INK_300)
+		_draw_string_center(_font_bold, UiTheme.FS_HEADING, ">",
+				_zone_next_page_rect().get_center() + Vector2(0, 1),
+				UiTheme.INK_600 if _zone_page < pages - 1 else UiTheme.INK_300)
+	# 右上「×」
+	draw_rect(_zone_close_rect(), Color("c9bfa6"), true)
+	draw_rect(_zone_close_rect(), UiTheme.INK_300, false, 1.0)
+	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "×",
+			_zone_close_rect().get_center() + Vector2(0, 1), UiTheme.INK_800)
 	if n == 0:
 		return
+	var page_rows: int = L["page_rows"]
+	var cols: int = L["cols"]
 	for i in n:
+		var row_in_page := int(i / cols) - _zone_page * page_rows
+		if row_in_page < 0 or row_in_page >= page_rows:
+			continue
 		var c: CardData = cards[i]
 		var face := _zone_card_rect(i, L)
 		_draw_card_face(c, face, c.health, false, false)
@@ -9448,6 +9640,8 @@ func _process(delta: float) -> void:
 		turn_label.text = "对局结束"
 	else:
 		turn_label.text = "对手回合"
-	hp_label.text = "我方 HP %d/%d · 敌方 HP %d/%d" % [_roll("hp_self_bar", engine.state.hp_self),
-			engine.state.max_hp_self, _roll("hp_opp_bar", engine.state.hp_opponent), engine.state.max_hp_opponent]
+	# R155/R156：顶栏血量条改自绘（图标 + 滚动数字），这里只触发重绘 + 维护按钮禁用态
+	hp_strip.queue_redraw()
+	deck_btn.disabled = engine.state.deck.is_empty() and not _deck_visible
+	map_btn.disabled = not _mapview_available()
 	status_label.text = status_text

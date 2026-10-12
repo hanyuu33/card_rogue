@@ -58,6 +58,9 @@ var void_dmg_spells := 0       # 虚空主宰 9082：本次对战中「用技能
 ## `void_count += 1`（FieldState.discard_hand / GameEngine 的 use_spell·_destroy·
 ## focus_pick·foresight_pick_card·_melt_ice_walls），战斗结束即作废。
 var void_count := 0
+## R155：消失的卡本体（与 void_count 平行，每处 `void_count += 1` 都同步 append）——
+## 消耗区从「只报一个数」升级成可点开的浏览面板，玩家能回看本局到底消失了哪些卡。
+var void_cards: Array = []
 var self_next_energy := 0      # 活力转移 9110（R55）：剩余费用换来的「下个回合开始时」额外费用（发放后清零）
 var opp_next_energy := 0       # 同上，敌方（对称保留）
 var self_energy_spent := 0     # 本回合**已花掉**的费用（暗影之刃 9111 的 X；回合开始清零）
@@ -178,10 +181,12 @@ func discard_hand() -> int:
 		if c.traits.has(VANISH_TRAIT):
 			n += 1
 			void_count += 1   # R140：离场消失 → 计入消耗区
+			void_cards.append(c)
 			continue
 		if c.is_ephemeral:
 			n += 1
 			void_count += 1   # R140：衍生物回合结束消失 → 计入消耗区
+			void_cards.append(c)
 			continue
 		if c.traits.has(KEEP_HAND_TRAIT):
 			kept.append(c)

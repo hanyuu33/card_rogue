@@ -111,6 +111,7 @@ var _hover_deck := -1
 var _relics_visible := false
 var _menu: UiMenu = null          # Esc 主菜单（R148）
 var _menu_btn: Button = null      # 上栏那个齿轮（**自绘图标**，需要它算尺寸/hover）
+var _deck_btn: Button = null      # R155：右上「卡组」按钮（非战斗界面也能直接看卡组，不必先按 Esc）
 var _relic_scroll := 0.0
 var _whisper_auto := false
 var _whisper_next: Dictionary = {}
@@ -175,6 +176,16 @@ func _ready() -> void:
 	_menu_btn.draw.connect(_draw_menu_gear)
 	UiTheme.apply_chip(_menu_btn, true)
 	add_child(_menu_btn)
+	# R155：右上「卡组」按钮 —— 贴在巧克力计数左边（原来卡组只能 Esc 菜单里看）
+	_deck_btn = Button.new()
+	_deck_btn.text = "卡组"
+	_deck_btn.position = Vector2(size.x - 24.0 - CHOCO_PANEL_W - 12.0 - 76.0, CHOCO_PANEL_Y - 2.0)
+	_deck_btn.size = Vector2(76, 30)
+	_deck_btn.tooltip_text = "查看当前卡组（Esc 菜单里也有）"
+	_deck_btn.pressed.connect(_toggle_deck)
+	_deck_btn.pressed.connect(func(): sfx.play("click"))
+	UiTheme.apply_chip(_deck_btn, true)
+	add_child(_deck_btn)
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "返回地图",
 		"sub": "冒险地图 · 按 Esc 返回",

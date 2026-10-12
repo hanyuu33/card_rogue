@@ -5720,28 +5720,67 @@ func _init() -> void:
 				"R147 喝泉水这条路：先过 `_arcane_taken()` 闸门、发完奖励再 `_claim_reward(bbq_btn)`")
 		check(r147_src.find("if _rested:   # R147：本次休息处只领一份") >= 0,
 				"R147 休息处「烤肉」同样带闸门（先休息过就不能再烤肉）")
-	# ==== R148：Esc 主菜单 + 战场顶栏只留「回合结束 + 齿轮」 ====
+	# ==== R148/R155：Esc 主菜单 + 战场顶栏「记录偏左 / 卡组·地图右侧 / 回合结束 / 齿轮」 ====
 	# 行为面（open → 暂停场景树 / close → 恢复 / UiGate 让位 / 菜单项与主按钮唯一）
-	# 在 test_smoke 里拿真场景跑；这里锁的是「接线」与「上栏那排按钮不会再长回来」。
+	# 在 test_smoke 里拿真场景跑；这里锁的是「接线」与顶栏布局口径。
+	# R155 新口径（用户）：地图 / 战斗记录 / 卡组**不该只藏在设置里** → 顶栏专属按钮；
+	# 「选择关卡」从 Esc 菜单下线；菜单只剩设置类（音效 / 返回标题）。
 	if not FileAccess.file_exists("res://export_presets.cfg"):
-		print("    · R148 源码守卫：打包环境读不到 .gd 源文本 → 跳过（只在 dev 工程/门禁生效）")
+		print("    · R148/R155 源码守卫：打包环境读不到 .gd 源文本 → 跳过（只在 dev 工程/门禁生效）")
 	else:
 		var r148_tscn := FileAccess.get_file_as_string("res://scenes/battle.tscn")
-		for gone: String in ["LogBtn", "SndBtn", "TitleBtn", "LevelBtn", "MapBtn"]:
+		for gone: String in ["SndBtn", "TitleBtn", "LevelBtn", "HpLabel"]:
 			check(r148_tscn.find('[node name="%s"' % gone) < 0,
-					"R148 战场顶栏不该再有 %s 节点（五颗按钮全收进菜单）" % gone)
-		check(r148_tscn.find('[node name="MenuBtn"') >= 0
-				and r148_tscn.find('[node name="EndTurnBtn"') >= 0,
-				"R148 战场顶栏 = 状态文字 + 回合结束 + 齿轮(MenuBtn)")
+					"R155 战场顶栏不该有 %s 节点" % gone)
+		for want3: String in ["MenuBtn", "EndTurnBtn", "LogBtn", "DeckBtn", "MapBtn", "HpStrip"]:
+			check(r148_tscn.find('[node name="%s"' % want3) >= 0,
+					"R155 战场顶栏缺少 %s（记录偏左 / 卡组·地图右侧 / HpStrip 血量条）" % want3)
 		var r148_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 		check(r148_bs.find("$Toolbar/MenuBtn") >= 0, "R148 battle_scene 接上顶栏齿轮")
+		for want4: String in ["$Toolbar/LogBtn", "$Toolbar/DeckBtn", "$Toolbar/MapBtn", "$Toolbar/HpStrip"]:
+			check(r148_bs.find(want4) >= 0, "R155 battle_scene 接上顶栏 %s" % want4)
 		var r148_leak := 0
-		for gone2: String in ["$Toolbar/MapBtn", "$Toolbar/LogBtn", "$Toolbar/SndBtn",
+		for gone2: String in ["$Toolbar/HpLabel", "$Toolbar/SndBtn",
 				"$Toolbar/TitleBtn", "$Toolbar/LevelBtn"]:
 			if r148_bs.find(gone2) >= 0:
 				r148_leak += 1
 		check(r148_leak == 0,
-				"R148 battle_scene 不再引用任何下线的顶栏按钮（漏 %d 处）" % r148_leak)
+				"R155 battle_scene 不再引用任何下线的顶栏节点（漏 %d 处）" % r148_leak)
+		# R155 菜单口径：选择关卡下线；地图 / 战斗记录不再只在菜单（上了顶栏就从菜单撤下）
+		var r155_i_items := r148_bs.find("func _menu_items()")
+		var r155_i_items_e := r148_bs.find("\nfunc ", r155_i_items + 1)
+		var r155_items_body := ""
+		if r155_i_items >= 0 and r155_i_items_e > r155_i_items:
+			r155_items_body = r148_bs.substr(r155_i_items, r155_i_items_e - r155_i_items)
+		check(r155_items_body.find("\"选择关卡\"") < 0,
+				"R155 Esc 菜单不该再有「选择关卡」菜单项（用户口径：删掉）")
+		check(r155_items_body.find("\"查看地图\"") < 0 and r155_items_body.find("\"战斗记录\"") < 0,
+				"R155 Esc 菜单只留设置类（地图 / 记录已上顶栏按钮）")
+		# R155 消耗区面板：引擎记账 + 场景可点开
+		check(r148_bs.find("_void_visible") >= 0 and r148_bs.find("state.void_cards") >= 0,
+				"R155 消耗区浏览面板：_void_visible + void_cards 数据源")
+		var r148_fs := FileAccess.get_file_as_string("res://scripts/field_state.gd")
+		check(r148_fs.find("var void_cards") >= 0, "R155 FieldState.void_cards 与 void_count 平行")
+		# R157 手牌 diff：LCS 纯函数行为（重复 id 不错配 —— 用一张卡其它卡不再播抽卡动画）
+		var bs_script: GDScript = load("res://scripts/battle_scene.gd")
+		var r157_d1: Dictionary = bs_script.call("_hand_diff", [1, 2, 1], [2, 1])
+		check((r157_d1["removed"] as Array).size() == 1 and (r157_d1["added"] as Array).is_empty()
+				and int((r157_d1["removed"] as Array)[0]["idx"]) == 0,
+				"R157 _hand_diff [A,B,A]→[B,A]：只移除首张 A，B 不误判新增（实际 %s）" % str(r157_d1))
+		var r157_d2: Dictionary = bs_script.call("_hand_diff", [1, 2], [1, 2, 3])
+		check((r157_d2["added"] as Array).size() == 1 and (r157_d2["removed"] as Array).is_empty()
+				and int((r157_d2["added"] as Array)[0]["idx"]) == 2,
+				"R157 _hand_diff 尾部抽牌：只新增一张（实际 %s）" % str(r157_d2))
+		var r157_d3: Dictionary = bs_script.call("_hand_diff", [5, 6, 7], [6, 7])
+		check((r157_d3["removed"] as Array).size() == 1 and int((r157_d3["removed"] as Array)[0]["idx"]) == 0
+				and (r157_d3["added"] as Array).is_empty(),
+				"R157 _hand_diff 打出首张：只移除它（实际 %s）" % str(r157_d3))
+		var r157_d4: Dictionary = bs_script.call("_hand_diff", [8, 8, 9], [8, 9, 8])
+		check((r157_d4["removed"] as Array).size() == 1 and (r157_d4["added"] as Array).size() == 1,
+				"R157 _hand_diff 同 id 换位：一增一删不错配（实际 %s）" % str(r157_d4))
+		# R156 能量口径：战斗里不再显示敌方能量数值
+		check(r148_bs.find("\"敌方能量 %d\"") < 0,
+				"R156 战斗内不再显示敌方能量数值（用户口径）")
 		# Esc 分支：切出 `_unhandled_key_input` 的函数体再在体内找
 		# ⚠️ 本文件是 CRLF → 别用跨行字面量配源码（`\n` 单个字符配不上 `\r\n`）。
 		var r148_i_key := r148_bs.find("func _unhandled_key_input")
@@ -5785,9 +5824,10 @@ func _init() -> void:
 		check(r148_ui.find("static func draw_gear(") >= 0
 				and r148_bs.find("UiTheme.draw_gear(") >= 0,
 				"R148 齿轮图标程序绘制（字体缺 ⚙ 会变成方框）＋ 战场自绘调用接上")
-		check(r148_bs.find("log_btn") < 0 and r148_bs.find("snd_btn") < 0
-				and r148_bs.find("map_btn") < 0,
-				"R148 战斗场景不再引用 log_btn / snd_btn / map_btn（按钮文案与禁用态一并下线）")
+		check(r148_bs.find("log_btn") >= 0 and r148_bs.find("map_btn") >= 0
+				and r148_bs.find("deck_btn") >= 0 and r148_bs.find("snd_btn") < 0
+				and r148_bs.find("title_btn") < 0 and r148_bs.find("level_btn") < 0,
+				"R155 战斗场景接上 log_btn / deck_btn / map_btn（顶栏按钮），snd/title/level 不下顶栏")
 	var back := RunState.advance(int(start_cell_d["id"]))
 	check(bool(back["ok"]) and not bool(back["is_new"]) and int(back["cost"]) == 0
 			and RunState.chocolate == choco_before - 1,

@@ -50,8 +50,7 @@ const CARD_W := 216.0
 const CARD_H := 260.0
 const CARD_GAP := 44.0
 const CARDS_Y := 152.0
-const DETAIL_W := 250.0
-const DETAIL_H := 286.0
+const DETAIL_STRIP_H := 152.0   # R155：悬停详情 = 三张卡正下方的横条（与卡组同一左右边界）
 
 var _root: Control
 var _btn: Button              # 常驻入口「✦ 待领奖励 N」
@@ -493,13 +492,17 @@ func _draw_cards() -> void:
 		var rr := Rect2(x0 + i * (CARD_W + CARD_GAP), CARDS_Y, CARD_W, CARD_H)
 		var hov := i == _hover_card and not settled
 		if hov:
-			_root.draw_rect(rr.grow(10.0), Color(1, 1, 1, 0.75), true)
+			_root.draw_rect(rr.grow(6.0), Color(1, 1, 1, 0.75), true)   # R155：亮边与点选判定同圈（原来大 4px）
 		CardFace.draw(_root, card, rr, card.health, false, false, _font, _font_bold)
-		var lw := 90.0
-		_root.draw_string(_font_bold,
-				rr.position + Vector2(CARD_W / 2.0 - lw / 2.0, CARD_H + 26),
-				card.rarity_name(), HORIZONTAL_ALIGNMENT_CENTER, lw,
-				UiTheme.FS_BODY, card.rarity_color())
+		# R155：稀有度铭牌 —— 宽度按文字实测（旧版写死 90px，和 216 宽的卡面对不上），
+		# 深色底条压在**这张卡自己的中轴**正下方。
+		var rn := card.rarity_name()
+		var lw := _font_bold.get_string_size(rn, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_BODY).x + 18.0
+		var plate := Rect2(rr.position.x + CARD_W / 2.0 - lw / 2.0, rr.position.y + CARD_H + 8.0, lw, 24.0)
+		_root.draw_rect(plate, Color(0.13, 0.14, 0.18, 0.88), true)
+		_root.draw_rect(plate, card.rarity_color(), false, 1.2)
+		_root.draw_string(_font_bold, plate.position + Vector2(9, 17), rn,
+				HORIZONTAL_ALIGNMENT_LEFT, lw - 18.0, UiTheme.FS_BODY, card.rarity_color())
 		if settled:
 			var picked := int(e.get("picked", -1))
 			if card.id != picked:
@@ -516,37 +519,41 @@ func _draw_cards() -> void:
 
 
 func _draw_card_detail(cands: Array) -> void:
+	## R155：详情从「钉在屏幕最右边缘」改成**三张卡正下方的横条**（与卡组同一左右边界）——
+	## 旧版悬停最左一张卡时说明文字在最右侧，眼睛横跨整个屏幕（用户：文字和卡面对不上）。
 	if _hover_card < 0 or _hover_card >= cands.size():
 		return
 	var card: CardData = _repo_cards.get_card(int(cands[_hover_card]))
 	if card == null:
 		return
 	var vs := _vs()
-	var box := Rect2(vs.x - DETAIL_W - 16.0, CARDS_Y, DETAIL_W, DETAIL_H)
+	var total := 3 * CARD_W + 2 * CARD_GAP
+	var x0 := (vs.x - total) / 2.0
+	var box := Rect2(x0, CARDS_Y + CARD_H + 42.0, total,
+			minf(DETAIL_STRIP_H, vs.y - (CARDS_Y + CARD_H + 42.0) - 92.0))
 	_root.draw_rect(box, Color(1, 1, 1, 0.97), true)
 	_root.draw_rect(box, card.rarity_color(), false, 2.0)
-	var pad := 12.0
-	var inner_w := DETAIL_W - pad * 2.0
-	var y := box.position.y + 24.0
+	var pad := 14.0
+	var col_w := 230.0
+	var y := box.position.y + 27.0
 	_root.draw_string(_font_bold, Vector2(box.position.x + pad, y),
-			"%s" % card.card_name, HORIZONTAL_ALIGNMENT_LEFT, inner_w,
-			UiTheme.FS_BODY, Color.BLACK)
-	y += 20.0
+			card.card_name, HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_SUBHEAD, Color.BLACK)
+	y += 23.0
 	_root.draw_string(_font, Vector2(box.position.x + pad, y),
 			"#%d  %s · %d 费 · %s" % [card.id, card.kind, card.cost, card.rarity_name()],
-			HORIZONTAL_ALIGNMENT_LEFT, inner_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
-	y += 18.0
+			HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
+	y += 19.0
 	var stats := CardFace.stats_line(card)
 	if stats != "":
 		_root.draw_string(_font, Vector2(box.position.x + pad, y), stats,
-				HORIZONTAL_ALIGNMENT_LEFT, inner_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
-		y += 18.0
-	y += 4.0
-	_root.draw_string(_font, Vector2(box.position.x + pad, y), "效果",
-			HORIZONTAL_ALIGNMENT_LEFT, inner_w, UiTheme.FS_CAPTION, Color("2a5a8a"))
-	y += 17.0
+				HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
+	# 右半：效果全文（折行）
+	var ex := box.position.x + pad + col_w + 18.0
+	var ew := box.end.x - pad - ex
+	_root.draw_string(_font, Vector2(ex, box.position.y + 25.0), "效果",
+			HORIZONTAL_ALIGNMENT_LEFT, ew, UiTheme.FS_CAPTION, Color("2a5a8a"))
 	CardText.draw_wrapped(_root, _font, _font_bold, CardText.parse(card.effect_text),
-			box.position.x + pad, y, inner_w, 12, 17.0, Color("2a5a8a"))
+			ex, box.position.y + 43.0, ew, 12, 17.0, Color("2a5a8a"))
 
 
 func _draw_btn(r: Rect2, text: String, primary: bool, disabled: bool) -> void:

@@ -36,12 +36,14 @@ class_name CardFace
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const CARD_H_DESIGN := 70.0   # 缩放基准高（battle 版小卡高）
-# R153 卡面 v2：card_paper.png 底图内框（卡图窗）的归一化矩形（PIL 从底图实测）。
-# 卡图画在这个窗里；名字/种类/效果文字在金线分隔之下、名称条（中心 ≈0.78）往下排。
-const ART_WIN_X0 := 0.065
-const ART_WIN_Y0 := 0.085
-const ART_WIN_X1 := 0.935
-const ART_WIN_Y1 := 0.715
+# R156 卡面 v3：card_paper.png 底图内框（卡图窗）的归一化矩形。
+# v3 = v2 底图 PIL 扩窗（用户口径「上半部分整个是卡图，给图片更大空间」）：
+# 窗 0.065..0.935 × 0.085..0.715 → 0.035..0.965 × 0.030..0.720（面积 +15%），
+# 文字区不变（金线分隔仍在 0.745，名称条之下排种类/效果）。
+const ART_WIN_X0 := 0.038
+const ART_WIN_Y0 := 0.033
+const ART_WIN_X1 := 0.962
+const ART_WIN_Y1 := 0.717
 
 static var _art_cache := {}   # id -> Texture2D / null（找不到图也缓存，避免反复查盘）
 
