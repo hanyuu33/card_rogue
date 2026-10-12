@@ -279,6 +279,19 @@ func extra_actions(side: String) -> int:
 	return best
 
 
+func has_mass_helios(side: String) -> bool:
+	## 「量产型赫利俄斯」（9137，R152）是否在**该方场上**。
+	## 它是「除自己以外的己方单位受到的技能伤害减半（向上取整）」这条光环的**唯一开关**，
+	## 与 `has_sun_forge` 同范式：实时扫场面、只收成一个函数、绝不烤进 CardData ——
+	## 「塔被打掉 → 光环立刻断」是免费的。
+	## ⚠️ 光环**不含光源自己**（「量产型赫利俄斯以外的己方单位」），那条判据在引擎侧
+	##    `_unit_damage_taken` 里用 `p.card.id != MASS_HELIOS_ID` 补。
+	for p: Placement in board.values():
+		if p.owner == side and p.card.id == GameEngine.MASS_HELIOS_ID:
+			return true
+	return false
+
+
 func has_sun_forge(side: String) -> bool:
 	## 「太阳熔炉」的太阳装置（赫利俄斯 9130）是否在**该方场上**。
 	## 它是「量产型俄倪厄双动」与「俄倪厄每回合回血」两条光环的**唯一开关**，

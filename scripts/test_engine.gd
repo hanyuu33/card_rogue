@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 205,
-			"图鉴 = 205 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126**；实际 %d）"
+	check(repo.all_cards().size() == 207,
+			"图鉴 = 205 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 162 and grp_enemy.size() == 43,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 162 / 43；R149 +3 / R150 +1 张敌方卡）"
+	check(grp_player.size() == 162 and grp_enemy.size() == 45,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 162 / 45；R149 +3 / R150 +1 / R152 +2 张敌方卡）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -4400,7 +4400,7 @@ func _init() -> void:
 
 	# ---- 新关卡：使魔鸭群 / 骑士冲锋 / 队长与巫师 / 爆炎鸭阵 / 白魔法师护阵 ----
 	var lvls := GameLevels.builtin_levels()
-	check(lvls.size() == 24, "内置关卡共 24 关（7 普简 + 5 普难 + 3 精英简单 + 4 精英困难 + 5 Boss；"
+	check(lvls.size() == 25, "内置关卡共 25 关（7 普简 + 6 普难 + 3 精英简单 + 4 精英困难 + 5 Boss；"
 			+ "R135 太阳熔炉进第二层普通困难 / R149 钢铁要塞进第二层精英困难 / R150 赫菲斯托斯工坊进第二层 Boss）")
 	var lva: Dictionary = _level_named("使魔鸭群")
 	check(str(lva["name"]) == "使魔鸭群"
@@ -4757,7 +4757,7 @@ func _init() -> void:
 	# ---- 分层：各层内容互不串层（第一层 [1] / 第二层 [2]，各自专属） ----
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_DEFAULT).size() == lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
 			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关）" % [lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(), GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size()])
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 13,
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 14,
 			"第二层自带 13 关（白魔法师护阵 / 夜鸭阵 / 鸭子窑 / 太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞** / 机械巨鸭Boss / 鸭之暗面Boss / **赫菲斯托斯工坊Boss**）")
 	# 内容池：第一层 = [1]；第二层 = [2]（各层内容互不串层）
 	var cl1 := GameLayers.content_layers(GameLayers.LAYER_DEFAULT)
@@ -4766,7 +4766,7 @@ func _init() -> void:
 	check(cl2.size() == 1 and int(cl2[0]) == 2,
 			"第二层内容池 = [2]（只用第二层内容，不再混用第一层）")
 	check(GameLayers.content_layers(9).is_empty(), "未配置的层：内容池为空（拿不到任何内容）")
-	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 6,
+	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 7,
 			"第二层普通池 6 关（专属：普通简单 3 + 普通困难 3；R135 太阳熔炉）")
 	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 4,
 			"第二层精英池 4 关（专属：精英简单 2 + 精英困难 2；R149 钢铁要塞）")
@@ -6688,8 +6688,8 @@ func _init() -> void:
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 55
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
-			and int(dr_cls_count.get("敌人", 0)) == 43,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 55 / 36 / 43）"
+			and int(dr_cls_count.get("敌人", 0)) == 45,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 55 / 36 / 45）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -14760,6 +14760,103 @@ func _init() -> void:
 			r150_badge = true
 	check(r150_show and r150_badge,
 			"R150 锻造进度在信息栏 + 战场徽标上都可见（隐藏状态不能只靠日志）")
+
+
+	# ================= R152：百臂工场（赫卡同克瑞斯 9136 / 量产型赫利俄斯 9137） =================
+	var r152_repo := CardRepo.load_json()
+	var r152_hec: CardData = r152_repo.get_card(9136)
+	var r152_mh: CardData = r152_repo.get_card(9137)
+	check(r152_hec != null and r152_mh != null,
+			"R152 赫卡同克瑞斯 9136 与量产型赫利俄斯 9137 都在卡库里")
+	check(r152_hec.card_name == "赫卡同克瑞斯" and r152_hec.kind == "盟友"
+			and r152_hec.power == 8 and r152_hec.health == 50
+			and r152_hec.attack_range == 1 and r152_hec.move_speed == 1
+			and r152_hec.group == "enemy",
+			"R152 赫卡同克瑞斯：盟友 8/50 程1 速1（敌方卡）")
+	check(r152_mh.card_name == "量产型赫利俄斯" and r152_mh.kind == "工事"
+			and r152_mh.power == 6 and r152_mh.health == 18
+			and r152_mh.attack_range == 1 and r152_mh.move_speed == 0
+			and r152_mh.traits.has("工事") and r152_mh.group == "enemy",
+			"R152 量产型赫利俄斯：工事 6/18 程1 速0（敌方卡，自带不能移动）")
+
+	var r152_lv: Dictionary = _level_named("百臂工场")
+	check(not r152_lv.is_empty()
+			and int(r152_lv["tier"]) == GameLevels.TIER_NORMAL_HARD
+			and GameLevels.layer_of(r152_lv) == GameLayers.LAYER_TWO
+			and GameLevels.bg_key(r152_lv) == "hecaton"
+			and GameLevels.normal_pool(GameLayers.LAYER_TWO).has(r152_lv),
+			"R152 关卡：第二层·普通敌人-困难，key=hecaton，进第二层普通池（地图会抽到）")
+	var r152_units: Array = r152_lv["enemy_units"]
+	check(r152_units.size() == 3
+			and int(r152_units[0][0]) == 9136 and r152_units[0][6] == Vector2i(0, 1)
+			and int(r152_units[1][0]) == 9137 and r152_units[1][6] == Vector2i(1, 0)
+			and int(r152_units[2][0]) == 9137 and r152_units[2][6] == Vector2i(1, 2),
+			"R152 站位：赫卡同克瑞斯 (0,1) 后排中央 + 两座量产型赫利俄斯 (1,0) / (1,2) 中排左右")
+	# 元组只是**文档**：引擎 `repo.get_card(id)` 命中时读卡库那份 → 逐项同源
+	var r152_src := true
+	for r152_u: Array in r152_units:
+		var r152_uc: CardData = r152_repo.get_card(int(r152_u[0]))
+		if not (str(r152_u[1]) == r152_uc.card_name
+				and int(r152_u[2]) == r152_uc.power
+				and int(r152_u[3]) == r152_uc.health
+				and int(r152_u[4]) == r152_uc.attack_range
+				and int(r152_u[5]) == r152_uc.move_speed):
+			r152_src = false
+	check(r152_src, "R152 三个单位的元组与卡库卡面逐项同源（名/力/生/程/速）")
+
+	# ① 量产型赫利俄斯光环：技能伤害减半（向上取整）；光环源自己不吃、攻击不吃
+	var r152_e := _new_engine([], 30, 30)
+	var r152_tower := r152_e.state.place(CardData.from_dict(r152_mh.to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r152_fod := r152_e.state.place(CardData.from_dict(
+			r152_repo.get_card(9001).to_dict()), Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+	r152_e.start_game()
+	check(r152_e.state.has_mass_helios(GameEngine.SIDE_OPPONENT),
+			"R152 光环开关：塔在场上 → has_mass_helios(opponent) = true")
+	var r152_t1 := r152_e._unit_damage_taken(r152_fod, 5, "spell")
+	check(r152_t1 == 3, "R152 光环：技能伤害减半向上取整 5 → 3（实际 %d）" % r152_t1)
+	var r152_t2 := r152_e._unit_damage_taken(r152_tower, 5, "spell")
+	check(r152_t2 == 5, "R152 光环不含光源自己：塔吃技能仍全额 5 → 5（实际 %d）" % r152_t2)
+	var r152_t3 := r152_e._unit_damage_taken(r152_fod, 5, "attack")
+	check(r152_t3 == 5, "R152 光环只减技能：攻击伤害仍全额 5 → 5（实际 %d）" % r152_t3)
+	# 塔被打掉 → 光环立刻失效（实时扫场面，不烤进 CardData）
+	r152_e._destroy(Vector2i(2, 1))
+	check(not r152_e.state.has_mass_helios(GameEngine.SIDE_OPPONENT),
+			"R152 塔被打掉 → 光环立刻失效")
+	var r152_t4 := r152_e._unit_damage_taken(r152_fod, 5, "spell")
+	check(r152_t4 == 5, "R152 光环失效后技能伤害恢复 5 → 5（实际 %d）" % r152_t4)
+
+	# ② 赫卡同克瑞斯孤军：唯一己方单位 → +2 力 + 攻击减半；有新单位 → 失效
+	var r152_e2 := _new_engine([], 30, 30)
+	var r152_h := r152_e2.state.place(CardData.from_dict(r152_hec.to_dict()),
+			Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
+	r152_e2.start_game()
+	r152_e2._refresh_hecaton(GameEngine.SIDE_OPPONENT)
+	check(r152_h.hecaton_atk == GameEngine.HECATON_ATK_BUFF
+			and r152_h.effective_power() == 8 + GameEngine.HECATON_ATK_BUFF,
+			"R152 孤军：场上唯一己方单位 → 力量 +2（当前 %d）" % r152_h.effective_power())
+	var r152_h1 := r152_e2._unit_damage_taken(r152_h, 7, "attack")
+	check(r152_h1 == 3, "R152 孤军：攻击伤害减半 7 → 3（实际 %d）" % r152_h1)
+	var r152_h2 := r152_e2._unit_damage_taken(r152_h, 7, "spell")
+	check(r152_h2 == 7, "R152 孤军只减攻击：技能仍全额 7 → 7（实际 %d）" % r152_h2)
+	var r152_h3 := r152_e2._unit_damage_taken(r152_h, 1, "attack")
+	check(r152_h3 == 1, "R152 孤军攻击减半保底 1 点：1 → 1（实际 %d）" % r152_h3)
+	# 可见性：孤军 buff 要进信息栏（徽标侧 net 自动含 hecaton_atk）
+	var r152_show := false
+	for r152_ent in r152_h.status_entries():
+		if str(r152_ent.get("label", "")).contains("孤军"):
+			r152_show = true
+	check(r152_show, "R152 孤军状态在信息栏可见（隐藏 buff 不能只靠日志）")
+	# 己方来了新单位 → 立刻失效
+	r152_e2.state.place(CardData.from_dict(
+			r152_repo.get_card(9001).to_dict()), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	r152_e2._refresh_hecaton(GameEngine.SIDE_OPPONENT)
+	check(r152_h.hecaton_atk == 0 and r152_h.effective_power() == 8,
+			"R152 有新己方单位 → 孤军失效，力量回 8（当前 %d）" % r152_h.effective_power())
+	var r152_h4 := r152_e2._unit_damage_taken(r152_h, 7, "attack")
+	check(r152_h4 == 7, "R152 孤军失效后攻击伤害恢复 7 → 7（实际 %d）" % r152_h4)
+	check(r152_hec.power == 8 and r152_hec.attack_range == 1,
+			"R152 孤军只记 Placement.hecaton_atk，卡库共享实例不变（绝不烤进 CardData）")
 
 	RunState.player_class = r91_saved_cls
 

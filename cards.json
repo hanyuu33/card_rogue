@@ -4207,6 +4207,49 @@
       "target_mode": "none",
       "color": "金",
       "image": ""
+    },
+    {
+      "id": 9136,
+      "name": "赫卡同克瑞斯",
+      "kind": "盟友",
+      "cost": 5,
+      "power": 8,
+      "health": 50,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [],
+      "effect_text": "回合开始时，若场上没有其他己方单位，获得：力量 +2，受到的攻击伤害减半。",
+      "target_mode": "none",
+      "color": "灰",
+      "image": ""
+    },
+    {
+      "id": 9137,
+      "name": "量产型赫利俄斯",
+      "kind": "工事",
+      "cost": 2,
+      "power": 6,
+      "health": 18,
+      "attack_range": 1,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "工事",
+        "机械"
+      ],
+      "affixes": [],
+      "effect_text": "在场时，量产型赫利俄斯以外的己方单位获得：受到的技能伤害减半（向上取整）。",
+      "target_mode": "none",
+      "color": "金",
+      "image": ""
     }
   ]
 }

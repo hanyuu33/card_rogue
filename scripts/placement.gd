@@ -77,6 +77,11 @@ var forge_range: int = 0
 ## 因此无需 `_card_leaving_field` 还原：单位一离场，这两个字段随之消失。
 var dark_lord_atk: int = 0     # +3 × 存活暗杀者数（进 effective_power）
 var dark_lord_speed: int = 0   # +1 × 存活暗杀者数（进 effective_speed）
+## 「赫卡同克瑞斯」（9136，R152）：场上**只有它一个**己方单位时的孤军 buff —— 力量 +2、
+## 受到的攻击伤害减半（减伤那一半在引擎 `_unit_damage_taken` 实时判定，不进本类）。
+## 力量由 `GameEngine._refresh_hecaton()` 在「开局/召唤/击破/回合开始」五处实时重算写值，
+## 与暗影领主同范式（只记 Placement、**绝不烤进 CardData**，敌方单位用的是卡库共享实例）。
+var hecaton_atk: int = 0       # 孤军成立时 = HECATON_ATK_BUFF(2)，否则 0（进 effective_power）
 
 
 func effective_power() -> int:
@@ -88,7 +93,7 @@ func effective_power() -> int:
 	## +1，不是这张卡攻击时 +1）。于是塔自身 0 攻就是 0 攻，定位 = 标记一片区域的增伤辅助。
 	var debuff := atk_debuff if debuff_stage == 1 else 0
 	return maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
-			+ end_atk + upgrade_atk + dark_lord_atk - debuff)
+			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk - debuff)
 
 
 func effective_speed() -> int:
@@ -144,6 +149,9 @@ func status_entries() -> Array[Dictionary]:
 				"col": COL_B, "kind": "buff"})
 	if dark_lord_atk > 0 or dark_lord_speed > 0:
 		out.append({"label": "暗影领主：力 +%d 速 +%d" % [dark_lord_atk, dark_lord_speed],
+				"col": COL_B, "kind": "buff"})
+	if hecaton_atk > 0:
+		out.append({"label": "孤军：力 +%d，攻击伤害减半（场上无其他己方单位）" % hecaton_atk,
 				"col": COL_B, "kind": "buff"})
 	if atk_buff > 0:
 		out.append({"label": "力量 +%d（成长光环）" % atk_buff, "col": COL_B, "kind": "buff"})

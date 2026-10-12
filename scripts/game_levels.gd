@@ -74,12 +74,12 @@ static func level_names() -> Array[String]:
 
 
 static func builtin_levels() -> Array:
-	## 按分级从低到高：普通简单×7（第一层 4 + 第二层 3）→ 普通困难×5（第一层 2 + 第二层 3）→
+	## 按分级从低到高：普通简单×7（第一层 4 + 第二层 3）→ 普通困难×6（第一层 2 + 第二层 4）→
 	## 精英简单×3 → 精英困难×4（第一层 2 + 第二层 2）→ Boss×5（第一层 2 + 第二层 3）。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_white_mage_guard(), _night_ducks(),
-			_knight_charge(), _wizard(), _duck_kiln(), _sun_forge(),
+			_knight_charge(), _wizard(), _duck_kiln(), _sun_forge(), _hecaton(),
 		_captain(), _captain_wizard(), _legion(), _breath_charge(), _frost_line(), _undead_legion(), _dragon_nest(),
 		_mech_giant(), _steel_fortress(), _boss_dragon(), _boss_demon_duck(), _mech_duck_boss(), _boss_duck_darkside(),
 		_hephaestus()]
@@ -799,6 +799,43 @@ static func _sun_forge() -> Dictionary:
 			[9130, "赫利俄斯", 0, 50, 0, 0, Vector2i(0, 1)],
 			[9131, "量产型俄倪厄", 5, 30, 1, 1, Vector2i(2, 0)],
 			[9131, "量产型俄倪厄", 5, 30, 1, 1, Vector2i(2, 2)],
+		],
+		"tutorial": [],
+	}
+
+
+static func _hecaton() -> Dictionary:
+	## 第二层·普通敌人-困难（R152「百臂工场」）：一只赫卡同克瑞斯（9136，8/50 程1 速1）
+	## + 两座量产型赫利俄斯（9137，**工事** 6/18 程1 速0 —— 打得到人但不会移动）。
+	##
+	## 赫卡同克瑞斯（R152）：**回合开始时**若场上没有其他己方单位，获得力量 +2 与
+	## 「受到的攻击伤害减半」—— 实时扫场面（`_refresh_hecaton`），塔一倒就生效、
+	## 己方再来新单位就失效。两座塔在场时它只是普攻 8 的普通大哥。
+	## 量产型赫利俄斯（R152）：在场时**除自己以外**的己方单位「受到的技能伤害减半
+	## （向上取整）」—— 实时扫描（`FieldState.has_mass_helios`），塔被打掉立刻失效。
+	##
+	## 取舍：两座塔各 18 血、打人 6，还压着全场的技能流；拆掉它们大哥就会狂暴
+	## （10 攻 + 攻击减半）。先拆塔还是先磨 50 血的大哥，就是这关的核心决策。
+	## ⚠️ 站位按 `Vector2i(行, 列)`（board key 语义，敌方占 row 0~2，row 0 = 最后排）：
+	##    大哥 (0,1) 坐镇后排中央，两座塔 (1,0)/(1,2) 扎中排左右。
+	## ⚠️ 摆放顺序：赫卡同克瑞斯写在**数组最前**（与 _sun_forge 的赫利俄斯同理 ——
+	##    光环源先上场，随后 `_refresh_hecaton` 才能立刻把它算进「唯一单位」判定）。
+	return {
+		"name": "百臂工场",
+		"key": "hecaton",
+		"tier": TIER_NORMAL_HARD,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9136, "赫卡同克瑞斯", 8, 50, 1, 1, Vector2i(0, 1)],
+			[9137, "量产型赫利俄斯", 6, 18, 1, 0, Vector2i(1, 0)],
+			[9137, "量产型赫利俄斯", 6, 18, 1, 0, Vector2i(1, 2)],
 		],
 		"tutorial": [],
 	}

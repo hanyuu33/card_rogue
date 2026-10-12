@@ -338,6 +338,17 @@ const WILD_FORM_RETALIATE:= 4     # 并对攻击者反伤
 const RHINO_TRAIT:= "犀牛"
 const RHINO_DAMAGE_REDUCE:= 1
 
+# ── 第二层·普通困难「百臂工场」（R152）──
+# 赫卡同克瑞斯（9136）：回合开始时若场上没有其他己方单位 → 力量 +2、受到的攻击伤害减半。
+# ⚠️ 力量那一半记 `Placement.hecaton_atk`（由 `_refresh_hecaton` 实时重算写值，
+#    与暗影领主同范式）；减伤那一半在 `_unit_damage_taken` 里实时判 `hecaton_atk > 0`。
+#    两条都**不烤进 CardData** —— 敌方关卡单位用的是卡库共享实例，写 card 会跨局泄漏。
+const HECATON_ID:= 9136
+const HECATON_ATK_BUFF:= 2
+# 量产型赫利俄斯（9137，工事 6/18）：在场时**除自己以外**的己方单位技能伤害减半（向上取整）。
+# 开关 = `FieldState.has_mass_helios(side)`；自身除外在 `_unit_damage_taken` 里判 id。
+const MASS_HELIOS_ID:= 9137
+
 # ── 角色：暗影刺客（2026-10-01）──
 # 终结（9086，角色专属初始卡，0 费技能）：对一个目标造成 RAID_BASE_DMG + X 点伤害，
 #   X = 本回合**该方已使用的卡牌**张数；结算时它自己还没记进去 → 首张终结就是 2 伤。
@@ -1179,6 +1190,7 @@ func _begin_turn(side: String) -> void :
 		_ghost_self_destruct(SIDE_SELF)
 		_assassin_summon(SIDE_SELF)
 		_refresh_dark_lord(SIDE_SELF)
+		_refresh_hecaton(SIDE_SELF)
 		_run_battlecries(SIDE_SELF)
 		_log("── 我方第 %d 回合：能量重置为 %d%s%s%s%s%s%s（共 %d），抽 %d 张" % [
 			turn_number, FieldState.ENERGY_PER_TURN,
@@ -1233,6 +1245,7 @@ func _begin_turn(side: String) -> void :
 		_ghost_self_destruct(SIDE_OPPONENT)
 		_assassin_summon(SIDE_OPPONENT)
 		_refresh_dark_lord(SIDE_OPPONENT)
+		_refresh_hecaton(SIDE_OPPONENT)
 		_run_battlecries(SIDE_OPPONENT)
 		_log("── 对手回合开始：能量 %d（上回合结束已清零，本回合重新发放基础费用），手牌 +%d" % [
 			FieldState.ENERGY_PER_TURN, FieldState.HAND_DRAW_PER_TURN])
@@ -1254,6 +1267,7 @@ func enable_enemy_effects(cards: Array[CardData]) -> void :
 	# R111 暗影召唤：「战斗开始时」那一半的召唤（另一半点在敌方回合开始里）。
 	_assassin_summon(SIDE_OPPONENT, true)
 	_refresh_dark_lord(SIDE_OPPONENT)
+	_refresh_hecaton(SIDE_OPPONENT)
 
 
 func _apply_growth(side: String) -> void :
@@ -6243,13 +6257,17 @@ func _effect_damage_reduction() -> int:
 	return total
 
 
-func _unit_damage_taken(p: Placement, amount: int) -> int:
+func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
+	## `kind`（R152）：""（未分类）/ "attack"（单位普通攻击）/ "spell"（技能卡与效果）。
+	## 「百臂工场」两条减伤要按来源分流 —— 赫卡同克瑞斯只减**攻击**，
+	## 量产型赫利俄斯只减**技能**（+ 效果，与玩家口径的二分：非攻击即技能）。
 	## 单位**受击前的减伤唯一口** —— 普通攻击 / 单目标技能 / 多格效果 / 陷阱 / 亡语 /
 	## 反伤，全都要经过这里，否则减伤会被绕过。
 	## ⚠️ 引擎里单位扣血有**两个落地口**：`_hit_unit`（普通攻击、多格、陷阱、亡语…）与
 	##   `_op_deal_damage`（**单目标技能**那条）。两边都必须调本函数 —— 此前
 	##   道具「护心」的 `_relic_damage_taken` 就是在这两处各写了一遍，正是收口的原因。
-	##   判定顺序：① 自身减伤（犀牛 9016，R125）→ ② 道具减伤（护心 6006，仅己方）。
+	## 判定顺序：① 自身减伤（犀牛 9016，R125）→ ② 赫卡同克瑞斯孤军（仅攻击，R152）
+	##   → ③ 量产型赫利俄斯光环（仅技能，R152）→ ④ 道具减伤（护心 6006，仅己方）。
 	## ⚠️ 只有 `amount > 0` 才减：否则 `maxi(1, 0 - 1)` 会把「0 伤害」**加成 1 点**。
 	var dmg:= amount
 	if p != null and p.card != null and dmg > 0 and p.card.traits.has(RHINO_TRAIT):
@@ -6257,12 +6275,31 @@ func _unit_damage_taken(p: Placement, amount: int) -> int:
 		dmg = maxi(1, dmg - RHINO_DAMAGE_REDUCE)
 		if dmg != before:
 			_log("犀牛：受到的伤害 %d → %d" % [before, dmg])
+	# ② 赫卡同克瑞斯（9136，R152）：孤军成立（hecaton_atk > 0）时受到的**攻击**伤害减半。
+	#    向下取整（int 除法）但至少 1 点 —— 与犀牛口径一致，1 点攻击不会被减成 0。
+	if p != null and p.card != null and dmg > 0 and kind == "attack" and p.hecaton_atk > 0:
+		var hb:= dmg
+		dmg = maxi(1, dmg / 2)
+		if dmg != hb:
+			_log("%s 孤军：攻击伤害 %d → %d（减半）" % [p.card.card_name, hb, dmg])
+	# ③ 量产型赫利俄斯（9137，R152）光环：除自己以外的己方单位，**技能**伤害减半
+	#    （向上取整 —— 用户口径）。实时扫场面：塔被打掉 → 光环立刻失效。
+	if p != null and p.card != null and dmg > 0 and kind != "attack" \
+			and p.card.id != MASS_HELIOS_ID and state.has_mass_helios(p.owner):
+		var mb:= dmg
+		dmg = maxi(1, (dmg + 1) / 2)
+		if dmg != mb:
+			_log("%s：技能伤害 %d → %d（量产型赫利俄斯光环，向上取整）" % [p.card.card_name, mb, dmg])
 	if p != null and p.owner == SIDE_SELF:
 		dmg = _relic_damage_taken(dmg)
 	return dmg
 
 
-func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= true) -> int:
+func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= true,
+		is_attack:= false) -> int:
+	## R152：`is_attack` = 这一笔是不是**单位普通攻击**（只有 8466 行「战斗」那处传 true）。
+	## 「百臂工场」两条减伤按来源分流：赫卡同克瑞斯只减攻击、量产型赫利俄斯只减技能。
+	## 默认 false（技能/效果/陷阱/反伤…）—— 新增伤害路径时不用改这里。
 	# 「侦察塔」（8032）光环易伤（R120）：攻击范围内的敌人，受到**任何来源**的伤害 +1/层。
 	# ⚠️ 必须放在 `amount <= 0` **之前**：0 攻的侦察塔自己攻击时基础伤害是 0，
 	#    而卡面口径是「自己打也算」—— 光环得先加进去，否则那一下会被直接吞掉。
@@ -6298,7 +6335,7 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 					"source": source, "side": p.owner})
 			_hit_unit(gen, amount, source, false)
 			return 0
-	var dmg:= _unit_damage_taken(p, amount)
+	var dmg:= _unit_damage_taken(p, amount, "attack" if is_attack else "spell")
 	p.health -= dmg
 	_log("%s 受到 %d 点%s伤害（剩余 %d）" % [p.card.card_name, dmg, source, p.health])
 	# 恶魔鸭 9116（R63）：受击反应挂在这里 = 所有伤害路径（普通攻击 / 技能 / 效果）的唯一口。
@@ -6964,7 +7001,7 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 			return "%s 免疫法术" % p.card.card_name
 		# R138：技能卡伤害也要吃「侦察塔」光环易伤 —— 与 `_hit_unit` 同一条口径
 		# （原先只挂在 `_hit_unit`，单目标技能走这里 → 光环被绕过）。
-		var amount2:= _unit_damage_taken(p, _apply_scout_aura(p, amount))
+		var amount2:= _unit_damage_taken(p, _apply_scout_aura(p, amount), "spell")
 		p.health -= amount2
 		if p.owner == SIDE_OPPONENT and amount2 > 0:
 			_mark_spell_enemy_hit()
@@ -7328,6 +7365,8 @@ func _destroy(cell: Vector2i) -> void :
 			_recycler_trigger(_r, _rec_power)
 	# R111 暗影领主：场上少了一个单位 → 重算（死的是暗杀者时鸭之暗面立刻掉 3 力 1 速）。
 	_refresh_dark_lord(p.owner)
+	# R152 赫卡同克瑞斯：场上单位数变了 → 孤军判定重算（塔被拆 → 立刻狂暴）。
+	_refresh_hecaton(p.owner)
 
 
 
@@ -8463,7 +8502,7 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	+ _ally_dmg_bonus(attacker.card, side)
 	var hp_before:= defender.health
 	defender.last_hit_by = src          # 击杀记功：鸭子骑士靠它结算「每击杀一个敌人 +2 攻击力」
-	var def_dmg:= _hit_unit(defender, atk_power, "战斗")
+	var def_dmg:= _hit_unit(defender, atk_power, "战斗", true, true)
 	# R74：场地卡**不是单位**（不在 board 里），所以打不到、也不会被「攻击即死」——
 	# 它的触发点唯一在 _field_trigger（挂在 move 上）。这里不再有任何陷阱即死分支。
 	var overflow:= 0
@@ -9235,6 +9274,31 @@ func _refresh_dark_lord(side: String) -> void :
 		p.dark_lord_speed = n * DARK_LORD_SPEED_PER_ASSASSIN
 
 
+# ================= R152：赫卡同克瑞斯孤军 =================
+
+func _refresh_hecaton(side: String) -> void:
+	## 赫卡同克瑞斯（9136）：场上**只有它一个**己方单位时，孤军 buff 成立
+	## → `hecaton_atk = HECATON_ATK_BUFF`（+2 力），否则归 0。
+	## 与 `_refresh_dark_lord` 完全同范式：只写 Placement 字段、不碰 card，
+	## 调用点 = 数量会变的五处：双方回合开始、开局（enable_enemy_effects）、
+	## 单位被击破、召唤落地。
+	var n:= 0
+	for c: Vector2i in state.board:
+		var q: Placement = state.board[c]
+		if q.owner == side and q.health > 0:
+			n += 1
+	for c2: Vector2i in state.board:
+		var p: Placement = state.board[c2]
+		if p.owner != side or p.card.id != HECATON_ID:
+			continue
+		var before:= p.hecaton_atk
+		p.hecaton_atk = HECATON_ATK_BUFF if n == 1 else 0
+		if p.hecaton_atk != before:
+			_log("赫卡同克瑞斯孤军：%s（场上己方单位数 %d）" % [
+					"力 +%d、攻击伤害减半" % HECATON_ATK_BUFF if p.hecaton_atk > 0 else "失效",
+					n])
+
+
 func _assassin_summon(side: String, initial:= false) -> void :
 	## 暗影召唤（9125，R111）：效果区有「暗杀召唤」时，**战斗开始时**（initial=true）
 	## 以及**每 value 个回合**召唤一只鸭子暗杀者 —— 落在**己方半场**的空格
@@ -9267,3 +9331,4 @@ func _assassin_summon(side: String, initial:= false) -> void :
 	action.emit("place", {"cell": spot, "card": copy, "side": side})
 	_on_ally_entered(summoned, side)
 	_refresh_dark_lord(side)
+	_refresh_hecaton(side)
