@@ -1,5 +1,7 @@
 class_name DeckViewer
 extends CanvasLayer
+
+const UiPop = preload("res://scripts/ui_pop.gd")
 ## 通用「牌库查看」悬浮层 —— 让牌库在游戏中任何界面都能查看。
 ##
 ## 右上角一个「牌库 N」按钮；点开后是本局卡组（RunState.deck_ids）的聚合网格：
@@ -78,6 +80,8 @@ func _refresh_btn() -> void:
 func _toggle() -> void:
 	_open = not _open
 	_panel.visible = _open
+	if _open:
+		UiPop.play(_panel, 1.0)   # R151 P1-9：入场淡入 160ms
 	_scroll = 0.0
 	_refresh_btn()
 	_panel.queue_redraw()

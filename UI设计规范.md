@@ -3,7 +3,7 @@
 > **这份文件是约束，不是建议。** 所有新写的界面代码、以及所有由 AI 生成的界面改动，
 > 都必须遵守下面的硬规则。违反规则的改动会被当成 bug 处理。
 >
-> 版本：R113 起生效（批 2 增补素材契约 / 美术方向 / 多界面统一性；§3 于 R151 复核重写）
+> 版本：R113 起生效（批 2 增补素材契约 / 美术方向 / 多界面统一性；§3 于 R151 复核重写；§4.30 于 R151 批 2 增补）
 > · 建立于 2026-10-09 的界面体检（`UI体检报告_2026-10-09.html`）
 > · 唯一实现：`scripts/ui_theme.gd`（颜色 / 字号 / 间距 / 字体 / 按钮规格）
 > · 素材契约：`assets/ui/图片命名说明.txt`（槽位名与尺寸的唯一出处）
@@ -1207,6 +1207,33 @@ R138 先补了一层「自动暗描边」兜底；**实机再看仍然不够清�
 出图核验：`-- --screenshot --level 0 --handfly --shotframe 20`（四种手牌动画钉中段）；
 转场 wipe 走 `_probe_scenefx.gd`（三张：擦出中段 / 纯黑 / 标题页上擦入 50%）。
 设计稿与 P1/P2 清单见 `动效设计_通用动画清单_R151.md`。
+
+---
+
+### 4.30 P1/P2 动效：组件唯一口 + 战斗特效管道（R151 批 2）
+
+**跨场景组件（都在 `scripts/`，class_name）：**
+
+| 组件 | 口 | 纪律 |
+|---|---|---|
+| 按钮按下反馈 | `UiPressFx.bind(btn)` | **不要在各场景手写 pressed 缩放**——`UiTheme.apply_button / apply_chip` 已统一挂接，新按钮自动获得；自绘按压框走 `_press_stamp` |
+| 覆盖层入场 | `UiPop.pop(ctrl)` | 结算 / Esc 菜单 / 奖励悬浮窗 / 卡组查看统一 scale 0.92→1.0 + 淡入 160ms；弹层 `visible = true` 后必须补一句 `UiPop.pop`，否则瞬间出现 |
+| 通用 Toast | `UiToast.toast(txt)` | 层 99、屏幕底部居中、硬边胶囊（`INK_900` 底 + 亮描边）；1.6s 自动退场；**同文本连发只刷新计时** |
+
+**战斗内特效管道（battle_scene 自绘，全部 `_now()` 时钟 + `dur` 控制 + `queue_redraw` 门）：**
+
+`_impacts`（P1-18 击破白闪，挂在 `_play_destroy_fx` 唯一口；全屏黑白闪仅 Boss 击破/胜利 ≤40ms）
+· `_pow_fx`（P2-13 力量跳动 1→1.35→1 + 金色扩散环，六个成长事件统一走）
+· `_heal_fx`（P2-14 治疗上升光点，硬边小圆/四角星）
+· `_shake_card` / `_reject_flash`（P2-15 非法操作：卡面回弹抖动 + 能量面板红闪，统一口 `_reject_fx` / `_energy_fail`）
+· `_hand_turn_dy` / `_turn_dim`（P1-6/7 回合归属：手牌下沉 ±6px / 暗罩 0.22，`_process` 逐帧缓动，**读 `engine.current_side`**）
+
+纪律：特效配色走 §3 规则 2 两条路（语义色用 UiTheme 令牌 / 一次性色在调用文件「视觉常量」区命名）；
+金框金环只在稀有语义；透明度不能一套吃所有底（暗底描边亮、纸面主体深）。
+
+出图核验：`-- --screenshot --level 0 --p1fx --shotframe 20`（战斗 P1/P2 钉帧）；
+`-- --screenshot --slidepin`（地图沿桥滑动）；`-- --screenshot --toastdemo`（Toast）；
+`--tweenshot`（卡组编辑补间）。证据：`shot_r152_*.png`。
 
 ---
 

@@ -71,6 +71,7 @@ const ANIM_DUR := 1.45            # 过场总时长（秒）
 const ANIM_ICON_S := 168.0        # 图标放大到的边长
 const ANIM_TEXT_DY := 122.0       # 类型文字在图标中心下方多少 px
 const ANIM_COST_W := 82.0         # 过场里「巧克力 -1」小牌的宽度
+const ENTER_SLIDE := 0.30           # R151 P1-10：过场前「当前房间」金标先沿桥滑到目标房间（秒）
 ## 房间类型 → 过场文字（**唯一出处**）。其余界面要同一套文案就读这里。
 ## 「unknown」= 玩家点它时还是「?」，所以是「不确定的命运」。
 const ENTER_LABELS := {
@@ -193,6 +194,21 @@ func _ready() -> void:
 				_anim_cell = c
 				_anim_t = 0.0
 				break
+	# -- --slidepin：演示沿桥滑动（R151 P1-10，钉在中段出图核验；停在过场前不真的进入）
+	if "--slidepin" in OS.get_cmdline_user_args():
+		_anim_hold = true
+		_slide_pin = true
+		for c2: Dictionary in RunState.available_nodes():
+			if not _visited(c2) and str(c2["type"]) != "start":
+				_anim_cell = c2
+				_anim_t = 0.0
+				_slide_from = _cell_center(_cur_cell()) if not _cur_cell().is_empty() 						else _cell_center(c2)
+				_slide_to = _cell_center(c2)
+				break
+	# -- --toastdemo：演示通用 Toast（R151 P2-17；0.6s 截图时 toast 仍可见）
+	if "--toastdemo" in OS.get_cmdline_user_args():
+		# ⚠️ _ready 期间 root 正忙（Parent busy），toast 的懒实例挂不上去 → 延迟一帧
+		(func(): UiToast.toast("回放开始")).call_deferred()
 	# 命令行 -- --screenshot：自动截图退出
 	#（`-- --enteranim --shotwait 1.0` 可以指定延迟，用来截过场的不同时刻）
 	if "--screenshot" in OS.get_cmdline_user_args():
@@ -351,6 +367,19 @@ func _gui_input(event: InputEvent) -> void:
 		_enter_node(cell)
 
 
+var _slide_from := Vector2.ZERO   # R151 P1-10：沿桥滑动起点（进入前的当前房间中心）
+var _slide_to := Vector2.ZERO     # R151 P1-10：沿桥滑动终点（目标房间中心）
+var _slide_pin := false           # --slidepin：把滑动钉在中段（出图核验）
+
+
+func _cur_cell() -> Dictionary:
+	## 当前房间的格子字典（拿不到就回退成空 —— 滑动退化为原地）。
+	for c: Dictionary in RunState.map_cells:
+		if int(c["id"]) == RunState.current_node_id:
+			return c
+	return {}
+
+
 func _enter_node(cell: Dictionary, animate := true) -> void:
 	## 走进一个房间。
 	## * **没去过的**房间 → 先播一段进场过场（`animate = false` 可跳过，回放用）；
@@ -360,6 +389,9 @@ func _enter_node(cell: Dictionary, animate := true) -> void:
 	if animate and not _visited(cell) and RunState.can_move_to(int(cell["id"])):
 		_anim_cell = cell
 		_anim_t = 0.0
+		# R151 P1-10：过场前先把「当前房间」金标沿桥滑到目标房间（300ms，路径感）
+		_slide_from = _cell_center(_cur_cell()) if not _cur_cell().is_empty() 				else _cell_center(cell)
+		_slide_to = _cell_center(cell)
 		queue_redraw()
 		return
 	_commit_enter(cell)
@@ -415,9 +447,11 @@ func _process(delta: float) -> void:
 	if _move_note_t > 0.0:
 		_move_note_t = maxf(0.0, _move_note_t - delta)
 	# 进场过场：走完才**真的进房间**（过场期间 RunState 一动不动）
+	if _slide_pin:
+		_anim_t = ENTER_SLIDE * 0.55   # R151 演示：把沿桥滑动钉在中段（出图核验）
 	if not _anim_cell.is_empty():
 		_anim_t += delta
-		if _anim_t >= ANIM_DUR and not _anim_hold:
+		if _anim_t >= ANIM_DUR + ENTER_SLIDE and not _anim_hold:
 			var entered := _anim_cell
 			_anim_cell = {}
 			_commit_enter(entered)
@@ -756,6 +790,17 @@ func _draw_cost_tip() -> void:
 
 # ------------------------------------------------------------ 进场过场
 
+func _draw_bridge_slide() -> void:
+	## R151 P1-10：金标沿桥从当前房间滑到目标房间（与「当前房间」金框同一视觉语言）。
+	var k := clampf(_anim_t / ENTER_SLIDE, 0.0, 1.0)
+	var e := 1.0 - pow(1.0 - k, 3.0)   # ease-out
+	var pos := _slide_from.lerp(_slide_to, e)
+	var s := CELL * 0.62
+	var r := Rect2(pos - Vector2(s, s) / 2.0, Vector2(s, s))
+	draw_rect(r.grow(3.0), UiTheme.ACCENT_LIT, false, 3.0)
+	draw_rect(r.grow(8.0), Color(0.95, 0.76, 0.31, 0.28), false, 5.0)
+
+
 func _enter_label(cell: Dictionary) -> String:
 	## 过场文字。读 `display_type`：「?」房此刻**还没**揭晓 → 落到「不确定的命运」。
 	var dt := RogueMap.display_type(cell)
@@ -773,7 +818,9 @@ func _draw_enter_anim() -> void:
 	## 进场过场：压暗全屏 → 那一格的图标一边放大一边飞到屏幕中心 → 亮出类型文字 →
 	## 同时右侧巧克力计数旁亮出「巧克力图标 -1」。
 	## ⚠️ 各段时机都写成 ANIM_DUR 的比例（下面只出现数字），改总时长不用动别处。
-	var p := clampf(_anim_t / ANIM_DUR, 0.0, 1.0)
+	var p := clampf((_anim_t - ENTER_SLIDE) / ANIM_DUR, 0.0, 1.0)
+	if _anim_t < ENTER_SLIDE:
+		_draw_bridge_slide()   # R151 P1-10：先沿桥滑 300ms，过场各段全部顺移
 	var dim := _ramp(p, 0.0, 0.18)
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.03, 0.05, 0.66 * dim), true)
 	# 图标：先快后慢地飞到屏幕中心（略微上移，给文字留位置），同时放大

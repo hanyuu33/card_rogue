@@ -91,6 +91,29 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(t)
 		t.start()
+	# -- --tweenshot：演示增删补间（R151 P1-11）—— 0.25s 删掉中间一张，
+	# 0.37s 截图（补间 t≈0.6，其余卡正从旧位滑向新位）
+	if "--tweenshot" in OS.get_cmdline_user_args():
+		# 新局卡组是空的 → 自备 6 张演示卡组（补间要有卡可滑）
+		RunState.deck_ids = [1011, 1013, 1050, 1051, 1053, 1055]
+		_cards = RunState.deck_ids.duplicate()
+		var tw_t := Timer.new()
+		tw_t.wait_time = 0.25
+		tw_t.one_shot = true
+		tw_t.timeout.connect(func():
+			if _cards.size() >= 4:
+				_cards.remove_at(_cards.size() / 2))
+		add_child(tw_t)
+		tw_t.start()
+		var tw_s := Timer.new()
+		tw_s.wait_time = 0.37
+		tw_s.one_shot = true
+		tw_s.timeout.connect(func():
+			var tw_img := get_viewport().get_texture().get_image()
+			tw_img.save_png(ProjectSettings.globalize_path("screenshot_deck_edit.png"))
+			get_tree().quit())
+		add_child(tw_s)
+		tw_s.start()
 	queue_redraw()
 	# R148：Esc 主菜单
 	_menu = UiMenu.attach(self, _menu_items, {
@@ -157,6 +180,11 @@ func _refresh_title() -> void:
 
 # ------------------------------------------------------------ 网格布局
 
+# R151 P1-11：增删补间 —— 每张卡按 id 记「当前显示位置」，目标位变了就从旧位滑过去（200ms）。
+var _tween := {}   # id(int) -> {from: Vector2, t0: int}
+var _shown := {}   # id(int) -> Vector2（当前显示位置；没有 = 还没画过，直接落目标位）
+
+
 func _layout() -> void:
 	## 平铺网格：先在「列数 1..n」里挑出让卡面最大的那种排法，
 	## 同等大小时优先「每行都排满」的列数，其次列数更多（更扁更顺眼）。
@@ -209,6 +237,28 @@ func _fit(area_w: float, area_h: float, gap: float) -> Array:
 	return [best_h, best_cols]
 
 
+func _tweened_rect(i: int, target: Rect2, now_ms: int) -> Rect2:
+	## R151 P1-11：第 i 张卡的显示矩形 —— 增删后目标位变了，从旧位置平滑滑到新位置（200ms）。
+	var id: int = _cards[i]
+	var tp := target.position
+	if not _shown.has(id):
+		_shown[id] = tp
+		_tween.erase(id)
+		return target
+	var cur: Vector2 = _shown[id]
+	if cur.distance_squared_to(tp) > 1.0 and not _tween.has(id):
+		_tween[id] = {"from": cur, "t0": now_ms}
+	if _tween.has(id):
+		var tw: Dictionary = _tween[id]
+		var k := clampf(float(now_ms - int(tw.t0)) / 200.0, 0.0, 1.0)
+		cur = (tw["from"] as Vector2).lerp(tp, 1.0 - pow(1.0 - k, 2.0))
+		if k >= 1.0:
+			_tween.erase(id)
+			cur = tp
+	_shown[id] = cur
+	return Rect2(cur, target.size)
+
+
 func _row_count(r: int) -> int:
 	## 第 r 行实际有几张卡（最后一行可能不满）。
 	return clampi(_cards.size() - r * _cols, 0, _cols)
@@ -240,10 +290,12 @@ func _draw() -> void:
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_ON_DARK)
 		return
 	_layout()
+	var now_ms := Time.get_ticks_msec()
 	for i in _cards.size():
 		var rect := _card_rect(i)
 		if rect.size.x <= 0.0:
 			continue
+		rect = _tweened_rect(i, rect, now_ms)   # R151 P1-11：增删后从旧位滑到新位（200ms）
 		var selected := _sel.has(i)
 		var hovered := i == _hover and not _done and not selected
 		# 高亮底衬：选中 = 红底 + 金边发光；悬停 = 白色微亮
@@ -257,6 +309,11 @@ func _draw() -> void:
 			CardFace.draw(self, c, rect, c.health, selected, false, _font, _font_bold)
 		if selected:
 			_draw_check_badge(rect)
+	# R151 P1-11：清理已移除卡的残留位置记录（它们的槽位已被别的卡滑过来补上）
+	for old_id in _shown.keys():
+		if not _cards.has(old_id):
+			_shown.erase(old_id)
+			_tween.erase(old_id)
 	if _result != "":
 		draw_string(_font_bold, Vector2(0, size.y - 72), _result,
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("c8e6a0"))
@@ -445,6 +502,9 @@ func _apply(pick: int) -> void:
 
 
 func _go_back_soon() -> void:
+	# R151 P2-17：结算结果同时发一条跨场景轻提示（回到地图也看得见）
+	if _result != "":
+		UiToast.toast(_result)
 	var t := Timer.new()
 	t.wait_time = 1.4
 	t.one_shot = true

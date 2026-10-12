@@ -506,6 +506,9 @@ static func _chip_box(bg: Color, line: Color, width: int, px: int, py: int,
 	return sb
 
 
+const UiPressFx = preload("res://scripts/ui_press_fx.gd")
+
+
 static func apply_button(btn: Button, primary := false, on_dark := false) -> void:
 	## 给按钮套上统一规格（**唯一口**）。新界面写按钮就调这一行，别自己画 StyleBox。
 	##   primary = 主行动。**一屏最多一个**；选择类界面（多个等价选项）可以全是次按钮。
@@ -561,6 +564,7 @@ static func apply_button(btn: Button, primary := false, on_dark := false) -> voi
 	btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
 	btn.add_theme_font_override("font", font_bold() if use_bold else font())
 	btn.add_theme_font_size_override("font_size", font_size)
+	UiPressFx.attach(btn)   # R151 P1-8：按下 scale 0.96 / 100ms（样式唯一口统一挂）
 
 
 static func apply_chip(btn: Button, solid := false, compact := false) -> void:
@@ -614,3 +618,4 @@ static func apply_chip(btn: Button, solid := false, compact := false) -> void:
 		btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
 	btn.add_theme_font_override("font", font())
 	btn.add_theme_font_size_override("font_size", FS_LABEL)
+	UiPressFx.attach(btn)   # R151 P1-8：与 apply_button 同一反馈

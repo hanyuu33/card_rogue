@@ -1,5 +1,7 @@
 class_name UiMenu
 extends CanvasLayer
+
+const UiPop = preload("res://scripts/ui_pop.gd")
 ## 游戏中按 Esc 呼出的主菜单（R148）—— **可做的操作由当前界面决定**。
 ##
 ## 为什么做成组件：
@@ -162,6 +164,7 @@ func open() -> void:
 	_is_open = true
 	_rebuild()
 	_root.visible = true
+	UiPop.play(_panel)   # R151 P1-9：入场 scale 0.92→1.0 + 淡入 160ms
 	UiGate.push(GATE_ID)
 	if _pause and not get_tree().paused:
 		_paused_by_me = true

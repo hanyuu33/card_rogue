@@ -162,6 +162,7 @@ func _play(path: String) -> void:
 	# 角色名走 legacy_id：旧录像 meta 里存的是改名前的「德鲁伊 / 游荡者」
 	RunState.start_run([], GameLayers.LAYER_DEFAULT,
 			PlayerClass.legacy_id(str(meta.get("class", PlayerClass.default_id()))))
+	UiToast.toast("回放开始")   # R151 P2-17：跨场景轻提示（转场不遮，layer 99）
 	SceneFx.goto("res://scenes/map.tscn")
 
 

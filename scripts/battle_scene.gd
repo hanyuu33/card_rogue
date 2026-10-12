@@ -15,6 +15,7 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiRoll = preload("res://scripts/ui_roll.gd")
+const UiPop = preload("res://scripts/ui_pop.gd")
 
 const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
@@ -317,6 +318,15 @@ var _void_known := 0            # void_count 快照：增量 = 这段时间被�
 var _place_from := {}           # {pos, card_id, at}；_finish_play 武装，"place" 事件消费
 # R151 批 1 · P0-3：能量变化量飘字（HP 掉血已有飘字体系，能量原来什么都没有）
 var _energy_known := -1
+# R151 批 2（动效设计 §四/§五）：回合归属 / 手牌下沉 / 冲击帧 / 力量跳动 / 治疗粒子 / 非法抖动
+var _hand_turn_dy := 0.0     # P1-6/7：手牌区纵向偏移（敌方回合 +6 下沉；我方回合 −3 上浮）
+var _turn_dim := 0.0         # P1-7：手牌区暗罩 alpha（敌方回合 0.22 —— 自绘卡面的「降饱和」等效）
+var _impacts: Array = []     # {pos, start, dur}  P1-18：击破冲击白闪（60ms，锐利高光）
+var _screen_flash := {}      # {start, dur}       P1-18：全屏黑白闪（仅 Boss 击破与胜利，≤40ms）
+var _pow_fx: Array = []      # {cell, start, dur} P2-13：力量成长跳动 + 扩散环
+var _heal_fx: Array = []     # {pos, start, dur, seed} P2-14：治疗上升光点
+var _shake_card := {}        # {idx, start, dur}  P2-15：被拒的手牌回弹抖动
+var _reject_flash := {}      # {"energy"?/"cell"?: {cell?, start, dur}} P2-15：目标红闪
 var _hp_pending: Dictionary = {} # 尚未在「命中演出」中体现的待扣生命：
 								 #   单位卡面 / HP 横幅 把显示数字冻结在「实际值 + 未演出伤害之和」，
 								 #   等对应的 hit / hp_hit 定时特效触发时才移除这一笔，数字才往下掉。
@@ -455,6 +465,31 @@ func _ready() -> void:
 		engine.self_relics = [6016, 6018]
 		engine.apply_battle_start_relics(repo)
 		status_text = "第二层起始道具：生蛋鸭（开场鸭蛋）+ 冰淇淋与汽水（开场 -3 生命）"
+		queue_redraw()
+	if "--p1fx" in args and engine != null:
+		# R151 批 2 演示：把 P1/P2 新动画全部钉在中段（dur 拉长 → 慢帧截图也截得到）。
+		# 出图命令：`-- --screenshot --level 0 --p1fx --shotframe 20`
+		var pf_n := _now()
+		# ① 摆一个我方单位 + 一个敌方单位（冲击白闪 / 力量跳动 / 治疗粒子 / 敌方红边的载体）
+		engine.state.place(repo.get_card(8003), Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.place(repo.get_card(1053), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+		# ② P1-18 冲击白闪（钉在 t=0.5）
+		_impacts.append({"pos": _cell_center(Vector2i(2, 1)), "start": pf_n - 30000, "dur": 60000})
+		# ③ P2-13 力量跳动（钉在 t=0.5，弹跳峰值 1.35 + 扩散环中段）
+		_pow_fx.append({"cell": Vector2i(4, 1), "start": pf_n - 30000, "dur": 60000})
+		# ④ P2-14 治疗上升光点（钉在上升中段）
+		for pf_i in 4:
+			_heal_fx.append({"pos": _cell_center(Vector2i(4, 1)),
+					"start": pf_n - 30000 - pf_i * 2000, "dur": 60000, "seed": pf_i})
+		# ⑤ P1-6/7 敌方回合态（直接钉死缓动终值：红边呼吸 + 手牌下沉 + 暗罩 + 敌方能量框）
+		engine.current_side = GameEngine.SIDE_OPPONENT
+		_hand_turn_dy = 6.0
+		_turn_dim = 0.22
+		# ⑥ P2-15 拒绝抖动 + 能量面板红闪（钉在 t=0.5）
+		if not engine.state.hand.is_empty():
+			_shake_card = {"idx": 0, "start": pf_n - 30000, "dur": 60000}
+		_reject_flash["energy"] = {"start": pf_n - 30000, "dur": 60000}
+		status_text = "演示：P1/P2 新动画钉帧（敌方回合态 / 冲击闪 / 力量跳动 / 治疗粒子 / 拒绝抖动）"
 		queue_redraw()
 	if "--handfly" in args and engine != null:
 		# R151 演示：P0 手牌因果动画钉在飞行中段（dur 拉长 → 慢帧截图也截得到）。
@@ -2686,8 +2721,7 @@ func _on_left_click(pos: Vector2) -> void:
 				status_text = "%s：点击自己半场（下 3 行）空格放置 —— 上场需额外丢弃 %d 张手牌" \
 						% [card.card_name, engine.discard_cost_of(card)]
 			elif not card.is_spell() and not engine.can_pay_card(card):
-				_say("能量不足：%s 需要 %d，当前能量 %d" % [
-						card.card_name, engine.cost_of(card), engine.energy_of()])
+				_energy_fail(card, hi)   # R151 P2-15：提示 + 抖动 + 能量框红闪
 			elif engine.fence_merge_allowed(card):
 				status_text = "%s：点绿格放置；点橙色「叠」格 = 与已有栅栏合并；再点一次 = 使用" % card.card_name
 			else:
@@ -2704,7 +2738,7 @@ func _use_hand_card(i: int) -> void:
 	if card.is_effect():
 		# 效果卡：支付能量 → 进入左侧效果区持续生效
 		if not engine.can_pay_card(card):
-			_say("能量不足：%s 需要 %d，当前能量 %d" % [card.card_name, engine.cost_of(card), engine.energy_of()])
+			_energy_fail(card, i)   # R151 P2-15
 		else:
 			engine.use_effect(i)
 			_net_send({"type": "action", "act": "effect", "card": card.to_dict()})
@@ -2714,7 +2748,7 @@ func _use_hand_card(i: int) -> void:
 	if not card.is_spell():
 		return  # 随从/工事：等待点击棋盘格放置
 	if not engine.can_pay_card(card):
-		_say("能量不足：%s 需要 %d，当前能量 %d" % [card.card_name, engine.cost_of(card), engine.energy_of()])
+		_energy_fail(card, i)   # R151 P2-15
 		_clear_selection()
 		return
 	if not engine.can_use_card(card):
@@ -2952,8 +2986,7 @@ func _finish_drag(pos: Vector2) -> void:
 	# R117：可用投放区从「效果区那 88px」放大到**左栏整条**（见 _effect_drop_rect）。
 	if to_effects and _effect_drop_rect().has_point(pos):
 		if not engine.can_pay_card(card):
-			_say("能量不足：%s 需要 %d，当前能量 %d" % [
-					card.card_name, engine.cost_of(card), engine.energy_of()])
+			_energy_fail(card, i)   # R151 P2-15
 			return
 		engine.use_effect(i)
 		_net_send({"type": "action", "act": "effect", "card": card.to_dict()})
@@ -2987,8 +3020,7 @@ func _finish_drag(pos: Vector2) -> void:
 		spell_pending = -1
 		spell_targets = []
 		if not engine.can_pay_card(card):
-			_say("能量不足：%s 需要 %d，当前能量 %d" % [
-					card.card_name, engine.cost_of(card), engine.energy_of()])
+			_energy_fail(card, i)   # R151 P2-15
 			return
 		status_text = "双向传送 → %s" % engine.cast_swap_units(i, sw_a, infil_drop)
 		_net_send({"type": "action", "act": "spell", "card": card.to_dict(),
@@ -3019,14 +3051,15 @@ func _finish_drag(pos: Vector2) -> void:
 		var drop = _cell_at(pos)
 		if drop != null and place_cells.has(drop):
 			if not engine.can_pay_card(card):
-				_say("能量不足：%s 需要 %d，当前能量 %d" % [
-						card.card_name, engine.cost_of(card), engine.energy_of()])
+				_energy_fail(card, i)   # R151 P2-15
 				return
 			_try_play_hand_card(i, drop, pos)   # 英雄要先付「弃 4 张」的代价；pos = 松手点（P0-4 落位起点）
 		elif engine.fence_merge_allowed(card):
 			_say("%s：拖到绿色空格；或拖到橙色「叠」格与已有栅栏合并（已取消）" % card.card_name)
+			_reject_fx(i, "", drop)   # R151 P2-15：落点非法 → 卡回弹抖动
 		else:
 			_say("%s：拖到自己半场（下 3 行）的空格放置（已取消）" % card.card_name)
+			_reject_fx(i, "", drop)   # R151 P2-15
 		return
 	var cell = _cell_at(pos)
 	if card.id == GameEngine.INFILTRATE_ID and _infiltrate_src.x >= 0 \
@@ -3038,8 +3071,7 @@ func _finish_drag(pos: Vector2) -> void:
 		spell_targets = []
 		if not engine.can_pay_card(card):
 			_clear_selection()
-			_say("能量不足：%s 需要 %d，当前能量 %d" % [
-					card.card_name, engine.cost_of(card), engine.energy_of()])
+			_energy_fail(card, i)   # R151 P2-15
 			return
 		_clear_selection()
 		status_text = "潜入 → %s" % engine.cast_infiltrate(i, src, cell)
@@ -3054,8 +3086,7 @@ func _finish_drag(pos: Vector2) -> void:
 			var spell_drop = _drop_cell(pos, cells)
 			if spell_drop != null:
 				if not engine.can_pay_card(card):
-					_say("能量不足：%s 需要 %d，当前能量 %d" % [
-							card.card_name, engine.cost_of(card), engine.energy_of()])
+					_energy_fail(card, i)   # R151 P2-15
 					return
 				_cast_spell(i, spell_drop, card)
 			else:
@@ -3063,8 +3094,7 @@ func _finish_drag(pos: Vector2) -> void:
 			return
 		if anywhere and cell != null:
 			if not engine.can_pay_card(card):
-				_say("能量不足：%s 需要 %d，当前能量 %d" % [
-						card.card_name, engine.cost_of(card), engine.energy_of()])
+				_energy_fail(card, i)   # R151 P2-15
 				return
 			engine.use_spell(i)
 			_net_send({"type": "action", "act": "spell",
@@ -3075,8 +3105,7 @@ func _finish_drag(pos: Vector2) -> void:
 	# 效果卡：拖到棋盘 = 启用
 	if cell != null:
 		if not engine.can_pay_card(card):
-			_say("能量不足：%s 需要 %d，当前能量 %d" % [
-					card.card_name, engine.cost_of(card), engine.energy_of()])
+			_energy_fail(card, i)   # R151 P2-15
 			return
 		engine.use_effect(i)
 		_net_send({"type": "action", "act": "effect", "card": card.to_dict()})
@@ -4060,8 +4089,7 @@ func _on_board_click(cell: Vector2i) -> void:
 			elif FieldState.cell_owner(cell.x) != "self":
 				_say("%s 只能放到自己半场（下 3 行）" % card.card_name)
 			elif not engine.can_pay_card(card):
-				_say("能量不足：%s 需要 %d，当前能量 %d" % [
-						card.card_name, engine.cost_of(card), engine.energy_of()])
+				_energy_fail(card, i)   # R151 P2-15
 			else:
 				_try_play_hand_card(i, cell)   # 英雄要先付「弃 4 张」的代价
 				return
@@ -4525,6 +4553,9 @@ func _show_over(win: bool) -> void:
 			RunState.record_battle(repo, str(lvl.get("name", "?")), tier,
 					true, RunState.hp)
 			_run_boss_win = tier == GameLevels.TIER_BOSS
+			# R151 P1-18：Boss 击破与胜利 → 全屏黑白闪（≤40ms，绝不滥用 —— 只有这一处）
+			if win and _run_boss_win and not _shot_pending:
+				_screen_flash = {"start": _now(), "dur": 40}
 			RunState.reward_type = "boss" if _run_boss_win else "normal"
 			# R119：奖励**先入队**，交给结算面板上的奖励悬浮窗 ——
 			#   * 精英 / Boss 掉落道具（不与已拥有的重复；奖励池掉空则不掉）；
@@ -4596,6 +4627,7 @@ func _show_over(win: bool) -> void:
 		if not RunState.run_active:
 			ReplayLog.finish("win" if win else "lose")   # 通关/失败：整局落盘
 	_over_panel.visible = true
+	UiPop.play(_over_panel)   # R151 P1-9：结算面板入场 scale 0.92→1.0 + 淡入 160ms
 	sfx.play("win" if win else "lose")
 	if win:
 		_spawn_confetti()
@@ -5337,6 +5369,12 @@ func _draw() -> void:
 	_draw_level_plate()
 	_draw_hand()
 	_draw_hand_fly()
+	_draw_turn_owner_fx()
+	_draw_pow_fx()
+	_draw_heal_fx()
+	_draw_impacts()
+	_draw_reject_fx()
+	_draw_screen_flash()
 	_draw_drag()
 	_draw_info_panel()
 	if _log_visible:
@@ -6348,10 +6386,35 @@ func _tick_anims() -> bool:
 	_floaters = _floaters.filter(func(f): return n - int(f.start) < int(f.dur))
 	_bursts = _bursts.filter(func(b): return n - int(b.start) < int(b.dur))
 	_wake_rings = _wake_rings.filter(func(r): return n - int(r.start) < int(r.dur))
+	_impacts = _impacts.filter(func(f): return n - int(f.start) < int(f.dur))
+	_pow_fx = _pow_fx.filter(func(f): return n - int(f.start) < int(f.dur))
+	_heal_fx = _heal_fx.filter(func(f): return n - int(f.start) < int(f.dur))
+	if not _screen_flash.is_empty() and n - int(_screen_flash.start) >= int(_screen_flash.dur):
+		_screen_flash = {}
 	return any or not _ghosts.is_empty() or not _floaters.is_empty() \
 			or not _bursts.is_empty() or not _dying.is_empty() \
 			or not _wake_rings.is_empty() \
-			or not _delayed.is_empty() or n < _shake_until
+			or not _delayed.is_empty() or n < _shake_until \
+			or not _impacts.is_empty() or not _pow_fx.is_empty() \
+			or not _heal_fx.is_empty() or not _screen_flash.is_empty()
+
+
+func _energy_fail(card: CardData, idx: int) -> void:
+	## 能量不足统一口（R151 P2-15）：提示 + 卡面回弹抖动 + 能量面板红闪。
+	_say("能量不足：%s 需要 %d，当前能量 %d" % [
+			card.card_name, engine.cost_of(card), engine.energy_of()])
+	_reject_fx(idx, "energy")
+
+
+func _reject_fx(idx: int, reason := "", target = null) -> void:
+	## R151 P2-15：打出被拒（能量不足 / 落点非法）→ 卡回弹抖动 + 目标红闪。
+	if _shot_pending:
+		return
+	_shake_card = {"idx": idx, "start": _now(), "dur": 150}
+	if reason == "energy":
+		_reject_flash["energy"] = {"start": _now(), "dur": 220}
+	if target is Vector2i and (target as Vector2i).x >= 0:
+		_reject_flash["cell"] = {"cell": target, "start": _now(), "dur": 220}
 
 
 func _on_engine_action(kind: String, data: Dictionary) -> void:
@@ -6368,6 +6431,22 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 	elif kind == "swap" and data.get("old") is CardData:
 		# 交换：原单位从场上顶回手牌（不是抽的）→ 不播「从抽牌堆飞入」
 		_flyin_skip.append((data["old"] as CardData).id)
+	# R151 P2-13：力量成长事件族（升级 / 骑士 / 锻造 / 夜行 / 精进 / 使魔）→ 卡面数字跳动 + 扩散环
+	if kind in ["upgrade", "knight_grow", "heph_grow", "night_grow", "mage_grow", "familiar_grow"]:
+		var pg_cell = data.get("cell")
+		if pg_cell is Vector2i and (pg_cell as Vector2i).x >= 0 and not _shot_pending:
+			_pow_fx.append({"cell": pg_cell, "start": n, "dur": 300})
+	# R151 P2-14：格上治疗事件族 → 上升光点（与伤害的扩散爆点对称）
+	if kind in ["heal", "regen", "charge_heal", "self_repair", "night_erosion"]:
+		var hl_cell = data.get("cell")
+		if hl_cell is Vector2i and (hl_cell as Vector2i).x >= 0 and not _shot_pending:
+			for hf_i in 4:
+				_heal_fx.append({"pos": _cell_center(hl_cell), "start": n + hf_i * 70,
+						"dur": 480, "seed": hf_i})
+	elif kind == "self_heal" and not _shot_pending:
+		for hf_j in 4:
+			_heal_fx.append({"pos": Vector2(GRID_X + GRID_W + 46, GRID_Y + GRID_H - 20),
+					"start": n + hf_j * 70, "dur": 480, "seed": hf_j})
 	match kind:
 		"place":
 			sfx.play("place")
@@ -7095,6 +7174,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("b0392f"), "start": n, "dur": 1600, "size": 20})
 			_say("威慑：%s 力量 -%d，持续到你下个回合开始（当前 %d）" % [
 					dt_name, int(data.get("amount", 0)), int(data.get("power", 0))])
+		"heph_grow":
+			# 锻造（9135，R150）：连续 3 个我方回合没击杀 → 力 +1 / 程 +1。
+			# 此前触发瞬间只有引擎日志与「锻 N/3」徽标 —— 画面是哑的；P2-13 统一进跳动。
+			var hg_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var hg_name := "赫菲斯托斯"
+			if data.get("card") is CardData:
+				hg_name = (data["card"] as CardData).card_name
+			if hg_cell.x >= 0:
+				_floaters.append({"pos": _cell_center(hg_cell) + Vector2(0, -24),
+						"text": "锻造 +1 攻 +1 程", "col": UiTheme.STATE_TAUNT,
+						"start": n, "dur": 1600, "size": 18})
+			_say("%s 锻造空转 3 回合 → 力量 +1 / 射程 +1（现 %d 攻 %d 程）" % [
+					hg_name, int(data.get("power", 0)), int(data.get("range", 0))])
 		"night_grow":
 			var ng_center := _cell_center(data["cell"]) if data.has("cell") \
 					else Vector2(WINDOW_W / 2, GRID_Y + 40)
@@ -7745,10 +7837,13 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 
 func _play_destroy_fx(center: Vector2, card: CardData) -> void:
 	## 击破演出：音效 + 卡牌幽灵淡出 + 大爆点 + 「击破」飘字 + 震屏。
+	## R151 P1-18：先插一帧冲击白闪（60ms，日漫「锐利高光」），幽灵 / 爆点顺延 60ms。
 	sfx.play("destroy")
+	if not _shot_pending:
+		_impacts.append({"pos": center, "start": _now(), "dur": 60})
 	_ghosts.append({"center": center,
-			"name": str(card.card_name), "start": _now(), "dur": 800})
-	_bursts.append({"pos": center, "start": _now(), "dur": 640,
+			"name": str(card.card_name), "start": _now() + 60, "dur": 800})
+	_bursts.append({"pos": center, "start": _now() + 60, "dur": 640,
 			"col": Color("e53935"), "big": true})
 	_floaters.append({"pos": center + Vector2(0, -14), "text": "击破",
 			"col": UiTheme.INK_600, "start": _now(), "dur": 1000})
@@ -8541,6 +8636,13 @@ func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> voi
 	## 卡底沉出窗口下沿：卡面照常整张排版，多出来的那截由视口裁掉（不补偿、不挪数值）。
 	var r := _hand_rect(i)
 	r.position.y -= lift
+	# R151 P1-6/7：回合归属 —— 敌方回合手牌整体下沉 +6；我方回合上浮 −3（纯显示，不动命中）
+	r.position.y += _hand_turn_dy
+	# R151 P2-15：这张卡打出被拒 → 回弹抖动（±4px 衰减，150ms）
+	if not _shake_card.is_empty() and int(_shake_card.idx) == i:
+		var st := clampf(float(_now() - int(_shake_card.start)) / int(_shake_card.dur), 0.0, 1.0)
+		if st < 1.0:
+			r.position.x += sin(st * PI * 3.0) * 4.0 * (1.0 - st)
 	var pivot := Vector2(r.position.x + HAND_CARD_W / 2, r.position.y + HAND_CARD_H)
 	draw_set_transform(pivot, _hand_angle(i), Vector2.ONE)
 	# 「现在打出能吃到额外效果」→ 金色高亮框 + 顶部金星标（R65）。
@@ -8548,6 +8650,9 @@ func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> voi
 	var bonus := engine.hand_bonus_ready(card)
 	_draw_card_face(card, Rect2(r.position - pivot, r.size), card.health, selected, false,
 			engine.cost_of(card))
+	# R151 P1-7：敌方回合的暗罩（自绘卡面没法整体降饱和，罩子是唯一便宜的等效）
+	if _turn_dim > 0.01:
+		draw_rect(Rect2(r.position - pivot, r.size), Color(0.102, 0.110, 0.133, _turn_dim), true)
 	if bonus:
 		_draw_hand_bonus_mark(Rect2(r.position - pivot, r.size))
 	# R90：「系统升级」等目标时，把**可改造的手牌**（盟友 / 工事）标出来 ——
@@ -8559,6 +8664,119 @@ func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> voi
 		_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "可改造", hr.position + Vector2(6, 14),
 				Color("1a5f7a"), 3, Color(0.92, 0.98, 1.0))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_turn_owner_fx() -> void:
+	## R151 P1-6：回合归属的持续指示 —— 敌方回合：敌方单位极淡红边呼吸（硬边，不是辉光）
+	## + 敌方能量框提亮；我方回合：手牌区轻微上浮（位移与暗罩在 _draw_hand_card）。
+	if engine.over:
+		return
+	if engine.current_side != GameEngine.SIDE_SELF:
+		var pulse := 0.5 + 0.5 * sin(float(_now()) / 380.0)
+		for pair: Array in engine.state.iter_board():
+			var cell: Vector2i = pair[0]
+			var p: Placement = pair[1]
+			if p.owner == GameEngine.SIDE_SELF:
+				continue
+			var ctr := _display_center(p, cell)
+			var r := Rect2(ctr - Vector2(BOARD_CARD_W, BOARD_CARD_H) / 2.0,
+					Vector2(BOARD_CARD_W, BOARD_CARD_H))
+			draw_rect(r.grow(2.0), Color(0.85, 0.20, 0.15, 0.16 + 0.14 * pulse), false, 1.5)
+		# 敌方能量框提亮（呼吸金框）——「轮到对面了」的第二个信号
+		var et := "敌方能量 %d" % engine.state.opp_energy
+		var etw := _font.get_string_size(et, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_MICRO).x
+		var er := Rect2(GRID_X + GRID_W + 18 - TEXT_BG_PAD_X, GRID_Y + 66 - TEXT_BG_PAD_Y,
+				etw + TEXT_BG_PAD_X * 2, UiTheme.FS_MICRO + TEXT_BG_PAD_Y * 2 + 2)
+		draw_rect(er, Color(0.95, 0.76, 0.31, 0.35 + 0.30 * pulse), false, 1.2)
+
+
+func _draw_pow_fx() -> void:
+	## R151 P2-13：力量成长 —— 力量徽章跳动（1→1.35→1）+ 一圈扩散环（金，力量语义）。
+	var n := _now()
+	for f in _pow_fx:
+		var t := clampf(float(n - int(f.start)) / int(f.dur), 0.0, 1.0)
+		var p: Placement = engine.state.unit_at(f["cell"])
+		if p == null:
+			continue
+		var ctr := _display_center(p, f["cell"])
+		var w := BOARD_TAP_W if p.tapped else BOARD_CARD_W
+		var h := BOARD_TAP_H if p.tapped else BOARD_CARD_H
+		var bc := Vector2(ctr.x - w / 2.0, ctr.y + h / 2.0)   # 力量徽章圆心（左下，压左框线）
+		var br := UiTheme.CARD_BADGE_R * BOARD_SCALE
+		var bfs: int = maxi(7, roundi(UiTheme.CARD_FS_BADGE * BOARD_SCALE))
+		var sc := 1.0 + 0.35 * sin(t * PI)
+		CardFace.draw_badge(self, _font_bold, bc, br * sc, bfs, "power",
+				str(p.effective_power()), UiTheme.BADGE_POWER)
+		draw_arc(bc, br * (1.0 + t * 2.6), 0.0, TAU, 24,
+				Color(1.0, 0.83, 0.48, 0.75 * (1.0 - t)), 2.0)
+
+
+func _draw_heal_fx() -> void:
+	## R151 P2-14：治疗上升光点 —— 硬边小圆 / 四角星交替（日漫 sparkle），生命语义绿。
+	var n := _now()
+	for f in _heal_fx:
+		var t := float(n - int(f.start)) / int(f.dur)
+		if t < 0.0:
+			continue   # 错峰未到的粒子
+		t = clampf(t, 0.0, 1.0)
+		var e := 1.0 - pow(1.0 - t, 2.0)
+		var seed := int(f.get("seed", 0))
+		var base: Vector2 = f["pos"]
+		var off := Vector2(sin(seed * 2.1) * 14.0 + cos(seed * 1.3) * 6.0,
+				cos(seed * 2.7) * 8.0 - 46.0 * e)
+		var a := 1.0 - t
+		if seed % 2 == 0:
+			draw_circle(base + off, 2.6, Color(0.55, 0.88, 0.60, a))
+		else:
+			_draw_spark(base + off, 4.6, Color(0.55, 0.88, 0.60, a))
+
+
+func _draw_spark(pos: Vector2, r: float, col: Color) -> void:
+	## 硬边四角星（日漫 sparkle）：治疗光点 / 冲击帧共用。
+	var q := r * 0.36
+	draw_colored_polygon(PackedVector2Array([
+			pos + Vector2(0, -r), pos + Vector2(q, -q), pos + Vector2(r, 0),
+			pos + Vector2(q, q), pos + Vector2(0, r), pos + Vector2(-q, q),
+			pos + Vector2(-r, 0), pos + Vector2(-q, -q)]), col)
+
+
+func _draw_impacts() -> void:
+	## R151 P1-18：击破冲击白闪 —— 60ms 的白卡形 + 白四角星（锐利高光，不是辉光）。
+	var n := _now()
+	for f in _impacts:
+		var t := clampf(float(n - int(f.start)) / int(f.dur), 0.0, 1.0)
+		var a := 1.0 - t
+		var pos: Vector2 = f["pos"]
+		draw_rect(Rect2(pos - Vector2(BOARD_CARD_W, BOARD_CARD_H) / 2.0,
+				Vector2(BOARD_CARD_W, BOARD_CARD_H)), Color(1, 1, 1, 0.92 * a), true)
+		_draw_spark(pos, 34.0 + 10.0 * t, Color(1, 1, 1, 0.85 * a))
+
+
+func _draw_reject_fx() -> void:
+	## R151 P2-15：打出被拒 —— 能量面板红闪 / 目标格红闪（卡的抖动在 _draw_hand_card）。
+	var n := _now()
+	var ef = _reject_flash.get("energy")
+	if ef != null:
+		var t := clampf(float(n - int(ef.start)) / int(ef.dur), 0.0, 1.0)
+		if t < 1.0:
+			draw_rect(Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H),
+					Color(0.90, 0.18, 0.12, 0.75 * (1.0 - t)), false, 2.2)
+	var cf = _reject_flash.get("cell")
+	if cf != null:
+		var t2 := clampf(float(n - int(cf.start)) / int(cf.dur), 0.0, 1.0)
+		if t2 < 1.0:
+			draw_rect(_cell_rect(cf["cell"]).grow(-1.0),
+					Color(0.90, 0.18, 0.12, 0.75 * (1.0 - t2)), false, 2.2)
+
+
+func _draw_screen_flash() -> void:
+	## R151 P1-18：全屏黑白闪（仅 Boss 击破与胜利，≤40ms）—— 前半白、后半黑，硬切。
+	if _screen_flash.is_empty():
+		return
+	var n := _now()
+	var t := clampf(float(n - int(_screen_flash.start)) / int(_screen_flash.dur), 0.0, 1.0)
+	draw_rect(Rect2(Vector2.ZERO, size),
+			Color(1, 1, 1, 0.92) if t < 0.5 else Color(0, 0, 0, 0.92), true)
 
 
 func _draw_hand_fly() -> void:
@@ -9118,6 +9336,10 @@ func _process(delta: float) -> void:
 	var anim_busy := _tick_anims()
 	_hand_sync()          # R151 P0-1/2：手牌差异 → 抽牌飞入 / 弃牌·消耗飞出
 	_energy_tick()        # R151 P0-3：能量变化量飘字
+	# R151 P1-6/7：回合归属 —— 敌方回合手牌下沉 +6 / 暗罩 0.22；我方回合上浮 −3 / 无罩（~150ms 缓动）
+	var turn_foe: bool = engine.current_side != GameEngine.SIDE_SELF and not engine.over
+	_hand_turn_dy = lerpf(_hand_turn_dy, 6.0 if turn_foe else -3.0, minf(1.0, delta * 8.0))
+	_turn_dim = lerpf(_turn_dim, 0.22 if turn_foe else 0.0, minf(1.0, delta * 8.0))
 	if not _hand_fly.is_empty():
 		var n3 := _now()
 		_hand_fly = _hand_fly.filter(func(f): return n3 - int(f.start) < int(f.dur))

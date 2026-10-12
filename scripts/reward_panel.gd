@@ -1,5 +1,7 @@
 class_name RewardPanel
 extends CanvasLayer
+
+const UiPop = preload("res://scripts/ui_pop.gd")
 ## 奖励悬浮窗（R119）—— 一次获得的**所有**奖励都在这里处理。
 ##
 ## 为什么要有它：
@@ -127,6 +129,7 @@ func open() -> void:
 	_open = true
 	UiGate.push(GATE_ID)   # R121：登记覆盖层 —— 下层的道具悬停就此让位
 	_root.visible = true
+	UiPop.play(_root, 1.0)   # R151 P1-9：全屏自绘层只淡入（压暗条满屏，一缩就露边）
 	_view = VIEW_LIST
 	_sel = _first_pending("")
 	if _sel < 0:

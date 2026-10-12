@@ -1,5 +1,7 @@
 class_name RelicViewer
 extends CanvasLayer
+
+const UiPop = preload("res://scripts/ui_pop.gd")
 ## 通用「道具查看」悬浮层 —— 与 DeckViewer（牌库查看）**完全对等**的一对。
 ##
 ## 右上角一个「道具 N」按钮。**看描述不用点**：鼠标悬浮在按钮上（或速览浮层上）
@@ -188,6 +190,8 @@ func _toggle() -> void:
 		return
 	_open = not _open
 	_panel.visible = _open
+	if _open:
+		UiPop.play(_panel, 1.0)   # R151 P1-9：入场淡入 160ms
 	_hover_on = false
 	_hover_layer.visible = false
 	_scroll = 0.0
