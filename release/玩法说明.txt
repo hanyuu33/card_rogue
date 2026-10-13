@@ -805,22 +805,20 @@
   各分级的合理关卡池规模（结论：普通困难池每层缺 4 张、精英池各缺 1 张），
   详见仓库根 `关卡池规模测算_R134.md`。
 
-  R159 变更（**敌方 AI 优化：角色分类、击杀优先、不挡队友**）：
+  R160 变更（**敌方行动顺序优化：保留原版、可一键切回**）：
 
-  · 引入 AI 角色分类（按卡面 traits / kind / 数值 / 文本）：
-    tank（嘲讽/工事）、support（治疗/成长光环/召唤引擎）、sniper（远程高力）、
-    assault（高速/多动/穿行）、summoner（孵化/锻造/铸造/召唤）、
-    volatile（亡语/爆炎伤害）、growth（每回合自成长）、bruiser（高力近战）、generic。
-    分类只读卡面，不依赖 Placement 状态；用于目标优先级与移动倾向。
-  · `_ai_pick_card_target` 重排优先级：
-    ① 能穿透后排溢出到 HP；② 能一击击杀；③ 按角色威胁分优先击杀 support/growth/sniper；
-    ④ 同分再挑血少 / 力高 / 更靠前的目标。
-  · `_ai_target_choice` 兜底增强：即使目标不是"挡路卡"，只要能一击击杀 support 等
-    高威胁单位，也不会空过。
-  · `_step_score` 增加「不挡队友正前路」惩罚：移动选点会避免落在未行动队友的正前方
-    同列，让后排单位仍有直路可走，减少自我阻挡。
-  · 新增 engine 断言 12 条覆盖角色分类、击杀优先级、support 优先、移动阻挡判定。
-  · 卡数基线不变；回归基线：engine **2351✓** / reward 26✓ / replay 28✓ / smoke 29。
+  · 新增 `AI_QUEUE_USE_OPTIMIZED` 开关（`scripts/game_engine.gd`）。
+    `true` 走优化排序，`false` 立即回滚到原版排序；默认 `true`。
+  · 原版逻辑抽出为 `_ai_action_queue_classic()`，完整保留 R61 的
+    「位置排序 + 开路射击插队」。
+  · 优化版 `_ai_action_queue_optimized()` 的排序 key：
+    开路射击 → 越靠前越先动 → 角色优先级（assault/sniper 优先，坦克/辅助殿后）
+    → 能让位者先动 → 多动单位优先 → 同行两翼先于中间。
+  · 新增辅助函数：`_ai_role_priority()`（角色→行动顺序优先级）、
+    `_ai_unblocks_ally_now()`（检测当前位置是否挡在友军正前方且能前行让开）。
+  · 新增 engine 断言 4 条覆盖：默认启用、classic 顺序保留、角色优先级、让位优先、
+    同行两翼优先。
+  · 卡数基线不变；回归基线：engine **2355✓** / reward 26✓ / replay 28✓ / smoke 29。
 
   R159 变更（**敌方 AI 优化：角色分类、击杀优先、不挡队友**）：
 

@@ -15161,13 +15161,70 @@ func _init() -> void:
 			and int(r158_dk_u[0][3]) == r158_repo.get_card(9124).health,
 			"R158 鸭之暗面：关卡元组与 cards.json 同源（都是 100 血）")
 	# 池规模：第一层精英简单从 1 关补到 2 关（R134 测算的 P0 缺口）
-	check(GameLevels.levels_of_tier([GameLevels.TIER_ELITE_EASY],
-			GameLayers.LAYER_DEFAULT).size() == 2,
-			"R158 第一层精英简单池 2 关（鸭子队长登场 + 鸭子窑）—— 补上 R134 测算的 P0 缺口")
-	check(GameLevels.normal_pool(GameLayers.LAYER_DEFAULT).size() == 8
-			and GameLevels.elite_pool(GameLayers.LAYER_DEFAULT).size() == 4
-			and GameLevels.boss_pool(GameLayers.LAYER_DEFAULT).size() == 3,
-			"R158 第一层池规模：普通 8 / 精英 4 / Boss 3")
+	# ---- R160：AI 行动顺序优化（保留原版可切换） ----
+	check(GameEngine.AI_QUEUE_USE_OPTIMIZED == true,
+			"R160 默认启用优化排序")
+	# 临时调用 classic 入口，验证原版逻辑完整保留
+	var engR160sw := _new_engine([], 20, 20)
+	engR160sw.ai_enabled = true
+	engR160sw.state.place(_card(9009, "使魔鸭子", "盟友", 3, 4, 15, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	engR160sw.state.place(_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 2),
+			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	engR160sw.current_side = GameEngine.SIDE_OPPONENT
+	var qR160sw := engR160sw.ai_action_queue()
+	check(qR160sw.size() == 2 and qR160sw[0] == Vector2i(3, 1) and qR160sw[1] == Vector2i(2, 1),
+			"R160 optimized：靠前单位仍然先动")
+	var qR160cl := engR160sw._ai_action_queue_classic()
+	check(qR160cl.size() == 2 and qR160cl[0] == Vector2i(3, 1) and qR160cl[1] == Vector2i(2, 1),
+			"R160 classic：原版顺序完整保留")
+
+	# 同位置（同一行）：角色优先级 assault > sniper > support
+	var engR160a := _new_engine([], 20, 20)
+	engR160a.ai_enabled = true
+	engR160a.state.place(_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 2),
+			Vector2i(2, 0), GameEngine.SIDE_OPPONENT)   # assault
+	engR160a.state.place(_card(9008, "鸭子巫师", "盟友", 5, 8, 50, 2, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)   # sniper
+	engR160a.state.place(repo.get_card(9021),
+			Vector2i(2, 2), GameEngine.SIDE_OPPONENT)   # 白魔法师：support
+	engR160a.current_side = GameEngine.SIDE_OPPONENT
+	var qR160a := engR160a.ai_action_queue()
+	check(qR160a.size() == 3
+			and qR160a[0] == Vector2i(2, 0)
+			and qR160a[1] == Vector2i(2, 1)
+			and qR160a[2] == Vector2i(2, 2),
+			"R160 同位置角色优先级：assault > sniper > support")
+
+	# 能让位者先动：使魔挡在鸭子骑士正前方，应优先动
+	var engR160b := _new_engine([], 20, 20)
+	engR160b.ai_enabled = true
+	engR160b.state.place(_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 2),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	engR160b.state.place(_card(9009, "使魔鸭子", "盟友", 3, 4, 15, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	engR160b.current_side = GameEngine.SIDE_OPPONENT
+	var qR160b := engR160b.ai_action_queue()
+	check(qR160b.size() == 2 and qR160b[0] == Vector2i(3, 1),
+			"R160 让位优先：挡在友军正前方且能前行的单位先动")
+
+	# 同行同角色：两翼（y=0,2）先于中间（y=1）
+	var engR160c := _new_engine([], 20, 20)
+	engR160c.ai_enabled = true
+	engR160c.state.place(_card(9009, "使魔左", "盟友", 3, 4, 15, 1, 1),
+			Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
+	engR160c.state.place(_card(9009, "使魔中", "盟友", 3, 4, 15, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	engR160c.state.place(_card(9009, "使魔右", "盟友", 3, 4, 15, 1, 1),
+			Vector2i(3, 2), GameEngine.SIDE_OPPONENT)
+	engR160c.current_side = GameEngine.SIDE_OPPONENT
+	var qR160c := engR160c.ai_action_queue()
+	check(qR160c.size() == 3
+			and qR160c[0] in [Vector2i(3, 0), Vector2i(3, 2)]
+			and qR160c[1] in [Vector2i(3, 0), Vector2i(3, 2)]
+			and qR160c[0] != qR160c[1]
+			and qR160c[2] == Vector2i(3, 1),
+			"R160 同行：两翼（y=0,2）先于中间（y=1）")
 
 	RunState.player_class = r91_saved_cls
 

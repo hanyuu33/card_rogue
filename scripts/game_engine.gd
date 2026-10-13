@@ -140,6 +140,7 @@ const AI_ROLE_GROWTH:= "growth"          # 每回合自己变强：越放越大�
 const AI_ROLE_BRUISER:= "bruiser"        # 高力量近战：正面威胁
 const AI_ROLE_GENERIC:= "generic"        # 其它
 
+const AI_QUEUE_USE_OPTIMIZED:= true   # R160：false 切回原版行动顺序
 
 const TAUNT_TRAIT:= "嘲讽"
 const SPELL_IMMUNE_TRAIT:= "法术免疫"
@@ -8700,6 +8701,14 @@ func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 
 
 func ai_action_queue() -> Array[Vector2i]:
+	## R160：行动顺序开关。true 走优化版（角色/让位/多动/开路），false 回滚到原版。
+	if AI_QUEUE_USE_OPTIMIZED:
+		return _ai_action_queue_optimized()
+	return _ai_action_queue_classic()
+
+
+func _ai_action_queue_classic() -> Array[Vector2i]:
+	## 原版行动顺序（R61 及以前）：按位置排序 + 开路射击优先。
 	var cells: Array[Vector2i] = []
 	if over or current_side != SIDE_OPPONENT:
 		return cells
@@ -8726,6 +8735,83 @@ func ai_action_queue() -> Array[Vector2i]:
 		if not promoted.has(cell):
 			rest.append(cell)
 	return promoted + rest
+
+
+func _ai_role_priority(card: CardData) -> int:
+	## R160：行动顺序角色优先级（越小越先动）。
+	## 只按卡面归类，不计算实际场面收益。
+	var role := _ai_role(card)
+	match role:
+		AI_ROLE_ASSAULT:  return 0   # 高速/穿行先占位
+		AI_ROLE_SNIPER:   return 1   # 后排输出
+		AI_ROLE_GENERIC:  return 2
+		AI_ROLE_BRUISER:  return 3   # 高力量近战
+		AI_ROLE_SUMMONER: return 4   # 召唤/锻造
+		AI_ROLE_GROWTH:   return 5   # 每回合成长
+		AI_ROLE_SUPPORT:  return 6   # 治疗/光环
+		AI_ROLE_VOLATILE: return 7   # 亡语伤害
+		AI_ROLE_TANK:     return 8   # 坦克/工事最后动
+	return 9
+
+
+func _ai_unblocks_ally_now(cell: Vector2i, p: Placement) -> bool:
+	## R160：当前位置是否挡在后方未行动友军正前方，且本回合能向前移动让开。
+	var behind := Vector2i(cell.x - 1, cell.y)
+	if behind.x < 0:
+		return false
+	var q := state.unit_at(behind)
+	if q == null or q.owner != p.owner or q.tapped or q.card.is_fort() or q.effective_speed() == 0:
+		return false
+	if p.effective_speed() == 0 or p.card.is_fort():
+		return false
+	var front := Vector2i(cell.x + 1, cell.y)
+	if front.x >= FieldState.BOARD_ROWS:
+		return false
+	if state.board.has(front):
+		return false
+	return true
+
+
+func _ai_action_queue_optimized() -> Array[Vector2i]:
+	## R160：优化版行动顺序。
+	## 优先级：开路射击 > 角色（突进/输出优先，坦克/辅助殿后） > 能让位者先 > 多动优先 > 靠前优先 > 两翼优先。
+	var cells: Array[Vector2i] = []
+	if over or current_side != SIDE_OPPONENT:
+		return cells
+	for cell: Vector2i in state.board:
+		var p: Placement = state.board[cell]
+		if p.owner == SIDE_OPPONENT and not p.tapped:
+			cells.append(cell)
+
+	cells.sort_custom( func(a: Vector2i, b: Vector2i) -> bool:
+		var pa: Placement = state.board[a]
+		var pb: Placement = state.board[b]
+		# 1) 开路射击绝对优先（保持 R61 逻辑）
+		var a_clear := _clear_shot_target(a, pa) != null
+		var b_clear := _clear_shot_target(b, pb) != null
+		if a_clear != b_clear:
+			return a_clear
+		# 2) 位置：越靠前越先动（R61 大原则不变）
+		if a.x != b.x:
+			return a.x > b.x
+		# 3) 同位置/同行：角色优先级（突进/输出优先，坦克/辅助殿后）
+		var a_pri := _ai_role_priority(pa.card)
+		var b_pri := _ai_role_priority(pb.card)
+		if a_pri != b_pri:
+			return a_pri < b_pri
+		# 4) 同角色：能让位者先动，避免挡队友路
+		var a_unblock := _ai_unblocks_ally_now(a, pa)
+		var b_unblock := _ai_unblocks_ally_now(b, pb)
+		if a_unblock != b_unblock:
+			return a_unblock
+		# 5) 同角色同位置：多动单位优先，保证行动轮数用完
+		if pa.acts_left != pb.acts_left:
+			return pa.acts_left > pb.acts_left
+		# 6) 同行：两翼（y=0,2）先于中间（y=1），减少互相阻挡
+		var ay := 0 if a.y != 1 else 2
+		var by := 0 if b.y != 1 else 2
+		return ay < by)
+	return cells
 
 
 func run_ai_unit(cell: Vector2i) -> void :
