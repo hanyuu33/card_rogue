@@ -4294,6 +4294,30 @@
       "value": 1,
       "color": "金",
       "image": ""
+    },
+    {
+      "id": 9140,
+      "name": "赫尔墨斯",
+      "kind": "盟友",
+      "cost": 8,
+      "power": 10,
+      "health": 80,
+      "attack_range": 1,
+      "move_speed": 1,
+      "actions": 2,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "行动力成长"
+      ],
+      "affixes": [
+        "疾行"
+      ],
+      "effect_text": "一回合可以行动两次。每过3回合，行动次数+1。",
+      "target_mode": "none",
+      "color": "金",
+      "image": ""
     }
   ]
 }

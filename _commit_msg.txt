@@ -1,0 +1,10 @@
+R161：赫尔墨斯 + 行动力成长
+
+- cards.json：新增 9140 赫尔墨斯（10/80，程1速1，actions=2），行动力成长 trait + 疾行 affix。
+- placement.gd / field_state.gd：新增 action_growth_extra / action_growth_turns；place() 初始化；unit_actions() 纳入成长。
+- game_engine.gd：ACTION_GROWTH_TRAIT/PERIOD 常量；_action_growth_tick() 挂 _begin_turn() self/ opponent 分支；_ai_role() 归 growth。
+- game_levels.gd：新增第二层·精英简单「赫尔墨斯的试炼」（1 赫尔墨斯在前排中央）；内置关卡 28→29。
+- test_engine.gd / test_reward.gd：基线同步 + R161 断言 9 条。
+- 文档同步：release/玩法说明.txt、release/自检.bat、图片命名说明.txt、关卡与敌人配置总览.md。
+
+回归：engine 2362✓ / reward 26✓ / replay 28✓ / smoke 29（0 Parse/SCRIPT ERROR）。

@@ -308,13 +308,15 @@ func has_sun_forge(side: String) -> bool:
 
 
 func unit_actions(p: Placement, side: String) -> int:
-	## 单位本回合的**行动轮数**（唯一口）。三个来源取最大：
+	## 单位本回合的**行动轮数**（唯一口）。四个来源取最大：
 	##   ① 卡面自带 `actions`（疾行，如鸭子队长）；
 	##   ② 效果区「哈气」9024 给的 `extra_actions`（整方生效）；
-	##   ③ 太阳熔炉：本方场上有赫利俄斯 → 量产型俄倪厄（9131）额外行动一次。
+	##   ③ 太阳熔炉：本方场上有赫利俄斯 → 量产型俄倪厄（9131）额外行动一次；
+	##   ④ 行动力成长（R161 赫尔墨斯 9140）：每过 3 回合额外 +1 行动轮数。
 	## ⚠️ 所有写 `acts_left` 的地方（place / reset_units / apply_extra_actions）
 	##   都必须走这个口 —— 漏一处就会出现「上场那回合不动、下回合才双动」的错位。
 	var n := maxi(p.card.actions, extra_actions(side))
+	n = maxi(n, p.action_growth_extra)
 	if p.card.id == GameEngine.SUN_FORGE_FURY_ID and has_sun_forge(side):
 		n = maxi(n, GameEngine.SUN_FORGE_ACTIONS)
 	return n
@@ -357,6 +359,11 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	# FORGE_PERIOD，与卡面 effect_text 写的是同一句话 —— 改一处必须一起改。
 	if card.traits.has(GameEngine.FORGE_TRAIT):
 		p.forge_period = GameEngine.FORGE_PERIOD
+	# 行动力成长（R161，赫尔墨斯 9140）：上场时挂上空转计数器。
+	# 同样放在 place 里 = **唯一初始化口**；周期取引擎常量 ACTION_GROWTH_PERIOD。
+	if card.traits.has(GameEngine.ACTION_GROWTH_TRAIT):
+		p.action_growth_turns = 0
+		p.action_growth_extra = p.card.actions   # 总行动数目标，成长时 +1
 	# 能量屏障（8033，R87）：带该 trait 的单位一上场就获得「首次受伤免掉」的一次性护盾。
 	# 放在 place 里 = **唯一初始化口**，于是无论它是手牌打出来的、关卡摆位的、
 	# 还是效果卡召唤出来的，都一致（漏了某条路径 = 那条路径出来的没有护盾）。

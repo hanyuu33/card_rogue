@@ -82,6 +82,10 @@ var dark_lord_speed: int = 0   # +1 × 存活暗杀者数（进 effective_speed�
 ## 力量由 `GameEngine._refresh_hecaton()` 在「开局/召唤/击破/回合开始」五处实时重算写值，
 ## 与暗影领主同范式（只记 Placement、**绝不烤进 CardData**，敌方单位用的是卡库共享实例）。
 var hecaton_atk: int = 0       # 孤军成立时 = HECATON_ATK_BUFF(2)，否则 0（进 effective_power）
+	## 「行动力成长」（R161，赫尔墨斯 9140）：每过 ACTION_GROWTH_PERIOD 个回合，
+	## 该单位本回合行动次数 +1（只记 Placement，不写回 CardData）。
+var action_growth_extra: int = 0   # 已累计的额外行动轮数
+var action_growth_turns: int = 0   # 距离下次成长还剩几个回合
 
 
 func effective_power() -> int:

@@ -128,6 +128,12 @@ const MASS_FORGE_TRAIT:= "量产锻造"   # 只做标记（与「锻造 / 铸造
 # （默认 1）—— 于是 value 有消费方，不是死数据。
 const CANNON_TRAIT:= "巨炮"           # 只做标记，破坏次数取卡面 value（默认 1）
 
+# ---- 行动力成长（R161，第二层精英简单「赫尔墨斯」）----
+# 带「行动力成长」trait 的单位：每过 ACTION_GROWTH_PERIOD 个回合，本回合行动次数 +1。
+# 只记 Placement.action_growth_extra，不走 CardData；回合开始先 tick 再 reset_units。
+const ACTION_GROWTH_TRAIT:= "行动力成长"
+const ACTION_GROWTH_PERIOD:= 3
+
 # ---- R159：AI 角色分类（按卡面能力，不走复杂收益计算）----
 # 分类只读 card/traits/kind/value，不依赖 Placement 状态；结果用于目标优先级与移动倾向。
 const AI_ROLE_TANK:= "tank"               # 嘲讽 / 工事 / 血厚低速：优先抗线，最后才打
@@ -1188,6 +1194,7 @@ func _begin_turn(side: String) -> void :
 		_clear_fire_walls(SIDE_SELF)
 		_wisdom_surge()
 		_endless_blessing()
+		_action_growth_tick(SIDE_SELF)   # R161：先推进成长计数，再刷新 acts_left
 		state.reset_units(SIDE_SELF)
 		_poison_tick(SIDE_SELF)   # 剧毒陷阱：我方回合开始结算中毒
 		_arm_debuffs(SIDE_SELF)
@@ -1246,6 +1253,7 @@ func _begin_turn(side: String) -> void :
 			_endless_dark(SIDE_OPPONENT)
 		_melt_ice_walls(SIDE_OPPONENT)
 		_clear_fire_walls(SIDE_OPPONENT)
+		_action_growth_tick(SIDE_OPPONENT)   # R161：先推进成长计数，再刷新 acts_left
 		state.reset_units(SIDE_OPPONENT)
 		_poison_tick(SIDE_OPPONENT)   # 剧毒陷阱：对方回合开始结算中毒
 		_arm_debuffs(SIDE_OPPONENT)
@@ -7272,6 +7280,22 @@ func _tick_enemy_growth() -> void :
 		action.emit("enemy_growth", {"stacks": want, "count": n})
 
 
+func _action_growth_tick(side: String) -> void:
+	## R161：行动力成长——每过 ACTION_GROWTH_PERIOD 个回合，行动次数 +1。
+	## 只在「该方回合开始」调用一次；先 tick，再由 reset_units 把新行动数刷到 acts_left。
+	for cell: Vector2i in state.board:
+		var p: Placement = state.board[cell]
+		if p.owner != side or not p.card.traits.has(ACTION_GROWTH_TRAIT):
+			continue
+		p.action_growth_turns += 1
+		if p.action_growth_turns >= ACTION_GROWTH_PERIOD:
+			p.action_growth_turns = 0
+			p.action_growth_extra += 1
+			_log("行动力成长：%s 的「%s」行动次数 +1（现每回合 %d 次）" % [
+					_zone_label(side), p.card.card_name, p.card.actions + p.action_growth_extra])
+			action.emit("action_growth", {"cell": cell, "side": side, "extra": p.action_growth_extra})
+
+
 func _recycler_trigger(r: Placement, victim_power: int) -> void :
 	## 「零件回收者」（8046，R96）的唯一结算口，由 `_destroy` 在 erase 之后调用。
 	if r == null or r.owner != SIDE_SELF or r.card.id != RECYCLER_ID:
@@ -8845,6 +8869,8 @@ func _ai_role(card: CardData) -> String:
 	if (card.move_speed >= 2 or traits.has("队长") or traits.has("穿行")) and card.power >= 3:
 		return AI_ROLE_ASSAULT
 	if traits.has("亡语") or "每回合开始时，力量" in card.effect_text or "每过一个自己的回合" in card.effect_text:
+		return AI_ROLE_GROWTH
+	if traits.has(ACTION_GROWTH_TRAIT):   # R161：赫尔墨斯——越拖行动次数越多
 		return AI_ROLE_GROWTH
 	if card.power >= 7:
 		return AI_ROLE_BRUISER

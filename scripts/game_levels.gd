@@ -75,14 +75,14 @@ static func level_names() -> Array[String]:
 
 static func builtin_levels() -> Array:
 	## 按分级从低到高：普通简单×7（第一层 4 + 第二层 3）→ 普通困难×8（第一层 4 + 第二层 4）→
-	## 精英简单×4（第一层 2 + 第二层 2）→ 精英困难×4（第一层 2 + 第二层 2）→
-	## Boss×5（第一层 3 + 第二层 2）。合计 28 关。
+	## 精英简单×5（第一层 2 + 第二层 3）→ 精英困难×4（第一层 2 + 第二层 2）→
+	## Boss×5（第一层 3 + 第二层 2）。合计 29 关。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_frost_line(), _assembly_line(), _mass_anvil(),
 		_knight_charge(), _wizard(), _white_mage_guard(), _night_ducks(),
 			_sun_forge(), _hecaton(), _undead_legion(), _twin_cannon(),
-		_captain(), _duck_kiln(), _breath_charge(), _dragon_nest(),
+		_captain(), _duck_kiln(), _breath_charge(), _hermes(), _dragon_nest(),
 		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(),
 		_boss_dragon(), _boss_demon_duck(), _boss_duck_darkside(),
 			_mech_duck_boss(), _hephaestus()]
@@ -753,6 +753,27 @@ static func _breath_charge() -> Dictionary:
 		"tutorial": [],
 	}
 
+
+static func _hermes() -> Dictionary:
+	## 第二层·精英敌人-简单（R161）：1 只赫尔墨斯（10/80，程 1 速 1）。
+	## 自带「行动力成长」——每过 3 个敌方回合，行动次数 +1，越拖越强。
+	return {
+		"name": "赫尔墨斯的试炼",
+		"key": "hermes",
+		"tier": TIER_ELITE_EASY,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9140, "赫尔墨斯", 10, 80, 1, 1, Vector2i(2, 1)],
+		],
+		"tutorial": [],
+	}
 
 static func _duck_kiln() -> Dictionary:
 	## 第一层·精英敌人-简单（R158 从「第二层·普通敌人-困难」上调）：敌方后排中央一座
