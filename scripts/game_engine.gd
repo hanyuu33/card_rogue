@@ -115,6 +115,18 @@ const FORGE_TRAIT:= "锻造"         # 只做标记（与「沉睡 / 铸造」�
 const FORGE_PERIOD:= 3            # 连续几个我方回合没击杀 → 成长一次
 const FORGE_ATK:= 1               # 每次成长：力量 +1（走 atk_buff，永久累计无上限）
 const FORGE_RANGE:= 1             # 每次成长：攻击距离 +1（走 Placement.forge_range）
+# ---- 「量产铁砧」关卡（R158，第二层普通简单）----
+# 量产型赫菲斯托斯（9138，盟友 4/50 程1 速1）带「量产锻造」trait：**只保留** Boss 版
+# 那条「亲手击杀 → 锻造量产型俄倪厄」，**没有**「连续空转 N 回合自己变强」那半边。
+# 判据用 trait：它的 `forge_period` 恒为 0，而 `_forge_tick` / `_heph_kill_forge`
+# 两条都以 `forge_period > 0` 为前提 → 都不会碰它，天然不会串到 Boss 的成长上。
+const MASS_FORGE_TRAIT:= "量产锻造"   # 只做标记（与「锻造 / 铸造」同套路），无数值字段
+# ---- 敌人效果卡「充能巨炮」（R158，第二层普通困难「双机炮阵」）----
+# 效果区里有「巨炮」trait 的卡：**己方每个回合开始时**，随机破坏**一个敌方单位**
+# （从持有效果卡那方看 = 对方单位）。破坏走唯一口 `_destroy`（离场记账 / 亡语 /
+# 击杀记功与别处完全一致），不是另起一套删除。一次破坏几个由卡面 `value` 决定
+# （默认 1）—— 于是 value 有消费方，不是死数据。
+const CANNON_TRAIT:= "巨炮"           # 只做标记，破坏次数取卡面 value（默认 1）
 
 
 const TAUNT_TRAIT:= "嘲讽"
@@ -1244,6 +1256,7 @@ func _begin_turn(side: String) -> void :
 		_glowgrass_supply(SIDE_OPPONENT)
 		_ghost_self_destruct(SIDE_OPPONENT)
 		_assassin_summon(SIDE_OPPONENT)
+		_cannon_fire(SIDE_OPPONENT)   # R158 充能巨炮 9139：己方回合开始随机破坏一个我方单位
 		_refresh_dark_lord(SIDE_OPPONENT)
 		_refresh_hecaton(SIDE_OPPONENT)
 		_run_battlecries(SIDE_OPPONENT)
@@ -1465,6 +1478,40 @@ func _dragon_breath(side: String) -> void :
 				q.card.card_name, dealt, maxi(0, q.health)])
 			if q.health <= 0:
 				_destroy_dead()
+
+
+func _cannon_fire(side: String) -> void :
+	## 充能巨炮（9139，R158 敌人效果卡）：**己方每个回合开始时**，随机破坏
+	## **一个敌方单位**（从持有效果卡那方看 = 对方单位）。
+	##   * 目标池 = 对方场上**所有**单位（含工事），走引擎 `rng` → 回放同种子可复现；
+	##   * 破坏走唯一口 `_destroy`（离场记账 / 亡语 / 击杀记功与别处完全一致），
+	##     不在这里另起一套删除；
+	##   * 没有目标 → 静默跳过（只打一行日志），**不会**转而伤害对方 HP ——
+	##     卡面写的是「破坏一个单位」，没有单位就是空响。
+	## ⚠️ 一次破坏几个由卡面 `value` 决定（默认 1，取效果区里最大值，不叠加）。
+	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
+	var shots:= 0
+	for c: CardData in zone:
+		if c.traits.has(CANNON_TRAIT):
+			shots = maxi(shots, maxi(1, c.value))
+	if shots <= 0:
+		return
+	var foe:= SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	for _shot in range(shots):
+		if over:
+			return   # 上一炮已经打出胜负，别再往已结束的战场开火
+		var targets: Array[Vector2i] = []
+		for cell: Vector2i in state.board:
+			if state.board[cell].owner == foe:
+				targets.append(cell)
+		if targets.is_empty():
+			_log("充能巨炮：对方场上没有单位，本回合空响")
+			return
+		var t: Vector2i = targets[rng.randi_range(0, targets.size() - 1)]
+		var q: Placement = state.unit_at(t)
+		_log("充能巨炮：破坏 %s（%s）" % [q.card.card_name, t])
+		action.emit("cannon_fire", {"cell": t, "card": q.card, "side": foe})
+		_destroy(t)
 
 
 func _max_buff(side: String) -> int:
@@ -6866,6 +6913,37 @@ func _forge_tick() -> void :
 				"power": p.effective_power(), "range": p.effective_range()})
 
 
+func _mass_heph_kill_forge(killer: Placement) -> void :
+	## 量产型赫菲斯托斯（9138，R158）「量产锻造」：**亲手击杀**敌方单位 →
+	## 在**己方半场随机空格**锻造一只量产型俄倪厄（9131，5/30 程1 速1）。
+	## 与 Boss 版赫菲斯托斯（9135）的差别：**没有「空转成长」那半边** ——
+	## 它的 `forge_period` 恒为 0，而 `_forge_tick` / `_heph_kill_forge` 两条都以
+	## `forge_period > 0` 为前提 → 都不会碰它。于是这只不会自己越长越疼，
+	## 纯粹是「你送一个头它就多一只兵」。
+	## ⚠️ 挂 `_credit_kill`（击杀记功唯一口），且排在骑士那条 return **之前**。
+	## ⚠️ 落点走 `_random_free_half_cell`（引擎 rng → 回放同种子可复现）；
+	## 召唤物走 `place(summon = true)` = 当回合恰好 1 轮行动，与恶魔召唤同口径。
+	if over or killer == null or killer.card == null:
+		return
+	if not killer.card.traits.has(MASS_FORGE_TRAIT):
+		return
+	var proto: CardData = CardRepo.load_json().get_card(SUN_FORGE_FURY_ID)
+	if proto == null:
+		_log("量产锻造失败：卡牌库里没有 id=%d" % SUN_FORGE_FURY_ID)
+		return
+	var spot:= _random_free_half_cell(killer.owner)
+	if spot == Vector2i(-1, -1):
+		_log("%s 亲手击杀 → 想锻造量产型俄倪厄，但己方半场没有空格"
+				% killer.card.card_name)
+		return
+	var copy:= CardData.from_dict(proto.to_dict())   # 独立副本：不与卡库实例共享
+	var spawned:= state.place(copy, spot, killer.owner, true)
+	_log("%s 亲手击杀 → 量产锻造出一只量产型俄倪厄（%s）" % [killer.card.card_name, spot])
+	action.emit("mass_forge", {"cell": spot, "card": copy, "side": killer.owner})
+	if spawned != null:
+		_on_ally_entered(spawned, killer.owner)
+
+
 func _heph_kill_forge(killer: Placement) -> void :
 	## 赫菲斯托斯（9135，R150）**亲手击杀**敌人 → 在**己方半场随机空格**锻造一只
 	## 量产型俄倪厄（9131，5/30 程1 速1），并**清零**空转计数 —— 它一直在杀人，
@@ -7117,9 +7195,12 @@ func _credit_kill(victim: Placement) -> void :
 	var killer:= state.unit_at(victim.last_hit_by)
 	if killer == null or killer.owner == victim.owner:
 		return
-	# R150 赫菲斯托斯「亲手击杀 → 锻造量产型俄倪厄」。
-	# ⚠️ 必须排在骑士那条 `if not ... has(KNIGHT_TRAIT): return` **之前** ——
-	#    那条一 return，Boss 的击杀效果就永远走不到。
+	# R150 赫菲斯托斯「亲手击杀 → 锻造量产型俄倪厄」；
+	# R158 量产型赫菲斯托斯「量产锻造」走同一条通路（两个函数各自按 trait 判，
+	# 互不干扰：Boss 看 forge_period > 0，量产型看「量产锻造」trait）。
+	# ⚠️ 两条都必须排在骑士那条 `if not ... has(KNIGHT_TRAIT): return` **之前** ——
+	#    那条一 return，击杀类效果就永远走不到。
+	_mass_heph_kill_forge(killer)
 	_heph_kill_forge(killer)
 	if not killer.card.traits.has(KNIGHT_TRAIT):
 		return

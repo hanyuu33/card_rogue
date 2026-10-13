@@ -187,10 +187,13 @@ if not shown:
 w('\n')
 
 w('### 3.2 其他观察\n\n')
-w('- **普通-简单**总量 7 关（第一层 4 + 第二层 3）为最大池，分布健康。\n')
-w('- **Boss 池**：第一层 2 个、第二层 3 个，随机性尚可；第二层含「恶魔鸭·复仇」彩蛋位（不进池）。\n')
-w('- 第二层总量（%d）多于第一层（%d），符合「越往后内容越密」的节奏。\n' % (len(l2), len(l1)))
-w('- **敌方卡复用率**：45 张敌方卡中，有 %d 张**未在任何内置关卡登场**（见 §5.2）；\n' % len([cid for cid in enemy_cards if cid not in appear]))
+w('- **普通-简单**总量 %d 关（第一层 %d + 第二层 %d）。\n'
+  % (len([x for x in builtin if x['tier'] == 0]),
+     len([x for x in l1 if x['tier'] == 0]), len([x for x in l2 if x['tier'] == 0])))
+w('- **Boss 池**：第一层 %d 个、第二层 %d 个；第二层含「恶魔鸭·复仇」彩蛋位（不进池）。\n'
+  % (len([x for x in l1 if x['tier'] == 4]), len([x for x in l2 if x['tier'] == 4])))
+w('- 层数分布：第一层 %d 关 / 第二层 %d 关。\n' % (len(l1), len(l2)))
+w('- **敌方卡复用率**：%d 张敌方卡中，有 %d 张**未在任何内置关卡登场**（见 §5.2）；\n' % (len(enemy_cards), len([cid for cid in enemy_cards if cid not in appear])))
 w('  其中部分为敌方「效果卡」（通过 `enemy_effects` 机制进入关卡），不占用 `enemy_units` 编成，属正常。\n\n')
 
 # ---------- 6. 关卡明细 ----------
@@ -320,7 +323,7 @@ w('```\npython _p14_gendoc.py\n```\n\n')
 w('抽取口径：\n\n')
 w('- 关卡列表 = `builtin_levels()` 的 return 数组顺序（**唯一权威顺序**），逐个解析对应 `static func _xxx()`\n')
 w('- `tier` 常量 → 分级名；`layer` 常量 → 层名\n')
-w('- 敌方卡 = `cards.json` 中 `class == "敌人"` 的卡（共 45 张）\n')
+w('- 敌方卡 = `cards.json` 中 `class == "敌人"` 的卡（共 %d 张）\n' % len(enemy_cards))
 w('- 「登场关卡」按各关 `enemy_units` 元组统计（**不含** `enemy_effects` 效果卡）\n\n')
 w('⚠️ 若新增关卡，请同步：① `builtin_levels()` 挂载 ② §二分级分布 ③ §四关卡明细 ④ 基线测试\n')
 

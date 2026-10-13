@@ -74,15 +74,18 @@ static func level_names() -> Array[String]:
 
 
 static func builtin_levels() -> Array:
-	## 按分级从低到高：普通简单×7（第一层 4 + 第二层 3）→ 普通困难×6（第一层 2 + 第二层 4）→
-	## 精英简单×3 → 精英困难×4（第一层 2 + 第二层 2）→ Boss×5（第一层 2 + 第二层 3）。
+	## 按分级从低到高：普通简单×7（第一层 4 + 第二层 3）→ 普通困难×8（第一层 4 + 第二层 4）→
+	## 精英简单×4（第一层 2 + 第二层 2）→ 精英困难×4（第一层 2 + 第二层 2）→
+	## Boss×5（第一层 3 + 第二层 2）。合计 28 关。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
-			_white_mage_guard(), _night_ducks(),
-			_knight_charge(), _wizard(), _duck_kiln(), _sun_forge(), _hecaton(),
-		_captain(), _captain_wizard(), _legion(), _breath_charge(), _frost_line(), _undead_legion(), _dragon_nest(),
-		_mech_giant(), _steel_fortress(), _boss_dragon(), _boss_demon_duck(), _mech_duck_boss(), _boss_duck_darkside(),
-		_hephaestus()]
+			_frost_line(), _assembly_line(), _mass_anvil(),
+		_knight_charge(), _wizard(), _white_mage_guard(), _night_ducks(),
+			_sun_forge(), _hecaton(), _undead_legion(), _twin_cannon(),
+		_captain(), _duck_kiln(), _breath_charge(), _dragon_nest(),
+		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(),
+		_boss_dragon(), _boss_demon_duck(), _boss_duck_darkside(),
+			_mech_duck_boss(), _hephaestus()]
 
 
 static func layer_of(level: Dictionary) -> int:
@@ -459,7 +462,8 @@ static func _mech_duck_boss() -> Dictionary:
 
 
 static func _boss_duck_darkside() -> Dictionary:
-	## 第二层 Boss「鸭之暗面」（R111）：后排中央一只鸭之暗面（9124，9/150，程1 速1），
+	## 第一层 Boss「鸭之暗面」（R111 / R158：血量 150 → 100，并从第二层下调到第一层）：
+	## 后排中央一只鸭之暗面（9124，9/100，程1 速1），
 	## 敌方效果卡「暗影召唤 9125」——**开局**以及**每 3 个回合**召唤一只鸭子暗杀者（9123，6/30）。
 	##   * 鸭之暗面「穿行」= 移动**无视单位阻挡**（可穿过任何单位，不能停在上面）；
 	##   * 鸭之暗面「暗影领主」= **每个存活暗杀者** +3 力 +1 速（死了立刻掉）；
@@ -471,7 +475,7 @@ static func _boss_duck_darkside() -> Dictionary:
 		"name": "鸭之暗面",
 		"key": "boss_duck_darkside",
 		"tier": TIER_BOSS,
-		"layer": GameLayers.LAYER_TWO,
+		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
 		"intro": "……别回头看。",
 		"player_hp": 20,
@@ -481,7 +485,7 @@ static func _boss_duck_darkside() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9124, "鸭之暗面", 9, 150, 1, 1, Vector2i(0, 1)],
+			[9124, "鸭之暗面", 9, 100, 1, 1, Vector2i(0, 1)],
 		],
 		"enemy_effects": [9125],
 		"tutorial": [],
@@ -670,14 +674,14 @@ static func _blaze_pack() -> Dictionary:
 
 
 static func _white_mage_guard() -> Dictionary:
-	## 第二层·普通敌人-简单：后排中央一名白魔法师（9021，2/100，回合开始治疗
-	## 生命值百分比最低的己方单位 10 点；精进——每回合开始力量 +1，无前置条件），
-	## 前排三名鸭子骑士护阵。
+	## 第一层·普通敌人-困难（R158 从「第二层·普通敌人-简单」上调）：后排中央一名白魔法师
+	## （9021，2/100，回合开始治疗生命值百分比最低的己方单位 10 点；精进——每回合开始
+	## 力量 +1，无前置条件），前排三名鸭子骑士护阵。
 	return {
 		"name": "白魔法师护阵",
 		"key": "white_mage_guard",
-		"tier": TIER_NORMAL_EASY,
-		"layer": GameLayers.LAYER_TWO,
+		"tier": TIER_NORMAL_HARD,
+		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
 		"player_hp": 20,
 		"enemy_hp": 30,
@@ -696,13 +700,14 @@ static func _white_mage_guard() -> Dictionary:
 
 
 static func _night_ducks() -> Dictionary:
-	## 第二层·普通敌人-简单：中排左右各一只夜鸭（6/35，程 2 速 2，回合开始 +1 攻），
-	## 前排左右各一只使魔鸭子（4/15，程 1 速 1）护阵，AI 推进。
+	## 第一层·普通敌人-困难（R158 从「第二层·普通敌人-简单」上调）：中排左右各一只夜鸭
+	## （6/35，程 2 速 2，回合开始 +1 攻），前排左右各一只使魔鸭子（4/15，程 1 速 1）护阵，
+	## AI 推进。
 	return {
 		"name": "夜鸭阵",
 		"key": "night_ducks",
-		"tier": TIER_NORMAL_EASY,
-		"layer": GameLayers.LAYER_TWO,
+		"tier": TIER_NORMAL_HARD,
+		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
 		"player_hp": 20,
 		"enemy_hp": 30,
@@ -750,14 +755,15 @@ static func _breath_charge() -> Dictionary:
 
 
 static func _duck_kiln() -> Dictionary:
-	## 第二层·普通敌人-困难：敌方后排中央一座鸭子窑（9025，工事 0 力 100 血），
-	## 自己回合开始时（含首回合）在四周曼哈顿距离为 1 的空格各烧出一只陶瓷鸭
-	## （8 力，生命 = 当前己方回合数，程1 速2）。越界/被占用的邻格跳过。
+	## 第一层·精英敌人-简单（R158 从「第二层·普通敌人-困难」上调）：敌方后排中央一座
+	## 鸭子窑（9025，工事 0 力 100 血），自己回合开始时（含首回合）在四周曼哈顿距离为 1
+	## 的空格各烧出一只陶瓷鸭（8 力，生命 = 当前己方回合数，程1 速2）。越界/被占用的邻格跳过。
+	## 上调理由：第一层精英简单池原本只有「鸭子队长登场」一关（R134 测算的 P0 缺口）。
 	return {
 		"name": "鸭子窑",
 		"key": "duck_kiln",
-		"tier": TIER_NORMAL_HARD,
-		"layer": GameLayers.LAYER_TWO,
+		"tier": TIER_ELITE_EASY,
+		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
 		"player_hp": 20,
 		"enemy_hp": 30,
@@ -837,6 +843,94 @@ static func _hecaton() -> Dictionary:
 			[9137, "量产型赫利俄斯", 6, 18, 1, 0, Vector2i(1, 0)],
 			[9137, "量产型赫利俄斯", 6, 18, 1, 0, Vector2i(1, 2)],
 		],
+		"tutorial": [],
+	}
+
+
+static func _assembly_line() -> Dictionary:
+	## 第二层·普通敌人-简单（R158「量产流水线」）：前排左右各一只量产型俄倪厄
+	## （9131，5/30 程1 速1），后排中央一座量产型赫利俄斯（9137，**工事** 6/18 程1 速0）。
+	## 塔在场 → 塔以外的己方单位「受到的技能伤害减半（向上取整）」—— 实时扫描
+	## （`FieldState.has_mass_helios`），塔一倒减半**立刻失效**。
+	## 取舍：先拆 18 血的塔（好拆，但它一直压着法术流），还是硬吃减半把两只 30 血
+	##   的俄倪厄磨掉。塔在后排够不到人，所以「拆塔」几乎不挨打 —— 这关的教学点
+	##   就是让你认出「减半是从哪来的」。
+	## ⚠️ 站位按 `Vector2i(行, 列)`：俄倪厄 (2,0)/(2,2) 顶前排，塔 (0,1) 坐后排中央。
+	return {
+		"name": "量产流水线",
+		"key": "assembly_line",
+		"tier": TIER_NORMAL_EASY,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9137, "量产型赫利俄斯", 6, 18, 1, 0, Vector2i(0, 1)],
+			[9131, "量产型俄倪厄", 5, 30, 1, 1, Vector2i(2, 0)],
+			[9131, "量产型俄倪厄", 5, 30, 1, 1, Vector2i(2, 2)],
+		],
+		"tutorial": [],
+	}
+
+
+static func _mass_anvil() -> Dictionary:
+	## 第二层·普通敌人-简单（R158「量产铁砧」）：后排中央一只量产型赫菲斯托斯
+	## （9138，4/50 程1 速1），带「量产锻造」——**亲自击杀**我方单位时，在
+	## **己方半场随机空格**锻造一只量产型俄倪厄（9131，5/30 程1 速1）
+	## （挂 `_credit_kill` + `_mass_heph_kill_forge`，走引擎 rng → 回放可复现）。
+	## 与 Boss 版赫菲斯托斯（9135）的差别：**没有「空转成长」那半边** ——
+	##   它不会自己越长越疼，纯粹是「你送一个头它就多一只兵」。
+	## 于是题面很直白：别让它拿到最后一刀（用法术 / 陷阱 / 溢出补掉濒死单位），
+	##   否则场面会越滚越多；它只有 4 攻，正面硬顶并不疼，疼的是滚起来的兵。
+	return {
+		"name": "量产铁砧",
+		"key": "mass_anvil",
+		"tier": TIER_NORMAL_EASY,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9138, "量产型赫菲斯托斯", 4, 50, 1, 1, Vector2i(0, 1)],
+		],
+		"tutorial": [],
+	}
+
+
+static func _twin_cannon() -> Dictionary:
+	## 第二层·普通敌人-困难（R158「双机炮阵」）：前排左右各一只量产型俄倪厄
+	## （9131，5/30 程1 速1），敌方效果卡「充能巨炮 9139」——
+	## **己方每个回合开始时**，随机破坏**一个敌方单位**（= 我方单位，走引擎 rng）。
+	## 于是这关的题面是「站不住场」：每回合固定少一个单位，前线迟早被两只俄倪厄压穿。
+	## 取舍：铺得越多，炮的期望损失被摊得越薄（但每只都扛不住 5 攻）；
+	##   只留少量高质量单位，则每一下都掉肉。玩家要在「数量」和「质量」之间选一边。
+	## ⚠️ 破坏走唯一口 `_destroy`（离场记账 / 亡语 / 击杀记功与别处完全一致），
+	##   不是另起一套删除；没有可破坏的目标时静默跳过（只打日志）。
+	return {
+		"name": "双机炮阵",
+		"key": "twin_cannon",
+		"tier": TIER_NORMAL_HARD,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9131, "量产型俄倪厄", 5, 30, 1, 1, Vector2i(2, 0)],
+			[9131, "量产型俄倪厄", 5, 30, 1, 1, Vector2i(2, 2)],
+		],
+		"enemy_effects": [9139],
 		"tutorial": [],
 	}
 

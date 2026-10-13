@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 207,
-			"图鉴 = 205 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152**；实际 %d）"
+	check(repo.all_cards().size() == 209,
+			"图鉴 = 209 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,7 +135,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 162 and grp_enemy.size() == 45,
+	check(grp_player.size() == 162 and grp_enemy.size() == 47,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 162 / 45；R149 +3 / R150 +1 / R152 +2 张敌方卡）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -149,10 +149,10 @@ func _init() -> void:
 	for c: CardData in grp_enemy:
 		if c.is_level_effect():
 			enemy_eff.append(c.id)
-	check(enemy_eff.size() == 7 and enemy_eff.has(9013) and enemy_eff.has(9015)
+	check(enemy_eff.size() == 8 and enemy_eff.has(9013) and enemy_eff.has(9015)
 			and enemy_eff.has(9024) and enemy_eff.has(9049) and enemy_eff.has(9115)
-			and enemy_eff.has(9117) and enemy_eff.has(9125),
-			"图鉴分组：敌人图鉴含 7 张敌方关卡效果 9013/9015/9024/9049/9115/9117/9125（实际 %s）" % str(enemy_eff))
+			and enemy_eff.has(9117) and enemy_eff.has(9125) and enemy_eff.has(9139),
+			"图鉴分组：敌人图鉴含 8 张敌方关卡效果 9013/9015/9024/9049/9115/9117/9125/**9139 充能巨炮 R158**（实际 %s）" % str(enemy_eff))
 	check(repo.get_card(9022).group == "player" and repo.get_card(9044).group == "player"
 			and repo.get_card(9072).group == "player" and repo.get_card(9018).group == "player"
 			and repo.get_card(9023).group == "player" and repo.get_card(9050).group == "player",
@@ -2588,18 +2588,19 @@ func _init() -> void:
 			and (lvl_ak.get("enemy_units", [])[1][3] as int) == 30,
 			"弓手与骑士：弓手 3/18、骑士 3/30")
 
-	# 新关卡：夜鸭阵 —— 第二层·普通敌人-简单，中排两只夜鸭 + 前排两只使魔鸭子
+	# 新关卡：夜鸭阵 —— **第一层**·普通敌人-困难（R158 从「第二层·普通敌人-简单」上调），
+	# 中排两只夜鸭 + 前排两只使魔鸭子
 	var lvl_nd: Dictionary = _level_named("夜鸭阵")
 	var eus_nd: Array = lvl_nd.get("enemy_units", [])
 	check(str(lvl_nd.get("name", "")) == "夜鸭阵"
-			and int(lvl_nd.get("tier", -1)) == GameLevels.TIER_NORMAL_EASY
-			and int(lvl_nd.get("layer", -1)) == GameLayers.LAYER_TWO
+			and int(lvl_nd.get("tier", -1)) == GameLevels.TIER_NORMAL_HARD
+			and int(lvl_nd.get("layer", -1)) == GameLayers.LAYER_DEFAULT
 			and eus_nd.size() == 4
 			and int(eus_nd[0][0]) == 9027 and eus_nd[0][6] == Vector2i(1, 0)
 			and int(eus_nd[1][0]) == 9027 and eus_nd[1][6] == Vector2i(1, 2)
 			and int(eus_nd[2][0]) == 9009 and eus_nd[2][6] == Vector2i(2, 0)
 			and int(eus_nd[3][0]) == 9009 and eus_nd[3][6] == Vector2i(2, 2),
-			"夜鸭阵：第二层普通简单，中排2夜鸭(1,0)/(1,2) + 前排2使魔(2,0)/(2,2)")
+			"夜鸭阵：第一层普通困难（R158 上调），中排2夜鸭(1,0)/(1,2) + 前排2使魔(2,0)/(2,2)")
 	check((eus_nd[0][2] as int) == 6 and (eus_nd[0][3] as int) == 35
 			and (eus_nd[0][4] as int) == 2 and (eus_nd[0][5] as int) == 2,
 			"夜鸭：6 攻 35 血 程2 速2")
@@ -4400,8 +4401,9 @@ func _init() -> void:
 
 	# ---- 新关卡：使魔鸭群 / 骑士冲锋 / 队长与巫师 / 爆炎鸭阵 / 白魔法师护阵 ----
 	var lvls := GameLevels.builtin_levels()
-	check(lvls.size() == 25, "内置关卡共 25 关（7 普简 + 6 普难 + 3 精英简单 + 4 精英困难 + 5 Boss；"
-			+ "R135 太阳熔炉进第二层普通困难 / R149 钢铁要塞进第二层精英困难 / R150 赫菲斯托斯工坊进第二层 Boss）")
+	check(lvls.size() == 28, "内置关卡共 28 关（7 普简 + 8 普难 + 4 精英简单 + 4 精英困难 + 5 Boss；"
+			+ "R135 太阳熔炉进第二层普通困难 / R149 钢铁要塞进第二层精英困难 / R150 赫菲斯托斯工坊进第二层 Boss"
+			+ " / R158 量产流水线·量产铁砧进第二层普通简单、双机炮阵进第二层普通困难）")
 	var lva: Dictionary = _level_named("使魔鸭群")
 	check(str(lva["name"]) == "使魔鸭群"
 			and int(lva["tier"]) == GameLevels.TIER_NORMAL_EASY
@@ -4417,9 +4419,10 @@ func _init() -> void:
 			and int(lvc["tier"]) == GameLevels.TIER_ELITE_HARD
 			and (lvc["enemy_units"] as Array).size() == 3,
 			"队长与巫师：精英困难（队长+巫师+使魔）")
-	check(GameLevels.normal_pool().size() == 6,
-			"第一层普通池 6 关（普简×4 + 普难×2，不含第二层那关）")
-	check(GameLevels.elite_pool().size() == 3, "精英池 3 关（精简×1 + 精难×2）")
+	check(GameLevels.normal_pool().size() == 8,
+			"第一层普通池 8 关（普简×4 + 普难×4：R158 白魔法师护阵 / 夜鸭阵 上调进第一层普通困难）")
+	check(GameLevels.elite_pool().size() == 4,
+			"第一层精英池 4 关（精简×2 + 精难×2：R158 鸭子窑上调进第一层精英简单）")
 	check(str(GameLevels.boss_level()["name"]) == "远古虚骨龙",
 			"boss_level() 默认返回第一层 Boss 池的第一个（远古虚骨龙；同层多Boss 时实际由 RunState 摇定）")
 
@@ -4440,10 +4443,10 @@ func _init() -> void:
 				wm_knight += 1
 				wm_knight_rows[ucell.x] = true
 	check(str(lvw["name"]) == "白魔法师护阵"
-			and int(lvw["tier"]) == GameLevels.TIER_NORMAL_EASY
-			and GameLevels.layer_of(lvw) == GameLayers.LAYER_TWO
+			and int(lvw["tier"]) == GameLevels.TIER_NORMAL_HARD
+			and GameLevels.layer_of(lvw) == GameLayers.LAYER_DEFAULT
 			and wm_units.size() == 4,
-			"白魔法师护阵：第二层·普通敌人-简单，4 个单位")
+			"白魔法师护阵：第一层·普通敌人-困难（R158 上调），4 个单位")
 	check(wm_mage == 1 and wm_knight == 3,
 			"白魔法师护阵阵容：白魔法师×1 / 鸭子骑士×3")
 	check(wm_mage_row == GameEngine.back_row(GameEngine.SIDE_OPPONENT)
@@ -4468,10 +4471,10 @@ func _init() -> void:
 			and nc_egg.attack_range == 0 and nc_egg.move_speed == 0
 			and not repo.reward_pool().has(nc_egg),
 			"鸭蛋：0 攻 1 血工事（生蛋鸭召唤物，不在奖励池）")
-	check(lvw not in GameLevels.normal_pool(GameLayers.LAYER_DEFAULT),
-			"第二层新关不出现在第一层普通池（不串层）")
-	check(lvw in GameLevels.normal_pool(GameLayers.LAYER_TWO),
-			"第二层新关出现在第二层普通池（专属池）")
+	check(lvw in GameLevels.normal_pool(GameLayers.LAYER_DEFAULT),
+			"R158 白魔法师护阵归第一层普通池（会被第一层地图抽到）")
+	check(lvw not in GameLevels.normal_pool(GameLayers.LAYER_TWO),
+			"R158 白魔法师护阵已离开第二层普通池（不串层）")
 
 	# ---- 第二层新关卡「哈气骑士团」+ 效果卡「哈气」（所属阵营单位从第 3 个回合起一回合行动两次）----
 	var hc := repo.get_card(9024)
@@ -4707,13 +4710,14 @@ func _init() -> void:
 	check(repo.get_card(9026).health == 1,
 			"鸭子窑强化：改的是产物副本，库里的陶瓷鸭仍是 1 血（没被就地改写）")
 
-	# 新关卡「鸭子窑」：第二层·普通敌人-困难，后排中央一座鸭子窑
+	# 新关卡「鸭子窑」：第一层·精英敌人-简单（R158 从「第二层·普通敌人-困难」上调），
+	# 后排中央一座鸭子窑
 	var lvk: Dictionary = _level_named("鸭子窑")
 	check(str(lvk["name"]) == "鸭子窑"
-			and int(lvk["tier"]) == GameLevels.TIER_NORMAL_HARD
-			and GameLevels.layer_of(lvk) == GameLayers.LAYER_TWO
+			and int(lvk["tier"]) == GameLevels.TIER_ELITE_EASY
+			and GameLevels.layer_of(lvk) == GameLayers.LAYER_DEFAULT
 			and (lvk["enemy_units"] as Array).size() == 1,
-			"鸭子窑：第二层·普通敌人-困难，仅 1 个敌方单位（鸭子窑）")
+			"鸭子窑：第一层·精英敌人-简单（R158 上调），仅 1 个敌方单位（鸭子窑）")
 	var ku: Array = lvk["enemy_units"]
 	check(int(ku[0][0]) == 9025 and ku[0][6] == Vector2i(0, 1),
 			"鸭子窑站位：敌方后排中央 (0,1)")
@@ -4757,8 +4761,8 @@ func _init() -> void:
 	# ---- 分层：各层内容互不串层（第一层 [1] / 第二层 [2]，各自专属） ----
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_DEFAULT).size() == lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
 			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关）" % [lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(), GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size()])
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 14,
-			"第二层自带 13 关（白魔法师护阵 / 夜鸭阵 / 鸭子窑 / 太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞** / 机械巨鸭Boss / 鸭之暗面Boss / **赫菲斯托斯工坊Boss**）")
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 13,
+			"第二层自带 13 关（太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞** / **量产流水线·量产铁砧·双机炮阵 R158** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法师护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层）")
 	# 内容池：第一层 = [1]；第二层 = [2]（各层内容互不串层）
 	var cl1 := GameLayers.content_layers(GameLayers.LAYER_DEFAULT)
 	var cl2 := GameLayers.content_layers(GameLayers.LAYER_TWO)
@@ -4767,7 +4771,7 @@ func _init() -> void:
 			"第二层内容池 = [2]（只用第二层内容，不再混用第一层）")
 	check(GameLayers.content_layers(9).is_empty(), "未配置的层：内容池为空（拿不到任何内容）")
 	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 7,
-			"第二层普通池 6 关（专属：普通简单 3 + 普通困难 3；R135 太阳熔炉）")
+			"第二层普通池 7 关（专属：普通简单 3 + 普通困难 4；R135 太阳熔炉 / R158 量产流水线·量产铁砧·双机炮阵）")
 	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 4,
 			"第二层精英池 4 关（专属：精英简单 2 + 精英困难 2；R149 钢铁要塞）")
 	var l2_battle_pool: Array[Dictionary] = []
@@ -4781,8 +4785,8 @@ func _init() -> void:
 	check(str(GameLevels.boss_level(GameLayers.LAYER_TWO)["name"]) == "机械巨鸭",
 			"第二层 Boss = 本层专属的机械巨鸭（不再回退第一层）")
 	check(str(GameLevels.boss_level(GameLayers.LAYER_DEFAULT)["name"]) == "远古虚骨龙"
-			and GameLevels.boss_pool(GameLayers.LAYER_DEFAULT).size() == 2,
-			"第一层 Boss 池 = 远古虚骨龙 + 恶魔鸭（R63 新增，共2 关）；boss_level() 默认取第一个")
+			and GameLevels.boss_pool(GameLayers.LAYER_DEFAULT).size() == 3,
+			"第一层 Boss 池 = 远古虚骨龙 + 恶魔鸭 + **鸭之暗面**（R158 从第二层下调、血量 100，共 3 关）；boss_level() 默认取第一个")
 	var lv_mb: Dictionary = _level_named("机械巨鸭")
 	var mb_units: Array = lv_mb.get("enemy_units", [])
 	var mb_effs: Array = lv_mb.get("enemy_effects", [])
@@ -4985,7 +4989,7 @@ func _init() -> void:
 			elif om_ecard.group != "enemy" or not om_ecard.is_level_effect():
 				om_drift += " %s/关卡效果%d" % [om_lvl2["name"], int(om_e)]
 	check(om_drift == "", "关卡 enemy_units 的 力/生/程/速 与 cards.json 同源（漂移:%s）" % om_drift)
-	check(om_lv_eff == 8, "关卡共挂 8 个敌方关卡效果（4 + 使魔之力 9115 挂 2 个巫师关卡 + 恶魔使魔 9117 + 暗影召唤 9125 各挂 1 个 Boss 关卡），且都属敌人图鉴（实际 %d）" % om_lv_eff)
+	check(om_lv_eff == 9, "关卡共挂 9 个敌方关卡效果（4 + 使魔之力 9115 挂 2 个巫师关卡 + 恶魔使魔 9117 + 暗影召唤 9125 各挂 1 个 Boss 关卡 + **充能巨炮 9139 挂双机炮阵 R158**），且都属敌人图鉴（实际 %d）" % om_lv_eff)
 
 	# ---- 二层强力怪物：一回合行动两次（2026-09-30 新增）----
 	# 挑选三只「巨兽 / 领主」级单位赋予双动：后排也能一回合绕开前排再出手。
@@ -6728,8 +6732,8 @@ func _init() -> void:
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 55
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
-			and int(dr_cls_count.get("敌人", 0)) == 45,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 55 / 36 / 45）"
+			and int(dr_cls_count.get("敌人", 0)) == 47,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 55 / 36 / 47）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -9545,8 +9549,8 @@ func _init() -> void:
 		r63_bp_names.append(str(b["name"]))
 	check(r63_bp_names.has("恶魔鸭") and r63_bp_names.has("远古虚骨龙"),
 			"R63 第一层 Boss 池 = 远古虚骨龙 + 恶魔鸭（%s）" % str(r63_bp_names))
-	check(GameLevels.boss_pool(GameLayers.LAYER_TWO).size() == 3,
-			"R63 第二层 Boss 池 3 关：机械巨鸭 + R111 鸭之暗面 + R150 赫菲斯托斯工坊（boss_level() 仍取第一个 = 机械巨鸭）")
+	check(GameLevels.boss_pool(GameLayers.LAYER_TWO).size() == 2,
+			"R158 第二层 Boss 池 2 关：机械巨鸭 + R150 赫菲斯托斯工坊（R111 鸭之暗面已下调到第一层；boss_level() 仍取第一个 = 机械巨鸭）")
 	# RunState 开局摇定的 boss_pick 一定落在本层池内，且next_level("boss") 返回它
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
 	var r63_roll_ok := false
@@ -9663,8 +9667,8 @@ func _init() -> void:
 	for b4: Dictionary in GameLevels.boss_pool(GameLayers.LAYER_TWO):
 		r73_p2.append(str(b4["name"]))
 	check(not r73_p1.has("恶魔鸭（复仇）") and not r73_p2.has("恶魔鸭（复仇）")
-			and r73_p2.size() == 3 and r73_p2[0] == "机械巨鸭",
-			"R73 彩蛋关**不进 boss_pool**（第一层 %s / 第二层 %s —— 第二层 = 机械巨鸭 + R111 鸭之暗面 + R150 赫菲斯托斯工坊，仍无恶魔鸭（复仇））"
+			and r73_p2.size() == 2 and r73_p2[0] == "机械巨鸭",
+			"R73 彩蛋关**不进 boss_pool**（第一层 %s / 第二层 %s —— 第二层 = 机械巨鸭 + R150 赫菲斯托斯工坊（R158 鸭之暗面下调到第一层），仍无恶魔鸭（复仇））"
 			% [str(r73_p1), str(r73_p2)])
 	# 也不该出现在关卡选择菜单里（不在 builtin_levels）
 	var r73_in_menu := false
@@ -13951,11 +13955,11 @@ func _init() -> void:
 	var r111_boss := r111_repo.get_card(9124)
 	check(r111_boss != null and r111_boss.card_name == "鸭之暗面"
 			and r111_boss.kind == "盟友" and r111_boss.group == "enemy"
-			and r111_boss.power == 9 and r111_boss.health == 150
+			and r111_boss.power == 9 and r111_boss.health == 100
 			and r111_boss.attack_range == 1 and r111_boss.move_speed == 1
 			and r111_boss.traits.has(GameEngine.SHADOW_LORD_TRAIT)
 			and r111_boss.traits.has(GameEngine.PHASE_TRAIT) and r111_boss.rarity == 4,
-		"R111 鸭之暗面 9124：9/150 程1 速1 敌人卡，trait 暗影领主 + 穿行")
+		"R111 鸭之暗面 9124：9/100 程1 速1 敌人卡（R158 血量 150 → 100），trait 暗影领主 + 穿行")
 	var r111_sum := r111_repo.get_card(9125)
 	check(r111_sum != null and r111_sum.card_name == "暗影召唤" and r111_sum.kind == "效果"
 			and r111_sum.traits.has(GameEngine.ASSASSIN_SUMMON_TRAIT)
@@ -13963,23 +13967,23 @@ func _init() -> void:
 			and r111_sum.group == "enemy",
 		"R111 暗影召唤 9125：敌方关卡效果卡，trait 暗杀召唤、value=3")
 
-	# ---- 关卡：第二层 Boss「鸭之暗面」 ----
+	# ---- 关卡：第一层 Boss「鸭之暗面」（R158 从第二层下调，血量 100）----
 	var r111_lv := _level_named("鸭之暗面")
 	var r111_units: Array = r111_lv.get("enemy_units", [])
 	var r111_effs: Array = r111_lv.get("enemy_effects", [])
 	check(str(r111_lv.get("name", "")) == "鸭之暗面"
 			and int(r111_lv.get("tier", -1)) == GameLevels.TIER_BOSS
-			and GameLevels.layer_of(r111_lv) == GameLayers.LAYER_TWO
+			and GameLevels.layer_of(r111_lv) == GameLayers.LAYER_DEFAULT
 			and r111_units.size() == 1 and int(r111_units[0][0]) == 9124
 			and int(r111_units[0][2]) == r111_boss.power
 			and int(r111_units[0][3]) == r111_boss.health
 			and int(r111_units[0][4]) == r111_boss.attack_range
 			and int(r111_units[0][5]) == r111_boss.move_speed
 			and r111_effs.size() == 1 and int(r111_effs[0]) == 9125,
-		"R111 鸭之暗面关：第二层 Boss 关（1 鸭之暗面 + 敌方效果卡 暗影召唤），数值与 cards.json 同源")
-	check(GameLevels.boss_pool(GameLayers.LAYER_TWO).size() == 3
+		"R111 鸭之暗面关：**第一层** Boss 关（R158 下调；1 鸭之暗面 + 敌方效果卡 暗影召唤），数值与 cards.json 同源")
+	check(GameLevels.boss_pool(GameLayers.LAYER_DEFAULT).size() == 3
 			and str(GameLevels.boss_level(GameLayers.LAYER_TWO)["name"]) == "机械巨鸭",
-		"R111 鸭之暗面进第二层 Boss 池（R150 后 3 关；默认 boss_level() 仍取第一个 = 机械巨鸭）")
+		"R158 鸭之暗面进**第一层** Boss 池（第一层 3 关；第二层剩机械巨鸭 + 赫菲斯托斯工坊）")
 
 	# ---- ① 穿行：可以**穿过**单位，但不能停在上面 ----
 	var r111_pa := _new_engine([], 20, 20)
@@ -14897,6 +14901,201 @@ func _init() -> void:
 	check(r152_h4 == 7, "R152 孤军失效后攻击伤害恢复 7 → 7（实际 %d）" % r152_h4)
 	check(r152_hec.power == 8 and r152_hec.attack_range == 1,
 			"R152 孤军只记 Placement.hecaton_atk，卡库共享实例不变（绝不烤进 CardData）")
+
+
+	# ══════════════════════════════════════════════════════════════
+	# R158 测试：量产型赫菲斯托斯 9138（量产锻造）/ 充能巨炮 9139
+	#            三张新关（量产流水线 / 量产铁砧 / 双机炮阵）
+	#            鸭子窑·白魔法师护阵·夜鸭阵 上调、鸭之暗面 下调到第一层
+	# ══════════════════════════════════════════════════════════════
+	var r158_repo := CardRepo.load_json()
+
+	# ---- ① 两张新卡 ----
+	var r158_mh := r158_repo.get_card(9138)
+	check(r158_mh != null and r158_mh.card_name == "量产型赫菲斯托斯"
+			and r158_mh.kind == "盟友" and r158_mh.group == "enemy"
+			and r158_mh.power == 4 and r158_mh.health == 50
+			and r158_mh.attack_range == 1 and r158_mh.move_speed == 1
+			and r158_mh.traits.has(GameEngine.MASS_FORGE_TRAIT) and r158_mh.rarity == 4
+			and not r158_repo.reward_pool().has(r158_mh),
+			"R158 量产型赫菲斯托斯 9138：4/50 程1 速1 敌人卡，trait 量产锻造（不进奖励池）")
+	check(not r158_mh.traits.has(GameEngine.FORGE_TRAIT),
+			"R158 量产型赫菲斯托斯**不带**「锻造」—— 不会走 Boss 那条空转成长")
+	var r158_cn := r158_repo.get_card(9139)
+	check(r158_cn != null and r158_cn.card_name == "充能巨炮" and r158_cn.kind == "效果"
+			and r158_cn.traits.has(GameEngine.CANNON_TRAIT) and r158_cn.value == 1
+			and r158_cn.is_level_effect() and r158_cn.group == "enemy",
+			"R158 充能巨炮 9139：敌方关卡效果卡，trait 巨炮、value=1")
+
+	# ---- ② 量产锻造（正面）：亲手击杀 → 己方半场出一只量产型俄倪厄 ----
+	var r158_e := _new_engine([], 30, 30)
+	var r158_hep := r158_e.state.place(CardData.from_dict(r158_mh.to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r158_e.state.place(CardData.from_dict(r158_repo.get_card(9001).to_dict()),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r158_e.start_game()
+	var r158_vic: Placement = r158_e.state.unit_at(Vector2i(3, 1))
+	r158_vic.last_hit_by = Vector2i(2, 1)
+	r158_e.state.board.erase(Vector2i(3, 1))   # 受害者先离场，只测「记功那一下」
+	var r158_n0 := 0
+	for r158_c0: Vector2i in r158_e.state.board:
+		if r158_e.state.board[r158_c0].owner == GameEngine.SIDE_OPPONENT:
+			r158_n0 += 1
+	r158_e._credit_kill(r158_vic)
+	var r158_n1 := 0
+	var r158_new := Vector2i(-1, -1)
+	for r158_c1: Vector2i in r158_e.state.board:
+		var r158_p1: Placement = r158_e.state.board[r158_c1]
+		if r158_p1.owner == GameEngine.SIDE_OPPONENT:
+			r158_n1 += 1
+			if r158_p1.card.id == 9131:
+				r158_new = r158_c1
+	check(r158_n1 == r158_n0 + 1 and r158_new != Vector2i(-1, -1),
+			"R158 量产锻造：亲手击杀 → 锻造出一只量产型俄倪厄（敌方单位 %d → %d）"
+			% [r158_n0, r158_n1])
+	check(r158_new.x < FieldState.OPPONENT_ROWS,
+			"R158 量产锻造：产物落在**己方半场**（%s）" % str(r158_new))
+	# 反面：没有该 trait 的单位击杀 → 什么都不锻造
+	var r158_e2 := _new_engine([], 30, 30)
+	r158_e2.state.place(CardData.from_dict(r158_repo.get_card(9001).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r158_e2.state.place(CardData.from_dict(r158_repo.get_card(9001).to_dict()),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r158_e2.start_game()
+	var r158_v2: Placement = r158_e2.state.unit_at(Vector2i(3, 1))
+	r158_v2.last_hit_by = Vector2i(2, 1)
+	r158_e2.state.board.erase(Vector2i(3, 1))
+	var r158_m0 := r158_e2.state.board.size()
+	r158_e2._credit_kill(r158_v2)
+	check(r158_e2.state.board.size() == r158_m0,
+			"R158 量产锻造反面：没有「量产锻造」trait → 击杀不锻造（场上仍 %d 个单位）" % r158_m0)
+	# 与 Boss 版隔离：量产型不挂锻造表，_forge_tick 碰不到它
+	check(r158_hep.forge_period == 0 and r158_hep.forge_idle == 0,
+			"R158 量产型赫菲斯托斯不挂锻造表（forge_period=0 → _forge_tick 跳过它）")
+	r158_e._forge_tick()
+	check(r158_hep.forge_idle == 0 and r158_hep.effective_power() == 4
+			and r158_hep.effective_range() == 1,
+			"R158 空转也不成长：_forge_tick 之后仍是 4 力 1 程（当前 %d / %d）"
+			% [r158_hep.effective_power(), r158_hep.effective_range()])
+
+	# ---- ③ 充能巨炮：己方（敌方）回合开始随机破坏一个我方单位 ----
+	var r158_ce := _new_engine([], 30, 30)
+	r158_ce.state.place(CardData.from_dict(r158_repo.get_card(9001).to_dict()),
+			Vector2i(3, 0), GameEngine.SIDE_SELF)
+	r158_ce.state.place(CardData.from_dict(r158_repo.get_card(9001).to_dict()),
+			Vector2i(3, 2), GameEngine.SIDE_SELF)
+	r158_ce.enable_enemy_effects([CardData.from_dict(r158_cn.to_dict())])
+	r158_ce.start_game()
+	var r158_s0 := 0
+	for r158_cc: Vector2i in r158_ce.state.board:
+		if r158_ce.state.board[r158_cc].owner == GameEngine.SIDE_SELF:
+			r158_s0 += 1
+	r158_ce.current_side = GameEngine.SIDE_OPPONENT
+	r158_ce._begin_turn(GameEngine.SIDE_OPPONENT)
+	var r158_s1 := 0
+	for r158_cc2: Vector2i in r158_ce.state.board:
+		if r158_ce.state.board[r158_cc2].owner == GameEngine.SIDE_SELF:
+			r158_s1 += 1
+	check(r158_s1 == r158_s0 - 1,
+			"R158 充能巨炮：敌方回合开始随机破坏一个我方单位（%d → %d）" % [r158_s0, r158_s1])
+	# 反面：我方场上没有单位 → 空响，**不**转而伤害我方 HP
+	var r158_ce2 := _new_engine([], 30, 30)
+	r158_ce2.enable_enemy_effects([CardData.from_dict(r158_cn.to_dict())])
+	r158_ce2.start_game()
+	r158_ce2.current_side = GameEngine.SIDE_OPPONENT
+	r158_ce2._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(r158_ce2.state.hp_self == 30,
+			"R158 充能巨炮：没有可破坏的单位 → 空响，不伤害我方 HP（仍 %d）"
+			% r158_ce2.state.hp_self)
+
+	# ---- ④ 三张新关 ----
+	var r158_l1 := _level_named("量产流水线")
+	var r158_u1: Array = r158_l1.get("enemy_units", [])
+	check(str(r158_l1.get("name", "")) == "量产流水线"
+			and int(r158_l1.get("tier", -1)) == GameLevels.TIER_NORMAL_EASY
+			and GameLevels.layer_of(r158_l1) == GameLayers.LAYER_TWO
+			and GameLevels.bg_key(r158_l1) == "assembly_line"
+			and r158_u1.size() == 3,
+			"R158 量产流水线：第二层·普通敌人-简单，3 个单位，key=assembly_line")
+	check(int(r158_u1[0][0]) == 9137 and r158_u1[0][6] == Vector2i(0, 1)
+			and int(r158_u1[1][0]) == 9131 and r158_u1[1][6] == Vector2i(2, 0)
+			and int(r158_u1[2][0]) == 9131 and r158_u1[2][6] == Vector2i(2, 2),
+			"R158 量产流水线站位：量产型赫利俄斯 (0,1) 后排 + 2 量产型俄倪厄 (2,0)/(2,2) 前排")
+	var r158_l2 := _level_named("量产铁砧")
+	var r158_u2: Array = r158_l2.get("enemy_units", [])
+	check(str(r158_l2.get("name", "")) == "量产铁砧"
+			and int(r158_l2.get("tier", -1)) == GameLevels.TIER_NORMAL_EASY
+			and GameLevels.layer_of(r158_l2) == GameLayers.LAYER_TWO
+			and GameLevels.bg_key(r158_l2) == "mass_anvil"
+			and r158_u2.size() == 1 and int(r158_u2[0][0]) == 9138
+			and int(r158_u2[0][2]) == 4 and int(r158_u2[0][3]) == 50
+			and r158_u2[0][6] == Vector2i(0, 1),
+			"R158 量产铁砧：第二层·普通敌人-简单，1 只量产型赫菲斯托斯 4/50 在 (0,1)")
+	var r158_l3 := _level_named("双机炮阵")
+	var r158_u3: Array = r158_l3.get("enemy_units", [])
+	var r158_f3: Array = r158_l3.get("enemy_effects", [])
+	check(str(r158_l3.get("name", "")) == "双机炮阵"
+			and int(r158_l3.get("tier", -1)) == GameLevels.TIER_NORMAL_HARD
+			and GameLevels.layer_of(r158_l3) == GameLayers.LAYER_TWO
+			and GameLevels.bg_key(r158_l3) == "twin_cannon"
+			and r158_u3.size() == 2 and int(r158_u3[0][0]) == 9131
+			and int(r158_u3[1][0]) == 9131
+			and r158_u3[0][6] == Vector2i(2, 0) and r158_u3[1][6] == Vector2i(2, 2)
+			and r158_f3.size() == 1 and int(r158_f3[0]) == 9139,
+			"R158 双机炮阵：第二层·普通敌人-困难，2 量产型俄倪厄 (2,0)/(2,2) + 效果卡充能巨炮 9139")
+	# 元组与卡面逐项同源（看到的 = 打到的）
+	var r158_same := true
+	for r158_lv: Dictionary in [r158_l1, r158_l2, r158_l3]:
+		for r158_tu in (r158_lv.get("enemy_units", []) as Array):
+			var r158_cd := r158_repo.get_card(int(r158_tu[0]))
+			if r158_cd == null or int(r158_tu[2]) != r158_cd.power \
+					or int(r158_tu[3]) != r158_cd.health \
+					or int(r158_tu[4]) != r158_cd.attack_range \
+					or int(r158_tu[5]) != r158_cd.move_speed:
+				r158_same = false
+	check(r158_same, "R158 三张新关：enemy_units 的 力/生/程/速 与 cards.json 同源")
+	# 归池：只在第二层普通池
+	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).has(r158_l1)
+			and GameLevels.normal_pool(GameLayers.LAYER_TWO).has(r158_l2)
+			and GameLevels.normal_pool(GameLayers.LAYER_TWO).has(r158_l3)
+			and not GameLevels.normal_pool(GameLayers.LAYER_DEFAULT).has(r158_l1)
+			and not GameLevels.normal_pool(GameLayers.LAYER_DEFAULT).has(r158_l2)
+			and not GameLevels.normal_pool(GameLayers.LAYER_DEFAULT).has(r158_l3),
+			"R158 三张新关都只在第二层普通池（不串到第一层）")
+
+	# ---- ⑤ 上调 / 下调复核 ----
+	var r158_k := _level_named("鸭子窑")
+	check(int(r158_k.get("tier", -1)) == GameLevels.TIER_ELITE_EASY
+			and GameLevels.layer_of(r158_k) == GameLayers.LAYER_DEFAULT
+			and GameLevels.elite_pool(GameLayers.LAYER_DEFAULT).has(r158_k)
+			and not GameLevels.normal_pool(GameLayers.LAYER_TWO).has(r158_k),
+			"R158 鸭子窑：上调到第一层精英简单池（已离开第二层普通池）")
+	var r158_w := _level_named("白魔法师护阵")
+	var r158_nd := _level_named("夜鸭阵")
+	check(int(r158_w.get("tier", -1)) == GameLevels.TIER_NORMAL_HARD
+			and GameLevels.layer_of(r158_w) == GameLayers.LAYER_DEFAULT
+			and int(r158_nd.get("tier", -1)) == GameLevels.TIER_NORMAL_HARD
+			and GameLevels.layer_of(r158_nd) == GameLayers.LAYER_DEFAULT,
+			"R158 白魔法师护阵 / 夜鸭阵：上调到第一层普通困难")
+	var r158_dk := _level_named("鸭之暗面")
+	var r158_dk_u: Array = r158_dk.get("enemy_units", [])
+	check(int(r158_dk.get("tier", -1)) == GameLevels.TIER_BOSS
+			and GameLevels.layer_of(r158_dk) == GameLayers.LAYER_DEFAULT
+			and GameLevels.boss_pool(GameLayers.LAYER_DEFAULT).has(r158_dk)
+			and not GameLevels.boss_pool(GameLayers.LAYER_TWO).has(r158_dk)
+			and r158_dk_u.size() == 1 and int(r158_dk_u[0][3]) == 100,
+			"R158 鸭之暗面：下调到第一层 Boss 池，血量 100")
+	check(r158_repo.get_card(9124).health == 100
+			and int(r158_dk_u[0][3]) == r158_repo.get_card(9124).health,
+			"R158 鸭之暗面：关卡元组与 cards.json 同源（都是 100 血）")
+	# 池规模：第一层精英简单从 1 关补到 2 关（R134 测算的 P0 缺口）
+	check(GameLevels.levels_of_tier([GameLevels.TIER_ELITE_EASY],
+			GameLayers.LAYER_DEFAULT).size() == 2,
+			"R158 第一层精英简单池 2 关（鸭子队长登场 + 鸭子窑）—— 补上 R134 测算的 P0 缺口")
+	check(GameLevels.normal_pool(GameLayers.LAYER_DEFAULT).size() == 8
+			and GameLevels.elite_pool(GameLayers.LAYER_DEFAULT).size() == 4
+			and GameLevels.boss_pool(GameLayers.LAYER_DEFAULT).size() == 3,
+			"R158 第一层池规模：普通 8 / 精英 4 / Boss 3")
 
 	RunState.player_class = r91_saved_cls
 

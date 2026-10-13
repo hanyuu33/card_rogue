@@ -4014,7 +4014,7 @@
       "kind": "盟友",
       "cost": 9,
       "power": 9,
-      "health": 150,
+      "health": 100,
       "attack_range": 1,
       "move_speed": 1,
       "rarity": 4,
@@ -4248,6 +4248,50 @@
       "affixes": [],
       "effect_text": "在场时，量产型赫利俄斯以外的己方单位获得：受到的技能伤害减半（向上取整）。",
       "target_mode": "none",
+      "color": "金",
+      "image": ""
+    },
+    {
+      "id": 9138,
+      "name": "量产型赫菲斯托斯",
+      "kind": "盟友",
+      "cost": 4,
+      "power": 4,
+      "health": 50,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "机械",
+        "量产锻造"
+      ],
+      "affixes": [],
+      "effect_text": "量产锻造：亲自击杀敌方单位时，在己方半场的随机空格锻造一只「量产型俄倪厄」（5/30）。",
+      "target_mode": "none",
+      "color": "金",
+      "image": ""
+    },
+    {
+      "id": 9139,
+      "name": "充能巨炮",
+      "kind": "效果",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "巨炮"
+      ],
+      "affixes": [],
+      "effect_text": "己方每个回合开始时，随机破坏一个敌方单位。",
+      "target_mode": "none",
+      "value": 1,
       "color": "金",
       "image": ""
     }
