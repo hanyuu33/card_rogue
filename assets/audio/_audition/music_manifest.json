@@ -1,0 +1,441 @@
+{
+ "title": [
+  {
+   "lib": "OpenTracks",
+   "name": "きらめく世界",
+   "ok": true,
+   "detail": "https://opentracks.com/bgm/detail/14163",
+   "download": "https://opentracks.com/bgm/detail/14163/download",
+   "title": "きらめく世界(Shimmering World)"
+  },
+  {
+   "lib": "OpenTracks",
+   "name": "空の匂い",
+   "ok": true,
+   "detail": "https://opentracks.com/bgm/detail/22544",
+   "download": "https://opentracks.com/bgm/detail/22544/download",
+   "title": "空の匂い"
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Poema",
+   "ok": true,
+   "page": "https://peritune.com/blog/2020/01/04/poema/",
+   "title": "【無料フリーBGM】穏やかなケルト曲「Poema」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Poema.mp3",
+   "loop": "https://peritune.com/loop/PerituneMaterial_Poema_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Morning Snowfields",
+   "ok": true,
+   "page": "https://peritune.com/blog/2026/01/02/morning_snowfields/",
+   "title": "【無料BGM】キラキラした雪原の曲「Morning Snowfields」",
+   "mp3": "https://peritune.com/music/Peritune_Morning_Snowfields.zip",
+   "loop": null,
+   "drive": null
+  }
+ ],
+ "class_pick": [
+  {
+   "lib": "OpenTracks",
+   "name": "Cheerful Steps",
+   "ok": true,
+   "detail": "https://opentracks.com/bgm/detail/22549",
+   "download": "https://opentracks.com/bgm/detail/22549/download",
+   "title": "Cheerful Steps"
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Positive_Happy",
+   "ok": true,
+   "page": "https://peritune.com/blog/2019/01/06/positive_happy/",
+   "title": "【無料フリーBGM】ハッピー＆ポップな曲「Positive_Happy」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Positive_Happy.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Positive_Happy_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Sakuya2",
+   "ok": true,
+   "page": "https://peritune.com/blog/2016/01/01/sakuya2/",
+   "title": "【無料フリーBGM】優雅で切ない和風曲「Sakuya2」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Sakuya2.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Sakuya2_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Enjoyable 3",
+   "ok": true,
+   "page": "https://peritune.com/blog/2017/02/07/enjoyable3/",
+   "title": "【無料フリーBGM・楽しい】Enjoyable3",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Enjoyable3.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Enjoyable3_loop.zip",
+   "drive": null
+  }
+ ],
+ "map": [
+  {
+   "lib": "OpenTracks",
+   "name": "森林ループ",
+   "ok": true,
+   "detail": "https://opentracks.com/bgm/detail/4484",
+   "download": "https://opentracks.com/bgm/detail/4484/download",
+   "title": "森林ループ"
+  },
+  {
+   "lib": "OpenTracks",
+   "name": "Drifting Friday",
+   "ok": true,
+   "detail": "https://opentracks.com/bgm/detail/22547",
+   "download": "https://opentracks.com/bgm/detail/22547/download",
+   "title": "Drifting Friday"
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Sketch Forest",
+   "ok": true,
+   "page": "https://peritune.com/blog/2019/02/20/sketch_forest/",
+   "title": "【無料フリーBGM】不思議な森の民族音楽「Sketch_Forest」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Sketch_Forest.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Sketch_Forest_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Wonder 5",
+   "ok": true,
+   "page": "https://peritune.com/blog/2017/03/27/wonder5/",
+   "title": "【無料フリーBGM・幻想】Wonder5",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Wonder5.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Wonder5_loop.zip",
+   "drive": null
+  }
+ ],
+ "deck": [
+  {
+   "lib": "OpenTracks",
+   "name": "静かな祈り",
+   "ok": true,
+   "detail": "https://opentracks.com/bgm/detail/22545",
+   "download": "https://opentracks.com/bgm/detail/22545/download",
+   "title": "静かな祈り"
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Teatime",
+   "ok": true,
+   "page": "https://peritune.com/blog/2021/11/10/teatime/",
+   "title": "【無料フリーBGM】ほのぼのバロック「Teatime」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Teatime.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Teatime_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Piano Refreshing",
+   "ok": true,
+   "page": "https://peritune.com/blog/2016/07/13/piano_refreshing/",
+   "title": "【無料フリーBGM】爽やかなピアノソロ「Piano_Refreshing」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Piano_Refreshing.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Piano_Refreshing_loop.zip",
+   "drive": null
+  }
+ ],
+ "battle_boss_dark": [
+  {
+   "lib": "OpenTracks",
+   "name": "霜蝶の夢",
+   "ok": true,
+   "detail": "https://opentracks.com/bgm/detail/17944",
+   "download": "https://opentracks.com/bgm/detail/17944/download",
+   "title": "霜蝶の夢"
+  },
+  {
+   "lib": "OpenTracks",
+   "name": "超常現象",
+   "ok": true,
+   "detail": "https://opentracks.com/bgm/detail/23004",
+   "download": "https://opentracks.com/bgm/detail/23004/download",
+   "title": "超常現象"
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Black_Crystal",
+   "ok": true,
+   "page": "https://peritune.com/blog/2023/11/23/black_crystal/",
+   "title": "【無料フリーBGM】未知のダンジョン探索BGM「Black_Crystal」",
+   "mp3": "http://peritune.com/music/Peritune_Black_Crystal.zip",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Crimson_Moon",
+   "ok": true,
+   "page": "https://peritune.com/blog/2023/12/07/crimson_moon/",
+   "title": "【無料フリーBGM】漆黒のゴシックロック「Crimson_Moon」",
+   "mp3": "http://peritune.com/music/Peritune_Crimson_Moon.zip",
+   "loop": null,
+   "drive": null
+  }
+ ],
+ "battle": [
+  {
+   "lib": "PeriTune",
+   "name": "Fight",
+   "ok": true,
+   "page": "https://peritune.com/blog/2015/05/04/fight1/",
+   "title": "【無料フリーBGM】激しいオーケストラ戦闘曲「Fight」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Fight.mp3",
+   "loop": "https://peritune.com/loop/PerituneMaterial_Fight_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Wonder 2",
+   "ok": true,
+   "page": "https://peritune.com/blog/2015/07/09/wonder2/",
+   "title": "【無料フリーBGM】神秘的な民族音楽「Wonder2」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Wonder2.mp3",
+   "loop": "https://peritune.com/loop/PerituneMaterial_Wonder2_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "魔王魂",
+   "name": "サイバー32",
+   "ok": true,
+   "page": "https://maou.audio/bgm_cyber32/",
+   "ogg": "https://maou.audio/sound/bgm/maou_bgm_cyber32.ogg",
+   "title": "サイバー32",
+   "query": "サイバー32"
+  }
+ ],
+ "battle_elite": [
+  {
+   "lib": "PeriTune",
+   "name": "Battlefield 5",
+   "ok": true,
+   "page": "https://peritune.com/blog/2020/08/25/battlefield5/",
+   "title": "【無料フリーBGM】スピード感のある戦闘曲「BattleField5」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_BattleField5.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_BattleField5_loop.zip",
+   "drive": "https://drive.google.com/file/d/1g2f5XiU"
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Strategy 4",
+   "ok": true,
+   "page": "https://peritune.com/blog/2017/01/08/strategy4/",
+   "title": "【無料フリーBGM・オーケストラ(軽快)】Strategy4",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Strategy4.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Strategy4_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Raid 2",
+   "ok": true,
+   "page": "https://peritune.com/blog/2015/09/08/raid2/",
+   "title": "【無料フリーBGM】熱い展開のハードロック「Raid2」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Raid2.mp3",
+   "loop": "https://peritune.com/loop/PerituneMaterial_Raid2_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Breakthrough",
+   "ok": true,
+   "page": "https://peritune.com/blog/2016/07/03/breakthrough/",
+   "title": "【無料フリーBGM】情熱的なハードロック「Breakthrough」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Breakthrough.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Breakthrough_loop.zip",
+   "drive": null
+  }
+ ],
+ "battle_boss": [
+  {
+   "lib": "PeriTune",
+   "name": "Dramatic",
+   "ok": true,
+   "page": "https://peritune.com/blog/2015/05/21/dramatic1/",
+   "title": "【無料フリーBGM】激しいオーケストラ戦闘曲「Dramatic」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Dramatic.mp3",
+   "loop": "https://peritune.com/loop/PerituneMaterial_Dramatic_loop.zip",
+   "drive": "https://drive.google.com/file/d/1g2f5XiU"
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Rapid 4",
+   "ok": true,
+   "page": "https://peritune.com/blog/2018/11/27/rapid4/",
+   "title": "【無料フリーBGM】疾走感のあるサイバー戦闘曲「Rapid4」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Rapid4.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Rapid4_loop.mp3",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Havoc",
+   "ok": true,
+   "page": "https://peritune.com/blog/2018/08/01/havoc/",
+   "title": "【無料フリーBGM】Havoc / ハードロック戦闘曲",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Havoc.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Havoc_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Valiant",
+   "ok": true,
+   "page": "https://peritune.com/blog/2017/11/29/valiant/",
+   "title": "【無料フリーBGM】Valiant / 壮大なエピック・オーケストラ",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Valiant.mp3",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "魔王魂",
+   "name": "Burning Heart",
+   "ok": true,
+   "page": "https://maou.audio/08_burning_heart/",
+   "ogg": "https://maou.audio/sound/song/maou_inst_08_burning_heart.ogg",
+   "title": "Burning Heart（魔王魂，含伴奏版）"
+  }
+ ],
+ "event": [
+  {
+   "lib": "PeriTune",
+   "name": "Augury",
+   "ok": true,
+   "page": "https://peritune.com/blog/2018/11/02/augury/",
+   "title": "【無料フリーBGM】コーラスメインの神秘的な曲「Augury」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Augury.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Augury_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Royal_Baroque",
+   "ok": true,
+   "page": "https://peritune.com/blog/2019/02/04/royal_baroque/",
+   "title": "【無料フリーBGM】王宮の優雅なバロック「Royal_Baroque」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Royal_Baroque.mp3",
+   "loop": "https://peritune.com/loop/PerituneMaterial_Royal_Baroque_loop.zip",
+   "drive": null
+  }
+ ],
+ "reward": [
+  {
+   "lib": "PeriTune",
+   "name": "Wish4",
+   "ok": true,
+   "page": "https://peritune.com/blog/2016/12/03/a-wish4/",
+   "title": "【無料フリーBGM・ハープ】A Wish4",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Wish4_HarpOnly.zip",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Music-box_Pleasant",
+   "ok": true,
+   "page": "https://peritune.com/blog/2016/09/30/music-box_pleasant/",
+   "title": "【無料フリーBGM・オルゴール(楽しい)】Music-box_Pleasant",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Music-box_Pleasant.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Music-box_Pleasant-loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Harvest",
+   "ok": true,
+   "page": "https://peritune.com/blog/2021/06/21/harvest_festival/",
+   "title": "【無料フリーBGM】軽快な中世の町BGM「Harvest_Festival」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Harvest_Festival.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Harvest_Festival_loop.zip",
+   "drive": null
+  }
+ ],
+ "victory": [
+  {
+   "lib": "PeriTune",
+   "name": "Soaring",
+   "ok": true,
+   "page": "https://peritune.com/blog/2021/01/01/soaring/",
+   "title": "【無料フリーBGM】空を翔るサイバーBGM「Soaring」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Soaring.mp3",
+   "loop": "https://peritune.com/loop/PerituneMaterial_Soaring_loop.zip",
+   "drive": "https://drive.google.com/file/d/1g2f5XiU"
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Holy Place",
+   "ok": true,
+   "page": "https://peritune.com/blog/2019/04/05/holy_place/",
+   "title": "【無料フリーBGM】幻想的なヒーリング「Holy_Place」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Holy_Place.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Holy_Place_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "魔王魂",
+   "name": "シャイニングスター",
+   "ok": true,
+   "page": "https://maou.audio/14_shining_star/",
+   "ogg": "https://maou.audio/sound/song/maou_14_shining_star.ogg",
+   "title": "シャイニングスター"
+  },
+  {
+   "lib": "魔王魂",
+   "name": "ハルジオン",
+   "ok": true,
+   "page": "https://maou.audio/05_halzion/",
+   "ogg": "https://maou.audio/sound/song/maou_05_halzion.ogg",
+   "title": "ハルジオン"
+  }
+ ],
+ "defeat": [
+  {
+   "lib": "PeriTune",
+   "name": "Grief 2",
+   "ok": true,
+   "page": "https://peritune.com/blog/2021/03/23/grief2/",
+   "title": "【無料フリーBGM】オルゴール＆弦の切ない小曲「Grief2」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Grief2.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Grief2_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Music-box_Sad",
+   "ok": true,
+   "page": "https://peritune.com/blog/2016/08/07/music-box_sad2/",
+   "title": "【無料フリーBGM】悲しいオルゴール「Music-box_Sad2」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Music-box_Sad2.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Music-box_Sad2_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Demise",
+   "ok": true,
+   "page": "https://peritune.com/blog/2018/11/06/demise/",
+   "title": "【無料フリーBGM】アップテンポな戦闘曲「Demise」",
+   "mp3": "http://peritune.com/music/PerituneMaterial_Demise.mp3",
+   "loop": "http://peritune.com/loop/PerituneMaterial_Demise_loop.zip",
+   "drive": null
+  },
+  {
+   "lib": "魔王魂",
+   "name": "月と狼",
+   "ok": true,
+   "page": "https://maou.audio/04_tsuki_to_okami/",
+   "ogg": "https://maou.audio/sound/song/maou_04_tsuki_to_okami.ogg",
+   "title": "月と狼"
+  }
+ ]
+}

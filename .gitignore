@@ -22,6 +22,7 @@ shot_*.png
 shot_*.import
 screenshot*.png
 screenshot*.import
+/_exe_title.png
 
 # Python
 __pycache__/
