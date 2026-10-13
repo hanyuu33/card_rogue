@@ -71,11 +71,8 @@ var board := {}  # Vector2i -> Placement
 # **每个格子最多 1 个**（这正是「每个格子只能存在一个效果」的数据保证：
 # 写入唯一口FieldState.set_field，第二块场地直接顶掉第一块，不做叠加）。
 var field_effects := {}
-# 双重场地（9108，R74）的待触发标记：Vector2i -> 次数。挂在**格子**上（场地不是单位）。
-# 触发口唯一 = GameEngine._twin_field_chain（场地效果结算完、场地已被摘掉之后才调）。
-var field_chains := {}
-# 每个场地是**谁放的**（SIDE_SELF / SIDE_OPPONENT）。双重场地连锁补场地时按原主人取候选，
-# 不能按「谁踩上去」取 —— 否则敌方踩我方场地会替我方抽卡。
+# 每个场地是**谁放的**（SIDE_SELF / SIDE_OPPONENT）。归属判据（场地精通加成按主人的
+# 效果区算、界面按主人配色）都读它，不能按「谁踩上去」取 —— 否则敌方踩我方场地会替我结算。
 var field_owner := {}
 var hp_self := 20
 var hp_opponent := 20
@@ -248,7 +245,7 @@ func field_at(cell: Vector2i) -> CardData:
 
 func set_field(card: CardData, cell: Vector2i, owner_side := "self") -> CardData:
 	## 在格子上挂一个场地效果。**唯一写入口**（"每个格子只能存在一个效果" 的执行点）。
-	## 返回被顶掉的那张旧场地（没有则 null）—— 双重场地要靠它接连锁。
+	## 返回被顶掉的那张旧场地（没有则 null）。
 	## 存**副本**而不是库内实例：场地会挂可叠加的临时加攻，直接挂共享实例会污染卡库。
 	var old: CardData = field_effects.get(cell)
 	field_effects[cell] = CardData.from_dict(card.to_dict())
@@ -258,8 +255,6 @@ func set_field(card: CardData, cell: Vector2i, owner_side := "self") -> CardData
 
 func clear_field(cell: Vector2i) -> CardData:
 	## 撤掉格子上的场地（触发后 / 被顶替时）。返回被撤掉的那张。
-	## **保留** field_chains：连锁标记属于「这个格子」而不是「这张场地」——
-	## 触发后场地已消失，但格子若被双重场地标记过，随机补上的新场地同样该吃连锁。
 	var old: CardData = field_effects.get(cell)
 	field_effects.erase(cell)
 	field_owner.erase(cell)

@@ -538,7 +538,6 @@ const PIERCE_TRAP_DMG:= 18
 # 于是它**必须被排除出陷阱那条链**（否则敌人一走过就被白白消耗掉，这张牌等于废）：
 #   * `_field_block_index` 跳过它 → 敌人正常走过、不被拦停；
 #   * `_field_trigger` 早退 → 不会被摘掉，也不会记「暗影狩猎」的触发标记；
-#   * `_twin_field_chain` / 界面双重场地候选也排除 → 不会被附魔（附魔永不触发＝白花一张牌）。
 # 判据是 **trait「持续场地」**（R83 新增），走 cards.json —— 加新的持续型场地只要写这个 trait。
 const FOUNTAIN_ID:= 8028
 const PERSISTENT_FIELD_TRAIT:= "持续场地"
@@ -563,7 +562,7 @@ const UPGRADE_FACTORY_HP:= 1
 #
 # 三个实现决定（用户当时已睡，按最合理口径定的，写在这里供日后核对）：
 #  ① **候选池 = 本角色奖励卡池**里筛「技能 + effect_text 含『改造』」
-#     —— 与「双重场地」`_twin_field_chain` 取场地卡同源口径（不是牌组，是卡池）。
+#     —— 与机关工坊 8015 / 捕兽大师 9126 取场地卡同源口径（不是牌组，是卡池）。
 #  ② **免费重置判据 = 「此刻还在不在手牌里」**（`state.hand_free` + `cost_of` 里验
 #     `state.hand.has(card)`）—— 离手口有 10 处，逐个挂钩必漏，靠判据一次解决。
 #  ③ **「每回合一次」记在 Placement 上**（`upgrade_feed_turn`，比对 `turn_total`），
@@ -692,12 +691,6 @@ const SWAP_UNITS_ID:= 8061
 ## 「能量屏障」8033 赋的护盾也登记成字段（R91）—— 否则这张牌被强化后
 ## 玩家在任何地方都看不到「它有护盾」。
 const FIELD_BARRIER:= "护盾"
-# 双重陷阱（9108 技能，R53）：2 费普通；只能指定**自己场上的一个工事**，给它附魔：
-#   该工事**被破坏后**（任何破坏手段：普通攻击 / 技能 / 效果 / 直击 HP），
-#   在**同一个格子**召唤一张随机「名字带『陷阱』的工事」—— 取自本角色的**奖励卡池**
-#   （敌方侧退化为完整奖励池），与陷阱工坊供牌同一来源；格子已被占（如亡语先占了）则召唤失败。
-#   R74：标记改记在 FieldState.field_chains（挂在**格子**上），触发口唯一 = _twin_field_chain。
-const DOUBLE_TRAP_ID:= 9108
 
 # 巨物陷阱（8017，R54 起是「巨物捕获」工事；**R76 改成场地卡并改名**）：2 费稀有。
 #   口径跟其它场地卡一致：不是单位、钉在一个格子上、**敌人移动经过此格**时触发一次
@@ -726,7 +719,7 @@ const DARK_TRAP_DEBUFF:= 1      # 本回合攻击时力量 -1
 # 捕兽大师（9126 盟友，暗影刺客·**史诗**）：3 费 2/8 程1 速1。
 #   **亡语：在原地留下一张随机陷阱。**
 # * 「随机陷阱」= 本角色奖励池里的**一次性场地**（唯一口 `_trap_card_pool`）；
-#   与「双重场地」9108 / 机关工坊 8015 同一来源。判据**不写死卡名 / id** ——
+#   与机关工坊 8015 / 警觉 9109 同一来源（唯一口 `_field_card_pool`）。判据**不写死卡名 / id** ——
 #   往后加新陷阱、或给别的角色加陷阱，这里一行都不用改。
 # * 原地已有场地效果时**不覆盖**（那张多半是玩家自己埋的）→ 见 `_deathrattle_place_trap`。
 const TRAPPER_ID:= 9126
@@ -863,7 +856,7 @@ const SHADOW_STEP_NEED:= 1          # 要从弃牌区取回几张
 # 所以玩家**推不出抽牌顺序** —— 面板给的是卡组视角，不是牌堆顶视角。
 # ⚠️ 敌方 AI 不使用这张卡（改牌组是玩家侧决策，AI 用了会污染玩家牌序；与预判 9097 同口径）。
 const FOCUS_ID:= 9122
-const FOCUS_NEED:= 2            # 要从抽牌库移除几张# 白魔法师（9021）「精进」：自己的回合开始时，本方带此 trait 的单位力量 +MAGE_GROW_BUFF
+const FOCUS_NEED:= 2            # 要从抽牌库移除几张# 白魔法鸭（9021）「精进」：自己的回合开始时，本方带此 trait 的单位力量 +MAGE_GROW_BUFF
 # （永久累计，无上限）—— 已去掉「只剩它自己」的前置条件，任何场面都稳定成长。
 # 注：本卡 value=10 归「治疗」用（回血量），所以成长量走常量，不读卡面 value。
 const MAGE_GROW_TRAIT:= "精进"
@@ -2877,10 +2870,10 @@ static func is_persistent_field(card: CardData) -> bool:
 	## 场地卡分两族，走**完全不同的链**：
 	##   * **一次性**（现有 6 张陷阱）：`_field_block_index` 拦人 → `_field_trigger` 结算 → 消失；
 	##   * **持续型**（清泉 8028）：永不触发、永不消失，只在某一方回合结束时结算一次效果。
-	## 所以凡是「按场地一次性结算」的地方（拦路 / 触发 / 双重场地附魔）都要先问一句这个，
+	## 所以凡是「按场地一次性结算」的地方（拦路 / 触发）都要先问一句这个，
 	## 否则持续型场地会被当成一次性用掉 —— **清泉会被敌人走一次就白费**。
 	##
-	## **static** + 纯函数：界面也要读（双重场地候选高亮），同 `field_place_allowed` 的做法。
+	## **static** + 纯函数：界面也要读（场地高亮），同 `field_place_allowed` 的做法。
 	return card != null and card.traits.has(PERSISTENT_FIELD_TRAIT)
 
 
@@ -3329,7 +3322,7 @@ func _feed_upgrade_card(p: Placement) -> void :
 	##
 	## 三个口径（用户当时已睡，按最合理方案定的 —— 见常量区的注释）：
 	##  ① **候选 = 本角色奖励卡池**里「技能 + effect_text 含『改造』」的卡
-	##     （与「双重场地」`_twin_field_chain` 从卡池取场地卡同源）。奖励池里现在有
+	##     （与机关工坊 8015 / 捕兽大师 9126 从卡池取场地卡同源）。奖励池里现在有
 	##     批量改造 8031 / 能量屏障 8033 / 自我修复 8035（「升级」8027 是初始卡 rarity=3，不入池）。
 	##  ② **免费重置靠判据而非清标记**：写 `state.hand_free[card] = true`，
 	##     由 `cost_of` 验「此刻是否还在手牌里」决定要不要给 0 费。离手口分散在
@@ -5090,7 +5083,7 @@ func _night_growth(side: String) -> void :
 func _mage_growth(side: String) -> void :
 
 
-	## 精进（白魔法师 9021）：回合开始力量 +MAGE_GROW_BUFF（永久累计，无上限，无前置条件）。
+	## 精进（白魔法鸭 9021）：回合开始力量 +MAGE_GROW_BUFF（永久累计，无上限，无前置条件）。
 	_turn_growth(side, MAGE_GROW_TRAIT, "mage_grow", MAGE_GROW_BUFF, false)
 
 
@@ -5669,8 +5662,6 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 			return _dodge_spell(side)
 		AMBUSH_ID:
 			return _emergency_ambush(side)
-		DOUBLE_TRAP_ID:
-			return _double_field_spell(side, target)
 		ALERT_ID:
 			return _alertness(side)
 		HUNT_ID:
@@ -6881,7 +6872,7 @@ func _can_hold(cell: Vector2i, side: String) -> bool:
 
 func _deathrattle_place_trap(cell: Vector2i, p: Placement) -> void :
 	## 捕兽大师（9126，R116）亡语：**在原地**留下一张随机陷阱。
-	## 来源与「双重场地」9108 / 机关工坊 8015 同一个池（唯一口 `_trap_card_pool`）；
+	## 来源与机关工坊 8015 / 警觉 9109 同一个池（唯一口 `_trap_card_pool`）；
 	## 随机走引擎 rng → 回放同种子可复现。
 	## ⚠️ 原地**已有场地效果就不覆盖** —— 那张很可能是玩家自己精心埋的陷阱，
 	##    覆盖掉等于把「亡语」打成了负收益。卡面已写明这一条。
@@ -7536,9 +7527,6 @@ func _destroy(cell: Vector2i) -> void :
 	if p.card.id == BLAZE_DUCK_ID:
 		_death_blast(cell, BLAZE_DUCK_DAMAGE, p.card)
 	_deathrattle(cell, p)
-	# R74：双重陷阱的「单位被破坏 → 召唤」已改写成「场地触发 → 追加场地」，
-	# 标记挂在格子上（state.field_chains），触发口唯一 = _field_trigger 末尾的
-	# _twin_field_chain。所以这里**不再**有任何 twin_trap 分支。
 	_check_game_over()
 	# R96：零件回收者 —— 被销毁的是己方盟友/工事时，连通块内的回收者回收其力量 + 手牌加素体。
 	if _rec_victim_ok:
@@ -7863,8 +7851,8 @@ func _field_mastery(field_side: String, field_card: CardData) -> int:
 
 func _field_card_pool(side: String) -> Array[CardData]:
 	## **「本角色奖励池里的场地卡」的唯一口**（R116 抽出）。
-	## 原先有 4 处各抄了一份同样的三行：机关工坊 8015 供牌 / 警觉 9109 取场地 /
-	## 双重场地 9108 连锁 / 捕兽大师 9126 亡语 —— 加新角色或改池子口径时极易漏改。
+	## 原先有多处各抄了一份同样的三行（机关工坊 8015 供牌 / 警觉 9109 取场地 /
+	## 捕兽大师 9126 亡语）—— 加新角色或改池子口径时极易漏改。
 	## `side == SIDE_SELF` 取**当前角色**；敌方侧退化为**完整奖励池**
 	## （敌方正常拿不到这些卡，这是既有口径）。
 	## ⚠️ 返回的是**卡库共享实例** —— 进手前必须 `CardData.from_dict(...)` 复制；
@@ -7915,7 +7903,7 @@ func _field_trigger(cell: Vector2i, mover: Placement) -> void :
 	##   * **移动路径上经过**此格即触发（不再要求「终点停在这里」，见 R80）；
 	##     原本就站在该格上的敌人**不触发**（不在这段 path 里）；
 	##   * 触发一次后**该格场地消失**（一次性）。**先摘牌再结算** ——
-	##     场地效果里若再触发别的场地（双重场地），也不会重复触发同一格；
+	##     场地效果里若再触发别的场地效果，也不会重复触发同一格；
 	##   * 场地不是单位 → 伤害/控制**打给移动进来的那个单位**（敌方踩自己的场地= 自己吃）；
 	##   * 场地精通加成照旧吃。
 	if mover == null or state.field_at(cell) == null:
@@ -7982,9 +7970,6 @@ func _field_trigger(cell: Vector2i, mover: Placement) -> void :
 			action.emit("dark_trap", {"cell": _cell_of(mover),
 				"amount": DARK_TRAP_DEBUFF, "power": mover.effective_power(),
 				"name": mover.card.card_name})
-	# 双重场地（9108，R74）：这个场地触发后 → 同一格随机追加一个随机场地效果。
-	# owner_side 显式传进去：field_owner 已被上面的 clear_field 擦掉，这里读不到。
-	_twin_field_chain(cell, owner_side)
 	_destroy_dead()
 
 
@@ -8584,70 +8569,6 @@ func _alertness(side: String) -> String:
 		action.emit("alert", {"card": copy, "discount": ALERT_DISCOUNT, "side": side})
 		return "警觉：%s 进入手卡（本回合费用 -%d）" % [copy.card_name, ALERT_DISCOUNT]
 	return "警觉：%s 进入手卡" % copy.card_name
-
-
-func _double_field_spell(side: String, target) -> String:
-	## 双重场地（9108，R74 由「双重陷阱」改名）：给**一个已有场地效果的格子**附魔——
-	## 该场地的效果触发并结束之后，在**同一格**对场上一个随机敌人使用一个**随机场地效果**。
-	## 与旧版的区别：旧版挂 Placement.twin_trap（单位被破坏时触发）；场地不是单位，
-	## 所以标记改记在 `state.field_chains`（格子 → 待触发次数），触发口唯一在
-	## `_field_trigger` 末尾的 `_twin_field_chain`。
-	## 只认**自己放的场地**（敌方放的场地不给你挂连锁）。
-	# 目标既可能是「格子坐标」也可能是「该格上的单位」（技能是 unit 目标模式，
-	# 界面上玩家点的是某个单位）——两种都要归一成格子。
-	var cell := _field_target_cell(target)
-	if not state.field_effects.has(cell):
-		return "（双重场地：需要指定一个**已有场地效果**的格子）"
-	# 持续型场地（清泉 8028，R83）**不给附魔**：它永不触发，连锁也就永远不会发生 ——
-	# 让玩家花一张牌换来「什么都不会发生」是最差的体验。
-	if is_persistent_field(state.field_at(cell)):
-		return "（双重场地：%s 是持续型场地，不会触发，不能附魔）" % str(state.field_at(cell).card_name)
-	if str(state.field_owner.get(cell, side)) != side:
-		return "（双重场地：只能给自己的场地追加）"
-	state.field_chains[cell] = int(state.field_chains.get(cell, 0)) + 1
-	_log("双重场地：%s 的场地触发后将追加一个随机场地效果" % cell)
-	action.emit("twin_field", {"cell": cell})
-	return "%s 获得双重场地效果" % cell
-
-
-func _field_target_cell(target) -> Vector2i:
-	## 把「双重场地」的目标归一成格子（R74）。
-	## 技能是 unit 目标模式 → 界面上玩家点的是**某个单位**；但场地不是单位，
-	## 所以这里两种都收：直接给坐标就给坐标，给单位就换算成它所在的格子。
-	## 返回 (-1,-1) = 无法归一（调用方据此拒绝）。
-	if target is Vector2i:
-		return target
-	if target is Array and (target as Array).size() >= 2:
-		return target[0]
-	var pl := _target_placement(SIDE_SELF, target)
-	if pl != null:
-		return _cell_of(pl)
-	return Vector2i(-1, -1)
-
-
-func _twin_field_chain(cell: Vector2i, owner_side: String) -> void :
-	## 双重场地（9108，R74）的连锁落地：本格的场地**刚触发完** → 在同一格
-	## 追加一个**随机场地效果**（取自**场地原主人**的角色奖励卡池；敌方侧退化为完整奖励池）。
-	## 连锁只吃标记**一次**（用完即清）→ 不会无限套娃。
-	# ⚠️ `owner_side` 必须由调用方 `_field_trigger` **显式传进来**：它在那里已经读过一次
-	# field_owner（为了算场地精通），而 `clear_field` 会把 field_owner 一起擦掉 ——
-	# 若这里再从 state 读，只会拿到 fallback（踩上去那个人的阵营），
-	# 于是「敌方踩我方场地」会替**敌方**抽场地卡（实测踩到过）。
-	var marked: int = int(state.field_chains.get(cell, 0))
-	if marked <= 0:
-		return
-	state.field_chains.erase(cell)
-	var pool := _field_card_pool(owner_side)
-	if pool.is_empty():
-		_log("双重场地：奖励卡池里没有场地卡")
-		return
-	# 用户口径「场地效果结束后随机对本格使用场地效果」：直接落在本格，
-	# 于是**下一个走进来的敌人**会吃到 —— 场上没人时这格就静静等着。
-	var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
-	state.set_field(pick, cell, owner_side)
-	_log("双重场地：%s 追加了场地「%s」（%s方）" % [cell, pick.card_name, owner_side])
-	action.emit("field_place", {"cell": cell, "card": pick, "side": owner_side,
-		"replaced": false, "chain": true})
 
 
 func pass_attack(cell: Vector2i, side:= SIDE_SELF) -> void :

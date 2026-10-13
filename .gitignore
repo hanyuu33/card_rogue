@@ -23,6 +23,9 @@ shot_*.import
 screenshot*.png
 screenshot*.import
 /_exe_title.png
+# 根目录的一次性探针图（card_face / 关卡出图校验用，随时可重建）
+/_*.png
+/_*.png.import
 
 # Python
 __pycache__/

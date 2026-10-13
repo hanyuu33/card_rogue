@@ -117,7 +117,7 @@ battle_bg.png            全局兜底（在 `assets/` 下，非本目录） 1280
       boss_demon_duck_revenge 恶魔鸭（复仇） / mech_duck_boss 机械巨鸭 /
       boss_duck_darkside 鸭之暗面 / legion 骑士军团 / familiars 使魔鸭群 /
       knight_charge 骑士冲锋 / captain_wizard 队长与巫师 / archer_knight 弓手与骑士 /
-      blaze_pack 爆炎鸭阵 / white_mage_guard 白魔法师护阵 / night_ducks 夜鸭阵 /
+      blaze_pack 爆炎鸭阵 / white_mage_guard 白魔法鸭护阵 / night_ducks 夜鸭阵 /
       breath_charge 哈气骑士团 / duck_kiln 鸭子窑 / captain 鸭子队长登场 /
       sun_forge 太阳熔炉（R135） / steel_fortress 钢铁要塞（R149） /
       hephaestus_forge 赫菲斯托斯工坊（R150） /

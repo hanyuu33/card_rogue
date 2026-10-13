@@ -531,7 +531,9 @@ func _draw_card_detail(cands: Array) -> void:
 	var x0 := (vs.x - total) / 2.0
 	var box := Rect2(x0, CARDS_Y + CARD_H + 42.0, total,
 			minf(DETAIL_STRIP_H, vs.y - (CARDS_Y + CARD_H + 42.0) - 92.0))
-	_root.draw_rect(box, Color(1, 1, 1, 0.97), true)
+	# R164：白底 → **羊皮纸**（与卡面文字区同一种底，`UiTheme.PANEL_PAPER_BG`）。
+	# 用户口径「白底上的字难认」—— 三选一这一屏统一到羊皮纸面上，卡面与详情是一套东西。
+	_root.draw_rect(box, UiTheme.PANEL_PAPER_BG, true)
 	_root.draw_rect(box, card.rarity_color(), false, 2.0)
 	var pad := 14.0
 	var col_w := 230.0

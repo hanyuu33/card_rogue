@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 211,
-			"图鉴 = 210 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162**；实际 %d）"
+	check(repo.all_cards().size() == 210,
+			"图鉴 = 209 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 162 and grp_enemy.size() == 49,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 162 / 49；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 张敌方卡）"
+	check(grp_player.size() == 161 and grp_enemy.size() == 49,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 161 / 49；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -164,7 +164,7 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 142,
+	check(pool.size() == 141,
 			"奖励池 142 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
@@ -2622,20 +2622,21 @@ func _init() -> void:
 	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 8,
 			"夜行：每个自己的回合开始都 +1（7 → 8）")
 
-	# 精进（9021 白魔法师）：每个自己的回合开始力量 +1（永久累计，无前置条件）
+	# 精进（9021 白魔法鸭）：每个自己的回合开始力量 +1（永久累计，无前置条件）
 	var sl_e := _new_engine([], 20, 20, -1, false)
 	sl_e.start_game(0)
 	sl_e.state.place(CardData.from_dict(repo.get_card(9021).to_dict()),
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
-	check(sl_e.state.unit_at(Vector2i(4, 1)).effective_power() == 2, "精进：上场 2 攻")
+	check(sl_e.state.unit_at(Vector2i(4, 1)).effective_power() == 0,
+			"精进：上场 0 攻（R164 基础力量 2 → 0）")
 	sl_e.end_turn()   # 我方 → 敌方
 	sl_e.end_turn()   # 敌方 → 我方（我方回合开始 → 精进 +1）
-	check(sl_e.state.unit_at(Vector2i(4, 1)).effective_power() == 3,
-			"精进：回合开始 +1 攻（2 → 3）")
+	check(sl_e.state.unit_at(Vector2i(4, 1)).effective_power() == 1,
+			"精进：回合开始 +1 攻（0 → 1）")
 	sl_e.end_turn()
 	sl_e.end_turn()
-	check(sl_e.state.unit_at(Vector2i(4, 1)).effective_power() == 4,
-			"精进：每个自己的回合开始都 +1（3 → 4）")
+	check(sl_e.state.unit_at(Vector2i(4, 1)).effective_power() == 2,
+			"精进：每个自己的回合开始都 +1（1 → 2）")
 	# 已去掉前置条件：己方半场另有单位也照常成长
 	var sl2 := _new_engine([], 20, 20, -1, false)
 	sl2.start_game(0)
@@ -2644,9 +2645,9 @@ func _init() -> void:
 	sl2.state.place(repo.get_card(8003), Vector2i(5, 1), GameEngine.SIDE_SELF)
 	sl2.end_turn()
 	sl2.end_turn()
-	check(sl2.state.unit_at(Vector2i(4, 1)).effective_power() == 3,
-			"精进：己方半场另有单位也 +1（不再要求「只剩它自己」，2 → 3）")
-	# 两只白魔法师同时在场 → 各自都成长
+	check(sl2.state.unit_at(Vector2i(4, 1)).effective_power() == 1,
+			"精进：己方半场另有单位也 +1（不再要求「只剩它自己」，0 → 1）")
+	# 两只白魔法鸭同时在场 → 各自都成长
 	var sl3 := _new_engine([], 20, 20, -1, false)
 	sl3.start_game(0)
 	sl3.state.place(CardData.from_dict(repo.get_card(9021).to_dict()),
@@ -2654,28 +2655,28 @@ func _init() -> void:
 	sl3.state.place(CardData.from_dict(repo.get_card(9021).to_dict()),
 			Vector2i(5, 0), GameEngine.SIDE_SELF)
 	sl3._mage_growth(GameEngine.SIDE_SELF)
-	check(sl3.state.unit_at(Vector2i(4, 0)).effective_power() == 3
-			and sl3.state.unit_at(Vector2i(5, 0)).effective_power() == 3,
-			"精进：两只白魔法师同时在场 → 各自都 +1（2 → 3）")
-	# 敌方侧同样生效（关卡「白魔法师护阵」里它是敌方卡）
+	check(sl3.state.unit_at(Vector2i(4, 0)).effective_power() == 1
+			and sl3.state.unit_at(Vector2i(5, 0)).effective_power() == 1,
+			"精进：两只白魔法鸭同时在场 → 各自都 +1（0 → 1）")
+	# 敌方侧同样生效（关卡「白魔法鸭护阵」里它是敌方卡）
 	var sl4 := _new_engine([], 20, 20, -1, false)
 	sl4.start_game(0)
 	sl4.state.place(CardData.from_dict(repo.get_card(9021).to_dict()),
 			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
 	sl4.end_turn()   # 我方 → 敌方回合开始 → 敌方精进 +1
-	check(sl4.state.unit_at(Vector2i(1, 1)).effective_power() == 3,
-			"精进：敌方白魔法师同样 +1（2 → 3）")
-	# 精进与治疗并存：回合开始既回 10 血又 +1 攻
+	check(sl4.state.unit_at(Vector2i(1, 1)).effective_power() == 1,
+			"精进：敌方白魔法鸭同样 +1（0 → 1）")
+	# 精进与治疗并存：回合开始既回 5 血又 +1 攻（R164：治疗量 10 → 5、生命上限 100 → 30）
 	var sl5 := _new_engine([], 20, 20, -1, false)
 	sl5.start_game(0)
 	sl5.state.place(CardData.from_dict(repo.get_card(9021).to_dict()),
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
-	sl5.state.unit_at(Vector2i(4, 1)).health = 50
+	sl5.state.unit_at(Vector2i(4, 1)).health = 20
 	sl5.end_turn()
 	sl5.end_turn()
 	var sl5_p := sl5.state.unit_at(Vector2i(4, 1))
-	check(sl5_p.health == 60 and sl5_p.effective_power() == 3,
-			"精进：与治疗并存——回合开始回 10 血且 +1 攻（50→60，2→3）")
+	check(sl5_p.health == 25 and sl5_p.effective_power() == 1,
+			"精进：与治疗并存——回合开始回 5 血且 +1 攻（20→25，0→1）")
 
 	# ---- 能量与回合流程 ----
 	var eng := _new_engine(_ordered_deck(), 20, 20, -1, false)
@@ -3870,7 +3871,7 @@ func _init() -> void:
 			"R159 AI角色：赫利俄斯（工事）-> tank")
 	var r159_mage := repo.get_card(9021)
 	check(engR159._ai_role(r159_mage) == GameEngine.AI_ROLE_SUPPORT,
-			"R159 AI角色：白魔法师（治疗）-> support")
+			"R159 AI角色：白魔法鸭（治疗）-> support")
 	var r159_night := repo.get_card(9027)
 	check(engR159._ai_role(r159_night) == GameEngine.AI_ROLE_SNIPER,
 			"R159 AI角色：夜鸭（程2 力6 速2）-> sniper")
@@ -3916,7 +3917,7 @@ func _init() -> void:
 					engR159b.state.unit_at(Vector2i(4, 1)).card),
 			engR159b.state.unit_at(Vector2i(4, 1)))
 	check(r159_pick2 == Vector2i(4, 0),
-			"R159 目标优先级：侧翼 support（白魔法师）优先于正前方普通农民")
+			"R159 目标优先级：侧翼 support（白魔法鸭）优先于正前方普通农民")
 
 	# R159：移动阻挡判定 - 落到友军正前方同列会触发惩罚
 	var engR159c := _new_engine([], 20, 20)
@@ -4471,7 +4472,7 @@ func _init() -> void:
 	check(r68_fz.state.unit_at(Vector2i(2, 1)).frozen == true,
 			"R68 冰封判据：Placement.frozen（界面特效的唯一数据源）")
 
-	# ---- 新关卡：使魔鸭群 / 骑士冲锋 / 队长与巫师 / 爆炎鸭阵 / 白魔法师护阵 ----
+	# ---- 新关卡：使魔鸭群 / 骑士冲锋 / 队长与巫师 / 爆炎鸭阵 / 白魔法鸭护阵 ----
 	var lvls := GameLevels.builtin_levels()
 	check(lvls.size() == 30, "内置关卡共 30 关（7 普简 + 8 普难 + 5 精英简单 + 5 精英困难 + 5 Boss；"
 			+ "R135 太阳熔炉进第二层普通困难 / R149 钢铁要塞·R162 阿斯克勒庇厄斯进第二层精英困难 / R150 赫菲斯托斯工坊进第二层 Boss"
@@ -4492,14 +4493,14 @@ func _init() -> void:
 			and (lvc["enemy_units"] as Array).size() == 3,
 			"队长与巫师：精英困难（队长+巫师+使魔）")
 	check(GameLevels.normal_pool().size() == 8,
-			"第一层普通池 8 关（普简×4 + 普难×4：R158 白魔法师护阵 / 夜鸭阵 上调进第一层普通困难）")
+			"第一层普通池 8 关（普简×4 + 普难×4：R158 白魔法鸭护阵 / 夜鸭阵 上调进第一层普通困难）")
 	check(GameLevels.elite_pool().size() == 4,
 			"第一层精英池 4 关（精简×2 + 精难×2：R158 鸭子窑上调进第一层精英简单）")
 	check(str(GameLevels.boss_level()["name"]) == "远古虚骨龙",
 			"boss_level() 默认返回第一层 Boss 池的第一个（远古虚骨龙；同层多Boss 时实际由 RunState 摇定）")
 
-	# ---- 第二层新关卡「白魔法师护阵」：后排 1 白魔法师 + 前排 3 鸭子骑士 ----
-	var lvw: Dictionary = _level_named("白魔法师护阵")
+	# ---- 第一层新关卡「白魔法鸭护阵」：后排 1 白魔法鸭 + 中排 2 鸭子骑士（R164 降难度）----
+	var lvw: Dictionary = _level_named("白魔法鸭护阵")
 	var wm_units: Array = lvw["enemy_units"]
 	var wm_mage := 0
 	var wm_knight := 0
@@ -4514,29 +4515,29 @@ func _init() -> void:
 			9001:
 				wm_knight += 1
 				wm_knight_rows[ucell.x] = true
-	check(str(lvw["name"]) == "白魔法师护阵"
+	check(str(lvw["name"]) == "白魔法鸭护阵"
 			and int(lvw["tier"]) == GameLevels.TIER_NORMAL_HARD
 			and GameLevels.layer_of(lvw) == GameLayers.LAYER_DEFAULT
-			and wm_units.size() == 4,
-			"白魔法师护阵：第一层·普通敌人-困难（R158 上调），4 个单位")
-	check(wm_mage == 1 and wm_knight == 3,
-			"白魔法师护阵阵容：白魔法师×1 / 鸭子骑士×3")
+			and wm_units.size() == 3,
+			"白魔法鸭护阵：第一层·普通敌人-困难（R158 上调 / R164 降难度），3 个单位")
+	check(wm_mage == 1 and wm_knight == 2,
+			"白魔法鸭护阵阵容：白魔法鸭×1 / 鸭子骑士×2（R164 删掉前排正中那只）")
 	check(wm_mage_row == GameEngine.back_row(GameEngine.SIDE_OPPONENT)
 			and wm_knight_rows.size() == 1
-			and wm_knight_rows.has(GameEngine.back_row(GameEngine.SIDE_OPPONENT) + 2),
-			"白魔法师护阵站位：白魔法师在后排（0 行）、3 骑士在前排（2 行）")
+			and wm_knight_rows.has(GameEngine.back_row(GameEngine.SIDE_OPPONENT) + 1),
+			"白魔法鸭护阵站位：白魔法鸭在后排（0 行）、2 骑士从**前排退到中排**（1 行）")
 	var nc_mage := repo.get_card(9021)
-	check(nc_mage != null and nc_mage.card_name == "白魔法师"
-			and nc_mage.power == 2 and nc_mage.health == 100
+	check(nc_mage != null and nc_mage.card_name == "白魔法鸭"
+			and nc_mage.power == 0 and nc_mage.health == 30
 			and nc_mage.attack_range == 1 and nc_mage.move_speed == 1
 			and nc_mage.rarity == 4 and nc_mage.traits.has("治疗")
-			and nc_mage.value == 10,
-			"白魔法师：怪物 2 攻 100 血，trait「治疗」强度 10")
+			and nc_mage.value == 5,
+			"白魔法鸭（R164 由「白魔法鸭」改名）：0 攻 30 血，trait「治疗」强度 5")
 	check(nc_mage.traits.has(GameEngine.MAGE_GROW_TRAIT)
 			and GameEngine.MAGE_GROW_BUFF == 1
 			and not nc_mage.effect_text.contains("仅有它自己")
 			and nc_mage.effect_text.contains("每回合开始时，力量 +1"),
-			"白魔法师：trait「精进」——每回合开始力量 +1（无前置条件）")
+			"白魔法鸭：trait「精进」——每回合开始力量 +1（无前置条件）")
 	var nc_egg := repo.get_card(9022)
 	check(nc_egg != null and nc_egg.card_name == "鸭蛋" and nc_egg.kind == "工事"
 			and nc_egg.power == 0 and nc_egg.health == 1
@@ -4544,9 +4545,9 @@ func _init() -> void:
 			and not repo.reward_pool().has(nc_egg),
 			"鸭蛋：0 攻 1 血工事（生蛋鸭召唤物，不在奖励池）")
 	check(lvw in GameLevels.normal_pool(GameLayers.LAYER_DEFAULT),
-			"R158 白魔法师护阵归第一层普通池（会被第一层地图抽到）")
+			"R158 白魔法鸭护阵归第一层普通池（会被第一层地图抽到）")
 	check(lvw not in GameLevels.normal_pool(GameLayers.LAYER_TWO),
-			"R158 白魔法师护阵已离开第二层普通池（不串层）")
+			"R158 白魔法鸭护阵已离开第二层普通池（不串层）")
 
 	# ---- 第二层新关卡「哈气骑士团」+ 效果卡「哈气」（所属阵营单位从第 3 个回合起一回合行动两次）----
 	var hc := repo.get_card(9024)
@@ -4834,7 +4835,7 @@ func _init() -> void:
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_DEFAULT).size() == lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
 			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关）" % [lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(), GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size()])
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 15,
-			"第二层自带 15 关（太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法师护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层）")
+			"第二层自带 15 关（太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法鸭护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层）")
 	# 内容池：第一层 = [1]；第二层 = [2]（各层内容互不串层）
 	var cl1 := GameLayers.content_layers(GameLayers.LAYER_DEFAULT)
 	var cl2 := GameLayers.content_layers(GameLayers.LAYER_TWO)
@@ -6044,7 +6045,7 @@ func _init() -> void:
 	RunState.relics = []
 	RunState.end_run()
 
-	# ---- 白魔法师（9021）：回合开始治疗生命值百分比最低的己方单位 ----
+	# ---- 白魔法鸭（9021）：回合开始治疗生命值百分比最低的己方单位 ----
 	var wm_deck: Array[CardData] = []
 	for i in 8:
 		wm_deck.append(_card(8002, "攻击", "技能", 1, 0, 0))
@@ -6059,10 +6060,10 @@ func _init() -> void:
 	wm_k1.health = 10          # 10/30 = 33% ← 百分比最低
 	wm_k2.health = 20          # 20/30 = 67%
 	eng_wm.end_turn()          # → 对手回合开始 → 治疗
-	check(wm_p.card.traits.has("治疗") and wm_p.card.value == 10,
-			"白魔法师：带「治疗」trait，强度 10（引擎按 trait 识别，不写死 id）")
-	check(wm_k1.health == 20 and wm_k2.health == 20,
-			"白魔法师：回合开始治疗生命%最低的己方单位 +10（10 → 20，另一只不动）")
+	check(wm_p.card.traits.has("治疗") and wm_p.card.value == 5,
+			"白魔法鸭：带「治疗」trait，强度 5（R164 由 10 下调；引擎按 trait 识别，不写死 id）")
+	check(wm_k1.health == 15 and wm_k2.health == 20,
+			"白魔法鸭：回合开始治疗生命%最低的己方单位 +5（10 → 15，另一只不动）")
 	# 按「百分比」而非「绝对血量」挑目标：75% 的小熊不动，67% 的骑士被治满
 	var eng_wm2 := _new_engine(wm_deck, 20, 20, -1, false)
 	eng_wm2.start_game()
@@ -6074,8 +6075,8 @@ func _init() -> void:
 	wm_bear.health = 3         # 3/4 = 75%
 	wm_k3.health = 20          # 20/30 = 67% ← 百分比最低（绝对值反而更高）
 	eng_wm2.end_turn()
-	check(wm_bear.health == 3 and wm_k3.health == 30,
-			"白魔法师：按生命「百分比」挑目标（75% 小熊不治，67% 骑士治满）")
+	check(wm_bear.health == 3 and wm_k3.health == 25,
+			"白魔法鸭：按生命「百分比」挑目标（75% 小熊不治，67% 骑士 +5）")
 
 	# ---- 黄桃罐头（6014）：每次战斗结束回复 4 点生命 ----
 	var eng_pc := _new_engine(wm_deck, 20, 20, -1, false)
@@ -6802,10 +6803,10 @@ func _init() -> void:
 			"角色系统：非敌方卡 class 都在可选角色内、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
-			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 55
+			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 54
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
 			and int(dr_cls_count.get("敌人", 0)) == 49,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 55 / 36 / 49；R161 +1 / R162 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 54 / 36 / 49；R161 +1 / R162 +1；R164 暗影刺客 -1 = 删除双重场地 9108）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -7063,7 +7064,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 142, "R45+R50~R57：扩展全部进奖励池（总池 142，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 141, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后总池 141，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -7368,8 +7369,8 @@ func _init() -> void:
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
 	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 71
-			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 55,
-			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d）"
+			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 54,
+			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
 
@@ -7439,8 +7440,8 @@ func _init() -> void:
 	check(not r47_dr_ids.has(9087) and not r47_dr_ids.has(9099) and not r47_dr_ids.has(9101),
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
-			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法师）")
-	check(r47_dr.size() == 60 and r47_rg.size() == 52
+			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法鸭）")
+	check(r47_dr.size() == 60 and r47_rg.size() == 51
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
 			"奖励池过滤：森林精魄 %d 张 / 暗影刺客 %d 张（两者之和 + 机械之心 %d = 完整池 %d）"
@@ -7759,12 +7760,6 @@ func _init() -> void:
 		"R74 场地精通 9105：由「陷阱精通」改名，口径从工事改成场地")
 	check(GameEngine.TRAP_MASTERY_TRAIT == "场地精通",
 		"R74 引擎常量：TRAP_MASTERY_TRAIT = 场地精通")
-	# 双重场地 9108
-	var r74_df: CardData = repo.get_card(GameEngine.DOUBLE_TRAP_ID)
-	check(r74_df != null and r74_df.card_name == "双重场地"
-			and r74_df.effect_text.contains("场地效果的格子"),
-		"R74 双重场地 9108：改名 + 口径改成「已有场地效果的格子」")
-
 	# ---- 场地的基础行为：不是单位、每格 1 个、移动进入才触发 ----
 	# ① 打出去**不进 board**，而是进 field_effects（完全独立的数据）
 	var r74_a := _new_engine([], 30, 30)
@@ -8008,34 +8003,6 @@ func _init() -> void:
 	check(r74_s_foe.health == 55 - GameEngine.FROST_TRAP_DMG,
 		"R74 场地：触发只认「移动进入」，与用什么手段打过来无关")
 
-	# ---- 双重场地 9108：标记格子 → 场地触发后同格追加一个随机场地 ----
-	# ⚠️ 必须先设 player_class：连锁是按**场地原主人**的角色奖励卡池取候选的，
-	# 角色不对（森林精魄）的话池里没有场地卡 → 连锁补不上（实测报"（无）"）。
-	RunState.player_class = PlayerClass.ROGUE
-	var r74_tw := _new_engine([], 30, 30)
-	var r74_tw_foe: Placement = r74_tw.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
-			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
-	r74_tw.state.hand.append(CardData.from_dict(repo.get_card(
-			GameEngine.PIERCE_TRAP_ID).to_dict()))
-	r74_tw.play_from_hand(0, Vector2i(4, 1))
-	# 给该格挂连锁标记（用引擎真实入口）
-	var r74_tw_res: String = r74_tw._double_field_spell(GameEngine.SIDE_SELF,
-		Vector2i(4, 1))
-	check(r74_tw.state.field_chains.has(Vector2i(4, 1))
-			and not r74_tw_res.contains("需要指定"),
-		"R74 双重场地：给已有场地的格子挂上连锁标记（%s）" % r74_tw_res)
-	# 触发 → 旧场地消失，新场地立刻补上
-	r74_tw.current_side = GameEngine.SIDE_OPPONENT
-	r74_tw.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
-	var r74_tw_after: CardData = r74_tw.state.field_at(Vector2i(4, 1))
-	check(r74_tw_after != null and r74_tw_after.is_field()
-			and not r74_tw.state.field_chains.has(Vector2i(4, 1)),
-		"R74 双重场地：原场地触发后同格补上**新的随机场地**（%s），连锁标记只用一次"
-			% (r74_tw_after.card_name if r74_tw_after != null else "无"))
-	# 没场地效果的格子不能挂连锁
-	check(r74_tw._double_field_spell(GameEngine.SIDE_SELF,
-			Vector2i(5, 0)).contains("需要指定"),
-		"R74 双重场地：对**没有场地效果**的格子使用被拒绝")
 	# 场地与单位可同格共存（两套数据互不影响）
 	var r74_co := _new_engine([], 30, 30)
 	r74_co.state.place(_card(8003, "树人", "盟友", 2, 2, 10, 1, 1), Vector2i(4, 1),
@@ -8209,28 +8176,24 @@ func _init() -> void:
 	check(r52_m.state.unit_at(Vector2i(4, 1)) == null and r52_m_foe.health == 46,
 			"陷阱精通：工坊反伤 8+2×3=14（60 → %d）" % r52_m_foe.health)
 
-	# ---- R53：陷阱系收尾 —— 穿刺陷阱 8016（工事）+ 双重陷阱 9108（技能）----
+	# ---- R53：陷阱系收尾 —— 穿刺陷阱 8016（工事）
+	#      （R164：「双重陷阱 / 双重场地」9108 整张下线，相关断言随之删除）----
 
 	# 卡面
 	var r53_pierce := repo.get_card(8016)
-	var r53_double := repo.get_card(9108)
 	check(r53_pierce.card_name == "穿刺陷阱" and r53_pierce.cost == 2
 			and r53_pierce.kind == "场地" and r53_pierce.is_field() and not r53_pierce.is_fort()
 			and r53_pierce.power == 0 and r53_pierce.health == 0
 			and r53_pierce.rarity == 0 and r53_pierce.card_class == "暗影刺客"
 			and r53_pierce.traits.has(GameEngine.PIERCE_TRAP_TRAIT),
 			"R74 穿刺场地 8016：2 费普通暗影刺客**场地卡**（不再是工事、无 HP）、带「穿刺陷阱」词条")
-	check(r53_double.card_name == "双重场地" and r53_double.cost == 2
-			and r53_double.kind == "技能" and r53_double.rarity == 0
-			and r53_double.card_class == "暗影刺客" and r53_double.target_mode == "unit",
-			"R74 双重场地 9108：2 费普通暗影刺客技能，需要指定目标（场地所在格）")
 	check(repo.get_card(9105).effect_text.contains("2X") and repo.get_card(9105).target_mode == "none",
 			"场地精通 9105：卡面文案补全（含 2X 加成说明）")
 	var r53_pool_ids := {}
 	for c: CardData in repo.reward_pool_for(PlayerClass.ROGUE):
 		r53_pool_ids[c.id] = true
-	check(r53_pool_ids.has(8016) and r53_pool_ids.has(9108),
-			"R53：穿刺陷阱 / 双重陷阱 都在暗影刺客奖励池")
+	check(r53_pool_ids.has(8016) and not r53_pool_ids.has(9108),
+			"R53/R164：穿刺陷阱在暗影刺客奖励池；双重场地 9108 已删除（不再入池）")
 
 	# 穿刺场地（R74：8016 已从工事改成场地）：敌人**移动进入** → 吃 14 伤，无附加状态
 	var r53_p := _new_engine([], 30, 30)
@@ -8275,73 +8238,6 @@ func _init() -> void:
 		"R74 场地不是攻击目标：技能/攻击都够不到「场地所在的那一格」")
 	check(r53_p0_foe.health == 60 and r53_p0.state.field_at(Vector2i(4, 1)) != null,
 		"R74 场地：站在上面既不掉血、场地也不触发（没「移动」这个动作）")
-
-	# ---- 双重场地 9108（R74 由「双重陷阱」改名，标记挂在**格子**上）----
-	RunState.player_class = PlayerClass.ROGUE
-
-	# 对**没有场地效果**的格子使用 → 被拒绝
-	var r53_d1 := _new_engine([], 30, 30)
-	r53_d1.state.energy = 9
-	r53_d1.state.hand.append(CardData.from_dict(repo.get_card(9108).to_dict()))
-	r53_d1.state.place(_card(8003, "树人", "盟友", 2, 2, 30, 1, 1),
-			Vector2i(4, 2), GameEngine.SIDE_SELF)
-	var r53_d1_res := r53_d1.use_spell(0, Vector2i(4, 2))
-	check(r53_d1_res.contains("需要指定") and r53_d1.state.field_chains.is_empty(),
-			"R74 双重场地：对没有场地效果的格子施放被拒绝（%s）" % r53_d1_res)
-
-	# 己方场地 → 挂上连锁标记
-	var r53_t := _new_engine([], 30, 30)
-	r53_t.state.energy = 9
-	r53_t.state.hand.append(CardData.from_dict(repo.get_card(9108).to_dict()))
-	r53_t.state.set_field(CardData.from_dict(repo.get_card(8012).to_dict()),
-			Vector2i(4, 1), GameEngine.SIDE_SELF)   # 冰霜场地
-	var r53_t_res := r53_t.use_spell(0, Vector2i(4, 1))
-	check(r53_t.state.field_chains.has(Vector2i(4, 1))
-			and not r53_t_res.contains("需要指定"),
-		"R74 双重场地：给己方场地挂上连锁标记（%s）" % r53_t_res)
-
-	# 场地触发后 → **同格**补上一个新的随机场地，且连锁标记只用一次
-	var r53_t_foe := r53_t.state.place(_card(1051, "亡灵领主", "盟友", 8, 5, 60, 1, 1),
-			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
-	r53_t.current_side = GameEngine.SIDE_OPPONENT
-	r53_t.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
-	var r53_t_new: CardData = r53_t.state.field_at(Vector2i(4, 1))
-	check(r53_t_new != null and r53_t_new.is_field()
-			and r53_t.state.field_chains.is_empty(),
-		"R74 双重场地：原场地触发后同格补上新场地「%s」，连锁标记一次性用掉"
-			% (r53_t_new.card_name if r53_t_new != null else "无"))
-	check(r53_t.state.field_at(Vector2i(4, 1)) != repo.get_card(r53_t_new.id),
-			"R74 双重场地：新场地是卡库实例的副本（改它不污染卡库）")
-	# 回归：补上的场地**归属仍是原主人**（我方场地被敌方踩了，不该改姓）
-	# （这条盯的是真bug：field_owner 曾被 clear_field 提前擦掉，导致连锁按
-	#  「踩上去那个人的阵营」取候选 —— 敌方踩我方场地会替敌方抽场地卡。）
-	check(str(r53_t.state.field_owner.get(Vector2i(4, 1), "")) == GameEngine.SIDE_SELF,
-			"R74 双重场地：补上的场地归属仍是**原主人**（%s）"
-			% str(r53_t.state.field_owner.get(Vector2i(4, 1), "")))
-	check(r53_t_foe.health == 60 - GameEngine.FROST_TRAP_DMG,
-			"R74 双重场地：被连锁的是冰霜场地 → 踩上去的那个敌人吃 %d 伤（60 → %d）"
-			% [GameEngine.FROST_TRAP_DMG, r53_t_foe.health])
-
-	# 连锁补上的新场地**也会被下一个走进来的敌人触发**（连锁不是一次性摆设）
-	# 第二个敌人放在新场地**正下方**的 (5,1)；但 (4,1) 上还站着第一个敌人（它踩完没走），
-	# 所以先把它挪开，否则路径被挡、`move` 直接失败（`move_path` 返回空）。
-	_check_to_opp_turn(r53_t)
-	r53_t.current_side = GameEngine.SIDE_OPPONENT
-	r53_t.state.reset_units(GameEngine.SIDE_OPPONENT)
-	r53_t.state.move_unit(Vector2i(4, 1), Vector2i(1, 1))   # 第一个敌人让位
-	r53_t.state.place(_card(1051, "亡灵领主2", "盟友", 8, 5, 60, 1, 1),
-			Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
-	var r53_t2_foe: Placement = r53_t.state.unit_at(Vector2i(5, 1))
-	r53_t.move(Vector2i(5, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
-	# R76：这里**不能**断言「血 < 60」—— 双重场地补的是**随机**场地卡，
-	# 而候选池里有「冻结陷阱」这类**只施加冰封、不掉血**的场地（8013），
-	# 摇到它时血量本来就不变（那不是 bug，是这张场地本来的效果）。
-	# 所以判据改成「场地一定消失 + 该格归位给踩进来的单位」—— 与摇到哪张无关。
-	check(r53_t.state.field_at(Vector2i(4, 1)) == null
-			and r53_t.state.unit_at(Vector2i(4, 1)) == r53_t2_foe,
-			"R74 双重场地：补上的新场地也会正常触发并消失（第二个敌人踩完，场地已清空；"
-			+ "血量 %d 取决于摇到哪张场地 —— 冻结类不掉血属正常）"
-			% r53_t2_foe.health)
 
 	# ---- R54：活体栅栏（8018）/ 警觉（9109）----
 	# 8017 R54 起是「巨物捕获」工事，**R76 改成场地卡「巨物陷阱」**（见下面的 R76 块）。
@@ -10712,22 +10608,6 @@ func _init() -> void:
 	# 「暗影狩猎 9107」的「触发过场地」判据：清泉不算触发（trap_trig_turn 不该被写）
 	check(r83_passer.trap_trig_turn == -1,
 		"R83 清泉：经过**不记**「触发过场地」（暗影狩猎不会因清泉翻倍）")
-
-	# ---- ⑦ 双重场地不能给清泉附魔（附魔永不触发 = 白花一张牌）----
-	var r83_e4 := _new_engine([], 30, 30, -1, false)
-	r83_e4.start_game()
-	r83_e4.state.set_field(CardData.from_dict(r83_fp.to_dict()),
-			Vector2i(4, 1), GameEngine.SIDE_SELF)
-	r83_e4.state.set_field(CardData.from_dict(r83_repo.get_card(GameEngine.TRAP_ID).to_dict()),
-			Vector2i(3, 1), GameEngine.SIDE_SELF)
-	var r83_res_fp: String = r83_e4._double_field_spell(GameEngine.SIDE_SELF, Vector2i(4, 1))
-	check(r83_res_fp.contains("持续型场地") and not r83_e4.state.field_chains.has(Vector2i(4, 1)),
-		"R83 清泉：双重场地拒绝给它附魔（%s）" % r83_res_fp)
-	var r83_res_trap: String = r83_e4._double_field_spell(GameEngine.SIDE_SELF, Vector2i(3, 1))
-	check(not r83_res_trap.contains("持续型")
-			and int(r83_e4.state.field_chains.get(Vector2i(3, 1), 0)) == 1,
-		"R83 清泉：一次性场地（爆炸陷阱）**照常**能附魔（回归护栏，chain=%d）"
-			% int(r83_e4.state.field_chains.get(Vector2i(3, 1), 0)))
 
 	# ---- ⑧ 格子空着时无事发生，场地不受影响 ----
 	var r83_e5 := _new_engine([], 30, 30, -1, false)
@@ -14978,7 +14858,7 @@ func _init() -> void:
 	# ══════════════════════════════════════════════════════════════
 	# R158 测试：量产型赫菲斯托斯 9138（量产锻造）/ 充能巨炮 9139
 	#            三张新关（量产流水线 / 量产铁砧 / 双机炮阵）
-	#            鸭子窑·白魔法师护阵·夜鸭阵 上调、鸭之暗面 下调到第一层
+	#            鸭子窑·白魔法鸭护阵·夜鸭阵 上调、鸭之暗面 下调到第一层
 	# ══════════════════════════════════════════════════════════════
 	var r158_repo := CardRepo.load_json()
 
@@ -15142,13 +15022,13 @@ func _init() -> void:
 			and GameLevels.elite_pool(GameLayers.LAYER_DEFAULT).has(r158_k)
 			and not GameLevels.normal_pool(GameLayers.LAYER_TWO).has(r158_k),
 			"R158 鸭子窑：上调到第一层精英简单池（已离开第二层普通池）")
-	var r158_w := _level_named("白魔法师护阵")
+	var r158_w := _level_named("白魔法鸭护阵")
 	var r158_nd := _level_named("夜鸭阵")
 	check(int(r158_w.get("tier", -1)) == GameLevels.TIER_NORMAL_HARD
 			and GameLevels.layer_of(r158_w) == GameLayers.LAYER_DEFAULT
 			and int(r158_nd.get("tier", -1)) == GameLevels.TIER_NORMAL_HARD
 			and GameLevels.layer_of(r158_nd) == GameLayers.LAYER_DEFAULT,
-			"R158 白魔法师护阵 / 夜鸭阵：上调到第一层普通困难")
+			"R158 白魔法鸭护阵 / 夜鸭阵：上调到第一层普通困难")
 	var r158_dk := _level_named("鸭之暗面")
 	var r158_dk_u: Array = r158_dk.get("enemy_units", [])
 	check(int(r158_dk.get("tier", -1)) == GameLevels.TIER_BOSS
@@ -15187,7 +15067,7 @@ func _init() -> void:
 	engR160a.state.place(_card(9008, "鸭子巫师", "盟友", 5, 8, 50, 2, 1),
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)   # sniper
 	engR160a.state.place(repo.get_card(9021),
-			Vector2i(2, 2), GameEngine.SIDE_OPPONENT)   # 白魔法师：support
+			Vector2i(2, 2), GameEngine.SIDE_OPPONENT)   # 白魔法鸭：support
 	engR160a.current_side = GameEngine.SIDE_OPPONENT
 	var qR160a := engR160a.ai_action_queue()
 	check(qR160a.size() == 3

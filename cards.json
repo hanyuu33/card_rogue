@@ -784,11 +784,11 @@
     },
     {
       "id": 9021,
-      "name": "白魔法师",
+      "name": "白魔法鸭",
       "kind": "盟友",
       "cost": 7,
-      "power": 2,
-      "health": 100,
+      "power": 0,
+      "health": 30,
       "attack_range": 1,
       "move_speed": 1,
       "rarity": 4,
@@ -799,9 +799,9 @@
         "治疗",
         "精进"
       ],
-      "effect_text": "自己的回合开始时，为伤势最重的己方单位恢复 10 点生命。每回合开始时，力量 +1。",
+      "effect_text": "自己的回合开始时，为伤势最重的己方单位恢复 5 点生命。每回合开始时，力量 +1。",
       "target_mode": "none",
-      "value": 10,
+      "value": 5,
       "color": "白",
       "image": ""
     },
@@ -2732,24 +2732,6 @@
       "color": "红",
       "image": "",
       "trigger": "单体伤害"
-    },
-    {
-      "id": 9108,
-      "name": "双重场地",
-      "kind": "技能",
-      "cost": 2,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 0,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [],
-      "effect_text": "选择一个**已有场地效果的格子**：该场地的效果触发并结束后，在同一格对一个随机敌人使用一个随机场地效果（取自本职业奖励卡池）。",
-      "target_mode": "unit",
-      "color": "紫",
-      "image": ""
     },
     {
       "id": 8017,

@@ -1037,23 +1037,14 @@ func _ready() -> void:
 		status_text = "陷阱工坊被攻击破坏 → 攻击者反受 8 伤；它「上回合触发过工事」→ 暗影狩猎改为 24"
 		_shot_t0 = _now()
 		queue_redraw()
-	if "--double" in args and engine != null:
-		# 演示（R53 起是「双重陷阱」；R74 改名「双重场地」）：双重场地（9108）+ 穿刺陷阱（8016）。
-		#   ① 双重陷阱给己方冰霜陷阱（4,1）附魔（紫字）；
-		#   ② 亡灵领主攻击它 → 冰霜陷阱即死并禁足攻击者，同时**原格立刻召唤**一张随机「陷阱」工事；
-		#   ③ 另一个亡灵领主踩穿刺陷阱（4,0）→ 自己吃 14 伤（纯直伤，没有附加状态）。
+	if "--pierce" in args and engine != null:
+		# 演示（R164 由 --double 改名收窄）：穿刺陷阱（8016，场地卡）。
+		#   亡灵领主踩上去 → 吃 14 伤（纯直伤、无附加状态），场地当场消失。
+		#   （原来的「给场地附魔 → 触发后同格补随机场地」随 9108 一起下线。）
 		RunState.player_class = PlayerClass.ROGUE
 		engine.state.hand.clear()
 		engine.state.energy = 9
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.DOUBLE_TRAP_ID).to_dict()))
 		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.PIERCE_TRAP_ID).to_dict()))
-		engine.state.place(CardData.from_dict(repo.get_card(GameEngine.FROST_TRAP_ID).to_dict()),
-				Vector2i(4, 1), GameEngine.SIDE_SELF)
-		var r53_foe := engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
-				Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
-		r53_foe.health = 60
-		engine.use_spell(0, Vector2i(4, 1))       # 双重陷阱 → 附魔冰霜陷阱
-		engine.attack(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)   # 踩陷阱 → 原格召唤
 		engine.state.place(CardData.from_dict(repo.get_card(GameEngine.PIERCE_TRAP_ID).to_dict()),
 				Vector2i(4, 0), GameEngine.SIDE_SELF)
 		var r53_foe2 := engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
@@ -1062,7 +1053,7 @@ func _ready() -> void:
 		engine.attack(Vector2i(3, 0), Vector2i(4, 0), GameEngine.SIDE_OPPONENT)   # 踩穿刺陷阱 → 14 伤
 		_demo_hover_idx = 0
 		_hover_hand = 0
-		status_text = "双重场地：附魔的场地触发并结束后 → 同格补一个随机场地；穿刺陷阱：敌人移动进入吃 14 伤"
+		status_text = "穿刺陷阱：敌人移动进入吃 14 伤（并立刻停止移动），场地消失"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--capture" in args and engine != null:
@@ -2861,8 +2852,6 @@ func _use_hand_card(i: int) -> void:
 				target_hint = "**一个目标**（8 伤；本回合含这张卡已用 3 张 → 回 1 费）"
 			elif card.id == GameEngine.SHADOW_STEP_ID:
 				target_hint = "**一个目标**（8 伤；之后从弃牌区任选一张卡回手）"
-			elif card.id == GameEngine.DOUBLE_TRAP_ID:
-				target_hint = "一个自己的工事"
 			elif card.id == GameEngine.UPGRADE_ID:
 				target_hint = "**自己的一个盟友或工事**（+2 攻 / +8 血）"
 			elif card.id == GameEngine.ARMOR_PLATE_ID:
@@ -2991,7 +2980,7 @@ func _own_place_cells(card: CardData) -> Array[Vector2i]:
 func _field_place_cells(card: CardData) -> Array[Vector2i]:
 	## 场地卡的合法格：按**这张卡的生效对象**逐格问引擎（field_place_allowed）。
 	## 刻意**不**自己算禁行 —— R78 之前界面算一遍 ban 行、引擎也算一遍，
-	## 两边万一不同步极难查（R76 的双重场地就是这么坏的）。委托唯一口就只有一个真相。
+	## 两边万一不同步极难查。委托唯一口就只有一个真相。
 	## card 传 null 时引擎按「敌」处理（陷阱默认口径）。
 	var aim := GameEngine.field_aim(card)
 	var out: Array[Vector2i] = []
@@ -3995,19 +3984,6 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 			var ip: Placement = engine.state.board[c]
 			if ip.owner == GameEngine.SIDE_SELF and ip.card.kind == "盟友":
 				out.append(c)
-		out.sort()
-	elif card.id == GameEngine.DOUBLE_TRAP_ID:
-		# 双重场地（9108，R74 由「双重陷阱」改名）：目标是**已有场地的格子**。
-		# R76 修：原来这里还在找「己方工事」，与 cards.json 的新口径完全对不上 ——
-		# 于是这张卡在 R74 之后**一个目标都选不出来**（点哪儿都取消）。
-		# R83：排除**持续型场地**（清泉 8028）—— 它永不触发，附魔等于白花一张牌。
-		for c: Vector2i in engine.state.field_effects:
-			if str(engine.state.field_owner.get(c, GameEngine.SIDE_SELF)) \
-					!= GameEngine.SIDE_SELF:
-				continue
-			if GameEngine.is_persistent_field(engine.state.field_at(c)):
-				continue
-			out.append(c)
 		out.sort()
 	elif card.id == GameEngine.WHIRL_BLADE_ID:
 		# 回旋斩：十字中心格 = 全棋盘任意格（只有敌方单位吃伤害）
@@ -5772,10 +5748,6 @@ func _draw_field_markers() -> void:
 		while px > 7 and _font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > CELL_W - 10.0:
 			px -= 1
 		_draw_string_box_nw(_font_bold, px, tag, rect.position + Vector2(5, CELL - 6), col)
-		# 双场地标记（9108）：左上角加一个「×2」提示
-		if int(engine.state.field_chains.get(cell, 0)) > 0:
-			_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION, "×2",
-					rect.position + Vector2(CELL_W - 26, 15), Color("ffd24a"))
 		# R84：触发类型角标（一次性场地）。「范围伤害」这类标签太长塞不进 6 字宽的角，
 		#   缩字号 + 靠左排；清泉是持续型、**没有** trigger，不画这个（别误导成「会被触发」）。
 		if not persistent and card.trigger != "":
@@ -7482,9 +7454,6 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 							% int(data.get("dmg", 0)),
 					"col": UiTheme.RARITY_EPIC, "start": n, "dur": 1400,
 					"size": 22 if hu_big else 18})
-		"twin_trap":
-			# 双重场地 9108：给某格挂上「触发后追加一个场地」的标记
-			_say("⧉ 双重场地：%s 的场地触发后会追加一个随机场地" % str(data.get("cell", "")))
 		"field_place":
 			# 场地卡（R74）放置：斜纹格亮一下 + 提示挂在哪一格
 			var fp_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
@@ -7504,9 +7473,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": fp_col, "start": n, "dur": 1200, "size": 15})
 			_bursts.append({"pos": fp_pos, "start": n, "dur": 420,
 				"col": fp_col, "big": false})
-			if bool(data.get("chain", false)):
-				_say("⧉ 双重场地连锁：%s 又挂上一个场地" % fp_cell)
-			elif fp_persist:
+			if fp_persist:
 				# 持续型场地（R83 清泉 / R88 维修间·改造工厂）：不会因经过而触发 →
 				# 别说「移动经过时触发」，否则玩家会以为敌人走过去就把它引爆了。
 				# 同样要**按生效对象分文案**：「友」的话明说只治自己人。
@@ -7536,14 +7503,6 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("⚡ 场地触发：%s 踩到了 %s（移动已停止）" % [str(data.get("name", "")),
 				str((data.get("card", null) as CardData).card_name)])
 			sfx.play("destroy")
-		"twin_field":
-			# 双重场地（9108，R74 由「双重陷阱」改名）：给格子上的场地挂连锁 —— 紫色微光 + 飘字
-			var dt_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": dt_pos, "start": n, "dur": 420,
-					"col": UiTheme.RARITY_EPIC, "big": false})
-			_floaters.append({"pos": dt_pos + Vector2(0, -12), "text": "双重场地",
-					"col": Color("5e35b1"), "start": n, "dur": 1400, "size": 18})
-			_say("♻ 双重场地：%s 的场地触发并结束后 → 同格补一张随机场地" % str(data.get("name", "该格")))
 		"charge":
 			# 蓄力（9085）：攒一层 —— 下一张技能生效 N+1 次（金色提示，压在技能结算飘字上方）
 			sfx.play("spell")

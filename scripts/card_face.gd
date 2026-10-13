@@ -170,10 +170,43 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	# ⚠️ R153：v2 底图**自带金线分隔**（CARD_ART_RATIO 0.745 处的金条），不再手画灰线。
 	# ⚠️ R122：**横置时不画** —— 那时卡图铺满整卡（见 _draw_art），横一道线很突兀。
 	var sep_y: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
-	# ⑥ 文字区（下半）
+	# ⑥ 文字区（下半）—— 底衬在 `_draw_text_zone` 内部按**文字块的实际高度**铺。
 	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold, on_board, is_tapped)
 	# ⑦ 数值徽章 —— 最后画，压在卡图与文字之上（「额外挂载」的字面意思）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, hp, power_override)
+
+
+static func draw_text_backing(canvas: CanvasItem, rect: Rect2, sep_y: float, k: float, pad: float,
+		text_top: float, block_bottom: float) -> void:
+	## R164：文字区底衬 = **程序绘制的羊皮卷 / 木板**（任意卡尺寸自适应，不依赖贴图，
+	## **没有边框**）。矩形由调用方按**文字块的实际范围**（`text_top` / `block_bottom`）给出，
+	## 于是底衬**贴着文字**：上不盖分隔金条、下不吃底部的数值徽章。
+	##
+	## 为什么要有它：`card_paper.png` 的下半自带四条装饰金线（归一化 0.756 / 0.763 /
+	## 0.788 / 0.849 附近），文字直接压上去会被「金线穿字」—— 小卡上看不出来，奖励
+	## 三选一那种 216×260 的大卡上字又大又密，金线正好横穿卡名与效果行，非常难认。
+	## 用户口径：「白底上描边的字难以辨认 → 放弃描边，改用羊皮卷/木板做底」。
+	##
+	## ⚠️ 木板的条数按**高度**算（2~4 条），条与条之间插值深浅 —— 同一张卡每帧都长一样
+	##   （**不用 randf**：随机纹理会逐帧抖动，看起来像贴纸闪）。
+	var pad_in: float = maxf(2.0, 1.2 * k)
+	var top: float = maxf(sep_y, text_top - pad_in)
+	var bottom: float = minf(rect.end.y - pad, block_bottom + pad_in)
+	if bottom - top < 3.0:
+		return
+	var r := Rect2(rect.position.x + pad * 0.4, top,
+			maxf(rect.size.x - pad * 0.8, 0.0), bottom - top)
+	if r.size.x < 6.0:
+		return
+	var planks: int = clampi(int(round(r.size.y / 30.0)) + 1, 2, 4)
+	var ph: float = r.size.y / float(planks)
+	for i in planks:
+		var t: float = float(i) / float(planks - 1)
+		canvas.draw_rect(Rect2(r.position.x, r.position.y + i * ph, r.size.x, ph + 1.0),
+				UiTheme.TEXT_BACK_A.lerp(UiTheme.TEXT_BACK_B, t), true)
+		if i > 0:
+			canvas.draw_rect(Rect2(r.position.x, r.position.y + i * ph, r.size.x,
+					maxf(0.8, 0.9 * k)), UiTheme.TEXT_BACK_SEAM, true)
 
 
 static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float, pad: float,
@@ -212,8 +245,10 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 		canvas.draw_rect(box, plate)
 		var glyph := kind_col
 		glyph.a = 0.34
-		_draw_center(canvas, font_bold, int(box.size.y * 0.86), card.card_name.substr(0, 1),
-				box.get_center(), glyph)
+		# R164：水印字号按**短边**算 —— 旧写法只看高度，奖励三选一那种大卡上字号能到 150px，
+		# 会从卡图窗顶/底溢出去（用户口径「卡图上的文字和卡面的布局对应不上」）。
+		_draw_center(canvas, font_bold, int(minf(box.size.x, box.size.y) * 0.9),
+				card.card_name.substr(0, 1), box.get_center(), glyph)
 
 
 static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,
@@ -226,8 +261,17 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	## 58×70 / 98×119 这类尺寸上光是这两行就把文字区吃光，效果文字永远轮不到。
 	## ⚠️ 效果文字**只在排得下完整一行时**才画 —— 小卡上排「半行字 + 省略号」比不排
 	## 更难看，而且玩家根本读不到信息。
-	var bottom: float = text_zone_bottom(rect)
-	var top: float = sep_y + maxf(1.5, 1.2 * kt)
+	##
+	## ⚠️ R164 版式重写（用户口径「文字和卡面的布局对应不上，白底上描边的字难以辨认」）：
+	##   ① **所有行共用一个基线基准**：卡名基线 = `top + ascent`，下面每行依次 +`row_h`。
+	##      旧版卡名经 `_draw_center`（内部 **+0.36 字号**）下移，而「种类」直接 `draw_string`
+	##      不下移 —— 两条基线只差 `row_h - 0.36×字号`，大卡上卡名与种类**必然叠字**
+	##      （奖励三选一 216×260 实测：字糊成一片），效果首行也一起挤上来。
+	##   ② **先算「画到哪一行」，再铺底衬**：底衬（`draw_text_backing`）按文字块的
+	##      实际高度现画，上不盖分隔金条、下不吃底部数值徽章 —— 文字与卡面因此对得上。
+	##   ③ 文字**一律不描边**：可读性由底衬提供（羊皮卷/木板），不靠描边撑对比度。
+	var bottom: float = rect.end.y - pad          # 可用下界（卡框内沿）
+	var top: float = sep_y + maxf(1.5, 1.2 * kt)  # 文字区上沿 = 卡名墨顶
 	if bottom - top < 6.0:
 		return
 	# ⚠️ R122：横置时卡图铺满整卡 → 名字/种类直接压在图上。铺一层**浅色薄纱**，
@@ -241,70 +285,72 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	var kind_col: Color = UiTheme.kind_color(card.kind)
 	# ⚠️ 行距必须用**字体真实行高**（`get_height`），不能按字号估：
 	#   雅黑 9px 的行高是 13（ascent 10 + descent 3），而旧写法 `sz * 1.12 = 10.08 < 13`
-	#   → 卡名与种类的墨迹**必然叠在一起**（R115 出图实测：手牌上「木栅栏 / 工事」
-	#   糊成一片，战场小卡上也叠着，只是叠得少些）。两个字体取大者，粗体度量可能略不同。
+	#   → 两行墨迹必然叠（R115 出图实测：手牌上「木栅栏 / 工事」糊成一片）。
 	var row_h: float = maxf(font.get_height(sz), font_bold.get_height(sz))
-	# 卡名（粗体、墨色）：基线 = `top + ascent`，让首行**墨顶正好贴住**文字区上沿
-	# （旧写法 `top + sz * 0.88` 偏低约 1.2px，白占了下面那行的空间）。
-	# 居中短行的下界用**卡框内沿**：它居中且短，撞不到左右角上骑着的数值；
-	# 左对齐、横跨整卡宽的效果文字才必须让开数值（继续用 text_zone_bottom）。
-	var line_bottom: float = rect.end.y - pad
-	var y: float = top + float(font_bold.get_ascent(sz)) - sz * 0.36
-	_draw_center(canvas, font_bold, sz, _ellipsize(font_bold, card.card_name, maxw, sz),
-			Vector2(cx, y), UiTheme.INK_900)
-	# 种类 · 字段（一行两段，分别着色；整体居中）
-	# ⚠️ 不硬编码任何字段：画的就是 `card.affix_line()`，所以「过载给某张牌加了疾行」
-	# 这类**后续赋予**的字段也会自动出现在卡面上。
-	y += row_h
-	if y + sz * 0.36 + float(font.get_descent(sz)) > line_bottom:
-		return
+	var asc: float = float(font.get_ascent(sz))
+	var asc_b: float = float(font_bold.get_ascent(sz))
+	var desc: float = float(font.get_descent(sz))
 	var meta_a: String = card.kind
 	# R118：战场卡面（`on_board`）只写**上场之后仍然有用**的字段 —— 交换 / 幻影是
 	# 「打出那一刻」的规则，卡一落到格子上就再无作用，继续写在这里只会误导玩家。
 	# ⚠️ 判空不能用 `card.affixes.is_empty()`：过滤之后**可能整段为空**（只剩种类的卡）。
 	var affix_txt: String = card.field_affix_line() if on_board else card.affix_line()
 	var meta_b: String = (" · " + affix_txt) if affix_txt != "" else ""
-	var wa: float = font.get_string_size(meta_a, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
-	var wb: float = font.get_string_size(meta_b, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
-	# ⚠️⚠️ 这里踩过一个**让整个游戏未响应**的坑，改这一行前务必读完：
-	#   起初写的是 `meta_b = meta_b.substr(0, meta_b.length() - 1) + "…"` ——
-	#   去掉最后一个字符再补一个 `…`，**长度恒定不变**；而且末位一旦是 `…`，
-	#   下一轮会得到**完全相同的字符串**（末位被换成 `…`，再砍一位又补回 `…`）。
-	#   于是只要「种类 + 长字段」一开始就超宽，这个循环**永远退不出来**。
-	#   它在 `_draw()` 里 → 整帧不返回 → 游戏直接未响应。图鉴会画全部 198 张卡
-	#   （里面有带字段的），所以必中、必卡死，表现为「一打开就卡住」。
-	#   两条保险：① 每次砍 **2** 个字符（长度严格递减）；② 再加一个硬上限兜底
-	#   —— 绘制代码里的循环**绝不允许**只依赖「条件终将不成立」来退出。
-	var meta_guard := 0
-	while meta_b != "" and wa + wb > maxw and meta_b.length() > 2 and meta_guard < 64:
-		meta_b = meta_b.substr(0, meta_b.length() - 2) + "…"
-		wb = font.get_string_size(meta_b, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
-		meta_guard += 1
-	var mx: float = cx - (wa + wb) / 2.0
-	canvas.draw_string(font, Vector2(mx, y), meta_a,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, sz, kind_col)
-	if meta_b != "":
-		canvas.draw_string(font, Vector2(mx + wa, y), meta_b,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, sz, UiTheme.STAT_POWER)
-	# 效果文字（左对齐折行）。空文本 / 排不下则整块跳过。
 	var eff: String = CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
-	if eff == "":
-		return
 	var line_h: float = sz * 1.16
-	var eff_top: float = y + sz * 0.42
-	var lines_fit: int = int(floor((bottom - eff_top) / line_h))
-	if lines_fit < 1:
-		return
-	var lines := wrap_text(font, eff, maxw, sz)
-	var draw_n: int = mini(lines.size(), lines_fit)
-	var ly: float = eff_top + sz * 0.80
-	for i in draw_n:
-		var t: String = lines[i]
-		if i == draw_n - 1 and lines.size() > draw_n:
+	# ── 第一遍：只算基线，不画 ──────────────────────────────────────────
+	var base_name: float = top + asc_b                       # 卡名基线
+	var base_meta: float = base_name + row_h                 # 种类 · 字段基线
+	var has_meta: bool = base_meta + desc <= bottom
+	var eff_base0: float = base_meta + row_h                 # 效果首行基线
+	var eff_n: int = 0
+	var eff_lines: Array = []
+	if eff != "":
+		eff_n = int(floor((bottom - desc - eff_base0) / line_h)) + 1
+		if eff_n > 0:
+			eff_lines = wrap_text(font, eff, maxw, sz)
+			eff_n = mini(eff_lines.size(), eff_n)
+	# 文字块的墨迹下沿（底衬按它定尺寸 —— 贴着文字，不留空档）
+	var block_bottom: float = base_name + desc
+	if has_meta:
+		block_bottom = base_meta + desc
+	if eff_n > 0:
+		block_bottom = eff_base0 + line_h * (eff_n - 1) + desc
+	# ── 底衬（R164：羊皮卷/木板，程序绘制，**无边框**）──
+	if not is_tapped:
+		draw_text_backing(canvas, rect, sep_y, k, pad, base_name - asc_b, block_bottom)
+	# ── 第二遍：画字（**不描边**）───────────────────────────────────────
+	_draw_center(canvas, font_bold, sz, _ellipsize(font_bold, card.card_name, maxw, sz),
+			Vector2(cx, base_name - sz * 0.36), UiTheme.INK_900)
+	if has_meta:
+		var wa: float = font.get_string_size(meta_a, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
+		var wb: float = font.get_string_size(meta_b, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
+		# ⚠️⚠️ 这里踩过一个**让整个游戏未响应**的坑，改这一行前务必读完：
+		#   起初写的是 `meta_b = meta_b.substr(0, meta_b.length() - 1) + "…"` ——
+		#   去掉最后一个字符再补一个 `…`，**长度恒定不变**；而且末位一旦是 `…`，
+		#   下一轮会得到**完全相同的字符串**（末位被换成 `…`，再砍一位又补回 `…`）。
+		#   于是只要「种类 + 长字段」一开始就超宽，这个循环**永远退不出来**。
+		#   它在 `_draw()` 里 → 整帧不返回 → 游戏直接未响应。图鉴会画全部卡
+		#   （里面有带字段的），所以必中、必卡死，表现为「一打开就卡住」。
+		#   两条保险：① 每次砍 **2** 个字符（长度严格递减）；② 再加一个硬上限兜底
+		#   —— 绘制代码里的循环**绝不允许**只依赖「条件终将不成立」来退出。
+		var meta_guard := 0
+		while meta_b != "" and wa + wb > maxw and meta_b.length() > 2 and meta_guard < 64:
+			meta_b = meta_b.substr(0, meta_b.length() - 2) + "…"
+			wb = font.get_string_size(meta_b, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
+			meta_guard += 1
+		var mx: float = cx - (wa + wb) / 2.0
+		canvas.draw_string(font, Vector2(mx, base_meta), meta_a,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, sz, kind_col)
+		if meta_b != "":
+			canvas.draw_string(font, Vector2(mx + wa, base_meta), meta_b,
+					HORIZONTAL_ALIGNMENT_LEFT, -1, sz, UiTheme.STAT_POWER)
+	for i in eff_n:
+		var t: String = eff_lines[i]
+		if i == eff_n - 1 and eff_lines.size() > eff_n:
 			t = _ellipsize(font, t + "…", maxw, sz)
-		canvas.draw_string(font, Vector2(rect.position.x + pad, ly), t,
+		canvas.draw_string(font, Vector2(rect.position.x + pad, eff_base0 + line_h * i), t,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, sz, UiTheme.INK_600)
-		ly += line_h
 
 
 static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, rect: Rect2,
