@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 210,
-			"图鉴 = 209 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161**；实际 %d）"
+	check(repo.all_cards().size() == 211,
+			"图鉴 = 210 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱·双重陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 162 and grp_enemy.size() == 48,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 162 / 46；R149 +3 / R150 +1 / R152 +2 / R161 +1 张敌方卡）"
+	check(grp_player.size() == 162 and grp_enemy.size() == 49,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 162 / 49；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 张敌方卡）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -4473,8 +4473,8 @@ func _init() -> void:
 
 	# ---- 新关卡：使魔鸭群 / 骑士冲锋 / 队长与巫师 / 爆炎鸭阵 / 白魔法师护阵 ----
 	var lvls := GameLevels.builtin_levels()
-	check(lvls.size() == 29, "内置关卡共 29 关（7 普简 + 8 普难 + 5 精英简单 + 4 精英困难 + 5 Boss；"
-			+ "R135 太阳熔炉进第二层普通困难 / R149 钢铁要塞进第二层精英困难 / R150 赫菲斯托斯工坊进第二层 Boss"
+	check(lvls.size() == 30, "内置关卡共 30 关（7 普简 + 8 普难 + 5 精英简单 + 5 精英困难 + 5 Boss；"
+			+ "R135 太阳熔炉进第二层普通困难 / R149 钢铁要塞·R162 阿斯克勒庇厄斯进第二层精英困难 / R150 赫菲斯托斯工坊进第二层 Boss"
 			+ " / R158 量产流水线·量产铁砧进第二层普通简单、双机炮阵进第二层普通困难）")
 	var lva: Dictionary = _level_named("使魔鸭群")
 	check(str(lva["name"]) == "使魔鸭群"
@@ -4833,8 +4833,8 @@ func _init() -> void:
 	# ---- 分层：各层内容互不串层（第一层 [1] / 第二层 [2]，各自专属） ----
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_DEFAULT).size() == lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
 			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关）" % [lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(), GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size()])
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 14,
-			"第二层自带 14 关（太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法师护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层）")
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 15,
+			"第二层自带 15 关（太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法师护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层）")
 	# 内容池：第一层 = [1]；第二层 = [2]（各层内容互不串层）
 	var cl1 := GameLayers.content_layers(GameLayers.LAYER_DEFAULT)
 	var cl2 := GameLayers.content_layers(GameLayers.LAYER_TWO)
@@ -4844,8 +4844,8 @@ func _init() -> void:
 	check(GameLayers.content_layers(9).is_empty(), "未配置的层：内容池为空（拿不到任何内容）")
 	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 7,
 			"第二层普通池 7 关（专属：普通简单 3 + 普通困难 4；R135 太阳熔炉 / R158 量产流水线·量产铁砧·双机炮阵）")
-	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 5,
-			"第二层精英池 5 关（专属：精英简单 3 + 精英困难 2；R149 钢铁要塞 / R161 赫尔墨斯的试炼）")
+	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 6,
+			"第二层精英池 6 关（专属：精英简单 3 + 精英困难 3；R149 钢铁要塞 / R161 赫尔墨斯的试炼 / R162 阿斯克勒庇厄斯的试炼）")
 	var l2_battle_pool: Array[Dictionary] = []
 	l2_battle_pool.append_array(GameLevels.normal_pool(GameLayers.LAYER_TWO))
 	l2_battle_pool.append_array(GameLevels.elite_pool(GameLayers.LAYER_TWO))
@@ -6804,8 +6804,8 @@ func _init() -> void:
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 55
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
-			and int(dr_cls_count.get("敌人", 0)) == 48,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 55 / 36 / 48；R161 +1）"
+			and int(dr_cls_count.get("敌人", 0)) == 49,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 55 / 36 / 49；R161 +1 / R162 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -15259,6 +15259,49 @@ func _init() -> void:
 	engR161._begin_turn(GameEngine.SIDE_OPPONENT)
 	check(pR161.acts_left == 4 and pR161.action_growth_extra == 4,
 			"R161 赫尔墨斯第 6 个回合开始：再次成长，acts_left = 4")
+
+	# ---- R162：阿斯克勒庇厄斯 + 护甲积攒 ----
+	var r162_asc := repo.get_card(9141)
+	check(r162_asc != null and r162_asc.card_name == "阿斯克勒庇厄斯"
+			and r162_asc.kind == "盟友" and r162_asc.power == 12 and r162_asc.health == 80
+			and r162_asc.attack_range == 1 and r162_asc.move_speed == 1
+			and r162_asc.traits.has(GameEngine.ASCLEPIUS_TRAIT),
+			"R162 阿斯克勒庇厄斯卡面：12/80，程 1 速 1，带护甲积攒 trait")
+	var r162_lvl := _level_named("阿斯克勒庇厄斯的试炼")
+	check(str(r162_lvl["name"]) == "阿斯克勒庇厄斯的试炼"
+			and int(r162_lvl["tier"]) == GameLevels.TIER_ELITE_HARD
+			and GameLevels.layer_of(r162_lvl) == GameLayers.LAYER_TWO
+			and (r162_lvl["enemy_units"] as Array).size() == 1
+			and int(r162_lvl["enemy_units"][0][0]) == 9141
+			and Vector2i(r162_lvl["enemy_units"][0][6]) == Vector2i(0, 1),
+			"R162 阿斯克勒庇厄斯的试炼：第二层·精英困难，1 只阿斯克勒庇厄斯在后排中央（0,1）")
+
+	var engR162 := _new_engine()
+	# 先放一只友方单位用来挨打 / 验证吸收（树人 8003，8 血）
+	var r162_ally := repo.get_card(8003)
+	engR162.state.place(r162_ally, Vector2i(5, 1), GameEngine.SIDE_SELF)
+	engR162.state.place(r162_asc, Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var pR162: Placement = engR162.state.unit_at(Vector2i(0, 1))
+	var allyR162: Placement = engR162.state.unit_at(Vector2i(5, 1))
+	check(pR162.armor == 0, "R162 阿斯克勒庇厄斯上场：初始护甲 0")
+	# 第 1 个敌方回合开始：获得 16 护甲
+	engR162._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(pR162.armor == 16, "R162 第 1 回合开始：获得 16 护甲")
+	# 我方攻击它：护甲应先吸收，生命不掉
+	engR162._hit_unit(pR162, 10, "测试伤害", false, false)
+	check(pR162.armor == 6 and pR162.health == 80,
+			"R162 护甲吸收 10 点伤害：剩余护甲 6，生命仍为 80")
+	# 第 2 个敌方回合开始：已有护甲（当前剩余 6）→ 清零并造成 6 点伤害，然后力量 +1
+	engR162._begin_turn(GameEngine.SIDE_OPPONENT)
+	allyR162 = engR162.state.unit_at(Vector2i(5, 1))
+	check(pR162.armor == 16 and pR162.effective_power() == 13
+			and allyR162 != null and allyR162.health == 2,
+			"R162 第 2 回合开始：存爆 6 护甲伤害 → 树人 8→2，力量 +1（现 13），再获得 16 护甲")
+	# 第 3 个回合：再次存爆 16 护甲伤害 → 树人阵亡，力量继续成长
+	engR162._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(pR162.effective_power() == 14 and pR162.armor == 16
+			and engR162.state.unit_at(Vector2i(5, 1)) == null,
+			"R162 第 3 回合开始：存爆 16 护甲伤害 → 树人阵亡，力量 14，护甲回满 16")
 
 	RunState.player_class = r91_saved_cls
 

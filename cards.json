@@ -4318,6 +4318,27 @@
       "target_mode": "none",
       "color": "金",
       "image": ""
+    },
+    {
+      "id": 9141,
+      "name": "阿斯克勒庇厄斯",
+      "kind": "盟友",
+      "cost": 8,
+      "power": 12,
+      "health": 80,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "护甲积攒"
+      ],
+      "affixes": [],
+      "effect_text": "每回合获得16护甲。若获得前已有护甲，则清零护甲并对随机敌方单位造成等量伤害，之后力量+1。",
+      "target_mode": "none",
+      "color": "金",
+      "image": ""
     }
   ]
 }

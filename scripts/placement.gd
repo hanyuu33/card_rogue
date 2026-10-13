@@ -47,6 +47,8 @@ var upgrade_speed: int = 0   # 改造加移速累计（R101，重甲战车）：
 # 「堡垒」（8034，trait「改造生命层」）：**每层 +3 生命**（R87）——
 # 加的血并进 `upgrade_hp`，于是离场还原走的是同一条路。
 var first_hit_shield: bool = false   # 能量屏障（8033，R87）：**本场战斗中第一次受伤免掉**
+## 「护甲」（R162，阿斯克勒庇厄斯 9141）：临时护盾，受到伤害时优先代替生命扣除；只记 Placement。
+var armor: int = 0
 var regen: int = 0           # 自我修复（8035，R87）：每回合结束回复的生命（离场还原）
 ## 「无限装甲」（8038，R89，trait「改造供能」）：**本回合是否已经供过能**。
 ## 记的是 `GameEngine.turn_total`（当初触发时的值），-1 = 还没触发过。
@@ -173,6 +175,8 @@ func status_entries() -> Array[Dictionary]:
 		out.append({"label": "自我修复：每回合回复 %d" % regen, "col": COL_B, "kind": "buff"})
 	if first_hit_shield:
 		out.append({"label": "护盾：免疫下一次伤害", "col": COL_B, "kind": "buff"})
+	if armor > 0:
+		out.append({"label": "护甲：%d" % armor, "col": Color("2a9d8f"), "kind": "buff"})
 	if guarding:
 		out.append({"label": "守护：代我方承受伤害", "col": COL_B, "kind": "buff"})
 	if acts_left > 1:
@@ -221,6 +225,8 @@ func status_badges() -> Array[Dictionary]:
 		out.append({"text": "改造 ×%d" % upgrade_stacks, "col": Color("1d6fb8")})
 	if first_hit_shield:
 		out.append({"text": "护盾", "col": Color("2f8f4f")})
+	if armor > 0:
+		out.append({"text": "护甲 %d" % armor, "col": Color("2a9d8f")})
 	if poison_left > 0:
 		out.append({"text": "中毒 %d" % poison_left, "col": Color("5a9e2f")})
 	if rooted > 0:

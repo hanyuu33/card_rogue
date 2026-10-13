@@ -4308,6 +4308,9 @@ func _on_hover(pos: Vector2) -> void:
 			# R87：护盾 / 自我修复都是隐藏状态，悬停必须写明「为什么它没掉血」。
 			if p.first_hit_shield:
 				tip += "　🛡 能量屏障（**第一次受到的伤害为 0**，用完消失）"
+			# R162：护甲是临时护盾，悬停必须写明剩余量。
+			if p.armor > 0:
+				tip += "　🛡 护甲 %d（受到伤害时优先代替生命扣除）" % p.armor
 			if p.regen > 0:
 				tip += "　✚ 自我修复（每回合结束回 %d 血）" % p.regen
 			if p.upgrade_stacks > 0:

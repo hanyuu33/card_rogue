@@ -134,6 +134,14 @@ const CANNON_TRAIT:= "巨炮"           # 只做标记，破坏次数取卡面 v
 const ACTION_GROWTH_TRAIT:= "行动力成长"
 const ACTION_GROWTH_PERIOD:= 3
 
+# ---- R162：阿斯克勒庇厄斯「护甲积攒」----
+# 每回合开始时获得 ASCLEPIUS_ARMOR 点护甲；若获得前已有护甲，则清零并对随机敌方单位
+# 造成等量伤害，然后力量 +1。护甲只记 Placement，受到伤害时优先代替生命扣除。
+const ASCLEPIUS_ID:= 9141
+const ASCLEPIUS_TRAIT:= "护甲积攒"
+const ASCLEPIUS_ARMOR:= 16
+const ASCLEPIUS_GROWTH_ATK:= 1
+
 # ---- R159：AI 角色分类（按卡面能力，不走复杂收益计算）----
 # 分类只读 card/traits/kind/value，不依赖 Placement 状态；结果用于目标优先级与移动倾向。
 const AI_ROLE_TANK:= "tank"               # 嘲讽 / 工事 / 血厚低速：优先抗线，最后才打
@@ -1204,6 +1212,7 @@ func _begin_turn(side: String) -> void :
 		_mage_growth(SIDE_SELF)
 		_familiar_growth(SIDE_SELF)   # 使魔之力 9115：回合开始使魔鸭子 +1
 		_apply_mech_growth(SIDE_SELF)
+		_asclepius_armor_tick(SIDE_SELF)   # R162：护甲积攒结算
 		# ── ② R122：**召唤**排在成长之后 ──
 		# 「回合开始成长」算的是**这一刻已在场**的单位；刚召唤出来的单位这一回合才上场，
 		# 成长结算时它还不存在 → 它不该吃到本回合的这一口（用户：召唤的使魔
@@ -1263,6 +1272,7 @@ func _begin_turn(side: String) -> void :
 		_mage_growth(SIDE_OPPONENT)
 		_familiar_growth(SIDE_OPPONENT)   # 使魔之力 9115：回合开始使魔鸭子 +1
 		_apply_mech_growth(SIDE_OPPONENT)
+		_asclepius_armor_tick(SIDE_OPPONENT)   # R162：护甲积攒结算
 		# ── ② R122：召唤排在成长之后（同我方）──
 		_summon_familiars(SIDE_OPPONENT)
 		_effect_summons(SIDE_OPPONENT)
@@ -1533,6 +1543,40 @@ func _cannon_fire(side: String) -> void :
 		_log("充能巨炮：破坏 %s（%s）" % [q.card.card_name, t])
 		action.emit("cannon_fire", {"cell": t, "card": q.card, "side": foe})
 		_destroy(t)
+
+
+func _asclepius_armor_tick(side: String) -> void:
+	## R162：阿斯克勒庇厄斯（9141）的「护甲积攒」。
+	## 该方回合开始时：获得 16 护甲；若获得前已有护甲，则清零并对随机敌方单位造成等量伤害，
+	## 然后力量 +1。伤害走 `_hit_unit`（与技能同口径，非攻击），击杀记功等联动与别处一致。
+	var foe := SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	for cell: Vector2i in state.board:
+		var p: Placement = state.board[cell]
+		if p.owner != side or p.card.id != ASCLEPIUS_ID:
+			continue
+		if p.armor > 0:
+			var blast := p.armor
+			p.armor = 0
+			var targets: Array[Vector2i] = []
+			for c: Vector2i in state.board:
+				if state.board[c].owner == foe:
+					targets.append(c)
+			if not targets.is_empty():
+				var t: Vector2i = targets[rng.randi_range(0, targets.size() - 1)]
+				var q: Placement = state.unit_at(t)
+				_log("护甲积攒：%s 爆发 %d 点伤害 → %s" % [p.card.card_name, blast, q.card.card_name])
+				action.emit("armor_blast", {"cell": cell, "target": t, "card": p.card,
+						"damage": blast, "side": side})
+				_hit_unit(q, blast, "护甲爆发", false, false)
+				_destroy_dead()   # 存爆击杀需要即时清理并结算溢出/击杀记功
+			else:
+				_log("护甲积攒：%s 准备爆发，但对方场上没有单位" % p.card.card_name)
+			p.atk_buff += ASCLEPIUS_GROWTH_ATK
+			_log("护甲积攒：%s 力量 +%d（现 %d）" % [p.card.card_name, ASCLEPIUS_GROWTH_ATK, p.effective_power()])
+		p.armor += ASCLEPIUS_ARMOR
+		_log("护甲积攒：%s 获得 %d 护甲（现 %d）" % [p.card.card_name, ASCLEPIUS_ARMOR, p.armor])
+		action.emit("armor_gain", {"cell": cell, "card": p.card, "side": side,
+				"armor": p.armor, "gained": ASCLEPIUS_ARMOR})
 
 
 func _max_buff(side: String) -> int:
@@ -6366,6 +6410,16 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 			_log("%s：技能伤害 %d → %d（量产型赫利俄斯光环，向上取整）" % [p.card.card_name, mb, dmg])
 	if p != null and p.owner == SIDE_SELF:
 		dmg = _relic_damage_taken(dmg)
+	# R162：护甲优先吸收伤害（只扣护甲、不扣生命；吸收不完的才扣 HP）。
+	if p != null and p.armor > 0 and dmg > 0:
+		var absorbed := mini(dmg, p.armor)
+		p.armor -= absorbed
+		dmg -= absorbed
+		_log("%s 的护甲吸收 %d 点伤害（剩余护甲 %d）" % [p.card.card_name, absorbed, p.armor])
+		action.emit("armor_absorb", {"cell": _cell_of(p), "card": p.card, "side": p.owner,
+				"absorbed": absorbed, "remaining": p.armor})
+		if dmg <= 0:
+			return 0
 	return dmg
 
 
@@ -8871,6 +8925,8 @@ func _ai_role(card: CardData) -> String:
 	if traits.has("亡语") or "每回合开始时，力量" in card.effect_text or "每过一个自己的回合" in card.effect_text:
 		return AI_ROLE_GROWTH
 	if traits.has(ACTION_GROWTH_TRAIT):   # R161：赫尔墨斯——越拖行动次数越多
+		return AI_ROLE_GROWTH
+	if traits.has(ASCLEPIUS_TRAIT):   # R162：阿斯克勒庇厄斯——越拖越强且存爆
 		return AI_ROLE_GROWTH
 	if card.power >= 7:
 		return AI_ROLE_BRUISER

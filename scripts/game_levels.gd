@@ -75,15 +75,15 @@ static func level_names() -> Array[String]:
 
 static func builtin_levels() -> Array:
 	## 按分级从低到高：普通简单×7（第一层 4 + 第二层 3）→ 普通困难×8（第一层 4 + 第二层 4）→
-	## 精英简单×5（第一层 2 + 第二层 3）→ 精英困难×4（第一层 2 + 第二层 2）→
-	## Boss×5（第一层 3 + 第二层 2）。合计 29 关。
+	## 精英简单×5（第一层 2 + 第二层 3）→ 精英困难×5（第一层 2 + 第二层 3）→
+	## Boss×5（第一层 3 + 第二层 2）。合计 30 关。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_frost_line(), _assembly_line(), _mass_anvil(),
 		_knight_charge(), _wizard(), _white_mage_guard(), _night_ducks(),
 			_sun_forge(), _hecaton(), _undead_legion(), _twin_cannon(),
 		_captain(), _duck_kiln(), _breath_charge(), _hermes(), _dragon_nest(),
-		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(),
+		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(), _asclepius(),
 		_boss_dragon(), _boss_demon_duck(), _boss_duck_darkside(),
 			_mech_duck_boss(), _hephaestus()]
 
@@ -771,6 +771,30 @@ static func _hermes() -> Dictionary:
 		"starting_hand": 0,
 		"enemy_units": [
 			[9140, "赫尔墨斯", 10, 80, 1, 1, Vector2i(2, 1)],
+		],
+		"tutorial": [],
+	}
+
+static func _asclepius() -> Dictionary:
+	## 第二层·精英敌人-困难（R162）：后排中央一只阿斯克勒庇厄斯
+	## （9141，12/80 程1 速1，带「护甲积攒」）。
+	## 每回合开始时获得 16 护甲；若获得前已有护甲，则清零护甲并对随机敌方单位
+	## 造成等量伤害，之后力量 +1。越拖攻击力越高，且护甲会不断「存爆」。
+	return {
+		"name": "阿斯克勒庇厄斯的试炼",
+		"key": "asclepius",
+		"tier": TIER_ELITE_HARD,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"enemy_growth": LAYER2_GROWTH,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9141, "阿斯克勒庇厄斯", 12, 80, 1, 1, Vector2i(0, 1)],
 		],
 		"tutorial": [],
 	}
