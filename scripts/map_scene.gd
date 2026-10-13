@@ -167,6 +167,10 @@ func _ready() -> void:
 		if RunState.run_active and RunState.pending_deck_edit != "":
 			SceneFx.goto("res://scenes/deck_edit.tscn", true)
 			return
+	# 续档检查点：已确定停留在地图（没有转去道具 / 卡组场景）→ 存一份本地存档。
+	# ⚠️ 只在真实游玩时存：回放中（ReplayLog.playing）/ 截图（_shot）/ headless（测试探针）都不写。
+	if RunState.run_active and not ReplayLog.playing and not _shot and DisplayServer.get_name() != "headless":
+		RunSave.save_run()
 	# R148：上栏原来挂着「回到标题 / 战斗记录 / 查看卡组」三个 chip —— 全部收进
 	# Esc 菜单（点齿轮或按 Esc 打开），上栏只留**一个齿轮**。
 	_menu_btn = Button.new()

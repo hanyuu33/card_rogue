@@ -34,6 +34,14 @@ func _ready() -> void:
 	$Buttons.add_child(rp_btn)
 	$Buttons.move_child(rp_btn, $Buttons.get_child_count() - 2)
 	rp_btn.pressed.connect(_on_replays)
+	# 续档入口（"继续游戏"）：有本地存档才显示，放在「开始」之后。
+	var cont_btn := Button.new()
+	cont_btn.text = "继续游戏"
+	$Buttons.add_child(cont_btn)
+	$Buttons.move_child(cont_btn, 1)
+	cont_btn.pressed.connect(_on_continue)
+	cont_btn.pressed.connect(func(): sfx.play("click"))
+	cont_btn.visible = RunSave.has_save()
 	for b: Button in [$Buttons/StartBtn, $Buttons/GalleryBtn, $Buttons/QuitBtn]:
 		b.pressed.connect(func(): sfx.play("click"))
 	rp_btn.pressed.connect(func(): sfx.play("click"))
@@ -42,6 +50,7 @@ func _ready() -> void:
 	UiTheme.apply_button($Buttons/StartBtn, true)
 	UiTheme.apply_button($Buttons/GalleryBtn, false)
 	UiTheme.apply_button(rp_btn, false)
+	UiTheme.apply_button(cont_btn, false)
 	UiTheme.apply_button($Buttons/QuitBtn, false)
 	_build_difficulty_row()
 	# 回放中途回到标题（整局播完 / 中途退出）→ 停止回放状态
@@ -211,7 +220,18 @@ func _on_start() -> void:
 	## 开始肉鸽 run：先选角色（角色决定初始卡组追加卡 + 战斗赠品道具）→
 	## 满血 + 初始卡组 + 生成 14 层地图（第一层，含第 6 层宝箱层 + 第 9 层固定休息层）→ 进冒险地图。
 	## 地图层级决定本局出现的战斗关卡与事件（见 GameLayers）。
+	RunSave.clear_save()   # 开新局 = 弃旧档（旧的"继续游戏"存档随之作废）
 	SceneFx.goto("res://scenes/class_pick.tscn")
+
+
+func _on_continue() -> void:
+	## 继续游戏：读本地存档恢复当前局 → 进冒险地图（地图场景按存档状态自行路由）。
+	if ReplayLog.playing:
+		ReplayLog.stop_playback()
+	if not RunSave.load_run():
+		push_warning("RunSave：继续游戏读档失败，留在标题")
+		return
+	SceneFx.goto("res://scenes/map.tscn")
 
 
 func _on_gallery() -> void:

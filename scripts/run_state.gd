@@ -288,6 +288,12 @@ static func end_run() -> void:
 	pending_event = ""
 
 
+	# 续档：run 结束（通关 / 失败 / 放弃）→ 本地存档随之失效。
+	# ⚠️ 回放中不清：回放末尾同样会调 end_run，此时清档会删掉玩家真实的续档存档。
+	if not ReplayLog.playing:
+		RunSave.clear_save()
+
+
 static func advance_layer(layer: int) -> int:
 	## 进入下一层（打败上一层 Boss 后由 battle_scene 调用）：
 	##   * **恢复所有生命**（第二层起始节点：满血重新出发）；
