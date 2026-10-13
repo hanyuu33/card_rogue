@@ -3857,6 +3857,78 @@ func _init() -> void:
 	check(eng16f.state.unit_at(q16f[0]).card == front_mon,
 			"AI 队列前方优先：队首确实是更前方的敌人")
 
+	# ---- R159：AI 角色分类与目标/移动优先级 ----
+	var engR159 := _new_engine([], 20, 20)
+	var r159_knight := repo.get_card(9001)
+	check(engR159._ai_role(r159_knight) == GameEngine.AI_ROLE_ASSAULT,
+			"R159 AI角色：鸭子骑士（速2）-> assault")
+	var r159_wiz := repo.get_card(9008)
+	check(engR159._ai_role(r159_wiz) == GameEngine.AI_ROLE_SNIPER,
+			"R159 AI角色：鸭子巫师（程2 力8）-> sniper")
+	var r159_helios := repo.get_card(9130)
+	check(engR159._ai_role(r159_helios) == GameEngine.AI_ROLE_TANK,
+			"R159 AI角色：赫利俄斯（工事）-> tank")
+	var r159_mage := repo.get_card(9021)
+	check(engR159._ai_role(r159_mage) == GameEngine.AI_ROLE_SUPPORT,
+			"R159 AI角色：白魔法师（治疗）-> support")
+	var r159_night := repo.get_card(9027)
+	check(engR159._ai_role(r159_night) == GameEngine.AI_ROLE_SNIPER,
+			"R159 AI角色：夜鸭（程2 力6 速2）-> sniper")
+	var r159_kiln := repo.get_card(9025)
+	check(engR159._ai_role(r159_kiln) == GameEngine.AI_ROLE_TANK,
+			"R159 AI角色：鸭子窑（工事+孵化）-> tank")
+	var r159_blaze := repo.get_card(9020)
+	check(engR159._ai_role(r159_blaze) == GameEngine.AI_ROLE_VOLATILE,
+			"R159 AI角色：爆炎鸭（亡语伤害）-> volatile")
+	var r159_heph := repo.get_card(9135)
+	check(engR159._ai_role(r159_heph) == GameEngine.AI_ROLE_SUMMONER,
+			"R159 AI角色：赫菲斯托斯（锻造召唤）-> summoner")
+
+	# R159：目标优先级 - 能一击击杀优先（脆皮在侧翼、壮汉在正前方）
+	var engR159a := _new_engine([], 20, 20)
+	engR159a.ai_enabled = true
+	engR159a.state.place(_card(9004, "前锋", "盟友", 1, 5, 30, 1, 1),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	engR159a.state.place(_card(8003, "脆皮农民", "盟友", 3, 3, 5, 1, 1),
+			Vector2i(4, 2), GameEngine.SIDE_SELF)   # 侧翼，射程 1 可达，5 血可被 5 攻秒杀
+	engR159a.state.place(_card(8003, "壮农民", "盟友", 3, 3, 10, 1, 1),
+			Vector2i(5, 1), GameEngine.SIDE_SELF)  # 正前方，10 血不可秒杀
+	engR159a.current_side = GameEngine.SIDE_OPPONENT
+	var r159_pick := engR159a._ai_pick_card_target(
+			engR159a.attack_targets(Vector2i(4, 1), GameEngine.SIDE_OPPONENT,
+					engR159a.state.unit_at(Vector2i(4, 1)).card),
+			engR159a.state.unit_at(Vector2i(4, 1)))
+	check(r159_pick == Vector2i(4, 2),
+			"R159 目标优先级：能一击击杀的脆皮农民（侧翼）优先于正前方壮农民")
+
+	# R159：目标优先级 - support 优先于 generic（都不能一击击杀时，support 在后方）
+	var engR159b := _new_engine([], 20, 20)
+	engR159b.ai_enabled = true
+	engR159b.state.place(_card(9004, "前锋", "盟友", 1, 5, 30, 1, 1),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	engR159b.state.place(_card(8003, "农民", "盟友", 3, 3, 10, 1, 1),
+			Vector2i(5, 1), GameEngine.SIDE_SELF)      # 正前方，更靠前
+	engR159b.state.place(CardData.from_dict(repo.get_card(9021).to_dict()),
+			Vector2i(4, 0), GameEngine.SIDE_SELF)   # 侧翼后方，support（用 repo 卡保留 traits）
+	engR159b.current_side = GameEngine.SIDE_OPPONENT
+	var r159_pick2 := engR159b._ai_pick_card_target(
+			engR159b.attack_targets(Vector2i(4, 1), GameEngine.SIDE_OPPONENT,
+					engR159b.state.unit_at(Vector2i(4, 1)).card),
+			engR159b.state.unit_at(Vector2i(4, 1)))
+	check(r159_pick2 == Vector2i(4, 0),
+			"R159 目标优先级：侧翼 support（白魔法师）优先于正前方普通农民")
+
+	# R159：移动阻挡判定 - 落到友军正前方同列会触发惩罚
+	var engR159c := _new_engine([], 20, 20)
+	engR159c.state.place(_card(9004, "前锋A", "盟友", 1, 5, 30, 1, 1),
+			Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+	engR159c.state.place(_card(9004, "前锋B", "盟友", 1, 5, 30, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	check(engR159c._ai_blocks_ally_path(Vector2i(3, 1), engR159c.state.unit_at(Vector2i(2, 0))) == 12,
+			"R159 阻挡判定：A 移动到 (3,1) 会挡在 B(2,1) 正前方")
+	check(engR159c._ai_blocks_ally_path(Vector2i(3, 0), engR159c.state.unit_at(Vector2i(2, 0))) == 0,
+			"R159 阻挡判定：A 移动到 (3,0) 不挡 B 的路")
+
 	# ---- HP 前的单位挡刀 + 溢出伤害 ----
 	# 站在对方后排（HP 前面那一行）的单位挡住了 HP 格：那一格不能再被越过直击。
 	var eng15 := _new_engine([], 20, 20)

@@ -128,6 +128,18 @@ const MASS_FORGE_TRAIT:= "量产锻造"   # 只做标记（与「锻造 / 铸造
 # （默认 1）—— 于是 value 有消费方，不是死数据。
 const CANNON_TRAIT:= "巨炮"           # 只做标记，破坏次数取卡面 value（默认 1）
 
+# ---- R159：AI 角色分类（按卡面能力，不走复杂收益计算）----
+# 分类只读 card/traits/kind/value，不依赖 Placement 状态；结果用于目标优先级与移动倾向。
+const AI_ROLE_TANK:= "tank"               # 嘲讽 / 工事 / 血厚低速：优先抗线，最后才打
+const AI_ROLE_SUPPORT:= "support"        # 治疗 / 成长光环 / 召唤引擎：活着就增益队友，优先击杀
+const AI_ROLE_SNIPER:= "sniper"          # 射程 ≥2 且有力：后排输出，优先清场
+const AI_ROLE_ASSAULT:= "assault"        # 高速 / 多动 / 穿行：积极前压、绕路
+const AI_ROLE_SUMMONER:= "summoner"      # 孵化 / 锻造 / 铸造 / 亡语召唤：击杀后可能生东西
+const AI_ROLE_VOLATILE:= "volatile"      # 亡语有伤害：能避免就不主动碰，必要时远距离点掉
+const AI_ROLE_GROWTH:= "growth"          # 每回合自己变强：越放越大，优先处理
+const AI_ROLE_BRUISER:= "bruiser"        # 高力量近战：正面威胁
+const AI_ROLE_GENERIC:= "generic"        # 其它
+
 
 const TAUNT_TRAIT:= "嘲讽"
 const SPELL_IMMUNE_TRAIT:= "法术免疫"
@@ -8725,18 +8737,75 @@ func run_ai_unit(cell: Vector2i) -> void :
 	_ai_act(cell, p)
 
 
+func _ai_role(card: CardData) -> String:
+	## R159：按卡面能力给单位贴一个 AI 角色（只读 card，不读 Placement）。
+	## 分类不精确计算收益，只按 traits / kind / 数值 / 文本做快速归类。
+	if card == null:
+		return AI_ROLE_GENERIC
+	var txt:= card.effect_text.to_lower()
+	var traits = card.traits
+	if traits.has(ASSASSIN_TRAIT):
+		return AI_ROLE_ASSAULT   # 暗杀者有专属 AI，这里只给它一个兜底标记
+	if traits.has(TAUNT_TRAIT) or card.is_fort() or (card.health >= 80 and card.move_speed == 0):
+		return AI_ROLE_TANK
+	if traits.has("孵化") or traits.has("锻造") or traits.has("量产锻造") or traits.has("铸造") or traits.has("暗杀召唤") or traits.has("召唤"):
+		return AI_ROLE_SUMMONER
+	if traits.has("爆炎") or (traits.has("亡语") and ("伤害" in txt or "造成" in txt)):
+		return AI_ROLE_VOLATILE
+	if traits.has("治疗") or traits.has("成长") or traits.has("哈气") or traits.has("使魔成长") or traits.has("机械成长") or (card.power == 0 and not card.is_fort()):
+		return AI_ROLE_SUPPORT
+	if card.attack_range >= 2 and card.power >= 4:
+		return AI_ROLE_SNIPER
+	if (card.move_speed >= 2 or traits.has("队长") or traits.has("穿行")) and card.power >= 3:
+		return AI_ROLE_ASSAULT
+	if traits.has("亡语") or "每回合开始时，力量" in card.effect_text or "每过一个自己的回合" in card.effect_text:
+		return AI_ROLE_GROWTH
+	if card.power >= 7:
+		return AI_ROLE_BRUISER
+	return AI_ROLE_GENERIC
+
+
+func _ai_role_threat(role: String) -> int:
+	## 敌方 AI 视角：目标越"讨厌"，威胁分越低（优先击杀）。
+	match role:
+		AI_ROLE_SUPPORT: return 0
+		AI_ROLE_VOLATILE: return 1
+		AI_ROLE_GROWTH:   return 2
+		AI_ROLE_SNIPER:   return 3
+		AI_ROLE_ASSAULT:  return 4
+		AI_ROLE_SUMMONER: return 5
+		AI_ROLE_BRUISER:  return 6
+		AI_ROLE_GENERIC:  return 7
+		AI_ROLE_TANK:     return 8
+	return 9
+
+
 func _ai_pick_card_target(targets: Array[Vector2i], p: Placement = null) -> Vector2i:
-	## 通用选目标：能穿透（打死敌方后排、溢出漏到 HP）的目标最优先 —— 那相当于在打 HP。
+	## 通用选目标：
+	##   1) 能穿透（打死敌方后排、溢出漏到 HP）的目标最优先 —— 那相当于在打 HP；
+	##   2) 能一击击杀的目标优先（不浪费行动）；
+	##   3) 按角色威胁分优先击杀 support/growth/sniper 等；
+	##   4) 同分则挑血少 / 力高 / 更靠前的目标。
 	if p != null:
 		var ov = _overflow_pick(targets, p)
 		if ov != null:
 			return ov
 	var best: Vector2i = targets[0]
-	var best_key:= [999, 0, 999]
+	var atk:= 0
+	if p != null:
+		atk = p.effective_power() + _turn_dmg_bonus(SIDE_OPPONENT) + _ally_dmg_bonus(p.card, SIDE_OPPONENT)
+	var best_key:= [1, 99, 999, 0, 99, 99]
 	for t in targets:
 		var q:= state.unit_at(t)
-		var key:= [q.health if q.health > 0 else 99, - (q.effective_power()), t.x * 10 + t.y]
-		if [key[0], key[1], key[2]] < [best_key[0], best_key[1], best_key[2]]:
+		if q == null:
+			continue
+		var can_kill:= 0 if atk > 0 and q.health <= atk else 1
+		var threat:= _ai_role_threat(_ai_role(q.card))
+		var key:= [can_kill, threat,
+				q.health if q.health > 0 else 999,
+				- (q.effective_power()),
+				- t.x, t.y]
+		if [key[0], key[1], key[2], key[3], key[4], key[5]] < [best_key[0], best_key[1], best_key[2], best_key[3], best_key[4], best_key[5]]:
 			best = t
 			best_key = key
 	return best
@@ -8849,6 +8918,14 @@ func _ai_target_choice(cell: Vector2i, p: Placement) -> Variant:
 	var blockers:= _blocking_targets(cell, p, card_targets)
 	if not blockers.is_empty():
 		return ["card", _ai_pick_card_target(blockers, p)]
+	# R159：即便目标不是"挡路卡"，能一击击杀也比空过强（优先击杀 support / growth 等）。
+	if not card_targets.is_empty():
+		var pick:= _ai_pick_card_target(card_targets, p)
+		var q:= state.unit_at(pick)
+		if q != null:
+			var atk:= p.effective_power() + _turn_dmg_bonus(SIDE_OPPONENT) + _ally_dmg_bonus(p.card, SIDE_OPPONENT)
+			if atk > 0 and q.health <= atk:
+				return ["card", pick]
 	return null
 
 
@@ -9138,6 +9215,22 @@ func _hp_pos_distance(cell: Vector2i, p: Placement) -> int:
 	return AI_NO_ROUTE
 
 
+func _ai_blocks_ally_path(dst: Vector2i, p: Placement) -> int:
+	## R159：判断 dst 是否挡在还没行动的友军正前方。若友军就在 dst 后一格同列且能移动，
+	## 则 dst 会让它下回合（或本回合后续行动）少一条直路；给 step_score 加惩罚。
+	if p == null:
+		return 0
+	var behind:= Vector2i(dst.x - 1, dst.y)
+	if behind.x < 0:
+		return 0
+	var q:= state.unit_at(behind)
+	if q == null or q == p or q.owner != p.owner or q.tapped:
+		return 0
+	if q.card.is_fort() or q.effective_speed() == 0:
+		return 0
+	return 12   # 相当于 1 格多一点的距离惩罚，足够让 AI 选择绕开
+
+
 func _step_score(src: Vector2i, dst: Vector2i, p: Placement) -> Array:
 
 
@@ -9154,7 +9247,9 @@ func _step_score(src: Vector2i, dst: Vector2i, p: Placement) -> Array:
 	# 同级距离里偏好向前（敌方 +x 方向），避免原地踏步：距离差 1 档 = 10 分，
 	# 棋盘只有 6 行，前进 1 格最多 -5，永远压不过距离档，但同档内必然击败原地不动。
 	var advance:= - dst.x
-	return [can_hit, wall, near * 10 + advance, manhattan(src, dst), - dst.y]
+	# R159：移动后不要挡在队友正前方；侧翼 / 空列更优。
+	var block_penalty:= _ai_blocks_ally_path(dst, p)
+	return [can_hit, wall, near * 10 + advance + block_penalty, manhattan(src, dst), - dst.y]
 
 
 func _ai_attack_if_any(cell: Vector2i, p: Placement) -> bool:
