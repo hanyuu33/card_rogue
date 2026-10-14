@@ -4718,10 +4718,10 @@ func _init() -> void:
 			"鸭子窑：工事 0 力 100 血 程0 速0，trait 孵化，产物=陶瓷鸭（不进奖励池）")
 	var ceramic_c := repo.get_card(9026)
 	check(ceramic_c != null and ceramic_c.card_name == "陶瓷鸭"
-			and ceramic_c.power == 8 and ceramic_c.health == 1
-			and ceramic_c.attack_range == 1 and ceramic_c.move_speed == 2
+			and ceramic_c.power == 6 and ceramic_c.health == 1
+			and ceramic_c.attack_range == 1 and ceramic_c.move_speed == 1
 			and not repo.reward_pool().has(ceramic_c),
-			"陶瓷鸭：8 力 1 血 程1 速2（鸭子窑产物，不进奖励池）")
+			"陶瓷鸭：6 力 1 血 程1 速1（鸭子窑产物，不进奖励池）")
 
 	# 孵化机制：**自己回合开始时**（含首回合）在四邻空格烧出陶瓷鸭；越界/占用跳过
 	var eng_kiln := _new_engine([], 20, 40)
@@ -4754,7 +4754,7 @@ func _init() -> void:
 			ceramic_count += 1
 	check(ceramic_count == 3, "轮到窑主人（敌方）回合开始 → 3 只陶瓷鸭，归属窑主人")
 
-	# 强化（2026-10-01）：陶瓷鸭的生命值 X = 当前**该方**回合数（窑主人的第几回合）
+	# 下调（R172）：陶瓷鸭的生命值 X = 随**该方**回合数每过 2 回合 +1（窑主人的第几回合，向上取整）
 	var eng_kiln3 := _new_engine([], 20, 40)
 	eng_kiln3.opp_turns = 4                      # 模拟「敌方第 4 回合开始」
 	eng_kiln3.state.place(kiln_c, Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
@@ -4765,8 +4765,8 @@ func _init() -> void:
 		if q.owner == GameEngine.SIDE_OPPONENT and q.card.id == 9026:
 			kiln_hp.append(q.health)
 	kiln_hp.sort()
-	check(kiln_hp == [4, 4, 4],
-			"鸭子窑强化：敌方第 4 回合烧出的陶瓷鸭各 4 血（生命 = 当前己方回合数）")
+	check(kiln_hp == [2, 2, 2],
+			"鸭子窑下调（R172）：敌方第 4 回合烧出的陶瓷鸭各 2 血（每 2 回合 +1）")
 	# 己方回合数（turn_number）同样成立
 	var eng_kiln4 := _new_engine([], 20, 40)
 	eng_kiln4.turn_number = 3
@@ -4778,10 +4778,25 @@ func _init() -> void:
 		if q2.owner == GameEngine.SIDE_SELF and q2.card.id == 9026:
 			kiln_hp_self.append(q2.health)
 	kiln_hp_self.sort()
-	check(kiln_hp_self == [3, 3, 3],
-			"鸭子窑强化：我方第 3 回合烧出的陶瓷鸭各 3 血（读的是己方回合数）")
+	check(kiln_hp_self == [2, 2, 2],
+			"鸭子窑下调（R172）：我方第 3 回合烧出的陶瓷鸭各 2 血（ceil(3/2)，读的是己方回合数）")
 	check(repo.get_card(9026).health == 1,
-			"鸭子窑强化：改的是产物副本，库里的陶瓷鸭仍是 1 血（没被就地改写）")
+			"鸭子窑下调（R172）：改的是产物副本，库里的陶瓷鸭仍是 1 血（没被就地改写）")
+	# 下调（R172）：生命曲线从「= 回合数」改为「每 2 回合 +1」→ 第 1..6 回合 = 1,1,2,2,3,3
+	var kiln_curve: Array[int] = []
+	for tn: int in [1, 2, 3, 4, 5, 6]:
+		var eng_cv := _new_engine([], 20, 40)
+		eng_cv.turn_number = tn
+		eng_cv.state.place(kiln_c, Vector2i(5, 1), GameEngine.SIDE_SELF)
+		eng_cv._kiln_hatch(GameEngine.SIDE_SELF)
+		var cv_hp := 0
+		for cell_cv in eng_cv.state.board:
+			var qc: Placement = eng_cv.state.board[cell_cv]
+			if qc.owner == GameEngine.SIDE_SELF and qc.card.id == 9026:
+				cv_hp = qc.health
+		kiln_curve.append(cv_hp)
+	check(kiln_curve == [1, 1, 2, 2, 3, 3],
+			"鸭子窑下调（R172）：第 1..6 回合烧出的陶瓷鸭生命 = 1,1,2,2,3,3（每 2 回合 +1，实际 %s）" % str(kiln_curve))
 
 	# 新关卡「鸭子窑」：第一层·精英敌人-简单（R158 从「第二层·普通敌人-困难」上调），
 	# 后排中央一座鸭子窑
@@ -5032,7 +5047,7 @@ func _init() -> void:
 		1071: 2,   # 熔岩巨人：同上
 		1051: 2,   # 亡灵领主：后排领主能绕路
 		1050: 2,   # 腐化尸鬼：冲脸亡语单位甩开阻挡
-		9026: 2,   # 陶瓷鸭：窑的产物一回合压上
+		9026: 1,   # 陶瓷鸭：窑的产物（R172 下调速 2→1）
 	}
 	for om_id_s: int in om_dist_s:
 		check(om_repo.get_card(om_id_s).move_speed == om_dist_s[om_id_s],

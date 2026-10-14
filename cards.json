@@ -888,7 +888,7 @@
         "工事",
         "孵化"
       ],
-      "effect_text": "自己回合开始时，在相邻的空格上各召唤一只陶瓷鸭，它的生命值等于当前己方回合数。",
+      "effect_text": "自己回合开始时，在相邻的空格上各召唤一只陶瓷鸭，它的生命值每过2回合+1。",
       "target_mode": "none",
       "value": 9026,
       "color": "金",
@@ -899,10 +899,10 @@
       "name": "陶瓷鸭",
       "kind": "盟友",
       "cost": 1,
-      "power": 8,
+      "power": 6,
       "health": 1,
       "attack_range": 1,
-      "move_speed": 2,
+      "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
       "class": "敌人",
@@ -910,7 +910,7 @@
         "鸭",
         "陶瓷"
       ],
-      "effect_text": "由鸭子窑烧出。它的生命值等于召唤时的己方回合数。",
+      "effect_text": "由鸭子窑烧出。它的生命值每过2回合+1。",
       "target_mode": "none",
       "color": "白",
       "image": ""

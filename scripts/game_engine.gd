@@ -1773,8 +1773,10 @@ func _kiln_hatch(side: String) -> void :
 
 
 
-	# 产物生命 X = 当前**该方**回合数（窑主人的第几回合）；首回合起算，至少 1。
-	var x:= maxi(1, turn_number if side == SIDE_SELF else opp_turns)
+	# 产物生命 X = 随**该方**回合数每过 2 回合 +1（窑主人的第几回合，向上取整）；
+	# 首回合起算，至少 1。（R172 下调：原为「生命 = 当前己方回合数」。）
+	var t:= turn_number if side == SIDE_SELF else opp_turns
+	var x:= maxi(1, (t + 1) / 2)
 	var repo:= CardRepo.load_json()
 	for cell: Vector2i in state.board.keys().duplicate():
 		var p:= state.unit_at(cell)
@@ -1802,8 +1804,8 @@ func _kiln_hatch(side: String) -> void :
 			action.emit("place", {"cell": c, "card": body, "side": p.owner})
 			_on_ally_entered(hatched, p.owner)
 		if born > 0:
-			_log("%s 烧出 %d 只陶瓷鸭（生命 %d = 第 %d 回合）" % [
-				p.card.card_name, born, x, x])
+			_log("%s 烧出 %d 只陶瓷鸭（生命 %d：第 %d 回合，每 2 回合 +1）" % [
+				p.card.card_name, born, x, t])
 
 
 func _fallback_ceramic() -> CardData:
@@ -1812,7 +1814,7 @@ func _fallback_ceramic() -> CardData:
 	c.card_name = "陶瓷鸭"
 	c.kind = "盟友"
 	c.cost = 1
-	c.power = 8
+	c.power = 6
 	c.health = 1
 	c.attack_range = 1
 	c.move_speed = 1
