@@ -497,12 +497,12 @@ func _ready() -> void:
 		engine.state.place(repo.get_card(8003), Vector2i(4, 1), GameEngine.SIDE_SELF)
 		engine.state.place(repo.get_card(1053), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 		# ② P1-18 冲击白闪（钉在 t=0.5）
-		_impacts.append({"pos": _cell_center(Vector2i(2, 1)), "start": pf_n - 30000, "dur": 60000})
+		_impacts.append({"pos": _cell_center(Vector2i(2, 1)), "sc": _grid_scroll, "start": pf_n - 30000, "dur": 60000})
 		# ③ P2-13 力量跳动（钉在 t=0.5，弹跳峰值 1.35 + 扩散环中段）
 		_pow_fx.append({"cell": Vector2i(4, 1), "start": pf_n - 30000, "dur": 60000})
 		# ④ P2-14 治疗上升光点（钉在上升中段）
 		for pf_i in 4:
-			_heal_fx.append({"pos": _cell_center(Vector2i(4, 1)),
+			_heal_fx.append({"pos": _cell_center(Vector2i(4, 1)), "sc": _grid_scroll,
 					"start": pf_n - 30000 - pf_i * 2000, "dur": 60000, "seed": pf_i})
 		# ⑤ P1-6/7 敌方回合态（直接钉死缓动终值：红边呼吸 + 手牌下沉 + 暗罩 + 敌方能量框）
 		engine.current_side = GameEngine.SIDE_OPPONENT
@@ -513,6 +513,27 @@ func _ready() -> void:
 			_shake_card = {"idx": 0, "start": pf_n - 30000, "dur": 60000}
 		_reject_flash["energy"] = {"start": pf_n - 30000, "dur": 60000}
 		status_text = "演示：P1/P2 新动画钉帧（敌方回合态 / 冲击闪 / 力量跳动 / 治疗粒子 / 拒绝抖动）"
+		queue_redraw()
+	if "--moveslide" in args and engine != null:
+		# R171 演示：钉一段「移动滑行」中段（dur 拉长），配合 --gridscroll 验证滚动补正 ——
+		# 修正前单位按「创建时滚动量」渲染、脱离棋盘点；修正后贴着格间轨道走。
+		# ⚠️ sc 钉 max：本旗标在参数循环**之后**执行，此时 --gridscroll 已生效，
+		#    要模拟「创建时滚动=max、之后玩家滚到 -16」必须显式写死。
+		# 出图命令：`-- --screenshot --level 0 --moveslide --gridscroll -16 --shotframe 40`
+		var ms_pl: Placement = null
+		var ms_cell := Vector2i(-1, -1)
+		for ms_pair in engine.state.iter_board():
+			ms_cell = ms_pair[0]
+			ms_pl = ms_pair[1]
+		if ms_pl != null:
+			# 取**最后**一个单位（通常在我方底排），从上一格滑入 —— 位移量看得见
+			var ms_from := Vector2i(maxi(ms_cell.x - 1, 0), ms_cell.y)
+			if ms_from == ms_cell:
+				ms_from = Vector2i(ms_cell.x + 1, ms_cell.y)
+			_slides[ms_pl] = {"from": _cell_center(ms_from), "to": _cell_center(ms_cell),
+					"sc": _grid_scroll_max(), "from_grid": true,
+					"start": _now() - 150, "dur": 180000}
+		status_text = "演示：移动滑行钉帧（--gridscroll 验证滚动补正）"
 		queue_redraw()
 	if "--handfly" in args and engine != null:
 		# R151 演示：P0 手牌因果动画钉在飞行中段（dur 拉长 → 慢帧截图也截得到）。
@@ -4394,7 +4415,13 @@ func _on_hover(pos: Vector2) -> void:
 	# ③'' 右栏道具栏：悬停看道具描述（装不下时悬停「+N」摘要 → 提示点开看全部）
 	if _hover_card == null:
 		var rel_hit := false
-		for i in engine.self_relics.size():
+		# R171b：只检测**看得见的**徽章 —— 道具溢出时，不可见徽章的矩形会一路排到
+		# 道具栏外（下面）；长说明悬浮窗翻到栏下时正好压在这些「幽灵矩形」上 →
+		# 鼠标明明悬在悬浮窗 / 空白处也弹说明（用户实测）。可见数与 _draw_relic_bar 同源。
+		var rel_shown: int = engine.self_relics.size() \
+				if engine.self_relics.size() <= _relic_max_slots() \
+				else _relic_max_slots() - 1
+		for i in rel_shown:
 			if _relic_rect(i).has_point(pos):
 				rel_hit = true
 				var rel := RelicRepo.load_json().get_relic(engine.self_relics[i])
@@ -6295,17 +6322,23 @@ func _display_center(p: Placement, cell: Vector2i) -> Vector2:
 		if n >= int(a.start):
 			var t := clampf(float(n - int(a.start)) / int(a.dur), 0.0, 1.0)
 			var e := 1.0 - pow(1.0 - t, 3.0)  # ease-out
+			# R171：创建后棋盘又滚过 → from/to/pts 里的像素位置已过期，按滚动差补回。
+			# from_grid=false 时 from 是手牌屏位（不随棋盘滚）→ 只补「到格端」，
+			# 补正量随插值权重 e 渐进生效（t=1 时正好落在当前格心，无瞬移）。
+			var dy := _scroll_dy(float(a.get("sc", _grid_scroll)))
 			var pts: Array[Vector2] = []
 			if a.has("pts"):
 				pts = a.get("pts", [])
 			if pts.size() < 2:
-				return (a.from as Vector2).lerp(a.to as Vector2, e)
+				if bool(a.get("from_grid", true)):
+					return (a.from as Vector2).lerp(a.to as Vector2, e) + dy
+				return (a.from as Vector2).lerp((a.to as Vector2) + dy, e)
 			# 逐格路径：整段按格数均分，每格内部单独 ease-out（看起来是一格一格走过去）
 			var segs := pts.size() - 1
 			var f := t * segs
 			var si := mini(int(floor(f)), segs - 1)
 			var e2 := 1.0 - pow(1.0 - clampf(f - si, 0.0, 1.0), 3.0)
-			return pts[si].lerp(pts[si + 1], e2)
+			return pts[si].lerp(pts[si + 1], e2) + dy
 	if _attacks.has(p):
 		var l: Dictionary = _attacks[p]
 		if n >= int(l.start):
@@ -6327,7 +6360,7 @@ func _display_center(p: Placement, cell: Vector2i) -> Vector2:
 			else:
 				var k3 := (t2 - ATK_IMPACT_T) / (1.0 - ATK_IMPACT_T)
 				off = push * (1.0 - (1.0 - pow(1.0 - k3, 2.0)))  # 缓缓回正
-			return asrc + adir * off
+			return asrc + adir * off + _scroll_dy(float(l.get("sc", _grid_scroll)))
 	return base
 
 
@@ -6616,7 +6649,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		var hl_cell = data.get("cell")
 		if hl_cell is Vector2i and (hl_cell as Vector2i).x >= 0 and not _shot_pending:
 			for hf_i in 4:
-				_heal_fx.append({"pos": _cell_center(hl_cell), "start": n + hf_i * 70,
+				_heal_fx.append({"pos": _cell_center(hl_cell), "sc": _grid_scroll, "start": n + hf_i * 70,
 						"dur": 480, "seed": hf_i})
 	elif kind == "self_heal" and not _shot_pending:
 		for hf_j in 4:
@@ -6633,6 +6666,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				var pl_from := _cell_center(cell) + Vector2(0, -110)
 				var pl_dur := 450
 				var pl_sc := 1.0
+				var pl_from_grid := true
 				if not _place_from.is_empty() and data.get("card") is CardData \
 						and str(data.get("side", "")) == GameEngine.SIDE_SELF \
 						and (data["card"] as CardData).id == int(_place_from.get("card_id", -1)) \
@@ -6640,9 +6674,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					pl_from = _place_from["pos"]
 					pl_dur = 180
 					pl_sc = HAND_CARD_H / BOARD_CARD_H
+					pl_from_grid = false   # 手牌屏位：不随棋盘滚动
 					_place_from = {}
 				_slides[pl] = {"from": pl_from, "to": _cell_center(cell),
-						"start": n, "dur": pl_dur}
+						"start": n, "dur": pl_dur, "sc": _grid_scroll,
+						"from_grid": pl_from_grid}
 				if pl_sc != 1.0:
 					_slides[pl]["from_scale"] = pl_sc
 		"fence_merge":
@@ -6652,9 +6688,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var fm_name := "栅栏"
 			if data.get("card") is CardData:
 				fm_name = (data["card"] as CardData).card_name
-			_bursts.append({"pos": _cell_center(fm_cell), "start": n, "dur": 520,
+			_bursts.append({"pos": _cell_center(fm_cell), "sc": _grid_scroll, "start": n, "dur": 520,
 					"col": Color("e08a2e"), "big": false})
-			_floaters.append({"pos": _cell_center(fm_cell) + Vector2(0, -20),
+			_floaters.append({"pos": _cell_center(fm_cell) + Vector2(0, -20), "sc": _grid_scroll,
 					"text": "叠栅栏 生+%d" % int(data.get("gained", 0)),
 					"col": Color("e08a2e"), "start": n, "dur": 1500, "size": 18})
 			_say("▣ 栅栏修复术：两张栅栏合并 → %s 生命 %d" % [fm_name,
@@ -6676,7 +6712,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 							_cell_center(data["dst"])]
 				var mv_steps := mv_pts.size() - 1
 				_slides[pl2] = {"from": mv_pts[0], "to": mv_pts[mv_steps],
-						"pts": mv_pts,
+						"pts": mv_pts, "sc": _grid_scroll,
 						"start": maxi(n, _anim_end_for(pl2)),
 						"dur": MOVE_SLIDE_BASE_MS + MOVE_SLIDE_PER_STEP_MS * mv_steps}
 		"attack":
@@ -6694,10 +6730,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if atk_pl != null:
 				a_start = maxi(n, _anim_end_for(atk_pl))
 				_attacks[atk_pl] = {"kind": "unit", "dir": adir, "src": src_c, "dst": dst_c,
+						"sc": _grid_scroll,
 						"start": a_start, "dur": ATK_DUR_MS, "dmg": int(data["damage"])}
 			# 弹体命中时刻 = ATK_IMPACT_T × 总时长：爆点/闪红/伤害数字那时才出现
 			_delayed.append({"at": a_start + int(ATK_IMPACT_T * ATK_DUR_MS), "kind": "hit",
-					"data": {"pos": dst_c, "dmg": int(data["damage"]), "def": def_pl}})
+					"data": {"pos": dst_c, "sc": _grid_scroll,
+							"dmg": int(data["damage"]), "def": def_pl}})
 			_say("⚔ %s 攻击 %s！" % [data.get("atk_name", "?"), data.get("def_name", "?")])
 		"hp":
 			# 攻击方 side；被打的是对面 → 飘字/爆点落在对应 HP 横幅。
@@ -6721,6 +6759,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				var hd := _cell_center(data["dst"])
 				var hdir: Vector2 = (hd - hs).normalized()
 				_attacks[hp_atk] = {"kind": "hp", "dir": hdir, "src": hs, "dst": hd,
+						"sc": _grid_scroll,
 						"start": h_start, "dur": ATK_DUR_MS, "dmg": hp_dmg}
 			if hp_dmg > 0:
 				# 撞击时刻才出爆点/飘字/震屏，与单位动作对齐
@@ -6853,9 +6892,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				hpos = _cell_center(hcell)
 			var hname := str((data.get("card") as CardData).card_name) \
 					if data.get("card") is CardData else "?"
-			_floaters.append({"pos": hpos + Vector2(0, -12),
+			# R171：hpos 两个分支都活着（格治疗 / HP 横幅）→ 只给格分支打标
+			var h_flo := {"pos": hpos + Vector2(0, -12),
 					"text": "治疗 +%d" % int(data.get("amount", 0)),
-					"col": Color("2fa36b"), "start": n, "dur": 1500})
+					"col": Color("2fa36b"), "start": n, "dur": 1500}
+			if hcell is Vector2i:
+				h_flo["sc"] = _grid_scroll
+			_floaters.append(h_flo)
 			if str(data.get("side", "")) == GameEngine.SIDE_OPPONENT:
 				_say("✚ 白魔法师治疗了 %s（+%d）" % [hname, int(data.get("amount", 0))])
 		"icecream":
@@ -6929,9 +6972,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("🛡 %s 的能量屏障挡住了 %d 点伤害（护盾消失）"
 					% [ba_name, int(data.get("blocked", 0))])
 			if ba_cell.x >= 0:
-				_bursts.append({"pos": _cell_center(ba_cell), "start": n,
+				_bursts.append({"pos": _cell_center(ba_cell), "sc": _grid_scroll, "start": n,
 						"dur": 520, "col": Color("7fd6f0"), "big": true})
-				_floaters.append({"pos": _cell_center(ba_cell) + Vector2(0, -14),
+				_floaters.append({"pos": _cell_center(ba_cell) + Vector2(0, -14), "sc": _grid_scroll,
 						"text": "护盾 · 0 伤", "col": Color("7fd6f0"),
 						"start": n, "dur": 1600, "size": 17})
 		"self_repair":
@@ -6942,7 +6985,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					% [str((data.get("card", null) as CardData).card_name),
 						int(data.get("hp", 0)), int(data.get("regen", 0))])
 			if (data.get("cell", Vector2i(-1, -1)) as Vector2i).x >= 0:
-				_floaters.append({"pos": sr_pos, "text": "+%d 血 / 回 %d"
+				_floaters.append({"pos": sr_pos, "sc": _grid_scroll, "text": "+%d 血 / 回 %d"
 						% [int(data.get("hp", 0)), int(data.get("regen", 0))],
 						"col": Color("8ce09a"), "start": n, "dur": 2000, "size": 14})
 		"charge_heal":
@@ -6950,7 +6993,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 与「清泉 / 维修间 / 自我修复」共用冷青色系（都是 friendly 回血）。
 			sfx.play("heal")
 			var ch_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_floaters.append({"pos": ch_pos, "text": "+%d" % int(data.get("amount", 0)),
+			_floaters.append({"pos": ch_pos, "sc": _grid_scroll, "text": "+%d" % int(data.get("amount", 0)),
 				"col": COL_FIELD_PERSIST, "start": n, "dur": 1400, "size": 18})
 		"shield_redirect":
 			# 护盾生成器（8042，R92）：接通的我方单位受伤 → 伤害**改由它承受**，溢出不再结算。
@@ -6962,13 +7005,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("◈ %s 受到的 %d 点伤害被护盾生成器接下（溢出不再结算）"
 					% [str((data.get("card", null) as CardData).card_name), sr_n])
 			if sr_src.x >= 0:
-				_floaters.append({"pos": _cell_center(sr_src) + Vector2(0, -14),
+				_floaters.append({"pos": _cell_center(sr_src) + Vector2(0, -14), "sc": _grid_scroll,
 						"text": "接下 %d" % sr_n, "col": COL_FIELD_PERSIST,
 						"start": n, "dur": 1600, "size": 16})
 			if sr_dst.x >= 0:
-				_bursts.append({"pos": _cell_center(sr_dst), "start": n,
+				_bursts.append({"pos": _cell_center(sr_dst), "sc": _grid_scroll, "start": n,
 						"dur": 520, "col": COL_FIELD_PERSIST, "big": true})
-				_floaters.append({"pos": _cell_center(sr_dst) + Vector2(0, -14),
+				_floaters.append({"pos": _cell_center(sr_dst) + Vector2(0, -14), "sc": _grid_scroll,
 						"text": "-%d" % sr_n, "col": Color("f0a0a0"),
 						"start": n, "dur": 1600, "size": 17})
 		"mimic_upgrade":
@@ -6980,7 +7023,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("✧ 模仿者模仿 %s 的改造：+%d 攻 / +%d 血"
 					% [str(data.get("from", "")), mu_atk, mu_hp])
 			if mu_cell.x >= 0:
-				_floaters.append({"pos": _cell_center(mu_cell),
+				_floaters.append({"pos": _cell_center(mu_cell), "sc": _grid_scroll,
 					"text": "+%d 攻 / +%d 血" % [mu_atk, mu_hp],
 					"col": Color("8ce09a"), "start": n, "dur": 1800, "size": 15})
 		"chimera":
@@ -6995,9 +7038,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sfx.play("attack")
 				_say("嵌合暴君融合 %d 张卡：+%d 攻 / +%d 血" % [ch_abs, ch_atk, ch_hp])
 				if ch_cell.x >= 0:
-					_bursts.append({"pos": _cell_center(ch_cell), "start": n,
+					_bursts.append({"pos": _cell_center(ch_cell), "sc": _grid_scroll, "start": n,
 							"dur": 420, "col": COL_SPELL})
-					_floaters.append({"pos": _cell_center(ch_cell),
+					_floaters.append({"pos": _cell_center(ch_cell), "sc": _grid_scroll,
 							"text": "+%d 攻 / +%d 血" % [ch_atk, ch_hp],
 							"col": Color("caa6ff"), "start": n, "dur": 1900, "size": 16})
 		"recycler":
@@ -7007,7 +7050,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			sfx.play("spell")
 			_say("零件回收者回收 %d 力量，手牌 +1 张「素体」" % rc_pow)
 			if rc_cell.x >= 0:
-				_floaters.append({"pos": _cell_center(rc_cell),
+				_floaters.append({"pos": _cell_center(rc_cell), "sc": _grid_scroll,
 						"text": "+%d 攻" % rc_pow,
 						"col": Color("ffa41f"), "start": n, "dur": 1700, "size": 16})
 		"prod_order":
@@ -7030,7 +7073,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			else:
 				_say("拆解：破坏单位，回复 %d 费，手牌 +%d 素体" % [dm_refund, dm_proto])
 			if dm_cell.x >= 0:
-				_floaters.append({"pos": _cell_center(dm_cell),
+				_floaters.append({"pos": _cell_center(dm_cell), "sc": _grid_scroll,
 					"text": "+%d 费" % dm_refund,
 					"col": UiTheme.STATE_FROZEN, "start": n, "dur": 1500, "size": 16})
 		"overload_die":
@@ -7041,25 +7084,25 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			sfx.play("death")
 			_say("超负荷：%s 生命仍为负（%d），回合结束死亡" % [od_name, int(data.get("health", 0))])
 			if od_cell.x >= 0:
-				_floaters.append({"pos": _cell_center(od_cell),
+				_floaters.append({"pos": _cell_center(od_cell), "sc": _grid_scroll,
 					"text": "超负荷死亡", "col": Color("ff7a3c"),
 					"start": n, "dur": 1500, "size": 15})
 		"overload_neg":
 			# 超负荷（旧式机兵 8050，R98）：受到伤害后仍以负数血量存活 → 一格提示。
 			var on_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
 			if on_cell.x >= 0:
-				_floaters.append({"pos": _cell_center(on_cell),
+				_floaters.append({"pos": _cell_center(on_cell), "sc": _grid_scroll,
 					"text": "负血存活 %d" % int(data.get("health", 0)),
 					"col": Color("ff7a3c"), "start": n, "dur": 1400, "size": 14})
 		"regen":
 			# 自我修复的每回合回血（R87）：在该单位格上飘字。
 			var rg_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_floaters.append({"pos": rg_pos, "text": "+%d" % int(data.get("amount", 0)),
+			_floaters.append({"pos": rg_pos, "sc": _grid_scroll, "text": "+%d" % int(data.get("amount", 0)),
 					"col": Color("8ce09a"), "start": n, "dur": 1400, "size": 16})
 		"night_erosion":
 			# 夜蚀 8062（R103）：回合结束按剩余费用回复生命 —— 绿色回血飘字（同自我修复口径）。
 			var ne_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_floaters.append({"pos": ne_pos, "text": "+%d" % int(data.get("amount", 0)),
+			_floaters.append({"pos": ne_pos, "sc": _grid_scroll, "text": "+%d" % int(data.get("amount", 0)),
 					"col": Color("8ce09a"), "start": n, "dur": 1400, "size": 16})
 			sfx.play("heal")
 		"batch_upgrade":
@@ -7110,7 +7153,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var sa_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var sa_bonus := int(data.get("bonus", 0))
 			if sa_cell.x >= 0 and sa_bonus > 0:
-				_floaters.append({"pos": _cell_center(sa_cell) + Vector2(0, -18),
+				_floaters.append({"pos": _cell_center(sa_cell) + Vector2(0, -18), "sc": _grid_scroll,
 						"text": "光环 +%d" % sa_bonus, "col": Color("e08a2e"),
 						"start": n, "dur": 1100})
 		"upgrade":
@@ -7130,7 +7173,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			else:
 				_say("◆ 升级：%s" % ug_txt)
 			if ug_cell.x >= 0:
-				_floaters.append({"pos": _cell_center(ug_cell),
+				_floaters.append({"pos": _cell_center(ug_cell), "sc": _grid_scroll,
 						"text": ug_txt, "col": Color("8ad4f0"),
 						"start": n, "dur": 2200})
 		"sys_upgrade":
@@ -7259,9 +7302,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if data.get("card") is CardData:
 				ec_name = (data["card"] as CardData).card_name
 			var ec_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": ec_pos, "start": n, "dur": 420,
+			_bursts.append({"pos": ec_pos, "sc": _grid_scroll, "start": n, "dur": 420,
 					"col": Color("8e6cc8"), "big": false})
-			_floaters.append({"pos": ec_pos + Vector2(0, -12),
+			_floaters.append({"pos": ec_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "回响 -%d / 力量 -%d" % [int(data.get("dmg", 0)),
 							int(data.get("amount", 0))],
 					"col": Color("6a4aa0"), "start": n, "dur": 1500, "size": 15})
@@ -7279,7 +7322,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if data.get("card") is CardData:
 				da_name = (data["card"] as CardData).card_name
 			var da_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_floaters.append({"pos": da_pos + Vector2(0, -12),
+			_floaters.append({"pos": da_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "闪躲 → %s -%d" % [da_name, int(data.get("absorbed", 0))],
 					"col": UiTheme.KIND_EFFECT, "start": n, "dur": 1500, "size": 15})
 			_say("闪躲：%s 替我方 HP 承受 %d 点伤害%s" % [
@@ -7292,7 +7335,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var fn_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var fn_pos := _cell_center(fn_cell) if fn_cell.x >= 0 \
 					else Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H / 2)
-			_floaters.append({"pos": fn_pos + Vector2(0, -12),
+			_floaters.append({"pos": fn_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "收尾 -%d" % int(data.get("dmg", 0)),
 					"col": UiTheme.STAT_POWER if fn_last else Color("6a4aa0"),
 					"outline": 6 if fn_last else 0,
@@ -7332,7 +7375,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				kg_name = (data["card"] as CardData).card_name
 			var kg_center := _cell_center(data["cell"]) if data.has("cell") \
 					else Vector2(WINDOW_W / 2, OWN_HAND_Y - 30)
-			_floaters.append({"pos": kg_center + Vector2(0, -24),
+			_floaters.append({"pos": kg_center + Vector2(0, -24), "sc": _grid_scroll,
 					"text": "+%d 攻" % int(data.get("amount", 0)),
 					"col": UiTheme.STATE_TAUNT, "start": _now(), "dur": 1500, "size": 20})
 			_say("%s 击杀敌人 → 攻击力 +%d（当前 %d）" % [
@@ -7344,7 +7387,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var dt_name := "敌人"
 			if data.get("card") is CardData:
 				dt_name = (data["card"] as CardData).card_name
-			_floaters.append({"pos": dt_center + Vector2(0, -24),
+			_floaters.append({"pos": dt_center + Vector2(0, -24), "sc": _grid_scroll,
 					"text": "威慑 -%d 攻" % int(data.get("amount", 0)),
 					"col": Color("b0392f"), "start": n, "dur": 1600, "size": 20})
 			_say("威慑：%s 力量 -%d，持续到你下个回合开始（当前 %d）" % [
@@ -7357,7 +7400,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if data.get("card") is CardData:
 				hg_name = (data["card"] as CardData).card_name
 			if hg_cell.x >= 0:
-				_floaters.append({"pos": _cell_center(hg_cell) + Vector2(0, -24),
+				_floaters.append({"pos": _cell_center(hg_cell) + Vector2(0, -24), "sc": _grid_scroll,
 						"text": "锻造 +1 攻 +1 程", "col": UiTheme.STATE_TAUNT,
 						"start": n, "dur": 1600, "size": 18})
 			_say("%s 锻造空转 3 回合 → 力量 +1 / 射程 +1（现 %d 攻 %d 程）" % [
@@ -7368,7 +7411,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var ng_name := "夜鸭"
 			if data.get("card") is CardData:
 				ng_name = (data["card"] as CardData).card_name
-			_floaters.append({"pos": ng_center + Vector2(0, -24),
+			_floaters.append({"pos": ng_center + Vector2(0, -24), "sc": _grid_scroll,
 					"text": "夜行 +%d 攻" % int(data.get("amount", 0)),
 					"col": UiTheme.STATE_TAUNT, "start": n, "dur": 1500, "size": 18})
 			_say("%s 夜行：回合开始力量 +%d（当前 %d）" % [
@@ -7380,7 +7423,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var mg_name := "白魔法师"
 			if data.get("card") is CardData:
 				mg_name = (data["card"] as CardData).card_name
-			_floaters.append({"pos": mg_center + Vector2(0, -24),
+			_floaters.append({"pos": mg_center + Vector2(0, -24), "sc": _grid_scroll,
 					"text": "精进 +%d 攻" % int(data.get("amount", 0)),
 					"col": UiTheme.STATE_TAUNT, "start": n, "dur": 1500, "size": 18})
 			_say("%s 精进：回合开始力量 +%d（当前 %d）" % [
@@ -7392,7 +7435,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var fg_name := "使魔鸭子"
 			if data.get("card") is CardData:
 				fg_name = (data["card"] as CardData).card_name
-			_floaters.append({"pos": fg_center + Vector2(0, -24),
+			_floaters.append({"pos": fg_center + Vector2(0, -24), "sc": _grid_scroll,
 					"text": "使魔 +%d 攻" % int(data.get("amount", 0)),
 					"col": Color("b06ad6"), "start": n, "dur": 1500, "size": 18})
 			_say("%s 使魔之力：回合开始力量 +%d（当前 %d）" % [
@@ -7429,17 +7472,18 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_dying.append({"cell": cell, "card": data["card"],
 					"p": data.get("placement"), "hide_at": hide_at})
 			_delayed.append({"at": hide_at, "kind": "destroy_fx",
-					"data": {"center": center, "card": data["card"], "cell": cell}})
+					"data": {"center": center, "sc": _grid_scroll,
+							"card": data["card"], "cell": cell}})
 		"blast":
 			# 爆炎鸭亡语 / 爆炸陷阱（R50）：尸体周围四格炸出的火焰（不分敌我）—— 同特效同源。
 			# 起播稍微延后一点，读起来就是「先倒下 → 再爆开」。
 			sfx.play("destroy")
 			var bwhen := n + 120
 			for c2 in data.get("cells", []):
-				_bursts.append({"pos": _cell_center(c2 as Vector2i), "start": bwhen,
+				_bursts.append({"pos": _cell_center(c2 as Vector2i), "sc": _grid_scroll, "start": bwhen,
 						"dur": 620, "col": Color("ff8a3d"), "big": true})
 			var blast_center := _cell_center(data["center"])
-			_floaters.append({"pos": blast_center + Vector2(0, -18),
+			_floaters.append({"pos": blast_center + Vector2(0, -18), "sc": _grid_scroll,
 					"text": "%s -%d" % [str(data["card"].card_name), int(data.get("amount", 0))],
 					"col": Color("d84a12"), "start": bwhen, "dur": 1400, "size": 20})
 			_shake(8.0, 360)
@@ -7449,35 +7493,35 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 冰霜 / 冻结陷阱（R51）：攻击者踩陷阱吃直伤 —— 蓝白火花 + 飘字（同源同特效）
 			sfx.play("destroy")
 			var th_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": th_pos, "start": n, "dur": 520,
+			_bursts.append({"pos": th_pos, "sc": _grid_scroll, "start": n, "dur": 520,
 					"col": Color("7ec8ff"), "big": false})
-			_floaters.append({"pos": th_pos + Vector2(0, -12),
+			_floaters.append({"pos": th_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "%s -%d" % [str(data.get("kind", "陷阱")), int(data.get("amount", 0))],
 					"col": Color("2b6fb3"), "start": n, "dur": 1400, "size": 18})
 		"frozen":
 			# 冰封（R68）：寒冰箭 9011 / 冰冻术士战吼 / 冻结陷阱 8013 的**唯一**施加特效。
 			# 判据与常驻光环同源（引擎的 Placement.frozen），这里只演「施加的那一下」。
 			var fz_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": fz_pos, "start": n, "dur": 620,
+			_bursts.append({"pos": fz_pos, "sc": _grid_scroll, "start": n, "dur": 620,
 					"col": Color("9ad8ff"), "big": false})
-			_bursts.append({"pos": fz_pos, "start": n + 90, "dur": 520,
+			_bursts.append({"pos": fz_pos, "sc": _grid_scroll, "start": n + 90, "dur": 520,
 					"col": Color("e8f6ff"), "big": false})
-			_floaters.append({"pos": fz_pos + Vector2(0, -14), "text": "冰封",
+			_floaters.append({"pos": fz_pos + Vector2(0, -14), "sc": _grid_scroll, "text": "冰封",
 					"col": Color("2b6fb3"), "start": n, "dur": 1500, "size": 20})
 			_say("❄ %s 被冰封：下回合不能行动" % str(data.get("name", "")))
 		"poison":
 			# 剧毒陷阱（R51）：挂毒（apply）与回合开始的毒跳 —— 绿泡 + 飘字
 			var po_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": po_pos, "start": n, "dur": 520,
+			_bursts.append({"pos": po_pos, "sc": _grid_scroll, "start": n, "dur": 520,
 					"col": Color("79c26a"), "big": false})
 			if bool(data.get("apply", false)):
-				_floaters.append({"pos": po_pos + Vector2(0, -12), "text": "中毒",
+				_floaters.append({"pos": po_pos + Vector2(0, -12), "sc": _grid_scroll, "text": "中毒",
 						"col": Color("3e8a2f"), "start": n, "dur": 1400, "size": 18})
 				_say("☠ %s 中毒：每回合 %d 点伤害，持续 %d 回合" % [
 						str(data.get("name", "")), int(data.get("dmg", 0)),
 						int(data.get("left", 0))])
 			else:
-				_floaters.append({"pos": po_pos + Vector2(0, -12),
+				_floaters.append({"pos": po_pos + Vector2(0, -12), "sc": _grid_scroll,
 						"text": "中毒 -%d" % int(data.get("amount", 0)),
 						"col": Color("3e8a2f"), "start": n, "dur": 1400, "size": 18})
 		"hunt":
@@ -7485,9 +7529,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			sfx.play("spell")
 			var hu_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
 			var hu_big := bool(data.get("big", false))
-			_bursts.append({"pos": hu_pos, "start": n, "dur": 560,
+			_bursts.append({"pos": hu_pos, "sc": _grid_scroll, "start": n, "dur": 560,
 					"col": UiTheme.RARITY_EPIC, "big": hu_big})
-			_floaters.append({"pos": hu_pos + Vector2(0, -12),
+			_floaters.append({"pos": hu_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": ("狩猎翻倍！-%d" if hu_big else "暗影狩猎 -%d")
 							% int(data.get("dmg", 0)),
 					"col": UiTheme.RARITY_EPIC, "start": n, "dur": 1400,
@@ -7506,10 +7550,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var fp_text := "持续生效" if fp_persist else "场地就位"
 			if bool(data.get("deathrattle", false)):
 				fp_text = "亡语 · 陷阱就位"
-			_floaters.append({"pos": fp_pos + Vector2(0, -6),
+			_floaters.append({"pos": fp_pos + Vector2(0, -6), "sc": _grid_scroll,
 					"text": fp_text,
 					"col": fp_col, "start": n, "dur": 1200, "size": 15})
-			_bursts.append({"pos": fp_pos, "start": n, "dur": 420,
+			_bursts.append({"pos": fp_pos, "sc": _grid_scroll, "start": n, "dur": 420,
 				"col": fp_col, "big": false})
 			if fp_persist:
 				# 持续型场地（R83 清泉 / R88 维修间·改造工厂）：不会因经过而触发 →
@@ -7534,7 +7578,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# → 该格飘字。`field` 带场地名（维修间与清泉共用这个事件）。
 			sfx.play("heal")
 			var fo_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_floaters.append({"pos": fo_pos, "text": "+%d" % int(data.get("amount", 0)),
+			_floaters.append({"pos": fo_pos, "sc": _grid_scroll, "text": "+%d" % int(data.get("amount", 0)),
 					"col": COL_FIELD_PERSIST, "start": n, "dur": 1400, "size": 18})
 		"field_trigger":
 			# 场地触发（R74；R80 扩为「经过即触发」）：敌人移动路上撞到 → 一次性结算
@@ -7554,9 +7598,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 熊（8004）发动回春：绿色爆点 + 「+N」飘字
 			sfx.play("place")
 			var bh_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": bh_pos, "start": n, "dur": 520,
+			_bursts.append({"pos": bh_pos, "sc": _grid_scroll, "start": n, "dur": 520,
 					"col": Color("4caf50"), "big": false})
-			_floaters.append({"pos": bh_pos + Vector2(0, -12),
+			_floaters.append({"pos": bh_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "回春 +%d" % int(data.get("amount", 0)),
 					"col": UiTheme.KIND_EFFECT, "start": n, "dur": 1400, "size": 18})
 			_say("❦ %s 发动回春：回复 %d 点生命，之后横置" % [
@@ -7565,12 +7609,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 荒野形态（6022，R60 重做）：每场第一次我方 HP 被普通攻击打中 →
 			# 这次伤害 -4（最少 1）+ 对攻击者反伤 4。
 			var wg_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": wg_pos, "start": n, "dur": 560,
+			_bursts.append({"pos": wg_pos, "sc": _grid_scroll, "start": n, "dur": 560,
 					"col": Color("4caf50"), "big": true})
-			_floaters.append({"pos": wg_pos + Vector2(0, -30),
+			_floaters.append({"pos": wg_pos + Vector2(0, -30), "sc": _grid_scroll,
 					"text": "荒野形态 减伤 %d" % int(data.get("reduced", 0)),
 					"col": Color("7fd18a"), "start": n, "dur": 1500, "size": 17})
-			_floaters.append({"pos": wg_pos + Vector2(0, -8),
+			_floaters.append({"pos": wg_pos + Vector2(0, -8), "sc": _grid_scroll,
 					"text": "反伤 %d" % int(data.get("amount", 0)),
 					"col": Color("e07a6a"), "start": n, "dur": 1500, "size": 19})
 			_say("❦ 荒野形态（每场第一次）：我方伤害 -%d，并对 %s 造成 %d 点伤害" % [
@@ -7579,9 +7623,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"phantom_cloak":
 			# 幻影斗篷（6023，暗影刺客角色道具）：R60 起每使用**两张**牌 → 随机敌方单位力量 -1
 			var pc_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": pc_pos, "start": n, "dur": 420,
+			_bursts.append({"pos": pc_pos, "sc": _grid_scroll, "start": n, "dur": 420,
 					"col": Color("7e57c2"), "big": false})
-			_floaters.append({"pos": pc_pos + Vector2(0, -12),
+			_floaters.append({"pos": pc_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "幻影斗篷 力量 -%d" % int(data.get("amount", 0)),
 					"col": Color("5e35b1"), "start": n, "dur": 1400, "size": 17})
 			_say("❧ 幻影斗篷：本回合每用一张牌 → %s 力量 -%d（当前 %d）" % [
@@ -7592,9 +7636,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var m_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var m_pos := _cell_center(m_cell) if m_cell.x >= 0 \
 					else Vector2(GRID_X + GRID_W / 2, GRID_Y - 36)
-			_bursts.append({"pos": m_pos, "start": n, "dur": 520,
+			_bursts.append({"pos": m_pos, "sc": _grid_scroll, "start": n, "dur": 520,
 					"col": Color("9b59d0"), "big": false})
-			_floaters.append({"pos": m_pos + Vector2(0, -12),
+			_floaters.append({"pos": m_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "-%d" % int(data.get("dmg", 0)),
 					"col": UiTheme.KIND_SKILL, "start": n, "dur": 1200})
 		"fire_wall":
@@ -7602,7 +7646,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			sfx.play("spell")
 			var fw_row2: int = int(data.get("row", -1))
 			for fw_col in FieldState.BOARD_COLS:
-				_bursts.append({"pos": _cell_center(Vector2i(fw_row2, fw_col)),
+				_bursts.append({"pos": _cell_center(Vector2i(fw_row2, fw_col)), "sc": _grid_scroll,
 						"start": n, "dur": 620, "col": Color("ff8a3d"), "big": false})
 			_shake(6.0, 300)
 			var fw_name := "火墙术"
@@ -7614,47 +7658,47 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"fire_wall_hit":
 			# 火墙开场那一炸：橙色爆点 + 伤害飘字
 			var fh_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": fh_pos, "start": n, "dur": 560,
+			_bursts.append({"pos": fh_pos, "sc": _grid_scroll, "start": n, "dur": 560,
 					"col": Color("ff6a00"), "big": false})
-			_floaters.append({"pos": fh_pos + Vector2(0, -12),
+			_floaters.append({"pos": fh_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "-%d" % int(data.get("dmg", 0)),
 					"col": Color("d84a12"), "start": n, "dur": 1200})
 		"fire_wall_pass":
 			# 穿过燃烧横行的单位被灼烧（不分敌我）
 			var fp_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": fp_pos, "start": n, "dur": 560,
+			_bursts.append({"pos": fp_pos, "sc": _grid_scroll, "start": n, "dur": 560,
 					"col": Color("ff8a3d"), "big": false})
-			_floaters.append({"pos": fp_pos + Vector2(0, -12),
+			_floaters.append({"pos": fp_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "火墙 -%d" % int(data.get("dmg", 0)),
 					"col": Color("d84a12"), "start": n, "dur": 1300, "size": 18})
 		"stun_blow":
 			# 敲晕（9088）：目标力量 -3（金色爆点 + 飘字）
 			var sb_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": sb_pos, "start": n, "dur": 480,
+			_bursts.append({"pos": sb_pos, "sc": _grid_scroll, "start": n, "dur": 480,
 					"col": Color("ffd54f"), "big": false})
-			_floaters.append({"pos": sb_pos + Vector2(0, -12),
+			_floaters.append({"pos": sb_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "敲晕 力量 -%d" % int(data.get("amount", 0)),
 					"col": UiTheme.STAT_POWER, "start": n, "dur": 1300, "size": 16})
 		"dark_trap":
 			# 黑暗陷阱（8063，R105）：踩中者本回合攻击时力量 -1（暗紫爆点 + 飘字）
 			var dt_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": dt_pos, "start": n, "dur": 480,
+			_bursts.append({"pos": dt_pos, "sc": _grid_scroll, "start": n, "dur": 480,
 					"col": Color("9b6bd6"), "big": false})
-			_floaters.append({"pos": dt_pos + Vector2(0, -12),
+			_floaters.append({"pos": dt_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "黑暗 力量 -%d" % int(data.get("amount", 0)),
 					"col": Color("6a3fa0"), "start": n, "dur": 1300, "size": 16})
 		"gale":
 			# 疾风（9091）：随机敌人吃 2 伤
 			var ga_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": ga_pos, "start": n, "dur": 420,
+			_bursts.append({"pos": ga_pos, "sc": _grid_scroll, "start": n, "dur": 420,
 					"col": Color("9bdcff"), "big": false})
-			_floaters.append({"pos": ga_pos + Vector2(0, -12),
+			_floaters.append({"pos": ga_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "疾风 -%d" % int(data.get("dmg", 0)),
 					"col": Color("2a7ab8"), "start": n, "dur": 1200})
 		"lurker":
 			# 潜影者（8009）：每用一张牌 +1 力量
 			var lk_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_floaters.append({"pos": lk_pos + Vector2(0, -12),
+			_floaters.append({"pos": lk_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "潜影者 +1 力量",
 					"col": Color("6a4fb8"), "start": n, "dur": 1100, "size": 15})
 		"attack_energy":
@@ -7692,10 +7736,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"dark_blade":
 			# 暗影之刃（9111）：按本回合已花费用对随机敌人造成伤害
 			var db_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
-			_floaters.append({"pos": _cell_center(db_cell) + Vector2(0, -12),
+			_floaters.append({"pos": _cell_center(db_cell) + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "暗影之刃 -%d" % int(data.get("dmg", 0)),
 					"col": Color("6a4aa0"), "start": n, "dur": 1600, "size": 17})
-			_bursts.append({"pos": _cell_center(db_cell), "start": n, "dur": 460,
+			_bursts.append({"pos": _cell_center(db_cell), "sc": _grid_scroll, "start": n, "dur": 460,
 					"col": Color("6a4aa0"), "big": false})
 			sfx.play("attack")
 		"dark_chain":
@@ -7709,7 +7753,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 回合结束 · 剩余费用（R55）：地狱猫 8019 / 鲜血堡垒 8020 永久成长
 			var sp_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var sp_pos := _cell_center(sp_cell)
-			_floaters.append({"pos": sp_pos + Vector2(0, -12),
+			_floaters.append({"pos": sp_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "+%d 力 +%d 生" % [int(data.get("atk", 0)), int(data.get("hp", 0))],
 					"col": Color("c0392b"), "start": n, "dur": 1500, "size": 16})
 			sfx.play("heal")
@@ -7726,7 +7770,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"contractor":
 			# 契约签订者（8024，R63）：登场回 4 费 + 本回合手卡全体涨价 4
 			var ct_pos:= _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_floaters.append({"pos": ct_pos + Vector2(0, -18),
+			_floaters.append({"pos": ct_pos + Vector2(0, -18), "sc": _grid_scroll,
 				"text": "契约签订者 +%d 费" % int(data.get("energy", 0)),
 				"col": Color("8a2be2"), "start": n, "dur": 1800, "size": 17})
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 60),
@@ -7776,17 +7820,17 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				wk_col = Color("d84a12")
 			# 挣脱环：2 圈错峰扩散的描边圆（不是实心块，保留卡面可读性）
 			for _wi in 2:
-				_wake_rings.append({"pos": wk_pos, "start": n + _wi * 130,
+				_wake_rings.append({"pos": wk_pos, "sc": _grid_scroll, "start": n + _wi * 130,
 					"dur": 620, "col": wk_col})
-			_floaters.append({"pos": wk_pos + Vector2(0, -18), "text": wk_txt,
+			_floaters.append({"pos": wk_pos + Vector2(0, -18), "sc": _grid_scroll, "text": wk_txt,
 				"col": wk_col, "start": n, "dur": 1600, "size": 17})
-			_bursts.append({"pos": wk_pos, "start": n, "dur": 520,
+			_bursts.append({"pos": wk_pos, "sc": _grid_scroll, "start": n, "dur": 520,
 				"col": wk_col, "big": false})
 			sfx.play("attack")
 		"demon_rage":
 			# 恶魔鸭（9116）：醒着受伤 → 永久 +1 力量
 			var dr_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
-			_floaters.append({"pos": _cell_center(dr_cell) + Vector2(0, -18),
+			_floaters.append({"pos": _cell_center(dr_cell) + Vector2(0, -18), "sc": _grid_scroll,
 				"text": "恶魔鸭 力量 +%d（%d）" % [int(data.get("amount", 0)),
 					int(data.get("power", 0))],
 				"col": Color("c0392b"), "start": n, "dur": 1600, "size": 16})
@@ -7798,19 +7842,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 从而意识到「这一回合得收手了」——这是这只 Boss 的核心决策点。
 			var rv_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var rv_pos := _cell_center(rv_cell)
-			_floaters.append({"pos": rv_pos + Vector2(0, -18),
+			_floaters.append({"pos": rv_pos + Vector2(0, -18), "sc": _grid_scroll,
 				"text": "复仇 本回合 +%d（力量 %d）" % [int(data.get("stacked", 0)),
 					int(data.get("power", 0))],
 				"col": Color("ff5722"), "start": n, "dur": 1500, "size": 16})
-			_bursts.append({"pos": rv_pos, "start": n, "dur": 460,
+			_bursts.append({"pos": rv_pos, "sc": _grid_scroll, "start": n, "dur": 460,
 				"col": Color("ff8a3d"), "big": false})
 			sfx.play("attack")
 		"demon_summon":
 			# 恶魔使魔（9117）：每回合开始随机空格召唤使魔鸭子
 			var dm_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
-			_bursts.append({"pos": _cell_center(dm_cell), "start": n, "dur": 560,
+			_bursts.append({"pos": _cell_center(dm_cell), "sc": _grid_scroll, "start": n, "dur": 560,
 				"col": Color("9b6bff"), "big": true})
-			_floaters.append({"pos": _cell_center(dm_cell) + Vector2(0, -22),
+			_floaters.append({"pos": _cell_center(dm_cell) + Vector2(0, -22), "sc": _grid_scroll,
 				"text": "恶魔使魔 召唤", "col": Color("6a3fb5"),
 				"start": n, "dur": 1700, "size": 16})
 			sfx.play("spell")
@@ -7914,7 +7958,7 @@ func _draw_bursts() -> void:
 		var t := clampf(float(n - int(b.start)) / int(b.dur), 0.0, 1.0)
 		if t <= 0.0:
 			continue
-		var pos: Vector2 = b.pos
+		var pos: Vector2 = _fx_pos(b)
 		var big: bool = b.big
 		var r_max := 52.0 if big else 34.0
 		var col: Color = b.col
@@ -7928,7 +7972,7 @@ func _draw_bursts() -> void:
 			draw_arc(pos, ring_r * 0.55, 0.0, TAU, 20, col2, 2.0)
 		# 放射火花（8 条短线，随时间飞出变短）
 		var lines := 10 if big else 7
-		var rot0 := pos.x * 0.7 + pos.y * 1.3  # 固定随机相位
+		var rot0 := (b.pos as Vector2).x * 0.7 + (b.pos as Vector2).y * 1.3  # 固定相位（用烘焙原值：滚动补正不改相位）
 		for i in lines:
 			var ang := rot0 + TAU * i / lines
 			var far := ring_r + 10.0
@@ -7948,7 +7992,7 @@ func _draw_wake_rings() -> void:
 		var t := clampf(float(n - int(r.start)) / int(r.dur), 0.0, 1.0)
 		if t <= 0.0:
 			continue
-		var pos: Vector2 = r.pos
+		var pos: Vector2 = _fx_pos(r)
 		var col: Color = r.col
 		# 半径：卡面外扩到 ~1.6 倍卡宽；ease-out 让它「冲出去」再消失
 		var ease := 1.0 - pow(1.0 - t, 2.0)
@@ -7969,16 +8013,21 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 			if d.has("cell"):
 				var c: Vector2i = d["cell"]
 				_dying = _dying.filter(func(x): return x.cell != c)
-			_play_destroy_fx(d.center as Vector2, d.card as CardData)
+			# R171：center 烘焙于 destroy 事件时 → 先补正到当前滚动再演
+			# （_play_destroy_fx 内部的特效以当前滚动重新打标）。
+			_play_destroy_fx((d.center as Vector2) + _scroll_dy(float(d.get("sc", _grid_scroll))),
+					d.card as CardData)
 		"hit":
 			sfx.play("attack")
 			var def = d.get("def")
 			if def != null:
 				_flashes[def] = {"col": Color(0.9, 0.15, 0.1), "start": n, "dur": 420}
 				_drop_hp(def)   # 命中演出到点：卡面生命数字才开始往下掉
-			_bursts.append({"pos": d.pos, "start": n, "dur": 520,
+			# R171：pos 烘焙于攻击创建时 → 先补正到当前滚动，爆点 / 飘字再重新打标
+			var hit_pos := (d.pos as Vector2) + _scroll_dy(float(d.get("sc", _grid_scroll)))
+			_bursts.append({"pos": hit_pos, "sc": _grid_scroll, "start": n, "dur": 520,
 					"col": Color("ffb300"), "big": false})
-			_floaters.append({"pos": (d.pos as Vector2) + Vector2(0, -10),
+			_floaters.append({"pos": hit_pos + Vector2(0, -10), "sc": _grid_scroll,
 					"text": "-%d" % int(d.dmg), "col": UiTheme.SIDE_FOE,
 					"start": n, "dur": 1150})
 			_shake(5.0, 260)
@@ -8002,12 +8051,12 @@ func _play_destroy_fx(center: Vector2, card: CardData) -> void:
 	## R151 P1-18：先插一帧冲击白闪（60ms，日漫「锐利高光」），幽灵 / 爆点顺延 60ms。
 	sfx.play("destroy")
 	if not _shot_pending:
-		_impacts.append({"pos": center, "start": _now(), "dur": 60})
-	_ghosts.append({"center": center,
+		_impacts.append({"pos": center, "sc": _grid_scroll, "start": _now(), "dur": 60})
+	_ghosts.append({"center": center, "sc": _grid_scroll,
 			"name": str(card.card_name), "start": _now() + 60, "dur": 800})
-	_bursts.append({"pos": center, "start": _now() + 60, "dur": 640,
+	_bursts.append({"pos": center, "sc": _grid_scroll, "start": _now() + 60, "dur": 640,
 			"col": Color("e53935"), "big": true})
-	_floaters.append({"pos": center + Vector2(0, -14), "text": "击破",
+	_floaters.append({"pos": center + Vector2(0, -14), "sc": _grid_scroll, "text": "击破",
 			"col": UiTheme.INK_600, "start": _now(), "dur": 1000})
 	_shake(9.0, 380)
 
@@ -8023,8 +8072,11 @@ func _draw_attack_fx() -> void:
 		if n < int(a.start):
 			continue   # 排队中：等前一段（如滑行）演完再开始，避免两段互相吞
 		var t := clampf(float(n - int(a.start)) / int(a.dur), 0.0, 1.0)
-		var src := a.src as Vector2
-		var dst := a.dst as Vector2
+		# R171：src/dst 是攻击创建时烘焙的像素 → 按滚动差补正
+		# （adir 是两者差值方向，滚动对差值天然免疫，不用动）。
+		var ady := _scroll_dy(float(a.get("sc", _grid_scroll)))
+		var src := (a.src as Vector2) + ady
+		var dst := (a.dst as Vector2) + ady
 		var adir := a.dir as Vector2
 		var dmg := int(a.get("dmg", 2))
 		var is_hp := str(a.get("kind", "unit")) == "hp"
@@ -8074,7 +8126,7 @@ func _draw_ghosts() -> void:
 	for g: Dictionary in _ghosts:
 		var t := clampf(float(n - int(g.start)) / int(g.dur), 0.0, 1.0)
 		var alpha := 1.0 - t
-		var center: Vector2 = g.center
+		var center: Vector2 = (g.center as Vector2) + _scroll_dy(float(g.get("sc", _grid_scroll)))
 		var rect := Rect2(center - Vector2(BOARD_CARD_W, BOARD_CARD_H) / 2.0,
 				Vector2(BOARD_CARD_W, BOARD_CARD_H))
 		draw_rect(rect, Color(1, 1, 1, 0.85 * alpha))
@@ -8090,7 +8142,7 @@ func _draw_floaters() -> void:
 		if t <= 0.0:
 			continue  # 延迟启动的飘字
 		var alpha := 1.0 - t * t
-		var pos: Vector2 = f.pos + Vector2(0, -30.0 * t)
+		var pos: Vector2 = _fx_pos(f) + Vector2(0, -30.0 * t)  # R171：格锚飘字随棋盘滚动补正
 		# R117：棋盘上沿从 136 移到 52，`GRID_Y - 36 / -62` 这类飘字起点会钻到顶栏
 		# 底下（顶栏 36px，且是子节点、画在本层之上）→ 统一压在顶栏之下。
 		pos.y = maxf(pos.y, 44.0)
@@ -8183,6 +8235,23 @@ func _draw_cancel_armed_marker() -> void:
 func _cell_center(cell: Vector2i) -> Vector2:
 	return Vector2(GRID_X + cell.y * CELL_W + CELL_W / 2,
 			GRID_Y + cell.x * CELL + CELL / 2 - _grid_scroll)
+
+
+func _scroll_dy(sc: float) -> Vector2:
+	## R171：动画 / 特效创建时把当时的 _grid_scroll 烘进了像素位置；之后棋盘再滚动，
+	## 这些位置就过期了 —— 单位卡看着「不跟板、慢半拍」，动画结束才瞬移回格位。
+	## 按「创建时滚动量 − 当前滚动量」补回 y 差（x 不随滚动变）。
+	return Vector2(0, sc - _grid_scroll)
+
+
+func _fx_pos(f: Dictionary) -> Vector2:
+	## 特效字典的当前绘制位置（R171 唯一取值口）：带 "sc" 标签（创建时的
+	## _grid_scroll）的是格锚特效 → 做滚动补正；没标签的是 UI 锚点
+	## （能量面板 / HP 横幅 / 手牌区 / 卡组列），本来就不随棋盘滚。
+	var p: Vector2 = f["pos"]
+	if f.has("sc"):
+		p += _scroll_dy(float(f["sc"]))
+	return p
 
 
 func _hl(cell: Vector2i, col: Color) -> void:
@@ -8891,7 +8960,7 @@ func _draw_heal_fx() -> void:
 		t = clampf(t, 0.0, 1.0)
 		var e := 1.0 - pow(1.0 - t, 2.0)
 		var seed := int(f.get("seed", 0))
-		var base: Vector2 = f["pos"]
+		var base: Vector2 = _fx_pos(f)
 		var off := Vector2(sin(seed * 2.1) * 14.0 + cos(seed * 1.3) * 6.0,
 				cos(seed * 2.7) * 8.0 - 46.0 * e)
 		var a := 1.0 - t
@@ -8916,7 +8985,7 @@ func _draw_impacts() -> void:
 	for f in _impacts:
 		var t := clampf(float(n - int(f.start)) / int(f.dur), 0.0, 1.0)
 		var a := 1.0 - t
-		var pos: Vector2 = f["pos"]
+		var pos: Vector2 = _fx_pos(f)
 		draw_rect(Rect2(pos - Vector2(BOARD_CARD_W, BOARD_CARD_H) / 2.0,
 				Vector2(BOARD_CARD_W, BOARD_CARD_H)), Color(1, 1, 1, 0.92 * a), true)
 		_draw_spark(pos, 34.0 + 10.0 * t, Color(1, 1, 1, 0.85 * a))
