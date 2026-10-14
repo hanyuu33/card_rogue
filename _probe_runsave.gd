@@ -105,7 +105,17 @@ func _init() -> void:
 	var got_next: int = RunState.run_rng.randi()
 	_ck("rng_continuity", got_next == expected_next)
 
-	# --- 生命周期：end_run 清档（非回放）---
+	# --- R167：end_run(false) 只复位内存，**保留续档**（「返回标题」后可继续）---
+	_ck("save_again_ok", RunSave.save_run())
+	RunState.end_run(false)
+	_ck("end_run_false_keeps_save", RunSave.has_save())
+	_ck("end_run_false_resets_memory",
+			not RunState.run_active and RunState.deck_ids.is_empty())
+	_ck("load_after_back_to_title", RunSave.load_run())
+	_ck("restored_after_back", RunState.run_active \
+			and RunState.deck_ids.size() == exp_deck.size())
+
+	# --- 生命周期：真结束（通关 / 失败）→ end_run() 清档（非回放）---
 	RunState.end_run()
 	_ck("end_run_clears_save", not RunSave.has_save())
 

@@ -1217,9 +1217,13 @@ func _toggle_sound() -> void:
 
 func _on_back_to_title() -> void:
 	## 回到标题：正在录像就先收尾（已录内容照常保存）。
-	if ReplayLog.recording:
+	## R167：**保留续档** —— 回标题后可点「继续游戏」从地图检查点接着来。
+	if ReplayLog.playing:
+		ReplayLog.stop_playback()      # 回放中：只停回放，别碰玩家存档
+	elif ReplayLog.recording:
 		ReplayLog.finish("quit")
-	ReplayLog.stop_playback()
+	if RunState.run_active:
+		RunState.end_run(false)
 	SceneFx.goto("res://scenes/title.tscn")
 
 
@@ -1428,6 +1432,7 @@ func _whisper_advance() -> void:
 
 func _replay_tick() -> void:
 	## 回放模式：按录像前进（地图条目由本场景消费）。
+	ReplayLog.skip_info()   # R167：先跳掉无消费方的信息条目，否则回放会卡住
 	if not ReplayLog.playing:
 		return
 	var e := ReplayLog.peek()

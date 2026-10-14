@@ -79,7 +79,7 @@ const CHEST_LAYER_DESC := """这一层堆满了落满灰尘的宝箱。
 每个宝箱里都躺着一件道具——开启它，带走其中一件。"""
 
 const HERO_DESC := """一块巨大的告示牌立在路中央，上面龙飞凤舞地写着五个大字：绝赞五换一！
-交出卡组里 5 张**不同名**的卡（随机挑 5 种，每种各 1 张），
+交出卡组里 5 张「不同名」的卡（随机挑 5 种，每种各 1 张），
 就能换回一位「英雄」——5 费 5 力 25 血，只是它上场时，
 你必须额外丢弃 4 张手牌作为代价。
 卡组里凑不出 5 种不同的卡时，这笔买卖做不成，只能转身离开。"""
@@ -105,7 +105,7 @@ const OBLIVION_DONE_DESC := """什么意思都没有的那张脸，又浮了上�
 
 const SMITH_DESC := """铁匠铺里叮叮当当，有人正把一张牌按进炉子——
 「这张，我给你改成一道墙。」
-选择锻造：从卡组中挑一张卡，把它变成一张**铁栅栏**（费用按 2 费计）。
+选择锻造：从卡组中挑一张卡，把它变成一张「铁栅栏」（费用按 2 费计）。
 （不想改的话，也可以转身离开。）"""
 
 const SMITH_DONE_DESC := """炉火熄了，锻件出炉。
@@ -415,6 +415,11 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "oblivion"
+			RunState.deck_ids = [8001, 8001, 8001, 8002, 8002, 8003, 9003, 9016, 9019]
+		if args[i] == "--smith":  # 演示：伪装 run 鸭鸭工匠事件（R167 出图核验选项文案）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "smith"
 			RunState.deck_ids = [8001, 8001, 8001, 8002, 8002, 8003, 9003, 9016, 9019]
 		if args[i] == "--chest":  # 演示：伪装 run 宝箱层节点（截图验证）
 			RunState.run_active = true
@@ -953,7 +958,11 @@ func _setup_arcane() -> void:
 func _refresh() -> void:
 	if _is_treasure() or _is_whisper() or _is_struggle() \
 			or _is_gaze() or _is_pear() or _is_hero() or _is_bluefish() \
-			or _is_relic_chest() or _is_arcane() or _is_oblivion():
+			or _is_relic_chest() or _is_arcane() or _is_oblivion() \
+			or _is_smith():
+		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
+		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
+		#   于是「选项文本与实际不符」（点了其实不回复生命）。
 		return
 	hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 	_refresh_bbq()
@@ -1047,6 +1056,7 @@ func _ui_leave() -> void:
 
 func _replay_tick() -> void:
 	## 回放模式：按录像执行事件选项。
+	ReplayLog.skip_info()   # R167：先跳掉无消费方的信息条目，否则回放会卡住
 	if not ReplayLog.playing:
 		return
 	var e := ReplayLog.peek()
@@ -1096,12 +1106,14 @@ func _toggle_sound() -> void:
 
 
 func _on_back_to_title() -> void:
-	## 事件里直接回标题 = **放弃本局**（与战斗里「返回标题」同一口径）。
-	if ReplayLog.recording:
+	## R167：回标题 = **保留本局**（只复位内存状态，续档留着）——
+	## 标题页「继续游戏」可以从上一次地图检查点接着来。
+	if ReplayLog.playing:
+		ReplayLog.stop_playback()      # 回放中：只停回放，别碰玩家存档
+	elif ReplayLog.recording:
 		ReplayLog.finish("quit")
-	ReplayLog.stop_playback()
 	if RunState.run_active:
-		RunState.end_run()
+		RunState.end_run(false)
 	SceneFx.goto("res://scenes/title.tscn")
 
 
@@ -1169,7 +1181,8 @@ static func _ref_index() -> Dictionary:
 
 static func _markers(txt: String) -> Array:
 	## 摘出 `「…」` 与 `**…**` 里的内容（返回 [{token(含标记), name}]）。
-	## 两种都认：事件文案惯用「」，强调写法用 `**`（如工匠事件的 **铁栅栏**）。
+	## ⚠️ R167：`desc` 是普通 Label，**不会**把 `**` 渲染成加粗 —— 星号会原样显示。
+	##   所以**玩家可见文案一律用「」**；`**` 只在历史文案 / 断言里作兼容保留。
 	var out: Array = []
 	var i := 0
 	while i < txt.length():

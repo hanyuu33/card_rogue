@@ -255,8 +255,12 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 			cleared_ids.append(current_node_id)
 
 
-static func end_run() -> void:
-	## run 结束（通关或失败回标题）：清掉 run 标记（记录与持久化文件保留）。
+static func end_run(clear_save: bool = true) -> void:
+	## run 结束（通关 / 失败）：
+	##   * clear_save = true（默认）：连**续档**一起清掉 —— 这一局真的结束了；
+	##   * clear_save = false：只复位内存里的 run 状态，**保留续档**（R167）——
+	##     给「返回标题」这种「先离开一下、回头还能点『继续游戏』」的路径用。
+	## 记录与持久化文件照旧保留。
 	run_active = false
 	player_class = PlayerClass.default_id()
 	deck_ids = []
@@ -290,7 +294,7 @@ static func end_run() -> void:
 
 	# 续档：run 结束（通关 / 失败 / 放弃）→ 本地存档随之失效。
 	# ⚠️ 回放中不清：回放末尾同样会调 end_run，此时清档会删掉玩家真实的续档存档。
-	if not ReplayLog.playing:
+	if clear_save and not ReplayLog.playing:
 		RunSave.clear_save()
 
 

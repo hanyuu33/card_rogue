@@ -18,6 +18,7 @@ extends CanvasLayer
 const OUT_MS := 220        # 擦出（盖住旧场景）
 const IN_MS := 220         # 擦入（揭开新场景）
 const SETTLE_MS := 80      # 切完多压一拍纯黑，等新场景首帧 ready
+const STUCK_MS := 1500     # R167 防卡死：转场卡住超过它就强制接上，不再吞掉后续 goto
 const WIPE_COL := Color("1a1c22")   # INK_900（不 preload ui_theme：越早越轻，少依赖）
 
 static var _inst: SceneFx = null
@@ -36,11 +37,17 @@ static func goto(path: String, instant := false) -> void:
 	if instant or _skip_fx():
 		tree.change_scene_to_file.call_deferred(path)
 		return
-	if _inst == null:
+	# R167：实例被释放 / 被移出树（转场途中出意外）→ 直接重建，别拿着死引用继续吞 goto。
+	if _inst == null or not is_instance_valid(_inst) or not _inst.is_inside_tree():
 		_inst = load("res://scripts/scene_fx.gd").new()
 		tree.root.add_child(_inst)
 	if _inst._phase != 0:
-		return
+		# 上一次转场还卡在半路：短暂等待是正常的（连点防护），但**卡太久就必须接手** ——
+		# 否则 `goto` 会被永远吞掉，表现就是「点哪都没反应」的假死。
+		if Time.get_ticks_msec() - _inst._t0 < STUCK_MS:
+			return
+		_inst._phase = 0
+		_inst._cv.queue_redraw()
 	_inst._begin(path)
 
 

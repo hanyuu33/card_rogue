@@ -42,6 +42,7 @@ static var _play_entries: Array = []
 static var _idx := 0
 static var _play_path := ""
 static var _saved_difficulty := 0   # 回放前的玩家档位（回放结束还原，免得「看了录像改了难度」）
+static var _last_progress := 0      # 上次**真正消费掉**一条条目的时刻（msec）—— 卡死看门狗用
 
 
 # ------------------------------------------------------------ 录制
@@ -160,6 +161,7 @@ static func start_playback(path: String) -> Dictionary:
 	speed = 1.0
 	_saved_difficulty = RunState.difficulty
 	playing = true
+	_touch()
 	return data
 
 
@@ -167,6 +169,7 @@ static func stop_playback() -> void:
 	playing = false
 	_play_entries = []
 	_idx = 0
+	_last_progress = 0
 	RunState.difficulty = _saved_difficulty   # 还原玩家自己的难度档位（R47）
 
 
@@ -185,6 +188,7 @@ static func take(kind: String) -> Dictionary:
 		stop_playback()
 		return {}
 	_idx += 1
+	_touch()
 	return e
 
 
@@ -192,6 +196,46 @@ static func advance() -> void:
 	## 消费下一条（peek 后手动执行时用）。
 	if playing:
 		_idx += 1
+		_touch()
+
+
+static func skip_info() -> void:
+	## R167：跳过「纯信息」条目 —— 它们**没有任何消费方**（录制时写下来只为存档 / 调试）。
+	##   * `battle_end`：战斗结束标记（引擎侧已自行结算，回放时跳过即可）；
+	##   * `run_end`   ：整局结束 → 回放**到此为止**。
+	## ⚠️ 不跳的后果：这两个条目排到队头后，地图 / 战斗 / 事件 / 奖励四个 `_replay_tick()`
+	##   全部「类型不符 → 直接 return」，没有任何一方会推进 `_idx` → **回放永久卡死**
+	##   （这就是「播放重放经常卡死」的根因）。每个 `_replay_tick()` 开头调一次。
+	if not playing:
+		return
+	# R167 看门狗：真卡住了（长时间没有任何条目被消费）就优雅停掉回放 ——
+	# 阈值 60 秒远大于任何正常等待（战斗内 AI 演出 / 回放节流都只有 1~2 秒），
+	# 所以触发的必然是真死锁，停掉不会误伤。
+	if stalled_sec() > 60.0:
+		stop_playback()
+		return
+	while _idx < _play_entries.size():
+		var e: Variant = _play_entries[_idx]
+		var k := str((e as Dictionary).get("k", "")) if e is Dictionary else ""
+		if k == "battle_end":
+			_idx += 1
+			_touch()
+		elif k == "run_end":
+			stop_playback()
+			return
+		else:
+			return
+
+
+static func stalled_sec() -> float:
+	## 距上次真正消费条目过了多久（秒）。**看门狗**用：真卡住时由界面兜底停掉回放。
+	if not playing or _last_progress <= 0:
+		return 0.0
+	return float(Time.get_ticks_msec() - _last_progress) / 1000.0
+
+
+static func _touch() -> void:
+	_last_progress = Time.get_ticks_msec()
 
 
 static func delay(sec: float) -> float:

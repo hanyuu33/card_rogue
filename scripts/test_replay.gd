@@ -25,6 +25,7 @@ func _init() -> void:
 	_test_run_rng_reproducible()
 	_test_shuffle_reproducible()
 	_test_battle_reproducible()
+	_test_skip_info()
 	print("== 录像系统测试完成：%s ==" % ("有失败" if fails > 0 else "全部通过"))
 	quit(1 if fails > 0 else 0)
 
@@ -237,6 +238,50 @@ func _sim_battle(seed: int) -> String:
 				continue
 		engine.end_turn()
 	return _board_sig(engine.state)
+
+
+# ──────────────────────── 6. R167：信息条目跳过（回放卡死修复） ────────────────────────
+
+func _test_skip_info() -> void:
+	## `battle_end` / `run_end` 是「纯信息」条目 —— **没有任何消费方**。
+	## 旧版它们排到队头后，四个 `_replay_tick()` 全都直接 return，`_idx` 永不推进
+	## → 回放永久卡死。`skip_info()` 必须跳掉 battle_end、并在 run_end 处优雅收尾。
+	RunState.run_seed = 20261003
+	ReplayLog.begin_run("森林精魄")
+	ReplayLog.ev("map", {"node": 3})
+	ReplayLog.ev("battle_begin", {"seed": 7})
+	ReplayLog.act("end_turn", [])
+	ReplayLog.ev("battle_end", {"win": true, "hp": 40})
+	ReplayLog.ev("map", {"node": 4})
+	ReplayLog.finish("win")
+	var path := ""
+	for it: Dictionary in ReplayLog.list_replays():
+		if int(it["meta"].get("run_seed", 0)) == 20261003:
+			path = str(it["path"])
+			break
+	check(path != "", "skip_info：测试录像已落盘")
+	if path == "":
+		return
+	ReplayLog.start_playback(path)
+	check(ReplayLog.playing, "skip_info：进入回放")
+	ReplayLog.skip_info()
+	check(str(ReplayLog.peek().get("k", "")) == "map",
+			"skip_info：非信息条目原地不动（map 不被吞）")
+	ReplayLog.take("map")
+	ReplayLog.take("battle_begin")
+	ReplayLog.advance()          # act（战斗 tick 的活，这里手动消费）
+	check(str(ReplayLog.peek().get("k", "")) == "battle_end",
+			"skip_info：队头 = battle_end")
+	ReplayLog.skip_info()
+	check(str(ReplayLog.peek().get("k", "")) == "map",
+			"skip_info：跳掉 battle_end → 停在 map（回放继续走）")
+	ReplayLog.take("map")
+	check(str(ReplayLog.peek().get("k", "")) == "run_end", "skip_info：队头 = run_end")
+	ReplayLog.skip_info()
+	check(not ReplayLog.playing, "skip_info：run_end → 回放优雅结束（不卡死）")
+	for it2: Dictionary in ReplayLog.list_replays():
+		if int(it2["meta"].get("run_seed", 0)) == 20261003:
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(str(it2["path"])))
 
 
 func _test_battle_reproducible() -> void:

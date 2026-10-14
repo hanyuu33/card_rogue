@@ -2074,11 +2074,14 @@ func _net_disconnect() -> void:
 
 func _on_back_to_title() -> void:
 	_ai_timer.stop()
-	if ReplayLog.recording:
-		ReplayLog.finish("quit")   # 中途放弃：已录内容照常保存
-	ReplayLog.stop_playback()
+	if ReplayLog.playing:
+		ReplayLog.stop_playback()      # 回放中：只停回放，别碰玩家存档
+	elif ReplayLog.recording:
+		ReplayLog.finish("quit")
 	if RunState.run_active:
-		RunState.end_run()   # 战斗中退出 = 放弃本局（回标题重新开始）
+		# R167：回标题**不再放弃本局** —— 只复位内存状态，续档保留，
+		# 标题页「继续游戏」可以从上一次地图检查点接着打。
+		RunState.end_run(false)
 	if _net_mode:
 		_net_send({"type": "bye"})
 	NetSession.clear()
@@ -6146,6 +6149,7 @@ func _draw_dying() -> void:
 func _replay_tick() -> void:
 	## 回放驱动（R46）：按录像逐条执行玩家动作；AI 与结算由引擎确定性重建。
 	## 空格切换倍速；战斗结束自动按结算面板主按钮继续整局流程。
+	ReplayLog.skip_info()   # R167：先跳掉 battle_end / run_end 这类无消费方的信息条目
 	if not ReplayLog.playing or engine == null:
 		return
 	if _now() < _replay_next_at:

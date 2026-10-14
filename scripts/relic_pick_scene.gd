@@ -136,12 +136,13 @@ func _toggle_sound() -> void:
 
 
 func _on_back_to_title() -> void:
-	## 流程界面里直接回标题 = **放弃本局**（与战斗中「返回标题」同一口径）。
-	if ReplayLog.recording:
+	## R167：回标题 = **保留本局**（只复位内存状态，续档留着）。
+	if ReplayLog.playing:
+		ReplayLog.stop_playback()      # 回放中：只停回放，别碰玩家存档
+	elif ReplayLog.recording:
 		ReplayLog.finish("quit")
-	ReplayLog.stop_playback()
 	if RunState.run_active:
-		RunState.end_run()
+		RunState.end_run(false)
 	SceneFx.goto("res://scenes/title.tscn")
 
 

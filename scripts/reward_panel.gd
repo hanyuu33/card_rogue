@@ -62,6 +62,7 @@ var _view := VIEW_LIST
 var _sel := 0                 # 当前在看的条目下标（列表 → 详情带过去）
 var _hover_row := -1
 var _hover_card := -1
+var _pick_sel := -1           # R167：卡牌三选一里「已点选、待确认」的那张（触屏没有悬停）
 var _scroll := 0.0
 var _cached_n := -1
 var _replay_next_at := 0
@@ -136,6 +137,7 @@ func open() -> void:
 	_scroll = 0.0
 	_hover_row = -1
 	_hover_card = -1
+	_pick_sel = -1
 	_refresh_btn()
 	_root.queue_redraw()
 
@@ -146,6 +148,7 @@ func close() -> void:
 	_root.visible = false
 	_view = VIEW_LIST
 	_scroll = 0.0
+	_pick_sel = -1
 	_refresh_btn()
 
 
@@ -290,6 +293,7 @@ func _pick_card(i: int, card_id: int) -> void:
 	RunState.pick_pending_card(i, card_id)
 	_view = VIEW_LIST
 	_scroll = 0.0
+	_pick_sel = -1
 	_root.queue_redraw()
 
 
@@ -304,6 +308,7 @@ func _open_entry(i: int) -> void:
 		_view = VIEW_CARDS
 	_scroll = 0.0
 	_hover_card = -1
+	_pick_sel = -1
 	_root.queue_redraw()
 
 
@@ -311,6 +316,7 @@ func _back_to_list() -> void:
 	_view = VIEW_LIST
 	_scroll = 0.0
 	_hover_card = -1
+	_pick_sel = -1
 	_root.queue_redraw()
 
 
@@ -480,7 +486,7 @@ func _draw_cards() -> void:
 	var x0 := (vs.x - total) / 2.0
 	var cands: Array = e.get("candidates", [])
 	_root.draw_string(_font_bold, Vector2(0, 44),
-			"卡牌奖励 —— 点一张加入卡组（%s）" % _entry_tag(e),
+			"卡牌奖励 —— 点一张看说明，再确认加入卡组（%s）" % _entry_tag(e),
 			HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, Color("2f2a20"))
 	_root.draw_string(_font, Vector2(0, 74),
 			"「%s」" % ("已领取：选了其中一张" if settled else "看完随时可以点下面「返回列表」"),
@@ -490,9 +496,13 @@ func _draw_cards() -> void:
 		if card == null:
 			continue
 		var rr := Rect2(x0 + i * (CARD_W + CARD_GAP), CARDS_Y, CARD_W, CARD_H)
-		var hov := i == _hover_card and not settled
+		var is_pick := i == _pick_sel and not settled
+		var hov := (i == _hover_card or is_pick) and not settled
 		if hov:
 			_root.draw_rect(rr.grow(6.0), Color(1, 1, 1, 0.75), true)   # R155：亮边与点选判定同圈（原来大 4px）
+			if is_pick:
+				# R167：已点选（待确认）那张补一圈金边 —— 触屏没有悬停，得让「我选了哪张」看得见
+				_root.draw_rect(rr.grow(9.0), UiTheme.ACCENT_GOLD, false, 3.0)
 		CardFace.draw(_root, card, rr, card.health, false, false, _font, _font_bold)
 		# R155：稀有度铭牌 —— 宽度按文字实测（旧版写死 90px，和 216 宽的卡面对不上），
 		# 深色底条压在**这张卡自己的中轴**正下方。
@@ -513,17 +523,22 @@ func _draw_cards() -> void:
 	_draw_card_detail(cands)
 	_draw_btn(_btn_back_rect(), "← 返回列表", false, false)
 	_draw_btn(_btn_cards_skip_rect(), "放弃这组", false, settled)
-	_root.draw_string(_font, Vector2(0, vs.y - 42),
-			"点任意一张卡＝直接加入卡组（该奖励随即置灰）" if not settled else "这组已经处理过了",
+	# R167：确认按钮（触屏必需 —— 没有悬停就得靠它「先看后拿」）
+	var can_pick := (not settled) and _pick_sel >= 0 and _pick_sel < cands.size()
+	_draw_btn(_btn_confirm_rect(), "确认选择这张", true, not can_pick)
+	_root.draw_string(_font, Vector2(0, vs.y - 100),
+			"点一张卡先看说明 → 再点「确认选择这张」加入卡组" if not settled else "这组已经处理过了",
 			HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_CAPTION, UiTheme.INK_600)
 
 
 func _draw_card_detail(cands: Array) -> void:
 	## R155：详情从「钉在屏幕最右边缘」改成**三张卡正下方的横条**（与卡组同一左右边界）——
 	## 旧版悬停最左一张卡时说明文字在最右侧，眼睛横跨整个屏幕（用户：文字和卡面对不上）。
-	if _hover_card < 0 or _hover_card >= cands.size():
+	# R167：鼠标悬停优先；**触屏**没有悬停 → 用「已点选」的那张（点一下就能读到说明）。
+	var idx := _hover_card if _hover_card >= 0 else _pick_sel
+	if idx < 0 or idx >= cands.size():
 		return
-	var card: CardData = _repo_cards.get_card(int(cands[_hover_card]))
+	var card: CardData = _repo_cards.get_card(int(cands[idx]))
 	if card == null:
 		return
 	var vs := _vs()
@@ -599,7 +614,13 @@ func _btn_skip_rect() -> Rect2:
 
 func _btn_cards_skip_rect() -> Rect2:
 	var vs := _vs()
-	return Rect2(vs.x / 2.0 - 70.0, vs.y - 84.0, 140.0, 38.0)
+	return Rect2(vs.x / 2.0 - 210.0, vs.y - 84.0, 140.0, 38.0)
+
+
+func _btn_confirm_rect() -> Rect2:
+	## R167：卡牌三选一的「确认选择这张」（放在「放弃这组」右侧）。
+	var vs := _vs()
+	return Rect2(vs.x / 2.0 + 20.0, vs.y - 84.0, 190.0, 38.0)
 
 
 func _card_rect_in(e: Dictionary, i: int) -> Rect2:
@@ -681,9 +702,16 @@ func _on_click(pos: Vector2) -> void:
 			if _settled(e):
 				return
 			var cands: Array = e.get("candidates", [])
+			# R167：**先看后拿**。点卡 = 选中并显示说明（触屏没悬停，旧版一点就直接入组、
+			# 根本看不到卡面效果），再点「确认选择这张」才真的加入卡组。
+			if _btn_confirm_rect().has_point(pos):
+				if _pick_sel >= 0 and _pick_sel < cands.size():
+					_pick_card(_sel, int(cands[_pick_sel]))
+				return
 			for i in cands.size():
 				if _card_rect_in(e, i).grow(6.0).has_point(pos):
-					_pick_card(_sel, int(cands[i]))
+					_pick_sel = i
+					_root.queue_redraw()
 					return
 		_:
 			if _btn_done_rect().has_point(pos):
@@ -720,6 +748,7 @@ func _max_scroll() -> float:
 
 func _replay_tick() -> void:
 	## 回放驱动（R46 的奖励分支搬到这里）：按录像执行奖励决策。
+	ReplayLog.skip_info()   # R167：先跳掉无消费方的信息条目（battle_end / run_end）
 	## ⚠️ 老录像里的 `drop_later`（先浏览卡牌奖励再回来决定）在新界面里没有对应动作 ——
 	##    悬浮窗本来就能随时进出，所以直接消费掉、什么都不做。
 	if not ReplayLog.playing:
@@ -766,6 +795,7 @@ func _replay_tick() -> void:
 func _demo_start() -> void:
 	## -- --r119：造一批「长描述道具 + 卡牌奖励」并直接弹窗（截图验证用）。
 	## --r119relic / --r119cards：额外切到「道具详情」/「卡牌三选一」视图，方便逐屏核验。
+	## --r119pick：卡牌三选一 + **已点选待确认**（R167 触屏「先看后拿」流程的出图核验）。
 	## --r119chip：只铺奖励、**不弹窗** —— 核验常驻入口「✦ 待领奖励 N」的位置。
 	var args := OS.get_cmdline_user_args()
 	var mode := ""
@@ -797,6 +827,14 @@ func _demo_start() -> void:
 				if str((RunState.pending_rewards[i] as Dictionary).get("kind", "")) == "cards":
 					_open_entry(i)
 					_hover_card = 0
+					break
+		elif mode == "--r119pick":
+			# R167：不设悬停，改用「已点选」—— 复现触屏上「点一下卡 → 看说明 → 待确认」的画面
+			for i in RunState.pending_rewards.size():
+				if str((RunState.pending_rewards[i] as Dictionary).get("kind", "")) == "cards":
+					_open_entry(i)
+					_hover_card = -1
+					_pick_sel = 0
 					break
 		_root.queue_redraw())
 	add_child(t)
