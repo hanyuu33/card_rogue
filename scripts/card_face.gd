@@ -36,14 +36,10 @@ class_name CardFace
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const CARD_H_DESIGN := 70.0   # 缩放基准高（battle 版小卡高）
-# R156 卡面 v3：card_paper.png 底图内框（卡图窗）的归一化矩形。
-# v3 = v2 底图 PIL 扩窗（用户口径「上半部分整个是卡图，给图片更大空间」）：
-# 窗 0.065..0.935 × 0.085..0.715 → 0.035..0.965 × 0.030..0.720（面积 +15%），
-# 文字区不变（金线分隔仍在 0.745，名称条之下排种类/效果）。
-const ART_WIN_X0 := 0.038
-const ART_WIN_Y0 := 0.033
-const ART_WIN_X1 := 0.962
-const ART_WIN_Y1 := 0.717
+# R165 卡面 v4：卡图**开放式**——左/右/上直接出血到卡边（不再留内框），
+# 卡框只留在**底部**（文字区那一截）。卡图区 = 顶部 0 .. CARD_ART_RATIO 的整块，
+# 直接在 `_draw_art()` 里按 rect 与 `UiTheme.CARD_ART_RATIO` 现算。
+# （原 0.035..0.965 × 0.030..0.720 的内框常量已撤。）
 
 static var _art_cache := {}   # id -> Texture2D / null（找不到图也缓存，避免反复查盘）
 
@@ -143,11 +139,13 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 			var glow := UiTheme.SELECT_RING
 			glow.a = 0.42 - 0.11 * gi
 			canvas.draw_rect(rect.grow(1.0 + gi), glow, false, 1.0)
-	# ③ 边框 + 角标（R153）：底图自带金线外框，稀有度走**程序描边 2.5px**（稀有度色，
-	#    唯一视觉通道）+ 右上角小旗（同色）—— 不再用 frame_*.png 素材（v2 底图自带装饰框，
-	#    再叠一层素材框会盖住底图的卷草纹）。
+	# ③ 稀有度：R165 起**只画底部框**——卡图开放、上/左/右出血到卡边，不再全框。
+	#    边框色仍是稀有度唯一通道（规则 5）；选中仍走外发光，不抢边框。
 	var rar_col: Color = card.rarity_color()
-	canvas.draw_rect(rect, rar_col, false, maxf(1.5, 2.0 * k))
+	var bw := maxf(1.5, 2.0 * k)
+	canvas.draw_rect(Rect2(rect.position.x, rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO,
+			rect.size.x, rect.size.y * (1.0 - UiTheme.CARD_ART_RATIO)), rar_col, false, bw)
+	# 右上角小旗（同色，稀有度辅助识别）
 	var flag_w: float = 5.0 * k
 	var flag_h: float = 9.0 * k
 	var fx: float = rect.end.x - UiTheme.CARD_PAD * k - flag_w
@@ -158,12 +156,6 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 			Vector2(fx + flag_w / 2.0, fy + flag_h * 0.72),
 			Vector2(fx, fy + flag_h)])
 	canvas.draw_colored_polygon(flag, rar_col)
-	# ③b 职业色条（R153）：卡面**左侧 3px 竖条**（CardData.card_class），中立卡（class 为空）不画。
-	#    它是「一眼区分职业」的新通道 —— 稀有度给边框，职业给侧边，两条不抢。
-	var cls_col: Color = UiTheme.class_color(card.card_class)
-	if cls_col.a > 0.01:
-		canvas.draw_rect(Rect2(rect.position.x + 2.0 * k, rect.position.y + 2.0 * k,
-				3.0 * k, rect.size.y - 4.0 * k), cls_col)
 	# ④ 卡图区（上半）
 	_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold)
 	# ⑤ 卡图与文字区的分隔线
@@ -211,44 +203,54 @@ static func draw_text_backing(canvas: CanvasItem, rect: Rect2, sep_y: float, k: 
 
 static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float, pad: float,
 		is_tapped: bool, font_bold: Font) -> void:
-	## 卡图区 = 卡片的**上半部分**（R114 起。此前是「顶部让出名字行、底部让出三行数值」，
-	## 58×70 的小卡只剩 50×22 的窄条，卡图几乎是装饰）。
-	# R153：卡图区 = 底图卡图窗的**内沿矩形**（归一化常量，见 ART_WIN_*）。
-	var box := Rect2(rect.position + Vector2(rect.size.x * ART_WIN_X0, rect.size.y * ART_WIN_Y0),
-			Vector2(rect.size.x * (ART_WIN_X1 - ART_WIN_X0), rect.size.y * (ART_WIN_Y1 - ART_WIN_Y0)))
+	## 卡图区 = 卡片上半（R114 起）。R165：卡图**开放**——左/右/上直接出血到卡边，
+	## 不再有内框；卡框只留在底部（见 `draw()` ③）。
+	var box := Rect2(rect.position,
+			Vector2(rect.size.x, rect.size.y * UiTheme.CARD_ART_RATIO))
 	if box.size.x < 6.0 or box.size.y < 6.0:
-		return
-	if is_tapped:
-		# 横置（本回合已行动）：卡图**铺满整张卡** + 压暗（R122 用户口径）。
-		# ⚠️ 原来是「画进上半条 70×28 + `Color(1,1,1,0.26)`」—— 0.26 是**透明度**而不是
-		#    「压暗」，于是卡图被缩成一个小方块还几乎看不见，玩家认不出躺在那的是哪张卡。
-		#    现在用 cover 裁切铺满整卡，再用一层黑纱压暗 —— 看得清，也一眼知道它已行动。
-		var tapped_tex := art_for(card.id)
-		if tapped_tex != null:
-			canvas.draw_texture_rect_region(tapped_tex, rect,
-					cover_region(tapped_tex.get_size(), rect), Color(0.72, 0.72, 0.76))
-		else:
-			var tc: Color = UiTheme.kind_color(card.kind)
-			tc.a = 0.20
-			canvas.draw_rect(rect, tc)
-		canvas.draw_rect(rect, Color(0.05, 0.06, 0.10, 0.30))
 		return
 	var tex := art_for(card.id)
 	if tex != null:
-		canvas.draw_texture_rect(tex, fit_rect(tex.get_size(), box), false)
+		# 覆盖式铺满（cover）：卡图出血到卡边、不留白（R165 开放式卡图）。
+		canvas.draw_texture_rect_region(tex, box, cover_region(tex.get_size(), box), Color.WHITE)
 	else:
-		# 无图回退（R113 批 3）：卡库 198 张只有 15 张有图，绝大多数卡原本是**一片白**。
-		# 改成「按卡种着色的淡底纹 + 首字水印」——留下信息（这是什么卡）而不是留白。
-		var kind_col: Color = UiTheme.kind_color(card.kind)
-		var plate := kind_col
-		plate.a = 0.13
-		canvas.draw_rect(box, plate)
-		var glyph := kind_col
-		glyph.a = 0.34
-		# R164：水印字号按**短边**算 —— 旧写法只看高度，奖励三选一那种大卡上字号能到 150px，
-		# 会从卡图窗顶/底溢出去（用户口径「卡图上的文字和卡面的布局对应不上」）。
+		# 无图回退（R165）：卡种/职业色的**淡彩竖向渐变横幅**代替「粗暴纯色块」——
+		# 自然、按卡分色（职业优先，中立回落卡种）。
+		var cols := banner_cols(card)
+		_draw_vgradient(canvas, box, cols[0], cols[1])
+		var glyph: Color = cols[1]
+		glyph.a = 0.40
 		_draw_center(canvas, font_bold, int(minf(box.size.x, box.size.y) * 0.9),
 				card.card_name.substr(0, 1), box.get_center(), glyph)
+
+
+static func banner_cols(card: CardData) -> Array:
+	## 卡面横幅色 = [上端, 下端]：职业色优先（中立回落卡种色），向白混合成淡彩。
+	var c: Color = UiTheme.class_color(card.card_class)
+	if c.a <= 0.01:
+		c = UiTheme.kind_color(card.kind)
+	var w := Color(1, 1, 1)
+	return [c.lerp(w, UiTheme.KIND_BANNER_TOP), c.lerp(w, UiTheme.KIND_BANNER_BOT)]
+
+
+static func _draw_vgradient(canvas: CanvasItem, rect: Rect2, top: Color, bot: Color) -> void:
+	## 竖向渐变填充（无图回退横幅）。逐条水平带插值 —— 无素材依赖、headless 安全。
+	var steps := maxi(2, int(rect.size.y / 3.0))
+	var sh := rect.size.y / float(steps)
+	for i in steps:
+		var t := float(i) / float(steps - 1)
+		canvas.draw_rect(Rect2(rect.position.x, rect.position.y + i * sh, rect.size.x, sh + 1.0),
+				top.lerp(bot, t), true)
+
+
+static func _draw_hgradient(canvas: CanvasItem, rect: Rect2, left: Color, right: Color) -> void:
+	## 横向渐变填充（卡名横幅）。
+	var steps := maxi(2, int(rect.size.x / 3.0))
+	var sw := rect.size.x / float(steps)
+	for i in steps:
+		var t := float(i) / float(steps - 1)
+		canvas.draw_rect(Rect2(rect.position.x + i * sw, rect.position.y, sw + 1.0, rect.size.y),
+				left.lerp(right, t), true)
 
 
 static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,
@@ -274,11 +276,6 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	var top: float = sep_y + maxf(1.5, 1.2 * kt)  # 文字区上沿 = 卡名墨顶
 	if bottom - top < 6.0:
 		return
-	# ⚠️ R122：横置时卡图铺满整卡 → 名字/种类直接压在图上。铺一层**浅色薄纱**，
-	#    深墨色的字才读得清（不透太多，卡图仍然是主角）。
-	if is_tapped:
-		canvas.draw_rect(Rect2(rect.position.x + pad * 0.5, sep_y,
-				rect.size.x - pad, rect.end.y - sep_y), Color(1, 1, 1, 0.62))
 	var sz: int = maxi(7, roundi(UiTheme.CARD_FS_TEXT * kt))
 	var cx: float = rect.position.x + rect.size.x / 2.0
 	var maxw: float = rect.size.x - pad * 2.0
@@ -317,9 +314,14 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	if eff_n > 0:
 		block_bottom = eff_base0 + line_h * (eff_n - 1) + desc
 	# ── 底衬（R164：羊皮卷/木板，程序绘制，**无边框**）──
-	if not is_tapped:
-		draw_text_backing(canvas, rect, sep_y, k, pad, base_name - asc_b, block_bottom)
+	draw_text_backing(canvas, rect, sep_y, k, pad, base_name - asc_b, block_bottom)
 	# ── 第二遍：画字（**不描边**）───────────────────────────────────────
+	# R165 卡名横幅：卡种/职业色的淡彩横向渐变条，垫在卡名之下（「不同颜色的 banner」）。
+	var bcols := banner_cols(card)
+	var nb_y := base_name - asc_b - sz * 0.18
+	var nb_h := sz * 1.40
+	_draw_hgradient(canvas, Rect2(rect.position.x + pad * 0.4, nb_y,
+			rect.size.x - pad * 0.8, nb_h), bcols[0], bcols[1])
 	_draw_center(canvas, font_bold, sz, _ellipsize(font_bold, card.card_name, maxw, sz),
 			Vector2(cx, base_name - sz * 0.36), UiTheme.INK_900)
 	if has_meta:

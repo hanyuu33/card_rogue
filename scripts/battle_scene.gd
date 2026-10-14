@@ -115,6 +115,7 @@ const COL_GUARD := Color("1d9e4f")              # 替 HP 承伤（森林守护/�
 ## R142：**可主动发动**（熊 8004「回春」）—— 亮黄绿脉动环 + 四向内箭头 + 「可发动 F」徽标。
 ## 用「黄绿」而不是普通绿：我方单位框本身就是深绿（SIDE_SELF），同色环会被读成「框变粗了」。
 const COL_ACTIVATABLE := Color(0.78, 1.0, 0.35)
+const COL_READY := Color(0.50, 0.90, 1.0)      ## R165「可行动」就绪光环（亮青，区别于黄绿「可发动」）
 const COL_TAUNT := UiTheme.STATE_TAUNT              # 嘲讽：战场单位的橙色脉冲光环（必须优先打它）
 const COL_FROZEN := UiTheme.STATE_FROZEN             # 冰封（寒冰箭/冻结陷阱/冰冻战吼）：冷蓝脉冲环 + 寒霜（这回合动不了）
 const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（恶魔鸭 9116）：紫脉冲环 + Zzz（还差 N 下挨打就醒）
@@ -5786,8 +5787,8 @@ func _draw_board_cards() -> void:
 func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	var center := _display_center(p, cell)
 	var selected: bool = selection != null and selection[0] == "board" and selection[1] == cell
-	var w := BOARD_TAP_W if p.tapped else BOARD_CARD_W
-	var h := BOARD_TAP_H if p.tapped else BOARD_CARD_H
+	var w := BOARD_CARD_W
+	var h := BOARD_CARD_H
 	# R151 P0-4：从手牌飞来的落位动画带缩放回稳（from_scale → 1，与位移同一条 ease-out）
 	if _slides.has(p):
 		var sl: Dictionary = _slides[p]
@@ -5804,7 +5805,11 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	# R118：`on_board = true` —— 战场卡面的「种类 · 字段」行**不再标出**上场后已无作用的
 	# 字段（交换 / 幻影）。判据在 `CardData.affix_on_board()`，这里只负责声明「我在战场上」。
 	_draw_card_face(p.card, Rect2(center - Vector2(w, h) / 2.0, Vector2(w, h)),
-			_show_hp(p, p.health), selected, p.tapped, -1, p.effective_power(), true)
+			_show_hp(p, p.health), selected, false, -1, p.effective_power(), true)
+	# R165：移除「横置」视觉——不再把卡转横。改用青色**就绪光环**标明「可行动」：
+	# 凡本回合还有行动权（未横置）的单位都亮脉动环（敌我同标），以此区分不能动的卡。
+	if not p.tapped:
+		_draw_ready_aura(center, w, h)
 	if engine.absorbs_for_hp(p):
 		# 替己方 HP 承伤的统一表现（森林守护 9037 / 以太守卫 9067 / 铁栅栏 9072）：
 		# 判定直接问引擎 absorbs_for_hp()，保证「同一机制 = 同一特效」，不再各写各的。
@@ -6035,6 +6040,24 @@ func _draw_activatable_aura(center: Vector2, w: float, h: float, badge_row: int)
 			Color(0.94, 1.0, 0.82), Color(0.02, 0.10, 0.02))
 
 
+func _draw_ready_aura(center: Vector2, w: float, h: float) -> void:
+	## R165：「可行动」就绪光环（敌我同标）—— 取代被移除的「横置」表现。
+	## 亮青脉动双环 + 光晕，和黄绿「可发动 F」主动技环区分开（「还能动」≠「能发动技能」）。
+	## 画在其它状态环之前 → 在最底层。要**明显**（用户口径）：亮、粗、带光晕，
+	## 在绿色战场底上也一眼能认出「这张还能动」。
+	var t := float(_now()) / 1000.0
+	var pulse := (sin(t * 3.2) + 1.0) * 0.5
+	var base := Vector2(w, h).length() * 0.5
+	var r1 := base + 3.0 + pulse * 3.0
+	draw_arc(center, r1, 0.0, TAU, 48,
+			Color(COL_READY.r, COL_READY.g, COL_READY.b, 0.46 + pulse * 0.44), 4.0)
+	var r2 := r1 + 5.5 + pulse * 2.5
+	draw_arc(center, r2, 0.0, TAU, 48,
+			Color(COL_READY.r, COL_READY.g, COL_READY.b, 0.16 + pulse * 0.20), 2.5)
+	draw_arc(center, base + 1.5, 0.0, TAU, 48,
+			Color(0.85, 0.97, 1.0, 0.20 + pulse * 0.30), 1.5)
+
+
 func _board_has_activatable() -> bool:
 	## 棋盘上是否有「我方现在就能主动发动」的单位 —— 那层环与内箭头是脉冲动画，
 	## 需要逐帧重绘（R142）。判据与绘制同源（都走 `engine.can_activate`）。
@@ -6044,6 +6067,18 @@ func _board_has_activatable() -> bool:
 		var p: Placement = engine.state.board[c]
 		if p != null and p.owner == GameEngine.SIDE_SELF \
 				and engine.can_activate(c, GameEngine.SIDE_SELF):
+			return true
+	return false
+
+
+func _board_has_actable() -> bool:
+	## R165：棋盘上是否有「本回合还能行动」的单位（未横置）—— 就绪光环是脉冲动画，
+	## 需要逐帧重绘。判据与绘制同源（都看 `p.tapped`）。
+	if engine == null:
+		return false
+	for c: Vector2i in engine.state.board:
+		var p: Placement = engine.state.board[c]
+		if p != null and not p.tapped:
 			return true
 	return false
 
@@ -7845,8 +7880,8 @@ func _draw_flashes() -> void:
 	var items: Array = []
 	for pair: Array in engine.state.iter_board():
 		var pl: Placement = pair[1]
-		items.append([pl, pair[0], BOARD_TAP_W if pl.tapped else BOARD_CARD_W,
-				BOARD_TAP_H if pl.tapped else BOARD_CARD_H])
+		items.append([pl, pair[0], BOARD_CARD_W,
+				BOARD_CARD_H])
 	for d: Dictionary in _dying:
 		if d.get("p") != null:
 			items.append([d.p, d.cell, BOARD_CARD_W, BOARD_CARD_H])
@@ -8818,17 +8853,8 @@ func _draw_turn_owner_fx() -> void:
 	## + 敌方能量框提亮；我方回合：手牌区轻微上浮（位移与暗罩在 _draw_hand_card）。
 	if engine.over:
 		return
-	if engine.current_side != GameEngine.SIDE_SELF:
-		var pulse := 0.5 + 0.5 * sin(float(_now()) / 380.0)
-		for pair: Array in engine.state.iter_board():
-			var cell: Vector2i = pair[0]
-			var p: Placement = pair[1]
-			if p.owner == GameEngine.SIDE_SELF:
-				continue
-			var ctr := _display_center(p, cell)
-			var r := Rect2(ctr - Vector2(BOARD_CARD_W, BOARD_CARD_H) / 2.0,
-					Vector2(BOARD_CARD_W, BOARD_CARD_H))
-			draw_rect(r.grow(2.0), Color(0.85, 0.20, 0.15, 0.16 + 0.14 * pulse), false, 1.5)
+	# R165：敌方「可行动」提示不再用红色呼吸边——统一改由 `_draw_ready_aura`
+	# 的青色就绪环（敌我同标）表达，避免两种环叠在同一张敌卡上显得杂乱。
 
 
 func _draw_pow_fx() -> void:
@@ -8840,8 +8866,8 @@ func _draw_pow_fx() -> void:
 		if p == null:
 			continue
 		var ctr := _display_center(p, f["cell"])
-		var w := BOARD_TAP_W if p.tapped else BOARD_CARD_W
-		var h := BOARD_TAP_H if p.tapped else BOARD_CARD_H
+		var w := BOARD_CARD_W
+		var h := BOARD_CARD_H
 		var bc := Vector2(ctr.x - w / 2.0, ctr.y + h / 2.0)   # 力量徽章圆心（左下，压左框线）
 		var br := UiTheme.CARD_BADGE_R * BOARD_SCALE
 		var bfs: int = maxi(7, roundi(UiTheme.CARD_FS_BADGE * BOARD_SCALE))
@@ -9563,6 +9589,8 @@ func _process(delta: float) -> void:
 		queue_redraw()  # 能量屏障的青色呼吸环 + 护盾徽标（R87）
 	if _board_has_activatable():
 		queue_redraw()  # R142：可主动发动的黄绿环 + 四向内箭头同样是脉冲动画
+	if _board_has_actable():
+		queue_redraw()  # R165：可行动就绪光环是脉冲动画（敌我同标）
 	if _cancel_armed:
 		queue_redraw()  # R118：「再点一次就取消」的橙环是脉冲动画
 	if engine != null and _board_has_pulsing_field():

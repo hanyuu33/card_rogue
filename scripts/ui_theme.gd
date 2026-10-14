@@ -302,6 +302,11 @@ const KIND_EFFECT := Color("1d7a4f")  ## 效果
 const KIND_FORT := Color("7a5a2a")    ## 工事
 const KIND_FALLBACK := Color("808080")  ## 未知种类
 
+## R165 卡面横幅：无图回退 / 卡名条用**卡种（或职业）色的淡彩渐变**代替「粗暴纯色块」。
+## 两个值是「向白混合」的比例（越大越淡越自然）：上端更淡、下端略深形成渐变。
+const KIND_BANNER_TOP := 0.80   ## 横幅渐变上端混合比（更淡）
+const KIND_BANNER_BOT := 0.50   ## 横幅渐变下端混合比（略深，仍有彩）
+
 ## 卡面说明文字里的「关键字」高亮（如数值、费用）。4.74:1。
 const CODE_TEXT := Color("a8621f")
 
