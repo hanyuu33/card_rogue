@@ -166,7 +166,6 @@ var _tip_demo := ""              # 演示参数 --tip <名字>：锁住悬浮供
 
 @onready var event_name: Label = $Center/EventName
 @onready var desc: Label = $Center/Desc
-@onready var hp_label: Label = $Center/HPLabel
 @onready var rest_btn: Button = $Center/RestBtn
 @onready var bbq_btn: Button = $Center/BBQBtn
 @onready var leave_btn: Button = $Center/LeaveBtn
@@ -433,7 +432,6 @@ func _ready() -> void:
 	if _is_whisper():
 		event_name.text = "鸭鸭低语"
 		desc.text = WHISPER_DESC
-		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 		if RunState.has_relic(WHISPER_ID):
 			_whisper_taken = true
 			rest_btn.text = "继续"
@@ -450,7 +448,6 @@ func _ready() -> void:
 	elif _is_gaze():
 		event_name.text = "鸭之凝视"
 		desc.text = GAZE_DESC
-		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 		if RunState.has_relic(RICE_ID):
 			_gaze_taken = true
 			rest_btn.text = "继续"
@@ -467,7 +464,6 @@ func _ready() -> void:
 	elif _is_pear():
 		event_name.text = "鸭 梨 山 大"
 		desc.text = PEAR_DESC
-		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 		if RunState.has_relic(PEAR_ID):
 			_pear_taken = true
 			rest_btn.text = "继续"
@@ -484,7 +480,6 @@ func _ready() -> void:
 	elif _is_bluefish():
 		event_name.text = "蓝 色 大 肥 鱼"
 		desc.text = BLUEFISH_TAKEN_DESC if _bluefish_taken else BLUEFISH_DESC
-		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 		if _bluefish_taken:
 			rest_btn.text = "继续"
 			$Center/LeaveBtn.text = "已获得"
@@ -499,7 +494,6 @@ func _ready() -> void:
 	elif _is_hero():
 		event_name.text = "绝赞五换一"
 		desc.text = HERO_DESC
-		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 		if _hero_traded:
 			rest_btn.text = "继续"
 			$Center/LeaveBtn.text = "已完成"
@@ -528,7 +522,6 @@ func _ready() -> void:
 	elif _is_oblivion():
 		event_name.text = "遗 忘 之 泉"
 		desc.text = OBLIVION_DONE_DESC if _oblivion_done else OBLIVION_DESC
-		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 		if _oblivion_done:
 			rest_btn.text = "继续"
 			$Center/LeaveBtn.text = "已完成"
@@ -543,7 +536,6 @@ func _ready() -> void:
 	elif _is_smith():
 		event_name.text = "鸭 鸭 工 匠"
 		desc.text = SMITH_DONE_DESC if _smith_done else SMITH_DESC
-		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 		if _smith_done:
 			rest_btn.text = "继续"
 			$Center/LeaveBtn.text = "已完成"
@@ -560,7 +552,6 @@ func _ready() -> void:
 	elif _is_relic_chest():
 		event_name.text = "宝 箱 层"
 		desc.text = CHEST_LAYER_DESC
-		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 		rest_btn.text = "开启宝箱（获得 1 个随机奖励道具）"
 		rest_btn.disabled = false
 		$Center/LeaveBtn.text = "空手离开"
@@ -571,7 +562,6 @@ func _ready() -> void:
 		desc.text = "路旁放着一只落满灰尘的宝箱……\n" \
 				+ "支付 5 生命打开它——箱子里可能是一组卡牌（选 1 张加入卡组），\n" \
 				+ "也可能是一件道具（直接进道具栏）。也可以转身离开，分文不取。"
-		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 		rest_btn.text = "支付 5 生命，打开宝箱"
 		rest_btn.disabled = RunState.hp <= 5   # 至少保留 1 点生命
 		$Center/LeaveBtn.text = "跳过（不支付生命）"
@@ -579,7 +569,6 @@ func _ready() -> void:
 	elif _is_struggle():
 		event_name.text = "挣  扎"
 		desc.text = STRUGGLE_TAKEN_DESC if _struggled else STRUGGLE_DESC
-		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 		rest_btn.text = "继续" if _struggled else "接受挣扎（失去 %d 生命，获得「金属龙」）" % STRUGGLE_LIFE
 		rest_btn.disabled = (not _struggled) and RunState.hp <= STRUGGLE_LIFE   # 至少保留 1 点生命
 		$Center/LeaveBtn.text = "已完成" if _struggled else "转身离开（保持现状）"
@@ -589,7 +578,6 @@ func _ready() -> void:
 		bbq_btn.visible = true
 		event_name.text = "休息处"
 		desc.text = _rest_desc()
-		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 	$Center/LeaveBtn.pressed.connect(func(): _ui_leave())
 	rest_btn.pressed.connect(func(): _ui_main())
 	bbq_btn.pressed.connect(func(): _ui_bbq())
@@ -887,7 +875,6 @@ func _on_main() -> void:
 		var card := CardRepo.load_json().get_card(STRUGGLE_CARD_ID)
 		var cname := card.card_name if card != null else "金属龙"
 		desc.text = STRUGGLE_TAKEN_DESC
-		hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 		rest_btn.text = "继续"
 		$Center/LeaveBtn.text = "已完成"
 		$Center/LeaveBtn.disabled = true
@@ -936,7 +923,6 @@ func _setup_arcane() -> void:
 	## R147：`_arcane_charm_taken` 只表示「**本次**取走了护符」，所以**不再**在铺选项时置位
 	##（那是「本来就戴着」，拿它当闸门就退回 R71 的 bug 了）。
 	event_name.text = "奥 秘 之 泉"
-	hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 	bbq_btn.visible = true
 	bbq_btn.text = "喝下泉水：随机 3 张效果 / 技能牌中选 1 张加入卡组"
 	bbq_btn.disabled = false
@@ -966,7 +952,6 @@ func _refresh() -> void:
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。
 		return
-	hp_label.text = "当前生命 %d / 最大生命 %d" % [RunState.hp, RunState.max_hp]
 	_refresh_bbq()
 	# 需求：休息处二选一 —— 选过「休息」或「烤肉」任意一个，另一个就收起来
 	if _rested or _bbq_taken:

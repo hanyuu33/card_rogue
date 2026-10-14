@@ -17,6 +17,10 @@ window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
+[autoload]
+
+TopBar="*res://scripts/top_bar.gd"
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
