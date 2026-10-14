@@ -9296,6 +9296,50 @@ func _init() -> void:
 			and r122ev._same_ref({}, {}),
 			"R122-G _same_ref：同类同 id 才算同一个（否则提示浮层会每帧闪烁）")
 
+	# ---- R168：文本里提到卡牌 / 道具的统一机制（Mention）----
+	# 解析层必须钉死：它一旦坏掉，画面上**看起来完全正常** —— 提及只是静默地
+	# 不再换色、不再可悬浮，光靠出图根本看不出来（与 R122-G 同一个理由）。
+	var r168_idx: Dictionary = Mention.index()
+	check(r168_idx.size() > 200 and int(r168_idx.get("铁栅栏", {}).get("id", 0)) == 9072,
+			"R168 名字表：卡牌 + 道具同一张表（%d 条），「铁栅栏」→ 9072" % r168_idx.size())
+	check(str(r168_idx.get("鸭之低语", {}).get("kind", "")) == "relic"
+			and str(r168_idx.get("鲸鱼之怒", {}).get("kind", "")) == "card",
+			"R168 名字表：道具名与卡名同在（卡牌优先）")
+	var r168_sc: Array = Mention.scan("把它改成一张「铁栅栏」；「不同名」不标；**鲸鱼之怒** 也认")
+	var r168_names: Array = []
+	for r168_s: Dictionary in r168_sc:
+		r168_names.append(r168_s["name"])
+	check(r168_names == ["铁栅栏", "鲸鱼之怒"],
+			"R168 scan：只认登记过的名字、去重、保序（得 %s）" % str(r168_names))
+	var r168_segs: Array = CardText.parse("由「在启动了」召唤的墙。")
+	var r168_mk := 0
+	for r168_g: Dictionary in r168_segs:
+		if r168_g.has("mention"):
+			r168_mk += 1
+	check(r168_mk == 1 and str(r168_segs[0].get("text", "")) == "由",
+			"R168 parse：`「名字」` 被切成独立片段并带上 mention（其余文字原样保留）")
+	check(CardText.naturalize("由「在启动了」召唤的墙。") == "由「在启动了」召唤的墙。",
+			"R168 naturalize：切提及**不改变**纯文本输出（老断言 / 老版式不受影响）")
+	var r168_wrap: Array = CardText.parse("先写一段很长很长的前缀把这一行彻底撑满再去提「铁栅栏」")
+	var r168_font: Font = ThemeDB.fallback_font
+	var r168_kept := 0
+	if r168_font != null:
+		for r168_l: Array in CardText.wrap_segments(r168_font, null, r168_wrap, 130.0, 14):
+			for r168_x: Dictionary in r168_l:
+				if r168_x.has("mention"):
+					r168_kept += 1
+	check(r168_kept >= 1, "R168 折行后 mention 不丢（折行必须带走 mention 元数据）")
+	var r168_lt: Color = Mention.text_color(Color("f1e9d5"))
+	var r168_dk: Color = Mention.text_color(Color("222630"))
+	check(r168_lt != r168_dk and r168_lt.get_luminance() < 0.5 and r168_dk.get_luminance() > 0.5,
+			"R168 提及色按底色切换（浅底深金 / 暗底亮金）：两种底色上都读得清")
+	var r168_sm: Array = Mention.summary_lines(r168_font, {"kind": "card", "id": 9072}, 300.0, 2)
+	check(r168_sm.size() >= 1 and r168_sm.size() <= 2,
+			"R168 附带块摘要：折行且不超过上限（%d 行，不会把面板撑爆）" % r168_sm.size())
+	check(Mention.same({"kind": "card", "id": 9072}, {"kind": "card", "id": 9072})
+			and not Mention.same({"kind": "card", "id": 9072}, {"kind": "relic", "id": 9072}),
+			"R168 same：同类同 id 才算同一个（悬浮高亮判定，避免每帧闪烁）")
+
 	# ---- R76-B：潜入 9100 必须是两段式（拖到卡上不能自己挑落点）----
 	# 原来拖到盟友身上会一路走到 use_spell 的 INFILTRATE 分支，引擎自己挑
 	# 「己方半场第一个空格」= 前排左边 → 表现为「卡片自己跑到前排左边」。

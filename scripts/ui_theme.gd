@@ -310,6 +310,12 @@ const KIND_BANNER_BOT := 0.50   ## 横幅渐变下端混合比（略深，仍有
 ## 卡面说明文字里的「关键字」高亮（如数值、费用）。4.74:1。
 const CODE_TEXT := Color("a8621f")
 
+## 「文本里提到的卡牌 / 道具名」（R168 · 规范 §4.38）：**可悬浮看详情**，
+## 所以要用与正文不同的强调色。浅底 / 暗底各一枚，由 `Mention.text_color(底色)` 二选一 ——
+## 保证两种底色上都比正文醒目、而且读得清（用户口径：这些名字本身要有颜色）。
+const MENTION_ON_LIGHT := Color("8a5f00")   ## 浅底（羊皮纸 / 卡面）：琥珀棕
+const MENTION_ON_DARK := Color("f2c14e")    ## 暗底（悬浮面板）：亮金（= ACCENT_LIT）
+
 # ── 卡面 ──
 const COST_BG := Color("2255aa")     ## 费用圆底色
 const SELECT_RING := Color("c1121f") ## 选中描边色（批 2 会改成「外发光」，令牌保留）

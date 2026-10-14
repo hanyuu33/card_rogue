@@ -166,7 +166,58 @@ static func parse(md: String, hide_parens := HIDE_PARENS) -> Array:
 		segs.append(_seg(buf, bold, italic, code))
 	if segs.is_empty():
 		segs.append(_seg("", false, false, false))
-	return segs
+	# R168：把「提到的卡牌 / 道具名」切出来（自动换色 + 可悬浮）。
+	# ⚠️ 切出来的片段**保留含标记的原文**（`「名字」`），所以 `naturalize()` 的输出
+	#    与历史逐字一致 —— 老的断言不会因为这次改动而变；颜色只体现在绘制层。
+	return mark_mentions(segs)
+
+
+static func _mention_seg(seg: Dictionary, token: String, name: String,
+		ref: Dictionary) -> Dictionary:
+	## 提及片段：`text` 保留**含标记的原文**（`「名字」`）—— 原文不动、只加一层「它是谁」。
+	var d := _carry(seg, token)
+	d["mention"] = {"name": name, "kind": str(ref["kind"]), "id": int(ref["id"])}
+	return d
+
+
+static func mark_mentions(segs: Array) -> Array:
+	## 把「提到的卡牌 / 道具名」从普通文本里切出来（R168 · 机制见 `Mention`）。
+	## 两种写法都认：
+	##   * `「名字」` —— 事件 / 卡面文案的惯用写法；
+	##   * **整段加粗**的 `**名字**` —— 历史写法（parse 已把星号吃掉，这里按整段文本判定）。
+	## 对不上名字表的一律原样保留（规范 §4.10 纪律 4：宁可少标，也不标「假链接」）。
+	var out: Array = []
+	for seg in segs:
+		var t: String = str(seg.get("text", ""))
+		if t == "":
+			continue
+		var whole := Mention.resolve(t)
+		if bool(seg.get("bold", false)) and not whole.is_empty():
+			out.append(_mention_seg(seg, t, t.strip_edges(), whole))
+			continue
+		var buf := ""
+		var i := 0
+		var n := t.length()
+		while i < n:
+			if t[i] == "「":
+				var j := t.find("」", i + 1)
+				if j > 0:
+					var nm := t.substr(i + 1, j - i - 1)
+					var ref := Mention.resolve(nm)
+					if not ref.is_empty():
+						if buf != "":
+							out.append(_carry(seg, buf))
+							buf = ""
+						out.append(_mention_seg(seg, t.substr(i, j - i + 1), nm, ref))
+						i = j + 1
+						continue
+			buf += t[i]
+			i += 1
+		if buf != "":
+			out.append(_carry(seg, buf))
+	if out.is_empty():
+		out.append(_seg("", false, false, false))
+	return out
 
 
 static func segments_plain(segs: Array) -> String:
@@ -186,6 +237,9 @@ static func to_bbcode(md: String, hide_parens := HIDE_PARENS) -> String:
 	var out := ""
 	for seg in parse(md, hide_parens):
 		var t: String = str(seg.get("text", "")).replace("[", "[lb]")
+		var men: Dictionary = seg.get("mention", {})
+		if not men.is_empty():
+			t = "[color=#%s]%s[/color]" % [UiTheme.MENTION_ON_LIGHT.to_html(false), t]
 		if bool(seg.get("code", false)):
 			t = "[code]%s[/code]" % t
 		if bool(seg.get("italic", false)):
@@ -197,8 +251,13 @@ static func to_bbcode(md: String, hide_parens := HIDE_PARENS) -> String:
 
 
 static func _carry(seg: Dictionary, text: String) -> Dictionary:
-	return {"text": text, "bold": seg.get("bold", false),
+	## ⚠️ R168：必须**原样带走 `mention`** —— 折行会把一个片段切成多段，
+	##    漏带就会让「提及」在换行处突然变回普通文字（颜色与悬浮一起丢）。
+	var d := {"text": text, "bold": seg.get("bold", false),
 			"italic": seg.get("italic", false), "code": seg.get("code", false)}
+	if seg.has("mention"):
+		d["mention"] = seg["mention"]
+	return d
 
 
 static func wrap_segments(font: Font, font_bold: Font, segs: Array,
@@ -240,29 +299,62 @@ static func draw_wrapped(canvas: CanvasItem, font: Font, font_bold: Font, segs: 
 		x: float, y: float, max_w: float, size: int, line_h: float, base_col: Color,
 		max_y := -1.0) -> float:
 	## 逐行绘制富文本片段；返回**画完后的 y**（下一行基线）。
+	## 需要「提及的命中矩形」（悬浮用）时改用 `draw_wrapped_hits()`。
+	return float(draw_wrapped_hits(canvas, font, font_bold, segs, x, y, max_w, size,
+			line_h, base_col, max_y).get("y", y))
+
+
+static func draw_wrapped_hits(canvas: CanvasItem, font: Font, font_bold: Font, segs: Array,
+		x: float, y: float, max_w: float, size: int, line_h: float, base_col: Color,
+		max_y := -1.0, min_y := -1.0) -> Dictionary:
+	## 同上，但额外交出**提及的命中矩形**：`{y: 基线, hits: [{rect, name, kind, id}]}`。
+	## 提及自动上强调色 + 淡底 + 下划线 —— 既满足「名字要有颜色」，
+	## 也是「这里能悬浮」的显式提示（规范 §4.10 的提示口径升级版）。
 	## 加粗用**加粗字体 + 略深的同色系**（不换色相，避免花）；行间纵向排布与
 	## 调用方的普通文本一致。max_y >= 0 时超过就画「……」并停笔。
 	var fnt_b := font_bold if font_bold != null else font
 	var bold_col := base_col.darkened(0.28)
+	var mcol := Mention.text_color(base_col)
 	var lines := wrap_segments(font, font_bold, segs, max_w, size)
+	var hits: Array = []
 	var drawn := 0
 	for line in lines:
 		if max_y >= 0.0 and drawn > 0 and y + size * 0.36 > max_y:
 			canvas.draw_string(font, Vector2(x, y), "……",
 					HORIZONTAL_ALIGNMENT_LEFT, -1, size, base_col)
-			return y
+			return {"y": y, "hits": hits}
 		var cx := x
+		# min_y：滚动视图里「顶边之上」的行**不画**（但仍推进 y）—— 否则会糊到面板标题上。
+		var skip_draw := min_y >= 0.0 and y + size * 0.36 < min_y
 		for seg in line:
 			var f: Font = fnt_b if bool(seg.get("bold", false)) else font
 			var col: Color = base_col
+			if skip_draw:
+				cx += f.get_string_size(str(seg.get("text", "")),
+						HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+				continue
 			if bool(seg.get("code", false)):
 				col = UiTheme.CODE_TEXT
 			elif bool(seg.get("bold", false)):
 				col = bold_col
+			var men: Dictionary = seg.get("mention", {})
 			var t: String = str(seg.get("text", ""))
+			var w: float = f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+			if not men.is_empty():
+				col = mcol
+				canvas.draw_rect(Rect2(cx - 2.0, y - size * 0.86, w + 4.0, size * 1.12),
+						Color(mcol.r, mcol.g, mcol.b, 0.13), true)
 			canvas.draw_string(f, Vector2(cx, y), t,
 					HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)
-			cx += f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+			if not men.is_empty():
+				canvas.draw_line(Vector2(cx, y + 2.0), Vector2(cx + w, y + 2.0),
+						Color(mcol.r, mcol.g, mcol.b, 0.55), 1.0)
+				hits.append({
+					"rect": Rect2(cx - 2.0, y - size * 0.86, w + 4.0, size * 1.12),
+					"name": str(men.get("name", "")),
+					"kind": str(men.get("kind", "")),
+					"id": int(men.get("id", 0))})
+			cx += w
 		y += line_h
 		drawn += 1
-	return y
+	return {"y": y, "hits": hits}

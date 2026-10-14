@@ -158,11 +158,11 @@ var _font_bold: SystemFont
 var _tip_layer: Control = null
 var _ref_names: Array = []       # [{token, name, kind, id}] —— 当前文案里可悬浮的名字
 var _ref_hits: Array = []        # [{rect(屏幕坐标), ref}] —— 命中表（文本或几何一变就重建）
+var _ref_btn_hits: Array = []    # R168：**选项按钮**上的提及（悬浮「获得某道具」也能看详情）
 var _ref_key := ""               # 命中表缓存键（文本 + 描述框矩形）
 var _hover_ref := {}             # 当前鼠标悬停到的引用（{} = 没悬停）
 var _tip_anchor := Vector2.ZERO  # 提示面板的锚点（鼠标位置 / 演示时名字的右端）
 var _tip_demo := ""              # 演示参数 --tip <名字>：锁住悬浮供出图核验
-static var _name_index := {}     # 名字 → 引用（卡牌 / 道具同表；全库只建一次）
 
 @onready var event_name: Label = $Center/EventName
 @onready var desc: Label = $Center/Desc
@@ -551,7 +551,9 @@ func _ready() -> void:
 			result_label.text = "你已经在工匠那里锻造过一张卡了。"
 			result_label.add_theme_color_override("font_color", Color("8a6a3a"))
 		else:
-			rest_btn.text = "锻造：把卡组中的一张卡变成 2 费铁栅栏"
+			# 「铁栅栏」必须带「」：按钮文字里的**显式标记**就是「这里能悬浮看详情」的判据
+			# （`Mention.scan` 只认带标记的名字，避免裸词误命中）。
+			rest_btn.text = "锻造：把卡组中的一张卡变成 2 费「铁栅栏」"
 			rest_btn.disabled = RunState.deck_ids.is_empty()
 			$Center/LeaveBtn.text = "离开（不锻造）"
 			result_label.text = ""
@@ -1149,6 +1151,12 @@ func _process(_delta: float) -> void:
 			if h["rect"].has_point(mp):
 				ref = h["ref"]
 				break
+		if ref.is_empty():
+			# R168：选项按钮上的提及（按钮整块都算命中区，好点）
+			for hb: Dictionary in _ref_btn_hits:
+				if hb["rect"].has_point(mp):
+					ref = hb["ref"]
+					break
 		_tip_anchor = mp
 	if not _same_ref(ref, _hover_ref):
 		_hover_ref = ref
@@ -1164,19 +1172,9 @@ static func _same_ref(a: Dictionary, b: Dictionary) -> bool:
 
 
 static func _ref_index() -> Dictionary:
-	## 名字 → 引用。**全库只建一次**（卡 200+ / 道具 40+，每帧重建太浪费）。
-	## 卡牌优先：万一某张卡与某件道具同名，以卡面为准。
-	if not _name_index.is_empty():
-		return _name_index
-	var idx := {}
-	for c: CardData in CardRepo.load_json().all_cards():
-		if c.card_name != "":
-			idx[c.card_name] = {"kind": "card", "id": c.id}
-	for r: RelicData in RelicRepo.load_json().all_relics():
-		if r.relic_name != "" and not idx.has(r.relic_name):
-			idx[r.relic_name] = {"kind": "relic", "id": r.id}
-	_name_index = idx
-	return _name_index
+	## 名字 → 引用。R168 起**委托 `Mention.index()`** —— 事件 / 卡面 / 奖励 / 图鉴
+	## 全工程共用同一张名字表（唯一口径，卡牌优先，卡 200+ / 道具 40+ 只建一次）。
+	return Mention.index()
 
 
 static func _markers(txt: String) -> Array:
@@ -1229,6 +1227,7 @@ func _ref_layout() -> void:
 	## 行高 = `get_line_height()`、行距 = `line_spacing` 主题常量。
 	_ref_hits = []
 	if _ref_names.is_empty():
+		_ref_button_hits()
 		return
 	var box := desc.get_global_rect()
 	var font: Font = desc.get_theme_font("font")
@@ -1257,17 +1256,75 @@ func _ref_layout() -> void:
 				_ref_hits.append({"rect": Rect2(ax, y, bx - ax, lh), "ref": e})
 				from = at + tok.length()
 		y += lh + gap
+	_ref_button_hits()
+
+
+func _btn_bg_lum(b: Button) -> float:
+	## 按钮底色的亮度（取不到样式盒时给 0.5 = 中性，走「按底色挑色」的默认分支）。
+	var sb := b.get_theme_stylebox("normal")
+	if sb is StyleBoxFlat:
+		return (sb as StyleBoxFlat).bg_color.get_luminance()
+	return 0.5
+
+
+func _ref_button_hits() -> void:
+	## R168（用户口径）：**悬浮「获得某个道具 / 某张卡」的选项**也要能直接看详情。
+	## 按钮文字由 Godot 自己画（不能只给名字上色），所以这里只登记命中矩形 +
+	## 在提示层给按钮描一圈淡金（悬停点亮）—— 明确「这个选项还有东西可看」。
+	_ref_btn_hits = []
+	for b: Button in [rest_btn, bbq_btn, leave_btn]:
+		if b == null or not b.visible or b.text.strip_edges() == "":
+			continue
+		# 环色按**按钮底色**取（不是字色）：事件页选项是浅色胶囊，金色环在上面等于没画。
+		var ring: Color = UiTheme.MENTION_ON_LIGHT if _btn_bg_lum(b) > 0.32 \
+				else UiTheme.MENTION_ON_DARK
+		# 圆角：事件页选项是 `btn_plain` 贴图（奶油胶囊）→ 样式盒是 StyleBoxTexture，
+		# 取不到 corner_radius，所以**默认按高度取胶囊圆角**（h/2）；
+		# 只有真给 StyleBoxFlat 时才用它自己的圆角。
+		var cr := int(b.size.y / 2.0)
+		var nsb := b.get_theme_stylebox("normal")
+		if nsb is StyleBoxFlat:
+			cr = maxi((nsb as StyleBoxFlat).corner_radius_top_left,
+					(nsb as StyleBoxFlat).corner_radius_bottom_left)
+		for m: Dictionary in Mention.scan(b.text):
+			_ref_btn_hits.append({"rect": b.get_global_rect(), "ring": ring,
+					"corner": cr,
+					"ref": {"name": m["name"], "kind": m["kind"], "id": m["id"]}})
 
 
 func _on_tip_draw() -> void:
 	# ① 每个可悬浮的名字画一条淡金细线 —— 这是「这里能悬浮」的唯一提示
 	#    （不悬停 34% 不透明，不喧宾夺主；悬停时点亮）。
+	var dfont: Font = desc.get_theme_font("font")
+	var dfs: int = desc.get_theme_font_size("font_size")
+	var mcol := Mention.text_color(Color("cfcabb"))
 	for h: Dictionary in _ref_hits:
 		var rr: Rect2 = h["rect"]
+		var hot := _same_ref(h["ref"], _hover_ref)
+		# R168（用户口径）：提到的名字**本身要有颜色** —— Label 已经画过正文，
+		# 这里在**同一位置**盖一层淡底 + 用强调色重画名字（几何取自命中表，像素级对齐）。
+		_tip_layer.draw_rect(Rect2(rr.position.x, rr.position.y + 1.0,
+				rr.size.x, rr.size.y - 2.0),
+				Color(mcol.r, mcol.g, mcol.b, 0.34 if hot else 0.18), true)
+		if dfont != null:
+			_tip_layer.draw_string(dfont,
+					Vector2(rr.position.x, rr.position.y + dfont.get_ascent(dfs)),
+					str(h["ref"]["token"]), HORIZONTAL_ALIGNMENT_LEFT, -1, dfs, mcol)
 		var col := UiTheme.ACCENT_GOLD
-		col.a = 0.85 if _same_ref(h["ref"], _hover_ref) else 0.34
+		col.a = 0.9 if hot else 0.5
 		_tip_layer.draw_line(Vector2(rr.position.x, rr.end.y - 1.0),
 				Vector2(rr.end.x, rr.end.y - 1.0), col, 1.0)
+	for hb: Dictionary in _ref_btn_hits:
+		# 环色**按按钮底色取**（事件页的选项是浅色胶囊，金色环在上面根本看不出来）；
+		# 形状跟着按钮的圆角走 —— 矩形环套在胶囊上很毛糙（实测出图看得出来）。
+		var g: Color = hb.get("ring", UiTheme.ACCENT_GOLD)
+		g.a = 0.95 if _same_ref(hb["ref"], _hover_ref) else 0.45
+		var ob := StyleBoxFlat.new()
+		ob.draw_center = false
+		ob.border_color = g
+		ob.set_border_width_all(2)
+		ob.set_corner_radius_all(int(hb.get("corner", 0)))
+		_tip_layer.draw_style_box(ob, (hb["rect"] as Rect2).grow(2.0))
 	# ② 悬停提示面板
 	if _hover_ref.is_empty():
 		return
@@ -1302,42 +1359,27 @@ func _tip_frame(r: Rect2) -> void:
 
 
 func _draw_card_tip() -> void:
-	## 卡牌 → 画**真实卡面**（与图鉴 / 战场同一套 CardFace，所见即所得）。
+	## 卡牌 → **真实卡面**（与图鉴 / 战场同一套 CardFace，所见即所得）。
+	## R168：改用共享的 `Mention.draw_tip()`（全工程同一套悬浮件），并把这**张卡的文案里
+	## 提到的其它卡 / 道具**的摘要一并附在卡面下方 —— 看一张卡就能顺带看到它提到的卡。
 	var card: CardData = CardRepo.load_json().get_card(int(_hover_ref["id"]))
 	if card == null:
 		return
-	var ch := 76.0 * 2.4
-	var cw := ch * 63.0 / 76.0
-	# ⚠️ 内边距必须 ≥ 徽章半径：数值徽章的**圆心骑在卡框上**（R115 起的力量/生命
-	#    还分别向左右探出卡框），`CARD_BADGE_R × CARD_BADGE_SCALE_CAP = 20.24`。
-	#    给 24 → 四边的徽章都完整落在金边里，不会被裁掉半圈。
-	var pad := 24.0
-	var frame := _tip_place(cw + pad * 2.0, ch + pad * 2.0)
-	_tip_frame(frame)
-	CardFace.draw(_tip_layer, card, Rect2(frame.position + Vector2(pad, pad),
-			Vector2(cw, ch)), card.health, false, false, _font, _font_bold, -1, false)
+	var sz := Mention.tip_size(_font, _hover_ref)
+	var bh := Mention.block_height(_font, _font_bold, card.effect_text, sz.x - Mention.PAD * 2.0)
+	var frame := _tip_place(sz.x, sz.y + bh)
+	Mention.draw_tip(_tip_layer, _font, _font_bold, _hover_ref, frame.position, bh,
+			card.effect_text)
 
 
 func _draw_relic_tip() -> void:
-	## 道具 → 名称 + 完整说明（说明按面板宽折行，长的「叠加态的鸭」也不溢出）。
+	## 道具 → 名称 + 「类型 · 来源」+ 完整说明。R168：改用共享的 `Mention.draw_tip()`，
+	## 并把说明里提到的卡 / 道具摘要附在下方（一个边框框住）。
 	var rel: RelicData = RelicRepo.load_json().get_relic(int(_hover_ref["id"]))
 	if rel == null:
 		return
-	var w := 352.0
-	var pad := 14.0
-	var lines := CardFace.wrap_text(_font, rel.desc, w - pad * 2.0, UiTheme.FS_LABEL)
-	var h := pad * 2.0 + 30.0 + float(lines.size()) * 19.0
-	var frame := _tip_place(w, h)
-	_tip_frame(frame)
-	_tip_layer.draw_string(_font_bold, frame.position + Vector2(pad, pad + 16.0),
-			rel.relic_name, HORIZONTAL_ALIGNMENT_LEFT, w - pad * 2.0,
-			UiTheme.FS_SUBHEAD, rel.source_color())
-	_tip_layer.draw_string(_font, frame.position + Vector2(pad, pad + 34.0),
-			"%s · %s" % [rel.kind, rel.source_label()], HORIZONTAL_ALIGNMENT_LEFT,
-			w - pad * 2.0, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
-	var y := frame.position.y + pad + 30.0 + 15.0
-	for t: String in lines:
-		_tip_layer.draw_string(_font, Vector2(frame.position.x + pad, y), t,
-				HORIZONTAL_ALIGNMENT_LEFT, w - pad * 2.0, UiTheme.FS_LABEL,
-				Color("f0ead8"))
-		y += 19.0
+	var sz := Mention.tip_size(_font, _hover_ref)
+	var bh := Mention.block_height(_font, _font_bold, rel.desc, sz.x - Mention.PAD * 2.0)
+	var frame := _tip_place(sz.x, sz.y + bh)
+	Mention.draw_tip(_tip_layer, _font, _font_bold, _hover_ref, frame.position, bh,
+			rel.desc)

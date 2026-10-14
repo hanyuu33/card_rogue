@@ -9198,9 +9198,14 @@ func _draw_info_panel() -> void:
 	y += 15.0
 	# 效果描述：按面板宽度自动换行 + **Markdown 富文本**（R106）。
 	# `CardText` 顺手隐藏「（…）」补注 —— 补注是规则说明，不该挤在句子主干里。
-	CardText.draw_wrapped(self, _font, _font_bold,
+	var res := CardText.draw_wrapped_hits(self, _font, _font_bold,
 			CardText.parse(card.effect_text), left, y, inner_w, 9, 14.0,
 			Color("2a5a8a"), top + GRID_H - 12.0)
+	# R168：这条文案提到的卡 / 道具，摘要接在效果说明下方（放不下就自动截断，
+	# 绝不越出面板 —— 悬浮件的边界感优先）。提及名在上一句里已自动换色。
+	Mention.draw_reference_block(self, _font, _font_bold, card.effect_text, left,
+			float(res["y"]) + 10.0, inner_w, Color("2a5a8a"), true,
+			top + GRID_H - 12.0)
 
 
 func _draw_game_over() -> void:
