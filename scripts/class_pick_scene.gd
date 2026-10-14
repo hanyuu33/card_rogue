@@ -1,24 +1,24 @@
 extends Control
-## 角色选择 —— 出发前先定角色，再生成地图进冒险。
-## 角色决定两件事（见 PlayerClass）：
-##   * 初始卡组追加的专属卡（森林精魄 → 熊 8004 ×1）；
-##   * 进入战斗时自动获得的角色赠品道具（森林精魄 → 荒野形态 6022）。
-## 往 PlayerClass.ids() 加新角色，这里会自动多出一张卡面（卡面数 × CARD_W + 间隙
-## 需放得下视口 1280：3 张 = 1056px OK；4 张 = 1448px 就要改 CARD_W/GAP 了）。
+## 角色选择（R166 改版）—— 不再摆三张大卡，而是：
+##   ① 一排在底部的**头像**（只有头，占面积小）；
+##   ② 点某个头像 → **背景换成该职业的 CG**（16:9 整屏），
+##      左侧一块**不遮挡 CG 人物**的面板放：职业名 / 副标题 / 介绍 / **难度档位**；
+##   ③ 点「确认进入」才开局。
+## 难度不再在标题页选（R166 起挪到这里，与职业一起在开局前定好）。
+## 角色决定两件事（见 PlayerClass）：初始卡组专属卡 + 战斗赠品道具。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
-const CARD_W := 320.0
-const CARD_H := 400.0
-const GAP := 48.0
-const AREA_Y := 150.0
-const LIFT := 12.0
+const AV := 96.0                       # 头像边长（小，别占太多面积）
+const AV_GAP := 30.0
+const PANEL_W := 416.0
 
 var _font: SystemFont
 var _font_bold: SystemFont
 var sfx: Sfx
 var _menu: UiMenu = null      # Esc 主菜单（R148）
-var _hover := -1
+var _hover := -1              # 悬停的头像下标
+var _selected := -1           # 已选职业下标（-1 = 还没选）
 var _picked := false
 
 
@@ -40,8 +40,13 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(t)
 		t.start()
+	# 出图核验用：`-- --screenshot --sel N` 预选第 N 个职业（看 CG + 面板态）。
+	var uargs := OS.get_cmdline_user_args()
+	for ai in uargs.size():
+		if uargs[ai] == "--sel" and ai + 1 < uargs.size():
+			_selected = clampi(int(uargs[ai + 1]), 0, PlayerClass.ids().size() - 1)
 	queue_redraw()
-	# R148：Esc 主菜单（这个界面没有上栏按钮 —— 加它只是为了「游戏中随处可按 Esc」成立）
+	# R148：Esc 主菜单
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续选角色",
 		"sub": "选择角色 · 按 Esc 返回",
@@ -49,78 +54,119 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	queue_redraw()   # 鼠标悬停跟随
+	queue_redraw()   # 悬停跟随
 
 
-func _card_rect(i: int) -> Rect2:
+# ──────────────────────────────────────────────────────────────
+# 几何（绘制与命中**同源**，改版式只改这里）
+# ──────────────────────────────────────────────────────────────
+
+func _av_rect(i: int) -> Rect2:
 	var n := PlayerClass.ids().size()
-	var total := n * CARD_W + maxi(0, n - 1) * GAP
+	var total := n * AV + maxi(0, n - 1) * AV_GAP
 	var x0 := (size.x - total) / 2.0
-	return Rect2(x0 + i * (CARD_W + GAP),
-			AREA_Y - (LIFT if i == _hover and not _picked else 0.0), CARD_W, CARD_H)
+	return Rect2(x0 + i * (AV + AV_GAP), size.y - AV - 36.0, AV, AV)
 
+
+func _panel_rect() -> Rect2:
+	return Rect2(40.0, 96.0, PANEL_W, size.y - 214.0)
+
+
+func _diff_rect(i: int) -> Rect2:
+	var p := _panel_rect()
+	var w := (PANEL_W - 40.0 - 2.0 * 12.0) / 3.0
+	return Rect2(p.position.x + 20.0 + i * (w + 12.0), p.position.y + p.size.y - 158.0, w, 42.0)
+
+
+func _confirm_rect() -> Rect2:
+	var p := _panel_rect()
+	return Rect2(p.position.x + 20.0, p.position.y + p.size.y - 96.0, PANEL_W - 40.0, 58.0)
+
+
+# ──────────────────────────────────────────────────────────────
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), UiTheme.SCREEN_BG)   # R154：墨蓝夜色锚点（清单 §2.6）
-	if _picked:
-		return
-	draw_string(_font, Vector2(0, 110), "出发之前，先决定你以什么身份走进这片森林……",
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_300)
-	var ids := PlayerClass.ids()
-	var relics := RelicRepo.load_json()
-	for i in ids.size():
-		var cid: String = ids[i]
-		var rect := _card_rect(i)
-		# R154：边框 / 标签带 / 副标题全部随职业色（UiTheme.class_color 唯一口），
-		# 不再三张卡共用一种绿；「角色」小标签 → 职业徽标 + 职业名（清单 §2.2）。
-		var cc: Color = UiTheme.class_color(cid)
-		var cc_text := cc.lightened(0.55)
-		if i == _hover:
-			draw_rect(rect.grow(10.0), Color(1, 1, 1, 0.10), true)
-		draw_rect(rect, UiTheme.PANEL_DARK, true)   # R154：暗底锚点
-		draw_rect(rect, cc, false, 2.5)
-		var band := Rect2(rect.position, Vector2(rect.size.x, 34))
-		draw_rect(band, Color(cc, 0.30), true)
+	var full := Rect2(Vector2.ZERO, size)
+	if _selected < 0:
+		draw_rect(full, UiTheme.SCREEN_BG)
+		draw_string(_font, Vector2(0, 288), "选择与你同行的精灵……",
+				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_TITLE, UiTheme.INK_300)
+		draw_string(_font, Vector2(0, 330), "点头像查看该角色，再选难度、确认进入",
+				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_ON_DARK)
+	else:
+		var cid := PlayerClass.ids()[_selected]
+		var cg := UiAssets.class_cg(cid)
+		if cg != null:
+			draw_texture_rect_region(cg, full, CardFace.cover_region(cg.get_size(), full), Color.WHITE)
+		else:
+			draw_rect(full, UiTheme.SCREEN_BG)
+		_draw_panel(cid)
+	for i in PlayerClass.ids().size():
+		_draw_avatar(i)
+
+
+func _draw_avatar(i: int) -> void:
+	var cid := PlayerClass.ids()[i]
+	var r := _av_rect(i)
+	var sel := i == _selected
+	var cc: Color = UiTheme.class_color(cid)
+	draw_rect(r, Color(0.04, 0.05, 0.08, 0.55), true)
+	var tex := UiAssets.class_avatar(cid)
+	if tex != null:
+		var fr := CardFace.fit_rect(tex.get_size(), r.grow(-6.0))
+		draw_texture_rect(tex, fr, false)
+	else:
+		# 缺图回退：职业圆徽（再缺则只留框）
 		var badge := UiAssets.class_badge(cid)
-		var text_x := 0.0
 		if badge != null:
-			var br := Rect2(rect.position + Vector2(10, 4), Vector2(26, 26))
-			draw_texture_rect(badge, br, false)
-			text_x = 18.0   # 文本略右移，给徽标让位
-		draw_string(_font_bold, band.position + Vector2(text_x, 23), PlayerClass.name_of(cid),
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_BODY, cc_text)
-		draw_string(_font_bold, rect.position + Vector2(0, 82), PlayerClass.name_of(cid),
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_TITLE, Color("f2ead0"))
-		var y := 116.0
-		draw_string(_font, rect.position + Vector2(0, y), PlayerClass.subtitle_of(cid),
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_LABEL, cc_text)
-		y += 26.0
-		# 概括性介绍（PlayerClass.desc_of）：只讲打法取向，**不列具体卡牌**。
-		for para: String in PlayerClass.desc_of(cid).split("\n"):
-			for line: String in _wrap_text(para, rect.size.x - 40.0, 14):
-				draw_string(_font, rect.position + Vector2(20, y), line,
-						HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 40.0, UiTheme.FS_LABEL, Color("cfcabb"))
-				y += 22.0
-			y += 6.0
-		# 初始道具：名字 + 完整效果（读 relics.json 的 desc，R55 起展示；不列初始卡组明细）。
-		var rel := relics.get_relic(PlayerClass.relic_of(cid))
-		if rel != null:
-			y = maxi(y + 10.0, rect.size.y - 150.0)
-			draw_rect(Rect2(rect.position + Vector2(20, y - 16.0),
-					Vector2(rect.size.x - 40.0, 1)), Color(1, 1, 1, 0.10), true)
-			draw_string(_font_bold, rect.position + Vector2(20, y + 2.0),
-					"初始道具：%s" % rel.relic_name, HORIZONTAL_ALIGNMENT_LEFT,
-					rect.size.x - 40.0, UiTheme.FS_LABEL, Color("e0b23c"))
-			y += 20.0
-			# 预折行再逐行画（Godot 的 draw_string 不自动换行，长文本会溢出卡面）。
-			for line: String in _wrap_text(rel.desc, rect.size.x - 40.0, 12):
-				if y > rect.size.y - 34.0:
-					break
-				draw_string(_font, rect.position + Vector2(20, y), line,
-						HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 40.0, UiTheme.FS_CAPTION, Color("b8b0a0"))
-				y += 17.0
-		draw_string(_font, rect.position + Vector2(0, rect.size.y - 18),
-				"点击选择", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
+			draw_texture_rect(badge, r.grow(-8.0), false)
+	draw_rect(r, cc if sel else Color(1, 1, 1, 0.25), false, 4.0 if sel else 2.0)
+	if i == _hover and not sel:
+		draw_rect(r.grow(3.0), Color(1, 1, 1, 0.55), false, 2.0)
+	draw_string(_font_bold, Vector2(r.position.x, r.end.y + 24.0), PlayerClass.name_of(cid),
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, Color("f2ead0"))
+
+
+func _draw_panel(cid: String) -> void:
+	var p := _panel_rect()
+	draw_rect(p, Color(0.05, 0.06, 0.09, 0.80), true)
+	draw_rect(p, UiTheme.class_color(cid), false, 2.5)
+	var x := p.position.x + 20.0
+	var w := PANEL_W - 40.0
+	var y := p.position.y + 54.0
+	draw_string(_font_bold, Vector2(x, y), PlayerClass.name_of(cid),
+			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, Color("f2ead0"))
+	y += 32.0
+	draw_string(_font, Vector2(x, y), PlayerClass.subtitle_of(cid),
+			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL,
+			UiTheme.class_color(cid).lightened(0.5))
+	y += 30.0
+	for para: String in PlayerClass.desc_of(cid).split("\n"):
+		for line: String in _wrap_text(para, w, 14):
+			draw_string(_font, Vector2(x, y), line, HORIZONTAL_ALIGNMENT_LEFT, w,
+					UiTheme.FS_LABEL, Color("cfcabb"))
+			y += 22.0
+		y += 6.0
+	# 难度档位
+	draw_string(_font_bold, Vector2(x, _diff_rect(0).position.y - 16.0), "难度档位",
+			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, Color("e0b23c"))
+	for i in RunState.DIFFICULTY_COUNT:
+		var dr := _diff_rect(i)
+		var on := RunState.difficulty == i
+		draw_rect(dr, Color(0.96, 0.78, 0.30, 0.94) if on else Color(1, 1, 1, 0.10), true)
+		draw_rect(dr, UiTheme.ACCENT_GOLD if on else Color(1, 1, 1, 0.30), false, 2.0)
+		draw_string(_font, Vector2(dr.position.x, dr.position.y + 28.0),
+				"%d %s" % [i, RunState.DIFFICULTY_NAMES[i]], HORIZONTAL_ALIGNMENT_CENTER, dr.size.x,
+				UiTheme.FS_LABEL, Color("1a1c22") if on else Color("e6e2d8"))
+	draw_string(_font, Vector2(x, _confirm_rect().position.y - 14.0),
+			RunState.difficulty_note(), HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_CAPTION,
+			UiTheme.INK_ON_DARK)
+	# 确认进入
+	var cr := _confirm_rect()
+	draw_rect(cr, Color("c8951c"), true)
+	draw_rect(cr, Color("f2c14e"), false, 2.0)
+	draw_string(_font_bold, Vector2(cr.position.x, cr.position.y + 38.0), "确认进入",
+			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_HEADING, Color("1a1c22"))
 
 
 func _wrap_text(t: String, max_w: float, px: int) -> Array[String]:
@@ -138,8 +184,7 @@ func _wrap_text(t: String, max_w: float, px: int) -> Array[String]:
 
 
 func _menu_items() -> Array:
-	## 本界面的 Esc 菜单项（R148）。⚠️ 每次打开菜单都会重新调用（见 UiMenu.attach 注释），
-	## 所以音效这类随状态变的文案永远是最新的。
+	## 本界面的 Esc 菜单项（R148）。每次打开都会重新调用，文案永远最新。
 	return [
 		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
 			"fn": _toggle_sound, "keep_open": true},
@@ -157,14 +202,13 @@ func _on_back_to_title() -> void:
 	## 流程界面里直接回标题 = **放弃本局**（与战斗中「返回标题」同一口径）。
 	if ReplayLog.recording:
 		ReplayLog.finish("quit")
-	ReplayLog.stop_playback()
+		ReplayLog.stop_playback()
 	if RunState.run_active:
 		RunState.end_run()
 	SceneFx.goto("res://scenes/title.tscn")
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# R148：Esc = 主菜单（菜单开着时它自己关掉自己）
 	if _menu != null and _menu.handle_esc(event):
 		return
 
@@ -173,21 +217,28 @@ func _gui_input(event: InputEvent) -> void:
 	if _picked:
 		return
 	if event is InputEventMouseMotion:
-		var idx := _index_at(event.position)
-		if idx != _hover:
-			_hover = idx
+		var idx := -1
+		for i in PlayerClass.ids().size():
+			if _av_rect(i).grow(5.0).has_point(event.position):
+				idx = i
+		_hover = idx
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
-		var pick := _index_at(event.position)
-		if pick >= 0:
-			_choose(PlayerClass.ids()[pick])
-
-
-func _index_at(pos: Vector2) -> int:
-	for i in PlayerClass.ids().size():
-		if _card_rect(i).grow(6.0).has_point(pos):
-			return i
-	return -1
+		var pos: Vector2 = event.position
+		if _selected >= 0:
+			if _confirm_rect().has_point(pos):
+				_choose(PlayerClass.ids()[_selected])
+				return
+			for i in RunState.DIFFICULTY_COUNT:
+				if _diff_rect(i).has_point(pos):
+					RunState.set_difficulty(i)
+					sfx.play("click")
+					return
+		for i in PlayerClass.ids().size():
+			if _av_rect(i).grow(5.0).has_point(pos):
+				_selected = i
+				sfx.play("click")
+				return
 
 
 func _choose(cid: String) -> void:

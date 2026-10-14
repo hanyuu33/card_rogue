@@ -715,6 +715,7 @@ func _draw_states() -> void:
 		if _is_current(cell):
 			draw_rect(r.grow(3.0), UiTheme.ACCENT_LIT, false, 3.0)
 			draw_rect(r.grow(8.0), Color(0.95, 0.76, 0.31, 0.28), false, 5.0)
+			_draw_player_marker(r)   # R166：当前格叠角色头像，一眼看到「我在这」
 		elif _is_available(cell):
 			var pulse := 0.5 + 0.5 * sin(_t * 4.0)
 			draw_rect(r.grow(2.0),
@@ -726,6 +727,20 @@ func _draw_states() -> void:
 			var p2 := 0.5 + 0.5 * sin(_t * 6.0)
 			draw_rect(r.grow(4.0 + p2 * 3.0),
 					Color(0.72, 0.38, 0.95, 0.55 + 0.40 * p2), false, 3.0)
+
+
+func _draw_player_marker(r: Rect2) -> void:
+	## R166：当前格右上角叠一枚**角色头像**标记（只有头），按所选职业取图
+	## （`RunState.player_class`）。缺图回退成我方色圆点 —— 不空白不报错。
+	var tex := UiAssets.class_avatar(RunState.player_class)
+	var d := 34.0
+	var c := Vector2(r.position.x + r.size.x - d * 0.32, r.position.y + d * 0.32)
+	draw_circle(c, d * 0.62, Color(0.05, 0.06, 0.09, 0.85))
+	draw_arc(c, d * 0.62, 0.0, TAU, 24, UiTheme.ACCENT_LIT, 2.0, true)
+	if tex != null:
+		draw_texture_rect(tex, Rect2(c - Vector2(d, d) * 0.5, Vector2(d, d)), false)
+	else:
+		draw_circle(c, d * 0.30, UiTheme.SIDE_SELF)
 
 
 func _draw_hud() -> void:

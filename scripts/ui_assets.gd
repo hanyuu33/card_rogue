@@ -181,6 +181,33 @@ static func class_badge(cls: String) -> Texture2D:
 	return get_tex("class_" + key)
 
 
+static func class_key(cls: String) -> String:
+	## 职业 id → 素材键（forest / rogue / mech）。未知返回 ""。**唯一映射口** ——
+	## class_badge / class_cg / class_avatar 都读它，调用方别各自猜键名。
+	match cls:
+		"森林精魄":
+			return "forest"
+		"暗影刺客":
+			return "rogue"
+		"机械之心":
+			return "mech"
+	return ""
+
+
+static func class_cg(cls: String) -> Texture2D:
+	## 职业 CG（R166）：选人界面的**整屏背景**，16:9（1280×720）。
+	## 缺图返回 null，`class_pick_scene` 回退 `SCREEN_BG` 纯色 —— 不空白不报错。
+	var k := class_key(cls)
+	return get_tex("class_cg_" + k) if k != "" else null
+
+
+static func class_avatar(cls: String) -> Texture2D:
+	## 职业头像（R166）：**只有头部**的小图（透明底），用于选人界面的头像行
+	## 与地图「当前格」的角色标记。缺图返回 null，调用方回退 `class_badge` 圆徽。
+	var k := class_key(cls)
+	return get_tex("class_avatar_" + k) if k != "" else null
+
+
 static func clear_cache() -> void:
 	## 运行中换了图想立刻生效时可以调（正常流程不需要）。
 	_cache.clear()

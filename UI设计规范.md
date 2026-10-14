@@ -180,6 +180,8 @@ UiTheme.<颜色|字号|间距令牌>            # 其余
 | 卡背 v2 | `assets/ui/card_back.png` | 256 × 384 | 0.67 | 旧 `assets/cardback.png` → 程序叉线（R154） |
 | 战争迷雾云 | `assets/ui/map_fog.png` | 256 × 256（四周渐隐） | 1:1 | 程序云团（R154） |
 | 职业徽标 ×3 | `assets/ui/class_<forest｜rogue｜mech>.png` | 128 × 128（透明圆徽） | 1:1 | 不画徽标、只写字（R154） |
+| 职业 CG ×3 | `assets/ui/class_cg_<forest｜rogue｜mech>.png` | 1280 × 720（16:9） | 1.78 | `SCREEN_BG` 纯色（R166） |
+| 职业头像 ×3 | `assets/ui/class_avatar_<forest｜rogue｜mech>.png` | 128 × 128（**只有头**、透明） | 1:1 | 职业圆徽 `class_<键>.png`（R166） |
 
 **技术要点**
 

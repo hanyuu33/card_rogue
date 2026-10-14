@@ -9,8 +9,7 @@ var _font: SystemFont
 var sfx: Sfx
 var _t := 0.0
 var _petals: Array = []         # {x, y, spd, ph, sc, rot, kind}  R154 飘落花瓣 / 光尘（换掉漂浮白方块）
-var _diff_btns: Array = []      # 难度档位按钮（0 / 1 / 2）
-var _diff_note: Label           # 当前档位说明
+
 
 
 func _ready() -> void:
@@ -52,7 +51,7 @@ func _ready() -> void:
 	UiTheme.apply_button(rp_btn, false)
 	UiTheme.apply_button(cont_btn, false)
 	UiTheme.apply_button($Buttons/QuitBtn, false)
-	_build_difficulty_row()
+	# R166：难度档位不再在标题页选 —— 挪到角色选择界面（class_pick_scene）。
 	# 回放中途回到标题（整局播完 / 中途退出）→ 停止回放状态
 	if ReplayLog.playing:
 		ReplayLog.stop_playback()
@@ -79,66 +78,6 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(t)
 		t.start()
-
-
-func _build_difficulty_row() -> void:
-	## 难度档位选择（R47）：0 宽松 / 1 标准 / 2 困难 —— 和角色一起在开局前定好。
-	## 0 = 战斗+3 血、休息 40%；1 = 战斗不回血、休息 40%；2 = 战斗不回血、休息 25%（原状）。
-	## 默认 0 档；选择只存在本次运行中（每次启动都从 0 档开始）。
-	var row := HBoxContainer.new()
-	row.name = "DiffRow"
-	row.anchor_left = 0.0
-	row.anchor_right = 1.0
-	row.offset_top = 306.0
-	row.offset_bottom = 338.0
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", UiTheme.SP_3)
-	add_child(row)
-	var label := Label.new()
-	label.text = "难度档位"
-	label.add_theme_font_override("font", _font)
-	label.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
-	# 行标签用次要色，让 chip 的选中态（深墨蓝）跳出来
-	label.add_theme_color_override("font_color", UiTheme.INK_600)
-	row.add_child(label)
-	for i in RunState.DIFFICULTY_COUNT:
-		var b := Button.new()
-		b.text = "%d · %s" % [i, RunState.DIFFICULTY_NAMES[i]]
-		b.toggle_mode = true
-		b.tooltip_text = RunState.DIFFICULTY_NOTES[i]
-		# R113：小切换按钮也走唯一口（此前是 Godot 默认样式，与主按钮不是一套）
-		UiTheme.apply_chip(b)
-		b.pressed.connect(_on_pick_difficulty.bind(i))
-		row.add_child(b)
-		_diff_btns.append(b)
-	var note := Label.new()
-	note.name = "DiffNote"
-	note.anchor_left = 0.0
-	note.anchor_right = 1.0
-	note.offset_top = 338.0
-	note.offset_bottom = 366.0
-	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	note.add_theme_font_override("font", _font)
-	note.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
-	note.add_theme_color_override("font_color", UiTheme.INK_600)
-	add_child(note)
-	_diff_note = note
-	_refresh_difficulty()
-
-
-func _on_pick_difficulty(d: int) -> void:
-	RunState.set_difficulty(d)
-	sfx.play("click")
-	_refresh_difficulty()
-
-
-func _refresh_difficulty() -> void:
-	## 三个按钮的高亮 = 当前档位（点按钮只改档位，不改动其它状态）。
-	for i in _diff_btns.size():
-		_diff_btns[i].button_pressed = i == RunState.difficulty
-	if _diff_note != null:
-		_diff_note.text = "当前：难度 %d · %s —— %s" % [RunState.difficulty,
-				RunState.difficulty_name(), RunState.difficulty_note()]
 
 
 func _process(delta: float) -> void:

@@ -143,6 +143,12 @@ map_fog.png             战争迷雾云                     256 × 256 透明、
 class_forest.png        职业徽标·森林精魄              128 × 128 透明圆徽（绿叶橡果 + 金环）
 class_rogue.png         职业徽标·暗影刺客              128 × 128 透明圆徽（紫月匕首 + 银环）
 class_mech.png          职业徽标·机械之心              128 × 128 透明圆徽（黄铜齿轮翼 + 金环）
+class_cg_forest.png     职业 CG·森林精魄（选人界面整屏背景） 1280 × 720（16:9；人物偏右、左侧留给文字/难度；缺图回退纯色 SCREEN_BG）
+class_cg_rogue.png      职业 CG·暗影刺客                    1280 × 720
+class_cg_mech.png       职业 CG·机械之心                    1280 × 720
+class_avatar_forest.png 职业头像·森林精魄（**只有头**）        128 × 128 透明（选人头像行 + 地图当前格标记；缺图回退职业圆徽 class_forest.png）
+class_avatar_rogue.png  职业头像·暗影刺客                    128 × 128 透明
+class_avatar_mech.png   职业头像·机械之心                    128 × 128 透明
 
 · 按钮 / 徽标 / 迷雾都是**透明底**素材：AI 出图时用**纯洋红（#FF00FF）或纯绿（#00FF00）**
   纯色背景再抠（⚠️ 直接要「透明背景」会被画成**棋盘格**，抠不干净 —— R154 实测）；
