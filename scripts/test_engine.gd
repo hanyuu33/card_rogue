@@ -9284,6 +9284,18 @@ func _init() -> void:
 		check(r122_src.find("draw_circle(cost_c") < 0,
 				"R122-F 降费路径不再自己 draw_circle（旧写法会把水晶图标整个盖掉）")
 
+	# ---- R173 源码守卫：稀有度缎带的「接线 + 尺寸」不能断 ----
+	# R170 第一版旗高只有 13k → 192px 高的燕尾锦旗被压成 ~6px 细线，
+	# 肉眼观感 = 「banner 素材没应用」（用户实测）。几何靠出图核验，这里锁死两件事：
+	if r122_in_dev:
+		var r173_src := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+		var r173_i_art := r173_src.find("\t_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold)")
+		var r173_i_ribbon := r173_src.find("\t_draw_rarity_ribbon(canvas, card, rect, k, pad)")
+		check(r173_i_art >= 0 and r173_i_ribbon > r173_i_art,
+				"R173 缎带必须画在卡图**之后**（开放式卡图会盖住先画的东西，R170 教训）")
+		check(r173_src.find("var rh: float = 27.0 * k") >= 0,
+				"R173 缎带旗高 27k（≈卡高 39%）—— 不许缩回 13k 细线")
+
 	# ---- R122-G：事件文案「卡名 / 道具名」悬浮 —— 解析层 ----
 	# 用户口径：「事件中提到道具或卡片时，应该可以在悬浮到卡名的时候显示那个道具 /
 	# 那张卡片」。几何层靠出图核验，解析层必须钉死：名字扫不出来，画面上完全看不出来。

@@ -227,9 +227,11 @@ static func _draw_rarity_ribbon(canvas: CanvasItem, card: CardData, rect: Rect2,
 	## 素材 `assets/ui/ribbon_<0..5>.png`（透明底、燕尾下垂，下标同 RARITY_COLORS）；
 	## 缺图回退程序小旗（同色多边形）—— 不空白也不报错。
 	## ⚠️ 必须画在卡图**之后**：开放式卡图铺满上半，先画会被整个盖住（旧小旗就是这么没的）。
+	## ⚠️ 尺寸（R173）：旗高 27k ≈ 卡高的 39% —— R170 第一版只有 13k，细长燕尾被压成
+	##    一条 6px 细线，肉眼观感 = 「没应用素材」；27k 后金绣/燕尾在各种卡尺寸下都可辨认。
 	var ribbon: Texture2D = UiAssets.rarity_ribbon(card.rarity)
 	if ribbon != null:
-		var rh: float = 13.0 * k
+		var rh: float = 27.0 * k
 		var rw: float = rh * ribbon.get_width() / maxf(1.0, ribbon.get_height())
 		var rx: float = rect.end.x - pad - rw
 		var ry: float = rect.position.y - 1.2 * k   # 横杆骑在卡顶边（微探出 = 「挂」在卡上）
@@ -237,8 +239,8 @@ static func _draw_rarity_ribbon(canvas: CanvasItem, card: CardData, rect: Rect2,
 		return
 	# 回退：程序小旗（形状与旧版一致，但画在卡图之后，不再被盖）
 	var rar_col: Color = card.rarity_color()
-	var flag_w: float = 5.0 * k
-	var flag_h: float = 9.0 * k
+	var flag_w: float = 9.0 * k
+	var flag_h: float = 22.0 * k
 	var fx: float = rect.end.x - pad - flag_w
 	var fy: float = rect.position.y + pad
 	var flag := PackedVector2Array([
