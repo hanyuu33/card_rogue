@@ -236,6 +236,11 @@ const TEXT_BACK_A := Color("f6efdb")     ## 底衬亮条（羊皮卷）
 const TEXT_BACK_B := Color("e7dcbd")     ## 底衬暗条（木板）
 const TEXT_BACK_SEAM := Color(0.70, 0.61, 0.40, 0.34)   ## 木板缝（细线，不是边框）
 
+## R170 卡面底部框线：**中性深胡桃木色**。此前框线涂稀有度色（「颜色条」），
+## 稀有度的主通道已改为右上角的**缎带素材**（`UiAssets.rarity_ribbon`）——
+## 用户口径「稀有度不要粗暴的颜色块/颜色条，做成 banner 图片素材」。
+const CARD_FRAME := Color("574433")
+
 ## 徽章圆盘色：**缺图标素材时的回退底衬**，同时充当图例（一个通道一个含义）。
 const BADGE_COST := Color("2255aa")    ## 费用（水晶）
 const BADGE_POWER := Color("8a5f00")   ## 力量（剑）
@@ -645,8 +650,18 @@ static func apply_button(btn: Button, primary := false, on_dark := false) -> voi
 
 static func apply_paper_panel(panel: Panel) -> void:
 	## 羊皮纸面板（**唯一口**，R154）：图鉴左 / 右栏这类亮底界面上的面板。
-	## 奶油纸底 + 细金边 + 圆角 —— 换掉 Godot 默认的冷灰 Panel。
+	## R170 起有 `panel_parchment` 素材就用**平铺底纹**（任意大小自适应、无边框），
+	## 缺图回退 奶油纸底 + 细金边 + 圆角 —— 换掉 Godot 默认的冷灰 Panel。
 	if panel == null:
+		return
+	var tex: Texture2D = UiAssets.panel_parchment()
+	if tex != null:
+		var st := StyleBoxTexture.new()
+		st.texture = tex
+		st.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+		st.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+		st.set_content_margin_all(12.0)
+		panel.add_theme_stylebox_override("panel", st)
 		return
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PANEL_PAPER_BG
@@ -655,6 +670,17 @@ static func apply_paper_panel(panel: Panel) -> void:
 	sb.set_corner_radius_all(10)
 	sb.set_content_margin_all(12.0)
 	panel.add_theme_stylebox_override("panel", sb)
+
+
+static func draw_panel_bg(canvas: CanvasItem, rect: Rect2) -> void:
+	## 面板统一底（R170，**唯一口**）：羊皮纸底纹**平铺**（无边框、任意大小自适应）。
+	## 战斗内的选卡 / 结算 / 道具这类 `_draw()` 手画面板一律走这里，
+	## 别再 `draw_rect(..., Color.WHITE)`。缺图回退 `PANEL_PAPER_BG` 纯色 —— 不空白。
+	var tex: Texture2D = UiAssets.panel_parchment()
+	if tex != null:
+		canvas.draw_texture_rect(tex, rect, true)
+	else:
+		canvas.draw_rect(rect, PANEL_PAPER_BG)
 
 
 static func apply_chip(btn: Button, solid := false, compact := false) -> void:

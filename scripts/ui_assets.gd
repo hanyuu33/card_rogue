@@ -11,6 +11,8 @@ class_name UiAssets
 ##                    battle_bg.png（全局）—— 三级回退，见 battle_bg_name()
 ##   卡面纸底       card_paper.png
 ##   稀有度边框     frame_<0..5>.png  下标同 CardData.RARITY_COLORS
+##   稀有度缎带     ribbon_<0..5>.png 下标同上（R170：稀有度的**主通道**，挂在卡面右上角）
+##   面板羊皮纸     panel_parchment.png（R170：白底面板的统一底，平铺自适应任意大小）
 ##   数值徽章图标   icon_<键>.png     键 = cost 水晶 / power 剑 / range 弓 /
 ##                                      health 血 / speed 鞋
 ##
@@ -71,6 +73,22 @@ static func card_frame(rarity: int) -> Texture2D:
 	## 稀有度边框（R113）。下标与 `CardData.RARITY_COLORS` 对齐：
 	##   0 普通 / 1 稀有 / 2 史诗 / 3 初始 / 4 怪物 / 5 事件。
 	return get_tex("frame_%d" % clampi(rarity, 0, 5))
+
+
+static func rarity_ribbon(rarity: int) -> Texture2D:
+	## 稀有度缎带（R170）：挂在卡面**右上角**的锦旗，稀有度的主通道
+	## （取代「底部框线涂稀有度色 + 色块小旗」—— 用户口径：不要粗暴的颜色块/颜色条）。
+	## 下标同 `CardData.RARITY_COLORS`。透明底、燕尾下垂，源图 192 高。
+	## 缺图时返回 null，`CardFace` 回退成程序绘制的小旗 —— 不空白也不报错。
+	return get_tex("ribbon_%d" % clampi(rarity, 0, 5))
+
+
+static func panel_parchment() -> Texture2D:
+	## 面板羊皮纸（R170）：1536×1536 **镜像无缝**底纹，白底面板的统一底。
+	## 窗口最大 1280×720，单张就盖得住任何面板 → 实际不会平铺出接缝；
+	## 更大的 rect 走 `draw_texture_rect(..., tile=true)` 平铺也无缝。
+	## 缺图时返回 null，调用方回退 `UiTheme.PANEL_PAPER_BG` 纯色。
+	return get_tex("panel_parchment")
 
 
 static func badge_icon(key: String) -> Texture2D:

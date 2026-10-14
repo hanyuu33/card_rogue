@@ -555,10 +555,11 @@ func _draw_card_detail(cands: Array) -> void:
 	var x0 := (vs.x - total) / 2.0
 	var box := Rect2(x0, CARDS_Y + CARD_H + 42.0, total,
 			minf(DETAIL_STRIP_H, vs.y - (CARDS_Y + CARD_H + 42.0) - 92.0))
-	# R164：白底 → **羊皮纸**（与卡面文字区同一种底，`UiTheme.PANEL_PAPER_BG`）。
-	# 用户口径「白底上的字难认」—— 三选一这一屏统一到羊皮纸面上，卡面与详情是一套东西。
-	_root.draw_rect(box, UiTheme.PANEL_PAPER_BG, true)
-	_root.draw_rect(box, card.rarity_color(), false, 2.0)
+	# R164：白底 → **羊皮纸**（与卡面文字区同一种底）；R170 起铺**羊皮纸底纹素材**
+	# （`UiTheme.draw_panel_bg`，任意大小自适应）。外框随缎带落地改金 ——
+	# 稀有度已由卡面右上角的缎带表达，不再用颜色条描边。
+	UiTheme.draw_panel_bg(_root, box)
+	_root.draw_rect(box, UiTheme.ACCENT_GOLD, false, 2.0)
 	var pad := 14.0
 	var col_w := 230.0
 	var y := box.position.y + 27.0

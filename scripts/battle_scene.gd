@@ -179,7 +179,6 @@ const COL_OPP_BACKROW := Color(0.541, 0.353, 0.165, 0.5)
 const COL_OWN_BACKROW := Color(0.165, 0.353, 0.541, 0.5)
 const COL_WIN := UiTheme.STAT_HEALTH
 const COL_LOSE := Color("1d3557")
-const COL_INFO_BG := Color("f7f5f0")
 ## 手卡「现在打出能吃到额外效果」的金色高亮（R65）：与「减费绿」区分开，一眼看出是收益提醒。
 const COL_HAND_BONUS := UiTheme.ACCENT_LIT
 ## R117：拖拽时「松手即生效」的**区域**外框色。与目标格填充（绿=移动 / 紫=技能 /
@@ -3292,7 +3291,7 @@ func _draw_hero_pick() -> void:
 	var L := _hero_pick_layout()
 	var need := GameEngine.HERO_DISCARD
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
-	draw_rect(Rect2(L.px, L.py, L.pw, L.ph), Color.WHITE)
+	UiTheme.draw_panel_bg(self, Rect2(L.px, L.py, L.pw, L.ph))
 	draw_rect(Rect2(L.px, L.py, L.pw, L.ph), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "英雄的代价：选择 %d 张手牌丢弃（已选 %d/%d）"
 					% [need, _hero_pick_sel.size(), need],
@@ -3398,7 +3397,7 @@ func _draw_crow_pick() -> void:
 	## 乌鸦（9039）「从弃牌堆选一张盟友回到手牌」面板：只列盟友，点哪张拿哪张（必须选）。
 	var L := _crow_panel_layout()
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
+	UiTheme.draw_panel_bg(self, Rect2(L["px"], L["py"], L["pw"], L["ph"]))
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "乌鸦：选择弃牌堆一张盟友回到手卡（必须选一张）",
 			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
@@ -3466,7 +3465,7 @@ func _draw_whale_pick() -> void:
 	## 鲸鱼之怒（9050）面板：从弃牌堆取卡入手（可选可跳过；取满 2 张自动关闭）。
 	var L := _whale_panel_layout()
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
+	UiTheme.draw_panel_bg(self, Rect2(L["px"], L["py"], L["pw"], L["ph"]))
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
 			"鲸鱼之怒：从弃牌堆取卡加入手卡（还可取 %d 张）" % engine.whale_remaining,
@@ -3538,7 +3537,7 @@ func _endless_panel_rect(L: Dictionary, k: int) -> Rect2:
 func _draw_endless_pick() -> void:
 	## 无尽黑暗（9114，R70）面板：每回合抽牌后强制弃 1 张手牌，**不能不选**，所以没有跳过按钮。
 	var L := _endless_panel_layout()
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
+	UiTheme.draw_panel_bg(self, Rect2(L["px"], L["py"], L["pw"], L["ph"]))
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
 			"无尽黑暗：选择 1 张手牌弃掉（不能不选）→ 之后费用 +%d"
@@ -3594,7 +3593,7 @@ func _draw_foresight_mode() -> void:
 	var rs: Array = _foresight_mode_rects()
 	var box := Rect2(rs[0].position.x - 26.0, rs[0].position.y - 54.0,
 			rs[0].size.x + 52.0, 168.0)
-	draw_rect(box, Color.WHITE)
+	UiTheme.draw_panel_bg(self, box)
 	draw_rect(box, UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "预判：选择一个效果",
 			Vector2(WINDOW_W / 2, rs[0].position.y - 28), UiTheme.INK_800)
@@ -3650,7 +3649,7 @@ func _foresight_panel_rect(L: Dictionary, k: int) -> Rect2:
 func _draw_foresight_pick() -> void:
 	## 预判①「从弃牌区选一张 0 费技能卡」面板：只列 0 费技能卡，点哪张拿哪张。
 	var L := _foresight_panel_layout()
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
+	UiTheme.draw_panel_bg(self, Rect2(L["px"], L["py"], L["pw"], L["ph"]))
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
 			"预判①：选择弃牌区一张费用为 0 的技能卡（必须选一张，之后本卡消失）",
@@ -3711,7 +3710,7 @@ func _fate_panel_rect(L: Dictionary, k: int) -> Rect2:
 func _draw_fate_pick() -> void:
 	## 拒绝命运（9098）面板：从弃牌区选回等量的卡（必须选满，本卡已消失不在列表里）。
 	var L := _fate_panel_layout()
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
+	UiTheme.draw_panel_bg(self, Rect2(L["px"], L["py"], L["pw"], L["ph"]))
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
 			"拒绝命运：从弃牌区选 %d 张卡加入手卡（必须选满）" % engine.fate_count,
@@ -3850,7 +3849,7 @@ func _revive_panel_rect(L: Dictionary, k: int) -> Rect2:
 func _draw_revive_pick() -> void:
 	## 复活术（9078）「从弃牌区选一张盟友回到手牌」面板：只列盟友，点哪张拿哪张。
 	var L := _revive_panel_layout()
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), Color.WHITE)
+	UiTheme.draw_panel_bg(self, Rect2(L["px"], L["py"], L["pw"], L["ph"]))
 	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
 	var rmode := _recall_mode()
 	var rtitle := "复活术：选择弃牌区一张盟友回到手卡（必须选一张）"
@@ -9121,7 +9120,7 @@ func _draw_info_panel() -> void:
 	if card == null:
 		return
 	var top := GRID_Y
-	draw_rect(Rect2(INFO_X, top, INFO_W, GRID_H), COL_INFO_BG)
+	UiTheme.draw_panel_bg(self, Rect2(INFO_X, top, INFO_W, GRID_H))
 	draw_rect(Rect2(INFO_X, top, INFO_W, GRID_H), UiTheme.INK_300, false, 1.0)
 	var left := INFO_X + 10.0
 	var right := INFO_X + INFO_W - 10.0
@@ -9213,7 +9212,7 @@ func _draw_game_over() -> void:
 	var cx := GRID_X + GRID_W / 2
 	var cy := GRID_Y + GRID_H / 2
 	var col := COL_WIN if win else COL_LOSE
-	draw_rect(Rect2(GRID_X + 12, cy - 58, GRID_W - 24, 116), Color.WHITE)
+	UiTheme.draw_panel_bg(self, Rect2(GRID_X + 12, cy - 58, GRID_W - 24, 116))
 	draw_rect(Rect2(GRID_X + 12, cy - 58, GRID_W - 24, 116), col, false, 3.0)
 	_draw_string_center(_font_bold, UiTheme.FS_HEADING, "胜  利" if win else "失  败", Vector2(cx, cy - 20), col)
 	_draw_string_center(_font, UiTheme.FS_MICRO, engine.result_reason, Vector2(cx, cy + 28), UiTheme.INK_600)
@@ -9378,7 +9377,7 @@ func _draw_zone_panel(title: String, cards: Array, counts: Array = []) -> void:
 	var px: float = L["px"]
 	var py: float = L["py"]
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
-	draw_rect(Rect2(px, py, pw, ph), UiTheme.PAPER)
+	UiTheme.draw_panel_bg(self, Rect2(px, py, pw, ph))
 	draw_rect(Rect2(px, py, pw, ph), UiTheme.ACCENT_GOLD, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "%s — 点击面板外关闭" % title,
 			Vector2(WINDOW_W / 2, py + 24), UiTheme.INK_800)
@@ -9464,7 +9463,7 @@ func _draw_relic_panel() -> void:
 	var scroll_max := maxf(0.0, _relic_panel_rows_height() + 66.0 - ph)
 	_relic_scroll = clampf(_relic_scroll, 0.0, scroll_max)
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
-	draw_rect(Rect2(px, py, pw, ph), Color.WHITE)
+	UiTheme.draw_panel_bg(self, Rect2(px, py, pw, ph))
 	draw_rect(Rect2(px, py, pw, ph), UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_SUBHEAD,
 			"道具 %d 个 — 悬浮即可看说明，这里是放大版%s" % [n,

@@ -40,6 +40,8 @@ const CARD_H_DESIGN := 70.0   # 缩放基准高（battle 版小卡高）
 # 卡框只留在**底部**（文字区那一截）。卡图区 = 顶部 0 .. CARD_ART_RATIO 的整块，
 # 直接在 `_draw_art()` 里按 rect 与 `UiTheme.CARD_ART_RATIO` 现算。
 # （原 0.035..0.965 × 0.030..0.720 的内框常量已撤。）
+# R170：底框改**中性木色**（`UiTheme.CARD_FRAME`）且四边内缩半线宽（描边外沿与卡边对齐）；
+# 稀有度主通道 = 右上角**缎带素材**（`_draw_rarity_ribbon`），不再是框线色/色块旗。
 
 static var _art_cache := {}   # id -> Texture2D / null（找不到图也缓存，避免反复查盘）
 
@@ -133,31 +135,26 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		canvas.draw_texture_rect(paper, rect, false)
 	else:
 		canvas.draw_rect(rect, UiTheme.SURFACE)
-	# ② 选中态：**外发光**，不占用边框颜色（边框是稀有度的唯一通道，见 UI设计规范 §规则 5）
+	# ② 选中态：**外发光**，不占用任何语义色（缎带是稀有度的通道，见 UI设计规范 §规则 5）
 	if selected:
 		for gi in 3:
 			var glow := UiTheme.SELECT_RING
 			glow.a = 0.42 - 0.11 * gi
 			canvas.draw_rect(rect.grow(1.0 + gi), glow, false, 1.0)
-	# ③ 稀有度：R165 起**只画底部框**——卡图开放、上/左/右出血到卡边，不再全框。
-	#    边框色仍是稀有度唯一通道（规则 5）；选中仍走外发光，不抢边框。
-	var rar_col: Color = card.rarity_color()
+	# ③ 底部框线（R170）：**中性深胡桃木色**、只框文字区 —— 卡图开放、上/左/右出血到卡边。
+	#    稀有度不再是框线色（「颜色条」已废，规则 5 改），主通道是右上角的缎带（见 ④b）。
+	#    ⚠️ 对齐：draw_rect 的描边**骑在线宽中线上**（一半里一半外）—— 直接贴卡边画，
+	#    左右两笔会各探出卡外 bw/2，与出血到卡边的卡图「最外沿对不上」（用户实测）。
+	#    所以框矩形四边**内缩 bw/2**：描边外沿正好落在卡边上，顶笔外沿与卡图下沿相接。
 	var bw := maxf(1.5, 2.0 * k)
-	canvas.draw_rect(Rect2(rect.position.x, rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO,
-			rect.size.x, rect.size.y * (1.0 - UiTheme.CARD_ART_RATIO)), rar_col, false, bw)
-	# 右上角小旗（同色，稀有度辅助识别）
-	var flag_w: float = 5.0 * k
-	var flag_h: float = 9.0 * k
-	var fx: float = rect.end.x - UiTheme.CARD_PAD * k - flag_w
-	var fy: float = rect.position.y + UiTheme.CARD_PAD * k
-	var flag := PackedVector2Array([
-			Vector2(fx, fy), Vector2(fx + flag_w, fy),
-			Vector2(fx + flag_w, fy + flag_h),
-			Vector2(fx + flag_w / 2.0, fy + flag_h * 0.72),
-			Vector2(fx, fy + flag_h)])
-	canvas.draw_colored_polygon(flag, rar_col)
+	var frame_top: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
+	canvas.draw_rect(Rect2(rect.position.x + bw / 2.0, frame_top + bw / 2.0,
+			rect.size.x - bw, rect.end.y - frame_top - bw), UiTheme.CARD_FRAME, false, bw)
 	# ④ 卡图区（上半）
 	_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold)
+	# ④b 稀有度缎带（R170）：挂在**右上角**、压在卡图之上。
+	#     （旧色块小旗画在卡图**之前**，被开放式卡图整个盖住 —— 等于没画。）
+	_draw_rarity_ribbon(canvas, card, rect, k, pad)
 	# ⑤ 卡图与文字区的分隔线
 	# ⚠️ R153：v2 底图**自带金线分隔**（CARD_ART_RATIO 0.745 处的金条），不再手画灰线。
 	# ⚠️ R122：**横置时不画** —— 那时卡图铺满整卡（见 _draw_art），横一道线很突兀。
@@ -222,6 +219,34 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 		glyph.a = 0.40
 		_draw_center(canvas, font_bold, int(minf(box.size.x, box.size.y) * 0.9),
 				card.card_name.substr(0, 1), box.get_center(), glyph)
+
+
+static func _draw_rarity_ribbon(canvas: CanvasItem, card: CardData, rect: Rect2,
+		k: float, pad: float) -> void:
+	## 稀有度缎带（R170）：挂在卡面**右上角**的锦旗 —— 稀有度的**主通道**。
+	## 素材 `assets/ui/ribbon_<0..5>.png`（透明底、燕尾下垂，下标同 RARITY_COLORS）；
+	## 缺图回退程序小旗（同色多边形）—— 不空白也不报错。
+	## ⚠️ 必须画在卡图**之后**：开放式卡图铺满上半，先画会被整个盖住（旧小旗就是这么没的）。
+	var ribbon: Texture2D = UiAssets.rarity_ribbon(card.rarity)
+	if ribbon != null:
+		var rh: float = 13.0 * k
+		var rw: float = rh * ribbon.get_width() / maxf(1.0, ribbon.get_height())
+		var rx: float = rect.end.x - pad - rw
+		var ry: float = rect.position.y - 1.2 * k   # 横杆骑在卡顶边（微探出 = 「挂」在卡上）
+		canvas.draw_texture_rect(ribbon, Rect2(rx, ry, rw, rh), false)
+		return
+	# 回退：程序小旗（形状与旧版一致，但画在卡图之后，不再被盖）
+	var rar_col: Color = card.rarity_color()
+	var flag_w: float = 5.0 * k
+	var flag_h: float = 9.0 * k
+	var fx: float = rect.end.x - pad - flag_w
+	var fy: float = rect.position.y + pad
+	var flag := PackedVector2Array([
+			Vector2(fx, fy), Vector2(fx + flag_w, fy),
+			Vector2(fx + flag_w, fy + flag_h),
+			Vector2(fx + flag_w / 2.0, fy + flag_h * 0.72),
+			Vector2(fx, fy + flag_h)])
+	canvas.draw_colored_polygon(flag, rar_col)
 
 
 static func banner_cols(card: CardData) -> Array:
