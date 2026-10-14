@@ -134,8 +134,10 @@ def main():
     src_extra = os.path.join(ROOT, EXTRA)
     if os.path.isdir(src_extra):
         for f in sorted(os.listdir(src_extra)):
-            shutil.copy2(os.path.join(src_extra, f), os.path.join(TARGET, f))
-            print("  写入 %s" % f)
+            # 只复制玩家向附属文件（说明与自检脚本），开发文档留在仓库。
+            if f.endswith(".txt") or f.endswith(".bat"):
+                shutil.copy2(os.path.join(src_extra, f), os.path.join(TARGET, f))
+                print("  写入 %s" % f)
 
     # ---------- 4) 用发布产物自检 ----------
     step(4, "用发布产物复跑一遍四套测试")
