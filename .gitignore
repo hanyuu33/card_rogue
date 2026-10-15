@@ -15,6 +15,7 @@ _e.txt
 _r.txt
 _s.txt
 _rp.txt
+_b.txt
 *.tmp
 
 # 调试截图（可重建）

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""三套回归一键跑（2026-10-01 重建：原文件被早期清理脚本误删）。
+"""五套回归一键跑（2026-10-01 重建：原文件被早期清理脚本误删）。
 
 用法：python _verify.py
-逐套跑 engine / reward / smoke，统计 ✓/✗，任一失败则进程退出码 1。
-输出同时落盘 _e.txt / _r.txt / _s.txt 便于事后检查。
+逐套跑 engine / reward / replay / bgm / smoke，统计 ✓/✗，任一失败则进程退出码 1。
+输出同时落盘 _e.txt / _r.txt / _rp.txt / _b.txt / _s.txt 便于事后检查。
 """
 import os
 import subprocess
@@ -46,6 +46,9 @@ SUITES = [
     ("engine", ["--headless", "--path", ROOT, "--script", "res://scripts/test_engine.gd"], "_e.txt"),
     ("reward", ["--headless", "--path", ROOT, "--script", "res://scripts/test_reward.gd"], "_r.txt"),
     ("replay", ["--headless", "--path", ROOT, "--script", "res://scripts/test_replay.gd"], "_rp.txt"),
+    # R176：BGM 套件 —— 7 槽位素材/loop、分级·分层映射、播放语义（不重启/交叉淡入）、
+    #      场景挂点源码守卫。**必须 headless**（它自己手动喂帧推进淡入）。
+    ("bgm", ["--headless", "--path", ROOT, "--script", "res://scripts/test_bgm.gd"], "_b.txt"),
     # ⚠️ smoke **必须** 也带 --headless：它原本是唯一一条不带  的套件，
     # 于是每次跑门禁都会**真的弹出一个游戏窗口**，在窗口里依次加载 21 个场景。
     # 后果有二：① 用户屏幕上冒出一个看起来「未响应」的游戏窗口；
@@ -73,7 +76,17 @@ def main():
         d = open(out, "rb").read().decode("utf-8", "replace")
         good, bad = d.count(OK), d.count(BAD)
         lines = d.strip().splitlines()
-        tail = lines[-1].strip()[:120] if lines else "(no output)"
+        # ⚠️ 退出噪音：headless 下**播过音**（bgm 套件、smoke 实例化场景）再退出时，
+        #    引擎会打这两行「ObjectDB instances leaked / N resources still in use」。
+        #    实测是引擎侧的（dummy 音频驱动的 playback 由 AudioServer 持有，脚本清不掉
+        #    —— 加 `--nomusic` 就完全不出现），**不是失败**，但会把最后一行的真实结论
+        #    顶掉、看着像挂。这里只在**取 tail / 判 Parse 错误**时过滤，原始文本仍留在
+        #    `_*.txt` 里可查。
+        _noise = ("ObjectDB instances leaked", "resources still in use",
+                  "at: cleanup (core/object", "at: clear (core/io/resource")
+        clean = [l for l in lines
+                 if l.strip() and not any(n in l for n in _noise)]
+        tail = clean[-1].strip()[:120] if clean else "(no output)"
         # ⚠️ **Parse Error 必须显眼**：GDScript 缩进错会让某个脚本整个加载失败，
         # 而 smoke 的「N 通过 / 0 失败」里**照样全绿**（失败发生在用例跑完之后，
         # 例如 battle 场景已跑完才发现 battle_scene.gd 解析不了）。
