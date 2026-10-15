@@ -11,8 +11,8 @@ const GAP := 56.0
 const AREA_Y := 168.0
 const LIFT := 12.0
 
-var _font: SystemFont
-var _font_bold: SystemFont
+var _font: Font
+var _font_bold: Font
 var sfx: Sfx
 var _menu: UiMenu = null      # Esc 主菜单（R148）
 var _hover := -1

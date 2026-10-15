@@ -126,7 +126,7 @@ func _rest_desc() -> String:
 也可以烤一块肉带在身上，留到 Boss 战前享用。
 （两样只能挑一样——选完这一处就到头了。）""" % int(round(RunState.rest_pct() * 100.0))
 
-var _font: SystemFont
+var _font: Font
 var sfx: Sfx
 var _menu: UiMenu = null      # Esc 主菜单（R148）
 var _rested := false          # 是否已休息（休息后按钮变「继续」）
@@ -154,7 +154,7 @@ var _reward_panel: RewardPanel = null   # R119：奖励悬浮窗（开箱 / 泉�
 #   取巧的一点：**完全不动 Label 的排版**（27 处 `desc.text = …` 一行不改），
 #   只在顶层浮层里按同一套几何（居中 + 字体度量）算出名字的命中矩形；
 #   命中后画提示 —— 卡牌画**真实卡面**，道具画名称 + 完整说明。
-var _font_bold: SystemFont
+var _font_bold: Font
 var _tip_layer: Control = null
 var _ref_names: Array = []       # [{token, name, kind, id}] —— 当前文案里可悬浮的名字
 var _ref_hits: Array = []        # [{rect(屏幕坐标), ref}] —— 命中表（文本或几何一变就重建）

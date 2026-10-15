@@ -49,40 +49,57 @@ extends RefCounted
 ##   不是排版问题，先记在这里。
 ##
 ## ## 未决
-## * `font_bold()` 依赖系统提供 Bold 字面，**headless 下无法验证粗细是否可见**。
-##   若要 100% 可控 → 把 `.ttf` 放进 `assets/fonts/` 改用 `FontFile` 加载
-##   （同时解决跨机字形/字宽漂移，对「手算文字宽度」的绘制方式是实际收益）。
+## * ~~`font_bold()` 依赖系统提供 Bold 字面~~ **R180 已解决**：内嵌思源黑体
+##   （`assets/fonts/SourceHanSansCN-Regular/Bold.otf`，OFL 授权可商用），`font()` /
+##   `font_bold()` 改走 `FontFile` —— 同时根治安卓乱码（微软雅黑是 Windows 字体，
+##   安卓上 SystemFont 回退默认字体 → 中文豆腐块），跨平台字形/字宽一致，粗体是真 Bold。
 
 # ══════════════════════════════════════════════════════════════════════
 # 字体
 # ══════════════════════════════════════════════════════════════════════
 
-## 字体族优先级：微软雅黑 UI → 微软雅黑 → 黑体。**唯一一处**字体族声明。
 ## ⚠️ 必须是**数组字面量**：`const X := PackedStringArray([...])` 不是常量表达式，会解析失败。
+## R180：字体从 `SystemFont`（微软雅黑系列）改为**内嵌思源黑体 FontFile** —— 微软雅黑是
+## Windows 专属字体，安卓上 `SystemFont` 找不到会回退到不含中文的默认字体 → 中文全变豆腐块。
+## 内嵌后跨平台字形一致、安卓不再乱码（含生僻字）。`FONT_NAMES` 降级为 `FontFile` 加载失败时
+## 的 SystemFont 兜底族名（几乎不会走到）。
 const FONT_NAMES := ["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"]
 
-## 系统粗体字面档（`font_weight`）。见文末「未决」。
-const FONT_WEIGHT_BOLD := 700
+## 内嵌思源黑体（Source Han Sans CN，OFL 授权可商用）—— Regular 正文 / Bold 强调。
+const FONT_PATH_REGULAR := "res://assets/fonts/SourceHanSansCN-Regular.otf"
+const FONT_PATH_BOLD := "res://assets/fonts/SourceHanSansCN-Bold.otf"
 
-static var _font: SystemFont = null
-static var _font_bold: SystemFont = null
+static var _font: FontFile = null
+static var _font_bold: FontFile = null
 
 
-static func font() -> SystemFont:
+static func font() -> FontFile:
 	## 正文/常规字体。全工程共用一个实例。
 	if _font == null:
-		_font = SystemFont.new()
-		_font.font_names = PackedStringArray(FONT_NAMES)
+		_font = _load_font_file(FONT_PATH_REGULAR)
 	return _font
 
 
-static func font_bold() -> SystemFont:
-	## 强调字体。R113 起真正请求 Bold 字面（此前 `_font_bold` 与 `_font` 同款，粗体是假的）。
+static func font_bold() -> FontFile:
+	## 强调字体。R180 起直接用**真粗体字面**（思源黑体 Bold），不再是 SystemFont 伪粗体。
 	if _font_bold == null:
-		_font_bold = SystemFont.new()
-		_font_bold.font_names = PackedStringArray(FONT_NAMES)
-		_font_bold.font_weight = FONT_WEIGHT_BOLD
+		_font_bold = _load_font_file(FONT_PATH_BOLD)
 	return _font_bold
+
+
+static func _load_font_file(path: String) -> FontFile:
+	## 加载内嵌 OTF；失败则回退到 SystemFont（微软雅黑系列）。FontFile 覆盖全部中文字形
+	## （含生僻字），安卓不再乱码。返回 FontFile 但内部兜底，调用方无需感知。
+	var ff := FontFile.new()
+	if ff.load_dynamic_font(path) == OK:
+		return ff
+	# 加载失败（资源缺失等）→ 兜底 SystemFont，保证永不空字。
+	var sf := SystemFont.new()
+	sf.font_names = PackedStringArray(FONT_NAMES)
+	# 把 SystemFont 挂到空 FontFile 的 fallback，仍返回 FontFile 类型（调用方类型不破）。
+	var fb := FontFile.new()
+	fb.fallbacks = [sf]
+	return fb
 
 
 # ══════════════════════════════════════════════════════════════════════

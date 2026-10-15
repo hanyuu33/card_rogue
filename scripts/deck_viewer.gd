@@ -24,8 +24,8 @@ const GAP := 24.0
 
 var _btn: Button
 var _panel: Control
-var _font: SystemFont
-var _font_bold: SystemFont
+var _font: Font
+var _font_bold: Font
 var _open := false
 var _scroll := 0.0          # 已滚动的行数（浮点，按行步进）
 

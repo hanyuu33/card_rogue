@@ -43,8 +43,8 @@ const P_LINE := 18.0             # 详情面板：说明行高
 var _btn: Button
 var _hover_layer: Control
 var _panel: Control
-var _font: SystemFont
-var _font_bold: SystemFont
+var _font: Font
+var _font_bold: Font
 var _open := false
 var _hover_on := false           # 鼠标当前在按钮或速览浮层上
 var _blocked := false            # R121：被满屏覆盖层压着（UiGate 登记非空）→ 悬停让位

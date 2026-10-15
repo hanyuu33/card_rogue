@@ -31,8 +31,8 @@ const RATIO := 0.82          # 卡面 宽/高（与 CardFace 小卡比例一致�
 const CARD_MAX_H := 150.0    # 卡面最大高度（卡少时不要撑爆屏幕）
 const CARD_MIN_H := 46.0     # 卡面最小高度（卡很多时仍可辨认）
 
-var _font: SystemFont
-var _font_bold: SystemFont
+var _font: Font
+var _font_bold: Font
 var sfx: Sfx
 var _menu: UiMenu = null      # Esc 主菜单（R148）
 var repo: CardRepo

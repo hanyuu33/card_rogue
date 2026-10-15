@@ -116,6 +116,10 @@ const COL_GUARD := Color("1d9e4f")              # 替 HP 承伤（森林守护/�
 ## 用「黄绿」而不是普通绿：我方单位框本身就是深绿（SIDE_SELF），同色环会被读成「框变粗了」。
 const COL_ACTIVATABLE := Color(0.78, 1.0, 0.35)
 const COL_READY := Color(0.50, 0.90, 1.0)      ## R165「可行动」就绪光环（亮青，区别于黄绿「可发动」）
+## R180：脉冲动画（呼吸/脉动光环）的重绘节流间隔。22fps 采样对 0.5s 周期的呼吸动画足够平滑，
+## 同时把安卓 GL Compatibility 上「每帧全量 _draw」降到约 1/3 的调用频率。仅驱动持续型脉冲动画，
+## 短时爆发特效（攻击/击破/飘字）不受影响、仍走正常帧率。
+const PULSE_FRAME_MS := 45
 const COL_TAUNT := UiTheme.STATE_TAUNT              # 嘲讽：战场单位的橙色脉冲光环（必须优先打它）
 const COL_FROZEN := UiTheme.STATE_FROZEN             # 冰封（寒冰箭/冻结陷阱/冰冻战吼）：冷蓝脉冲环 + 寒霜（这回合动不了）
 const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（恶魔鸭 9116）：紫脉冲环 + Zzz（还差 N 下挨打就醒）
@@ -277,8 +281,8 @@ var _discard_tex: Texture2D    # R140：弃牌区图标（assets/ui/discard_icon
 var _void_tex: Texture2D       # R140：消耗（消失）区次元图标（assets/ui/void_icon.png）
 var _hp_icon: Texture2D        # R156：双方血量图标（icon_health.png，与生命徽章同款血滴）
 var _energy_icon: Texture2D    # R156：能量图标（icon_cost.png，与费用徽章同款水晶）
-var _font: SystemFont
-var _font_bold: SystemFont
+var _font: FontFile
+var _font_bold: FontFile
 
 # 关卡与教程：
 var _cur_level: Dictionary = {}
@@ -312,6 +316,12 @@ var _ghosts: Array = []         # {center, name, start, dur}                  �
 var _dying: Array = []          # {cell, card, p, hide_at}                    已归零但仍要显示到命中时刻的卡
 var _floaters: Array = []       # {pos, text, col, start, dur}                伤害/治疗飘字
 var _flashes := {}              # Placement -> {col, start, dur}              受击闪色覆盖
+## R180：脉冲动画重绘节流。呼吸/脉动类光环（就绪/嘲讽/冰封/沉睡/铸造/屏障/可发动/
+## 场地标记/取消环/地图绿环/棋盘双箭头）不再**每帧** queue_redraw，而是统一降到
+## 每 `PULSE_FRAME_MS` 一次 —— 呼吸动画周期约 0.5s，22fps 采样视觉上依然平滑，
+## 但把安卓 GL Compatibility 上的全量 _draw 调用从 60fps 砍到 22fps，CPU 负载降约 2/3。
+## ⚠️ 短时爆发动画（攻击/击破/飘字/手牌飞/数字滚动）**不**走这里，仍保正常帧率。
+var _pulse_redraw_at := 0
 # R151 批 1（动效设计 §三）：手牌因果动画 —— 抽牌飞入（P0-1）/ 弃牌·消耗飞出（P0-2）
 var _hand_fly: Array = []       # {mode:"in"|"out_d"|"out_v"|"fade", card?, from/from_rect, slot?, start, dur}
 var _hand_known: Array = []     # 手牌 id 快照（保序双指针 diff，见 _hand_sync）
@@ -3943,6 +3953,16 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 			if fp.owner == GameEngine.SIDE_SELF and fp.card.kind == "盟友":
 				out.append(c)
 		out.sort()
+	elif card.id == GameEngine.FOREST_GUARD_ID:
+		# 森林守护（9037，R180）：只认己方「盟友」。原走 else 分支会把**工事**也列为
+		# 可选目标（高亮可点），但引擎 `_forest_guard` 只认 `kind == "盟友"`、点工事会被拒
+		# （用户实测报「森林守护可以以工事为对象使用」）。这里与狂暴 / 加厚装甲同口径，
+		# 提前把工事从可选集合里滤掉，别等玩家付了费、点了格子才被拒。
+		for c: Vector2i in engine.state.board:
+			var gp: Placement = engine.state.board[c]
+			if gp.owner == GameEngine.SIDE_SELF and gp.card.kind == "盟友":
+				out.append(c)
+		out.sort()
 	elif card.id == GameEngine.UPGRADE_ID:
 		# 升级 8027（R82，机械之心）：只列**己方盟友或工事**。
 		# 必须在这里过滤掉敌方 —— 引擎侧 `_upgrade_unit` 也会拒敌方单位，
@@ -6312,6 +6332,19 @@ func _replay_tick() -> void:
 
 func _now() -> int:
 	return Time.get_ticks_msec()
+
+
+func _pulse_redraw() -> void:
+	## R180：脉冲动画节流重绘。呼吸/脉动类光环不逐帧 queue_redraw，而是按
+	## `PULSE_FRAME_MS` 降频 —— 这些动画的相位都基于 `_now()`（重绘时自动取当前相位），
+	## 降频只是降采样、不会「卡住」，22fps 对 0.5s 周期的呼吸动画视觉上依然平滑。
+	## 安卓 GL Compatibility 上这是「越打越卡」的关键缓解：己方回合 `_board_has_actable()`
+	## 恒真、棋盘 `_grid_scrollable()` 恒真，原来每帧触发全量 `_draw`（80+ 子绘制）。
+	var n := _now()
+	if n < _pulse_redraw_at:
+		return
+	_pulse_redraw_at = n + PULSE_FRAME_MS
+	queue_redraw()
 
 
 func _anim_end_for(p: Placement, cap_ms := 900) -> int:
@@ -9703,24 +9736,14 @@ func _process(delta: float) -> void:
 		queue_redraw()  # 动画播放中逐帧重绘
 	if earring_busy:
 		queue_redraw()
-	if _board_has_taunt():
-		queue_redraw()  # 嘲讽光环是脉冲动画 → 需要持续重绘
-	if _board_has_frozen():
-		queue_redraw()  # 冰封寒霜环同样是脉冲动画（R68）
-	if _board_has_sleep():
-		queue_redraw()  # 沉睡环 + 飘「Zzz」同样是脉冲动画（R72）
-	if _board_has_fuse():
-		queue_redraw()  # R149：铸造倒计时的橙红脉冲环 + 「倒数 N」徽标
-	if _board_has_shield():
-		queue_redraw()  # 能量屏障的青色呼吸环 + 护盾徽标（R87）
-	if _board_has_activatable():
-		queue_redraw()  # R142：可主动发动的黄绿环 + 四向内箭头同样是脉冲动画
-	if _board_has_actable():
-		queue_redraw()  # R165：可行动就绪光环是脉冲动画（敌我同标）
-	if _cancel_armed:
-		queue_redraw()  # R118：「再点一次就取消」的橙环是脉冲动画
-	if engine != null and _board_has_pulsing_field():
-		queue_redraw()  # 场地标记的呼吸描边是脉冲动画（R74）；持续型场地静止不重绘（R83）
+	# R180：脉冲动画统一**节流重绘**（_pulse_redraw 每 PULSE_FRAME_MS 才真正 queue_redraw）。
+	# 原来这 9 个 _board_has_* 每个都逐帧 queue_redraw，且 _board_has_actable()（己方回合恒真）
+	# 单独就能让整个场景每帧全量 _draw —— 安卓 GL Compatibility 上这是「越打越卡」的主因。
+	if _board_has_taunt() or _board_has_frozen() or _board_has_sleep() \
+			or _board_has_fuse() or _board_has_shield() or _board_has_activatable() \
+			or _board_has_actable() or _cancel_armed \
+			or (engine != null and _board_has_pulsing_field()):
+		_pulse_redraw()
 	if not _confetti.is_empty():
 		if _tick_confetti(delta):
 			queue_redraw()
@@ -9735,12 +9758,9 @@ func _process(delta: float) -> void:
 	# 结算面板：等所有攻击/命中/击破/飘字等动画特效播完后再弹出。
 	if engine.over and not _over_shown and not anim_busy:
 		_show_over(engine.result == "胜利")
-	# 地图总览的「下一步可走」绿环是脉冲动画 → 开着时需持续重绘
-	if _map_visible:
-		queue_redraw()
-	# R141：棋盘双箭头改成**常显呼吸脉动**（不再只给新玩家）→ 只要棋盘能滚就逐帧重绘。
-	if _grid_scrollable():
-		queue_redraw()
+	# 地图总览的「下一步可走」绿环 / 棋盘双箭头呼吸脉动 → 同走脉冲节流（R180）。
+	if _map_visible or _grid_scrollable():
+		_pulse_redraw()
 	if not _tutorial_finished:
 		_tut_poll()
 	if _net_mode:

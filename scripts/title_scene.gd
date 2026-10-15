@@ -5,7 +5,7 @@ extends Control
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 var _bg_tex: Texture2D
-var _font: SystemFont
+var _font: Font
 var sfx: Sfx
 var _t := 0.0
 var _petals: Array = []         # {x, y, spd, ph, sc, rot, kind}  R154 飘落花瓣 / 光尘（换掉漂浮白方块）

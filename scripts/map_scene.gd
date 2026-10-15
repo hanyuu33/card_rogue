@@ -111,8 +111,8 @@ const CHOCO_ICON_H := 24.0
 const CHOCO_ROWS := 2             # 缺图兜底的小方格行数（与新素材的「2 行」呼应）
 const CHOCO_COLS := 4
 
-var _font: SystemFont
-var _font_bold: SystemFont
+var _font: Font
+var _font_bold: Font
 var sfx: Sfx
 var _t := 0.0
 var _hover_id := -1

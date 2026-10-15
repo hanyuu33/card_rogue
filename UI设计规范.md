@@ -41,6 +41,9 @@ R112 的界面体检把「界面层」当成一个系统量了一遍，结果是
 
 一律 `UiTheme.font()` / `UiTheme.font_bold()`。
 **禁止**再出现 `SystemFont.new()`，**禁止**再写 `PackedStringArray(["Microsoft YaHei UI", ...])`。
+**R180**：二者已是**内嵌思源黑体**（`assets/fonts/SourceHanSansCN-Regular/Bold.otf`，OFL 授权可商用）
+的 `FontFile` —— 根治安卓乱码（微软雅黑是 Windows 字体，安卓回退默认字体 → 中文豆腐块），
+跨平台字形/字宽一致，粗体是真 Bold 字面；新增文案不再受「字符集」限制。
 
 ### 规则 2 · 颜色
 

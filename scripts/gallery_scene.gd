@@ -37,8 +37,8 @@ var _class_filter := "全部"       # R77：按职业查找（"" = 无归属 / �
 
 var _menu: UiMenu = null      # Esc 主菜单（R148）
 
-var _font: SystemFont
-var _font_bold: SystemFont
+var _font: Font
+var _font_bold: Font
 
 @onready var title_label: Label = $TopBar/TitleLabel
 @onready var player_tab: Button = $TopBar/PlayerTab

@@ -54,8 +54,8 @@ const DETAIL_STRIP_H := 152.0   # R155：悬停详情 = 三张卡正下方的横
 
 var _root: Control
 var _btn: Button              # 常驻入口「✦ 待领奖励 N」
-var _font: SystemFont
-var _font_bold: SystemFont
+var _font: Font
+var _font_bold: Font
 var _btn_pos := Vector2(12, 40)
 var _open := false
 var _view := VIEW_LIST

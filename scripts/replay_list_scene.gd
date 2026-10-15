@@ -6,8 +6,8 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
-var _font: SystemFont
-var _font_bold: SystemFont
+var _font: Font
+var _font_bold: Font
 var sfx: Sfx
 var _menu: UiMenu = null      # Esc 主菜单（R148）
 var _items: Array[Dictionary] = []   # ReplayLog.list_replays() 结果

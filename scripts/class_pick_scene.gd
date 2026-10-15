@@ -13,8 +13,8 @@ const AV := 96.0                       # 头像边长（小，别占太多面积
 const AV_GAP := 30.0
 const PANEL_W := 416.0
 
-var _font: SystemFont
-var _font_bold: SystemFont
+var _font: Font
+var _font_bold: Font
 var sfx: Sfx
 var _menu: UiMenu = null      # Esc 主菜单（R148）
 var _hover := -1              # 悬停的头像下标
