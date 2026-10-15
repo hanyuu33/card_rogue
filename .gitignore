@@ -34,3 +34,7 @@ __pycache__/
 # 出图过程档案 art_src/ —— **有意入库**（含所有被弃用的候选图）。
 #   靠 art_src/.gdignore 让 Godot 忽略它（不导入、不进发布包）。
 #   ⚠️ 别把它写进任何忽略规则。
+
+# BGM 候选曲暂存（~485MB，可由 _download.py / _download_opentracks.js 幂等重下）
+# 选曲后只有成品进 assets/audio/bgm/（.ogg，届时入库）
+/assets/audio/_audition/raw/
