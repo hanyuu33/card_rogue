@@ -18,7 +18,7 @@ MAP = {
     "Cute_chibi_white_duck_wizard_c": 9008,   # 鸭子巫师
     "Cute_chibi_white_duck_archer_c": 9017,   # 鸭子弓手
     "Cute_chibi_white_duck_with_a_m": 9020,   # 爆炎鸭
-    "A_mystical_forest_spirit_chara": 9007,   # 火球术
+    "The_same_character_from_the_re": 9007,   # 火球术（森林精魄 i2i 重出版）
 }
 
 SRC_W = 1024
