@@ -46,8 +46,9 @@ var _row3: Array = []          # [{key: "delete"/"maxhp"/"choco", sold: bool}]
 
 # 附魔购买流程状态
 var _enchanting := -1          # 第二行正在附魔的商品下标（-1 = 无）
+var _deleting := false         # 第三行「删除一张卡」的选卡覆盖层（true = 弹卡组选一张删）
 var _hover := -1               # 悬停的商品下标（按全局编号）
-var _hover_enchant_card := -1  # 附魔选卡时悬停的卡下标
+var _hover_enchant_card := -1  # 附魔/删除选卡时悬停的卡下标
 
 # 卡组展示（附魔选卡时）
 var _deck_cards: Array = []    # [{id, name, card}]
@@ -136,7 +137,7 @@ func _draw() -> void:
 	_draw_row1()
 	_draw_row2()
 	_draw_row3()
-	_draw_enchant_overlay()
+	_draw_pick_overlay()
 	_draw_leave()
 	_draw_hint()
 
@@ -292,18 +293,24 @@ func _set_hint(text: String) -> void:
 
 # ------------------------------------------------------------ 附魔选卡覆盖层
 
-func _draw_enchant_overlay() -> void:
-	if _enchanting < 0:
+func _draw_pick_overlay() -> void:
+	## 通用「选卡」覆盖层：附魔选卡（_enchanting >= 0）或删除选卡（_deleting）。
+	if _enchanting < 0 and not _deleting:
 		return
 	# 压暗
 	draw_rect(Rect2(Vector2.ZERO, Vector2(W, H)), Color(0, 0, 0, 0.55), true)
-	var e: Dictionary = _row2[_enchanting]
-	var ench: Dictionary = e["ench"]
 	# 标题
-	draw_string(_font_bold, Vector2(0, 60), "选择要附魔的卡 —— %s" % str(ench["name"]),
-			HORIZONTAL_ALIGNMENT_CENTER, W, UiTheme.FS_HEADING, Color("ffd75a"))
-	draw_string(_font, Vector2(0, 92), "点一张高亮的卡完成附魔（点「取消」返回）",
-			HORIZONTAL_ALIGNMENT_CENTER, W, UiTheme.FS_BODY, Color("ece7db"))
+	if _deleting:
+		draw_string(_font_bold, Vector2(0, 60), "选择要删除的卡",
+				HORIZONTAL_ALIGNMENT_CENTER, W, UiTheme.FS_HEADING, Color("ff9a9a"))
+		draw_string(_font, Vector2(0, 92), "点一张卡从卡组中删除（点「取消」返回）",
+				HORIZONTAL_ALIGNMENT_CENTER, W, UiTheme.FS_BODY, Color("ece7db"))
+	else:
+		var ench: Dictionary = _row2[_enchanting]["ench"]
+		draw_string(_font_bold, Vector2(0, 60), "选择要附魔的卡 —— %s" % str(ench["name"]),
+				HORIZONTAL_ALIGNMENT_CENTER, W, UiTheme.FS_HEADING, Color("ffd75a"))
+		draw_string(_font, Vector2(0, 92), "点一张高亮的卡完成附魔（点「取消」返回）",
+				HORIZONTAL_ALIGNMENT_CENTER, W, UiTheme.FS_BODY, Color("ece7db"))
 	# 列出可选卡
 	_build_deck_cards()
 	var cols := 5
@@ -331,7 +338,8 @@ func _draw_enchant_overlay() -> void:
 					_font, _font_bold)
 			draw_rect(rr, Color(0, 0, 0, 0.6), true)
 	if not any_ok:
-		draw_string(_font, Vector2(0, 300), "没有符合这张附魔条件的卡",
+		draw_string(_font, Vector2(0, 300),
+				"没有符合这张附魔条件的卡" if not _deleting else "卡组里没有卡可删",
 				HORIZONTAL_ALIGNMENT_CENTER, W, UiTheme.FS_SUBHEAD, Color("ffb0b0"))
 	# 取消按钮
 	var cancel := Rect2(W / 2.0 - 80, H - 80, 160, 44)
@@ -342,17 +350,19 @@ func _draw_enchant_overlay() -> void:
 
 
 func _build_deck_cards() -> void:
-	## 构建附魔选卡的候选列表（含每张卡是否符合当前附魔条件）。
+	## 构建选卡候选列表。附魔模式按附魔条件过滤；删除模式所有卡都可选。
 	_deck_cards = []
-	if _enchanting < 0:
+	if _enchanting < 0 and not _deleting:
 		return
-	var ench: Dictionary = _row2[_enchanting]["ench"]
 	for i in RunState.deck_ids.size():
 		var id: int = RunState.deck_ids[i]
 		var c := _repo.get_card(id)
 		if c == null:
 			continue
-		var ok := _enchant_ok(str(ench["id"]), c, i)
+		var ok := true
+		if not _deleting:
+			var ench: Dictionary = _row2[_enchanting]["ench"]
+			ok = _enchant_ok(str(ench["id"]), c, i)
 		_deck_cards.append({"id": id, "card": c, "ok": ok, "idx": i})
 
 
@@ -392,7 +402,7 @@ func _on_motion(pos: Vector2) -> void:
 
 
 func _hit_at(pos: Vector2) -> int:
-	if _enchanting >= 0:
+	if _enchanting >= 0 or _deleting:
 		return -1
 	if _row1_rect(0).position.y <= pos.y and pos.y <= _row1_rect(0).end.y:
 		for i in _row1.size():
@@ -413,7 +423,7 @@ func _hit_at(pos: Vector2) -> int:
 
 
 func _enchant_card_at(pos: Vector2) -> int:
-	if _enchanting < 0:
+	if _enchanting < 0 and not _deleting:
 		return -1
 	var cols := 5
 	var cw := 150.0
@@ -432,8 +442,8 @@ func _enchant_card_at(pos: Vector2) -> int:
 
 
 func _on_click(pos: Vector2) -> void:
-	if _enchanting >= 0:
-		_on_enchant_click(pos)
+	if _enchanting >= 0 or _deleting:
+		_on_pick_click(pos)
 		return
 	if _leave_rect().has_point(pos):
 		_leave()
@@ -472,16 +482,16 @@ func _buy_row3(i: int) -> void:
 	var price: int = e["price"]
 	var key: String = e["key"]
 	if key == "delete":
+		# R181b：点「删除一张卡」→ 弹选卡覆盖层（选一张删），选完才扣钱。
 		if RunState.deck_ids.is_empty():
 			_set_hint("卡组里没有卡可删")
 			return
-		if not RunState.spend_gold(price):
+		if RunState.gold < price:
 			_set_hint("金币不足（需要 %d）" % price)
 			return
-		e["sold"] = true
-		# 删除卡组最后一张（简化：删最后一张；也可改成交互选卡，但这里按需求「删除一张卡」）
-		RunState.delete_deck_card(RunState.deck_ids.size() - 1)
-		_set_hint("删除了一张卡")
+		_deleting = true
+		_hover_enchant_card = -1
+		_build_deck_cards()
 	elif key == "maxhp":
 		if not RunState.spend_gold(price):
 			_set_hint("金币不足（需要 %d）" % price)
@@ -498,11 +508,13 @@ func _buy_row3(i: int) -> void:
 		_set_hint("巧克力 +1")
 
 
-func _on_enchant_click(pos: Vector2) -> void:
+func _on_pick_click(pos: Vector2) -> void:
+	## 选卡覆盖层的点击：附魔模式（_enchanting）或删除模式（_deleting）共用。
 	# 取消
 	var cancel := Rect2(W / 2.0 - 80, H - 80, 160, 44)
 	if cancel.has_point(pos):
 		_enchanting = -1
+		_deleting = false
 		_hover_enchant_card = -1
 		queue_redraw()
 		return
@@ -511,6 +523,24 @@ func _on_enchant_click(pos: Vector2) -> void:
 		return
 	var d: Dictionary = _deck_cards[ci]
 	var idx: int = d["idx"]
+	# ---- 删除模式 ----
+	if _deleting:
+		var del_price: int = _row3[0]["price"]
+		if not RunState.spend_gold(del_price):
+			_set_hint("金币不足（需要 %d）" % del_price)
+			_deleting = false
+			queue_redraw()
+			return
+		var del_name: String = str(_repo.get_card(RunState.deck_ids[idx]).card_name) \
+				if _repo.get_card(RunState.deck_ids[idx]) != null else str(idx)
+		RunState.delete_deck_card(idx)
+		_row3[0]["sold"] = true
+		_set_hint("删除了「%s」" % del_name)
+		_deleting = false
+		_hover_enchant_card = -1
+		queue_redraw()
+		return
+	# ---- 附魔模式 ----
 	var ench: Dictionary = _row2[_enchanting]["ench"]
 	var price: int = ench["price"]
 	if not RunState.spend_gold(price):
