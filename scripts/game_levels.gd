@@ -74,12 +74,12 @@ static func level_names() -> Array[String]:
 
 
 static func builtin_levels() -> Array:
-	## 按分级从低到高：普通简单×7（第一层 4 + 第二层 3）→ 普通困难×8（第一层 4 + 第二层 4）→
+	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×8（第一层 4 + 第二层 4）→
 	## 精英简单×5（第一层 2 + 第二层 3）→ 精英困难×5（第一层 2 + 第二层 3）→
-	## Boss×5（第一层 3 + 第二层 2）。合计 30 关。
+	## Boss×5（第一层 3 + 第二层 2）。合计 31 关（R174 百眼动员进第二层普通简单）。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
-			_frost_line(), _assembly_line(), _mass_anvil(),
+			_frost_line(), _assembly_line(), _mass_anvil(), _argos_mobilize(),
 		_knight_charge(), _wizard(), _white_mage_guard(), _night_ducks(),
 			_sun_forge(), _hecaton(), _undead_legion(), _twin_cannon(),
 		_captain(), _duck_kiln(), _breath_charge(), _hermes(), _dragon_nest(),
@@ -948,6 +948,39 @@ static func _mass_anvil() -> Dictionary:
 		"starting_hand": 0,
 		"enemy_units": [
 			[9138, "量产型赫菲斯托斯", 4, 50, 1, 1, Vector2i(0, 1)],
+		],
+		"tutorial": [],
+	}
+
+
+static func _argos_mobilize() -> Dictionary:
+	## 第二层·普通敌人-简单（R174「百眼动员」）：中排左右各一只量产型阿尔戈斯
+	## （9142，4/35 程1 **速2**），带「百眼」trait —— **在场时每单位只发动一次**
+	## （`Placement.ability_used`，离场再上场算新单位）：**攻击命中单位**时，在
+	## **己方后排**（row 0）召唤一只量产型俄倪厄（9131，5/30 程1 速1），并使其
+	## **移动速度 +1**（`Placement.summon_haste`，随单位离场消失，不烤进 CardData）；
+	## 后排满则退到己方半场随机空格（引擎 rng → 回放可复现）。
+	## 取舍：速 2 的中排阿尔戈斯一两步就压到脸上，每只只有一次「攻击换一只 2 速俄倪厄」
+	##   —— 是让它们尽早把这一拍打出来（早点召唤、早点多一只咬人的），还是卡射程 /
+	##   先点掉一只让它连发动机会都没有，就是这关的决策点。两只**各自独立**计数。
+	## ⚠️ 与量产铁砧（9138）的区别：那个要**亲手击杀**才锻造；这个只要**攻击命中**。
+	## ⚠️ 站位按 `Vector2i(行, 列)`（board key 语义，敌方占 row 0~2，row 0 = 最后排）：
+	##    两只阿尔戈斯 (1,0)/(1,2) 扎中排左右，给玩家留出一拍反应时间。
+	return {
+		"name": "百眼动员",
+		"key": "argos_mobilize",
+		"tier": TIER_NORMAL_EASY,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9142, "量产型阿尔戈斯", 4, 35, 1, 2, Vector2i(1, 0)],
+			[9142, "量产型阿尔戈斯", 4, 35, 1, 2, Vector2i(1, 2)],
 		],
 		"tutorial": [],
 	}

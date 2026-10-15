@@ -134,6 +134,18 @@ const CANNON_TRAIT:= "巨炮"           # 只做标记，破坏次数取卡面 v
 const ACTION_GROWTH_TRAIT:= "行动力成长"
 const ACTION_GROWTH_PERIOD:= 3
 
+# ---- R174：量产型阿尔戈斯「百眼动员」（第二层普通简单「百眼动员」）----
+# 阿尔戈斯（9142，盟友 4/35 程1 **速2**）带「百眼」trait：**在场时每单位只发动一次**
+# （记 `Placement.ability_used`，与潜伏 9092 同口径 —— 离场再上场算新单位，可再发动）。
+# 触发条件 = **攻击命中单位**（不要求亲手击杀，与「量产锻造」的区别就在这）：
+# 在**己方后排**（row 0）召唤一只量产型俄倪厄（9131，5/30 程1 速1），并使其
+# **移动速度 +1**（记 `Placement.summon_haste`，进 `effective_speed`，随单位离场消失）。
+# 后排满则退到己方半场随机空格（`_random_free_half_cell`，走引擎 rng → 回放同种子可复现）。
+# ⚠️ 挂点 = `attack()`（攻击单位），**不挂** `attack_hp()`（直击 HP 不算「攻击单位」）。
+const ARGOS_ID:= 9142             # 量产型阿尔戈斯（盟友 4/35 程1 速2）
+const ARGOS_TRAIT:= "百眼"        # 只做标记（与「量产锻造 / 锻造」同套路），次数记 Placement
+const ARGOS_SUMMON_HASTE:= 1      # 召唤出的俄倪厄移速加成（Placement.summon_haste）
+
 # ---- R162：阿斯克勒庇厄斯「护甲积攒」----
 # 每回合开始时获得 ASCLEPIUS_ARMOR 点护甲；若获得前已有护甲，则清零并对随机敌方单位
 # 造成等量伤害，然后力量 +1。护甲只记 Placement，受到伤害时优先代替生命扣除。
@@ -7012,6 +7024,52 @@ func _mass_heph_kill_forge(killer: Placement) -> void :
 		_on_ally_entered(spawned, killer.owner)
 
 
+func _argos_summon(attacker: Placement) -> void:
+	## 百眼动员（量产型阿尔戈斯 9142，R174）：**在场时每单位只发动一次**
+	## （`ability_used`，离场再上场算新单位）—— **攻击命中单位**时，在**己方后排**
+	## （`back_row`，敌方 = row 0）召唤一只量产型俄倪厄（9131，5/30 程1 速1），
+	## 并使其**移动速度 +1**（`Placement.summon_haste`，随单位离场消失，不烤进 CardData）。
+	## ⚠️ 与「量产锻造」（9138）的差别：**不要求亲手击杀**，攻击命中任何单位都算；
+	##    发动一次后本单位在场期间不再触发（打防御塔 / 打残血都算发动）。
+	## ⚠️ 找不到格子时**不消耗次数**（保留 ability_used），下一拍攻击还能发动；
+	##    落点走引擎 rng（`_random_free_half_cell`）→ 回放同种子可复现。
+	## ⚠️ 召唤物走 `place(summon = true)` = 当回合恰好 1 轮行动（与恶魔召唤同口径）。
+	if over or attacker == null or attacker.card == null:
+		return
+	if not attacker.card.traits.has(ARGOS_TRAIT):
+		return
+	if attacker.ability_used:
+		return
+	var proto: CardData = CardRepo.load_json().get_card(SUN_FORGE_FURY_ID)
+	if proto == null:
+		_log("百眼动员失败：卡牌库里没有 id=%d" % SUN_FORGE_FURY_ID)
+		return
+	var spot:= _argos_summon_spot(attacker.owner)
+	if spot == Vector2i(-1, -1):
+		_log("%s 想发动百眼动员，但己方半场已满（保留发动次数）" % attacker.card.card_name)
+		return
+	var copy:= CardData.from_dict(proto.to_dict())   # 独立副本：不与卡库实例共享
+	var spawned:= state.place(copy, spot, attacker.owner, true)
+	spawned.summon_haste = ARGOS_SUMMON_HASTE
+	attacker.ability_used = true
+	_log("%s 发动百眼动员：后排召唤一只量产型俄倪厄（%s），其移动速度 +1"
+			% [attacker.card.card_name, spot])
+	action.emit("argos_summon", {"cell": spot, "card": copy, "side": attacker.owner})
+	if spawned != null:
+		_on_ally_entered(spawned, attacker.owner)
+
+
+func _argos_summon_spot(side: String) -> Vector2i:
+	## 百眼动员的落点：**先找己方后排**（`back_row`）的空格（按列从左到右），
+	## 后排满了再退到己方半场随机空格（`_random_free_half_cell`）。
+	var br:= back_row(side)
+	for col: int in FieldState.BOARD_COLS:
+		var c:= Vector2i(br, col)
+		if not state.board.has(c):
+			return c
+	return _random_free_half_cell(side)
+
+
 func _heph_kill_forge(killer: Placement) -> void :
 	## 赫菲斯托斯（9135，R150）**亲手击杀**敌人 → 在**己方半场随机空格**锻造一只
 	## 量产型俄倪厄（9131，5/30 程1 速1），并**清零**空转计数 —— 它一直在杀人，
@@ -8641,6 +8699,7 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		if attacker.card.id == LURKER_ID and attacker.ramp_atk > 0:
 			attacker.ramp_atk = 0
 			_log("潜影者：攻击后力量重置（当前 %d）" % attacker.effective_power())
+		_argos_summon(attacker)   # 百眼动员（9142，R174）：攻击单位 → 后排召唤俄倪厄
 		_attack_gain_energy(side, attacker)   # 地狱咏唱者 8022 / 黑暗祭坛 8023：攻击时 +1 费
 		_tap(attacker, "行动完毕")
 	_check_game_over()

@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 210,
-			"图鉴 = 209 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162**；R164 删除**双重场地 9108**；实际 %d）"
+	check(repo.all_cards().size() == 211,
+			"图鉴 = 209 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 161 and grp_enemy.size() == 49,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 161 / 49；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 161 and grp_enemy.size() == 50,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 161 / 50；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -4474,7 +4474,7 @@ func _init() -> void:
 
 	# ---- 新关卡：使魔鸭群 / 骑士冲锋 / 队长与巫师 / 爆炎鸭阵 / 白魔法鸭护阵 ----
 	var lvls := GameLevels.builtin_levels()
-	check(lvls.size() == 30, "内置关卡共 30 关（7 普简 + 8 普难 + 5 精英简单 + 5 精英困难 + 5 Boss；"
+	check(lvls.size() == 31, "内置关卡共 31 关（8 普简 + 8 普难 + 5 精英简单 + 5 精英困难 + 5 Boss；"
 			+ "R135 太阳熔炉进第二层普通困难 / R149 钢铁要塞·R162 阿斯克勒庇厄斯进第二层精英困难 / R150 赫菲斯托斯工坊进第二层 Boss"
 			+ " / R158 量产流水线·量产铁砧进第二层普通简单、双机炮阵进第二层普通困难）")
 	var lva: Dictionary = _level_named("使魔鸭群")
@@ -4849,7 +4849,7 @@ func _init() -> void:
 	# ---- 分层：各层内容互不串层（第一层 [1] / 第二层 [2]，各自专属） ----
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_DEFAULT).size() == lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
 			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关）" % [lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(), GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size()])
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 15,
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 16,
 			"第二层自带 15 关（太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法鸭护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层）")
 	# 内容池：第一层 = [1]；第二层 = [2]（各层内容互不串层）
 	var cl1 := GameLayers.content_layers(GameLayers.LAYER_DEFAULT)
@@ -4858,8 +4858,8 @@ func _init() -> void:
 	check(cl2.size() == 1 and int(cl2[0]) == 2,
 			"第二层内容池 = [2]（只用第二层内容，不再混用第一层）")
 	check(GameLayers.content_layers(9).is_empty(), "未配置的层：内容池为空（拿不到任何内容）")
-	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 7,
-			"第二层普通池 7 关（专属：普通简单 3 + 普通困难 4；R135 太阳熔炉 / R158 量产流水线·量产铁砧·双机炮阵）")
+	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 8,
+			"第二层普通池 8 关（专属：普通简单 4 + 普通困难 4；R135 太阳熔炉 / R158 量产流水线·量产铁砧·双机炮阵 / R174 百眼动员）")
 	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 6,
 			"第二层精英池 6 关（专属：精英简单 3 + 精英困难 3；R149 钢铁要塞 / R161 赫尔墨斯的试炼 / R162 阿斯克勒庇厄斯的试炼）")
 	var l2_battle_pool: Array[Dictionary] = []
@@ -6820,8 +6820,8 @@ func _init() -> void:
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 54
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
-			and int(dr_cls_count.get("敌人", 0)) == 49,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 54 / 36 / 49；R161 +1 / R162 +1；R164 暗影刺客 -1 = 删除双重场地 9108）"
+			and int(dr_cls_count.get("敌人", 0)) == 50,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 54 / 36 / 50；R161 +1 / R162 +1 / R174 +1；R164 暗影刺客 -1 = 删除双重场地 9108）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -15253,6 +15253,116 @@ func _init() -> void:
 	check(pR162.effective_power() == 14 and pR162.armor == 16
 			and engR162.state.unit_at(Vector2i(5, 1)) == null,
 			"R162 第 3 回合开始：存爆 16 护甲伤害 → 树人阵亡，力量 14，护甲回满 16")
+
+
+	# ---- R174：量产型阿尔戈斯「百眼动员」+ 第二层普通简单关「百眼动员」 ----
+	var r174_repo := CardRepo.load_json()
+	var r174_arg: CardData = r174_repo.get_card(9142)
+	check(r174_arg != null and r174_arg.card_name == "量产型阿尔戈斯"
+			and r174_arg.kind == "盟友" and r174_arg.group == "enemy"
+			and r174_arg.power == 4 and r174_arg.health == 35
+			and r174_arg.attack_range == 1 and r174_arg.move_speed == 2
+			and r174_arg.rarity == 4 and r174_arg.traits.has(GameEngine.ARGOS_TRAIT)
+			and not r174_repo.reward_pool().has(r174_arg),
+			"R174 阿尔戈斯：盟友 4/35 程1 速2，trait「百眼」，敌方卡不进奖励池")
+	var r174_lvl: Dictionary = _level_named("百眼动员")
+	check(not r174_lvl.is_empty()
+			and int(r174_lvl["tier"]) == GameLevels.TIER_NORMAL_EASY
+			and GameLevels.layer_of(r174_lvl) == GameLayers.LAYER_TWO
+			and GameLevels.bg_key(r174_lvl) == "argos_mobilize"
+			and GameLevels.normal_pool(GameLayers.LAYER_TWO).has(r174_lvl)
+			and not GameLevels.normal_pool(GameLayers.LAYER_DEFAULT).has(r174_lvl),
+			"R174 关卡：第二层·普通敌人-简单，key=argos_mobilize，只进第二层普通池（不串层）")
+	var r174_units: Array = r174_lvl["enemy_units"]
+	check(r174_units.size() == 2
+			and int(r174_units[0][0]) == 9142 and r174_units[0][6] == Vector2i(1, 0)
+			and int(r174_units[1][0]) == 9142 and r174_units[1][6] == Vector2i(1, 2),
+			"R174 编成：两只阿尔戈斯扎中排左右 (1,0)/(1,2)")
+	var r174_same := true
+	for r174_u: Array in r174_units:
+		var r174_uc: CardData = r174_repo.get_card(int(r174_u[0]))
+		if not (str(r174_u[1]) == r174_uc.card_name
+				and int(r174_u[2]) == r174_uc.power
+				and int(r174_u[3]) == r174_uc.health
+				and int(r174_u[4]) == r174_uc.attack_range
+				and int(r174_u[5]) == r174_uc.move_speed):
+			r174_same = false
+	check(r174_same, "R174 元组与卡面逐项同源（名/力/生/程/速）")
+
+	# 机制正面：攻击命中单位 → 后排召唤俄倪厄 + 移速 +1
+	var r174_e := _new_engine([], 30, 30)
+	var r174_a := r174_e.state.place(CardData.from_dict(r174_arg.to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	r174_e.state.place(CardData.from_dict(r174_repo.get_card(9001).to_dict()),
+			Vector2i(2, 0), GameEngine.SIDE_SELF)
+	r174_e.start_game()
+	var r174_n0 := 0
+	for r174_c0: Vector2i in r174_e.state.board:
+		if r174_e.state.board[r174_c0].owner == GameEngine.SIDE_OPPONENT:
+			r174_n0 += 1
+	r174_e.attack(Vector2i(1, 0), Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+	var r174_new := Vector2i(-1, -1)
+	var r174_n1 := 0
+	for r174_c1: Vector2i in r174_e.state.board:
+		var r174_p1: Placement = r174_e.state.board[r174_c1]
+		if r174_p1.owner == GameEngine.SIDE_OPPONENT:
+			r174_n1 += 1
+			if r174_p1.card.id == GameEngine.SUN_FORGE_FURY_ID:
+				r174_new = r174_c1
+	check(r174_n1 == r174_n0 + 1 and r174_new != Vector2i(-1, -1),
+			"R174 攻击命中单位 → 召唤一只量产型俄倪厄（%d → %d，落点 %s）"
+			% [r174_n0, r174_n1, str(r174_new)])
+	check(r174_new.x == GameEngine.back_row(GameEngine.SIDE_OPPONENT),
+			"R174 落点优先后排（%s，敌方 row 0 = 最后排）" % str(r174_new))
+	var r174_sp: Placement = r174_e.state.unit_at(r174_new)
+	check(r174_sp != null and r174_sp.summon_haste == GameEngine.ARGOS_SUMMON_HASTE
+			and r174_sp.effective_speed() == 1 + GameEngine.ARGOS_SUMMON_HASTE,
+			"R174 召唤物移速 +1：1 → %d（实际 %d）"
+			% [1 + GameEngine.ARGOS_SUMMON_HASTE, r174_sp.effective_speed()])
+	check(r174_sp.card.move_speed == 1,
+			"R174 加成不烤进 CardData：卡库卡面移速仍是 1")
+	check(r174_a.ability_used,
+			"R174 发动后 ability_used 置位（在场只发动一次）")
+	# 同一单位第二次攻击不再触发
+	r174_a.tapped = false
+	r174_e.attack(Vector2i(1, 0), Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+	var r174_n2 := 0
+	for r174_c2: Vector2i in r174_e.state.board:
+		if r174_e.state.board[r174_c2].owner == GameEngine.SIDE_OPPONENT:
+			r174_n2 += 1
+	check(r174_n2 == r174_n1,
+			"R174 同一单位第二次攻击不再召唤（仍 %d 只）" % r174_n2)
+	# 俄倪厄离场 → 加成随之消失
+	r174_e._destroy(r174_new)
+	check(r174_e.state.unit_at(r174_new) == null,
+			"R174 俄倪厄被摧毁 → 移速加成随之消失（Placement 离场即还原）")
+	# 离场再上场算新单位，可再发动
+	var r174_a2 := r174_e.state.place(CardData.from_dict(r174_arg.to_dict()),
+			Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
+	check(not r174_a2.ability_used,
+			"R174 新上场的阿尔戈斯 ability_used 复位（离场再上场算新单位）")
+	# 反面：非百眼单位攻击不触发
+	var r174_e2 := _new_engine([], 30, 30)
+	r174_e2.state.place(CardData.from_dict(r174_repo.get_card(9001).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	r174_e2.state.place(CardData.from_dict(r174_repo.get_card(9001).to_dict()),
+			Vector2i(2, 0), GameEngine.SIDE_SELF)
+	r174_e2.start_game()
+	var r174_m0 := r174_e2.state.board.size()
+	r174_e2.attack(Vector2i(1, 0), Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+	check(r174_e2.state.board.size() == r174_m0,
+			"R174 反面：非百眼单位攻击不召唤（场上仍 %d 个单位）" % r174_m0)
+	# 可见性：俄倪厄的移速加成在信息栏与卡面徽标可见
+	var r174_show := false
+	for r174_ent in r174_sp.status_entries():
+		if str(r174_ent.get("label", "")).contains("动员"):
+			r174_show = true
+	var r174_badge := false
+	for r174_bd in r174_sp.status_badges():
+		if str(r174_bd.get("text", "")).contains("速"):
+			r174_badge = true
+	check(r174_show and r174_badge,
+			"R174 移速加成在信息栏与卡面徽标可见（隐藏 buff 不能只靠日志）")
 
 	RunState.player_class = r91_saved_cls
 

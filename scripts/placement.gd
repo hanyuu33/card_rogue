@@ -88,6 +88,11 @@ var hecaton_atk: int = 0       # 孤军成立时 = HECATON_ATK_BUFF(2)，否则 
 	## 该单位本回合行动次数 +1（只记 Placement，不写回 CardData）。
 var action_growth_extra: int = 0   # 已累计的额外行动轮数
 var action_growth_turns: int = 0   # 距离下次成长还剩几个回合
+## 「百眼动员」（量产型阿尔戈斯 9142，R174）：被它召唤出来的量产型俄倪厄移速 +1。
+## ⚠️ 同暗影领主：只记在 Placement、**绝不烤进 CardData** —— 敌方关卡单位用的是卡库
+## 共享实例，直接改 card.move_speed 会把加成写进卡库、跨局泄漏。单位一离场字段随之消失，
+## 因此无需 `_card_leaving_field` 还原。
+var summon_haste: int = 0          # 阿尔戈斯召唤加成（进 effective_speed）
 
 
 func effective_power() -> int:
@@ -107,7 +112,7 @@ func effective_speed() -> int:
 	## 与 effective_power 对称：**不写回 card**，所以 `_move_bfs` / AI 都要读这个口。
 	if card == null:
 		return 0
-	return maxi(0, card.move_speed + dark_lord_speed)
+	return maxi(0, card.move_speed + dark_lord_speed + summon_haste)
 
 
 func effective_range() -> int:
@@ -171,6 +176,9 @@ func status_entries() -> Array[Dictionary]:
 		out.append({"label": "潜影累计 +%d" % ramp_atk, "col": COL_B, "kind": "buff"})
 	if end_atk > 0:
 		out.append({"label": "回合结束成长 +%d" % end_atk, "col": COL_B, "kind": "buff"})
+	if summon_haste > 0:
+		out.append({"label": "动员：速 +%d（阿尔戈斯召唤）" % summon_haste,
+				"col": COL_B, "kind": "buff"})
 	if regen > 0:
 		out.append({"label": "自我修复：每回合回复 %d" % regen, "col": COL_B, "kind": "buff"})
 	if first_hit_shield:
@@ -233,6 +241,8 @@ func status_badges() -> Array[Dictionary]:
 		out.append({"text": "禁足", "col": Color("8a6d1f")})
 	if guarding:
 		out.append({"text": "守护", "col": Color("2f8f4f")})
+	if summon_haste > 0:
+		out.append({"text": "速 +%d" % summon_haste, "col": Color("2f8f4f")})
 	if forge_period > 0:
 		out.append({"text": "锻 %d/%d" % [forge_idle, forge_period], "col": Color("ff7043")})
 	return out

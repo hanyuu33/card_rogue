@@ -4321,6 +4321,28 @@
       "target_mode": "none",
       "color": "金",
       "image": ""
+    },
+    {
+      "id": 9142,
+      "name": "量产型阿尔戈斯",
+      "kind": "盟友",
+      "cost": 5,
+      "power": 4,
+      "health": 35,
+      "attack_range": 1,
+      "move_speed": 2,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "机械",
+        "百眼"
+      ],
+      "affixes": [],
+      "effect_text": "在场时只能发动一次：攻击单位时，在己方后排召唤一只量产型俄倪厄，并使其移动速度 +1。",
+      "target_mode": "none",
+      "color": "灰",
+      "image": ""
     }
   ]
 }
