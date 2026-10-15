@@ -14497,8 +14497,11 @@ func _init() -> void:
 			% [r135_fury.kind, r135_fury.power, r135_fury.health,
 				r135_fury.attack_range, r135_fury.move_speed])
 	check(r135_helios.group == "enemy" and r135_fury.group == "enemy"
-			and r135_helios.effect_text != "" and r135_fury.effect_text != "",
-			"R135 两张都是敌方卡（group=enemy）且卡面写明效果")
+			and r135_helios.effect_text != "",
+			"R135 两张都是敌方卡（group=enemy），**效果写在光源上**")
+	check(r135_fury.effect_text == "",
+			"R179b 量产型俄倪厄卡面不写效果（「赫利俄斯在场时双动 / 回血」是光源的效果，"
+			+ "写在赫利俄斯卡上 —— 原来写在被影响方卡面会让玩家以为「量产型赫利俄斯」也算）")
 
 	var r135_lv: Dictionary = _level_named("太阳熔炉")
 	check(not r135_lv.is_empty()
