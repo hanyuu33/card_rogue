@@ -11963,8 +11963,8 @@ func _init() -> void:
 		"R91 充电装置：带 trait「接通」（与闪电链同一个 trait 族）")
 
 	# ---- ② 字段系统：定义表 / 判定口 / 序列化往返 ----
-	check(CardData.AFFIX_DEFS.size() == 8,
-		"R91 字段表：8 个字段（疾行 / 嘲讽 / 死亡 / 幻影 / 护盾 / **次元** R93 / **超负荷** R98 / **交换** R101），实际 %d"
+	check(CardData.AFFIX_DEFS.size() == 9,
+		"R91 字段表：9 个字段（疾行 / 嘲讽 / 死亡 / 幻影 / 护盾 / **次元** R93 / **超负荷** R98 / **交换** R101 / **保存** R181），实际 %d"
 		% CardData.AFFIX_DEFS.size())
 	var r91_all: Dictionary = {}
 	for c91 in r91_repo.all_cards():
@@ -15366,6 +15366,68 @@ func _init() -> void:
 			r174_badge = true
 	check(r174_show and r174_badge,
 			"R174 移速加成在信息栏与卡面徽标可见（隐藏 buff 不能只靠日志）")
+
+	# ---- R181 商店 + 金币 + 附魔 + 保存字段 ----
+	var r181_saved_deck: Array[int] = RunState.deck_ids.duplicate()
+	var r181_saved_mods: Array = RunState.deck_mods.duplicate()
+	# ① 金币掉落按难度
+	check(RunState.gold_for_tier(GameLevels.TIER_NORMAL_EASY) == 20
+			and RunState.gold_for_tier(GameLevels.TIER_NORMAL_HARD) == 30
+			and RunState.gold_for_tier(GameLevels.TIER_ELITE_EASY) == 50
+			and RunState.gold_for_tier(GameLevels.TIER_ELITE_HARD) == 65
+			and RunState.gold_for_tier(GameLevels.TIER_BOSS) == 100,
+			"R181 金币掉落：普通简单20/普通困难30/精英简单50/精英困难65/Boss100")
+	# ② 金币收支
+	RunState.gold = 100
+	check(RunState.gain_gold(50) == 50 and RunState.gold == 150, "R181 加金币 100+50=150")
+	check(RunState.spend_gold(60) and RunState.gold == 90, "R181 花金币 150-60=90")
+	check(not RunState.spend_gold(999) and RunState.gold == 90, "R181 金币不足拒绝")
+	# ③ +5 最大生命（并回血）
+	RunState.max_hp = 50
+	RunState.hp = 30
+	RunState.gain_max_hp(5)
+	check(RunState.max_hp == 55 and RunState.hp == 35, "R181 +5 最大生命并回血（50/30 → 55/35）")
+	# ④ 附魔：费用 -1
+	RunState.deck_ids = [8003, 8003]
+	RunState.deck_mods = [{}, {}]
+	check(RunState.enchant_deck_card(0, {"cost": -1}), "R181 附魔费用-1 成功")
+	check(not RunState.enchant_deck_card(0, {"power": 10}), "R181 每张卡只能一个附魔（二次附魔被拒）")
+	var r181_deck := RunState.build_deck(r91_repo)
+	check(r181_deck[0].cost == 2 and r181_deck[1].cost == 3,
+			"R181 附魔费用-1 只改这一张（2/3，卡库原卡仍 3）")
+	check(r91_repo.get_card(8003).cost == 3, "R181 附魔不污染卡库共享实例")
+	# ⑤ 附魔：次元 +2力+10血
+	RunState.deck_ids = [8001]
+	RunState.deck_mods = [{}]
+	check(RunState.enchant_deck_card(0, {"affix": "次元", "power": 2, "health": 10}),
+			"R181 附魔次元成功")
+	var r181_dim := RunState.build_deck(r91_repo)[0]
+	check(r181_dim.has_affix("次元") and r181_dim.power == r91_repo.get_card(8001).power + 2
+			and r181_dim.health == r91_repo.get_card(8001).health + 10,
+			"R181 次元附魔：字段+2力+10血都烤进副本（不污染原卡）")
+	# ⑥ 保存字段：回合结束手牌不丢弃
+	var r181_sv := _new_engine([], 30, 30)
+	var r181_sv_card := CardData.from_dict(r91_repo.get_card(8003).to_dict())
+	r181_sv_card.add_affix("保存")
+	r181_sv.state.hand = [r181_sv_card]
+	r181_sv.state.discard_hand()
+	check(r181_sv.state.hand.size() == 1 and r181_sv.state.discard.is_empty(),
+			"R181 保存字段：回合结束手牌这张不丢弃")
+	var r181_sv2 := _new_engine([], 30, 30)
+	r181_sv2.state.hand = [CardData.from_dict(r91_repo.get_card(8003).to_dict())]
+	r181_sv2.state.discard_hand()
+	check(r181_sv2.state.hand.is_empty() and r181_sv2.state.discard.size() == 1,
+			"R181 反面：无保存字段的卡回合结束照常丢弃")
+	# ⑦ 商店地图节点
+	var r181_map := RogueMap.generate(RunState.run_rng, GameLayers.LAYER_DEFAULT)
+	var r181_shop_found := false
+	for r181_c in r181_map:
+		if str(r181_c.get("type", "")) == "shop":
+			r181_shop_found = true
+			break
+	check(r181_shop_found, "R181 地图生成含商店节点")
+	RunState.deck_ids = r181_saved_deck
+	RunState.deck_mods = r181_saved_mods
 
 	RunState.player_class = r91_saved_cls
 

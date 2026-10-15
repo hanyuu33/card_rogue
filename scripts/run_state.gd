@@ -19,6 +19,11 @@ static var hp: int = 50          # 玩家当前生命（跨战斗保留）
 # ---- run 进度 ----
 static var run_active := false               # 是否在肉鸽 run 中（false = 单关/演示模式）
 static var deck_ids: Array[int] = []         # 当前卡组（卡 id，可重复）
+## R181 商店附魔：与 deck_ids **等长**的修饰列表。每个元素是 {}（无附魔）或
+## {"cost":-1} / {"power":+10} / {"affix":"次元","power":+2,"health":+10} / {"affix":"保存"}。
+## 只改这一张卡（不改卡库共享实例）：`build_deck` 按 mod 生成独立副本再应用。
+## 每张卡只能有一个附魔（enchant_deck_card 会拒绝已附魔的卡）。跨战斗、跨层保留。
+static var deck_mods: Array = []
 ## 卡组费用**一律以卡面为准**（R112）：早前鸭鸭工匠产物靠 `deck_cost_at_index()` 把卡组里的
 ## 铁栅栏现算成 2 费、而卡面是 0 费 → 「图鉴 0 费 / 卡组 2 费」两处不一致。用户拍板
 ## 「只保留 2 费」后，直接把 **9072 的卡面改成 2 费**，那套运行时费用改写已整块删除。
@@ -30,6 +35,10 @@ static var cleared_ids: Array = []
 ## R128 巧克力：每层固定 RogueMap.MAX_STEPS 块。进入**没走过**的房间扣 1 块，
 ## 原路返回走过的房间不扣。扣到 0 → 本房间内容结算完立刻开 Boss 战（boss_pending）。
 static var chocolate := 0
+## R181 金币：本局货币。初始 100；战斗胜利按难度掉落（普通简单 20 / 普通困难 30 /
+## 精英简单 50 / 精英困难 65 / Boss 100）；开普通宝箱 +50、大宝箱 +80；商店消费。
+## 跨战斗、跨层保留（同一局）；start_run 重置 100、end_run 清 0。advance_layer 不清。
+static var gold := 0
 static var boss_pending := false             # 巧克力已耗尽，等当前房间结算完就开 Boss 战
 static var pending_level: Dictionary = {}    # 即将进入的战斗关卡（地图 → 战斗）
 static var pending_node: Dictionary = {}     # 即将进入的地图节点（地图 → 休息/事件）
@@ -191,6 +200,16 @@ static func rest() -> int:
 	return heal(rest_heal_amount())
 
 
+static func gain_max_hp(amount: int) -> int:
+	## R181：商店「+5 最大生命（并回血）」—— 最大生命 +amount，当前生命同 +amount
+	## （即「上限提升的同时也补上这几点血」）。返回实际增加的最大生命。
+	if amount <= 0:
+		return 0
+	max_hp += amount
+	hp = mini(max_hp, hp + amount)
+	return amount
+
+
 static func lose_max_hp(amount: int) -> int:
 	## 失去指定点数的最大生命（「源数之力」的代价）：
 	## 当前生命同步下降相同的点数，且不超过新的上限、不低于 0；
@@ -222,6 +241,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	current_layer = layer
 	cleared_ids = []
 	chocolate = RogueMap.MAX_STEPS
+	gold = 100                    # R181：新开一局初始 100 金币
 	boss_pending = false
 	battle_log = []
 	pending_level = {}
@@ -232,6 +252,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# 开局卡组 = 公共部分 + 2 张角色基础盟友（森林精魄 → 树人；暗影刺客 → 幽影）
 	# + 角色专属卡（森林精魄 → 熊 8004；暗影刺客 → 突袭 9086）。见 PlayerClass.start_deck_ids。
 	deck_ids = PlayerClass.start_deck_ids(player_class)
+	deck_mods = []                # R181：新开一局 → 附魔清空（与 deck_ids 等长）
 	battle_wins = 0
 	elite_wins = 0
 	used_levels = []
@@ -274,11 +295,13 @@ static func end_run(clear_save: bool = true) -> void:
 	run_active = false
 	player_class = PlayerClass.default_id()
 	deck_ids = []
+	deck_mods = []                # R181：本局结束 → 附魔清掉
 	map_cells = []
 	current_layer = GameLayers.LAYER_DEFAULT
 	current_node_id = -1
 	cleared_ids = []
 	chocolate = 0
+	gold = 0                      # R181：本局结束 → 金币清掉
 	boss_pending = false
 	pending_level = {}
 	pending_node = {}
@@ -628,6 +651,7 @@ static func delete_deck_card(index: int) -> bool:
 	if index < 0 or index >= deck_ids.size():
 		return false
 	deck_ids.remove_at(index)
+	_sync_mods_remove(index)     # R181：附魔下标同步前移
 	pending_relic = -1
 	return true
 
@@ -642,6 +666,8 @@ static func transform_deck_card(repo: CardRepo, index: int) -> Dictionary:
 	var rolled := CardReward.roll(repo, "normal", 1, run_rng)
 	var new_id: int = rolled[0].id if not rolled.is_empty() else old_id
 	deck_ids[index] = new_id
+	if index < deck_mods.size():
+		deck_mods[index] = {}       # R181：变形后附魔失效
 	pending_relic = -1
 	return {"ok": true, "old_id": old_id, "new_id": new_id}
 
@@ -657,6 +683,8 @@ static func smith_deck_card(index: int) -> Dictionary:
 		return {"ok": false, "old_id": 0, "new_id": 0}
 	var old_id: int = deck_ids[index]
 	deck_ids[index] = FENCE_CARD_ID
+	if index < deck_mods.size():
+		deck_mods[index] = {}       # R181：变铁栅栏后附魔失效
 	pending_deck_edit = ""
 	var fc := CardRepo.load_json().get_card(FENCE_CARD_ID)
 	return {"ok": true, "old_id": old_id, "new_id": FENCE_CARD_ID,
@@ -683,6 +711,7 @@ static func duplicate_deck_cards(repo: CardRepo, indices: Array) -> Dictionary:
 		var c := repo.get_card(id)
 		copied.append({"id": id, "name": c.card_name if c != null else str(id)})
 		deck_ids.append(id)     # 副本追加到卡组末尾（原卡位置不动）
+		deck_mods.append({})    # R181：复制品无附魔
 	pending_relic = -1
 	return {"ok": not copied.is_empty(), "copied": copied}
 
@@ -761,7 +790,9 @@ static func trade_five_for_one(repo: CardRepo) -> Dictionary:
 		removed.append({"id": deck_ids[i2],
 				"name": c2.card_name if c2 != null else str(deck_ids[i2])})
 		deck_ids.remove_at(i2)
+		_sync_mods_remove(i2)    # R181：删卡同步附魔下标
 	deck_ids.append(HERO_CARD_ID)
+	deck_mods.append({})        # R181：新英雄无附魔
 	return {"ok": true, "removed": removed, "new_id": HERO_CARD_ID}
 
 
@@ -878,6 +909,33 @@ static func complete_current() -> void:
 		cleared_ids.append(current_node_id)
 
 
+static func gold_for_tier(tier: int) -> int:
+	## R181：战斗胜利的金币掉落（按关卡分级）。普通简单 20 / 普通困难 30 /
+	## 精英简单 50 / 精英困难 65 / Boss 100。未知分级回退 0。
+	match tier:
+		GameLevels.TIER_NORMAL_EASY: return 20
+		GameLevels.TIER_NORMAL_HARD: return 30
+		GameLevels.TIER_ELITE_EASY: return 50
+		GameLevels.TIER_ELITE_HARD: return 65
+		GameLevels.TIER_BOSS: return 100
+	return 0
+
+
+static func gain_gold(amount: int) -> int:
+	## 加金币（战斗掉落 / 宝箱）。返回本次实际增加量。
+	var before := gold
+	gold = maxi(0, gold + maxi(0, amount))
+	return gold - before
+
+
+static func spend_gold(amount: int) -> bool:
+	## 花金币（商店购买）。金额不足返回 false，不扣。
+	if gold < amount:
+		return false
+	gold -= amount
+	return true
+
+
 static func boss_level() -> Dictionary:
 	## 巧克力耗尽触发 Boss 战时取的关卡。开局已用 run_rng 摇定（boss_pick），
 	## 与玩家在地图上看到的 Boss 名牌读**同一份** —— 看到谁就打谁。
@@ -960,18 +1018,67 @@ static func _pick_level(pool: Array[Dictionary]) -> Dictionary:
 static func add_card(id: int) -> void:
 	## 卡牌奖励收下的卡加入卡组。
 	deck_ids.append(id)
+	deck_mods.append({})          # R181：附魔列表同步增长（新卡无附魔）
 
 
 static func build_deck(repo: CardRepo) -> Array[CardData]:
 	## 按 deck_ids 构建实际牌库（缺定义的 id 跳过）。
-	## 一律用卡库**共享实例** —— R112 起卡组里不再有「费用与卡面不同」的卡
-	## （铁栅栏 9072 的卡面就是 2 费），所以不需要取副本改写费用。
+	## 一律用卡库**共享实例**，**除非**这一张带商店附魔（R181）—— 附魔要烤进卡
+	## （费用 -1 / 伤害 +10 / 次元 +2力+10血 / 保存），不能污染卡库共享实例，
+	## 于是对带附魔的那张用 `from_dict(to_dict())` 生成**独立副本**再应用。
 	var cards: Array[CardData] = []
-	for id in deck_ids:
+	for i in deck_ids.size():
+		var id: int = deck_ids[i]
 		var c := repo.get_card(id)
-		if c != null:
+		if c == null:
+			continue
+		var mod: Dictionary = _mod_at(i)
+		if mod.is_empty():
 			cards.append(c)
+			continue
+		var cc := CardData.from_dict(c.to_dict())   # 独立副本（affixes 等数组也独立）
+		_apply_mod(cc, mod)
+		cards.append(cc)
 	return cards
+
+
+static func _mod_at(index: int) -> Dictionary:
+	## 取第 index 张卡的附魔（越界 / 未附魔 → {}）。懒对齐，绝不越界崩溃。
+	if index < 0 or index >= deck_mods.size():
+		return {}
+	var m: Variant = deck_mods[index]
+	return m if m is Dictionary else {}
+
+
+static func _apply_mod(c: CardData, mod: Dictionary) -> void:
+	## 把附魔烤进这张（已经是独立副本的）卡。
+	if int(mod.get("cost", 0)) != 0:
+		c.cost = maxi(0, c.cost + int(mod.get("cost", 0)))
+	if int(mod.get("power", 0)) != 0:
+		c.power = maxi(0, c.power + int(mod.get("power", 0)))
+	if int(mod.get("health", 0)) != 0:
+		c.health = maxi(0, c.health + int(mod.get("health", 0)))
+	var affix: String = str(mod.get("affix", ""))
+	if affix != "" and not c.has_affix(affix):
+		c.add_affix(affix)
+
+
+static func _sync_mods_remove(index: int) -> void:
+	## 删卡后同步附魔下标（前移）。越界安全。
+	if index < 0 or index >= deck_mods.size():
+		return
+	deck_mods.remove_at(index)
+
+
+static func enchant_deck_card(index: int, mod: Dictionary) -> bool:
+	## R181：给卡组第 index 张卡附魔（商店）。每张卡只能有一个附魔。
+	## 返回是否成功；已附魔 / 越界 / 空 mod 都返回 false。
+	if index < 0 or index >= deck_ids.size() or mod.is_empty():
+		return false
+	if not _mod_at(index).is_empty():
+		return false          # 已有附魔 → 拒绝（每张卡只能一个）
+	deck_mods[index] = mod
+	return true
 
 
 static func deck_summary(repo: CardRepo) -> Array:

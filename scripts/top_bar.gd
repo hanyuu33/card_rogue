@@ -6,14 +6,16 @@ extends CanvasLayer
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
-const SIZE := Vector2(152, 40)
+const SIZE := Vector2(234, 40)      # R181：加宽以容纳金币（血量右边）
 const BG := Color("1a1c22")
 const BORDER := Color("d4a84b")
 const TEXT := Color("ece7db")
+const GOLD_TEXT := Color("ffd75a")  # R181：金币数字（金色）
 
 var _last_scene_path := ""
 var _last_hp := -999
 var _last_max := -999
+var _last_gold := -999
 
 
 func _ready() -> void:
@@ -49,13 +51,34 @@ func _ready() -> void:
 	var hp := Label.new()
 	hp.name = "HpLabel"
 	hp.position = Vector2(40, 9)
-	hp.size = Vector2(104, 22)
+	hp.size = Vector2(100, 22)
 	hp.add_theme_font_override("font", UiTheme.font())
 	hp.add_theme_font_size_override("font_size", 16)
 	hp.add_theme_color_override("font_color", TEXT)
 	hp.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hp.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(hp)
+
+	# R181：金币图标 + 数字，放在血量右边（同一个状态条框内）。
+	var gold_icon := TextureRect.new()
+	gold_icon.name = "GoldIcon"
+	gold_icon.position = Vector2(146, 9)
+	gold_icon.size = Vector2(22, 22)
+	gold_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	gold_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	gold_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(gold_icon)
+
+	var gold := Label.new()
+	gold.name = "GoldLabel"
+	gold.position = Vector2(170, 9)
+	gold.size = Vector2(58, 22)
+	gold.add_theme_font_override("font", UiTheme.font())
+	gold.add_theme_font_size_override("font_size", 16)
+	gold.add_theme_color_override("font_color", GOLD_TEXT)
+	gold.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	gold.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(gold)
 
 	visible = false
 
@@ -73,7 +96,8 @@ func _process(_delta: float) -> void:
 		visible = need
 		if need:
 			_update()
-	if need and (_last_hp != RunState.hp or _last_max != RunState.max_hp):
+	if need and (_last_hp != RunState.hp or _last_max != RunState.max_hp \
+			or _last_gold != RunState.gold):
 		_update()
 
 
@@ -94,3 +118,8 @@ func _update() -> void:
 	avatar.texture = UiAssets.class_avatar(RunState.player_class)
 	var hp: Label = panel.get_node("HpLabel")
 	hp.text = "生命 %d / %d" % [RunState.hp, RunState.max_hp]
+	_last_gold = RunState.gold
+	var gicon: TextureRect = panel.get_node("GoldIcon")
+	gicon.texture = UiAssets.get_tex("icon_gold")
+	var gold: Label = panel.get_node("GoldLabel")
+	gold.text = "%d" % RunState.gold

@@ -99,6 +99,7 @@ const ENTER_LABELS := {
 	"unknown": "不确定的命运",
 	"chest": "宝箱",
 	"bigchest": "大宝箱",
+	"shop": "神秘商店",
 	"start": "起点",
 }
 
@@ -463,14 +464,19 @@ func _commit_enter(cell: Dictionary) -> void:
 			# 事件房不再遭遇战斗：本层事件池已去掉「遭遇怪物」（见 GameLayers）。
 			SceneFx.goto("res://scenes/event.tscn")
 		"chest":
-			# 普通宝箱：一次卡牌奖励（就地弹奖励悬浮窗，不切界面）
+			# 普通宝箱：一次卡牌奖励 + 50 金币（R181）
+			RunState.gain_gold(50)
 			RunState.queue_card_reward("normal")
 			_open_reward_panel()
 		"bigchest":
-			# 大宝箱：**1 个道具 + 一次卡牌奖励**
+			# 大宝箱：**1 个道具 + 一次卡牌奖励 + 80 金币**（R181）
+			RunState.gain_gold(80)
 			RunState.queue_relic_reward(RunState.roll_reward_relic())
 			RunState.queue_card_reward("normal")
 			_open_reward_panel()
+		"shop":
+			# R181：神秘商店 —— 进入商店场景（3 行商品，金币消费）。
+			SceneFx.goto("res://scenes/shop.tscn")
 
 
 func _open_reward_panel() -> void:

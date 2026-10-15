@@ -188,6 +188,9 @@ func discard_hand() -> int:
 		if c.traits.has(KEEP_HAND_TRAIT):
 			kept.append(c)
 			continue
+		if c.has_affix("保存"):          # R181：商店附魔「保存」——回合结束手牌保留（做成字段）
+			kept.append(c)
+			continue
 		if turn_keep.has(c):          # 回转：本回合抽到的牌留在手里
 			kept.append(c)
 			continue

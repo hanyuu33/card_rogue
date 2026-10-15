@@ -63,21 +63,28 @@ const BIGCHEST_POS := [Vector2i(0, 0), Vector2i(6, 0)]        # 左上 / 右上
 
 const TYPE_LABELS := {
 	"start": "起点", "battle": "战斗", "elite": "精英", "rest": "休息",
-	"event": "事件", "chest": "宝箱", "bigchest": "大宝箱", "unknown": "未知",
+	"event": "事件", "chest": "宝箱", "bigchest": "大宝箱", "shop": "商店",
+	"unknown": "未知",
 }
 ## 格子正中间的短标记（没有对应图标素材时用）。
 const TYPE_MARKS := {
 	"start": "起", "battle": "战", "elite": "英", "rest": "息",
-	"event": "事", "chest": "箱", "bigchest": "大", "unknown": "?",
+	"event": "事", "chest": "箱", "bigchest": "大", "shop": "商",
+	"unknown": "?",
 }
 
 const P_UNKNOWN := 0.28              # 「?」房占比（其余格直接写明类型）
 const REST_MIN := 2                  # 每张地图的休息点数量区间
 const REST_MAX := 4
-## 普通格的类型权重（战斗为主，精英与宝箱略少）。
-const WEIGHTS := {"battle": 6, "event": 3, "elite": 2, "chest": 2}
-## 「?」房的实际类型权重 —— 用户口径：**精英与普通宝箱出现概率略低**。
-const WEIGHTS_UNKNOWN := {"battle": 7, "event": 4, "elite": 1, "chest": 1}
+## R181：商店节点。数量区间与休息点相当（「概率和篝火相当」）—— 独立先定（像 rest 一样
+## 不从权重里抽），约束同样是「不与起点 / 宝箱 / 休息点 / 另一个商店相邻」。
+const SHOP_MIN := 1
+const SHOP_MAX := 2
+## 普通格的类型权重（战斗为主，精英与宝箱略少）。R181 加「商店」：权重 = 精英（2）。
+const WEIGHTS := {"battle": 6, "event": 3, "elite": 2, "chest": 2, "shop": 2}
+## 「?」房的实际类型权重 —— 用户口径：**精英与普通宝箱出现概率略低**；
+## R181 加「商店」，权重 = 精英（1），即「?房出现商店的概率和精英相当」。
+const WEIGHTS_UNKNOWN := {"battle": 7, "event": 4, "elite": 1, "chest": 1, "shop": 1}
 
 ## R142：卡牌宝箱（事件子类型 treasure）有**一半概率**装的是一件道具（而不是卡牌三选一）。
 ## 摇在**地图生成期**（走本局 run_rng 的链条）→ 录像回放同一张图必然同一个结果。
@@ -372,6 +379,27 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 		if ok:
 			rest_set[i] = true
 
+	# --- 商店点位置（R181）：与休息点同口径独立先定 —— 概率和篝火相当。
+	# 约束：不与起点 / 宝箱 / 休息点 / 另一个商店相邻（避免三连强功能房扎堆）。
+	var shop_set := {}
+	var shop_cands: Array = []
+	for i in CELLS:
+		if i == start_i or is_bigchest(i) or rest_set.has(i):
+			continue
+		shop_cands.append(i)
+	_shuffle(shop_cands, rng)
+	var want_shop: int = rng.randi_range(SHOP_MIN, SHOP_MAX)
+	for i: int in shop_cands:
+		if shop_set.size() >= want_shop:
+			break
+		var sok := true
+		for nb: int in adj[i]:
+			if nb == start_i or rest_set.has(nb) or shop_set.has(nb):
+				sok = false
+				break
+		if sok:
+			shop_set[i] = true
+
 	# --- 逐格定类型
 	var used_events := {}
 	var cells: Array = []
@@ -384,6 +412,8 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 			type = "bigchest"
 		elif rest_set.has(i):
 			type = "rest"
+		elif shop_set.has(i):
+			type = "shop"
 		else:
 			# 「?」房的实际类型在生成时就定（约束才对隐藏房生效），
 			# 只是**先不告诉玩家**，走进才揭晓。

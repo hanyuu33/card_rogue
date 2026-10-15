@@ -41,6 +41,8 @@ static func save_run() -> bool:
 		"max_hp": RunState.max_hp,
 		"hp": RunState.hp,
 		"deck_ids": RunState.deck_ids,
+		"deck_mods": RunState.deck_mods,
+		"gold": RunState.gold,
 		"map_cells": RunState.map_cells,
 		"current_layer": RunState.current_layer,
 		"current_node_id": RunState.current_node_id,
@@ -98,6 +100,8 @@ static func load_run() -> bool:
 	RunState.hp = clampi(int(d.get("hp", RunState.max_hp)), 0, RunState.max_hp)
 	RunState.run_active = true
 	RunState.deck_ids = _int_array(d.get("deck_ids", []))
+	RunState.deck_mods = d.get("deck_mods", []) if d.get("deck_mods", []) is Array else []
+	RunState.gold = int(d.get("gold", 100))
 	RunState.map_cells = d.get("map_cells", []) if d.get("map_cells", []) is Array else []
 	RunState.current_layer = int(d.get("current_layer", GameLayers.LAYER_DEFAULT))
 	RunState.current_node_id = int(d.get("current_node_id", -1))

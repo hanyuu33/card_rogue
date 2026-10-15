@@ -4681,6 +4681,10 @@ func _show_over(win: bool) -> void:
 			RunState.record_battle(repo, str(lvl.get("name", "?")), tier,
 					true, RunState.hp)
 			_run_boss_win = tier == GameLevels.TIER_BOSS
+			# R181：战斗胜利掉金币（按关卡分级：普通简单 20 / 普通困难 30 / 精英 50/65 / Boss 100）
+			var gold_gain := RunState.gold_for_tier(tier)
+			if gold_gain > 0:
+				RunState.gain_gold(gold_gain)
 			# R151 P1-18：Boss 击破与胜利 → 全屏黑白闪（≤40ms，绝不滥用 —— 只有这一处）
 			if win and _run_boss_win and not _shot_pending:
 				_screen_flash = {"start": _now(), "dur": 40}
