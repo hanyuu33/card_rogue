@@ -479,6 +479,15 @@ func _ready() -> void:
 	if "--over" in args:
 		# 演示：直接进入结算（验证结算覆盖层 / 彩带 / 胜利音效）
 		engine._finish("胜利", "演示：结算界面")
+	if "--bosswin" in args and engine != null:
+		# R179 演示：**Boss 通关结算**（核验短按钮文案 + Boss 档卡牌三选一）。
+		# 必须配 `--level <Boss 关下标>` 用（`_run_boss_win` 由关卡 tier 决定）。
+		# 出图：`-- --screenshot --level 26 --bosswin --shotframe 30`
+		if not RunState.run_active:
+			seed(0x179)
+			RunState.start_run([], GameLayers.LAYER_DEFAULT)
+		RunState.pending_node = {"type": "boss"}
+		engine._finish("胜利", "演示：Boss 关卡结算")
 	if "--relics" in args and engine != null:
 		# 演示：右栏道具栏（截图验证用；放在 args 循环后，避免被 --level 重建覆盖）
 		engine.self_relics = [6001, 6005, 6010]   # 初始白 / 奖励黄 / 事件紫
@@ -4658,29 +4667,26 @@ func _show_over(win: bool) -> void:
 			RunState.reward_type = "boss" if _run_boss_win else "normal"
 			# R119：奖励**先入队**，交给结算面板上的奖励悬浮窗 ——
 			#   * 精英 / Boss 掉落道具（不与已拥有的重复；奖励池掉空则不掉）；
-			#   * 普通 / 精英战斗的卡牌奖励（Boss 通关不给卡牌奖励，与本轮之前一致）。
+			#   * 卡牌三选一：普通 / 精英 / **Boss** 都给（R179 起）。
+			#     Boss 走 `reward_type = "boss"` 的**好概率档**（普通 35% / 稀有 45% /
+			#     史诗 20%，明显优于普通过的 70/27/3）——在此之前 Boss 不发卡牌奖励，
+			#     `reward_type = "boss"` 实际是**死数据**（没有任何消费方）。
 			# 「入队」不等于「发放」：玩家在悬浮窗里看过介绍、点过「领取」才真进袋子。
 			var dropped := RunState.offer_relic_drop(node_type)
-			var rname := ""
 			if dropped > 0:
 				RunState.queue_relic_reward(dropped)
-				var rel := RelicRepo.load_json().get_relic(dropped)
-				rname = rel.relic_name if rel != null else str(dropped)
-			if not _run_boss_win:
-				RunState.queue_card_reward(RunState.reward_type)
+			RunState.queue_card_reward(RunState.reward_type)
 			if _run_boss_win:
 				# Boss 通关：本层打完了 —— 有下一层就推进（满血 + 新地图 + 起始道具
 				# 三选一），没有下一层才结束整局 run。
 				_run_next_layer = GameLayers.next_layer(RunState.current_layer)
+			# R179：按钮文案只留几个字（用户报「字太多」）——掉落道具、回血 / 恢复生命
+			# 这些细节都在奖励悬浮窗与结算提示行里，不必塞进按钮。
 			if _run_boss_win:
 				if _run_next_layer > 0:
-					_over_btn_restart.text = "通关%s！进入%s（恢复全部生命 + 起始道具三选一）%s" % [
-							GameLayers.layer_name(RunState.current_layer),
-							GameLayers.layer_name(_run_next_layer),
-							"　｜　掉落道具「%s」见奖励悬浮窗" % rname if dropped > 0 else ""]
+					_over_btn_restart.text = "进入%s" % GameLayers.layer_name(_run_next_layer)
 				else:
-					_over_btn_restart.text = ("通关！返回标题（掉落道具「%s」见悬浮窗）" % rname) \
-							if dropped > 0 else "通关！返回标题"
+					_over_btn_restart.text = "返回标题"
 			else:
 					# R137：奖励在结算悬浮窗里就已经领过了，这里只是「回去」——
 				# 再写「领取奖励」会让人以为按钮才是领取入口。

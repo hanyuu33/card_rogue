@@ -434,9 +434,7 @@ func _ready() -> void:
 		desc.text = WHISPER_DESC
 		if RunState.has_relic(WHISPER_ID):
 			_whisper_taken = true
-			rest_btn.text = "继续"
-			$Center/LeaveBtn.text = "已获得"
-			$Center/LeaveBtn.disabled = true
+			_collapse_to_leave()
 			desc.text = WHISPER_TAKEN_DESC
 			result_label.text = "你已经听见过低语了——前路仍由命运决定。"
 			result_label.add_theme_color_override("font_color", Color("a86ad8"))
@@ -450,9 +448,7 @@ func _ready() -> void:
 		desc.text = GAZE_DESC
 		if RunState.has_relic(RICE_ID):
 			_gaze_taken = true
-			rest_btn.text = "继续"
-			$Center/LeaveBtn.text = "已获得"
-			$Center/LeaveBtn.disabled = true
+			_collapse_to_leave()
 			desc.text = GAZE_TAKEN_DESC
 			result_label.text = "那袋米你已经扛在肩上了——鸭眼仍在注视，却不再给你更多。"
 			result_label.add_theme_color_override("font_color", Color("d7a54a"))
@@ -466,9 +462,7 @@ func _ready() -> void:
 		desc.text = PEAR_DESC
 		if RunState.has_relic(PEAR_ID):
 			_pear_taken = true
-			rest_btn.text = "继续"
-			$Center/LeaveBtn.text = "已获得"
-			$Center/LeaveBtn.disabled = true
+			_collapse_to_leave()
 			desc.text = PEAR_TAKEN_DESC
 			result_label.text = "鸭梨已经背在肩上了——往后的每一次受伤，都会让你更「强大」一点。"
 			result_label.add_theme_color_override("font_color", Color("8a9a2f"))
@@ -481,9 +475,7 @@ func _ready() -> void:
 		event_name.text = "蓝 色 大 肥 鱼"
 		desc.text = BLUEFISH_TAKEN_DESC if _bluefish_taken else BLUEFISH_DESC
 		if _bluefish_taken:
-			rest_btn.text = "继续"
-			$Center/LeaveBtn.text = "已获得"
-			$Center/LeaveBtn.disabled = true
+			_collapse_to_leave()
 			result_label.text = "「鲸鱼之怒」已加入卡组——用掉之后本场战斗里不再出现。"
 			result_label.add_theme_color_override("font_color", UiTheme.RARITY_RARE)
 		else:
@@ -495,9 +487,7 @@ func _ready() -> void:
 		event_name.text = "绝赞五换一"
 		desc.text = HERO_DESC
 		if _hero_traded:
-			rest_btn.text = "继续"
-			$Center/LeaveBtn.text = "已完成"
-			$Center/LeaveBtn.disabled = true
+			_collapse_to_leave()
 			desc.text = HERO_TAKEN_DESC
 			result_label.text = "交易完成：「英雄」已加入卡组（换走 %d 张）" % _hero_removed.size()
 			result_label.add_theme_color_override("font_color", UiTheme.STAT_POWER)
@@ -523,9 +513,7 @@ func _ready() -> void:
 		event_name.text = "遗 忘 之 泉"
 		desc.text = OBLIVION_DONE_DESC if _oblivion_done else OBLIVION_DESC
 		if _oblivion_done:
-			rest_btn.text = "继续"
-			$Center/LeaveBtn.text = "已完成"
-			$Center/LeaveBtn.disabled = true
+			_collapse_to_leave()
 			result_label.text = "你已经在泉里遗忘过一张卡了。"
 			result_label.add_theme_color_override("font_color", Color("5a6a8a"))
 		else:
@@ -537,9 +525,7 @@ func _ready() -> void:
 		event_name.text = "鸭 鸭 工 匠"
 		desc.text = SMITH_DONE_DESC if _smith_done else SMITH_DESC
 		if _smith_done:
-			rest_btn.text = "继续"
-			$Center/LeaveBtn.text = "已完成"
-			$Center/LeaveBtn.disabled = true
+			_collapse_to_leave()
 			result_label.text = "你已经在工匠那里锻造过一张卡了。"
 			result_label.add_theme_color_override("font_color", Color("8a6a3a"))
 		else:
@@ -569,9 +555,12 @@ func _ready() -> void:
 	elif _is_struggle():
 		event_name.text = "挣  扎"
 		desc.text = STRUGGLE_TAKEN_DESC if _struggled else STRUGGLE_DESC
-		rest_btn.text = "继续" if _struggled else "接受挣扎（失去 %d 生命，获得「金属龙」）" % STRUGGLE_LIFE
-		rest_btn.disabled = (not _struggled) and RunState.hp <= STRUGGLE_LIFE   # 至少保留 1 点生命
-		$Center/LeaveBtn.text = "已完成" if _struggled else "转身离开（保持现状）"
+		if _struggled:
+			_collapse_to_leave()
+		else:
+			rest_btn.text = "接受挣扎（失去 %d 生命，获得「金属龙」）" % STRUGGLE_LIFE
+			rest_btn.disabled = RunState.hp <= STRUGGLE_LIFE   # 至少保留 1 点生命
+			$Center/LeaveBtn.text = "转身离开（保持现状）"
 		result_label.text = ""
 	else:
 		# 休息处：休息 与 烤肉 两个选项（烤肉是新增选项）
@@ -657,9 +646,7 @@ func _on_main() -> void:
 		_whisper_taken = true
 		_claim_reward(rest_btn)   # R147：本次访问的奖励只领一份（其它选项若有则锁死）
 		var rel := RelicRepo.load_json().get_relic(WHISPER_ID)
-		rest_btn.text = "继续"
-		$Center/LeaveBtn.text = "已获得"
-		$Center/LeaveBtn.disabled = true
+		_collapse_to_leave()
 		desc.text = WHISPER_TAKEN_DESC
 		result_label.text = "「鸭之低语」已加入道具栏：%s" % (rel.desc if rel != null else "")
 		result_label.add_theme_color_override("font_color", Color("a86ad8"))
@@ -673,9 +660,7 @@ func _on_main() -> void:
 		_gaze_taken = true
 		_claim_reward(rest_btn)   # R147
 		var rel_g := RelicRepo.load_json().get_relic(RICE_ID)
-		rest_btn.text = "继续"
-		$Center/LeaveBtn.text = "已获得"
-		$Center/LeaveBtn.disabled = true
+		_collapse_to_leave()
 		desc.text = GAZE_TAKEN_DESC
 		result_label.text = "「一袋米抗几楼」已加入道具栏：%s" \
 				% (rel_g.desc if rel_g != null else "")
@@ -690,9 +675,7 @@ func _on_main() -> void:
 		_pear_taken = true
 		_claim_reward(rest_btn)   # R147
 		var rel_p := RelicRepo.load_json().get_relic(PEAR_ID)
-		rest_btn.text = "继续"
-		$Center/LeaveBtn.text = "已获得"
-		$Center/LeaveBtn.disabled = true
+		_collapse_to_leave()
 		desc.text = PEAR_TAKEN_DESC
 		result_label.text = "「鸭梨」已加入道具栏：%s" % (rel_p.desc if rel_p != null else "")
 		result_label.add_theme_color_override("font_color", Color("8a9a2f"))
@@ -707,9 +690,7 @@ func _on_main() -> void:
 		_claim_reward(rest_btn)   # R147
 		var wcard := CardRepo.load_json().get_card(WHALE_CARD_ID)
 		var wname := wcard.card_name if wcard != null else "鲸鱼之怒"
-		rest_btn.text = "继续"
-		$Center/LeaveBtn.text = "已获得"
-		$Center/LeaveBtn.disabled = true
+		_collapse_to_leave()
 		desc.text = BLUEFISH_TAKEN_DESC
 		result_label.text = "「%s」已加入卡组：%s" % [wname,
 				CardText.naturalize(wcard.effect_text) if wcard != null else ""]
@@ -734,9 +715,7 @@ func _on_main() -> void:
 			names_t.append(str((r as Dictionary).get("name", "?")))
 		var hero_card := repo_t.get_card(HERO_CARD_ID)
 		var hname := hero_card.card_name if hero_card != null else "英雄"
-		rest_btn.text = "继续"
-		$Center/LeaveBtn.text = "已完成"
-		$Center/LeaveBtn.disabled = true
+		_collapse_to_leave()
 		desc.text = HERO_TAKEN_DESC
 		result_label.text = "换走 %d 张（%s）——「%s」已加入卡组" % [
 				_hero_removed.size(), "、".join(names_t), hname]
@@ -751,10 +730,7 @@ func _on_main() -> void:
 		RunState.gain_relic(ARCANE_CHARM_ID)
 		_arcane_charm_taken = true
 		var rel_a := RelicRepo.load_json().get_relic(ARCANE_CHARM_ID)
-		rest_btn.text = "继续"
-		rest_btn.disabled = false
-		leave_btn.text = "离开"
-		leave_btn.disabled = false
+		_collapse_to_leave()
 		desc.text = ARCANE_CHARM_TAKEN_DESC
 		# R147：一次访问只领一份 —— 取走护符后「喝下泉水」立刻锁死（用户口径）。
 		#（R71 那条「拿到护符还能喝泉水」的口径到此为止：那是「本来就戴着老护符」的待遇。）
@@ -800,9 +776,7 @@ func _on_main() -> void:
 		_chest_opened = true
 		_claim_reward(rest_btn)   # R147
 		_chest_relic = RunState.roll_reward_relic()
-		rest_btn.text = "继续"
-		$Center/LeaveBtn.text = "已开启"
-		$Center/LeaveBtn.disabled = true
+		_collapse_to_leave()
 		if _chest_relic < 0:
 			desc.text = "箱底只剩一层灰——奖励道具你已经全都拿到了。"
 			result_label.text = "宝箱是空的（奖励道具已全部拥有）"
@@ -830,10 +804,7 @@ func _on_main() -> void:
 		RunState.take_damage(5)
 		_treasure_taken = true
 		_claim_reward(rest_btn)   # R147
-		rest_btn.text = "继续"
-		rest_btn.disabled = false
-		leave_btn.text = "离开"
-		leave_btn.disabled = false
+		_collapse_to_leave()
 		result_label.text = "已支付 5 生命（当前 %d/%d）" % [RunState.hp, RunState.max_hp]
 		result_label.add_theme_color_override("font_color", Color("9a968c"))
 		# R142：箱子内容在**生成地图时**就摇定（`treasure_relic` 旗标）：
@@ -875,9 +846,7 @@ func _on_main() -> void:
 		var card := CardRepo.load_json().get_card(STRUGGLE_CARD_ID)
 		var cname := card.card_name if card != null else "金属龙"
 		desc.text = STRUGGLE_TAKEN_DESC
-		rest_btn.text = "继续"
-		$Center/LeaveBtn.text = "已完成"
-		$Center/LeaveBtn.disabled = true
+		_collapse_to_leave()
 		result_label.text = "失去 %d 生命（当前 %d/%d）——「%s」已加入卡组" % [
 				STRUGGLE_LIFE, RunState.hp, RunState.max_hp, cname]
 		result_label.add_theme_color_override("font_color", Color("a44ad0"))
@@ -907,6 +876,23 @@ func _claim_reward(keep: Button) -> void:
 		b.disabled = true
 
 
+func _collapse_to_leave() -> void:
+	## R178：事件选项办完 → 全场只留一个「离开」。
+	## 旧版是「主按钮变『继续』+ 放弃 / 退出 / 已完成按钮原样留着（多数还 disabled）」
+	## —— 一次访问里出现两个语义重叠的按钮（用户报：选完选项后放弃/退出还在）。
+	## 现在：主按钮（rest_btn）与第二选项（bbq_btn）收起，LeaveBtn 成为唯一出口。
+	## ⚠️ 与 R147「一次访问只领一份」天然兼容：奖励按钮都收起了，不存在第二个奖励入口；
+	##    幂等（铺排 / _on_main / _refresh 三处都会调，重复调无副作用）。
+	rest_btn.visible = false
+	if bbq_btn != null:
+		bbq_btn.visible = false
+	leave_btn.visible = true
+	leave_btn.text = "离开"
+	leave_btn.disabled = false
+	_reward_claimed = true
+	_redraw()
+
+
 func _arcane_taken() -> bool:
 	## R147：本次访问是否已从泉里领走奖励（护符 / 泉水任一份）。
 	## ⚠️ 只看「本次」的两个旗标，**不能**用 `RunState.has_relic(ARCANE_CHARM_ID)` ——
@@ -923,6 +909,9 @@ func _setup_arcane() -> void:
 	## R147：`_arcane_charm_taken` 只表示「**本次**取走了护符」，所以**不再**在铺选项时置位
 	##（那是「本来就戴着」，拿它当闸门就退回 R71 的 bug 了）。
 	event_name.text = "奥 秘 之 泉"
+	# R178：重铺时把两个按钮都恢复可见 —— 上一次「办完收起」（_collapse_to_leave）
+	# 之后可能残留 visible=false；这个函数是「重铺选项」的唯一口，回归也靠它重跑。
+	rest_btn.visible = true
 	bbq_btn.visible = true
 	bbq_btn.text = "喝下泉水：随机 3 张效果 / 技能牌中选 1 张加入卡组"
 	bbq_btn.disabled = false
@@ -944,6 +933,11 @@ func _setup_arcane() -> void:
 
 
 func _refresh() -> void:
+	# R178：本次访问的奖励已领完 → 任何刷新都保持「只有一个离开」的收尾态
+	#（_on_main 的休息分支等地方会再调 _refresh，不收住会把按钮文案改回去）。
+	if _reward_claimed:
+		_collapse_to_leave()
+		return
 	if _is_treasure() or _is_whisper() or _is_struggle() \
 			or _is_gaze() or _is_pear() or _is_hero() or _is_bluefish() \
 			or _is_relic_chest() or _is_arcane() or _is_oblivion() \
@@ -953,24 +947,28 @@ func _refresh() -> void:
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。
 		return
 	_refresh_bbq()
-	# 需求：休息处二选一 —— 选过「休息」或「烤肉」任意一个，另一个就收起来
+	# R178：休息处办完（休息 / 烤肉任意一个）→ 也只留一个「离开」，
+	# 治愈 / 烤肉文案照写（结果行在按钮下方，收起按钮不影响它）。
 	if _rested or _bbq_taken:
 		bbq_btn.visible = false
-	leave_btn.text = "继续前进" if (_rested or _bbq_taken) else "离开（不休息）"
+		rest_btn.visible = false
+		leave_btn.visible = true
+		leave_btn.text = "离开"
+		leave_btn.disabled = false
+		_reward_claimed = true
+		if _rested:
+			result_label.text = "篝火的温暖涌上心头……生命回复 +%d（当前 %d/%d）" % [
+					_gained, RunState.hp, RunState.max_hp]
+			result_label.add_theme_color_override("font_color", UiTheme.SIDE_SELF_TEXT)
+		elif _bbq_taken:
+			result_label.text = "「烤肉」已收进道具栏——进入 Boss 战时自动享用，回复 25% 最大生命。"
+			result_label.add_theme_color_override("font_color", Color("d89a2e"))
+		_redraw()
+		return
+	leave_btn.text = "离开（不休息）"
 	var gain: int = RunState.rest_heal_amount()   # 按难度档位（0/1 档 40%、2 档 25%）
-	if _rested:
-		rest_btn.text = "继续"
-		result_label.text = "篝火的温暖涌上心头……生命回复 +%d（当前 %d/%d）" % [
-				_gained, RunState.hp, RunState.max_hp]
-		result_label.add_theme_color_override("font_color", UiTheme.SIDE_SELF_TEXT)
-	elif _bbq_taken:
-		# 选过烤肉 → 本次休息处到此为止（不能再休息，只能继续前进）
-		rest_btn.text = "继续"
-		result_label.text = "「烤肉」已收进道具栏——进入 Boss 战时自动享用，回复 25% 最大生命。"
-		result_label.add_theme_color_override("font_color", Color("d89a2e"))
-	else:
-		rest_btn.text = "在这里休息（回复 %d 生命）" % mini(gain, RunState.max_hp - RunState.hp)
-		result_label.text = ""
+	rest_btn.text = "在这里休息（回复 %d 生命）" % mini(gain, RunState.max_hp - RunState.hp)
+	result_label.text = ""
 
 
 func _refresh_bbq() -> void:
@@ -999,11 +997,7 @@ func _on_bbq() -> void:
 		# R119：泉水给的卡牌奖励同样**先入队**（限定 效果 / 技能），由奖励悬浮窗处理。
 		var arcane_kinds: Array[String] = ["效果", "技能"]
 		RunState.queue_card_reward("normal", arcane_kinds)
-		rest_btn.text = "（已喝泉水——本次不能再拿护符）"
-		bbq_btn.text = "已喝下泉水（在奖励窗里选一张牌）"
-		bbq_btn.disabled = true
-		leave_btn.text = "离开"
-		leave_btn.disabled = false
+		_collapse_to_leave()
 		# R147：喝过之后「获取护符」立刻锁死。
 		_claim_reward(bbq_btn)
 		result_label.text = "「喝下泉水」：请在奖励悬浮窗里从 3 张效果 / 技能牌中挑一张（本次只给一份）。"

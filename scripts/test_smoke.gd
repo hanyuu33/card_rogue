@@ -1348,8 +1348,9 @@ func _check_arcane_one_reward(scene: Variant) -> void:
 	if not scene._arcane_taken() or not scene._reward_claimed:
 		_smoke_fail("R147 奥秘之泉：取走护符后应记下「本次已领」（_arcane_taken / _reward_claimed）")
 		return
-	if not bbq.disabled:
-		_smoke_fail("R147 奥秘之泉：取走护符后「喝下泉水」必须锁死")
+	if bbq.visible and not bbq.disabled:
+		# R178：办完后按钮是**收起**（visible=false）而不是「禁用」，两者都算锁死
+		_smoke_fail("R147/R178 奥秘之泉：取走护符后「喝下泉水」必须收起或锁死")
 		return
 	var n0: int = RunState.pending_reward_count()
 	scene._ui_bbq()
@@ -1374,8 +1375,8 @@ func _check_arcane_one_reward(scene: Variant) -> void:
 	if not scene._arcane_taken():
 		_smoke_fail("R147 奥秘之泉：喝过泉水后 _arcane_taken() 应为真")
 		return
-	if not rest.disabled:
-		_smoke_fail("R147 奥秘之泉：喝过泉水后「获取护符」必须锁死")
+	if rest.visible and not rest.disabled:
+		_smoke_fail("R147/R178 奥秘之泉：喝过泉水后「获取护符」必须收起或锁死")
 		return
 	if RunState.has_relic(6020):
 		_smoke_fail("R147 奥秘之泉：喝过泉水后不该已经拿到护符")

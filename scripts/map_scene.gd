@@ -40,10 +40,15 @@ const MARK_ERASE := 2                # 擦除模式：拖动的橡皮擦
 const MARK_LINE_W := 3.5             # 笔画宽度（另垫 2px 暗描边）
 const MARK_ERASE_R := 12.0           # 橡皮命中半径
 const MARK_MIN_STEP := 3.0           # 笔画取点最小间距（去掉手抖冗余点）
+## R179：入夜前的缓冲（秒）—— 巧克力耗尽后，等**当前格结算完**再播「入夜」：
+##   * 进场过场刚结束 → 留这点时间让玩家看清「当前格落定」（过场期间绝不触发入夜）；
+##   * 从战斗 / 事件 / 奖励窗回到地图 → 也给同样长度的缓冲，别一回来就糊黑屏。
+const BOSS_HOLD_AFTER_ENTER := 0.55
 var _mark_mode := -1                 # 当前标记模式（-1 = 关，行为与旧版一致）
 var _mark_drawing := false           # 左键按下中（画线中 / 擦拭中 / 预备放旗）
 var _mark_cur: PackedVector2Array = PackedVector2Array()   # 正在画的笔画（松手才入栈）
 var _mark_flag_press := Vector2(-1, -1)                    # 旗子按下位置（拖动则不触发放旗）
+var _boss_hold := 0.0              # R179：入夜触发倒计时（> 0 时即使 boss_pending 也不播）
 
 # ---- 视觉常量（只服务本文件；跨文件的房间类型色在 UiTheme.MAP_NODE_COLORS）----
 const COL_CELL_FILL := Color(0.06, 0.08, 0.12, 0.40)        # 未走过的格子底（半透明，露出背景图）
@@ -186,6 +191,10 @@ func _ready() -> void:
 	# ⚠️ 只在真实游玩时存：回放中（ReplayLog.playing）/ 截图（_shot）/ headless（测试探针）都不写。
 	if RunState.run_active and not ReplayLog.playing and not _shot and DisplayServer.get_name() != "headless":
 		RunSave.save_run()
+	# R179：带着 boss_pending 回到地图（刚打完最后一格里的战斗 / 事件）→ 也给同样长的缓冲，
+	# 别一进地图就糊上「入夜」黑屏。回放不等（时序由录像驱动）。
+	if RunState.run_active and RunState.boss_pending and not ReplayLog.playing:
+		_boss_hold = BOSS_HOLD_AFTER_ENTER
 	# R148：上栏原来挂着「回到标题 / 战斗记录 / 查看卡组」三个 chip —— 全部收进
 	# Esc 菜单（点齿轮或按 Esc 打开），上栏只留**一个齿轮**。
 	_menu_btn = Button.new()
@@ -490,11 +499,18 @@ func _process(delta: float) -> void:
 		if _anim_t >= ANIM_DUR + ENTER_SLIDE and not _anim_hold:
 			var entered := _anim_cell
 			_anim_cell = {}
+			# R179：过场刚结束 → 给一点缓冲再入夜（玩家先看清当前格落定）。
+			_boss_hold = BOSS_HOLD_AFTER_ENTER
 			_commit_enter(entered)
+	elif _boss_hold > 0.0:
+		_boss_hold = maxf(0.0, _boss_hold - delta)
 	queue_redraw()
-	# 巧克力耗尽 → 等当前房间的内容结算完（奖励弹窗关掉 / 战斗与事件回来）再开 Boss 战。
+	# 巧克力耗尽 → 等当前房间的内容结算完（进过场走完 / 奖励弹窗关掉 / 战斗与事件回来）
+	# 再开 Boss 战。R179：原来这里没排除「进场过场播放中」，于是最后一格的过场还在播时
+	# 入夜暗罩就已经盖上来了（用户报）；现在过场期间（`_anim_cell` 非空）与缓冲期内都不触发。
 	# ⚠️ 回放模式同样要触发（boss_pending 由 advance 确定性地置位），只是不等那 2 秒。
 	if RunState.run_active and RunState.boss_pending and not _boss_alert \
+			and _boss_hold <= 0.0 and _anim_cell.is_empty() \
 			and (_reward_panel == null or not _reward_panel.is_open()):
 		_trigger_boss_alert()
 
