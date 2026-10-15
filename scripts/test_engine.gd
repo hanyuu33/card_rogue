@@ -1434,7 +1434,7 @@ func _init() -> void:
 	lg_e3.state.hand = [repo.get_card(9054)]
 	lg_e3.state.energy = 9
 	var lg_r3 := lg_e3.use_spell(0, Vector2i(1, 0))
-	check(lg_e3.state.unit_at(Vector2i(1, 0)).health == 70 and lg_r3.contains("免疫"),
+	check(lg_e3.state.unit_at(Vector2i(1, 0)).health == 60 and lg_r3.contains("免疫"),
 			"龙息：法术免疫单位完全免疫（%s）" % lg_r3)
 	# 只打敌方：指定己方单位 / 空目标都被拒绝
 	var lg_e4 := _new_engine([], 20, 20, -1, false)
@@ -2453,12 +2453,12 @@ func _init() -> void:
 	var gl_e := _new_engine([], 20, 20, -1, false)
 	gl_e.start_game(0)
 	gl_e.state.place(repo.get_card(1011), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)   # 铁壁卫兵 3 攻
-	gl_e.state.place(repo.get_card(1071), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)   # 熔岩巨人 9 攻
+	gl_e.state.place(repo.get_card(1071), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)   # 熔岩巨人 8 攻（R175 下调）
 	gl_e.configure_growth(GameLevels.LAYER2_GROWTH)
 	check(gl_e.state.unit_at(Vector2i(2, 1)).effective_power() == 3,
 			"成长曲线：杂兵（卡面 3 攻，R123 无开局修正）→ 3")
-	check(gl_e.state.unit_at(Vector2i(1, 1)).effective_power() == 9,
-			"成长曲线：强力怪（卡面 9 攻，R123 无开局修正）→ 9")
+	check(gl_e.state.unit_at(Vector2i(1, 1)).effective_power() == 8,
+			"成长曲线：强力怪（卡面 8 攻，R123 无开局修正；R175 由 9 攻下调）→ 8")
 	gl_e.turn_number = 2
 	gl_e._tick_enemy_growth()
 	check(gl_e._growth_stacks == 1
@@ -2472,8 +2472,8 @@ func _init() -> void:
 	gl_e.turn_number = 8
 	gl_e._tick_enemy_growth()
 	check(gl_e._growth_stacks == 4
-			and gl_e.state.unit_at(Vector2i(1, 1)).effective_power() == 13,
-			"成长曲线：第 8 回合累计 +4 封顶 → 强力怪 9+4=13")
+			and gl_e.state.unit_at(Vector2i(1, 1)).effective_power() == 12,
+			"成长曲线：第 8 回合累计 +4 封顶 → 强力怪 8+4=12（R175 由 9 攻下调）")
 	gl_e.turn_number = 20
 	gl_e._tick_enemy_growth()
 	check(gl_e._growth_stacks == 4, "成长曲线：封顶后不再增长")
@@ -4202,12 +4202,12 @@ func _init() -> void:
 	var wiz3 := eng_dw2.state.unit_at(Vector2i(1, 1))
 	check(wiz3 != null and not wiz3.tapped, "召唤失败时巫师不横置")
 
-	# ---- 鸭子队长：8/50 程1 速1，一回合行动两次 ----
+	# ---- 鸭子队长：7/50 程1 速1，一回合行动两次（R175 由 8 攻下调） ----
 	var cap := repo.get_card(9012)
-	check(cap != null and cap.card_name == "鸭子队长" and cap.power == 8
+	check(cap != null and cap.card_name == "鸭子队长" and cap.power == 7
 			and cap.health == 50 and cap.attack_range == 1 and cap.move_speed == 1
 			and cap.actions == 2 and cap.rarity == 4,
-			"鸭子队长：怪物 8/50 程1 速1 行动2次")
+			"鸭子队长：怪物 7/50 程1 速1 行动2次")
 	var lvl3: Dictionary = _level_named("鸭子队长登场")
 	var eus: Array = lvl3["enemy_units"]
 	check(str(lvl3["name"]) == "鸭子队长登场"
@@ -4893,13 +4893,13 @@ func _init() -> void:
 	var om_wall := om_repo.get_card(1011)      # 铁壁卫兵 3/40 嘲讽（R123：开局 -1 直接写进力量）
 	check(om_wall != null and om_wall.power == 3 and om_wall.health == 40,
 			"铁壁卫兵 1011 → 3/40（二层坦克，R123 起始力量写在卡面）")
-	var om_ash := om_repo.get_card(1013)       # 灰烬龙 6/45（R123：开局 -3 直接写进力量）
-	check(om_ash != null and om_ash.power == 6 and om_ash.health == 45,
-			"灰烬龙 1013 → 6/45（R123 起始力量写在卡面）")
+	var om_ash := om_repo.get_card(1013)       # 灰烬龙 5/45（R123：开局 -3 写进力量；R175 由 6 攻下调）
+	check(om_ash != null and om_ash.power == 5 and om_ash.health == 45,
+			"灰烬龙 1013 → 5/45（R123 起始力量写在卡面，R175 下调）")
 	check(om_wall != null and om_wall.traits.has("嘲讽"), "铁壁卫兵带「嘲讽」trait")
-	var om_giant := om_repo.get_card(1071)     # 熔岩巨人 12/70 法术免疫
-	check(om_giant != null and om_giant.power == 9 and om_giant.health == 70,
-			"熔岩巨人 1071 → 9/70（R123 起始力量写在卡面）")
+	var om_giant := om_repo.get_card(1071)     # 熔岩巨人 8/60 法术免疫（R175 由 9/70 下调）
+	check(om_giant != null and om_giant.power == 8 and om_giant.health == 60,
+			"熔岩巨人 1071 → 8/60（R123 起始力量写在卡面，R175 下调）")
 	check(om_giant != null and om_giant.traits.has("法术免疫"), "熔岩巨人带「法术免疫」trait")
 	var om_cost_ok := true
 	for om_id in [1011, 1013, 1014, 1031, 1050, 1051, 1053, 1054, 1055, 1061, 1071]:
@@ -15174,10 +15174,10 @@ func _init() -> void:
 	# ---- R161：赫尔墨斯 + 行动力成长 ----
 	var r161_hermes := repo.get_card(9140)
 	check(r161_hermes != null and r161_hermes.card_name == "赫尔墨斯"
-			and r161_hermes.kind == "盟友" and r161_hermes.power == 10 and r161_hermes.health == 80
+			and r161_hermes.kind == "盟友" and r161_hermes.power == 9 and r161_hermes.health == 80
 			and r161_hermes.attack_range == 1 and r161_hermes.move_speed == 1
 			and r161_hermes.actions == 2 and r161_hermes.traits.has(GameEngine.ACTION_GROWTH_TRAIT),
-			"R161 赫尔墨斯卡面：10/80，程 1 速 1，actions=2，带行动力成长 trait")
+			"R161 赫尔墨斯卡面：9/80，程 1 速 1，actions=2，带行动力成长 trait（R175 由 10 攻下调）")
 	var r161_lvl := _level_named("赫尔墨斯的试炼")
 	check(str(r161_lvl["name"]) == "赫尔墨斯的试炼"
 			and int(r161_lvl["tier"]) == GameLevels.TIER_ELITE_EASY

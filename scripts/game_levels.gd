@@ -281,7 +281,7 @@ static func _undead_legion() -> Dictionary:
 		"enemy_growth": LAYER2_GROWTH,
 		"starting_hand": 0,
 		"enemy_units": [
-			[1051, "亡灵领主", 5, 55, 1, 2, Vector2i(0, 1)],
+			[1051, "亡灵领主", 4, 55, 1, 2, Vector2i(0, 1)],
 			[1055, "骷髅兵", 2, 28, 1, 1, Vector2i(2, 0)],
 			[1050, "腐化尸鬼", 4, 18, 1, 2, Vector2i(2, 1)],
 			[1054, "骷髅兵", 3, 14, 1, 1, Vector2i(2, 2)],
@@ -307,7 +307,7 @@ static func _dragon_nest() -> Dictionary:
 		"enemy_growth": LAYER2_GROWTH,
 		"starting_hand": 0,
 		"enemy_units": [
-			[1013, "灰烬龙", 6, 45, 1, 2, Vector2i(0, 1)],
+			[1013, "灰烬龙", 5, 45, 1, 2, Vector2i(0, 1)],
 			[1014, "幼龙", 5, 25, 2, 1, Vector2i(1, 0)],
 			[1014, "幼龙", 5, 25, 2, 1, Vector2i(1, 2)],
 			[1011, "铁壁卫兵", 3, 40, 1, 1, Vector2i(2, 1)],
@@ -333,7 +333,7 @@ static func _mech_giant() -> Dictionary:
 		"enemy_growth": LAYER2_GROWTH,
 		"starting_hand": 0,
 		"enemy_units": [
-			[1071, "熔岩巨人", 9, 70, 1, 2, Vector2i(0, 1)],
+			[1071, "熔岩巨人", 8, 60, 1, 2, Vector2i(0, 1)],
 			[1061, "爆裂机甲", 4, 30, 2, 1, Vector2i(1, 0)],
 			[1061, "爆裂机甲", 4, 30, 2, 1, Vector2i(1, 2)],
 			[1011, "铁壁卫兵", 3, 40, 1, 1, Vector2i(2, 1)],
@@ -614,7 +614,7 @@ static func _captain_wizard() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9012, "鸭子队长", 8, 50, 1, 1, Vector2i(0, 1)],
+			[9012, "鸭子队长", 7, 50, 1, 1, Vector2i(0, 1)],
 			[9008, "鸭子巫师", 8, 50, 2, 1, Vector2i(1, 1)],
 			[9009, "使魔鸭子", 4, 15, 1, 1, Vector2i(2, 1)],
 		],
@@ -773,7 +773,7 @@ static func _hermes() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9140, "赫尔墨斯", 10, 80, 1, 1, Vector2i(2, 1)],
+			[9140, "赫尔墨斯", 9, 80, 1, 1, Vector2i(2, 1)],
 		],
 		"tutorial": [],
 	}
@@ -1062,7 +1062,7 @@ static func _captain() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9012, "鸭子队长", 8, 50, 1, 1, Vector2i(0, 1)],
+			[9012, "鸭子队长", 7, 50, 1, 1, Vector2i(0, 1)],
 			[9001, "鸭子骑士", 3, 30, 1, 2, Vector2i(1, 0)],
 			[9001, "鸭子骑士", 3, 30, 1, 2, Vector2i(1, 2)],
 		],
