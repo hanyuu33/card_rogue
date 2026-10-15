@@ -39,6 +39,14 @@ static var pending_event := ""               # 即将进入的事件子类型：
 static var pending_deck_edit := ""           # 事件「遗忘之泉」的待办卡组操作："" / "delete"（删一张卡）
 static var reward_kinds: Array[String] = []  # 本次卡牌奖励的卡类限制（空 = 不限制；如 ["效果","技能"]）
 static var battle_log: Array = []            # 本局战斗记录（与持久化文件同步追加）
+## R177 玩家地图标记（当局内共享）：`map_strokes` = 画图模式折线，每条
+## `{"pts": PackedVector2Array, "col": Color}`（一次拖拽一条，坐标 = 地图场景屏幕坐标，
+## 地图区 = 227,94 起 826×590）；`map_flags` = 标记模式小旗，每个
+## `{"pos": Vector2, "col": Color}`。颜色取绘制时的职业色快照。
+## ⚠️ 只清在 start_run / end_run（新开一局 / 本局结束）—— **advance_layer 不清**
+##    （用户口径：当局内不论从哪种方式访问地图都能看到，跨层也算同一局）。
+static var map_strokes: Array = []
+static var map_flags: Array = []
 static var player_class: String = "森林精魄"   # 本局所选角色（PlayerClass.ids() 之一）
 static var battle_wins := 0                   # 本局已胜利的普通战斗数（前 2 场简单）
 static var elite_wins := 0                   # 本局已胜利的精英战斗数（前 2 场简单）
@@ -227,6 +235,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	battle_wins = 0
 	elite_wins = 0
 	used_levels = []
+	map_strokes = []              # R177：新开一局清掉上一局的玩家标记
+	map_flags = []
 	# 本层 Boss 开局摇定（同层多个 Boss 时随机；走 run_rng → 录像可复现）
 	# 彩蛋 Boss（R73）：开新 run 先清pending，再摇 —— _roll_boss 内部会按
 	# 「第一层是否摇中恶魔鸭」置位。顺序不能反，否则会用到上一局残留的 pending。
@@ -283,6 +293,8 @@ static func end_run(clear_save: bool = true) -> void:
 	battle_wins = 0
 	elite_wins = 0
 	used_levels = []
+	map_strokes = []              # R177：本局结束 → 标记随之清掉
+	map_flags = []
 	relics = []
 	relic_choice = []
 	skipped_relics = []

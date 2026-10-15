@@ -1414,6 +1414,14 @@ func _ready() -> void:
 		if not RunState.run_active:
 			seed(0x128)   # 固定演示种子 → 截图可复现
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
+		# R177：总览里也演示玩家标记（与 map_scene --marks 同数据，截图核验用）
+		if RunState.map_strokes.is_empty() and RunState.map_flags.is_empty():
+			var mv_col := UiTheme.class_color(RunState.player_class)
+			if mv_col.a <= 0.0:
+				mv_col = UiTheme.ACCENT_GOLD
+			RunState.map_strokes = [{"pts": PackedVector2Array([Vector2(300, 300),
+					Vector2(380, 260), Vector2(460, 320), Vector2(540, 250)]), "col": mv_col}]
+			RunState.map_flags = [{"pos": Vector2(520, 400), "col": mv_col}]
 		_toggle_map()
 		_demo_hover_idx = -1
 		_hover_hand = -1
@@ -4961,6 +4969,7 @@ func _draw_map_panel() -> void:
 	_draw_map_bridges()
 	_draw_map_fog()          # R145：内容看不见的格子盖迷雾（桥不盖）
 	_draw_map_nodes()
+	_draw_mapview_marks()    # R177：玩家标记（与冒险地图同一份数据，只读）
 	_draw_map_legend(pr)
 
 
@@ -4991,6 +5000,40 @@ func _draw_map_bridges() -> void:
 			var kind := _mapview_bridge_kind(cell, nb)
 			MapBridge.draw_bridge(self, ctr, _mapview_cell_rect(nb).get_center(), kind,
 					MAPVIEW_CELL, pulse if kind == MapBridge.LIT else 0.0)
+
+
+func _draw_mapview_marks() -> void:
+	## R177：战斗内地图总览显示玩家标记（`RunState.map_strokes` / `map_flags`，
+	## 与冒险地图同一份数据，这里只读）。用户口径：「当局内不论从哪种方式访问
+	## 地图都能看到」。
+	## 坐标系映射：冒险地图区 = (227, 94) 起 826×590（118/格），总览格子阵列
+	## = (x0, y0) 起 7×74 / 5×74（74/格）—— 两边都是 7×5 等比 → 线性缩放即可。
+	var view := _mapview_view_rect()
+	var w := RogueMap.COLS * MAPVIEW_CELL
+	var h := RogueMap.ROWS * MAPVIEW_CELL
+	var x0 := view.position.x + (view.size.x - w) * 0.5
+	var y0 := view.position.y + (view.size.y - h) * 0.5
+	var s := MAPVIEW_CELL / 118.0
+	var base := Vector2(227.0, 94.0)
+	var off := Vector2(x0, y0)
+	for st: Dictionary in RunState.map_strokes:
+		var pts: PackedVector2Array = st["pts"]
+		if pts.size() < 2:
+			continue
+		var mv := PackedVector2Array()
+		for p: Vector2 in pts:
+			mv.append(off + (p - base) * s)
+		draw_polyline(mv, Color(0, 0, 0, 0.45), 3.5 * s + 1.6)
+		draw_polyline(mv, Color(st["col"]), 3.5 * s)
+	for f: Dictionary in RunState.map_flags:
+		var fp: Vector2 = off + (Vector2(f["pos"]) - base) * s
+		var pole := Vector2(fp.x, fp.y - 26.0 * s)
+		draw_line(fp, pole, UiTheme.SAND, 2.2 * s)
+		var tri := PackedVector2Array([pole, pole + Vector2(16, 5) * s, pole + Vector2(0, 10) * s])
+		draw_colored_polygon(tri, Color(f["col"]))
+		draw_polyline(PackedVector2Array([tri[0], tri[1], tri[2], tri[0]]),
+				Color(0, 0, 0, 0.55), 1.2 * s)
+		draw_circle(fp, 2.6 * s, Color(0, 0, 0, 0.55))
 
 
 func _draw_map_fog() -> void:

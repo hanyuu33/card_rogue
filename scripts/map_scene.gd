@@ -33,6 +33,18 @@ const MAP_Y0 := 94.0                 # 标题行 + 信息行之下
 const VIEW_H := 720.0
 const DRAG_THRESHOLD := 6.0          # 弃用（保留：点击判定仍用它区分按下/拖动）
 
+# ---- R177：地图标记（画图 / 旗子 / 橡皮；当局内任何入口进地图都看得到）----
+const MARK_PEN := 0                  # 画图模式：拖动画任意线条（职业色）
+const MARK_FLAG := 1                 # 标记模式：点放小旗子（职业色）
+const MARK_ERASE := 2                # 擦除模式：拖动的橡皮擦
+const MARK_LINE_W := 3.5             # 笔画宽度（另垫 2px 暗描边）
+const MARK_ERASE_R := 12.0           # 橡皮命中半径
+const MARK_MIN_STEP := 3.0           # 笔画取点最小间距（去掉手抖冗余点）
+var _mark_mode := -1                 # 当前标记模式（-1 = 关，行为与旧版一致）
+var _mark_drawing := false           # 左键按下中（画线中 / 擦拭中 / 预备放旗）
+var _mark_cur: PackedVector2Array = PackedVector2Array()   # 正在画的笔画（松手才入栈）
+var _mark_flag_press := Vector2(-1, -1)                    # 旗子按下位置（拖动则不触发放旗）
+
 # ---- 视觉常量（只服务本文件；跨文件的房间类型色在 UiTheme.MAP_NODE_COLORS）----
 const COL_CELL_FILL := Color(0.06, 0.08, 0.12, 0.40)        # 未走过的格子底（半透明，露出背景图）
 const COL_CELL_FILL_DONE := Color(0.14, 0.17, 0.22, 0.46)   # 走过的格子底（稍实一点）
@@ -154,6 +166,9 @@ func _ready() -> void:
 	if "--deck" in OS.get_cmdline_user_args():
 		_deck_rows = _build_deck_rows()
 		_deck_visible = true
+	# -- --marks：演示玩家标记（R177：画图 / 旗子，截图核验用）
+	if "--marks" in OS.get_cmdline_user_args():
+		_prep_marks_demo()
 	# 起点三选一 / 待办卡组操作：先走它们，别停在地图上。
 	# ⚠️ **截图核验模式要跳过**：否则刚开的一局带着「起点道具三选一」，
 	# 会立刻把场景切走 → 截图截到的是别的界面（甚至什么都截不到）。
@@ -330,6 +345,12 @@ func _is_current(cell: Dictionary) -> bool:
 func _gui_input(event: InputEvent) -> void:
 	# 进场过场播放中：屏蔽一切输入（这 1.5 秒地图不接受操作，免得点穿）
 	if not _anim_cell.is_empty():
+		return
+	# ---- R177：标记模式激活时，这一块输入全归标记所有 ----
+	# 不 hover 房间、点击也不进房间（否则画一笔就进战斗了）。再点一次当前模式
+	# 的按钮 = 收起，行为与旧版完全一致。
+	if _mark_mode >= 0:
+		_handle_mark_input(event)
 		return
 	if event is InputEventMouseMotion:
 		_mouse = event.position
@@ -514,8 +535,10 @@ func _draw() -> void:
 	_draw_cell_icons()
 	_draw_fog()          # R145：内容看不见的格子盖迷雾（**桥不盖** —— 通路要可见）
 	_draw_states()
+	_draw_marks()        # R177：玩家标记画在地图内容之上、HUD 之下
 	_draw_hud()
 	_draw_sidebar()
+	_draw_mark_buttons()   # R177：三个标记模式按钮（最上层，不被任何面板盖）
 	_draw_relics()
 	if _relics_visible:
 		_draw_relic_panel()
@@ -975,6 +998,216 @@ func _draw_sidebar() -> void:
 	draw_string(_font, Vector2(size.x - 600.0, size.y - 30.0 + 14.0),
 			_ellipsis(hint, 586.0, UiTheme.FS_CAPTION),
 			HORIZONTAL_ALIGNMENT_RIGHT, 586.0, UiTheme.FS_CAPTION, Color("efe9db"))
+
+
+# ------------------------------------------------------------ R177 地图标记
+
+func _mark_color() -> Color:
+	## 标记颜色 = 当前职业色（唯一口 `UiTheme.class_color`）；取不到时回落金色。
+	var c := UiTheme.class_color(RunState.player_class)
+	return c if c.a > 0.0 else UiTheme.ACCENT_GOLD
+
+
+func _mark_btn_rect(i: int) -> Rect2:
+	## 三个模式按钮：左上角纵排。y 从 92 起 —— TopBar（0~40）与「本层 Boss」条
+	## （约 50~80）之下，按钮和右侧中文标签都不与它们重叠；x 在地图区左侧空白。
+	return Rect2(14.0, 92.0 + i * 40.0, 34.0, 34.0)
+
+
+func _mark_btn_at(pos: Vector2) -> int:
+	for i in 3:
+		if _mark_btn_rect(i).has_point(pos):
+			return i
+	return -1
+
+
+func _mark_set_mode(m: int) -> void:
+	_mark_mode = m
+	_mark_drawing = false
+	_mark_cur = PackedVector2Array()
+	_mark_flag_press = Vector2(-1, -1)
+	sfx.play("click")
+	queue_redraw()
+
+
+func _mark_clamp(p: Vector2) -> Vector2:
+	## 标记点限制在地图区内（否则战斗内总览做线性映射时会跑到面板外）。
+	return Vector2(clampf(p.x, MAP_X0, MAP_X0 + MAP_W),
+			clampf(p.y, MAP_Y0, MAP_Y0 + MAP_H))
+
+
+func _handle_mark_input(event: InputEvent) -> void:
+	if ReplayLog.playing:
+		return                      # 回放只读，不接标记输入
+	if event is InputEventMouseMotion:
+		_mouse = event.position
+		if _mark_drawing:
+			if _mark_mode == MARK_PEN:
+				_mark_stroke_add(event.position)
+			elif _mark_mode == MARK_ERASE:
+				_mark_erase_at(event.position)
+		queue_redraw()
+	elif event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT:
+		var bi := _mark_btn_at(event.position)
+		if bi >= 0:
+			# 再点一次当前模式的按钮 = 收起（回到纯地图模式）
+			_mark_set_mode(-1 if _mark_mode == bi else bi)
+			return
+		_mark_drawing = true
+		if _mark_mode == MARK_PEN:
+			_mark_cur = PackedVector2Array([_mark_clamp(event.position)])
+		elif _mark_mode == MARK_ERASE:
+			_mark_erase_at(event.position)
+		elif _mark_mode == MARK_FLAG:
+			_mark_flag_press = event.position
+	elif event is InputEventMouseButton and not event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT:
+		if not _mark_drawing:
+			return
+		_mark_drawing = false
+		if _mark_mode == MARK_PEN and _mark_cur.size() >= 2:
+			RunState.map_strokes.append({"pts": _mark_cur, "col": _mark_color()})
+			_mark_cur = PackedVector2Array()
+			sfx.play("click")
+		elif _mark_mode == MARK_FLAG and _mark_flag_press != Vector2(-1, -1):
+			# 旗子：按下到松开位移很小才算「放旗」（按住拖动不触发放旗，避免误置）
+			RunState.map_flags.append({"pos": _mark_clamp(_mark_flag_press),
+					"col": _mark_color()})
+			_mark_flag_press = Vector2(-1, -1)
+			sfx.play("click")
+
+
+func _mark_stroke_add(p: Vector2) -> void:
+	var q := _mark_clamp(p)
+	if _mark_cur.size() > 0 and q.distance_to(_mark_cur[_mark_cur.size() - 1]) < MARK_MIN_STEP:
+		return
+	_mark_cur.append(q)
+
+
+func _mark_erase_at(p: Vector2) -> void:
+	## 橡皮命中：旗子按圆心半径、笔画按「点到任一线段的距离」；整条 / 整个删。
+	var hit := false
+	for i in range(RunState.map_flags.size() - 1, -1, -1):
+		var f: Dictionary = RunState.map_flags[i]
+		if Vector2(f["pos"]).distance_to(p) <= MARK_ERASE_R + 8.0:
+			RunState.map_flags.remove_at(i)
+			hit = true
+	for i in range(RunState.map_strokes.size() - 1, -1, -1):
+		var pts: PackedVector2Array = RunState.map_strokes[i]["pts"]
+		for j in range(pts.size() - 1):
+			if _dist_to_seg(p, pts[j], pts[j + 1]) <= MARK_ERASE_R:
+				RunState.map_strokes.remove_at(i)
+				hit = true
+				break
+	if hit:
+		queue_redraw()
+
+
+static func _dist_to_seg(p: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var l2 := ab.length_squared()
+	if l2 <= 0.0001:
+		return p.distance_to(a)
+	var t := clampf((p - a).dot(ab) / l2, 0.0, 1.0)
+	return p.distance_to(a + ab * t)
+
+
+func _draw_marks() -> void:
+	## R177 玩家标记：笔画（先垫 2px 暗描边再画本色，压亮色节点仍可辨）+ 小旗。
+	## 画在格子 / 图标 / 迷雾之上、HUD 之下 —— 标记是「玩家自己的笔记」，
+	## 不该被迷雾盖住（迷雾遮的是房间内容）。
+	for s: Dictionary in RunState.map_strokes:
+		var pts: PackedVector2Array = s["pts"]
+		if pts.size() < 2:
+			continue
+		draw_polyline(pts, Color(0, 0, 0, 0.45), MARK_LINE_W + 2.0)
+		draw_polyline(pts, Color(s["col"]), MARK_LINE_W)
+	for f: Dictionary in RunState.map_flags:
+		_draw_mark_flag(Vector2(f["pos"]), Color(f["col"]))
+	# 正在画的笔画：松手才入栈，但拖拽中要实时可见
+	if _mark_mode == MARK_PEN and _mark_drawing and _mark_cur.size() >= 2:
+		draw_polyline(_mark_cur, Color(0, 0, 0, 0.45), MARK_LINE_W + 2.0)
+		draw_polyline(_mark_cur, _mark_color(), MARK_LINE_W)
+	# 橡皮：擦拭中画一个光标圈，提示擦除半径
+	if _mark_mode == MARK_ERASE and _mark_drawing:
+		draw_circle(_mouse, MARK_ERASE_R, Color(1, 1, 1, 0.10))
+		draw_arc(_mouse, MARK_ERASE_R, 0, TAU, 24, Color(1, 1, 1, 0.55), 1.2)
+
+
+func _draw_mark_flag(p: Vector2, col: Color) -> void:
+	## 小旗（程序绘制）：杆 + 三角旗面（职业色）+ 暗描边 + 底座。
+	var pole := Vector2(p.x, p.y - 26.0)
+	draw_line(p, pole, UiTheme.SAND, 2.2)
+	var tri := PackedVector2Array([pole, pole + Vector2(16, 5), pole + Vector2(0, 10)])
+	draw_colored_polygon(tri, col)
+	draw_polyline(PackedVector2Array([tri[0], tri[1], tri[2], tri[0]]),
+			Color(0, 0, 0, 0.55), 1.2)
+	draw_circle(p, 2.6, Color(0, 0, 0, 0.55))
+
+
+func _draw_mark_buttons() -> void:
+	## 三个模式按钮（左上纵排）+ 各自的中文小标签。
+	for i in 3:
+		var r := _mark_btn_rect(i)
+		var on := _mark_mode == i
+		draw_rect(r, Color(0.07, 0.08, 0.12, 0.85), true)
+		draw_rect(r, UiTheme.ACCENT_GOLD if on else Color(1, 1, 1, 0.16),
+				false, 2.0 if on else 1.0)
+		var c := r.get_center()
+		match i:
+			MARK_PEN:
+				_draw_mark_icon_pen(c, on)
+			MARK_FLAG:
+				_draw_mark_icon_flag(c, on)
+			MARK_ERASE:
+				_draw_mark_icon_erase(c, on)
+		var label: String = ["画图", "标记", "擦除"][i]
+		draw_string(_font, Vector2(r.end.x + 8.0, c.y + 4.0), label,
+				HORIZONTAL_ALIGNMENT_LEFT, 48.0, UiTheme.FS_CAPTION,
+				UiTheme.ACCENT_LIT if on else UiTheme.INK_300)
+
+
+func _draw_mark_icon_pen(c: Vector2, on: bool) -> void:
+	var col := UiTheme.ACCENT_LIT if on else UiTheme.INK_300
+	var a := c + Vector2(-6, 7)
+	var b := c + Vector2(6, -7)
+	draw_line(a, b, col, 2.6)
+	var tip := PackedVector2Array([b + Vector2(-1, -4), b + Vector2(5, -1), b + Vector2(-1, 2)])
+	draw_colored_polygon(tip, col)
+
+
+func _draw_mark_icon_flag(c: Vector2, on: bool) -> void:
+	var col := UiTheme.ACCENT_LIT if on else UiTheme.INK_300
+	var base := c + Vector2(-5, 8)
+	draw_line(base, base + Vector2(0, -16), col, 2.2)
+	var tri := PackedVector2Array([base + Vector2(0, -16),
+			base + Vector2(12, -12), base + Vector2(0, -8)])
+	draw_colored_polygon(tri, col)
+
+
+func _draw_mark_icon_erase(c: Vector2, on: bool) -> void:
+	var col := UiTheme.ACCENT_LIT if on else UiTheme.INK_300
+	var a := c + Vector2(-7, 5)
+	var pts := PackedVector2Array([a, a + Vector2(12, -4), a + Vector2(8, 4), a + Vector2(-4, 12)])
+	draw_colored_polygon(pts, col)
+	draw_line(a + Vector2(1, 1), a + Vector2(9, -1), Color(0.07, 0.08, 0.12, 0.85), 2.0)
+
+
+func _prep_marks_demo() -> void:
+	## --marks：演示玩家标记（R177 截图核验用）。两笔 + 两旗，职业色。
+	var col := _mark_color()
+	RunState.map_strokes = [
+		{"pts": PackedVector2Array([Vector2(300, 300), Vector2(380, 260),
+				Vector2(460, 320), Vector2(540, 250)]), "col": col},
+		{"pts": PackedVector2Array([Vector2(640, 500), Vector2(720, 460),
+				Vector2(800, 520)]), "col": col},
+	]
+	RunState.map_flags = [
+		{"pos": Vector2(520, 400), "col": col},
+		{"pos": Vector2(880, 200), "col": col},
+	]
+	_mark_mode = MARK_PEN
 
 
 func _draw_move_note() -> void:
