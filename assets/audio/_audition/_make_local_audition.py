@@ -15,6 +15,7 @@ SLOT_LABEL = {
     "battle_boss": "Boss 战", "battle_boss_dark": "暗影系 Boss",
     "event": "事件页", "reward": "奖励/宝箱", "victory": "胜利结算",
     "defeat": "失败结算",
+    "battle_hot": "战斗·热血追加候选（R175 追加：魔王魂 金属/战斗曲 + PeriTune 战闘曲）",
 }
 
 

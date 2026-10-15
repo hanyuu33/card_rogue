@@ -437,5 +437,205 @@
    "ogg": "https://maou.audio/sound/song/maou_04_tsuki_to_okami.ogg",
    "title": "月と狼"
   }
+ ],
+ "battle_hot": [
+  {
+   "lib": "魔王魂",
+   "name": "ネオロック13",
+   "ok": true,
+   "page": "https://maou.audio/bgm_neorock13/",
+   "ogg": "https://maou.audio/sound/bgm/maou_bgm_neorock13.ogg",
+   "title": "ネオロック13"
+  },
+  {
+   "lib": "魔王魂",
+   "name": "ネオロック32",
+   "ok": true,
+   "page": "https://maou.audio/bgm_neorock32/",
+   "ogg": "https://maou.audio/sound/bgm/maou_bgm_neorock32.ogg",
+   "title": "ネオロック32"
+  },
+  {
+   "lib": "魔王魂",
+   "name": "ネオロック40",
+   "ok": true,
+   "page": "https://maou.audio/bgm_neorock40/",
+   "ogg": "https://maou.audio/sound/bgm/maou_bgm_neorock40.ogg",
+   "title": "ネオロック40"
+  },
+  {
+   "lib": "魔王魂",
+   "name": "ネオロック75",
+   "ok": true,
+   "page": "https://maou.audio/bgm_neorock75/",
+   "ogg": "https://maou.audio/sound/bgm/maou_bgm_neorock75.ogg",
+   "title": "ネオロック75"
+  },
+  {
+   "lib": "魔王魂",
+   "name": "ネオロック81",
+   "ok": true,
+   "page": "https://maou.audio/bgm_neorock81/",
+   "ogg": "https://maou.audio/sound/bgm/maou_bgm_neorock81.ogg",
+   "title": "ネオロック81"
+  },
+  {
+   "lib": "魔王魂",
+   "name": "ネオロック83",
+   "ok": true,
+   "page": "https://maou.audio/bgm_neorock83/",
+   "ogg": "https://maou.audio/sound/bgm/maou_bgm_neorock83.ogg",
+   "title": "ネオロック83"
+  },
+  {
+   "lib": "魔王魂",
+   "name": "オーケストラ11",
+   "ok": true,
+   "page": "https://maou.audio/bgm_orchestra11/",
+   "ogg": "https://maou.audio/sound/bgm/maou_bgm_orchestra11.ogg",
+   "title": "オーケストラ11"
+  },
+  {
+   "lib": "魔王魂",
+   "name": "オーケストラ12",
+   "ok": true,
+   "page": "https://maou.audio/bgm_orchestra12/",
+   "ogg": "https://maou.audio/sound/bgm/maou_bgm_orchestra12.ogg",
+   "title": "オーケストラ12"
+  },
+  {
+   "lib": "魔王魂",
+   "name": "オーケストラ24",
+   "ok": true,
+   "page": "https://maou.audio/bgm_orchestra24/",
+   "ogg": "https://maou.audio/sound/bgm/maou_bgm_orchestra24.ogg",
+   "title": "オーケストラ24"
+  },
+  {
+   "lib": "魔王魂",
+   "name": "サイバー39",
+   "ok": true,
+   "page": "https://maou.audio/bgm_cyber39/",
+   "ogg": "https://maou.audio/sound/bgm/maou_bgm_cyber39.ogg",
+   "title": "サイバー39"
+  },
+  {
+   "lib": "魔王魂",
+   "name": "サイバー35",
+   "ok": true,
+   "page": "https://maou.audio/bgm_cyber35/",
+   "ogg": "https://maou.audio/sound/bgm/maou_bgm_cyber35.ogg",
+   "title": "サイバー35"
+  },
+  {
+   "lib": "PeriTune",
+   "name": "EpicBattle",
+   "ok": true,
+   "page": "https://peritune.com/blog/2020/08/28/epicbattle/",
+   "title": "【無料フリーBGM】壮大なシネマティック戦闘曲「EpicBattle」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_EpicBattle.mp3",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "EpicBattle2",
+   "ok": true,
+   "page": "https://peritune.com/blog/2021/05/31/epicbattle2/",
+   "title": "【無料フリーBGM】壮大なシネマティック戦闘曲「EpicBattle2」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_EpicBattle2.mp3",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "EpicBattle_Deity",
+   "ok": true,
+   "page": "https://peritune.com/blog/2022/05/09/epicbattle_deity/",
+   "title": "【無料フリーBGM】壮大なシネマティック戦闘曲「EpicBattle_Deity」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_EpicBattle_Deity.mp3",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "EpicBattle_J",
+   "ok": true,
+   "page": "https://peritune.com/blog/2021/09/16/epicbattle_j/",
+   "title": "【無料フリーBGM】和風シネマティック戦闘曲「EpicBattle_J」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_EpicBattle_J.mp3",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Kengeki",
+   "ok": true,
+   "page": "https://peritune.com/blog/2021/08/17/kengeki/",
+   "title": "【無料フリーBGM】和風ハードロック戦闘曲「Kengeki」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Kengeki.mp3",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Raid_FolkMetal",
+   "ok": true,
+   "page": "https://peritune.com/blog/2019/08/26/raid_folkmetal/",
+   "title": "【無料フリーBGM】フォークメタル戦闘曲「Raid_FolkMetal」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Raid_FolkMetal.mp3",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Thunderclap",
+   "ok": true,
+   "page": "https://peritune.com/blog/2021/06/30/thunderclap/",
+   "title": "【無料フリーBGM】ダークメルヘン戦闘曲「Thunderclap」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Thunderclap.mp3",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Puppeteer",
+   "ok": true,
+   "page": "https://peritune.com/blog/2021/01/21/puppeteer/",
+   "title": "【無料フリーBGM】ハイテンションなゴシック戦闘曲「Puppeteer」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Puppeteer.mp3",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Battle_Fun",
+   "ok": true,
+   "page": "https://peritune.com/blog/2021/04/13/battle_fun/",
+   "title": "【無料フリーBGM】コミカル＆ポップな戦闘曲「Battle_Fun」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Battle_Fun.mp3",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Rapid5",
+   "ok": true,
+   "page": "https://peritune.com/blog/2021/03/15/rapid5/",
+   "title": "【無料フリーBGM】スピード感のあるサイバー戦闘曲「Rapid5」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Rapid5.mp3",
+   "loop": null,
+   "drive": null
+  },
+  {
+   "lib": "PeriTune",
+   "name": "Wuxia3",
+   "ok": true,
+   "page": "https://peritune.com/blog/2021/05/22/wuxia3/",
+   "title": "【無料フリーBGM】中華風の勇壮なオーケストラ曲「Wuxia3」",
+   "mp3": "https://peritune.com/music/PerituneMaterial_Wuxia3.mp3",
+   "loop": null,
+   "drive": null
+  }
  ]
 }

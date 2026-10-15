@@ -31,9 +31,9 @@
 
 | 场景 | 文件名 | 曲名 | 作者 | 来源库 | 授权 | 需署名 | 已修改 | 下载日期 | 来源链接 |
 |---|---|---|---|---|---|---|---|---|---|
-| 标题 | `title.ogg` | Poema | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
-| 角色选择 | `class_pick.ogg` | Positive_Happy | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
-| 地图 | `map.ogg` | Sketch Forest | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
+| 标题 | `title.ogg` | Piano_Refreshing | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-16 | https://peritune.com/blog/2016/07/13/piano_refreshing/ |
+| 角色选择 | `class_pick.ogg` | Piano_Refreshing | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-16 | https://peritune.com/blog/2016/07/13/piano_refreshing/ |
+| 地图 | `map.ogg` | Poema | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-16 | https://peritune.com/blog/2020/01/04/poema/ |
 | 卡组编辑/图鉴 | `deck.ogg` | Teatime | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
 | 战斗 | `battle.ogg` | Fight | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
 | 精英战斗 | `battle_elite.ogg` | Battlefield 5 | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
@@ -45,6 +45,10 @@
 | 失败 | `defeat.ogg` | Grief 2 | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
 
 > 备选曲目若启用，另起一行登记，并在「场景」列注明「（备选）」。
+>
+> **当前状态（2026-10-16）**：标题 / 角色选择 / 地图 三行已按用户指定定曲，
+> 但**尚未接入**（`bgm.gd` 未建、`assets/audio/bgm/` 尚无成品）。
+> 其余槽位仍为拟定占位。选曲依据见同目录 `选曲记录.md`。
 
 ---
 
