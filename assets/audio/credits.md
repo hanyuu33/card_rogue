@@ -29,22 +29,40 @@
 
 ## 二、BGM 登记表
 
+> **全部 7 首均为 PeriTune 官方「loop 版」整包里的 `.ogg` 原文件** ——
+> 我们只做了「从 zip 里取出 ogg」这一步，**未裁剪、未变调、未重编码**，
+> 因此「已修改」一律填 **否**（这不免除署名义务：PeriTune 是 CC BY 4.0）。
+
+### 2.1 已接入（2026-10-16 起实装，`scripts/bgm.gd`）
+
 | 场景 | 文件名 | 曲名 | 作者 | 来源库 | 授权 | 需署名 | 已修改 | 下载日期 | 来源链接 |
 |---|---|---|---|---|---|---|---|---|---|
-| 标题 | `title.ogg` | Poema | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
-| 角色选择 | `class_pick.ogg` | Positive_Happy | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
-| 地图 | `map.ogg` | Sketch Forest | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
-| 卡组编辑/图鉴 | `deck.ogg` | Teatime | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
-| 战斗 | `battle.ogg` | Fight | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
-| 精英战斗 | `battle_elite.ogg` | Battlefield 5 | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
-| Boss | `battle_boss.ogg` | Dramatic | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
-| 暗影 Boss | `battle_boss_dark.ogg` | 霜蝶の夢 | まんぼう二等兵 | OpenTracks | 站点自有许可 | 否 | 待填 | 待填 | 待填 |
-| 事件 | `event.ogg` | Augury | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
-| 奖励 | `reward.ogg` | Wish4 | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
-| 胜利 | `victory.ogg` | Soaring | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
-| 失败 | `defeat.ogg` | Grief 2 | PeriTune | PeriTune | CC BY 4.0 | 是 | 待填 | 待填 | 待填 |
+| 标题页 | `title.ogg` | Holy_Place | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-16 | https://peritune.com/blog/2019/04/05/holy_place/ |
+| 角色选择 | `class_pick.ogg` | Piano_Refreshing | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-16 | https://peritune.com/blog/2016/07/13/piano_refreshing/ |
+| 第一层地图 | `map.ogg` | Poema | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-16 | https://peritune.com/blog/2020/01/04/poema/ |
+| 第二层地图 | `map2.ogg` | Strategy4 | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-16 | https://peritune.com/blog/2017/01/08/strategy4/ |
+| 一般战斗 | `battle.ogg` | Dramatic | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-16 | https://peritune.com/blog/2015/05/21/dramatic1/ |
+| 精英战斗 | `battle_elite.ogg` | EpicBattle | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-16 | https://peritune.com/blog/2020/08/28/epicbattle/ |
+| Boss 战斗 | `battle_boss.ogg` | Raid_FolkMetal | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-16 | https://peritune.com/blog/2019/08/26/raid_folkmetal/ |
 
-> 备选曲目若启用，另起一行登记，并在「场景」列注明「（备选）」。
+### 2.2 未接入（拟定占位，尚未使用；曲名仅供参考）
+
+| 场景 | 文件名 | 拟用曲名 | 来源库 | 状态 |
+|---|---|---|---|---|
+| 卡组编辑 / 图鉴 | `deck.ogg` | Teatime | PeriTune | 未选曲 |
+| 暗影 Boss | `battle_boss_dark.ogg` | 霜蝶の夢 | OpenTracks | 未下载 |
+| 事件 | `event.ogg` | Augury | PeriTune | 未选曲 |
+| 奖励 | `reward.ogg` | Wish4 | PeriTune | 未选曲 |
+| 胜利 | `victory.ogg` | Soaring | PeriTune | 未选曲 |
+| 失败 | `defeat.ogg` | Grief 2 | PeriTune | 未选曲 |
+
+> **当前状态（2026-10-16）**：上表 2.1 的 7 首**已实装** ——
+> `assets/audio/bgm/*.ogg` 已入库、`.import` 全部 `loop=true`、
+> autoload `Bgm`（`scripts/bgm.gd`）已在标题 / 选人 / 地图 / 战斗四处挂好。
+> 选曲依据与备选清单见同目录 `选曲记录.md`；试听页 `_audition/试听_本地.html`。
+>
+> ⚠️ `assets/audio/_audition/`（含 485MB 候选曲 raw/）挂有 `.gdignore` ——
+> **它是选曲工作区，不进导入表、不进发布包**，别把 `.gdignore` 删了。
 
 ---
 

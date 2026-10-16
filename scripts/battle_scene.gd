@@ -2250,6 +2250,9 @@ func load_level(lvl: Dictionary) -> void:
 	_hover_card = null
 	_hover_pl = null
 	_cur_level = lvl
+	# R176：战斗 BGM 按关卡分级取（一般 Dramatic / 精英 EpicBattle / Boss Raid_FolkMetal）。
+	# 挂在这里而不是 _ready —— load_level 是「换关」的唯一入口，选关 / 换层都走到。
+	Bgm.play_battle(int(lvl.get("tier", -1)))
 	_refresh_bg_texture()
 	_tutorial = lvl["tutorial"]
 	tutorial_step = 0

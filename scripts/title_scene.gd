@@ -24,6 +24,8 @@ func _ready() -> void:
 	_font = UiTheme.font()
 	sfx = Sfx.new()
 	add_child(sfx)
+	# R176：标题页 BGM（Holy_Place）；选人 / 地图 / 战斗各自在进入时换曲。
+	Bgm.play("title")
 	$Buttons/StartBtn.pressed.connect(_on_start)
 	$Buttons/GalleryBtn.pressed.connect(_on_gallery)
 	$Buttons/QuitBtn.pressed.connect(_on_quit)

@@ -27,6 +27,8 @@ func _ready() -> void:
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
 	add_child(sfx)
+	# R176：角色选择 BGM（Piano_Refreshing）—— 与标题同曲系，进选人不断氛围。
+	Bgm.play("class_pick")
 	DeckViewer.attach(self)
 	RelicViewer.attach(self, Vector2(1044, 6))
 	# -- --screenshot：自动截图退出（视觉验证用）

@@ -157,6 +157,9 @@ func _ready() -> void:
 	if not RunState.run_active or RunState.map_cells.is_empty():
 		RunState.start_run(RogueMap.generate(_rng(), GameLayers.LAYER_DEFAULT),
 				GameLayers.LAYER_DEFAULT)
+	# R176：地图 BGM 按层取（第一层 Poema / 第二层 Strategy4）。
+	# 位置必须在上面那段兜底 start_run **之后** —— 否则 current_layer 还没定。
+	Bgm.play_map(RunState.current_layer)
 	# -- --relics：演示道具栏（截图验证用）
 	if "--relics" in OS.get_cmdline_user_args():
 		RunState.relics = [6001, 6005, 6010]
