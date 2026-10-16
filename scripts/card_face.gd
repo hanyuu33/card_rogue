@@ -225,13 +225,11 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 
 
 static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,
-		k: float, pad: float, font_bold: Font) -> void:
-	## 文字区 = **只有卡名**：姓名牌内框 + 垂直居中的卡名（wrap 最多 2 行；与姓名牌位置契合 —— R193）。
+		k: float, pad: float, font_bold: Font, pin_gold := false) -> void:
+	## 文字区 = **只有卡名**（wrap 最多 2 行）。
 	## `draw_pick()`（选卡界面）与 `draw(..., name_only=true)`（战斗内卡面）共用这一条。
 	## 效果文字**不画在卡面上** —— 详情走悬停/点选的描述面板（选卡界面底部描述条 / 战斗左栏信息）。
 	var sep_y: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
-	var zone_top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad
-	var zone_bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_BOTTOM - pad
 	var sz: int = maxi(9, roundi(UiTheme.CARD_FS_TEXT * kt * 1.15))
 	var maxw: float = rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0
 	var lines := wrap_text(font_bold, card.card_name, maxw, sz)
@@ -242,9 +240,35 @@ static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 		if lines.size() > 2:
 			lines = lines.slice(0, 2)
 	var row_h: float = font_bold.get_height(sz)
-	var block_h: float = row_h * lines.size()
-	var text_top: float = zone_top + maxf(0.0, (zone_bottom - zone_top - block_h) / 2.0)
 	var text_x: float = rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad
+	var text_top: float
+	if pin_gold:
+		# R196（用户口径「战场中卡的名字被下面的数字挡住」）：
+		# 底部一排数值徽章（力/程/速/生）圆心压在卡框**下边缘**、一半探出卡外 —— 卡内自
+		# `rect.end.y - badge_r` 起就是徽章带。姓名牌区（0.745~0.94h）里垂直居中时，
+		# 文字块必然伸进徽章带被数字压住。改为**上沿贴分隔金条**、整块排在徽章带之前；
+		# 一行放不下就逐级缩字号（最小 8px），绝不让数字盖住名字。
+		var badge_r: float = UiTheme.CARD_BADGE_R * minf(k, UiTheme.CARD_BADGE_SCALE_CAP)
+		var badge_top: float = rect.end.y - badge_r - pad * 0.5
+		text_top = sep_y + pad * 0.5
+		# 判据用**墨迹底**（`text_top + ascent + 后续行`），不用行盒底 —— descent 那 2~3px
+		# 本来就没有墨迹，允许伸进徽章带顶部；卡名因此不必缩得太小（R196 实测 h=92
+		# 战场单位卡：sz 可保持 14，墨迹完整避开力/程/速/生四个数字）。
+		var ink_bottom: float = (text_top + float(font_bold.get_ascent(sz))
+				+ row_h * float(lines.size() - 1) + 1.0)
+		while sz > 8 and ink_bottom > badge_top:
+			sz -= 1
+			lines = wrap_text(font_bold, card.card_name, maxw, sz)
+			if lines.size() > 2:
+				lines = lines.slice(0, 2)
+			row_h = font_bold.get_height(sz)
+			ink_bottom = (text_top + float(font_bold.get_ascent(sz))
+					+ row_h * float(lines.size() - 1) + 1.0)
+	else:
+		var zone_top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad
+		var zone_bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_BOTTOM - pad
+		text_top = zone_top + maxf(0.0, (zone_bottom - zone_top - row_h * lines.size()) / 2.0)
+	var block_h: float = row_h * lines.size()
 	draw_text_backing(canvas, rect, sep_y, k, pad, text_top - 3.0, text_top + block_h + 3.0)
 	var asc: float = float(font_bold.get_ascent(sz))
 	for li in lines.size():
@@ -391,7 +415,7 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	# name_only（战斗内卡面口径）：只画居中卡名，不画种类·字段与效果文 ——
 	# 效果详情由悬停/点选的描述面板提供（战斗左栏信息 / 选卡界面底部描述条）。
 	if name_only:
-		_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold)
+		_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold, true)   # 战斗内：贴金条上移，避开底部徽章
 		return
 	var bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_BOTTOM - pad  # 姓名牌内框下沿
 	var top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad       # 姓名牌内框上沿
