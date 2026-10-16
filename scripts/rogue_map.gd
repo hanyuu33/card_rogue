@@ -73,18 +73,18 @@ const TYPE_MARKS := {
 	"unknown": "?",
 }
 
-const P_UNKNOWN := 0.28              # 「?」房占比（其余格直接写明类型）
+const P_UNKNOWN := 0.34              # 「?」房占比（其余格直接写明类型）
 const REST_MIN := 2                  # 每张地图的休息点数量区间
 const REST_MAX := 4
 ## R181：商店节点。数量区间与休息点相当（「概率和篝火相当」）—— 独立先定（像 rest 一样
 ## 不从权重里抽），约束同样是「不与起点 / 宝箱 / 休息点 / 另一个商店相邻」。
 const SHOP_MIN := 1
 const SHOP_MAX := 2
-## 普通格的类型权重（战斗为主，精英与宝箱略少）。R181 加「商店」：权重 = 精英（2）。
-const WEIGHTS := {"battle": 6, "event": 3, "elite": 2, "chest": 2, "shop": 2}
-## 「?」房的实际类型权重 —— 用户口径：**精英与普通宝箱出现概率略低**；
-## R181 加「商店」，权重 = 精英（1），即「?房出现商店的概率和精英相当」。
-const WEIGHTS_UNKNOWN := {"battle": 7, "event": 4, "elite": 1, "chest": 1, "shop": 1}
+## 普通格（明房）的类型权重。R192：事件明房权重降到与其他齐平（2），战斗仍是明房最大宗。
+const WEIGHTS := {"battle": 7, "event": 2, "elite": 2, "chest": 2, "shop": 2}
+## 「?」房的实际类型权重。R192：战斗中签概率砍半（50%→25%），省下的比例按
+## 事件:精英:宝箱:商店 = 4:1:1:1 原比例分给其他类型（战斗仍是明房最大宗）。
+const WEIGHTS_UNKNOWN := {"battle": 7, "event": 12, "elite": 3, "chest": 3, "shop": 3}
 
 ## R142：卡牌宝箱（事件子类型 treasure）有**一半概率**装的是一件道具（而不是卡牌三选一）。
 ## 摇在**地图生成期**（走本局 run_rng 的链条）→ 录像回放同一张图必然同一个结果。
@@ -403,6 +403,9 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 	# --- 逐格定类型
 	var used_events := {}
 	var cells: Array = []
+	var start_nbs := {}          # R192：起点后第一格（起点的每一个邻居）类型约束用
+	for nb in adj[start_i]:
+		start_nbs[int(nb)] = true
 	for i in CELLS:
 		var type := "battle"
 		var hidden := false
@@ -417,8 +420,20 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 		else:
 			# 「?」房的实际类型在生成时就定（约束才对隐藏房生效），
 			# 只是**先不告诉玩家**，走进才揭晓。
-			hidden = rng.randf() < P_UNKNOWN
-			type = _weighted(WEIGHTS_UNKNOWN if hidden else WEIGHTS, rng)
+			if start_nbs.has(i):
+				# R192：起点后第一格约束 —— 所有层都不是精英/篝火（篝火已被 rest_set 排除）；
+				# 第一层更进一步：只可能是事件或一般战斗（不是?/商店/精英/篝火）。
+				if layer == GameLayers.LAYER_DEFAULT:
+					hidden = false
+					type = _weighted({"battle": 7, "event": 2}, rng)
+				else:
+					hidden = rng.randf() < P_UNKNOWN
+					var nb_w: Dictionary = (WEIGHTS_UNKNOWN if hidden else WEIGHTS).duplicate()
+					nb_w.erase("elite")
+					type = _weighted(nb_w, rng)
+			else:
+				hidden = rng.randf() < P_UNKNOWN
+				type = _weighted(WEIGHTS_UNKNOWN if hidden else WEIGHTS, rng)
 		var cell := {
 			"id": i,
 			"col": col_of(i), "row": row_of(i),

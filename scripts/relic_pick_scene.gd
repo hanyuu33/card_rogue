@@ -58,10 +58,6 @@ func _ready() -> void:
 	})
 
 
-func _process(_delta: float) -> void:
-	queue_redraw()   # 鼠标提示跟随
-
-
 func _card_rect(i: int) -> Rect2:
 	var total := 3 * CARD_W + 2 * GAP
 	var x0 := (size.x - total) / 2.0
@@ -159,6 +155,7 @@ func _gui_input(event: InputEvent) -> void:
 		var idx := _index_at(event.position)
 		if idx != _hover:
 			_hover = idx
+			queue_redraw()   # R186：悬停变化才重绘（原来靠 _process 每帧重绘）
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
 		var pick := _index_at(event.position)

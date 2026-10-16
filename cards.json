@@ -4059,6 +4059,23 @@
       "image": ""
     },
     {
+      "id": 9127,
+      "name": "返修",
+      "kind": "技能",
+      "cost": 1,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "改造"
+      ],
+      "effect_text": "从弃牌区选一张盟友或工事，那张卡返回手卡，并获得永久改造：生命+3。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
       "id": 9130,
       "name": "赫利俄斯",
       "kind": "工事",

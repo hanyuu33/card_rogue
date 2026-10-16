@@ -19,17 +19,20 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
-# ⚠️ 网格间距**不写死**：卡高是算出来的（卡组张数一变就变），而间距必须 ≥
-# 2 × 图标半径，图标半径又由卡高决定 —— 两者互相依赖。写死常数两头都错：
-# 卡小的时候白白浪费空间（28 张的卡组会从卡高 124 掉到 105），卡大的时候又装不下。
-# 所以 _layout() 排两次，用第一次的卡高反算真实间距（见那里的注释）。
-const GAP_BASE := 20.0       # 间距下限（也当第一次试排用的基准值）
-const MARGIN := 40.0         # 网格左右留白
+# R191（用户口径「事件选卡也要用全屏大选卡」）：固定**每行 5 张放大卡** +
+# 垂直滚动（滚轮 / 拖动 / 触屏拖动），卡面只留卡名，点选后描述在底部描述条读。
+# 不再做「按张数挤一屏」的自适应缩小 —— 卡小到 46px 时什么都看不清。
+const COLS := 5              # 每行 5 张（与战斗内选卡页同口径）
+const GAP := 34.0            # 卡间距（要装得下一行徽章骑缝：≥ 2×徽章半径）
+const GRID_PAD_TOP := 16.0   # 网格内容顶部留白（首行徽章向上出血不被 clip 裁掉）
+const MARGIN := 72.0         # 网格左右留白
 const TOP_Y := 108.0         # 网格顶部（标题栏 + 提示之下）
-const BOTTOM_RESERVE := 96.0 # 底部留给「确定」按钮与结果文字
+const BOTTOM_RESERVE := 178.0 # 底部：描述条 88 + 确定按钮带 76 + 间隙
+const DESC_H := 88.0         # 底部描述条高（点选/悬停的卡在这里读描述）
 const RATIO := 0.82          # 卡面 宽/高（与 CardFace 小卡比例一致）
-const CARD_MAX_H := 150.0    # 卡面最大高度（卡少时不要撑爆屏幕）
-const CARD_MIN_H := 46.0     # 卡面最小高度（卡很多时仍可辨认）
+const CARD_MAX_H := 252.0    # 卡面高度上限（≈ 奖励三选一的 216×260 规格）
+const WHEEL_STEP := 64.0     # 滚轮一步
+const DRAG_SLOP := 10.0      # 拖动超过它才算滚动（不是点选）
 
 var _font: Font
 var _font_bold: Font
@@ -44,12 +47,13 @@ var _hover := -1
 var _result := ""             # 完成提示（显示后 1.4s 回地图）
 var _done := false
 
-# ---- 网格布局（由 _layout() 算出）----
-var _cw := 92.0
-var _ch := 112.0
-var _cols := 1
-var _gap := GAP_BASE       # 实际间距（_layout() 里按卡高反算）
-var _grid_y := TOP_Y
+# ---- 网格布局（R191：固定 5 列 + 滚动；尺寸由 _layout() 算出）----
+var _cw := 200.0
+var _ch := 244.0
+var _scroll := 0.0
+var _press := {}           # {pos, scroll, moved} 拖滚动手势
+var _clip: Control         # 裁剪容器（Godot 画布无裁剪 → clip_contents 容器裁子节点）
+var _grid: Control         # 卡片网格自绘节点（本地坐标；y = -_scroll）
 
 @onready var title_label: Label = $TopBar/TitleLabel
 @onready var hint_label: Label = $HintLabel
@@ -78,8 +82,17 @@ func _ready() -> void:
 				RunState.pending_relic = mid  # 兜底：该道具不需要选卡
 	_cards = RunState.deck_ids.duplicate()
 	_reset_uids()
+	# R191：滚动网格 —— 裁剪容器 + 自绘子节点（卡画在它上面，滚出视区的被裁掉）
+	_clip = Control.new()
+	_clip.clip_contents = true
+	_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_clip)
+	_grid = Control.new()
+	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_clip.add_child(_grid)
+	_grid.draw.connect(_draw_grid)
 	confirm_btn.pressed.connect(_on_confirm)
-	resized.connect(_layout)
+	resized.connect(func(): _layout(); if _grid != null: _grid.queue_redraw(); queue_redraw())
 	_refresh_title()
 	_layout()
 	_refresh_ui()
@@ -129,7 +142,16 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	queue_redraw()
+	# R186：滑位动画（_tween 非空）或鼠标移动时才重绘（原来无条件每帧重绘）。
+	# R191：卡片画在 `_grid` 子节点上 → 重绘要连带它（hover 高亮 / 补间都在那边）。
+	if not _tween.is_empty():
+		_grid.queue_redraw()
+		return
+	var mp := get_local_mouse_position()
+	if mp != _last_mp:
+		_last_mp = mp
+		_grid.queue_redraw()
+		queue_redraw()
 
 
 func _mode() -> String:
@@ -188,6 +210,7 @@ func _refresh_title() -> void:
 
 # R151 P1-11：增删补间 —— 每张卡按 id 记「当前显示位置」，目标位变了就从旧位滑过去（200ms）。
 var _tween := {}   # uid(int) -> {from: Vector2, t0: int}（R157：键从卡 id 改成实例号）
+var _last_mp := Vector2.INF      # R186：上次重绘时的鼠标位置（不动不重绘）
 var _shown := {}   # uid(int) -> Vector2（当前显示位置；没有 = 还没画过，直接落目标位）
 
 
@@ -201,55 +224,23 @@ func _reset_uids() -> void:
 
 
 func _layout() -> void:
-	## 平铺网格：先在「列数 1..n」里挑出让卡面最大的那种排法，
-	## 同等大小时优先「每行都排满」的列数，其次列数更多（更扁更顺眼）。
-	##
-	## ⚠️ 间距与卡高**互相依赖**：间距必须装得下骑在框上的数值（≥ 2 × 图标半径），
-	## 而图标半径由卡高决定。所以**排两次**：先用基准间距试排出卡高，
-	## 用它反算真实间距，再排一次。两次就收敛，两个方向都不会出错。
-	var n := _cards.size()
-	if n <= 0:
+	## R191：固定 5 列大卡。卡宽由可用宽度决定（适配各种屏幕），卡高按宽高比换算、
+	## 封顶 CARD_MAX_H；内容高超视区就走滚动（`_scroll`）。
+	if _clip == null:
 		return
-	var area_w: float = maxf(120.0, size.x - MARGIN * 2.0)
-	var area_h: float = maxf(60.0, size.y - TOP_Y - BOTTOM_RESERVE)
-	var probe := _fit(area_w, area_h, GAP_BASE)
-	_gap = maxf(GAP_BASE, 2.0 * UiTheme.CARD_BLEED
-			* minf(float(probe[0]) / CardFace.CARD_H_DESIGN, UiTheme.CARD_BADGE_SCALE_CAP))
-	var best := _fit(area_w, area_h, _gap)
-	_ch = maxf(float(best[0]), CARD_MIN_H)
-	_cw = _ch * RATIO
-	_cols = int(best[1])
-	var rows2 := int(ceil(float(n) / float(_cols)))
-	var grid_h: float = rows2 * _ch + (rows2 - 1) * _gap
-	_grid_y = TOP_Y + maxf(0.0, (area_h - grid_h) / 2.0)   # 网格整块垂直居中
+	var area_w: float = maxf(200.0, size.x - MARGIN * 2.0)
+	_cw = minf((area_w - GAP * (COLS - 1)) / float(COLS), CARD_MAX_H * RATIO)
+	_ch = _cw / RATIO
+	_clip.position = Vector2(MARGIN, TOP_Y)
+	_clip.size = Vector2(area_w, maxf(60.0, size.y - TOP_Y - BOTTOM_RESERVE))
+	var rows := maxi(1, int(ceil(float(maxi(_cards.size(), 1)) / float(COLS))))
+	_grid.size = Vector2(area_w, GRID_PAD_TOP + rows * (_ch + GAP) - GAP)
+	_clamp_scroll()
 
 
-func _fit(area_w: float, area_h: float, gap: float) -> Array:
-	## 在**给定间距**下挑「卡面最大」的列数 → `[卡高, 列数]`。
-	## 抽成独立函数是为了让 `_layout()` 能换着间距排两次（间距与卡高互相依赖）。
-	var n := _cards.size()
-	var best_h := 0.0
-	var best_cols := 1
-	for cols in range(1, n + 1):
-		var rows := int(ceil(float(n) / float(cols)))
-		var w_limit: float = (area_w - gap * (cols - 1)) / float(cols)   # 列宽上限
-		var h_limit: float = (area_h - gap * (rows - 1)) / float(rows)   # 行高上限
-		# 卡面高度同时受行高、列宽（按宽高比换算）与上限约束
-		var ch: float = minf(minf(h_limit, w_limit / RATIO), CARD_MAX_H)
-		if ch <= 0.0:
-			continue
-		var full: bool = (n % cols) == 0      # 该列数能把最后一行也排满
-		var best_full: bool = (n % best_cols) == 0
-		var better := false
-		if ch > best_h + 0.001:
-			better = true
-		elif absf(ch - best_h) <= 0.001 and ((full and not best_full)
-				or (full == best_full and cols > best_cols)):
-			better = true
-		if better:
-			best_h = ch
-			best_cols = cols
-	return [best_h, best_cols]
+func _clamp_scroll() -> void:
+	_scroll = clampf(_scroll, 0.0, maxf(0.0, _grid.size.y - _clip.size.y))
+	_grid.position = Vector2(0, -_scroll)
 
 
 func _tweened_rect(i: int, target: Rect2, now_ms: int) -> Rect2:
@@ -274,24 +265,20 @@ func _tweened_rect(i: int, target: Rect2, now_ms: int) -> Rect2:
 	return Rect2(cur, target.size)
 
 
-func _row_count(r: int) -> int:
-	## 第 r 行实际有几张卡（最后一行可能不满）。
-	return clampi(_cards.size() - r * _cols, 0, _cols)
-
-
 func _row_x0(r: int) -> float:
-	## 每行单独水平居中，最后一行不满时也居中（不左对齐留空）。
-	var cnt := _row_count(r)
-	var w: float = cnt * _cw + maxf(0.0, cnt - 1) * _gap
-	return MARGIN + maxf(0.0, (size.x - MARGIN * 2.0 - w) / 2.0)
+	## 每行单独水平居中（grid 本地坐标），最后一行不满时也居中。
+	var cnt := clampi(_cards.size() - r * COLS, 0, COLS)
+	var w: float = cnt * _cw + maxf(0.0, cnt - 1) * GAP
+	return maxf(0.0, (_clip.size.x - w) / 2.0)
 
 
 func _card_rect(i: int) -> Rect2:
-	if _cols <= 0 or _cw <= 0.0:
+	## 第 i 张卡在 **grid 本地坐标系**里的矩形（补间键用它，滚动不影响补间）。
+	if _cw <= 0.0:
 		return Rect2()
-	var r := i / _cols
-	var c := i % _cols
-	return Rect2(Vector2(_row_x0(r) + c * (_cw + _gap), _grid_y + r * (_ch + _gap)),
+	var r := i / COLS
+	var c := i % COLS
+	return Rect2(Vector2(_row_x0(r) + c * (_cw + GAP), GRID_PAD_TOP + r * (_ch + GAP)),
 			Vector2(_cw, _ch))
 
 
@@ -305,6 +292,34 @@ func _draw() -> void:
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_ON_DARK)
 		return
 	_layout()
+	# R191 描述条：卡面只留卡名 → 点选/悬停的卡在这里读描述（画在网格区之下、按钮之上）
+	var desc_idx := _hover
+	if desc_idx < 0 and not _sel.is_empty():
+		desc_idx = _sel[-1]
+	if desc_idx >= 0 and desc_idx < _cards.size():
+		var dc := repo.get_card(_cards[desc_idx])
+		if dc != null:
+			var dr := Rect2(MARGIN, size.y - BOTTOM_RESERVE + 6.0,
+					size.x - MARGIN * 2.0, DESC_H)
+			draw_rect(dr, Color(0.08, 0.07, 0.12, 0.88))
+			draw_rect(dr, Color("ffd27d"), false, 1.2)
+			draw_string(_font_bold, dr.position + Vector2(14, 26), dc.card_name,
+					HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_BODY, Color("ffd27d"))
+			draw_string(_font, dr.position + Vector2(14, 48),
+					"%s · %d 费 · %s" % [dc.kind, dc.cost, dc.rarity_name()],
+					HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_CAPTION, Color("9a94a8"))
+			var lines := CardFace.wrap_text(_font, CardText.naturalize(dc.effect_text),
+					dr.size.x - 210.0, UiTheme.FS_BODY)
+			for li in mini(lines.size(), 3):
+				draw_string(_font, dr.position + Vector2(196, 24 + li * 20), lines[li],
+						HORIZONTAL_ALIGNMENT_LEFT, dr.size.x - 210.0, UiTheme.FS_BODY, Color("e8e2d4"))
+	if _result != "":
+		draw_string(_font_bold, Vector2(0, size.y - 72), _result,
+				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("c8e6a0"))
+
+
+func _draw_grid() -> void:
+	## 卡片网格（`_grid` 子节点自绘，本地坐标；滚出 `_clip` 视区的部分被裁掉）。
 	var now_ms := Time.get_ticks_msec()
 	for i in _cards.size():
 		var rect := _card_rect(i)
@@ -315,34 +330,32 @@ func _draw() -> void:
 		var hovered := i == _hover and not _done and not selected
 		# 高亮底衬：选中 = 红底 + 金边发光；悬停 = 白色微亮
 		if selected:
-			draw_rect(rect.grow(UiTheme.CARD_BLEED), Color(0.80, 0.18, 0.14, 0.34), true)
-			draw_rect(rect.grow(UiTheme.CARD_BLEED), UiTheme.ACCENT_GOLD, false, 2.0)
+			_grid.draw_rect(rect.grow(UiTheme.CARD_BLEED), Color(0.80, 0.18, 0.14, 0.34), true)
+			_grid.draw_rect(rect.grow(UiTheme.CARD_BLEED), UiTheme.ACCENT_GOLD, false, 2.0)
 		elif hovered:
-			draw_rect(rect.grow(5.0), Color(1, 1, 1, 0.10), true)
+			_grid.draw_rect(rect.grow(5.0), Color(1, 1, 1, 0.10), true)
 		var c := repo.get_card(_cards[i])
 		if c != null:
-			CardFace.draw(self, c, rect, c.health, selected, false, _font, _font_bold)
+			# R191：选卡场景卡面只留卡名（描述在底部描述条读）
+			CardFace.draw_pick(_grid, c, rect, _font, _font_bold, selected)
 		if selected:
-			_draw_check_badge(rect)
+			_draw_check_badge(_grid, rect)
 	# R151 P1-11：清理已移除卡的残留位置记录（它们的槽位已被别的卡滑过来补上）
 	for old_id in _shown.keys():
 		if not _uids.has(old_id):
 			_shown.erase(old_id)
 			_tween.erase(old_id)
-	if _result != "":
-		draw_string(_font_bold, Vector2(0, size.y - 72), _result,
-				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("c8e6a0"))
 
 
-func _draw_check_badge(rect: Rect2) -> void:
+func _draw_check_badge(canvas: CanvasItem, rect: Rect2) -> void:
 	## 选中角标：卡面右上角的红色对勾圆（不依赖字体，一定画得出来）。
 	var r := clampf(rect.size.y * 0.075, 7.0, 12.0)
 	var c := rect.position + Vector2(rect.size.x - r - 2.0, r + 2.0)
-	draw_circle(c, r, UiTheme.STAT_HEALTH)
-	draw_circle(c, r, Color("f4d47a"), false, 1.5)
+	canvas.draw_circle(c, r, UiTheme.STAT_HEALTH)
+	canvas.draw_circle(c, r, Color("f4d47a"), false, 1.5)
 	var s := r / 9.0
-	draw_line(c + Vector2(-4.0, 0.0) * s, c + Vector2(-1.0, 3.4) * s, Color.WHITE, 2.0 * s)
-	draw_line(c + Vector2(-1.0, 3.4) * s, c + Vector2(4.6, -3.2) * s, Color.WHITE, 2.0 * s)
+	canvas.draw_line(c + Vector2(-4.0, 0.0) * s, c + Vector2(-1.0, 3.4) * s, Color.WHITE, 2.0 * s)
+	canvas.draw_line(c + Vector2(-1.0, 3.4) * s, c + Vector2(4.6, -3.2) * s, Color.WHITE, 2.0 * s)
 
 
 # ------------------------------------------------------------ 交互
@@ -377,17 +390,75 @@ func _on_back_to_title() -> void:
 func _gui_input(event: InputEvent) -> void:
 	if _done:
 		return
-	if event is InputEventMouseMotion:
-		var idx := _index_at(event.position)
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		# R191：滚轮滚动网格
+		if mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
+			_scroll -= WHEEL_STEP
+			_clamp_scroll()
+			accept_event()
+			return
+		if mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
+			_scroll += WHEEL_STEP
+			_clamp_scroll()
+			accept_event()
+			return
+		if mb.button_index == MOUSE_BUTTON_LEFT and not _cards.is_empty():
+			if mb.pressed:
+				_press = {"pos": mb.position, "scroll": _scroll, "moved": false}
+			else:
+				var moved: bool = _press.get("moved", true)
+				_press = {}
+				if not moved:
+					var pick := _index_at(mb.position)
+					if pick >= 0:
+						_toggle_sel(pick)     # 只改选中，不立即生效：可以反复改选
+						sfx.play("click")
+						_refresh_ui()
+						queue_redraw()        # 描述条跟着换
+			accept_event()
+			return
+	elif event is InputEventMouseMotion:
+		var mm := event as InputEventMouseMotion
+		if not _press.is_empty():
+			# R191：按住拖动 = 滚动网格
+			var dy: float = mm.position.y - (_press["pos"] as Vector2).y
+			if absf(dy) > DRAG_SLOP:
+				_press["moved"] = true
+			if _press.get("moved", false):
+				_scroll = (_press["scroll"] as float) - dy
+				_clamp_scroll()
+			accept_event()
+			return
+		var idx := _index_at(mm.position)
 		if idx != _hover:
 			_hover = idx
-	elif event is InputEventMouseButton and event.pressed \
-			and event.button_index == MOUSE_BUTTON_LEFT and not _cards.is_empty():
-		var pick := _index_at(event.position)
-		if pick >= 0:
-			_toggle_sel(pick)     # 只改选中，不立即生效：可以反复改选
-			sfx.play("click")
-			_refresh_ui()
+	elif event is InputEventScreenTouch:
+		# R191：触屏 —— 按下/抬指=点选，拖动=滚动（与鼠标同一套手势）
+		var st := event as InputEventScreenTouch
+		if st.pressed:
+			_press = {"pos": st.position, "scroll": _scroll, "moved": false}
+		else:
+			var moved2: bool = _press.get("moved", true)
+			_press = {}
+			if not moved2 and not _cards.is_empty():
+				var pick2 := _index_at(st.position)
+				if pick2 >= 0:
+					_toggle_sel(pick2)
+					sfx.play("click")
+					_refresh_ui()
+					queue_redraw()
+		accept_event()
+	elif event is InputEventScreenDrag:
+		var sd := event as InputEventScreenDrag
+		if not _press.is_empty():
+			var dy2: float = sd.position.y - (_press["pos"] as Vector2).y
+			if absf(dy2) > DRAG_SLOP:
+				_press["moved"] = true
+			if _press.get("moved", false):
+				_scroll = (_press["scroll"] as float) - dy2
+				_clamp_scroll()
+		accept_event()
 
 
 func _toggle_sel(pick: int) -> void:
@@ -402,10 +473,14 @@ func _toggle_sel(pick: int) -> void:
 
 
 func _index_at(pos: Vector2) -> int:
-	_layout()
+	## 屏幕坐标 → 格子下标（-1 = 没点中）。先判在不在网格视区内（视区外不命中），
+	## 再换算 grid 本地坐标（加滚动偏移）。
+	if _clip == null or not Rect2(_clip.position, _clip.size).has_point(pos):
+		return -1
+	var local := pos - _clip.position - _grid.position
 	for i in _cards.size():
 		var rect := _card_rect(i)
-		if rect.size.x > 0.0 and rect.grow(4.0).has_point(pos):
+		if rect.size.x > 0.0 and rect.grow(4.0).has_point(local):
 			return i
 	return -1
 

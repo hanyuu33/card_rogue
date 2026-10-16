@@ -186,6 +186,7 @@ UiTheme.<颜色|字号|间距令牌>            # 其余
 | 职业徽标 ×3 | `assets/ui/class_<forest｜rogue｜mech>.png` | 128 × 128（透明圆徽） | 1:1 | 不画徽标、只写字（R154） |
 | 职业 CG ×3 | `assets/ui/class_cg_<forest｜rogue｜mech>.png` | 1280 × 720（16:9） | 1.78 | `SCREEN_BG` 纯色（R166） |
 | 职业头像 ×3 | `assets/ui/class_avatar_<forest｜rogue｜mech>.png` | 128 × 128（**只有头**、透明） | 1:1 | 职业圆徽 `class_<键>.png`（R166） |
+| 选卡页返回图标 | `assets/ui/icon_back.png` | 64 × 64（透明底） | 1:1 | 程序画「←」字符（R189） |
 
 **技术要点**
 

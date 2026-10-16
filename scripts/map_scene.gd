@@ -116,6 +116,8 @@ var _font: Font
 var _font_bold: Font
 var sfx: Sfx
 var _t := 0.0
+var _pulse_redraw_at := 0     # R186：呼吸/脉冲节流重绘的下次许可时刻（ms）
+var _pulse_ms := 0            # R187：实际节流窗口（懒初始化；安卓 ×2，PC 45ms 不变）
 var _hover_id := -1
 var _mouse := Vector2.ZERO
 var _records_visible := false
@@ -359,6 +361,18 @@ func _gui_input(event: InputEvent) -> void:
 	# 进场过场播放中：屏蔽一切输入（这 1.5 秒地图不接受操作，免得点穿）
 	if not _anim_cell.is_empty():
 		return
+	# ---- R177：标记模式按钮 —— **任何状态都可点**（含「关」态激活）----
+	# ⚠️ R184 修：按钮命中原来只判在 `_handle_mark_input` 里，而那个函数仅在
+	# `_mark_mode >= 0` 之后才走 → 关态（-1）点按钮掉进下面的普通地图分支，
+	# 该坐标又不在任何格子上 → 直接 return，**标记功能永远开不了口**。
+	# 按钮必须判在模式分支**之前**；回放只读，按钮同样不响应。
+	if not ReplayLog.playing and event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT:
+		var mbi := _mark_btn_at(event.position)
+		if mbi >= 0:
+			# 再点一次当前模式的按钮 = 收起（回到纯地图模式）
+			_mark_set_mode(-1 if _mark_mode == mbi else mbi)
+			return
 	# ---- R177：标记模式激活时，这一块输入全归标记所有 ----
 	# 不 hover 房间、点击也不进房间（否则画一笔就进战斗了）。再点一次当前模式
 	# 的按钮 = 收起，行为与旧版完全一致。
@@ -513,7 +527,7 @@ func _process(delta: float) -> void:
 			_commit_enter(entered)
 	elif _boss_hold > 0.0:
 		_boss_hold = maxf(0.0, _boss_hold - delta)
-	queue_redraw()
+	_map_pulse_redraw()   # R186：呼吸/脉冲动画 45ms 节流（R180 同款，原来每帧全量重绘）
 	# 巧克力耗尽 → 等当前房间的内容结算完（进过场走完 / 奖励弹窗关掉 / 战斗与事件回来）
 	# 再开 Boss 战。R179：原来这里没排除「进场过场播放中」，于是最后一格的过场还在播时
 	# 入夜暗罩就已经盖上来了（用户报）；现在过场期间（`_anim_cell` 非空）与缓冲期内都不触发。
@@ -522,6 +536,19 @@ func _process(delta: float) -> void:
 			and _boss_hold <= 0.0 and _anim_cell.is_empty() \
 			and (_reward_panel == null or not _reward_panel.is_open()):
 		_trigger_boss_alert()
+
+
+func _map_pulse_redraw() -> void:
+	## R186：呼吸/脉冲动画的节流重绘 —— 每 45ms 才真正 queue_redraw。
+	## 动画相位基于 _t（重绘时自动取当前相位），22fps 采样视觉依然平滑（R180 结论）。
+	if _pulse_ms <= 0:
+		# R187：安卓脉冲窗口 ×2（45→90ms）。⚠️ OS 门控：PC 端保持 45ms 原样。
+		_pulse_ms = 90 if OS.get_name() == "Android" else 45
+	var n := Time.get_ticks_msec()
+	if n < _pulse_redraw_at:
+		return
+	_pulse_redraw_at = n + _pulse_ms
+	queue_redraw()
 
 
 func _trigger_boss_alert() -> void:
@@ -1074,11 +1101,7 @@ func _handle_mark_input(event: InputEvent) -> void:
 		queue_redraw()
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
-		var bi := _mark_btn_at(event.position)
-		if bi >= 0:
-			# 再点一次当前模式的按钮 = 收起（回到纯地图模式）
-			_mark_set_mode(-1 if _mark_mode == bi else bi)
-			return
+		# 按钮命中已在 `_gui_input` 前置处理（关态也要能激活），这里只认画布
 		_mark_drawing = true
 		if _mark_mode == MARK_PEN:
 			_mark_cur = PackedVector2Array([_mark_clamp(event.position)])

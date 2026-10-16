@@ -114,9 +114,11 @@ func _setup_shop() -> void:
 
 
 func _process(delta: float) -> void:
+	# R186：只在提示淡出动画期间逐帧重绘（原来无条件每帧重绘）；
+	# 悬停高亮由 _on_motion 事件驱动重绘。
 	if _hint_t > 0.0:
 		_hint_t -= delta
-	queue_redraw()
+		queue_redraw()
 
 
 # ------------------------------------------------------------ 布局（自适应）

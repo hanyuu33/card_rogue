@@ -24,6 +24,13 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const HIDE_PARENS := true
 
+## R187 性能：`parse` 是纯函数（输入串 → 片段数组），但每张卡每次重绘都要走一遍
+## 「词句归一 + 括号剥离 + 提及扫描」。一局里输入串高度重复（卡就那两百来张），
+## 缓存命中后只剩一次字典查询。返回**副本**（浅拷贝），调用方增删片段不伤缓存；
+## 满 PARSE_CACHE_MAX 全清重来（极端长局也就重新填一次，无 correctness 风险）。
+const PARSE_CACHE_MAX := 512
+static var _parse_cache := {}
+
 ## 代码片段（`反引号`）的着色 —— 与正文的蓝色刻意分开，一眼能认出来。
 ## 关键字高亮色统一由 UiTheme 提供（R113）。
 
@@ -127,6 +134,10 @@ static func strip_parens(s: String) -> String:
 static func parse(md: String, hide_parens := HIDE_PARENS) -> Array:
 	## 解析极简 Markdown → 片段数组：[{text, bold, italic, code}, ...]
 	## 支持 `**加粗**`、`*斜体*`、`` `代码` ``。标记不成对时按字面保留（不吞字）。
+	## ⚠️ R187：返回的是缓存的**浅副本** —— 片段 Dictionary 请勿原地改写。
+	var ck := ("1" if hide_parens else "0") + "|" + md
+	if _parse_cache.has(ck):
+		return (_parse_cache[ck] as Array).duplicate()
 	var s: String = naturalize_phrases(md)
 	if hide_parens:
 		s = strip_parens(s)
@@ -169,7 +180,11 @@ static func parse(md: String, hide_parens := HIDE_PARENS) -> Array:
 	# R168：把「提到的卡牌 / 道具名」切出来（自动换色 + 可悬浮）。
 	# ⚠️ 切出来的片段**保留含标记的原文**（`「名字」`），所以 `naturalize()` 的输出
 	#    与历史逐字一致 —— 老的断言不会因为这次改动而变；颜色只体现在绘制层。
-	return mark_mentions(segs)
+	var parsed: Array = mark_mentions(segs)
+	if _parse_cache.size() >= PARSE_CACHE_MAX:
+		_parse_cache.clear()
+	_parse_cache[ck] = parsed
+	return parsed.duplicate()
 
 
 static func _mention_seg(seg: Dictionary, token: String, name: String,

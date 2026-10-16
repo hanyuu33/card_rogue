@@ -49,7 +49,6 @@ const FOOT_H := 66.0          # 面板底部按钮带高度
 const CARD_W := 216.0
 const CARD_H := 260.0
 const CARD_GAP := 44.0
-const CARDS_Y := 152.0
 const DETAIL_STRIP_H := 152.0   # R155：悬停详情 = 三张卡正下方的横条（与卡组同一左右边界）
 
 var _root: Control
@@ -164,7 +163,8 @@ func _process(_delta: float) -> void:
 	if _cached_n != RunState.pending_reward_count():
 		_refresh_btn()
 	if _open:
-		_root.queue_redraw()
+		# R186：面板绘制无时间基元素（悬停 / 滚动 / 提及悬浮均由事件驱动重绘）
+		# → 不再逐帧重绘（移动端耗电；PC 端闲置占用同步下降）。
 		_replay_tick()
 
 
@@ -340,8 +340,8 @@ func _on_draw() -> void:
 
 
 func _draw_panel_box(r: Rect2) -> void:
-	_root.draw_rect(r, UiTheme.PAPER)
-	_root.draw_rect(r, UiTheme.ACCENT_GOLD, false, 2.0)
+	## R191：羊皮卷底（九宫格自适应，**无边框** —— 用户口径「换成羊皮卷风格的底」）。
+	UiTheme.draw_scroll_bg(_root, r)
 
 
 func _draw_list() -> void:
@@ -379,11 +379,11 @@ func _draw_list() -> void:
 			break
 	if any_relic:
 		_draw_btn(all, "领取全部道具", true, false)
-		_root.draw_string(_font, Vector2(r.position.x + PAD, done.position.y + 25),
+		_root.draw_string(_font, Vector2(r.position.x + PAD, done.position.y + 12),
 				"「领取全部道具」不碰卡牌奖励 —— 卡牌要自己挑一张",
 				HORIZONTAL_ALIGNMENT_LEFT, 560, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	else:
-		_root.draw_string(_font, Vector2(r.position.x + PAD, done.position.y + 25),
+		_root.draw_string(_font, Vector2(r.position.x + PAD, done.position.y + 12),
 				"卡牌奖励需要点进去挑一张（不能一键领取）" if pend > 0 else "全部奖励都已处理，可以点「完成」",
 				HORIZONTAL_ALIGNMENT_LEFT, 620, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	_draw_btn(done, "完成", false, false)
@@ -470,15 +470,23 @@ func _draw_relic() -> void:
 	var claim := _btn_claim_rect()
 	var skip := _btn_skip_rect()
 	if settled:
-		_root.draw_string(_font, Vector2(r.position.x + PAD, claim.position.y + 25),
+		_root.draw_string(_font, Vector2(r.position.x + PAD, claim.position.y + 12),
 				"这条已经%s了（不可再操作）" % ("领取" if _state_label(e) == "已领取" else "放弃"),
 				HORIZONTAL_ALIGNMENT_LEFT, 420, UiTheme.FS_BODY, UiTheme.INK_500)
 	else:
-		_root.draw_string(_font, Vector2(r.position.x + PAD, claim.position.y + 25),
+		_root.draw_string(_font, Vector2(r.position.x + PAD, claim.position.y + 12),
 				"「返回列表」不会丢掉它 —— 可以随时再点进来看、再领取。",
 				HORIZONTAL_ALIGNMENT_LEFT, 480, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	_draw_btn(skip, "放弃这件", false, settled)
 	_draw_btn(claim, "领取" if not settled else "已处理", true, settled)
+
+
+func _cards_panel_rect() -> Rect2:
+	## 卡牌三选一的羊皮卷面板（R191）：屏幕居中，留边适配各种屏幕。
+	var vs := _vs()
+	var pw := minf(vs.x - 72.0, 1056.0)
+	var ph := minf(vs.y - 56.0, 668.0)
+	return Rect2(Vector2((vs.x - pw) / 2.0, (vs.y - ph) / 2.0), Vector2(pw, ph))
 
 
 func _draw_cards() -> void:
@@ -488,23 +496,24 @@ func _draw_cards() -> void:
 	var e: Dictionary = RunState.pending_rewards[_sel]
 	var settled := _settled(e)
 	var vs := _vs()
-	# 卡牌视图是**整屏**的（三张卡 + 右侧详情），所以先铺一层不透明底：
-	# 否则会透出下面的战场 / 事件页，卡面与标题糊在背景里读不清（实测复核过）。
-	_root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.914, 0.906, 0.886), true)
+	# R191：整屏米白底 → **暗化罩 + 中央羊皮卷面板**（不透明，下层战场不会糊进来）。
+	_root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.045, 0.08, 0.86), true)
+	var pr := _cards_panel_rect()
+	UiTheme.draw_scroll_bg(_root, pr)
 	var total := 3 * CARD_W + 2 * CARD_GAP
-	var x0 := (vs.x - total) / 2.0
+	var x0 := pr.position.x + (pr.size.x - total) / 2.0
 	var cands: Array = e.get("candidates", [])
-	_root.draw_string(_font_bold, Vector2(0, 44),
+	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
 			"卡牌奖励 —— 点一张看说明，再确认加入卡组（%s）" % _entry_tag(e),
-			HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, Color("2f2a20"))
-	_root.draw_string(_font, Vector2(0, 74),
+			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_HEADING, Color("2f2a20"))
+	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 76),
 			"「%s」" % ("已领取：选了其中一张" if settled else "看完随时可以点下面「返回列表」"),
-			HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, UiTheme.INK_600)
+			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
 	for i in cands.size():
 		var card: CardData = _repo_cards.get_card(int(cands[i]))
 		if card == null:
 			continue
-		var rr := Rect2(x0 + i * (CARD_W + CARD_GAP), CARDS_Y, CARD_W, CARD_H)
+		var rr := Rect2(x0 + i * (CARD_W + CARD_GAP), _cards_y(), CARD_W, CARD_H)
 		var is_pick := i == _pick_sel and not settled
 		var hov := (i == _hover_card or is_pick) and not settled
 		if hov:
@@ -512,7 +521,7 @@ func _draw_cards() -> void:
 			if is_pick:
 				# R167：已点选（待确认）那张补一圈金边 —— 触屏没有悬停，得让「我选了哪张」看得见
 				_root.draw_rect(rr.grow(9.0), UiTheme.ACCENT_GOLD, false, 3.0)
-		CardFace.draw(_root, card, rr, card.health, false, false, _font, _font_bold)
+		CardFace.draw_pick(_root, card, rr, _font, _font_bold, false)   # R191：只留卡名
 		# R155：稀有度铭牌 —— 宽度按文字实测（旧版写死 90px，和 216 宽的卡面对不上），
 		# 深色底条压在**这张卡自己的中轴**正下方。
 		var rn := card.rarity_name()
@@ -530,14 +539,14 @@ func _draw_cards() -> void:
 				_root.draw_rect(rr.grow(4.0), UiTheme.ACCENT_GOLD, false, 3.0)
 	# 悬停详情（卡面放不下效果文本）
 	_draw_card_detail(cands)
-	_draw_btn(_btn_back_rect(), "← 返回列表", false, false)
+	_draw_btn(_btn_cards_back_rect(), "← 返回列表", false, false)
 	_draw_btn(_btn_cards_skip_rect(), "放弃这组", false, settled)
 	# R167：确认按钮（触屏必需 —— 没有悬停就得靠它「先看后拿」）
 	var can_pick := (not settled) and _pick_sel >= 0 and _pick_sel < cands.size()
 	_draw_btn(_btn_confirm_rect(), "确认选择这张", true, not can_pick)
-	_root.draw_string(_font, Vector2(0, vs.y - 100),
+	_root.draw_string(_font, Vector2(pr.position.x, pr.end.y - 66.0),
 			"点一张卡先看说明 → 再点「确认选择这张」加入卡组" if not settled else "这组已经处理过了",
-			HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_CAPTION, UiTheme.INK_600)
+			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_CAPTION, UiTheme.INK_600)
 
 
 func _draw_card_detail(cands: Array) -> void:
@@ -550,16 +559,11 @@ func _draw_card_detail(cands: Array) -> void:
 	var card: CardData = _repo_cards.get_card(int(cands[idx]))
 	if card == null:
 		return
-	var vs := _vs()
-	var total := 3 * CARD_W + 2 * CARD_GAP
-	var x0 := (vs.x - total) / 2.0
-	var box := Rect2(x0, CARDS_Y + CARD_H + 42.0, total,
-			minf(DETAIL_STRIP_H, vs.y - (CARDS_Y + CARD_H + 42.0) - 92.0))
-	# R164：白底 → **羊皮纸**（与卡面文字区同一种底）；R170 起铺**羊皮纸底纹素材**
-	# （`UiTheme.draw_panel_bg`，任意大小自适应）。外框随缎带落地改金 ——
-	# 稀有度已由卡面右上角的缎带表达，不再用颜色条描边。
-	UiTheme.draw_panel_bg(_root, box)
-	_root.draw_rect(box, UiTheme.ACCENT_GOLD, false, 2.0)
+	var pr2 := _cards_panel_rect()
+	var box := Rect2(pr2.position.x + 36.0, _cards_y() + CARD_H + 42.0, pr2.size.x - 72.0,
+			minf(DETAIL_STRIP_H, pr2.end.y - (_cards_y() + CARD_H + 42.0) - 76.0))
+	# R191：羊皮卷面板**内**的详情条 —— 淡色半透明底（透出羊皮卷纹理），无边框。
+	_root.draw_rect(box, Color(0.99, 0.97, 0.90, 0.55), true)
 	var pad := 14.0
 	var col_w := 230.0
 	var y := box.position.y + 27.0
@@ -630,22 +634,34 @@ func _btn_skip_rect() -> Rect2:
 	return Rect2(c.position.x - 150.0, c.position.y, 136.0, 38.0)
 
 
+func _cards_y() -> float:
+	## 三张卡的顶边（面板内，R191）。
+	return _cards_panel_rect().position.y + 104.0
+
+
+func _btn_cards_back_rect() -> Rect2:
+	## 卡牌三选一的「← 返回列表」（R191：挪到羊皮卷面板左下；列表/道具视图的
+	## `_btn_back_rect` 在面板**顶部**，两者位置不同不能共用）。
+	var pr := _cards_panel_rect()
+	return Rect2(pr.position.x + 36.0, pr.end.y - 56.0, 130.0, 38.0)
+
+
 func _btn_cards_skip_rect() -> Rect2:
-	var vs := _vs()
-	return Rect2(vs.x / 2.0 - 210.0, vs.y - 84.0, 140.0, 38.0)
+	var pr := _cards_panel_rect()
+	return Rect2(pr.position.x + pr.size.x / 2.0 - 160.0, pr.end.y - 56.0, 140.0, 38.0)
 
 
 func _btn_confirm_rect() -> Rect2:
 	## R167：卡牌三选一的「确认选择这张」（放在「放弃这组」右侧）。
-	var vs := _vs()
-	return Rect2(vs.x / 2.0 + 20.0, vs.y - 84.0, 190.0, 38.0)
+	var pr := _cards_panel_rect()
+	return Rect2(pr.position.x + pr.size.x / 2.0 + 20.0, pr.end.y - 56.0, 190.0, 38.0)
 
 
 func _card_rect_in(e: Dictionary, i: int) -> Rect2:
-	var vs := _vs()
+	var pr := _cards_panel_rect()
 	var total := 3 * CARD_W + 2 * CARD_GAP
-	var x0 := (vs.x - total) / 2.0
-	return Rect2(x0 + i * (CARD_W + CARD_GAP), CARDS_Y, CARD_W, CARD_H)
+	var x0 := pr.position.x + (pr.size.x - total) / 2.0
+	return Rect2(x0 + i * (CARD_W + CARD_GAP), _cards_y(), CARD_W, CARD_H)
 
 
 # ------------------------------------------------------------ 输入
@@ -717,7 +733,7 @@ func _on_click(pos: Vector2) -> void:
 				_skip_entry(_sel)
 				return
 		VIEW_CARDS:
-			if _btn_back_rect().has_point(pos):
+			if _btn_cards_back_rect().has_point(pos):
 				_back_to_list()
 				return
 			if _btn_cards_skip_rect().has_point(pos):

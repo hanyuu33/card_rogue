@@ -57,10 +57,6 @@ func _ready() -> void:
 	})
 
 
-func _process(_delta: float) -> void:
-	queue_redraw()   # 悬停跟随
-
-
 # ──────────────────────────────────────────────────────────────
 # 几何（绘制与命中**同源**，改版式只改这里）
 # ──────────────────────────────────────────────────────────────
@@ -238,7 +234,9 @@ func _gui_input(event: InputEvent) -> void:
 		for i in PlayerClass.ids().size():
 			if _av_rect(i).grow(5.0).has_point(event.position):
 				idx = i
-		_hover = idx
+		if idx != _hover:
+			_hover = idx
+			queue_redraw()   # R186：悬停变化才重绘（原来靠 _process 每帧重绘）
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos: Vector2 = event.position
@@ -250,11 +248,13 @@ func _gui_input(event: InputEvent) -> void:
 				if _diff_rect(i).has_point(pos):
 					RunState.set_difficulty(i)
 					sfx.play("click")
+					queue_redraw()   # R186（原来靠 _process 每帧重绘）
 					return
 		for i in PlayerClass.ids().size():
 			if _av_rect(i).grow(5.0).has_point(pos):
 				_selected = i
 				sfx.play("click")
+				queue_redraw()   # R186（原来靠 _process 每帧重绘）
 				return
 
 

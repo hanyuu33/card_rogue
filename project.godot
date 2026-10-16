@@ -8,7 +8,7 @@ config_version=5
 config/name="卡牌肉鸽"
 run/main_scene="res://scenes/title.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
-config/icon="res://assets/cardback.png"
+config/icon="res://assets/ui/icon_android_legacy.png"
 
 [display]
 
@@ -20,6 +20,7 @@ window/stretch/aspect="expand"
 [autoload]
 
 TopBar="*res://scripts/top_bar.gd"
+BackKey="*res://scripts/back_key.gd"
 
 [rendering]
 

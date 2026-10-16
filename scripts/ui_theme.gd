@@ -700,6 +700,50 @@ static func draw_panel_bg(canvas: CanvasItem, rect: Rect2) -> void:
 		canvas.draw_rect(rect, PANEL_PAPER_BG)
 
 
+const SCROLL_EDGE := 0.16   # 羊皮卷九宫格：角块取源图宽/高的 16%
+
+
+static func draw_scroll_bg(canvas: CanvasItem, rect: Rect2) -> void:
+	## 羊皮卷面板底（R191，**唯一口**）：整张卷轴九宫格 —— 四角原样、四边单向拉伸、
+	## 中心双向拉伸，任意面板尺寸自适应且破损边不变形。**没有边框**（用户口径：
+	## 羊皮卷的边就是边界）。缺图回退 `draw_panel_bg` 平铺羊皮纸。
+	var tex: Texture2D = UiAssets.scroll_parchment()
+	if tex == null:
+		draw_panel_bg(canvas, rect)
+		return
+	var ts := tex.get_size()
+	var sx := ts.x * SCROLL_EDGE
+	var sy := ts.y * SCROLL_EDGE
+	var dx := minf(sx, rect.size.x / 2.0)
+	var dy := minf(sy, rect.size.y / 2.0)
+	# 角块按面板比例缩放（小面板上角块跟着缩，边仍然完整）
+	var corners := [
+		[Rect2(0, 0, sx, sy), Rect2(rect.position, Vector2(dx, dy))],
+		[Rect2(ts.x - sx, 0, sx, sy), Rect2(rect.end.x - dx, rect.position.y, dx, dy)],
+		[Rect2(0, ts.y - sy, sx, sy), Rect2(rect.position.x, rect.end.y - dy, dx, dy)],
+		[Rect2(ts.x - sx, ts.y - sy, sx, sy), Rect2(rect.end - Vector2(dx, dy), Vector2(dx, dy))],
+	]
+	for pair in corners:
+		canvas.draw_texture_rect_region(tex, pair[1], pair[0])
+	# 四边（单向拉伸）
+	canvas.draw_texture_rect_region(tex,
+			Rect2(rect.position.x + dx, rect.position.y, rect.size.x - dx * 2.0, dy),
+			Rect2(sx, 0, ts.x - sx * 2.0, sy))
+	canvas.draw_texture_rect_region(tex,
+			Rect2(rect.position.x + dx, rect.end.y - dy, rect.size.x - dx * 2.0, dy),
+			Rect2(sx, ts.y - sy, ts.x - sx * 2.0, sy))
+	canvas.draw_texture_rect_region(tex,
+			Rect2(rect.position.x, rect.position.y + dy, dx, rect.size.y - dy * 2.0),
+			Rect2(0, sy, sx, ts.y - sy * 2.0))
+	canvas.draw_texture_rect_region(tex,
+			Rect2(rect.end.x - dx, rect.position.y + dy, dx, rect.size.y - dy * 2.0),
+			Rect2(ts.x - sx, sy, sx, ts.y - sy * 2.0))
+	# 中心（双向拉伸）
+	canvas.draw_texture_rect_region(tex,
+			Rect2(rect.position + Vector2(dx, dy), rect.size - Vector2(dx, dy) * 2.0),
+			Rect2(sx, sy, ts.x - sx * 2.0, ts.y - sy * 2.0))
+
+
 static func apply_chip(btn: Button, solid := false, compact := false) -> void:
 	## 小按钮规格（**唯一口**）：顶部工具条 / HUD、难度档位、筛选、多选标签。
 	##   solid   = 实心暗蓝灰 + 亮字（**工具条 / HUD**，要从背景里跳出来）

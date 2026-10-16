@@ -33,6 +33,10 @@ static var _index := {}      # name -> {kind, id}
 static var _cards := {}      # id -> CardData
 static var _relics := {}     # id -> RelicData
 static var _built := false
+## R187 性能：`scan` 是纯函数（文案 → 提及列表），悬浮窗/附带块每次重绘都调。
+## 缓存命中只剩字典查询；返回浅副本（条目 Dictionary 请勿原地改写）。
+const SCAN_CACHE_MAX := 256
+static var _scan_cache := {}
 
 
 static func reset_cache() -> void:
@@ -41,6 +45,7 @@ static func reset_cache() -> void:
 	_cards = {}
 	_relics = {}
 	_built = false
+	_scan_cache = {}   # R187：名字表变了，文案扫描结果也一并作废
 
 
 static func index() -> Dictionary:
@@ -82,6 +87,9 @@ static func relic_of(id: int) -> RelicData:
 static func scan(text: String) -> Array:
 	## 文案里出现过的（已登记的）提及：去重、按首次出现顺序。
 	## 返回 [{name, token, kind, id}]；`token` 是**含标记**的原文（「名字」/ **名字**）。
+	## ⚠️ R187：返回缓存的**浅副本** —— 条目 Dictionary 请勿原地改写。
+	if _scan_cache.has(text):
+		return (_scan_cache[text] as Array).duplicate()
 	var out: Array = []
 	var seen := {}
 	var i := 0
@@ -113,7 +121,10 @@ static func scan(text: String) -> Array:
 			continue
 		seen[nm] = true
 		out.append({"name": nm, "token": tok, "kind": str(ref["kind"]), "id": int(ref["id"])})
-	return out
+	if _scan_cache.size() >= SCAN_CACHE_MAX:
+		_scan_cache.clear()
+	_scan_cache[text] = out
+	return out.duplicate()
 
 
 static func text_color(base: Color) -> Color:

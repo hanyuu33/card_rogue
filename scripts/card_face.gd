@@ -43,21 +43,47 @@ const CARD_H_DESIGN := 70.0   # 缩放基准高（battle 版小卡高）
 # R170：底框改**中性木色**（`UiTheme.CARD_FRAME`）且四边内缩半线宽（描边外沿与卡边对齐）；
 # 稀有度主通道 = 右上角**缎带素材**（`_draw_rarity_ribbon`），不再是框线色/色块旗。
 
-static var _art_cache := {}   # id -> Texture2D / null（找不到图也缓存，避免反复查盘）
+static var _art_cache := {}   # "id[_职业后缀][_sleep]" -> Texture2D / null（找不到图也缓存，避免反复查盘）
+## R187 性能：`wrap_text` 逐字 get_string_size，是 _draw 里最贵的纯计算（每张卡每次
+## 重绘都跑）。键 = 字体实例 + 字号 + 宽度（量化到 1/4 px）+ 原文；命中即免重算。
+## 返回浅副本，调用方随便改；满 WRAP_CACHE_MAX 全清重来。
+const WRAP_CACHE_MAX := 2048
+static var _wrap_cache := {}
+
+# R185：8002「攻击」卡图按当前职业切换（森林精魄=爪击 / 暗影刺客=匕首刺 / 机械之心=浮游炮）。
+const ATTACK_ART_ID := 8002
+const ATTACK_ART_SUFFIX := {"森林精魄": "forest", "暗影刺客": "shadow", "机械之心": "mech"}
 
 
 static func art_for(id: int, sleeping := false) -> Texture2D:
 	# sleeping=true 时优先取沉睡专用图 `<id>_sleep.png`（R182 恶魔鸭沉睡状态）；
 	# 沉睡图缺失则回退普通卡图 —— 不空白、不报错。
-	var key := str(id) + ("_sleep" if sleeping else "")
+	# 8002「攻击」按 RunState.player_class 换图；职业图缺失回退 `8002.png` 通用图；
+	# 图鉴等非 run 场景 player_class 为默认值（森林精魄），显示爪击版。
+	var suffix := ""
+	if id == ATTACK_ART_ID:
+		suffix = "_" + String(ATTACK_ART_SUFFIX.get(RunState.player_class, "forest"))
+	var key := str(id) + suffix + ("_sleep" if sleeping else "")
 	if not _art_cache.has(key):
 		var path := "res://assets/pics/%d.png" % id
+		if suffix != "":
+			var cp := "res://assets/pics/%d%s.png" % [id, suffix]
+			if _pic_exists(cp):
+				path = cp
 		if sleeping:
-			var sp := "res://assets/pics/%d_sleep.png" % id
-			if FileAccess.file_exists(sp):
+			var sp := "res://assets/pics/%d%s_sleep.png" % [id, suffix]
+			if _pic_exists(sp):
 				path = sp
-		_art_cache[key] = load(path) if FileAccess.file_exists(path) else null
+		_art_cache[key] = load(path) if _pic_exists(path) else null
 	return _art_cache[key]
+
+
+## R190：导出包（安卓 / Windows 独立版）里图片只有 `.import` + `.ctex`、**没有源文件**，
+## 单看 `FileAccess.file_exists` 会全部落空 → 卡图一张都不显示（UiAssets 同款坑，
+## 见 ui_assets.gd 顶部注释）。正确判存 = FileAccess or ResourceLoader.exists
+## （编辑器里两者都真；导出包里后者靠 .import 重映射为真）。
+static func _pic_exists(path: String) -> bool:
+	return FileAccess.file_exists(path) or ResourceLoader.exists(path)
 
 
 static func fit_rect(src: Vector2, box: Rect2) -> Rect2:
@@ -170,6 +196,52 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold, on_board, is_tapped)
 	# ⑦ 数值徽章 —— 最后画，压在卡图与文字之上（「额外挂载」的字面意思）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, hp, power_override)
+
+
+static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
+		font: Font, font_bold: Font, selected := false) -> void:
+	## 选卡场景专用简洁卡面（R191，用户口径「卡面只留卡名，描述点选后再看」）：
+	## 纸底 + 卡图 + 稀有度缎带 + 数值徽章 + **只有卡名**的文字区（不画种类行与效果文）。
+	## 用于战斗内选卡页 / 卡牌奖励三选一 / 卡组编辑选卡 —— 战场与手牌仍走 `draw()`。
+	var k := rect.size.y / CARD_H_DESIGN
+	var kc: float = minf(k, UiTheme.CARD_BADGE_SCALE_CAP)
+	var kt: float = minf(k, UiTheme.CARD_TEXT_SCALE_CAP)
+	var pad: float = UiTheme.CARD_PAD * k
+	var paper: Texture2D = UiAssets.card_paper()
+	if paper != null:
+		canvas.draw_texture_rect(paper, rect, false)
+	else:
+		canvas.draw_rect(rect, UiTheme.SURFACE)
+	if selected:
+		for gi in 3:
+			var glow := UiTheme.SELECT_RING
+			glow.a = 0.42 - 0.11 * gi
+			canvas.draw_rect(rect.grow(1.0 + gi), glow, false, 1.0)
+	_draw_art(canvas, card, rect, k, pad, false, font_bold, false)
+	_draw_rarity_ribbon(canvas, card, rect, k, pad)
+	# 文字区：底衬 + **垂直居中**的卡名（wrap 最多 2 行；位置必须正确 —— 用户口径）
+	var sep_y: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
+	var zone_top: float = sep_y + maxf(1.5, 1.2 * kt)
+	var zone_bottom: float = rect.end.y - pad
+	var sz: int = maxi(9, roundi(UiTheme.CARD_FS_TEXT * kt * 1.15))
+	var maxw: float = rect.size.x - pad * 2.0
+	var lines := wrap_text(font_bold, card.card_name, maxw, sz)
+	if lines.size() > 2:
+		# 名字实在太长 → 缩字号重排一次，仍不行就截两行
+		sz = maxi(8, sz - 2)
+		lines = wrap_text(font_bold, card.card_name, maxw, sz)
+		if lines.size() > 2:
+			lines = lines.slice(0, 2)
+	var row_h: float = font_bold.get_height(sz)
+	var block_h: float = row_h * lines.size()
+	var text_top: float = zone_top + maxf(0.0, (zone_bottom - zone_top - block_h) / 2.0)
+	draw_text_backing(canvas, rect, sep_y, k, pad, text_top - 3.0, text_top + block_h + 3.0)
+	var asc: float = float(font_bold.get_ascent(sz))
+	for li in lines.size():
+		canvas.draw_string(font_bold,
+				Vector2(rect.position.x + pad, text_top + asc + li * row_h),
+				lines[li], HORIZONTAL_ALIGNMENT_CENTER, maxw, sz, UiTheme.INK_900)
+	_draw_badges(canvas, font_bold, card, rect, k, kc, card.health, -1)
 
 
 static func draw_text_backing(canvas: CanvasItem, rect: Rect2, sep_y: float, k: float, pad: float,
@@ -496,6 +568,11 @@ static func wrap_text(font: Font, text: String, max_w: float, size: int) -> Arra
 	## 看上去就是「说明文字错位」。典型例子（道具「叠加态的鸭」）：
 	##   `…概率永久降低 25%（100 → 75 → 50`
 	##   ` → 25 → 0），降到 0 后不再复活。`   ← 这行原来行首多一个空格
+	## R187：纯函数 → 缓存（见 `_wrap_cache`）；返回**副本**，调用方增删不伤缓存。
+	var ck := "%d|%d|%d|%s" % [font.get_instance_id(), size, roundi(max_w * 4.0), text]
+	if _wrap_cache.has(ck):
+		var hit: Array[String] = _wrap_cache[ck]
+		return hit.duplicate()
 	var out: Array[String] = []
 	for para in text.split("\n"):
 		var cur := ""
@@ -509,7 +586,10 @@ static func wrap_text(font: Font, text: String, max_w: float, size: int) -> Arra
 			else:
 				cur += ch
 		out.append(cur)
-	return out
+	if _wrap_cache.size() >= WRAP_CACHE_MAX:
+		_wrap_cache.clear()
+	_wrap_cache[ck] = out
+	return out.duplicate()
 
 
 static func _ellipsize(font: Font, text: String, max_w: float, size: int) -> String:

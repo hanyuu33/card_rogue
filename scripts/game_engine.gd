@@ -31,6 +31,8 @@ var crow_pending:= false
 var whale_pending:= false
 var revive_pending:= false   # 复活术（9078）：等玩家从弃牌区选盟友
 var revive_remaining:= 0     # 还要选几张（蓄力让这张卡生效 2 次 → 2 张，一张一张选）
+var overhaul_pending:= false   # 返修（9127，R188）：等玩家从弃牌区选盟友/工事
+var overhaul_remaining:= 0     # 还要选几张（蓄力让这张卡生效 2 次 → 2 张，一张一张选）
 var shadow_step_pending:= false   # 暗影步（9121）：等玩家从弃牌区选一张（任意 kind）
 var shadow_step_remaining:= 0     # 还要选几张（蓄力让这张卡生效 2 次 → 2 张）
 var shadow_step_label:= "暗影步" # 面板标题（复用复活术那套面板时区分文案）
@@ -327,6 +329,10 @@ const METEOR_ID:= 9077
 const METEOR_DMG:= 40
 # 复活术（9078 技能）：从弃牌区取一张盟友回到手卡。
 const REVIVE_ID:= 9078
+# 返修（9127 技能，R188，机械之心 1 费稀有）：从弃牌区选一张盟友/工事回手，
+# 并获得永久改造：生命 +3（烤进副本、本场战斗永久，口径同系统升级）。
+const OVERHAUL_ID:= 9127
+const OVERHAUL_HP:= 3
 # 魔像术（9079 技能）：在己方半场召唤魔像；每用一张技能，手卡里这张本回合 -1。
 const GOLEM_SPELL_ID:= 9079
 const GOLEM_ID:= 9080
@@ -1994,6 +2000,10 @@ func _autoplay_play(hand_index: int) -> bool:
 		var crow_auto:= crow_options()
 		if not crow_auto.is_empty():
 			crow_recall(crow_auto[0])
+	if overhaul_pending:
+		var oh_auto:= overhaul_options()
+		if not oh_auto.is_empty():
+			overhaul_recall(oh_auto[0])
 	return true
 
 
@@ -4235,6 +4245,8 @@ func use_spell(hand_index: int, target = null) -> String:
 	# 界面本身会拦点击（面板是模态的），这里是给联机 / 回放路径兜底。
 	if sys_upgrade_pending:
 		return "系统升级：请先选择手牌里的一张盟友或工事"
+	if overhaul_pending:
+		return "返修：请先从弃牌区选择一张盟友或工事"
 
 	var card:= state.hand[hand_index]
 	# 潜入（9100）：**两段式**技能，唯一入口是 cast_infiltrate(手牌序号, 盟友格, 目的格)。
@@ -4598,7 +4610,7 @@ func _sleepless_tick(side: String) -> void:
 	# 的效果打乱玩家正在做的选择。
 	if revive_pending or crow_pending or whale_pending or foresight_pick or fate_pending \
 			or endless_pending or sys_upgrade_pending or shadow_step_pending \
-			or focus_pending:
+			or focus_pending or overhaul_pending:
 		return
 	if not _zone_has_id(side, SLEEPLESS_ID) or not state.hand.is_empty():
 		return
@@ -5506,6 +5518,8 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 			return _meteor(side, target, card)
 		REVIVE_ID:
 			return _revive_spell(side)
+		OVERHAUL_ID:
+			return _overhaul_spell(side)
 		GOLEM_SPELL_ID:
 			return _golem_spell(side, target)
 		GOUGE_ID:
@@ -5863,6 +5877,75 @@ func revive_recall(discard_index: int) -> bool:
 		revive_remaining = 0
 	_log("复活术：%s 从弃牌区回到手牌（还要选 %d 张）" % [c.card_name, revive_remaining])
 	action.emit("revive_recall", {"card": c})
+	return true
+
+
+func _overhaul_spell(side: String) -> String:
+	## 返修（9127，R188，机械之心 1 费稀有）：从弃牌区选一张盟友 / 工事回手，
+	## 并获得永久改造：生命 +3。
+	## 口径（与复活术同构，候选多一类「工事」）：
+	##   * 只在**弃牌区**里选，**必须选一张**（没有「不选了」按钮）；
+	##   * 手牌已满 → 直接落空（不回手就没有改造的意义）；
+	##   * 叠加记账：蓄力让这张卡生效 2 次 → 可以取回 2 张（一张一张选）。
+	if side != SIDE_SELF:
+		return "（返修：敌方 AI 不使用这张卡）"
+	if overhaul_options().is_empty():
+		_log("返修：弃牌区里没有盟友或工事，效果落空")
+		overhaul_pending = false
+		overhaul_remaining = 0
+		return "弃牌区里没有盟友或工事"
+	if state.hand_full():
+		_log("返修：手牌已满（%d 张），无法取回" % FieldState.HAND_LIMIT)
+		overhaul_pending = false
+		overhaul_remaining = 0
+		return "手牌已满，无法取回"
+	overhaul_remaining += 1
+	overhaul_pending = true
+	_log("返修：从弃牌区选择 %d 张盟友或工事回到手牌（生命 +%d）"
+			% [overhaul_remaining, OVERHAUL_HP])
+	return "从弃牌区选择 %d 张盟友或工事回到手牌（生命 +%d）" % [overhaul_remaining, OVERHAUL_HP]
+
+
+func overhaul_options() -> Array[int]:
+	## 返修的面板候选：弃牌区里的「盟友」与「工事」（技能 / 场地 / 效果卡不可选）。
+	var out: Array[int] = []
+	for i in state.discard.size():
+		var oc: CardData = state.discard[i]
+		if oc.kind == "盟友" or oc.is_fort():
+			out.append(i)
+	return out
+
+
+func overhaul_recall(discard_index: int) -> bool:
+	## 结算返修的选择：目标卡**复制改造后**回手牌（原实例从弃牌区移除）。
+	## ⚠️ 必须 from_dict 复制再改：弃牌区里的卡同样可能是卡库共享实例的传递，
+	##    直接 +3 会污染卡库、跨 run 泄漏（同系统升级 / 批量改造纪律）。
+	if ReplayLog.recording:
+		ReplayLog.act("overhaul_recall", [discard_index])
+	if not overhaul_pending:
+		return false
+	if discard_index < 0 or discard_index >= state.discard.size():
+		return false
+	var c: CardData = state.discard[discard_index]
+	if c.kind != "盟友" and not c.is_fort():
+		return false
+	if state.hand_full():
+		_log("返修：手牌已满，无法取回 %s" % c.card_name)
+		return false
+	var up := CardData.from_dict(c.to_dict())
+	up.traits = (up.traits as Array).duplicate()   # 切断与卡库的共享引用
+	# R120：改造奖励走**唯一口**（素体被返修也额外 +1 血）。
+	var oh_hp: int = _upgrade_hp_gain(up, OVERHAUL_HP)
+	up.health += oh_hp
+	state.discard.remove_at(discard_index)
+	state.hand.append(up)
+	overhaul_remaining -= 1
+	if overhaul_remaining <= 0:
+		overhaul_pending = false
+		overhaul_remaining = 0
+	_log("返修：%s 从弃牌区回到手牌，生命 +%d → %d（本场战斗永久；还要选 %d 张）"
+			% [c.card_name, oh_hp, up.health, overhaul_remaining])
+	action.emit("overhaul_recall", {"card": up, "hp": oh_hp})
 	return true
 
 

@@ -579,6 +579,105 @@ func _check_map_scene(scene: Variant) -> void:
 			% [RogueMap.CELLS, RogueMap.START_COL, RogueMap.START_ROW,
 				RunState.chocolate, avail.size()])
 	_check_relic_bar(scene)
+	_check_map_marks(scene)
+
+
+func _feed_mb(scene: Variant, pos: Vector2, pressed: bool) -> void:
+	## 合成一次鼠标按键事件，直接喂给场景的 `_gui_input` —— smoke 无真实窗口，
+	## 这条路正好把「输入路由」当纯函数测（比截图可靠，也不会被真实事件顺序干扰）。
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.pressed = pressed
+	e.position = pos
+	scene._gui_input(e)
+
+
+func _feed_click(scene: Variant, pos: Vector2) -> void:
+	_feed_mb(scene, pos, true)
+	_feed_mb(scene, pos, false)
+
+
+func _feed_motion(scene: Variant, pos: Vector2) -> void:
+	var e := InputEventMouseMotion.new()
+	e.position = pos
+	scene._gui_input(e)
+
+
+func _check_map_marks(scene: Variant) -> void:
+	## R184：地图标记（R177）输入路由。原 bug：按钮命中只判在 `_handle_mark_input`
+	## 里，而它仅在 `_mark_mode >= 0` 之后才走 → 关态点按钮掉进普通地图分支、
+	## 坐标又不在任何格上 → 直接 return，**标记功能永远开不了口**
+	## （R177 只用 `--marks` 探针强制激活做出图核验，点击路径从没被验证）。
+	# 0) 初始关态 + 标记数据干净
+	if int(scene._mark_mode) != -1:
+		_smoke_fail("地图标记：初始 _mark_mode 应为 -1（关），实际 %d" % int(scene._mark_mode))
+		return
+	if not RunState.map_strokes.is_empty() or not RunState.map_flags.is_empty():
+		_smoke_fail("地图标记：开局不该有残留笔画 / 旗子")
+		return
+	# 1) 关态点「画图」按钮 → 必须激活（原 bug 就死在这一步）
+	_feed_click(scene, scene._mark_btn_rect(scene.MARK_PEN).get_center())
+	if int(scene._mark_mode) != scene.MARK_PEN:
+		_smoke_fail("地图标记：关态点「画图」按钮应激活画图模式，实际 _mark_mode=%d"
+				% int(scene._mark_mode))
+		return
+	# 2) 拖一笔（按 → 移动 → 松）→ 松手入栈 1 条笔画
+	var p0 := Vector2(400, 300)
+	var p1 := Vector2(520, 360)
+	var p2 := Vector2(640, 300)
+	_feed_mb(scene, p0, true)
+	_feed_motion(scene, p1)
+	_feed_motion(scene, p2)
+	_feed_mb(scene, p2, false)
+	if RunState.map_strokes.size() != 1:
+		_smoke_fail("地图标记：拖一笔应入栈 1 条笔画，实际 %d" % RunState.map_strokes.size())
+		return
+	var pts: PackedVector2Array = RunState.map_strokes[0]["pts"]
+	if pts.size() < 2:
+		_smoke_fail("地图标记：笔画至少 2 个点，实际 %d" % pts.size())
+		return
+	# 3) 切「标记」按钮 → 旗子模式；单点放旗
+	_feed_click(scene, scene._mark_btn_rect(scene.MARK_FLAG).get_center())
+	if int(scene._mark_mode) != scene.MARK_FLAG:
+		_smoke_fail("地图标记：点「标记」按钮应切到旗子模式，实际 %d" % int(scene._mark_mode))
+		return
+	_feed_click(scene, Vector2(700, 420))
+	if RunState.map_flags.size() != 1:
+		_smoke_fail("地图标记：旗子模式点一下应放 1 面旗，实际 %d" % RunState.map_flags.size())
+		return
+	# 4) 再点一次当前模式按钮 → 收起（回纯地图态）
+	_feed_click(scene, scene._mark_btn_rect(scene.MARK_FLAG).get_center())
+	if int(scene._mark_mode) != -1:
+		_smoke_fail("地图标记：再点一次当前模式按钮应收起，实际 %d" % int(scene._mark_mode))
+		return
+	# 5) 收起态点地图区外空白 → 不该切当前房（也不该起过场）
+	var cur_before := RunState.current_node_id
+	_feed_click(scene, Vector2(60, 400))
+	if RunState.current_node_id != cur_before or not scene._anim_cell.is_empty():
+		_smoke_fail("地图标记：收起态点空白处不该切换当前房 / 起过场")
+		return
+	# 6) 橡皮：激活后擦在旗子上 → 删旗；再擦在笔画上 → 删笔
+	_feed_click(scene, scene._mark_btn_rect(scene.MARK_ERASE).get_center())
+	if int(scene._mark_mode) != scene.MARK_ERASE:
+		_smoke_fail("地图标记：点「擦除」按钮应激活橡皮，实际 %d" % int(scene._mark_mode))
+		return
+	_feed_mb(scene, Vector2(700, 420), true)
+	_feed_motion(scene, Vector2(700, 420))
+	_feed_mb(scene, Vector2(700, 420), false)
+	if not RunState.map_flags.is_empty():
+		_smoke_fail("地图标记：橡皮擦过旗子应删旗，还剩 %d" % RunState.map_flags.size())
+		return
+	_feed_mb(scene, p1, true)
+	_feed_motion(scene, p1)
+	_feed_mb(scene, p1, false)
+	if not RunState.map_strokes.is_empty():
+		_smoke_fail("地图标记：橡皮擦过笔画应删笔，还剩 %d" % RunState.map_strokes.size())
+		return
+	# 7) 收起来 + 清干净，别影响后面的用例
+	scene._mark_set_mode(-1)
+	RunState.map_strokes = []
+	RunState.map_flags = []
+	print("SMOKE OK 地图标记（R184）：关态点按钮可激活 / 拖笔入栈 / 单点放旗 / 再点收起 / 橡皮删旗删笔")
 
 
 func _check_relic_bar(scene: Variant) -> void:
@@ -902,6 +1001,230 @@ func _check_battle(scene: Variant) -> void:
 	_check_r106(scene)
 	_check_cancel_armed(scene)
 	_check_menu(scene)
+	_check_attack_art_variant()
+	_check_long_press(scene)
+	_check_back_key(scene)
+	_check_perf(scene)
+	_check_pick_overlay(scene)
+
+
+func _check_pick_overlay(scene: Variant) -> void:
+	## R189：全屏选卡页 —— 自动打开 / 点选不结算 / 确认才结算 / 返回收起往返 / 放弃按钮 / 滚动钳制。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("选卡页：拿不到 engine")
+		return
+	var ov: PickOverlay = scene._pick
+	if ov == null:
+		_smoke_fail("选卡页：scene._pick 为空（_ready 没挂上）")
+		return
+	ov.size = Vector2(1280, 720)   # headless 下 anchors 不结算，手动给尺寸
+	var repo := CardRepo.load_json()
+	# ── 1) crow_pending 出现 → _sync_pick 自动打开 ──
+	eng.state.discard.append(CardData.from_dict(repo.get_card(8003).to_dict()))
+	eng.state.discard.append(CardData.from_dict(repo.get_card(8005).to_dict()))
+	eng.crow_pending = true
+	scene._sync_pick()
+	if not ov.is_picking() or not ov.visible or ov.kind() != "crow":
+		_smoke_fail("选卡页：crow_pending 置位后 overlay 应自动打开（kind=crow），实际 kind=%s visible=%s"
+				% [ov.kind(), str(ov.visible)])
+		return
+	# ── 2) 点卡 = 仅选中，引擎不结算 ──
+	var discard_before := eng.state.discard.size()
+	var r0 := ov._card_rect(0)
+	ov._tap(ov._clip.position + ov._grid.position + r0.get_center())
+	if ov.selected_count() != 1:
+		_smoke_fail("选卡页：点一张卡应选中 1 张，实际 %d" % ov.selected_count())
+		return
+	if eng.state.discard.size() != discard_before:
+		_smoke_fail("选卡页：点卡不该直接结算（弃牌区不应变化）")
+		return
+	if not ov._can_confirm():
+		_smoke_fail("选卡页：单选场景选中 1 张后确认按钮应可用")
+		return
+	# ── 3) 确认 → 引擎结算 ──
+	ov._tap(ov._confirm_rect().get_center())
+	if eng.crow_pending:
+		_smoke_fail("选卡页：确认后 crow_pending 应已清")
+		return
+	if eng.state.discard.size() != discard_before - 1:
+		_smoke_fail("选卡页：确认后弃牌区应少 1 张（%d → %d）"
+				% [discard_before, eng.state.discard.size()])
+		return
+	# ── 4) 返回 = 收起看战场（pending 保留）；点浮条回来 ──
+	eng.state.discard.append(CardData.from_dict(repo.get_card(8003).to_dict()))
+	eng.crow_pending = true
+	scene._sync_pick()
+	if not ov.visible:
+		_smoke_fail("选卡页：第二次 crow_pending 应再次打开")
+		return
+	ov._tap(ov._back_rect().get_center())   # 返回 = 收起
+	if ov.visible or not ov.is_picking():
+		_smoke_fail("选卡页：返回应收起但保留 pending（is_picking=true）")
+		return
+	if not eng.crow_pending:
+		_smoke_fail("选卡页：收起不该结算/取消引擎 pending")
+		return
+	scene._on_left_click(Vector2(640, 400))   # 收起态点战场 → 只提示，不结算
+	if not eng.crow_pending:
+		_smoke_fail("选卡页：收起态点战场不该结算选择")
+		return
+	scene._on_left_click(scene._pick_banner_rect().get_center())   # 点浮条 → 回来
+	if not ov.visible:
+		_smoke_fail("选卡页：点「继续选择」浮条应重新展开")
+		return
+	# ── 5) 放弃按钮（whale「不选了」）──
+	eng.crow_pending = false
+	ov.close()
+	eng.whale_pending = true
+	eng.whale_remaining = 2
+	scene._sync_pick()
+	if not ov.is_picking() or ov.kind() != "whale":
+		_smoke_fail("选卡页：whale_pending 应打开 whale 场景，实际 kind=%s" % ov.kind())
+		return
+	ov._tap(ov._cancel_rect().get_center())   # 「不选了」
+	if eng.whale_pending:
+		_smoke_fail("选卡页：放弃按钮应调 whale_skip（pending 清）")
+		return
+	# ── 6) 滚动钳制：候选超一屏 → max_scroll > 0，滚动值被钳住 ──
+	for _i in 14:
+		eng.state.discard.append(CardData.from_dict(repo.get_card(8003).to_dict()))
+	eng.fate_pending = true
+	eng.fate_count = 1
+	scene._sync_pick()
+	if not ov.is_picking() or ov.kind() != "fate":
+		_smoke_fail("选卡页：fate_pending 应打开 fate 场景，实际 kind=%s" % ov.kind())
+		return
+	if ov._max_scroll() <= 1.0:
+		_smoke_fail("选卡页：多张候选应超出一屏（max_scroll > 0），实际 %.1f" % ov._max_scroll())
+		return
+	ov._scroll = 99999.0
+	ov._clamp_scroll()
+	if ov._scroll > ov._max_scroll() + 0.01:
+		_smoke_fail("选卡页：滚动应被钳制在 max_scroll，实际 %.1f > %.1f"
+				% [ov._scroll, ov._max_scroll()])
+		return
+	# 收尾：清干净，别漏给后面的用例
+	eng.fate_pending = false
+	eng.fate_count = 0
+	ov.close()
+	print("SMOKE OK 选卡页：crow 自动打开 / 点选不结算 / 确认才结算 / 返回收起往返 / 放弃按钮 / 滚动钳制")
+
+
+func _check_long_press(scene: Variant) -> void:
+	## R186：触屏长按 = 右键等价（专注取消 / 取消选中在安卓触屏上的关键口子）。
+	## 只认 InputEventScreenTouch；到时在 _process 里转 `_on_right_click()`。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("长按右键：拿不到 engine")
+		return
+	eng.over = false
+	eng.current_side = GameEngine.SIDE_SELF
+	# 1) 触屏按下 → 长按计时启动
+	var down := InputEventScreenTouch.new()
+	down.pressed = true
+	down.position = Vector2(640, 300)
+	scene._gui_input(down)
+	if not scene._lp_active or scene._lp_fired:
+		_smoke_fail("长按右键：触屏按下后 _lp_active 应为 true 且 _lp_fired 为 false")
+		return
+	# 2) 位移超阈值 → 视为拖拽，取消长按
+	var far := InputEventScreenDrag.new()
+	far.position = Vector2(640, 300) + Vector2(scene.LP_SLOP + 4.0, 0)
+	scene._gui_input(far)
+	if scene._lp_active:
+		_smoke_fail("长按右键：位移超过 LP_SLOP 应取消长按计时")
+		return
+	# 3) 重新按下并把计时拨回过去 → 下一帧 _process 必须触发一次右键等价
+	scene._gui_input(down)
+	scene._lp_t0 = Time.get_ticks_msec() - scene.LP_MS - 100
+	scene._press_idx = 3   # 模拟「按住一张手牌」：触发后必须摘掉，否则松手会补发左键
+	scene.status_text = "长按测试基准"
+	scene._process(0.016)
+	if not scene._lp_fired or scene._lp_active:
+		_smoke_fail("长按右键：到时后应触发一次并复位（_lp_fired=true / _lp_active=false）")
+		return
+	if scene._press_idx != -1:
+		_smoke_fail("长按右键：触发后 _press_idx 应摘为 -1，实际 %d" % scene._press_idx)
+		return
+	if scene.status_text == "长按测试基准":
+		_smoke_fail("长按右键：触发后 status_text 应变化（_on_right_click 未执行？）")
+		return
+	# 4) 抬指 → 状态干净
+	var up := InputEventScreenTouch.new()
+	up.pressed = false
+	up.position = Vector2(640, 300)
+	scene._gui_input(up)
+	if scene._lp_active:
+		_smoke_fail("长按右键：抬指后 _lp_active 应为 false")
+		return
+	print("SMOKE OK 触屏长按=右键：按下计时 / 超位移取消 / 到时触发一次并摘掉左键按下")
+
+
+func _check_perf(scene: Variant) -> void:
+	## R187：wrap_text 纯函数缓存（副本隔离）+ 脉冲节流窗口（安卓 ×2，PC 保持 45ms）。
+	var f: Font = scene._font
+	if f == null:
+		_smoke_fail("性能缓存：拿不到场景字体")
+		return
+	var t := "造成 4 点伤害，如果消灭目标，抽一张牌。"
+	var w1: Array[String] = CardFace.wrap_text(f, t, 88.0, 12)
+	var w2: Array[String] = CardFace.wrap_text(f, t, 88.0, 12)
+	if w1 != w2 or w1.is_empty():
+		_smoke_fail("性能缓存：wrap_text 缓存命中结果与首次不一致")
+		return
+	if is_same(w1, w2):
+		_smoke_fail("性能缓存：wrap_text 应返回副本，不能与缓存同实例")
+		return
+	# 脉冲节流：懒初始化出窗口宽度；非安卓必须保持 PULSE_FRAME_MS 原样
+	scene._pulse_ms = 0
+	scene._pulse_redraw_at = 0
+	scene._pulse_redraw()
+	var expect_ms: int = scene.PULSE_FRAME_MS * (2 if OS.get_name() == "Android" else 1)
+	if scene._pulse_ms != expect_ms:
+		_smoke_fail("性能缓存：_pulse_ms 应为 %d，实际 %d" % [expect_ms, scene._pulse_ms])
+		return
+	var at1: int = scene._pulse_redraw_at
+	scene._pulse_redraw()
+	if scene._pulse_redraw_at != at1:
+		_smoke_fail("性能缓存：节流窗口内不应重复 queue_redraw")
+		return
+	print("SMOKE OK 性能缓存：wrap_text 副本隔离 / 脉冲节流窗口生效（_pulse_ms=%d）" % scene._pulse_ms)
+
+
+func _check_back_key(scene: Variant) -> void:
+	## R186：安卓返回键 → Esc。BackKey autoload 必须在位，且「返回即退出」必须关掉
+	## （否则安卓上按返回直接退 App）。合成 Esc 走真实输入管线是异步的，
+	## 这里做结构断言（autoload / 开关 / 翻译代码在位）。
+	var bk: Variant = scene.get_tree().root.get_node_or_null("BackKey")
+	if bk == null:
+		_smoke_fail("BackKey：autoload 未注册（project.godot 缺 BackKey 行？）")
+		return
+	if scene.get_tree().quit_on_go_back:
+		_smoke_fail("BackKey：quit_on_go_back 应为 false（否则安卓返回键直接退 App）")
+		return
+	var src := FileAccess.get_file_as_string("res://scripts/back_key.gd")
+	if src.find("Input.parse_input_event") < 0 or src.find("KEY_ESCAPE") < 0 \
+			or src.find("NOTIFICATION_WM_GO_BACK_REQUEST") < 0:
+		_smoke_fail("BackKey：back_key.gd 缺返回键→Esc 的翻译代码")
+		return
+	print("SMOKE OK BackKey：autoload 在位 / quit_on_go_back=false / 返回键→Esc 翻译在位")
+
+
+func _check_attack_art_variant() -> void:
+	## R185：8002「攻击」卡图按当前职业切换（森林精魄=爪击 / 暗影刺客=匕首刺 / 机械之心=浮游炮）。
+	## `CardFace.art_for` 按 RunState.player_class 取 `8002_<suffix>.png`；未知职业回退 forest。
+	var prev := RunState.player_class
+	var cases := {"森林精魄": "forest", "暗影刺客": "shadow", "机械之心": "mech", "不存在职业": "forest"}
+	for cls in cases:
+		RunState.player_class = cls
+		var tex := CardFace.art_for(CardFace.ATTACK_ART_ID)
+		var want := "res://assets/pics/8002_%s.png" % cases[cls]
+		if tex == null or tex.resource_path != want:
+			_smoke_fail("攻击卡图职业变体：%s 应取 %s，实际 %s"
+					% [cls, want, tex.resource_path if tex != null else "null"])
+	RunState.player_class = prev
+	print("SMOKE OK 攻击卡图职业变体：三职业各取各图，未知职业回退 forest")
 
 
 func _check_r106(scene: Variant) -> void:

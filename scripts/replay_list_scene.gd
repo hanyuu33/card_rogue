@@ -14,6 +14,7 @@ var _items: Array[Dictionary] = []   # ReplayLog.list_replays() 结果
 var _err := ""                       # 读取失败提示
 var _hover := -1
 var _hover_del := -1
+var _last_mp := Vector2.INF      # R186：上次重绘时的鼠标位置（不动不重绘）
 
 
 func _ready() -> void:
@@ -70,7 +71,12 @@ func _refresh() -> void:
 
 
 func _process(_delta: float) -> void:
-	queue_redraw()   # 悬停跟随
+	# R186：悬停跟随只需要「鼠标动了才重绘」（原来每帧无条件重绘）。
+	# 返回键悬停态在 _draw 里读实时鼠标坐标，靠这里兜底。
+	var mp := get_local_mouse_position()
+	if mp != _last_mp:
+		_last_mp = mp
+		queue_redraw()
 
 
 # ------------------------------------------------------------ 布局

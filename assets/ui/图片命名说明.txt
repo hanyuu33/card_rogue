@@ -196,6 +196,12 @@ icon_range.png          攻击距离  弓          已提供（R114）
 icon_health.png         生命      血          已提供（R114）
 icon_speed.png          移动距离  鞋          已提供（R114）
 
+icon_back.png           返回      左箭头      已提供（R189：战斗内全屏选卡页的「返回」按钮；
+icon_android_legacy.png  安卓·旧版图标   192 × 192（Android 7.1- 启动器；深林绿渐变底 + 森林精魄头像居中）
+icon_android_fg.png      安卓·自适应前景 432 × 432 透明（森林精魄头像缩进 72dp 安全区，保留自带 alpha）
+icon_android_bg.png      安卓·自适应背景 432 × 432（径向渐变深林绿 #35502f→#152418，取自头像叶片色系）
+                        64×64 透明底，缺图时回退程序画「←」字符）
+
 · 现成素材为 **192 × 192、透明底、已裁成圆形**（5 张共约 220 KB）。
 
 · 位置是固定的：**左上=费用、左下=力量、右下=生命**；攻击距离在力量右侧、
@@ -241,7 +247,10 @@ assets/pics/<卡牌id>.png   卡面插图（如 1001.png、8004.png），按卡�
                            比例 = 卡图窗 1.112（横向），建议 448×403；整幅铺满（cover），无需抠底。
 assets/pics/<卡牌id>_sleep.png  沉睡状态专用卡图（R182 起，恶魔鸭 9116_sleep.png）。
                            沉睡（Placement.sleep_left>0）时战场卡面换这张；缺失回退普通卡图，不空白。
-                           ⚠️ 当前 211 张卡里约 20 张有图，其余仍是渐变占位 —— 素材缺口，不是渲染 bug。
+assets/pics/<卡牌id>_<职业>.png  职业变体卡图（R185 起，8002「攻击」：8002_forest/shadow/mech.png）。
+                           CardFace.art_for 按 RunState.player_class 换图；职业图缺失回退 <id>.png 通用图。
+                           后缀映射：森林精魄=forest / 暗影刺客=shadow / 机械之心=mech。
+                           ⚠️ 当前 211 张卡里约 28 张有图，其余仍是渐变占位 —— 素材缺口，不是渲染 bug。
 assets/battle_bg.png       战斗界面背景
 assets/cardback.png        卡牌背面 / 窗口图标
 ========================================================================

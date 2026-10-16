@@ -120,6 +120,8 @@ const COL_READY := Color(0.50, 0.90, 1.0)      ## R165「可行动」就绪光�
 ## 同时把安卓 GL Compatibility 上「每帧全量 _draw」降到约 1/3 的调用频率。仅驱动持续型脉冲动画，
 ## 短时爆发特效（攻击/击破/飘字）不受影响、仍走正常帧率。
 const PULSE_FRAME_MS := 45
+const LP_MS := 500              # R186：触屏长按判定时长（毫秒）—— 长按 = 右键等价
+const LP_SLOP := 18.0           # R186：长按允许的最大位移（px，超过视为拖拽）
 const COL_TAUNT := UiTheme.STATE_TAUNT              # 嘲讽：战场单位的橙色脉冲光环（必须优先打它）
 const COL_FROZEN := UiTheme.STATE_FROZEN             # 冰封（寒冰箭/冻结陷阱/冰冻战吼）：冷蓝脉冲环 + 寒霜（这回合动不了）
 const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（恶魔鸭 9116）：紫脉冲环 + Zzz（还差 N 下挨打就醒）
@@ -259,6 +261,11 @@ var _press_idx := -1            # 按下的手牌下标（-1 = 按下点不在�
 var _press_pos := Vector2.ZERO
 var _drag_idx := -1             # 正在拖拽的手牌下标（-1 = 无）
 var _drag_pos := Vector2.ZERO
+## R186：触屏长按 = 右键（只认 InputEventScreenTouch；PC 鼠标永不进这条路径）。
+var _lp_active := false
+var _lp_fired := false
+var _lp_pos := Vector2.ZERO
+var _lp_t0 := 0
 var _drag_spell_cells: Array[Vector2i] = []   # 拖拽中技能的有效目标格
 var _drag_anywhere := false     # 拖到棋盘任意处即可释放（无目标技能/效果卡）
 var _drag_place := false        # 拖拽的是随从/工事：落到自己半场空格放置
@@ -322,6 +329,7 @@ var _flashes := {}              # Placement -> {col, start, dur}              �
 ## 但把安卓 GL Compatibility 上的全量 _draw 调用从 60fps 砍到 22fps，CPU 负载降约 2/3。
 ## ⚠️ 短时爆发动画（攻击/击破/飘字/手牌飞/数字滚动）**不**走这里，仍保正常帧率。
 var _pulse_redraw_at := 0
+var _pulse_ms := 0              # R187：实际节流窗口（懒初始化；安卓 = PULSE_FRAME_MS×2，PC 不变）
 # R151 批 1（动效设计 §三）：手牌因果动画 —— 抽牌飞入（P0-1）/ 弃牌·消耗飞出（P0-2）
 var _hand_fly: Array = []       # {mode:"in"|"out_d"|"out_v"|"fade", card?, from/from_rect, slot?, start, dur}
 var _hand_known: Array = []     # 手牌 id 快照（保序双指针 diff，见 _hand_sync）
@@ -376,7 +384,7 @@ var _relic_scroll := 0.0        # 道具浏览面板滚动量（道具太多时�
 # _hero_pick_idx = 待上场的英雄手牌下标（-1 = 没有待付代价的卡）
 var _hero_pick_idx := -1
 var _hero_pick_cell := Vector2i(-1, -1)   # 英雄要落到的空格
-var _hero_pick_sel: Array[int] = []       # 已选要丢弃的手牌下标
+var _pick: PickOverlay = null            # R189：全屏选卡页（8 套旧小面板的统一替换）
 var _hover_card: CardData = null  # 鼠标悬停的卡（左侧信息栏优先显示）
 var _hover_pl: Placement = null   # 悬停的战场单位（可显示当前生命）
 var _hover_hand := -1             # 悬停的手牌下标（-1 = 无）：仅用于绘制时抬手
@@ -453,6 +461,12 @@ func _ready() -> void:
 		UiTheme.apply_chip(_tb, true, true)
 	# R119：奖励悬浮窗 —— 战斗胜利后的掉落道具 / 卡牌奖励都先入队，由它逐项展示
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
+	# R189：全屏选卡页 —— 乌鸦/鲸鱼/无尽/取牌/预判/命运/专注/英雄代价的统一入口。
+	# 作为最后一个子节点挂上（盖住按钮栏，展开时吃掉全部点击）。
+	_pick = PickOverlay.new()
+	_pick.confirmed.connect(_on_pick_confirmed)
+	_pick.cancelled.connect(_on_pick_cancelled)
+	add_child(_pick)
 	# 命令行 -- --screenshot / -- --demo：自动化演示与截图（验证视觉效果用）
 	var args := OS.get_cmdline_user_args()
 	_demo_args = args
@@ -624,8 +638,7 @@ func _ready() -> void:
 			engine.state.hand.append(hero_card)
 			_hero_pick_idx = engine.state.hand.size() - 1
 			_hero_pick_cell = Vector2i(4, 1)
-			_hero_pick_sel = []
-			status_text = "英雄的代价：选择 4 张手牌丢弃（0/4）"
+			status_text = "英雄的代价：选择 4 张手牌丢弃"
 			_shot_t0 = _now()
 			queue_redraw()
 	if "--wmheal" in args and engine != null:
@@ -2246,7 +2259,8 @@ func load_level(lvl: Dictionary) -> void:
 	_hp_pending.clear()
 	_shake_until = 0
 	_hero_pick_idx = -1          # 换关/重开：待付代价的面板一并收掉
-	_hero_pick_sel = []
+	if _pick != null:
+		_pick.close()
 	_hover_card = null
 	_hover_pl = null
 	_cur_level = lvl
@@ -2361,6 +2375,21 @@ func _gui_input(event: InputEvent) -> void:
 	# R136：巡场动画播放中，玩家一按鼠标就停（动画只是提示，绝不吞操作）。
 	if event is InputEventMouseButton and event.pressed and _grid_intro_t >= 0.0:
 		_grid_intro_stop()
+	# R186：触屏长按 = 右键。emulate_mouse_from_touch 会把同一次触摸再发一遍左键事件，
+	# 那条路径照旧走（点选 / 拖牌）；这里只额外计时，到时在 _process 里转成右键。
+	if event is InputEventScreenTouch:
+		var st := event as InputEventScreenTouch
+		if st.pressed:
+			_lp_active = true
+			_lp_fired = false
+			_lp_pos = st.position
+			_lp_t0 = _now()
+		else:
+			_lp_active = false
+	elif event is InputEventScreenDrag:
+		var sd := event as InputEventScreenDrag
+		if _lp_active and sd.position.distance_to(_lp_pos) > LP_SLOP:
+			_lp_active = false   # 位移超阈值 = 拖拽，不是长按
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			# 手牌按下：先不触发点击逻辑，等松手判定是点击还是拖拽
@@ -2685,37 +2714,19 @@ func _cell_at(pos: Vector2) -> Variant:
 
 
 func _on_left_click(pos: Vector2) -> void:
-	# 英雄的弃牌代价面板：开着时只处理面板内的点击（棋盘/手牌一律不响应）
-	if _hero_pick_idx >= 0:
-		_on_hero_pick_click(pos)
+	# R189：全屏选卡页接管 8 套旧面板。展开时点击被子节点吃掉、根本到不了这里；
+	# 收起态（返回看战场）点「继续选择」浮条回来，点其他地方只提示 —— pending
+	# 还在引擎里，不能让玩家绕过选择直接打牌。
+	if _pick != null and _pick.is_picking():
+		if not _pick.visible and _pick_banner_rect().has_point(pos):
+			_pick.reopen()
+			queue_redraw()
+		elif not _pick.visible:
+			_say("选择进行中：点顶部「继续选择」回到选卡页")
 		return
-	# 乌鸦的回手面板：必须选一张，开着时只处理面板内的点击
-	if engine.crow_pending:
-		_on_crow_pick_click(pos)
-		return
-	# 鲸鱼之怒的取牌面板：可选可跳过（面板底部有「不选了」按钮）
-	if engine.whale_pending:
-		_on_whale_pick_click(pos)
-		return
-	# 无尽黑暗 9114（R70）：强制弃 1 张手牌，**不能不选** → 面板开着时只处理面板内点击
-	if engine.endless_pending:
-		_on_endless_pick_click(pos)
-		return
-	# 取牌面板（复活术 9078 / 暗影步 9121）：开着时只处理面板内的点击
-	if _recall_pending():
-		_on_revive_pick_click(pos)
-		return
-	# 预判（9097）：二选一面板
+	# 预判（9097）：二选一面板（选的是模式不是卡，不进选卡页）
 	if engine.foresight_mode:
 		_on_foresight_mode_click(pos)
-		return
-	# 预判①：弃牌区选 0 费技能卡（必须选一张）
-	if engine.foresight_pick:
-		_on_foresight_pick_click(pos)
-		return
-	# 拒绝命运（9098）：弃牌区选回 N 张（必须选满）
-	if engine.fate_pending:
-		_on_fate_pick_click(pos)
 		return
 	# 浏览面板：开着时点任意处关闭
 	if _map_visible:
@@ -2725,11 +2736,6 @@ func _on_left_click(pos: Vector2) -> void:
 		return
 	if _discard_visible or _effects_visible or _enemy_effects_visible or _relics_visible\
 			or _deck_visible or _void_visible:
-		# 专注（9122）挂起时：先让点击落到「面板内选牌」上，别被这里直接关掉。
-		if engine.focus_pending:
-			if _on_focus_panel_click(pos):
-				queue_redraw()
-				return
 		# R155：‹ › 翻页 / 右上「×」/ 点面板**外**才关闭 —— 旧版「点任意处关闭」
 		# 让面板内的点击（想看另一页、想细看）都变成了关面板，太毛躁。
 		if _zone_prev_page_rect().has_point(pos):
@@ -3289,9 +3295,8 @@ func _try_play_hand_card(i: int, cell: Vector2i, from_pos := Vector2.ZERO) -> vo
 		return
 	_hero_pick_idx = i
 	_hero_pick_cell = cell
-	_hero_pick_sel = []
-	status_text = "英雄的代价：选择 %d 张手牌丢弃（0/%d）" % [need, need]
-	queue_redraw()
+	status_text = "英雄的代价：选择 %d 张手牌丢弃" % need
+	queue_redraw()   # _sync_pick 会打开全屏选卡页
 
 
 func _finish_play(i: int, cell: Vector2i, from_pos := Vector2.ZERO) -> void:
@@ -3317,307 +3322,6 @@ func _hero_pick_options() -> Array[int]:
 		if i != _hero_pick_idx:
 			out.append(i)
 	return out
-
-
-func _hero_pick_layout() -> Dictionary:
-	## 代价面板的布局（绘制与点击判定共用，改一处即可）。
-	var opts := _hero_pick_options()
-	var n := opts.size()
-	var pw := minf(WINDOW_W - 240.0, 120.0 + n * (CARD_W + 8.0))
-	var ph := CARD_H + 150.0
-	var px := (WINDOW_W - pw) / 2.0
-	var py := (WINDOW_H - ph) / 2.0
-	var spacing: float = minf(CARD_W + 8.0, maxf(24.0, (pw - 60.0) / maxf(n, 1)))
-	var x0 := px + (pw - (spacing * (n - 1) + CARD_W)) / 2.0
-	var bw := 116.0
-	var by := py + ph - 52.0
-	return {"opts": opts, "px": px, "py": py, "pw": pw, "ph": ph, "x0": x0,
-			"spacing": spacing, "card_y": py + 46.0,
-			"ok": Rect2(WINDOW_W / 2.0 + 12.0, by, bw, 34.0),
-			"cancel": Rect2(WINDOW_W / 2.0 - 12.0 - bw, by, bw, 34.0)}
-
-
-func _draw_hero_pick() -> void:
-	## 「英雄的代价」面板：手牌（除英雄外）横排 → 点选 4 张 → 确定 → 英雄上场。
-	var L := _hero_pick_layout()
-	var need := GameEngine.HERO_DISCARD
-	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
-	UiTheme.draw_panel_bg(self, Rect2(L.px, L.py, L.pw, L.ph))
-	draw_rect(Rect2(L.px, L.py, L.pw, L.ph), UiTheme.INK_600, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "英雄的代价：选择 %d 张手牌丢弃（已选 %d/%d）"
-					% [need, _hero_pick_sel.size(), need],
-			Vector2(WINDOW_W / 2, L.py + 26), UiTheme.INK_800)
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		var idx: int = opts[k]
-		var c: CardData = engine.state.hand[idx]
-		var r := Rect2(L["x0"] + L["spacing"] * k, L["card_y"], CARD_W, CARD_H)
-		var picked := _hero_pick_sel.has(idx)
-		if picked:
-			draw_rect(r.grow(5.0), UiTheme.STAT_HEALTH, false, 2.0)
-		_draw_card_face(c, r, c.health, picked, false, engine.cost_of(c))
-	var full: bool = _hero_pick_sel.size() == need
-	draw_rect(L["ok"], UiTheme.SIDE_SELF if full else Color("b0aaa0"))
-	_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "确定（丢弃 %d 张）" % _hero_pick_sel.size(),
-			Vector2(L["ok"].position.x + L["ok"].size.x / 2.0,
-					L["ok"].position.y + L["ok"].size.y / 2.0 + 4.0), Color.WHITE)
-	draw_rect(L["cancel"], Color("8a8578"))
-	_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "取消",
-			Vector2(L["cancel"].position.x + L["cancel"].size.x / 2.0,
-					L["cancel"].position.y + L["cancel"].size.y / 2.0 + 4.0), Color.WHITE)
-	_draw_string_center(_font, UiTheme.FS_MICRO,
-			"点卡牌选中 / 取消；选满 %d 张后点确定 —— 英雄随即上场" % need,
-			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 12.0), UiTheme.INK_600)
-
-
-func _on_hero_pick_click(pos: Vector2) -> void:
-	## 代价面板的点击：卡牌切换选中 / 确定 / 取消。
-	var L := _hero_pick_layout()
-	var need := GameEngine.HERO_DISCARD
-	if L["cancel"].has_point(pos):
-		var nm := engine.state.hand[_hero_pick_idx].card_name
-		_hero_pick_idx = -1
-		_hero_pick_sel = []
-		status_text = "已取消：%s 仍在手牌（未付代价）" % nm
-		queue_redraw()
-		return
-	if L["ok"].has_point(pos):
-		if _hero_pick_sel.size() != need:
-			_say("还要再选 %d 张手牌当作代价" % (need - _hero_pick_sel.size()))
-			return
-		var i := _hero_pick_idx
-		var cell := _hero_pick_cell
-		var sel := _hero_pick_sel.duplicate()
-		_hero_pick_idx = -1
-		_hero_pick_sel = []
-		var card := engine.state.hand[i]
-		if engine.play_hero_from_hand(i, cell, sel) == null:
-			_say("%s：代价结算失败，卡仍在手牌" % card.card_name)
-		else:
-			_clear_selection()
-			_net_send({"type": "action", "act": "play", "card": card.to_dict(),
-					"cell": [cell.x, cell.y]})
-			status_text = "%s 上场：付出代价（丢弃 %d 张手牌）" % [card.card_name, sel.size()]
-		queue_redraw()
-		return
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		var idx: int = opts[k]
-		var r := Rect2(L["x0"] + L["spacing"] * k, L["card_y"], CARD_W, CARD_H)
-		if r.has_point(pos):
-			if _hero_pick_sel.has(idx):
-				_hero_pick_sel.erase(idx)
-			elif _hero_pick_sel.size() < need:
-				_hero_pick_sel.append(idx)
-			else:
-				_say("最多只能丢弃 %d 张" % need)
-			queue_redraw()
-			return
-
-
-func _crow_panel_layout() -> Dictionary:
-	## 乌鸦回手面板布局（绘制与点击判定共用一份，改一处即可）。
-	## 弃牌堆里的盟友可能很多 → 网格排布 + 略缩小卡面，避免单行挤成一团。
-	var opts := engine.crow_options()
-	var n := maxi(opts.size(), 1)
-	var cw := CARD_W * 0.8
-	var ch := CARD_H * 0.8
-	var step_x := cw + 8.0
-	var step_y := ch + 8.0
-	var cols: int = clampi(int((WINDOW_W - 220.0) / step_x), 1, mini(n, 10))
-	var rows: int = int(ceil(float(n) / float(cols)))
-	var content_w: float = step_x * cols - 8.0
-	var content_h: float = step_y * rows - 8.0
-	var pw: float = minf(WINDOW_W - 120.0, content_w + 60.0)
-	var ph: float = minf(WINDOW_H - 80.0, content_h + 132.0)
-	var px: float = (WINDOW_W - pw) / 2.0
-	var py: float = (WINDOW_H - ph) / 2.0
-	return {"opts": opts, "cols": cols, "cw": cw, "ch": ch,
-			"step_x": step_x, "step_y": step_y,
-			"x0": px + (pw - content_w) / 2.0, "card_y": py + 52.0,
-			"px": px, "py": py, "pw": pw, "ph": ph}
-
-
-func _crow_panel_rect(L: Dictionary, k: int) -> Rect2:
-	var cols: int = L["cols"]
-	return Rect2(L["x0"] + L["step_x"] * (k % cols),
-			L["card_y"] + L["step_y"] * int(k / cols), L["cw"], L["ch"])
-
-
-func _draw_crow_pick() -> void:
-	## 乌鸦（9039）「从弃牌堆选一张盟友回到手牌」面板：只列盟友，点哪张拿哪张（必须选）。
-	var L := _crow_panel_layout()
-	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
-	UiTheme.draw_panel_bg(self, Rect2(L["px"], L["py"], L["pw"], L["ph"]))
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "乌鸦：选择弃牌堆一张盟友回到手卡（必须选一张）",
-			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		var idx: int = opts[k]
-		var c: CardData = engine.state.discard[idx]
-		_draw_card_face(c, _crow_panel_rect(L, k), c.health, false, false)
-	_draw_string_center(_font, UiTheme.FS_MICRO, "点击一张卡：它立即回到你的手牌",
-			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 12.0), UiTheme.INK_600)
-
-
-func _on_crow_pick_click(pos: Vector2) -> void:
-	var L := _crow_panel_layout()
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		if _crow_panel_rect(L, k).has_point(pos):
-			var idx: int = opts[k]
-			var nm := "?"
-			if idx >= 0 and idx < engine.state.discard.size():
-				nm = engine.state.discard[idx].card_name
-			if engine.crow_recall(idx):
-				status_text = "乌鸦：%s 从弃牌堆回到手牌" % nm
-			_clear_selection()
-			queue_redraw()
-			return
-
-
-func _whale_panel_layout() -> Dictionary:
-	## 鲸鱼之怒取牌面板布局（与乌鸦面板同款：网格排布 + 略缩小卡面）。
-	var opts := engine.whale_options()
-	var n := maxi(opts.size(), 1)
-	var cw := CARD_W * 0.8
-	var ch := CARD_H * 0.8
-	var step_x := cw + 8.0
-	var step_y := ch + 8.0
-	var cols: int = clampi(int((WINDOW_W - 220.0) / step_x), 1, mini(n, 10))
-	var rows: int = int(ceil(float(n) / float(cols)))
-	var content_w: float = step_x * cols - 8.0
-	var content_h: float = step_y * rows - 8.0
-	var pw: float = minf(WINDOW_W - 120.0, content_w + 60.0)
-	var ph: float = minf(WINDOW_H - 80.0, content_h + 132.0)
-	var px: float = (WINDOW_W - pw) / 2.0
-	var py: float = (WINDOW_H - ph) / 2.0
-	return {"opts": opts, "cols": cols, "cw": cw, "ch": ch,
-			"step_x": step_x, "step_y": step_y,
-			"x0": px + (pw - content_w) / 2.0, "card_y": py + 52.0,
-			"px": px, "py": py, "pw": pw, "ph": ph}
-
-
-func _whale_panel_rect(L: Dictionary, k: int) -> Rect2:
-	var cols: int = L["cols"]
-	return Rect2(L["x0"] + L["step_x"] * (k % cols),
-			L["card_y"] + L["step_y"] * int(k / cols), L["cw"], L["ch"])
-
-
-func _whale_skip_rect(L: Dictionary) -> Rect2:
-	## 「不选了」按钮（面板底部居中）—— 鲸鱼之怒的取牌是可选的。
-	var bw := 132.0
-	var bh := 26.0
-	return Rect2(WINDOW_W / 2.0 - bw / 2.0, L["py"] + L["ph"] - bh - 8.0, bw, bh)
-
-
-func _draw_whale_pick() -> void:
-	## 鲸鱼之怒（9050）面板：从弃牌堆取卡入手（可选可跳过；取满 2 张自动关闭）。
-	var L := _whale_panel_layout()
-	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
-	UiTheme.draw_panel_bg(self, Rect2(L["px"], L["py"], L["pw"], L["ph"]))
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
-			"鲸鱼之怒：从弃牌堆取卡加入手卡（还可取 %d 张）" % engine.whale_remaining,
-			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		var idx: int = opts[k]
-		var c: CardData = engine.state.discard[idx]
-		_draw_card_face(c, _whale_panel_rect(L, k), c.health, false, false)
-	var sk := _whale_skip_rect(L)
-	draw_rect(sk, Color("dcdcdc"))
-	draw_rect(sk, UiTheme.INK_500, false, 1.5)
-	_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "不选了（结束取牌）",
-			sk.position + sk.size / 2.0, Color("222222"))
-
-
-func _on_whale_pick_click(pos: Vector2) -> void:
-	var L := _whale_panel_layout()
-	if _whale_skip_rect(L).has_point(pos):
-		var left := engine.whale_remaining
-		engine.whale_skip()
-		status_text = "鲸鱼之怒：放弃剩余 %d 张的取牌" % left
-		_clear_selection()
-		queue_redraw()
-		return
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		if _whale_panel_rect(L, k).has_point(pos):
-			var idx: int = opts[k]
-			var nm := "?"
-			if idx >= 0 and idx < engine.state.discard.size():
-				nm = engine.state.discard[idx].card_name
-			if engine.whale_pick(idx):
-				status_text = "鲸鱼之怒：%s 从弃牌堆回到手牌" % nm
-			_clear_selection()
-			queue_redraw()
-			return
-
-
-func _endless_panel_layout() -> Dictionary:
-	## 无尽黑暗（9114，R70）弃牌面板布局：列出**手牌**，玩家点一张弃掉。
-	## 与鲸鱼面板同一套网格逻辑（略缩小卡面），只是数据源从弃牌堆换成手牌。
-	var opts := engine.endless_options()
-	var n := maxi(opts.size(), 1)
-	var cw := CARD_W * 0.8
-	var ch := CARD_H * 0.8
-	var step_x := cw + 8.0
-	var step_y := ch + 8.0
-	var cols: int = clampi(int((WINDOW_W - 220.0) / step_x), 1, mini(n, 10))
-	var rows: int = int(ceil(float(n) / float(cols)))
-	var content_w: float = step_x * cols - 8.0
-	var content_h: float = step_y * rows - 8.0
-	var pw: float = minf(WINDOW_W - 120.0, content_w + 60.0)
-	var ph: float = minf(WINDOW_H - 80.0, content_h + 96.0)
-	var px: float = (WINDOW_W - pw) / 2.0
-	var py: float = (WINDOW_H - ph) / 2.0
-	return {"opts": opts, "cols": cols, "cw": cw, "ch": ch,
-			"step_x": step_x, "step_y": step_y,
-			"x0": px + (pw - content_w) / 2.0, "card_y": py + 52.0,
-			"px": px, "py": py, "pw": pw, "ph": ph}
-
-
-func _endless_panel_rect(L: Dictionary, k: int) -> Rect2:
-	var cols: int = L["cols"]
-	return Rect2(L["x0"] + L["step_x"] * (k % cols),
-			L["card_y"] + L["step_y"] * int(k / cols), L["cw"], L["ch"])
-
-
-func _draw_endless_pick() -> void:
-	## 无尽黑暗（9114，R70）面板：每回合抽牌后强制弃 1 张手牌，**不能不选**，所以没有跳过按钮。
-	var L := _endless_panel_layout()
-	UiTheme.draw_panel_bg(self, Rect2(L["px"], L["py"], L["pw"], L["ph"]))
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
-			"无尽黑暗：选择 1 张手牌弃掉（不能不选）→ 之后费用 +%d"
-			% GameEngine.ENDLESS_DARK_ENERGY,
-			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		var idx: int = opts[k]
-		var c: CardData = engine.state.hand[idx]
-		_draw_card_face(c, _endless_panel_rect(L, k), c.health, false, false)
-
-
-func _on_endless_pick_click(pos: Vector2) -> void:
-	var L := _endless_panel_layout()
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		if _endless_panel_rect(L, k).has_point(pos):
-			var idx: int = opts[k]
-			var nm := "?"
-			if idx >= 0 and idx < engine.state.hand.size():
-				nm = engine.state.hand[idx].card_name
-			if engine.endless_pick(idx):
-				status_text = "无尽黑暗：弃掉 %s → 费用 +%d" % [
-						nm, GameEngine.ENDLESS_DARK_ENERGY]
-			_clear_selection()
-			queue_redraw()
-			return
-
-
 func _infiltrate_dst_cells() -> Array[Vector2i]:
 	## 潜入（9100）第二段的目的格：全棋盘任意空格，对方后排（移动禁区）除外。
 	var out: Array[Vector2i] = []
@@ -3667,136 +3371,14 @@ func _on_foresight_mode_click(pos: Vector2) -> void:
 			_clear_selection()
 			queue_redraw()
 			return
-
-
-func _foresight_panel_layout() -> Dictionary:
-	## 预判①取牌面板布局（与复活术面板同款：网格排布 + 略缩小卡面）。
-	var opts := engine.foresight_options()
-	var n := maxi(opts.size(), 1)
-	var cw := CARD_W * 0.8
-	var ch := CARD_H * 0.8
-	var step_x := cw + 8.0
-	var step_y := ch + 8.0
-	var cols: int = clampi(int((WINDOW_W - 220.0) / step_x), 1, mini(n, 10))
-	var rows: int = int(ceil(float(n) / float(cols)))
-	var content_w: float = step_x * cols - 8.0
-	var content_h: float = step_y * rows - 8.0
-	var pw: float = minf(WINDOW_W - 120.0, content_w + 60.0)
-	var ph: float = minf(WINDOW_H - 80.0, content_h + 132.0)
-	var px: float = (WINDOW_W - pw) / 2.0
-	var py: float = (WINDOW_H - ph) / 2.0
-	return {"opts": opts, "cols": cols, "cw": cw, "ch": ch,
-			"step_x": step_x, "step_y": step_y,
-			"x0": px + (pw - content_w) / 2.0, "card_y": py + 52.0,
-			"px": px, "py": py, "pw": pw, "ph": ph}
-
-
-func _foresight_panel_rect(L: Dictionary, k: int) -> Rect2:
-	var cols: int = L["cols"]
-	return Rect2(L["x0"] + L["step_x"] * (k % cols),
-			L["card_y"] + L["step_y"] * int(k / cols), L["cw"], L["ch"])
-
-
-func _draw_foresight_pick() -> void:
-	## 预判①「从弃牌区选一张 0 费技能卡」面板：只列 0 费技能卡，点哪张拿哪张。
-	var L := _foresight_panel_layout()
-	UiTheme.draw_panel_bg(self, Rect2(L["px"], L["py"], L["pw"], L["ph"]))
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
-			"预判①：选择弃牌区一张费用为 0 的技能卡（必须选一张，之后本卡消失）",
-			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		var idx: int = opts[k]
-		var c: CardData = engine.state.discard[idx]
-		_draw_card_face(c, _foresight_panel_rect(L, k), c.health, false, false)
-	_draw_string_center(_font, UiTheme.FS_MICRO, "点击一张卡：它立即回到你的手牌",
-			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 30), UiTheme.INK_600)
-
-
-func _on_foresight_pick_click(pos: Vector2) -> void:
-	var L := _foresight_panel_layout()
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		if _foresight_panel_rect(L, k).has_point(pos):
-			var idx: int = opts[k]
-			var nm := "?"
-			if idx >= 0 and idx < engine.state.discard.size():
-				nm = engine.state.discard[idx].card_name
-			if engine.foresight_pick_card(idx):
-				status_text = "预判：%s 回到手卡（本卡已消失）" % nm
-			_clear_selection()
-			queue_redraw()
-			return
-
-
-func _fate_panel_layout() -> Dictionary:
-	## 拒绝命运取牌面板布局（与鲸鱼面板同款；必须选满，没有「不选了」）。
-	var opts := engine.fate_options()
-	var n := maxi(opts.size(), 1)
-	var cw := CARD_W * 0.8
-	var ch := CARD_H * 0.8
-	var step_x := cw + 8.0
-	var step_y := ch + 8.0
-	var cols: int = clampi(int((WINDOW_W - 220.0) / step_x), 1, mini(n, 10))
-	var rows: int = int(ceil(float(n) / float(cols)))
-	var content_w: float = step_x * cols - 8.0
-	var content_h: float = step_y * rows - 8.0
-	var pw: float = minf(WINDOW_W - 120.0, content_w + 60.0)
-	var ph: float = minf(WINDOW_H - 80.0, content_h + 132.0)
-	var px: float = (WINDOW_W - pw) / 2.0
-	var py: float = (WINDOW_H - ph) / 2.0
-	return {"opts": opts, "cols": cols, "cw": cw, "ch": ch,
-			"step_x": step_x, "step_y": step_y,
-			"x0": px + (pw - content_w) / 2.0, "card_y": py + 52.0,
-			"px": px, "py": py, "pw": pw, "ph": ph}
-
-
-func _fate_panel_rect(L: Dictionary, k: int) -> Rect2:
-	var cols: int = L["cols"]
-	return Rect2(L["x0"] + L["step_x"] * (k % cols),
-			L["card_y"] + L["step_y"] * int(k / cols), L["cw"], L["ch"])
-
-
-func _draw_fate_pick() -> void:
-	## 拒绝命运（9098）面板：从弃牌区选回等量的卡（必须选满，本卡已消失不在列表里）。
-	var L := _fate_panel_layout()
-	UiTheme.draw_panel_bg(self, Rect2(L["px"], L["py"], L["pw"], L["ph"]))
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
-			"拒绝命运：从弃牌区选 %d 张卡加入手卡（必须选满）" % engine.fate_count,
-			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		var idx: int = opts[k]
-		var c: CardData = engine.state.discard[idx]
-		_draw_card_face(c, _fate_panel_rect(L, k), c.health, false, false)
-	_draw_string_center(_font, UiTheme.FS_MICRO, "点击一张卡：它立即回到你的手牌（还要选 %d 张）" % engine.fate_count,
-			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 30), UiTheme.INK_600)
-
-
-func _on_fate_pick_click(pos: Vector2) -> void:
-	var L := _fate_panel_layout()
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		if _fate_panel_rect(L, k).has_point(pos):
-			var idx: int = opts[k]
-			var nm := "?"
-			if idx >= 0 and idx < engine.state.discard.size():
-				nm = engine.state.discard[idx].card_name
-			if engine.fate_pick(idx):
-				status_text = "拒绝命运：%s 回到手牌" % nm
-			_clear_selection()
-			queue_redraw()
-			return
-
-
 func _recall_mode() -> String:
 	## 当前开着的是哪个「从弃牌区取牌」面板：""（无）/ "复活术" / "暗影步"。
 	## R108：两套面板同构，只是候选口径不同（复活术仅盟友、暗影步任意卡），
 	## 所以共用绘制/点击代码，由本函数分流，**不去改复活术的既有行为**。
 	if engine.shadow_step_pending:
 		return "暗影步"
+	if engine.overhaul_pending:
+		return "返修"
 	if engine.revive_pending:
 		return "复活术"
 	return ""
@@ -3804,59 +3386,276 @@ func _recall_mode() -> String:
 
 func _recall_pending() -> bool:
 	## 任一取牌面板开着（点棋盘/手牌时的模态拦截）。
-	return engine.revive_pending or engine.shadow_step_pending
+	return engine.revive_pending or engine.shadow_step_pending or engine.overhaul_pending
 
 
 func _recall_options() -> Array[int]:
 	if engine.shadow_step_pending:
 		return engine.shadow_step_options()
+	if engine.overhaul_pending:
+		return engine.overhaul_options()
 	return engine.revive_options()
 
 
 func _recall_remaining() -> int:
 	if engine.shadow_step_pending:
 		return engine.shadow_step_remaining
+	if engine.overhaul_pending:
+		return engine.overhaul_remaining
 	return engine.revive_remaining
 
 
 func _recall_discard_index(idx: int) -> bool:
 	if engine.shadow_step_pending:
 		return engine.shadow_step_recall(idx)
+	if engine.overhaul_pending:
+		return engine.overhaul_recall(idx)
 	return engine.revive_recall(idx)
 
 
-func _on_focus_panel_click(pos: Vector2) -> bool:
-	## 专注（9122）面板点击：**面板内点一张卡 = 从抽牌库移除它**（按 id 找第一张）。
-	## 返回 true 表示这次点击被面板吃掉了（不该再冒泡去关面板）。
-	if not engine.focus_pending:
-		return false
-	var zp := _zone_panel_cards()
-	if zp.is_empty():
-		return false
-	var L := _zone_panel_layout(zp.size())
-	for i in zp.size():
-		if _zone_card_rect(i, L).has_point(pos):
-			var picked: CardData = zp[i]
+
+# ── R189 全屏选卡页（PickOverlay）─────────────────────────────
+
+func _pick_active_kind() -> String:
+	## 当前活跃的选卡场景（"" = 无）。优先级同原小面板的拦截顺序。
+	if _hero_pick_idx >= 0:
+		return "hero"
+	if engine.crow_pending:
+		return "crow"
+	if engine.whale_pending:
+		return "whale"
+	if engine.endless_pending:
+		return "endless"
+	if _recall_pending():
+		return "recall"
+	if engine.foresight_pick:
+		return "foresight"
+	if engine.fate_pending:
+		return "fate"
+	if engine.focus_pending:
+		return "focus"
+	return ""
+
+
+func _build_pick_cfg(k: String) -> Dictionary:
+	## 各场景的选卡页配置：cards 与 opts 平行（opts[i] = 网格第 i 张卡的业务下标；
+	## focus 例外：opts 存代表卡的 id，确认时按 id 在卡组找第一张）。
+	var disc_cards := func(i: int) -> CardData: return engine.state.discard[i]
+	match k:
+		"hero":
+			var hopts := _hero_pick_options()
+			return {"kind": k, "short": "英雄的代价", "opts": hopts,
+					"title": "英雄的代价：选择 %d 张手牌丢弃" % GameEngine.HERO_DISCARD,
+					"note": "点卡选中 / 再点取消；选满后点确认 —— 英雄随即上场",
+					"cards": hopts.map(func(i: int) -> CardData: return engine.state.hand[i]),
+					"max_sel": GameEngine.HERO_DISCARD,
+					"confirm_label": "确认丢弃", "cancel_label": "取消上场"}
+		"crow":
+			var copts: Array = engine.crow_options()
+			return {"kind": k, "short": "乌鸦", "opts": copts,
+					"title": "乌鸦：选择弃牌堆一张盟友回到手卡（必须选一张）",
+					"note": "点卡选中，再点确认 —— 它立即回到你的手牌",
+					"cards": copts.map(disc_cards),
+					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
+		"whale":
+			var wopts: Array = engine.whale_options()
+			return {"kind": k, "short": "鲸鱼之怒", "opts": wopts,
+					"title": "鲸鱼之怒：从弃牌堆取卡加入手卡（还可取 %d 张）" % engine.whale_remaining,
+					"note": "点卡选中，再点确认 —— 它立即回到你的手牌；也可以放弃剩余取牌",
+					"cards": wopts.map(disc_cards),
+					"max_sel": 1, "confirm_label": "确认", "cancel_label": "不选了（结束取牌）"}
+		"endless":
+			var eopts: Array = engine.endless_options()
+			return {"kind": k, "short": "无尽黑暗", "opts": eopts,
+					"title": "无尽黑暗：选择 1 张手牌弃掉（不能不选）→ 之后费用 +%d"
+							% GameEngine.ENDLESS_DARK_ENERGY,
+					"note": "点卡选中，再点确认 —— 它被弃掉",
+					"cards": eopts.map(func(i: int) -> CardData: return engine.state.hand[i]),
+					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
+		"recall":
+			var ropts: Array = _recall_options()
+			var rtitle := "复活术：选择弃牌区一张盟友回到手卡（必须选一张）"
+			if _recall_mode() == "暗影步":
+				rtitle = "暗影步：选择弃牌区一张卡回到手卡（必须选一张）"
+			elif _recall_mode() == "返修":
+				rtitle = "返修：选择弃牌区一张盟友或工事回到手卡（生命+3）"
+			return {"kind": k, "short": _recall_mode(), "opts": ropts,
+					"title": rtitle,
+					"note": "点卡选中，再点确认 —— 它立即回到你的手牌（还要选 %d 张）"
+							% _recall_remaining(),
+					"cards": ropts.map(disc_cards),
+					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
+		"foresight":
+			var fopts: Array = engine.foresight_options()
+			return {"kind": k, "short": "预判", "opts": fopts,
+					"title": "预判①：选择弃牌区一张费用为 0 的技能卡（必须选一张，之后本卡消失）",
+					"note": "点卡选中，再点确认 —— 它立即回到你的手牌",
+					"cards": fopts.map(disc_cards),
+					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
+		"fate":
+			var faopts: Array = engine.fate_options()
+			return {"kind": k, "short": "拒绝命运", "opts": faopts,
+					"title": "拒绝命运：从弃牌区选 %d 张卡加入手卡（必须选满）" % engine.fate_count,
+					"note": "点卡选中，再点确认 —— 它立即回到你的手牌",
+					"cards": faopts.map(disc_cards),
+					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
+		"focus":
+			# 专注沿用「卡组合并视图」：同名合并 + ×N 张数角标（整副卡组铺开没法看）。
+			var merged := _merged_deck(engine.state.deck)
+			return {"kind": k, "short": "专注",
+					"opts": merged.map(func(m: Dictionary) -> int: return (m["card"] as CardData).id),
+					"title": "专注：从卡组中移除 %d 张卡（本次对战中消失）" % engine.focus_remaining,
+					"note": "点卡选中，再点确认 —— 它从卡组移除（本场对战消失）；已移除的不回收",
+					"cards": merged.map(func(m: Dictionary) -> CardData: return m["card"]),
+					"counts": merged.map(func(m: Dictionary) -> int: return m["count"]),
+					"max_sel": 1, "confirm_label": "确认移除", "cancel_label": "取消专注"}
+	return {}
+
+
+func _sync_pick() -> void:
+	## 全屏选卡页的驱动器（每帧一次，开销极小）：pending 出现 → 打开；消失 → 关闭；
+	## 场景切换 → 重开。回放模式不弹（回放 act 直接结算）。
+	if _pick == null or engine == null:
+		return
+	var k := "" if ReplayLog.playing else _pick_active_kind()
+	if k == "":
+		if _pick.is_picking():
+			_pick.close()
+			queue_redraw()
+		return
+	if not _pick.is_picking() or _pick.kind() != k:
+		if k == "focus":
+			_close_zone_panels()   # 专注走选卡页，不再复用卡组浏览面板
+		_pick.open(_build_pick_cfg(k))
+		queue_redraw()
+
+
+func _on_pick_confirmed(sel: Array) -> void:
+	## 选卡页「确认」的唯一结算口：网格下标 → 业务下标 → 引擎。
+	if _pick == null or sel.is_empty():
+		return
+	var k := _pick.kind()
+	var opts: Array = _pick.opts()
+	match k:
+		"hero":
+			var drop: Array = sel.map(func(g: int) -> int: return int(opts[g]))
+			var i := _hero_pick_idx
+			var cell := _hero_pick_cell
+			_hero_pick_idx = -1
+			var card := engine.state.hand[i]
+			if engine.play_hero_from_hand(i, cell, drop) == null:
+				_say("%s：代价结算失败，卡仍在手牌" % card.card_name)
+			else:
+				_clear_selection()
+				_net_send({"type": "action", "act": "play", "card": card.to_dict(),
+						"cell": [cell.x, cell.y]})
+				status_text = "%s 上场：付出代价（丢弃 %d 张手牌）" % [card.card_name, drop.size()]
+		"crow":
+			var ci := int(opts[sel[0]])
+			var cnm := "?"
+			if ci >= 0 and ci < engine.state.discard.size():
+				cnm = engine.state.discard[ci].card_name
+			if engine.crow_recall(ci):
+				status_text = "乌鸦：%s 从弃牌堆回到手牌" % cnm
+			_clear_selection()
+		"whale":
+			var wi := int(opts[sel[0]])
+			var wnm := "?"
+			if wi >= 0 and wi < engine.state.discard.size():
+				wnm = engine.state.discard[wi].card_name
+			if engine.whale_pick(wi):
+				status_text = "鲸鱼之怒：%s 从弃牌堆回到手牌" % wnm
+			_clear_selection()
+		"endless":
+			var ei := int(opts[sel[0]])
+			var enm := "?"
+			if ei >= 0 and ei < engine.state.hand.size():
+				enm = engine.state.hand[ei].card_name
+			if engine.endless_pick(ei):
+				status_text = "无尽黑暗：弃掉 %s → 费用 +%d" % [enm, GameEngine.ENDLESS_DARK_ENERGY]
+			_clear_selection()
+		"recall":
+			var ri := int(opts[sel[0]])
+			var rnm := "?"
+			if ri >= 0 and ri < engine.state.discard.size():
+				rnm = engine.state.discard[ri].card_name
+			if _recall_discard_index(ri):
+				status_text = "%s：%s 从弃牌区回到手牌" % [_recall_mode(), rnm]
+			_clear_selection()
+		"foresight":
+			var fi := int(opts[sel[0]])
+			var fnm := "?"
+			if fi >= 0 and fi < engine.state.discard.size():
+				fnm = engine.state.discard[fi].card_name
+			if engine.foresight_pick_card(fi):
+				status_text = "预判：%s 回到手卡（本卡已消失）" % fnm
+			_clear_selection()
+		"fate":
+			var fai := int(opts[sel[0]])
+			var fanm := "?"
+			if fai >= 0 and fai < engine.state.discard.size():
+				fanm = engine.state.discard[fai].card_name
+			if engine.fate_pick(fai):
+				status_text = "拒绝命运：%s 回到手牌" % fanm
+			_clear_selection()
+		"focus":
+			# opts 存的是代表卡 id：按 id 找卡组里第一张（与合并视图口径一致）。
+			var cid := int(opts[sel[0]])
 			var di := -1
-			for k in engine.state.deck.size():
-				if engine.state.deck[k].id == picked.id:
-					di = k
+			for q in engine.state.deck.size():
+				if engine.state.deck[q].id == cid:
+					di = q
 					break
 			if di < 0:
-				_say("专注：牌堆里已经没有 %s 了" % picked.card_name)
-				return true
-			var nm := picked.card_name
-			engine.focus_pick(di)
-			if engine.focus_pending:
-				status_text = "专注：已移除 %s，还要移除 %d 张（右键取消）" % [
-						nm, engine.focus_remaining]
+				_say("专注：牌堆里已经没有这张卡了")
 			else:
-				status_text = "专注：已移除 %d 张卡，它们本次对战中消失" % GameEngine.FOCUS_NEED
-				_close_zone_panels()
-			return true
-	return false
+				var qnm := engine.state.deck[di].card_name
+				engine.focus_pick(di)
+				if engine.focus_pending:
+					status_text = "专注：已移除 %s，还要移除 %d 张" % [qnm, engine.focus_remaining]
+				else:
+					status_text = "专注：已移除 %d 张卡，它们本次对战中消失" % GameEngine.FOCUS_NEED
+	# 累计型（鲸鱼 / 命运 / 取牌 / 专注）确认一张后 pending 可能还在：
+	# 候选变了 → 用新 cfg 刷新（标题里的剩余数同步更新）；pending 没了由 _sync_pick 关。
+	if _pick.is_picking() and _pick_active_kind() == k:
+		_pick.update_cfg(_build_pick_cfg(k))
+	queue_redraw()
 
 
+func _on_pick_cancelled() -> void:
+	## 底栏「放弃」按钮（仅 whale / hero / focus 有）。
+	if _pick == null:
+		return
+	match _pick.kind():
+		"whale":
+			var left := engine.whale_remaining
+			engine.whale_skip()
+			status_text = "鲸鱼之怒：放弃剩余 %d 张的取牌" % left
+			_clear_selection()
+		"focus":
+			engine.focus_cancel()
+			status_text = "专注：已取消剩余的移除"
+		"hero":
+			var hnm := engine.state.hand[_hero_pick_idx].card_name
+			_hero_pick_idx = -1
+			status_text = "已取消：%s 仍在手牌（未付代价）" % hnm
+	# pending 已清 → _sync_pick 下一帧关掉 overlay
+	queue_redraw()
+
+
+func _pick_banner_rect() -> Rect2:
+	## 选卡页收起态的「继续选择」浮条（顶部中央；绘制与点击判定共用）。
+	return Rect2(WINDOW_W / 2.0 - 240.0, 74.0, 480.0, 40.0)
+
+
+func _draw_pick_banner() -> void:
+	## 收起态浮条：pending 与选中都还在，点击回到选卡页。
+	var r := _pick_banner_rect()
+	draw_rect(r, Color(0.14, 0.12, 0.20, 0.95))
+	draw_rect(r, Color("ffd27d"), false, 2.0)
+	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
+			"选择进行中：%s —— 点击继续" % String(_pick.cfg_short()),
+			r.get_center(), Color("ffd27d"))
 func _close_zone_panels() -> void:
 	## 关掉所有区域浏览面板（专注选完 / 取消后收干净）。
 	_discard_visible = false
@@ -3867,76 +3666,6 @@ func _close_zone_panels() -> void:
 	_void_visible = false
 	_zone_page = 0
 	_relic_scroll = 0.0
-
-
-func _revive_panel_layout() -> Dictionary:
-	## 复活术（9078）/ 暗影步（9121）取牌面板布局（与乌鸦/鲸鱼面板同款：网格排布 + 略缩小卡面）。
-	var opts := _recall_options()
-	var n := maxi(opts.size(), 1)
-	var cw := CARD_W * 0.8
-	var ch := CARD_H * 0.8
-	var step_x := cw + 8.0
-	var step_y := ch + 8.0
-	var cols: int = clampi(int((WINDOW_W - 220.0) / step_x), 1, mini(n, 10))
-	var rows: int = int(ceil(float(n) / float(cols)))
-	var content_w: float = step_x * cols - 8.0
-	var content_h: float = step_y * rows - 8.0
-	var pw: float = minf(WINDOW_W - 120.0, content_w + 60.0)
-	var ph: float = minf(WINDOW_H - 80.0, content_h + 132.0)
-	var px: float = (WINDOW_W - pw) / 2.0
-	var py: float = (WINDOW_H - ph) / 2.0
-	return {"opts": opts, "cols": cols, "cw": cw, "ch": ch,
-			"step_x": step_x, "step_y": step_y,
-			"x0": px + (pw - content_w) / 2.0, "card_y": py + 52.0,
-			"px": px, "py": py, "pw": pw, "ph": ph}
-
-
-func _revive_panel_rect(L: Dictionary, k: int) -> Rect2:
-	var cols: int = L["cols"]
-	return Rect2(L["x0"] + L["step_x"] * (k % cols),
-			L["card_y"] + L["step_y"] * int(k / cols), L["cw"], L["ch"])
-
-
-func _draw_revive_pick() -> void:
-	## 复活术（9078）「从弃牌区选一张盟友回到手牌」面板：只列盟友，点哪张拿哪张。
-	var L := _revive_panel_layout()
-	UiTheme.draw_panel_bg(self, Rect2(L["px"], L["py"], L["pw"], L["ph"]))
-	draw_rect(Rect2(L["px"], L["py"], L["pw"], L["ph"]), UiTheme.INK_600, false, 2.0)
-	var rmode := _recall_mode()
-	var rtitle := "复活术：选择弃牌区一张盟友回到手卡（必须选一张）"
-	if rmode == "暗影步":
-		rtitle = "暗影步：选择弃牌区一张卡回到手卡（必须选一张）"
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL, rtitle,
-			Vector2(WINDOW_W / 2, L["py"] + 26), UiTheme.INK_800)
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		var idx: int = opts[k]
-		var c: CardData = engine.state.discard[idx]
-		_draw_card_face(c, _revive_panel_rect(L, k), c.health, false, false)
-	var rv_tip := "点击一张卡：它立即回到你的手牌"
-	var rleft := _recall_remaining()
-	if rleft > 1:
-		rv_tip = "点击一张卡：它立即回到你的手牌（还要选 %d 张）" % rleft
-	_draw_string_center(_font, UiTheme.FS_MICRO, rv_tip,
-			Vector2(WINDOW_W / 2, L["py"] + L["ph"] - 12.0), UiTheme.INK_600)
-
-
-func _on_revive_pick_click(pos: Vector2) -> void:
-	var L := _revive_panel_layout()
-	var opts: Array = L["opts"]
-	for k in opts.size():
-		if _revive_panel_rect(L, k).has_point(pos):
-			var idx: int = opts[k]
-			var nm := "?"
-			if idx >= 0 and idx < engine.state.discard.size():
-				nm = engine.state.discard[idx].card_name
-			if _recall_discard_index(idx):
-				status_text = "%s：%s 从弃牌区回到手牌" % [_recall_mode(), nm]
-			_clear_selection()
-			queue_redraw()
-			return
-
-
 func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 	## 技能的可点目标格：火球术=任意格；击退/龙息=敌方单位；狂暴=己方盟友；其余=战场上所有单位。
 	var out: Array[Vector2i] = []
@@ -4260,7 +3989,6 @@ func _on_right_click() -> void:
 	if _hero_pick_idx >= 0:
 		var hero_nm := engine.state.hand[_hero_pick_idx].card_name
 		_hero_pick_idx = -1
-		_hero_pick_sel = []
 		status_text = "已取消：%s 仍在手牌（未付代价）" % hero_nm
 		queue_redraw()
 		return
@@ -5600,8 +5328,6 @@ func _draw() -> void:
 		_draw_discard_panel()
 	if _deck_visible:
 		var deck_title := "卡组 %d 张（相同卡合并，不显示抽牌顺序）" % engine.state.deck.size()
-		if engine.focus_pending:
-			deck_title = "专注：从卡组中移除 %d 张卡（点一张就移除它｜右键取消）" % engine.focus_remaining
 		_draw_zone_panel(deck_title,
 				_zone_panel_cards(), _zone_panel_counts())
 	if _void_visible:
@@ -5619,27 +5345,12 @@ func _draw() -> void:
 	_draw_tutorial_cue()
 	_draw_confetti()
 	_draw_banner()
-	# 英雄的弃牌代价面板：画在横幅**之后**（回合横幅不能盖住面板）
-	if _hero_pick_idx >= 0:
-		_draw_hero_pick()
-	# 乌鸦的回手面板：同样画在横幅之后
-	if engine.crow_pending:
-		_draw_crow_pick()
-	# 鲸鱼之怒的取牌面板：同样画在横幅之后
-	if engine.whale_pending:
-		_draw_whale_pick()
-	# 无尽黑暗的弃牌面板（R70）：同样画在横幅之后
-	if engine.endless_pending:
-		_draw_endless_pick()
-	# 取牌面板：同样画在横幅之后
-	if _recall_pending():
-		_draw_revive_pick()
+	# R189：选卡面板已统一为 PickOverlay 子节点（自己画自己）；
+	# 这里只画「收起态」的继续选择浮条（画在横幅之后，不能被盖住）。
+	if _pick != null and _pick.is_picking() and not _pick.visible:
+		_draw_pick_banner()
 	if engine.foresight_mode:
 		_draw_foresight_mode()
-	if engine.foresight_pick:
-		_draw_foresight_pick()
-	if engine.fate_pending:
-		_draw_fate_pick()
 	if engine.over:
 		_draw_game_over()
 
@@ -6276,6 +5987,7 @@ func _replay_tick() -> void:
 		return   # 其余条目（battle_end 等）由对应时机消费
 	# 玩家回合才执行（回合之间等 AI 动作跑完；面板类操作随时可执行）
 	var panel_f: bool = str(e.get("f", "")) in ["revive_recall", "shadow_step_recall", "focus_pick", "whale_pick",
+			"overhaul_recall",
 			"whale_skip", "crow_recall", "foresight_choose", "foresight_pick_card",
 			"fate_pick", "endless_pick"]
 	if not panel_f and engine.current_side != GameEngine.SIDE_SELF:
@@ -6294,7 +6006,6 @@ func _replay_tick() -> void:
 			engine.play_hero_from_hand(int(a[0]), ReplayLog.vec(a[1]),
 					a[2] if a.size() > 2 else [])
 			_hero_pick_idx = -1
-			_hero_pick_sel = []
 		"use_spell":
 			engine.use_spell(int(a[0]), ReplayLog.vec_or_null(a[1]))
 		"use_effect":
@@ -6315,6 +6026,8 @@ func _replay_tick() -> void:
 			engine.pass_attack(ReplayLog.vec(a[0]))
 		"revive_recall":
 			engine.revive_recall(int(a[0]))
+		"overhaul_recall":
+			engine.overhaul_recall(int(a[0]))
 		"shadow_step_recall":
 			engine.shadow_step_recall(int(a[0]))
 		"focus_pick":
@@ -6349,10 +6062,14 @@ func _pulse_redraw() -> void:
 	## 降频只是降采样、不会「卡住」，22fps 对 0.5s 周期的呼吸动画视觉上依然平滑。
 	## 安卓 GL Compatibility 上这是「越打越卡」的关键缓解：己方回合 `_board_has_actable()`
 	## 恒真、棋盘 `_grid_scrollable()` 恒真，原来每帧触发全量 `_draw`（80+ 子绘制）。
+	if _pulse_ms <= 0:
+		# R187：安卓再把脉冲窗口 ×2（45→90ms，11fps 采样呼吸动画仍连续）——
+		# 稳态下全量 _draw 再砍一半。⚠️ OS 门控：PC 端保持 45ms 原样，行为零变化。
+		_pulse_ms = PULSE_FRAME_MS * (2 if OS.get_name() == "Android" else 1)
 	var n := _now()
 	if n < _pulse_redraw_at:
 		return
-	_pulse_redraw_at = n + PULSE_FRAME_MS
+	_pulse_redraw_at = n + _pulse_ms
 	queue_redraw()
 
 
@@ -7338,6 +7055,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if data.get("card") is CardData:
 				rv_name = (data["card"] as CardData).card_name
 			_say("复活术：%s 从弃牌区回到手牌" % rv_name)
+		"overhaul_recall":
+			sfx.play("place")
+			var oh_name := "?"
+			if data.get("card") is CardData:
+				oh_name = (data["card"] as CardData).card_name
+			var oh_hp := int(data.get("hp", 0))
+			_say("返修：%s 从弃牌区回到手牌（生命 +%d，本场战斗永久）" % [oh_name, oh_hp])
+			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+					"text": "%s 生命 +%d" % [oh_name, oh_hp],
+					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 		"shadow_step_recall":
 			sfx.play("place")
 			var ss_name := "?"
@@ -9715,6 +9442,17 @@ func _process(delta: float) -> void:
 		_hover_pl = null
 	if engine == null:
 		return
+	# R186：触屏长按到时 → 右键等价（放弃取牌 / 取消专注 / 取消选中）。
+	# 同时摘掉待结算的左键按下 —— 否则松手时模拟鼠标会补发一发左键点击。
+	_sync_pick()
+	if _lp_active and not _lp_fired and _drag_idx < 0 and not _grid_dragging \
+			and (_pick == null or not _pick.visible) and _now() - _lp_t0 >= LP_MS:
+		_lp_fired = true
+		_lp_active = false
+		_press_idx = -1
+		_grid_drag_arm = false
+		_on_right_click()
+		queue_redraw()
 	if _shot_pending:
 		_demo_tick()
 	if _net_mode:

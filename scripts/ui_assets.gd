@@ -13,6 +13,7 @@ class_name UiAssets
 ##   稀有度边框     frame_<0..5>.png  下标同 CardData.RARITY_COLORS
 ##   稀有度缎带     ribbon_<0..5>.png 下标同上（R170：稀有度的**主通道**，挂在卡面右上角）
 ##   面板羊皮纸     panel_parchment.png（R170：白底面板的统一底，平铺自适应任意大小）
+##   羊皮卷面板底   scroll_parchment.png（R191：奖励面板的卷轴底，九宫格自适应、无边框）
 ##   数值徽章图标   icon_<键>.png     键 = cost 水晶 / power 剑 / range 弓 /
 ##                                      health 血 / speed 鞋
 ##
@@ -81,6 +82,13 @@ static func rarity_ribbon(rarity: int) -> Texture2D:
 	## 下标同 `CardData.RARITY_COLORS`。透明底、燕尾下垂，源图 192 高。
 	## 缺图时返回 null，`CardFace` 回退成程序绘制的小旗 —— 不空白也不报错。
 	return get_tex("ribbon_%d" % clampi(rarity, 0, 5))
+
+
+static func scroll_parchment() -> Texture2D:
+	## 羊皮卷面板底（R191）：1524×953 透明底卷轴，四边自然破损、中心均匀干净。
+	## 配 `UiTheme.draw_scroll_bg()` 九宫格使用（角块 16%，边条单向拉伸）。
+	## 缺图返回 null，调用方回退 `draw_panel_bg` 平铺羊皮纸。
+	return get_tex("scroll_parchment")
 
 
 static func panel_parchment() -> Texture2D:

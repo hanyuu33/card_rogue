@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 211,
-			"图鉴 = 209 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174**；R164 删除**双重场地 9108**；实际 %d）"
+	check(repo.all_cards().size() == 212,
+			"图鉴 = 209 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 161 and grp_enemy.size() == 50,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 161 / 50；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 162 and grp_enemy.size() == 50,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 162 / 50；R188 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -164,8 +164,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 141,
-			"奖励池 142 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池**；实际 %d）"
+	check(pool.size() == 142,
+			"奖励池 142 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -5482,6 +5482,43 @@ func _init() -> void:
 	check(q_l2_ev_seen.has("pear") or q_l2_ev_seen.has("hero") or q_l2_ev_seen.has("bluefish"),
 			"第二层地图多次生成：出鸭梨山大/绝赞五换一/蓝色大肥鱼专属事件")
 
+	# ---- R192：起点后第一格（起点的每一个邻居）类型约束 ----
+	# 第一层：只可能是事件或一般战斗（不是?/商店/精英/篝火）；
+	# 其他层：不会是精英/篝火（篝火本就有「不与起点相邻」约束）。
+	var q_r192_rng := RandomNumberGenerator.new()
+	q_r192_rng.randomize()
+	var q_r192_l1_bad := ""
+	var q_r192_l2_bad := ""
+	var q_r192_seen_b := false
+	var q_r192_seen_e := false
+	for q_r192_i in 120:
+		var q_r192_m1: Array = RogueMap.generate(q_r192_rng, GameLayers.LAYER_DEFAULT)
+		var q_r192_s1: Dictionary = RogueMap.start_cell(q_r192_m1)
+		for q_r192_nid: int in (q_r192_s1["doors"] as Array):
+			var q_r192_c1: Dictionary = q_r192_m1[q_r192_nid]
+			var q_r192_t1 := str(q_r192_c1["type"])
+			if q_r192_t1 != "event" and q_r192_t1 != "battle":
+				q_r192_l1_bad = q_r192_t1
+			if bool(q_r192_c1.get("hidden", false)):
+				q_r192_l1_bad = "?房:" + q_r192_t1
+			if q_r192_t1 == "battle":
+				q_r192_seen_b = true
+			if q_r192_t1 == "event":
+				q_r192_seen_e = true
+		var q_r192_m2: Array = RogueMap.generate(q_r192_rng, GameLayers.LAYER_TWO)
+		var q_r192_s2: Dictionary = RogueMap.start_cell(q_r192_m2)
+		for q_r192_nid2: int in (q_r192_s2["doors"] as Array):
+			var q_r192_c2: Dictionary = q_r192_m2[q_r192_nid2]
+			var q_r192_t2 := str(q_r192_c2["type"])
+			if q_r192_t2 == "elite" or q_r192_t2 == "rest":
+				q_r192_l2_bad = q_r192_t2
+	check(q_r192_l1_bad == "", "R192 第一层起点邻居只出事件/一般战斗，且不是?房（违例：%s）"
+			% ("无" if q_r192_l1_bad == "" else q_r192_l1_bad))
+	check(q_r192_l2_bad == "", "R192 第二层起点邻居不出精英/篝火（违例：%s）"
+		% ("无" if q_r192_l2_bad == "" else q_r192_l2_bad))
+	check(q_r192_seen_b and q_r192_seen_e,
+			"R192 第一层起点邻居：事件与一般战斗都确实会出现（未被写死成单一类型）")
+
 	# ---- R68：同一张地图上事件子类型不重复（全出过一遍后才允许重复）----
 	var q_r68_u := {}
 	var q_r68_l1 := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
@@ -6819,9 +6856,9 @@ func _init() -> void:
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 54
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 36
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 37
 			and int(dr_cls_count.get("敌人", 0)) == 50,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 54 / 36 / 50；R161 +1 / R162 +1 / R174 +1；R164 暗影刺客 -1 = 删除双重场地 9108）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 54 / 37 / 50；R188 +1；R161 +1 / R162 +1 / R174 +1；R164 暗影刺客 -1 = 删除双重场地 9108）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -7079,7 +7116,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 141, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后总池 141，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 142, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 = 142，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -15430,6 +15467,127 @@ func _init() -> void:
 	RunState.deck_mods = r181_saved_mods
 
 	RunState.player_class = r91_saved_cls
+
+	# ============================================================
+	#  R187：性能 —— 文案纯函数缓存（parse / naturalize / Mention.scan）
+	# ============================================================
+	var r187_t := "**接通**的单位不计算距离。「铁栅栏」也来一张。"
+	var r187_p1: Array = CardText.parse(r187_t)
+	var r187_p2: Array = CardText.parse(r187_t)
+	check(r187_p1 == r187_p2 and r187_p1.size() >= 3,
+		"R187 性能：parse 缓存命中与首次结果逐字一致")
+	check(not is_same(r187_p1, r187_p2),
+		"R187 性能：parse 返回副本（不与缓存同实例）")
+	r187_p1.clear()
+	var r187_p3: Array = CardText.parse(r187_t)
+	check(r187_p3.size() == r187_p2.size(),
+		"R187 性能：调用方清空返回数组后缓存仍完好")
+	check(CardText.naturalize(r187_t) == CardText.naturalize(r187_t)
+			and not CardText.naturalize(r187_t).contains("*"),
+		"R187 性能：naturalize 走 parse 缓存，输出稳定且无裸星号")
+	var r187_m1: Array = Mention.scan("把「铁栅栏」摆上场，再听一次「鲸鱼之怒」。")
+	var r187_m2: Array = Mention.scan("把「铁栅栏」摆上场，再听一次「鲸鱼之怒」。")
+	check(r187_m1 == r187_m2 and r187_m1.size() == 2,
+		"R187 性能：Mention.scan 缓存命中结果一致（2 处提及）")
+	RunState.player_class = r91_saved_cls
+
+	# ============================================================
+	#  R188：返修 9127（机械之心 1 费稀有技能）—— 弃牌区选盟友/工事回手 + 永久改造生命+3
+	# ============================================================
+	# ---- ① 卡面：技能 / 1 费 / 稀有 / 机械之心 / target_mode=none / traits 机械·改造 ----
+	var r188_c: CardData = r91_repo.get_card(9127)
+	check(r188_c != null and r188_c.card_name == "返修" and r188_c.kind == "技能"
+			and r188_c.cost == 1 and r188_c.rarity == 1 and r188_c.group == "player"
+			and r188_c.card_class == "机械之心" and r188_c.target_mode == "none"
+			and r188_c.traits.has("机械") and r188_c.traits.has("改造"),
+		"R188 返修卡面：技能 / 1 费 / 稀有 / 机械之心 / target_mode=none / traits 机械·改造")
+	var r188_in_pool := false
+	for r188_pc: CardData in r91_repo.reward_pool():
+		if r188_pc.id == 9127:
+			r188_in_pool = true
+	check(r188_in_pool, "R188 返修（稀有）进奖励卡池")
+	# ---- ② 弃牌区没有盟友/工事 → 效果落空，不开面板 ----
+	var r188_e1 := _new_engine([], 30, 30)
+	r188_e1.state.discard = []
+	r188_e1.state.hand = [CardData.from_dict(r188_c.to_dict())]
+	r188_e1.state.energy = 5
+	var r188_r1: String = r188_e1.use_spell(0)
+	check(not r188_e1.overhaul_pending and r188_r1.contains("没有盟友或工事"),
+		"R188 返修：弃牌区没有盟友/工事 → 落空不开面板（%s）" % r188_r1)
+	# ---- ③ 有候选 → 开面板；技能卡不在候选里 ----
+	var r188_e2 := _new_engine([], 30, 30)
+	r188_e2.state.discard = [CardData.from_dict(r91_repo.get_card(8003).to_dict()),
+			CardData.from_dict(r91_repo.get_card(8001).to_dict()),
+			CardData.from_dict(r91_repo.get_card(8002).to_dict())]
+	r188_e2.state.hand = [CardData.from_dict(r188_c.to_dict())]
+	r188_e2.state.energy = 5
+	r188_e2.use_spell(0)
+	check(r188_e2.overhaul_pending and r188_e2.overhaul_options().size() == 2,
+		"R188 返修：候选 = 弃牌区盟友+工事（技能卡不可选；实际 %d）"
+			% r188_e2.overhaul_options().size())
+	check(not r188_e2.overhaul_options().has(2), "R188 返修：8002 攻击（技能）不在候选里")
+	# ---- ④ 选树人 → 回手且生命 +3（烤进副本，本场战斗永久）----
+	var r188_tree_hp: int = r91_repo.get_card(8003).health
+	check(r188_e2.overhaul_recall(0), "R188 返修：选 0 号（树人）结算成功")
+	check(not r188_e2.overhaul_pending, "R188 返修：选完即关面板")
+	var r188_back: CardData = r188_e2.state.hand[r188_e2.state.hand.size() - 1]
+	check(r188_back.id == 8003 and r188_back.health == r188_tree_hp + 3
+			and r188_e2.state.discard.size() == 3,
+		"R188 返修：树人回手且生命 %d → %d（本场战斗永久；弃牌区少一张）"
+			% [r188_tree_hp, r188_back.health])
+	check(r91_repo.get_card(8003).health == r188_tree_hp,
+		"R188 返修：卡库共享实例未被污染（树人仍是 %d 血）" % r188_tree_hp)
+	# ---- ⑤ 手牌已满 → 取回被拒，面板不关 ----
+	var r188_e3 := _new_engine([], 30, 30)
+	r188_e3.state.discard = [CardData.from_dict(r91_repo.get_card(8003).to_dict())]
+	for r188_i in FieldState.HAND_LIMIT:
+		r188_e3.state.hand.append(CardData.from_dict(r91_repo.get_card(8001).to_dict()))
+	r188_e3.overhaul_pending = true
+	r188_e3.overhaul_remaining = 1
+	check(not r188_e3.overhaul_recall(0), "R188 返修：手牌已满 → 取回被拒")
+	check(r188_e3.overhaul_pending, "R188 返修：取回失败不关面板（还能换张再选）")
+	# ---- ⑥ 技能卡不可选（直接调 recall 也被拒）----
+	var r188_e4 := _new_engine([], 30, 30)
+	r188_e4.state.discard = [CardData.from_dict(r91_repo.get_card(8002).to_dict())]
+	r188_e4.overhaul_pending = true
+	r188_e4.overhaul_remaining = 1
+	check(not r188_e4.overhaul_recall(0), "R188 返修：技能卡（8002 攻击）不可选 —— recall 拒绝")
+	# ---- ⑦ 面板开着时不许出别的牌（联机/回放兜底）----
+	var r188_e5 := _new_engine([], 30, 30)
+	r188_e5.state.hand = [CardData.from_dict(r91_repo.get_card(8001).to_dict())]
+	r188_e5.state.energy = 5
+	r188_e5.overhaul_pending = true
+	var r188_r5: String = r188_e5.use_spell(0)
+	check(r188_r5.contains("请先从弃牌区"),
+		"R188 返修：选牌面板开着时出牌被拦截（%s）" % r188_r5)
+	# ---- ⑧ 敌方 AI 不使用这张卡 ----
+	var r188_r8: String = r188_e5._overhaul_spell(GameEngine.SIDE_OPPONENT)
+	check(r188_r8.contains("敌方"), "R188 返修：敌方 AI 不使用这张卡（%s）" % r188_r8)
+
+	# ============================================================
+	#  R190：导出版资源修复 —— 卡图判存走 ResourceLoader.exists
+	#        + 安卓图标键名 launcher_icons/*（package/icon 在 4.3 无效）
+	# ============================================================
+	var r190_face_src := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+	check(r190_face_src.contains("ResourceLoader.exists("),
+		"R190 导出：card_face.art_for 用 ResourceLoader.exists 判存（FileAccess 在包里恒假）")
+	check(not r190_face_src.contains("if FileAccess.file_exists(cp)")
+		and not r190_face_src.contains("if FileAccess.file_exists(sp)"),
+		"R190 导出：卡图变体判存不得再用 FileAccess.file_exists")
+	var r190_presets := FileAccess.get_file_as_string("res://export_presets.cfg")
+	check(r190_presets.contains("launcher_icons/main_192x192")
+		and r190_presets.contains("launcher_icons/adaptive_foreground_432x432")
+		and r190_presets.contains("launcher_icons/adaptive_background_432x432"),
+		"R190 导出：安卓图标用 4.3 键名 launcher_icons/*")
+	check(not r190_presets.contains("package/icon"),
+		"R190 导出：preset 不得残留 4.3 无效的 package/icon* 键")
+	var r190_proj := FileAccess.get_file_as_string("res://project.godot")
+	check(r190_proj.contains("config/icon=\"res://assets/ui/icon_android_legacy.png\""),
+		"R190 导出：application/config/icon 指向森林头像旧版图标（不再回退卡背）")
+	check(FileAccess.file_exists("res://assets/ui/icon_android_legacy.png")
+		and FileAccess.file_exists("res://assets/ui/icon_android_fg.png")
+		and FileAccess.file_exists("res://assets/ui/icon_android_bg.png"),
+		"R190 导出：三张安卓图标文件在位")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
