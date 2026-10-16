@@ -44,6 +44,10 @@ const MARK_MIN_STEP := 3.0           # 笔画取点最小间距（去掉手抖�
 ##   * 进场过场刚结束 → 留这点时间让玩家看清「当前格落定」（过场期间绝不触发入夜）；
 ##   * 从战斗 / 事件 / 奖励窗回到地图 → 也给同样长度的缓冲，别一回来就糊黑屏。
 const BOSS_HOLD_AFTER_ENTER := 0.55
+## R194：鸭之低语的行走节奏（秒）。进地图先等一拍，让玩家看清「命运选了哪一间」；
+## 之后每步只隔一小段 —— 路过走过的旧房间时，看起来就是被一路拽着往前走。
+const WHISPER_FIRST_DELAY := 1.6
+const WHISPER_STEP_DELAY := 0.55
 var _mark_mode := -1                 # 当前标记模式（-1 = 关，行为与旧版一致）
 var _mark_drawing := false           # 左键按下中（画线中 / 擦拭中 / 预备放旗）
 var _mark_cur: PackedVector2Array = PackedVector2Array()   # 正在画的笔画（松手才入栈）
@@ -134,7 +138,8 @@ var _menu_btn: Button = null      # 上栏那个齿轮（**自绘图标**，需�
 var _deck_btn: Button = null      # R155：右上「卡组」按钮（非战斗界面也能直接看卡组，不必先按 Esc）
 var _relic_scroll := 0.0
 var _whisper_auto := false
-var _whisper_next: Dictionary = {}
+var _whisper_next: Dictionary = {}   # 命运本轮选中的下一间（画紫圈的目标）
+var _whisper_wait := 0.0             # 距命运落下一步还有多少秒（<= 0 即可走）
 var _reward_panel: RewardPanel = null
 var _drag_press_pos := Vector2.ZERO
 var _press_active := false
@@ -225,8 +230,12 @@ func _ready() -> void:
 		"sub": "冒险地图 · 按 Esc 返回",
 	})
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
-	# 道具「鸭之低语」（6010）：玩家失去选择权 → 系统随机挑路并自动前进
-	if RunState.run_active and RunState.has_relic(6010) and not ReplayLog.playing:
+	# 道具「鸭之低语」（6010）：玩家失去选择权 → 系统随机挑路并自动前进。
+	# ⚠️ R194：这里只负责**接手**（`_start_whisper` 挑出第一间），真正一步步往下走
+	#    由 `_process` → `_tick_whisper` 持续驱动 —— 原来只在 `_ready` 挑一次、
+	#    抽中「走过的房间」时不会换场景、也就再没人挑路 → 当场卡死（用户上报）。
+	if RunState.run_active and RunState.has_relic(RunState.WHISPER_RELIC_ID) \
+			and not ReplayLog.playing:
 		_start_whisper()
 	# -- --bossalert：演示「入夜了」提示（只显示不切场景，截图核验用）
 	if "--bossalert" in OS.get_cmdline_user_args():
@@ -536,6 +545,9 @@ func _process(delta: float) -> void:
 			and _boss_hold <= 0.0 and _anim_cell.is_empty() \
 			and (_reward_panel == null or not _reward_panel.is_open()):
 		_trigger_boss_alert()
+	# 鸭之低语（R194）：本场景一空闲就继续走下一步 —— 过场中 / 奖励窗开着 / 已入夜
+	# 都先按住（空闲判定见 `_tick_whisper`）。
+	_tick_whisper(delta)
 
 
 func _map_pulse_redraw() -> void:
@@ -1688,27 +1700,51 @@ func _unhandled_input(event: InputEvent) -> void:
 # ------------------------------------------------------------ 鸭之低语 / 回放
 
 func _start_whisper() -> void:
+	## 接手：命运替玩家挑路（第一步）。
+	## 后续每一步由 `_tick_whisper` 在 `_process` 里持续驱动 —— 本函数只负责起头。
 	_whisper_auto = true
-	var opts := RunState.available_nodes()
-	if opts.is_empty():
-		return
-	_whisper_next = opts[RunState.run_rng.randi() % opts.size()]
+	_whisper_next = RunState.whisper_pick()
+	_whisper_wait = WHISPER_FIRST_DELAY
 	queue_redraw()
-	var t := Timer.new()
-	t.wait_time = 1.6
-	t.one_shot = true
-	t.timeout.connect(_whisper_advance)
-	add_child(t)
-	t.start()
 
 
-func _whisper_advance() -> void:
-	if not RunState.run_active or not RunState.has_relic(6010):
+func _tick_whisper(delta: float) -> void:
+	## 鸭之低语的**持续代走**（R194）。
+	## 旧实现是「`_ready` 挑一次 + 一次性 Timer 走一步」：那一步若落在**走过的**房间上
+	## （`advance()` 不换场景），本场景就不会重跑 `_ready` → 再没人挑路，
+	## 而 `_whisper_auto` 又挡着玩家点击 → 队伍卡死、「只走一格就停」（用户上报）。
+	## 现在做成**本场景的常驻循环**：场景一空闲就接着走；走过旧房间不算数，
+	## 一路走到「没走过的房间」为止（那一步会切去战斗 / 事件 / 商店，或就地开奖励窗）。
+	##
+	## 空闲 = 没在播进场过场、没开着奖励悬浮窗、还没入夜、也不在回放 / 出图钉帧。
+	if not _whisper_auto or not RunState.run_active or ReplayLog.playing or _shot:
 		return
-	if _whisper_next.is_empty() or not _is_available(_whisper_next):
+	if not RunState.has_relic(RunState.WHISPER_RELIC_ID):
 		return
+	if not _anim_cell.is_empty() or RunState.boss_pending:
+		return
+	if _reward_panel != null and _reward_panel.is_open():
+		return
+	_whisper_wait = maxf(0.0, _whisper_wait - delta)
+	if _whisper_wait > 0.0:
+		return
+	if _whisper_next.is_empty():
+		_whisper_next = RunState.whisper_pick()
+		if _whisper_next.is_empty():
+			return                        # 无处可去（生成约束下不会发生）
+		_whisper_wait = WHISPER_STEP_DELAY   # 先亮出紫圈，再落地
+		queue_redraw()
+		return
+	var step := _whisper_next
+	_whisper_next = {}
 	sfx.play("click")
-	_enter_node(_whisper_next)
+	_enter_node(step)
+	# 走的是**走过的**房间（`_enter_node` 不起过场、RunState 已即时推进）→ 接着挑下一步；
+	# 走的是新房间则由过场 + 场景切换接手（本场景即将卸载，下一步在 `_ready` 里重挑）。
+	if _anim_cell.is_empty():
+		_whisper_next = RunState.whisper_pick()
+	_whisper_wait = WHISPER_STEP_DELAY
+	queue_redraw()
 
 
 func _replay_tick() -> void:

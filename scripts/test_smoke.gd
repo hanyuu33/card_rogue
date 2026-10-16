@@ -102,6 +102,15 @@ func _initialize() -> void:
 				RunState.relics = [RunState.DUCK_BLOOD_RELIC_ID]
 				RunState.pending_relic = RunState.DUCK_BLOOD_RELIC_ID,
 			_check_deck_duck_blood],
+		# R194：鸭之低语（6010）—— 随机走路「只走一格就停」的场景侧回归。
+		# ⚠️ 断言完必须把 `_whisper_auto` 关掉：本用例后面还有几帧，代走若还开着
+		#    就会走进新房间把场景切走 → 冒烟用例崩掉。
+		["res://scenes/map.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relic_choice = []
+				RunState.relics = [RunState.WHISPER_RELIC_ID],
+			_check_whisper],
 		["res://scenes/gallery.tscn", func(): _reset()],
 		# 回放列表场景（R46）
 		["res://scenes/replay_list.tscn", func(): _reset()],
@@ -678,6 +687,93 @@ func _check_map_marks(scene: Variant) -> void:
 	RunState.map_strokes = []
 	RunState.map_flags = []
 	print("SMOKE OK 地图标记（R184）：关态点按钮可激活 / 拖笔入栈 / 单点放旗 / 再点收起 / 橡皮删旗删笔")
+
+
+func _check_whisper(scene: Variant) -> void:
+	## R194：鸭之低语（6010）随机走路「只走一格就停」。
+	## 场景侧两件事必须同时成立：
+	##   ① `_ready` 进来就接管（`_whisper_auto` 置起 + 已挑好第一间，紫圈画得出）；
+	##   ② 落在一间**走过的**房间上时，必须**接着挑下一步** ——
+	##      当年就是在这里静止（`advance` 不换场景 → 场景不重跑 `_ready`）→ 卡死。
+	if not bool(scene._whisper_auto):
+		_smoke_fail("R194 低语：持 6010 进地图应当自动接管（_whisper_auto 未置起）")
+		return
+	var w_first: Dictionary = scene._whisper_next
+	if w_first.is_empty() or RunState.cleared_ids.has(int(w_first["id"])):
+		_smoke_fail("R194 低语：接管后第一步必须挑「没走过的」邻居，实际 %s" % str(w_first))
+		scene._whisper_auto = false
+		return
+	# 造一个「命运选中走过的房间」的局面：先站到那个邻居上，再让它回踩已走过的起点。
+	var w_nb: int = int(w_first["id"])
+	var w_start: Dictionary = RogueMap.start_cell(RunState.map_cells)
+	RunState.cleared_ids.append(w_nb)          # 邻居也记成走过
+	RunState.current_node_id = w_nb
+	RunState.chocolate = maxi(2, RunState.chocolate - 1)
+	scene._whisper_next = w_start              # 命运选中「走过的起点」
+	scene._whisper_wait = 0.0
+	var w_choco0: int = RunState.chocolate
+	scene._process(0.05)                       # 推一帧：应当走过去 + **接着挑下一步**
+	var w_next2: Dictionary = scene._whisper_next
+	if RunState.current_node_id != int(w_start["id"]):
+		_smoke_fail("R194 低语：命运选中的「走过的房间」没被走过去（现在站在 %d）"
+				% RunState.current_node_id)
+	elif RunState.chocolate != w_choco0:
+		_smoke_fail("R194 低语：回踩走过的房间不该扣巧克力（%d → %d）"
+				% [w_choco0, RunState.chocolate])
+	elif w_next2.is_empty():
+		_smoke_fail("R194 低语：落在走过的房间上之后**没有再挑下一步**"
+				+ "（这就是当年「只走一格就停」）")
+	elif int(w_next2["id"]) == w_nb:
+		_smoke_fail("R194 低语：接着挑的下一步又指回刚离开的那间（原地打转）")
+	else:
+		print("SMOKE OK R194 低语：接管 → 抽中走过的房间仍继续往前走"
+				+ "（%d → %d，接着挑 %d）"
+				% [w_nb, int(w_start["id"]), int(w_next2["id"])])
+	# ③ 真跑一遍「连续代走」：全图都记成走过、只留 3 步外的一间没走过 →
+	#    命运必须**连走 3 步**过去（旧实现走 1 步就停 —— 这正是用户上报的现象）。
+	if RunState.run_active and RunState.current_node_id >= 0:
+		var w_save_cleared: Array = RunState.cleared_ids
+		var w_save_cur: int = RunState.current_node_id
+		var w_save_choco: int = RunState.chocolate
+		RunState.cleared_ids = []
+		for w_c: Dictionary in RunState.map_cells:
+			RunState.cleared_ids.append(int(w_c["id"]))
+		var w_ds: Dictionary = RogueMap.steps_from(RunState.map_cells, w_save_cur)
+		var w_target := -1
+		for w_c2: Dictionary in RunState.map_cells:
+			if int(w_ds.get(int(w_c2["id"]), -1)) == 3:
+				w_target = int(w_c2["id"])
+				break
+		if w_target < 0:
+			_smoke_fail("R194 低语：地图上找不到距起点 3 步的格子（用例前提不成立）")
+		else:
+			RunState.cleared_ids.erase(w_target)
+			scene._whisper_auto = true
+			scene._whisper_next = RunState.whisper_pick()
+			var w_steps := 0
+			while w_steps < 8 and scene._anim_cell.is_empty():
+				scene._whisper_wait = 0.0
+				scene._process(0.05)
+				w_steps += 1
+			if w_steps != 3 or scene._anim_cell.is_empty() \
+					or int(scene._anim_cell["id"]) != w_target:
+				_smoke_fail("R194 低语：3 步外那间没走过去（走了 %d 步 / 过场目标 %s / 期望 %d）"
+						% [w_steps, str(scene._anim_cell.get("id", -1)), w_target])
+			elif RunState.current_node_id == w_target:
+				_smoke_fail("R194 低语：走到新房间应当先播进场过场（不该已经结算进房）")
+			elif RunState.chocolate != w_save_choco:
+				_smoke_fail("R194 低语：过场没播完前的路过步不该扣巧克力（%d → %d）"
+						% [w_save_choco, RunState.chocolate])
+			else:
+				print("SMOKE OK R194 低语：一连代走 3 步到没走过的房间"
+						+ "（旧实现走 1 步就停；路过步不扣巧克力）")
+		RunState.cleared_ids = w_save_cleared
+		RunState.current_node_id = w_save_cur
+		RunState.chocolate = w_save_choco
+	# 收尾：关掉代走，免得后面几帧真的走进新房间把场景切走
+	scene._whisper_auto = false
+	scene._whisper_next = {}
+	scene._anim_cell = {}
 
 
 func _check_relic_bar(scene: Variant) -> void:

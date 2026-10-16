@@ -832,6 +832,61 @@ static func available_nodes() -> Array:
 	return out
 
 
+static func whisper_pick() -> Dictionary:
+	## 「鸭之低语」（6010）随机走路的**唯一挑路口** —— 地图场景只负责把它画出来（紫圈）
+	## 并走过去，挑选规则本身放这里，纯逻辑即可单测（见 test_engine 的 R194 用例）。
+	##
+	## ⚠️ 修「新地图上随机走路只走一格就停」（用户 2026-10-16 上报，卡死级）：
+	##    `available_nodes()` 里**既有没走过的、也有走过的**邻居（走过的可零消耗原路返回）。
+	##    旧实现由地图场景直接从**整池**里随机抽一间 → 抽中「走过的」时 `advance()` 只弹一句
+	##    「什么都不会发生」、**不换场景** → 地图场景不会重跑 `_ready`，再没人挑下一步，
+	##    而 `_whisper_auto` 又挡着玩家点击 → 队伍就地卡死、流程推不下去（= 只走一格就停）。
+	##
+	##    现在分三档挑，「随机走路」= 一路穿过走过的旧房间，直到踏进没走过的那间为止
+	##    （用户口径「应走到一格没走过的格子为止」）：
+	##      ① 隔壁就有没走过的 → 随机挑一间（走进就推进剧情）；
+	##      ② 隔壁全是走过的 → 朝**最近的没走过的房间**走一步（BFS 步数表 → 目标 -
+	##         1 步的邻居），于是每一步都在**缩短**到未探索区域的距离，不会瞎逛；
+	##      ③ 全图都走过了 → 任选一间邻居兜底 —— 不做事，但也绝不把队伍钉死在原地。
+	##    只在「当前房间一个门都没有」时返回 {}（生成约束下不会发生）。
+	var opts: Array = available_nodes()
+	if opts.is_empty():
+		return {}
+	# ---- ① 隔壁就有没走过的 ----
+	var fresh: Array = []
+	for c: Dictionary in opts:
+		if not cleared_ids.has(int(c["id"])):
+			fresh.append(c)
+	if not fresh.is_empty():
+		return fresh[run_rng.randi() % fresh.size()]
+	# ---- ② 隔壁全是走过的：朝最近的没走过的房间走一步 ----
+	var ds: Dictionary = RogueMap.steps_from(map_cells, current_node_id)
+	var far := 1 << 30
+	for c2: Dictionary in map_cells:
+		if not cleared_ids.has(int(c2["id"])):
+			far = mini(far, int(ds.get(int(c2["id"]), 1 << 30)))
+	if far < (1 << 30):
+		var ties: Array = []
+		for c3: Dictionary in map_cells:
+			if not cleared_ids.has(int(c3["id"])) \
+					and int(ds.get(int(c3["id"]), 1 << 30)) == far:
+				ties.append(int(c3["id"]))
+		if not ties.is_empty():
+			var target: int = int(ties[run_rng.randi() % ties.size()])
+			var dt: Dictionary = RogueMap.steps_from(map_cells, target)
+			var near := 1 << 30
+			for c4: Dictionary in opts:
+				near = mini(near, int(dt.get(int(c4["id"]), 1 << 30)))
+			var cand: Array = []
+			for c5: Dictionary in opts:
+				if int(dt.get(int(c5["id"]), 1 << 30)) == near:
+					cand.append(c5)
+			if not cand.is_empty():
+				return cand[run_rng.randi() % cand.size()]
+	# ---- ③ 兜底：全图都走过了（或步数表异常）→ 任选一间邻居 ----
+	return opts[run_rng.randi() % opts.size()]
+
+
 static func known_node(id: int) -> bool:
 	## R145 迷雾规则的**唯一判定口**：玩家「看得见这一格里是什么」吗？
 	##   * 持有「鹰哨」（6026）→ 全图都看得见；

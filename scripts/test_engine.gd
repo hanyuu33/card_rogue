@@ -15466,6 +15466,134 @@ func _init() -> void:
 	RunState.deck_ids = r181_saved_deck
 	RunState.deck_mods = r181_saved_mods
 
+	# ---- R194：鸭之低语「随机走路在新地图只走一格就停」（用户 2026-10-16 上报） ----
+	# 现象：低语接管后随机走路只走 1 格就静止 → 玩家点不动 = 卡死、游戏进行不下去。
+	# 根因：地图场景从「所有邻居（**含走过的**）」整池随机抽一间，抽中走过的时 `advance`
+	#      只弹一句提示、**不换场景** → 场景不会重跑 `_ready` → 再没人挑下一步。
+	# 修法：挑路收进 `RunState.whisper_pick()`（唯一口）——**只要还有没走过的邻居就
+	#      必须挑它**；隔壁全是走过的时朝「最近的没走过的房间」走一步，于是随机走路
+	#      会一路穿过走过的旧房间，直到踏进没走过的那间为止。
+	# 断言用的不变量（与实现无关）：**每一步都让「到最近没走过的房间的步数」-1**。
+	# ⚠️ 这里只测**纯逻辑**（挑选规则 + 走完全程）；场景侧的「持续驱动」由下面的
+	#    源码守卫 + test_smoke 的 `_check_whisper` 覆盖。
+	var w194_cells: Array = RunState.map_cells
+	var w194_cur: int = RunState.current_node_id
+	var w194_cleared: Array = RunState.cleared_ids
+	var w194_choco: int = RunState.chocolate
+	var w194_boss: bool = RunState.boss_pending
+	var w194_active: bool = RunState.run_active
+	var w194_rng: RandomNumberGenerator = RunState.run_rng
+	RunState.run_rng = RandomNumberGenerator.new()
+	RunState.run_rng.seed = 20261016
+	RunState.run_active = true
+	var w194_maps := 30
+	var w194_stall := 0        # 挑不出下一间（= 当年的卡死）
+	var w194_old_pick := 0     # 明明还有没走过的邻居、却挑了走过的（= 卡死的直接成因）
+	var w194_dawdle := 0       # 「到最近没走过的房间的步数」没有缩短（= 瞎逛 / 原地打转）
+	var w194_slow := 0         # 走不到 Boss（巧克力耗尽）
+	var w194_max_steps := 0
+	for w194_i in w194_maps:
+		var w194_map := RogueMap.generate(RunState.run_rng, GameLayers.LAYER_DEFAULT)
+		if w194_map.size() != RogueMap.CELLS:
+			w194_stall += 1
+			continue
+		RunState.map_cells = w194_map
+		RunState.boss_pending = false
+		RunState.chocolate = RogueMap.MAX_STEPS
+		var w194_start := RogueMap.start_cell(w194_map)
+		RunState.current_node_id = int(w194_start["id"])
+		RunState.cleared_ids = [int(w194_start["id"])]
+		var w194_steps := 0
+		while not RunState.boss_pending and w194_steps < 600:
+			w194_steps += 1
+			var w194_far0: int = _whisper_far(w194_map, RunState.current_node_id,
+					RunState.cleared_ids)
+			var w194_fresh: Array = []
+			for w194_c: Dictionary in RunState.available_nodes():
+				if not RunState.cleared_ids.has(int(w194_c["id"])):
+					w194_fresh.append(int(w194_c["id"]))
+			var w194_next: Dictionary = RunState.whisper_pick()
+			if w194_next.is_empty():
+				w194_stall += 1
+				break
+			var w194_nid: int = int(w194_next["id"])
+			if not w194_fresh.is_empty() and not w194_fresh.has(w194_nid):
+				w194_old_pick += 1     # 还有没走过的邻居却挑了走过的 = 当年卡死的直接成因
+			if _whisper_far(w194_map, w194_nid, RunState.cleared_ids) != w194_far0 - 1:
+				w194_dawdle += 1       # 没朝「没走过的房间」走近一步 = 瞎逛 / 打转
+			var w194_res: Dictionary = RunState.advance(w194_nid)
+			if not bool(w194_res.get("ok", false)):
+				w194_stall += 1
+				break
+		if not RunState.boss_pending:
+			w194_slow += 1
+		w194_max_steps = maxi(w194_max_steps, w194_steps)
+	check(w194_stall == 0,
+			"R194 低语：%d 张图上随机走路一次都没有「挑不出下一间」（实际 %d 次）"
+			% [w194_maps, w194_stall])
+	check(w194_old_pick == 0,
+			"R194 低语：只要还有没走过的邻居就**必须**挑它（挑中走过的 = 当年的卡死，实际 %d 次）"
+			% w194_old_pick)
+	check(w194_dawdle == 0,
+			"R194 低语：每一步都让「到最近没走过的房间的步数」-1（瞎逛 %d 次）"
+			% w194_dawdle)
+	check(w194_slow == 0,
+			"R194 低语：%d 张图都一路走到 Boss（巧克力耗尽，最长 %d 步）"
+			% [w194_maps, w194_max_steps])
+	# 单步断言：站在「邻居全是走过的」房间里时，必须朝最近的没走过的房间走近 1 步
+	#（把「离起点最远的那一间」留成唯一没走过的 → 保证隔壁确实没有没走过的）。
+	RunState.map_cells = RogueMap.generate(RunState.run_rng, GameLayers.LAYER_DEFAULT)
+	RunState.cleared_ids = []
+	var w194_s2 := RogueMap.start_cell(RunState.map_cells)
+	RunState.current_node_id = int(w194_s2["id"])
+	var w194_d0: Dictionary = RogueMap.steps_from(RunState.map_cells,
+			RunState.current_node_id)
+	var w194_far_id: int = RunState.current_node_id
+	for w194_c2: Dictionary in RunState.map_cells:
+		if int(w194_d0.get(int(w194_c2["id"]), 0)) \
+				> int(w194_d0.get(w194_far_id, 0)):
+			w194_far_id = int(w194_c2["id"])
+	for w194_c3: Dictionary in RunState.map_cells:
+		if int(w194_c3["id"]) != w194_far_id:
+			RunState.cleared_ids.append(int(w194_c3["id"]))
+	var w194_x0: int = _whisper_far(RunState.map_cells, RunState.current_node_id,
+			RunState.cleared_ids)
+	var w194_dead: Dictionary = RunState.whisper_pick()
+	var w194_x1: int = _whisper_far(RunState.map_cells,
+			int(w194_dead.get("id", -1)), RunState.cleared_ids)
+	check(not w194_dead.is_empty() and RunState.can_move_to(int(w194_dead["id"]))
+			and w194_x0 >= 2 and w194_x1 == w194_x0 - 1,
+			"R194 低语：隔壁全是走过的房间时，挑出的邻居必须朝最近没走过的房间走近 1 步"
+			+ "（%d 步 → %d 步）" % [w194_x0, w194_x1])
+	# 全图都走过了：仍须返回一间能走的邻居（兜底 —— 不做事，但别把队伍钉死）
+	RunState.cleared_ids = []
+	for w194_c4: Dictionary in RunState.map_cells:
+		RunState.cleared_ids.append(int(w194_c4["id"]))
+	var w194_all: Dictionary = RunState.whisper_pick()
+	check(not w194_all.is_empty() and RunState.can_move_to(int(w194_all["id"])),
+			"R194 低语：全图都走过时仍返回一间能走的邻居（绝不原地钉死）")
+	# 场景侧的「持续驱动」是这次修复的另一半 —— 逐条源码守卫（打包环境跳过）。
+	if r122_in_dev:
+		var w194_ms := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+		check(w194_ms.find("_tick_whisper(delta)") >= 0,
+				"R194 低语：`_process` 每帧驱动随机走路（不是只在 `_ready` 挑一次）")
+		check(w194_ms.find("RunState.whisper_pick()") >= 0,
+				"R194 低语：挑路走 RunState.whisper_pick 唯一口")
+		check(w194_ms.find("t.timeout.connect(_whisper_advance)") < 0
+				and w194_ms.find("func _whisper_advance(") < 0,
+				"R194 低语：一次性 Timer 的「走一步就完」已删除（当年卡死的直接成因）")
+		check(w194_ms.find("opts[RunState.run_rng.randi() % opts.size()]") < 0,
+				"R194 低语：不再从「含走过的房间」的整池里随机抽（抽中旧房间 = 卡死）")
+		check(w194_ms.find("RunState.WHISPER_RELIC_ID") >= 0,
+				"R194 低语：道具 id 走 RunState.WHISPER_RELIC_ID 常量，不再散落字面量 6010")
+	RunState.map_cells = w194_cells
+	RunState.current_node_id = w194_cur
+	RunState.cleared_ids = w194_cleared
+	RunState.chocolate = w194_choco
+	RunState.boss_pending = w194_boss
+	RunState.run_active = w194_active
+	RunState.run_rng = w194_rng
+
 	RunState.player_class = r91_saved_cls
 
 	# ============================================================
@@ -15591,3 +15719,16 @@ func _init() -> void:
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
+
+
+func _whisper_far(cells: Array, from_id: int, cleared: Array) -> int:
+	## R194 测试专用：从 `from_id` 走到**最近的没走过的房间**要几步（没走过 = 不在
+	## `cleared` 里）。全部走完（或坐标非法）时返回一个很大的数。
+	## ⚠️ 用「离未探索区域近了几步」当断言口径，而不是「挑中了哪一间」——
+	##    同距离的目标有多个时挑路是**随机**的，钉死某一间会写出假失败。
+	var d: Dictionary = RogueMap.steps_from(cells, from_id)
+	var best := 1 << 30
+	for c: Dictionary in cells:
+		if not cleared.has(int(c["id"])):
+			best = mini(best, int(d.get(int(c["id"]), 1 << 30)))
+	return best
