@@ -154,7 +154,8 @@ static func text_zone_bottom(rect: Rect2) -> float:
 
 static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		selected: bool, is_tapped: bool, font: Font, font_bold: Font,
-		power_override := -1, on_board := false, sleeping := false) -> void:
+		power_override := -1, on_board := false, sleeping := false,
+		name_only := false) -> void:
 	## 卡面一律按 rect **完整排版**，与图鉴/战场小卡同一套比例，没有「按可见高度重锚」
 	## 之类的特例 —— 手牌卡底沉出窗口下沿时，被挡住的那截就让它挡住
 	## （作者口径：卡片是一个整体，排版要与正常状态完全一致，别为了躲裁剪挪数值）。
@@ -192,7 +193,8 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	# ⚠️ R122：**横置时不画** —— 那时卡图铺满整卡（见 _draw_art），横一道线很突兀。
 	var sep_y: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
 	# ⑥ 文字区（下半）—— 底衬在 `_draw_text_zone` 内部按**文字块的实际高度**铺。
-	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold, on_board, is_tapped)
+	#    name_only=true → 只画卡名（战斗内卡面口径：效果详情走悬停/点选描述面板）。
+	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold, on_board, is_tapped, name_only)
 	# ⑦ 数值徽章 —— 最后画，压在卡图与文字之上（「额外挂载」的字面意思）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, hp, power_override)
 
@@ -218,7 +220,15 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 			canvas.draw_rect(rect.grow(1.0 + gi), glow, false, 1.0)
 	_draw_art(canvas, card, rect, k, pad, false, font_bold, false)
 	_draw_rarity_ribbon(canvas, card, rect, k, pad)
-	# 文字区：姓名牌内框 + **垂直居中**的卡名（wrap 最多 2 行；与姓名牌位置契合 —— R193）
+	_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold)   # R193：姓名牌内框 + 居中卡名（只留卡名）
+	_draw_badges(canvas, font_bold, card, rect, k, kc, card.health, -1)
+
+
+static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,
+		k: float, pad: float, font_bold: Font) -> void:
+	## 文字区 = **只有卡名**：姓名牌内框 + 垂直居中的卡名（wrap 最多 2 行；与姓名牌位置契合 —— R193）。
+	## `draw_pick()`（选卡界面）与 `draw(..., name_only=true)`（战斗内卡面）共用这一条。
+	## 效果文字**不画在卡面上** —— 详情走悬停/点选的描述面板（选卡界面底部描述条 / 战斗左栏信息）。
 	var sep_y: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
 	var zone_top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad
 	var zone_bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_BOTTOM - pad
@@ -241,7 +251,6 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 		canvas.draw_string(font_bold,
 				Vector2(text_x, text_top + asc + li * row_h),
 				lines[li], HORIZONTAL_ALIGNMENT_CENTER, maxw, sz, UiTheme.INK_900)
-	_draw_badges(canvas, font_bold, card, rect, k, kc, card.health, -1)
 
 
 static func draw_text_backing(canvas: CanvasItem, rect: Rect2, sep_y: float, k: float, pad: float,
@@ -362,7 +371,7 @@ static func _draw_hgradient(canvas: CanvasItem, rect: Rect2, left: Color, right:
 
 static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,
 		k: float, pad: float, sep_y: float, hp: int, font: Font, font_bold: Font,
-		on_board: bool, is_tapped := false) -> void:
+		on_board: bool, is_tapped := false, name_only := false) -> void:
 	## 文字区（下半）：**卡名 → 种类 · 字段 → 效果文字**，按这个优先级往下排，
 	## 排不下的整块省略。
 	##
@@ -379,6 +388,11 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	##   ② **先算「画到哪一行」，再铺底衬**：底衬（`draw_text_backing`）按文字块的
 	##      实际高度现画，上不盖分隔金条、下不吃底部数值徽章 —— 文字与卡面因此对得上。
 	##   ③ 文字**一律不描边**：可读性由底衬提供（羊皮卷/木板），不靠描边撑对比度。
+	# name_only（战斗内卡面口径）：只画居中卡名，不画种类·字段与效果文 ——
+	# 效果详情由悬停/点选的描述面板提供（战斗左栏信息 / 选卡界面底部描述条）。
+	if name_only:
+		_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold)
+		return
 	var bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_BOTTOM - pad  # 姓名牌内框下沿
 	var top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad       # 姓名牌内框上沿
 	if bottom - top < 6.0:

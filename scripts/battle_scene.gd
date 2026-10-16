@@ -5373,8 +5373,10 @@ func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_ta
 	## power_override >= 0 → 用实际力量重画左下角标（战场单位传 effective_power()）。
 	## on_board = true → 卡面的「种类 · 字段」行只写**上场之后仍然有用**的字段
 	##   （R118：交换 / 幻影 是打出那一刻的规则，落在格子上之后再标就是噪音）。
+	## name_only = true（战斗内一律）→ 卡面**只画卡名**，不画种类·字段与效果文 ——
+	##   效果详情由悬停/点选的描述面板提供（左侧信息栏「悬停优先，其次选中的卡」）。
 	CardFace.draw(self, card, rect, hp, selected, is_tapped, _font, _font_bold, power_override,
-			on_board, sleeping)
+			on_board, sleeping, true)
 	if not card.x_cost and cost_override >= 0 and cost_override != card.cost:
 		# ⚠️ R122：**必须走 CardFace.draw_badge()**（同一个槽位的唯一绘制口）。
 		# 这里原来自己 `draw_circle` 盖一个纯色圆盘 —— R115 把费用徽章换成

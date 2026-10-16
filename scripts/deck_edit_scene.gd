@@ -133,12 +133,48 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(tw_s)
 		tw_s.start()
+	# -- --pickshot：演示「点选高亮切换」（配 --mode 用；也可独立跑，自带演示卡组）——
+	# 走**真实 _gui_input 路径**依次点第 0、1 张卡，每次落定后各截一张图，
+	# 核验「点新卡 → 旧卡高亮熄灭、新卡高亮亮起」（修 deck_edit 高亮不切换 bug 的回归）。
+	if "--pickshot" in args:
+		if _cards.is_empty():
+			RunState.deck_ids = [8001, 8002, 8003, 1011, 1013, 1050]
+			_cards = RunState.deck_ids.duplicate()
+			_reset_uids()
+		var pt := Timer.new()
+		pt.wait_time = 0.6
+		pt.one_shot = true
+		pt.timeout.connect(_run_pickshot)
+		add_child(pt)
+		pt.start()
 	queue_redraw()
 	# R148：Esc 主菜单
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续",
 		"sub": "卡组编辑 · 按 Esc 返回",
 	})
+
+
+func _run_pickshot() -> void:
+	## --pickshot 演示：走**真实输入路径**（_gui_input）依次点选，核验高亮切换。
+	var steps := mini(2, _cards.size())
+	for step in steps:
+		# 卡片中心（Control 本地坐标）= _clip.position + _grid.position + 卡心（grid 本地坐标）
+		var c: Vector2 = _clip.position + _grid.position + _card_rect(step).get_center()
+		var dn := InputEventMouseButton.new()
+		dn.button_index = MOUSE_BUTTON_LEFT
+		dn.pressed = true
+		dn.position = c
+		_gui_input(dn)
+		var up := InputEventMouseButton.new()
+		up.button_index = MOUSE_BUTTON_LEFT
+		up.pressed = false
+		up.position = c
+		_gui_input(up)
+		await get_tree().create_timer(0.15).timeout   # 等几帧，让 queue_redraw 的重绘真正渲染出来
+		var img := get_viewport().get_texture().get_image()
+		img.save_png(ProjectSettings.globalize_path("screenshot_pick_%d.png" % step))
+	get_tree().quit()
 
 
 func _process(_delta: float) -> void:
@@ -415,7 +451,9 @@ func _gui_input(event: InputEvent) -> void:
 						_toggle_sel(pick)     # 只改选中，不立即生效：可以反复改选
 						sfx.play("click")
 						_refresh_ui()
-						queue_redraw()        # 描述条跟着换
+						queue_redraw()        # 描述条跟着换（画在根节点）
+						_grid.queue_redraw()  # 卡片选中高亮画在 _grid 子节点 → 必须一起重绘，
+						                      # 否则点新卡时高亮不切换（要等鼠标移动才刷新）
 			accept_event()
 			return
 	elif event is InputEventMouseMotion:
@@ -448,6 +486,7 @@ func _gui_input(event: InputEvent) -> void:
 					sfx.play("click")
 					_refresh_ui()
 					queue_redraw()
+					_grid.queue_redraw()   # 同鼠标：选中高亮在 _grid 上，触屏点选后也要即时重绘
 		accept_event()
 	elif event is InputEventScreenDrag:
 		var sd := event as InputEventScreenDrag
