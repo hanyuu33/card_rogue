@@ -206,7 +206,11 @@ const CARD_FS_BADGE := 12.0
 ## ⚠️ 这个值不是「好看就行」：下半要同时装下**卡名 + 种类·字段 + 效果文字**三样。
 ## 数值不占内部空间（它们骑在卡框上，见 `CARD_BLEED`），所以 0.50 是安全的；
 ## 但 R114 实测 0.52 时 k=1.7 的手牌上「种类」会被挤掉 —— 想调大先按最坏情况算一遍。
-const CARD_ART_RATIO := 0.745  ## R153：对齐 card_paper.png v2 底图的分隔金条（PIL 实测 0.742）
+const CARD_ART_RATIO := 0.662  ## R193：对齐 card_paper.png v4 底图的卡图/姓名牌分隔金条
+const CARD_NAMEPLATE_TOP := 0.745    ## 姓名牌内框上沿（归一化）
+const CARD_NAMEPLATE_BOTTOM := 0.94  ## 姓名牌内框下沿
+const CARD_NAMEPLATE_X0 := 0.06      ## 姓名牌内框左沿
+const CARD_NAMEPLATE_X1 := 0.94      ## 姓名牌内框右沿
 const CARD_PAD := 3.0             ## 卡面内距（基准）
 ## 数值图标半径（基准）。R117 从 8.5 提到 9.2 —— 战场卡 k ≈ 1.086
 ## → 实到 10.0（**直径 20**，正是用户口径「徽章直径 17 → 约 20」）。

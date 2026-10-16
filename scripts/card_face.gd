@@ -174,15 +174,14 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 			var glow := UiTheme.SELECT_RING
 			glow.a = 0.42 - 0.11 * gi
 			canvas.draw_rect(rect.grow(1.0 + gi), glow, false, 1.0)
-	# ③ 底部框线（R170）：**中性深胡桃木色**、只框文字区 —— 卡图开放、上/左/右出血到卡边。
-	#    稀有度不再是框线色（「颜色条」已废，规则 5 改），主通道是右上角的缎带（见 ④b）。
-	#    ⚠️ 对齐：draw_rect 的描边**骑在线宽中线上**（一半里一半外）—— 直接贴卡边画，
-	#    左右两笔会各探出卡外 bw/2，与出血到卡边的卡图「最外沿对不上」（用户实测）。
-	#    所以框矩形四边**内缩 bw/2**：描边外沿正好落在卡边上，顶笔外沿与卡图下沿相接。
+	# ③ 底部框线（R170 / R193）：**中性深胡桃木色**、只框文字区。
+	#    v4 纸底自带 ornate 姓名牌边框，有纸时不再手画框线，避免双重边框；缺图时才用程序框。
+	var has_paper := paper != null
 	var bw := maxf(1.5, 2.0 * k)
 	var frame_top: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
-	canvas.draw_rect(Rect2(rect.position.x + bw / 2.0, frame_top + bw / 2.0,
-			rect.size.x - bw, rect.end.y - frame_top - bw), UiTheme.CARD_FRAME, false, bw)
+	if not has_paper:
+		canvas.draw_rect(Rect2(rect.position.x + bw / 2.0, frame_top + bw / 2.0,
+				rect.size.x - bw, rect.end.y - frame_top - bw), UiTheme.CARD_FRAME, false, bw)
 	# ④ 卡图区（上半）
 	_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold, sleeping)
 	# ④b 稀有度缎带（R170）：挂在**右上角**、压在卡图之上。
@@ -219,12 +218,12 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 			canvas.draw_rect(rect.grow(1.0 + gi), glow, false, 1.0)
 	_draw_art(canvas, card, rect, k, pad, false, font_bold, false)
 	_draw_rarity_ribbon(canvas, card, rect, k, pad)
-	# 文字区：底衬 + **垂直居中**的卡名（wrap 最多 2 行；位置必须正确 —— 用户口径）
+	# 文字区：姓名牌内框 + **垂直居中**的卡名（wrap 最多 2 行；与姓名牌位置契合 —— R193）
 	var sep_y: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
-	var zone_top: float = sep_y + maxf(1.5, 1.2 * kt)
-	var zone_bottom: float = rect.end.y - pad
+	var zone_top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad
+	var zone_bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_BOTTOM - pad
 	var sz: int = maxi(9, roundi(UiTheme.CARD_FS_TEXT * kt * 1.15))
-	var maxw: float = rect.size.x - pad * 2.0
+	var maxw: float = rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0
 	var lines := wrap_text(font_bold, card.card_name, maxw, sz)
 	if lines.size() > 2:
 		# 名字实在太长 → 缩字号重排一次，仍不行就截两行
@@ -235,11 +234,12 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 	var row_h: float = font_bold.get_height(sz)
 	var block_h: float = row_h * lines.size()
 	var text_top: float = zone_top + maxf(0.0, (zone_bottom - zone_top - block_h) / 2.0)
+	var text_x: float = rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad
 	draw_text_backing(canvas, rect, sep_y, k, pad, text_top - 3.0, text_top + block_h + 3.0)
 	var asc: float = float(font_bold.get_ascent(sz))
 	for li in lines.size():
 		canvas.draw_string(font_bold,
-				Vector2(rect.position.x + pad, text_top + asc + li * row_h),
+				Vector2(text_x, text_top + asc + li * row_h),
 				lines[li], HORIZONTAL_ALIGNMENT_CENTER, maxw, sz, UiTheme.INK_900)
 	_draw_badges(canvas, font_bold, card, rect, k, kc, card.health, -1)
 
@@ -262,8 +262,8 @@ static func draw_text_backing(canvas: CanvasItem, rect: Rect2, sep_y: float, k: 
 	var bottom: float = minf(rect.end.y - pad, block_bottom + pad_in)
 	if bottom - top < 3.0:
 		return
-	var r := Rect2(rect.position.x + pad * 0.4, top,
-			maxf(rect.size.x - pad * 0.8, 0.0), bottom - top)
+	var r := Rect2(rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad * 0.4, top,
+			maxf(rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 0.8, 0.0), bottom - top)
 	if r.size.x < 6.0:
 		return
 	var planks: int = clampi(int(round(r.size.y / 30.0)) + 1, 2, 4)
@@ -379,13 +379,13 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	##   ② **先算「画到哪一行」，再铺底衬**：底衬（`draw_text_backing`）按文字块的
 	##      实际高度现画，上不盖分隔金条、下不吃底部数值徽章 —— 文字与卡面因此对得上。
 	##   ③ 文字**一律不描边**：可读性由底衬提供（羊皮卷/木板），不靠描边撑对比度。
-	var bottom: float = rect.end.y - pad          # 可用下界（卡框内沿）
-	var top: float = sep_y + maxf(1.5, 1.2 * kt)  # 文字区上沿 = 卡名墨顶
+	var bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_BOTTOM - pad  # 姓名牌内框下沿
+	var top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad       # 姓名牌内框上沿
 	if bottom - top < 6.0:
 		return
 	var sz: int = maxi(7, roundi(UiTheme.CARD_FS_TEXT * kt))
-	var cx: float = rect.position.x + rect.size.x / 2.0
-	var maxw: float = rect.size.x - pad * 2.0
+	var cx: float = rect.position.x + rect.size.x * (UiTheme.CARD_NAMEPLATE_X0 + UiTheme.CARD_NAMEPLATE_X1) / 2.0
+	var maxw: float = rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0
 	var kind_col: Color = UiTheme.kind_color(card.kind)
 	# ⚠️ 行距必须用**字体真实行高**（`get_height`），不能按字号估：
 	#   雅黑 9px 的行高是 13（ascent 10 + descent 3），而旧写法 `sz * 1.12 = 10.08 < 13`
@@ -427,8 +427,9 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	var bcols := banner_cols(card)
 	var nb_y := base_name - asc_b - sz * 0.18
 	var nb_h := sz * 1.40
-	_draw_hgradient(canvas, Rect2(rect.position.x + pad * 0.4, nb_y,
-			rect.size.x - pad * 0.8, nb_h), bcols[0], bcols[1])
+	var nb_x: float = rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad * 0.4
+	var nb_w: float = rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 0.8
+	_draw_hgradient(canvas, Rect2(nb_x, nb_y, nb_w, nb_h), bcols[0], bcols[1])
 	_draw_center(canvas, font_bold, sz, _ellipsize(font_bold, card.card_name, maxw, sz),
 			Vector2(cx, base_name - sz * 0.36), UiTheme.INK_900)
 	if has_meta:
@@ -458,7 +459,8 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 		var t: String = eff_lines[i]
 		if i == eff_n - 1 and eff_lines.size() > eff_n:
 			t = _ellipsize(font, t + "…", maxw, sz)
-		canvas.draw_string(font, Vector2(rect.position.x + pad, eff_base0 + line_h * i), t,
+		canvas.draw_string(font, Vector2(rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad,
+				eff_base0 + line_h * i), t,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, sz, UiTheme.INK_600)
 
 
