@@ -5651,7 +5651,7 @@ func _art(card: CardData, rect: Rect2) -> void:
 
 
 func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_tapped: bool,
-		cost_override := -1, power_override := -1, on_board := false) -> void:
+		cost_override := -1, power_override := -1, on_board := false, sleeping := false) -> void:
 	## 卡面一律按 rect 完整排版（含手牌）—— 卡底沉出窗口下沿的那截由视口裁掉，
 	## 卡面内容**不做**任何偏移补偿：卡片是一个整体，被挡住就挡住。
 	## cost_override >= 0 且不等于卡面费用 → 在费用圆上重画**绿色**数字，
@@ -5660,7 +5660,7 @@ func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_ta
 	## on_board = true → 卡面的「种类 · 字段」行只写**上场之后仍然有用**的字段
 	##   （R118：交换 / 幻影 是打出那一刻的规则，落在格子上之后再标就是噪音）。
 	CardFace.draw(self, card, rect, hp, selected, is_tapped, _font, _font_bold, power_override,
-			on_board)
+			on_board, sleeping)
 	if not card.x_cost and cost_override >= 0 and cost_override != card.cost:
 		# ⚠️ R122：**必须走 CardFace.draw_badge()**（同一个槽位的唯一绘制口）。
 		# 这里原来自己 `draw_circle` 盖一个纯色圆盘 —— R115 把费用徽章换成
@@ -5906,8 +5906,10 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	var _badge_row := 0
 	# R118：`on_board = true` —— 战场卡面的「种类 · 字段」行**不再标出**上场后已无作用的
 	# 字段（交换 / 幻影）。判据在 `CardData.affix_on_board()`，这里只负责声明「我在战场上」。
+	# 沉睡（恶魔鸭 9116，sleep_left>0）→ 换沉睡专用卡图；其余状态用普通卡图。
 	_draw_card_face(p.card, Rect2(center - Vector2(w, h) / 2.0, Vector2(w, h)),
-			_show_hp(p, p.health), selected, false, -1, p.effective_power(), true)
+			_show_hp(p, p.health), selected, false, -1, p.effective_power(), true,
+			p.sleep_left > 0)
 	# R165：移除「横置」视觉——不再把卡转横。改用青色**就绪光环**标明「可行动」：
 	# 凡本回合还有行动权（未横置）的单位都亮脉动环（敌我同标），以此区分不能动的卡。
 	if not p.tapped:

@@ -229,7 +229,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	## 新 run：满血、初始卡组、载入地图、定位起点（第 0 列唯一节点）。
 	## layer = 本局地图所属的层（地图上所有战斗/事件都从这一层的内容池里取）。
 	## map 传空数组时用本局种子现生成（真实流程 = 角色选择场景这样进来）。
-	reset()
+	# 初始生命按职业不同（R182）：基础 50 + 职业加成（森林精魄+20/暗影刺客+10/机械之心+16）。
+	reset(PlayerClass.base_hp_of(cid if cid != "" else PlayerClass.default_id()))
 	# run 种子：回放时由 ReplayLog 预先写好（不重摇）；正常开局时新摇一个
 	if not (ReplayLog.playing and run_seed != 0):
 		run_seed = randi()

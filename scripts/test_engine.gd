@@ -5548,8 +5548,8 @@ func _init() -> void:
 	var run_rng := RandomNumberGenerator.new()
 	run_rng.randomize()
 	RunState.start_run(RogueMap.generate(run_rng))
-	check(RunState.run_active and RunState.hp == 50 and RunState.max_hp == 50,
-			"开局：满血 50/50")
+	check(RunState.run_active and RunState.hp == 70 and RunState.max_hp == 70,
+			"开局：满血 70/70（默认职业森林精魄，基础50+20）")
 	# ---- 道具：起点三选一 / 即时效果 / 卡组编辑 ----
 	check(RunState.relic_choice.size() == 3, "开局：初始道具三选一（3 个候选）")
 	var relic_uniq := {}
@@ -5562,8 +5562,8 @@ func _init() -> void:
 			"道具库：5 个初始道具全部加载（+ 栅栏修复术 6021）")
 	RunState.choose_start_relic(6001)
 	check(RunState.has_relic(6001) and RunState.relic_choice.is_empty()
-			and RunState.max_hp == 56 and RunState.hp == 56,
-			"类固醇：获得即最大生命 +6（50→56）")
+			and RunState.max_hp == 76 and RunState.hp == 76,
+			"类固醇：获得即最大生命 +6（70→76）")
 	# ---- 动态难度：前 2 场简单、之后困难（普通与精英各自计数）----
 	var nb1 := RunState.next_level({"type": "battle"})
 	check(int(nb1["tier"]) == GameLevels.TIER_NORMAL_EASY,
@@ -9289,8 +9289,8 @@ func _init() -> void:
 	# 肉眼观感 = 「banner 素材没应用」（用户实测）。几何靠出图核验，这里锁死两件事：
 	if r122_in_dev:
 		var r173_src := FileAccess.get_file_as_string("res://scripts/card_face.gd")
-		var r173_i_art := r173_src.find("\t_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold)")
-		var r173_i_ribbon := r173_src.find("\t_draw_rarity_ribbon(canvas, card, rect, k, pad)")
+		var r173_i_art := r173_src.find("\t_draw_art(canvas, card, rect,")
+		var r173_i_ribbon := r173_src.find("\t_draw_rarity_ribbon(canvas, card, rect,")
 		check(r173_i_art >= 0 and r173_i_ribbon > r173_i_art,
 				"R173 缎带必须画在卡图**之后**（开放式卡图会盖住先画的东西，R170 教训）")
 		check(r173_src.find("var rh: float = 27.0 * k") >= 0,

@@ -18,7 +18,7 @@ var _font_bold: Font
 var sfx: Sfx
 var _menu: UiMenu = null      # Esc 主菜单（R148）
 var _hover := -1              # 悬停的头像下标
-var _selected := -1           # 已选职业下标（-1 = 还没选）
+var _selected := -1           # 已选职业下标（_ready 里默认置 0 = 第一角色；-1 仅作初值）
 var _picked := false
 
 
@@ -41,6 +41,8 @@ func _ready() -> void:
 		add_child(t)
 		t.start()
 	# 出图核验用：`-- --screenshot --sel N` 预选第 N 个职业（看 CG + 面板态）。
+	# 默认选中第一个角色（R167：进入即选中，不再「默认不选」）。
+	_selected = 0
 	var uargs := OS.get_cmdline_user_args()
 	for ai in uargs.size():
 		if uargs[ai] == "--sel" and ai + 1 < uargs.size():
@@ -65,7 +67,7 @@ func _av_rect(i: int) -> Rect2:
 	var n := PlayerClass.ids().size()
 	var total := n * AV + maxi(0, n - 1) * AV_GAP
 	var x0 := (size.x - total) / 2.0
-	return Rect2(x0 + i * (AV + AV_GAP), size.y - AV - 36.0, AV, AV)
+	return Rect2(x0 + i * (AV + AV_GAP), size.y - AV - 64.0, AV, AV)
 
 
 func _panel_rect() -> Rect2:
@@ -125,6 +127,11 @@ func _draw_avatar(i: int) -> void:
 		draw_rect(r.grow(3.0), Color(1, 1, 1, 0.55), false, 2.0)
 	draw_string(_font_bold, Vector2(r.position.x, r.end.y + 24.0), PlayerClass.name_of(cid),
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, Color("f2ead0"))
+	# 初始最大生命（R182：选职业界面明示，便于对比）
+	var hp_txt := "生命 %d" % PlayerClass.base_hp_of(cid)
+	draw_string(_font, Vector2(r.position.x, r.end.y + 44.0), hp_txt,
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_CAPTION,
+			UiTheme.class_color(cid).lightened(0.35))
 
 
 func _draw_panel(cid: String) -> void:
@@ -141,6 +148,14 @@ func _draw_panel(cid: String) -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL,
 			UiTheme.class_color(cid).lightened(0.5))
 	y += 30.0
+	# 初始最大生命（R182：按职业不同，选职业界面明示）
+	y += 4.0
+	draw_string(_font, Vector2(x, y), "初始最大生命",
+			HORIZONTAL_ALIGNMENT_LEFT, w * 0.5, UiTheme.FS_LABEL, Color("cfcabb"))
+	draw_string(_font_bold, Vector2(x + w * 0.5, y), "%d" % PlayerClass.base_hp_of(cid),
+			HORIZONTAL_ALIGNMENT_RIGHT, w * 0.5, UiTheme.FS_HEADING,
+			UiTheme.class_color(cid).lightened(0.4))
+	y += 28.0
 	for para: String in PlayerClass.desc_of(cid).split("\n"):
 		for line: String in _wrap_text(para, w, 14):
 			draw_string(_font, Vector2(x, y), line, HORIZONTAL_ALIGNMENT_LEFT, w,

@@ -22,6 +22,10 @@ const MECH := "机械之心"          # R82：0 费素体滚雪球 + 「升级�
 const BASE_COMMON: Array[int] = [8001, 8001, 8001, 8001, 8001,
 		8002, 8002, 8002, 8002, 8002]
 
+## 玩家初始最大生命的**基础值**（R182 起按职业加加成）。
+## 角色选择界面读 base_hp_of 展示，RunState.start_run 用它初始化玩家生命。
+const BASE_HP := 50
+
 ## 可选角色（顺序 = 角色选择界面的展示顺序）。
 static func ids() -> Array[String]:
 	return [DRUID, ROGUE, MECH]
@@ -130,3 +134,21 @@ static func start_deck_ids(cid: String) -> Array[int]:
 			out.append(ally)
 	out.append_array(bonus_deck_of(cid))
 	return out
+
+
+## 各职业的**初始最大生命加成**（R182）：基础值 BASE_HP + 此加成。
+## 森林精魄 +20（厚血耐打）、暗影刺客 +10（容错低）、机械之心 +16。
+static func hp_bonus_of(cid: String) -> int:
+	match cid:
+		DRUID:
+			return 20
+		ROGUE:
+			return 10
+		MECH:
+			return 16
+	return 0
+
+
+static func base_hp_of(cid: String) -> int:
+	## 该职业的**初始最大生命**（基础值 + 职业加成）。
+	return BASE_HP + hp_bonus_of(cid)
