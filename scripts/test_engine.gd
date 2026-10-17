@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 219,
-			"图鉴 = 219 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充**；R164 删除**双重场地 9108**；实际 %d）"
+	check(repo.all_cards().size() == 220,
+			"图鉴 = 220 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 169 and grp_enemy.size() == 50,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 169 / 50；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 170 and grp_enemy.size() == 50,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 170 / 50；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -164,8 +164,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 148,
-			"奖励池 148 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）**；实际 %d）"
+	check(pool.size() == 149,
+			"奖励池 149 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -2231,7 +2231,7 @@ func _init() -> void:
 			"鸡煲：去掉每场一次 → 再次满足条件的回合结束再次触发（5-3=2）")
 
 	# ============================================================
-	# 群起攻之 / 在启动了一批（2026-09-30）：群起攻之 9070 / 在启动了 9071 /
+	# 群起攻之 / 坚固围栏一批（2026-09-30）：群起攻之 9070 / 坚固围栏 9071 /
 	#                                      铁栅栏 9072 / 猫头鹰 9073 / 小精灵 9074
 	# ============================================================
 
@@ -2267,11 +2267,11 @@ func _init() -> void:
 	check(rl_e.attack_distance(Vector2i(2, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT,
 			rl_e.state.unit_at(Vector2i(2, 1)).card) == 3,
 			"群起攻之：敌方效果区没有这张卡 → 敌人不受影响")
-	# ---- 在启动了（9071）：3 费普通技能；召唤铁栅栏 0/12，替我方 HP 承伤 ----
+	# ---- 坚固围栏（9071）：3 费普通技能；召唤铁栅栏 0/12，替我方 HP 承伤 ----
 	var nc_lock := repo.get_card(9071)
-	check(nc_lock.card_name == "在启动了" and nc_lock.is_spell() and nc_lock.cost == 3
+	check(nc_lock.card_name == "坚固围栏" and nc_lock.is_spell() and nc_lock.cost == 3
 			and nc_lock.rarity == 0 and nc_lock.target_mode == "cell",
-			"在启动了：普通 3 费技能卡，需要选一格（target_mode=cell）")
+			"坚固围栏：普通 3 费技能卡，需要选一格（target_mode=cell）")
 	var nc_fence := repo.get_card(9072)
 	check(nc_fence.card_name == "铁栅栏" and nc_fence.kind == "工事"
 			and nc_fence.power == 0 and nc_fence.health == 12
@@ -2287,12 +2287,12 @@ func _init() -> void:
 	check(not fence_in_pool, "铁栅栏：奖励池里拿不到（token）")
 	var if_e := _new_engine([], 20, 20, -1, false)
 	if_e.start_game(0)
-	check(if_e.cost_of(repo.get_card(9071)) == 3, "在启动了：还没用过效果卡 → 原价 3 费")
+	check(if_e.cost_of(repo.get_card(9071)) == 3, "坚固围栏：还没用过效果卡 → 原价 3 费")
 	if_e.state.self_effect_plays = 2
 	check(if_e.cost_of(repo.get_card(9071)) == 1,
-			"在启动了：本回合用过 2 张效果卡 → 费用 3-2=1")
+			"坚固围栏：本回合用过 2 张效果卡 → 费用 3-2=1")
 	if_e.state.self_effect_plays = 5
-	check(if_e.cost_of(repo.get_card(9071)) == 0, "在启动了：减到 0 就到底了")
+	check(if_e.cost_of(repo.get_card(9071)) == 0, "坚固围栏：减到 0 就到底了")
 	var if_e2 := _new_engine([], 20, 20, -1, false)
 	if_e2.start_game(0)
 	if_e2.state.hand = [repo.get_card(9071)]
@@ -2301,26 +2301,26 @@ func _init() -> void:
 	var fn_p := if_e2.state.unit_at(Vector2i(4, 1))
 	check(fn_p != null and fn_p.card.id == 9072 and fn_p.health == 12
 			and fn_p.owner == GameEngine.SIDE_SELF,
-			"在启动了：在自己半场选定格召唤出一个 12 血的铁栅栏")
+			"坚固围栏：在自己半场选定格召唤出一个 12 血的铁栅栏")
 	if_e2._damage_player(GameEngine.SIDE_SELF, 5, "测试")
 	check(if_e2.state.hp_self == 20 and if_e2.state.unit_at(Vector2i(4, 1)) != null
 			and if_e2.state.unit_at(Vector2i(4, 1)).health == 7,
-			"在启动了：铁栅栏替我方 HP 承受伤害（HP 20 不变，栅栏 12→7）")
+			"坚固围栏：铁栅栏替我方 HP 承受伤害（HP 20 不变，栅栏 12→7）")
 	var if_e3 := _new_engine([], 20, 20, -1, false)
 	if_e3.start_game(0)
 	if_e3.state.hand = [repo.get_card(9071), repo.get_card(9071), repo.get_card(9071)]
 	if_e3.state.energy = 9
 	check(if_e3.use_spell(0, Vector2i(0, 0)).begins_with("（只能在自己半场"),
-			"在启动了：指定敌方半场会被拒绝")
+			"坚固围栏：指定敌方半场会被拒绝")
 	if_e3.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(3, 0),
 			GameEngine.SIDE_SELF)
 	check(if_e3.use_spell(0, Vector2i(3, 0)).begins_with("（那一格已经有单位"),
-			"在启动了：指定已占用的格子会被拒绝")
+			"坚固围栏：指定已占用的格子会被拒绝")
 	var fences := 0
 	for _c: Vector2i in if_e3.state.board:
 		if if_e3.state.board[_c].card.id == 9072:
 			fences += 1
-	check(fences == 0, "在启动了：被拒的请求没有生成铁栅栏")
+	check(fences == 0, "坚固围栏：被拒的请求没有生成铁栅栏")
 
 	# ---- 统一「替 HP 承伤」判定（2026-10-01）：森林守护 / 以太守卫 / 铁栅栏同一机制，同一特效 ----
 	var gv_e := _new_engine([], 20, 20, -1, false)
@@ -6466,13 +6466,13 @@ func _init() -> void:
 	var sk_token: CardData = dc_repo.get_card(9029)
 	check(sk_token.effect_text.contains("骷髅兵"),
 			"骷髅 token 文案补上真实来源（亡灵领主 + 骷髅兵）")
-	# 「在启动了的」必须带上它召唤的铁栅栏的信息
+	# 「坚固围栏的」必须带上它召唤的铁栅栏的信息
 	var lock_card: CardData = dc_repo.get_card(9071)
 	var lock_fence: CardData = dc_repo.get_card(9072)
 	check(lock_card != null and lock_fence != null
 			and lock_card.effect_text.contains(lock_fence.card_name)
 			and lock_card.effect_text.contains(str(lock_fence.health)),
-			"在启动了的文案带上了铁栅栏的信息（%s）" % lock_card.effect_text)
+			"坚固围栏的文案带上了铁栅栏的信息（%s）" % lock_card.effect_text)
 
 	# ---- 重鸭（6017）：敌方的移动距离 >1 → 按 1 计算 ----
 	var eng_hv := _new_engine(wm_deck, 20, 20, -1, false)
@@ -6881,10 +6881,10 @@ func _init() -> void:
 			"角色系统：非敌方卡 class 都在可选角色内、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 72
-			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 55
+			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 56
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 42
 			and int(dr_cls_count.get("敌人", 0)) == 50,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 72 / 55 / 42 / 50；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1；R164 暗影刺客 -1 = 删除双重场地 9108）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 72 / 56 / 42 / 50；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -7142,7 +7142,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 148, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 149, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -7447,8 +7447,8 @@ func _init() -> void:
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
 	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 72
-			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 55,
-			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1）"
+			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 56,
+			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
 
@@ -7519,7 +7519,7 @@ func _init() -> void:
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
 			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法鸭）")
-	check(r47_dr.size() == 60 and r47_rg.size() == 52
+	check(r47_dr.size() == 60 and r47_rg.size() == 53
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
 			"奖励池过滤：森林精魄 %d 张 / 暗影刺客 %d 张（两者之和 + 机械之心 %d = 完整池 %d）"
@@ -9401,14 +9401,14 @@ func _init() -> void:
 		r168_names.append(r168_s["name"])
 	check(r168_names == ["铁栅栏", "鲸鱼之怒"],
 			"R168 scan：只认登记过的名字、去重、保序（得 %s）" % str(r168_names))
-	var r168_segs: Array = CardText.parse("由「在启动了」召唤的墙。")
+	var r168_segs: Array = CardText.parse("由「坚固围栏」召唤的墙。")
 	var r168_mk := 0
 	for r168_g: Dictionary in r168_segs:
 		if r168_g.has("mention"):
 			r168_mk += 1
 	check(r168_mk == 1 and str(r168_segs[0].get("text", "")) == "由",
 			"R168 parse：`「名字」` 被切成独立片段并带上 mention（其余文字原样保留）")
-	check(CardText.naturalize("由「在启动了」召唤的墙。") == "由「在启动了」召唤的墙。",
+	check(CardText.naturalize("由「坚固围栏」召唤的墙。") == "由「坚固围栏」召唤的墙。",
 			"R168 naturalize：切提及**不改变**纯文本输出（老断言 / 老版式不受影响）")
 	var r168_wrap: Array = CardText.parse("先写一段很长很长的前缀把这一行彻底撑满再去提「铁栅栏」")
 	var r168_font: Font = ThemeDB.fallback_font
@@ -9469,13 +9469,15 @@ func _init() -> void:
 	check(r76_c.state.field_at(Vector2i(4, 1)) != null
 			and r76_c.state.unit_at(Vector2i(4, 1)) == null,
 			"R76-C 场地卡不进 board：只挂在格子上、该格没有单位")
-	# 敌人移动进入 → 吃 MASS_TRAP_DMG、场地消失
+	# 敌人移动进入 → 吃 MASS_TRAP_DMG + 攻击力×2、场地消失（R217 改数值）
+	var r76_hit := GameEngine.MASS_TRAP_DMG + 2 * GameEngine.MASS_TRAP_ATK_MUL
 	r76_c.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
-	check(r76_c_foe.health == 60 - GameEngine.MASS_TRAP_DMG
+	check(r76_c_foe.health == 60 - r76_hit
 			and r76_c.state.field_at(Vector2i(4, 1)) == null
 			and r76_c.state.unit_at(Vector2i(4, 1)) == r76_c_foe,
-			"R76-C 敌人移动进入 → 吃 %d 伤（60→%d）、场地一次性消失、单位留在格上"
-			% [GameEngine.MASS_TRAP_DMG, r76_c_foe.health])
+			"R76-C 敌人移动进入 → 吃 %d 伤（%d + 力2×%d；60→%d）、场地一次性消失、单位留在格上"
+			% [r76_hit, GameEngine.MASS_TRAP_DMG, GameEngine.MASS_TRAP_ATK_MUL,
+				r76_c_foe.health])
 	# 原本就站在该格 → 不触发（场地语义：只有「移动进入」才炸）
 	var r76_d := _new_engine([], 30, 30)
 	var r76_d_foe := r76_d.state.place(_card(1051, "站雷的", "盟友", 8, 2, 60, 2, 1),
@@ -9494,10 +9496,9 @@ func _init() -> void:
 	var r76_e_foe := r76_e.state.place(_card(1051, "踩雷的", "盟友", 8, 2, 60, 2, 1),
 			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
 	r76_e.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
-	check(r76_e_foe.health == 60 - GameEngine.MASS_TRAP_DMG - 2 * r76_mt.cost,
-			"R76-C 吃场地精通：%d + 2×%d = %d 伤（60→%d）"
-			% [GameEngine.MASS_TRAP_DMG, r76_mt.cost,
-				GameEngine.MASS_TRAP_DMG + 2 * r76_mt.cost, r76_e_foe.health])
+	check(r76_e_foe.health == 60 - r76_hit - 2 * r76_mt.cost,
+			"R76-C 吃场地精通：%d（10 + 力2×2）+ 2×%d = %d 伤（60→%d）"
+			% [r76_hit, r76_mt.cost, r76_hit + 2 * r76_mt.cost, r76_e_foe.health])
 	# 场地卡不能被攻击（不在 board → 打不到）
 	var r76_f := _new_engine([], 30, 30)
 	r76_f.state.set_field(CardData.from_dict(r76_mt.to_dict()),
@@ -13832,7 +13833,7 @@ func _init() -> void:
 	# ══════════════════════════════════════════════════════════════
 	var r110_repo := CardRepo.load_json()
 
-	# ---- ① 铁栅栏 9072 就是「在启动了」召出的那道墙 ----
+	# ---- ① 铁栅栏 9072 就是「坚固围栏」召出的那道墙 ----
 	var r110_fence := r110_repo.get_card(RunState.FENCE_CARD_ID)
 	check(r110_fence != null and r110_fence.card_name == "铁栅栏"
 			and r110_fence.kind == "工事" and r110_fence.health == 12,
@@ -16701,6 +16702,101 @@ func _init() -> void:
 	RunState.pending_relic = -1
 	RunState.run_active = true
 	RunState.end_run()
+
+	# ---------------------------------------------------------------- R217
+	# ① 新卡：分裂之影 8067（暗影刺客 · 稀有工事）2 费 0/5/0，**回合开始抽 1 张**
+	var r217_repo := CardRepo.load_json()
+	var r217_card := r217_repo.get_card(GameEngine.SHADOW_SPLIT_ID)
+	check(r217_card != null and r217_card.card_name == "分裂之影"
+			and r217_card.kind == "工事" and r217_card.cost == 2
+			and r217_card.power == 0 and r217_card.health == 5
+			and r217_card.attack_range == 0 and r217_card.move_speed == 0
+			and r217_card.rarity == 1 and r217_card.card_class == PlayerClass.ROGUE
+			and r217_card.traits.has("工事")
+			and r217_card.traits.has(GameEngine.SHADOW_SPLIT_TRAIT),
+			"R217 分裂之影 8067：2 费稀有**工事** 0/5/0、暗影刺客、带「分裂之影」trait")
+	check(r217_repo.reward_pool().has(r217_card)
+			and r217_repo.reward_pool_for(PlayerClass.ROGUE).has(r217_card)
+			and not r217_repo.reward_pool_for(PlayerClass.DRUID).has(r217_card),
+			"R217 分裂之影：进奖励池、只属于暗影刺客（森林精魄摇不到）")
+	# 抽牌口径：场上几座就多抽几张（走 _draw_many，手牌上限/牌库空照常记账）
+	var r217_deck: Array[CardData] = []
+	for r217_i in 30:
+		r217_deck.append(_card(7100 + r217_i, "抽牌测试%d" % r217_i, "盟友", 1, 1, 1, 1, 1))
+	var r217_one := _new_engine(r217_deck.duplicate(), 30, 30, -1, false)
+	r217_one.state.place(CardData.from_dict(r217_card.to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r217_one.state.hand.clear()
+	r217_one._begin_turn(GameEngine.SIDE_SELF)
+	check(r217_one.state.hand.size() == FieldState.HAND_DRAW_PER_TURN + 1,
+			"R217 分裂之影：1 座在场 → 回合开始抽 %d 张（标准 %d + 1）"
+			% [r217_one.state.hand.size(), FieldState.HAND_DRAW_PER_TURN])
+	var r217_two := _new_engine(r217_deck.duplicate(), 30, 30, -1, false)
+	for r217_col in 2:
+		r217_two.state.place(CardData.from_dict(r217_card.to_dict()),
+				Vector2i(4, r217_col), GameEngine.SIDE_SELF)
+	r217_two.state.hand.clear()
+	r217_two._begin_turn(GameEngine.SIDE_SELF)
+	check(r217_two.state.hand.size() == FieldState.HAND_DRAW_PER_TURN + 2,
+			"R217 分裂之影：2 座在场 → 多抽 2 张（多座叠加，实际 %d 张）"
+			% r217_two.state.hand.size())
+	var r217_none := _new_engine(r217_deck.duplicate(), 30, 30, -1, false)
+	r217_none.state.hand.clear()
+	r217_none._begin_turn(GameEngine.SIDE_SELF)
+	check(r217_none.state.hand.size() == FieldState.HAND_DRAW_PER_TURN,
+			"R217 分裂之影：场上没有它 → 只抽标准的 %d 张" % FieldState.HAND_DRAW_PER_TURN)
+	# 敌方侧对称：只推进 opp_hand_count，不偷我方牌库
+	var r217_opp := _new_engine([], 30, 30, -1, false)
+	r217_opp.state.place(CardData.from_dict(r217_card.to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	var r217_opp_before := r217_opp.state.opp_hand_count
+	r217_opp._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(r217_opp.state.opp_hand_count
+			== r217_opp_before + FieldState.HAND_DRAW_PER_TURN + 1,
+			"R217 分裂之影（敌方侧，对称保留）：手牌计数 +%d"
+			% (FieldState.HAND_DRAW_PER_TURN + 1))
+
+	# ② 巨物陷阱 8017：伤害 = **10 + 踩雷者当前攻击力 × 2**
+	var r217_mt := r217_repo.get_card(GameEngine.MASS_TRAP_ID)
+	check(GameEngine.MASS_TRAP_DMG == 10 and GameEngine.MASS_TRAP_ATK_MUL == 2,
+			"R217 巨物陷阱：基础 10 点 + 攻击力 ×2（常量口径）")
+	var r217_z := _new_engine([], 30, 30)
+	r217_z.state.set_field(CardData.from_dict(r217_mt.to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r217_z_foe := r217_z.state.place(_card(7100, "零攻踩雷者", "盟友", 1, 0, 99, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	r217_z.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r217_z_foe.health == 99 - 10,
+			"R217 巨物陷阱：0 攻单位踩上去只吃 10 伤（99→%d）" % r217_z_foe.health)
+	var r217_p5 := _new_engine([], 30, 30)
+	r217_p5.state.set_field(CardData.from_dict(r217_mt.to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r217_p5_foe := r217_p5.state.place(_card(7101, "五攻踩雷者", "盟友", 1, 5, 99, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	r217_p5.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r217_p5_foe.health == 99 - 20,
+			"R217 巨物陷阱：5 攻单位踩上去吃 10 + 5×2 = 20 伤（99→%d）"
+			% r217_p5_foe.health)
+	# 「当前攻击力」读 effective_power：成长光环（atk_buff）也算进去
+	var r217_b := _new_engine([], 30, 30)
+	r217_b.state.set_field(CardData.from_dict(r217_mt.to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r217_b_foe := r217_b.state.place(_card(7102, "带光环踩雷者", "盟友", 1, 3, 99, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	r217_b_foe.atk_buff = 2          # 当前攻击力 3 + 2 = 5
+	r217_b.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r217_b_foe.health == 99 - 20,
+			"R217 巨物陷阱：算**当前**攻击力（3 攻 +2 光环 = 5 → 20 伤，99→%d）"
+			% r217_b_foe.health)
+
+	# ③ 改名：9071「在启动了」→「坚固围栏」（trait 与铁栅栏文案一起改）
+	var r217_spell := r217_repo.get_card(GameEngine.IRON_FENCE_SPELL_ID)
+	check(r217_spell.card_name == "坚固围栏" and r217_spell.traits.has("坚固围栏")
+			and not r217_spell.traits.has("在启动了"),
+			"R217 改名：9071 卡名 = 坚固围栏（trait 同步，旧名不再存在）")
+	check(r217_repo.get_card(9072).effect_text.contains("坚固围栏")
+			and not r217_repo.get_card(9072).effect_text.contains("在启动了"),
+			"R217 铁栅栏文案：改成「由「坚固围栏」召唤的墙」")
 
 	# ================================================================
 

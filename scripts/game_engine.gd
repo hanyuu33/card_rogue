@@ -747,7 +747,21 @@ const FIELD_BARRIER:= "护盾"
 #   场地卡不会被攻击（也不在 board 里），所以那两个分支已全部删除。
 const MASS_TRAP_ID:= 8017
 const MASS_TRAP_TRAIT:= "巨物陷阱"
-const MASS_TRAP_DMG:= 12
+## R217（2026-10-18）用户口径：伤害 = **10 + 踩上来的那个单位当前攻击力 × 2**。
+## 「当前攻击力」读 `Placement.effective_power()`（含增减益 / 成长 / 改造 / 改造加攻），
+## **不是卡面 power** —— 卡面 0 攻的单位踩上来就只有 10 点。
+const MASS_TRAP_DMG:= 10
+const MASS_TRAP_ATK_MUL:= 2
+
+# ---- R217（2026-10-18）分裂之影 8067 ----
+# 分裂之影（8067 工事，暗影刺客·**稀有**）：2 费 0/5/0。
+#   **自己的回合开始时抽 1 张卡**；场上每多一座就多抽 1 张（多座叠加）。
+# * 判据读**场上 Placement 的 trait**（与机关工坊 8015 / 荧光草 8010 同范式），
+#   不读效果区 —— 这张是工事，离场就没有这个效果。
+# * 抽牌走 `_draw_many`：手牌已满会照常发 hand_full、牌库/弃牌区都空也照常记日志。
+# * 敌方侧对称保留（敌方正常拿不到这张卡）：只推进 `opp_hand_count`，不偷我方牌库。
+const SHADOW_SPLIT_ID:= 8067
+const SHADOW_SPLIT_TRAIT:= "分裂之影"
 
 # ---- R105（2026-10-08）黑暗陷阱 8063 ----
 # 黑暗陷阱（8063 场地，暗影刺客·普通）：**0 费**；敌人**移动经过**此格时立刻触发
@@ -1282,6 +1296,7 @@ func _begin_turn(side: String) -> void :
 		_workshop_supply(SIDE_SELF)   # 机关工坊（R74 改名）：我方回合开始随机工事进手
 		_clockwork_summon(SIDE_SELF)
 		_latent_turn_draw(SIDE_SELF)
+		_shadow_split_draw(SIDE_SELF)   # 分裂之影 8067（R217）
 		_glowgrass_supply(SIDE_SELF)
 		_ghost_self_destruct(SIDE_SELF)
 		_assassin_summon(SIDE_SELF)
@@ -1339,6 +1354,7 @@ func _begin_turn(side: String) -> void :
 		_workshop_supply(SIDE_OPPONENT)   # 陷阱工坊（对称保留；敌方正常拿不到该卡）
 		_clockwork_summon(SIDE_OPPONENT)
 		_latent_turn_draw(SIDE_OPPONENT)
+		_shadow_split_draw(SIDE_OPPONENT)   # 分裂之影 8067（R217，对称保留）
 		_glowgrass_supply(SIDE_OPPONENT)
 		_ghost_self_destruct(SIDE_OPPONENT)
 		_assassin_summon(SIDE_OPPONENT)
@@ -4679,6 +4695,25 @@ func _latent_turn_draw(side: String) -> void:
 	action.emit("latent", {"card": first, "second": second})
 
 
+func _shadow_split_draw(side: String) -> void:
+	## 分裂之影（8067，R217）：本方回合开始时，场上**每座**分裂之影抽 1 张。
+	## 场景：两座在场 → 抽 2 张；一座都没有 → 什么都不做（这个函数直接早退）。
+	## 敌方侧只推进 `opp_hand_count`（敌方没有真实手牌，与 `_latent_turn_draw` 同口径）。
+	var n := 0
+	for p: Placement in state.board.values():
+		if p.owner == side and p.card.traits.has(SHADOW_SPLIT_TRAIT):
+			n += 1
+	if n <= 0:
+		return
+	if side != SIDE_SELF:
+		state.opp_draw(n)
+		_log("分裂之影（对方）：回合开始多抽 %d 张" % n)
+		return
+	var got := _draw_many(n)
+	_log("分裂之影：回合开始多抽 %d 张（场上 %d 座）" % [got, n])
+	action.emit("shadow_split", {"draw": got, "count": n})
+
+
 func _glowgrass_supply(side: String) -> void:
 	## 幽光（9099 效果卡）：回合开始时，把一张荧光草 token 加入手卡（手牌满 → 落空）。
 	if not _zone_has_id(side, GLOW_ID):
@@ -5946,7 +5981,7 @@ func _iron_fence(side: String, target) -> String:
 	if fence == null:
 		fence = _fallback_iron_fence()
 	state.place(fence, cell, side)
-	_log("在启动了：在 %s 召唤一个铁栅栏（0/%d）" % [cell, fence.health])
+	_log("坚固围栏：在 %s 召唤一个铁栅栏（0/%d）" % [cell, fence.health])
 	action.emit("place", {"cell": cell, "card": fence, "side": side})
 	action.emit("iron_fence", {"cell": cell, "card": fence, "side": side})
 	return "在 %s 召唤一个铁栅栏" % cell
@@ -8259,12 +8294,16 @@ func _field_trigger(cell: Vector2i, mover: Placement) -> void :
 	elif mover.health > 0:
 		# 其余几种都是「打给踩上来的那一个单位」；他若已被别的东西打死就不追伤
 		if card.traits.has(MASS_TRAP_TRAIT):
-			# 巨物陷阱（8017）：单点高伤，打给踩上来的那一个（不分敌我）
-			var g_dmg:= _hit_unit(mover, MASS_TRAP_DMG + bonus, "巨物陷阱")
+			# 巨物陷阱（8017，R217 改数值）：10 + 踩上来的那个单位**当前攻击力×2**，
+			# 打给那一个（不分敌我）。读 effective_power() → 增减益/成长/改造一起算进去。
+			var g_atk:= mover.effective_power()
+			var g_dmg:= _hit_unit(mover, MASS_TRAP_DMG + g_atk * MASS_TRAP_ATK_MUL + bonus,
+					"巨物陷阱")
 			action.emit("trap_hit", {"cell": _cell_of(mover), "amount": g_dmg,
-					"kind": "巨物", "name": mover.card.card_name})
-			_log("%s 踩到巨物陷阱：受到 %d 点伤害（剩余 %d）" % [
-				mover.card.card_name, g_dmg, mover.health])
+					"kind": "巨物", "name": mover.card.card_name, "atk": g_atk})
+			_log("%s 踩到巨物陷阱：受到 %d 点伤害（%d + %d×%d%s，剩余 %d）" % [
+				mover.card.card_name, g_dmg, MASS_TRAP_DMG, g_atk, MASS_TRAP_ATK_MUL,
+				"（+场地精通 %d）" % bonus if bonus > 0 else "", mover.health])
 		elif card.traits.has(FROST_TRAP_TRAIT):
 			var f_dmg:= _hit_unit(mover, FROST_TRAP_DMG + bonus, "冰霜陷阱")
 			action.emit("trap_hit", {"cell": _cell_of(mover), "amount": f_dmg,

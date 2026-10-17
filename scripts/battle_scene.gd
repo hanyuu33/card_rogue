@@ -1304,7 +1304,7 @@ func _ready() -> void:
 		queue_redraw()
 	if "--capture" in args and engine != null:
 		# 演示（R54 起是「巨物捕获」工事；**R76 改成场地卡「巨物陷阱」**）+ 活体栅栏 + 警觉。
-		#   ① 巨物陷阱（场地）落在 (4,1)，敌人移动进入 → 吃 12 伤（不分敌我）、场地消失；
+		#   ① 巨物陷阱（场地）落在 (4,1)，敌人移动进入 → 吃 **10 + 攻击力×2 = 14** 伤（不分敌我）、场地消失；
 		#   ② 活体栅栏（8018 工事）正常在场 —— 证明「工事」与「场地」是两套独立数据；
 		#   ③ 警觉：随机一张工事进手（费用 -2，绿色圆标注）。
 		RunState.player_class = PlayerClass.ROGUE
@@ -1318,13 +1318,13 @@ func _ready() -> void:
 		var r54_foe := engine.state.place(r54_weak, Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
 		r54_foe.health = 60
 		engine.play_from_hand(0, Vector2i(4, 1))                 # 巨物陷阱落到 (4,1)
-		engine.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)   # 踩上去 → 12 伤 + 场地消失
+		engine.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)   # 踩上去 → 10+2×2=14 伤 + 场地消失
 		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.ALERT_ID).to_dict()))
 		engine.use_spell(0)                                      # 警觉：随机工事 -2 费进手
 		_demo_hover_idx = 0
 		_hover_hand = 0
 		_hover_card = engine.state.hand[0]                       # 警觉摇到的工事 → 绿色费用圆
-		status_text = "巨物陷阱（场地）：敌人**移动经过**即吃 12 伤并停止移动、场地消失；活体栅栏仍是工事；警觉：随机工事进手（-2 费）"
+		status_text = "巨物陷阱（场地）：敌人**移动经过**即吃 10+攻击力×2 伤（示例 14）并停止移动、场地消失；活体栅栏仍是工事；警觉：随机工事进手（-2 费）"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r80" in args and engine != null:
@@ -4151,7 +4151,7 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 			for y in FieldState.BOARD_COLS:
 				out.append(Vector2i(x, y))
 	elif card.id == GameEngine.IRON_FENCE_SPELL_ID:
-		# 在启动了：在自己半场选一格召唤铁栅栏 → 只列出自己半场的空格
+		# 坚固围栏（原「在启动了」，R217 改名）：在自己半场选一格召唤铁栅栏 → 只列出自己半场的空格
 		for x in range(FieldState.OPPONENT_ROWS, FieldState.BOARD_ROWS):
 			for y in FieldState.BOARD_COLS:
 				var c := Vector2i(x, y)
@@ -7561,7 +7561,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var if_name := "铁栅栏"
 			if data.get("card") is CardData:
 				if_name = (data["card"] as CardData).card_name
-			_say("在启动了：召唤%s，它替你的 HP 承受伤害" % if_name)
+			_say("坚固围栏：召唤%s，它替你的 HP 承受伤害" % if_name)
 		"knight_grow":
 			var kg_name := "鸭子骑士"
 			if data.get("card") is CardData:
