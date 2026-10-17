@@ -1397,6 +1397,73 @@ func _check_battle(scene: Variant) -> void:
 	_check_assemble(scene)
 	_check_run_deck_panel(scene)
 	_check_r208(scene)
+	_check_enchant_mark(scene)
+
+
+func _check_enchant_mark(scene: Variant) -> void:
+	## R214：**商店附魔的标记** —— 用户口径「带有附魔效果的卡片，应该在任何地方，都显示
+	## 附魔标记。标记应在卡片费用正下方，与附魔种类相同」。
+	## 钉三件事：① 几何（费用正下方 = 同 x、圆心距 2R）；② 卡面带着附魔种类 id；
+	## ③ 展示层的卡组聚合不会把附魔卡并进原卡（并了就根本没机会画标记）。
+	var repo := CardRepo.load_json()
+	# ① 几何：费用圆心在卡左上角 → 标记圆心必须与它同一条竖线、距离正好 2R（相切）。
+	#    三种典型尺寸都过一遍：小卡 58×70 / 手牌 99×119 / 奖励大卡 150×190（徽章已封顶）。
+	var geo_bad := ""
+	for sz: Vector2 in [Vector2(58, 70), Vector2(99, 119), Vector2(150, 190)]:
+		var rr := Rect2(Vector2(40, 60), sz)
+		var cost_c := CardFace.cost_badge_center(rr)
+		var ench_c := CardFace.enchant_badge_center(rr)
+		var r: float = UiTheme.CARD_BADGE_R \
+				* minf(sz.y / CardFace.CARD_H_DESIGN, UiTheme.CARD_BADGE_SCALE_CAP)
+		if absf(ench_c.x - cost_c.x) > 0.01 or absf(ench_c.y - cost_c.y - 2.0 * r) > 0.01:
+			geo_bad = "%s → 费用 %s / 附魔 %s" % [sz, cost_c, ench_c]
+	if geo_bad != "":
+		_smoke_fail("R214 附魔标记：应在费用徽章**正下方**（同 x、间距 2R）—— %s" % geo_bad)
+		return
+	# ② 种类表：显示名 / 种类色 / 图标名都在 CardData.ENCHANT_DEFS 里（绘制与左栏的唯一口）
+	if CardData.enchant_name("damage") != "伤害 +10" \
+			or not CardData.enchant_color("costdown").is_equal_approx(Color("6db2f0")) \
+			or CardData.enchant_icon_name("dimension") != "shop_icon_dimension" \
+			or CardData.enchant_name("") != "":
+		_smoke_fail("R214 附魔标记：ENCHANT_DEFS 的显示名 / 种类色 / 图标名不对")
+		return
+	var marked := CardData.from_dict(repo.get_card(8003).to_dict())
+	if marked.has_enchant():
+		_smoke_fail("R214 附魔标记：未附魔的卡不该带标记")
+		return
+	marked.enchant = "dimension"
+	if not marked.has_enchant():
+		_smoke_fail("R214 附魔标记：写上种类 id 后 has_enchant() 应为真")
+		return
+	# ③ 牌库面板（DeckViewer）的聚合：附魔卡必须与原卡分开列（同 id 也不能并）
+	var saved_ids: Array[int] = RunState.deck_ids.duplicate()
+	var saved_mods: Array = RunState.deck_mods.duplicate()
+	RunState.run_active = true
+	var dv_ids: Array[int] = [8003, 8003, 9003]
+	RunState.deck_ids = dv_ids
+	RunState.deck_mods = []
+	RunState.ensure_deck_mods()
+	RunState.enchant_deck_card(1, RunState.enchant_mod("dimension"))
+	var dv: DeckViewer = DeckViewer.new()
+	var merged: Array = dv._merged()
+	var groups: int = merged.size()
+	var found_ench := false
+	for e: Dictionary in merged:
+		var c: CardData = e["card"]
+		if c.id == 8003 and c.enchant == "dimension" and int(e["count"]) == 1:
+			found_ench = true
+	dv.free()
+	RunState.deck_ids = saved_ids
+	RunState.deck_mods = saved_mods
+	RunState.ensure_deck_mods()
+	if groups != 3 or not found_ench:
+		_smoke_fail("R214 附魔标记：牌库面板应把附魔卡与原卡分开列（%d 组 / 找到附魔组 %s）"
+				% [groups, str(found_ench)])
+		return
+	# ④ 绘制路径由场景自身的 _draw 覆盖（战斗手牌 / 牌库面板 / 地图卡组都会真实画到）；
+	# 这里**不能**手调 CardFace.draw —— Godot 只在 `_draw()` 内部允许绘制，直接调会刷
+	# 一屏「Drawing is only allowed inside this node's _draw()」（不崩，但把日志淹掉）。
+	print("SMOKE OK R214 附魔标记：费用正下方（同 x / 间距 2R，三种尺寸）/ 种类表唯一口 / 牌库面板不并按")
 
 
 func _check_reload(scene: Variant) -> void:
@@ -1588,6 +1655,15 @@ func _check_run_deck_panel(scene: Variant) -> void:
 			atk_groups += 1
 	if atk_groups != 2:
 		_smoke_fail("完整卡组：带附魔的攻击必须与原卡分开列（攻击组数 %d，期望 2）" % atk_groups)
+		return
+	# R214：那张附魔是**没有 id 的老形态** mod（`{"power": 10}`）→ 按内容反推成 damage，
+	# 卡面才能画出「伤害 +10」的附魔标记（老存档不能因为没有 id 就变成没标记）。
+	var got_ench := ""
+	for c: CardData in run_cards:
+		if c.id == 8002 and c.enchant != "":
+			got_ench = c.enchant
+	if got_ench != "damage":
+		_smoke_fail("R214 附魔：卡组面板里附魔卡的种类应反推为 damage（实际「%s」）" % got_ench)
 		return
 	# ── ② 右下牌堆 → 剩余牌堆（只有 1 张）──
 	scene._close_zone_panels()

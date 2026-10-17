@@ -1184,20 +1184,33 @@ static func build_deck(repo: CardRepo) -> Array[CardData]:
 	## 一律用卡库**共享实例**，**除非**这一张带商店附魔（R181）—— 附魔要烤进卡
 	## （费用 -1 / 伤害 +10 / 次元 +2力+10血 / 保存），不能污染卡库共享实例，
 	## 于是对带附魔的那张用 `from_dict(to_dict())` 生成**独立副本**再应用。
+	## R214：单卡口径统一收进 `card_with_mod()`（展示层也调它，别再各写一遍复制逻辑）。
 	var cards: Array[CardData] = []
 	for i in deck_ids.size():
-		var id: int = deck_ids[i]
-		var c := repo.get_card(id)
-		if c == null:
+		var cc := card_with_mod(repo, i)
+		if cc == null:
 			continue
-		var mod: Dictionary = _mod_at(i)
-		if mod.is_empty():
-			cards.append(c)
-			continue
-		var cc := CardData.from_dict(c.to_dict())   # 独立副本（affixes 等数组也独立）
-		_apply_mod(cc, mod)
 		cards.append(cc)
 	return cards
+
+
+static func card_with_mod(repo: CardRepo, index: int) -> CardData:
+	## 卡组第 index 张的**实际卡实例**（带附魔的独立副本 / 没附魔就是卡库共享实例）。
+	## R214：牌库面板、地图卡组、商店选卡覆盖层、战斗卡组全部走这一口 ——
+	## 否则展示层拿到的是 `repo.get_card()` 的**原卡**，附魔数值与附魔标记一起丢掉
+	## （地图卡组 R207 已经这么做了，但牌库面板与商店选卡还是原卡）。
+	## 越界 / 卡库缺定义 → null。
+	if index < 0 or index >= deck_ids.size():
+		return null
+	var c := repo.get_card(deck_ids[index])
+	if c == null:
+		return null
+	var mod: Dictionary = _mod_at(index)
+	if mod.is_empty():
+		return c
+	var cc := CardData.from_dict(c.to_dict())   # 独立副本（affixes 等数组也独立）
+	_apply_mod(cc, mod)
+	return cc
 
 
 static func ensure_deck_mods() -> void:
@@ -1225,6 +1238,46 @@ static func _mod_at(index: int) -> Dictionary:
 	return m if m is Dictionary else {}
 
 
+static func enchant_mod(ench_id: String) -> Dictionary:
+	## **商店附魔的数值定义唯一口**（R214，原在 `shop_scene._ench_mod`）。
+	## 返回的字典就是 `deck_mods` 里存的那一份，`_apply_mod` 按它烤数值。
+	## `"id"` 是 R214 新增的：烤完之后卡与「原生就长这样的卡」无法区分，
+	## 卡面的附魔标记只能靠它（见 `CardData.ENCHANT_DEFS`）。
+	## ⚠️ 加新附魔：这里加一条 + `CardData.ENCHANT_DEFS` 加一条 + `shop_scene.ENCHANTS`
+	## 加一条（价格/文案），三处同名 —— smoke 有守卫。
+	var m: Dictionary = {}
+	match ench_id:
+		"costdown": m = {"cost": -1}
+		"damage": m = {"power": 10, "note": "伤害 +10"}
+		"dimension": m = {"affix": "次元", "power": 2, "health": 10}
+		"save": m = {"affix": "保存"}
+		_: return {}
+	m["id"] = ench_id
+	return m
+
+
+static func enchant_id_of(mod: Dictionary) -> String:
+	## 一份 mod 是哪种附魔（`enchant_mod()` 写的 `"id"` 优先）。
+	## R181~R213 的老存档 / 老 mod **没有 id** → 按内容反推（附魔效果互不重叠，能反推）：
+	## 费用 -1 / 次元(+2力+10血) / 保存 / 伤害 +10（带 note）。
+	## 反推不出来（未知形态）→ ""（卡面不画标记，但数值照旧生效）。
+	if mod.is_empty():
+		return ""
+	var eid: String = str(mod.get("id", ""))
+	if eid != "":
+		return eid
+	if int(mod.get("cost", 0)) < 0:
+		return "costdown"
+	var affix: String = str(mod.get("affix", ""))
+	if affix == "次元":
+		return "dimension"
+	if affix == "保存":
+		return "save"
+	if int(mod.get("power", 0)) != 0 or str(mod.get("note", "")) != "":
+		return "damage"
+	return ""
+
+
 static func _apply_mod(c: CardData, mod: Dictionary) -> void:
 	## 把附魔烤进这张（已经是独立副本的）卡。
 	if int(mod.get("cost", 0)) != 0:
@@ -1236,6 +1289,8 @@ static func _apply_mod(c: CardData, mod: Dictionary) -> void:
 	var affix: String = str(mod.get("affix", ""))
 	if affix != "" and not c.has_affix(affix):
 		c.add_affix(affix)
+	# R214：记下附魔种类（烤完数值就看不出来了 —— 卡面标记 / 左栏 / 商店全靠它）
+	c.enchant = enchant_id_of(mod)
 	# R210：技能卡的具体伤害是写在 `effect_text` 里的死文字（「造成 17 点伤害」），
 	# 「伤害 +10」附魔改的是**结算值** → 卡面文字会跟实际伤害对不上。补一行标注，
 	# 详情条 / 图鉴 / 牌库都读 `effect_text`，玩家一眼能看到这张卡被附魔过。

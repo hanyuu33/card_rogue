@@ -16474,6 +16474,71 @@ func _init() -> void:
 	RunState.deck_mods = r210_saved_mods2
 	RunState.ensure_deck_mods()
 
+	# ---- R214：商店附魔的**种类**要跟着卡走（卡面「费用正下方」的附魔标记靠它）----
+	# 附魔的数值早在 `_apply_mod` 里烤进了 cost / power / health / affixes —— 烤完之后
+	# 这张卡和「原生就长这样的卡」一模一样，卡面无从知道它被附魔过。所以另记一个 id。
+	var r214_repo := CardRepo.load_json()
+	# ① `enchant_mod()` 是**唯一口**：四种都带 id，且与 `CardData.ENCHANT_DEFS` 同名
+	var r214_ids := ["costdown", "damage", "dimension", "save"]
+	var r214_all_ok := true
+	for eid in r214_ids:
+		var em: Dictionary = RunState.enchant_mod(eid)
+		if str(em.get("id", "")) != eid or not CardData.ENCHANT_DEFS.has(eid):
+			r214_all_ok = false
+	check(r214_all_ok,
+		"R214 附魔：enchant_mod() 四种都带 id，且与 ENCHANT_DEFS 同名（%s）"
+			% ", ".join(r214_ids))
+	check(RunState.enchant_mod("nope").is_empty(),
+		"R214 附魔：未知 id → 空 mod（不会凭空造出一张附魔卡）")
+	# ② build_deck 把种类写进卡（数值照旧烤）
+	var r214_saved_ids: Array[int] = RunState.deck_ids.duplicate()
+	var r214_saved_mods: Array = RunState.deck_mods.duplicate()
+	RunState.deck_ids = [9003, 8003, 8003, 9003]
+	RunState.deck_mods = [RunState.enchant_mod("damage"),
+			RunState.enchant_mod("dimension"), {}, RunState.enchant_mod("save")]
+	var r214_built: Array[CardData] = RunState.build_deck(r214_repo)
+	var r214_got: Array = []
+	for c: CardData in r214_built:
+		r214_got.append(c.enchant)
+	check(r214_built.size() == 4 and r214_got == ["damage", "dimension", "", "save"],
+		"R214 附魔：build_deck 给每张附魔卡写上种类 id（实际 %s）" % str(r214_got))
+	# ③ 卡库共享实例不能被污染（否则图鉴里的原卡也会顶着一枚附魔标记）
+	check(r214_repo.get_card(9003).enchant == "" and r214_repo.get_card(8003).enchant == "",
+		"R214 附魔：卡库原卡的 enchant 仍是空（附魔只烤进独立副本）")
+	# ④ 附魔 id 随 to_dict / from_dict 走（复制 / 离场还原 / 联机共用这条通道）
+	var r214_rt := CardData.from_dict(r214_built[0].to_dict())
+	check(r214_rt.enchant == "damage" and r214_rt.has_enchant(),
+		"R214 附魔：id 随 to_dict/from_dict 走（实际 %s）" % r214_rt.enchant)
+	# ⑤ 上场之后战场卡面仍要画标记 → Placement 持有的卡也得带 id
+	var r214_e := _new_engine([], 30, 30, -1, false)
+	r214_e.start_game()
+	var r214_pl: Placement = r214_e.state.place(
+			CardData.from_dict(r214_built[1].to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r214_pl.card.enchant == "dimension" and r214_pl.card.has_enchant(),
+		"R214 附魔：上场后卡仍带着种类 id（战场卡面画标记）")
+	# ⑥ `card_with_mod()` = 展示层的单卡口（牌库面板 / 地图卡组 / 商店选卡都走它）
+	var r214_one := RunState.card_with_mod(r214_repo, 1)
+	check(r214_one != null and r214_one.id == r214_built[1].id
+			and r214_one.enchant == "dimension" and r214_one.power == r214_built[1].power,
+		"R214 附魔：card_with_mod 与 build_deck 同源（%s / 力 %d）"
+			% [r214_one.enchant if r214_one != null else "null",
+				r214_one.power if r214_one != null else -1])
+	var r214_plain := RunState.card_with_mod(r214_repo, 2)
+	check(r214_plain == r214_repo.get_card(8003),
+		"R214 附魔：没附魔的那张直接给卡库共享实例（不白复制一份）")
+	check(RunState.card_with_mod(r214_repo, 99) == null,
+		"R214 附魔：card_with_mod 越界 → null（展示层不会崩）")
+	# ⑦ 老存档（R181~R213）的 mod **没有 id** → 按内容反推（附魔效果互不重叠）
+	check(RunState.enchant_id_of({"cost": -1}) == "costdown"
+			and RunState.enchant_id_of({"affix": "次元", "power": 2, "health": 10}) == "dimension"
+			and RunState.enchant_id_of({"affix": "保存"}) == "save"
+			and RunState.enchant_id_of({"power": 10, "note": "伤害 +10"}) == "damage"
+			and RunState.enchant_id_of({}) == "",
+		"R214 附魔：老存档（mod 里没有 id）按内容反推种类")
+	RunState.deck_ids = r214_saved_ids
+	RunState.deck_mods = r214_saved_mods
+	RunState.ensure_deck_mods()
+
 	# ================================================================
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")

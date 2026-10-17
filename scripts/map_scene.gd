@@ -179,7 +179,12 @@ func _ready() -> void:
 	if "--midway" in OS.get_cmdline_user_args():
 		_prep_midway_demo()
 	# -- --deck：直接打开卡组查看面板
+	# R214：顺手给前两张塞附魔 —— 出图核验「卡面费用正下方有标记」+「列表行标出附魔名」。
 	if "--deck" in OS.get_cmdline_user_args():
+		RunState.ensure_deck_mods()
+		var dm_ids := ["costdown", "save"]
+		for dm_i in mini(dm_ids.size(), RunState.deck_ids.size()):
+			RunState.deck_mods[dm_i] = RunState.enchant_mod(str(dm_ids[dm_i]))
 		_deck_rows = _build_deck_rows()
 		_deck_visible = true
 	# -- --marks：演示玩家标记（R177：画图 / 旗子，截图核验用）
@@ -1626,9 +1631,15 @@ func _draw_deck_panel() -> void:
 			draw_string(_font_bold, r.position + Vector2(68, 24),
 					"%s × %d" % [c.card_name, _deck_rows[i]["count"]],
 					HORIZONTAL_ALIGNMENT_LEFT, 340, UiTheme.FS_BODY, kcol)
-			draw_string(_font, r.position + Vector2(68, 45),
-					"费用 %d · %s" % [c.cost, CardFace.stats_line(c)],
-					HORIZONTAL_ALIGNMENT_LEFT, 372, UiTheme.FS_CAPTION, Color("9a968c"))
+			# R214：带附魔的卡在这一行前面标出附魔名（卡面费用正下方同时有附魔标记）——
+			# 列表里一眼能挑出「花过钱的那几张」，不用凑近看卡面小徽章。
+			var stat_txt := "费用 %d · %s" % [c.cost, CardFace.stats_line(c)]
+			var stat_col := Color("9a968c")
+			if c.has_enchant():
+				stat_txt = "附魔「%s」· %s" % [CardData.enchant_name(c.enchant), stat_txt]
+				stat_col = CardData.enchant_color(c.enchant)
+			draw_string(_font, r.position + Vector2(68, 45), stat_txt,
+					HORIZONTAL_ALIGNMENT_LEFT, 372, UiTheme.FS_CAPTION, stat_col)
 			var eff: String = CardText.naturalize(c.effect_text).replace("\n", " ")
 			if eff.length() > 30:
 				eff = eff.substr(0, 29) + "…"

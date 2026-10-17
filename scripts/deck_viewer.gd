@@ -90,22 +90,23 @@ func _toggle() -> void:
 # ------------------------------------------------------------ 数据
 
 func _merged() -> Array:
-	## 卡组按 **id** 聚合：[{card, count}]，按（费用, id）排序。
-	## ⚠️ R112 起卡组里不再有「运行时改写费用」的卡（铁栅栏 9072 卡面就是 2 费），
-	## 同名卡的费用必然相同 → 按 id 聚合即可，不再需要把费用并进聚合键。
+	## 卡组按 **卡面签名** 聚合：[{card, count}]，按（费用, id）排序。
+	## ⚠️ R112 起卡组里不再有「运行时改写费用」的卡（铁栅栏 9072 卡面就是 2 费）。
+	## ⚠️ R214：**不能只按 id 聚合**（与 `map_scene._build_deck_rows()` 同口径）——
+	##    商店附魔（R181）生成的是**同 id 的独立副本**，只按 id 合并会把「附魔的那张」
+	##    并进原卡：卡面上的附魔标记与烤进去的数值一起来路不明。
+	##    卡实例统一从 `RunState.build_deck()` 取（它负责把附魔烤进副本并写 `enchant`）。
 	var repo := CardRepo.load_json()
 	var order: Array = []
-	var by_id := {}
-	for i in RunState.deck_ids.size():
-		var id: int = RunState.deck_ids[i]
-		var c := repo.get_card(id)
-		if c == null:
+	var by_key := {}
+	for c: CardData in RunState.build_deck(repo):
+		var key := "%d|%d|%d|%d|%s|%s" % [c.id, c.cost, c.power, c.health,
+				",".join(c.affixes), c.enchant]
+		if by_key.has(key):
+			order[by_key[key]]["count"] += 1
 			continue
-		if not by_id.has(id):
-			var e := {"card": c, "count": 0}
-			by_id[id] = e
-			order.append(e)
-		by_id[id]["count"] += 1
+		by_key[key] = order.size()
+		order.append({"card": c, "count": 1})
 	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ca: CardData = a["card"]
 		var cb: CardData = b["card"]

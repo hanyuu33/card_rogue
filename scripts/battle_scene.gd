@@ -514,6 +514,62 @@ func _ready() -> void:
 			# 「拖向敌方那半场时放大 / 拖回我方时还原大小」）。
 			_grid_intro_t = -1.0
 			_grid_zoom = clampf(float(args[i + 1]), 1.0, 2.0)
+	if "--enchmark" in args and engine != null:
+		# R214 演示：**真实的附魔数据**出图 —— 给卡组前 4 张各塞一种商店附魔
+		# （走 `RunState.enchant_mod()` 唯一口，与商店买到的完全同源），再用本关重载一次。
+		# 出图核验三处：① 手牌 / 战场卡面「费用正下方的附魔标记」；
+		#   ② 左栏「附魔：」行（`_demo_hover_idx = 0` 常驻悬停第 1 张）；
+		#   ③ 右上「牌库」面板（deck_viewer 走 build_deck，同 id 的附魔卡不再被并进原卡）。
+		# 出图：`battle.tscn -- --screenshot --level 0 --enchmark --shotframe 20`
+		if not RunState.run_active:
+			seed(0x214)
+			RunState.start_run([], GameLayers.LAYER_DEFAULT)
+		RunState.ensure_deck_mods()
+		# ⚠️ 按**商店的合法条件**挑卡（不然出图里会出现「工事带伤害 +10」这种玩家
+		#    永远做不到的状态，图就没法用来验收）：费用 -1 要 cost>1 且非 X 费 /
+		#    伤害 +10 只给技能卡 / 次元只给盟友·工事 / 保存任意。一张卡只吃一个附魔。
+		var em_ids := ["costdown", "damage", "dimension", "save"]
+		var em_used := {}
+		var em_repo := CardRepo.load_json()
+		for em_id in em_ids:
+			for i in RunState.deck_ids.size():
+				if em_used.has(i):
+					continue
+				var ec: CardData = em_repo.get_card(RunState.deck_ids[i])
+				if ec == null:
+					continue
+				var em_ok := false
+				match em_id:
+					"costdown": em_ok = ec.cost > 1 and not ec.x_cost
+					"damage": em_ok = ec.kind == "技能"
+					"dimension": em_ok = (ec.kind == "盟友" or ec.is_fort()) \
+							and not ec.has_affix("次元")
+					"save": em_ok = true
+				if em_ok:
+					RunState.deck_mods[i] = RunState.enchant_mod(em_id)
+					em_used[i] = true
+					break
+		var em_lvl: Dictionary = RunState.pending_level
+		RunState.pending_level = {}
+		load_level(em_lvl if not em_lvl.is_empty() else GameLevels.builtin_levels()[0])
+		# 场上也摆一张带附魔的单位 —— 战场卡面（`on_board=true`）同样要画标记
+		# （`Placement` 持有的是卡副本，附魔 id 随 to_dict 走过来，smoke 里也钉着这条）。
+		for em_hi2 in engine.state.hand.size():
+			var hc2: CardData = engine.state.hand[em_hi2]
+			if hc2.has_enchant() and (hc2.kind == "盟友" or hc2.is_fort()) \
+					and engine.state.unit_at(Vector2i(4, 1)) == null:
+				engine.state.place(CardData.from_dict(hc2.to_dict()), Vector2i(4, 1),
+						GameEngine.SIDE_SELF)
+				break
+		# 左栏「附魔：」行要看出图 → 悬停**第一张带附魔的手牌**（手牌是随机抽的，
+		# 不能写死下标 0 —— 那张经常正好没附魔）。
+		_demo_hover_idx = -1
+		for em_hi in engine.state.hand.size():
+			if (engine.state.hand[em_hi] as CardData).has_enchant():
+				_demo_hover_idx = em_hi
+				break
+		status_text = "R214 演示：卡组前 4 张带附魔（费用正下方标记 / 左栏「附魔：」行 / 牌库面板）"
+		queue_redraw()
 	if "--over" in args:
 		# 演示：直接进入结算（验证结算覆盖层 / 彩带 / 胜利音效）
 		engine._finish("胜利", "演示：结算界面")
@@ -9581,6 +9637,15 @@ func _draw_info_panel() -> void:
 		for t in card.traits:
 			tt += (" · " if tt != "" else "") + str(t)
 		_draw_string_nw(_font, UiTheme.FS_MICRO, "词条：" + tt, Vector2(left, y), Color("886000"))
+		y += 17.0
+	# R214：**附魔**（商店附魔）—— 附魔的数值早已烤进 cost/power/health，卡面上只看得出
+	# 「这张卡数值比原卡高」，看不出是附魔来的。左栏补一行来源，与卡面费用正下方的
+	# 附魔标记同色（`CardData.enchant_color`），悬停时一目了然。
+	# 空态不画（免得每张卡都顶着一行「附魔：无」）。
+	if card.has_enchant():
+		_draw_string_nw(_font_bold, UiTheme.FS_MICRO,
+				"附魔：" + CardData.enchant_name(card.enchant), Vector2(left, y),
+				CardData.enchant_color(card.enchant))
 		y += 17.0
 	# R211：**字段**（affix）与上面的「词条」（traits）是两回事 —— 卡面那行「技能 · 次元」的
 	# 后半截就是它（`CardData.affix_line()`）。以前左栏只列 traits，于是次元 / 疾行 / 幻影 /

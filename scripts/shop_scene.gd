@@ -106,6 +106,27 @@ func _ready() -> void:
 		t2.timeout.connect(func(): _demo_enchant(cand, commit, ench_id))
 		add_child(t2)
 		t2.start()
+	# 演示参数（R214）：`--delpick` 打开「删除一张卡」的选卡页 —— 核验**选卡页大卡**
+	# （150×190，`CardFace.draw_pick()`）上也有附魔标记。顺带给卡组前两张塞附魔，
+	# 否则初始卡组是一张张素卡，出图看不出任何标记。
+	# 出图：`shop.tscn -- --screenshot --delpick`
+	if "--delpick" in args:
+		if not RunState.run_active:
+			RunState.run_active = true
+			RunState.start_run([], GameLayers.LAYER_DEFAULT)
+		var t3 := Timer.new()
+		t3.wait_time = 0.2
+		t3.one_shot = true
+		t3.timeout.connect(func():
+			RunState.ensure_deck_mods()
+			var em_list := ["costdown", "save"]
+			for i in mini(em_list.size(), RunState.deck_ids.size()):
+				RunState.deck_mods[i] = RunState.enchant_mod(str(em_list[i]))
+			_deleting = true
+			_build_deck_cards()
+			queue_redraw())
+		add_child(t3)
+		t3.start()
 	# 命令行 -- --screenshot：自动截图退出（出图核验用）。
 	if "--screenshot" in OS.get_cmdline_user_args():
 		var t := Timer.new()
@@ -612,15 +633,16 @@ func _build_deck_cards() -> void:
 	if _enchanting < 0 and not _deleting:
 		return
 	for i in RunState.deck_ids.size():
-		var id: int = RunState.deck_ids[i]
-		var c := _repo.get_card(id)
+		# R214：取**带附魔的副本**（`card_with_mod`），否则覆盖层里已附魔的卡
+		# 显示成没附魔的样子 —— 「任何地方都显示附魔标记」在这一页也得成立。
+		var c := RunState.card_with_mod(_repo, i)
 		if c == null:
 			continue
 		var ok := true
 		if not _deleting:
 			var ench: Dictionary = _row2[_enchanting]["ench"]
 			ok = _enchant_ok(str(ench["id"]), c, i)
-		_deck_cards.append({"id": id, "card": c, "ok": ok, "idx": i})
+		_deck_cards.append({"id": c.id, "card": c, "ok": ok, "idx": i})
 
 
 func _enchant_ok(ench_id: String, c: CardData, deck_idx: int) -> bool:
@@ -892,12 +914,9 @@ func _on_pick_click(pos: Vector2) -> void:
 
 
 func _ench_mod(ench_id: String) -> Dictionary:
-	match ench_id:
-		"costdown": return {"cost": -1}
-		"damage": return {"power": 10, "note": "伤害 +10"}
-		"dimension": return {"affix": "次元", "power": 2, "health": 10}
-		"save": return {"affix": "保存"}
-	return {}
+	## R214：数值定义搬到 `RunState.enchant_mod()`（唯一口）—— 演示旗标 / 测试 /
+	## 商店三处必须完全同源，否则「卡面标记显示的那种附魔」和「实际烤进去的数值」会漂移。
+	return RunState.enchant_mod(ench_id)
 
 
 func _leave() -> void:

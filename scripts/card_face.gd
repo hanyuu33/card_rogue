@@ -144,6 +144,17 @@ static func cost_badge_center(rect: Rect2) -> Vector2:
 	return rect.position
 
 
+static func enchant_badge_center(rect: Rect2) -> Vector2:
+	## **附魔标记的圆心**（R214）= 费用徽章**正下方** —— 用户口径「标记应在卡片费用正下方」。
+	## 同一竖线（x 与费用圆心相同 = 卡框左沿），纵向间距与底部那排数值徽章**完全一致**
+	## （圆心距 = 2R + `CARD_BADGE_GAP`，默认 gap=0 → 两枚徽章相切），
+	## 于是「费用 · 附魔 · 力量」在卡框左侧排成一条**等距竖列**，眼睛只需要记一次间距。
+	## ⚠️ 半径一律走 `badge_radius()`（带 `CARD_BADGE_SCALE_CAP` 封顶）——
+	##    `_draw_badges()` 里也是这么算的，两处不同步就会错位。
+	return cost_badge_center(rect) + Vector2(0.0,
+			2.0 * badge_radius(rect) + UiTheme.CARD_BADGE_GAP * ui_scale_of(rect))
+
+
 static func text_zone_bottom(rect: Rect2) -> float:
 	## 文字区下界 = 底部数值的**内半圈**上沿（圆心在卡框上，只侵入卡片一个半径）。
 	## 数值不再占用卡片内部空间，所以这一版比初版多了约 1.5R 的文字高度。
@@ -197,6 +208,8 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold, on_board, is_tapped, name_only)
 	# ⑦ 数值徽章 —— 最后画，压在卡图与文字之上（「额外挂载」的字面意思）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, hp, power_override)
+	# ⑧ 附魔标记（R214）—— 同样压在最上层（它骑在卡图左上角上）
+	_draw_enchant_mark(canvas, card, rect, font_bold)
 
 
 static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
@@ -222,6 +235,48 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 	_draw_rarity_ribbon(canvas, card, rect, k, pad)
 	_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold)   # R193：姓名牌内框 + 居中卡名（只留卡名）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, card.health, -1)
+	_draw_enchant_mark(canvas, card, rect, font_bold)            # R214：选卡页也要看到附魔标记
+
+
+static func _draw_enchant_mark(canvas: CanvasItem, card: CardData, rect: Rect2,
+		font_bold: Font) -> void:
+	## **附魔标记**（R214）：费用徽章正下方的一枚圆徽，内容是这张卡吃的那一种附魔。
+	##
+	## 用户口径「带有附魔效果的卡片，应该在任何地方，都显示附魔标记。标记应在卡片费用
+	## 正下方，与附魔种类相同」——
+	##   · **任何地方**：`draw()`（战场 / 手牌 / 图鉴 / 牌库 / 地图卡组 / 商店）
+	##     与 `draw_pick()`（选卡页 / 奖励三选一 / 卡组编辑）都调这一口，
+	##     所以标记跟着卡面走，不用每个场景各画一遍。
+	##   · **与附魔种类相同**：图标就是商店第二行那件商品的**同一张素材**
+	##     （`CardData.ENCHANT_DEFS` 唯一口），描边环再用该附魔的种类色 ——
+	##     四种附魔在 18px 的小徽章上靠「图 + 环色」双通道区分，不会认错。
+	##   · **费用正下方**：几何见 `enchant_badge_center()`，与底部那排数值徽章等距。
+	##
+	## ⚠️ 必须垫一层**深色圆盘**：附魔素材是浅色扁平插画（白描边），直接压在本就花哨的
+	##    卡图上会糊成一片；深底 + 亮色环让它在任何卡图上都读得出来（R173 的教训：
+	##    素材接进绘制后必须出图量像素，别只看代码）。
+	## ⚠️ 图标缺失 → 回退「附魔名首字」（费/伤/次/保），不空白也不报错。
+	if card == null or not card.has_enchant():
+		return
+	var r: float = badge_radius(rect)
+	var c := enchant_badge_center(rect)
+	if r < 3.0:
+		return
+	var col: Color = CardData.enchant_color(card.enchant)
+	# 底圆盘用**该附魔色的深色调**（不是统一黑）：远处也能凭底色区分「蓝=费用 / 橙=伤害 /
+	# 紫=次元 / 绿=保存」，近处再看图标细节 —— 双通道。
+	var disc: Color = col.darkened(0.74)
+	disc.a = 0.92
+	canvas.draw_circle(c, r, disc)
+	canvas.draw_arc(c, r, 0.0, TAU, 28, col, maxf(1.2, r * 0.20), true)
+	var icon: Texture2D = UiAssets.enchant_icon(card.enchant)
+	if icon != null:
+		var ir: float = r * 0.86
+		canvas.draw_texture_rect(icon, Rect2(c - Vector2(ir, ir), Vector2(ir, ir) * 2.0), false)
+	else:
+		var fs: int = maxi(6, roundi(10.0 * ui_scale_of(rect)))
+		_draw_center_outlined(canvas, font_bold, fs,
+				CardData.enchant_name(card.enchant).substr(0, 1), c, col)
 
 
 static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,

@@ -118,6 +118,17 @@ static func badge_icon(key: String) -> Texture2D:
 	return get_tex("icon_" + key)
 
 
+static func enchant_icon(ench_id: String) -> Texture2D:
+	## 商店附魔的图标（R214）—— 与商店第二行商品**同一张素材**，所以卡面上的
+	## 附魔标记天然「与附魔种类相同」（用户口径）。
+	## 素材名来自 `CardData.ENCHANT_DEFS[id].icon`（唯一口），这里只负责取图；
+	## 未注册 / 缺图 → null，`CardFace` 回退成附魔名首字，不空白也不报错。
+	var nm := CardData.enchant_icon_name(ench_id)
+	if nm == "":
+		return null
+	return get_tex(nm)
+
+
 static func map_bg(layer: int) -> Texture2D:
 	## 冒险地图背景（R128）：**每层一张**，1280 × 720 铺满。
 	## 缺图时返回 null，`map_scene` 回退成内置的纵向渐变底 —— 不空白也不报错。

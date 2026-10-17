@@ -61,6 +61,25 @@ const AFFIX_DEFS: Dictionary = {
 	"保存": {"label": "保存", "desc": "回合结束时，手牌里的这张卡不会丢弃（保留到下一回合）。", "on_board": false, "bg": "1a2a0a", "fg": "b9e85a"},
 }
 
+## ── 【商店附魔】（R214）`enchant` = 这张卡吃过的商店附魔 id（"" = 没附魔）──
+##
+## **为什么不能只靠「数值变了」推断**：附魔本体在 `RunState._apply_mod` 里就被**烤进**了
+## 副本的 cost / power / health / affixes（费用 -1、伤害 +10、次元 +2力+10血、保存），
+## 烤完之后这张卡和「一张原生就长这样的卡」**完全一样** —— 卡面无从知道「它被附魔过」。
+## 于是另记一个 id：玩家花了钱，就必须在**任何看到这张卡的地方**都能认出它（用户口径
+## R214「带有附魔效果的卡片，应该在任何地方，都显示附魔标记」）。
+##
+## 显示（`CardFace` 的附魔标记 / 左栏 / 商店）读这里，**不许各处自己写白名单**：
+##   * `label` 附魔显示名（与 `shop_scene.ENCHANTS` 的 name 同一份文案，smoke 有守卫）
+##   * `icon`  `assets/ui/` 下的素材名（就是商店第二行那张图标 —— 「与附魔种类相同」）
+##   * `col`   附魔种类色：标记描边环 / 左栏文字 / 商店悬停描边共用
+const ENCHANT_DEFS: Dictionary = {
+	"costdown": {"label": "费用 -1", "icon": "shop_icon_costdown", "col": "6db2f0"},
+	"damage": {"label": "伤害 +10", "icon": "shop_icon_damage", "col": "f08a5a"},
+	"dimension": {"label": "次元", "icon": "shop_icon_dimension", "col": "c08cf0"},
+	"save": {"label": "保存", "icon": "shop_icon_save", "col": "8fdc9f"},
+}
+
 var id: int = 0
 var card_name: String = ""
 var kind: String = ""          # 盟友 / 法术 / 工事 / 场地 / 效果
@@ -121,6 +140,11 @@ var upgrade_stacks: int = 0
 var field_heal: int = 0
 ## **字段系统（R91）**：这张卡当前带有的字段名列表。见上方 AFFIX_DEFS。
 var affixes: Array[String] = []
+## **商店附魔 id**（R214，见上方 ENCHANT_DEFS；"" = 没附魔）。
+## 附魔的效果本身早烤进了 cost/power/health/affixes —— 这个 id **只负责“让人看出来”**：
+## 卡面费用正下方的附魔标记、战斗左栏、商店/牌库/地图的卡面都读它。
+## 必须随 `to_dict` 走（复制 / 离场还原 / 联机都是同一条通道），否则标记会静默消失。
+var enchant: String = ""
 ## **本场战斗内的衍生物**（R82：野兔 9032 复制出来的那些）—— 不进牌库也不进弃牌区。
 ## 为什么要单独一个字段而不是只靠 trait「自我复制」：
 ## **卡库里的原卡也带同一个 trait**（否则引擎认不出该给谁发复制），
@@ -155,6 +179,8 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.upgrade_stacks = maxi(0, int(d.get("upgrade_stacks", 0)))
 	c.field_heal = int(d.get("field_heal", 0))
 	c.own_copy = bool(d.get("own_copy", false))
+	# R214：附魔 id 随序列化走（烤数值之后它是「这张卡被附魔过」的唯一凭据）
+	c.enchant = str(d.get("enchant", ""))
 	# ⚠️ 数组字段**必须逐个 append**（不能直接接字典里那个 Array）：
 	# `from_dict` 只接引用的话，赋给场上那张副本后引擎往里 append 字段会
 	# **连带改到卡库**（MEMORY 里「from_dict 只复制壳」那个老坑）。
@@ -186,6 +212,9 @@ func to_dict() -> Dictionary:
 		"field_heal": field_heal,
 		# R123：独立副本标记随序列化走 —— 复制 / 离场还原之后减费记账仍跟着这一张。
 		"own_copy": own_copy,
+		# R214：附魔 id **必须**在这里 —— 复制 / 离场还原 / 联机共用这条通道，
+		# 漏了它 = 卡一进战场附魔标记就没了（数值还在，看不出是附魔来的）。
+		"enchant": enchant,
 		# ⚠️ `affixes` 同样**必须**在这里 —— 漏了字段会静默清空
 		#（「这张卡被别的卡赋了疾行/幻影/护盾」的强化就没了）。
 		"affixes": affixes.duplicate(),
@@ -301,6 +330,33 @@ static func affix_colors(name: String) -> Array:
 	var bg := Color(str(d["bg"]))
 	bg.a = 0.92
 	return [bg, Color(str(d["fg"]))]
+
+
+## ── 附魔（R214）：显示口径的唯一入口（未注册 id 回退到 id 本身 / 中性紫，不空白）──
+
+## 附魔的显示名（「费用 -1」/「伤害 +10」/「次元」/「保存」）。
+static func enchant_name(id: String) -> String:
+	if id == "":
+		return ""
+	var d: Dictionary = ENCHANT_DEFS.get(id, {})
+	return str(d.get("label", id))
+
+
+## 附魔的种类色：卡面标记的描边环、左栏文字、商店悬停描边共用这一个色。
+static func enchant_color(id: String) -> Color:
+	var d: Dictionary = ENCHANT_DEFS.get(id, {})
+	return Color(str(d.get("col", "9b6bd8")))
+
+
+## 附魔图标素材名（`UiAssets.enchant_icon()` 的入参）；未注册 → 空串（调用方回退首字）。
+static func enchant_icon_name(id: String) -> String:
+	var d: Dictionary = ENCHANT_DEFS.get(id, {})
+	return str(d.get("icon", ""))
+
+
+## 这张卡带附魔吗（卡面标记 / 左栏 / 商店的唯一判据 —— 别各处写 `enchant != ""`）。
+func has_enchant() -> bool:
+	return enchant != "" and ENCHANT_DEFS.has(enchant)
 
 
 ## 卡面上要追加的那一行字段提示（引擎在卡被赋予新字段后会自动补上 ——

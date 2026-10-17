@@ -1721,6 +1721,68 @@ R138 先补了一层「自动暗描边」兜底；**实机再看仍然不够清�
 - `enchant_deck_card` 拒绝已附魔卡（每张卡只能一个）。
 - 「保存」做成字段（`AFFIX_DEFS` 加 `保存`），消费方 = `FieldState.discard_hand()` 的 kept 分支。
 
+### 4.47 附魔标记：卡面「费用正下方」的唯一口（R214）
+
+用户口径：「带有附魔效果的卡片，应该在任何地方，都显示附魔标记。标记应在卡片费用正下方，
+与附魔种类相同。」
+
+**为什么需要它**：商店附魔在 `RunState._apply_mod()` 里就把效果**烤进**了卡的
+cost / power / health / affixes，烤完之后这张卡与「原生就长这样的卡」**完全无法区分** ——
+玩家花 80 金买「次元」，离店之后那张卡和一张本来就带次元的卡一模一样。于是另记一个
+`CardData.enchant`（附魔 id），并把它做成**卡面的一部分**。
+
+**几何（唯一口 `CardFace.enchant_badge_center()`）**：
+- 圆心 = `cost_badge_center()`（= 卡框左上角）+ `(0, 2R + CARD_BADGE_GAP)`；
+- 即与费用徽章**同一条竖线**、圆心距与底部那排数值徽章完全一致（gap=0 → 两枚相切），
+  于是「费用 · 附魔 · 力量」在卡框左侧排成一条等距竖列（眼睛只记一次间距）；
+- 半径一律 `badge_radius()`（带 `CARD_BADGE_SCALE_CAP` 封顶）—— 不许自己按 k 算，
+  两处不同步就错位。
+
+**外观（唯一口 `CardFace._draw_enchant_mark()`）**：
+- 深色圆盘（**该附魔的种类色** `darkened(0.74)`、α 0.92）+ 同色描边环 + **附魔图标**；
+- 图标就是 `assets/ui/shop_icon_<id>.png` —— 商店第二行那件商品的**同一张素材**，
+  所以标记天然「与附魔种类相同」（四种靠「图 + 环色/底色」双通道区分）；
+- 缺图标 → 回退附魔名首字（费 / 伤 / 次 / 保），不空白也不报错；
+- ⚠️ 必须垫深底：附魔素材是浅色扁平插画（白描边），直接压在本就花哨的卡图上会糊成一片。
+
+**四种附魔的元数据（`CardData.ENCHANT_DEFS`，唯一口）**：
+
+| id | 显示名 | 图标（`assets/ui/`） | 种类色 |
+| --- | --- | --- | --- |
+| `costdown` | 费用 -1 | `shop_icon_costdown` | `#6db2f0` |
+| `damage` | 伤害 +10 | `shop_icon_damage` | `#f08a5a` |
+| `dimension` | 次元 | `shop_icon_dimension` | `#c08cf0` |
+| `save` | 保存 | `shop_icon_save` | `#8fdc9f` |
+
+**「任何地方」怎么保证**：标记画在 `CardFace.draw()` 与 `CardFace.draw_pick()` 的**末尾**
+（后者 = 选卡页 / 奖励三选一 / 卡组编辑），所以凡是画卡面的地方都自动带上；剩下只要保证
+**递给卡面的那份 `CardData` 带着 `enchant`**：
+
+- 战斗手牌 / 战场 / 效果区：卡来自 `RunState.build_deck()` ✓
+- 战斗内完整卡组面板（`_zone_panel_cards`）、冒险地图卡组面板（`_build_deck_rows`）✓
+- 牌库面板 `DeckViewer._merged()`：R214 改成 `build_deck` + **卡面签名**聚合
+  （原来只按 id 合并，会把附魔副本并进原卡 → 标记与数值一起消失）
+- 商店选卡覆盖层 `_build_deck_cards()`：R214 改走 `RunState.card_with_mod()` ✓
+- 图鉴 / 商店货架 / 奖励三选一：卡库**原卡**，本来就没有附魔 → 天然无标记
+
+**单卡口径 `RunState.card_with_mod(repo, index)`（R214）**：卡组第 i 张的**实际实例**
+（带附魔 → 独立副本，否则卡库共享实例）。`build_deck()` 也复用它 —— 展示层别再各写一遍
+`from_dict(to_dict())`。
+
+**老存档兼容**：R181~R213 的 `deck_mods` 里没有 `"id"` → `RunState.enchant_id_of()`
+按内容反推（`cost < 0` → costdown / `affix == 次元` → dimension / `affix == 保存` → save /
+有 `note` 或 `power` → damage）。
+
+**文字通道（第二条腿）**：战斗左栏在「字段：」之前补「附魔：伤害 +10」（同色）；冒险地图
+卡组面板的数值行前置「附魔「xxx」」（同色）。58×70 上的徽章终究只有 18px，具体是哪种
+由文字通道兜底。
+
+**出图**：`battle -- --screenshot --level 0 --enchmark --shotframe 20`（手牌 + 战场 + 左栏）、
+同参再加 `--rundeckpanel`（完整卡组面板）；`shop -- --screenshot --delpick`（选卡页大卡）；
+`map -- --screenshot --deck`（地图卡组面板）。`--enchmark` 按**商店的合法条件**挑卡塞附魔，
+不会摆出「工事带伤害 +10」这种玩家永远做不到的状态。
+`test_smoke._check_enchant_mark` 钉住几何（三种卡尺寸同 x、间距 2R）、种类表、牌库面板不并按。
+
 ---
 
 ## 5. 无障碍底线
