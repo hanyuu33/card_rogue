@@ -16086,8 +16086,11 @@ func _init() -> void:
 	check(r202_rl.state.hand.size() == 1 and r202_rl.state.hand[0].id == GameEngine.ENERGY_CANNON_ID,
 		"R202 填充：攻击（8002）被变成聚能炮击")
 	check(r202_rl.state.energy == 0, "R202 填充：0 费不改变能量")
-	check(r202_rl.state.discard.size() == 1 and r202_rl.state.discard[0].id == GameEngine.RELOAD_ID,
-		"R202 填充：填充本身进入弃牌区")
+	check(r202_rl.state.discard.is_empty() and r202_rl.state.void_count == 1
+			and r202_rl.state.void_cards.size() == 1
+			and r202_rl.state.void_cards[0].id == GameEngine.RELOAD_ID,
+		"R202/R211 填充：带「次元」→ 用后进消耗区、**不进弃牌区**（消耗区 %d 张 / 弃牌区 %d 张）"
+			% [r202_rl.state.void_count, r202_rl.state.discard.size()])
 
 	# ---- 发明专家：变化一张卡回 2 费（不可叠加）----
 	var r202_ir := _new_engine([], 20, 20)
@@ -16098,6 +16101,39 @@ func _init() -> void:
 	r202_ir.cast_reload(0, 1)
 	check(r202_ir.state.energy == 2,
 		"R202 发明专家：填充变化 1 张卡后回复 2 费（实际 %d）" % r202_ir.state.energy)
+
+	# ---- R211：填充（9146）挂上「次元」词条 → 用后消失，不进弃牌区 ----
+	check(r202_rel.has_affix(GameEngine.AFFIX_DIMENSION),
+		"R211 填充：卡面带「次元」字段（打出去就应该消失）")
+	check(r202_rel.affix_line() == "次元" and r202_rel.field_affix_line() == "次元",
+		"R211 填充：卡面字段行写「次元」（手牌 / 图鉴 %s · 战场 %s）"
+			% [r202_rel.affix_line(), r202_rel.field_affix_line()])
+	var r211_e := _new_engine([], 20, 20)
+	r211_e.state.hand = [CardData.from_dict(r202_rel.to_dict()),
+			CardData.from_dict(r202_repo.get_card(8002).to_dict())]
+	r211_e.state.energy = 0
+	r211_e.cast_reload(0, 1)
+	check(r211_e.state.void_count == 1 and r211_e.state.void_cards.size() == 1
+			and r211_e.state.void_cards[0].id == GameEngine.RELOAD_ID,
+		"R211 填充：用后进消耗区（void_count=%d）" % r211_e.state.void_count)
+	check(r211_e.state.discard.is_empty(),
+		"R211 填充：**不进弃牌区**（discard=%s）"
+			% str(r211_e.state.discard.map(func(c): return c.id)))
+	check(r211_e.state.hand.size() == 1
+			and r211_e.state.hand[0].id == GameEngine.ENERGY_CANNON_ID,
+		"R211 填充：目标仍照常变成聚能炮击（变卡效果不受词条影响）")
+	# 对照：没有次元的技能卡照常进弃牌区 —— 别把 `_spell_card_gone` 的判据改宽了
+	var r211_n := _new_engine([], 20, 20)
+	r211_n.state.place(_card(9001, "靶子", "盟友", 3, 3, 30), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
+	r211_n.state.hand = [CardData.from_dict(r202_can.to_dict())]
+	r211_n.state.energy = 1
+	r211_n.use_spell(0, Vector2i(2, 1))
+	check(r211_n.state.discard.size() == 1
+			and r211_n.state.discard[0].id == GameEngine.ENERGY_CANNON_ID
+			and r211_n.state.void_count == 0,
+		"R211 对照：没有次元的技能卡照常进弃牌区（消耗区 %d 张）"
+			% r211_n.state.void_count)
 
 	# ---- 随心组装：手牌全部变成随机奖励卡 ----
 	RunState.player_class = PlayerClass.MECH

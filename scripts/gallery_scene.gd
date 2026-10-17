@@ -112,6 +112,15 @@ func _ready() -> void:
 		add_child(t)
 		t.start()
 	_selected = _shown[0] if not _shown.is_empty() else null
+	# 命令行 -- --card <id>：详情直接选中指定卡（出图核验卡面 / 字段行用，与 battle 的
+	# `--r119card <id>` 同类）。R211 加：填充 9146 挂「次元」后靠它核对卡面确实写了字段。
+	for ai in args.size():
+		if args[ai] == "--card" and ai + 1 < args.size():
+			var want_id := int(args[ai + 1])
+			for gi in _shown.size():
+				if (_shown[gi] as CardData).id == want_id:
+					_selected = _shown[gi]
+					break
 	_refresh_detail()
 	grid.queue_redraw()
 	# R148：Esc 主菜单（图鉴页没有 sfx → 菜单里不给音效项）

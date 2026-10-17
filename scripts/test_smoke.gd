@@ -1450,15 +1450,21 @@ func _check_reload(scene: Variant) -> void:
 	if eng.state.energy != 3:
 		_smoke_fail("填充：应 0 费（能量 %d，期望 3）" % eng.state.energy)
 		return
-	var reload_in_discard := false
+	# R211：填充带「次元」→ 用后**消失**（进消耗区），不进弃牌区
+	var reload_in_void := false
+	for d: CardData in eng.state.void_cards:
+		if d.id == GameEngine.RELOAD_ID:
+			reload_in_void = true
+			break
+	if not reload_in_void:
+		_smoke_fail("填充：带「次元」→ 用后应进消耗区（void=%s）"
+				% str(eng.state.void_cards.map(func(c): return c.id)))
+		return
 	for d: CardData in eng.state.discard:
 		if d.id == GameEngine.RELOAD_ID:
-			reload_in_discard = true
-			break
-	if not reload_in_discard:
-		_smoke_fail("填充：填充本身应进弃牌区（discard=%s）"
-				% str(eng.state.discard.map(func(c): return c.id)))
-		return
+			_smoke_fail("填充：带「次元」不该进弃牌区（discard=%s）"
+					% str(eng.state.discard.map(func(c): return c.id)))
+			return
 	scene._sync_pick()
 	if scene._pick != null and scene._pick.is_picking():
 		_smoke_fail("填充：结算完选卡页应自动关闭")
@@ -1486,7 +1492,7 @@ func _check_reload(scene: Variant) -> void:
 		return
 	eng.state.hand.clear()
 	scene._reload_idx = -1
-	print("SMOKE OK 填充选卡页：点填充 → 弹页（候选 2）/ 确认 → 聚能炮击（0 费）/ 取消不扣费")
+	print("SMOKE OK 填充选卡页：点填充 → 弹页（候选 2）/ 确认 → 聚能炮击（0 费）/ 用后进消耗区（次元）/ 取消不扣费")
 
 
 func _check_run_deck_panel(scene: Variant) -> void:

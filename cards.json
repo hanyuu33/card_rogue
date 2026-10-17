@@ -3977,7 +3977,7 @@
       "group": "player",
       "class": "机械之心",
       "traits": [],
-      "affixes": [],
+      "affixes": ["次元"],
       "effect_text": "将手卡一张卡变成「聚能炮击」。",
       "target_mode": "hand_any",
       "color": "紫",
