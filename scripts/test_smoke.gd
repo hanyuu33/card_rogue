@@ -639,8 +639,57 @@ func _check_shop_enchant(scene: Variant) -> void:
 	if RunState.gold != gold0 - 60:
 		_smoke_fail("商店附魔：应扣 60 金币（%d → %d）" % [gold0, RunState.gold])
 		return
-	print("SMOKE OK 商店附魔：首击选中 / 再击成交（卡 %d 落附魔，金币 %d → %d）"
-			% [idx, gold0, RunState.gold])
+	var gold1: int = RunState.gold      # 成交后的金币（下面的用例会改 gold，先留一份给打印）
+	# ③ R218：**打开选卡页必须当场请求重绘**（Android 触摸没有鼠标移动兜底）。
+	#    用户实测：点第二行的附魔 / 第三行的「删除一张卡」，画面完全不动（= 点了没反应），
+	#    继续乱点，每一下其实都落在**看不见的**选卡页上 → 随机某张卡被选中/成交
+	#    （「附魔 / 删除的对象变成随机」），随后某一次重绘才把结果一起画出来（「一起结算」）。
+	#    桌面端有鼠标移动顺手触发重绘，所以只有 Android 必现。
+	var rr0: int = int(scene._redraw_req)
+	scene._start_enchant(0)
+	if int(scene._redraw_req) <= rr0:
+		_smoke_fail("商店附魔：打开选卡页必须请求重绘（Android 上少了它 = 点了没反应）")
+		return
+	# 删除一张卡的选卡页同理（第三行第 0 件）
+	scene._enchanting = -1
+	scene._sel_pick = -1
+	scene._row3[0]["sold"] = false
+	RunState.gold = 500
+	var rr1: int = int(scene._redraw_req)
+	scene._buy_row3(0)
+	if not bool(scene._deleting):
+		_smoke_fail("商店删除：点「删除一张卡」应打开选卡页（_deleting 未置位）")
+		return
+	if int(scene._redraw_req) <= rr1:
+		_smoke_fail("商店删除：打开选卡页必须请求重绘（同附魔，Android 上 = 点了没反应）")
+		return
+	# 点到「不符合条件」的灰卡必须有反馈（不能静默）
+	var grey_pos := Vector2(-9999, -9999)
+	for i in (scene._deck_cards as Array).size():
+		if not bool(scene._deck_cards[i]["ok"]):
+			grey_pos = (scene._pick_card_rect(i) as Rect2).get_center()
+			break
+	scene._deleting = false
+	scene._start_enchant(0)
+	scene._row2[0]["ench"] = {"id": "damage", "name": "伤害 +10", "desc": "", "price": 60, "icon": ""}
+	scene._build_deck_cards()
+	grey_pos = Vector2(-9999, -9999)
+	for i in (scene._deck_cards as Array).size():
+		if not bool(scene._deck_cards[i]["ok"]):
+			grey_pos = (scene._pick_card_rect(i) as Rect2).get_center()
+			break
+	if grey_pos.x > -999.0:
+		var hint0: String = str(scene._hint)
+		scene._on_pick_click(grey_pos)
+		if str(scene._hint) == hint0:
+			_smoke_fail("商店附魔：点到不符合条件的灰卡应给出提示（不能静默无反应）")
+			return
+	scene._enchanting = -1
+	scene._sel_pick = -1
+
+	print("SMOKE OK 商店附魔：首击选中 / 再击成交（卡 %d 落附魔，金币 %d → %d）；"
+			% [idx, gold0, gold1]
+			+ "打开附魔/删除选卡页均请求重绘，点灰卡有反馈")
 
 
 func _check_map_scene(scene: Variant) -> void:

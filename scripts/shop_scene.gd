@@ -61,6 +61,11 @@ var _deck_cards: Array = []    # [{id, name, card}]
 var _hint := ""
 var _hint_t := 0.0
 
+# R218：**请求重绘的次数**（只增不减）。唯一重绘口 `_ask_redraw()` 自增，
+# 给「状态变了却没画」这类 bug 留一个可断言的接缝（Android 触摸没有鼠标移动，
+# 少一次 queue_redraw 就是「点了没反应」）。
+var _redraw_req := 0
+
 # 全局商品编号：第一行 0..n-1，第二行紧跟，第三行再紧跟。
 # 三行各自独立计数，全局编号在 _hit_at 里换算。这里用三个 base 偏移。
 var _row1_base := 0
@@ -124,9 +129,30 @@ func _ready() -> void:
 				RunState.deck_mods[i] = RunState.enchant_mod(str(em_list[i]))
 			_deleting = true
 			_build_deck_cards()
-			queue_redraw())
+			_ask_redraw())
 		add_child(t3)
 		t3.start()
+	# 演示参数（R218）：`--pickopen` / `--delopen`
+	# 只走「打开选卡页」这一步，**不再额外请求重绘** —— 出图里选卡页必须在，
+	# 用来证明 `_start_enchant` / `_buy_row3(delete)` 自己会重绘（Android 触摸的唯一依赖）。
+	# 出图：`shop.tscn -- --screenshot --pickopen`
+	var po := "--pickopen" in args
+	var do_ := "--delopen" in args
+	if po or do_:
+		if not RunState.run_active:
+			RunState.run_active = true
+			RunState.start_run([], GameLayers.LAYER_DEFAULT)
+		RunState.gold = 500
+		var t4 := Timer.new()
+		t4.wait_time = 0.2
+		t4.one_shot = true
+		t4.timeout.connect(func():
+			if do_:
+				_buy_row3(0)        # 「删除一张卡」→ 打开删除选卡页
+			else:
+				_start_enchant(0))  # 「附魔」→ 打开附魔选卡页
+		add_child(t4)
+		t4.start()
 	# 命令行 -- --screenshot：自动截图退出（出图核验用）。
 	if "--screenshot" in OS.get_cmdline_user_args():
 		var t := Timer.new()
@@ -138,7 +164,7 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(t)
 		t.start()
-	queue_redraw()
+	_ask_redraw()
 
 
 func _setup_shop() -> void:
@@ -169,12 +195,21 @@ func _setup_shop() -> void:
 	_row3_base = _row1.size() + _row2.size()
 
 
+func _ask_redraw() -> void:
+	## 场景内**唯一**重绘入口（R218）：所有「状态变了」的地方都走这里。
+	## 为什么必须显式：`_draw()` 不会自己跑，改完状态不请求重绘 = 画面停在旧状态。
+	## 桌面端有鼠标移动（`_on_motion` 里会请求重绘）罩着，问题被掩盖；
+	## **Android 触摸没有那段移动**，于是表现为「点了没反应」。
+	_redraw_req += 1
+	queue_redraw()
+
+
 func _process(delta: float) -> void:
 	# R186：只在提示淡出动画期间逐帧重绘（原来无条件每帧重绘）；
 	# 悬停高亮由 _on_motion 事件驱动重绘。
 	if _hint_t > 0.0:
 		_hint_t -= delta
-		queue_redraw()
+		_ask_redraw()
 
 
 # ------------------------------------------------------------ 布局（自适应）
@@ -530,6 +565,7 @@ func _draw_hint() -> void:
 func _set_hint(text: String) -> void:
 	_hint = text
 	_hint_t = 2.4
+	_ask_redraw()
 
 
 # ------------------------------------------------------------ 悬停/选中描述板（R203）
@@ -681,7 +717,7 @@ func _on_motion(pos: Vector2) -> void:
 	_hover = _hit_at(pos)
 	_hover_enchant_card = _enchant_card_at(pos)
 	if old != _hover or _hover_enchant_card != -1:
-		queue_redraw()
+		_ask_redraw()
 
 
 func _hit_at(pos: Vector2) -> int:
@@ -739,6 +775,17 @@ func _enchant_card_at(pos: Vector2) -> int:
 	return -1
 
 
+func _pick_card_any_at(pos: Vector2) -> int:
+	## 落在哪张卡上（**不筛 `ok`**）：只用来给「这张卡不符合条件」这类反馈找目标 ——
+	## 原来点到灰卡是完全静默的，触摸端玩家会以为「又没反应了」（R218）。
+	if _enchanting < 0 and not _deleting:
+		return -1
+	for i in _deck_cards.size():
+		if _pick_card_rect(i).has_point(pos):
+			return i
+	return -1
+
+
 func _on_click(pos: Vector2) -> void:
 	if _enchanting >= 0 or _deleting:
 		_on_pick_click(pos)
@@ -750,7 +797,7 @@ func _on_click(pos: Vector2) -> void:
 	if hit < 0:
 		if _sel_row1 >= 0:            # 点空白 → 取消「选中查看」
 			_sel_row1 = -1
-			queue_redraw()
+			_ask_redraw()
 		return
 	if hit >= _row1_base and hit < _row1_base + _row1.size():
 		var i := hit - _row1_base
@@ -761,7 +808,7 @@ func _on_click(pos: Vector2) -> void:
 		else:
 			# 首击 → 选中查看（卡面高亮 + 描述板），不扣钱；移动端无 hover 时的详情入口
 			_sel_row1 = i
-			queue_redraw()
+			_ask_redraw()
 	elif hit >= _row2_base and hit < _row2_base + _row2.size():
 		_start_enchant(hit - _row2_base)
 	elif hit >= _row3_base and hit < _row3_base + _row3.size():
@@ -781,9 +828,13 @@ func _buy_card(i: int) -> void:
 
 
 func _start_enchant(i: int) -> void:
+	## ⚠️ 末尾的 `_ask_redraw()` 不是可选项（R218 用户实测）：少了它，点第二行的附魔商品
+	## 只会把 `_enchanting` 设上、画面却完全不动 → 玩家以为「点了没反应」，继续点，
+	## 结果每一下都落在**看不见的**选卡页上 → 随机某张卡被选中/成交（「对象变成随机」）。
 	_enchanting = i
 	_hover_enchant_card = -1
 	_build_deck_cards()
+	_ask_redraw()
 
 
 func _demo_enchant(cand: int, commit: bool, ench_id := "save") -> void:
@@ -800,13 +851,13 @@ func _demo_enchant(cand: int, commit: bool, ench_id := "save") -> void:
 	_row2[0]["ench"] = save_ench
 	_start_enchant(0)
 	if cand < 0 or cand >= _deck_cards.size():
-		queue_redraw()
+		_ask_redraw()
 		return
 	var pos: Vector2 = _pick_card_rect(cand).get_center()
 	_on_pick_click(pos)              # 首击 → 选中查看
 	if commit:
 		_on_pick_click(pos)          # 再击同一张 → 成交
-	queue_redraw()
+	_ask_redraw()
 
 
 func _buy_row3(i: int) -> void:
@@ -823,6 +874,7 @@ func _buy_row3(i: int) -> void:
 		_deleting = true
 		_hover_enchant_card = -1
 		_build_deck_cards()
+		_ask_redraw()          # R218：同 `_start_enchant`，否则删除选卡页不出现
 	elif key == "maxhp":
 		if not RunState.spend_gold(price):
 			_set_hint("金币不足（需要 %d）" % price)
@@ -848,18 +900,24 @@ func _on_pick_click(pos: Vector2) -> void:
 		_deleting = false
 		_hover_enchant_card = -1
 		_sel_pick = -1
-		queue_redraw()
+		_ask_redraw()
 		return
 	var ci := _enchant_card_at(pos)
 	if ci < 0:
+		var any_i := _pick_card_any_at(pos)
+		if any_i >= 0 and not _deleting:
+			# 点到「不符合这张附魔条件」的灰卡 → 明确说一句，别让玩家以为死机
+			_set_hint("这张卡不能吃「%s」（已附魔或类型不符）"
+					% str(_row2[_enchanting]["ench"]["name"]))
+			return
 		if _sel_pick >= 0:            # 点空白 → 取消「选中查看」
 			_sel_pick = -1
-			queue_redraw()
+			_ask_redraw()
 		return
 	if _sel_pick != ci:
 		# 首击 → 选中查看（R203 两段式：卡面只留卡名后，移动端靠这个看描述）
 		_sel_pick = ci
-		queue_redraw()
+		_ask_redraw()
 		return
 	_sel_pick = -1
 	var d: Dictionary = _deck_cards[ci]
@@ -870,7 +928,7 @@ func _on_pick_click(pos: Vector2) -> void:
 		if RunState.gold < del_price:
 			_set_hint("金币不足（需要 %d）" % del_price)
 			_deleting = false
-			queue_redraw()
+			_ask_redraw()
 			return
 		var del_card: CardData = null
 		if idx < RunState.deck_ids.size():
@@ -880,14 +938,14 @@ func _on_pick_click(pos: Vector2) -> void:
 		if not RunState.delete_deck_card(idx):
 			_set_hint("删除失败")
 			_deleting = false
-			queue_redraw()
+			_ask_redraw()
 			return
 		RunState.gold -= del_price
 		_row3[0]["sold"] = true
 		_set_hint("删除了「%s」" % del_name)
 		_deleting = false
 		_hover_enchant_card = -1
-		queue_redraw()
+		_ask_redraw()
 		return
 	# ---- 附魔模式 ----
 	var ench: Dictionary = _row2[_enchanting]["ench"]
@@ -895,14 +953,14 @@ func _on_pick_click(pos: Vector2) -> void:
 	if RunState.gold < price:
 		_set_hint("金币不足（需要 %d）" % price)
 		_enchanting = -1
-		queue_redraw()
+		_ask_redraw()
 		return
 	var mod := _ench_mod(str(ench["id"]))
 	# 先落附魔、再扣钱（R204）：附魔失败（越界 / 已有附魔）绝不白扣金币。
 	if not RunState.enchant_deck_card(idx, mod):
 		_set_hint("附魔失败")
 		_enchanting = -1
-		queue_redraw()
+		_ask_redraw()
 		return
 	RunState.gold -= price
 	_row2[_enchanting]["sold"] = true
@@ -910,7 +968,7 @@ func _on_pick_click(pos: Vector2) -> void:
 	_set_hint("「%s」获得附魔「%s」" % [c.card_name if c != null else str(idx), str(ench["name"])])
 	_enchanting = -1
 	_hover_enchant_card = -1
-	queue_redraw()
+	_ask_redraw()
 
 
 func _ench_mod(ench_id: String) -> Dictionary:
