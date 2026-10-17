@@ -242,6 +242,8 @@ var _grid_intro_t := -1.0
 ## R146：开场巡场当前的**棋盘缩放倍率**（1.0 = 原大小）。只由 `intro_pose()` 驱动；
 ## 玩家一打断就立刻归 1.0 —— 命中判定 `_cell_at` 不认识缩放，留在半路会整体错位。
 var _grid_zoom := 1.0
+## R197：敌方效果开场弹窗开着（入场巡场**完整播完**后弹一次；点任意处/Esc/右键关）。
+var _ee_popup := false
 var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本不覆盖
 ## R118：左键点「空位」**不再一步取消**。为 true = 本轮的第一次空位点击已经发生 ——
 ## 选区、绿色移动格、红色攻击格、深红 HP 格**全部原样保留**（于是这时点目标照样能打），
@@ -2297,6 +2299,7 @@ func load_level(lvl: Dictionary) -> void:
 		_show_banner("我方回合 · 第 1 回合")
 	# R136/R146：开场巡场 —— 停自己半场 → 推进到对方半场（放大）→ **拖回我方 + 还原大小**。
 	# 回放不播（回放按录像节奏走，不额外加动画）。
+	_ee_popup = false   # R197：新一场战斗，开场弹窗重新计一次
 	if _grid_scrollable() and not ReplayLog.playing:
 		_grid_scroll = _grid_scroll_max()
 		_grid_zoom = 1.0
@@ -2513,6 +2516,11 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				_map_visible = false
 				queue_redraw()
 				return
+			# R197：敌方效果开场弹窗也是一层浮层 → Esc 先关它再轮到区域面板
+			if _ee_popup:
+				_ee_popup = false
+				queue_redraw()
+				return
 			# R155：区域浏览面板（卡组/弃牌/消耗/效果/道具）也是一层浮层 → 先关它再轮到自己开菜单
 			if _discard_visible or _effects_visible or _enemy_effects_visible or _relics_visible \
 					or _deck_visible or _void_visible:
@@ -2666,6 +2674,7 @@ func _grid_intro_tick(delta: float) -> void:
 		var end := intro_pose(GRID_INTRO_DUR)
 		_grid_scroll = end["scroll"]
 		_grid_zoom = end["zoom"]
+		_maybe_open_enemy_effect_popup()   # R197：巡场完整播完 → 弹敌方效果
 		queue_redraw()
 		return
 	var pose := intro_pose(_grid_intro_t)
@@ -2714,6 +2723,11 @@ func _cell_at(pos: Vector2) -> Variant:
 
 
 func _on_left_click(pos: Vector2) -> void:
+	# R197：敌方效果开场弹窗开着 → 本次点击只关弹窗，不落进战场
+	if _ee_popup:
+		_ee_popup = false
+		queue_redraw()
+		return
 	# R189：全屏选卡页接管 8 套旧面板。展开时点击被子节点吃掉、根本到不了这里；
 	# 收起态（返回看战场）点「继续选择」浮条回来，点其他地方只提示 —— pending
 	# 还在引擎里，不能让玩家绕过选择直接打牌。
@@ -3664,6 +3678,7 @@ func _close_zone_panels() -> void:
 	_relics_visible = false
 	_deck_visible = false
 	_void_visible = false
+	_ee_popup = false   # R197：一并收掉敌方效果开场弹窗
 	_zone_page = 0
 	_relic_scroll = 0.0
 func _spell_target_cells(card: CardData) -> Array[Vector2i]:
@@ -3951,6 +3966,11 @@ func _on_board_click(cell: Vector2i) -> void:
 
 
 func _on_right_click() -> void:
+	# R197：敌方效果开场弹窗开着 → 右键只关弹窗
+	if _ee_popup:
+		_ee_popup = false
+		queue_redraw()
+		return
 	# 乌鸦的回手面板：必须选一张（不接受取消）
 	if engine.crow_pending:
 		_say("乌鸦：必须从弃牌堆选择一张盟友回到手牌")
@@ -5351,6 +5371,8 @@ func _draw() -> void:
 		_draw_pick_banner()
 	if engine.foresight_mode:
 		_draw_foresight_mode()
+	if _ee_popup:
+		_draw_enemy_effect_popup()   # R197：开场敌方效果弹窗（画在最上层）
 	if engine.over:
 		_draw_game_over()
 
@@ -8249,6 +8271,81 @@ func _enemy_effect_rect(i: int) -> Rect2:
 	var z := _enemy_zone_rect()
 	return Rect2(z.position.x + 4, z.position.y + 32.0 + i * (TAP_H + 10.0),
 			TAP_W, TAP_H)
+
+
+# ---- R197：敌方效果开场弹窗（虚空洞口底） ----
+const EE_POP_W := 768.0
+const EE_POP_H := 540.0
+## 素材几何契约：void_portal.png 为 768×540，中心 r=225 纯黑圆盘（见
+## art_src/2026-10-17_虚空洞口弹窗底/README.md）；文字区 = 同圆心的 336×252
+## （角距 √(168²+126²) ≈ 210 < 225，四角都落在纯黑内）。重画素材两边要一起改。
+const EE_TEXT_HW := 168.0
+const EE_TEXT_HH := 126.0
+
+
+func _enemy_effect_popup_rect() -> Rect2:
+	return Rect2((WINDOW_W - EE_POP_W) / 2.0, (WINDOW_H - EE_POP_H) / 2.0,
+			EE_POP_W, EE_POP_H)
+
+
+func _maybe_open_enemy_effect_popup() -> void:
+	## R197：开场巡场**完整播完**（_grid_intro_tick 走满 GRID_INTRO_DUR）后，
+	## 若敌方带效果卡则弹窗展示。玩家点击打断巡场不算「播完」——效果明细
+	## 仍可随时点右侧「敌方效果」区查看；回放不弹；每场至多一次。
+	if _ee_popup or ReplayLog.playing:
+		return
+	if engine == null or engine.state.enemy_effects.is_empty():
+		return
+	_ee_popup = true
+	queue_redraw()
+
+
+func _draw_void_portal_fallback(r: Rect2) -> void:
+	## 缺图回退：深紫黑底 + 紫色洞口环 + 纯黑内圆（与素材同一形态，不空白不报错）。
+	draw_rect(r, Color(0.055, 0.045, 0.085), true)
+	var c := r.get_center()
+	draw_circle(c, 236.0, Color(0.0, 0.0, 0.0))
+	draw_arc(c, 240.0, 0.0, TAU, 72, Color(0.62, 0.36, 0.88), 5.0)
+	draw_arc(c, 248.0, 0.0, TAU, 72, Color(0.30, 0.55, 0.78), 2.0)
+
+
+func _draw_enemy_effect_popup() -> void:
+	## R197：虚空洞口底 + 中心纯黑区白色文字。素材与弹窗 1:1（不缩放），
+	## 纯黑圆盘圆心 = 弹窗中心；文字全部画在该圆盘内，白字黑底对比拉满。
+	var r := _enemy_effect_popup_rect()
+	var c := r.get_center()
+	var tex := UiAssets.void_portal()
+	if tex != null:
+		draw_texture_rect(tex, r, false)
+	else:
+		_draw_void_portal_fallback(r)
+	var merged := _merged_effects(engine.state.enemy_effects)
+	var max_w := EE_TEXT_HW * 2.0 - 28.0
+	_draw_string_center(_font_bold, UiTheme.FS_SUBHEAD, "敌方效果",
+			c + Vector2(0.0, -EE_TEXT_HH + 26.0), Color.WHITE)
+	var y := c.y - EE_TEXT_HH + 62.0
+	var bottom := c.y + EE_TEXT_HH - 30.0
+	for m in merged:
+		if y > bottom - 24.0:
+			_draw_string_center(_font, UiTheme.FS_CAPTION,
+					"……共 %d 张，点右侧「敌方效果」区查看全部" % merged.size(),
+					Vector2(c.x, bottom), Color(0.72, 0.72, 0.78))
+			break
+		var card: CardData = m["card"]
+		var nm: String = card.card_name
+		if int(m["count"]) > 1:
+			nm += " ×%d" % int(m["count"])
+		_draw_string_center(_font_bold, UiTheme.FS_BODY, nm,
+				Vector2(c.x, y), Color.WHITE)
+		y += 24.0
+		var desc := CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
+		for ln in _wrap_lines(_font, UiTheme.FS_CAPTION, desc, max_w):
+			_draw_string_center(_font, UiTheme.FS_CAPTION, ln,
+					Vector2(c.x, y), Color(0.93, 0.93, 0.97))
+			y += 17.0
+		y += 12.0
+	_draw_string_center(_font, UiTheme.FS_CAPTION, "点击任意处继续",
+			c + Vector2(0.0, EE_TEXT_HH - 22.0), Color(0.66, 0.66, 0.74))
 
 
 func _draw_enemy_effects() -> void:

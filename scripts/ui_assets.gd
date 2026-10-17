@@ -14,6 +14,7 @@ class_name UiAssets
 ##   稀有度缎带     ribbon_<0..5>.png 下标同上（R170：稀有度的**主通道**，挂在卡面右上角）
 ##   面板羊皮纸     panel_parchment.png（R170：白底面板的统一底，平铺自适应任意大小）
 ##   羊皮卷面板底   scroll_parchment.png（R191：奖励面板的卷轴底，九宫格自适应、无边框）
+##   敌方效果弹窗底 void_portal.png（R197：战斗开场敌方效果弹窗，中心纯黑、白字）
 ##   数值徽章图标   icon_<键>.png     键 = cost 水晶 / power 剑 / range 弓 /
 ##                                      health 血 / speed 鞋
 ##
@@ -89,6 +90,13 @@ static func scroll_parchment() -> Texture2D:
 	## 配 `UiTheme.draw_scroll_bg()` 九宫格使用（角块 16%，边条单向拉伸）。
 	## 缺图返回 null，调用方回退 `draw_panel_bg` 平铺羊皮纸。
 	return get_tex("scroll_parchment")
+
+
+static func void_portal() -> Texture2D:
+	## 虚空洞口弹窗底（R197）：768×540，与敌方效果开场弹窗 **1:1 不缩放**；
+	## 中心 r=225 纯黑圆盘、文字画白色，几何契约见 battle_scene 的 EE_TEXT_* 常量。
+	## 缺图返回 null，battle_scene 回退程序化绘制（紫环 + 纯黑内圆），不空白不报错。
+	return get_tex("void_portal")
 
 
 static func panel_parchment() -> Texture2D:

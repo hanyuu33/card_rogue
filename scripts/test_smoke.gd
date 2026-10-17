@@ -1102,6 +1102,44 @@ func _check_battle(scene: Variant) -> void:
 	_check_back_key(scene)
 	_check_perf(scene)
 	_check_pick_overlay(scene)
+	_check_ee_popup(scene)
+
+
+func _check_ee_popup(scene: Variant) -> void:
+	## R197：敌方效果开场弹窗 —— 素材在库 / 打断不弹 / 播完必弹 / 点任意处关 / 关后不重弹。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("敌方效果弹窗：拿不到 engine")
+		return
+	if UiAssets.void_portal() == null:
+		_smoke_fail("敌方效果弹窗：void_portal.png 应已入库并可加载")
+		return
+	var repo := CardRepo.load_json()
+	eng.state.enemy_effects.append(CardData.from_dict(repo.get_card(9115).to_dict()))
+	# ── 1) 巡场被点击打断 = 没有「播完」→ 不弹 ──
+	scene._grid_intro_t = 1.0
+	scene._grid_intro_stop()
+	if scene._ee_popup:
+		_smoke_fail("敌方效果弹窗：巡场被打断不应弹窗")
+		return
+	# ── 2) 巡场完整播完 → 弹 ──
+	scene._grid_intro_t = scene.GRID_INTRO_DUR - 0.1
+	scene._grid_intro_tick(0.2)
+	if not scene._ee_popup:
+		_smoke_fail("敌方效果弹窗：巡场播完且有敌方效果卡应自动弹窗")
+		return
+	# ── 3) 点任意处 = 只关弹窗，不落进战场 ──
+	_feed_click(scene, Vector2(640, 360))
+	if scene._ee_popup:
+		_smoke_fail("敌方效果弹窗：点击任意处应关闭弹窗")
+		return
+	# ── 4) 巡场已结束 → 关掉后不再重弹；清掉测试铺的效果卡 ──
+	scene._grid_intro_tick(0.5)
+	if scene._ee_popup:
+		_smoke_fail("敌方效果弹窗：关闭后不应重新弹出")
+		return
+	eng.state.enemy_effects.clear()
+	print("SMOKE OK 敌方效果开场弹窗：素材在库 / 打断不弹 / 播完弹 / 点击关 / 不重弹")
 
 
 func _check_pick_overlay(scene: Variant) -> void:
