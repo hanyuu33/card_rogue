@@ -130,6 +130,16 @@ func _initialize() -> void:
 				RunState.relics = [RunState.WHISPER_RELIC_ID],
 			_check_whisper],
 		["res://scenes/gallery.tscn", func(): _reset()],
+		# R216：鸭血领取后**立刻**转去选卡页（不能等奖励界面关闭、回到地图才结算）。
+		# 用 `route_fn` 接缝截获目标 —— headless 里真换场景会把用例的树掀掉。
+		["res://scenes/map.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relic_choice = []
+				RunState.pending_relic = -1
+				RunState.pending_rewards = []
+				RunState.pending_relic_drop = -1,
+			_check_duck_blood_instant],
 		# 对战记录 / 设置（R215：回放已删）
 		["res://scenes/record_list.tscn", func(): _prep_records(), _check_record_list],
 		["res://scenes/settings.tscn", func(): _reset()],
@@ -265,6 +275,51 @@ func _prep_records() -> void:
 	RunRecord.finish("win")
 	RunRecord.begin_run("森林精魄")
 	RunRecord.finish("interrupted")
+
+
+func _check_duck_blood_instant(scene: Variant) -> void:
+	## R216：奖励界面领到鸭血 → 当刻关界面并转去卡组选择页（不等地图 `_ready`）。
+	var p: Variant = scene._reward_panel
+	if p == null:
+		_smoke_fail("R216 鸭血即时结算：地图没有挂上 RewardPanel")
+		return
+	var routed: Array = []
+	var hooked: Array = [false]
+	p.route_fn = func(target: String): routed.append(target)
+	p.on_before_pick = func(): hooked[0] = true
+	RunState.pending_relic = -1
+	RunState.pending_relic_drop = -1
+	RunState.pending_rewards = [{"kind": "relic", "id": RunState.DUCK_BLOOD_RELIC_ID,
+			"state": RunState.REWARD_PENDING}]
+	p.open()
+	p._claim_entry(0)
+	var bad := ""
+	if RunState.pending_relic != RunState.DUCK_BLOOD_RELIC_ID:
+		bad = "领取当刻就该置待选卡，实际 pending_relic=%d" % RunState.pending_relic
+	elif not bool(hooked[0]):
+		bad = "跳转前没有调用宿主收尾钩子（房间会漏结算）"
+	elif routed.size() != 1 or str(routed[0]) != "res://scenes/deck_edit.tscn":
+		bad = "应立刻转去卡组选择页，实际 %s" % str(routed)
+	elif p.is_open():
+		bad = "转页前没有关闭奖励界面"
+	if bad != "":
+		_smoke_fail("R216 鸭血即时结算：" + bad)
+	else:
+		print("SMOKE OK R216 鸭血即时结算：领取当刻关界面并转卡组选择页（钩子先收尾）")
+	# 普通道具（不需要选卡）→ 不转页
+	# ⚠️ 先把上一段的待选清掉：真流程里选卡页已经把它结算了，这里用 `route_fn` 假跳，
+	#    不清就会把「还没选完」的待办算到这一段头上。
+	RunState.pending_relic = -1
+	RunState.pending_rewards = [{"kind": "relic", "id": 6005,
+			"state": RunState.REWARD_PENDING}]
+	p.open()
+	p._claim_entry(0)
+	if routed.size() != 1:
+		_smoke_fail("R216 普通道具：不需要选卡却转页了（%s）" % str(routed))
+	p.route_fn = Callable()
+	p.on_before_pick = Callable()
+	RunState.pending_relic = -1
+	RunState.pending_rewards = []
 
 
 func _check_record_list(scene: Variant) -> void:

@@ -16657,6 +16657,51 @@ func _init() -> void:
 		cf = null
 	GameSettings._loaded = false
 
+	# ---------------------------------------------------------------- R216
+	# 「必须先选卡才能结算」的唯一判据口（`RunState.waiting_pick_scene`）。
+	# 用户报：鸭血拿到后没反应，要把奖励界面关掉、回到地图才结算 —— 根因是只有地图
+	# `_ready` 在消费 `pending_relic`，奖励界面领完什么都不做。
+	RunState.start_run([], GameLayers.LAYER_DEFAULT)
+	check(RunState.waiting_pick_scene() == "", "R216 待办判据：干净开局没有待选卡")
+	check(RewardPanel.route_target_after_pick() == "",
+			"R216 奖励界面判据：没有待办就不转页")
+	var r216_repo := CardRepo.load_json()
+	RunState.deck_ids = [8001, 8001, 8002]
+	RunState.ensure_deck_mods()
+	RunState.gain_relic(RunState.DUCK_BLOOD_RELIC_ID)
+	check(RunState.pending_relic == RunState.DUCK_BLOOD_RELIC_ID,
+			"R216 鸭血：拾起当刻就置「待选卡」（数据层立刻结算）")
+	check(RunState.waiting_pick_scene() == "res://scenes/deck_edit.tscn",
+			"R216 鸭血：待选 → 判据指向卡组选择页")
+	check(RewardPanel.route_target_after_pick() == "res://scenes/deck_edit.tscn",
+			"R216 鸭血：奖励界面领取后同一口径 → 立刻转页")
+	var r216_dup := RunState.duplicate_deck_cards(r216_repo, [0])
+	check((r216_dup["copied"] as Array).size() == 1, "R216 鸭血：复制一张生效")
+	check(RunState.waiting_pick_scene() == "", "R216 鸭血：选完卡后待办清空")
+	# 另外两件「要选卡」的即时道具走同一条路
+	RunState.gain_relic(RunState.SOURCE_POWER_ID)
+	check(RunState.waiting_pick_scene() == "res://scenes/deck_edit.tscn",
+			"R216 源数之力：同样立刻待选")
+	RunState.transform_deck_card(r216_repo, 0)
+	check(RunState.waiting_pick_scene() == "", "R216 源数之力：选完卡后待办清空")
+	RunState.gain_relic(6004)
+	check(RunState.waiting_pick_scene() == "res://scenes/deck_edit.tscn",
+			"R216 失忆药水：同样立刻待选")
+	RunState.delete_deck_card(0)
+	check(RunState.waiting_pick_scene() == "", "R216 失忆药水：选完卡后待办清空")
+	# 事件的卡组操作（pending_deck_edit）算同一种待办
+	RunState.pending_deck_edit = "delete"
+	check(RunState.waiting_pick_scene() == "res://scenes/deck_edit.tscn",
+			"R216 事件删卡：pending_deck_edit 也算待办")
+	RunState.pending_deck_edit = ""
+	# 局已结束（结算面板上仍可能领到道具）→ 不再把人送进选卡页
+	RunState.pending_relic = RunState.DUCK_BLOOD_RELIC_ID
+	RunState.run_active = false
+	check(RunState.waiting_pick_scene() == "", "R216 非局内：残留待办也不转页")
+	RunState.pending_relic = -1
+	RunState.run_active = true
+	RunState.end_run()
+
 	# ================================================================
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")

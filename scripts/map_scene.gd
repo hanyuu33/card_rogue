@@ -197,11 +197,9 @@ func _ready() -> void:
 		if RunState.run_active and not RunState.relic_choice.is_empty():
 			SceneFx.goto("res://scenes/relic_pick.tscn", true)
 			return
-		if RunState.run_active and RunState.pending_relic > 0:
-			SceneFx.goto("res://scenes/deck_edit.tscn", true)
-			return
-		if RunState.run_active and RunState.pending_deck_edit != "":
-			SceneFx.goto("res://scenes/deck_edit.tscn", true)
+		var pick_scene := RunState.waiting_pick_scene()   # R216：唯一判据口
+		if pick_scene != "":
+			SceneFx.goto(pick_scene, true)
 			return
 	# 续档检查点：已确定停留在地图（没有转去道具 / 卡组场景）→ 存一份本地存档。
 	# ⚠️ 只在真实游玩时存：截图（_shot）/ headless（测试探针）都不写。

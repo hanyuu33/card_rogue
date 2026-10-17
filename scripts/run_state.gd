@@ -573,6 +573,18 @@ static func has_pending_rewards() -> bool:
 	return not pending_rewards.is_empty()
 
 
+static func waiting_pick_scene() -> String:
+	## R216：「必须先选卡才能结算」的待办 → 返回要去的场景（"" = 没有待办）。
+	## 唯一判据口 —— 即时道具（鸭血 6024 / 源数之力 6002 / 失忆药水 6004）与事件卡组操作
+	## （`pending_deck_edit`：遗忘之泉 / 鸭鸭工匠）都汇到这里。
+	## ⚠️ 只有 run 进行中才算：局已经结束（`end_run`）之后道具仍可能被领，但那时不该再跳。
+	if not run_active:
+		return ""
+	if pending_relic > 0 or pending_deck_edit != "":
+		return "res://scenes/deck_edit.tscn"
+	return ""
+
+
 static func claim_pending_reward(idx: int) -> bool:
 	## 领取第 idx 条：道具 → 进道具栏。成功后 state = claimed（悬浮窗里那条置灰）。
 	## ⚠️ 卡牌奖励**不走这里**：卡牌必须先在三选一里选一张（pick_pending_card），

@@ -69,6 +69,11 @@ var _scroll := 0.0
 var _cached_n := -1
 var _repo_cards: CardRepo
 var _repo_relics: RelicRepo
+## R216：跳去选卡页**之前**让宿主收尾（战斗：房间标记完成 / Boss 推进层；事件：房间完成）。
+## 顺序很重要 —— 先收尾再换场景，否则「跳走」会把没做完的结算甩掉。
+var on_before_pick: Callable = Callable()
+## 烟测接缝：非空时代替真跳转（headless 没有场景可换）。正式流程永远为空。
+var route_fn: Callable = Callable()
 
 
 static func attach(host: Node, btn_pos := Vector2(12, 40)) -> RewardPanel:
@@ -263,6 +268,32 @@ func _claim_entry(i: int) -> void:
 	_view = VIEW_LIST
 	_scroll = 0.0
 	_root.queue_redraw()
+	# R216：即时道具（鸭血 / 源数之力 / 失忆药水）领完**立刻**去选卡 ——
+	# 旧版要玩家先关掉本界面、回到地图 `_ready` 才跳，表现就是「拿了鸭血没反应」。
+	_route_if_waiting_pick()
+
+
+func _route_if_waiting_pick() -> void:
+	## 领取后立刻结算的唯一出口 —— 单条领取与「一键领取」共用（后者也要能立刻跳）。
+	var target := route_target_after_pick()
+	if target != "":
+		_settle_then_route(target)
+
+
+static func route_target_after_pick() -> String:
+	## 领取之后是否要立刻转去选卡页（"" = 不用）。判据只有 `RunState` 一个口。
+	return RunState.waiting_pick_scene()
+
+
+func _settle_then_route(target: String) -> void:
+	## 先让宿主收尾 → 关界面 → 换场景。
+	if on_before_pick.is_valid():
+		on_before_pick.call()
+	close()
+	if route_fn.is_valid():
+		route_fn.call(target)      # 烟测：只记录目标，不真换场景
+	else:
+		SceneFx.goto(target)
 
 
 func _skip_entry(i: int) -> void:
@@ -787,6 +818,7 @@ func _on_click(pos: Vector2) -> void:
 			if any_relic and _btn_claim_all_rect().has_point(pos):
 				RunState.claim_all_relic_rewards()
 				_root.queue_redraw()
+				_route_if_waiting_pick()   # R216：一键领到鸭血也要立刻去选卡
 				return
 			for i in RunState.pending_rewards.size():
 				if _row_rect(i).has_point(pos):

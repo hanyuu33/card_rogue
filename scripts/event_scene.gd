@@ -381,6 +381,9 @@ func _ready() -> void:
 	# R119：奖励悬浮窗 —— 宝箱层开箱 / 宝箱事件 / 奥秘之泉「喝下泉水」都先入队，
 	# 由它展示完整介绍（长描述不再塞进下面那一行 Label）。
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
+	# R216：领到「要立刻选卡」的即时道具 → 奖励界面当场转去卡组选择页。
+	# 本页的收尾就是「房间标记完成」（`complete_current` 幂等），先做掉再跳。
+	_reward_panel.on_before_pick = _settle_before_pick
 	# R122：描述文案的悬浮提示层 —— 挂在最后（画在所有子节点之上）、IGNORE（不吃点击）。
 	_tip_layer = Control.new()
 	_tip_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -1217,6 +1220,12 @@ func _ui_bbq() -> void:
 
 func _ui_leave() -> void:
 	_on_leave()
+
+
+func _settle_before_pick() -> void:
+	## R216：奖励界面要跳去选卡页之前，先把本次事件节点标记完成 —— 否则回地图还能再进一次。
+	if RunState.run_active:
+		RunState.complete_current()
 
 
 func _on_leave() -> void:

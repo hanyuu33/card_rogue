@@ -476,6 +476,9 @@ func _ready() -> void:
 		UiTheme.apply_chip(_tb, true, true)
 	# R119：奖励悬浮窗 —— 战斗胜利后的掉落道具 / 卡牌奖励都先入队，由它逐项展示
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
+	# R216：领到「要立刻选卡」的即时道具时，奖励界面会当场转去卡组选择页 ——
+	# 跳走之前先让本场把尾收掉（房间标记完成 / Boss 推进层），否则结算会被甩掉。
+	_reward_panel.on_before_pick = _settle_before_pick
 	# R189：全屏选卡页 —— 乌鸦/鲸鱼/无尽/取牌/预判/命运/专注/英雄代价的统一入口。
 	# 作为最后一个子节点挂上（盖住按钮栏，展开时吃掉全部点击）。
 	_pick = PickOverlay.new()
@@ -4757,6 +4760,18 @@ func _build_over_panel() -> void:
 	for b: Button in [_over_btn_restart, _over_btn_level, _over_btn_title]:
 		b.custom_minimum_size = Vector2(220, 46)      # 24px 字 + 内距需要的高度
 		b.pressed.connect(func(): sfx.play("click"))
+
+
+func _settle_before_pick() -> void:
+	## R216：奖励界面为了「即时道具立刻结算」要跳走时，先把本场的收尾做完。
+	## 口径与 `_on_over_restart` 一致：Boss 通关有下一层 → 推进层；普通胜利 → 房间完成。
+	if not RunState.run_active:
+		return
+	if _run_next_layer > 0:
+		RunState.advance_layer(_run_next_layer)
+		_run_next_layer = 0        # 防重入：结算按钮再点也不会推两次
+	elif not _run_boss_win:
+		RunState.complete_current()
 
 
 func _on_over_restart() -> void:
