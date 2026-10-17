@@ -437,6 +437,13 @@ OWN_HAND_Y - HAND_FAN_HOVER_LIFT >= GRID_Y + GRID_H - 2        （= 590）
 > 后续行`）而非行盒底（descent 空档允许伸入徽章带顶部），放不下才逐级缩字号（最小 8px）。
 > 选卡界面（`draw_pick`，`pin_gold=false`）保持姓名牌区内居中版式不变。
 
+> **R205 起：「填充」也走全屏选卡页**（用户口径「使用后应该弹出选择卡界面，选一张卡变化」）——
+> 使用填充后 `_reload_idx >= 0` → `_pick_active_kind()` 返回 `"reload"` → `_sync_pick()` 自动
+> `open`；候选由**唯一口** `_reload_options(skip)` 给出（手牌里**除它自己以外**的全部卡），
+> 确认走 `_on_pick_confirmed("reload")` → `cast_reload(填充下标, 目标下标)`，取消/收起不扣费。
+> 旧「再点一张手牌」的第二段**已删**（手牌在屏幕底部被扇形折角压住，手机上很难点中）。
+> 演示旗标 `battle -- --reloadpick --screenshot`（出图含选中态 + 描述条）。
+
 卡面那一行「种类 · 字段」有两个来源，**按场景分**：
 
 | 场景 | 调用的口 | 内容 |

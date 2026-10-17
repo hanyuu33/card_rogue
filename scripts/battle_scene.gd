@@ -263,6 +263,7 @@ var _whisper_txt := ""          # 道具「鸭之低语」：本回合随机到�
 var _hover_relic_tip := ""      # 道具悬停：完整说明走浮动折行面板（工具栏一行放不下）
 var _demo_tip_text := ""       # --relictip 演示：每帧重设悬停提示（warp 的合成移动会清掉一次性设置）
 var _demo_hover_idx := -1      # --xtext 演示：每帧重设悬停手牌卡（合成鼠标移动会清掉一次性设置）
+var _demo_pick_sel := -1       # --reloadpick 演示：选卡页展开后预选第 N 张（一次性，出图看选中态）
 
 # 拖拽释放：按住技能/效果卡拖到目标格（或棋盘）上松手即生效
 const DRAG_THRESHOLD := 14.0    # 超过此位移判定为拖拽（否则视为点击）
@@ -693,6 +694,21 @@ func _ready() -> void:
 		_hover_hand = 0
 		_hover_card = engine.state.hand[0]
 		status_text = "三张新卡：协同攻击（2 盟友 → 费用 3→1，绿色）+ 森林守护（绿环）"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--reloadpick" in args and engine != null:
+		# 演示（R205）：填充（9146）现在**弹全屏选卡页**选目标 —— 出图核验候选、描述条与底栏按钮
+		# （`_sync_pick()` 在 `_process` 里自动 open）。
+		engine.state.hand.clear()
+		engine.state.hand.append(repo.get_card(8002))                  # 攻击（候选）
+		engine.state.hand.append(repo.get_card(GameEngine.RELOAD_ID))  # 填充（自己，不入候选）
+		engine.state.hand.append(repo.get_card(8004))                  # 熊（候选）
+		engine.state.energy = 3
+		_reload_idx = 1
+		# 选卡页由 `_sync_pick()` 在 `_process` 里自动开（`_ready` 阶段 anchors 还没结算，
+		# 这里 open 会告警「size overridden after _ready」）→ 只记下「展开后预选第 1 张」。
+		_demo_pick_sel = 0
+		status_text = "R205：填充 → 弹出选卡页，点一张手牌变形成聚能炮击"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--trapper" in args and engine != null:
@@ -2865,23 +2881,7 @@ func _on_left_click(pos: Vector2) -> void:
 					"target": null})
 			queue_redraw()
 			return
-		# R202「填充」第二段：正在等玩家点一张**手牌**时，点哪张就把哪张变成聚能炮击。
-		if _reload_idx >= 0:
-			if hi == _reload_idx:
-				_reload_idx = -1
-				_clear_selection()
-				status_text = "已取消：填充仍在手牌（未扣费）"
-				queue_redraw()
-				return
-			var rl_src := _reload_idx
-			_reload_idx = -1
-			_clear_selection()
-			var rl_card: CardData = engine.state.hand[rl_src]
-			status_text = "填充 → %s" % engine.cast_reload(rl_src, hi)
-			_net_send({"type": "action", "act": "spell", "card": rl_card.to_dict(),
-					"target": null})
-			queue_redraw()
-			return
+		# R205：「填充」已改成**弹全屏选卡页**（`_sync_pick`）—— 手牌点击不再承担第二段。
 		if selection != null and selection[0] == "hand" and selection[1] == hi:
 			_use_hand_card(hi)  # 再点一次 = 使用
 		else:
@@ -2953,10 +2953,16 @@ func _use_hand_card(i: int) -> void:
 		_recycle_idx = i
 		status_text = "回收：点手牌里的一张卡（再点一次回收取消）"
 		return
-	# 「填充」（9146，R202）：目标在**手牌**里且不限种类。
+	# 「填充」（9146，R202 / R205）：目标在**手牌**里且不限种类。
+	# R205：不再靠「再点一张手牌」两段式 —— 直接弹**全屏选卡页**（与乌鸦 / 取牌同一套）：
+	#   `_reload_idx` 一置，`_sync_pick()` 下一帧自动 open；选完点「确认填充」才结算。
 	if card.id == GameEngine.RELOAD_ID:
+		if _reload_options(i).is_empty():
+			_say("填充：手牌里没有可改变的卡（填充仍在手牌）")
+			_clear_selection()
+			return
 		_reload_idx = i
-		status_text = "填充：点手牌里的一张卡（再点一次填充取消）"
+		status_text = "填充：在弹出的选卡页里点一张手牌"
 		return
 	if card.needs_target():
 		# 需要选目标的技能：进入选目标模式（技能还在手牌，能量未付）
@@ -3072,10 +3078,10 @@ func _start_drag(i: int, pos: Vector2) -> void:
 		queue_redraw()
 		return
 	if card.id == GameEngine.RELOAD_ID:
-		# R202：填充是两段式（目标在**手牌**），与「回收」同口径；拖拽不生效。
+		# R202/R205：目标在选卡页里挑；拖拽不生效（拖到棋盘松手：不发消息、不扣费）。
 		_drag_spell_cells = []
 		_drag_anywhere = false
-		status_text = "填充：请点击手牌里的目标卡（拖拽不会生效）"
+		status_text = "填充：点它即可弹出选卡页（拖拽不会生效）"
 		queue_redraw()
 		return
 	if card.is_spell() and card.needs_target():
@@ -3508,6 +3514,10 @@ func _pick_active_kind() -> String:
 	## 当前活跃的选卡场景（"" = 无）。优先级同原小面板的拦截顺序。
 	if _hero_pick_idx >= 0:
 		return "hero"
+	# R205：「填充」（9146）也用全屏选卡页 —— 用户口径「使用后应该弹出选择卡界面，
+	# 选一张卡变化」。原来靠「再点一张手牌」两段式，手牌被扇形压住时很难点中。
+	if _reload_idx >= 0:
+		return "reload"
 	if engine.crow_pending:
 		return "crow"
 	if engine.whale_pending:
@@ -3523,6 +3533,16 @@ func _pick_active_kind() -> String:
 	if engine.focus_pending:
 		return "focus"
 	return ""
+
+
+func _reload_options(skip: int) -> Array:
+	## 「填充」的候选 = 手牌里**除它自己以外**的所有卡（业务下标 = 手牌下标）。
+	## `skip` = 填充自己那张的手牌下标（调用方传 `_reload_idx` 或刚点的那张）。
+	var out: Array = []
+	for i in engine.state.hand.size():
+		if i != skip:
+			out.append(i)
+	return out
 
 
 func _build_pick_cfg(k: String) -> Dictionary:
@@ -3587,6 +3607,15 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"note": "点卡选中，再点确认 —— 它立即回到你的手牌",
 					"cards": faopts.map(disc_cards),
 					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
+		"reload":
+			# R205：填充（9146）—— 候选是手牌（除它自己），确认后目标原位变成「聚能炮击」。
+			var lopts: Array = _reload_options(_reload_idx)
+			return {"kind": k, "short": "填充", "opts": lopts,
+					"title": "填充：选择一张手牌，把它变成「聚能炮击」",
+					"note": "点卡选中，再点确认 —— 它原位变成「聚能炮击」；填充本身 0 费",
+					"cards": lopts.map(func(i: int) -> CardData: return engine.state.hand[i]),
+					"max_sel": 1, "confirm_label": "确认填充",
+					"cancel_label": "取消（不扣费）"}
 		"focus":
 			# 专注 / 负重减轻（8066，R201）共用本场景：文案按 engine.focus_label 切换。
 			# 沿用「卡组合并视图」：同名合并 + ×N 张数角标（整副卡组铺开没法看）。
@@ -3688,6 +3717,21 @@ func _on_pick_confirmed(sel: Array) -> void:
 			if engine.fate_pick(fai):
 				status_text = "拒绝命运：%s 回到手牌" % fanm
 			_clear_selection()
+		"reload":
+			# R205：确认 → 结算 `cast_reload(填充手牌下标, 目标手牌下标)`。
+			# 先抓卡对象（cast 会把填充从手牌拿走），再结算、再补联机消息 —— 与旧两段式同口径。
+			var ridx := int(opts[sel[0]])
+			var rsrc := _reload_idx
+			_reload_idx = -1
+			var rl_card: CardData = engine.state.hand[rsrc] \
+					if rsrc >= 0 and rsrc < engine.state.hand.size() else null
+			if rl_card == null:
+				_say("填充：手牌已变化，请重新使用")
+			else:
+				status_text = "填充 → %s" % engine.cast_reload(rsrc, ridx)
+				_net_send({"type": "action", "act": "spell",
+						"card": rl_card.to_dict(), "target": null})
+			_clear_selection()
 		"focus":
 			# opts 存的是代表卡 id：按 id 找卡组里第一张（与合并视图口径一致）。
 			var cid := int(opts[sel[0]])
@@ -3728,6 +3772,10 @@ func _on_pick_cancelled() -> void:
 			var fc_label := engine.focus_label
 			engine.focus_cancel()
 			status_text = "%s：已取消剩余的移除" % fc_label
+		"reload":
+			_reload_idx = -1
+			status_text = "已取消：填充仍在手牌（未扣费）"
+			_clear_selection()
 		"hero":
 			var hnm := engine.state.hand[_hero_pick_idx].card_name
 			_hero_pick_idx = -1
@@ -9672,6 +9720,10 @@ func _process(delta: float) -> void:
 	# R186：触屏长按到时 → 右键等价（放弃取牌 / 取消专注 / 取消选中）。
 	# 同时摘掉待结算的左键按下 —— 否则松手时模拟鼠标会补发一发左键点击。
 	_sync_pick()
+	# 演示：选卡页一展开就补一次预选（一次性；出图能看到「选中金框 + 描述条」）。
+	if _demo_pick_sel >= 0 and _pick != null and _pick.visible and _pick.is_picking():
+		_pick._toggle(_demo_pick_sel)
+		_demo_pick_sel = -1
 	if _lp_active and not _lp_fired and _drag_idx < 0 and not _grid_dragging \
 			and (_pick == null or not _pick.visible) and _now() - _lp_t0 >= LP_MS:
 		_lp_fired = true

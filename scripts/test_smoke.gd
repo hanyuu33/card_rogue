@@ -1287,8 +1287,9 @@ func _check_battle(scene: Variant) -> void:
 
 
 func _check_reload(scene: Variant) -> void:
-	## R202：填充（9146）两段式 —— 点填充 / 点任意手牌 → 目标变成聚能炮击；
-	## 再点一次填充自己 = 取消（不扣费）。0 费，所以能量应不变。
+	## R202 / R205：填充（9146）—— 使用后**弹全屏选卡页**（候选 = 除自己以外的手牌），
+	## 选一张 → 确认 → 它原位变成聚能炮击；0 费；点「取消」不扣费、不弃卡。
+	## R205 起手牌点击不再承担第二段（旧路径删掉了），所以这里断言 **选卡页** 真的打开。
 	var eng: GameEngine = scene.engine
 	if eng == null:
 		_smoke_fail("填充：拿不到 engine")
@@ -1302,23 +1303,36 @@ func _check_reload(scene: Variant) -> void:
 	scene._grid_zoom = 1.0
 	scene._clear_selection()
 	eng.current_side = GameEngine.SIDE_SELF
-	# 手牌：攻击(0) + 填充(1)
+	# 手牌：攻击(0) + 填充(1) + 熊(2)
 	eng.state.hand.clear()
 	eng.state.hand.append(CardData.from_dict(repo.get_card(8002).to_dict()))
 	eng.state.hand.append(CardData.from_dict(rl.to_dict()))
+	eng.state.hand.append(CardData.from_dict(repo.get_card(8004).to_dict()))
 	eng.state.energy = 3
 	_feed_click(scene, _hand_card_center(scene, 1))
 	_feed_click(scene, _hand_card_center(scene, 1))
 	if int(scene._reload_idx) != 1:
-		_smoke_fail("填充：再点一次应进入选手牌模式（_reload_idx=%d）" % scene._reload_idx)
+		_smoke_fail("填充：再点一次应进入填充待选（_reload_idx=%d）" % scene._reload_idx)
 		return
-	_feed_click(scene, _hand_card_center(scene, 0))
+	# 关键断言：不再手点第二张手牌 —— 弹出全屏选卡页
+	scene._sync_pick()
+	if scene._pick == null or not scene._pick.is_picking():
+		_smoke_fail("填充：使用后应弹出全屏选卡页")
+		return
+	if String(scene._pick.kind()) != "reload":
+		_smoke_fail("填充：选卡页场景应是 reload（实际 %s）" % String(scene._pick.kind()))
+		return
+	var opts: Array = scene._pick.opts()
+	if opts.size() != 2 or opts.has(1):
+		_smoke_fail("填充：候选应是除自己以外的 2 张手牌（opts=%s）" % str(opts))
+		return
+	scene._on_pick_confirmed([0])   # 网格第 0 张 = 手牌 0（攻击）
 	if int(scene._reload_idx) >= 0:
-		_smoke_fail("填充：点目标后应退出选手牌模式（_reload_idx=%d）" % scene._reload_idx)
+		_smoke_fail("填充：确认后应清掉 _reload_idx（%d）" % scene._reload_idx)
 		return
-	var got: CardData = eng.state.hand[0]
-	if got.id != GameEngine.ENERGY_CANNON_ID:
-		_smoke_fail("填充：攻击应变成聚能炮击（实际 %s %d）" % [got.card_name, got.id])
+	if eng.state.hand[0].id != GameEngine.ENERGY_CANNON_ID:
+		_smoke_fail("填充：攻击应变成聚能炮击（实际 %s %d）"
+				% [eng.state.hand[0].card_name, eng.state.hand[0].id])
 		return
 	if eng.state.energy != 3:
 		_smoke_fail("填充：应 0 费（能量 %d，期望 3）" % eng.state.energy)
@@ -1329,29 +1343,37 @@ func _check_reload(scene: Variant) -> void:
 			reload_in_discard = true
 			break
 	if not reload_in_discard:
-		_smoke_fail("填充：填充本身应进弃牌区（discard=%s）" % str(eng.state.discard.map(func(c): return c.id)))
+		_smoke_fail("填充：填充本身应进弃牌区（discard=%s）"
+				% str(eng.state.discard.map(func(c): return c.id)))
 		return
-	# 取消路径
+	scene._sync_pick()
+	if scene._pick != null and scene._pick.is_picking():
+		_smoke_fail("填充：结算完选卡页应自动关闭")
+		return
+	# 取消路径：再填充一次 → 点「取消（不扣费）」→ 手牌 / 能量原样
 	eng.state.hand.clear()
 	eng.state.hand.append(CardData.from_dict(rl.to_dict()))
 	eng.state.hand.append(CardData.from_dict(repo.get_card(8004).to_dict()))
 	eng.state.energy = 3
+	scene._clear_selection()
 	_feed_click(scene, _hand_card_center(scene, 0))
 	_feed_click(scene, _hand_card_center(scene, 0))
 	if int(scene._reload_idx) != 0:
-		_smoke_fail("填充（取消路径）：再点一次应进入选手牌模式")
+		_smoke_fail("填充（取消路径）：再点一次应进入填充待选")
 		return
-	_feed_click(scene, _hand_card_center(scene, 0))   # 点自己 = 取消
-	if int(scene._reload_idx) >= 0:
-		_smoke_fail("填充（取消路径）：点自己应取消")
-		return
-	if eng.state.hand.size() != 2 or eng.state.energy != 3:
+	scene._sync_pick()
+	scene._on_pick_cancelled()
+	if int(scene._reload_idx) >= 0 or eng.state.hand.size() != 2 or eng.state.energy != 3:
 		_smoke_fail("填充（取消路径）：取消后手牌/能量应原样（%d 张 / %d 费）"
 				% [eng.state.hand.size(), eng.state.energy])
 		return
+	scene._sync_pick()
+	if scene._pick != null and scene._pick.is_picking():
+		_smoke_fail("填充（取消路径）：取消后选卡页应关闭")
+		return
 	eng.state.hand.clear()
 	scene._reload_idx = -1
-	print("SMOKE OK 填充两段式：点填充 / 点手牌→聚能炮击（0 费）/ 点自己取消不扣费")
+	print("SMOKE OK 填充选卡页：点填充 → 弹页（候选 2）/ 确认 → 聚能炮击（0 费）/ 取消不扣费")
 
 
 func _check_assemble(scene: Variant) -> void:
