@@ -1412,6 +1412,13 @@ func _check_reload(scene: Variant) -> void:
 	if rl == null or rl.cost != 0 or rl.rarity != 0:
 		_smoke_fail("填充：卡面应是 0 费普通技能")
 		return
+	# R213：手牌目标技能的**唯一判据口** —— 拖拽 / 点击 / 区域文案三处共用它。
+	if String(scene._hand_target_pick_kind(repo.get_card(GameEngine.SYS_UPGRADE_ID))) != "sysup" \
+			or String(scene._hand_target_pick_kind(repo.get_card(GameEngine.RECYCLE_ID))) != "recycle" \
+			or String(scene._hand_target_pick_kind(repo.get_card(GameEngine.RELOAD_ID))) != "reload" \
+			or String(scene._hand_target_pick_kind(repo.get_card(8002))) != "":
+		_smoke_fail("R213：手牌目标判据口不对（8039/8064/9146 应各归 sysup/recycle/reload，8002 应为空）")
+		return
 	scene._grid_intro_t = -1.0
 	scene._grid_zoom = 1.0
 	scene._clear_selection()
@@ -1490,9 +1497,44 @@ func _check_reload(scene: Variant) -> void:
 	if scene._pick != null and scene._pick.is_picking():
 		_smoke_fail("填充（取消路径）：取消后选卡页应关闭")
 		return
+	# ── R213：**拖拽**也能发动（用户口径「填充当前不能拖拽使用」）──
+	# 拖到棋盘任意处松手 = 与点击同一入口：只记下标弹选卡页，不扣费、不调 use_spell。
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(rl.to_dict()))
+	eng.state.hand.append(CardData.from_dict(repo.get_card(8004).to_dict()))
+	eng.state.energy = 3
+	scene._clear_selection()
+	scene._start_drag(0, _hand_card_center(scene, 0))
+	if not bool(scene._drag_anywhere):
+		_smoke_fail("填充（拖拽）：拖起来应显示「这片区域能松手」（_drag_anywhere=false）")
+		return
+	if String(scene._drag_zone_label()).find("选卡页") < 0:
+		_smoke_fail("填充（拖拽）：区域标签应说明「松手 → 弹出选卡页」（实际 %s）"
+				% String(scene._drag_zone_label()))
+		return
+	scene._finish_drag(scene._cell_center(Vector2i(4, 1)))
+	if int(scene._reload_idx) != 0:
+		_smoke_fail("填充（拖拽）：松手后应进入填充待选（_reload_idx=%d）" % scene._reload_idx)
+		return
+	scene._sync_pick()
+	if scene._pick == null or not scene._pick.is_picking() \
+			or String(scene._pick.kind()) != "reload":
+		_smoke_fail("填充（拖拽）：松手后应弹出 reload 选卡页")
+		return
+	if eng.state.energy != 3 or eng.state.hand.size() != 2:
+		_smoke_fail("填充（拖拽）：松手不该扣费/弃卡（%d 费 / %d 张）"
+				% [eng.state.energy, eng.state.hand.size()])
+		return
+	scene._on_pick_cancelled()
+	# ⚠️ 必须把选卡页**关掉**再交棒：`_pick` 还处于 picking 状态时，下一个用例
+	# （系统升级）的第一次点击会被模态选卡页吞掉 → 它报「_sys_upgrade_idx=-1」。
+	scene._sync_pick()
+	if scene._pick != null and scene._pick.is_picking():
+		_smoke_fail("填充（拖拽）：取消后选卡页应关闭")
+		return
 	eng.state.hand.clear()
 	scene._reload_idx = -1
-	print("SMOKE OK 填充选卡页：点填充 → 弹页（候选 2）/ 确认 → 聚能炮击（0 费）/ 用后进消耗区（次元）/ 取消不扣费")
+	print("SMOKE OK 填充选卡页：点填充 → 弹页（候选 2）/ 确认 → 聚能炮击（0 费）/ 用后进消耗区（次元）/ 拖到棋盘松手同样弹页 / 取消不扣费")
 
 
 func _check_run_deck_panel(scene: Variant) -> void:

@@ -477,6 +477,21 @@ OWN_HAND_Y - HAND_FAN_HOVER_LIFT >= GRID_Y + GRID_H - 2        （= 590）
 > （选卡入口只留一个，回放也只需一条 `cast_*` act）。
 > 演示旗标 `battle -- --sysuppick` / `--recyclepick --screenshot`。
 
+> **R213 起：这三张卡「拖拽」也能发动** —— 用户口径「填充当前不能拖拽使用，检查此类卡片
+> 是否可以拖拽到战场中发动」。R198 / R202 当年把拖拽显式关掉（`_drag_anywhere = false`），
+> 怕松手落进 `use_spell` 被引擎拒、联机白发一条 `spell`。现在**拖到棋盘任意处松手 =
+> 与点击同一个入口** `_use_hand_card()`：只记下标、下一帧弹选卡页，**不调 use_spell、
+> 不发联机消息、不扣费**。三条纪律：
+> ① 判据只有一处 `_hand_target_pick_kind(card)` → `"sysup"`/`"recycle"`/`"reload"`，
+>    `_start_drag`（能不能拖）/ `_finish_drag`（松手走哪条路）/ `_drag_zone_label`（文案）
+>    三处共用，加新卡只改它；
+> ② 区域标签写 **「松手 → 弹出选卡页」**，不能只写「可释放区域」—— 这三张卡松手**不结算**，
+>    写含糊了玩家会以为拖上去就直接打出去了；
+> ③ 全量排查：按 `target_mode in [hand_unit, hand_any]` 筛，这类卡只有这三张。其余选卡页
+>    技能（预判 / 拒绝命运 / 警觉 / 返修 / 回响）是 `target_mode=none` → 拖到棋盘就走
+>    `use_spell`，**本来就能拖**，不要把它们也塞进这个判据。
+> 演示旗标 `battle -- --reloaddrag --screenshot`（棋盘整片可释放外框 + 标签 + 跟随光标的卡）。
+
 卡面那一行「种类 · 字段」有两个来源，**按场景分**：
 
 | 场景 | 调用的口 | 内容 |

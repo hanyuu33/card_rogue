@@ -4268,12 +4268,14 @@ func _spell_card_gone(card: CardData, log_text := "") -> bool:
 	##   * 带「次元」字段的**技能卡** → **消失**：`void_count += 1` + `void_cards.append`，
 	##     **不进弃牌区**（本场对战不再出现）；
 	##   * 其余技能卡 → 照常进弃牌区。
-	## 以前这条规则是**按卡 id 硬编码**的（鲸鱼之怒 9050 / 拒绝命运 9098 / 警觉 9109 / 预判 9097
-	## 各写一遍），加一张次元技能卡就得记得再写一遍 —— 填充 9146（R211）加词条时就差点漏掉
-	## 行为。现在判据只读字段，`use_spell` 的两段式入口（`cast_reload`）与单段入口共用这一个口。
-	## ⚠️ 「回响」9102 用后**返回手卡**，不走这里（它是循环牌，不是次元牌）。
-	## ⚠️ 「超越极限」8053 卡面同样带次元，但它目前仍走 `use_spell` 的兜底分支进弃牌区
-	##    （R211 未改：那会把它从可循环变成一次性，属于平衡决策，留给设计确认）。
+	## 以前这条规则是**按卡 id 硬编码**的（鲸鱼之怒 9050 / 拒绝命运 9098 / 警觉 9109 各写一遍），
+	## 加一张次元技能卡就得记得再写一遍 —— 填充 9146（R211）加词条时就差点漏掉行为。
+	## 现在判据只读字段，`use_spell` / `cast_reload` 等所有入口共用这一个口。
+	## 两个**必须在外面**的例外（见 `use_spell` 尾段）：
+	##   * 9102 回响 —— 用后**返回手卡**（循环牌，不是次元牌）；
+	##   * 9097 预判 —— pending 期间要留在**弃牌区**做候选池标记，玩家选完由
+	##     `foresight_pick_card()` 把自己搬进消耗区。
+	## R213：8053 超越极限原先「卡面带次元却进弃牌区」（R99 起文档与实现不一致）已并入本口。
 	if card != null and card.kind == "技能" and card.has_affix(AFFIX_DIMENSION):
 		state.void_count += 1
 		state.void_cards.append(card)
@@ -4358,10 +4360,15 @@ func use_spell(hand_index: int, target = null) -> String:
 	_spell_play_tick()
 	_on_turn_first_play(SIDE_SELF, card)
 	_note_card_played(SIDE_SELF, card)
-	# R211：次元技能卡（鲸鱼之怒 / 拒绝命运 / 警觉）统一走 `_spell_card_gone` ——
-	# 原来这三条各自手写一遍「void_count += 1 + append + log」，加新次元卡只能靠记性。
-	if card.id == WHALE_WRATH_ID or card.id == FATE_REJECT_ID or card.id == ALERT_ID:
-		_spell_card_gone(card)
+	# R213：技能卡去向**统一按字段**判，不再罗列卡 id —— `_spell_card_gone` 读「次元」，
+	# 带它的技能卡打完即消失（进消耗区），其余照常进弃牌区。这样 R211 之后新加的次元卡
+	# （填充 9146、超越极限 8053）都不必回来补分支；8053 也因此与卡面一致
+	# （用户口径「超越极限也修复为和其他次元一样」，此前它落到下面的 else 进弃牌区）。
+	# 只有两个例外必须留在外面：
+	#   * 9097 预判：pending 期间还要待在弃牌区（`foresight_pick_card()` 选完才搬进消耗区）；
+	#   * 9102 回响：用后返回手卡（循环牌，不是次元牌）。
+	if card.id == FORESIGHT_ID:
+		state.discard.append(card)
 	elif card.id == ECHO_ID:
 		# 回响（9102）：使用后**返回手卡**（循环代价只有费用，下限见 ECHO_MIN_COST）。
 		if state.hand_full():
@@ -4371,7 +4378,7 @@ func use_spell(hand_index: int, target = null) -> String:
 			state.hand.append(card)
 			_log("回响：使用后返回手卡")
 	else:
-		state.discard.append(card)
+		_spell_card_gone(card)   # 次元 → 进消耗区；其余 → 进弃牌区
 	_log("使用技能 %s → %s" % [card.card_name, detail])
 	action.emit("spell", {"card": card, "detail": detail})
 	return detail

@@ -16135,6 +16135,49 @@ func _init() -> void:
 		"R211 对照：没有次元的技能卡照常进弃牌区（消耗区 %d 张）"
 			% r211_n.state.void_count)
 
+	# ---- R213：超越极限（8053）带「次元」→ 与其它次元卡一致：用后**消失** ----
+	# 用户口径「超越极限也修复为和其他次元一样」：此前它落到 use_spell 的兜底分支进弃牌区，
+	# 0 费卡能靠洗牌反复抽回来，与卡面写的「次元」矛盾（R99 起文档与实现就不一致）。
+	var r213_repo := CardRepo.load_json()
+	var r213_tr: CardData = r213_repo.get_card(GameEngine.TRANSCEND_ID)
+	check(r213_tr.has_affix(GameEngine.AFFIX_DIMENSION) and r213_tr.kind == "技能" \
+			and r213_tr.cost == 0,
+		"R213 超越极限：0 费技能 + 带次元（%s / %d 费）" % [r213_tr.kind, r213_tr.cost])
+	var r213_e := _new_engine([], 20, 20, -1, false)
+	r213_e.start_game()
+	r213_e.state.board.clear()
+	var r213_p: Placement = r213_e.state.place(
+			CardData.from_dict(r213_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+			GameEngine.SIDE_SELF)
+	r213_e.state.hand = [CardData.from_dict(r213_tr.to_dict())]
+	r213_e.state.energy = 5
+	r213_e.use_spell(0, Vector2i(4, 1))
+	check(r213_p.card.has_affix(GameEngine.AFFIX_OVERLOAD),
+		"R213 超越极限：目标照常获得「超负荷」（效果没被改动影响）")
+	check(r213_e.state.void_count == 1 and r213_e.state.void_cards.size() == 1 \
+			and r213_e.state.void_cards[0].id == GameEngine.TRANSCEND_ID,
+		"R213 超越极限：用后进消耗区（void_count=%d）" % r213_e.state.void_count)
+	check(r213_e.state.discard.is_empty(),
+		"R213 超越极限：**不进弃牌区**（discard=%s）"
+			% str(r213_e.state.discard.map(func(c): return c.id)))
+	check(r213_e.state.hand.is_empty(),
+		"R213 超越极限：用后从手牌移除（手牌 %d 张）" % r213_e.state.hand.size())
+	# 对照：不带次元的机械之心技能卡（加厚装甲 8044）照常进弃牌区 —— 判据不许改宽
+	var r213_n := _new_engine([], 20, 20, -1, false)
+	r213_n.start_game()
+	r213_n.state.board.clear()
+	r213_n.state.place(CardData.from_dict(r213_repo.get_card(8003).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r213_n.state.hand = [CardData.from_dict(
+			r213_repo.get_card(GameEngine.ARMOR_PLATE_ID).to_dict())]
+	r213_n.state.energy = 5
+	r213_n.use_spell(0, Vector2i(4, 1))
+	check(r213_n.state.discard.size() == 1 \
+			and r213_n.state.discard[0].id == GameEngine.ARMOR_PLATE_ID \
+			and r213_n.state.void_count == 0,
+		"R213 对照：无次元的技能卡照常进弃牌区（消耗区 %d 张）"
+			% r213_n.state.void_count)
+
 	# ---- 随心组装：手牌全部变成随机奖励卡 ----
 	RunState.player_class = PlayerClass.MECH
 	var r202_as := _new_engine([], 20, 20, -1, false)

@@ -715,6 +715,40 @@ func _ready() -> void:
 		status_text = "R205：填充 → 弹出选卡页，点一张手牌变形成聚能炮击"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--transcendvoid" in args and engine != null:
+		# 演示（R213）：超越极限（8053）带「次元」→ 打出后进**消耗区**（右列 VOID），
+		# 不再进弃牌区。出图核验：`battle.tscn -- --screenshot --transcendvoid --shotframe 20`
+		RunState.player_class = PlayerClass.MECH
+		engine.state.board.clear()
+		engine.state.discard.clear()
+		engine.state.void_cards.clear()
+		engine.state.void_count = 0
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.hand.clear()
+		engine.state.hand.append(CardData.from_dict(
+				repo.get_card(GameEngine.TRANSCEND_ID).to_dict()))
+		engine.state.energy = 5
+		engine.use_spell(0, Vector2i(4, 1))
+		status_text = "R213：超越极限带「次元」→ 打出后进消耗区（VOID %d / 弃牌区 %d）" % [
+				engine.state.void_count, engine.state.discard.size()]
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--reloaddrag" in args and engine != null:
+		# 演示（R213）：填充**拖拽也能发动** —— 拖到棋盘任意处松手 = 弹选卡页。
+		# 出图核验三件事：① 棋盘整片「可释放区域」外框；② 标签写「松手 → 弹出选卡页」
+		# （不是含糊的「可释放区域」，免得玩家以为拖上去就直接打出去了）；
+		# ③ 卡跟着光标走。出图：`battle.tscn -- --screenshot --reloaddrag --shotframe 20`
+		engine.state.hand.clear()
+		engine.state.hand.append(repo.get_card(GameEngine.RELOAD_ID))
+		engine.state.hand.append(repo.get_card(8002))
+		engine.state.hand.append(repo.get_card(8004))
+		engine.state.energy = 3
+		_start_drag(0, _hand_rect(0).get_center())
+		_drag_pos = _cell_center(Vector2i(4, 1))
+		status_text = "R213：填充拖到棋盘任意处松手 → 弹出选卡页（拖拽也能发动）"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--sysuppick" in args and engine != null:
 		# 演示（R209）：系统升级（8039）也弹全屏选卡页 —— 候选**只列盟友 / 工事**，
 		# 技能卡（攻击 8002）不进候选（旧点击式会让人点了才被拒）。
@@ -3139,21 +3173,17 @@ func _start_drag(i: int, pos: Vector2) -> void:
 			status_text = "双向传送：拖到第一个单位上（第二段再拖到另一个单位）"
 		queue_redraw()
 		return
-	if card.id == GameEngine.RECYCLE_ID:
-		# R198：回收是两段式（目标在**手牌**），与「系统升级」同口径。
-		# ⚠️ `_drag_anywhere` 必须留 false：拖到棋盘上松手若走 use_spell 分支，
-		# 联机模式下会向对方补发一条 spell 消息（本地被拒、对方真扣费）→ 不同步。
-		# 留 false 时松手只走「已取消」提示，不发消息、不扣费。
+	if _hand_target_pick_kind(card) != "":
+		# R213：目标在**手牌**里的技能（系统升级 8039 / 回收 8064 / 填充 9146）—— 拖拽也能发动。
+		# 用户口径「填充当前不能拖拽使用，检查此类卡片是否可以拖拽到战场中发动」：
+		# R198 / R202 当年把这几张的拖拽显式关掉（`_drag_anywhere = false`），理由是怕松手
+		# 落进 `use_spell` 分支被引擎拒、联机还会白发一条 spell。现在改成「拖到棋盘任意处
+		# 松手 → 与点击**同一个入口** `_use_hand_card()`」：只记下标、下一帧弹选卡页，
+		# **不调 use_spell、不发联机消息、不扣费**（扣费发生在选卡页确认时）。
+		# `_drag_anywhere` 在这里只表示「这块区域能松手」，分流在 `_finish_drag` 里按 kind 做。
 		_drag_spell_cells = []
-		_drag_anywhere = false
-		status_text = "回收：请点击手牌里的目标卡（拖拽不会生效）"
-		queue_redraw()
-		return
-	if card.id == GameEngine.RELOAD_ID:
-		# R202/R205：目标在选卡页里挑；拖拽不生效（拖到棋盘松手：不发消息、不扣费）。
-		_drag_spell_cells = []
-		_drag_anywhere = false
-		status_text = "填充：点它即可弹出选卡页（拖拽不会生效）"
+		_drag_anywhere = true
+		status_text = "%s：拖到棋盘任意处松手 → 弹出选卡页" % card.card_name
 		queue_redraw()
 		return
 	if card.is_spell() and card.needs_target():
@@ -3382,6 +3412,12 @@ func _finish_drag(pos: Vector2) -> void:
 				_say("%s：拖到高亮目标上释放（已取消）" % card.card_name)
 			return
 		if anywhere and cell != null:
+			# R213：目标在**手牌**里（系统升级 / 回收 / 填充）→ 与点击同一入口：只记下标、
+			# 下一帧弹选卡页。⚠️ **绝不能**掉进下面的 use_spell —— `use_spell` 对这三张
+			# 只有一句「先点手牌里的…」的拒绝文案，联机时还会白发一条 spell 给对手。
+			if _hand_target_pick_kind(card) != "":
+				_use_hand_card(i)
+				return
 			if not engine.can_pay_card(card):
 				_energy_fail(card, i)   # R151 P2-15
 				return
@@ -3609,6 +3645,24 @@ func _pick_active_kind() -> String:
 		return "fate"
 	if engine.focus_pending:
 		return "focus"
+	return ""
+
+
+func _hand_target_pick_kind(card: CardData) -> String:
+	## R213：「目标在**手牌**里、靠全屏选卡页挑」的技能 → 选卡页 kind（"" = 不是这类卡）。
+	## 这是**唯一判据口**：`_start_drag`（能不能拖）、`_finish_drag`（松手走哪条路）、
+	## `_drag_zone_label`（画什么文案）三处共用它，加新卡只改这里。
+	## 全量排查（R213）：按 `target_mode in [hand_unit, hand_any]` 筛，只有这三张。
+	## 其余选卡页技能（预判 9097 / 拒绝命运 9098 / 警觉 9109 / 返修 9127 / 回响 9102）
+	## 都是 `target_mode=none` → 拖到棋盘任意处就走 `use_spell`，本来就能拖，不在此列。
+	if card == null:
+		return ""
+	if card.id == GameEngine.SYS_UPGRADE_ID:
+		return "sysup"
+	if card.id == GameEngine.RECYCLE_ID:
+		return "recycle"
+	if card.id == GameEngine.RELOAD_ID:
+		return "reload"
 	return ""
 
 
@@ -9054,6 +9108,11 @@ func _drag_zone_rect() -> Rect2:
 
 func _drag_zone_label() -> String:
 	## 区域外框上的短标签（第一屏里玩家只需要知道「这里能不能松手」）。
+	# R213：目标在手牌里的技能 —— 松手不结算、只弹选卡页，标签要说清（否则玩家会以为
+	# 拖到棋盘就直接打出去了）。
+	if _drag_idx >= 0 and engine != null and _drag_idx < engine.state.hand.size() \
+			and _hand_target_pick_kind(engine.state.hand[_drag_idx]) != "":
+		return "松手 → 弹出选卡页"
 	if _drag_to_effects:
 		return "可释放区域"
 	if _drag_place:
