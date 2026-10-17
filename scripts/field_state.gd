@@ -99,7 +99,7 @@ var turn_keep: Array[CardData] = []  # 回转 9089 抽到的牌：本回合结�
 var turn_limit: int = -1        # -1 = 不限回合
 var clear_win := false          # 消灭所有敌方场上单位 → 直接胜利（关卡有敌方单位时启用）
 var level_name := ""
-var rng: RandomNumberGenerator = null   # 洗牌随机源（录像回放注入；null = 引擎全局随机）
+var rng: RandomNumberGenerator = null   # 洗牌随机源（测试/固定种子注入；null = 引擎全局随机）
 
 
 func _init(deck_cards: Array[CardData] = [], hp_me := 20, hp_foe := 20,
@@ -118,7 +118,7 @@ func _init(deck_cards: Array[CardData] = [], hp_me := 20, hp_foe := 20,
 
 
 func _shuffle_deck() -> void:
-	## 洗牌：注入了 rng（录像回放）就走可复现的 Fisher-Yates，否则用引擎全局随机。
+	## 洗牌：注入了 rng（固定种子 / 回归测试）就走可复现的 Fisher-Yates，否则用引擎全局随机。
 	if rng == null:
 		deck.shuffle()
 		return

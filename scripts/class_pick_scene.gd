@@ -213,9 +213,6 @@ func _toggle_sound() -> void:
 
 func _on_back_to_title() -> void:
 	## 流程界面里直接回标题 = **放弃本局**（与战斗中「返回标题」同一口径）。
-	if ReplayLog.recording:
-		ReplayLog.finish("quit")
-		ReplayLog.stop_playback()
 	if RunState.run_active:
 		RunState.end_run()
 	SceneFx.goto("res://scenes/title.tscn")
@@ -262,7 +259,7 @@ func _choose(cid: String) -> void:
 	_picked = true
 	sfx.play("click")
 	# 角色决定：初始卡组追加的专属卡 + 战斗赠品道具（见 PlayerClass）。
-	# 地图由 RunState.start_run 用本局种子生成（R46：录像回放可完整复现）。
+	# 地图由 RunState.start_run 用本局种子生成（同一种子必然生成同一张图）。
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, cid)
-	ReplayLog.begin_run(cid)   # 从这里开始录制本局完整流程
+	RunRecord.begin_run(cid)   # 本局开始：对战记录从这里计时
 	SceneFx.goto("res://scenes/map.tscn")

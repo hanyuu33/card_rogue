@@ -130,8 +130,9 @@ func _initialize() -> void:
 				RunState.relics = [RunState.WHISPER_RELIC_ID],
 			_check_whisper],
 		["res://scenes/gallery.tscn", func(): _reset()],
-		# 回放列表场景（R46）
-		["res://scenes/replay_list.tscn", func(): _reset()],
+		# 对战记录 / 设置（R215：回放已删）
+		["res://scenes/record_list.tscn", func(): _prep_records(), _check_record_list],
+		["res://scenes/settings.tscn", func(): _reset()],
 		# 事件场景的其它子类型
 		["res://scenes/event.tscn", func():
 				_reset()
@@ -245,6 +246,52 @@ func _initialize() -> void:
 	]
 	print("SMOKE === 开始（%d 项场景用例）===" % _plan.size())
 	_next()
+
+
+var _rec_bak := ""        # R215：记录页用例前的真实记录（用例结束还原）
+var _rec_pend_bak := ""   # R215：同上，pending 文件
+
+
+func _prep_records() -> void:
+	## R215：对战记录页用例的前置 —— 造两条记录（通关 + 中断）。
+	## ⚠️ 必须在**场景实例化之前**跑（plan 的第 2 项），页面 `_ready` 时才读得到。
+	_reset()
+	_rec_bak = FileAccess.get_file_as_string(RunRecord.PATH) \
+			if FileAccess.file_exists(RunRecord.PATH) else ""
+	_rec_pend_bak = FileAccess.get_file_as_string(RunRecord.PENDING_PATH) \
+			if FileAccess.file_exists(RunRecord.PENDING_PATH) else ""
+	RunRecord.clear_all()
+	RunRecord.begin_run("暗影刺客")
+	RunRecord.finish("win")
+	RunRecord.begin_run("森林精魄")
+	RunRecord.finish("interrupted")
+
+
+func _check_record_list(scene: Variant) -> void:
+	## R215：对战记录页 —— 两行、新在前、文案对；末尾把真实数据还原回去。
+	var rows: Array = scene._rows
+	if rows.size() != 2:
+		_smoke_fail("R215 记录页：应有 2 行，实际 %d" % rows.size())
+	elif str(rows[0].get("result", "")) != "interrupted" \
+			or str(rows[1].get("result", "")) != "win":
+		_smoke_fail("R215 记录页：顺序应为新在前（中断 / 通关）")
+	elif RunRecord.result_label(str(rows[1].get("result", ""))) != "通关":
+		_smoke_fail("R215 记录页：结果文案不是「通关」")
+	elif scene._row_rect(0).size.x <= 0.0:
+		_smoke_fail("R215 记录页：行几何无效")
+	else:
+		print("SMOKE OK R215 记录页：2 行（中断 / 通关）· 新在前 · 文案正确")
+	# 还原真实记录 / pending
+	if _rec_bak == "":
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(RunRecord.PATH))
+	else:
+		var f := FileAccess.open(RunRecord.PATH, FileAccess.WRITE)
+		f.store_string(_rec_bak)
+		f = null
+	if _rec_pend_bak != "":
+		var pf := FileAccess.open(RunRecord.PENDING_PATH, FileAccess.WRITE)
+		pf.store_string(_rec_pend_bak)
+		pf = null
 
 
 func _reset() -> void:

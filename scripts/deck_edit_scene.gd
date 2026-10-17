@@ -414,10 +414,6 @@ func _toggle_sound() -> void:
 
 func _on_back_to_title() -> void:
 	## R167：回标题 = **保留本局**（只复位内存状态，续档留着）。
-	if ReplayLog.playing:
-		ReplayLog.stop_playback()      # 回放中：只停回放，别碰玩家存档
-	elif ReplayLog.recording:
-		ReplayLog.finish("quit")
 	if RunState.run_active:
 		RunState.end_run(false)
 	SceneFx.goto("res://scenes/title.tscn")
@@ -560,8 +556,6 @@ func _refresh_ui() -> void:
 
 
 func _on_confirm() -> void:
-	if ReplayLog.playing:
-		return   # 回放模式：由驱动执行
 	if _done:
 		return
 	if _mode() == "duplicate":
@@ -574,10 +568,6 @@ func _on_confirm() -> void:
 
 func _apply_duplicate() -> void:
 	## 鸭血：把选中的每张卡各复制一份加入卡组。
-	## 录像记全部下标（不是单个 idx）—— 多选模式的决策是一个列表。
-	# 录像：鸭血是**多选**模式，决策是一组下标（照旧单选模式的 idx 字段名会与
-	# 未来其它多选待办撞车），回放侧按 "idxs" 还原成一个列表。
-	ReplayLog.ev("deck_edit", {"idxs": _sel.duplicate()})
 	_done = true
 	sfx.play("click")
 	var res := RunState.duplicate_deck_cards(repo, _sel)
@@ -595,7 +585,6 @@ func _apply_duplicate() -> void:
 
 
 func _apply(pick: int) -> void:
-	ReplayLog.ev("deck_edit", {"idx": pick})   # 录像：卡组编辑选择
 	_done = true
 	sfx.play("click")
 	var id: int = _cards[pick]

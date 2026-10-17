@@ -2,7 +2,7 @@
 """五套回归一键跑（2026-10-01 重建：原文件被早期清理脚本误删）。
 
 用法：python _verify.py
-逐套跑 engine / reward / replay / bgm / smoke，统计 ✓/✗，任一失败则进程退出码 1。
+逐套跑 engine / reward / bgm / smoke，统计 ✓/✗，任一失败则进程退出码 1。
 输出同时落盘 _e.txt / _r.txt / _rp.txt / _b.txt / _s.txt 便于事后检查。
 """
 import os
@@ -45,7 +45,6 @@ BAD = "\u2717"
 SUITES = [
     ("engine", ["--headless", "--path", ROOT, "--script", "res://scripts/test_engine.gd"], "_e.txt"),
     ("reward", ["--headless", "--path", ROOT, "--script", "res://scripts/test_reward.gd"], "_r.txt"),
-    ("replay", ["--headless", "--path", ROOT, "--script", "res://scripts/test_replay.gd"], "_rp.txt"),
     # R176：BGM 套件 —— 7 槽位素材/loop、分级·分层映射、播放语义（不重启/交叉淡入）、
     #      场景挂点源码守卫。**必须 headless**（它自己手动喂帧推进淡入）。
     ("bgm", ["--headless", "--path", ROOT, "--script", "res://scripts/test_bgm.gd"], "_b.txt"),

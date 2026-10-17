@@ -61,6 +61,7 @@ static var _inst: Bgm = null                       # 唯一实例（惰性创建
 var enabled := true
 var current := ""                                  # 当前（含正在淡入）的槽位
 var _pending := ""                                 # 节点还没进树时先记下想放的槽位
+var _resume := ""                                  # 被静音时记下槽位：开回来时接着放这一首
 
 var _streams := {}
 var _players: Array[AudioStreamPlayer] = []
@@ -160,10 +161,34 @@ static func stop() -> void:
 		n.halt()
 
 
+static func set_enabled(on: bool) -> void:
+	## 音乐开关（R215 设置页）：立即生效并记住 —— 关 = 停掉并记下槽位，开 = 接着放。
+	var n := instance()
+	if n != null:
+		n.apply_enabled(on)
+
+
+func apply_enabled(on: bool) -> void:
+	if enabled == on:
+		return
+	enabled = on
+	GameSettings.set_music_on(on)
+	if not on:
+		_resume = current
+		halt()
+	elif _resume != "":
+		var s := _resume
+		_resume = ""
+		switch_to(s)
+
+
 # ============================================================ 实例
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# R215：音乐开关跟着设置走（`--nomusic` 仍优先于设置 —— 跑测试/出图时一律静音）。
+	GameSettings.ensure_loaded()
+	enabled = GameSettings.music_on
 	if "--nomusic" in OS.get_cmdline_user_args():
 		enabled = false
 	_ensure_players()

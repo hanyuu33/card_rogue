@@ -24,9 +24,9 @@ echo ============================================================
 echo.
 
 echo ============================================================
-echo  3/4  replay suite
+echo  3/4  bgm suite
 echo ============================================================
-"%GAME%" --headless --script res://scripts/test_replay.gd
+"%GAME%" --headless --script res://scripts/test_bgm.gd
 echo.
 
 echo ============================================================
@@ -37,7 +37,7 @@ echo.
 
 echo ============================================================
 echo  [done] every suite must print an "all passed" line.
-echo         baseline: engine 2558 / reward 26 / replay 35 / smoke 34
+echo         baseline: engine 2575 / reward 26 / bgm 31 / smoke 35
 echo ============================================================
 pause
 popd

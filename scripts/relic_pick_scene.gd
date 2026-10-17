@@ -133,10 +133,6 @@ func _toggle_sound() -> void:
 
 func _on_back_to_title() -> void:
 	## R167：回标题 = **保留本局**（只复位内存状态，续档留着）。
-	if ReplayLog.playing:
-		ReplayLog.stop_playback()      # 回放中：只停回放，别碰玩家存档
-	elif ReplayLog.recording:
-		ReplayLog.finish("quit")
 	if RunState.run_active:
 		RunState.end_run(false)
 	SceneFx.goto("res://scenes/title.tscn")
@@ -149,7 +145,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if _picked or ReplayLog.playing:
+	if _picked:
 		return
 	if event is InputEventMouseMotion:
 		var idx := _index_at(event.position)
@@ -171,7 +167,6 @@ func _index_at(pos: Vector2) -> int:
 
 
 func _choose(id: int) -> void:
-	ReplayLog.ev("relic_pick", {"id": id})   # 录像：起点道具三选一
 	_picked = true
 	sfx.play("click")
 	RunState.choose_start_relic(id)

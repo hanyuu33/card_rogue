@@ -67,7 +67,6 @@ var _hover_mention := {}        # R168：当前鼠标压中的那一个（{} = �
 var _pick_sel := -1           # R167：卡牌三选一里「已点选、待确认」的那张（触屏没有悬停）
 var _scroll := 0.0
 var _cached_n := -1
-var _replay_next_at := 0
 var _repo_cards: CardRepo
 var _repo_relics: RelicRepo
 
@@ -120,11 +119,6 @@ func is_open() -> bool:
 	return _open
 
 
-func blocks_replay() -> bool:
-	## 回放时是否该等它：开着、且还有条目没处理 —— 这时不让外层（战斗结算）抢着点主按钮。
-	return _open and RunState.pending_reward_count() > 0
-
-
 func open() -> void:
 	if RunState.pending_rewards.is_empty():
 		return
@@ -163,10 +157,8 @@ func _exit_tree() -> void:
 func _process(_delta: float) -> void:
 	if _cached_n != RunState.pending_reward_count():
 		_refresh_btn()
-	if _open:
-		# R186：面板绘制无时间基元素（悬停 / 滚动 / 提及悬浮均由事件驱动重绘）
-		# → 不再逐帧重绘（移动端耗电；PC 端闲置占用同步下降）。
-		_replay_tick()
+	# R186：面板绘制无时间基元素（悬停 / 滚动 / 提及悬浮均由事件驱动重绘）
+	# → 不逐帧重绘（移动端耗电；PC 端闲置占用同步下降）。
 
 
 func _refresh_btn() -> void:
@@ -267,8 +259,6 @@ func _wrap(text: String, max_w: float, size: int) -> Array[String]:
 func _claim_entry(i: int) -> void:
 	if i < 0 or i >= RunState.pending_rewards.size():
 		return
-	if not ReplayLog.playing:
-		ReplayLog.ev("drop_claim")   # 录像：收下掉落道具
 	RunState.claim_pending_reward(i)
 	_view = VIEW_LIST
 	_scroll = 0.0
@@ -278,8 +268,6 @@ func _claim_entry(i: int) -> void:
 func _skip_entry(i: int) -> void:
 	if i < 0 or i >= RunState.pending_rewards.size():
 		return
-	if not ReplayLog.playing:
-		ReplayLog.ev("drop_skip")   # 录像：放弃掉落道具
 	RunState.skip_pending_reward(i)
 	_view = VIEW_LIST
 	_scroll = 0.0
@@ -290,9 +278,6 @@ func _pick_card(i: int, card_id: int) -> void:
 	## 卡牌三选一：选中即入卡组 + 该条置灰。
 	if i < 0 or i >= RunState.pending_rewards.size():
 		return
-	if not ReplayLog.playing:
-		var cands: Array = (RunState.pending_rewards[i] as Dictionary).get("candidates", [])
-		ReplayLog.ev("reward_pick", {"idx": cands.find(card_id), "id": card_id})
 	RunState.pick_pending_card(i, card_id)
 	_view = VIEW_LIST
 	_scroll = 0.0
@@ -800,11 +785,6 @@ func _on_click(pos: Vector2) -> void:
 					any_relic = true
 					break
 			if any_relic and _btn_claim_all_rect().has_point(pos):
-				if not ReplayLog.playing:
-					for _i in RunState.pending_rewards.size():
-						var ee2: Dictionary = RunState.pending_rewards[_i]
-						if str(ee2.get("kind", "")) == "relic" and not _settled(ee2):
-							ReplayLog.ev("drop_claim")
 				RunState.claim_all_relic_rewards()
 				_root.queue_redraw()
 				return
@@ -836,52 +816,6 @@ func _max_scroll() -> float:
 	var content := n * (ROW_H + ROW_GAP) - ROW_GAP
 	var view := PANEL_H - HEAD_H - FOOT_H
 	return maxf(0.0, content - view)
-
-
-# ------------------------------------------------------------ 回放
-
-func _replay_tick() -> void:
-	## 回放驱动（R46 的奖励分支搬到这里）：按录像执行奖励决策。
-	ReplayLog.skip_info()   # R167：先跳掉无消费方的信息条目（battle_end / run_end）
-	## ⚠️ 老录像里的 `drop_later`（先浏览卡牌奖励再回来决定）在新界面里没有对应动作 ——
-	##    悬浮窗本来就能随时进出，所以直接消费掉、什么都不做。
-	if not ReplayLog.playing:
-		return
-	if Time.get_ticks_msec() < _replay_next_at:
-		return
-	var e := ReplayLog.peek()
-	if e.is_empty():
-		return
-	match str(e.get("k", "")):
-		"drop_claim":
-			var i := _first_pending("relic")
-			if i >= 0:
-				ReplayLog.advance()
-				_replay_next_at = Time.get_ticks_msec() + 700
-				_claim_entry(i)
-		"drop_skip":
-			var i2 := _first_pending("relic")
-			if i2 >= 0:
-				ReplayLog.advance()
-				_replay_next_at = Time.get_ticks_msec() + 700
-				_skip_entry(i2)
-		"drop_later":
-			ReplayLog.advance()
-		"reward_pick":
-			var cid := int(e.get("id", 0))
-			var ic := _cards_entry_with(cid)
-			if ic >= 0:
-				ReplayLog.advance()
-				_replay_next_at = Time.get_ticks_msec() + 700
-				_pick_card(ic, cid)
-		"reward_skip":
-			var ic2 := _first_pending("cards")
-			if ic2 >= 0:
-				ReplayLog.advance()
-				_replay_next_at = Time.get_ticks_msec() + 700
-				_skip_entry(ic2)
-		_:
-			pass
 
 
 # ------------------------------------------------------------ 命令行演示

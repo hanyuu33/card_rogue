@@ -37,7 +37,7 @@ static func default_id() -> String:
 
 static func legacy_id(cid: String) -> String:
 	## 旧版角色名的兼容映射（2026-10-03 改名：德鲁伊 → 森林精魄 / 游荡者 → 暗影刺客）。
-	## 只给**回放旧录像**用 —— 旧录像 meta 里存的是老名字；现行 id 原样返回。
+	## 只给**读旧数据**用（老存档 / 老记录里存的是老名字）；现行 id 原样返回。
 	match cid:
 		"德鲁伊":
 			return DRUID

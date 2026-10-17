@@ -1,5 +1,5 @@
 extends Control
-## 标题界面（肉鸽版）—— 标题 → 图鉴 / 录像回放 / 开始冒险。
+## 标题界面（肉鸽版）—— 开始冒险 / 继续 / 图鉴 / 对战记录 / 设置 / 退出。
 ## R58：移除了「卡牌奖励（演示）」「事件：休息（演示）」两个入口（开发调试用，正式流程已覆盖）。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
@@ -29,34 +29,46 @@ func _ready() -> void:
 	$Buttons/StartBtn.pressed.connect(_on_start)
 	$Buttons/GalleryBtn.pressed.connect(_on_gallery)
 	$Buttons/QuitBtn.pressed.connect(_on_quit)
-	# 录像回放入口（R46）：插在「退出」之前
-	var rp_btn := Button.new()
-	rp_btn.text = "录像回放"
-	$Buttons.add_child(rp_btn)
-	$Buttons.move_child(rp_btn, $Buttons.get_child_count() - 2)
-	rp_btn.pressed.connect(_on_replays)
+	# R215：「录像回放」整块删掉（回放机制不再维护），换成只记结果的「对战记录」；
+	# 同时补上原来缺失的「设置」入口。两者都插在「退出」之前。
+	var rec_btn := Button.new()
+	rec_btn.text = "对战记录"
+	rec_btn.tooltip_text = "每局的最终结果（通关 / 失败 / 中断）"
+	$Buttons.add_child(rec_btn)
+	rec_btn.pressed.connect(_on_records)
+	var set_btn := Button.new()
+	set_btn.text = "设置"
+	set_btn.tooltip_text = "音效 / 音乐 / 全屏"
+	$Buttons.add_child(set_btn)
+	set_btn.pressed.connect(_on_settings)
 	# 续档入口（"继续游戏"）：有本地存档才显示，放在「开始」之后。
 	var cont_btn := Button.new()
 	cont_btn.text = "继续游戏"
 	$Buttons.add_child(cont_btn)
-	$Buttons.move_child(cont_btn, 1)
 	cont_btn.pressed.connect(_on_continue)
-	cont_btn.pressed.connect(func(): sfx.play("click"))
 	cont_btn.visible = RunSave.has_save()
-	for b: Button in [$Buttons/StartBtn, $Buttons/GalleryBtn, $Buttons/QuitBtn]:
+	# 顺序固定：开始 / 继续 / 图鉴 / 记录 / 设置 / 退出
+	$Buttons.move_child(cont_btn, 1)
+	$Buttons.move_child(rec_btn, 3)
+	$Buttons.move_child(set_btn, 4)
+	$Buttons.move_child($Buttons/QuitBtn, 5)
+	for b: Button in [$Buttons/StartBtn, $Buttons/GalleryBtn, $Buttons/QuitBtn,
+			cont_btn, rec_btn, set_btn]:
 		b.pressed.connect(func(): sfx.play("click"))
-	rp_btn.pressed.connect(func(): sfx.play("click"))
 	# R113 按钮主次：**一屏只有一个主按钮**（开始对战）。规格全部来自 UiTheme.apply_button，
 	# 这里不写任何字号 / 圆角 / 颜色 —— 以后新界面照抄这几行即可。
 	UiTheme.apply_button($Buttons/StartBtn, true)
 	UiTheme.apply_button($Buttons/GalleryBtn, false)
-	UiTheme.apply_button(rp_btn, false)
 	UiTheme.apply_button(cont_btn, false)
 	UiTheme.apply_button($Buttons/QuitBtn, false)
+	UiTheme.apply_button(rec_btn, false)
+	UiTheme.apply_button(set_btn, false)
 	# R166：难度档位不再在标题页选 —— 挪到角色选择界面（class_pick_scene）。
-	# 回放中途回到标题（整局播完 / 中途退出）→ 停止回放状态
-	if ReplayLog.playing:
-		ReplayLog.stop_playback()
+	# R215：设置（音效 / 音乐 / 全屏）按上次保存的值套上；上次启动留下的「没打完的一局」
+	# 在这里补记成「中断」（关窗口 / 崩溃都算）。
+	GameSettings.ensure_loaded()
+	GameSettings.apply_display()
+	RunRecord.recover()
 	# R154：飘落花瓣 + 光尘（替换「漂浮白方块」—— 浅色卡背贴在浅底上只剩一个灰色占位块，
 	# UI 检视报告点名它像没删干净的占位符）。花瓣缓慢下落、横向轻摆；光尘微微闪烁。
 	for i in 14:
@@ -167,11 +179,10 @@ func _on_start() -> void:
 
 func _on_continue() -> void:
 	## 继续游戏：读本地存档恢复当前局 → 进冒险地图（地图场景按存档状态自行路由）。
-	if ReplayLog.playing:
-		ReplayLog.stop_playback()
 	if not RunSave.load_run():
 		push_warning("RunSave：继续游戏读档失败，留在标题")
 		return
+	RunRecord.resume()   # 这一局接着打 → 保证有开始时间（对战记录收尾时才写得出来）
 	SceneFx.goto("res://scenes/map.tscn")
 
 
@@ -180,8 +191,14 @@ func _on_gallery() -> void:
 
 
 func _on_quit() -> void:
+	## 还有一局没结束就退出 → 对战记录立刻补一条「中断」（不留到下次启动再猜）。
+	RunRecord.finish("interrupted")
 	get_tree().quit()
 
 
-func _on_replays() -> void:
-	SceneFx.goto("res://scenes/replay_list.tscn")
+func _on_records() -> void:
+	SceneFx.goto("res://scenes/record_list.tscn")
+
+
+func _on_settings() -> void:
+	SceneFx.goto("res://scenes/settings.tscn")

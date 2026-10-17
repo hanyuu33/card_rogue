@@ -223,7 +223,7 @@ func _pending_kind() -> String:
 
 func _is_treasure_relic() -> bool:
 	## R142：这只卡牌宝箱里装的是**道具**而不是卡牌 —— 旗标在地图生成期就摇定
-	## （`RogueMap._make_cells`，走本局 run_rng → 录像回放一致）。
+	## （`RogueMap._make_cells`，走本局 run_rng → 同一种子必然同一个结果）。
 	return bool(RunState.pending_node.get("treasure_relic", false))
 
 
@@ -661,13 +661,6 @@ func _ready() -> void:
 		_on_bbq()
 		if _reward_panel != null:
 			_reward_panel.close()   # 演示：关掉奖励窗，露出「两个选项都锁死」的界面
-	# 回放模式：自动执行下一条事件决策（R46）
-	if ReplayLog.playing:
-		var rt := Timer.new()
-		rt.wait_time = 0.5
-		rt.timeout.connect(_replay_tick)
-		add_child(rt)
-		rt.start()
 	# 命令行 -- --screenshot：打开后自动截图退出（视觉验证用）
 	if "--screenshot" in args:
 		var t := Timer.new()
@@ -715,7 +708,6 @@ func _fit_center() -> void:
 func _on_main() -> void:
 	## 主按钮：宝箱 → 支付 5 生命后转交卡牌奖励；鸭鸭低语 / 鸭之凝视 → 收下事件道具；
 	## 宝箱层 → 开箱获得 1 个随机奖励道具；休息 → 休息（或休息后离开）。
-	ReplayLog.ev("event_main")   # 录像：事件主选项
 	sfx.play("click")
 	if _is_whisper():
 		if _whisper_taken:
@@ -991,7 +983,6 @@ func _on_delivery_confirmed(selected: Array) -> void:
 		RunState.add_card(CARGO_CARD_ID)
 	_delivery_taken = true
 	_delivery_count = n
-	ReplayLog.ev("event_main", {"delivery": n})   # 录像：接了几张（回放原样重放）
 	_collapse_to_leave()
 	desc.text = DELIVERY_TAKEN_DESC % n
 	result_label.text = "已接取 %d 张货物（1 费工事 0/6/0）——第二层第一个事件房兑付报酬。" % n
@@ -1008,7 +999,7 @@ func _on_delivery_cancelled() -> void:
 func _delivery_settle() -> void:
 	## R200：委托完成兑付 —— 卡组每保有 1 张货物 → 抽奖一次。
 	## 概率：卡牌奖励 35% / 80 金币 25% / 随机奖励道具 30% / 隐藏大奖巧克力 10%。
-	## ⚠️ 随机一律走 RunState.run_rng（run 层唯一源 → 录像回放一致）。
+	## ⚠️ 随机一律走 RunState.run_rng（run 层唯一源 → 同一种子结果一致）。
 	var n: int = RunState.cargo_count()
 	if n <= 0:
 		return
@@ -1184,7 +1175,6 @@ func _refresh_bbq() -> void:
 func _on_bbq() -> void:
 	## 休息处「烤肉」：获得事件道具「烤肉」（进入 Boss 战时自动消耗 → 回复 25% 生命）。
 	## 奥秘之泉：这一路是「选择2 · 喝下泉水」→ 去卡牌奖励界面（限定效果 / 技能）。
-	ReplayLog.ev("event_bbq")   # 录像：烤肉 / 喝泉水
 	sfx.play("click")
 	if _is_arcane():
 		# R71：判断「能不能喝泉水」只看 `_arcane_drunk`（喝过）与 `_arcane_charm_taken`
@@ -1218,53 +1208,18 @@ func _on_bbq() -> void:
 
 
 func _ui_main() -> void:
-	if ReplayLog.playing:
-		return   # 回放模式：选项由驱动执行
 	_on_main()
 
 
 func _ui_bbq() -> void:
-	if ReplayLog.playing:
-		return
 	_on_bbq()
 
 
 func _ui_leave() -> void:
-	if ReplayLog.playing:
-		return
 	_on_leave()
 
 
-func _replay_tick() -> void:
-	## 回放模式：按录像执行事件选项。
-	ReplayLog.skip_info()   # R167：先跳掉无消费方的信息条目，否则回放会卡住
-	if not ReplayLog.playing:
-		return
-	var e := ReplayLog.peek()
-	if e.is_empty():
-		return
-	match str(e.get("k", "")):
-		"event_main":
-			ReplayLog.advance()
-			if e.has("delivery"):
-				# R200：运送委托确认（带回几张）—— 先开门，再按张数原样确认。
-				_on_main()
-				var fake_sel: Array = []
-				for _i in int(e["delivery"]):
-					fake_sel.append(_i)
-				_on_delivery_confirmed(fake_sel)
-			else:
-				_on_main()
-		"event_bbq":
-			ReplayLog.advance()
-			_on_bbq()
-		"event_leave":
-			ReplayLog.advance()
-			_on_leave()
-
-
 func _on_leave() -> void:
-	ReplayLog.ev("event_leave")   # 录像：离开事件
 	if RunState.run_active:
 		RunState.complete_current()   # 事件/休息完成 → 节点标记完成
 		SceneFx.goto("res://scenes/map.tscn")
@@ -1297,10 +1252,6 @@ func _toggle_sound() -> void:
 func _on_back_to_title() -> void:
 	## R167：回标题 = **保留本局**（只复位内存状态，续档留着）——
 	## 标题页「继续游戏」可以从上一次地图检查点接着来。
-	if ReplayLog.playing:
-		ReplayLog.stop_playback()      # 回放中：只停回放，别碰玩家存档
-	elif ReplayLog.recording:
-		ReplayLog.finish("quit")
 	if RunState.run_active:
 		RunState.end_run(false)
 	SceneFx.goto("res://scenes/title.tscn")

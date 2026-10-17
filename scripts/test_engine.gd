@@ -5944,7 +5944,8 @@ func _init() -> void:
 				"R148 战场 Esc → 主菜单（层级：菜单自己 → 地图总览 → 才开菜单）")
 		# 全界面覆盖：任何一个游戏内界面少了菜单，玩家就会遇到「按 Esc 没反应」
 		var r148_scenes := ["battle_scene", "map_scene", "event_scene", "class_pick_scene",
-				"relic_pick_scene", "deck_edit_scene", "replay_list_scene", "gallery_scene"]
+				"relic_pick_scene", "deck_edit_scene", "record_list_scene",
+				"settings_scene", "gallery_scene"]
 		var r148_missing := ""
 		for s: String in r148_scenes:
 			if FileAccess.get_file_as_string("res://scripts/%s.gd" % s).find("UiMenu.attach(") < 0:
@@ -16538,6 +16539,123 @@ func _init() -> void:
 	RunState.deck_ids = r214_saved_ids
 	RunState.deck_mods = r214_saved_mods
 	RunState.ensure_deck_mods()
+
+	# ================================================================
+	# R215：删掉录像回放，只留「对战记录」（一局一行结果，中断也记）
+	# ================================================================
+	var r215_rec_bak := FileAccess.get_file_as_string(RunRecord.PATH) \
+			if FileAccess.file_exists(RunRecord.PATH) else ""
+	var r215_pend_bak := FileAccess.get_file_as_string(RunRecord.PENDING_PATH) \
+			if FileAccess.file_exists(RunRecord.PENDING_PATH) else ""
+	var r215_cfg_bak := FileAccess.get_file_as_string(GameSettings.PATH) \
+			if FileAccess.file_exists(GameSettings.PATH) else ""
+	RunRecord.clear_all()
+	if FileAccess.file_exists(RunRecord.PENDING_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(RunRecord.PENDING_PATH))
+	# ① 正常打完一局 → 一行记录
+	RunState.set_difficulty(1)
+	RunRecord.begin_run("暗影刺客")
+	check(FileAccess.file_exists(RunRecord.PENDING_PATH), "R215 记录：开局写 pending")
+	RunRecord.finish("win")
+	var r215_a := RunRecord.list_records()
+	check(r215_a.size() == 1 and str(r215_a[0].get("result", "")) == "win"
+			and str(r215_a[0].get("class", "")) == "暗影刺客"
+			and int(r215_a[0].get("difficulty", -1)) == 1
+			and str(r215_a[0].get("time", "")) != "",
+		"R215 记录：finish 落一行（角色 / 难度 / 时间 / 结果）")
+	check(not FileAccess.file_exists(RunRecord.PENDING_PATH),
+		"R215 记录：finish 之后 pending 被清掉")
+	# ② 没有 pending → finish 不凭空造记录（单关 / 演示模式不会留假记录）
+	RunRecord.finish("lose")
+	check(RunRecord.list_records().size() == 1,
+		"R215 记录：没有 pending 时 finish 不写记录")
+	# ③ 中断：上次启动留下的 pending（session 不同）→ recover 补一行
+	var r215_f := FileAccess.open(RunRecord.PENDING_PATH, FileAccess.WRITE)
+	r215_f.store_string(JSON.stringify({
+		"format": RunRecord.FORMAT, "session": "old-session",
+		"time": "2026-01-01T00:00:00", "start_unix": 0,
+		"class": "森林精魄", "difficulty": 0}))
+	r215_f = null
+	check(RunRecord.recover(), "R215 中断：上次启动遗留的 pending → recover 补记录")
+	var r215_b := RunRecord.list_records()
+	check(r215_b.size() == 2 and str(r215_b[1].get("result", "")) == "interrupted"
+			and str(r215_b[1].get("class", "")) == "森林精魄",
+		"R215 中断：结果 = interrupted（最旧在前，append 在末尾）")
+	# ④ 本进程自己的 pending 不算中断（回标题后还能续档接着打）
+	RunRecord.begin_run("机械之心")
+	check(not RunRecord.recover(), "R215 中断：本进程正在打的 pending 不误判为中断")
+	# ⑤ 直接开新局 → 上一局收成「中断」
+	RunRecord.begin_run("森林精魄")
+	var r215_c := RunRecord.list_records()
+	check(r215_c.size() == 3 and str(r215_c[2].get("result", "")) == "interrupted"
+			and str(r215_c[2].get("class", "")) == "机械之心",
+		"R215 中断：开新局时上一局自动补「中断」")
+	# ⑥ 文案 / 用时格式
+	check(RunRecord.result_label("win") == "通关"
+			and RunRecord.result_label("lose") == "失败"
+			and RunRecord.result_label("quit") == "中途放弃"
+			and RunRecord.result_label("interrupted") == "中断",
+		"R215 记录：结果文案（通关 / 失败 / 中途放弃 / 中断）")
+	check(RunRecord.fmt_secs(0) == "—" and RunRecord.fmt_secs(9) == "9 秒"
+			and RunRecord.fmt_secs(75) == "1 分 15 秒",
+		"R215 记录：用时格式")
+	check(RunRecord.fmt_time("2026-10-17T23:40:12") == "2026-10-17 23:40",
+		"R215 记录：时间格式（T → 空格 + 截到分）")
+	# ⑦ 清空
+	RunRecord.finish("quit")          # 收掉 ⑤ 留下的 pending
+	RunRecord.clear_all()
+	check(RunRecord.list_records().is_empty() and not FileAccess.file_exists(
+			RunRecord.PENDING_PATH), "R215 记录：清空 + pending 已收尾")
+	# ⑧ 敌方效果开场弹窗：5 秒自动关闭（纯函数口径，不依赖帧）
+	var r215_bs: GDScript = load("res://scripts/battle_scene.gd")
+	check(is_equal_approx(r215_bs.ee_popup_left_sec(1000, 1000), 5.0)
+			and is_equal_approx(r215_bs.ee_popup_left_sec(1000, 4000), 2.0)
+			and r215_bs.ee_popup_left_sec(1000, 6000) <= 0.0,
+		"R215 敌方效果弹窗：5 秒到期（剩下 5 / 2 / 0 秒）")
+	var r215_besrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check(r215_besrc.find("ee_popup_expired()") >= 0
+			and r215_besrc.find("秒后自动关闭") >= 0,
+		"R215 敌方效果弹窗：到期由 _process 收起 + 底部有倒计时文案")
+	# ⑨ 设置落盘：音效开关写进 user://settings.cfg 并能读回
+	var r215_sfx := GameSettings.sfx_on
+	GameSettings.ensure_loaded()
+	GameSettings.set_sfx_on(not r215_sfx)
+	GameSettings._loaded = false
+	GameSettings.ensure_loaded()
+	check(GameSettings.sfx_on == (not r215_sfx), "R215 设置：音效开关落盘并读回")
+	GameSettings.sfx_on = r215_sfx
+	GameSettings._loaded = false
+	GameSettings.set_sfx_on(r215_sfx)     # 还原
+	# ⑩ 标题页入口：记录 / 设置按钮都在，录像回放已删干净
+	var r215_tsrc := FileAccess.get_file_as_string("res://scripts/title_scene.gd")
+	check(r215_tsrc.find("_on_records") >= 0 and r215_tsrc.find("_on_settings") >= 0
+			and r215_tsrc.find("replay") < 0,
+		"R215 标题页：有「对战记录」「设置」，不再有录像回放入口")
+	check(not FileAccess.file_exists("res://scripts/replay_log.gd")
+			and not FileAccess.file_exists("res://scenes/replay_list.tscn"),
+		"R215 回放机制已删（replay_log / replay_list 都不在了）")
+	# 还原用户真实数据
+	if r215_rec_bak == "":
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(RunRecord.PATH))
+	else:
+		var rf := FileAccess.open(RunRecord.PATH, FileAccess.WRITE)
+		rf.store_string(r215_rec_bak)
+		rf = null
+	if r215_pend_bak == "":
+		if FileAccess.file_exists(RunRecord.PENDING_PATH):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(RunRecord.PENDING_PATH))
+	else:
+		var pf := FileAccess.open(RunRecord.PENDING_PATH, FileAccess.WRITE)
+		pf.store_string(r215_pend_bak)
+		pf = null
+	if r215_cfg_bak == "":
+		if FileAccess.file_exists(GameSettings.PATH):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(GameSettings.PATH))
+	else:
+		var cf := FileAccess.open(GameSettings.PATH, FileAccess.WRITE)
+		cf.store_string(r215_cfg_bak)
+		cf = null
+	GameSettings._loaded = false
 
 	# ================================================================
 

@@ -87,7 +87,7 @@ const WEIGHTS := {"battle": 7, "event": 2, "elite": 2, "chest": 2, "shop": 2}
 const WEIGHTS_UNKNOWN := {"battle": 7, "event": 12, "elite": 3, "chest": 3, "shop": 3}
 
 ## R142：卡牌宝箱（事件子类型 treasure）有**一半概率**装的是一件道具（而不是卡牌三选一）。
-## 摇在**地图生成期**（走本局 run_rng 的链条）→ 录像回放同一张图必然同一个结果。
+## 摇在**地图生成期**（走本局 run_rng 的链条）→ 同一种子必然生成同一张图。
 const TREASURE_RELIC_CHANCE := 0.5
 
 const MAX_ATTEMPTS := 200
@@ -172,7 +172,7 @@ static func generate(rng: RandomNumberGenerator,
 
 static func _shuffle(arr: Array, rng: RandomNumberGenerator) -> void:
 	## ⚠️ 只能用这个，**不要用 `Array.shuffle()`** —— 后者走全局随机源，
-	## 录像回放（同一种子）会得到不同的地图。Fisher-Yates 手工版走传入的 rng。
+	## 同一种子重跑也会得到不同的地图。Fisher-Yates 手工版走传入的 rng。
 	for i in range(arr.size() - 1, 0, -1):
 		var j := rng.randi_range(0, i)
 		var t: Variant = arr[i]

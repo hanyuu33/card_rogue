@@ -946,7 +946,7 @@ const BATTLE_BONE_ID:= 8029     # 战斗骨骼（2 费 2/7/1/1，改造时 +1 �
 # 「一回合行动两次」= `CardData.actions >= 2`（**没有**对应 trait，判据就是这个字段）——
 # 现有 5 张卡自带：灰烬龙 1013 / 亡灵领主 1051 / 熔岩巨人 1071 / 鸭子队长 9012 / 白狼 9031。
 # 口径（已与用户确认）：候选**只从 state.deck（抽牌堆）**里选，与 `_fetch_skill_card` 同口径；
-# 选中的卡**原位替换**，不抽到手上、不改变洗牌序列（录像回放因此天然一致）。
+# 选中的卡**原位替换**，不抽到手上、不改变洗牌序列（同一种子重跑必然一致）。
 const OVERLOAD_ID:= 8030
 const OVERLOAD_TRAIT:= "过载"
 const DOUBLE_ACTION:= 2          # 「一回合行动两次」的 actions 值（= 卡面自带双动的口径）
@@ -1240,7 +1240,7 @@ func _begin_turn(side: String) -> void :
 			# R77：第 1 回合不抽牌，改为**逐张自动出牌**。这里只「启动」，
 			# 真正的出牌由界面每帧推进一步（_autoplay_step）——
 			# 原来在这里 while 一次跑完，玩家什么都看不见。
-			# headless / 录像回放没有界面驱动，所以那种情况走同步版。
+			# headless 没有界面驱动，所以那种情况走同步版。
 			if autoplay_stepwise:
 				begin_earring_autoplay()
 			else:
@@ -1351,7 +1351,6 @@ func _begin_turn(side: String) -> void :
 
 
 func enable_enemy_effects(cards: Array[CardData]) -> void :
-
 	for c in cards:
 		state.enemy_effects.append(c)
 	if state.enemy_effects.is_empty():
@@ -1513,7 +1512,6 @@ func _effect_summons(side: String) -> void :
 
 
 func _random_free_half_cell(side: String) -> Vector2i:
-
 	var rows:= range(FieldState.OPPONENT_ROWS) if side == SIDE_OPPONENT\
 	else range(FieldState.OPPONENT_ROWS, FieldState.BOARD_ROWS)
 	var free: Array[Vector2i] = []
@@ -1649,7 +1647,6 @@ func _max_buff(side: String) -> int:
 ## 保留它是为了防止将来某张新卡「只加了 atk_debuff、忘了置 stage」时减值永远不生效
 ## （那种情况下至少会在目标方下个回合开始补上，而不是静默丢失）。
 func _arm_debuffs(side: String) -> void :
-
 	for cell: Vector2i in state.board:
 		var p: Placement = state.unit_at(cell)
 		if p != null and p.owner == side and p.atk_debuff > 0 and p.debuff_stage == 0:
@@ -1690,7 +1687,6 @@ func _summon_familiars(side: String) -> void :
 
 
 func _free_cell_near(cell: Vector2i, side: String) -> Vector2i:
-
 	for d: Vector2i in [Vector2i(0, -1), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(1, 0)]:
 		var c:= cell + d
 		if _valid_own_cell(c, side) and not state.board.has(c):
@@ -1936,8 +1932,8 @@ func _fallback_clockwork() -> CardData:
 ## → 玩家只看到最终局面，完全不知道中间出了什么牌。现在拆成「每帧出一张」，
 ## 由 battle_scene 的 _tick_earring_autoplay() 按动画节奏驱动（配合每张之间的停顿）。
 ## 语义不变：能量不足 / 牌库抽空 / 手满 / X 费卡 / 无合法目标 → 停。
-## R77：true = 逐张驱动（界面实机，能看到动画）；false = 一次性同步跑完（headless 回归 / 录像）。
-## 由 battle_scene 在 _ready 里置 true；回归 / 录像保持 false 以免依赖帧。
+## R77：true = 逐张驱动（界面实机，能看到动画）；false = 一次性同步跑完（headless 回归）。
+## 由 battle_scene 在 _ready 里置 true；回归保持 false 以免依赖帧。
 var autoplay_stepwise := false
 var earring_pending := false      # 是否处于「自动出牌中」
 var earring_played := 0           # 已自动出了几张
@@ -1949,7 +1945,7 @@ func earring_autoplay_active() -> bool:
 
 
 func _autoplay_from_deck() -> int:
-	## **同步**跑完（headless 回归 / 录像回放走这条；界面实机走下面的逐张版）。
+	## **同步**跑完（headless 回归走这条；界面实机走下面的逐张版）。
 	var played := 0
 	while played < EARRING_AUTOPLAY_MAX:
 		if not _autoplay_step(played):
@@ -2056,7 +2052,6 @@ func _autoplay_play(hand_index: int) -> bool:
 
 
 func _autoplay_cell() -> Vector2i:
-
 	var rows: Array[int] = [FieldState.OPPONENT_ROWS, FieldState.OPPONENT_ROWS + 1, 
 		FieldState.BOARD_ROWS - 1]
 	var cols: Array[int] = [FieldState.BOARD_COLS / 2, 0, FieldState.BOARD_COLS - 1]
@@ -2367,7 +2362,6 @@ func _fort_discount(card: CardData, side: String) -> int:
 
 
 func can_pay_card(card: CardData, side:= SIDE_SELF) -> bool:
-
 	# X 费卡（流星雨 9083）：**任何时候都能打** —— 0 能量时 X 记 0（R124 用户口径：
 	# 「费用为 X 的牌即使当前没有费用也能使用，那个场合 X 当作 0 计算」）。
 	# ⚠️ 这里**不再**要求 energy >= 1：要不要空放由玩家自己决定，卡照常离手进弃牌区。
@@ -2377,7 +2371,6 @@ func can_pay_card(card: CardData, side:= SIDE_SELF) -> bool:
 
 
 func _coord_discount(card: CardData, side:= SIDE_SELF) -> int:
-
 	if card.id != COORD_ATTACK_ID:
 		return 0
 	return _ally_count(side)
@@ -2481,7 +2474,6 @@ func _arcane_charm_discount(card: CardData, side:= SIDE_SELF) -> int:
 
 
 func _demon_discount(card: CardData) -> int:
-
 	if card.id != AETHER_DEMON_ID:
 		return 0
 	return state.effects.size()
@@ -2496,14 +2488,12 @@ func _iron_fence_discount(card: CardData) -> int:
 
 
 func _sprite_effect_discount(card: CardData) -> int:
-
 	if not card.is_effect():
 		return 0
 	return state.self_next_effect_reduction
 
 
 func _ally_count(side: String) -> int:
-
 	var n:= 0
 	for p: Placement in state.board.values():
 		if p.owner == side and p.card.kind == "盟友":
@@ -2512,7 +2502,6 @@ func _ally_count(side: String) -> int:
 
 
 func _lion_discount(card: CardData) -> int:
-
 	if card.id != LION_ID:
 		return 0
 	var n:= 0
@@ -2523,21 +2512,18 @@ func _lion_discount(card: CardData) -> int:
 
 
 func _quick_strike_discount(card: CardData) -> int:
-
 	if card.kind != "盟友":
 		return 0
 	return state.self_ally_cost_reduction
 
 
 func _dove_discount(card: CardData) -> int:
-
 	if card.kind != "盟友":
 		return 0
 	return state.self_next_ally_reduction
 
 
 func _frenzy_discount(card: CardData, side:= SIDE_SELF) -> int:
-
 	if card.id != FRENZY_ID:
 		return 0
 	return FRENZY_DISCOUNT if _ally_count(side) >= FRENZY_ALLY_MIN else 0
@@ -2846,7 +2832,6 @@ func _endless_blessing() -> void :
 
 
 func _chicken_pot() -> void :
-
 	var enemies:= _side_cells(SIDE_OPPONENT)
 	if enemies.is_empty():
 		_log("鸡煲：场上没有敌人，效果落空")
@@ -3030,9 +3015,6 @@ func _card_leaving_field(p: Placement) -> CardData:
 
 
 func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
-	if ReplayLog.recording:
-		ReplayLog.act("play_from_hand", [hand_index, cell])
-
 	var card:= state.hand[hand_index]
 	var paid:= _pay(card)
 	# 栅栏修复术（6021）：把栅栏打到已有栅栏的格子上 → 合并（不新建单位）
@@ -3680,7 +3662,7 @@ func _energy_barrier(side: String) -> String :
 	##
 	## 判据「没有此能力」= 卡上没带 BARRIER_TRAIT（与「过载」判 actions 同一套路）。
 	## ⚠️ **必须 `from_dict` 复制再原位替换**：卡库是**共享实例**，直接改会跨 run 泄漏。
-	## 原位替换（不抽到手上）让牌库顺序 / 洗牌序列不变 → 录像回放一致（同「过载」）。
+	## 原位替换（不抽到手上）让牌库顺序 / 洗牌序列不变 → 同一种子重跑必然一致（同「过载」）。
 	var cand: Array[int] = []
 	for i in state.deck.size():
 		var c: CardData = state.deck[i]
@@ -3806,7 +3788,7 @@ func _auto_upgrade(side: String) -> void :
 	## `state.deck[i].power` 会连**卡库**那份一起改 —— 本场之后、甚至下一场抽到就已经是
 	## 强化版（等于把「自主升级」变成永久强化，且跨 run 泄漏）。
 	##
-	## 原位替换不改牌库顺序 → 洗牌序列不变，录像回放天然一致。
+	## 原位替换不改牌库顺序 → 洗牌序列不变，同一种子重跑必然一致。
 	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
 	if not _zone_has(zone, AUTO_UPGRADE_TRAIT):
 		return
@@ -4006,7 +3988,6 @@ func _mimic_relay(src: Placement, atk_gain: int, hp_gain: int, affix: String = "
 
 
 func _aether_guard_enter(p: Placement) -> void :
-
 	var n:= mini(state.effects.size(), AETHER_GUARD_CAP)
 	if n <= 0:
 		_log("以太守卫：效果区没有效果卡，未获得加成")
@@ -4033,7 +4014,6 @@ func _contractor_enter(p: Placement) -> void :
 
 
 func _demon_fetch(_p: Placement) -> void :
-
 	if state.hand_full():
 		_log("以太恶魔：手牌已满（%d 张），没有取效果卡" % FieldState.HAND_LIMIT)
 		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
@@ -4056,7 +4036,6 @@ func _demon_fetch(_p: Placement) -> void :
 
 
 func _owl_fetch() -> void :
-
 	if state.hand_full():
 		_log("猫头鹰：手牌已满（%d 张），没有取效果卡" % FieldState.HAND_LIMIT)
 		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
@@ -4077,7 +4056,6 @@ func _owl_fetch() -> void :
 
 
 func _sprite_trigger() -> void :
-
 	state.self_next_effect_reduction = SPRITE_EFFECT_DISCOUNT
 	_log("小精灵：本回合下一张效果卡费用 -%d" % SPRITE_EFFECT_DISCOUNT)
 
@@ -4128,7 +4106,6 @@ func _fetch_skill_card(source: String) -> void :
 
 
 func _dove_trigger() -> void :
-
 	state.self_next_ally_reduction = TURTLE_DOVE_DISCOUNT
 	_log("斑鸠：本回合下一个盟友费用 -%d" % TURTLE_DOVE_DISCOUNT)
 
@@ -4140,7 +4117,7 @@ func _overload_grant(side: String) -> String :
 	## 口径（已与用户确认）：
 	##   * 候选**只从 `state.deck`（抽牌堆）**里选 —— 与 `_fetch_skill_card`（赤狐 / 魔法学徒）
 	##     「从卡组取一张技能牌」同口径。手牌 / 弃牌区里的盟友不参与。
-	##   * 选中后**原位替换**：不抽到手上、不改变牌库顺序 → 洗牌序列不变，录像回放天然一致。
+	##   * 选中后**原位替换**：不抽到手上、不改变牌库顺序 → 洗牌序列不变，同种子必然一致。
 	##   * 「一回合行动两次」判据 = `CardData.actions >= DOUBLE_ACTION`（**没有**对应 trait）。
 	##   * 一个候选都没有（牌库里全是双动盟友 / 没有盟友）→ **效果落空**，不消耗任何额外东西。
 	##
@@ -4172,7 +4149,6 @@ func _overload_grant(side: String) -> String :
 
 
 func discard_cost_of(card: CardData) -> int:
-
 	return HERO_DISCARD if card.id == HERO_CARD_ID else 0
 
 
@@ -4190,8 +4166,6 @@ func can_play_from_hand(hand_index: int) -> bool:
 
 
 func play_hero_from_hand(hand_index: int, cell: Vector2i, drop_indexes: Array) -> Placement:
-	if ReplayLog.recording:
-		ReplayLog.act("play_hero", [hand_index, cell, drop_indexes])
 
 
 
@@ -4290,9 +4264,6 @@ func _spell_card_gone(card: CardData, log_text := "") -> bool:
 
 
 func use_spell(hand_index: int, target = null) -> String:
-	if ReplayLog.recording:
-		ReplayLog.act("use_spell", [hand_index, target])
-
 	# 选牌 pending 期间**不许再出别的牌** —— 否则玩家可以在选牌过程中把目标那张
 	# 顺手打掉，下标就失效了。界面本身会拦点击（选卡页是模态的），这里是给联机 /
 	# 回放路径兜底。（R209：`sys_upgrade_pending` 已删，手牌目标改由选卡页驱动。）
@@ -4385,8 +4356,6 @@ func use_spell(hand_index: int, target = null) -> String:
 
 
 func use_effect(hand_index: int) -> String:
-	if ReplayLog.recording:
-		ReplayLog.act("use_effect", [hand_index])
 
 
 
@@ -4866,8 +4835,6 @@ func fate_options() -> Array[int]:
 
 
 func fate_pick(discard_index: int) -> bool:
-	if ReplayLog.recording:
-		ReplayLog.act("fate_pick", [discard_index])
 	if not fate_pending:
 		return false
 	if discard_index < 0 or discard_index >= state.discard.size():
@@ -4902,8 +4869,6 @@ func foresight_options() -> Array[int]:
 
 
 func foresight_choose(mode: int) -> bool:
-	if ReplayLog.recording:
-		ReplayLog.act("foresight_choose", [mode])
 	if not foresight_mode:
 		return false
 	foresight_mode = false
@@ -4925,8 +4890,6 @@ func foresight_choose(mode: int) -> bool:
 
 
 func foresight_pick_card(discard_index: int) -> bool:
-	if ReplayLog.recording:
-		ReplayLog.act("foresight_pick_card", [discard_index])
 	if not foresight_pick:
 		return false
 	if discard_index < 0 or discard_index >= state.discard.size():
@@ -4981,8 +4944,6 @@ func _infiltrate_auto_cell(side: String) -> Vector2i:
 
 
 func cast_infiltrate(hand_index: int, ally_cell: Vector2i, dst: Vector2i) -> String:
-	if ReplayLog.recording:
-		ReplayLog.act("cast_infiltrate", [hand_index, ally_cell, dst])
 	## 潜入的两段施放入口（UI：先点盟友、再点目的格）。
 	if hand_index < 0 or hand_index >= state.hand.size():
 		return "（潜入：手牌序号无效）"
@@ -5011,8 +4972,6 @@ func cast_swap_units(hand_index: int, cell_a: Vector2i, cell_b: Vector2i) -> Str
 	## 与「潜入」9100 同一套路：`use_spell` 已在**付费之前**拦掉单段入口，
 	## 所以 `_pay` 在**这里**扣。两格必须**不同**、都必须有单位
 	##（交换是「两个单位换位置」，空格不参与）。
-	if ReplayLog.recording:
-		ReplayLog.act("cast_swap_units", [hand_index, cell_a, cell_b])
 	if hand_index < 0 or hand_index >= state.hand.size():
 		return "（双向传送：手牌序号无效）"
 	var card: CardData = state.hand[hand_index]
@@ -5081,8 +5040,6 @@ func cast_sys_upgrade(hand_index: int, target_hand_index: int) -> String:
 	##   * `_pay` 在**这里**扣（不是 `use_spell`）；
 	##   * 目标卡**留在手牌里**（就地改造，原位替换）—— 只有「系统升级」自己进弃牌区。
 	##   * `_sys_upgrade_hand_card` 走「复制 + 原位替换」，手牌顺序与扇形布局不受影响。
-	if ReplayLog.recording:
-		ReplayLog.act("cast_sys_upgrade", [hand_index, target_hand_index])
 	if hand_index < 0 or hand_index >= state.hand.size():
 		return "（系统升级：手牌序号无效）"
 	var card: CardData = state.hand[hand_index]
@@ -5120,8 +5077,6 @@ func cast_recycle(hand_index: int, target_hand_index: int) -> String:
 	##     **唯一口**（素体自己的 +1 血照算 → 实际 +9 → 0 费 1/10）；
 	##   * 「回收」自己进弃牌区；数值**烤进副本**、**本场战斗永久**
 	##     （下一场 `build_deck()` 重新从卡库取实例 → 自动重置）。
-	if ReplayLog.recording:
-		ReplayLog.act("cast_recycle", [hand_index, target_hand_index])
 	if hand_index < 0 or hand_index >= state.hand.size():
 		return "（回收：手牌序号无效）"
 	var card: CardData = state.hand[hand_index]
@@ -5167,8 +5122,6 @@ func cast_reload(hand_index: int, target_hand_index: int) -> String:
 	## 「填充」（9146，R202，机械之心 0 费普通技能）的两段施放入口：
 	## UI 先点「填充」→ 再点**手牌里任意一张卡**，目标被原位替换为「聚能炮击」。
 	## 与「回收」（8064）同套路：费用在这里扣；目标不限种类；不能选自己。
-	if ReplayLog.recording:
-		ReplayLog.act("cast_reload", [hand_index, target_hand_index])
 	if hand_index < 0 or hand_index >= state.hand.size():
 		return "（填充：手牌序号无效）"
 	var card: CardData = state.hand[hand_index]
@@ -5388,7 +5341,6 @@ func _on_turn_first_play(side: String, played: CardData) -> void :
 
 
 func _aether_roar(c: CardData) -> void :
-
 	var dmg:= maxi(1, c.value)
 	var foe:= SIDE_OPPONENT
 	var cells: Array[Vector2i] = []
@@ -5438,7 +5390,6 @@ func _space_guard(c: CardData) -> void :
 
 
 func _egg_to_hand(reason: String) -> void :
-
 	if state.hand_full():
 		_log("%s：手牌已满（%d 张），没有加入鸭蛋" % [reason, FieldState.HAND_LIMIT])
 		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
@@ -5526,7 +5477,6 @@ func _fallback_crow() -> CardData:
 
 
 func _arcane_refund(side: String, amount: int) -> void :
-
 	if amount <= 0:
 		return
 	if side == SIDE_SELF:
@@ -5539,7 +5489,6 @@ func _arcane_refund(side: String, amount: int) -> void :
 
 
 func remote_play(card: CardData, cell: Vector2i) -> Placement:
-
 	state.pay_energy(card.cost, SIDE_OPPONENT)
 	state.opp_hand_count = maxi(0, state.opp_hand_count - 1)
 	# 场地卡（R74）：对称 —— 敌方也能放场地（写进同一张表，同样顶掉旧场地），返回 null。
@@ -5576,7 +5525,6 @@ func remote_play(card: CardData, cell: Vector2i) -> Placement:
 
 
 func remote_spell(card: CardData, target, side:= SIDE_OPPONENT) -> String:
-
 	if card != null and card.x_cost:
 		# R124：敌我同一口径 —— 0 能量也能施放，此时 X = 0（pay_energy(0) 分文不扣）。
 		_x_spell_value = maxi(0, state.energy_of(side))
@@ -5598,7 +5546,6 @@ func remote_spell(card: CardData, target, side:= SIDE_OPPONENT) -> String:
 
 
 func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
-
 	match card.id:
 		8002:
 			return str(_op_deal_damage(side, _spell_dmg(side, 4, card), target))
@@ -6020,7 +5967,6 @@ func _fallback_iron_fence() -> CardData:
 
 
 func _own_rows(side: String) -> Array:
-
 	return range(FieldState.OPPONENT_ROWS) if side == SIDE_OPPONENT\
 	else range(FieldState.OPPONENT_ROWS, FieldState.BOARD_ROWS)
 
@@ -6092,9 +6038,6 @@ func revive_options() -> Array[int]:
 
 
 func revive_recall(discard_index: int) -> bool:
-	if ReplayLog.recording:
-		ReplayLog.act("revive_recall", [discard_index])
-
 	if not revive_pending:
 		return false
 	if discard_index < 0 or discard_index >= state.discard.size():
@@ -6153,8 +6096,6 @@ func overhaul_recall(discard_index: int) -> bool:
 	## 结算返修的选择：目标卡**复制改造后**回手牌（原实例从弃牌区移除）。
 	## ⚠️ 必须 from_dict 复制再改：弃牌区里的卡同样可能是卡库共享实例的传递，
 	##    直接 +3 会污染卡库、跨 run 泄漏（同系统升级 / 批量改造纪律）。
-	if ReplayLog.recording:
-		ReplayLog.act("overhaul_recall", [discard_index])
 	if not overhaul_pending:
 		return false
 	if discard_index < 0 or discard_index >= state.discard.size():
@@ -6213,9 +6154,6 @@ func shadow_step_options() -> Array[int]:
 
 
 func shadow_step_recall(discard_index: int) -> bool:
-	if ReplayLog.recording:
-		ReplayLog.act("shadow_step_recall", [discard_index])
-
 	if not shadow_step_pending:
 		return false
 	if discard_index < 0 or discard_index >= state.discard.size():
@@ -6286,8 +6224,6 @@ func focus_options() -> Array[int]:
 
 func focus_pick(deck_index: int) -> bool:
 	## 移除抽牌库里第 deck_index 张卡 —— 它**本次对战中消失**（不进手牌也不进弃牌区）。
-	if ReplayLog.recording:
-		ReplayLog.act("focus_pick", [deck_index])
 
 	if not focus_pending:
 		return false
@@ -6377,7 +6313,6 @@ func _fallback_ice_wall() -> CardData:
 
 
 func _melt_ice_walls(side: String) -> void :
-
 	var melted:= 0
 	for cell: Vector2i in state.board.keys().duplicate():
 		var p: Placement = state.unit_at(cell)
@@ -6393,7 +6328,6 @@ func _melt_ice_walls(side: String) -> void :
 
 
 func _wind_force_dmg(side: String) -> int:
-
 	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
 	for c: CardData in zone:
 		if c.traits.has(WIND_FORCE_TRAIT):
@@ -6464,7 +6398,6 @@ func _forest_guard(side: String, target) -> String:
 
 
 func _quick_strike(side: String) -> String:
-
 	if side != SIDE_SELF:
 		return "（对手使用）"
 	state.self_ally_cost_reduction = QUICK_STRIKE_DISCOUNT
@@ -6559,7 +6492,6 @@ func _dodge_absorb(amount: int) -> int:
 
 
 func _ally_dmg_bonus(card: CardData, side: String) -> int:
-
 	if card == null or card.kind != "盟友":
 		return 0
 	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
@@ -6570,7 +6502,6 @@ func _ally_dmg_bonus(card: CardData, side: String) -> int:
 
 
 func _beast_hp_bonus(card: CardData) -> int:
-
 	if card.kind != "盟友":
 		return 0
 	for c: CardData in state.effects:
@@ -6580,7 +6511,6 @@ func _beast_hp_bonus(card: CardData) -> int:
 
 
 func _lion_roar(lion: Placement) -> void :
-
 	var n:= 0
 	for p: Placement in state.board.values():
 		if p.owner == SIDE_SELF and p.card.kind == "盟友" and p != lion:
@@ -6604,7 +6534,6 @@ func _hound_snapshot(hound: Placement) -> void :
 
 
 func crow_options() -> Array[int]:
-
 	## 只列弃牌堆里的「盟友」；**乌鸦自己不算**（不能乌鸦套乌鸦无限回手）。
 	var out: Array[int] = []
 	for i in state.discard.size():
@@ -6633,9 +6562,6 @@ func crow_trigger() -> void :
 
 
 func crow_recall(discard_index: int) -> bool:
-	if ReplayLog.recording:
-		ReplayLog.act("crow_recall", [discard_index])
-
 	if not crow_pending:
 		return false
 	if discard_index < 0 or discard_index >= state.discard.size():
@@ -6672,7 +6598,6 @@ func _whale_wrath(side: String, target, card: CardData) -> String:
 
 
 func whale_options() -> Array[int]:
-
 	var out: Array[int] = []
 	for i in state.discard.size():
 		out.append(i)
@@ -6680,8 +6605,6 @@ func whale_options() -> Array[int]:
 
 
 func whale_pick(discard_index: int) -> bool:
-	if ReplayLog.recording:
-		ReplayLog.act("whale_pick", [discard_index])
 
 
 	if not whale_pending:
@@ -6706,9 +6629,6 @@ func whale_pick(discard_index: int) -> bool:
 
 
 func whale_skip() -> void :
-	if ReplayLog.recording:
-		ReplayLog.act("whale_skip", [])
-
 	if not whale_pending:
 		return
 	_log("鲸鱼之怒：放弃剩余 %d 张的取牌" % whale_remaining)
@@ -6962,7 +6882,6 @@ func _spell_dmg(side: String, base: int, card: CardData = null) -> int:
 
 
 func _turn_dmg_bonus(side: String) -> int:
-
 	return turn_dmg_bonus if side == SIDE_SELF else 0
 
 
@@ -6992,7 +6911,6 @@ func _on_self_hp_damaged() -> void :
 
 
 func _knockback(side: String, target, steps: int) -> String:
-
 	var p:= _target_placement(side, target)
 	if p == null:
 		return "（没有目标）"
@@ -7021,7 +6939,6 @@ func _knockback(side: String, target, steps: int) -> String:
 
 
 func _connected_components() -> Array:
-
 	var cells: Array[Vector2i] = []
 	for c: Vector2i in state.board:
 		cells.append(c)
@@ -7046,7 +6963,6 @@ func _connected_components() -> Array:
 
 
 func _chain_lightning(amount: int) -> String:
-
 	var hits:= 0
 	_begin_hp_once()
 	for comp: Array in _connected_components():
@@ -7117,7 +7033,6 @@ func _run_battlecries(side: String) -> void :
 
 
 func _battlecry(cell: Vector2i, p: Placement) -> void :
-
 	match p.card.id:
 		ASH_DRAGON_ID:
 			_battlecry_ash(cell, p)
@@ -7128,7 +7043,6 @@ func _battlecry(cell: Vector2i, p: Placement) -> void :
 
 
 func _battlecry_ash(cell: Vector2i, p: Placement) -> void :
-
 	var foe:= SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
 	var hits:= 0
 	_begin_hp_once()
@@ -7147,7 +7061,6 @@ func _battlecry_ash(cell: Vector2i, p: Placement) -> void :
 
 
 func _battlecry_frost(cell: Vector2i, p: Placement) -> void :
-
 	var foe:= SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
 	var best:= Vector2i(-1, -1)
 	var best_hp:= 999999
@@ -7167,7 +7080,6 @@ func _battlecry_frost(cell: Vector2i, p: Placement) -> void :
 
 
 func _deathrattle(cell: Vector2i, p: Placement) -> void :
-
 	match p.card.id:
 		WYVERN_ID:
 			_summon_token(WYVERN_TOKEN_ID, cell, p.owner, 1)
@@ -7201,7 +7113,6 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 
 
 func _summon_token(card_id: int, near: Vector2i, side: String, count: int) -> void :
-
 	var repo:= CardRepo.load_json()
 	var spawn: CardData = repo.get_card(card_id)
 	if spawn == null:
@@ -7230,7 +7141,6 @@ func _token_spot(near: Vector2i, side: String) -> Vector2i:
 
 
 func _can_hold(cell: Vector2i, side: String) -> bool:
-
 	if cell.x < 0 or cell.x >= FieldState.BOARD_ROWS\
 	or cell.y < 0 or cell.y >= FieldState.BOARD_COLS:
 		return false
@@ -7264,7 +7174,6 @@ func _deathrattle_place_trap(cell: Vector2i, p: Placement) -> void :
 
 
 func _death_wipe(center: Vector2i, amount: int, card: CardData) -> void :
-
 	var cells: Array[Vector2i] = []
 	for c: Vector2i in state.board.keys().duplicate():
 		if c == center:
@@ -8034,7 +7943,6 @@ func move_path(src: Vector2i, dst: Vector2i, side: String) -> Array[Vector2i]:
 
 
 func _reachable(cell: Vector2i, side: String) -> Array[Vector2i]:
-
 	var result: Array[Vector2i] = []
 	for c: Vector2i in _move_bfs(cell, side).keys():
 		# 穿行会把「路过的被占格」也记进来 —— 那不是合法落点，要剔除。
@@ -8057,7 +7965,6 @@ func _reachable_with(start: Vector2i, freed: Vector2i, side: String,
 
 
 func _rally_active(side: String) -> bool:
-
 	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
 	for c: CardData in zone:
 		if c.traits.has(RALLY_TRAIT):
@@ -8089,7 +7996,6 @@ func eff_range(cell: Vector2i, c: CardData) -> int:
 
 
 func attack_targets(cell: Vector2i, side:= "", card: CardData = null) -> Array[Vector2i]:
-
 	var s:= side
 	var c:= card
 	if s == "" or c == null:
@@ -8136,8 +8042,6 @@ func hp_targets(cell: Vector2i, side:= SIDE_SELF, card: CardData = null) -> Arra
 
 
 func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void :
-	if ReplayLog.recording and side == SIDE_SELF:
-		ReplayLog.act("move", [src, dst])
 	var p:= state.unit_at(src)
 	if p == null or p.owner != side:
 		_log("%s 上没有我方卡" % src)
@@ -8238,8 +8142,6 @@ func can_activate(cell: Vector2i, side:= SIDE_SELF) -> bool:
 
 
 func activate(cell: Vector2i, side:= SIDE_SELF) -> bool:
-	if ReplayLog.recording and side == SIDE_SELF:
-		ReplayLog.act("activate", [cell])
 	## 主动发动：代替行动回复 BEAR_HEAL 点生命（不超过生命上限），之后横置。
 	var p:= state.unit_at(cell)
 	if not can_activate(cell, side):
@@ -8858,7 +8760,6 @@ func _endless_dark(side: String) -> void :
 
 
 func endless_options() -> Array[int]:
-
 	## 无尽黑暗：可弃的手牌下标（面板用；空数组 = 本回合没有待弃的牌）。
 	if not endless_pending:
 		return []
@@ -8870,8 +8771,6 @@ func endless_options() -> Array[int]:
 
 func endless_pick(hand_index: int) -> bool:
 	## 无尽黑暗：玩家点掉一张手牌 → 真的弃掉 + 拿到费用，面板关闭。
-	if ReplayLog.recording:
-		ReplayLog.act("endless_pick", [hand_index])
 
 
 	if not endless_pending:
@@ -9002,9 +8901,6 @@ func _alertness(side: String) -> String:
 
 
 func pass_attack(cell: Vector2i, side:= SIDE_SELF) -> void :
-	if ReplayLog.recording and side == SIDE_SELF:
-		ReplayLog.act("pass", [cell])
-
 	var p:= state.unit_at(cell)
 	if p == null or p.owner != side or p.tapped or not p.moved:
 		return
@@ -9012,8 +8908,6 @@ func pass_attack(cell: Vector2i, side:= SIDE_SELF) -> void :
 
 
 func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
-	if ReplayLog.recording and side == SIDE_SELF:
-		ReplayLog.act("attack", [src, dst])
 
 
 
@@ -9076,9 +8970,6 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 
 
 func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
-	if ReplayLog.recording and side == SIDE_SELF:
-		ReplayLog.act("attack_hp", [src, dst])
-
 	var attacker:= state.unit_at(src)
 	if attacker == null or attacker.owner != side or attacker.tapped:
 		return
@@ -9350,7 +9241,6 @@ func _overflow_pick(targets: Array[Vector2i], p: Placement) -> Variant:
 
 
 func _taunt_targets(cell: Vector2i, side: String, card: CardData) -> Array[Vector2i]:
-
 	var out: Array[Vector2i] = []
 	for t in attack_targets(cell, side, card):
 		var q:= state.unit_at(t)
@@ -9521,12 +9411,10 @@ func _goal_ok(cell: Vector2i, p: Placement, want_hp: bool, cleared: Array = []) 
 
 
 func _hp_search(cell: Vector2i, p: Placement, cleared: Array = []) -> Variant:
-
 	return _walk_search(cell, p, true, cleared)
 
 
 func _front_search(cell: Vector2i, p: Placement, cleared: Array = []) -> Variant:
-
 	return _walk_search(cell, p, false, cleared)
 
 
@@ -9566,7 +9454,6 @@ func _wall_depth(cell: Vector2i, p: Placement, cleared: Array = []) -> int:
 
 
 func _hp_route_exists(cell: Vector2i, p: Placement, cleared: Array = []) -> bool:
-
 	return _hp_search(cell, p, cleared) != null
 
 

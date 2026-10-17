@@ -102,7 +102,8 @@ func _process(_delta: float) -> void:
 
 
 func _is_menu_scene(path: String) -> bool:
-	for suffix in ["title.tscn", "class_pick.tscn", "replay_list.tscn", "gallery.tscn"]:
+	for suffix in ["title.tscn", "class_pick.tscn", "record_list.tscn",
+			"settings.tscn", "gallery.tscn"]:
 		if path.ends_with(suffix):
 			return true
 	return false

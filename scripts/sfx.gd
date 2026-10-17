@@ -18,6 +18,9 @@ var _next := 0
 
 
 func _ready() -> void:
+	# R215：音效开关跟着设置走（各场景 Esc 菜单里的开关也不再随场景重置）。
+	GameSettings.ensure_loaded()
+	enabled = GameSettings.sfx_on
 	for i in VOICES:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
@@ -33,6 +36,11 @@ func _ready() -> void:
 		"lose": _sfx_lose(),
 		"turn": _sfx_turn(),
 	}
+
+
+func _exit_tree() -> void:
+	## R215：离场时把当前开关写回设置 —— 「音效：开/关」从此跨场景记住。
+	GameSettings.set_sfx_on(enabled)
 
 
 func play(name: String) -> void:

@@ -204,12 +204,12 @@ func _ready() -> void:
 			SceneFx.goto("res://scenes/deck_edit.tscn", true)
 			return
 	# 续档检查点：已确定停留在地图（没有转去道具 / 卡组场景）→ 存一份本地存档。
-	# ⚠️ 只在真实游玩时存：回放中（ReplayLog.playing）/ 截图（_shot）/ headless（测试探针）都不写。
-	if RunState.run_active and not ReplayLog.playing and not _shot and DisplayServer.get_name() != "headless":
+	# ⚠️ 只在真实游玩时存：截图（_shot）/ headless（测试探针）都不写。
+	if RunState.run_active and not _shot and DisplayServer.get_name() != "headless":
 		RunSave.save_run()
 	# R179：带着 boss_pending 回到地图（刚打完最后一格里的战斗 / 事件）→ 也给同样长的缓冲，
-	# 别一进地图就糊上「入夜」黑屏。回放不等（时序由录像驱动）。
-	if RunState.run_active and RunState.boss_pending and not ReplayLog.playing:
+	# 别一进地图就糊上「入夜」黑屏。
+	if RunState.run_active and RunState.boss_pending:
 		_boss_hold = BOSS_HOLD_AFTER_ENTER
 	# R148：上栏原来挂着「回到标题 / 战斗记录 / 查看卡组」三个 chip —— 全部收进
 	# Esc 菜单（点齿轮或按 Esc 打开），上栏只留**一个齿轮**。
@@ -239,8 +239,7 @@ func _ready() -> void:
 	# ⚠️ R194：这里只负责**接手**（`_start_whisper` 挑出第一间），真正一步步往下走
 	#    由 `_process` → `_tick_whisper` 持续驱动 —— 原来只在 `_ready` 挑一次、
 	#    抽中「走过的房间」时不会换场景、也就再没人挑路 → 当场卡死（用户上报）。
-	if RunState.run_active and RunState.has_relic(RunState.WHISPER_RELIC_ID) \
-			and not ReplayLog.playing:
+	if RunState.run_active and RunState.has_relic(RunState.WHISPER_RELIC_ID):
 		_start_whisper()
 	# -- --bossalert：演示「入夜了」提示（只显示不切场景，截图核验用）
 	if "--bossalert" in OS.get_cmdline_user_args():
@@ -285,13 +284,6 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(t)
 		t.start()
-	# 回放模式：自动执行下一条「前进」决策
-	if ReplayLog.playing:
-		var rt := Timer.new()
-		rt.wait_time = 0.5
-		rt.timeout.connect(_replay_tick)
-		add_child(rt)
-		rt.start()
 
 
 func _rng() -> RandomNumberGenerator:
@@ -383,7 +375,7 @@ func _gui_input(event: InputEvent) -> void:
 	# `_mark_mode >= 0` 之后才走 → 关态（-1）点按钮掉进下面的普通地图分支，
 	# 该坐标又不在任何格子上 → 直接 return，**标记功能永远开不了口**。
 	# 按钮必须判在模式分支**之前**；回放只读，按钮同样不响应。
-	if not ReplayLog.playing and event is InputEventMouseButton and event.pressed \
+	if event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
 		var mbi := _mark_btn_at(event.position)
 		if mbi >= 0:
@@ -436,8 +428,6 @@ func _gui_input(event: InputEvent) -> void:
 		if _dragging:
 			_dragging = false
 			return
-		if ReplayLog.playing:
-			return   # 回放模式：前进由驱动执行
 		var cell := _cell_at(event.position)
 		if cell.is_empty() or not _is_available(cell):
 			return
@@ -483,7 +473,6 @@ func _commit_enter(cell: Dictionary) -> void:
 	var res := RunState.advance(id)
 	if not bool(res.get("ok", false)):
 		return
-	ReplayLog.ev("map", {"node": id})
 	if not bool(res.get("is_new", false)):
 		# 原路返回：不扣巧克力、不结算 —— 给一句轻提示，免得玩家以为点击失效。
 		_set_note("这里是走过的房间，什么都不会发生（不消耗巧克力）")
@@ -582,7 +571,7 @@ func _trigger_boss_alert() -> void:
 	sfx.play("click")
 	queue_redraw()
 	var t := Timer.new()
-	t.wait_time = 0.1 if ReplayLog.playing else 2.2
+	t.wait_time = 2.2
 	t.one_shot = true
 	t.timeout.connect(_start_boss_battle)
 	add_child(t)
@@ -1115,8 +1104,6 @@ func _mark_clamp(p: Vector2) -> Vector2:
 
 
 func _handle_mark_input(event: InputEvent) -> void:
-	if ReplayLog.playing:
-		return                      # 回放只读，不接标记输入
 	if event is InputEventMouseMotion:
 		_mouse = event.position
 		if _mark_drawing:
@@ -1523,12 +1510,8 @@ func _toggle_sound() -> void:
 
 
 func _on_back_to_title() -> void:
-	## 回到标题：正在录像就先收尾（已录内容照常保存）。
-	## R167：**保留续档** —— 回标题后可点「继续游戏」从地图检查点接着来。
-	if ReplayLog.playing:
-		ReplayLog.stop_playback()      # 回放中：只停回放，别碰玩家存档
-	elif ReplayLog.recording:
-		ReplayLog.finish("quit")
+	## 回到标题：R167 起**保留续档** —— 回标题后可点「继续游戏」从地图检查点接着来。
+	## （本局没结束，所以不写对战记录 —— 真的不打了，下次开新局 / 关窗口时才补「中断」。）
 	if RunState.run_active:
 		RunState.end_run(false)
 	SceneFx.goto("res://scenes/title.tscn")
@@ -1739,7 +1722,7 @@ func _tick_whisper(delta: float) -> void:
 	## 一路走到「没走过的房间」为止（那一步会切去战斗 / 事件 / 商店，或就地开奖励窗）。
 	##
 	## 空闲 = 没在播进场过场、没开着奖励悬浮窗、还没入夜、也不在回放 / 出图钉帧。
-	if not _whisper_auto or not RunState.run_active or ReplayLog.playing or _shot:
+	if not _whisper_auto or not RunState.run_active or _shot:
 		return
 	if not RunState.has_relic(RunState.WHISPER_RELIC_ID):
 		return
@@ -1769,19 +1752,3 @@ func _tick_whisper(delta: float) -> void:
 	queue_redraw()
 
 
-func _replay_tick() -> void:
-	## 回放模式：按录像前进（地图条目由本场景消费）。
-	ReplayLog.skip_info()   # R167：先跳掉无消费方的信息条目，否则回放会卡住
-	if not ReplayLog.playing:
-		return
-	var e := ReplayLog.peek()
-	if e.is_empty() or str(e.get("k", "")) != "map":
-		return
-	ReplayLog.advance()
-	var cell := RunState.cell_of(int(e.get("node", -1)))
-	if cell.is_empty():
-		ReplayLog.stop_playback()
-		return
-	sfx.play("click")
-	# 回放要一口气跑完一整局 → 跳过过场（过场只是给玩家看的）
-	_enter_node(cell, false)

@@ -248,7 +248,9 @@ var _grid_intro_t := -1.0
 ## 玩家一打断就立刻归 1.0 —— 命中判定 `_cell_at` 不认识缩放，留在半路会整体错位。
 var _grid_zoom := 1.0
 ## R197：敌方效果开场弹窗开着（入场巡场**完整播完**后弹一次；点任意处/Esc/右键关）。
+## R215：**不点也会自己关** —— 5 秒后自动收起（倒计时画在底部提示行上）。
 var _ee_popup := false
+var _ee_popup_t0 := 0            # 弹窗开启时刻（msec）—— 自动关闭的计时起点
 var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本不覆盖
 ## R118：左键点「空位」**不再一步取消**。为 true = 本轮的第一次空位点击已经发生 ——
 ## 选区、绿色移动格、红色攻击格、深红 HP 格**全部原样保留**（于是这时点目标照样能打），
@@ -403,7 +405,6 @@ var _hover_card: CardData = null  # 鼠标悬停的卡（左侧信息栏优先�
 var _hover_pl: Placement = null   # 悬停的战场单位（可显示当前生命）
 var _hover_hand := -1             # 悬停的手牌下标（-1 = 无）：仅用于绘制时抬手
 var _over_shown := false        # 结算覆盖层是否已弹出（边沿检测）
-var _replay_next_at := 0        # 回放下一条动作的执行时刻（msec，R46）
 var _over_panel: PanelContainer
 var _over_title: Label
 var _over_hint: Label            # 结算面板副标题（难度档位信息等）
@@ -2351,10 +2352,6 @@ func _net_disconnect() -> void:
 
 func _on_back_to_title() -> void:
 	_ai_timer.stop()
-	if ReplayLog.playing:
-		ReplayLog.stop_playback()      # 回放中：只停回放，别碰玩家存档
-	elif ReplayLog.recording:
-		ReplayLog.finish("quit")
 	if RunState.run_active:
 		# R167：回标题**不再放弃本局** —— 只复位内存状态，续档保留，
 		# 标题页「继续游戏」可以从上一次地图检查点接着打。
@@ -2390,13 +2387,8 @@ func load_level(lvl: Dictionary) -> void:
 		bbq_heal = RunState.consume_barbecue()
 		if bbq_heal >= 0:
 			p_hp = RunState.hp
-	# R46 录像：战斗种子 = 本局随机链（run_rng）的下一环；回放时改用录像里记下的
-	# 种子（run_rng 照常消耗一次，保证后续掉落/摇卡链条与录制时一致）。
+	# 战斗种子 = 本局随机链（run_rng）的下一环 —— 战斗内全部随机（含 AI）由它复现。
 	var battle_seed: int = RunState.run_rng.randi() if RunState.run_active else 0
-	if RunState.run_active and ReplayLog.playing:
-		var bb := ReplayLog.take("battle_begin")
-		if not bb.is_empty() and bb.has("seed"):
-			battle_seed = int(bb["seed"])
 	var brng := RandomNumberGenerator.new()
 	brng.seed = battle_seed
 	var state := FieldState.new(
@@ -2406,16 +2398,11 @@ func load_level(lvl: Dictionary) -> void:
 	engine = GameEngine.new(state)
 	if RunState.run_active:
 		engine.rng.seed = battle_seed   # 战斗内全部随机（含 AI）可复现
-		if ReplayLog.recording:
-			ReplayLog.ev("battle_begin", {"seed": battle_seed,
-					"level": str(lvl.get("name", "?")),
-					"tier": int(lvl.get("tier", -1)),
-					"node_type": str(RunState.pending_node.get("type", ""))})
 	engine.ai_enabled = bool(lvl["enemy_ai"])
 	engine.self_relics = RunState.relics   # 道具（鸡煲等战斗内效果由引擎结算）
 	# R77：鸭语耳环（6015）改成**逐张**自动出牌 —— 由 _tick_earring_autoplay 每帧推进一步，
-	# 这样每张牌的抽牌 / 出牌 / 落位动画都能看清。录像回放保持 false（回放按固定节奏走）。
-	engine.autoplay_stepwise = not ReplayLog.playing
+	# 这样每张牌的抽牌 / 出牌 / 落位动画都能看清。
+	engine.autoplay_stepwise = true
 	engine.duck_revive_chance = RunState.duck_revive_chance   # 叠加态的鸭：复活概率跨战斗保留
 	engine.action.connect(_on_engine_action)
 	for e: Array in lvl["enemy_units"]:
@@ -2513,9 +2500,8 @@ func load_level(lvl: Dictionary) -> void:
 	else:
 		_show_banner("我方回合 · 第 1 回合")
 	# R136/R146：开场巡场 —— 停自己半场 → 推进到对方半场（放大）→ **拖回我方 + 还原大小**。
-	# 回放不播（回放按录像节奏走，不额外加动画）。
 	_ee_popup = false   # R197：新一场战斗，开场弹窗重新计一次
-	if _grid_scrollable() and not ReplayLog.playing:
+	if _grid_scrollable():
 		_grid_scroll = _grid_scroll_max()
 		_grid_zoom = 1.0
 		_grid_intro_t = 0.0
@@ -2592,7 +2578,7 @@ func _pass_moved_pending() -> void:
 # ------------------------------------------------------------ 输入
 
 func _gui_input(event: InputEvent) -> void:
-	if engine == null or engine.over or _net_locked() or ReplayLog.playing:
+	if engine == null or engine.over or _net_locked():
 		return
 	# R136：巡场动画播放中，玩家一按鼠标就停（动画只是提示，绝不吞操作）。
 	if event is InputEventMouseButton and event.pressed and _grid_intro_t >= 0.0:
@@ -2715,13 +2701,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	# 菜单开着时屏蔽其余快捷键。正常路径上 `paused` 已经替我们挡住了（菜单打开会暂停
 	# 场景树，PAUSABLE 的节点收不到输入），这里是**演示模式（不暂停）**的双保险。
 	if _menu != null and _menu.is_open() and k.keycode != KEY_ESCAPE:
-		return
-	if ReplayLog.playing:
-		# 回放模式：空格切换倍速（1→2→4→8 循环），其余快捷键接管
-		if k.keycode == KEY_SPACE:
-			ReplayLog.speed = 1.0 if ReplayLog.speed >= 4.0 else ReplayLog.speed * 2.0
-			_show_banner("回放倍速 ×%g" % ReplayLog.speed, Color("3f7fbf"))
-			queue_redraw()
 		return
 	match k.keycode:
 		KEY_ESCAPE:
@@ -3865,7 +3844,7 @@ func _sync_pick() -> void:
 	## 场景切换 → 重开。回放模式不弹（回放 act 直接结算）。
 	if _pick == null or engine == null:
 		return
-	var k := "" if ReplayLog.playing else _pick_active_kind()
+	var k := _pick_active_kind()
 	if k == "":
 		if _pick.is_picking():
 			_pick.close()
@@ -4868,10 +4847,12 @@ func _show_over(win: bool) -> void:
 			_over_btn_level.visible = false
 			_over_btn_title.visible = false
 			if _run_boss_win and _run_next_layer <= 0:
-				RunState.end_run()   # 通关：run 结束（记录已写入）
+				RunRecord.finish("win")   # 通关：整局结果记一行
+				RunState.end_run()
 		else:
 			RunState.record_battle(repo, str(lvl.get("name", "?")), tier,
 					false, maxi(0, engine.state.hp_self))
+			RunRecord.finish("lose")   # 失败：整局结果记一行
 			RunState.end_run()
 			_run_boss_win = false
 			_over_btn_restart.visible = false
@@ -4898,11 +4879,6 @@ func _show_over(win: bool) -> void:
 	sb.border_color = COL_WIN if win else COL_LOSE
 	_over_title.text = "胜  利" if win else "失  败"
 	_over_title.add_theme_color_override("font_color", COL_WIN if win else COL_LOSE)
-	if ReplayLog.recording:
-		ReplayLog.ev("battle_end", {"win": win,
-				"hp": RunState.hp if win else maxi(0, engine.state.hp_self)})
-		if not RunState.run_active:
-			ReplayLog.finish("win" if win else "lose")   # 通关/失败：整局落盘
 	_over_panel.visible = true
 	UiPop.play(_over_panel)   # R151 P1-9：结算面板入场 scale 0.92→1.0 + 淡入 160ms
 	sfx.play("win" if win else "lose")
@@ -6414,105 +6390,6 @@ func _draw_dying() -> void:
 
 # ------------------------------------------------------------ 动画
 
-func _replay_tick() -> void:
-	## 回放驱动（R46）：按录像逐条执行玩家动作；AI 与结算由引擎确定性重建。
-	## 空格切换倍速；战斗结束自动按结算面板主按钮继续整局流程。
-	ReplayLog.skip_info()   # R167：先跳掉 battle_end / run_end 这类无消费方的信息条目
-	if not ReplayLog.playing or engine == null:
-		return
-	if _now() < _replay_next_at:
-		return
-	if engine.over:
-		# R119：奖励悬浮窗还开着且有待领条目 → 先把里面的决策放完，再点主按钮
-		#（否则会跳过录像里记录的 drop_claim / reward_pick）。
-		if _reward_panel != null and _reward_panel.blocks_replay():
-			return
-		# 结算面板出现后自动点主按钮（领奖励 / 进下一层 / 返回标题）
-		if _over_shown and _over_panel.visible:
-			_replay_next_at = _now() + int(ReplayLog.delay(1600.0))
-			if _over_btn_restart.visible:
-				_over_btn_restart.pressed.emit()
-			else:
-				_over_btn_title.pressed.emit()
-		return
-	var e := ReplayLog.peek()
-	if e.is_empty() or str(e.get("k", "")) != "act":
-		return   # 其余条目（battle_end 等）由对应时机消费
-	# 玩家回合才执行（回合之间等 AI 动作跑完；面板类操作随时可执行）
-	var panel_f: bool = str(e.get("f", "")) in ["revive_recall", "shadow_step_recall", "focus_pick", "whale_pick",
-			"overhaul_recall",
-			"whale_skip", "crow_recall", "foresight_choose", "foresight_pick_card",
-			"fate_pick", "endless_pick"]
-	if not panel_f and engine.current_side != GameEngine.SIDE_SELF:
-		return
-	var f := str(e.get("f", ""))
-	var a: Array = e.get("a", [])
-	ReplayLog.advance()
-	_replay_next_at = _now() + int(ReplayLog.delay(1400.0 if f == "end_turn" else 900.0))
-	_clear_selection()
-	match f:
-		"end_turn":
-			_on_end_turn()
-		"play_from_hand":
-			engine.play_from_hand(int(a[0]), ReplayLog.vec(a[1]))
-		"play_hero":
-			engine.play_hero_from_hand(int(a[0]), ReplayLog.vec(a[1]),
-					a[2] if a.size() > 2 else [])
-			_hero_pick_idx = -1
-		"use_spell":
-			engine.use_spell(int(a[0]), ReplayLog.vec_or_null(a[1]))
-		"use_effect":
-			engine.use_effect(int(a[0]))
-		"cast_infiltrate":
-			engine.cast_infiltrate(int(a[0]), ReplayLog.vec(a[1]), ReplayLog.vec(a[2]))
-		"cast_swap_units":
-			engine.cast_swap_units(int(a[0]), ReplayLog.vec(a[1]), ReplayLog.vec(a[2]))
-		"cast_sys_upgrade":
-			# R90 系统升级：以前**漏了这条** —— 录像里记了 act，回放却只 advance
-			# 不结算（系统升级在回放里变成空操作）。R198 补上，连同新卡一起。
-			engine.cast_sys_upgrade(int(a[0]), int(a[1]))
-		"cast_recycle":
-			engine.cast_recycle(int(a[0]), int(a[1]))
-		"cast_reload":
-			# R202 填充：两段式回放入口。
-			engine.cast_reload(int(a[0]), int(a[1]))
-		"move":
-			engine.move(ReplayLog.vec(a[0]), ReplayLog.vec(a[1]))
-		"attack":
-			engine.attack(ReplayLog.vec(a[0]), ReplayLog.vec(a[1]))
-		"attack_hp":
-			engine.attack_hp(ReplayLog.vec(a[0]), ReplayLog.vec(a[1]))
-		"activate":
-			engine.activate(ReplayLog.vec(a[0]))
-		"pass":
-			engine.pass_attack(ReplayLog.vec(a[0]))
-		"revive_recall":
-			engine.revive_recall(int(a[0]))
-		"overhaul_recall":
-			engine.overhaul_recall(int(a[0]))
-		"shadow_step_recall":
-			engine.shadow_step_recall(int(a[0]))
-		"focus_pick":
-			engine.focus_pick(int(a[0]))
-		"whale_pick":
-			engine.whale_pick(int(a[0]))
-		"whale_skip":
-			engine.whale_skip()
-		"endless_pick":
-			# 无尽黑暗 9114（R70）：回放里复现「弃掉手牌 idx」这一步
-			engine.endless_pick(int(a[0]))
-		"crow_recall":
-			engine.crow_recall(int(a[0]))
-		"foresight_choose":
-			engine.foresight_choose(int(a[0]))
-		"foresight_pick_card":
-			engine.foresight_pick_card(int(a[0]))
-		"fate_pick":
-			engine.fate_pick(int(a[0]))
-		_:
-			pass
-	queue_redraw()
-
 
 func _now() -> int:
 	return Time.get_ticks_msec()
@@ -7496,8 +7373,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"inf_armor":
 			# 无限装甲（8038，R89）：被改造时供一张 0 费改造牌到手 —— 飘字落在**手牌区上方**，
 			# 因为目标在手里、不在场上（与 `fetch_skill` 同一落点）。
-			# ⚠️ 不需要进录像：回放会重放「use_spell → 升级」，`_upgrade_unit` 在回放里
-			# **同样会触发**供能 —— 内部结算不记 action（同批量改造 / 过载的口径）。
+			# ⚠️ 这是引擎内部结算（改造 → 供能），不经过任何「玩家动作」入口 ——
+			# 界面只管飘字，别在这里再记一次动作。
 			var ia_card = data.get("card", null)
 			if ia_card is CardData:
 				var ia_name: String = (ia_card as CardData).card_name
@@ -8756,6 +8633,9 @@ const EE_POP_H := 540.0
 ## （角距 √(168²+126²) ≈ 210 < 225，四角都落在纯黑内）。重画素材两边要一起改。
 const EE_TEXT_HW := 168.0
 const EE_TEXT_HH := 126.0
+## R215：开场弹窗的自动关闭时长（秒）。原来必须点一下才关 —— 玩家在等，
+## 界面在等，实际上什么也没等。5 秒足够读完 3 条效果。
+const EE_POPUP_SEC := 5.0
 
 
 func _enemy_effect_popup_rect() -> Rect2:
@@ -8767,12 +8647,23 @@ func _maybe_open_enemy_effect_popup() -> void:
 	## R197：开场巡场**完整播完**（_grid_intro_tick 走满 GRID_INTRO_DUR）后，
 	## 若敌方带效果卡则弹窗展示。玩家点击打断巡场不算「播完」——效果明细
 	## 仍可随时点右侧「敌方效果」区查看；回放不弹；每场至多一次。
-	if _ee_popup or ReplayLog.playing:
+	if _ee_popup:
 		return
 	if engine == null or engine.state.enemy_effects.is_empty():
 		return
 	_ee_popup = true
+	_ee_popup_t0 = _now()
 	queue_redraw()
+
+
+static func ee_popup_left_sec(t0: int, now_ms: int) -> float:
+	## 开场弹窗还剩多少秒（<= 0 = 该关了）。**纯函数**：headless 测试直接调它。
+	return EE_POPUP_SEC - float(now_ms - t0) / 1000.0
+
+
+func ee_popup_expired() -> bool:
+	## 该不该自动收起 —— `_process` 每帧问一次（唯一判据口）。
+	return _ee_popup and ee_popup_left_sec(_ee_popup_t0, _now()) <= 0.0
 
 
 func _draw_void_portal_fallback(r: Rect2) -> void:
@@ -8819,7 +8710,9 @@ func _draw_enemy_effect_popup() -> void:
 					Vector2(c.x, y), Color(0.93, 0.93, 0.97))
 			y += 17.0
 		y += 12.0
-	_draw_string_center(_font, UiTheme.FS_CAPTION, "点击任意处继续",
+	var left := maxi(0, int(ceil(ee_popup_left_sec(_ee_popup_t0, _now()))))
+	_draw_string_center(_font, UiTheme.FS_CAPTION,
+			"点击任意处继续 · %d 秒后自动关闭" % left,
 			c + Vector2(0.0, EE_TEXT_HH - 22.0), Color(0.66, 0.66, 0.74))
 
 
@@ -10068,9 +9961,12 @@ func _process(delta: float) -> void:
 		_demo_tick()
 	if _net_mode:
 		_net_poll(delta)
-	if ReplayLog.playing:
-		_replay_tick()
 	_grid_intro_tick(delta)         # R136/R146：开场巡场（自己半场 → 对方半场放大 → 拖回我方）
+	# R215：开场弹窗**不点也会关** —— 5 秒到点自动收起（倒计时由这里逐帧推进重绘）。
+	if _ee_popup:
+		if ee_popup_expired():
+			_ee_popup = false
+		queue_redraw()
 	# R77：鸭语耳环逐张出牌 —— 放在 _tick_anims 之前，优先把「下一张」推出去，
 	# 这样同一帧里刚出的牌动画能立刻开始播。
 	var earring_busy := _tick_earring_autoplay()

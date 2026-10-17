@@ -90,8 +90,8 @@ const DIFFICULTY_NOTES: Array[String] = [
 const DIFFICULTY_BATTLE_HEAL: Array[int] = [3, 0, 0]      # 战斗胜利回复量
 const DIFFICULTY_REST_PCT: Array[float] = [0.40, 0.40, 0.25]  # 休息回复百分比
 
-# ---- 录像（R46）：run 层唯一随机源 ----
-static var run_seed: int = 0                 # 本局种子（录像回放的根：run 层全部随机由它派生）
+# ---- 本局种子：run 层唯一随机源 ----
+static var run_seed: int = 0                 # 本局种子（run 层全部随机由它派生；同一种子重跑必然一致）
 static var run_rng := RandomNumberGenerator.new()   # 本局随机源（地图/道具/关卡/掉落/五换一）
 
 # ---- 道具 ----
@@ -245,9 +245,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	## map 传空数组时用本局种子现生成（真实流程 = 角色选择场景这样进来）。
 	# 初始生命按职业不同（R182）：基础 50 + 职业加成（森林精魄+20/暗影刺客+10/机械之心+16）。
 	reset(PlayerClass.base_hp_of(cid if cid != "" else PlayerClass.default_id()))
-	# run 种子：回放时由 ReplayLog 预先写好（不重摇）；正常开局时新摇一个
-	if not (ReplayLog.playing and run_seed != 0):
-		run_seed = randi()
+	# run 种子：开局新摇一个（地图生成 / 掉落 / 摇卡全部由它派生）
+	run_seed = randi()
 	run_rng = RandomNumberGenerator.new()
 	run_rng.seed = run_seed
 	run_active = true
@@ -275,7 +274,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	used_levels = []
 	map_strokes = []              # R177：新开一局清掉上一局的玩家标记
 	map_flags = []
-	# 本层 Boss 开局摇定（同层多个 Boss 时随机；走 run_rng → 录像可复现）
+	# 本层 Boss 开局摇定（同层多个 Boss 时随机；走 run_rng → 同一种子必然可复现）
 	# 彩蛋 Boss（R73）：开新 run 先清pending，再摇 —— _roll_boss 内部会按
 	# 「第一层是否摇中恶魔鸭」置位。顺序不能反，否则会用到上一局残留的 pending。
 	revenge_pending = false
@@ -349,8 +348,7 @@ static func end_run(clear_save: bool = true) -> void:
 
 
 	# 续档：run 结束（通关 / 失败 / 放弃）→ 本地存档随之失效。
-	# ⚠️ 回放中不清：回放末尾同样会调 end_run，此时清档会删掉玩家真实的续档存档。
-	if clear_save and not ReplayLog.playing:
+	if clear_save:
 		RunSave.clear_save()
 
 
@@ -397,7 +395,7 @@ static func advance_layer(layer: int) -> int:
 
 
 static func _roll_boss(layer: int) -> Dictionary:
-	## 从「本层 Boss 池」摇一个。走 run_rng → 录像回放可复现。
+	## 从「本层 Boss 池」摇一个。走 run_rng → 同一种子必然可复现。
 	## 池里只有一个（第二层）时直接返回它，不消耗随机源。
 	##
 	## **彩蛋 Boss（R73）**：摇第一层的Boss 时，若摇中「恶魔鸭」→ 50% 概率
@@ -405,7 +403,7 @@ static func _roll_boss(layer: int) -> Dictionary:
 	## 判定写在这一处（而不是 boss 分支的调用点），是为了让
 	## ① `boss_pick`（地图 Boss 名牌的数据源）② `next_level("boss")` 实际进入的关卡
 	## 读的是同一份结果 —— 否则地图上写机械巨鸭、进去却是恶魔鸭（复仇）。
-	## 走 run_rng → 录像回放可复现。
+	## 走 run_rng → 同一种子必然可复现。
 	if layer == GameLayers.LAYER_DEFAULT:
 		var first := _pick_from_boss_pool(layer)
 		if str(first.get("name", "")) == DEMON_DUCK_BOSS_NAME \
@@ -545,7 +543,7 @@ static func queue_relic_reward(id: int) -> void:
 static func queue_card_reward(reward_type: String = "normal",
 		kinds: Array[String] = []) -> int:
 	## 一组卡牌奖励（三选一）入队。**候选在这一刻**用 run_rng 摇定 ——
-	## 候选早就定了，玩家只是稍后才看、才选，所以录像回放逐帧一致。
+	## 候选早就定了，玩家只是稍后才看、才选，所以同一种子逐步一致。
 	## 返回队列下标（-1 = 卡池空，没有可给的卡）。
 	var roll_rng: RandomNumberGenerator = run_rng if run_active else null
 	var rolled := CardReward.roll(CardRepo.load_json(), reward_type,
@@ -685,7 +683,7 @@ static func transform_deck_card(repo: CardRepo, index: int) -> Dictionary:
 	if index < 0 or index >= deck_ids.size():
 		return {"ok": false, "old_id": 0, "new_id": 0}
 	var old_id: int = deck_ids[index]
-	# 修复（实机体验）：必须用本局 run_rng —— 否则走全局随机，破坏 R46 录像回放的确定性
+	# 修复（实机体验）：必须用本局 run_rng —— 否则走全局随机，破坏「同一种子必然一致」的确定性
 	var rolled := CardReward.roll(repo, "normal", 1, run_rng)
 	var new_id: int = rolled[0].id if not rolled.is_empty() else old_id
 	deck_ids[index] = new_id
@@ -701,7 +699,7 @@ static func smith_deck_card(index: int) -> Dictionary:
 	## 所以这里只换 id，费用天然正确，不需要任何覆盖 / 平行表（单一数据源 = cards.json）。
 	##
 	## ⚠️ 为什么不直接改卡库：卡库是**共享实例**，改它会连本局之外都污染。
-	## 纯确定性操作，不走随机源 → 录像回放天然一致。
+	## 纯确定性操作，不走随机源 → 同一种子必然一致。
 	if index < 0 or index >= deck_ids.size():
 		return {"ok": false, "old_id": 0, "new_id": 0}
 	var old_id: int = deck_ids[index]
@@ -720,7 +718,7 @@ static func duplicate_deck_cards(repo: CardRepo, indices: Array) -> Dictionary:
 	##
 	## ⚠️ **下标必须在复制前全部校验完**：复制是 append，不改已有下标，所以边校验边 append
 	## 是安全的；但仍先做一遍去重 + 越界过滤，避免同一个下标被选中两次而复制出两张同样的。
-	## 用 `run_rng` ？不需要 —— 纯确定性操作，录像回放天然一致。
+	## 用 `run_rng` ？不需要 —— 纯确定性操作，同一种子必然一致。
 	var picked: Array[int] = []
 	for v: Variant in indices:
 		var i := int(v)
@@ -779,7 +777,7 @@ static func trade_five_for_one(repo: CardRepo) -> Dictionary:
 	# （实测权重 4/11 时命中率 0.97）—— 概率弹性消失，玩家感受到的是"锁定"而不是"概率变高"。
 	# 平方根把 4 张压成 2 倍于 1 张：重复卡确实更容易被换掉，但不会被抽 5/6 的结构锁死。
 	# 用自写的整数平方根 _isqrt(k*1000)（GDScript 没有内置 isqrt，也不是为了跨平台确定性）。
-	# ⚠️ 必须走 run_rng（不能全局随机），否则破坏 R46 录像回放的确定性。
+	# ⚠️ 必须走 run_rng（不能全局随机），否则破坏「同一种子必然一致」的确定性。
 	var pool_names: Array = by_name.keys()
 	var weights: Array[int] = []
 	for nm_w in pool_names:
@@ -820,7 +818,7 @@ static func trade_five_for_one(repo: CardRepo) -> Dictionary:
 
 
 ## 整数平方根（floor(sqrt(n)))——GDScript **没有**内置 isqrt()，这里自己实现。
-## 纯整数运算（不用 sqrtf），保证同一输入永远得同一结果 —— 回放录像依赖这个确定性。
+## 纯整数运算（不用 sqrtf），保证同一输入永远得同一结果 —— 回归测试依赖这个确定性。
 ## 算法：从 0 开始每次加 1 直到 x*x > n；n 很小（权重 = 张数×1000 ≤ 几十千），够快。
 static func _isqrt(n: int) -> int:
 	if n <= 0:
