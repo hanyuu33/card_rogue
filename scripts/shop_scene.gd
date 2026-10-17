@@ -7,7 +7,7 @@ extends Control
 ##   * 伤害 +10（只可原本造成伤害的卡，即 power > 0）价 60
 ##   * 次元（盟友/工事，必须无次元、非效果卡；+2 力 +10 血）价 50
 ##   * 保存（回合结束手牌不丢弃，做成字段）价 60
-## 第三行：固定 3 项：删一张卡 50 / +5 最大生命（并回血）50 / 买一块巧克力 60。
+## 第三行：固定 3 项：删一张卡 50 / +5 最大生命（并回血）50 / 买一块巧克力 120。
 ##
 ## 三行商品背后各有一层**货架**（shelf.png 素材，缺图回退程序画木板横条），
 ## 货架宽度 = 商品区宽度，随屏幕比例自适应。
@@ -104,7 +104,7 @@ func _setup_shop() -> void:
 			"icon": "shop_icon_remove", "sold": false},
 		{"key": "maxhp", "name": "+5 最大生命", "desc": "最大生命 +5，并回复 5 点生命", "price": 50,
 			"icon": "shop_icon_maxhp", "sold": false},
-		{"key": "choco", "name": "巧克力", "desc": "获得一块巧克力（行动力 +1）", "price": 60,
+		{"key": "choco", "name": "巧克力", "desc": "获得一块巧克力（行动力 +1）", "price": 120,
 			"icon": "chocolate", "sold": false},
 	]
 	# 全局编号偏移
@@ -275,7 +275,7 @@ func _card_price(card: CardData) -> int:
 	match card.rarity:
 		0: return 25
 		1: return 50
-		2: return 100
+		2: return 80
 	return 25
 
 
