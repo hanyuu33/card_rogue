@@ -7086,14 +7086,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 							"col": Color("caa6ff"), "start": n, "dur": 1900, "size": 16})
 		"recycler":
 			# 零件回收者（8046，R96）：接通的己方卡被销毁 → 回收其力量 + 手牌加素体。
+			# ⚠️ R208：被销毁的卡力量为 0（工事 / 被削到 0 的单位）时**不飘「+0 攻」** ——
+			# 攻击力一点没变，飘字只会让玩家以为出了 bug（用户实测反馈）。素体照给。
 			var rc_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
 			var rc_pow: int = int(data.get("power", 0))
 			sfx.play("spell")
-			_say("零件回收者回收 %d 力量，手牌 +1 张「素体」" % rc_pow)
-			if rc_cell.x >= 0:
-				_floaters.append({"pos": _cell_center(rc_cell), "sc": _grid_scroll,
-						"text": "+%d 攻" % rc_pow,
-						"col": Color("ffa41f"), "start": n, "dur": 1700, "size": 16})
+			if rc_pow > 0:
+				_say("零件回收者回收 %d 力量，手牌 +1 张「素体」" % rc_pow)
+				if rc_cell.x >= 0:
+					_floaters.append({"pos": _cell_center(rc_cell), "sc": _grid_scroll,
+							"text": "+%d 攻" % rc_pow,
+							"col": Color("ffa41f"), "start": n, "dur": 1700, "size": 16})
+			else:
+				_say("零件回收者：被破坏的卡没有力量（攻击力不变），手牌 +1 张「素体」")
 		"prod_order":
 			# 生产订单（8048，R96）：往抽牌堆加两张改造「素体」。
 			var po_cnt: int = int(data.get("count", 0))

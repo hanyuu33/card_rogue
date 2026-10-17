@@ -665,7 +665,7 @@ const AUTO_UPGRADE_TRAIT:= "自主改造"
 const AUTO_UPGRADE_ATK:= 2
 const AUTO_UPGRADE_HP:= 1
 # ── R96：机械之心 8046 / 8047 / 8048 ──
-# 「零件回收者」（8046，3 费**普通**盟友 1/14/1/1）：与这张卡**接通**的己方盟友或工事被
+# 「零件回收者」（8046，3 费**史诗**盟友 1/14/1/1，R208 由普通升史诗）：与这张卡**接通**的己方盟友或工事被
 #   **破坏**时，这张卡攻击力 += 被销毁卡的力量，并往手牌加一张「素体」。
 #   * 触发口唯一 = `_destroy`（全游戏唯一破坏口），在 erase 之前先抓同连通块里的回收者。
 #   * 「接通」= `_component_of_cell`（四方向相邻，隔敌也算连通），但此处只认 SIDE_SELF 回收者
@@ -7754,7 +7754,12 @@ func _recycler_trigger(r: Placement, victim_power: int) -> void :
 	if r == null or r.owner != SIDE_SELF or r.card.id != RECYCLER_ID:
 		return
 	r.upgrade_atk += victim_power
-	_log("零件回收者：回收 %d 力量（现 +%d 攻）" % [victim_power, r.upgrade_atk])
+	if victim_power > 0:
+		_log("零件回收者：回收 %d 力量（现 +%d 攻）" % [victim_power, r.upgrade_atk])
+	else:
+		# R208：被破坏的卡力量是 0（工事 / 被削到 0）→ 攻击力一点没变，
+		# 别在战报里写「回收 0 力量」（用户口径：不该弹「+0 攻」）。
+		_log("零件回收者：被破坏的卡没有力量，攻击力不变（现 +%d 攻）" % r.upgrade_atk)
 	# 往手牌加一张「素体」（独立副本，与机械核心 6025 同口径；手牌满就停）。
 	if state.hand_full():
 		_log("零件回收者：手牌已满，未加入「素体」")

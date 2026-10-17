@@ -437,6 +437,20 @@ OWN_HAND_Y - HAND_FAN_HOVER_LIFT >= GRID_Y + GRID_H - 2        （= 590）
 > 后续行`）而非行盒底（descent 空档允许伸入徽章带顶部），放不下才逐级缩字号（最小 8px）。
 > 选卡界面（`draw_pick`，`pin_gold=false`）保持姓名牌区内居中版式不变。
 
+> **R208 起：卡面文字背后不再铺「淡黄色长方形」（底衬全删）** —— 用户口径
+> 「卡牌文字背后依然有淡黄色长方形，不需要这些，只留卡名文字和底背景图」。
+> - `CardFace.draw_text_backing()` 与 `UiTheme.TEXT_BACK_A/B/SEAM` **整块删除**；
+>   `_draw_name_zone` / `_draw_text_zone` 都不再调用它。
+> - 卡面文字现在**直接坐在 `card_paper.png` 自带的姓名牌羊皮纸**上（那就是「底背景图」的一部分）。
+> - 连带改口：R196 的「卡名上沿贴分隔金条」也一并撤了 —— 分隔金条以下是底图的**金色雕花**，
+>   深色字压上去看不见。`pin_gold=true`（战斗 / 商店 `name_only`）现在把文字块**居中在
+>   「姓名牌内框上沿(`CARD_NAMEPLATE_TOP`) ~ 徽章带顶(`rect.end.y - badge_r - pad/2`)」**之间，
+>   放不下照旧逐级缩字号（最小 8px），墨迹判据不变。
+> - 代价：小卡（战场单位 58×70）的卡名会缩到 8px 左右 —— 这是「不铺底衬」的必然结果；
+>   想让字更大只能改底图姓名牌内框的高度，不要在代码里偷偷把字画到雕花上。
+> - 回归：smoke `_check_r208` 钉住「card_face.gd 不许再出现 `draw_text_backing` / `TEXT_BACK_`」。
+>   出图：`shop -- --screenshot --shop`（大卡）、`battle -- --screenshot --level 0`（手牌/战场）。
+
 > **R205 起：「填充」也走全屏选卡页**（用户口径「使用后应该弹出选择卡界面，选一张卡变化」）——
 > 使用填充后 `_reload_idx >= 0` → `_pick_active_kind()` 返回 `"reload"` → `_sync_pick()` 自动
 > `open`；候选由**唯一口** `_reload_options(skip)` 给出（手牌里**除它自己以外**的全部卡），

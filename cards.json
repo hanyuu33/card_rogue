@@ -3529,7 +3529,7 @@
       "health": 14,
       "attack_range": 1,
       "move_speed": 1,
-      "rarity": 0,
+      "rarity": 2,
       "group": "player",
       "class": "机械之心",
       "traits": [

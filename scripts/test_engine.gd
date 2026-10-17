@@ -12718,9 +12718,9 @@ func _init() -> void:
 	check(r96_rec_def != null and r96_rec_def.kind == "盟友" and r96_rec_def.cost == 3
 			and r96_rec_def.power == 1 and r96_rec_def.health == 14
 			and r96_rec_def.attack_range == 1 and r96_rec_def.move_speed == 1
-			and r96_rec_def.rarity == 0 and r96_rec_def.card_class == PlayerClass.MECH
+			and r96_rec_def.rarity == 2 and r96_rec_def.card_class == PlayerClass.MECH
 			and not r96_rec_def.has_affix("嘲讽"),
-		"R96 零件回收者：盟友 / 3 费 1 攻 14 血 / 攻程 1 / 移速 1 / **普通** / 机械之心")
+		"R96 零件回收者：盟友 / 3 费 1 攻 14 血 / 攻程 1 / 移速 1 / **史诗**（R208 升） / 机械之心")
 	check(r96_rec_def.traits.has("机械"),
 		"R96 零件回收者：带 trait「机械」")
 	check(r96_chi_def != null and r96_chi_def.kind == "盟友" and r96_chi_def.cost == 4

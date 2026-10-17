@@ -229,7 +229,6 @@ static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	## 文字区 = **只有卡名**（wrap 最多 2 行）。
 	## `draw_pick()`（选卡界面）与 `draw(..., name_only=true)`（战斗内卡面）共用这一条。
 	## 效果文字**不画在卡面上** —— 详情走悬停/点选的描述面板（选卡界面底部描述条 / 战斗左栏信息）。
-	var sep_y: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
 	var sz: int = maxi(9, roundi(UiTheme.CARD_FS_TEXT * kt * 1.15))
 	var maxw: float = rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0
 	var lines := wrap_text(font_bold, card.card_name, maxw, sz)
@@ -243,17 +242,20 @@ static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	var text_x: float = rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad
 	var text_top: float
 	if pin_gold:
-		# R196（用户口径「战场中卡的名字被下面的数字挡住」）：
-		# 底部一排数值徽章（力/程/速/生）圆心压在卡框**下边缘**、一半探出卡外 —— 卡内自
-		# `rect.end.y - badge_r` 起就是徽章带。姓名牌区（0.745~0.94h）里垂直居中时，
-		# 文字块必然伸进徽章带被数字压住。改为**上沿贴分隔金条**、整块排在徽章带之前；
-		# 一行放不下就逐级缩字号（最小 8px），绝不让数字盖住名字。
+		# R196 / R208：底部一排数值徽章（力/程/速/生）圆心压在卡框**下边缘**、一半探出卡外
+		# —— 卡内自 `rect.end.y - badge_r` 起就是徽章带，文字块不能伸进去。
+		# ⚠️ R208 改口（用户口径「卡牌文字背后依然有淡黄色长方形，不需要这些，只留卡名
+		# 文字和底背景图」）：不再铺程序底衬，卡名**直接坐在 card_paper 自带的姓名牌**上。
+		# 于是纵坐标也得改：底图姓名牌的**内框羊皮纸**从 `CARD_NAMEPLATE_TOP` 起，
+		# 它上面那截（0.662~0.745）是底图的金色雕花 —— 深色字压上去直接看不见。
+		# 文字块在「内框上沿 ~ 徽章带顶」之间**居中**；放不下就逐级缩字号（最小 8px），
+		# 绝不让数字盖住名字。
 		var badge_r: float = UiTheme.CARD_BADGE_R * minf(k, UiTheme.CARD_BADGE_SCALE_CAP)
 		var badge_top: float = rect.end.y - badge_r - pad * 0.5
-		text_top = sep_y + pad * 0.5
+		var parch_top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad * 0.25
+		text_top = parch_top + maxf(0.0, (badge_top - parch_top - row_h * lines.size()) / 2.0)
 		# 判据用**墨迹底**（`text_top + ascent + 后续行`），不用行盒底 —— descent 那 2~3px
-		# 本来就没有墨迹，允许伸进徽章带顶部；卡名因此不必缩得太小（R196 实测 h=92
-		# 战场单位卡：sz 可保持 14，墨迹完整避开力/程/速/生四个数字）。
+		# 本来就没有墨迹，允许伸进徽章带顶部；卡名因此不必缩得太小。
 		var ink_bottom: float = (text_top + float(font_bold.get_ascent(sz))
 				+ row_h * float(lines.size() - 1) + 1.0)
 		while sz > 8 and ink_bottom > badge_top:
@@ -262,52 +264,19 @@ static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 			if lines.size() > 2:
 				lines = lines.slice(0, 2)
 			row_h = font_bold.get_height(sz)
+			text_top = parch_top + maxf(0.0, (badge_top - parch_top - row_h * lines.size()) / 2.0)
 			ink_bottom = (text_top + float(font_bold.get_ascent(sz))
 					+ row_h * float(lines.size() - 1) + 1.0)
 	else:
 		var zone_top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad
 		var zone_bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_BOTTOM - pad
 		text_top = zone_top + maxf(0.0, (zone_bottom - zone_top - row_h * lines.size()) / 2.0)
-	var block_h: float = row_h * lines.size()
-	draw_text_backing(canvas, rect, sep_y, k, pad, text_top - 3.0, text_top + block_h + 3.0)
+	# R208：**不铺底衬** —— 卡名直接画在底图姓名牌的羊皮纸上（见上）。
 	var asc: float = float(font_bold.get_ascent(sz))
 	for li in lines.size():
 		canvas.draw_string(font_bold,
 				Vector2(text_x, text_top + asc + li * row_h),
 				lines[li], HORIZONTAL_ALIGNMENT_CENTER, maxw, sz, UiTheme.INK_900)
-
-
-static func draw_text_backing(canvas: CanvasItem, rect: Rect2, sep_y: float, k: float, pad: float,
-		text_top: float, block_bottom: float) -> void:
-	## R164：文字区底衬 = **程序绘制的羊皮卷 / 木板**（任意卡尺寸自适应，不依赖贴图，
-	## **没有边框**）。矩形由调用方按**文字块的实际范围**（`text_top` / `block_bottom`）给出，
-	## 于是底衬**贴着文字**：上不盖分隔金条、下不吃底部的数值徽章。
-	##
-	## 为什么要有它：`card_paper.png` 的下半自带四条装饰金线（归一化 0.756 / 0.763 /
-	## 0.788 / 0.849 附近），文字直接压上去会被「金线穿字」—— 小卡上看不出来，奖励
-	## 三选一那种 216×260 的大卡上字又大又密，金线正好横穿卡名与效果行，非常难认。
-	## 用户口径：「白底上描边的字难以辨认 → 放弃描边，改用羊皮卷/木板做底」。
-	##
-	## ⚠️ 木板的条数按**高度**算（2~4 条），条与条之间插值深浅 —— 同一张卡每帧都长一样
-	##   （**不用 randf**：随机纹理会逐帧抖动，看起来像贴纸闪）。
-	var pad_in: float = maxf(2.0, 1.2 * k)
-	var top: float = maxf(sep_y, text_top - pad_in)
-	var bottom: float = minf(rect.end.y - pad, block_bottom + pad_in)
-	if bottom - top < 3.0:
-		return
-	var r := Rect2(rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad * 0.4, top,
-			maxf(rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 0.8, 0.0), bottom - top)
-	if r.size.x < 6.0:
-		return
-	var planks: int = clampi(int(round(r.size.y / 30.0)) + 1, 2, 4)
-	var ph: float = r.size.y / float(planks)
-	for i in planks:
-		var t: float = float(i) / float(planks - 1)
-		canvas.draw_rect(Rect2(r.position.x, r.position.y + i * ph, r.size.x, ph + 1.0),
-				UiTheme.TEXT_BACK_A.lerp(UiTheme.TEXT_BACK_B, t), true)
-		if i > 0:
-			canvas.draw_rect(Rect2(r.position.x, r.position.y + i * ph, r.size.x,
-					maxf(0.8, 0.9 * k)), UiTheme.TEXT_BACK_SEAM, true)
 
 
 static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float, pad: float,
@@ -399,9 +368,10 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	##      旧版卡名经 `_draw_center`（内部 **+0.36 字号**）下移，而「种类」直接 `draw_string`
 	##      不下移 —— 两条基线只差 `row_h - 0.36×字号`，大卡上卡名与种类**必然叠字**
 	##      （奖励三选一 216×260 实测：字糊成一片），效果首行也一起挤上来。
-	##   ② **先算「画到哪一行」，再铺底衬**：底衬（`draw_text_backing`）按文字块的
-	##      实际高度现画，上不盖分隔金条、下不吃底部数值徽章 —— 文字与卡面因此对得上。
-	##   ③ 文字**一律不描边**：可读性由底衬提供（羊皮卷/木板），不靠描边撑对比度。
+	##   ② **先算「画到哪一行」，再画字**：文字块整块落在姓名牌内框里，上不盖分隔金条、
+	##      下不吃底部数值徽章 —— 文字与卡面因此对得上。
+	##   ③ 文字**一律不描边**，也**不铺底衬**（R208）：可读性靠 card_paper 姓名牌那块
+	##      羊皮纸；贴一块程序画的长方形反而像贴纸（用户口径）。
 	# name_only（战斗内卡面口径）：只画居中卡名，不画种类·字段与效果文 ——
 	# 效果详情由悬停/点选的描述面板提供（战斗左栏信息 / 选卡界面底部描述条）。
 	if name_only:
@@ -442,14 +412,8 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 		if eff_n > 0:
 			eff_lines = wrap_text(font, eff, maxw, sz)
 			eff_n = mini(eff_lines.size(), eff_n)
-	# 文字块的墨迹下沿（底衬按它定尺寸 —— 贴着文字，不留空档）
-	var block_bottom: float = base_name + desc
-	if has_meta:
-		block_bottom = base_meta + desc
-	if eff_n > 0:
-		block_bottom = eff_base0 + line_h * (eff_n - 1) + desc
-	# ── 底衬（R164：羊皮卷/木板，程序绘制，**无边框**）──
-	draw_text_backing(canvas, rect, sep_y, k, pad, base_name - asc_b, block_bottom)
+	# R208：**不再铺底衬**（用户口径「卡牌文字背后那个淡黄色长方形不需要，只留卡名
+	# 文字和底背景图」）—— 文字直接坐在 card_paper 自带的姓名牌羊皮纸上。
 	# ── 第二遍：画字（**不描边**）───────────────────────────────────────
 	# R203：卡名横幅（R165 的 banner 渐变条）已去掉 —— 用户口径「卡名后面垫着的那条
 	# 绿色长方形直接去掉，卡名直接放在上面就好」；卡名直接画在羊皮卷/木板底衬上。

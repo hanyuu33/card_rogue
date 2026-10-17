@@ -1360,6 +1360,7 @@ func _check_battle(scene: Variant) -> void:
 	_check_reload(scene)
 	_check_assemble(scene)
 	_check_run_deck_panel(scene)
+	_check_r208(scene)
 
 
 func _check_reload(scene: Variant) -> void:
@@ -1528,6 +1529,50 @@ func _check_run_deck_panel(scene: Variant) -> void:
 	eng.state.deck.clear()
 	eng.state.deck.assign(saved_deck)
 	print("SMOKE OK 卡组：顶栏=完整卡组（4 张/附魔单列）/ 右下=剩余牌堆（1 张）/ 互斥开关")
+
+
+func _check_r208(scene: Variant) -> void:
+	## R208 三件事：
+	##   ① 零件回收者（8046）升**史诗**（rarity 2）；卡面文本里写的「普通」跟着改。
+	##   ② 被破坏的卡力量是 0 时**不许飘「+0 攻」**（用户实测：偶尔会弹一个 +0，像 bug）；
+	##      真的加攻时必须照旧飘。
+	##   ③ 卡面文字背后**不再铺淡黄色底衬**（`draw_text_backing` / `TEXT_BACK_*` 全删）。
+	var repo := CardRepo.load_json()
+	var rec: CardData = repo.get_card(8046)
+	if rec == null:
+		_smoke_fail("R208 零件回收者：卡库里没有 8046（用例前提失效）")
+		return
+	if rec.rarity != 2:
+		_smoke_fail("R208 零件回收者：应为史诗（rarity 2），实际 %d" % rec.rarity)
+		return
+	# ── ② 飘字：力量 0 不飘，力量 > 0 照飘 ──
+	var n0: int = scene._floaters.size()
+	scene._on_engine_action("recycler", {"cell": Vector2i(2, 2), "power": 0,
+			"side": GameEngine.SIDE_SELF})
+	for f0: Dictionary in scene._floaters.slice(n0):
+		if str(f0.get("text", "")).contains("+0 攻"):
+			_smoke_fail("R208 零件回收者：力量 0 时不应飘「+0 攻」")
+			return
+	var n1: int = scene._floaters.size()
+	scene._on_engine_action("recycler", {"cell": Vector2i(2, 2), "power": 6,
+			"side": GameEngine.SIDE_SELF})
+	var got_six := false
+	for f1: Dictionary in scene._floaters.slice(n1):
+		if str(f1.get("text", "")) == "+6 攻":
+			got_six = true
+	if not got_six:
+		_smoke_fail("R208 零件回收者：真加了 6 攻时必须照旧飘「+6 攻」")
+		return
+	# ── ③ 源码守卫：底衬不许回潮（函数与色常量都已删除）──
+	var cf := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+	if cf.is_empty():
+		_smoke_fail("R208 卡面：读不到 card_face.gd（源码守卫失效）")
+		return
+	for bad: String in ["draw_text_backing", "TEXT_BACK_"]:
+		if cf.contains(bad):
+			_smoke_fail("R208 卡面：文字背后不许再铺淡黄色底衬（%s 仍在）" % bad)
+			return
+	print("SMOKE OK R208：零件回收者史诗 / 力量 0 不飘 +0 攻 / 卡面不再铺底衬")
 
 
 func _check_assemble(scene: Variant) -> void:
