@@ -3177,6 +3177,9 @@ func _daedalus_upgrade(self_p: Placement) -> void :
 				# R120：改造奖励走**唯一口**（手/库/弃里的素体也 +1 血）。
 				up.power += _upgrade_atk_gain(up, 1)
 				up.health += _upgrade_hp_gain(up, 0)
+				# R209：手牌 / 牌库 / 弃牌区里的那张**也记一层**（随身带）——
+				# 漏了它，代达罗斯改过的牌抽到上场时层数还是 0（侦察塔光环 / 徽标都看不到）。
+				up.upgrade_stacks += 1
 				zone[i] = up
 	# 场上其他友方盟友/工事：走改造路径（力量+1，触发其改造反应），不连锁镜像/供牌
 	for cell in state.board.keys():
@@ -3535,9 +3538,10 @@ func _batch_upgrade(_side: String) -> String :
 	## 那是**卡库共享实例**。直接 `state.hand[i].health += 1` 会把**卡库**那张一起改 ——
 	## 于是本局之后、甚至下一局新 run 抽到那张卡都天生 +1 血（跨 run 泄漏）。
 	##
-	## 顺带：`upgrade_stacks` **不**在这里加 —— 侦察塔那类「层数加伤」的效果是
-	## 「攻击时伤害 +1」，而手牌里的卡还没上场，给它记层没有意义（用户口径的
-	## 「被任何改造手段 +1 层」指的是**已上场的**单位被改造时）。
+	## **R209 记层**：每改一张就 `upgrade_stacks += 1`（随身带着）—— 旧版记「手牌里的卡
+	## 还没上场、记层没意义」，结果这些卡上场后 `Placement.upgrade_stacks` 从 0 开始，
+	## 侦察塔的光环（每层 +1 易伤）与卡面「改造 ×N」全看不到改造（用户实测报的缺陷）。
+	## 层数**随卡走**（`CardData.upgrade_stacks`），上场由 `FieldState.place()` 接上。
 	var touched := 0
 	var names: Array[String] = []
 	for i in state.hand.size():
@@ -3549,6 +3553,7 @@ func _batch_upgrade(_side: String) -> String :
 		#（用户口径：任何改造都生效，含手牌与牌库）；战斗骨骼同理 +1 力 +1 血。
 		up.power += _upgrade_atk_gain(up, 0)
 		up.health += _upgrade_hp_gain(up, BATCH_UPGRADE_HP)
+		up.upgrade_stacks += 1        # R209：层数随身带（上场时由 place() 接到 Placement）
 		state.hand[i] = up
 		touched += 1
 		names.append("%s %d血" % [c.card_name, up.health])
@@ -3591,6 +3596,9 @@ func _sys_upgrade_hand_card(hand_index: int) -> String :
 	var su_hp: int = _upgrade_hp_gain(up, SYS_UPGRADE_HP)
 	up.power += su_atk
 	up.health += su_hp
+	# R209：记一层「改造」随身带 —— 否则它上场后 `upgrade_stacks` 从 0 开始：
+	# 侦察塔拿不到光环的 +1 易伤、卡面也看不到「改造 ×1」（用户实测报的缺陷）。
+	up.upgrade_stacks += 1
 	state.hand[hand_index] = up
 	_log("系统升级：%s 改造完成（费用 +%d / 力量 +%d / 生命 +%d → %d 费 %d 攻 %d 血，本场战斗永久）"
 		% [c.card_name, SYS_UPGRADE_COST_ADD, SYS_UPGRADE_ATK, SYS_UPGRADE_HP,
@@ -3626,6 +3634,7 @@ func _batch_transfer(side: String) -> String :
 		# R120：改造奖励走**唯一口**（与「系统升级」同口径）。
 		up.power += _upgrade_atk_gain(up, SYS_UPGRADE_ATK)
 		up.health += _upgrade_hp_gain(up, SYS_UPGRADE_HP)
+		up.upgrade_stacks += 1        # R209：层数随身带（同系统升级）
 		state.hand[i] = up
 		touched += 1
 		names.append("%s（%d 费 %d 攻 %d 血）" % [c.card_name, up.cost, up.power, up.health])
@@ -3644,53 +3653,12 @@ func _batch_transfer(side: String) -> String :
 	return "%d 张手牌改造，抽 %d 张卡" % [touched, got]
 
 
-# ── R90「系统升级」的选牌 pending（目标在**手牌**，不在棋盘）──
-# 面板期间引擎不结算的挂点见 `_end_turn_surplus` 一带（`revive_pending or crow_pending …`）。
-var sys_upgrade_pending := false
-var sys_upgrade_source := -1        # 手牌里那张「系统升级」自己的下标（结算时从这里取出）
-
-
-func sys_upgrade_options() -> Array[int]:
-	## 「系统升级」可选的手牌下标：**只列盟友 / 工事**（技能 / 场地 / 效果卡不可选）。
-	## 返回下标而不是 CardData —— 与 `crow_options` 同一惯例，界面按 `state.hand[i]` 取卡面。
-	var out: Array[int] = []
-	if not sys_upgrade_pending:
-		return out
-	for i in state.hand.size():
-		if i == sys_upgrade_source:
-			continue
-		var c: CardData = state.hand[i]
-		if c.kind == "盟友" or c.is_fort():
-			out.append(i)
-	return out
-
-
-func sys_upgrade_start(source_hand_index: int) -> void :
-	## 打出「系统升级」→ 置 pending，等玩家点一张手牌。
-	## 手牌里没有可选的盟友 / 工事 → **立刻落空**（不弹空面板），费用照付。
-	sys_upgrade_pending = false
-	sys_upgrade_source = source_hand_index
-	if sys_upgrade_options().is_empty():
-		_log("系统升级：手牌里没有可选的盟友或工事，效果落空")
-		action.emit("sys_upgrade", {"card": null, "ok": false})
-		return
-	sys_upgrade_pending = true
-	_log("系统升级：选择手牌里的一张盟友或工事进行改造")
-
-
-func sys_upgrade_pick(hand_index: int) -> bool:
-	## 结算玩家选中的那张手牌。**改造在手牌上就地完成**（不 remove/re-append ——
-	## `_sys_upgrade_hand_card` 走的是「复制 + 原位替换」，手牌顺序与扇形布局不受影响）。
-	if ReplayLog.recording:
-		ReplayLog.act("sys_upgrade_pick", [hand_index])
-	if not sys_upgrade_pending:
-		return false
-	if not sys_upgrade_options().has(hand_index):
-		return false
-	var detail := _sys_upgrade_hand_card(hand_index)
-	sys_upgrade_pending = false
-	sys_upgrade_source = -1
-	return detail != ""
+# ── R209：手牌目标的「选哪张」不再由引擎存 pending ──
+# R90 曾有一套 `sys_upgrade_start/pick` + `sys_upgrade_pending`（引擎自己记 pending），
+# 但界面后来改走 `cast_sys_upgrade(手牌序号, 目标手牌序号)`（更简单、且回放只需一条 act），
+# 那套 pending **一次都没被调用过**，留着只会让「选卡只有一个入口」这条纪律多一个岔口。
+# 现在两种手牌目标卡的选卡交互统一走**全屏选卡页**（`battle_scene._pick_active_kind`），
+# 引擎侧只保留结算入口：`cast_sys_upgrade` / `cast_recycle`。
 
 
 func _energy_barrier(side: String) -> String :
@@ -3849,6 +3817,7 @@ func _auto_upgrade(side: String) -> void :
 	var au_hp: int = _upgrade_hp_gain(up, AUTO_UPGRADE_HP)
 	up.power += au_atk
 	up.health += au_hp
+	up.upgrade_stacks += 1       # R209：牌库里的改造同样记层（抽到上场就有层）
 	state.deck[pick] = up        # 原位替换：牌库顺序不变
 	_log("自主升级：「%s」在牌库里被改造 → 力量 +%d（%d）、生命 +%d（%d）" % [
 			before.card_name, au_atk, up.power, au_hp, up.health])
@@ -4288,11 +4257,9 @@ func use_spell(hand_index: int, target = null) -> String:
 	if ReplayLog.recording:
 		ReplayLog.act("use_spell", [hand_index, target])
 
-	# R90：「系统升级」的选牌面板开着时**不许再出别的牌** —— 否则玩家可以在
-	# 选牌过程中把「系统升级」的目标那张顺手打掉，下标就失效了。
-	# 界面本身会拦点击（面板是模态的），这里是给联机 / 回放路径兜底。
-	if sys_upgrade_pending:
-		return "系统升级：请先选择手牌里的一张盟友或工事"
+	# 选牌 pending 期间**不许再出别的牌** —— 否则玩家可以在选牌过程中把目标那张
+	# 顺手打掉，下标就失效了。界面本身会拦点击（选卡页是模态的），这里是给联机 /
+	# 回放路径兜底。（R209：`sys_upgrade_pending` 已删，手牌目标改由选卡页驱动。）
 	if overhaul_pending:
 		return "返修：请先从弃牌区选择一张盟友或工事"
 
@@ -4663,11 +4630,12 @@ func _sleepless_tick(side: String) -> void:
 	## 等选完（fate_pick 收尾）再补结算。
 	if side != SIDE_SELF:
 		return
-	# ⚠️ R90 新增 `sys_upgrade_pending`（「系统升级」的选牌面板开着）——
-	# 少一个就出 bug：面板期间回合收尾会照常结算，把「手牌空了 → 抽 1 张」之类
-	# 的效果打乱玩家正在做的选择。
+	# ⚠️ 选牌面板开着时先不抽 —— 少一个就出 bug：面板期间回合收尾会照常结算，
+	# 把「手牌空了 → 抽 1 张」之类的效果打乱玩家正在做的选择。
+	# （R209：`sys_upgrade_pending` 已随那套没用的 pending API 一起删除；手牌目标的
+	#  选卡改由场景的选卡页驱动，它自己会拦住出牌与回合收尾。）
 	if revive_pending or crow_pending or whale_pending or foresight_pick or fate_pending \
-			or endless_pending or sys_upgrade_pending or shadow_step_pending \
+			or endless_pending or shadow_step_pending \
 			or focus_pending or overhaul_pending:
 		return
 	if not _zone_has_id(side, SLEEPLESS_ID) or not state.hand.is_empty():
@@ -5153,6 +5121,7 @@ func cast_recycle(hand_index: int, target_hand_index: int) -> String:
 	# R198：改造走**唯一口**（素体自身被改造时额外 +1 生命 → 实际 +9）。
 	var rc_hp: int = _upgrade_hp_gain(body, RECYCLE_HP)
 	body.health += rc_hp
+	body.upgrade_stacks += 1   # R209：卡面写的就是「使其获得改造」→ 记一层随身带
 	var rc_old: String = tgt.card_name
 	state.hand[target_hand_index] = body
 	_log("回收：%s → 素体（改造：生命 +%d → %d 攻 / %d 血，本场战斗永久）"
@@ -6170,6 +6139,7 @@ func overhaul_recall(discard_index: int) -> bool:
 	# R120：改造奖励走**唯一口**（素体被返修也额外 +1 血）。
 	var oh_hp: int = _upgrade_hp_gain(up, OVERHAUL_HP)
 	up.health += oh_hp
+	up.upgrade_stacks += 1   # R209：卡面写的是「获得永久改造」→ 记一层随身带
 	state.discard.remove_at(discard_index)
 	state.hand.append(up)
 	overhaul_remaining -= 1
@@ -7825,6 +7795,7 @@ func _production_order(side: String) -> String :
 		# R120：改造奖励走**唯一口** —— 素体自己的 +1 生命也算上（1 攻 / 4+1=5 血）。
 		up.power += _upgrade_atk_gain(up, PROD_ORDER_ATK)
 		up.health += _upgrade_hp_gain(up, PROD_ORDER_HP)
+		up.upgrade_stacks += 1       # R209：产出的素体天生 1 层改造（抽到上场就带着）
 		state.deck.append(up)        # 加进抽牌堆（末尾），本场之后抽到即改造版素体
 		added += 1
 	_log("生产订单：卡组 +%d 张改造「素体」（各 +%d 攻 / +%d 血，永久）"

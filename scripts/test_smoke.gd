@@ -1358,6 +1358,7 @@ func _check_battle(scene: Variant) -> void:
 	_check_recycle(scene)
 	_check_lighten(scene)
 	_check_reload(scene)
+	_check_sysupgrade(scene)
 	_check_assemble(scene)
 	_check_run_deck_panel(scene)
 	_check_r208(scene)
@@ -1653,8 +1654,9 @@ func _check_ee_popup(scene: Variant) -> void:
 
 
 func _check_recycle(scene: Variant) -> void:
-	## R198：回收（8064）两段式 —— 点回收 / 点任意手牌 → 换成素体（改造 +9 血）；
-	## 再点一次回收自己 = 取消（不扣费）。目标不限种类：这里刻意拿**技能卡**当目标。
+	## R198 / R209：回收（8064）—— 使用后**弹全屏选卡页**（候选 = 除自己以外的手牌，
+	## 不限种类：技能卡也能回收）；确认 → 目标换成素体 1/10 且**带一层改造**；
+	## 取消 → 不扣费、不弃卡。R209 起不再是「再点一张手牌」的两段式。
 	var eng: GameEngine = scene.engine
 	if eng == null:
 		_smoke_fail("回收：拿不到 engine")
@@ -1669,52 +1671,160 @@ func _check_recycle(scene: Variant) -> void:
 	scene._grid_zoom = 1.0
 	scene._clear_selection()
 	eng.current_side = GameEngine.SIDE_SELF
-	# ── 1) 铺一手牌：回收 + 技能卡「攻击」（证明技能卡也能当目标）──
+	# ── 1) 铺一手牌：攻击（技能卡，证明技能也能当目标）+ 回收 ──
 	eng.state.hand.clear()
 	eng.state.hand.append(CardData.from_dict(repo.get_card(8002).to_dict()))
 	eng.state.hand.append(CardData.from_dict(rc.to_dict()))
 	eng.state.energy = 5
-	# ── 2) 点回收两次 = 选中 → 使用 → 进入选手牌模式 ──
+	# ── 2) 点回收两次 = 选中 → 使用 → 进入选卡页 ──
 	_feed_click(scene, _hand_card_center(scene, 1))
 	_feed_click(scene, _hand_card_center(scene, 1))
 	if int(scene._recycle_idx) != 1:
-		_smoke_fail("回收：再点一次应进入选手牌模式（_recycle_idx=%d）" % scene._recycle_idx)
+		_smoke_fail("回收：再点一次应进入回收待选（_recycle_idx=%d）" % scene._recycle_idx)
 		return
-	# ── 3) 点技能卡 → 应换成素体 1/10 ──
-	_feed_click(scene, _hand_card_center(scene, 0))
+	scene._sync_pick()
+	if scene._pick == null or not scene._pick.is_picking():
+		_smoke_fail("回收：使用后应弹出全屏选卡页")
+		return
+	if String(scene._pick.kind()) != "recycle":
+		_smoke_fail("回收：选卡页场景应是 recycle（实际 %s）" % String(scene._pick.kind()))
+		return
+	var ropts: Array = scene._pick.opts()
+	if ropts.size() != 1 or int(ropts[0]) != 0:
+		_smoke_fail("回收：候选应是除自己以外的 1 张手牌（opts=%s）" % str(ropts))
+		return
+	# ── 3) 确认 → 技能卡换成素体 1/10（带一层改造）──
+	scene._on_pick_confirmed([0])
 	if int(scene._recycle_idx) >= 0:
-		_smoke_fail("回收：点目标后应退出选手牌模式（_recycle_idx=%d）" % scene._recycle_idx)
+		_smoke_fail("回收：确认后应清掉 _recycle_idx（%d）" % scene._recycle_idx)
 		return
 	var got: CardData = eng.state.hand[0]
 	if got.id != 8025 or got.health != 10 or got.power != 1:
 		_smoke_fail("回收：攻击应换成素体 1/10（实际 %s %d/%d）"
 				% [got.card_name, got.power, got.health])
 		return
+	if got.upgrade_stacks != 1:
+		_smoke_fail("R209 回收：换出来的素体应带**一层改造**（upgrade_stacks=%d）"
+				% got.upgrade_stacks)
+		return
 	if eng.state.energy != 3:
 		_smoke_fail("回收：应扣 2 费（能量 %d，期望 3）" % eng.state.energy)
 		return
-	# ── 4) 取消路径：再铺一张，点回收两次 → 再点回收自己 = 取消 ──
+	scene._sync_pick()
+	if scene._pick != null and scene._pick.is_picking():
+		_smoke_fail("回收：结算完选卡页应自动关闭")
+		return
+	# ── 4) 取消路径：点「取消（不扣费）」→ 手牌 / 能量原样 ──
 	eng.state.hand.clear()
 	eng.state.hand.append(CardData.from_dict(rc.to_dict()))
 	eng.state.hand.append(CardData.from_dict(repo.get_card(8004).to_dict()))   # 熊
 	eng.state.energy = 5
+	scene._clear_selection()
 	_feed_click(scene, _hand_card_center(scene, 0))
 	_feed_click(scene, _hand_card_center(scene, 0))
 	if int(scene._recycle_idx) != 0:
-		_smoke_fail("回收（取消路径）：再点一次应进入选手牌模式（_recycle_idx=%d）" % scene._recycle_idx)
+		_smoke_fail("回收（取消路径）：再点一次应进入回收待选（_recycle_idx=%d）"
+				% scene._recycle_idx)
 		return
-	_feed_click(scene, _hand_card_center(scene, 0))   # 点它自己 = 取消
-	if int(scene._recycle_idx) >= 0:
-		_smoke_fail("回收（取消路径）：点回收自己应取消（_recycle_idx=%d）" % scene._recycle_idx)
-		return
-	if eng.state.hand.size() != 2 or eng.state.energy != 5:
+	scene._sync_pick()
+	scene._on_pick_cancelled()
+	if int(scene._recycle_idx) >= 0 or eng.state.hand.size() != 2 or eng.state.energy != 5:
 		_smoke_fail("回收（取消路径）：取消后手牌/能量应原样（%d 张 / %d 费）"
 				% [eng.state.hand.size(), eng.state.energy])
+		return
+	scene._sync_pick()
+	if scene._pick != null and scene._pick.is_picking():
+		_smoke_fail("回收（取消路径）：取消后选卡页应关闭")
 		return
 	# 收尾：还原手牌与状态，别污染后面的用例
 	eng.state.hand.clear()
 	scene._recycle_idx = -1
-	print("SMOKE OK 回收两段式：点回收 / 点技能卡→素体 1/10（扣 2 费）/ 点自己取消不扣费")
+	print("SMOKE OK 回收选卡页：弹页（候选 1）/ 确认 → 素体 1/10 + 一层改造（扣 2 费）/ 取消不扣费")
+
+
+func _check_sysupgrade(scene: Variant) -> void:
+	## R209：系统升级（8039）—— 使用后**弹全屏选卡页**（用户口径「除了填充，还有一些
+	## 选手牌的没弹出选卡界面」）；候选**只列盟友 / 工事**（技能卡不在候选里）；
+	## 确认 → 费用 +1 / 力量 +3 / 生命 +6，且**记一层改造**（`upgrade_stacks`）；
+	## 取消 → 不扣费、不弃卡。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("系统升级：拿不到 engine")
+		return
+	var repo := CardRepo.load_json()
+	var su: CardData = repo.get_card(GameEngine.SYS_UPGRADE_ID)
+	var bear: CardData = repo.get_card(8004)
+	if su == null or bear == null:
+		_smoke_fail("系统升级：测试用卡（8039 / 8004）缺失")
+		return
+	scene._grid_intro_t = -1.0
+	scene._grid_zoom = 1.0
+	scene._clear_selection()
+	eng.current_side = GameEngine.SIDE_SELF
+	# 手牌：熊(0) + 系统升级(1) + 攻击(2，技能卡 → **不该进候选**)
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(bear.to_dict()))
+	eng.state.hand.append(CardData.from_dict(su.to_dict()))
+	eng.state.hand.append(CardData.from_dict(repo.get_card(8002).to_dict()))
+	eng.state.energy = 5
+	_feed_click(scene, _hand_card_center(scene, 1))
+	_feed_click(scene, _hand_card_center(scene, 1))
+	if int(scene._sys_upgrade_idx) != 1:
+		_smoke_fail("系统升级：再点一次应进入待选（_sys_upgrade_idx=%d）"
+				% scene._sys_upgrade_idx)
+		return
+	scene._sync_pick()
+	if scene._pick == null or not scene._pick.is_picking():
+		_smoke_fail("系统升级：使用后应弹出全屏选卡页")
+		return
+	if String(scene._pick.kind()) != "sysup":
+		_smoke_fail("系统升级：选卡页场景应是 sysup（实际 %s）" % String(scene._pick.kind()))
+		return
+	var uopts: Array = scene._pick.opts()
+	if uopts.size() != 1 or int(uopts[0]) != 0:
+		_smoke_fail("系统升级：候选只能是盟友 / 工事（熊），实际 opts=%s" % str(uopts))
+		return
+	# ── 确认 → 熊 4 费 3/14 → 5 费 6/20，且记一层改造 ──
+	scene._on_pick_confirmed([0])
+	if int(scene._sys_upgrade_idx) >= 0:
+		_smoke_fail("系统升级：确认后应清掉 _sys_upgrade_idx（%d）" % scene._sys_upgrade_idx)
+		return
+	var up: CardData = eng.state.hand[0]
+	if up.id != 8004 or up.cost != bear.cost + 1 or up.power != bear.power + 3 \
+			or up.health != bear.health + 6:
+		_smoke_fail("系统升级：熊应变成 %d 费 %d/%d（实际 %d 费 %d/%d）"
+				% [bear.cost + 1, bear.power + 3, bear.health + 6, up.cost, up.power, up.health])
+		return
+	if up.upgrade_stacks != 1:
+		_smoke_fail("R209 系统升级：被改造的卡应带**一层改造**（upgrade_stacks=%d）"
+				% up.upgrade_stacks)
+		return
+	if eng.state.energy != 4:
+		_smoke_fail("系统升级：应扣 1 费（能量 %d，期望 4）" % eng.state.energy)
+		return
+	scene._sync_pick()
+	if scene._pick != null and scene._pick.is_picking():
+		_smoke_fail("系统升级：结算完选卡页应自动关闭")
+		return
+	# ── 取消路径 ──
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(su.to_dict()))
+	eng.state.hand.append(CardData.from_dict(bear.to_dict()))
+	eng.state.energy = 5
+	scene._clear_selection()
+	_feed_click(scene, _hand_card_center(scene, 0))
+	_feed_click(scene, _hand_card_center(scene, 0))
+	scene._sync_pick()
+	scene._on_pick_cancelled()
+	if int(scene._sys_upgrade_idx) >= 0 or eng.state.hand.size() != 2 \
+			or eng.state.energy != 5:
+		_smoke_fail("系统升级（取消路径）：取消后手牌/能量应原样（%d 张 / %d 费）"
+				% [eng.state.hand.size(), eng.state.energy])
+		return
+	eng.state.hand.clear()
+	scene._sys_upgrade_idx = -1
+	print("SMOKE OK 系统升级选卡页：弹页（候选只列盟友/工事）/ 确认 → +1 费 +3 力 +6 血 +1 层 / 取消不扣费")
+
 
 
 func _check_lighten(scene: Variant) -> void:

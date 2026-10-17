@@ -338,6 +338,12 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	p.card = card
 	p.owner = owner
 	p.health = card.health
+	# R209：把**随身携带**的改造层数接到场上。手牌 / 牌库里的改造（系统升级 / 批量改造 /
+	# 批量传输 / 自主升级 / 生产订单 / 回收 / 返修）烤进的就是这张卡，层数记在
+	# `card.upgrade_stacks` —— 漏了这一步，侦察塔光环（每层 +1 易伤）与卡面
+	# 「改造 ×N」徽标上场后全是 0（用户实测报的缺陷）。
+	# ⚠️ 只读不写回：上场后的改造仍只加 `p.upgrade_stacks`，离场不还原到卡上。
+	p.upgrade_stacks = card.upgrade_stacks
 	# 哈气：已到生效回合且效果区有哈气时，上场即可行动 extra 次（与卡自带的 actions 取大者）。
 	# ⚠️ R122：`summon = true`（**被召唤**出来的，不是玩家从手牌打出来的）固定 **1 轮** ——
 	#    召唤物当回合**恰好行动一次**，不继承哈气 / 双动字段。

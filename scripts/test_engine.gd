@@ -16123,6 +16123,166 @@ func _init() -> void:
 	check(r202_changed >= 1, "R202 随心组装：至少 1 张手牌发生了变化（实际 %d 张）" % r202_changed)
 	RunState.player_class = PlayerClass.DRUID
 
+	# ================================================================
+	# R209：改造层数**随身带** —— 手牌 / 牌库里的改造，上场后仍是一层
+	# ================================================================
+	# 用户实测：系统升级改造侦察塔 → 上场后**拿不到那一层光环**；其他卡被系统升级
+	# 改造后上场，卡面也不显示「改造 ×N」。根因：层的记账只在 Placement 上，手牌 /
+	# 牌库里那些「烤进副本」的改造**没有任何地方记层** → 上场从 0 开始。
+	var r209_repo := CardRepo.load_json()
+	# ---- ① 层数随序列化走（复制 / 离场还原 / 联机共用这一条通道）----
+	var r209_c := _card(8032, "侦察塔", "工事", 3, 0, 12, 2, 0)
+	r209_c.traits = ["工事", "侦察塔", "改造层数"]
+	r209_c.upgrade_stacks = 2
+	var r209_rt := CardData.from_dict(r209_c.to_dict())
+	check(r209_rt.upgrade_stacks == 2,
+		"R209 层数随 to_dict/from_dict 走：复制后仍是 %d 层" % r209_rt.upgrade_stacks)
+	# ---- ② 系统升级改侦察塔 → 上场自带 1 层 → 光环 +1（用户报的那条）----
+	var r209_e := _new_engine([], 30, 30, -1, false)
+	r209_e.start_game()
+	r209_e.state.hand = [
+		CardData.from_dict(r209_repo.get_card(GameEngine.SCOUT_TOWER_ID).to_dict()),
+		CardData.from_dict(r209_repo.get_card(GameEngine.SYS_UPGRADE_ID).to_dict())]
+	r209_e.state.energy = 10
+	r209_e.cast_sys_upgrade(1, 0)
+	var r209_tw_pre: CardData = r209_e.state.hand[0]
+	check(r209_tw_pre.upgrade_stacks == 1,
+		"R209 系统升级：手牌里的侦察塔被改造后**带 1 层**（实际 %d）"
+			% r209_tw_pre.upgrade_stacks)
+	r209_e.play_from_hand(0, Vector2i(4, 1))
+	var r209_tp: Placement = r209_e.state.unit_at(Vector2i(4, 1))
+	check(r209_tp != null and r209_tp.upgrade_stacks == 1,
+		"R209 侦察塔：上场时把**随身的 1 层**接到 Placement（实际 %s）"
+			% (str(r209_tp.upgrade_stacks) if r209_tp != null else "null"))
+	var r209_foe: Placement = r209_e.state.place(
+			_card(1053, "骷髅兵", "怪物", 3, 2, 1, 1, 1), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
+	r209_foe.card = CardData.from_dict(r209_foe.card.to_dict())
+	r209_foe.card.health = 30
+	r209_foe.health = 30
+	check(r209_e._scout_aura_bonus(r209_foe, Vector2i(2, 1)) == 1,
+		"R209 侦察塔：系统升级改造 1 次 → 上场就有光环 **+1**（实际 +%d）"
+			% r209_e._scout_aura_bonus(r209_foe, Vector2i(2, 1)))
+	check(r209_tp.effective_power() == 0,
+		"R209 侦察塔：改造仍然**不给塔加攻**（0 攻就是 0 攻，实际 %d）"
+			% r209_tp.effective_power())
+	r209_e._hit_unit(r209_foe, 5, "R209：队友造成的伤害")
+	check(r209_foe.health == 30 - 5 - 1,
+		"R209 侦察塔：任意来源 5 伤 → 实际掉 %d（5 + 光环 1）" % (30 - r209_foe.health))
+	# ---- ③ 其他卡：上场后卡面徽标 / 信息栏显示「改造 ×N」----
+	var r209_e3 := _new_engine([], 30, 30, -1, false)
+	r209_e3.start_game()
+	r209_e3.state.hand = [CardData.from_dict(r209_repo.get_card(8003).to_dict()),
+			CardData.from_dict(r209_repo.get_card(GameEngine.SYS_UPGRADE_ID).to_dict())]
+	r209_e3.state.energy = 10
+	r209_e3.cast_sys_upgrade(1, 0)
+	r209_e3.play_from_hand(0, Vector2i(4, 2))
+	var r209_tree: Placement = r209_e3.state.unit_at(Vector2i(4, 2))
+	var r209_badge_txt := ""
+	for r209_b: Dictionary in r209_tree.status_badges():
+		r209_badge_txt += str(r209_b["text"]) + "｜"
+	check(r209_badge_txt.contains("改造 ×1"),
+		"R209 卡面徽标：被系统升级过的树人上场后显示「改造 ×1」（实际 %s）" % r209_badge_txt)
+	var r209_entry_txt := ""
+	for r209_s: Dictionary in r209_tree.status_entries():
+		r209_entry_txt += str(r209_s["label"]) + "｜"
+	check(r209_entry_txt.contains("改造 ×1"),
+		"R209 信息栏：同样列出「改造 ×1」（实际 %s）" % r209_entry_txt)
+	# ---- ④ 批量改造 8031 ----
+	var r209_e4 := _new_engine([], 30, 30, -1, false)
+	r209_e4.start_game()
+	r209_e4.state.hand = [CardData.from_dict(r209_repo.get_card(8003).to_dict()),
+			CardData.from_dict(r209_repo.get_card(GameEngine.BATCH_UPGRADE_ID).to_dict())]
+	r209_e4.state.energy = 10
+	r209_e4.use_spell(1)
+	check(r209_e4.state.hand[0].upgrade_stacks == 1,
+		"R209 批量改造：手牌里的树人带 1 层（实际 %d）"
+			% r209_e4.state.hand[0].upgrade_stacks)
+	# ---- ⑤ 批量传输 8040 ----
+	var r209_e5 := _new_engine([], 30, 30, -1, false)
+	r209_e5.start_game()
+	r209_e5.state.hand = [CardData.from_dict(r209_repo.get_card(8003).to_dict()),
+			CardData.from_dict(r209_repo.get_card(GameEngine.BATCH_TRANSFER_ID).to_dict())]
+	r209_e5.state.deck.clear()
+	r209_e5.state.energy = 10
+	r209_e5.use_spell(1)
+	check(r209_e5.state.hand[0].upgrade_stacks == 1,
+		"R209 批量传输：手牌里的树人带 1 层（实际 %d）"
+			% r209_e5.state.hand[0].upgrade_stacks)
+	# ---- ⑥ 生产订单 8048：产出的两张素体天生 1 层 ----
+	var r209_e6 := _new_engine([], 30, 30, -1, false)
+	r209_e6.start_game()
+	r209_e6.state.deck.clear()
+	r209_e6.state.hand = [
+			CardData.from_dict(r209_repo.get_card(GameEngine.PROD_ORDER_ID).to_dict())]
+	r209_e6.state.energy = 10
+	r209_e6.use_spell(0)
+	var r209_prod_ok := r209_e6.state.deck.size() == 2
+	for r209_pc: CardData in r209_e6.state.deck:
+		if r209_pc.id != 8025 or r209_pc.upgrade_stacks != 1:
+			r209_prod_ok = false
+	check(r209_prod_ok,
+		"R209 生产订单：卡组 +2 张素体，各带 1 层（实际 %d 张 / 层数 %s）"
+			% [r209_e6.state.deck.size(),
+				str(r209_e6.state.deck.map(func(x: CardData): return x.upgrade_stacks))])
+	# ---- ⑦ 自主升级 8045：牌库里的那张被改造 → 带 1 层 ----
+	var r209_e7 := _new_engine([], 30, 30, -1, false)
+	r209_e7.start_game()
+	r209_e7.state.deck.clear()
+	r209_e7.state.deck.append(CardData.from_dict(r209_repo.get_card(8003).to_dict()))
+	r209_e7.state.effects = [
+			CardData.from_dict(r209_repo.get_card(GameEngine.AUTO_UPGRADE_ID).to_dict())]
+	r209_e7._auto_upgrade(GameEngine.SIDE_SELF)
+	check(r209_e7.state.deck[0].upgrade_stacks == 1,
+		"R209 自主升级：牌库里被改造的树人带 1 层（实际 %d）"
+			% r209_e7.state.deck[0].upgrade_stacks)
+	# ---- ⑧ 返修 9127：弃牌区回手的那张带 1 层 ----
+	var r209_e8 := _new_engine([], 30, 30, -1, false)
+	r209_e8.start_game()
+	r209_e8.state.hand.clear()
+	r209_e8.state.discard = [CardData.from_dict(r209_repo.get_card(8003).to_dict())]
+	r209_e8.state.energy = 10
+	r209_e8._overhaul_spell(GameEngine.SIDE_SELF)
+	var r209_oh_ok: bool = r209_e8.overhaul_recall(0)
+	check(r209_oh_ok and r209_e8.state.hand[0].upgrade_stacks == 1,
+		"R209 返修：从弃牌区回手的树人带 1 层（实际 %s）"
+			% (str(r209_e8.state.hand[0].upgrade_stacks) if r209_oh_ok else "回手失败"))
+	# ---- ⑧b 代达罗斯 8060：手牌 / 牌库 / 弃牌区里的友军也各记一层 ----
+	var r209_e8b := _new_engine([], 30, 30, -1, false)
+	r209_e8b.start_game()
+	r209_e8b.state.hand = [CardData.from_dict(r209_repo.get_card(8003).to_dict())]
+	r209_e8b.state.deck = [CardData.from_dict(r209_repo.get_card(8003).to_dict())]
+	r209_e8b.state.discard = [CardData.from_dict(r209_repo.get_card(8003).to_dict())]
+	var r209_dae: Placement = r209_e8b.state.place(
+			CardData.from_dict(r209_repo.get_card(8003).to_dict()), Vector2i(4, 3),
+			GameEngine.SIDE_SELF)
+	r209_e8b._daedalus_upgrade(r209_dae)
+	check(r209_e8b.state.hand[0].upgrade_stacks == 1
+			and r209_e8b.state.deck[0].upgrade_stacks == 1
+			and r209_e8b.state.discard[0].upgrade_stacks == 1,
+		"R209 代达罗斯：手牌 / 牌库 / 弃牌区的友军各记 1 层（实际 %s）"
+			% str([r209_e8b.state.hand[0].upgrade_stacks,
+				r209_e8b.state.deck[0].upgrade_stacks,
+				r209_e8b.state.discard[0].upgrade_stacks]))
+	# ---- ⑨ 场上改造**不写回卡**（离场还原后层数回到随身值）----
+	var r209_e9 := _new_engine([], 30, 30, -1, false)
+	r209_e9.start_game()
+	var r209_plain: Placement = r209_e9.state.place(
+			CardData.from_dict(r209_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+			GameEngine.SIDE_SELF)
+	r209_e9.state.hand = [CardData.from_dict(
+			r209_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
+	r209_e9.state.energy = 10
+	r209_e9.use_spell(0, Vector2i(4, 1))
+	check(r209_plain.upgrade_stacks == 1 and r209_plain.card.upgrade_stacks == 0,
+		"R209 场上改造：只加 Placement 层数（%d），不写回卡面（%d）"
+			% [r209_plain.upgrade_stacks, r209_plain.card.upgrade_stacks])
+	var r209_back := r209_e9._card_leaving_field(r209_plain)
+	check(r209_back.upgrade_stacks == 0,
+		"R209 离场还原：交出去的卡**只带随身层数**（实际 %d）"
+			% r209_back.upgrade_stacks)
+	# ================================================================
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

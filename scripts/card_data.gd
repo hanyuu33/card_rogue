@@ -101,6 +101,17 @@ var trigger: String = ""
 ## 放在卡面（而不是引擎里按卡名/trait 硬编码）是为了**加新卡不用改引擎**。
 var upgrade_atk_bonus: int = 0
 var upgrade_hp_bonus: int = 0
+## **这张卡随身携带的「改造层数」**（R209）—— 手牌 / 牌库 / 弃牌区里被改造过几次。
+##
+## 与 `Placement.upgrade_stacks` 是同一口径的**两段**：
+##   * **上桌前**的改造（系统升级 8039 / 批量改造 8031 / 批量传输 8040 / 自主升级 8045 /
+##     生产订单 8048 / 回收 8064 / 返修 9127）把数值烤进这张卡的副本，层数记在这里 ——
+##     否则那些卡上场后 `upgrade_stacks` 从 0 开始，侦察塔的光环（每层 +1 易伤）与卡面
+##     「改造 ×N」徽标都看不到改造（用户实测报「系统升级改造侦查塔后没有获得一层改造」）。
+##   * **上场后**的改造（升级 8027 / 自我修复 / 改造工厂…）只加 `Placement.upgrade_stacks`，
+##     **不写回这里** —— 那是「只在场上有效」的加固，离场即消失（R86 口径不变）。
+## `FieldState.place()` 是唯一衔接口：`p.upgrade_stacks = card.upgrade_stacks`。
+var upgrade_stacks: int = 0
 ## **持续型场地每回合的回血量**（R88）：清泉 8028 = 2、维修间 8036 = 2，其余 = 0。
 ## 0 = 这张持续型场地不回血（判据：`GameEngine._field_aura_tick` 靠它决定要不要结算，
 ## 以及结算多少 —— 之前那里硬编码 `f.id == FOUNTAIN_ID`，加第二张持续型场地就会被忽略）。
@@ -139,6 +150,7 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.trigger = str(d.get("trigger", ""))
 	c.upgrade_atk_bonus = int(d.get("upgrade_atk_bonus", 0))
 	c.upgrade_hp_bonus = int(d.get("upgrade_hp_bonus", 0))
+	c.upgrade_stacks = maxi(0, int(d.get("upgrade_stacks", 0)))
 	c.field_heal = int(d.get("field_heal", 0))
 	c.own_copy = bool(d.get("own_copy", false))
 	# ⚠️ 数组字段**必须逐个 append**（不能直接接字典里那个 Array）：
@@ -163,6 +175,9 @@ func to_dict() -> Dictionary:
 		# ⚠️ `is_ephemeral` **故意不进** —— 衍生物序列化出去应当退化成普通卡。
 		"trigger": trigger,
 		"upgrade_atk_bonus": upgrade_atk_bonus, "upgrade_hp_bonus": upgrade_hp_bonus,
+		# R209：随身改造层数必须随序列化走（复制 / 离场还原 / 联机共用这一条通道），
+		# 漏了它 = 上场后层数静默归 0（侦察塔光环失效）。
+		"upgrade_stacks": upgrade_stacks,
 		# ⚠️ `field_heal` **必须**在这里 —— `from_dict(card.to_dict())` 是复制 /
 		# 改造 / 离场还原 / 联机序列化的统一通道，漏了它字段会静默归 0
 		#（持续型场地直接失效）。

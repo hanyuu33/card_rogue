@@ -223,16 +223,14 @@ var _infiltrate_src := Vector2i(-1, -1)   # 潜入（9100）第一段选中的�
 ## 「双向传送」（8061，R102）的**两段式**第一段：已选中的**第一个单位**所在格
 ## （敌我皆可，所以不像 `_infiltrate_src` 那样限己方）。第二段点另一个单位即交换。
 var _swap_src := Vector2i(-1, -1)
-## 「系统升级」（8039，R90）的**两段式**第一段：已选中的「系统升级」手牌下标（-1 = 未选）。
-## 它的目标是**手牌里**的卡（不是棋盘），所以不能走 `spell_targets`（那套是棋盘格），
-## 选中后要**点手牌**完成第二段 —— 靠这个变量标记「正在等玩家选手牌」。
+## ── R209：手牌目标卡的三位「自己」下标（-1 = 不在选卡）──
+## 「系统升级」8039 / 「回收」8064 / 「填充」9146 的目标都在**手牌里**（不是棋盘），
+## 所以不能走 `spell_targets`（那套是棋盘格）。三者**统一**：点第二下只记下标，
+## `_sync_pick()` 下一帧弹**全屏选卡页**，确认时才调 `cast_*` 结算。
+## ⚠️ 旧版是「再点一张手牌」的两段式：手牌是扇形叠着画的，目标常被压住点不准，
+##    用户实测报「除了填充，还有一些选手卡的没有弹出选卡界面」。别再写回点击式。
 var _sys_upgrade_idx := -1
-## 「回收」（8064，R198，机械之心 2 费史诗）的**两段式**第一段：已选中的「回收」
-## 手牌下标（-1 = 未选）。与「系统升级」同套路，但目标**不限盟友/工事** ——
-## 回收是把目标换成素体，手牌里任何卡都能当目标（除它自己）。
 var _recycle_idx := -1
-## 「填充」（9146，R202）的**两段式**第一段：已选中的「填充」手牌下标。
-## 与「系统升级」「回收」同套路，目标在手牌里。
 var _reload_idx := -1
 var status_text := ""
 ## R123：棋盘滚动偏移（0 .. _grid_scroll_max()）；滚轮 / 空格左键拖动改变它。
@@ -717,6 +715,31 @@ func _ready() -> void:
 		status_text = "R205：填充 → 弹出选卡页，点一张手牌变形成聚能炮击"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--sysuppick" in args and engine != null:
+		# 演示（R209）：系统升级（8039）也弹全屏选卡页 —— 候选**只列盟友 / 工事**，
+		# 技能卡（攻击 8002）不进候选（旧点击式会让人点了才被拒）。
+		engine.state.hand.clear()
+		engine.state.hand.append(repo.get_card(8004))                  # 熊（候选）
+		engine.state.hand.append(repo.get_card(GameEngine.SYS_UPGRADE_ID))
+		engine.state.hand.append(repo.get_card(8002))                  # 攻击（技能，不入候选）
+		engine.state.energy = 3
+		_sys_upgrade_idx = 1
+		_demo_pick_sel = 0
+		status_text = "R209：系统升级 → 选卡页只列盟友 / 工事（技能卡不在候选里）"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--recyclepick" in args and engine != null:
+		# 演示（R209）：回收（8064）—— 候选 = 手里**任意**一张卡（技能卡也能回收）。
+		engine.state.hand.clear()
+		engine.state.hand.append(repo.get_card(8002))                  # 攻击（技能，候选）
+		engine.state.hand.append(repo.get_card(GameEngine.RECYCLE_ID))
+		engine.state.hand.append(repo.get_card(8004))                  # 熊（候选）
+		engine.state.energy = 3
+		_recycle_idx = 1
+		_demo_pick_sel = 0
+		status_text = "R209：回收 → 选卡页列出全部手牌（除回收自己）"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--trapper" in args and engine != null:
 		# 演示（R116）：捕兽大师 9126 的**亡语** —— 先上场、再当场打死它 →
 		# 它倒下的那一格变成一张**随机陷阱**（斜纹格 + 角标）。
@@ -798,6 +821,34 @@ func _ready() -> void:
 		var r120_tp2 := engine.state.unit_at(Vector2i(4, 1))
 		status_text = "R120：塔 %d攻/%d血/%d层（改造不给塔加攻）→ 范围内(3,1) 6伤变8；范围外(0,0) 只吃6" % [
 				r120_tp2.effective_power(), r120_tp2.health, r120_tp2.upgrade_stacks]
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--sysupfield" in args and engine != null:
+		# 演示（R209）：**系统升级改的侦察塔上场自带 1 层**（用户报的那条）——
+		# 走真实路径（cast_sys_upgrade → play_from_hand），不手工摆层数；
+		# 出图核验：卡面徽标「改造 ×1」+ 左栏「光环：范围内敌人受伤 +1」+ 飘字。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		engine.state.hand.append(CardData.from_dict(
+				repo.get_card(GameEngine.SCOUT_TOWER_ID).to_dict()))
+		engine.state.hand.append(CardData.from_dict(
+				repo.get_card(GameEngine.SYS_UPGRADE_ID).to_dict()))
+		engine.cast_sys_upgrade(1, 0)
+		engine.play_from_hand(0, Vector2i(4, 1))
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+		engine._hit_unit(engine.state.unit_at(Vector2i(3, 1)), 6, "演示：系统升级过的塔")
+		var r209_demo_tp: Placement = engine.state.unit_at(Vector2i(4, 1))
+		# 左栏信息面板只在 `_hover_card != null`（或选中）时才画 —— 只设 `_hover_pl` 不够。
+		_hover_card = r209_demo_tp.card
+		_hover_pl = r209_demo_tp
+		_hover_hand = -1
+		status_text = "R209：系统升级改的侦察塔上场 → %d 层 / %d 攻 / %d 血；范围内 6 伤变 %d" % [
+				r209_demo_tp.upgrade_stacks, r209_demo_tp.effective_power(),
+				r209_demo_tp.health,
+				6 + engine._scout_aura_bonus(engine.state.unit_at(Vector2i(3, 1)),
+						Vector2i(3, 1))]
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--xtext" in args and engine != null:
@@ -1249,8 +1300,8 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--sysup" in args and engine != null:
-		# 演示（R90）：两张「改造手牌」的技能——
-		#   ① 系统升级：进入两段式等目标状态（手牌里可改造的卡带青色「可改造」标记）；
+		# 演示（R90 / R209）：两张「改造手牌」的技能——
+		#   ① 系统升级：弹**全屏选卡页**（候选只列盟友 / 工事；R209 前是手牌上点第二下）；
 		#   ② 批量传输：手牌 3 张一起改造 + 抽 1 张。
 		RunState.player_class = PlayerClass.MECH
 		engine.state.hand.clear()
@@ -1264,10 +1315,9 @@ func _ready() -> void:
 		engine.state.reset_units(GameEngine.SIDE_SELF)
 		_clear_selection()
 		selection = ["hand", 3]
-		_use_hand_card(3)          # 第一段：只记下它，等点手牌
-		_demo_hover_idx = 0        # 悬停树人，让「可改造」标记清楚可见
-		status_text = "R90 系统升级：青框「可改造」= 合法目标（盟友/工事）；" + \
-			"点它 → 树人变 4 费 6 攻 14 血（**本场战斗永久**，+1费/+3力/+6血）"
+		_use_hand_card(3)          # 记下「系统升级」自己 → `_sync_pick()` 弹选卡页
+		status_text = "R90/R209 系统升级：选卡页只列盟友 / 工事（技能卡不在候选）；" + \
+			"选树人 → 4 费 6 攻 14 血（本场战斗永久，+1费/+3力/+6血）"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--batcht" in args and engine != null:
@@ -2878,47 +2928,8 @@ func _on_left_click(pos: Vector2) -> void:
 			_say("现在是敌方回合，等对手行动完再出牌")
 			return
 		_pass_moved_pending()  # 切去选手牌 = 放弃已移动单位的攻击
-		# R90「系统升级」第二段：正在等玩家点一张**手牌**时，点哪张就是改造目标。
-		# 放在「再点一次 = 使用」之前 —— 否则会先把「系统升级」自己打出去。
-		if _sys_upgrade_idx >= 0:
-			if hi == _sys_upgrade_idx:
-				_sys_upgrade_idx = -1
-				_clear_selection()
-				status_text = "已取消：系统升级仍在手牌（未扣费）"
-				queue_redraw()
-				return
-			var tgt: CardData = engine.state.hand[hi]
-			if tgt.kind != "盟友" and not tgt.is_fort():
-				_say("只能改造盟友或工事（%s 是%s）" % [tgt.card_name, tgt.kind])
-				return
-			var src := _sys_upgrade_idx
-			_sys_upgrade_idx = -1
-			_clear_selection()
-			var su_card: CardData = engine.state.hand[src]
-			status_text = "系统升级 → %s" % engine.cast_sys_upgrade(src, hi)
-			_net_send({"type": "action", "act": "spell", "card": su_card.to_dict(),
-					"target": null})
-			queue_redraw()
-			return
-		# R198「回收」第二段：正在等玩家点一张**手牌**时，点哪张就把哪张换成素体。
-		# 与「系统升级」同套路（都排在「再点一次 = 使用」之前），但目标不限种类。
-		if _recycle_idx >= 0:
-			if hi == _recycle_idx:
-				_recycle_idx = -1
-				_clear_selection()
-				status_text = "已取消：回收仍在手牌（未扣费）"
-				queue_redraw()
-				return
-			var rc_src := _recycle_idx
-			_recycle_idx = -1
-			_clear_selection()
-			var rc_card: CardData = engine.state.hand[rc_src]
-			status_text = "回收 → %s" % engine.cast_recycle(rc_src, hi)
-			_net_send({"type": "action", "act": "spell", "card": rc_card.to_dict(),
-					"target": null})
-			queue_redraw()
-			return
-		# R205：「填充」已改成**弹全屏选卡页**（`_sync_pick`）—— 手牌点击不再承担第二段。
+		# R209：手牌点击**不再**承担「再点一张 = 选目标」的第二段 —— 系统升级 / 回收 /
+		# 填充三种手牌目标卡都在弹出选卡页后就由 `_pick` 接管，这里只剩「再点一次 = 使用」。
 		if selection != null and selection[0] == "hand" and selection[1] == hi:
 			_use_hand_card(hi)  # 再点一次 = 使用
 		else:
@@ -2978,20 +2989,27 @@ func _use_hand_card(i: int) -> void:
 				card.card_name, GameEngine.WHIRL_BLADE_NEED, engine.state.self_card_plays])
 		_clear_selection()
 		return
-	# 「系统升级」（8039，R90）：目标在**手牌**里，所以**不进 spell_targets**
-	# （那套是棋盘格）—— 这里只记下它自己，等玩家再点一张手牌。
+	# 「系统升级」（8039，R209）：目标在**手牌**里，所以**不进 spell_targets**
+	# （那套是棋盘格）。与「填充」统一 —— 只记下标，`_sync_pick()` 下一帧弹**全屏选卡页**。
 	if card.id == GameEngine.SYS_UPGRADE_ID:
+		if _sysup_options(i).is_empty():
+			_say("系统升级：手牌里没有可改造的盟友或工事（系统升级仍在手牌）")
+			_clear_selection()
+			return
 		_sys_upgrade_idx = i
-		status_text = "系统升级：点手牌里的一个**盟友或工事**（再点一次系统升级取消）"
+		status_text = "系统升级：在弹出的选卡页里点一张盟友或工事"
 		return
-	# 「回收」（8064，R198）：目标在**手牌**里且不限种类 —— 这里只记下它自己，
-	# 等玩家再点一张手牌（点它自己 = 取消）。
+	# 「回收」（8064，R209）：目标在手牌里且**不限种类**，同样走选卡页。
 	if card.id == GameEngine.RECYCLE_ID:
+		if _recycle_options(i).is_empty():
+			_say("回收：手牌里没有可回收的卡（回收仍在手牌）")
+			_clear_selection()
+			return
 		_recycle_idx = i
-		status_text = "回收：点手牌里的一张卡（再点一次回收取消）"
+		status_text = "回收：在弹出的选卡页里点一张手牌"
 		return
 	# 「填充」（9146，R202 / R205）：目标在**手牌**里且不限种类。
-	# R205：不再靠「再点一张手牌」两段式 —— 直接弹**全屏选卡页**（与乌鸦 / 取牌同一套）：
+	# 最早就是选卡页（R205 从点击式改过来），R209 让系统升级 / 回收照同一套路走。
 	#   `_reload_idx` 一置，`_sync_pick()` 下一帧自动 open；选完点「确认填充」才结算。
 	if card.id == GameEngine.RELOAD_ID:
 		if _reload_options(i).is_empty():
@@ -3555,6 +3573,11 @@ func _pick_active_kind() -> String:
 	# 选一张卡变化」。原来靠「再点一张手牌」两段式，手牌被扇形压住时很难点中。
 	if _reload_idx >= 0:
 		return "reload"
+	# R209：系统升级 / 回收也走选卡页（与填充同一套，见 `_build_pick_cfg`）
+	if _sys_upgrade_idx >= 0:
+		return "sysup"
+	if _recycle_idx >= 0:
+		return "recycle"
 	if engine.crow_pending:
 		return "crow"
 	if engine.whale_pending:
@@ -3575,6 +3598,30 @@ func _pick_active_kind() -> String:
 func _reload_options(skip: int) -> Array:
 	## 「填充」的候选 = 手牌里**除它自己以外**的所有卡（业务下标 = 手牌下标）。
 	## `skip` = 填充自己那张的手牌下标（调用方传 `_reload_idx` 或刚点的那张）。
+	var out: Array = []
+	for i in engine.state.hand.size():
+		if i != skip:
+			out.append(i)
+	return out
+
+
+func _sysup_options(skip: int) -> Array:
+	## 「系统升级」（8039）的候选 = 手牌里**除它自己以外**的盟友 / 工事（业务下标 = 手牌下标）。
+	## 与引擎 `_sys_upgrade_hand_card` 的判定同口径 —— 提前把技能 / 场地 / 效果卡滤掉，
+	## 玩家不会「选了才被拒」（旧点击式常有这个白试）。
+	var out: Array = []
+	for i in engine.state.hand.size():
+		if i == skip:
+			continue
+		var c: CardData = engine.state.hand[i]
+		if c.kind == "盟友" or c.is_fort():
+			out.append(i)
+	return out
+
+
+func _recycle_options(skip: int) -> Array:
+	## 「回收」（8064）的候选 = 手牌里**除它自己以外**的任意一张卡（不限种类 ——
+	## 回收就是把卡换成素体，技能 / 场地卡同样能当目标）。
 	var out: Array = []
 	for i in engine.state.hand.size():
 		if i != skip:
@@ -3652,6 +3699,24 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"note": "点卡选中，再点确认 —— 它原位变成「聚能炮击」；填充本身 0 费",
 					"cards": lopts.map(func(i: int) -> CardData: return engine.state.hand[i]),
 					"max_sel": 1, "confirm_label": "确认填充",
+					"cancel_label": "取消（不扣费）"}
+		"sysup":
+			# R209：系统升级（8039）—— 候选只列盟友 / 工事；确认后费用 +1 / 力 +3 / 生 +6。
+			var uopts: Array = _sysup_options(_sys_upgrade_idx)
+			return {"kind": k, "short": "系统升级", "opts": uopts,
+					"title": "系统升级：选择一张手牌（盟友 / 工事）施加「改造」",
+					"note": "费用 +1 / 力量 +3 / 生命 +6（本场战斗永久），并记一层改造",
+					"cards": uopts.map(func(i: int) -> CardData: return engine.state.hand[i]),
+					"max_sel": 1, "confirm_label": "确认改造",
+					"cancel_label": "取消（不扣费）"}
+		"recycle":
+			# R209：回收（8064）—— 候选 = 手里任意一张卡（除它自己），目标被换成素体。
+			var copts2: Array = _recycle_options(_recycle_idx)
+			return {"kind": k, "short": "回收", "opts": copts2,
+					"title": "回收：选择一张手牌，把它换成「素体」",
+					"note": "目标不限种类；素体带一层改造（0 费 1 攻 / 10 血，回合结束不弃牌）",
+					"cards": copts2.map(func(i: int) -> CardData: return engine.state.hand[i]),
+					"max_sel": 1, "confirm_label": "确认回收",
 					"cancel_label": "取消（不扣费）"}
 		"focus":
 			# 专注 / 负重减轻（8066，R201）共用本场景：文案按 engine.focus_label 切换。
@@ -3769,6 +3834,35 @@ func _on_pick_confirmed(sel: Array) -> void:
 				_net_send({"type": "action", "act": "spell",
 						"card": rl_card.to_dict(), "target": null})
 			_clear_selection()
+		"sysup":
+			# R209：确认 → `cast_sys_upgrade(系统升级下标, 目标手牌下标)`。
+			# 先抓卡对象（cast 会把它从手牌拿走），再结算、再补联机消息（与填充同口径）。
+			var uidx := int(opts[sel[0]])
+			var usrc := _sys_upgrade_idx
+			_sys_upgrade_idx = -1
+			var su_card: CardData = engine.state.hand[usrc] \
+					if usrc >= 0 and usrc < engine.state.hand.size() else null
+			if su_card == null or su_card.id != GameEngine.SYS_UPGRADE_ID:
+				_say("系统升级：手牌已变化，请重新使用")
+			else:
+				status_text = "系统升级 → %s" % engine.cast_sys_upgrade(usrc, uidx)
+				_net_send({"type": "action", "act": "spell",
+						"card": su_card.to_dict(), "target": null})
+			_clear_selection()
+		"recycle":
+			# R209：确认 → `cast_recycle(回收下标, 目标手牌下标)`。
+			var ridx2 := int(opts[sel[0]])
+			var rsrc2 := _recycle_idx
+			_recycle_idx = -1
+			var rc_card: CardData = engine.state.hand[rsrc2] \
+					if rsrc2 >= 0 and rsrc2 < engine.state.hand.size() else null
+			if rc_card == null or rc_card.id != GameEngine.RECYCLE_ID:
+				_say("回收：手牌已变化，请重新使用")
+			else:
+				status_text = "回收 → %s" % engine.cast_recycle(rsrc2, ridx2)
+				_net_send({"type": "action", "act": "spell",
+						"card": rc_card.to_dict(), "target": null})
+			_clear_selection()
 		"focus":
 			# opts 存的是代表卡 id：按 id 找卡组里第一张（与合并视图口径一致）。
 			var cid := int(opts[sel[0]])
@@ -3812,6 +3906,14 @@ func _on_pick_cancelled() -> void:
 		"reload":
 			_reload_idx = -1
 			status_text = "已取消：填充仍在手牌（未扣费）"
+			_clear_selection()
+		"sysup":
+			_sys_upgrade_idx = -1
+			status_text = "已取消：系统升级仍在手牌（未扣费）"
+			_clear_selection()
+		"recycle":
+			_recycle_idx = -1
+			status_text = "已取消：回收仍在手牌（未扣费）"
 			_clear_selection()
 		"hero":
 			var hnm := engine.state.hand[_hero_pick_idx].card_name
@@ -9072,21 +9174,9 @@ func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> voi
 		draw_rect(Rect2(r.position - pivot, r.size), Color(0.102, 0.110, 0.133, _turn_dim), true)
 	if bonus:
 		_draw_hand_bonus_mark(Rect2(r.position - pivot, r.size))
-	# R90：「系统升级」等目标时，把**可改造的手牌**（盟友 / 工事）标出来 ——
-	# 不标的话玩家不知道该点哪张（技能卡点了会被拒，白试一次）。
-	if _sys_upgrade_idx >= 0 and i != _sys_upgrade_idx \
-			and (card.kind == "盟友" or card.is_fort()):
-		var hr := Rect2(r.position - pivot, r.size)
-		draw_rect(hr, Color("8ad4f0"), false, 3.0)
-		_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "可改造", hr.position + Vector2(6, 14),
-				Color("1a5f7a"), 3, Color(0.92, 0.98, 1.0))
-	# R198：「回收」等目标时，把手牌里**所有别的卡**标出来（不限种类 ——
-	# 回收就是把卡换成素体，技能/场地卡照样能当目标）。
-	if _recycle_idx >= 0 and i != _recycle_idx:
-		var rr := Rect2(r.position - pivot, r.size)
-		draw_rect(rr, Color("8ad4f0"), false, 3.0)
-		_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "可回收", rr.position + Vector2(6, 14),
-				Color("1a5f7a"), 3, Color(0.92, 0.98, 1.0))
+	# R209：原来这里给「可改造 / 可回收」的手牌描青边 —— 系统升级 / 回收改走**全屏
+	# 选卡页**后，选卡期间手牌根本点不到（`_on_left_click` 被 `_pick` 拦下），
+	# 那两块高亮成了死代码，一并删掉（选卡页里每张候选都是可选的，不需要再标）。
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
