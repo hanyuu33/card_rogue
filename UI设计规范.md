@@ -1440,12 +1440,14 @@ R138 先补了一层「自动暗描边」兜底；**实机再看仍然不够清�
 |---|---|---|
 | 名字表 | `Mention.index()` | 卡库 + 道具库（卡牌优先），**全工程一张表**、只建一次 |
 | 解析 | `Mention.scan()` / `CardText.mark_mentions()` | `parse()` **自动**切出提及（含折行带走 `mention`） |
-| 着色 + 命中 | `Mention.text_color()` / `CardText.draw_wrapped_hits()` | 返回 `{y, hits}`；提及自动上强调色 + 淡底 + 下划线 |
+| 着色 + 命中 | `Mention.text_color_on(底色)` / `CardText.draw_wrapped_hits(..., bg_col)` | 返回 `{y, hits}`；提及自动上强调色 + 淡底 + 下划线。**有底色就必须传 `bg_col`**（R206） |
 | 悬浮件 | `Mention.tip_size()` / `draw_tip()` | 卡牌画**真实卡面**、道具画名称 + 来源 + 完整说明；暗底 + 金边（与事件页同一语言） |
-| 附带块 | `Mention.block_height()` / `draw_reference_block()` | 「这条文案里提到的」= 名字 + 摘要（折行、有上限、可传 `max_y` 截断） |
+| 附带块 | `Mention.block_height()` / `draw_reference_block()` | 「这条文案里提到的」= 名字 + 摘要（折行、有上限、可传 `max_y` 截断）。行距唯一口 = `BLOCK_HEAD_H / BLOCK_ITEM_H / BLOCK_LINE_H / BLOCK_GAP`（R206） |
 
-**颜色**：`UiTheme.MENTION_ON_LIGHT`（浅底琥珀棕）/ `MENTION_ON_DARK`（暗底亮金），
-由 `Mention.text_color(底色)` 按亮度二选一 —— 两种底色上都比正文醒目且过可读性。
+**颜色**：`UiTheme.MENTION_ON_LIGHT`（浅底琥珀棕 `#8a5f00`）/ `MENTION_ON_DARK`（暗底亮金 `#f2c14e`）。
+⚠️ **R206 纠正了判据**：`Mention.text_color(base)` 看的是**正文色**亮度，只在「正文色与底色明暗相反」
+时才对；羊皮纸面板上正文是深蓝 `#2a5a8a` → 被判成暗底 → 亮金画在奶油色上只剩 1.6:1。
+**只要有明确底色，一律走 `Mention.text_color_on(底色)`**（并按下面的纪律把它传进 `bg_col`）。
 
 **已接入的表面**：事件文案（换色 + 悬浮）、**事件选项按钮**（悬浮「获得某道具」的选项也能看详情，
 按钮描一圈与它同圆角的强调色提示环）、奖励悬浮窗的**道具详情 / 卡牌三选一详情**、
@@ -1462,6 +1464,24 @@ R138 先补了一层「自动暗描边」兜底；**实机再看仍然不够清�
 折行不丢 / 双色 / 摘要上限 / same）；几何层靠出图 ——
 `event.tscn -- --screenshot --smith`（提及换色 + 按钮环）、
 `-- --screenshot --smith --tip 铁栅栏`（悬浮件 + 附带块）。
+**排版层**（R206）：`scenes/battle.tscn -- --screenshot --r119cards --r119card 8046 --shotframe 80`
+（卡牌三选一详情条：左栏卡信息 / 右栏效果 + 提及块）、`-- --r119relic`（道具详情）、
+`-- --level 0 --projshot`（战斗左栏）。逻辑侧有 smoke 用例 `_check_card_detail_block()`。
+
+### 4.45 详情条的排版纪律（R206）
+
+用户口径：*「卡片详细效果描述」的排版乱* —— 三条硬规矩，改详情/描述面板时逐条对照：
+
+1. **提及块跟着它所属的正文那一栏走**。卡牌三选一详情条是左右两栏：左栏只放
+   「卡名 / 编号·种类·费用·稀有度 / 数值」，右栏放「效果 + 提及块」，两栏各有自己的
+   x 起点与栏宽。⚠️ 旧版 `draw_reference_block()` 的 y 取自**右栏**正文底部、x 却用
+   **左栏**起点 → 标题压着左栏数值行、摘要横跨两栏（看上去像「排版炸了」）。
+2. **横条高度按内容自适应**（`clampf(内容高 + pad*2, 96, DETAIL_STRIP_H)`），不要一律撑满；
+   一律撑满会在短描述时留一大片空白，比错位更显眼。上限之外仍靠 `max_y` 截断。
+3. **提及名的强调色按真实底色挑**（见 §4.38 的颜色段），别拿正文色猜；
+   高亮底衬要**罩住字形墨迹**（`y - size*0.96`、高 `size*1.20`），否则像贴纸没对准。
+4. 附带块的行距只用 `BLOCK_*` 常量 —— `draw_reference_block()` 实画与 `block_height()` 预算
+   必须同源，两边各写一套数字就是「预算 90px、实画 110px」的经典错位。
 
 ---
 

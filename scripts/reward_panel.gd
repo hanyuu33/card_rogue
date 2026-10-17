@@ -49,7 +49,8 @@ const FOOT_H := 66.0          # 面板底部按钮带高度
 const CARD_W := 216.0
 const CARD_H := 260.0
 const CARD_GAP := 44.0
-const DETAIL_STRIP_H := 152.0   # R155：悬停详情 = 三张卡正下方的横条（与卡组同一左右边界）
+const DETAIL_STRIP_H := 176.0   # R155：悬停详情 = 三张卡正下方的横条（与卡组同一左右边界）
+# R206：横条高度改为**按内容自适应**，这个值只是上限（可用空间不够时再往下压）
 
 var _root: Control
 var _btn: Button              # 常驻入口「✦ 待领奖励 N」
@@ -441,8 +442,17 @@ func _draw_relic() -> void:
 	_root.draw_string(_font_bold, Vector2(r.position.x + 180, r.position.y + 40),
 			"「%s」" % _entry_name(e), HORIZONTAL_ALIGNMENT_LEFT, 520,
 			UiTheme.FS_HEADING, UiTheme.INK_900)
+	# R206：改半透明奶油底（透出羊皮卷纹理）+ **高度随内容自适应** —— 与卡牌三选一的
+	# 详情条同一语言。旧版是**实心** `f0ede4` 铺满整块，短描述就在卷轴上摊一张白纸，
+	# 和两边卷边完全脱节；现在内容少就收短，长描述仍然吃满（超出照样滚动）。
+	var prose := _relic_desc_text(e)
+	var body_txt_w := PANEL_W - PAD * 4.0
+	var body_h := clampf(30.0
+			+ float(CardFace.wrap_text(_font, prose, body_txt_w, UiTheme.FS_BODY).size()) * 24.0
+			+ Mention.block_height(_font, _font_bold, prose, body_txt_w, Mention.BLOCK_HEAD_H)
+			+ 34.0, 150.0, PANEL_H - HEAD_H - FOOT_H)
 	_root.draw_rect(Rect2(r.position.x + PAD, r.position.y + HEAD_H, PANEL_W - PAD * 2.0,
-			PANEL_H - HEAD_H - FOOT_H), Color("f0ede4"), true)
+			body_h), Color(0.99, 0.97, 0.90, 0.55), true)
 	_root.draw_string(_font, Vector2(r.position.x + PAD * 2.0, r.position.y + HEAD_H + 30),
 			"%s　·　状态：%s" % [_entry_tag(e), _state_label(e)],
 			HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - PAD * 4.0, UiTheme.FS_BODY, UiTheme.INK_600)
@@ -453,11 +463,12 @@ func _draw_relic() -> void:
 	var segs := CardText.parse(_relic_desc_text(e))
 	var res := CardText.draw_wrapped_hits(_root, _font, _font_bold, segs, txt_x,
 			r.position.y + HEAD_H + 68.0 - _scroll, txt_w, UiTheme.FS_BODY, 24.0,
-			Color("3a342a"), bottom, r.position.y + HEAD_H + 56.0)
+			Color("3a342a"), bottom, r.position.y + HEAD_H + 56.0, Color("f0ede4"))
 	_mention_hits = res["hits"]
 	# 附带块：描述里提到的卡 / 道具，名字 + 摘要一并列出来（放得下才画）。
 	var blk := Mention.draw_reference_block(_root, _font, _font_bold, _relic_desc_text(e),
-			txt_x, float(res["y"]) + 12.0, txt_w, Color("3a342a"))
+			txt_x, float(res["y"]) + 12.0, txt_w, Color("3a342a"), true, -1.0,
+			Color("f0ede4"))
 	if float(blk["y"]) < bottom:
 		for h: Dictionary in blk["hits"]:
 			_mention_hits.append(h)
@@ -550,9 +561,13 @@ func _draw_cards() -> void:
 
 
 func _draw_card_detail(cands: Array) -> void:
-	## R155：详情从「钉在屏幕最右边缘」改成**三张卡正下方的横条**（与卡组同一左右边界）——
-	## 旧版悬停最左一张卡时说明文字在最右侧，眼睛横跨整个屏幕（用户：文字和卡面对不上）。
+	## R155：详情从「钉在屏幕最右边缘」改成**三张卡正下方的横条**（与卡组同一左右边界）。
 	# R167：鼠标悬停优先；**触屏**没有悬停 → 用「已点选」的那张（点一下就能读到说明）。
+	# R206：排版重做 —— ①左栏只放「卡名 / 编号·种类·费用·稀有度 / 数值」，②右栏放
+	#   「效果 + 提及块」，两栏各有自己的 x 起点与栏宽（旧版把提及块**从右栏正文底部
+	#   接到左栏 x** 起画 → 标题压着左栏数值行、摘要横跨两栏 → 用户口径「排版乱」）；
+	#   ③提及强调色按**真实底色**挑（羊皮纸浅底 → 琥珀棕，不再是奶油色上看不清的亮金）；
+	#   ④横条高度随内容自适应（下限 96 / 上限 DETAIL_STRIP_H），不再一律撑满留一大片空白。
 	var idx := _hover_card if _hover_card >= 0 else _pick_sel
 	if idx < 0 or idx >= cands.size():
 		return
@@ -560,37 +575,58 @@ func _draw_card_detail(cands: Array) -> void:
 	if card == null:
 		return
 	var pr2 := _cards_panel_rect()
-	var box := Rect2(pr2.position.x + 36.0, _cards_y() + CARD_H + 42.0, pr2.size.x - 72.0,
-			minf(DETAIL_STRIP_H, pr2.end.y - (_cards_y() + CARD_H + 42.0) - 76.0))
+	var bx := pr2.position.x + 36.0
+	var bw := pr2.size.x - 72.0
+	var top := _cards_y() + CARD_H + 40.0       # 卡下沿还挂着稀有度铭牌（+8~+32）
+	var pad := 15.0
+	var col_w := 232.0
+	var ex := bx + pad + col_w + 24.0           # 右栏起点（= 分隔线 + 13）
+	var ew := bx + bw - pad - ex                # 右栏宽度
+	var bg := Color(0.99, 0.97, 0.90)           # 横条底色（半透明铺在羊皮卷上）
+	var ink := Color("2a5a8a")                  # 效果正文色（沿用原口径）
+	var stats := CardFace.stats_line(card)
+	var segs := CardText.parse(card.effect_text)
+	var stat_lines := 0
+	if stats != "":
+		stat_lines = CardFace.wrap_text(_font, stats, col_w, UiTheme.FS_CAPTION).size()
+	var eff_lines: int = CardText.wrap_segments(_font, _font_bold, segs, ew, 13).size()
+	var blk_h := Mention.block_height(_font, _font_bold, card.effect_text, ew,
+			Mention.BLOCK_HEAD_H)
+	var right_h := 22.0 + float(eff_lines) * 19.0 + (8.0 + blk_h if blk_h > 0.0 else 0.0)
+	var left_h := 24.0 + 22.0 + float(stat_lines) * 17.0
+	var avail := pr2.end.y - top - 76.0         # 下面还留着「返回列表 / 放弃 / 确认」那一排
+	var box_h := clampf(maxf(left_h, right_h) + pad * 2.0, 96.0, minf(DETAIL_STRIP_H, avail))
+	var box := Rect2(bx, top, bw, box_h)
 	# R191：羊皮卷面板**内**的详情条 —— 淡色半透明底（透出羊皮卷纹理），无边框。
-	_root.draw_rect(box, Color(0.99, 0.97, 0.90, 0.55), true)
-	var pad := 14.0
-	var col_w := 230.0
-	var y := box.position.y + 27.0
-	_root.draw_string(_font_bold, Vector2(box.position.x + pad, y),
-			card.card_name, HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_SUBHEAD, Color.BLACK)
-	y += 23.0
-	_root.draw_string(_font, Vector2(box.position.x + pad, y),
+	_root.draw_rect(box, Color(bg.r, bg.g, bg.b, 0.55), true)
+	# 左右分栏的细分隔线：让「这张卡是什么」与「它做什么」各成一块
+	var sx := bx + pad + col_w + 11.0
+	_root.draw_line(Vector2(sx, box.position.y + pad * 0.7),
+			Vector2(sx, box.end.y - pad * 0.7), Color(0.35, 0.30, 0.20, 0.16), 1.0)
+	# ── 左栏：卡名 / 元信息 / 数值 ─────────────────────────────
+	var lx := bx + pad
+	var ly := box.position.y + pad + 19.0
+	_root.draw_string(_font_bold, Vector2(lx, ly), card.card_name,
+			HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_SUBHEAD, Color.BLACK)
+	ly += 22.0
+	_root.draw_string(_font, Vector2(lx, ly),
 			"#%d  %s · %d 费 · %s" % [card.id, card.kind, card.cost, card.rarity_name()],
 			HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
-	y += 19.0
-	var stats := CardFace.stats_line(card)
+	ly += 19.0
 	if stats != "":
-		_root.draw_string(_font, Vector2(box.position.x + pad, y), stats,
-				HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
-	# 右半：效果全文（折行）
-	var ex := box.position.x + pad + col_w + 18.0
-	var ew := box.end.x - pad - ex
-	_root.draw_string(_font, Vector2(ex, box.position.y + 25.0), "效果",
-			HORIZONTAL_ALIGNMENT_LEFT, ew, UiTheme.FS_CAPTION, Color("2a5a8a"))
-	var res := CardText.draw_wrapped_hits(_root, _font, _font_bold,
-			CardText.parse(card.effect_text), ex, box.position.y + 43.0, ew, 12, 17.0,
-			Color("2a5a8a"))
+		for t: String in CardFace.wrap_text(_font, stats, col_w, UiTheme.FS_CAPTION):
+			_root.draw_string(_font, Vector2(lx, ly), t,
+					HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
+			ly += 17.0
+	# ── 右栏：效果全文（折行，提及自动上色）+ 提及块 ───────────
+	_root.draw_string(_font_bold, Vector2(ex, box.position.y + pad + 15.0), "效果",
+			HORIZONTAL_ALIGNMENT_LEFT, ew, UiTheme.FS_CAPTION, ink)
+	var res := CardText.draw_wrapped_hits(_root, _font, _font_bold, segs, ex,
+			box.position.y + pad + 34.0, ew, 13, 19.0, ink, box.end.y - pad, -1.0, bg)
 	_mention_hits = res["hits"]
 	# R168（用户口径）：这张卡的文案提到另一张卡 / 道具时，**详情里顺带把它的信息列出来**。
 	var blk := Mention.draw_reference_block(_root, _font, _font_bold, card.effect_text,
-			box.position.x + pad, float(res["y"]) + 12.0, box.size.x - pad * 2.0,
-			Color("2a5a8a"))
+			ex, float(res["y"]) + 8.0, ew, ink, true, box.end.y - pad, bg)
 	for h: Dictionary in blk["hits"]:
 		_mention_hits.append(h)
 
@@ -863,6 +899,10 @@ func _demo_start() -> void:
 			break
 	if mode == "":
 		return
+	var forced := -1
+	for k in args.size():
+		if args[k] == "--r119card" and k + 1 < args.size():
+			forced = int(args[k + 1])
 	RunState.run_active = true
 	RunState.relics = []
 	RunState.skipped_relics = []
@@ -871,6 +911,12 @@ func _demo_start() -> void:
 	RunState.queue_relic_reward(6013)   # 叠加态的鸭（描述最长的一件，专治「介绍太长」）
 	RunState.queue_card_reward("boss")
 	RunState.queue_relic_reward(6005)
+	if forced > 0:
+		# --r119card <id>：候选固定成同一张卡的三份 —— 复现「长描述 + 提及块」的排版
+		for i in RunState.pending_rewards.size():
+			var en: Dictionary = RunState.pending_rewards[i]
+			if str(en.get("kind", "")) == "cards":
+				en["candidates"] = [forced, forced, forced]
 	if mode == "--r119chip":
 		return
 	var t := Timer.new()

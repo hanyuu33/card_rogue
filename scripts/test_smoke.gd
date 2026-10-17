@@ -13,6 +13,7 @@ extends SceneTree
 ##     「SCRIPT ERROR / Nonexistent / Invalid call」判定失败。
 
 const MapBridge = preload("res://scripts/map_bridge.gd")
+const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const FRAMES_PER_SCENE := 8
 
@@ -112,6 +113,13 @@ func _initialize() -> void:
 				RunState.gold = 500
 				RunState.pending_node = {"type": "shop"},
 			_check_shop_enchant],
+		# R206：卡牌三选一「详情条」的排版唯一性 —— 提及块必须画在右栏、预算高度与
+		# 实画行距同源、强调色按真实底色挑。用户口径：「卡片详细效果描述」的排版乱。
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "rest"},
+			_check_card_detail_block],
 		# R194：鸭之低语（6010）—— 随机走路「只走一格就停」的场景侧回归。
 		# ⚠️ 断言完必须把 `_whisper_auto` 关掉：本用例后面还有几帧，代走若还开着
 		#    就会走进新房间把场景切走 → 冒烟用例崩掉。
@@ -984,6 +992,73 @@ func _process(_delta: float) -> bool:
 		_ok += 1
 		_next()
 	return false
+
+
+func _check_card_detail_block(_scene: Variant) -> void:
+	## R206：卡牌三选一「详情条」排版 —— 三个根因都钉在这里（用户报「卡片详细效果描述」乱）：
+	##   ① 附带块从**右栏正文底部**接到**左栏 x** 起画 → 标题压着左栏数值行、摘要横跨两栏；
+	##   ② 提及标题/名字拿**正文色**猜底色 → 深蓝正文被判成暗底 → 亮金 `f2c14e` 画在奶油色
+	##      羊皮纸上（对比度 ~1.6:1，几乎看不见）；
+	##   ③ 附带块的**预算高度**与**实画行距**各写一套数字 → 自适应出来的横条装不下内容。
+	var rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	var a := rp.find("func _draw_card_detail")
+	var b := rp.find("\nfunc ", a + 10)
+	if a < 0 or b <= a:
+		_smoke_fail("R206 详情条：找不到 _draw_card_detail()")
+		return
+	var detail_src := rp.substr(a, b - a)
+	if detail_src.find("box.position.x + pad, float(res") >= 0:
+		_smoke_fail("R206 详情条：提及块还从**左栏** x 起画（应改成右栏 ex / ew）")
+		return
+	if detail_src.find('ex, float(res["y"]) + 8.0, ew') < 0:
+		_smoke_fail("R206 详情条：提及块必须画在右栏（x = ex、w = ew）")
+		return
+	# ② 强调色按真实底色挑（浅底 → 琥珀棕；暗底 → 亮金）
+	if Mention.text_color_on(UiTheme.PANEL_PAPER_BG) != UiTheme.MENTION_ON_LIGHT:
+		_smoke_fail("R206 详情条：羊皮纸浅底上提及名应取 MENTION_ON_LIGHT（琥珀棕）")
+		return
+	if Mention.text_color_on(Color("1a1c22")) != UiTheme.MENTION_ON_DARK:
+		_smoke_fail("R206 详情条：暗底上提及名应取 MENTION_ON_DARK（亮金）")
+		return
+	if Mention.text_color(Color("2a5a8a")) == UiTheme.MENTION_ON_LIGHT:
+		_smoke_fail("R206 详情条：text_color() 的「正文色」判据不该在深蓝正文上给出浅底色答案"
+				+ "（这正是本轮 bug：有底色时必须走 text_color_on）")
+		return
+	# ③ 预算高度 == 实画行距（两边都只许用 BLOCK_* 常量）
+	var ms := FileAccess.get_file_as_string("res://scripts/mention.gd")
+	if ms.is_empty():
+		_smoke_fail("R206 详情条：读不到 mention.gd（源码守卫失效）")
+		return
+	# 正向守卫：行距必须走 BLOCK_* 常量（含 head 行）；旧的字面量推进一旦回潮就报。
+	for need: String in ["ty += BLOCK_HEAD_H", "ty += BLOCK_ITEM_H", "ty += BLOCK_LINE_H",
+			"ty += BLOCK_GAP"]:
+		if not ms.contains(need):
+			_smoke_fail("R206 详情条：mention.gd 缺少行距推进 `%s`" % need)
+			return
+	for bad: String in ["ty += 16.0", "ty += 15.0", "ty += 3.0", "ty += 20.0"]:
+		if ms.contains(bad):
+			_smoke_fail("R206 详情条：附带块行距仍在写字面量 `%s`（应改用 BLOCK_* 常量）" % bad)
+			return
+	var card: CardData = Mention.card_of(8046)
+	if card == null:
+		_smoke_fail("R206 详情条：卡牌 8046 不在卡库（用例前提失效）")
+		return
+	var refs := Mention.scan(card.effect_text)
+	if refs.is_empty():
+		_smoke_fail("R206 详情条：8046 的文案应能扫出至少一个提及（用例前提失效）")
+		return
+	var f: Font = UiTheme.font()
+	var fb: Font = UiTheme.font_bold()
+	var want := Mention.BLOCK_HEAD_H + float(refs.size()) * (Mention.BLOCK_ITEM_H + Mention.BLOCK_GAP)
+	for r: Dictionary in refs:
+		want += float(Mention.summary_lines(f, r, 686.0).size()) * Mention.BLOCK_LINE_H
+	var got := Mention.block_height(f, fb, card.effect_text, 700.0, Mention.BLOCK_HEAD_H)
+	if absf(got - want) > 0.01:
+		_smoke_fail("R206 详情条：block_height 预算（%.1f）与行距公式（%.1f）不一致 —— "
+				+ "自适应高度会算歪" % [got, want])
+		return
+	print("SMOKE OK R206 详情条：提及块在右栏 / 浅底琥珀棕 / 预算高度 %.0f == 公式（%d 个提及）"
+			% [got, refs.size()])
 
 
 func _smoke_fail(msg: String) -> void:

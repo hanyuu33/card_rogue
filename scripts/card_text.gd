@@ -321,7 +321,7 @@ static func draw_wrapped(canvas: CanvasItem, font: Font, font_bold: Font, segs: 
 
 static func draw_wrapped_hits(canvas: CanvasItem, font: Font, font_bold: Font, segs: Array,
 		x: float, y: float, max_w: float, size: int, line_h: float, base_col: Color,
-		max_y := -1.0, min_y := -1.0) -> Dictionary:
+		max_y := -1.0, min_y := -1.0, bg_col := Color(0, 0, 0, 0)) -> Dictionary:
 	## 同上，但额外交出**提及的命中矩形**：`{y: 基线, hits: [{rect, name, kind, id}]}`。
 	## 提及自动上强调色 + 淡底 + 下划线 —— 既满足「名字要有颜色」，
 	## 也是「这里能悬浮」的显式提示（规范 §4.10 的提示口径升级版）。
@@ -330,6 +330,8 @@ static func draw_wrapped_hits(canvas: CanvasItem, font: Font, font_bold: Font, s
 	var fnt_b := font_bold if font_bold != null else font
 	var bold_col := base_col.darkened(0.28)
 	var mcol := Mention.text_color(base_col)
+	if bg_col.a > 0.0:
+		mcol = Mention.text_color_on(bg_col)   # R206：有真实底色就按底色挑（浅底琥珀棕）
 	var lines := wrap_segments(font, font_bold, segs, max_w, size)
 	var hits: Array = []
 	var drawn := 0
@@ -357,15 +359,17 @@ static func draw_wrapped_hits(canvas: CanvasItem, font: Font, font_bold: Font, s
 			var w: float = f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 			if not men.is_empty():
 				col = mcol
-				canvas.draw_rect(Rect2(cx - 2.0, y - size * 0.86, w + 4.0, size * 1.12),
-						Color(mcol.r, mcol.g, mcol.b, 0.13), true)
+				# R206：底衬要「罩住字形墨迹」。旧值 -0.86h / 高 1.12h 把底衬中心压到基线下方
+				# 约 0.3 个字号 → 高亮块和文字视觉错位（用户口径「贴纸没对准」）。
+				canvas.draw_rect(Rect2(cx - 2.0, y - size * 0.96, w + 4.0, size * 1.20),
+						Color(mcol.r, mcol.g, mcol.b, 0.20), true)
 			canvas.draw_string(f, Vector2(cx, y), t,
 					HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)
 			if not men.is_empty():
 				canvas.draw_line(Vector2(cx, y + 2.0), Vector2(cx + w, y + 2.0),
 						Color(mcol.r, mcol.g, mcol.b, 0.55), 1.0)
 				hits.append({
-					"rect": Rect2(cx - 2.0, y - size * 0.86, w + 4.0, size * 1.12),
+					"rect": Rect2(cx - 2.0, y - size * 0.96, w + 4.0, size * 1.20),
 					"name": str(men.get("name", "")),
 					"kind": str(men.get("kind", "")),
 					"id": int(men.get("id", 0))})

@@ -28,6 +28,12 @@ const RELIC_W := 352.0       # 道具浮窗宽度
 const RELIC_PAD := 14.0
 const BLOCK_HEAD := "这条文案里提到的"   # 附带块标题
 const BLOCK_MAX_LINES := 3               # 每个被提及项最多列几行摘要
+## R206：附带块行距**唯一口** —— `draw_reference_block()` 与 `block_height()` 共用，
+## 两边各写一份数字就是「预算 90px、实画 110px」的经典错位来源。
+const BLOCK_HEAD_H := 24.0     # 标题行 + 与第一项的间隔
+const BLOCK_ITEM_H := 18.0     # 每项「· 种类「名字」」行占位
+const BLOCK_LINE_H := 15.0     # 摘要每行
+const BLOCK_GAP := 6.0         # 项与项之间
 
 static var _index := {}      # name -> {kind, id}
 static var _cards := {}      # id -> CardData
@@ -133,6 +139,15 @@ static func text_color(base: Color) -> Color:
 	return UiTheme.MENTION_ON_LIGHT if base.get_luminance() > 0.45 else UiTheme.MENTION_ON_DARK
 
 
+static func text_color_on(bg: Color) -> Color:
+	## R206：按**真实底色**挑提及强调色（浅底琥珀棕 / 暗底亮金）。
+	## ⚠️ `text_color()` 的判据看的是**正文色**亮度 —— 只在「正文色与底色明暗相反」时才对。
+	## 羊皮纸面板上正文用深蓝 `#2a5a8a`，会被误判成暗底 → 亮金 `#f2c14e` 画在奶油色上
+	## 只剩 1.6:1：「这条文案里提到的」那行与提及名几乎看不见（R206 用户反馈）。
+	## 只要有明确底色，一律走这里。
+	return UiTheme.MENTION_ON_LIGHT if bg.get_luminance() > 0.45 else UiTheme.MENTION_ON_DARK
+
+
 static func same(a: Dictionary, b: Dictionary) -> bool:
 	## 两个引用是不是同一张卡 / 同一件道具（悬浮高亮判定用）。
 	if a.is_empty() != b.is_empty():
@@ -170,15 +185,20 @@ static func tip_size(font: Font, ref: Dictionary) -> Vector2:
 	return Vector2(w, RELIC_PAD * 2.0 + 30.0 + float(lines.size()) * 19.0)
 
 
-static func block_height(font: Font, font_bold: Font, text: String, w: float) -> float:
+static func block_height(font: Font, font_bold: Font, text: String, w: float,
+		head_h := 32.0) -> float:
 	## 「提到的卡 / 道具」附带块需要多高（0 = 这条文案没有提及）。
 	## 调用方拿它去算悬浮窗总高，好让**一个**边框把摘要一起框住。
+	## `head_h`：标题那一行的占位 —— 悬浮窗预留 **32**（= `BLOCK_HEAD_H` 24 + 8px 间距），
+	## 面板内要跟 `draw_reference_block()` 的行距**严格同源**就传 `BLOCK_HEAD_H`（R206）。
+	## ⚠️ 每项 / 摘要 / 项间距一律用上面的 `BLOCK_*` 常量，别再写字面量。
 	var refs := scan(text)
 	if refs.is_empty():
 		return 0.0
-	var h := 32.0
+	var h := head_h
 	for r: Dictionary in refs:
-		h += 16.0 + float(summary_lines(font, r, w - 14.0).size()) * 15.0 + 3.0
+		h += BLOCK_ITEM_H + float(summary_lines(font, r, w - 14.0).size()) * BLOCK_LINE_H \
+				+ BLOCK_GAP
 	return h
 
 
@@ -262,7 +282,7 @@ static func summary_lines(font: Font, ref: Dictionary, max_w: float, max_lines :
 
 static func draw_reference_block(canvas: CanvasItem, font: Font, font_bold: Font,
 		text: String, x: float, y: float, w: float, base_col: Color,
-		draw_head := true, max_y := -1.0) -> Dictionary:
+		draw_head := true, max_y := -1.0, bg_col := Color(0, 0, 0, 0)) -> Dictionary:
 	## 「这条文案里提到的：…」附带块 —— 把被提及的卡 / 道具**名字 + 摘要**一并列出来
 	## （用户口径 R168：卡片文本提到另一张卡牌时，看这张卡的详情要能顺带看到那张卡）。
 	## 返回 `{y: 画完后的基线, hits: [{rect, name, kind, id}]}`，`hits` 交给悬浮层即可。
@@ -273,6 +293,8 @@ static func draw_reference_block(canvas: CanvasItem, font: Font, font_bold: Font
 	var ty := y
 	var hits: Array = []
 	var mcol := text_color(base_col)
+	if bg_col.a > 0.0:
+		mcol = text_color_on(bg_col)   # R206：有真实底色就按底色挑，别拿正文色猜
 	if draw_head:
 		canvas.draw_line(Vector2(x, ty - 7.0), Vector2(x + w, ty - 7.0),
 				Color(base_col.r, base_col.g, base_col.b, 0.22), 1.0)
@@ -280,7 +302,7 @@ static func draw_reference_block(canvas: CanvasItem, font: Font, font_bold: Font
 			return res
 		canvas.draw_string(font_bold, Vector2(x, ty + 6.0), BLOCK_HEAD,
 				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_CAPTION, base_col)
-		ty += 20.0
+		ty += BLOCK_HEAD_H
 	for r: Dictionary in refs:
 		if max_y >= 0.0 and ty + 16.0 > max_y:
 			break
@@ -288,23 +310,23 @@ static func draw_reference_block(canvas: CanvasItem, font: Font, font_bold: Font
 		var head := "· %s「%s」" % [kind_label(r), nm]
 		var hw: float = font_bold.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1,
 				UiTheme.FS_CAPTION).x
-		canvas.draw_rect(Rect2(x - 2.0, ty - 11.0, hw + 4.0, 15.0),
-				Color(mcol.r, mcol.g, mcol.b, 0.10), true)
+		var hrect := Rect2(x - 3.0, ty - 12.0, hw + 6.0, 18.0)
+		canvas.draw_rect(hrect, Color(mcol.r, mcol.g, mcol.b, 0.14), true)
 		canvas.draw_string(font_bold, Vector2(x, ty), head,
 				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_CAPTION, mcol)
-		canvas.draw_line(Vector2(x, ty + 2.0), Vector2(x + hw, ty + 2.0),
-				Color(mcol.r, mcol.g, mcol.b, 0.55), 1.0)
-		hits.append({"rect": Rect2(x - 2.0, ty - 11.0, hw + 4.0, 15.0),
+		# R206：这里原来还画一条下划线，压着 12 号字的字底（底衬底边也在同一高度）
+		# → 两重装饰叠成「文字被上下夹住」；底衬已足够表达「这里能悬浮看详情」，删掉。
+		hits.append({"rect": hrect,
 				"name": nm, "kind": str(r["kind"]), "id": int(r["id"])})
-		ty += 16.0
+		ty += BLOCK_ITEM_H
 		for line: String in summary_lines(font, r, w - 14.0):
 			if max_y >= 0.0 and ty > max_y:
 				break
 			canvas.draw_string(font, Vector2(x + 12.0, ty), line,
 					HORIZONTAL_ALIGNMENT_LEFT, w - 12.0, UiTheme.FS_CAPTION,
 					Color(base_col.r, base_col.g, base_col.b, 0.78))
-			ty += 15.0
-		ty += 3.0
+			ty += BLOCK_LINE_H
+		ty += BLOCK_GAP
 	res["y"] = ty
 	res["hits"] = hits
 	return res
