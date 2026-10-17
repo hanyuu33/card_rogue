@@ -18,6 +18,14 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
+# 选卡覆盖层的卡片网格几何（绘制 + 命中**共用**，唯一口 `_pick_card_rect`）
+const PICK_COLS := 5
+const PICK_CARD_W := 150.0
+const PICK_CARD_H := 190.0
+const PICK_GAP_X := 20.0
+const PICK_GAP_Y := 16.0
+const PICK_Y0 := 130.0
+
 # 附魔定义（id → 元数据）
 const ENCHANTS := [
 	{"id": "costdown", "name": "费用 -1", "desc": "每次战斗初次使用费用 -1（只能选费用 > 1 且非 X 费的卡）",
@@ -77,6 +85,22 @@ func _ready() -> void:
 	var ps := args.find("--picksel")
 	if ps >= 0 and ps + 1 < args.size():
 		_sel_row1 = int(args[ps + 1])
+	# 演示参数（R204 附魔卡死回归）：
+	#   `--ench N`  打开附魔选卡页并「首击」选中第 N 张 → 截图里的高亮必须还在
+	#               （旧 bug 会在重绘时把选中抹掉 → 截图里没有高亮 / 点不动）。
+	#   `--ench2 N` 再点一次同一张 → 真的成交（覆盖层关闭 + 提示「获得附魔」）。
+	var en := args.find("--ench")
+	var en2 := args.find("--ench2")
+	if en >= 0 or en2 >= 0:
+		var pos_i := maxi(en, en2)
+		var cand := int(args[pos_i + 1]) if pos_i + 1 < args.size() else 0
+		var commit := en2 >= 0
+		var t2 := Timer.new()
+		t2.wait_time = 0.2          # 等布局定好（size 才是真实视口）
+		t2.one_shot = true
+		t2.timeout.connect(func(): _demo_enchant(cand, commit))
+		add_child(t2)
+		t2.start()
 	# 命令行 -- --screenshot：自动截图退出（出图核验用）。
 	if "--screenshot" in OS.get_cmdline_user_args():
 		var t := Timer.new()
@@ -536,31 +560,26 @@ func _draw_pick_overlay() -> void:
 	if _deleting:
 		draw_string(_font_bold, Vector2(0, 60), "选择要删除的卡",
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, Color("ff9a9a"))
-		draw_string(_font, Vector2(0, 92), "点一张卡从卡组中删除（点「取消」返回）",
+		draw_string(_font, Vector2(0, 92), "点一张卡查看（再点一次删除；点「取消」返回）",
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, Color("ece7db"))
 	else:
 		var ench: Dictionary = _row2[_enchanting]["ench"]
 		draw_string(_font_bold, Vector2(0, 60), "选择要附魔的卡 —— %s" % str(ench["name"]),
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, Color("ffd75a"))
-		draw_string(_font, Vector2(0, 92), "点一张高亮的卡完成附魔（点「取消」返回）",
+		draw_string(_font, Vector2(0, 92), "点一张高亮的卡查看（再点一次完成附魔；点「取消」返回）",
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, Color("ece7db"))
-	_build_deck_cards()
-	var cols := 5
-	var cw := 150.0
-	var ch := 190.0
-	var gapx := 20.0
-	var gapy := 16.0
-	var x0 := (vs.x - (cols * cw + (cols - 1) * gapx)) / 2.0
-	var y0 := 130.0
+	# ⚠️ 这里**绝对不能**调 `_build_deck_cards()`（R204 修卡死）：
+	# 它会把 `_sel_pick` 重置成 -1，而 `_draw()` 在每次 `queue_redraw()` 之后都会跑 →
+	# 「首击选中查看」刚设好的下标当场被抹掉 → 第二次点同一张永远走不到成交分支
+	# → 附魔 / 删除的选卡页**点什么都没反应**（表现为卡死，只能点「取消」退出）。
+	# 候选列表只在**打开覆盖层时**建一次（`_start_enchant` / `_buy_row3` 的删除分支）。
 	var any_ok := false
 	for i in _deck_cards.size():
 		var d: Dictionary = _deck_cards[i]
 		var ok: bool = d["ok"]
 		if ok:
 			any_ok = true
-		var col := i % cols
-		var row := i / cols
-		var rr := Rect2(x0 + col * (cw + gapx), y0 + row * (ch + gapy), cw, ch)
+		var rr := _pick_card_rect(i)
 		# R203：卡面只留卡名；悬停或「选中查看」都走高亮（移动端无 hover，靠选中查看）。
 		var hovered := ok and (_hover_enchant_card == i or _sel_pick == i)
 		if ok:
@@ -652,22 +671,39 @@ func _hit_at(pos: Vector2) -> int:
 	return -1
 
 
+func _pick_card_rect(i: int) -> Rect2:
+	## 选卡覆盖层第 i 张卡的矩形 —— **唯一几何口**（绘制与命中都走这里，
+	## 免得两处各写一份 150/190/gap → 改一处就点不中）。
+	## R204：卡组一长（>3 行）第 4 行就掉到屏幕外，玩家以为「点不到 / 卡死」——
+	## 这里按可用区域**整体等比缩小**（最小 0.45），保证每一张都在屏幕内、都点得到。
+	var vs := _vs()
+	var n: int = maxi(1, _deck_cards.size())
+	var rows := ceili(float(n) / float(PICK_COLS))
+	var s := 1.0
+	var total_w := PICK_COLS * PICK_CARD_W + (PICK_COLS - 1) * PICK_GAP_X
+	var total_h := rows * PICK_CARD_H + maxi(0, rows - 1) * PICK_GAP_Y
+	var avail_w: float = maxf(200.0, vs.x - 40.0)
+	var avail_h: float = maxf(200.0, vs.y - PICK_Y0 - 100.0)   # 底部留给「取消」
+	if total_w > avail_w:
+		s = minf(s, avail_w / total_w)
+	if total_h > avail_h:
+		s = minf(s, avail_h / total_h)
+	s = clampf(s, 0.45, 1.0)
+	var cw: float = PICK_CARD_W * s
+	var ch: float = PICK_CARD_H * s
+	var gx: float = PICK_GAP_X * s
+	var gy: float = PICK_GAP_Y * s
+	var x0 := (vs.x - (PICK_COLS * cw + (PICK_COLS - 1) * gx)) / 2.0
+	var col := i % PICK_COLS
+	var row := i / PICK_COLS
+	return Rect2(x0 + col * (cw + gx), PICK_Y0 + row * (ch + gy), cw, ch)
+
+
 func _enchant_card_at(pos: Vector2) -> int:
 	if _enchanting < 0 and not _deleting:
 		return -1
-	var cols := 5
-	var cw := 150.0
-	var ch := 190.0
-	var gapx := 20.0
-	var gapy := 16.0
-	var vs := _vs()
-	var x0 := (vs.x - (cols * cw + (cols - 1) * gapx)) / 2.0
-	var y0 := 130.0
 	for i in _deck_cards.size():
-		var col := i % cols
-		var row := i / cols
-		var rr := Rect2(x0 + col * (cw + gapx), y0 + row * (ch + gapy), cw, ch)
-		if rr.has_point(pos) and _deck_cards[i]["ok"]:
+		if _pick_card_rect(i).has_point(pos) and _deck_cards[i]["ok"]:
 			return i
 	return -1
 
@@ -717,6 +753,28 @@ func _start_enchant(i: int) -> void:
 	_enchanting = i
 	_hover_enchant_card = -1
 	_build_deck_cards()
+
+
+func _demo_enchant(cand: int, commit: bool) -> void:
+	## R204 演示/回归：把第二行第一件商品换成「保存」（任何卡都能吃）→ 打开选卡页 →
+	## 按**真实点击路径**点第 cand 张；commit=true 时再点一次同一张（应当成交）。
+	var save_ench: Dictionary = {}
+	for e: Dictionary in ENCHANTS:
+		if str(e["id"]) == "save":
+			save_ench = e
+			break
+	if save_ench.is_empty() or _row2.is_empty():
+		return
+	_row2[0]["ench"] = save_ench
+	_start_enchant(0)
+	if cand < 0 or cand >= _deck_cards.size():
+		queue_redraw()
+		return
+	var pos: Vector2 = _pick_card_rect(cand).get_center()
+	_on_pick_click(pos)              # 首击 → 选中查看
+	if commit:
+		_on_pick_click(pos)          # 再击同一张 → 成交
+	queue_redraw()
 
 
 func _buy_row3(i: int) -> void:
@@ -777,14 +835,22 @@ func _on_pick_click(pos: Vector2) -> void:
 	# ---- 删除模式 ----
 	if _deleting:
 		var del_price: int = _row3[0]["price"]
-		if not RunState.spend_gold(del_price):
+		if RunState.gold < del_price:
 			_set_hint("金币不足（需要 %d）" % del_price)
 			_deleting = false
 			queue_redraw()
 			return
-		var del_name: String = str(_repo.get_card(RunState.deck_ids[idx]).card_name) \
-				if _repo.get_card(RunState.deck_ids[idx]) != null else str(idx)
-		RunState.delete_deck_card(idx)
+		var del_card: CardData = null
+		if idx < RunState.deck_ids.size():
+			del_card = _repo.get_card(RunState.deck_ids[idx])
+		var del_name: String = del_card.card_name if del_card != null else str(idx)
+		# 先删卡、再扣钱（R204）：删失败绝不白扣。
+		if not RunState.delete_deck_card(idx):
+			_set_hint("删除失败")
+			_deleting = false
+			queue_redraw()
+			return
+		RunState.gold -= del_price
 		_row3[0]["sold"] = true
 		_set_hint("删除了「%s」" % del_name)
 		_deleting = false
@@ -794,17 +860,19 @@ func _on_pick_click(pos: Vector2) -> void:
 	# ---- 附魔模式 ----
 	var ench: Dictionary = _row2[_enchanting]["ench"]
 	var price: int = ench["price"]
-	if not RunState.spend_gold(price):
+	if RunState.gold < price:
 		_set_hint("金币不足（需要 %d）" % price)
 		_enchanting = -1
 		queue_redraw()
 		return
 	var mod := _ench_mod(str(ench["id"]))
+	# 先落附魔、再扣钱（R204）：附魔失败（越界 / 已有附魔）绝不白扣金币。
 	if not RunState.enchant_deck_card(idx, mod):
 		_set_hint("附魔失败")
 		_enchanting = -1
 		queue_redraw()
 		return
+	RunState.gold -= price
 	_row2[_enchanting]["sold"] = true
 	var c := _repo.get_card(RunState.deck_ids[idx])
 	_set_hint("「%s」获得附魔「%s」" % [c.card_name if c != null else str(idx), str(ench["name"])])

@@ -101,6 +101,7 @@ static func load_run() -> bool:
 	RunState.run_active = true
 	RunState.deck_ids = _int_array(d.get("deck_ids", []))
 	RunState.deck_mods = d.get("deck_mods", []) if d.get("deck_mods", []) is Array else []
+	RunState.ensure_deck_mods()   # R204：老存档没有 deck_mods → 补齐成与 deck_ids 等长
 	RunState.gold = int(d.get("gold", 100))
 	RunState.map_cells = d.get("map_cells", []) if d.get("map_cells", []) is Array else []
 	RunState.current_layer = int(d.get("current_layer", GameLayers.LAYER_DEFAULT))

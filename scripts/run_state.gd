@@ -262,7 +262,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# 开局卡组 = 公共部分 + 2 张角色基础盟友（森林精魄 → 树人；暗影刺客 → 幽影）
 	# + 角色专属卡（森林精魄 → 熊 8004；暗影刺客 → 突袭 9086）。见 PlayerClass.start_deck_ids。
 	deck_ids = PlayerClass.start_deck_ids(player_class)
-	deck_mods = []                # R181：新开一局 → 附魔清空（与 deck_ids 等长）
+	deck_mods = []                # R181：新开一局 → 附魔清空
+	ensure_deck_mods()            # R204：立刻对齐成等长（否则附魔必越界，见函数注释）
 	battle_wins = 0
 	elite_wins = 0
 	used_levels = []
@@ -1085,7 +1086,7 @@ static func _pick_level(pool: Array[Dictionary]) -> Dictionary:
 static func add_card(id: int) -> void:
 	## 卡牌奖励收下的卡加入卡组。
 	deck_ids.append(id)
-	deck_mods.append({})          # R181：附魔列表同步增长（新卡无附魔）
+	ensure_deck_mods()            # R204：附魔列表对齐（原来只 append，槽位不等长时会错位）
 
 
 static func remove_card(id: int) -> bool:
@@ -1138,8 +1139,25 @@ static func build_deck(repo: CardRepo) -> Array[CardData]:
 	return cards
 
 
+static func ensure_deck_mods() -> void:
+	## **附魔列表对齐唯一口（R204）**：`deck_mods` 必须与 `deck_ids` **等长**，
+	## 下标一一对应（`build_deck` 按 `_mod_at(i)` 给 `deck_ids[i]` 烤附魔）。
+	## ⚠️ 之前 `start_run` 只写 `deck_mods = []`（注释写着「与 deck_ids 等长」却没做），
+	##    于是 `enchant_deck_card` 里 `deck_mods[index] = mod` **越界报错** →
+	##    「附魔必定失败、钱还照扣」。所有直接改 deck_ids 的地方（演示旗标 / 读档）
+	##    都必须过这一口，别只靠 `add_card` 的 append。
+	if deck_mods.size() == deck_ids.size():
+		return
+	if deck_mods.size() > deck_ids.size():
+		deck_mods.resize(deck_ids.size())
+		return
+	while deck_mods.size() < deck_ids.size():
+		deck_mods.append({})
+
+
 static func _mod_at(index: int) -> Dictionary:
 	## 取第 index 张卡的附魔（越界 / 未附魔 → {}）。懒对齐，绝不越界崩溃。
+	ensure_deck_mods()          # R204：先对齐（演示旗标 / 读档可能留下不等长）
 	if index < 0 or index >= deck_mods.size():
 		return {}
 	var m: Variant = deck_mods[index]
@@ -1171,6 +1189,7 @@ static func enchant_deck_card(index: int, mod: Dictionary) -> bool:
 	## 返回是否成功；已附魔 / 越界 / 空 mod 都返回 false。
 	if index < 0 or index >= deck_ids.size() or mod.is_empty():
 		return false
+	ensure_deck_mods()        # R204：先对齐再写（越界就是「附魔必失败 + 白扣钱」的根因）
 	if not _mod_at(index).is_empty():
 		return false          # 已有附魔 → 拒绝（每张卡只能一个）
 	deck_mods[index] = mod

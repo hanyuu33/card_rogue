@@ -102,6 +102,16 @@ func _initialize() -> void:
 				RunState.relics = [RunState.DUCK_BLOOD_RELIC_ID]
 				RunState.pending_relic = RunState.DUCK_BLOOD_RELIC_ID,
 			_check_deck_duck_blood],
+		# R204：商店附魔「卡死」回归 —— 附魔选卡页点一张卡必须**真的能成交**。
+		# 旧 bug：`_draw_pick_overlay` 每帧重建候选列表 → 把 `_sel_pick` 抹回 -1，
+		# 于是「首击选中查看 / 再击成交」永远走不到成交，覆盖层退不出去 = 卡死。
+		["res://scenes/shop.tscn", func():
+				_reset()
+				RunState.run_active = true
+				RunState.start_run(_map())
+				RunState.gold = 500
+				RunState.pending_node = {"type": "shop"},
+			_check_shop_enchant],
 		# R194：鸭之低语（6010）—— 随机走路「只走一格就停」的场景侧回归。
 		# ⚠️ 断言完必须把 `_whisper_auto` 关掉：本用例后面还有几帧，代走若还开着
 		#    就会走进新房间把场景切走 → 冒烟用例崩掉。
@@ -433,6 +443,73 @@ func _check_deck_duck_blood(scene: Variant) -> void:
 		return
 	print("SMOKE OK 鸭血卡组编辑：多选上限 2 / 选 3 张保留最新 2 张 / 确定后卡组 %d → %d"
 			% [before, RunState.deck_ids.size()])
+
+
+func _check_shop_enchant(scene: Variant) -> void:
+	## R204：商店附魔流程必须**能走完**（用户报「附魔可能导致卡死」）。
+	## 两个根因都在这条用例里钉住：
+	##   ① `_draw_pick_overlay` 每帧重建候选列表 → 把 `_sel_pick` 抹回 -1 →
+	##      两段式点击永远走不到成交，选卡页退不出去（= 卡死）。→ 源码守卫 + 双击断言。
+	##   ② `deck_mods` 与 `deck_ids` 不等长 → `enchant_deck_card` 写入越界 →
+	##      附魔必失败（钱还照扣）。→ 等长断言。
+	# ① 源码守卫：选卡覆盖层的绘制函数里不许再出现 `_build_deck_cards()` **调用**。
+	# ⚠️ 必须逐行精确比对（整行 strip 后等于调用本身）：函数里那段「不许调它」的注释
+	#    也含这个字面量，用 contains() 会误判（R204 自己踩过）。
+	var src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	var a := src.find("func _draw_pick_overlay")
+	var b := src.find("func _build_deck_cards")
+	var bad_call := false
+	if a >= 0 and b > a:
+		for ln in src.substr(a, b - a).split("\n"):
+			if ln.strip_edges() == "_build_deck_cards()":
+				bad_call = true
+				break
+	if bad_call:
+		_smoke_fail("商店附魔：_draw_pick_overlay 里不能再调 _build_deck_cards()"
+				+ "（会把 _sel_pick 抹回 -1 → 选卡页点不动 = 卡死）")
+		return
+	# ② 附魔槽位必须与卡组等长，否则 enchant_deck_card 越界。
+	if RunState.deck_mods.size() != RunState.deck_ids.size():
+		_smoke_fail("商店附魔：deck_mods 应与 deck_ids 等长（%d vs %d）"
+				% [RunState.deck_mods.size(), RunState.deck_ids.size()])
+		return
+	# 换成「保存」附魔 —— 任何卡都能吃，保证一定有候选。
+	scene._row2.clear()
+	scene._row2.append({"ench": {"id": "save", "name": "保存", "desc": "",
+			"price": 60, "icon": ""}, "sold": false})
+	scene._start_enchant(0)
+	if (scene._deck_cards as Array).is_empty():
+		_smoke_fail("商店附魔：打开选卡页后候选列表为空")
+		return
+	var ci := -1
+	for i in (scene._deck_cards as Array).size():
+		if bool(scene._deck_cards[i]["ok"]):
+			ci = i
+			break
+	if ci < 0:
+		_smoke_fail("商店附魔：卡组里没有任何能吃「保存」的卡")
+		return
+	var idx: int = int(scene._deck_cards[ci]["idx"])
+	var gold0: int = RunState.gold
+	var pos: Vector2 = (scene._pick_card_rect(ci) as Rect2).get_center()
+	scene._on_pick_click(pos)          # 首击 → 选中查看
+	if int(scene._sel_pick) != ci:
+		_smoke_fail("商店附魔：首击应「选中查看」第 %d 张，实际 %d"
+				% [ci, int(scene._sel_pick)])
+		return
+	scene._on_pick_click(pos)          # 再击同一张 → 成交
+	if int(scene._enchanting) != -1:
+		_smoke_fail("商店附魔：成交后选卡页应关闭（_enchanting 仍 = %d）——「点了没反应」即此"
+				% int(scene._enchanting))
+		return
+	if RunState._mod_at(idx).is_empty():
+		_smoke_fail("商店附魔：第 %d 张卡没有落上附魔" % idx)
+		return
+	if RunState.gold != gold0 - 60:
+		_smoke_fail("商店附魔：应扣 60 金币（%d → %d）" % [gold0, RunState.gold])
+		return
+	print("SMOKE OK 商店附魔：首击选中 / 再击成交（卡 %d 落附魔，金币 %d → %d）"
+			% [idx, gold0, RunState.gold])
 
 
 func _check_map_scene(scene: Variant) -> void:
