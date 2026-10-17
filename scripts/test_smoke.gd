@@ -1103,6 +1103,7 @@ func _check_battle(scene: Variant) -> void:
 	_check_perf(scene)
 	_check_pick_overlay(scene)
 	_check_ee_popup(scene)
+	_check_recycle(scene)
 
 
 func _check_ee_popup(scene: Variant) -> void:
@@ -1140,6 +1141,79 @@ func _check_ee_popup(scene: Variant) -> void:
 		return
 	eng.state.enemy_effects.clear()
 	print("SMOKE OK 敌方效果开场弹窗：素材在库 / 打断不弹 / 播完弹 / 点击关 / 不重弹")
+
+
+func _check_recycle(scene: Variant) -> void:
+	## R198：回收（8064）两段式 —— 点回收 / 点任意手牌 → 换成素体（改造 +9 血）；
+	## 再点一次回收自己 = 取消（不扣费）。目标不限种类：这里刻意拿**技能卡**当目标。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("回收：拿不到 engine")
+		return
+	var repo := CardRepo.load_json()
+	var rc: CardData = repo.get_card(GameEngine.RECYCLE_ID)
+	if rc == null or rc.cost != 2 or rc.rarity != 2:
+		_smoke_fail("回收：卡面应是 2 费史诗技能")
+		return
+	# 收尾 Intro 状态（本用例只关心手牌点击，不碰巡场）
+	scene._grid_intro_t = -1.0
+	scene._grid_zoom = 1.0
+	scene._clear_selection()
+	eng.current_side = GameEngine.SIDE_SELF
+	# ── 1) 铺一手牌：回收 + 技能卡「攻击」（证明技能卡也能当目标）──
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(repo.get_card(8002).to_dict()))
+	eng.state.hand.append(CardData.from_dict(rc.to_dict()))
+	eng.state.energy = 5
+	# ── 2) 点回收两次 = 选中 → 使用 → 进入选手牌模式 ──
+	_feed_click(scene, _hand_card_center(scene, 1))
+	_feed_click(scene, _hand_card_center(scene, 1))
+	if int(scene._recycle_idx) != 1:
+		_smoke_fail("回收：再点一次应进入选手牌模式（_recycle_idx=%d）" % scene._recycle_idx)
+		return
+	# ── 3) 点技能卡 → 应换成素体 1/10 ──
+	_feed_click(scene, _hand_card_center(scene, 0))
+	if int(scene._recycle_idx) >= 0:
+		_smoke_fail("回收：点目标后应退出选手牌模式（_recycle_idx=%d）" % scene._recycle_idx)
+		return
+	var got: CardData = eng.state.hand[0]
+	if got.id != 8025 or got.health != 10 or got.power != 1:
+		_smoke_fail("回收：攻击应换成素体 1/10（实际 %s %d/%d）"
+				% [got.card_name, got.power, got.health])
+		return
+	if eng.state.energy != 3:
+		_smoke_fail("回收：应扣 2 费（能量 %d，期望 3）" % eng.state.energy)
+		return
+	# ── 4) 取消路径：再铺一张，点回收两次 → 再点回收自己 = 取消 ──
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(rc.to_dict()))
+	eng.state.hand.append(CardData.from_dict(repo.get_card(8004).to_dict()))   # 熊
+	eng.state.energy = 5
+	_feed_click(scene, _hand_card_center(scene, 0))
+	_feed_click(scene, _hand_card_center(scene, 0))
+	if int(scene._recycle_idx) != 0:
+		_smoke_fail("回收（取消路径）：再点一次应进入选手牌模式（_recycle_idx=%d）" % scene._recycle_idx)
+		return
+	_feed_click(scene, _hand_card_center(scene, 0))   # 点它自己 = 取消
+	if int(scene._recycle_idx) >= 0:
+		_smoke_fail("回收（取消路径）：点回收自己应取消（_recycle_idx=%d）" % scene._recycle_idx)
+		return
+	if eng.state.hand.size() != 2 or eng.state.energy != 5:
+		_smoke_fail("回收（取消路径）：取消后手牌/能量应原样（%d 张 / %d 费）"
+				% [eng.state.hand.size(), eng.state.energy])
+		return
+	# 收尾：还原手牌与状态，别污染后面的用例
+	eng.state.hand.clear()
+	scene._recycle_idx = -1
+	print("SMOKE OK 回收两段式：点回收 / 点技能卡→素体 1/10（扣 2 费）/ 点自己取消不扣费")
+
+
+func _hand_card_center(scene: Variant, i: int) -> Vector2:
+	## 第 i 张手牌**旋转后**的中心点（命中判定与绘制同一个角度，见 _check_hand_fan）。
+	var r: Rect2 = scene._hand_rect(i)
+	var pivot: Vector2 = scene._hand_pivot(i)
+	var center := Vector2(r.position.x + r.size.x / 2, r.position.y + r.size.y / 2)
+	return pivot + (center - pivot).rotated(scene._hand_angle(i))
 
 
 func _check_pick_overlay(scene: Variant) -> void:

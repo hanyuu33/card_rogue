@@ -227,6 +227,10 @@ var _swap_src := Vector2i(-1, -1)
 ## 它的目标是**手牌里**的卡（不是棋盘），所以不能走 `spell_targets`（那套是棋盘格），
 ## 选中后要**点手牌**完成第二段 —— 靠这个变量标记「正在等玩家选手牌」。
 var _sys_upgrade_idx := -1
+## 「回收」（8064，R198，机械之心 2 费史诗）的**两段式**第一段：已选中的「回收」
+## 手牌下标（-1 = 未选）。与「系统升级」同套路，但目标**不限盟友/工事** ——
+## 回收是把目标换成素体，手牌里任何卡都能当目标（除它自己）。
+var _recycle_idx := -1
 var status_text := ""
 ## R123：棋盘滚动偏移（0 .. _grid_scroll_max()）；滚轮 / 空格左键拖动改变它。
 var _grid_scroll := 0.0
@@ -2328,6 +2332,8 @@ func _clear_selection() -> void:
 	# R90：「系统升级」的两段式状态也在这里收掉 —— 它不在棋盘选中体系里，
 	# 但换关 / 敌方回合 / 选别的牌时都该自动取消（否则面板会一直挂着）。
 	_sys_upgrade_idx = -1
+	# R198：「回收」的两段式状态同理（右键取消 / 换牌 / 敌方回合都走这里）。
+	_recycle_idx = -1
 
 
 func _select_board(cell: Vector2i) -> void:
@@ -2836,6 +2842,24 @@ func _on_left_click(pos: Vector2) -> void:
 					"target": null})
 			queue_redraw()
 			return
+		# R198「回收」第二段：正在等玩家点一张**手牌**时，点哪张就把哪张换成素体。
+		# 与「系统升级」同套路（都排在「再点一次 = 使用」之前），但目标不限种类。
+		if _recycle_idx >= 0:
+			if hi == _recycle_idx:
+				_recycle_idx = -1
+				_clear_selection()
+				status_text = "已取消：回收仍在手牌（未扣费）"
+				queue_redraw()
+				return
+			var rc_src := _recycle_idx
+			_recycle_idx = -1
+			_clear_selection()
+			var rc_card: CardData = engine.state.hand[rc_src]
+			status_text = "回收 → %s" % engine.cast_recycle(rc_src, hi)
+			_net_send({"type": "action", "act": "spell", "card": rc_card.to_dict(),
+					"target": null})
+			queue_redraw()
+			return
 		if selection != null and selection[0] == "hand" and selection[1] == hi:
 			_use_hand_card(hi)  # 再点一次 = 使用
 		else:
@@ -2900,6 +2924,12 @@ func _use_hand_card(i: int) -> void:
 	if card.id == GameEngine.SYS_UPGRADE_ID:
 		_sys_upgrade_idx = i
 		status_text = "系统升级：点手牌里的一个**盟友或工事**（再点一次系统升级取消）"
+		return
+	# 「回收」（8064，R198）：目标在**手牌**里且不限种类 —— 这里只记下它自己，
+	# 等玩家再点一张手牌（点它自己 = 取消）。
+	if card.id == GameEngine.RECYCLE_ID:
+		_recycle_idx = i
+		status_text = "回收：点手牌里的一张卡（再点一次回收取消）"
 		return
 	if card.needs_target():
 		# 需要选目标的技能：进入选目标模式（技能还在手牌，能量未付）
@@ -3002,6 +3032,16 @@ func _start_drag(i: int, pos: Vector2) -> void:
 			_drag_spell_cells = []
 		else:
 			status_text = "双向传送：拖到第一个单位上（第二段再拖到另一个单位）"
+		queue_redraw()
+		return
+	if card.id == GameEngine.RECYCLE_ID:
+		# R198：回收是两段式（目标在**手牌**），与「系统升级」同口径。
+		# ⚠️ `_drag_anywhere` 必须留 false：拖到棋盘上松手若走 use_spell 分支，
+		# 联机模式下会向对方补发一条 spell 消息（本地被拒、对方真扣费）→ 不同步。
+		# 留 false 时松手只走「已取消」提示，不发消息、不扣费。
+		_drag_spell_cells = []
+		_drag_anywhere = false
+		status_text = "回收：请点击手牌里的目标卡（拖拽不会生效）"
 		queue_redraw()
 		return
 	if card.is_spell() and card.needs_target():
@@ -6038,6 +6078,12 @@ func _replay_tick() -> void:
 			engine.cast_infiltrate(int(a[0]), ReplayLog.vec(a[1]), ReplayLog.vec(a[2]))
 		"cast_swap_units":
 			engine.cast_swap_units(int(a[0]), ReplayLog.vec(a[1]), ReplayLog.vec(a[2]))
+		"cast_sys_upgrade":
+			# R90 系统升级：以前**漏了这条** —— 录像里记了 act，回放却只 advance
+			# 不结算（系统升级在回放里变成空操作）。R198 补上，连同新卡一起。
+			engine.cast_sys_upgrade(int(a[0]), int(a[1]))
+		"cast_recycle":
+			engine.cast_recycle(int(a[0]), int(a[1]))
 		"move":
 			engine.move(ReplayLog.vec(a[0]), ReplayLog.vec(a[1]))
 		"attack":
@@ -7022,6 +7068,22 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 			else:
 				_say("系统升级：手牌里没有可选的盟友或工事")
+		"recycle":
+			# 回收 8064（R198）：手牌里一张卡被换成素体（改造 +9 血）→ 手牌区飘字。
+			# 目标在**手牌**里（不是棋盘），落点用整排手牌的中点（与系统升级同）。
+			var rc = data.get("card", null)
+			if rc is CardData:
+				var rc_d: CardData = rc as CardData
+				sfx.play("spell")
+				_say("◆ 回收：%s → 素体 %d 攻 / %d 血（改造 +%d，本场战斗永久）" % [
+						str(data.get("recycled", "?")), rc_d.power, rc_d.health,
+						int(data.get("hp", 0))])
+				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+					"text": "%s → 素体 %d/%d" % [str(data.get("recycled", "?")),
+						rc_d.power, rc_d.health],
+					"col": Color("8ad4f0"), "start": n, "dur": 2000})
+			else:
+				_say("回收：卡库缺少素体，效果落空")
 		"batch_transfer":
 			# 批量传输 8040（R90）：手牌全体改造 + 抽 1 张。
 			var bt_n := int(data.get("count", 0))
@@ -8833,6 +8895,13 @@ func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> voi
 		var hr := Rect2(r.position - pivot, r.size)
 		draw_rect(hr, Color("8ad4f0"), false, 3.0)
 		_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "可改造", hr.position + Vector2(6, 14),
+				Color("1a5f7a"), 3, Color(0.92, 0.98, 1.0))
+	# R198：「回收」等目标时，把手牌里**所有别的卡**标出来（不限种类 ——
+	# 回收就是把卡换成素体，技能/场地卡照样能当目标）。
+	if _recycle_idx >= 0 and i != _recycle_idx:
+		var rr := Rect2(r.position - pivot, r.size)
+		draw_rect(rr, Color("8ad4f0"), false, 3.0)
+		_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "可回收", rr.position + Vector2(6, 14),
 				Color("1a5f7a"), 3, Color(0.92, 0.98, 1.0))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 

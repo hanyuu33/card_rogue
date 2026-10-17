@@ -602,6 +602,20 @@ const SYS_UPGRADE_COST_ADD:= 1   # 费用 +1
 const SYS_UPGRADE_ATK:= 3        # 力量 +3
 const SYS_UPGRADE_HP:= 6         # 生命 +6
 const BATCH_TRANSFER_DRAW:= 1    # 批量传输：改造完抽 1 张卡
+# ── R198：回收 8064（机械之心 2 费史诗技能：把手牌里一张卡换成素体）──
+# 与「系统升级」同族（都改**手牌**、都烤进副本、都本场战斗永久），但结算是
+# **换卡**而不是加数值：目标被**原位替换**成一张干净的「素体」副本（8025），
+# 并立刻吃一次改造 = 生命 +RECYCLE_HP。走 `_upgrade_hp_gain` 唯一口 →
+# 素体自己的 `upgrade_hp_bonus`(1) 照算 → 实际 +9（0 费 1/10），与「系统升级」同口径。
+# 目标**不限盟友/工事**（素体就是盟友，技能/场地卡照样回收）—— 这是它的价值：
+# 把用不上的废卡换成一张能留手的 1/10。唯一入口 `cast_recycle(手牌序号, 目标序号)`。
+const RECYCLE_ID:= 8064
+const RECYCLE_HP:= 8              # 改造基数（素体自身 +1 额外照算 → 实际 +9）
+# ── R200：货物 8065（运送委托）—— 1 费工事 0/6/0/0 ──
+# **被破坏时从卡组中删除**：`_destroy` 己方分支唯一口 —— void（不进弃牌区）
+# + `RunState.remove_card` 删卡组那份。货物是「占卡组名额的负债」：
+# 带着它进第二层，第一个事件房会变成「委托完成」。
+const CARGO_ID:= 8065
 # ── R91：充电装置 8041 + 字段系统（CardData.affixes）──
 # 充电装置（1 费工事 1/1/1，机械之心普通）：**接通**的**我方**盟友和工事，
 #   在自己回合结束时回 CHARGE_HEAL(2) 点生命。
@@ -4261,6 +4275,11 @@ func use_spell(hand_index: int, target = null) -> String:
 	# 费用已经扣了、卡也已经从手牌里拿走了。
 	if card.id == SYS_UPGRADE_ID:
 		return "系统升级：先点手牌里的一张盟友或工事"
+	# 回收（8064，R198）：**两段式**技能 —— 目标在**手牌**里且**不限种类**
+	# （换卡式回收，技能/场地卡也能当目标），走独立入口
+	# `cast_recycle(手牌序号, 目标手牌序号)`。同样在**付费之前**拦截。
+	if card.id == RECYCLE_ID:
+		return "回收：先点手牌里的一张卡"
 	# 双向传送（8061，R102）：**两段式**技能 —— 要选**两个**单位，单段入口没有
 	# 第二个目标的信息。必须在**付费之前**拦截，否则玩家发现场上不足两个单位时
 	# 费用已经扣了、卡也已经从手牌里拿走了。
@@ -5047,6 +5066,62 @@ func cast_sys_upgrade(hand_index: int, target_hand_index: int) -> String:
 	_note_card_played(SIDE_SELF, card)
 	state.discard.append(card)
 	return detail
+
+
+func cast_recycle(hand_index: int, target_hand_index: int) -> String:
+	## 「回收」（8064，R198，机械之心 2 费史诗）的两段施放入口：
+	## UI 先点「回收」→ 再点**手牌里任意一张卡**（不限盟友/工事 —— 回收就是
+	## 把卡换成素体，技能/场地卡同样能回收；不能选自己）。
+	##
+	## 结算（与「潜入」9100 / 「系统升级」8039 同一套路）：
+	##   * `_pay` 在**这里**扣（不是 `use_spell`）—— 单段入口已在付费前拦截；
+	##   * 目标那张被**原位替换**成一张独立的「素体」副本（卡库共享实例 →
+	##     `from_dict` 复制 + 切断 traits 共享引用，绝不动卡库），手牌顺序与
+	##     扇形布局不受影响；
+	##   * 替换后立刻施加一次改造：生命 +RECYCLE_HP，走 `_upgrade_hp_gain`
+	##     **唯一口**（素体自己的 +1 血照算 → 实际 +9 → 0 费 1/10）；
+	##   * 「回收」自己进弃牌区；数值**烤进副本**、**本场战斗永久**
+	##     （下一场 `build_deck()` 重新从卡库取实例 → 自动重置）。
+	if ReplayLog.recording:
+		ReplayLog.act("cast_recycle", [hand_index, target_hand_index])
+	if hand_index < 0 or hand_index >= state.hand.size():
+		return "（回收：手牌序号无效）"
+	var card: CardData = state.hand[hand_index]
+	if card == null or card.id != RECYCLE_ID:
+		return "（这不是回收）"
+	if target_hand_index == hand_index:
+		return "（不能回收自己）"
+	var tgt: CardData = state.hand[target_hand_index] \
+			if target_hand_index >= 0 and target_hand_index < state.hand.size() else null
+	if tgt == null:
+		return "（回收：目标手牌序号无效）"
+	_pay(card)
+	state.hand.remove_at(hand_index)   # 目标下标若在被移除项之后要顺移
+	if target_hand_index > hand_index:
+		target_hand_index -= 1
+	# 换卡：取一张干净的素体副本（卡库共享实例 → from_dict 复制 + 切断共享引用）。
+	var repo := CardRepo.load_json()
+	var proto: CardData = repo.get_card(PROTO_ID) if repo != null else null
+	if proto == null:
+		# 卡库不该缺素体；万一缺了也别把目标那张吞掉 → 原样留在手里，只当白花一费。
+		_log("回收：卡库缺少「素体」(8025)，目标保持原样")
+		action.emit("recycle", {"card": null, "ok": false})
+		_note_card_played(SIDE_SELF, card)
+		state.discard.append(card)
+		return "回收：卡库缺少素体，效果落空"
+	var body := CardData.from_dict(proto.to_dict())
+	body.traits = (body.traits as Array).duplicate()   # 切断与卡库的共享引用
+	# R198：改造走**唯一口**（素体自身被改造时额外 +1 生命 → 实际 +9）。
+	var rc_hp: int = _upgrade_hp_gain(body, RECYCLE_HP)
+	body.health += rc_hp
+	var rc_old: String = tgt.card_name
+	state.hand[target_hand_index] = body
+	_log("回收：%s → 素体（改造：生命 +%d → %d 攻 / %d 血，本场战斗永久）"
+		% [rc_old, rc_hp, body.power, body.health])
+	action.emit("recycle", {"card": body, "hp": rc_hp, "recycled": rc_old})
+	_note_card_played(SIDE_SELF, card)
+	state.discard.append(card)
+	return "%s → 素体（%d 攻 / %d 血）" % [rc_old, body.power, body.health]
 
 
 func _trait_copies(zone: Array[CardData], tname: String) -> int:

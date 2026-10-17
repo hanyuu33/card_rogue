@@ -71,7 +71,8 @@ var color: String = ""
 var traits: Array = []
 var effect_text: String = ""
 ## 技能是否需要选目标：none=不需要 / unit=选一个单位 / cell=选一个格子 /
-## hand_unit=选手牌里的一张卡（R90「系统升级」）。
+## hand_unit=选手牌里的一张盟友或工事（R90「系统升级」8039）；
+## hand_any=选手牌里**任意一张**卡（R198「回收」8064 —— 目标被换成素体，种类不限）。
 var target_mode: String = "none"
 var value: int = 0
 ## 「一回合行动两次」的次数（1 = 普通）。**没有对应 trait**（R91 统一成字段「疾行」）。
@@ -212,8 +213,9 @@ func is_field() -> bool:
 func needs_target() -> bool:
 	## 目标是单位（攻击/火焰箭/击退/削弱/寒冰箭）或格子（火球术）的技能，
 	## 使用前必须先指定目标 —— UI 据此进入选目标模式，引擎据此拒绝空目标施放。
-	## ⚠️ **不含 `hand_unit`**（R90「系统升级」8039）：那套目标在**手牌**里，
-	## 不走棋盘选目标（`_spell_target_cells` 返回的是棋盘格），界面另开分支。
+	## ⚠️ **不含 `hand_unit` / `hand_any`**（R90「系统升级」8039 / R198「回收」8064）：
+	## 那两套目标都在**手牌**里，不走棋盘选目标（`_spell_target_cells` 返回的是棋盘格），
+	## 界面另开分支（`_sys_upgrade_idx` / `_recycle_idx`）。
 	return target_mode == "unit" or target_mode == "cell"
 
 
