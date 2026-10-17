@@ -198,7 +198,10 @@ func _cancel_rect() -> Rect2:
 
 
 func _can_confirm() -> bool:
-	return _selected.size() == int(_cfg.get("max_sel", 1))
+	# R200：支持区间多选（min_sel..max_sel；min 默认 = max → 旧行为「恰好 N 张」）。
+	var mx := int(_cfg.get("max_sel", 1))
+	var mn := int(_cfg.get("min_sel", mx))
+	return _selected.size() >= mn and _selected.size() <= mx
 
 
 static func _center_y(rect: Rect2, fs: int) -> float:

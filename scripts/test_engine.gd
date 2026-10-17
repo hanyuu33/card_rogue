@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 213,
-			"图鉴 = 209 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198**；R164 删除**双重场地 9108**；实际 %d）"
+	check(repo.all_cards().size() == 214,
+			"图鉴 = 209 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 163 and grp_enemy.size() == 50,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 163 / 50；R188 / R198 各 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 164 and grp_enemy.size() == 50,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 164 / 50；R188 / R198 / R200 各 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -5110,10 +5110,11 @@ func _init() -> void:
 	# 「凝视 / 一袋米抗几楼」已挪到第二层；第一层换成「奥秘之泉」，
 	# 「遗忘之泉」是写进每一层事件表的全层通用事件。
 	var ev_kinds_layer := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
-	check(ev_kinds_layer.size() == 6 and not ev_kinds_layer.has("monster") \
+	check(ev_kinds_layer.size() == 7 and not ev_kinds_layer.has("monster") \
 			and ev_kinds_layer.has("treasure") and ev_kinds_layer.has("arcane") \
-			and ev_kinds_layer.has("smith") and not ev_kinds_layer.has("gaze"),
-			"第一层事件池：6 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/卡牌宝箱；无凝视、无怪物）")
+			and ev_kinds_layer.has("smith") and ev_kinds_layer.has("delivery") \
+			and not ev_kinds_layer.has("gaze"),
+			"第一层事件池：7 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/卡牌宝箱；无凝视、无怪物）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
 	check(l2_ev_kinds.size() == 6 and l2_ev_kinds.has("smith"),
 			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 + 凝视 + 遗忘之泉 = 5 种子类型")
@@ -6854,11 +6855,11 @@ func _init() -> void:
 	check(dr_cls_bad.is_empty() and dr_cls_enemy_bad.is_empty(),
 			"角色系统：非敌方卡 class 都在可选角色内、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
-	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 71
+	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 72
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 54
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 38
 			and int(dr_cls_count.get("敌人", 0)) == 50,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 71 / 54 / 38 / 50；R188 +1；R198 +1；R161 +1 / R162 +1 / R174 +1；R164 暗影刺客 -1 = 删除双重场地 9108）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 72 / 54 / 38 / 50；R188 +1；R200 +1；R198 +1；R161 +1 / R162 +1 / R174 +1；R164 暗影刺客 -1 = 删除双重场地 9108）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -7420,9 +7421,9 @@ func _init() -> void:
 	var r45_cls_count := {}
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
-	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 71
+	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 72
 			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 54,
-			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108）"
+			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R200 货物 +1）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
 
@@ -12087,6 +12088,70 @@ func _init() -> void:
 			and r198_e4.state.energy == 5,
 		"R198 回收：单段 use_spell 被**付费前拦截**（卡还在手牌、能量仍 %d）"
 			% r198_e4.state.energy)
+
+	# ---- R200：货物 8065（运送委托）—— 被破坏时从卡组中删除 ----
+	var r200_cargo := repo.get_card(RunState.CARGO_CARD_ID)
+	check(r200_cargo != null and r200_cargo.card_name == "货物",
+		"R200 货物：id 8065 存在且名为「货物」")
+	check(r200_cargo != null and r200_cargo.kind == "工事" and r200_cargo.cost == 1
+			and r200_cargo.power == 0 and r200_cargo.health == 6
+			and r200_cargo.attack_range == 0 and r200_cargo.move_speed == 0,
+		"R200 货物：1 费工事，0 攻 / 6 血 / 0 程 / 0 速")
+	check(r200_cargo != null and r200_cargo.rarity == 5 and r200_cargo.group == "player"
+			and r200_cargo.card_class == "森林精魄",
+		"R200 货物：rarity 5（事件卡）/ 玩家图鉴 / 森林精魄")
+	check(r200_cargo != null and r200_cargo.traits.has("货物") and r200_cargo.traits.has("工事"),
+		"R200 货物：带 trait「工事」「货物」")
+	check(r200_cargo != null and r200_cargo.effect_text.find("从卡组中删除") >= 0,
+		"R200 货物：文案写明「被破坏时从卡组中删除」")
+	var r200_in_pool := false
+	for r200_c: CardData in repo.reward_pool():
+		if r200_c.id == RunState.CARGO_CARD_ID:
+			r200_in_pool = true
+	check(not r200_in_pool, "R200 货物：不进奖励池（rarity 5）")
+	# ---- RunState 三件套：remove_card / cargo_count / delivery_override_kind ----
+	var r200_saved_deck: Array[int] = RunState.deck_ids.duplicate()
+	var r200_saved_layer: int = RunState.current_layer
+	var r200_saved_done: bool = RunState.delivery_done
+	RunState.deck_ids = [8001, 8002, RunState.CARGO_CARD_ID, RunState.CARGO_CARD_ID]
+	check(RunState.cargo_count() == 2, "R200 cargo_count：卡组 2 张货物 → 2")
+	check(RunState.remove_card(RunState.CARGO_CARD_ID), "R200 remove_card：删一张货物返回 true")
+	check(RunState.cargo_count() == 1 and RunState.deck_ids.size() == 3,
+		"R200 remove_card：删后卡组少 1 张、货物剩 1（卡组 %d / 货物 %d）"
+		% [RunState.deck_ids.size(), RunState.cargo_count()])
+	check(not RunState.remove_card(99999), "R200 remove_card：卡组没有该 id → false")
+	check(RunState.delivery_override_kind() == "", "R200 替换判据：第一层不替换")
+	RunState.current_layer = GameLayers.LAYER_TWO
+	check(RunState.delivery_override_kind() == "delivery_done",
+		"R200 替换判据：第二层 + 持有货物 + 未结算 → delivery_done")
+	RunState.delivery_done = true
+	check(RunState.delivery_override_kind() == "",
+		"R200 替换判据：已结算（一次性）→ 不再替换")
+	RunState.delivery_done = false
+	RunState.deck_ids = [8001, 8002]
+	check(RunState.delivery_override_kind() == "",
+		"R200 替换判据：第二层但没货物 → 不替换")
+	# ---- 引擎：场上货物被击破 → 卡组删一张 / 不进弃牌区 / 进消耗区 ----
+	RunState.deck_ids = [8001, RunState.CARGO_CARD_ID, RunState.CARGO_CARD_ID]
+	var r200_e := _new_engine([], 20, 20)
+	var r200_p: Placement = r200_e.state.place(
+			CardData.from_dict(r200_cargo.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r200_e._destroy(Vector2i(4, 1))
+	check(RunState.deck_ids.size() == 2 and RunState.cargo_count() == 1,
+		"R200 引擎：货物被破坏 → 卡组删掉一张（剩 %d 张 / 货物 %d）"
+		% [RunState.deck_ids.size(), RunState.cargo_count()])
+	check(r200_e.state.discard.is_empty() and r200_e.state.void_cards.size() == 1,
+		"R200 引擎：货物被破坏不进弃牌区，进消耗区（弃牌 %d / 消耗 %d）"
+		% [r200_e.state.discard.size(), r200_e.state.void_cards.size()])
+	check(r200_e.state.unit_at(Vector2i(4, 1)) == null, "R200 引擎：货物离场后棋盘上不再有它")
+	check(repo.get_card(RunState.CARGO_CARD_ID).health == 6,
+		"R200 引擎：货物被破坏不污染卡库（卡面仍 6 血）")
+	RunState.deck_ids = r200_saved_deck.duplicate()
+	RunState.current_layer = r200_saved_layer
+	RunState.delivery_done = r200_saved_done
+
+	RunState.player_class = r198_saved_cls
+
 
 	# ---- R91：充电装置 8041 + 字段系统（CardData.affixes）----
 	var r91_saved_cls: String = RunState.player_class

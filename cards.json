@@ -3866,6 +3866,27 @@
       "image": ""
     },
     {
+      "id": 8065,
+      "name": "货物",
+      "kind": "工事",
+      "cost": 1,
+      "power": 0,
+      "health": 6,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [
+        "工事",
+        "货物"
+      ],
+      "effect_text": "运送委托的货物：被破坏时从卡组中删除。替你的 HP 承受伤害。",
+      "target_mode": "none",
+      "color": "灰",
+      "image": ""
+    },
+    {
       "id": 8062,
       "name": "夜蚀",
       "kind": "盟友",

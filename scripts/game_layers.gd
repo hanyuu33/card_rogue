@@ -41,6 +41,7 @@ const LAYERS := {
 			"oblivion": 14,   # 遗忘之泉（全层通用）：可从卡组删一张卡，或离开
 			"smith": 12,       # 鸭鸭工匠（R110，全层通用）：把卡组里一张卡变成「2 费铁栅栏」
 			"treasure": 31,   # 宝箱（卡牌奖励）
+			"delivery": 20,  # 运送委托（R200，第一层专属）：选 1~6 张「货物」入卡组
 		},
 	},
 	2: {
@@ -75,6 +76,8 @@ const EVENT_NAMES := {
 	"arcane": "奥秘之泉",
 	"oblivion": "遗忘之泉",
 	"smith": "鸭鸭工匠",
+	"delivery": "运送委托",
+	"delivery_done": "委托完成",
 	"treasure": "卡牌宝箱",
 	"relic_chest": "宝箱层",
 }

@@ -7721,6 +7721,15 @@ func _destroy(cell: Vector2i) -> void :
 			state.void_count += 1   # R140：消耗区计数（冰墙不进弃牌区）
 			state.void_cards.append(p.card)
 			_log("%s 被击破，移出场外（冰墙不进弃牌区）" % p.card.card_name)
+		elif p.card.id == CARGO_ID:
+			# R200：货物被破坏 → **从卡组中删除**（场上这份 void 不进弃牌区）。
+			state.void_count += 1
+			state.void_cards.append(p.card)
+			if RunState.remove_card(CARGO_ID):
+				_log("货物被破坏，从卡组中删除（卡组内货物剩余 %d）"
+						% RunState.cargo_count())
+			else:
+				_log("货物被破坏（卡组内已无货物可删）")
 		elif p.card.id == LYNX_ID:
 
 			var back:= CardData.from_dict(p.card.to_dict())

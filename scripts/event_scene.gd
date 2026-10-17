@@ -10,6 +10,9 @@ extends Control
 ##   * event + gaze     鸭之凝视：获得事件道具「一袋米抗几楼」，或放弃；
 ##   * event + pear     鸭梨山大（第二层专属）：获得事件道具「鸭梨」，或放弃；
 ##   * event + bluefish 蓝色大肥鱼（第二层专属）：把一张「鲸鱼之怒」加入卡组，或放弃；
+##   * event + delivery 运送委托（R200，第一层专属）：平铺挑 1~6 张「货物」加入卡组，或离开；
+##   * event + delivery_done 委托完成（R200）：持有货物时**第二层第一个事件房**替换而来，
+##                     卡组每保有 1 张货物 → 抽奖一次（卡牌奖励 / 80 金币 / 随机道具 / 巧克力 10%）；
 ##   * event + gaze     鸭之凝视（**第二层**）：获得事件道具「一袋米抗几楼」，或放弃；
 ##   * event + arcane   奥秘之泉（第一层专属）：获得道具「奥秘护符」（每回合第一张效果牌费用 -1），
 ##                      或「喝下泉水」从随机 3 张效果 / 技能牌中选 1 张加入卡组（也可什么都不拿）；
@@ -38,6 +41,9 @@ const STRUGGLE_CARD_ID := 9018    # 金属龙（事件卡牌，不可奖励获�
 const STRUGGLE_LIFE := 21         # 挣扎代价：失去的生命
 const WHALE_CARD_ID := 9050       # 鲸鱼之怒（蓝色大肥鱼事件的奖励卡，不可奖励获取）
 const ARCANE_CHARM_ID := 6020     # 奥秘护符（奥秘之泉事件给予；奖励池也能正常获得）
+const CARGO_CARD_ID := 8065       # 货物（R200 运送委托；1 费工事 0/6/0/0，被破坏时从卡组删除）
+const DELIVERY_MIN := 1           # 运送委托：最少接几张
+const DELIVERY_MAX := 6           # 运送委托：最多接几张
 
 const WHISPER_DESC := """深处的鸭鸣在你耳畔回荡，绕梁不散……
 获得「鸭之低语」：你将不再能控制自己接下来的前进方向
@@ -119,6 +125,20 @@ const STRUGGLE_DESC := """体内的血液在翻涌，某种东西正挣扎着想
 const STRUGGLE_TAKEN_DESC := """「这就是为了胜利我的挣扎。」
 金属巨兽破体而出，臣服于你——「金属龙」已加入卡组。"""
 
+const DELIVERY_DESC := """驿站门口堆着一批贴了封条的货箱，脚夫收了钱就不见了人影。
+选择承运：平铺挑 1~6 张「货物」加入卡组（1 费工事，0 攻 / 6 血，替你承受伤害）；
+货物**被破坏时会从卡组中删除**——毁了就真的毁了。
+带着货物走进第二层，第一个事件房的货主会按张兑付报酬，接得越多兑得越多。
+也可以不接，转身离开。"""
+
+const DELIVERY_TAKEN_DESC := """货箱已经码上车队，封条上写着「第二层兑付」。
+你把 %d 张货物收进了卡组——它们会替你挡伤害，但毁了就真的毁了。"""
+
+const DELIVERY_DONE_DESC := """第二层的第一个事件房里，货主早就在原地等着你。
+卡组里每保有一张货物，就当场兑付一次报酬：
+一次卡牌奖励 / 80 金币 / 一件随机奖励道具，
+还有藏得最深的大奖——一块巧克力（概率 10%%）。"""
+
 func _rest_desc() -> String:
 	## 休息处文案：回复百分比按当前难度档位走（0 / 1 档 = 40%，2 档 = 25%）。
 	return """前路的战斗还在等着你。
@@ -148,6 +168,11 @@ var _reward_claimed := false  # R147：本次事件访问是否已领过奖励�
 var _oblivion_done := false   # 遗忘之泉：是否已经遗忘过一张卡（或已选择去删卡）
 var _smith_done := false      # 鸭鸭工匠：是否已经锻造过（或已选择去锻造）
 var _treasure_taken := false  # 宝箱（支付生命换卡牌奖励）：是否已开
+var _delivery_taken := false  # R200 运送委托：本次是否已接取（选过货物）
+var _delivery_count := 0      # R200 运送委托：本次接了几张
+var _delivery_settled := false  # R200 委托完成：本次是否已兑付
+var _delivery_result := ""     # R200 委托完成：兑付结果汇总文案
+var _pick: PickOverlay = null   # R200：运送委托的平铺选卡页（PickOverlay 复用）
 var _reward_panel: RewardPanel = null   # R119：奖励悬浮窗（开箱 / 泉水 / 宝箱都在这里看）
 
 # ── R122：事件文案里的「卡名 / 道具名」可以悬浮查看（用户口径）──
@@ -242,6 +267,16 @@ func _is_struggle() -> bool:
 	return _is_event_node() and _pending_kind() == "struggle"
 
 
+func _is_delivery() -> bool:
+	## 运送委托（R200，第一层专属）：平铺挑 1~6 张「货物」加入卡组，或离开。
+	return _is_event_node() and _pending_kind() == "delivery"
+
+
+func _is_delivery_done() -> bool:
+	## 委托完成（R200）：持有货物时，第二层第一个事件房由 map_scene 替换而来。
+	return _is_event_node() and _pending_kind() == "delivery_done"
+
+
 func _is_relic_chest() -> bool:
 	## 宝箱层开箱：节点类型 chest，或（演示参数）事件节点 + pending_event。
 	return _is_chest_layer() \
@@ -253,7 +288,8 @@ func _is_treasure() -> bool:
 	return _is_event_node() and not _is_whisper() and not _is_struggle() \
 			and not _is_gaze() and not _is_pear() and not _is_hero() \
 			and not _is_bluefish() and not _is_relic_chest() \
-			and not _is_arcane() and not _is_oblivion() and not _is_smith()
+			and not _is_arcane() and not _is_oblivion() and not _is_smith() \
+			and not _is_delivery() and not _is_delivery_done()
 
 
 func _kind() -> String:
@@ -276,6 +312,10 @@ func _kind() -> String:
 		return "smith"
 	if _is_bluefish():
 		return "bluefish"
+	if _is_delivery():
+		return "delivery"
+	if _is_delivery_done():
+		return "delivery_done"
 	if _is_struggle():
 		return "struggle"
 	if _is_treasure():
@@ -420,6 +460,17 @@ func _ready() -> void:
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "smith"
 			RunState.deck_ids = [8001, 8001, 8001, 8002, 8002, 8003, 9003, 9016, 9019]
+		if args[i] == "--delivery":  # 演示：伪装 run 运送委托事件（截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "delivery"
+			RunState.deck_ids = [8001, 8001, 8001, 8002, 8002, 8003, 9003, 9016, 9019]
+		if args[i] == "--deliverydone":  # 演示：委托完成（卡组带 3 张货物，截图验证）
+			RunState.run_active = true
+			RunState.current_layer = GameLayers.LAYER_TWO
+			RunState.pending_node = {"type": "event", "event_kind": "delivery_done"}
+			RunState.pending_event = "delivery_done"
+			RunState.deck_ids = [8001, 8001, 8002, 8003, 8065, 8065, 8065]
 		if args[i] == "--chest":  # 演示：伪装 run 宝箱层节点（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "chest"}
@@ -534,6 +585,32 @@ func _ready() -> void:
 			rest_btn.text = "锻造：把卡组中的一张卡变成 2 费「铁栅栏」"
 			rest_btn.disabled = RunState.deck_ids.is_empty()
 			$Center/LeaveBtn.text = "离开（不锻造）"
+			result_label.text = ""
+	elif _is_delivery():
+		event_name.text = "运 送 委 托"
+		desc.text = (DELIVERY_TAKEN_DESC % _delivery_count) if _delivery_taken else DELIVERY_DESC
+		if _delivery_taken:
+			_collapse_to_leave()
+			result_label.text = "已接取 %d 张货物——第二层的第一个事件房，货主会按张兑付报酬。" \
+					% _delivery_count
+			result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		else:
+			rest_btn.text = "承运：平铺挑选 1~%d 张「货物」加入卡组" % DELIVERY_MAX
+			rest_btn.disabled = false
+			$Center/LeaveBtn.text = "不接（转身离开）"
+			result_label.text = ""
+	elif _is_delivery_done():
+		event_name.text = "委 托 完 成"
+		desc.text = DELIVERY_DONE_DESC
+		if _delivery_settled:
+			_collapse_to_leave()
+			result_label.text = _delivery_result
+			result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		else:
+			var n_cargo: int = RunState.cargo_count()
+			rest_btn.text = "兑付：卡组 %d 张货物 × 各抽一次" % n_cargo
+			rest_btn.disabled = n_cargo <= 0
+			$Center/LeaveBtn.text = "不要报酬（离开）"
 			result_label.text = ""
 	elif _is_relic_chest():
 		event_name.text = "宝 箱 层"
@@ -696,6 +773,44 @@ func _on_main() -> void:
 				CardText.naturalize(wcard.effect_text) if wcard != null else ""]
 		result_label.add_theme_color_override("font_color", UiTheme.RARITY_RARE)
 		_redraw()
+		return
+	if _is_delivery():
+		if _delivery_taken:
+			_on_leave()
+			return
+		# R200：平铺选卡页（PickOverlay 复用，R189 口径）—— 6 张货物平铺，
+		# 点几张收几张（1~6），确认才入卡组；取消只是收起回事件页。
+		var repo_d := CardRepo.load_json()
+		var cargo: CardData = repo_d.get_card(CARGO_CARD_ID)
+		if cargo == null:
+			return
+		var picks: Array = []
+		for _i in DELIVERY_MAX:
+			picks.append(cargo)
+		if _pick == null:
+			_pick = PickOverlay.new()
+			_pick.confirmed.connect(_on_delivery_confirmed)
+			_pick.cancelled.connect(_on_delivery_cancelled)
+			add_child(_pick)
+		_pick.open({
+			"kind": "delivery",
+			"title": "运送委托 · 挑选货物",
+			"note": "点几张收几张（%d~%d 张）；货物被破坏时会从卡组中删除"
+					% [DELIVERY_MIN, DELIVERY_MAX],
+			"cards": picks,
+			"counts": [],
+			"max_sel": DELIVERY_MAX,
+			"min_sel": DELIVERY_MIN,
+			"confirm_label": "接下货物",
+			"cancel_label": "不接（收起）",
+			"short": "运送委托",
+		})
+		return
+	if _is_delivery_done():
+		if _delivery_settled:
+			_on_leave()
+			return
+		_delivery_settle()
 		return
 	if _is_hero():
 		if _hero_traded:
@@ -863,6 +978,83 @@ func _on_main() -> void:
 	_redraw()
 
 
+func _on_delivery_confirmed(selected: Array) -> void:
+	## R200：运送委托确认 —— 选了几张就入卡组几张（货物 8065）。
+	if _pick != null:
+		_pick.close()
+	var n: int = selected.size()
+	if n < DELIVERY_MIN or n > DELIVERY_MAX:
+		return
+	for _i in n:
+		RunState.add_card(CARGO_CARD_ID)
+	_delivery_taken = true
+	_delivery_count = n
+	ReplayLog.ev("event_main", {"delivery": n})   # 录像：接了几张（回放原样重放）
+	_collapse_to_leave()
+	desc.text = DELIVERY_TAKEN_DESC % n
+	result_label.text = "已接取 %d 张货物（1 费工事 0/6/0）——第二层第一个事件房兑付报酬。" % n
+	result_label.add_theme_color_override("font_color", Color("c8a86a"))
+	_redraw()
+
+
+func _on_delivery_cancelled() -> void:
+	## R200：放弃挑选 → 收起选卡页回事件页（不接货，什么都不扣）。
+	if _pick != null:
+		_pick.close()
+
+
+func _delivery_settle() -> void:
+	## R200：委托完成兑付 —— 卡组每保有 1 张货物 → 抽奖一次。
+	## 概率：卡牌奖励 35% / 80 金币 25% / 随机奖励道具 30% / 隐藏大奖巧克力 10%。
+	## ⚠️ 随机一律走 RunState.run_rng（run 层唯一源 → 录像回放一致）。
+	var n: int = RunState.cargo_count()
+	if n <= 0:
+		return
+	var n_cards := 0
+	var n_gold := 0
+	var n_relic := 0
+	var n_choco := 0
+	for _i in n:
+		var r: float = RunState.run_rng.randf()
+		if r < 0.10:
+			n_choco += 1            # 隐藏大奖：巧克力 ×1
+		elif r < 0.40:
+			n_relic += 1            # 30% → 随机奖励道具
+		elif r < 0.65:
+			n_gold += 1             # 25% → 80 金币
+		else:
+			n_cards += 1            # 35% → 一次卡牌奖励
+	if n_gold > 0:
+		RunState.gain_gold(80 * n_gold)
+	if n_choco > 0:
+		RunState.chocolate += n_choco
+	for _i in n_relic:
+		var rid: int = RunState.roll_reward_relic()
+		if rid > 0:
+			RunState.queue_relic_reward(rid)
+	for _i in n_cards:
+		RunState.queue_card_reward("normal")
+	RunState.delivery_done = true     # 一次性：本局不再触发
+	_delivery_settled = true
+	var parts: Array[String] = ["%d 张货物全部兑付" % n]
+	if n_cards > 0:
+		parts.append("卡牌奖励 ×%d" % n_cards)
+	if n_gold > 0:
+		parts.append("%d 金币" % (80 * n_gold))
+	if n_relic > 0:
+		parts.append("随机道具 ×%d" % n_relic)
+	if n_choco > 0:
+		parts.append("隐藏大奖·巧克力 ×%d！" % n_choco)
+	_delivery_result = "兑付结果：" + "；".join(parts)
+	_collapse_to_leave()
+	desc.text = DELIVERY_DONE_DESC
+	result_label.text = _delivery_result + "（待领奖励见右上悬浮窗）"
+	result_label.add_theme_color_override("font_color", Color("c8a86a"))
+	if _reward_panel != null and RunState.pending_reward_count() > 0:
+		_reward_panel.open()
+	_redraw()
+
+
 func _claim_reward(keep: Button) -> void:
 	## R147：**一次事件访问只能领走一份奖励**。
 	## 用户口径：「任意获得一个奖励之后，应该不再能获取其他奖励。（任何事件都应该做成这样）」
@@ -941,7 +1133,7 @@ func _refresh() -> void:
 	if _is_treasure() or _is_whisper() or _is_struggle() \
 			or _is_gaze() or _is_pear() or _is_hero() or _is_bluefish() \
 			or _is_relic_chest() or _is_arcane() or _is_oblivion() \
-			or _is_smith():
+			or _is_smith() or _is_delivery() or _is_delivery_done():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。
@@ -1046,7 +1238,15 @@ func _replay_tick() -> void:
 	match str(e.get("k", "")):
 		"event_main":
 			ReplayLog.advance()
-			_on_main()
+			if e.has("delivery"):
+				# R200：运送委托确认（带回几张）—— 先开门，再按张数原样确认。
+				_on_main()
+				var fake_sel: Array = []
+				for _i in int(e["delivery"]):
+					fake_sel.append(_i)
+				_on_delivery_confirmed(fake_sel)
+			else:
+				_on_main()
 		"event_bbq":
 			ReplayLog.advance()
 			_on_bbq()

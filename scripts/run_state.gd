@@ -137,6 +137,15 @@ const HERO_CARD_ID := 9023
 # 费用只有一个来源（cards.json），所以这里只记 id，不再有 SMITH_COST / 覆盖表。
 const FENCE_CARD_ID := 9072
 
+# 事件「运送委托」（R200）的货物卡（cards.json）：1 费工事 0/6/0/0，
+# **被破坏时从卡组中删除**（引擎 `_destroy` 的货物分支是唯一口）。
+# rarity 5（事件）→ 不进奖励池，只能从「运送委托」事件获得。
+const CARGO_CARD_ID := 8065
+## R200：「委托完成」（第二层第一个事件房，持有货物时替换）是否已结算 ——
+## **一次性**（每个保有货物抽奖一次，结算后本局不再触发）。
+## start_run / end_run 复位；advance_layer 故意不清（第二层只进一次）。
+static var delivery_done := false
+
 # 即时道具
 const SOURCE_POWER_ID := 6002     # 源数之力（改造卡组中的一张卡）
 const SOURCE_POWER_HP_COST := 5   # 源数之力的代价：失去 5 点最大生命
@@ -270,6 +279,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	pending_relic_drop = -1
 	pending_rewards = []   # R119：开新 run 清空待领奖励
 	duck_revive_chance = 100
+	delivery_done = false       # R200：新开一局 → 「委托完成」未结算
 	pending_event = ""
 	# 角色赠品道具（森林精魄 → 荒野形态 6022）：不入随机池，也不占起点三选一的名额
 	var cls_relic := PlayerClass.relic_of(player_class)
@@ -325,6 +335,7 @@ static func end_run(clear_save: bool = true) -> void:
 	pending_relic = -1
 	pending_relic_drop = -1
 	duck_revive_chance = 100
+	delivery_done = false       # R200：本局结束 → 复位
 	pending_event = ""
 
 
@@ -1075,6 +1086,35 @@ static func add_card(id: int) -> void:
 	## 卡牌奖励收下的卡加入卡组。
 	deck_ids.append(id)
 	deck_mods.append({})          # R181：附魔列表同步增长（新卡无附魔）
+
+
+static func remove_card(id: int) -> bool:
+	## 从卡组里删掉**一张**指定 id 的卡（R200：货物被破坏时用；附魔列表同步）。
+	## 返回是否真删到了（卡组里没有该 id 时返回 false）。
+	for i in deck_ids.size():
+		if deck_ids[i] == id:
+			deck_ids.remove_at(i)
+			if i < deck_mods.size():
+				deck_mods.remove_at(i)
+			return true
+	return false
+
+
+static func cargo_count() -> int:
+	## 卡组里保有的「货物」张数（运送委托 / 委托完成的唯一口径）。
+	var n := 0
+	for id in deck_ids:
+		if id == CARGO_CARD_ID:
+			n += 1
+	return n
+
+
+static func delivery_override_kind() -> String:
+	## R200：**第二层的第一个事件房**，持有货物时替换成「委托完成」。
+	## 返回 "" = 不替换。一次性：delivery_done 结算后置位，本局不再触发。
+	if current_layer != GameLayers.LAYER_TWO or delivery_done:
+		return ""
+	return "delivery_done" if cargo_count() > 0 else ""
 
 
 static func build_deck(repo: CardRepo) -> Array[CardData]:

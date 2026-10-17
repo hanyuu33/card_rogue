@@ -480,6 +480,12 @@ func _commit_enter(cell: Dictionary) -> void:
 		# 原路返回：不扣巧克力、不结算 —— 给一句轻提示，免得玩家以为点击失效。
 		_set_note("这里是走过的房间，什么都不会发生（不消耗巧克力）")
 		return
+	# R200：持有货物 → 第二层第一个事件房替换成「委托完成」（一次性）。
+	# ⚠️ 必须在 pending_node = cell **之前**改：Dictionary 是引用，后改会断开。
+	var delivery_kind := RunState.delivery_override_kind()
+	if delivery_kind != "" and str(cell.get("type", "")) == "event":
+		cell = cell.duplicate()   # 别污染地图本体（map_cells 里那份）
+		cell["event_kind"] = delivery_kind
 	RunState.pending_node = cell
 	var dtype := RogueMap.display_type(cell)
 	match dtype:

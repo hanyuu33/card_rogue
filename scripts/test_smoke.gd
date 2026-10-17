@@ -208,6 +208,22 @@ func _initialize() -> void:
 				_seed_rewards()
 				RunState.relics = [6001, 6002],
 			_check_battle_hover_gate],
+		# R200：运送委托（第一层专属）—— 平铺选卡页开合 / 取消不接 / 确认入卡组
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "event"}
+				RunState.pending_event = "delivery",
+			_check_delivery],
+		# R200：委托完成（持有货物 → 第二层第一个事件房替换而来）—— 每个货物抽一次
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.current_layer = GameLayers.LAYER_TWO
+				RunState.pending_node = {"type": "event", "event_kind": "delivery_done"}
+				RunState.pending_event = "delivery_done"
+				RunState.deck_ids = [8001, 8001, 8002, 8003, 8065, 8065, 8065],
+			_check_delivery_done],
 	]
 	print("SMOKE === 开始（%d 项场景用例）===" % _plan.size())
 	_next()
@@ -1082,6 +1098,90 @@ func _check_move_path(scene: Variant) -> void:
 		print("SMOKE OK 多格移动走真实路径：途经点 %d 个 / 时长 %dms / 最大偏离 %.2f 像素（直线插值会偏 %.0f）" % [pts.size(), dur, worst, diag])
 	st.board.erase(Vector2i(4, 1))
 	st.board.erase(Vector2i(4, 0))
+
+func _check_delivery(scene: Variant) -> void:
+	## R200：运送委托 —— 主按钮开平铺选卡页（PickOverlay 复用）；取消不接货；
+	## 确认选 2 张 → 卡组 +2 张货物、接取状态记 2。
+	if not scene._is_delivery():
+		_smoke_fail("运送委托：pending_event=delivery 应被识别")
+		return
+	var repo := CardRepo.load_json()
+	var cargo: CardData = repo.get_card(RunState.CARGO_CARD_ID)
+	if cargo == null or cargo.kind != "工事" or cargo.cost != 1 \
+			or cargo.power != 0 or cargo.health != 6 or cargo.attack_range != 0:
+		_smoke_fail("运送委托：货物卡面应是 1 费工事 0/6/0")
+		return
+	var before: int = RunState.deck_ids.size()
+	# ── 1) 主按钮 → 开平铺选卡页（1~6 区间）──
+	scene._on_main()
+	var pick: Variant = scene._pick
+	if pick == null or not pick.is_picking():
+		_smoke_fail("运送委托：主按钮应打开平铺选卡页")
+		return
+	if int(pick._cfg.get("max_sel", 0)) != 6 or int(pick._cfg.get("min_sel", 0)) != 1:
+		_smoke_fail("运送委托：选卡页应是 1~6 张区间（max=%d min=%d）"
+				% [int(pick._cfg.get("max_sel", 0)), int(pick._cfg.get("min_sel", 0))])
+		return
+	# ── 2) 取消 = 收起，不接货 ──
+	scene._on_delivery_cancelled()
+	if RunState.cargo_count() != 0:
+		_smoke_fail("运送委托：取消后卡组不应有货物（实际 %d）" % RunState.cargo_count())
+		return
+	# ── 3) 再开 → 确认 2 张入卡组 ──
+	scene._on_main()
+	scene._on_delivery_confirmed([0, 1])
+	if RunState.deck_ids.size() != before + 2:
+		_smoke_fail("运送委托：确认 2 张后卡组应 +2（实际 %d → %d）"
+				% [before, RunState.deck_ids.size()])
+		return
+	if RunState.cargo_count() != 2:
+		_smoke_fail("运送委托：卡组应有 2 张货物（实际 %d）" % RunState.cargo_count())
+		return
+	if not scene._delivery_taken or scene._delivery_count != 2:
+		_smoke_fail("运送委托：接取状态应记录 2 张（taken=%s count=%d）"
+				% [str(scene._delivery_taken), scene._delivery_count])
+		return
+	print("SMOKE OK 运送委托：平铺选卡页 1~6 / 取消不接 / 确认 2 张入卡组")
+
+
+func _check_delivery_done(scene: Variant) -> void:
+	## R200：委托完成 —— 3 张货物各抽一次（卡牌奖励 / 80 金币 / 随机道具 / 巧克力 10%）；
+	## 兑付总量恰为 3 次；一次性（delivery_done 置位后不再替换事件房）。
+	if not scene._is_delivery_done():
+		_smoke_fail("委托完成：pending_event=delivery_done 应被识别")
+		return
+	if RunState.cargo_count() != 3:
+		_smoke_fail("委托完成：卡组应铺 3 张货物（实际 %d）" % RunState.cargo_count())
+		return
+	if RunState.delivery_override_kind() != "delivery_done":
+		_smoke_fail("委托完成：二层 + 持有货物 + 未结算时应替换为 delivery_done")
+		return
+	var gold0: int = RunState.gold
+	var choco0: int = RunState.chocolate
+	var pend0: int = RunState.pending_reward_count()
+	# ── 1) 兑付 ──
+	scene._on_main()
+	if not scene._delivery_settled or not RunState.delivery_done:
+		_smoke_fail("委托完成：兑付后 _delivery_settled / delivery_done 都应置位")
+		return
+	# ── 2) 每个货物恰好一次：入队奖励 + 金币/80 + 巧克力 == 3 ──
+	var got_relic: int = RunState.pending_reward_count() - pend0
+	var got_gold: int = (RunState.gold - gold0) / 80
+	var got_choco: int = RunState.chocolate - choco0
+	if got_relic + got_gold + got_choco != 3:
+		_smoke_fail("委托完成：3 张货物应共兑付 3 次（奖励 %d / 金币 %d / 巧克力 %d）"
+				% [got_relic, got_gold, got_choco])
+		return
+	# ── 3) 一次性：置位后不再替换 ──
+	if RunState.delivery_override_kind() != "":
+		_smoke_fail("委托完成：delivery_done 置位后不应再替换事件房")
+		return
+	# ── 4) 结算后只留离开按钮 ──
+	if scene.rest_btn.visible:
+		_smoke_fail("委托完成：结算后应只留离开按钮（rest_btn 应收起）")
+		return
+	print("SMOKE OK 委托完成：3 张货物各抽一次 / 总量=3 / 一次性 / 结算后只剩离开")
+
 
 func _check_battle(scene: Variant) -> void:
 	## 战斗场景的所有行为断言：扇形手牌 + 多格移动动画走真实路径 + 效果/道具溢出兜底
