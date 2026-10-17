@@ -383,16 +383,6 @@ static func _draw_vgradient(canvas: CanvasItem, rect: Rect2, top: Color, bot: Co
 				top.lerp(bot, t), true)
 
 
-static func _draw_hgradient(canvas: CanvasItem, rect: Rect2, left: Color, right: Color) -> void:
-	## 横向渐变填充（卡名横幅）。
-	var steps := maxi(2, int(rect.size.x / 3.0))
-	var sw := rect.size.x / float(steps)
-	for i in steps:
-		var t := float(i) / float(steps - 1)
-		canvas.draw_rect(Rect2(rect.position.x + i * sw, rect.position.y, sw + 1.0, rect.size.y),
-				left.lerp(right, t), true)
-
-
 static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,
 		k: float, pad: float, sep_y: float, hp: int, font: Font, font_bold: Font,
 		on_board: bool, is_tapped := false, name_only := false) -> void:
@@ -461,13 +451,8 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	# ── 底衬（R164：羊皮卷/木板，程序绘制，**无边框**）──
 	draw_text_backing(canvas, rect, sep_y, k, pad, base_name - asc_b, block_bottom)
 	# ── 第二遍：画字（**不描边**）───────────────────────────────────────
-	# R165 卡名横幅：卡种/职业色的淡彩横向渐变条，垫在卡名之下（「不同颜色的 banner」）。
-	var bcols := banner_cols(card)
-	var nb_y := base_name - asc_b - sz * 0.18
-	var nb_h := sz * 1.40
-	var nb_x: float = rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad * 0.4
-	var nb_w: float = rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 0.8
-	_draw_hgradient(canvas, Rect2(nb_x, nb_y, nb_w, nb_h), bcols[0], bcols[1])
+	# R203：卡名横幅（R165 的 banner 渐变条）已去掉 —— 用户口径「卡名后面垫着的那条
+	# 绿色长方形直接去掉，卡名直接放在上面就好」；卡名直接画在羊皮卷/木板底衬上。
 	_draw_center(canvas, font_bold, sz, _ellipsize(font_bold, card.card_name, maxw, sz),
 			Vector2(cx, base_name - sz * 0.36), UiTheme.INK_900)
 	if has_meta:

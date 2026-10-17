@@ -44,6 +44,8 @@ var _enchanting := -1          # 第二行正在附魔的商品下标（-1 = 无
 var _deleting := false         # 第三行「删除一张卡」的选卡覆盖层（true = 弹卡组选一张删）
 var _hover := -1               # 悬停的商品下标（按全局编号）
 var _hover_enchant_card := -1  # 附魔/删除选卡时悬停的卡下标
+var _sel_row1 := -1            # 「选中查看」的第一行卡下标（R203：两段式购买首击）
+var _sel_pick := -1            # 「选中查看」的选卡覆盖层卡下标（R203）
 
 # 卡组展示（附魔选卡时）
 var _deck_cards: Array = []    # [{id, name, card}]
@@ -71,6 +73,10 @@ func _ready() -> void:
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		RunState.gold = 100
 		RunState.pending_node = {"type": "shop"}
+	# 演示参数：--picksel N 选中查看第一行第 N 张卡（截图核验描述板 / 选中高亮）。
+	var ps := args.find("--picksel")
+	if ps >= 0 and ps + 1 < args.size():
+		_sel_row1 = int(args[ps + 1])
 	# 命令行 -- --screenshot：自动截图退出（出图核验用）。
 	if "--screenshot" in OS.get_cmdline_user_args():
 		var t := Timer.new()
@@ -221,6 +227,7 @@ func _draw() -> void:
 	_draw_row3()
 	_draw_pick_overlay()
 	_draw_leave()
+	_draw_desc_plate()   # R203：悬停/选中卡的描述板（卡面只留卡名后的详情入口）
 	_draw_hint()
 
 
@@ -295,7 +302,10 @@ func _draw_row1() -> void:
 		var sold: bool = e["sold"]
 		var rr := Rect2(x0 + i * (cw + gap), y, cw, ch)
 		var hovered := not sold and _hover == _row1_base + i and _enchanting < 0
-		CardFace.draw(self, card, rr, card.health, hovered, false, _font, _font_bold)
+		# R203：卡面只留卡名（name_only）；悬停或「选中查看」都走高亮。
+		var picked := not sold and _sel_row1 == i and _enchanting < 0
+		CardFace.draw(self, card, rr, card.health, hovered or picked, false, _font, _font_bold,
+				-1, false, false, true)
 		var price := _card_price(card)
 		_draw_price(rr, price, sold)
 		if sold:
@@ -472,6 +482,49 @@ func _set_hint(text: String) -> void:
 	_hint_t = 2.4
 
 
+# ------------------------------------------------------------ 悬停/选中描述板（R203）
+
+func _hover_card() -> CardData:
+	## 当前应该显示描述的卡：附魔/删除选卡列表优先，其次第一行「选中查看」的卡，
+	## 最后才是鼠标悬停的第一行卡（桌面端）。返回 null = 不画描述板。
+	if _hover_enchant_card >= 0 and _hover_enchant_card < _deck_cards.size():
+		return _deck_cards[_hover_enchant_card]["card"]
+	if _sel_row1 >= 0 and _sel_row1 < _row1.size():
+		var e: Dictionary = _row1[_sel_row1]
+		if not e["sold"]:
+			return e["card"]
+		return null
+	if _hover < 0:
+		return null
+	if _hover >= _row1_base and _hover < _row1_base + _row1.size():
+		var e2: Dictionary = _row1[_hover - _row1_base]
+		if not e2["sold"]:
+			return e2["card"]
+	return null
+
+
+func _draw_desc_plate() -> void:
+	## R203：商店卡面改为只留卡名后，效果描述的查看入口 = 底部这条描述板。
+	## 桌面端鼠标悬停即显示；移动端无 hover → 两段式点击的「首击选中查看」同样显示。
+	var card := _hover_card()
+	if card == null:
+		return
+	var vs := _vs()
+	var rr := Rect2(_goods_x0(), vs.y - 58.0, _goods_w(), 40.0)
+	draw_rect(rr, Color(0.06, 0.07, 0.09, 0.88), true)
+	draw_rect(rr, Color("c8951c"), false, 1.5)
+	var affix: String = card.affix_line()
+	var meta: String = card.kind + ((" · " + affix) if affix != "" else "")
+	draw_string(_font_bold, rr.position + Vector2(10, 17),
+			"%s   %s" % [card.card_name, meta],
+			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 20.0, 12, Color("ffd75a"))
+	var eff: String = CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
+	if eff != "":
+		draw_string(_font, rr.position + Vector2(10, 33),
+				CardFace._ellipsize(_font, eff, rr.size.x - 20.0, 10),
+				HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 20.0, 10, Color("ece7db"))
+
+
 # ------------------------------------------------------------ 附魔选卡覆盖层
 
 func _draw_pick_overlay() -> void:
@@ -508,13 +561,14 @@ func _draw_pick_overlay() -> void:
 		var col := i % cols
 		var row := i / cols
 		var rr := Rect2(x0 + col * (cw + gapx), y0 + row * (ch + gapy), cw, ch)
-		var hovered := ok and _hover_enchant_card == i
+		# R203：卡面只留卡名；悬停或「选中查看」都走高亮（移动端无 hover，靠选中查看）。
+		var hovered := ok and (_hover_enchant_card == i or _sel_pick == i)
 		if ok:
 			CardFace.draw(self, d["card"], rr, int(d["card"].health), hovered, false,
-					_font, _font_bold)
+					_font, _font_bold, -1, false, false, true)
 		else:
 			CardFace.draw(self, d["card"], rr, int(d["card"].health), false, false,
-					_font, _font_bold)
+					_font, _font_bold, -1, false, false, true)
 			draw_rect(rr, Color(0, 0, 0, 0.6), true)
 	if not any_ok:
 		draw_string(_font, Vector2(0, 300),
@@ -530,6 +584,7 @@ func _draw_pick_overlay() -> void:
 func _build_deck_cards() -> void:
 	## 构建选卡候选列表。附魔模式按附魔条件过滤；删除模式所有卡都可选。
 	_deck_cards = []
+	_sel_pick = -1          # 列表重建 → 旧的「选中查看」下标失效
 	if _enchanting < 0 and not _deleting:
 		return
 	for i in RunState.deck_ids.size():
@@ -626,9 +681,20 @@ func _on_click(pos: Vector2) -> void:
 		return
 	var hit := _hit_at(pos)
 	if hit < 0:
+		if _sel_row1 >= 0:            # 点空白 → 取消「选中查看」
+			_sel_row1 = -1
+			queue_redraw()
 		return
 	if hit >= _row1_base and hit < _row1_base + _row1.size():
-		_buy_card(hit - _row1_base)
+		var i := hit - _row1_base
+		if _sel_row1 == i:
+			# 第二击同一张 → 确认购买（R203 两段式：首击查看，再击成交）
+			_sel_row1 = -1
+			_buy_card(i)
+		else:
+			# 首击 → 选中查看（卡面高亮 + 描述板），不扣钱；移动端无 hover 时的详情入口
+			_sel_row1 = i
+			queue_redraw()
 	elif hit >= _row2_base and hit < _row2_base + _row2.size():
 		_start_enchant(hit - _row2_base)
 	elif hit >= _row3_base and hit < _row3_base + _row3.size():
@@ -691,11 +757,21 @@ func _on_pick_click(pos: Vector2) -> void:
 		_enchanting = -1
 		_deleting = false
 		_hover_enchant_card = -1
+		_sel_pick = -1
 		queue_redraw()
 		return
 	var ci := _enchant_card_at(pos)
 	if ci < 0:
+		if _sel_pick >= 0:            # 点空白 → 取消「选中查看」
+			_sel_pick = -1
+			queue_redraw()
 		return
+	if _sel_pick != ci:
+		# 首击 → 选中查看（R203 两段式：卡面只留卡名后，移动端靠这个看描述）
+		_sel_pick = ci
+		queue_redraw()
+		return
+	_sel_pick = -1
 	var d: Dictionary = _deck_cards[ci]
 	var idx: int = d["idx"]
 	# ---- 删除模式 ----
