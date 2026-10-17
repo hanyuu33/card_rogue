@@ -1359,6 +1359,7 @@ func _check_battle(scene: Variant) -> void:
 	_check_lighten(scene)
 	_check_reload(scene)
 	_check_assemble(scene)
+	_check_run_deck_panel(scene)
 
 
 func _check_reload(scene: Variant) -> void:
@@ -1449,6 +1450,84 @@ func _check_reload(scene: Variant) -> void:
 	eng.state.hand.clear()
 	scene._reload_idx = -1
 	print("SMOKE OK 填充选卡页：点填充 → 弹页（候选 2）/ 确认 → 聚能炮击（0 费）/ 取消不扣费")
+
+
+func _check_run_deck_panel(scene: Variant) -> void:
+	## R207：战斗内**两个卡组口径**必须分开 ——
+	##   顶栏「卡组」= **完整卡组**（`RunState.deck_ids`，本局构筑，跨战斗、含附魔）
+	##   右下牌堆  = **剩余牌堆**（`engine.state.deck`，本场还没抽到的牌）
+	## 旧版两个按钮开的是同一个面板（都读 engine.state.deck），整副牌根本看不到。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("完整卡组：拿不到 engine")
+		return
+	var repo := CardRepo.load_json()
+	if repo.get_card(8002) == null or repo.get_card(8004) == null \
+			or repo.get_card(9010) == null:
+		_smoke_fail("完整卡组：测试用卡（8002/8004/9010）缺失")
+		return
+	var saved_active: bool = RunState.run_active
+	var saved_ids: Array = RunState.deck_ids.duplicate()
+	var saved_mods: Array = RunState.deck_mods.duplicate()
+	var saved_deck: Array = eng.state.deck.duplicate()
+	# 本局构筑 4 张：攻击 ×2（第 2 张带 +10 攻击附魔）+ 熊 + 火球
+	var test_ids: Array[int] = [8002, 8002, 8004, 9010]
+	RunState.run_active = true
+	RunState.deck_ids = test_ids
+	RunState.deck_mods = []
+	RunState.ensure_deck_mods()
+	RunState.enchant_deck_card(1, {"power": 10})
+	# 本场抽牌堆只剩 1 张（模拟已经抽掉大半）
+	eng.state.deck.clear()
+	eng.state.deck.append(repo.get_card(8002))
+	# ── ① 顶栏按钮 → 完整卡组 ──
+	scene._close_zone_panels()
+	scene._toggle_deck_panel()
+	if not scene._run_deck_visible or scene._deck_visible:
+		_smoke_fail("完整卡组：顶栏按钮应只开完整卡组面板（run=%s deck=%s）"
+				% [scene._run_deck_visible, scene._deck_visible])
+		return
+	var run_cards: Array = scene._zone_panel_cards()
+	var run_counts: Array = scene._zone_panel_counts()
+	var run_total := 0
+	for n: int in run_counts:
+		run_total += n
+	if run_total != 4 or run_cards.size() != run_counts.size():
+		_smoke_fail("完整卡组：应显示本局构筑 4 张（实际 %d 张 / %d 组）"
+				% [run_total, run_cards.size()])
+		return
+	# 附魔副本不能被 id 并掉 → 「攻击」应出现两组（原卡 ×1 + 附魔 ×1）
+	var atk_groups := 0
+	for c: CardData in run_cards:
+		if c.id == 8002:
+			atk_groups += 1
+	if atk_groups != 2:
+		_smoke_fail("完整卡组：带附魔的攻击必须与原卡分开列（攻击组数 %d，期望 2）" % atk_groups)
+		return
+	# ── ② 右下牌堆 → 剩余牌堆（只有 1 张）──
+	scene._close_zone_panels()
+	scene._deck_visible = true
+	var rem: Array = scene._zone_panel_cards()
+	if rem.size() != 1 or rem[0].id != 8002:
+		_smoke_fail("剩余牌堆：右下牌堆应只显示本场剩下的 1 张（实际 %d 组）" % rem.size())
+		return
+	# ── ③ 再点一次顶栏按钮 → 关闭（两个面板互斥，不叠着开）──
+	scene._close_zone_panels()
+	scene._toggle_deck_panel()
+	scene._toggle_deck_panel()
+	if scene._run_deck_visible or scene._deck_visible:
+		_smoke_fail("完整卡组：再点一次应关闭面板（run=%s deck=%s）"
+				% [scene._run_deck_visible, scene._deck_visible])
+		return
+	# 还原（后面的用例还要用这套状态）
+	scene._close_zone_panels()
+	RunState.run_active = saved_active
+	RunState.deck_ids = saved_ids
+	RunState.deck_mods = saved_mods
+	RunState.ensure_deck_mods()
+	eng.state.deck.clear()
+	eng.state.deck.assign(saved_deck)
+	print("SMOKE OK 卡组：顶栏=完整卡组（4 张/附魔单列）/ 右下=剩余牌堆（1 张）/ 互斥开关")
 
 
 func _check_assemble(scene: Variant) -> void:

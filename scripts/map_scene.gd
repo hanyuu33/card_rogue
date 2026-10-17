@@ -302,9 +302,12 @@ func _prep_midway_demo() -> void:
 	if cells.size() != RogueMap.CELLS:
 		return
 	RunState.cleared_ids = []
+	RunState.seen_ids = []
 	# 沿起点一路向上走 3 格（找有路的邻居）
 	var cur := int(RogueMap.start_cell(cells)["id"])
 	RunState.cleared_ids.append(cur)
+	RunState.reveal_known()   # R207：把「站在起点时已经看过的那一圈」记进记忆 ——
+	                          #      走开之后它们**不该**重新被雾盖回去（本演示要核验这条）
 	for step in 3:
 		var nxt := -1
 		var fallback := -1      # 没有向上的门时的兜底（起点可能只有左右两个门）
@@ -1555,20 +1558,22 @@ func _toggle_deck() -> void:
 
 func _build_deck_rows() -> Array:
 	## 卡组聚合：[{id, card, count}]（按首次出现顺序）。
-	## ⚠️ R112 起卡组里不再有「运行时改写费用」的卡，同名卡费用必然相同 → 按 id 聚合即可。
+	## ⚠️ R112 起卡组里不再有「运行时改写费用」的卡 —— 但 **R207** 起必须按
+	## 「卡面签名」（id + 费用 + 力/生 + 词缀）聚合，不能只按 id：
+	## 商店附魔（R181）生成的是**同 id 的独立副本**，只按 id 合并会把「+10 攻击的那张」
+	## 并进原卡、面板上显示成没附魔的数值 —— 玩家花了钱却看不出效果。
+	## 卡实例统一从 `RunState.build_deck()` 取（它负责把附魔烤进副本）。
 	var repo := CardRepo.load_json()
 	var seen := {}
 	var out: Array = []
-	for i in RunState.deck_ids.size():
-		var id: int = RunState.deck_ids[i]
-		if seen.has(id):
-			out[seen[id]]["count"] += 1
+	for c: CardData in RunState.build_deck(repo):
+		var key := "%d|%d|%d|%d|%s" % [c.id, c.cost, c.power, c.health,
+				",".join(c.affixes)]
+		if seen.has(key):
+			out[seen[key]]["count"] += 1
 			continue
-		var c := repo.get_card(id)
-		if c == null:
-			continue
-		seen[id] = out.size()
-		out.append({"id": id, "card": c, "count": 1})
+		seen[key] = out.size()
+		out.append({"id": c.id, "card": c, "count": 1})
 	return out
 
 

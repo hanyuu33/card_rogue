@@ -32,6 +32,11 @@ static var current_layer := GameLayers.LAYER_DEFAULT  # 本局地图所属的层
 static var current_node_id := -1             # 玩家所在房间（-1 = 还没出发）
 ## 已**走过**的房间 id（R128 语义）：既决定回溯是否免费，也决定该房间的门是否可见。
 static var cleared_ids: Array = []
+## R207：**曾经看清过的房间** id（只增不减）。用户口径「已经揭开的迷雾，不需要再还原」——
+## 旧规则把可见性算成「当前房间 + 它的邻居」，于是玩家往前走一格，**原来那批邻居**
+## 立刻又被雾盖回去（明明刚才看过）。现在每次判定命中视野就记进这里，永久认得。
+## 随续档持久化（run_save）；换层 / 新开一局 / 结束一局时清空。
+static var seen_ids: Array = []
 ## R128 巧克力：每层固定 RogueMap.MAX_STEPS 块。进入**没走过**的房间扣 1 块，
 ## 原路返回走过的房间不扣。扣到 0 → 本房间内容结算完立刻开 Boss 战（boss_pending）。
 static var chocolate := 0
@@ -250,6 +255,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	map_cells = map if not map.is_empty() else RogueMap.generate(run_rng, layer)
 	current_layer = layer
 	cleared_ids = []
+	seen_ids = []                 # R207：新开一局 → 迷雾记忆清空
 	chocolate = RogueMap.MAX_STEPS
 	gold = 100                    # R181：新开一局初始 100 金币
 	boss_pending = false
@@ -296,6 +302,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 			# ⚠️ 起点开局就记「已走过」：规则是「初始点和已经走过的房间除外」，
 			# 漏掉这一步的话，玩家从别处**走回起点会被当成新房间误扣一块巧克力**。
 			cleared_ids.append(current_node_id)
+	reveal_known()                # R207：开局视野（起点 + 邻居 + 地标）立刻记进 seen
 
 
 static func end_run(clear_save: bool = true) -> void:
@@ -312,6 +319,7 @@ static func end_run(clear_save: bool = true) -> void:
 	current_layer = GameLayers.LAYER_DEFAULT
 	current_node_id = -1
 	cleared_ids = []
+	seen_ids = []                 # R207：本局结束 → 迷雾记忆清掉
 	chocolate = 0
 	gold = 0                      # R181：本局结束 → 金币清掉
 	boss_pending = false
@@ -362,6 +370,7 @@ static func advance_layer(layer: int) -> int:
 	# 本层 Boss 开局摇定（换层要重摇：第二层只有机械巨鸭）
 	boss_pick = _roll_boss(layer)
 	cleared_ids = []
+	seen_ids = []                 # R207：换层 = 新地图 → 上一层记得的格子全部作废
 	pending_level = {}
 	pending_node = {}
 	pending_event = ""
@@ -380,6 +389,7 @@ static func advance_layer(layer: int) -> int:
 		if not sc2.is_empty():
 			current_node_id = int(sc2["id"])
 			cleared_ids.append(current_node_id)   # 起点同样算「初始点」
+	reveal_known()                # R207：本层开局视野立刻记进 seen
 	return current_node_id
 
 
@@ -901,7 +911,8 @@ static func whisper_pick() -> Dictionary:
 
 static func known_node(id: int) -> bool:
 	## R145 迷雾规则的**唯一判定口**：玩家「看得见这一格里是什么」吗？
-	##   * 持有「鹰哨」（6026）→ 全图都看得见；
+	##   * 持有「鹰哨」（6026）→ 全图都看得见（**不写进记忆**：道具拿走就该回到迷雾）；
+	##   * **记忆**（`seen_ids`）：只要看清过一次就永久记得（R207，见下）；
 	##   * **地标**（`is_landmark_node`）：起点与两个大宝箱 —— 它们不是随机内容，
 	##     位置固定、开局就该知道；全图的通路又是可见的，玩家才有办法「朝大宝箱走」；
 	##   * 走过的房间（`cleared_ids`）—— 去过就记得；
@@ -909,10 +920,26 @@ static func known_node(id: int) -> bool:
 	##   * **当前房间有门的邻居** = 「下一步」能选的这几间。
 	## 其余格子在界面上盖一层迷雾（**内容**不可见，但通路（小桥）仍然可见）。
 	## ⚠️ 地图页与战斗内总览**必须**都读这个函数 —— 两处各写一份必然走形。
+	## ⚠️ **R207 起本函数带副作用**：命中「会留下记忆」的视野时把 id 记进 `seen_ids`。
+	##    这是故意的 —— 「揭开过就不还原」只能有一个判定口，而「绘制时问了一句」
+	##    本身就是玩家看见了这件事。放进这里，任何新增的可见性来源都不必再去登记一遍；
+	##    只想问「按老规则此刻看不看得见」用它下面的 `_memory_visible()`。
 	if id < 0 or id >= map_cells.size():
 		return false
 	if has_relic(EAGLE_WHISTLE_RELIC_ID):
 		return true
+	if seen_ids.has(id):
+		return true
+	if not _memory_visible(id):
+		return false
+	seen_ids.append(id)      # R207：看清过 → 永久记得（只增不减）
+	return true
+
+
+static func _memory_visible(id: int) -> bool:
+	## 「看了会记住」的视野来源 —— **不含鹰哨**（那是道具给的瞬时透视，
+	## 摘掉鹰哨远处的格子就该重新被雾盖住，test_engine 的 R145 块钉着这一条）。
+	## 判定顺序与老的 `known_node` 完全一致，改这里等于改「迷雾规则」。
 	if is_landmark_node(id):
 		return true
 	if current_node_id < 0:
@@ -920,6 +947,17 @@ static func known_node(id: int) -> bool:
 	if id == current_node_id or cleared_ids.has(id):
 		return true
 	return RogueMap.neighbor_ids(current_node()).has(id)
+
+
+static func reveal_known() -> void:
+	## 视野记忆的**刷新口**：把此刻所有「看了会记住」的格子记进 `seen_ids`（去重、只增）。
+	## 走一步 / 换层 / 读档 / 演示摆位之后调一次，之后无论谁先查询，视野都是最新的。
+	## （正常绘制也会通过 `known_node()` 逐个登记，这里只是把「立刻生效」做成显式一步。）
+	if map_cells.is_empty():
+		return
+	for i in map_cells.size():
+		if not seen_ids.has(i) and _memory_visible(i):
+			seen_ids.append(i)
 
 
 static func is_landmark_node(id: int) -> bool:
@@ -966,6 +1004,8 @@ static func advance(node_id: int) -> Dictionary:
 		if chocolate <= 0:
 			boss_pending = true
 	current_node_id = node_id
+	reveal_known()   # R207：走进来之后立刻把新视野记进 seen —— 旧邻居不会因为
+	                 #      「已经不是邻居」而重新被雾盖回去（用户口径）
 	return {"ok": true, "is_new": is_new, "cost": cost, "revealed": revealed,
 			"chocolate": chocolate}
 
@@ -975,6 +1015,7 @@ static func complete_current() -> void:
 	## 进房时已经标过「已走过」，这里是幂等的兜底口。
 	if current_node_id >= 0 and not cleared_ids.has(current_node_id):
 		cleared_ids.append(current_node_id)
+	reveal_known()                # R207：幂等刷新（房间结算完的视野也记进 seen）
 
 
 static func gold_for_tier(tier: int) -> int:

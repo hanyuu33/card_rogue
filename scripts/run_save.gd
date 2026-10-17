@@ -47,6 +47,7 @@ static func save_run() -> bool:
 		"current_layer": RunState.current_layer,
 		"current_node_id": RunState.current_node_id,
 		"cleared_ids": RunState.cleared_ids,
+		"seen_ids": RunState.seen_ids,       # R207：迷雾记忆（揭开过的房间不再还原）
 		"chocolate": RunState.chocolate,
 		"boss_pending": RunState.boss_pending,
 		"player_class": RunState.player_class,
@@ -107,6 +108,10 @@ static func load_run() -> bool:
 	RunState.current_layer = int(d.get("current_layer", GameLayers.LAYER_DEFAULT))
 	RunState.current_node_id = int(d.get("current_node_id", -1))
 	RunState.cleared_ids = _int_array(d.get("cleared_ids", []))
+	# R207：读档后先还原「揭开过就不还原」的记忆，再按当前视野补一批
+	#（老存档没有这个字段 → 空数组，补完等于「读档那一刻看见的都记住」）。
+	RunState.seen_ids = _int_array(d.get("seen_ids", []))
+	RunState.reveal_known()
 	RunState.chocolate = int(d.get("chocolate", 0))
 	RunState.boss_pending = bool(d.get("boss_pending", false))
 	RunState.player_class = str(d.get("player_class", PlayerClass.default_id()))

@@ -5689,6 +5689,15 @@ func _init() -> void:
 	RunState.relics = fog_saved_relics
 	check(fog_far_id >= 0 and not RunState.known_node(fog_far_id),
 			"R145 迷雾：摘掉鹰哨后远处的格子重新被迷雾遮住")
+	# R207：「揭开过的迷雾不还原」—— 先记下此刻（站在起点）看得见的全部格子，
+	# 走一步之后它们**不许**再被雾盖回去（旧规则只看当前 + 邻居，走开就重新遮住）。
+	var fog_seen_before: Array = []
+	for fsb: Dictionary in RunState.map_cells:
+		if RunState.known_node(int(fsb["id"])):
+			fog_seen_before.append(int(fsb["id"]))
+	check(not fog_seen_before.is_empty() and RunState.seen_ids.size() >= fog_seen_before.size(),
+			"R207 迷雾：看清过的格子都进了 seen_ids（看得见 %d 格 / 已记忆 %d 格）"
+			% [fog_seen_before.size(), RunState.seen_ids.size()])
 	var first_new: Dictionary = avail[0]
 	var choco_before := RunState.chocolate
 	var mv := RunState.advance(int(first_new["id"]))
@@ -5707,6 +5716,14 @@ func _init() -> void:
 			fog_next_ok = false
 	check(fog_next_ok, "R145 迷雾：走到新房间后，「下一步」换成新位置的相邻房"
 			+ "（走过的房间仍然可见）")
+	# R207：走开之后，刚才在起点看见的那一圈「一格都不许还原」
+	var fog_restored := 0
+	for fsv in fog_seen_before:
+		if not RunState.known_node(int(fsv)):
+			fog_restored += 1
+	check(fog_restored == 0,
+			"R207 迷雾：走开后已揭开的 %d 格全部仍然可见（还原了 %d 格）"
+			% [fog_seen_before.size(), fog_restored])
 	# ==== R146：开场巡场的「放大 + 拖回我方并还原大小」（battle_scene）====
 	# 时间轴是纯函数 `intro_pose(t)` → 直接钉死四段；几何（不漏色）靠出图 + 像素比对核验。
 	var r146bs := load("res://scripts/battle_scene.gd")
@@ -6081,6 +6098,13 @@ func _init() -> void:
 	check(RunState.chocolate == RogueMap.MAX_STEPS
 			and RunState.cleared_ids.size() == 1 and not RunState.boss_pending,
 			"进入第二层：巧克力重新满上（%d 块）、足迹只剩新起点" % RunState.chocolate)
+	# R207：换层 = 新地图 → 上一层「揭开过的格子」全部作废，只按新地图初始视野重记
+	var l2_seen_ok := not RunState.seen_ids.is_empty()
+	for sid in RunState.seen_ids:
+		if int(sid) < 0 or int(sid) >= RunState.map_cells.size():
+			l2_seen_ok = false
+	check(l2_seen_ok, "R207 迷雾：换层后迷雾记忆按新地图重建（%d 格，旧地图的 id 不带过来）"
+			% RunState.seen_ids.size())
 	check(RunState.relic_choice.size() == 3, "第二层起始：重新掷出道具三选一")
 	var c2_from_pool := 0
 	for rid2 in RunState.relic_choice:

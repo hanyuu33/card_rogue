@@ -386,6 +386,12 @@ var _discard_visible := false   # 弃牌区浏览面板开关（点弃牌区切�
 var _effects_visible := false   # 效果区浏览面板开关（点左侧效果区查看）
 var _enemy_effects_visible := false  # 敌方效果区浏览面板开关
 var _deck_visible := false      # 卡组（抽牌堆）浏览面板开关（点卡组牌堆查看，不显示顺序）
+## R207：**完整卡组**面板开关（顶栏「卡组」按钮）。用户口径：「战斗内上方应该查看
+## 完整卡组，右下角才是查看现有卡组」—— 上方 = `RunState.deck_ids`（本局构筑，跨战斗、
+## 含附魔）；右下牌堆 = `engine.state.deck`（本场还没抽到的牌）。两者**互斥**打开。
+var _run_deck_visible := false
+## 完整卡组面板的卡实例缓存（见 `_run_deck_cards()`；开 / 关面板时清空）
+var _run_deck_cache: Array = []
 var _void_visible := false      # 消耗区浏览面板开关（R155：点消耗区图标回看本局消失的卡）
 var _zone_page := 0             # 区域浏览面板页码（R155 分页：滚轮 / ‹ › 翻页）
 var _relics_visible := false    # 道具浏览面板开关（道具栏装不下时点它查看全部）
@@ -1690,7 +1696,36 @@ func _ready() -> void:
 	if "--deckpanel" in args and engine != null:
 		# 演示（2026-10-01）：卡组（抽牌堆）浏览面板 —— 相同卡合并、不显示抽牌顺序
 		_deck_visible = true
-		status_text = "卡组：点开浏览（相同卡合并 ×N，按费用排序，不显示抽牌顺序）"
+		_banner = {}    # 只截图：别让「我方回合」横幅压在面板标题上
+		status_text = "剩余牌堆：点开浏览（相同卡合并 ×N，按费用排序，不显示抽牌顺序）"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--rundeckpanel" in args and engine != null:
+		# 演示（R207）：顶栏「卡组」= **完整卡组**（本局构筑，含奖励卡与商店附魔），
+		# 与右下「剩余牌堆」（本场还没抽到的牌）是两个口径。
+		# 出图：--screenshot --level 0 --rundeckpanel --shotframe 20
+		if not RunState.run_active:
+			# 单关演示没有 run → 临时造一份「本局构筑」：现有牌堆 + 3 张奖励卡，
+			# 其中一张「攻击」带附魔（验证同 id 的附魔副本按卡面签名单列，不被并掉）。
+			RunState.run_active = true
+			var demo_ids: Array[int] = []
+			for dc: CardData in engine.state.deck:
+				demo_ids.append(dc.id)
+			for extra: int in [8004, 9032, 9010]:
+				if repo.get_card(extra) != null:
+					demo_ids.append(extra)
+			RunState.deck_ids = demo_ids
+			RunState.deck_mods = []
+			RunState.ensure_deck_mods()
+			for di in RunState.deck_ids.size():
+				if RunState.deck_ids[di] == 8002:
+					RunState.enchant_deck_card(di, {"power": 10})
+					break
+		_close_zone_panels()
+		_run_deck_visible = true
+		_banner = {}    # 只截图：别让「我方回合」横幅压在面板标题上
+		status_text = "完整卡组：本局构筑 %d 张（含附魔副本）—— 右下角牌堆才是本场剩余" \
+				% _run_deck_cards().size()
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--fence" in args and engine != null:
@@ -2461,7 +2496,7 @@ func _gui_input(event: InputEvent) -> void:
 			return
 		# R155：区域浏览面板（卡组/弃牌/消耗/效果区）开着 → 滚轮翻页
 		if _discard_visible or _effects_visible or _enemy_effects_visible \
-				or _deck_visible or _void_visible:
+				or _deck_visible or _run_deck_visible or _void_visible:
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				_zone_page = maxi(0, _zone_page - 1)
 			else:
@@ -2550,7 +2585,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				return
 			# R155：区域浏览面板（卡组/弃牌/消耗/效果/道具）也是一层浮层 → 先关它再轮到自己开菜单
 			if _discard_visible or _effects_visible or _enemy_effects_visible or _relics_visible \
-					or _deck_visible or _void_visible:
+					or _deck_visible or _run_deck_visible or _void_visible:
 				_close_zone_panels()
 				queue_redraw()
 				return
@@ -2776,7 +2811,7 @@ func _on_left_click(pos: Vector2) -> void:
 		queue_redraw()
 		return
 	if _discard_visible or _effects_visible or _enemy_effects_visible or _relics_visible\
-			or _deck_visible or _void_visible:
+			or _deck_visible or _run_deck_visible or _void_visible:
 		# R155：‹ › 翻页 / 右上「×」/ 点面板**外**才关闭 —— 旧版「点任意处关闭」
 		# 让面板内的点击（想看另一页、想细看）都变成了关面板，太毛躁。
 		if _zone_prev_page_rect().has_point(pos):
@@ -2825,9 +2860,11 @@ func _on_left_click(pos: Vector2) -> void:
 		queue_redraw()
 		return
 	# 卡组（抽牌堆）：点开浏览 —— 相同卡合并显示张数，不泄露抽牌顺序
+	# R207：这里 = **现有卡组**（本场还没抽到的牌），顶栏按钮才是完整卡组 → 先关干净再开
 	var deck_rect := Rect2(DECK_X, DECK_Y, CARD_W, CARD_H)
 	if deck_rect.has_point(pos) and not engine.state.deck.is_empty():
 		_pass_moved_pending()
+		_close_zone_panels()
 		_deck_visible = true
 		queue_redraw()
 		return
@@ -3804,6 +3841,8 @@ func _close_zone_panels() -> void:
 	_enemy_effects_visible = false
 	_relics_visible = false
 	_deck_visible = false
+	_run_deck_visible = false
+	_run_deck_cache = []
 	_void_visible = false
 	_ee_popup = false   # R197：一并收掉敌方效果开场弹窗
 	_zone_page = 0
@@ -4166,7 +4205,7 @@ func _hover_covered() -> bool:
 	## 它们的共同点：鼠标坐标仍落在下层元素上，但玩家看不见 —— 此时再按鼠标位置
 	## 弹说明，就会出现「看不见道具栏却在它上面弹出悬浮效果」（R121 用户报告）。
 	## ⚠️ **不含** `_effects_visible` / `_enemy_effects_visible` / `_deck_visible` /
-	##    `_discard_visible` —— 那些区域面板里的卡是**要**悬停查看的，
+	##    `_run_deck_visible` / `_discard_visible` —— 那些区域面板里的卡是**要**悬停查看的，
 	##    由 `_on_hover` 的 ⓪ 分支单独处理，别在这里误杀。
 	if UiGate.blocked():
 		return true
@@ -4367,9 +4406,10 @@ func _on_hover(pos: Vector2) -> void:
 		var deck_rect := Rect2(DECK_X, DECK_Y, CARD_W, CARD_H)
 		if deck_rect.has_point(pos):
 			if engine.state.deck.is_empty():
-				tip = "卡组（空）：抽牌堆用完了会把弃牌洗回来"
+				tip = "剩余牌堆（空）：抽牌堆用完了会把弃牌洗回来"
 			else:
-				tip = "卡组 %d 张（点击查看，不显示抽牌顺序）" % engine.state.deck.size()
+				tip = "剩余牌堆 %d 张（本场还没抽到；点开查看，不显示抽牌顺序）" \
+						% engine.state.deck.size()
 	# ⑥ R140 消耗（消失）区：本局消失的卡
 	if _hover_card == null:
 		if Rect2(VOID_X, VOID_Y, CARD_W, CARD_H).has_point(pos):
@@ -4727,15 +4767,41 @@ func _toggle_log() -> void:
 
 
 func _toggle_deck_panel() -> void:
-	## 顶栏「卡组」按钮（R155）：开关卡组浏览面板 —— 与点右下牌堆是**同一个**面板。
-	if engine.state.deck.is_empty() and not _deck_visible:
+	## 顶栏「卡组」按钮（R155 上线 / R207 改口径）：打开的是**完整卡组** ——
+	## 本局构筑的整副牌（`RunState.deck_ids`，跨战斗累积、含商店附魔）。
+	## ⚠️ 旧版这里和点右下牌堆打开的是**同一个**面板（都读 `engine.state.deck`），
+	##    于是玩家点上方按钮只看到「本场还剩几张」，整副牌根本看不到（用户反馈）。
+	##    现在的分工见 `_run_deck_cards()` 与 `_deck_visible` 的注释。
+	var cards := _run_deck_cards()
+	if cards.is_empty() and not _run_deck_visible:
 		return
-	if _deck_visible:
-		_close_zone_panels()
-	else:
-		_close_zone_panels()
-		_deck_visible = true
+	var was := _run_deck_visible
+	_close_zone_panels()
+	if not was:
+		_run_deck_cache = []      # 每次打开重建（关闭期间卡组可能变过）
+		_run_deck_visible = true
 	queue_redraw()
+
+
+func _run_deck_cards() -> Array:
+	## 「完整卡组」的卡列表（R207）：
+	##   * run 中 → `RunState.deck_ids` 经 `build_deck()` 展开（附魔卡是独立副本，
+	##     卡面直接带附魔后的数值）；
+	##   * 单关 / 演示（没有 run）→ 退回本场抽牌堆，至少不是空面板。
+	## 与右下「剩余牌堆」的区别：那份是 `engine.state.deck`，会随出牌越抽越少；
+	## 这份是本局**拥有的全部牌**，整场不变（除非胜利后加了新卡）。
+	## ⚠️ 结果**缓存到面板关闭**：`build_deck()` 会为每张附魔卡复制一份 CardData，
+	##    而 `_draw()` 每帧要问 `_zone_panel_cards()` 五六次（布局 / 分页 / 关闭按钮）——
+	##    不缓存就是每帧复制整副牌。缓存作废点只放在开 / 关面板（战斗内改不了卡组）。
+	if not _run_deck_cache.is_empty():
+		return _run_deck_cache
+	var out: Array = []
+	if RunState.run_active and not RunState.deck_ids.is_empty() and repo != null:
+		out.assign(RunState.build_deck(repo))
+	elif engine != null:
+		out.assign(engine.state.deck)
+	_run_deck_cache = out
+	return out
 
 
 func _draw_hp_strip() -> void:
@@ -4787,6 +4853,7 @@ func _toggle_map() -> void:
 		_effects_visible = false
 		_enemy_effects_visible = false
 		_deck_visible = false
+		_run_deck_visible = false
 		_relics_visible = false
 		_log_visible = false
 	queue_redraw()
@@ -5475,9 +5542,14 @@ func _draw() -> void:
 	if _discard_visible:
 		_draw_discard_panel()
 	if _deck_visible:
-		var deck_title := "卡组 %d 张（相同卡合并，不显示抽牌顺序）" % engine.state.deck.size()
+		# R207：右下牌堆 = **现有卡组**（本场还没抽到的牌，会越抽越少）
+		var deck_title := "剩余牌堆 %d 张（本场未抽到 · 同名合并）" % engine.state.deck.size()
 		_draw_zone_panel(deck_title,
 				_zone_panel_cards(), _zone_panel_counts())
+	if _run_deck_visible:
+		# R207：顶栏「卡组」= **完整卡组**（本局构筑的整副牌）
+		var run_title := "完整卡组 %d 张（本局构筑 · 同名合并）" % _run_deck_cards().size()
+		_draw_zone_panel(run_title, _zone_panel_cards(), _zone_panel_counts())
 	if _void_visible:
 		_draw_zone_panel("消耗区 %d 张（相同卡合并；消失的卡本场对战不再出现）" % engine.state.void_count,
 				_zone_panel_cards(), _zone_panel_counts())
@@ -9419,6 +9491,9 @@ func _zone_panel_cards() -> Array:
 	if _enemy_effects_visible:
 		return _merged_effects(engine.state.enemy_effects).map(
 				func(m: Dictionary) -> CardData: return m["card"])
+	if _run_deck_visible:
+		return _merged_deck(_run_deck_cards()).map(
+				func(m: Dictionary) -> CardData: return m["card"])
 	if _deck_visible:
 		return _merged_deck(engine.state.deck).map(
 				func(m: Dictionary) -> CardData: return m["card"])
@@ -9438,6 +9513,9 @@ func _zone_panel_counts() -> Array:
 	if _enemy_effects_visible:
 		return _merged_effects(engine.state.enemy_effects).map(
 				func(m: Dictionary) -> int: return m["count"])
+	if _run_deck_visible:
+		return _merged_deck(_run_deck_cards()).map(
+				func(m: Dictionary) -> int: return m["count"])
 	if _deck_visible:
 		return _merged_deck(engine.state.deck).map(
 				func(m: Dictionary) -> int: return m["count"])
@@ -9448,22 +9526,29 @@ func _zone_panel_counts() -> Array:
 
 
 func _merged_deck(cards: Array) -> Array:
-	## 抽牌堆按 **id** 合并显示：[{card, count}]。
-	## 按（费用, id）排序而非出现顺序 —— 玩家不能从面板推出抽牌顺序。
+	## 牌堆按**卡面签名**合并显示：[{card, count}]。
+	## ⚠️ R207：不能只按 `id` 合并 —— 商店附魔（R181）生成的是**同 id 的独立副本**，
+	##    按 id 合并会把「+10 攻击的那张」并进原卡、只留其中一个卡面，
+	##    玩家在「完整卡组」里就看不见自己花钱买的附魔了（卡名一样、数值不一样）。
+	## 排序用（费用, id）而非出现顺序 —— 玩家不能从面板推出抽牌顺序。
 	var order: Array = []
-	var by_id := {}
+	var by_key := {}
 	for c: CardData in cards:
-		if not by_id.has(c.id):
+		var key := "%d|%d|%d|%d|%s" % [c.id, c.cost, c.power, c.health,
+				",".join(c.affixes)]
+		if not by_key.has(key):
 			var e := {"card": c, "count": 0}
-			by_id[c.id] = e
+			by_key[key] = e
 			order.append(e)
-		by_id[c.id]["count"] += 1
+		by_key[key]["count"] += 1
 	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ca: CardData = a["card"]
 		var cb: CardData = b["card"]
 		if ca.cost != cb.cost:
 			return ca.cost < cb.cost
-		return ca.id < cb.id)
+		if ca.id != cb.id:
+			return ca.id < cb.id
+		return ca.power < cb.power)
 	return order
 
 
@@ -9804,6 +9889,10 @@ func _process(delta: float) -> void:
 		turn_label.text = "对手回合"
 	# R155/R156：顶栏血量条改自绘（图标 + 滚动数字），这里只触发重绘 + 维护按钮禁用态
 	hp_strip.queue_redraw()
-	deck_btn.disabled = engine.state.deck.is_empty() and not _deck_visible
+	# R207：顶栏「卡组」看的是**完整卡组** → 本场牌堆抽空也不该变灰（整副牌还在）
+	var has_any_deck := RunState.run_active and not RunState.deck_ids.is_empty()
+	if not has_any_deck and engine != null and not engine.state.deck.is_empty():
+		has_any_deck = true
+	deck_btn.disabled = not has_any_deck and not _run_deck_visible
 	map_btn.disabled = not _mapview_available()
 	status_label.text = status_text
