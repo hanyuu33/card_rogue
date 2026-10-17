@@ -851,6 +851,23 @@ func _ready() -> void:
 						Vector2i(3, 1))]
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--reloadhover" in args and engine != null:
+		# 演示（R211）：填充 9146 挂了「次元」字段 —— 手牌塞一张并悬停，左栏应出现「字段：次元」
+		# （R211 起左栏补列 affix；以前只有 traits 的「词条：」行）。
+		# 出图：`battle.tscn -- --screenshot --reloadhover --shotframe 20`
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		engine.state.hand.append(CardData.from_dict(
+				repo.get_card(GameEngine.RELOAD_ID).to_dict()))
+		engine.state.hand.append(CardData.from_dict(
+				repo.get_card(GameEngine.ENERGY_CANNON_ID).to_dict()))
+		_hover_card = engine.state.hand[0]
+		_hover_pl = null
+		_hover_hand = 0
+		status_text = "R211：填充带「次元」→ 左栏「字段：次元」；用后进消耗区（不进弃牌区）"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--xtext" in args and engine != null:
 		# 演示（2026-10-01）：长描述效果卡。
 		# 悬停最长的那张（空间守护 9064）→ 左栏信息面板用于像素级核验「长描述不溢出」。
@@ -9505,6 +9522,17 @@ func _draw_info_panel() -> void:
 		for t in card.traits:
 			tt += (" · " if tt != "" else "") + str(t)
 		_draw_string_nw(_font, UiTheme.FS_MICRO, "词条：" + tt, Vector2(left, y), Color("886000"))
+		y += 17.0
+	# R211：**字段**（affix）与上面的「词条」（traits）是两回事 —— 卡面那行「技能 · 次元」的
+	# 后半截就是它（`CardData.affix_line()`）。以前左栏只列 traits，于是次元 / 疾行 / 幻影 /
+	# 超负荷这些字段在战斗里**根本看不到**（R195 起手牌卡面只剩卡名，小卡面又画不下种类行）。
+	# 空态不画（免得每张卡都顶着一行「字段：无」）。
+	if not card.affixes.is_empty():
+		var at := ""
+		for a in card.affixes:
+			at += (" · " if at != "" else "") + CardData.affix_label(str(a))
+		_draw_string_nw(_font_bold, UiTheme.FS_MICRO, "字段：" + at, Vector2(left, y),
+				Color("6b3fa0"))
 		y += 17.0
 	# 【R106】状态：这张战场单位**此刻已获得**的增益 / 减益，逐条一行。
 	# 空态不画（免得每张卡都顶着一行「状态：无」占地方）。放在「效果」之前 ——
