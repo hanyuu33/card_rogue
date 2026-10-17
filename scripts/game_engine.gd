@@ -359,7 +359,7 @@ const VOID_LORD_DMG_DISCOUNT:= 2
 # R124：**0 能量时也能使用**（此时 X 记 0）—— can_pay_card 对 X 费卡一律放行，
 #       不再是「0 能量打不出/不可点」；空放会照常把这张卡消耗掉（离手进弃牌区）。
 const METEOR_SHOWER_ID:= 9083
-const METEOR_SHOWER_DMG:= 9
+const METEOR_SHOWER_DMG:= 8
 
 # ── 火墙术（9084 技能，2026-10-01）──
 # 3 费普通技能：对一横行的敌人造成 FIRE_WALL_DMG 点伤害；该横行持续燃烧到**施放方**
@@ -619,6 +619,18 @@ const RECYCLE_HP:= 8              # 改造基数（素体自身 +1 额外照算 
 # + `RunState.remove_card` 删卡组那份。货物是「占卡组名额的负债」：
 # 带着它进第二层，第一个事件房会变成「委托完成」。
 const CARGO_ID:= 8065
+# ── R202：机械之心扩展（发明专家 / 随心组装 / 聚能炮击 / 填充）──
+# 「发明专家」（9143，2 费稀有效果）：己方每次在战斗内**变化**一张卡 → 回复 2 费。
+# 变化事件统一走 `_transform_hand_card` / `_invention_refund`。
+const INVENTION_EXPERT_ID:= 9143
+const INVENTION_REFUND:= 2
+# 「随心组装」（9144，1 费史诗技能）：将手牌里所有卡变成随机奖励卡（按稀有度三等分）。
+const ASSEMBLE_ID:= 9144
+# 「聚能炮击」（9145，1 费普通技能）：造成 9 点伤害并抽 1 张。
+const ENERGY_CANNON_ID:= 9145
+const ENERGY_CANNON_DMG:= 9
+# 「填充」（9146，0 费普通技能）：将手牌里一张卡变成聚能炮击。两段式入口 `cast_reload`。
+const RELOAD_ID:= 9146
 # ── R91：充电装置 8041 + 字段系统（CardData.affixes）──
 # 充电装置（1 费工事 1/1/1，机械之心普通）：**接通**的**我方**盟友和工事，
 #   在自己回合结束时回 CHARGE_HEAL(2) 点生命。
@@ -2007,6 +2019,10 @@ func _autoplay_play(hand_index: int) -> bool:
 		_log("鸭语耳环：%s 是 X 费卡，自动出牌跳过" % card.card_name)
 		return false
 	if card.is_spell():
+		# R202：需要选手牌目标的技能（系统升级 / 回收 / 填充）没有棋盘目标，自动出牌无法替他选。
+		if card.target_mode in ["hand_unit", "hand_any"]:
+			_log("鸭语耳环：%s 需要选手牌目标，自动出牌跳过" % card.card_name)
+			return false
 		var targets:= _autoplay_spell_targets(card)
 		if card.needs_target() and targets.is_empty():
 			_log("鸭语耳环：%s 没有合法目标，无法自动使用" % card.card_name)
@@ -4298,6 +4314,10 @@ func use_spell(hand_index: int, target = null) -> String:
 	# `cast_recycle(手牌序号, 目标手牌序号)`。同样在**付费之前**拦截。
 	if card.id == RECYCLE_ID:
 		return "回收：先点手牌里的一张卡"
+	# 填充（9146，R202）：**两段式**技能 —— 目标在**手牌**里且不限种类。
+	# 与「回收」同口径：点手牌里的一张卡把它变成「聚能炮击」。
+	if card.id == RELOAD_ID:
+		return "填充：先点手牌里的一张卡"
 	# 双向传送（8061，R102）：**两段式**技能 —— 要选**两个**单位，单段入口没有
 	# 第二个目标的信息。必须在**付费之前**拦截，否则玩家发现场上不足两个单位时
 	# 费用已经扣了、卡也已经从手牌里拿走了。
@@ -5142,6 +5162,113 @@ func cast_recycle(hand_index: int, target_hand_index: int) -> String:
 	return "%s → 素体（%d 攻 / %d 血）" % [rc_old, body.power, body.health]
 
 
+func cast_reload(hand_index: int, target_hand_index: int) -> String:
+	## 「填充」（9146，R202，机械之心 0 费普通技能）的两段施放入口：
+	## UI 先点「填充」→ 再点**手牌里任意一张卡**，目标被原位替换为「聚能炮击」。
+	## 与「回收」（8064）同套路：费用在这里扣；目标不限种类；不能选自己。
+	if ReplayLog.recording:
+		ReplayLog.act("cast_reload", [hand_index, target_hand_index])
+	if hand_index < 0 or hand_index >= state.hand.size():
+		return "（填充：手牌序号无效）"
+	var card: CardData = state.hand[hand_index]
+	if card == null or card.id != RELOAD_ID:
+		return "（这不是填充）"
+	if target_hand_index == hand_index:
+		return "（不能填充自己）"
+	var tgt: CardData = state.hand[target_hand_index] \
+			if target_hand_index >= 0 and target_hand_index < state.hand.size() else null
+	if tgt == null:
+		return "（填充：目标手牌序号无效）"
+	_pay(card)
+	state.hand.remove_at(hand_index)   # 目标下标若在被移除项之后要顺移
+	if target_hand_index > hand_index:
+		target_hand_index -= 1
+	var repo := CardRepo.load_json()
+	var proto: CardData = repo.get_card(ENERGY_CANNON_ID) if repo != null else null
+	if proto == null:
+		_log("填充：卡库缺少「聚能炮击」(9145)，目标保持原样")
+		action.emit("reload", {"card": null, "ok": false})
+		_note_card_played(SIDE_SELF, card)
+		state.discard.append(card)
+		return "填充：卡库缺少聚能炮击，效果落空"
+	var rc_old: String = tgt.card_name
+	var res := _transform_hand_card(SIDE_SELF, target_hand_index, proto, "填充")
+	var body: CardData = res.get("new", null) as CardData
+	_note_card_played(SIDE_SELF, card)
+	state.discard.append(card)
+	if body != null:
+		return "填充：%s → %s" % [rc_old, body.card_name]
+	return "填充：%s 没有变化" % rc_old
+
+
+func _random_reward_card(side: String) -> CardData:
+	## 从本角色奖励卡池里按「稀有度三等分」随机取一张卡（R202 随心组装）。
+	## 稀有度 0/1/2 各取一份，先均匀挑稀有度，再在该稀有度里随机挑卡。
+	var cid := RunState.player_class if side == SIDE_SELF else ""
+	var pool: Array[CardData] = CardRepo.load_json().reward_pool_for(cid)
+	var by_rarity: Dictionary = {0: [] as Array[CardData], 1: [] as Array[CardData], 2: [] as Array[CardData]}
+	for c: CardData in pool:
+		if c.rarity <= 2:
+			by_rarity[c.rarity].append(c)
+	var nonempty: Array[int] = []
+	for r in [0, 1, 2]:
+		if not by_rarity[r].is_empty():
+			nonempty.append(r)
+	if nonempty.is_empty():
+		return null
+	var rar: int = nonempty[rng.randi() % nonempty.size()]
+	var lst: Array[CardData] = by_rarity[rar] as Array[CardData]
+	return lst[rng.randi() % lst.size()]
+
+
+func _invention_refund(side: String, source_name: String) -> void:
+	## 「发明专家」9143 的触发唯一口：每变化一张卡回 2 费，多张发明专家不叠加。
+	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
+	var has_expert := false
+	for c: CardData in zone:
+		if c.id == INVENTION_EXPERT_ID:
+			has_expert = true
+			break
+	if not has_expert:
+		return
+	if side == SIDE_SELF:
+		state.energy += INVENTION_REFUND
+	else:
+		state.opp_energy += INVENTION_REFUND
+	_log("发明专家：%s 变化一张卡，回复 %d 点费用" % [source_name, INVENTION_REFUND])
+	action.emit("invention_refund", {"side": side, "amount": INVENTION_REFUND})
+
+
+func _transform_hand_card(side: String, hand_index: int, new_card: CardData, source_name: String) -> Dictionary:
+	## 变化一张手牌：把 state.hand[hand_index] 替换成 new_card 的独立副本，
+	## 触发「发明专家」回费，并 emit "transform" 动作给 UI。
+	var out: Dictionary = {"old": null, "new": null}
+	if hand_index < 0 or hand_index >= state.hand.size():
+		return out
+	var old_card: CardData = state.hand[hand_index]
+	var copy: CardData = CardData.from_dict(new_card.to_dict())
+	copy.traits = (copy.traits as Array).duplicate()   # 切断与卡库的共享引用
+	state.hand[hand_index] = copy
+	_invention_refund(side, source_name)
+	_log("%s：%s → %s" % [source_name, old_card.card_name, copy.card_name])
+	action.emit("transform", {"side": side, "index": hand_index, "old": old_card, "new": copy, "source": source_name})
+	out["old"] = old_card
+	out["new"] = copy
+	return out
+
+
+func _assemble_at_will(side: String) -> String:
+	## 「随心组装」9144：把手牌里所有卡变成随机奖励卡（按稀有度概率相等）。
+	var count := 0
+	for i in state.hand.size():
+		var pick: CardData = _random_reward_card(side)
+		if pick == null:
+			continue
+		_transform_hand_card(side, i, pick, "随心组装")
+		count += 1
+	return "随心组装：变化了 %d 张手牌" % count
+
+
 func _trait_copies(zone: Array[CardData], tname: String) -> int:
 
 
@@ -5501,6 +5628,14 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 		REBOOT_ID:
 			# 重启 8054（R100，机械之心）：将己方一个盟友/工事返回手卡（0 费，离手重置）。
 			return _reboot(target, side)
+		ENERGY_CANNON_ID:
+			# 聚能炮击 9145（R202，机械之心）：造成 ENERGY_CANNON_DMG 点伤害并抽 1 张。
+			var ec_dmg:= _op_deal_damage(side, _spell_dmg(side, ENERGY_CANNON_DMG, card), target)
+			var ec_draw:= _draw_many(1)
+			return "%s；抽 %d 张" % [ec_dmg, ec_draw]
+		ASSEMBLE_ID:
+			# 随心组装 9144（R202，机械之心）：手牌里所有卡变成随机奖励卡。
+			return _assemble_at_will(side)
 		BATCH_UPGRADE_ID:
 			# 批量改造 8031（R86，机械之心）：手牌里所有盟友 / 工事 +1 生命。
 			return _batch_upgrade(side)

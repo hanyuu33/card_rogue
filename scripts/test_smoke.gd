@@ -1205,6 +1205,116 @@ func _check_battle(scene: Variant) -> void:
 	_check_ee_popup(scene)
 	_check_recycle(scene)
 	_check_lighten(scene)
+	_check_reload(scene)
+	_check_assemble(scene)
+
+
+func _check_reload(scene: Variant) -> void:
+	## R202：填充（9146）两段式 —— 点填充 / 点任意手牌 → 目标变成聚能炮击；
+	## 再点一次填充自己 = 取消（不扣费）。0 费，所以能量应不变。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("填充：拿不到 engine")
+		return
+	var repo := CardRepo.load_json()
+	var rl: CardData = repo.get_card(GameEngine.RELOAD_ID)
+	if rl == null or rl.cost != 0 or rl.rarity != 0:
+		_smoke_fail("填充：卡面应是 0 费普通技能")
+		return
+	scene._grid_intro_t = -1.0
+	scene._grid_zoom = 1.0
+	scene._clear_selection()
+	eng.current_side = GameEngine.SIDE_SELF
+	# 手牌：攻击(0) + 填充(1)
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(repo.get_card(8002).to_dict()))
+	eng.state.hand.append(CardData.from_dict(rl.to_dict()))
+	eng.state.energy = 3
+	_feed_click(scene, _hand_card_center(scene, 1))
+	_feed_click(scene, _hand_card_center(scene, 1))
+	if int(scene._reload_idx) != 1:
+		_smoke_fail("填充：再点一次应进入选手牌模式（_reload_idx=%d）" % scene._reload_idx)
+		return
+	_feed_click(scene, _hand_card_center(scene, 0))
+	if int(scene._reload_idx) >= 0:
+		_smoke_fail("填充：点目标后应退出选手牌模式（_reload_idx=%d）" % scene._reload_idx)
+		return
+	var got: CardData = eng.state.hand[0]
+	if got.id != GameEngine.ENERGY_CANNON_ID:
+		_smoke_fail("填充：攻击应变成聚能炮击（实际 %s %d）" % [got.card_name, got.id])
+		return
+	if eng.state.energy != 3:
+		_smoke_fail("填充：应 0 费（能量 %d，期望 3）" % eng.state.energy)
+		return
+	var reload_in_discard := false
+	for d: CardData in eng.state.discard:
+		if d.id == GameEngine.RELOAD_ID:
+			reload_in_discard = true
+			break
+	if not reload_in_discard:
+		_smoke_fail("填充：填充本身应进弃牌区（discard=%s）" % str(eng.state.discard.map(func(c): return c.id)))
+		return
+	# 取消路径
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(rl.to_dict()))
+	eng.state.hand.append(CardData.from_dict(repo.get_card(8004).to_dict()))
+	eng.state.energy = 3
+	_feed_click(scene, _hand_card_center(scene, 0))
+	_feed_click(scene, _hand_card_center(scene, 0))
+	if int(scene._reload_idx) != 0:
+		_smoke_fail("填充（取消路径）：再点一次应进入选手牌模式")
+		return
+	_feed_click(scene, _hand_card_center(scene, 0))   # 点自己 = 取消
+	if int(scene._reload_idx) >= 0:
+		_smoke_fail("填充（取消路径）：点自己应取消")
+		return
+	if eng.state.hand.size() != 2 or eng.state.energy != 3:
+		_smoke_fail("填充（取消路径）：取消后手牌/能量应原样（%d 张 / %d 费）"
+				% [eng.state.hand.size(), eng.state.energy])
+		return
+	eng.state.hand.clear()
+	scene._reload_idx = -1
+	print("SMOKE OK 填充两段式：点填充 / 点手牌→聚能炮击（0 费）/ 点自己取消不扣费")
+
+
+func _check_assemble(scene: Variant) -> void:
+	## R202：随心组装（9144）—— 手牌里所有卡变成随机奖励卡，且不崩溃。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("随心组装：拿不到 engine")
+		return
+	var repo := CardRepo.load_json()
+	var asm: CardData = repo.get_card(GameEngine.ASSEMBLE_ID)
+	if asm == null or asm.cost != 1 or asm.rarity != 2:
+		_smoke_fail("随心组装：卡面应是 1 费史诗技能")
+		return
+	var saved_cls: String = RunState.player_class
+	RunState.player_class = PlayerClass.MECH
+	eng.current_side = GameEngine.SIDE_SELF
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(asm.to_dict()))
+	eng.state.hand.append(CardData.from_dict(repo.get_card(8002).to_dict()))
+	eng.state.hand.append(CardData.from_dict(repo.get_card(8001).to_dict()))
+	eng.state.energy = 1
+	eng.rng.seed = 20261017
+	var before: int = eng.state.hand.size()
+	var detail: String = eng.use_spell(0)
+	if eng.state.hand.size() != before - 1:
+		_smoke_fail("随心组装：自身消耗后手牌应剩 %d 张（实际 %d）" % [before - 1, eng.state.hand.size()])
+		return
+	var pool_ids := {}
+	for c: CardData in repo.reward_pool():
+		pool_ids[c.id] = true
+	for hc: CardData in eng.state.hand:
+		if not pool_ids.has(hc.id):
+			_smoke_fail("随心组装：变化后的卡 %d 不在奖励池内" % hc.id)
+			return
+	if eng.state.energy != 0:
+		_smoke_fail("随心组装：应消耗 1 费（剩余 %d）" % eng.state.energy)
+		return
+	RunState.player_class = saved_cls
+	eng.state.hand.clear()
+	print("SMOKE OK 随心组装：%s，剩余手牌 %d 张均来自奖励池" % [detail, eng.state.hand.size()])
 
 
 func _check_ee_popup(scene: Variant) -> void:

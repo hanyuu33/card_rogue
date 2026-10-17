@@ -231,6 +231,9 @@ var _sys_upgrade_idx := -1
 ## 手牌下标（-1 = 未选）。与「系统升级」同套路，但目标**不限盟友/工事** ——
 ## 回收是把目标换成素体，手牌里任何卡都能当目标（除它自己）。
 var _recycle_idx := -1
+## 「填充」（9146，R202）的**两段式**第一段：已选中的「填充」手牌下标。
+## 与「系统升级」「回收」同套路，目标在手牌里。
+var _reload_idx := -1
 var status_text := ""
 ## R123：棋盘滚动偏移（0 .. _grid_scroll_max()）；滚轮 / 空格左键拖动改变它。
 var _grid_scroll := 0.0
@@ -2334,6 +2337,8 @@ func _clear_selection() -> void:
 	_sys_upgrade_idx = -1
 	# R198：「回收」的两段式状态同理（右键取消 / 换牌 / 敌方回合都走这里）。
 	_recycle_idx = -1
+	# R202：「填充」的两段式状态也在这里收掉。
+	_reload_idx = -1
 
 
 func _select_board(cell: Vector2i) -> void:
@@ -2860,6 +2865,23 @@ func _on_left_click(pos: Vector2) -> void:
 					"target": null})
 			queue_redraw()
 			return
+		# R202「填充」第二段：正在等玩家点一张**手牌**时，点哪张就把哪张变成聚能炮击。
+		if _reload_idx >= 0:
+			if hi == _reload_idx:
+				_reload_idx = -1
+				_clear_selection()
+				status_text = "已取消：填充仍在手牌（未扣费）"
+				queue_redraw()
+				return
+			var rl_src := _reload_idx
+			_reload_idx = -1
+			_clear_selection()
+			var rl_card: CardData = engine.state.hand[rl_src]
+			status_text = "填充 → %s" % engine.cast_reload(rl_src, hi)
+			_net_send({"type": "action", "act": "spell", "card": rl_card.to_dict(),
+					"target": null})
+			queue_redraw()
+			return
 		if selection != null and selection[0] == "hand" and selection[1] == hi:
 			_use_hand_card(hi)  # 再点一次 = 使用
 		else:
@@ -2930,6 +2952,11 @@ func _use_hand_card(i: int) -> void:
 	if card.id == GameEngine.RECYCLE_ID:
 		_recycle_idx = i
 		status_text = "回收：点手牌里的一张卡（再点一次回收取消）"
+		return
+	# 「填充」（9146，R202）：目标在**手牌**里且不限种类。
+	if card.id == GameEngine.RELOAD_ID:
+		_reload_idx = i
+		status_text = "填充：点手牌里的一张卡（再点一次填充取消）"
 		return
 	if card.needs_target():
 		# 需要选目标的技能：进入选目标模式（技能还在手牌，能量未付）
@@ -3042,6 +3069,13 @@ func _start_drag(i: int, pos: Vector2) -> void:
 		_drag_spell_cells = []
 		_drag_anywhere = false
 		status_text = "回收：请点击手牌里的目标卡（拖拽不会生效）"
+		queue_redraw()
+		return
+	if card.id == GameEngine.RELOAD_ID:
+		# R202：填充是两段式（目标在**手牌**），与「回收」同口径；拖拽不生效。
+		_drag_spell_cells = []
+		_drag_anywhere = false
+		status_text = "填充：请点击手牌里的目标卡（拖拽不会生效）"
 		queue_redraw()
 		return
 	if card.is_spell() and card.needs_target():
@@ -6090,6 +6124,9 @@ func _replay_tick() -> void:
 			engine.cast_sys_upgrade(int(a[0]), int(a[1]))
 		"cast_recycle":
 			engine.cast_recycle(int(a[0]), int(a[1]))
+		"cast_reload":
+			# R202 填充：两段式回放入口。
+			engine.cast_reload(int(a[0]), int(a[1]))
 		"move":
 			engine.move(ReplayLog.vec(a[0]), ReplayLog.vec(a[1]))
 		"attack":

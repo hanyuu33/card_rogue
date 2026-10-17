@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 215,
-			"图鉴 = 215 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201**；R164 删除**双重场地 9108**；实际 %d）"
+	check(repo.all_cards().size() == 219,
+			"图鉴 = 219 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 165 and grp_enemy.size() == 50,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 165 / 50；R188 / R198 / R200 / R201 各 +1；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 169 and grp_enemy.size() == 50,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 169 / 50；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -164,8 +164,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 144,
-			"奖励池 144 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201**；实际 %d）"
+	check(pool.size() == 148,
+			"奖励池 148 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -217,7 +217,7 @@ func _init() -> void:
 			and repo.get_card(9081).group == "player",
 			"第 37 轮新卡都归玩家图鉴（含 token 魔像 9080）")
 
-	# ---- 流星雨（9083，2026-10-01）：X 费技能 —— 消耗全部能量，对随机敌人打 9 伤 X 次 ----
+	# ---- 流星雨（9083，2026-10-01）：X 费技能 —— 消耗全部能量，对随机敌人打 8 伤 X 次 ----
 	var ms_card := repo.get_card(9083)
 	check(ms_card != null and ms_card.is_spell() and ms_card.rarity == 0
 			and ms_card.group == "player" and ms_card.x_cost and ms_card.cost == 0
@@ -241,7 +241,7 @@ func _init() -> void:
 			"流星雨：5 点能量时费用 = 5（X 费 = 剩余的全部能量）")
 	ms_e.use_spell(0)
 	var ms_lost := ms_before - (ms_pa.health + ms_pb.health + ms_pc.health)
-	check(ms_lost == 45, "流星雨：X=5 → 5 次 × 9 = 45 点伤害（实际 %d）" % ms_lost)
+	check(ms_lost == 40, "流星雨：X=5 → 5 次 × 8 = 40 点伤害（实际 %d）" % ms_lost)
 	check(ms_e.state.energy == 0, "流星雨：一次吃掉全部能量（5 → 0）")
 	check(ms_e.state.hp_opponent == 30,
 			"流星雨：场上还有敌人时，没有一颗落到敌方 HP")
@@ -275,8 +275,8 @@ func _init() -> void:
 	ms_empty.state.hand.append(CardData.from_dict(ms_card.to_dict()))
 	ms_empty.state.energy = 3
 	ms_empty.use_spell(0)
-	check(ms_empty.state.hp_opponent == 3,
-			"流星雨：场上没有敌人 → 每颗直击敌方 HP（3×9 = 27）")
+	check(ms_empty.state.hp_opponent == 6,
+			"流星雨：场上没有敌人 → 每颗直击敌方 HP（3×8 = 24）")
 	# 目标带「法术免疫」→ 那一颗被拦下（不掉血，也不会改打 HP）
 	var ms_im := _new_engine([], 30, 30)
 	var ms_im_p := ms_im.state.place(CardData.from_dict(repo.get_card(1071).to_dict()),
@@ -6857,9 +6857,9 @@ func _init() -> void:
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 72
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 55
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 38
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 42
 			and int(dr_cls_count.get("敌人", 0)) == 50,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 72 / 55 / 38 / 50；R188 +1；R198 +1；R200 +1；R201 +1；R161 +1 / R162 +1 / R174 +1；R164 暗影刺客 -1 = 删除双重场地 9108）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 72 / 55 / 42 / 50；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1；R164 暗影刺客 -1 = 删除双重场地 9108）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -7117,7 +7117,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 144, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 = 144，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 148, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -16013,6 +16013,91 @@ func _init() -> void:
 		and FileAccess.file_exists("res://assets/ui/icon_android_fg.png")
 		and FileAccess.file_exists("res://assets/ui/icon_android_bg.png"),
 		"R190 导出：三张安卓图标文件在位")
+
+	
+	# ============================================================
+	#  R202：机械之心扩展 —— 发明专家 / 随心组装 / 聚能炮击 / 填充
+	# ============================================================
+	var r202_repo := CardRepo.load_json()
+	var r202_inv := r202_repo.get_card(GameEngine.INVENTION_EXPERT_ID)
+	var r202_asm := r202_repo.get_card(GameEngine.ASSEMBLE_ID)
+	var r202_can := r202_repo.get_card(GameEngine.ENERGY_CANNON_ID)
+	var r202_rel := r202_repo.get_card(GameEngine.RELOAD_ID)
+	check(r202_inv != null and r202_inv.kind == "效果" and r202_inv.cost == 2 and r202_inv.rarity == 1
+			and r202_inv.card_class == PlayerClass.MECH and r202_inv.target_mode == "none",
+		"R202 发明专家：2 费稀有效果卡，无目标")
+	check(r202_asm != null and r202_asm.is_spell() and r202_asm.cost == 1 and r202_asm.rarity == 2
+			and r202_asm.target_mode == "none",
+		"R202 随心组装：1 费史诗技能，无目标")
+	check(r202_can != null and r202_can.is_spell() and r202_can.cost == 1 and r202_can.rarity == 0
+			and r202_can.target_mode == "unit" and r202_can.effect_text.contains("9"),
+		"R202 聚能炮击：1 费普通技能，需选目标，打 9 伤")
+	check(r202_rel != null and r202_rel.is_spell() and r202_rel.cost == 0 and r202_rel.rarity == 0
+			and r202_rel.target_mode == "hand_any",
+		"R202 填充：0 费普通技能，选手牌目标")
+	check(pool_ids.has(GameEngine.INVENTION_EXPERT_ID) and pool_ids.has(GameEngine.ASSEMBLE_ID)
+			and pool_ids.has(GameEngine.ENERGY_CANNON_ID) and pool_ids.has(GameEngine.RELOAD_ID),
+		"R202 四张新卡均进入奖励池")
+
+	# ---- 聚能炮击：9 伤 + 抽 1 张 ----
+	var r202_ec := _new_engine([], 20, 20)
+	var r202_target: Placement = r202_ec.state.place(_card(9001, "靶子", "盟友", 3, 3, 30),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r202_ec.state.deck = [CardData.from_dict(r202_repo.get_card(8003).to_dict())]
+	r202_ec.state.hand = [CardData.from_dict(r202_can.to_dict())]
+	r202_ec.state.energy = 1
+	r202_ec.use_spell(0, Vector2i(2, 1))
+	check(r202_target.health == 21,
+		"R202 聚能炮击：对目标造成 9 点伤害（30→%d）" % r202_target.health)
+	check(r202_ec.state.energy == 0, "R202 聚能炮击：消耗 1 费")
+	check(r202_ec.state.hand.size() == 1 and r202_ec.state.hand[0].id == 8003,
+		"R202 聚能炮击：抽 1 张卡到手")
+
+	# ---- 填充：0 费把一张手牌变成聚能炮击 ----
+	var r202_rl := _new_engine([], 20, 20)
+	r202_rl.state.hand = [CardData.from_dict(r202_rel.to_dict()),
+			CardData.from_dict(r202_repo.get_card(8002).to_dict())]
+	r202_rl.state.energy = 0
+	r202_rl.cast_reload(0, 1)
+	check(r202_rl.state.hand.size() == 1 and r202_rl.state.hand[0].id == GameEngine.ENERGY_CANNON_ID,
+		"R202 填充：攻击（8002）被变成聚能炮击")
+	check(r202_rl.state.energy == 0, "R202 填充：0 费不改变能量")
+	check(r202_rl.state.discard.size() == 1 and r202_rl.state.discard[0].id == GameEngine.RELOAD_ID,
+		"R202 填充：填充本身进入弃牌区")
+
+	# ---- 发明专家：变化一张卡回 2 费（不可叠加）----
+	var r202_ir := _new_engine([], 20, 20)
+	r202_ir.state.effects = [CardData.from_dict(r202_inv.to_dict())]
+	r202_ir.state.hand = [CardData.from_dict(r202_rel.to_dict()),
+			CardData.from_dict(r202_repo.get_card(8002).to_dict())]
+	r202_ir.state.energy = 0
+	r202_ir.cast_reload(0, 1)
+	check(r202_ir.state.energy == 2,
+		"R202 发明专家：填充变化 1 张卡后回复 2 费（实际 %d）" % r202_ir.state.energy)
+
+	# ---- 随心组装：手牌全部变成随机奖励卡 ----
+	RunState.player_class = PlayerClass.MECH
+	var r202_as := _new_engine([], 20, 20, -1, false)
+	r202_as.rng.seed = 20261017
+	r202_as.state.hand = [CardData.from_dict(r202_asm.to_dict()),
+			CardData.from_dict(r202_repo.get_card(8002).to_dict()),
+			CardData.from_dict(r202_repo.get_card(8001).to_dict())]
+	var r202_orig: Array[int] = [9144, 8002, 8001]
+	r202_as.use_spell(0)
+	check(r202_as.state.hand.size() == 2, "R202 随心组装：自身消耗后手牌剩 2 张（实际 %d）" % r202_as.state.hand.size())
+	var r202_pool_ids := {}
+	for r202_pc: CardData in r202_repo.reward_pool():
+		r202_pool_ids[r202_pc.id] = true
+	var r202_all_in_pool := true
+	var r202_changed := 0
+	for r202_hc: CardData in r202_as.state.hand:
+		if not r202_pool_ids.has(r202_hc.id):
+			r202_all_in_pool = false
+		if r202_hc.id not in r202_orig:
+			r202_changed += 1
+	check(r202_all_in_pool, "R202 随心组装：变化后的卡均来自奖励池")
+	check(r202_changed >= 1, "R202 随心组装：至少 1 张手牌发生了变化（实际 %d 张）" % r202_changed)
+	RunState.player_class = PlayerClass.DRUID
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
