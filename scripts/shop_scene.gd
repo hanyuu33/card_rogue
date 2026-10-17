@@ -4,8 +4,8 @@ extends Control
 ## 第一行：随机本职业奖励卡（数量自适应货架宽，约 3~6 张，走 Boss 档概率 35/45/20）。
 ## 第二行：3 个随机附魔（从 4 种里抽 3 种不重复）：
 ##   * 费用 -1（只可费用 > 1 且非 X 费卡）价 50
-##   * 伤害 +10（只可原本造成伤害的卡，即 power > 0）价 60
-##   * 次元（盟友/工事，必须无次元、非效果卡；+2 力 +10 血）价 50
+##   * 伤害 +10（**只可技能卡**，R210；技能卡造成的伤害 +10）价 60
+##   * 次元（盟友/工事，必须无次元、非效果卡；+2 力 +10 血）价 80（R210：50 → 80）
 ##   * 保存（回合结束手牌不丢弃，做成字段）价 60
 ## 第三行：固定 3 项：删一张卡 50 / +5 最大生命（并回血）50 / 买一块巧克力 120。
 ##
@@ -30,10 +30,10 @@ const PICK_Y0 := 130.0
 const ENCHANTS := [
 	{"id": "costdown", "name": "费用 -1", "desc": "每次战斗初次使用费用 -1（只能选费用 > 1 且非 X 费的卡）",
 		"price": 50, "icon": "shop_icon_costdown"},
-	{"id": "damage", "name": "伤害 +10", "desc": "力量 +10（只能选原本就造成伤害的卡）",
+	{"id": "damage", "name": "伤害 +10", "desc": "这张技能卡造成的伤害 +10（只能选技能卡）",
 		"price": 60, "icon": "shop_icon_damage"},
 	{"id": "dimension", "name": "次元", "desc": "赋予「次元」并 +2 力 +10 血（盟友/工事，须无次元、非效果卡；离场消失）",
-		"price": 50, "icon": "shop_icon_dimension"},
+		"price": 80, "icon": "shop_icon_dimension"},
 	{"id": "save", "name": "保存", "desc": "赋予「保存」——回合结束时手牌这张不丢弃",
 		"price": 60, "icon": "shop_icon_save"},
 ]
@@ -95,10 +95,15 @@ func _ready() -> void:
 		var pos_i := maxi(en, en2)
 		var cand := int(args[pos_i + 1]) if pos_i + 1 < args.size() else 0
 		var commit := en2 >= 0
+		# R210：`--enchid <id>` 指定第二行第一件换成哪张附魔（截图核对「伤害 +10 只能选技能卡」）。
+		var ench_id := "save"
+		var eid := args.find("--enchid")
+		if eid >= 0 and eid + 1 < args.size():
+			ench_id = str(args[eid + 1])
 		var t2 := Timer.new()
 		t2.wait_time = 0.2          # 等布局定好（size 才是真实视口）
 		t2.one_shot = true
-		t2.timeout.connect(func(): _demo_enchant(cand, commit))
+		t2.timeout.connect(func(): _demo_enchant(cand, commit, ench_id))
 		add_child(t2)
 		t2.start()
 	# 命令行 -- --screenshot：自动截图退出（出图核验用）。
@@ -626,7 +631,11 @@ func _enchant_ok(ench_id: String, c: CardData, deck_idx: int) -> bool:
 		"costdown":
 			return c.cost > 1 and not c.x_cost
 		"damage":
-			return c.power > 0
+			# R210：**只给技能卡**（用户口径「伤害 +10 限制只能附魔给技能卡」）。
+			# 技能卡的 `power` 在卡面上**恒为 0**（伤害写死在引擎结算里），附魔把 +10 烤进
+			# `power`，由 `GameEngine._spell_dmg()` 消费 → 这张技能卡造成的伤害 +10。
+			# 以前判 `power > 0`（= 只给盟友 / 工事），技能卡永远选不中、单位却能白拿 10 攻。
+			return c.kind == "技能"
 		"dimension":
 			return (c.kind == "盟友" or c.is_fort()) and not c.has_affix("次元") \
 					and not c.is_effect()
@@ -755,12 +764,13 @@ func _start_enchant(i: int) -> void:
 	_build_deck_cards()
 
 
-func _demo_enchant(cand: int, commit: bool) -> void:
-	## R204 演示/回归：把第二行第一件商品换成「保存」（任何卡都能吃）→ 打开选卡页 →
-	## 按**真实点击路径**点第 cand 张；commit=true 时再点一次同一张（应当成交）。
+func _demo_enchant(cand: int, commit: bool, ench_id := "save") -> void:
+	## R204 演示/回归：把第二行第一件商品换成指定附魔（默认「保存」，任何卡都能吃）→
+	## 打开选卡页 → 按**真实点击路径**点第 cand 张；commit=true 时再点一次同一张（应当成交）。
+	## R210：`ench_id` 可传 "damage" 出「伤害 +10 只能选技能卡」的对比图。
 	var save_ench: Dictionary = {}
 	for e: Dictionary in ENCHANTS:
-		if str(e["id"]) == "save":
+		if str(e["id"]) == ench_id:
 			save_ench = e
 			break
 	if save_ench.is_empty() or _row2.is_empty():
@@ -884,7 +894,7 @@ func _on_pick_click(pos: Vector2) -> void:
 func _ench_mod(ench_id: String) -> Dictionary:
 	match ench_id:
 		"costdown": return {"cost": -1}
-		"damage": return {"power": 10}
+		"damage": return {"power": 10, "note": "伤害 +10"}
 		"dimension": return {"affix": "次元", "power": 2, "health": 10}
 		"save": return {"affix": "保存"}
 	return {}

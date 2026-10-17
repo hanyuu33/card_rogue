@@ -16281,6 +16281,120 @@ func _init() -> void:
 	check(r209_back.upgrade_stacks == 0,
 		"R209 离场还原：交出去的卡**只带随身层数**（实际 %d）"
 			% r209_back.upgrade_stacks)
+
+	# ---- R210：伤害 +10 附魔只给技能卡 / 无限装甲只认「场上被改造」/ 交付后货物移除 ----
+	var r210_repo := CardRepo.load_json()
+	var r210_spell: CardData = r210_repo.get_card(9003)   # 火焰箭：技能，17 伤，power 恒 0
+	var r210_ally: CardData = r210_repo.get_card(8003)    # 树人：盟友，自带攻击力
+	var r210_spell_up := CardData.from_dict(r210_spell.to_dict())
+	r210_spell_up.power += 10                             # 模拟商店附魔烤进 power
+	var r210_e0 := _new_engine([], 30, 30, -1, false)
+	r210_e0.start_game()
+	check(r210_spell.kind == "技能" and r210_spell.power == 0,
+		"R210 附魔：技能卡的 power 恒为 0（火焰箭 %d）" % r210_spell.power)
+	check(r210_e0._spell_dmg(GameEngine.SIDE_SELF, 17, r210_spell_up) == 27,
+		"R210 附魔：被「伤害 +10」附魔的技能卡 → 同一张卡 17 伤变 %d"
+			% r210_e0._spell_dmg(GameEngine.SIDE_SELF, 17, r210_spell_up))
+	check(r210_e0._spell_dmg(GameEngine.SIDE_SELF, 17, r210_spell) == 17,
+		"R210 附魔：没附魔的技能卡伤害不变（17 → %d）"
+			% r210_e0._spell_dmg(GameEngine.SIDE_SELF, 17, r210_spell))
+	check(r210_e0._spell_dmg(GameEngine.SIDE_SELF, 5, r210_ally) == 5,
+		"R210 附魔：盟友的 power **不**并进技能伤害（5 → %d）"
+			% r210_e0._spell_dmg(GameEngine.SIDE_SELF, 5, r210_ally))
+	# 附魔走 build_deck 烤进**独立副本**：卡库那张不能被污染
+	var r210_saved_ids: Array[int] = RunState.deck_ids.duplicate()
+	var r210_saved_mods: Array = RunState.deck_mods.duplicate()
+	var r210_fix: Array[int] = [9003, 8003]
+	RunState.deck_ids = r210_fix.duplicate()
+	RunState.deck_mods = [{"power": 10}, {}]
+	var r210_built: Array[CardData] = RunState.build_deck(r210_repo)
+	check(r210_built.size() == 2 and r210_built[0].power == 10
+			and r210_built[1].power == r210_ally.power and r210_spell.power == 0,
+		"R210 附魔：build_deck 只给附魔那张烤 +10 力（技能 %d / 盟友 %d / 卡库原卡 %d）"
+			% [r210_built[0].power, r210_built[1].power, r210_spell.power])
+	var r210_noted := CardData.from_dict(r210_spell.to_dict())
+	RunState._apply_mod(r210_noted, {"power": 10, "note": "伤害 +10"})
+	check("【附魔】伤害 +10" in r210_noted.effect_text,
+		"R210 附魔：技能卡的卡面文字补上「【附魔】伤害 +10」（%s）"
+			% r210_noted.effect_text.replace("\n", " / "))
+	RunState.deck_ids = r210_saved_ids
+	RunState.deck_mods = r210_saved_mods
+	RunState.ensure_deck_mods()
+
+	# ② 无限装甲（8038）：桌外改造 **不供能**；只有「场上的这张卡」被改造才供能
+	var r210_saved_cls: String = RunState.player_class
+	RunState.player_class = PlayerClass.MECH
+	var r210_armor: CardData = r210_repo.get_card(GameEngine.INF_ARMOR_ID)
+	# (a) 手牌里的无限装甲被「系统升级」改造 → 只记层，不许供能
+	var r210_e1 := _new_engine([], 30, 30, -1, false)
+	r210_e1.rng.seed = 1
+	r210_e1.start_game()
+	r210_e1.state.board.clear()
+	r210_e1.state.hand = [CardData.from_dict(r210_armor.to_dict()),
+			CardData.from_dict(r210_repo.get_card(GameEngine.SYS_UPGRADE_ID).to_dict())]
+	r210_e1.state.energy = 10
+	r210_e1.cast_sys_upgrade(1, 0)
+	var r210_hand_stack := -1
+	for c: CardData in r210_e1.state.hand:
+		if c.id == GameEngine.INF_ARMOR_ID:
+			r210_hand_stack = c.upgrade_stacks
+	check(r210_hand_stack == 1,
+		"R210 无限装甲：手牌里的它被改造 → 只记 1 层（实际 %d）" % r210_hand_stack)
+	check(r210_e1.state.hand.size() == 1 and r210_e1.state.hand_free.is_empty(),
+		"R210 无限装甲：**手牌里的改造不供能**（手牌 %d 张 / 免费标记 %d 个 —— 应 1 / 0）"
+			% [r210_e1.state.hand.size(), r210_e1.state.hand_free.size()])
+	# (b) 场上的**别的**单位被改造 → 也不供能（只有这张卡自己被改造才算）
+	var r210_e2 := _new_engine([], 30, 30, -1, false)
+	r210_e2.rng.seed = 1
+	r210_e2.start_game()
+	r210_e2.state.board.clear()
+	r210_e2.state.place(CardData.from_dict(r210_armor.to_dict()), Vector2i(4, 1),
+			GameEngine.SIDE_SELF)
+	r210_e2.state.place(CardData.from_dict(r210_ally.to_dict()), Vector2i(4, 2),
+			GameEngine.SIDE_SELF)
+	r210_e2.state.hand = [CardData.from_dict(
+			r210_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
+	r210_e2.state.energy = 10
+	r210_e2.use_spell(0, Vector2i(4, 2))
+	check(r210_e2.state.hand.is_empty() and r210_e2.state.hand_free.is_empty(),
+		"R210 无限装甲：改造**别的**单位不供能（改造后手牌 %d 张 —— 应 0）"
+			% r210_e2.state.hand.size())
+	# (c) 对照：场上的无限装甲自己被改造 → 照常供能（这条规则不能被改坏）
+	var r210_e3 := _new_engine([], 30, 30, -1, false)
+	r210_e3.rng.seed = 1
+	r210_e3.start_game()
+	r210_e3.state.board.clear()
+	var r210_p3: Placement = r210_e3.state.place(
+			CardData.from_dict(r210_armor.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r210_e3.state.hand = [CardData.from_dict(
+			r210_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
+	r210_e3.state.energy = 10
+	r210_e3.use_spell(0, Vector2i(4, 1))
+	check(r210_e3.state.hand.size() == 1 and r210_p3.upgrade_feed_turn == r210_e3.turn_total,
+		"R210 无限装甲：场上的它被改造 → 照常供能（手牌 %d 张 / 本回合号 %d）"
+			% [r210_e3.state.hand.size(), r210_p3.upgrade_feed_turn])
+	RunState.player_class = r210_saved_cls
+
+	# ③ 委托完成：兑付后货物必须从卡组里**真的删掉**
+	var r210_saved_ids2: Array[int] = RunState.deck_ids.duplicate()
+	var r210_saved_mods2: Array = RunState.deck_mods.duplicate()
+	var r210_cargo_fix: Array[int] = [8065, 8003, 8065, 9003, 8065]
+	RunState.deck_ids = r210_cargo_fix.duplicate()
+	RunState.deck_mods = [{}, {"power": 10}, {}, {"cost": -1}, {}]
+	var r210_gone: int = RunState.remove_all_cards(8065)
+	var r210_kept: Array[int] = [8003, 9003]
+	check(r210_gone == 3 and RunState.deck_ids == r210_kept
+			and RunState.cargo_count() == 0,
+		"R210 委托完成：3 张货物全删（删了 %d，剩 %s，货物 %d）"
+			% [r210_gone, str(RunState.deck_ids), RunState.cargo_count()])
+	check(RunState.deck_mods.size() == 2
+			and int(RunState.deck_mods[0].get("power", 0)) == 10
+			and int(RunState.deck_mods[1].get("cost", 0)) == -1,
+		"R210 委托完成：附魔槽位跟着前移（%s）" % str(RunState.deck_mods))
+	RunState.deck_ids = r210_saved_ids2
+	RunState.deck_mods = r210_saved_mods2
+	RunState.ensure_deck_mods()
+
 	# ================================================================
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")

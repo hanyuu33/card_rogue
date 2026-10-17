@@ -1142,6 +1142,26 @@ static func remove_card(id: int) -> bool:
 	return false
 
 
+static func remove_all_cards(id: int) -> int:
+	## R210：从卡组里删掉**所有**指定 id 的卡，返回删掉的张数（附魔列表同步前移）。
+	## 「委托完成」兑付后要用它把货物清干净 —— R200 只按张数发了奖励、货物却原封不动
+	## 留在 `deck_ids` 里，于是交付完还得一直抽这些 1 费 0 攻的废牌（用户实测报的缺陷）。
+	## ⚠️ **必须从后往前删**：正序删会让后面的下标前移，`deck_mods` 的附魔跟着错位
+	##    （`remove_card` 只删一张无所谓，这里要批量删，只能倒着走）。
+	## ⚠️ 先 `ensure_deck_mods()` 对齐：删一个 key 就少一项，两个列表本来不等长时
+	##    会越删越错（smoke 实测 10 vs 4）。
+	ensure_deck_mods()
+	var removed := 0
+	for i in range(deck_ids.size() - 1, -1, -1):
+		if deck_ids[i] != id:
+			continue
+		deck_ids.remove_at(i)
+		if i < deck_mods.size():
+			deck_mods.remove_at(i)
+		removed += 1
+	return removed
+
+
 static func cargo_count() -> int:
 	## 卡组里保有的「货物」张数（运送委托 / 委托完成的唯一口径）。
 	var n := 0
@@ -1216,6 +1236,12 @@ static func _apply_mod(c: CardData, mod: Dictionary) -> void:
 	var affix: String = str(mod.get("affix", ""))
 	if affix != "" and not c.has_affix(affix):
 		c.add_affix(affix)
+	# R210：技能卡的具体伤害是写在 `effect_text` 里的死文字（「造成 17 点伤害」），
+	# 「伤害 +10」附魔改的是**结算值** → 卡面文字会跟实际伤害对不上。补一行标注，
+	# 详情条 / 图鉴 / 牌库都读 `effect_text`，玩家一眼能看到这张卡被附魔过。
+	var note: String = str(mod.get("note", ""))
+	if note != "" and c.effect_text.find(note) < 0:
+		c.effect_text += "\n【附魔】" + note
 
 
 static func _sync_mods_remove(index: int) -> void:

@@ -3410,6 +3410,16 @@ func _feed_upgrade_card(p: Placement) -> void :
 	## 它是场地效果不是「改造技能」，否则每回合自动触发一次，装甲会变成印钞机。
 	if p == null or p.card == null or not p.card.traits.has(INF_ARMOR_TRAIT):
 		return
+	# R210：**只有「场上的这张卡」被改造才生效**（用户口径）。
+	# 桌外（手牌 / 牌库 / 弃牌区）的改造只把数值烤进那张卡：系统升级 8039 / 批量改造 8031 /
+	# 批量传输 8040 / 回收 8064 / 返修 9127 / 生产订单 8048 / 自主升级 8045 / 代达罗斯 8060
+	# （三区），**一律不供能**。以前这里只判「这个 Placement 带不带 trait」= 等于「谁被当成
+	# 改造目标就供能」，一旦以后哪条桌外路径把升级传进来（例如手牌副本也能拿到 Placement），
+	# 供能就会凭空触发。把「此刻在场上」写成显式守卫，规则才不依赖调用方的自觉。
+	if p.owner != SIDE_SELF:
+		return
+	if state.unit_at(_cell_of(p)) != p:
+		return
 	if p.upgrade_feed_turn == turn_total:
 		return    # 本回合已供过能
 	var pool: Array[CardData] = []
@@ -6911,6 +6921,12 @@ func _spell_dmg(side: String, base: int, card: CardData = null) -> int:
 	## card 传正在结算的技能卡：鸭之眼（6009）与魔法塔（9075）都按这张卡的**原始费用**加成
 	## （刻意用 card.cost 而不是 cost_of()，各类临时减费不会把加成一起吃掉）。
 	var out:= base
+	# R210：商店附魔「伤害 +10」的**唯一消费点** —— 技能卡的 `power` 在卡面上**恒为 0**
+	# （每张技能的具体伤害写死在下面的结算分支里），附魔把 +10 烤进 `power`，在这里并进
+	# 每一段伤害。非技能卡（盟友 / 工事 / 场地 / 效果）的 `power` 是它自己的攻击力，
+	# 绝不能并进技能伤害 —— 所以判据必须带 `kind == "技能"`，不能只看 `power > 0`。
+	if card != null and card.kind == "技能":
+		out += maxi(0, card.power)
 	out += _magic_tower_bonus(side, card)   # 魔法塔：敌我通用（谁的场上塔就加谁的伤）
 	out += _glowgrass_bonus(side)           # 荧光草（8010）：该方场上每株 +1
 	if side != SIDE_SELF:

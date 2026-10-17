@@ -481,6 +481,27 @@ func _check_shop_enchant(scene: Variant) -> void:
 		_smoke_fail("商店附魔：deck_mods 应与 deck_ids 等长（%d vs %d）"
 				% [RunState.deck_mods.size(), RunState.deck_ids.size()])
 		return
+	# ②b R210：附魔表的条件与价格（次元 50 → 80；伤害 +10 只认技能卡）
+	var cmap: Dictionary = (scene.get_script() as GDScript).get_script_constant_map()
+	var enchs: Array = cmap.get("ENCHANTS", [])
+	var price := {}
+	for e in enchs:
+		price[str(e["id"])] = int(e["price"])
+	if int(price.get("dimension", -1)) != 80:
+		_smoke_fail("商店附魔：次元应 80 金（实际 %s）" % str(price.get("dimension", -1)))
+		return
+	if int(price.get("damage", -1)) != 60:
+		_smoke_fail("商店附魔：伤害 +10 应 60 金（实际 %s）" % str(price.get("damage", -1)))
+		return
+	# 「伤害 +10」**只认技能卡**：有攻击力的盟友也必须被拒；技能卡必须能选。
+	# deck_idx 传 9999 → `_mod_at` 越界返回 {} → 「未附魔」这一关不会挡路。
+	var repo2 := CardRepo.load_json()
+	if scene._enchant_ok("damage", repo2.get_card(8003), 9999):
+		_smoke_fail("商店附魔：伤害 +10 不能再附给盟友（树人被放行）")
+		return
+	if not scene._enchant_ok("damage", repo2.get_card(9003), 9999):
+		_smoke_fail("商店附魔：伤害 +10 应能附给技能卡（火焰箭被拒）")
+		return
 	# 换成「保存」附魔 —— 任何卡都能吃，保证一定有候选。
 	scene._row2.clear()
 	scene._row2.append({"ench": {"id": "save", "name": "保存", "desc": "",
@@ -1308,6 +1329,7 @@ func _check_delivery_done(scene: Variant) -> void:
 	if RunState.delivery_override_kind() != "delivery_done":
 		_smoke_fail("委托完成：二层 + 持有货物 + 未结算时应替换为 delivery_done")
 		return
+	var deck0: int = RunState.deck_ids.size()
 	var gold0: int = RunState.gold
 	var choco0: int = RunState.chocolate
 	var pend0: int = RunState.pending_reward_count()
@@ -1328,11 +1350,24 @@ func _check_delivery_done(scene: Variant) -> void:
 	if RunState.delivery_override_kind() != "":
 		_smoke_fail("委托完成：delivery_done 置位后不应再替换事件房")
 		return
+	# ── 3b) R210：货物兑付后必须从卡组里删干净（用户实测：以前交付完还留在卡组）──
+	if RunState.cargo_count() != 0:
+		_smoke_fail("委托完成：兑付后卡组里不应再有货物（实际 %d 张）"
+				% RunState.cargo_count())
+		return
+	if RunState.deck_ids.size() != deck0 - 3:
+		_smoke_fail("委托完成：兑付后卡组应少 3 张（%d → %d）"
+				% [deck0, RunState.deck_ids.size()])
+		return
+	if RunState.deck_mods.size() != RunState.deck_ids.size():
+		_smoke_fail("委托完成：删货物后附魔槽位仍要与卡组等长（%d vs %d）"
+				% [RunState.deck_mods.size(), RunState.deck_ids.size()])
+		return
 	# ── 4) 结算后只留离开按钮 ──
 	if scene.rest_btn.visible:
 		_smoke_fail("委托完成：结算后应只留离开按钮（rest_btn 应收起）")
 		return
-	print("SMOKE OK 委托完成：3 张货物各抽一次 / 总量=3 / 一次性 / 结算后只剩离开")
+	print("SMOKE OK 委托完成：3 张货物各抽一次 / 总量=3 / 一次性 / 货物已移出卡组 / 结算后只剩离开")
 
 
 func _check_battle(scene: Variant) -> void:

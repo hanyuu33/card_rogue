@@ -128,7 +128,8 @@ const STRUGGLE_TAKEN_DESC := """「这就是为了胜利我的挣扎。」
 const DELIVERY_DESC := """驿站门口堆着一批贴了封条的货箱，脚夫收了钱就不见了人影。
 选择承运：平铺挑 1~6 张「货物」加入卡组（1 费工事，0 攻 / 6 血，替你承受伤害）；
 货物**被破坏时会从卡组中删除**——毁了就真的毁了。
-带着货物走进第二层，第一个事件房的货主会按张兑付报酬，接得越多兑得越多。
+带着货物走进第二层，第一个事件房的货主会按张兑付报酬，接得越多兑得越多；
+兑付完成后这些货物会被货主收走（同样从卡组里删掉）。
 也可以不接，转身离开。"""
 
 const DELIVERY_TAKEN_DESC := """货箱已经码上车队，封条上写着「第二层兑付」。
@@ -137,7 +138,8 @@ const DELIVERY_TAKEN_DESC := """货箱已经码上车队，封条上写着「第
 const DELIVERY_DONE_DESC := """第二层的第一个事件房里，货主早就在原地等着你。
 卡组里每保有一张货物，就当场兑付一次报酬：
 一次卡牌奖励 / 80 金币 / 一件随机奖励道具，
-还有藏得最深的大奖——一块巧克力（概率 10%%）。"""
+还有藏得最深的大奖——一块巧克力（概率 10%%）。
+交付完成后货物全部收走（从卡组里删除）。"""
 
 func _rest_desc() -> String:
 	## 休息处文案：回复百分比按当前难度档位走（0 / 1 档 = 40%，2 档 = 25%）。
@@ -1034,6 +1036,10 @@ func _delivery_settle() -> void:
 			RunState.queue_relic_reward(rid)
 	for _i in n_cards:
 		RunState.queue_card_reward("normal")
+	# R210：**交出去的货物必须真的从卡组里删掉**（用户口径「交付后货物没有从卡组删除」）——
+	# R200 只按张数发奖励，`deck_ids` 里那些货物原封不动，交付完还会一路抽到这些废牌。
+	# 先兑付、后删（兑付张数就是此刻卡组里的货物数），删完 `cargo_count()` 归 0。
+	var cargo_gone: int = RunState.remove_all_cards(CARGO_CARD_ID)
 	RunState.delivery_done = true     # 一次性：本局不再触发
 	_delivery_settled = true
 	var parts: Array[String] = ["%d 张货物全部兑付" % n]
@@ -1045,6 +1051,8 @@ func _delivery_settle() -> void:
 		parts.append("随机道具 ×%d" % n_relic)
 	if n_choco > 0:
 		parts.append("隐藏大奖·巧克力 ×%d！" % n_choco)
+	if cargo_gone > 0:
+		parts.append("%d 张货物已从卡组移除" % cargo_gone)
 	_delivery_result = "兑付结果：" + "；".join(parts)
 	_collapse_to_leave()
 	desc.text = DELIVERY_DONE_DESC
