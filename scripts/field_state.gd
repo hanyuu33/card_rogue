@@ -62,6 +62,7 @@ var void_count := 0
 ## 消耗区从「只报一个数」升级成可点开的浏览面板，玩家能回看本局到底消失了哪些卡。
 var void_cards: Array = []
 var self_next_energy := 0      # 活力转移 9110（R55）：剩余费用换来的「下个回合开始时」额外费用（发放后清零）
+var self_next_draw := 0        # 负重减轻 8066（R201）：选卡消失换来的「下个回合开始时」额外抽牌张数（发放后清零）
 var opp_next_energy := 0       # 同上，敌方（对称保留）
 var self_energy_spent := 0     # 本回合**已花掉**的费用（暗影之刃 9111 的 X；回合开始清零）
 var opp_energy_spent := 0      # 同上，敌方（对称保留）

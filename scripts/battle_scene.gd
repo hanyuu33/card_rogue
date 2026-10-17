@@ -3554,15 +3554,17 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"cards": faopts.map(disc_cards),
 					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
 		"focus":
-			# 专注沿用「卡组合并视图」：同名合并 + ×N 张数角标（整副卡组铺开没法看）。
+			# 专注 / 负重减轻（8066，R201）共用本场景：文案按 engine.focus_label 切换。
+			# 沿用「卡组合并视图」：同名合并 + ×N 张数角标（整副卡组铺开没法看）。
+			var fl := engine.focus_label
 			var merged := _merged_deck(engine.state.deck)
-			return {"kind": k, "short": "专注",
+			return {"kind": k, "short": fl,
 					"opts": merged.map(func(m: Dictionary) -> int: return (m["card"] as CardData).id),
-					"title": "专注：从卡组中移除 %d 张卡（本次对战中消失）" % engine.focus_remaining,
+					"title": "%s：从卡组中移除 %d 张卡（本次对战中消失）" % [fl, engine.focus_remaining],
 					"note": "点卡选中，再点确认 —— 它从卡组移除（本场对战消失）；已移除的不回收",
 					"cards": merged.map(func(m: Dictionary) -> CardData: return m["card"]),
 					"counts": merged.map(func(m: Dictionary) -> int: return m["count"]),
-					"max_sel": 1, "confirm_label": "确认移除", "cancel_label": "取消专注"}
+					"max_sel": 1, "confirm_label": "确认移除", "cancel_label": "取消%s" % fl}
 	return {}
 
 
@@ -3661,14 +3663,16 @@ func _on_pick_confirmed(sel: Array) -> void:
 					di = q
 					break
 			if di < 0:
-				_say("专注：牌堆里已经没有这张卡了")
+				_say("%s：牌堆里已经没有这张卡了" % engine.focus_label)
 			else:
 				var qnm := engine.state.deck[di].card_name
 				engine.focus_pick(di)
 				if engine.focus_pending:
-					status_text = "专注：已移除 %s，还要移除 %d 张" % [qnm, engine.focus_remaining]
+					status_text = "%s：已移除 %s，还要移除 %d 张" % [
+						engine.focus_label, qnm, engine.focus_remaining]
 				else:
-					status_text = "专注：已移除 %d 张卡，它们本次对战中消失" % GameEngine.FOCUS_NEED
+					status_text = "%s：已移除 %d 张卡，它们本次对战中消失" % [
+						engine.focus_label, engine.focus_total]
 	# 累计型（鲸鱼 / 命运 / 取牌 / 专注）确认一张后 pending 可能还在：
 	# 候选变了 → 用新 cfg 刷新（标题里的剩余数同步更新）；pending 没了由 _sync_pick 关。
 	if _pick.is_picking() and _pick_active_kind() == k:
@@ -3687,8 +3691,9 @@ func _on_pick_cancelled() -> void:
 			status_text = "鲸鱼之怒：放弃剩余 %d 张的取牌" % left
 			_clear_selection()
 		"focus":
+			var fc_label := engine.focus_label
 			engine.focus_cancel()
-			status_text = "专注：已取消剩余的移除"
+			status_text = "%s：已取消剩余的移除" % fc_label
 		"hero":
 			var hnm := engine.state.hand[_hero_pick_idx].card_name
 			_hero_pick_idx = -1
@@ -4029,11 +4034,12 @@ func _on_right_click() -> void:
 	if _recall_pending():
 		_say("%s：必须从弃牌区选择一张卡回到手牌" % _recall_mode())
 		return
-	# 专注（9122）：右键 = 取消剩余的移除（已移除的**不回收**，它们已经消失了）
+	# 专注（9122）/ 负重减轻（8066，R201）：右键 = 取消剩余的移除（已移除的**不回收**，它们已经消失了）
 	if engine.focus_pending:
+		var rc_label := engine.focus_label
 		engine.focus_cancel()
 		_close_zone_panels()
-		status_text = "专注：已取消剩余的移除"
+		status_text = "%s：已取消剩余的移除" % rc_label
 		queue_redraw()
 		return
 	if engine.foresight_mode:
@@ -7670,6 +7676,22 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": vt_pos,
 					"text": "活力转移 · 本回合费用 +%d" % int(data.get("energy", 0)),
 					"col": Color("2f9e5e"), "start": n, "dur": 2100})
+			sfx.play("heal")
+		"lighten_set":
+			# 负重减轻（8066，R201）：选卡消失完成 → 提示「下个回合多抽一张」
+			var ls_side := str(data.get("side", GameEngine.SIDE_SELF))
+			var ls_pos := Vector2(GRID_X + GRID_W / 2, GRID_Y - 12) \
+					if ls_side == GameEngine.SIDE_SELF \
+					else Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 24)
+			_floaters.append({"pos": ls_pos,
+					"text": "👻 负重减轻 · 下回合多抽 %d 张" % int(data.get("draw", 0)),
+					"col": Color("6a4aa0"), "start": n, "dur": 2100})
+		"lighten_draw":
+			# 负重减轻（8066，R201）：回合开始正式发放额外抽牌
+			var ld_pos := Vector2(GRID_X + GRID_W / 2, GRID_Y - 12)
+			_floaters.append({"pos": ld_pos,
+					"text": "👻 负重减轻 · 多抽 %d 张" % int(data.get("draw", 0)),
+					"col": Color("6a4aa0"), "start": n, "dur": 2100})
 			sfx.play("heal")
 		"contractor":
 			# 契约签订者（8024，R63）：登场回 4 费 + 本回合手卡全体涨价 4

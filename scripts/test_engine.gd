@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 214,
-			"图鉴 = 209 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200**；R164 删除**双重场地 9108**；实际 %d）"
+	check(repo.all_cards().size() == 215,
+			"图鉴 = 215 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 164 and grp_enemy.size() == 50,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 164 / 50；R188 / R198 / R200 各 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 165 and grp_enemy.size() == 50,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 165 / 50；R188 / R198 / R200 / R201 各 +1；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -164,8 +164,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 143,
-			"奖励池 143 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198**；实际 %d）"
+	check(pool.size() == 144,
+			"奖励池 144 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -6856,10 +6856,10 @@ func _init() -> void:
 			"角色系统：非敌方卡 class 都在可选角色内、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 72
-			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 54
+			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 55
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 38
 			and int(dr_cls_count.get("敌人", 0)) == 50,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 72 / 54 / 38 / 50；R188 +1；R200 +1；R198 +1；R161 +1 / R162 +1 / R174 +1；R164 暗影刺客 -1 = 删除双重场地 9108）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 72 / 55 / 38 / 50；R188 +1；R198 +1；R200 +1；R201 +1；R161 +1 / R162 +1 / R174 +1；R164 暗影刺客 -1 = 删除双重场地 9108）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -7117,7 +7117,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 143, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 = 143，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 144, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 = 144，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -7422,8 +7422,8 @@ func _init() -> void:
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
 	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 72
-			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 54,
-			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R200 货物 +1）"
+			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 55,
+			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
 
@@ -7494,7 +7494,7 @@ func _init() -> void:
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
 			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法鸭）")
-	check(r47_dr.size() == 60 and r47_rg.size() == 51
+	check(r47_dr.size() == 60 and r47_rg.size() == 52
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
 			"奖励池过滤：森林精魄 %d 张 / 暗影刺客 %d 张（两者之和 + 机械之心 %d = 完整池 %d）"
@@ -13674,6 +13674,134 @@ func _init() -> void:
 
 	# ══════════════════════════════════════════════════════════════
 	# ══════════════════════════════════════════════════════════════
+	# ══════════════════════════════════════════════════════════════
+	# ══════════════════════════════════════════════════════════════
+	# R201 测试：负重减轻 8066（0 费史诗 · 选卡组一张卡消失 · 下个回合多抽一张）
+	# ══════════════════════════════════════════════════════════════
+	var r201_repo := CardRepo.load_json()
+	var r201_pool_ids := {}
+	for c in r201_repo.reward_pool():
+		r201_pool_ids[c.id] = true
+
+	# ---- 卡面定义校验 ----
+	var r201_c := r201_repo.get_card(GameEngine.LIGHTEN_ID)
+	check(r201_c != null and r201_c.kind == "技能" and r201_c.cost == 0
+			and r201_c.rarity == 2 and r201_c.card_class == "暗影刺客"
+			and r201_c.target_mode == "none" and not r201_c.needs_target(),
+		"R201 负重减轻 8066：0 费史诗技能，暗影刺客，无目标（实际 %s）"
+			% (r201_c.card_name if r201_c != null else "null"))
+	check(r201_pool_ids.has(GameEngine.LIGHTEN_ID),
+		"R201：负重减轻 8066 进入奖励池（史诗 rarity=2）")
+
+	# ---- ① 打开面板：选 1 张消失 + 记账「下回合多抽 1 张」 ----
+	var r201_e1 := _new_engine([], 30, 30)
+	r201_e1.start_game()
+	r201_e1.state.deck.append(_card(8003, "树人", "盟友", 3, 3, 8, 1, 1))
+	r201_e1.state.deck.append(_card(8004, "熊", "盟友", 3, 3, 8, 1, 1))
+	r201_e1.state.deck.append(_card(9095, "怒涛", "技能", 2, 0, 0, 0, 0))
+	var r201_deck0 := r201_e1.state.deck.size()
+	r201_e1.state.hand.append(
+			CardData.from_dict(r201_repo.get_card(GameEngine.LIGHTEN_ID).to_dict()))
+	r201_e1.use_spell(r201_e1.state.hand.size() - 1)
+	check(r201_e1.focus_pending,
+		"R201 负重减轻：结算后打开「从抽牌库移除」面板（复用专注那套）")
+	check(r201_e1.focus_remaining == GameEngine.LIGHTEN_NEED,
+		"R201 负重减轻：待移除张数 = %d（实际 %d）"
+			% [GameEngine.LIGHTEN_NEED, r201_e1.focus_remaining])
+	check(r201_e1.focus_total == GameEngine.LIGHTEN_NEED,
+		"R201 负重减轻：focus_total = %d（文案用，实际 %d）"
+			% [GameEngine.LIGHTEN_NEED, r201_e1.focus_total])
+	check(r201_e1.focus_label == "负重减轻",
+		"R201 负重减轻：面板文案标签 = 负重减轻（实际 %s）" % r201_e1.focus_label)
+	var r201_i1 := r201_e1.focus_options()[0]
+	var r201_nm1: String = r201_e1.state.deck[r201_i1].card_name
+	check(r201_e1.focus_pick(r201_i1),
+		"R201 负重减轻：移除选中的那张（%s）" % r201_nm1)
+	check(r201_e1.state.deck.size() == r201_deck0 - 1,
+		"R201 负重减轻：牌库少一张（%d → %d）" % [r201_deck0, r201_e1.state.deck.size()])
+	check(not r201_e1.focus_pending and r201_e1.focus_remaining == 0,
+		"R201 负重减轻：选满 1 张 → 面板关闭")
+	check(r201_e1.state.void_count == 1,
+		"R140 消耗区：负重减轻抹除 1 张 → void_count = 1（实际 %d）" % r201_e1.state.void_count)
+	check(r201_e1.state.self_next_draw == 1,
+		"R201 负重减轻：记账 self_next_draw = 1（实际 %d）" % r201_e1.state.self_next_draw)
+	check(r201_e1.focus_label == "专注",
+		"R201 负重减轻：发放后标签复位为专注（实际 %s）" % r201_e1.focus_label)
+	var r201_gone := true
+	for c in r201_e1.state.deck:
+		if c.card_name == r201_nm1:
+			r201_gone = false
+	for c in r201_e1.state.discard:
+		if c.card_name == r201_nm1:
+			r201_gone = false
+	check(r201_gone,
+		"R201 负重减轻：%s 从本场彻底消失（牌库与弃牌区都找不到）" % r201_nm1)
+
+	# ---- ② 下个回合开始：实验组比对照组多抽 1 张（牌库 / 手牌双对照） ----
+	var r201_ctl := _new_engine([], 30, 30, -1, false)
+	r201_ctl.start_game()
+	var r201_exp := _new_engine([], 30, 30, -1, false)
+	r201_exp.start_game()
+	for _i in 12:
+		r201_ctl.state.deck.append(_card(9000 + _i, "素材%d" % _i, "技能", 1, 0, 0, 0, 0))
+		r201_exp.state.deck.append(_card(9000 + _i, "素材%d" % _i, "技能", 1, 0, 0, 0, 0))
+	var r201_base := r201_ctl.state.deck.size()
+	r201_exp.state.hand.append(
+			CardData.from_dict(r201_repo.get_card(GameEngine.LIGHTEN_ID).to_dict()))
+	r201_exp.use_spell(r201_exp.state.hand.size() - 1)
+	r201_exp.focus_pick(r201_exp.focus_options()[0])
+	# 半个回合制：连点两次 end_turn = 走过敌方回合、来到下一个自己的回合开始
+	r201_ctl.end_turn()
+	r201_ctl.end_turn()
+	r201_exp.end_turn()
+	r201_exp.end_turn()
+	check(r201_ctl.state.deck.size() == r201_base - FieldState.HAND_DRAW_PER_TURN
+			and r201_exp.state.deck.size()
+			== r201_base - 1 - FieldState.HAND_DRAW_PER_TURN - 1,
+		"R201 负重减轻：实验组比对照组多抽 1 张（牌库 %d vs %d，基数 %d）"
+			% [r201_ctl.state.deck.size(), r201_exp.state.deck.size(), r201_base])
+	check(r201_exp.state.hand.size() == r201_ctl.state.hand.size() + 1,
+		"R201 负重减轻：回合开始手牌多 1 张（%d vs %d）"
+			% [r201_exp.state.hand.size(), r201_ctl.state.hand.size()])
+	check(r201_exp.state.self_next_draw == 0,
+		"R201 负重减轻：发放后 self_next_draw 清零（实际 %d）" % r201_exp.state.self_next_draw)
+
+	# ---- ③ 取消：不记账、不多抽 ----
+	var r201_e3 := _new_engine([], 30, 30)
+	r201_e3.start_game()
+	r201_e3.state.deck.append(_card(8003, "树人", "盟友", 3, 3, 8, 1, 1))
+	r201_e3.state.deck.append(_card(8004, "熊", "盟友", 3, 3, 8, 1, 1))
+	r201_e3.state.hand.append(
+			CardData.from_dict(r201_repo.get_card(GameEngine.LIGHTEN_ID).to_dict()))
+	r201_e3.use_spell(r201_e3.state.hand.size() - 1)
+	r201_e3.focus_cancel()
+	check(r201_e3.state.self_next_draw == 0,
+		"R201 负重减轻：取消面板 → 不记下回合多抽（self_next_draw=%d）"
+			% r201_e3.state.self_next_draw)
+	check(r201_e3.focus_label == "专注",
+		"R201 负重减轻：取消后标签复位（实际 %s）" % r201_e3.focus_label)
+
+	# ---- ④ 牌库为空：不开面板、不记账 ----
+	var r201_e4 := _new_engine([], 30, 30)
+	r201_e4.start_game()
+	r201_e4.state.deck.clear()
+	r201_e4.state.hand.append(
+			CardData.from_dict(r201_repo.get_card(GameEngine.LIGHTEN_ID).to_dict()))
+	r201_e4.use_spell(r201_e4.state.hand.size() - 1)
+	check(not r201_e4.focus_pending and r201_e4.state.self_next_draw == 0,
+		"R201 负重减轻：牌库为空 → 不开面板也不记账")
+
+	# ---- ⑤ 敌方 AI 不使用这张卡（改牌组是玩家侧决策）----
+	var r201_e5 := _new_engine([], 30, 30)
+	r201_e5.start_game()
+	r201_e5.state.deck.append(_card(8003, "树人", "盟友", 3, 3, 8, 1, 1))
+	r201_e5.state.opp_hand_count = 5
+	r201_e5.remote_spell(
+			CardData.from_dict(r201_repo.get_card(GameEngine.LIGHTEN_ID).to_dict()),
+			null, GameEngine.SIDE_OPPONENT)
+	check(not r201_e5.focus_pending and r201_e5.state.self_next_draw == 0,
+		"R201 负重减轻：敌方 AI 不动面板也不记账")
+
 	# R110 测试：鸭鸭工匠（事件 · 卡组一张卡 → 2 费铁栅栏）
 	#           绝赞五换一（同名张数越多越容易被选中）
 	# ══════════════════════════════════════════════════════════════

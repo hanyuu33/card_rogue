@@ -3887,6 +3887,25 @@
       "image": ""
     },
     {
+      "id": 8066,
+      "name": "负重减轻",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "选卡组一张卡，使其**消失**（本场对战移除：既不进手牌也不进弃牌区）。**下个回合开始时多抽一张卡**。",
+      "target_mode": "none",
+      "color": "紫",
+      "image": ""
+    },
+    {
       "id": 8062,
       "name": "夜蚀",
       "kind": "盟友",

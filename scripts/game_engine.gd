@@ -36,8 +36,11 @@ var overhaul_remaining:= 0     # 还要选几张（蓄力让这张卡生效 2 �
 var shadow_step_pending:= false   # 暗影步（9121）：等玩家从弃牌区选一张（任意 kind）
 var shadow_step_remaining:= 0     # 还要选几张（蓄力让这张卡生效 2 次 → 2 张）
 var shadow_step_label:= "暗影步" # 面板标题（复用复活术那套面板时区分文案）
-var focus_pending:= false      # 专注（9122）：等玩家从**抽牌库**里选 2 张卡移除
+var focus_pending:= false      # 专注（9122）/ 负重减轻（8066，R201）：等玩家从**抽牌库**里选 N 张卡移除
 var focus_remaining:= 0        # 还要移除几张
+var focus_total:= 0            # 本层面板总共要移除几张（文案用：专注 2 / 负重减轻 1）
+var focus_draw_bonus:= false   # 负重减轻（8066，R201）：选完后下个回合开始多抽 1 张（focus_pick 完成时发放）
+var focus_label:= "专注"       # 面板文案标签（专注 / 负重减轻）；battle_scene 按它切标题与提示
 var whale_remaining:= 0
 var foresight_mode:= false  # 预判（9097）：等玩家选效果①/②
 var foresight_pick:= false  # 预判①：等玩家从弃牌区选一张 0 费技能卡
@@ -888,7 +891,15 @@ const SHADOW_STEP_NEED:= 1          # 要从弃牌区取回几张
 # 所以玩家**推不出抽牌顺序** —— 面板给的是卡组视角，不是牌堆顶视角。
 # ⚠️ 敌方 AI 不使用这张卡（改牌组是玩家侧决策，AI 用了会污染玩家牌序；与预判 9097 同口径）。
 const FOCUS_ID:= 9122
-const FOCUS_NEED:= 2            # 要从抽牌库移除几张# 白魔法鸭（9021）「精进」：自己的回合开始时，本方带此 trait 的单位力量 +MAGE_GROW_BUFF
+const FOCUS_NEED:= 2            # 要从抽牌库移除几张
+# 负重减轻（8066 技能，暗影刺客·史诗，R201）：0 费；从抽牌库里选 1 张卡，这张卡
+# **本次对战中消失**，并且**下个回合开始时多抽一张卡**。
+# 面板完全复用专注那套（focus_pending / focus_options / focus_pick / focus_cancel），
+# 区别只在：张数是 1、以及选完后给 state.self_next_draw 记 +1（见 focus_pick 末尾）。
+# ⚠️ 敌方 AI 不使用这张卡（与专注 9122 同口径：改牌组是玩家侧决策）。
+const LIGHTEN_ID:= 8066
+const LIGHTEN_NEED:= 1          # 要从抽牌库移除几张
+# 白魔法鸭（9021）「精进」：自己的回合开始时，本方带此 trait 的单位力量 +MAGE_GROW_BUFF
 # （永久累计，无上限）—— 已去掉「只剩它自己」的前置条件，任何场面都稳定成长。
 # 注：本卡 value=10 归「治疗」用（回血量），所以成长量走常量，不读卡面 value。
 const MAGE_GROW_TRAIT:= "精进"
@@ -1203,6 +1214,13 @@ func _begin_turn(side: String) -> void :
 					whisper_txt = "本回合多抽 1 张卡"
 			_log("鸭之低语：%s" % whisper_txt)
 			action.emit("whisper", {"text": whisper_txt})
+		# 负重减轻（8066，R201）：上回合「选卡消失」换来的额外抽牌，**只在本回合发放一次**
+		if state.self_next_draw > 0:
+			extra_draw += state.self_next_draw
+			var lighten_draw := state.self_next_draw
+			state.self_next_draw = 0
+			_log("负重减轻：本回合多抽 %d 张卡" % lighten_draw)
+			action.emit("lighten_draw", {"draw": lighten_draw, "side": SIDE_SELF})
 		if turn_number == 1:
 			_ensure_opening_card(ALERT_ID)   # 警觉（9109）：第 1 回合必定抽到
 		var drawn:= 0
@@ -5694,6 +5712,10 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 		FOCUS_ID:
 			# 专注 9122（R109）：0 费稀有；从抽牌库移除 2 张卡（本场消失，不抽牌）。
 			return _focus_spell(side)
+		LIGHTEN_ID:
+			# 负重减轻 8066（R201）：0 费史诗；从抽牌库移除 1 张卡（本场消失），
+			# 并且下个回合开始时多抽 1 张卡。
+			return _lighten_spell(side)
 		PREPARE_ID:
 			if side != SIDE_SELF:
 				var pp_m := 0
@@ -6087,8 +6109,31 @@ func _focus_spell(side: String) -> String:
 	# 牌组不足 N 张：按实际能选的张数开面板（选完即结束，不会卡住）
 	var can := mini(FOCUS_NEED, state.deck.size())
 	focus_remaining = can
+	focus_total = can
 	focus_pending = true
+	focus_label = "专注"
 	_log("专注：从抽牌库移除 %d 张卡（本次对战中消失）" % can)
+	return "从抽牌库移除 %d 张卡" % can
+
+
+func _lighten_spell(side: String) -> String:
+	## 负重减轻（8066，R201）：打开「从抽牌库移除 1 张卡」面板，并在选完后
+	## 给下个回合记 1 次额外抽牌（state.self_next_draw += 1，见 focus_pick 末尾）。
+	## 面板 / 候选 / 取消全部复用专注那套，只差张数与「多抽一张」的记账。
+	if side != SIDE_SELF:
+		return "（负重减轻：敌方 AI 不使用这张卡）"
+	if focus_options().is_empty():
+		_log("负重减轻：抽牌库是空的，效果落空")
+		focus_label = "专注"
+		return "抽牌库是空的"
+	# 牌组不足 N 张：按实际能选的张数开面板（选完即结束，不会卡住）
+	var can := mini(LIGHTEN_NEED, state.deck.size())
+	focus_remaining = can
+	focus_total = can
+	focus_pending = true
+	focus_draw_bonus = true
+	focus_label = "负重减轻"
+	_log("负重减轻：从抽牌库移除 %d 张卡（本次对战中消失），下个回合多抽 1 张" % can)
 	return "从抽牌库移除 %d 张卡" % can
 
 
@@ -6122,6 +6167,13 @@ func focus_pick(deck_index: int) -> bool:
 	if focus_remaining <= 0:
 		focus_pending = false
 		focus_remaining = 0
+		if focus_draw_bonus:
+			# 负重减轻（8066，R201）：这张消失的卡换来的收益 —— 下个回合开始时多抽 1 张
+			focus_draw_bonus = false
+			focus_label = "专注"
+			state.self_next_draw += 1
+			_log("负重减轻：下个回合开始时多抽 %d 张卡" % state.self_next_draw)
+			action.emit("lighten_set", {"draw": 1, "side": SIDE_SELF})
 	return true
 
 
@@ -6129,9 +6181,11 @@ func focus_cancel() -> void:
 	## 专注面板取消（清挂起状态；已移除的卡**不回收** —— 它已经消失了）。
 	if not focus_pending:
 		return
-	_log("专注：已取消剩余的移除")
+	_log("%s：已取消剩余的移除" % focus_label)
 	focus_pending = false
 	focus_remaining = 0
+	focus_draw_bonus = false
+	focus_label = "专注"
 
 
 func _golem_spell(side: String, target) -> String:

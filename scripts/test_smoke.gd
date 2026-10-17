@@ -1204,6 +1204,7 @@ func _check_battle(scene: Variant) -> void:
 	_check_pick_overlay(scene)
 	_check_ee_popup(scene)
 	_check_recycle(scene)
+	_check_lighten(scene)
 
 
 func _check_ee_popup(scene: Variant) -> void:
@@ -1306,6 +1307,96 @@ func _check_recycle(scene: Variant) -> void:
 	eng.state.hand.clear()
 	scene._recycle_idx = -1
 	print("SMOKE OK 回收两段式：点回收 / 点技能卡→素体 1/10（扣 2 费）/ 点自己取消不扣费")
+
+
+func _check_lighten(scene: Variant) -> void:
+	## R201：负重减轻（8066）—— 0 费史诗；点两次手牌打出 → 自动打开专注同款
+	## focus 选卡面板；点选一张 + 确认 → 该卡从卡组消失（消耗区 +1）并记账
+	## self_next_draw=1（下回合多抽一张）；放弃路径不记账、不动牌库。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("负重减轻：拿不到 engine")
+		return
+	var repo := CardRepo.load_json()
+	var lt: CardData = repo.get_card(GameEngine.LIGHTEN_ID)
+	if lt == null or lt.cost != 0 or lt.rarity != 2:
+		_smoke_fail("负重减轻：卡面应是 0 费史诗技能")
+		return
+	var ov: PickOverlay = scene._pick
+	if ov == null:
+		_smoke_fail("负重减轻：scene._pick 为空")
+		return
+	ov.size = Vector2(1280, 720)   # headless 下 anchors 不结算，手动给尺寸
+	# 收尾 Intro 状态（本用例只关心手牌点击与选卡页，不碰巡场）
+	scene._grid_intro_t = -1.0
+	scene._grid_zoom = 1.0
+	scene._clear_selection()
+	eng.current_side = GameEngine.SIDE_SELF
+	# ── 1) 铺牌库 2 张 + 手牌 1 张负重减轻；点两次 = 选中 → 打出 ──
+	eng.state.deck.clear()
+	eng.state.deck.append(CardData.from_dict(repo.get_card(8003).to_dict()))
+	eng.state.deck.append(CardData.from_dict(repo.get_card(8004).to_dict()))
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(lt.to_dict()))
+	eng.state.energy = 3
+	var deck0 := eng.state.deck.size()
+	_feed_click(scene, _hand_card_center(scene, 0))
+	_feed_click(scene, _hand_card_center(scene, 0))
+	scene._sync_pick()
+	if not ov.is_picking() or ov.kind() != "focus":
+		_smoke_fail("负重减轻：打出后应自动打开 focus 选卡面板（kind=%s）" % ov.kind())
+		return
+	# ── 2) 点选一张 + 确认 → 消失 1 张 + 记账 ──
+	var r0 := ov._card_rect(0)
+	ov._tap(ov._clip.position + ov._grid.position + r0.get_center())
+	if ov.selected_count() != 1:
+		_smoke_fail("负重减轻：点一张卡应选中 1 张，实际 %d" % ov.selected_count())
+		return
+	ov._tap(ov._confirm_rect().get_center())
+	scene._sync_pick()
+	if eng.focus_pending:
+		_smoke_fail("负重减轻：确认后 focus_pending 应已清")
+		return
+	if eng.state.deck.size() != deck0 - 1:
+		_smoke_fail("负重减轻：确认后牌库应少 1 张（%d → %d）"
+				% [deck0, eng.state.deck.size()])
+		return
+	if eng.state.self_next_draw != 1:
+		_smoke_fail("负重减轻：确认后应记账 self_next_draw=1（实际 %d）"
+				% eng.state.self_next_draw)
+		return
+	if eng.state.void_count < 1:
+		_smoke_fail("负重减轻：消失的卡应计入消耗区（void_count=%d）" % eng.state.void_count)
+		return
+	# ── 3) 取消路径：再打一次 → 点放弃 → 不记账、不动牌库 ──
+	eng.state.self_next_draw = 0
+	var vc0 := eng.state.void_count
+	eng.state.hand.append(CardData.from_dict(lt.to_dict()))
+	eng.state.energy = 3
+	_feed_click(scene, _hand_card_center(scene, 0))
+	_feed_click(scene, _hand_card_center(scene, 0))
+	scene._sync_pick()
+	if not ov.is_picking() or ov.kind() != "focus":
+		_smoke_fail("负重减轻（取消路径）：应再次打开 focus 面板（kind=%s）" % ov.kind())
+		return
+	ov._tap(ov._cancel_rect().get_center())
+	scene._sync_pick()
+	if eng.focus_pending:
+		_smoke_fail("负重减轻（取消路径）：放弃后 focus_pending 应清")
+		return
+	if eng.state.self_next_draw != 0:
+		_smoke_fail("负重减轻（取消路径）：放弃后不应记账（self_next_draw=%d）"
+				% eng.state.self_next_draw)
+		return
+	if eng.state.deck.size() != deck0 - 1 or eng.state.void_count != vc0:
+		_smoke_fail("负重减轻（取消路径）：牌库/消耗区不应变化（%d 张 / void=%d）"
+				% [eng.state.deck.size(), eng.state.void_count])
+		return
+	# 收尾：清干净，别漏给后面的用例
+	ov.close()
+	eng.state.hand.clear()
+	eng.state.energy = 3
+	print("SMOKE OK 负重减轻：打出开面板 / 确认消失 1 张并记账 / 放弃不记账")
 
 
 func _hand_card_center(scene: Variant, i: int) -> Vector2:
