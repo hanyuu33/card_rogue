@@ -6998,6 +6998,26 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					_say("⚔ %s 直击敌方 HP！-%d" % [data.get("atk_name", "?"), hp_dmg])
 				else:
 					_say("⚔ %s 直击我方 HP！-%d" % [data.get("atk_name", "?"), hp_dmg])
+		"trample_hit":
+			# R225 践踏：击杀的溢出伤害沿**同一列**击穿下一个单位 —— 在**那个格子**
+			# 补一次命中演出（不重播攻击者的攻击动作），排在这次攻击「命中」之后再播，
+			# 视觉上就是「伤害穿过了前一具尸体」。
+			var th_cell: Vector2i = data["cell"]
+			var th_pl := engine.state.unit_at(th_cell)
+			var th_dmg := int(data.get("amount", 0))
+			var th_at := n
+			var th_src = data.get("src")
+			var th_atk = engine.state.unit_at(th_src) if th_src is Vector2i else null
+			if th_atk != null and _attacks.has(th_atk):
+				var tha: Dictionary = _attacks[th_atk]
+				th_at = int(tha.start) + int(ATK_IMPACT_T * int(tha.dur)) + 140
+			if th_pl != null and th_dmg > 0:
+				_freeze_hp(th_pl, th_dmg)   # 卡面生命也等命中演出到点才掉
+			_delayed.append({"at": maxi(th_at, n), "kind": "hit",
+					"data": {"pos": _cell_center(th_cell), "sc": _grid_scroll,
+							"dmg": th_dmg, "def": th_pl}})
+			_say("⚡ 践踏！溢出伤害沿同列传给 %s（-%d）" % [
+					data.get("name", "?"), th_dmg])
 		"trample":
 			# 打穿挡在 HP 前面的单位 → 多出来的伤害漏到玩家 HP。
 			# 排在这次攻击「命中」之后再播：弹体命中 → 击破 → 漏伤。
@@ -7676,8 +7696,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_floaters.append({"pos": _cell_center(hg_cell) + Vector2(0, -24), "sc": _grid_scroll,
 						"text": "锻造 +1 攻 +1 程", "col": UiTheme.STATE_TAUNT,
 						"start": n, "dur": 1600, "size": 18})
-			_say("%s 锻造空转 3 回合 → 力量 +1 / 射程 +1（现 %d 攻 %d 程）" % [
-					hg_name, int(data.get("power", 0)), int(data.get("range", 0))])
+			_say("%s 锻造：空转 %d 回合 → 力量 +1 / 射程 +1（现 %d 攻 %d 程）" % [
+					hg_name, int(data.get("period", 1)),
+					int(data.get("power", 0)), int(data.get("range", 0))])
 		"night_grow":
 			var ng_center := _cell_center(data["cell"]) if data.has("cell") \
 					else Vector2(WINDOW_W / 2, GRID_Y + 40)

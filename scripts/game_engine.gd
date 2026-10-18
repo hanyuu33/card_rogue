@@ -108,20 +108,34 @@ const FUSE_TRAIT:= "铸造"           # 只做标记（与「亡语 / 孵化」�
 const HECATE_ID:= 9133              # 量产型赫卡同克瑞斯（盟友 3/35 程1 速1）
 const STEEL_FORTRESS_ID:= 9134      # 钢铁要塞（工事 5/100 程2 速0，嘲讽）
 const FUSE_TURNS:= 5                # 铸造倒计时的初始回合数（与卡面 effect_text 同源）
-# ---- 「赫菲斯托斯工坊」关卡（R150，第二层 Boss）----
+# ---- 「赫菲斯托斯工坊」关卡（R150，第二层 Boss；R225 上调）----
 # 赫菲斯托斯（9135，盟友 5/120 程1 速1）带「锻造」trait，两条效果挂在两个**唯一口**上：
 #   ① **亲手击杀**敌人 → 在**己方半场随机空格**锻造一只量产型俄倪厄（9131，5/45）
 #      —— 挂 `_credit_kill`（击杀记功唯一口），并**清零**空转计数；
 #   ② 连续 FORGE_PERIOD 个**我方回合**没能亲手击杀 → 力量 +1、攻击距离 +1（永久累计）
 #      —— 挂 `_forge_tick`（`end_turn` 的 SIDE_SELF 分支，与 R149 铸造倒计时同一处）。
+# ⚠️ R225 用户口径：周期从 3 改成 **1（每回合）** —— 它每挨过一个没击杀的我方回合
+#    就长 1 力 1 程；同时 Boss 获得「践踏」（见下），清不干净前排就一路被穿到脸。
 # 于是这关的取舍是：往前顶着送头（它一直在杀 → 一直在生小兵），还是缩着不接触
-#   （它杀不到 → 每 3 个回合自己长 1 力 1 程，射程越长越难躲）。
+#   （它杀不到 → 每回合自己长 1 力 1 程，射程越长越难躲）。
 # ⚠️ 射程记 `Placement.forge_range`（走 `effective_range`），**不写回 card**。
 const HEPHAESTUS_ID:= 9135        # 赫菲斯托斯（第二层 Boss）
 const FORGE_TRAIT:= "锻造"         # 只做标记（与「沉睡 / 铸造」同套路），数值放 Placement
-const FORGE_PERIOD:= 3            # 连续几个我方回合没击杀 → 成长一次
+const FORGE_PERIOD:= 1            # 连续几个我方回合没击杀 → 成长一次（R225：3 → 1）
 const FORGE_ATK:= 1               # 每次成长：力量 +1（走 atk_buff，永久累计无上限）
 const FORGE_RANGE:= 1             # 每次成长：攻击距离 +1（走 Placement.forge_range）
+
+# ---- R225：践踏（trample）----
+# 带「践踏」trait 的单位**普通攻击**击杀敌对单位时，超出对方剩余生命的伤害**不丢弃**，
+# 而是沿**击杀目标所在的那一列继续往深处传**（从攻击者一侧往对方后排方向）：
+#   * 逐个结算同列的下一个敌对单位（空网格跳过，先遇到的先吃），
+#     打死一个就把剩余伤害继续往下传；
+#   * 遇上一个没被打死的单位 → 溢出到此为止（它吃满）；
+#   * 整列都打穿了 → 剩下的伤害直击对方 HP（走 `_damage_player`，与既有溢出同口径，
+#     石肤 / 护心 / 荒野形态等减伤链照常生效）。
+# 只挂**普通攻击**（`attack()`）—— 技能 / 效果 / 直击 HP 不触发（用户口径「攻击击杀」）。
+# 非践踏单位保持原规则：只有「被击穿的是对方**后排**单位」时溢出才漏到 HP。
+const TRAMPLE_TRAIT:= "践踏"       # 只做标记（与「锻造 / 铸造」同套路），无数值字段
 # ---- 「量产铁砧」关卡（R158，第二层普通简单）----
 # 量产型赫菲斯托斯（9138，盟友 4/50 程1 速1）带「量产锻造」trait：**只保留** Boss 版
 # 那条「亲手击杀 → 锻造量产型俄倪厄」，**没有**「连续空转 N 回合自己变强」那半边。
@@ -7389,7 +7403,8 @@ func _forge_tick() -> void :
 	## 赫菲斯托斯（9135，R150）的「锻造」：**我方回合结束**时清点 —— 这一个回合它还是
 	## 没亲手击杀过敌人 → 空转 +1；满 FORGE_PERIOD → 力量 +1、攻击距离 +1，计数清零。
 	## ⚠️ 挂在 `end_turn()` 的 `current_side == SIDE_SELF` 分支里（与 R149 铸造倒计时
-	##    同一处），所以「3 个回合」= **玩家的** 3 个回合，与卡面那句话对得上。
+	##    同一处），所以「N 个回合」= **玩家的** N 个回合，与卡面那句话对得上。
+	##    R225：`FORGE_PERIOD` 3 → 1 = 每个我方回合都成长（用户口径）。
 	## ⚠️ 射程记 `Placement.forge_range`（走 `effective_range`）、力量记 `atk_buff`，
 	##    **都不写回 card** —— 关卡敌方单位是卡库共享实例，改卡面会跨局泄漏。
 	for cell: Vector2i in state.board:
@@ -7408,7 +7423,8 @@ func _forge_tick() -> void :
 				p.card.card_name, p.forge_period, FORGE_ATK, p.effective_power(),
 				FORGE_RANGE, p.effective_range()])
 		action.emit("heph_grow", {"cell": cell, "card": p.card,
-				"power": p.effective_power(), "range": p.effective_range()})
+				"power": p.effective_power(), "range": p.effective_range(),
+				"period": p.forge_period})
 
 
 func _mass_heph_kill_forge(killer: Placement) -> void :
@@ -9150,6 +9166,52 @@ func pass_attack(cell: Vector2i, side:= SIDE_SELF) -> void :
 	_tap(p, "放弃攻击")
 
 
+func _trample_chain(attacker: Placement, foe_side: String, from_cell: Vector2i,
+		remaining: int, src: Vector2i) -> Array:
+	## R225 践踏：击杀后的溢出伤害沿**同一列**继续往深处传 —— 逐个结算同列的下一个
+	## 敌对单位（空格跳过），打死一个就把剩余伤害继续往下传；遇见没打死的 → 停；
+	## 整列打穿 → 返回 [剩下的伤害, 最后一个被击穿的单位名]
+	##（调用方拿它直击对方 HP；名字用于播报「打穿的是谁」，没穿到人就返回空串）。
+	## 「深处」= 从被击杀的格子继续**远离攻击者**的方向（行号差的正负）。
+	## ⚠️ 坐标是 `Vector2i(行, 列)` —— 同列 = 同一个 `y`，行号往对方半场推。
+	## ⚠️ 只认 `foe_side` 的单位（同列的己方单位不会被误伤）。
+	## ⚠️ 每段都走 `_hit_unit(..., is_attack = true)` = 与那一下普通攻击同口径
+	##    （侦察塔光环 / 百臂工场「只减攻击」/ 石肤等都照常生效）。
+	if attacker == null or remaining <= 0:
+		return [remaining, ""]
+	var step: int = 0
+	if from_cell.x > src.x:
+		step = 1
+	elif from_cell.x < src.x:
+		step = -1
+	else:
+		return [remaining, ""]    # 同一行（理论上不会发生）：不再往下传
+	var pierced: String = ""
+	var cell: Vector2i = from_cell
+	while remaining > 0:
+		cell = Vector2i(cell.x + step, cell.y)
+		if cell.x < 0 or cell.x >= FieldState.BOARD_ROWS:
+			break                  # 这一列走到底了 → 剩下的直击 HP
+		var next: Placement = state.unit_at(cell)
+		if next == null or next.owner != foe_side:
+			continue               # 空格 / 同列的自己人 → 继续往深处找
+		var hp_before: int = next.health
+		next.last_hit_by = src      # 击杀记功：践踏打死的也算攻击者的（锻造会触发）
+		var dmg: int = _hit_unit(next, remaining, "战斗", true, true)
+		_log("践踏：%d 点溢出沿同列传给 %s（造成 %d 点伤害）" % [
+				remaining, next.card.card_name, dmg])
+		action.emit("trample_hit", {"cell": cell, "side": next.owner, "amount": dmg,
+				"name": next.card.card_name, "src": src,
+				"atk_name": attacker.card.card_name, "from": from_cell})
+		pierced = next.card.card_name
+		if next.health > 0:
+			return [0, pierced]    # 没打死 → 溢出到此为止（它吃满）
+		var over: int = dmg - maxi(hp_before, 0)
+		_destroy(cell)
+		remaining = over
+	return [remaining if remaining > 0 else 0, pierced]
+
+
 func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 
 
@@ -9174,8 +9236,11 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	var def_dmg:= _hit_unit(defender, atk_power, "战斗", true, true)
 	# R74：场地卡**不是单位**（不在 board 里），所以打不到、也不会被「攻击即死」——
 	# 它的触发点唯一在 _field_trigger（挂在 move 上）。这里不再有任何陷阱即死分支。
+	# R225：践踏 → 击杀的溢出伤害不丢（沿击杀目标那一列继续传下去）；
+	# 非践踏保持原规则：只有被击穿的是对方**后排**单位，溢出才漏到 HP。
+	var trample: bool = attacker.card.traits.has(TRAMPLE_TRAIT)
 	var overflow:= 0
-	if dst.x == back_row(defender.owner) and def_dmg > hp_before:
+	if def_dmg > hp_before and (trample or dst.x == back_row(defender.owner)):
 		overflow = def_dmg - maxi(hp_before, 0)
 	_log("%s 攻击 %s：对方 -%d 生命" % [
 		attacker.card.card_name, defender.card.card_name, def_dmg])
@@ -9184,14 +9249,21 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		"atk_name": attacker.card.card_name, "def_name": defender.card.card_name})
 	if defender.health <= 0:
 		_destroy(dst)
+		# R225：践踏 —— 先把溢出伤沿同列逐个击穿，打穿整列后剩下的才轮到 HP。
+		var pierced_name: String = defender.card.card_name
+		if overflow > 0 and trample:
+			var tr_res: Array = _trample_chain(attacker, defender.owner, dst, overflow, src)
+			overflow = int(tr_res[0])
+			if str(tr_res[1]) != "":
+				pierced_name = str(tr_res[1])   # 播报「打穿的是同列最后一个」
 		if overflow > 0:
 			var foe:= defender.owner
-			_log("溢出伤害：%d 点越过 %s 漏到玩家 HP" % [overflow, defender.card.card_name])
+			_log("溢出伤害：%d 点越过 %s 漏到玩家 HP" % [overflow, pierced_name])
 			# R145：先结算、再播出 —— `amount` 报实际掉血（溢出也可能被石肤 / 护心压掉）。
 			_damage_player(foe, overflow, "溢出")
 			action.emit("trample", {"side": foe, "amount": _last_hp_damage, "src": src,
 				"dst": dst, "atk_name": attacker.card.card_name,
-				"def_name": defender.card.card_name})
+				"def_name": pierced_name})
 	if defender.health <= 0 and defender.card.traits.has(WORKSHOP_TRAIT) and state.board.has(src):
 		# 机关工坊（8015；R74 由「陷阱工坊」改名，仍是工事）：被敌人的攻击**破坏** → 对破坏它的敌人造成 8 伤。
 		# 攻击者若已先倒下（如踩了别的反伤）则不再追伤；同样记「触发过工事」供暗影狩猎判定。

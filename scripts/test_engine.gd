@@ -15270,27 +15270,29 @@ func _init() -> void:
 	check(r150_b.forge_period == GameEngine.FORGE_PERIOD and r150_b.forge_idle == 0
 			and r150_b.forge_range == 0,
 			"R150 上场挂表：周期 %d / 空转 0 / 射程加成 0" % GameEngine.FORGE_PERIOD)
-	# ② 计数口径：**我方回合结束** +1；敌方回合结束不动（用户口径）
-	r150_e.end_turn()      # 我方 → 1
+	# ② 计数口径（R225：周期 3 → 1 = 每个我方回合都成长）：
+	#    **我方回合结束** +1，满 FORGE_PERIOD 当场成长；敌方回合结束不动（用户口径）。
+	r150_e.end_turn()      # 我方 → +1（period = 1 当场满）
 	var r150_a1 := r150_b.forge_idle
 	r150_e.end_turn()      # 敌方 → 不动
-	check(r150_a1 == 1 and r150_b.forge_idle == 1,
-			"R150 计数：我方回合结束 +1（0 → 1），敌方回合结束不动（仍 1）")
-	r150_e.end_turn()      # 我方 → 2
-	var r150_a2 := r150_b.forge_idle
-	r150_e.end_turn()      # 敌方 → 不动
-	check(r150_a2 == 2 and r150_b.forge_idle == 2 and r150_b.forge_range == 0,
-			"R150 计数：第 2 个我方回合 → 2，此时还没成长（射程加成仍 0）")
-	r150_e.end_turn()      # 我方 → 满 3 → 成长
-	check(r150_b.forge_idle == 0 and r150_b.atk_buff == GameEngine.FORGE_ATK
-			and r150_b.forge_range == GameEngine.FORGE_RANGE
-			and r150_b.effective_range() == 1 + GameEngine.FORGE_RANGE,
-			"R150 满 %d 个我方回合 → 空转清零 + 力量 +%d（当前 %d）+ 攻程 +%d（射程 %d）"
-			% [GameEngine.FORGE_PERIOD, GameEngine.FORGE_ATK, r150_b.effective_power(),
-			GameEngine.FORGE_RANGE, r150_b.effective_range()])
+	check(r150_a1 == 0 and r150_b.forge_idle == 0
+			and r150_b.atk_buff == GameEngine.FORGE_ATK
+			and r150_b.forge_range == GameEngine.FORGE_RANGE,
+			"R225 计数：我方回合结束即成长（力 +%d / 程 +%d 且空转清零），敌方回合结束不动"
+			% [GameEngine.FORGE_ATK, GameEngine.FORGE_RANGE])
+	r150_e.end_turn()      # 再一个我方回合 → 继续累计
+	check(r150_b.forge_idle == 0 and r150_b.atk_buff == GameEngine.FORGE_ATK * 2
+			and r150_b.forge_range == GameEngine.FORGE_RANGE * 2
+			and r150_b.effective_range() == 1 + GameEngine.FORGE_RANGE * 2,
+			"R225 每回合成长可永久累计（2 个我方回合 → 力 +%d / 程 +%d，实际程 %d）"
+			% [GameEngine.FORGE_ATK * 2, GameEngine.FORGE_RANGE * 2,
+			r150_b.effective_range()])
 	# ③ 射程加成**不烤进卡面**（这条最能防「直接改 card.attack_range」）
-	check(r150_b.card.attack_range == 1 and r150_b.forge_range == GameEngine.FORGE_RANGE,
+	check(r150_b.card.attack_range == 1
+			and r150_b.forge_range == GameEngine.FORGE_RANGE * 2,
 			"R150 射程加成只记在 Placement.forge_range（卡面仍是 1 —— 绝不烤进 CardData）")
+	r150_b.atk_buff = 0
+	r150_b.forge_range = 0     # 还原，后面的用例不受影响
 
 	# ④ 亲手击杀 → 锻造量产型俄倪厄 + 空转清零
 	var r150_e2 := _new_engine([], 30, 30)
@@ -15343,6 +15345,96 @@ func _init() -> void:
 			r150_badge = true
 	check(r150_show and r150_badge,
 			"R150 锻造进度在信息栏 + 战场徽标上都可见（隐藏状态不能只靠日志）")
+
+
+	# ================= R225：践踏（trample）=================
+	# 9135 赫菲斯托斯获得「践踏」；锻造周期 3 → 1（每回合成长）。
+	# 9220~9224 顺序：① 连穿；② 遇生者停；③ 无践踏不溢出；④ 后排单点直击 HP；⑤ 不挂直击 HP。
+	var r225_repo := CardRepo.load_json()
+	var r225_boss: CardData = r225_repo.get_card(9135)
+	check(r225_boss != null and r225_boss.traits.has(GameEngine.TRAMPLE_TRAIT)
+			and GameEngine.FORGE_PERIOD == 1,
+			"R225 赫菲斯托斯带「践踏」trait，锻造周期改为 1（每回合成长）")
+	check(r225_boss.traits.has(GameEngine.FORGE_TRAIT)
+			and r225_boss.effect_text.contains("践踏")
+			and r225_boss.effect_text.contains("每回合"),
+			"R225 卡面文案同步（锻造 trait 保留；文案含「践踏」与「每回合」）")
+
+	# ① 一串三个薄单位：10 攻 → 1 血(溢出9) → 3 血(溢出6) → 5 血(溢出1) → HP -1
+	var r225_e := _new_engine([], 20, 20)
+	var r225_atk := _card(9901, "践踏测试者", "盟友", 5, 10, 30, 3, 1)
+	r225_atk.traits.append(GameEngine.TRAMPLE_TRAIT)
+	r225_e.state.place(r225_atk, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r225_e.state.place(_card(8003, "农民", "盟友", 1, 1, 1, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	var r225_b := _card(8003, "农民", "盟友", 1, 1, 3, 1, 1)
+	r225_e.state.place(r225_b, Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r225_c := _card(8003, "农民", "盟友", 1, 1, 5, 1, 1)
+	r225_e.state.place(r225_c, Vector2i(5, 1), GameEngine.SIDE_SELF)
+	r225_e.start_game()
+	r225_e.attack(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	check(r225_e.state.unit_at(Vector2i(3, 1)) == null
+			and r225_e.state.unit_at(Vector2i(4, 1)) == null
+			and r225_e.state.unit_at(Vector2i(5, 1)) == null
+			and r225_e.state.hp_self == 19,
+			"R225 践踏：溢出沿同列连穿 3 个（1→3→5 血），最后 1 点漏到我方 HP（20 → %d）"
+			% r225_e.state.hp_self)
+
+	# ② 中途有人没被打死 → 溢出到此为止（HP 不掉、后面的单位不挨打）
+	var r225_e2 := _new_engine([], 20, 20)
+	var r225_atk2 := _card(9901, "践踏测试者", "盟友", 5, 10, 30, 3, 1)
+	r225_atk2.traits.append(GameEngine.TRAMPLE_TRAIT)
+	r225_e2.state.place(r225_atk2, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r225_e2.state.place(_card(8003, "农民", "盟友", 1, 1, 1, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	# ⚠️ 命中扣的是 Placement.health（不是 CardData.health）—— 断言必须读 place 的返回值
+	var r225_b2 := r225_e2.state.place(_card(8003, "农民", "盟友", 1, 1, 20, 1, 1),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r225_c2 := r225_e2.state.place(_card(8003, "农民", "盟友", 1, 1, 5, 1, 1),
+			Vector2i(5, 1), GameEngine.SIDE_SELF)
+	r225_e2.start_game()
+	r225_e2.attack(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	check(r225_b2.health == 11 and r225_e2.state.hp_self == 20
+			and r225_c2.health == 5,
+			"R225 践踏：同列第二个没被打死（20 → %d）→ 溢出停止，HP 不掉、后面的不动"
+			% r225_b2.health)
+
+	# ③ 没有践踏的单位：打穿前排也不溢出（旧规则不变）
+	var r225_e3 := _new_engine([], 20, 20)
+	r225_e3.state.place(_card(9001, "鸭子骑士", "盟友", 1, 10, 30, 3, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r225_e3.state.place(_card(8003, "农民", "盟友", 1, 1, 1, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	var r225_c3 := r225_e3.state.place(_card(8003, "农民", "盟友", 1, 1, 5, 1, 1),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r225_e3.start_game()
+	r225_e3.attack(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	check(r225_c3.health == 5 and r225_e3.state.hp_self == 20,
+			"R225 无践踏：打穿前排不溢出（同列后面的单位与 HP 都不受影响）")
+
+	# ④ 践踏 + 后排单点：整列打穿 → 溢出直击 HP（与旧「后排溢出」口径一致）
+	var r225_e4 := _new_engine([], 20, 20)
+	var r225_atk4 := _card(9901, "践踏测试者", "盟友", 5, 10, 30, 3, 1)
+	r225_atk4.traits.append(GameEngine.TRAMPLE_TRAIT)
+	r225_e4.state.place(r225_atk4, Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	r225_e4.state.place(_card(8003, "农民", "盟友", 1, 1, 3, 1, 1),
+			Vector2i(5, 1), GameEngine.SIDE_SELF)
+	r225_e4.start_game()
+	r225_e4.attack(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(r225_e4.state.hp_self == 13,
+			"R225 践踏：后排 3 血单位被 10 攻打死 → 7 点直击我方 HP（20 → %d）"
+			% r225_e4.state.hp_self)
+
+	# ⑤ 践踏只挂普通攻击：直击 HP 不触发溢出链（照常打满）
+	var r225_e5 := _new_engine([], 20, 20)
+	var r225_atk5 := _card(9901, "践踏测试者", "盟友", 5, 10, 30, 1, 1)
+	r225_atk5.traits.append(GameEngine.TRAMPLE_TRAIT)
+	r225_e5.state.place(r225_atk5, Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	r225_e5.start_game()
+	r225_e5.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(r225_e5.state.hp_self == 10,
+			"R225 践踏不挂直击 HP：attack_hp 照常打满 10（20 → %d）"
+			% r225_e5.state.hp_self)
 
 
 	# ================= R152：百臂工场（赫卡同克瑞斯 9136 / 量产型赫利俄斯 9137） =================
