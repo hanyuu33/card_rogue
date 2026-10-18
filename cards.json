@@ -1456,7 +1456,7 @@
       "group": "player",
       "class": "森林精魄",
       "traits": [],
-      "effect_text": "对一个敌方单位造成 3 点伤害，重复 6 次。",
+      "effect_text": "对一个敌方单位造成 4 点伤害，重复 5 次。",
       "target_mode": "unit",
       "color": "红",
       "image": ""
@@ -4050,6 +4050,26 @@
       "target_mode": "none",
       "value": 0,
       "color": "灰",
+      "image": ""
+    },
+    {
+      "id": 9150,
+      "name": "生命循环",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "选择一个己方盟友：使它获得「次元」和「死亡」—— 它被破坏时，将一张随机盟友卡加入你的手卡。",
+      "target_mode": "unit",
+      "value": 0,
+      "color": "绿",
       "image": ""
     },
     {

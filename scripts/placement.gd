@@ -93,6 +93,15 @@ var action_growth_turns: int = 0   # 距离下次成长还剩几个回合
 ## 共享实例，直接改 card.move_speed 会把加成写进卡库、跨局泄漏。单位一离场字段随之消失，
 ## 因此无需 `_card_leaving_field` 还原。
 var summon_haste: int = 0          # 阿尔戈斯召唤加成（进 effective_speed）
+## 「生命循环」（9150，R227，森林精魄稀有技能）：
+##   * `life_cycle` —— 这个单位被本卡点过（死亡时要「加一张随机盟友卡到手卡」）；
+##   * `life_cycle_added` —— 本卡实际**新加**的字段（次元 / 死亡）。离场（重启 / 回收 /
+##     返修）时由 `_card_leaving_field` **逐个摘掉**，于是回手的那张卡还是原样 ——
+##     否则下次上场会带着一个不会触发的「死亡」标记（效果未生效却写在卡面上）。
+## ⚠️ 不用 `has_affix("死亡")` 判效果：「死亡」字段是通用标记，幼龙 / 腐化尸鬼 / 捕兽大师
+##    等卡也带它，各有各的亡语（按卡 id 结算）—— 认字段会串戏。
+var life_cycle: bool = false
+var life_cycle_added: Array[String] = []
 
 
 func effective_power() -> int:

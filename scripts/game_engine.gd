@@ -297,12 +297,22 @@ const NATURE_FORCE_BASE:= 1
 const TURTLE_DOVE_ID:= 9052
 const TURTLE_DOVE_DISCOUNT:= 1
 const DRAGON_BREATH_ID:= 9054
-const DRAGON_BREATH_DMG:= 3
-const DRAGON_BREATH_HITS:= 6
+const DRAGON_BREATH_DMG:= 4      # R227：3 → 4（4 点 × 5 次 = 20，原 3 × 6 = 18）
+const DRAGON_BREATH_HITS:= 5     # R227：6 → 5
 const FRENZY_ID:= 9055
 const FRENZY_ACTIONS:= 2
 const FRENZY_DISCOUNT:= 1
 const FRENZY_ALLY_MIN:= 3
+# ---- R227：生命循环（9150，森林精魄 · 稀有 · 0 费技能）----
+# 选一个**己方盟友** → 它获得字段「次元」「死亡」，并在 Placement 上打 `life_cycle`：
+#   * 次元 → **离场即消失**：进消耗区（`void_count`），不进弃牌区
+#     （`_destroy` 的己方分支认这个字段，与「离场消失」trait 同路）；
+#   * 死亡 → 被破坏时把**一张随机盟友卡**加入手卡（`_deathrattle` 的 `life_cycle` 分支）。
+# 随机源 = 本角色奖励池里的盟友卡（与「新生」9148 同口径），走引擎 rng → 回放可复现。
+# ⚠️ 「死亡」字段是**通用标记**（幼龙 / 腐化尸鬼 / 捕兽大师等各有亡语，按卡 id 结算）→
+#    本卡的效果绝不能用 `has_affix("死亡")` 判，只认 `Placement.life_cycle`。
+# ⚠️ 本卡自己是普通技能（无次元字段）→ 用完照常进弃牌区。
+const LIFE_CYCLE_ID:= 9150
 
 
 
@@ -3119,11 +3129,18 @@ func _card_leaving_field(p: Placement) -> CardData:
 	## 「离场还原只有唯一口」这条约定不被绕过。
 	if p == null:
 		return null
+	# R227：生命循环给的「次元 / 死亡」是**场上这段**的字段 —— 回手 / 返修时摘掉，
+	# 否则那张卡再上场会带着一个不会触发的「死亡」标记（卡面写着效果却不生效）。
 	if p.fence_bonus_hp <= 0 and p.fence_bonus_traits.is_empty() and p.upgrade_hp <= 0 \
-			and p.upgrade_range <= 0 and p.upgrade_speed <= 0:
+			and p.upgrade_range <= 0 and p.upgrade_speed <= 0 \
+			and p.life_cycle_added.is_empty():
 		return p.card
 	var out:= CardData.from_dict(p.card.to_dict())
 	out.traits = (p.card.traits as Array).duplicate()   # 同上：必须切断与卡库的共享引用
+	if not p.life_cycle_added.is_empty():
+		out.affixes = (p.card.affixes as Array).duplicate()
+		for lc_a: String in p.life_cycle_added:
+			out.affixes.erase(lc_a)
 	out.health = maxi(1, p.card.health - p.fence_bonus_hp - p.upgrade_hp)
 	for t in p.fence_bonus_traits:
 		out.traits.erase(t)
@@ -5312,6 +5329,66 @@ func cast_reload(hand_index: int, target_hand_index: int) -> String:
 	return "填充：%s 没有变化" % rc_old
 
 
+func _life_cycle(target, side:= SIDE_SELF) -> String:
+	## 生命循环（9150，R227）：选一个**己方盟友** → 获得字段「次元」「死亡」。
+	## 只认 `kind == "盟友"`（工事不是「盟友」，与森林守护 / 狂暴同口径）；
+	## 重复施放同一个目标 → 直接返回提示，不重复挂（0 费，避免玩家白点也没变化）。
+	var p:= _target_placement(side, target)
+	if p == null or p.owner != side:
+		return "（需要指定一个己方盟友）"
+	if p.card.kind != "盟友":
+		return "生命循环：只能指定己方盟友（%s 不是盟友）" % p.card.card_name
+	if p.life_cycle:
+		return "「%s」已经获得生命循环" % p.card.card_name
+	for lc_a: String in [AFFIX_DIMENSION, AFFIX_DEATH]:
+		if p.card.add_affix(lc_a):
+			p.life_cycle_added.append(lc_a)
+	p.life_cycle = true
+	_log("生命循环：%s 获得「次元」与「死亡」（被破坏时加一张随机盟友卡到手卡）"
+			% p.card.card_name)
+	action.emit("life_cycle_grant", {"cell": _cell_of(p), "card": p.card, "side": side})
+	return "%s 获得「次元」+「死亡」" % p.card.card_name
+
+
+func _life_cycle_death(p: Placement, cell: Vector2i) -> void :
+	## 生命循环的「死亡」：被破坏时把**一张随机盟友卡**加入手卡。
+	## 随机源 = 本角色奖励池里的盟友卡（与「新生」9148 同口径，走引擎 rng）；
+	## 池里一张盟友都没有 → 退到全部玩家盟友卡；仍为空 → 只打日志。
+	## 手牌满 → 这张卡不进来（与其它「加入手卡」同口径：不静默丢，写清楚）。
+	if p.owner != SIDE_SELF:
+		return                     # 只有玩家能施放本卡，敌方分支不需要效果
+	var c:= _random_ally_card(p.owner)
+	if c == null:
+		_log("生命循环：卡池里没有盟友卡可加入手卡")
+		return
+	if state.hand_full():
+		_log("生命循环：手牌已满，「%s」无法加入手卡" % c.card_name)
+		return
+	var copy:= CardData.from_dict(c.to_dict())
+	copy.affixes = (c.affixes as Array).duplicate()
+	state.hand.append(copy)
+	_log("生命循环：%s 被破坏 → 手卡加入「%s」" % [p.card.card_name, copy.card_name])
+	action.emit("life_cycle", {"card": copy, "from": p.card, "cell": cell})
+
+
+func _random_ally_card(side: String) -> CardData:
+	## 本角色奖励池里的随机**盟友**卡（生命循环的随机源，R227）。
+	## 走引擎 `rng` → 同种子同结果、回放可复现（与新生 9148 / 随心组装同一口径）。
+	var cid:= RunState.player_class if side == SIDE_SELF else ""
+	var repo:= CardRepo.load_json()
+	var pool: Array[CardData] = []
+	for c: CardData in repo.reward_pool_for(cid):
+		if c.kind == "盟友":
+			pool.append(c)
+	if pool.is_empty():
+		for c: CardData in repo.player_cards():
+			if c.kind == "盟友":
+				pool.append(c)
+	if pool.is_empty():
+		return null
+	return pool[rng.randi() % pool.size()]
+
+
 func _random_reward_card(side: String) -> CardData:
 	## 从本角色奖励卡池里按「稀有度三等分」随机取一张卡（R202 随心组装）。
 	## 稀有度 0/1/2 各取一份，先均匀挑稀有度，再在该稀有度里随机挑卡。
@@ -5752,6 +5829,9 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 		ASSEMBLE_ID:
 			# 随心组装 9144（R202，机械之心）：手牌里所有卡变成随机奖励卡。
 			return _assemble_at_will(side)
+		LIFE_CYCLE_ID:
+			# 生命循环 9150（R227，森林精魄）：己方盟友获得「次元」+「死亡」。
+			return _life_cycle(target, side)
 		BATCH_UPGRADE_ID:
 			# 批量改造 8031（R86，机械之心）：手牌里所有盟友 / 工事 +1 生命。
 			return _batch_upgrade(side)
@@ -7248,6 +7328,10 @@ func _battlecry_frost(cell: Vector2i, p: Placement) -> void :
 
 
 func _deathrattle(cell: Vector2i, p: Placement) -> void :
+	# R227 生命循环：被本卡点过的单位被破坏 → 加一张随机盟友卡到手卡。
+	# ⚠️ 只认 Placement 标记（不认「死亡」字段 —— 那是通用标记，别的卡也带）。
+	if p.life_cycle:
+		_life_cycle_death(p, cell)
 	match p.card.id:
 		WYVERN_ID:
 			_summon_token(WYVERN_TOKEN_ID, cell, p.owner, 1)
@@ -7991,7 +8075,9 @@ func _destroy(cell: Vector2i) -> void :
 	state.board.erase(cell)
 	_credit_kill(p)
 	if p.owner == SIDE_SELF:
-		if p.card.traits.has(EGG_VANISH_TRAIT):
+		# R227：带「次元」字段的**单位**同样离场即消失（此前只有「离场消失」trait 会走这条；
+		# 现在字段本身也算数 —— 卡面写的是「离开战场后消失，不会进入弃牌区」）。
+		if p.card.traits.has(EGG_VANISH_TRAIT) or p.card.has_affix(AFFIX_DIMENSION):
 			state.void_count += 1   # R140：消耗区计数（场上次元单位被击破）
 			state.void_cards.append(p.card)
 			_log("%s 被击破，移出场外（离场即消失，不进弃牌区）" % p.card.card_name)

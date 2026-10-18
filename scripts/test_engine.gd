@@ -121,7 +121,7 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 223,
+	check(repo.all_cards().size() == 224,
 			"图鉴 = 223 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
@@ -135,7 +135,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 172 and grp_enemy.size() == 51,
+	check(grp_player.size() == 173 and grp_enemy.size() == 51,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 172 / 51；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -165,7 +165,7 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 150,
+	check(pool.size() == 151,
 			"奖励池 150 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
@@ -1416,8 +1416,8 @@ func _init() -> void:
 	lg_e.state.energy = 9
 	var lg_p: Placement = lg_e.state.unit_at(Vector2i(1, 0))
 	var lg_r := lg_e.use_spell(0, Vector2i(1, 0))
-	check(lg_p.health == 22, "龙息：3 点 × 6 次 = 18 点（40 → 22，实际 %d）" % lg_p.health)
-	check(lg_r.contains("6 次"), "龙息：结算文案标注次数（%s）" % lg_r)
+	check(lg_p.health == 20, "龙息：4 点 × 5 次 = 20 点（40 → 20，实际 %d）" % lg_p.health)
+	check(lg_r.contains("5 次"), "龙息：结算文案标注次数（%s）" % lg_r)
 	# 目标中途死亡 → 后续次数落空
 	var lg_e2 := _new_engine([], 20, 20, -1, false)
 	lg_e2.start_game(1)
@@ -1449,6 +1449,89 @@ func _init() -> void:
 	lg_e4.state.energy = 9
 	var lg_r5 := lg_e4.use_spell(0)
 	check(lg_r5.contains("敌方单位"), "龙息：空目标被拒绝（%s）" % lg_r5)
+
+	# ---- R227：生命循环（9150，森林精魄 · 稀有 · 0 费技能）----
+	# 选一个己方盟友 → 获得「次元」+「死亡」；被破坏时加一张随机盟友卡到手卡，
+	# 且带次元 → 进消耗区（不进弃牌区）；离场（重启）时那两个字段要还原掉。
+	var lc_c := repo.get_card(9150)
+	check(lc_c != null and lc_c.card_name == "生命循环" and lc_c.is_spell()
+			and lc_c.cost == 0 and lc_c.rarity == 1 and lc_c.card_class == "森林精魄"
+			and lc_c.target_mode == "unit" and lc_c.needs_target(),
+			"R227 生命循环：森林精魄稀有 0 费技能，需要选单位目标")
+	var lc_pool := repo.reward_pool_for("森林精魄")
+	var lc_in_pool := false
+	for lc_pc: CardData in lc_pool:
+		if lc_pc.id == 9150:
+			lc_in_pool = true
+	check(lc_in_pool, "R227 生命循环：进森林精魄奖励池（稀有 rarity 1）")
+
+	# ① 施放：目标拿到「次元」+「死亡」+ Placement 标记
+	var lc_e := _new_engine([], 20, 20, -1, false)
+	lc_e.start_game(1)
+	var lc_ally := lc_e.state.place(_card(8003, "树人", "盟友", 3, 3, 8),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	lc_e.state.hand = [repo.get_card(9150)]
+	lc_e.state.energy = 5
+	var lc_ret := lc_e.use_spell(0, Vector2i(4, 1))
+	check(lc_ally.card.has_affix(GameEngine.AFFIX_DIMENSION)
+			and lc_ally.card.has_affix(GameEngine.AFFIX_DEATH) and lc_ally.life_cycle,
+			"R227 生命循环：目标获得「次元」+「死亡」并打上 life_cycle 标记（%s）" % lc_ret)
+
+	# ② 次元：被击破 → 进消耗区，不进弃牌区；死亡：手卡多一张随机盟友卡
+	lc_e.state.hand.clear()
+	var lc_discard0: int = lc_e.state.discard.size()
+	var lc_void0: int = lc_e.state.void_count
+	lc_ally.health = 0
+	lc_e._destroy(Vector2i(4, 1))
+	check(lc_e.state.void_count == lc_void0 + 1
+			and lc_e.state.discard.size() == lc_discard0,
+			"R227 生命循环：带「次元」的单位被击破 → 进消耗区、不进弃牌区（void %d → %d）"
+			% [lc_void0, lc_e.state.void_count])
+	check(lc_e.state.hand.size() == 1
+			and (lc_e.state.hand[0] as CardData).kind == "盟友",
+			"R227 生命循环：被破坏时加一张随机盟友卡到手卡（手卡 %d 张）"
+			% lc_e.state.hand.size())
+	var lc_drawn: CardData = lc_e.state.hand[0] as CardData
+	var lc_drawn_in_pool := false
+	for lc_pc2: CardData in lc_pool:
+		if lc_pc2.id == lc_drawn.id:
+			lc_drawn_in_pool = true
+	check(lc_drawn_in_pool,
+			"R227 生命循环：随机卡来自本角色奖励池（%s）" % lc_drawn.card_name)
+
+	# ③ 目标校验：敌方单位 / 工事都被拒
+	var lc_e2 := _new_engine([], 20, 20, -1, false)
+	lc_e2.start_game(1)
+	lc_e2.state.place(_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 2),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	lc_e2.state.place(_card(8005, "木栅栏", "工事", 1, 0, 6, 0, 0),
+			Vector2i(4, 0), GameEngine.SIDE_SELF)
+	lc_e2.state.hand = [repo.get_card(9150)]
+	lc_e2.state.energy = 5
+	var lc_r2 := lc_e2.use_spell(0, Vector2i(1, 1))
+	check(lc_r2.contains("己方盟友"), "R227 生命循环：指定敌方单位被拒（%s）" % lc_r2)
+	lc_e2.state.hand = [repo.get_card(9150)]
+	lc_e2.state.energy = 5
+	var lc_r3 := lc_e2.use_spell(0, Vector2i(4, 0))
+	check(lc_r3.contains("不是盟友"), "R227 生命循环：指定工事被拒（%s）" % lc_r3)
+
+	# ④ 离场还原：给盟友上生命循环 → 重启回手 → 手里那张不该带次元 / 死亡
+	var lc_e3 := _new_engine([], 20, 20, -1, false)
+	lc_e3.start_game(1)
+	var lc_ally3 := lc_e3.state.place(_card(8003, "树人", "盟友", 3, 3, 8),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	lc_e3.state.hand = [repo.get_card(9150)]
+	lc_e3.state.energy = 5
+	lc_e3.use_spell(0, Vector2i(4, 1))
+	lc_e3.state.hand.clear()
+	lc_e3._reboot(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var lc_back: CardData = null
+	for lc_hc: CardData in lc_e3.state.hand:
+		if lc_hc.id == 8003:
+			lc_back = lc_hc
+	check(lc_back != null and not lc_back.has_affix(GameEngine.AFFIX_DIMENSION)
+			and not lc_back.has_affix(GameEngine.AFFIX_DEATH),
+			"R227 生命循环：重启回手时「次元 / 死亡」已还原（回手那张不带这两个字段）")
 
 	# 狂暴（9055）：稀有 2 费技能，指定己方盟友本回合可以攻击两次；不可重复；>=3 盟友费用 -1
 	var nc_fz := repo.get_card(9055)
@@ -6890,11 +6973,11 @@ func _init() -> void:
 	check(dr_cls_bad.is_empty() and dr_cls_enemy_bad.is_empty(),
 			"角色系统：非敌方卡 class 都在可选角色内（或留空 = 通用卡）、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
-	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 73
+	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 74
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 56
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 42
 			and int(dr_cls_count.get("敌人", 0)) == 51,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 73 / 56 / 42 / 51；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 74 / 56 / 42 / 51；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -7155,7 +7238,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 150, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 151, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -7459,9 +7542,9 @@ func _init() -> void:
 	var r45_cls_count := {}
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
-	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 73
+	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 74
 			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 56,
-			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1）"
+			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
 	check(int(r45_cls_count.get("", 0)) == 1,
@@ -7620,7 +7703,7 @@ func _init() -> void:
 			r226_dmg += 1
 		elif r226_card.effect_text.contains("造成") and r226_card.effect_text.contains("伤害"):
 			r226_leak.append(r226_card.card_name)
-	check(r226_skills == 68 and r226_dmg == 25 and r226_leak.is_empty(),
+	check(r226_skills == 69 and r226_dmg == 25 and r226_leak.is_empty(),
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 			% [r226_skills, r226_dmg, "0 张" if r226_leak.is_empty() else str(r226_leak)])
 	check(RunState.enchant_ok("damage", r224_okrepo.get_card(9083), 9999)
@@ -7671,7 +7754,7 @@ func _init() -> void:
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
 			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法鸭）")
-	check(r47_dr.size() == 61 and r47_rg.size() == 53
+	check(r47_dr.size() == 62 and r47_rg.size() == 53
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
 			"奖励池过滤：森林精魄 %d 张 / 暗影刺客 %d 张（两者之和 + 机械之心 %d = 完整池 %d）"

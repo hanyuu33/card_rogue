@@ -4154,6 +4154,15 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 			if gp.owner == GameEngine.SIDE_SELF and gp.card.kind == "盟友":
 				out.append(c)
 		out.sort()
+	elif card.id == GameEngine.LIFE_CYCLE_ID:
+		# 生命循环（9150，R227）：只列**己方盟友**（工事不是盟友 → 不列，
+		# 免得玩家点了才被引擎拒；与森林守护 / 狂暴同口径）。已获得的也不再列出。
+		for c: Vector2i in engine.state.board:
+			var lcp: Placement = engine.state.board[c]
+			if lcp.owner == GameEngine.SIDE_SELF and lcp.card.kind == "盟友" \
+					and not lcp.life_cycle:
+				out.append(c)
+		out.sort()
 	elif card.id == GameEngine.UPGRADE_ID:
 		# 升级 8027（R82，机械之心）：只列**己方盟友或工事**。
 		# 必须在这里过滤掉敌方 —— 引擎侧 `_upgrade_unit` 也会拒敌方单位，
