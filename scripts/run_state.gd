@@ -421,18 +421,21 @@ static func lose_max_hp(amount: int) -> int:
 # ------------------------------------------------------------ run 生命周期
 
 static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
-		cid: String = "") -> void:
+		cid: String = "", seed_override := 0) -> void:
 	## 新 run：满血、初始卡组、载入地图、定位起点（第 0 列唯一节点）。
 	## layer = 本局地图所属的层（地图上所有战斗/事件都从这一层的内容池里取）。
 	## map 传空数组时用本局种子现生成（真实流程 = 角色选择场景这样进来）。
+	## R241 种子：`seed_override != 0` 时**用它**（同一种子必然同一张图、同一串掉落/摇卡）；
+	## 0 = 现摇一个。整局只有这一行碰全局随机源，之后所有随机都由 `run_seed` 派生。
 	# 初始生命按职业不同（R182）：基础 50 + 职业加成（森林精魄+20/暗影刺客+10/机械之心+16）。
 	# R223 难度 9「虚弱」：初始最大生命 ×80%（截断取整）—— 在 reset 之前算好基数。
 	var base_hp: int = PlayerClass.base_hp_of(cid if cid != "" else PlayerClass.default_id())
 	if max_hp_mul() < 1.0:
 		base_hp = int(base_hp * max_hp_mul())
 	reset(base_hp)
-	# run 种子：开局新摇一个（地图生成 / 掉落 / 摇卡全部由它派生）
-	run_seed = randi()
+	# run 种子（R241）：**全局唯一随机源**的根 —— 地图 / 掉落 / 摇卡 / 商店库存 / 战斗种子
+	# 全部从它派生；同一种子重开、以及「继续游戏」读档（seed + rng.state）都走这条链。
+	run_seed = seed_override if seed_override != 0 else randi()
 	run_rng = RandomNumberGenerator.new()
 	run_rng.seed = run_seed
 	run_active = true
@@ -1153,6 +1156,24 @@ static func _memory_visible(id: int) -> bool:
 	if id == current_node_id or cleared_ids.has(id):
 		return true
 	return RogueMap.neighbor_ids(current_node()).has(id)
+
+
+static func seed_text() -> String:
+	## 种子的展示文本（设置页 / 对战记录共用；开局前 = 「—」）。
+	## 玩家拿这串数字就能让别人（或自己）用「下一局种子」复现同一局。
+	return "—" if run_seed == 0 else str(run_seed)
+
+
+static func shuffle_rng(arr: Array) -> void:
+	## **按本局随机链洗牌的唯一口（R241）**。
+	## `Array.shuffle()` 走的是**全局随机源** —— 同一种子重开 / 续档会洗出不同顺序，
+	## 商店库存、附魔三选三这类「进场景时洗一下」的地方最容易被它坑。
+	## 算法与 `RogueMap._shuffle` / `FieldState._shuffle_deck` 相同（Fisher-Yates）。
+	for i in range(arr.size() - 1, 0, -1):
+		var j := run_rng.randi_range(0, i)
+		var tmp: Variant = arr[i]
+		arr[i] = arr[j]
+		arr[j] = tmp
 
 
 static func reveal_known() -> void:

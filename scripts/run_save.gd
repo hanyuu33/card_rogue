@@ -30,12 +30,14 @@ static func has_save() -> bool:
 
 # ------------------------------------------------------------ 写入
 
-static func save_run() -> bool:
-	## 把当前 run 写入本地存档。非 run 中 / 写盘失败返回 false。
-	if not RunState.run_active:
-		return false
+static func snapshot() -> Dictionary:
+	## 当前 run 的**全部持久字段**（存档 = 它直接落盘）。
+	## R241 抽出来单独一个函数，是为了让「确定性」能被**测试**验证：
+	## 测试可以 snapshot() → 改乱内存 → apply(snapshot) → 再摇随机，完全不用碰磁盘。
+	## ⚠️ 随机源只存 `seed + state` 两个整数：地图 / 掉落 / 摇卡 / 商店库存 / 战斗种子
+	## 全部从这条链派生，续上这两个数 = 续上整条链。
 	var rng: RandomNumberGenerator = RunState.run_rng
-	var d := {
+	return {
 		"max_hp": RunState.max_hp,
 		"hp": RunState.hp,
 		"deck_ids": RunState.deck_ids,
@@ -70,7 +72,13 @@ static func save_run() -> bool:
 		"reward_context": RunState.reward_context,
 		"difficulty": RunState.difficulty,
 	}
-	var root := {"__runsave__": FORMAT, "d": d}
+
+
+static func save_run() -> bool:
+	## 把当前 run 写入本地存档。非 run 中 / 写盘失败返回 false。
+	if not RunState.run_active:
+		return false
+	var root := {"__runsave__": FORMAT, "d": snapshot()}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f == null:
 		push_warning("RunSave：无法写入存档 " + SAVE_PATH)
@@ -94,7 +102,12 @@ static func load_run() -> bool:
 	var d: Dictionary = (root as Dictionary).get("d", {})
 	if not (d is Dictionary):
 		return false
+	return apply(d)
 
+
+static func apply(d: Dictionary) -> bool:
+	## 把一份 snapshot（存档里的 d）**写回 RunState**。R241 从 load_run 里抽出来，
+	## 于是「读档」与「测试里验证确定性」走的是**同一段代码**，不会两条路各写一遍。
 	RunState.max_hp = maxi(1, int(d.get("max_hp", 50)))
 	RunState.hp = clampi(int(d.get("hp", RunState.max_hp)), 0, RunState.max_hp)
 	RunState.run_active = true

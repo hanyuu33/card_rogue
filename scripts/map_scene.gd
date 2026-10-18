@@ -205,6 +205,9 @@ func _ready() -> void:
 	# ⚠️ 只在真实游玩时存：截图（_shot）/ headless（测试探针）都不写。
 	if RunState.run_active and not _shot and DisplayServer.get_name() != "headless":
 		RunSave.save_run()
+		# R241：同一时刻把「记录详情快照」同步进 pending —— 关掉游戏留下的「中断」记录
+		# 也带着当时的卡组 / 道具 / 血量。
+		RunRecord.update_pending()
 	# R179：带着 boss_pending 回到地图（刚打完最后一格里的战斗 / 事件）→ 也给同样长的缓冲，
 	# 别一进地图就糊上「入夜」黑屏。
 	if RunState.run_active and RunState.boss_pending:

@@ -10,6 +10,7 @@ const ROW_W := 520.0
 const ROW_H := 64.0
 const ROW_GAP := 14.0
 const LIST_Y := 220.0
+const SEED_H := 138.0     # R241：种子面板高度
 
 var _font: Font
 var _font_bold: Font
@@ -17,6 +18,8 @@ var sfx: Sfx
 var _menu: UiMenu = null
 var _hover := -1
 var _last_mp := Vector2.INF
+var _seed_edit: LineEdit = null   # R241「下一局种子」输入框（唯一的原生控件）
+var _seed_guard := false          # 防止 text_changed 里改 text 触发二次回调
 
 
 func _ready() -> void:
@@ -36,10 +39,84 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(t)
 		t.start()
+	_build_seed_edit()
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续",
 		"sub": "设置 · 按 Esc 返回",
 	})
+
+
+# ------------------------------------------------------------ 种子（R241）
+
+func _seed_panel_rect() -> Rect2:
+	## 三行开关下面的一块 —— 本局种子（只读）+ 下一局种子（可填）。
+	var last := _row_rect(2)
+	return Rect2(last.position.x, last.end.y + 22.0, ROW_W, SEED_H)
+
+
+func _seed_edit_rect() -> Rect2:
+	var p := _seed_panel_rect()
+	return Rect2(p.position.x + 132.0, p.position.y + 62.0, 214.0, 34.0)
+
+
+func _build_seed_edit() -> void:
+	## 原生 LineEdit（手机上点它才会弹软键盘 —— 纯 _draw 的输入框做不到这件事）。
+	GameSettings.ensure_loaded()
+	_seed_edit = LineEdit.new()
+	_seed_edit.placeholder_text = "留空 = 随机"
+	_seed_edit.max_length = 10
+	_seed_edit.text = "" if GameSettings.next_seed == 0 else str(GameSettings.next_seed)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("1b1d24")
+	sb.border_color = Color("4a4e58")
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(4)
+	sb.content_margin_left = 8.0
+	sb.content_margin_right = 8.0
+	_seed_edit.add_theme_stylebox_override("normal", sb)
+	var sbf := StyleBoxFlat.new()
+	sbf.bg_color = Color("23262f")
+	sbf.border_color = Color("8f9ab4")
+	sbf.set_border_width_all(1)
+	sbf.set_corner_radius_all(4)
+	sbf.content_margin_left = 8.0
+	sbf.content_margin_right = 8.0
+	_seed_edit.add_theme_stylebox_override("focus", sbf)
+	_seed_edit.add_theme_font_override("font", _font)
+	_seed_edit.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
+	_seed_edit.add_theme_color_override("font_color", Color("ece7db"))
+	_seed_edit.add_theme_color_override("caret_color", UiTheme.SAND)
+	_seed_edit.add_theme_color_override("placeholder_color", Color("7d8590"))
+	_seed_edit.text_changed.connect(_on_seed_changed)
+	add_child(_seed_edit)
+	_sync_seed_edit()
+	resized.connect(_sync_seed_edit)
+
+
+func _sync_seed_edit() -> void:
+	if _seed_edit == null:
+		return
+	var r := _seed_edit_rect()
+	_seed_edit.position = r.position
+	_seed_edit.size = r.size
+
+
+func _on_seed_changed(txt: String) -> void:
+	## 只收数字：粘贴 / 输入法带进来的其它字符当场剃掉。
+	if _seed_guard:
+		return
+	var digits := ""
+	for i in txt.length():
+		var ch := txt[i]
+		if ch >= "0" and ch <= "9":
+			digits += ch
+	if digits != txt:
+		_seed_guard = true
+		_seed_edit.text = digits
+		_seed_edit.caret_column = digits.length()
+		_seed_guard = false
+	GameSettings.set_next_seed(int(digits) if digits != "" else 0)
+	queue_redraw()
 
 
 func _menu_items() -> Array:
@@ -158,10 +235,35 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, Color("e6e2d8"))
 	for i in 3:
 		_draw_row(i, _row(i))
+	_draw_seed_panel()
 	draw_string(_font, Vector2(0, size.y - 28),
-			"提示：Esc 菜单里的「音效：开/关」与这里同一份设置，两边同步。",
+			"提示：种子决定整局的地图 / 掉落 / 摇卡；同一种子新开一局可复现同一局。",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
 			UiTheme.INK_ON_DARK)
+
+
+func _draw_seed_panel() -> void:
+	## R241：种子面板 —— ① 本局种子（只读，继续游戏会沿用它）② 下一局种子（可填）。
+	var p := _seed_panel_rect()
+	draw_rect(p, Color("22242c"), true)
+	draw_rect(p, Color("4a4e58"), false, 1.6)
+	draw_string(_font_bold, p.position + Vector2(20, 26), "随机种子",
+			HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_BODY, UiTheme.SAND)
+	var cur := "本局种子：%s" % RunState.seed_text()
+	if not RunState.run_active:
+		cur = "本局种子：—（当前没有进行中的对局）"
+	draw_string(_font, p.position + Vector2(20, 50), cur,
+			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 40.0, UiTheme.FS_LABEL,
+			Color("9fd7a5") if RunState.run_active else Color("9a968c"))
+	draw_string(_font_bold, p.position + Vector2(20, 84), "下一局种子",
+			HORIZONTAL_ALIGNMENT_LEFT, 120, UiTheme.FS_LABEL, Color("ece7db"))
+	var tail := "当前：随机" if GameSettings.next_seed == 0 else "当前：%d" % GameSettings.next_seed
+	draw_string(_font, p.position + Vector2(356, 84), tail,
+			HORIZONTAL_ALIGNMENT_LEFT, 150, UiTheme.FS_CAPTION,
+			Color("9a968c") if GameSettings.next_seed == 0 else Color("f0c860"))
+	draw_string(_font, p.position + Vector2(20, 120),
+			"留空 = 每局随机；填入数字 → 下一局用同一种子（用一次自动清空）",
+			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 40.0, UiTheme.FS_CAPTION, Color("7d8590"))
 
 
 func _draw_row(i: int, d: Dictionary) -> void:

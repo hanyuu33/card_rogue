@@ -342,6 +342,13 @@ func _choose(cid: String) -> void:
 	sfx.play("click")
 	# 角色决定：初始卡组追加的专属卡 + 战斗赠品道具（见 PlayerClass）。
 	# 地图由 RunState.start_run 用本局种子生成（同一种子必然生成同一张图）。
-	RunState.start_run([], GameLayers.LAYER_DEFAULT, cid)
+	# R241：设置页填了「下一局种子」就用它（复现用）；填 0 则现摇一个。
+	GameSettings.ensure_loaded()
+	var want_seed: int = GameSettings.next_seed
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, cid, want_seed)
+	# 指定种子**用一次就清空**：否则玩家会莫名其妙「每局地图都一样」。
+	# 要再复现同一局，回设置页把种子再填一次即可（记录详情里能查到那串数字）。
+	if want_seed != 0:
+		GameSettings.set_next_seed(0)
 	RunRecord.begin_run(cid)   # 本局开始：对战记录从这里计时
 	SceneFx.goto("res://scenes/map.tscn")

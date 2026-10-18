@@ -17340,6 +17340,104 @@ func _init() -> void:
 	check(not FileAccess.file_exists("res://scripts/replay_log.gd")
 			and not FileAccess.file_exists("res://scenes/replay_list.tscn"),
 		"R215 回放机制已删（replay_log / replay_list 都不在了）")
+	# ================================================================
+	# R241：随机种子（全局同一随机源）+ 对战记录详情快照
+	# ================================================================
+	# ① 同一种子开两次 → 地图 / 本层 Boss / 接下来的随机串**完全一致**
+	#    ⚠️ 字典不能用 ==（Godot 4 的 Dictionary 比较是引用），一律 var_to_str 比。
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID, 424242)
+	var r241_map_a := var_to_str(RunState.map_cells)
+	var r241_boss_a := var_to_str(RunState.boss_pick)
+	var r241_roll_a: Array = [RunState.run_rng.randi(), RunState.run_rng.randi(),
+			RunState.run_rng.randi()]
+	check(RunState.run_seed == 424242 and RunState.seed_text() == "424242",
+			"R241 种子：start_run(seed) 用指定种子，seed_text() 就是它（%s）"
+			% RunState.seed_text())
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID, 424242)
+	check(var_to_str(RunState.map_cells) == r241_map_a,
+			"R241 同种子：地图逐格一致（%d 格）" % RunState.map_cells.size())
+	check(var_to_str(RunState.boss_pick) == r241_boss_a,
+			"R241 同种子：本层 Boss 一致")
+	var r241_roll_b: Array = [RunState.run_rng.randi(), RunState.run_rng.randi(),
+			RunState.run_rng.randi()]
+	check(r241_roll_b == r241_roll_a,
+			"R241 同种子：接下来的随机串一致（%s）" % str(r241_roll_a))
+	# ② 换种子 → 地图跟着变（证明种子真的在驱动生成，不是碰巧）
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID, 424243)
+	check(var_to_str(RunState.map_cells) != r241_map_a,
+			"R241 换种子：地图跟着变")
+	# ③ 「继续游戏」= 存档快照 → 读回之后随机链接得上（snapshot/apply 同一段代码）
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID, 777001)
+	var r241_map3 := var_to_str(RunState.map_cells)
+	var r241_snap := RunSave.snapshot()      # 先快照（存的是「这一刻」的 seed+state）
+	var r241_next_a: Array = [RunState.run_rng.randi(), RunState.run_rng.randi()]
+	# 模拟「关掉游戏再打开」：把内存里的随机源彻底换掉
+	RunState.run_rng = RandomNumberGenerator.new()
+	RunState.run_rng.seed = 1
+	RunState.run_rng.randi()
+	RunState.map_cells = []
+	RunSave.apply(r241_snap)
+	var r241_next_b: Array = [RunState.run_rng.randi(), RunState.run_rng.randi()]
+	check(r241_next_b == r241_next_a and RunState.run_seed == 777001
+			and var_to_str(RunState.map_cells) == r241_map3,
+			"R241 续档：快照回放后地图 / 种子 / 随机链原样接上（%s）" % str(r241_next_a))
+	# ④ 记录快照：种子 / 血量 / 卡组（含附魔 id）/ 道具
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.ROGUE, 8888)
+	RunState.relics = [6011, 6029]
+	RunState.deck_mods[0] = RunState.enchant_mod("damage")
+	RunState.hp = 37
+	var r241_rs := RunRecord.snapshot()
+	var r241_rs_deck: Array = r241_rs["deck"]
+	check(int(r241_rs["seed"]) == 8888 and int(r241_rs["hp"]) == 37
+			and int(r241_rs["max_hp"]) == RunState.max_hp
+			and r241_rs_deck.size() == RunState.deck_ids.size()
+			and str((r241_rs_deck[0] as Dictionary).get("e", "")) == "damage"
+			and (r241_rs["relics"] as Array).size() == 2,
+			"R241 记录快照：种子 / 血量 / 卡组（含附魔）/ 道具都进快照")
+	# ⑤ 失败：生命记 0（用户口径）；通关：保留真实生命
+	RunRecord.begin_run(PlayerClass.ROGUE)
+	RunRecord.finish("lose")
+	var r241_lose: Dictionary = RunRecord.list_records()[-1]
+	check(str(r241_lose["result"]) == "lose" and int(r241_lose.get("hp", -1)) == 0
+			and int(r241_lose.get("max_hp", 0)) == RunState.max_hp
+			and int(r241_lose.get("seed", 0)) == 8888
+			and (r241_lose.get("deck", []) as Array).size() == RunState.deck_ids.size(),
+			"R241 记录：失败 → 生命 0 / 最大生命 / 种子 / 卡组都记下")
+	RunState.hp = 42
+	RunRecord.begin_run(PlayerClass.ROGUE)
+	RunRecord.finish("win")
+	var r241_win: Dictionary = RunRecord.list_records()[-1]
+	check(int(r241_win.get("hp", -1)) == 42 and int(r241_win.get("seed", 0)) == 8888,
+			"R241 记录：通关保留真实生命（%d）" % int(r241_win.get("hp", -1)))
+	# ⑥ 检查点顺手刷新 pending 快照（关掉游戏留下的「中断」也有详情）
+	#    pending 在上面的 finish 里被收掉了 → 重开一份；**先 begin_run 再改血**，
+	#    这样只有 update_pending() 真的刷新了，断言才会过。
+	RunRecord.begin_run(PlayerClass.ROGUE)
+	RunState.hp = 55
+	RunRecord.update_pending()
+	var r241_p: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string(RunRecord.PENDING_PATH))
+	check(r241_p is Dictionary
+			and int(((r241_p as Dictionary).get("snap", {}) as Dictionary).get("hp", -1)) == 55
+			and int((r241_p as Dictionary).get("seed", 0)) == 8888,
+			"R241 中断记录：update_pending 把快照与种子写进 pending")
+	# ⑦ 确定性源码守卫：商店商品 / 附魔池必须走本局随机链
+	var r241_ssrc := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	check(r241_ssrc.find("CardReward.roll(_repo, \"boss\", 6, RunState.run_rng)") >= 0
+			and r241_ssrc.find("RunState.shuffle_rng(pool)") >= 0
+			and r241_ssrc.find("pool.shuffle()") < 0,
+			"R241 确定性：商店商品 / 附魔池都走 run_rng（不许全局 roll / Array.shuffle）")
+	# ⑧ 整局只有一个地方碰全局随机源（start_run 造新种子）
+	#    「裸 randi()」= 总数 − 带点的 `.randi()`（`run_rng.randi()` 这类不算）。
+	var r241_rsrc := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	var r241_randi_hits: int = r241_rsrc.count("randi()") \
+			- r241_rsrc.count(".randi()")
+	check(r241_randi_hits == 1,
+			"R241 确定性：run_state 只有 1 处裸 randi()（造新种子），实际 %d 处"
+			% r241_randi_hits)
+	RunRecord.finish("quit")   # 收掉 ⑤/⑥ 留下的 pending
+	RunRecord.clear_all()
+
 	# 还原用户真实数据
 	if r215_rec_bak == "":
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(RunRecord.PATH))

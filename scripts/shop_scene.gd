@@ -175,13 +175,15 @@ func _ready() -> void:
 func _setup_shop() -> void:
 	# 第一行：随机本职业奖励卡（数量自适应，先按最多 6 张抽，绘制时按货架宽截断）。
 	# 走 Boss 档概率（普通 35% / 稀有 45% / 史诗 20%）。
-	var rolled := CardReward.roll(_repo, "boss", 6)
+	# R241：必须走本局随机链 —— 原来没传 rng（= 全局随机源），同一份存档读两次
+	# 会看到不同的商品，破坏「同一种子必然一致」。
+	var rolled := CardReward.roll(_repo, "boss", 6, RunState.run_rng)
 	_row1 = []
 	for c: CardData in rolled:
 		_row1.append({"card": c, "sold": false})
 	# 第二行：从 4 种附魔随机抽 3 种不重复
 	var pool := ENCHANTS.duplicate()
-	pool.shuffle()
+	RunState.shuffle_rng(pool)   # R241：`Array.shuffle()` 是全局随机源，这里不能直接用
 	_row2 = []
 	for i in 3:
 		_row2.append({"ench": pool[i], "sold": false})

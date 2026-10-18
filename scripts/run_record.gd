@@ -8,7 +8,12 @@ extends RefCounted
 ##
 ## 一条记录：
 ##   {"time": 开始时间, "end": 结束时间, "class": 角色 id, "difficulty": 档位,
-##    "result": "win" / "lose" / "quit" / "interrupted", "secs": 用时秒}
+##    "result": "win" / "lose" / "quit" / "interrupted", "secs": 用时秒,
+##    "seed": 本局种子,                                    ← R241
+##    "hp" / "max_hp" / "gold" / "layer" / "battles" / "elites",   ← R241 快照
+##    "relics": [道具 id...], "deck": [{"id":卡 id, "e":附魔 id}...]}  ← R241 快照
+## ⚠️ 后加的字段**全部可选**：老记录没有就判空（详情页显示「旧记录无详情」），
+##    FORMAT 仍是 1 —— 升版本会把玩家已有的历史记录全丢掉。
 ## 落盘 `user://run_records.json`（数组，**最旧在前**，最多 KEEP 条）。
 ##
 ## **「中断也记录」靠一份 pending 文件**（`user://run_pending.json`）：
@@ -58,6 +63,7 @@ static func resume() -> void:
 static func finish(result: String) -> void:
 	## 一局结束（win / lose / quit / interrupted）：落盘并清掉 pending。
 	## 没有 pending（续档补记失败 / 单关模式）→ 什么都不写，绝不凭空造记录。
+	## R241：连**最终状态快照**一起记（血量 / 道具 / 卡组…），记录页才能看详情。
 	var p := _read_pending()
 	if p.is_empty():
 		return
@@ -71,13 +77,65 @@ static func finish(result: String) -> void:
 		"difficulty": int(p.get("difficulty", 2)),
 		"result": result,
 		"secs": maxi(0, int(now - start)),
+		"seed": int(p.get("seed", 0)),
 	}
+	# 快照来源：本局还活着 → 现取；否则（启动时补记「中断」）→ 用 pending 里存的
+	# 最后一份检查点快照（`update_pending()` 写的）。
+	var snap: Variant = p.get("snap", {})
+	if RunState.run_active:
+		snap = snapshot()
+	if snap is Dictionary:
+		entry.merge(snap as Dictionary, true)
+	# 用户口径：**失败时生命记 0**（战斗输掉那一刻 RunState.hp 还是进战斗前的值，
+	# 不能直接抄）；中断 / 放弃则保留当时的真实血量。
+	if result == "lose":
+		entry["hp"] = 0
 	var all := list_records()
 	all.append(entry)
 	while all.size() > KEEP:
 		all.pop_front()
 	_write_records(all)
 	_delete_pending()
+
+
+static func snapshot() -> Dictionary:
+	## 一局的**最终状态快照**（记录详情用）。字段都可选，老记录没有就空着。
+	## 卡组按 `{id, e}` 记（卡 id + 附魔 id）：详情页据此还原卡名与附魔标记，
+	## 不存整张 CardData —— 记录是历史，卡表以后再改也读得回来（id 找不到就跳过）。
+	var deck: Array = []
+	for i in RunState.deck_ids.size():
+		var mod: Dictionary = RunState.deck_mods[i] if i < RunState.deck_mods.size() else {}
+		deck.append({
+			"id": int(RunState.deck_ids[i]),
+			"e": RunState.enchant_id_of(mod),
+		})
+	var relics: Array = []
+	for id: int in RunState.relics:
+		relics.append(int(id))
+	return {
+		"seed": RunState.run_seed,
+		"hp": RunState.hp,
+		"max_hp": RunState.max_hp,
+		"gold": RunState.gold,
+		"layer": RunState.current_layer,
+		"battles": RunState.battle_wins,
+		"elites": RunState.elite_wins,
+		"relics": relics,
+		"deck": deck,
+	}
+
+
+static func update_pending() -> void:
+	## 地图检查点上顺手把**快照**同步进 pending（与 `RunSave.save_run()` 同一时刻）。
+	## 这样直接关掉游戏留下的「中断」记录也有卡组 / 道具 / 血量可看，而不是只有一行结果。
+	if not RunState.run_active:
+		return
+	var p := _read_pending()
+	if p.is_empty():
+		return
+	p["snap"] = snapshot()
+	p["seed"] = RunState.run_seed
+	_write_pending_dict(p)
 
 
 static func recover() -> bool:
@@ -164,7 +222,14 @@ static func _write_pending(cls: String) -> void:
 		"start_unix": Time.get_unix_time_from_system(),
 		"class": cls,
 		"difficulty": RunState.difficulty,
+		"seed": RunState.run_seed,
+		"snap": snapshot() if RunState.run_active else {},
 	}
+	_write_pending_dict(p)
+
+
+static func _write_pending_dict(p: Dictionary) -> void:
+	## pending 落盘（`begin_run` 建的那份 / `update_pending` 刷新的那份都走这里）。
 	var f := FileAccess.open(PENDING_PATH, FileAccess.WRITE)
 	if f == null:
 		push_warning("RunRecord：pending 写入失败")

@@ -18,6 +18,9 @@ const PATH := "user://settings.cfg"
 static var sfx_on := true
 static var music_on := true
 static var fullscreen := false
+## R241「下一局种子」：0 = 每局随机；非 0 = 新开一局就用它（复现某一局用）。
+## 放在设置里而不是角色选择页：那个页面是「一个动作」的界面，多一个输入框会抢焦点。
+static var next_seed := 0
 
 static var _loaded := false
 
@@ -33,6 +36,7 @@ static func ensure_loaded() -> void:
 	sfx_on = bool(cf.get_value("audio", "sfx", true))
 	music_on = bool(cf.get_value("audio", "music", true))
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
+	next_seed = int(cf.get_value("run", "seed", 0))
 
 
 static func save() -> void:
@@ -40,6 +44,7 @@ static func save() -> void:
 	cf.set_value("audio", "sfx", sfx_on)
 	cf.set_value("audio", "music", music_on)
 	cf.set_value("display", "fullscreen", fullscreen)
+	cf.set_value("run", "seed", next_seed)
 	cf.save(PATH)
 
 
@@ -65,6 +70,16 @@ static func set_fullscreen(v: bool) -> void:
 		return
 	fullscreen = v
 	apply_display()
+	save()
+
+
+static func set_next_seed(v: int) -> void:
+	## 负数 / 0 一律当「随机」。
+	ensure_loaded()
+	var nv := maxi(0, v)
+	if nv == next_seed:
+		return
+	next_seed = nv
 	save()
 
 
