@@ -121,7 +121,7 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 224,
+	check(repo.all_cards().size() == 226,
 			"图鉴 = 223 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
@@ -135,7 +135,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 173 and grp_enemy.size() == 51,
+	check(grp_player.size() == 173 and grp_enemy.size() == 53,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 172 / 51；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -1532,6 +1532,92 @@ func _init() -> void:
 	check(lc_back != null and not lc_back.has_affix(GameEngine.AFFIX_DIMENSION)
 			and not lc_back.has_affix(GameEngine.AFFIX_DEATH),
 			"R227 生命循环：重启回手时「次元 / 死亡」已还原（回手那张不带这两个字段）")
+
+	# ---- R228：废料场（拾荒者 9151 / 废弃机器人 9152）----
+	var r228_repo := CardRepo.load_json()
+	var r228_sc := r228_repo.get_card(9151)
+	var r228_bot := r228_repo.get_card(9152)
+	check(r228_sc != null and r228_sc.card_name == "拾荒者" and r228_sc.kind == "盟友"
+			and r228_sc.power == 4 and r228_sc.health == 50
+			and r228_sc.traits.has(GameEngine.SCAVENGER_TRAIT) and r228_sc.group == "enemy",
+			"R228 拾荒者：盟友 4/50，带「拾荒」trait（敌方卡）")
+	check(r228_bot != null and r228_bot.card_name == "废弃机器人" and r228_bot.kind == "盟友"
+			and r228_bot.power == 5 and r228_bot.health == 40
+			and r228_bot.traits.has(GameEngine.WASTE_BOT_TRAIT) and r228_bot.group == "enemy",
+			"R228 废弃机器人：盟友 5/40，带「废铁」trait（敌方卡）")
+	var r228_lv: Dictionary = _level_named("废料场")
+	var r228_units: Array = r228_lv.get("enemy_units", [])
+	check(not r228_lv.is_empty()
+			and str(r228_lv["key"]) == "scrapyard"
+			and int(r228_lv["tier"]) == GameLevels.TIER_NORMAL_HARD
+			and GameLevels.layer_of(r228_lv) == GameLayers.LAYER_TWO
+			and r228_units.size() == 5
+			and int(r228_units[0][0]) == 9151 and int(r228_units[1][0]) == 9151
+			and int(r228_units[2][0]) == 9152 and int(r228_units[3][0]) == 9152
+			and int(r228_units[4][0]) == 9152,
+			"R228 关卡「废料场」：第二层·普通敌人-困难，2 拾荒者 + 3 废弃机器人")
+	check(r228_units.size() == 5
+			and r228_units[0][6] == Vector2i(0, 0) and r228_units[1][6] == Vector2i(0, 2)
+			and r228_units[2][6] == Vector2i(2, 0) and r228_units[3][6] == Vector2i(2, 1)
+			and r228_units[4][6] == Vector2i(2, 2),
+			"R228 站位：拾荒者后排角 (0,0)/(0,2)，机器人前排 (2,0)(2,1)(2,2)")
+	# ① 拾荒者：回合开始改造一个「拾荒者以外」的己方单位（+3 攻 / +5 血 / 1 层），不改自己
+	var r228_e := _new_engine([], 20, 20)
+	r228_e.start_game(1)
+	var r228_s1 := r228_e.state.place(CardData.from_dict(r228_sc.to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	var r228_b1 := r228_e.state.place(CardData.from_dict(r228_bot.to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r228_e._scavenger_tick(GameEngine.SIDE_OPPONENT)
+	check(r228_b1.upgrade_stacks == 1
+			and r228_b1.effective_power() == 5 + GameEngine.SCAVENGER_ATK
+			and r228_b1.health == 40 + GameEngine.SCAVENGER_HP,
+			"R228 拾荒者：回合开始把机器人改造 +%d 攻 / +%d 血（现 %d 攻 / %d 血，%d 层）"
+			% [GameEngine.SCAVENGER_ATK, GameEngine.SCAVENGER_HP,
+			r228_b1.effective_power(), r228_b1.health, r228_b1.upgrade_stacks])
+	check(r228_s1.upgrade_stacks == 0, "R228 拾荒者：不改自己（自身 0 层）")
+	# ② 废弃机器人：被改造 → 对所有敌方（玩家）单位各 1 伤
+	var r228_e2 := _new_engine([], 20, 20)
+	r228_e2.start_game(1)
+	var r228_b2 := r228_e2.state.place(CardData.from_dict(r228_bot.to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r228_a1 := r228_e2.state.place(_card(8003, "农民", "盟友", 3, 3, 8),
+			Vector2i(4, 0), GameEngine.SIDE_SELF)
+	var r228_a2 := r228_e2.state.place(_card(8003, "农民", "盟友", 3, 3, 8),
+			Vector2i(4, 2), GameEngine.SIDE_SELF)
+	r228_e2._field_upgrade_grant(r228_b2, GameEngine.SCAVENGER_ATK,
+			GameEngine.SCAVENGER_HP, "测试改造")
+	check(r228_a1.health == 7 and r228_a2.health == 7 and r228_b2.health == 45,
+			"R228 废弃机器人：被改造 → 所有敌方单位各 -1（8 → %d / %d；自己 45 血）"
+			% [r228_a1.health, r228_a2.health])
+	# ③ 非机器人被改造 → 不触发群伤
+	var r228_f := r228_e2.state.place(_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 2),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r228_e2._field_upgrade_grant(r228_f, GameEngine.SCAVENGER_ATK,
+			GameEngine.SCAVENGER_HP, "测试改造")
+	check(r228_a1.health == 7 and r228_a2.health == 7,
+			"R228 非机器人被改造 → 不触发群伤（我方仍 %d / %d）"
+			% [r228_a1.health, r228_a2.health])
+	# ④ 场上只剩拾荒者 → 不改造（候选为空跳过）
+	var r228_e3 := _new_engine([], 20, 20)
+	r228_e3.start_game(1)
+	var r228_s3 := r228_e3.state.place(CardData.from_dict(r228_sc.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r228_e3._scavenger_tick(GameEngine.SIDE_OPPONENT)
+	check(r228_s3.upgrade_stacks == 0, "R228 拾荒者：场上只剩自己时不改造（0 层）")
+	# ⑤ 真实回合路径：玩家结束回合 → 敌方回合开始即改造
+	var r228_e4 := _new_engine([], 20, 20)
+	r228_e4.start_game(1)
+	r228_e4.state.place(CardData.from_dict(r228_sc.to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	var r228_b4 := r228_e4.state.place(CardData.from_dict(r228_bot.to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r228_hp0 := r228_e4.state.place(_card(8003, "农民", "盟友", 3, 3, 8),
+			Vector2i(4, 0), GameEngine.SIDE_SELF)
+	r228_e4.end_turn()   # 我方 → 敌方回合开始
+	check(r228_b4.upgrade_stacks >= 1 and r228_hp0.health < 8,
+			"R228 回合开始路径：end_turn 进敌方回合即改造（%d 层），机器人顺带群伤（农民 %d 血）"
+			% [r228_b4.upgrade_stacks, r228_hp0.health])
 
 	# 狂暴（9055）：稀有 2 费技能，指定己方盟友本回合可以攻击两次；不可重复；>=3 盟友费用 -1
 	var nc_fz := repo.get_card(9055)
@@ -4563,9 +4649,9 @@ func _init() -> void:
 
 	# ---- 新关卡：使魔鸭群 / 骑士冲锋 / 队长与巫师 / 爆炎鸭阵 / 白魔法鸭护阵 ----
 	var lvls := GameLevels.builtin_levels()
-	check(lvls.size() == 31, "内置关卡共 31 关（8 普简 + 8 普难 + 5 精英简单 + 5 精英困难 + 5 Boss；"
+	check(lvls.size() == 32, "内置关卡共 32 关（8 普简 + 9 普难 + 5 精英简单 + 5 精英困难 + 5 Boss；"
 			+ "R135 太阳熔炉进第二层普通困难 / R149 钢铁要塞·R162 阿斯克勒庇厄斯进第二层精英困难 / R150 赫菲斯托斯工坊进第二层 Boss"
-			+ " / R158 量产流水线·量产铁砧进第二层普通简单、双机炮阵进第二层普通困难）")
+			+ " / R158 量产流水线·量产铁砧进第二层普通简单、双机炮阵进第二层普通困难 / R228 废料场进第二层普通困难）")
 	var lva: Dictionary = _level_named("使魔鸭群")
 	check(str(lva["name"]) == "使魔鸭群"
 			and int(lva["tier"]) == GameLevels.TIER_NORMAL_EASY
@@ -4938,8 +5024,8 @@ func _init() -> void:
 	# ---- 分层：各层内容互不串层（第一层 [1] / 第二层 [2]，各自专属） ----
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_DEFAULT).size() == lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
 			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关）" % [lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(), GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size()])
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 16,
-			"第二层自带 15 关（太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法鸭护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层）")
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 17,
+			"第二层自带 17 关（R228 废料场 +1；太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法鸭护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层）")
 	# 内容池：第一层 = [1]；第二层 = [2]（各层内容互不串层）
 	var cl1 := GameLayers.content_layers(GameLayers.LAYER_DEFAULT)
 	var cl2 := GameLayers.content_layers(GameLayers.LAYER_TWO)
@@ -4947,8 +5033,8 @@ func _init() -> void:
 	check(cl2.size() == 1 and int(cl2[0]) == 2,
 			"第二层内容池 = [2]（只用第二层内容，不再混用第一层）")
 	check(GameLayers.content_layers(9).is_empty(), "未配置的层：内容池为空（拿不到任何内容）")
-	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 8,
-			"第二层普通池 8 关（专属：普通简单 4 + 普通困难 4；R135 太阳熔炉 / R158 量产流水线·量产铁砧·双机炮阵 / R174 百眼动员）")
+	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 9,
+			"第二层普通池 9 关（专属：普通简单 4 + 普通困难 5；R135 太阳熔炉 / R158 量产流水线·量产铁砧·双机炮阵 / R174 百眼动员 / R228 废料场）")
 	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 6,
 			"第二层精英池 6 关（专属：精英简单 3 + 精英困难 3；R149 钢铁要塞 / R161 赫尔墨斯的试炼 / R162 阿斯克勒庇厄斯的试炼）")
 	var l2_battle_pool: Array[Dictionary] = []
@@ -6976,8 +7062,8 @@ func _init() -> void:
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 74
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 56
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 42
-			and int(dr_cls_count.get("敌人", 0)) == 51,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 74 / 56 / 42 / 51；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1）"
+			and int(dr_cls_count.get("敌人", 0)) == 53,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 74 / 56 / 42 / 53；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),

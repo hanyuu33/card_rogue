@@ -136,6 +136,23 @@ const FORGE_RANGE:= 1             # 每次成长：攻击距离 +1（走 Placeme
 # 只挂**普通攻击**（`attack()`）—— 技能 / 效果 / 直击 HP 不触发（用户口径「攻击击杀」）。
 # 非践踏单位保持原规则：只有「被击穿的是对方**后排**单位」时溢出才漏到 HP。
 const TRAMPLE_TRAIT:= "践踏"       # 只做标记（与「锻造 / 铸造」同套路），无数值字段
+
+# ---- R228：「废料场」关卡（第二层 · 普通困难）----
+# 拾荒者（9151，盟友 4/50 程1 速1）带「拾荒」：**己方回合开始时**，各给一个
+#   「拾荒者以外」的**己方**单位一次改造（+SCAVENGER_ATK 攻 / +SCAVENGER_HP 血）。
+#   目标走引擎 rng（回放同种子可复现）；除了拾荒者自己没别人时跳过、只打日志。
+# 废弃机器人（9152，盟友 5/40 程1 速1）带「废铁」：**每次被改造** → 对**所有敌方单位**
+#   （= 机器人这一方的对侧）各造成 WASTE_BOT_DMG 点伤害。
+#   ⚠️ 挂点 = `_on_unit_upgraded()`（R101 起就是「所有改造入口的统一后置口」），
+#      所以不管改造来自拾荒者、升级、加厚装甲还是批量改造，都会触发；
+#      不要另外在某个改造函数里再补一次（会双触发）。
+const SCAVENGER_ID:= 9151
+const SCAVENGER_TRAIT:= "拾荒"      # 只做标记（与「锻造 / 铸造」同套路）
+const SCAVENGER_ATK:= 3            # 每次改造：攻击力 +3
+const SCAVENGER_HP:= 5             # 每次改造：生命 +5
+const WASTE_BOT_ID:= 9152
+const WASTE_BOT_TRAIT:= "废铁"      # 只做标记（与「锻造 / 铸造」同套路）
+const WASTE_BOT_DMG:= 1            # 每次被改造：对所有敌方单位 1 点伤害
 # ---- 「量产铁砧」关卡（R158，第二层普通简单）----
 # 量产型赫菲斯托斯（9138，盟友 4/50 程1 速1）带「量产锻造」trait：**只保留** Boss 版
 # 那条「亲手击杀 → 锻造量产型俄倪厄」，**没有**「连续空转 N 回合自己变强」那半边。
@@ -1405,6 +1422,7 @@ func _begin_turn(side: String) -> void :
 		_assembly_tick(SIDE_OPPONENT)   # 流水线装配 9147（R219）
 		_demon_summon(SIDE_OPPONENT)   # 恶魔使魔 9117：回合开始随机空格召唤使魔鸭子
 		_auto_upgrade(SIDE_OPPONENT)      # 对称保留（敌方正常拿不到这张卡）
+		_scavenger_tick(SIDE_OPPONENT)    # R228 拾荒者 9151：回合开始改造一个友方单位
 		_dragon_breath(SIDE_OPPONENT)
 		_heal_aura(SIDE_OPPONENT)
 		_kiln_hatch(SIDE_OPPONENT)
@@ -3448,6 +3466,90 @@ func _on_unit_upgraded(p: Placement) -> void :
 		if p.owner == SIDE_SELF:
 			state.draw()
 		_log("改造触发：%s 改造时抽1张" % p.card.card_name)
+	if p.card.traits.has(WASTE_BOT_TRAIT):          # R228 废弃机器人：每次被改造 → 全体敌方 1 伤
+		_waste_bot_ping(p)
+
+func _scavenger_tick(side: String) -> void :
+	## 拾荒者（9151，R228）：**己方回合开始时**，每个拾荒者各挑一个「拾荒者以外」的
+	## 己方单位，给它一次改造（+3 攻 / +5 血）。
+	## * 目标随机（引擎 rng → 同种子同结果，回放可复现）；候选为空（场上只剩拾荒者）→ 跳过；
+	## * 改造走 `_field_upgrade_grant()`（场上改造唯一口）→ 被改的是废弃机器人时会
+	##   连带触发它「每次被改造 → 对所有敌方单位 1 伤」。
+	## ⚠️ 两只拾荒者各自独立结算（各改一个），同一回合可能改到同一个目标 —— 允许叠加。
+	var scavengers: Array[Placement] = []
+	for cell: Vector2i in state.board:
+		var p: Placement = state.board[cell]
+		if p != null and p.owner == side and p.card.traits.has(SCAVENGER_TRAIT):
+			scavengers.append(p)
+	if scavengers.is_empty():
+		return
+	for sc: Placement in scavengers:
+		var picks: Array[Placement] = []
+		for cell2: Vector2i in state.board:
+			var q: Placement = state.board[cell2]
+			if q != null and q.owner == side and not q.card.traits.has(SCAVENGER_TRAIT):
+				picks.append(q)
+		if picks.is_empty():
+			_log("拾荒者：场上没有「拾荒者」以外的友方单位可改造")
+			continue
+		var tgt: Placement = picks[rng.randi() % picks.size()]
+		_log("拾荒者（%s）：回合开始 → 改造 %s" % [sc.card.card_name, tgt.card.card_name])
+		_field_upgrade_grant(tgt, SCAVENGER_ATK, SCAVENGER_HP, "拾荒者")
+
+
+func _field_upgrade_grant(p: Placement, atk: int, hp: int, source: String) -> void :
+	## **场上单位获得改造的唯一口**（R228）—— 与「升级 8027」的区别：这里不带
+	## 卡面改造奖励（`upgrade_*_bonus`）、不叠「堡垒」trait，只给固定 +atk/+hp 与一层改造。
+	## 加攻进 `upgrade_atk`（进 effective_power）、加血同时抬场上卡副本与 `p.health`，
+	## 离场由 `_card_leaving_field` 统一减回去。
+	## ⚠️ 卡换成独立副本再改（卡库实例是共享的，直接改会跨局泄漏）。
+	## ⚠️ 末尾必须调 `_on_unit_upgraded(p)`（所有改造入口的统一后置口）。
+	if p == null or p.card == null:
+		return
+	p.card = CardData.from_dict(p.card.to_dict())
+	p.card.traits = (p.card.traits as Array).duplicate()
+	p.upgrade_atk += atk
+	p.upgrade_hp += hp
+	p.upgrade_stacks += 1
+	p.card.health += hp
+	p.health += hp
+	_log("%s：改造 %s → 力量 +%d、生命 +%d（%d 攻 / %d 血，第 %d 层）" % [
+			source, p.card.card_name, atk, hp, p.effective_power(), p.health,
+			p.upgrade_stacks])
+	action.emit("upgrade", {"cell": _cell_of(p), "card": p.card, "placement": p,
+			"atk": atk, "hp": hp})
+	_on_unit_upgraded(p)
+
+
+func _waste_bot_ping(p: Placement) -> void :
+	## 废弃机器人（9152，R228）：**每次被改造** → 对它这一方的**所有敌方单位**
+	## （= 玩家单位）各造成 WASTE_BOT_DMG 点伤害。
+	## 伤害走 `_hit_unit`（与技能同口径：护盾 / 减伤 / 石肤照常生效），
+	## 致死统一交给 `_destroy_dead()`（亡语 / 击杀记功与别处一致）。
+	## ⚠️ 快照先取格子（`_hit_unit` 不删格，但 `_destroy_dead` 会 → 边遍历边删不安全）。
+	var foe_side: String = SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
+	var cells: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var u: Placement = state.board[cell]
+		if u != null and u.owner == foe_side:
+			cells.append(cell)
+	if cells.is_empty():
+		_log("废弃机器人：被改造，但场上没有敌方单位可打")
+		return
+	cells.sort()
+	var hits: int = 0
+	for c: Vector2i in cells:
+		var u2: Placement = state.board.get(c, null)
+		if u2 == null or u2.health <= 0:
+			continue
+		var dmg: int = _hit_unit(u2, WASTE_BOT_DMG, "废弃机器人")
+		hits += 1
+		action.emit("waste_ping", {"cell": c, "amount": dmg,
+				"name": u2.card.card_name, "side": foe_side})
+	_log("废弃机器人：被改造 → 对所有敌方单位造成 %d 点伤害（%d 个目标）" % [
+			WASTE_BOT_DMG, hits])
+	_destroy_dead()
+
 
 func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	## 「升级」（8027，R82，机械之心）：改造一个**己方盟友或工事** →

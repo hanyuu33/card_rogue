@@ -4073,6 +4073,52 @@
       "image": ""
     },
     {
+      "id": 9151,
+      "name": "拾荒者",
+      "kind": "盟友",
+      "cost": 4,
+      "power": 4,
+      "health": 50,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "机械",
+        "拾荒"
+      ],
+      "affixes": [],
+      "effect_text": "回合开始时，使一个「拾荒者」以外的友方单位获得改造：攻击力 +3、生命 +5。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "金",
+      "image": ""
+    },
+    {
+      "id": 9152,
+      "name": "废弃机器人",
+      "kind": "盟友",
+      "cost": 5,
+      "power": 5,
+      "health": 40,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "机械",
+        "废铁"
+      ],
+      "affixes": [],
+      "effect_text": "每次被改造时，对所有敌方单位造成 1 点伤害。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "金",
+      "image": ""
+    },
+    {
       "id": 9146,
       "name": "填充",
       "kind": "技能",

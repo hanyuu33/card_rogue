@@ -85,7 +85,7 @@ static func builtin_levels() -> Array:
 		_captain(), _duck_kiln(), _breath_charge(), _hermes(), _dragon_nest(),
 		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(), _asclepius(),
 		_boss_dragon(), _boss_demon_duck(), _boss_duck_darkside(),
-			_mech_duck_boss(), _hephaestus()]
+			_mech_duck_boss(), _hephaestus(), _scrapyard()]
 
 
 static func layer_of(level: Dictionary) -> int:
@@ -521,6 +521,43 @@ static func _hephaestus() -> Dictionary:
 		"enemy_units": [
 			[9135, "赫菲斯托斯", 5, 120, 1, 1, Vector2i(0, 1)],
 		],
+		"tutorial": [],
+	}
+
+
+static func _scrapyard() -> Dictionary:
+	## 第二层·普通敌人-困难（R228「废料场」）：后排两只拾荒者（9151，4/50 程1 速1）
+	## + 前排三只废弃机器人（9152，5/40 程1 速1）。
+	##   * 拾荒者：**己方回合开始时**，各给一个「拾荒者以外」的己方单位一次改造
+	##     （+3 攻 / +5 血，挂 `_scavenger_tick`）；
+	##   * 废弃机器人：**每次被改造** → 对所有敌方单位（= 玩家单位）各 1 点伤害
+	##     （挂 `_on_unit_upgraded`，所以拾荒者改它一次就响一次）。
+	## 题面：拾荒者越改越肥，且多半改到机器人 → 每回合额外 1~2 次全体 1 伤；
+	##   先点拾荒者断掉成长链，还是先拆机器人止住群伤，是这关的核心取舍。
+	##   （机器人 5/40 顶在前排，拾荒者 4/50 躲在后排 —— 想拆拾荒者得先撬开前排。）
+	## ⚠️ 站位按 `Vector2i(行, 列)`（board key 语义，敌方占 row 0~2，row 0 = 最后排）。
+	## ⚠️ 数组顺序：拾荒者写在**最前**（成长源先上场，回合开始扫描时一定在场）。
+	return {
+		"name": "废料场",
+		"key": "scrapyard",
+		"tier": TIER_NORMAL_HARD,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"intro": "……铁锈味比血还重。",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9151, "拾荒者", 4, 50, 1, 1, Vector2i(0, 0)],
+			[9151, "拾荒者", 4, 50, 1, 1, Vector2i(0, 2)],
+			[9152, "废弃机器人", 5, 40, 1, 1, Vector2i(2, 0)],
+			[9152, "废弃机器人", 5, 40, 1, 1, Vector2i(2, 1)],
+			[9152, "废弃机器人", 5, 40, 1, 1, Vector2i(2, 2)],
+		],
+		"enemy_effects": [],
 		"tutorial": [],
 	}
 
