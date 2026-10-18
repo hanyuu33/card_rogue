@@ -210,6 +210,13 @@ const APPLE_MAX_HP := 14
 const PACK_RELIC_ID := 6030
 const PACK_GOLD := 100
 const PACK_CARD_ID := 8001        # 木栅栏
+# R245 新道具：勇气徽章（6031，初始池）—— 战斗内生效，判定与数值都在引擎
+# （`GameEngine.COURAGE_RELIC_ID` / `COURAGE_ELITE_TURNS` / `COURAGE_BOSS_TURNS`）。
+const COURAGE_RELIC_ID := 6031
+# R245 新道具：陶罐（6032，初始池）—— 获得时随机 2 件奖励道具 + 一张「罐子」诅咒进卡组。
+const POT_RELIC_ID := 6032
+const POT_RELIC_COUNT := 2
+const JAR_CURSE_ID := 9157        # 罐子（诅咒卡；召唤物是 9158）
 # R224 新道具：牛奶（6028，奖励池）—— 获得时随机摇 **2 种**互不重复的附魔，
 # 各附到一张卡组里「能附且尚未附魔」的卡上（资格判定走 `enchant_ok` 唯一口；
 # 某种附魔当前没有合规目标就跳过，不强求附满）。
@@ -671,8 +678,27 @@ static func gain_relic(id: int) -> void:
 		PACK_RELIC_ID:   # 行囊（R244）：+100 金币 + 一张「木栅栏」进卡组
 			gold += PACK_GOLD
 			add_card(PACK_CARD_ID)   # 内部会 ensure_deck_mods()，附魔槽位不会错位
+		POT_RELIC_ID:   # 陶罐（R245）：随机 2 件奖励道具 + 一张「罐子」诅咒进卡组
+			_apply_pot()
 		MILK_RELIC_ID:   # 牛奶（R224）：随机两种附魔，附给能附魔的卡
 			_apply_milk()
+
+
+static func _apply_pot() -> void:
+	## 陶罐（6032，R245）：随机拿 **2 件奖励道具**（不与已拥有的 / 本局跳过过的重复），
+	## 再塞一张「罐子」（9157）诅咒进卡组。
+	## 随机源走 `run_rng` → 同一种子必然同样的两件；抽中的即时道具（牛奶等）照常递归结算。
+	## ⚠️ 池子空了就少给（奖励池只有 11 件，理论上不会，但别让边界炸掉）。
+	var pool: Array[int] = []
+	for id in RelicRepo.load_json().reward_ids():
+		if not relics.has(id) and not skipped_relics.has(id):
+			pool.append(id)
+	for _i in POT_RELIC_COUNT:
+		if pool.is_empty():
+			break
+		var pick: int = pool.pop_at(run_rng.randi() % pool.size())
+		gain_relic(pick)
+	add_card(JAR_CURSE_ID)
 
 
 static func has_relic(id: int) -> bool:

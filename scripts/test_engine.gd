@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 230,
-			"图鉴 = 223 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149**；R164 删除**双重场地 9108**；实际 %d）"
+	check(repo.all_cards().size() == 232,
+			"图鉴 = 232 张（R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 177 and grp_enemy.size() == 53,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 172 / 51；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 179 and grp_enemy.size() == 53,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 179 / 53；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -5957,9 +5957,9 @@ func _init() -> void:
 		relic_uniq[rid] = true
 	check(relic_uniq.size() == 3, "初始道具候选互不重复")
 	var relic_repo := RelicRepo.load_json()
-	check(relic_repo.initial_ids().size() == 5 and relic_repo.get_relic(6001) != null
+	check(relic_repo.initial_ids().size() == 7 and relic_repo.get_relic(6001) != null
 			and relic_repo.get_relic(6004) != null and relic_repo.get_relic(6021) != null,
-			"道具库：5 个初始道具全部加载（+ 栅栏修复术 6021）")
+			"道具库：7 个初始道具全部加载（+ 栅栏修复术 6021 / 行囊 6030 / 勇气徽章 6031 / 陶罐 6032）")
 	RunState.choose_start_relic(6001)
 	check(RunState.has_relic(6001) and RunState.relic_choice.is_empty()
 			and RunState.max_hp == 76 and RunState.hp == 76,
@@ -7255,8 +7255,8 @@ func _init() -> void:
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
 				int(dr_cls_count.get("敌人", 0))])
-	check(int(dr_cls_count.get("", 0)) == 2,
-			"角色系统：class 留空（通用卡）= 疲惫 9149 + 破绽 9154 两张（实际 %d）"
+	check(int(dr_cls_count.get("", 0)) == 4,
+			"角色系统：class 留空（通用卡）= 疲惫 9149 + 破绽 9154 + 罐子 9157 / 9158 四张（实际 %d）"
 			% int(dr_cls_count.get("", 0)))
 	check(PlayerClass.ids() == ["森林精魄", "暗影刺客", "机械之心"]
 			and PlayerClass.default_id() == "森林精魄",
@@ -7820,8 +7820,8 @@ func _init() -> void:
 			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
-	check(int(r45_cls_count.get("", 0)) == 2,
-			"R223/R231：class 留空（通用卡）= 疲惫 9149 + 破绽 9154（%d 张）"
+	check(int(r45_cls_count.get("", 0)) == 4,
+			"R223/R231/R245：class 留空（通用卡）= 疲惫 9149 + 破绽 9154 + 罐子 9157 / 9158（%d 张）"
 			% int(r45_cls_count.get("", 0)))
 
 	# ---- R47：难度档位 / 事件遭遇战计入难度 / 奖励池角色过滤 / 荒野形态强化 ----
@@ -18467,8 +18467,8 @@ func _init() -> void:
 	check(r244_seen, "R244 第二层事件抽取能掷出「苹果与医生」（权重生效）")
 	var r244_init := r244_repo.initial_ids()
 	var r244_pack := r244_repo.get_relic(6030)
-	check(r244_init.size() == 5 and r244_init.has(6030) and not r244_init.has(6003),
-			"R244 初始道具池：移除鸡煲 6003、加入行囊 6030（仍 5 个）")
+	check(r244_init.size() == 7 and r244_init.has(6030) and not r244_init.has(6003),
+			"R244 初始道具池：移除鸡煲 6003、加入行囊 6030（R245 后共 7 个）")
 	check(r244_pack != null and r244_pack.source == "初始"
 			and r244_pack.desc.contains("100") and r244_pack.desc.contains("木栅栏"),
 			"R244 行囊：初始道具，文案写明 100 金币 + 木栅栏")
@@ -18498,6 +18498,155 @@ func _init() -> void:
 	check(RunState.hp == RunState.max_hp and r244_hp0 < RunState.hp,
 			"R244 苹果：+14 最大生命并回满（%d → %d/%d）"
 			% [r244_hp0, RunState.hp, RunState.max_hp])
+
+	# ==== R245：初始道具 勇气徽章 6031 / 陶罐 6032 + 诅咒「罐子」9157 / 召唤物 9158 ====
+	var r245_rrepo := RelicRepo.load_json()
+	var r245_crepo := CardRepo.load_json()
+	var r245_init := r245_rrepo.initial_ids()
+	var r245_brave := r245_rrepo.get_relic(6031)
+	var r245_pot := r245_rrepo.get_relic(6032)
+	check(r245_init.size() == 7 and r245_init.has(6031) and r245_init.has(6032),
+			"R245 初始道具池：勇气徽章 6031 / 陶罐 6032 已在池内（%d 个）" % r245_init.size())
+	check(r245_brave != null and r245_brave.kind == "战斗"
+			and r245_brave.desc.contains("精英") and r245_brave.desc.contains("Boss"),
+			"R245 勇气徽章：战斗类初始道具，文案写明精英 / Boss 两档")
+	check(r245_pot != null and r245_pot.kind == "即时"
+			and r245_pot.desc.contains("2 件奖励道具") and r245_pot.desc.contains("罐子"),
+			"R245 陶罐：即时类初始道具，文案写明 2 件奖励道具 + 罐子")
+	check(not r245_rrepo.reward_ids().has(6031) and not r245_rrepo.reward_ids().has(6032)
+			and not r245_rrepo.event_ids().has(6031) and not r245_rrepo.event_ids().has(6032)
+			and not r245_rrepo.layer2_ids().has(6031) and not r245_rrepo.layer2_ids().has(6032),
+			"R245 两件新道具只进初始池（不进奖励 / 事件 / 二层起始池）")
+	# 勇气徽章：精英战首回合 +1、Boss 战前两回合 +1、普通战斗不加
+	var r245_eng_e := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)), 40, 40, -1, false)
+	r245_eng_e.self_relics = [6031]
+	r245_eng_e.battle_kind = "elite"
+	r245_eng_e.start_game()
+	check(r245_eng_e.state.energy == FieldState.ENERGY_PER_TURN + 1,
+			"R245 勇气徽章：精英战第 1 回合 +1 费（%d）" % r245_eng_e.state.energy)
+	r245_eng_e.end_turn()
+	r245_eng_e.end_turn()
+	check(r245_eng_e.state.energy == FieldState.ENERGY_PER_TURN,
+			"R245 勇气徽章：精英战第 2 回合不再加费（%d）" % r245_eng_e.state.energy)
+	var r245_eng_b := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)), 40, 40, -1, false)
+	r245_eng_b.self_relics = [6031]
+	r245_eng_b.battle_kind = "boss"
+	r245_eng_b.start_game()
+	var r245_b1: int = r245_eng_b.state.energy
+	r245_eng_b.end_turn()
+	r245_eng_b.end_turn()
+	var r245_b2: int = r245_eng_b.state.energy
+	r245_eng_b.end_turn()
+	r245_eng_b.end_turn()
+	check(r245_b1 == FieldState.ENERGY_PER_TURN + 1 and r245_b2 == FieldState.ENERGY_PER_TURN + 1
+			and r245_eng_b.state.energy == FieldState.ENERGY_PER_TURN,
+			"R245 勇气徽章：Boss 战前两回合各 +1 费、第 3 回合恢复（%d / %d / %d）"
+			% [r245_b1, r245_b2, r245_eng_b.state.energy])
+	var r245_eng_n := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)), 40, 40, -1, false)
+	r245_eng_n.self_relics = [6031]
+	r245_eng_n.start_game()
+	check(r245_eng_n.state.energy == FieldState.ENERGY_PER_TURN,
+			"R245 勇气徽章：普通战斗不加费（%d）" % r245_eng_n.state.energy)
+	check(GameEngine.COURAGE_RELIC_ID == 6031 and GameEngine.COURAGE_ELITE_TURNS == 1
+			and GameEngine.COURAGE_BOSS_TURNS == 2,
+			"R245 勇气徽章：数值只有一份来源（引擎常量 6031 / 1 / 2）")
+	# 陶罐：随机 2 件奖励道具 + 一张「罐子」进卡组
+	RunState.end_run()
+	var r245_run_rng := RandomNumberGenerator.new()
+	r245_run_rng.seed = 20261020
+	RunState.start_run(RogueMap.generate(r245_run_rng))
+	var r245_deck0 := RunState.deck_ids.size()
+	# ⚠️ 起始时道具栏里已经有**角色赠品**（森林精魄 = 荒野形态 6022）→ 只统计这次新增的
+	var r245_before: Array[int] = RunState.relics.duplicate()
+	RunState.gain_relic(6032)
+	var r245_got: Array[int] = []
+	for rid in RunState.relics:
+		if int(rid) != 6032 and not r245_before.has(int(rid)):
+			r245_got.append(int(rid))
+	check(r245_got.size() == 2 and r245_got[0] != r245_got[1]
+			and r245_rrepo.reward_ids().has(r245_got[0])
+			and r245_rrepo.reward_ids().has(r245_got[1]),
+			"R245 陶罐：随机到 2 件互不相同的奖励道具（%s）" % str(r245_got))
+	check(RunState.deck_ids.size() == r245_deck0 + 1
+			and RunState.deck_ids[RunState.deck_ids.size() - 1] == 9157,
+			"R245 陶罐：一张「罐子」诅咒加入卡组")
+	check(RunState.deck_mods.size() == RunState.deck_ids.size(),
+			"R245 陶罐：附魔槽位与卡组等长（不会错位）")
+	# 罐子（诅咒 / 召唤物）的数据
+	var r245_jar: CardData = r245_crepo.get_card(9157)
+	var r245_tok: CardData = r245_crepo.get_card(9158)
+	check(r245_jar != null and r245_jar.is_curse() and r245_jar.cost == 1
+			and r245_jar.rarity == 6 and r245_jar.effect_text.contains("消失")
+			and not r245_jar.effect_text.contains("后排")
+			and not r245_jar.effect_text.contains("Boss"),
+			"R245 罐子（诅咒）：1 费 / rarity 6 / 文案不写实现细节（后排、Boss）")
+	check(r245_tok != null and r245_tok.kind == "工事" and r245_tok.power == 0
+			and r245_tok.health == 1 and r245_tok.move_speed == 0
+			and r245_tok.traits.has("离场消失"),
+			"R245 罐子（工事）：0/1/0 召唤物，离场即消失（不进弃牌区）")
+	# 回合结束仍在手卡 → 本场消失 + 召唤工事（优先后排）
+	var r245_eng_j := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)), 40, 40, -1, false)
+	r245_eng_j.start_game()
+	r245_eng_j.state.hand = [CardData.from_dict(r245_jar.to_dict())]
+	var r245_void0: int = r245_eng_j.state.void_count
+	r245_eng_j.end_turn()
+	check(r245_eng_j.state.void_count == r245_void0 + 1,
+			"R245 罐子：回合结束仍在手卡 → 本场消失（消耗区 +1）")
+	var r245_hand_jar := 0
+	for r245_hc: CardData in r245_eng_j.state.hand:
+		if r245_hc.id == 9157:
+			r245_hand_jar += 1
+	var r245_disc_jar := 0
+	for r245_dc: CardData in r245_eng_j.state.discard:
+		if r245_dc.id == 9157:
+			r245_disc_jar += 1
+	check(r245_hand_jar == 0 and r245_disc_jar == 0,
+			"R245 罐子：既不在手牌也不进弃牌区（手 %d / 弃 %d）" % [r245_hand_jar, r245_disc_jar])
+	var r245_jar_cell := Vector2i(-1, -1)
+	for r245_rc: Vector2i in r245_eng_j.state.board.keys():
+		var r245_ru: Placement = r245_eng_j.state.unit_at(r245_rc)
+		if r245_ru != null and r245_ru.card.id == 9158:
+			r245_jar_cell = r245_rc
+	check(r245_jar_cell.x == FieldState.BOARD_ROWS - 1,
+			"R245 罐子：召唤物优先落自家后排（第 %d 行，实际 %s）"
+			% [FieldState.BOARD_ROWS - 1, str(r245_jar_cell)])
+	# 亡语：破坏召唤物 → 敌方半场出现一个随机敌人（优先敌方后排）
+	r245_eng_j._destroy(r245_jar_cell)
+	var r245_foe_cells: Array[Vector2i] = []
+	for r245_fc: Vector2i in r245_eng_j.state.board.keys():
+		var r245_fu: Placement = r245_eng_j.state.unit_at(r245_fc)
+		if r245_fu != null and r245_fu.owner == GameEngine.SIDE_OPPONENT:
+			r245_foe_cells.append(r245_fc)
+	check(r245_foe_cells.size() == 1 and r245_foe_cells[0].x == 0,
+			"R245 罐子亡语：召唤 1 个随机敌人，优先落敌方后排（%s）" % str(r245_foe_cells))
+	check(r245_eng_j.state.void_count == r245_void0 + 2,
+			"R245 罐子亡语：召唤物自己也是「离场消失」（消耗区再 +1）")
+	# 自家后排满了 → 退到前半场（不会召唤失败）
+	var r245_eng_full := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)), 40, 40, -1, false)
+	r245_eng_full.start_game()
+	for r245_col in FieldState.BOARD_COLS:
+		r245_eng_full.state.place(_card(8003, "农民", "盟友", 3, 3, 8),
+				Vector2i(FieldState.BOARD_ROWS - 1, r245_col), GameEngine.SIDE_SELF)
+	r245_eng_full.state.hand = [CardData.from_dict(r245_jar.to_dict())]
+	r245_eng_full.end_turn()
+	var r245_full_cell := Vector2i(-1, -1)
+	for r245_cc: Vector2i in r245_eng_full.state.board.keys():
+		var r245_cu: Placement = r245_eng_full.state.unit_at(r245_cc)
+		if r245_cu != null and r245_cu.card.id == 9158:
+			r245_full_cell = r245_cc
+	check(r245_full_cell.x >= FieldState.OPPONENT_ROWS
+			and r245_full_cell.x < FieldState.BOARD_ROWS - 1,
+			"R245 罐子：自家后排满了 → 退到前半场（实际 %s）" % str(r245_full_cell))
+	# 打出它 = 付 1 费、无效果、进弃牌区 —— 这是唯一的规避手段（不会召唤）
+	var r245_eng_p := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)), 40, 40, -1, false)
+	r245_eng_p.start_game()
+	r245_eng_p.state.hand = [CardData.from_dict(r245_jar.to_dict())]
+	r245_eng_p.state.energy = FieldState.ENERGY_PER_TURN
+	var r245_msg := r245_eng_p.use_curse(0)
+	check(r245_msg.contains("无效果") and r245_eng_p.state.energy == FieldState.ENERGY_PER_TURN - 1
+			and r245_eng_p.state.discard.size() == 1
+			and r245_eng_p.state.discard[0].id == 9157,
+			"R245 罐子：打出它 = 付 1 费、无效果、进弃牌区（规避手段）")
 
 	# ================================================================
 

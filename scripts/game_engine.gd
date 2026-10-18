@@ -19,6 +19,10 @@ var over:= false
 var result:= ""
 var result_reason:= ""
 var ai_enabled:= true
+## R245：本场战斗的节点类型（"battle" / "elite" / "boss"）。
+## 由 battle_scene 按**关卡 tier** 写入一次；引擎不自己读 RunState.pending_node ——
+## 单关演示 / 单元测试都能显式指定，判据只有一处（`_courage_energy` 的消费方）。
+var battle_kind:= "battle"
 var log: Array[String] = []
 var rng:= RandomNumberGenerator.new()
 var self_relics: Array[int] = []
@@ -279,6 +283,13 @@ const EGG_DUCK_RELIC_ID:= 6018
 const DUCK_WING_RELIC_ID:= 6007
 const DUCK_WING_TURN:= 3
 const DUCK_WING_ENERGY:= 3
+# R245 初始道具「勇气徽章」（6031）：精英战**首回合**、Boss 战**前两回合**各额外 +1 费用。
+const COURAGE_RELIC_ID:= 6031
+const COURAGE_ELITE_TURNS:= 1
+const COURAGE_BOSS_TURNS:= 2
+# R245 诅咒「罐子」（9157）与它的召唤物（9158）。
+const JAR_CURSE_ID:= 9157
+const JAR_TOKEN_ID:= 9158
 
 
 const PEAR_RELIC_ID:= 6019
@@ -1335,6 +1346,19 @@ func _begin_turn(side: String) -> void :
 			action.emit("icecream", {"text": ICECREAM_LINE, 
 				"energy": ICECREAM_ENERGY, "draw": ICECREAM_DRAW})
 
+
+		# 勇气徽章（6031，R245）：精英战首回合 / Boss 战前两回合，各额外 +1 费用。
+		# 「哪一场算精英 / Boss」由 battle_scene 写入 `battle_kind`，引擎只看这个字段。
+		if self_relics.has(COURAGE_RELIC_ID):
+			var brave_span:= 0
+			if battle_kind == "elite":
+				brave_span = COURAGE_ELITE_TURNS
+			elif battle_kind == "boss":
+				brave_span = COURAGE_BOSS_TURNS
+			if brave_span > 0 and turn_number <= brave_span:
+				state.energy += 1
+				_log("勇气徽章：%s第 %d 回合，费用 +1"
+						% ["精英战" if battle_kind == "elite" else "Boss 战", turn_number])
 
 		var whisper_txt:= ""
 		if self_relics.has(6010):
@@ -2413,6 +2437,9 @@ func end_turn() -> void :
 		_forge_tick()      # R150 赫菲斯托斯：连续空转 → 力量 / 攻程 +1
 
 	if current_side == SIDE_SELF:
+		# 罐子（9157，R245）：回合结束时**还在手卡**的这张卡 → 本场消失 + 召唤友方工事。
+		# ⚠️ 必须排在 `discard_hand()` **之前**：手牌先被弃掉，这效果就永远触发不了。
+		_jar_tick()
 		var n:= state.discard_hand()
 		_log("回合结束：弃掉 %d 张手牌" % n)
 		# 使魔之夜的乌鸦只在给的那一回合免费 → 回合结束清掉免费名单
@@ -7636,6 +7663,9 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 		TRAPPER_ID:
 			# R116 捕兽大师：在原地留下一张随机陷阱（唯一口见该函数）
 			_deathrattle_place_trap(cell, p)
+		JAR_TOKEN_ID:
+			# R245 罐子（工事 0/1/0）：死亡 → 召唤一个本层非 Boss 的随机敌人
+			_summon_jar_enemy(cell, p)
 		_:
 			pass
 
@@ -7675,6 +7705,99 @@ func _can_hold(cell: Vector2i, side: String) -> bool:
 	if state.board.has(cell):
 		return false
 	return cell.x != forbidden_row_for(side)
+
+
+func _jar_tick() -> void :
+	## 罐子（9157，诅咒 · 1 费）的「留手惩罚」：**我方回合结束时**，还留在手卡里的这张卡
+	## → 本场消失（进消耗区，与「次元」/「离场消失」同一口径）+ 随机位置召唤一个友方工事「罐子」。
+	## 一次把手里所有罐子都结算（同名多张各算一次）；随机源走引擎 rng → 回放可复现。
+	## 注：**打出**这张卡不会有这个效果（`use_curse` 付 1 费进弃牌区）—— 那是唯一的规避手段。
+	var count:= 0
+	var rest: Array[CardData] = []
+	for c: CardData in state.hand:
+		if c != null and c.id == JAR_CURSE_ID:
+			count += 1
+			state.void_count += 1
+			state.void_cards.append(c)
+		else:
+			rest.append(c)
+	if count == 0:
+		return
+	state.hand = rest
+	_log("罐子：回合结束仍在手卡 %d 张 → 消失，召唤 %d 个「罐子」" % [count, count])
+	action.emit("jar", {"count": count})
+	for _i in count:
+		_summon_jar_token()
+
+
+func _summon_jar_token() -> void :
+	## 召唤友方工事「罐子」（9158，0/1/0）：位置随机，**优先自家后排**。
+	var repo:= CardRepo.load_json()
+	var token: CardData = repo.get_card(JAR_TOKEN_ID)
+	if token == null:
+		_log("罐子：卡牌库里没有召唤物 9158")
+		return
+	var spot:= _jar_spot(SIDE_SELF)
+	if spot == Vector2i(-1, -1):
+		_log("罐子：我方半场已满，无法召唤")
+		return
+	var copy:= CardData.from_dict(token.to_dict())   # 独立副本：别和库内实例共享
+	var summoned:= state.place(copy, spot, SIDE_SELF, true)
+	_log("罐子：召唤了一个工事「罐子」（%s）" % spot)
+	action.emit("place", {"cell": spot, "card": copy, "side": SIDE_SELF})
+	_on_ally_entered(summoned, SIDE_SELF)
+
+
+func _jar_spot(side: String) -> Vector2i:
+	## 「随机位置，优先后排」：先看**自家后排**（SELF = 第 5 行 / 敌方 = 第 0 行）有没有空格，
+	## 满了再退回自家半场随机（与 `_random_free_half_cell` 同口径）。
+	var row:= back_row(side)
+	var free: Array[Vector2i] = []
+	for col in FieldState.BOARD_COLS:
+		var c:= Vector2i(row, col)
+		if not state.board.has(c):
+			free.append(c)
+	if not free.is_empty():
+		return free[rng.randi_range(0, free.size() - 1)]
+	return _random_free_half_cell(side)
+
+
+func _summon_jar_enemy(cell: Vector2i, p: Placement) -> void :
+	## 罐子（9158）亡语：召唤一个**本层非 Boss** 的随机敌人 —— 优先敌方后排（第 0 行），
+	## 满了再退敌方半场随机；敌方半场全满则召唤失败（不炸场、不卡死）。
+	var layer:= RunState.current_layer if RunState.run_active else GameLayers.LAYER_DEFAULT
+	var card:= _jar_enemy_card(layer)
+	if card == null:
+		_log("罐子亡语：本层没有可召唤的敌人")
+		return
+	var spot:= _jar_spot(SIDE_OPPONENT)
+	if spot == Vector2i(-1, -1):
+		_log("罐子亡语：敌方半场已满，召唤失败")
+		return
+	var copy:= CardData.from_dict(card.to_dict())
+	state.place(copy, spot, SIDE_OPPONENT, true)
+	_log("罐子亡语：%s 被破坏 → 召唤敌人「%s」（%s）"
+			% [p.card.card_name, card.card_name, spot])
+	action.emit("place", {"cell": spot, "card": copy, "side": SIDE_OPPONENT})
+	# 场上多了一个敌方单位 → 暗影领主 / 赫卡同克瑞斯 的光环立刻重算（与其它召唤同口径）
+	_refresh_dark_lord(SIDE_OPPONENT)
+	_refresh_hecaton(SIDE_OPPONENT)
+
+
+func _jar_enemy_card(layer: int) -> CardData:
+	## 敌人卡池 = 本层**非 Boss** 关卡的 `enemy_units`（按卡 id 去重）。
+	## 不另立名单：关卡编成改了这里自动跟着改，也保证不会召唤到 Boss。
+	var ids: Array[int] = []
+	var tiers: Array = [GameLevels.TIER_NORMAL_EASY, GameLevels.TIER_NORMAL_HARD,
+			GameLevels.TIER_ELITE_EASY, GameLevels.TIER_ELITE_HARD]
+	for lvl: Dictionary in GameLevels.levels_of_tier(tiers, layer):
+		for e: Array in lvl.get("enemy_units", []):
+			var cid:= int(e[0])
+			if not ids.has(cid):
+				ids.append(cid)
+	if ids.is_empty():
+		return null
+	return CardRepo.load_json().get_card(ids[rng.randi_range(0, ids.size() - 1)])
 
 
 func _deathrattle_place_trap(cell: Vector2i, p: Placement) -> void :

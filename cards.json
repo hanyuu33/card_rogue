@@ -4740,6 +4740,54 @@
       "value": 0,
       "color": "紫",
       "image": ""
+    },
+    {
+      "id": 9157,
+      "name": "罐子",
+      "kind": "诅咒",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 6,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "罐子"
+      ],
+      "affixes": [],
+      "effect_text": "打出无效果。回合结束时若这张卡仍在手牌：这张卡消失，并在场上随机位置召唤一个友方工事「罐子」。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "灰",
+      "image": ""
+    },
+    {
+      "id": 9158,
+      "name": "罐子",
+      "kind": "工事",
+      "cost": 0,
+      "power": 0,
+      "health": 1,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "工事",
+        "罐子",
+        "离场消失"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "无法移动。死亡：召唤一个随机敌人。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "灰",
+      "image": ""
     }
   ]
 }

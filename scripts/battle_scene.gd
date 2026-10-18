@@ -2475,6 +2475,12 @@ func load_level(lvl: Dictionary) -> void:
 		engine.rng.seed = battle_seed   # 战斗内全部随机（含 AI）可复现
 	engine.ai_enabled = bool(lvl["enemy_ai"])
 	engine.self_relics = RunState.relics   # 道具（鸡煲等战斗内效果由引擎结算）
+	# R245：战斗类型只在这里判一次（勇气徽章等「按战斗类型生效」的道具读引擎这个字段）。
+	# 用**关卡 tier** 而不是 pending_node 的 type：演示参数 / 单关入口也走同一条路，
+	# 不会出现「地图说是精英、结算按普通」这种两处判据分叉。
+	var _tier_for_kind := int(lvl.get("tier", -1))
+	engine.battle_kind = "boss" if _tier_for_kind == GameLevels.TIER_BOSS \
+			else ("elite" if _tier_for_kind >= GameLevels.TIER_ELITE_EASY else "battle")
 	# R77：鸭语耳环（6015）改成**逐张**自动出牌 —— 由 _tick_earring_autoplay 每帧推进一步，
 	# 这样每张牌的抽牌 / 出牌 / 落位动画都能看清。
 	engine.autoplay_stepwise = true
