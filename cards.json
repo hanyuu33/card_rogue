@@ -3987,6 +3987,28 @@
       "image": ""
     },
     {
+      "id": 9147,
+      "name": "流水线装配",
+      "kind": "效果",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "装配"
+      ],
+      "affixes": [],
+      "effect_text": "每过 3 回合，随机从量产型俄倪厄 / 量产型赫利俄斯中召唤一个到己方半场。",
+      "target_mode": "none",
+      "value": 3,
+      "color": "金",
+      "image": ""
+    },
+    {
       "id": 9146,
       "name": "填充",
       "kind": "技能",
@@ -4259,7 +4281,7 @@
       "kind": "盟友",
       "cost": 5,
       "power": 5,
-      "health": 30,
+      "health": 45,
       "attack_range": 1,
       "move_speed": 1,
       "rarity": 4,
@@ -4359,7 +4381,7 @@
         "机械",
         "锻造"
       ],
-      "effect_text": "锻造：亲自击杀敌人时，在己方半场的随机空格召唤一只「量产型俄倪厄」（5/30）。每 3 个我方回合它没能击杀任何敌人，就攻击距离 +1、力量 +1（永久累计）。",
+      "effect_text": "锻造：亲自击杀敌人时，在己方半场的随机空格召唤一只「量产型俄倪厄」（5/45）。每 3 个我方回合它没能击杀任何敌人，就攻击距离 +1、力量 +1（永久累计）。",
       "target_mode": "none",
       "color": "金",
       "image": ""
@@ -4391,7 +4413,7 @@
       "kind": "工事",
       "cost": 2,
       "power": 6,
-      "health": 18,
+      "health": 30,
       "attack_range": 1,
       "move_speed": 0,
       "rarity": 4,
@@ -4424,7 +4446,7 @@
         "量产锻造"
       ],
       "affixes": [],
-      "effect_text": "量产锻造：亲自击杀敌方单位时，在己方半场的随机空格锻造一只「量产型俄倪厄」（5/30）。",
+      "effect_text": "量产锻造：亲自击杀敌方单位时，在己方半场的随机空格锻造一只「量产型俄倪厄」（5/45）。",
       "target_mode": "none",
       "color": "金",
       "image": ""
@@ -4501,7 +4523,7 @@
       "name": "量产型阿尔戈斯",
       "kind": "盟友",
       "cost": 5,
-      "power": 4,
+      "power": 7,
       "health": 35,
       "attack_range": 1,
       "move_speed": 2,

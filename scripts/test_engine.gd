@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 220,
-			"图鉴 = 220 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067**；R164 删除**双重场地 9108**；实际 %d）"
+	check(repo.all_cards().size() == 221,
+			"图鉴 = 221 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 170 and grp_enemy.size() == 50,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 170 / 50；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 170 and grp_enemy.size() == 51,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 170 / 51；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -149,10 +149,11 @@ func _init() -> void:
 	for c: CardData in grp_enemy:
 		if c.is_level_effect():
 			enemy_eff.append(c.id)
-	check(enemy_eff.size() == 8 and enemy_eff.has(9013) and enemy_eff.has(9015)
+	check(enemy_eff.size() == 9 and enemy_eff.has(9013) and enemy_eff.has(9015)
 			and enemy_eff.has(9024) and enemy_eff.has(9049) and enemy_eff.has(9115)
-			and enemy_eff.has(9117) and enemy_eff.has(9125) and enemy_eff.has(9139),
-			"图鉴分组：敌人图鉴含 8 张敌方关卡效果 9013/9015/9024/9049/9115/9117/9125/**9139 充能巨炮 R158**（实际 %s）" % str(enemy_eff))
+			and enemy_eff.has(9117) and enemy_eff.has(9125) and enemy_eff.has(9139)
+			and enemy_eff.has(9147),
+			"图鉴分组：敌人图鉴含 9 张敌方关卡效果 9013/9015/9024/9049/9115/9117/9125/**9139 充能巨炮 R158**/**9147 流水线装配 R219**（实际 %s）" % str(enemy_eff))
 	check(repo.get_card(9022).group == "player" and repo.get_card(9044).group == "player"
 			and repo.get_card(9072).group == "player" and repo.get_card(9018).group == "player"
 			and repo.get_card(9023).group == "player" and repo.get_card(9050).group == "player",
@@ -5077,7 +5078,7 @@ func _init() -> void:
 			elif om_ecard.group != "enemy" or not om_ecard.is_level_effect():
 				om_drift += " %s/关卡效果%d" % [om_lvl2["name"], int(om_e)]
 	check(om_drift == "", "关卡 enemy_units 的 力/生/程/速 与 cards.json 同源（漂移:%s）" % om_drift)
-	check(om_lv_eff == 9, "关卡共挂 9 个敌方关卡效果（4 + 使魔之力 9115 挂 2 个巫师关卡 + 恶魔使魔 9117 + 暗影召唤 9125 各挂 1 个 Boss 关卡 + **充能巨炮 9139 挂双机炮阵 R158**），且都属敌人图鉴（实际 %d）" % om_lv_eff)
+	check(om_lv_eff == 10, "关卡共挂 10 个敌方关卡效果（4 + 使魔之力 9115 挂 2 个巫师关卡 + 恶魔使魔 9117 + 暗影召唤 9125 各挂 1 个 Boss 关卡 + **充能巨炮 9139 挂双机炮阵 R158** + **流水线装配 9147 挂量产流水线 R219**），且都属敌人图鉴（实际 %d）" % om_lv_eff)
 
 	# ---- 二层强力怪物：一回合行动两次（2026-09-30 新增）----
 	# 挑选三只「巨兽 / 领主」级单位赋予双动：后排也能一回合绕开前排再出手。
@@ -6883,8 +6884,8 @@ func _init() -> void:
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 72
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 56
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 42
-			and int(dr_cls_count.get("敌人", 0)) == 50,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 72 / 56 / 42 / 50；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1）"
+			and int(dr_cls_count.get("敌人", 0)) == 51,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 72 / 56 / 42 / 51；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -14839,7 +14840,7 @@ func _init() -> void:
 
 	# ================= R135：太阳熔炉（第二层 · 普通困难）=================
 	# 新增两张敌方单位：赫利俄斯（9130 工事 0/50 程0 速0） /
-	# 量产型俄倪厄（9131 盟友 5/30 程1 速1）。
+	# 量产型俄倪厄（9131 盟友 **5/45** 程1 速1，R219 生命 30→45）。
 	# 赫利俄斯是**场上的光环源**（不是效果卡）：它在场时，本方的俄倪厄
 	# ① 一回合行动两次 ② 每回合结束回复 2 点生命；拆掉它两条立刻断。
 	var r135_helios := repo.get_card(GameEngine.SUN_FORGE_HELIOS_ID)
@@ -14851,9 +14852,9 @@ func _init() -> void:
 			% [r135_helios.kind, r135_helios.power, r135_helios.health,
 				r135_helios.attack_range, r135_helios.move_speed])
 	check(r135_fury != null and r135_fury.kind == "盟友"
-			and r135_fury.power == 5 and r135_fury.health == 30
+			and r135_fury.power == 5 and r135_fury.health == 45
 			and r135_fury.attack_range == 1 and r135_fury.move_speed == 1,
-			"R135 量产型俄倪厄：盟友 5/30 程1 速1（实际 %s %d/%d 程%d 速%d）"
+			"R135 量产型俄倪厄：盟友 5/45 程1 速1（R219 加强；实际 %s %d/%d 程%d 速%d）"
 			% [r135_fury.kind, r135_fury.power, r135_fury.health,
 				r135_fury.attack_range, r135_fury.move_speed])
 	check(r135_helios.group == "enemy" and r135_fury.group == "enemy"
@@ -15204,10 +15205,10 @@ func _init() -> void:
 			and r152_hec.group == "enemy",
 			"R152 赫卡同克瑞斯：盟友 8/50 程1 速1（敌方卡）")
 	check(r152_mh.card_name == "量产型赫利俄斯" and r152_mh.kind == "工事"
-			and r152_mh.power == 6 and r152_mh.health == 18
+			and r152_mh.power == 6 and r152_mh.health == 30
 			and r152_mh.attack_range == 1 and r152_mh.move_speed == 0
 			and r152_mh.traits.has("工事") and r152_mh.group == "enemy",
-			"R152 量产型赫利俄斯：工事 6/18 程1 速0（敌方卡，自带不能移动）")
+			"R152 量产型赫利俄斯：工事 6/30 程1 速0（R219 加强；敌方卡，自带不能移动）")
 
 	var r152_lv: Dictionary = _level_named("百臂工场")
 	check(not r152_lv.is_empty()
@@ -15623,11 +15624,11 @@ func _init() -> void:
 	var r174_arg: CardData = r174_repo.get_card(9142)
 	check(r174_arg != null and r174_arg.card_name == "量产型阿尔戈斯"
 			and r174_arg.kind == "盟友" and r174_arg.group == "enemy"
-			and r174_arg.power == 4 and r174_arg.health == 35
+			and r174_arg.power == 7 and r174_arg.health == 35
 			and r174_arg.attack_range == 1 and r174_arg.move_speed == 2
 			and r174_arg.rarity == 4 and r174_arg.traits.has(GameEngine.ARGOS_TRAIT)
 			and not r174_repo.reward_pool().has(r174_arg),
-			"R174 阿尔戈斯：盟友 4/35 程1 速2，trait「百眼」，敌方卡不进奖励池")
+			"R174 阿尔戈斯：盟友 7/35 程1 速2（R219 攻击 4→7），trait「百眼」，敌方卡不进奖励池")
 	var r174_lvl: Dictionary = _level_named("百眼动员")
 	check(not r174_lvl.is_empty()
 			and int(r174_lvl["tier"]) == GameLevels.TIER_NORMAL_EASY
@@ -15637,10 +15638,11 @@ func _init() -> void:
 			and not GameLevels.normal_pool(GameLayers.LAYER_DEFAULT).has(r174_lvl),
 			"R174 关卡：第二层·普通敌人-简单，key=argos_mobilize，只进第二层普通池（不串层）")
 	var r174_units: Array = r174_lvl["enemy_units"]
-	check(r174_units.size() == 2
+	check(r174_units.size() == 3
 			and int(r174_units[0][0]) == 9142 and r174_units[0][6] == Vector2i(1, 0)
-			and int(r174_units[1][0]) == 9142 and r174_units[1][6] == Vector2i(1, 2),
-			"R174 编成：两只阿尔戈斯扎中排左右 (1,0)/(1,2)")
+			and int(r174_units[1][0]) == 9142 and r174_units[1][6] == Vector2i(1, 2)
+			and int(r174_units[2][0]) == 9137 and r174_units[2][6] == Vector2i(0, 1),
+			"R174 编成：两只阿尔戈斯扎中排左右 (1,0)/(1,2) + R219 后排 (0,1) 一座量产型赫利俄斯")
 	var r174_same := true
 	for r174_u: Array in r174_units:
 		var r174_uc: CardData = r174_repo.get_card(int(r174_u[0]))
@@ -16797,6 +16799,94 @@ func _init() -> void:
 	check(r217_repo.get_card(9072).effect_text.contains("坚固围栏")
 			and not r217_repo.get_card(9072).effect_text.contains("在启动了"),
 			"R217 铁栅栏文案：改成「由「坚固围栏」召唤的墙」")
+
+
+	# ---------------------------------------------------------------- R219
+	# ① 效果卡 9147「流水线装配」：每过 3 回合随机从 9131 / 9137 召唤一个
+	var r219_repo := CardRepo.load_json()
+	var r219_card: CardData = r219_repo.get_card(GameEngine.ASSEMBLY_CARD_ID)
+	check(r219_card != null and r219_card.card_name == "流水线装配"
+			and r219_card.kind == "效果" and r219_card.group == "enemy"
+			and r219_card.rarity == 4 and r219_card.value == 3
+			and r219_card.traits.has(GameEngine.ASSEMBLY_TRAIT)
+			and r219_card.is_level_effect()
+			and not r219_repo.reward_pool().has(r219_card),
+			"R219 流水线装配 9147：效果卡 value=3、trait「装配」、敌人图鉴、不进奖励池")
+	# ② 关卡「量产流水线」挂上这张效果卡
+	var r219_lvl: Dictionary = _level_named("量产流水线")
+	var r219_eff: Array = r219_lvl.get("enemy_effects", [])
+	check(r219_eff.size() == 1 and int(r219_eff[0]) == GameEngine.ASSEMBLY_CARD_ID,
+			"R219 量产流水线：enemy_effects = [9147]（实际 %s）" % str(r219_eff))
+
+	# ③ 机制：第 3 / 6 回合各产出 1 只，第 4 回合不产出；产物只能是 9131 / 9137
+	var r219_foe_count := func(eng: GameEngine) -> int:
+		var n := 0
+		for c: Vector2i in eng.state.board:
+			if eng.state.board[c].owner == GameEngine.SIDE_OPPONENT:
+				n += 1
+		return n
+	var r219_mk := func(seed_i: int) -> GameEngine:
+		var e := _new_engine([], 60, 60)
+		e.rng.seed = seed_i
+		var cards: Array[CardData] = [CardData.from_dict(r219_card.to_dict())]
+		e.enable_enemy_effects(cards)
+		e.opp_turns = 2
+		return e
+	var r219_e: GameEngine = r219_mk.call(1)
+	r219_e._begin_turn(GameEngine.SIDE_OPPONENT)      # opp_turns 2 → 3
+	var r219_n3: int = r219_foe_count.call(r219_e)
+	var r219_only: bool = true
+	for c: Vector2i in r219_e.state.board:
+		var u: Placement = r219_e.state.board[c]
+		if u.owner == GameEngine.SIDE_OPPONENT and not (GameEngine.ASSEMBLY_POOL as Array).has(u.card.id):
+			r219_only = false
+	check(r219_n3 == 1 and r219_only,
+			"R219 第 3 回合：产出 1 只，且只可能是 9131 / 9137（实际 %d 只）" % r219_n3)
+	r219_e._begin_turn(GameEngine.SIDE_OPPONENT)      # opp_turns 4
+	check(r219_foe_count.call(r219_e) == 1,
+			"R219 第 4 回合：不产出（间隔 3 回合）")
+	r219_e._begin_turn(GameEngine.SIDE_OPPONENT)      # 5
+	r219_e._begin_turn(GameEngine.SIDE_OPPONENT)      # 6
+	check(r219_foe_count.call(r219_e) == 2,
+			"R219 第 6 回合：再产出 1 只（累计 2 只）")
+	# 没有效果卡 → 一回合都不产出
+	var r219_none := _new_engine([], 60, 60)
+	r219_none.opp_turns = 2
+	r219_none._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(r219_foe_count.call(r219_none) == 0,
+			"R219 反面：没挂效果卡 → 一个都不产出")
+	# ④ 随机性：两种产物都会出现（走引擎 rng → 回放同种子可复现）
+	var r219_seen := {}
+	for s in 24:
+		var e2: GameEngine = r219_mk.call(100 + s)
+		e2._begin_turn(GameEngine.SIDE_OPPONENT)
+		for c: Vector2i in e2.state.board:
+			var u2: Placement = e2.state.board[c]
+			if u2.owner == GameEngine.SIDE_OPPONENT:
+				r219_seen[u2.card.id] = true
+	check(r219_seen.has(9131) and r219_seen.has(9137),
+			"R219 随机：24 次抽样里 9131 与 9137 都出现过（实际 %s）" % str(r219_seen.keys()))
+	# ⑤ 同种子同产物（回放口径）
+	var r219_a: GameEngine = r219_mk.call(777)
+	var r219_b: GameEngine = r219_mk.call(777)
+	r219_a._begin_turn(GameEngine.SIDE_OPPONENT)
+	r219_b._begin_turn(GameEngine.SIDE_OPPONENT)
+	var r219_id_a := -1
+	var r219_id_b := -1
+	for c: Vector2i in r219_a.state.board:
+		if r219_a.state.board[c].owner == GameEngine.SIDE_OPPONENT:
+			r219_id_a = r219_a.state.board[c].card.id
+	for c: Vector2i in r219_b.state.board:
+		if r219_b.state.board[c].owner == GameEngine.SIDE_OPPONENT:
+			r219_id_b = r219_b.state.board[c].card.id
+	check(r219_id_a == r219_id_b and r219_id_a != -1,
+			"R219 同种子同产物（%d vs %d）" % [r219_id_a, r219_id_b])
+
+	# ⑥ 数值加强：俄倪厄 45 血 / 赫利俄斯 30 血 / 阿尔戈斯 7 攻
+	check(r219_repo.get_card(9131).health == 45
+			and r219_repo.get_card(9137).health == 30
+			and r219_repo.get_card(9142).power == 7,
+			"R219 加强：9131 生命 45 / 9137 生命 30 / 9142 攻击 7")
 
 	# ================================================================
 

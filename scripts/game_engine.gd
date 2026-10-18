@@ -91,7 +91,7 @@ const KILN_CARD_ID:= 9025
 # 两条都以「赫利俄斯还在场」为前提：行动数在 FieldState.unit_actions 里实时判定，
 # 回血在 `_regen_tick` 里实时判定 —— 拆掉它两条立刻断，不需要任何收尾钩子。
 const SUN_FORGE_HELIOS_ID:= 9130   # 赫利俄斯（太阳装置，工事 0/50 程0 速0）
-const SUN_FORGE_FURY_ID:= 9131     # 量产型俄倪厄（盟友 5/30 程1 速1）
+const SUN_FORGE_FURY_ID:= 9131     # 量产型俄倪厄（盟友 5/45 程1 速1）
 const SUN_FORGE_REGEN:= 2          # 赫利俄斯在场时，每只俄倪厄每回合结束的回复量
 const SUN_FORGE_ACTIONS:= 2        # 赫利俄斯在场时，俄倪厄每回合的行动次数
 const CERAMIC_CARD_ID:= 9026
@@ -108,7 +108,7 @@ const STEEL_FORTRESS_ID:= 9134      # 钢铁要塞（工事 5/100 程2 速0，�
 const FUSE_TURNS:= 5                # 铸造倒计时的初始回合数（与卡面 effect_text 同源）
 # ---- 「赫菲斯托斯工坊」关卡（R150，第二层 Boss）----
 # 赫菲斯托斯（9135，盟友 5/120 程1 速1）带「锻造」trait，两条效果挂在两个**唯一口**上：
-#   ① **亲手击杀**敌人 → 在**己方半场随机空格**锻造一只量产型俄倪厄（9131，5/30）
+#   ① **亲手击杀**敌人 → 在**己方半场随机空格**锻造一只量产型俄倪厄（9131，5/45）
 #      —— 挂 `_credit_kill`（击杀记功唯一口），并**清零**空转计数；
 #   ② 连续 FORGE_PERIOD 个**我方回合**没能亲手击杀 → 力量 +1、攻击距离 +1（永久累计）
 #      —— 挂 `_forge_tick`（`end_turn` 的 SIDE_SELF 分支，与 R149 铸造倒计时同一处）。
@@ -140,16 +140,28 @@ const ACTION_GROWTH_TRAIT:= "行动力成长"
 const ACTION_GROWTH_PERIOD:= 3
 
 # ---- R174：量产型阿尔戈斯「百眼动员」（第二层普通简单「百眼动员」）----
-# 阿尔戈斯（9142，盟友 4/35 程1 **速2**）带「百眼」trait：**在场时每单位只发动一次**
+# 阿尔戈斯（9142，盟友 **7/35** 程1 **速2**，R219 攻击 4→7）带「百眼」trait：**在场时每单位只发动一次**
 # （记 `Placement.ability_used`，与潜伏 9092 同口径 —— 离场再上场算新单位，可再发动）。
 # 触发条件 = **攻击命中单位**（不要求亲手击杀，与「量产锻造」的区别就在这）：
-# 在**己方后排**（row 0）召唤一只量产型俄倪厄（9131，5/30 程1 速1），并使其
+# 在**己方后排**（row 0）召唤一只量产型俄倪厄（9131，5/45 程1 速1），并使其
 # **移动速度 +1**（记 `Placement.summon_haste`，进 `effective_speed`，随单位离场消失）。
 # 后排满则退到己方半场随机空格（`_random_free_half_cell`，走引擎 rng → 回放同种子可复现）。
 # ⚠️ 挂点 = `attack()`（攻击单位），**不挂** `attack_hp()`（直击 HP 不算「攻击单位」）。
-const ARGOS_ID:= 9142             # 量产型阿尔戈斯（盟友 4/35 程1 速2）
+const ARGOS_ID:= 9142             # 量产型阿尔戈斯（盟友 7/35 程1 速2）
 const ARGOS_TRAIT:= "百眼"        # 只做标记（与「量产锻造 / 锻造」同套路），次数记 Placement
 const ARGOS_SUMMON_HASTE:= 1      # 召唤出的俄倪厄移速加成（Placement.summon_haste）
+
+# ---- R219：量产流水线「流水线装配」（第二层普通简单「量产流水线」）----
+# 效果卡 9147（效果 · 敌方 · 金）：**每过 `value`(=3) 回合**，从
+# **量产型俄倪厄 9131 / 量产型赫利俄斯 9137** 里**随机挑一个**，召唤到己方半场空格。
+# * 回合计数口径与「鸭子号角 9015（召唤）」完全一致：**双方各数自己的回合**
+#   （`turn_number` / `opp_turns`），`tick % interval == 0` 时产出 → 第 3、6、9… 回合。
+# * 随机走引擎 `rng`（回放同种子可复现）；落点 `_random_free_half_cell`。
+# * 召唤物走 `place(summon = true)`：当回合恰好 1 轮行动，与其它召唤同口径。
+# * 半场满 → 只打日志、不产出（不补到下一回合，不转伤害）。
+const ASSEMBLY_CARD_ID:= 9147     # 流水线装配（效果卡，卡面 value = 间隔回合）
+const ASSEMBLY_TRAIT:= "装配"
+const ASSEMBLY_POOL:= [9131, 9137]   # 量产型俄倪厄 / 量产型赫利俄斯
 
 # ---- R162：阿斯克勒庇厄斯「护甲积攒」----
 # 每回合开始时获得 ASCLEPIUS_ARMOR 点护甲；若获得前已有护甲，则清零并对随机敌方单位
@@ -1288,6 +1300,7 @@ func _begin_turn(side: String) -> void :
 		# 「享受了效果卡的加攻」）。放在成长之后，它从**下一回合**起才加入成长。
 		_summon_familiars(SIDE_SELF)
 		_effect_summons(SIDE_SELF)
+		_assembly_tick(SIDE_SELF)     # 流水线装配 9147（R219，对称保留）
 		_demon_summon(SIDE_SELF)      # 恶魔使魔 9117：每 2 回合随机空格召唤使魔鸭子
 		_auto_upgrade(SIDE_SELF)          # 自主升级 8045（R95）：回合开始随机改造抽牌堆 1 张
 		_dragon_breath(SIDE_SELF)
@@ -1346,6 +1359,7 @@ func _begin_turn(side: String) -> void :
 		# ── ② R122：召唤排在成长之后（同我方）──
 		_summon_familiars(SIDE_OPPONENT)
 		_effect_summons(SIDE_OPPONENT)
+		_assembly_tick(SIDE_OPPONENT)   # 流水线装配 9147（R219）
 		_demon_summon(SIDE_OPPONENT)   # 恶魔使魔 9117：回合开始随机空格召唤使魔鸭子
 		_auto_upgrade(SIDE_OPPONENT)      # 对称保留（敌方正常拿不到这张卡）
 		_dragon_breath(SIDE_OPPONENT)
@@ -1525,6 +1539,41 @@ func _effect_summons(side: String) -> void :
 	_log("效果卡（每 %d 回合）召唤了鸭子骑士（%s）" % [interval, spot])
 	action.emit("place", {"cell": spot, "card": card, "side": side})
 	_on_ally_entered(summoned, side)
+
+
+func _assembly_tick(side: String) -> void :
+	## 流水线装配（9147，R219「量产流水线」效果卡）：**每过 3 回合**（该方自己的回合计数
+	## % 卡面 `value`），从 `ASSEMBLY_POOL`（量产型俄倪厄 9131 / 量产型赫利俄斯 9137）里
+	## **随机挑一个**，召唤到己方半场空格。
+	## ⚠️ 与「鸭子号角 9015」的 `_effect_summons` 是**两条独立的口**：
+	##    那个固定召唤鸭子骑士，这个要二选一；共用同一套计数口径（双方各数自己的回合）。
+	## ⚠️ 半场满 → 本回合不产出（只打日志），不补发、不转伤害。
+	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
+	var interval:= 0
+	for c: CardData in zone:
+		if c.traits.has(ASSEMBLY_TRAIT):
+			interval = maxi(interval, maxi(1, c.value))
+	if interval <= 0:
+		return
+	var tick:= turn_number if side == SIDE_SELF else opp_turns
+	if tick <= 0 or tick % interval != 0:
+		return
+	var repo:= CardRepo.load_json()
+	var pick: int = int(ASSEMBLY_POOL[rng.randi_range(0, ASSEMBLY_POOL.size() - 1)])
+	var proto: CardData = repo.get_card(pick)
+	if proto == null:
+		_log("流水线装配失败：卡牌库里没有 id=%d" % pick)
+		return
+	var spot:= _random_free_half_cell(side)
+	if spot == Vector2i(-1, -1):
+		_log("流水线装配：己方半场已满，本回合不产出")
+		return
+	var copy:= CardData.from_dict(proto.to_dict())   # 独立副本：不与卡库实例共享
+	var spawned:= state.place(copy, spot, side, true)
+	_log("流水线装配（每 %d 回合）：产出 %s（%s）" % [interval, copy.card_name, spot])
+	action.emit("assembly_summon", {"cell": spot, "card": copy, "side": side})
+	if spawned != null:
+		_on_ally_entered(spawned, side)
 
 
 func _random_free_half_cell(side: String) -> Vector2i:
@@ -7294,7 +7343,7 @@ func _forge_tick() -> void :
 
 func _mass_heph_kill_forge(killer: Placement) -> void :
 	## 量产型赫菲斯托斯（9138，R158）「量产锻造」：**亲手击杀**敌方单位 →
-	## 在**己方半场随机空格**锻造一只量产型俄倪厄（9131，5/30 程1 速1）。
+	## 在**己方半场随机空格**锻造一只量产型俄倪厄（9131，5/45 程1 速1）。
 	## 与 Boss 版赫菲斯托斯（9135）的差别：**没有「空转成长」那半边** ——
 	## 它的 `forge_period` 恒为 0，而 `_forge_tick` / `_heph_kill_forge` 两条都以
 	## `forge_period > 0` 为前提 → 都不会碰它。于是这只不会自己越长越疼，
@@ -7326,7 +7375,7 @@ func _mass_heph_kill_forge(killer: Placement) -> void :
 func _argos_summon(attacker: Placement) -> void:
 	## 百眼动员（量产型阿尔戈斯 9142，R174）：**在场时每单位只发动一次**
 	## （`ability_used`，离场再上场算新单位）—— **攻击命中单位**时，在**己方后排**
-	## （`back_row`，敌方 = row 0）召唤一只量产型俄倪厄（9131，5/30 程1 速1），
+	## （`back_row`，敌方 = row 0）召唤一只量产型俄倪厄（9131，5/45 程1 速1），
 	## 并使其**移动速度 +1**（`Placement.summon_haste`，随单位离场消失，不烤进 CardData）。
 	## ⚠️ 与「量产锻造」（9138）的差别：**不要求亲手击杀**，攻击命中任何单位都算；
 	##    发动一次后本单位在场期间不再触发（打防御塔 / 打残血都算发动）。
@@ -7371,7 +7420,7 @@ func _argos_summon_spot(side: String) -> Vector2i:
 
 func _heph_kill_forge(killer: Placement) -> void :
 	## 赫菲斯托斯（9135，R150）**亲手击杀**敌人 → 在**己方半场随机空格**锻造一只
-	## 量产型俄倪厄（9131，5/30 程1 速1），并**清零**空转计数 —— 它一直在杀人，
+	## 量产型俄倪厄（9131，5/45 程1 速1），并**清零**空转计数 —— 它一直在杀人，
 	## 就一直不变强（「杀一只抵三回合」这种钻空子的路因此被堵死）。
 	## 落点走 `_random_free_half_cell`（引擎 rng → 回放同种子可复现），召唤物走
 	## `place(summon = true)`：当回合恰好 1 轮行动，与恶魔召唤 / 暗杀召唤同口径。
