@@ -142,11 +142,11 @@ const DELIVERY_DONE_DESC := """第二层的第一个事件房里，货主早就�
 交付完成后货物全部收走（从卡组里删除）。"""
 
 func _rest_desc() -> String:
-	## 休息处文案（R224）：全局规则「除了到达新的一层，不能回复 HP」→ 篝火不再回血，
-	## 这里只剩「烤肉」一个选项（Boss 战前享用，属道具口径的主动回血）。
+	## 休息处文案（R237：恢复篝火回血 —— 休息与烤肉二选一）。
 	return """前路的战斗还在等着你。
-篝火暖不了伤口——除了抵达新的一层，你已无法再回复生命；
-但你可以烤一块肉带在身上，抵达 Boss 战前再享用（回复 25% 最大生命）。"""
+在篝火旁休息，恢复 %d%% 最大生命；
+也可以烤一块肉带在身上，留到 Boss 战前享用。
+（两样只能挑一样——选完这一处就到头了。）""" % int(round(RunState.rest_pct() * 100.0))
 
 var _font: Font
 var sfx: Sfx
@@ -204,6 +204,11 @@ func _is_event_node() -> bool:
 func _is_chest_layer() -> bool:
 	## 宝箱层（第六层）：地图节点类型为 chest，整层都是宝箱。
 	return RunState.run_active and str(RunState.pending_node.get("type", "")) == "chest"
+
+
+func _is_rest() -> bool:
+	## 休息处（篝火）：地图节点 type == "rest"（不是 event 房）。
+	return RunState.run_active and str(RunState.pending_node.get("type", "")) == "rest"
 
 
 func _pending_kind() -> String:
@@ -640,11 +645,14 @@ func _ready() -> void:
 			$Center/LeaveBtn.text = "转身离开（保持现状）"
 		result_label.text = ""
 	else:
-		# 休息处（R224：篝火不再回血 → 只剩「烤肉」一个选项，主按钮收起）
+		# 休息处（R237：恢复篝火回血 —— 「在这里休息」与「烤肉」二选一）
 		bbq_btn.visible = true
-		rest_btn.visible = false
+		rest_btn.visible = true
 		event_name.text = "休息处"
 		desc.text = _rest_desc()
+		var rest_gain := mini(RunState.rest_heal_amount(), RunState.max_hp - RunState.hp)
+		rest_btn.text = "在这里休息（回复 %d 生命）" % rest_gain
+		rest_btn.disabled = rest_gain <= 0   # 满血 → 休息没意义，置灰
 		# R234 止血绷带（6029）：进休息处时结算本层累计的额外回血（结算后清零）。
 		var bandage_heal := RunState.consume_bandage_heal()
 		if bandage_heal > 0:
@@ -968,8 +976,19 @@ func _on_main() -> void:
 		result_label.add_theme_color_override("font_color", Color("a44ad0"))
 		_redraw()
 		return
-	# R224：休息处的「休息」随篝火回血一起移除（只剩 bbq_btn 的「烤肉」，
-	# 主按钮在该事件里不可见）。走到这里 = 未识别的事件类型 → 安全不动。
+	# R237：休息处「在这里休息」→ 回复 rest_heal_amount() 点生命（与「烤肉」二选一）。
+	# 只有真正的休息节点才走这里（_is_rest 精确判 pending_node.type == "rest"）；
+	# 未识别的事件类型仍然安全不动。
+	if _is_rest():
+		if _bbq_taken:
+			return
+		var gain := RunState.rest()
+		_collapse_to_leave()
+		result_label.text = "篝火的温暖涌上心头……回复 %d 点生命（当前 %d / %d）" % [
+				gain, RunState.hp, RunState.max_hp]
+		result_label.add_theme_color_override("font_color", UiTheme.SIDE_SELF_TEXT)
+		_redraw()
+		return
 	return
 
 

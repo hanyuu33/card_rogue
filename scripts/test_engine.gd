@@ -4478,10 +4478,10 @@ func _init() -> void:
 	check(RunState.hp == 50, "回复不超过最大生命")
 	RunState.take_damage(20)
 	var g := RunState.rest()
-	check(g == 0 and RunState.hp == 30,
-			"R224：休息处不再回血（rest() 恒 0；20/50 → %d/50）" % RunState.hp)
-	check(RunState.rest_heal_amount() == 0 and RunState.rest_pct() == 0.0,
-			"R224：休息回复口径全档位归零（rest_pct 0.0 → rest_heal_amount 0）")
+	check(g == 13 and RunState.hp == 43,
+			"R237：休息处按难度回血（难度 2 = 25%% → 回复 %d；30/50 → %d/50）" % [g, RunState.hp])
+	check(RunState.rest_heal_amount() == 13 and RunState.rest_pct() == 0.25,
+			"R237：休息回复口径恢复（难度 2: rest_pct 0.25 → rest_heal_amount 13）")
 	RunState.reset(30)
 	check(RunState.hp == 30 and RunState.max_hp == 30, "reset 可指定新最大生命")
 	RunState.take_damage(5)
@@ -7824,26 +7824,26 @@ func _init() -> void:
 	# 下面难度 0/1/2 的回血断言全部改成「恒 0」。
 	RunState.set_difficulty(0)
 	RunState.reset(50)
-	check(RunState.battle_win_heal() == 0 and RunState.rest_heal_amount() == 0,
-			"难度 0：R224 起战斗胜利 / 休息均不回血（回血两表归零）")
+	check(RunState.battle_win_heal() == 0 and RunState.rest_heal_amount() == 20,
+			"难度 0：战斗胜利不回血（R224）/ 篝火回血 40%% = 20（R237 恢复）")
 	check(RunState.start_gold() == 150 and RunState.chocolate_per_layer() == RogueMap.MAX_STEPS
 			and RunState.max_hp_mul() == 1.0 and RunState.enemy_hp_bonus_pct() == 0.0
 			and RunState.enemy_power_bonus() == 0 and RunState.rare_weight_mul() == 1.0
 			and not RunState.fatigue_active(),
 			"难度 0：金钱 150 / 巧克力 %d / 最大生命不变 / 无其他 debuff" % RogueMap.MAX_STEPS)
 	RunState.take_damage(30)
-	check(RunState.rest() == 0 and RunState.hp == 20,
-			"难度 0：休息不再回血（30/50 → %d/50 不变）" % RunState.hp)
+	check(RunState.rest() == 20 and RunState.hp == 40,
+			"难度 0：篝火休息回复 20（30/50 → %d/50）" % RunState.hp)
 	RunState.set_difficulty(1)
 	RunState.reset(50)
 	RunState.take_damage(30)
-	check(RunState.battle_win_heal() == 0 and RunState.rest_heal_amount() == 0,
-			"难度 1：R224 起同样不回血（原「降篝火」debuff 已无数值效果）")
-	check(RunState.rest() == 0 and RunState.hp == 20,
-			"难度 1：休息不再回血（30/50 → %d/50 不变）" % RunState.hp)
+	check(RunState.battle_win_heal() == 0 and RunState.rest_heal_amount() == 13,
+			"难度 1：战斗胜利不回血 / 篝火回血 25%% = 13（R237）")
+	check(RunState.rest() == 13 and RunState.hp == 33,
+			"难度 1：篝火休息回复 13（30/50 → %d/50）" % RunState.hp)
 	RunState.set_difficulty(2)
-	check(RunState.battle_win_heal() == 0 and RunState.rest_pct() == 0.0,
-			"难度 2：R224 起与全档位一致 —— 战斗胜利 / 休息均不回血")
+	check(RunState.battle_win_heal() == 0 and RunState.rest_pct() == 0.25,
+			"难度 2：战斗胜利不回血 / 篝火 25%%（R237）")
 	RunState.set_difficulty(3)
 	check(RunState.enemy_hp_bonus_pct() == 0.10, "难度 3：敌人生命 +10%（向上取整）")
 	RunState.set_difficulty(4)
@@ -7882,15 +7882,16 @@ func _init() -> void:
 			and RunState.DIFFICULTY_REST_PCT.size() == 11
 			and RunState.DIFFICULTY_TEXTS.size() == 11
 			and RunState.DIFFICULTY_BATTLE_HEAL[0] == 0 and RunState.DIFFICULTY_BATTLE_HEAL[2] == 0
-			and RunState.DIFFICULTY_REST_PCT[0] == 0.0 and RunState.DIFFICULTY_REST_PCT[1] == 0.0,
-			"难度档位：共 11 档；R224 回血两表全 0（除换层外不回血）长度齐平")
+			and RunState.DIFFICULTY_REST_PCT[0] == 0.40 and RunState.DIFFICULTY_REST_PCT[1] == 0.25,
+			"难度档位：共 11 档；战斗胜利回血恒 0 / 篝火 40%%(0档)·25%%(1档起)（R237 恢复）")
 	RunState.reset(50)
 
 	# ---- R224：全局 HP 规则 + 苹果 6027 + 牛奶 6028 + 附魔资格唯一口 ----
 	# ① 两条自动回血路径（战斗胜利 / 休息）归零 —— 函数层再钉一遍
-	check(RunState.battle_win_heal() == 0 and RunState.rest() == 0
-			and RunState.rest_heal_amount() == 0 and RunState.rest_pct() == 0.0,
-			"R224：战斗胜利 / 休息均不回血（除到达新的一层外不能回复 HP）")
+	check(RunState.battle_win_heal() == 0 and RunState.rest_pct() > 0.0
+			and RunState.rest_heal_amount() > 0,
+			"R237：战斗胜利仍不回血（R224 保留）；篝火回血已恢复（rest_pct %.2f）"
+			% RunState.rest_pct())
 	# ② 苹果：立即 +14 最大生命并回复满
 	RunState.set_difficulty(0)
 	RunState.reset(50)

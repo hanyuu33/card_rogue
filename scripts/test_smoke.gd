@@ -195,7 +195,7 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "event"}
 				RunState.pending_event = "arcane",
 			_check_arcane_one_reward],
-		# R147/R224：同一条规则也管休息处 —— R224 起篝火不回血，只剩「烤肉」一个选项。
+		# R147/R237：同一条规则也管休息处 —— R237 起篝火回血恢复（休息 / 烤肉二选一）。
 		["res://scenes/event.tscn", func():
 				_reset()
 				RunState.start_run(_map())
@@ -2994,34 +2994,35 @@ func _check_arcane_one_reward(scene: Variant) -> void:
 
 
 func _check_rest_one_reward(scene: Variant) -> void:
-	## R147：一次访问只领一份。R224：全局 HP 规则「除到达新的一层外不能回复 HP」
-	## → 休息处的「篝火休息」移除，只剩「烤肉」一个选项；烤完 → 全场只留「离开」。
-	var bbq: Button = scene.get_node_or_null("Center/BBQBtn")
-	if bbq == null:
-		_smoke_fail("R147 休息处：找不到 BBQBtn 节点")
-		return
-	if not bbq.visible or bbq.disabled:
-		_smoke_fail("R224 休息处：刚进来「烤肉」应当可用（唯一选项）")
-		return
+	## R147：一次访问只领一份。R237：篝火回血已恢复 —— 「在这里休息」与「烤肉」二选一。
 	var rest: Button = scene.get_node_or_null("Center/RestBtn")
-	if rest != null and rest.visible:
-		_smoke_fail("R224 休息处：「在这里休息」按钮应当收起（篝火不再回血）")
+	var bbq: Button = scene.get_node_or_null("Center/BBQBtn")
+	if rest == null or bbq == null:
+		_smoke_fail("R237 休息处：找不到 RestBtn / BBQBtn 节点")
 		return
-	scene._ui_bbq()
+	if not rest.visible or not bbq.visible:
+		_smoke_fail("R237 休息处：「在这里休息」与「烤肉」两个选项都应可见")
+		return
+	# 打残 → 点「休息」应回血，且只留离开（烤肉收起 = 二选一）
+	RunState.hp = maxi(1, RunState.max_hp - 12)
+	var hp0: int = RunState.hp
+	var expect_gain: int = mini(RunState.rest_heal_amount(), RunState.max_hp - RunState.hp)
+	if expect_gain <= 0:
+		_smoke_fail("R237 休息处：残血时休息回血量应 > 0")
+		return
+	scene._ui_main()
 	await process_frame
-	if not scene._bbq_taken:
-		_smoke_fail("R224 休息处：点「烤肉」应记下 _bbq_taken")
-		return
-	if not scene._reward_claimed:
-		_smoke_fail("R224 休息处：烤完应记下 _reward_claimed（一次访问只领一份）")
+	if RunState.hp != hp0 + expect_gain:
+		_smoke_fail("R237 休息处：点「休息」应回复 %d 点（%d → %d）"
+				% [expect_gain, hp0, RunState.hp])
 		return
 	if bbq.visible:
-		_smoke_fail("R224 休息处：烤完「烤肉」应收起，只留离开")
+		_smoke_fail("R237 休息处：休息后「烤肉」应收起（二选一）")
 		return
-	if not RunState.has_relic(RunState.BARBECUE_RELIC_ID):
-		_smoke_fail("R224 休息处：烤完应拿到道具「烤肉」")
+	if not scene._reward_claimed:
+		_smoke_fail("R237 休息处：休息后应记下 _reward_claimed（一次访问只领一份）")
 		return
-	print("SMOKE OK R224 休息处：只剩烤肉一个选项，烤完只领一份、只留离开")
+	print("SMOKE OK R147/R237 休息处：篝火回血恢复（+%d）；休息后只留离开" % expect_gain)
 
 
 func _check_frozen_aura(scene: Variant) -> void:
