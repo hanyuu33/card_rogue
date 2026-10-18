@@ -3033,7 +3033,10 @@ func _on_left_click(pos: Vector2) -> void:
 			selection = ["hand", hi]
 			var card := engine.state.hand[hi]
 			if card.is_curse():
-				status_text = "%s（诅咒）：再点一次打出（无效果）" % card.card_name
+				# R239：带「次元」的诅咒（破绽 9154）打出后消失，提示里说清楚
+				var curse_gone: String = "，打出后消失" \
+						if card.has_affix(GameEngine.AFFIX_DIMENSION) else ""
+				status_text = "%s（诅咒）：再点一次打出（无效果%s）" % [card.card_name, curse_gone]
 			elif card.is_effect():
 				status_text = "%s（效果卡）：再点一次启用，放入左侧效果区持续生效" % card.card_name
 			elif card.is_spell() and card.needs_target():
@@ -3067,7 +3070,8 @@ func _on_left_click(pos: Vector2) -> void:
 func _use_hand_card(i: int) -> void:
 	var card := engine.state.hand[i]
 	if card.is_curse():
-		# R223：诅咒卡（「疲惫」9149）—— 唯一打出入口 use_curse（付能量、无效果、进弃牌区）。
+		# R223：诅咒卡（「疲惫」9149）—— 唯一打出入口 use_curse（付能量、无效果；
+		# 打完之后去哪由引擎 `_spell_card_gone` 定：带「次元」的破绽 9154 消失，其余进弃牌区）。
 		# 必须拦在随从 / 技能分支**之前**：诅咒既不是单位也不是技能，掉进任一条都会被拒。
 		if not engine.can_pay_card(card):
 			_energy_fail(card, i)   # R151 P2-15
@@ -3381,7 +3385,9 @@ func _finish_drag(pos: Vector2) -> void:
 			return
 		engine.use_curse(i)
 		_net_send({"type": "action", "act": "curse", "card": card.to_dict()})
-		status_text = "%s：已打出（无效果）" % card.card_name
+		var curse_done: String = "，本场消失" \
+				if card.has_affix(GameEngine.AFFIX_DIMENSION) else ""
+		status_text = "%s：已打出（无效果%s）" % [card.card_name, curse_done]
 		queue_redraw()
 		return
 	# R106：效果卡拖到**左侧效果区**上松手 = 直接启用（与「拖到棋盘任意处」等效，

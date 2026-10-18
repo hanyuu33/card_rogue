@@ -4628,7 +4628,9 @@ func _spell_card_gone(card: CardData, log_text := "") -> bool:
 	##   * 9097 预判 —— pending 期间要留在**弃牌区**做候选池标记，玩家选完由
 	##     `foresight_pick_card()` 把自己搬进消耗区。
 	## R213：8053 超越极限原先「卡面带次元却进弃牌区」（R99 起文档与实现不一致）已并入本口。
-	if card != null and card.kind == "技能" and card.has_affix(AFFIX_DIMENSION):
+	## R239：**判据不再限定卡种** —— 只认「次元」字段。诅咒「破绽」（9154，`use_curse`）
+	## 也要「打出后消失」，它走的就是这里；以后任何卡种要「用后消失」，写上次元即生效。
+	if card != null and card.has_affix(AFFIX_DIMENSION):
 		state.void_count += 1
 		state.void_cards.append(card)
 		if log_text != "":
@@ -4774,6 +4776,8 @@ func use_effect(hand_index: int) -> String:
 func use_curse(hand_index: int) -> String:
 	## R223：打出**诅咒卡**（「疲惫」9149）—— 用户口径「打出无效果」：付能量、离手、
 	## 进弃牌区，就这些。
+	## R239：去向改走**唯一口 `_spell_card_gone`** —— 带「次元」的诅咒（破绽 9154）
+	## 「打出后消失」（进消耗区，本场不再出现），其余诅咒（疲惫 9149）照旧进弃牌区。
 	## ⚠️ **不走 use_spell**：不记 `self_skill_plays`（不是技能），也不点亮技能类反应
 	##    （虚空主宰记账 / 蓄力 / 回合首张技能加成 / 陨石术的留手折价都不该被一张
 	##    无效果诅咒触发）。
@@ -4785,7 +4789,7 @@ func use_curse(hand_index: int) -> String:
 		return cap_msg
 	_pay(card)
 	state.hand.remove_at(hand_index)
-	state.discard.append(card)
+	_spell_card_gone(card)   # R239：次元诅咒（破绽）→ 进消耗区；其余 → 进弃牌区
 	_note_card_played(SIDE_SELF, card)
 	_log("打出诅咒 %s（无效果）" % card.card_name)
 	action.emit("curse", {"card": card})

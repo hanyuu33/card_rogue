@@ -1787,11 +1787,12 @@ func _init() -> void:
 	# ⑥ 破绽能正常打出：付 2 费、离手、无效果、进弃牌区
 	r231_e5.state.hand = [CardData.from_dict(r231_curse.to_dict())]
 	r231_e5.state.energy = 5
+	var r231_void0: int = r231_e5.state.void_count
 	var r231_played := r231_e5.use_curse(0)
 	check(r231_e5.state.energy == 3 and r231_e5.state.hand.is_empty()
-			and r231_e5.state.discard.size() == 1
-			and r231_e5.state.discard[0].id == 9154,
-			"R231 打出破绽：付 2 费（5 → %d）、无效果、进弃牌区（%s）"
+			and r231_e5.state.void_count == r231_void0 + 1
+			and r231_e5.state.discard.is_empty(),
+			"R239 打出破绽：付 2 费（5 → %d）、无效果、**本场消失**（void +1、不进弃牌区）（%s）"
 			% [r231_e5.state.energy, r231_played])
 
 	# 狂暴（9055）：稀有 2 费技能，指定己方盟友本回合可以攻击两次；不可重复；>=3 盟友费用 -1
@@ -18164,6 +18165,70 @@ func _init() -> void:
 	r238_e6.end_turn()
 	check(r238_foe6.health == 30 - GameEngine.PIERCE_TRAP_DMG,
 			"R238：被禁足原地罚站的敌人照样踩响陷阱（30 → %d）" % r238_foe6.health)
+
+	# ---- R239：破绽（9154）改为「打出后消失」----
+	var r239_repo := CardRepo.load_json()
+	var r239_curse: CardData = r239_repo.get_card(9154)
+	var r239_fatigue: CardData = r239_repo.get_card(9149)
+	check(r239_curse.has_affix(GameEngine.AFFIX_DIMENSION)
+			and r239_curse.effect_text.contains("消失")
+			and r239_curse.is_curse() and r239_curse.cost == 2,
+			"R239 破绽：带「次元」字段（打出后消失），文案写明；仍是 2 费诅咒")
+	check(not r239_fatigue.has_affix(GameEngine.AFFIX_DIMENSION),
+			"R239 对照：疲惫（9149）**没有**次元 —— 打出后照旧进弃牌区")
+	# ① 打出破绽：付 2 费、离手、进消耗区（不进弃牌区、不洗回牌库）
+	var r239_e := _new_engine([], 30, 30)
+	r239_e.start_game(1)
+	r239_e.state.hand = [CardData.from_dict(r239_curse.to_dict())]
+	r239_e.state.energy = 5
+	var r239_void0: int = r239_e.state.void_count
+	var r239_disc0: int = r239_e.state.discard.size()
+	r239_e.use_curse(0)
+	check(r239_e.state.energy == 3 and r239_e.state.hand.is_empty()
+			and r239_e.state.void_count == r239_void0 + 1
+			and r239_e.state.void_cards.size() >= 1
+			and r239_e.state.void_cards[r239_e.state.void_cards.size() - 1].id == 9154
+			and r239_e.state.discard.size() == r239_disc0,
+			"R239 打出破绽：扣 2 费、离手、进消耗区（void %d → %d），**不进弃牌区**"
+			% [r239_void0, r239_e.state.void_count])
+	# ② 对照：疲惫（无次元）打出后仍进弃牌区，不被这条规则带走
+	var r239_e2 := _new_engine([], 30, 30)
+	r239_e2.start_game(1)
+	r239_e2.state.hand = [CardData.from_dict(r239_fatigue.to_dict())]
+	r239_e2.state.energy = 5
+	var r239_void2: int = r239_e2.state.void_count
+	r239_e2.use_curse(0)
+	check(r239_e2.state.void_count == r239_void2
+			and r239_e2.state.discard.size() == 1
+			and r239_e2.state.discard[0].id == 9149,
+			"R239 对照：疲惫打出后照旧进弃牌区（void 不变）")
+	# ③ 唯一口通用化后，两条老路都没被改坏（直接打这个口，不跑整套法术流程）：
+	#    无次元 → 进弃牌区；带次元 → 进消耗区。
+	var r239_e3 := _new_engine([], 30, 30)
+	r239_e3.start_game(1)
+	var r239_plain: CardData = CardData.from_dict(r239_repo.get_card(9003).to_dict())
+	var r239_void3: int = r239_e3.state.void_count
+	var r239_gone3: bool = r239_e3._spell_card_gone(r239_plain)
+	check(not r239_gone3 and r239_e3.state.void_count == r239_void3
+			and r239_e3.state.discard.has(r239_plain),
+			"R239 回归：无「次元」的技能卡（火焰箭 9003）照旧进弃牌区")
+	var r239_dim: CardData = CardData.from_dict(r239_repo.get_card(9050).to_dict())
+	var r239_void4: int = r239_e3.state.void_count
+	var r239_gone4: bool = r239_e3._spell_card_gone(r239_dim)
+	check(r239_gone4 and r239_e3.state.void_count == r239_void4 + 1
+			and r239_e3.state.void_cards.has(r239_dim)
+			and not r239_e3.state.discard.has(r239_dim),
+			"R239 回归：带「次元」的技能卡（鲸鱼之怒 9050）打出后仍进消耗区")
+	# ④ to_dict / from_dict 往返保留次元（复制 / 塞进牌库 / 联机都走这条通道）
+	var r239_rt := CardData.from_dict(r239_curse.to_dict())
+	check(r239_rt.has_affix(GameEngine.AFFIX_DIMENSION) and r239_rt.is_curse(),
+			"R239 to_dict/from_dict 保留「次元」：塞进你牌库的那张也会消失")
+	# ⑤ 破绽仍不进奖励池（rarity 6 的诅咒）
+	var r239_in_pool := false
+	for r239_pc: CardData in r239_repo.reward_pool():
+		if r239_pc.id == 9154:
+			r239_in_pool = true
+	check(not r239_in_pool, "R239 破绽：仍然不进奖励池（玩家只能被敌方塞进来）")
 
 	# ================================================================
 

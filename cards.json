@@ -4156,8 +4156,10 @@
       "traits": [
         "破绽"
       ],
-      "affixes": [],
-      "effect_text": "打出无效果。",
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "打出无效果。打出后消失，本场对战不再出现。",
       "target_mode": "none",
       "value": 0,
       "color": "灰",
