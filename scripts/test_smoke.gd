@@ -695,6 +695,47 @@ func _check_shop_enchant(scene: Variant) -> void:
 		if str(scene._hint) == hint0:
 			_smoke_fail("商店附魔：点到不符合条件的灰卡应给出提示（不能静默无反应）")
 			return
+	# ④ R235：新增「确定」按钮 —— 选中一张卡后点「确定」成交（与双击成交等价）。
+	scene._enchanting = -1
+	scene._sel_pick = -1
+	scene._deleting = false
+	scene._row2.clear()
+	scene._row2.append({"ench": {"id": "save", "name": "保存", "desc": "",
+			"price": 60, "icon": ""}, "sold": false})
+	RunState.gold = 500
+	scene._start_enchant(0)
+	var ci2 := -1
+	for i in (scene._deck_cards as Array).size():
+		if bool(scene._deck_cards[i]["ok"]):
+			ci2 = i
+			break
+	if ci2 < 0:
+		_smoke_fail("R235 商店附魔：找不到可附魔的卡")
+		return
+	var idx2: int = int(scene._deck_cards[ci2]["idx"])
+	var gold2: int = RunState.gold
+	# 未选卡直接点「确定」→ 只提示、不成交。
+	scene._on_pick_click((scene._pick_confirm_rect() as Rect2).get_center())
+	if int(scene._enchanting) != 0 or RunState.gold != gold2:
+		_smoke_fail("R235 商店附魔：未选卡点「确定」不应成交")
+		return
+	# 选中一张 → 点「确定」→ 成交。
+	scene._on_pick_click((scene._pick_card_rect(ci2) as Rect2).get_center())
+	if int(scene._sel_pick) != ci2:
+		_smoke_fail("R235 商店附魔：点卡应选中（实际 %d）" % int(scene._sel_pick))
+		return
+	scene._on_pick_click((scene._pick_confirm_rect() as Rect2).get_center())
+	if int(scene._enchanting) != -1:
+		_smoke_fail("R235 商店附魔：点「确定」后选卡页应关闭（_enchanting = %d）"
+				% int(scene._enchanting))
+		return
+	if RunState._mod_at(idx2).is_empty():
+		_smoke_fail("R235 商店附魔：点「确定」后第 %d 张卡应落附魔" % idx2)
+		return
+	if RunState.gold != gold2 - 60:
+		_smoke_fail("R235 商店附魔：点「确定」应扣 60 金币（%d → %d）"
+				% [gold2, RunState.gold])
+		return
 	scene._enchanting = -1
 	scene._sel_pick = -1
 
