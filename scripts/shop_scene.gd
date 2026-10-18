@@ -6,7 +6,7 @@ extends Control
 ##   * 费用 -1（只可费用 > 1 且非 X 费卡）价 50
 ##   * 伤害 +10（**只可「能直接造成伤害」的技能卡**，R210 限技能卡 / R226 再收紧；
 ##     技能卡造成的伤害 +10）价 60
-##   * 次元（盟友/工事，必须无次元、非效果卡；+2 力 +10 血）价 80（R210：50 → 80）
+##   * 次元之力（赋字段「次元」；盟友/工事，必须无次元、非效果卡；+2 力 +10 血）价 80（R210：50 → 80）
 ##   * 保存（回合结束手牌不丢弃，做成字段）价 60
 ## 第三行：固定 3 项：删一张卡 50 / +5 最大生命（并回血）50 / 买一块巧克力 120。
 ##
@@ -29,11 +29,13 @@ const PICK_Y0 := 130.0
 
 # 附魔定义（id → 元数据）
 const ENCHANTS := [
+	# ⚠️ 这里的 `name` 只是**冗余副本**，绘制一律走 `_ench_name()`（真源 = `CardData.ENCHANT_DEFS`）；
+	# smoke 会逐条比对两处文案，分叉立刻红（R240）。
 	{"id": "costdown", "name": "费用 -1", "desc": "每次战斗初次使用费用 -1（只能选费用 > 1 且非 X 费的卡）",
 		"price": 50, "icon": "shop_icon_costdown"},
 	{"id": "damage", "name": "伤害 +10", "desc": "这张技能卡造成的伤害 +10（只能选能直接造成伤害的技能卡）",
 		"price": 60, "icon": "shop_icon_damage"},
-	{"id": "dimension", "name": "次元", "desc": "赋予「次元」并 +2 力 +10 血（盟友/工事，须无次元、非效果卡；离场消失）",
+	{"id": "dimension", "name": "次元之力", "desc": "赋字段「次元」+2力+10血，离场消失",
 		"price": 80, "icon": "shop_icon_dimension"},
 	{"id": "save", "name": "保存", "desc": "赋予「保存」——回合结束时手牌这张不丢弃",
 		"price": 60, "icon": "shop_icon_save"},
@@ -417,7 +419,7 @@ func _draw_row2() -> void:
 		var ench: Dictionary = e["ench"]
 		var sold: bool = e["sold"]
 		var rr := Rect2(x0 + i * (bw + gap), y, bw, bh)
-		_draw_goods_box(rr, str(ench["icon"]), str(ench["name"]), str(ench["desc"]),
+		_draw_goods_box(rr, str(ench["icon"]), _ench_name(ench), str(ench["desc"]),
 				int(ench["price"]), sold, _hover == _row2_base + i, _enchanting == i and not sold,
 				"enchant")
 		if sold:
@@ -629,7 +631,7 @@ func _draw_pick_overlay() -> void:
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, Color("ece7db"))
 	else:
 		var ench: Dictionary = _row2[_enchanting]["ench"]
-		draw_string(_font_bold, Vector2(0, 60), "选择要附魔的卡 —— %s" % str(ench["name"]),
+		draw_string(_font_bold, Vector2(0, 60), "选择要附魔的卡 —— %s" % _ench_name(ench),
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, Color("ffd75a"))
 		draw_string(_font, Vector2(0, 92), "点一张高亮的卡选中，再点「确定」完成附魔（或再点一次同一张）；点「取消」返回",
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, Color("ece7db"))
@@ -848,6 +850,14 @@ func _start_enchant(i: int) -> void:
 	_ask_redraw()
 
 
+func _ench_name(e: Dictionary) -> String:
+	## 附魔显示名的**唯一来源** = `CardData.ENCHANT_DEFS`（R240）。
+	## 原来商店自己有 5 份文案副本，改名「次元 → 次元之力」时差点只改了字段那处 /
+	## 只改了商店那处 —— 这里收成一口：ENCHANTS 的 name 只当兜底。
+	var nm := CardData.enchant_name(str(e.get("id", "")))
+	return nm if nm != "" else str(e.get("name", ""))
+
+
 func _demo_enchant(cand: int, commit: bool, ench_id := "save") -> void:
 	## R204 演示/回归：把第二行第一件商品换成指定附魔（默认「保存」，任何卡都能吃）→
 	## 打开选卡页 → 按**真实点击路径**点第 cand 张；commit=true 时再点一次同一张（应当成交）。
@@ -925,7 +935,7 @@ func _on_pick_click(pos: Vector2) -> void:
 		if any_i >= 0 and not _deleting:
 			# 点到「不符合这张附魔条件」的灰卡 → 明确说一句，别让玩家以为死机
 			_set_hint("这张卡不能吃「%s」（已附魔或类型不符）"
-					% str(_row2[_enchanting]["ench"]["name"]))
+					% _ench_name(_row2[_enchanting]["ench"]))
 			return
 		if _sel_pick >= 0:            # 点空白 → 取消「选中查看」
 			_sel_pick = -1
@@ -982,7 +992,7 @@ func _on_pick_click(pos: Vector2) -> void:
 	RunState.gold -= price
 	_row2[_enchanting]["sold"] = true
 	var c := _repo.get_card(RunState.deck_ids[idx])
-	_set_hint("「%s」获得附魔「%s」" % [c.card_name if c != null else str(idx), str(ench["name"])])
+	_set_hint("「%s」获得附魔「%s」" % [c.card_name if c != null else str(idx), _ench_name(ench)])
 	_enchanting = -1
 	_hover_enchant_card = -1
 	_ask_redraw()

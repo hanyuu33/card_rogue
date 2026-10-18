@@ -264,7 +264,7 @@ static func _draw_enchant_mark(canvas: CanvasItem, card: CardData, rect: Rect2,
 		return
 	var col: Color = CardData.enchant_color(card.enchant)
 	# 底圆盘用**该附魔色的深色调**（不是统一黑）：远处也能凭底色区分「蓝=费用 / 橙=伤害 /
-	# 紫=次元 / 绿=保存」，近处再看图标细节 —— 双通道。
+	# 紫=次元之力 / 绿=保存」，近处再看图标细节 —— 双通道。
 	var disc: Color = col.darkened(0.74)
 	disc.a = 0.92
 	canvas.draw_circle(c, r, disc)

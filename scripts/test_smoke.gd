@@ -600,6 +600,17 @@ func _check_shop_enchant(scene: Variant) -> void:
 	if int(price.get("damage", -1)) != 60:
 		_smoke_fail("商店附魔：伤害 +10 应 60 金（实际 %s）" % str(price.get("damage", -1)))
 		return
+	# R240：附魔显示名的**真源 = CardData.ENCHANT_DEFS** —— ENCHANTS 里的 name 必须与它逐条一致，
+	# 且附魔名**不许与「字段」同名**（原来附魔「次元」/ 字段「次元」撞了命名空间）。
+	for e240 in enchs:
+		var e240_id := str(e240["id"])
+		if str(e240.get("name", "")) != CardData.enchant_name(e240_id):
+			_smoke_fail("R240 商店附魔：%s 的 name 应与 ENCHANT_DEFS 一致（%s vs %s）"
+					% [e240_id, str(e240.get("name", "")), CardData.enchant_name(e240_id)])
+			return
+	if CardData.enchant_name("dimension") == CardData.affix_label(GameEngine.AFFIX_DIMENSION):
+		_smoke_fail("R240 商店附魔：附魔名不能与字段同名（dimension 应叫「次元之力」）")
+		return
 	# R229：「起手」（必定第 1 回合抽到）应 50 金，且出现在附魔表里
 	if int(price.get("opening", -1)) != 50:
 		_smoke_fail("商店附魔：起手应 50 金（实际 %s）" % str(price.get("opening", -1)))

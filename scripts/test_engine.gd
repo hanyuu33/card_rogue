@@ -18230,6 +18230,36 @@ func _init() -> void:
 			r239_in_pool = true
 	check(not r239_in_pool, "R239 破绽：仍然不进奖励池（玩家只能被敌方塞进来）")
 
+	# ---- R240：附魔「次元」改名「次元之力」（与字段「次元」区分命名空间）----
+	check(CardData.enchant_name("dimension") == "次元之力",
+			"R240 附魔改名：dimension 显示名 = 「次元之力」（实际 %s）"
+			% CardData.enchant_name("dimension"))
+	check(CardData.affix_label(GameEngine.AFFIX_DIMENSION) == "次元"
+			and CardData.affix_desc(GameEngine.AFFIX_DIMENSION) != "",
+			"R240 字段不变：affix「次元」标签与效果说明都还在")
+	check(CardData.enchant_name("dimension") != CardData.affix_label(GameEngine.AFFIX_DIMENSION)
+			and CardData.enchant_name("save") == "保存"
+			and CardData.enchant_name("opening") == "起手",
+			"R240 命名空间：附魔名不再与字段同名，其余四种附魔名不变")
+	# 破绽的卡面文案要把**字段**的效果注释出来（用户口径：次元是字段，应注释效果）
+	var r240_repo := CardRepo.load_json()
+	var r240_curse: CardData = r240_repo.get_card(9154)
+	check(r240_curse.effect_text.contains("字段")
+			and r240_curse.effect_text.contains("次元")
+			and r240_curse.effect_text.contains("消失")
+			and r240_curse.has_affix(GameEngine.AFFIX_DIMENSION),
+			"R240 破绽：卡面注释了「字段：次元」的效果（%s）" % r240_curse.effect_text)
+	# 文案改动不影响行为：打出仍然消失（进消耗区、不进弃牌区）
+	var r240_e := _new_engine([], 30, 30)
+	r240_e.start_game(1)
+	r240_e.state.hand = [CardData.from_dict(r240_curse.to_dict())]
+	r240_e.state.energy = 5
+	var r240_void0: int = r240_e.state.void_count
+	r240_e.use_curse(0)
+	check(r240_e.state.void_count == r240_void0 + 1
+			and r240_e.state.discard.is_empty(),
+			"R240 破绽：改文案不改行为（打出仍进消耗区）")
+
 	# ================================================================
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")

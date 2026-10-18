@@ -71,13 +71,15 @@ const AFFIX_DEFS: Dictionary = {
 ## R214「带有附魔效果的卡片，应该在任何地方，都显示附魔标记」）。
 ##
 ## 显示（`CardFace` 的附魔标记 / 左栏 / 商店）读这里，**不许各处自己写白名单**：
-##   * `label` 附魔显示名（与 `shop_scene.ENCHANTS` 的 name 同一份文案，smoke 有守卫）
+##   * `label` 附魔显示名（**唯一来源**：`shop_scene.ENCHANTS` 的 name 必须与它一致，smoke 有守卫）
+##     ⚠️ R240：附魔名**不许和「字段」(AFFIX_DEFS) 同名** —— 原来附魔「次元」与字段「次元」
+##     撞了命名空间，玩家分不清「这是卡上的字段还是商店附魔」，故改名为「次元之力」。
 ##   * `icon`  `assets/ui/` 下的素材名（就是商店第二行那张图标 —— 「与附魔种类相同」）
 ##   * `col`   附魔种类色：标记描边环 / 左栏文字 / 商店悬停描边共用
 const ENCHANT_DEFS: Dictionary = {
 	"costdown": {"label": "费用 -1", "icon": "shop_icon_costdown", "col": "6db2f0"},
 	"damage": {"label": "伤害 +10", "icon": "shop_icon_damage", "col": "f08a5a"},
-	"dimension": {"label": "次元", "icon": "shop_icon_dimension", "col": "c08cf0"},
+	"dimension": {"label": "次元之力", "icon": "shop_icon_dimension", "col": "c08cf0"},
 	"save": {"label": "保存", "icon": "shop_icon_save", "col": "8fdc9f"},
 	"opening": {"label": "起手", "icon": "shop_icon_opening", "col": "f0c860"},
 }
@@ -367,7 +369,8 @@ static func affix_colors(name: String) -> Array:
 
 ## ── 附魔（R214）：显示口径的唯一入口（未注册 id 回退到 id 本身 / 中性紫，不空白）──
 
-## 附魔的显示名（「费用 -1」/「伤害 +10」/「次元」/「保存」）。
+## 附魔的显示名（「费用 -1」/「伤害 +10」/「次元之力」/「保存」/「起手」）。
+## ⚠️ 与**字段**名（`AFFIX_DEFS`，如「次元」）是两个命名空间，别重名（R240）。
 static func enchant_name(id: String) -> String:
 	if id == "":
 		return ""
