@@ -140,6 +140,11 @@ var upgrade_stacks: int = 0
 ## 以及结算多少 —— 之前那里硬编码 `f.id == FOUNTAIN_ID`，加第二张持续型场地就会被忽略）。
 ## 放卡面而不是引擎常量：**加新的治疗型场地只要填这个数字，引擎一行都不用改**。
 var field_heal: int = 0
+## **卡面自带的「每回合结束回血」**（R233）：犀牛 9016 = 2，其余 = 0。
+## 0 = 这张单位不回血。由 `GameEngine._regen_tick` 在**该单位所属方回合结束**时
+## 与 `Placement.regen`（自我修复给的）、太阳熔炉光环**相加**结算；
+## 放卡面而不是引擎常量：加新的「自带回血」单位只要填这个数字，引擎一行都不用改。
+var regen_per_turn: int = 0
 ## **字段系统（R91）**：这张卡当前带有的字段名列表。见上方 AFFIX_DEFS。
 var affixes: Array[String] = []
 ## **商店附魔 id**（R214，见上方 ENCHANT_DEFS；"" = 没附魔）。
@@ -180,6 +185,7 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.upgrade_hp_bonus = int(d.get("upgrade_hp_bonus", 0))
 	c.upgrade_stacks = maxi(0, int(d.get("upgrade_stacks", 0)))
 	c.field_heal = int(d.get("field_heal", 0))
+	c.regen_per_turn = maxi(0, int(d.get("regen_per_turn", 0)))
 	c.own_copy = bool(d.get("own_copy", false))
 	# R214：附魔 id 随序列化走（烤数值之后它是「这张卡被附魔过」的唯一凭据）
 	c.enchant = str(d.get("enchant", ""))
@@ -212,6 +218,9 @@ func to_dict() -> Dictionary:
 		# 改造 / 离场还原 / 联机序列化的统一通道，漏了它字段会静默归 0
 		#（持续型场地直接失效）。
 		"field_heal": field_heal,
+		# R233：自带每回合回血必须随序列化走（复制 / 离场还原 / 联机共用这条通道），
+		# 漏了它 = 犀牛一上场 / 一复制就失去回血。
+		"regen_per_turn": regen_per_turn,
 		# R123：独立副本标记随序列化走 —— 复制 / 离场还原之后减费记账仍跟着这一张。
 		"own_copy": own_copy,
 		# R214：附魔 id **必须**在这里 —— 复制 / 离场还原 / 联机共用这条通道，

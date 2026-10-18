@@ -2872,8 +2872,9 @@ func _init() -> void:
 	var nc_rider := repo.get_card(9016)
 	check(nc_rider.card_name == "犀牛" and nc_rider.cost == 4 and nc_rider.power == 6
 			and nc_rider.health == 12 and nc_rider.attack_range == 1
-			and nc_rider.move_speed == 2 and nc_rider.rarity == 0,
-			"犀牛（R125 由「骑兵」改名）：普通 4 费 6/12 程1 速2")
+			and nc_rider.move_speed == 2 and nc_rider.rarity == 0
+			and nc_rider.regen_per_turn == 2,
+			"犀牛（R125 改名；R233 加强每回合回 2）：普通 4 费 6/12 程1 速2")
 	var nc_archer := repo.get_card(9017)
 	check(nc_archer.card_name == "鸭子弓手" and nc_archer.power == 3
 			and nc_archer.health == 18 and nc_archer.attack_range == 2
@@ -17958,6 +17959,33 @@ func _init() -> void:
 	var r232_ep: Placement = r232_hit_e.state.unit_at(Vector2i(0, 1))
 	check(r232_ep != null and r232_ep.health == 21,
 			"R232 蓄势打出：对目标造成 value=9 伤害（30→%d）" % (r232_ep.health if r232_ep else -1))
+
+	# ---- R233：犀牛加强（每回合结束回复 2 点生命）----
+	var r233_repo := CardRepo.load_json()
+	var r233_rhino := r233_repo.get_card(9016)
+	check(r233_rhino != null and r233_rhino.regen_per_turn == 2
+			and r233_rhino.effect_text.contains("回复 2 点生命"),
+			"R233 犀牛：regen_per_turn=2，卡面写明每回合回复 2 点生命")
+	var r233_e := _new_engine([], 20, 20)
+	r233_e.start_game(1)
+	r233_e.state.place(CardData.from_dict(r233_rhino.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r233_e.state.unit_at(Vector2i(4, 1)).health = 6
+	r233_e.end_turn()
+	var r233_after: int = r233_e.state.unit_at(Vector2i(4, 1)).health
+	check(r233_after == 8, "R233 犀牛：回合结束回复 2 点生命（6 → %d）" % r233_after)
+	var r233_e2 := _new_engine([], 20, 20)
+	r233_e2.start_game(1)
+	r233_e2.state.place(CardData.from_dict(r233_rhino.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r233_e2.state.unit_at(Vector2i(4, 1)).health = 11
+	r233_e2.end_turn()
+	var r233_cap: int = r233_e2.state.unit_at(Vector2i(4, 1)).health
+	check(r233_cap == 12, "R233 犀牛：11/12 回 2 夹到上限 12（%d）" % r233_cap)
+	var r233_e3 := _new_engine([], 20, 20)
+	r233_e3.start_game(1)
+	r233_e3.state.place(CardData.from_dict(r233_rhino.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r233_e3.end_turn()
+	var r233_full: int = r233_e3.state.unit_at(Vector2i(4, 1)).health
+	check(r233_full == 12, "R233 犀牛：满血不再回复（仍 %d/12，不越界）" % r233_full)
 
 	# ================================================================
 

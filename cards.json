@@ -693,8 +693,9 @@
       "traits": [
         "犀牛"
       ],
-      "effect_text": "受到伤害减少 1 点，但至少仍要受到 1 点。",
+      "effect_text": "受到伤害减少 1 点，但至少仍要受到 1 点。每回合结束时回复 2 点生命。",
       "target_mode": "none",
+      "regen_per_turn": 2,
       "color": "白",
       "image": ""
     },

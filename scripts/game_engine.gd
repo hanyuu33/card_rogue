@@ -4204,7 +4204,11 @@ func _regen_tick(side: String) -> void :
 		if p.card.id == SUN_FORGE_FURY_ID and state.has_sun_forge(side):
 			aura = SUN_FORGE_REGEN
 			origin = "太阳熔炉"
-		var amount: int = p.regen + aura
+		# R233：卡面自带的「每回合结束回血」（犀牛 9016 = 2）—— 与自我修复 / 太阳熔炉
+		# 相加走同一次收尾（满血跳过 / mini 夹上限），三者互不顶掉、也不会越界。
+		if p.regen <= 0 and p.card.regen_per_turn > 0 and aura <= 0:
+			origin = "自身"
+		var amount: int = p.regen + p.card.regen_per_turn + aura
 		if amount <= 0:
 			continue
 		if p.health >= p.card.health:
