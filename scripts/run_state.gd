@@ -217,6 +217,11 @@ const COURAGE_RELIC_ID := 6031
 const POT_RELIC_ID := 6032
 const POT_RELIC_COUNT := 2
 const JAR_CURSE_ID := 9157        # 罐子（诅咒卡；召唤物是 9158）
+# R246 二层起始道具：兼修（6033）—— 每回合 +1 费，且奖励/商店不再按职业过滤。
+# 判定只看「持有这件道具」（不去存一个 bool），存档 / 换层 / 读档都不用额外照顾。
+const VERSATILE_RELIC_ID := 6033
+# R246 二层起始道具：附魔大师（6034）—— 每次在篝火处休息，随机附一个合规附魔。
+const ENCHANT_MASTER_RELIC_ID := 6034
 # R224 新道具：牛奶（6028，奖励池）—— 获得时随机摇 **2 种**互不重复的附魔，
 # 各附到一张卡组里「能附且尚未附魔」的卡上（资格判定走 `enchant_ok` 唯一口；
 # 某种附魔当前没有合规目标就跳过，不强求附满）。
@@ -699,6 +704,37 @@ static func _apply_pot() -> void:
 		var pick: int = pool.pop_at(run_rng.randi() % pool.size())
 		gain_relic(pick)
 	add_card(JAR_CURSE_ID)
+
+
+static func all_class_rewards() -> bool:
+	## R246 兼修（6033）：卡牌奖励与商店是否放开职业限制（出现所有职业的卡牌）。
+	## 消费点 = `CardReward.roll()` 的默认 cid 分支（奖励悬浮窗 / 商店共用那一条）。
+	return relics.has(VERSATILE_RELIC_ID)
+
+
+static func enchant_master_on_rest() -> Dictionary:
+	## R246 附魔大师（6034）：每次在篝火处休息 → **随机一张卡** + **随机一个合规附魔**。
+	## 合规判据唯一口 = `enchant_ok()`（damage 只给伤害技能 / dimension 只给盟友工事 / …），
+	## 所以「罐子」这类诅咒、已附魔的卡都不会被瞎附。
+	## 随机一律走 `run_rng`（同种子重放一致）。返回 {ok, idx, card, ench}。
+	if not relics.has(ENCHANT_MASTER_RELIC_ID):
+		return {"ok": false}
+	var pool: Array[String] = []
+	for eid: String in CardData.ENCHANT_DEFS.keys():
+		if not _milk_targets(eid).is_empty():
+			pool.append(eid)
+	if pool.is_empty():
+		return {"ok": false, "reason": "no_target"}
+	var eid2: String = pool[run_rng.randi() % pool.size()]
+	var idxs := _milk_targets(eid2)
+	if idxs.is_empty():
+		return {"ok": false, "reason": "no_target"}
+	var idx: int = idxs[run_rng.randi() % idxs.size()]
+	if not enchant_deck_card(idx, enchant_mod(eid2)):
+		return {"ok": false}
+	var c := CardRepo.load_json().get_card(deck_ids[idx])
+	return {"ok": true, "idx": idx, "ench": eid2,
+			"card": c.card_name if c != null else "?"}
 
 
 static func has_relic(id: int) -> bool:

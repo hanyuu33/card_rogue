@@ -611,9 +611,9 @@ func _check_shop_enchant(scene: Variant) -> void:
 	if CardData.enchant_name("dimension") == CardData.affix_label(GameEngine.AFFIX_DIMENSION):
 		_smoke_fail("R240 商店附魔：附魔名不能与字段同名（dimension 应叫「次元之力」）")
 		return
-	# R229：「起手」（必定第 1 回合抽到）应 50 金，且出现在附魔表里
-	if int(price.get("opening", -1)) != 50:
-		_smoke_fail("商店附魔：起手应 50 金（实际 %s）" % str(price.get("opening", -1)))
+	# R229：「起手」（必定第 1 回合抽到）出现在附魔表里；R246 起价格 50 → **30 金**
+	if int(price.get("opening", -1)) != 30:
+		_smoke_fail("R246 商店附魔：起手应 30 金（实际 %s）" % str(price.get("opening", -1)))
 		return
 	# 「伤害 +10」**只认技能卡**：有攻击力的盟友也必须被拒；技能卡必须能选。
 	# deck_idx 传 9999 → `_mod_at` 越界返回 {} → 「未附魔」这一关不会挡路。

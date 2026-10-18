@@ -30,7 +30,12 @@ static func type_label(reward_type: String) -> String:
 static func roll(repo: CardRepo, reward_type: String, count: int = CHOICES,
 		rng: RandomNumberGenerator = null, kinds: Array[String] = [],
 		cid: String = "") -> Array[CardData]:
-	var pool := repo.reward_pool_for(cid if cid != "" else RunState.player_class)
+	# R246 兼修（6033）：持有它 → 奖励（连带商店那一行）不再按职业过滤。
+	# ⚠️ 只影响「默认 cid」这一支：显式传 cid 的调用（事件 / 测试）语义不变。
+	var want_cid := cid
+	if want_cid == "":
+		want_cid = "" if RunState.all_class_rewards() else RunState.player_class
+	var pool := repo.reward_pool_for(want_cid)
 	if not kinds.is_empty():
 		var filtered: Array[CardData] = []
 		for c: CardData in pool:

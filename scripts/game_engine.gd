@@ -290,6 +290,8 @@ const COURAGE_BOSS_TURNS:= 2
 # R245 诅咒「罐子」（9157）与它的召唤物（9158）。
 const JAR_CURSE_ID:= 9157
 const JAR_TOKEN_ID:= 9158
+# R246 二层起始道具「兼修」（6033）：我方每回合额外 +1 费用（与其它「回合开始加费」并列）。
+const VERSATILE_RELIC_ID:= 6033
 
 
 const PEAR_RELIC_ID:= 6019
@@ -1359,6 +1361,11 @@ func _begin_turn(side: String) -> void :
 				state.energy += 1
 				_log("勇气徽章：%s第 %d 回合，费用 +1"
 						% ["精英战" if battle_kind == "elite" else "Boss 战", turn_number])
+
+		# 兼修（6033，R246）：我方每回合额外 +1 费用（不分战斗类型）。
+		if self_relics.has(VERSATILE_RELIC_ID):
+			state.energy += 1
+			_log("兼修：本回合费用 +1")
 
 		var whisper_txt:= ""
 		if self_relics.has(6010):

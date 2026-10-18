@@ -1033,9 +1033,16 @@ func _on_main() -> void:
 		if _bbq_taken:
 			return
 		var gain := RunState.rest()
+		# R246 附魔大师（6034）：休息的同一次里随机给一张卡附一个合规附魔。
+		# 结算排在回血之后（回血先落，再谈附魔），结果写进同一行提示。
+		var em := RunState.enchant_master_on_rest()
 		_collapse_to_leave()
-		result_label.text = "篝火的温暖涌上心头……回复 %d 点生命（当前 %d / %d）" % [
-				gain, RunState.hp, RunState.max_hp]
+		var em_txt := ""
+		if bool(em.get("ok", false)):
+			em_txt = "；附魔大师给「%s」附上了「%s」" % [
+					str(em.get("card", "")), CardData.enchant_name(str(em.get("ench", "")))]
+		result_label.text = "篝火的温暖涌上心头……回复 %d 点生命（当前 %d / %d）%s" % [
+				gain, RunState.hp, RunState.max_hp, em_txt]
 		result_label.add_theme_color_override("font_color", UiTheme.SIDE_SELF_TEXT)
 		_redraw()
 		return

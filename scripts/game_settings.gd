@@ -1,6 +1,7 @@
 class_name GameSettings
 extends RefCounted
 ## 全局设置（R215）—— 音效 / 音乐 / 全屏，落盘 `user://settings.cfg`。
+## R246：音效 / 音乐各加一档**音量**（0~1，10% 一档）；`Sfx` / `Bgm` 建好时读它。
 ##
 ## 为什么要有它：标题页原来**没有设置入口**，音效开关只散在各场景的 Esc 菜单里，
 ## 而且关掉之后一换场景就恢复默认（每个场景新建 Sfx 都是 `enabled = true`）。
@@ -18,6 +19,9 @@ const PATH := "user://settings.cfg"
 static var sfx_on := true
 static var music_on := true
 static var fullscreen := false
+## R246 音量（0.0 ~ 1.0，线性）：100% = 原来的音量（音效 0dB / 音乐 -12dB）。
+static var sfx_volume := 1.0
+static var music_volume := 1.0
 ## R241「下一局种子」：0 = 每局随机；非 0 = 新开一局就用它（复现某一局用）。
 ## 放在设置里而不是角色选择页：那个页面是「一个动作」的界面，多一个输入框会抢焦点。
 static var next_seed := 0
@@ -35,6 +39,8 @@ static func ensure_loaded() -> void:
 		return
 	sfx_on = bool(cf.get_value("audio", "sfx", true))
 	music_on = bool(cf.get_value("audio", "music", true))
+	sfx_volume = clampf(float(cf.get_value("audio", "sfx_volume", 1.0)), 0.0, 1.0)
+	music_volume = clampf(float(cf.get_value("audio", "music_volume", 1.0)), 0.0, 1.0)
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
 	next_seed = int(cf.get_value("run", "seed", 0))
 
@@ -43,6 +49,8 @@ static func save() -> void:
 	var cf := ConfigFile.new()
 	cf.set_value("audio", "sfx", sfx_on)
 	cf.set_value("audio", "music", music_on)
+	cf.set_value("audio", "sfx_volume", sfx_volume)
+	cf.set_value("audio", "music_volume", music_volume)
 	cf.set_value("display", "fullscreen", fullscreen)
 	cf.set_value("run", "seed", next_seed)
 	cf.save(PATH)
@@ -61,6 +69,27 @@ static func set_music_on(v: bool) -> void:
 	if v == music_on:
 		return
 	music_on = v
+	save()
+
+
+static func set_sfx_volume(v: float) -> void:
+	## R246：0~1 线性音量（调用方负责把它落到正在播的 `Sfx` 实例上）。
+	## 只在**真的变了**时写盘 —— 与其它 setter 同一条纪律。
+	ensure_loaded()
+	var nv := clampf(v, 0.0, 1.0)
+	if is_equal_approx(nv, sfx_volume):
+		return
+	sfx_volume = nv
+	save()
+
+
+static func set_music_volume(v: float) -> void:
+	## R246：同上（音乐）。
+	ensure_loaded()
+	var nv := clampf(v, 0.0, 1.0)
+	if is_equal_approx(nv, music_volume):
+		return
+	music_volume = nv
 	save()
 
 

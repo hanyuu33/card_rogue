@@ -12,6 +12,8 @@ const RATE := 22050
 const VOICES := 8
 
 var enabled := true
+## R246：音量（0.0~1.0 线性）。100% = 0dB（原音量）；每次播放时落到播放器上。
+var volume := 1.0
 var _streams := {}
 var _players: Array[AudioStreamPlayer] = []
 var _next := 0
@@ -21,6 +23,7 @@ func _ready() -> void:
 	# R215：音效开关跟着设置走（各场景 Esc 菜单里的开关也不再随场景重置）。
 	GameSettings.ensure_loaded()
 	enabled = GameSettings.sfx_on
+	volume = GameSettings.sfx_volume
 	for i in VOICES:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
@@ -50,6 +53,10 @@ func play(name: String) -> void:
 	_next = (_next + 1) % VOICES
 	p.stream = _streams[name]
 	p.pitch_scale = randf_range(0.96, 1.04)
+	# R246：音量 0 = 直接不播（linear_to_db(0) 是 -inf，别让它进到播放器里）
+	if volume <= 0.001:
+		return
+	p.volume_db = linear_to_db(clampf(volume, 0.001, 1.0))
 	p.play()
 
 

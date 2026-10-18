@@ -39,8 +39,9 @@ const ENCHANTS := [
 		"price": 80, "icon": "shop_icon_dimension"},
 	{"id": "save", "name": "保存", "desc": "赋予「保存」——回合结束时手牌这张不丢弃",
 		"price": 60, "icon": "shop_icon_save"},
+	# R246：起手 50 → **30 金**（用户口径：第一回合抽到的附魔价格降为 30）。
 	{"id": "opening", "name": "起手", "desc": "第一回合必定抽到（任何卡都能选）",
-		"price": 50, "icon": "shop_icon_opening"},
+		"price": 30, "icon": "shop_icon_opening"},
 ]
 
 var _font: Font

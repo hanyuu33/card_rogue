@@ -6423,9 +6423,10 @@ func _init() -> void:
 	# ---- 第二层：起始道具池 / 满血接层 / 层推进 ----
 	var l2repo := RelicRepo.load_json()
 	var l2ids := l2repo.layer2_ids()
-	check(l2ids.size() == 5 and l2ids.has(6014) and l2ids.has(6015)
-			and l2ids.has(6016) and l2ids.has(6017) and l2ids.has(6018),
-			"第二层起始道具池 5 件（黄桃罐头/鸭语耳环/冰淇淋与汽水/重鸭/生蛋鸭）")
+	check(l2ids.size() == 7 and l2ids.has(6014) and l2ids.has(6015)
+			and l2ids.has(6016) and l2ids.has(6017) and l2ids.has(6018)
+			and l2ids.has(6033) and l2ids.has(6034),
+			"第二层起始道具池 7 件（黄桃罐头/鸭语耳环/冰淇淋与汽水/重鸭/生蛋鸭 + R246 兼修 6033 / 附魔大师 6034）")
 	var l2_overlap := false
 	for rid in l2ids:
 		if l2repo.initial_ids().has(rid) or l2repo.reward_ids().has(rid) \
@@ -18647,6 +18648,135 @@ func _init() -> void:
 			and r245_eng_p.state.discard.size() == 1
 			and r245_eng_p.state.discard[0].id == 9157,
 			"R245 罐子：打出它 = 付 1 费、无效果、进弃牌区（规避手段）")
+
+	# ==== R246：音量设置 / 起手 30 金 / 二层道具「兼修」6033 +「附魔大师」6034 ====
+	# ---- 音量：设置读写 + 落到 Sfx / Bgm ----
+	GameSettings.ensure_loaded()
+	var r246_sfx0 := GameSettings.sfx_volume
+	GameSettings.set_sfx_volume(0.4)
+	check(is_equal_approx(GameSettings.sfx_volume, 0.4),
+			"R246 音量：音效音量可设（0.4）")
+	GameSettings.set_sfx_volume(-3.0)
+	check(is_equal_approx(GameSettings.sfx_volume, 0.0), "R246 音量：负数夹到 0")
+	GameSettings.set_sfx_volume(9.0)
+	check(is_equal_approx(GameSettings.sfx_volume, 1.0), "R246 音量：超过 1 夹到 1")
+	GameSettings.set_sfx_volume(r246_sfx0)
+	var r246_bgm0 := Bgm.volume
+	Bgm.set_volume(0.5)
+	check(is_equal_approx(Bgm.volume, 0.5)
+			and is_equal_approx(Bgm.target_db(), Bgm.BGM_VOLUME_DB + linear_to_db(0.5)),
+			"R246 音量：音乐音量换成目标 dB（50% 时比满档低 6dB）")
+	Bgm.set_volume(1.0)
+	check(is_equal_approx(Bgm.target_db(), Bgm.BGM_VOLUME_DB),
+			"R246 音量：音乐 100% 与原来的 -12dB 完全一致（不凭空变响）")
+	Bgm.set_volume(0.0)
+	check(Bgm.target_db() < -50.0, "R246 音量：音乐 0% 近乎静音（不会算出 -inf）")
+	Bgm.set_volume(r246_bgm0)
+	var r246_sfx := Sfx.new()
+	check(r246_sfx.volume >= 0.0 and r246_sfx.volume <= 1.0,
+			"R246 音量：Sfx 实例带 volume 字段（0~1）")
+	r246_sfx.free()
+	# ---- 起手附魔：50 → 30 金（价格真源在 shop_scene.ENCHANTS）----
+	var r246_shop_map: Dictionary = (load("res://scripts/shop_scene.gd") as Script) 			.get_script_constant_map()
+	var r246_prices := {}
+	for e: Dictionary in (r246_shop_map["ENCHANTS"] as Array):
+		r246_prices[str(e["id"])] = int(e["price"])
+	check(int(r246_prices.get("opening", -1)) == 30,
+			"R246 起手附魔：价格 50 → 30 金（实际 %d）" % int(r246_prices.get("opening", -1)))
+	check(int(r246_prices.get("dimension", -1)) == 80 and int(r246_prices.get("damage", -1)) == 60,
+			"R246 起手附魔：只调了起手价，其余四种不变")
+	# ---- 两件二层起始道具的数据 ----
+	var r246_rrepo := RelicRepo.load_json()
+	var r246_l2 := r246_rrepo.layer2_ids()
+	check(r246_l2.size() == 7 and r246_l2.has(6033) and r246_l2.has(6034),
+			"R246 二层起始道具池：+兼修 6033 / +附魔大师 6034（%d 件）" % r246_l2.size())
+	check(r246_rrepo.get_relic(6033) != null
+			and r246_rrepo.get_relic(6033).source == RelicData.SRC_LAYER2
+			and r246_rrepo.get_relic(6033).kind == "战斗"
+			and r246_rrepo.get_relic(6034) != null
+			and r246_rrepo.get_relic(6034).source == RelicData.SRC_LAYER2
+			and r246_rrepo.get_relic(6034).kind == "持续",
+			"R246 两件新二层道具：来源=二层，兼修=战斗类 / 附魔大师=持续类")
+	check(not r246_rrepo.initial_ids().has(6033) and not r246_rrepo.reward_ids().has(6033)
+			and not r246_rrepo.event_ids().has(6034),
+			"R246 两件新道具只进二层起始池（不串初始 / 奖励 / 事件池）")
+	# ---- 兼修：每回合 +1 费 ----
+	var r246_eng := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)), 40, 40, -1, false)
+	r246_eng.self_relics = [6033]
+	r246_eng.start_game()
+	var r246_e1: int = r246_eng.state.energy
+	r246_eng.end_turn()
+	r246_eng.end_turn()
+	var r246_e2: int = r246_eng.state.energy
+	check(r246_e1 == FieldState.ENERGY_PER_TURN + 1 and r246_e2 == FieldState.ENERGY_PER_TURN + 1,
+			"R246 兼修：每回合额外 +1 费（第 1 / 2 回合 = %d / %d）" % [r246_e1, r246_e2])
+	# ---- 兼修：奖励（含商店那一行）放开所有职业 ----
+	RunState.end_run()
+	var r246_run_rng := RandomNumberGenerator.new()
+	r246_run_rng.seed = 20261021
+	RunState.start_run(RogueMap.generate(r246_run_rng))
+	check(not RunState.all_class_rewards(), "R246 兼修：未持有时奖励仍按职业过滤")
+	var r246_crng := RandomNumberGenerator.new()
+	r246_crng.seed = 777
+	var r246_narrow := CardReward.roll(CardRepo.load_json(), "normal", 20, r246_crng)
+	var r246_narrow_ok := true
+	for c: CardData in r246_narrow:
+		if c.card_class != "" and c.card_class != RunState.player_class:
+			r246_narrow_ok = false
+	check(r246_narrow_ok, "R246 兼修：持有前 20 次抽卡不会跨职业")
+	RunState.gain_relic(6033)
+	check(RunState.all_class_rewards(), "R246 兼修：持有后奖励放开所有职业")
+	var r246_crng2 := RandomNumberGenerator.new()
+	r246_crng2.seed = 777
+	var r246_wide := CardReward.roll(CardRepo.load_json(), "normal", 20, r246_crng2)
+	var r246_cross := 0
+	for c: CardData in r246_wide:
+		if c.card_class != "" and c.card_class != RunState.player_class:
+			r246_cross += 1
+	check(r246_cross > 0, "R246 兼修：同一串随机能抽到别的职业（跨职业 %d 张）" % r246_cross)
+	var r246_crng3 := RandomNumberGenerator.new()
+	r246_crng3.seed = 778
+	var r246_explicit := CardReward.roll(CardRepo.load_json(), "normal", 12, r246_crng3, [], "暗影刺客")
+	var r246_exp_ok := true
+	for c: CardData in r246_explicit:
+		if c.card_class != "" and c.card_class != "暗影刺客":
+			r246_exp_ok = false
+	check(r246_exp_ok, "R246 兼修：显式传 cid 的调用语义不变（不被全局放开影响）")
+	# ---- 附魔大师：休息时随机一张卡 + 随机合规附魔 ----
+	RunState.end_run()
+	var r246_run2 := RandomNumberGenerator.new()
+	r246_run2.seed = 20261022
+	RunState.start_run(RogueMap.generate(r246_run2))
+	check(not bool(RunState.enchant_master_on_rest().get("ok", true)),
+			"R246 附魔大师：未持有时休息不附魔")
+	RunState.gain_relic(6034)
+	var r246_em := RunState.enchant_master_on_rest()
+	check(bool(r246_em.get("ok", false)) and int(r246_em.get("idx", -1)) >= 0,
+			"R246 附魔大师：休息时给一张卡附了魔（%s ← %s）"
+			% [str(r246_em.get("card", "")), str(r246_em.get("ench", ""))])
+	var r246_idx: int = int(r246_em.get("idx", -1))
+	var r246_mod: Dictionary = RunState._mod_at(r246_idx)
+	check(not r246_mod.is_empty(), "R246 附魔大师：附魔真的写进了 deck_mods")
+	var r246_card := CardRepo.load_json().get_card(RunState.deck_ids[r246_idx])
+	var r246_eid := str(r246_em.get("ench", ""))
+	var r246_legal := false
+	match r246_eid:
+		"damage":
+			r246_legal = r246_card.is_damage_spell()
+		"dimension":
+			r246_legal = (r246_card.kind == "盟友" or r246_card.is_fort()) \
+					and not r246_card.is_effect()
+		"costdown":
+			r246_legal = r246_card.cost > 1 and not r246_card.x_cost
+		"save", "opening":
+			r246_legal = true
+	check(r246_legal, "R246 附魔大师：附上的附魔对目标合规（%s → %s）"
+			% [r246_eid, r246_card.card_name])
+	var r246_enchanted := 0
+	for r246_m in RunState.deck_mods:
+		if r246_m is Dictionary and not (r246_m as Dictionary).is_empty():
+			r246_enchanted += 1
+	check(r246_enchanted == 1, "R246 附魔大师：一次休息只附一张卡（实际 %d）" % r246_enchanted)
 
 	# ================================================================
 

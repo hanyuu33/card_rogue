@@ -44,6 +44,9 @@ const BGM_DIR := "res://assets/audio/bgm/"
 const BGM_VOLUME_DB := -12.0
 const FADE_SEC := 0.6
 const SILENT_DB := -60.0
+## R246：音量倍率（0.0~1.0 线性）。**100% 时目标音量仍是 BGM_VOLUME_DB** ——
+## 换句话说「音量 100%」= 以前一直听到的那一档，不凭空变响。
+static var volume := 1.0
 
 ## 槽位 → 曲目名（仅供 credits / 自检对照；实际播放只认同名 ogg 文件）
 const SLOT_TRACKS := {
@@ -57,6 +60,21 @@ const SLOT_TRACKS := {
 }
 
 static var _inst: Bgm = null                       # 唯一实例（惰性创建）
+
+
+static func target_db() -> float:
+	## 当前音量对应的目标 dB（唯一口：淡入终点 / 立刻生效 都走它）。
+	return BGM_VOLUME_DB + linear_to_db(clampf(volume, 0.001, 1.0))
+
+
+static func set_volume(v: float) -> void:
+	## R246：设置页调音量。**只改这里的运行值**，落盘由 `GameSettings.set_music_volume`
+	## 负责（这条分工让测试能随便调，不会污染玩家的 settings.cfg）。
+	volume = clampf(v, 0.0, 1.0)
+	var n := instance()
+	if n != null and not n._fading and n._active != null:
+		n._active.volume_db = target_db()
+
 
 var enabled := true
 var current := ""                                  # 当前（含正在淡入）的槽位
@@ -189,6 +207,7 @@ func _ready() -> void:
 	# R215：音乐开关跟着设置走（`--nomusic` 仍优先于设置 —— 跑测试/出图时一律静音）。
 	GameSettings.ensure_loaded()
 	enabled = GameSettings.music_on
+	volume = GameSettings.music_volume
 	if "--nomusic" in OS.get_cmdline_user_args():
 		enabled = false
 	_ensure_players()
@@ -229,7 +248,7 @@ func _process(delta: float) -> void:
 	_fade_t += delta
 	var k := clampf(_fade_t / FADE_SEC, 0.0, 1.0)
 	if _active != null:
-		_active.volume_db = lerpf(SILENT_DB, BGM_VOLUME_DB, k)
+		_active.volume_db = lerpf(SILENT_DB, target_db(), k)
 	if _out != null:
 		_out.volume_db = lerpf(_out_from_db, SILENT_DB, k)
 	if k >= 1.0:
@@ -237,7 +256,7 @@ func _process(delta: float) -> void:
 			_out.stop()
 		_out = null
 		if _active != null:
-			_active.volume_db = BGM_VOLUME_DB
+			_active.volume_db = target_db()
 		_fading = false
 
 

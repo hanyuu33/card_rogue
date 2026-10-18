@@ -1,5 +1,6 @@
 extends Control
 ## 设置页（R215）—— 音效 / 音乐 / 全屏。三项都**立刻生效并记住**（GameSettings）。
+## R246：音效 / 音乐各加一行**音量**（− / + 或点条直接定位，10% 一档；同样即时生效并记住）。
 ##
 ## 入口：标题页「设置」按钮。之所以单开一页而不是塞进标题页：标题页是按钮栈
 ## （`Buttons` 容器），塞开关进去会把一屏一个主按钮的层次搞乱。
@@ -7,10 +8,13 @@ extends Control
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const ROW_W := 520.0
-const ROW_H := 64.0
-const ROW_GAP := 14.0
-const LIST_Y := 220.0
+const ROW_H := 54.0        # R246：5 行（3 开关 + 2 音量）要塞进原来 3 行的位置
+const ROW_GAP := 10.0
+const ROW_COUNT := 5
+const LIST_Y := 190.0
 const SEED_H := 138.0     # R241：种子面板高度
+const VOL_STEP := 0.1      # R246：音量一档 10%
+const VOL_NUM := 20
 
 var _font: Font
 var _font_bold: Font
@@ -50,7 +54,7 @@ func _ready() -> void:
 
 func _seed_panel_rect() -> Rect2:
 	## 三行开关下面的一块 —— 本局种子（只读）+ 下一局种子（可填）。
-	var last := _row_rect(2)
+	var last := _row_rect(ROW_COUNT - 1)
 	return Rect2(last.position.x, last.end.y + 22.0, ROW_W, SEED_H)
 
 
@@ -140,9 +144,19 @@ func _process(_delta: float) -> void:
 # ------------------------------------------------------------ 布局 / 输入
 
 func _row_rect(i: int) -> Rect2:
-	var total := 3.0 * ROW_H + 2.0 * ROW_GAP
+	var total := float(ROW_COUNT) * ROW_H + float(ROW_COUNT - 1) * ROW_GAP
 	var y := LIST_Y + (320.0 - total) * 0.35
 	return Rect2((size.x - ROW_W) / 2.0, y + i * (ROW_H + ROW_GAP), ROW_W, ROW_H)
+
+
+func _vol_rects(r: Rect2) -> Array[Rect2]:
+	## R246 音量行右侧的几何唯一口（画与点共用）：[−][条][+]。
+	var cy := r.position.y + r.size.y / 2.0
+	return [
+		Rect2(r.position.x + r.size.x - 300.0, cy - 16.0, 32.0, 32.0),
+		Rect2(r.position.x + r.size.x - 260.0, cy - 7.0, 118.0, 14.0),
+		Rect2(r.position.x + r.size.x - 134.0, cy - 16.0, 32.0, 32.0),
+	]
 
 
 func _back_rect() -> Rect2:
@@ -150,7 +164,7 @@ func _back_rect() -> Rect2:
 
 
 func _row_at(pos: Vector2) -> int:
-	for i in 3:
+	for i in ROW_COUNT:
 		if _row_rect(i).has_point(pos):
 			return i
 	return -1
@@ -170,6 +184,22 @@ func _gui_input(event: InputEvent) -> void:
 			return
 		var i := _row_at(event.position)
 		if i >= 0:
+			if str(_row(i).get("kind", "toggle")) == "volume":
+				var vr := _vol_rects(_row_rect(i))
+				if vr[0].has_point(event.position):
+					sfx.play("click")
+					_nudge_volume(i, -VOL_STEP)
+					return
+				if vr[2].has_point(event.position):
+					sfx.play("click")
+					_nudge_volume(i, VOL_STEP)
+					return
+				if vr[1].grow(8.0).has_point(event.position):
+					# 点条上任意位置直接定位（条本身就是滑块）
+					sfx.play("click")
+					_set_volume(i, (event.position.x - vr[1].position.x) / vr[1].size.x)
+					return
+				return   # 点行进空白处：不动作（别把音量行当成开关翻掉）
 			sfx.play("click")
 			_flip(i)
 			return
@@ -187,13 +217,40 @@ func _flip(i: int) -> void:
 			sfx.enabled = GameSettings.sfx_on
 			if sfx.enabled:
 				sfx.play("click")
-		1:
+		2:
 			GameSettings.set_music_on(not GameSettings.music_on)
 			Bgm.set_enabled(GameSettings.music_on)
 			if GameSettings.music_on:
 				Bgm.play("title")   # 当场就有反馈（否则要等下一次切场景才响）
-		2:
+		4:
 			GameSettings.set_fullscreen(not GameSettings.fullscreen)
+	queue_redraw()
+
+
+func _nudge_volume(i: int, delta: float) -> void:
+	## R246：− / + 按一档（10%）步进，并对齐到整档（避免 10% 累积出 0.30000001）。
+	var cur := _volume_of(i)
+	var steps := roundf((cur + delta) * float(VOL_NUM))
+	_set_volume(i, steps / float(VOL_NUM))
+
+
+func _volume_of(i: int) -> float:
+	GameSettings.ensure_loaded()
+	return GameSettings.sfx_volume if i == 1 else GameSettings.music_volume
+
+
+func _set_volume(i: int, v: float) -> void:
+	## 唯一落地点：写设置 + 落到正在播的实例 + 重绘（两档音量共用）。
+	var nv := clampf(v, 0.0, 1.0)
+	nv = roundf(nv * float(VOL_NUM)) / float(VOL_NUM)   # 吸附到 5% 网格（点条也整齐）
+	if i == 1:
+		GameSettings.set_sfx_volume(nv)
+		sfx.volume = nv
+		if nv > 0.0:
+			sfx.play("click")   # 当场听到新音量
+	else:
+		GameSettings.set_music_volume(nv)
+		Bgm.set_volume(nv)
 	queue_redraw()
 
 
@@ -208,12 +265,18 @@ func _row(i: int) -> Dictionary:
 	match i:
 		0:
 			return {"title": "音效", "desc": "点击 / 出牌 / 攻击等提示音",
-					"on": GameSettings.sfx_on}
+					"kind": "toggle", "on": GameSettings.sfx_on}
 		1:
+			return {"title": "音效音量", "desc": "点 − / + 调整",
+					"kind": "volume", "val": GameSettings.sfx_volume}
+		2:
 			return {"title": "音乐", "desc": "背景音乐（标题 / 地图 / 战斗各自换曲）",
-					"on": GameSettings.music_on}
+					"kind": "toggle", "on": GameSettings.music_on}
+		3:
+			return {"title": "音乐音量", "desc": "点 − / + 调整",
+					"kind": "volume", "val": GameSettings.music_volume}
 	return {"title": "全屏", "desc": "关掉则使用窗口模式（默认窗口）",
-			"on": GameSettings.fullscreen}
+			"kind": "toggle", "on": GameSettings.fullscreen}
 
 
 func _draw() -> void:
@@ -225,7 +288,7 @@ func _draw() -> void:
 				top.lerp(bottom, t), true)
 	draw_string(_font_bold, Vector2(0, 78), "设 置",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_HEADING, UiTheme.SAND)
-	draw_string(_font, Vector2(0, 110), "点一行即可切换 · 自动保存，下次启动仍然有效",
+	draw_string(_font, Vector2(0, 110), "点一行即可切换 · 音量点 − / +（或点进度条）· 自动保存",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
@@ -233,7 +296,7 @@ func _draw() -> void:
 	draw_rect(back, Color(0, 0, 0, 0.35), false, 2.0)
 	draw_string(_font_bold, back.position + Vector2(0, 22), "← 返回标题",
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, Color("e6e2d8"))
-	for i in 3:
+	for i in ROW_COUNT:
 		_draw_row(i, _row(i))
 	_draw_seed_panel()
 	draw_string(_font, Vector2(0, size.y - 28),
@@ -269,13 +332,18 @@ func _draw_seed_panel() -> void:
 func _draw_row(i: int, d: Dictionary) -> void:
 	var r := _row_rect(i)
 	var hov := i == _hover
-	var on := bool(d["on"])
 	draw_rect(r, Color("3a4152") if hov else Color("22242c"), true)
 	draw_rect(r, Color("6a768c") if hov else Color("4a4e58"), false, 1.6)
-	draw_string(_font_bold, r.position + Vector2(20, 27), str(d["title"]),
+	draw_string(_font_bold, r.position + Vector2(20, 24), str(d["title"]),
 			HORIZONTAL_ALIGNMENT_LEFT, 160, UiTheme.FS_BODY, UiTheme.SAND)
-	draw_string(_font, r.position + Vector2(20, 47), str(d["desc"]),
-			HORIZONTAL_ALIGNMENT_LEFT, 360, UiTheme.FS_CAPTION, Color("9a968c"))
+	var is_vol := str(d.get("kind", "toggle")) == "volume"
+	draw_string(_font, r.position + Vector2(20, 43), str(d["desc"]),
+			HORIZONTAL_ALIGNMENT_LEFT, 190.0 if is_vol else 360, UiTheme.FS_CAPTION,
+			Color("9a968c"))
+	if is_vol:
+		_draw_volume_row(r, float(d.get("val", 1.0)))
+		return
+	var on := bool(d["on"])
 	# 右侧开关：药丸底 + 圆点（开 = 绿 / 关 = 灰），文字跟着走
 	var sw := Rect2(r.position.x + r.size.x - 96.0, r.position.y + r.size.y / 2.0 - 15.0,
 			76.0, 30.0)
@@ -287,3 +355,24 @@ func _draw_row(i: int, d: Dictionary) -> void:
 	draw_string(_font_bold, Vector2(sw.position.x - 46.0, sw.position.y + 21.0),
 			"开" if on else "关", HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL,
 			Color("9fd7a5") if on else Color("8b8f98"))
+
+
+func _draw_volume_row(r: Rect2, val: float) -> void:
+	## R246：音量行右侧 = [−][滑条][+][ 80% ]。三块几何走 `_vol_rects`（与点击同一份）。
+	var vr := _vol_rects(r)
+	var mp := get_local_mouse_position()
+	for k in [0, 2]:
+		var b: Rect2 = vr[k]
+		var hb := b.has_point(mp)
+		draw_rect(b, Color("4a5164") if hb else Color("343947"), true)
+		draw_rect(b, Color("7d8aa4") if hb else Color("4a4e58"), false, 1.4)
+		draw_string(_font_bold, b.position + Vector2(0, 22), "−" if k == 0 else "+",
+				HORIZONTAL_ALIGNMENT_CENTER, b.size.x, UiTheme.FS_BODY, Color("e6e2d8"))
+	var bar: Rect2 = vr[1]
+	draw_rect(bar, Color("1b1d24"), true)
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(val, 0.0, 1.0), bar.size.y)),
+			UiTheme.SAND, true)
+	draw_rect(bar, Color("4a4e58"), false, 1.2)
+	draw_string(_font_bold, Vector2(r.position.x + r.size.x - 92.0, bar.position.y + 13.0),
+			"%d%%" % int(roundf(val * 100.0)), HORIZONTAL_ALIGNMENT_LEFT, 76,
+			UiTheme.FS_LABEL, Color("f0c860") if val > 0.0 else Color("8b8f98"))
