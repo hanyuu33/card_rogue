@@ -18066,6 +18066,105 @@ func _init() -> void:
 			"R236：add_chocolate(0) 不让 0 体力变正 → boss_pending 保持")
 	RunState.end_run()
 
+	# ---- R238：陷阱加强 —— 敌人本回合原地不动 → 回合结束触发脚下陷阱 ----
+	var r238_repo := CardRepo.load_json()
+	var r238_trap: CardData = r238_repo.get_card(GameEngine.PIERCE_TRAP_ID)
+	check(r238_trap != null and r238_trap.card_name == "穿刺陷阱"
+			and GameEngine.PIERCE_TRAP_DMG > 0,
+			"R238 陷阱加强：穿刺陷阱用作判定载体（单目标 %d 伤）"
+			% GameEngine.PIERCE_TRAP_DMG)
+	# ① 敌人站在陷阱上、整回合一步没挪 → 敌方回合结束触发并摘牌
+	var r238_e := _new_engine([], 40, 40)
+	r238_e.start_game(1)
+	var r238_foe: Placement = r238_e.state.place(
+			_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 2), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
+	r238_e.state.hand = [CardData.from_dict(r238_trap.to_dict())]
+	r238_e.state.energy = 5
+	r238_e.play_from_hand(0, Vector2i(2, 1))
+	check(r238_e.state.field_at(Vector2i(2, 1)) != null and r238_foe.health == 30,
+			"R238：陷阱落在敌人脚下，落地当下不炸（仍 %d 血）" % r238_foe.health)
+	r238_e.end_turn()   # 我方结束 → 敌方回合开始（reset_units 复位 did_move）
+	check(r238_e.current_side == GameEngine.SIDE_OPPONENT,
+			"R238：我方结束后进入敌方回合")
+	r238_e.end_turn()   # 敌方一步没动 → 回合结束踩响
+	check(r238_foe.health == 30 - GameEngine.PIERCE_TRAP_DMG,
+			"R238 敌方原地不动 → 回合结束踩响脚下陷阱（30 → %d）" % r238_foe.health)
+	check(r238_e.state.field_at(Vector2i(2, 1)) == null,
+			"R238：触发后陷阱照例消失（仍然是一次性）")
+	var r238_hp_after: int = r238_foe.health
+	r238_e.end_turn()   # 再结束一个我方回合
+	check(r238_foe.health == r238_hp_after,
+			"R238：不会重复结算（陷阱已摘，血量仍 %d）" % r238_foe.health)
+	# ② 自己埋的陷阱不炸自己人（我方单位站着不动也不触发）
+	var r238_e2 := _new_engine([], 40, 40)
+	r238_e2.start_game(1)
+	var r238_mine: Placement = r238_e2.state.place(
+			_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 1), Vector2i(4, 1),
+			GameEngine.SIDE_SELF)
+	r238_e2.state.hand = [CardData.from_dict(r238_trap.to_dict())]
+	r238_e2.state.energy = 5
+	r238_e2.play_from_hand(0, Vector2i(4, 1))
+	r238_e2.end_turn()
+	r238_e2.end_turn()
+	check(r238_mine.health == 30 and r238_e2.state.field_at(Vector2i(4, 1)) != null,
+			"R238：自己埋的陷阱不炸自己人（我方单位原地不动也不触发）")
+	# ③ 持续型场地（清泉）不在这条路上触发/被消耗
+	var r238_e3 := _new_engine([], 40, 40)
+	r238_e3.start_game(1)
+	r238_e3.state.place(_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 2),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r238_e3.state.hand = [CardData.from_dict(r238_repo.get_card(8028).to_dict())]  # 清泉
+	r238_e3.state.energy = 5
+	r238_e3.play_from_hand(0, Vector2i(2, 1))
+	r238_e3.end_turn()
+	r238_e3.end_turn()
+	check(r238_e3.state.field_at(Vector2i(2, 1)) != null,
+			"R238：清泉（持续型场地）不会被「原地不动」触发掉")
+	# ④ did_move 的语义：move 成功才置 true，回合开始复位
+	var r238_e4 := _new_engine([], 40, 40)
+	r238_e4.start_game(1)
+	var r238_u4: Placement = r238_e4.state.place(
+			_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 2), Vector2i(2, 1),
+			GameEngine.SIDE_SELF)
+	check(not r238_u4.did_move, "R238：刚上场的单位 did_move = false")
+	r238_e4.move(Vector2i(2, 1), Vector2i(1, 1), GameEngine.SIDE_SELF)
+	check(r238_u4.did_move, "R238：move() 成功 → did_move = true")
+	r238_e4.state.reset_units(GameEngine.SIDE_SELF)
+	check(not r238_u4.did_move, "R238：回合开始 reset_units 复位 did_move")
+	# ⑤ 挪走的敌人不会踩原来的格子（陷阱留在原地不动）
+	var r238_e5 := _new_engine([], 40, 40)
+	r238_e5.start_game(1)
+	var r238_foe5: Placement = r238_e5.state.place(
+			_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 2), Vector2i(3, 1),
+			GameEngine.SIDE_OPPONENT)
+	r238_e5.state.hand = [CardData.from_dict(r238_trap.to_dict())]
+	r238_e5.state.energy = 5
+	r238_e5.play_from_hand(0, Vector2i(2, 1))   # 陷阱放在它旁边的空格
+	r238_e5.end_turn()   # → 敌方回合
+	r238_e5.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	r238_e5.end_turn()   # 敌方回合结束
+	check(r238_foe5.health == 30 and r238_e5.state.field_at(Vector2i(2, 1)) != null,
+			"R238：走开的敌人不会踩到原格陷阱（陷阱仍在 2,1）")
+	# ⑥ 禁足（rooted）的敌人：moved 被置 true，但物理上没动 → 照样踩响
+	#    这条是 did_move 必须单独存在的理由（用 moved 判会漏掉这一类）。
+	var r238_e6 := _new_engine([], 40, 40)
+	r238_e6.start_game(1)
+	var r238_foe6: Placement = r238_e6.state.place(
+			_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 2), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
+	r238_e6.state.hand = [CardData.from_dict(r238_trap.to_dict())]
+	r238_e6.state.energy = 5
+	r238_e6.play_from_hand(0, Vector2i(2, 1))
+	r238_foe6.rooted = 1   # 下回合生效（reset_units：1→2，同时把 moved 置 true）
+	r238_e6.end_turn()
+	check(r238_foe6.moved and not r238_foe6.did_move,
+			"R238：被禁足的单位「移动权已用掉」但物理上没动（moved=%s / did_move=%s）"
+			% [r238_foe6.moved, r238_foe6.did_move])
+	r238_e6.end_turn()
+	check(r238_foe6.health == 30 - GameEngine.PIERCE_TRAP_DMG,
+			"R238：被禁足原地罚站的敌人照样踩响陷阱（30 → %d）" % r238_foe6.health)
+
 	# ================================================================
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")

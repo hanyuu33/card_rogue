@@ -2381,6 +2381,11 @@ func end_turn() -> void :
 			p.atk_buff_turn = 0
 			if p.rooted == 2:
 				p.rooted = 0   # 禁足（冰霜陷阱）：生效回合结束解除
+	# 陷阱加强（R238）：**本回合一步没挪**的敌方单位，回合结束时踩响脚下的陷阱。
+	# ⚠️ 必须排在上面那段「清本回合 debuff / 解禁足」**之后**：黑暗陷阱给的是
+	#    「本回合攻击 -1」（debuff_stage = 1），排在前面会被紧接着这个循环当场擦掉，
+	#    等于白触发。排在后面 → 它生效到对方的下一个回合结束，正是「踩响了」的手感。
+	_trap_still_tick(current_side)
 	# 沉睡（恶魔鸭 9116）：**回合递减口** —— 本方回合结束时，本方还在睡的单位
 	# sleep_left -1；减到 0 就此醒来（下一回合可行动）。
 	# R122 用户口径：沉睡**随着回合减少**（与「受伤也 -1」并存，见 _demon_duck_hurt）。
@@ -8632,6 +8637,7 @@ func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void
 		dst = stop_cell
 	state.move_unit(src, dst)
 	p.moved = true
+	p.did_move = true   # 陷阱加强（R238）：物理上挪过格子 → 回合结束不再补踩脚下的陷阱
 	if stop_i >= 0:
 		_log("%s 移动 %s → %s（路上触发场地，移动停止）" % [
 			p.card.card_name, src, dst])
@@ -8751,6 +8757,52 @@ func _field_block_index(path: Array[Vector2i]) -> int:
 		if f != null and not is_persistent_field(f):
 			return i
 	return -1
+
+
+func _trap_still_tick(side: String) -> void :
+	## **陷阱加强的唯一口（R238）：「原地不动」也会踩响脚下的陷阱。**
+	## 用户口径：「如果敌人本回合原地不动，则会触发当前格子上的陷阱」。
+	##
+	## 与既有「移动经过即触发」互补 —— 那条挂在 `move()` 里（`_field_block_index`
+	## 截断 + `_field_trigger` 结算），只管**动过**的单位：
+	##   * 动过 → 走老路（走过哪格就炸哪格）；
+	##   * 一步没挪 → 本方回合结束时，**脚下这一格**的陷阱立刻结算。
+	##
+	## 判据与边界（三条都不许省）：
+	##   1. **只认陷阱** —— `_field_kind(card) != ""`（与 `_trap_card_pool` 同一判据）。
+	##      清泉 / 维修间 / 改造工厂是持续型场地，有自己的 `_field_aura_tick`，
+	##      在这里触发等于把它们白白消耗掉（等于废牌）。
+	##   2. **只炸「别人埋的」** —— `field_owner` 与本方不同才算踩雷；自己埋的陷阱
+	##      自己人站着不动不会自爆（陷阱是对敌的，用户口径也是「敌人」）。
+	##   3. 「原地不动」看 `Placement.did_move`（**物理上没挪过格子**），**不看 `moved`**
+	##      —— 后者是「移动权已用掉」，禁足 / 冰封的单位也会是 true，用它会漏掉
+	##      「被禁足原地罚站的敌人」这一类最该踩雷的。
+	##
+	## 结算一律走**唯一口 `_field_trigger`**：伤害数值 / 控制 / 摘牌 / 场地精通 /
+	## 暗影狩猎记号全部复用，这里只负责回答「**谁来踩、什么时候踩**」。
+	var cells: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var p: Placement = state.unit_at(cell)
+		if p == null or p.owner != side or p.did_move:
+			continue
+		var f: CardData = state.field_at(cell)
+		if f == null or _field_kind(f) == "":
+			continue
+		if str(state.field_owner.get(cell, p.owner)) == side:
+			continue   # 自己埋的陷阱不炸自己人
+		cells.append(cell)
+	cells.sort()   # 结算顺序稳定（回放 / 测试可复现）；与 _breach_tick 同一手法
+	for c2: Vector2i in cells:
+		if over:
+			return
+		var q: Placement = state.unit_at(c2)
+		if q == null or q.owner != side or q.did_move:
+			continue
+		var f2: CardData = state.field_at(c2)
+		if f2 == null:
+			continue   # 前面的格子结算时把它顶掉 / 摘掉了（同一回合多格时才会遇到）
+		_log("%s 本回合原地不动 → 踩响脚下的 %s" % [q.card.card_name, f2.card_name])
+		_field_trigger(c2, q)
 
 
 func _field_trigger(cell: Vector2i, mover: Placement) -> void :

@@ -413,6 +413,9 @@ func reset_units(side: String) -> void:
 			if p.rooted == 1:
 				p.rooted = 2
 			p.moved = p.rooted > 0
+			# 陷阱加强（R238）：「本回合挪过没有」的**唯一复位口** —— 回合开始清零，
+			# 与上面的 moved 分开记（moved 会被禁足置 true，不能拿来判「原地不动」）。
+			p.did_move = false
 			# 哈气 / 太阳熔炉：回合开始时刷新成「行动两次」
 			# （未到生效回合 / 原本就双动 → 不叠加，取最大）
 			p.acts_left = unit_actions(p, side)

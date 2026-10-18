@@ -5,6 +5,11 @@ extends RefCounted
 var card: CardData
 var tapped: bool = false      # True = 横置（本回合已无行动权）
 var moved: bool = false       # 本回合已移动（移动后未攻击仍保留攻击权）
+## 陷阱加强（R238）：**本回合是否真的挪过格子**（`move()` 成功才置 true，回合开始复位）。
+## 与 `moved` 分开记 —— `moved` 的语义是「移动权已用掉」（禁足 / 冰冻会被置 true，见
+## `FieldState.reset_units`），而这里要的是**物理上原地不动**：禁足的敌人一动不动，
+## 照样该踩响脚下的陷阱。两者混用会漏掉这一类。
+var did_move: bool = false
 var health: int = 0           # 当前生命
 var owner: String = "self"    # "self" / "opponent"（按卡算，不按行算）
 # ---- 回合级状态效果（削弱/寒冰箭）----
