@@ -121,7 +121,7 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 228,
+	check(repo.all_cards().size() == 230,
 			"图鉴 = 223 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
@@ -135,7 +135,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 175 and grp_enemy.size() == 53,
+	check(grp_player.size() == 177 and grp_enemy.size() == 53,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 172 / 51；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -165,7 +165,7 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 152,
+	check(pool.size() == 154,
 			"奖励池 150 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
@@ -7235,7 +7235,7 @@ func _init() -> void:
 			"角色系统：非敌方卡 class 都在可选角色内（或留空 = 通用卡）、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 74
-			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 57
+			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 59
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 42
 			and int(dr_cls_count.get("敌人", 0)) == 53,
 		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 74 / 56 / 42 / 53；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1）"
@@ -7499,7 +7499,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 152, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 154, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -7804,7 +7804,7 @@ func _init() -> void:
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
 	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 74
-			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 57,
+			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 59,
 			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
@@ -7965,7 +7965,7 @@ func _init() -> void:
 			r226_dmg += 1
 		elif r226_card.effect_text.contains("造成") and r226_card.effect_text.contains("伤害"):
 			r226_leak.append(r226_card.card_name)
-	check(r226_skills == 69 and r226_dmg == 25 and r226_leak.is_empty(),
+	check(r226_skills == 71 and r226_dmg == 26 and r226_leak.is_empty(),
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 			% [r226_skills, r226_dmg, "0 张" if r226_leak.is_empty() else str(r226_leak)])
 	check(RunState.enchant_ok("damage", r224_okrepo.get_card(9083), 9999)
@@ -8016,7 +8016,7 @@ func _init() -> void:
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
 			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法鸭）")
-	check(r47_dr.size() == 62 and r47_rg.size() == 54
+	check(r47_dr.size() == 62 and r47_rg.size() == 56
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
 			"奖励池过滤：森林精魄 %d 张 / 暗影刺客 %d 张（两者之和 + 机械之心 %d = 完整池 %d）"
@@ -17846,6 +17846,118 @@ func _init() -> void:
 
 	RunState.set_difficulty(0)
 	RunState.player_class = r223_cls_prev
+
+	# ---- R232：夜行（9155）/ 蓄势（9156）----
+	var r232_repo := CardRepo.load_json()
+	var r232_nw: CardData = r232_repo.get_card(9155)
+	var r232_cu: CardData = r232_repo.get_card(9156)
+	check(r232_nw != null and r232_nw.card_name == "夜行" and r232_nw.is_spell()
+			and r232_nw.cost == 2 and r232_nw.rarity == 2
+			and r232_nw.card_class == "暗影刺客" and r232_nw.target_mode == "none"
+			and not r232_nw.is_damage_spell(),
+			"R232 夜行：史诗 2 费技能（暗影刺客，无目标，非伤害卡）")
+	check(r232_cu != null and r232_cu.card_name == "蓄势" and r232_cu.is_spell()
+			and r232_cu.cost == 1 and r232_cu.rarity == 0
+			and r232_cu.card_class == "暗影刺客" and r232_cu.target_mode == "unit"
+			and r232_cu.has_affix("保存") and r232_cu.value == 0
+			and r232_cu.is_damage_spell(),
+			"R232 蓄势：普通 1 费技能（保存字段 / 初始 0 伤 / 伤害卡）")
+	var r232_nw_pool := false
+	var r232_cu_pool := false
+	for r232_pc: CardData in r232_repo.reward_pool():
+		if r232_pc.id == 9155:
+			r232_nw_pool = true
+		if r232_pc.id == 9156:
+			r232_cu_pool = true
+	check(r232_nw_pool and r232_cu_pool, "R232 夜行 / 蓄势 都进奖励池（rarity 0/2）")
+
+	# ① 夜行：本回合全免费 + 出牌上限 5（含本卡）
+	var r232_e := _new_engine([], 20, 20)
+	r232_e.start_game(1)
+	var r232_probe := _card(9003, "火焰箭", "技能", 2, 0, 0)
+	r232_e.state.hand = [r232_probe, CardData.from_dict(r232_nw.to_dict())]
+	r232_e.state.energy = 10
+	check(r232_e.cost_of(r232_probe) == 2, "R232 夜行前：技能仍 %d 费" % r232_e.cost_of(r232_probe))
+	var r232_nw_detail := r232_e.use_spell(1, null)
+	check(r232_e.state.turn_all_free and r232_e.state.card_play_cap == 5,
+			"R232 打夜行：本回合全免费 + 出牌上限 5（%s）" % r232_nw_detail)
+	check(r232_e.state.energy == 8 and r232_e.state.self_card_plays == 1,
+			"R232 夜行自身付 2 费（10→%d），计入出牌数 1" % r232_e.state.energy)
+	check(r232_e.cost_of(r232_probe) == 0, "R232 夜行后：任何卡费用为 0（%d）" % r232_e.cost_of(r232_probe))
+
+	# ② 出牌上限：4/5 可出、5/5 置灰拒绝；夜行作为第 6 张被拒
+	var r232_cap_e := _new_engine([], 20, 20)
+	r232_cap_e.start_game(1)
+	r232_cap_e.state.card_play_cap = 5
+	r232_cap_e.state.self_card_plays = 4
+	var r232_ok_card := _card(9003, "x", "技能", 1, 0, 0)
+	check(r232_cap_e._play_cap_blocked() == "" and r232_cap_e.can_use_card(r232_ok_card),
+			"R232 夜行上限：4/5 张仍可出牌")
+	r232_cap_e.state.self_card_plays = 5
+	check(r232_cap_e._play_cap_blocked() != "" and not r232_cap_e.can_use_card(r232_ok_card),
+			"R232 夜行上限：5/5 张已达上限 → 拒绝 / 置灰")
+	var r232_nw6_e := _new_engine([], 20, 20)
+	r232_nw6_e.start_game(1)
+	r232_nw6_e.state.energy = 20
+	r232_nw6_e.state.self_card_plays = 5
+	r232_nw6_e.state.hand = [CardData.from_dict(r232_nw.to_dict())]
+	var r232_nw6_msg := r232_nw6_e.use_spell(0, null)
+	check(not r232_nw6_e.state.turn_all_free and r232_nw6_e.state.self_card_plays == 5
+			and r232_nw6_e.state.hand.size() == 1,
+			"R232 夜行作为第 6 张：被拒（含本卡只能 5 张；%s）" % r232_nw6_msg)
+
+	# ③ 回合结束：免费与上限清除
+	var r232_reset_e := _new_engine([], 20, 20)
+	r232_reset_e.start_game(1)
+	r232_reset_e.state.energy = 10
+	r232_reset_e.state.hand = [CardData.from_dict(r232_nw.to_dict())]
+	r232_reset_e.use_spell(0, null)
+	var r232_after := _card(9003, "后", "技能", 2, 0, 0)
+	r232_reset_e.state.hand.append(r232_after)
+	check(r232_reset_e.cost_of(r232_after) == 0, "R232 夜行中：后续卡免费")
+	r232_reset_e.end_turn()
+	check(not r232_reset_e.state.turn_all_free and r232_reset_e.state.card_play_cap == 0,
+			"R232 回合结束：免费与出牌上限清除")
+	check(r232_reset_e.cost_of(r232_after) == 2, "R232 回合结束：费用恢复 %d" % r232_reset_e.cost_of(r232_after))
+
+	# ④ 蓄势：结束回合每剩 1 费 +3 伤害，卡面文案同步
+	var r232_g_e := _new_engine([], 20, 20)
+	r232_g_e.start_game(1)
+	r232_g_e.state.energy = 7
+	r232_g_e.state.hand = [CardData.from_dict(r232_cu.to_dict())]
+	r232_g_e.end_turn()
+	var r232_g1: CardData = null
+	for r232_c: CardData in r232_g_e.state.hand:
+		if r232_c.id == 9156:
+			r232_g1 = r232_c
+	check(r232_g1 != null and r232_g1.value == 21,
+			"R232 蓄势：结束回合剩 7 费 → 伤害 +21（value=%d）" % (r232_g1.value if r232_g1 else -1))
+	check(r232_g1 != null and r232_g1.effect_text.contains("造成 21 点伤害"),
+			"R232 蓄势：卡面文案同步显示当前伤害（%s）" % (r232_g1.effect_text if r232_g1 else ""))
+
+	# ⑤ 蓄势：战斗内不重置（第二次继续累加，且是同一张实例）
+	r232_g_e.end_turn()   # 对方回合结束 → 回到我方
+	r232_g_e.state.energy = 4
+	r232_g_e.end_turn()   # 我方再次结束：剩 4 费 → +12
+	var r232_g2: CardData = null
+	for r232_c2: CardData in r232_g_e.state.hand:
+		if r232_c2.id == 9156:
+			r232_g2 = r232_c2
+	check(r232_g2 != null and r232_g2.value == 33 and r232_g2 == r232_g1,
+			"R232 蓄势：战斗内不重置 —— 第二次剩 4 费累加到 33（同一实例）")
+
+	# ⑥ 蓄势：打出时按当前 value 造成伤害
+	var r232_hit_e := _new_engine([], 20, 20)
+	r232_hit_e.start_game(1)
+	r232_hit_e.state.energy = 5
+	r232_hit_e.state.place(_card(8003, "农民", "盟友", 1, 1, 30), Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var r232_cu2 := CardData.from_dict(r232_cu.to_dict())
+	r232_cu2.value = 9
+	r232_hit_e.state.hand = [r232_cu2]
+	r232_hit_e.use_spell(0, Vector2i(0, 1))
+	var r232_ep: Placement = r232_hit_e.state.unit_at(Vector2i(0, 1))
+	check(r232_ep != null and r232_ep.health == 21,
+			"R232 蓄势打出：对目标造成 value=9 伤害（30→%d）" % (r232_ep.health if r232_ep else -1))
 
 	# ================================================================
 

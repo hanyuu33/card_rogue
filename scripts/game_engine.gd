@@ -550,6 +550,14 @@ const LURKER_RAMP:= 1
 const WHIRL_BLADE_ID:= 9096
 const WHIRL_BLADE_DMG:= 17
 const WHIRL_BLADE_NEED:= 4
+# 夜行（9155 技能，R232，暗影刺客史诗）：2 费；本回合我方所有卡费用为 0；
+# 本回合我方出牌上限 NIGHT_WALK_MAX 张（**含本卡**，无论之前还是之后用的）。
+const NIGHT_WALK_ID:= 9155
+const NIGHT_WALK_MAX:= 5
+# 蓄势（9156 技能，R232，暗影刺客普通）：1 费 + 保存；造成 value 点伤害（初始 0）；
+# 回合结束时每剩 1 点费用 → 手卡里这张 +CHARGE_UP_PER_ENERGY 伤害（战斗内不重置）。
+const CHARGE_UP_ID:= 9156
+const CHARGE_UP_PER_ENERGY:= 3
 # 预判（9097 技能）：0 费史诗；二选一：①弃牌区选一张 0 费技能卡（之后本卡消失）
 # ②卡组随机非 0 费技能卡入手。面板走 foresight_* 状态机。
 const FORESIGHT_ID:= 9097
@@ -2409,6 +2417,9 @@ func end_turn() -> void :
 		# 回转（9089）抽到的牌只在抽到的那个回合免弃
 		if not state.turn_keep.is_empty():
 			state.turn_keep.clear()
+		# 夜行（9155，R232）：本回合免费用 / 出牌上限都只在本回合有效
+		state.turn_all_free = false
+		state.card_play_cap = 0
 
 
 		_rice_used = false
@@ -2472,6 +2483,9 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 
 
 
+	# 夜行（9155，R232）：本回合我方所有卡费用为 0 —— 放在最前，X 费卡与「最低 N 费」也一并免费。
+	if side == SIDE_SELF and state.turn_all_free:
+		return 0
 	# X 费卡（流星雨 9083）：费用 = 该方当前剩余的**全部能量**（显示=判定=实扣 都读这里）。
 	if card != null and card.x_cost:
 		return maxi(0, state.energy_of(side))
@@ -2534,6 +2548,31 @@ func _cost_floor(card: CardData, cost: int) -> int:
 	if card != null and card.id == ECHO_ID:
 		return maxi(cost, ECHO_MIN_COST)
 	return cost
+
+
+func _play_cap_blocked() -> String:
+	## 夜行（9155，R232）：本回合我方出牌上限（含夜行本身）。"" = 未达上限。
+	if state.card_play_cap > 0 and state.self_card_plays >= state.card_play_cap:
+		return "夜行：本回合使用卡牌已达 %d 张上限" % state.card_play_cap
+	return ""
+
+
+func _charge_up_text(v: int) -> String:
+	## 蓄势（9156，R232）的卡面文案：始终显示当前伤害 v（随剩余费用成长）。
+	return "造成 %d 点伤害。回合结束时，每有 1 点未使用的费用，手卡的此卡伤害 +3（战斗内不重置）。" % v
+
+
+func _charge_up_grow(left: int) -> void:
+	## 蓄势（9156，R232）：回合结束、能量清零之前，手卡里每张「蓄势」按剩余费用涨伤害。
+	if left <= 0:
+		return
+	for c: CardData in state.hand:
+		if c.id == CHARGE_UP_ID:
+			c.value += left * CHARGE_UP_PER_ENERGY
+			c.effect_text = _charge_up_text(c.value)
+			_log("蓄势：剩余费用 %d → %s 伤害 +%d（现 %d）" % [
+				left, c.card_name, left * CHARGE_UP_PER_ENERGY, c.value])
+			action.emit("charge_up", {"card": c, "left": left, "value": c.value})
 
 
 func _fort_discount(card: CardData, side: String) -> int:
@@ -3206,6 +3245,10 @@ func _card_leaving_field(p: Placement) -> CardData:
 
 func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	var card:= state.hand[hand_index]
+	var cap_msg:= _play_cap_blocked()
+	if cap_msg != "":
+		_log(cap_msg)
+		return null
 	var paid:= _pay(card)
 	# 栅栏修复术（6021）：把栅栏打到已有栅栏的格子上 → 合并（不新建单位）
 	var stack_onto: Placement = state.unit_at(cell)
@@ -4597,6 +4640,11 @@ func use_spell(hand_index: int, target = null) -> String:
 		return "返修：请先从弃牌区选择一张盟友或工事"
 
 	var card:= state.hand[hand_index]
+	var cap_msg:= _play_cap_blocked()
+	if cap_msg != "":
+		return cap_msg
+	if card.id == NIGHT_WALK_ID and state.self_card_plays >= NIGHT_WALK_MAX:
+		return "夜行：本回合已使用 %d 张卡（含本卡上限 %d 张）" % [state.self_card_plays, NIGHT_WALK_MAX]
 	# 潜入（9100）：**两段式**技能，唯一入口是 cast_infiltrate(手牌序号, 盟友格, 目的格)。
 	# R76 守卫：单段入口没有「目的格」这个信息，原来会一路走到 _infiltrate_auto_cell()
 	# 自己挑落点（= 己方半场第一个空格 = 前排左边）→ 表现为「卡片自己跑到前排左边」。
@@ -4686,6 +4734,9 @@ func use_effect(hand_index: int) -> String:
 
 
 	var card:= state.hand[hand_index]
+	var cap_msg:= _play_cap_blocked()
+	if cap_msg != "":
+		return cap_msg
 	_pay(card)
 
 	state.self_next_effect_reduction = 0
@@ -4720,6 +4771,9 @@ func use_curse(hand_index: int) -> String:
 	##    「用了一张牌」的通用收尾仍走 `_note_card_played`（终结/回转的 X、幻影斗篷、
 	##    疾风、潜影者、不眠……都该把它算成一次出牌）。
 	var card := state.hand[hand_index]
+	var cap_msg := _play_cap_blocked()
+	if cap_msg != "":
+		return cap_msg
 	_pay(card)
 	state.hand.remove_at(hand_index)
 	state.discard.append(card)
@@ -5168,6 +5222,12 @@ func can_use_card(card: CardData, side:= SIDE_SELF) -> bool:
 	if card != null and card.id == WHIRL_BLADE_ID:
 		var plays := state.self_card_plays if side == SIDE_SELF else state.opp_card_plays
 		return plays >= WHIRL_BLADE_NEED
+	# 夜行（9155，R232）：出牌上限已达 / 本卡作为夜行时已用满 5 张 → 不可使用（UI 置灰）。
+	if side == SIDE_SELF:
+		if state.card_play_cap > 0 and state.self_card_plays >= state.card_play_cap:
+			return false
+		if card != null and card.id == NIGHT_WALK_ID and state.self_card_plays >= NIGHT_WALK_MAX:
+			return false
 	return true
 
 
@@ -5981,6 +6041,16 @@ func remote_curse(card: CardData, side:= SIDE_OPPONENT) -> void:
 
 func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 	match card.id:
+		NIGHT_WALK_ID:
+			# 夜行（9155，R232）：本回合我方所有卡免费；本回合出牌上限 NIGHT_WALK_MAX 张（含本卡）。
+			state.turn_all_free = true
+			state.card_play_cap = NIGHT_WALK_MAX
+			var nw_left: int = maxi(0, NIGHT_WALK_MAX - state.self_card_plays - 1)
+			_log("夜行：本回合所有卡费用为 0；最多还能再使用 %d 张卡" % nw_left)
+			return "本回合全部免费（还能再用 %d 张卡）" % nw_left
+		CHARGE_UP_ID:
+			# 蓄势（9156，R232）：对目标造成此卡当前伤害（value 随剩余费用成长）。
+			return str(_op_deal_damage(side, _spell_dmg(side, card.value, card), target))
 		8002:
 			return str(_op_deal_damage(side, _spell_dmg(side, 4, card), target))
 		UPGRADE_ID:
@@ -9039,6 +9109,9 @@ func _end_turn_surplus(side: String) -> void :
 	## 「优先结算」= 第 0 步先跑：黑暗领主给的 5 点会被第 1~5 步一起读到。
 	_dark_lord_energy(side)
 	var left := state.energy_of(side)
+	# 蓄势（9156，R232）：回合结束、能量清零之前 —— 手卡里每张「蓄势」按 left 涨伤害。
+	if side == SIDE_SELF:
+		_charge_up_grow(left)
 	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
 	# 暗影之刃读的是**已花掉**的费用，与 left 无关 —— 必须放在 left<=0 的早退**之前**，
 	# 否则「钱刚好花光」这种最常见的情况会把它一并跳过。

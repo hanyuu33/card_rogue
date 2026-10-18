@@ -96,6 +96,10 @@ var hand_free := {}
 var turn_card_discount := {}    # CardData -> int：本回合这张**手卡**费用 -N（魔像术 9079；回合结束清空）
 var turn_card_raise := 0         # 本回合**手卡全体**费用 +N（契约签订者 8024；回合结束清空）
 var turn_keep: Array[CardData] = []  # 回转 9089 抽到的牌：本回合结束不弃（discard_hand 跳过；回合结束清空）
+## 夜行（9155，R232）：本回合**我方所有卡费用为 0**（cost_of 最前判定；回合结束清空）。
+var turn_all_free := false
+## 夜行（9155，R232）：本回合**我方出牌上限**（含夜行本卡；0 = 不限；回合结束清空）。
+var card_play_cap := 0
 var turn_limit: int = -1        # -1 = 不限回合
 var clear_win := false          # 消灭所有敌方场上单位 → 直接胜利（关卡有敌方单位时启用）
 var level_name := ""

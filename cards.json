@@ -4696,6 +4696,47 @@
       "target_mode": "none",
       "color": "灰",
       "image": ""
+    },
+    {
+      "id": 9155,
+      "name": "夜行",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "这个回合，你使用所有卡都无需费用。包含这张卡在内，本回合只能使用 5 张卡（无论这张卡之前还是之后使用的）。",
+      "target_mode": "none",
+      "color": "紫",
+      "image": ""
+    },
+    {
+      "id": 9156,
+      "name": "蓄势",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "affixes": [
+        "保存"
+      ],
+      "effect_text": "造成 0 点伤害。回合结束时，每有 1 点未使用的费用，手卡的此卡伤害 +3（战斗内不重置）。",
+      "target_mode": "unit",
+      "value": 0,
+      "color": "紫",
+      "image": ""
     }
   ]
 }
