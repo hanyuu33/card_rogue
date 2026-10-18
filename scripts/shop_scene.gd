@@ -31,12 +31,14 @@ const PICK_Y0 := 130.0
 const ENCHANTS := [
 	{"id": "costdown", "name": "费用 -1", "desc": "每次战斗初次使用费用 -1（只能选费用 > 1 且非 X 费的卡）",
 		"price": 50, "icon": "shop_icon_costdown"},
-	{"id": "damage", "name": "伤害 +10", "desc": "这张技能卡造成的伤害 +10（只能选**能直接造成伤害**的技能卡）",
+	{"id": "damage", "name": "伤害 +10", "desc": "这张技能卡造成的伤害 +10（只能选能直接造成伤害的技能卡）",
 		"price": 60, "icon": "shop_icon_damage"},
 	{"id": "dimension", "name": "次元", "desc": "赋予「次元」并 +2 力 +10 血（盟友/工事，须无次元、非效果卡；离场消失）",
 		"price": 80, "icon": "shop_icon_dimension"},
 	{"id": "save", "name": "保存", "desc": "赋予「保存」——回合结束时手牌这张不丢弃",
 		"price": 60, "icon": "shop_icon_save"},
+	{"id": "opening", "name": "起手", "desc": "第一回合必定抽到（任何卡都能选）",
+		"price": 50, "icon": "shop_icon_opening"},
 ]
 
 var _font: Font

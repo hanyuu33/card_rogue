@@ -1431,6 +1431,10 @@ static func enchant_ok(ench_id: String, c: CardData, deck_idx: int) -> bool:
 					and not c.is_effect()
 		"save":
 			return true          # 任何卡都能保存
+		"opening":
+			# R229「起手」：任何卡都能附（第 1 回合必定抽到，单位 / 技能 / 效果都一样）。
+			# 「一张卡只能一个附魔」在上面统一拦（`_mod_at()` 非空即拒），这里不重复判。
+			return true
 	return false
 
 
@@ -1447,6 +1451,8 @@ static func enchant_mod(ench_id: String) -> Dictionary:
 		"damage": m = {"power": 10, "note": "伤害 +10"}
 		"dimension": m = {"affix": "次元", "power": 2, "health": 10}
 		"save": m = {"affix": "保存"}
+		# R229「起手」：**不改任何数值**，只记 id —— 抽牌时引擎按 `card.enchant` 认它。
+		"opening": m = {}
 		_: return {}
 	m["id"] = ench_id
 	return m

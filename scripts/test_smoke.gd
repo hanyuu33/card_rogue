@@ -595,6 +595,10 @@ func _check_shop_enchant(scene: Variant) -> void:
 	if int(price.get("damage", -1)) != 60:
 		_smoke_fail("商店附魔：伤害 +10 应 60 金（实际 %s）" % str(price.get("damage", -1)))
 		return
+	# R229：「起手」（必定第 1 回合抽到）应 50 金，且出现在附魔表里
+	if int(price.get("opening", -1)) != 50:
+		_smoke_fail("商店附魔：起手应 50 金（实际 %s）" % str(price.get("opening", -1)))
+		return
 	# 「伤害 +10」**只认技能卡**：有攻击力的盟友也必须被拒；技能卡必须能选。
 	# deck_idx 传 9999 → `_mod_at` 越界返回 {} → 「未附魔」这一关不会挡路。
 	var repo2 := CardRepo.load_json()
@@ -1582,6 +1586,8 @@ func _check_enchant_mark(scene: Variant) -> void:
 	if CardData.enchant_name("damage") != "伤害 +10" \
 			or not CardData.enchant_color("costdown").is_equal_approx(Color("6db2f0")) \
 			or CardData.enchant_icon_name("dimension") != "shop_icon_dimension" \
+			or CardData.enchant_name("opening") != "起手" \
+			or CardData.enchant_icon_name("opening") != "shop_icon_opening" \
 			or CardData.enchant_name("") != "":
 		_smoke_fail("R214 附魔标记：ENCHANT_DEFS 的显示名 / 种类色 / 图标名不对")
 		return

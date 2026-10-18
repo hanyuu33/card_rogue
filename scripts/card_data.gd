@@ -79,6 +79,7 @@ const ENCHANT_DEFS: Dictionary = {
 	"damage": {"label": "伤害 +10", "icon": "shop_icon_damage", "col": "f08a5a"},
 	"dimension": {"label": "次元", "icon": "shop_icon_dimension", "col": "c08cf0"},
 	"save": {"label": "保存", "icon": "shop_icon_save", "col": "8fdc9f"},
+	"opening": {"label": "起手", "icon": "shop_icon_opening", "col": "f0c860"},
 }
 
 var id: int = 0

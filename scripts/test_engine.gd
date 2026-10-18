@@ -16929,14 +16929,14 @@ func _init() -> void:
 	# 这张卡和「原生就长这样的卡」一模一样，卡面无从知道它被附魔过。所以另记一个 id。
 	var r214_repo := CardRepo.load_json()
 	# ① `enchant_mod()` 是**唯一口**：四种都带 id，且与 `CardData.ENCHANT_DEFS` 同名
-	var r214_ids := ["costdown", "damage", "dimension", "save"]
+	var r214_ids := ["costdown", "damage", "dimension", "save", "opening"]
 	var r214_all_ok := true
 	for eid in r214_ids:
 		var em: Dictionary = RunState.enchant_mod(eid)
 		if str(em.get("id", "")) != eid or not CardData.ENCHANT_DEFS.has(eid):
 			r214_all_ok = false
 	check(r214_all_ok,
-		"R214 附魔：enchant_mod() 四种都带 id，且与 ENCHANT_DEFS 同名（%s）"
+		"R214/R229 附魔：enchant_mod() 五种都带 id，且与 ENCHANT_DEFS 同名（%s）"
 			% ", ".join(r214_ids))
 	check(RunState.enchant_mod("nope").is_empty(),
 		"R214 附魔：未知 id → 空 mod（不会凭空造出一张附魔卡）")
@@ -16952,6 +16952,61 @@ func _init() -> void:
 		r214_got.append(c.enchant)
 	check(r214_built.size() == 4 and r214_got == ["damage", "dimension", "", "save"],
 		"R214 附魔：build_deck 给每张附魔卡写上种类 id（实际 %s）" % str(r214_got))
+	# ---- R229「起手」附魔：必定第 1 回合抽到 + 一张卡只能一个附魔 ----
+	check(CardData.ENCHANT_DEFS.size() == 5
+			and CardData.enchant_name("opening") == "起手"
+			and CardData.enchant_icon_name("opening") == "shop_icon_opening"
+			and CardData.enchant_color("opening").is_equal_approx(Color("f0c860")),
+			"R229「起手」附魔：定义齐（label 起手 / icon shop_icon_opening / 颜色 f0c860）")
+	check(RunState.enchant_ok("opening", r214_repo.get_card(8003), 9999)
+			and RunState.enchant_ok("opening", r214_repo.get_card(9003), 9999),
+			"R229「起手」：任何卡都能附（单位 / 技能都放行）")
+	# 一张卡只能一个附魔：五种附魔对「已附魔」的格子一律拒绝（enchant_ok 与商店写入口都拦）
+	var r229_ids: Array[String] = ["costdown", "damage", "dimension", "save", "opening"]
+	var r229_saved_ids: Array[int] = RunState.deck_ids.duplicate()
+	var r229_saved_mods: Array = RunState.deck_mods.duplicate()
+	RunState.deck_ids = [8003]
+	RunState.deck_mods = [RunState.enchant_mod("save")]
+	var r229_block_ok := true
+	for r229_id: String in r229_ids:
+		if RunState.enchant_ok(r229_id, r214_repo.get_card(8003), 0):
+			r229_block_ok = false
+		if RunState.enchant_deck_card(0, RunState.enchant_mod(r229_id)):
+			r229_block_ok = false
+	check(r229_block_ok and RunState.deck_mods[0].get("id", "") == "save",
+			"R229：已附魔的卡拒绝一切新附魔（五种全拒；一张卡只能同时存在一个附魔）")
+	# 起手附魔：第 1 回合必定抽到（把卡放在牌库最底 —— 正常抽 5 张绝对抽不到）
+	var r229_e := _new_engine([], 20, 20)
+	var r229_deck: Array[CardData] = []
+	for i in 8:
+		var r229_c := _card(8003, "农民%d" % i, "盟友", 3, 3, 8)
+		if i == 0:
+			r229_c.enchant = GameEngine.ENCHANT_OPENING
+		r229_deck.append(r229_c)
+	r229_e.state.deck = r229_deck
+	r229_e.start_game()
+	var r229_in_hand := false
+	var r229_hand_ids: Array[int] = []
+	for r229_hc: CardData in r229_e.state.hand:
+		r229_hand_ids.append(r229_hc.id)
+		if r229_hc.enchant == GameEngine.ENCHANT_OPENING:
+			r229_in_hand = true
+	check(r229_in_hand,
+			"R229 起手附魔：牌库最底那张第 1 回合照样到手（手牌 %d 张）" % r229_hand_ids.size())
+	# 对照组：同一副牌去掉附魔 → 那张抽不到（否则上面那条断言没有意义）
+	var r229_e2 := _new_engine([], 20, 20)
+	var r229_deck2: Array[CardData] = []
+	for i in 8:
+		r229_deck2.append(_card(8003, "农民%d" % i, "盟友", 3, 3, 8))
+	r229_e2.state.deck = r229_deck2
+	r229_e2.start_game()
+	check(r229_e2.state.hand.size() == FieldState.HAND_DRAW_PER_TURN
+			and r229_e2.state.deck.size() == 8 - FieldState.HAND_DRAW_PER_TURN,
+			"R229 对照组：没有「起手」附魔时只抽常规 %d 张（牌库剩 %d）"
+			% [r229_e2.state.hand.size(), r229_e2.state.deck.size()])
+	RunState.deck_ids = r229_saved_ids
+	RunState.deck_mods = r229_saved_mods
+
 	# ③ 卡库共享实例不能被污染（否则图鉴里的原卡也会顶着一枚附魔标记）
 	check(r214_repo.get_card(9003).enchant == "" and r214_repo.get_card(8003).enchant == "",
 		"R214 附魔：卡库原卡的 enchant 仍是空（附魔只烤进独立副本）")

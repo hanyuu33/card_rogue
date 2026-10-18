@@ -330,6 +330,9 @@ const FRENZY_ALLY_MIN:= 3
 #    本卡的效果绝不能用 `has_affix("死亡")` 判，只认 `Placement.life_cycle`。
 # ⚠️ 本卡自己是普通技能（无次元字段）→ 用完照常进弃牌区。
 const LIFE_CYCLE_ID:= 9150
+# R229：商店附魔「起手」的 id —— 带这个附魔的卡**第 1 回合必定被抽到**
+# （开局把它挪到牌库顶，与警觉 9109 同一套 `_ensure_opening_card` 手法，不动随机源）。
+const ENCHANT_OPENING:= "opening"
 
 
 
@@ -1320,6 +1323,7 @@ func _begin_turn(side: String) -> void :
 			action.emit("lighten_draw", {"draw": lighten_draw, "side": SIDE_SELF})
 		if turn_number == 1:
 			_ensure_opening_card(ALERT_ID)   # 警觉（9109）：第 1 回合必定抽到
+			_ensure_opening_enchanted()      # R229「起手」附魔：同样第 1 回合必定抽到
 		var drawn:= 0
 		if self_relics.has(EARRING_RELIC_ID) and turn_number == 1:
 			# R77：第 1 回合不抽牌，改为**逐张自动出牌**。这里只「启动」，
@@ -9317,6 +9321,22 @@ func _ensure_opening_card(card_id: int) -> void :
 			state.deck.append(c)
 			_log("警觉：置于牌库顶（第 1 回合必定抽到）")
 			return
+
+
+func _ensure_opening_enchanted() -> void :
+	## R229「起手」附魔：把牌库里带这个附魔的卡全部挪到**牌库顶**
+	##（draw() 从尾部取 → 本回合抽的牌必定含它们），与警觉 9109 同口径、不动随机源。
+	## ⚠️ 多张都带 → 逐张挪（倒序遍历，保持相对顺序）；起手只抽
+	##    `FieldState.HAND_DRAW_PER_TURN` 张，带附魔的卡多于这个数时只有前几张必定到手。
+	var moved: int = 0
+	for i in range(state.deck.size() - 1, -1, -1):
+		var c: CardData = state.deck[i]
+		if c != null and c.enchant == ENCHANT_OPENING:
+			state.deck.remove_at(i)
+			state.deck.append(c)
+			moved += 1
+	if moved > 0:
+		_log("起手附魔：%d 张卡置于牌库顶（第 1 回合必定抽到）" % moved)
 
 
 func _alertness(side: String) -> String:
