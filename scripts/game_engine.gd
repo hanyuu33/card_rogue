@@ -153,6 +153,16 @@ const SCAVENGER_HP:= 5             # 每次改造：生命 +5
 const WASTE_BOT_ID:= 9152
 const WASTE_BOT_TRAIT:= "废铁"      # 只做标记（与「锻造 / 铸造」同套路）
 const WASTE_BOT_DMG:= 1            # 每次被改造：对所有敌方单位 1 点伤害
+
+# ---- R230：清退（9153，暗影刺客 · 稀有效果卡）----
+# 效果区里有本卡时：**把陷阱（= 等敌人踩的场地卡，`field_aim == FIELD_AIM_ENEMY`）
+# 放在有敌人的格子上** → 把那个敌人朝**敌方后排**方向击退 CLEAR_OUT_STEPS 格
+# （被单位或边界挡住就停下，与「击退 9004」同一个口 `_knockback`）。
+# ⚠️ 挂点 = `play_from_hand` 的场地分支（玩家侧唯一场地放置口）。
+# ⚠️ 只认「陷阱」：清泉 / 维修间 / 改造工厂这类对己方或双向生效的场地不算（不是陷阱）。
+const CLEAR_OUT_ID:= 9153
+const CLEAR_OUT_TRAIT:= "清退"      # 只做标记（与「锻造 / 废铁」同套路）
+const CLEAR_OUT_STEPS:= 2          # 击退格数
 # ---- 「量产铁砧」关卡（R158，第二层普通简单）----
 # 量产型赫菲斯托斯（9138，盟友 4/50 程1 速1）带「量产锻造」trait：**只保留** Boss 版
 # 那条「亲手击杀 → 锻造量产型俄倪厄」，**没有**「连续空转 N 回合自己变强」那半边。
@@ -3206,6 +3216,14 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 		_log("场地生效：%s 放在 %s（敌人移动经过时触发并停止移动）" % [card.card_name, cell])
 		action.emit("field_place", {"cell": cell, "card": card,
 			"replaced": old_field != null})
+		# R230「清退」：陷阱落在**有敌人的格子**上 → 把那个敌人击退 2 格（朝敌方后排）。
+		# 只认陷阱（aim = ENEMY）；清泉 / 维修间这类对己方或双向生效的场地不触发。
+		if f_aim == FIELD_AIM_ENEMY and _zone_has(state.effects, CLEAR_OUT_TRAIT):
+			var co_occ: Placement = state.unit_at(cell)
+			if co_occ != null and co_occ.owner == SIDE_OPPONENT:
+				_log("清退：陷阱落在敌人 %s 的格子上 → 击退 %d 格" % [
+						co_occ.card.card_name, CLEAR_OUT_STEPS])
+				_knockback(SIDE_SELF, cell, CLEAR_OUT_STEPS)
 		_note_card_played(SIDE_SELF, card)
 		return null
 	# 交换（R101）：放在已有己方单位的格子上 → 原单位回手，新卡占据该格
