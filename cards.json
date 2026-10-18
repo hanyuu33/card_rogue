@@ -2807,7 +2807,7 @@
       "health": 1,
       "attack_range": 1,
       "move_speed": 1,
-      "rarity": 0,
+      "rarity": 1,
       "group": "player",
       "class": "暗影刺客",
       "traits": [
@@ -2827,7 +2827,7 @@
       "health": 1,
       "attack_range": 1,
       "move_speed": 0,
-      "rarity": 1,
+      "rarity": 0,
       "group": "player",
       "class": "暗影刺客",
       "traits": [

@@ -5536,9 +5536,9 @@ func _init() -> void:
 			"地图尺寸：横 7 × 竖 5 = 35 格")
 	check(RogueMap.MAX_STEPS == 12, "每层 12 块巧克力（= 最多探索 12 个新房间）")
 	check(RogueMap.START_POS == Vector2i(3, 4), "起点固定在最下一行中间 (3,4)")
-	check(RogueMap.BIGCHEST_POS[0] == Vector2i(0, 0)
-			and RogueMap.BIGCHEST_POS[1] == Vector2i(6, 0),
-			"左上 (0,0) 与右上 (6,0) 固定为大宝箱")
+	check(RogueMap.BIGCHEST_POS.size() == 1 and RogueMap.BIGCHEST_POS[0] == Vector2i(0, 0)
+			and RogueMap.SHOP_POS.size() == 1 and RogueMap.SHOP_POS[0] == Vector2i(6, 0),
+			"R243 固定格：左上 (0,0) = 大宝箱，右上 (6,0) = 商店")
 
 	var q_mrng := RandomNumberGenerator.new()
 	q_mrng.seed = 424242
@@ -5547,8 +5547,8 @@ func _init() -> void:
 	var q_scol: Dictionary = RogueMap.start_cell(q_map1)
 	check(not q_scol.is_empty() and str(q_scol["type"]) == "start", "起点房类型为 start")
 	check(str(RogueMap.cell_at(q_map1, 0, 0)["type"]) == "bigchest"
-			and str(RogueMap.cell_at(q_map1, 6, 0)["type"]) == "bigchest",
-			"左上 / 右上角固定是大宝箱房")
+			and str(RogueMap.cell_at(q_map1, 6, 0)["type"]) == "shop",
+			"R243 角格：左上大宝箱 / 右上商店（每张图都一样）")
 	check(int(RogueMap.cell_at(q_map1, 3, 4)["id"]) == int(q_scol["id"]),
 			"起点就是 (3,4) 那一格")
 
@@ -5605,12 +5605,8 @@ func _init() -> void:
 	var q_dA: int = int(q_map_steps.get(q_bA, 999))
 	var q_dB: int = int(q_map_steps.get(q_bB, 999))
 	check(q_dA <= RogueMap.MAX_STEPS and q_dB <= RogueMap.MAX_STEPS,
-			"地图：两个大宝箱都在 %d 步内可达（左上 %d 步 / 右上 %d 步）"
-			% [RogueMap.MAX_STEPS, q_dA, q_dB])
-	var q_dAB: int = int(RogueMap.steps_from(q_map1, q_bA).get(q_bB, 999))
-	check(q_dA + q_dAB > RogueMap.MAX_STEPS and q_dB + q_dAB > RogueMap.MAX_STEPS,
-			"地图：12 步内不可能两个大宝箱都进（先到一个再赶去另一个最少 %d 步）"
-			% (q_dA + q_dAB))
+			"R243 地图：左上大宝箱 %d 步 / 右上商店 %d 步，都在 %d 步内可达"
+			% [q_dA, q_dB, RogueMap.MAX_STEPS])
 
 	# 休息点：不与起点相邻、也不与另一个休息点相邻
 	var q_rest_ok := true
@@ -5640,7 +5636,8 @@ func _init() -> void:
 			q_layer_ok = false
 		if bool(q_c.get("hidden", false)):
 			q_hidden_seen = true
-			if str(q_c["type"]) == "start" or str(q_c["type"]) == "bigchest":
+			if str(q_c["type"]) == "start" or str(q_c["type"]) == "bigchest" \
+					or RogueMap.is_fixed_shop(int(q_c["id"])):
 				q_hidden_ok = false
 	check(q_type_ok, "地图：房间类型全部合法")
 	check(q_layer_ok, "地图：每个房间都标记了所属层（第一层）")
@@ -5676,6 +5673,7 @@ func _init() -> void:
 	q_bulk_rng.seed = 777001
 	var q_bulk_rest := 0
 	var q_bulk_unknown := 0
+	var q_bulk_visible_chest := 0   # R243：明格普通宝箱数（必须 0）
 	var q_bulk_types := {}
 	var q_bulk_worst := 0          # R136：单张最差重摇次数（下限提到 2 后要盯住生成成本）
 	for q_trial in 60:
@@ -5693,7 +5691,7 @@ func _init() -> void:
 		if int(q_st.get(RogueMap.idx(0, 0), 999)) > RogueMap.MAX_STEPS \
 				or int(q_st.get(RogueMap.idx(6, 0), 999)) > RogueMap.MAX_STEPS:
 			q_bulk_ok = false
-			q_bulk_msg = "第 %d 张有大宝箱超过 %d 步" % [q_trial, RogueMap.MAX_STEPS]
+			q_bulk_msg = "第 %d 张左上大宝箱 / 右上商店超过 %d 步" % [q_trial, RogueMap.MAX_STEPS]
 			break
 		for q_c: Dictionary in q_mp:
 			var q_lim2: Vector2i = RogueMap.limits(int(q_c["col"]), int(q_c["row"]))
@@ -5707,6 +5705,8 @@ func _init() -> void:
 				q_bulk_rest += 1
 			if bool(q_c.get("hidden", false)):
 				q_bulk_unknown += 1
+			elif str(q_c["type"]) == "chest":
+				q_bulk_visible_chest += 1   # R243：明格不该出现普通宝箱
 			q_bulk_types[str(q_c["type"])] = int(q_bulk_types.get(str(q_c["type"]), 0)) + 1
 		# R142：起点每个邻居都必须能「不回头」走到宝箱
 		if q_bulk_ok and not RogueMap.exits_reach_chest(q_mp):
@@ -5715,9 +5715,19 @@ func _init() -> void:
 		if not q_bulk_ok:
 			break
 	check(q_bulk_ok, "地图：连生成 60 张都满足全部约束（%s）" % q_bulk_msg)
-	check(int(q_bulk_types.get("bigchest", 0)) == 120
-			and int(q_bulk_types.get("start", 0)) == 60,
-			"地图 60 张统计：大宝箱恰好 2×60、起点恰好 60（固定格不参与随机）")
+	check(int(q_bulk_types.get("bigchest", 0)) == 60
+			and int(q_bulk_types.get("start", 0)) == 60
+			and int(q_bulk_types.get("shop", 0)) >= 60,
+			"R243 地图 60 张统计：大宝箱 1×60 / 起点 60 / 商店 ≥ 1×60（右上角每张必有一间；另加随机 0~1 与「?」房，实测 %d 间）"
+			% int(q_bulk_types.get("shop", 0)))
+	check(q_bulk_visible_chest == 0,
+			"R243 地图 60 张统计：**明格普通宝箱 0 个**（只可能藏在「?」房里，实际 %d）"
+			% q_bulk_visible_chest)
+	# 反方向：这条规则不能把宝箱**删干净** —— 「?」房里仍然要能摇出宝箱
+	# （可见宝箱 = 0 已断言 → 这里统计到的 chest 必然全是隐藏房）。
+	check(int(q_bulk_types.get("chest", 0)) > 0 and int(q_bulk_types.get("chest", 0)) < 60 * 35,
+			"R243 地图 60 张统计：宝箱仍会从「?」房摇出来（%d 个 / 全部隐藏）"
+			% int(q_bulk_types.get("chest", 0)))
 	check(q_bulk_rest >= 60 and q_bulk_unknown >= 60,
 			"地图 60 张统计：休息点 %d 个、「?」房 %d 个（两类都真实出现）"
 			% [q_bulk_rest, q_bulk_unknown])
@@ -6013,7 +6023,7 @@ func _init() -> void:
 			and RunState.known_node(RogueMap.idx(6, 0))
 			and RunState.is_landmark_node(RogueMap.idx(0, 0))
 			and RunState.is_landmark_node(fog_here),
-			"R145 迷雾：地标（起点 + 两个大宝箱）不被迷雾遮住 —— 玩家才找得到去大宝箱的路")
+			"R145 迷雾：地标（起点 + 大宝箱 + 右上固定商店）不被迷雾遮住 —— 路线才规划得了")
 	var fog_far_n := 0
 	var fog_far_known := 0
 	var fog_far_id := -1
@@ -8966,7 +8976,8 @@ func _init() -> void:
 
 	# ================= R55（2026-10-03）：地狱猫 8019 / 鲜血堡垒 8020 / 活力转移 9110 =================
 	# 三张卡共用一个结算入口 _end_turn_surplus()：读**自己回合结束时的剩余费用**。
-	# 卡面数据：地狱猫 0 费普通盟友 1/1（+1力+2生/点）；鲜血堡垒 0 费稀有工事 1/1 程1（+1力+3生/点）；
+	# 卡面数据（R243 两者稀有度互换）：地狱猫 0 费**稀有**盟友 1/1（+1力+2生/点）；
+	#          鲜血堡垒 0 费**普通**工事 1/1 程1（+1力+3生/点）；
 	#          活力转移 2 费史诗效果（剩余费用每 2 点 → 下回合开始 +1 费用，效果区多张不叠加）。
 	var r55_cat := repo.get_card(8019)
 	var r55_fort := repo.get_card(8020)
@@ -8974,13 +8985,13 @@ func _init() -> void:
 	check(r55_cat != null and r55_cat.card_name == "地狱猫" and r55_cat.kind == "盟友"
 			and r55_cat.cost == 0 and r55_cat.power == 1 and r55_cat.health == 1
 			and r55_cat.attack_range == 1 and r55_cat.move_speed == 1
-			and r55_cat.rarity == 0 and r55_cat.card_class == PlayerClass.ROGUE,
-			"R55 地狱猫 8019：0 费普通暗影刺客盟友 1/1 程1 速1")
+			and r55_cat.rarity == 1 and r55_cat.card_class == PlayerClass.ROGUE,
+			"R243 地狱猫 8019：0 费**稀有**暗影刺客盟友 1/1 程1 速1")
 	check(r55_fort != null and r55_fort.card_name == "鲜血堡垒" and r55_fort.kind == "工事"
 			and r55_fort.is_fort() and r55_fort.cost == 0 and r55_fort.power == 0
 			and r55_fort.health == 1 and r55_fort.attack_range == 1
-			and r55_fort.rarity == 1 and r55_fort.card_class == PlayerClass.ROGUE,
-			"R55 鲜血堡垒 8020：0 费稀有暗影刺客工事 0/1 程1（R56 起初始力量 0）")
+			and r55_fort.rarity == 0 and r55_fort.card_class == PlayerClass.ROGUE,
+			"R243 鲜血堡垒 8020：0 费**普通**暗影刺客工事 0/1 程1（R56 起初始力量 0）")
 	check(r55_vit != null and r55_vit.card_name == "活力转移" and r55_vit.kind == "效果"
 			and r55_vit.cost == 2 and r55_vit.rarity == 2
 			and r55_vit.traits.has(GameEngine.VITALITY_TRAIT)

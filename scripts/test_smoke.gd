@@ -782,6 +782,13 @@ func _check_map_scene(scene: Variant) -> void:
 			_smoke_fail("地图场景：(%d,%d) 应是大宝箱房，实际 %s"
 					% [bp.x, bp.y, str(bc["type"])])
 			return
+	# R243：右上角固定为商店（原来也是大宝箱）
+	for sp: Vector2i in RogueMap.SHOP_POS:
+		var spc: Dictionary = RogueMap.cell_at(cells, sp.x, sp.y)
+		if str(spc["type"]) != "shop":
+			_smoke_fail("地图场景：(%d,%d) 应是固定商店，实际 %s"
+					% [sp.x, sp.y, str(spc["type"])])
+			return
 	# 几何：格子是正方形、彼此相接、整体落在窗口内
 	var c0: Rect2 = scene._cell_rect(cells[0])
 	var c_last: Rect2 = scene._cell_rect(cells[RogueMap.CELLS - 1])
@@ -925,7 +932,7 @@ func _check_map_scene(scene: Variant) -> void:
 		if RunState.cleared_ids.has(int(c["id"])) and (c["doors"] as Array).is_empty():
 			_smoke_fail("地图场景：走过的房间 %d 竟然一个门都没有" % int(c["id"]))
 			return
-	print("SMOKE OK 地图场景：5×7 = %d 格相接正方形 / 起点 (%d,%d) / 两角大宝箱 / 巧克力 ×%d / 可走 %d 间"
+	print("SMOKE OK 地图场景：5×7 = %d 格相接正方形 / 起点 (%d,%d) / 左上大宝箱 + 右上商店 / 巧克力 ×%d / 可走 %d 间"
 			% [RogueMap.CELLS, RogueMap.START_COL, RogueMap.START_ROW,
 				RunState.chocolate, avail.size()])
 	_check_relic_bar(scene)

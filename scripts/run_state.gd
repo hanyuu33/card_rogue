@@ -1188,12 +1188,14 @@ static func reveal_known() -> void:
 
 
 static func is_landmark_node(id: int) -> bool:
-	## 迷雾永远盖不住的地标格：起点 + 两个大宝箱。
+	## 迷雾永远盖不住的地标格：起点 + 左上大宝箱 + 右上固定商店（R243）。
 	## 「找不到通往大宝箱的路」是 R145 要解决的问题 —— 通路可见 + 目标可见，
 	## 玩家才规划得了路线；剩下「路上会遇到什么」才是迷雾要藏的东西。
+	## R243：右上角改成**固定商店**之后，它和宝箱一样每层都在同一个位置 ——
+	## 藏起来只会让玩家以为这张图没有商店，所以一并当地标。
 	if id < 0 or id >= map_cells.size():
 		return false
-	if RogueMap.is_bigchest(id):
+	if RogueMap.is_bigchest(id) or RogueMap.is_fixed_shop(id):
 		return true
 	return str(map_cells[id].get("type", "")) == "start"
 

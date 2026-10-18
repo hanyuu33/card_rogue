@@ -19,7 +19,8 @@ extends RefCounted
 ## 房间类型：
 ##   start 起点 / battle 战斗 / elite 精英 / rest 休息 / event 事件 /
 ##   chest 普通宝箱 / bigchest 大宝箱 / unknown 「?」（走进才揭晓）
-## 固定格：起点 (3,4)；**左上 (0,0) 与右上 (6,0) 固定为大宝箱**。
+## 固定格（R243）：起点 (3,4)；**左上 (0,0) 固定为大宝箱**、**右上 (6,0) 固定为商店**。
+## 普通宝箱（chest）**不再出现在明格**：只有「?」房里有概率藏一个（见 `WEIGHTS_UNKNOWN`）。
 ## 「?」房的实际类型在**生成时**就定好（而非进入时抽）—— 这样休息点的
 ## 「不与起点相邻 / 不与另一个休息相邻」两条约束对隐藏房同样成立。
 ##
@@ -59,7 +60,10 @@ const MAX_STEPS := 12                # 每层的巧克力块数 = 可探索的�
 const START_COL := 3
 const START_ROW := 4                                        # 最下一行
 const START_POS := Vector2i(START_COL, START_ROW)
-const BIGCHEST_POS := [Vector2i(0, 0), Vector2i(6, 0)]        # 左上 / 右上
+## R243：左上角固定大宝箱（原先是左上 + 右上两个）。
+const BIGCHEST_POS := [Vector2i(0, 0)]
+## R243：右上角固定商店 —— 每一层都保证有一间商店可去（原先是 1~2 间纯随机商店）。
+const SHOP_POS := [Vector2i(6, 0)]
 
 const TYPE_LABELS := {
 	"start": "起点", "battle": "战斗", "elite": "精英", "rest": "休息",
@@ -78,10 +82,17 @@ const REST_MIN := 2                  # 每张地图的休息点数量区间
 const REST_MAX := 4
 ## R181：商店节点。数量区间与休息点相当（「概率和篝火相当」）—— 独立先定（像 rest 一样
 ## 不从权重里抽），约束同样是「不与起点 / 宝箱 / 休息点 / 另一个商店相邻」。
-const SHOP_MIN := 1
-const SHOP_MAX := 2
+## R243：右上角**固定**商店之后，随机商店降到 0~1 间 ——
+## 每层商店总量仍是 1~2 间（与改动前一致），不会因为固定角多出一倍商店。
+const SHOP_MIN := 0
+const SHOP_MAX := 1
 ## 普通格（明房）的类型权重。R192：事件明房权重降到与其他齐平（2），战斗仍是明房最大宗。
-const WEIGHTS := {"battle": 7, "event": 2, "elite": 2, "chest": 2, "shop": 2}
+## ⚠️ R243：明格**没有 chest / shop** ——
+##   * 普通宝箱：只在「?」房里出（见 `WEIGHTS_UNKNOWN`）；
+##   * 商店：由「右上角固定 1 间 + `shop_set` 随机 0~1 间」保证，不再靠权重刷 ——
+##     否则 35 格 × 权重会刷出 5 间以上，右上那间就没有意义了。
+## 要放宽就把对应键加回来。
+const WEIGHTS := {"battle": 7, "event": 2, "elite": 2}
 ## 「?」房的实际类型权重。R192：战斗中签概率砍半（50%→25%），省下的比例按
 ## 事件:精英:宝箱:商店 = 4:1:1:1 原比例分给其他类型（战斗仍是明房最大宗）。
 const WEIGHTS_UNKNOWN := {"battle": 7, "event": 12, "elite": 3, "chest": 3, "shop": 3}
@@ -143,6 +154,14 @@ static func hi_of(i: int) -> int:
 
 static func is_bigchest(i: int) -> bool:
 	for p in BIGCHEST_POS:
+		if idx(p.x, p.y) == i:
+			return true
+	return false
+
+
+static func is_fixed_shop(i: int) -> bool:
+	## R243：右上角那间**固定商店**（每层都有，不参与随机摆位）。
+	for p in SHOP_POS:
 		if idx(p.x, p.y) == i:
 			return true
 	return false
@@ -279,9 +298,12 @@ static func _validate(adj: Array, start_i: int) -> Array:
 	if _reach_count(adj, start_i) != CELLS:
 		return []
 	var dist := _bfs(adj, start_i)
-	for p in BIGCHEST_POS:
+	# R243：固定格（左上大宝箱 + 右上商店）都必须在 12 步巧克力内可达 ——
+	# 右上角改成商店之后，它和宝箱一样是「每层必去」的目标格，
+	# 走不到就等于这一层没商店（实测有些图会是 13 步，必须靠重摇挡掉）。
+	for p in (BIGCHEST_POS + SHOP_POS):
 		if int(dist.get(idx(p.x, p.y), 9999)) > MAX_STEPS:
-			return []      # 大宝箱必须在 12 步内可达
+			return []
 	return adj
 
 
@@ -362,7 +384,7 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 	var rest_set := {}
 	var cands: Array = []
 	for i in CELLS:
-		if i == start_i or is_bigchest(i):
+		if i == start_i or is_bigchest(i) or is_fixed_shop(i):
 			continue
 		cands.append(i)
 	_shuffle(cands, rng)
@@ -384,7 +406,7 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 	var shop_set := {}
 	var shop_cands: Array = []
 	for i in CELLS:
-		if i == start_i or is_bigchest(i) or rest_set.has(i):
+		if i == start_i or is_bigchest(i) or is_fixed_shop(i) or rest_set.has(i):
 			continue
 		shop_cands.append(i)
 	_shuffle(shop_cands, rng)
@@ -394,7 +416,7 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 			break
 		var sok := true
 		for nb: int in adj[i]:
-			if nb == start_i or rest_set.has(nb) or shop_set.has(nb):
+			if nb == start_i or rest_set.has(nb) or shop_set.has(nb) or is_fixed_shop(nb):
 				sok = false
 				break
 		if sok:
@@ -413,6 +435,8 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 			type = "start"
 		elif is_bigchest(i):
 			type = "bigchest"
+		elif is_fixed_shop(i):
+			type = "shop"          # R243：右上角固定商店（每层都有）
 		elif rest_set.has(i):
 			type = "rest"
 		elif shop_set.has(i):
