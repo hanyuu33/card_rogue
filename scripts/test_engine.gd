@@ -15693,6 +15693,27 @@ func _init() -> void:
 	check(r150_spawned == 1 and r150_b2.forge_idle == 0,
 			"R150 亲手击杀 → 锻造出 1 只量产型俄倪厄（实际 %d 只），且空转清零" % r150_spawned)
 
+	# ④b R231 追加：上面那条是**手写 last_hit_by** 的短路用例，这里补一条**真实攻击路径**
+	#     （`attack()` 自己记击杀功 → `_destroy` → `_credit_kill` → 锻造），
+	#     防有人改掉 `attack()` 里那句 `defender.last_hit_by = src` 而没人发现。
+	var r231f_e := _new_engine([], 40, 40)
+	var r231f_boss := r231f_e.state.place(CardData.from_dict(r150_boss.to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r231f_food_card: CardData = CardData.from_dict(r150_repo.get_card(8003).to_dict())
+	r231f_food_card.health = 1
+	r231f_e.state.place(r231f_food_card, Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r231f_e.start_game()
+	r231f_boss.forge_idle = r231f_boss.forge_period
+	r231f_e.attack(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	var r231f_bots := 0
+	for r231f_c: Vector2i in r231f_e.state.board:
+		var r231f_p: Placement = r231f_e.state.unit_at(r231f_c)
+		if r231f_p != null and r231f_p.card.id == GameEngine.SUN_FORGE_FURY_ID:
+			r231f_bots += 1
+	check(r231f_bots == 1 and r231f_boss.forge_idle == 0,
+			"R150/R231 真实攻击路径：Boss 走 attack() 打死我方单位也会锻造（%d 只，空转清零）"
+			% r231f_bots)
+
 	# ⑤ **不是**它亲手击杀 → 不锻造、空转也不清零（防「只要死了人就算它的」）
 	var r150_e3 := _new_engine([], 30, 30)
 	var r150_b3 := r150_e3.state.place(CardData.from_dict(r150_boss.to_dict()),
