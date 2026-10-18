@@ -192,6 +192,11 @@ const COL_HAND_BONUS := UiTheme.ACCENT_LIT
 const COL_DROP_ZONE := Color(0.13, 0.55, 0.86, 0.85)
 ## 拖拽「将要命中的那一格」的光圈色（原来直接写在 _draw_drag 里，R117 收成令牌）。
 const COL_SPELL_RING := Color(0.55, 0.90, 1.00, 0.90)
+# R242：AOE 释放范围（橙=波及格）· 自伤警告（红，脉冲）· 条件额外效果（金）
+const COL_AOE := Color(0.95, 0.55, 0.20, 0.26)
+const COL_AOE_EDGE := Color(0.98, 0.62, 0.24, 0.92)
+const COL_AOE_DANGER := Color(0.95, 0.26, 0.26, 0.95)
+const COL_BONUS := Color(1.00, 0.82, 0.29, 0.95)
 ## R118：左键误点空位后的「再点一次就取消」上膛色 —— 偏橙，与两段式技能的「已选」
 ## 金黄（COL_PICKED 1.0/0.784/0.0）明确分开，也压得住 `_draw_grid()` 已经画在
 ## 同一格上的绿 / 暗红**敌我框**（0.7 透明度的琥珀压上去会混成说不清的黄绿）。
@@ -2098,6 +2103,8 @@ func _demo_tick() -> void:
 		_shot_t0 = _now()
 	if _shot_pending and "--dragshot" in _demo_args:
 		_demo_dragshot()          # R117 临时演示：钉住一次拖拽（见函数注释）
+	if _shot_pending and "--aoe" in _demo_args:
+		_demo_aoe_drag()          # R242 演示：AOE 范围 / 自伤警告 / 条件额外加成
 	var shot_due := _shot_pending and _demo_frame == _shot_frame
 	if _shot_pending and _shot_t0 > 0 and _now() - _shot_t0 >= _shot_ms \
 			and "--shotms" in _demo_args:
@@ -2154,6 +2161,68 @@ func _demo_dragshot() -> void:
 	if p != Vector2.ZERO:
 		_drag_pos = p
 	queue_redraw()
+
+
+func _demo_aoe_drag() -> void:
+	## R242 演示（**只服务出图**，不进任何正式流程）：把一张 AOE / 条件加成技能拖住并钉在指定格。
+	## 用法：`battle.tscn -- --screenshot --aoe 9007 --aoepos x,y --shotframe 90`
+	##   `--aoe <id>`   拖哪张卡（9007 火球 / 9084 火墙 / 9090 偷袭）
+	##   `--aoepos x,y` / `--aoecell 行,列` 光标钉在哪（不给 = 第一个合法目标格）
+	## 摆位只做一次：我方两个树人（4,0 / 4,2）+ 敌方一个满血骷髅（2,1），于是
+	##   * 火球砸 (4,1) → 同时演「波及自己人 ×2」与「会伤到自己 HP」；
+	##   * 火墙选第 4 行 → 演「我方单位在这行，走过去会被烧」；
+	##   * 偷袭打 (2,1) 的满血敌人 → 演金色双环「满血：6 → 12」。
+	if engine == null:
+		return
+	if _drag_idx < 0:
+		var want := GameEngine.FIREBALL_ID
+		for i in _demo_args.size():
+			if _demo_args[i] == "--aoe" and i + 1 < _demo_args.size():
+				want = int(_demo_args[i + 1])
+		var c := repo.get_card(want)
+		if c == null:
+			return
+		if not engine.state.board.has(Vector2i(4, 0)):
+			engine.state.place(repo.get_card(8003), Vector2i(4, 0), GameEngine.SIDE_SELF)
+		if not engine.state.board.has(Vector2i(4, 2)):
+			engine.state.place(repo.get_card(8003), Vector2i(4, 2), GameEngine.SIDE_SELF)
+		if not engine.state.board.has(Vector2i(2, 1)):
+			engine.state.place(repo.get_card(1053), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+		# 手牌此刻可能还没抽上来（开局前几帧是空数组）→ 空了就先 append。
+		# 走 from_dict 复制：`get_card()` 的静态类型是 RefCounted，直接塞进
+		# `Array[CardData]` 会被运行时拒（实见 Invalid assignment）。
+		var hc := CardData.from_dict(c.to_dict())
+		if engine.state.hand.is_empty():
+			engine.state.hand.append(hc)
+		else:
+			engine.state.hand[0] = hc
+		_banner = {}    # 只截图：回合横幅会压在 AOE 范围顶部
+		engine.state.energy = 99        # 出图不该卡在「能量不足」
+		_start_drag(0, _cell_center(Vector2i(4, 0)))
+		queue_redraw()
+		return
+	var p := _demo_aoe_pos()
+	if p != Vector2.ZERO:
+		_drag_pos = p
+	queue_redraw()
+
+
+func _demo_aoe_pos() -> Vector2:
+	## `--aoepos x,y`（像素）或 `--aoecell 行,列`（格子）指定的光标；
+	## 都不给 = 第一个合法目标格的中心。出图用手算像素容易偏，优先用 --aoecell。
+	for i in _demo_args.size():
+		if _demo_args[i] == "--aoecell" and i + 1 < _demo_args.size():
+			var rc := str(_demo_args[i + 1]).split(",")
+			if rc.size() == 2:
+				return _cell_center(Vector2i(int(rc[0]), int(rc[1])))
+	for i in _demo_args.size():
+		if _demo_args[i] == "--aoepos" and i + 1 < _demo_args.size():
+			var parts := str(_demo_args[i + 1]).split(",")
+			if parts.size() == 2:
+				return Vector2(float(parts[0]), float(parts[1]))
+	if not _drag_spell_cells.is_empty():
+		return _cell_center(_drag_spell_cells[0])
+	return Vector2.ZERO
 
 
 func _demo_drag_pos() -> Vector2:
@@ -3146,7 +3215,7 @@ func _use_hand_card(i: int) -> void:
 		else:
 			spell_pending = i
 			spell_targets = targets
-			var target_hint := "一个格子" if card.id == 9007 else "一个目标"
+			var target_hint := "一个格子" if card.id == GameEngine.FIREBALL_ID else "一个目标"
 			if card.id == GameEngine.FIRE_WALL_SPELL_ID:
 				target_hint = "一条横行（点该行任意一格）"
 			elif card.id == GameEngine.INFILTRATE_ID:
@@ -4131,10 +4200,91 @@ func _close_zone_panels() -> void:
 	_ee_popup = false   # R197：一并收掉敌方效果开场弹窗
 	_zone_page = 0
 	_relic_scroll = 0.0
+# ── R242：AOE 释放范围预览（纯函数，便于回归）────────────────────
+
+static func spell_aoe_kind(card: CardData) -> String:
+	## 这张技能的 AOE 形状（"" = 不是 AOE）。**唯一判据口** —— 与引擎实现逐条对齐：
+	##   * "cross" 十字（中心 + 四邻，越界裁剪）：
+	##       火球 9007（`_blast(..., radius=1)`，manhattan ≤ 1）/
+	##       陨石 9077（`_meteor`）/ 回旋斩 9096（`_whirl_blade`）；
+	##   * "row" 一整横行：火墙术 9084（`_fire_wall_spell` 取 target.x）；
+	##   加新的 AOE 技能只改这里，绘制与提示都跟着走。
+	if card == null:
+		return ""
+	match card.id:
+		GameEngine.FIREBALL_ID, GameEngine.METEOR_ID, GameEngine.WHIRL_BLADE_ID:
+			return "cross"
+		GameEngine.FIRE_WALL_SPELL_ID:
+			return "row"
+	return ""
+
+
+static func spell_aoe_hits_ally(card: CardData) -> bool:
+	## 这一发的 AOE **会不会打到自己人**（与引擎一致）：
+	##   火球 9007 / 陨石 9077 = 不分敌我 → true；
+	##   回旋斩 9096 只打敌方；火墙 9084 施放时只打敌方（但该行会燃烧，另行提示）→ false。
+	if card == null:
+		return false
+	return card.id in [GameEngine.FIREBALL_ID, GameEngine.METEOR_ID]
+
+
+static func aoe_cells(kind: String, center: Vector2i) -> Array[Vector2i]:
+	## AOE 形状 → 具体格集合（棋盘外的不收）。"" / 未知形状按「只有中心格」处理。
+	var out: Array[Vector2i] = []
+	match kind:
+		"row":
+			for y in FieldState.BOARD_COLS:
+				out.append(Vector2i(center.x, y))
+		"cross":
+			out.append(center)
+			for d: Vector2i in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
+				var c: Vector2i = center + d
+				if c.x < 0 or c.x >= FieldState.BOARD_ROWS or c.y < 0 or c.y >= FieldState.BOARD_COLS:
+					continue
+				out.append(c)
+		_:
+			out.append(center)
+	return out
+
+
+static func aoe_danger(state: FieldState, card: CardData, center: Vector2i) -> Dictionary:
+	## 「这一发会不会伤到自己」的**唯一判定口**（绘制与测试共用）。返回：
+	##   cells  —— 会被波及的格（浅橙）
+	##   own    —— 其中的**己方单位**个数
+	##   hp     —— 会不会**伤到我方 HP**（后排被覆盖：空格直接打 HP / 单位死了溢出）
+	##   burn   —— 我方单位站在火墙那一行（施放不受伤，但该行燃烧，经过会被灼烧）
+	var kind := spell_aoe_kind(card)
+	var cells: Array[Vector2i] = aoe_cells(kind, center)
+	var info := {"kind": kind, "cells": cells, "own": 0, "hp": false, "burn": false}
+	if kind == "" or state == null:
+		return info
+	var my_back: int = GameEngine.back_row(GameEngine.SIDE_SELF)
+	# ⚠️ 回旋斩（9096）也是十字，但**只打敌方** —— 十字里有自己人并不算「波及」，
+	# 不能报红（否则玩家会以为这一刀会砍到自己人）。只有「不分敌我」的 AOE 才数自己人。
+	if kind != "row" and not spell_aoe_hits_ally(card):
+		return info
+	for c: Vector2i in cells:
+		var p: Placement = state.unit_at(c)
+		if p == null or p.owner != GameEngine.SIDE_SELF:
+			continue
+		info["own"] = int(info["own"]) + 1
+	if kind == "row":
+		# 火墙：只烧「敌人」，自己人站上去只有**移动经过**时挨灼烧
+		info["burn"] = int(info["own"]) > 0
+		return info
+	# 不分敌我的真 AOE：覆盖到我方后排行 → 掉的是自己的 HP
+	# （火球 `_blast` 会挑最近的**空格**直击 HP；后排单位被击破同样溢出漏 HP）
+	for c2: Vector2i in cells:
+		if c2.x == my_back:
+			info["hp"] = true
+			break
+	return info
+
+
 func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 	## 技能的可点目标格：火球术=任意格；击退/龙息=敌方单位；狂暴=己方盟友；其余=战场上所有单位。
 	var out: Array[Vector2i] = []
-	if card.id == 9007:
+	if card.id == GameEngine.FIREBALL_ID:
 		for x in FieldState.BOARD_ROWS:
 			for y in FieldState.BOARD_COLS:
 				out.append(Vector2i(x, y))
@@ -8516,6 +8666,12 @@ func _draw_highlights() -> void:
 		_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, "HP", _cell_center(cell), Color.WHITE)
 	for cell in spell_targets:
 		_hl(cell, COL_SPELL)
+	# R242：「点手卡 → 点目标」这条路上，鼠标停在某一格时同样给 AOE 范围 / 自伤警告。
+	# 与拖拽共用 `_draw_spell_preview`，两条路的画法不会分叉。
+	if spell_pending >= 0 and engine != null and spell_pending < engine.state.hand.size():
+		var hov: Variant = _cell_at(get_local_mouse_position())
+		if hov != null and spell_targets.has(hov):
+			_draw_spell_preview(engine.state.hand[spell_pending], hov)
 	# R102：两段式技能**已选中第一个单位**的标记（金黄粗描边 + 角标「已选」）。
 	# 潜伏 9100 与双向传送 8061 共用这一套 —— 满足「选中哪个要看得见、右键能取消」。
 	_draw_picked_marker()
@@ -9541,8 +9697,14 @@ func _draw_drag() -> void:
 	## 拖拽释放演出：目标格高亮 + 半透明卡牌跟随光标。
 	if _drag_idx < 0 or _drag_idx >= engine.state.hand.size():
 		return
-	for cell in _drag_spell_cells:
-		_hl(cell, COL_SPELL)
+	# R242：AOE 技能（火球 / 陨石 / 回旋斩 / 火墙）**不逐格刷紫** —— 它们的可选格往往是
+	# 「全盘」或「整行」，紫色填充会把下面那层橙色范围盖得看不见；范围由
+	# `_draw_spell_preview` 统一画（还能带上自伤警告）。单体技能照旧刷紫。
+	var _dragging: CardData = engine.state.hand[_drag_idx]
+	var _aoe_kind := spell_aoe_kind(_dragging)
+	if _aoe_kind == "":
+		for cell in _drag_spell_cells:
+			_hl(cell, COL_SPELL)
 	if _drag_place:
 		for cell in _drag_place_cells:
 			# 已有栅栏的格子（叠栅栏）用橙色 + 「叠」标记，与绿色空格区分
@@ -9552,22 +9714,8 @@ func _draw_drag() -> void:
 			else:
 				_hl(cell, COL_MOVE)
 	var card := engine.state.hand[_drag_idx]
-	if card.id == GameEngine.DEMOLISH_ID and not _drag_spell_cells.is_empty():
-		# 拆解 8049（R97）：拖到「被改造」的合法目标上时，金色高亮 + 「额外获得升级」提示。
-		var near := _drag_spell_cells[0]
-		var bestd := 999999
-		for c in _drag_spell_cells:
-			var d := int(_cell_center(c).distance_squared_to(_drag_pos))
-			if d < bestd:
-				bestd = d
-				near = c
-		var up: Placement = engine.state.unit_at(near)
-		if up != null and (up.upgrade_stacks > 0 or up.upgrade_atk != 0 or up.upgrade_hp != 0):
-			_hl(near, Color("ffd24a"))
-			var nc := _cell_center(near)
-			draw_arc(nc, CELL * 0.66, 0, TAU, 32, Color("ffd24a"), 4.0)
-			_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "额外获得升级",
-				nc + Vector2(0, CELL * 0.44), Color("ffd24a"))
+	# R242：拆解（8049）的「额外获得升级」金色提示已并入 `_draw_spell_preview` ——
+	# 它和偷袭的「满血双倍」是同一类「条件额外效果」，不该各画一套。
 	# R106：拖的是效果卡 → 高亮左侧效果区（**落点**就是它以后待着的地方）。
 	# R117 订正文案：原来写「松手启用 / 拖到这里启用」，但 R117 把「松手生效的范围」
 	# 扩到了**左半边整片**（见 `_effect_drop_rect`，外框由 `_drag_zone_rect` 统一画）。
@@ -9604,11 +9752,79 @@ func _draw_drag() -> void:
 	# 光圈还挂在一个目标上，玩家会以为已经打出去了（用户口径「有误导性」）。
 	var hit = _drag_hit_cell()
 	if hit != null:
+		# R242：AOE 范围 / 自伤警告 / 条件额外效果（放置类不是施法，跳过）
+		if not _drag_place:
+			_draw_spell_preview(card, hit)
 		var cc := _cell_center(hit)
 		var rc := COL_SPELL_RING
 		if _drag_place:
 			rc = COL_FENCE_MERGE if engine.state.board.has(hit) else COL_MOVE
 		draw_arc(cc, minf(CELL, CELL_W) * 0.62, 0, TAU, 32, rc, 3.0)
+
+
+static func spell_bonus_note(card: CardData, p: Placement) -> String:
+	## 这一发打在**这个单位**上，有没有「条件额外效果」（有 → 返回提示文案，"" = 没有）。
+	## **纯函数**（绘制与回归共用），判据与引擎逐条对齐，加新的「条件加成」卡只改这里：
+	##   * 偷袭 9090：目标**满血** → 6 改 12（引擎：`p.health >= p.card.health`）
+	##   * 拆解 8049（R97）：目标被改造过 → 额外获得升级
+	if card == null or p == null:
+		return ""
+	if card.id == GameEngine.SNEAK_ID and p.health >= p.card.health:
+		return "满血：%d → %d" % [GameEngine.SNEAK_DMG, GameEngine.SNEAK_FULL_DMG]
+	if card.id == GameEngine.DEMOLISH_ID \
+			and (p.upgrade_stacks > 0 or p.upgrade_atk != 0 or p.upgrade_hp != 0):
+		return "额外获得升级"
+	return ""
+
+
+func _spell_bonus_label(card: CardData, cell: Vector2i) -> String:
+	## 屏幕坐标那一格 → 单位 → 交给纯函数判有没有额外效果。
+	if card == null or engine == null:
+		return ""
+	return spell_bonus_note(card, engine.state.unit_at(cell))
+
+
+func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
+	## R242：**释放预览的唯一绘制口** —— 拖拽释放与「点选目标后再悬停」两条路都调它。
+	## 三层，从下到上：
+	##   ① AOE 覆盖格（浅橙填充 + 橙框）：告诉玩家「这一发会打到哪几格」；
+	##   ② 自伤警告（红色脉冲框 + 文字）：覆盖到己方单位 / 我方后排时才亮；
+	##   ③ 条件额外效果（金色双环 + 文案）：偷袭满血、拆解打已改造目标。
+	if card == null or engine == null:
+		return
+	var info := aoe_danger(engine.state, card, center)
+	var cells: Array[Vector2i] = info["cells"]
+	if String(info["kind"]) != "":
+		for c: Vector2i in cells:
+			var r := _cell_rect(c).grow(-2.0)
+			draw_rect(r, COL_AOE, true)
+			draw_rect(r, COL_AOE_EDGE, false, 1.6)
+	# ② 自伤警告：红框按时间做呼吸（相位取 _now()，不额外开 Timer）
+	var own := int(info["own"])
+	if own > 0 or bool(info["hp"]):
+		var pulse := 0.55 + 0.45 * absf(sin(float(_now()) * 0.004))
+		var dcol := Color(COL_AOE_DANGER.r, COL_AOE_DANGER.g, COL_AOE_DANGER.b, pulse)
+		var bb := _cells_bbox(cells).grow(2.0)
+		draw_rect(bb, dcol, false, 3.0)
+		var txt := ""
+		if bool(info["hp"]):
+			txt = "⚠ 会伤到自己 HP"
+		elif bool(info["burn"]):
+			txt = "⚠ 我方单位在这行，走过去会被烧"
+		else:
+			txt = "⚠ 会波及自己人 ×%d" % own
+		_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, txt,
+				Vector2(bb.get_center().x, bb.position.y - 13.0), Color("ffe2e2"),
+				Color(0.22, 0.05, 0.05, 0.88))
+	# ③ 条件额外效果：金色双环 + 文案（在格子下方，不挡飘字）
+	var bonus := _spell_bonus_label(card, center)
+	if bonus != "":
+		var cc := _cell_center(center)
+		var kw := minf(CELL, CELL_W)
+		draw_arc(cc, kw * 0.60, 0, TAU, 32, COL_BONUS, 2.5)
+		draw_arc(cc, kw * 0.72, 0, TAU, 32, COL_BONUS, 1.4)
+		_draw_string_box_center(_font_bold, UiTheme.FS_CAPTION, bonus,
+				cc + Vector2(0, kw * 1.06), COL_BONUS, Color(0.14, 0.11, 0.03, 0.86))
 
 
 func _draw_info_panel() -> void:

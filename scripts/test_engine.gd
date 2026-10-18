@@ -18358,6 +18358,77 @@ func _init() -> void:
 			and r240_e.state.discard.is_empty(),
 			"R240 破绽：改文案不改行为（打出仍进消耗区）")
 
+	# ---- R242：AOE 释放范围提示 / 自伤警告 / 条件额外效果 ----
+	var r242_bs: GDScript = load("res://scripts/battle_scene.gd")
+	var r242_repo := CardRepo.load_json()
+	var r242_fire: CardData = r242_repo.get_card(9007)
+	var r242_meteor: CardData = r242_repo.get_card(9077)
+	var r242_whirl: CardData = r242_repo.get_card(9096)
+	var r242_wall: CardData = r242_repo.get_card(9084)
+	var r242_sneak: CardData = r242_repo.get_card(9090)
+	check(r242_bs.spell_aoe_kind(r242_fire) == "cross"
+			and r242_bs.spell_aoe_kind(r242_meteor) == "cross"
+			and r242_bs.spell_aoe_kind(r242_whirl) == "cross"
+			and r242_bs.spell_aoe_kind(r242_wall) == "row"
+			and r242_bs.spell_aoe_kind(r242_sneak) == "",
+			"R242 AOE 形状：火球 / 陨石 / 回旋斩 = 十字，火墙 = 整行，偷袭 = 非 AOE")
+	var r242_c5: Array = r242_bs.aoe_cells("cross", Vector2i(2, 1))
+	var r242_c3: Array = r242_bs.aoe_cells("cross", Vector2i(0, 0))
+	var r242_row: Array = r242_bs.aoe_cells("row", Vector2i(3, 0))
+	check(r242_c5.size() == 5 and r242_c3.size() == 3
+			and r242_row.size() == FieldState.BOARD_COLS,
+			"R242 AOE 范围：中心十字 5 格 / 角落裁剪成 3 格 / 整行 %d 格"
+			% FieldState.BOARD_COLS)
+	# 自伤判定：我方树人站 (4,0)，火球砸 (4,1) → 十字含自己人 + 覆盖我方后排
+	var r242_e := _new_engine([], 30, 30)
+	r242_e.start_game(1)
+	r242_e.state.place(_card(9001, "测试树人", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(4, 0), GameEngine.SIDE_SELF)
+	var r242_d_fire: Dictionary = r242_bs.aoe_danger(r242_e.state, r242_fire, Vector2i(4, 1))
+	check(int(r242_d_fire["own"]) == 1 and bool(r242_d_fire["hp"])
+			and (r242_d_fire["cells"] as Array).size() == 5,
+			"R242 自伤：火球盖到自己人 1 个 + 我方后排 → 警告会掉 HP")
+	var r242_d_meteor: Dictionary = r242_bs.aoe_danger(r242_e.state, r242_meteor, Vector2i(4, 1))
+	check(int(r242_d_meteor["own"]) == 1 and bool(r242_d_meteor["hp"]),
+			"R242 自伤：陨石同样不分敌我")
+	# 回旋斩只打敌方 —— 同样位置**不报**自伤（否则玩家以为会砍自己人）
+	var r242_d_whirl: Dictionary = r242_bs.aoe_danger(r242_e.state, r242_whirl, Vector2i(4, 1))
+	check(int(r242_d_whirl["own"]) == 0 and not bool(r242_d_whirl["hp"]),
+			"R242 自伤：回旋斩只打敌方 → 不报「波及自己人」")
+	# 火墙：自己人在这行 → 只提示「会被烧」，不是立刻掉 HP
+	var r242_d_wall: Dictionary = r242_bs.aoe_danger(r242_e.state, r242_wall, Vector2i(4, 1))
+	check(bool(r242_d_wall["burn"]) and not bool(r242_d_wall["hp"])
+			and (r242_d_wall["cells"] as Array).size() == FieldState.BOARD_COLS,
+			"R242 火墙：我方单位在这行 → 提示会被烧（不立刻掉 HP）")
+	# 反向：砸敌方半场（十字里没有自己人）→ 不报警告
+	var r242_d_safe: Dictionary = r242_bs.aoe_danger(r242_e.state, r242_fire, Vector2i(1, 1))
+	check(int(r242_d_safe["own"]) == 0 and not bool(r242_d_safe["hp"]),
+			"R242 反向：砸敌方半场不报警告")
+	# 条件额外效果：偷袭打满血敌人 → 有文案；掉血之后 → 没有
+	var r242_full: Placement = r242_e.state.place(
+			_card(9002, "满血敌人", "盟友", 1, 5, 20, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	check(r242_bs.spell_bonus_note(r242_sneak, r242_full).contains("满血")
+			and r242_bs.spell_bonus_note(r242_sneak, r242_full).contains("12"),
+			"R242 偷袭：目标满血 → 金色提示「满血：6 → 12」（%s）"
+			% r242_bs.spell_bonus_note(r242_sneak, r242_full))
+	r242_full.health = 19
+	check(r242_bs.spell_bonus_note(r242_sneak, r242_full) == "",
+			"R242 偷袭：目标掉血后不再提示额外伤害")
+	# 拆解（8049）沿用同一口：已改造目标 → 「额外获得升级」
+	var r242_demolish: CardData = r242_repo.get_card(8049)
+	var r242_mech: Placement = r242_e.state.place(
+			_card(9003, "已改造", "盟友", 1, 2, 6, 1, 1),
+			Vector2i(3, 2), GameEngine.SIDE_SELF)
+	check(r242_bs.spell_bonus_note(r242_demolish, r242_mech) == "",
+			"R242 拆解：未改造目标不提示")
+	r242_mech.upgrade_stacks = 1
+	check(r242_bs.spell_bonus_note(r242_demolish, r242_mech) == "额外获得升级",
+			"R242 拆解：已改造目标 → 「额外获得升级」（与偷袭同一口）")
+	check(r242_bs.spell_bonus_note(null, r242_mech) == ""
+			and r242_bs.spell_bonus_note(r242_sneak, null) == "",
+			"R242 空值安全：卡或目标为空时返回空串")
+
 	# ================================================================
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")

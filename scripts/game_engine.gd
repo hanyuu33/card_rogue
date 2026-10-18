@@ -409,6 +409,10 @@ const MAGIC_TOWER_TRAIT:= "魔法塔"
 const MAGIC_CORE_TRAIT:= "魔力核心"
 const MAGIC_CORE_DISCOUNT:= 1
 const MAGIC_CORE_DMG:= 1
+# 火球术（9007 技能）：2 费；对目标格**十字（中心 + 四邻）**各 20 伤、不分敌我；
+# 空格落在「HP 行」上 → 直击那一方的 HP（见 `_blast` / `damage_cell`）。
+# R242：提成常量 —— 战斗场景的「AOE 范围提示」要按同一个 id 判形状，别再各写一遍字面量。
+const FIREBALL_ID:= 9007
 # 陨石术（9077 技能）：10 费；十字范围 40 伤、不分敌我；「留手」不弃；每次用技能永久 -1。
 const METEOR_ID:= 9077
 const METEOR_DMG:= 40
@@ -6135,7 +6139,7 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 			return "对方抽了 %d 张牌" % m
 		9006:
 			return _chain_lightning(_spell_dmg(side, 11, card))
-		9007:
+		FIREBALL_ID:
 			return _blast(_spell_dmg(side, 20, card), target, 1)
 		9010:
 			var wp:= _target_placement(side, target)
