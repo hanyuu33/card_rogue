@@ -3046,6 +3046,9 @@ func _init() -> void:
 			"没有鸭之眼时技能伤害不加成")
 	# 掉落：精英/Boss 胜利掉落随机奖励道具（不重复、可掉空）
 	var saved_relics: Array[int] = RunState.relics.duplicate()
+	var r224_s_hp := RunState.hp            # R224：池里新增苹果/牛奶（改血量/附魔）
+	var r224_s_max := RunState.max_hp       # → 领取后立刻还原，别污染后面的断言
+	var r224_s_mods: Array = RunState.deck_mods.duplicate()
 	RunState.relics = []
 	var d1 := RunState.offer_relic_drop("elite")
 	check(d1 > 0 and RunState.pending_relic_drop == d1
@@ -3054,6 +3057,9 @@ func _init() -> void:
 	RunState.claim_relic_drop()
 	check(RunState.has_relic(d1) and RunState.pending_relic_drop == -1,
 			"领取掉落：道具入列、待领清空")
+	RunState.hp = r224_s_hp
+	RunState.max_hp = r224_s_max
+	RunState.deck_mods = r224_s_mods
 	# ⚠️ R81：奖励池新增了「鸭血」（6024），它获得时会置 `pending_relic`（要玩家选卡）。
 	# 这里摇到的 d1 有可能是鸭血 → 领取后 `pending_relic` 会**合法地**留着 6024。
 	# 必须清掉，否则后面「某某道具获得后无待选后续」的断言会被这次随机掉落污染。
@@ -4118,7 +4124,7 @@ func _init() -> void:
 	check(reached_front or eng19.over,
 			"使魔鸭群：几回合内挤到 HP 前第 4 行（不再卡住绕圈）")
 
-	# ---- RunState：玩家最大/当前生命 + 休息事件（把档位钉在 2「困难」= 25%）----
+	# ---- RunState：玩家最大/当前生命（R224：休息处不再回血，rest() 恒 0）----
 	RunState.set_difficulty(2)
 	RunState.reset(50)
 	RunState.take_damage(13)
@@ -4127,16 +4133,15 @@ func _init() -> void:
 	check(RunState.hp == 50, "回复不超过最大生命")
 	RunState.take_damage(20)
 	var g := RunState.rest()
-	check(g == 13, "休息恢复 25% 最大生命（向上取整，50×25%→13）〔2 档〕")
-	check(RunState.hp == 43, "休息后 43/50")
-	RunState.take_damage(0)
-	var g2 := RunState.rest()
-	check(g2 == 7 and RunState.hp == 50, "再休息按需回复并封顶（缺 7 回 7 → 50/50）")
+	check(g == 0 and RunState.hp == 30,
+			"R224：休息处不再回血（rest() 恒 0；20/50 → %d/50）" % RunState.hp)
+	check(RunState.rest_heal_amount() == 0 and RunState.rest_pct() == 0.0,
+			"R224：休息回复口径全档位归零（rest_pct 0.0 → rest_heal_amount 0）")
 	RunState.reset(30)
 	check(RunState.hp == 30 and RunState.max_hp == 30, "reset 可指定新最大生命")
 	RunState.take_damage(5)
 	RunState.reset()
-	RunState.set_difficulty(0)   # 复位成默认档（0 宽松）
+	RunState.set_difficulty(0)   # 复位成默认档（0 轻松）
 
 	# ---- 挣扎事件（数据面）：失去 21 生命 + 金属龙加入卡组 ----
 	RunState.reset(50)
@@ -5850,7 +5855,7 @@ func _init() -> void:
 				"R147 事件奖励互斥：`_reward_claimed` + `_claim_reward` 唯一口存在")
 		var r147_n_main := r147_src.count("_claim_reward(rest_btn)")
 		var r147_n_bbq := r147_src.count("_claim_reward(bbq_btn)")
-		check(r147_n_main >= 12 and r147_n_bbq >= 2,
+		check(r147_n_main >= 11 and r147_n_bbq >= 2,
 				"R147 每个发放奖励的分支都调 `_claim_reward`（主按钮 %d 处 / 次按钮 %d 处）"
 				% [r147_n_main, r147_n_bbq])
 		var r147_i_at := r147_src.find("func _arcane_taken")
@@ -5866,8 +5871,11 @@ func _init() -> void:
 		check(r147_bbq_body.find("if _arcane_taken():") >= 0
 				and r147_bbq_body.find("_claim_reward(bbq_btn)") >= 0,
 				"R147 喝泉水这条路：先过 `_arcane_taken()` 闸门、发完奖励再 `_claim_reward(bbq_btn)`")
-		check(r147_src.find("if _rested:   # R147：本次休息处只领一份") >= 0,
-				"R147 休息处「烤肉」同样带闸门（先休息过就不能再烤肉）")
+		# R224：休息处只剩「烤肉」一个选项（篝火回血移除）→ 不再有「先休息过」闸门；
+		# 改成守卫新口径：`_on_bbq` 仍带「已持有烤肉」闸门，且 `_rested` 旗标已彻底删除。
+		check(r147_bbq_body.find("if RunState.has_relic(RunState.BARBECUE_RELIC_ID):") >= 0
+				and r147_src.find("var _rested") < 0,
+				"R224 休息处：只保留「已持有烤肉」闸门，_rested 旗标已移除")
 	# ==== R148/R155：Esc 主菜单 + 战场顶栏「记录偏左 / 卡组·地图右侧 / 回合结束 / 齿轮」 ====
 	# 行为面（open → 暂停场景树 / close → 恢复 / UiGate 让位 / 菜单项与主按钮唯一）
 	# 在 test_smoke 里拿真场景跑；这里锁的是「接线」与顶栏布局口径。
@@ -7462,32 +7470,34 @@ func _init() -> void:
 	# ---- R47：难度档位 / 事件遭遇战计入难度 / 奖励池角色过滤 / 荒野形态强化 ----
 
 	# ---- R223：难度档位 0~10（继承制：高难度继承低难度全部 debuff）----
-	# 0 = 战斗回 3 + 休息 40% + 金钱 150；1 = 休息 25%（战斗仍回 3）；
-	# 2 = 战斗胜利不回血（= 旧「困难」其余部分）；3 = 敌血 +10%；4 = 稀有率 ×0.5；
+	# 0 = 金钱 150；1 = 休息回复降低（R224 起无数值效果，文本保留）；
+	# 2 = 战斗胜利不回血（R224 起全档位同此，文本保留）；3 = 敌血 +10%；4 = 稀有率 ×0.5；
 	# 5 = 疲惫诅咒；6 = 敌攻 +1；7 = 金钱 100；8 = 巧克力 11；9 = 最大生命 80%；
 	# 10 = 继承 0~9 全部、无新增。
+	# R224 全局规则「除到达新的一层外不能回复 HP」：战斗胜利回血 / 休息回血两表归零，
+	# 下面难度 0/1/2 的回血断言全部改成「恒 0」。
 	RunState.set_difficulty(0)
 	RunState.reset(50)
-	check(RunState.battle_win_heal() == 3 and RunState.rest_heal_amount() == 20,
-			"难度 0：战斗回 3 血、休息 50×40%%→%d" % RunState.rest_heal_amount())
+	check(RunState.battle_win_heal() == 0 and RunState.rest_heal_amount() == 0,
+			"难度 0：R224 起战斗胜利 / 休息均不回血（回血两表归零）")
 	check(RunState.start_gold() == 150 and RunState.chocolate_per_layer() == RogueMap.MAX_STEPS
 			and RunState.max_hp_mul() == 1.0 and RunState.enemy_hp_bonus_pct() == 0.0
 			and RunState.enemy_power_bonus() == 0 and RunState.rare_weight_mul() == 1.0
 			and not RunState.fatigue_active(),
 			"难度 0：金钱 150 / 巧克力 %d / 最大生命不变 / 无其他 debuff" % RogueMap.MAX_STEPS)
 	RunState.take_damage(30)
-	check(RunState.rest() == 20 and RunState.hp == 40,
-			"难度 0：休息实际回 20（20/50 → %d/50）" % RunState.hp)
+	check(RunState.rest() == 0 and RunState.hp == 20,
+			"难度 0：休息不再回血（30/50 → %d/50 不变）" % RunState.hp)
 	RunState.set_difficulty(1)
 	RunState.reset(50)
 	RunState.take_damage(30)
-	check(RunState.battle_win_heal() == 3 and RunState.rest_heal_amount() == 13,
-			"难度 1：只降篝火（休息 50×25%→13），战斗胜利仍回 3 血")
-	check(RunState.rest() == 13 and RunState.hp == 33,
-			"难度 1：休息实际回 13（20/50 → %d/50）" % RunState.hp)
+	check(RunState.battle_win_heal() == 0 and RunState.rest_heal_amount() == 0,
+			"难度 1：R224 起同样不回血（原「降篝火」debuff 已无数值效果）")
+	check(RunState.rest() == 0 and RunState.hp == 20,
+			"难度 1：休息不再回血（30/50 → %d/50 不变）" % RunState.hp)
 	RunState.set_difficulty(2)
-	check(RunState.battle_win_heal() == 0 and RunState.rest_pct() == 0.25,
-			"难度 2：战斗胜利不回血（= 旧「困难」，休息 25% 继承自难度 1）")
+	check(RunState.battle_win_heal() == 0 and RunState.rest_pct() == 0.0,
+			"难度 2：R224 起与全档位一致 —— 战斗胜利 / 休息均不回血")
 	RunState.set_difficulty(3)
 	check(RunState.enemy_hp_bonus_pct() == 0.10, "难度 3：敌人生命 +10%（向上取整）")
 	RunState.set_difficulty(4)
@@ -7503,12 +7513,19 @@ func _init() -> void:
 	RunState.set_difficulty(9)
 	check(RunState.max_hp_mul() == 0.8, "难度 9：最大生命 ×80%")
 	RunState.set_difficulty(10)
-	check(RunState.difficulty_note().count("；") == 8
-			and RunState.difficulty_note().contains("虚弱"),
-			"难度 10：累计文本拼上 1~9 全部 9 条、自身无新增（%s）" % RunState.difficulty_note())
+	check(RunState.difficulty_note() == "无新增",
+			"难度 10：自身无新增 debuff → 文本「无新增」（%s）" % RunState.difficulty_note())
 	check(RunState.difficulty_summary().contains("初始金钱 100")
-			and RunState.difficulty_summary().contains("最大生命 80%"),
-			"难度 10：数值摘要列出全部生效项（%s）" % RunState.difficulty_summary())
+			and RunState.difficulty_summary().contains("最大生命 80%")
+			and not RunState.difficulty_summary().contains("篝火"),
+			"难度 10：数值摘要列出全部生效项、不再列「篝火」（%s）" % RunState.difficulty_summary())
+	RunState.set_difficulty(3)
+	check(RunState.difficulty_note() == "敌人更加顽强"
+			and RunState.difficulty_note().find("；") < 0,
+			"R224：难度文本只写当前档新增（3 档 = %s，不再拼 1~2 档）" % RunState.difficulty_note())
+	RunState.set_difficulty(0)
+	check(RunState.difficulty_note() == "无", "R224：0 档文本 = 「无」")
+	RunState.set_difficulty(10)
 	check(RunState.difficulty_name() == "噩梦" and RunState.DIFFICULTY_NAMES.size() == 11,
 			"难度 10 = 噩梦；档位名共 11 个（%s）" % str(RunState.DIFFICULTY_NAMES))
 	RunState.set_difficulty(99)
@@ -7518,11 +7535,74 @@ func _init() -> void:
 	check(RunState.DIFFICULTY_COUNT == 11 and RunState.DIFFICULTY_BATTLE_HEAL.size() == 11
 			and RunState.DIFFICULTY_REST_PCT.size() == 11
 			and RunState.DIFFICULTY_TEXTS.size() == 11
-			and RunState.DIFFICULTY_BATTLE_HEAL[0] == 3 and RunState.DIFFICULTY_BATTLE_HEAL[1] == 3
-			and RunState.DIFFICULTY_BATTLE_HEAL[2] == 0
-			and RunState.DIFFICULTY_REST_PCT[0] == 0.40 and RunState.DIFFICULTY_REST_PCT[1] == 0.25,
-			"难度档位：共 11 档；战斗回血 [3,3,0…] / 休息 [40%,25%…] 长度齐平")
+			and RunState.DIFFICULTY_BATTLE_HEAL[0] == 0 and RunState.DIFFICULTY_BATTLE_HEAL[2] == 0
+			and RunState.DIFFICULTY_REST_PCT[0] == 0.0 and RunState.DIFFICULTY_REST_PCT[1] == 0.0,
+			"难度档位：共 11 档；R224 回血两表全 0（除换层外不回血）长度齐平")
 	RunState.reset(50)
+
+	# ---- R224：全局 HP 规则 + 苹果 6027 + 牛奶 6028 + 附魔资格唯一口 ----
+	# ① 两条自动回血路径（战斗胜利 / 休息）归零 —— 函数层再钉一遍
+	check(RunState.battle_win_heal() == 0 and RunState.rest() == 0
+			and RunState.rest_heal_amount() == 0 and RunState.rest_pct() == 0.0,
+			"R224：战斗胜利 / 休息均不回血（除到达新的一层外不能回复 HP）")
+	# ② 苹果：立即 +14 最大生命并回复满
+	RunState.set_difficulty(0)
+	RunState.reset(50)
+	RunState.take_damage(30)              # 残血 20/50
+	check(RunState.hp == 20 and RunState.max_hp == 50, "苹果前置：残血 20/50")
+	RunState.gain_relic(RunState.APPLE_RELIC_ID)
+	check(RunState.max_hp == 64 and RunState.hp == 64,
+			"苹果：最大生命 50 → 64（+14）并回复满（%d/%d）" % [RunState.hp, RunState.max_hp])
+	check(RunState.has_relic(RunState.APPLE_RELIC_ID), "苹果：登记进道具栏")
+	# ③ 牛奶：随机两种附魔落到「合规且未附魔」的卡上，卡组本身不动
+	#    （start_run 走 randi() 播种 → 这里只断言**种子无关**的不变式）
+	RunState.end_run()
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	var r224_deck: Array = RunState.deck_ids.duplicate()
+	RunState.gain_relic(RunState.MILK_RELIC_ID)
+	var r224_ench := 0
+	var r224_ids: Array[String] = []
+	for r224_i in RunState.deck_mods.size():
+		var r224_m: Variant = RunState.deck_mods[r224_i]
+		if r224_m is Dictionary and not (r224_m as Dictionary).is_empty():
+			r224_ench += 1
+			var r224_eid: String = RunState.enchant_id_of(r224_m as Dictionary)
+			if not r224_ids.has(r224_eid):
+				r224_ids.append(r224_eid)
+	check(RunState.has_relic(RunState.MILK_RELIC_ID), "牛奶：登记进道具栏")
+	check(r224_ench <= RunState.MILK_ENCHANTS and r224_ids.size() == r224_ench,
+			"牛奶：最多附 %d 张、附魔种类两两不重复（实际 %d 张：%s）"
+			% [RunState.MILK_ENCHANTS, r224_ench, str(r224_ids)])
+	check(RunState.deck_ids == r224_deck, "牛奶：只加附魔，不动卡组本身")
+	var r224_repo := CardRepo.load_json()
+	var r224_ok := true
+	for r224_j in RunState.deck_mods.size():
+		var r224_m2: Variant = RunState.deck_mods[r224_j]
+		if r224_m2 is Dictionary and not (r224_m2 as Dictionary).is_empty():
+			var r224_c := r224_repo.get_card(RunState.deck_ids[r224_j])
+			# enchant_ok 带「已附魔拒绝」闸门 → 验资格时先把这一格的附魔摘下再判
+			RunState.deck_mods[r224_j] = {}
+			var r224_ok_j: bool = r224_c != null and RunState.enchant_ok(
+					RunState.enchant_id_of(r224_m2 as Dictionary), r224_c, r224_j)
+			RunState.deck_mods[r224_j] = r224_m2
+			if not r224_ok_j:
+				r224_ok = false
+	check(r224_ok, "牛奶：每张被附的卡都过 enchant_ok 资格判定（附魔前判定）")
+	# ④ 附魔资格唯一口（R224 从 shop_scene._enchant_ok 上移）
+	var r224_okrepo := CardRepo.load_json()
+	check(RunState.enchant_ok("damage", r224_okrepo.get_card(9003), 9999)
+			and not RunState.enchant_ok("damage", r224_okrepo.get_card(8003), 9999),
+			"R224：enchant_ok —— 伤害 +10 只给技能卡（盟友被拒）")
+	check(not RunState.enchant_ok("costdown", r224_okrepo.get_card(8002), 9999)
+			and RunState.enchant_ok("costdown", r224_okrepo.get_card(9003), 9999),
+			"R224：enchant_ok —— 费用 -1 只给费用 >1 的卡（1 费攻击被拒）")
+	check(RunState.enchant_ok("save", r224_okrepo.get_card(8003), 9999)
+			and RunState.enchant_ok("save", r224_okrepo.get_card(9003), 9999),
+			"R224：enchant_ok —— 保存任何卡都能吃")
+	check(RunState.enchant_ok("dimension", r224_okrepo.get_card(8003), 9999)
+			and not RunState.enchant_ok("dimension", r224_okrepo.get_card(9013), 9999),
+			"R224：enchant_ok —— 次元只给盟友/工事（效果卡被拒）")
+	RunState.end_run()
 
 	# 事件节点遭遇怪物：同样计入「普通战斗胜场」（否则永远停在简单档、可反复刷简单战斗）
 	RunState.end_run()

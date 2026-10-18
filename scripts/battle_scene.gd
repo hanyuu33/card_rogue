@@ -4880,15 +4880,6 @@ func _show_over(win: bool) -> void:
 			RunState.hp = maxi(0, engine.state.hp_self)
 			# 鸭梨（6019）：战斗内每次 HP 受伤累计的最大生命提升，写回 run（跨战斗保留）
 			RunState.max_hp = maxi(RunState.max_hp, engine.state.max_hp_self)
-			# 难度档位（R47）：0 档「宽松」→ 每场战斗胜利回复 3 点生命
-			# （必须在写战斗记录 / 回放条目之前结算，记录里的血量才是治疗后的值）
-			var bheal := RunState.battle_win_heal()
-			var healed := RunState.heal(bheal) if bheal > 0 else 0
-			if healed > 0:
-				_over_hint.text = "难度 %d · %s：战斗结束回复 %d 点生命（当前 %d/%d）" % [
-						RunState.difficulty, RunState.difficulty_name(), healed,
-						RunState.hp, RunState.max_hp]
-				_over_hint.add_theme_color_override("font_color", UiTheme.SIDE_SELF_TEXT)
 			var node_type := str(RunState.pending_node.get("type", ""))
 			RunState.on_battle_won(node_type)
 			RunState.record_battle(repo, str(lvl.get("name", "?")), tier,

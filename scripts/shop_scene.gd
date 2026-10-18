@@ -682,24 +682,9 @@ func _build_deck_cards() -> void:
 
 
 func _enchant_ok(ench_id: String, c: CardData, deck_idx: int) -> bool:
-	## 这张卡能否吃这个附魔。每张卡只能有一个附魔 → 已附魔的直接排除。
-	if not RunState._mod_at(deck_idx).is_empty():
-		return false
-	match ench_id:
-		"costdown":
-			return c.cost > 1 and not c.x_cost
-		"damage":
-			# R210：**只给技能卡**（用户口径「伤害 +10 限制只能附魔给技能卡」）。
-			# 技能卡的 `power` 在卡面上**恒为 0**（伤害写死在引擎结算里），附魔把 +10 烤进
-			# `power`，由 `GameEngine._spell_dmg()` 消费 → 这张技能卡造成的伤害 +10。
-			# 以前判 `power > 0`（= 只给盟友 / 工事），技能卡永远选不中、单位却能白拿 10 攻。
-			return c.kind == "技能"
-		"dimension":
-			return (c.kind == "盟友" or c.is_fort()) and not c.has_affix("次元") \
-					and not c.is_effect()
-		"save":
-			return true          # 任何卡都能保存
-	return false
+	## 附魔资格判定。R224 起唯一口在 `RunState.enchant_ok`（商店选卡页与「牛奶」
+	## 随机附魔共用同一份规则）；这里保留壳 —— smoke 直接调 `scene._enchant_ok(...)`。
+	return RunState.enchant_ok(ench_id, c, deck_idx)
 
 
 # ------------------------------------------------------------ 输入

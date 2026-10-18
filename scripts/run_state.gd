@@ -77,9 +77,11 @@ const DEMON_DUCK_BOSS_NAME := "恶魔鸭"       # 第一层触发条件：摇中
 # ---- 难度档位（R47 三档 → R223 重做成 0~10 共 11 档）----
 # R223 起：角色选择界面用**左右箭头**调档（0~10），**高难度继承低难度全部 debuff**。
 # 用户口径逐档新增内容（数值口径见下方各 const 与取值函数）：
-#   0 = 初始金钱 +50（其余同原难度 0：战斗胜利回 3 血、休息 40%）
-#   1 = 篝火（休息）回复量降到原难度 2 的水平（40% → 25%）
-#   2 = 战斗胜利不再回复生命值（= 原难度 2 的其余部分 → 新 2 档与旧「困难」完全一致）
+# R224 起新增全局规则：**除到达新的一层外不能回复 HP**（用户口径）——
+# 战斗胜利回血、休息处篝火回血两类「自动回复」全部作废（两表归零，见下）。
+#   0 = 初始金钱 +50（R224 前还带战斗胜利回 3 血、休息 40%，现已归零）
+#   1 = 篝火（休息）回复量降低（R224：休息处不再回血 → 本条暂无数值效果，文本保留待换新 debuff）
+#   2 = 战斗胜利不再回复生命值（R224：全档位战斗胜利均不回血，文本保留待换新 debuff）
 #   3 = 开场时敌人生命值 +10%（向上取整）
 #   4 = 稀有卡牌获取概率降低（稀有权重 ×0.5）
 #   5 = 行动力低时疲惫（巧克力 <6 → 一张诅咒「疲惫」9149 加入卡组；≥6 移除）
@@ -94,7 +96,9 @@ const DIFFICULTY_COUNT := 11
 const DIFFICULTY_NAMES: Array[String] = ["轻松", "微恙", "严酷", "顽强", "稀缺",
 		"疲惫", "凶暴", "贫瘠", "匆忙", "虚弱", "噩梦"]
 ## 各档位**新增** debuff 的文本（用户口径原话）。0 档 = 「无」；第 10 档无新增（空串）。
-## `difficulty_note()` 按「高档继承低档」把 1..当前档 的全部文本拼起来。
+## R224：`difficulty_note()` 只返回**当前档**这一条（用户口径「难度文本没有必要写所有，
+## 只需要写当前难度新增就行了」）—— 高档继承低档的全部 debuff 由 `difficulty_summary()`
+## 的数值摘要承载（那里列的都是「实际生效」的数值）。
 const DIFFICULTY_TEXTS: Array[String] = [
 	"无",
 	"篝火回复生命值降低",
@@ -108,9 +112,12 @@ const DIFFICULTY_TEXTS: Array[String] = [
 	"虚弱",
 	"",
 ]
-const DIFFICULTY_BATTLE_HEAL: Array[int] = [3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
-const DIFFICULTY_REST_PCT: Array[float] = [0.40, 0.25, 0.25, 0.25, 0.25, 0.25,
-		0.25, 0.25, 0.25, 0.25, 0.25]                                       # 休息回复百分比
+## R224：全局规则「除到达新的一层外不能回复 HP」→ 战斗胜利回血全档位归零。
+## 表保留 11 长度（回归钉死口径；将来若再加「某档回血」类 debuff 改这张表即可）。
+const DIFFICULTY_BATTLE_HEAL: Array[int] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
+## R224：同上 → 休息（篝火）回复百分比全档位归零（休息处不再回血）。
+const DIFFICULTY_REST_PCT: Array[float] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+		0.0, 0.0, 0.0, 0.0, 0.0]                                       # 休息回复百分比
 
 ## 各 debuff 的数值口径（**唯一口** —— 界面 / 引擎 / 测试都读这里，别在各处写死数字）
 const DIFF_GOLD_LOW := 150         # 0~6 档初始金钱（原 100 + 难度 0 的 +50）
@@ -190,6 +197,17 @@ static var delivery_done := false
 const SOURCE_POWER_ID := 6002     # 源数之力（改造卡组中的一张卡）
 const SOURCE_POWER_HP_COST := 5   # 源数之力的代价：失去 5 点最大生命
 
+# R224 新道具：苹果（6027，奖励池）—— 获得时**立即 +14 最大生命并回复满生命值**。
+# 全局 HP 规则「除到达新的一层外不能回复 HP」下，它是主动道具口径的回血手段
+# （与烤肉 / 黄桃罐头 / 自愈同属「道具·卡牌主动回血」，被动自动回血已全部移除）。
+const APPLE_RELIC_ID := 6027
+const APPLE_MAX_HP := 14
+# R224 新道具：牛奶（6028，奖励池）—— 获得时随机摇 **2 种**互不重复的附魔，
+# 各附到一张卡组里「能附且尚未附魔」的卡上（资格判定走 `enchant_ok` 唯一口；
+# 某种附魔当前没有合规目标就跳过，不强求附满）。
+const MILK_RELIC_ID := 6028
+const MILK_ENCHANTS := 2
+
 
 static func reset(new_max := 50) -> void:
 	## 重置生命（保留 run 进度——单测与旧流程兼容）。
@@ -225,26 +243,19 @@ static func difficulty_name() -> String:
 
 
 static func difficulty_note() -> String:
-	## 该档位的**累计** debuff 文本（高档继承低档）：用户口径的「文本」按档位用「；」拼接。
-	## 0 档 = 「无」；第 10 档把 1~9 全部拼上（第 10 档本身无新增文本）。
+	## **当前档新增**的 debuff 文本（R224：只写当前档这一条，不再把 1..当前档全拼上）。
+	## 0 档 = 「无」；第 10 档本身无新增文本 → 显示「无新增」。
 	var d := _diff()
-	if d <= 0:
-		return DIFFICULTY_TEXTS[0]
-	var parts: Array[String] = []
-	for i in range(1, d + 1):
-		var t: String = DIFFICULTY_TEXTS[i]
-		if t != "":
-			parts.append(t)
-	return "；".join(parts) if not parts.is_empty() else DIFFICULTY_TEXTS[0]
+	var t: String = DIFFICULTY_TEXTS[d] if d < DIFFICULTY_TEXTS.size() else ""
+	return t if t != "" else "无新增"
 
 
 static func difficulty_summary() -> String:
 	## 当前档**实际生效的数值**一览（角色选择界面第二行）—— 免得只看到「虚弱」不晓得是 80%。
 	## 金钱 / 巧克力恒定显示；其余只在「已生效」时列出（低难度下保持一行）。
+	## R224：回血类 debuff 两表归零 → 不再列「篝火」；继承关系由这里的数值替文本说话。
 	var d := _diff()
 	var bits: Array[String] = ["初始金钱 %d" % start_gold(), "巧克力 %d" % chocolate_per_layer()]
-	if d >= 1:
-		bits.append("篝火 %d%%" % int(round(rest_pct() * 100.0)))
 	if d >= 3:
 		bits.append("敌血 +%d%%" % int(round(enemy_hp_bonus_pct() * 100.0)))
 	if d >= 4:
@@ -257,22 +268,24 @@ static func difficulty_summary() -> String:
 
 
 static func battle_win_heal() -> int:
-	## 战斗**胜利**后的自动回复量（难度 0 = 3 点，1~10 档 = 0）。
+	## 战斗**胜利**后的自动回复量。R224 全局规则「除到达新的一层外不能回复 HP」
+	## → 所有档位均为 0（表留 11 长度供回归与将来调整）。
 	return DIFFICULTY_BATTLE_HEAL[_diff()]
 
 
 static func rest_pct() -> float:
-	## 本档位的休息回复百分比（0 档 = 0.40，1~10 档 = 0.25）。
+	## 本档位的休息回复百分比。R224：休息处不再回血 → 全档位 0.0。
 	return DIFFICULTY_REST_PCT[_diff()]
 
 
 static func rest_heal_amount() -> int:
 	## 休息事件的回复量 = 最大生命 × 本档位百分比（向上取整），再受上限封顶。
+	## R224：rest_pct 全 0 → 恒为 0（保留函数是为了「将来要把休息回血加回来」只有一个口）。
 	return ceili(max_hp * rest_pct())
 
 
 static func rest() -> int:
-	## 「休息」事件：按本局难度档位恢复最大生命的 40%（0 档）或 25%（1 档起），不超过上限。
+	## 「休息」事件：R224 起休息处不再回复生命（全档位 rest_pct = 0）→ 恒返回 0。
 	return heal(rest_heal_amount())
 
 
@@ -605,6 +618,11 @@ static func gain_relic(id: int) -> void:
 		6017:   # 重鸭（二层起始）：拾起时最大生命 +6（当前生命同 +6）
 			max_hp += 6
 			hp += 6
+		APPLE_RELIC_ID:   # 苹果（R224）：立即 +14 最大生命，并**回复满**生命值
+			gain_max_hp(APPLE_MAX_HP)
+			hp = max_hp
+		MILK_RELIC_ID:   # 牛奶（R224）：随机两种附魔，附给能附魔的卡
+			_apply_milk()
 
 
 static func has_relic(id: int) -> bool:
@@ -1390,6 +1408,29 @@ static func _mod_at(index: int) -> Dictionary:
 	return m if m is Dictionary else {}
 
 
+static func enchant_ok(ench_id: String, c: CardData, deck_idx: int) -> bool:
+	## 这张卡能否吃这个附魔（R224 从 `shop_scene._enchant_ok` 上移为**唯一口**：
+	## 商店选卡页 / 牛奶随机附魔 / 回归测试都走这里，别处再写第二份资格规则）。
+	## 每张卡只能有一个附魔 → 已附魔的直接排除。
+	if not _mod_at(deck_idx).is_empty():
+		return false
+	match ench_id:
+		"costdown":
+			return c.cost > 1 and not c.x_cost
+		"damage":
+			# R210：**只给技能卡**（用户口径「伤害 +10 限制只能附魔给技能卡」）。
+			# 技能卡的 `power` 在卡面上**恒为 0**（伤害写死在引擎结算里），附魔把 +10 烤进
+			# `power`，由 `GameEngine._spell_dmg()` 消费 → 这张技能卡造成的伤害 +10。
+			# 以前判 `power > 0`（= 只给盟友 / 工事），技能卡永远选不中、单位却能白拿 10 攻。
+			return c.kind == "技能"
+		"dimension":
+			return (c.kind == "盟友" or c.is_fort()) and not c.has_affix("次元") \
+					and not c.is_effect()
+		"save":
+			return true          # 任何卡都能保存
+	return false
+
+
 static func enchant_mod(ench_id: String) -> Dictionary:
 	## **商店附魔的数值定义唯一口**（R214，原在 `shop_scene._ench_mod`）。
 	## 返回的字典就是 `deck_mods` 里存的那一份，`_apply_mod` 按它烤数值。
@@ -1468,6 +1509,41 @@ static func enchant_deck_card(index: int, mod: Dictionary) -> bool:
 		return false          # 已有附魔 → 拒绝（每张卡只能一个）
 	deck_mods[index] = mod
 	return true
+
+
+static func _milk_targets(ench_id: String) -> Array[int]:
+	## 卡组里「能吃这个附魔、且尚未附魔」的卡下标（牛奶随机附魔用）。
+	var repo := CardRepo.load_json()
+	var out: Array[int] = []
+	for i in deck_ids.size():
+		var c := repo.get_card(deck_ids[i])
+		if c == null:
+			continue
+		if enchant_ok(ench_id, c, i):
+			out.append(i)
+	return out
+
+
+static func _apply_milk() -> void:
+	## 牛奶（R224）：随机摇 2 种**互不重复**的附魔，各落到一张合规且未附魔的卡上。
+	## ⚠️ 随机一律走 `run_rng`（run 层唯一源 → 同一种子重放一致）。
+	## 某种附魔此刻没有合规目标（或两种摇重复后池子空了）就跳过 ——
+	## 绝不为「附满 2 种」而附到不合规 / 已附魔的卡上。
+	var pool: Array[String] = []
+	for eid: String in CardData.ENCHANT_DEFS.keys():
+		if not _milk_targets(eid).is_empty():
+			pool.append(eid)
+	if pool.is_empty():
+		return
+	for _i in MILK_ENCHANTS:
+		if pool.is_empty():
+			return
+		var eid: String = pool.pop_at(run_rng.randi() % pool.size())
+		var targets: Array[int] = _milk_targets(eid)
+		if targets.is_empty():
+			continue
+		var idx: int = targets[run_rng.randi() % targets.size()]
+		enchant_deck_card(idx, enchant_mod(eid))
 
 
 static func deck_summary(repo: CardRepo) -> Array:

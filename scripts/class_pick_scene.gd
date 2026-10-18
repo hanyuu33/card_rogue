@@ -13,11 +13,12 @@ const AV := 96.0                       # 头像边长（小，别占太多面积
 const AV_GAP := 30.0
 const PANEL_W := 416.0
 # R223：难度档位从「三个固定按钮」改成「左箭头 / 档位盒 / 右箭头」一行（0~10 共 11 档，
-# 钳制不循环）。下面那条累计 debuff 文本随之变宽变高。
+# 钳制不循环）。下面那条 debuff 文本随之变宽变高。
+# R224：文本口径改成「只写当前档新增」（用户口径），通常一行就够；行数预算仍按 3 行留。
 const DIFF_ARROW_W := 44.0     # 箭头按钮宽
 const DIFF_ROW_H := 38.0       # 档位行高
 const DIFF_GAP := 8.0          # 箭头与档位盒的间距
-const NOTE_LINES := 3          # 累计 debuff 文本行数预算（FS_CAPTION 12px / 行距 14）
+const NOTE_LINES := 3          # 当前档新增 debuff 文本行数预算（FS_CAPTION 12px / 行距 14）
 const NOTE_LH := 14.0
 const SUM_LINES := 2           # 数值摘要行数预算（FS_MICRO 10px / 行距 12）
 const SUM_LH := 12.0
@@ -229,7 +230,8 @@ func _draw_panel(cid: String) -> void:
 	draw_string(_font_bold, Vector2(br.position.x, br.position.y + 26.0),
 			"%d  %s" % [d, RunState.DIFFICULTY_NAMES[d]], HORIZONTAL_ALIGNMENT_CENTER, br.size.x,
 			UiTheme.FS_HEADING, Color("1a1c22"))
-	# 累计 debuff 文本（高档继承低档全部）
+	# 当前档新增 debuff 文本（R224：只写当前档这一条；高档继承的低档 debuff
+	# 由下面那行数值摘要体现 —— 摘要列的都是「实际生效」的数值）
 	var ny := _note_rect().position.y + 11.0
 	for line: String in _wrap_text(RunState.difficulty_note(), w, UiTheme.FS_CAPTION):
 		draw_string(_font, Vector2(x, ny), line, HORIZONTAL_ALIGNMENT_LEFT, w,

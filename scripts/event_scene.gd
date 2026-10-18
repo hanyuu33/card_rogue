@@ -142,17 +142,15 @@ const DELIVERY_DONE_DESC := """第二层的第一个事件房里，货主早就�
 交付完成后货物全部收走（从卡组里删除）。"""
 
 func _rest_desc() -> String:
-	## 休息处文案：回复百分比按当前难度档位走（0 / 1 档 = 40%，2 档 = 25%）。
+	## 休息处文案（R224）：全局规则「除了到达新的一层，不能回复 HP」→ 篝火不再回血，
+	## 这里只剩「烤肉」一个选项（Boss 战前享用，属道具口径的主动回血）。
 	return """前路的战斗还在等着你。
-在篝火旁休息，恢复 %d%% 最大生命；
-也可以烤一块肉带在身上，留到 Boss 战前享用。
-（两样只能挑一样——选完这一处就到头了。）""" % int(round(RunState.rest_pct() * 100.0))
+篝火暖不了伤口——除了抵达新的一层，你已无法再回复生命；
+但你可以烤一块肉带在身上，抵达 Boss 战前再享用（回复 25% 最大生命）。"""
 
 var _font: Font
 var sfx: Sfx
 var _menu: UiMenu = null      # Esc 主菜单（R148）
-var _rested := false          # 是否已休息（休息后按钮变「继续」）
-var _gained := 0              # 本次实际回复量
 var _whisper_taken := false   # 鸭鸭低语：是否已收下道具
 var _gaze_taken := false      # 鸭之凝视：是否已收下道具
 var _pear_taken := false      # 鸭梨山大：是否已收下道具
@@ -390,14 +388,11 @@ func _ready() -> void:
 	_tip_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tip_layer.draw.connect(_on_tip_draw)
 	add_child(_tip_layer)
-	# 演示参数：--dmg N 先扣 N 点生命，方便截图/试玩验证休息效果
+	# 演示参数：--dmg N 先扣 N 点生命，方便截图/试玩验证各事件的残血态
 	var args := OS.get_cmdline_user_args()
 	for i in args.size():
 		if args[i] == "--dmg" and i + 1 < args.size():
 			RunState.take_damage(maxi(0, int(args[i + 1])))
-		if args[i] == "--rested":   # 演示：直接呈现休息后的状态（截图验证）
-			_gained = RunState.rest()
-			_rested = true
 		if args[i] == "--treasure":  # 演示：伪装 run 宝箱节点（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -645,8 +640,9 @@ func _ready() -> void:
 			$Center/LeaveBtn.text = "转身离开（保持现状）"
 		result_label.text = ""
 	else:
-		# 休息处：休息 与 烤肉 两个选项（烤肉是新增选项）
+		# 休息处（R224：篝火不再回血 → 只剩「烤肉」一个选项，主按钮收起）
 		bbq_btn.visible = true
+		rest_btn.visible = false
 		event_name.text = "休息处"
 		desc.text = _rest_desc()
 	$Center/LeaveBtn.pressed.connect(func(): _ui_leave())
@@ -710,7 +706,8 @@ func _fit_center() -> void:
 
 func _on_main() -> void:
 	## 主按钮：宝箱 → 支付 5 生命后转交卡牌奖励；鸭鸭低语 / 鸭之凝视 → 收下事件道具；
-	## 宝箱层 → 开箱获得 1 个随机奖励道具；休息 → 休息（或休息后离开）。
+	## 宝箱层 → 开箱获得 1 个随机奖励道具。
+	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
 	sfx.play("click")
 	if _is_whisper():
 		if _whisper_taken:
@@ -964,15 +961,9 @@ func _on_main() -> void:
 		result_label.add_theme_color_override("font_color", Color("a44ad0"))
 		_redraw()
 		return
-	if _rested or _bbq_taken:
-		_on_leave()
-		return
-	_gained = RunState.rest()
-	_rested = true
-	_claim_reward(rest_btn)   # R147：本次休息处只领一份 → 「烤肉」锁死
-	rest_btn.disabled = false
-	_refresh()
-	_redraw()
+	# R224：休息处的「休息」随篝火回血一起移除（只剩 bbq_btn 的「烤肉」，
+	# 主按钮在该事件里不可见）。走到这里 = 未识别的事件类型 → 安全不动。
+	return
 
 
 func _on_delivery_confirmed(selected: Array) -> void:
@@ -1142,27 +1133,19 @@ func _refresh() -> void:
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。
 		return
 	_refresh_bbq()
-	# R178：休息处办完（休息 / 烤肉任意一个）→ 也只留一个「离开」，
-	# 治愈 / 烤肉文案照写（结果行在按钮下方，收起按钮不影响它）。
-	if _rested or _bbq_taken:
+	# R178：休息处办完（烤肉）→ 也只留一个「离开」，结果行照写（收起按钮不影响它）。
+	if _bbq_taken:
 		bbq_btn.visible = false
 		rest_btn.visible = false
 		leave_btn.visible = true
 		leave_btn.text = "离开"
 		leave_btn.disabled = false
 		_reward_claimed = true
-		if _rested:
-			result_label.text = "篝火的温暖涌上心头……生命回复 +%d（当前 %d/%d）" % [
-					_gained, RunState.hp, RunState.max_hp]
-			result_label.add_theme_color_override("font_color", UiTheme.SIDE_SELF_TEXT)
-		elif _bbq_taken:
-			result_label.text = "「烤肉」已收进道具栏——进入 Boss 战时自动享用，回复 25% 最大生命。"
-			result_label.add_theme_color_override("font_color", Color("d89a2e"))
+		result_label.text = "「烤肉」已收进道具栏——进入 Boss 战时自动享用，回复 25% 最大生命。"
+		result_label.add_theme_color_override("font_color", Color("d89a2e"))
 		_redraw()
 		return
-	leave_btn.text = "离开（不休息）"
-	var gain: int = RunState.rest_heal_amount()   # 按难度档位（R223：0 档 40%、1 档起 25%）
-	rest_btn.text = "在这里休息（回复 %d 生命）" % mini(gain, RunState.max_hp - RunState.hp)
+	leave_btn.text = "离开（不烤肉）"
 	result_label.text = ""
 
 
@@ -1200,8 +1183,7 @@ func _on_bbq() -> void:
 			_reward_panel.open()
 		_redraw()
 		return
-	if _rested:   # R147：本次休息处只领一份（先休息过 → 不能再烤肉）
-		return
+	# R224：休息处只剩这一个选项（篝火回血已移除），不再有「先休息过就不能再烤肉」的闸门。
 	if RunState.has_relic(RunState.BARBECUE_RELIC_ID):
 		return
 	RunState.gain_relic(RunState.BARBECUE_RELIC_ID)
