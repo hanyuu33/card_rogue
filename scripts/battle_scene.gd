@@ -4889,6 +4889,10 @@ func _show_over(win: bool) -> void:
 			RunState.hp = maxi(0, engine.state.hp_self)
 			# 鸭梨（6019）：战斗内每次 HP 受伤累计的最大生命提升，写回 run（跨战斗保留）
 			RunState.max_hp = maxi(RunState.max_hp, engine.state.max_hp_self)
+			# R234 止血绷带（6029）：本场受伤合计 > 20 → 本层下次休息额外 +8（同层累计）。
+			if RunState.has_relic(RunState.BANDAGE_RELIC_ID) \
+					and engine.state.self_hp_damage_taken > RunState.BANDAGE_THRESHOLD:
+				RunState.bandage_add(RunState.BANDAGE_HEAL)
 			var node_type := str(RunState.pending_node.get("type", ""))
 			RunState.on_battle_won(node_type)
 			RunState.record_battle(repo, str(lvl.get("name", "?")), tier,

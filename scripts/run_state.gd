@@ -45,6 +45,8 @@ static var chocolate := 0
 ## 跨战斗、跨层保留（同一局）；start_run 重置 100、end_run 清 0。advance_layer 不清。
 static var gold := 0
 static var boss_pending := false             # 巧克力已耗尽，等当前房间结算完就开 Boss 战
+## R234 止血绷带（6029）：本层累计的「下次休息额外回血」点数。换层 / 开新局 / 结束局清零。
+static var bandage_pending := 0
 static var pending_level: Dictionary = {}    # 即将进入的战斗关卡（地图 → 战斗）
 static var pending_node: Dictionary = {}     # 即将进入的地图节点（地图 → 休息/事件）
 static var reward_context := ""              # 奖励来源："battle" / "event" / ""（演示）
@@ -207,6 +209,12 @@ const APPLE_MAX_HP := 14
 # 某种附魔当前没有合规目标就跳过，不强求附满）。
 const MILK_RELIC_ID := 6028
 const MILK_ENCHANTS := 2
+# R234 新道具：止血绷带（6029，奖励池）—— 一场战斗中我方 HP 受到的伤害合计**超过 20** 时，
+# 记一层「本层下次休息 +8 生命」的账（同层可累计）。进休息处由 consume_bandage_heal() 结算。
+# 换层 / 开新局 / 结束局都清零（「本层」口径）。
+const BANDAGE_RELIC_ID := 6029
+const BANDAGE_THRESHOLD := 20   # 「超过 20 点」= 严格大于
+const BANDAGE_HEAL := 8
 
 
 static func reset(new_max := 50) -> void:
@@ -287,6 +295,21 @@ static func rest_heal_amount() -> int:
 static func rest() -> int:
 	## 「休息」事件：R224 起休息处不再回复生命（全档位 rest_pct = 0）→ 恒返回 0。
 	return heal(rest_heal_amount())
+
+
+static func bandage_add(n: int) -> void:
+	## R234 止血绷带：一场战斗受伤 > 20 → 记一层 +8（同层累计）。
+	bandage_pending += maxi(0, n)
+
+
+static func consume_bandage_heal() -> int:
+	## R234 止血绷带：进休息处时结算「本层累计」的额外回血，结算后清零。
+	## 返回**实际**回复量（受最大生命上限限制；满血时返回 0 但仍清零）。
+	if bandage_pending <= 0:
+		return 0
+	var amt := bandage_pending
+	bandage_pending = 0
+	return heal(amt)
 
 
 # ---- R223：0~10 各 debuff 的取值函数（界面 / 引擎 / 测试的唯一口）----
@@ -431,6 +454,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	revenge_pending = false
 	boss_pick = _roll_boss(current_layer)
 	relics = []
+	bandage_pending = 0
 	skipped_relics = []
 	pending_relic = -1
 	pending_relic_drop = -1
@@ -489,6 +513,7 @@ static func end_run(clear_save: bool = true) -> void:
 	map_strokes = []              # R177：本局结束 → 标记随之清掉
 	map_flags = []
 	relics = []
+	bandage_pending = 0
 	relic_choice = []
 	skipped_relics = []
 	pending_relic = -1
@@ -512,6 +537,7 @@ static func advance_layer(layer: int) -> int:
 	## 返回本层起点节点 id（-1 = 地图为空）。
 	max_hp = maxi(1, max_hp)
 	hp = max_hp                      # 二层起始：恢复所有生命
+	bandage_pending = 0             # R234：换层 → 止血绷带待结算清零（本层口径）
 	current_layer = layer
 	battle_wins = 0
 	elite_wins = 0

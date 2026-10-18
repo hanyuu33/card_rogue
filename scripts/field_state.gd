@@ -77,6 +77,8 @@ var field_effects := {}
 var field_owner := {}
 var hp_self := 20
 var hp_opponent := 20
+## R234 止血绷带（6029）：本场战斗中我方 HP **实际**受到的伤害合计（每场 FieldState 新建即清零）。
+var self_hp_damage_taken := 0
 var max_hp_self := 20
 var max_hp_opponent := 20
 var opp_hand_count := 5

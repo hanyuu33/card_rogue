@@ -645,6 +645,13 @@ func _ready() -> void:
 		rest_btn.visible = false
 		event_name.text = "休息处"
 		desc.text = _rest_desc()
+		# R234 止血绷带（6029）：进休息处时结算本层累计的额外回血（结算后清零）。
+		var bandage_heal := RunState.consume_bandage_heal()
+		if bandage_heal > 0:
+			desc.text += "\n\n【止血绷带】回复了 %d 点生命（现 %d / %d）。" % [
+					bandage_heal, RunState.hp, RunState.max_hp]
+			result_label.text = "止血绷带：回复 %d 点生命" % bandage_heal
+			result_label.add_theme_color_override("font_color", Color("c0504d"))
 	$Center/LeaveBtn.pressed.connect(func(): _ui_leave())
 	rest_btn.pressed.connect(func(): _ui_main())
 	bbq_btn.pressed.connect(func(): _ui_bbq())

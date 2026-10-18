@@ -8052,6 +8052,9 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 		var dmg:= _hp_damage_taken(amount)
 		_last_hp_damage = dmg           # R145：减伤之后**真正**掉的血
 		state.hp_self = maxi(0, state.hp_self - dmg)
+		# R234：累计本场我方 HP 实际受到的伤害（止血绷带 6029 的判定依据）。
+		if dmg > 0:
+			state.self_hp_damage_taken += dmg
 		if dmg != amount:
 			_log("减伤（迅捷/鸭嘴）：伤害 %d → %d" % [amount, dmg])
 		_log("我方 HP -%d（%s），剩余 %d" % [dmg, source, state.hp_self])

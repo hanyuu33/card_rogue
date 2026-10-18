@@ -17987,6 +17987,54 @@ func _init() -> void:
 	var r233_full: int = r233_e3.state.unit_at(Vector2i(4, 1)).health
 	check(r233_full == 12, "R233 犀牛：满血不再回复（仍 %d/12，不越界）" % r233_full)
 
+	# ---- R234：止血绷带（6029）----
+	var r234_repo := RelicRepo.load_json()
+	var r234_band: RelicData = r234_repo.get_relic(6029)
+	check(r234_band != null and r234_band.relic_name == "止血绷带"
+			and r234_band.kind == RelicData.KIND_BATTLE
+			and r234_band.source == RelicData.SRC_REWARD
+			and r234_band.desc.contains("超过 20") and r234_band.desc.contains("8 点"),
+			"R234 止血绷带：战斗类奖励道具，文案写明 >20 → 下次休息 +8")
+	check(r234_repo.reward_ids().has(6029), "R234 止血绷带在奖励道具池内")
+	# ① 单场受伤累计（_damage_player 是玩家 HP 扣血唯一口）
+	var r234_e := _new_engine([], 100, 100)
+	r234_e.start_game(1)
+	r234_e._damage_player(GameEngine.SIDE_SELF, 12, "测试")
+	check(r234_e.state.self_hp_damage_taken == 12,
+			"R234 受伤累计：单场 HP 伤害累加（%d）" % r234_e.state.self_hp_damage_taken)
+	r234_e._damage_player(GameEngine.SIDE_SELF, 9, "测试")
+	check(r234_e.state.self_hp_damage_taken == 21 and r234_e.state.hp_self == 79,
+			"R234 受伤累计：21 > 阈值 20（hp 100→%d）" % r234_e.state.hp_self)
+	# ② 同层累计 + 休息结算 + 满血不溢出
+	var r234_hp0: int = RunState.hp
+	var r234_max0: int = RunState.max_hp
+	RunState.max_hp = 50
+	RunState.hp = 30
+	RunState.bandage_pending = 0
+	RunState.bandage_add(8)
+	RunState.bandage_add(8)
+	check(RunState.bandage_pending == 16, "R234 同层累计：两次触发 → 16 点待结算")
+	var r234_healed := RunState.consume_bandage_heal()
+	check(r234_healed == 16 and RunState.hp == 46 and RunState.bandage_pending == 0,
+			"R234 休息结算：回复 16（30 → %d），结算后清零" % RunState.hp)
+	RunState.hp = RunState.max_hp
+	RunState.bandage_add(8)
+	var r234_over := RunState.consume_bandage_heal()
+	check(r234_over == 0 and RunState.bandage_pending == 0,
+			"R234 满血结算：不溢出、仍清零（回复 %d）" % r234_over)
+	RunState.hp = r234_hp0
+	RunState.max_hp = r234_max0
+	# ③ 换层清零（「本层」口径）—— 复用第二层测试同款 setup
+	var r234_rng := RandomNumberGenerator.new()
+	r234_rng.seed = 24681357
+	RunState.end_run()
+	RunState.start_run(RogueMap.generate(r234_rng, GameLayers.LAYER_DEFAULT), GameLayers.LAYER_DEFAULT)
+	RunState.bandage_add(8)
+	check(RunState.bandage_pending == 8, "R234 换层前：待结算 8 点")
+	RunState.advance_layer(GameLayers.LAYER_TWO)
+	check(RunState.bandage_pending == 0, "R234 换层：待结算清零（「本层」口径）")
+	RunState.end_run()
+
 	# ================================================================
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
