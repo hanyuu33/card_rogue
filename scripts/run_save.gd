@@ -135,6 +135,9 @@ static func load_run() -> bool:
 	RunState.reward_type = str(d.get("reward_type", "normal"))
 	RunState.reward_context = str(d.get("reward_context", ""))
 	RunState.difficulty = clampi(int(d.get("difficulty", 0)), 0, RunState.DIFFICULTY_COUNT - 1)
+	# R223 难度 5：读档后按存档里的巧克力纠正「疲惫」在不在卡组
+	# （老存档没有它、难度也是旧的，直接按当前口径推导最稳）
+	RunState.sync_fatigue()
 	# 瞬时转换字段不存档（安全检查点上它们本就为空）：读档后复位，走地图重新触发
 	RunState.pending_level = {}
 	RunState.pending_node = {}

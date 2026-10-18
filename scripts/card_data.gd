@@ -7,10 +7,11 @@ extends RefCounted
 ## 而且报错只说 "Could not parse global class CardData"，完全看不出是哪一行）。
 ## 所以 `AFFIX_DEFS` 里只存**十六进制色串**，由 `affix_colors()` 运行时构造 Color。
 
-const RARITY_NAMES: Array[String] = ["普通", "稀有", "史诗", "初始", "怪物", "事件"]
-## 卡面边框色：普通=黑 稀有=蓝 史诗=紫 初始=绿 怪物=暗红 事件=亮紫
+const RARITY_NAMES: Array[String] = ["普通", "稀有", "史诗", "初始", "怪物", "事件", "诅咒"]
+## 卡面边框色：普通=黑 稀有=蓝 史诗=紫 初始=绿 怪物=暗红 事件=亮紫 诅咒=暗紫灰（R223）
 const RARITY_COLORS: Array[Color] = [Color("2c2c2a"), Color("1f5fbf"),
-		Color("8a30b8"), Color("1d7a4f"), Color("7a1f1f"), Color("a44ad0")]
+		Color("8a30b8"), Color("1d7a4f"), Color("7a1f1f"), Color("a44ad0"),
+		Color("4e4560")]
 
 ## ── 【字段系统】（R91）`affixes` = 这张卡当前带有的**字段名**列表 ──
 ##
@@ -169,7 +170,7 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.target_mode = str(d.get("target_mode", "none"))
 	c.value = int(d.get("value", 0))
 	c.actions = maxi(1, int(d.get("actions", 1)))
-	c.rarity = clampi(int(d.get("rarity", 0)), 0, 5)
+	c.rarity = clampi(int(d.get("rarity", 0)), 0, 6)
 	c.group = str(d.get("group", "player"))
 	c.card_class = str(d.get("class", "森林精魄"))
 	c.x_cost = bool(d.get("x_cost", false))
@@ -222,11 +223,11 @@ func to_dict() -> Dictionary:
 
 
 func rarity_name() -> String:
-	return RARITY_NAMES[clampi(rarity, 0, 5)]
+	return RARITY_NAMES[clampi(rarity, 0, 6)]
 
 
 func rarity_color() -> Color:
-	return RARITY_COLORS[clampi(rarity, 0, 5)]
+	return RARITY_COLORS[clampi(rarity, 0, 6)]
 
 
 ## ── 卡种判定（R91 重建时补回；这几张卡种互不重叠，读法统一走这里）──
@@ -248,12 +249,22 @@ func is_fort() -> bool:
 
 func is_field() -> bool:
 	## 场地卡（R74）：**不是单位**，而是「钉在某个格子上的一次性/持续效果」。
-	##   * 不能被攻击（没有 HP、没有攻击目标、也不算挡路）；
+	##   * 不能被攻击（没有 HP、没有攻击目标，也不算挡路）；
 	##   * 一次性族：敌人**移动经过**该格时触发一次并停止移动，随后该格场地消失；
 	##   * 持续型（trait「持续场地」）：永不触发、永不消失，每回合结束结算一次。
 	##   * 每个格子最多 1 个场地效果（`FieldState.field_effects` 单一来源）。
 	## 「工事」与「场地」是两种东西：工事是会挡住路的单位，场地是格子上的标记。
 	return kind == "场地"
+
+
+func is_curse() -> bool:
+	## 诅咒卡（R223 难度 5「疲惫」9149）：**打出无效果**；真正的威力在手里 ——
+	## 手牌里有它时，所有**技能卡**费用 +1（引擎 `cost_of` 是唯一消费点）。
+	## ⚠️ 诅咒既不是单位也不是技能/效果：`play_from_hand`（单位）、`use_spell`（技能）、
+	##    `use_effect`（效果）三条出牌路径都不该碰它 —— 引擎 `use_curse` 是唯一打出入口，
+	##    界面（battle_scene）三处据此分流；鸭语耳环自动出牌显式跳过（否则会掉进
+	##    `play_from_hand` 被当成单位摆上场）。
+	return kind == "诅咒"
 
 
 func needs_target() -> bool:

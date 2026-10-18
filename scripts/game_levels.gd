@@ -959,7 +959,7 @@ static func _mass_anvil() -> Dictionary:
 
 static func _argos_mobilize() -> Dictionary:
 	## 第二层·普通敌人-简单（R174「百眼动员」）：中排左右各一只量产型阿尔戈斯
-	## （9142，**7/35** 程1 **速2**），带「百眼」trait —— **在场时每单位只发动一次**
+	## （9142，**7/35** 程2 **速2**），带「百眼」trait —— **在场时每单位只发动一次**
 	## （`Placement.ability_used`，离场再上场算新单位）：**攻击命中单位**时，在
 	## **己方后排**（row 0）召唤一只量产型俄倪厄（9131，5/45 程1 速1），并使其
 	## **移动速度 +1**（`Placement.summon_haste`，随单位离场消失，不烤进 CardData）；
@@ -986,8 +986,8 @@ static func _argos_mobilize() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9142, "量产型阿尔戈斯", 7, 35, 1, 2, Vector2i(1, 0)],
-			[9142, "量产型阿尔戈斯", 7, 35, 1, 2, Vector2i(1, 2)],
+		[9142, "量产型阿尔戈斯", 7, 35, 2, 2, Vector2i(1, 0)],
+		[9142, "量产型阿尔戈斯", 7, 35, 2, 2, Vector2i(1, 2)],
 			[9137, "量产型赫利俄斯", 6, 30, 1, 0, Vector2i(0, 1)],
 		],
 		"tutorial": [],

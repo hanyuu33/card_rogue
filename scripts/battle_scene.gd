@@ -2325,6 +2325,9 @@ func _apply_net_msg(msg: Dictionary) -> void:
 		"activate":
 			# 对方主动发动（熊 8004「回春」）
 			engine.activate(_net_vec(args[0]), GameEngine.SIDE_OPPONENT)
+		"curse":
+			# R223：对方打出诅咒（无效果）—— 镜像侧扣能量、手牌数 -1、记一次出牌
+			engine.remote_curse(CardData.from_dict(msg["card"]))
 
 
 func _net_vec(a: Array) -> Vector2i:
@@ -2422,6 +2425,10 @@ func load_level(lvl: Dictionary) -> void:
 			card.health = int(e[3])
 			card.attack_range = int(e[4])
 			card.move_speed = int(e[5])
+		# R223 难度 3 / 6：敌方开场缩放（生命 +10% / 攻击 +1）。scaled_enemy_card
+		# 内部按需返回**副本**、否则原样返回 —— 绝不改卡库原卡（卡库与关卡编成同源）。
+		# 与下面的 configure_growth（atk_growth 独立叠加）互不相干。
+		card = RunState.scaled_enemy_card(card)
 		engine.state.place(card, e[6], GameEngine.SIDE_OPPONENT)
 	# 太阳熔炉（R135）：双动光环的来源是**场上的单位**（赫利俄斯），而 `enemy_units`
 	# 的摆放顺序不保证「光环源先上场」→ 摆完统一补一次（与 `enable_enemy_effects`
@@ -3025,7 +3032,9 @@ func _on_left_click(pos: Vector2) -> void:
 			_clear_selection()
 			selection = ["hand", hi]
 			var card := engine.state.hand[hi]
-			if card.is_effect():
+			if card.is_curse():
+				status_text = "%s（诅咒）：再点一次打出（无效果）" % card.card_name
+			elif card.is_effect():
 				status_text = "%s（效果卡）：再点一次启用，放入左侧效果区持续生效" % card.card_name
 			elif card.is_spell() and card.needs_target():
 				status_text = "%s（技能）：再点一次使用，需点击一个目标" % card.card_name
@@ -3057,6 +3066,17 @@ func _on_left_click(pos: Vector2) -> void:
 
 func _use_hand_card(i: int) -> void:
 	var card := engine.state.hand[i]
+	if card.is_curse():
+		# R223：诅咒卡（「疲惫」9149）—— 唯一打出入口 use_curse（付能量、无效果、进弃牌区）。
+		# 必须拦在随从 / 技能分支**之前**：诅咒既不是单位也不是技能，掉进任一条都会被拒。
+		if not engine.can_pay_card(card):
+			_energy_fail(card, i)   # R151 P2-15
+		else:
+			engine.use_curse(i)
+			_net_send({"type": "action", "act": "curse", "card": card.to_dict()})
+		_clear_selection()
+		queue_redraw()
+		return
 	if card.is_effect():
 		# 效果卡：支付能量 → 进入左侧效果区持续生效
 		if not engine.can_pay_card(card):
@@ -3159,7 +3179,7 @@ func _use_hand_card(i: int) -> void:
 # ------------------------------------------------------------ 拖拽释放
 
 func _start_drag(i: int, pos: Vector2) -> void:
-	## 开始拖拽一张手牌：技能/效果卡拖到棋盘释放；随从/工事拖到自己半场空格放置。
+	## 开始拖拽一张手牌：诅咒/技能/效果卡拖到棋盘释放；随从/工事拖到自己半场空格放置。
 	var card := engine.state.hand[i]
 	_pass_moved_pending()   # 拖拽 = 放弃已移动单位的攻击
 	_clear_selection()
@@ -3168,6 +3188,18 @@ func _start_drag(i: int, pos: Vector2) -> void:
 	_drag_place = false
 	_drag_place_cells = []
 	_drag_to_effects = false
+	if card.is_curse():
+		# R223：诅咒卡（「疲惫」9149）—— 拖到棋盘任意处松手即打出（无效果）。
+		# 必须拦在随从分支**之前**：诅咒不是单位，掉进去会被当随从摆上场。
+		_drag_spell_cells = []
+		_drag_anywhere = true
+		if not engine.can_pay_card(card):
+			status_text = "%s：能量不足（需要 %d，当前 %d）——松手不会生效" % [
+					card.card_name, engine.cost_of(card), engine.energy_of()]
+		else:
+			status_text = "%s：拖到棋盘任意处打出（无效果）" % card.card_name
+		queue_redraw()
+		return
 	if not card.is_spell() and not card.is_effect():
 		# 随从 / 工事：拖到自己半场（下 3 行）的空格放置；
 		# 持「栅栏修复术」且手里是栅栏 → 已有栅栏的格子也可落（叠栅栏，橙色）
@@ -3337,6 +3369,21 @@ func _finish_drag(pos: Vector2) -> void:
 	_drag_place_cells = []
 	_drag_to_effects = false
 	var card := engine.state.hand[i]
+	# R223：诅咒卡拖到棋盘上 = 打出（无效果）。必须拦在最前面：诅咒不是单位 /
+	# 技能 / 效果，掉进后面任一条分支都会被当成别的东西结算。
+	if card.is_curse():
+		var curse_cell: Variant = _cell_at(pos)   # _cell_at 返回 Variant（空格返回 null）
+		if curse_cell == null:
+			_say("%s：拖到棋盘上打出（已取消）" % card.card_name)
+			return
+		if not engine.can_pay_card(card):
+			_energy_fail(card, i)   # R151 P2-15
+			return
+		engine.use_curse(i)
+		_net_send({"type": "action", "act": "curse", "card": card.to_dict()})
+		status_text = "%s：已打出（无效果）" % card.card_name
+		queue_redraw()
+		return
 	# R106：效果卡拖到**左侧效果区**上松手 = 直接启用（与「拖到棋盘任意处」等效，
 	# 但落点就是它以后待着的地方，手感更自然）。必须放在 `_cell_at(pos)` 之前 ——
 	# 效果区不在棋盘格上，走那条路会被判成「无效落点」而取消。
@@ -3675,6 +3722,8 @@ func _pick_active_kind() -> String:
 		return "whale"
 	if engine.endless_pending:
 		return "endless"
+	if engine.rebirth_pending:
+		return "rebirth"
 	if _recall_pending():
 		return "recall"
 	if engine.foresight_pick:
@@ -3772,6 +3821,15 @@ func _build_pick_cfg(k: String) -> Dictionary:
 							% GameEngine.ENDLESS_DARK_ENERGY,
 					"note": "点卡选中，再点确认 —— 它被弃掉",
 					"cards": eopts.map(func(i: int) -> CardData: return engine.state.hand[i]),
+					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
+		"rebirth":
+			# R222：新生（9148）—— 候选是全部手牌；确认后目标本场对战消失，
+			# 并随机拿一张本职业奖励卡（界面文案由 action 处理器播报）。
+			var bopts: Array = engine.rebirth_options()
+			return {"kind": k, "short": "新生", "opts": bopts,
+					"title": "新生：选择 1 张手牌使其消失（不能不选）→ 之后随机一张本职业奖励卡加入手牌",
+					"note": "点卡选中，再点确认 —— 它本场对战消失（不进弃牌区）",
+					"cards": bopts.map(func(i: int) -> CardData: return engine.state.hand[i]),
 					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
 		"recall":
 			var ropts: Array = _recall_options()
@@ -3903,6 +3961,15 @@ func _on_pick_confirmed(sel: Array) -> void:
 				enm = engine.state.hand[ei].card_name
 			if engine.endless_pick(ei):
 				status_text = "无尽黑暗：弃掉 %s → 费用 +%d" % [enm, GameEngine.ENDLESS_DARK_ENERGY]
+			_clear_selection()
+		"rebirth":
+			# R222：新生（9148）—— 确认 → 目标手牌消失 + 随机一张本职业奖励卡进手牌。
+			var bi := int(opts[sel[0]])
+			var bnm := "?"
+			if bi >= 0 and bi < engine.state.hand.size():
+				bnm = engine.state.hand[bi].card_name
+			if engine.rebirth_pick(bi):
+				status_text = "新生：%s 消失" % bnm
 			_clear_selection()
 		"recall":
 			var ri := int(opts[sel[0]])
@@ -4361,6 +4428,10 @@ func _on_right_click() -> void:
 	# 无尽黑暗 9114（R70）：**不能不选** → 右键/Esc 只提示，不取消（与乌鸦同款）
 	if engine.endless_pending:
 		_say("无尽黑暗：必须从手牌里选一张弃掉（不能不选）")
+		return
+	# 新生 9148（R222）：**不能不选** → 右键/Esc 只提示，不取消（与无尽黑暗同款）
+	if engine.rebirth_pending:
+		_say("新生：必须从手牌里选一张使其消失（不能不选）")
 		return
 	# 取牌面板：必须选一张（不接受取消）
 	if _recall_pending():
@@ -5634,6 +5705,9 @@ func _on_end_turn() -> void:
 		return
 	if engine.endless_pending:
 		_say("无尽黑暗：请先从手牌里选一张弃掉（不能不选）")
+		return
+	if engine.rebirth_pending:
+		_say("新生：请先从手牌里选一张使其消失（不能不选）")
 		return
 	if _recall_pending():
 		_say("%s：请先选择一张要回到手牌的卡" % _recall_mode())
@@ -7206,7 +7280,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 							"text": "+%d 攻 / +%d 血" % [ch_atk, ch_hp],
 							"col": Color("caa6ff"), "start": n, "dur": 1900, "size": 16})
 		"recycler":
-			# 零件回收者（8046，R96）：接通的己方卡被销毁 → 回收其力量 + 手牌加素体。
+			# 零件回收者（8046，R96）：接通的己方「素体以外」卡被销毁 → 回收其力量 + 手牌加素体。
+			# ⚠️ R221：被销毁的是「素体」→ 引擎根本不发这条 action（不触发即无动画）。
 			# ⚠️ R208：被销毁的卡力量为 0（工事 / 被削到 0 的单位）时**不飘「+0 攻」** ——
 			# 攻击力一点没变，飘字只会让玩家以为出了 bug（用户实测反馈）。素体照给。
 			var rc_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
@@ -7424,6 +7499,20 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 66),
 					"text": "弃 %s　费用 +%d" % [en_name, en_gain],
 					"col": Color("6a4a9a"), "size": 15, "start": n, "dur": 2000})
+		"rebirth_pick":
+			# 新生 9148（R222）：玩家选定消失 → 消失飘字 + 随机卡入手的播报
+			sfx.play("destroy")
+			var rb_name := "?"
+			if data.get("card") is CardData:
+				rb_name = (data["card"] as CardData).card_name
+			var rb_given := String(data.get("given", ""))
+			if rb_given != "":
+				_say("新生：%s 消失 → 随机一张「%s」加入手牌" % [rb_name, rb_given])
+			else:
+				_say("新生：%s 消失" % rb_name)
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 66),
+					"text": "%s 消失" % rb_name,
+					"col": Color("3f8f5f"), "size": 15, "start": n, "dur": 2000})
 		"revive_recall":
 			sfx.play("place")
 			var rv_name := "?"
@@ -7919,6 +8008,18 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_say("∞ 无尽黑暗：费用 +%d" % int(data.get("energy", 0)))
 			else:
 				_say("∞ 无尽黑暗：手牌为空，没有可弃的牌 → 本回合不弃也不给费用")
+		"rebirth":
+			# 新生 9148（R222）：抽牌之后开面板让玩家选一张手牌消失（不能不选）。
+			# pending=true → 只提示「请选一张」；pending=false → 手牌为空，本回合落空。
+			if bool(data.get("pending", false)):
+				var rb_copies := int(data.get("copies", 1))
+				if rb_copies > 1:
+					_say("∞ 新生（%d 张）：请从手牌里选 1 张使其消失（不能不选）→ 之后随机一张本职业奖励卡加入手牌"
+							% rb_copies)
+				else:
+					_say("∞ 新生：请从手牌里选 1 张使其消失（不能不选）→ 之后随机一张本职业奖励卡加入手牌")
+			else:
+				_say("∞ 新生：手牌为空，没有可消失的牌 → 本回合不触发")
 		"dark_lord":
 			# 黑暗领主（8021）：回合结束优先结算 → 费用 +5
 			var dl_energy := int(data.get("amount", 0))

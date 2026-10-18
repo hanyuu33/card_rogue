@@ -1024,6 +1024,7 @@ func _delivery_settle() -> void:
 		RunState.gain_gold(80 * n_gold)
 	if n_choco > 0:
 		RunState.chocolate += n_choco
+		RunState.sync_fatigue()   # R223 难度 5：巧克力回到 6 以上 → 疲惫出卡组
 	for _i in n_relic:
 		var rid: int = RunState.roll_reward_relic()
 		if rid > 0:
@@ -1160,7 +1161,7 @@ func _refresh() -> void:
 		_redraw()
 		return
 	leave_btn.text = "离开（不休息）"
-	var gain: int = RunState.rest_heal_amount()   # 按难度档位（0/1 档 40%、2 档 25%）
+	var gain: int = RunState.rest_heal_amount()   # 按难度档位（R223：0 档 40%、1 档起 25%）
 	rest_btn.text = "在这里休息（回复 %d 生命）" % mini(gain, RunState.max_hp - RunState.hp)
 	result_label.text = ""
 

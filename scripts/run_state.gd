@@ -74,21 +74,56 @@ static var revenge_pending := false
 const REVENGE_TRIGGER_CHANCE := 0.5         # 50%
 const DEMON_DUCK_BOSS_NAME := "恶魔鸭"       # 第一层触发条件：摇中的 boss 名必须是它
 
-# ---- 难度档位（R47）：标题界面选择，默认 0（宽松） ----
-# 0 = 宽松：每场战斗**胜利**回复 3 点生命；休息回复 40% 最大生命。
-# 1 = 标准：战斗结束不回血；休息回复 40% 最大生命。
-# 2 = 困难：战斗结束不回血；休息回复 25% 最大生命（= 加入难度档位之前的实机行为）。
-# 档位只在标题界面改，不属于 run 状态（end_run / start_run 都不动它）。
+# ---- 难度档位（R47 三档 → R223 重做成 0~10 共 11 档）----
+# R223 起：角色选择界面用**左右箭头**调档（0~10），**高难度继承低难度全部 debuff**。
+# 用户口径逐档新增内容（数值口径见下方各 const 与取值函数）：
+#   0 = 初始金钱 +50（其余同原难度 0：战斗胜利回 3 血、休息 40%）
+#   1 = 篝火（休息）回复量降到原难度 2 的水平（40% → 25%）
+#   2 = 战斗胜利不再回复生命值（= 原难度 2 的其余部分 → 新 2 档与旧「困难」完全一致）
+#   3 = 开场时敌人生命值 +10%（向上取整）
+#   4 = 稀有卡牌获取概率降低（稀有权重 ×0.5）
+#   5 = 行动力低时疲惫（巧克力 <6 → 一张诅咒「疲惫」9149 加入卡组；≥6 移除）
+#   6 = 敌人更加凶猛（除原本 0 攻工事外，所有敌人攻击 +1）
+#   7 = 金钱减少（初始金钱 150 → 100，后续每层也都是 100）
+#   8 = 行动力降低（每层初始巧克力 12 → 11）
+#   9 = 虚弱（最大生命 ×80%，截断取整）
+#   10 = 继承 0~9 全部 debuff，**无新增**（给「全都要」的玩家一个终点）
+# 档位只在角色选择界面改，不属于 run 状态（end_run / start_run 都不动它）。
 static var difficulty: int = 0
-const DIFFICULTY_COUNT := 3
-const DIFFICULTY_NAMES: Array[String] = ["宽松", "标准", "困难"]
-const DIFFICULTY_NOTES: Array[String] = [
-	"每场战斗胜利回复 3 生命；休息回复 40% 最大生命。",
-	"战斗结束不回血；休息回复 40% 最大生命。",
-	"战斗结束不回血；休息回复 25% 最大生命（与加入难度档位前完全一致）。",
+const DIFFICULTY_COUNT := 11
+const DIFFICULTY_NAMES: Array[String] = ["轻松", "微恙", "严酷", "顽强", "稀缺",
+		"疲惫", "凶暴", "贫瘠", "匆忙", "虚弱", "噩梦"]
+## 各档位**新增** debuff 的文本（用户口径原话）。0 档 = 「无」；第 10 档无新增（空串）。
+## `difficulty_note()` 按「高档继承低档」把 1..当前档 的全部文本拼起来。
+const DIFFICULTY_TEXTS: Array[String] = [
+	"无",
+	"篝火回复生命值降低",
+	"战斗胜利不再回复生命值",
+	"敌人更加顽强",
+	"稀有卡牌获取概率降低",
+	"行动力低时疲惫",
+	"敌人更加凶猛",
+	"金钱减少",
+	"行动力降低",
+	"虚弱",
+	"",
 ]
-const DIFFICULTY_BATTLE_HEAL: Array[int] = [3, 0, 0]      # 战斗胜利回复量
-const DIFFICULTY_REST_PCT: Array[float] = [0.40, 0.40, 0.25]  # 休息回复百分比
+const DIFFICULTY_BATTLE_HEAL: Array[int] = [3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
+const DIFFICULTY_REST_PCT: Array[float] = [0.40, 0.25, 0.25, 0.25, 0.25, 0.25,
+		0.25, 0.25, 0.25, 0.25, 0.25]                                       # 休息回复百分比
+
+## 各 debuff 的数值口径（**唯一口** —— 界面 / 引擎 / 测试都读这里，别在各处写死数字）
+const DIFF_GOLD_LOW := 150         # 0~6 档初始金钱（原 100 + 难度 0 的 +50）
+const DIFF_GOLD_HIGH := 100        # 7 档起「金钱减少」
+const DIFF_RARE_WEIGHT_MUL := 0.5  # 4 档起「稀有卡牌获取概率降低」：稀有权重 ×0.5
+const DIFF_FATIGUE_FROM := 5       # 5 档起「行动力低时疲惫」
+const DIFF_FATIGUE_LIMIT := 6      # 巧克力 < 6 → 疲惫入卡组；≥ 6 → 移除
+const DIFF_ENEMY_HP_PCT := 0.10    # 3 档起「敌人更加顽强」：敌人生命 +10%（向上取整）
+const DIFF_ENEMY_POWER := 1        # 6 档起「敌人更加凶猛」：敌人攻击 +1
+const DIFF_CHOCO_HIGH := 11        # 8 档起「行动力降低」：每层初始巧克力 11（原 12）
+const DIFF_MAX_HP_MUL := 0.8       # 9 档起「虚弱」：最大生命 ×80%（截断取整）
+## 诅咒卡「疲惫」（9149）：1 费诅咒，打出无效果；**在手里时**所有技能卡费用 +1。
+const FATIGUE_CARD_ID := 9149
 
 # ---- 本局种子：run 层唯一随机源 ----
 static var run_seed: int = 0                 # 本局种子（run 层全部随机由它派生；同一种子重跑必然一致）
@@ -173,7 +208,7 @@ static func heal(amount: int) -> int:
 	return gained
 
 
-# ---- 难度档位（R47）----
+# ---- 难度档位（R223 重做成 0~10）----
 
 static func _diff() -> int:
 	## 当前档位（越界兜底）。
@@ -181,7 +216,7 @@ static func _diff() -> int:
 
 
 static func set_difficulty(d: int) -> void:
-	## 标题界面选择难度档位（0 / 1 / 2）。
+	## 角色选择界面用左右箭头调档（0~10）。越界钳制、**不循环**。
 	difficulty = clampi(d, 0, DIFFICULTY_COUNT - 1)
 
 
@@ -190,17 +225,44 @@ static func difficulty_name() -> String:
 
 
 static func difficulty_note() -> String:
-	## 该档位的完整效果说明（标题界面展示用）。
-	return DIFFICULTY_NOTES[_diff()]
+	## 该档位的**累计** debuff 文本（高档继承低档）：用户口径的「文本」按档位用「；」拼接。
+	## 0 档 = 「无」；第 10 档把 1~9 全部拼上（第 10 档本身无新增文本）。
+	var d := _diff()
+	if d <= 0:
+		return DIFFICULTY_TEXTS[0]
+	var parts: Array[String] = []
+	for i in range(1, d + 1):
+		var t: String = DIFFICULTY_TEXTS[i]
+		if t != "":
+			parts.append(t)
+	return "；".join(parts) if not parts.is_empty() else DIFFICULTY_TEXTS[0]
+
+
+static func difficulty_summary() -> String:
+	## 当前档**实际生效的数值**一览（角色选择界面第二行）—— 免得只看到「虚弱」不晓得是 80%。
+	## 金钱 / 巧克力恒定显示；其余只在「已生效」时列出（低难度下保持一行）。
+	var d := _diff()
+	var bits: Array[String] = ["初始金钱 %d" % start_gold(), "巧克力 %d" % chocolate_per_layer()]
+	if d >= 1:
+		bits.append("篝火 %d%%" % int(round(rest_pct() * 100.0)))
+	if d >= 3:
+		bits.append("敌血 +%d%%" % int(round(enemy_hp_bonus_pct() * 100.0)))
+	if d >= 4:
+		bits.append("稀有率 ×%.1f" % rare_weight_mul())
+	if d >= 6:
+		bits.append("敌攻 +%d" % enemy_power_bonus())
+	if d >= 9:
+		bits.append("最大生命 %d%%" % int(round(max_hp_mul() * 100.0)))
+	return " · ".join(bits)
 
 
 static func battle_win_heal() -> int:
-	## 战斗**胜利**后的自动回复量（难度 0 = 3 点，其余档位 = 0）。
+	## 战斗**胜利**后的自动回复量（难度 0 = 3 点，1~10 档 = 0）。
 	return DIFFICULTY_BATTLE_HEAL[_diff()]
 
 
 static func rest_pct() -> float:
-	## 本档位的休息回复百分比（0 / 1 档 = 0.40，2 档 = 0.25）。
+	## 本档位的休息回复百分比（0 档 = 0.40，1~10 档 = 0.25）。
 	return DIFFICULTY_REST_PCT[_diff()]
 
 
@@ -210,8 +272,79 @@ static func rest_heal_amount() -> int:
 
 
 static func rest() -> int:
-	## 「休息」事件：按本局难度档位恢复最大生命的 40%（0 / 1 档）或 25%（2 档），不超过上限。
+	## 「休息」事件：按本局难度档位恢复最大生命的 40%（0 档）或 25%（1 档起），不超过上限。
 	return heal(rest_heal_amount())
+
+
+# ---- R223：0~10 各 debuff 的取值函数（界面 / 引擎 / 测试的唯一口）----
+
+static func start_gold() -> int:
+	## 新开一局（与换层）的初始金钱：0~6 档 = 150（含难度 0 的 +50），7 档起 = 100。
+	return DIFF_GOLD_HIGH if _diff() >= 7 else DIFF_GOLD_LOW
+
+
+static func chocolate_per_layer() -> int:
+	## 每层初始巧克力：8 档起「行动力降低」= 11，其余 = RogueMap.MAX_STEPS(12)。
+	return DIFF_CHOCO_HIGH if _diff() >= 8 else RogueMap.MAX_STEPS
+
+
+static func max_hp_mul() -> float:
+	## 初始最大生命系数：9 档起「虚弱」= 0.8，其余 = 1.0。
+	return DIFF_MAX_HP_MUL if _diff() >= 9 else 1.0
+
+
+static func enemy_hp_bonus_pct() -> float:
+	## 3 档起「敌人更加顽强」：敌方开场生命 +10%（向上取整）。
+	return DIFF_ENEMY_HP_PCT if _diff() >= 3 else 0.0
+
+
+static func enemy_power_bonus() -> int:
+	## 6 档起「敌人更加凶猛」：敌方开场攻击 +1（原本 0 攻工事除外，见 scaled_enemy_card）。
+	return DIFF_ENEMY_POWER if _diff() >= 6 else 0
+
+
+static func rare_weight_mul() -> float:
+	## 4 档起「稀有卡牌获取概率降低」：卡牌奖励里稀有权重的乘数（×0.5）。
+	return DIFF_RARE_WEIGHT_MUL if _diff() >= 4 else 1.0
+
+
+static func fatigue_active() -> bool:
+	## 5 档起「行动力低时疲惫」是否生效。
+	return _diff() >= DIFF_FATIGUE_FROM
+
+
+static func scaled_enemy_card(card: CardData) -> CardData:
+	## 难度 3 / 6 的敌方开场缩放：**返回副本**，绝不改卡库原卡（卡库与关卡编成同源；
+	## `place()` 直接引用卡库原卡，改数值必须先复制）。两个 debuff 都关闭时原样返回。
+	##   * 难度 ≥3：生命 +10%（向上取整）；
+	##   * 难度 ≥6：攻击 +1，**原本 0 攻的工事除外**（用户口径「除原本力0工事外」）。
+	## 与 `configure_growth`（atk_growth 独立叠加、与 card.power 解耦）顺序无关。
+	if card == null:
+		return null
+	var pct := enemy_hp_bonus_pct()
+	var add := enemy_power_bonus()
+	var skip_power: bool = card.is_fort() and card.power == 0
+	if pct <= 0.0 and (add <= 0 or skip_power):
+		return card
+	var c := CardData.from_dict(card.to_dict())
+	if pct > 0.0:
+		c.health += ceili(card.health * pct)
+	if add > 0 and not skip_power:
+		c.power += add
+	return c
+
+
+static func sync_fatigue() -> void:
+	## R223 难度 5「行动力低时疲惫」：**从 deck_ids 直接推导**（不加布尔 flag，读档天然正确）。
+	## 难度 ≥5 且巧克力 < 6 → 卡组里放一张「疲惫」9149；巧克力 ≥6（或难度不足）→ 移除。
+	## 调用点：start_run / advance_layer / advance（扣巧克力后）/ 事件与商店的巧克力加法 /
+	## RunSave.load_run（读档后按巧克力纠正）。
+	## ⚠️ 战斗内不调用（战斗中巧克力不变；手牌每场从 deck_ids 重抽，删卡组即生效）。
+	if fatigue_active() and chocolate < DIFF_FATIGUE_LIMIT:
+		if not deck_ids.has(FATIGUE_CARD_ID):
+			add_card(FATIGUE_CARD_ID)
+	elif deck_ids.has(FATIGUE_CARD_ID):
+		remove_all_cards(FATIGUE_CARD_ID)
 
 
 static func gain_max_hp(amount: int) -> int:
@@ -244,7 +377,11 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	## layer = 本局地图所属的层（地图上所有战斗/事件都从这一层的内容池里取）。
 	## map 传空数组时用本局种子现生成（真实流程 = 角色选择场景这样进来）。
 	# 初始生命按职业不同（R182）：基础 50 + 职业加成（森林精魄+20/暗影刺客+10/机械之心+16）。
-	reset(PlayerClass.base_hp_of(cid if cid != "" else PlayerClass.default_id()))
+	# R223 难度 9「虚弱」：初始最大生命 ×80%（截断取整）—— 在 reset 之前算好基数。
+	var base_hp: int = PlayerClass.base_hp_of(cid if cid != "" else PlayerClass.default_id())
+	if max_hp_mul() < 1.0:
+		base_hp = int(base_hp * max_hp_mul())
+	reset(base_hp)
 	# run 种子：开局新摇一个（地图生成 / 掉落 / 摇卡全部由它派生）
 	run_seed = randi()
 	run_rng = RandomNumberGenerator.new()
@@ -255,8 +392,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	current_layer = layer
 	cleared_ids = []
 	seen_ids = []                 # R207：新开一局 → 迷雾记忆清空
-	chocolate = RogueMap.MAX_STEPS
-	gold = 100                    # R181：新开一局初始 100 金币
+	chocolate = chocolate_per_layer()   # R223 难度 8「行动力降低」：8 档起 = 11
+	gold = start_gold()           # R181 初始 100 金；R223 难度 0 +50、难度 7 起降回 100
 	boss_pending = false
 	battle_log = []
 	pending_level = {}
@@ -269,6 +406,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	deck_ids = PlayerClass.start_deck_ids(player_class)
 	deck_mods = []                # R181：新开一局 → 附魔清空
 	ensure_deck_mods()            # R204：立刻对齐成等长（否则附魔必越界，见函数注释）
+	sync_fatigue()                # R223 难度 5：开局巧克力满 → 先入/出一次（<6 才生效）
 	battle_wins = 0
 	elite_wins = 0
 	used_levels = []
@@ -379,7 +517,8 @@ static func advance_layer(layer: int) -> int:
 	# 本层地图用本局种子续摇（同一 run 的随机链条：start_run → 各次 advance_layer）
 	map_cells = RogueMap.generate(run_rng, layer)
 	relic_choice = _roll_relic_choice()
-	chocolate = RogueMap.MAX_STEPS      # 新一层：巧克力重新满上
+	chocolate = chocolate_per_layer()   # 新一层：巧克力重新满上（R223 难度 8 起 = 11）
+	sync_fatigue()                # R223 难度 5：新层巧克力满 → 疲惫出卡组
 	boss_pending = false
 	current_node_id = -1
 	if not map_cells.is_empty():
@@ -1013,6 +1152,9 @@ static func advance(node_id: int) -> Dictionary:
 		chocolate = maxi(0, chocolate - cost)
 		if chocolate <= 0:
 			boss_pending = true
+		# R223 难度 5「行动力低时疲惫」：巧克力跨过 6 的临界 → 疲惫入 / 出卡组
+		# （唯一推导口 sync_fatigue，从 deck_ids 直接判，不加布尔 flag）
+		sync_fatigue()
 	current_node_id = node_id
 	reveal_known()   # R207：走进来之后立刻把新视野记进 seen —— 旧邻居不会因为
 	                 #      「已经不是邻居」而重新被雾盖回去（用户口径）

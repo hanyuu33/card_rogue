@@ -316,6 +316,7 @@ const KIND_ALLY := Color("2a7a2a")    ## 盟友
 const KIND_SKILL := Color("7a2a7a")   ## 技能
 const KIND_EFFECT := Color("1d7a4f")  ## 效果
 const KIND_FORT := Color("7a5a2a")    ## 工事
+const KIND_CURSE := Color("4e4560")   ## 诅咒（R223「疲惫」）
 const KIND_FALLBACK := Color("808080")  ## 未知种类
 
 ## R165 卡面横幅：无图回退 / 卡名条用**卡种（或职业）色的淡彩渐变**代替「粗暴纯色块」。
@@ -356,6 +357,7 @@ const RARITY_EPIC := Color("8a30b8")     ## 2 史诗
 const RARITY_STARTER := Color("1d7a4f")  ## 3 初始
 const RARITY_MONSTER := Color("7a1f1f")  ## 4 怪物
 const RARITY_EVENT := Color("a44ad0")    ## 5 事件
+const RARITY_CURSE := Color("4e4560")    ## 6 诅咒（R223「疲惫」）
 
 # ── 职业色（CardData.card_class → 卡面左侧竖条，R153）──
 const CLASS_DRUID := Color("3a7d44")   ## 森林精魄 自然绿
@@ -444,6 +446,8 @@ static func kind_color(kind: String) -> Color:
 			return KIND_EFFECT
 		"工事":
 			return KIND_FORT
+		"诅咒":
+			return KIND_CURSE
 	return KIND_FALLBACK
 
 

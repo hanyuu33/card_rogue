@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 221,
-			"图鉴 = 221 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147**；R164 删除**双重场地 9108**；实际 %d）"
+	check(repo.all_cards().size() == 223,
+			"图鉴 = 223 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 170 and grp_enemy.size() == 51,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 170 / 51；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 172 and grp_enemy.size() == 51,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 172 / 51；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -165,8 +165,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 149,
-			"奖励池 149 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）**；实际 %d）"
+	check(pool.size() == 150,
+			"奖励池 150 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -6875,21 +6875,25 @@ func _init() -> void:
 			if c.card_class != "敌人":
 				dr_cls_enemy_bad.append(c.id)
 		else:
-			if not PlayerClass.ids().has(c.card_class):
+			# R223：class 留空 = 通用卡（PlayerClass 注释里的既定口径；当前库内仅「疲惫」9149）
+			if c.card_class != "" and not PlayerClass.ids().has(c.card_class):
 				dr_cls_bad.append(c.id)
 		dr_cls_count[c.card_class] = int(dr_cls_count.get(c.card_class, 0)) + 1
 	check(dr_cls_bad.is_empty() and dr_cls_enemy_bad.is_empty(),
-			"角色系统：非敌方卡 class 都在可选角色内、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
+			"角色系统：非敌方卡 class 都在可选角色内（或留空 = 通用卡）、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
-	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 72
+	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 73
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 56
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 42
 			and int(dr_cls_count.get("敌人", 0)) == 51,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 72 / 56 / 42 / 51；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 73 / 56 / 42 / 51；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
 				int(dr_cls_count.get("敌人", 0))])
+	check(int(dr_cls_count.get("", 0)) == 1,
+			"角色系统：class 留空（通用卡）只有疲惫 9149 一张（实际 %d）"
+			% int(dr_cls_count.get("", 0)))
 	check(PlayerClass.ids() == ["森林精魄", "暗影刺客", "机械之心"]
 			and PlayerClass.default_id() == "森林精魄",
 			"R82 角色系统：可选角色 = 森林精魄 / 暗影刺客 / **机械之心**（默认森林精魄）")
@@ -7143,7 +7147,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 149, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 150, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -7447,43 +7451,77 @@ func _init() -> void:
 	var r45_cls_count := {}
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
-	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 72
+	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 73
 			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 56,
-			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1）"
+			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
+	check(int(r45_cls_count.get("", 0)) == 1,
+			"R223：class 留空（通用卡）= 疲惫 9149（%d 张）" % int(r45_cls_count.get("", 0)))
 
 	# ---- R47：难度档位 / 事件遭遇战计入难度 / 奖励池角色过滤 / 荒野形态强化 ----
 
-	# 难度档位：0 = 战斗回 3 + 休息 40%；1 = 战斗不回 + 休息 40%；2 = 战斗不回 + 休息 25%（原状）
+	# ---- R223：难度档位 0~10（继承制：高难度继承低难度全部 debuff）----
+	# 0 = 战斗回 3 + 休息 40% + 金钱 150；1 = 休息 25%（战斗仍回 3）；
+	# 2 = 战斗胜利不回血（= 旧「困难」其余部分）；3 = 敌血 +10%；4 = 稀有率 ×0.5；
+	# 5 = 疲惫诅咒；6 = 敌攻 +1；7 = 金钱 100；8 = 巧克力 11；9 = 最大生命 80%；
+	# 10 = 继承 0~9 全部、无新增。
 	RunState.set_difficulty(0)
 	RunState.reset(50)
 	check(RunState.battle_win_heal() == 3 and RunState.rest_heal_amount() == 20,
 			"难度 0：战斗回 3 血、休息 50×40%%→%d" % RunState.rest_heal_amount())
+	check(RunState.start_gold() == 150 and RunState.chocolate_per_layer() == RogueMap.MAX_STEPS
+			and RunState.max_hp_mul() == 1.0 and RunState.enemy_hp_bonus_pct() == 0.0
+			and RunState.enemy_power_bonus() == 0 and RunState.rare_weight_mul() == 1.0
+			and not RunState.fatigue_active(),
+			"难度 0：金钱 150 / 巧克力 %d / 最大生命不变 / 无其他 debuff" % RogueMap.MAX_STEPS)
 	RunState.take_damage(30)
 	check(RunState.rest() == 20 and RunState.hp == 40,
 			"难度 0：休息实际回 20（20/50 → %d/50）" % RunState.hp)
 	RunState.set_difficulty(1)
 	RunState.reset(50)
 	RunState.take_damage(30)
-	check(RunState.battle_win_heal() == 0 and RunState.rest_heal_amount() == 20,
-			"难度 1：战斗结束不回血、休息仍 40%（20）")
-	RunState.set_difficulty(2)
-	check(RunState.battle_win_heal() == 0 and RunState.rest_heal_amount() == 13,
-			"难度 2：战斗结束不回血、休息 50×25%→13（与加入档位前完全一致）")
+	check(RunState.battle_win_heal() == 3 and RunState.rest_heal_amount() == 13,
+			"难度 1：只降篝火（休息 50×25%→13），战斗胜利仍回 3 血")
 	check(RunState.rest() == 13 and RunState.hp == 33,
-			"难度 2：休息实际回 13（20/50 → %d/50）" % RunState.hp)
-	check(RunState.difficulty_name() == "困难" and RunState.difficulty_note() != "",
-			"难度档位：名称 / 说明文案齐备（当前 %s）" % RunState.difficulty_name())
-	check(RunState.DIFFICULTY_NAMES == ["宽松", "标准", "困难"],
-			"R58 难度 2 改名为「困难」（%s）" % str(RunState.DIFFICULTY_NAMES))
+			"难度 1：休息实际回 13（20/50 → %d/50）" % RunState.hp)
+	RunState.set_difficulty(2)
+	check(RunState.battle_win_heal() == 0 and RunState.rest_pct() == 0.25,
+			"难度 2：战斗胜利不回血（= 旧「困难」，休息 25% 继承自难度 1）")
+	RunState.set_difficulty(3)
+	check(RunState.enemy_hp_bonus_pct() == 0.10, "难度 3：敌人生命 +10%（向上取整）")
+	RunState.set_difficulty(4)
+	check(RunState.rare_weight_mul() == 0.5, "难度 4：稀有权重 ×0.5")
+	RunState.set_difficulty(5)
+	check(RunState.fatigue_active(), "难度 5：疲惫诅咒生效（巧克力 <6 入卡组）")
+	RunState.set_difficulty(6)
+	check(RunState.enemy_power_bonus() == 1, "难度 6：敌人攻击 +1（0 攻工事除外）")
+	RunState.set_difficulty(7)
+	check(RunState.start_gold() == 100, "难度 7：初始金钱降为 100")
+	RunState.set_difficulty(8)
+	check(RunState.chocolate_per_layer() == 11, "难度 8：每层初始巧克力 12 → 11")
 	RunState.set_difficulty(9)
-	check(RunState.difficulty == 2, "难度档位：越界输入被钳制到 2")
+	check(RunState.max_hp_mul() == 0.8, "难度 9：最大生命 ×80%")
+	RunState.set_difficulty(10)
+	check(RunState.difficulty_note().count("；") == 8
+			and RunState.difficulty_note().contains("虚弱"),
+			"难度 10：累计文本拼上 1~9 全部 9 条、自身无新增（%s）" % RunState.difficulty_note())
+	check(RunState.difficulty_summary().contains("初始金钱 100")
+			and RunState.difficulty_summary().contains("最大生命 80%"),
+			"难度 10：数值摘要列出全部生效项（%s）" % RunState.difficulty_summary())
+	check(RunState.difficulty_name() == "噩梦" and RunState.DIFFICULTY_NAMES.size() == 11,
+			"难度 10 = 噩梦；档位名共 11 个（%s）" % str(RunState.DIFFICULTY_NAMES))
+	RunState.set_difficulty(99)
+	check(RunState.difficulty == 10, "难度档位：越界输入被钳制到 10")
 	RunState.set_difficulty(-3)
 	check(RunState.difficulty == 0, "难度档位：负数被钳制到 0")
-	check(RunState.DIFFICULTY_COUNT == 3 and RunState.DIFFICULTY_BATTLE_HEAL.size() == 3
-			and RunState.DIFFICULTY_REST_PCT.size() == 3,
-			"难度档位：共 3 档，回复表长度齐平")
+	check(RunState.DIFFICULTY_COUNT == 11 and RunState.DIFFICULTY_BATTLE_HEAL.size() == 11
+			and RunState.DIFFICULTY_REST_PCT.size() == 11
+			and RunState.DIFFICULTY_TEXTS.size() == 11
+			and RunState.DIFFICULTY_BATTLE_HEAL[0] == 3 and RunState.DIFFICULTY_BATTLE_HEAL[1] == 3
+			and RunState.DIFFICULTY_BATTLE_HEAL[2] == 0
+			and RunState.DIFFICULTY_REST_PCT[0] == 0.40 and RunState.DIFFICULTY_REST_PCT[1] == 0.25,
+			"难度档位：共 11 档；战斗回血 [3,3,0…] / 休息 [40%,25%…] 长度齐平")
 	RunState.reset(50)
 
 	# 事件节点遭遇怪物：同样计入「普通战斗胜场」（否则永远停在简单档、可反复刷简单战斗）
@@ -7520,7 +7558,7 @@ func _init() -> void:
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
 			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法鸭）")
-	check(r47_dr.size() == 60 and r47_rg.size() == 53
+	check(r47_dr.size() == 61 and r47_rg.size() == 53
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
 			"奖励池过滤：森林精魄 %d 张 / 暗影刺客 %d 张（两者之和 + 机械之心 %d = 完整池 %d）"
@@ -12787,6 +12825,40 @@ func _init() -> void:
 		"R96 零件回收者：**只回收己方**——相邻敌方被销毁不触发（仍 %d 攻 / 手牌 %d）"
 			% [r96_rec3.upgrade_atk, r96_e3.state.hand.size()])
 
+	# ---- ③b R221：零件回收者：接通的「素体」被销毁 → **不触发**（卡面「素体以外」）----
+	var r221_e1 := _new_engine([], 40, 40, -1, false)
+	r221_e1.start_game()
+	var r221_rec1: Placement = r221_e1.state.place(
+		CardData.from_dict(r96_rec_def.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r221_proto1: Placement = r221_e1.state.place(
+		CardData.from_dict(r96_repo.get_card(GameEngine.PROTO_ID).to_dict()),
+		Vector2i(4, 0), GameEngine.SIDE_SELF)
+	var r221_hand1: int = r221_e1.state.hand.size()
+	r221_e1._destroy(Vector2i(4, 0))
+	check(not r221_e1.state.board.has(Vector2i(4, 0)),
+		"R221 零件回收者：接通的素体被销毁（已离场）")
+	check(r221_rec1.upgrade_atk == 0 and r221_e1.state.hand.size() == r221_hand1,
+		"R221 零件回收者：被销毁的是「素体」→ 不回收、不加素体（仍 %d 攻 / 手牌 %d）"
+			% [r221_rec1.upgrade_atk, r221_e1.state.hand.size()])
+
+	# ---- ③c R221：拆解拆「素体」→ 同样不触发回收者；拆非素体照旧触发 ----
+	var r221_e2 := _new_engine([], 40, 40, -1, false)
+	r221_e2.start_game()
+	var r221_rec2: Placement = r221_e2.state.place(
+		CardData.from_dict(r96_rec_def.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r221_e2.state.place(
+		CardData.from_dict(r96_repo.get_card(GameEngine.PROTO_ID).to_dict()),
+		Vector2i(4, 0), GameEngine.SIDE_SELF)
+	var r221_hand2: int = r221_e2.state.hand.size()
+	r221_e2._demolish(Vector2i(4, 0), GameEngine.SIDE_SELF)
+	# 拆解本身会往手牌塞 1 张素体，故此处比「是否多出第 2 张 / 攻力是否上涨」。
+	check(r221_rec2.upgrade_atk == 0,
+		"R221 拆解拆素体：回收者攻力不变（仍 %d 攻）" % r221_rec2.upgrade_atk)
+	check(r221_e2.state.hand.size() == r221_hand2 + 1
+			and r221_e2.state.hand[r221_e2.state.hand.size() - 1].id == GameEngine.PROTO_ID,
+		"R221 拆解拆素体：手牌只 +1 张素体（来自拆解本身，回收者不额外加）（%d→%d）"
+			% [r221_hand2, r221_e2.state.hand.size()])
+
 	# ---- ④ 嵌合暴君：使用时破坏接通的己方卡并吸收攻/血 ----
 	var r96_e4 := _new_engine([], 40, 40, -1, false)
 	r96_e4.start_game()
@@ -15625,10 +15697,10 @@ func _init() -> void:
 	check(r174_arg != null and r174_arg.card_name == "量产型阿尔戈斯"
 			and r174_arg.kind == "盟友" and r174_arg.group == "enemy"
 			and r174_arg.power == 7 and r174_arg.health == 35
-			and r174_arg.attack_range == 1 and r174_arg.move_speed == 2
+			and r174_arg.attack_range == 2 and r174_arg.move_speed == 2
 			and r174_arg.rarity == 4 and r174_arg.traits.has(GameEngine.ARGOS_TRAIT)
 			and not r174_repo.reward_pool().has(r174_arg),
-			"R174 阿尔戈斯：盟友 7/35 程1 速2（R219 攻击 4→7），trait「百眼」，敌方卡不进奖励池")
+			"R174 阿尔戈斯：盟友 7/35 程2 速2（R219 攻击 4→7，R220 攻击距离 1→2），trait「百眼」，敌方卡不进奖励池")
 	var r174_lvl: Dictionary = _level_named("百眼动员")
 	check(not r174_lvl.is_empty()
 			and int(r174_lvl["tier"]) == GameLevels.TIER_NORMAL_EASY
@@ -16887,6 +16959,265 @@ func _init() -> void:
 			and r219_repo.get_card(9137).health == 30
 			and r219_repo.get_card(9142).power == 7,
 			"R219 加强：9131 生命 45 / 9137 生命 30 / 9142 攻击 7")
+
+	# ================================================================
+	# R222：新生 9148（森林精魄 · 史诗 · 2 费效果卡）
+	# 「回合开始时，选一张手卡消失，随机将一张卡牌加入你的手卡。」
+	# ================================================================
+	var r222_cls_prev := RunState.player_class
+	RunState.player_class = "森林精魄"   # 随机卡池按本职业取（测试里显式钉住）
+	var r222_repo := CardRepo.load_json()
+	var r222_card: CardData = r222_repo.get_card(9148)
+	# ① 卡面数据 + 入池
+	check(r222_card != null and r222_card.card_name == "新生"
+		and r222_card.kind == "效果" and r222_card.cost == 2
+		and r222_card.rarity == 2 and r222_card.group == "player"
+		and r222_card.card_class == "森林精魄"
+		and r222_card.traits.has(GameEngine.REBIRTH_TRAIT)
+		and r222_card.target_mode == "none"
+		and r222_card.effect_text == "回合开始时，选一张手卡消失，随机将一张卡牌加入你的手卡。",
+		"R222 新生：效果卡 / 2 费 / 史诗 / 森林精魄 / trait「新生」/ target none / 文案")
+	var r222_pool_ids := {}
+	for c: CardData in r222_repo.reward_pool_for("森林精魄"):
+		r222_pool_ids[c.id] = true
+	check(r222_pool_ids.has(9148),
+		"R222 新生：史诗 → 进本职业奖励池（共 %d 张）" % r222_pool_ids.size())
+	# ② 回合开始（抽牌之后）弹面板等选
+	var r222_deck: Array[CardData] = []
+	for i in 8:
+		r222_deck.append(_card(7900 + i, "填牌%d" % i, "技能", 0, 0, 0))
+	var r222_a := _new_engine(r222_deck, 30, 30, -1, false)
+	r222_a.state.effects.append(CardData.from_dict(r222_card.to_dict()))
+	r222_a.current_side = GameEngine.SIDE_SELF
+	r222_a.state.energy = 0
+	r222_a._begin_turn(GameEngine.SIDE_SELF)
+	check(r222_a.rebirth_pending
+		and r222_a.state.hand.size() == FieldState.HAND_DRAW_PER_TURN,
+		"R222 新生：抽 %d 张后弹面板等玩家选（手牌 %d）"
+			% [FieldState.HAND_DRAW_PER_TURN, r222_a.state.hand.size()])
+	check(r222_a.rebirth_options().size() == FieldState.HAND_DRAW_PER_TURN,
+		"R222 新生：面板列出全部手牌（实际 %d 张）" % r222_a.rebirth_options().size())
+	# 选第 2 张 → 本场对战消失 + 随机一张本职业奖励卡进手
+	var r222_pick_name := str(r222_a.state.hand[1].card_name)
+	var r222_void0 := r222_a.state.void_count
+	var r222_disc0 := r222_a.state.discard.size()
+	check(r222_a.rebirth_pick(1),
+		"R222 新生：rebirth_pick(1) 成功（选中 %s）" % r222_pick_name)
+	check(not r222_a.rebirth_pending,
+		"R222 新生：选完面板关闭")
+	check(r222_a.state.void_count == r222_void0 + 1
+		and r222_a.state.void_cards.size() > 0
+		and str(r222_a.state.void_cards[r222_a.state.void_cards.size() - 1].card_name) == r222_pick_name
+		and r222_a.state.discard.size() == r222_disc0,
+		"R222 新生：%s **本场对战消失**（void +1、不进弃牌区）" % r222_pick_name)
+	var r222_given: CardData = r222_a.state.hand[r222_a.state.hand.size() - 1]
+	check(r222_a.state.hand.size() == FieldState.HAND_DRAW_PER_TURN
+		and r222_pool_ids.has(r222_given.id),
+		"R222 新生：手牌补回 %d 张，且新进来的「%s」来自本职业奖励池"
+			% [FieldState.HAND_DRAW_PER_TURN, r222_given.card_name])
+	check(not r222_a.rebirth_pick(0) and not r222_a.rebirth_pick(99),
+		"R222 新生：面板关闭后 / 下标越界都选不动")
+	# ③ 反面：没挂新生 → 不弹面板
+	var r222_none := _new_engine([], 30, 30)
+	r222_none.current_side = GameEngine.SIDE_SELF
+	r222_none._begin_turn(GameEngine.SIDE_SELF)
+	check(not r222_none.rebirth_pending,
+		"R222 反面：效果区没有新生 → 回合开始不弹面板")
+	# ④ 手牌为空 → 没有可消失的牌 → 本回合不触发
+	var r222_empty := _new_engine([], 30, 30)
+	r222_empty.state.effects.append(CardData.from_dict(r222_card.to_dict()))
+	r222_empty.current_side = GameEngine.SIDE_SELF
+	r222_empty._rebirth_tick(GameEngine.SIDE_SELF)
+	check(not r222_empty.rebirth_pending and r222_empty.state.hand.is_empty(),
+		"R222 手牌为空：没有可消失的牌 → 不弹面板、也不补随机卡")
+	# ⑤ 效果区两张 → 逐张选（默认按张数结算：卡面没写「不叠加」）
+	var r222_two := _new_engine(r222_deck.duplicate(), 30, 30, -1, false)
+	for _i4 in 2:
+		r222_two.state.effects.append(CardData.from_dict(r222_card.to_dict()))
+	r222_two.current_side = GameEngine.SIDE_SELF
+	r222_two.state.energy = 0
+	r222_two._begin_turn(GameEngine.SIDE_SELF)
+	check(r222_two.rebirth_pending and r222_two.rebirth_remaining == 2,
+		"R222 两张新生：待消失 2 张（rebirth_remaining=%d）" % r222_two.rebirth_remaining)
+	var r222_two_void0 := r222_two.state.void_count
+	check(r222_two.rebirth_pick(0) and r222_two.rebirth_pending
+		and r222_two.rebirth_remaining == 1,
+		"R222 两张新生：选一张后面板还在（还剩 1 张）")
+	check(r222_two.rebirth_pick(0) and not r222_two.rebirth_pending,
+		"R222 两张新生：第二张选完关闭")
+	check(r222_two.state.void_count == r222_two_void0 + 2,
+		"R222 两张新生：两张都真的消失了（void +2）")
+	# ⑥ 随机卡只来自本职业池：12 次抽样
+	var r222_bad := 0
+	for sd in 12:
+		var e6 := _new_engine(r222_deck.duplicate(), 30, 30, -1, false)
+		e6.state.effects.append(CardData.from_dict(r222_card.to_dict()))
+		e6.current_side = GameEngine.SIDE_SELF
+		e6._begin_turn(GameEngine.SIDE_SELF)
+		if not e6.rebirth_pending:
+			continue
+		e6.rebirth_pick(0)
+		var g6: CardData = e6.state.hand[e6.state.hand.size() - 1]
+		if not r222_pool_ids.has(g6.id):
+			r222_bad += 1
+	check(r222_bad == 0,
+		"R222 随机卡：12 次抽样给出的卡全部来自本职业奖励池（越界 %d 次）" % r222_bad)
+	# ⑦ 同种子同产物（回放口径）
+	var r222_s1 := _new_engine(r222_deck.duplicate(), 30, 30, -1, false)
+	var r222_s2 := _new_engine(r222_deck.duplicate(), 30, 30, -1, false)
+	for e7 in [r222_s1, r222_s2]:
+		e7.state.effects.append(CardData.from_dict(r222_card.to_dict()))
+		e7.rng.seed = 4242
+		e7.current_side = GameEngine.SIDE_SELF
+		e7._begin_turn(GameEngine.SIDE_SELF)
+		e7.rebirth_pick(0)
+	var r222_g1: int = r222_s1.state.hand[r222_s1.state.hand.size() - 1].id
+	var r222_g2: int = r222_s2.state.hand[r222_s2.state.hand.size() - 1].id
+	check(r222_g1 == r222_g2,
+		"R222 同种子同产物（%d vs %d）" % [r222_g1, r222_g2])
+	RunState.player_class = r222_cls_prev
+
+	# ---- R223：难度系统大改（0~10 继承制 + 诅咒卡「疲惫」9149）----
+
+	var r223_cls_prev := RunState.player_class
+	var r223_repo := CardRepo.load_json()
+	var r223_fatigue: CardData = r223_repo.get_card(9149)
+	check(r223_fatigue != null and r223_fatigue.card_name == "疲惫"
+			and r223_fatigue.kind == "诅咒" and r223_fatigue.cost == 1
+			and r223_fatigue.power == 0 and r223_fatigue.health == 0
+			and r223_fatigue.rarity == 6 and r223_fatigue.rarity_name() == "诅咒"
+			and r223_fatigue.rarity_color() == CardData.RARITY_COLORS[6]
+			and r223_fatigue.group == "player" and r223_fatigue.card_class == ""
+			and r223_fatigue.is_curse() and not r223_fatigue.is_spell()
+			and not r223_fatigue.is_effect() and not r223_fatigue.is_fort()
+			and r223_fatigue.target_mode == "none" and not r223_fatigue.needs_target()
+			and r223_fatigue.traits.has("疲惫")
+			and r223_fatigue.effect_text == "打出无效果。在手卡时，所有技能卡费用 +1。",
+			"R223 疲惫 9149：1 费诅咒（rarity 6 = 新分类）/ class 留空 / 无目标 / 文案")
+	check(CardData.RARITY_NAMES.size() == 7 and CardData.RARITY_NAMES[6] == "诅咒",
+			"R223 稀有度名称表 7 档（新增 6 = 诅咒）")
+	var r223_clamp := CardData.from_dict({"id": 1, "name": "x", "rarity": 9})
+	check(r223_clamp.rarity == 6, "R223 非法稀有度被钳制到 6（诅咒）")
+	var r223_pool := r223_repo.reward_pool()
+	var r223_in_pool := false
+	for c: CardData in r223_pool:
+		if c.id == 9149:
+			r223_in_pool = true
+	check(not r223_in_pool, "R223 疲惫（诅咒 rarity 6）不进奖励池（池 %d 张）" % r223_pool.size())
+
+	# 敌血 +10% / 敌攻 +1：scaled_enemy_card 返回副本，卡库原卡不动
+	RunState.set_difficulty(3)
+	var r223_foe: CardData = CardData.from_dict(r223_repo.get_card(1011).to_dict())   # 铁壁卫兵 3/40
+	var r223_scaled: CardData = RunState.scaled_enemy_card(r223_foe)
+	check(r223_scaled != r223_foe and r223_scaled.health == 44 and r223_scaled.power == 3
+			and r223_foe.health == 40,
+			"R223 难度 3：3/40 敌人 → 生命 ceil(40×10%)=+4 → 3/44（原卡不动）")
+	RunState.set_difficulty(6)
+	var r223_scaled2: CardData = RunState.scaled_enemy_card(r223_foe)
+	check(r223_scaled2.health == 44 and r223_scaled2.power == 4,
+			"R223 难度 6：敌血 +10% 与敌攻 +1 同时生效 → 4/44")
+	var r223_fort0: CardData = CardData.from_dict(r223_repo.get_card(8001).to_dict())  # 木栅栏 0/6 工事
+	var r223_fort_s: CardData = RunState.scaled_enemy_card(r223_fort0)
+	check(r223_fort_s.power == 0 and r223_fort_s.health == 7,
+			"R223 难度 6：原本 0 攻工事不吃攻击加成（0/6 → 0/7，只吃生命）")
+	RunState.set_difficulty(0)
+	check(RunState.scaled_enemy_card(r223_foe) == r223_foe,
+			"R223 难度 0：两个缩放都关 → 原样返回（连副本都不做）")
+
+	# 开局接线：金钱 / 巧克力 / 最大生命
+	RunState.set_difficulty(0)
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	check(RunState.gold == 150 and RunState.chocolate == 12 and RunState.max_hp == 70,
+			"R223 难度 0 开局：金钱 150 / 巧克力 12 / 森林精魄最大生命 70")
+	RunState.set_difficulty(9)
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	check(RunState.max_hp == 56, "R223 难度 9 开局：森林精魄 70×80% → 最大生命 56")
+	RunState.set_difficulty(7)
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	check(RunState.gold == 100, "R223 难度 7 开局：金钱 100")
+	RunState.set_difficulty(8)
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	check(RunState.chocolate == 11, "R223 难度 8 开局：巧克力 11")
+	RunState.end_run()
+
+	# 疲惫入/出卡组：sync_fatigue 从 deck_ids 推导（不加布尔 flag）
+	RunState.set_difficulty(5)
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	check(not RunState.deck_ids.has(RunState.FATIGUE_CARD_ID),
+			"R223 难度 5 + 巧克力 12：开局不进疲惫（≥6）")
+	RunState.chocolate = 5
+	RunState.sync_fatigue()
+	check(RunState.deck_ids.has(RunState.FATIGUE_CARD_ID)
+			and RunState.deck_ids.count(RunState.FATIGUE_CARD_ID) == 1,
+			"R223 难度 5 + 巧克力 5：卡组加入一张疲惫 9149")
+	RunState.sync_fatigue()
+	check(RunState.deck_ids.count(RunState.FATIGUE_CARD_ID) == 1,
+			"R223 反复 sync 不会叠出第二张疲惫")
+	RunState.chocolate = 6
+	RunState.sync_fatigue()
+	check(not RunState.deck_ids.has(RunState.FATIGUE_CARD_ID),
+			"R223 巧克力回到 6：疲惫被移出卡组")
+	RunState.chocolate = 0
+	RunState.sync_fatigue()
+	check(RunState.deck_ids.has(RunState.FATIGUE_CARD_ID), "R223 巧克力 0：疲惫重新入卡组")
+	RunState.set_difficulty(4)
+	RunState.sync_fatigue()
+	check(not RunState.deck_ids.has(RunState.FATIGUE_CARD_ID),
+			"R223 难度 4（未到 5 档）：即使巧克力 0 也不进疲惫")
+	RunState.end_run()
+
+	# 诅咒的打出 / 涨价：引擎侧
+	var r223_e := _new_engine([], 30, 30)
+	r223_e.state.hand.clear()
+	r223_e.state.hand.append(CardData.from_dict(r223_fatigue.to_dict()))
+	r223_e.state.hand.append(_card(7901, "测试技能", "技能", 1, 0, 0))
+	r223_e.current_side = GameEngine.SIDE_SELF
+	check(r223_e.cost_of(r223_e.state.hand[1]) == 2
+			and r223_e.cost_of(r223_e.state.hand[1], GameEngine.SIDE_OPPONENT) == 1,
+			"R223 手牌里有疲惫：己方技能卡费用 +1（敌方视角不变）")
+	r223_e.state.hand.remove_at(0)
+	check(r223_e.cost_of(r223_e.state.hand[0]) == 1, "R223 疲惫离手：技能卡费用恢复 1")
+	r223_e.state.hand.clear()
+	r223_e.state.hand.append(CardData.from_dict(r223_fatigue.to_dict()))
+	r223_e.state.hand.append(_card(7902, "测试盟友", "盟友", 2, 1, 1))
+	check(r223_e.cost_of(r223_e.state.hand[1]) == 2,
+			"R223 疲惫只涨技能卡，盟友费用不变")
+
+	var r223_ce := _new_engine([], 30, 30)
+	r223_ce.state.hand.clear()
+	r223_ce.state.hand.append(CardData.from_dict(r223_fatigue.to_dict()))
+	r223_ce.state.hand.append(_card(7901, "测试技能", "技能", 1, 0, 0))
+	r223_ce.current_side = GameEngine.SIDE_SELF
+	r223_ce.state.energy = 3
+	var r223_spell0: int = r223_ce.state.self_skill_plays
+	var r223_plays0: int = r223_ce.state.self_card_plays
+	var r223_detail: String = r223_ce.use_curse(0)
+	check(r223_ce.state.energy == 2 and r223_ce.state.hand.size() == 1
+			and r223_ce.state.hand[0].card_name == "测试技能"
+			and r223_ce.state.discard.size() == 1
+			and r223_ce.state.discard[0].is_curse()
+			and r223_ce.state.self_skill_plays == r223_spell0
+			and r223_ce.state.self_card_plays == r223_plays0 + 1,
+			"R223 use_curse：扣 1 能量、离手进弃牌区；不记技能出牌（%s）" % r223_detail)
+
+	var r223_re := _new_engine([], 30, 30)
+	r223_re.state.opp_hand_count = 3
+	r223_re.state.opp_energy = 4
+	r223_re.current_side = GameEngine.SIDE_OPPONENT
+	var r223_opp0: int = r223_re.state.opp_card_plays
+	r223_re.remote_curse(CardData.from_dict(r223_fatigue.to_dict()))
+	check(r223_re.state.opp_energy == 3 and r223_re.state.opp_hand_count == 2
+			and r223_re.state.opp_card_plays == r223_opp0 + 1,
+			"R223 remote_curse：对方打出诅咒 → 能量 -1 / 手牌数 -1 / 记一次出牌")
+
+	var r223_ae := _new_engine([], 30, 30)
+	r223_ae.state.hand.clear()
+	r223_ae.state.hand.append(CardData.from_dict(r223_fatigue.to_dict()))
+	check(not r223_ae._autoplay_play(0) and r223_ae.state.hand.size() == 1,
+			"R223 自动出牌（鸭语耳环）跳过诅咒卡（不会被当成单位摆上场）")
+
+	RunState.set_difficulty(0)
+	RunState.player_class = r223_cls_prev
 
 	# ================================================================
 

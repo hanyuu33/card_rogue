@@ -40,7 +40,13 @@ static func roll(repo: CardRepo, reward_type: String, count: int = CHOICES,
 	var out: Array[CardData] = []
 	if pool.is_empty() or count <= 0:
 		return out
-	var weights: Array = TYPE_WEIGHTS.get(reward_type, TYPE_WEIGHTS["normal"])
+	# R223 难度 4「稀有卡牌获取概率降低」：稀有权重 ×0.5（史诗不动；内部按总和归一化）。
+	# ⚠️ TYPE_WEIGHTS 是 const 字典、取出来的是**共享引用** —— 必须 `.duplicate()`
+	# 新建数组再改，否则会把全局表永久改掉（后续每局都吃这个乘数）。
+	var weights: Array = (TYPE_WEIGHTS.get(reward_type, TYPE_WEIGHTS["normal"]) as Array).duplicate()
+	var rare_mul: float = RunState.rare_weight_mul()
+	if rare_mul != 1.0:
+		weights[1] = float(weights[1]) * rare_mul
 	var used_names := {}
 	for i in count:
 		var card := _pick_one(pool, weights, used_names, rng)

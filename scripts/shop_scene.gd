@@ -888,6 +888,7 @@ func _buy_row3(i: int) -> void:
 			return
 		e["sold"] = true
 		RunState.chocolate += 1
+		RunState.sync_fatigue()   # R223 难度 5：巧克力回到 6 以上 → 疲惫出卡组
 		_set_hint("巧克力 +1")
 
 

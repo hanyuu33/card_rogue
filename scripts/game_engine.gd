@@ -48,6 +48,8 @@ var foresight_vanish:= false  # 预判①选完后：把本卡从弃牌区移除
 var fate_pending:= false    # 拒绝命运（9098）：等玩家从弃牌区选回 fate_count 张
 var fate_count:= 0
 var endless_pending:= false  # 无尽黑暗 9114（R70）：等玩家从**手牌**里选 1 张弃掉
+var rebirth_pending:= false  # 新生 9148（R222）：等玩家从**手牌**里选 1 张使其消失
+var rebirth_remaining:= 0    # 本层面板还要消失几张（效果区几张新生就几张）
 var _aether_left:= 0
 var _aether_used:= false
 var _stoneskin_left:= 0
@@ -140,14 +142,14 @@ const ACTION_GROWTH_TRAIT:= "行动力成长"
 const ACTION_GROWTH_PERIOD:= 3
 
 # ---- R174：量产型阿尔戈斯「百眼动员」（第二层普通简单「百眼动员」）----
-# 阿尔戈斯（9142，盟友 **7/35** 程1 **速2**，R219 攻击 4→7）带「百眼」trait：**在场时每单位只发动一次**
+# 阿尔戈斯（9142，盟友 **7/35** 程2 **速2**，R219 攻击 4→7，R220 攻击距离 1→2）带「百眼」trait：**在场时每单位只发动一次**
 # （记 `Placement.ability_used`，与潜伏 9092 同口径 —— 离场再上场算新单位，可再发动）。
 # 触发条件 = **攻击命中单位**（不要求亲手击杀，与「量产锻造」的区别就在这）：
 # 在**己方后排**（row 0）召唤一只量产型俄倪厄（9131，5/45 程1 速1），并使其
 # **移动速度 +1**（记 `Placement.summon_haste`，进 `effective_speed`，随单位离场消失）。
 # 后排满则退到己方半场随机空格（`_random_free_half_cell`，走引擎 rng → 回放同种子可复现）。
 # ⚠️ 挂点 = `attack()`（攻击单位），**不挂** `attack_hp()`（直击 HP 不算「攻击单位」）。
-const ARGOS_ID:= 9142             # 量产型阿尔戈斯（盟友 7/35 程1 速2）
+const ARGOS_ID:= 9142             # 量产型阿尔戈斯（盟友 7/35 程2 速2）
 const ARGOS_TRAIT:= "百眼"        # 只做标记（与「量产锻造 / 锻造」同套路），次数记 Placement
 const ARGOS_SUMMON_HASTE:= 1      # 召唤出的俄倪厄移速加成（Placement.summon_haste）
 
@@ -677,8 +679,10 @@ const AUTO_UPGRADE_TRAIT:= "自主改造"
 const AUTO_UPGRADE_ATK:= 2
 const AUTO_UPGRADE_HP:= 1
 # ── R96：机械之心 8046 / 8047 / 8048 ──
-# 「零件回收者」（8046，3 费**史诗**盟友 1/14/1/1，R208 由普通升史诗）：与这张卡**接通**的己方盟友或工事被
-#   **破坏**时，这张卡攻击力 += 被销毁卡的力量，并往手牌加一张「素体」。
+# 「零件回收者」（8046，3 费**史诗**盟友 1/14/1/1，R208 由普通升史诗）：与这张卡**接通**的己方
+#   **素体以外**的盟友或工事被**破坏**时，这张卡攻击力 += 被销毁卡的力量，并往手牌加一张「素体」。
+#   * R221：被销毁的卡是「素体」（8025，PROTO_ID）→ **不触发**（防「拆素体 → 回收 + 补一张素体」
+#     的永动刷攻循环）；判据用 card.id 比对 PROTO_ID（卡库仅 8025 带 trait「素体」）。
 #   * 触发口唯一 = `_destroy`（全游戏唯一破坏口），在 erase 之前先抓同连通块里的回收者。
 #   * 「接通」= `_component_of_cell`（四方向相邻，隔敌也算连通），但此处只认 SIDE_SELF 回收者
 #     + 受害者必须是己方盟友/工事（卡面明写「己方」）。
@@ -873,6 +877,20 @@ const ENDLESS_DARK_ID:= 9114
 const ENDLESS_DARK_TRAIT:= "无尽黑暗"
 const ENDLESS_DARK_DISCARD:= 1     # 每次触发弃几张
 const ENDLESS_DARK_ENERGY:= 2      # 每次触发换几点费用
+
+# ---- R222（2026-10-18）新生 9148（森林精魄 · 史诗 · 2 费效果卡）----
+# 「回合开始时，选一张手卡消失，随机将一张卡牌加入你的手卡。」
+#   * 挂在 `_begin_turn` **抽牌之后**（用户口径：抽卡之后结算 —— 选的就是刚抽完的那手牌）；
+#   * 「消失」= 本场对战移除（既不进手牌也不进弃牌区），与专注 9122 / 负重减轻 8066
+#     同口径：`void_count += 1` + `void_cards.append`；
+#   * 随机卡池 = `reward_pool_for(RunState.player_class)`（**本职业奖励卡牌**，
+#     与无尽加护 9061 同一口径，只多一个「不限效果卡」的差别）；
+#   * 默认**按效果区张数逐份结算**（使魔之夜 / 无尽加护同款默认语义：卡面没写
+#     「不叠加」就逐张来）→ 两张新生 = 选两张消失、拿两张随机卡；
+#   * 手牌为空 → 没有可消失的牌 → 整条落空（不触发、也不补随机卡）；
+#   * 敌方侧没有真实手牌（只记张数）→ 对称落空，不开面板。
+const REBIRTH_ID:= 9148
+const REBIRTH_TRAIT:= "新生"
 
 # ---- R103（2026-10-07）夜蚀 8062 ----
 # 夜蚀8062（2 费史诗盟友 2/8/程1/速1）：**自己回合结束时**，回复 X 点生命值，
@@ -1311,6 +1329,7 @@ func _begin_turn(side: String) -> void :
 		_latent_turn_draw(SIDE_SELF)
 		_shadow_split_draw(SIDE_SELF)   # 分裂之影 8067（R217）
 		_glowgrass_supply(SIDE_SELF)
+		_rebirth_tick(SIDE_SELF)          # 新生 9148（R222）：抽牌之后，选一张手卡消失
 		_ghost_self_destruct(SIDE_SELF)
 		_assassin_summon(SIDE_SELF)
 		_refresh_dark_lord(SIDE_SELF)
@@ -1370,6 +1389,7 @@ func _begin_turn(side: String) -> void :
 		_latent_turn_draw(SIDE_OPPONENT)
 		_shadow_split_draw(SIDE_OPPONENT)   # 分裂之影 8067（R217，对称保留）
 		_glowgrass_supply(SIDE_OPPONENT)
+		_rebirth_tick(SIDE_OPPONENT)      # 新生 9148（R222，对称保留：敌方无真实手牌）
 		_ghost_self_destruct(SIDE_OPPONENT)
 		_assassin_summon(SIDE_OPPONENT)
 		_cannon_fire(SIDE_OPPONENT)   # R158 充能巨炮 9139：己方回合开始随机破坏一个我方单位
@@ -2073,6 +2093,12 @@ func _autoplay_play(hand_index: int) -> bool:
 	if hand_index < 0 or hand_index >= state.hand.size():
 		return false
 	var card: CardData = state.hand[hand_index]
+	if card.is_curse():
+		# R223：诅咒卡（「疲惫」9149）—— 唯一打出入口是 use_curse（玩家自己决定
+		# 什么时候扔掉这张废牌）。自动出牌**绝不能**碰它：它会掉进下面的
+		# `play_from_hand` 被当成单位摆上场（诅咒不是单位）。
+		_log("鸭语耳环：%s 是诅咒卡，自动出牌跳过" % card.card_name)
+		return false
 	if card.x_cost:
 		# X 费卡（流星雨）：会一口气吃掉全部能量 → 自动出牌不碰它（留在手里）。
 		# ⚠️ R124 起它在 0 能量时也算「可打出」（X 记 0）→ 自动出牌**更**不该碰它，
@@ -2407,7 +2433,22 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 	# 这样它压得住前面的各种 -1 / -X，且显示 = 判定 = 实扣仍统一走这里。
 	if side == SIDE_SELF and card != null and state.turn_card_raise > 0:
 		c += state.turn_card_raise
+	# R223 难度 5「疲惫」诅咒（9149）：**在手牌里期间**所有技能卡费用 +1。
+	# 判据 = 手里有没有诅咒卡（按卡种判、不按 id 硬编码，跟次元/字段一个路子）；
+	# 放在契约签订者之后 —— 两者都是涨价，顺序不影响最终值。
+	if side == SIDE_SELF and card != null and card.is_spell() and _hand_has_curse():
+		c += FATIGUE_COST_RAISE
 	return _cost_floor(card, maxi(0, c))
+
+
+const FATIGUE_COST_RAISE := 1   ## R223：手牌里有诅咒「疲惫」时，所有技能卡费用 +1
+
+func _hand_has_curse() -> bool:
+	## 当前手牌里是否有诅咒卡（R223 难度 5「疲惫」的涨价判据）。
+	for c: CardData in state.hand:
+		if c != null and c.is_curse():
+			return true
+	return false
 
 
 func _cost_floor(card: CardData, cost: int) -> int:
@@ -4450,6 +4491,24 @@ func use_effect(hand_index: int) -> String:
 	return "%s 生效中" % card.card_name
 
 
+func use_curse(hand_index: int) -> String:
+	## R223：打出**诅咒卡**（「疲惫」9149）—— 用户口径「打出无效果」：付能量、离手、
+	## 进弃牌区，就这些。
+	## ⚠️ **不走 use_spell**：不记 `self_skill_plays`（不是技能），也不点亮技能类反应
+	##    （虚空主宰记账 / 蓄力 / 回合首张技能加成 / 陨石术的留手折价都不该被一张
+	##    无效果诅咒触发）。
+	##    「用了一张牌」的通用收尾仍走 `_note_card_played`（终结/回转的 X、幻影斗篷、
+	##    疾风、潜影者、不眠……都该把它算成一次出牌）。
+	var card := state.hand[hand_index]
+	_pay(card)
+	state.hand.remove_at(hand_index)
+	state.discard.append(card)
+	_note_card_played(SIDE_SELF, card)
+	_log("打出诅咒 %s（无效果）" % card.card_name)
+	action.emit("curse", {"card": card})
+	return "%s：无效果" % card.card_name
+
+
 func _spell_play_tick() -> void:
 
 
@@ -5627,6 +5686,17 @@ func remote_spell(card: CardData, target, side:= SIDE_OPPONENT) -> String:
 	action.emit("spell", {"card": card, "detail": detail})
 	_note_card_played(SIDE_OPPONENT, card)
 	return detail
+
+
+func remote_curse(card: CardData, side:= SIDE_OPPONENT) -> void:
+	## R223：对方打出诅咒（无效果）—— 镜像侧只做「扣能量 + 手牌数 -1 + 记一次出牌」，
+	## 不进弃牌区（镜像侧不维护对方弃牌堆的具体内容，与 remote_spell 同口径）。
+	if card == null:
+		return
+	state.pay_energy(card.cost, side)
+	state.opp_hand_count = maxi(0, state.opp_hand_count - 1)
+	_log("对方打出诅咒 %s（无效果）" % card.card_name)
+	_note_card_played(side, card)
 
 
 func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
@@ -7751,6 +7821,7 @@ func _action_growth_tick(side: String) -> void:
 
 func _recycler_trigger(r: Placement, victim_power: int) -> void :
 	## 「零件回收者」（8046，R96）的唯一结算口，由 `_destroy` 在 erase 之后调用。
+	## R221：被销毁的卡必须是「素体以外」（`_destroy` 里已按 PROTO_ID 过滤），本口不再复核。
 	if r == null or r.owner != SIDE_SELF or r.card.id != RECYCLER_ID:
 		return
 	r.upgrade_atk += victim_power
@@ -7888,11 +7959,13 @@ func _destroy(cell: Vector2i) -> void :
 		return
 	var p: Placement = state.board[cell]
 	# R96：零件回收者触发预判 —— 在 erase 之前抓同连通块的回收者与被销毁卡的力量。
+	# R221：被销毁的是「素体」（8025）→ 不触发（卡面「素体以外」）。
 	var _rec_power:= p.effective_power() if (p != null) else 0
 	var _rec_victim_ok:= false
 	var _rec_list: Array[Placement] = []
 	if p != null and p.owner == SIDE_SELF \
-			and (p.card.kind == "盟友" or p.card.is_fort()):
+			and (p.card.kind == "盟友" or p.card.is_fort()) \
+			and p.card.id != PROTO_ID:
 		_rec_victim_ok = true
 		for rc in _component_of_cell(cell):
 			var ru: Placement = state.unit_at(rc)
@@ -7951,7 +8024,7 @@ func _destroy(cell: Vector2i) -> void :
 		_death_blast(cell, BLAZE_DUCK_DAMAGE, p.card)
 	_deathrattle(cell, p)
 	_check_game_over()
-	# R96：零件回收者 —— 被销毁的是己方盟友/工事时，连通块内的回收者回收其力量 + 手牌加素体。
+	# R96：零件回收者 —— 被销毁的是己方「素体以外」盟友/工事时，连通块内的回收者回收其力量 + 手牌加素体。
 	if _rec_victim_ok:
 		for _r in _rec_list:
 			_recycler_trigger(_r, _rec_power)
@@ -8873,6 +8946,88 @@ func endless_pick(hand_index: int) -> bool:
 	_log("无尽黑暗：弃掉 %s → 费用 +%d（当前 %d）" % [
 			c.card_name, ENDLESS_DARK_ENERGY, state.energy])
 	action.emit("endless_pick", {"card": c, "energy": ENDLESS_DARK_ENERGY})
+	return true
+
+
+func _rebirth_tick(side: String) -> void:
+	## 新生（9148，R222，森林精魄·史诗）：**抽牌之后**，按效果区张数逐份结算 ——
+	## 每份「从手牌选 1 张**消失**（本场对战移除：不进手牌也不进弃牌区）→ 随机一张
+	## **本职业奖励卡牌**加入手牌」。手牌为空 → 没有可消失的牌 → 整条落空。
+	## 敌方侧没有真实手牌（只记张数）→ 对称落空，不开面板。
+	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
+	var copies:= _trait_copies(zone, REBIRTH_TRAIT)
+	if copies <= 0:
+		return
+	if side != SIDE_SELF:
+		# 敌方侧对称：没有真实手牌可「选」→ 整条效果落空。
+		_log("新生：敌方回合没有真实手牌 → 效果落空")
+		return
+	if state.hand.is_empty():
+		_log("新生：手牌为空，没有可消失的牌 → 本回合不触发")
+		action.emit("rebirth", {"pending": false, "copies": copies,
+				"remaining": 0, "names": []})
+		return
+	# 开选牌面板：**不能不选**（与无尽黑暗 / 复活术同款），随机卡等选完再给。
+	rebirth_remaining = copies
+	rebirth_pending = true
+	_log("新生：效果区 %d 张 → 待消失 %d 张手牌，每张换一张随机本职业奖励卡"
+			% [copies, copies])
+	action.emit("rebirth", {"pending": true, "copies": copies,
+			"remaining": copies, "names": []})
+
+
+func rebirth_options() -> Array[int]:
+	## 新生的面板候选：**全部**手牌（业务下标 = 手牌下标；空数组 = 没有待办）。
+	if not rebirth_pending:
+		return []
+	var out: Array[int] = []
+	for i in state.hand.size():
+		out.append(i)
+	return out
+
+
+func rebirth_pick(hand_index: int) -> bool:
+	## 新生：玩家点掉一张手牌 → 它**本场对战消失**（void_count/void_cards，
+	## 与专注 9122 / 负重减轻 8066 同口径），然后随机一张**本职业奖励卡牌**加入手牌
+	##（无尽加护 9061 同口径：`reward_pool_for(player_class)`，走引擎 rng → 回放可复现）。
+	## 效果区几张新生就逐张来（rebirth_remaining 计数，与专注 / 拒绝命运同口径）。
+	if not rebirth_pending:
+		return false
+	if hand_index < 0 or hand_index >= state.hand.size():
+		return false
+	var c: CardData = state.hand[hand_index]
+	state.hand.remove_at(hand_index)
+	state.void_count += 1   # R140：消耗区计数（新生从手牌抹除）
+	state.void_cards.append(c)
+	rebirth_remaining -= 1
+	var given_name:= ""
+	var repo:= CardRepo.load_json()
+	if repo == null:
+		_log("新生：%s 消失（卡库读取失败，未加入随机卡）" % c.card_name)
+	else:
+		var pool: Array[CardData] = repo.reward_pool_for(RunState.player_class)
+		if pool.is_empty():
+			_log("新生：%s 消失（本职业奖励池为空，没有可加入的牌）" % c.card_name)
+		elif state.hand_full():
+			_log("新生：%s 消失（手牌已满 %d 张，本次不加入随机卡）"
+					% [c.card_name, FieldState.HAND_LIMIT])
+			action.emit("hand_full", {"limit": FieldState.HAND_LIMIT,
+					"hand": state.hand.size()})
+		else:
+			var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
+			var copy:= CardData.from_dict(pick.to_dict())
+			state.hand.append(copy)
+			given_name = copy.card_name
+			_log("新生：%s 消失 → 随机一张「%s」加入手牌" % [c.card_name, given_name])
+	action.emit("rebirth_pick", {"card": c, "given": given_name})
+	if rebirth_remaining <= 0:
+		rebirth_pending = false
+		rebirth_remaining = 0
+	elif state.hand.is_empty():
+		# 手牌被选空了 → 剩余份额作废（面板不能空转着让玩家干等）。
+		_log("新生：手牌已空，剩余 %d 份额作废" % rebirth_remaining)
+		rebirth_remaining = 0
+		rebirth_pending = false
 	return true
 
 

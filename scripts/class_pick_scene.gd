@@ -12,6 +12,15 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 const AV := 96.0                       # 头像边长（小，别占太多面积）
 const AV_GAP := 30.0
 const PANEL_W := 416.0
+# R223：难度档位从「三个固定按钮」改成「左箭头 / 档位盒 / 右箭头」一行（0~10 共 11 档，
+# 钳制不循环）。下面那条累计 debuff 文本随之变宽变高。
+const DIFF_ARROW_W := 44.0     # 箭头按钮宽
+const DIFF_ROW_H := 38.0       # 档位行高
+const DIFF_GAP := 8.0          # 箭头与档位盒的间距
+const NOTE_LINES := 3          # 累计 debuff 文本行数预算（FS_CAPTION 12px / 行距 14）
+const NOTE_LH := 14.0
+const SUM_LINES := 2           # 数值摘要行数预算（FS_MICRO 10px / 行距 12）
+const SUM_LH := 12.0
 
 var _font: Font
 var _font_bold: Font
@@ -49,6 +58,10 @@ func _ready() -> void:
 	for ai in uargs.size():
 		if uargs[ai] == "--sel" and ai + 1 < uargs.size():
 			_selected = clampi(int(uargs[ai + 1]), 0, PlayerClass.ids().size() - 1)
+	# R223：`-- --screenshot --diff N` 预选难度档位（0~10，看累计 debuff 文本的换行情况）。
+	for ai in uargs.size():
+		if uargs[ai] == "--diff" and ai + 1 < uargs.size():
+			RunState.set_difficulty(int(uargs[ai + 1]))
 	queue_redraw()
 	# R148：Esc 主菜单
 	_menu = UiMenu.attach(self, _menu_items, {
@@ -69,18 +82,49 @@ func _av_rect(i: int) -> Rect2:
 
 
 func _panel_rect() -> Rect2:
-	return Rect2(40.0, 96.0, PANEL_W, size.y - 214.0)
+	# R223：底边从 size.y-214 改为 -190（给难度档位块让出空间）；
+	# 头像行顶边 = size.y-160，靠这 30px 缝隙分开。
+	return Rect2(40.0, 96.0, PANEL_W, size.y - 190.0)
 
 
-func _diff_rect(i: int) -> Rect2:
+# 难度档位行：左箭头 / 档位盒 / 右箭头（R223，原来是三按钮 _diff_rect(i)）。
+# 从面板底边往上排：确认钮(54) -8- 摘要(SUM) -2- 累计文本(NOTE) -6- 档位行(38)。
+func _diff_row_rect() -> Rect2:
 	var p := _panel_rect()
-	var w := (PANEL_W - 40.0 - 2.0 * 12.0) / 3.0
-	return Rect2(p.position.x + 20.0 + i * (w + 12.0), p.position.y + p.size.y - 158.0, w, 42.0)
+	return Rect2(p.position.x + 20.0, p.end.y - 154.0 - DIFF_ROW_H, PANEL_W - 40.0, DIFF_ROW_H)
+
+
+func _diff_left_rect() -> Rect2:
+	var r := _diff_row_rect()
+	return Rect2(r.position.x, r.position.y, DIFF_ARROW_W, DIFF_ROW_H)
+
+
+func _diff_right_rect() -> Rect2:
+	var r := _diff_row_rect()
+	return Rect2(r.end.x - DIFF_ARROW_W, r.position.y, DIFF_ARROW_W, DIFF_ROW_H)
+
+
+func _diff_box_rect() -> Rect2:
+	var r := _diff_row_rect()
+	return Rect2(r.position.x + DIFF_ARROW_W + DIFF_GAP, r.position.y,
+			r.size.x - 2.0 * (DIFF_ARROW_W + DIFF_GAP), DIFF_ROW_H)
+
+
+func _note_rect() -> Rect2:
+	var p := _panel_rect()
+	return Rect2(p.position.x + 20.0, p.end.y - 106.0 - NOTE_LINES * NOTE_LH,
+			PANEL_W - 40.0, NOTE_LINES * NOTE_LH)
+
+
+func _summary_rect() -> Rect2:
+	var p := _panel_rect()
+	return Rect2(p.position.x + 20.0, p.end.y - 80.0 - SUM_LINES * SUM_LH,
+			PANEL_W - 40.0, SUM_LINES * SUM_LH)
 
 
 func _confirm_rect() -> Rect2:
 	var p := _panel_rect()
-	return Rect2(p.position.x + 20.0, p.position.y + p.size.y - 96.0, PANEL_W - 40.0, 58.0)
+	return Rect2(p.position.x + 20.0, p.end.y - 72.0, PANEL_W - 40.0, 54.0)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -138,47 +182,70 @@ func _draw_panel(cid: String) -> void:
 	draw_rect(p, UiTheme.class_color(cid), false, 2.5)
 	var x := p.position.x + 20.0
 	var w := PANEL_W - 40.0
-	var y := p.position.y + 54.0
+	var y := p.position.y + 46.0
 	draw_string(_font_bold, Vector2(x, y), PlayerClass.name_of(cid),
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, Color("f2ead0"))
-	y += 32.0
+	y += 30.0
 	draw_string(_font, Vector2(x, y), PlayerClass.subtitle_of(cid),
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL,
 			UiTheme.class_color(cid).lightened(0.5))
 	y += 30.0
 	# 初始最大生命（R182：按职业不同，选职业界面明示）
-	y += 4.0
+	y += 2.0
 	draw_string(_font, Vector2(x, y), "初始最大生命",
 			HORIZONTAL_ALIGNMENT_LEFT, w * 0.5, UiTheme.FS_LABEL, Color("cfcabb"))
 	draw_string(_font_bold, Vector2(x + w * 0.5, y), "%d" % PlayerClass.base_hp_of(cid),
 			HORIZONTAL_ALIGNMENT_RIGHT, w * 0.5, UiTheme.FS_HEADING,
 			UiTheme.class_color(cid).lightened(0.4))
-	y += 28.0
+	y += 26.0
+	# 角色介绍（R223：字号降到 FS_CAPTION / 行距 17，给下面的难度档位块腾垂直空间）
 	for para: String in PlayerClass.desc_of(cid).split("\n"):
-		for line: String in _wrap_text(para, w, 14):
+		for line: String in _wrap_text(para, w, UiTheme.FS_CAPTION):
 			draw_string(_font, Vector2(x, y), line, HORIZONTAL_ALIGNMENT_LEFT, w,
-					UiTheme.FS_LABEL, Color("cfcabb"))
-			y += 22.0
-		y += 6.0
-	# 难度档位
-	draw_string(_font_bold, Vector2(x, _diff_rect(0).position.y - 16.0), "难度档位",
+					UiTheme.FS_CAPTION, Color("cfcabb"))
+			y += 17.0
+		y += 4.0
+	# 难度档位（R223：左箭头 / 档位盒 / 右箭头，0~10 共 11 档，钳制不循环）
+	draw_string(_font_bold, Vector2(x, _diff_row_rect().position.y - 13.0), "难度档位",
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, Color("e0b23c"))
-	for i in RunState.DIFFICULTY_COUNT:
-		var dr := _diff_rect(i)
-		var on := RunState.difficulty == i
-		draw_rect(dr, Color(0.96, 0.78, 0.30, 0.94) if on else Color(1, 1, 1, 0.10), true)
-		draw_rect(dr, UiTheme.ACCENT_GOLD if on else Color(1, 1, 1, 0.30), false, 2.0)
-		draw_string(_font, Vector2(dr.position.x, dr.position.y + 28.0),
-				"%d %s" % [i, RunState.DIFFICULTY_NAMES[i]], HORIZONTAL_ALIGNMENT_CENTER, dr.size.x,
-				UiTheme.FS_LABEL, Color("1a1c22") if on else Color("e6e2d8"))
-	draw_string(_font, Vector2(x, _confirm_rect().position.y - 14.0),
-			RunState.difficulty_note(), HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_CAPTION,
-			UiTheme.INK_ON_DARK)
+	var d := clampi(RunState.difficulty, 0, RunState.DIFFICULTY_COUNT - 1)
+	var lr := _diff_left_rect()
+	var rr := _diff_right_rect()
+	draw_rect(lr, Color(1, 1, 1, 0.10), true)
+	draw_rect(lr, Color(1, 1, 1, 0.30), false, 2.0)
+	draw_rect(rr, Color(1, 1, 1, 0.10), true)
+	draw_rect(rr, Color(1, 1, 1, 0.30), false, 2.0)
+	var arrow_on := Color("f2ead0")
+	var arrow_off := Color("6b675f")
+	draw_string(_font_bold, Vector2(lr.position.x, lr.position.y + 26.0), "<",
+			HORIZONTAL_ALIGNMENT_CENTER, lr.size.x, UiTheme.FS_HEADING,
+			arrow_on if d > 0 else arrow_off)
+	draw_string(_font_bold, Vector2(rr.position.x, rr.position.y + 26.0), ">",
+			HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_HEADING,
+			arrow_on if d < RunState.DIFFICULTY_COUNT - 1 else arrow_off)
+	var br := _diff_box_rect()
+	draw_rect(br, Color(0.96, 0.78, 0.30, 0.94), true)
+	draw_rect(br, UiTheme.ACCENT_GOLD, false, 2.0)
+	draw_string(_font_bold, Vector2(br.position.x, br.position.y + 26.0),
+			"%d  %s" % [d, RunState.DIFFICULTY_NAMES[d]], HORIZONTAL_ALIGNMENT_CENTER, br.size.x,
+			UiTheme.FS_HEADING, Color("1a1c22"))
+	# 累计 debuff 文本（高档继承低档全部）
+	var ny := _note_rect().position.y + 11.0
+	for line: String in _wrap_text(RunState.difficulty_note(), w, UiTheme.FS_CAPTION):
+		draw_string(_font, Vector2(x, ny), line, HORIZONTAL_ALIGNMENT_LEFT, w,
+				UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
+		ny += NOTE_LH
+	# 数值摘要（金钱 / 巧克力恒定显示，其余只在生效时列出）
+	var sy := _summary_rect().position.y + 10.0
+	for line: String in _wrap_text(RunState.difficulty_summary(), w, UiTheme.FS_MICRO):
+		draw_string(_font, Vector2(x, sy), line, HORIZONTAL_ALIGNMENT_LEFT, w,
+				UiTheme.FS_MICRO, UiTheme.INK_ON_DARK)
+		sy += SUM_LH
 	# 确认进入
 	var cr := _confirm_rect()
 	draw_rect(cr, Color("c8951c"), true)
 	draw_rect(cr, Color("f2c14e"), false, 2.0)
-	draw_string(_font_bold, Vector2(cr.position.x, cr.position.y + 38.0), "确认进入",
+	draw_string(_font_bold, Vector2(cr.position.x, cr.position.y + 37.0), "确认进入",
 			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_HEADING, Color("1a1c22"))
 
 
@@ -221,6 +288,19 @@ func _on_back_to_title() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _menu != null and _menu.handle_esc(event):
 		return
+	if _picked:
+		return
+	# R223：键盘 ←/→ 也能调难度档位（与点箭头同效果）
+	if event is InputEventKey and event.pressed and _selected >= 0:
+		match event.keycode:
+			KEY_LEFT:
+				RunState.set_difficulty(RunState.difficulty - 1)
+				sfx.play("click")
+				queue_redraw()
+			KEY_RIGHT:
+				RunState.set_difficulty(RunState.difficulty + 1)
+				sfx.play("click")
+				queue_redraw()
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -241,12 +321,12 @@ func _gui_input(event: InputEvent) -> void:
 			if _confirm_rect().has_point(pos):
 				_choose(PlayerClass.ids()[_selected])
 				return
-			for i in RunState.DIFFICULTY_COUNT:
-				if _diff_rect(i).has_point(pos):
-					RunState.set_difficulty(i)
-					sfx.play("click")
-					queue_redraw()   # R186（原来靠 _process 每帧重绘）
-					return
+			if _diff_left_rect().has_point(pos) or _diff_right_rect().has_point(pos):
+				var dir := -1 if _diff_left_rect().has_point(pos) else 1
+				RunState.set_difficulty(RunState.difficulty + dir)
+				sfx.play("click")
+				queue_redraw()   # R186（原来靠 _process 每帧重绘）
+				return
 		for i in PlayerClass.ids().size():
 			if _av_rect(i).grow(5.0).has_point(pos):
 				_selected = i

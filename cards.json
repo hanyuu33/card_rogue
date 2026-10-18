@@ -3535,7 +3535,7 @@
       "traits": [
         "机械"
       ],
-      "effect_text": "与这张卡**接通**的己方盟友或工事被**破坏**时：这张卡的攻击力 += 那张卡的力量，并往你的手牌加一张「素体」。",
+      "effect_text": "与这张卡**接通**的己方**素体以外**的盟友或工事被**破坏**时：这张卡的攻击力 += 那张卡的力量，并往你的手牌加一张「素体」。",
       "target_mode": "none",
       "color": "橙",
       "image": ""
@@ -4006,6 +4006,50 @@
       "target_mode": "none",
       "value": 3,
       "color": "金",
+      "image": ""
+    },
+    {
+      "id": 9148,
+      "name": "新生",
+      "kind": "效果",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [
+        "新生"
+      ],
+      "affixes": [],
+      "effect_text": "回合开始时，选一张手卡消失，随机将一张卡牌加入你的手卡。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "绿",
+      "image": ""
+    },
+    {
+      "id": 9149,
+      "name": "疲惫",
+      "kind": "诅咒",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 6,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "疲惫"
+      ],
+      "affixes": [],
+      "effect_text": "打出无效果。在手卡时，所有技能卡费用 +1。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "灰",
       "image": ""
     },
     {
@@ -4525,7 +4569,7 @@
       "cost": 5,
       "power": 7,
       "health": 35,
-      "attack_range": 1,
+      "attack_range": 2,
       "move_speed": 2,
       "rarity": 4,
       "group": "enemy",

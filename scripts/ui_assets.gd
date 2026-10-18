@@ -73,8 +73,8 @@ static func card_paper() -> Texture2D:
 
 static func card_frame(rarity: int) -> Texture2D:
 	## 稀有度边框（R113）。下标与 `CardData.RARITY_COLORS` 对齐：
-	##   0 普通 / 1 稀有 / 2 史诗 / 3 初始 / 4 怪物 / 5 事件。
-	return get_tex("frame_%d" % clampi(rarity, 0, 5))
+	##   0 普通 / 1 稀有 / 2 史诗 / 3 初始 / 4 怪物 / 5 事件 / 6 诅咒（R223）。
+	return get_tex("frame_%d" % clampi(rarity, 0, 6))
 
 
 static func rarity_ribbon(rarity: int) -> Texture2D:
@@ -82,7 +82,7 @@ static func rarity_ribbon(rarity: int) -> Texture2D:
 	## （取代「底部框线涂稀有度色 + 色块小旗」—— 用户口径：不要粗暴的颜色块/颜色条）。
 	## 下标同 `CardData.RARITY_COLORS`。透明底、燕尾下垂，源图 192 高。
 	## 缺图时返回 null，`CardFace` 回退成程序绘制的小旗 —— 不空白也不报错。
-	return get_tex("ribbon_%d" % clampi(rarity, 0, 5))
+	return get_tex("ribbon_%d" % clampi(rarity, 0, 6))
 
 
 static func scroll_parchment() -> Texture2D:
