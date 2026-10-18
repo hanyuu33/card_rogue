@@ -104,8 +104,13 @@ func _draw() -> void:
 func _wrap_text(text: String, max_w: float, px: int) -> Array[String]:
 	var out: Array[String] = []
 	var cur := ""
+	# R244 修正：`draw_string(..., width)` 会按 width 做溢出裁剪，而 `get_string_size`
+	# 的度量比实际绘制略窄 → 正好贴着上限的那个字整颗不画，看起来像下一行行首
+	# 少了一个字（老道具「类固醇」的「（」就这么丢了很多轮，一直没人发现）。
+	# 实测安全宽度 ≈ max_w - 14（栅栏修复术每行 210px 一直显示完整）。
+	var limit := max_w - 14.0
 	for ch in text:
-		if _font.get_string_size(cur + ch, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > max_w \
+		if _font.get_string_size(cur + ch, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > limit \
 				and cur != "":
 			out.append(cur)
 			cur = ch

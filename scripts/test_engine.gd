@@ -5468,8 +5468,8 @@ func _init() -> void:
 			and not ev_kinds_layer.has("gaze"),
 			"第一层事件池：7 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/卡牌宝箱；无凝视、无怪物）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
-	check(l2_ev_kinds.size() == 6 and l2_ev_kinds.has("smith"),
-			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 + 凝视 + 遗忘之泉 = 5 种子类型")
+	check(l2_ev_kinds.size() == 7 and l2_ev_kinds.has("smith"),
+			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 = 7 种子类型")
 	var pear_ev_kinds := l2_ev_kinds        # 旧用例里沿用的变量名（保持后文读到本地变量）
 	check(l2_ev_kinds.has("gaze") and not ev_kinds_layer.has("gaze"),
 			"鸭之凝视已改为第二层事件（第一层不再出 gaze）")
@@ -18439,6 +18439,65 @@ func _init() -> void:
 	check(r242_bs.spell_bonus_note(null, r242_mech) == ""
 			and r242_bs.spell_bonus_note(r242_sneak, null) == "",
 			"R242 空值安全：卡或目标为空时返回空串")
+
+	# ==== R244：苹果 6027 改为二层事件道具 + 初始池换「行囊」 6030 ====
+	var r244_repo := RelicRepo.load_json()
+	var r244_apple := r244_repo.get_relic(6027)
+	check(r244_apple != null and r244_apple.source == "事件",
+			"R244 苹果：来源改为「事件」（不再按奖励道具发放）")
+	check(r244_repo.event_ids().has(6027) and not r244_repo.reward_ids().has(6027),
+			"R244 苹果：只在事件道具池，奖励池已移除")
+	check(not r244_repo.initial_ids().has(6027) and not r244_repo.layer2_ids().has(6027),
+			"R244 苹果：不进初始池 / 二层起始池")
+	var r244_l2_ev := GameLayers.event_kinds(GameLayers.LAYER_TWO)
+	check(r244_l2_ev.has("apple_doctor") \
+			and not GameLayers.event_kinds(GameLayers.LAYER_DEFAULT).has("apple_doctor"),
+			"R244 「苹果与医生」只在第二层事件池（第一层不出，不串层）")
+	check(GameLayers.event_name("apple_doctor") == "苹果与医生",
+			"R244 「苹果与医生」显示名已登记")
+	check(int(GameLayers.event_weights(GameLayers.LAYER_TWO).get("apple_doctor", 0)) > 0,
+			"R244 「苹果与医生」在第二层权重 > 0（可被抽到）")
+	var r244_seen := false
+	var r244_rng := RandomNumberGenerator.new()
+	for r244_i in 600:
+		r244_rng.seed = 130000 + r244_i
+		if GameLayers.roll_event_kind(GameLayers.LAYER_TWO, r244_rng) == "apple_doctor":
+			r244_seen = true
+			break
+	check(r244_seen, "R244 第二层事件抽取能掷出「苹果与医生」（权重生效）")
+	var r244_init := r244_repo.initial_ids()
+	var r244_pack := r244_repo.get_relic(6030)
+	check(r244_init.size() == 5 and r244_init.has(6030) and not r244_init.has(6003),
+			"R244 初始道具池：移除鸡煲 6003、加入行囊 6030（仍 5 个）")
+	check(r244_pack != null and r244_pack.source == "初始"
+			and r244_pack.desc.contains("100") and r244_pack.desc.contains("木栅栏"),
+			"R244 行囊：初始道具，文案写明 100 金币 + 木栅栏")
+	check(not r244_repo.reward_ids().has(6030) and not r244_repo.event_ids().has(6030) \
+			and not r244_repo.layer2_ids().has(6030),
+			"R244 行囊：不进奖励 / 事件 / 二层起始池")
+	# 行囊即时结算：+100 金币 + 一张木栅栏进卡组（附魔槽位跟着对齐）
+	RunState.end_run()
+	var r244_run_rng := RandomNumberGenerator.new()
+	r244_run_rng.seed = 20261018
+	RunState.start_run(RogueMap.generate(r244_run_rng))
+	var r244_gold0 := RunState.gold
+	var r244_deck0 := RunState.deck_ids.size()
+	RunState.gain_relic(6030)
+	check(RunState.gold == r244_gold0 + 100,
+			"R244 行囊：获得即 +100 金币（%d → %d）" % [r244_gold0, RunState.gold])
+	check(RunState.deck_ids.size() == r244_deck0 + 1
+			and RunState.deck_ids[RunState.deck_ids.size() - 1] == 8001,
+			"R244 行囊：一张「木栅栏」8001 加入卡组")
+	check(RunState.deck_mods.size() == RunState.deck_ids.size(),
+			"R244 行囊：附魔槽位与卡组等长（不会错位）")
+	check(RunState.has_relic(6030), "R244 行囊：登记进道具栏")
+	# 苹果仍是「主动道具回血」口径：+14 上限并回满（与 R224 一致，只是来源变了）
+	RunState.take_damage(20)
+	var r244_hp0 := RunState.hp
+	RunState.gain_relic(RunState.APPLE_RELIC_ID)
+	check(RunState.hp == RunState.max_hp and r244_hp0 < RunState.hp,
+			"R244 苹果：+14 最大生命并回满（%d → %d/%d）"
+			% [r244_hp0, RunState.hp, RunState.max_hp])
 
 	# ================================================================
 

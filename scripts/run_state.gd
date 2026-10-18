@@ -205,6 +205,11 @@ const SOURCE_POWER_HP_COST := 5   # 源数之力的代价：失去 5 点最大�
 # （与烤肉 / 黄桃罐头 / 自愈同属「道具·卡牌主动回血」，被动自动回血已全部移除）。
 const APPLE_RELIC_ID := 6027
 const APPLE_MAX_HP := 14
+# R244 新道具：行囊（6030，初始道具池）—— 获得时 **+100 金币**，并把一张
+# 「木栅栏」（工事 2 费 0/6，8001）加入卡组。属于「即时」类，`gain_relic` 里当场结算。
+const PACK_RELIC_ID := 6030
+const PACK_GOLD := 100
+const PACK_CARD_ID := 8001        # 木栅栏
 # R224 新道具：牛奶（6028，奖励池）—— 获得时随机摇 **2 种**互不重复的附魔，
 # 各附到一张卡组里「能附且尚未附魔」的卡上（资格判定走 `enchant_ok` 唯一口；
 # 某种附魔当前没有合规目标就跳过，不强求附满）。
@@ -660,9 +665,12 @@ static func gain_relic(id: int) -> void:
 		6017:   # 重鸭（二层起始）：拾起时最大生命 +6（当前生命同 +6）
 			max_hp += 6
 			hp += 6
-		APPLE_RELIC_ID:   # 苹果（R224）：立即 +14 最大生命，并**回复满**生命值
+		APPLE_RELIC_ID:   # 苹果（R224/244）：立即 +14 最大生命，并**回复满**生命值
 			gain_max_hp(APPLE_MAX_HP)
 			hp = max_hp
+		PACK_RELIC_ID:   # 行囊（R244）：+100 金币 + 一张「木栅栏」进卡组
+			gold += PACK_GOLD
+			add_card(PACK_CARD_ID)   # 内部会 ensure_deck_mods()，附魔槽位不会错位
 		MILK_RELIC_ID:   # 牛奶（R224）：随机两种附魔，附给能附魔的卡
 			_apply_milk()
 

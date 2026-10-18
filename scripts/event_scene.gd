@@ -9,6 +9,7 @@ extends Control
 ##   * event + struggle 挣扎：失去 21 点生命，将一张「金属龙」加入卡组，或离开；
 ##   * event + gaze     鸭之凝视：获得事件道具「一袋米抗几楼」，或放弃；
 ##   * event + pear     鸭梨山大（第二层专属）：获得事件道具「鸭梨」，或放弃；
+##   * event + apple_doctor 苹果与医生（R244，第二层专属）：收下道具「苹果」，或放弃并离开；
 ##   * event + bluefish 蓝色大肥鱼（第二层专属）：把一张「鲸鱼之怒」加入卡组，或放弃；
 ##   * event + delivery 运送委托（R200，第一层专属）：平铺挑 1~6 张「货物」加入卡组，或离开；
 ##   * event + delivery_done 委托完成（R200）：持有货物时**第二层第一个事件房**替换而来，
@@ -27,7 +28,7 @@ extends Control
 ##
 ## 插图与背景走 assets/ui/ 的可替换图片（详见 assets/ui/图片命名说明.txt）：
 ##   event_<事件>.png 插图（标题下方） / bg_<事件>.png 整屏背景；
-##   事件 = rest / treasure / whisper / struggle / gaze / pear / bluefish / relic_chest。
+##   事件 = rest / treasure / whisper / struggle / gaze / pear / apple_doctor / bluefish / relic_chest。
 ## 缺图时回退内置绘制（所有事件共用的篝火动画 / 深灰底色）。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
@@ -35,6 +36,7 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 const WHISPER_ID := 6010
 const RICE_ID := 6012             # 一袋米抗几楼（鸭之凝视事件道具）
 const PEAR_ID := 6019             # 鸭梨（鸭梨山大事件道具）
+const APPLE_ID := 6027            # 苹果（R244「苹果与医生」事件道具；原奖励道具）
 const HERO_CARD_ID := 9023        # 英雄（绝赞五换一的奖励卡）
 const HERO_TRADE_NEED := 5        # 绝赞五换一：要交出 5 张**不同名**的卡
 const STRUGGLE_CARD_ID := 9018    # 金属龙（事件卡牌，不可奖励获取）
@@ -71,6 +73,14 @@ const PEAR_DESC := """不知从哪儿滚来一堆鸭梨，一颗一颗，把你�
 const PEAR_TAKEN_DESC := """肩上那座鸭梨山，你已经背起来了。
 往后每一次受伤，都会让你更「强大」一点——
 只是那点强大，补不回已经失去的血。"""
+
+const APPLE_DESC := """路边坐着一位医生，膝上摊着一本病历，抬头看了你一眼：
+「拿个苹果走吧。吃了它，就别再来找我。」
+获得「苹果」：最大生命 +14，并回复满生命值。
+也可以什么也不接，转身离开——只是路上别再回头。"""
+
+const APPLE_TAKEN_DESC := """医生已经不在那儿了，连椅子都收走了。
+手里那颗苹果沉甸甸的，还带着体温。"""
 
 const BLUEFISH_DESC := """一条通体蓝色的大肥鱼搁浅在岸边，肚皮一起一伏，像还在做梦。
 它翻了个身，从嘴里吐出一枚亮晶晶的东西——
@@ -154,6 +164,7 @@ var _menu: UiMenu = null      # Esc 主菜单（R148）
 var _whisper_taken := false   # 鸭鸭低语：是否已收下道具
 var _gaze_taken := false      # 鸭之凝视：是否已收下道具
 var _pear_taken := false      # 鸭梨山大：是否已收下道具
+var _apple_taken := false     # 苹果与医生（R244）：本次是否已收下「苹果」
 var _bluefish_taken := false  # 蓝色大肥鱼：是否已收下「鲸鱼之怒」
 var _chest_opened := false    # 宝箱层：是否已开箱
 var _chest_relic := -1        # 宝箱层：开出的道具 id（-1 = 未开 / 已无货）
@@ -243,6 +254,11 @@ func _is_pear() -> bool:
 	return _is_event_node() and _pending_kind() == "pear"
 
 
+func _is_apple() -> bool:
+	## 苹果与医生（R244，第二层专属事件）：收下事件道具「苹果」（+14 最大生命并回满）。
+	return _is_event_node() and _pending_kind() == "apple_doctor"
+
+
 func _is_bluefish() -> bool:
 	## 蓝色大肥鱼（第二层专属事件）：可将一张「鲸鱼之怒」（9050）加入卡组。
 	return _is_event_node() and _pending_kind() == "bluefish"
@@ -292,7 +308,7 @@ func _is_treasure() -> bool:
 	## 卡牌宝箱（支付 5 生命换一组卡牌奖励）：事件节点中未被其它子类型认领的情况。
 	return _is_event_node() and not _is_whisper() and not _is_struggle() \
 			and not _is_gaze() and not _is_pear() and not _is_hero() \
-			and not _is_bluefish() and not _is_relic_chest() \
+			and not _is_bluefish() and not _is_apple() and not _is_relic_chest() \
 			and not _is_arcane() and not _is_oblivion() and not _is_smith() \
 			and not _is_delivery() and not _is_delivery_done()
 
@@ -307,6 +323,8 @@ func _kind() -> String:
 		return "gaze"
 	if _is_pear():
 		return "pear"
+	if _is_apple():
+		return "apple_doctor"
 	if _is_hero():
 		return "hero"
 	if _is_arcane():
@@ -423,6 +441,10 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "pear"
+		if args[i] == "--apple":  # 演示：伪装 run 苹果与医生事件（R244 截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "apple_doctor"
 		if args[i] == "--bluefish":  # 演示：伪装 run 蓝色大肥鱼事件（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -526,6 +548,20 @@ func _ready() -> void:
 			rest_btn.text = "获得「鸭梨」"
 			rest_btn.disabled = false
 			$Center/LeaveBtn.text = "把梨推开（放弃）"
+			result_label.text = ""
+	elif _is_apple():
+		event_name.text = "苹 果 与 医 生"
+		desc.text = APPLE_DESC
+		if RunState.has_relic(APPLE_ID):
+			_apple_taken = true
+			_collapse_to_leave()
+			desc.text = APPLE_TAKEN_DESC
+			result_label.text = "苹果你已经收下过了——医生不再理你。"
+			result_label.add_theme_color_override("font_color", Color("a44ad0"))
+		else:
+			rest_btn.text = "收下苹果（远离医生）"
+			rest_btn.disabled = false
+			$Center/LeaveBtn.text = "放弃并离开"
 			result_label.text = ""
 	elif _is_bluefish():
 		event_name.text = "蓝 色 大 肥 鱼"
@@ -765,6 +801,20 @@ func _on_main() -> void:
 		desc.text = PEAR_TAKEN_DESC
 		result_label.text = "「鸭梨」已加入道具栏：%s" % (rel_p.desc if rel_p != null else "")
 		result_label.add_theme_color_override("font_color", Color("8a9a2f"))
+		_redraw()
+		return
+	if _is_apple():
+		if _apple_taken:
+			_on_leave()
+			return
+		RunState.gain_relic(APPLE_ID)
+		_apple_taken = true
+		_claim_reward(rest_btn)   # R147：一次访问只领一份
+		var rel_a := RelicRepo.load_json().get_relic(APPLE_ID)
+		_collapse_to_leave()
+		desc.text = APPLE_TAKEN_DESC
+		result_label.text = "「苹果」已收进道具栏：%s" % (rel_a.desc if rel_a != null else "")
+		result_label.add_theme_color_override("font_color", Color("a44ad0"))
 		_redraw()
 		return
 	if _is_bluefish():
@@ -1151,7 +1201,7 @@ func _refresh() -> void:
 		_collapse_to_leave()
 		return
 	if _is_treasure() or _is_whisper() or _is_struggle() \
-			or _is_gaze() or _is_pear() or _is_hero() or _is_bluefish() \
+			or _is_gaze() or _is_pear() or _is_apple() or _is_hero() or _is_bluefish() \
 			or _is_relic_chest() or _is_arcane() or _is_oblivion() \
 			or _is_smith() or _is_delivery() or _is_delivery_done():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
