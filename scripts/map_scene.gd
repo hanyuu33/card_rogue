@@ -542,7 +542,10 @@ func _process(delta: float) -> void:
 	# 再开 Boss 战。R179：原来这里没排除「进场过场播放中」，于是最后一格的过场还在播时
 	# 入夜暗罩就已经盖上来了（用户报）；现在过场期间（`_anim_cell` 非空）与缓冲期内都不触发。
 	# ⚠️ 回放模式同样要触发（boss_pending 由 advance 确定性地置位），只是不等那 2 秒。
-	if RunState.run_active and RunState.boss_pending and not _boss_alert \
+	# R236：再加一道 `chocolate <= 0` 兜底 —— 体力若被商店买回 > 0，即使 boss_pending
+	# 因故残留也不该入夜（正常流程 add_chocolate 已清掉它，这里是双保险）。
+	if RunState.run_active and RunState.boss_pending and RunState.chocolate <= 0 \
+			and not _boss_alert \
 			and _boss_hold <= 0.0 and _anim_cell.is_empty() \
 			and (_reward_panel == null or not _reward_panel.is_open()):
 		_trigger_boss_alert()

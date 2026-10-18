@@ -898,7 +898,7 @@ func _buy_row3(i: int) -> void:
 			_set_hint("金币不足（需要 %d）" % price)
 			return
 		e["sold"] = true
-		RunState.chocolate += 1
+		RunState.add_chocolate(1)   # R236：体力回到 > 0 会撤销「耗尽→开 Boss」的待触发
 		RunState.sync_fatigue()   # R223 难度 5：巧克力回到 6 以上 → 疲惫出卡组
 		_set_hint("巧克力 +1")
 

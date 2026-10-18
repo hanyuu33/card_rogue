@@ -18035,6 +18035,36 @@ func _init() -> void:
 	check(RunState.bandage_pending == 0, "R234 换层：待结算清零（「本层」口径）")
 	RunState.end_run()
 
+	# ---- R236：最后一格体力进商店买巧克力后不该再开 Boss ----
+	var r236_rng := RandomNumberGenerator.new()
+	r236_rng.seed = 13572468
+	RunState.end_run()
+	RunState.start_run(RogueMap.generate(r236_rng, GameLayers.LAYER_DEFAULT), GameLayers.LAYER_DEFAULT)
+	var r236_uv := -1
+	for ac: Dictionary in RunState.available_nodes():
+		if not RunState.cleared_ids.has(int(ac["id"])):
+			r236_uv = int(ac["id"])
+			break
+	RunState.chocolate = 1
+	var r236_pre := false
+	if r236_uv >= 0:
+		RunState.advance(r236_uv)
+		r236_pre = RunState.chocolate == 0 and RunState.boss_pending
+	check(r236_pre, "R236 前置：最后一块体力进新房间 → 体力 0 且 boss_pending 置位")
+	RunState.add_chocolate(1)
+	check(RunState.chocolate == 1 and not RunState.boss_pending,
+			"R236 修复：买巧克力后体力 1 且 boss_pending 撤销（离店不再进 Boss）")
+	RunState.add_chocolate(1)
+	check(RunState.chocolate == 2 and not RunState.boss_pending,
+			"R236：再买一块仍不触发 Boss（体力 %d）" % RunState.chocolate)
+	# 体力没回正（买了但仍是 0 的极端）→ pending 保持，符合「耗尽即入夜」
+	RunState.chocolate = 0
+	RunState.boss_pending = true
+	RunState.add_chocolate(0)
+	check(RunState.chocolate == 0 and RunState.boss_pending,
+			"R236：add_chocolate(0) 不让 0 体力变正 → boss_pending 保持")
+	RunState.end_run()
+
 	# ================================================================
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")

@@ -324,6 +324,18 @@ static func chocolate_per_layer() -> int:
 	return DIFF_CHOCO_HIGH if _diff() >= 8 else RogueMap.MAX_STEPS
 
 
+static func add_chocolate(n: int) -> void:
+	## 增加巧克力（商店「巧克力 +1」等来源）。
+	## R236 修复：最后一格进商店把体力耗到 0 → `boss_pending` 已置位；此时买到巧克力
+	## 让体力回到 > 0，必须**撤销**这条「等本房间结算完就开 Boss」的待触发，
+	## 否则离店后仍会进 Boss 战（用户报的 bug）。
+	## 判据用「体力 > 0」而不是「本次加了几点」—— boss_pending 的唯一成因就是体力耗尽，
+	## 体力一旦回到正数，这条待触发就该失效。
+	chocolate += maxi(0, n)
+	if chocolate > 0 and boss_pending:
+		boss_pending = false
+
+
 static func max_hp_mul() -> float:
 	## 初始最大生命系数：9 档起「虚弱」= 0.8，其余 = 1.0。
 	return DIFF_MAX_HP_MUL if _diff() >= 9 else 1.0

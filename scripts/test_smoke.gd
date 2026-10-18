@@ -578,6 +578,11 @@ func _check_shop_enchant(scene: Variant) -> void:
 		_smoke_fail("商店附魔：_draw_pick_overlay 里不能再调 _build_deck_cards()"
 				+ "（会把 _sel_pick 抹回 -1 → 选卡页点不动 = 卡死）")
 		return
+	# R236：商店「巧克力 +1」必须走 RunState.add_chocolate(1) —— 它会撤销
+	# 「体力耗尽 → 开 Boss」的 boss_pending；否则最后一格进商店买巧克力后离店仍进 Boss。
+	if src.find("RunState.add_chocolate(1)") < 0 or src.find("RunState.chocolate += 1") >= 0:
+		_smoke_fail("R236 商店：买巧克力应走 RunState.add_chocolate(1)（撤销 boss_pending），不能再裸 +=1")
+		return
 	# ② 附魔槽位必须与卡组等长，否则 enchant_deck_card 越界。
 	if RunState.deck_mods.size() != RunState.deck_ids.size():
 		_smoke_fail("商店附魔：deck_mods 应与 deck_ids 等长（%d vs %d）"
