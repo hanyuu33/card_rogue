@@ -7593,6 +7593,39 @@ func _init() -> void:
 	check(RunState.enchant_ok("damage", r224_okrepo.get_card(9003), 9999)
 			and not RunState.enchant_ok("damage", r224_okrepo.get_card(8003), 9999),
 			"R224：enchant_ok —— 伤害 +10 只给技能卡（盟友被拒）")
+	# R226：再收紧 —— 只给**能直接造成伤害**的技能卡（治疗 / 抽牌 / 加 buff / 防御类被拒）
+	var r226_bad_ids: Array[int] = [9051, 9005, 8051, 9071, 9103, 8033]
+	var r226_bad_ok := true
+	var r226_bad_names: Array[String] = []
+	for r226_id: int in r226_bad_ids:
+		var r226_c: CardData = r224_okrepo.get_card(r226_id)
+		if r226_c == null:
+			r226_bad_ok = false
+			r226_bad_names.append("缺卡 %d" % r226_id)
+		elif RunState.enchant_ok("damage", r226_c, 9999):
+			r226_bad_ok = false
+			r226_bad_names.append(r226_c.card_name)
+	check(r226_bad_ok,
+			"R226：伤害 +10 拒绝「不能直接造成伤害」的技能卡（自然之力/智慧/重组/坚固围栏/闪躲/能量屏障）"
+			+ ("：全部被拒" if r226_bad_ok else "：被放行 " + ", ".join(r226_bad_names)))
+	# 判据唯一口 `CardData.is_damage_spell()`：68 张玩家技能卡里恰好 25 张能直接造成伤害
+	var r226_dmg := 0
+	var r226_skills := 0
+	var r226_leak: Array[String] = []
+	for r226_card: CardData in r224_okrepo.player_cards():
+		if r226_card.kind != "技能":
+			continue
+		r226_skills += 1
+		if r226_card.is_damage_spell():
+			r226_dmg += 1
+		elif r226_card.effect_text.contains("造成") and r226_card.effect_text.contains("伤害"):
+			r226_leak.append(r226_card.card_name)
+	check(r226_skills == 68 and r226_dmg == 25 and r226_leak.is_empty(),
+			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
+			% [r226_skills, r226_dmg, "0 张" if r226_leak.is_empty() else str(r226_leak)])
+	check(RunState.enchant_ok("damage", r224_okrepo.get_card(9083), 9999)
+			and RunState.enchant_ok("damage", r224_okrepo.get_card(8002), 9999),
+			"R226：伤害 +10 仍给流星雨（随机目标伤害）与「攻击」8002（基础攻击是技能卡）")
 	check(not RunState.enchant_ok("costdown", r224_okrepo.get_card(8002), 9999)
 			and RunState.enchant_ok("costdown", r224_okrepo.get_card(9003), 9999),
 			"R224：enchant_ok —— 费用 -1 只给费用 >1 的卡（1 费攻击被拒）")

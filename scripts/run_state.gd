@@ -1419,10 +1419,13 @@ static func enchant_ok(ench_id: String, c: CardData, deck_idx: int) -> bool:
 			return c.cost > 1 and not c.x_cost
 		"damage":
 			# R210：**只给技能卡**（用户口径「伤害 +10 限制只能附魔给技能卡」）。
+			# R226：再收紧 —— 只给**能直接造成伤害**的技能卡（用户口径「要限制能直接造成
+			# 伤害的技能卡」）：治疗 / 抽牌 / 加 buff / 防御类技能本来就不吃这个 +10，
+			# 附了也是白花 60 金。判据唯一口 = `CardData.is_damage_spell()`。
 			# 技能卡的 `power` 在卡面上**恒为 0**（伤害写死在引擎结算里），附魔把 +10 烤进
 			# `power`，由 `GameEngine._spell_dmg()` 消费 → 这张技能卡造成的伤害 +10。
 			# 以前判 `power > 0`（= 只给盟友 / 工事），技能卡永远选不中、单位却能白拿 10 攻。
-			return c.kind == "技能"
+			return c.is_damage_spell()
 		"dimension":
 			return (c.kind == "盟友" or c.is_fort()) and not c.has_affix("次元") \
 					and not c.is_effect()

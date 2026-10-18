@@ -604,6 +604,13 @@ func _check_shop_enchant(scene: Variant) -> void:
 	if not scene._enchant_ok("damage", repo2.get_card(9003), 9999):
 		_smoke_fail("商店附魔：伤害 +10 应能附给技能卡（火焰箭被拒）")
 		return
+	# R226：只认「能直接造成伤害」的技能卡 —— 治疗 / 抽牌 / 防御类技能必须被拒
+	if scene._enchant_ok("damage", repo2.get_card(9051), 9999):
+		_smoke_fail("R226 商店附魔：伤害 +10 不应再附给「自然之力」（不能直接造成伤害）")
+		return
+	if scene._enchant_ok("damage", repo2.get_card(9103), 9999):
+		_smoke_fail("R226 商店附魔：伤害 +10 不应再附给「闪躲」（只提承受伤害）")
+		return
 	# 换成「保存」附魔 —— 任何卡都能吃，保证一定有候选。
 	scene._row2.clear()
 	scene._row2.append({"ench": {"id": "save", "name": "保存", "desc": "",
