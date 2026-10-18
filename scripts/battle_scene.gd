@@ -7007,6 +7007,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					_say("⚔ %s 直击敌方 HP！-%d" % [data.get("atk_name", "?"), hp_dmg])
 				else:
 					_say("⚔ %s 直击我方 HP！-%d" % [data.get("atk_name", "?"), hp_dmg])
+		"curse_added":
+			# R231 破绽：俄倪厄往卡组塞诅咒 —— 牌库张数会自己跳，玩家不一定看得出来，
+			# 这里补一句播报（不播动画：诅咒是凭空进牌库，没有「从哪儿飞」（0,0））。
+			var ca_from := ""
+			if data.get("from") is CardData:
+				ca_from = (data["from"] as CardData).card_name
+			if data.get("card") is CardData:
+				var ca_card := data["card"] as CardData
+				_say("⚡ 破绽：%s 把「%s」（%d 费诅咒）塞进了卡组" % [
+						ca_from, ca_card.card_name, ca_card.cost])
 		"trample_hit":
 			# R225 践踏：击杀的溢出伤害沿**同一列**击穿下一个单位 —— 在**那个格子**
 			# 补一次命中演出（不重播攻击者的攻击动作），排在这次攻击「命中」之后再播，

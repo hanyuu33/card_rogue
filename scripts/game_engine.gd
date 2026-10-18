@@ -163,6 +163,20 @@ const WASTE_BOT_DMG:= 1            # 每次被改造：对所有敌方单位 1 �
 const CLEAR_OUT_ID:= 9153
 const CLEAR_OUT_TRAIT:= "清退"      # 只做标记（与「锻造 / 废铁」同套路）
 const CLEAR_OUT_STEPS:= 2          # 击退格数
+
+# ---- R231：破绽（俄倪厄 9132 / 量产型俄倪厄 9131）----
+# 带「破绽」trait 的单位在**自己这一方的回合开始时**，往**对方卡组**塞一张诅咒
+# 「破绽」（9154，2 费，打出无效果）：
+#   * 敌方单位（正常情况）→ 「对方」= 玩家 → 真的插进 `state.deck`；
+#     插入位置走引擎 rng（同种子同位置、回放一致）。**不插在最上面**：
+#     `draw()` 取的是牌库尾，append 到尾部 = 下一抽必定吃诅咒，那样两张俄倪厄
+#     就是「每回合两张必抽的废牌」，手牌直接死；随机位才叫「加进卡组」。
+#   * 玩家单位（理论上拿不到）→ 「对方」= 敌方，而敌方牌库只有抽象计数
+#     （`opp_deck_count`）→ 只 +1 并记日志，与「镜像」同口径。
+# ⚠️ 一只单位每回合各塞一张（场上 3 只俄倪厄 = 每回合 3 张）—— 这是这两张卡的
+#    核心压力：拖得越久，你的牌库越脏。
+const BREACH_TRAIT:= "破绽"        # 单位侧标记（卡面 trait，与「锻造 / 废铁」同套路）
+const BREACH_CURSE_ID:= 9154      # 诅咒「破绽」（2 费，打出无效果）
 # ---- 「量产铁砧」关卡（R158，第二层普通简单）----
 # 量产型赫菲斯托斯（9138，盟友 4/50 程1 速1）带「量产锻造」trait：**只保留** Boss 版
 # 那条「亲手击杀 → 锻造量产型俄倪厄」，**没有**「连续空转 N 回合自己变强」那半边。
@@ -1376,6 +1390,7 @@ func _begin_turn(side: String) -> void :
 		_assembly_tick(SIDE_SELF)     # 流水线装配 9147（R219，对称保留）
 		_demon_summon(SIDE_SELF)      # 恶魔使魔 9117：每 2 回合随机空格召唤使魔鸭子
 		_auto_upgrade(SIDE_SELF)          # 自主升级 8045（R95）：回合开始随机改造抽牌堆 1 张
+		_breach_tick(SIDE_SELF)           # R231 破绽：己方俄倪厄往对方卡组塞诅咒（对称保留）
 		_dragon_breath(SIDE_SELF)
 		_heal_aura(SIDE_SELF)
 		_kiln_hatch(SIDE_SELF)
@@ -1437,6 +1452,7 @@ func _begin_turn(side: String) -> void :
 		_demon_summon(SIDE_OPPONENT)   # 恶魔使魔 9117：回合开始随机空格召唤使魔鸭子
 		_auto_upgrade(SIDE_OPPONENT)      # 对称保留（敌方正常拿不到这张卡）
 		_scavenger_tick(SIDE_OPPONENT)    # R228 拾荒者 9151：回合开始改造一个友方单位
+		_breach_tick(SIDE_OPPONENT)        # R231 破绽：俄倪厄 9132 / 量产型 9131 往我方卡组塞诅咒
 		_dragon_breath(SIDE_OPPONENT)
 		_heal_aura(SIDE_OPPONENT)
 		_kiln_hatch(SIDE_OPPONENT)
@@ -2498,11 +2514,16 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 
 
 const FATIGUE_COST_RAISE := 1   ## R223：手牌里有诅咒「疲惫」时，所有技能卡费用 +1
+## R231：涨价判据的**卡面 trait**。⚠️ 不能按 `is_curse()` 判 —— 诅咒家族多了
+## 「破绽」（9154，2 费打出无效果），它若也触发「技能卡 +1」就等于白送了它一条
+## 卡面没写的效果（用户口径只有「打出无效果」）。按 trait 判仍不写死 id：
+## 将来要是给「疲惫」换皮，只要留着这个 trait 就照样生效。
+const FATIGUE_TRAIT := "疲惫"
 
 func _hand_has_curse() -> bool:
-	## 当前手牌里是否有诅咒卡（R223 难度 5「疲惫」的涨价判据）。
+	## 当前手牌里是否有「疲惫」（9149）—— R223 难度 5 的涨价判据。
 	for c: CardData in state.hand:
-		if c != null and c.is_curse():
+		if c != null and c.traits.has(FATIGUE_TRAIT):
 			return true
 	return false
 
@@ -3517,6 +3538,50 @@ func _scavenger_tick(side: String) -> void :
 		var tgt: Placement = picks[rng.randi() % picks.size()]
 		_log("拾荒者（%s）：回合开始 → 改造 %s" % [sc.card.card_name, tgt.card.card_name])
 		_field_upgrade_grant(tgt, SCAVENGER_ATK, SCAVENGER_HP, "拾荒者")
+
+
+func _breach_tick(side: String) -> void :
+	## 破绽（R231）：`side` 这一方每只带「破绽」trait 的单位，往**对方卡组**塞一张
+	## 诅咒「破绽」（9154，2 费，打出无效果）。
+	## * 敌方 → 真的插进玩家牌库（`state.deck`），位置随机（引擎 rng，回放一致）；
+	## * 我方 → 敌方牌库只是抽象计数（`opp_deck_count`），只 +1（与「镜像」同口径）。
+	## ⚠️ 快照格子后排序再结算：同一回合多只单位时，rng 消耗顺序必须稳定（回放）。
+	## ⚠️ 诅咒卡一律 `CardData.from_dict()` 复制：卡库实例是共享的，直接塞库实例会让
+	##    「这张诅咒被改造 / 被附魔」之类的场上改动泄漏到图鉴里。
+	var casters: Array[Placement] = []
+	var cells: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var p: Placement = state.board[cell]
+		if p != null and p.owner == side and p.card.traits.has(BREACH_TRAIT):
+			cells.append(cell)
+	if cells.is_empty():
+		return
+	cells.sort()
+	for c: Vector2i in cells:
+		var p2: Placement = state.unit_at(c)
+		if p2 == null:
+			continue
+		casters.append(p2)
+	var base: CardData = CardRepo.load_json().get_card(BREACH_CURSE_ID)
+	if base == null:
+		_log("破绽：找不到诅咒卡定义（%d）" % BREACH_CURSE_ID)
+		return
+	for p3: Placement in casters:
+		var curse := CardData.from_dict(base.to_dict())
+		if side == SIDE_OPPONENT:
+			var idx: int = state.deck.size()
+			if idx > 0:
+				idx = rng.randi_range(0, idx)
+			state.deck.insert(idx, curse)
+			_log("破绽：%s 回合开始 → 一张诅咒「破绽」（2 费）塞进你的卡组（牌库 %d 张）"
+					% [p3.card.card_name, state.deck.size()])
+			action.emit("curse_added", {"card": curse, "from": p3.card,
+					"cell": _cell_of(p3), "deck": state.deck.size()})
+		else:
+			state.opp_deck_count += 1
+			_log("破绽（我方）：%s 回合开始 → 对方卡组 +1 张「破绽」" % p3.card.card_name)
+			action.emit("curse_added", {"card": curse, "from": p3.card,
+					"cell": _cell_of(p3), "deck": -1})
 
 
 func _field_upgrade_grant(p: Placement, atk: int, hp: int, source: String) -> void :

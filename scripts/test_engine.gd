@@ -121,7 +121,7 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 227,
+	check(repo.all_cards().size() == 228,
 			"图鉴 = 223 张（+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
@@ -135,7 +135,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 174 and grp_enemy.size() == 53,
+	check(grp_player.size() == 175 and grp_enemy.size() == 53,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 172 / 51；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -1691,6 +1691,108 @@ func _init() -> void:
 	check(r230_e5.state.unit_at(Vector2i(2, 1)) == r230_foe5
 			and r230_e5.state.unit_at(Vector2i(1, 1)) == r230_block,
 			"R230 清退：后方被单位挡住 → 击退停下（敌人留在 2,1）")
+
+	# ---- R231：破绽（俄倪厄 9132 / 量产型俄倪厄 9131 + 诅咒 9154）----
+	var r231_repo := CardRepo.load_json()
+	var r231_curse: CardData = r231_repo.get_card(9154)
+	var r231_u1: CardData = r231_repo.get_card(9131)
+	var r231_u2: CardData = r231_repo.get_card(9132)
+	check(r231_curse != null and r231_curse.card_name == "破绽"
+			and r231_curse.kind == "诅咒" and r231_curse.is_curse()
+			and r231_curse.cost == 2 and r231_curse.rarity == 6
+			and r231_curse.card_class == ""
+			and r231_curse.effect_text.contains("无效果"),
+			"R231 破绽：2 费诅咒（rarity 6 / 通用卡），打出无效果")
+	check(r231_u1 != null and r231_u2 != null
+			and r231_u1.traits.has(GameEngine.BREACH_TRAIT)
+			and r231_u2.traits.has(GameEngine.BREACH_TRAIT)
+			and r231_u1.effect_text.contains("对方卡组")
+			and r231_u2.effect_text.contains("对方卡组")
+			and r231_u2.effect_text.contains("行动两次"),
+			"R231 两张俄倪厄都带「破绽」trait 且文案写明往对方卡组加卡（俄倪厄保留两动）")
+	var r231_in_pool := false
+	for r231_pc: CardData in r231_repo.reward_pool():
+		if r231_pc.id == 9154:
+			r231_in_pool = true
+	check(not r231_in_pool, "R231 破绽：诅咒不进奖励池（rarity 6，玩家只能被敌方塞进卡组）")
+
+	# ① 敌方一只量产型俄倪厄 → 我方牌库多一张「破绽」，且进的是**独立副本**
+	var r231_e := _new_engine([], 20, 20)
+	r231_e.start_game(1)
+	var r231_deck0: int = r231_e.state.deck.size()
+	r231_e.state.place(CardData.from_dict(r231_u1.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r231_e._breach_tick(GameEngine.SIDE_OPPONENT)
+	var r231_added := 0
+	var r231_inst: CardData = null
+	for r231_c: CardData in r231_e.state.deck:
+		if r231_c.id == 9154:
+			r231_added += 1
+			r231_inst = r231_c
+	check(r231_added == 1 and r231_e.state.deck.size() == r231_deck0 + 1,
+			"R231 破绽：敌方俄倪厄回合开始 → 我方牌库 +1 张「破绽」（%d → %d）"
+			% [r231_deck0, r231_e.state.deck.size()])
+	check(r231_inst != null and r231_inst != r231_curse,
+			"R231 破绽：塞进牌库的是**独立副本**（不是卡库共享实例，防场上改动泄漏到图鉴）")
+
+	# ② 两只（一只是 9132 两动版）→ 各塞一张
+	var r231_e2 := _new_engine([], 20, 20)
+	r231_e2.start_game(1)
+	var r231_deck2: int = r231_e2.state.deck.size()
+	r231_e2.state.place(CardData.from_dict(r231_u1.to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	r231_e2.state.place(CardData.from_dict(r231_u2.to_dict()),
+			Vector2i(0, 2), GameEngine.SIDE_OPPONENT)
+	r231_e2._breach_tick(GameEngine.SIDE_OPPONENT)
+	check(r231_e2.state.deck.size() == r231_deck2 + 2,
+			"R231 破绽：两只俄倪厄各塞一张（牌库 %d → %d）"
+			% [r231_deck2, r231_e2.state.deck.size()])
+
+	# ③ 我方拥有（理论上拿不到）→ 对方牌库只是抽象计数，只 +1，我方牌库不动
+	var r231_e3 := _new_engine([], 20, 20)
+	r231_e3.start_game(1)
+	var r231_deck3: int = r231_e3.state.deck.size()
+	var r231_opp_deck0: int = r231_e3.state.opp_deck_count
+	r231_e3.state.place(CardData.from_dict(r231_u1.to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r231_e3._breach_tick(GameEngine.SIDE_SELF)
+	check(r231_e3.state.opp_deck_count == r231_opp_deck0 + 1
+			and r231_e3.state.deck.size() == r231_deck3,
+			"R231 破绽（我方拥有）：只让对方牌库计数 +1（%d → %d），我方牌库不动"
+			% [r231_opp_deck0, r231_e3.state.opp_deck_count])
+
+	# ④ 真实回合路径：玩家结束回合 → 敌方回合开始即塞咒
+	var r231_e4 := _new_engine([], 20, 20)
+	r231_e4.start_game(1)
+	var r231_deck4: int = r231_e4.state.deck.size()
+	r231_e4.state.place(CardData.from_dict(r231_u2.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r231_e4.end_turn()   # 我方 → 敌方回合开始
+	check(r231_e4.state.deck.size() == r231_deck4 + 1,
+			"R231 回合开始路径：end_turn 进敌方回合即塞一张（牌库 %d → %d）"
+			% [r231_deck4, r231_e4.state.deck.size()])
+
+	# ⑤ 费用口径：破绽在手不涨价（只有「疲惫」涨价），别把诅咒当同一种税
+	var r231_e5 := _new_engine([], 20, 20)
+	r231_e5.start_game(1)
+	var r231_skill := _card(9003, "火焰箭", "技能", 2, 0, 0)
+	r231_e5.state.hand = [r231_skill, CardData.from_dict(r231_curse.to_dict())]
+	var r231_cost_breach: int = r231_e5.cost_of(r231_skill, GameEngine.SIDE_SELF)
+	r231_e5.state.hand = [r231_skill, CardData.from_dict(r231_repo.get_card(9149).to_dict())]
+	var r231_cost_fatigue: int = r231_e5.cost_of(r231_skill, GameEngine.SIDE_SELF)
+	check(r231_cost_breach == 2 and r231_cost_fatigue == 3,
+			"R231 费用：破绽在手技能仍 %d 费（疲惫才是 %d 费 —— 破绽没写涨价就不该涨）"
+			% [r231_cost_breach, r231_cost_fatigue])
+
+	# ⑥ 破绽能正常打出：付 2 费、离手、无效果、进弃牌区
+	r231_e5.state.hand = [CardData.from_dict(r231_curse.to_dict())]
+	r231_e5.state.energy = 5
+	var r231_played := r231_e5.use_curse(0)
+	check(r231_e5.state.energy == 3 and r231_e5.state.hand.is_empty()
+			and r231_e5.state.discard.size() == 1
+			and r231_e5.state.discard[0].id == 9154,
+			"R231 打出破绽：付 2 费（5 → %d）、无效果、进弃牌区（%s）"
+			% [r231_e5.state.energy, r231_played])
 
 	# 狂暴（9055）：稀有 2 费技能，指定己方盟友本回合可以攻击两次；不可重复；>=3 盟友费用 -1
 	var nc_fz := repo.get_card(9055)
@@ -7125,7 +7227,7 @@ func _init() -> void:
 			if c.card_class != "敌人":
 				dr_cls_enemy_bad.append(c.id)
 		else:
-			# R223：class 留空 = 通用卡（PlayerClass 注释里的既定口径；当前库内仅「疲惫」9149）
+			# R223：class 留空 = 通用卡（PlayerClass 注释里的既定口径；当前库内 = 疲惫 9149 + 破绽 9154）
 			if c.card_class != "" and not PlayerClass.ids().has(c.card_class):
 				dr_cls_bad.append(c.id)
 		dr_cls_count[c.card_class] = int(dr_cls_count.get(c.card_class, 0)) + 1
@@ -7141,8 +7243,8 @@ func _init() -> void:
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
 				int(dr_cls_count.get("敌人", 0))])
-	check(int(dr_cls_count.get("", 0)) == 1,
-			"角色系统：class 留空（通用卡）只有疲惫 9149 一张（实际 %d）"
+	check(int(dr_cls_count.get("", 0)) == 2,
+			"角色系统：class 留空（通用卡）= 疲惫 9149 + 破绽 9154 两张（实际 %d）"
 			% int(dr_cls_count.get("", 0)))
 	check(PlayerClass.ids() == ["森林精魄", "暗影刺客", "机械之心"]
 			and PlayerClass.default_id() == "森林精魄",
@@ -7706,8 +7808,9 @@ func _init() -> void:
 			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
-	check(int(r45_cls_count.get("", 0)) == 1,
-			"R223：class 留空（通用卡）= 疲惫 9149（%d 张）" % int(r45_cls_count.get("", 0)))
+	check(int(r45_cls_count.get("", 0)) == 2,
+			"R223/R231：class 留空（通用卡）= 疲惫 9149 + 破绽 9154（%d 张）"
+			% int(r45_cls_count.get("", 0)))
 
 	# ---- R47：难度档位 / 事件遭遇战计入难度 / 奖励池角色过滤 / 荒野形态强化 ----
 
@@ -15287,9 +15390,11 @@ func _init() -> void:
 	check(r135_helios.group == "enemy" and r135_fury.group == "enemy"
 			and r135_helios.effect_text != "",
 			"R135 两张都是敌方卡（group=enemy），**效果写在光源上**")
-	check(r135_fury.effect_text == "",
-			"R179b 量产型俄倪厄卡面不写效果（「赫利俄斯在场时双动 / 回血」是光源的效果，"
-			+ "写在赫利俄斯卡上 —— 原来写在被影响方卡面会让玩家以为「量产型赫利俄斯」也算）")
+	check(not r135_fury.effect_text.contains("赫利俄斯")
+			and r135_fury.effect_text.contains("破绽"),
+			"R179b 量产型俄倪厄卡面不写光源效果（「赫利俄斯在场时双动 / 回血」是光源的效果，"
+			+ "写在赫利俄斯卡上 —— 原来写在被影响方卡面会让玩家以为「量产型赫利俄斯」也算）；"
+			+ "R231 起只写自己的「破绽」（实际：%s）" % r135_fury.effect_text)
 
 	var r135_lv: Dictionary = _level_named("太阳熔炉")
 	check(not r135_lv.is_empty()

@@ -4141,6 +4141,28 @@
       "image": ""
     },
     {
+      "id": 9154,
+      "name": "破绽",
+      "kind": "诅咒",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 6,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "破绽"
+      ],
+      "affixes": [],
+      "effect_text": "打出无效果。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "灰",
+      "image": ""
+    },
+    {
       "id": 9146,
       "name": "填充",
       "kind": "技能",
@@ -4420,9 +4442,10 @@
       "group": "enemy",
       "class": "敌人",
       "traits": [
-        "机械"
+        "机械",
+        "破绽"
       ],
-      "effect_text": "",
+      "effect_text": "回合开始时，往对方卡组中加入一张「破绽」（2 费诅咒，打出无效果）。",
       "target_mode": "none",
       "color": "灰",
       "image": ""
@@ -4440,9 +4463,10 @@
       "group": "enemy",
       "class": "敌人",
       "traits": [
-        "机械"
+        "机械",
+        "破绽"
       ],
-      "effect_text": "一回合可以行动两次。",
+      "effect_text": "一回合可以行动两次。回合开始时，往对方卡组中加入一张「破绽」（2 费诅咒，打出无效果）。",
       "target_mode": "none",
       "color": "金",
       "image": "",
