@@ -19906,6 +19906,94 @@ func _init() -> void:
 	check(r271_e9.state.turn_cannon_free,
 		"R271 代达罗斯：入场即点亮「本回合手卡聚能炮击 0 费」")
 
+	# ============================================================
+	#  R272：战斗骨骼「被**任意方式**改造时 +1 力 +1 血」
+	# ============================================================
+	# 用户口径：卡面去掉「升级」限定 → 「被改造时，获得 +1 力量、+1 生命。」
+	# 机制侧要保证**所有**改造入口都吃到卡面奖励。R228 时 `_field_upgrade_grant()`
+	# 刻意跳过 `upgrade_*_bonus`，于是「共享护盾」「拾荒者」给骨骼改造只涨层数不涨数值。
+	var r272_bone := repo.get_card(GameEngine.BATTLE_BONE_ID)
+
+	# ---- ① 卡面 ----
+	check(r272_bone.effect_text == "被改造时，获得 +1 力量、+1 生命。"
+			and r272_bone.upgrade_atk_bonus == 1 and r272_bone.upgrade_hp_bonus == 1,
+		"R272 战斗骨骼：卡面不再限定「升级」，直接写「被改造时」（%s）"
+			% r272_bone.effect_text)
+
+	# ---- ② 共享护盾 8069（场上改造唯一口 _field_upgrade_grant）----
+	var r272_e1 := _new_engine([], 20, 20, -1, false)
+	r272_e1.start_game(0)
+	var r272_b1: Placement = r272_e1.state.place(
+			CardData.from_dict(r272_bone.to_dict()), Vector2i(4, 0), GameEngine.SIDE_SELF)
+	r272_e1.state.hand = [CardData.from_dict(
+			repo.get_card(GameEngine.SHARED_SHIELD_ID).to_dict())]
+	r272_e1.state.energy = 9
+	r272_e1.use_spell(0, Vector2i(4, 0))
+	check(r272_b1.effective_power() == 3 and r272_b1.health == 8
+			and r272_b1.upgrade_stacks == 1,
+		"R272 共享护盾改造骨骼：2/7 → %d/%d（卡面 +1 力 +1 血照算），1 层改造"
+			% [r272_b1.effective_power(), r272_b1.health])
+	check(r272_b1.card.has_affix(GameEngine.AFFIX_SHARED_SHIELD),
+		"R272 共享护盾改造骨骼：字段照常挂上（奖励与字段互不挤占）")
+
+	# 离场还原 + 不污染卡库（改造奖励走 upgrade_hp，由 _card_leaving_field 减回去）
+	r272_e1._hit_unit(r272_b1, 999, "R272 测试")
+	r272_e1._destroy_dead()
+	var r272_back: CardData = null
+	for d272 in r272_e1.state.discard:
+		if d272.id == GameEngine.BATTLE_BONE_ID:
+			r272_back = d272
+	check(r272_back != null and r272_back.power == 2 and r272_back.health == 7,
+		"R272 战斗骨骼：被共享护盾改造后离场 → 还原 2/7（实际 %s/%s）"
+			% [str(r272_back.power) if r272_back != null else "?",
+				str(r272_back.health) if r272_back != null else "?"])
+	var r272_lib := repo.get_card(GameEngine.BATTLE_BONE_ID)
+	check(r272_lib.power == 2 and r272_lib.health == 7,
+		"R272 战斗骨骼：卡库未被污染（仍 2/%d）" % r272_lib.health)
+
+	# ---- ③ 轻量化 8068（手牌改造）----
+	var r272_e2 := _new_engine([], 20, 20, -1, false)
+	r272_e2.start_game(0)
+	r272_e2.state.hand = [CardData.from_dict(
+			repo.get_card(GameEngine.HAND_LIGHTEN_ID).to_dict()),
+			CardData.from_dict(r272_bone.to_dict())]
+	r272_e2.state.energy = 9
+	r272_e2.cast_lighten(0, 1)
+	var r272_lu: CardData = r272_e2.state.hand[0]
+	check(r272_lu.power == 3 and r272_lu.health == 8 and r272_lu.cost == 1
+			and r272_lu.move_speed == 2 and r272_lu.upgrade_stacks == 1,
+		"R272 轻量化改造骨骼：2/7 → %d/%d，并 2→1 费、速 1→2、1 层改造"
+			% [r272_lu.power, r272_lu.health])
+
+	# ---- ④ 系统升级 8039（原本就走唯一口，做回归对照）----
+	var r272_e3 := _new_engine([], 20, 20, -1, false)
+	r272_e3.start_game(0)
+	r272_e3.state.hand = [CardData.from_dict(
+			repo.get_card(GameEngine.SYS_UPGRADE_ID).to_dict()),
+			CardData.from_dict(r272_bone.to_dict())]
+	r272_e3.state.energy = 9
+	r272_e3.cast_sys_upgrade(0, 1)
+	var r272_su: CardData = r272_e3.state.hand[0]
+	check(r272_su.power == r272_bone.power + GameEngine.SYS_UPGRADE_ATK + 1
+			and r272_su.health == r272_bone.health + GameEngine.SYS_UPGRADE_HP + 1,
+		"R272 系统升级改造骨骼：%d/%d（基数 + 卡面 1/1，未重复计算）"
+			% [r272_su.power, r272_su.health])
+
+	# ---- ⑤ 素体 8025 护栏：别的卡也被「任意方式」照顾到 ----
+	var r272_e4 := _new_engine([], 20, 20, -1, false)
+	r272_e4.start_game(0)
+	var r272_proto: Placement = r272_e4.state.place(
+			CardData.from_dict(repo.get_card(GameEngine.PROTO_ID).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r272_hp0: int = r272_proto.health
+	r272_e4.state.hand = [CardData.from_dict(
+			repo.get_card(GameEngine.SHARED_SHIELD_ID).to_dict())]
+	r272_e4.state.energy = 9
+	r272_e4.use_spell(0, Vector2i(4, 1))
+	check(r272_proto.health == r272_hp0 + 1,
+		"R272 素体护栏：共享护盾改造素体也 +1 血（%d → %d）"
+			% [r272_hp0, r272_proto.health])
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

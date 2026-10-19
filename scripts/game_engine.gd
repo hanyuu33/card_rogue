@@ -4063,8 +4063,11 @@ func _breach_tick(side: String) -> void :
 
 func _field_upgrade_grant(p: Placement, atk: int, hp: int, source: String,
 		affix: String = "") -> void :
-	## **场上单位获得改造的唯一口**（R228）—— 与「升级 8027」的区别：这里不带
-	## 卡面改造奖励（`upgrade_*_bonus`）、不叠「堡垒」trait，只给固定 +atk/+hp 与一层改造。
+	## **场上单位获得改造的唯一口**（R228）。
+	## R272（用户口径）：**任意方式**的改造都要吃卡面改造奖励（战斗骨骼 +1 力 +1 血 /
+	## 素体 +1 血）。R228 当初刻意「不带 `upgrade_*_bonus`」，结果「共享护盾」「拾荒者」
+	## 给骨骼改造只涨层数、不涨数值 —— 与卡面「被改造时」自相矛盾，用户报了这个缺陷。
+	## 现在统一过 `_upgrade_atk_gain` / `_upgrade_hp_gain` 唯一口。
 	## 加攻进 `upgrade_atk`（进 effective_power）、加血同时抬场上卡副本与 `p.health`，
 	## 离场由 `_card_leaving_field` 统一减回去。
 	## ⚠️ 卡换成独立副本再改（卡库实例是共享的，直接改会跨局泄漏）。
@@ -4078,21 +4081,23 @@ func _field_upgrade_grant(p: Placement, atk: int, hp: int, source: String,
 	# 还是没字段的卡，等于这次改造对它们「不算数」。
 	if affix != "":
 		p.card.add_affix(affix)
-	p.upgrade_atk += atk
-	p.upgrade_hp += hp
+	var atk_all: int = _upgrade_atk_gain(p.card, atk)
+	var hp_all: int = _upgrade_hp_gain(p.card, hp)
+	p.upgrade_atk += atk_all
+	p.upgrade_hp += hp_all
 	p.upgrade_stacks += 1
-	p.card.health += hp
-	p.health += hp
-	if atk == 0 and hp == 0 and affix != "":
+	p.card.health += hp_all
+	p.health += hp_all
+	if atk_all == 0 and hp_all == 0 and affix != "":
 		# 纯挂字段的改造（共享护盾）：不印「力量 +0、生命 +0」这种废话。
 		_log("%s：改造 %s → 挂上字段「%s」（第 %d 层）" % [
 				source, p.card.card_name, affix, p.upgrade_stacks])
 	else:
 		_log("%s：改造 %s → 力量 +%d、生命 +%d（%d 攻 / %d 血，第 %d 层）" % [
-				source, p.card.card_name, atk, hp, p.effective_power(), p.health,
+				source, p.card.card_name, atk_all, hp_all, p.effective_power(), p.health,
 				p.upgrade_stacks])
 	action.emit("upgrade", {"cell": _cell_of(p), "card": p.card, "placement": p,
-			"atk": atk, "hp": hp, "affix": affix})
+			"atk": atk_all, "hp": hp_all, "affix": affix})
 	_on_unit_upgraded(p)
 	_refresh_mnemosyne()   # R271：被改造的可能正是谟涅摩叙涅（X = 层数要立刻生效）
 
@@ -4441,12 +4446,17 @@ func _lighten_hand_card(hand_index: int) -> String :
 	var speed_before: int = up.move_speed
 	up.cost = maxi(0, up.cost + HAND_LIGHTEN_COST_DELTA)
 	up.move_speed += HAND_LIGHTEN_SPEED_ADD
+	# R272：轻量化也是「改造」→ 卡面改造奖励照算（战斗骨骼 +1 力 +1 血 / 素体 +1 血）。
+	var li_atk: int = _upgrade_atk_gain(up, 0)
+	var li_hp: int = _upgrade_hp_gain(up, 0)
+	up.power += li_atk
+	up.health += li_hp
 	up.upgrade_stacks += 1        # 一层改造（同系统升级 8039）
 	state.hand[hand_index] = up
-	_log("轻量化：%s 改造完成（费用 %d → %d / 移速 %d → %d，本场战斗永久）" % [
-			c.card_name, cost_before, up.cost, speed_before, up.move_speed])
+	_log("轻量化：%s 改造完成（费用 %d → %d / 移速 %d → %d / 力量 +%d / 生命 +%d，本场战斗永久）" % [
+			c.card_name, cost_before, up.cost, speed_before, up.move_speed, li_atk, li_hp])
 	action.emit("lighten", {"card": up, "hand_index": hand_index,
-			"cost": up.cost, "speed": up.move_speed})
+			"cost": up.cost, "speed": up.move_speed, "atk": li_atk, "hp": li_hp})
 	return "%s 改造完成（%d 费 / 移速 %d）" % [up.card_name, up.cost, up.move_speed]
 
 
