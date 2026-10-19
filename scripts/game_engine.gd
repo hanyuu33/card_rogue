@@ -10440,6 +10440,11 @@ func _ai_target_choice(cell: Vector2i, p: Placement) -> Variant:
 	var ov = _overflow_pick(card_targets, p)
 	if ov != null:
 		return ["card", ov]
+	# R265：被一个前顶单位顶住时，远程单位先侧移（`_ai_ranged_step`）——
+	# 返回 null 交给 `_ai_best_step` 走位，**不要**在这里原地打那个杂兵。
+	# 近战 / 已经能打 HP / 侧移也缩短不了距离的单位，都不受影响。
+	if _ai_ranged_step(cell, p) != null:
+		return null
 	if _wall_depth(cell, p) <= 0:
 		return null
 	var blockers:= _blocking_targets(cell, p, card_targets)
@@ -10466,6 +10471,8 @@ func _pick_nearest(cell: Vector2i, targets: Array[Vector2i]) -> Vector2i:
 
 
 const AI_NO_ROUTE:= 99
+# R265：射程 ≥ 这个值的单位，被挡路者贴脸时**优先侧移去开火线**，不跟杂兵换血。
+const AI_RANGED_REPOSITION_RANGE:= 2
 
 
 func _walk_search(cell: Vector2i, p: Placement, want_hp: bool, 
@@ -10632,6 +10639,41 @@ func _clear_shot_target(cell: Vector2i, p: Placement) -> Variant:
 	return _ai_pick_card_target(killable, p)
 
 
+func _ai_ranged_step(cell: Vector2i, p: Placement) -> Variant:
+	## R265（用户口径：**「恶魔鸭前进两格后被前顶单位单防」**）：
+	## **远程单位不该站在挡路者面前换血** —— 射程 2 的单位根本不需要跨过那个单位，
+	## 它只要侧移一格、把「到开火线的走位距离」缩短一步，就能继续压 HP。
+	## 三条判据（同时成立才让位，任何一条不成立就照旧打）：
+	##   ① 射程 ≥ `AI_RANGED_REPOSITION_RANGE`（近战没有绕行余地，啃掉挡路者才是正解）；
+	##   ② **现在打不到 HP**（打得到就直接开枪，`_ai_target_choice` 会先处理 HP，这里不该抢）；
+	##   ③ 存在可达格使 `_hp_pos_distance` **严格变小**（等距侧移 = 空走，不算优化）。
+	## 返回要挪过去的格子；不需要 / 无处可让 → null。
+	## ⚠️ 只读 `_hp_pos_distance`（把被占格当墙的真实走位距离）—— 与 `_step_score` 里
+	##    那个被 `_engage_distance` 拉平的 `near` 不同，它在远程单位身上不会一落地就归零。
+	if p == null or p.card == null or p.card.is_fort() or p.effective_speed() == 0:
+		return null
+	if p.effective_range() < AI_RANGED_REPOSITION_RANGE:
+		return null
+	if not hp_targets(cell, SIDE_OPPONENT, p.card).is_empty():
+		return null
+	var here:= _hp_pos_distance(cell, p)
+	if here <= 0 or here >= AI_NO_ROUTE:
+		return null
+	var best:= Vector2i(-1, -1)
+	var best_d:= here
+	for dst: Vector2i in _reachable(cell, SIDE_OPPONENT):
+		if dst == cell:
+			continue
+		var d:= _hp_pos_distance(dst, p)
+		if d >= here:
+			continue   # 没变好（或更差）→ 空走
+		# 同样能缩短时偏好继续向前（敌方 +x 方向），避免在两翼来回摆
+		if d < best_d or (d == best_d and dst.x > best.x):
+			best = dst
+			best_d = d
+	return best if best != Vector2i(-1, -1) else null
+
+
 func _ai_best_step(cell: Vector2i, p: Placement) -> Variant:
 
 
@@ -10648,6 +10690,11 @@ func _ai_best_step(cell: Vector2i, p: Placement) -> Variant:
 			best_score = s
 	if best != cell:
 		return best
+	# R265：分数打平（远程单位的距离项被 `_engage_distance` 拉平是常态）时，
+	# 仍然要肯为「缩短开火距离」侧移一格 —— 否则就是站在挡路者面前原地换血。
+	var reposition: Variant = _ai_ranged_step(cell, p)
+	if reposition != null:
+		return reposition
 	if p.acts_left < 2 or p.card.is_fort() or p.effective_speed() == 0:
 		return null
 	var spd:= p.effective_speed()

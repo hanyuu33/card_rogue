@@ -4056,6 +4056,53 @@ func _init() -> void:
 	check(engM2.state.unit_at(Vector2i(1, 1)) != null,
 			"积极移动：全场没有可攻击目标 → 照样向前推进 (0,1)→(1,1)")
 
+	# ---- R265（用户口径）：**恶魔鸭「前进两格后被前顶单位单防」** ----
+	# 根因：`_ai_target_choice` 只要「射程内有挡路者」就原地开打，且一打就横置，
+	# 于是**一个杂兵站在正前方就能吃满它的每一手**。可它程 2 —— 根本不用跨过那个单位，
+	# 侧移一格让「到开火线的走位距离」从 2 变 1 才是正解（`_ai_ranged_step`）。
+	var r265 := _new_engine([], 30, 30)
+	r265.ai_enabled = true
+	r265.state.place(_card(9116, "恶魔鸭", "盟友", 0, 5, 100, 2, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r265.state.place(_card(8003, "农民", "盟友", 3, 3, 8),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r265.current_side = GameEngine.SIDE_OPPONENT
+	r265.run_ai_unit(Vector2i(2, 1))
+	var r265_b: Placement = r265.state.unit_at(Vector2i(3, 1))
+	check(r265.state.unit_at(Vector2i(2, 0)) != null
+			and r265.state.unit_at(Vector2i(2, 1)) == null,
+			"R265 恶魔鸭：正前方被一个农民顶住 → 侧移到 (2,0) 让位，不站着换血")
+	# 让位是**移动**，移动后照常补一刀（程 2 够得着那个农民）—— 白送的伤害不收白不收。
+	# 关键是它**已经离开原位、走到了开火线上**，农民没能吃掉它这一整手。
+	check(r265_b != null and r265_b.health == 3 and r265.state.hp_self == 30,
+			"R265 恶魔鸭：让位那一手顺手补刀（农民 8→%d），我方 HP 不掉（%d）"
+			% [3 if r265_b == null else r265_b.health, r265.state.hp_self])
+	# 下一手沿侧列推进到 (3,0) —— 那才是它的开火线（程 2 打得到第 5 行）
+	r265.current_side = GameEngine.SIDE_OPPONENT
+	r265.state.reset_units(GameEngine.SIDE_OPPONENT)
+	r265.run_ai_unit(Vector2i(2, 0))
+	check(r265.state.unit_at(Vector2i(3, 0)) != null and r265.state.hp_self == 25,
+			"R265 恶魔鸭：侧列推进到 (3,0) 后立刻压 HP（30 → %d）" % r265.state.hp_self)
+	# 已经站上开火线 → 不许再为了「让位」白挪（否则会在两翼来回摆）
+	r265.current_side = GameEngine.SIDE_OPPONENT
+	r265.state.reset_units(GameEngine.SIDE_OPPONENT)
+	r265.run_ai_unit(Vector2i(3, 0))
+	check(r265.state.unit_at(Vector2i(3, 0)) != null and r265.state.hp_self == 20,
+			"R265 恶魔鸭：已能打 HP 就原地开火（位置不动、HP 20）")
+	# 对照：近战（程 1）同场景照旧先啃挡路者 —— 本规则只放开远程，不动近战口径
+	var r265m := _new_engine([], 30, 30)
+	r265m.ai_enabled = true
+	r265m.state.place(_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r265m.state.place(_card(8003, "农民", "盟友", 3, 3, 8),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r265m.current_side = GameEngine.SIDE_OPPONENT
+	r265m.run_ai_unit(Vector2i(2, 1))
+	var r265m_b: Placement = r265m.state.unit_at(Vector2i(3, 1))
+	check(r265m.state.unit_at(Vector2i(2, 1)) != null
+			and r265m_b != null and r265m_b.health == 3,
+			"R265 对照：近战骑士仍原地啃挡路农民（8-5=3），不受远程让位影响")
+
 	# ---- 穿透优先：能打死后排残血（溢出漏 HP）时，不打没有穿透的前排 ----
 	var engV := _new_engine([], 20, 20)
 	engV.ai_enabled = true
