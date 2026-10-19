@@ -52,6 +52,33 @@ overlapping green leaves with tiny white daisies, a white daisy beside one cat e
   - 第 2 张（`A_big_plump_YELLOW_DUCK_knight_…`）：垂头、喙闭合、剑尖杵地、膝盖发软 → **采用**。
 - 经验：**「虚弱 / 被削弱」要靠体态（垂头、垮肩、卸力）表达，不能靠表情（张嘴只会读成喊叫 / 震惊）。**
 
+## R254 重画：9004 / 9005
+
+用户口径：**「智慧卡图依旧不够还原，与其他图对齐」** + **「击退的图太奇怪了，去掉森林精魄角色，只展示敌人被气波击退的画面」**。
+
+### 9005 智慧
+
+R253 那版的问题（并排 9003 一眼可见）：发色偏**银灰**、耳朵画成**大灰狐耳**、身材偏高 → 和 9003 不是同一个人。
+
+- 改法：**给参照图**（`image1 = assets/pics/9003.png`、`image2 = assets/pics/8002_forest.png`、`input_fidelity = high`），
+  提示词开头写死 `Draw the EXACT SAME CHARACTER as the two reference images`，并在负向枚举
+  `NO grey or silver hair, NO fox ears, NO elf ears, NO pointed ears`。
+- 出了 2 张：第 1 张尾巴画成**两条**（黑尾左右各一条）→ 弃用；第 2 张只有右侧一条黑尾、食指明确竖在唇上 → 采用。
+- 第 2 张额外写死 `EXACTLY ONE single big fluffy BLACK TAIL on her right side only, NO tail on her left side`
+  与 `RIGHT index finger clearly extended straight and pressed vertically against her lips, the other three fingers curled into a loose fist`。
+
+> **经验：角色还原靠「给参照图 + EXACT SAME CHARACTER」比堆文字描述稳得多；纯文字提示词一定会漂。**
+
+### 9004 击退
+
+- 原构图 = 精灵少女挥手 + 铠甲骑士被推退，双主体被否（「太奇怪」）。
+- 现在 = **只留敌人**：铠甲骑士整个人被掀离地面、身体后仰、盾牌护脸、铠甲凹陷、地面碎石尘土爆开，
+  白绿色气波从左下斜扫而来，长条速度线 + 落叶。
+- 提示词写死：`ONLY the armored enemy and the shockwave ... NO spell caster, NO second character, NO girl,
+  NO hands, NO mage silhouette, NO arm entering the frame`。
+
+两张都是满屏背景（bbox = 全图，不裁），按老链处理：切底部 11% 水印 → 1.1117 cover → LANCZOS 448×403 → `--headless --import` → `_art_index.py --check`（通过）。
+
 ## 处理流程（同批次 A / B）
 
 1. 白底图按非白像素 bbox 裁边 + 内缩 6px；**这六张都是满屏背景，bbox = 全图，等于不裁**。
