@@ -346,7 +346,7 @@ func _draw_detail() -> void:
 	# 概览两行
 	var seed_v := int(rec.get("seed", 0))
 	draw_string(_font_bold, Vector2(x0, r.position.y + 58.0),
-			"种子：%s" % ("—" if seed_v == 0 else str(seed_v)),
+			"种子：%s" % ("—" if seed_v == 0 else RunState.seed_text_of(seed_v)),
 			HORIZONTAL_ALIGNMENT_LEFT, 320, UiTheme.FS_LABEL, Color("f0c860"))
 	draw_string(_font, Vector2(x0 + 250.0, r.position.y + 58.0),
 			"角色：%s · 难度 %d · 用时 %s"
@@ -457,3 +457,8 @@ func _draw_row(idx: int, rec: Dictionary) -> void:
 	draw_string(_font, r.position + Vector2(18, 43),
 			"结束于 %s" % RunRecord.fmt_time(str(rec.get("end", ""))),
 			HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_CAPTION, Color("7d8590"))
+	# R261：种子码也列在列表行上（不用点进详情就能抄下来复现）
+	var row_seed := int(rec.get("seed", 0))
+	draw_string(_font, r.position + Vector2(430, 43),
+			"种子：%s" % ("—" if row_seed == 0 else RunState.seed_text_of(row_seed)),
+			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_CAPTION, Color("b39a5e"))

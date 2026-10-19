@@ -101,6 +101,9 @@ const SUN_FORGE_FURY_ID:= 9131     # 量产型俄倪厄（盟友 5/45 程1 速1�
 const SUN_FORGE_REGEN:= 2          # 赫利俄斯在场时，每只俄倪厄每回合结束的回复量
 const SUN_FORGE_ACTIONS:= 2        # 赫利俄斯在场时，俄倪厄每回合的行动次数
 const CERAMIC_CARD_ID:= 9026
+# R259：场上该方陶瓷鸭达到这个数（>=3）时，鸭子窑不再四邻各刷一只（鸭海滚雪球），
+# 改为相邻空格里随机挑一个只召唤 1 只，并给所有陶瓷鸭 +1 血量（见 _kiln_hatch）。
+const KILN_CROWDED_COUNT:= 3
 const EGG_CARD_ID:= 9022
 # ---- 「钢铁要塞」关卡（R149，第二层精英困难）----
 # 量产型赫卡同克瑞斯（9133）上场就带铸造倒计时：**我方回合结束** -1，
@@ -2048,7 +2051,6 @@ func _kiln_hatch(side: String) -> void :
 
 
 
-
 	# 产物生命 X = 随**该方**回合数每过 2 回合 +1（窑主人的第几回合，向上取整）；
 	# 首回合起算，至少 1。（R172 下调：原为「生命 = 当前己方回合数」。）
 	var t:= turn_number if side == SIDE_SELF else opp_turns
@@ -2062,8 +2064,51 @@ func _kiln_hatch(side: String) -> void :
 		else repo.get_card(CERAMIC_CARD_ID)
 		if spawn == null:
 			spawn = _fallback_ceramic()
+		# ── R259：场上该方陶瓷鸭 >= KILN_CROWDED_COUNT 只时，不再四邻各刷一只 ──
+		# （鸭海滚雪球：每回合 +3~4 只，几个回合就铺满屏）。改为：
+		# ① 相邻空格里**随机挑一个**只召唤 1 只（随机走引擎 rng，回放同种子可复现）；
+		# ② 给**所有**陶瓷鸭（含刚出生的）+1 血量 —— 数量收住、单兵变硬。
+		# 不足 3 只时保持原样（首回合仍是经典的「四邻各刷一只」）。
+		var have:= 0
+		for q: Placement in state.board.values():
+			if q.owner == side and q.card.id == CERAMIC_CARD_ID:
+				have += 1
+		if have >= KILN_CROWDED_COUNT:
+			var spots: Array[Vector2i] = []
+			for d2: Vector2i in [Vector2i(0, -1), Vector2i(0, 1),
+					Vector2i(-1, 0), Vector2i(1, 0)]:
+				var c2:= cell + d2
+				if c2.x < 0 or c2.x >= FieldState.BOARD_ROWS\
+				or c2.y < 0 or c2.y >= FieldState.BOARD_COLS:
+					continue
+				if state.board.has(c2):
+					continue
+				spots.append(c2)
+			if spots.is_empty():
+				_log("%s：周围没有空格，本回合未烧出陶瓷鸭" % p.card.card_name)
+				continue
+			var pick: Vector2i = spots[rng.randi_range(0, spots.size() - 1)]
+			# 每一只都放**副本**并把生命改成 X：库里的对象被同名卡共享，
+			# 直接改它会污染全局（第 29 轮实例级减费踩过同类坑）。
+			var body: CardData = CardData.from_dict(spawn.to_dict())
+			body.health = x
+			var hatched:= state.place(body, pick, p.owner, true)
+			action.emit("place", {"cell": pick, "card": body, "side": p.owner})
+			_on_ally_entered(hatched, p.owner)
+			var grown:= 0
+			for cell2: Vector2i in state.board.keys().duplicate():
+				var q2: Placement = state.unit_at(cell2)
+				if q2 == null or q2.owner != side or q2.card.id != CERAMIC_CARD_ID:
+					continue
+				q2.health += 1
+				grown += 1
+				action.emit("heal", {"cell": cell2, "card": q2.card, "amount": 1,
+						"health": q2.health, "side": q2.owner})
+			_log("%s：场上已有 %d 只陶瓷鸭，只烧 1 只（生命 %d）并给所有 %d 只 +1 血" % [
+					p.card.card_name, have, x, grown])
+			continue
 		var born:= 0
-		for d: Vector2i in [Vector2i(0, -1), Vector2i(0, 1), 
+		for d: Vector2i in [Vector2i(0, -1), Vector2i(0, 1),
 				Vector2i(-1, 0), Vector2i(1, 0)]:
 			var c:= cell + d
 			if c.x < 0 or c.x >= FieldState.BOARD_ROWS\
@@ -2073,12 +2118,12 @@ func _kiln_hatch(side: String) -> void :
 				continue
 			# 每一只都放**副本**并把生命改成 X：库里的对象被同名卡共享，
 			# 直接改它会污染全局（第 29 轮实例级减费踩过同类坑）。
-			var body: CardData = CardData.from_dict(spawn.to_dict())
-			body.health = x
-			var hatched:= state.place(body, c, p.owner, true)
+			var body2: CardData = CardData.from_dict(spawn.to_dict())
+			body2.health = x
+			var hatched2:= state.place(body2, c, p.owner, true)
 			born += 1
-			action.emit("place", {"cell": c, "card": body, "side": p.owner})
-			_on_ally_entered(hatched, p.owner)
+			action.emit("place", {"cell": c, "card": body2, "side": p.owner})
+			_on_ally_entered(hatched2, p.owner)
 		if born > 0:
 			_log("%s 烧出 %d 只陶瓷鸭（生命 %d：第 %d 回合，每 2 回合 +1）" % [
 				p.card.card_name, born, x, t])

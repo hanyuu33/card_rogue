@@ -67,9 +67,9 @@ func _build_seed_edit() -> void:
 	## 原生 LineEdit（手机上点它才会弹软键盘 —— 纯 _draw 的输入框做不到这件事）。
 	GameSettings.ensure_loaded()
 	_seed_edit = LineEdit.new()
-	_seed_edit.placeholder_text = "留空 = 随机"
-	_seed_edit.max_length = 10
-	_seed_edit.text = "" if GameSettings.next_seed == 0 else str(GameSettings.next_seed)
+	_seed_edit.placeholder_text = "留空 = 随机（10 位）"
+	_seed_edit.max_length = RunState.SEED_LEN
+	_seed_edit.text = GameSettings.next_seed_code
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color("1b1d24")
 	sb.border_color = Color("4a4e58")
@@ -106,20 +106,21 @@ func _sync_seed_edit() -> void:
 
 
 func _on_seed_changed(txt: String) -> void:
-	## 只收数字：粘贴 / 输入法带进来的其它字符当场剃掉。
+	## R261：只收 **A-Z / 0-9**（小写自动转大写）—— 粘贴 / 输入法带进来的其它字符当场剃掉。
+	## 半截串（不足 10 位）先留在框里让人继续打，落盘只会是合法码或空（见 set_next_seed_code）。
 	if _seed_guard:
 		return
-	var digits := ""
+	var code := ""
 	for i in txt.length():
-		var ch := txt[i]
-		if ch >= "0" and ch <= "9":
-			digits += ch
-	if digits != txt:
+		var ch := txt[i].to_upper()
+		if RunState.SEED_ALPHABET.find(ch) >= 0:
+			code += ch
+	if code != txt:
 		_seed_guard = true
-		_seed_edit.text = digits
-		_seed_edit.caret_column = digits.length()
+		_seed_edit.text = code
+		_seed_edit.caret_column = code.length()
 		_seed_guard = false
-	GameSettings.set_next_seed(int(digits) if digits != "" else 0)
+	GameSettings.set_next_seed_code(code)
 	queue_redraw()
 
 
@@ -320,12 +321,13 @@ func _draw_seed_panel() -> void:
 			Color("9fd7a5") if RunState.run_active else Color("9a968c"))
 	draw_string(_font_bold, p.position + Vector2(20, 84), "下一局种子",
 			HORIZONTAL_ALIGNMENT_LEFT, 120, UiTheme.FS_LABEL, Color("ece7db"))
-	var tail := "当前：随机" if GameSettings.next_seed == 0 else "当前：%d" % GameSettings.next_seed
+	var next_code := GameSettings.next_seed_code
+	var tail := "当前：随机" if next_code == "" else "当前：%s" % next_code
 	draw_string(_font, p.position + Vector2(356, 84), tail,
 			HORIZONTAL_ALIGNMENT_LEFT, 150, UiTheme.FS_CAPTION,
-			Color("9a968c") if GameSettings.next_seed == 0 else Color("f0c860"))
+			Color("9a968c") if next_code == "" else Color("f0c860"))
 	draw_string(_font, p.position + Vector2(20, 120),
-			"留空 = 每局随机；填入数字 → 下一局用同一种子（用一次自动清空）",
+			"留空 = 每局随机；填入 10 位大写字母 / 数字 → 下一局用同一种子（用一次自动清空）",
 			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 40.0, UiTheme.FS_CAPTION, Color("7d8590"))
 
 

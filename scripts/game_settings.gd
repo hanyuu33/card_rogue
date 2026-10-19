@@ -22,9 +22,11 @@ static var fullscreen := false
 ## R246 音量（0.0 ~ 1.0，线性）：100% = 原来的音量（音效 0dB / 音乐 -12dB）。
 static var sfx_volume := 1.0
 static var music_volume := 1.0
-## R241「下一局种子」：0 = 每局随机；非 0 = 新开一局就用它（复现某一局用）。
-## 放在设置里而不是角色选择页：那个页面是「一个动作」的界面，多一个输入框会抢焦点。
-static var next_seed := 0
+## R241 / R261「下一局种子」：空 = 每局随机；非空 = **10 位大写字母 / 数字**的种子码
+## （新开一局就用它 —— 复现某一局用）。旧版存的是 int（`run/seed`）→ `ensure_loaded` 时
+## 迁移成同值的 10 位码，复现结果不变。
+## R261 起角色选择页也有种子输入框（那里更贴近「开局前」），这里是跨进程保留的默认值。
+static var next_seed_code := ""
 
 static var _loaded := false
 
@@ -42,7 +44,12 @@ static func ensure_loaded() -> void:
 	sfx_volume = clampf(float(cf.get_value("audio", "sfx_volume", 1.0)), 0.0, 1.0)
 	music_volume = clampf(float(cf.get_value("audio", "music_volume", 1.0)), 0.0, 1.0)
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
-	next_seed = int(cf.get_value("run", "seed", 0))
+	next_seed_code = str(cf.get_value("run", "seed_code", ""))
+	if next_seed_code == "":
+		# 旧版（R241~R260）的 int 种子 → 迁移成同值的 10 位种子码（复现结果不变）
+		var legacy := int(cf.get_value("run", "seed", 0))
+		if legacy > 0:
+			next_seed_code = RunState.seed_text_of(legacy)
 
 
 static func save() -> void:
@@ -52,7 +59,10 @@ static func save() -> void:
 	cf.set_value("audio", "sfx_volume", sfx_volume)
 	cf.set_value("audio", "music_volume", music_volume)
 	cf.set_value("display", "fullscreen", fullscreen)
-	cf.set_value("run", "seed", next_seed)
+	cf.set_value("run", "seed_code", next_seed_code)
+	# 旧键（int 种子）清掉：否则玩家把种子清空后，下次启动又被旧键迁移回来
+	if cf.has_section_key("run", "seed"):
+		cf.erase_section_key("run", "seed")
 	cf.save(PATH)
 
 
@@ -102,13 +112,17 @@ static func set_fullscreen(v: bool) -> void:
 	save()
 
 
-static func set_next_seed(v: int) -> void:
-	## 负数 / 0 一律当「随机」。
+static func set_next_seed_code(v: String) -> void:
+	## 规范化成 10 位种子码；**非法（长度不对 / 含 A-Z0-9 以外的字符 / 全 0）
+	## 一律当「随机」**（存空串）。输入到一半的半截串由界面自己管 ——
+	## 落盘的只会是「合法的码」或「空」。
 	ensure_loaded()
-	var nv := maxi(0, v)
-	if nv == next_seed:
+	var nv := v.strip_edges().to_upper()
+	if RunState.seed_value_of(nv) < 0:
+		nv = ""
+	if nv == next_seed_code:
 		return
-	next_seed = nv
+	next_seed_code = nv
 	save()
 
 

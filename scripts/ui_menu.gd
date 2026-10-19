@@ -282,6 +282,14 @@ func _rebuild() -> void:
 		# 暗底界面一律 on_dark（本菜单面板就是暗底）
 		UiTheme.apply_button(b, bool(it.get("primary", false)), true)
 		_box.add_child(b)
+	# R261：菜单底部**显示本局种子** —— 玩家随时按 Esc 抄下 10 位码，
+	# 下次在角色选择页填进去就能复现这一局。只在进行中的对局里显示。
+	if RunState.run_active:
+		var sp := Control.new()
+		sp.custom_minimum_size = Vector2(0, 4)
+		_box.add_child(sp)
+		_box.add_child(_mk_label("种子：%s" % RunState.seed_text(),
+				UiTheme.FS_CAPTION, Color("a89a6e"), false))
 
 
 func _mk_label(text: String, fs: int, col: Color, bold: bool) -> Label:

@@ -30,6 +30,9 @@ var _menu: UiMenu = null      # Esc 主菜单（R148）
 var _hover := -1              # 悬停的头像下标
 var _selected := -1           # 已选职业下标（_ready 里默认置 0 = 第一角色；-1 仅作初值）
 var _picked := false
+var _seed_edit: LineEdit = null   # R261：种子输入框（唯一的原生控件，手机点它弹软键盘）
+var _seed_guard := false          # 防止 text_changed 里改 text 触发二次回调
+var _seed_bad := false            # 输入的种子不合法（红框 + 提示；不静默换成随机）
 
 
 func _ready() -> void:
@@ -41,6 +44,7 @@ func _ready() -> void:
 	Bgm.play("class_pick")
 	DeckViewer.attach(self)
 	RelicViewer.attach(self, Vector2(1044, 6))
+	_build_seed_edit()   # R261：种子输入框（设置页的「下一局种子」会预填进来）
 	# -- --screenshot：自动截图退出（视觉验证用）
 	if "--screenshot" in OS.get_cmdline_user_args():
 		var t := Timer.new()
@@ -128,6 +132,94 @@ func _confirm_rect() -> Rect2:
 	return Rect2(p.position.x + 20.0, p.end.y - 72.0, PANEL_W - 40.0, 54.0)
 
 
+func _seed_panel_rect() -> Rect2:
+	## R261：种子面板摆在右下角 —— CG 人物一般在中左、头像行在底部居中，
+	## 这一块既不挡角色也不压头像（右上角是道具 / 牌库查看器）。
+	return Rect2(size.x - 356.0, size.y - 236.0, 316.0, 150.0)
+
+
+func _seed_edit_rect() -> Rect2:
+	var p := _seed_panel_rect()
+	return Rect2(p.position.x + 18.0, p.position.y + 40.0, p.size.x - 36.0, 34.0)
+
+
+func _build_seed_edit() -> void:
+	## 原生 LineEdit（手机上点它才会弹软键盘）—— 样式与设置页的种子框同一套。
+	GameSettings.ensure_loaded()
+	_seed_edit = LineEdit.new()
+	_seed_edit.placeholder_text = "留空 = 每局随机"
+	_seed_edit.max_length = RunState.SEED_LEN
+	_seed_edit.text = GameSettings.next_seed_code
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("1b1d24")
+	sb.border_color = Color("4a4e58")
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(4)
+	sb.content_margin_left = 8.0
+	sb.content_margin_right = 8.0
+	_seed_edit.add_theme_stylebox_override("normal", sb)
+	var sbf := StyleBoxFlat.new()
+	sbf.bg_color = Color("23262f")
+	sbf.border_color = Color("8f9ab4")
+	sbf.set_border_width_all(1)
+	sbf.set_corner_radius_all(4)
+	sbf.content_margin_left = 8.0
+	sbf.content_margin_right = 8.0
+	_seed_edit.add_theme_stylebox_override("focus", sbf)
+	_seed_edit.add_theme_font_override("font", _font)
+	_seed_edit.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
+	_seed_edit.add_theme_color_override("font_color", Color("ece7db"))
+	_seed_edit.add_theme_color_override("caret_color", UiTheme.SAND)
+	_seed_edit.add_theme_color_override("placeholder_color", Color("7d8590"))
+	_seed_edit.text_changed.connect(_on_seed_changed)
+	add_child(_seed_edit)
+	_sync_seed_edit()
+	resized.connect(_sync_seed_edit)
+
+
+func _sync_seed_edit() -> void:
+	if _seed_edit == null:
+		return
+	var r := _seed_edit_rect()
+	_seed_edit.position = r.position
+	_seed_edit.size = r.size
+
+
+func _on_seed_changed(txt: String) -> void:
+	## 只收 A-Z / 0-9（小写自动转大写）；其余字符当场剃掉。
+	if _seed_guard:
+		return
+	var code := ""
+	for i in txt.length():
+		var ch := txt[i].to_upper()
+		if RunState.SEED_ALPHABET.find(ch) >= 0:
+			code += ch
+	if code != txt:
+		_seed_guard = true
+		_seed_edit.text = code
+		_seed_edit.caret_column = code.length()
+		_seed_guard = false
+	_seed_bad = false
+	queue_redraw()
+
+
+func _draw_seed_panel() -> void:
+	var p := _seed_panel_rect()
+	draw_rect(p, Color(0.04, 0.05, 0.08, 0.78), true)
+	draw_rect(p, Color("b4523f") if _seed_bad else Color(1, 1, 1, 0.22), false, 1.6)
+	draw_string(_font_bold, p.position + Vector2(18, 26), "随机种子",
+			HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_BODY, Color("e0b23c"))
+	draw_string(_font, p.position + Vector2(18, 96), "留空 = 每局随机",
+			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 36.0, UiTheme.FS_CAPTION, Color("9a968c"))
+	var hint2 := "或填 10 位（A-Z / 0-9）复现同一局"
+	var hint_col := Color("7d8590")
+	if _seed_bad:
+		hint2 = "种子需 10 位：大写字母 / 数字"
+		hint_col = Color("e07a6a")
+	draw_string(_font, p.position + Vector2(18, 116), hint2,
+			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 36.0, UiTheme.FS_CAPTION, hint_col)
+
+
 # ──────────────────────────────────────────────────────────────
 
 func _draw() -> void:
@@ -146,6 +238,7 @@ func _draw() -> void:
 		else:
 			draw_rect(full, UiTheme.SCREEN_BG)
 		_draw_panel(cid)
+		_draw_seed_panel()
 	for i in PlayerClass.ids().size():
 		_draw_avatar(i)
 
@@ -338,17 +431,27 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _choose(cid: String) -> void:
-	_picked = true
 	sfx.play("click")
 	# 角色决定：初始卡组追加的专属卡 + 战斗赠品道具（见 PlayerClass）。
 	# 地图由 RunState.start_run 用本局种子生成（同一种子必然生成同一张图）。
-	# R241：设置页填了「下一局种子」就用它（复现用）；填 0 则现摇一个。
+	# R261：种子输入框优先（10 位 A-Z / 0-9）；留空 → 现摇一个。
+	# 设置页的「下一局种子」会预填进这个框 —— 两条入口同一套口径。
+	var code := ""
+	if _seed_edit != null:
+		code = _seed_edit.text.strip_edges().to_upper()
+	if code != "" and RunState.seed_value_of(code) < 0:
+		# 半截 / 含非法字符：**不开局**，红框提示。绝不静默改成随机 —— 玩家会以为复现了。
+		_seed_bad = true
+		queue_redraw()
+		return
+	_picked = true
 	GameSettings.ensure_loaded()
-	var want_seed: int = GameSettings.next_seed
-	RunState.start_run([], GameLayers.LAYER_DEFAULT, cid, want_seed)
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, cid, 0, code)
 	# 指定种子**用一次就清空**：否则玩家会莫名其妙「每局地图都一样」。
-	# 要再复现同一局，回设置页把种子再填一次即可（记录详情里能查到那串数字）。
-	if want_seed != 0:
-		GameSettings.set_next_seed(0)
+	# 要再复现同一局，把记录详情里那 10 位码抄回来即可。
+	if code != "":
+		GameSettings.set_next_seed_code("")
+	if _seed_edit != null:
+		_seed_edit.text = ""
 	RunRecord.begin_run(cid)   # 本局开始：对战记录从这里计时
 	SceneFx.goto("res://scenes/map.tscn")

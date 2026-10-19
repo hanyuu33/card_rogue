@@ -138,6 +138,13 @@ const FATIGUE_CARD_ID := 9149
 # ---- 本局种子：run 层唯一随机源 ----
 static var run_seed: int = 0                 # 本局种子（run 层全部随机由它派生；同一种子重跑必然一致）
 static var run_rng := RandomNumberGenerator.new()   # 本局随机源（地图/道具/关卡/掉落/五换一）
+## R261：对玩家展示的种子 = **10 位大写字母 / 数字**（标准 base36：0-9 在前、A-Z 在后，
+## 所以补位字符是 0、字母位值是 10~35）。
+## 与 `run_seed` 一一对应（`seed_text_of` / `seed_value_of` 互逆）—— 玩家抄这 10 位就能
+## 复现同一局；内部仍用 int 播种（存档 / 对战记录 / 测试断言都是 int）。
+## 0 仍是「没有种子 / 随机」的哨兵 → 全 0 的码按非法处理（`seed_value_of` 返回 -1）。
+const SEED_LEN := 10
+const SEED_ALPHABET := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # ---- 道具 ----
 static var relics: Array[int] = []           # 已拥有的道具 id（跨战斗保留）
@@ -438,7 +445,7 @@ static func lose_max_hp(amount: int) -> int:
 # ------------------------------------------------------------ run 生命周期
 
 static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
-		cid: String = "", seed_override := 0) -> void:
+		cid: String = "", seed_override := 0, seed_code := "") -> void:
 	## 新 run：满血、初始卡组、载入地图、定位起点（第 0 列唯一节点）。
 	## layer = 本局地图所属的层（地图上所有战斗/事件都从这一层的内容池里取）。
 	## map 传空数组时用本局种子现生成（真实流程 = 角色选择场景这样进来）。
@@ -450,9 +457,17 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	if max_hp_mul() < 1.0:
 		base_hp = int(base_hp * max_hp_mul())
 	reset(base_hp)
-	# run 种子（R241）：**全局唯一随机源**的根 —— 地图 / 掉落 / 摇卡 / 商店库存 / 战斗种子
+	# run 种子（R241 / R261）：**全局唯一随机源**的根 —— 地图 / 掉落 / 摇卡 / 商店库存 / 战斗种子
 	# 全部从它派生；同一种子重开、以及「继续游戏」读档（seed + rng.state）都走这条链。
-	run_seed = seed_override if seed_override != 0 else randi()
+	# R261：优先吃玩家输入的 10 位种子码；其次旧的 int 覆盖（测试与旧调用点）；
+	# 都没有 → 现摇一个 10 位码（整局唯一碰全局随机源的地方，见 random_seed_text）。
+	var code_v := seed_value_of(seed_code) if seed_code != "" else -1
+	if code_v > 0:
+		run_seed = code_v
+	elif seed_override != 0:
+		run_seed = seed_override
+	else:
+		run_seed = seed_value_of(random_seed_text())
 	run_rng = RandomNumberGenerator.new()
 	run_rng.seed = run_seed
 	run_active = true
@@ -1229,9 +1244,57 @@ static func _memory_visible(id: int) -> bool:
 
 
 static func seed_text() -> String:
-	## 种子的展示文本（设置页 / 对战记录共用；开局前 = 「—」）。
-	## 玩家拿这串数字就能让别人（或自己）用「下一局种子」复现同一局。
-	return "—" if run_seed == 0 else str(run_seed)
+	## 本局种子的展示文本（ESC 菜单 / 设置页 / 对战记录共用；没有进行中的局 = 「—」）。
+	## R261：一律是 **10 位大写字母 / 数字**，玩家抄下来就能复现同一局。
+	if not run_active or run_seed == 0:
+		return "—"
+	return seed_text_of(run_seed)
+
+
+static func seed_text_of(v: int) -> String:
+	## int 种子 → **10 位 base36 大写文本**（不足左补 0）。与 `seed_value_of` 互逆 ——
+	## 对战记录里的老记录（只存了 int）也靠它显示成同一套种子码。
+	if v <= 0:
+		return "0".repeat(SEED_LEN)
+	var out := ""
+	var n := v
+	while n > 0:
+		out = SEED_ALPHABET[n % 36] + out
+		n = n / 36
+	while out.length() < SEED_LEN:
+		out = "0" + out
+	return out
+
+
+static func seed_value_of(code: String) -> int:
+	## 10 位种子码 → int 种子。小写自动转大写、首尾空格忽略；
+	## **非法一律返回 -1**（长度不对 / 有 A-Z0-9 以外的字符 / 全 0）。
+	## 全 0 视为非法：0 在本工程里是「没有种子」的哨兵，不能被当成一个可复现的种子。
+	var s := code.strip_edges().to_upper()
+	if s.length() != SEED_LEN:
+		return -1
+	var v := 0
+	for i in SEED_LEN:
+		var idx := SEED_ALPHABET.find(s[i])
+		if idx < 0:
+			return -1
+		v = v * 36 + idx
+	return -1 if v == 0 else v
+
+
+static func random_seed_text() -> String:
+	## 新开一局时**现摇**一个 10 位种子码（A-Z + 0-9）。
+	## ⚠️ 这是整局唯一碰全局随机源的地方（R241 起就只在开局摇这一次）：
+	##    之后所有随机都由 `run_rng` 派生 → 同一种子必然一致，续档也不会变。
+	## 全 0 的码重摇（概率 1/36^10）—— 保证「0 = 没有种子」这个哨兵不被撞上。
+	var s := ""
+	while s == "":
+		s = ""
+		for i in SEED_LEN:
+			s += SEED_ALPHABET[randi() % 36]
+		if seed_value_of(s) < 0:
+			s = ""
+	return s
 
 
 static func shuffle_rng(arr: Array) -> void:

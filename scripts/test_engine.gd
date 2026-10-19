@@ -5165,6 +5165,110 @@ func _init() -> void:
 	check(kiln_curve == [1, 1, 2, 2, 3, 3],
 			"鸭子窑下调（R172）：第 1..6 回合烧出的陶瓷鸭生命 = 1,1,2,2,3,3（每 2 回合 +1，实际 %s）" % str(kiln_curve))
 
+	# ---- R259：场上陶瓷鸭 >= 3 只时改为「只召唤 1 只（相邻空格随机）+ 全体 +1 血」----
+	check(kiln_c.effect_text.contains("少于3只时") and kiln_c.effect_text.contains("只召唤1只")
+			and kiln_c.effect_text.contains("所有陶瓷鸭+1血量"),
+			"R259：鸭子窑卡面写明 <3 只照旧、>=3 只只召唤 1 只且全体 +1 血量")
+	# ① 场上 0 只（<3）→ 原逻辑：相邻空格各刷 1 只
+	var eng_r259a := _new_engine([], 20, 40)
+	eng_r259a.state.place(kiln_c, Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	eng_r259a._kiln_hatch(GameEngine.SIDE_OPPONENT)
+	var r259a_cnt := 0
+	for cell_r259a in eng_r259a.state.board:
+		var qa: Placement = eng_r259a.state.board[cell_r259a]
+		if qa.owner == GameEngine.SIDE_OPPONENT and qa.card.id == 9026:
+			r259a_cnt += 1
+	check(r259a_cnt == 3, "R259：场上 0 只陶瓷鸭（<3）→ 维持原逻辑四邻各刷 1 只（3 只）")
+	# ② 场上恰好 2 只（<3）→ 仍走原逻辑：再刷 3 只且原有 2 只不加血
+	var eng_r259b := _new_engine([], 20, 40)
+	eng_r259b.state.place(kiln_c, Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	eng_r259b.state.place(_card(9026, "陶瓷鸭", "盟友", 1, 6, 5), Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+	eng_r259b.state.place(_card(9026, "陶瓷鸭", "盟友", 1, 6, 7), Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
+	eng_r259b._kiln_hatch(GameEngine.SIDE_OPPONENT)
+	var r259b_hp: Array[int] = []
+	for cell_r259b in eng_r259b.state.board:
+		var qb: Placement = eng_r259b.state.board[cell_r259b]
+		if qb.owner == GameEngine.SIDE_OPPONENT and qb.card.id == 9026:
+			r259b_hp.append(qb.health)
+	r259b_hp.sort()
+	check(r259b_hp == [1, 1, 1, 5, 7],
+			"R259：场上 2 只陶瓷鸭（<3）→ 原逻辑再刷 3 只（各 1 血），原有 2 只不加血（实际 %s）" % str(r259b_hp))
+	# ③ 场上 3 只（>=3）→ 新逻辑：相邻空格随机 1 个只刷 1 只，全体 +1 血（含新生儿）
+	var eng_r259c := _new_engine([], 20, 40)
+	eng_r259c.state.place(kiln_c, Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	eng_r259c.state.place(_card(9026, "陶瓷鸭", "盟友", 1, 6, 5), Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+	eng_r259c.state.place(_card(9026, "陶瓷鸭", "盟友", 1, 6, 7), Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
+	eng_r259c.state.place(_card(9026, "陶瓷鸭", "盟友", 1, 6, 9), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	eng_r259c._kiln_hatch(GameEngine.SIDE_OPPONENT)
+	var r259c_hp: Array[int] = []
+	var r259c_cnt := 0
+	var r259c_newborn := 0
+	for cell_r259c in eng_r259c.state.board:
+		var qc: Placement = eng_r259c.state.board[cell_r259c]
+		if qc.owner == GameEngine.SIDE_OPPONENT and qc.card.id == 9026:
+			r259c_cnt += 1
+			r259c_hp.append(qc.health)
+			if cell_r259c in [Vector2i(0, 0), Vector2i(0, 2), Vector2i(1, 1)]:
+				r259c_newborn += 1
+	r259c_hp.sort()
+	check(r259c_cnt == 4 and r259c_newborn == 1,
+			"R259：场上 3 只（>=3）→ 只召唤 1 只且落点在相邻空格 (0,0)/(0,2)/(1,1) 中（共 %d 只，新生 %d 只）"
+			% [r259c_cnt, r259c_newborn])
+	check(r259c_hp == [2, 6, 8, 10],
+			"R259：全体 +1 血 —— 原有 5/7/9 → 6/8/10，新生儿生命 1（第 1 回合）+1 = 2（实际 %s）" % str(r259c_hp))
+	# ④ 回合推进连击：第 1 回合照旧 3 只 → 第 2 回合占满不动作 → 挪出空格后只 1 只 + 全体 +1
+	var eng_r259d := _new_engine([], 20, 40)
+	eng_r259d.state.place(kiln_c, Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	eng_r259d.opp_turns = 1
+	eng_r259d._kiln_hatch(GameEngine.SIDE_OPPONENT)
+	var r259d_r1: Array[int] = []
+	for cell_r259d1 in eng_r259d.state.board:
+		var qd1: Placement = eng_r259d.state.board[cell_r259d1]
+		if qd1.owner == GameEngine.SIDE_OPPONENT and qd1.card.id == 9026:
+			r259d_r1.append(qd1.health)
+	r259d_r1.sort()
+	check(r259d_r1 == [1, 1, 1], "R259 连击①：第 1 回合 0 只 → 原逻辑 3 只各 1 血")
+	eng_r259d.opp_turns = 2
+	eng_r259d._kiln_hatch(GameEngine.SIDE_OPPONENT)      # 3 只但相邻格被占满 → 不召唤不加血
+	var r259d_r2: Array[int] = []
+	for cell_r259d2 in eng_r259d.state.board:
+		var qd2: Placement = eng_r259d.state.board[cell_r259d2]
+		if qd2.owner == GameEngine.SIDE_OPPONENT and qd2.card.id == 9026:
+			r259d_r2.append(qd2.health)
+	r259d_r2.sort()
+	check(r259d_r2 == [1, 1, 1],
+			"R259 连击②：第 2 回合 3 只（>=3）但相邻格被占满 → 不召唤也不加血（原样）")
+	eng_r259d.state.move_unit(Vector2i(0, 0), Vector2i(5, 2))   # 挪走一只露出空格
+	eng_r259d.opp_turns = 3
+	eng_r259d._kiln_hatch(GameEngine.SIDE_OPPONENT)
+	var r259d_r3: Array[int] = []
+	for cell_r259d3 in eng_r259d.state.board:
+		var qd3: Placement = eng_r259d.state.board[cell_r259d3]
+		if qd3.owner == GameEngine.SIDE_OPPONENT and qd3.card.id == 9026:
+			r259d_r3.append(qd3.health)
+	r259d_r3.sort()
+	check(r259d_r3 == [2, 2, 2, 3],
+			"R259 连击③：挪出空格后第 3 回合只烧 1 只（生命 ceil(3/2)=2，+1=3），其余 3 只各 +1（1→2）（实际 %s）"
+			% str(r259d_r3))
+	# ⑤ 己方窑同样生效（读 turn_number）
+	var eng_r259e := _new_engine([], 20, 40)
+	eng_r259e.turn_number = 1
+	eng_r259e.state.place(kiln_c, Vector2i(5, 1), GameEngine.SIDE_SELF)
+	eng_r259e.state.place(_card(9026, "陶瓷鸭", "盟友", 1, 6, 4), Vector2i(2, 0), GameEngine.SIDE_SELF)
+	eng_r259e.state.place(_card(9026, "陶瓷鸭", "盟友", 1, 6, 4), Vector2i(2, 2), GameEngine.SIDE_SELF)
+	eng_r259e.state.place(_card(9026, "陶瓷鸭", "盟友", 1, 6, 4), Vector2i(3, 1), GameEngine.SIDE_SELF)
+	eng_r259e._kiln_hatch(GameEngine.SIDE_SELF)
+	var r259e_hp: Array[int] = []
+	var r259e_cnt := 0
+	for cell_r259e in eng_r259e.state.board:
+		var qe: Placement = eng_r259e.state.board[cell_r259e]
+		if qe.owner == GameEngine.SIDE_SELF and qe.card.id == 9026:
+			r259e_cnt += 1
+			r259e_hp.append(qe.health)
+	r259e_hp.sort()
+	check(r259e_cnt == 4 and r259e_hp == [2, 5, 5, 5],
+			"R259：己方窑同样生效（读 turn_number）—— 只 1 只（1+1=2），原有 3 只 4→5（实际 %s）" % str(r259e_hp))
+
 	# 新关卡「鸭子窑」：第一层·精英敌人-简单（R158 从「第二层·普通敌人-困难」上调），
 	# 后排中央一座鸭子窑
 	var lvk: Dictionary = _level_named("鸭子窑")
@@ -17377,8 +17481,9 @@ func _init() -> void:
 	var r241_boss_a := var_to_str(RunState.boss_pick)
 	var r241_roll_a: Array = [RunState.run_rng.randi(), RunState.run_rng.randi(),
 			RunState.run_rng.randi()]
-	check(RunState.run_seed == 424242 and RunState.seed_text() == "424242",
-			"R241 种子：start_run(seed) 用指定种子，seed_text() 就是它（%s）"
+	check(RunState.run_seed == 424242
+			and RunState.seed_text() == RunState.seed_text_of(424242),
+			"R241 种子：start_run(seed) 用指定种子，seed_text() = 对应的 10 位种子码（%s）"
 			% RunState.seed_text())
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID, 424242)
 	check(var_to_str(RunState.map_cells) == r241_map_a,
@@ -17487,6 +17592,115 @@ func _init() -> void:
 		cf.store_string(r215_cfg_bak)
 		cf = null
 	GameSettings._loaded = false
+
+	# ---------------------------------------------------------------- R261
+	# 固定随机种子（10 位大写字母 / 数字）+ ESC 菜单 / 对战记录显示 + 按种子开局。
+	# 用户口径：单局用固定种子（10 位 A-Z + 0-9）、所有随机都由它派生、
+	#          点「继续游戏」不能改变接下来的随机；ESC 菜单与对战记录里能看到种子；
+	#          玩家可以填种子开新局。
+	# ① 格式：seed_text_of ↔ seed_value_of 互逆，恒 10 位、只含 A-Z / 0-9
+	var r261_code := RunState.seed_text_of(424242)
+	var r261_chars_ok := true
+	for r261_ch in r261_code:
+		if RunState.SEED_ALPHABET.find(r261_ch) < 0:
+			r261_chars_ok = false
+	check(r261_code.length() == 10 and r261_chars_ok
+			and RunState.seed_value_of(r261_code) == 424242,
+			"R261 种子码：424242 ↔ %s（10 位 A-Z/0-9，可逆）" % r261_code)
+	check(RunState.seed_text_of(1) == "0000000001"
+			and RunState.seed_text_of(35) == "000000000Z"
+			and RunState.seed_text_of(36) == "0000000010",
+			"R261 种子码：base36 进位正确（1 → 0000000001 / 35 → Z / 36 → 10）")
+	# ② 小写与首尾空格自动归一；长度不对 / 非法字符 / 全 0 / 空 → -1
+	check(RunState.seed_value_of(r261_code.to_lower()) == 424242
+			and RunState.seed_value_of("  %s " % r261_code.to_lower()) == 424242,
+			"R261 种子码：小写与首尾空格自动归一")
+	check(RunState.seed_value_of("ABC") == -1
+			and RunState.seed_value_of("ABCD12345-") == -1
+			and RunState.seed_value_of("0000000000") == -1
+			and RunState.seed_value_of("") == -1,
+			"R261 种子码：长度不符 / 含非法字符 / 全 0 / 空 → -1")
+	# ③ 现摇的种子必须合法（连摇 30 次都过校验）
+	var r261_rand_ok := true
+	for r261_i in 30:
+		var r261_s := RunState.random_seed_text()
+		if r261_s.length() != 10 or RunState.seed_value_of(r261_s) < 0:
+			r261_rand_ok = false
+	check(r261_rand_ok, "R261 随机种子：random_seed_text 恒为 10 位合法码（30 次）")
+	# ④ 按种子码开局：同一个码两次 → 种子 / 地图 / 随机串完全一致
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID, 0, "K7M2QX9B4T")
+	var r261_map_a := var_to_str(RunState.map_cells)
+	var r261_roll_a: Array = [RunState.run_rng.randi(), RunState.run_rng.randi()]
+	check(RunState.run_seed == RunState.seed_value_of("K7M2QX9B4T")
+			and RunState.seed_text() == "K7M2QX9B4T",
+			"R261 按种子开局：start_run(..., 0, 码) 用该码，seed_text() 原样返回（%s）"
+			% RunState.seed_text())
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID, 0, "k7m2qx9b4t")
+	check(var_to_str(RunState.map_cells) == r261_map_a
+			and [RunState.run_rng.randi(), RunState.run_rng.randi()] == r261_roll_a,
+			"R261 按种子开局：小写码同样复现（地图与接下来 2 次随机都一致）")
+	# ⑤ 换一个码 → 地图跟着变（证明码真的在驱动生成）
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID, 0, "K7M2QX9B4U")
+	check(var_to_str(RunState.map_cells) != r261_map_a, "R261 换码：地图跟着变")
+	# ⑥ 「继续游戏」不改接下来的随机：快照 → 打乱内存 → apply → 随机串原样接上
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID, 0, "SEED2026AA")
+	var r261_snap := RunSave.snapshot()
+	var r261_next_a: Array = [RunState.run_rng.randi(), RunState.run_rng.randi(),
+			RunState.run_rng.randi()]
+	RunState.run_rng = RandomNumberGenerator.new()
+	RunState.run_rng.seed = 99
+	RunState.run_rng.randi()
+	RunState.run_seed = 1
+	RunSave.apply(r261_snap)
+	var r261_next_b: Array = [RunState.run_rng.randi(), RunState.run_rng.randi(),
+			RunState.run_rng.randi()]
+	check(RunState.run_seed == RunState.seed_value_of("SEED2026AA")
+			and RunState.seed_text() == "SEED2026AA"
+			and r261_next_b == r261_next_a,
+			"R261 继续游戏：读档后种子不变、接下来 3 次随机与存档前完全一致（%s）"
+			% str(r261_next_a))
+	# ⑦ 设置页「下一局种子」：合法码统一大写落盘；半截 / 非法一律当随机（空）
+	var r261_cfg_bak := ""
+	if FileAccess.file_exists(GameSettings.PATH):
+		r261_cfg_bak = FileAccess.get_file_as_string(GameSettings.PATH)
+	GameSettings._loaded = false
+	GameSettings.set_next_seed_code("abcd1234xy")
+	check(GameSettings.next_seed_code == "ABCD1234XY",
+			"R261 设置：小写种子码落盘前统一成全大写（%s）" % GameSettings.next_seed_code)
+	GameSettings._loaded = false
+	GameSettings.ensure_loaded()
+	check(GameSettings.next_seed_code == "ABCD1234XY",
+			"R261 设置：种子码写进 settings.cfg 并能读回")
+	GameSettings.set_next_seed_code("ABC")
+	check(GameSettings.next_seed_code == "",
+			"R261 设置：半截 / 非法码一律当「随机」（清空）")
+	if r261_cfg_bak == "":
+		if FileAccess.file_exists(GameSettings.PATH):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(GameSettings.PATH))
+	else:
+		var r261_cf := FileAccess.open(GameSettings.PATH, FileAccess.WRITE)
+		r261_cf.store_string(r261_cfg_bak)
+		r261_cf = null
+	GameSettings._loaded = false
+	GameSettings.ensure_loaded()
+	# ⑧ 界面源码守卫：ESC 菜单 / 对战记录 / 角色选择页都接上了种子
+	var r261_src_menu := FileAccess.get_file_as_string("res://scripts/ui_menu.gd")
+	var r261_src_rec := FileAccess.get_file_as_string("res://scripts/record_list_scene.gd")
+	var r261_src_cp := FileAccess.get_file_as_string("res://scripts/class_pick_scene.gd")
+	check(r261_src_menu.find("种子：%s") >= 0
+			and r261_src_menu.find("RunState.seed_text()") >= 0,
+			"R261 界面：ESC 菜单底部显示本局种子")
+	check(r261_src_rec.count("RunState.seed_text_of") >= 2,
+			"R261 界面：对战记录列表行 + 详情都用种子码显示")
+	check(r261_src_cp.find("_seed_edit") >= 0
+			and r261_src_cp.find("RunState.seed_value_of(code)") >= 0
+			and r261_src_cp.find(
+			"RunState.start_run([], GameLayers.LAYER_DEFAULT, cid, 0, code)") >= 0,
+			"R261 界面：角色选择页有种子输入框，且按该码开局")
+	# ⑨ 全局随机源守卫：run_state 仍只有 1 处裸 randi()（现摇种子）
+	var r261_rsrc := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	check(r261_rsrc.count("randi()") - r261_rsrc.count(".randi()") == 1,
+			"R261 确定性：run_state 仍只有 1 处裸 randi()（random_seed_text 现摇种子）")
 
 	# ---------------------------------------------------------------- R216
 	# 「必须先选卡才能结算」的唯一判据口（`RunState.waiting_pick_scene`）。
@@ -17974,6 +18188,37 @@ func _init() -> void:
 
 	RunState.set_difficulty(0)
 	RunState.player_class = r223_cls_prev
+
+	# ---- R260：难度 3/6 敌方缩放只作用于「开局在场」的敌人 ----
+	# 用户口径「只有开局在场的敌人获得 +1 攻，后续入场的不享受」。
+	# 实现口径：缩放唯一发生在 battle_scene 的开场 enemy_units 接线（RunState.scaled_enemy_card）；
+	# 引擎侧一切中程入场（亡语 _summon_token / 罐子 _summon_jar_enemy / 暗影召唤 _assassin_summon /
+	# 使魔 _demon_summon 等）都直接取卡库原卡，不过缩放 —— 这里把该口径钉成断言。
+	RunState.set_difficulty(6)
+	var r260_repo := CardRepo.load_json()
+	var r260_open: CardData = RunState.scaled_enemy_card(r260_repo.get_card(1011))   # 铁壁卫兵 3/40
+	check(r260_open.power == 4 and r260_open.health == 44,
+			"R260 开场口径：难度 6 下 1011 铁壁卫兵 → 4/44（敌攻 +1 且敌血 +10%）")
+	var r260_late_e := _new_engine([], 40, 40, -1, false)
+	var r260_late := r260_late_e.state.place(r260_repo.get_card(1011), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	check(r260_late.card.power == 3 and r260_late.health == 40,
+			"R260 难度 6：开场后入场的敌人原值 3/40（不吃 +1 攻 / +10% 生命）")
+	var r260_sk_power: int = r260_repo.get_card(9029).power
+	r260_late_e.state.place(CardData.from_dict(r260_repo.get_card(1051).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	r260_late_e._destroy(Vector2i(4, 1))
+	var r260_skells := 0
+	var r260_sk_ok := true
+	for r260_r in FieldState.BOARD_ROWS:
+		for r260_c in FieldState.BOARD_COLS:
+			var r260_q := r260_late_e.state.unit_at(Vector2i(r260_r, r260_c))
+			if r260_q != null and r260_q.card.id == 9029:
+				r260_skells += 1
+				if r260_q.card.power != r260_sk_power:
+					r260_sk_ok = false
+	check(r260_skells == 2 and r260_sk_ok,
+			"R260 难度 6：亡灵领主亡语召出的 2 只骷髅力量 = %d（卡库原值，不 +1）" % r260_sk_power)
+	RunState.set_difficulty(0)
 
 	# ---- R232：夜行（9155）/ 蓄势（9156）----
 	var r232_repo := CardRepo.load_json()
