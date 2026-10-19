@@ -18,6 +18,7 @@
     python _art_index.py --todo       待做清单
     python _art_index.py --skip       暂不做清单（带理由）
     python _art_index.py --done       已完成清单
+    python _art_index.py --batch      批次排期（★ = 当前批，跟着 art_plan.json 走）
     python _art_index.py --md         重写 卡图索引.md
     python _art_index.py --check      只体检；有问题退出码 1（可挂自检）
     python _art_index.py --json       机器可读
@@ -26,7 +27,8 @@
 体检四项：
     ① 占位图残留 —— 卡图宽度 < 300 或高度 < 270（真图规范 448×403，最小 512×456）
     ② 孤儿图 —— assets/pics 里有图，但没有对应卡
-    ③ 计划失效 —— art_plan.json 的 skip 引用了不存在的卡 / 已经有图的卡
+    ③ 计划失效 —— art_plan.json 的 skip 引用了不存在的卡 / 已经有图的卡；
+                   batches 里引用了不存在的卡
     ④ 规格不足 —— 真图但尺寸小于规范（只提醒，不算失败）
 """
 
@@ -66,10 +68,12 @@ def load_cards():
 
 
 def load_plan():
+    """返回 (skip, batches)。batches = 排期批次（`active: true` 的那个是当前批）。"""
     if not os.path.exists(ART_PLAN):
-        return {}
+        return {}, []
     with open(ART_PLAN, encoding="utf-8") as f:
-        return json.load(f).get("skip", {})
+        data = json.load(f)
+    return data.get("skip", {}), data.get("batches", [])
 
 
 def png_size(path):
@@ -141,7 +145,7 @@ def label_class(c):
 # ── 体检 ────────────────────────────────────────────────────────────────
 
 
-def health(rows, art, skip):
+def health(rows, art, skip, batches=()):
     """返回 (问题列表, 提醒列表)。问题 = 必须修；提醒 = 建议修。"""
     errors, warns = [], []
     ids = {str(r["card"]["id"]) for r in rows}
@@ -171,6 +175,12 @@ def health(rows, art, skip):
             errors.append("art_plan.json 的 skip 里有不存在的 id：%s（%s）" % (cid, reason))
         elif art.get(cid):
             errors.append("art_plan.json 把 id=%s 标成「暂不做」，但它已经有图了" % cid)
+
+    # ④ 批次失效（art_plan.json 的 batches）
+    for b in batches:
+        for cid in b.get("ids", []):
+            if str(cid) not in ids:
+                errors.append("批次「%s」里有不存在的 id：%s" % (b.get("name", "?"), cid))
     return errors, warns
 
 
@@ -181,7 +191,21 @@ def pct(a, b):
     return 0.0 if b == 0 else 100.0 * a / b
 
 
-def print_summary(rows, errors, warns):
+def active_batch(batches):
+    for b in batches:
+        if b.get("active"):
+            return b
+    return batches[0] if batches else None
+
+
+def batch_progress(rows, batch):
+    """返回 (已完成, 总数) —— 批次里的卡可能已被跳做 / 已出图。"""
+    by_id = {str(r["card"]["id"]): r for r in rows}
+    ids = [str(i) for i in batch.get("ids", [])]
+    return sum(1 for i in ids if by_id.get(i, {}).get("state") == STATE_DONE), len(ids)
+
+
+def print_summary(rows, errors, warns, batches=()):
     total = len(rows)
     done = [r for r in rows if r["state"] == STATE_DONE]
     todo = [r for r in rows if r["state"] == STATE_TODO]
@@ -201,6 +225,11 @@ def print_summary(rows, errors, warns):
         s = sum(1 for r in sub if r["state"] == STATE_SKIP)
         print("  %-6s %3d 张：有图 %3d / 待做 %3d / 不做 %2d" % (CLASS_LABEL.get(cls, cls), len(sub), d, t, s))
     print()
+    b = active_batch(batches)
+    if b:
+        d, n = batch_progress(rows, b)
+        print("当前批次：%s —— %d/%d 已完成（还差 %d 张）" % (b.get("name", "?"), d, n, n - d))
+        print()
     if errors:
         print("体检：%d 个问题" % len(errors))
         for e in errors[:20]:
@@ -247,6 +276,30 @@ def print_table(rows, state, show_reason=False):
         print(" ".join(_pad(v, w) for v, w in zip(cells, widths)).rstrip())
 
 
+def print_batches(rows, batches):
+    if not batches:
+        print("（art_plan.json 里还没有批次）")
+        return
+    by_id = {str(r["card"]["id"]): r for r in rows}
+    for b in batches:
+        d, n = batch_progress(rows, b)
+        print("%s %s —— %d/%d" % ("★" if b.get("active") else " ", b.get("name", "?"), d, n))
+        if b.get("note"):
+            print("    " + b["note"])
+        heads = ["id", "卡名", "职业", "种类", "状态"]
+        widths = [5, 14, 10, 6, 8]
+        print("  " + " ".join(_pad(h, w) for h, w in zip(heads, widths)).rstrip())
+        for cid in [str(i) for i in b.get("ids", [])]:
+            r = by_id.get(cid)
+            if not r:
+                print("  " + cid + "  （cards.json 里没有这张）")
+                continue
+            c = r["card"]
+            cells = [c.get("id"), c.get("name"), label_class(c), c.get("kind"), r["state"]]
+            print("  " + " ".join(_pad(v, w) for v, w in zip(cells, widths)).rstrip())
+        print()
+
+
 def md_table(rows, state):
     sub = [r for r in rows if r["state"] == state]
     sub.sort(key=sort_key)
@@ -284,7 +337,7 @@ def rarity_name(r):
     return RARITY_NAMES[r] if 0 <= r < len(RARITY_NAMES) else str(r)
 
 
-def write_md(rows, errors, warns):
+def write_md(rows, errors, warns, batches=()):
     total = len(rows)
     done = [r for r in rows if r["state"] == STATE_DONE]
     todo = [r for r in rows if r["state"] == STATE_TODO]
@@ -353,16 +406,38 @@ def write_md(rows, errors, warns):
     L.append("- 尺寸：**%d×%d**（卡图窗比例 1.112，横向）；四周留 6%% 安全边，整幅按 cover 铺满。"
              % (SPEC_W, SPEC_H))
     L.append("- 判存：`CardFace.art_for()` 先找变体、再找本图；都没有 → 卡面走职业色渐变横幅（不是 bug）。")
-    L.append("- 体检：`python _art_index.py --check` 会拦「占位图残留 / 孤儿图 / 计划失效」。")
+    L.append("- 体检：`python _art_index.py --check` 会拦「占位图残留 / 孤儿图 / 计划失效 / 批次失效」。")
     L.append("")
+    if batches:
+        by_id = {str(r["card"]["id"]): r for r in rows}
+        L.append("## 六、批次排期")
+        L.append("")
+        for b in batches:
+            d, n = batch_progress(rows, b)
+            L.append("### %s%s —— %d/%d" % ("★ " if b.get("active") else "", b.get("name", "?"), d, n))
+            L.append("")
+            if b.get("note"):
+                L.append(b["note"])
+                L.append("")
+            L.append("| id | 卡名 | 职业 | 种类 | 稀有度 | 费用 | 状态 |")
+            L.append("|---|---|---|---|---|---|---|")
+            for cid in [str(i) for i in b.get("ids", [])]:
+                r = by_id.get(cid)
+                if not r:
+                    continue
+                c = r["card"]
+                L.append("| %s | %s | %s | %s | %s | %s | %s |" % (
+                    c.get("id"), c.get("name"), label_class(c), c.get("kind"),
+                    rarity_name(int(c.get("rarity", 0))), c.get("cost"), r["state"]))
+            L.append("")
     if errors:
-        L.append("## 六、体检问题（%d）" % len(errors))
+        L.append("## 七、体检问题（%d）" % len(errors))
         L.append("")
         for e in errors:
             L.append("- %s" % e)
         L.append("")
     if warns:
-        L.append("## 七、提醒（%d）" % len(warns))
+        L.append("## 八、提醒（%d）" % len(warns))
         L.append("")
         for w in warns:
             L.append("- %s" % w)
@@ -389,6 +464,7 @@ def main():
     ap.add_argument("--todo", action="store_true", help="待做清单")
     ap.add_argument("--skip", action="store_true", help="暂不做清单（带理由）")
     ap.add_argument("--done", action="store_true", help="已完成清单")
+    ap.add_argument("--batch", action="store_true", help="批次排期（★ = 当前批）")
     ap.add_argument("--md", action="store_true", help="重写 卡图索引.md")
     ap.add_argument("--check", action="store_true", help="只体检；有问题退出码 1")
     ap.add_argument("--json", action="store_true", help="机器可读输出")
@@ -399,9 +475,9 @@ def main():
 
     cards = load_cards()
     art = scan_art()
-    skip = load_plan()
+    skip, batches = load_plan()
     rows = classify(cards, art, skip)
-    errors, warns = health(rows, art, skip)
+    errors, warns = health(rows, art, skip, batches)
 
     # 过滤只影响清单，不影响体检（体检永远看全量）
     view = rows
@@ -428,10 +504,12 @@ def main():
         print_table(view, STATE_SKIP, show_reason=True)
     elif args.done:
         print_table(view, STATE_DONE)
+    elif args.batch:
+        print_batches(rows, batches)
     elif args.md:
-        write_md(rows, errors, warns)
+        write_md(rows, errors, warns, batches)
     else:
-        print_summary(view, errors, warns)
+        print_summary(view, errors, warns, batches)
     return 1 if errors else 0
 
 
