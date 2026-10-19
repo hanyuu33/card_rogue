@@ -1134,6 +1134,24 @@ func _ready() -> void:
 		status_text = "暗影刺客：本回合已用 2 张牌 → 终结 4+2=6 伤；幻影斗篷三张牌共 -3 力量"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--nowdmg" in args and engine != null:
+		# R262 出图核验：左栏「现在打出：N 点伤害」。
+		#   手牌只放一张终结（9086），本回合已用 2 张 → 面板应写「现在打出：4 点伤害」+
+		#   小字「2 + 本回合已用 2 张」。（`battle.tscn -- --screenshot --nowdmg --shotframe 20`）
+		RunState.player_class = PlayerClass.ROGUE
+		engine.state.hand.clear()
+		engine.state.hand.append(
+				CardData.from_dict(repo.get_card(GameEngine.RAID_SPELL_ID).to_dict()))
+		engine.state.self_card_plays = 2
+		engine.state.energy = 3
+		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
+				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+		_demo_hover_idx = 0
+		_hover_hand = 0
+		_hover_card = engine.state.hand[0]
+		status_text = "R262：左栏「现在打出：4 点伤害」= 2 + 本回合已用 2 张"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--rogue2" in args and engine != null:
 		# 演示（2026-10-02）：暗影刺客 R45 —— 终结 / 连刺 / 偷袭 / 潜影者 / 影魔 / 幽光。
 		#   终结(X=0)→连刺(带卡组 0 费技能卡)→偷袭(满血 12 伤)→潜影者上场→
@@ -9885,6 +9903,21 @@ func _draw_info_panel() -> void:
 	y += 13.0
 	draw_line(Vector2(left, y), Vector2(right, y), Color("cfcbc2"), 1.0)
 	y += 17.0
+	# R262（用户口径）：**「现在打出会造成多少伤害」**——只对**卡面文案给不出确数**的技能卡显示
+	#（终结 2+X / 连环戏法 5→10 / 偷袭 6→12 / 流星雨 8×X）。这类卡玩家只能心算，
+	# 详情里直接报当前真实值；数值与结算同源（`GameEngine.spell_now()` → `_spell_dmg()`）。
+	# ⚠️ 只在**手牌**上显示：费用区 / 弃牌区 / 敌方卡上算这个数没有意义。
+	if hand_idx >= 0 and hand_idx < engine.state.hand.size() \
+				and engine.state.hand[hand_idx] == card:
+		var now := engine.spell_now(card)
+		if not now.is_empty():
+			_draw_string_nw(_font_bold, UiTheme.FS_MICRO,
+					"现在打出：%d 点伤害" % int(now.get("dmg", 0)), Vector2(left, y),
+					Color("a3241c"))
+			y += 15.0
+			_draw_string_nw(_font, UiTheme.FS_MICRO, str(now.get("note", "")),
+					Vector2(left + 6.0, y), Color("8a5a2a"))
+			y += 19.0
 	# 数值：与卡面同配色（力量金黄 / 生命红）；战场上的单位显示当前/上限
 	if card.kind == "盟友" or card.kind == "工事":
 		var hp_now: int = pl.health if pl != null else card.health

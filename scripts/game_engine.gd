@@ -4992,6 +4992,41 @@ func hand_bonus_text(card: CardData) -> String:
 	return ""
 
 
+func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
+	## R262（用户口径）：**「现在打出会造成多少伤害」** —— 战斗左栏详情用。
+	## 只覆盖**卡面文案给不出确数**的伤害技能（数字随局势变），其余卡返回 {} 让界面不画：
+	##   终结 9086 = 2 + 本回合已用张数；连环戏法 9093 = 5 / 10（含本卡是否第 3 张）；
+	##   偷袭 9090 = 6（满血 12，目标未知时按 6 报）；流星雨 9083 = 8 × 剩余能量。
+	## ⚠️ 基数**复用结算分支的常量与判据**（`_raid_dmg` / COMBO_TRICK_* / SNEAK_* / METEOR_SHOWER_*），
+	## 最后统一过 `_spell_dmg()` —— 附魔「伤害 +10」（烤在 power 里）、魔法塔、荧光草、
+	## 鸭之眼、魔力核心、回合加成都算进去，所以**显示值 == 实际扣血值**。
+	## 返回 {"dmg": int, "note": String}；note 是给玩家看的算式来源（界面第二行小字）。
+	if card == null or card.kind != "技能":
+		return {}
+	var plays: int = state.self_card_plays if side == SIDE_SELF else state.opp_card_plays
+	if card.id == RAID_SPELL_ID:
+		return {"dmg": _spell_dmg(side, _raid_dmg(side), card),
+				"note": "%d + 本回合已用 %d 张" % [RAID_BASE_DMG, plays]}
+	if card.id == COMBO_TRICK_ID:
+		var n: int = plays + 1
+		var full: bool = n >= COMBO_TRICK_NEED
+		var base: int = COMBO_TRICK_DMG
+		var note: String = "本回合第 %d 张（满 %d 张强化）" % [n, COMBO_TRICK_NEED]
+		if full:
+			base = COMBO_TRICK_FULL_DMG
+			note = "含本卡本回合第 %d 张 → 强化" % n
+		return {"dmg": _spell_dmg(side, base, card), "note": note}
+	if card.id == SNEAK_ID:
+		# 目标未定时按**未受伤目标**报 6，满血值写进 note（提前知道「这一下能翻倍」）
+		return {"dmg": _spell_dmg(side, SNEAK_DMG, card),
+				"note": "目标满血时 %d" % _spell_dmg(side, SNEAK_FULL_DMG, card)}
+	if card.id == METEOR_SHOWER_ID:
+		var times: int = maxi(0, state.energy_of(SIDE_SELF)) if side == SIDE_SELF else 0
+		var per: int = _spell_dmg(side, METEOR_SHOWER_DMG, card)
+		return {"dmg": per * times, "note": "%d × %d 颗（清空能量）" % [METEOR_SHOWER_DMG, times]}
+	return {}
+
+
 func _finisher_dmg(side: String) -> int:
 	## 收尾的基础伤害：手卡仅剩它 → 15 伤；否则 4 伤（之后统一经 _spell_dmg 加成）。
 	return FINISHER_LAST_DMG if _finisher_is_last(side) else FINISHER_DMG

@@ -7553,6 +7553,48 @@ func _init() -> void:
 			"终结：没有敌方单位时 2 伤直击敌方 HP（30→%d）"
 			% rg_hp.state.hp_opponent)
 
+	# R262（用户口径）：左栏「现在打出：N 点伤害」—— 预览值必须与同一手的**实际扣血**一致
+	var r259 := _new_engine([], 30, 30)
+	var r259_foe := r259.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 60, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r259_raid := CardData.from_dict(rg_raid.to_dict())
+	check(int(r259.spell_now(r259_raid).get("dmg", -1)) == 2,
+			"R262 终结：本回合 0 张 → 预览 2 伤")
+	r259.state.self_card_plays = 3
+	check(int(r259.spell_now(r259_raid).get("dmg", -1)) == 5,
+			"R262 终结：已用 3 张 → 预览 2+3=5 伤")
+	var r259_ench := CardData.from_dict(rg_raid.to_dict())
+	r259_ench.power = 10   # 附魔「伤害 +10」烤进 power
+	check(int(r259.spell_now(r259_ench).get("dmg", -1)) == 15,
+			"R262 终结：附魔 +10 也算进预览（5+10=15）")
+	r259.state.hand.clear()
+	r259.state.energy = 5
+	r259.state.hand.append(CardData.from_dict(rg_raid.to_dict()))
+	r259.use_spell(0, Vector2i(2, 1))
+	check(r259_foe.health == 55,
+			"R262 终结：实际扣 5 血 == 预览 5（60→%d）" % r259_foe.health)
+	var r259_combo := _card(9093, "连环戏法", "技能", 0, 0, 0, 0, 0)
+	var r259_c := _new_engine([], 30, 30)
+	r259_c.state.self_card_plays = 1
+	check(int(r259_c.spell_now(r259_combo).get("dmg", -1)) == 5,
+			"R262 连环戏法：本回合第 2 张 → 预览 5 伤")
+	r259_c.state.self_card_plays = 2
+	check(int(r259_c.spell_now(r259_combo).get("dmg", -1)) == 10,
+			"R262 连环戏法：含本卡第 3 张 → 预览 10 伤")
+	var r259_sneak := _card(9090, "偷袭", "技能", 0, 0, 0, 0, 0)
+	var r259_s := _new_engine([], 30, 30)
+	check(int(r259_s.spell_now(r259_sneak).get("dmg", -1)) == 6,
+			"R262 偷袭：目标未定 → 预览 6 伤")
+	check(str(r259_s.spell_now(r259_sneak).get("note", "")).contains("12"),
+			"R262 偷袭：小字里写明满血目标为 12 伤")
+	var r259_meteor := _card(9083, "流星雨", "技能", 4, 0, 0, 0, 0)
+	var r259_m := _new_engine([], 30, 30)
+	r259_m.state.energy = 3
+	check(int(r259_m.spell_now(r259_meteor).get("dmg", -1)) == 24,
+			"R262 流星雨：3 点能量 → 预览 8×3=24 伤")
+	check(r259_m.spell_now(_card(8001, "树人", "盟友", 2, 2, 6, 1, 1)).is_empty(),
+			"R262 预览：非技能卡不出这一行")
+
 	# 幻影斗篷（6023，R60 起每使用**两张**牌 → 随机一个敌方单位力量 -1）
 	var rg_ck := _new_engine([], 30, 30)
 	rg_ck.self_relics = [GameEngine.PHANTOM_CLOAK_RELIC_ID]
