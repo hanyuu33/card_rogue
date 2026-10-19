@@ -79,6 +79,23 @@ R253 那版的问题（并排 9003 一眼可见）：发色偏**银灰**、耳�
 
 两张都是满屏背景（bbox = 全图，不裁），按老链处理：切底部 11% 水印 → 1.1117 cover → LANCZOS 448×403 → `--headless --import` → `_art_index.py --check`（通过）。
 
+## R255 重画 9003 火焰箭：改成「投射物」
+
+用户口径：**「火焰箭是投射物」**。
+
+R252/R253 那版把火焰画成**从掌心向前延伸的长矛状火焰**（读成持续喷出的火柱 / 贴在手上的武器），不对。
+现在改成：**已经射出去的一发火焰弹**——掌心前方约两米处有一团独立飞行的火焰弹，
+**手掌与火焰之间有明显空隙**，弹体是带白热核心的水滴 / 彗星形，拖长尾、火星与速度线飞向画面右缘。
+
+**同时保留 R252 的「完全没有箭头」口径**：弹体不画箭杆、不画箭头、不画箭羽，纯火焰。
+
+提示词关键句：
+`a compact elongated spear-shaped BOLT OF PURE FIRE is FLYING through the air about two meters in front of her hand,
+as a distinct flying PROJECTILE with clearly visible empty air between her palm and the flame ... NOT a continuous beam,
+NOT a flamethrower stream coming out of her palm, NO arrow shaft, NO arrowhead, NO feathers, NO bow`
+
+> **经验：法系卡要区分「弹体已离手」（投射物）与「光柱 / 火焰自掌心延伸」（引导）——差别只在「手与弹之间有没有空隙」，必须在提示词里写死。**
+
 ## 处理流程（同批次 A / B）
 
 1. 白底图按非白像素 bbox 裁边 + 内缩 6px；**这六张都是满屏背景，bbox = 全图，等于不裁**。
