@@ -2225,12 +2225,14 @@ func _init() -> void:
 	#                              石肤 9066 / 以太守卫 9067 / 以太恶魔 9068 / 鸭窝 9069
 	# ============================================================
 
-	# ---- 以太咆哮（9063）：1 费普通效果；每回合前 X 次使用**技能卡**（X=效果区张数）→ 对所有敌人造成 4 伤 ----
-	# R266（用户口径「只能被能力卡触发」）：触发源由「效果卡 or 技能卡」收窄为**只认技能卡**。
+	# ---- 以太咆哮（9063）：1 费普通效果；每回合前 X 次使用**效果卡**（X=效果区张数）→ 对所有敌人造成 4 伤 ----
+	# R268（用户口径「只由效果卡触发」）：触发源 = **只认效果卡**，技能卡不再触发。
 	var nc_roar := repo.get_card(9063)
 	check(nc_roar.card_name == "以太咆哮" and nc_roar.is_effect() and nc_roar.cost == 1
 			and nc_roar.rarity == 0 and nc_roar.traits.has("以太咆哮") and nc_roar.value == 4,
 			"以太咆哮：普通 1 费效果卡，trait 以太咆哮 value=4")
+	check(nc_roar.effect_text.contains("使用效果卡") and not nc_roar.effect_text.contains("技能卡"),
+			"以太咆哮（R268）：文案只说效果卡，不再提技能卡")
 	var roar_e := _new_engine([], 20, 20, -1, false)
 	roar_e.start_game(0)
 	roar_e.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(0, 0),
@@ -2243,44 +2245,46 @@ func _init() -> void:
 	check(roar_e.state.unit_at(Vector2i(0, 0)).health == 8
 			and roar_e.state.unit_at(Vector2i(0, 2)).health == 8,
 			"以太咆哮：打出自己那一下不触发（本身是效果卡）")
+	roar_e.state.hand = [repo.get_card(9053)]
+	roar_e.state.energy = 9
+	roar_e.use_spell(0)
+	check(roar_e.state.unit_at(Vector2i(0, 0)).health == 8
+			and roar_e.state.unit_at(Vector2i(0, 2)).health == 8,
+			"以太咆哮：使用技能卡不触发（R268 只认效果卡）")
 	roar_e.state.hand = [repo.get_card(9002)]
 	roar_e.state.energy = 9
 	roar_e.use_effect(0)
-	check(roar_e.state.unit_at(Vector2i(0, 0)).health == 8
-			and roar_e.state.unit_at(Vector2i(0, 2)).health == 8,
-			"以太咆哮：使用效果卡不触发（R266 只认技能卡）")
-	roar_e.state.hand = [repo.get_card(9053)]
-	roar_e.state.energy = 9
-	roar_e.use_spell(0)
 	check(roar_e.state.unit_at(Vector2i(0, 0)).health == 4
 			and roar_e.state.unit_at(Vector2i(0, 2)).health == 4,
-			"以太咆哮：本回合首次使用技能卡 → 两个敌人各 8-4=4")
-	roar_e.state.hand = [repo.get_card(9053)]
+			"以太咆哮：本回合首次使用效果卡 → 两个敌人各 8-4=4")
+	roar_e.state.hand = [repo.get_card(9002)]
 	roar_e.state.energy = 9
-	roar_e.use_spell(0)
+	roar_e.use_effect(0)
 	check(roar_e.state.unit_at(Vector2i(0, 0)).health == 4,
-			"以太咆哮：同回合第二次使用技能卡不再触发")
+			"以太咆哮：同回合第二次使用效果卡不再触发")
 	roar_e.end_turn()   # 我方 → 敌方
 	roar_e.end_turn()   # 敌方 → 我方（新回合，标记重置）
-	roar_e.state.hand = [repo.get_card(9053)]
+	roar_e.state.hand = [repo.get_card(9002)]
 	roar_e.state.energy = 9
-	roar_e.use_spell(0)
+	roar_e.use_effect(0)
 	check(roar_e.state.unit_at(Vector2i(0, 0)) == null,
-			"以太咆哮：新回合再用技能卡再次触发 → 4 血的敌人被打死离场")
+			"以太咆哮：新回合再用效果卡再次触发 → 4 血的敌人被打死离场")
 	var roar_e2 := _new_engine([], 20, 20, -1, false)
 	roar_e2.start_game(0)
 	roar_e2.state.effects.append(repo.get_card(9063))
-	roar_e2.state.hand = [repo.get_card(9053)]
+	roar_e2.state.hand = [repo.get_card(9002)]
 	roar_e2.state.energy = 9
-	roar_e2.use_spell(0)
+	roar_e2.use_effect(0)
 	check(roar_e2.state.hp_opponent == 16,
-			"以太咆哮：技能卡触发；场上没有敌人 → 直击敌方 HP -4（20→16）")
+			"以太咆哮：效果卡触发；场上没有敌人 → 直击敌方 HP -4（20→16）")
 
 	# ---- 空间守护（9064）：1 费普通效果；每回合前 X 次用**技能卡**（X=张数）→ 最近敌人退后 2 格 ----
 	var nc_sg := repo.get_card(9064)
 	check(nc_sg.card_name == "空间守护" and nc_sg.is_effect() and nc_sg.cost == 1
 			and nc_sg.rarity == 0 and nc_sg.traits.has("空间守护") and nc_sg.value == 2,
 			"空间守护：普通 1 费效果卡，trait 空间守护 value=2")
+	check(nc_sg.effect_text.contains("使用效果卡") and not nc_sg.effect_text.contains("技能卡"),
+			"空间守护（R268）：文案只说效果卡，不再提技能卡")
 	var sg_e := _new_engine([], 20, 20, -1, false)
 	sg_e.start_game(0)
 	sg_e.state.effects.append(repo.get_card(9064))
@@ -2288,18 +2292,18 @@ func _init() -> void:
 			GameEngine.SIDE_OPPONENT)
 	sg_e.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(0, 0),
 			GameEngine.SIDE_OPPONENT)
-	sg_e.state.hand = [repo.get_card(9002)]
-	sg_e.state.energy = 9
-	sg_e.use_effect(0)
-	check(sg_e.state.unit_at(Vector2i(2, 1)) != null,
-			"空间守护：使用效果卡不触发（R266 只认技能卡）")
 	sg_e.state.hand = [repo.get_card(9053)]
 	sg_e.state.energy = 9
 	sg_e.use_spell(0)
+	check(sg_e.state.unit_at(Vector2i(2, 1)) != null,
+			"空间守护：使用技能卡不触发（R268 只认效果卡）")
+	sg_e.state.hand = [repo.get_card(9002)]
+	sg_e.state.energy = 9
+	sg_e.use_effect(0)
 	check(sg_e.state.unit_at(Vector2i(2, 1)) == null
 			and sg_e.state.unit_at(Vector2i(0, 1)) != null
 			and sg_e.state.unit_at(Vector2i(0, 0)) != null,
-			"空间守护：离己方 HP 最近的敌人（第 2 行）被推回 2 格到第 0 行")
+			"空间守护：使用效果卡触发 → 离己方 HP 最近的敌人（第 2 行）被推回 2 格到第 0 行")
 
 	# ---- 自愈（9065）：2 费稀有效果；战斗结束后回复 8 点生命 ----
 	var nc_sh := repo.get_card(9065)
@@ -2553,31 +2557,31 @@ func _init() -> void:
 	nest2.use_effect(nest2.state.hand.size() - 1)
 	check(nest2.state.hand.size() == 2,
 			"鸭窝：2 张 → 第 3 次使用不再触发（仍 2 张鸭蛋）")
-	# 以太咆哮（9063）：2 张 → 前 2 次使用技能卡各轰一次；效果卡不计入次数（R266）
+	# 以太咆哮（9063）：2 张 → 前 2 次使用效果卡各轰一次；技能卡不计入次数（R268）
 	var roar2 := _new_engine([], 20, 20, -1, false)
 	roar2.start_game(0)
 	roar2.state.effects.append(repo.get_card(9063))
 	roar2.state.effects.append(repo.get_card(9063))
 	roar2.state.place(_card(8003, "农民", "盟友", 3, 3, 20), Vector2i(0, 0),
 			GameEngine.SIDE_OPPONENT)
+	roar2.state.hand = [repo.get_card(9053)]
+	roar2.state.energy = 9
+	roar2.use_spell(0)
+	check(roar2.state.unit_at(Vector2i(0, 0)).health == 20,
+			"以太咆哮：2 张 → 技能卡不触发、也不占用本回合的次数（仍 20）")
 	roar2.state.hand = [repo.get_card(9002)]
 	roar2.state.energy = 9
 	roar2.use_effect(0)
-	check(roar2.state.unit_at(Vector2i(0, 0)).health == 20,
-			"以太咆哮：2 张 → 效果卡不触发、也不占用本回合的次数（仍 20）")
-	roar2.state.hand = [repo.get_card(9053)]
-	roar2.state.energy = 9
-	roar2.use_spell(0)
 	check(roar2.state.unit_at(Vector2i(0, 0)).health == 16,
-			"以太咆哮：2 张 → 第 1 次使用技能卡就触发（20 - 4 = 16）")
-	roar2.state.hand = [repo.get_card(9053)]
+			"以太咆哮：2 张 → 第 1 次使用效果卡就触发（20 - 4 = 16）")
+	roar2.state.hand = [repo.get_card(9002)]
 	roar2.state.energy = 9
-	roar2.use_spell(0)
+	roar2.use_effect(0)
 	check(roar2.state.unit_at(Vector2i(0, 0)).health == 12,
 			"以太咆哮：2 张 → 第 2 次使用再触发（16 - 4 = 12）")
-	roar2.state.hand = [repo.get_card(9053)]
+	roar2.state.hand = [repo.get_card(9002)]
 	roar2.state.energy = 9
-	roar2.use_spell(0)
+	roar2.use_effect(0)
 	check(roar2.state.unit_at(Vector2i(0, 0)).health == 12,
 			"以太咆哮：2 张 → 第 3 次使用不再触发（仍 12）")
 

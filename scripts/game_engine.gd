@@ -391,8 +391,10 @@ const BLESSING_TRAIT:= "加护"
 const FAMILIAR_NIGHT_ID:= 9062
 const FAMILIAR_NIGHT_TRAIT:= "使魔之夜"
 
-# R266：9063 / 9064 的触发条件收窄为「只认技能卡」。
+# R268：9063 / 9064 的触发条件 = **只认效果卡**（技能卡不再触发）。
+const AETHER_ROAR_ID:= 9063
 const AETHER_ROAR_TRAIT:= "以太咆哮"
+const SPACE_GUARD_ID:= 9064
 const SPACE_GUARD_TRAIT:= "空间守护"
 const SELF_HEAL_ID:= 9065
 const SELF_HEAL_TRAIT:= "自愈"
@@ -5965,11 +5967,12 @@ func _on_turn_first_play(side: String, played: CardData) -> void :
 
 	if side != SIDE_SELF or played == null:
 		return
-	# R266（用户口径「只能被能力卡触发」）：触发源**收窄到技能卡**。
-	# 旧版是「效果卡 或 技能卡」都触发，于是任何效果牌都能刷它；
-	# 现在只有技能卡算——效果卡（包括这两张自身）打出去一律不触发，
-	# 所以「打出本卡自身不算」的 id 兜底也一并拆掉了。
-	if not played.is_spell():
+	# R268（用户口径「只由效果卡触发」）：触发源 = **只认效果卡**，技能卡不再触发。
+	# 与同一族的「威慑 / 镜像 / 鸭窝」对齐——它们的「每回合前 X 次」也都是效果牌驱动。
+	# 这两张自身也是效果卡，所以必须先把「打出本卡本身」挡掉（否则落地即自触发）。
+	if played.id == AETHER_ROAR_ID or played.id == SPACE_GUARD_ID:
+		return
+	if not played.is_effect():
 		return
 	# 「每回合第 X 次」：X = 效果区里该类卡的张数（单张时 X=1 → 就是原来的「每回合首次」）。
 	var roar_n:= _trait_copies(state.effects, AETHER_ROAR_TRAIT)
