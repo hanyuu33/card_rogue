@@ -302,6 +302,18 @@ func _init() -> void:
 			and nc_fw.needs_target() and nc_fw.target_mode == "cell"
 			and nc_fw.group == "player",
 			"火墙术：3 费普通技能、选格子目标、归玩家图鉴")
+	# R264（用户口径）：**「下调火墙术延迟伤害：10-8（15点即时伤害不变）」**
+	check(GameEngine.FIRE_WALL_DMG == 15 and GameEngine.FIRE_WALL_PASS_DMG == 8
+			and GameEngine.FIRE_WALL_CAP == 15,
+			"R264 火墙术：即时 %d / 经过 %d / 单位上限 %d（即时与上限不变，只降经过灼烧）"
+			% [GameEngine.FIRE_WALL_DMG, GameEngine.FIRE_WALL_PASS_DMG,
+					GameEngine.FIRE_WALL_CAP])
+	check(nc_fw.effect_text.contains("15 点伤害")
+			and nc_fw.effect_text.contains("8 点伤害")
+			and not nc_fw.effect_text.contains("10 点伤害")
+			and nc_fw.effect_text.contains("所有单位"),
+			"R264 火墙术：卡面文案同步（经过 8 点 / 即时 15 / 不分敌我）：%s"
+			% nc_fw.effect_text)
 	var eng_fw := _new_engine([], 30, 30, -1, false)
 	eng_fw.start_game(0)
 	eng_fw.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
@@ -339,9 +351,10 @@ func _init() -> void:
 	var fw_p: Placement = eng_fw2.state.unit_at(Vector2i(2, 2))
 	var fw_p_hp := fw_p.health
 	eng_fw2.move(Vector2i(2, 2), Vector2i(1, 2), GameEngine.SIDE_SELF)
-	check(fw_p.health == fw_p_hp - GameEngine.FIRE_WALL_PASS_DMG,
-			"火墙术：不分敌我 —— 我方单位穿过火线 -10（%d→%d）" % [
-			fw_p_hp, fw_p.health])
+	check(fw_p.health == fw_p_hp - GameEngine.FIRE_WALL_PASS_DMG
+			and fw_p_hp - fw_p.health == 8,
+			"火墙术：不分敌我 —— 我方单位穿过火线 -%d（%d→%d）" % [
+			GameEngine.FIRE_WALL_PASS_DMG, fw_p_hp, fw_p.health])
 	fw_p.moved = false
 	fw_p.tapped = false
 	eng_fw2.move(Vector2i(1, 2), Vector2i(2, 2), GameEngine.SIDE_SELF)
@@ -351,7 +364,10 @@ func _init() -> void:
 	fw_p.tapped = false
 	eng_fw2.move(Vector2i(2, 2), Vector2i(1, 2), GameEngine.SIDE_SELF)
 	check(fw_p.health == fw_p_hp - GameEngine.FIRE_WALL_CAP,
-			"火墙术：第二次穿过只补到上限 15（10+5 → 共 -%d）" % (fw_p_hp - fw_p.health))
+			"火墙术：第二次穿过只补到上限 %d（8+%d → 共 -%d）" % [
+			GameEngine.FIRE_WALL_CAP,
+			GameEngine.FIRE_WALL_CAP - GameEngine.FIRE_WALL_PASS_DMG,
+			fw_p_hp - fw_p.health])
 	# 下次自己回合开始 → 火线熄灭
 	eng_fw2.state.deck = []
 	for fw_i in 8:

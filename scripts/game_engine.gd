@@ -464,12 +464,16 @@ const METEOR_SHOWER_ID:= 9083
 const METEOR_SHOWER_DMG:= 8
 
 # ── 火墙术（9084 技能，2026-10-01）──
-# 3 费普通技能：对一横行的敌人造成 FIRE_WALL_DMG 点伤害；该横行持续燃烧到**施放方**
-# 的下次回合开始，期间任何单位（不分敌我）移动经过该行 → 再受 FIRE_WALL_PASS_DMG 点。
-# 同一个单位从这张卡身上累计最多吃 FIRE_WALL_CAP 点（全卡合计上限，不是单次上限）。
+# 3 费普通技能：对一横行的**所有单位**（R247 起不分敌我）造成 FIRE_WALL_DMG 点伤害；
+# 该横行持续燃烧到**施放方**的下次回合开始，期间任何单位（不分敌我）移动经过该行
+# → 再受 FIRE_WALL_PASS_DMG 点。同一个单位从这张卡身上累计最多吃 FIRE_WALL_CAP 点
+# （全卡合计上限，不是单次上限；开场即时伤害也算在里面）。
+# R264（用户口径「下调火墙术延迟伤害：10-8（15点即时伤害不变）」）：
+#   经过灼烧 10 → **8**；即时 15 与单位上限 15 都不动。
+#   8 + 7 = 15 → 同一单位最多穿过两次就吃满，第二次只补 CAP 余量（7 点）。
 const FIRE_WALL_SPELL_ID:= 9084
 const FIRE_WALL_DMG:= 15
-const FIRE_WALL_PASS_DMG:= 10
+const FIRE_WALL_PASS_DMG:= 8
 const FIRE_WALL_CAP:= 15
 
 # ── 蓄力（9085 技能，2026-10-01）──
