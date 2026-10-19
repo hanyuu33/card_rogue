@@ -853,7 +853,23 @@ const GRENADIER_ID:= 8057
 const HEAVY_TANK_ID:= 8058
 const MECH_BIRD_ID:= 8059
 const DAEDALUS_ID:= 8060
+# ── R269：机械之心 8068 轻量化 / 8069 共享护盾 ──
+# 「轻量化」（8068，2 费**普通**技能，手牌目标）：改造**手牌里一个盟友** → 费用 -1、移动速度 +1。
+#   与「系统升级」8039 同一套纪律（烤进副本、本场战斗永久、不污染卡库），只是一减一加；
+#   费用**下限 0**（0 费盟友不会被减成负费）。只吃盟友：工事移速恒为 0，加了没意义。
+const HAND_LIGHTEN_ID:= 8068
+const HAND_LIGHTEN_COST_DELTA:= -1
+const HAND_LIGHTEN_SPEED_ADD:= 1
+# 「共享护盾」（8069，0 费**稀有**技能，场上盟友目标）：给一个己方盟友挂字段「共享护盾」
+#   + 算一层改造 → 之后**我方 HP 要掉血时改由它承受**。
+#   判据唯一口 = `absorbs_for_hp()`（森林守护 / 以太守卫 / 铁栅栏 / 本字段共用一条通道），
+#   于是引擎结算与战场绿环自动同源，battle_scene 一行都不用改。
+const SHARED_SHIELD_ID:= 8069
 const AFFIX_SWAP:= "交换"
+## 「共享护盾」（R269，8069 赋予）：替我方的 HP 承受伤害。
+## ⚠️ 与「护盾」（能量屏障的一次性免伤）**不是一回事**：那个免的是**这张卡自己**受的第一次伤害，
+##   这个是**玩家 HP** 要掉血时改由这张卡挨打（每次都能顶，顶到死）。
+const AFFIX_SHARED_SHIELD:= "共享护盾"
 const UPGRADE_RANGE_TRAIT:= "改造攻程"
 const UPGRADE_SPEED_TRAIT:= "改造移速"
 const UPGRADE_DRAW_TRAIT:= "改造抽牌"
@@ -2374,7 +2390,8 @@ func _autoplay_spell_targets(card: CardData) -> Array[Vector2i]:
 		return out
 	var heal:= card.id in [2002, 7202]
 	var pool:= _side_cells(SIDE_SELF if heal else SIDE_OPPONENT)
-	if card.id == UPGRADE_ID or card.id == ARMOR_PLATE_ID:
+	if card.id == UPGRADE_ID or card.id == ARMOR_PLATE_ID \
+			or card.id == SHARED_SHIELD_ID:
 		# 升级 8027（R82）/ 加厚装甲 8044（R95，机械之心）：自动出牌时选
 		# **己方最值得改造的那一个** —— 优先级 = 力量。默认分支会选敌方单位，
 		# 那样 `_upgrade_unit` / `_armor_plate` 会拒掉 → 这张牌等于白拿了一张。
@@ -2385,7 +2402,9 @@ func _autoplay_spell_targets(card: CardData) -> Array[Vector2i]:
 			var up: Placement = state.unit_at(uc)
 			if up == null:
 				continue
-			if card.id == ARMOR_PLATE_ID and up.card.kind != "盟友":
+			if card.id in [ARMOR_PLATE_ID, SHARED_SHIELD_ID] and up.card.kind != "盟友":
+				continue
+			if card.id == SHARED_SHIELD_ID and up.card.has_affix(AFFIX_SHARED_SHIELD):
 				continue
 			if up.card.kind != "盟友" and not up.card.is_fort():
 				continue
@@ -3747,7 +3766,8 @@ func _breach_tick(side: String) -> void :
 					"cell": _cell_of(p3), "deck": -1})
 
 
-func _field_upgrade_grant(p: Placement, atk: int, hp: int, source: String) -> void :
+func _field_upgrade_grant(p: Placement, atk: int, hp: int, source: String,
+		affix: String = "") -> void :
 	## **场上单位获得改造的唯一口**（R228）—— 与「升级 8027」的区别：这里不带
 	## 卡面改造奖励（`upgrade_*_bonus`）、不叠「堡垒」trait，只给固定 +atk/+hp 与一层改造。
 	## 加攻进 `upgrade_atk`（进 effective_power）、加血同时抬场上卡副本与 `p.health`，
@@ -3758,16 +3778,26 @@ func _field_upgrade_grant(p: Placement, atk: int, hp: int, source: String) -> vo
 		return
 	p.card = CardData.from_dict(p.card.to_dict())
 	p.card.traits = (p.card.traits as Array).duplicate()
+	# R269：可选附带一个**字段**（共享护盾 8069）。必须在 `_on_unit_upgraded()` **之前**挂上 ——
+	# 否则「每次被改造」那条链（侦察塔 / 堡垒 / 无限装甲 / 模仿者 / 废弃机器人）读到的
+	# 还是没字段的卡，等于这次改造对它们「不算数」。
+	if affix != "":
+		p.card.add_affix(affix)
 	p.upgrade_atk += atk
 	p.upgrade_hp += hp
 	p.upgrade_stacks += 1
 	p.card.health += hp
 	p.health += hp
-	_log("%s：改造 %s → 力量 +%d、生命 +%d（%d 攻 / %d 血，第 %d 层）" % [
-			source, p.card.card_name, atk, hp, p.effective_power(), p.health,
-			p.upgrade_stacks])
+	if atk == 0 and hp == 0 and affix != "":
+		# 纯挂字段的改造（共享护盾）：不印「力量 +0、生命 +0」这种废话。
+		_log("%s：改造 %s → 挂上字段「%s」（第 %d 层）" % [
+				source, p.card.card_name, affix, p.upgrade_stacks])
+	else:
+		_log("%s：改造 %s → 力量 +%d、生命 +%d（%d 攻 / %d 血，第 %d 层）" % [
+				source, p.card.card_name, atk, hp, p.effective_power(), p.health,
+				p.upgrade_stacks])
 	action.emit("upgrade", {"cell": _cell_of(p), "card": p.card, "placement": p,
-			"atk": atk, "hp": hp})
+			"atk": atk, "hp": hp, "affix": affix})
 	_on_unit_upgraded(p)
 
 
@@ -4089,6 +4119,40 @@ func _sys_upgrade_hand_card(hand_index: int) -> String :
 	return "%s 改造完成（%d 费 / %d 攻 / %d 血）" % [up.card_name, up.cost, up.power, up.health]
 
 
+func _lighten_hand_card(hand_index: int) -> String :
+	## 「轻量化」（8068，R269，机械之心 2 费普通技能）：把**手牌里**选定的一张**盟友**
+	## 「改造」成 费用 -1 / 移动速度 +1。
+	##
+	## 口径与「系统升级」8039 完全一致（用户口径「战斗内永久」）：
+	##   * 只作用于**手牌**；数值**烤进这张卡的副本**，本场战斗永久 ——
+	##     打出后进牌库 / 弃牌区仍带着，之后再次抽到上场依然是轻量版；
+	##     下一场 `build_deck()` 重新从卡库取实例 → 自动重置。
+	##   * 费用**下限 0**：0 费盟友不会被减成负费。
+	##   * 算**一层改造**（`upgrade_stacks += 1`）：侦察塔 / 堡垒 / 无限装甲 / 模仿者照常响应。
+	##   * 只吃**盟友**（用户原话「一个随从」）；工事移速恒为 0，减费也不是这张牌的本意。
+	##
+	## ⚠️ 必须 `from_dict` 复制成新实例再原位替换（同 8039 / 8031）：卡库是**共享实例**，
+	## 直接改 `state.hand[i].cost` 会连卡库一起改 —— 跨 run 泄漏。
+	if hand_index < 0 or hand_index >= state.hand.size():
+		return "（手牌序号无效）"
+	var c: CardData = state.hand[hand_index]
+	if c.kind != "盟友":
+		return "%s 不是盟友，不能轻量化" % c.card_name
+	var up := CardData.from_dict(c.to_dict())
+	up.traits = (up.traits as Array).duplicate()   # 切断与卡库的共享引用
+	var cost_before: int = up.cost
+	var speed_before: int = up.move_speed
+	up.cost = maxi(0, up.cost + HAND_LIGHTEN_COST_DELTA)
+	up.move_speed += HAND_LIGHTEN_SPEED_ADD
+	up.upgrade_stacks += 1        # 一层改造（同系统升级 8039）
+	state.hand[hand_index] = up
+	_log("轻量化：%s 改造完成（费用 %d → %d / 移速 %d → %d，本场战斗永久）" % [
+			c.card_name, cost_before, up.cost, speed_before, up.move_speed])
+	action.emit("lighten", {"card": up, "hand_index": hand_index,
+			"cost": up.cost, "speed": up.move_speed})
+	return "%s 改造完成（%d 费 / 移速 %d）" % [up.card_name, up.cost, up.move_speed]
+
+
 func _batch_transfer(side: String) -> String :
 	## 「批量传输」（8040，R90，机械之心 1 费稀有）：**手牌里所有**盟友 / 工事
 	## 获得「改造」（费用 +1 / 力量 +3 / 生命 +6），**然后抽 1 张卡**。
@@ -4268,6 +4332,32 @@ func _armor_plate(target, side:= SIDE_SELF) -> String :
 	_feed_upgrade_card(p)
 	_on_unit_upgraded(p)
 	return "%s 加装完成（+%d 血）" % [p.card.card_name, hp_gain]
+
+
+func _shared_shield(target, side:= SIDE_SELF) -> String :
+	## 「共享护盾」（8069，R269，机械之心 0 费稀有技能）：使**场上的一个己方盟友**
+	## 获得改造：挂上字段「共享护盾」+ 算一层改造。
+	##
+	## 字段语义（用户口径「代替自己 HP 承受伤害」）：**我方 HP 要掉血时，改由它挨打**。
+	## 判据唯一口 = `absorbs_for_hp()`（与森林守护 / 以太守卫 / 铁栅栏同一条通道）→
+	## 引擎结算与战场绿环自动同源，这里不写任何显示代码。
+	## ⚠️ 只吃**盟友**（用户原话「一个随从」）；工事不是随从。
+	## ⚠️ 同一张卡重复给没有意义 → 已有该字段时直接拒绝（不白扣费用、也不刷改造层数）。
+	var p:= _target_placement(side, target)
+	if p == null:
+		return "（没有目标）"
+	if p.owner != side:
+		return "只能改造自己的单位"
+	if p.card.kind != "盟友":
+		return "%s 不是盟友" % p.card.card_name
+	if p.card.has_affix(AFFIX_SHARED_SHIELD):
+		return "%s 已经有共享护盾了" % p.card.card_name
+	# 走**场上改造唯一口**（R228）：复制副本 + 一层改造 + `_on_unit_upgraded()`
+	# （侦察塔 / 堡垒 / 无限装甲 / 模仿者照常响应）。数值 +0，只挂字段。
+	_field_upgrade_grant(p, 0, 0, "共享护盾", AFFIX_SHARED_SHIELD)
+	_log("共享护盾：%s 获得字段「共享护盾」→ 我方 HP 将受到的伤害改由它承受" % p.card.card_name)
+	action.emit("shared_shield", {"cell": target, "card": p.card})
+	return "%s 获得共享护盾（替我方 HP 承伤）" % p.card.card_name
 
 
 func _auto_upgrade(side: String) -> void :
@@ -4783,6 +4873,9 @@ func use_spell(hand_index: int, target = null) -> String:
 	# 费用已经扣了、卡也已经从手牌里拿走了。
 	if card.id == SYS_UPGRADE_ID:
 		return "系统升级：先点手牌里的一张盟友或工事"
+	# 轻量化（8068，R269）：同样是**两段式**、目标在**手牌**里 → 走 `cast_lighten()`。
+	if card.id == HAND_LIGHTEN_ID:
+		return "轻量化：先点手牌里的一张盟友"
 	# 回收（8064，R198）：**两段式**技能 —— 目标在**手牌**里且**不限种类**
 	# （换卡式回收，技能/场地卡也能当目标），走独立入口
 	# `cast_recycle(手牌序号, 目标手牌序号)`。同样在**付费之前**拦截。
@@ -5649,6 +5742,36 @@ func cast_sys_upgrade(hand_index: int, target_hand_index: int) -> String:
 	return detail
 
 
+func cast_lighten(hand_index: int, target_hand_index: int) -> String:
+	## 「轻量化」（8068，R269，机械之心 2 费普通）的两段施放入口：
+	## UI 先点「轻量化」→ 再点**手牌里**一张盟友。
+	##
+	## 与「系统升级」8039 完全同一套路：
+	##   * `_pay` 在**这里**扣（`use_spell` 的单段入口已在付费前拦掉）；
+	##   * 目标卡**留在手牌里**（就地改造、原位替换）—— 只有「轻量化」自己进弃牌区。
+	if hand_index < 0 or hand_index >= state.hand.size():
+		return "（轻量化：手牌序号无效）"
+	var card: CardData = state.hand[hand_index]
+	if card == null or card.id != HAND_LIGHTEN_ID:
+		return "（这不是轻量化）"
+	if target_hand_index == hand_index:
+		return "（不能改造自己）"
+	var tgt: CardData = state.hand[target_hand_index] \
+			if target_hand_index >= 0 and target_hand_index < state.hand.size() else null
+	if tgt == null or tgt.kind != "盟友":
+		return "（只能改造手牌里的盟友）"
+	_pay(card)
+	state.hand.remove_at(hand_index)   # 目标下标若在被移除项之后要顺移
+	if target_hand_index > hand_index:
+		target_hand_index -= 1
+	var detail := _lighten_hand_card(target_hand_index)
+	_log("使用技能 轻量化 → %s" % detail)
+	action.emit("spell", {"card": card, "detail": detail})
+	_note_card_played(SIDE_SELF, card)
+	state.discard.append(card)
+	return detail
+
+
 func cast_recycle(hand_index: int, target_hand_index: int) -> String:
 	## 「回收」（8064，R198，机械之心 2 费史诗）的两段施放入口：
 	## UI 先点「回收」→ 再点**手牌里任意一张卡**（不限盟友/工事 —— 回收就是
@@ -6227,6 +6350,9 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 		ARMOR_PLATE_ID:
 			# 加厚装甲 8044（R95，机械之心）：改造一个己方**盟友** → +4 生命（算一层改造）。
 			return _armor_plate(target, side)
+		SHARED_SHIELD_ID:
+			# 共享护盾 8069（R269，机械之心）：己方盟友挂字段「共享护盾」+ 一层改造。
+			return _shared_shield(target, side)
 		OVERLOAD_ID:
 			# 过载 8030（R85，机械之心）：从牌库随机一张盟友改成双动。无目标、不可选。
 			return _overload_grant(side)
@@ -7152,19 +7278,29 @@ func absorbs_for_hp(p: Placement) -> bool:
 	if p == null:
 		return false
 	return p.guarding or p.card.traits.has(AETHER_GUARD_TRAIT)\
-	or p.card.traits.has(IRON_FENCE_TRAIT)
+	or p.card.traits.has(IRON_FENCE_TRAIT)\
+	or p.card.has_affix(AFFIX_SHARED_SHIELD)
 
 
 func _guard_cell(side:= SIDE_SELF) -> Vector2i:
-
-
+	## 多个「替我 HP 承伤」候选时的**唯一优先级**（R269）：
+	##   ① 挂着「共享护盾」字段的单位优先 —— 那是玩家**花一张牌指定**的坦克，
+	##      若被森林守护 / 铁栅栏抢了先，这张牌就等于什么都没做；
+	##   ② 其余候选一律按格位序号最小（原语义，保证同种子回放一致）。
+	var best_affix:= Vector2i(-1, -1)
 	var best:= Vector2i(-1, -1)
 	for cell: Vector2i in state.board:
 		var p: Placement = state.board[cell]
 		if p.owner != side or not absorbs_for_hp(p):
 			continue
+		if p.card.has_affix(AFFIX_SHARED_SHIELD):
+			if best_affix == Vector2i(-1, -1) or cell < best_affix:
+				best_affix = cell
+			continue
 		if best == Vector2i(-1, -1) or cell < best:
 			best = cell
+	if best_affix != Vector2i(-1, -1):
+		return best_affix
 	return best
 
 
@@ -7179,8 +7315,9 @@ func _absorb_by_guard(amount: int) -> bool:
 		return false
 	var g: Placement = state.board[cell]
 	var gname:= g.card.card_name
-	var how:= "以太守卫" if g.card.traits.has(AETHER_GUARD_TRAIT)\
-	else ("铁栅栏" if g.card.traits.has(IRON_FENCE_TRAIT) else "森林守护")
+	var how:= "共享护盾" if g.card.has_affix(AFFIX_SHARED_SHIELD)\
+	else ("以太守卫" if g.card.traits.has(AETHER_GUARD_TRAIT)\
+	else ("铁栅栏" if g.card.traits.has(IRON_FENCE_TRAIT) else "森林守护"))
 	var dealt:= _hit_unit(g, amount, how)
 	_log("%s：%s 替我方 HP 承受 %d 点伤害（剩余 %d）" % [how, gname, dealt, g.health])
 	action.emit("guard_absorb", {"card": g.card, "how": how, "amount": dealt})

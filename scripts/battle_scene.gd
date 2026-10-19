@@ -839,6 +839,40 @@ func _ready() -> void:
 		status_text = "R209：回收 → 选卡页列出全部手牌（除回收自己）"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--lightenpick" in args and engine != null:
+		# 演示（R269）：轻量化（8068）也有全屏选卡页 —— 候选**只列盟友**
+		# （工事不进候选：移速对工事恒为 0，用户口径是「一个随从」；技能卡同理）。
+		engine.state.hand.clear()
+		engine.state.hand.append(repo.get_card(8004))                  # 熊（候选）
+		engine.state.hand.append(repo.get_card(GameEngine.HAND_LIGHTEN_ID))
+		engine.state.hand.append(repo.get_card(8001))                  # 木栅栏（工事，不入候选）
+		engine.state.hand.append(repo.get_card(8002))                  # 攻击（技能，不入候选）
+		engine.state.energy = 9
+		_sys_upgrade_idx = 1
+		_demo_pick_sel = 0
+		status_text = "R269：轻量化 → 选卡页只列盟友（工事 / 技能卡不在候选里）"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--sharedshield" in args and engine != null:
+		# 演示（R269）：共享护盾（8069）→ 己方盟友挂字段「共享护盾」+ 算一层改造；
+		# 之后**我方 HP 要掉血时改由它承受**（战场绿环与结算都读 `absorbs_for_hp()`）。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.hand.append(CardData.from_dict(
+				repo.get_card(GameEngine.SHARED_SHIELD_ID).to_dict()))
+		engine.use_spell(0, Vector2i(4, 1))
+		var r269_demo_tp: Placement = engine.state.unit_at(Vector2i(4, 1))
+		engine._damage_player(GameEngine.SIDE_SELF, 5, "演示：共享护盾")
+		_hover_card = r269_demo_tp.card
+		_hover_pl = r269_demo_tp
+		_hover_hand = -1
+		status_text = "R269：共享护盾 → 树人 %d 层改造；我方 HP 吃 5 点全由它承受（HP %d / 树人 %d）" % [
+				r269_demo_tp.upgrade_stacks, engine.state.hp_self, r269_demo_tp.health]
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--trapper" in args and engine != null:
 		# 演示（R116）：捕兽大师 9126 的**亡语** —— 先上场、再当场打死它 →
 		# 它倒下的那一格变成一张**随机陷阱**（斜纹格 + 角标）。
@@ -3216,13 +3250,17 @@ func _use_hand_card(i: int) -> void:
 		return
 	# 「系统升级」（8039，R209）：目标在**手牌**里，所以**不进 spell_targets**
 	# （那套是棋盘格）。与「填充」统一 —— 只记下标，`_sync_pick()` 下一帧弹**全屏选卡页**。
-	if card.id == GameEngine.SYS_UPGRADE_ID:
+	# R269：轻量化（8068）与系统升级（8039）共用这一条「手牌目标」流，
+	# 文案与候选范围按**是哪张卡**区分（`_sysup_word` / `_sysup_options`）。
+	if card.id == GameEngine.SYS_UPGRADE_ID or card.id == GameEngine.HAND_LIGHTEN_ID:
+		var su_word := _sysup_word(card)
 		if _sysup_options(i).is_empty():
-			_say("系统升级：手牌里没有可改造的盟友或工事（系统升级仍在手牌）")
+			_say("%s：手牌里没有可改造的%s（%s 仍在手牌）" % [
+					card.card_name, su_word, card.card_name])
 			_clear_selection()
 			return
 		_sys_upgrade_idx = i
-		status_text = "系统升级：在弹出的选卡页里点一张盟友或工事"
+		status_text = "%s：在弹出的选卡页里点一张%s" % [card.card_name, su_word]
 		return
 	# 「回收」（8064，R209）：目标在手牌里且**不限种类**，同样走选卡页。
 	if card.id == GameEngine.RECYCLE_ID:
@@ -3862,7 +3900,8 @@ func _hand_target_pick_kind(card: CardData) -> String:
 	## 都是 `target_mode=none` → 拖到棋盘任意处就走 `use_spell`，本来就能拖，不在此列。
 	if card == null:
 		return ""
-	if card.id == GameEngine.SYS_UPGRADE_ID:
+	# R269：轻量化（8068）与系统升级共用 "sysup" 这条手牌改造流（文案按卡名区分）。
+	if card.id == GameEngine.SYS_UPGRADE_ID or card.id == GameEngine.HAND_LIGHTEN_ID:
 		return "sysup"
 	if card.id == GameEngine.RECYCLE_ID:
 		return "recycle"
@@ -3881,15 +3920,31 @@ func _reload_options(skip: int) -> Array:
 	return out
 
 
+func _sysup_word(card) -> String:
+	## R269：手牌改造类技能的**目标范围文案**（唯一口）。
+	## 系统升级 8039 吃「盟友或工事」，轻量化 8068 只吃「盟友」（工事移速恒为 0）。
+	if card is CardData and (card as CardData).id == GameEngine.SYS_UPGRADE_ID:
+		return "盟友或工事"
+	return "盟友"
+
+
 func _sysup_options(skip: int) -> Array:
-	## 「系统升级」（8039）的候选 = 手牌里**除它自己以外**的盟友 / 工事（业务下标 = 手牌下标）。
-	## 与引擎 `_sys_upgrade_hand_card` 的判定同口径 —— 提前把技能 / 场地 / 效果卡滤掉，
-	## 玩家不会「选了才被拒」（旧点击式常有这个白试）。
+	## 「系统升级」（8039）/**「轻量化」**（8068，R269）的候选 =
+	## 手牌里**除它自己以外**可改造的卡（业务下标 = 手牌下标）。
+	## 与引擎 `_sys_upgrade_hand_card` / `_lighten_hand_card` 的判定同口径 ——
+	## 提前把技能 / 场地 / 效果卡滤掉，玩家不会「选了才被拒」（旧点击式常有这个白试）。
+	## ⚠️ 两者的差别只在「要不要工事」：轻量化只吃盟友。
 	var out: Array = []
+	var ally_only := skip >= 0 and skip < engine.state.hand.size() \
+			and engine.state.hand[skip].id == GameEngine.HAND_LIGHTEN_ID
 	for i in engine.state.hand.size():
 		if i == skip:
 			continue
 		var c: CardData = engine.state.hand[i]
+		if ally_only:
+			if c.kind == "盟友":
+				out.append(i)
+			continue
 		if c.kind == "盟友" or c.is_fort():
 			out.append(i)
 	return out
@@ -3986,11 +4041,21 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"max_sel": 1, "confirm_label": "确认填充",
 					"cancel_label": "取消（不扣费）"}
 		"sysup":
-			# R209：系统升级（8039）—— 候选只列盟友 / 工事；确认后费用 +1 / 力 +3 / 生 +6。
+			# R209：系统升级（8039）/ R269：轻量化（8068）—— 候选只列可改造的手牌；
+			# 确认后就地改造（**本场战斗永久**）。文案按是哪张卡区分。
 			var uopts: Array = _sysup_options(_sys_upgrade_idx)
-			return {"kind": k, "short": "系统升级", "opts": uopts,
-					"title": "系统升级：选择一张手牌（盟友 / 工事）施加「改造」",
-					"note": "费用 +1 / 力量 +3 / 生命 +6（本场战斗永久），并记一层改造",
+			var ucard = engine.state.hand[_sys_upgrade_idx] \
+					if _sys_upgrade_idx >= 0 and _sys_upgrade_idx < engine.state.hand.size() \
+					else null
+			var u_title := "改造"
+			var u_note := "费用 +1 / 力量 +3 / 生命 +6（本场战斗永久），并记一层改造"
+			if ucard is CardData:
+				u_title = (ucard as CardData).card_name
+			if ucard is CardData and (ucard as CardData).id == GameEngine.HAND_LIGHTEN_ID:
+				u_note = "费用 -1 / 移动速度 +1（本场战斗永久），并记一层改造"
+			return {"kind": k, "short": u_title, "opts": uopts,
+					"title": "%s：选择一张手牌（%s）施加「改造」" % [u_title, _sysup_word(ucard)],
+					"note": u_note,
 					"cards": uopts.map(func(i: int) -> CardData: return engine.state.hand[i]),
 					"max_sel": 1, "confirm_label": "确认改造",
 					"cancel_label": "取消（不扣费）"}
@@ -4136,8 +4201,14 @@ func _on_pick_confirmed(sel: Array) -> void:
 			_sys_upgrade_idx = -1
 			var su_card: CardData = engine.state.hand[usrc] \
 					if usrc >= 0 and usrc < engine.state.hand.size() else null
-			if su_card == null or su_card.id != GameEngine.SYS_UPGRADE_ID:
-				_say("系统升级：手牌已变化，请重新使用")
+			if su_card == null or (su_card.id != GameEngine.SYS_UPGRADE_ID \
+					and su_card.id != GameEngine.HAND_LIGHTEN_ID):
+				_say("改造：手牌已变化，请重新使用")
+			elif su_card.id == GameEngine.HAND_LIGHTEN_ID:
+				# R269：轻量化 → `cast_lighten(轻量化下标, 目标手牌下标)`
+				status_text = "轻量化 → %s" % engine.cast_lighten(usrc, uidx)
+				_net_send({"type": "action", "act": "spell",
+						"card": su_card.to_dict(), "target": null})
 			else:
 				status_text = "系统升级 → %s" % engine.cast_sys_upgrade(usrc, uidx)
 				_net_send({"type": "action", "act": "spell",
@@ -7643,8 +7714,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var ug_name := "?"
 			if data.get("card") is CardData:
 				ug_name = (data["card"] as CardData).card_name
-			var ug_txt := "%s +%d攻 +%d血" % [ug_name, int(data.get("atk", 0)),
-					int(data.get("hp", 0))]
+			var ug_atk := int(data.get("atk", 0))
+			var ug_hp := int(data.get("hp", 0))
+			var ug_affix := str(data.get("affix", ""))
+			# R269：纯挂字段的改造（共享护盾）不该飘「+0攻 +0血」—— 数值没动，飘了等于骗人。
+			var ug_txt := "%s 获得「%s」" % [ug_name, ug_affix] if ug_atk == 0 and ug_hp == 0 \
+					and ug_affix != "" else "%s +%d攻 +%d血" % [ug_name, ug_atk, ug_hp]
 			var ug_from := str(data.get("field", ""))
 			if ug_from != "":
 				_say("◆ %s：%s（每回合结算，可叠加）" % [ug_from, ug_txt])
@@ -7668,6 +7743,20 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 			else:
 				_say("系统升级：手牌里没有可选的盟友或工事")
+		"lighten":
+			# R269 轻量化（8068）：手牌里一张盟友被改造（-1 费 / +1 移速）→ 手牌区飘字。
+			# 目标在**手牌**里（不是棋盘），落点同系统升级 = 整排手牌的中点。
+			var li_c = data.get("card", null)
+			if li_c is CardData:
+				var li_d: CardData = li_c as CardData
+				sfx.play("spell")
+				_say("◆ 轻量化：%s → %d 费 / 移速 %d（本场战斗永久）" % [
+					li_d.card_name, li_d.cost, li_d.move_speed])
+				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+					"text": "%s -1费 +1移速" % li_d.card_name,
+					"col": Color("8ad4f0"), "start": n, "dur": 2000})
+			else:
+				_say("轻量化：手牌里没有可改造的盟友")
 		"recycle":
 			# 回收 8064（R198）：手牌里一张卡被换成素体（改造 +9 血）→ 手牌区飘字。
 			# 目标在**手牌**里（不是棋盘），落点用整排手牌的中点（与系统升级同）。
