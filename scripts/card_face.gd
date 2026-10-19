@@ -55,6 +55,32 @@ const ATTACK_ART_ID := 8002
 const ATTACK_ART_SUFFIX := {"森林精魄": "forest", "暗影刺客": "shadow", "机械之心": "mech"}
 
 
+## ── 【卡底面的职业色】（R267）──
+##
+## 用户口径「三个职业的卡底面换成各职业的颜色（能否做到图不变，只改填色）」
+## → 做得到：**不换素材、不重画**，同一张 `card_paper.png` 走 `draw_texture_rect`
+##   的 modulate（相乘）—— 纸纹、雕花、明暗全部保留，只把色相换成职业色。
+##
+## ⚠️ 必须**大幅向白混合再乘**：直接乘饱和职业色（如 3a7d44）会把羊皮纸
+##   压成深色，而卡名用的是 `INK_900` 深墨 → 字就没了。混白后仍是**浅纸**，
+##   只带职业色相，对比度不受影响。
+## ⚠️ **只有三个玩家职业上色**：通用卡（`card_class == ""`）与敌人卡（"敌人"）
+##   保持原纸底 —— 用户口径只要“三个职业”，而敌人卡本来就有怪物色缎带。
+const CLASS_PAPER_MIX := 0.60
+
+
+static func paper_tint(card: CardData) -> Color:
+	## 卡底面的乘色（唯一口）。`Color.WHITE` = 不上色。
+	if card == null:
+		return Color.WHITE
+	if card.card_class == "敌人":
+		return Color.WHITE
+	var c: Color = UiTheme.class_color(card.card_class)
+	if c.a <= 0.0:
+		return Color.WHITE
+	return c.lerp(Color.WHITE, CLASS_PAPER_MIX)
+
+
 static func art_for(id: int, sleeping := false) -> Texture2D:
 	# sleeping=true 时优先取沉睡专用图 `<id>_sleep.png`（R182 恶魔鸭沉睡状态）；
 	# 沉睡图缺失则回退普通卡图 —— 不空白、不报错。
@@ -176,10 +202,11 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	var pad: float = UiTheme.CARD_PAD * k
 	# ① 卡面纸底：素材槽 assets/ui/card_paper.png 优先，缺图回退纯色（R113 起可换皮）
 	var paper: Texture2D = UiAssets.card_paper()
+	var tint := paper_tint(card)   # R267：职业色只涂在纸底上，卡图本身不动
 	if paper != null:
-		canvas.draw_texture_rect(paper, rect, false)
+		canvas.draw_texture_rect(paper, rect, false, tint)
 	else:
-		canvas.draw_rect(rect, UiTheme.SURFACE)
+		canvas.draw_rect(rect, tint if tint != Color.WHITE else UiTheme.SURFACE)
 	# ② 选中态：**外发光**，不占用任何语义色（缎带是稀有度的通道，见 UI设计规范 §规则 5）
 	if selected:
 		for gi in 3:
@@ -222,10 +249,11 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 	var kt: float = minf(k, UiTheme.CARD_TEXT_SCALE_CAP)
 	var pad: float = UiTheme.CARD_PAD * k
 	var paper: Texture2D = UiAssets.card_paper()
+	var tint := paper_tint(card)   # R267：职业色只涂在纸底上，卡图本身不动
 	if paper != null:
-		canvas.draw_texture_rect(paper, rect, false)
+		canvas.draw_texture_rect(paper, rect, false, tint)
 	else:
-		canvas.draw_rect(rect, UiTheme.SURFACE)
+		canvas.draw_rect(rect, tint if tint != Color.WHITE else UiTheme.SURFACE)
 	if selected:
 		for gi in 3:
 			var glow := UiTheme.SELECT_RING

@@ -10085,6 +10085,26 @@ func _init() -> void:
 	check(is_equal_approx(r122_cv2.size.x, 50.0) and is_equal_approx(r122_cv2.size.y, 50.0)
 			and is_equal_approx(r122_cv2.position.y, 25.0),
 			"R122-F cover_region：50x100 → 40x40 应上下各裁一点（得 %s）" % str(r122_cv2))
+
+	# ---- R267：卡底面的职业色（只改填色、不动纸底图） ----
+	# 判据全在 `CardFace.paper_tint()`：三个玩家职业上色、通用/敌人不上色、且都是浅色（深墨卡名仍可读）。
+	var r267_druid := CardFace.paper_tint(repo.get_card(9003))   # 火焰箭 · 森林精魄
+	var r267_rogue := CardFace.paper_tint(repo.get_card(9086))   # 终结 · 暗影刺客
+	var r267_mech := CardFace.paper_tint(repo.get_card(8027))    # 升级 · 机械之心
+	check(r267_druid != Color.WHITE and r267_rogue != Color.WHITE and r267_mech != Color.WHITE,
+			"R267 卡底面：三个职业都上色（不再统一原纸底）")
+	check(r267_druid.g > r267_druid.r and r267_druid.g > r267_druid.b,
+			"R267 卡底面：森林精魄 = 绿（G 分量最高，得 %s）" % str(r267_druid))
+	check(r267_rogue.b > r267_rogue.r and r267_rogue.b > r267_rogue.g,
+			"R267 卡底面：暗影刺客 = 紫（B 分量最高，得 %s）" % str(r267_rogue))
+	check(r267_mech.r > r267_mech.b and r267_mech.g > r267_mech.b,
+			"R267 卡底面：机械之心 = 黄铜（R/G 高于 B，得 %s）" % str(r267_mech))
+	check(CardFace.paper_tint(repo.get_card(9008)) == Color.WHITE,
+			"R267 卡底面：敌人卡不上色（保持原纸底）")
+	check(CardFace.paper_tint(repo.get_card(9149)) == Color.WHITE,
+			"R267 卡底面：通用卡（诅咒“疲惫”）不上色")
+	check(r267_druid.v > 0.55 and r267_rogue.v > 0.55 and r267_mech.v > 0.55,
+			"R267 卡底面：职业色都向白混过（明度 > 0.55 → INK_900 卡名仍可读）")
 	# ② 降费重画必须走**唯一口** CardFace.draw_badge（自己 draw_circle 会盖掉水晶图标）
 	# ⚠️ 这是**源码守卫**，只在 dev 工程里成立：导出包（.pck）里脚本是**二进制 token**，
 	#    get_file_as_string 读不到源文本（R124 发布实测：pck 里 `CardFace.draw_badge(` /
