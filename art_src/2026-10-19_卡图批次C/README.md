@@ -22,10 +22,24 @@
 橙红（9003）/ 青白（9004）/ 青蓝（9005）/ 金紫（9010）/ 冰蓝（9011）/ 棕红（9042）。
 六张的主色调互不重叠，缩到战场卡（77×92）也能靠色块分开。
 
-## 角色一致性
+## 角色一致性（R253 修正）
 
-- 森林精魄施法者 = 浅金长发、猫耳、绿叶裙、白雏菊发饰、琥珀眼。
-  与 8002_forest（职业立绘）和 9007（火球术）同一个人。
+⚠️ **第一版画成了尖耳精灵 + 偏高的身材，不对。** 森林精魄角色的正典是 **Q 版（三到四头身）**：
+
+- 大圆头、琥珀金色大眼睛、浅金长卷发垂过膝；
+- **头顶一对黑猫耳 + 一条蓬松黑猫尾**，**没有尖耳 / 精灵耳**；
+- 绿叶叠成的短裙 + 几朵小雏菊，耳侧别一朵白雏菊，赤脚；
+- 参照物 = `8002_forest`（职业立绘）与 `9007`（火球术），三张新图要与这两张并排看不出破绽。
+
+R253 的提示词固定写死下面几句，效果稳定：
+`A tiny CHIBI anime forest spirit girl, only three to four heads tall, huge round head with big
+amber-gold eyes, long wavy ash-blonde hair flowing past her knees, fluffy BLACK CAT EARS on top of
+her head and a big fluffy BLACK CAT TAIL, NO elf ears, NO pointed ears, short dress made entirely of
+overlapping green leaves with tiny white daisies, a white daisy beside one cat ear, barefoot`
+
+**「不需要实体书页」**：9005 第一版画了两本摊开的书 + 书页，被否。现在只留两片半透明的蓝色
+**发光卡形光片**（纯光，没有纸），提示词里显式写
+`NO books, NO open books, NO paper pages, NO parchment, NO scrolls, NO physical props`。
 - 鸭子队长 = 9012 那身：金黄色鸭、华丽金色板甲（胸口鸢尾花浮雕）、尖顶金盔、棕色皮带、橙蹼。
 - 猎犬 = 9040 那只：棕色短毛、奶白胸斑、垂耳、肌肉厚实。
 
