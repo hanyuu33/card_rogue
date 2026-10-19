@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 236,
-			"图鉴 = 236 张（R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；实际 %d）"
+	check(repo.all_cards().size() == 242,
+			"图鉴 = 242 张（R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,7 +135,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 183 and grp_enemy.size() == 53,
+	check(grp_player.size() == 189 and grp_enemy.size() == 53,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 183 / 53；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -165,7 +165,7 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 158,
+	check(pool.size() == 165,
 			"奖励池 158 张（R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
@@ -7495,9 +7495,9 @@ func _init() -> void:
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 74
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 61
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 44
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 50
 			and int(dr_cls_count.get("敌人", 0)) == 53,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 74 / 61 / 44 / 53；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 74 / 61 / 50 / 53；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -7800,7 +7800,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 158, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 165, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -8267,7 +8267,7 @@ func _init() -> void:
 			r226_dmg += 1
 		elif r226_card.effect_text.contains("造成") and r226_card.effect_text.contains("伤害"):
 			r226_leak.append(r226_card.card_name)
-	check(r226_skills == 74 and r226_dmg == 27 and r226_leak.is_empty(),
+	check(r226_skills == 75 and r226_dmg == 27 and r226_leak.is_empty(),
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 			% [r226_skills, r226_dmg, "0 张" if r226_leak.is_empty() else str(r226_leak)])
 	check(RunState.enchant_ok("damage", r224_okrepo.get_card(9083), 9999)
@@ -14990,9 +14990,10 @@ func _init() -> void:
 		% [r101_bird.kind])
 	var r101_dae := r101_repo.get_card(8060)
 	check(r101_dae != null and r101_dae.kind == "盟友" and r101_dae.cost == 5
-			and r101_dae.power == 5 and r101_dae.health == 19
-			and r101_dae.rarity == 3 and r101_dae.card_class == "机械之心",
-		"R101 代达罗斯 8060：5 费史诗盟友 5/19/1/1，机械之心（实际 %s/%s/%s/%s/%s）"
+			and r101_dae.power == 8 and r101_dae.health == 18
+			and r101_dae.rarity == 2 and r101_dae.card_class == "机械之心"
+			and r101_dae.has_affix(GameEngine.AFFIX_TAUNT),
+		"R271 代达罗斯 8060（重做）：5 费史诗盟友 8/18/1/1，机械之心，带「嘲讽」（实际 %s/%s/%s/%s/%s）"
 		% [r101_dae.kind, r101_dae.cost, r101_dae.power, r101_dae.health, r101_dae.rarity])
 
 	# ---- ① 交换：放在己方单位上 → 原单位回手，新卡占据该格 ----
@@ -15054,33 +15055,25 @@ func _init() -> void:
 	check(r101_e4.state.hand.size() == r101_hand4 + 1,
 		"R101 改造抽牌：机器鸟获得改造（己方）→ 手牌 +1（%d→%d）" % [r101_hand4, r101_e4.state.hand.size()])
 
-	# ---- ⑤ 代达罗斯：群改手/库/弃 + 其他友方单位力量+1，不污染卡库 ----
+	# ---- ⑤ 代达罗斯（R271 重做）：入场 +3×聚能炮击生命 + 本回合手卡炮击 0 费 ----
 	var r101_e5 := _new_engine([], 40, 40, -1, false)
 	r101_e5.start_game()
-	r101_e5.state.hand.append(CardData.from_dict(r101_repo.get_card(8003).to_dict()))  # 树人 3/8
-	r101_e5.state.deck.append(CardData.from_dict(r101_repo.get_card(8001).to_dict()))  # 木栅栏
-	r101_e5.state.discard.append(CardData.from_dict(r101_repo.get_card(8004).to_dict()))  # 熊
-	var r101_d: Placement = r101_e5.state.place(
-		CardData.from_dict(r101_repo.get_card(8060).to_dict()), Vector2i(4, 1),
-		GameEngine.SIDE_SELF)   # 代达罗斯 5/19
-	var r101_ally: Placement = r101_e5.state.place(
-		CardData.from_dict(r101_repo.get_card(8003).to_dict()), Vector2i(4, 2),
-		GameEngine.SIDE_SELF)   # 另一张树人 3/8
-	var r101_ally_atk0 := r101_ally.upgrade_atk
-	var r101_lib_tree := r101_repo.get_card(8003)
-	var r101_lib_tree_power := r101_lib_tree.power
-	r101_e5._daedalus_upgrade(r101_d)
-	check(r101_ally.upgrade_atk == r101_ally_atk0 + 1,
-		"R101 代达罗斯：场上其他友方盟友力量+1（upgrade_atk %d→%d）" % [r101_ally_atk0, r101_ally.upgrade_atk])
-	check(r101_ally.card.power == 3,
-		"R101 代达罗斯：场上友方盟友卡面力量不变（仍 3，加成在 upgrade_atk）")
-	var r101_hand_tree_power := -1
-	for c in r101_e5.state.hand:
-		if c.id == 8003:
-			r101_hand_tree_power = c.power
-	check(r101_hand_tree_power == 4, "R101 代达罗斯：手牌中的树人力量+1（%d）" % r101_hand_tree_power)
-	check(r101_lib_tree.power == r101_lib_tree_power,
-		"R101 代达罗斯：卡库里的树人未被污染（仍 %d 力）" % r101_lib_tree.power)
+	r101_e5.state.hand = [CardData.from_dict(r101_repo.get_card(8060).to_dict())]
+	r101_e5.state.hand.append(CardData.from_dict(r101_repo.get_card(9145).to_dict()))  # 聚能炮击
+	r101_e5.state.energy = 10
+	r101_e5.state.self_cannon_plays = 2     # 本次对战已用过 2 张聚能炮击
+	var r101_d: Placement = r101_e5.play_from_hand(0, Vector2i(4, 1))
+	check(r101_d != null and r101_d.card.health == 24 and r101_d.health == 24,
+		"R271 代达罗斯：入场按 2 张聚能炮击 → 18+6=24 血（实际 %s）"
+			% ("null" if r101_d == null else str(r101_d.health)))
+	check(r101_d != null and r101_d.card.has_affix(GameEngine.AFFIX_TAUNT),
+		"R271 代达罗斯：卡面带「嘲讽」字段（敌方只能打它）")
+	var r101_cannon_cost := r101_e5.cost_of(r101_e5.state.hand[0])
+	check(r101_cannon_cost == 0,
+		"R271 代达罗斯：本回合手卡里的聚能炮击费用变 0（实际 %d）" % r101_cannon_cost)
+	var r101_back := r101_e5._card_leaving_field(r101_d)
+	check(r101_back.health == 18,
+		"R271 代达罗斯：离场还原后卡面生命回到 18（实际 %d）" % r101_back.health)
 
 
 	# ============================================================
@@ -17298,23 +17291,18 @@ func _init() -> void:
 	check(r209_oh_ok and r209_e8.state.hand[0].upgrade_stacks == 1,
 		"R209 返修：从弃牌区回手的树人带 1 层（实际 %s）"
 			% (str(r209_e8.state.hand[0].upgrade_stacks) if r209_oh_ok else "回手失败"))
-	# ---- ⑧b 代达罗斯 8060：手牌 / 牌库 / 弃牌区里的友军也各记一层 ----
+	# ---- ⑧b 代达罗斯 8060（R271 重做）：入场成长 = 3 × 本次对战用过的聚能炮击 ----
 	var r209_e8b := _new_engine([], 30, 30, -1, false)
 	r209_e8b.start_game()
-	r209_e8b.state.hand = [CardData.from_dict(r209_repo.get_card(8003).to_dict())]
-	r209_e8b.state.deck = [CardData.from_dict(r209_repo.get_card(8003).to_dict())]
-	r209_e8b.state.discard = [CardData.from_dict(r209_repo.get_card(8003).to_dict())]
+	r209_e8b.state.self_cannon_plays = 3
 	var r209_dae: Placement = r209_e8b.state.place(
-			CardData.from_dict(r209_repo.get_card(8003).to_dict()), Vector2i(4, 3),
+			CardData.from_dict(r209_repo.get_card(8060).to_dict()), Vector2i(4, 3),
 			GameEngine.SIDE_SELF)
-	r209_e8b._daedalus_upgrade(r209_dae)
-	check(r209_e8b.state.hand[0].upgrade_stacks == 1
-			and r209_e8b.state.deck[0].upgrade_stacks == 1
-			and r209_e8b.state.discard[0].upgrade_stacks == 1,
-		"R209 代达罗斯：手牌 / 牌库 / 弃牌区的友军各记 1 层（实际 %s）"
-			% str([r209_e8b.state.hand[0].upgrade_stacks,
-				r209_e8b.state.deck[0].upgrade_stacks,
-				r209_e8b.state.discard[0].upgrade_stacks]))
+	r209_e8b._daedalus_enter(r209_dae)
+	check(r209_dae.health == 27 and r209_dae.card.health == 27,
+		"R271 代达罗斯：3 张聚能炮击 → 18+9=27 血（实际 %s）" % str(r209_dae.health))
+	check(r209_e8b.state.turn_cannon_free,
+		"R271 代达罗斯：入场后本回合手卡聚能炮击 0 费（turn_cannon_free）")
 	# ---- ⑨ 场上改造**不写回卡**（离场还原后层数回到随身值）----
 	var r209_e9 := _new_engine([], 30, 30, -1, false)
 	r209_e9.start_game()
@@ -19676,6 +19664,247 @@ func _init() -> void:
 	var r269_a1_targets := r269_a1._autoplay_spell_targets(r269_a1_ss)
 	check(r269_a1_targets.size() == 1 and r269_a1_targets[0] == Vector2i(4, 0),
 			"R269 共享护盾：自动出牌挑中己方盟友那一格（不会选到敌方 / 空格）")
+
+	# ============================================================
+	#  R271：机械之心「聚能」体系（6 张新卡 + 代达罗斯 8060 重做）
+	# ============================================================
+	# 三条公共骨架（改机制时先看这里，再看各卡）：
+	#   ① `state.self_cannon_plays` = 本次对战中我方**使用过**几张「聚能炮击」9145；
+	#   ② `state.hand_cost_delta` = 手卡内减费（只在卡还在手里时生效）；
+	#   ③ `CardData.random_born` = 「以随机变化的方式加入手卡」的标记。
+	var r271_repo := CardRepo.load_json()
+
+	# ---- ① 卡面定义 ----
+	var r271_creation := r271_repo.get_card(8070)
+	check(r271_creation != null and r271_creation.kind == "效果" and r271_creation.cost == 2
+			and r271_creation.rarity == 2 and r271_creation.card_class == "机械之心",
+		"R271 创意 8070：2 费史诗效果卡，机械之心（实际 %s/%s/%s）"
+			% [r271_creation.kind, r271_creation.cost, r271_creation.rarity])
+	var r271_scrap := r271_repo.get_card(8071)
+	check(r271_scrap != null and r271_scrap.kind == "技能" and r271_scrap.cost == 3
+			and r271_scrap.rarity == 1 and r271_scrap.target_mode == "none",
+		"R271 报废 8071：3 费稀有技能卡，无需目标")
+	var r271_mnemo := r271_repo.get_card(8072)
+	check(r271_mnemo != null and r271_mnemo.kind == "盟友" and r271_mnemo.cost == 4
+			and r271_mnemo.power == 5 and r271_mnemo.health == 16
+			and r271_mnemo.attack_range == 1 and r271_mnemo.move_speed == 1
+			and r271_mnemo.rarity == 2,
+		"R271 谟涅摩叙涅 8072：4 费史诗盟友 5/16/1/1（实际 %s/%s）"
+			% [r271_mnemo.power, r271_mnemo.health])
+	var r271_mech := r271_repo.get_card(8073)
+	check(r271_mech != null and r271_mech.kind == "盟友" and r271_mech.cost == 2
+			and r271_mech.power == 1 and r271_mech.health == 8 and r271_mech.rarity == 0,
+		"R271 聚能机兵 8073：2 费普通盟友 1/8/1/1（实际 %s/%s）"
+			% [r271_mech.power, r271_mech.health])
+	var r271_massdae := r271_repo.get_card(8074)
+	check(r271_massdae != null and r271_massdae.kind == "盟友" and r271_massdae.cost == 3
+			and r271_massdae.power == 3 and r271_massdae.health == 12
+			and r271_massdae.rarity == 0,
+		"R271 量产型代达罗斯 8074：3 费普通盟友 3/12/1/1（实际 %s/%s）"
+			% [r271_massdae.power, r271_massdae.health])
+	var r271_massmne := r271_repo.get_card(8075)
+	check(r271_massmne != null and r271_massmne.kind == "工事" and r271_massmne.cost == 2
+			and r271_massmne.power == 0 and r271_massmne.health == 10
+			and r271_massmne.attack_range == 0,
+		"R271 量产型谟涅摩叙涅 8075：2 费普通工事 0/10/程 0（实际 %s/%s/%s）"
+			% [r271_massmne.power, r271_massmne.health, r271_massmne.attack_range])
+	check(r271_repo.get_card(9145).cost == 1,
+		"R271 前提：聚能炮击 9145 是 1 费（报废把它变 0 费才有意义）")
+
+	# ---- ② 聚能计数：使用聚能炮击 → self_cannon_plays +1（唯一记账口 _note_card_played）----
+	var r271_e1 := _new_engine([], 40, 40, -1, false)
+	r271_e1.start_game()
+	r271_e1.state.place(CardData.from_dict(r271_repo.get_card(8003).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r271_e1.state.hand = [CardData.from_dict(r271_repo.get_card(9145).to_dict())]
+	r271_e1.state.energy = 5
+	r271_e1.use_spell(0, Vector2i(0, 1))
+	check(r271_e1.state.self_cannon_plays == 1,
+		"R271 聚能计数：用掉一张聚能炮击 → 本次对战累计 1（实际 %d）"
+			% r271_e1.state.self_cannon_plays)
+
+	# ---- ③ 聚能机兵 8073：入场按「本次对战用过几张聚能炮击」加攻 ----
+	var r271_e2 := _new_engine([], 40, 40, -1, false)
+	r271_e2.start_game()
+	r271_e2.state.hand = [CardData.from_dict(r271_repo.get_card(8073).to_dict())]
+	r271_e2.state.energy = 5
+	r271_e2.state.self_cannon_plays = 3
+	var r271_mech_p: Placement = r271_e2.play_from_hand(0, Vector2i(4, 1))
+	check(r271_mech_p != null and r271_mech_p.effective_power() == 4,
+		"R271 聚能机兵：用过 3 张聚能炮击 → 1+3=4 攻（实际 %s）"
+			% ("null" if r271_mech_p == null else str(r271_mech_p.effective_power())))
+	check(r271_mech_p != null and r271_mech_p.card.power == 1,
+		"R271 聚能机兵：卡面力量不变（加成记在 upgrade_atk，离场带走）")
+	var r271_mech_back := r271_e2._card_leaving_field(r271_mech_p)
+	check(r271_mech_back != null and r271_mech_back.power == 1,
+		"R271 聚能机兵：离场还原后仍是 1 攻的卡（不入库成雪球）")
+
+	# ---- ④ 谟涅摩叙涅 8072：光环「所有敌人力量 -= 改造层数」，层数一变立刻重算 ----
+	var r271_e3 := _new_engine([], 40, 40, -1, false)
+	r271_e3.start_game()
+	var r271_mnemo_p: Placement = r271_e3.state.place(
+			CardData.from_dict(r271_repo.get_card(8072).to_dict()), Vector2i(4, 1),
+			GameEngine.SIDE_SELF)
+	var r271_foe: Placement = r271_e3.state.place(
+			CardData.from_dict(r271_repo.get_card(8003).to_dict()), Vector2i(0, 1),
+			GameEngine.SIDE_OPPONENT)
+	r271_e3._refresh_mnemosyne()
+	check(r271_foe.effective_power() == 3 and r271_foe.mnemo_down == 0,
+		"R271 谟涅摩叙涅：0 层改造 → 敌人力量不降（%d 攻）" % r271_foe.effective_power())
+	r271_e3._field_upgrade_grant(r271_mnemo_p, 1, 2, "测试")
+	r271_e3._field_upgrade_grant(r271_mnemo_p, 1, 2, "测试")
+	check(r271_mnemo_p.upgrade_stacks == 2 and r271_foe.mnemo_down == 2,
+		"R271 谟涅摩叙涅：2 层改造 → 所有敌人力量 -2（实际 -%d）" % r271_foe.mnemo_down)
+	check(r271_foe.effective_power() == 1,
+		"R271 谟涅摩叙涅：敌方 effective_power 真的掉到 1（实际 %d）"
+			% r271_foe.effective_power())
+	var r271_mnemo_entry := ""
+	for r271_se: Dictionary in r271_foe.status_entries():
+		if str(r271_se.get("label", "")).begins_with("谟涅摩叙涅"):
+			r271_mnemo_entry = str(r271_se["label"])
+	check(r271_mnemo_entry == "谟涅摩叙涅：力 -2",
+		"R271 谟涅摩叙涅：敌方状态列写着「%s」" % r271_mnemo_entry)
+	r271_e3._destroy(Vector2i(4, 1))
+	check(r271_foe.mnemo_down == 0 and r271_foe.effective_power() == 3,
+		"R271 谟涅摩叙涅：它被破坏 → 减益立刻消失（敌回到 %d 攻）" % r271_foe.effective_power())
+
+	# ---- ⑤ 谟涅摩叙涅：以「随机变化」方式入手 → 手卡内 -2 费，离手恢复 ----
+	var r271_e4 := _new_engine([], 40, 40, -1, false)
+	r271_e4.start_game()
+	r271_e4.state.hand = [CardData.from_dict(r271_repo.get_card(8003).to_dict()),
+			CardData.from_dict(r271_repo.get_card(8059).to_dict())]
+	r271_e4._transform_hand_card(GameEngine.SIDE_SELF, 0, r271_repo.get_card(8072), "测试", true)
+	var r271_born: CardData = r271_e4.state.hand[0]
+	check(r271_born.id == 8072 and r271_born.random_born,
+		"R271 随机变化：变出来的谟涅摩叙涅带 random_born 标记")
+	check(r271_e4.cost_of(r271_born) == 2,
+		"R271 谟涅摩叙涅：随机变化入手 → 手卡内费用 4-2=2（实际 %d）"
+			% r271_e4.cost_of(r271_born))
+	r271_e4.state.hand.erase(r271_born)
+	check(r271_e4.cost_of(r271_born) == 4,
+		"R271 谟涅摩叙涅：**离开手卡**立刻恢复原价 4（实际 %d）"
+			% r271_e4.cost_of(r271_born))
+	var r271_born2 := CardData.from_dict(r271_repo.get_card(8072).to_dict())
+	r271_born2.random_born = true
+	r271_e4._apply_random_born(r271_born2)
+	check(r271_e4.cost_of(r271_born2) == 4,
+		"R271 随机变化：**没进过手卡**的卡不吃 -2（判据是 hand.has）")
+
+	# ---- ⑥ 量产型代达罗斯 8074：入场选一张手卡变炮击；随机变化入手 +2 攻 +2 血 ----
+	var r271_e5 := _new_engine([], 40, 40, -1, false)
+	r271_e5.start_game()
+	r271_e5.state.hand = [CardData.from_dict(r271_repo.get_card(8074).to_dict()),
+			CardData.from_dict(r271_repo.get_card(8003).to_dict())]
+	r271_e5.state.energy = 6
+	var r271_md_p: Placement = r271_e5.play_from_hand(0, Vector2i(4, 2))
+	check(r271_md_p != null and r271_e5.cannonize_pending,
+		"R271 量产型代达罗斯：入场后开「选一张手卡变炮击」的待办")
+	check(r271_e5.cannonize_options().size() == r271_e5.state.hand.size(),
+		"R271 量产型代达罗斯：候选 = 全部手牌（%d 张）" % r271_e5.state.hand.size())
+	var r271_pick_ok: bool = r271_e5.cannonize_pick(0)
+	check(r271_pick_ok and r271_e5.state.hand[0].id == 9145 and not r271_e5.cannonize_pending,
+		"R271 量产型代达罗斯：选中的手卡变成聚能炮击，待办清空")
+	check(not r271_e5.state.hand[0].random_born,
+		"R271 量产型代达罗斯：入场效果是**确定**变化 → 不带 random_born")
+	var r271_born_md := CardData.from_dict(r271_repo.get_card(8074).to_dict())
+	r271_born_md.random_born = true
+	r271_e5._apply_random_born(r271_born_md)
+	check(r271_born_md.power == 5 and r271_born_md.health == 14,
+		"R271 量产型代达罗斯：随机变化入手 → 3/12 变 %d/%d"
+			% [r271_born_md.power, r271_born_md.health])
+	# 手牌为空时不弹面板（否则玩家会被一个没得选的面板卡死）
+	var r271_e5b := _new_engine([], 40, 40, -1, false)
+	r271_e5b.start_game()
+	r271_e5b.state.hand.clear()
+	r271_e5b._start_cannonize(1, "量产型代达罗斯")
+	check(not r271_e5b.cannonize_pending,
+		"R271 量产型代达罗斯：手牌为空 → 不弹面板（整条落空）")
+
+	# ---- ⑦ 量产型谟涅摩叙涅 8075：炮击因自身效果抽到的那张卡 -1 费 ----
+	var r271_e6 := _new_engine([], 40, 40, -1, false)
+	r271_e6.start_game()
+	r271_e6.state.place(CardData.from_dict(r271_repo.get_card(8003).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r271_e6.state.place(CardData.from_dict(r271_repo.get_card(8075).to_dict()),
+			Vector2i(4, 3), GameEngine.SIDE_SELF)
+	r271_e6.state.hand = [CardData.from_dict(r271_repo.get_card(9145).to_dict())]
+	r271_e6.state.deck = [CardData.from_dict(r271_repo.get_card(8004).to_dict())]   # 熊 4 费
+	r271_e6.state.energy = 5
+	r271_e6.use_spell(0, Vector2i(0, 1))
+	var r271_drawn: CardData = r271_e6.state.hand[0] if not r271_e6.state.hand.is_empty() else null
+	check(r271_drawn != null and int(r271_e6.state.card_discount.get(r271_drawn, 0)) == 1,
+		"R271 量产型谟涅摩叙涅：炮击抽到的那张记 -1 费（实际 %s）"
+			% ("无" if r271_drawn == null else str(r271_e6.state.card_discount.get(r271_drawn, 0))))
+	check(r271_drawn != null and r271_e6.cost_of(r271_drawn) == r271_drawn.cost - 1,
+		"R271 量产型谟涅摩叙涅：抽到的那张**实际费用** -1（%s → %s）"
+			% ["?" if r271_drawn == null else str(r271_drawn.cost),
+				"?" if r271_drawn == null else str(r271_e6.cost_of(r271_drawn))])
+
+	# ---- ⑧ 报废 8071：手牌里其他卡全变聚能炮击（本回合 0 费，回合结束失效）----
+	var r271_e7 := _new_engine([], 40, 40, -1, false)
+	r271_e7.start_game()
+	r271_e7.state.hand = [CardData.from_dict(r271_repo.get_card(8071).to_dict()),
+			CardData.from_dict(r271_repo.get_card(8003).to_dict()),
+			CardData.from_dict(r271_repo.get_card(8027).to_dict())]
+	r271_e7.state.energy = 6
+	r271_e7.use_spell(0, null)
+	check(r271_e7.state.hand.size() == 2 and r271_e7.state.hand[0].id == 9145
+			and r271_e7.state.hand[1].id == 9145,
+		"R271 报废：手牌里其他 2 张全变成聚能炮击（实际 %d 张）"
+			% r271_e7.state.hand.size())
+	check(r271_e7.cost_of(r271_e7.state.hand[0]) == 0
+			and r271_e7.cost_of(r271_e7.state.hand[1]) == 0,
+		"R271 报废：这两张**本回合**费用为 0（实际 %d / %d）"
+			% [r271_e7.cost_of(r271_e7.state.hand[0]),
+				r271_e7.cost_of(r271_e7.state.hand[1])])
+	check(not r271_e7.state.hand[0].random_born,
+		"R271 报废：确定变化 → 不带 random_born（不会误触发谟涅摩叙涅 -2）")
+	r271_e7.end_turn()
+	check(r271_e7.state.turn_card_discount.is_empty() and not r271_e7.state.turn_cannon_free,
+		"R271：回合结束清空「本回合手卡减费」与「手卡炮击 0 费」两条一次性账")
+
+	# ---- ⑨ 创意 8070：回合开始 → 选一张手卡变成随机「被改造有额外效果」的卡 ----
+	var r271_e8 := _new_engine([], 40, 40, -1, false)
+	r271_e8.start_game()
+	r271_e8.state.effects.append(CardData.from_dict(r271_repo.get_card(8070).to_dict()))
+	r271_e8.state.hand = [CardData.from_dict(r271_repo.get_card(8003).to_dict())]
+	r271_e8._creation_tick(GameEngine.SIDE_SELF)
+	check(r271_e8.creation_pending and r271_e8.creation_options().size() == 1,
+		"R271 创意：回合开始进入待选（候选 = 全部手牌）")
+	var r271_cr_ok: bool = r271_e8.creation_pick(0)
+	var r271_cre: CardData = r271_e8.state.hand[0]
+	check(r271_cr_ok and r271_cre.id != 8003 and r271_cre.random_born,
+		"R271 创意：手卡被变成一张随机卡（%s）" % r271_cre.card_name)
+	var r271_is_zoom := r271_cre.upgrade_atk_bonus > 0 or r271_cre.upgrade_hp_bonus > 0 \
+			or r271_cre.traits.has(GameEngine.UPGRADE_RANGE_TRAIT) \
+			or r271_cre.traits.has(GameEngine.UPGRADE_SPEED_TRAIT) \
+			or r271_cre.traits.has(GameEngine.UPGRADE_DRAW_TRAIT)
+	check(r271_is_zoom,
+		"R271 创意：变出来的卡一定属于「被改造有额外效果」那一族（%s）" % r271_cre.card_name)
+	check(r271_cre.upgrade_stacks == 1,
+		"R271 创意：变出来的卡带 1 层改造（侦察塔 / 堡垒会照常响应）")
+	var r271_base_hp: int = r271_repo.get_card(r271_cre.id).health
+	check(r271_cre.health == r271_base_hp + r271_cre.upgrade_hp_bonus + GameEngine.CREATION_HP,
+		"R271 创意：改造 +2 生命真的加上去了（%d → %d）"
+			% [r271_base_hp, r271_cre.health])
+	check(not r271_e8.creation_pending,
+		"R271 创意：选完一次 → 待办清空")
+	r271_e8.state.hand.clear()
+	r271_e8._creation_tick(GameEngine.SIDE_SELF)
+	check(not r271_e8.creation_pending,
+		"R271 创意：手牌为空 → 不开面板（整条落空）")
+
+	# ---- ⑩ 代达罗斯 8060：一张炮击都没用过 → 不加血，但本回合炮击照样 0 费 ----
+	var r271_e9 := _new_engine([], 40, 40, -1, false)
+	r271_e9.start_game()
+	r271_e9.state.hand = [CardData.from_dict(r271_repo.get_card(8060).to_dict())]
+	r271_e9.state.energy = 6
+	var r271_d0: Placement = r271_e9.play_from_hand(0, Vector2i(4, 1))
+	check(r271_d0 != null and r271_d0.health == 18 and r271_d0.card.health == 18,
+		"R271 代达罗斯：0 张聚能炮击 → 入场不加血（18 血，实际 %s）"
+			% ("null" if r271_d0 == null else str(r271_d0.health)))
+	check(r271_e9.state.turn_cannon_free,
+		"R271 代达罗斯：入场即点亮「本回合手卡聚能炮击 0 费」")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

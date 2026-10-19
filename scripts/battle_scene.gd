@@ -893,6 +893,95 @@ func _ready() -> void:
 					r270_p.card.move_speed, r270_p.card.attack_range]
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r271" in args and engine != null:
+		# 演示（R271）：创意（8070）—— 效果区一张 → **回合开始**选一张手卡变形成一张
+		# 随机「被改造时有额外效果」的卡，并使其获得改造：生命 +2。
+		# 出图看的是**选卡页**（`_sync_pick()` 每帧驱动，pending 一置上就弹出）。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		for r271_nid: int in [8003, 8019, 8055]:
+			engine.state.hand.append(CardData.from_dict(repo.get_card(r271_nid).to_dict()))
+		engine.state.effects.clear()
+		engine.state.effects.append(
+				CardData.from_dict(repo.get_card(GameEngine.CREATION_ID).to_dict()))
+		engine.state.energy = 7
+		engine._creation_tick(GameEngine.SIDE_SELF)
+		status_text = "R271：创意（8070）→ 回合开始，选 1 张手牌变成随机「被改造有额外效果」的卡，并获改造：生命 +2"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r271cannon" in args and engine != null:
+		# 演示（R271）：报废（8071）—— 手牌里**其他所有卡**变成「聚能炮击」，
+		# 且这些卡**本回合**费用为 0（左栏「费用 0」；离开手卡即恢复原价 1）。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.SCRAP_ID).to_dict()))
+		for r271_nid2: int in [8003, 8019, 8055]:
+			engine.state.hand.append(CardData.from_dict(repo.get_card(r271_nid2).to_dict()))
+		engine.state.energy = 9
+		engine.use_spell(0)
+		if not engine.state.hand.is_empty():
+			_hover_card = engine.state.hand[0]
+			_hover_hand = 0
+			_hover_pl = null
+		status_text = "R271：报废（8071）→ 手牌其余 %d 张全变「聚能炮击」，本回合费用 %d（原价 1）" % [
+				engine.state.hand.size(), engine.cost_of(engine.state.hand[0]) if not engine.state.hand.is_empty() else -1]
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r271mnemo" in args and engine != null:
+		# 演示（R271）：谟涅摩叙涅（8072）—— 在场时**所有敌人力量 -X**（X = 本卡改造层数）。
+		# 这里给 2 层改造 → 每个敌人 -2 力；悬停一个敌人看左栏力量被压后的数值。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 7
+		var r271_mn: CardData = CardData.from_dict(
+				repo.get_card(GameEngine.MNEMOSYNE_ID).to_dict())
+		r271_mn.upgrade_stacks = 2
+		engine.state.place(r271_mn, Vector2i(4, 1), GameEngine.SIDE_SELF)
+		var r271_mn_p: Placement = engine.state.unit_at(Vector2i(4, 1))
+		if r271_mn_p != null:
+			r271_mn_p.upgrade_stacks = 2
+		engine._refresh_mnemosyne()
+		var r271_enemy: Placement = null
+		for r271_c: Vector2i in engine.state.board:
+			var r271_q: Placement = engine.state.board[r271_c]
+			if r271_q != null and r271_q.owner == GameEngine.SIDE_OPPONENT:
+				r271_enemy = r271_q
+				break
+		if r271_enemy != null:
+			_hover_pl = r271_enemy
+			_hover_card = r271_enemy.card
+			_hover_hand = -1
+			status_text = "R271：谟涅摩叙涅 %d 层改造 → %s 力量 %d（卡面 %d）" % [
+					r271_mn_p.upgrade_stacks if r271_mn_p != null else 0,
+					r271_enemy.card.card_name, r271_enemy.effective_power(),
+					r271_enemy.card.power]
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r271daedalus" in args and engine != null:
+		# 演示（R271）：代达罗斯（8060）重做 —— 入场时**本次对战中每用过一张聚能炮击 → 生命 +3**，
+		# 且本回合手卡里的「聚能炮击」费用为 0。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		engine.state.self_cannon_plays = 3
+		engine.state.hand.append(
+				CardData.from_dict(repo.get_card(GameEngine.ENERGY_CANNON_ID).to_dict()))
+		engine.state.hand.append(
+				CardData.from_dict(repo.get_card(GameEngine.ENERGY_CANNON_ID).to_dict()))
+		var r271_dd: CardData = CardData.from_dict(repo.get_card(GameEngine.DAEDALUS_ID).to_dict())
+		engine.state.place(r271_dd, Vector2i(4, 0), GameEngine.SIDE_SELF)
+		var r271_dp: Placement = engine.state.unit_at(Vector2i(4, 0))
+		if r271_dp != null:
+			engine._daedalus_enter(r271_dp)
+			_hover_pl = r271_dp
+			_hover_card = r271_dp.card
+			_hover_hand = -1
+			status_text = "R271：代达罗斯 入场（已用聚能炮击 %d 张）→ 生命 %d（18 +3×%d），本回合手卡聚能炮击 %d 费" % [
+					engine.state.self_cannon_plays, r271_dp.health,
+					engine.state.self_cannon_plays,
+					engine.cost_of(engine.state.hand[0]) if not engine.state.hand.is_empty() else -1]
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--trapper" in args and engine != null:
 		# 演示（R116）：捕兽大师 9126 的**亡语** —— 先上场、再当场打死它 →
 		# 它倒下的那一格变成一张**随机陷阱**（斜纹格 + 角标）。
@@ -3900,6 +3989,11 @@ func _pick_active_kind() -> String:
 		return "endless"
 	if engine.rebirth_pending:
 		return "rebirth"
+	# R271：创意（8070）回合开始 / 量产型代达罗斯（8074）入场 —— 都是「选一张手卡变化」。
+	if engine.creation_pending:
+		return "creation"
+	if engine.cannonize_pending:
+		return "cannonize"
 	if _recall_pending():
 		return "recall"
 	if engine.foresight_pick:
@@ -4024,6 +4118,23 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"note": "点卡选中，再点确认 —— 它本场对战消失（不进弃牌区）",
 					"cards": bopts.map(func(i: int) -> CardData: return engine.state.hand[i]),
 					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
+		"creation":
+			# R271 创意（8070）：候选 = 全部手牌；确认后随机变形成「被改造有额外效果」的卡，
+			# 并获得改造：生命 +2。**不能不选**（效果区几张就选几次）。
+			var cr_opts: Array = engine.creation_options()
+			return {"kind": k, "short": "创意", "opts": cr_opts,
+					"title": "创意：选择 1 张手牌，让它变成随机的「被改造有额外效果」卡牌",
+					"note": "点卡选中，再点确认 —— 它随机变形，并获得改造：生命 +2",
+					"cards": cr_opts.map(func(i: int) -> CardData: return engine.state.hand[i]),
+					"max_sel": 1, "confirm_label": "确认变化", "cancel_label": ""}
+		"cannonize":
+			# R271 量产型代达罗斯（8074）：候选 = 全部手牌；确认后原位变成「聚能炮击」。
+			var ca_opts: Array = engine.cannonize_options()
+			return {"kind": k, "short": engine.cannonize_src, "opts": ca_opts,
+					"title": "%s：选择 1 张手牌，把它变成「聚能炮击」" % engine.cannonize_src,
+					"note": "点卡选中，再点确认 —— 它原位变成「聚能炮击」",
+					"cards": ca_opts.map(func(i: int) -> CardData: return engine.state.hand[i]),
+					"max_sel": 1, "confirm_label": "确认变化", "cancel_label": ""}
 		"recall":
 			var ropts: Array = _recall_options()
 			var rtitle := "复活术：选择弃牌区一张盟友回到手卡（必须选一张）"
@@ -4173,6 +4284,26 @@ func _on_pick_confirmed(sel: Array) -> void:
 				bnm = engine.state.hand[bi].card_name
 			if engine.rebirth_pick(bi):
 				status_text = "新生：%s 消失" % bnm
+			_clear_selection()
+		"creation":
+			# R271 创意（8070）：确认 → 随机变形 + 改造（生命 +2）。
+			var cri := int(opts[sel[0]])
+			var crnm := "?"
+			if cri >= 0 and cri < engine.state.hand.size():
+				crnm = engine.state.hand[cri].card_name
+			if engine.creation_pick(cri):
+				status_text = "创意：%s 随机变形并获得改造：生命 +2" % crnm
+			_clear_selection()
+		"cannonize":
+			# R271 量产型代达罗斯（8074）：确认 → 目标原位变成「聚能炮击」。
+			# ⚠️ source 要在 pick 之前抓（pick 成功后 `cannonize_src` 可能已被下一组覆盖）。
+			var ca_src: String = engine.cannonize_src
+			var cai := int(opts[sel[0]])
+			var canm := "?"
+			if cai >= 0 and cai < engine.state.hand.size():
+				canm = engine.state.hand[cai].card_name
+			if engine.cannonize_pick(cai):
+				status_text = "%s：%s 变成「聚能炮击」" % [ca_src, canm]
 			_clear_selection()
 		"recall":
 			var ri := int(opts[sel[0]])

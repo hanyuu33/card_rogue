@@ -83,6 +83,9 @@ var forge_range: int = 0
 ## 直接改 card 会把加成写进卡库、跨局泄漏（R111 特意不走 R101 那条 `p.card.move_speed +=` 的路）。
 ## 因此无需 `_card_leaving_field` 还原：单位一离场，这两个字段随之消失。
 var dark_lord_atk: int = 0     # +3 × 存活暗杀者数（进 effective_power）
+## R271 谟涅摩叙涅 8072：场上**每张**本卡的改造层数之和 → 敌方单位力量 -N。
+## 与 dark_lord_atk 同范式：只写 Placement、不碰 card，由 `_refresh_mnemosyne()` 重算。
+var mnemo_down: int = 0
 var dark_lord_speed: int = 0   # +1 × 存活暗杀者数（进 effective_speed）
 ## 「赫卡同克瑞斯」（9136，R152）：场上**只有它一个**己方单位时的孤军 buff —— 力量 +2、
 ## 受到的攻击伤害减半（减伤那一半在引擎 `_unit_damage_taken` 实时判定，不进本类）。
@@ -122,7 +125,8 @@ func effective_power() -> int:
 	## +1，不是这张卡攻击时 +1）。于是塔自身 0 攻就是 0 攻，定位 = 标记一片区域的增伤辅助。
 	var debuff := atk_debuff if debuff_stage == 1 else 0
 	return maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
-			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk - debuff)
+			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk
+			- debuff - mnemo_down)
 
 
 func effective_speed() -> int:
@@ -183,6 +187,9 @@ func status_entries() -> Array[Dictionary]:
 	if hecaton_atk > 0:
 		out.append({"label": "孤军：力 +%d，攻击伤害减半（场上无其他己方单位）" % hecaton_atk,
 				"col": COL_B, "kind": "buff"})
+	if mnemo_down > 0:
+		out.append({"label": "谟涅摩叙涅：力 -%d" % mnemo_down,
+				"col": COL_D, "kind": "debuff"})
 	if atk_buff > 0:
 		out.append({"label": "力量 +%d（成长光环）" % atk_buff, "col": COL_B, "kind": "buff"})
 	if atk_buff_turn > 0:

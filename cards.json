@@ -3817,18 +3817,20 @@
       "name": "代达罗斯",
       "kind": "盟友",
       "cost": 5,
-      "power": 5,
-      "health": 19,
+      "power": 8,
+      "health": 18,
       "attack_range": 1,
       "move_speed": 1,
-      "rarity": 3,
+      "rarity": 2,
       "group": "player",
       "class": "机械之心",
       "traits": [
         "机械"
       ],
-      "affixes": [],
-      "effect_text": "使用时，手卡、抽牌库、弃牌区，以及场上其他所有盟友和工事获得改造：力量+1。",
+      "affixes": [
+        "嘲讽"
+      ],
+      "effect_text": "嘲讽。入场时，本次对战中你每使用过一张「聚能炮击」，本卡生命 +3。本回合，你手卡里的「聚能炮击」费用为 0。",
       "target_mode": "none",
       "color": "蓝",
       "image": ""
@@ -3959,6 +3961,124 @@
       ],
       "effect_text": "使**场上的一个己方盟友**获得改造：挂上「共享护盾」字段 —— 之后**我方 HP 要受到伤害时，改由它承受**，每次都能顶、顶到它死亡为止。这**算一层改造**，侦察塔 / 堡垒 / 无限装甲 / 模仿者都会照常响应。",
       "target_mode": "unit",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8070,
+      "name": "创意",
+      "kind": "效果",
+      "cost": 2,
+      "rarity": 2,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "回合开始时，选一张手卡变成一张随机**被改造时有额外效果**的卡牌，并使其获得改造：生命 +2。",
+      "target_mode": "none",
+      "color": "紫",
+      "image": ""
+    },
+    {
+      "id": 8071,
+      "name": "报废",
+      "kind": "技能",
+      "cost": 3,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [],
+      "effect_text": "将手牌里**其他所有卡**变成「聚能炮击」。这些卡本回合费用为 0，离开手卡即恢复原价。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8072,
+      "name": "谟涅摩叙涅",
+      "kind": "盟友",
+      "cost": 4,
+      "power": 5,
+      "health": 16,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 2,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [],
+      "effect_text": "在场时，**所有敌人力量降低 X 点**，X 为本卡的改造层数。若本卡以**随机变化**的方式加入手卡，费用 -2。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8073,
+      "name": "聚能机兵",
+      "kind": "盟友",
+      "cost": 2,
+      "power": 1,
+      "health": 8,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [],
+      "effect_text": "入场时，本次对战中你每使用过一张「聚能炮击」，本卡力量 +1。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8074,
+      "name": "量产型代达罗斯",
+      "kind": "盟友",
+      "cost": 3,
+      "power": 3,
+      "health": 12,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "量产型"
+      ],
+      "affixes": [],
+      "effect_text": "入场时，选一张手卡变成「聚能炮击」。若本卡以**随机变化**的方式加入手卡，力量 +2、生命 +2。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 8075,
+      "name": "量产型谟涅摩叙涅",
+      "kind": "工事",
+      "cost": 2,
+      "power": 0,
+      "health": 10,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "工事"
+      ],
+      "affixes": [],
+      "effect_text": "你使用「聚能炮击」时，它因自身效果**抽到的那张卡费用 -1**。",
+      "target_mode": "none",
       "color": "蓝",
       "image": ""
     },

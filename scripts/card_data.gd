@@ -106,6 +106,13 @@ var actions: int = 1
 var rarity: int = 0             # 0普通 1稀有 2史诗 3初始 4怪物 5事件
 var group: String = "player"
 var card_class: String = "森林精魄"
+## R271：**「以随机变化的方式加入手卡」**的标记（创意 / 报废 / 随心组装 / 填充等
+## `_transform_hand_card` 复制出来的卡）。
+##   * 谟涅摩叙涅 8072：带这个标记 → 手卡内费用 -2（`state.hand_cost_delta`）；
+##   * 量产型代达罗斯 8074：带这个标记 → +2 攻 +2 血（复制那一刻就烤进数值）。
+## ⚠️ 必须随 `to_dict()` 走：卡被复制 / 离场还原之后标记不能丢，否则「随机出来的卡」
+##    在弃牌区洗回牌库再抽到时就不认了（-2 费凭空消失）。
+var random_born := false
 ## R123：「按张记账」的卡（留手 / 魔像）**第一次**抽到时已换成独立副本的标记
 ## （见 FieldState.draw）。副本离开手卡（打出 → 弃牌区 → 洗回牌库 → 再抽到）沿用
 ## 同一个对象 → 实例级**永久**减费（陨石术 9077）不再重置。
@@ -190,6 +197,7 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.field_heal = int(d.get("field_heal", 0))
 	c.regen_per_turn = maxi(0, int(d.get("regen_per_turn", 0)))
 	c.own_copy = bool(d.get("own_copy", false))
+	c.random_born = bool(d.get("random_born", false))
 	# R214：附魔 id 随序列化走（烤数值之后它是「这张卡被附魔过」的唯一凭据）
 	c.enchant = str(d.get("enchant", ""))
 	# ⚠️ 数组字段**必须逐个 append**（不能直接接字典里那个 Array）：
@@ -226,6 +234,8 @@ func to_dict() -> Dictionary:
 		"regen_per_turn": regen_per_turn,
 		# R123：独立副本标记随序列化走 —— 复制 / 离场还原之后减费记账仍跟着这一张。
 		"own_copy": own_copy,
+		# R271：「随机变化入手」标记同样必须随序列化走（复制 / 离场还原共用这条通道）。
+		"random_born": random_born,
 		# R214：附魔 id **必须**在这里 —— 复制 / 离场还原 / 联机共用这条通道，
 		# 漏了它 = 卡一进战场附魔标记就没了（数值还在，看不出是附魔来的）。
 		"enchant": enchant,

@@ -95,6 +95,15 @@ var turn_free := {}             # CardData -> true：本回合费用为 0（使�
 ##   这也是为什么**不需要在 10 处离手口逐个挂钩**（离手口分散在 play / use / discard / …），
 ##   靠「判据 = 此刻在手牌里」一次解决，漏一处也不会出 bug。
 var hand_free := {}
+## R271：**手卡内减费**（CardData -> int，正数 = 减 N 费）。
+## 与 `hand_free` 同一条判据（`cost_of` 里验 `hand.has(card)`）→ 打出 / 弃掉自动恢复原价。
+## 用途：谟涅摩叙涅 8072「以随机变化方式入手 → 费用 -2」。
+var hand_cost_delta := {}
+## R271：代达罗斯 8060「本回合，你手卡里的「聚能炮击」费用为 0」—— **回合结束清空**。
+var turn_cannon_free := false
+## R271：**本次对战中我方使用过几张「聚能炮击」9145**（聚能机兵 / 代达罗斯 / 量产型的 X）。
+## 记账口唯一 = `GameEngine._note_card_played()`。
+var self_cannon_plays := 0
 var turn_card_discount := {}    # CardData -> int：本回合这张**手卡**费用 -N（魔像术 9079；回合结束清空）
 var turn_card_raise := 0         # 本回合**手卡全体**费用 +N（契约签订者 8024；回合结束清空）
 var turn_keep: Array[CardData] = []  # 回转 9089 抽到的牌：本回合结束不弃（discard_hand 跳过；回合结束清空）

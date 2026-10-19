@@ -54,6 +54,13 @@ var fate_count:= 0
 var endless_pending:= false  # 无尽黑暗 9114（R70）：等玩家从**手牌**里选 1 张弃掉
 var rebirth_pending:= false  # 新生 9148（R222）：等玩家从**手牌**里选 1 张使其消失
 var rebirth_remaining:= 0    # 本层面板还要消失几张（效果区几张新生就几张）
+## R271 创意 8070：回合开始「选一张手卡变成随机可改造卡」的待办（UI kind = "creation"）。
+var creation_pending:= false
+var creation_remaining:= 0
+## R271 量产型代达罗斯 8074：入场「选一张手卡变成聚能炮击」的待办（UI kind = "cannonize"）。
+var cannonize_pending:= false
+var cannonize_remaining:= 0
+var cannonize_src:= ""
 var _aether_left:= 0
 var _aether_used:= false
 var _stoneskin_left:= 0
@@ -875,6 +882,44 @@ const AFFIX_SWAP:= "交换"
 ## ⚠️ 与「护盾」（能量屏障的一次性免伤）**不是一回事**：那个免的是**这张卡自己**受的第一次伤害，
 ##   这个是**玩家 HP** 要掉血时改由这张卡挨打（每次都能顶，顶到死）。
 const AFFIX_SHARED_SHIELD:= "共享护盾"
+# ── R271：机械之心「聚能」体系（6 张新卡 + 代达罗斯 8060 重做）──
+# 这一批共用三条骨架，先讲清楚，下面各卡只写差异：
+#   ① **聚能计数** `state.self_cannon_plays` = 本次对战中我方**使用过**几张「聚能炮击」9145。
+#      记账口唯一 = `_note_card_played()`（所有出牌路径的统一收尾），不另开计数器；
+#   ② **手卡内减费** `state.hand_cost_delta` = 只在卡**此刻还在手牌里**时生效
+#      （判据 `hand.has(card)`，与 `hand_free` 同一条路）→ 打出 / 弃掉自动恢复原价，
+#      不必在那 15 处离手口逐个清标记；
+#   ③ **随机变化标记** `CardData.random_born` = `_transform_hand_card()` 复制出来的卡
+#      （= 卡面说的「以随机变化的方式加入手卡」），由 `_apply_random_born()` 一处结算。
+# 「创意」8070（2 费**史诗效果**）：回合开始时，选一张手卡变成一张随机
+#   「**被改造时有额外效果**」的卡，并获得改造：生命 +2。
+#   随机池判据与 `_on_unit_upgraded()` 同源 = `upgrade_atk_bonus` / `upgrade_hp_bonus` > 0，
+#   或带「改造攻程 / 改造移速 / 改造抽牌」trait。层数照样 +1（侦察塔 / 堡垒会响应）。
+const CREATION_ID:= 8070
+const CREATION_HP:= 2
+# 「报废」8071（3 费**稀有技能**）：把手牌里**其他所有卡**变成「聚能炮击」，
+#   这些卡**本回合**费用为 0（`turn_card_discount`，回合结束随表清空）。
+const SCRAP_ID:= 8071
+# 「谟涅摩叙涅」8072（4 费**史诗盟友** 5/16/1/1）：在场时所有敌人力量 -X（X = 本卡改造层数）；
+#   若以随机变化方式加入手卡 → 手卡内费用 -2。
+#   ⚠️ 光环走 `Placement.mnemo_down`（同 dark_lord_atk 范式），由 `_refresh_mnemosyne()` 重算。
+const MNEMOSYNE_ID:= 8072
+const MNEMOSYNE_RAND_DISCOUNT:= 2
+# 「聚能机兵」8073（2 费**普通盟友** 1/8/1/1）：入场时，本次对战每用过一张聚能炮击 → 力量 +1。
+const CANNON_MECH_ID:= 8073
+const CANNON_MECH_ATK_PER:= 1
+# 「量产型代达罗斯」8074（3 费**普通盟友** 3/12/1/1）：入场时选一张手卡变成聚能炮击；
+#   若本卡以随机变化方式加入手卡 → +2 攻 +2 血。
+const MASS_DAEDALUS_ID:= 8074
+const MASS_DAEDALUS_BORN_ATK:= 2
+const MASS_DAEDALUS_BORN_HP:= 2
+# 「量产型谟涅摩叙涅」8075（2 费**普通工事** 0/10）：你使用聚能炮击时，
+#   它因自身效果抽到的那张卡费用 -1（实例级减费 `state.card_discount`，本场有效）。
+const MASS_MNEMOSYNE_ID:= 8075
+const MASS_MNEMOSYNE_DISCOUNT:= 1
+# 「代达罗斯」8060（R271 重做，5 费**史诗盟友** 8/18/1/1，嘲讽）：
+#   入场时本次对战每用过一张聚能炮击 → 生命 +3；本回合手卡里的聚能炮击费用为 0。
+const DAEDALUS_HP_PER_CANNON:= 3
 const UPGRADE_RANGE_TRAIT:= "改造攻程"
 const UPGRADE_SPEED_TRAIT:= "改造移速"
 const UPGRADE_DRAW_TRAIT:= "改造抽牌"
@@ -1499,10 +1544,12 @@ func _begin_turn(side: String) -> void :
 		_shadow_split_draw(SIDE_SELF)   # 分裂之影 8067（R217）
 		_glowgrass_supply(SIDE_SELF)
 		_rebirth_tick(SIDE_SELF)          # 新生 9148（R222）：抽牌之后，选一张手卡消失
+		_creation_tick(SIDE_SELF)         # 创意 8070（R271）：抽牌之后，选一张手卡随机变形
 		_ghost_self_destruct(SIDE_SELF)
 		_assassin_summon(SIDE_SELF)
 		_refresh_dark_lord(SIDE_SELF)
 		_refresh_hecaton(SIDE_SELF)
+		_refresh_mnemosyne()           # R271 谟涅摩叙涅：按改造层数重算敌方力量减益
 		_refresh_night_owl()           # R270 夜鸭：按本回合奇偶刷新夜衰
 		_run_battlecries(SIDE_SELF)
 		_log("── 我方第 %d 回合：能量重置为 %d%s%s%s%s%s%s（共 %d），抽 %d 张" % [
@@ -1567,6 +1614,7 @@ func _begin_turn(side: String) -> void :
 		_cannon_fire(SIDE_OPPONENT)   # R158 充能巨炮 9139：己方回合开始随机破坏一个我方单位
 		_refresh_dark_lord(SIDE_OPPONENT)
 		_refresh_hecaton(SIDE_OPPONENT)
+		_refresh_mnemosyne()           # R271 谟涅摩叙涅：对称保留（敌方正常拿不到）
 		_refresh_night_owl()           # R270 夜鸭：奇数回合夜衰（与上一行同回合内一致）
 		_run_battlecries(SIDE_OPPONENT)
 		_log("── 对手回合开始：能量 %d（上回合结束已清零，本回合重新发放基础费用），手牌 +%d" % [
@@ -1589,6 +1637,7 @@ func enable_enemy_effects(cards: Array[CardData]) -> void :
 	_assassin_summon(SIDE_OPPONENT, true)
 	_refresh_dark_lord(SIDE_OPPONENT)
 	_refresh_hecaton(SIDE_OPPONENT)
+	_refresh_mnemosyne()               # R271 谟涅摩叙涅：开局先算一次
 	_refresh_night_owl()               # R270 夜鸭：开局先按当前回合数定一次
 
 
@@ -2566,6 +2615,7 @@ func end_turn() -> void :
 			state.turn_keep.clear()
 		# 夜行（9155，R232）：本回合免费用 / 出牌上限都只在本回合有效
 		state.turn_all_free = false
+		state.turn_cannon_free = false   # R271 代达罗斯：本回合手卡炮击 0 费，回合结束失效
 		state.card_play_cap = 0
 
 
@@ -2662,6 +2712,10 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 	c -= _turn_instance_discount(card, side)
 	c -= _magic_core_discount(card, side)
 	c -= _void_lord_discount(card, side)
+	# R271：**手卡内减费**（谟涅摩叙涅「随机变化入手 -2」）——
+	# 判据 = 这张卡此刻还在手牌里，离手即自动恢复原价（与 hand_free 同一条路）。
+	if card != null and state.hand_cost_delta.has(card) and state.hand.has(card):
+		c -= int(state.hand_cost_delta[card])
 	# 契约签订者（8024，R63）：本回合手卡全体**涨价** +N —— 放在所有减费之后，
 	# 这样它压得住前面的各种 -1 / -X，且显示 = 判定 = 实扣仍统一走这里。
 	if side == SIDE_SELF and card != null and state.turn_card_raise > 0:
@@ -2671,6 +2725,11 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 	# 放在契约签订者之后 —— 两者都是涨价，顺序不影响最终值。
 	if side == SIDE_SELF and card != null and card.is_spell() and _hand_has_curse():
 		c += FATIGUE_COST_RAISE
+	# R271 代达罗斯 8060：「本回合，你手卡里的「聚能炮击」费用为 0」——
+	# 放在**最后**（压得住契约签订者的涨价，因为卡面写的就是「为 0」）；回合结束清空。
+	if side == SIDE_SELF and state.turn_cannon_free and card != null \
+			and card.id == ENERGY_CANNON_ID and state.hand.has(card):
+		c = 0
 	return _cost_floor(card, maxi(0, c))
 
 
@@ -3457,7 +3516,12 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	state.hand.remove_at(hand_index)
 
 	if card.id == DAEDALUS_ID:
-		_daedalus_upgrade(p)
+		_daedalus_enter(p)          # R271 重做：入场 +3×聚能炮击生命 + 本回合炮击 0 费
+	if card.id == CANNON_MECH_ID:
+		_cannon_mech_enter(p)       # R271 聚能机兵：入场 +1 力 / 用过的一张炮击
+	if card.id == MASS_DAEDALUS_ID:
+		_mass_daedalus_enter(p)     # R271 量产型代达罗斯：入场选一张手卡变炮击
+	_refresh_mnemosyne()            # R271：刚落地 / 刚被换上场的那只可能是谟涅摩叙涅
 
 	if card.id == FOX_ID:
 		_fox_trigger()
@@ -3534,46 +3598,269 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	return p
 
 
-func _daedalus_upgrade(self_p: Placement) -> void :
-	## 代达罗斯 8060（R101，史诗，机械之心）：使用时，手卡/抽牌库/弃牌区/
-	## 场上其他所有友方盟友和工事获得改造：力量+1。
-	# 手牌/牌库/弃牌区：烤进副本（与 系统升级/批量改造 同口径，本场永久、不污染卡库）
-	for zone in [state.hand, state.deck, state.discard]:
-		for i in zone.size():
-			var c: CardData = zone[i]
-			if c.kind == "盟友" or c.is_fort():
-				var up := CardData.from_dict(c.to_dict())
-				up.traits = (up.traits as Array).duplicate()
-				# R120：改造奖励走**唯一口**（手/库/弃里的素体也 +1 血）。
-				up.power += _upgrade_atk_gain(up, 1)
-				up.health += _upgrade_hp_gain(up, 0)
-				# R209：手牌 / 牌库 / 弃牌区里的那张**也记一层**（随身带）——
-				# 漏了它，代达罗斯改过的牌抽到上场时层数还是 0（侦察塔光环 / 徽标都看不到）。
-				up.upgrade_stacks += 1
-				zone[i] = up
-	# 场上其他友方盟友/工事：走改造路径（力量+1，触发其改造反应），不连锁镜像/供牌
-	for cell in state.board.keys():
-		var q: Placement = state.board[cell]
-		if q == self_p:
+func _daedalus_enter(p: Placement) -> void :
+	## 「代达罗斯」8060（**R271 重做**，机械之心 5 费史诗盟友 8/18/1/1，嘲讽）：
+	##   ① 入场时：本次对战中你**每使用过一张「聚能炮击」** → 这张卡生命 +3；
+	##   ② 本回合：你手卡里的「聚能炮击」费用为 0。
+	## ⚠️ 加血记 `upgrade_hp`（**不**加 `upgrade_stacks` —— 这是入场成长，不是「改造」）：
+	##    `_card_leaving_field()` 靠 `upgrade_hp` 把它减回去，否则这张卡被击破 / 回手后
+	##    会带着多出来的血量再打一次，直接滚成雪球。
+	var n := state.self_cannon_plays
+	var gain := n * DAEDALUS_HP_PER_CANNON
+	if gain > 0:
+		p.upgrade_hp += gain
+		p.card.health += gain
+		p.health += gain
+	state.turn_cannon_free = true
+	_log("代达罗斯入场：本次对战已用聚能炮击 %d 张 → 生命 +%d（%d/%d）；本回合手卡聚能炮击 0 费"
+			% [n, gain, p.health, p.card.health])
+	action.emit("daedalus_enter", {"cell": _cell_of(p), "card": p.card,
+			"cannons": n, "hp": gain})
+
+
+func _cannon_mech_enter(p: Placement) -> void :
+	## 「聚能机兵」8073（R271，2 费普通盟友 1/8/1/1）：入场时，本次对战中你每使用过
+	## 一张「聚能炮击」→ 自身力量 +1。
+	## 加攻记 `upgrade_atk`（进 `effective_power`、离场不带走）—— 与嵌合暴君的吸收同口径。
+	var n := state.self_cannon_plays
+	var gain := n * CANNON_MECH_ATK_PER
+	if gain <= 0:
+		_log("聚能机兵入场：本次对战还没用过聚能炮击 → 力量不变（%d 攻）" % p.effective_power())
+		return
+	p.upgrade_atk += gain
+	_log("聚能机兵入场：本次对战已用聚能炮击 %d 张 → 力量 +%d（→%d 攻）"
+			% [n, gain, p.effective_power()])
+	action.emit("cannon_mech", {"cell": _cell_of(p), "card": p.card,
+			"cannons": n, "atk": gain})
+
+
+func _mass_daedalus_enter(p: Placement) -> void :
+	## 「量产型代达罗斯」8074（R271，3 费普通盟友 3/12/1/1）：入场时**选一张手卡**
+	## 变成「聚能炮击」（全屏选卡页 kind = "cannonize"）。
+	## 「随机变化入手 +2 攻 +2 血」在 `_apply_random_born()` 里、复制那一刻就烤进数值了，
+	## 入场这里不再处理 —— 否则随机出来的那张会重复加一遍。
+	_start_cannonize(1, "量产型代达罗斯")
+
+
+func _refresh_mnemosyne() -> void :
+	## 「谟涅摩叙涅」8072（R271）：**这张卡在场时**，所有敌人力量 -X，X = 它的改造层数。
+	## 同场多张 → 各算各的再加起来（卡面写的是「这张卡在场时」，不是效果区那种
+	## 「多张不叠加」的口径）。
+	## 与 `_refresh_dark_lord` 同范式：**只写 Placement 字段**（`mnemo_down`），不碰 card ——
+	## 敌方关卡单位用的是卡库共享实例，写 card 会跨局泄漏；不写 card 也就不需要离场还原。
+	## 调用点 = 层数 / 在场数会变的六处：双方回合开始、我方单位落地、两个改造口、单位被破坏。
+	var total := 0
+	for c1: Vector2i in state.board:
+		var m: Placement = state.board[c1]
+		if m.owner == SIDE_SELF and m.card.id == MNEMOSYNE_ID:
+			total += m.upgrade_stacks
+	for c2: Vector2i in state.board:
+		var u: Placement = state.board[c2]
+		u.mnemo_down = total if u.owner == SIDE_OPPONENT else 0
+
+
+func _apply_random_born(card: CardData) -> void :
+	## 「以**随机变化**的方式加入手卡」的**唯一结算口**（R271）：
+	##   * 谟涅摩叙涅 8072 → 手卡内费用 -2（`hand_cost_delta`，离手自动失效）；
+	##   * 量产型代达罗斯 8074 → +2 攻 +2 血（直接烤进副本的数值）。
+	## 其它卡只留 `random_born` 标记 —— 以后再加「随机变化有收益」的卡，只改这里。
+	if card == null or not card.random_born:
+		return
+	if card.id == MNEMOSYNE_ID:
+		state.hand_cost_delta[card] = int(state.hand_cost_delta.get(card, 0)) \
+				+ MNEMOSYNE_RAND_DISCOUNT
+		_log("谟涅摩叙涅：以随机变化的方式入手 → 手卡内费用 -%d" % MNEMOSYNE_RAND_DISCOUNT)
+	elif card.id == MASS_DAEDALUS_ID:
+		card.power += MASS_DAEDALUS_BORN_ATK
+		card.health += MASS_DAEDALUS_BORN_HP
+		_log("量产型代达罗斯：以随机变化的方式入手 → +%d 攻 +%d 血"
+				% [MASS_DAEDALUS_BORN_ATK, MASS_DAEDALUS_BORN_HP])
+
+
+# ── R271：手卡变化（「量产型代达罗斯」入场 / 「创意」回合开始）──
+
+func _start_cannonize(n: int, src: String) -> void :
+	## 开一组「选一张手卡变成聚能炮击」的待办（UI 侧 `_pick_active_kind` = "cannonize"）。
+	## 手牌为空 → 直接落空：不弹面板、不留 pending（否则玩家会被一个没得选的面板卡住）。
+	if state.hand.is_empty():
+		_log("%s：手牌为空，没有可变化的卡 → 效果落空" % src)
+		action.emit("cannonize", {"pending": false, "remaining": 0, "source": src})
+		return
+	cannonize_pending = true
+	cannonize_remaining += n
+	cannonize_src = src
+	_log("%s：待选 %d 张手卡变成聚能炮击" % [src, cannonize_remaining])
+	action.emit("cannonize", {"pending": true, "remaining": cannonize_remaining, "source": src})
+
+
+func cannonize_options() -> Array[int]:
+	## 候选 = **全部**手牌（业务下标 = 手牌下标）；空数组 = 没有待办。
+	if not cannonize_pending:
+		return []
+	var out: Array[int] = []
+	for i in state.hand.size():
+		out.append(i)
+	return out
+
+
+func cannonize_pick(hand_index: int) -> bool:
+	## 确认一张：原位变成「聚能炮击」的独立副本。
+	## 这是**确定**变化（不是随机）→ `random_born = false`，不会触发谟涅摩叙涅 / 量产型代达罗斯。
+	if not cannonize_pending:
+		return false
+	if hand_index < 0 or hand_index >= state.hand.size():
+		return false
+	var repo := CardRepo.load_json()
+	var proto: CardData = repo.get_card(ENERGY_CANNON_ID) if repo != null else null
+	if proto == null:
+		cannonize_pending = false
+		cannonize_remaining = 0
+		return false
+	var res := _transform_hand_card(SIDE_SELF, hand_index, proto, cannonize_src, false)
+	var body: CardData = res.get("new", null) as CardData
+	cannonize_remaining = maxi(0, cannonize_remaining - 1)
+	if cannonize_remaining == 0:
+		cannonize_pending = false
+	action.emit("cannonize_pick", {"card": body, "index": hand_index,
+			"remaining": cannonize_remaining})
+	return body != null
+
+
+func _creation_tick(side: String) -> void :
+	## 「创意」8070（R271，2 费史诗效果卡）：**回合开始时**，选一张手卡变成一张随机
+	## 「被改造时有额外效果」的卡，并使其获得改造：生命 +2。
+	## * 挂在 `_begin_turn` **抽牌之后**（与新生 9148 同位置：刚抽完的那手牌才是候选）；
+	## * 效果区几张就逐份结算（`creation_remaining`，与新生 / 专注同口径）；
+	## * 敌方侧没有真实手牌（只记张数）→ 对称落空，不开面板。
+	var copies := 0
+	for c: CardData in (state.effects if side == SIDE_SELF else state.enemy_effects):
+		if c.id == CREATION_ID:
+			copies += 1
+	if copies <= 0:
+		return
+	if side != SIDE_SELF:
+		_log("创意（对方）：敌方没有真实手牌 → 效果落空")
+		return
+	if state.hand.is_empty():
+		_log("创意：手牌为空 → 本回合不触发")
+		action.emit("creation", {"pending": false, "copies": copies, "remaining": 0})
+		return
+	creation_pending = true
+	creation_remaining = copies
+	_log("创意：效果区 %d 张 → 待变化 %d 张手卡（随机「被改造有额外效果」的卡 + 生命 +2）"
+			% [copies, copies])
+	action.emit("creation", {"pending": true, "copies": copies, "remaining": copies})
+
+
+func creation_options() -> Array[int]:
+	## 创意的面板候选：**全部**手牌（业务下标 = 手牌下标）；空数组 = 没有待办。
+	if not creation_pending:
+		return []
+	var out: Array[int] = []
+	for i in state.hand.size():
+		out.append(i)
+	return out
+
+
+func _random_creation_card() -> CardData:
+	## 创意的随机池 = **玩家卡里「被改造时有额外效果」的那些**（不按职业过滤 ——
+	## 卡面写的是「一张随机「被改造有额外效果」的卡牌」，这一族目前全是机械之心）。
+	## 判据与 `_on_unit_upgraded()` 同源（`upgrade_atk_bonus` / `upgrade_hp_bonus` /
+	## 「改造攻程·改造移速·改造抽牌」三个 trait），**不写死卡 id** ——
+	## 以后新卡只要带这些字段就自动进池，不必回来改这里。
+	## 池先按 id 排序再抽：rng 消耗顺序稳定 → 同种子回放可复现。
+	var repo := CardRepo.load_json()
+	if repo == null:
+		return null
+	var pool: Array[CardData] = []
+	for c: CardData in repo.player_cards():
+		if c.upgrade_atk_bonus > 0 or c.upgrade_hp_bonus > 0 \
+				or c.traits.has(UPGRADE_RANGE_TRAIT) or c.traits.has(UPGRADE_SPEED_TRAIT) \
+				or c.traits.has(UPGRADE_DRAW_TRAIT):
+			pool.append(c)
+	if pool.is_empty():
+		return null
+	pool.sort_custom(func(a: CardData, b: CardData) -> bool: return a.id < b.id)
+	return pool[rng.randi() % pool.size()]
+
+
+func creation_pick(hand_index: int) -> bool:
+	## 选一张手卡 → 随机变形成「被改造有额外效果」的卡，并获得改造：生命 +2。
+	## 「获得改造」与批量改造 8031 完全同一条口径：奖励走唯一口（素体 +1 血 / 骨骼 +1 攻 +1 血）
+	## + 层数随身带（侦察塔 / 堡垒 / 无限装甲都会照常响应）。
+	if not creation_pending:
+		return false
+	if hand_index < 0 or hand_index >= state.hand.size():
+		return false
+	var pick := _random_creation_card()
+	if pick == null:
+		creation_pending = false
+		creation_remaining = 0
+		return false
+	var res := _transform_hand_card(SIDE_SELF, hand_index, pick, "创意", true)
+	var body: CardData = res.get("new", null) as CardData
+	if body != null:
+		body.power += _upgrade_atk_gain(body, 0)
+		body.health += _upgrade_hp_gain(body, CREATION_HP)
+		body.upgrade_stacks += 1
+		_log("创意：%s → %s（改造 +生命，%d 攻 / %d 血）"
+				% [str(res.get("old", null)), body.card_name, body.power, body.health])
+	creation_remaining = maxi(0, creation_remaining - 1)
+	if creation_remaining == 0:
+		creation_pending = false
+	action.emit("creation_pick", {"card": body, "index": hand_index,
+			"remaining": creation_remaining})
+	return body != null
+
+
+func _scrap_hand(side: String) -> String :
+	## 「报废」8071（R271，机械之心 3 费稀有技能）：把手牌里**其他所有卡**变成
+	## 「聚能炮击」（此时报废自己已被 `use_spell` 移出手牌），并让这些卡**本回合**费用为 0。
+	## * 走 `_transform_hand_card()` → 「发明专家」照常回费、"transform" 动作照常播；
+	## * 「本回合 0 费」记 `turn_card_discount`（回合结束随表清空）——
+	##   离开手卡后费用不再有意义，效果自然结束，正好对上卡面的「离开手卡即恢复原价」。
+	if side != SIDE_SELF:
+		return "报废：敌方没有真实手牌"
+	var repo := CardRepo.load_json()
+	var proto: CardData = repo.get_card(ENERGY_CANNON_ID) if repo != null else null
+	if proto == null:
+		_log("报废：卡库缺少「聚能炮击」(9145)，效果落空")
+		return "报废：卡库缺少聚能炮击，效果落空"
+	var n := 0
+	for i in state.hand.size():
+		var res := _transform_hand_card(side, i, proto, "报废", false)
+		var body: CardData = res.get("new", null) as CardData
+		if body == null:
 			continue
-		if q.owner != SIDE_SELF:
-			continue
-		if q.card.kind == "盟友" or q.card.is_fort():
-			q.card = CardData.from_dict(q.card.to_dict())
-			q.card.traits = (q.card.traits as Array).duplicate()
-			# R120：改造奖励走**唯一口**（场上的素体也 +1 血；侦察塔不加攻）。
-			var da_atk: int = _upgrade_atk_gain(q.card, 1)
-			var da_hp: int = _upgrade_hp_gain(q.card, 0)
-			q.upgrade_atk += da_atk
-			if da_hp > 0:
-				q.upgrade_hp += da_hp
-				q.card.health += da_hp
-				q.health += da_hp
-			q.upgrade_stacks += 1
-			_on_unit_upgraded(q)
-			_log("代达罗斯：%s 获得改造（力量+1）" % q.card.card_name)
-	_log("代达罗斯：群体改造完成")
-	action.emit("daedalus", {"self": self_p.card})
+		state.turn_card_discount[body] = int(state.turn_card_discount.get(body, 0)) \
+				+ maxi(0, proto.cost)
+		n += 1
+	if n == 0:
+		_log("报废：手牌里没有其他卡 → 效果落空")
+		return "报废：手牌里没有其他卡"
+	_log("报废：手牌 %d 张全部变成「聚能炮击」（本回合 0 费）" % n)
+	action.emit("scrap", {"count": n})
+	return "%d 张手牌变成聚能炮击（本回合 0 费）" % n
+
+
+func _cannon_draw_discount(side: String, drawn: CardData) -> void :
+	## 「量产型谟涅摩叙涅」8075（R271，2 费普通工事 0/10）：你使用「聚能炮击」时，
+	## **它因自身效果抽到的那张卡**费用 -1。
+	## * 判据 = 场上有没有本卡（多座不叠加 —— 与效果区 / 场地一贯的「有没有」口径一致）；
+	## * 减费记 `state.card_discount`（**实例级**、本场有效）：这是「给那张卡打折」，
+	##   不是「本回合打折」，所以它洗回牌库再抽到仍然便宜 1 费。
+	if side != SIDE_SELF or drawn == null:
+		return
+	var n := 0
+	for p: Placement in state.board.values():
+		if p.owner == SIDE_SELF and p.card.id == MASS_MNEMOSYNE_ID:
+			n += 1
+	if n <= 0:
+		return
+	state.card_discount[drawn] = int(state.card_discount.get(drawn, 0)) \
+			+ MASS_MNEMOSYNE_DISCOUNT
+	_log("量产型谟涅摩叙涅：聚能炮击抽到的「%s」费用 -%d"
+			% [drawn.card_name, MASS_MNEMOSYNE_DISCOUNT])
 
 func _spawn_self_clone(card: CardData) -> void :
 	## 野兔 9032（R82）：把**自己**复制一份塞进手牌。
@@ -3807,6 +4094,7 @@ func _field_upgrade_grant(p: Placement, atk: int, hp: int, source: String,
 	action.emit("upgrade", {"cell": _cell_of(p), "card": p.card, "placement": p,
 			"atk": atk, "hp": hp, "affix": affix})
 	_on_unit_upgraded(p)
+	_refresh_mnemosyne()   # R271：被改造的可能正是谟涅摩叙涅（X = 层数要立刻生效）
 
 
 func _waste_bot_ping(p: Placement) -> void :
@@ -3895,6 +4183,7 @@ func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	# 挂在**改造结算之后**（卡面写的是「被改造时」，那是改造完成的那一刻）。
 	_feed_upgrade_card(p)
 	_on_unit_upgraded(p)
+	_refresh_mnemosyne()   # R271：谟涅摩叙涅被「升级」改造 → 敌方立刻多降一层
 	return "%s 改造完成（+%d 攻 / +%d 血）" % [p.card.card_name, atk_gain, hp_gain]
 
 
@@ -4862,6 +5151,12 @@ func use_spell(hand_index: int, target = null) -> String:
 	# 回放路径兜底。（R209：`sys_upgrade_pending` 已删，手牌目标改由选卡页驱动。）
 	if overhaul_pending:
 		return "返修：请先从弃牌区选择一张盟友或工事"
+	# R271：手卡变化面板（创意 / 量产型代达罗斯）pending 期间同样不许出别的牌 ——
+	# 否则玩家能在选牌过程中把目标那张打掉，业务下标就失效了。
+	if creation_pending:
+		return "创意：请先选一张手卡让它变成随机可改造卡"
+	if cannonize_pending:
+		return "量产型代达罗斯：请先选一张手卡让它变成聚能炮击"
 
 	var card:= state.hand[hand_index]
 	var cap_msg:= _play_cap_blocked()
@@ -5043,6 +5338,12 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 			_log("紧急埋伏：本张工事卡费用 -1（剩余 %d 层）" % state.fort_discount_self)
 		elif side == SIDE_OPPONENT and state.fort_discount_opp > 0:
 			state.fort_discount_opp -= 1
+	# R271：聚能体系计数 —— 本次对战中我方**使用过几张「聚能炮击」**（9145）。
+	# 记账口就这一处：play_from_hand / use_spell / use_effect / remote_* 全都会走到这里。
+	# 记在 `played` 上（而不是扫描效果区）：聚能炮击是技能卡，用完就进弃牌区了。
+	if played != null and played.id == ENERGY_CANNON_ID and side == SIDE_SELF:
+		state.self_cannon_plays += 1
+		_log("聚能炮击：本次对战累计使用 %d 张" % state.self_cannon_plays)
 	_phantom_cloak_tick(side)
 	_gale_tick(side, played)
 	_lurker_tick(side, played)
@@ -5970,16 +6271,24 @@ func _invention_refund(side: String, source_name: String) -> void:
 	action.emit("invention_refund", {"side": side, "amount": INVENTION_REFUND})
 
 
-func _transform_hand_card(side: String, hand_index: int, new_card: CardData, source_name: String) -> Dictionary:
+func _transform_hand_card(side: String, hand_index: int, new_card: CardData,
+		source_name: String, random_born := false) -> Dictionary:
 	## 变化一张手牌：把 state.hand[hand_index] 替换成 new_card 的独立副本，
 	## 触发「发明专家」回费，并 emit "transform" 动作给 UI。
+	## `random_born = true` → 这张新卡标记「以**随机**变化的方式加入手卡」，
+	## 并立刻结算 `_apply_random_born()`（谟涅摩叙涅 -2 费 / 量产型代达罗斯 +2+2）。
+	## ⚠️ 只有**随机**来源才传 true（随心组装 9144 / 创意 8070）；填充 9146 / 报废 8071 /
+	##    量产型代达罗斯的入场效果都是**确定**变化，传 false。
 	var out: Dictionary = {"old": null, "new": null}
 	if hand_index < 0 or hand_index >= state.hand.size():
 		return out
 	var old_card: CardData = state.hand[hand_index]
 	var copy: CardData = CardData.from_dict(new_card.to_dict())
 	copy.traits = (copy.traits as Array).duplicate()   # 切断与卡库的共享引用
+	copy.random_born = random_born
 	state.hand[hand_index] = copy
+	if random_born:
+		_apply_random_born(copy)
 	_invention_refund(side, source_name)
 	_log("%s：%s → %s" % [source_name, old_card.card_name, copy.card_name])
 	action.emit("transform", {"side": side, "index": hand_index, "old": old_card, "new": copy, "source": source_name})
@@ -5995,7 +6304,7 @@ func _assemble_at_will(side: String) -> String:
 		var pick: CardData = _random_reward_card(side)
 		if pick == null:
 			continue
-		_transform_hand_card(side, i, pick, "随心组装")
+		_transform_hand_card(side, i, pick, "随心组装", true)   # R271：随机变化
 		count += 1
 	return "随心组装：变化了 %d 张手牌" % count
 
@@ -6383,8 +6692,16 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 		ENERGY_CANNON_ID:
 			# 聚能炮击 9145（R202，机械之心）：造成 ENERGY_CANNON_DMG 点伤害并抽 1 张。
 			var ec_dmg:= _op_deal_damage(side, _spell_dmg(side, ENERGY_CANNON_DMG, card), target)
+			# R271 量产型谟涅摩叙涅 8075：**因这张卡自身效果抽到的那张卡**费用 -1。
+			# 抽牌后手牌末尾就是刚抽到的那张（手牌满时 _draw_many 不抽，长度不变 → 不结算）。
+			var ec_before:= state.hand.size()
 			var ec_draw:= _draw_many(1)
+			if side == SIDE_SELF and state.hand.size() > ec_before:
+				_cannon_draw_discount(side, state.hand[state.hand.size() - 1])
 			return "%s；抽 %d 张" % [ec_dmg, ec_draw]
+		SCRAP_ID:
+			# 报废 8071（R271，机械之心）：手牌里其他所有卡变成聚能炮击（本回合 0 费）。
+			return _scrap_hand(side)
 		ASSEMBLE_ID:
 			# 随心组装 9144（R202，机械之心）：手牌里所有卡变成随机奖励卡。
 			return _assemble_at_will(side)
@@ -8859,6 +9176,8 @@ func _destroy(cell: Vector2i) -> void :
 	_refresh_dark_lord(p.owner)
 	# R152 赫卡同克瑞斯：场上单位数变了 → 孤军判定重算（塔被拆 → 立刻狂暴）。
 	_refresh_hecaton(p.owner)
+	# R271 谟涅摩叙涅：场上少了一张（可能是它自己）→ 光环立刻重算。
+	_refresh_mnemosyne()
 
 
 
