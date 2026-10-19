@@ -3021,6 +3021,49 @@ func _init() -> void:
 	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 7,
 			"夜行：每个自己的回合开始都 +1（6 → 7）")
 
+	# ===== R270：夜鸭「夜衰」—— 奇数回合移速 -1 / 攻击距离 -1 =====
+	# 判据 = `Placement.night_owl_weak`，由 `GameEngine._refresh_night_owl()` 在双方回合开始
+	# 与开局刷新；奇偶用 `turn_number`（玩家看到的回合数），**不是** turn_total（双方各 +1）。
+	var nw_e := _new_engine([], 20, 20, -1, false)
+	nw_e.start_game(0)                       # 我方第 1 回合（奇数）
+	nw_e.state.place(CardData.from_dict(repo.get_card(9027).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	nw_e.state.place(CardData.from_dict(repo.get_card(9009).to_dict()),
+			Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
+	nw_e._refresh_night_owl()
+	var nw_p: Placement = nw_e.state.unit_at(Vector2i(1, 0))
+	var nw_other: Placement = nw_e.state.unit_at(Vector2i(1, 2))
+	check(nw_e.turn_number == 1, "夜衰：开局是我方第 1 回合（奇数）")
+	check(nw_p.effective_speed() == 1 and nw_p.effective_range() == 1,
+			"夜衰：奇数回合 速 2→1、攻程 2→1")
+	check(nw_p.card.move_speed == 2 and nw_p.card.attack_range == 2,
+			"夜衰：只改场上值，卡面数据不动（绝不写回 card）")
+	check(nw_other.night_owl_weak == 0 and nw_other.effective_speed() == 1,
+			"夜衰：只打夜鸭（9027），别的敌方单位不沾")
+	check(nw_p.status_entries().any(func(e): return str(e.get("label", "")).begins_with("夜衰")),
+			"夜衰：左栏列出一条减益")
+	check(nw_p.status_badges().any(func(b): return str(b.get("text", "")) == "夜衰"),
+			"夜衰：战场卡面显示「夜衰」徽标")
+	var nw_weak_cells: int = nw_e._reachable(Vector2i(1, 0), GameEngine.SIDE_OPPONENT).size()
+	nw_e.end_turn()   # → 敌方第 1 回合（turn_number 仍 1，仍奇数）
+	check(nw_e.turn_number == 1 and nw_p.effective_speed() == 1
+			and nw_p.effective_range() == 1,
+			"夜衰：敌方第 1 回合仍是奇数回合，继续削弱（两侧同回合一致）")
+	nw_e.end_turn()   # → 我方第 2 回合（偶数）
+	check(nw_e.turn_number == 2 and nw_p.effective_speed() == 2
+			and nw_p.effective_range() == 2,
+			"夜衰：第 2 回合（偶数）恢复 速2 程2")
+	var nw_full_cells: int = nw_e._reachable(Vector2i(1, 0), GameEngine.SIDE_OPPONENT).size()
+	check(nw_full_cells > nw_weak_cells,
+			"夜衰：移速 2→1 真的少走（可达 %d 格 → %d 格）" % [nw_full_cells, nw_weak_cells])
+	nw_e.end_turn()   # → 敌方第 2 回合（仍偶数）
+	check(nw_p.effective_speed() == 2, "夜衰：敌方第 2 回合不削弱")
+	nw_e.end_turn()   # → 我方第 3 回合（奇数）
+	check(nw_e.turn_number == 3 and nw_p.effective_speed() == 1
+			and nw_p.effective_range() == 1,
+			"夜衰：第 3 回合（奇数）再次削弱")
+	check(not nw_p.status_badges().is_empty(), "夜衰：徽标随状态出现/消失，不留残影")
+
 	# 精进（9021 白魔法鸭）：每个自己的回合开始力量 +1（永久累计，无前置条件）
 	var sl_e := _new_engine([], 20, 20, -1, false)
 	sl_e.start_game(0)

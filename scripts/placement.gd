@@ -98,6 +98,10 @@ var action_growth_turns: int = 0   # 距离下次成长还剩几个回合
 ## 共享实例，直接改 card.move_speed 会把加成写进卡库、跨局泄漏。单位一离场字段随之消失，
 ## 因此无需 `_card_leaving_field` 还原。
 var summon_haste: int = 0          # 阿尔戈斯召唤加成（进 effective_speed）
+## 「夜衰」（夜鸭 9027，R270）：**奇数回合**移速 / 攻击距离各 -1（0 = 不生效，1 = 生效）。
+## 与暗影领主同范式：只记 Placement、**绝不烤进 CardData**（敌方关卡单位是卡库共享实例），
+## 由 `GameEngine._refresh_night_owl()` 在回合开始时按 `turn_number` 的奇偶重算。
+var night_owl_weak: int = 0
 ## 「生命循环」（9150，R227，森林精魄稀有技能）：
 ##   * `life_cycle` —— 这个单位被本卡点过（死亡时要「加一张随机盟友卡到手卡」）；
 ##   * `life_cycle_added` —— 本卡实际**新加**的字段（次元 / 死亡）。离场（重启 / 回收 /
@@ -122,21 +126,22 @@ func effective_power() -> int:
 
 
 func effective_speed() -> int:
-	## 实际移动速度（R111）：卡面移速 + 场上加成（鸭之暗面的暗影领主）。最低 0。
+	## 实际移动速度（R111）：卡面移速 + 场上加成（鸭之暗面的暗影领主）- 夜衰（夜鸭奇数回合）。最低 0。
 	## 与 effective_power 对称：**不写回 card**，所以 `_move_bfs` / AI 都要读这个口。
 	if card == null:
 		return 0
-	return maxi(0, card.move_speed + dark_lord_speed + summon_haste)
+	return maxi(0, card.move_speed + dark_lord_speed + summon_haste - night_owl_weak)
 
 
 func effective_range() -> int:
-	## 实际攻击距离（R150）：卡面射程 + **只在场上有效**的加成（赫菲斯托斯的锻造成长）。
+	## 实际攻击距离（R150）：卡面射程 + **只在场上有效**的加成（赫菲斯托斯的锻造成长）
+	## - 夜衰（夜鸭 9027 奇数回合 -1）。
 	## 与 `effective_power` / `effective_speed` 对称：**不写回 card**。
 	## ⚠️ 引擎里凡是判断「够不够得着」的地方都要走这个口（或 `GameEngine.eff_range`），
 	##    别再直接读 `card.attack_range` —— 那个不含场上加成。
 	if card == null:
 		return 0
-	return maxi(0, card.attack_range + forge_range)
+	return maxi(0, card.attack_range + forge_range - night_owl_weak)
 
 
 ## 【R106】这张卡**此刻已获得**的增益 / 减益，逐条列出（一条一个 Dictionary）。
@@ -231,6 +236,9 @@ func status_entries() -> Array[Dictionary]:
 	if poison_left > 0:
 		out.append({"label": "中毒：剩 %d 跳，每跳 %d 伤" % [poison_left, poison_dmg],
 				"col": COL_D, "kind": "debuff"})
+	if night_owl_weak > 0:
+		out.append({"label": "夜衰（奇数回合）：移速 -%d、攻程 -%d" % [night_owl_weak, night_owl_weak],
+				"col": COL_D, "kind": "debuff"})
 	return out
 
 
@@ -259,4 +267,6 @@ func status_badges() -> Array[Dictionary]:
 		out.append({"text": "速 +%d" % summon_haste, "col": Color("2f8f4f")})
 	if forge_period > 0:
 		out.append({"text": "锻 %d/%d" % [forge_idle, forge_period], "col": Color("ff7043")})
+	if night_owl_weak > 0:
+		out.append({"text": "夜衰", "col": Color("8a6d1f")})
 	return out

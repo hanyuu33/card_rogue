@@ -873,6 +873,26 @@ func _ready() -> void:
 				r269_demo_tp.upgrade_stacks, engine.state.hp_self, r269_demo_tp.health]
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--nightduck" in args and engine != null:
+		# 演示（R270）：夜鸭 9027 的「夜衰」—— **奇数回合**移速 -1、攻击距离 -1。
+		# 配 `--level 11`（夜鸭阵：中排两只夜鸭）出图；再加 `--nightduckeven` 看偶数回合对照。
+		engine.turn_number = 2 if "--nightduckeven" in args else 1
+		engine._refresh_night_owl()
+		var r270_p: Placement = null
+		for cc: Vector2i in engine.state.board:
+			var q: Placement = engine.state.board[cc]
+			if q.card != null and q.card.id == GameEngine.NIGHT_DUCK_ID:
+				r270_p = q
+				break
+		if r270_p != null:
+			_hover_pl = r270_p
+			_hover_card = r270_p.card
+			_hover_hand = -1
+			status_text = "R270：夜鸭 第 %d 回合 → 场上 速 %d / 攻程 %d（卡面 %d / %d）" % [
+					engine.turn_number, r270_p.effective_speed(), r270_p.effective_range(),
+					r270_p.card.move_speed, r270_p.card.attack_range]
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--trapper" in args and engine != null:
 		# 演示（R116）：捕兽大师 9126 的**亡语** —— 先上场、再当场打死它 →
 		# 它倒下的那一格变成一张**随机陷阱**（斜纹格 + 角标）。
@@ -10040,7 +10060,11 @@ func _draw_info_panel() -> void:
 				UiTheme.STAT_HEALTH)
 		y += 17.0
 		var rng_shown := pl.effective_range() if pl != null else card.attack_range
-		var mv: String = "射程 %d   移速 %d" % [rng_shown, card.move_speed] \
+		# ⚠️ 移速也走 `effective_speed()`，别再读 `card.move_speed` ——
+		# 那样夜鸭（R270 奇数回合 -1）/ 暗影领主 / 动员的场上修正全看不见，
+		# 会出现「栏里写速 2，实际只走得动 1 格」的自相矛盾。
+		var spd_shown := pl.effective_speed() if pl != null else card.move_speed
+		var mv: String = "射程 %d   移速 %d" % [rng_shown, spd_shown] \
 				if card.kind == "盟友" else "射程 %d" % rng_shown
 		_draw_string_nw(_font, UiTheme.FS_MICRO, mv, Vector2(left, y), UiTheme.INK_600)
 		y += 17.0

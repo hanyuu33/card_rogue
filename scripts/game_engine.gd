@@ -418,6 +418,11 @@ const OWL_ID:= 9073
 const SPRITE_ID:= 9074
 const SPRITE_EFFECT_DISCOUNT:= 2
 const NIGHT_GROW_TRAIT:= "夜行"
+## 夜鸭（9027，R270）：**奇数回合**时移速 -1、攻击距离 -1（`Placement.night_owl_weak`）。
+## 判据用 **id 而不是 trait** —— 「夜行」是「回合开始力量 +1」的成长族 trait，
+## 以后再有夜行单位不该被顺手削弱；这条明确只属于夜鸭。
+const NIGHT_DUCK_ID:= 9027
+const NIGHT_DUCK_WEAK:= 1
 
 # ── 第 37 轮（2026-10-01）新卡 ──
 # 魔法塔（9075 工事）：在场时，该方「伤害类技能」原本费用每 1 点 → 额外 1 点伤害。
@@ -1498,6 +1503,7 @@ func _begin_turn(side: String) -> void :
 		_assassin_summon(SIDE_SELF)
 		_refresh_dark_lord(SIDE_SELF)
 		_refresh_hecaton(SIDE_SELF)
+		_refresh_night_owl()           # R270 夜鸭：按本回合奇偶刷新夜衰
 		_run_battlecries(SIDE_SELF)
 		_log("── 我方第 %d 回合：能量重置为 %d%s%s%s%s%s%s（共 %d），抽 %d 张" % [
 			turn_number, FieldState.ENERGY_PER_TURN,
@@ -1561,6 +1567,7 @@ func _begin_turn(side: String) -> void :
 		_cannon_fire(SIDE_OPPONENT)   # R158 充能巨炮 9139：己方回合开始随机破坏一个我方单位
 		_refresh_dark_lord(SIDE_OPPONENT)
 		_refresh_hecaton(SIDE_OPPONENT)
+		_refresh_night_owl()           # R270 夜鸭：奇数回合夜衰（与上一行同回合内一致）
 		_run_battlecries(SIDE_OPPONENT)
 		_log("── 对手回合开始：能量 %d（上回合结束已清零，本回合重新发放基础费用），手牌 +%d" % [
 			FieldState.ENERGY_PER_TURN, FieldState.HAND_DRAW_PER_TURN])
@@ -1582,6 +1589,7 @@ func enable_enemy_effects(cards: Array[CardData]) -> void :
 	_assassin_summon(SIDE_OPPONENT, true)
 	_refresh_dark_lord(SIDE_OPPONENT)
 	_refresh_hecaton(SIDE_OPPONENT)
+	_refresh_night_owl()               # R270 夜鸭：开局先按当前回合数定一次
 
 
 func _apply_growth(side: String) -> void :
@@ -11194,6 +11202,25 @@ func _refresh_hecaton(side: String) -> void:
 			_log("赫卡同克瑞斯孤军：%s（场上己方单位数 %d）" % [
 					"力 +%d、攻击伤害减半" % HECATON_ATK_BUFF if p.hecaton_atk > 0 else "失效",
 					n])
+
+
+# ================= R270：夜鸭「夜衰」 =================
+
+func _refresh_night_owl() -> void:
+	## 夜鸭（9027）：**奇数回合**（`turn_number % 2 == 1`，即玩家看到的第 1/3/5… 回合）
+	## 移动速度 -1、攻击距离 -1，偶数回合恢复 —— 用户口径「削弱夜鸭：奇数回合时，
+	## 移动速度攻击距离-1」。
+	## 与 `_refresh_dark_lord` 同范式：**只写 Placement 字段、不碰 card**
+	## （敌方关卡单位用的是卡库共享实例，写 card 会跨局泄漏；不写 card 也就无需离场还原）。
+	## 调用点 = 双方回合开始各一次（`_begin_turn` 两个分支）+ 开局
+	## —— 同一个「回合」内两侧看到的状态一致，夜鸭不会因为换边而忽强忽弱。
+	## ⚠️ 一律用 `turn_number`（我方回合数）判奇偶，**不要用 `turn_total`**：
+	##    后者双方各 +1，敌方回合永远是偶数 → 夜鸭等于没被削。
+	var weak:= NIGHT_DUCK_WEAK if turn_number % 2 == 1 else 0
+	for c: Vector2i in state.board:
+		var p: Placement = state.board[c]
+		if p.card != null and p.card.id == NIGHT_DUCK_ID:
+			p.night_owl_weak = weak
 
 
 func _assassin_summon(side: String, initial:= false) -> void :
