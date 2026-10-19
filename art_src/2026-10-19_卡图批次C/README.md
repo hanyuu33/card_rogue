@@ -96,6 +96,30 @@ NOT a flamethrower stream coming out of her palm, NO arrow shaft, NO arrowhead, 
 
 > **经验：法系卡要区分「弹体已离手」（投射物）与「光柱 / 火焰自掌心延伸」（引导）——差别只在「手与弹之间有没有空隙」，必须在提示词里写死。**
 
+## R256 重画 9004 击退：气波轨迹要读得出「推」
+
+用户口径：**「气流的轨迹不对，要体现被击退」**。
+
+R254 那版的问题：气波画成**绕着敌人转的一整圈漩涡**——读者只能看出「他在风里」，看不出「被谁往哪个方向推走」。
+
+三次试错：
+
+1. 螺旋管（r254 原版）→ 否，同上。
+2. 正面气波盘：气波正对镜头成一个圆盘，敌人从盘里飞出来 → **像传送门**，方向反而更模糊。
+3. 侧视气波墙（**采用**）：气波画成一块**立在画面左侧、只见厚度与前缘的竖弧墙**（像音爆的边缘），
+   一束水平速度线从左贯到右，人被打飞、披风朝右拉直，地面上**一道被犁出的长土沟**从左边一路划到他身下。
+
+**让「击退」可读的四件套**（以后画击退/撞飞类一律照这个）：
+① 人物整体沿同一方向后仰、双脚离地、鞋跟拖后；② 披风/布料朝来向拉直；③ 地面犁痕/擦痕指向推飞方向；
+④ 速度线单向贯通，**不要绕圈**。
+
+提示词关键句：
+`a TALL VERTICAL CRESCENT WALL OF COMPRESSED AIR standing at the LEFT of the frame, SEEN EDGE-ON ... NOT a disc,
+NOT a portal, NOT a circle facing the camera` + `a long straight FURROW is plowed through the dirt floor ... below his flight path`
+
+> **经验：单向动作的构图必须「拒绝一切闭环」——圆盘/环/漩涡一旦出现，方向感立刻被读成「被吸进去」而不是「被推出去」。**
+改前/改后对照：`art_src/_review/_r256_knockback_before_after.png`
+
 ## 处理流程（同批次 A / B）
 
 1. 白底图按非白像素 bbox 裁边 + 内缩 6px；**这六张都是满屏背景，bbox = 全图，等于不裁**。
