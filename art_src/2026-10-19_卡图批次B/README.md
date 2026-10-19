@@ -43,11 +43,20 @@ no watermark, no frame, no border, trading card illustration, square composition
 ## 出图记录
 
 - 8027：1 张过。
-- 9086：**2 张候选**。
+- 9086：**3 张候选**。
   - 候选 0（`An_anime_female_assassin_…`）：刺客大头回头、机器人背后被贯穿。小图辨识度高，
-    但姿态是「站定回眸」，不是**前刺冲刺**，与要求不符 → 弃用。
-  - 候选 1（`Side_view_action_shot_…`）：侧视冲刺、匕首前伸、背对背、环形刀光贯穿 → **采用**。
-  - 两张候选都留在 `raw/`，以后要换直接改处理映射即可。
+    但姿态是「站定回眸」，不是**前刺冲刺** → 弃用。
+  - 候选 1（`Side_view_action_shot_…`）：侧视冲刺、匕首前伸 → 动作对，**但构图不合格**：
+    机器人是**正面朝镜头**，刺客只是背贴着它的胸口，两人朝向没有相反，读不出「背对背」。
+    **用户否掉的就是这张。**
+  - 候选 2（`STRICT_BACK_TO_BACK_pose__clas_…`，**采用**）：刺客朝左、机器人朝右，
+    肩胛骨在画面正中相贴，脊柱平行、朝向相反；机器人主要露**背部与后脑**，
+    只从肩上露出一点蓝色眼；紫白刀光从匕首处斜贯穿过机器人 → 背对背一眼可读。
+- **教训（写提示词的硬规矩）**：只写 `back to back` 模型会画成「背贴胸」。
+  必须把几何写成可执行的话：`shoulder blades touching at the exact center`、
+  `spines pressed together`、`one faces LEFT, the other faces RIGHT`、
+  `the automaton seen mostly FROM BEHIND`、`neither figure faces the viewer`。
+- 三张原始图都留在 `raw/`，要回退改处理映射里的文件名即可。
 
 ## 处理流程（同批次 A）
 
