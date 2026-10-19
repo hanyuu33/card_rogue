@@ -759,8 +759,8 @@ static func _night_ducks() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9027, "夜鸭", 6, 35, 2, 2, Vector2i(1, 0)],
-			[9027, "夜鸭", 6, 35, 2, 2, Vector2i(1, 2)],
+			[9027, "夜鸭", 5, 35, 2, 2, Vector2i(1, 0)],
+			[9027, "夜鸭", 5, 35, 2, 2, Vector2i(1, 2)],
 			[9009, "使魔鸭子", 4, 15, 1, 1, Vector2i(2, 0)],
 			[9009, "使魔鸭子", 4, 15, 1, 1, Vector2i(2, 2)],
 		],

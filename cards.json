@@ -921,7 +921,7 @@
       "name": "夜鸭",
       "kind": "盟友",
       "cost": 8,
-      "power": 6,
+      "power": 5,
       "health": 35,
       "attack_range": 2,
       "move_speed": 2,

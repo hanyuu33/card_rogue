@@ -2948,26 +2948,26 @@ func _init() -> void:
 			and int(eus_nd[2][0]) == 9009 and eus_nd[2][6] == Vector2i(2, 0)
 			and int(eus_nd[3][0]) == 9009 and eus_nd[3][6] == Vector2i(2, 2),
 			"夜鸭阵：第一层普通困难（R158 上调），中排2夜鸭(1,0)/(1,2) + 前排2使魔(2,0)/(2,2)")
-	check((eus_nd[0][2] as int) == 6 and (eus_nd[0][3] as int) == 35
+	check((eus_nd[0][2] as int) == 5 and (eus_nd[0][3] as int) == 35
 			and (eus_nd[0][4] as int) == 2 and (eus_nd[0][5] as int) == 2,
-			"夜鸭：6 攻 35 血 程2 速2")
+			"夜鸭：5 攻 35 血 程2 速2")
 	var nd_card := repo.get_card(9027)
-	check(nd_card.power == 6 and nd_card.health == 35 and nd_card.value == 1
+	check(nd_card.power == 5 and nd_card.health == 35 and nd_card.value == 1
 			and nd_card.traits.has("夜行") and nd_card.effect_text.contains("回合开始时"),
-			"夜鸭：6 攻 35 血，trait 夜行（回合开始 +1 攻）")
+			"夜鸭：5 攻 35 血，trait 夜行（回合开始 +1 攻）")
 	# 夜行（9027）：所属方回合开始时力量 +1（永久累计）
 	var ng_e := _new_engine([], 20, 20, -1, false)
 	ng_e.start_game(0)
 	var ng_duck := CardData.from_dict(repo.get_card(9027).to_dict())
 	ng_e.state.place(ng_duck, Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
-	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 6, "夜行：上场 6 攻")
+	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 5, "夜行：上场 5 攻")
 	ng_e.end_turn()   # 我方 → 敌方（敌方回合开始 → 夜行 +1）
-	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 7,
-			"夜行：敌方回合开始 +1 攻（6 → 7）")
+	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 6,
+			"夜行：敌方回合开始 +1 攻（5 → 6）")
 	ng_e.end_turn()   # 敌方 → 我方
 	ng_e.end_turn()   # 我方 → 敌方（再 +1）
-	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 8,
-			"夜行：每个自己的回合开始都 +1（7 → 8）")
+	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 7,
+			"夜行：每个自己的回合开始都 +1（6 → 7）")
 
 	# 精进（9021 白魔法鸭）：每个自己的回合开始力量 +1（永久累计，无前置条件）
 	var sl_e := _new_engine([], 20, 20, -1, false)
@@ -4227,7 +4227,7 @@ func _init() -> void:
 			"R159 AI角色：白魔法鸭（治疗）-> support")
 	var r159_night := repo.get_card(9027)
 	check(engR159._ai_role(r159_night) == GameEngine.AI_ROLE_SNIPER,
-			"R159 AI角色：夜鸭（程2 力6 速2）-> sniper")
+			"R159 AI角色：夜鸭（程2 力5 速2）-> sniper")
 	var r159_kiln := repo.get_card(9025)
 	check(engR159._ai_role(r159_kiln) == GameEngine.AI_ROLE_TANK,
 			"R159 AI角色：鸭子窑（工事+孵化）-> tank")
