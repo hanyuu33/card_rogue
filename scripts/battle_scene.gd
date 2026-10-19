@@ -1016,7 +1016,7 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--fire" in args and engine != null:
-		# 演示（2026-10-01）：火墙术（9084）—— 3 费，对一横行的敌人造成 15 点伤害；
+		# 演示（2026-10-01，R247 起不分敌我）：火墙术（9084）—— 3 费，对一横行的所有单位造成 15 点伤害；
 		# 该行燃烧到下次自己回合开始，期间任何单位（不分敌我）经过 → 再受 10 点。
 		# 沿用默认关卡的两只鸭子骑士（1,0)/(1,2)，烧中间那条行；再让白魔法师穿过 → 100→90。
 		engine.state.hand.clear()
@@ -1028,7 +1028,7 @@ func _ready() -> void:
 		engine.move(Vector2i(2, 1), Vector2i(1, 1))
 		engine.state.hand.append(repo.get_card(GameEngine.FIRE_WALL_SPELL_ID))
 		_demo_hover_idx = 0
-		status_text = "火墙术：第 1 行敌人 -15，穿过该行的单位再 -10（不分敌我）"
+		status_text = "火墙术：第 1 行所有单位 -15（不分敌我），穿过的单位再 -10"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--charge" in args and engine != null:
@@ -3223,7 +3223,7 @@ func _use_hand_card(i: int) -> void:
 			spell_targets = targets
 			var target_hint := "一个格子" if card.id == GameEngine.FIREBALL_ID else "一个目标"
 			if card.id == GameEngine.FIRE_WALL_SPELL_ID:
-				target_hint = "一条横行（点该行任意一格）"
+				target_hint = "一条横行（不分敌我；点该行任意一格）"
 			elif card.id == GameEngine.INFILTRATE_ID:
 				target_hint = "一个自己的盟友（之后再点目的格）"
 			elif card.id == GameEngine.SWAP_UNITS_ID:
@@ -4227,11 +4227,12 @@ static func spell_aoe_kind(card: CardData) -> String:
 
 static func spell_aoe_hits_ally(card: CardData) -> bool:
 	## 这一发的 AOE **会不会打到自己人**（与引擎一致）：
-	##   火球 9007 / 陨石 9077 = 不分敌我 → true；
-	##   回旋斩 9096 只打敌方；火墙 9084 施放时只打敌方（但该行会燃烧，另行提示）→ false。
+	##   火球 9007 / 陨石 9077 / 火墙 9084（R247 起不分敌我）= true；
+	##   回旋斩 9096 只打敌方 → false（火墙该行还会燃烧，另行 burn 提示）。
 	if card == null:
 		return false
-	return card.id in [GameEngine.FIREBALL_ID, GameEngine.METEOR_ID]
+	return card.id in [GameEngine.FIREBALL_ID, GameEngine.METEOR_ID,
+			GameEngine.FIRE_WALL_SPELL_ID]
 
 
 static func aoe_cells(kind: String, center: Vector2i) -> Array[Vector2i]:
@@ -4275,7 +4276,9 @@ static func aoe_danger(state: FieldState, card: CardData, center: Vector2i) -> D
 			continue
 		info["own"] = int(info["own"]) + 1
 	if kind == "row":
-		# 火墙：只烧「敌人」，自己人站上去只有**移动经过**时挨灼烧
+		# 火墙（R247 起不分敌我）：站在该行的己方单位**立刻**吃 FIRE_WALL_DMG；
+		# 该行同时燃烧，之后移动经过另受灼烧（同一单位合计上限 FIRE_WALL_CAP）。
+		# 火墙只打**单位**、不打空格 → 恒不直接掉我方 HP（hp 保持 false）。
 		info["burn"] = int(info["own"]) > 0
 		return info
 	# 不分敌我的真 AOE：覆盖到我方后排行 → 掉的是自己的 HP
@@ -9816,7 +9819,7 @@ func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
 		if bool(info["hp"]):
 			txt = "⚠ 会伤到自己 HP"
 		elif bool(info["burn"]):
-			txt = "⚠ 我方单位在这行，走过去会被烧"
+			txt = "⚠ 不分敌我：我行单位立刻 -%d，走过去还会被烧" % GameEngine.FIRE_WALL_DMG
 		else:
 			txt = "⚠ 会波及自己人 ×%d" % own
 		_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, txt,

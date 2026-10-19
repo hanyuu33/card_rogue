@@ -885,6 +885,24 @@ const DARK_TRAP_ID:= 8063
 const DARK_TRAP_TRAIT:= "黑暗陷阱"
 const DARK_TRAP_DEBUFF:= 1      # 本回合攻击时力量 -1
 
+# ---- R248（2026-10-19）落石陷阱 9159 ----
+# 落石陷阱（9159 场地，暗影刺客·**史诗**）：**3 费**；敌人**移动经过**此格时立刻触发
+#   （R80 口径：路过即中，不必停留）并**立即停止这次移动** → 对踩上来的那个单位造成
+#   ROCKFALL_TRAP_DMG 点伤害；**这一下若将其击杀，溢出的伤害不丢弃**（用户口径「践踏」）。
+# * 践踏语义与 R225 攻击践踏（`_trample_chain`）一致：溢出不丢弃、沿**同一列**逐个
+#   击穿踩雷者**同侧**的单位，打穿整列后剩余伤害漏到该方 HP。
+# * 方向差异：攻击践踏是「远离攻击者、冲向 defender 后排」，陷阱**没有攻击者**，
+#   方向固定取「踩雷者所在方的后排」—— 于是「原地不动踩响」（R238 `_trap_still_tick`）
+#   同样享受践踏，不需要移动方向信息（`_field_trigger` 两个调用点都覆盖）。
+# * 每一段都走 `_hit_unit`（单位扣血唯一口）→ 侦察塔光环 / 石肤 / 护盾转发照常生效；
+#   is_attack 保持默认 false —— 这是**效果/陷阱伤害**，不是普通攻击。
+# * 特效复用「trample_hit / trample」（R225 攻击践踏同款）—— 同效果必须同特效。
+# * 击杀不记功给任何单位（last_hit_by 置 -1）：陷阱格上没有「攻击者」，不置的话
+#   会误记给本回合早先打过它的单位（鸭子骑士白拿 buff）。
+const ROCKFALL_TRAP_ID:= 9159
+const ROCKFALL_TRAP_TRAIT:= "落石陷阱"
+const ROCKFALL_TRAP_DMG:= 29
+
 # ---- R116（2026-10-09）捕兽大师 9126 ----
 # 捕兽大师（9126 盟友，暗影刺客·**史诗**）：3 费 2/8 程1 速1。
 #   **亡语：在原地留下一张随机陷阱。**
@@ -2900,15 +2918,15 @@ func _meteor_shower(side: String, card: CardData) -> String:
 func _fire_wall_spell(side: String, target, card: CardData) -> String:
 
 
-	## 火墙术（9084）：对一横行的敌人造成 FIRE_WALL_DMG 点伤害，并让该行燃烧到施放方的
-	## 下次回合开始 —— 期间任何单位（不分敌我）移动经过该行 → 再挨 FIRE_WALL_PASS_DMG 点
-	## （见 _fire_wall_pass）。同一个单位从这面火墙上累计最多 FIRE_WALL_CAP 点。
+	## 火墙术（9084，R247 起不分敌我）：对一横行的**所有单位**（含施放方自己人）造成
+	## FIRE_WALL_DMG 点伤害，并让该行燃烧到施放方的下次回合开始 —— 期间任何单位
+	## （不分敌我）移动经过该行 → 再挨 FIRE_WALL_PASS_DMG 点（见 _fire_wall_pass）。
+	## 同一个单位从这面火墙上累计最多 FIRE_WALL_CAP 点（即时 + 经过合计）。
 	if not (target is Vector2i):
 		return "（需要指定一条横行）"
 	var row: int = (target as Vector2i).x
 	if row < 0 or row >= FieldState.BOARD_ROWS:
 		return "（横行不存在）"
-	var foe:= SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
 	var dmg:= _spell_dmg(side, FIRE_WALL_DMG, card)
 	var pass_dmg:= _spell_dmg(side, FIRE_WALL_PASS_DMG, card)
 	var rec:= {"side": side, "row": row, "pass_dmg": pass_dmg, "dealt": {}}
@@ -2920,8 +2938,8 @@ func _fire_wall_spell(side: String, target, card: CardData) -> String:
 	for col in FieldState.BOARD_COLS:
 		var c:= Vector2i(row, col)
 		var p: Placement = state.unit_at(c)
-		if p == null or p.owner != foe:
-			continue
+		if p == null:
+			continue   # R247：不分敌我 —— 自己人站着一样烧
 		if p.card.traits.has(SPELL_IMMUNE_TRAIT):
 			blocked += 1
 			_log("火墙术：%s 免疫法术，未被点燃" % p.card.card_name)
@@ -2936,9 +2954,9 @@ func _fire_wall_spell(side: String, target, card: CardData) -> String:
 	if hits > 0:
 		_destroy_dead()
 	_end_hp_once()
-	_log("火墙术：第 %d 行燃起（%d 个敌人共 -%d；经过者 -%d，同一单位上限 %d）" % [
+	_log("火墙术：第 %d 行燃起（%d 个单位共 -%d，不分敌我；经过者 -%d，同一单位上限 %d）" % [
 			row, hits, total, pass_dmg, FIRE_WALL_CAP])
-	var msg:= "第 %d 行火墙：%d 个敌人 -%d" % [row, hits, dmg]
+	var msg:= "第 %d 行火墙：%d 个单位 -%d（不分敌我）" % [row, hits, dmg]
 	if blocked > 0:
 		msg += "，%d 个免疫" % blocked
 	return msg
@@ -8833,7 +8851,7 @@ func _field_kind(c: CardData) -> String:
 	if not c.is_field():
 		return ""
 	for t: String in [TRAP_TRAIT, FROST_TRAP_TRAIT, FREEZE_TRAP_TRAIT, POISON_TRAP_TRAIT,
-			PIERCE_TRAP_TRAIT, MASS_TRAP_TRAIT, DARK_TRAP_TRAIT]:
+			PIERCE_TRAP_TRAIT, MASS_TRAP_TRAIT, DARK_TRAP_TRAIT, ROCKFALL_TRAP_TRAIT]:
 		if c.traits.has(t):
 			return t
 	return ""
@@ -8869,7 +8887,7 @@ func _field_card_pool(side: String) -> Array[CardData]:
 func _trap_card_pool(side: String) -> Array[CardData]:
 	## `_field_card_pool` 里**只留一次性触发的陷阱**（R116，捕兽大师 9126 用）。
 	## 判据 = `_field_kind(c) != ""` —— 「是不是陷阱」这件事**只有 `_field_kind` 说了算**
-	## （它列出的那 7 个 trait 就是引擎认的 7 张陷阱），持续型场地（清泉 / 维修间 /
+	## （它列出的那 8 个 trait 就是引擎认的 8 张陷阱），持续型场地（清泉 / 维修间 /
 	## 改造工厂）自然落空。**别再按卡名 / kind 自己判一遍**（两处判据迟早会分叉）。
 	var out: Array[CardData] = []
 	for c: CardData in _field_card_pool(side):
@@ -9011,6 +9029,9 @@ func _field_trigger(cell: Vector2i, mover: Placement) -> void :
 			_log("穿刺场地：%s 受到 %d 点伤害" % [mover.card.card_name, pr_dmg])
 			action.emit("trap_hit", {"cell": _cell_of(mover), "amount": pr_dmg,
 				"kind": "穿刺", "name": mover.card.card_name})
+		elif card.traits.has(ROCKFALL_TRAP_TRAIT):
+			# 落石陷阱（9159，R248）：29 伤 + 击杀后溢出不丢弃（「践踏」）
+			_rockfall_trap(cell, mover, bonus)
 		elif card.traits.has(DARK_TRAP_TRAIT):
 			# 黑暗陷阱（8063，R105）：**不造成伤害**，只让踩上来的那个敌人
 			# **本回合攻击时力量 -1**（atk_debuff + debuff_stage=1，与敲晕同源）。
@@ -9050,6 +9071,77 @@ func _field_explode(center: Vector2i, card: CardData, bonus: int) -> void :
 	action.emit("blast", {"center": center, "cells": cells, "amount": TRAP_DMG + bonus,
 			"card": card})
 
+
+func _rockfall_trap(cell: Vector2i, mover: Placement, bonus: int) -> void :
+		## 落石陷阱（9159，R248）：对踩上来的那个单位造成 ROCKFALL_TRAP_DMG(+bonus) 点伤害；
+		## **这一下若将其击杀，溢出的伤害不丢弃**（用户口径「践踏」）—— 沿同列继续碾压
+		## 踩雷者**同侧**的单位，打穿整列后剩余伤害漏到该方 HP。
+		## 方向 = 踩雷者所在方的**后排**（与 R225 攻击践踏「冲向 defender 后排」同口径），
+		## 两个 `_field_trigger` 调用点（移动经过 / 原地不动）都走这里，语义一致。
+		var dmg:= ROCKFALL_TRAP_DMG + bonus
+		var hp_before:= mover.health
+		var dealt:= _hit_unit(mover, dmg, "落石陷阱")
+		action.emit("trap_hit", {"cell": cell, "amount": dealt,
+				"kind": "落石", "name": mover.card.card_name})
+		if mover.health > 0:
+			_log("落石陷阱：%s 受到 %d 点伤害（剩余 %d）" % [
+				mover.card.card_name, dealt, mover.health])
+			return
+		_log("落石陷阱：%s 被落石砸毙（%d 点伤害，生命 %d）" % [
+				mover.card.card_name, dealt, hp_before])
+		# 击杀不记功：陷阱格上没有「攻击者」→ 置 -1（否则可能误记给本回合早先打过它的单位）
+		mover.last_hit_by = Vector2i(-1, -1)
+		_destroy(cell)
+		var overflow:= dealt - maxi(hp_before, 0)
+		if overflow <= 0:
+			return
+		var res: Array = _rockfall_overflow(cell, mover.owner, overflow)
+		overflow = int(res[0])
+		if overflow > 0:
+			var pierced_name: String = str(res[1])
+			if pierced_name == "":
+				pierced_name = mover.card.card_name
+			_log("落石践踏：%d 点打穿整列 → 漏到 %s HP" % [
+				overflow, "敌方" if mover.owner == SIDE_OPPONENT else "我方"])
+			# R145 口径：先结算、再播出（amount 报实际掉血）
+			_damage_player(mover.owner, overflow, "落石践踏")
+			action.emit("trample", {"side": mover.owner, "amount": _last_hp_damage,
+				"dst": cell, "atk_name": "落石陷阱", "def_name": pierced_name})
+
+func _rockfall_overflow(from_cell: Vector2i, side: String, remaining: int) -> Array:
+		## 落石陷阱的践踏链（R248）—— `_trample_chain` 的**陷阱版**：同列、同侧、逐个击穿。
+		## 与攻击践踏只有两处差异：方向取「踩雷者所在方的**后排**」（不是远离攻击者），
+		## 伤害来源记「落石陷阱」（is_attack = false，效果伤害而非普通攻击）。
+		## 返回 [剩余伤害, 最后被击穿的单位名]：没穿到人 → 名字空串；打穿整列 → 调用方漏 HP。
+		## ⚠️ 坐标是 `Vector2i(行, 列)` —— 同列 = 同一个 `y`，行号朝 `back_row(side)` 推；
+		##    踩雷者已在本方后排（没有更深的同侧格）时公式自然给出反方向（朝对方半场推）。
+		## ⚠️ 只认 `side` 的单位（同列的对方单位不会被误伤），与 `_trample_chain` 同一判据。
+		if remaining <= 0:
+			return [0, ""]
+		var step: int = -1 if back_row(side) < from_cell.x else 1
+		var pierced: String = ""
+		var cell: Vector2i = from_cell
+		while remaining > 0:
+			cell = Vector2i(cell.x + step, cell.y)
+			if cell.x < 0 or cell.x >= FieldState.BOARD_ROWS:
+				break                  # 这一列走到底了 → 剩下的直击 HP
+			var next: Placement = state.unit_at(cell)
+			if next == null or next.owner != side:
+				continue               # 空格 / 同列的对方单位 → 继续往深处找
+			var hp_before: int = next.health
+			next.last_hit_by = Vector2i(-1, -1)   # 同上：落石击杀不记功给单位
+			var dmg: int = _hit_unit(next, remaining, "落石陷阱")
+			_log("落石践踏：%d 点沿同列传给 %s（造成 %d 点伤害）" % [
+				remaining, next.card.card_name, dmg])
+			action.emit("trample_hit", {"cell": cell, "side": next.owner, "amount": dmg,
+				"name": next.card.card_name, "from": from_cell, "atk_name": "落石陷阱"})
+			pierced = next.card.card_name
+			if next.health > 0:
+				return [0, pierced]    # 没打死 → 溢出到此为止（它吃满）
+			var carry: int = dmg - maxi(hp_before, 0)
+			_destroy(cell)
+			remaining = carry
+		return [maxi(remaining, 0), pierced]
 
 func _poison_tick(side: String) -> void :
 	## 中毒（剧毒陷阱，R51）：在受害者所属方的回合开始结算一次 —— 每跳 poison_dmg

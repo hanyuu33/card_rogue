@@ -121,8 +121,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 232,
-			"图鉴 = 232 张（R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149**；R164 删除**双重场地 9108**；实际 %d）"
+	check(repo.all_cards().size() == 233,
+			"图鉴 = 232 张（R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -135,8 +135,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 179 and grp_enemy.size() == 53,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 179 / 53；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 180 and grp_enemy.size() == 53,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 180 / 53；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -165,8 +165,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 154,
-			"奖励池 150 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；实际 %d）"
+	check(pool.size() == 155,
+			"奖励池 150 张（初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -332,7 +332,7 @@ func _init() -> void:
 	eng_fw2.state.hand = [repo.get_card(9084)]
 	eng_fw2.state.energy = 5
 	var fw2_res := eng_fw2.use_spell(0, Vector2i(1, 1))
-	check(fw2_res.contains("0 个敌人"),
+	check(fw2_res.contains("0 个单位"),
 			"火墙术：空行也能点燃（只是没打到人：%s）" % fw2_res)
 	eng_fw2.state.place(CardData.from_dict(repo.get_card(9021).to_dict()),
 			Vector2i(2, 2), GameEngine.SIDE_SELF)
@@ -379,6 +379,21 @@ func _init() -> void:
 	var fw3_res := eng_fw3.use_spell(0, Vector2i(1, 0))
 	check(fw_im.health == fw_im_hp and fw3_res.contains("免疫"),
 			"火墙术：法术免疫的单位点不着（%s）" % fw3_res)
+
+	# R247：不分敌我 —— 施放即烧到该行**所有单位**（含施放方自己人）
+	var eng_fw4 := _new_engine([], 30, 30, -1, false)
+	eng_fw4.start_game(0)
+	eng_fw4.state.place(CardData.from_dict(repo.get_card(9021).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_SELF)
+	var fw4_own: Placement = eng_fw4.state.unit_at(Vector2i(1, 1))
+	var fw4_own_hp := fw4_own.health
+	eng_fw4.state.hand = [repo.get_card(9084)]
+	eng_fw4.state.energy = 5
+	var fw4_res := eng_fw4.use_spell(0, Vector2i(1, 0))
+	check(fw4_own.health == fw4_own_hp - GameEngine.FIRE_WALL_DMG
+			and fw4_res.contains("1 个单位"),
+			"火墙术：不分敌我 —— 我方单位站着也 -15（%d→%d）" % [
+			fw4_own_hp, fw4_own.health])
 
 	# ---- 蓄力（9085，2026-10-01）：2 费史诗技能 —— 本方下一张技能生效 2 次 ----
 	var nc_ch := repo.get_card(9085)
@@ -7248,10 +7263,10 @@ func _init() -> void:
 			"角色系统：非敌方卡 class 都在可选角色内（或留空 = 通用卡）、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 74
-			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 59
+			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 60
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 42
 			and int(dr_cls_count.get("敌人", 0)) == 53,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 74 / 56 / 42 / 53；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 74 / 60 / 42 / 53；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -7512,7 +7527,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 154, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 155, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -7817,8 +7832,8 @@ func _init() -> void:
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
 	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 74
-			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 59,
-			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1）"
+			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 60,
+			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
 	check(int(r45_cls_count.get("", 0)) == 4,
@@ -8030,7 +8045,7 @@ func _init() -> void:
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
 			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法鸭）")
-	check(r47_dr.size() == 62 and r47_rg.size() == 56
+	check(r47_dr.size() == 62 and r47_rg.size() == 57
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
 			"奖励池过滤：森林精魄 %d 张 / 暗影刺客 %d 张（两者之和 + 机械之心 %d = 完整池 %d）"
@@ -10592,8 +10607,8 @@ func _init() -> void:
 				r79_bad.append("%d@row%d(判定%s实际%s)" % [fid3, x6, str(allowed3), str(placed3)])
 			if not allowed3 and e3.state.energy != before3:
 				r79_bad.append("%d@row%d 拒放但没退费(%d→%d)" % [fid3, x6, before3, e3.state.energy])
-	check(r79_bad.is_empty() and r79_ids.size() == 10
-			and r79_enemy_cards == 7 and r79_both_cards == 1 and r79_ally_cards == 2,
+	check(r79_bad.is_empty() and r79_ids.size() == 11
+			and r79_enemy_cards == 8 and r79_both_cards == 1 and r79_ally_cards == 2,
 			"R79 玩家放场地：%d 张卡（%d 敌生效 / %d 双生效（清泉 8028）/ %d 友生效（维修间 8036 + 改造工厂 8037）），"
 			% [r79_ids.size(), r79_enemy_cards, r79_both_cards, r79_ally_cards]
 			+ "%d 张 × %d 行「判定 == 实际」且拒放退费（%s）" % [
@@ -15085,8 +15100,8 @@ func _init() -> void:
 	for c4: CardData in r116_repo.reward_pool_for("暗影刺客"):
 		if c4.is_field() and r116_judge._field_kind(c4) != "":
 			r116_rogue_traps.append(c4.id)
-	check(r116_rogue_traps.size() == 7,
-		"R116 陷阱判据：暗影刺客池里正好 7 张一次性陷阱（实际 %d 张 %s）"
+	check(r116_rogue_traps.size() == 8,
+		"R116 陷阱判据：暗影刺客池里正好 8 张一次性陷阱（实际 %d 张 %s）"
 		% [r116_rogue_traps.size(), str(r116_rogue_traps)])
 
 	# ① 亡语落地：死在空格 → 原地出现一张陷阱，归属跟着单位走
@@ -15102,8 +15117,8 @@ func _init() -> void:
 	check(r116_f != null and r116_f.is_field() and r116_e._field_kind(r116_f) != "",
 		"R116 亡语：原地留下了一张陷阱（实际 %s）"
 		% (str(r116_f.card_name) if r116_f != null else "null"))
-	check(r116_f != null and [8011, 8012, 8013, 8014, 8016, 8017, 8063].has(r116_f.id),
-		"R116 亡语：留下的属于本角色那 7 张陷阱之一（实际 id=%s —— 加新陷阱要同步这条）"
+	check(r116_f != null and [8011, 8012, 8013, 8014, 8016, 8017, 8063, 9159].has(r116_f.id),
+		"R116 亡语：留下的属于本角色那 8 张陷阱之一（实际 id=%s —— 加新陷阱要同步这条）"
 		% (str(r116_f.id) if r116_f != null else "null"))
 	check(str(r116_e.state.field_owner.get(Vector2i(3, 1), "")) == GameEngine.SIDE_SELF,
 		"R116 亡语：陷阱归属 = 该单位的所有方（我方）")
@@ -18378,6 +18393,10 @@ func _init() -> void:
 	var r242_whirl: CardData = r242_repo.get_card(9096)
 	var r242_wall: CardData = r242_repo.get_card(9084)
 	var r242_sneak: CardData = r242_repo.get_card(9090)
+	check(r242_bs.spell_aoe_hits_ally(r242_fire) and r242_bs.spell_aoe_hits_ally(r242_meteor)
+			and r242_bs.spell_aoe_hits_ally(r242_wall)
+			and not r242_bs.spell_aoe_hits_ally(r242_whirl),
+			"R242 敌我判定：火球 / 陨石 / 火墙（R247 起不分敌我）；回旋斩只打敌方")
 	check(r242_bs.spell_aoe_kind(r242_fire) == "cross"
 			and r242_bs.spell_aoe_kind(r242_meteor) == "cross"
 			and r242_bs.spell_aoe_kind(r242_whirl) == "cross"
@@ -18407,11 +18426,11 @@ func _init() -> void:
 	var r242_d_whirl: Dictionary = r242_bs.aoe_danger(r242_e.state, r242_whirl, Vector2i(4, 1))
 	check(int(r242_d_whirl["own"]) == 0 and not bool(r242_d_whirl["hp"]),
 			"R242 自伤：回旋斩只打敌方 → 不报「波及自己人」")
-	# 火墙：自己人在这行 → 只提示「会被烧」，不是立刻掉 HP
+	# 火墙（R247 起不分敌我）：自己人在这行 burn 报警（站着就 -15；不打空格 → 不报掉 HP）
 	var r242_d_wall: Dictionary = r242_bs.aoe_danger(r242_e.state, r242_wall, Vector2i(4, 1))
 	check(bool(r242_d_wall["burn"]) and not bool(r242_d_wall["hp"])
 			and (r242_d_wall["cells"] as Array).size() == FieldState.BOARD_COLS,
-			"R242 火墙：我方单位在这行 → 提示会被烧（不立刻掉 HP）")
+			"R242 火墙：不分敌我 —— 我方单位在该行 burn 报警（不打空格 HP）")
 	# 反向：砸敌方半场（十字里没有自己人）→ 不报警告
 	var r242_d_safe: Dictionary = r242_bs.aoe_danger(r242_e.state, r242_fire, Vector2i(1, 1))
 	check(int(r242_d_safe["own"]) == 0 and not bool(r242_d_safe["hp"]),
@@ -18778,6 +18797,128 @@ func _init() -> void:
 			r246_enchanted += 1
 	check(r246_enchanted == 1, "R246 附魔大师：一次休息只附一张卡（实际 %d）" % r246_enchanted)
 
+	# ---- R248：落石陷阱 9159 —— 29 伤 +「践踏」（击杀后溢出沿同列继续碾压）----
+	var r248_repo := CardRepo.load_json()
+	var r248_card: CardData = r248_repo.get_card(GameEngine.ROCKFALL_TRAP_ID)
+	check(r248_card != null and r248_card.card_name == "落石陷阱"
+		and r248_card.kind == "场地" and r248_card.is_field() and not r248_card.is_fort()
+		and r248_card.card_class == PlayerClass.ROGUE and r248_card.cost == 3
+		and r248_card.rarity == 2 and r248_card.health == 0
+		and r248_card.target_mode == "none"
+		and r248_card.traits.has(GameEngine.ROCKFALL_TRAP_TRAIT),
+		"R248 落石陷阱 9159：3 费史诗**场地卡**（暗影刺客），带「落石陷阱」词条、生命 0、不打目标格")
+	check(r248_card.effect_text.contains("29 点伤害") and r248_card.effect_text.contains("践踏")
+		and r248_card.effect_text.contains("移动经过"),
+		"R248 卡面：写「移动经过触发 + 29 伤害 + 践踏不漏溢出」")
+	check(r248_repo.reward_pool_for(PlayerClass.ROGUE).any(func(c): return c.id == GameEngine.ROCKFALL_TRAP_ID)
+		and not r248_repo.reward_pool_for(PlayerClass.DRUID).any(func(c): return c.id == GameEngine.ROCKFALL_TRAP_ID),
+		"R248：落石陷阱进暗影刺客奖励池，不进森林精魄池")
+	# ① 敌人移动经过 → 29 伤、立刻停住、场地消失
+	var r248_e := _new_engine([], 40, 40)
+	r248_e.current_side = GameEngine.SIDE_OPPONENT
+	r248_e.state.set_field(CardData.from_dict(r248_card.to_dict()),
+		Vector2i(3, 1), GameEngine.SIDE_SELF)
+	var r248_foe: Placement = r248_e.state.place(
+		_card(9001, "鸭子骑士", "盟友", 1, 5, 40, 1, 2), Vector2i(2, 1),
+		GameEngine.SIDE_OPPONENT)
+	check(r248_e._field_kind(r248_card) == GameEngine.ROCKFALL_TRAP_TRAIT,
+		"R248：_field_kind 认这张为陷阱（实际 %s）" % r248_e._field_kind(r248_card))
+	r248_e.move(Vector2i(2, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r248_foe.health == 40 - GameEngine.ROCKFALL_TRAP_DMG
+		and r248_e.state.unit_at(Vector2i(3, 1)) == r248_foe
+		and r248_e.state.field_at(Vector2i(3, 1)) == null,
+		"R248：敌人移动经过落石陷阱 → -%d（40 → %d），立刻停在陷阱格、场地消失"
+		% [GameEngine.ROCKFALL_TRAP_DMG, r248_foe.health])
+	# ② 践踏：击杀后溢出不丢弃 —— 沿同列（朝踩雷者自己的后排）逐个击穿，打穿整列漏对方 HP
+	var r248_t := _new_engine([], 40, 40)
+	r248_t.current_side = GameEngine.SIDE_OPPONENT
+	r248_t.state.set_field(CardData.from_dict(r248_card.to_dict()),
+		Vector2i(3, 1), GameEngine.SIDE_SELF)
+	var r248_t_mover: Placement = r248_t.state.place(
+		_card(9001, "鸭子骑士", "盟友", 1, 5, 5, 1, 2), Vector2i(2, 1),
+		GameEngine.SIDE_OPPONENT)
+	var r248_t_b: Placement = r248_t.state.place(
+		_card(8003, "农民", "盟友", 1, 1, 10, 1, 1), Vector2i(1, 1),
+		GameEngine.SIDE_OPPONENT)
+	var r248_t_c: Placement = r248_t.state.place(
+		_card(8003, "农民", "盟友", 1, 1, 8, 1, 1), Vector2i(0, 1),
+		GameEngine.SIDE_OPPONENT)
+	r248_t.move(Vector2i(2, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r248_t.state.unit_at(Vector2i(3, 1)) == null
+		and r248_t.state.unit_at(Vector2i(1, 1)) == null
+		and r248_t.state.unit_at(Vector2i(0, 1)) == null
+		and r248_t.state.field_at(Vector2i(3, 1)) == null,
+		"R248 践踏：5 血踩雷者被 29 砸毙 → 溢出 24 击穿 (1,1) 10 血 → 再 14 击穿 (0,1) 8 血，同列全灭")
+	check(r248_t.state.hp_opponent == 40 - 6,
+		"R248 践踏：打穿整列后剩余 6 点漏到对方 HP（40 → %d）" % r248_t.state.hp_opponent)
+	# ③ 遇生者停：同列下一个单位没被打死 → 溢出差被它吃满，不再往下传、不漏 HP
+	var r248_s := _new_engine([], 40, 40)
+	r248_s.current_side = GameEngine.SIDE_OPPONENT
+	r248_s.state.set_field(CardData.from_dict(r248_card.to_dict()),
+		Vector2i(3, 1), GameEngine.SIDE_SELF)
+	var r248_s_mover: Placement = r248_s.state.place(
+		_card(9001, "鸭子骑士", "盟友", 1, 5, 5, 1, 2), Vector2i(2, 1),
+		GameEngine.SIDE_OPPONENT)
+	var r248_s_b: Placement = r248_s.state.place(
+		_card(8003, "农民", "盟友", 1, 1, 30, 1, 1), Vector2i(1, 1),
+		GameEngine.SIDE_OPPONENT)
+	var r248_s_c: Placement = r248_s.state.place(
+		_card(8003, "农民", "盟友", 1, 1, 30, 1, 1), Vector2i(0, 1),
+		GameEngine.SIDE_OPPONENT)
+	r248_s.move(Vector2i(2, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r248_s.state.unit_at(Vector2i(3, 1)) == null
+		and r248_s_b.health == 30 - 24 and r248_s_c.health == 30
+		and r248_s.state.hp_opponent == 40,
+		"R248 遇生者停：24 点溢出差被 (1,1) 30 血吃满（剩 %d）→ 不再往下传、(0,1) 满血、HP 不掉"
+		% r248_s_b.health)
+	# ④ 原地不动踩响（R238 路径）同样享受践踏 —— 与移动经过同一个 _field_trigger 口
+	var r248_w := _new_engine([], 40, 40)
+	r248_w.start_game(1)
+	var r248_w_mover: Placement = r248_w.state.place(
+		_card(9001, "鸭子骑士", "盟友", 1, 5, 5, 1, 2), Vector2i(2, 1),
+		GameEngine.SIDE_OPPONENT)
+	var r248_w_b: Placement = r248_w.state.place(
+		_card(8003, "农民", "盟友", 1, 1, 10, 1, 1), Vector2i(1, 1),
+		GameEngine.SIDE_OPPONENT)
+	r248_w.state.hand = [CardData.from_dict(r248_card.to_dict())]
+	r248_w.state.energy = 10
+	r248_w.play_from_hand(0, Vector2i(2, 1))   # 陷阱落在敌人脚下
+	r248_w.end_turn()   # 我方结束 → 敌方回合
+	r248_w.end_turn()   # 敌方一步没动 → 回合结束踩响
+	check(r248_w.state.unit_at(Vector2i(2, 1)) == null
+		and r248_w.state.unit_at(Vector2i(1, 1)) == null
+		and r248_w.state.field_at(Vector2i(2, 1)) == null
+		and r248_w.state.hp_opponent == 40 - 14,
+		"R248 原地踩响：5 血被 29 砸毙 → 溢出 24 击穿 (1,1) 10 血 → 列尾剩余 14 漏对方 HP（40 → %d）"
+		% r248_w.state.hp_opponent)
+	# ⑤ 场地精通（9105）：29 + 2×原费3 = 35
+	var r248_m := _new_engine([], 40, 40)
+	r248_m.current_side = GameEngine.SIDE_OPPONENT
+	r248_m.state.energy = 9
+	r248_m.state.hand.append(CardData.from_dict(r248_repo.get_card(GameEngine.TRAP_MASTERY_ID).to_dict()))
+	r248_m.use_effect(0)
+	r248_m.state.set_field(CardData.from_dict(r248_card.to_dict()),
+		Vector2i(3, 1), GameEngine.SIDE_SELF)
+	var r248_m_foe: Placement = r248_m.state.place(
+		_card(8003, "农民", "盟友", 1, 1, 40, 1, 2), Vector2i(2, 1),
+		GameEngine.SIDE_OPPONENT)
+	r248_m.move(Vector2i(2, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r248_m_foe.health == 40 - (GameEngine.ROCKFALL_TRAP_DMG + 6),
+		"R248 场地精通：落石陷阱 %d + 2×3 = %d（40 → %d）"
+		% [GameEngine.ROCKFALL_TRAP_DMG, GameEngine.ROCKFALL_TRAP_DMG + 6, r248_m_foe.health])
+	# ⑥ 家族默认口径：任何单位移动经过都吃（自己人踩自己埋的也炸）—— 与爆炸/穿刺同族
+	var r248_o := _new_engine([], 40, 40)
+	r248_o.current_side = GameEngine.SIDE_SELF
+	r248_o.state.set_field(CardData.from_dict(r248_card.to_dict()),
+		Vector2i(3, 1), GameEngine.SIDE_SELF)
+	var r248_o_mine: Placement = r248_o.state.place(
+		_card(9001, "鸭子骑士", "盟友", 1, 5, 40, 1, 2), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)
+	r248_o.move(Vector2i(4, 1), Vector2i(2, 1), GameEngine.SIDE_SELF)
+	check(r248_o_mine.health == 40 - GameEngine.ROCKFALL_TRAP_DMG
+		and r248_o.state.unit_at(Vector2i(3, 1)) == r248_o_mine,
+		"R248 家族口径：自己人移动经过自己埋的落石陷阱也吃 %d 伤并停住（40 → %d）"
+		% [GameEngine.ROCKFALL_TRAP_DMG, r248_o_mine.health])
 	# ================================================================
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
