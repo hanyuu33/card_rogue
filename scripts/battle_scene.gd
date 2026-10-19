@@ -1152,6 +1152,25 @@ func _ready() -> void:
 		status_text = "R262：左栏「现在打出：4 点伤害」= 2 + 本回合已用 2 张"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--bounce" in args and engine != null:
+		# R263 出图核验：新卡「弹跳飞刀」（9160）—— 手牌一张 + 场上三个敌人。
+		#   左栏应写「#9160 弹跳飞刀 / 技能 · 费用 1 · 普通」，
+		#   卡面文案「对一个敌人造成 5 点伤害，再对随机最多两个其他敌人各造成 3 点伤害。」
+		#   （`battle.tscn -- --screenshot --bounce --shotframe 20`）
+		RunState.player_class = PlayerClass.ROGUE
+		engine.state.hand.clear()
+		engine.state.hand.append(
+				CardData.from_dict(repo.get_card(GameEngine.BOUNCE_KNIFE_ID).to_dict()))
+		engine.state.energy = 3
+		for _bn_i in 3:
+			engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
+					Vector2i(_bn_i + 1, 1), GameEngine.SIDE_OPPONENT)
+		_demo_hover_idx = 0
+		_hover_hand = 0
+		_hover_card = engine.state.hand[0]
+		status_text = "R263 弹跳飞刀：1 费 · 主目标 5 伤 + 随机最多两个其他敌人各 3 伤"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--rogue2" in args and engine != null:
 		# 演示（2026-10-02）：暗影刺客 R45 —— 终结 / 连刺 / 偷袭 / 潜影者 / 影魔 / 幽光。
 		#   终结(X=0)→连刺(带卡组 0 费技能卡)→偷袭(满血 12 伤)→潜影者上场→

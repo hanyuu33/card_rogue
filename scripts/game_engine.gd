@@ -578,6 +578,15 @@ const NIGHT_WALK_MAX:= 5
 # 回合结束时每剩 1 点费用 → 手卡里这张 +CHARGE_UP_PER_ENERGY 伤害（战斗内不重置）。
 const CHARGE_UP_ID:= 9156
 const CHARGE_UP_PER_ENERGY:= 3
+# ── 暗影刺客扩展（R263，2026-10-19）──
+# 弹跳飞刀（9160 技能，暗影刺客普通）：1 费；主目标 BOUNCE_KNIFE_DMG 伤，
+#   之后从**其它**敌方单位里随机抽最多 BOUNCE_KNIFE_BOUNCES 个，各吃 BOUNCE_KNIFE_SPLASH。
+#   文案口径「随机最多两个**其他**敌人」——「其他」= 排除主目标（同一只不会既吃主刀又吃弹跳），
+#   「最多」= 场上不够就少弹（只剩主目标 → 一刀 5 伤，不弹）。
+const BOUNCE_KNIFE_ID:= 9160
+const BOUNCE_KNIFE_DMG:= 5
+const BOUNCE_KNIFE_SPLASH:= 3
+const BOUNCE_KNIFE_BOUNCES:= 2
 # 预判（9097 技能）：0 费史诗；二选一：①弃牌区选一张 0 费技能卡（之后本卡消失）
 # ②卡组随机非 0 费技能卡入手。面板走 foresight_* 状态机。
 const FORESIGHT_ID:= 9097
@@ -6360,6 +6369,8 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 				var gg_c := _fetch_skill_from_deck(1)
 				gg_s += "；连刺：%s" % (("卡组 0 费技能卡「%s」加入手卡" % gg_c.card_name) if gg_c != null else "卡组里没有 0 费技能卡")
 			return gg_s
+		BOUNCE_KNIFE_ID:
+			return _bounce_knife(side, target, card)
 		STUN_BLOW_ID:
 			var st_p := _target_placement(side, target)
 			if st_p == null:
@@ -6558,6 +6569,60 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 			return fi_s
 		_:
 			return "（无效果）"
+
+
+func _bounce_knife(side: String, target, card: CardData) -> String:
+	## 弹跳飞刀（9160，R263）：主目标吃 BOUNCE_KNIFE_DMG —— 走 `_op_deal_damage`，
+	## 与连刺 / 终结同一口径（免疫法术照常免疫；没点到单位就直击对方 HP）。
+	## 弹跳再从「其它敌方单位」里随机抽，最多 BOUNCE_KNIFE_BOUNCES 个，各吃 BOUNCE_KNIFE_SPLASH。
+	## 三条判据（漏一条就变成别的卡）：
+	##   ① **其他** = 排除主目标所在格 → 同一只不会既吃主刀又吃弹跳；
+	##   ② 抽走即从池里删 → 两个弹跳一定落在**不同**单位上（不会对同一只重复）；
+	##   ③ 池子先按格坐标 sort 再抽 → 与 `state.board` 的遍历顺序无关，随机只由 `rng` 决定
+	##      （回放 / 联机重放的确定性靠这一条）。
+	## 两段伤害都过 `_spell_dmg()` —— 荧光草 / 魔法塔 / 附魔「伤害 +10」对主刀与弹跳**都**生效。
+	var foe:= SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	var main_cell: Vector2i = target if target is Vector2i else Vector2i(-1, -1)
+	var msg:= str(_op_deal_damage(side, _spell_dmg(side, BOUNCE_KNIFE_DMG, card), target))
+	var pool: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		if state.board[cell].owner != foe:
+			continue
+		if cell == main_cell:
+			continue
+		pool.append(cell)
+	pool.sort()
+	var spl:= _spell_dmg(side, BOUNCE_KNIFE_SPLASH, card)
+	var bounces:= mini(BOUNCE_KNIFE_BOUNCES, pool.size())
+	var hits:= 0
+	var total:= 0
+	var blocked:= 0
+	for i in bounces:
+		var pick: int = rng.randi_range(0, pool.size() - 1)
+		var c: Vector2i = pool[pick]
+		pool.remove_at(pick)
+		var p: Placement = state.unit_at(c)
+		if p == null:
+			continue
+		if p.card.traits.has(SPELL_IMMUNE_TRAIT):
+			blocked += 1
+			_log("弹跳飞刀第 %d 跳：%s 免疫法术，这一跳被拦下" % [i + 1, p.card.card_name])
+			continue
+		var dealt:= _hit_unit(p, spl, "弹跳飞刀")
+		total += dealt
+		hits += 1
+		_log("弹跳飞刀第 %d 跳：命中 %s -%d（剩余 %d）" % [
+			i + 1, p.card.card_name, dealt, maxi(0, p.health)])
+		# 复用流星雨的落点特效通道（紫色爆点 + 「-N」飘字，不新增 action 类型）
+		action.emit("meteor", {"cell": c, "dmg": dealt, "card": card})
+	if hits > 0:
+		_destroy_dead()
+	# 文案：全部被免疫时不要写成「弹跳 0 跳共 -0」，直接只报被拦下几跳
+	if hits > 0:
+		msg += "；弹跳 %d 跳共 -%d" % [hits, total]
+	if blocked > 0:
+		msg += "（%d 跳被法术免疫拦下）" % blocked
+	return msg
 
 
 func _ice_wall(side: String, target) -> String:

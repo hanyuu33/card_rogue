@@ -4811,6 +4811,24 @@
       "color": "红",
       "image": "",
       "trigger": "单体伤害"
+    },
+    {
+      "id": 9160,
+      "name": "弹跳飞刀",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "effect_text": "对一个敌人造成 5 点伤害，再对随机最多两个**其他**敌人各造成 3 点伤害。",
+      "target_mode": "unit",
+      "color": "紫",
+      "image": ""
     }
   ]
 }
