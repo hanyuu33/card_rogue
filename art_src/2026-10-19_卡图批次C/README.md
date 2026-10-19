@@ -145,6 +145,31 @@ NOT a portal, NOT a circle facing the camera` + `a long straight FURROW is plowe
 > **经验：先问「这个痕迹在物理上是谁留下的」。人已腾空就不该有地面拖痕；站地滑退才配擦痕。
 > 加线索必须过一遍物理检查，否则读者第一反应就是「毫无道理」。**
 
+## R258 第四版 9004 击退：正面受击 → 整体后退
+
+用户口径：**「显然这些方向都和击退不符，正面受击向后移动才是击退」**。
+
+前三版都错在**方向语义**上：相机在正侧面、气波打在侧面、人横着飞出画面 → 读成「被侧向撞飞 / 从背后推走」，
+这不是击退。**击退的判据是：敌人面朝攻击来向，正面吃下这一击，然后整体向后移动。**
+
+| 项目 | 前三版 | R258 |
+|---|---|---|
+| 朝向 | 侧面朝镜头，看不出哪边是正面 | **面甲 + 胸甲正面朝气波来向（画面左侧）** |
+| 受力点 | 胸口/腰侧/后背 | **盾牌与胸甲正面正中，接触点有紧凑白光爆点** |
+| 位移 | 横着平飞、像布袋 | **保持站立轴线，整体向右后滑退**（靴底擦地起尘） |
+| 相机 | 正侧面 | **三分之四前侧**，能看到铠甲的正面 |
+| 地面 | 犁地沟 / 全无 | **两小段浅擦痕（不超过一步）+ 脚跟扬起的小土团** |
+
+提示词关键句：
+`He FACES LEFT, straight into the incoming blast ... the round shield is braced in front of his chest ... strikes the FRONT of
+his shield and breastplate head-on ... his whole body is shoved BACKWARD to the RIGHT ... He stays UPRIGHT on a standing axis -
+NOT lying horizontally, NOT flying like a rag doll, NOT tumbling, NOT falling over, NOT rotating`
+
+对照图：`art_src/_review/_r258_knockback_frontal.png`
+
+> **经验（画击退/推移类先定这三件事）：① 谁面朝谁（正面是否对着攻击来向）；② 位移方向与攻击方向相反；
+> ③ 保留站立轴线。人物一旦横躺平飞，就变成「被打飞」而不是「被击退」。**
+
 ## 处理流程（同批次 A / B）
 
 1. 白底图按非白像素 bbox 裁边 + 内缩 6px；**这六张都是满屏背景，bbox = 全图，等于不裁**。
