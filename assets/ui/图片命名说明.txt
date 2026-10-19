@@ -250,7 +250,7 @@ assets/pics/<卡牌id>_sleep.png  沉睡状态专用卡图（R182 起，恶魔�
 assets/pics/<卡牌id>_<职业>.png  职业变体卡图（R185 起，8002「攻击」：8002_forest/shadow/mech.png）。
                            CardFace.art_for 按 RunState.player_class 换图；职业图缺失回退 <id>.png 通用图。
                            后缀映射：森林精魄=forest / 暗影刺客=shadow / 机械之心=mech。
-                           ⚠️ 当前 232 张卡里 16 张有图（19 个文件，含 3 张职业变体 + 1 张沉睡图），
+                           ⚠️ 当前 232 张卡里 33 张有图（36 个文件，含 3 张职业变体 + 1 张沉睡图），
                            其余走职业色渐变横幅 —— 素材缺口，不是渲染 bug。
                            R247：62 张「纯渐变 + 卡号水印」的占位图已全部删除，assets/pics 只留真图。
                            要查「哪些卡还差图 / 哪些暂时不做」，跑 `python _art_index.py`
