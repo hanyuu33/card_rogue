@@ -145,7 +145,7 @@ git push
 | `git stash` / `git stash pop` | 临时收起 / 取回未提交改动 |
 | `git checkout -b 分支名` | 开新分支做实验 |
 
-## 7. 本机已知的两个坑（来自开发机，提前告知省得踩）
+## 7. 本机已知的三个坑（来自开发机，提前告知省得踩）
 
 1. **`git fetch` 可能建不出 `.git/refs/remotes/origin/`**：命令返回成功、还打印
    `[new branch] main -> origin/main`，但引用没落盘，`git rev-parse origin/main` 报
@@ -156,6 +156,17 @@ git push
 2. **中文路径被转义**：`git ls-tree` 输出里 `玩法说明.txt` 会显示成八进制转义，
    直接 grep 匹配不上，看着像「文件没入库」。设 `git config core.quotepath false` 解决
    （第 2.3 节已包含这一步）。
+
+3. **直连 GitHub 拉大 pack 会中途被掐断**：`git fetch` 报 `fetch-pack: unexpected disconnect while reading
+   sideband packet` / `early EOF` / `invalid index-pack output`，重试多次也一样（跨境限速）。
+   绕法（无需代理，实测 1~2 分钟拉完）：走公共镜像读，只要仓库匿名可读即可用——
+   ```bash
+   git fetch https://ghfast.top/https://github.com/hanyuu33/card_rogue.git main
+   # 备选镜像：gh-proxy.com / ghproxy.net，前缀同样拼在原地址前
+   git merge --ff-only FETCH_HEAD
+   ```
+   推送仍走 SSH 的 `origin`；镜像只用于读。
+   排查技巧：`git ls-remote <镜像地址> refs/heads/main` 秒回 = 镜像可用，再用它 fetch。
 
 ## 8. 与资料库网盘备份的关系（双保险）
 
