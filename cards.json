@@ -2948,7 +2948,7 @@
       "health": 11,
       "attack_range": 2,
       "move_speed": 1,
-      "rarity": 0,
+      "rarity": 1,
       "group": "player",
       "class": "暗影刺客",
       "traits": [
@@ -2968,7 +2968,7 @@
       "health": 15,
       "attack_range": 1,
       "move_speed": 0,
-      "rarity": 0,
+      "rarity": 1,
       "group": "player",
       "class": "暗影刺客",
       "traits": [
@@ -3874,7 +3874,7 @@
       "id": 8065,
       "name": "货物",
       "kind": "工事",
-      "cost": 1,
+      "cost": 3,
       "power": 0,
       "health": 6,
       "attack_range": 0,

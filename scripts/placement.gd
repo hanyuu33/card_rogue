@@ -155,6 +155,9 @@ func effective_speed() -> int:
 func effective_range() -> int:
 	## 实际攻击距离（R150）：卡面射程 + **只在场上有效**的加成（赫菲斯托斯的锻造成长）
 	## - 夜衰（夜鸭 9027 奇数回合 -1）。
+	## R279：「改造攻程」（榴弹击手）的 +N **已经烤在这张卡的副本上**（`card.attack_range`），
+	## 所以这里不再加 `upgrade_range`（加了会双计）。`upgrade_range` 只负责两件事：
+	## ① 徽标显示 / ② 离场时 `_card_leaving_field` 按它减回去。
 	## 与 `effective_power` / `effective_speed` 对称：**不写回 card**。
 	## ⚠️ 引擎里凡是判断「够不够得着」的地方都要走这个口（或 `GameEngine.eff_range`），
 	##    别再直接读 `card.attack_range` —— 那个不含场上加成。

@@ -8100,10 +8100,14 @@ func _init() -> void:
 	r45_sl.state.deck.append(r45_sl_c)
 	r45_sl.state.hand.append(repo.get_card(GameEngine.RAID_SPELL_ID))
 	r45_sl.use_spell(0, Vector2i(2, 1))
-	check(r45_sl.state.hand.size() == 1 and r45_sl.state.hand[0] == r45_sl_c,
+	# R281：抽牌一律换成独立副本 → 手牌里那张**不再等于**牌库里放进去的对象，
+	# 断言改看手牌里实际抽到的那张（按 id 认）。
+	var r45_sl_got: CardData = r45_sl.state.hand[0] if r45_sl.state.hand.size() == 1 else null
+	check(r45_sl_got != null and r45_sl_got.id == r45_sl_c.id,
 			"不眠：手里没牌 → 补抽 1 张")
-	check(r45_sl.cost_of(r45_sl_c) == 1,
-			"不眠：抽到的 0 费卡本回合 1 费（实际 %d）" % r45_sl.cost_of(r45_sl_c))
+	check(r45_sl_got != null and r45_sl.cost_of(r45_sl_got) == 1,
+			"不眠：抽到的 0 费卡本回合 1 费（实际 %d）"
+				% (-1 if r45_sl_got == null else r45_sl.cost_of(r45_sl_got)))
 
 	# R45 基线：角色归属（森林精魄 99 / 暗影刺客 25 —— R48 +回响·闪躲 2 张、R49 +收尾 1 张、R50 +爆炸陷阱 1 张）
 	var r45_cls := repo.all_cards()
@@ -9585,15 +9589,15 @@ func _init() -> void:
 			and r57_chanter.kind == "盟友" and r57_chanter.cost == 3
 			and r57_chanter.power == 1 and r57_chanter.health == 11
 			and r57_chanter.attack_range == 2 and r57_chanter.move_speed == 1
-			and r57_chanter.rarity == 0
+			and r57_chanter.rarity == 1
 			and r57_chanter.traits.has(GameEngine.CHANTER_TRAIT),
-			"R57 地狱咏唱者 8022：3 费普通暗影刺客盟友 1/11 程2 速1")
+			"R57/R282 地狱咏唱者 8022：3 费稀有暗影刺客盟友 1/11 程2 速1")
 	check(r57_altar != null and r57_altar.card_name == "黑暗祭坛"
 			and r57_altar.kind == "工事" and r57_altar.is_fort() and r57_altar.cost == 3
 			and r57_altar.power == 1 and r57_altar.health == 15
-			and r57_altar.attack_range == 1 and r57_altar.rarity == 0
+			and r57_altar.attack_range == 1 and r57_altar.rarity == 1
 			and r57_altar.traits.has(GameEngine.ALTAR_TRAIT),
-			"R57 黑暗祭坛 8023：3 费普通暗影刺客工事 1/15 程1")
+			"R57/R282 黑暗祭坛 8023：3 费稀有暗影刺客工事 1/15 程1")
 	check(r57_endless != null and r57_endless.card_name == "无尽黑暗"
 			and r57_endless.kind == "效果" and r57_endless.cost == 1
 			and r57_endless.rarity == 1
@@ -12946,10 +12950,12 @@ func _init() -> void:
 	var r200_cargo := repo.get_card(RunState.CARGO_CARD_ID)
 	check(r200_cargo != null and r200_cargo.card_name == "货物",
 		"R200 货物：id 8065 存在且名为「货物」")
-	check(r200_cargo != null and r200_cargo.kind == "工事" and r200_cargo.cost == 1
+	check(r200_cargo != null and r200_cargo.kind == "工事" and r200_cargo.cost == 3
 			and r200_cargo.power == 0 and r200_cargo.health == 6
 			and r200_cargo.attack_range == 0 and r200_cargo.move_speed == 0,
-		"R200 货物：1 费工事，0 攻 / 6 血 / 0 程 / 0 速")
+		"R200 货物：3 费工事（R280 由 1 费上调），0 攻 / 6 血 / 0 程 / 0 速")
+	check(r200_cargo != null and r200_cargo.cost == 3,
+		"R280 货物：费用锁定为 3（原 1 费 → 3 费，防回退）")
 	check(r200_cargo != null and r200_cargo.rarity == 5 and r200_cargo.group == "player"
 			and r200_cargo.card_class == "",
 		"R200 货物：rarity 5（事件卡）/ 玩家图鉴 / 公用（class 留空；R277 修正归属）")
@@ -20646,6 +20652,165 @@ func _init() -> void:
 			"R278 只动陷阱：清泉 / 维修间 / 改造工厂费用不变（%d / %d / %d）"
 			% [r278_repo.get_card(8028).cost, r278_repo.get_card(8036).cost,
 				r278_repo.get_card(8037).cost])
+
+	# ---- R279 榴弹击手「改造攻程」：三条路径都必须加到射程 ----
+	# 用户报的缺陷：改造拿不到攻击距离。实测三条路径里只有「场上升级」是通的，
+	# 手牌里攒的层数上场不折算、改造工厂压根不走 `_on_unit_upgraded()`。
+	var r279_repo := CardRepo.load_json()
+
+	# ① 场上改造（升级 8027）
+	var r279_e1 := _new_engine([], 40, 40, -1, false)
+	r279_e1.start_game()
+	r279_e1.state.energy = 99
+	var r279_p1: Placement = r279_e1.state.place(
+		CardData.from_dict(r279_repo.get_card(8057).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)
+	var r279_r0: int = r279_p1.effective_range()
+	r279_e1._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r279_p1.effective_range() == r279_r0 + 1 and r279_p1.upgrade_range == 1,
+		"R279 场上改造：榴弹击手射程 %d→%d（upgrade_range=%d）" % [
+			r279_r0, r279_p1.effective_range(), r279_p1.upgrade_range])
+	var r279_out: CardData = r279_e1._card_leaving_field(r279_p1)
+	check(r279_out.attack_range == 1,
+		"R279 离场还原：交出的卡射程回到 1（实际 %d）" % r279_out.attack_range)
+
+	# ② 手牌里被改造 2 次 → 上场应一次结清（层数随身带）
+	var r279_e2 := _new_engine([], 40, 40, -1, false)
+	r279_e2.start_game()
+	r279_e2.state.energy = 99
+	var r279_hc := CardData.from_dict(r279_repo.get_card(8057).to_dict())
+	r279_hc.upgrade_stacks = 2
+	r279_e2.state.hand.append(r279_hc)
+	var r279_p2: Placement = r279_e2.play_from_hand(
+		r279_e2.state.hand.size() - 1, Vector2i(4, 1))
+	check(r279_p2.effective_range() == 3 and r279_p2.upgrade_range == 2
+			and r279_p2.upgrade_stacks == 2,
+		"R279 手牌改造上场：2 层 → 射程 1→%d（upgrade_range=%d）" % [
+			r279_p2.effective_range(), r279_p2.upgrade_range])
+	check(r279_repo.get_card(8057).attack_range == 1,
+		"R279 卡库不被污染：8057 射程仍是 1（实际 %d）"
+		% r279_repo.get_card(8057).attack_range)
+	var r279_out2: CardData = r279_e2._card_leaving_field(r279_p2)
+	check(r279_out2.attack_range == 1,
+		"R279 手牌改造再离场：交出的卡射程回到 1（实际 %d）" % r279_out2.attack_range)
+
+	# ③ 改造工厂 8037：每回合的「改造」同样算改造
+	var r279_e3 := _new_engine([], 40, 40, -1, false)
+	r279_e3.start_game()
+	r279_e3.state.energy = 99
+	r279_e3.state.set_field(
+		CardData.from_dict(r279_repo.get_card(8037).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)
+	var r279_p3: Placement = r279_e3.state.place(
+		CardData.from_dict(r279_repo.get_card(8057).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)
+	var r279_f0: int = r279_p3.effective_range()
+	r279_e3._field_aura_tick(GameEngine.SIDE_SELF)
+	check(r279_p3.effective_range() == r279_f0 + 1 and r279_p3.upgrade_range == 1,
+		"R279 改造工厂：站在工厂上的榴弹击手射程 %d→%d" % [
+			r279_f0, r279_p3.effective_range()])
+
+	# ④ 同一后置口的另一受害者：机器鸟 8059 站在工厂上应抽 1 张
+	var r279_e4 := _new_engine([], 40, 40, -1, false)
+	r279_e4.start_game()
+	r279_e4.state.energy = 99
+	r279_e4.state.hand.clear()
+	r279_e4.state.deck.clear()
+	for _k in 3:
+		r279_e4.state.deck.append(
+			CardData.from_dict(r279_repo.get_card(8003).to_dict()))
+	r279_e4.state.set_field(
+		CardData.from_dict(r279_repo.get_card(8037).to_dict()), Vector2i(5, 0),
+		GameEngine.SIDE_SELF)
+	r279_e4.state.place(
+		CardData.from_dict(r279_repo.get_card(8059).to_dict()), Vector2i(5, 0),
+		GameEngine.SIDE_SELF)
+	var r279_h0: int = r279_e4.state.hand.size()
+	r279_e4._field_aura_tick(GameEngine.SIDE_SELF)
+	check(r279_e4.state.hand.size() == r279_h0 + 1,
+		"R279 改造工厂 → 机器鸟「改造抽牌」也生效（手牌 %d→%d）" % [
+			r279_h0, r279_e4.state.hand.size()])
+
+	# ══════════════════════════════════════════════════════════════
+	# R281：① 8075 减费不再串号 ② 8050 超负荷 0 血边界 ③ 卡名恒单行 + 横向滚动
+	# ══════════════════════════════════════════════════════════════
+	var r281_repo := CardRepo.load_json()
+	# ---- ① 抽牌一律独立副本（实例级记账的前提）----
+	var r281_e := _new_engine([], 40, 40, -1, false)
+	r281_e.start_game()
+	r281_e.state.hand.clear()
+	r281_e.state.deck.clear()
+	var r281_shared: CardData = r281_repo.get_card(8001)
+	r281_e.state.deck.append(r281_shared)
+	r281_e.state.deck.append(r281_shared)     # 同名两张 = 同一个卡库实例（旧版就是这样）
+	var r281_d1: CardData = r281_e.state.draw()
+	var r281_d2: CardData = r281_e.state.draw()
+	check(r281_d1 != null and r281_d2 != null and r281_d1 != r281_d2 and r281_d1 != r281_shared,
+		"R281 抽牌：同名两张是**不同实例**，且都不是卡库共享实例")
+	r281_e.state.card_discount[r281_d1] = 1
+	check(r281_e.cost_of(r281_d1) == r281_d1.cost - 1 and r281_e.cost_of(r281_d2) == r281_d2.cost,
+		"R281 实例减费：只作用于那一张（%d 费 / 另一张 %d 费）"
+			% [r281_e.cost_of(r281_d1), r281_e.cost_of(r281_d2)])
+	# ---- ② 8075 量产型谟涅摩叙涅：炮击抽到的那张 -1 费，同名其它卡不受影响 ----
+	var r281_e2 := _new_engine([], 40, 40, -1, false)
+	r281_e2.start_game()
+	r281_e2.state.place(CardData.from_dict(r281_repo.get_card(8075).to_dict()),
+		Vector2i(4, 0), GameEngine.SIDE_SELF)
+	r281_e2.state.place(CardData.from_dict(r281_repo.get_card(8003).to_dict()),
+		Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r281_e2.state.deck.clear()
+	r281_e2.state.deck.append(CardData.from_dict(r281_repo.get_card(8001).to_dict()))
+	r281_e2.state.deck.append(CardData.from_dict(r281_repo.get_card(8001).to_dict()))
+	r281_e2.state.hand.clear()
+	var r281_sp: CardData = CardData.from_dict(r281_repo.get_card(9145).to_dict())
+	r281_e2.state.hand.append(r281_sp)
+	r281_e2.state.energy = 99
+	r281_e2.use_spell(0, Vector2i(1, 1))
+	var r281_drawn: CardData = null
+	for c: CardData in r281_e2.state.hand:
+		if c.id == 8001:
+			r281_drawn = c
+	check(r281_drawn != null and r281_e2.cost_of(r281_drawn) == 1,
+		"R281 8075：炮击抽到的那张 2 → 1 费（实际 %d）"
+			% (-1 if r281_drawn == null else r281_e2.cost_of(r281_drawn)))
+	check(r281_e2.state.deck.size() > 0 and r281_e2.cost_of(r281_e2.state.deck[0]) == 2,
+		"R281 8075：牌库里另一张同名卡仍是 2 费（不再串号，实际 %d）"
+			% (-1 if r281_e2.state.deck.is_empty() else r281_e2.cost_of(r281_e2.state.deck[0])))
+	# ---- ③ 8050 旧式机兵 · 超负荷：0 血也算「0 或以下」----
+	var r281_e3 := _new_engine([], 40, 40, -1, false)
+	r281_e3.start_game()
+	var r281_mech: Placement = r281_e3.state.place(
+		CardData.from_dict(r281_repo.get_card(8050).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)
+	r281_e3._hit_unit(r281_mech, r281_mech.health, "测试")
+	r281_e3._destroy_dead()
+	check(r281_mech.health == 0 and r281_e3.state.unit_at(Vector2i(4, 1)) == r281_mech,
+		"R281 超负荷：恰好 0 血不立即死亡（hp=%d）" % r281_mech.health)
+	r281_e3.end_turn()
+	check(r281_e3.state.unit_at(Vector2i(4, 1)) == null,
+		"R281 超负荷：0 血在己方回合结束死亡（与卡面「0 或以下」一致）")
+	# ---- ④ 卡名恒单行：宽度/高度双约束 + 超宽横向滚动（唯一判定口 name_layout）----
+	var r281_font := UiTheme.font_bold()
+	var r281_cell := Rect2(Vector2.ZERO, Vector2(77, 92))
+	var r281_info_long := CardFace.name_layout("量产型赫卡同克瑞斯", r281_cell, r281_font, 8.4)
+	check(bool(r281_info_long["need_scroll"])
+			and int(r281_info_long["sz"]) == CardFace.CARD_NAME_MIN_SZ,
+		"R281 卡名：超长名在 77×92 上缩到最小号后转横向滚动（sz=%d）"
+			% int(r281_info_long["sz"]))
+	var r281_info_short := CardFace.name_layout("木栅栏", r281_cell, r281_font, 8.4)
+	check(not bool(r281_info_short["need_scroll"]),
+		"R281 卡名：短名不滚动（text_w=%.0f ≤ maxw=%.0f）"
+			% [float(r281_info_short["text_w"]), float(r281_info_short["maxw"])])
+	check(CardFace.marquee_offset(50.0, 60.0, 1234) == 0.0,
+		"R281 滚动：不超宽时偏移恒为 0")
+	var r281_off: float = CardFace.marquee_offset(120.0, 60.0, 1500)
+	check(r281_off > 0.0 and r281_off <= 60.0,
+		"R281 滚动：中途偏移落在 0..span（%.1f）" % r281_off)
+	check(is_equal_approx(CardFace.marquee_offset(120.0, 60.0, 3600), 60.0),
+		"R281 滚动：走到头停在 span（= text_w - maxw）")
+	var r281_cf_src := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+	check(r281_cf_src.find("wrap_text(font_bold, card.card_name") < 0,
+		"R281 卡名：卡面**不再对卡名折行**（单行 + 滚动，防回退）")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

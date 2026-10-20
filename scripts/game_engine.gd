@@ -768,7 +768,7 @@ const BATCH_TRANSFER_DRAW:= 1    # 批量传输：改造完抽 1 张卡
 # 把用不上的废卡换成一张能留手的 1/10。唯一入口 `cast_recycle(手牌序号, 目标序号)`。
 const RECYCLE_ID:= 8064
 const RECYCLE_HP:= 8              # 改造基数（素体自身 +1 额外照算 → 实际 +9）
-# ── R200：货物 8065（运送委托）—— 1 费工事 0/6/0/0 ──
+# ── R200：货物 8065（运送委托）—— 3 费工事 0/6/0/0（R280 费用 1 → 3）──
 # **被破坏时从卡组中删除**：`_destroy` 己方分支唯一口 —— void（不进弃牌区）
 # + `RunState.remove_card` 删卡组那份。货物是「占卡组名额的负债」：
 # 带着它进第二层，第一个事件房会变成「委托完成」。
@@ -1079,7 +1079,7 @@ const DARK_CHAIN_STEPS:= 2     # 每次击退格数
 const DARK_SPREAD_ID:= 9113
 const DARK_SPREAD_TRAIT:= "黑暗扩散"
 const DARK_SPREAD_PER_ENERGY:= 2   # 每 1 点剩余费用 → 全体敌人 2 点伤害
-# 地狱咏唱者 8022（3 费普通盟友 1/11/程2/速1）+ 黑暗祭坛 8023（3 费普通工事 1/15/程1）：
+# 地狱咏唱者 8022（3 费稀有盟友 1/11/程2/速1）+ 黑暗祭坛 8023（3 费稀有工事 1/15/程1）：R282 两张由普通升为稀有，数值不变
 #   **攻击时**回复 1 点费用（trait 咏唱者 / 祭坛）。两卡共用 ATTACK_GAIN_ENERGY，
 #   触发点是 attack() 尾部（本次攻击确实打出去才触发；被拒绝的非法攻击不算）。
 #   工事也能攻击（1 攻/射程 1），所以祭坛同样成立。
@@ -3894,6 +3894,16 @@ func _cannon_draw_discount(side: String, drawn: CardData) -> void :
 			n += 1
 	if n <= 0:
 		return
+	# R281 防御：减费按**实例**记账 → 这张必须是手牌里的独立副本（`FieldState.draw()`
+	# 已保证；这里再兜一次，防止将来有别的抽牌路径绕开 draw()）。
+	var idx := state.hand.size() - 1
+	if idx < 0 or state.hand[idx] != drawn:
+		return
+	if not drawn.own_copy:
+		var own := CardData.from_dict(drawn.to_dict())
+		own.own_copy = true
+		state.hand[idx] = own
+		drawn = own
 	state.card_discount[drawn] = int(state.card_discount.get(drawn, 0)) \
 			+ MASS_MNEMOSYNE_DISCOUNT
 	_log("量产型谟涅摩叙涅：聚能炮击抽到的「%s」费用 -%d"
@@ -5010,6 +5020,12 @@ func _demon_fetch(_p: Placement) -> void :
 	var pick: int = cand[rng.randi() % cand.size()]
 	var chosen: CardData = state.deck[pick]
 	state.deck.remove_at(pick)
+	# R281：这条路径**绕开了 `FieldState.draw()`**，取到的是卡库共享实例 —— 直接给「它」
+	# 减费会串到所有同名卡。先换成独立副本再记减费。
+	if not chosen.own_copy:
+		var own := CardData.from_dict(chosen.to_dict())
+		own.own_copy = true
+		chosen = own
 	state.hand.append(chosen)
 	state.card_discount[chosen] = int(state.card_discount.get(chosen, 0)) + DEMON_FETCH_DISCOUNT
 	_log("以太恶魔：从卡组取到效果卡「%s」，它的费用 -%d" % [
@@ -8651,12 +8667,14 @@ func _death_blast(center: Vector2i, amount: int, card: CardData) -> void :
 func _overload_tick(side: String) -> void :
 	## 「超负荷」（旧式机兵 8050，R98）：**己方回合结束时**，
 	## 带「超负荷」且生命为负的单位**真正死亡**（直接 _destroy，不触发后排「溢出伤害」）。
-	## 生命已回到 0 或以上（本回合被治疗拉回）的单位则继续存活。
+	## 生命已回到 1 或以上（本回合被治疗拉回）的单位则继续存活。
+	## ⚠️ R281：判据是 `<= 0`（卡面「0 或以下」）—— 旧版写 `< 0`，于是**恰好 0 血**的
+	##    超负荷单位既不被 `_destroy_dead` 杀（<=0 跳过）、也不被这里杀 → 永久不死。
 	var dead_cells: Array[Vector2i] = []
 	for cell: Vector2i in state.board:
 		var p: Placement = state.unit_at(cell)
 		if p != null and p.owner == side and p.card.has_affix(AFFIX_OVERLOAD) \
-				and p.health < 0:
+				and p.health <= 0:
 			dead_cells.append(cell)
 	for cell: Vector2i in dead_cells:
 		var p: Placement = state.unit_at(cell)
@@ -8854,7 +8872,7 @@ func _destroy_dead() -> void :
 				# 现在以负数血量继续存活，且不触发「溢出伤害」漏给玩家 HP。
 				action.emit("overload_neg", {"cell": cell, "card": _pu.card,
 					"health": _pu.health, "side": _pu.owner})
-				_log("超负荷：%s 生命降至 %d，暂不死亡（己方回合结束若仍为负则死亡）"
+				_log("超负荷：%s 生命降至 %d，暂不死亡（己方回合结束若仍为 0 或更低则死亡）"
 					% [_pu.card.card_name, _pu.health])
 				continue
 			dead.append(cell)
@@ -10002,6 +10020,11 @@ func _field_aura_tick(side: String) -> void :
 		# 「模仿者」8043（R92）：改造工厂给的 +1/+1 也是一次改造（用户口径）→
 		# 接通的模仿者同步获得 +1 力 / +1 血。每回合触发一次，**可无限叠加**。
 		_mimic_relay(p, fac_atk, fac_hp)
+		# R279：工厂给的也是**改造** → 必须过统一后置口。以前这里只 `_add_upgrade_stack`，
+		# 于是「每次被改造时」那一族（改造攻程 榴弹击手 / 改造抽牌 机器鸟 /
+		# 废弃机器人）站在改造工厂上完全不响应 —— 用户报的就是榴弹击手加不了射程。
+		if f.traits.has(PERSIST_UPGRADE_TRAIT):
+			_on_unit_upgraded(p)
 	if healed > 0:
 		_log("持续型场地：%d 个单位在自己回合结束时回复了生命" % healed)
 	if upgraded > 0:

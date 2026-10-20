@@ -43,7 +43,7 @@ const STRUGGLE_CARD_ID := 9018    # 金属龙（事件卡牌，不可奖励获�
 const STRUGGLE_LIFE := 21         # 挣扎代价：失去的生命
 const WHALE_CARD_ID := 9050       # 鲸鱼之怒（蓝色大肥鱼事件的奖励卡，不可奖励获取）
 const ARCANE_CHARM_ID := 6020     # 奥秘护符（奥秘之泉事件给予；奖励池也能正常获得）
-const CARGO_CARD_ID := 8065       # 货物（R200 运送委托；1 费工事 0/6/0/0，被破坏时从卡组删除）
+const CARGO_CARD_ID := 8065       # 货物（R200 运送委托；3 费工事 0/6/0/0，被破坏时从卡组删除）
 const DELIVERY_MIN := 1           # 运送委托：最少接几张
 const DELIVERY_MAX := 6           # 运送委托：最多接几张
 
@@ -136,7 +136,7 @@ const STRUGGLE_TAKEN_DESC := """「这就是为了胜利我的挣扎。」
 金属巨兽破体而出，臣服于你——「金属龙」已加入卡组。"""
 
 const DELIVERY_DESC := """驿站门口堆着一批贴了封条的货箱，脚夫收了钱就不见了人影。
-选择承运：平铺挑 1~6 张「货物」加入卡组（1 费工事，0 攻 / 6 血，替你承受伤害）；
+选择承运：平铺挑 1~6 张「货物」加入卡组（3 费工事，0 攻 / 6 血，替你承受伤害）；
 货物**被破坏时会从卡组中删除**——毁了就真的毁了。
 带着货物走进第二层，第一个事件房的货主会按张兑付报酬，接得越多兑得越多；
 兑付完成后这些货物会被货主收走（同样从卡组里删掉）。
@@ -1062,7 +1062,7 @@ func _on_delivery_confirmed(selected: Array) -> void:
 	_delivery_count = n
 	_collapse_to_leave()
 	desc.text = DELIVERY_TAKEN_DESC % n
-	result_label.text = "已接取 %d 张货物（1 费工事 0/6/0）——第二层第一个事件房兑付报酬。" % n
+	result_label.text = "已接取 %d 张货物（3 费工事 0/6/0）——第二层第一个事件房兑付报酬。" % n
 	result_label.add_theme_color_override("font_color", Color("c8a86a"))
 	_redraw()
 

@@ -1506,9 +1506,9 @@ func _check_delivery(scene: Variant) -> void:
 		return
 	var repo := CardRepo.load_json()
 	var cargo: CardData = repo.get_card(RunState.CARGO_CARD_ID)
-	if cargo == null or cargo.kind != "工事" or cargo.cost != 1 \
+	if cargo == null or cargo.kind != "工事" or cargo.cost != 3 \
 			or cargo.power != 0 or cargo.health != 6 or cargo.attack_range != 0:
-		_smoke_fail("运送委托：货物卡面应是 1 费工事 0/6/0")
+		_smoke_fail("运送委托：货物卡面应是 3 费工事 0/6/0（R280 由 1 费上调）")
 		return
 	var before: int = RunState.deck_ids.size()
 	# ── 1) 主按钮 → 开平铺选卡页（1~6 区间）──

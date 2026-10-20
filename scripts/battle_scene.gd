@@ -10792,6 +10792,10 @@ func _draw_log_panel() -> void:
 # ------------------------------------------------------------ 每帧刷新工具栏文字
 
 func _process(delta: float) -> void:
+	# R281：卡名超宽时是**横向滚动**的 —— 需要连续重绘才会动。
+	# 自持循环：`_draw_name_marquee()` 记时刻 → 这里看到 → 请求下一帧 → 继续画。
+	if CardFace.scrolling_recent():
+		queue_redraw()
 	if _demo_tip_text != "":
 		_hover_relic_tip = _demo_tip_text   # 演示：合成鼠标移动会清提示 → 每帧重设
 	if _demo_hover_idx >= 0 and engine != null \

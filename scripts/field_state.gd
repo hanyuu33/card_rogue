@@ -178,7 +178,13 @@ func draw() -> CardData:
 	# 否则同名卡共享库内实例 → 一张的减费会串到卡组里其它同名卡上（见 GameEngine 的实例级减费）。
 	# R123：副本离开手卡再抽回来**不再换新副本**（own_copy 已标记）——
 	# 否则实例级永久减费（陨石术「每用一张技能 -1」）会在每次循环后静默归零。
-	if _needs_own_instance(card) and not card.own_copy:
+	# R281：**手牌里永远是独立副本**。实例级记账（card_discount / turn_card_discount /
+	# hand_free / turn_free）都以 CardData 对象为 key，而牌库/弃牌区里的同名卡**共享卡库实例**
+	# —— 只要一张共享实例进了手牌，给「它」减费就等于给**所有同名卡**减费
+	# （实测：8075 量产型谟涅摩叙涅的炮击减费串到了牌库另一张同名卡）。
+	# 所以判据从白名单 trait 放宽成「**还没复制过就复制**」；R123 的顾虑
+	# （副本离手再抽回会被重复复制 → 永久减费归零）由 `own_copy` 标记覆盖。
+	if not card.own_copy:
 		card = CardData.from_dict(card.to_dict())
 		card.own_copy = true
 	hand.append(card)
@@ -378,6 +384,23 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 			p.upgrade_hp += stack_bonus
 			p.card.health += stack_bonus
 			p.health += stack_bonus
+	# R279：「改造攻程 / 改造移速」—— 与「改造生命层」同一条路：**层数不论在哪里获得**，
+	# 上场时一并折算。手牌里被改造过的榴弹击手（系统升级 / 批量改造 / 创意 等）上场后，
+	# 射程必须跟着层数走 —— 以前只在场上改造才 +1，手牌攒的层数上场就白吃（用户报的缺陷）。
+	# 记账仍走 Placement 字段（`upgrade_range` / `upgrade_speed`），离场由
+	# `_card_leaving_field` 一并减回去；卡面数值同时抬在这个**副本**上（与场上改造同口径）。
+	# ⚠️ 先换独立副本：`card` 可能是卡库共享实例，直接改会跨 run 泄漏。
+	if p.upgrade_stacks > 0:
+		var rng_bonus: int = p.upgrade_stacks if card.traits.has(GameEngine.UPGRADE_RANGE_TRAIT) else 0
+		var spd_bonus: int = p.upgrade_stacks if card.traits.has(GameEngine.UPGRADE_SPEED_TRAIT) else 0
+		if rng_bonus > 0 or spd_bonus > 0:
+			if p.card == card:
+				p.card = CardData.from_dict(card.to_dict())
+				p.card.traits = (card.traits as Array).duplicate()
+			p.upgrade_range += rng_bonus
+			p.upgrade_speed += spd_bonus
+			p.card.attack_range += rng_bonus
+			p.card.move_speed += spd_bonus
 	# 哈气：已到生效回合且效果区有哈气时，上场即可行动 extra 次（与卡自带的 actions 取大者）。
 	# ⚠️ R122：`summon = true`（**被召唤**出来的，不是玩家从手牌打出来的）固定 **1 轮** ——
 	#    召唤物当回合**恰好行动一次**，不继承哈气 / 双动字段。

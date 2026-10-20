@@ -194,7 +194,7 @@ const HERO_CARD_ID := 9023
 # 费用只有一个来源（cards.json），所以这里只记 id，不再有 SMITH_COST / 覆盖表。
 const FENCE_CARD_ID := 9072
 
-# 事件「运送委托」（R200）的货物卡（cards.json）：1 费工事 0/6/0/0，
+# 事件「运送委托」（R200）的货物卡（cards.json）：3 费工事 0/6/0/0（R280 由 1 费上调），
 # **被破坏时从卡组中删除**（引擎 `_destroy` 的货物分支是唯一口）。
 # rarity 5（事件）→ 不进奖励池，只能从「运送委托」事件获得。
 const CARGO_CARD_ID := 8065

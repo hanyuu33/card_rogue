@@ -50,6 +50,111 @@ static var _art_cache := {}   # "id[_职业后缀][_sleep]" -> Texture2D / null�
 const WRAP_CACHE_MAX := 2048
 static var _wrap_cache := {}
 
+# ── R281：卡名「单行 + 超宽横向滚动」 ──
+## 旧版卡名最多折 2 行，但姓名牌内框（0.745~0.94）只有 11~18px 高，底部数值徽章
+## 还要再吃掉 6~12px —— 8 号字两行 = 26px，必然溢出卡外 / 压在徽章上，
+## 在小卡（77×92）上表现为「长卡名堆叠」。现在卡名**恒单行**：
+##   ① 字号按宽度自适应（9 → 最小 CARD_NAME_MIN_SZ）；
+##   ② 仍放不下 → 横向滚动（`marquee_offset` + `_draw_name_marquee`）。
+## 判定口只有一个：`name_layout()`（绘制与回归断言共用）。
+const CARD_NAME_MIN_SZ := 7          # 卡名自适应最小字号（再小不可读）
+const MARQUEE_PAUSE_MS := 900.0      # 横向滚动：两端停顿时长
+const MARQUEE_SPEED := 26.0          # 横向滚动速度（px/s）
+static var _char_cache := {}         # "字体|字号|文本" -> Array[float]（逐字宽度）
+static var _scroll_watch_ms := 0     # 最近一次「画了滚动卡名」的时刻
+
+
+static func name_layout(card_name: String, rect: Rect2, font_bold: Font,
+		max_h := 0.0) -> Dictionary:
+	## **卡名单行排版唯一判定口**（绘制与测试共用，R281）。
+	## 返回 {"sz", "maxw", "text_w", "need_scroll"}。
+	## 字号同时受**宽度**与**高度**约束（`max_h` = 姓名牌内框到徽章带顶的距离，0 = 不限）：
+	##   * 宽度放不下 → 继续缩，缩到底（CARD_NAME_MIN_SZ）再交给横向滚动；
+	##   * 高度放不下 → 必须缩 —— 墨迹压住底部数值就是玩家口中的「叠字」。
+	## 循环有硬边界（sz 单调递减到 CARD_NAME_MIN_SZ），不会死循环。
+	var k: float = rect.size.y / CARD_H_DESIGN
+	var kt: float = minf(k, UiTheme.CARD_TEXT_SCALE_CAP)
+	var pad: float = UiTheme.CARD_PAD * k
+	var maxw: float = rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0
+	var sz: int = maxi(9, roundi(UiTheme.CARD_FS_TEXT * kt * 1.15))
+	var tw: float = 0.0
+	while true:
+		tw = font_bold.get_string_size(card_name, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
+		var ink: float = float(font_bold.get_ascent(sz)) + 1.0
+		var too_wide: bool = tw > maxw
+		var too_tall: bool = max_h > 0.0 and ink > max_h
+		if sz <= CARD_NAME_MIN_SZ or (not too_wide and not too_tall):
+			break
+		sz -= 1
+	return {"sz": sz, "maxw": maxw, "text_w": tw, "need_scroll": tw > maxw + 0.5}
+
+
+static func marquee_offset(text_w: float, maxw: float, now_ms: int) -> float:
+	## 超宽卡名的**横向滚动偏移**（纯函数，便于断言）：两端各停 MARQUEE_PAUSE_MS，
+	## 中间匀速走完 span = text_w - maxw，然后原路返回 —— 不跳变。
+	if text_w <= maxw:
+		return 0.0
+	var span: float = text_w - maxw
+	var move_ms: float = span / maxf(1.0, MARQUEE_SPEED) * 1000.0
+	var cycle: float = 2.0 * (MARQUEE_PAUSE_MS + move_ms)
+	var t: float = fmod(float(now_ms), cycle)
+	if t < MARQUEE_PAUSE_MS:
+		return 0.0
+	t -= MARQUEE_PAUSE_MS
+	if t < move_ms:
+		return span * (t / move_ms)
+	t -= move_ms
+	if t < MARQUEE_PAUSE_MS:
+		return span
+	t -= MARQUEE_PAUSE_MS
+	return span * (1.0 - clampf(t / move_ms, 0.0, 1.0))
+
+
+static func scrolling_recent(window_ms := 1000) -> bool:
+	## 最近 window_ms 内画过滚动卡名 → 宿主（battle_scene._process）据此每帧重绘。
+	## 自持循环：draw → 记时刻 → _process 看到 → queue_redraw → 下一帧继续 draw。
+	return Time.get_ticks_msec() - _scroll_watch_ms < window_ms
+
+
+static func _char_widths(font: Font, text: String, size: int) -> Array[float]:
+	## 逐字宽度（缓存）：只用来算「滚到哪里该画哪一段字」。
+	var ck := "%d|%d|%s" % [font.get_instance_id(), size, text]
+	if _char_cache.has(ck):
+		var hit: Array[float] = _char_cache[ck]
+		return hit
+	var out: Array[float] = []
+	for ch in text:
+		out.append(font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x)
+	if _char_cache.size() >= WRAP_CACHE_MAX:
+		_char_cache.clear()
+	_char_cache[ck] = out
+	return out
+
+
+static func _draw_name_marquee(canvas: CanvasItem, font: Font, sz: int, text: String,
+		x0: float, baseline: float, maxw: float, col: Color, text_w: float) -> void:
+	## 横向滚动绘制：把**落在可视窗口内的那一段连续字符**整段 draw_string 出去
+	## （不是逐字画 —— 逐字会丢字距、也更慢）。窗口 = [x0, x0 + maxw]。
+	_scroll_watch_ms = Time.get_ticks_msec()
+	var off: float = marquee_offset(text_w, maxw, Time.get_ticks_msec())
+	var ws := _char_widths(font, text, sz)
+	var x: float = x0 - off
+	var first := -1
+	var last := -1
+	var fx: float = x0
+	for i in ws.size():
+		var w: float = ws[i]
+		if x + w > x0 + 0.5 and x < x0 + maxw - 0.5:
+			if first < 0:
+				first = i
+				fx = x
+			last = i
+		x += w
+	if first < 0 or last < first:
+		return
+	canvas.draw_string(font, Vector2(fx, baseline), text.substr(first, last - first + 1),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, sz, col)
+
 # R185：8002「攻击」卡图按当前职业切换（森林精魄=爪击 / 暗影刺客=匕首刺 / 机械之心=浮游炮）。
 const ATTACK_ART_ID := 8002
 const ATTACK_ART_SUFFIX := {"森林精魄": "forest", "暗影刺客": "shadow", "机械之心": "mech"}
@@ -307,58 +412,41 @@ static func _draw_enchant_mark(canvas: CanvasItem, card: CardData, rect: Rect2,
 
 
 static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,
-		k: float, pad: float, font_bold: Font, pin_gold := false) -> void:
-	## 文字区 = **只有卡名**（wrap 最多 2 行）。
-	## `draw_pick()`（选卡界面）与 `draw(..., name_only=true)`（战斗内卡面）共用这一条。
-	## 效果文字**不画在卡面上** —— 详情走悬停/点选的描述面板（选卡界面底部描述条 / 战斗左栏信息）。
-	var sz: int = maxi(9, roundi(UiTheme.CARD_FS_TEXT * kt * 1.15))
-	var maxw: float = rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0
-	var lines := wrap_text(font_bold, card.card_name, maxw, sz)
-	if lines.size() > 2:
-		# 名字实在太长 → 缩字号重排一次，仍不行就截两行
-		sz = maxi(8, sz - 2)
-		lines = wrap_text(font_bold, card.card_name, maxw, sz)
-		if lines.size() > 2:
-			lines = lines.slice(0, 2)
+	k: float, pad: float, font_bold: Font, pin_gold := false) -> void:
+	## 文字区 = **只有卡名**（R281 起**恒单行**）。
+	## 字号 / 是否滚动走 `name_layout()`（宽度 + 高度双约束的唯一口）；
+	## 超宽走 `_draw_name_marquee()` 横向滚动。
+	## 效果文字**不画在卡面上** —— 详情走悬停/点选的描述面板（选卡底部描述条 / 战斗左栏）。
+	var parch_top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad * 0.25
+	var zone_top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad
+	var zone_bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_BOTTOM - pad
+	var badge_top: float = 0.0
+	if pin_gold:
+		# 底部一排数值徽章（力/程/速/生）圆心压在卡框**下边缘**、一半探出卡外 →
+		# 卡内自 `rect.end.y - badge_r` 起就是徽章带，卡名绝不能伸进去。
+		var badge_r: float = UiTheme.CARD_BADGE_R * minf(k, UiTheme.CARD_BADGE_SCALE_CAP)
+		badge_top = rect.end.y - badge_r - pad * 0.5
+	var max_h: float = (badge_top - parch_top) if pin_gold else (zone_bottom - zone_top)
+	var info := name_layout(card.card_name, rect, font_bold, max_h)
+	var sz: int = int(info["sz"])
+	var maxw: float = float(info["maxw"])
 	var row_h: float = font_bold.get_height(sz)
 	var text_x: float = rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad
 	var text_top: float
 	if pin_gold:
-		# R196 / R208：底部一排数值徽章（力/程/速/生）圆心压在卡框**下边缘**、一半探出卡外
-		# —— 卡内自 `rect.end.y - badge_r` 起就是徽章带，文字块不能伸进去。
-		# ⚠️ R208 改口（用户口径「卡牌文字背后依然有淡黄色长方形，不需要这些，只留卡名
-		# 文字和底背景图」）：不再铺程序底衬，卡名**直接坐在 card_paper 自带的姓名牌**上。
-		# 于是纵坐标也得改：底图姓名牌的**内框羊皮纸**从 `CARD_NAMEPLATE_TOP` 起，
-		# 它上面那截（0.662~0.745）是底图的金色雕花 —— 深色字压上去直接看不见。
-		# 文字块在「内框上沿 ~ 徽章带顶」之间**居中**；放不下就逐级缩字号（最小 8px），
-		# 绝不让数字盖住名字。
-		var badge_r: float = UiTheme.CARD_BADGE_R * minf(k, UiTheme.CARD_BADGE_SCALE_CAP)
-		var badge_top: float = rect.end.y - badge_r - pad * 0.5
-		var parch_top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad * 0.25
-		text_top = parch_top + maxf(0.0, (badge_top - parch_top - row_h * lines.size()) / 2.0)
-		# 判据用**墨迹底**（`text_top + ascent + 后续行`），不用行盒底 —— descent 那 2~3px
-		# 本来就没有墨迹，允许伸进徽章带顶部；卡名因此不必缩得太小。
-		var ink_bottom: float = (text_top + float(font_bold.get_ascent(sz))
-				+ row_h * float(lines.size() - 1) + 1.0)
-		while sz > 8 and ink_bottom > badge_top:
-			sz -= 1
-			lines = wrap_text(font_bold, card.card_name, maxw, sz)
-			if lines.size() > 2:
-				lines = lines.slice(0, 2)
-			row_h = font_bold.get_height(sz)
-			text_top = parch_top + maxf(0.0, (badge_top - parch_top - row_h * lines.size()) / 2.0)
-			ink_bottom = (text_top + float(font_bold.get_ascent(sz))
-					+ row_h * float(lines.size() - 1) + 1.0)
+		text_top = parch_top + maxf(0.0, (badge_top - parch_top - row_h) / 2.0)
+		# R208：不铺程序底衬 —— 卡名直接坐在 card_paper 自带的姓名牌羊皮纸上。
+		text_top = minf(text_top, badge_top - row_h)   # 放不下就贴徽章带顶，绝不压数字
 	else:
-		var zone_top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad
-		var zone_bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_BOTTOM - pad
-		text_top = zone_top + maxf(0.0, (zone_bottom - zone_top - row_h * lines.size()) / 2.0)
-	# R208：**不铺底衬** —— 卡名直接画在底图姓名牌的羊皮纸上（见上）。
-	var asc: float = float(font_bold.get_ascent(sz))
-	for li in lines.size():
-		canvas.draw_string(font_bold,
-				Vector2(text_x, text_top + asc + li * row_h),
-				lines[li], HORIZONTAL_ALIGNMENT_CENTER, maxw, sz, UiTheme.INK_900)
+		text_top = zone_top + maxf(0.0, (zone_bottom - zone_top - row_h) / 2.0)
+	text_top = maxf(text_top, rect.position.y + 1.0)
+	var baseline: float = text_top + float(font_bold.get_ascent(sz))
+	if bool(info["need_scroll"]):
+		_draw_name_marquee(canvas, font_bold, sz, card.card_name, text_x, baseline, maxw,
+			UiTheme.INK_900, float(info["text_w"]))
+		return
+	canvas.draw_string(font_bold, Vector2(text_x, baseline), card.card_name,
+			HORIZONTAL_ALIGNMENT_CENTER, maxw, sz, UiTheme.INK_900)
 
 
 static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float, pad: float,
@@ -502,8 +590,16 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	# ── 第二遍：画字（**不描边**）───────────────────────────────────────
 	# R203：卡名横幅（R165 的 banner 渐变条）已去掉 —— 用户口径「卡名后面垫着的那条
 	# 绿色长方形直接去掉，卡名直接放在上面就好」；卡名直接画在羊皮卷/木板底衬上。
-	_draw_center(canvas, font_bold, sz, _ellipsize(font_bold, card.card_name, maxw, sz),
-			Vector2(cx, base_name - sz * 0.36), UiTheme.INK_900)
+	# R281：卡名恒单行（宽度自适应 → 超宽横向滚动），不再折行；超宽时也不省略。
+	var ninfo := name_layout(card.card_name, rect, font_bold)
+	var nsz: int = int(ninfo["sz"])
+	if bool(ninfo["need_scroll"]):
+		_draw_name_marquee(canvas, font_bold, nsz, card.card_name,
+			rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad,
+			base_name, float(ninfo["maxw"]), UiTheme.INK_900, float(ninfo["text_w"]))
+	else:
+		_draw_center(canvas, font_bold, nsz, card.card_name,
+			Vector2(cx, base_name - nsz * 0.36), UiTheme.INK_900)
 	if has_meta:
 		var wa: float = font.get_string_size(meta_a, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
 		var wb: float = font.get_string_size(meta_b, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
