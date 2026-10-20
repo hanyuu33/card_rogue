@@ -90,6 +90,14 @@ static func font_bold() -> FontFile:
 static func _load_font_file(path: String) -> FontFile:
 	## 加载内嵌 OTF；失败则回退到 SystemFont（微软雅黑系列）。FontFile 覆盖全部中文字形
 	## （含生僻字），安卓不再乱码。返回 FontFile 但内部兜底，调用方无需感知。
+	## ⚠️ 必须先走 `load()`：导出包（pck）里原始 .otf 被 import 成 `.fontdata` 并写进
+	## `.remap`，`load_dynamic_font()` 是**直读磁盘原文**，在发布包里必然失败 →
+	## 静默回落到 SystemFont（微软雅黑），字形与字宽都和开发时看到的不一样。
+	## `load()` 认 remap，编辑器与导出包拿到的是同一份导入产物。
+	var res: Resource = load(path)
+	if res is FontFile:
+		return res as FontFile
+	# 万不得已（资源未导入 / 路径写错）仍按原文直读一次。
 	var ff := FontFile.new()
 	if ff.load_dynamic_font(path) == OK:
 		return ff
