@@ -4758,6 +4758,18 @@ static func aoe_danger(state: FieldState, card: CardData, center: Vector2i) -> D
 	return info
 
 
+static func shared_shield_target_ok(p: Placement) -> bool:
+	## 共享护盾 8069（R269）的**可点目标**判据 —— 与引擎 `_shared_shield()` 的三条拒因
+	## 一一对应：只认**己方盟友**，且**还没有这个字段**（敌方 / 工事 / 重复给都会被拒）。
+	## 单独抽成 static 是为了让回归能直接钉死它。R287 修复：8069 加卡时漏了下面
+	## `_spell_target_cells()` 的分支 → 落进 else = 敌我全列，敌方格子也能点。
+	if p == null or p.card == null:
+		return false
+	return p.owner == GameEngine.SIDE_SELF \
+			and p.card.kind == "盟友" \
+			and not p.card.has_affix(GameEngine.AFFIX_SHARED_SHIELD)
+
+
 func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 	## 技能的可点目标格：火球术=任意格；击退/龙息=敌方单位；狂暴=己方盟友；其余=战场上所有单位。
 	var out: Array[Vector2i] = []
@@ -4812,6 +4824,16 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 		for c: Vector2i in engine.state.board:
 			var ap: Placement = engine.state.board[c]
 			if ap.owner == GameEngine.SIDE_SELF and ap.card.kind == "盟友":
+				out.append(c)
+		out.sort()
+	elif card.id == GameEngine.SHARED_SHIELD_ID:
+		# 共享护盾 8069（R269，机械之心）：只列**己方盟友**、且**还没有这个字段**的
+		# （工事不是随从、敌方不可改造、重复给没意义 —— 三条都与引擎 `_shared_shield()`
+		# 的拒因一一对应）。R180 森林守护 9037 踩过同一个坑：落进 else = 敌方单位也
+		# 高亮可点，点下去 `use_spell` 先把卡从手牌吃掉，才回一句「只能改造自己的单位」
+		# —— 牌白丢。判据见上方的 shared_shield_target_ok()（static，回归直接调）。
+		for c: Vector2i in engine.state.board:
+			if shared_shield_target_ok(engine.state.board[c]):
 				out.append(c)
 		out.sort()
 	elif card.id == GameEngine.DEMOLISH_ID:

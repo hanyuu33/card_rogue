@@ -19717,6 +19717,33 @@ func _init() -> void:
 	check(r269_a1_targets.size() == 1 and r269_a1_targets[0] == Vector2i(4, 0),
 			"R269 共享护盾：自动出牌挑中己方盟友那一格（不会选到敌方 / 空格）")
 
+	# ---- ⑥ UI 可选目标：敌方 / 工事 / 已挂字段的单位不许列进来（R287 修复）----
+	# 8069 原先漏了 `_spell_target_cells()` 的分支 → 落进 else = 敌我全列，敌方格子
+	# 也高亮可点；点下去卡被吃掉才报「只能改造自己的单位」。判据已抽成 static，
+	# 这里三条拒因逐条钉死（与引擎 `_shared_shield()` 同源）。
+	var r287_bs: GDScript = load("res://scripts/battle_scene.gd")
+	var r287_ok := Placement.new()
+	r287_ok.card = _card(8003, "树人", "盟友", 3, 3, 8)
+	r287_ok.owner = GameEngine.SIDE_SELF
+	var r287_foe := Placement.new()
+	r287_foe.card = _card(8003, "树人", "盟友", 3, 3, 8)
+	r287_foe.owner = GameEngine.SIDE_OPPONENT
+	var r287_fort := Placement.new()
+	r287_fort.card = _card(8001, "木栅栏", "工事", 2, 0, 6)
+	r287_fort.owner = GameEngine.SIDE_SELF
+	var r287_dup := Placement.new()
+	r287_dup.card = _card(8003, "树人", "盟友", 3, 3, 8)
+	r287_dup.owner = GameEngine.SIDE_SELF
+	r287_dup.card.add_affix(GameEngine.AFFIX_SHARED_SHIELD)
+	check(r287_bs.call("shared_shield_target_ok", r287_ok) == true,
+			"R287 共享护盾：己方盟友是合法目标（高亮可点）")
+	check(r287_bs.call("shared_shield_target_ok", r287_foe) == false,
+			"R287 共享护盾：**敌方单位不是目标**（原先落到 else 被列出来 → 点了白丢一张卡）")
+	check(r287_bs.call("shared_shield_target_ok", r287_fort) == false,
+			"R287 共享护盾：己方工事不是目标（工事不是随从）")
+	check(r287_bs.call("shared_shield_target_ok", r287_dup) == false,
+			"R287 共享护盾：已挂过字段的不再列出（点了必被引擎拒）")
+
 	# ============================================================
 	#  R271：机械之心「聚能」体系（6 张新卡 + 代达罗斯 8060 重做）
 	# ============================================================
