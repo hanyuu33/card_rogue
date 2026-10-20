@@ -1338,6 +1338,24 @@ static func forbidden_row_for(side: String) -> int:
 	return back_row(SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF)
 
 
+static func unit_slot_allowed(cell: Vector2i, side: String) -> bool:
+	## **单位能不能存在于这一格**（R285，唯一判据）。
+	##
+	## 规则只有一条：越界 / **对方后排（HP 行）** 一律不行 —— 那一行是「直击 HP」的
+	## 目标行，自己人站上去等于把对方血条当落脚点（用户实测：我方单位被卡牌效果
+	## 挪到了敌方后排队列上，且界面高亮 / 引擎判定各说各话，谁也拦不住）。
+	##
+	## 为什么收敛成唯一口：落点判定原来散在五处（move / blink / 潜入 / 召唤 _can_hold /
+	## 手牌放置只在界面拦），每加一张位移卡就要再记一次，漏一处就漏一条路。
+	## 战场其余格子（敌方前排 / 中场）**照旧允许** —— 移动、潜入、换位的玩法意义
+	## 本来就是越过中线去敌方半场做事，只有后排这一行是硬禁区。
+	if cell.x < 0 or cell.x >= FieldState.BOARD_ROWS:
+		return false
+	if cell.y < 0 or cell.y >= FieldState.BOARD_COLS:
+		return false
+	return cell.x != forbidden_row_for(side)
+
+
 static func hp_row_owner(row: int) -> String:
 
 
@@ -3493,6 +3511,12 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	var cap_msg:= _play_cap_blocked()
 	if cap_msg != "":
 		_log(cap_msg)
+		return null
+	# R285：**单位落点的引擎侧闸门**。界面（拖拽 / 点选）本来就只让自己半场高亮，
+	# 但引擎一直没有判 —— 联机回放、自动出牌、以后新加的效果卡都能把单位塞进对方后排。
+	# 放在 `_pay` 之前：拒放不扣费，也就不用走退款。
+	if (card.kind == "盟友" or card.is_fort()) and not unit_slot_allowed(cell, SIDE_SELF):
+		_log("%s 只能放在自己半场（对方后排是直击 HP 的行）" % card.card_name)
 		return null
 	var paid:= _pay(card)
 	# 栅栏修复术（6021）：把栅栏打到已有栅栏的格子上 → 合并（不新建单位）
@@ -6063,7 +6087,7 @@ func _infiltrate_cast(side: String, ally_cell: Vector2i, dst: Vector2i, card: Ca
 	var p := state.unit_at(ally_cell)
 	if p == null or p.owner != side or p.card.kind != "盟友":
 		return "（需要指定一个自己的盟友）"
-	if state.board.has(dst) or dst.x == forbidden_row_for(side):
+	if state.board.has(dst) or not unit_slot_allowed(dst, side):
 		return "（目的地必须是空格，且不能是对方的后排）"
 	var path := move_path(ally_cell, dst, side)
 	state.move_unit(ally_cell, dst)
@@ -6098,7 +6122,7 @@ func cast_infiltrate(hand_index: int, ally_cell: Vector2i, dst: Vector2i) -> Str
 	var p := state.unit_at(ally_cell)
 	if p == null or p.owner != SIDE_SELF or p.card.kind != "盟友":
 		return "（需要指定一个自己的盟友）"
-	if state.board.has(dst) or dst.x == forbidden_row_for(SIDE_SELF):
+	if state.board.has(dst) or not unit_slot_allowed(dst, SIDE_SELF):
 		return "（目的地必须是空格，且不能是对方的后排）"
 	_pay(card)
 	state.hand.remove_at(hand_index)
@@ -6135,6 +6159,14 @@ func cast_swap_units(hand_index: int, cell_a: Vector2i, cell_b: Vector2i) -> Str
 				if pa.card.traits.has(DISPLACE_IMMUNE_TRAIT) else pb.card.card_name
 		_log("双向传送：%s 免疫位移，交换没有生效" % imm_nm)
 		return "（%s 免疫位移，无法交换）" % imm_nm
+	# R285：换位也是位移 —— 按**交换后的归属**判（pa 去 cell_b、pb 去 cell_a），
+	# 只要有一方要落进对方后排就整笔拒绝。必须放在 `_pay` 之前：
+	# 否则能量白扣、卡也没了（R277 双向传送踩过的同一个坑）。
+	if not swap_pair_allowed(cell_a, cell_b):
+		var sw_nm := pa.card.card_name if not unit_slot_allowed(cell_b, pa.owner) \
+				else pb.card.card_name
+		_log("双向传送：%s 换过去会落到对方后排，交换没有生效" % sw_nm)
+		return "（%s 不能换到对方后排，交换没有生效）" % sw_nm
 	_pay(card)
 	state.hand.remove_at(hand_index)
 	var detail := _swap_two_units(cell_a, cell_b)
@@ -6154,12 +6186,31 @@ func _swap_two_units(cell_a: Vector2i, cell_b: Vector2i) -> String:
 	if pa.card.traits.has(DISPLACE_IMMUNE_TRAIT) \
 			or pb.card.traits.has(DISPLACE_IMMUNE_TRAIT):
 		return "（有人免疫位移，交换没有生效）"
+	# R285：兜底闸门 —— 与免疫同款，任何直接调用（AI / 以后的新入口）都绕不过去。
+	if not swap_pair_allowed(cell_a, cell_b):
+		return "（交换会把单位送到对方后排，没有生效）"
 	state.board[cell_a] = pb
 	state.board[cell_b] = pa
 	var detail := "%s ⇄ %s 交换了位置" % [pa.card.card_name, pb.card.card_name]
 	action.emit("swap_units", {"a": cell_a, "b": cell_b,
 			"card_a": pa.card, "card_b": pb.card})
 	return detail
+
+
+func swap_pair_allowed(cell_a: Vector2i, cell_b: Vector2i) -> bool:
+	## **这两个单位能不能换位**（R285，换位的唯一判据；界面第二段的高亮也读它）。
+	##
+	## 换位按「交换后的归属」判：pa 去 cell_b、pb 去 cell_a —— 双方都必须落在
+	## 各自的合法行（`unit_slot_allowed`）。于是「把我方单位换进敌方后排」被拒，
+	## 但「我方换到敌方前排 / 中场」「敌方换到敌方后排」照旧允许（只有后排是硬禁区）。
+	## 空格 / 不存在的单位一律 false（交换的两格都必须站着人）。
+	var pa := state.unit_at(cell_a)
+	var pb := state.unit_at(cell_b)
+	if pa == null or pb == null:
+		return false
+	if cell_a == cell_b:
+		return false
+	return unit_slot_allowed(cell_b, pa.owner) and unit_slot_allowed(cell_a, pb.owner)
 
 
 func _swap_auto_cells(side: String) -> Array:
@@ -6178,14 +6229,19 @@ func _swap_auto_cells(side: String) -> Array:
 			return a.x > b.x)
 	foes.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
 			return a.x < b.x)
-	var out: Array = []
+	# R285：AI 拿不到玩家点了哪两格，但**不能挑一对换完会有人落到对方后排的**。
+	# 候选按「先自己人、再自己人+敌人、最后纯敌人」的顺序，取第一个合法配对。
+	var cands: Array = []
 	if mine.size() >= 2:
-		out = [mine[0], mine[1]]
-	elif mine.size() == 1 and foes.size() >= 1:
-		out = [mine[0], foes[0]]
-	elif foes.size() >= 2:
-		out = [foes[0], foes[1]]
-	return out
+		cands.append([mine[0], mine[1]])
+	if mine.size() >= 1 and foes.size() >= 1:
+		cands.append([mine[0], foes[0]])
+	if foes.size() >= 2:
+		cands.append([foes[0], foes[1]])
+	for pair: Array in cands:
+		if swap_pair_allowed(pair[0], pair[1]):
+			return pair
+	return []
 
 
 func cast_sys_upgrade(hand_index: int, target_hand_index: int) -> String:
@@ -6788,6 +6844,12 @@ func remote_play(card: CardData, cell: Vector2i) -> Placement:
 		_log("对方放置场地：%s 于 %s" % [card.card_name, cell])
 		action.emit("field_place", {"cell": cell, "card": card, "side": SIDE_OPPONENT,
 			"replaced": false})
+		_note_card_played(SIDE_OPPONENT, card)
+		return null
+	# R285：敌方同样不许站进我方后排（对称闸门）。费用在函数开头已付、没有退款，
+	# 所以这里与「场地拒放」同口径：只记日志 + 记一次出牌，不做别的结算。
+	if (card.kind == "盟友" or card.is_fort()) and not unit_slot_allowed(cell, SIDE_OPPONENT):
+		_log("对方放弃放置：%s 不能放到我方后排 %s" % [card.card_name, cell])
 		_note_card_played(SIDE_OPPONENT, card)
 		return null
 	var p:= state.place(card, cell, SIDE_OPPONENT)
@@ -8548,7 +8610,8 @@ func _can_hold(cell: Vector2i, side: String) -> bool:
 		return false
 	if state.board.has(cell):
 		return false
-	return cell.x != forbidden_row_for(side)
+	# R285：行归属走唯一口（越界 + 对方后排都不行）
+	return unit_slot_allowed(cell, side)
 
 
 func _jar_tick() -> void :
@@ -9588,13 +9651,13 @@ func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void
 		if state.board.has(dst):
 			_log("闪现落点 %s 已有单位" % dst)
 			return
-		if dst.x == forbidden_row_for(side):
+		if not unit_slot_allowed(dst, side):
 			_log("不能移动到对方后排")
 			return
 		path.append(src)
 		path.append(dst)
 	else:
-		if dst.x == forbidden_row_for(side):
+		if not unit_slot_allowed(dst, side):
 			_log("不能移动到对方后排")
 			return
 		path = move_path(src, dst, side)

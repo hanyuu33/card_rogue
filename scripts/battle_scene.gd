@@ -525,6 +525,36 @@ func _ready() -> void:
 			# 「拖向敌方那半场时放大 / 拖回我方时还原大小」）。
 			_grid_intro_t = -1.0
 			_grid_zoom = clampf(float(args[i + 1]), 1.0, 2.0)
+	if "--r285swap" in args and engine != null:
+		# R285 出图：双向传送选中我方单位后，第二段候选**不能包含敌方后排**。
+		# 布景：(4,1) 我方、(0,1) 敌方（敌方后排 = HP 行）、(2,2) 敌方中场。
+		# 期望：只有 (2,2) 亮 —— (0,1) 换过去会把我方送进对方后排，候选里没有它。
+		# 出图：`battle.tscn -- --screenshot --level 0 --r285swap --shotframe 600`
+		engine.ai_enabled = false
+		engine.state.board.clear()
+		var rs_repo := CardRepo.load_json()
+		var rs_ally: CardData = rs_repo.get_card(8003)
+		var rs_foe: CardData = rs_repo.get_card(9001)
+		engine.state.place(CardData.from_dict(rs_ally.to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(rs_foe.to_dict()),
+				Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+		engine.state.place(CardData.from_dict(rs_foe.to_dict()),
+				Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
+		engine.state.hand.clear()
+		engine.state.hand.append(CardData.from_dict(
+				rs_repo.get_card(GameEngine.SWAP_UNITS_ID).to_dict()))
+		_swap_src = Vector2i(4, 1)
+		spell_pending = 0
+		spell_targets = []
+		for c: Vector2i in engine.state.board:
+			if c != _swap_src and engine.swap_pair_allowed(_swap_src, c):
+				spell_targets.append(c)
+		spell_targets.sort()
+		_demo_hover_idx = 0
+		status_text = "双向传送：只能换中场，后排不给换"
+		queue_redraw()
+
 	if "--enchmark" in args and engine != null:
 		# R214 演示：**真实的附魔数据**出图 —— 给卡组前 4 张各塞一种商店附魔
 		# （走 `RunState.enchant_mod()` 唯一口，与商店买到的完全同源），再用本关重载一次。
@@ -3720,9 +3750,13 @@ func _own_place_cells(card: CardData) -> Array[Vector2i]:
 	## 带「交换」字段的卡（R101，救援构装体）：还能打在**已有己方单位**的格子上
 	## （原单位被顶回手、新卡占据该格；引擎 play_from_hand 里的交换分支负责顶回手）。
 	var out: Array[Vector2i] = []
-	for x in range(FieldState.OPPONENT_ROWS, FieldState.BOARD_ROWS):
+	# R285：行归属读引擎唯一口 `unit_slot_allowed` —— 界面上「能放哪」与引擎
+	# 「实际放不放」从此同一个真相，别再这里写死「下三行」。
+	for x in FieldState.BOARD_ROWS:
 		for y in FieldState.BOARD_COLS:
 			var c := Vector2i(x, y)
+			if not GameEngine.unit_slot_allowed(c, GameEngine.SIDE_SELF):
+				continue
 			if not engine.state.board.has(c):
 				out.append(c)
 			elif engine.fence_merge_target(c, card):
@@ -3868,14 +3902,14 @@ func _finish_drag(pos: Vector2) -> void:
 		_swap_src = infil_drop
 		_drag_spell_cells = []
 		for c: Vector2i in engine.state.board:
-			if c != infil_drop:
+			# R285：与点击路径同一判据 —— 非法配对不进高亮
+			if c != infil_drop and engine.swap_pair_allowed(infil_drop, c):
 				_drag_spell_cells.append(c)
 		_drag_spell_cells.sort()
-		var sw_pick: Placement = engine.state.unit_at(_swap_src)
 		if _drag_spell_cells.is_empty():
 			_clear_selection()
 			_drag_idx = -1
-			_say("双向传送：场上只有 %s 一个单位，技能仍在手牌" % sw_pick.card.card_name)
+			_say("双向传送：没有能换的单位")
 			return
 		spell_pending = i
 		spell_targets = _drag_spell_cells
@@ -4048,7 +4082,7 @@ func _infiltrate_dst_cells() -> Array[Vector2i]:
 		for y in FieldState.BOARD_COLS:
 			var c := Vector2i(x, y)
 			if not engine.state.board.has(c)\
-					and x != GameEngine.forbidden_row_for(GameEngine.SIDE_SELF):
+					and GameEngine.unit_slot_allowed(c, GameEngine.SIDE_SELF):
 				out.append(c)
 	out.sort()
 	return out
@@ -4893,17 +4927,17 @@ func _on_board_click(cell: Vector2i) -> void:
 			# 双向传送（8061，R102）两段操作：第一段点单位甲 → 第二段点单位乙
 			if sp_card.id == GameEngine.SWAP_UNITS_ID and _swap_src.x < 0:
 				_swap_src = cell
-				# 第二段的可选集合 = 场上**除它以外**的所有单位（敌我皆可）
+				# 第二段的可选集合 = 场上**除它以外**的所有单位（敌我皆可），但
+				# R285：换完会有人落进对方后排的配对**不给点**（唯一判据 swap_pair_allowed）
 				spell_targets = []
 				for c: Vector2i in engine.state.board:
-					if c != cell:
+					if c != cell and engine.swap_pair_allowed(cell, c):
 						spell_targets.append(c)
 				spell_targets.sort()
 				var picked: Placement = engine.state.unit_at(_swap_src)
 				if spell_targets.is_empty():
 					_clear_selection()
-					status_text = "双向传送：场上只有 %s 一个单位，技能仍在手牌" % \
-							picked.card.card_name
+					status_text = "双向传送：没有能换的单位"
 				else:
 					status_text = "双向传送：已选 %s，再点另一个单位交换位置（右键取消）" % \
 							picked.card.card_name

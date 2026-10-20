@@ -10290,12 +10290,14 @@ func _init() -> void:
 			"R76-B 潜入：玩家侧 use_spell 拒绝单段施放（%s）→ 卡还在手上、单位没动"
 			% r76_refused)
 	# 正规两段入口：选盟友 + 指定空格 = 真的移动过去并 +3 力量
-	var r76_moved := r76_inf.cast_infiltrate(0, Vector2i(4, 2), Vector2i(4, 4))
-	check(r76_inf.state.unit_at(Vector2i(4, 4)) != null
+	# R285：落点原来写成 (4,4) —— 棋盘只有 3 列（0..2），那是**越界坐标**，
+	# 旧实现不校验列所以照样塞进 board，测试假通过。改成真实空格 (4,1)。
+	var r76_moved := r76_inf.cast_infiltrate(0, Vector2i(4, 2), Vector2i(4, 1))
+	check(r76_inf.state.unit_at(Vector2i(4, 1)) != null
 			and r76_inf.state.unit_at(Vector2i(4, 2)) == null
 			and r76_inf.state.hand.is_empty()
-			and r76_inf.state.unit_at(Vector2i(4, 4)).atk_buff_turn == GameEngine.INFILTRATE_ATK,
-			"R76-B 潜入两段式：%s（落到指定格 (4,4)，力量 +%d）"
+			and r76_inf.state.unit_at(Vector2i(4, 1)).atk_buff_turn == GameEngine.INFILTRATE_ATK,
+			"R76-B 潜入两段式：%s（落到指定格 (4,1)，力量 +%d）"
 			% [r76_moved, GameEngine.INFILTRATE_ATK])
 
 	# ---- R76-C：巨物陷阱 8017 = 场地卡（不再是「被打才反伤」的工事）----
@@ -20811,6 +20813,111 @@ func _init() -> void:
 	var r281_cf_src := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 	check(r281_cf_src.find("wrap_text(font_bold, card.card_name") < 0,
 		"R281 卡名：卡面**不再对卡名折行**（单行 + 滚动，防回退）")
+
+	# ================= R285：单位落点归属（对方后排 = 直击 HP 的行，任何入口都进不去）=================
+	# 用户实测：我方单位被卡牌效果挪到了敌方后排队列上。根因是**落点判定散在五处**
+	# （move / blink / 潜入 / 召唤 _can_hold / 手牌放置只在界面拦），双向传送更是完全没判。
+	# 修复 = 收敛成唯一口 `unit_slot_allowed`（换位另有 `swap_pair_allowed`），
+	# 界面高亮与引擎判定从此同一个真相。
+	var r285_repo := CardRepo.load_json()
+	var r285_ally: CardData = r285_repo.get_card(8003)
+	var r285_swap: CardData = r285_repo.get_card(8061)
+
+	# ---- ① 唯一判据本身 ----
+	var r285_self_rows: Array = []
+	for x in FieldState.BOARD_ROWS:
+		r285_self_rows.append(GameEngine.unit_slot_allowed(Vector2i(x, 1), GameEngine.SIDE_SELF))
+	check(r285_self_rows[0] == false and r285_self_rows[1] and r285_self_rows[2] \
+			and r285_self_rows[3] and r285_self_rows[4] and r285_self_rows[5],
+			"R285 判据：我方只有第 0 行（对方后排）禁入，1..5 全允许（%s）" % str(r285_self_rows))
+	var r285_opp_rows: Array = []
+	for x2 in FieldState.BOARD_ROWS:
+		r285_opp_rows.append(GameEngine.unit_slot_allowed(Vector2i(x2, 1), GameEngine.SIDE_OPPONENT))
+	check(r285_opp_rows[5] == false and r285_opp_rows[0] and r285_opp_rows[1],
+			"R285 判据（对称）：敌方只有第 5 行（我方后排）禁入，第 0 行（自家后排）允许（%s）"
+			% str(r285_opp_rows))
+	check(not GameEngine.unit_slot_allowed(Vector2i(-1, 0), GameEngine.SIDE_SELF) \
+			and not GameEngine.unit_slot_allowed(Vector2i(FieldState.BOARD_ROWS, 0), GameEngine.SIDE_SELF) \
+			and not GameEngine.unit_slot_allowed(Vector2i(0, FieldState.BOARD_COLS), GameEngine.SIDE_SELF),
+			"R285 判据：越界格一律 false（行 -1 / 行 6 / 列 3）")
+
+	# ---- ② 手牌放置：引擎侧也要拦（以前只有界面拦）----
+	var r285_e1 := _new_engine([], 40, 40, -1, false)
+	r285_e1.start_game()
+	r285_e1.state.energy = 30
+	r285_e1.state.hand.clear()
+	r285_e1.state.hand.append(CardData.from_dict(r285_ally.to_dict()))
+	var r285_e1_before: int = r285_e1.state.energy
+	r285_e1.play_from_hand(0, Vector2i(0, 1))
+	check(not r285_e1.state.board.has(Vector2i(0, 1))
+			and r285_e1.state.energy == r285_e1_before
+			and r285_e1.state.hand.size() == 1,
+			"R285 手牌放置：对方后排被拒、不扣费（%d→%d）、卡还在手（%d 张）" % [
+				r285_e1_before, r285_e1.state.energy, r285_e1.state.hand.size()])
+	# 敌方中场照旧允许 —— 越过中线本来就是玩法的一部分
+	var r285_e2 := _new_engine([], 40, 40, -1, false)
+	r285_e2.start_game()
+	r285_e2.state.energy = 30
+	r285_e2.state.hand.clear()
+	r285_e2.state.hand.append(CardData.from_dict(r285_ally.to_dict()))
+	r285_e2.play_from_hand(0, Vector2i(2, 1))
+	check(r285_e2.state.board.has(Vector2i(2, 1)),
+			"R285 手牌放置：敌方中场 row 2 照旧允许（只禁后排这一行）")
+
+	# ---- ③ 敌方放置：对称拦（AI 不能把单位摆进我方后排）----
+	var r285_e3 := _new_engine([], 40, 40, -1, false)
+	r285_e3.start_game()
+	r285_e3.remote_play(CardData.from_dict(r285_ally.to_dict()), Vector2i(5, 1))
+	var r285_e3_rejected: bool = not r285_e3.state.board.has(Vector2i(5, 1))
+	r285_e3.remote_play(CardData.from_dict(r285_ally.to_dict()), Vector2i(1, 1))
+	check(r285_e3_rejected and r285_e3.state.board.has(Vector2i(1, 1)),
+			"R285 敌方放置：我方后排 row 5 被拒、敌方前场 row 1 正常")
+
+	# ---- ④ 双向传送：换完会有人落到对方后排 → 整笔拒绝（不扣费、卡留在手）----
+	var r285_e4 := _new_engine([], 40, 40, -1, false)
+	r285_e4.start_game()
+	r285_e4.state.energy = 30
+	r285_e4.state.board.clear()
+	var r285_me4: Placement = r285_e4.state.place(
+			CardData.from_dict(r285_ally.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r285_foe4: Placement = r285_e4.state.place(
+			CardData.from_dict(r285_ally.to_dict()), Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r285_e4.state.hand.clear()
+	r285_e4.state.hand.append(CardData.from_dict(r285_swap.to_dict()))
+	var r285_e4_before: int = r285_e4.state.energy
+	var r285_d4: String = r285_e4.cast_swap_units(0, Vector2i(4, 1), Vector2i(0, 1))
+	check(r285_e4.state.unit_at(Vector2i(4, 1)) == r285_me4
+			and r285_e4.state.unit_at(Vector2i(0, 1)) == r285_foe4
+			and r285_e4.state.energy == r285_e4_before
+			and r285_e4.state.hand.size() == 1,
+			"R285 双向传送：我方换进对方后排被拒、不扣费（%d→%d）、卡还在手 —— %s" % [
+				r285_e4_before, r285_e4.state.energy, r285_d4])
+
+	# ---- ⑤ 合法换位照旧（我方 ↔ 敌方中场）----
+	var r285_e5 := _new_engine([], 40, 40, -1, false)
+	r285_e5.start_game()
+	r285_e5.state.energy = 30
+	r285_e5.state.board.clear()
+	var r285_me5: Placement = r285_e5.state.place(
+			CardData.from_dict(r285_ally.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r285_foe5: Placement = r285_e5.state.place(
+			CardData.from_dict(r285_ally.to_dict()), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r285_e5.state.hand.clear()
+	r285_e5.state.hand.append(CardData.from_dict(r285_swap.to_dict()))
+	var r285_d5: String = r285_e5.cast_swap_units(0, Vector2i(4, 1), Vector2i(2, 1))
+	check(r285_e5.state.unit_at(Vector2i(2, 1)) == r285_me5 \
+			and r285_e5.state.unit_at(Vector2i(4, 1)) == r285_foe5,
+			"R285 双向传送：我方 ↔ 敌方中场正常换位 —— %s" % r285_d5)
+
+	# ---- ⑥ 配对判据：空格 / 同格一律 false ----
+	check(not r285_e5.swap_pair_allowed(Vector2i(2, 1), Vector2i(0, 0))
+			and not r285_e5.swap_pair_allowed(Vector2i(2, 1), Vector2i(2, 1)),
+			"R285 配对判据：空格、同一格都不构成合法换位")
+
+	# ---- ⑦ 源码锁：引擎里不再有「只比一行」的散装落点判定 ----
+	var r285_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(r285_src.find("dst.x == forbidden_row_for") < 0,
+			"R285 源码锁：落点判定已全部改走 unit_slot_allowed（不再散装比 dst.x）")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
