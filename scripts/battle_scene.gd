@@ -1729,6 +1729,58 @@ func _ready() -> void:
 				r275_demo_tree.dmg_reduce]
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r276asm" in args and engine != null:
+		# 演示（R276）：随心组装 9144 —— 手牌全变随机奖励卡，其中**变出来的盟友卡
+		# 本回合费用 -1**（工事 / 技能 / 效果不减），离手即恢复原价、回合结束清空。
+		# 演示要稳定看到一张盟友卡：反复重变，直到手里出现盟友。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		for _n276a in 6:
+			engine.state.hand.append(CardData.from_dict(
+					repo.get_card(8003).to_dict()))
+		var r276_demo_ally: CardData = null
+		for _try276 in 8:
+			engine._assemble_at_will(GameEngine.SIDE_SELF)
+			for c: CardData in engine.state.hand:
+				if c.kind == "盟友":
+					r276_demo_ally = c
+					break
+			if r276_demo_ally != null:
+				break
+		_hover_card = null
+		_hover_pl = null
+		_demo_hover_idx = -1
+		if r276_demo_ally != null:
+			var r276_idx: int = engine.state.hand.find(r276_demo_ally)
+			# 手牌悬停要走 `_demo_hover_idx`（每帧重设），`_hover_hand` 只管绘制时抬手。
+			_demo_hover_idx = r276_idx
+			status_text = "随心组装：「%s」%d 费 → %d 费" % [
+					r276_demo_ally.card_name, r276_demo_ally.cost,
+					engine.cost_of(r276_demo_ally)]
+		else:
+			status_text = "随心组装：本轮没变出盟友卡"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r276bar" in args and engine != null:
+		# 演示（R276）：能量屏障 8033 —— 从抽牌堆挑一张加护盾，**然后抽 3 张**。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		engine.state.deck = []
+		for _n276b in 12:
+			engine.state.deck.append(CardData.from_dict(
+					repo.get_card(8003).to_dict()))
+		engine.state.hand.append(CardData.from_dict(
+				repo.get_card(GameEngine.BARRIER_ID).to_dict()))
+		engine.use_spell(0)
+		engine.state.reset_units(GameEngine.SIDE_SELF)
+		_hover_card = null
+		_hover_pl = null
+		_demo_hover_idx = 0
+		status_text = "能量屏障：1 张获护盾 + 抽 %d 张" % GameEngine.BARRIER_DRAW
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--armor" in args and engine != null:
 		# 演示（R89）：无限装甲（8038）——
 		#   ① 场上放装甲 + 手牌塞一张「升级」→ 打出去改造它
@@ -1750,11 +1802,8 @@ func _ready() -> void:
 			if engine.state.hand_free.has(c) and engine.state.hand.has(c):
 				r89_fed = c
 		engine.state.reset_units(GameEngine.SIDE_SELF)
-		status_text = "R89：无限装甲（4 攻 / 18 血）**每回合一次**被「升级」改造时，" + \
-			"供一张「效果含改造」的技能牌到手 —— 那张牌在手牌里是 **0 费**" + \
-			"（「%s」卡面 %d 费），打出/弃掉后恢复原价" % [
-				"?" if r89_fed == null else r89_fed.card_name,
-				0 if r89_fed == null else r89_fed.cost]
+		status_text = "无限装甲：供「%s」入手 · 0 费" % \
+			("?" if r89_fed == null else r89_fed.card_name)
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--factory" in args and engine != null:
@@ -1790,9 +1839,8 @@ func _ready() -> void:
 				repo.get_card(GameEngine.REPAIR_BAY_ID).to_dict()),
 				Vector2i(0, 1), GameEngine.SIDE_SELF)
 		engine.state.reset_units(GameEngine.SIDE_SELF)
-		status_text = "R88：维修间 / 改造工厂（冷青静止描边）= 持续型场地，" + \
-			"只对**自己人**生效；改造工厂每回合 +1 力 / +1 血（可无限叠）" + \
-			"（敌方后排那只敌人站在维修间上不受益）"
+		status_text = "维修间回 %d / 改造工厂 +1+1（只自己人）" \
+			% repo.get_card(GameEngine.REPAIR_BAY_ID).field_heal
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--surplus" in args and engine != null:
@@ -7744,14 +7792,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 能量屏障 8033（R87）：给抽牌堆里一张卡加上「首次受伤免掉」。
 			if bool(data.get("ok", false)) and data.get("card") is CardData:
 				var bg_card: CardData = data["card"]
+				var bg_drw: int = int(data.get("drawn", 0))
 				sfx.play("place")
-				_say("✦ 能量屏障：%s 获得能量屏障（下次上场时第一次挨打完全免掉）"
-						% bg_card.card_name)
+				_say("✦ 能量屏障：%s 获得能量屏障（下次上场时第一次挨打完全免掉），抽 %d 张"
+						% [bg_card.card_name, bg_drw])
 				_floaters.append({"pos": Vector2(DECK_X + CARD_W / 2, DECK_Y - 14),
 						"text": "%s · 获得护盾" % bg_card.card_name,
 						"col": Color("7fd6f0"), "start": n, "dur": 2200, "size": 14})
 			else:
-				_say("能量屏障：抽牌堆里没有「还没有能量屏障」的盟友 / 工事，效果落空")
+				_say("能量屏障：抽牌堆里没有「还没有能量屏障」的盟友 / 工事，效果落空（仍抽 %d 张）"
+						% int(data.get("drawn", 0)))
 		"barrier":
 			# 护盾**挡下**伤害的瞬间（R87）：这是玩家最需要看到的反馈 —— 护盾消失且不扣血。
 			sfx.play("heal")
@@ -8047,7 +8097,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"text": "%s · 0 费入手" % ia_name, "col": Color("8ad4f0"),
 					"start": n, "dur": 2000})
 			else:
-				_say("◆ 无限装甲：本次供能落空（没有可给的改造牌 / 手牌已满）")
+				_say("◆ 无限装甲：本次供能落空（手牌已满）")
 		"crow_recall":
 			sfx.play("place")
 			var cr_name := "?"

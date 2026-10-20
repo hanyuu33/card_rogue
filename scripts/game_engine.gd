@@ -707,7 +707,7 @@ const PERSISTENT_FIELD_TRAIT:= "持续场地"
 const FOUNTAIN_HEAL:= 2
 # ── R88：持续型场地的第二族（「改造工厂」8037）──
 # 维修间 8036（1 费稀有，机械之心）：站在上面的**己方**盟友/工事在自己回合结束时回
-#   `CardData.field_heal` 点血。**与清泉 8028 是同一族机制、只差生效对象**（清泉「双」）。
+#   `CardData.field_heal` 点血（R276：2 → 4）。**与清泉 8028 是同一族机制、只差生效对象**。
 # 改造工厂 8037（2 费普通，机械之心）：站在上面的**己方**盟友/工事在自己回合结束时
 #   获得一次「改造」+1 力 / +1 血，**每回合都结算、可无限叠加**。
 # ⚠️ 这两张都写了 trait「仅玩家可放置」→ 敌方 `remote_play` 直接拒放（用户口径）。
@@ -720,8 +720,10 @@ const PLAYER_ONLY_FIELD_TRAIT:= "仅玩家可放置"
 const UPGRADE_FACTORY_ATK:= 1
 const UPGRADE_FACTORY_HP:= 1
 # ── R89：无限装甲 8038（机械之心史诗盟友 4 费 4/18/1/1）──
-# 「**每回合一次**：这张卡被「改造」时，随机一张**效果含「改造」的技能卡**加入手牌，
+# 「**每回合一次**：这张卡被「改造」时，将一张「升级」加入手牌，
 #  那张牌在手牌里费用为 0，离开手牌后恢复原价。」
+# ⚠️ R276（用户口径）：**固定给「升级」8027** —— 原先是「奖励池里随机一张效果含
+#   『改造』的技能卡」，现在不再随机；其余口径（每回合一次 / 手牌内 0 费 / 只在场上算）全不变。
 #
 # 三个实现决定（用户当时已睡，按最合理口径定的，写在这里供日后核对）：
 #  ① **候选池 = 本角色奖励卡池**里筛「技能 + effect_text 含『改造』」
@@ -1211,13 +1213,15 @@ const DOUBLE_ACTION:= 2          # 「一回合行动两次」的 actions 值（
 # `build_deck` 给的是卡库共享实例，不复制就会跨 run 泄漏。
 const BATCH_UPGRADE_ID:= 8031
 const BATCH_UPGRADE_HP:= 1
-# 「侦察塔」（8032，3 费工事，机械之心，R86）：0 攻 / 12 血 / **攻程 2**。
+# 「侦察塔」（8032，工事，机械之心，R86）：R276 起 **2 费 / 0 攻 / 8 血 / 攻程 2**。
 #   * **0 攻也能攻击** —— 用户口径「只有 0 攻程不能攻击」；引擎的 `attack_targets`
 #     本来就只看 `attack_range` 不看 `power`，所以无需改引擎。
 #   * 「每层改造使攻击范围内的敌人受到伤害 +1」→ 伤害 = 改造的 +2 力量 **+ 层数**
 #     （`Placement.upgrade_stacks`，由 `_upgrade_unit` 每次 +1）。
 #   * 只有**带 trait「改造层数」**的卡才吃到层数加成（见 Placement.effective_power）——
 #     否则 0 攻工事改造几次就能自己打人。
+## R276：随心组装 9144「变化出的盟友卡本回合费用 -1」。
+const ASSEMBLE_ALLY_DISCOUNT:= 1
 const SCOUT_TOWER_ID:= 8032
 const STACK_DAMAGE_TRAIT:= "改造层数"
 # 「堡垒」（8034，3 费工事，机械之心，R87）：3 攻 / 10 血 / 攻程 1，
@@ -1231,6 +1235,8 @@ const STACK_HP_PER:= 3
 # 「没有此能力」的判据 = 卡上没这个 trait（与「过载」判 actions 同套路）。
 const BARRIER_ID:= 8033
 const BARRIER_TRAIT:= "能量屏障"
+## R276：能量屏障 8033 额外「抽 3 张卡」。
+const BARRIER_DRAW:= 3
 # 「自我修复」（8035，1 费技能，机械之心，R87）：改造**场上的一个己方盟友** →
 # +2 最大生命（并进 upgrade_hp，离场还原）+ 每回合结束回 SELF_REPAIR_REGEN 生命
 # （记在 `Placement.regen`，同样只在场上有效）。
@@ -2626,6 +2632,9 @@ func end_turn() -> void :
 		# 魔像术（9079）的本回合手卡减费同样只在当回合有效
 		if not state.turn_card_discount.is_empty():
 			state.turn_card_discount.clear()
+		# R276：随心组装 9144「变化出的盟友卡本回合 -1」同样只在当回合有效
+		if not state.hand_cost_turn.is_empty():
+			state.hand_cost_turn.clear()
 		# 契约签订者（8024）的本回合手卡涨价同样只在当回合有效
 		state.turn_card_raise = 0
 		# 回转（9089）抽到的牌只在抽到的那个回合免弃
@@ -2734,6 +2743,10 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 	# 判据 = 这张卡此刻还在手牌里，离手即自动恢复原价（与 hand_free 同一条路）。
 	if card != null and state.hand_cost_delta.has(card) and state.hand.has(card):
 		c -= int(state.hand_cost_delta[card])
+	# R276：**本回合**的手卡内减费（随心组装 9144 变出来的盟友卡 -1）——
+	# 与上面同一判据（还在手牌里才生效），区别只在这张表会在 end_turn 被清空。
+	if card != null and state.hand_cost_turn.has(card) and state.hand.has(card):
+		c -= int(state.hand_cost_turn[card])
 	# 契约签订者（8024，R63）：本回合手卡全体**涨价** +N —— 放在所有减费之后，
 	# 这样它压得住前面的各种 -1 / -X，且显示 = 判定 = 实扣仍统一走这里。
 	if side == SIDE_SELF and card != null and state.turn_card_raise > 0:
@@ -4264,9 +4277,8 @@ func _feed_upgrade_card(p: Placement) -> void :
 	## 那张牌在手牌里**费用为 0**（离开手牌后恢复原价）。」
 	##
 	## 三个口径（用户当时已睡，按最合理方案定的 —— 见常量区的注释）：
-	##  ① **候选 = 本角色奖励卡池**里「技能 + effect_text 含『改造』」的卡
-	##     （与机关工坊 8015 / 捕兽大师 9126 从卡池取场地卡同源）。奖励池里现在有
-	##     批量改造 8031 / 能量屏障 8033 / 自我修复 8035（「升级」8027 是初始卡 rarity=3，不入池）。
+	##  ① **固定给「升级」8027**（R276 用户口径，原先是从奖励池随机摇一张「效果含改造」
+	##     的技能牌）。「升级」是初始卡 rarity=3、不入奖励池，所以按 id 直接取。
 	##  ② **免费重置靠判据而非清标记**：写 `state.hand_free[card] = true`，
 	##     由 `cost_of` 验「此刻是否还在手牌里」决定要不要给 0 费。离手口分散在
 	##     play / use_spell / discard_hand / 乌鸦回手 … 共 10 处，逐个挂钩必漏一处。
@@ -4290,12 +4302,11 @@ func _feed_upgrade_card(p: Placement) -> void :
 		return
 	if p.upgrade_feed_turn == turn_total:
 		return    # 本回合已供过能
-	var pool: Array[CardData] = []
-	for c: CardData in CardRepo.load_json().reward_pool_for(RunState.player_class):
-		if c.is_spell() and UPGRADE_KEYWORD in c.effect_text:
-			pool.append(c)
-	if pool.is_empty():
-		_log("无限装甲：奖励卡池里没有效果含「改造」的技能牌，本回合供能落空")
+	# R276（用户口径）：**固定给「升级」8027**，不再从奖励池里随机摇一张改造牌。
+	# 「升级」是初始卡（rarity 3，不入奖励池），所以必须直接用 id 取。
+	var src: CardData = CardRepo.load_json().get_card(UPGRADE_ID)
+	if src == null:
+		_log("无限装甲：卡库里找不到「升级」8027，本回合供能落空")
 		action.emit("inf_armor", {"card": null, "ok": false, "placement": p})
 		return
 	if state.hand_full():
@@ -4305,15 +4316,14 @@ func _feed_upgrade_card(p: Placement) -> void :
 			"hand": state.hand.size()})
 		action.emit("inf_armor", {"card": null, "ok": false, "placement": p})
 		return
-	var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
 	# ⚠️ **必须 from_dict 复制成独立实例**（卡库是共享实例）：直接 append 卡库那张
 	# 会让 `hand_free` 的按实例标记串到别处，且以后改它会污染卡库。
-	var got := CardData.from_dict(pick.to_dict())
+	var got := CardData.from_dict(src.to_dict())
 	got.traits = (got.traits as Array).duplicate()
 	state.hand.append(got)
 	state.hand_free[got] = true
 	p.upgrade_feed_turn = turn_total
-	_log("无限装甲：供能 —— 技能牌「%s」加入手牌，在手牌里费用为 %d"
+	_log("无限装甲：供能 —— 「%s」加入手牌，在手牌里费用为 %d"
 		% [got.card_name, INF_ARMOR_FEED_COST])
 	action.emit("inf_armor", {"card": got, "ok": true, "placement": p})
 
@@ -4597,9 +4607,12 @@ func _energy_barrier(side: String) -> String :
 			continue
 		cand.append(i)
 	if cand.is_empty():
-		_log("能量屏障：抽牌堆里没有「还没有能量屏障」的盟友/工事，效果落空")
-		action.emit("barrier_grant", {"card": null, "ok": false})
-		return "抽牌堆里没有可改造的卡"
+		# R276：即使没有可改造的卡，**抽牌照常结算**（抽牌是这张牌自己的效果，
+		# 不该因为改造落空就一起白吃）。
+		var missed: int = _draw_many(BARRIER_DRAW)
+		_log("能量屏障：抽牌堆里没有「还没有能量屏障」的盟友/工事，效果落空；抽了 %d 张牌" % missed)
+		action.emit("barrier_grant", {"card": null, "ok": false, "drawn": missed})
+		return "抽牌堆里没有可改造的卡（抽了 %d 张）" % missed
 	var pick: int = cand[rng.randi() % cand.size()]
 	var before: CardData = state.deck[pick]
 	var up := CardData.from_dict(before.to_dict())
@@ -4611,9 +4624,15 @@ func _energy_barrier(side: String) -> String :
 	if not up.has_affix(FIELD_BARRIER):
 		up.affixes.append(FIELD_BARRIER)
 	state.deck[pick] = up
-	_log("能量屏障：「%s」获得能量屏障（下次上场时第一次挨打完全免掉）" % before.card_name)
-	action.emit("barrier_grant", {"card": up, "ok": true, "from": before, "side": side})
-	return "%s 获得能量屏障" % before.card_name
+	# R276：改造完**再抽 BARRIER_DRAW 张**（用户口径「新增抽 3 张卡」）。
+	# 放在改造之后：抽到的那几张里若有盟友 / 工事，不会在同一张牌里被顺手加盾
+	# （卡面写的是「从抽牌堆里随机改造一张」—— 那一刻抽牌堆还没抽）。
+	var drawn: int = _draw_many(BARRIER_DRAW)
+	_log("能量屏障：「%s」获得能量屏障（下次上场时第一次挨打完全免掉）；抽了 %d 张牌"
+		% [before.card_name, drawn])
+	action.emit("barrier_grant", {"card": up, "ok": true, "from": before, "side": side,
+		"drawn": drawn})
+	return "%s 获得能量屏障（抽 %d 张）" % [before.card_name, drawn]
 
 
 func _self_repair(target, side:= SIDE_SELF) -> String :
@@ -6378,14 +6397,24 @@ func _transform_hand_card(side: String, hand_index: int, new_card: CardData,
 
 func _assemble_at_will(side: String) -> String:
 	## 「随心组装」9144：把手牌里所有卡变成随机奖励卡（按稀有度概率相等）。
+	## R276 新增：变化出的**盟友卡**本回合费用 -1（`state.hand_cost_turn`，回合结束清空、
+	## 离手也自动恢复原价）。注意只算**变出来的结果**是盟友的，工事 / 技能 / 效果不减。
 	var count := 0
+	var cheap := 0
 	for i in state.hand.size():
 		var pick: CardData = _random_reward_card(side)
 		if pick == null:
 			continue
-		_transform_hand_card(side, i, pick, "随心组装", true)   # R271：随机变化
+		var res: Dictionary = _transform_hand_card(side, i, pick, "随心组装", true)   # R271：随机变化
+		var nc: CardData = res.get("new")
+		if nc != null and nc.kind == "盟友":
+			state.hand_cost_turn[nc] = int(state.hand_cost_turn.get(nc, 0)) + 1
+			cheap += 1
 		count += 1
-	return "随心组装：变化了 %d 张手牌" % count
+	if cheap > 0:
+		_log("随心组装：其中 %d 张盟友卡本回合费用 -%d" % [cheap, ASSEMBLE_ALLY_DISCOUNT])
+	return "随心组装：变化了 %d 张手牌（%d 张盟友本回合 -%d 费）" % [
+		count, cheap, ASSEMBLE_ALLY_DISCOUNT]
 
 
 func _trait_copies(zone: Array[CardData], tname: String) -> int:
@@ -9907,7 +9936,7 @@ func _field_aura_tick(side: String) -> void :
 		# 清泉是「双」→ 不受这条限制（它的 trait 是 场地生效·双）。
 		if field_aim(f) == FIELD_AIM_ALLY and side != SIDE_SELF:
 			continue
-		# ① 治疗：读卡面 field_heal（清泉 2 / 维修间 2 / 其它 0 = 不回血）
+		# ① 治疗：读卡面 field_heal（清泉 2 / 维修间 4 / 其它 0 = 不回血）
 		var heal: int = f.field_heal
 		if heal > 0 and p.health < p.card.health:
 			var before: int = p.health

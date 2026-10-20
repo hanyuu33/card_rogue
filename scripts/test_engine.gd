@@ -11882,10 +11882,10 @@ func _init() -> void:
 	# ---- ③ 侦察塔：卡面 ----
 	var r86_tw: CardData = r86_repo.get_card(GameEngine.SCOUT_TOWER_ID)
 	check(r86_tw != null and r86_tw.card_name == "侦察塔" and r86_tw.kind == "工事"
-			and r86_tw.cost == 3 and r86_tw.power == 0 and r86_tw.health == 12
+			and r86_tw.cost == 2 and r86_tw.power == 0 and r86_tw.health == 8
 			and r86_tw.attack_range == 2 and r86_tw.rarity == 0
 			and r86_tw.card_class == PlayerClass.MECH,
-		"R86 侦察塔 8032：机械之心的 3 费普通工事，0 攻 / 12 血 / 攻程 2")
+		"R276 侦察塔 8032：机械之心的 2 费普通工事，0 攻 / 8 血 / 攻程 2")
 	check(r86_tw.traits.has(GameEngine.STACK_DAMAGE_TRAIT),
 		"R86/R120 侦察塔：带 trait「改造层数」—— **光环易伤**按这个 trait 判定")
 	# ---- ④ 0 攻工事**能攻击**（用户口径：只有 0 攻程不能攻击）----
@@ -11987,7 +11987,7 @@ func _init() -> void:
 		"R86 层数是「只在场上有效」的（离场不写回卡：Placement 上仍是 %d 层）"
 			% r86_tp.upgrade_stacks)
 	var r86_tw_lib: CardData = r86_repo.get_card(GameEngine.SCOUT_TOWER_ID)
-	check(r86_tw_lib.power == 0 and r86_tw_lib.health == 12,
+	check(r86_tw_lib.power == 0 and r86_tw_lib.health == 8,
 		"R86 侦察塔：离场后**没有污染卡库**（仍 0 攻 / %d 血）" % r86_tw_lib.health)
 	# ================================================================
 	# R120：改造奖励的**唯一口**（素体）+ 侦察塔光环易伤
@@ -12136,11 +12136,16 @@ func _init() -> void:
 	r87_e.start_game()
 	var r87_farmer_card: CardData = _card(8003, "树人", "盟友", 3, 3, 8, 1, 1)
 	r87_e.state.deck = [CardData.from_dict(r87_farmer_card.to_dict())]
+	# R276：这张牌现在**还会抽 3 张** —— 牌库补 3 张「技能卡」（不会成为护盾候选），
+	# `draw()` 是 `pop_back()`，所以抽走的正好是后 3 张，树人留在 deck[0]。
+	for r87_i in 3:
+		r87_e.state.deck.append(_card(9100 + r87_i, "填充技能", "技能", 1, 0, 0, 0, 0))
 	r87_e.state.hand = [CardData.from_dict(r87_bar.to_dict())]
 	r87_e.state.energy = 5
 	var r87_bd: String = r87_e.use_spell(0)
-	check(r87_bd.contains("获得能量屏障") and r87_e.state.deck.size() == 1,
-		"R87 能量屏障：抽牌堆里的树人被加上护盾（%s），牌库张数不变" % r87_bd)
+	check(r87_bd.contains("获得能量屏障") and r87_bd.contains("抽 3 张")
+			and r87_e.state.deck.size() == 1,
+		"R276 能量屏障：树人被加上护盾 + **抽 3 张**（牌库 4 → 1 张）（%s）" % r87_bd)
 	check(r87_e.state.deck[0].traits.has(GameEngine.BARRIER_TRAIT),
 		"R87 能量屏障：牌库那张带上 trait「能量屏障」")
 	check(r87_e.state.deck[0] != r87_repo.get_card(8003),
@@ -12224,7 +12229,7 @@ func _init() -> void:
 			r87_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
 	r87_e4.state.energy = 5
 	r87_e4.use_spell(0, Vector2i(4, 1))
-	check(r87_tp.health == 12 + GameEngine.UPGRADE_HP,
+	check(r87_tp.health == 8 + GameEngine.UPGRADE_HP,
 		"R87 侦察塔（回归护栏）：改造 1 次只 +8 血（%d），**不吃**堡垒的每层 +3"
 			% r87_tp.health)
 
@@ -12289,8 +12294,8 @@ func _init() -> void:
 	check(r88_fac != null and r88_fac.kind == "场地" and r88_fac.cost == 2
 			and r88_fac.rarity == 0 and r88_fac.card_class == PlayerClass.MECH,
 		"R88 改造工厂：场地 / 2 费 / 普通 / 机械之心")
-	check(r88_bay.field_heal == 2 and r88_fount.field_heal == 2,
-		"R88 两张持续型场地都填了 field_heal=2（清泉也补上了 —— 之前是引擎里的裸常量）")
+	check(r88_bay.field_heal == 4 and r88_fount.field_heal == 2,
+		"R276 维修间 field_heal=4（每回合回 4）、清泉仍是 2（两个口不复用常量）")
 	check(r88_fac.field_heal == 0 and r88_fac.traits.has(GameEngine.PERSIST_UPGRADE_TRAIT),
 		"R88 改造工厂：field_heal=0（它不治血，只加攻加血）+ 带 trait「持续改造」")
 	check(r88_bay.traits.has("场地生效·友") and r88_fac.traits.has("场地生效·友")
@@ -12305,7 +12310,7 @@ func _init() -> void:
 	check(r88_bay.trigger == "" and r88_fac.trigger == "",
 		"R88 两张持续型场地 trigger 留空（它们不走「经过触发」，写触发类型会误导）")
 	# to_dict 往返：漏了 field_heal 会让持续型场地静默失效（R88 真踩过这个坑）
-	check(CardData.from_dict(r88_bay.to_dict()).field_heal == 2
+	check(CardData.from_dict(r88_bay.to_dict()).field_heal == 4
 			and CardData.from_dict(r88_fac.to_dict()).field_heal == 0,
 		"R88 field_heal 能过 to_dict/from_dict 往返（漏序列化 → 回血静默归 0）")
 
@@ -12331,20 +12336,20 @@ func _init() -> void:
 		GameEngine.SIDE_SELF)
 	r88_tree.health = 3
 	r88_e1.end_turn()   # 我方回合结束 → 维修间结算
-	check(r88_tree.health == 5,
-		"R88 维修间：我方单位在自己回合结束时 +2 血（3 → %d）" % r88_tree.health)
+	check(r88_tree.health == 7,
+		"R276 维修间：我方单位在自己回合结束时 +4 血（3 → %d）" % r88_tree.health)
 	# 敌方回合结束**不回**（用户口径：只在自己回合结束时回）。
 	# `end_turn()` 是**半回合**（self ⇄ opp 交替）：从 self 出发调一次 = 我方回合结束，
 	# 再调一次 = 敌方回合结束。
-	r88_e1.end_turn()   # 我方回合结束 → 维修间结算
-	check(r88_tree.health == 5,
-		"R88 维修间：我方单位在自己回合结束时 +2 血（3 → %d）" % r88_tree.health)
+	r88_e1.end_turn()   # 敌方回合结束 → 我方单位不在这半回合结算
+	check(r88_tree.health == 7,
+		"R276 维修间：敌方回合结束那半步**不回血**（仍 %d）" % r88_tree.health)
 	r88_e1._hit_unit(r88_tree, 4, "R88 测试")
 	r88_e1._destroy_dead()
 	r88_e1.end_turn()   # 敌方回合结束 → 我方单位不在这半回合结算
 	r88_e1.end_turn()   # 我方回合结束 → 再回
-	check(r88_tree.health == 3,
-		"R88 维修间：连跑仍生效（打伤到 1 后 +2 → %d），敌方回合结束那半步不回血" % r88_tree.health)
+	check(r88_tree.health == 7,
+		"R276 维修间：连跑仍生效（打伤到 3 后 +4 → %d），敌方回合结束那半步不回血" % r88_tree.health)
 	check(r88_e1.state.field_at(Vector2i(4, 1)) != null,
 		"R88 维修间：场地不会被消耗掉（持续型）")
 
@@ -12498,45 +12503,28 @@ func _init() -> void:
 	check(r89_armor.traits.has(GameEngine.INF_ARMOR_TRAIT),
 		"R89 无限装甲：带 trait「改造供能」（引擎按 trait 判定，走卡面不硬编码卡名）")
 
-	# ---- ② 候选池：奖励卡池里「技能 + effect_text 含『改造』」的卡 ----
-	# ⚠️ 只收**卡面原费 > 0**的牌：这张测试要验证的是「供能后费用被压成 0」，
-	# 若抽中原费就是 0 的牌（如超越极限），压费前后都是 0、断言 `cost > 0` 会假失败。
-	# （R103 之前这个筛选没写，随机序列一变就会踩中——已修成确定性选取。）
+	# ---- ② R276 改口径：**固定给「升级」8027**（不再从奖励池随机摇改造牌）----
 	var r89_pool: Array[CardData] = r89_repo.reward_pool_for(PlayerClass.MECH)
-	var r89_up_spells: Array[CardData] = []
 	var r89_has_armor := false
+	var r89_up_in_pool := false
 	for pc in r89_pool:
 		if pc.id == GameEngine.INF_ARMOR_ID:
 			r89_has_armor = true
-		if pc.is_spell() and GameEngine.UPGRADE_KEYWORD in pc.effect_text \
-				and pc.cost > 0:
-			r89_up_spells.append(pc)
+		if pc.id == GameEngine.UPGRADE_ID:
+			r89_up_in_pool = true
 	check(r89_has_armor, "R89 无限装甲：史诗 → 进机械之心的奖励池（能摇到）")
-	check(r89_up_spells.size() >= 3,
-		"R89 候选池：机械之心奖励池里有 %d 张「效果含改造」的技能牌（%s）" % [
-			r89_up_spells.size(),
-			"、".join(r89_up_spells.map(func(c: CardData): return c.card_name))])
-	# 池里**不能**混进非技能卡 / 不含关键词的技能卡
-	var r89_pure := true
-	for pc in r89_pool:
-		if not pc.is_spell():
-			continue
-		if not (GameEngine.UPGRADE_KEYWORD in pc.effect_text):
-			continue
-		if pc.kind != "技能":
-			r89_pure = false
-	check(r89_pure, "R89 候选池：筛选只认「技能 + effect_text 含改造」")
+	var r89_upgrade: CardData = r89_repo.get_card(GameEngine.UPGRADE_ID)
+	check(r89_upgrade != null and r89_upgrade.is_spell() and r89_upgrade.cost > 0,
+		"R276 供能牌 = 「升级」8027（技能 / %d 费 / 稀有度 %d），按 id 取得到"
+			% [0 if r89_upgrade == null else r89_upgrade.cost,
+				0 if r89_upgrade == null else r89_upgrade.rarity])
+	check(not r89_up_in_pool,
+		"R276 「升级」是初始卡（rarity 3，不入奖励池）—— 所以不能从池里摇，必须按 id 直接取")
 
 	# ---- ③ 核心：被改造时供一张 0 费改造牌到手 ----
 	var r89_e1 := _new_engine([], 30, 30, -1, false)
-	# ⚠️ **钉死引擎随机种子**：供能池里有 0 费卡「超越极限」8053，而 `_inf_armor_feed`
-	#    用的是 `rng.randi_range(0, pool.size()-1)`，`GameEngine.rng` 又是默认随机播种。
-	#    摇到 0 费卡时，「在手牌里被压成 0」与「卡面原费」都是 0 → `cost > 0` 那条断言
-	#    变成 0→0 空转并假失败（实测 32s 全量门禁里约 1/9 概率翻红，R113 抓到一次）。
-	#    种子 1 → 抽到「生产订单」8048（原费 2）。
-	#    ⚠️ 若以后改了机械之心的奖励池导致这条断言翻红，重跑 `_probe_feed_seed.gd`
-	#    换一个种子即可 —— 这是**确定性**失败（不是偶发），看到就等于收到提醒。
-	r89_e1.rng.seed = 1
+	# R276：供能牌固定是「升级」，**不再依赖 rng** —— 原先那段「钉死种子躲开 0 费卡
+	# 超越极限」的脆弱处理（R113 曾翻红一次）随之退场。
 	r89_e1.start_game()
 	var r89_p: Placement = r89_e1.state.place(
 		CardData.from_dict(r89_armor.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
@@ -12554,13 +12542,12 @@ func _init() -> void:
 		if r89_e1.state.hand_free.has(c):
 			r89_got = c
 			break
-	check(r89_got != null and r89_got.is_spell()
-			and GameEngine.UPGRADE_KEYWORD in r89_got.effect_text,
-		"R89 供能牌确实是一张「效果含改造」的技能牌（%s）"
+	check(r89_got != null and r89_got.id == GameEngine.UPGRADE_ID,
+		"R276 供能牌**固定**是「升级」8027（实际 %s）"
 			% ("?" if r89_got == null else r89_got.card_name))
 	check(r89_got != null and r89_e1.cost_of(r89_got) == GameEngine.INF_ARMOR_FEED_COST
 			and r89_got.cost > 0,
-		"R89 供能牌在手牌里费用为 %d（卡面原费 %d；原费 0 = 种子 1 已失效，重跑 _probe_feed_seed.gd 换种子）"
+		"R276 供能给的是「升级」，在手牌里费用为 %d（卡面原费 %d）"
 			% [GameEngine.INF_ARMOR_FEED_COST, 0 if r89_got == null else r89_got.cost])
 	check(r89_p.upgrade_feed_turn == r89_e1.turn_total,
 		"R89 「每回合一次」：供能后记下本回合号（%d）" % r89_e1.turn_total)
@@ -13088,6 +13075,10 @@ func _init() -> void:
 	var r91_e2 := _new_engine([], 30, 30, -1, false)
 	r91_e2.start_game()
 	r91_e2.state.deck = [CardData.from_dict(r91_repo.get_card(8001).to_dict())]
+	# R276：能量屏障现在会**抽 3 张** —— 后面补 3 张技能卡（不会成为护盾候选）。
+	# `draw()` 用 `pop_back()`，所以抽走的正好是后 3 张，木栅栏留在 deck[0]。
+	for r91_i in 3:
+		r91_e2.state.deck.append(_card(9110 + r91_i, "填充技能", "技能", 1, 0, 0, 0, 0))
 	r91_e2.state.hand.append(CardData.from_dict(
 			r91_repo.get_card(GameEngine.BARRIER_ID).to_dict()))
 	r91_e2.state.energy = 5
@@ -17207,7 +17198,7 @@ func _init() -> void:
 	# 牌库里那些「烤进副本」的改造**没有任何地方记层** → 上场从 0 开始。
 	var r209_repo := CardRepo.load_json()
 	# ---- ① 层数随序列化走（复制 / 离场还原 / 联机共用这一条通道）----
-	var r209_c := _card(8032, "侦察塔", "工事", 3, 0, 12, 2, 0)
+	var r209_c := _card(8032, "侦察塔", "工事", 2, 0, 8, 2, 0)
 	r209_c.traits = ["工事", "侦察塔", "改造层数"]
 	r209_c.upgrade_stacks = 2
 	var r209_rt := CardData.from_dict(r209_c.to_dict())
@@ -19907,10 +19898,13 @@ func _init() -> void:
 	var r271_cre: CardData = r271_e8.state.hand[0]
 	check(r271_cr_ok and r271_cre.id != 8003 and r271_cre.random_born,
 		"R271 创意：手卡被变成一张随机卡（%s）" % r271_cre.card_name)
+	# ⚠️ 重甲战车 8058 的改造收益是「每层受伤 -1」，**没有**对应字段 / trait ——
+	#    池子里它是按 id 单收的（R275），所以判据也必须认它，否则抽到它就假失败。
 	var r271_is_zoom := r271_cre.upgrade_atk_bonus > 0 or r271_cre.upgrade_hp_bonus > 0 \
 			or r271_cre.traits.has(GameEngine.UPGRADE_RANGE_TRAIT) \
 			or r271_cre.traits.has(GameEngine.UPGRADE_SPEED_TRAIT) \
-			or r271_cre.traits.has(GameEngine.UPGRADE_DRAW_TRAIT)
+			or r271_cre.traits.has(GameEngine.UPGRADE_DRAW_TRAIT) \
+			or r271_cre.id == GameEngine.HEAVY_TANK_ID
 	check(r271_is_zoom,
 		"R271 创意：变出来的卡一定属于「被改造有额外效果」那一族（%s）" % r271_cre.card_name)
 	check(r271_cre.upgrade_stacks == 1,
@@ -20364,6 +20358,146 @@ func _init() -> void:
 			and r275_wall.card.has_affix(GameEngine.AFFIX_OVERLOAD)
 			and r275_wall.health == 10,
 		"R275 城墙：0/10 工事，同时带「嘲讽」与「超负荷」")
+
+
+	# ================================================================
+	# R276：侦察塔 2 费 8 血 / 维修间回 4 / 无限装甲固定给「升级」/
+	#       随心组装变出的盟友 -1 费 / 能量屏障额外抽 3 张
+	# ================================================================
+	var r276_repo := CardRepo.load_json()
+
+	# ---- ① 侦察塔 8032：3 费 12 血 → **2 费 8 血**（0 攻 / 攻程 2 不变）----
+	var r276_tw: CardData = r276_repo.get_card(GameEngine.SCOUT_TOWER_ID)
+	check(r276_tw != null and r276_tw.cost == 2 and r276_tw.health == 8
+			and r276_tw.power == 0 and r276_tw.attack_range == 2
+			and r276_tw.rarity == 0,
+		"R276 侦察塔：%d 费 / %d 攻 / %d 血 / 攻程 %d" % [
+			r276_tw.cost, r276_tw.power, r276_tw.health, r276_tw.attack_range])
+	# 光环仍按层数走（改了费用/血量不该动到机制）
+	check(r276_tw.traits.has(GameEngine.STACK_DAMAGE_TRAIT),
+		"R276 侦察塔：仍带 trait「改造层数」（调数值不动机制）")
+
+	# ---- ② 维修间 8036：每回合回 2 → **4**（清泉仍 2，两个口不共享数值）----
+	var r276_bay: CardData = r276_repo.get_card(GameEngine.REPAIR_BAY_ID)
+	check(r276_bay.field_heal == 4
+			and r276_repo.get_card(GameEngine.FOUNTAIN_ID).field_heal == 2,
+		"R276 维修间 field_heal=%d / 清泉 field_heal=%d（各算各的）" % [
+			r276_bay.field_heal,
+			r276_repo.get_card(GameEngine.FOUNTAIN_ID).field_heal])
+	var r276_e1 := _new_engine([], 30, 30, -1, false)
+	r276_e1.start_game()
+	var r276_tree: Placement = r276_e1.state.place(
+			CardData.from_dict(r276_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+			GameEngine.SIDE_SELF)
+	r276_e1.state.set_field(CardData.from_dict(r276_bay.to_dict()), Vector2i(4, 1),
+			GameEngine.SIDE_SELF)
+	r276_tree.health = 3
+	r276_e1.end_turn()
+	check(r276_tree.health == 7,
+		"R276 维修间：回合结束 3 → %d（+4）" % r276_tree.health)
+
+	# ---- ③ 无限装甲 8038：**固定**给「升级」8027（原先是奖励池随机摇改造牌）----
+	var r276_e2 := _new_engine([], 30, 30, -1, false)
+	r276_e2.start_game()
+	var r276_armor: Placement = r276_e2.state.place(
+			CardData.from_dict(r276_repo.get_card(GameEngine.INF_ARMOR_ID).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r276_e2.state.hand = [CardData.from_dict(
+			r276_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
+	r276_e2.state.energy = 5
+	r276_e2.use_spell(0, Vector2i(4, 1))
+	var r276_fed: CardData = null
+	for c: CardData in r276_e2.state.hand:
+		if r276_e2.state.hand_free.has(c):
+			r276_fed = c
+	check(r276_fed != null and r276_fed.id == GameEngine.UPGRADE_ID,
+		"R276 无限装甲：被改造 → 供一张「升级」8027（实际 %s）"
+			% ("无" if r276_fed == null else r276_fed.card_name))
+	check(r276_fed != null and r276_e2.cost_of(r276_fed) == 0,
+		"R276 无限装甲：供来的「升级」在手牌里 0 费（原费 %d）—— 其余口径不变"
+			% (0 if r276_fed == null else r276_fed.cost))
+
+	# ---- ④ 随心组装 9144：变出的**盟友卡**本回合 -1 费 ----
+	# (a) 机制层：本回合减费表 = cost_of 减 1 / 离手恢复原价 / 回合结束清空
+	var r276_e3 := _new_engine([], 30, 30, -1, false)
+	r276_e3.start_game()
+	var r276_ally: CardData = CardData.from_dict(r276_repo.get_card(8003).to_dict())
+	r276_e3.state.hand = [r276_ally]
+	r276_e3.state.hand_cost_turn[r276_ally] = GameEngine.ASSEMBLE_ALLY_DISCOUNT
+	check(r276_e3.cost_of(r276_ally) == r276_ally.cost - GameEngine.ASSEMBLE_ALLY_DISCOUNT,
+		"R276 手卡内本回合减费：树人 %d 费 → %d 费" % [
+			r276_ally.cost, r276_e3.cost_of(r276_ally)])
+	r276_e3.state.hand.remove_at(0)
+	check(r276_e3.cost_of(r276_ally) == r276_ally.cost,
+		"R276 本回合减费**离手即恢复原价**（%d）—— 判据是「此刻在手牌里」" % r276_ally.cost)
+	r276_e3.state.hand = [r276_ally]
+	r276_e3.end_turn()
+	check(r276_e3.state.hand_cost_turn.is_empty(),
+		"R276 本回合减费**回合结束清空**（表剩 %d 条）"
+			% r276_e3.state.hand_cost_turn.size())
+	# (b) 整段：变化后「减费表条数 == 变出的盟友卡数」，且每张盟友都少 1 费
+	var r276_e4 := _new_engine([], 30, 30, -1, false)
+	r276_e4.start_game()
+	r276_e4.state.energy = 9
+	r276_e4.state.hand = [CardData.from_dict(r276_repo.get_card(9144).to_dict())]
+	for r276_i in 9:
+		r276_e4.state.hand.append(CardData.from_dict(
+				r276_repo.get_card(8003).to_dict()))
+	r276_e4.use_spell(0)
+	# 变出来的可能是工事 / 技能 / 效果 —— 重变几次直到手里出现盟友（本条要有样本）
+	var r276_allies := 0
+	for _try276c in 8:
+		r276_allies = 0
+		for c: CardData in r276_e4.state.hand:
+			if c.kind == "盟友":
+				r276_allies += 1
+		if r276_allies > 0:
+			break
+		r276_e4.state.hand_cost_turn.clear()
+		r276_e4._assemble_at_will(GameEngine.SIDE_SELF)
+	# ⚠️ 这里**不能**拿 `cost_of(c) == c.cost` 当「没减费」的判据：`cost_of` 里还有一堆
+	#    全局减费（道具 / 进化 / X 费卡按剩余能量算…），前面用例可能给 RunState 留过东西，
+	#    那样会随随机结果翻红（R276 实踩）。改成验**结构**：减费表的键必须全是此刻还在
+	#    手牌里的**盟友**卡、值都是 1；「差 1 点」另用手造卡做前后对比。
+	var r276_bad := 0
+	for k: CardData in r276_e4.state.hand_cost_turn.keys():
+		if k.kind != "盟友":
+			r276_bad += 1
+		if int(r276_e4.state.hand_cost_turn[k]) != GameEngine.ASSEMBLE_ALLY_DISCOUNT:
+			r276_bad += 1
+		if not r276_e4.state.hand.has(k):
+			r276_bad += 1
+	check(r276_allies > 0 and r276_bad == 0,
+		"R276 随心组装：变出的 %d 张盟友卡进减费表，非盟友 / 已离手的一张都没进"
+			% r276_allies)
+	check(r276_e4.state.hand_cost_turn.size() == r276_allies,
+		"R276 随心组装：减费表正好 %d 条（= 变出的盟友数）"
+			% r276_e4.state.hand_cost_turn.size())
+	# 同一张卡：加表前 / 加表后**正好差 1**（不受 RunState 全局减费干扰）
+	var r276_probe: CardData = CardData.from_dict(r276_repo.get_card(8003).to_dict())
+	r276_e4.state.hand.append(r276_probe)
+	var r276_probe_before: int = r276_e4.cost_of(r276_probe)
+	r276_e4.state.hand_cost_turn[r276_probe] = GameEngine.ASSEMBLE_ALLY_DISCOUNT
+	check(r276_e4.cost_of(r276_probe) == maxi(0, r276_probe_before - 1),
+		"R276：加进本回合减费表 → %d 费变 %d 费（正好 -1）" % [
+			r276_probe_before, r276_e4.cost_of(r276_probe)])
+
+	# ---- ⑤ 能量屏障 8033：额外**抽 3 张**（改造落空时照抽）----
+	var r276_e5 := _new_engine([], 30, 30, -1, false)
+	r276_e5.start_game()
+	# 牌库里只放「技能卡」→ 护盾没有合法候选，必然落空；但要照抽 3 张
+	r276_e5.state.deck = []
+	for r276_i in 3:
+		r276_e5.state.deck.append(_card(9120 + r276_i, "填充技能", "技能", 1, 0, 0, 0, 0))
+	r276_e5.state.hand = [CardData.from_dict(
+			r276_repo.get_card(GameEngine.BARRIER_ID).to_dict())]
+	r276_e5.state.energy = 5
+	var r276_bmsg: String = r276_e5.use_spell(0)
+	check(r276_bmsg.contains("没有") and r276_e5.state.hand.size() == 3,
+		"R276 能量屏障：没有候选（改造落空）**也照抽 3 张**（手牌 %d 张 / %s）" % [
+			r276_e5.state.hand.size(), r276_bmsg])
+	check(GameEngine.BARRIER_DRAW == 3,
+		"R276 能量屏障：抽牌数常量为 %d（卡面「抽 3 张卡」）" % GameEngine.BARRIER_DRAW)
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
