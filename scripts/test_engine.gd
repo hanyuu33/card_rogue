@@ -1655,7 +1655,7 @@ func _init() -> void:
 			% [r228_b4.upgrade_stacks, r228_hp0.health])
 
 	# ---- R230：清退（9153，暗影刺客 · 稀有 · 1 费效果卡）----
-	# 效果区有本卡时，陷阱放在**有敌人的格子**上 → 把那个敌人朝敌方后排击退 2 格。
+	# 效果区有本卡时，陷阱放在**有敌人的格子**上 → 把那个敌人朝敌方后排击退 1 格（R278 由 2 格下调）。
 	var r230_c := repo.get_card(9153)
 	check(r230_c != null and r230_c.card_name == "清退" and r230_c.kind == "效果"
 			and r230_c.cost == 1 and r230_c.rarity == 1
@@ -1668,7 +1668,7 @@ func _init() -> void:
 		if r230_pc.id == 9153:
 			r230_in_pool = true
 	check(r230_in_pool, "R230 清退：进暗影刺客奖励池（稀有 rarity 1）")
-	# ① 有清退 + 陷阱落在敌人格 → 敌人被击退 2 格（2,1 → 0,1）
+	# ① 有清退 + 陷阱落在敌人格 → 敌人被击退 1 格（2,1 → 1,1）
 	var r230_e := _new_engine([], 20, 20)
 	r230_e.start_game(1)
 	var r230_foe := r230_e.state.place(_card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 2),
@@ -1678,8 +1678,9 @@ func _init() -> void:
 	r230_e.state.energy = 5
 	r230_e.play_from_hand(0, Vector2i(2, 1))
 	check(r230_e.state.unit_at(Vector2i(2, 1)) == null
-			and r230_e.state.unit_at(Vector2i(0, 1)) == r230_foe,
-			"R230 清退：陷阱放到敌人格 → 该敌人被击退 2 格（2,1 → 0,1）")
+			and r230_e.state.unit_at(Vector2i(1, 1)) == r230_foe,
+			"R230 清退：陷阱放到敌人格 → 该敌人被击退 %d 格（2,1 → 1,1）"
+			% GameEngine.CLEAR_OUT_STEPS)
 	check(r230_e.state.field_at(Vector2i(2, 1)) != null,
 			"R230 清退：击退的是人不是场地 —— 陷阱仍落在原格 (2,1)")
 	# ② 没有清退 → 敌人原地不动
@@ -8653,8 +8654,9 @@ func _init() -> void:
 			and r74_a.state.unit_at(Vector2i(4, 1)) == null
 			and r74_a_ret == null,
 		"R74 场地卡：打出后**不在 board 上**（不是单位）、登记到该格的场地效果")
-	check(r74_a.state.energy == 2 and r74_a.state.hand.is_empty(),
-		"R74 场地卡：正常扣费 3 点（5 → %d）并离手" % r74_a.state.energy)
+	check(r74_a.state.energy == 5 - r74_a_card.cost and r74_a.state.hand.is_empty(),
+		"R74 场地卡：正常扣费 %d 点（5 → %d）并离手"
+			% [r74_a_card.cost, r74_a.state.energy])
 	# ② **每格只能有一个效果**：再放一张 → 顶掉旧的
 	var r74_old: CardData = r74_a.state.set_field(
 			CardData.from_dict(repo.get_card(GameEngine.FROST_TRAP_ID).to_dict()),
@@ -8833,13 +8835,15 @@ func _init() -> void:
 	r74_m1.play_from_hand(0, Vector2i(4, 1))
 	r74_m1.current_side = GameEngine.SIDE_OPPONENT
 	r74_m1.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
-	check(r74_m1_foe.poison_dmg == GameEngine.POISON_DMG + 2 * 2,
-		"R74 场地精通：剧毒场地每跳 %d+2×2=%d（实际 %d）"
-			% [GameEngine.POISON_DMG, GameEngine.POISON_DMG + 4, r74_m1_foe.poison_dmg])
+	var r74_m1_cost: int = repo.get_card(GameEngine.POISON_TRAP_ID).cost
+	check(r74_m1_foe.poison_dmg == GameEngine.POISON_DMG + 2 * r74_m1_cost,
+		"R74 场地精通：剧毒场地每跳 %d+2×%d=%d（实际 %d）"
+			% [GameEngine.POISON_DMG, r74_m1_cost, GameEngine.POISON_DMG + 2 * r74_m1_cost,
+				r74_m1_foe.poison_dmg])
 	_check_to_opp_turn(r74_m1)
-	check(r74_m1_foe.health == 80 - (GameEngine.POISON_DMG + 4),
+	check(r74_m1_foe.health == 80 - (GameEngine.POISON_DMG + 2 * r74_m1_cost),
 			"R74 场地精通：毒跳 %d 伤（80 → %d）"
-			% [GameEngine.POISON_DMG + 4, r74_m1_foe.health])
+			% [GameEngine.POISON_DMG + 2 * r74_m1_cost, r74_m1_foe.health])
 	# 冰霜场地 4+2×1=6
 	var r74_m3 := _new_engine([], 30, 30)
 	var r74_m3_foe: Placement = r74_m3.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 80, 1, 1),
@@ -8869,9 +8873,12 @@ func _init() -> void:
 	r74_m2.play_from_hand(0, Vector2i(4, 1))
 	r74_m2.current_side = GameEngine.SIDE_OPPONENT
 	r74_m2.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
-	check(r74_m2_foe.health == 80 - (GameEngine.TRAP_DMG + 6) and r74_m2_pal.health <= 0,
-		"R74 场地精通：爆炸场地十字 %d+2×3=%d（亡灵领主 80 → %d，旁边的树人被炸死）"
-			% [GameEngine.TRAP_DMG, GameEngine.TRAP_DMG + 6, r74_m2_foe.health])
+	var r74_m2_cost: int = r74_expl.cost
+	check(r74_m2_foe.health == 80 - (GameEngine.TRAP_DMG + 2 * r74_m2_cost)
+			and r74_m2_pal.health <= 0,
+		"R74 场地精通：爆炸场地十字 %d+2×%d=%d（亡灵领主 80 → %d，旁边的树人被炸死）"
+			% [GameEngine.TRAP_DMG, r74_m2_cost,
+				GameEngine.TRAP_DMG + 2 * r74_m2_cost, r74_m2_foe.health])
 
 	# ---- 技能打场地：**不触发**（场地不是单位，技能打不到；即便打到也不触发）----
 	var r74_s := _new_engine([], 30, 30)
@@ -9063,12 +9070,12 @@ func _init() -> void:
 
 	# 卡面
 	var r53_pierce := repo.get_card(8016)
-	check(r53_pierce.card_name == "穿刺陷阱" and r53_pierce.cost == 2
+	check(r53_pierce.card_name == "穿刺陷阱" and r53_pierce.cost == 1
 			and r53_pierce.kind == "场地" and r53_pierce.is_field() and not r53_pierce.is_fort()
 			and r53_pierce.power == 0 and r53_pierce.health == 0
 			and r53_pierce.rarity == 0 and r53_pierce.card_class == "暗影刺客"
 			and r53_pierce.traits.has(GameEngine.PIERCE_TRAP_TRAIT),
-			"R74 穿刺场地 8016：2 费普通暗影刺客**场地卡**（不再是工事、无 HP）、带「穿刺陷阱」词条")
+			"R74 穿刺场地 8016：1 费（R278 由 2 费下调）普通暗影刺客**场地卡**（不再是工事、无 HP）、带「穿刺陷阱」词条")
 	check(repo.get_card(9105).effect_text.contains("2X") and repo.get_card(9105).target_mode == "none",
 			"场地精通 9105：卡面文案补全（含 2X 加成说明）")
 	var r53_pool_ids := {}
@@ -9093,7 +9100,7 @@ func _init() -> void:
 	check(r53_p_foe.trap_trig_turn == r53_p.turn_total,
 			"R74 穿刺场地：这次触发记全局半回合号（暗影狩猎可判 24 伤）")
 
-	# 穿刺场地 + 场地精通：14 + 2×2 = 18
+	# 穿刺场地 + 场地精通：18 + 2×1 = 20（R278 原费 2 → 1）
 	var r53_pm := _new_engine([], 30, 30)
 	r53_pm.state.energy = 9
 	r53_pm.state.hand.append(CardData.from_dict(repo.get_card(9105).to_dict()))
@@ -9104,9 +9111,11 @@ func _init() -> void:
 			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
 	r53_pm.current_side = GameEngine.SIDE_OPPONENT
 	r53_pm.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
-	check(r53_pm_foe.health == 60 - (GameEngine.PIERCE_TRAP_DMG + 4),
-			"R74 场地精通：穿刺场地 %d+2×2=%d（60 → %d）"
-			% [GameEngine.PIERCE_TRAP_DMG, GameEngine.PIERCE_TRAP_DMG + 4, r53_pm_foe.health])
+	var r53_pm_cost: int = repo.get_card(8016).cost
+	check(r53_pm_foe.health == 60 - (GameEngine.PIERCE_TRAP_DMG + 2 * r53_pm_cost),
+			"R74 场地精通：穿刺场地 %d+2×%d=%d（60 → %d）"
+			% [GameEngine.PIERCE_TRAP_DMG, r53_pm_cost,
+				GameEngine.PIERCE_TRAP_DMG + 2 * r53_pm_cost, r53_pm_foe.health])
 
 	# 场地**不能被打**：站在场地上不会被「隔空打到」，只能移动进去才触发
 	var r53_p0 := _new_engine([], 30, 30)
@@ -10288,10 +10297,10 @@ func _init() -> void:
 	# ---- R76-C：巨物陷阱 8017 = 场地卡（不再是「被打才反伤」的工事）----
 	var r76_mt := repo.get_card(GameEngine.MASS_TRAP_ID)
 	check(r76_mt != null and r76_mt.card_name == "巨物陷阱" and r76_mt.is_field()
-			and not r76_mt.is_fort() and r76_mt.cost == 2 and r76_mt.health == 0
+			and not r76_mt.is_fort() and r76_mt.cost == 1 and r76_mt.health == 0
 			and r76_mt.rarity == 1 and r76_mt.card_class == PlayerClass.ROGUE
 			and r76_mt.traits.has(GameEngine.MASS_TRAP_TRAIT),
-			"R76-C 巨物陷阱 8017：2 费稀有**场地卡**（不再是工事）、生命 0、暗影刺客")
+			"R76-C 巨物陷阱 8017：1 费（R278 由 2 费下调）稀有**场地卡**（不再是工事）、生命 0、暗影刺客")
 	var r76_c := _new_engine([], 30, 30)
 	r76_c.state.set_field(CardData.from_dict(r76_mt.to_dict()),
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
@@ -10319,7 +10328,7 @@ func _init() -> void:
 	check(r76_d_foe.health == 60 and r76_d.state.field_at(Vector2i(4, 1)) != null,
 			"R76-C 场地与单位可同格共存、原本站着的敌人**不触发**（血仍 %d）"
 			% r76_d_foe.health)
-	# 吃场地精通加成（2× 原费 = +4）
+	# 吃场地精通加成（2× 原费 = +2；R278 原费 2 → 1）
 	var r76_e := _new_engine([], 30, 30)
 	r76_e.state.set_field(CardData.from_dict(r76_mt.to_dict()),
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
@@ -19258,11 +19267,11 @@ func _init() -> void:
 	var r248_card: CardData = r248_repo.get_card(GameEngine.ROCKFALL_TRAP_ID)
 	check(r248_card != null and r248_card.card_name == "落石陷阱"
 		and r248_card.kind == "场地" and r248_card.is_field() and not r248_card.is_fort()
-		and r248_card.card_class == PlayerClass.ROGUE and r248_card.cost == 3
+		and r248_card.card_class == PlayerClass.ROGUE and r248_card.cost == 2
 		and r248_card.rarity == 2 and r248_card.health == 0
 		and r248_card.target_mode == "none"
 		and r248_card.traits.has(GameEngine.ROCKFALL_TRAP_TRAIT),
-		"R248 落石陷阱 9159：3 费史诗**场地卡**（暗影刺客），带「落石陷阱」词条、生命 0、不打目标格")
+		"R248 落石陷阱 9159：2 费（R278 由 3 费下调）史诗**场地卡**（暗影刺客），带「落石陷阱」词条、生命 0、不打目标格")
 	check(r248_card.effect_text.contains("29 点伤害") and r248_card.effect_text.contains("践踏")
 		and r248_card.effect_text.contains("移动经过"),
 		"R248 卡面：写「移动经过触发 + 29 伤害 + 践踏不漏溢出」")
@@ -19347,7 +19356,7 @@ func _init() -> void:
 		and r248_w.state.hp_opponent == 40 - 14,
 		"R248 原地踩响：5 血被 29 砸毙 → 溢出 24 击穿 (1,1) 10 血 → 列尾剩余 14 漏对方 HP（40 → %d）"
 		% r248_w.state.hp_opponent)
-	# ⑤ 场地精通（9105）：29 + 2×原费3 = 35
+	# ⑤ 场地精通（9105）：29 + 2×原费2 = 33（R278 原费 3 → 2）
 	var r248_m := _new_engine([], 40, 40)
 	r248_m.current_side = GameEngine.SIDE_OPPONENT
 	r248_m.state.energy = 9
@@ -19359,9 +19368,10 @@ func _init() -> void:
 		_card(8003, "农民", "盟友", 1, 1, 40, 1, 2), Vector2i(2, 1),
 		GameEngine.SIDE_OPPONENT)
 	r248_m.move(Vector2i(2, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
-	check(r248_m_foe.health == 40 - (GameEngine.ROCKFALL_TRAP_DMG + 6),
-		"R248 场地精通：落石陷阱 %d + 2×3 = %d（40 → %d）"
-		% [GameEngine.ROCKFALL_TRAP_DMG, GameEngine.ROCKFALL_TRAP_DMG + 6, r248_m_foe.health])
+	check(r248_m_foe.health == 40 - (GameEngine.ROCKFALL_TRAP_DMG + 2 * r248_card.cost),
+		"R248 场地精通：落石陷阱 %d + 2×%d = %d（40 → %d）"
+		% [GameEngine.ROCKFALL_TRAP_DMG, r248_card.cost,
+			GameEngine.ROCKFALL_TRAP_DMG + 2 * r248_card.cost, r248_m_foe.health])
 	# ⑥ 家族默认口径：任何单位移动经过都吃（自己人踩自己埋的也炸）—— 与爆炸/穿刺同族
 	var r248_o := _new_engine([], 40, 40)
 	r248_o.current_side = GameEngine.SIDE_SELF
@@ -20601,6 +20611,41 @@ func _init() -> void:
 	var r277_gen_card: CardData = r277_repo.get_card(9154)
 	check(CardFace.paper_tint(r277_gen_card) != Color.WHITE,
 		"R277 配色：公用卡纸底上灰（%s）" % str(CardFace.paper_tint(r277_gen_card)))
+
+	# ---- R278：陷阱类场地卡整体下调 1 费（冰霜陷阱是原本 1 费那张，例外）+ 数值 ----
+	var r278_repo := CardRepo.load_json()
+	var r278_cost := {
+		8011: 2,   # 爆炸陷阱 3 → 2
+		8012: 1,   # 冰霜陷阱：**原本就是 1 费**，费用不动（只加伤害）
+		8013: 1,   # 冻结陷阱 2 → 1
+		8014: 1,   # 剧毒陷阱 2 → 1
+		8016: 1,   # 穿刺陷阱 2 → 1
+		8017: 1,   # 巨物陷阱 2 → 1
+		8063: 0,   # 黑暗陷阱：0 费已是最低，不能再减
+		9159: 2,   # 落石陷阱 3 → 2
+	}
+	var r278_bad: Array = []
+	for r278_key in r278_cost.keys():
+		var r278_c: CardData = r278_repo.get_card(int(r278_key))
+		if r278_c == null or r278_c.cost != int(r278_cost[r278_key]):
+			r278_bad.append(r278_key)
+	check(r278_bad.is_empty(),
+			"R278 陷阱降价：8 张陷阱场地卡费用 = 2 / 1 / 1 / 1 / 1 / 1 / 0 / 2（不符：%s）"
+			% str(r278_bad))
+	check(GameEngine.TRAP_DMG >= 18,
+			"R278 爆炸陷阱：伤害不低于 18（当前 %d）" % GameEngine.TRAP_DMG)
+	check(GameEngine.FROST_TRAP_DMG == 9
+			and r278_repo.get_card(8012).effect_text.contains("9 点伤害"),
+			"R278 冰霜陷阱：伤害 4 → 9（+5），卡面同步（当前 %d）" % GameEngine.FROST_TRAP_DMG)
+	check(GameEngine.CLEAR_OUT_STEPS == 1
+			and r278_repo.get_card(9153).effect_text.contains("击退 1 格"),
+			"R278 清退：击退 2 格 → 1 格（引擎常量 %d）" % GameEngine.CLEAR_OUT_STEPS)
+	# 只动陷阱：持续型 / 对己方生效的场地卡费用一律不动
+	check(r278_repo.get_card(8028).cost == 1 and r278_repo.get_card(8036).cost == 1
+			and r278_repo.get_card(8037).cost == 2,
+			"R278 只动陷阱：清泉 / 维修间 / 改造工厂费用不变（%d / %d / %d）"
+			% [r278_repo.get_card(8028).cost, r278_repo.get_card(8036).cost,
+				r278_repo.get_card(8037).cost])
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
