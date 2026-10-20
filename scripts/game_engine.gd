@@ -740,6 +740,12 @@ const BATCH_TRANSFER_ID:= 8040
 const SYS_UPGRADE_COST_ADD:= 1   # 费用 +1
 const SYS_UPGRADE_ATK:= 3        # 力量 +3
 const SYS_UPGRADE_HP:= 6         # 生命 +6
+# ── R273：批量传输与「系统升级」拆开口径 ──
+# 原来 8040 直接复用 SYS_UPGRADE_*（费用 +1 / 力量 +3 / 生命 +6），
+# 现在改成**不涨费用、只 +1 力 +4 血** —— 两个技能从此各有一套数，
+# 别再合并（合并就是下一次改动漏改的根源）。
+const BATCH_TRANSFER_ATK:= 1     # 力量 +1
+const BATCH_TRANSFER_HP:= 4      # 生命 +4
 const BATCH_TRANSFER_DRAW:= 1    # 批量传输：改造完抽 1 张卡
 # ── R198：回收 8064（机械之心 2 费史诗技能：把手牌里一张卡换成素体）──
 # 与「系统升级」同族（都改**手牌**、都烤进副本、都本场战斗永久），但结算是
@@ -1174,7 +1180,7 @@ const CLONE_TRAIT:= "自我复制"
 const UPGRADE_ID:= 8027
 const UPGRADE_TRAIT:= "改造"
 const UPGRADE_ATK:= 2
-const UPGRADE_HP:= 8
+const UPGRADE_HP:= 10
 const PROTO_TRAIT:= "素体"       # 仅供界面/图鉴筛「素体」用；判定已改读卡面字段
 const PROTO_ID:= 8025
 const CONSTRUCT_ID:= 8026       # 构装体（3 费 3/8/1/1，本体无机制，只是厚实的盟友）
@@ -4462,11 +4468,11 @@ func _lighten_hand_card(hand_index: int) -> String :
 
 func _batch_transfer(side: String) -> String :
 	## 「批量传输」（8040，R90，机械之心 1 费稀有）：**手牌里所有**盟友 / 工事
-	## 获得「改造」（费用 +1 / 力量 +3 / 生命 +6），**然后抽 1 张卡**。
+	## 获得「改造」（力量 +1 / 生命 +4，**不涨费用**），**然后抽 1 张卡**。
 	##
 	## 与「批量改造」8031 的差别（R90 刻意做的升级版）：
 	##   * 8031：只 +1 生命，**不抽牌**；
-	##   * 8040：+1 费 / +3 力 / +6 血，**外加抽 1 张**。
+	##   * 8040：+1 力 / +4 血（**不加费**），**外加抽 1 张**。
 	## 两者**都只改手牌**，都**烤进副本**，都**本场战斗永久**。
 	##
 	## ⚠️ 同 `_sys_upgrade_hand_card`：**必须 `from_dict` 复制 + 原位替换**，否则污染卡库。
@@ -4482,10 +4488,10 @@ func _batch_transfer(side: String) -> String :
 			continue
 		var up := CardData.from_dict(c.to_dict())
 		up.traits = (up.traits as Array).duplicate()
-		up.cost += SYS_UPGRADE_COST_ADD
+		# R273：**不再加费用**（用户口径：只 +1 力 +4 血）。
 		# R120：改造奖励走**唯一口**（与「系统升级」同口径）。
-		up.power += _upgrade_atk_gain(up, SYS_UPGRADE_ATK)
-		up.health += _upgrade_hp_gain(up, SYS_UPGRADE_HP)
+		up.power += _upgrade_atk_gain(up, BATCH_TRANSFER_ATK)
+		up.health += _upgrade_hp_gain(up, BATCH_TRANSFER_HP)
 		up.upgrade_stacks += 1        # R209：层数随身带（同系统升级）
 		state.hand[i] = up
 		touched += 1
@@ -4498,8 +4504,8 @@ func _batch_transfer(side: String) -> String :
 		_log("批量传输：手牌里没有盟友或工事，改造落空（仍抽 %d 张卡）" % got)
 		action.emit("batch_transfer", {"count": 0, "cards": [], "draw": got})
 		return "手牌里没有盟友或工事（抽 %d 张卡）" % got
-	_log("批量传输：手牌 %d 张盟友/工事改造（费用 +%d / 力量 +%d / 生命 +%d）"
-		% [touched, SYS_UPGRADE_COST_ADD, SYS_UPGRADE_ATK, SYS_UPGRADE_HP])
+	_log("批量传输：手牌 %d 张盟友/工事改造（力量 +%d / 生命 +%d，不加费用）"
+		% [touched, BATCH_TRANSFER_ATK, BATCH_TRANSFER_HP])
 	_log("批量传输：%s；抽 %d 张卡" % ["、".join(names), got])
 	action.emit("batch_transfer", {"count": touched, "cards": names, "draw": got})
 	return "%d 张手牌改造，抽 %d 张卡" % [touched, got]

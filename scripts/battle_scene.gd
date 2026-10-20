@@ -1629,8 +1629,43 @@ func _ready() -> void:
 		engine.state.energy = 5
 		engine.state.reset_units(GameEngine.SIDE_SELF)
 		engine.use_spell(3, null)
-		status_text = "R90 批量传输：手牌 2 张盟友/工事各 **+1 费 / +3 攻 / +6 血**（技能卡不动）" + \
-			"并**抽 1 张**（抽到熊）—— 加成本场战斗永久"
+		status_text = "R90 批量传输：手牌各 +1 攻 / +4 血（费用不变）+ 抽 1 张"
+		_demo_hover_idx = 0
+		_hover_hand = 0     # 让左栏把改完的树人数值显示出来
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r273up" in args and engine != null:
+		# 演示（R273）：升级 8027 基数改为 +2 攻 / +10 血 —— 树人 3/8 → 5/18。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		var r273_demo_up: Placement = engine.state.place(
+				CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.hand.append(CardData.from_dict(
+				repo.get_card(GameEngine.UPGRADE_ID).to_dict()))
+		engine.use_spell(0, Vector2i(4, 1))
+		engine.state.place(CardData.from_dict(repo.get_card(8004).to_dict()),
+				Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+		_hover_card = r273_demo_up.card
+		_hover_pl = r273_demo_up
+		_hover_hand = -1
+		status_text = "R273 升级：树人 3/8 → %d 攻 / %d 血（+2 攻 / +10 血）" % [
+				r273_demo_up.effective_power(), r273_demo_up.health]
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r273ov" in args and engine != null:
+		# 演示（R273）：过载 8030 改成 0 费 —— 能量 0 也能打出，牌库里随机一张盟友永久双动。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.deck = [CardData.from_dict(repo.get_card(8004).to_dict())]
+		engine.state.hand.append(CardData.from_dict(
+				repo.get_card(GameEngine.OVERLOAD_ID).to_dict()))
+		engine.state.hand.append(CardData.from_dict(repo.get_card(8003).to_dict()))
+		engine.state.energy = 0
+		_demo_hover_idx = 0
+		_hover_hand = 0
+		status_text = "R273 过载：0 费（能量 0 也能打）→ 牌库一张盟友永久双动"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--armor" in args and engine != null:
@@ -7930,7 +7965,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var bt_drw := int(data.get("draw", 0))
 			sfx.play("spell")
 			if bt_n > 0:
-				_say("◆ 批量传输：%d 张手牌 +1 费 / +3 攻 / +6 血，抽 %d 张卡" % [bt_n, bt_drw])
+				_say("◆ 批量传输：%d 张手牌 +1 攻 / +4 血（不加费），抽 %d 张卡" % [bt_n, bt_drw])
 			else:
 				_say("批量传输：手牌里没有盟友或工事（未改造），仍抽 %d 张卡" % bt_drw)
 			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),

@@ -11704,10 +11704,10 @@ func _init() -> void:
 	var r85_ov: CardData = r85_repo.get_card(GameEngine.OVERLOAD_ID)
 	# ---- ① 卡面数据 ----
 	check(r85_ov != null and r85_ov.card_name == "过载" and r85_ov.kind == "技能"
-			and r85_ov.cost == 2 and r85_ov.rarity == 2
+			and r85_ov.cost == 0 and r85_ov.rarity == 2
 			and r85_ov.card_class == PlayerClass.MECH
 			and r85_ov.target_mode == "none",
-		"R85 过载 8030：机械之心的 2 费**史诗**技能，无目标（随机选，不需要玩家指定）")
+		"R85 过载 8030：机械之心的 0 费**史诗**技能（R273 由 2 费降到 0 费），无目标（随机选，不需要玩家指定）")
 	# ⚠️ `reward_pool_for` 返回的是 Array[CardData]（卡牌数组），**不是 id 数组** ——
 	#    别写 `.has(id)`，那样永远 false。
 	var r85_pool: Array[CardData] = r85_repo.reward_pool_for(PlayerClass.MECH)
@@ -12784,10 +12784,10 @@ func _init() -> void:
 	var r90_t2: CardData = r90_e5.state.hand[0]
 	var r90_f2: CardData = r90_e5.state.hand[1]
 	var r90_s2: CardData = r90_e5.state.hand[2]
-	check(r90_t2.power == 3 + GameEngine.SYS_UPGRADE_ATK
-			and r90_f2.health == 6 + GameEngine.SYS_UPGRADE_HP
-			and r90_f2.cost == 2 + GameEngine.SYS_UPGRADE_COST_ADD,
-		"R90 批量传输：树人 %d 攻 / 木栅栏 %d 费 %d 血（技能卡不动）" % [
+	check(r90_t2.power == 3 + GameEngine.BATCH_TRANSFER_ATK
+			and r90_f2.health == 6 + GameEngine.BATCH_TRANSFER_HP
+			and r90_f2.cost == 2 and r90_t2.cost == 3,
+		"R90 批量传输：树人 %d 攻 / 木栅栏 %d 费 %d 血（**不加费**，R273 口径；技能卡不动）" % [
 			r90_t2.power, r90_f2.cost, r90_f2.health])
 	# 8002「攻击」是技能卡、**没有 power 字段**（默认 0）→ 判据用「费用没被 +1」
 	check(r90_s2.kind == "技能" and r90_s2.cost == 1 and r90_s2.card_name == "攻击",
@@ -13902,10 +13902,14 @@ func _init() -> void:
 	var r99_u2: Placement = r99_e1.state.place(
 		CardData.from_dict(r99_repo.get_card(8025).to_dict()), Vector2i(4, 2),
 		GameEngine.SIDE_SELF)   # 素体 0/1
-	r99_e1._upgrade_unit(Vector2i(4, 2), GameEngine.SIDE_SELF)  # +2 攻 +8 血 → 卡面 0/9
-	check(r99_u2.card.health == 10, "R99 前置：素体被改造后卡面生命 %d" % r99_u2.card.health)
+	r99_e1._upgrade_unit(Vector2i(4, 2), GameEngine.SIDE_SELF)  # +升级基数 → 卡面同步
+	# R273：升级基数由 +8 改为 +10 → 素体 1 + UPGRADE_HP + 素体自带奖励 1。
+	# 用常量算而不写死 10 / 12 —— 下次改基数不会再红。
+	var r99_proto_hp: int = 1 + GameEngine.UPGRADE_HP + 1
+	check(r99_u2.card.health == r99_proto_hp, "R99 前置：素体被改造后卡面生命 %d（期望 %d）"
+		% [r99_u2.card.health, r99_proto_hp])
 	r99_e1._reorganize(Vector2i(4, 2), GameEngine.SIDE_SELF)
-	check(r99_u2.health == 10, "R99 重组：已满血单位回满不变（仍为 %d）" % r99_u2.health)
+	check(r99_u2.health == r99_proto_hp, "R99 重组：已满血单位回满不变（仍为 %d）" % r99_u2.health)
 
 	# ---- ② 超越极限：挂超负荷 + 算一层改造；不污染卡库；重复被拒 ----
 	var r99_e2 := _new_engine([], 40, 40, -1, false)
@@ -19993,6 +19997,72 @@ func _init() -> void:
 	check(r272_proto.health == r272_hp0 + 1,
 		"R272 素体护栏：共享护盾改造素体也 +1 血（%d → %d）"
 			% [r272_hp0, r272_proto.health])
+
+
+	# ================================================================
+	# R273：过载 0 费 / 批量传输不再加费（+1 力 +4 血）/ 升级 +10 血
+	# ================================================================
+	var r273_repo := CardRepo.load_json()
+	var r273_up: CardData = r273_repo.get_card(GameEngine.UPGRADE_ID)
+	var r273_ov: CardData = r273_repo.get_card(GameEngine.OVERLOAD_ID)
+	var r273_bt: CardData = r273_repo.get_card(GameEngine.BATCH_TRANSFER_ID)
+
+	# ---- ① 升级：基数 +2 攻 / +10 血（原 +8）----
+	check(GameEngine.UPGRADE_ATK == 2 and GameEngine.UPGRADE_HP == 10,
+		"R273 升级：基数改为 +%d 攻 / +%d 血" % [GameEngine.UPGRADE_ATK, GameEngine.UPGRADE_HP])
+	check(r273_up != null and r273_up.effect_text.contains("生命 +10")
+			and not r273_up.effect_text.contains("生命 +8"),
+		"R273 升级：卡面同步写「+2 力量、+10 生命」（%s）" % r273_up.effect_text)
+
+	# ---- ② 过载：2 费 → 0 费 ----
+	check(r273_ov != null and r273_ov.cost == 0 and r273_ov.rarity == 2
+			and r273_ov.kind == "技能",
+		"R273 过载：费用 2 → 0（仍是技能 / 史诗），实际 cost=%d" % r273_ov.cost)
+
+	# ---- ③ 批量传输：常量与「系统升级」彻底拆开 + 卡面同步 ----
+	check(GameEngine.BATCH_TRANSFER_ATK == 1 and GameEngine.BATCH_TRANSFER_HP == 4,
+		"R273 批量传输：常量 +%d 攻 / +%d 血（不再是系统升级的 +%d/+%d）"
+			% [GameEngine.BATCH_TRANSFER_ATK, GameEngine.BATCH_TRANSFER_HP,
+				GameEngine.SYS_UPGRADE_ATK, GameEngine.SYS_UPGRADE_HP])
+	check(r273_bt != null and r273_bt.effect_text.contains("力量 +1、生命 +4")
+			and r273_bt.effect_text.contains("费用不变"),
+		"R273 批量传输：卡面改写「力量 +1、生命 +4，费用不变」（%s）" % r273_bt.effect_text)
+
+	# ---- ④ 批量传输实测：费用**一点没涨**，攻 +1 / 血 +4 ----
+	var r273_e1 := _new_engine([], 30, 30, -1, false)
+	r273_e1.start_game()
+	r273_e1.state.deck.clear()
+	r273_e1.state.hand = [CardData.from_dict(r273_repo.get_card(8003).to_dict()),
+			CardData.from_dict(r273_repo.get_card(8004).to_dict()),
+			CardData.from_dict(r273_bt.to_dict())]
+	r273_e1.state.energy = 9
+	var r273_tree0: CardData = r273_e1.state.hand[0]
+	var r273_bear0: CardData = r273_e1.state.hand[1]
+	r273_e1.use_spell(2, null)
+	var r273_tree: CardData = r273_e1.state.hand[0]
+	var r273_bear: CardData = r273_e1.state.hand[1]
+	check(r273_tree.cost == r273_tree0.cost and r273_bear.cost == r273_bear0.cost,
+		"R273 批量传输：费用**不变**（树人 %d→%d 费 / 熊 %d→%d 费）"
+			% [r273_tree0.cost, r273_tree.cost, r273_bear0.cost, r273_bear.cost])
+	check(r273_tree.power == r273_tree0.power + 1
+			and r273_tree.health == r273_tree0.health + 4
+			and r273_bear.health == r273_bear0.health + 4,
+		"R273 批量传输：树人 %d/%d → %d/%d，熊 %d 血 → %d 血"
+			% [r273_tree0.power, r273_tree0.health, r273_tree.power, r273_tree.health,
+				r273_bear0.health, r273_bear.health])
+
+	# ---- ⑤ 升级实测：树人 3/8 → 5/18 ----
+	var r273_e2 := _new_engine([], 30, 30, -1, false)
+	r273_e2.start_game()
+	var r273_u: Placement = r273_e2.state.place(
+			CardData.from_dict(r273_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+			GameEngine.SIDE_SELF)
+	r273_e2.state.hand = [CardData.from_dict(r273_up.to_dict())]
+	r273_e2.state.energy = 9
+	r273_e2.use_spell(0, Vector2i(4, 1))
+	check(r273_u.effective_power() == 5 and r273_u.health == 18,
+		"R273 升级实测：树人 3/8 → %d/%d（+2 攻 / +10 血）"
+			% [r273_u.effective_power(), r273_u.health])
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
