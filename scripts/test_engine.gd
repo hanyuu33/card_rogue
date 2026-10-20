@@ -20064,6 +20064,163 @@ func _init() -> void:
 		"R273 升级实测：树人 3/8 → %d/%d（+2 攻 / +10 血）"
 			% [r273_u.effective_power(), r273_u.health])
 
+	# ================================================================
+	# R274：「每拥有一层改造」= 层数**不论在哪里获得**都算
+	#   （堡垒 8034 每层 +3 血 / 侦察塔 8032 每层 +1 易伤 / 谟涅摩叙涅 8072 每层 -1 敌力）
+	# ================================================================
+	var r274_repo := CardRepo.load_json()
+	var r274_fort: CardData = r274_repo.get_card(GameEngine.FORT_ID)
+	var r274_up: CardData = r274_repo.get_card(GameEngine.UPGRADE_ID)
+	check(GameEngine.STACK_HP_PER == 3 and r274_fort.health == 10,
+		"R274 堡垒：基础 10 血 / 每层 +%d 血（常量 STACK_HP_PER）" % GameEngine.STACK_HP_PER)
+
+	# ---- ① 场上改造（升级）：10 + UPGRADE_HP + 3 × 1 层 ----
+	var r274_e1 := _new_engine([], 30, 30, -1, false)
+	r274_e1.start_game()
+	var r274_f1: Placement = r274_e1.state.place(
+			CardData.from_dict(r274_fort.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r274_e1.state.hand = [CardData.from_dict(r274_up.to_dict())]
+	r274_e1.state.energy = 9
+	r274_e1.use_spell(0, Vector2i(4, 1))
+	check(r274_f1.upgrade_stacks == 1
+			and r274_f1.health == 10 + GameEngine.UPGRADE_HP + 3
+			and r274_f1.stack_hp_applied == 3,
+		"R274 堡垒：场上被「升级」改造 → %d 血（10 + %d + 3）"
+			% [r274_f1.health, GameEngine.UPGRADE_HP])
+
+	# ---- ② 手牌改造（系统升级）：卡上还没有每层血，**上场才结算** ----
+	var r274_e2 := _new_engine([], 30, 30, -1, false)
+	r274_e2.start_game()
+	r274_e2.state.hand = [CardData.from_dict(r274_fort.to_dict()),
+			CardData.from_dict(r274_repo.get_card(GameEngine.SYS_UPGRADE_ID).to_dict())]
+	r274_e2.state.energy = 9
+	r274_e2.cast_sys_upgrade(1, 0)
+	var r274_hand_fort: CardData = r274_e2.state.hand[0]
+	check(r274_hand_fort.upgrade_stacks == 1
+			and r274_hand_fort.health == 10 + GameEngine.SYS_UPGRADE_HP,
+		"R274 手牌里的堡垒：系统升级后 %d 血 / %d 层（每层血不烤进卡面）"
+			% [r274_hand_fort.health, r274_hand_fort.upgrade_stacks])
+	r274_e2.play_from_hand(0, Vector2i(4, 1))
+	var r274_f2: Placement = r274_e2.state.unit_at(Vector2i(4, 1))
+	check(r274_f2 != null
+			and r274_f2.health == 10 + GameEngine.SYS_UPGRADE_HP + 3
+			and r274_f2.stack_hp_applied == 3,
+		"R274 堡垒：**手牌**改造 1 层 → 上场 %d 血（10 + %d + 3）"
+			% [r274_f2.health if r274_f2 != null else -1, GameEngine.SYS_UPGRADE_HP])
+
+	# ---- ③ 手牌连改 2 层 → 上场一次结清 +6 ----
+	var r274_e3 := _new_engine([], 30, 30, -1, false)
+	r274_e3.start_game()
+	r274_e3.state.hand = [CardData.from_dict(r274_fort.to_dict())]
+	r274_e3.state.energy = 9
+	for _n274 in 2:
+		r274_e3.state.hand.append(CardData.from_dict(
+				r274_repo.get_card(GameEngine.SYS_UPGRADE_ID).to_dict()))
+		r274_e3.cast_sys_upgrade(r274_e3.state.hand.size() - 1, 0)
+	r274_e3.play_from_hand(0, Vector2i(4, 2))
+	var r274_f3: Placement = r274_e3.state.unit_at(Vector2i(4, 2))
+	check(r274_f3 != null and r274_f3.upgrade_stacks == 2
+			and r274_f3.health == 10 + GameEngine.SYS_UPGRADE_HP * 2 + 3 * 2,
+		"R274 堡垒：手牌连改 **2 层** → 上场 %d 血（10 + %d×2 + 3×2）"
+			% [r274_f3.health if r274_f3 != null else -1, GameEngine.SYS_UPGRADE_HP])
+
+	# ---- ④ 不给自己加血的那种入口也得给（共享护盾：只挂字段）----
+	var r274_e4 := _new_engine([], 30, 30, -1, false)
+	r274_e4.start_game()
+	var r274_f4: Placement = r274_e4.state.place(
+			CardData.from_dict(r274_fort.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	# 共享护盾 / 拾荒者走 `_field_upgrade_grant()`（它自己给 0 攻 0 血）——
+	# 堡垒是**工事**、共享护盾只吃盟友，所以这里直接调那个唯一口，验「每层 +3」照给。
+	r274_e4._field_upgrade_grant(r274_f4, 0, 0, "共享护盾", "共享护盾")
+	check(r274_f4.upgrade_stacks == 1 and r274_f4.health == 10 + 3,
+		"R274 堡垒：共享护盾（原本白吃）改造 → %d 血（10 + 3）" % r274_f4.health)
+	# 幂等：同一层数重算两次只加一次
+	var r274_hp_idem: int = r274_f4.health
+	r274_e4._refresh_stack_hp(r274_f4)
+	r274_e4._refresh_stack_hp(r274_f4)
+	check(r274_f4.health == r274_hp_idem,
+		"R274 堡垒：重算**幂等**（同层数调两次仍是 %d 血）" % r274_f4.health)
+
+	# ---- ⑤ 手牌改造的层数与血**随身带走**（离场后下次上场照样 +3）----
+	var r274_e5 := _new_engine([], 30, 30, -1, false)
+	r274_e5.start_game()
+	r274_e5.state.hand = [CardData.from_dict(r274_fort.to_dict()),
+			CardData.from_dict(r274_repo.get_card(GameEngine.SYS_UPGRADE_ID).to_dict())]
+	r274_e5.state.energy = 9
+	r274_e5.cast_sys_upgrade(1, 0)
+	r274_e5.play_from_hand(0, Vector2i(4, 1))
+	var r274_f5: Placement = r274_e5.state.unit_at(Vector2i(4, 1))
+	r274_e5._hit_unit(r274_f5, 999, "R274 测试")
+	r274_e5._destroy_dead()
+	var r274_back2: CardData = null
+	for d275: CardData in r274_e5.state.discard:
+		if d275.id == GameEngine.FORT_ID:
+			r274_back2 = d275
+	check(r274_back2 != null and r274_back2.upgrade_stacks == 1
+			and r274_back2.health == 10 + GameEngine.SYS_UPGRADE_HP,
+		"R274 堡垒：手牌改造的 %d 血 / 1 层**随身带走**（弃牌区 %s 血，下次上场再 +3）"
+			% [GameEngine.SYS_UPGRADE_HP,
+				str(r274_back2.health) if r274_back2 != null else "?"])
+
+	# ---- ⑥ 超越极限 8053（原本白吃，且自身不给攻血）----
+	var r274_e6 := _new_engine([], 30, 30, -1, false)
+	r274_e6.start_game()
+	var r274_f6: Placement = r274_e6.state.place(
+			CardData.from_dict(r274_fort.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r274_e6.state.hand = [CardData.from_dict(
+			r274_repo.get_card(GameEngine.TRANSCEND_ID).to_dict())]
+	r274_e6.state.energy = 9
+	r274_e6.use_spell(0, Vector2i(4, 1))
+	check(r274_f6.upgrade_stacks == 1 and r274_f6.health == 13,
+		"R274 堡垒：超越极限改造（自身 +0 血）也按层给 3 → %d 血" % r274_f6.health)
+
+	# ---- ⑦ 离场还原：层数血不烤进卡面 ----
+	r274_e1._hit_unit(r274_f1, 999, "R274 测试")
+	r274_e1._destroy_dead()
+	var r274_back: CardData = null
+	for d274: CardData in r274_e1.state.discard:
+		if d274.id == GameEngine.FORT_ID:
+			r274_back = d274
+	check(r274_back != null and r274_back.health == 10
+			and r274_back.upgrade_stacks == 0,
+		"R274 堡垒：场上改造离场 → 还原成原卡（%s 血 / 0 层），层数血不烤进卡面"
+			% (str(r274_back.health) if r274_back != null else "?"))
+
+	# ---- ⑧ 侦察塔 8032：手牌攒的层数上场即算光环 ----
+	var r274_e8 := _new_engine([], 30, 30, -1, false)
+	r274_e8.start_game()
+	var r274_tower_card: CardData = CardData.from_dict(
+			r274_repo.get_card(GameEngine.SCOUT_TOWER_ID).to_dict())
+	r274_tower_card.upgrade_stacks = 2     # 模拟「手牌里被改造过 2 次」
+	var r274_tower: Placement = r274_e8.state.place(
+			r274_tower_card, Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r274_foe: Placement = r274_e8.state.place(
+			CardData.from_dict(r274_repo.get_card(8003).to_dict()),
+			Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+	check(r274_tower.upgrade_stacks == 2
+			and r274_e8._scout_aura_bonus(r274_foe, Vector2i(4, 2)) == 2,
+		"R274 侦察塔：手牌攒的 2 层上场即算 → 范围内敌人受伤 +%d"
+			% r274_e8._scout_aura_bonus(r274_foe, Vector2i(4, 2)))
+
+	# ---- ⑨ 谟涅摩叙涅 8072：层数从**别的**改造入口来，光环也立刻跟着变 ----
+	var r274_e9 := _new_engine([], 30, 30, -1, false)
+	r274_e9.start_game()
+	var r274_mn: Placement = r274_e9.state.place(
+			CardData.from_dict(r274_repo.get_card(GameEngine.MNEMOSYNE_ID).to_dict()),
+			Vector2i(4, 2), GameEngine.SIDE_SELF)
+	var r274_foe2: Placement = r274_e9.state.place(
+			CardData.from_dict(r274_repo.get_card(8003).to_dict()),
+			Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
+	var r274_foe2_atk: int = r274_foe2.effective_power()
+	r274_e9.state.hand = [CardData.from_dict(
+			r274_repo.get_card(GameEngine.TRANSCEND_ID).to_dict())]
+	r274_e9.state.energy = 9
+	r274_e9.use_spell(0, Vector2i(4, 2))
+	check(r274_mn.upgrade_stacks == 1
+			and r274_foe2.effective_power() == r274_foe2_atk - 1,
+		"R274 谟涅摩叙涅：被「超越极限」（非升级入口）改造 1 层 → 敌人力量 %d → %d"
+			% [r274_foe2_atk, r274_foe2.effective_power()])
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

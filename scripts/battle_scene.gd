@@ -1668,6 +1668,27 @@ func _ready() -> void:
 		status_text = "R273 过载：0 费（能量 0 也能打）→ 牌库一张盟友永久双动"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r274fort" in args and engine != null:
+		# 演示（R274）：堡垒「每拥有一层改造 +3 生命」——层数在**手牌**里攒的也照算。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		engine.state.hand = [CardData.from_dict(repo.get_card(GameEngine.FORT_ID).to_dict())]
+		for _n274 in 2:
+			engine.state.hand.append(CardData.from_dict(
+					repo.get_card(GameEngine.SYS_UPGRADE_ID).to_dict()))
+			engine.cast_sys_upgrade(engine.state.hand.size() - 1, 0)
+		engine.play_from_hand(0, Vector2i(4, 1))
+		var r274_demo_fort: Placement = engine.state.unit_at(Vector2i(4, 1))
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+		_hover_card = r274_demo_fort.card
+		_hover_pl = r274_demo_fort
+		_hover_hand = -1
+		status_text = "R274 堡垒：手牌改造 2 层 → 上场 %d 血（10 + 6×2 + 3×2）" % [
+				r274_demo_fort.health]
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--armor" in args and engine != null:
 		# 演示（R89）：无限装甲（8038）——
 		#   ① 场上放装甲 + 手牌塞一张「升级」→ 打出去改造它

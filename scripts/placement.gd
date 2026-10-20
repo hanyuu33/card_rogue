@@ -40,6 +40,11 @@ var fence_bonus_traits: Array[String] = []   # 同上，叠加时**新加进**�
 var upgrade_atk: int = 0      # 改造累计加攻（无上限）
 var upgrade_hp: int = 0       # 改造累计加血（含「素体被改造时额外 +1」那部分）
 var upgrade_stacks: int = 0   # **改造层数**（R86）：被改造过几次
+# 「改造生命层」（堡垒 8034，R274）：**已按层数烘进 `health` 的额外生命**。
+# 用「目标值 vs 已结算值」的**差量法**重算（`GameEngine._refresh_stack_hp`）——
+# 层数不管在哪里获得（手牌 / 牌库 / 场上），都汇到 `upgrade_stacks`，
+# 这里只记「已经结算过多少」，保证重算幂等。
+var stack_hp_applied: int = 0
 var upgrade_range: int = 0   # 改造加攻程累计（R101，榴弹击手）：只在场上有效，离场由 _card_leaving_field 还原
 var upgrade_speed: int = 0   # 改造加移速累计（R101，重甲战车）：只在场上有效，离场由 _card_leaving_field 还原
 # 「侦察塔」（8032，trait「改造层数」）：**光环易伤**（R120 用户口径）——

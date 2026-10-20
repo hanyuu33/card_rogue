@@ -359,6 +359,20 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	# 「改造 ×N」徽标上场后全是 0（用户实测报的缺陷）。
 	# ⚠️ 只读不写回：上场后的改造仍只加 `p.upgrade_stacks`，离场不还原到卡上。
 	p.upgrade_stacks = card.upgrade_stacks
+	# R274：「改造生命层」（堡垒 8034）—— **层数不论在哪里获得**，
+	# 上场时一并折算成生命（以前只有「升级」「加厚装甲」两个场上入口给，
+	# 手牌里攒的层数上场后白吃）。走同一套差量记账：
+	# `stack_hp_applied` 记「已结算多少」，`upgrade_hp` 记「离场要还多少」。
+	# ⚠️ 先换独立副本：`card` 可能是卡库共享实例，直接改会跨 run 泄漏。
+	if card.traits.has(GameEngine.STACK_HP_TRAIT):
+		var stack_bonus: int = p.upgrade_stacks * GameEngine.STACK_HP_PER
+		if stack_bonus > 0:
+			p.card = CardData.from_dict(card.to_dict())
+			p.card.traits = (p.card.traits as Array).duplicate()
+			p.stack_hp_applied = stack_bonus
+			p.upgrade_hp += stack_bonus
+			p.card.health += stack_bonus
+			p.health += stack_bonus
 	# 哈气：已到生效回合且效果区有哈气时，上场即可行动 extra 次（与卡自带的 actions 取大者）。
 	# ⚠️ R122：`summon = true`（**被召唤**出来的，不是玩家从手牌打出来的）固定 **1 轮** ——
 	#    召唤物当回合**恰好行动一次**，不继承哈气 / 双动字段。

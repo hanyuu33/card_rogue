@@ -3929,6 +3929,55 @@ func _upgrade_hp_gain(c: CardData, base_hp: int = 0) -> int:
 	return base_hp + c.upgrade_hp_bonus
 
 
+func _stack_hp_bonus(p: Placement) -> int:
+	## 「改造生命层」（堡垒 8034，R274）在**当前层数**下应得的额外生命。
+	## 层数来源不限 —— 手牌 / 牌库里的改造由 `FieldState.place()` 折进来，
+	## 场上改造由 `_add_upgrade_stack()` 逐层补，两边记的都是 `upgrade_stacks`。
+	if p == null or p.card == null:
+		return 0
+	if not p.card.traits.has(STACK_HP_TRAIT):
+		return 0
+	return p.upgrade_stacks * STACK_HP_PER
+
+
+func _refresh_stack_hp(p: Placement) -> void:
+	## 「改造生命层」的**唯一结算口**（R274）：把 `health` 调到「当前层数应得」的值。
+	##
+	## 差量法（目标值 - 已结算值）→ 幂等，同一层数调几次都只加一次；
+	## 加的血并进 `upgrade_hp`，离场还原仍走 `_card_leaving_field()` 那条老路。
+	##
+	## 为什么不能像以前那样「改造时 +3 一次就完」：那样只有**当场那次改造**算数，
+	## 手牌里攒的层数上场后白吃，而且自我修复 / 超越极限 / 共享护盾 / 改造工厂 /
+	## 模仿者传导全都漏（都是自己手写的 +3 复制不到）。
+	if p == null or p.card == null:
+		return
+	var want := _stack_hp_bonus(p)
+	var delta := want - p.stack_hp_applied
+	if delta == 0:
+		return
+	p.stack_hp_applied = want
+	p.upgrade_hp += delta
+	p.card.health += delta
+	p.health += delta
+	if p.health < 1:
+		p.health = 1
+	_log("堡垒：%s 改造 %d 层 → 生命 %+d（%d/%d）" % [
+			p.card.card_name, p.upgrade_stacks, delta, p.health, p.card.health])
+
+
+func _add_upgrade_stack(p: Placement) -> void:
+	## 场上「改造层数 +1」的**唯一口**（R274）。
+	## 除了 +1，还立刻按**新层数**重算「改造生命层」——
+	## ⚠️ 新增改造入口一律走这里，别再裸写 `p.upgrade_stacks += 1`（漏一次就少一层收益）。
+	if p == null:
+		return
+	p.upgrade_stacks += 1
+	_refresh_stack_hp(p)
+	# 谟涅摩叙涅 8072 的「每层 -1 敌力」也是「按层数」的族 —— 层数一变就得重算，
+	# 否则超越极限 / 自我修复 / 加厚装甲 / 改造工厂给的层数不反映到光环上（R274 补）。
+	_refresh_mnemosyne()
+
+
 func _scout_aura_bonus(victim: Placement, victim_cell: Vector2i) -> int:
 	## 「侦察塔」（8032，trait「改造层数」）的**光环易伤**（R120 用户口径）：
 	## 站在它**攻击范围内**的敌人，受到**任何来源**的伤害都 +1 / 层改造。
@@ -4091,7 +4140,7 @@ func _field_upgrade_grant(p: Placement, atk: int, hp: int, source: String,
 	var hp_all: int = _upgrade_hp_gain(p.card, hp)
 	p.upgrade_atk += atk_all
 	p.upgrade_hp += hp_all
-	p.upgrade_stacks += 1
+	_add_upgrade_stack(p)          # R274：层数唯一口（堡垒按层数补血）
 	p.card.health += hp_all
 	p.health += hp_all
 	if atk_all == 0 and hp_all == 0 and affix != "":
@@ -4170,19 +4219,15 @@ func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	# 改造**层数**（R86）：被改造一次 +1 层。侦察塔（trait「改造层数」）靠它
 	# 每层 +1 攻击伤害（见 Placement.effective_power）。离场不还原到卡上 ——
 	# 它只记在 Placement 上，跟 upgrade_atk 一样是「只在场上有效」。
-	p.upgrade_stacks += 1
-	# 「堡垒」（8034，R87，trait「改造生命层」）：**每层 +STACK_HP_PER 生命**。
-	# 并进 `upgrade_hp` → 离场还原走 `_card_leaving_field` 的同一条路，不用额外处理。
-	# 与侦察塔的「改造层数」是两套 trait，别混：那个加攻、这个加血。
-	if p.card.traits.has(STACK_HP_TRAIT):
-		p.upgrade_hp += STACK_HP_PER
-		p.card.health += STACK_HP_PER
-		p.health += STACK_HP_PER
+	# R274：「堡垒」的每层 +3 血不再在这里手写 —— 由层数唯一口按**当前层数**重算，
+	# 手牌里攒的层数上场也能一次结清（差量记在 `stack_hp_applied`）。
+	var stack_hp0: int = p.stack_hp_applied
+	_add_upgrade_stack(p)
+	var stack_hp_gain: int = p.stack_hp_applied - stack_hp0
 	p.card.health += hp_gain
 	p.health += hp_gain
 	_log("升级：%s 被改造 → 力量 +%d、生命 +%d（%d 攻 / %d 血，第 %d 层）" % [
-			p.card.card_name, atk_gain, hp_gain + (STACK_HP_PER \
-					if p.card.traits.has(STACK_HP_TRAIT) else 0),
+			p.card.card_name, atk_gain, hp_gain + stack_hp_gain,
 			p.effective_power(), p.health, p.upgrade_stacks])
 	action.emit("upgrade", {"cell": target, "card": p.card, "placement": p,
 			"atk": atk_gain, "hp": hp_gain})
@@ -4295,7 +4340,7 @@ func _transcend(target, side:= SIDE_SELF) -> String :
 	p.card = CardData.from_dict(p.card.to_dict())
 	p.card.traits = (p.card.traits as Array).duplicate()
 	p.card.add_affix(AFFIX_OVERLOAD)
-	p.upgrade_stacks += 1   # 算一层改造 → 侦察塔光环 / 堡垒按层数反应
+	_add_upgrade_stack(p)   # 算一层改造 → 侦察塔光环 / 堡垒按层数反应
 	# R120：改造奖励走**唯一口**。超越极限自己不给攻/血，但**卡面自己**的改造奖励照给
 	# （素体 +1 血）—— 以前这里写死 0/0，素体被它改造白挨。
 	var atk_gain: int = _upgrade_atk_gain(p.card, 0)
@@ -4581,7 +4626,7 @@ func _self_repair(target, side:= SIDE_SELF) -> String :
 	var hp_gain: int = _upgrade_hp_gain(p.card, SELF_REPAIR_HP)
 	p.upgrade_atk += atk_gain
 	p.upgrade_hp += hp_gain
-	p.upgrade_stacks += 1        # 也算一次改造（用户口径：任何改造手段都记层）
+	_add_upgrade_stack(p)        # 也算一次改造（用户口径：任何改造手段都记层）
 	p.card.health += hp_gain
 	p.health += hp_gain
 	p.regen += SELF_REPAIR_REGEN
@@ -4625,12 +4670,8 @@ func _armor_plate(target, side:= SIDE_SELF) -> String :
 	p.upgrade_atk += atk_gain
 	p.upgrade_hp += hp_gain
 	# 算一层改造（用户口径）：侦察塔每层 +1 攻、模仿者传导、无限装甲供牌都靠它。
-	p.upgrade_stacks += 1
-	# 「堡垒」（8034）：每层改造 +STACK_HP_PER 生命（与侦察塔是两套 trait，别混）。
-	if p.card.traits.has(STACK_HP_TRAIT):
-		p.upgrade_hp += STACK_HP_PER
-		p.card.health += STACK_HP_PER
-		p.health += STACK_HP_PER
+	# R274：堡垒的「每层 +3 生命」不在这里手写，由层数唯一口按新层数重算。
+	_add_upgrade_stack(p)
 	p.card.health += hp_gain
 	p.health += hp_gain
 	_log("加厚装甲：%s 被改造 → 生命 +%d（%d 血，第 %d 层）" % [
@@ -4875,7 +4916,7 @@ func _mimic_relay(src: Placement, atk_gain: int, hp_gain: int, affix: String = "
 			q.health += hp_gain
 		if affix != "":
 			q.card.add_affix(affix)
-		q.upgrade_stacks += 1
+		_add_upgrade_stack(q)   # R274：层数唯一口（模仿者若带堡垒 trait 也照算）
 		_on_unit_upgraded(q)
 		_log("模仿者模仿 %s 的改造：+%d 攻 / +%d 血（现在是 %d 攻 / %d 血）" % [
 				src.card.card_name, atk_gain, hp_gain, q.effective_power(), q.health])
@@ -9859,7 +9900,7 @@ func _field_aura_tick(side: String) -> void :
 			fac_hp = _upgrade_hp_gain(p.card, UPGRADE_FACTORY_HP)
 			p.upgrade_atk += fac_atk
 			p.upgrade_hp += fac_hp
-			p.upgrade_stacks += 1
+			_add_upgrade_stack(p)   # R274：层数唯一口
 			p.card.health += fac_hp
 			p.health += fac_hp
 			upgraded += 1
