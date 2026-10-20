@@ -939,6 +939,10 @@ const MASS_DAEDALUS_BORN_HP:= 2
 #   它因自身效果抽到的那张卡费用 -1（实例级减费 `state.card_discount`，本场有效）。
 const MASS_MNEMOSYNE_ID:= 8075
 const MASS_MNEMOSYNE_DISCOUNT:= 1
+# 「改装者」8076（R282，3 费**普通**盟友 3/8/1/1，机械之心）：
+#   入场时己方**所有盟友**（场上 + 手牌）各获得一次「改造」：生命 +4（不含工事；含它自己）。
+const MODDER_ID:= 8076
+const MODDER_HP:= 4
 # 「代达罗斯」8060（R271 重做，5 费**史诗盟友** 8/18/1/1，嘲讽）：
 #   入场时本次对战每用过一张聚能炮击 → 生命 +3；本回合手卡里的聚能炮击费用为 0。
 const DAEDALUS_HP_PER_CANNON:= 3
@@ -3556,6 +3560,8 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 		_cannon_mech_enter(p)       # R271 聚能机兵：入场 +1 力 / 用过的一张炮击
 	if card.id == MASS_DAEDALUS_ID:
 		_mass_daedalus_enter(p)     # R271 量产型代达罗斯：入场选一张手卡变炮击
+	if card.id == MODDER_ID:
+		_modder_enter(p)          # R282 改装者：入场全体己方盟友（场上+手牌）改造 +4 生命
 	_refresh_mnemosyne()            # R271：刚落地 / 刚被换上场的那只可能是谟涅摩叙涅
 
 	if card.id == FOX_ID:
@@ -3652,6 +3658,39 @@ func _daedalus_enter(p: Placement) -> void :
 	action.emit("daedalus_enter", {"cell": _cell_of(p), "card": p.card,
 			"cannons": n, "hp": gain})
 
+
+func _modder_enter(p: Placement) -> void :
+	## 「改装者」（8076，R282，机械之心 3 费**普通**盟友 3/8/1/1）：
+	##   入场时：**所有**己方盟友（场上 + 手牌）获得一次「改造」：生命 +4（不含工事，含它自己）。
+	##   * **场上**盟友走 `_field_upgrade_grant()` 唯一口（场上改造离场即消失，与「升级」同口径）；
+	##     末尾自动 `_on_unit_upgraded()` → 被改的榴弹击手 +1 攻程、机器鸟抽牌照常触发。
+	##   * **手牌**盟友烤进副本（`from_dict` 复制 + 原位替换），生命 +4 并记一层 `upgrade_stacks`
+	##     （R209：层数随身带，上场由 `FieldState.place()` 折算成 HP；本场战斗内保留）。
+	##   * 只认「盟友」（kind == "盟友"），不认工事（用户原话「盟友」）。
+	##   * 改造走唯一口 → 素体 / 战斗骨骼等卡面改造奖励照常生效。
+	## ⚠️ 场上盟友改的是 `p.card`（from_dict 副本），手牌同理 —— 都污染不到卡库。
+	var field_got := 0
+	for cell: Vector2i in state.board:
+		var q: Placement = state.board[cell]
+		if q != null and q.owner == SIDE_SELF and q.card.kind == "盟友":
+			_field_upgrade_grant(q, 0, MODDER_HP, "改装者")
+			field_got += 1
+	var hand_got := 0
+	var hand_names: Array[String] = []
+	for i in state.hand.size():
+		var c: CardData = state.hand[i]
+		if c.kind != "盟友":
+			continue
+		var up := CardData.from_dict(c.to_dict())
+		up.traits = (up.traits as Array).duplicate()
+		var mh: int = _upgrade_hp_gain(up, MODDER_HP)
+		up.health += mh
+		up.upgrade_stacks += 1        # R209：层数随身带（上场由 place() 接到 Placement）
+		state.hand[i] = up
+		hand_got += 1
+		hand_names.append("%s %d血" % [c.card_name, up.health])
+	_log("改装者：场上 %d 个盟友 / 手牌 %d 个盟友各获得改造（生命 +%d）" % [field_got, hand_got, MODDER_HP])
+	action.emit("modder_enter", {"field": field_got, "hand": hand_got, "hp": MODDER_HP})
 
 func _cannon_mech_enter(p: Placement) -> void :
 	## 「聚能机兵」8073（R271，2 费普通盟友 1/8/1/1）：入场时，本次对战中你每使用过
@@ -6259,7 +6298,8 @@ func cast_recycle(hand_index: int, target_hand_index: int) -> String:
 	state.hand[target_hand_index] = body
 	_log("回收：%s → 素体（改造：生命 +%d → %d 攻 / %d 血，本场战斗永久）"
 		% [rc_old, rc_hp, body.power, body.health])
-	action.emit("recycle", {"card": body, "hp": rc_hp, "recycled": rc_old})
+	action.emit("recycle", {"card": body, "hp": rc_hp, "recycled": rc_old,
+		"hand_index": target_hand_index})
 	_note_card_played(SIDE_SELF, card)
 	state.discard.append(card)
 	return "%s → 素体（%d 攻 / %d 血）" % [rc_old, body.power, body.health]
@@ -6642,8 +6682,10 @@ func _mirror_reflect(side: String, played: CardData) -> void :
 	if played == null:
 		return
 	if side == SIDE_SELF:
-		state.deck.append(CardData.from_dict(played.to_dict()))
+		var mr_copy := CardData.from_dict(played.to_dict())
+		state.deck.append(mr_copy)
 		_log("镜像：将一张「%s」加入本局卡组" % played.card_name)
+		action.emit("deck_added", {"card": mr_copy, "side": side})
 	else:
 		state.opp_deck_count += 1
 		_log("镜像（敌方）：本局卡组 +1 张「%s」" % played.card_name)
@@ -9204,6 +9246,8 @@ func _production_order(side: String) -> String :
 		up.health += _upgrade_hp_gain(up, PROD_ORDER_HP)
 		up.upgrade_stacks += 1       # R209：产出的素体天生 1 层改造（抽到上场就带着）
 		state.deck.append(up)        # 加进抽牌堆（末尾），本场之后抽到即改造版素体
+		if side == SIDE_SELF:
+			action.emit("deck_added", {"card": up, "side": side})
 		added += 1
 	_log("生产订单：卡组 +%d 张改造「素体」（各 +%d 攻 / +%d 血，永久）"
 		% [added, PROD_ORDER_ATK, PROD_ORDER_HP])

@@ -4085,6 +4085,27 @@
       "image": ""
     },
     {
+      "id": 8076,
+      "name": "改装者",
+      "kind": "盟友",
+      "cost": 3,
+      "power": 3,
+      "health": 8,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [],
+      "effect_text": "入场时，所有场上和手卡盟友获得改造：生命 +4。",
+      "target_mode": "none",
+      "color": "白",
+      "image": ""
+    },
+    {
       "id": 9143,
       "name": "发明专家",
       "kind": "效果",

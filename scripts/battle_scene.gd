@@ -352,6 +352,8 @@ var _hand_known_init := false   # 首次 sync 只建快照不播（开场发牌�
 var _flyout_skip: Array = []    # 本帧「是打出不是消失」的卡 id（place/spell/effect 事件喂入，sync 消费并清空）
 var _flyout_skip_all := false   # batch_transfer（手牌洗回牌库）：整批移除不播飞出
 var _flyin_skip: Array = []     # 本帧「来源不是抽牌堆」的入手卡 id（swap 顶回手）
+var _deck_fly: Array = []       # R283：卡入牌库飞行动画 {card, from, start, dur, curse}
+var _transform_fx: Array = []   # R284：变幻特效 {zone, slot, start, dur}（zone: hand/deck/discard）
 var _earring_missed := 0        # 耳环连出期间压下的飞出数（>3 → 收尾合并一次整体淡出）
 var _void_known := 0            # void_count 快照：增量 = 这段时间被「消耗」的张数（飞出改上飞）
 # R151 批 1 · P0-4：出牌落位 —— 「place」事件用它把 _slides 的 from 换成真实松手/手牌位置
@@ -6421,6 +6423,7 @@ func _draw() -> void:
 	# R146 起遮罩会横向加宽（棋盘放大时把外溢的石色裁掉）→ 两侧栏位若先画就会被裁掉。
 	_draw_cost_zone()
 	_draw_deck_and_discard()
+	_draw_deck_fly()
 	_draw_hp_banner()
 	_draw_enemy_effects()
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)  # 结束震动，后续 UI 不抖
@@ -6428,6 +6431,7 @@ func _draw() -> void:
 	_draw_hand_base()
 	_draw_hand()
 	_draw_hand_fly()
+	_draw_transform_fx()
 	_draw_turn_owner_fx()
 	_draw_pow_fx()
 	_draw_heal_fx()
@@ -7440,6 +7444,8 @@ func _tick_anims() -> bool:
 	_impacts = _impacts.filter(func(f): return n - int(f.start) < int(f.dur))
 	_pow_fx = _pow_fx.filter(func(f): return n - int(f.start) < int(f.dur))
 	_heal_fx = _heal_fx.filter(func(f): return n - int(f.start) < int(f.dur))
+	_deck_fly = _deck_fly.filter(func(f): return n - int(f.start) < int(f.dur))
+	_transform_fx = _transform_fx.filter(func(x): return n - int(x.start) < int(x.dur))
 	if not _screen_flash.is_empty() and n - int(_screen_flash.start) >= int(_screen_flash.dur):
 		_screen_flash = {}
 	return any or not _ghosts.is_empty() or not _floaters.is_empty() \
@@ -7447,7 +7453,8 @@ func _tick_anims() -> bool:
 			or not _wake_rings.is_empty() \
 			or not _delayed.is_empty() or n < _shake_until \
 			or not _impacts.is_empty() or not _pow_fx.is_empty() \
-			or not _heal_fx.is_empty() or not _screen_flash.is_empty()
+			or not _heal_fx.is_empty() or not _screen_flash.is_empty() \
+			or not _deck_fly.is_empty() or not _transform_fx.is_empty()
 
 
 func _energy_fail(card: CardData, idx: int) -> void:
@@ -7622,8 +7629,40 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				ca_from = (data["from"] as CardData).card_name
 			if data.get("card") is CardData:
 				var ca_card := data["card"] as CardData
+				if not _shot_pending:
+					_deck_fly.append({"card": ca_card,
+						"from": Vector2(GRID_X + GRID_W + 46, GRID_Y + GRID_H - 20),
+						"start": n, "dur": 360, "curse": true})
+				if not _shot_pending:
+					_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
 				_say("⚡ 破绽：%s 把「%s」（%d 费诅咒）塞进了卡组" % [
 						ca_from, ca_card.card_name, ca_card.cost])
+		"transform":
+			# R283：随机变化卡进手卡 -> 不再走「从抽牌堆飞入」的抽牌动画；
+			#   改为「变幻」特效（光环 + 火花），并跳过该卡的抽 / 弃飞行动画。
+			var tr_new: CardData = data.get("new")
+			var tr_old: CardData = data.get("old")
+			if tr_old is CardData:
+				_flyout_skip.append(tr_old.id)
+			if tr_new is CardData:
+				_flyin_skip.append(tr_new.id)
+				if str(data.get("side", "")) == GameEngine.SIDE_SELF and not _shot_pending:
+					_transform_fx.append({"zone": str(data.get("zone", "hand")),
+						"slot": int(data.get("index", -1)),
+						"id": tr_new.id, "start": n, "dur": 460})
+			_say("✶ %s：%s -> %s" % [str(data.get("source", "")),
+				(tr_old.card_name if tr_old is CardData else "?"),
+				(tr_new.card_name if tr_new is CardData else "?")])
+		"deck_added":
+			# R283：卡入牌库（镜面反射 / 生产订单）-> 卡背飞入卡组区（普通调，无紫）。
+			var da_card: CardData = data.get("card")
+			var da_from := Vector2(DECK_X + CARD_W / 2.0, DECK_Y - 130.0)
+			if data.get("from") is Vector2:
+				da_from = data["from"]
+			if not _shot_pending:
+				_deck_fly.append({"card": da_card, "from": da_from,
+					"start": n, "dur": 320, "curse": false})
+				_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
 		"trample_hit":
 			# R225 践踏：击杀的溢出伤害沿**同一列**击穿下一个单位 —— 在**那个格子**
 			# 补一次命中演出（不重播攻击者的攻击动作），排在这次攻击「命中」之后再播，
@@ -7837,6 +7876,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			else:
 				_say("能量屏障：抽牌堆里没有「还没有能量屏障」的盟友 / 工事，效果落空（仍抽 %d 张）"
 						% int(data.get("drawn", 0)))
+			if bool(data.get("ok", false)) and data.get("card") is CardData and not _shot_pending:
+				_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
 		"barrier":
 			# 护盾**挡下**伤害的瞬间（R87）：这是玩家最需要看到的反馈 —— 护盾消失且不扣血。
 			sfx.play("heal")
@@ -8012,6 +8053,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			else:
 				# 落空要说清原因，否则玩家以为白花了 2 费
 				_say("过载：牌库里没有「没有一回合行动两次」的盟友，效果落空")
+			if bool(data.get("ok", false)) and data.get("card") is CardData and not _shot_pending:
+				_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
 		"auto_upgrade":
 			# 自主升级 8045（R95，机械之心；R275 改口径）：回合开始随机改造**手牌**里一张
 			# 盟友 / 工事。飘字落在手牌区上方 —— 与「过载」（牌库）分开。
@@ -8075,6 +8118,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 			else:
 				_say("系统升级：手牌里没有可选的盟友或工事")
+			if su_c is CardData and not _shot_pending:
+				_transform_fx.append({"slot": int(data.get("hand_index", -1)),
+					"zone": "hand", "start": n, "dur": 460})
 		"lighten":
 			# R269 轻量化（8068）：手牌里一张盟友被改造（-1 费 / +1 移速）→ 手牌区飘字。
 			# 目标在**手牌**里（不是棋盘），落点同系统升级 = 整排手牌的中点。
@@ -8089,6 +8135,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 			else:
 				_say("轻量化：手牌里没有可改造的盟友")
+			if li_c is CardData and not _shot_pending:
+				_transform_fx.append({"slot": int(data.get("hand_index", -1)),
+					"zone": "hand", "start": n, "dur": 460})
 		"recycle":
 			# 回收 8064（R198）：手牌里一张卡被换成素体（改造 +9 血）→ 手牌区飘字。
 			# 目标在**手牌**里（不是棋盘），落点用整排手牌的中点（与系统升级同）。
@@ -8105,6 +8154,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 			else:
 				_say("回收：卡库缺少素体，效果落空")
+			if rc is CardData and not _shot_pending:
+				_transform_fx.append({"slot": int(data.get("hand_index", -1)),
+					"zone": "hand", "start": n, "dur": 460})
 		"batch_transfer":
 			# 批量传输 8040（R90）：手牌全体改造 + 抽 1 张。
 			var bt_n := int(data.get("count", 0))
@@ -10130,6 +10182,60 @@ func _draw_hand_fly() -> void:
 				_draw_zone_icon(_discard_tex, Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H),
 						Color("a08a52"))
 
+
+
+func _draw_deck_fly() -> void:
+	## R283：卡入牌库（诅咒 / 镜面反射 / 生产订单）-> 卡背（诅咒紫调）飞入卡组区。
+	var n := _now()
+	for f in _deck_fly:
+		var t := float(n - int(f["start"])) / int(f["dur"])
+		if t < 0.0:
+			continue
+		t = clampf(t, 0.0, 1.0)
+		var e := 1.0 - pow(1.0 - t, 3.0)
+		var target := Vector2(DECK_X + CARD_W / 2.0, DECK_Y + CARD_H / 2.0)
+		var pos := (f["from"] as Vector2).lerp(target, e)
+		var sc := lerpf(0.55, 1.0, e)
+		var r := Rect2(pos - Vector2(CARD_W, CARD_H) * sc / 2.0, Vector2(CARD_W, CARD_H) * sc)
+		var curse := bool(f.get("curse", false))
+		if curse:
+			draw_rect(r.grow(5.0), Color(0.55, 0.20, 0.80, 0.45 * (1.0 - t)), true)
+		_draw_card_back(r)
+		if curse:
+			draw_rect(r, Color(0.55, 0.18, 0.78, 0.40 * (1.0 - t * 0.5)), true)
+			draw_rect(r, Color(0.78, 0.40, 0.95, 0.85 * (1.0 - t)), false, 2.5)
+
+func _draw_transform_fx() -> void:
+	## R283/R284：变幻特效 —— 扩散光环 + 火花 + 「变幻」字样，标记「这张卡被变化了」。
+	## 按 zone 落点：hand=手牌位（slot）、deck=卡组堆、discard=弃牌堆 —— 同一套视觉跨区复用。
+	var n := _now()
+	for f in _transform_fx:
+		var t := float(n - int(f["start"])) / int(f["dur"])
+		if t < 0.0:
+			continue
+		t = clampf(t, 0.0, 1.0)
+		var zone: String = str(f.get("zone", "hand"))
+		var ctr: Vector2
+		if zone == "hand":
+			var slot: int = int(f.get("slot", -1))
+			if slot < 0 or slot >= engine.state.hand.size():
+				continue
+			ctr = _hand_rect(slot).get_center()
+		elif zone == "deck":
+			ctr = Vector2(DECK_X + CARD_W / 2.0, DECK_Y + CARD_H / 2.0)
+		else:  # discard
+			ctr = Vector2(DISCARD_X + CARD_W / 2.0, DISCARD_Y + CARD_H / 2.0)
+		var a := 1.0 - t
+		var rad := lerpf(CARD_W * 0.30, CARD_W * 1.10, t)
+		draw_arc(ctr, rad, 0.0, TAU, 30, Color(0.78, 0.40, 0.95, a * 0.9), 3.0)
+		draw_arc(ctr, rad * 0.6, 0.0, TAU, 26, Color(0.95, 0.72, 1.0, a * 0.7), 2.0)
+		for k in 6:
+			var ang := TAU * float(k) / 6.0 + float(n) * 0.004
+			var p0 := ctr + Vector2(cos(ang), sin(ang)) * rad * 0.5
+			var p1 := ctr + Vector2(cos(ang), sin(ang)) * rad * 1.05
+			draw_line(p0, p1, Color(0.90, 0.62, 1.0, a * 0.8), 2.0)
+		_draw_string_center(_font_bold, UiTheme.FS_LABEL, "变幻",
+			ctr + Vector2(0.0, -CARD_H * 0.5 - 8.0), Color(0.85, 0.50, 1.0, a))
 
 func _draw_card_back_fade(rect: Rect2, alpha: float) -> void:
 	## 带透明度的卡背（耳环合并淡出用）：有素材走 modulate，兜底图形用 alpha 色。
