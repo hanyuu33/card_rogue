@@ -165,8 +165,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 165,
-			"奖励池 158 张（R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；实际 %d）"
+	check(pool.size() == 166,
+			"奖励池 166 张（R275 重组降为普通后进池；R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -7800,7 +7800,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 165, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 166, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -13188,10 +13188,10 @@ func _init() -> void:
 	var r92_gen_def: CardData = r92_repo.get_card(GameEngine.SHIELD_GEN_ID)
 	var r92_mim_def: CardData = r92_repo.get_card(GameEngine.MIMIC_ID)
 	check(r92_gen_def != null and r92_gen_def.kind == "工事" and r92_gen_def.cost == 2
-			and r92_gen_def.power == 0 and r92_gen_def.health == 9
+			and r92_gen_def.power == 0 and r92_gen_def.health == 10
 			and r92_gen_def.attack_range == 0 and r92_gen_def.move_speed == 0
 			and r92_gen_def.rarity == 0 and r92_gen_def.card_class == PlayerClass.MECH,
-		"R92 护盾生成器：工事 / 2 费 0 攻 9 血 / 攻程 0 / 移速 0 / **普通** / 机械之心")
+		"R92 护盾生成器：工事 / 2 费 0 攻 **10 血**（R275 由 9 上调）/ 攻程 0 / 移速 0 / **普通** / 机械之心")
 	check(r92_gen_def.traits.has(GameEngine.CHARGE_TRAIT)
 			and r92_gen_def.traits.has("伤害转移"),
 		"R92 护盾生成器：带 trait「接通」与「伤害转移」")
@@ -13244,11 +13244,11 @@ func _init() -> void:
 	var r92_foe_hp0: int = r92_foe2.health
 	var r92_iso_hp0: int = r92_iso.health
 	r92_e2._hit_unit(r92_foe2, 3, "测试")
-	check(r92_foe2.health == r92_foe_hp0 - 3 and r92_gen2.health == 9,
+	check(r92_foe2.health == r92_foe_hp0 - 3 and r92_gen2.health == 10,
 		"R92 护盾生成器「**只护我方**」：相邻的敌方单位照常受伤（%d→%d），生成器没掉血（%d）"
 			% [r92_foe_hp0, r92_foe2.health, r92_gen2.health])
 	r92_e2._hit_unit(r92_iso, 3, "测试")
-	check(r92_iso.health == r92_iso_hp0 - 3 and r92_gen2.health == 9,
+	check(r92_iso.health == r92_iso_hp0 - 3 and r92_gen2.health == 10,
 		"R92 护盾生成器：孤立的 (0,0) **不接通** → 不受保护（%d→%d），生成器仍 %d"
 			% [r92_iso_hp0, r92_iso.health, r92_gen2.health])
 
@@ -13436,6 +13436,10 @@ func _init() -> void:
 			and r95_tree.upgrade_stacks == 1,
 		"R95 加厚装甲：己方盟友生命 +%d（%d→%d）、**算一层改造**（层数 %d）"
 			% [GameEngine.ARMOR_PLATE_HP, r95_hp0, r95_tree.health, r95_tree.upgrade_stacks])
+	# R275：额外给「受到伤害 -1（至少 1）」—— 记 Placement.dmg_reduce，只算场上
+	check(r95_tree.dmg_reduce == GameEngine.ARMOR_PLATE_REDUCE,
+		"R275 加厚装甲：额外获得 **受伤 -%d**（dmg_reduce=%d）"
+			% [GameEngine.ARMOR_PLATE_REDUCE, r95_tree.dmg_reduce])
 	# ⚠️ 只在场上有效：卡库原卡不能被改（否则跨 run 泄漏）
 	check(r95_repo.get_card(8003).health == r95_hp0,
 		"R95 加厚装甲：加成**没烤进卡库**（卡库树人仍 %d 血）" % r95_repo.get_card(8003).health)
@@ -13479,37 +13483,37 @@ func _init() -> void:
 		"R95 加厚装甲算「改造」→ 接通的模仿者复制了同量改造（%d→%d）"
 			% [r95_mim_hp0, r95_mim.health])
 
-	# ---- ⑤ 自主升级：回合开始随机改造抽牌堆里 1 张（+2 攻 / +1 血）----
+	# ---- ⑤ 自主升级：回合开始随机改造**手牌**里 1 张（+1 攻 / +3 血，R275 改口径）----
 	var r95_base_p: int = r95_repo.get_card(8003).power
 	var r95_base_h: int = r95_repo.get_card(8003).health
 	var r95_e5 := _new_engine([], 40, 40, -1, false)
 	r95_e5.start_game()
-	r95_e5.state.deck = [
+	r95_e5.state.hand = [
 		CardData.from_dict(r95_repo.get_card(8003).to_dict()),
 		CardData.from_dict(r95_repo.get_card(8003).to_dict())]
 	r95_e5.state.effects.append(CardData.from_dict(r95_auto_def.to_dict()))
 	r95_e5._auto_upgrade(GameEngine.SIDE_SELF)
 	var r95_hit: int = 0
-	for c: CardData in r95_e5.state.deck:
+	for c: CardData in r95_e5.state.hand:
 		if c.power == r95_base_p + GameEngine.AUTO_UPGRADE_ATK \
 				and c.health == r95_base_h + GameEngine.AUTO_UPGRADE_HP:
 			r95_hit += 1
-	check(r95_hit == 1 and r95_e5.state.deck.size() == 2,
-		"R95 自主升级：每回合只改造抽牌堆里 **1 张**（命中 %d 张，牌库仍 %d 张 —— 原位替换）"
-			% [r95_hit, r95_e5.state.deck.size()])
+	check(r95_hit == 1 and r95_e5.state.hand.size() == 2,
+		"R95 自主升级：每回合只改造**手牌**里 1 张（命中 %d 张，手牌仍 %d 张 —— 原位替换）"
+			% [r95_hit, r95_e5.state.hand.size()])
 	check(r95_repo.get_card(8003).power == r95_base_p
 			and r95_repo.get_card(8003).health == r95_base_h,
 		"R95 自主升级：**没污染卡库**（卡库树人仍 %d 攻 / %d 血）"
 			% [r95_base_p, r95_base_h])
 	# 不叠加：效果区有 2 张仍然只改造 1 张
-	r95_e5.state.deck = [
+	r95_e5.state.hand = [
 		CardData.from_dict(r95_repo.get_card(8003).to_dict()),
 		CardData.from_dict(r95_repo.get_card(8003).to_dict()),
 		CardData.from_dict(r95_repo.get_card(8003).to_dict())]
 	r95_e5.state.effects.append(CardData.from_dict(r95_auto_def.to_dict()))
 	r95_e5._auto_upgrade(GameEngine.SIDE_SELF)
 	r95_hit = 0
-	for c: CardData in r95_e5.state.deck:
+	for c: CardData in r95_e5.state.hand:
 		if c.power == r95_base_p + GameEngine.AUTO_UPGRADE_ATK:
 			r95_hit += 1
 	check(r95_hit == 1,
@@ -13517,20 +13521,20 @@ func _init() -> void:
 	# 效果区没有这张卡 → 完全不触发
 	var r95_e6 := _new_engine([], 40, 40, -1, false)
 	r95_e6.start_game()
-	r95_e6.state.deck = [CardData.from_dict(r95_repo.get_card(8003).to_dict())]
+	r95_e6.state.hand = [CardData.from_dict(r95_repo.get_card(8003).to_dict())]
 	r95_e6._auto_upgrade(GameEngine.SIDE_SELF)
-	check(r95_e6.state.deck[0].power == r95_base_p,
-		"R95 自主升级：效果区没有这张卡时**不触发**（牌库那张仍 %d 攻）"
-			% r95_e6.state.deck[0].power)
-	# 抽牌堆里没有盟友 / 工事 → 落空且不崩
+	check(r95_e6.state.hand[0].power == r95_base_p,
+		"R95 自主升级：效果区没有这张卡时**不触发**（手牌那张仍 %d 攻）"
+			% r95_e6.state.hand[0].power)
+	# 手牌里没有盟友 / 工事 → 落空且不崩
 	var r95_e7 := _new_engine([], 40, 40, -1, false)
 	r95_e7.start_game()
-	r95_e7.state.deck = [CardData.from_dict(r95_repo.get_card(8002).to_dict())]
+	r95_e7.state.hand = [CardData.from_dict(r95_repo.get_card(8002).to_dict())]
 	r95_e7.state.effects.append(CardData.from_dict(r95_auto_def.to_dict()))
 	r95_e7._auto_upgrade(GameEngine.SIDE_SELF)
-	check(r95_e7.state.deck.size() == 1 and r95_e7.state.deck[0].power == 0,
-		"R95 自主升级：抽牌堆里没有盟友 / 工事时**落空**（技能卡不会被改造，仍 %d 攻）"
-			% r95_e7.state.deck[0].power)
+	check(r95_e7.state.hand.size() == 1 and r95_e7.state.hand[0].power == 0,
+		"R95 自主升级：手牌里没有盟友 / 工事时**落空**（技能卡不会被改造，仍 %d 攻）"
+			% r95_e7.state.hand[0].power)
 
 	# ─────────── R96：零件回收者 8046 / 嵌合暴君 8047 / 生产订单 8048（机械之心）───────────
 	var r96_repo := CardRepo.load_json()
@@ -13869,17 +13873,18 @@ func _init() -> void:
 	# ---- 卡面定义校验 ----
 	var r99_reorg := r99_repo.get_card(8051)
 	check(r99_reorg != null and r99_reorg.kind == "技能" and r99_reorg.cost == 1
-			and r99_reorg.rarity == 3 and r99_reorg.card_class == "机械之心"
+			and r99_reorg.rarity == 0 and r99_reorg.card_class == "机械之心"
 			and r99_reorg.target_mode == "unit"
 			and r99_reorg.effect_text.contains("满生命"),
-		"R99 重组 8051：1 费史诗技能，机械之心，target=unit，回满生命（实际 %s / %s费 / 稀有度%s / target=%s）"
+		"R99 重组 8051：1 费**普通**技能（R275 由史诗下调），机械之心，target=unit，回满生命（实际 %s / %s费 / 稀有度%s / target=%s）"
 			% [r99_reorg.kind, r99_reorg.cost, r99_reorg.rarity, r99_reorg.target_mode])
 	var r99_wall := r99_repo.get_card(8052)
 	check(r99_wall != null and r99_wall.kind == "工事" and r99_wall.cost == 2
 			and r99_wall.power == 0 and r99_wall.health == 10
 			and r99_wall.rarity == 0 and r99_wall.has_affix("超负荷")
+			and r99_wall.has_affix(GameEngine.AFFIX_TAUNT)
 			and r99_wall.card_class == "机械之心",
-		"R99 城墙 8052：2 费普通工事 0/10/0，带超负荷，机械之心（实际 %s / %s费 / %s攻 / %s血 / 稀有度%s）"
+		"R99 城墙 8052：2 费普通工事 0/10/0，带超负荷 + **嘲讽**（R275 新增），机械之心（实际 %s / %s费 / %s攻 / %s血 / 稀有度%s）"
 			% [r99_wall.kind, r99_wall.cost, r99_wall.power, r99_wall.health, r99_wall.rarity])
 	var r99_trans := r99_repo.get_card(8053)
 	check(r99_trans != null and r99_trans.kind == "技能" and r99_trans.cost == 0
@@ -14980,10 +14985,12 @@ func _init() -> void:
 		% [r101_gren.kind])
 	var r101_tank := r101_repo.get_card(8058)
 	check(r101_tank != null and r101_tank.kind == "盟友" and r101_tank.cost == 3
-			and r101_tank.power == 3 and r101_tank.health == 13
+			and r101_tank.power == 3 and r101_tank.health == 12
+			and r101_tank.attack_range == 1 and r101_tank.move_speed == 2
 			and r101_tank.rarity == 1 and r101_tank.card_class == "机械之心"
-			and r101_tank.traits.has("改造移速"),
-		"R101 重甲战车 8058：3 费稀有盟友 3/13/1/1，机械之心，带 trait「改造移速」（实际 kind=%s）"
+			and r101_tank.has_affix(GameEngine.AFFIX_TAUNT)
+			and not r101_tank.traits.has("改造移速"),
+		"R101 重甲战车 8058（R275 重做）：3 费稀有盟友 3/12/2 移速/1，**嘲讽**，已移除「改造移速」（实际 kind=%s）"
 		% [r101_tank.kind])
 	var r101_bird := r101_repo.get_card(8059)
 	check(r101_bird != null and r101_bird.kind == "盟友" and r101_bird.cost == 1
@@ -15035,17 +15042,38 @@ func _init() -> void:
 		"R101 改造攻程：榴弹击手获得改造 → 攻击距离 %d→%d" % [r101_ar0, r101_g.card.attack_range])
 	check(r101_g.upgrade_range == 1, "R101 改造攻程：upgrade_range 累计=1")
 
-	# ---- ③ 改造移速（重甲战车）：获得改造时移动速度+1 ----
+	# ---- ③ 重甲战车（R275）：每拥有一层改造 → 受到的伤害 -1（至少仍受 1 点）----
 	var r101_e3 := _new_engine([], 40, 40, -1, false)
 	r101_e3.start_game()
 	var r101_t: Placement = r101_e3.state.place(
 		CardData.from_dict(r101_repo.get_card(8058).to_dict()), Vector2i(4, 1),
-		GameEngine.SIDE_SELF)   # 重甲战车 3/13 移速1
-	var r101_ms0 := r101_t.card.move_speed
+		GameEngine.SIDE_SELF)   # 重甲战车 3/12 移速 2
+	# 0 层：不减伤
+	var r101_hp0x: int = r101_t.health
+	r101_e3._hit_unit(r101_t, 5, "测试")
+	check(r101_hp0x - r101_t.health == 5,
+		"R275 重甲战车：0 层改造**不减伤**（5 点伤害掉 %d 血）" % (r101_hp0x - r101_t.health))
+	# 改造 2 层（升级 +2 攻 / +10 血，会抬上限，所以只比较**掉血量**）
 	r101_e3._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
-	check(r101_t.card.move_speed == r101_ms0 + 1,
-		"R101 改造移速：重甲战车获得改造 → 移动速度 %d→%d" % [r101_ms0, r101_t.card.move_speed])
-	check(r101_t.upgrade_speed == 1, "R101 改造移速：upgrade_speed 累计=1")
+	r101_e3._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r101_hp1x: int = r101_t.health
+	r101_e3._hit_unit(r101_t, 5, "测试")
+	check(r101_hp1x - r101_t.health == 3,
+		"R275 重甲战车：2 层改造 → 5 点伤害只掉 3（每层 -1）")
+	# 至少仍受 1 点
+	var r101_hp2x: int = r101_t.health
+	r101_e3._hit_unit(r101_t, 1, "测试")
+	check(r101_hp2x - r101_t.health == 1,
+		"R275 重甲战车：**至少仍受 1 点**（2 层改造下 1 点伤害仍掉 1）")
+	# 层数随身：手牌 / 牌库攒的层数上场同样生效
+	var r101_tank2 := CardData.from_dict(r101_repo.get_card(8058).to_dict())
+	r101_tank2.upgrade_stacks = 2
+	var r101_t2: Placement = r101_e3.state.place(
+		r101_tank2, Vector2i(4, 2), GameEngine.SIDE_SELF)
+	var r101_hp3x: int = r101_t2.health
+	r101_e3._hit_unit(r101_t2, 5, "测试")
+	check(r101_hp3x - r101_t2.health == 3,
+		"R275 重甲战车：层数随身（带着 2 层上场）同样 -2 受伤")
 
 	# ---- ④ 改造抽牌（机器鸟）：获得改造时（己方）抽 1 张 ----
 	var r101_e4 := _new_engine([], 40, 40, -1, false)
@@ -17273,17 +17301,17 @@ func _init() -> void:
 		"R209 生产订单：卡组 +2 张素体，各带 1 层（实际 %d 张 / 层数 %s）"
 			% [r209_e6.state.deck.size(),
 				str(r209_e6.state.deck.map(func(x: CardData): return x.upgrade_stacks))])
-	# ---- ⑦ 自主升级 8045：牌库里的那张被改造 → 带 1 层 ----
+	# ---- ⑦ 自主升级 8045：手牌里的那张被改造 → 带 1 层（R275 由牌库改手牌）----
 	var r209_e7 := _new_engine([], 30, 30, -1, false)
 	r209_e7.start_game()
-	r209_e7.state.deck.clear()
-	r209_e7.state.deck.append(CardData.from_dict(r209_repo.get_card(8003).to_dict()))
+	r209_e7.state.hand.clear()
+	r209_e7.state.hand.append(CardData.from_dict(r209_repo.get_card(8003).to_dict()))
 	r209_e7.state.effects = [
 			CardData.from_dict(r209_repo.get_card(GameEngine.AUTO_UPGRADE_ID).to_dict())]
 	r209_e7._auto_upgrade(GameEngine.SIDE_SELF)
-	check(r209_e7.state.deck[0].upgrade_stacks == 1,
-		"R209 自主升级：牌库里被改造的树人带 1 层（实际 %d）"
-			% r209_e7.state.deck[0].upgrade_stacks)
+	check(r209_e7.state.hand[0].upgrade_stacks == 1,
+		"R209 自主升级：手牌里被改造的树人带 1 层（实际 %d）"
+			% r209_e7.state.hand[0].upgrade_stacks)
 	# ---- ⑧ 返修 9127：弃牌区回手的那张带 1 层 ----
 	var r209_e8 := _new_engine([], 30, 30, -1, false)
 	r209_e8.start_game()
@@ -20220,6 +20248,122 @@ func _init() -> void:
 			and r274_foe2.effective_power() == r274_foe2_atk - 1,
 		"R274 谟涅摩叙涅：被「超越极限」（非升级入口）改造 1 层 → 敌人力量 %d → %d"
 			% [r274_foe2_atk, r274_foe2.effective_power()])
+
+
+	# ══════════════════════════════════════════════════════════════
+	# R275 六卡调整：重甲战车每层减伤 / 加厚装甲减伤 / 自主升级改手牌 /
+	#      城墙嘲讽 / 重组普通 / 护盾生成器 10 血
+	# ══════════════════════════════════════════════════════════════
+	var r275_repo := CardRepo.load_json()
+	var r275_plate := r275_repo.get_card(GameEngine.ARMOR_PLATE_ID)
+	check(r275_plate.effect_text.contains("受到的伤害 -1"),
+		"R275 加厚装甲卡面写明「受到的伤害 -1（至少 1）」")
+	var r275_auto := r275_repo.get_card(GameEngine.AUTO_UPGRADE_ID)
+	check(r275_auto.effect_text.contains("手牌")
+			and GameEngine.AUTO_UPGRADE_ATK == 1 and GameEngine.AUTO_UPGRADE_HP == 3,
+		"R275 自主升级卡面写「手牌」，且 +1 攻 / +3 血")
+
+	# ---- ① 加厚装甲：受伤 -1（至少 1），多次施加累计 ----
+	var r275_e1 := _new_engine([], 40, 40, -1, false)
+	r275_e1.start_game()
+	var r275_tree: Placement = r275_e1.state.place(
+		CardData.from_dict(r275_repo.get_card(8003).to_dict()), Vector2i(4, 0),
+		GameEngine.SIDE_SELF)
+	r275_e1._armor_plate(Vector2i(4, 0), GameEngine.SIDE_SELF)
+	var r275_hp_a: int = r275_tree.health
+	r275_e1._hit_unit(r275_tree, 5, "测试")
+	check(r275_hp_a - r275_tree.health == 4,
+		"R275 加厚装甲：受伤 -1（5 点伤害掉 %d 血）" % (r275_hp_a - r275_tree.health))
+	var r275_hp_b: int = r275_tree.health
+	r275_e1._hit_unit(r275_tree, 1, "测试")
+	check(r275_hp_b - r275_tree.health == 1,
+		"R275 加厚装甲：**至少仍受 1 点**（1 点伤害掉 1）")
+	# 再施加一次 → 累计 -2
+	r275_e1._armor_plate(Vector2i(4, 0), GameEngine.SIDE_SELF)
+	check(r275_tree.dmg_reduce == 2,
+		"R275 加厚装甲：多次施加累计减伤（dmg_reduce=%d）" % r275_tree.dmg_reduce)
+	var r275_hp_c: int = r275_tree.health
+	r275_e1._hit_unit(r275_tree, 5, "测试")
+	check(r275_hp_c - r275_tree.health == 3,
+		"R275 加厚装甲：累计 2 次 → 5 点伤害掉 3")
+
+	# ---- ② 加厚装甲离场后减伤消失（只记 Placement，不随身）----
+	var r275_e2 := _new_engine([], 40, 40, -1, false)
+	r275_e2.start_game()
+	var r275_tree2: Placement = r275_e2.state.place(
+		CardData.from_dict(r275_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)
+	r275_e2._armor_plate(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r275_back: CardData = r275_e2._card_leaving_field(r275_tree2)
+	check(r275_back.health == r275_repo.get_card(8003).health,
+		"R275 加厚装甲：离场还原成原卡（%d 血）" % r275_back.health)
+
+	# ---- ③ 自主升级：改造手牌（本场永久，洗回牌库再抽仍是强化版）----
+	var r275_e3 := _new_engine([], 40, 40, -1, false)
+	r275_e3.start_game()
+	var r275_p0: int = r275_repo.get_card(8003).power
+	var r275_h0: int = r275_repo.get_card(8003).health
+	r275_e3.state.hand = [CardData.from_dict(r275_repo.get_card(8003).to_dict())]
+	r275_e3.state.effects = [CardData.from_dict(r275_auto.to_dict())]
+	r275_e3._auto_upgrade(GameEngine.SIDE_SELF)
+	check(r275_e3.state.hand.size() == 1
+			and r275_e3.state.hand[0].power == r275_p0 + 1
+			and r275_e3.state.hand[0].health == r275_h0 + 3
+			and r275_e3.state.hand[0].upgrade_stacks == 1,
+		"R275 自主升级：手牌树人 +%d 攻 / +%d 血 / 1 层（实际 %d/%d/层%d）"
+			% [GameEngine.AUTO_UPGRADE_ATK, GameEngine.AUTO_UPGRADE_HP,
+				r275_e3.state.hand[0].power, r275_e3.state.hand[0].health,
+				r275_e3.state.hand[0].upgrade_stacks])
+	# 升级后的那张**打出后仍是强化版**（烤进副本，本场有效）
+	var r275_u: Placement = r275_e3.state.place(
+		r275_e3.state.hand[0], Vector2i(4, 0), GameEngine.SIDE_SELF)
+	check(r275_u.card.power == r275_p0 + 1 and r275_u.upgrade_stacks == 1,
+		"R275 自主升级：强化版上场后力量 %d、层数 %d（随卡带走）"
+			% [r275_u.effective_power(), r275_u.upgrade_stacks])
+	check(r275_repo.get_card(8003).power == r275_p0
+			and r275_repo.get_card(8003).health == r275_h0,
+		"R275 自主升级：**没污染卡库**（卡库树人仍 %d/%d）" % [r275_p0, r275_h0])
+
+	# ---- ④ 状态条：重甲战车按层数显示「受伤 -N」，加厚装甲显示累计减伤 ----
+	var r275_e4 := _new_engine([], 40, 40, -1, false)
+	r275_e4.start_game()
+	var r275_tank: Placement = r275_e4.state.place(
+		CardData.from_dict(r275_repo.get_card(GameEngine.HEAVY_TANK_ID).to_dict()),
+		Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r275_e4._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r275_lbls: Array = r275_tank.status_entries().map(
+			func(e: Dictionary): return String(e["label"]))
+	var r275_has_tank_lbl := false
+	for s: String in r275_lbls:
+		if s.begins_with("重甲战车：受伤 -1"):
+			r275_has_tank_lbl = true
+	check(r275_has_tank_lbl,
+		"R275 重甲战车：状态条按层数显示「受伤 -N」（%s）" % str(r275_lbls))
+	var r275_e5 := _new_engine([], 40, 40, -1, false)
+	r275_e5.start_game()
+	var r275_t3: Placement = r275_e5.state.place(
+		CardData.from_dict(r275_repo.get_card(8003).to_dict()), Vector2i(4, 2),
+		GameEngine.SIDE_SELF)
+	r275_e5._armor_plate(Vector2i(4, 2), GameEngine.SIDE_SELF)
+	var r275_lbls2: Array = r275_t3.status_entries().map(
+			func(e: Dictionary): return String(e["label"]))
+	var r275_has_plate_lbl := false
+	for s: String in r275_lbls2:
+		if s.begins_with("加厚装甲：受伤 -1"):
+			r275_has_plate_lbl = true
+	check(r275_has_plate_lbl,
+		"R275 加厚装甲：状态条显示「加厚装甲：受伤 -N」（%s）" % str(r275_lbls2))
+
+	# ---- ⑤ 城墙嘲讽：敌方只能攻击它（与超负荷并存）----
+	var r275_e6 := _new_engine([], 40, 40, -1, false)
+	r275_e6.start_game()
+	var r275_wall: Placement = r275_e6.state.place(
+		CardData.from_dict(r275_repo.get_card(GameEngine.WALL_ID).to_dict()),
+		Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r275_wall.card.has_affix(GameEngine.AFFIX_TAUNT)
+			and r275_wall.card.has_affix(GameEngine.AFFIX_OVERLOAD)
+			and r275_wall.health == 10,
+		"R275 城墙：0/10 工事，同时带「嘲讽」与「超负荷」")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

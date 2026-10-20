@@ -1689,6 +1689,46 @@ func _ready() -> void:
 				r274_demo_fort.health]
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r275tank" in args and engine != null:
+		# 演示（R275）：重甲战车「每拥有一层改造，受到的伤害 -1（至少 1）」——
+		# 层数在**手牌**里攒的也算（与 R274 同口径），所以先改造 2 次再上场。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 99
+		engine.state.place(CardData.from_dict(
+				repo.get_card(GameEngine.HEAVY_TANK_ID).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		for _n275 in 2:
+			engine._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+		var r275_demo_tank: Placement = engine.state.unit_at(Vector2i(4, 1))
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+		_hover_card = r275_demo_tank.card
+		_hover_pl = r275_demo_tank
+		_hover_hand = -1
+		status_text = "重甲战车：改造 ×%d → 受伤 -%d（最低 1）" % [
+				r275_demo_tank.upgrade_stacks, r275_demo_tank.upgrade_stacks]
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r275plate" in args and engine != null:
+		# 演示（R275）：加厚装甲「+4 生命 + 受到伤害 -1」—— 施加两次 → 累计受伤 -2。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 99
+		var r275_demo_tree: Placement = engine.state.place(
+				CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		for _n275b in 2:
+			engine._armor_plate(Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+		_hover_card = r275_demo_tree.card
+		_hover_pl = r275_demo_tree
+		_hover_hand = -1
+		status_text = "加厚装甲 ×2 → 生+8 / 受伤 -%d" % [
+				r275_demo_tree.dmg_reduce]
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--armor" in args and engine != null:
 		# 演示（R89）：无限装甲（8038）——
 		#   ① 场上放装甲 + 手牌塞一张「升级」→ 打出去改造它
@@ -7888,20 +7928,20 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				# 落空要说清原因，否则玩家以为白花了 2 费
 				_say("过载：牌库里没有「没有一回合行动两次」的盟友，效果落空")
 		"auto_upgrade":
-			# 自主升级 8045（R95，机械之心）：回合开始随机改造抽牌堆里一张盟友 / 工事。
-			# 目标在**牌库**里（不在场上），所以飘字落在抽牌堆旁边 —— 与「过载」同一套路。
+			# 自主升级 8045（R95，机械之心；R275 改口径）：回合开始随机改造**手牌**里一张
+			# 盟友 / 工事。飘字落在手牌区上方 —— 与「过载」（牌库）分开。
 			if bool(data.get("ok", false)) and data.get("card") is CardData:
 				var au_card: CardData = data["card"]
 				sfx.play("spell")
-				_say("✦ 自主升级：牌库里的「%s」被改造（+%d 攻 / +%d 血，之后抽到就带）" % [
+				_say("✦ 自主升级：手牌里的「%s」被改造（+%d 攻 / +%d 血，本场有效）" % [
 						au_card.card_name,
 						GameEngine.AUTO_UPGRADE_ATK, GameEngine.AUTO_UPGRADE_HP])
-				_floaters.append({"pos": Vector2(DECK_X + CARD_W / 2, DECK_Y - 14),
+				_floaters.append({"pos": Vector2(HAND_BASE_X + HAND_BASE_W / 2, HAND_BASE_Y - 10),
 						"text": "%s · +%d 攻 +%d 血" % [au_card.card_name,
 							GameEngine.AUTO_UPGRADE_ATK, GameEngine.AUTO_UPGRADE_HP],
 						"col": Color("ffc94d"), "start": n, "dur": 2200, "size": 14})
 			else:
-				_say("自主升级：抽牌堆里没有盟友 / 工事，本回合落空")
+				_say("自主升级：手牌里没有盟友 / 工事，本回合落空")
 		"scout_aura":
 			# 「侦察塔」8032 光环易伤（R120）：攻击范围内的敌人受到**任何来源**的伤害 +N。
 			# ⚠️ 飘字落在**受害者那一格** —— 加的是「敌人受到的伤害」，不是塔自己的攻击力

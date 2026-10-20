@@ -1,5 +1,9 @@
 class_name Placement
 extends RefCounted
+
+## 重甲战车（8058）：状态条要按层数显示「受伤 -N」—— 与 `GameEngine.HEAVY_TANK_ID` 同值。
+## 写成本地常量而不是引 GameEngine，是因为两边互相 import 会形成循环依赖。
+const HEAVY_TANK_CARD_ID := 8058
 ## 战场某格上的一张卡（对应 Python 版 field.Placement）。
 
 var card: CardData
@@ -46,7 +50,13 @@ var upgrade_stacks: int = 0   # **改造层数**（R86）：被改造过几次
 # 这里只记「已经结算过多少」，保证重算幂等。
 var stack_hp_applied: int = 0
 var upgrade_range: int = 0   # 改造加攻程累计（R101，榴弹击手）：只在场上有效，离场由 _card_leaving_field 还原
-var upgrade_speed: int = 0   # 改造加移速累计（R101，重甲战车）：只在场上有效，离场由 _card_leaving_field 还原
+## ⚠️ R275：重甲战车 8058 已移除「改造移速」（改成「每层改造受到的伤害 -1」），
+## `upgrade_speed` 与 trait「改造移速」目前**没有卡在用**，机制保留给未来的卡。
+var upgrade_speed: int = 0   # 改造加移速累计（原 R101 重甲战车）：只在场上有效，离场还原
+## 「加厚装甲」（8044，R275）：**受到的伤害 -1 / 次**（每次施加累计 1 点）。
+## 只记 Placement —— 与改造层数不同，它**不随身**（回手再上场就没了，卡面写明「只在场上有效」）。
+## 结算在 `GameEngine._unit_damage_taken()`（单位受击减伤唯一口），下限同犀牛：至少仍受 1 点。
+var dmg_reduce: int = 0
 # 「侦察塔」（8032，trait「改造层数」）：**光环易伤**（R120 用户口径）——
 # 它**攻击范围内**的敌人，受到**任何来源**的伤害都 +1 / 层改造。
 # 判据 = trait「改造层数」+ `upgrade_stacks`，结算在
@@ -216,6 +226,12 @@ func status_entries() -> Array[Dictionary]:
 		out.append({"label": "护盾：免疫下一次伤害", "col": COL_B, "kind": "buff"})
 	if armor > 0:
 		out.append({"label": "护甲：%d" % armor, "col": Color("2a9d8f"), "kind": "buff"})
+	# R275：重甲战车（8058）每层改造 -1 受伤；加厚装甲（8044）每次施加累计 -1 受伤。
+	if card != null and card.id == HEAVY_TANK_CARD_ID and upgrade_stacks > 0:
+		out.append({"label": "重甲战车：受伤 -%d" % upgrade_stacks,
+				"col": COL_B, "kind": "buff"})
+	if dmg_reduce > 0:
+		out.append({"label": "加厚装甲：受伤 -%d" % dmg_reduce, "col": COL_B, "kind": "buff"})
 	if guarding:
 		out.append({"label": "守护：代我方承受伤害", "col": COL_B, "kind": "buff"})
 	if acts_left > 1:

@@ -517,6 +517,12 @@ const WILD_FORM_RETALIATE:= 4     # 并对攻击者反伤
 const RHINO_TRAIT:= "犀牛"
 const RHINO_DAMAGE_REDUCE:= 1
 
+# 重甲战车（8058，R275 重做：3 费稀有盟友 3/12/2/1，嘲讽）：
+#   **每拥有一层改造，受到的伤害 -1（每次至少仍受 1 点）**。层数口径同 R274 ——
+#   手牌 / 牌库攒的层数上场也算（`upgrade_stacks` 随身）。判据走 id：
+#   这是单卡专属机制，不污染别的「改造」卡。
+const HEAVY_TANK_REDUCE_PER_STACK:= 1
+
 # ── 第二层·普通困难「百臂工场」（R152）──
 # 赫卡同克瑞斯（9136）：回合开始时若场上没有其他己方单位 → 力量 +2、受到的攻击伤害减半。
 # ⚠️ 力量那一半记 `Placement.hecaton_atk`（由 `_refresh_hecaton` 实时重算写值，
@@ -796,6 +802,10 @@ const MIMIC_ID:= 8043           # 模仿者：接通的盟友获得改造 → �
 #   ⚠️ 与「升级」不同：**只吃盟友**（用户原话「一个我方盟友」），工事不能选。
 const ARMOR_PLATE_ID:= 8044
 const ARMOR_PLATE_HP:= 4
+## R275：加厚装甲额外给「受到伤害 -1（每次至少仍受 1 点）」——
+## 记在 `Placement.dmg_reduce`（本场累计、只算场上，离场随单位消失），
+## 与「改造层数」是两条独立的账（层数随身、减伤只在场上）。
+const ARMOR_PLATE_REDUCE:= 1
 # 「自主升级」（8045，2 费效果卡）：**回合开始时**随机使**抽牌堆**里一张盟友或工事
 #   获得改造：+2 攻 / +1 血。
 #   * 候选只从 `state.deck`（抽牌堆）挑 —— 与「过载」8030 / 「能量屏障」8033 同口径。
@@ -804,8 +814,8 @@ const ARMOR_PLATE_HP:= 4
 #   * 效果区有多张时**不叠加**（符合效果区一贯惯例）：每回合只改造 1 张。
 const AUTO_UPGRADE_ID:= 8045
 const AUTO_UPGRADE_TRAIT:= "自主改造"
-const AUTO_UPGRADE_ATK:= 2
-const AUTO_UPGRADE_HP:= 1
+const AUTO_UPGRADE_ATK:= 1
+const AUTO_UPGRADE_HP:= 3
 # ── R96：机械之心 8046 / 8047 / 8048 ──
 # 「零件回收者」（8046，3 费**史诗**盟友 1/14/1/1，R208 由普通升史诗）：与这张卡**接通**的己方
 #   **素体以外**的盟友或工事被**破坏**时，这张卡攻击力 += 被销毁卡的力量，并往手牌加一张「素体」。
@@ -927,6 +937,8 @@ const MASS_MNEMOSYNE_DISCOUNT:= 1
 #   入场时本次对战每用过一张聚能炮击 → 生命 +3；本回合手卡里的聚能炮击费用为 0。
 const DAEDALUS_HP_PER_CANNON:= 3
 const UPGRADE_RANGE_TRAIT:= "改造攻程"
+## R275：重甲战车 8058 移除本 trait（改为「每层改造受到的伤害 -1」）——
+## 当前**没有任何卡**带「改造移速」，分支保留给未来的卡用。
 const UPGRADE_SPEED_TRAIT:= "改造移速"
 const UPGRADE_DRAW_TRAIT:= "改造抽牌"
 ## 双向传送（8061 技能，R102）：0 费；指定战场上**两个单位**，交换它们的位置。
@@ -3780,9 +3792,11 @@ func _random_creation_card() -> CardData:
 		return null
 	var pool: Array[CardData] = []
 	for c: CardData in repo.player_cards():
+		# R275：重甲战车 8058 的改造收益是「每层受到的伤害 -1」（没有对应 trait / 字段），
+		# 但它确实属于「被改造时有额外效果」—— 按 id 单独收进池，避免漏掉这一张。
 		if c.upgrade_atk_bonus > 0 or c.upgrade_hp_bonus > 0 \
 				or c.traits.has(UPGRADE_RANGE_TRAIT) or c.traits.has(UPGRADE_SPEED_TRAIT) \
-				or c.traits.has(UPGRADE_DRAW_TRAIT):
+				or c.traits.has(UPGRADE_DRAW_TRAIT) or c.id == HEAVY_TANK_ID:
 			pool.append(c)
 	if pool.is_empty():
 		return null
@@ -4033,7 +4047,7 @@ func _on_unit_upgraded(p: Placement) -> void :
 		p.upgrade_range += 1
 		p.card.attack_range += 1
 		_log("改造触发：%s 攻击距离+1（→%d）" % [p.card.card_name, p.card.attack_range])
-	if p.card.traits.has(UPGRADE_SPEED_TRAIT):      # 重甲战车：移动速度+1
+	if p.card.traits.has(UPGRADE_SPEED_TRAIT):      # R275 后无卡使用（重甲战车已改），留给未来
 		p.upgrade_speed += 1
 		p.card.move_speed += 1
 		_log("改造触发：%s 移动速度+1（→%d）" % [p.card.card_name, p.card.move_speed])
@@ -4674,8 +4688,11 @@ func _armor_plate(target, side:= SIDE_SELF) -> String :
 	_add_upgrade_stack(p)
 	p.card.health += hp_gain
 	p.health += hp_gain
-	_log("加厚装甲：%s 被改造 → 生命 +%d（%d 血，第 %d 层）" % [
-			p.card.card_name, hp_gain, p.health, p.upgrade_stacks])
+	# R275：额外给「受到伤害 -1（至少 1）」—— 记 Placement（本场累计、只算场上）。
+	p.dmg_reduce += ARMOR_PLATE_REDUCE
+	_log("加厚装甲：%s 被改造 → 生命 +%d（%d 血）、受伤 -%d（累计 -%d），第 %d 层" % [
+			p.card.card_name, hp_gain, p.health, ARMOR_PLATE_REDUCE,
+			p.dmg_reduce, p.upgrade_stacks])
 	action.emit("upgrade", {"cell": target, "card": p.card, "placement": p,
 			"atk": atk_gain, "hp": hp_gain})
 	# 「模仿者」8043（R92）：接通的模仿者获得**相同改造**。
@@ -4685,7 +4702,8 @@ func _armor_plate(target, side:= SIDE_SELF) -> String :
 	# 「无限装甲」8038（R89）：被改造时**每回合一次**供一张 0 费改造牌到手。
 	_feed_upgrade_card(p)
 	_on_unit_upgraded(p)
-	return "%s 加装完成（+%d 血）" % [p.card.card_name, hp_gain]
+	return "%s 加装完成（+%d 血 / 受伤 -%d）" % [
+			p.card.card_name, hp_gain, ARMOR_PLATE_REDUCE]
 
 
 func _shared_shield(target, side:= SIDE_SELF) -> String :
@@ -4717,34 +4735,38 @@ func _shared_shield(target, side:= SIDE_SELF) -> String :
 func _auto_upgrade(side: String) -> void :
 	## 「自主升级」（8045，R95，机械之心 2 费效果卡）的唯一结算口，挂在 `_begin_turn()`。
 	##
-	## ⚠️ **必须 `from_dict` 复制成新实例再原位替换**：卡库里是**共享实例**，直接改
-	## `state.deck[i].power` 会连**卡库**那份一起改 —— 本场之后、甚至下一场抽到就已经是
-	## 强化版（等于把「自主升级」变成永久强化，且跨 run 泄漏）。
+	## **R275 改口径**：候选从 `state.deck`（抽牌堆）改为 `state.hand`（**手牌**），
+	## 数值 +2 攻 / +1 血 → **+1 攻 / +3 血**（用户口径「改为随机手卡而非抽牌库」）。
+	## 手牌里的强化**本场有效**（洗回去再抽到仍是强化版），与「系统升级」8039 同口径。
 	##
-	## 原位替换不改牌库顺序 → 洗牌序列不变，同一种子重跑必然一致。
+	## ⚠️ **必须 `from_dict` 复制成新实例再原位替换**：手牌里的卡可能是卡库共享实例，
+	## 直接改 `state.hand[i].power` 会连**卡库**那份一起改（跨 run 泄漏）。
+	##
+	## 原位替换不改手牌顺序 → 洗牌序列不变，同一种子重跑必然一致。
 	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
 	if not _zone_has(zone, AUTO_UPGRADE_TRAIT):
 		return
+	var hand: Array[CardData] = state.hand   # 敌方没有自己的手牌，与旧实现（都读 state.deck）同口径
 	var cand: Array[int] = []
-	for i in state.deck.size():
-		var c: CardData = state.deck[i]
+	for i in hand.size():
+		var c: CardData = hand[i]
 		if c.kind == "盟友" or c.is_fort():
 			cand.append(i)
 	if cand.is_empty():
-		_log("自主升级：抽牌堆里没有盟友 / 工事，本回合落空")
+		_log("自主升级：手牌里没有盟友 / 工事，本回合落空")
 		action.emit("auto_upgrade", {"card": null, "ok": false, "side": side})
 		return
 	var pick: int = cand[rng.randi() % cand.size()]
-	var before: CardData = state.deck[pick]
+	var before: CardData = hand[pick]
 	var up := CardData.from_dict(before.to_dict())
 	# R120：改造奖励走**唯一口**（牌库里的素体被改造也额外 +1 血）。
 	var au_atk: int = _upgrade_atk_gain(up, AUTO_UPGRADE_ATK)
 	var au_hp: int = _upgrade_hp_gain(up, AUTO_UPGRADE_HP)
 	up.power += au_atk
 	up.health += au_hp
-	up.upgrade_stacks += 1       # R209：牌库里的改造同样记层（抽到上场就有层）
-	state.deck[pick] = up        # 原位替换：牌库顺序不变
-	_log("自主升级：「%s」在牌库里被改造 → 力量 +%d（%d）、生命 +%d（%d）" % [
+	up.upgrade_stacks += 1       # R209：手牌里的改造同样记层（上场就有层）
+	hand[pick] = up              # 原位替换：手牌顺序不变
+	_log("自主升级：「%s」在手牌里被改造 → 力量 +%d（%d）、生命 +%d（%d）" % [
 			before.card_name, au_atk, up.power, au_hp, up.health])
 	action.emit("auto_upgrade", {"card": up, "ok": true, "from": before, "side": side})
 
@@ -7915,6 +7937,21 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		dmg = maxi(1, dmg - RHINO_DAMAGE_REDUCE)
 		if dmg != before:
 			_log("犀牛：受到的伤害 %d → %d" % [before, dmg])
+	# ①b 重甲战车（8058，R275）：**每拥有一层改造，受到的伤害 -1，至少仍受 1 点**。
+	#    层数随身（手牌 / 牌库攒的也算），所以只读 `upgrade_stacks`、不另存字段。
+	if p != null and p.card != null and dmg > 0 and p.card.id == HEAVY_TANK_ID \
+			and p.upgrade_stacks > 0:
+		var tb:= dmg
+		dmg = maxi(1, dmg - p.upgrade_stacks * HEAVY_TANK_REDUCE_PER_STACK)
+		if dmg != tb:
+			_log("重甲战车：改造 ×%d → 受到的伤害 %d → %d" % [p.upgrade_stacks, tb, dmg])
+	# ①c 加厚装甲（8044，R275）：每次施加累计 `dmg_reduce`，同样「至少 1 点」。
+	#    只记 Placement：离场时随单位一起消失（卡面写明「只在场上有效」）。
+	if p != null and dmg > 0 and p.dmg_reduce > 0:
+		var ab:= dmg
+		dmg = maxi(1, dmg - p.dmg_reduce)
+		if dmg != ab:
+			_log("%s：加厚装甲减伤 %d → 受到的伤害 %d → %d" % [p.card.card_name, p.dmg_reduce, ab, dmg])
 	# ② 赫卡同克瑞斯（9136，R152）：孤军成立（hecaton_atk > 0）时受到的**攻击**伤害减半。
 	#    向下取整（int 除法）但至少 1 点 —— 与犀牛口径一致，1 点攻击不会被减成 0。
 	if p != null and p.card != null and dmg > 0 and kind == "attack" and p.hecaton_atk > 0:
