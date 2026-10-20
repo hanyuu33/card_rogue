@@ -364,6 +364,9 @@ const CLASS_DRUID := Color("3a7d44")   ## 森林精魄 自然绿
 const CLASS_ROGUE := Color("5b3a8e")   ## 暗影刺客 幽紫
 const CLASS_MECH := Color("b8860b")    ## 机械之心 黄铜
 const CLASS_ENEMY := Color("7a1f1f")   ## 敌人 暗红
+## R277：**公用卡**（cards.json 里 class 留空 = 不属于任何职业的事件 / 道具产出卡）
+## 的中性灰 —— 与「无归属」的语义一致：不站任何一边，但也确实是卡库里的正式成员。
+const CLASS_NONE := Color("6f6f6f")    ## 公用卡 中性灰
 
 # ── 强调 / 状态 ──
 const ACCENT_GOLD := Color("c8951c")  ## 装饰 / 描边
@@ -422,7 +425,14 @@ static func draw_gear(cv: CanvasItem, center: Vector2, r_out: float,
 
 
 static func class_color(card_class: String) -> Color:
-	## 职业 → 左侧竖条颜色。**唯一口**（R153）。中立卡（""）返回透明（调用方跳过）。
+	## 卡牌**归属** → 颜色。**唯一口**（R153）：左侧竖条与卡底面填色（`CardFace.paper_tint`）
+	## 都读这里，别在别处再写一份字典。
+	## R277 用户口径：颜色绑的是「这张卡属于谁」，不是「哪个角色能用它」——
+	##   森林精魄 = 自然绿 / 暗影刺客 = 幽紫 / 机械之心 = 黄铜 / 敌人 = 暗红 /
+	##   **class 留空 = 公用卡 → 中性灰**（此前留空返回透明，卡面与竖条都当作“没有归属”）。
+	## 返回 alpha 0 仍然表示「不需要上色」（目前只有 card == null 这类兜底会走到）。
+	if card_class == "":
+		return CLASS_NONE
 	match card_class:
 		"森林精魄":
 			return CLASS_DRUID

@@ -64,16 +64,15 @@ const ATTACK_ART_SUFFIX := {"森林精魄": "forest", "暗影刺客": "shadow", 
 ## ⚠️ 必须**大幅向白混合再乘**：直接乘饱和职业色（如 3a7d44）会把羊皮纸
 ##   压成深色，而卡名用的是 `INK_900` 深墨 → 字就没了。混白后仍是**浅纸**，
 ##   只带职业色相，对比度不受影响。
-## ⚠️ **只有三个玩家职业上色**：通用卡（`card_class == ""`）与敌人卡（"敌人"）
-##   保持原纸底 —— 用户口径只要“三个职业”，而敌人卡本来就有怪物色缎带。
+## R277：上色口径 = **卡的所属**（`CardData.card_class`），四类各有各的颜色：
+##   森林精魄 绿 / 暗影刺客 紫 / 机械之心 黄铜 / 敌人 红 / **class 留空（公用卡）灰**。
+##   全部走 `UiTheme.class_color()` 唯一口，这里不再另写判断。
 const CLASS_PAPER_MIX := 0.60
 
 
 static func paper_tint(card: CardData) -> Color:
 	## 卡底面的乘色（唯一口）。`Color.WHITE` = 不上色。
 	if card == null:
-		return Color.WHITE
-	if card.card_class == "敌人":
 		return Color.WHITE
 	var c: Color = UiTheme.class_color(card.card_class)
 	if c.a <= 0.0:
@@ -418,6 +417,9 @@ static func _draw_rarity_ribbon(canvas: CanvasItem, card: CardData, rect: Rect2,
 
 static func banner_cols(card: CardData) -> Array:
 	## 卡面横幅色 = [上端, 下端]：职业色优先（中立回落卡种色），向白混合成淡彩。
+	## R277：**无图回退横幅**也按卡的**归属**上色 —— 189 张卡还没有卡图，横幅就是它们的
+	##    卡面，颜色不跟归属走的话「敌人红 / 公用灰」在这些卡上根本看不见
+	##    （原来敌人卡取卡种色、公用卡取卡种色，一张盟友卡永远是绿的）。
 	var c: Color = UiTheme.class_color(card.card_class)
 	if c.a <= 0.01:
 		c = UiTheme.kind_color(card.kind)

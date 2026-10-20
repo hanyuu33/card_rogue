@@ -4,6 +4,10 @@ extends SceneTree
 ## 回合结束弃全部手牌、牌库空时弃牌洗回、抽空提示、效果卡（迅捷减伤）、
 ## 击退/智慧/闪电链/火球术、鸭子骑士关卡、放置/移动/攻击/AI/胜负。
 
+## R277：卡面配色（归属色）在 test_engine 里也要断言 —— ui_theme.gd 没有 class_name，
+## 只能显式 preload（与 battle_scene / gallery_scene 同一写法）。
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 var fails := 0
 
 
@@ -7493,17 +7497,18 @@ func _init() -> void:
 	check(dr_cls_bad.is_empty() and dr_cls_enemy_bad.is_empty(),
 			"角色系统：非敌方卡 class 都在可选角色内（或留空 = 通用卡）、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
-	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 74
+	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 68
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 61
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 50
-			and int(dr_cls_count.get("敌人", 0)) == 53,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 74 / 61 / 50 / 53；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1）"
+			and int(dr_cls_count.get("敌人", 0)) == 53
+			and int(dr_cls_count.get("", 0)) == 10,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 68 / 61 / 50 / 53；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
 				int(dr_cls_count.get("敌人", 0))])
-	check(int(dr_cls_count.get("", 0)) == 4,
-			"角色系统：class 留空（通用卡）= 疲惫 9149 + 破绽 9154 + 罐子 9157 / 9158 四张（实际 %d）"
+	check(int(dr_cls_count.get("", 0)) == 10,
+			"角色系统：class 留空（公用卡）= 疲惫 9149 + 破绽 9154 + 罐子 9157 / 9158 + R277 六张事件 / 道具产出卡（实际 %d）"
 			% int(dr_cls_count.get("", 0)))
 	check(PlayerClass.ids() == ["森林精魄", "暗影刺客", "机械之心"]
 			and PlayerClass.default_id() == "森林精魄",
@@ -8104,13 +8109,13 @@ func _init() -> void:
 	var r45_cls_count := {}
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
-	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 74
+	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 68
 			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 61,
 			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
-	check(int(r45_cls_count.get("", 0)) == 4,
-			"R223/R231/R245：class 留空（通用卡）= 疲惫 9149 + 破绽 9154 + 罐子 9157 / 9158（%d 张）"
+	check(int(r45_cls_count.get("", 0)) == 10,
+			"R223/R231/R245/R277：class 留空（公用卡）= 诅咒 9149/9154/9157 + 罐子 9158 + 事件/道具产出 9018 金属龙 / 9022 鸭蛋 / 9023 英雄 / 9050 鲸鱼之怒 / 8065 货物 / 9072 铁栅栏（%d 张）"
 			% int(r45_cls_count.get("", 0)))
 
 	# ---- R47：难度档位 / 事件遭遇战计入难度 / 奖励池角色过滤 / 荒野形态强化 ----
@@ -10146,10 +10151,16 @@ func _init() -> void:
 			"R267 卡底面：暗影刺客 = 紫（B 分量最高，得 %s）" % str(r267_rogue))
 	check(r267_mech.r > r267_mech.b and r267_mech.g > r267_mech.b,
 			"R267 卡底面：机械之心 = 黄铜（R/G 高于 B，得 %s）" % str(r267_mech))
-	check(CardFace.paper_tint(repo.get_card(9008)) == Color.WHITE,
-			"R267 卡底面：敌人卡不上色（保持原纸底）")
-	check(CardFace.paper_tint(repo.get_card(9149)) == Color.WHITE,
-			"R267 卡底面：通用卡（诅咒“疲惫”）不上色")
+	# R277 用户口径变更：颜色绑**卡的归属**，敌人卡 = 红、公用卡（class 留空）= 灰。
+	# 于是 R267 那两条「敌人 / 通用不上色」的旧断言**必须反过来** —— 不上色才是 bug。
+	var r277_enemy_tint := CardFace.paper_tint(repo.get_card(9008))
+	var r277_none_tint := CardFace.paper_tint(repo.get_card(9149))
+	check(r277_enemy_tint != Color.WHITE and r277_enemy_tint.r > r277_enemy_tint.g,
+			"R277 卡底面：敌人卡 = 红（R 分量最高，得 %s）" % str(r277_enemy_tint))
+	check(r277_none_tint != Color.WHITE
+			and absf(r277_none_tint.r - r277_none_tint.g) < 0.02
+			and absf(r277_none_tint.g - r277_none_tint.b) < 0.02,
+			"R277 卡底面：公用卡（诅咒“疲惫”）= 中性灰（RGB 相等，得 %s）" % str(r277_none_tint))
 	check(r267_druid.v > 0.55 and r267_rogue.v > 0.55 and r267_mech.v > 0.55,
 			"R267 卡底面：职业色都向白混过（明度 > 0.55 → INK_900 卡名仍可读）")
 	# ② 降费重画必须走**唯一口** CardFace.draw_badge（自己 draw_circle 会盖掉水晶图标）
@@ -12931,8 +12942,8 @@ func _init() -> void:
 			and r200_cargo.attack_range == 0 and r200_cargo.move_speed == 0,
 		"R200 货物：1 费工事，0 攻 / 6 血 / 0 程 / 0 速")
 	check(r200_cargo != null and r200_cargo.rarity == 5 and r200_cargo.group == "player"
-			and r200_cargo.card_class == "森林精魄",
-		"R200 货物：rarity 5（事件卡）/ 玩家图鉴 / 森林精魄")
+			and r200_cargo.card_class == "",
+		"R200 货物：rarity 5（事件卡）/ 玩家图鉴 / 公用（class 留空；R277 修正归属）")
 	check(r200_cargo != null and r200_cargo.traits.has("货物") and r200_cargo.traits.has("工事"),
 		"R200 货物：带 trait「工事」「货物」")
 	check(r200_cargo != null and r200_cargo.effect_text.find("从卡组中删除") >= 0,
@@ -20498,6 +20509,98 @@ func _init() -> void:
 			r276_e5.state.hand.size(), r276_bmsg])
 	check(GameEngine.BARRIER_DRAW == 3,
 		"R276 能量屏障：抽牌数常量为 %d（卡面「抽 3 张卡」）" % GameEngine.BARRIER_DRAW)
+
+	# ═══════════ R277 ═══════════
+	# ---- ① 赫菲斯托斯 9135：位移免疫（击退 / 换位无效）----
+	var r277_repo := CardRepo.load_json()
+	var r277_hep: CardData = r277_repo.get_card(9135)
+	check(r277_hep != null and r277_hep.traits.has(GameEngine.DISPLACE_IMMUNE_TRAIT),
+		"R277 赫菲斯托斯：卡面 trait 带「%s」（实际 %s）"
+		% [GameEngine.DISPLACE_IMMUNE_TRAIT, str(r277_hep.traits if r277_hep else [])])
+	check(r277_hep != null and r277_hep.effect_text.contains("位移免疫："),
+		"R277 赫菲斯托斯：效果文本写明位移免疫（%s）"
+		% (r277_hep.effect_text if r277_hep else ""))
+
+	var r277_e := _new_engine([], 30, 30, -1, false)
+	r277_e.start_game()
+	var r277_hep_p := r277_e.state.place(
+			CardData.from_dict(r277_repo.get_card(9135).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r277_kb_msg: String = r277_e._knockback(
+			GameEngine.SIDE_SELF, Vector2i(2, 1), 2)
+	check(r277_e.state.unit_at(Vector2i(2, 1)) == r277_hep_p
+			and r277_e.state.unit_at(Vector2i(3, 1)) == null,
+		"R277 赫菲斯托斯：被击退 2 格 → **原地不动**（2,1 仍是它）")
+	check(r277_kb_msg.contains("免疫位移"),
+		"R277 赫菲斯托斯：击退提示写明免疫（%s）" % r277_kb_msg)
+
+	# 对照：同一套击退打在普通敌人身上照旧生效（闸门别写宽）
+	var r277_e2 := _new_engine([], 30, 30, -1, false)
+	r277_e2.start_game()
+	r277_e2.state.place(_card(1981, "普通敌人", "盟友", 1, 1, 9, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r277_kb2: String = r277_e2._knockback(
+			GameEngine.SIDE_SELF, Vector2i(2, 1), 2)
+	check(r277_e2.state.unit_at(Vector2i(0, 1)) != null
+			and r277_e2.state.unit_at(Vector2i(2, 1)) == null,
+		"R277 对照：普通敌人被击退 2 格（2,1 → 0,1，朝敌方后排；%s）" % r277_kb2)
+
+	# ---- ② 换位置：双向传送 8061 对免疫单位无效，且**不扣费、卡留手牌** ----
+	var r277_e3 := _new_engine([], 30, 30, -1, false)
+	r277_e3.start_game()
+	var r277_a := r277_e3.state.place(_card(1982, "我方盟友", "盟友", 1, 2, 10, 1, 1),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r277_b := r277_e3.state.place(
+			CardData.from_dict(r277_repo.get_card(9135).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r277_e3.state.hand = [CardData.from_dict(
+			r277_repo.get_card(GameEngine.SWAP_UNITS_ID).to_dict())]
+	r277_e3.state.energy = 5
+	var r277_sw: String = r277_e3.cast_swap_units(0, Vector2i(4, 1), Vector2i(2, 1))
+	check(r277_e3.state.unit_at(Vector2i(4, 1)) == r277_a
+			and r277_e3.state.unit_at(Vector2i(2, 1)) == r277_b,
+		"R277 双向传送：赫菲斯托斯免疫位移 → 两边都没换位")
+	check(r277_sw.contains("免疫位移") and r277_e3.state.energy == 5
+			and r277_e3.state.hand.size() == 1,
+		"R277 双向传送：拒绝时**不扣费、技能留手牌**（能量 %d / 手牌 %d / %s）"
+		% [r277_e3.state.energy, r277_e3.state.hand.size(), r277_sw])
+	# 对照：换成普通敌人就能换
+	var r277_e4 := _new_engine([], 30, 30, -1, false)
+	r277_e4.start_game()
+	r277_e4.state.place(_card(1983, "我方盟友", "盟友", 1, 2, 10, 1, 1),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r277_d := r277_e4.state.place(_card(1984, "普通敌人", "盟友", 1, 1, 9, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r277_e4.state.hand = [CardData.from_dict(
+			r277_repo.get_card(GameEngine.SWAP_UNITS_ID).to_dict())]
+	r277_e4.state.energy = 5
+	r277_e4.cast_swap_units(0, Vector2i(4, 1), Vector2i(2, 1))
+	check(r277_e4.state.unit_at(Vector2i(2, 1)) != null
+			and r277_e4.state.unit_at(Vector2i(2, 1)).card.id == 1983,
+		"R277 对照：普通敌人照旧被换位（我方盟友到了 2,1）")
+
+	# ---- ③ 卡的**归属**：公用卡 class 留空，且颜色 = 中性灰 ------------------
+	var r277_generic := [9018, 9022, 9023, 9050, 8065, 9072]
+	var r277_bad_cls: Array = []
+	for r277_gid: int in r277_generic:
+		var r277_gc: CardData = r277_repo.get_card(r277_gid)
+		if r277_gc == null or r277_gc.card_class != "":
+			r277_bad_cls.append(r277_gid)
+	check(r277_bad_cls.is_empty(),
+		"R277 归属修正：金属龙 / 鸭蛋 / 英雄 / 鲸鱼之怒 / 货物 / 铁栅栏 都是公用卡（class 留空），异常 %s"
+		% str(r277_bad_cls))
+	check(UiTheme.class_color("") == UiTheme.CLASS_NONE
+			and UiTheme.CLASS_NONE.a > 0.5,
+		"R277 配色：公用卡取中性灰（不再返回透明）")
+	check(UiTheme.class_color("敌人") == UiTheme.CLASS_ENEMY
+			or UiTheme.class_color("敌人").r > UiTheme.class_color("敌人").g,
+		"R277 配色：敌人卡是红系（%s）" % str(UiTheme.class_color("敌人")))
+	var r277_enemy_card: CardData = r277_repo.get_card(9135)
+	check(CardFace.paper_tint(r277_enemy_card) != Color.WHITE,
+		"R277 配色：敌人卡纸底不再留白（%s）" % str(CardFace.paper_tint(r277_enemy_card)))
+	var r277_gen_card: CardData = r277_repo.get_card(9154)
+	check(CardFace.paper_tint(r277_gen_card) != Color.WHITE,
+		"R277 配色：公用卡纸底上灰（%s）" % str(CardFace.paper_tint(r277_gen_card)))
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

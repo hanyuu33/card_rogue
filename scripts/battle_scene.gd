@@ -1781,6 +1781,25 @@ func _ready() -> void:
 		status_text = "能量屏障：1 张获护盾 + 抽 %d 张" % GameEngine.BARRIER_DRAW
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r277hep" in args and engine != null:
+		# 演示（R277）：赫菲斯托斯（9135）**位移免疫** —— 击退 / 换位一概无效。
+		# 场上摆两只：赫菲斯托斯（敌方）与我方一只树人，然后对它放一发击退，
+		# 让状态栏把「免疫位移」当场播出来（截图核验用）。
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		engine.state.board.clear()
+		engine.state.place(CardData.from_dict(repo.get_card(9135).to_dict()),
+				Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		var r277_kb: String = engine._knockback(GameEngine.SIDE_SELF, Vector2i(1, 1), 2)
+		engine.state.reset_units(GameEngine.SIDE_SELF)
+		_hover_card = null
+		_hover_pl = engine.state.unit_at(Vector2i(1, 1))
+		_demo_hover_idx = -1
+		status_text = "击退 2 格 → %s" % r277_kb
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--armor" in args and engine != null:
 		# 演示（R89）：无限装甲（8038）——
 		#   ① 场上放装甲 + 手牌塞一张「升级」→ 打出去改造它
@@ -3617,6 +3636,8 @@ func _start_drag(i: int, pos: Vector2) -> void:
 		if not engine.can_pay_card(card):
 			status_text = "%s：能量不足（需要 %d，当前 %d）——松手不会生效" % [
 					card.card_name, engine.cost_of(card), engine.energy_of()]
+		elif card.is_field():
+			status_text = "%s：拖到高亮格放置（可落在已有单位上）" % card.card_name
 		elif engine.fence_merge_allowed(card):
 			status_text = "%s：拖到绿色格子放置；拖到橙色「叠」格 = 与已有栅栏合并" % card.card_name
 		elif card.has_affix(GameEngine.AFFIX_SWAP):
@@ -4961,6 +4982,20 @@ func _on_board_click(cell: Vector2i) -> void:
 	if selection != null and selection[0] == "hand":
 		var i: int = selection[1]
 		var card := engine.state.hand[i]
+		if card.is_field():
+			# R277（安卓触屏）：场地卡**允许落在已有单位 / 已有场地的格子**上 ——
+			# 场地不是单位，两套数据互不影响（引擎 set_field 顶掉同格旧场地）。
+			# 原来这里直接掉进下面「占用格拒绝」的随从分支 → 手机上「点卡 → 点格子」
+			# 在有己方单位的格子上永远提示「那格已有 X，换一格放置」；
+			# 而拖拽路径（_own_place_cells → _field_place_cells）本来就是对的。
+			# 现在两条路径**同源**：合法格一律问 `_field_place_cells`（内部再问引擎）。
+			if not _field_place_cells(card).has(cell):
+				_say("%s：这一格放不了场地，换一格" % card.card_name)
+			elif not engine.can_pay_card(card):
+				_energy_fail(card, i)   # R151 P2-15
+			else:
+				_try_play_hand_card(i, cell)
+			return
 		if not card.is_spell():
 			# 带「交换」字段的卡（R101）可以落在己方已有单位上 → 顶回手；其余占用格拒绝
 			if p != null and not engine.fence_merge_target(cell, card) \

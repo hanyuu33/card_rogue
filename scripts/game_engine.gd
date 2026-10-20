@@ -258,6 +258,10 @@ const AI_QUEUE_USE_OPTIMIZED:= true   # R160：false 切回原版行动顺序
 
 const TAUNT_TRAIT:= "嘲讽"
 const SPELL_IMMUNE_TRAIT:= "法术免疫"
+## R277：「位移免疫」—— 击退 / 推移 / 换位置这类**改变格位**的效果对它一律无效。
+## 只认卡面 trait（与「法术免疫」同一套路，无数值字段）；判定口只有
+## `_knockback()` 与 `_swap_two_units()` 两处 —— 所有位移效果都必须经过它们。
+const DISPLACE_IMMUNE_TRAIT:= "位移免疫"
 const ASH_DRAGON_ID:= 1013
 const ASH_DRAGON_AOE:= 4
 const FROST_MAGE_ID:= 1031
@@ -6069,6 +6073,13 @@ func cast_swap_units(hand_index: int, cell_a: Vector2i, cell_b: Vector2i) -> Str
 	var pb := state.unit_at(cell_b)
 	if pa == null or pb == null:
 		return "（需要指定两个都在场上的单位）"
+	# R277：位移免疫 —— **付费之前**拦，否则能量白扣、卡也没了。
+	if pa.card.traits.has(DISPLACE_IMMUNE_TRAIT) \
+			or pb.card.traits.has(DISPLACE_IMMUNE_TRAIT):
+		var imm_nm: String = pa.card.card_name \
+				if pa.card.traits.has(DISPLACE_IMMUNE_TRAIT) else pb.card.card_name
+		_log("双向传送：%s 免疫位移，交换没有生效" % imm_nm)
+		return "（%s 免疫位移，无法交换）" % imm_nm
 	_pay(card)
 	state.hand.remove_at(hand_index)
 	var detail := _swap_two_units(cell_a, cell_b)
@@ -6084,6 +6095,10 @@ func _swap_two_units(cell_a: Vector2i, cell_b: Vector2i) -> String:
 	## 只换**位置**：Placement 上的全部状态（横置 / 已移动 / 沉睡 / 冰封…）跟着单位走。
 	var pa: Placement = state.board[cell_a]
 	var pb: Placement = state.board[cell_b]
+	# R277：兜底闸门 —— 敌方 AI（`_swap_auto_cells`）与任何直接调用都不会绕过免疫。
+	if pa.card.traits.has(DISPLACE_IMMUNE_TRAIT) \
+			or pb.card.traits.has(DISPLACE_IMMUNE_TRAIT):
+		return "（有人免疫位移，交换没有生效）"
 	state.board[cell_a] = pb
 	state.board[cell_b] = pa
 	var detail := "%s ⇄ %s 交换了位置" % [pa.card.card_name, pb.card.card_name]
@@ -6571,13 +6586,16 @@ func _space_guard(c: CardData) -> void :
 	for cell: Vector2i in state.board:
 		if state.board[cell].owner != SIDE_OPPONENT:
 			continue
+		# R277：免疫位移的单位不参与「最靠前」的评选。
+		if state.board[cell].card.traits.has(DISPLACE_IMMUNE_TRAIT):
+			continue
 		if cell.x > best_row:
 			best_row = cell.x
 			near = [cell]
 		elif cell.x == best_row:
 			near.append(cell)
 	if near.is_empty():
-		_log("空间守护：场上没有敌方单位，未生效")
+		_log("空间守护：没有可被位移的敌方单位，未生效")
 		return
 	var t: Vector2i = near[rng.randi() % near.size()]
 	var p: Placement = state.unit_at(t)
@@ -8228,6 +8246,11 @@ func _knockback(side: String, target, steps: int) -> String:
 	var p:= _target_placement(side, target)
 	if p == null:
 		return "（没有目标）"
+	# R277：位移免疫（赫菲斯托斯 9135）—— 判据放在这个**唯一口**，
+	# 清退陷阱 / 击退 9004 / 空间守护 9064 / 暗影锁链 9112 就全都自动生效。
+	if p.card.traits.has(DISPLACE_IMMUNE_TRAIT):
+		_log("%s 免疫位移：没有被击退" % p.card.card_name)
+		return "%s 免疫位移" % p.card.card_name
 	var cell:= _cell_of(p)
 	if cell == Vector2i(-1, -1):
 		return "（目标已不在场上）"
@@ -10482,7 +10505,9 @@ func _dark_chain_pulls(side: String, times: int) -> void :
 		var foes: Array[Vector2i] = []
 		for cell: Vector2i in state.board:
 			var q: Placement = state.unit_at(cell)
-			if q != null and q.owner != side and q.health > 0:
+			# R277：免疫位移的单位不进候补 —— 否则随机抽中它等于白耗一次击退。
+			if q != null and q.owner != side and q.health > 0 \
+					and not q.card.traits.has(DISPLACE_IMMUNE_TRAIT):
 				foes.append(cell)
 		if foes.is_empty():
 			_log("暗影锁链：场上没有敌人，第 %d/%d 次落空" % [i + 1, times])

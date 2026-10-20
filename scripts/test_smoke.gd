@@ -1624,6 +1624,89 @@ func _check_battle(scene: Variant) -> void:
 	_check_run_deck_panel(scene)
 	_check_r208(scene)
 	_check_enchant_mark(scene)
+	_check_r277_field_tap(scene)
+
+
+func _check_r277_field_tap(scene: Variant) -> void:
+	## R277（安卓触屏）：场地卡的**点选路径**必须能落在「已有己方单位」的格子上。
+	##
+	## 原 bug：`_on_board_click` 里场地卡掉进了随从分支 —— 那里见格子有单位就
+	## 「那格已有 X，换一格放置」，于是手机上「点手牌 → 点格子」永远放不上
+	## 维修间 8036 / 改造工厂 8037（拖拽路径走 `_own_place_cells` → `_field_place_cells`，
+	## 本来就是对的 → 这个 bug 只在触屏 / 点选操作里出现）。
+	## 这里走**真实点击注入**（`_feed_click`），不是直接调引擎。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("R277 场地放置：拿不到 engine")
+		return
+	var repo := CardRepo.load_json()
+	var bay: CardData = repo.get_card(GameEngine.REPAIR_BAY_ID)
+	if bay == null:
+		_smoke_fail("R277 场地放置：维修间（%d）缺失" % GameEngine.REPAIR_BAY_ID)
+		return
+	# 上一条用例可能把全屏选卡页留在展开态（R189 起它会吞掉所有点击）→ 先取消掉
+	if scene._pick != null and scene._pick.is_picking():
+		scene._on_pick_cancelled()
+		scene._sync_pick()
+	if scene._pick != null and scene._pick.is_picking():
+		_smoke_fail("R277 场地放置：上一条用例的选卡页关不掉，无法验证点击路径")
+		return
+	scene._grid_intro_t = -1.0
+	scene._grid_zoom = 1.0
+	scene._clear_selection()
+	eng.current_side = GameEngine.SIDE_SELF
+	eng.state.energy = 9
+	# 目标格：己方半场里**当前可视窗内**、且场地允许放的一格
+	var cell := Vector2i(-1, -1)
+	for x in range(FieldState.OPPONENT_ROWS, FieldState.BOARD_ROWS):
+		for y in FieldState.BOARD_COLS:
+			var c := Vector2i(x, y)
+			if not scene._cell_in_view(scene._cell_center(c)):
+				continue
+			if not GameEngine.field_place_allowed(c, GameEngine.FIELD_AIM_ALLY):
+				continue
+			cell = c
+			break
+		if cell.x >= 0:
+			break
+	if cell.x < 0:
+		_smoke_fail("R277 场地放置：己方半场找不到可放场地的可视格")
+		return
+	# 那格上先站一个己方盟友（这就是「有友方单位的格子」）
+	if eng.state.board.has(cell):
+		eng.state.board.erase(cell)
+	var ally := CardData.new()
+	ally.id = 8199
+	ally.card_name = "测试盟友"
+	ally.kind = "盟友"
+	ally.cost = 1
+	ally.power = 2
+	ally.health = 10
+	ally.attack_range = 1
+	ally.move_speed = 1
+	eng.state.place(ally, cell, GameEngine.SIDE_SELF)
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(bay.to_dict()))
+	# ① 点手牌 → 选中  ② 点**有己方单位**的格子 → 应该放下场地
+	_feed_click(scene, _hand_card_center(scene, 0))
+	if scene.selection == null or scene.selection[0] != "hand":
+		_smoke_fail("R277 场地放置：点手牌没选中（selection=%s）" % str(scene.selection))
+		return
+	_feed_click(scene, scene._cell_center(cell))
+	var placed: CardData = eng.state.field_at(cell)
+	if placed == null or placed.id != GameEngine.REPAIR_BAY_ID:
+		_smoke_fail("R277 场地放置：点有己方单位的格子（%s）没放上维修间（实际 %s）"
+				% [str(cell), "空" if placed == null else placed.card_name])
+		return
+	if eng.state.hand.size() != 0:
+		_smoke_fail("R277 场地放置：放下后手牌应清空，实际 %d 张" % eng.state.hand.size())
+		return
+	var still: Placement = eng.state.unit_at(cell)
+	if still == null or still.card.id != 8199:
+		_smoke_fail("R277 场地放置：场地放下后原己方单位**不该消失**（实际 %s）"
+				% ("空" if still == null else still.card.card_name))
+		return
+	print("SMOKE OK R277 场地卡点选：放在有己方单位的格子上成功（%s，单位仍在场）" % str(cell))
 
 
 func _check_enchant_mark(scene: Variant) -> void:
