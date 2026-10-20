@@ -1356,6 +1356,24 @@ static func unit_slot_allowed(cell: Vector2i, side: String) -> bool:
 	return cell.x != forbidden_row_for(side)
 
 
+static func hand_place_allowed(cell: Vector2i, side: String) -> bool:
+	## **手牌单位（盟友/工事）能不能放在这一格**（R286，唯一判据）。
+	##
+	## 规则：**只能放自己半场**（下 3 行；敌方对称 = 上 3 行）。R285 曾把手牌放置
+	## 与界面高亮一起放宽成「除对方后排全图」，木栅栏拖出去连敌方前排都是绿的 ——
+	## 「越过中线做事」是**场上位移效果**（移动 / 闪现 / 潜入 / 换位）的玩法，
+	## 不是从手里拍牌的玩法；出手放置回归「自己半场」的口径。两条判据并存：
+	##   * `hand_place_allowed` —— 从手牌上场（play_from_hand / remote_play / 界面高亮）；
+	##   * `unit_slot_allowed` —— 场上单位的落点（move / 闪现 / 潜入 / 召唤 / 换位）。
+	if cell.x < 0 or cell.x >= FieldState.BOARD_ROWS:
+		return false
+	if cell.y < 0 or cell.y >= FieldState.BOARD_COLS:
+		return false
+	if side == SIDE_OPPONENT:
+		return cell.x < FieldState.OPPONENT_ROWS
+	return cell.x >= FieldState.OPPONENT_ROWS
+
+
 static func hp_row_owner(row: int) -> String:
 
 
@@ -3515,8 +3533,8 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	# R285：**单位落点的引擎侧闸门**。界面（拖拽 / 点选）本来就只让自己半场高亮，
 	# 但引擎一直没有判 —— 联机回放、自动出牌、以后新加的效果卡都能把单位塞进对方后排。
 	# 放在 `_pay` 之前：拒放不扣费，也就不用走退款。
-	if (card.kind == "盟友" or card.is_fort()) and not unit_slot_allowed(cell, SIDE_SELF):
-		_log("%s 只能放在自己半场（对方后排是直击 HP 的行）" % card.card_name)
+	if (card.kind == "盟友" or card.is_fort()) and not hand_place_allowed(cell, SIDE_SELF):
+		_log("%s 只能放在自己半场（下 3 行）" % card.card_name)
 		return null
 	var paid:= _pay(card)
 	# 栅栏修复术（6021）：把栅栏打到已有栅栏的格子上 → 合并（不新建单位）
@@ -6848,8 +6866,8 @@ func remote_play(card: CardData, cell: Vector2i) -> Placement:
 		return null
 	# R285：敌方同样不许站进我方后排（对称闸门）。费用在函数开头已付、没有退款，
 	# 所以这里与「场地拒放」同口径：只记日志 + 记一次出牌，不做别的结算。
-	if (card.kind == "盟友" or card.is_fort()) and not unit_slot_allowed(cell, SIDE_OPPONENT):
-		_log("对方放弃放置：%s 不能放到我方后排 %s" % [card.card_name, cell])
+	if (card.kind == "盟友" or card.is_fort()) and not hand_place_allowed(cell, SIDE_OPPONENT):
+		_log("对方放弃放置：%s 只能放到对方半场 %s" % [card.card_name, cell])
 		_note_card_played(SIDE_OPPONENT, card)
 		return null
 	var p:= state.place(card, cell, SIDE_OPPONENT)

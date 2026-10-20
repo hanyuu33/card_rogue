@@ -20840,6 +20840,17 @@ func _init() -> void:
 			and not GameEngine.unit_slot_allowed(Vector2i(FieldState.BOARD_ROWS, 0), GameEngine.SIDE_SELF) \
 			and not GameEngine.unit_slot_allowed(Vector2i(0, FieldState.BOARD_COLS), GameEngine.SIDE_SELF),
 			"R285 判据：越界格一律 false（行 -1 / 行 6 / 列 3）")
+	# R286：手牌放置有自己的一条判据 —— 只有自己半场（row 3..5）允许
+	var r286_hand_rows: Array = []
+	for x5 in FieldState.BOARD_ROWS:
+		r286_hand_rows.append(GameEngine.hand_place_allowed(Vector2i(x5, 1), GameEngine.SIDE_SELF))
+	check(r286_hand_rows == [false, false, false, true, true, true],
+			"R286 判据：手牌放置只有自己半场 row 3..5 允许（%s）" % str(r286_hand_rows))
+	var r286_hand_opp: Array = []
+	for x6 in FieldState.BOARD_ROWS:
+		r286_hand_opp.append(GameEngine.hand_place_allowed(Vector2i(x6, 1), GameEngine.SIDE_OPPONENT))
+	check(r286_hand_opp == [true, true, true, false, false, false],
+			"R286 判据（对称）：敌方手牌放置只有对方半场 row 0..2 允许（%s）" % str(r286_hand_opp))
 
 	# ---- ② 手牌放置：引擎侧也要拦（以前只有界面拦）----
 	var r285_e1 := _new_engine([], 40, 40, -1, false)
@@ -20854,24 +20865,31 @@ func _init() -> void:
 			and r285_e1.state.hand.size() == 1,
 			"R285 手牌放置：对方后排被拒、不扣费（%d→%d）、卡还在手（%d 张）" % [
 				r285_e1_before, r285_e1.state.energy, r285_e1.state.hand.size()])
-	# 敌方中场照旧允许 —— 越过中线本来就是玩法的一部分
+	# R286：出手放置回归「自己半场」—— 敌方半场（含前排/中场）从手里也进不去
 	var r285_e2 := _new_engine([], 40, 40, -1, false)
 	r285_e2.start_game()
 	r285_e2.state.energy = 30
 	r285_e2.state.hand.clear()
 	r285_e2.state.hand.append(CardData.from_dict(r285_ally.to_dict()))
 	r285_e2.play_from_hand(0, Vector2i(2, 1))
-	check(r285_e2.state.board.has(Vector2i(2, 1)),
-			"R285 手牌放置：敌方中场 row 2 照旧允许（只禁后排这一行）")
+	check(not r285_e2.state.board.has(Vector2i(2, 1))
+			and r285_e2.state.hand.size() == 1,
+			"R286 手牌放置：敌方中场 row 2 被拒（出手只能放自己半场）")
+	# 自己半场第一行照常允许
+	r285_e2.play_from_hand(0, Vector2i(3, 1))
+	check(r285_e2.state.board.has(Vector2i(3, 1)),
+			"R286 手牌放置：自己半场 row 3 照常允许")
 
 	# ---- ③ 敌方放置：对称拦（AI 不能把单位摆进我方后排）----
 	var r285_e3 := _new_engine([], 40, 40, -1, false)
 	r285_e3.start_game()
 	r285_e3.remote_play(CardData.from_dict(r285_ally.to_dict()), Vector2i(5, 1))
 	var r285_e3_rejected: bool = not r285_e3.state.board.has(Vector2i(5, 1))
+	r285_e3.remote_play(CardData.from_dict(r285_ally.to_dict()), Vector2i(4, 1))
+	var r285_e3_rejected2: bool = not r285_e3.state.board.has(Vector2i(4, 1))
 	r285_e3.remote_play(CardData.from_dict(r285_ally.to_dict()), Vector2i(1, 1))
-	check(r285_e3_rejected and r285_e3.state.board.has(Vector2i(1, 1)),
-			"R285 敌方放置：我方后排 row 5 被拒、敌方前场 row 1 正常")
+	check(r285_e3_rejected and r285_e3_rejected2 and r285_e3.state.board.has(Vector2i(1, 1)),
+			"R286 敌方放置：我方后排 row 5 / 我方中场 row 4 被拒、敌方前场 row 1 正常")
 
 	# ---- ④ 双向传送：换完会有人落到对方后排 → 整笔拒绝（不扣费、卡留在手）----
 	var r285_e4 := _new_engine([], 40, 40, -1, false)

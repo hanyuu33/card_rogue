@@ -2521,6 +2521,14 @@ func _demo_dragshot() -> void:
 				return
 			engine.state.hand[0] = eff
 			idx = 0
+		elif "--dragkind" in _demo_args and "place" in _demo_args:
+			# R286 出图：拖**工事**（木栅栏 8001）→ 放置高亮应只有自己半场（下 3 行），
+			# R285 曾放宽成「除对方后排全图」。`--dragkind place`。
+			var pl := repo.get_card(8001)
+			if pl == null:
+				return
+			engine.state.hand[0] = pl
+			idx = 0
 		else:
 			for i in engine.state.hand.size():
 				if engine.state.hand[i].id == 8002:   # 攻击：target_mode=unit，初始卡组 ×5
@@ -3750,12 +3758,12 @@ func _own_place_cells(card: CardData) -> Array[Vector2i]:
 	## 带「交换」字段的卡（R101，救援构装体）：还能打在**已有己方单位**的格子上
 	## （原单位被顶回手、新卡占据该格；引擎 play_from_hand 里的交换分支负责顶回手）。
 	var out: Array[Vector2i] = []
-	# R285：行归属读引擎唯一口 `unit_slot_allowed` —— 界面上「能放哪」与引擎
-	# 「实际放不放」从此同一个真相，别再这里写死「下三行」。
+	# R286：手牌放置读引擎唯一口 `hand_place_allowed`（自己半场）—— 界面上
+	# 「能放哪」与引擎「实际放不放」同一个真相；R285 曾误放宽成只禁对方后排。
 	for x in FieldState.BOARD_ROWS:
 		for y in FieldState.BOARD_COLS:
 			var c := Vector2i(x, y)
-			if not GameEngine.unit_slot_allowed(c, GameEngine.SIDE_SELF):
+			if not GameEngine.hand_place_allowed(c, GameEngine.SIDE_SELF):
 				continue
 			if not engine.state.board.has(c):
 				out.append(c)
