@@ -20,7 +20,14 @@ extends RefCounted
 ##   * `begin_run()` 开局（角色选定）写 pending：开始时间 / 角色 / 难度 / 本次进程 id；
 ##   * `finish()` 结束时把它转成正式记录，并删掉 pending；
 ##   * 直接关窗口 / 进程崩掉 → pending 留在盘上，**下次启动 `recover()` 补一条「中断」**；
-##   * 回标题后开新局 → `begin_run()` 先把上一局的 pending 收成「中断」。
+##   * 回标题后开新局 → `begin_run()` 先把上一局的 pending 收成「中断」；
+##   * **中断之后又续档（R289）** → `resume()` 把刚补的那条「中断」**撤回**（见下）。
+##
+## **一局只该有一条记录**（R289）：中断 → 继续游戏 → 打完，记录页不能出现
+## 「中断」+「通关」两条。做法是 `resume()` 先 `_revive_interrupted()`：若**最后一条**
+## 记录是「中断」且种子与本局一致，就把它删掉、拿它的开局时间 / 累计用时当新 pending
+## 的起点。待在 pending 里的 `elapsed` 是「中断之前已经打了多久」，这样续档后
+## `secs` 是**各段累加**，不会把关掉游戏的那几个小时算进去。
 ## 进程 id 用来区分两种「半路没了」：
 ##   * **同一进程内**回标题（续档还能接着打）→ pending 的 id 与当前一致，`recover()` 不动它；
 ##   * **上次启动**留下的 pending → id 对不上，判定为真中断。
@@ -54,10 +61,19 @@ static func begin_run(cls: String) -> void:
 
 
 static func resume() -> void:
-	## 续档进入（跨启动续档）：盘上有 pending 就接着用；没有就按当前状态补一份，
+	## 续档进入（跨启动续档）：盘上有 pending 就接着用；没有就先试着**把上一次那条
+	## 「中断」记录复活**（中断后又继续 = 同一局，不能记成两条），复活不了再补一份新的 ——
 	## 免得这一局打完时 `finish()` 找不到开始时间。
-	if _read_pending().is_empty():
+	if not _read_pending().is_empty():
+		return
+	var base := _revive_interrupted()
+	if base.is_empty():
 		_write_pending(RunState.player_class)
+		return
+	var cls := RunState.player_class
+	if cls == "":
+		cls = str(base.get("class", PlayerClass.default_id()))
+	_write_pending(cls, base)
 
 
 static func finish(result: String) -> void:
@@ -69,6 +85,10 @@ static func finish(result: String) -> void:
 		return
 	var now := Time.get_unix_time_from_system()
 	var start := float(p.get("start_unix", now))
+	if start <= 0.0:
+		start = now     # 老 pending 没有 start_unix / 写成 0 → 不拿 1970 年当起点算用时
+	# R289：跨中断续档时 pending 里带着「中断前已经打的时间」，两段相加才是真实用时。
+	var spent := maxi(0, int(p.get("elapsed", 0))) + maxi(0, int(now - start))
 	var entry := {
 		"format": FORMAT,
 		"time": str(p.get("time", "")),
@@ -76,7 +96,7 @@ static func finish(result: String) -> void:
 		"class": str(p.get("class", PlayerClass.default_id())),
 		"difficulty": int(p.get("difficulty", 2)),
 		"result": result,
-		"secs": maxi(0, int(now - start)),
+		"secs": spent,
 		"seed": int(p.get("seed", 0)),
 	}
 	# 快照来源：本局还活着 → 现取；否则（启动时补记「中断」）→ 用 pending 里存的
@@ -150,6 +170,32 @@ static func recover() -> bool:
 	return true
 
 
+static func _revive_interrupted() -> Dictionary:
+	## 把「上次启动 recover() 补的那条中断」收回来当 pending 的起点（R289）。
+	## 只在玩家点「继续游戏」（`resume()`）时调用 —— 那一刻才确定那局还要接着打。
+	## 判据三条，缺一不可：**最后一条记录** + 结果 interrupted + 种子与本局一致。
+	## 种子非 0 才认（老记录 / 单关没有 seed，宁可按「中断 + 新记录」两条留着也不误删）。
+	if not RunState.run_active or RunState.run_seed == 0:
+		return {}
+	var all := list_records()
+	if all.is_empty():
+		return {}
+	var last: Dictionary = all[all.size() - 1]
+	if str(last.get("result", "")) != "interrupted":
+		return {}
+	if int(last.get("seed", 0)) != RunState.run_seed:
+		return {}
+	all.pop_back()
+	_write_records(all)
+	return {
+		"time": str(last.get("time", "")),
+		"start_unix": Time.get_unix_time_from_system(),
+		"elapsed": maxi(0, int(last.get("secs", 0))),
+		"class": str(last.get("class", "")),
+		"difficulty": int(last.get("difficulty", RunState.difficulty)),
+	}
+
+
 static func clear_all() -> void:
 	## 清空全部记录（设置 / 记录页的「清空」按钮）。
 	_write_records([])
@@ -214,14 +260,18 @@ static func fmt_secs(secs: int) -> String:
 
 # ------------------------------------------------------------ 落盘
 
-static func _write_pending(cls: String) -> void:
+static func _write_pending(cls: String, base: Dictionary = {}) -> void:
+	## base：中断记录复活时带进来的起点（开局时间 / 本段起点 / 已累计秒 / 档位），
+	## 没有就当作全新一局。`elapsed` 只统计**真的在打**的时间（见文件头 R289 说明）。
+	var now := Time.get_unix_time_from_system()
 	var p := {
 		"format": FORMAT,
 		"session": session_id(),
-		"time": Time.get_datetime_string_from_system(),
-		"start_unix": Time.get_unix_time_from_system(),
+		"time": str(base.get("time", Time.get_datetime_string_from_system())),
+		"start_unix": int(base.get("start_unix", now)),
+		"elapsed": maxi(0, int(base.get("elapsed", 0))),
 		"class": cls,
-		"difficulty": RunState.difficulty,
+		"difficulty": int(base.get("difficulty", RunState.difficulty)),
 		"seed": RunState.run_seed,
 		"snap": snapshot() if RunState.run_active else {},
 	}

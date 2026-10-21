@@ -17746,6 +17746,70 @@ func _init() -> void:
 	RunRecord.clear_all()
 	check(RunRecord.list_records().is_empty() and not FileAccess.file_exists(
 			RunRecord.PENDING_PATH), "R215 记录：清空 + pending 已收尾")
+	# ---- R289：中断后继续 = 同一局，记录页不能出两条 ----
+	RunRecord.clear_all()
+	if FileAccess.file_exists(RunRecord.PENDING_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(RunRecord.PENDING_PATH))
+	RunState.run_active = true
+	var r289_seed := 20261021
+	RunState.run_seed = r289_seed
+	# 上次启动留下的 pending：同一局（种子相同）、session 不同、已经打了 1500 秒
+	var r289_f := FileAccess.open(RunRecord.PENDING_PATH, FileAccess.WRITE)
+	r289_f.store_string(JSON.stringify({
+		"format": RunRecord.FORMAT, "session": "r289-old",
+		"time": "2026-10-21T09:00:00", "start_unix": 0, "elapsed": 1500,
+		"class": "森林精魄", "difficulty": 2, "seed": r289_seed}))
+	r289_f = null
+	check(RunRecord.recover(), "R289 中断：上次启动遗留的 pending → 补一条「中断」")
+	check(RunRecord.list_records().size() == 1, "R289 中断：此时记录页一条「中断」")
+	# 玩家点「继续游戏」→ 那条中断被撤回，pending 带着原开局时间 + 已累计用时回来
+	RunRecord.resume()
+	var r289_pend: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string(RunRecord.PENDING_PATH))
+	check(RunRecord.list_records().is_empty(),
+		"R289 续档：中断记录被收回（同一条战斗不记两行）")
+	check(r289_pend is Dictionary
+			and str((r289_pend as Dictionary).get("time", "")) == "2026-10-21T09:00:00"
+			and int((r289_pend as Dictionary).get("elapsed", 0)) == 1500
+			and int((r289_pend as Dictionary).get("seed", 0)) == r289_seed,
+		"R289 续档：pending 继承开局时间 / 已累计 1500 秒 / 同一种子")
+	RunRecord.finish("win")
+	var r289_end := RunRecord.list_records()
+	check(r289_end.size() == 1 and str(r289_end[0].get("result", "")) == "win"
+			and int(r289_end[0].get("secs", 0)) >= 1500,
+		"R289 续档：打完只留一条「通关」，用时是各段累加（不把关机的几小时算进去）")
+	# 种子对不上（那是另一局的中断）→ 一条都不许删
+	RunRecord.clear_all()
+	if FileAccess.file_exists(RunRecord.PENDING_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(RunRecord.PENDING_PATH))
+	RunState.run_seed = 777
+	var r289_other := FileAccess.open(RunRecord.PATH, FileAccess.WRITE)
+	r289_other.store_string(JSON.stringify([{
+		"format": RunRecord.FORMAT, "time": "2026-10-20T10:00:00",
+		"end": "2026-10-20T11:00:00", "class": "暗影刺客", "difficulty": 2,
+		"result": "interrupted", "secs": 60, "seed": 888}]))
+	r289_other = null
+	RunRecord.resume()
+	check(RunRecord.list_records().size() == 1
+			and FileAccess.file_exists(RunRecord.PENDING_PATH),
+		"R289 续档：种子不同的「中断」不复活（别人的记录一条不动，只补新 pending）")
+	# 最后一条已经收尾（通关）→ 不复活
+	RunRecord.clear_all()
+	if FileAccess.file_exists(RunRecord.PENDING_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(RunRecord.PENDING_PATH))
+	var r289_win := FileAccess.open(RunRecord.PATH, FileAccess.WRITE)
+	r289_win.store_string(JSON.stringify([{
+		"format": RunRecord.FORMAT, "time": "2026-10-20T10:00:00",
+		"end": "2026-10-20T11:00:00", "class": "暗影刺客", "difficulty": 2,
+		"result": "win", "secs": 60, "seed": 777}]))
+	r289_win = null
+	RunRecord.resume()
+	check(RunRecord.list_records().size() == 1
+			and str(RunRecord.list_records()[0].get("result", "")) == "win",
+		"R289 续档：最后一条是「通关」→ 不复活（已结束的局不重开）")
+	RunRecord.clear_all()
+	if FileAccess.file_exists(RunRecord.PENDING_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(RunRecord.PENDING_PATH))
 	# ⑧ 敌方效果开场弹窗：5 秒自动关闭（纯函数口径，不依赖帧）
 	var r215_bs: GDScript = load("res://scripts/battle_scene.gd")
 	check(is_equal_approx(r215_bs.ee_popup_left_sec(1000, 1000), 5.0)
