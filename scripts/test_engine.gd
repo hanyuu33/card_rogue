@@ -20964,6 +20964,82 @@ func _init() -> void:
 	check(r285_src.find("dst.x == forbidden_row_for") < 0,
 			"R285 源码锁：落点判定已全部改走 unit_slot_allowed（不再散装比 dst.x）")
 
+	# ================= R288：通用效果演出（隐形伤害看得见）=================
+	# 现象：远古虚骨龙这类「被动 / 回合开始」效果只 `_log()` 一句就结算完了，
+	# 血条数字变了、屏幕上一动不动。修复 = 引擎补两个通用事件
+	# （`fx_impact` 受击 / `card_pulse` 发动），界面统一演成
+	# 「脉冲 → 光带 → 镜头依次带两边进画面」。
+	var r288_events: Array = []
+	var r288_pulses: Array = []
+
+	# ① 受击唯一口：任何来源的伤害都发 fx_impact（界面原来只认 attack / trample）
+	var r288_e := _new_engine([], 40, 40, -1, false)
+	r288_e.start_game()
+	r288_e.action.connect(func(k: String, d: Dictionary) -> void:
+		if k == "fx_impact":
+			r288_events.append(d))
+	var r288_foe: Placement = r288_e.state.place(
+			CardData.from_dict(repo.get_card(8003).to_dict()), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
+	r288_e._hit_unit(r288_foe, 7, "测试")
+	check(r288_events.size() == 1
+			and int(r288_events[0].get("amount", 0)) == 7
+			and r288_events[0].get("cell") == Vector2i(2, 1)
+			and str(r288_events[0].get("source", "")) == "测试",
+			"R288 fx_impact：技能伤害发出通用受击事件（%d 条，amount=%s cell=%s）" % [
+				r288_events.size(),
+				str(r288_events[0].get("amount")) if r288_events.size() > 0 else "-",
+				str(r288_events[0].get("cell")) if r288_events.size() > 0 else "-"])
+
+	# ② 远古虚骨龙：吐息前发 card_pulse（发动者格 + 标签），原来什么都没有
+	var r288_d := _new_engine([], 40, 40, -1, false)
+	r288_d.start_game()
+	r288_d.state.place(CardData.from_dict(repo.get_card(9014).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r288_d.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r288_d.action.connect(func(k: String, d2: Dictionary) -> void:
+		if k == "card_pulse":
+			r288_pulses.append(d2))
+	r288_d._dragon_breath(GameEngine.SIDE_SELF)
+	check(r288_pulses.size() == 1
+			and r288_pulses[0].get("cell") == Vector2i(4, 1)
+			and str(r288_pulses[0].get("label", "")) == "龙息",
+			"R288 虚骨龙：吐息前发出 card_pulse（发动者 (4,1) + 标签「龙息」，实际 %d 条）"
+			% r288_pulses.size())
+
+	# ③ 镜头段计算（纯函数）：一行必进窗；同组行与顺序无关
+	var r288_bs = load("res://scripts/battle_scene.gd")
+	var r288_top: float = r288_bs.cue_scroll_for([0])
+	var r288_bot: float = r288_bs.cue_scroll_for([5])
+	check(r288_top <= r288_bot,
+			"R288 镜头：敌方后排(0) 的滚动量 <= 我方后排(5)（%.0f <= %.0f）"
+			% [r288_top, r288_bot])
+	check(bool(r288_bs.row_in_view(0, r288_top)) and bool(r288_bs.row_in_view(5, r288_bot)),
+			"R288 镜头：算出来的滚动量能让目标行**完整**进窗")
+	check(is_equal_approx(float(r288_bs.cue_scroll_for([2, 4])),
+			float(r288_bs.cue_scroll_for([4, 2]))),
+			"R288 镜头：同一组行与顺序无关（能同屏时合成一个镜头段）")
+
+	# ④ 跨屏必须**切成多段轮流演**：一屏塞不下时不能只保证第一行，
+	#    否则受影者永远在画面外（用户要求的第二、三条硬需求）。
+	var r288_near: Array = r288_bs.cue_shot_rows([2, 4])
+	var r288_far: Array = r288_bs.cue_shot_rows([0, 5])
+	check(r288_near.size() == 1 and (r288_near[0] as Array).size() == 2,
+			"R288 镜头段：相邻两行能同屏 → 只切 1 段（实际 %d 段）" % r288_near.size())
+	check(r288_far.size() == 2 and (r288_far[0] as Array).size() == 1
+			and (r288_far[1] as Array).size() == 1,
+			"R288 镜头段：跨 6 行塞不进一屏 → 切成 2 段轮流演（实际 %d 段）"
+			% r288_far.size())
+	check(r288_bs.cue_shot_rows([]).is_empty(),
+			"R288 镜头段：空输入不产生镜头段")
+
+	# ⑤ 源码锁：发动 / 受影必须**并成一条**演出，否则光带画不出来
+	var r288_ui := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check(r288_ui.find("_cue_absorb(") >= 0
+			and r288_ui.find("const CUE_MERGE_MS := ") >= 0,
+			"R288 源码锁：同笔结算的「发动 → 命中」走 _cue_absorb 合并（光带才画得出来）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
