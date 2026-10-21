@@ -1938,6 +1938,8 @@ func _dragon_breath(side: String) -> void :
 		for c2: Vector2i in state.board:
 			if state.board[c2].owner == foe:
 				targets.append(c2)
+		# R288：先让玩家看见「是这条龙在动」—— 吐息原来只有一行日志 + 数字变化
+		_fx_pulse(cell, p.card, "龙息")
 		if targets.is_empty():
 			_log("远古虚骨龙吐息：敌方玩家 -%d" % breath)
 			_damage_player(foe, breath, "龙息")
@@ -8384,6 +8386,24 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 	return dmg
 
 
+func _fx_pulse(cell: Vector2i, card: CardData, label := "") -> void:
+	## **「这张卡发动了效果」的通用表现事件**（R288 唯一口）。
+	##
+	## 为什么需要它：引擎里大量被动 / 回合开始效果只 `_log()` 一句就结算完了，
+	## 玩家看到的只有「对面数字变了」，根本不知道是谁干的。这里只报
+	## **发动者所在格 + 卡 + 一句短标签**，界面负责把它演成
+	## 「卡身脉冲 → 光带指向受影者 → 镜头依次把两边都带进画面」。
+	## 不在这里判「有没有目标 / 目标是谁」—— 那是具体效果的事，
+	## 界面拿不到目标时只演脉冲，不会画错线。
+	if card == null:
+		return
+	if cell.x < 0 or cell.x >= FieldState.BOARD_ROWS \
+			or cell.y < 0 or cell.y >= FieldState.BOARD_COLS:
+		return
+	action.emit("card_pulse", {"cell": cell, "card": card,
+			"label": card.card_name if label == "" else label})
+
+
 func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= true,
 		is_attack:= false) -> int:
 	## R152：`is_attack` = 这一笔是不是**单位普通攻击**（只有 8466 行「战斗」那处传 true）。
@@ -8435,6 +8455,14 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 		_mark_spell_enemy_hit()
 	# R123：己方**单位**受伤不再触发「一袋米抗几楼」—— 它只认我方 HP 受伤
 	#（_damage_player 的两条路径 + attack_hp 直击，与鸭梨 6019 同一口径）。
+	# R288：**通用受击表现事件**（唯一口）。任何来源的伤害（技能 / 被动 / 陷阱 /
+	# 反伤 / 护盾转发…）都会走到这里，而界面原来只认得 `attack` / `trample_hit`
+	# 两条专属路径 —— 于是虚骨龙吐息、回合结束侵蚀这类「隐形伤害」只改数字、
+	# 屏幕上一动不动。事件只报**受击点 + 数值 + 来源名**：发动者由各卡自己的
+	# `_fx_pulse()` 补，引擎不必在这里知道「谁打的」。
+	if dmg > 0:
+		action.emit("fx_impact", {"cell": _cell_of(p), "amount": dmg,
+				"source": source, "side": p.owner})
 	return dmg
 
 

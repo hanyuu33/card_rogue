@@ -214,6 +214,12 @@ const DESTROY_HOLD_MS := 140    # 命中后卡牌「留一帧」再消失：先�
 const MOVE_SLIDE_BASE_MS := 160     # 移动滑行：起步耗时（1 格 = 420ms，与旧版一致）
 const MOVE_SLIDE_PER_STEP_MS := 260 # 移动滑行：每多走 1 格再加这么久
 
+# R288：通用效果演出（cue）的时间轴 —— 一段演出 = 一个镜头段，够玩家看清「谁对谁做了什么」。
+const CUE_MS := 760              # 单个镜头段的长度（占时间让玩家反应，不是一帧闪过）
+const CUE_CAM_MS := 300          # 镜头滑到目标格
+const CUE_SHOT_U := 0.34         # 出图时钉住的演出进度（脉冲中段，环/线都还亮着）
+const CUE_MERGE_MS := 900        # 同一笔结算里「发动 → 命中」的间隔内并成一条演出
+
 # ------------------------------------------------------------ 状态
 
 var repo: CardRepo
@@ -373,6 +379,19 @@ var _hp_pending: Dictionary = {} # 尚未在「命中演出」中体现的待扣
 								 #   单位卡面 / HP 横幅 把显示数字冻结在「实际值 + 未演出伤害之和」，
 								 #   等对应的 hit / hp_hit 定时特效触发时才移除这一笔，数字才往下掉。
 var _bursts: Array = []         # {pos, start, dur, col, big}                 打击爆点（扩散环+火花）
+# R288：通用效果演出队列 + 镜头跟随（唯一口）。一场演出 = 若干**镜头段**：
+# 发动者与受影者能同屏就一段演完；不能同屏就一段一个目标，**轮流**滚过去。
+var _cues: Array = []           # 待播 [{cells, rows, label, col, at}]
+var _cue_cur: Dictionary = {}   # 正在播的那条
+var _cue_t0 := 0                # 当前 cue 的起点（0 = 空闲）
+var _cue_cells: Array = []      # 本条涉及的格（cells[0] = 发动者，其余 = 受影者）
+var _cue_shots: Array = []      # 镜头段 [{rows, scroll}]
+var _cue_home := 0.0            # 本条开始时的滚动位置（播完回到这里）
+var _cam_from := 0.0
+var _cam_to := 0.0
+var _cam_t0 := 0
+var _cam_ms := 0                # >0 = 镜头正在补间（玩家一操作就取消）
+var _fx_claimed: Dictionary = {}   # Vector2i -> ms：这一格已有专属命中表现，通用演出让路
 var _wake_rings: Array = []     # {pos, start, dur, col}                       恶魔鸭苏醒的挣脱环（R72）
 var _shake_until := 0           # 屏幕震动截止时刻
 var _shake_mag := 0.0           # 屏幕震动幅度（像素）
@@ -520,11 +539,47 @@ func _ready() -> void:
 			_grid_intro_t = -1.0
 			_grid_scroll = clampf(float(int(args[i + 1])),
 					_grid_scroll_min(), _grid_scroll_max())
+		if args[i] == "--cuepin" and i + 1 < args.size():
+			# R288 出图：跨屏演出有多个镜头段时，钉在第几段（0 = 发动者，1 = 第二个受影者…）
+			_cue_pin = maxi(int(args[i + 1]), 0)
 		if args[i] == "--gridzoom" and i + 1 < args.size():
 			# R146 演示：把开场巡场的**缩放**钉在指定值（配 --gridscroll 出图核验
 			# 「拖向敌方那半场时放大 / 拖回我方时还原大小」）。
 			_grid_intro_t = -1.0
 			_grid_zoom = clampf(float(args[i + 1]), 1.0, 2.0)
+	if "--r288pulse" in args and engine != null:
+		# R288 出图：通用效果演出 —— 虚骨龙吐息（我方 4,1 → 敌方 2,1，两格同屏一段演完）。
+		# 期望画面：龙身两圈扩散脉冲 + 上方卡名标签「龙息」+ 指向受影者的光带。
+		# 出图：`battle.tscn -- --screenshot --level 0 --r288pulse --shotframe 600`
+		_cue_demo = true
+		_grid_intro_t = -1.0            # 关掉开场巡场（它会抢镜头，出图必须钉死构图）
+		engine.ai_enabled = false
+		engine.state.board.clear()
+		var rp_repo := CardRepo.load_json()
+		engine.state.place(CardData.from_dict(rp_repo.get_card(9014).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(rp_repo.get_card(9001).to_dict()),
+				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+		engine.state.hand.clear()
+		status_text = "远古虚骨龙 · 龙息"
+		queue_redraw()
+	if "--r288span" in args and engine != null:
+		# R288 出图：**跨屏轮流**取证 —— 发动者 (5,1) 与受影者 (0,1) 相隔 6 行，
+		# 一屏塞不下（6*110=660 > GRID_H=540），演出必须切成两段轮流看。
+		# 出图：`battle.tscn -- --screenshot --level 0 --r288span --shotframe 600`
+		#       `battle.tscn -- --screenshot --level 0 --r288span --cuepin 1 --shotframe 600`
+		_cue_demo = true
+		_grid_intro_t = -1.0            # 关掉开场巡场（它会抢镜头，出图必须钉死构图）
+		engine.ai_enabled = false
+		engine.state.board.clear()
+		var sp_repo := CardRepo.load_json()
+		engine.state.place(CardData.from_dict(sp_repo.get_card(9014).to_dict()),
+				Vector2i(5, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(sp_repo.get_card(9001).to_dict()),
+				Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+		engine.state.hand.clear()
+		status_text = "跨屏轮流：先看发动者，再看受影者"
+		queue_redraw()
 	if "--r285swap" in args and engine != null:
 		# R285 出图：双向传送选中我方单位后，第二段候选**不能包含敌方后排**。
 		# 布景：(4,1) 我方、(0,1) 敌方（敌方后排 = HP 行）、(2,2) 敌方中场。
@@ -2389,10 +2444,22 @@ var _demo_frame := 0
 var _shot_frame := 150
 var _shot_ms := 0               # --shotms：距演示动作的毫秒数（比帧号稳定）
 var _shot_t0 := 0               # 演示动作起始时刻（_now）
+var _cue_demo := false          # R288：--r288pulse 出图时允许演出队列照常推进
+var _cue_pin := 0               # R288：出图时钉在第几个镜头段（跨屏轮流取证用）
 
 
 func _demo_tick() -> void:
 	_demo_frame += 1
+	if _shot_pending and "--r288span" in _demo_args \
+			and _demo_frame == _shot_frame - 12 and engine != null:
+		# 跨屏：发动者 (5,1) 与受影者 (0,1) 一起入队 → _begin_cue 自动切成两段
+		_push_cue([Vector2i(5, 1), Vector2i(0, 1)], "龙息", Color("8f5ad0"))
+	if _shot_pending and "--r288pulse" in _demo_args \
+			and _demo_frame == _shot_frame - 12 and engine != null:
+		# R288：只播表现、不真扣血（出图要可重复，不能被伤害次数带偏）
+		var rp_card := CardRepo.load_json().get_card(9014)
+		engine._fx_pulse(Vector2i(4, 1), rp_card, "龙息")
+		_push_cue([Vector2i(2, 1)], "", Color("8f5ad0"))
 	if "--griddrag" in _demo_args:
 		# ⚠️ 这里**不能 return** —— 截图与退出在 _demo_tick 末尾，提前返回游戏永远不退出。
 		_demo_grid_drag()      # R136：左键拖棋盘的出图演示（只服务截图）
@@ -3141,6 +3208,7 @@ func _gui_input(event: InputEvent) -> void:
 			return
 		# R123：棋盘可视窗内容超高 → 滚轮上下滚动
 		if _grid_scrollable() and _cell_in_view(event.position):
+			_cam_cancel()   # R288：玩家要自己滚 → 交还镜头
 			_grid_scroll = clampf(_grid_scroll
 					+ (-GRID_SCROLL_STEP if event.button_index == MOUSE_BUTTON_WHEEL_UP
 							else GRID_SCROLL_STEP), _grid_scroll_min(), _grid_scroll_max())
@@ -3155,6 +3223,7 @@ func _gui_input(event: InputEvent) -> void:
 			if not _grid_dragging and event.position.distance_to(_grid_drag_pos) > DRAG_THRESHOLD:
 				_grid_dragging = true
 			if _grid_dragging:
+				_cam_cancel()   # R288：玩家拖棋盘 → 交还镜头
 				_grid_scroll = clampf(
 						_grid_scroll - (event.position.y - _grid_drag_pos.y),
 						_grid_scroll_min(), _grid_scroll_max())
@@ -3409,6 +3478,9 @@ func _cell_at(pos: Vector2) -> Variant:
 
 
 func _on_left_click(pos: Vector2) -> void:
+	# R288：玩家一动手就交还镜头（滚轮 / 拖棋盘已有，点击这条别漏 ——
+	# 否则演到一半点张牌，棋盘还停在敌方半场，自己出的牌在哪都看不见）。
+	_cam_cancel()
 	# R197：敌方效果开场弹窗开着 → 本次点击只关弹窗，不落进战场
 	if _ee_popup:
 		_ee_popup = false
@@ -5108,6 +5180,7 @@ func _on_board_click(cell: Vector2i) -> void:
 
 
 func _on_right_click() -> void:
+	_cam_cancel()                  # R288：右键取消 = 玩家要自己看，演出让位
 	# R197：敌方效果开场弹窗开着 → 右键只关弹窗
 	if _ee_popup:
 		_ee_popup = false
@@ -6494,6 +6567,7 @@ func _draw() -> void:
 	_draw_ghosts()
 	_draw_highlights()
 	_draw_bursts()
+	_draw_cues()          # R288：通用效果演出（脉冲 / 光带 / 卡名）—— 压在卡牌之上才看得见
 	_draw_wake_rings()
 	# R139：边框跟着战场本体滚动 → 顶带 / 底带会越过可视窗上下沿，必须**先画边框、
 	# 再画遮罩**把溢出裁掉；顺序反了边框就会糊在工具栏与手牌上。
@@ -7486,6 +7560,272 @@ func _roll(key: String, target: float) -> int:
 	return roundi(UiRoll.value(key, target))
 
 
+# ── R288：通用效果演出（cue）＋ 镜头跟随 ─────────────────────────────
+# 目标：让「一张卡发动了效果」这件事本身可见 —— 卡身脉冲 → 卡名标签 →
+# 光带指向受影者；发动者与受影者不在同一屏时，镜头**依次**滚到它们身上
+# （每个镜头段 CUE_MS，不共用同一个短窗口，所以两边都来得及看清）。
+
+static func row_in_view(row: int, scroll: float) -> bool:
+	## 这一行在给定滚动量下是否**完整落在棋盘可视窗**内（R288，纯函数）。
+	var top := float(row) * CELL - scroll
+	return top >= -1.0 and top + CELL <= GRID_H + 1.0
+
+
+static func cue_scroll_for(rows: Array) -> float:
+	## 让这些行**同时可见**所需的滚动量；放不下（跨度 > 可视窗）时只保证第一行居中。
+	## 纯函数（只读棋盘常量）→ 回归可以直接钉，不需要造一个战场实例。
+	var lo := 99
+	var hi := -1
+	for r in rows:
+		lo = mini(lo, int(r))
+		hi = maxi(hi, int(r))
+	if hi < 0:
+		return -1.0
+	var span := float(hi - lo + 1) * CELL
+	if span <= GRID_H:
+		return clampf(float(lo) * CELL - (GRID_H - span) * 0.5,
+				_grid_scroll_min(), _grid_scroll_max())
+	return clampf(float(lo) * CELL + CELL * 0.5 - GRID_H * 0.5,
+			_grid_scroll_min(), _grid_scroll_max())
+
+
+func _cue_dur() -> int:
+	## 当前这条演出的总时长：每个镜头段各占 CUE_MS，不共用一个短窗口。
+	return CUE_MS * maxi(1, _cue_shots.size())
+
+
+func _push_cue(cells: Array, label: String, col: Color) -> void:
+	## 收一条通用演出（R288 唯一入口）。出图模式不排队（否则 --shotframe 时序全乱）；
+	## 积压时只留最近 8 条，避免一次大结算把队列撑成十几秒。
+	if _shot_pending and not _cue_demo:
+		return
+	var uniq: Array = []
+	for c in cells:
+		if c is Vector2i and (c as Vector2i).x >= 0 and not uniq.has(c):
+			uniq.append(c)
+	if uniq.is_empty():
+		return
+	var rows: Array = []
+	for c: Vector2i in uniq:
+		if not rows.has(c.x):
+			rows.append(c.x)
+	# 同一次结算里接连到达的事件（发动 → 命中）**并成一条**：分成两条就画不出
+	# 「指向受影者」的光带，玩家也看不出谁打的谁。
+	var tail: Dictionary = {}
+	var tail_live := false
+	if _cue_t0 != 0 and not _cue_cur.is_empty():
+		tail = _cue_cur
+		tail_live = true
+	elif not _cues.is_empty():
+		tail = _cues[_cues.size() - 1]
+	if not tail.is_empty() and _now() - int(tail.get("at", 0)) <= CUE_MERGE_MS:
+		_cue_absorb(tail, uniq, label, tail_live)
+		queue_redraw()
+		return
+	_cues.append({"cells": uniq, "rows": rows, "label": label,
+			"col": col, "at": _now()})
+	if _cues.size() > 8:
+		_cues = _cues.slice(_cues.size() - 8)
+	queue_redraw()
+
+
+func _fx_claim(cell: Vector2i) -> void:
+	## 这一格已经有**专属命中表现**（普通攻击 / 践踏 / 直击）→ 通用受击演出让路，
+	## 免得同一个伤口炸两次。
+	_fx_claimed[cell] = _now()
+
+
+func _cam_to_scroll(target: float, ms: int) -> void:
+	_cam_from = _grid_scroll
+	_cam_to = clampf(target, _grid_scroll_min(), _grid_scroll_max())
+	_cam_t0 = _now()
+	_cam_ms = maxi(1, ms)
+
+
+func _cam_cancel() -> void:
+	## 玩家一动（滚轮 / 拖棋盘 / 点格子）就交还镜头控制权，并清空排队演出。
+	_cam_ms = 0
+	_cues.clear()
+	_cue_t0 = 0
+	_cue_cur = {}
+	_cue_cells = []
+	_cue_shots = []
+
+
+static func cue_shot_rows(rows: Array) -> Array:
+	## 把「要展示的行」切成镜头段（唯一口）：塞得进一屏就一段；
+	## 塞不进就一行一段 —— 发动者和受影者轮流进画面，总比两边都看不见强。
+	var lo := 99
+	var hi := -1
+	for r in rows:
+		lo = mini(lo, int(r))
+		hi = maxi(hi, int(r))
+	if hi < 0:
+		return []
+	if float(hi - lo + 1) * CELL <= GRID_H:
+		return [rows]
+	var out: Array = []
+	for r in rows:
+		out.append([r])
+	return out
+
+
+func _cue_shots_of(rows: Array) -> Array:
+	## 镜头段 = 行分组 + 该组的落位滚动量（滚动量只算一次，纯函数）。
+	var shots: Array = []
+	for grp: Array in cue_shot_rows(rows):
+		shots.append({"rows": grp, "scroll": cue_scroll_for(grp)})
+	return shots
+
+
+func _cue_absorb(cue: Dictionary, cells: Array, label: String,
+		live: bool) -> void:
+	## 把后来的格子并进已有演出（发动者 + 受影者 = 一条完整的因果）。
+	var dst: Array = cue["cells"]
+	var rows: Array = cue["rows"]
+	var grew := false
+	for c: Vector2i in cells:
+		if not dst.has(c):
+			dst.append(c)
+			grew = true
+		if not rows.has(c.x):
+			rows.append(c.x)
+	if label != "" and str(cue.get("label", "")) == "":
+		cue["label"] = label
+	cue["at"] = _now()
+	if not live:
+		return
+	_cue_cells = dst
+	var shots := _cue_shots_of(rows)
+	if not shots.is_empty():
+		_cue_shots = shots
+		# 只并进格子、段数没变时不要重排镜头（否则正在滑的补间会被打断）
+		if grew and _cam_ms == 0:
+			var want := float(shots[0]["scroll"])
+			if absf(want - _grid_scroll) > 1.0:
+				_cam_to_scroll(want, CUE_CAM_MS)
+
+
+func _begin_cue(cue: Dictionary) -> void:
+	var n := _now()
+	_cue_cur = cue
+	_cue_t0 = n
+	_cue_home = _grid_scroll
+	_cue_cells = cue["cells"]
+	var shots := _cue_shots_of(cue["rows"])
+	_cue_shots = shots
+	if not shots.is_empty():
+		_cam_to_scroll(float(shots[0]["scroll"]), CUE_CAM_MS)
+	queue_redraw()
+
+
+func _end_cue() -> void:
+	_cue_t0 = 0
+	_cue_cur = {}
+	_cue_cells = []
+	_cue_shots = []
+	if _cues.is_empty():
+		# 演完回到玩家原本的位置 —— 别把人留在敌方半场
+		if absf(_grid_scroll - _cue_home) > 1.0:
+			_cam_to_scroll(_cue_home, CUE_CAM_MS)
+	else:
+		_begin_cue(_cues.pop_front())
+
+
+func _tick_cues(_delta: float) -> bool:
+	## 推进镜头补间 + 演出队列。返回 true = 还在演（界面要逐帧重绘）。
+	if _shot_pending and not _cue_demo:
+		return false
+	if _cue_demo and _shot_pending:
+		# 出图：队列照常开播，但**进度与镜头都钉住** —— 截图要的是稳定构图，
+		# 不能让补间把画面带着跑，更不能因为进度没走完就永远不入场。
+		if _cue_t0 == 0:
+			if _cues.is_empty():
+				return false
+			_begin_cue(_cues.pop_front())
+			_cam_ms = 0                     # 掐掉 _begin_cue 里排的补间
+		# ⚠️ 每帧都要钉一次：开场巡场（_grid_intro_tick）会写 _grid_scroll，
+		# 只钉第一帧等于没钉 —— 镜头会被巡场拖走，跨屏两段就变成一模一样的图。
+		if not _cue_shots.is_empty():
+			var pin := clampi(_cue_pin, 0, _cue_shots.size() - 1)
+			_grid_scroll = clampf(float(_cue_shots[pin]["scroll"]),
+					_grid_scroll_min(), _grid_scroll_max())
+		return true
+	var n := _now()
+	var busy := false
+	if _cam_ms > 0:
+		var t := clampf(float(n - _cam_t0) / float(_cam_ms), 0.0, 1.0)
+		var e := 1.0 - pow(1.0 - t, 3.0)       # ease-out cubic：起步快、落位稳
+		_grid_scroll = lerpf(_cam_from, _cam_to, e)
+		busy = true
+		if t >= 1.0:
+			_cam_ms = 0
+	# 认领表只留最近 3 秒（别让字典无限长）
+	if not _fx_claimed.is_empty():
+		for k in _fx_claimed.keys():
+			if n - int(_fx_claimed[k]) > 3000:
+				_fx_claimed.erase(k)
+	if _cue_t0 == 0:
+		if _cues.is_empty():
+			return busy
+		_begin_cue(_cues.pop_front())
+		return true
+	var el := n - _cue_t0
+	var shots: Array = _cue_shots
+	for i in shots.size():
+		var t0 := CUE_MS * i
+		if el >= t0 and el < t0 + CUE_MS:
+			if _cam_ms == 0:
+				var want := float(shots[i]["scroll"])
+				if absf(want - _grid_scroll) > 1.0:
+					_cam_to_scroll(want, CUE_CAM_MS)
+			break
+	if el >= _cue_dur():
+		if _cue_demo and _shot_pending:
+			_cue_t0 = n          # 出图：原地重来，画面永远停在演出态
+		else:
+			_end_cue()
+	return true
+
+
+func _draw_cues() -> void:
+	## 通用演出本体（唯一口）：发动脉冲 ＋ 指向受影者的光带 ＋ 受影者落点环 ＋ 卡名。
+	## 画在棋盘 transform 内（跟着开场缩放 / 震动一起动），并压在卡牌之上。
+	var n := _now()
+	if _cue_t0 == 0 or _cue_cur.is_empty() or _cue_cells.is_empty():
+		return
+	var total := maxi(1, _cue_dur())
+	var u := clampf(float(n - _cue_t0) / float(total), 0.0, 1.0)
+	if _cue_demo and _shot_pending:
+		u = CUE_SHOT_U   # 出图：钉住进度，免得抓到的永远是尾声（alpha 已衰减到看不见）
+	var src: Vector2 = _cell_center(_cue_cells[0])
+	var col: Color = _cue_cur.get("col", UiTheme.KIND_SKILL)
+	# ① 发动脉冲：两圈错相位向外扩散（单圈一闪太容易被当成卡面自带光环）
+	for i in 2:
+		var k := fmod(u * 2.2 + float(i) * 0.5, 1.0)
+		var rr := 22.0 + 46.0 * k
+		draw_arc(src, rr, 0.0, TAU, 28,
+				Color(col.r, col.g, col.b, 0.85 * (1.0 - k)), 3.5)
+	# ② 光带 + 受影者落点环：一条线把因果连起来，受影者那头再套一圈 ——
+	#    谁发动、谁挨打，不看战报也一眼看得出（跨屏时靠镜头段轮流去看两头）。
+	if _cue_cells.size() > 1:
+		var a := clampf(1.0 - u * 0.7, 0.15, 1.0)
+		for j in range(1, _cue_cells.size()):
+			var dst: Vector2 = _cell_center(_cue_cells[j])
+			draw_line(src, dst, Color(col.r, col.g, col.b, a * 0.20), 18.0)
+			draw_line(src, dst, Color(col.r, col.g, col.b, a * 0.70), 7.0)
+			draw_line(src, dst, Color(1, 1, 1, a * 0.85), 2.5)
+			draw_arc(dst, 34.0 + 10.0 * u, 0.0, TAU, 26,
+					Color(col.r, col.g, col.b, a * 0.90), 3.5)
+			draw_arc(dst, 34.0 + 10.0 * u, 0.0, TAU, 26,
+					Color(1, 1, 1, a * 0.50), 1.5)
+	var label := str(_cue_cur.get("label", ""))
+	if label != "":
+		_draw_string_box_center(UiTheme.font_bold(), 15, label,
+				src + Vector2(0, -BOARD_CARD_H * 0.5 - 18), Color.WHITE,
+				Color(0.10, 0.09, 0.13, 0.88))
+
+
 func _tick_anims() -> bool:
 	## 清理过期动画，返回是否仍有活动动画。
 	var n := _now()
@@ -7671,6 +8011,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 卡面生命冻结：伤害已在引擎里扣掉，但数字等到「命中」演出才往下掉
 			if def_pl != null:
 				_freeze_hp(def_pl, int(data["damage"]))
+			# R288：这一格已经有「弹体命中」专属演出 → 通用受击让路
+			if data.get("dst") is Vector2i:
+				_fx_claim(data["dst"])
 			# 攻击演出排在「该单位已排队的动作」之后：AI 一步内常连做「移动 + 攻击」，
 			# 若两段同时起播，滑行会盖住蓄力/后坐，看起来就是「怪物一闪就打完了」。
 			var a_start := n
@@ -7813,6 +8156,35 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				else:
 					_say("💥 溢出伤害：%d 点越过 %s 直击%s HP！" % [tr_amt,
 							data.get("def_name", "?"), tr_side_cn])
+		"card_pulse":
+			# R288：卡效果发动（引擎 `_fx_pulse` 唯一口）→ 通用演出：脉冲 + 卡名 + 镜头。
+			# 目标不在这里给：随后的 `fx_impact` 会再推一条「受影者」cue，
+			# 于是「谁发动 → 谁中招」被**依次**演出来，两边不同屏也不会漏看。
+			var cp_cell = data.get("cell")
+			if cp_cell is Vector2i:
+				var cp_col := UiTheme.KIND_SKILL
+				if data.get("card") is CardData:
+					var cp_card: CardData = data["card"]
+					if cp_card.is_effect():
+						cp_col = UiTheme.KIND_EFFECT
+					elif cp_card.is_fort():
+						cp_col = UiTheme.KIND_FORT
+					elif cp_card.kind == "盟友":
+						cp_col = UiTheme.KIND_ALLY
+				_push_cue([cp_cell], str(data.get("label", "")), cp_col)
+		"fx_impact":
+			# R288：通用受击（引擎 `_hit_unit` 唯一口发出）。只有**没有专属表现**的
+			# 伤害才演（普通攻击 / 践踏已经在同帧认领了那一格）。
+			var fi_cell = data.get("cell")
+			if fi_cell is Vector2i:
+				var fc: Vector2i = fi_cell
+				var fi_owned := _fx_claimed.has(fc) and n - int(_fx_claimed[fc]) < 700
+				if not fi_owned:
+					_fx_claim(fc)
+					_delayed.append({"at": n + 160, "kind": "fx_hit",
+							"data": {"cell": fc, "dmg": int(data.get("amount", 0)),
+							"source": str(data.get("source", ""))}})
+					_push_cue([fc], "", Color("8f5ad0"))
 		"spell":
 			sfx.play("heal" if int(data["card"].id) in [2002, 7202] else "spell")
 			var detail := str(data.get("detail", ""))
@@ -9020,6 +9392,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"text": "警觉 · %s -%d 费" % [al_name, al_disc],
 					"col": UiTheme.KIND_SKILL, "start": n, "dur": 1800, "size": 18})
 			_say("🃏 警觉：随机工事「%s」进入手卡（费用 -%d）" % [al_name, al_disc])
+		_:
+			# R288：兜底 —— 任何**还没有专属表现**的事件，只要带格子，就至少演一次
+			# 「脉冲 + 镜头」。以后新加的事件不会再静悄悄发生（这是这套演出的兜底价值）。
+			var g_cell = data.get("cell")
+			if g_cell is Vector2i and int((g_cell as Vector2i).x) >= 0:
+				_push_cue([g_cell], "", Color("8a8f9a"))
 
 
 func _shake(mag: float, ms: int) -> void:
@@ -9148,6 +9526,18 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 					"text": "-%d" % int(d.dmg), "col": UiTheme.SIDE_FOE,
 					"start": n, "dur": 1150})
 			_shake(5.0, 260)
+		"fx_hit":
+			# R288：通用受击到点 —— 爆点 + 伤害数字（不分来源，谁打的都看得见）
+			sfx.play("attack")
+			var fc2: Vector2i = d.get("cell", Vector2i(-1, -1))
+			if fc2.x >= 0:
+				var fpos: Vector2 = _cell_center(fc2)
+				_bursts.append({"pos": fpos, "sc": _grid_scroll, "start": n, "dur": 520,
+						"col": Color("8f5ad0"), "big": false})
+				_floaters.append({"pos": fpos + Vector2(0, -10), "sc": _grid_scroll,
+						"text": "-%d" % int(d.get("dmg", 0)), "col": UiTheme.SIDE_FOE,
+						"start": n, "dur": 1150})
+				_shake(3.0, 180)
 		"hp_hit":
 			var hk = d.get("hpkey")
 			if hk != null:
@@ -11037,6 +11427,8 @@ func _process(delta: float) -> void:
 	# 这样同一帧里刚出的牌动画能立刻开始播。
 	var earring_busy := _tick_earring_autoplay()
 	var anim_busy := _tick_anims()
+	if _tick_cues(delta):
+		queue_redraw()   # R288：通用演出 / 镜头补间进行中
 	_hand_sync()          # R151 P0-1/2：手牌差异 → 抽牌飞入 / 弃牌·消耗飞出
 	_energy_tick()        # R151 P0-3：能量变化量飘字
 	# R151 P1-6/7：回合归属 —— 敌方回合手牌下沉 +6 / 暗罩 0.22；我方回合上浮 −3 / 无罩（~150ms 缓动）
