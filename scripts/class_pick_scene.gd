@@ -345,17 +345,8 @@ func _draw_panel(cid: String) -> void:
 
 
 func _wrap_text(t: String, max_w: float, px: int) -> Array[String]:
-	var out: Array[String] = []
-	var cur := ""
-	for ch in t:
-		if _font.get_string_size(cur + ch, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > max_w \
-				and cur != "":
-			out.append(cur)
-			cur = ch
-		else:
-			cur += ch
-	out.append(cur)
-	return out
+	## 折行唯一口 = `TextWrap.wrap_plain`（R292）。
+	return TextWrap.wrap_plain(_font, t, max_w, px)
 
 
 func _menu_items() -> Array:

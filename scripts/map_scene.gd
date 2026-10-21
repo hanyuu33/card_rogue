@@ -1429,19 +1429,8 @@ func _relic_panel_rows() -> Array:
 
 
 func _wrap_relic_text(text: String, max_w: float, px: int) -> PackedStringArray:
-	var out: PackedStringArray = []
-	var cur := ""
-	for i in text.length():
-		var ch := text[i]
-		if cur != "" and _font.get_string_size(cur + ch,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > max_w:
-			out.append(cur)
-			cur = ch
-		else:
-			cur += ch
-	if cur != "":
-		out.append(cur)
-	return out
+	## 折行唯一口 = `TextWrap.wrap_plain`（R292）。
+	return PackedStringArray(TextWrap.wrap_plain(_font, text, max_w, px))
 
 
 func _relic_panel_metrics(rows: Array) -> Dictionary:

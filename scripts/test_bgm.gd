@@ -59,7 +59,8 @@ func _run(b: Bgm) -> void:
 	# ---- 素材在位 ----
 	var missing := []
 	for slot: String in SLOTS:
-		if not FileAccess.file_exists("res://assets/audio/bgm/%s.ogg" % slot):
+		# ⚠️ 判存走 ResourceLoader.exists：导出包里没有源 .ogg（只有 .import + oggvorbisstr），FileAccess 恒假。
+		if not ResourceLoader.exists("res://assets/audio/bgm/%s.ogg" % slot):
 			missing.append(slot)
 	check(missing.is_empty(), "7 个 BGM 槽位素材齐全（缺 %s）" % str(missing))
 

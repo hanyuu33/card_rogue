@@ -37,7 +37,7 @@ echo.
 
 echo ============================================================
 echo  [done] every suite must print an "all passed" line.
-echo         baseline: engine 2760 / reward 26 / bgm 31 / smoke 36
+echo         baseline: engine 3172 / reward 26 / bgm 23 / smoke 36
 echo ============================================================
 pause
 popd

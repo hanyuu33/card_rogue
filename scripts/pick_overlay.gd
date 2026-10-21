@@ -74,6 +74,7 @@ func open(cfg: Dictionary) -> void:
 	_counts = cfg.get("counts", [])
 	_selected = []
 	_scroll = 0.0
+	_hover_idx = -1   # R294：新一轮选卡 → 悬停下标清零（否则描述条停在上局的卡上）
 	visible = true
 	_layout()
 	_grid.queue_redraw()
@@ -86,6 +87,7 @@ func close() -> void:
 	_cfg = {}
 	_cards = []
 	_selected = []
+	_hover_idx = -1   # R294：关掉就清，别带到下一次 open
 
 
 func collapse() -> void:
@@ -136,6 +138,7 @@ func refresh() -> void:
 	_cards = _cfg.get("cards", [])
 	_counts = _cfg.get("counts", [])
 	_selected = []
+	_hover_idx = -1   # R294：候选表换了，旧下标指向的是另一张卡
 	_clamp_scroll()
 	_grid.queue_redraw()
 	queue_redraw()
@@ -426,6 +429,10 @@ func _tap(pos: Vector2) -> void:
 		return
 	var k := _card_at(pos)
 	if k >= 0:
+		# R294：**点中的卡 = 描述条要显示的那张**。触屏没有 motion 事件，
+		# 光靠悬停跟踪的话点了卡描述条也不动；选满时 `_toggle` 会忽略，
+		# 但「点一下看看这张」仍然应该成立。
+		_hover_idx = k
 		_toggle(k)
 
 

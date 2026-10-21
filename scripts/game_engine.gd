@@ -49,8 +49,8 @@ var whale_remaining:= 0
 var foresight_mode:= false  # 预判（9097）：等玩家选效果①/②
 var foresight_pick:= false  # 预判①：等玩家从弃牌区选一张 0 费技能卡
 var foresight_vanish:= false  # 预判①选完后：把本卡从弃牌区移除（本卡消失）
-var fate_pending:= false    # 拒绝命运（9098）：等玩家从弃牌区选回 fate_count 张
-var fate_count:= 0
+## R292：拒绝命运（9098）改成**自动结算**（丢光手卡 → 弃牌区所有 0/1 费卡按顺序回手），
+## 原来那套「等玩家从弃牌区选回 N 张」的待办字段（fate_pending / fate_count）已删。
 var endless_pending:= false  # 无尽黑暗 9114（R70）：等玩家从**手牌**里选 1 张弃掉
 var rebirth_pending:= false  # 新生 9148（R222）：等玩家从**手牌**里选 1 张使其消失
 var rebirth_remaining:= 0    # 本层面板还要消失几张（效果区几张新生就几张）
@@ -617,8 +617,12 @@ const BOUNCE_KNIFE_BOUNCES:= 2
 # 预判（9097 技能）：0 费史诗；二选一：①弃牌区选一张 0 费技能卡（之后本卡消失）
 # ②卡组随机非 0 费技能卡入手。面板走 foresight_* 状态机。
 const FORESIGHT_ID:= 9097
-# 拒绝命运（9098 技能）：2 费史诗；弃掉全部手卡 → 从弃牌区选等量的卡（必须选满）→ 本卡消失。
+# 拒绝命运（9098 技能）：2 费史诗；弃掉**全部**手卡 → 从弃牌区把**所有 0 费 / 1 费卡**
+#   按弃牌区顺序加回手卡（不超过手牌上限）→ 本卡消失（带「次元」）。
+# R292 改「自动结算」：以前是「从弃牌区选等量、必须选满」的模态面板；玩家口径
+#   「直接把 0/1 费的捞回来」→ 面板整套（fate_pending / fate_options / fate_pick）已删。
 const FATE_REJECT_ID:= 9098
+const FATE_CHEAP_MAX:= 1        # 「0 费卡和 1 费卡」→ 判据 = 卡面费用 <= 1
 # 幽光（9099 效果）+ 荧光草（8010 工事 token）：回合开始把荧光草塞进手卡；
 # 荧光草在场时该方技能伤害 +1（多株叠加），离场即消失（VANISH trait）。
 const GLOW_ID:= 9099
@@ -785,6 +789,43 @@ const ENERGY_CANNON_ID:= 9145
 const ENERGY_CANNON_DMG:= 9
 # 「填充」（9146，0 费普通技能）：将手牌里一张卡变成聚能炮击。两段式入口 `cast_reload`。
 const RELOAD_ID:= 9146
+# ── R290：机械之心两张伤害技能（集中突破 9162 / 冲击炮 9163）──
+# 「集中突破」（9162，2 费**普通**技能）：造成 BREAKTHROUGH_DMG 点伤害，
+#   场上**己方**单位每有 1 层改造，伤害 +BREAKTHROUGH_PER_STACK。
+#   层数只读**场上**（`Placement.upgrade_stacks`），手牌 / 牌库里的层数不算 ——
+#   卡面写的是「场上的己方单位」，与侦察塔 / 堡垒那种「随身层数」口径不同。
+const BREAKTHROUGH_ID:= 9162
+const BREAKTHROUGH_DMG:= 10
+const BREAKTHROUGH_PER_STACK:= 4
+# 「冲击炮」（9163，2 费**稀有**技能）：造成 IMPACT_CANNON_DMG 点伤害，
+#   并把目标击退 IMPACT_CANNON_STEPS 格（走唯一口 `_knockback`：位移免疫 / 被挡住 /
+#   朝目标所属方后排，全部自动生效；先伤害再击退，被打死就不击退）。
+const IMPACT_CANNON_ID:= 9163
+const IMPACT_CANNON_DMG:= 8
+const IMPACT_CANNON_STEPS:= 2
+# ── R291：机械之心两张技能（辅助刃 9164 / 复制术 9165）──
+# 「辅助刃」（9164，0 费**普通**技能，目标 = 己方盟友）：
+#   * 一次改造 = **+BLADE_ATK 力量**，走 `_field_upgrade_grant()` 唯一口 —— 于是层数
+#     （堡垒 / 侦察塔 / 谟涅摩叙涅）、卡面改造奖励（素体 +1 血 / 战斗骨骼 +2 力 +2 血）、
+#     「每次被改造」那一整族（榴弹击手 / 机器鸟 / 无限装甲 / 废弃机器人）全部照常反应；
+#   * 同时挂「死亡」字段 + `Placement.blade_gift` 标记 → 被破坏时**把一张辅助刃加入手卡**
+#     （`_deathrattle` 开头按**标记**分派；判据不认「死亡」字段，见 Placement 的注释）；
+#   * 字段是「场上这段」的：离场由 `_card_leaving_field()` 摘掉，回手后仍是原样。
+#   ⚠️ 0 费 + 亡语回收一张自己 → 会循环（给 A 打一张、A 死了拿回一张），这是卡面本就
+#      写着的口径；强度靠「必须死一个单位」来换，不做上限拦截。
+const BLADE_GIFT_ID:= 9164
+const BLADE_ATK:= 2
+# 「复制术」（9165，5 费**史诗**技能，目标 = 己方盟友或工事）：
+#   把这张卡**此刻的样子**复制 DUPLICATE_COUNT 份加进手卡：
+#     * **保留 buff** —— 力量把 `Placement.upgrade_atk` 烤进副本 `power`；生命直接取
+#       `card.health`（改造加的血早就在里面）、攻程 / 移速同理（`_upgrade_unit` 烤在副本上）；
+#     * `upgrade_stacks` **置 0** —— 数值已经全烤进副本，再随身带层数会被
+#       `FieldState.place()` 按层数折一次（堡垒 +3 血/层、榴弹击手 +1 程/层）→ 双计；
+#     * 每份都挂「次元」字段 → 上场后离场即消失（`_destroy` 认字段），不会变成永久卡；
+#     * 本回合在手牌里 0 费：`state.turn_free[copy]`（`cost_of` 的唯一判据，回合结束清空
+#       → 没打出去的下回合恢复原价）。
+const DUPLICATE_ID:= 9165
+const DUPLICATE_COUNT:= 2
 # ── R91：充电装置 8041 + 字段系统（CardData.affixes）──
 # 充电装置（1 费工事 1/1/1，机械之心普通）：**接通**的**我方**盟友和工事，
 #   在自己回合结束时回 CHARGE_HEAL(2) 点生命。
@@ -1209,7 +1250,7 @@ const MAGE_GROW_BUFF:= 1
 const CLONE_TRAIT:= "自我复制"
 # 「升级」（8027，2 费技能，机械之心）：改造一个己方盟友或工事 → +2 攻 / +8 血。
 # 加成**只在场上有效**、离场由 _card_leaving_field 还原（不烤进 CardData）。
-# R84：每张卡**自己的**改造奖励（素体 +1 血 / 战斗骨骼 +1 力 +1 血）**读卡面字段**
+# R84：每张卡**自己的**改造奖励（素体 +1 血 / 战斗骨骼 +2 力 +2 血）**读卡面字段**
 # `CardData.upgrade_atk_bonus` / `upgrade_hp_bonus` —— 不再在这里按卡名硬编码，
 # 所以以后加新盟友只要填字段，引擎一行都不用动。
 const UPGRADE_ID:= 8027
@@ -1219,7 +1260,7 @@ const UPGRADE_HP:= 10
 const PROTO_TRAIT:= "素体"       # 仅供界面/图鉴筛「素体」用；判定已改读卡面字段
 const PROTO_ID:= 8025
 const CONSTRUCT_ID:= 8026       # 构装体（3 费 3/8/1/1，本体无机制，只是厚实的盟友）
-const BATTLE_BONE_ID:= 8029     # 战斗骨骼（2 费 2/7/1/1，改造时 +1 力 +1 生命）
+const BATTLE_BONE_ID:= 8029     # 战斗骨骼（2 费 2/7/1/1，改造时 +2 力 +2 生命）
 # 「过载」（8030，**史诗**技能，机械之心，R85）：从**牌库**里随机一张
 # 「还没有一回合行动两次」的盟友，给它加上这个特性（**永久**改牌）。
 # 「一回合行动两次」= `CardData.actions >= 2`（**没有**对应 trait，判据就是这个字段）——
@@ -1455,6 +1496,20 @@ func _side_cells(side: String) -> Array[Vector2i]:
 		if (state.board[cell] as Placement).owner == side:
 			out.append(cell)
 	return out
+
+
+func _side_upgrade_stacks(side: String) -> int:
+	## **场上**该方所有单位（盟友 / 工事 / 随从）的改造层数合计。
+	## 唯一消费方 = 集中突破 9162（每层 +4 伤害）。
+	## ⚠️ 只数 `Placement.upgrade_stacks`：手牌 / 牌库里攒的层数**不算** ——
+	##   卡面写的是「场上的己方单位」，与侦察塔 / 堡垒读「随身层数」是两套口径。
+	var total := 0
+	for c: Vector2i in state.board:
+		var p: Placement = state.board[c]
+		if p == null or p.owner != side:
+			continue
+		total += maxi(0, p.upgrade_stacks)
+	return total
 
 
 func _finish(res: String, reason: String) -> void :
@@ -3510,14 +3565,18 @@ func _card_leaving_field(p: Placement) -> CardData:
 	# 否则那张卡再上场会带着一个不会触发的「死亡」标记（卡面写着效果却不生效）。
 	if p.fence_bonus_hp <= 0 and p.fence_bonus_traits.is_empty() and p.upgrade_hp <= 0 \
 			and p.upgrade_range <= 0 and p.upgrade_speed <= 0 \
-			and p.life_cycle_added.is_empty():
+			and p.life_cycle_added.is_empty() and p.blade_added.is_empty():
 		return p.card
 	var out:= CardData.from_dict(p.card.to_dict())
 	out.traits = (p.card.traits as Array).duplicate()   # 同上：必须切断与卡库的共享引用
-	if not p.life_cycle_added.is_empty():
+	# R291：生命循环与辅助刃都是「场上这段」的字段 —— 合成一次 duplicate 再逐个摘，
+	# 分两段各 duplicate 一次会让后一段把前一段的删除覆盖掉。
+	if not p.life_cycle_added.is_empty() or not p.blade_added.is_empty():
 		out.affixes = (p.card.affixes as Array).duplicate()
 		for lc_a: String in p.life_cycle_added:
 			out.affixes.erase(lc_a)
+		for bg_a: String in p.blade_added:
+			out.affixes.erase(bg_a)
 	out.health = maxi(1, p.card.health - p.fence_bonus_hp - p.upgrade_hp)
 	for t in p.fence_bonus_traits:
 		out.traits.erase(t)
@@ -3936,6 +3995,28 @@ func _fort_board_targets(card: CardData) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	if card.id == ENERGY_CANNON_ID:
 		# 聚能炮击 9145：任意**敌方**单位
+		for c in _side_cells(SIDE_OPPONENT):
+			if state.unit_at(c) != null:
+				out.append(c)
+		return out
+	if card.id == BLADE_GIFT_ID:
+		# 辅助刃 9164（R291）：只吃**己方盟友**（工事不行）。
+		for bc: Vector2i in _side_cells(SIDE_SELF):
+			var bu: Placement = state.unit_at(bc)
+			if bu != null and bu.owner == SIDE_SELF and bu.card.kind == "盟友":
+				out.append(bc)
+		return out
+	if card.id == DUPLICATE_ID:
+		# 复制术 9165（R291）：己方盟友或工事。
+		for dc: Vector2i in _side_cells(SIDE_SELF):
+			var du: Placement = state.unit_at(dc)
+			if du != null and du.owner == SIDE_SELF \
+					and (du.card.kind == "盟友" or du.card.is_fort()):
+				out.append(dc)
+		return out
+	if card.id == BREAKTHROUGH_ID or card.id == IMPACT_CANNON_ID:
+		# 集中突破 9162 / 冲击炮 9163（R290）：与聚能炮击同口径，只打**敌方**单位。
+		# ⚠️ 漏了这一支就会落进下面的 `_:` → 返回空池 → 失控要塞抽到它当场白跳。
 		for c in _side_cells(SIDE_OPPONENT):
 			if state.unit_at(c) != null:
 				out.append(c)
@@ -4452,7 +4533,7 @@ func _breach_tick(side: String) -> void :
 func _field_upgrade_grant(p: Placement, atk: int, hp: int, source: String,
 		affix: String = "") -> void :
 	## **场上单位获得改造的唯一口**（R228）。
-	## R272（用户口径）：**任意方式**的改造都要吃卡面改造奖励（战斗骨骼 +1 力 +1 血 /
+	## R272（用户口径）：**任意方式**的改造都要吃卡面改造奖励（战斗骨骼 +2 力 +2 血 /
 	## 素体 +1 血）。R228 当初刻意「不带 `upgrade_*_bonus`」，结果「共享护盾」「拾荒者」
 	## 给骨骼改造只涨层数、不涨数值 —— 与卡面「被改造时」自相矛盾，用户报了这个缺陷。
 	## 现在统一过 `_upgrade_atk_gain` / `_upgrade_hp_gain` 唯一口。
@@ -4523,7 +4604,7 @@ func _waste_bot_ping(p: Placement) -> void :
 func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	## 「升级」（8027，R82，机械之心）：改造一个**己方盟友或工事** →
 	## +UPGRADE_ATK 攻 / +UPGRADE_HP 血，**再加这张卡自己的「改造奖励」**
-	## （`CardData.upgrade_atk_bonus` / `upgrade_hp_bonus`：素体 +1 血、战斗骨骼 +1 力 +1 血）。
+	## （`CardData.upgrade_atk_bonus` / `upgrade_hp_bonus`：素体 +1 血、战斗骨骼 +2 力 +2 血）。
 	##
 	## 加成**记在 Placement 上、绝不烤进 CardData**（与栅栏修复术 R67 同一条纪律）：
 	## 加攻进 `upgrade_atk`（直接进 effective_power，**不复用 atk_buff** ——
@@ -4544,7 +4625,7 @@ func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	# 无条件复制最省心 —— 哪怕它本来就是独立副本，多一次 from_dict 也不影响正确性。
 	p.card = CardData.from_dict(p.card.to_dict())
 	p.card.traits = (p.card.traits as Array).duplicate()
-	# R120：改造奖励走**唯一口**（素体 +1 血 / 战斗骨骼 +1 力 +1 血 / 侦察塔不加攻）。
+	# R120：改造奖励走**唯一口**（素体 +1 血 / 战斗骨骼 +2 力 +2 血 / 侦察塔不加攻）。
 	var atk_gain: int = _upgrade_atk_gain(p.card, UPGRADE_ATK)
 	var hp_gain: int = _upgrade_hp_gain(p.card, UPGRADE_HP)
 	p.upgrade_atk += atk_gain
@@ -4744,7 +4825,7 @@ func _batch_upgrade(_side: String) -> String :
 			continue
 		var up := CardData.from_dict(c.to_dict())
 		# R120：改造奖励走**唯一口** —— 素体在手牌里被「批量改造」也额外 +1 血
-		#（用户口径：任何改造都生效，含手牌与牌库）；战斗骨骼同理 +1 力 +1 血。
+		#（用户口径：任何改造都生效，含手牌与牌库）；战斗骨骼同理 +2 力 +2 血。
 		up.power += _upgrade_atk_gain(up, 0)
 		up.health += _upgrade_hp_gain(up, BATCH_UPGRADE_HP)
 		up.upgrade_stacks += 1        # R209：层数随身带（上场时由 place() 接到 Placement）
@@ -4827,7 +4908,7 @@ func _lighten_hand_card(hand_index: int) -> String :
 	var speed_before: int = up.move_speed
 	up.cost = maxi(0, up.cost + HAND_LIGHTEN_COST_DELTA)
 	up.move_speed += HAND_LIGHTEN_SPEED_ADD
-	# R272：轻量化也是「改造」→ 卡面改造奖励照算（战斗骨骼 +1 力 +1 血 / 素体 +1 血）。
+	# R272：轻量化也是「改造」→ 卡面改造奖励照算（战斗骨骼 +2 力 +2 血 / 素体 +1 血）。
 	var li_atk: int = _upgrade_atk_gain(up, 0)
 	var li_hp: int = _upgrade_hp_gain(up, 0)
 	up.power += li_atk
@@ -6002,14 +6083,14 @@ func _sleepless_tick(side: String) -> void:
 	## 不眠（9101 效果卡）：自己的回合中，结算收尾时手里没牌 → 抽 1 张；
 	## 抽到的 0 费卡本回合费用 +1（turn_card_discount 记 -1，回合结束随表清空）。
 	## 挂在 _note_card_played 收尾 = 当前效果结算完毕；选牌面板开着时先不抽，
-	## 等选完（fate_pick 收尾）再补结算。
+	## 等选完再补结算（R292：拒绝命运已改自动结算，不再有 fate_pending）。
 	if side != SIDE_SELF:
 		return
 	# ⚠️ 选牌面板开着时先不抽 —— 少一个就出 bug：面板期间回合收尾会照常结算，
 	# 把「手牌空了 → 抽 1 张」之类的效果打乱玩家正在做的选择。
 	# （R209：`sys_upgrade_pending` 已随那套没用的 pending API 一起删除；手牌目标的
 	#  选卡改由场景的选卡页驱动，它自己会拦住出牌与回合收尾。）
-	if revive_pending or crow_pending or whale_pending or foresight_pick or fate_pending \
+	if revive_pending or crow_pending or whale_pending or foresight_pick \
 			or endless_pending or shadow_step_pending \
 			or focus_pending or overhaul_pending:
 		return
@@ -6209,8 +6290,12 @@ func can_use_card(card: CardData, side:= SIDE_SELF) -> bool:
 
 
 func _fate_reject(side: String) -> String:
-	## 拒绝命运（9098）：丢弃所有手卡 → 从弃牌区选等量的卡（面板必须选满）。
-	## 本卡随后消失（use_spell 里不进弃牌区），所以面板里选不到它自己。
+	## 拒绝命运（9098）：丢弃**所有**手卡，然后把弃牌区里**所有 0 费 / 1 费卡**
+	## 按弃牌区顺序加回手卡（不超过手牌上限）。
+	## R292 改「自动结算」：原来是「从弃牌区选等量、必须选满」的模态面板，玩家口径是
+	## 「直接把 0/1 费的都捞回来」→ 面板整套（fate_pending / fate_options / fate_pick）已删，
+	## 一次结算完、不打断出牌节奏。
+	## 本卡带「次元」→ 打完就进消耗区（`_spell_card_gone`），所以捞不到它自己。
 	if side != SIDE_SELF:
 		return "（拒绝命运：敌方 AI 不使用这张卡）"
 	var n := state.hand.size()
@@ -6218,42 +6303,24 @@ func _fate_reject(side: String) -> String:
 		state.discard.append_array(state.hand)
 		state.hand.clear()
 		_log("拒绝命运：丢弃 %d 张手卡" % n)
-	fate_count = n
-	if n > 0:
-		fate_pending = true
-		_log("拒绝命运：从弃牌区选择 %d 张卡加入手卡" % n)
-	else:
-		_log("拒绝命运：手牌本来就是空的，效果落空")
-	return "丢弃 %d 张，选回 %d 张" % [n, n]
-
-
-func fate_options() -> Array[int]:
-	var out: Array[int] = []
-	for i in state.discard.size():
-		out.append(i)
-	return out
-
-
-func fate_pick(discard_index: int) -> bool:
-	if not fate_pending:
-		return false
-	if discard_index < 0 or discard_index >= state.discard.size():
-		return false
-	if state.hand_full():
-		_log("拒绝命运：手牌已满，剩余取牌作废")
-		fate_pending = false
-		fate_count = 0
-		return false
-	var c: CardData = state.discard[discard_index]
-	state.discard.remove_at(discard_index)
-	state.hand.append(c)
-	fate_count -= 1
-	_log("拒绝命运：%s 回到手牌（还要选 %d 张）" % [c.card_name, maxi(0, fate_count)])
-	action.emit("fate_pick", {"card": c})
-	if fate_count <= 0:
-		fate_pending = false
-		_sleepless_tick(SIDE_SELF)   # 选完了才补「没有手卡」的判定
-	return true
+	var picked: Array[String] = []
+	var i := 0
+	# ⚠️ 取走一张后**不推进 i**（后面的卡顺移上来）；手牌满了就停 —— 「不超过手牌上限」。
+	while i < state.discard.size() and not state.hand_full():
+		var c: CardData = state.discard[i]
+		if c != null and c.cost <= FATE_CHEAP_MAX:
+			state.discard.remove_at(i)
+			state.hand.append(c)
+			picked.append(c.card_name)
+			continue
+		i += 1
+	if picked.is_empty():
+		_log("拒绝命运：弃牌区没有 %d 费以内的卡（只丢了 %d 张手卡）" % [FATE_CHEAP_MAX, n])
+		action.emit("fate", {"discarded": n, "picked": 0, "names": []})
+		return "丢弃 %d 张，弃牌区没有 0/1 费卡" % n
+	_log("拒绝命运：%d 张 0/1 费卡回到手卡（%s）" % [picked.size(), ", ".join(picked)])
+	action.emit("fate", {"discarded": n, "picked": picked.size(), "names": picked})
+	return "丢弃 %d 张，捞回 %d 张 0/1 费卡" % [n, picked.size()]
 
 
 func foresight_options() -> Array[int]:
@@ -6576,7 +6643,8 @@ func cast_recycle(hand_index: int, target_hand_index: int, free_cast := false) -
 	if proto == null:
 		# 卡库不该缺素体；万一缺了也别把目标那张吞掉 → 原样留在手里，只当白花一费。
 		_log("回收：卡库缺少「素体」(8025)，目标保持原样")
-		action.emit("recycle", {"card": null, "ok": false})
+		# R292：回收统一走 transform 那条口，不再有自己的 action；这里是**防御分支**
+		# （卡库不该缺素体），只留日志，不 emit 任何界面事件。
 		_note_card_played(SIDE_SELF, card)
 		state.discard.append(card)
 		return "回收：卡库缺少素体，效果落空"
@@ -6587,11 +6655,14 @@ func cast_recycle(hand_index: int, target_hand_index: int, free_cast := false) -
 	body.health += rc_hp
 	body.upgrade_stacks += 1   # R209：卡面写的就是「使其获得改造」→ 记一层随身带
 	var rc_old: String = tgt.card_name
-	state.hand[target_hand_index] = body
+	# R292：用户口径「回收效果属于**变成**类」→ 换卡不再自己手搓，走**变化的唯一口**
+	# `_transform_hand_card`：① 发明专家（9143）每变化一张卡回 2 费；② 变幻特效由界面
+	# 的 transform 分支统一播（不再是回收专属的一套）；③ 以后任何「变化时」的钩子都会
+	# 自动吃到，不必再回来给回收补分支。改造后的数值挂在 extra 上，播报照旧写清 1/10。
+	_transform_hand_card(SIDE_SELF, target_hand_index, body, "回收", false,
+			{"recycle_hp": rc_hp, "recycled": rc_old})
 	_log("回收：%s → 素体（改造：生命 +%d → %d 攻 / %d 血，本场战斗永久）"
 		% [rc_old, rc_hp, body.power, body.health])
-	action.emit("recycle", {"card": body, "hp": rc_hp, "recycled": rc_old,
-		"hand_index": target_hand_index})
 	_note_card_played(SIDE_SELF, card)
 	state.discard.append(card)
 	return "%s → 素体（%d 攻 / %d 血）" % [rc_old, body.power, body.health]
@@ -6677,6 +6748,109 @@ func _life_cycle_death(p: Placement, cell: Vector2i) -> void :
 	action.emit("life_cycle", {"card": copy, "from": p.card, "cell": cell})
 
 
+func _blade_gift(target, side:= SIDE_SELF) -> String:
+	## 辅助刃（9164，R291，机械之心）：选一个**己方盟友** → 改造它（力 +BLADE_ATK），
+	## 并挂「死亡」：被破坏时把**一张辅助刃**加入手卡。
+	##
+	## 改造走 `_field_upgrade_grant()`（场上改造唯一口）—— 层数 / 卡面改造奖励 /
+	## 「每次被改造」那一族全部自动生效，这里一行都不手写。
+	## ⚠️ 只认 `kind == "盟友"`：工事不是「盟友」（与生命循环 9150 / 加厚装甲 8044 同口径）。
+	## ⚠️ 允许对同一个目标重复施放（每次各 +BLADE_ATK 力量、各算一层改造）——
+	##    卡面没有「只能一次」，而亡语回收的那张就该能再点一次。
+	var p:= _target_placement(side, target)
+	if p == null:
+		return "（没有目标）"
+	if p.owner != side:
+		return "只能改造自己的单位"
+	if p.card.kind != "盟友":
+		return "辅助刃：只能指定己方盟友（%s 不是盟友）" % p.card.card_name
+	# 「死亡」字段是不是这张卡**原本没有**的 —— 只有新加的才记进 `blade_added`（离场要摘）。
+	var new_death_affix := not p.card.has_affix(AFFIX_DEATH)
+	_field_upgrade_grant(p, BLADE_ATK, 0, "辅助刃", AFFIX_DEATH)
+	if new_death_affix and not p.blade_added.has(AFFIX_DEATH):
+		p.blade_added.append(AFFIX_DEATH)
+	p.blade_gift = true
+	_log("辅助刃：%s 改造 → 力量 +%d，并获得「死亡」（%d 攻，第 %d 层）" % [
+			p.card.card_name, BLADE_ATK, p.effective_power(), p.upgrade_stacks])
+	return "%s 力量 +%d，并获得「死亡」" % [p.card.card_name, BLADE_ATK]
+
+
+func _blade_gift_death(p: Placement, cell: Vector2i) -> void :
+	## 辅助刃的「死亡」：被破坏时把**一张辅助刃**加入手卡。
+	## 与生命循环的随机盟友不同 —— 这里是**固定一张本卡**（卡面写的就是「一张辅助刃」）。
+	## 手牌满 → 这张卡不进来（与其它「加入手卡」同口径：写清楚，不静默丢）。
+	if p.owner != SIDE_SELF:
+		return                     # 只有玩家能施放本卡，敌方分支不需要效果
+	var proto: CardData = CardRepo.load_json().get_card(BLADE_GIFT_ID)
+	if proto == null:
+		_log("辅助刃：卡库缺少「辅助刃」(9164)，亡语落空")
+		return
+	if state.hand_full():
+		_log("辅助刃：手牌已满（%d 张），亡语无法加入手卡" % FieldState.HAND_LIMIT)
+		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT,
+				"hand": state.hand.size()})
+		return
+	# ⚠️ 必须 from_dict 复制成独立实例（卡库是共享实例）—— 与其它「加入手卡」同一条纪律。
+	var copy:= CardData.from_dict(proto.to_dict())
+	copy.traits = (proto.traits as Array).duplicate()
+	copy.affixes = (proto.affixes as Array).duplicate()
+	copy.own_copy = true
+	state.hand.append(copy)
+	_log("辅助刃：%s 被破坏 → 手卡加入「%s」" % [p.card.card_name, copy.card_name])
+	action.emit("blade_gift_death", {"card": copy, "from": p.card, "cell": cell})
+
+
+func _duplicate_spell(target, side:= SIDE_SELF) -> String:
+	## 复制术（9165，R291，机械之心史诗）：选一个**己方盟友或工事** → 把它的
+	## DUPLICATE_COUNT 份复制加入手卡（保留 buff、带「次元」），本回合在手牌里 0 费。
+	##
+	## 「保留 buff」的具体口径（与卡面一致，也和「重启 8054 回手」相反 —— 那个是**还原**）：
+	##   * 力量：`card.power + Placement.upgrade_atk`（场上的改造加攻不在 card 里，必须先并进去，
+	##     否则复制品上场后力量会掉回卡面值）；
+	##   * 生命：直接取 `card.health`（改造加血 / 栅栏修复术都烤在这个副本上了）；
+	##   * 攻程 / 移速：同理已烤在副本上（`_upgrade_unit` / `place()` 干的），原样带走；
+	##   * `upgrade_stacks` **置 0**：上面这些数值已经全在副本里了，再随身带层数会被
+	##     `FieldState.place()` 按层数再折一次（堡垒 +3 血/层、榴弹击手 +1 程/层）→ 双计。
+	##     代价是复制品不带「改造 ×N」徽标 / 侦察塔光环 —— 数值一致优先。
+	##   * 「次元」字段：上场后离场即消失（`_destroy` 认字段），不会变成永久卡。
+	## 手牌不足 → 能加几张加几张（不静默吞掉，日志与返回值都写清楚）。
+	var p:= _target_placement(side, target)
+	if p == null:
+		return "（没有目标）"
+	if p.owner != side:
+		return "只能复制自己的单位"
+	if p.card.kind != "盟友" and not p.card.is_fort():
+		return "%s 不能被复制" % p.card.card_name
+	var made := 0
+	for _i in DUPLICATE_COUNT:
+		if state.hand_full():
+			_log("复制术：手牌已满（%d 张），少复制 %d 张" % [
+					FieldState.HAND_LIMIT, DUPLICATE_COUNT - made])
+			break
+		var copy:= CardData.from_dict(p.card.to_dict())
+		copy.traits = (p.card.traits as Array).duplicate()
+		copy.affixes = (p.card.affixes as Array).duplicate()
+		# 「死亡」若是辅助刃挂上去的（`blade_added`），复制品**不带走** —— 那条亡语挂在
+		# `Placement.blade_gift` 上，复制品上场后没有这个标记，留着字段就是「卡面写着却不触发」
+		# （R227 立的口径）。力量那部分照常保留（已烤进 power）。
+		for bg_a: String in p.blade_added:
+			copy.affixes.erase(bg_a)
+		copy.power = p.card.power + p.upgrade_atk   # 保留力量改造（它只在 Placement 上）
+		copy.upgrade_stacks = 0                     # 数值已烤进副本 → 不再随身，防 place 双计
+		copy.own_copy = true
+		copy.add_affix(AFFIX_DIMENSION)
+		state.hand.append(copy)
+		state.turn_free[copy] = true   # 本回合 0 费；end_turn 清空 → 没打出去的下回合原价
+		made += 1
+	if made == 0:
+		return "复制术：手牌已满，没有复制生成"
+	action.emit("duplicate", {"cell": target, "card": p.card, "count": made,
+			"placement": p})
+	_log("复制术：%s → %d 张带「次元」的复制加入手卡（本回合 0 费）" % [
+			p.card.card_name, made])
+	return "%s 复制 %d 张（本回合 0 费）" % [p.card.card_name, made]
+
+
 func _random_ally_card(side: String) -> CardData:
 	## 本角色奖励池里的随机**盟友**卡（生命循环的随机源，R227）。
 	## 走引擎 `rng` → 同种子同结果、回放可复现（与新生 9148 / 随心组装同一口径）。
@@ -6734,9 +6908,11 @@ func _invention_refund(side: String, source_name: String) -> void:
 
 
 func _transform_hand_card(side: String, hand_index: int, new_card: CardData,
-		source_name: String, random_born := false) -> Dictionary:
+		source_name: String, random_born := false, extra := {}) -> Dictionary:
 	## 变化一张手牌：把 state.hand[hand_index] 替换成 new_card 的独立副本，
 	## 触发「发明专家」回费，并 emit "transform" 动作给 UI。
+	## `extra`：额外塞进 action 负载的字段（R292 回收用它带「改造回血值 / 被换掉的原卡名」，
+	##   界面据此仍能报「X → 素体 1/10」，不必为它单开一条 action）。
 	## `random_born = true` → 这张新卡标记「以**随机**变化的方式加入手卡」，
 	## 并立刻结算 `_apply_random_born()`（谟涅摩叙涅 -2 费 / 量产型代达罗斯 +2+2）。
 	## ⚠️ 只有**随机**来源才传 true（随心组装 9144 / 创意 8070）；填充 9146 / 报废 8071 /
@@ -6753,7 +6929,11 @@ func _transform_hand_card(side: String, hand_index: int, new_card: CardData,
 		_apply_random_born(copy)
 	_invention_refund(side, source_name)
 	_log("%s：%s → %s" % [source_name, old_card.card_name, copy.card_name])
-	action.emit("transform", {"side": side, "index": hand_index, "old": old_card, "new": copy, "source": source_name})
+	var payload := {"side": side, "index": hand_index, "old": old_card, "new": copy,
+			"source": source_name}
+	for k in extra:
+		payload[k] = extra[k]
+	action.emit("transform", payload)
 	out["old"] = old_card
 	out["new"] = copy
 	return out
@@ -7182,6 +7362,36 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 			if side == SIDE_SELF and state.hand.size() > ec_before:
 				_cannon_draw_discount(side, state.hand[state.hand.size() - 1])
 			return "%s；抽 %d 张" % [ec_dmg, ec_draw]
+		BREAKTHROUGH_ID:
+			# 集中突破 9162（R290，机械之心）：造成 BREAKTHROUGH_DMG 点伤害，
+			# 场上己方单位每有 1 层改造，伤害 +BREAKTHROUGH_PER_STACK。
+			# 加成并进 **base** 再走 `_spell_dmg()` —— 附魔 / 魔法塔 / 荧光草 / 鸭之眼
+			# 照常作用在「含改造加成」的总伤害上（与蓄势读 card.value 同一口径）。
+			var bt_stacks:= _side_upgrade_stacks(side)
+			var bt_base:= BREAKTHROUGH_DMG + bt_stacks * BREAKTHROUGH_PER_STACK
+			if bt_stacks > 0:
+				_log("集中突破：场上己方改造 ×%d → 伤害 %d + %d = %d" % [
+					bt_stacks, BREAKTHROUGH_DMG,
+					bt_stacks * BREAKTHROUGH_PER_STACK, bt_base])
+			return str(_op_deal_damage(side, _spell_dmg(side, bt_base, card), target))
+		IMPACT_CANNON_ID:
+			# 冲击炮 9163（R290，机械之心）：造成 IMPACT_CANNON_DMG 点伤害，
+			# 并把目标击退 IMPACT_CANNON_STEPS 格。
+			# 顺序 = 先伤害再击退：目标被这一发打死后 `_target_placement()` 已经是 null，
+			# 自然跳过击退（不会对着空格推）。
+			# 击退走唯一口 `_knockback()`：位移免疫（赫菲斯托斯）/ 被己方单位挡住 /
+			# 朝目标所属方后排 —— 三条规则与清退陷阱 / 暗影锁链完全同源。
+			var ic_msg:= _op_deal_damage(side, _spell_dmg(side, IMPACT_CANNON_DMG, card), target)
+			if _target_placement(side, target) == null:
+				return "%s；目标被击破" % ic_msg
+			_log("冲击炮：%s，随后击退 %d 格" % [ic_msg, IMPACT_CANNON_STEPS])
+			return "%s；%s" % [ic_msg, _knockback(side, target, IMPACT_CANNON_STEPS)]
+		BLADE_GIFT_ID:
+			# 辅助刃 9164（R291，机械之心）：己方盟友获得改造（力 +2）+「死亡」亡语回收自己。
+			return _blade_gift(target, side)
+		DUPLICATE_ID:
+			# 复制术 9165（R291，机械之心）：复制己方一个盟友 / 工事两份到手卡（带「次元」，本回合 0 费）。
+			return _duplicate_spell(target, side)
 		SCRAP_ID:
 			# 报废 8071（R271，机械之心）：手牌里其他所有卡变成聚能炮击（本回合 0 费）。
 			return _scrap_hand(side)
@@ -8804,6 +9014,10 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 	# ⚠️ 只认 Placement 标记（不认「死亡」字段 —— 那是通用标记，别的卡也带）。
 	if p.life_cycle:
 		_life_cycle_death(p, cell)
+	# R291 辅助刃：被本卡点过的单位被破坏 → 把一张辅助刃加回手卡。
+	# 同样只认 Placement 标记（不认「死亡」字段）。
+	if p.blade_gift:
+		_blade_gift_death(p, cell)
 	match p.card.id:
 		WYVERN_ID:
 			_summon_token(WYVERN_TOKEN_ID, cell, p.owner, 1)

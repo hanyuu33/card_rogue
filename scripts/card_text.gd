@@ -277,37 +277,10 @@ static func _carry(seg: Dictionary, text: String) -> Dictionary:
 
 static func wrap_segments(font: Font, font_bold: Font, segs: Array,
 		max_w: float, size: int) -> Array:
-	## 中文友好的字符级折行，**保留每段的字体/样式**。
-	## 返回：若干「行」，每行是片段数组（可直接交给 draw_wrapped 或自己绘制）。
-	var fnt_b := font_bold if font_bold != null else font
-	var lines: Array = []
-	var cur: Array = []
-	var cur_w := 0.0
-	for seg in segs:
-		var f: Font = fnt_b if bool(seg.get("bold", false)) else font
-		var parts: PackedStringArray = str(seg.get("text", "")).split("\n")
-		for pi in parts.size():
-			if pi > 0:
-				lines.append(cur)
-				cur = []
-				cur_w = 0.0
-			var run := ""
-			for ch in parts[pi]:
-				var w: float = f.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-				if cur_w + w > max_w and cur_w > 0.0:
-					if run != "":
-						cur.append(_carry(seg, run))
-						run = ""
-					lines.append(cur)
-					cur = []
-					cur_w = 0.0
-				run += ch
-				cur_w += w
-			if run != "":
-				cur.append(_carry(seg, run))
-	if not cur.is_empty() or lines.is_empty():
-		lines.append(cur)
-	return lines
+	## 折行**唯一口** = `TextWrap.wrap_rich`（R292）—— 保留了每段的 bold / italic / code /
+	## mention，但断行规则与卡面文案完全同一套（禁则 / 引号成对 / 西文成词 / 空格断点）。
+	## 返回：若干「行」，每行是片段数组（可直接交给 `draw_wrapped_hits`）。
+	return TextWrap.wrap_rich(font, font_bold, segs, max_w, size)
 
 
 static func draw_wrapped(canvas: CanvasItem, font: Font, font_bold: Font, segs: Array,

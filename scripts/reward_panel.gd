@@ -803,6 +803,10 @@ func _on_click(pos: Vector2) -> void:
 				return
 			for i in cands.size():
 				if _card_rect_in(e, i).grow(6.0).has_point(pos):
+					# R294：点卡 = 同时把描述条切到这张。描述条的口径是
+					# 「有悬停看悬停，没悬停看 _pick_sel」→ 悬停若停在上一张，
+					# 点新卡会被它压住，描述不换（触屏尤其明显）。
+					_hover_card = i
 					_pick_sel = i
 					_root.queue_redraw()
 					return

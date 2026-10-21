@@ -2426,6 +2426,30 @@ func _check_pick_overlay(scene: Variant) -> void:
 	if eng.state.discard.size() != discard_before:
 		_smoke_fail("选卡页：点卡不该直接结算（弃牌区不应变化）")
 		return
+	# R294：点中的卡必须同时成为「描述条当前显示的那张」——触屏没有 motion 事件，
+	# 光靠悬停跟踪的话点了卡描述条不动（用户报告「点卡无法顺利切换描述」）。
+	if ov._hover_idx != 0:
+		_smoke_fail("选卡页 R294：点卡后描述条应跟到该卡（hover_idx=%d，期望 0）"
+				% ov._hover_idx)
+	# R294：悬停缓存过期判定 —— 出牌/弃牌后手牌左移，`_hover_hand` 指的位置上
+	# 已经不是原来那张卡，左栏必须清掉而不是继续显示旧卡。
+	if eng.state.hand.size() > 0:
+		scene._hover_hand = 0
+		scene._hover_card = eng.state.hand[0]
+		scene._hover_purge_stale()
+		if scene._hover_card == null:
+			_smoke_fail("R294 悬停过期判定：同一张卡不该被清掉")
+		scene._hover_hand = eng.state.hand.size() + 2
+		scene._hover_purge_stale()
+		if scene._hover_card != null or scene._hover_hand != -1:
+			_smoke_fail("R294 悬停过期判定：越界下标应清空（hover_hand=%d）"
+					% scene._hover_hand)
+		if eng.state.hand.size() >= 2:
+			scene._hover_hand = 0
+			scene._hover_card = eng.state.hand[1]
+			scene._hover_purge_stale()
+			if scene._hover_card != null:
+				_smoke_fail("R294 悬停过期判定：下标与卡不符应清空（出牌后左栏停在旧卡）")
 	if not ov._can_confirm():
 		_smoke_fail("选卡页：单选场景选中 1 张后确认按钮应可用")
 		return
@@ -2469,6 +2493,10 @@ func _check_pick_overlay(scene: Variant) -> void:
 	if not ov.is_picking() or ov.kind() != "whale":
 		_smoke_fail("选卡页：whale_pending 应打开 whale 场景，实际 kind=%s" % ov.kind())
 		return
+	# R294：上一段刚 close() 过、这里是全新一轮 → 悬停下标必须清零，
+	# 否则描述条会停在上局那张卡上（触屏没有 motion，永远看不回正确的那张）。
+	if ov._hover_idx != -1:
+		_smoke_fail("选卡页 R294：close 后重新打开应清空悬停下标，实际 %d" % ov._hover_idx)
 	ov._tap(ov._cancel_rect().get_center())   # 「不选了」
 	if eng.whale_pending:
 		_smoke_fail("选卡页：放弃按钮应调 whale_skip（pending 清）")
@@ -2476,11 +2504,15 @@ func _check_pick_overlay(scene: Variant) -> void:
 	# ── 6) 滚动钳制：候选超一屏 → max_scroll > 0，滚动值被钳住 ──
 	for _i in 14:
 		eng.state.discard.append(CardData.from_dict(repo.get_card(8003).to_dict()))
-	eng.fate_pending = true
-	eng.fate_count = 1
+	# R292：拒绝命运改自动结算（不再有 "fate" 选卡页）→ 滚动用例改用 whale（弃牌区全列）。
+	# ⚠️ 必须先 `ov.close()`：上一步的 whale 页还开着（pending 已清但页面没关），
+	#    `_sync_pick()` 见「kind 没变 + 仍在 picking」就不重建 → 读到的是旧的两张候选。
+	ov.close()
+	eng.whale_pending = true
+	eng.whale_remaining = 1
 	scene._sync_pick()
-	if not ov.is_picking() or ov.kind() != "fate":
-		_smoke_fail("选卡页：fate_pending 应打开 fate 场景，实际 kind=%s" % ov.kind())
+	if not ov.is_picking() or ov.kind() != "whale":
+		_smoke_fail("选卡页：whale_pending 应打开 whale 场景，实际 kind=%s" % ov.kind())
 		return
 	if ov._max_scroll() <= 1.0:
 		_smoke_fail("选卡页：多张候选应超出一屏（max_scroll > 0），实际 %.1f" % ov._max_scroll())
@@ -2492,8 +2524,8 @@ func _check_pick_overlay(scene: Variant) -> void:
 				% [ov._scroll, ov._max_scroll()])
 		return
 	# 收尾：清干净，别漏给后面的用例
-	eng.fate_pending = false
-	eng.fate_count = 0
+	eng.whale_pending = false
+	eng.whale_remaining = 0
 	ov.close()
 	print("SMOKE OK 选卡页：crow 自动打开 / 点选不结算 / 确认才结算 / 返回收起往返 / 放弃按钮 / 滚动钳制")
 

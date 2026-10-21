@@ -226,20 +226,8 @@ func _body_text(e: Dictionary) -> String:
 
 
 func _wrap(text: String, max_w: float, px: int) -> PackedStringArray:
-	## 按宽度逐字折行（draw_string 不自动换行，长说明会画到面板外）。
-	var out: PackedStringArray = []
-	var cur := ""
-	for i in text.length():
-		var ch := text[i]
-		if cur != "" and _font.get_string_size(cur + ch,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > max_w:
-			out.append(cur)
-			cur = ch
-		else:
-			cur += ch
-	if cur != "":
-		out.append(cur)
-	return out
+	## 折行唯一口 = `TextWrap.wrap_plain`（R292；draw_string 不自动换行）。
+	return PackedStringArray(TextWrap.wrap_plain(_font, text, max_w, px))
 
 
 func _row_block(e: Dictionary, max_lines: int) -> Dictionary:

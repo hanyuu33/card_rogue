@@ -44,11 +44,8 @@ const CARD_H_DESIGN := 70.0   # 缩放基准高（battle 版小卡高）
 # 稀有度主通道 = 右上角**缎带素材**（`_draw_rarity_ribbon`），不再是框线色/色块旗。
 
 static var _art_cache := {}   # "id[_职业后缀][_sleep]" -> Texture2D / null（找不到图也缓存，避免反复查盘）
-## R187 性能：`wrap_text` 逐字 get_string_size，是 _draw 里最贵的纯计算（每张卡每次
-## 重绘都跑）。键 = 字体实例 + 字号 + 宽度（量化到 1/4 px）+ 原文；命中即免重算。
-## 返回浅副本，调用方随便改；满 WRAP_CACHE_MAX 全清重来。
-const WRAP_CACHE_MAX := 2048
-static var _wrap_cache := {}
+## R292：折行算法搬到 `scripts/text_wrap.gd`（唯一口：断行禁则 / 引号成对 / 西文成词），
+## 缓存也一并搬过去 —— 这里不再自己攒表（R187 那张 `_wrap_cache` 已删）。
 
 # ── R281：卡名「单行 + 超宽横向滚动」 ──
 ## 旧版卡名最多折 2 行，但姓名牌内框（0.745~0.94）只有 11~18px 高，底部数值徽章
@@ -60,6 +57,7 @@ static var _wrap_cache := {}
 const CARD_NAME_MIN_SZ := 7          # 卡名自适应最小字号（再小不可读）
 const MARQUEE_PAUSE_MS := 900.0      # 横向滚动：两端停顿时长
 const MARQUEE_SPEED := 26.0          # 横向滚动速度（px/s）
+const CHAR_CACHE_MAX := 2048        # 卡名滚动的逐字宽度缓存上限（R292：与折行缓存分家）
 static var _char_cache := {}         # "字体|字号|文本" -> Array[float]（逐字宽度）
 static var _scroll_watch_ms := 0     # 最近一次「画了滚动卡名」的时刻
 
@@ -125,7 +123,7 @@ static func _char_widths(font: Font, text: String, size: int) -> Array[float]:
 	var out: Array[float] = []
 	for ch in text:
 		out.append(font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x)
-	if _char_cache.size() >= WRAP_CACHE_MAX:
+	if _char_cache.size() >= CHAR_CACHE_MAX:
 		_char_cache.clear()
 	_char_cache[ck] = out
 	return out
@@ -733,33 +731,12 @@ static func stats_line(card: CardData, hp := -1) -> String:
 
 
 static func wrap_text(font: Font, text: String, max_w: float, size: int) -> Array[String]:
-	## 中文友好的字符级换行（draw_string 不自动折行）——按逐字累加测量宽度。
-	## ⚠️ 折行点上的空格**留在上一行、不要带到新行首**：否则续行会比首行缩进一格，
-	## 看上去就是「说明文字错位」。典型例子（道具「叠加态的鸭」）：
-	##   `…概率永久降低 25%（100 → 75 → 50`
-	##   ` → 25 → 0），降到 0 后不再复活。`   ← 这行原来行首多一个空格
-	## R187：纯函数 → 缓存（见 `_wrap_cache`）；返回**副本**，调用方增删不伤缓存。
-	var ck := "%d|%d|%d|%s" % [font.get_instance_id(), size, roundi(max_w * 4.0), text]
-	if _wrap_cache.has(ck):
-		var hit: Array[String] = _wrap_cache[ck]
-		return hit.duplicate()
-	var out: Array[String] = []
-	for para in text.split("\n"):
-		var cur := ""
-		for ch in para:
-			if cur == "" and ch == " ":
-				continue          # 行首不留空格（折行处吃掉那个空格）
-			if font.get_string_size(cur + ch, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > max_w \
-					and cur != "":
-				out.append(cur)
-				cur = "" if ch == " " else ch
-			else:
-				cur += ch
-		out.append(cur)
-	if _wrap_cache.size() >= WRAP_CACHE_MAX:
-		_wrap_cache.clear()
-	_wrap_cache[ck] = out
-	return out.duplicate()
+	## 折行**唯一口** = `TextWrap.wrap_plain`（R292）。
+	## 名字保留是因为全工程（卡面 / 选卡页 / 卡组编辑 / 道具页 / 地图）都在调它 ——
+	## 换实现只改这一行，几十处调用点不用跟着动。
+	## 规则：行首不落「，）」」这类收尾标点、行尾不留开引号、`「卡名」` 不拆、`+2/12/HP`
+	## 不从中间断、折行处不吃空格、超宽单元退化成逐字硬切。
+	return TextWrap.wrap_plain(font, text, max_w, size)
 
 
 static func _ellipsize(font: Font, text: String, max_w: float, size: int) -> String:

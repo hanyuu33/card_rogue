@@ -3481,6 +3481,12 @@ func _on_left_click(pos: Vector2) -> void:
 	# R288：玩家一动手就交还镜头（滚轮 / 拖棋盘已有，点击这条别漏 ——
 	# 否则演到一半点张牌，棋盘还停在敌方半场，自己出的牌在哪都看不见）。
 	_cam_cancel()
+	# R294：**点击 = 「指针确实在这里」**，顺手按落点把悬停状态刷一次。
+	# 悬停只在 MouseMotion 里更新，却是左栏描述的**最高优先级**来源 →
+	# 出牌后手牌左移、或触屏（根本没有 motion 事件）时，缓存会停在旧卡上，
+	# 玩家点了别的卡，左栏描述却一动不动（用户报告）。放在最前面：
+	# 后面各分支自己的 `_say()` / status_text 仍会覆盖掉悬停写的那句提示。
+	_on_hover(pos)
 	# R197：敌方效果开场弹窗开着 → 本次点击只关弹窗，不落进战场
 	if _ee_popup:
 		_ee_popup = false
@@ -3723,6 +3729,18 @@ func _use_hand_card(i: int) -> void:
 				target_hint = "**自己的一个盟友或工事**（还没超负荷）：挂上超负荷 + 算一层改造"
 			elif card.id == GameEngine.REBOOT_ID:
 				target_hint = "**自己的一个盟友或工事**：返回手卡（0 费，离手重置）"
+			elif card.id == GameEngine.BLADE_GIFT_ID:
+				target_hint = "**自己的一个盟友**（改造：力 +%d，并获得「死亡」）" \
+						% GameEngine.BLADE_ATK
+			elif card.id == GameEngine.DUPLICATE_ID:
+				target_hint = "**自己的一个盟友或工事**：复制 %d 张带「次元」的副本到手卡（本回合 0 费）" \
+						% GameEngine.DUPLICATE_COUNT
+			elif card.id == GameEngine.BREAKTHROUGH_ID:
+				target_hint = "**一个敌人**（%d 伤；场上己方每层改造再 +%d）" % [
+						GameEngine.BREAKTHROUGH_DMG, GameEngine.BREAKTHROUGH_PER_STACK]
+			elif card.id == GameEngine.IMPACT_CANNON_ID:
+				target_hint = "**一个敌人**（%d 伤，并击退 %d 格）" % [
+						GameEngine.IMPACT_CANNON_DMG, GameEngine.IMPACT_CANNON_STEPS]
 			elif card.id == GameEngine.WHIRL_BLADE_ID:
 				target_hint = "十字中心格"
 			status_text = "%s：点击%s（右键取消）" % [card.card_name, target_hint]
@@ -4299,8 +4317,7 @@ func _pick_active_kind() -> String:
 		return "recall"
 	if engine.foresight_pick:
 		return "foresight"
-	if engine.fate_pending:
-		return "fate"
+	# R292：拒绝命运（9098）改自动结算 → 不再有 "fate" 选卡场景。
 	if engine.focus_pending:
 		return "focus"
 	return ""
@@ -4455,13 +4472,6 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"title": "预判①：选择弃牌区一张费用为 0 的技能卡（必须选一张，之后本卡消失）",
 					"note": "点卡选中，再点确认 —— 它立即回到你的手牌",
 					"cards": fopts.map(disc_cards),
-					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
-		"fate":
-			var faopts: Array = engine.fate_options()
-			return {"kind": k, "short": "拒绝命运", "opts": faopts,
-					"title": "拒绝命运：从弃牌区选 %d 张卡加入手卡（必须选满）" % engine.fate_count,
-					"note": "点卡选中，再点确认 —— 它立即回到你的手牌",
-					"cards": faopts.map(disc_cards),
 					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
 		"reload":
 			# R205：填充（9146）—— 候选是手牌（除它自己），确认后目标原位变成「聚能炮击」。
@@ -4621,14 +4631,6 @@ func _on_pick_confirmed(sel: Array) -> void:
 				fnm = engine.state.discard[fi].card_name
 			if engine.foresight_pick_card(fi):
 				status_text = "预判：%s 回到手卡（本卡已消失）" % fnm
-			_clear_selection()
-		"fate":
-			var fai := int(opts[sel[0]])
-			var fanm := "?"
-			if fai >= 0 and fai < engine.state.discard.size():
-				fanm = engine.state.discard[fai].card_name
-			if engine.fate_pick(fai):
-				status_text = "拒绝命运：%s 回到手牌" % fanm
 			_clear_selection()
 		"reload":
 			# R205：确认 → 结算 `cast_reload(填充手牌下标, 目标手牌下标)`。
@@ -4963,6 +4965,32 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 					and (rp.card.kind == "盟友" or rp.card.is_fort()):
 				out.append(c)
 		out.sort()
+	elif card.id == GameEngine.BLADE_GIFT_ID:
+		# 辅助刃 9164（R291，机械之心）：只列**己方盟友**（工事不是「盟友」）。
+		for bgc: Vector2i in engine.state.board:
+			var bgp: Placement = engine.state.board[bgc]
+			if bgp.owner == GameEngine.SIDE_SELF and bgp.card.kind == "盟友":
+				out.append(bgc)
+		out.sort()
+	elif card.id == GameEngine.DUPLICATE_ID:
+		# 复制术 9165（R291，机械之心）：己方盟友或工事。
+		# ⚠️ 落进下面的 else 会敌我全列 —— 玩家能点敌人，付费后才发现「不能被复制」。
+		for dpc: Vector2i in engine.state.board:
+			var dpp: Placement = engine.state.board[dpc]
+			if dpp.owner == GameEngine.SIDE_SELF \
+					and (dpp.card.kind == "盟友" or dpp.card.is_fort()):
+				out.append(dpc)
+		out.sort()
+	elif card.id == GameEngine.BREAKTHROUGH_ID \
+			or card.id == GameEngine.IMPACT_CANNON_ID:
+		# 集中突破 9162 / 冲击炮 9163（R290，机械之心）：只列**敌方**单位。
+		# ⚠️ 两张都是「对一个敌人造成伤害」，落进下面的 else 会把己方单位也高亮 ——
+		#    玩家能点自己人、付费后才挨一发（R287 共享护盾 8069 踩过同一个坑）。
+		for c: Vector2i in engine.state.board:
+			var bp: Placement = engine.state.board[c]
+			if bp.owner == GameEngine.SIDE_OPPONENT:
+				out.append(c)
+		out.sort()
 	elif card.id == GameEngine.FIRE_WALL_SPELL_ID:
 		# 火墙术：任意一条横行都能烧 → 全棋盘任意格都可点（点该行任一格即选中整行）
 		for x in FieldState.BOARD_ROWS:
@@ -5222,9 +5250,6 @@ func _on_right_click() -> void:
 	if engine.foresight_pick:
 		_say("预判：必须从弃牌区选择一张费用为 0 的技能卡")
 		return
-	if engine.fate_pending:
-		_say("拒绝命运：必须从弃牌区选 %d 张卡" % engine.fate_count)
-		return
 	# 英雄的弃牌代价面板：右键 = 取消支付（卡留在手牌）
 	if _hero_pick_idx >= 0:
 		var hero_nm := engine.state.hand[_hero_pick_idx].card_name
@@ -5249,6 +5274,20 @@ func _clear_hover_state() -> void:
 	_hover_pl = null
 	_hover_hand = -1
 	_hover_relic_tip = ""
+
+
+func _hover_purge_stale() -> void:
+	## R294：悬停缓存可能已经**过期** —— 手牌出掉 / 弃掉 / 洗回之后，
+	## `_hover_hand` 指的那个位置上已经不是原来那张卡了。
+	## 不清掉的话左栏会一直停在「刚刚打出去的那张」，点别的卡也不换描述。
+	## ⚠️ 只清**手牌**那一份（`_hover_hand >= 0` 才判）：战场单位 / 场地 / 区域面板的
+	##    悬停不带下标，别误伤（那几类由 `_on_hover` 每次重算）。
+	if engine == null or _hover_card == null or _hover_hand < 0:
+		return
+	if _hover_hand >= engine.state.hand.size() \
+			or engine.state.hand[_hover_hand] != _hover_card:
+		_hover_card = null
+		_hover_hand = -1
 
 
 func _hover_covered() -> bool:
@@ -6480,9 +6519,6 @@ func _on_end_turn() -> void:
 		return
 	if engine.foresight_mode or engine.foresight_pick:
 		_say("预判：请先完成选择")
-		return
-	if engine.fate_pending:
-		_say("拒绝命运：请先从弃牌区选 %d 张卡" % engine.fate_count)
 		return
 	if _net_mode:
 		# 联机：发给对方 → 本机进入对方回合 → 等待回放
@@ -8090,9 +8126,22 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					_transform_fx.append({"zone": str(data.get("zone", "hand")),
 						"slot": int(data.get("index", -1)),
 						"id": tr_new.id, "start": n, "dur": 460})
-			_say("✶ %s：%s -> %s" % [str(data.get("source", "")),
-				(tr_old.card_name if tr_old is CardData else "?"),
-				(tr_new.card_name if tr_new is CardData else "?")])
+			if data.has("recycle_hp"):
+				# R292：回收 = 「变成」类（走同一条变化口）→ 播报仍写清改造后的数值，
+				# 落点同系统升级 = 整排手牌的中点（目标在手牌里，不在棋盘上）。
+				if tr_new is CardData:
+					var rc_n: CardData = tr_new as CardData
+					_say("◆ 回收：%s → 素体 %d 攻 / %d 血（改造 +%d，本场战斗永久）" % [
+							str(data.get("recycled", "?")), rc_n.power, rc_n.health,
+							int(data.get("recycle_hp", 0))])
+					_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+						"text": "%s → 素体 %d/%d" % [str(data.get("recycled", "?")),
+							rc_n.power, rc_n.health],
+						"col": Color("8ad4f0"), "start": n, "dur": 2000})
+			else:
+				_say("✶ %s：%s -> %s" % [str(data.get("source", "")),
+					(tr_old.card_name if tr_old is CardData else "?"),
+					(tr_new.card_name if tr_new is CardData else "?")])
 		"deck_added":
 			# R283：卡入牌库（镜面反射 / 生产订单）-> 卡背飞入卡组区（普通调，无紫）。
 			var da_card: CardData = data.get("card")
@@ -8605,25 +8654,6 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			else:
 				_say("轻量化：手牌里没有可改造的盟友")
 			if li_c is CardData and not _shot_pending:
-				_transform_fx.append({"slot": int(data.get("hand_index", -1)),
-					"zone": "hand", "start": n, "dur": 460})
-		"recycle":
-			# 回收 8064（R198）：手牌里一张卡被换成素体（改造 +9 血）→ 手牌区飘字。
-			# 目标在**手牌**里（不是棋盘），落点用整排手牌的中点（与系统升级同）。
-			var rc = data.get("card", null)
-			if rc is CardData:
-				var rc_d: CardData = rc as CardData
-				sfx.play("spell")
-				_say("◆ 回收：%s → 素体 %d 攻 / %d 血（改造 +%d，本场战斗永久）" % [
-						str(data.get("recycled", "?")), rc_d.power, rc_d.health,
-						int(data.get("hp", 0))])
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
-					"text": "%s → 素体 %d/%d" % [str(data.get("recycled", "?")),
-						rc_d.power, rc_d.health],
-					"col": Color("8ad4f0"), "start": n, "dur": 2000})
-			else:
-				_say("回收：卡库缺少素体，效果落空")
-			if rc is CardData and not _shot_pending:
 				_transform_fx.append({"slot": int(data.get("hand_index", -1)),
 					"zone": "hand", "start": n, "dur": 460})
 		"batch_transfer":
@@ -9381,8 +9411,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("🔮 预判②：%s" % (("「%s」加入手卡" % fs_c.card_name) if fs_c != null else "卡组里没有非 0 费技能卡"))
 		"foresight_pick":
 			_say("🔮 预判：%s 回到手卡（本卡已消失）" % str(data["card"].card_name))
-		"fate_pick":
-			_say("🃏 拒绝命运：%s 回到手牌" % str(data["card"].card_name))
+		"fate":
+			# 拒绝命运 9098（R292）：丢光手卡 → 弃牌区所有 0/1 费卡按顺序回手（自动结算）。
+			var ft_n := int(data.get("picked", 0))
+			sfx.play("draw")
+			if ft_n > 0:
+				_say("🃏 拒绝命运：丢 %d 张，捞回 %d 张 0/1 费卡" % [
+						int(data.get("discarded", 0)), ft_n])
+			else:
+				_say("🃏 拒绝命运：丢 %d 张，弃牌区没有 0/1 费卡" % int(data.get("discarded", 0)))
 		"alert":
 			# 警觉（9109，R54）：随机工事进手，那张卡费用 -2
 			var al_c = data.get("card")
@@ -10892,6 +10929,7 @@ func _draw_info_panel() -> void:
 	## 手牌卡底沉出窗口后，「程 / 速」这类小字只能在这里看全，所以这栏要写满：
 	##   编号·名字 → 种类·费用·稀有度 → 数值（战场单位带当前/上限）→ 词条 →
 	##   每回合行动数 → 效果正文（按面板宽度自动换行，放不下画省略号）。
+	_hover_purge_stale()   # R294：手牌变了 → 先清掉过期的悬停，别让左栏停在旧卡上
 	var card: CardData = null
 	var pl: Placement = null
 	if _hover_card != null:
@@ -11251,20 +11289,9 @@ func _draw_zone_panel(title: String, cards: Array, counts: Array = []) -> void:
 
 
 func _wrap_lines(font: Font, px: int, text: String, max_w: float) -> PackedStringArray:
-	## 按宽度逐字折行（draw_string 不会自动换行，长文本会画出面板外）。
-	var out: PackedStringArray = []
-	var cur := ""
-	for i in text.length():
-		var ch := text[i]
-		if cur != "" and font.get_string_size(cur + ch,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > max_w:
-			out.append(cur)
-			cur = ch
-		else:
-			cur += ch
-	if cur != "":
-		out.append(cur)
-	return out
+	## 折行唯一口 = `TextWrap.wrap_plain`（R292）—— 以前这里是第七份「逐字累加」的
+	## 私有实现，行首照样会撞标点。现在全工程共用一套规则。
+	return PackedStringArray(TextWrap.wrap_plain(font, text, max_w, px))
 
 
 func _relic_panel_rows() -> Array:

@@ -48,7 +48,7 @@ BAD = "✗"
 SUITES = [
     ("engine", "res://scripts/test_engine.gd"),
     ("reward", "res://scripts/test_reward.gd"),
-    ("replay", "res://scripts/test_replay.gd"),
+    ("bgm", "res://scripts/test_bgm.gd"),
     ("smoke", "res://scripts/test_smoke.gd"),
 ]
 

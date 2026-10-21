@@ -19,6 +19,18 @@ func check(cond: bool, msg: String) -> void:
 		printerr("  ✗ ", msg)
 
 
+# ⚠️ 源码类断言的统一入口：导出包（.pck）里脚本是二进制 token，
+#    `FileAccess.get_file_as_string("res://scripts/xxx.gd")` 读不到源文本，`export_presets.cfg` / `project.godot`
+#    也不进包 → 这类「源码守卫」在包里必然假红。
+#    dev 工程里等价于 check()；打包环境里直接跳过（不计通过也不计失败）。
+#    判 dev / 打包的唯一可靠口径 = `res://export_presets.cfg` 是否存在（*.cfg 不进 pck）。
+func check_src(cond: bool, msg: String) -> void:
+	if not FileAccess.file_exists("res://export_presets.cfg"):
+		print("  · [跳过] ", msg, " —— 打包环境读不到源文本")
+		return
+	check(cond, msg)
+
+
 func _new_engine(deck: Array[CardData] = [], hp_me := 20, hp_foe := 20,
 		limit := -1, shuffle := true) -> GameEngine:
 	var st := FieldState.new(deck, hp_me, hp_foe, limit, "测试", shuffle)
@@ -125,8 +137,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 244,
-			"图鉴 = 244 张（R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
+	check(repo.all_cards().size() == 248,
+			"图鉴 = 248 张（R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -139,7 +151,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 191 and grp_enemy.size() == 53,
+	check(grp_player.size() == 195 and grp_enemy.size() == 53,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 184 / 53；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -169,8 +181,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 168,
-			"奖励池 167 张（R275 重组降为普通后进池；R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；**R282 改装者 8076（普通，进池）**；实际 %d）"
+	check(pool.size() == 172,
+			"奖励池 172 张（R291 辅助刃 / 复制术进池；R290 集中突破 / 冲击炮进池；R275 重组降为普通后进池；R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；**R282 改装者 8076（普通，进池）**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -7556,10 +7568,10 @@ func _init() -> void:
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 68
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 61
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 52
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 56
 			and int(dr_cls_count.get("敌人", 0)) == 53
 			and int(dr_cls_count.get("", 0)) == 10,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 68 / 61 / 52 / 53；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 68 / 61 / 56 / 53；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -7862,7 +7874,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 168, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，R282 改装者 8076（普通，进池）+1 = 167，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 172, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，R282 改装者 8076（普通，进池）+1 = 167，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -8101,22 +8113,27 @@ func _init() -> void:
 	check(r45_fs2.state.hand.size() == 1 and r45_fs2.state.discard.is_empty(),
 			"预判①：选回 0 费技能卡，本卡消失（弃牌区清空）")
 
-	# 拒绝命运（9098）：弃光手卡 → 弃牌区选等量 → 本卡消失
+	# 拒绝命运（9098，R292）：弃光手卡 → 弃牌区**所有 0/1 费卡按顺序**回手 → 本卡消失
 	var r45_ft := _new_engine([], 30, 30)
-	var r45_ft_a := _card(8001, "木栅栏", "工事", 1, 0, 2, 0, 0)
-	var r45_ft_b := _card(8001, "木栅栏", "工事", 1, 0, 2, 0, 0)
+	var r45_ft_a := _card(8001, "木栅栏", "工事", 1, 0, 2, 0, 0)          # 1 费 → 捞回
+	var r45_ft_hi := _card(9001, "鸭子骑士", "盟友", 6, 3, 30, 1, 2)     # 6 费 → 留弃牌区
+	var r45_ft_z := _card(9086, "终结", "技能", 0, 0, 0, 0, 0)            # 0 费 → 先捞（顺序在前）
+	r45_ft.state.discard.append(r45_ft_z)
+	r45_ft.state.hand.append(r45_ft_hi)
 	r45_ft.state.hand.append(r45_ft_a)
-	r45_ft.state.hand.append(r45_ft_b)
 	r45_ft.state.hand.append(repo.get_card(GameEngine.FATE_REJECT_ID))
-	r45_ft.use_spell(2, null)
-	check(r45_ft.fate_pending and r45_ft.fate_count == 2
-			and r45_ft.state.hand.is_empty(),
-			"拒绝命运：丢 2 张手卡，等待选回 2 张")
-	r45_ft.fate_pick(0)
-	r45_ft.fate_pick(0)
-	check(r45_ft.state.hand.has(r45_ft_a) and r45_ft.state.hand.has(r45_ft_b)
-			and r45_ft.state.discard.is_empty(),
-			"拒绝命运：选回 2 张，本卡消失（弃牌区清空）")
+	var r45_ft_msg: String = r45_ft.use_spell(2, null)
+	check(r45_ft.state.hand.size() == 2 and r45_ft.state.hand[0].id == 9086
+			and r45_ft.state.hand[1].cost == 1,
+			"拒绝命运：丢 3 张 → 弃牌区 0/1 费卡按顺序回手（手牌 %d 张：%s / %s）— %s" % [
+				r45_ft.state.hand.size(),
+				r45_ft.state.hand[0].card_name if r45_ft.state.hand.size() > 0 else "?",
+				r45_ft.state.hand[1].card_name if r45_ft.state.hand.size() > 1 else "?",
+				r45_ft_msg])
+	check(r45_ft.state.discard.size() == 1 and r45_ft.state.discard[0].id == 9001,
+			"拒绝命运：6 费卡留在弃牌区（不会被捞）")
+	check(r45_ft.state.void_count == 1,
+			"拒绝命运：本卡带「次元」→ 进消耗区（void %d）" % r45_ft.state.void_count)
 
 	# 潜入（9100）：0 费 → 盟友移动到任意空格 + 本回合力量 +3
 	var r45_if := _new_engine([], 30, 30)
@@ -8321,7 +8338,7 @@ func _init() -> void:
 	check(r226_bad_ok,
 			"R226：伤害 +10 拒绝「不能直接造成伤害」的技能卡（自然之力/智慧/重组/坚固围栏/闪躲/能量屏障）"
 			+ ("：全部被拒" if r226_bad_ok else "：被放行 " + ", ".join(r226_bad_names)))
-	# 判据唯一口 `CardData.is_damage_spell()`：68 张玩家技能卡里恰好 25 张能直接造成伤害
+	# 判据唯一口 `CardData.is_damage_spell()`：79 张玩家技能卡里恰好 29 张能直接造成伤害（R290 两张新卡文案含「造成…伤害」→ 自动入判据）
 	var r226_dmg := 0
 	var r226_skills := 0
 	var r226_leak: Array[String] = []
@@ -8333,7 +8350,7 @@ func _init() -> void:
 			r226_dmg += 1
 		elif r226_card.effect_text.contains("造成") and r226_card.effect_text.contains("伤害"):
 			r226_leak.append(r226_card.card_name)
-	check(r226_skills == 75 and r226_dmg == 27 and r226_leak.is_empty(),
+	check(r226_skills == 79 and r226_dmg == 29 and r226_leak.is_empty(),
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 			% [r226_skills, r226_dmg, "0 张" if r226_leak.is_empty() else str(r226_leak)])
 	check(RunState.enchant_ok("damage", r224_okrepo.get_card(9083), 9999)
@@ -11720,8 +11737,9 @@ func _init() -> void:
 			and r84_bone.attack_range == 1 and r84_bone.move_speed == 1
 			and r84_bone.rarity == 0 and r84_bone.card_class == PlayerClass.MECH,
 		"R84 战斗骨骼 8029：机械之心的 2 费普通盟友 2/7/1/1")
-	check(r84_bone.upgrade_atk_bonus == 1 and r84_bone.upgrade_hp_bonus == 1,
-		"R84 战斗骨骼：卡面写明改造奖励 +1 力 / +1 血（读字段，引擎不按卡名硬编码）")
+	check(r84_bone.upgrade_atk_bonus == 2 and r84_bone.upgrade_hp_bonus == 2,
+		"R84 战斗骨骼：卡面写明改造奖励 +%d 力 / +%d 血（R292：1/1 → 2/2，读字段不硬编码）"
+			% [r84_bone.upgrade_atk_bonus, r84_bone.upgrade_hp_bonus])
 	check(r84_repo.get_card(GameEngine.PROTO_ID).upgrade_hp_bonus == 1
 			and r84_repo.get_card(GameEngine.PROTO_ID).upgrade_atk_bonus == 0,
 		"R84 素体：改造奖励搬到卡面 = +1 血 / +0 力（原先是引擎里按 trait 硬编码的）")
@@ -11738,17 +11756,18 @@ func _init() -> void:
 			r84_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
 	r84_e.state.energy = 5
 	r84_e.use_spell(0, Vector2i(4, 1))
-	check(r84_bp.effective_power() == 2 + GameEngine.UPGRADE_ATK + 1
-			and r84_bp.health == 7 + GameEngine.UPGRADE_HP + 1,
-		"R84 战斗骨骼：被改造一次 → %d 攻 / %d 血（2/7 + 升级 2/8 + 卡面 1/1）"
-			% [r84_bp.effective_power(), r84_bp.health])
+	check(r84_bp.effective_power() == 2 + GameEngine.UPGRADE_ATK + r84_bone.upgrade_atk_bonus
+			and r84_bp.health == 7 + GameEngine.UPGRADE_HP + r84_bone.upgrade_hp_bonus,
+		"R84 战斗骨骼：被改造一次 → %d 攻 / %d 血（2/7 + 升级基数 + 卡面 %d/%d）"
+			% [r84_bp.effective_power(), r84_bp.health,
+				r84_bone.upgrade_atk_bonus, r84_bone.upgrade_hp_bonus])
 	# 可重复叠加，且离场还原（不烤进卡库）
 	r84_e.state.hand = [CardData.from_dict(
 			r84_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
 	r84_e.state.energy = 5
 	r84_e.use_spell(0, Vector2i(4, 1))
-	check(r84_bp.effective_power() == 2 + (GameEngine.UPGRADE_ATK + 1) * 2
-			and r84_bp.health == 7 + (GameEngine.UPGRADE_HP + 1) * 2,
+	check(r84_bp.effective_power() == 2 + (GameEngine.UPGRADE_ATK + r84_bone.upgrade_atk_bonus) * 2
+			and r84_bp.health == 7 + (GameEngine.UPGRADE_HP + r84_bone.upgrade_hp_bonus) * 2,
 		"R84 战斗骨骼：可重复叠加（第二次后 %d 攻 / %d 血）"
 			% [r84_bp.effective_power(), r84_bp.health])
 	r84_e._hit_unit(r84_bp, 999, "R84 测试")
@@ -17089,25 +17108,26 @@ func _init() -> void:
 	#        + 安卓图标键名 launcher_icons/*（package/icon 在 4.3 无效）
 	# ============================================================
 	var r190_face_src := FileAccess.get_file_as_string("res://scripts/card_face.gd")
-	check(r190_face_src.contains("ResourceLoader.exists("),
+	check_src(r190_face_src.contains("ResourceLoader.exists("),
 		"R190 导出：card_face.art_for 用 ResourceLoader.exists 判存（FileAccess 在包里恒假）")
 	check(not r190_face_src.contains("if FileAccess.file_exists(cp)")
 		and not r190_face_src.contains("if FileAccess.file_exists(sp)"),
 		"R190 导出：卡图变体判存不得再用 FileAccess.file_exists")
 	var r190_presets := FileAccess.get_file_as_string("res://export_presets.cfg")
-	check(r190_presets.contains("launcher_icons/main_192x192")
+	check_src(r190_presets.contains("launcher_icons/main_192x192")
 		and r190_presets.contains("launcher_icons/adaptive_foreground_432x432")
 		and r190_presets.contains("launcher_icons/adaptive_background_432x432"),
 		"R190 导出：安卓图标用 4.3 键名 launcher_icons/*")
 	check(not r190_presets.contains("package/icon"),
 		"R190 导出：preset 不得残留 4.3 无效的 package/icon* 键")
 	var r190_proj := FileAccess.get_file_as_string("res://project.godot")
-	check(r190_proj.contains("config/icon=\"res://assets/ui/icon_android_legacy.png\""),
+	check_src(r190_proj.contains("config/icon=\"res://assets/ui/icon_android_legacy.png\""),
 		"R190 导出：application/config/icon 指向森林头像旧版图标（不再回退卡背）")
-	check(FileAccess.file_exists("res://assets/ui/icon_android_legacy.png")
-		and FileAccess.file_exists("res://assets/ui/icon_android_fg.png")
-		and FileAccess.file_exists("res://assets/ui/icon_android_bg.png"),
-		"R190 导出：三张安卓图标文件在位")
+	# ⚠️ 判存必须走 ResourceLoader.exists：包里只有 .import + ctex，FileAccess 恒假（R190 本身的教训）。
+	check(ResourceLoader.exists("res://assets/ui/icon_android_legacy.png")
+		and ResourceLoader.exists("res://assets/ui/icon_android_fg.png")
+		and ResourceLoader.exists("res://assets/ui/icon_android_bg.png"),
+		"R190 导出：三张安卓图标文件在位（ResourceLoader)")
 
 	
 	# ============================================================
@@ -17733,7 +17753,7 @@ func _init() -> void:
 			and r215_bs.ee_popup_left_sec(1000, 6000) <= 0.0,
 		"R215 敌方效果弹窗：5 秒到期（剩下 5 / 2 / 0 秒）")
 	var r215_besrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
-	check(r215_besrc.find("ee_popup_expired()") >= 0
+	check_src(r215_besrc.find("ee_popup_expired()") >= 0
 			and r215_besrc.find("秒后自动关闭") >= 0,
 		"R215 敌方效果弹窗：到期由 _process 收起 + 底部有倒计时文案")
 	# ⑨ 设置落盘：音效开关写进 user://settings.cfg 并能读回
@@ -17748,7 +17768,7 @@ func _init() -> void:
 	GameSettings.set_sfx_on(r215_sfx)     # 还原
 	# ⑩ 标题页入口：记录 / 设置按钮都在，录像回放已删干净
 	var r215_tsrc := FileAccess.get_file_as_string("res://scripts/title_scene.gd")
-	check(r215_tsrc.find("_on_records") >= 0 and r215_tsrc.find("_on_settings") >= 0
+	check_src(r215_tsrc.find("_on_records") >= 0 and r215_tsrc.find("_on_settings") >= 0
 			and r215_tsrc.find("replay") < 0,
 		"R215 标题页：有「对战记录」「设置」，不再有录像回放入口")
 	check(not FileAccess.file_exists("res://scripts/replay_log.gd")
@@ -17838,7 +17858,7 @@ func _init() -> void:
 			"R241 中断记录：update_pending 把快照与种子写进 pending")
 	# ⑦ 确定性源码守卫：商店商品 / 附魔池必须走本局随机链
 	var r241_ssrc := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
-	check(r241_ssrc.find("CardReward.roll(_repo, \"boss\", 6, RunState.run_rng)") >= 0
+	check_src(r241_ssrc.find("CardReward.roll(_repo, \"boss\", 6, RunState.run_rng)") >= 0
 			and r241_ssrc.find("RunState.shuffle_rng(pool)") >= 0
 			and r241_ssrc.find("pool.shuffle()") < 0,
 			"R241 确定性：商店商品 / 附魔池都走 run_rng（不许全局 roll / Array.shuffle）")
@@ -17847,7 +17867,7 @@ func _init() -> void:
 	var r241_rsrc := FileAccess.get_file_as_string("res://scripts/run_state.gd")
 	var r241_randi_hits: int = r241_rsrc.count("randi()") \
 			- r241_rsrc.count(".randi()")
-	check(r241_randi_hits == 1,
+	check_src(r241_randi_hits == 1,
 			"R241 确定性：run_state 只有 1 处裸 randi()（造新种子），实际 %d 处"
 			% r241_randi_hits)
 	RunRecord.finish("quit")   # 收掉 ⑤/⑥ 留下的 pending
@@ -17970,19 +17990,19 @@ func _init() -> void:
 	var r261_src_menu := FileAccess.get_file_as_string("res://scripts/ui_menu.gd")
 	var r261_src_rec := FileAccess.get_file_as_string("res://scripts/record_list_scene.gd")
 	var r261_src_cp := FileAccess.get_file_as_string("res://scripts/class_pick_scene.gd")
-	check(r261_src_menu.find("种子：%s") >= 0
+	check_src(r261_src_menu.find("种子：%s") >= 0
 			and r261_src_menu.find("RunState.seed_text()") >= 0,
 			"R261 界面：ESC 菜单底部显示本局种子")
-	check(r261_src_rec.count("RunState.seed_text_of") >= 2,
+	check_src(r261_src_rec.count("RunState.seed_text_of") >= 2,
 			"R261 界面：对战记录列表行 + 详情都用种子码显示")
-	check(r261_src_cp.find("_seed_edit") >= 0
+	check_src(r261_src_cp.find("_seed_edit") >= 0
 			and r261_src_cp.find("RunState.seed_value_of(code)") >= 0
 			and r261_src_cp.find(
 			"RunState.start_run([], GameLayers.LAYER_DEFAULT, cid, 0, code)") >= 0,
 			"R261 界面：角色选择页有种子输入框，且按该码开局")
 	# ⑨ 全局随机源守卫：run_state 仍只有 1 处裸 randi()（现摇种子）
 	var r261_rsrc := FileAccess.get_file_as_string("res://scripts/run_state.gd")
-	check(r261_rsrc.count("randi()") - r261_rsrc.count(".randi()") == 1,
+	check_src(r261_rsrc.count("randi()") - r261_rsrc.count(".randi()") == 1,
 			"R261 确定性：run_state 仍只有 1 处裸 randi()（random_seed_text 现摇种子）")
 
 	# ---------------------------------------------------------------- R216
@@ -20044,16 +20064,16 @@ func _init() -> void:
 		"R271 代达罗斯：入场即点亮「本回合手卡聚能炮击 0 费」")
 
 	# ============================================================
-	#  R272：战斗骨骼「被**任意方式**改造时 +1 力 +1 血」
+	#  R272：战斗骨骼「被**任意方式**改造时 +2 力 +2 血」（R292 起数值翻倍）
 	# ============================================================
-	# 用户口径：卡面去掉「升级」限定 → 「被改造时，获得 +1 力量、+1 生命。」
+	# 用户口径：卡面去掉「升级」限定 → 「被改造时，获得 +2 力量、+2 生命。」
 	# 机制侧要保证**所有**改造入口都吃到卡面奖励。R228 时 `_field_upgrade_grant()`
 	# 刻意跳过 `upgrade_*_bonus`，于是「共享护盾」「拾荒者」给骨骼改造只涨层数不涨数值。
 	var r272_bone := repo.get_card(GameEngine.BATTLE_BONE_ID)
 
 	# ---- ① 卡面 ----
-	check(r272_bone.effect_text == "被改造时，获得 +1 力量、+1 生命。"
-			and r272_bone.upgrade_atk_bonus == 1 and r272_bone.upgrade_hp_bonus == 1,
+	check(r272_bone.effect_text == "被改造时，获得 +2 力量、+2 生命。"
+			and r272_bone.upgrade_atk_bonus == 2 and r272_bone.upgrade_hp_bonus == 2,
 		"R272 战斗骨骼：卡面不再限定「升级」，直接写「被改造时」（%s）"
 			% r272_bone.effect_text)
 
@@ -20066,9 +20086,9 @@ func _init() -> void:
 			repo.get_card(GameEngine.SHARED_SHIELD_ID).to_dict())]
 	r272_e1.state.energy = 9
 	r272_e1.use_spell(0, Vector2i(4, 0))
-	check(r272_b1.effective_power() == 3 and r272_b1.health == 8
+	check(r272_b1.effective_power() == 4 and r272_b1.health == 9
 			and r272_b1.upgrade_stacks == 1,
-		"R272 共享护盾改造骨骼：2/7 → %d/%d（卡面 +1 力 +1 血照算），1 层改造"
+		"R272 共享护盾改造骨骼：2/7 → %d/%d（卡面 +2 力 +2 血照算），1 层改造"
 			% [r272_b1.effective_power(), r272_b1.health])
 	check(r272_b1.card.has_affix(GameEngine.AFFIX_SHARED_SHIELD),
 		"R272 共享护盾改造骨骼：字段照常挂上（奖励与字段互不挤占）")
@@ -20097,7 +20117,7 @@ func _init() -> void:
 	r272_e2.state.energy = 9
 	r272_e2.cast_lighten(0, 1)
 	var r272_lu: CardData = r272_e2.state.hand[0]
-	check(r272_lu.power == 3 and r272_lu.health == 8 and r272_lu.cost == 1
+	check(r272_lu.power == 4 and r272_lu.health == 9 and r272_lu.cost == 1
 			and r272_lu.move_speed == 2 and r272_lu.upgrade_stacks == 1,
 		"R272 轻量化改造骨骼：2/7 → %d/%d，并 2→1 费、速 1→2、1 层改造"
 			% [r272_lu.power, r272_lu.health])
@@ -20111,10 +20131,11 @@ func _init() -> void:
 	r272_e3.state.energy = 9
 	r272_e3.cast_sys_upgrade(0, 1)
 	var r272_su: CardData = r272_e3.state.hand[0]
-	check(r272_su.power == r272_bone.power + GameEngine.SYS_UPGRADE_ATK + 1
-			and r272_su.health == r272_bone.health + GameEngine.SYS_UPGRADE_HP + 1,
-		"R272 系统升级改造骨骼：%d/%d（基数 + 卡面 1/1，未重复计算）"
-			% [r272_su.power, r272_su.health])
+	check(r272_su.power == r272_bone.power + GameEngine.SYS_UPGRADE_ATK + r272_bone.upgrade_atk_bonus
+			and r272_su.health == r272_bone.health + GameEngine.SYS_UPGRADE_HP + r272_bone.upgrade_hp_bonus,
+		"R272 系统升级改造骨骼：%d/%d（基数 + 卡面 %d/%d，未重复计算）"
+			% [r272_su.power, r272_su.health,
+				r272_bone.upgrade_atk_bonus, r272_bone.upgrade_hp_bonus])
 
 	# ---- ⑤ 素体 8025 护栏：别的卡也被「任意方式」照顾到 ----
 	var r272_e4 := _new_engine([], 20, 20, -1, false)
@@ -21094,7 +21115,8 @@ func _init() -> void:
 	check(not r288_e3.overhaul_pending,
 			"R288 失控要塞：返修的选牌 pending 已就地收掉（不留交互给玩家）")
 
-	# ⑤ 随机池 = 本职业技能卡（不写死 id）：机械之心技能 21 张，且不含初始 / 史诗以外越界卡
+	# ⑤ 随机池 = 本职业技能卡（不写死 id）：机械之心技能 23 张（R290 +集中突破 / 冲击炮），
+	#    且不含初始 / 越界卡
 	var r288_pool := r288_e0._fort_skill_pool()
 	var r288_pool_bad := 0
 	for r288_pc: CardData in r288_pool:
@@ -21176,10 +21198,492 @@ func _init() -> void:
 
 	# ⑤ 源码锁：发动 / 受影必须**并成一条**演出，否则光带画不出来
 	var r288_ui := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
-	check(r288_ui.find("_cue_absorb(") >= 0
+	check_src(r288_ui.find("_cue_absorb(") >= 0
 			and r288_ui.find("const CUE_MERGE_MS := ") >= 0,
 			"R288 源码锁：同笔结算的「发动 → 命中」走 _cue_absorb 合并（光带才画得出来）")
 
+	# ================= R290：机械之心两张伤害技能（集中突破 9162 / 冲击炮 9163）=================
+	# 集中突破 = 2 费普通技能：10 伤 + 场上**己方**每层改造 +4（只数场上，手牌 / 牌库不算）。
+	# 冲击炮   = 2 费稀有技能：8 伤 + 把目标击退 2 格（走唯一口 _knockback）。
+	var r290_bt: CardData = repo.get_card(GameEngine.BREAKTHROUGH_ID)
+	check(r290_bt != null and r290_bt.card_name == "集中突破"
+			and r290_bt.kind == "技能" and r290_bt.cost == 2 and r290_bt.rarity == 0
+			and r290_bt.card_class == "机械之心" and r290_bt.target_mode == "unit"
+			and r290_bt.needs_target(),
+			"R290 集中突破：机械之心普通技能 —— 2 费 / 需选一个目标")
+	var r290_ic: CardData = repo.get_card(GameEngine.IMPACT_CANNON_ID)
+	check(r290_ic != null and r290_ic.card_name == "冲击炮"
+			and r290_ic.kind == "技能" and r290_ic.cost == 2 and r290_ic.rarity == 1
+			and r290_ic.card_class == "机械之心" and r290_ic.target_mode == "unit",
+			"R290 冲击炮：机械之心稀有技能 —— 2 费 / 需选一个目标")
+
+	# ① 基础伤害 10：场上没有任何改造
+	var r290_e0 := _new_engine([], 20, 20, -1, false)
+	var r290_foe0 := r290_e0.state.place(_card(1011, "铁壁卫兵", "盟友", 4, 4, 40),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	r290_e0.state.hand.clear()
+	r290_e0.state.hand.append(CardData.from_dict(r290_bt.to_dict()))
+	r290_e0.state.energy = 5
+	r290_e0.use_spell(0, Vector2i(1, 0))
+	check(r290_foe0.health == 30,
+			"R290 集中突破：场上 0 层改造 → 10 伤（实际 -%d）" % (40 - r290_foe0.health))
+
+	# ② 场上 3 层改造 → 10 + 3×4 = 22
+	var r290_e1 := _new_engine([], 20, 20, -1, false)
+	var r290_foe1 := r290_e1.state.place(_card(1011, "铁壁卫兵", "盟友", 4, 4, 40),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	r290_e1.state.place(_card(8003, "树人", "盟友", 0, 1, 1),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	for _ri in 3:
+		r290_e1._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r290_e1._side_upgrade_stacks(GameEngine.SIDE_SELF) == 3,
+			"R290 集中突破：层数统计读到场上 3 层改造（实际 %d）"
+			% r290_e1._side_upgrade_stacks(GameEngine.SIDE_SELF))
+	r290_e1.state.hand.clear()
+	r290_e1.state.hand.append(CardData.from_dict(r290_bt.to_dict()))
+	r290_e1.state.energy = 5
+	r290_e1.use_spell(0, Vector2i(1, 0))
+	check(r290_foe1.health == 18,
+			"R290 集中突破：场上 3 层改造 → 10 + 12 = 22 伤（实际 -%d）"
+			% (40 - r290_foe1.health))
+
+	# ③ 只数**场上**：手牌里攒的改造层数不参与
+	var r290_e2 := _new_engine([], 20, 20, -1, false)
+	var r290_foe2 := r290_e2.state.place(_card(1011, "铁壁卫兵", "盟友", 4, 4, 40),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r290_hand2: CardData = _card(8003, "树人", "盟友", 0, 1, 1)
+	r290_hand2.upgrade_stacks = 5   # 还没上场，层数随身但不在场上
+	r290_e2.state.hand.clear()
+	r290_e2.state.hand.append(CardData.from_dict(r290_bt.to_dict()))
+	r290_e2.state.hand.append(r290_hand2)
+	r290_e2.state.energy = 5
+	r290_e2.use_spell(0, Vector2i(1, 0))
+	check(r290_foe2.health == 30,
+			"R290 集中突破：手牌里的改造层数不算（仍 10 伤，实际 -%d）"
+			% (40 - r290_foe2.health))
+	check(r290_e2._side_upgrade_stacks(GameEngine.SIDE_SELF) == 0,
+			"R290 集中突破：场上层数统计为 0（手牌 5 层不上场不计数）")
+
+	# ④ 冲击炮：8 伤 + 击退 2 格（敌方 → 朝敌方后排，2,1 → 0,1）
+	var r290_e3 := _new_engine([], 20, 20, -1, false)
+	var r290_foe3 := r290_e3.state.place(_card(1011, "铁壁卫兵", "盟友", 4, 4, 40),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r290_e3.state.hand.clear()
+	r290_e3.state.hand.append(CardData.from_dict(r290_ic.to_dict()))
+	r290_e3.state.energy = 5
+	var r290_d3: String = r290_e3.use_spell(0, Vector2i(2, 1))
+	check(r290_foe3.health == 32,
+			"R290 冲击炮：造成 8 点伤害（实际 -%d）" % (40 - r290_foe3.health))
+	check(r290_e3.state.unit_at(Vector2i(0, 1)) == r290_foe3
+			and r290_e3.state.unit_at(Vector2i(2, 1)) == null,
+			"R290 冲击炮：目标被击退 2 格（2,1 → 0,1）—— %s" % r290_d3)
+
+	# ⑤ 击退被挡住时停在原地（前面有己方单位，不越位、不挤开）
+	var r290_e4 := _new_engine([], 20, 20, -1, false)
+	var r290_foe4 := r290_e4.state.place(_card(1011, "铁壁卫兵", "盟友", 4, 4, 40),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r290_e4.state.place(_card(1013, "灰烬龙", "盟友", 9, 9, 45),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r290_e4.state.hand.clear()
+	r290_e4.state.hand.append(CardData.from_dict(r290_ic.to_dict()))
+	r290_e4.state.energy = 5
+	r290_e4.use_spell(0, Vector2i(2, 1))
+	check(r290_e4.state.unit_at(Vector2i(1, 1)) != r290_foe4
+			and r290_e4.state.unit_at(Vector2i(2, 1)) == r290_foe4,
+			"R290 冲击炮：击退路线被挡住 → 停在原地（不挤开队友）")
+
+	# ⑥ 目标被这一发打死 → 不再对空格击退
+	var r290_e5 := _new_engine([], 20, 20, -1, false)
+	r290_e5.state.place(_card(1011, "脆皮", "盟友", 4, 4, 5),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r290_e5.state.hand.clear()
+	r290_e5.state.hand.append(CardData.from_dict(r290_ic.to_dict()))
+	r290_e5.state.energy = 5
+	var r290_d5: String = r290_e5.use_spell(0, Vector2i(2, 1))
+	check(r290_e5.state.unit_at(Vector2i(2, 1)) == null
+			and r290_e5.state.unit_at(Vector2i(0, 1)) == null,
+			"R290 冲击炮：目标被击破 → 不产生空格击退（%s）" % r290_d5)
+
+	# ⑦ 位移免疫（赫菲斯托斯 9135）：伤害照常，击退无效（唯一口 _knockback 判定）
+	var r290_e6 := _new_engine([], 20, 20, -1, false)
+	var r290_imm: CardData = CardData.from_dict(repo.get_card(9135).to_dict())
+	var r290_foe6 := r290_e6.state.place(r290_imm,
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r290_e6.state.hand.clear()
+	r290_e6.state.hand.append(CardData.from_dict(r290_ic.to_dict()))
+	r290_e6.state.energy = 5
+	var r290_d6: String = r290_e6.use_spell(0, Vector2i(2, 1))
+	check(r290_e6.state.unit_at(Vector2i(2, 1)) == r290_foe6
+			and r290_foe6.health == r290_imm.health - GameEngine.IMPACT_CANNON_DMG,
+			"R290 冲击炮：位移免疫单位照样吃 8 伤、但不会被击退（%s）" % r290_d6)
+
+	# ⑧ 失控要塞随机池自动纳入两张新卡；场上目标只认敌方
+	var r290_e7 := _new_engine([], 20, 20, -1, false)
+	r290_e7.state.place(_card(1011, "铁壁卫兵", "盟友", 4, 4, 40),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	r290_e7.state.place(_card(8003, "树人", "盟友", 0, 1, 1),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r290_pool := r290_e7._fort_skill_pool()
+	var r290_in_pool := false
+	for r290_pc: CardData in r290_pool:
+		if r290_pc.id == 9162 or r290_pc.id == 9163:
+			r290_in_pool = true
+	check(r290_in_pool,
+			"R290 失控要塞：随机池按职业 / 稀有度自动纳入两张新卡（共 %d 张）"
+			% r290_pool.size())
+	var r290_bt_t := r290_e7._fort_board_targets(r290_bt)
+	var r290_ic_t := r290_e7._fort_board_targets(r290_ic)
+	check(r290_bt_t.size() == 1 and r290_bt_t.has(Vector2i(1, 0))
+			and r290_ic_t.size() == 1 and r290_ic_t.has(Vector2i(1, 0)),
+			"R290 失控要塞：两张新卡的目标枚举只含敌方单位（%s / %s）"
+			% [str(r290_bt_t), str(r290_ic_t)])
+
+	# ⑨ 源码锁：界面必须为两张新卡登记可点目标分支（否则落进 else = 敌我全列）
+	var r290_ui := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r290_ui.find("card.id == GameEngine.BREAKTHROUGH_ID") >= 0
+			and r290_ui.find("card.id == GameEngine.IMPACT_CANNON_ID") >= 0,
+			"R290 源码锁：两张新卡都登记了界面目标分支（不会让玩家点自己人）")
+
+	# ================= R291：机械之心两张技能（辅助刃 9164 / 复制术 9165）=================
+	# 辅助刃 = 0 费普通技能：己方盟友获得改造（力 +2）+「死亡」亡语把一张辅助刃加回手卡。
+	# 复制术 = 5 费史诗技能：己方盟友 / 工事 → 2 份带「次元」的复制进手卡（保留 buff、本回合 0 费）。
+	var r291_bg: CardData = repo.get_card(GameEngine.BLADE_GIFT_ID)
+	check(r291_bg != null and r291_bg.card_name == "辅助刃"
+			and r291_bg.kind == "技能" and r291_bg.cost == 0 and r291_bg.rarity == 0
+			and r291_bg.card_class == "机械之心" and r291_bg.target_mode == "unit"
+			and r291_bg.needs_target(),
+			"R291 辅助刃：机械之心普通技能 —— 0 费 / 需选一个目标")
+	var r291_dup: CardData = repo.get_card(GameEngine.DUPLICATE_ID)
+	check(r291_dup != null and r291_dup.card_name == "复制术"
+			and r291_dup.kind == "技能" and r291_dup.cost == 5 and r291_dup.rarity == 2
+			and r291_dup.card_class == "机械之心" and r291_dup.target_mode == "unit",
+			"R291 复制术：机械之心史诗技能 —— 5 费 / 需选一个目标")
+
+	# ① 辅助刃：力量 +2 / 一层改造 / 挂「死亡」字段
+	var r291_e1 := _new_engine([], 20, 20, -1, false)
+	var r291_tree := r291_e1.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r291_e1.state.hand.clear()
+	r291_e1.state.hand.append(CardData.from_dict(r291_bg.to_dict()))
+	r291_e1.state.energy = 3
+	var r291_m1: String = r291_e1.use_spell(0, Vector2i(4, 1))
+	check(r291_tree.effective_power() == 3 and r291_tree.upgrade_stacks == 1,
+			"R291 辅助刃：+%d 力 / 一层改造（实际 %d 攻 / %d 层）— %s" % [
+				GameEngine.BLADE_ATK, r291_tree.effective_power(),
+				r291_tree.upgrade_stacks, r291_m1])
+	check(r291_tree.blade_gift and r291_tree.card.has_affix(GameEngine.AFFIX_DEATH)
+			and r291_tree.blade_added.has(GameEngine.AFFIX_DEATH),
+			"R291 辅助刃：目标挂上「死亡」字段，并记进离场要摘的清单")
+
+	# ② 辅助刃的亡语：目标被破坏 → 一张辅助刃加入手卡
+	r291_e1._destroy(Vector2i(4, 1))
+	check(r291_e1.state.hand.size() == 1
+			and r291_e1.state.hand[0].id == GameEngine.BLADE_GIFT_ID,
+			"R291 辅助刃：目标被破坏 → 一张「辅助刃」加入手卡（手牌 %d 张）"
+			% r291_e1.state.hand.size())
+
+	# ③ 只能点己方盟友（工事不是「盟友」）
+	var r291_e2 := _new_engine([], 20, 20, -1, false)
+	r291_e2.state.place(_card(8001, "木栅栏", "工事", 2, 0, 6),
+			Vector2i(4, 0), GameEngine.SIDE_SELF)
+	r291_e2.state.hand.clear()
+	r291_e2.state.hand.append(CardData.from_dict(r291_bg.to_dict()))
+	r291_e2.state.energy = 3
+	var r291_m2: String = r291_e2.use_spell(0, Vector2i(4, 0))
+	check(r291_m2.contains("只能指定己方盟友"),
+			"R291 辅助刃：工事不是「盟友」→ 拒绝（%s）" % r291_m2)
+
+	# ④ 「死亡」字段是场上这段的：重启回手后必须摘掉
+	var r291_e3 := _new_engine([], 20, 20, -1, false)
+	r291_e3.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r291_e3._blade_gift(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r291_e3.state.hand.clear()
+	r291_e3._reboot(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r291_back: CardData = r291_e3.state.hand[0] if r291_e3.state.hand.size() > 0 else null
+	check(r291_back != null and not r291_back.has_affix(GameEngine.AFFIX_DEATH),
+			"R291 辅助刃：回手的那张卡摘掉「死亡」字段（不会留下不会触发的标记）")
+
+	# ⑤ 复制术：两张复制 / 带「次元」/ 保留 buff / 本回合 0 费
+	var r291_e5 := _new_engine([], 20, 20, -1, false)
+	var r291_bone := r291_e5.state.place(_card(8029, "战斗骨骼", "盟友", 2, 2, 7),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r291_e5._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r291_want_atk: int = r291_bone.card.power + r291_bone.upgrade_atk
+	var r291_want_hp: int = r291_bone.card.health
+	r291_e5.state.hand.clear()
+	r291_e5.state.hand.append(CardData.from_dict(r291_dup.to_dict()))
+	r291_e5.state.energy = 9
+	var r291_m5: String = r291_e5.use_spell(0, Vector2i(4, 1))
+	check(r291_e5.state.hand.size() == GameEngine.DUPLICATE_COUNT,
+			"R291 复制术：%d 张复制进手卡（实际 %d）— %s" % [
+				GameEngine.DUPLICATE_COUNT, r291_e5.state.hand.size(), r291_m5])
+	var r291_all_dim := true
+	for r291_c: CardData in r291_e5.state.hand:
+		if r291_c.id != 8029 or not r291_c.has_affix(GameEngine.AFFIX_DIMENSION):
+			r291_all_dim = false
+	check(r291_all_dim, "R291 复制术：复制品是同 id 且都带「次元」字段")
+	var r291_c0: CardData = r291_e5.state.hand[0]
+	check(r291_c0.power == r291_want_atk and r291_c0.health == r291_want_hp,
+			"R291 复制术：保留改造 buff（力 %d / 血 %d，期望 %d / %d）" % [
+				r291_c0.power, r291_c0.health, r291_want_atk, r291_want_hp])
+	check(r291_c0.upgrade_stacks == 0,
+			"R291 复制术：层数不随身（数值已烤进副本，避免 place 双计）")
+	check(r291_e5.cost_of(r291_c0, GameEngine.SIDE_SELF) == 0
+			and r291_e5.cost_of(r291_e5.state.hand[1], GameEngine.SIDE_SELF) == 0,
+			"R291 复制术：本回合在手牌里 0 费（%d / %d）" % [
+				r291_e5.cost_of(r291_c0, GameEngine.SIDE_SELF),
+				r291_e5.cost_of(r291_e5.state.hand[1], GameEngine.SIDE_SELF)])
+	r291_e5.state.turn_free.clear()   # = end_turn 清空 turn_free
+	check(r291_e5.cost_of(r291_c0, GameEngine.SIDE_SELF) > 0,
+			"R291 复制术：回合结束（turn_free 清空）后恢复原价（%d 费）"
+			% r291_e5.cost_of(r291_c0, GameEngine.SIDE_SELF))
+
+	# ⑥ 复制术：工事同样能复制
+	var r291_e6 := _new_engine([], 20, 20, -1, false)
+	r291_e6.state.place(_card(8001, "木栅栏", "工事", 2, 0, 6),
+			Vector2i(4, 0), GameEngine.SIDE_SELF)
+	r291_e6.state.hand.clear()
+	r291_e6.state.hand.append(CardData.from_dict(r291_dup.to_dict()))
+	r291_e6.state.energy = 9
+	var r291_m6: String = r291_e6.use_spell(0, Vector2i(4, 0))
+	check(r291_e6.state.hand.size() == GameEngine.DUPLICATE_COUNT,
+			"R291 复制术：工事也能复制（%s）" % r291_m6)
+
+	# ⑥-b 复制辅助刃点过的单位：力量照常保留，但「死亡」不带走
+	# （复制品没有 `blade_gift` 标记，留着字段就是「卡面写着却不触发」）
+	var r291_e6b := _new_engine([], 20, 20, -1, false)
+	var r291_gp := r291_e6b.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r291_e6b._blade_gift(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r291_e6b.state.hand.clear()
+	r291_e6b.state.hand.append(CardData.from_dict(r291_dup.to_dict()))
+	r291_e6b.state.energy = 9
+	r291_e6b.use_spell(0, Vector2i(4, 1))
+	var r291_gc: CardData = r291_e6b.state.hand[0]
+	check(r291_gc.power == r291_gp.card.power + r291_gp.upgrade_atk
+			and not r291_gc.has_affix(GameEngine.AFFIX_DEATH),
+			"R291 复制术：辅助刃的 +力保留、但不带走「死亡」字段（无标记不触发）")
+
+	# ⑦ 带「次元」的复制被击破 → 进消耗区，不进弃牌区
+	var r291_e7 := _new_engine([], 20, 20, -1, false)
+	var r291_void0: int = r291_e7.state.void_count
+	var r291_disc0: int = r291_e7.state.discard.size()
+	r291_e7.state.place(CardData.from_dict(r291_c0.to_dict()),
+			Vector2i(4, 2), GameEngine.SIDE_SELF)
+	r291_e7._destroy(Vector2i(4, 2))
+	check(r291_e7.state.void_count == r291_void0 + 1
+			and r291_e7.state.discard.size() == r291_disc0,
+			"R291 复制术：复制品被击破 → 进消耗区（void %d → %d），不进弃牌区（%d）" % [
+				r291_void0, r291_e7.state.void_count, r291_e7.state.discard.size()])
+
+	# ⑧ 失控要塞：池子自动纳入两张新卡 + 目标枚举只认己方
+	var r291_e8 := _new_engine([], 20, 20, -1, false)
+	r291_e8.state.place(_card(8003, "树人", "盟友", 0, 1, 1),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r291_e8.state.place(_card(8001, "木栅栏", "工事", 2, 0, 6),
+			Vector2i(4, 0), GameEngine.SIDE_SELF)
+	r291_e8.state.place(_card(1011, "铁壁卫兵", "盟友", 4, 4, 40),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r291_fpool := r291_e8._fort_skill_pool()
+	var r291_in_pool := 0
+	for r291_pc: CardData in r291_fpool:
+		if r291_pc.id == GameEngine.BLADE_GIFT_ID or r291_pc.id == GameEngine.DUPLICATE_ID:
+			r291_in_pool += 1
+	check(r291_in_pool == 2,
+			"R291 失控要塞：随机池按职业 / 稀有度自动纳入两张新卡（池 %d 张）"
+			% r291_fpool.size())
+	var r291_bgt := r291_e8._fort_board_targets(r291_bg)
+	var r291_dupt := r291_e8._fort_board_targets(r291_dup)
+	check(r291_bgt.size() == 1 and r291_bgt.has(Vector2i(4, 1))
+			and r291_dupt.size() == 2 and r291_dupt.has(Vector2i(4, 1))
+			and r291_dupt.has(Vector2i(4, 0)),
+			"R291 失控要塞：辅助刃只列己方盟友、复制术列盟友+工事（%s / %s）" % [
+				str(r291_bgt), str(r291_dupt)])
+
+	# ⑨ 奖励池：普通 / 史诗两张都进机械之心奖励池
+	var r291_reward_ids: Array[int] = []
+	for r291_rc: CardData in repo.reward_pool_for(PlayerClass.MECH):
+		r291_reward_ids.append(r291_rc.id)
+	check(r291_reward_ids.has(GameEngine.BLADE_GIFT_ID)
+			and r291_reward_ids.has(GameEngine.DUPLICATE_ID),
+			"R291：两张新卡都进机械之心奖励池")
+
+	# ⑩ 源码锁：界面必须为两张新卡登记可点目标分支
+	var r291_ui := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r291_ui.find("card.id == GameEngine.BLADE_GIFT_ID") >= 0
+			and r291_ui.find("card.id == GameEngine.DUPLICATE_ID") >= 0,
+			"R291 源码锁：两张新卡都登记了界面目标分支（不会敌我全列）")
+
+	# ============================================================
+	#  R292：拒绝命运自动化 / 战斗骨骼 +2+2 / 回收归入「变成」/ 严格自动折行
+	# ============================================================
+
+	# ---- ① 拒绝命运：手牌上限封顶（弃牌区 12 张 0 费 → 只捞到上限）----
+	var r292_e1 := _new_engine([], 20, 20, -1, false)
+	for _i in 12:
+		r292_e1.state.discard.append(_card(9086, "终结", "技能", 0, 0, 0, 0, 0))
+	r292_e1.state.hand.clear()
+	r292_e1.state.hand.append(CardData.from_dict(
+			repo.get_card(GameEngine.FATE_REJECT_ID).to_dict()))
+	r292_e1.state.energy = 9
+	r292_e1.use_spell(0, null)
+	check(r292_e1.state.hand.size() == FieldState.HAND_LIMIT
+			and r292_e1.state.discard.size() == 2,
+			"R292 拒绝命运：弃牌区 12 张 0 费 → 只捞到手牌上限 %d 张（手牌 %d / 弃牌 %d）" % [
+				FieldState.HAND_LIMIT, r292_e1.state.hand.size(),
+				r292_e1.state.discard.size()])
+
+	# ---- ② 战斗骨骼：卡面 +2 力 / +2 血，改造一次即 4/19（2/7 + 升级 + 2/2）----
+	var r292_bone: CardData = repo.get_card(GameEngine.BATTLE_BONE_ID)
+	check(r292_bone.upgrade_atk_bonus == 2 and r292_bone.upgrade_hp_bonus == 2
+			and r292_bone.effect_text.contains("+2 力量、+2 生命"),
+			"R292 战斗骨骼：卡面「获得 +2 力量、+2 生命」，字段 2/2（%s）"
+			% r292_bone.effect_text)
+	var r292_e2 := _new_engine([], 20, 20, -1, false)
+	r292_e2.start_game(0)
+	var r292_bp: Placement = r292_e2.state.place(
+			CardData.from_dict(r292_bone.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r292_e2.state.hand = [CardData.from_dict(
+			repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
+	r292_e2.state.energy = 9
+	r292_e2.use_spell(0, Vector2i(4, 1))
+	check(r292_bp.effective_power() == 2 + GameEngine.UPGRADE_ATK + 2
+			and r292_bp.health == 7 + GameEngine.UPGRADE_HP + 2,
+			"R292 战斗骨骼：改造一次 → %d 攻 / %d 血（2/7 + 升级 + 卡面 2/2）" % [
+				r292_bp.effective_power(), r292_bp.health])
+
+	# ---- ③ 回收归入「变成」：走 _transform_hand_card → 发明专家回费 ----
+	var r292_e3 := _new_engine([], 20, 20, -1, false)
+	r292_e3.start_game(0)
+	r292_e3.state.effects.append(CardData.from_dict(
+			repo.get_card(GameEngine.INVENTION_EXPERT_ID).to_dict()))
+	r292_e3.state.hand.clear()
+	r292_e3.state.hand.append(CardData.from_dict(repo.get_card(8002).to_dict()))   # 攻击
+	r292_e3.state.hand.append(CardData.from_dict(
+			repo.get_card(GameEngine.RECYCLE_ID).to_dict()))                          # 回收
+	r292_e3.state.energy = 5
+	var r292_e3_msg: String = r292_e3.cast_recycle(1, 0)
+	check(r292_e3.state.energy == 5 - 2 + GameEngine.INVENTION_REFUND,
+			"R292 回收算一次「变化」：发明专家回 %d 费（5 - 2 + %d = %d）" % [
+				GameEngine.INVENTION_REFUND, GameEngine.INVENTION_REFUND,
+				r292_e3.state.energy])
+	check(r292_e3.state.hand.size() == 1 and r292_e3.state.hand[0].id == 8025
+			and r292_e3.state.hand[0].health
+				== 1 + GameEngine.RECYCLE_HP + repo.get_card(GameEngine.PROTO_ID).upgrade_hp_bonus,
+			"R292 回收：目标仍原位变成素体（%s）" % r292_e3_msg)
+	check(repo.get_card(GameEngine.RECYCLE_ID).effect_text.contains("变成")
+			and repo.get_card(GameEngine.RECYCLE_ID).effect_text.contains("这算一次**变化**"),
+			"R292 回收：卡面口径改成「**变成** … 这算一次**变化**」")
+
+	# ---- ④ 严格折行：行首不落标点 / 不超宽 / 数字成词 / 引号成对 / 硬换行 ----
+	var r292_f: Font = ThemeDB.fallback_font
+	check(r292_f != null, "R292 折行：拿到字体探针")
+	var r292_head := "，。、；：！？）」』】》〉”’…"
+	var r292_txt := "将一张「聚能炮击」加入手卡，然后对其造成 12 点伤害（不分敌我）。"
+	var r292_bad_head := 0
+	var r292_bad_wide := 0
+	for r292_w in [44.0, 55.0, 70.0, 88.0, 120.0]:
+		for r292_ln: String in TextWrap.wrap_plain(r292_f, r292_txt, r292_w, 12):
+			if r292_ln.length() > 0 and r292_head.contains(r292_ln.substr(0, 1)):
+				r292_bad_head += 1
+			if TextWrap._measure(r292_f, r292_ln, 12) > r292_w:
+				r292_bad_wide += 1
+	check(r292_bad_head == 0 and r292_bad_wide == 0,
+			"R292 折行：五种宽度下都无「行首标点」(%d) / 「超出行宽」(%d)" % [
+				r292_bad_head, r292_bad_wide])
+	var r292_num: Array[String] = TextWrap.wrap_plain(r292_f, "造成 12 点伤害", 30.0, 12)
+	var r292_num_ok := true
+	for r292_g in r292_num:
+		if r292_g.ends_with("1") or r292_g.begins_with("2 "):
+			r292_num_ok = false
+	check(r292_num_ok, "R292 折行：「12」不从中间劈开（%s）" % str(r292_num))
+	var r292_q: Array[String] = TextWrap.wrap_plain(r292_f, "获得「素体」的护佑", 60.0, 12)
+	var r292_q_ok := true
+	for r292_g in r292_q:
+		if r292_g.contains("「") != r292_g.contains("」"):
+			r292_q_ok = false
+	check(r292_q_ok, "R292 折行：「素体」这一对引号不拆行（%s）" % str(r292_q))
+	var r292_nl: Array[String] = TextWrap.wrap_plain(r292_f, "第一行\n第二行", 500.0, 12)
+	check(r292_nl.size() == 2, "R292 折行：\n 仍是硬换行（%d 行）" % r292_nl.size())
+	var r292_long: Array[String] = TextWrap.wrap_plain(r292_f,
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 40.0, 12)
+	var r292_long_ok := r292_long.size() > 1
+	for r292_g in r292_long:
+		if TextWrap._measure(r292_f, r292_g, 12) > 40.0:
+			r292_long_ok = false
+	check(r292_long_ok, "R292 折行：超长不可断单元退化硬切、且不溢出（%d 行）"
+			% r292_long.size())
+
+	# ---- ⑤ 富文本折行：提及片段保留、内容不增不减；缓存返回副本 ----
+	var r292_src_txt := "造成 4 点伤害，然后召唤一个「素体」，再抽一张卡。"
+	var r292_rich: Array = TextWrap.wrap_rich(r292_f, r292_f, CardText.parse(r292_src_txt),
+			60.0, 12)
+	var r292_men := 0
+	var r292_plain := ""
+	for r292_line in r292_rich:
+		for r292_seg in r292_line:
+			r292_plain += str(r292_seg["text"])
+			if r292_seg.has("mention"):
+				r292_men += 1
+	check(r292_men >= 1 and r292_plain == CardText.naturalize(r292_src_txt),
+			"R292 富文本折行：提及片段保留（%d 段）、内容不增不减" % r292_men)
+	var r292_a: Array[String] = TextWrap.wrap_plain(r292_f, r292_txt, 88.0, 12)
+	var r292_b: Array[String] = TextWrap.wrap_plain(r292_f, r292_txt, 88.0, 12)
+	check(r292_a == r292_b and not is_same(r292_a, r292_b),
+			"R292 折行缓存：命中结果一致、且返回副本（不同实例）")
+
+	# ---- ⑥ 源码锁：面板字段删干净 / 折行只剩一个口 ----
+	var r292_src_e := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	var r292_src_b := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r292_src_cf := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+	var r292_src_ct := FileAccess.get_file_as_string("res://scripts/card_text.gd")
+	check(r292_e1.get("fate_pending") == null and r292_e1.get("fate_count") == null,
+			"R292 拒绝命运：面板字段 fate_pending / fate_count 已彻底删除")
+	check(r292_src_b.find("engine.fate_options()") < 0
+			and r292_src_e.find("action.emit(\"recycle\"") < 0,
+			"R292 源码锁：选卡页不再有 fate 分支、回收不再发专属 recycle 动作")
+	check_src(r292_src_cf.find("TextWrap.wrap_plain") >= 0
+			and r292_src_ct.find("TextWrap.wrap_rich") >= 0,
+			"R292 源码锁：卡面 / 富文本折行都委派给 TextWrap（唯一口）")
+
+	# ---- ⑦ R294 源码锁：**点卡必须同时切换描述** ----
+	# 病根：描述条的「当前显示哪张」= 悬停缓存优先，而缓存只在 MouseMotion 里更新。
+	# 出牌后手牌左移 / 触屏没有 motion / 重新开一轮选卡 → 缓存停在旧卡上，点别的卡不换。
+	# 这里钉四件事，防止以后又有人把「点击同步悬停」这条线删掉。
+	var r294_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r294_po := FileAccess.get_file_as_string("res://scripts/pick_overlay.gd")
+	var r294_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	var r294_de := FileAccess.get_file_as_string("res://scripts/deck_edit_scene.gd")
+	check_src(r294_bs.find("func _on_left_click") >= 0 \
+			and r294_bs.find("_on_hover(pos)") >= 0,
+			"R294 源码锁：战斗内点击会按落点刷新悬停（左栏描述跟着点走）")
+	check_src(r294_bs.find("func _hover_purge_stale") >= 0 \
+			and r294_bs.find("_hover_purge_stale()   # R294") >= 0,
+			"R294 源码锁：左栏取卡前会清掉过期的手牌悬停")
+	check_src(r294_po.count("_hover_idx = -1") >= 3,
+			"R294 源码锁：选卡页 open / refresh / close 都清悬停下标")
+	check_src(r294_rp.find("_hover_card = i") >= 0 \
+			and r294_de.find("_hover = pick") >= 0,
+			"R294 源码锁：奖励三选一 / 卡组编辑点卡也同步描述")
+
+
+	# ---- ⑧ R295 商店价钱：左下固定商品里的「巧克力」120 → 80 ----
+	# 价钱真源 = shop_scene 的 PRICE_* 常量（R295 起 `_row3` 不再写字面量）。
+	# 常量表走 get_script_constant_map()（与 R246 读 ENCHANTS 同一手法），导出包里也能读。
+	var r295_map: Dictionary = (load("res://scripts/shop_scene.gd") as Script) \
+			.get_script_constant_map()
+	check(int(r295_map.get("PRICE_CHOCO", -1)) == 80,
+			"R295 商店：巧克力价钱 = 80（原 120）")
+	check(int(r295_map.get("PRICE_DELETE", -1)) == 50 \
+			and int(r295_map.get("PRICE_MAXHP", -1)) == 50,
+			"R295 商店：删卡 / +5 最大生命仍是 50（只动巧克力）")
+	var r295_src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	check_src(r295_src.find("\"price\": PRICE_CHOCO") >= 0 \
+			and r295_src.find("\"price\": PRICE_MAXHP") >= 0 \
+			and r295_src.find("\"price\": PRICE_DELETE") >= 0 \
+			and r295_src.find("\"price\": 120") < 0,
+			"R295 源码锁：第三行价钱一律引用 PRICE_* 常量（不再写死）")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

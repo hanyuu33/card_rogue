@@ -444,6 +444,7 @@ func _gui_input(event: InputEvent) -> void:
 				if not moved:
 					var pick := _index_at(mb.position)
 					if pick >= 0:
+						_hover = pick          # R294：点中的卡就是描述条当前显示的那张
 						_toggle_sel(pick)     # 只改选中，不立即生效：可以反复改选
 						sfx.play("click")
 						_refresh_ui()
@@ -478,6 +479,7 @@ func _gui_input(event: InputEvent) -> void:
 			if not moved2 and not _cards.is_empty():
 				var pick2 := _index_at(st.position)
 				if pick2 >= 0:
+					_hover = pick2         # R294：触屏没有 motion → 点选也要同步描述条
 					_toggle_sel(pick2)
 					sfx.play("click")
 					_refresh_ui()

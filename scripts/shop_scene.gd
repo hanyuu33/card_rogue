@@ -8,7 +8,7 @@ extends Control
 ##     技能卡造成的伤害 +10）价 60
 ##   * 次元之力（赋字段「次元」；盟友/工事，必须无次元、非效果卡；+2 力 +10 血）价 80（R210：50 → 80）
 ##   * 保存（回合结束手牌不丢弃，做成字段）价 60
-## 第三行：固定 3 项：删一张卡 50 / +5 最大生命（并回血）50 / 买一块巧克力 120。
+## 第三行：固定 3 项：删一张卡 50 / +5 最大生命（并回血）50 / 买一块巧克力 80（R295：120 → 80）。
 ##
 ## 三行商品背后各有一层**货架**（shelf.png 素材，缺图回退程序画木板横条），
 ## 货架宽度 = 商品区宽度，随屏幕比例自适应。
@@ -26,6 +26,12 @@ const PICK_CARD_H := 190.0
 const PICK_GAP_X := 20.0
 const PICK_GAP_Y := 16.0
 const PICK_Y0 := 130.0
+
+# 第三行固定商品的价钱（R295：**唯一来源**）—— `_row3` 逐项引用，改价只改这里。
+# 之前价钱写死在 `_row3` 字面量里，改一次要翻代码找，测试也没法按常量核对。
+const PRICE_DELETE := 50
+const PRICE_MAXHP := 50
+const PRICE_CHOCO := 80      # R295：120 → 80
 
 # 附魔定义（id → 元数据）
 const ENCHANTS := [
@@ -190,11 +196,11 @@ func _setup_shop() -> void:
 		_row2.append({"ench": pool[i], "sold": false})
 	# 第三行：固定 3 项
 	_row3 = [
-		{"key": "delete", "name": "删除一张卡", "desc": "从卡组里删掉一张卡", "price": 50,
+		{"key": "delete", "name": "删除一张卡", "desc": "从卡组里删掉一张卡", "price": PRICE_DELETE,
 			"icon": "shop_icon_remove", "sold": false},
-		{"key": "maxhp", "name": "+5 最大生命", "desc": "最大生命 +5，并回复 5 点生命", "price": 50,
+		{"key": "maxhp", "name": "+5 最大生命", "desc": "最大生命 +5，并回复 5 点生命", "price": PRICE_MAXHP,
 			"icon": "shop_icon_maxhp", "sold": false},
-		{"key": "choco", "name": "巧克力", "desc": "获得一块巧克力（行动力 +1）", "price": 120,
+		{"key": "choco", "name": "巧克力", "desc": "获得一块巧克力（行动力 +1）", "price": PRICE_CHOCO,
 			"icon": "chocolate", "sold": false},
 	]
 	# 全局编号偏移

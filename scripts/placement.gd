@@ -129,6 +129,15 @@ var night_owl_weak: int = 0
 ##    等卡也带它，各有各的亡语（按卡 id 结算）—— 认字段会串戏。
 var life_cycle: bool = false
 var life_cycle_added: Array[String] = []
+## 「辅助刃」（9164，R291，机械之心普通技能）：
+##   * `blade_gift` —— 这个单位被辅助刃点过（被破坏时要「把一张辅助刃加入手卡」）；
+##   * `blade_added` —— 本卡实际**新加**的字段（「死亡」）。离场（重启 / 回收 / 返修 /
+##     被击破进弃牌区）时由 `_card_leaving_field` **逐个摘掉** —— 与生命循环同口径，
+##     否则那张卡再上场会带着一个不会触发的「死亡」标记。
+## ⚠️ 判据只认这个标记，**不认** `has_affix("死亡")` —— 「死亡」是通用字段，
+##    幼龙 / 腐化尸鬼 / 捕兽大师等各有各的亡语（按卡 id 结算），认字段会串戏。
+var blade_gift: bool = false
+var blade_added: Array[String] = []
 
 
 func effective_power() -> int:
