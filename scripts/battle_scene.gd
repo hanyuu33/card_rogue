@@ -3458,6 +3458,9 @@ func _cell_at(pos: Vector2) -> Variant:
 
 
 func _on_left_click(pos: Vector2) -> void:
+	# R288：玩家一动手就交还镜头（滚轮 / 拖棋盘已有，点击这条别漏 ——
+	# 否则演到一半点张牌，棋盘还停在敌方半场，自己出的牌在哪都看不见）。
+	_cam_cancel()
 	# R197：敌方效果开场弹窗开着 → 本次点击只关弹窗，不落进战场
 	if _ee_popup:
 		_ee_popup = false
@@ -5157,6 +5160,7 @@ func _on_board_click(cell: Vector2i) -> void:
 
 
 func _on_right_click() -> void:
+	_cam_cancel()                  # R288：右键取消 = 玩家要自己看，演出让位
 	# R197：敌方效果开场弹窗开着 → 右键只关弹窗
 	if _ee_popup:
 		_ee_popup = false
