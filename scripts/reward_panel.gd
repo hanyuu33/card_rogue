@@ -221,7 +221,7 @@ func _entry_tag(e: Dictionary) -> String:
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		if r == null:
 			return "奖励道具"
-		return "%s · %s" % [r.source_label(), r.kind]
+		return r.tag_line()
 	return "卡牌奖励 · %s" % CardReward.type_label(str(e.get("type", "normal")))
 
 
@@ -229,7 +229,7 @@ func _entry_color(e: Dictionary) -> Color:
 	if str(e.get("kind", "")) == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		if r != null:
-			return r.source_color()
+			return r.badge_color()
 	return UiTheme.ACCENT_GOLD
 
 

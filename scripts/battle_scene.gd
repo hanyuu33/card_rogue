@@ -1014,6 +1014,26 @@ func _ready() -> void:
 					engine.cost_of(engine.state.hand[0]) if not engine.state.hand.is_empty() else -1]
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r288fort" in args and engine != null:
+		# 演示（R288）：失控要塞（9161）—— 本次对战中每用过一张「聚能炮击」
+		# → 随机释放一张机械之心技能卡（随机目标 / 落点，不消耗费用）。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 6
+		engine.state.self_cannon_plays = 3
+		engine.state.hand.append(
+				CardData.from_dict(repo.get_card(GameEngine.OUT_OF_CONTROL_FORT_ID).to_dict()))
+		# 手牌里留一张盟友，给「系统升级 / 轻量化」这类需要**选手牌**的技能当目标。
+		engine.state.hand.append(
+				CardData.from_dict(repo.get_card(8029).to_dict()))
+		engine.play_from_hand(0, Vector2i(5, 0))
+		var r288_names := ""
+		for r288_n: String in engine.fort_casts:
+			r288_names = r288_n if r288_names == "" else "%s, %s" % [r288_names, r288_n]
+		status_text = "R288：失控要塞 入场（已用聚能炮击 %d 张）→ 随机释放 %d 张技能：%s" % [
+				engine.state.self_cannon_plays, engine.fort_casts.size(), r288_names]
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--trapper" in args and engine != null:
 		# 演示（R116）：捕兽大师 9126 的**亡语** —— 先上场、再当场打死它 →
 		# 它倒下的那一格变成一张**随机陷阱**（斜纹格 + 角标）。
@@ -2296,7 +2316,7 @@ func _ready() -> void:
 		engine.self_relics = [6013]
 		var rel := RelicRepo.load_json().get_relic(6013)
 		_demo_tip_text = "「%s」（%s）%s\n当前复活概率 100%%。" % [rel.relic_name,
-				rel.source_label(), rel.desc]
+				rel.tag_line(), rel.desc]
 		_hover_relic_tip = _demo_tip_text
 		Input.warp_mouse(_relic_rect(0).get_center())  # 真窗口下把鼠标挪到徽章上，走真实悬停路径
 		_shot_t0 = _now()
@@ -5345,7 +5365,7 @@ func _on_hover(pos: Vector2) -> void:
 					# 不再塞进工具栏一行（会横向溢出窗口）
 					var note := RunState.relic_state_note(engine.self_relics[i])
 					_hover_relic_tip = "「%s」（%s）%s%s" % [rel.relic_name,
-							rel.source_label(), rel.desc,
+							rel.tag_line(), rel.desc,
 							("\n" + note) if note != "" else ""]
 				break
 		if not rel_hit and tip == "" and _relic_zone_rect().has_point(pos):
@@ -7570,6 +7590,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_heal_fx.append({"pos": Vector2(GRID_X + GRID_W + 46, GRID_Y + GRID_H - 20),
 					"start": n + hf_j * 70, "dur": 480, "seed": hf_j})
 	match kind:
+		"out_of_control_fort":
+			# R288 失控要塞：入场随机释放职业技能 —— 这里只报总结果；每张技能自己
+			# 已经走过上面的 "spell" 分支（音效 / 飘字都在那儿）。
+			var ocf_names := ""
+			for ocf_n in (data.get("casts", []) as Array):
+				ocf_names = str(ocf_n) if ocf_names == "" \
+						else "%s, %s" % [ocf_names, str(ocf_n)]
+			if int(data.get("cannons", 0)) <= 0:
+				status_text = "R288：失控要塞 入场 —— 本次对战还没用过「聚能炮击」，没有技能可释放"
+			else:
+				status_text = "R288：失控要塞 入场（已用聚能炮击 %d 张）→ 随机释放 %d 张技能：%s" % [
+						int(data.get("cannons", 0)), (data.get("casts", []) as Array).size(), ocf_names]
+			sfx.play("spell")
 		"place":
 			sfx.play("place")
 			var cell: Vector2i = data["cell"]
@@ -8868,12 +8901,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_earring_done = false
 			_banner = {"text": "鸭语耳环 · 自动出牌", "col": UiTheme.STATE_SLEEP,
 					"start": _now(), "dur": 1600}
-			status_text = "鸭语耳环：第 1 回合不抽牌，开始自动出牌（会一张一张出）"
+			status_text = "鸭语耳环：第 1 回合抽牌后开始自动出牌（会一张一张出）"
 			_say("鸭语耳环：自动出牌开始（逐张播放）")
 		"earring_autoplay_step":
 			# 每出一张：飘出「第 N 张 · 卡名」，玩家能看清到底出了什么。
 			var es_name: String = str(data.get("card_name", "?"))
-			var es_i: int = int(data.get("index", 0)) + 1
+			var es_i: int = int(data.get("total", 0))
 			_floaters.append({"pos": Vector2(WINDOW_W / 2, GRID_Y + 26),
 					"text": "自动出牌 %d · %s" % [es_i, es_name],
 					"col": Color("c9a0f0"), "start": n, "dur": 1100, "size": 20})
@@ -9697,7 +9730,7 @@ func _draw_relic_bar() -> void:
 		if rel == null:
 			continue
 		var rect := _relic_rect(i)
-		var scol := rel.source_color()
+		var scol := rel.badge_color()
 		draw_rect(rect, Color(scol, 0.28), true)
 		draw_rect(rect, scol, false, 1.2)
 		# 来源色块（白色描述边在浅底上不醒目，配实心块 + 深描边）
@@ -10853,8 +10886,8 @@ func _relic_panel_rows() -> Array:
 		var rel := repo.get_relic(ids[i])
 		var nm := rel.relic_name if rel != null else str(ids[i])
 		var desc := rel.desc if rel != null else ""
-		var scol := rel.source_color() if rel != null else Color.GRAY
-		var tag := rel.source_label() if rel != null else "道具"
+		var scol := rel.badge_color() if rel != null else Color.GRAY
+		var tag := rel.tag_line() if rel != null else "道具"
 		rows.append(["「%s」（%s）" % [nm, tag],
 				_wrap_lines(_font, RELIC_P_DESC, desc, RELIC_PANEL_W - 96.0), scol])
 	return rows

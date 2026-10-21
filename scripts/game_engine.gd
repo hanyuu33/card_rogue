@@ -943,6 +943,19 @@ const MASS_MNEMOSYNE_DISCOUNT:= 1
 #   入场时己方**所有盟友**（场上 + 手牌）各获得一次「改造」：生命 +4（不含工事；含它自己）。
 const MODDER_ID:= 8076
 const MODDER_HP:= 4
+# 「失控要塞」9161（R288，2 费**史诗工事** 0 攻 / 1 血 / 无法移动，机械之心）：
+#   入场时，本次对战中你**每使用过一张「聚能炮击」9145** → **随机释放一张机械之心技能卡**。
+#   三条口径，全部落在 `_fort_play()` 这一处：
+#     ① 卡是**凭空生成**的（不在手牌 / 牌库 / 弃牌区）→ 复制一份临时插进手牌末尾，再走
+#        原有的施放入口。这样「选手牌 / 卡组 / 弃牌区」这些需要**真实位置**的技能
+#        （系统升级 8039 / 回收 8064 / 轻量化 8068 / 填充 9146 / 返修 9127 / 双向传送 8061）
+#        都能按原有流程结算，不必另写一套「虚空施放」的第二实现；
+#     ② **不消耗费用**：卡面写的是「释放」—— 玩家并没有为这张凭空出现的卡付钱
+#        （`use_spell(..., free_cast = true)` / `cast_*(..., free_cast = true)`）；
+#     ③ 目标与落点**随机且合法**：先枚举合法目标、再让 `rng` 抽一个（回放可复现）；
+#        抽到的技能此刻没有合法目标就换一张，最多把池子试一圈（`_fort_cast_one`）。
+const OUT_OF_CONTROL_FORT_ID:= 9161
+const OUT_OF_CONTROL_MAX_CASTS:= 20
 # 「代达罗斯」8060（R271 重做，5 费**史诗盟友** 8/18/1/1，嘲讽）：
 #   入场时本次对战每用过一张聚能炮击 → 生命 +3；本回合手卡里的聚能炮击费用为 0。
 const DAEDALUS_HP_PER_CANNON:= 3
@@ -1560,19 +1573,16 @@ func _begin_turn(side: String) -> void :
 		if turn_number == 1:
 			_ensure_opening_card(ALERT_ID)   # 警觉（9109）：第 1 回合必定抽到
 			_ensure_opening_enchanted()      # R229「起手」附魔：同样第 1 回合必定抽到
-		var drawn:= 0
+		var drawn := _draw_many(FieldState.HAND_DRAW_PER_TURN + extra_draw)
+		var earring_autoplayed := 0
 		if self_relics.has(EARRING_RELIC_ID) and turn_number == 1:
-			# R77：第 1 回合不抽牌，改为**逐张自动出牌**。这里只「启动」，
-			# 真正的出牌由界面每帧推进一步（_autoplay_step）——
-			# 原来在这里 while 一次跑完，玩家什么都看不见。
-			# headless 没有界面驱动，所以那种情况走同步版。
+			# R285：第 1 回合**正常抽牌之后**，再开始自动出牌。
+			# 自动出牌从左到右扫描手牌，跳过无法打出的牌，循环直到打不出或达到上限。
 			if autoplay_stepwise:
 				begin_earring_autoplay()
 			else:
-				drawn = _autoplay_from_deck()
-				_log("鸭语耳环：第 1 回合不抽牌 → 自动出牌 %d 张" % drawn)
-		else:
-			drawn = _draw_many(FieldState.HAND_DRAW_PER_TURN + extra_draw)
+				earring_autoplayed = _autoplay_from_deck()
+				_log("鸭语耳环：第 1 回合自动出牌 %d 张" % earring_autoplayed)
 		# 无尽黑暗 9114（R70 改）：抽牌之后**开选牌面板**，玩家选 1 张手牌弃掉
 		# → 之后才给 2 点费用（费用在 endless_pick 里加，不在这里）。
 		# 放在抽牌分支**之后**，这样「鸭语耳环自动出牌」那条分支也会照常触发。
@@ -1620,7 +1630,7 @@ func _begin_turn(side: String) -> void :
 		_refresh_mnemosyne()           # R271 谟涅摩叙涅：按改造层数重算敌方力量减益
 		_refresh_night_owl()           # R270 夜鸭：按本回合奇偶刷新夜衰
 		_run_battlecries(SIDE_SELF)
-		_log("── 我方第 %d 回合：能量重置为 %d%s%s%s%s%s%s（共 %d），抽 %d 张" % [
+		_log("── 我方第 %d 回合：能量重置为 %d%s%s%s%s%s%s%s（共 %d），抽 %d 张" % [
 			turn_number, FieldState.ENERGY_PER_TURN,
 			"（+%d 鸭翼）" % bonus_energy if bonus_energy > 0 else "",
 			"（+%d 鸭语耳环）" % earring_energy if earring_energy > 0 else "",
@@ -1628,6 +1638,7 @@ func _begin_turn(side: String) -> void :
 			"（+%d 活力转移）" % transfer_energy if transfer_energy > 0 else "",
 			"（无尽黑暗：待选弃牌）" if endless_pending else "",
 			"（鸭之低语：%s）" % whisper_txt if whisper_txt != "" else "",
+			"，耳环自动出 %d 张" % earring_autoplayed if earring_autoplayed > 0 else "",
 			state.energy, drawn])
 	else:
 		opp_turns += 1
@@ -2349,12 +2360,17 @@ func _fallback_clockwork() -> CardData:
 ## R77：原来这里是「一个 while 循环一口气跑完最多 20 张」，全部发生在 _begin_turn 的一次调用里
 ## → 玩家只看到最终局面，完全不知道中间出了什么牌。现在拆成「每帧出一张」，
 ## 由 battle_scene 的 _tick_earring_autoplay() 按动画节奏驱动（配合每张之间的停顿）。
-## 语义不变：能量不足 / 牌库抽空 / 手满 / X 费卡 / 无合法目标 → 停。
+## R285：改为「正常抽牌后从左到右扫描手牌」——跳过无法打出的牌，一轮扫完若还有进展，
+## 就再扫一轮，直到没有牌能打出或已达 20 张上限。
 ## R77：true = 逐张驱动（界面实机，能看到动画）；false = 一次性同步跑完（headless 回归）。
 ## 由 battle_scene 在 _ready 里置 true；回归保持 false 以免依赖帧。
 var autoplay_stepwise := false
 var earring_pending := false      # 是否处于「自动出牌中」
 var earring_played := 0           # 已自动出了几张
+## R288 失控要塞 9161：最近一次入场**实际释放**的技能卡名（日志 / UI / 回归断言共用）。
+var fort_casts: Array[String] = []
+var earring_hand_index := 0       # 当前扫描到手牌第几张（从左到右）
+var earring_pass_played := 0      # 本轮扫描已打出几张（用于判断是否需要再扫一轮）
 
 
 func earring_autoplay_active() -> bool:
@@ -2364,51 +2380,50 @@ func earring_autoplay_active() -> bool:
 
 func _autoplay_from_deck() -> int:
 	## **同步**跑完（headless 回归走这条；界面实机走下面的逐张版）。
-	var played := 0
-	while played < EARRING_AUTOPLAY_MAX:
-		if not _autoplay_step(played):
-			break
-		played += 1
-		earring_played = played
-	return played
+	begin_earring_autoplay()
+	var guard := 0
+	while earring_pending and guard < EARRING_AUTOPLAY_MAX * 4:
+		_autoplay_step(earring_played)
+		guard += 1
+	return earring_played
 
 
 func begin_earring_autoplay() -> void:
 	## 开始自动出牌（不立即出牌）。界面侧每帧调 _autoplay_step 推进。
 	earring_pending = true
 	earring_played = 0
+	earring_hand_index = 0
+	earring_pass_played = 0
 	action.emit("earring_autoplay_begin", {})
 
 
-func _autoplay_step(played: int) -> bool:
-	## **推进一步**（出一张牌）。返回 false = 该停了。
-	## played = 已出的张数（只用于日志措辞，不参与判定）。
-	if played >= EARRING_AUTOPLAY_MAX:
-		_finish_earring_autoplay(played, "已达上限 %d 张" % EARRING_AUTOPLAY_MAX)
+func _autoplay_step(step_index: int) -> bool:
+	## **推进一步**（处理一张手牌）。返回 false = 该停了。
+	## step_index 仅用于事件/日志，不参与判定。
+	if earring_played >= EARRING_AUTOPLAY_MAX:
+		_finish_earring_autoplay(earring_played, "已达上限 %d 张" % EARRING_AUTOPLAY_MAX)
 		return false
-	if state.deck.is_empty() and state.discard.is_empty():
-		_finish_earring_autoplay(played, "牌库已抽空")
+	if state.hand.is_empty():
+		_finish_earring_autoplay(earring_played, "手牌已空")
 		return false
-	if state.hand_full():
-		_finish_earring_autoplay(played, "手牌已满（%d 张）" % FieldState.HAND_LIMIT)
-		return false
-	var card := state.draw()
-	if card == null:
-		_finish_earring_autoplay(played, "抽牌失败")
-		return false
-	if state.energy < card.cost:
-		_log("鸭语耳环：能量不足（%d < %d），停止自动出牌（%s 留在手里）"
-			%[state.energy, card.cost, card.card_name])
-		_finish_earring_autoplay(played, "能量不足")
-		return false
-	if not _autoplay_play(state.hand.size() - 1):
-		_finish_earring_autoplay(played, "下一张无法使用")
-		return false
-	earring_played = played + 1
-	# R77：每出一张都发一次事件 —— 界面据此播「抽牌 → 出牌 → 落位」三段动画。
-	action.emit("earring_autoplay_step", {"index": played, "total": earring_played,
-		"card_name": card.card_name, "cost": card.cost})
-	return true
+	# 一轮扫描到头：若本轮出过牌，就再从头扫一轮；否则结束。
+	if earring_hand_index >= state.hand.size():
+		if earring_pass_played == 0:
+			_finish_earring_autoplay(earring_played, "没有能出的牌")
+			return false
+		earring_hand_index = 0
+		earring_pass_played = 0
+	var card: CardData = state.hand[earring_hand_index]
+	if _autoplay_play(earring_hand_index):
+		earring_played += 1
+		earring_pass_played += 1
+		# 出牌后手牌整体左移，保持索引即可处理下一张。
+		action.emit("earring_autoplay_step", {"index": step_index, "total": earring_played,
+			"card_name": card.card_name, "cost": card.cost})
+		return true
+	else:
+		earring_hand_index += 1
+		return true
 
 
 func _finish_earring_autoplay(played: int, why: String) -> void:
@@ -2421,11 +2436,17 @@ func _finish_earring_autoplay(played: int, why: String) -> void:
 
 
 func _autoplay_play(hand_index: int) -> bool:
-
-
 	if hand_index < 0 or hand_index >= state.hand.size():
 		return false
 	var card: CardData = state.hand[hand_index]
+	# 通用出牌上限（夜行等）
+	if _play_cap_blocked() != "":
+		_log("鸭语耳环：%s 被出牌上限挡下，自动出牌跳过" % card.card_name)
+		return false
+	if state.energy < cost_of(card):
+		_log("鸭语耳环：%s 费用不足（%d < %d），自动出牌跳过"
+			% [card.card_name, state.energy, cost_of(card)])
+		return false
 	if card.is_curse():
 		# R223：诅咒卡（「疲惫」9149）—— 唯一打出入口是 use_curse（玩家自己决定
 		# 什么时候扔掉这张废牌）。自动出牌**绝不能**碰它：它会掉进下面的
@@ -2443,86 +2464,98 @@ func _autoplay_play(hand_index: int) -> bool:
 		if card.target_mode in ["hand_unit", "hand_any"]:
 			_log("鸭语耳环：%s 需要选手牌目标，自动出牌跳过" % card.card_name)
 			return false
-		var targets:= _autoplay_spell_targets(card)
+		# 两段式 / 多目标技能自动出牌无法处理
+		if card.id in [INFILTRATE_ID, SWAP_UNITS_ID]:
+			_log("鸭语耳环：%s 需要多段目标，自动出牌跳过" % card.card_name)
+			return false
+		# 回旋斩：本回合用卡数不足时跳过
+		if card.id == WHIRL_BLADE_ID and state.self_card_plays < WHIRL_BLADE_NEED:
+			_log("鸭语耳环：%s 条件未满足，自动出牌跳过" % card.card_name)
+			return false
+		var targets := _autoplay_spell_targets(card)
 		if card.needs_target() and targets.is_empty():
 			_log("鸭语耳环：%s 没有合法目标，无法自动使用" % card.card_name)
 			return false
-		use_spell(hand_index, targets[0] if not targets.is_empty() else null)
-		return true
+		# 随机目标
+		var target = null
+		if not targets.is_empty():
+			target = targets[rng.randi() % targets.size()]
+		var plays_before := state.self_card_plays
+		use_spell(hand_index, target)
+		return state.self_card_plays > plays_before
 	if card.is_effect():
+		var plays_before := state.self_card_plays
 		use_effect(hand_index)
-		return true
+		return state.self_card_plays > plays_before
 	if discard_cost_of(card) > 0:
-
 		_log("鸭语耳环：%s 需要额外丢弃 %d 张手牌，自动出牌跳过"
-			%[card.card_name, discard_cost_of(card)])
+			% [card.card_name, discard_cost_of(card)])
 		return false
-
-	var cell:= _autoplay_cell()
+	var cell := _autoplay_cell(card)
 	if cell == Vector2i(-1, -1):
-		_log("鸭语耳环：自己半场没有空格，无法放置 %s" % card.card_name)
+		_log("鸭语耳环：没有合法位置，无法放置 %s" % card.card_name)
 		return false
-	play_from_hand(hand_index, cell)
-
+	var plays_before := state.self_card_plays
+	var placed := play_from_hand(hand_index, cell)
+	if placed == null or state.self_card_plays <= plays_before:
+		return false
 	if crow_pending:
-		var crow_auto:= crow_options()
+		var crow_auto := crow_options()
 		if not crow_auto.is_empty():
 			crow_recall(crow_auto[0])
 	if overhaul_pending:
-		var oh_auto:= overhaul_options()
+		var oh_auto := overhaul_options()
 		if not oh_auto.is_empty():
 			overhaul_recall(oh_auto[0])
 	return true
 
 
-func _autoplay_cell() -> Vector2i:
-	var rows: Array[int] = [FieldState.OPPONENT_ROWS, FieldState.OPPONENT_ROWS + 1, 
-		FieldState.BOARD_ROWS - 1]
-	var cols: Array[int] = [FieldState.BOARD_COLS / 2, 0, FieldState.BOARD_COLS - 1]
-	for row: int in rows:
-		for col: int in cols:
-			var c:= Vector2i(row, col)
-			if not state.board.has(c):
-				return c
-	return Vector2i(-1, -1)
+func _autoplay_cell(card: CardData) -> Vector2i:
+	## 自动出牌时给单位/场地挑一个**随机合法位置**。
+	var candidates: Array[Vector2i] = []
+	if card.is_field():
+		var aim := field_aim(card)
+		for row in FieldState.BOARD_ROWS:
+			for col in FieldState.BOARD_COLS:
+				var c := Vector2i(row, col)
+				if field_place_allowed(c, aim):
+					candidates.append(c)
+	else:
+		for row in range(FieldState.OPPONENT_ROWS, FieldState.BOARD_ROWS):
+			for col in FieldState.BOARD_COLS:
+				var c := Vector2i(row, col)
+				if not state.board.has(c):
+					candidates.append(c)
+	if candidates.is_empty():
+		return Vector2i(-1, -1)
+	return candidates[rng.randi() % candidates.size()]
 
 
 func _autoplay_spell_targets(card: CardData) -> Array[Vector2i]:
-
-
+	## 自动出牌时给技能挑一组**合法目标**；实际使用时会从中随机选一个。
 	var out: Array[Vector2i] = []
 	if not card.needs_target():
 		return out
 	if card.id == ICE_WALL_SPELL_ID:
-
 		out.append(Vector2i(FieldState.OPPONENT_ROWS, FieldState.BOARD_COLS / 2))
 		return out
 	if card.id == FIRE_WALL_SPELL_ID:
-		# 火墙术：烧敌人最多的那条横行
-		var fw_row:= -1
-		var fw_best:= 0
+		# 火墙术：所有有敌人的横行都是合法目标。
 		for r in FieldState.BOARD_ROWS:
-			var n:= 0
+			var n := 0
 			for cc in FieldState.BOARD_COLS:
 				var q: Placement = state.unit_at(Vector2i(r, cc))
 				if q != null and q.owner == SIDE_OPPONENT:
 					n += 1
-			if n > fw_best:
-				fw_best = n
-				fw_row = r
-		if fw_row >= 0:
-			out.append(Vector2i(fw_row, FieldState.BOARD_COLS / 2))
+			if n > 0:
+				out.append(Vector2i(r, FieldState.BOARD_COLS / 2))
 		return out
-	var heal:= card.id in [2002, 7202]
-	var pool:= _side_cells(SIDE_SELF if heal else SIDE_OPPONENT)
+	var heal := card.id in [2002, 7202]
+	var pool := _side_cells(SIDE_SELF if heal else SIDE_OPPONENT)
 	if card.id == UPGRADE_ID or card.id == ARMOR_PLATE_ID \
 			or card.id == SHARED_SHIELD_ID:
-		# 升级 8027（R82）/ 加厚装甲 8044（R95，机械之心）：自动出牌时选
-		# **己方最值得改造的那一个** —— 优先级 = 力量。默认分支会选敌方单位，
-		# 那样 `_upgrade_unit` / `_armor_plate` 会拒掉 → 这张牌等于白拿了一张。
-		# ⚠️ 加厚装甲**只吃盟友**（工事会被引擎拒绝），所以这里按卡把候选收窄。
-		var best_up := Vector2i(-1, -1)
-		var best_pow := -1
+		# 升级 8027（R82）/ 加厚装甲 8044（R95，机械之心）/ 共享护盾 8069（R269）：
+		# 返回所有合法己方目标，实际由 _autoplay_play 随机挑选。
 		for uc in _side_cells(SIDE_SELF):
 			var up: Placement = state.unit_at(uc)
 			if up == null:
@@ -2533,48 +2566,31 @@ func _autoplay_spell_targets(card: CardData) -> Array[Vector2i]:
 				continue
 			if up.card.kind != "盟友" and not up.card.is_fort():
 				continue
-			if up.effective_power() > best_pow:
-				best_pow = up.effective_power()
-				best_up = uc
-		if best_up.x >= 0:
-			out.append(best_up)
+			out.append(uc)
 		return out
 	if card.id == DEMOLISH_ID:
-		# 拆解 8049（R97，机械之心）：自动出牌时优先拆**己方被改造**的盟友/工事
-		# （能拿到额外「升级」），没有则退而拆任意己方盟友/工事。
-		var best_up := Vector2i(-1, -1)
+		# 拆解 8049（R97，机械之心）：任意己方盟友/工事都是合法目标。
 		for uc in _side_cells(SIDE_SELF):
 			var up: Placement = state.unit_at(uc)
 			if up == null:
 				continue
 			if up.card.kind != "盟友" and not up.card.is_fort():
 				continue
-			if best_up.x < 0 or (not _is_upgraded(state.unit_at(best_up)) and _is_upgraded(up)):
-				best_up = uc
-		if best_up.x >= 0:
-			out.append(best_up)
+			out.append(uc)
 		return out
 	if card.id == REORG_ID:
-		# 重组 8051（R99，机械之心）：自动出牌时只选**受伤**的己方盟友/工事
-		# （生命未满），没有受伤单位就不自动出，免得浪费这张史诗牌。
-		var best_r := Vector2i(-1, -1)
-		var worst := 1 << 30
+		# 重组 8051（R99，机械之心）：受伤己方盟友/工事。
 		for uc in _side_cells(SIDE_SELF):
 			var up: Placement = state.unit_at(uc)
 			if up == null:
 				continue
 			if up.card.kind != "盟友" and not up.card.is_fort():
 				continue
-			var missing := up.card.health - up.health
-			if missing > 0 and missing < worst:
-				worst = missing
-				best_r = uc
-		if best_r.x >= 0:
-			out.append(best_r)
+			if up.card.health - up.health > 0:
+				out.append(uc)
 		return out
 	if card.id == TRANSCEND_ID:
-		# 超越极限 8053（R99，机械之心）：自动出牌时选一个**还没有超负荷**的
-		# 己方盟友/工事（有了就跳过，避免重复给；全部都有则不出）。
+		# 超越极限 8053（R99，机械之心）：还没有超负荷的己方盟友/工事。
 		for uc in _side_cells(SIDE_SELF):
 			var up: Placement = state.unit_at(uc)
 			if up == null:
@@ -2584,36 +2600,22 @@ func _autoplay_spell_targets(card: CardData) -> Array[Vector2i]:
 			if up.card.has_affix(AFFIX_OVERLOAD):
 				continue
 			out.append(uc)
-		out.sort()
 		return out
 	if card.id == REBOOT_ID:
-		# 重启 8054（R100，机械之心）：自动出牌时只选**受伤**的己方盟友/工事
-		# （返回手卡能救回它并 0 费重铺，没受伤就不必浪费这张牌）。
-		var best_r := Vector2i(-1, -1)
-		var worst := 1 << 30
+		# 重启 8054（R100，机械之心）：受伤己方盟友/工事。
 		for uc in _side_cells(SIDE_SELF):
 			var up: Placement = state.unit_at(uc)
 			if up == null:
 				continue
 			if up.card.kind != "盟友" and not up.card.is_fort():
 				continue
-			var missing := up.card.health - up.health
-			if missing > 0 and missing < worst:
-				worst = missing
-				best_r = uc
-		if best_r.x >= 0:
-			out.append(best_r)
+			if up.card.health - up.health > 0:
+				out.append(uc)
 		return out
-	var best:= Vector2i(-1, -1)
-	var best_key:= 1 << 30
+	# 默认伤害/治疗：所有有效侧单位格
 	for c: Vector2i in pool:
-		var q: Placement = state.board[c]
-		var key:= (maxi(1, q.card.health) - q.health) if heal else q.health
-		if key < best_key:
-			best_key = key
-			best = c
-	if best != Vector2i(-1, -1):
-		out.append(best)
+		if state.board.has(c):
+			out.append(c)
 	return out
 
 
@@ -3604,6 +3606,8 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 		_mass_daedalus_enter(p)     # R271 量产型代达罗斯：入场选一张手卡变炮击
 	if card.id == MODDER_ID:
 		_modder_enter(p)          # R282 改装者：入场全体己方盟友（场上+手牌）改造 +4 生命
+	if card.id == OUT_OF_CONTROL_FORT_ID:
+		_out_of_control_fort_enter(p)   # R288 失控要塞：每用过一张聚能炮击 → 随机释放一张技能卡
 	_refresh_mnemosyne()            # R271：刚落地 / 刚被换上场的那只可能是谟涅摩叙涅
 
 	if card.id == FOX_ID:
@@ -3748,6 +3752,211 @@ func _cannon_mech_enter(p: Placement) -> void :
 			% [n, gain, p.effective_power()])
 	action.emit("cannon_mech", {"cell": _cell_of(p), "card": p.card,
 			"cannons": n, "atk": gain})
+
+
+func _out_of_control_fort_enter(p: Placement) -> void :
+	## 「失控要塞」9161（R288，机械之心 2 费**史诗工事** 0 攻 / 1 血 / 不可移动）的入场效果：
+	##   本次对战中你**每使用过一张「聚能炮击」9145** → **随机释放一张机械之心技能卡**。
+	##   * 计数来源 = `state.self_cannon_plays`（`_note_card_played()` 唯一口记的，
+	##     与代达罗斯 8060 / 聚能机兵 8073 同源）；
+	##   * 一张都没用过 → 什么都不发生（0 攻 1 血、不能动的白板工事）；
+	##   * 上限 `OUT_OF_CONTROL_MAX_CASTS` 只是防呆（攒 20 张炮击本身已不现实）。
+	fort_casts.clear()
+	var n := mini(state.self_cannon_plays, OUT_OF_CONTROL_MAX_CASTS)
+	if n <= 0:
+		_log("失控要塞入场：本次对战还没用过「聚能炮击」→ 没有技能可释放")
+		var none_casts: Array[String] = []
+		action.emit("out_of_control_fort", {"cell": _cell_of(p), "card": p.card,
+				"cannons": 0, "casts": none_casts})
+		return
+	for i in n:
+		var nm := _fort_cast_one()
+		if nm == "":
+			_log("失控要塞：第 %d 张触发找不到可执行的技能（池子试过一圈）→ 提前停止" % (i + 1))
+			break
+		fort_casts.append(nm)
+	var names := ""
+	for nm2: String in fort_casts:
+		names = nm2 if names == "" else "%s, %s" % [names, nm2]
+	_log("失控要塞入场：本次对战已用聚能炮击 %d 张 → 实际释放 %d 张技能（%s）"
+			% [state.self_cannon_plays, fort_casts.size(), names])
+	action.emit("out_of_control_fort", {"cell": _cell_of(p), "card": p.card,
+			"cannons": n, "casts": fort_casts.duplicate()})
+
+
+func _fort_skill_pool() -> Array[CardData]:
+	## 「失控要塞」9161 的随机池 = **本职业技能卡**：kind == "技能" + 当前职业 + rarity <= 2
+	## （排除初始 3 / 怪物 4 / 事件 5 / 诅咒 6 —— 与奖励池同口径）。
+	## ⚠️ 不写死卡 id：以后机械之心新加的技能卡自动进池。
+	var out: Array[CardData] = []
+	var repo := CardRepo.load_json()
+	if repo == null:
+		return out
+	for c: CardData in repo.all_cards():
+		if c.card_class != PlayerClass.MECH or c.kind != "技能":
+			continue
+		if c.rarity > 2:
+			continue
+		out.append(c)
+	return out
+
+
+func _fort_cast_one() -> String:
+	## 随机抽一张职业技能卡并**立即释放**（失控要塞的一次触发）。
+	## 返回实际释放的卡名；"" = 池里此刻没有能执行的技能了。
+	## ⚠️ 抽签必须走引擎 `rng`（**不能**用 `Array.shuffle()`）—— 否则录像回放会漂。
+	var pool := _fort_skill_pool()
+	if pool.is_empty():
+		return ""
+	var idxs: Array[int] = []
+	for k in pool.size():
+		idxs.append(k)
+	while not idxs.is_empty():
+		var pick := rng.randi() % idxs.size()
+		var proto: CardData = pool[idxs[pick]]
+		idxs.remove_at(pick)
+		var card := CardData.from_dict(proto.to_dict())
+		card.traits = (card.traits as Array).duplicate()
+		card.affixes = (card.affixes as Array).duplicate()
+		if _fort_play(card):
+			return card.card_name
+	return ""
+
+
+func _fort_play(card: CardData) -> bool:
+	## 把一张**凭空生成**的技能卡真正释放掉（失控要塞 9161 的唯一结算口）。
+	## 流程：临时塞进手牌末尾 → 按类型挑**随机合法目标** → 走对应正常入口（免费）。
+	## 成功判据 = `state.self_card_plays` 涨了（所有出牌路径的统一收尾都是
+	## `_note_card_played`，不另设标志位）。
+	## ⚠️ 无论成败都把临时卡清掉：它不属于玩家，也不该留在手牌里。
+	if card == null or not card.is_spell():
+		return false
+	state.hand.append(card)
+	var hi := state.hand.size() - 1
+	var plays_before := state.self_card_plays
+	match card.id:
+		SYS_UPGRADE_ID:
+			var su_i := _fort_hand_target(card, hi)
+			if su_i >= 0:
+				cast_sys_upgrade(hi, su_i, true)
+		HAND_LIGHTEN_ID:
+			var hl_i := _fort_hand_target(card, hi)
+			if hl_i >= 0:
+				cast_lighten(hi, hl_i, true)
+		RECYCLE_ID:
+			var rc_i := _fort_hand_target(card, hi)
+			if rc_i >= 0:
+				cast_recycle(hi, rc_i, true)
+		RELOAD_ID:
+			var rl_i := _fort_hand_target(card, hi)
+			if rl_i >= 0:
+				cast_reload(hi, rl_i, true)
+		SWAP_UNITS_ID:
+			var sp := _fort_swap_pair()
+			if not sp.is_empty():
+				cast_swap_units(hi, sp[0], sp[1], true)
+		OVERHAUL_ID:
+			# 返修 9127：单段入口结算时置 pending → 这里立刻替玩家从弃牌区随机选一张。
+			if not overhaul_options().is_empty() and not state.hand_full():
+				use_spell(hi, null, true)
+				var oh_now := overhaul_options()
+				if overhaul_pending and not oh_now.is_empty():
+					overhaul_recall(oh_now[rng.randi() % oh_now.size()])
+		_:
+			# 其余技能：`unit` 类走随机棋盘目标，无目标的直接施放。
+			# ⚠️ `needs_target()` **不含** hand_unit / hand_any（那几类在上面逐个处理），
+			#    这里再兜一次：没有合法目标就不打，避免白掉一张。
+			var tg = null
+			if card.needs_target():
+				var cells := _fort_board_targets(card)
+				if not cells.is_empty():
+					tg = cells[rng.randi() % cells.size()]
+			if not card.needs_target() or tg != null:
+				use_spell(hi, tg, true)
+	var ok := state.self_card_plays > plays_before
+	# 清理：正常路径结算完卡已不在手牌；失败 / 落空时把临时卡直接丢掉（不进弃牌区）。
+	while state.hand.has(card):
+		state.hand.erase(card)
+	# 有些技能会顺手置 pending（返修一族）—— 失控要塞不留交互给玩家，一律就地收掉，
+	# 否则 `use_spell` 开头的 pending 闸门会让玩家这一回合再也打不出技能牌。
+	if overhaul_pending:
+		overhaul_remaining = 0
+		overhaul_pending = false
+	if ok:
+		_log("失控要塞：随机释放「%s」" % card.card_name)
+	return ok
+
+
+func _fort_hand_target(card: CardData, own_index: int) -> int:
+	## 给「目标在手牌里」的技能（系统升级 / 轻量化 / 回收 / 填充）挑一张**随机合法**手牌。
+	## 排除刚塞进来占位的那张临时卡自己；没有候选 → -1（这个技能此刻打不出去）。
+	var cand: Array[int] = []
+	for i in state.hand.size():
+		if i == own_index:
+			continue
+		var c: CardData = state.hand[i]
+		if card.id == HAND_LIGHTEN_ID and c.kind != "盟友":
+			continue
+		if card.id == SYS_UPGRADE_ID and c.kind != "盟友" and not c.is_fort():
+			continue
+		cand.append(i)
+	if cand.is_empty():
+		return -1
+	return cand[rng.randi() % cand.size()]
+
+
+func _fort_swap_pair() -> Array[Vector2i]:
+	## 双向传送 8061 的两个随机单位：都在场上、不免疫位移、换过去不落进对方后排。
+	var units: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var u: Placement = state.unit_at(cell)
+		if u == null or u.card.traits.has(DISPLACE_IMMUNE_TRAIT):
+			continue
+		units.append(cell)
+	var pairs: Array = []
+	for i in units.size():
+		for j in range(i + 1, units.size()):
+			if swap_pair_allowed(units[i], units[j]):
+				pairs.append([units[i], units[j]])
+	var out: Array[Vector2i] = []
+	if pairs.is_empty():
+		return out
+	var pr: Array = pairs[rng.randi() % pairs.size()]
+	out.append(pr[0])
+	out.append(pr[1])
+	return out
+
+
+func _fort_board_targets(card: CardData) -> Array[Vector2i]:
+	## 场上目标枚举：只覆盖机械之心技能池里 `target_mode == "unit"` 的那几张。
+	## ⚠️ 与 `_autoplay_spell_targets()` 分开写：那个是给鸭语耳环「打手牌里已有的卡」
+	##    用的，口径已冻结（改动会让 R285 的断言漂）；这里按技能池重写一份更严格的判据。
+	var out: Array[Vector2i] = []
+	if card.id == ENERGY_CANNON_ID:
+		# 聚能炮击 9145：任意**敌方**单位
+		for c in _side_cells(SIDE_OPPONENT):
+			if state.unit_at(c) != null:
+				out.append(c)
+		return out
+	for c2 in _side_cells(SIDE_SELF):
+		var u: Placement = state.unit_at(c2)
+		if u == null or u.owner != SIDE_SELF:
+			continue
+		var ally_like := u.card.kind == "盟友" or u.card.is_fort()
+		match card.id:
+			SELF_REPAIR_ID, ARMOR_PLATE_ID, SHARED_SHIELD_ID:
+				# 8035 / 8044 / 8069：只吃**盟友**（工事不行）
+				if u.card.kind != "盟友":
+					continue
+				if card.id == SHARED_SHIELD_ID and u.card.has_affix(AFFIX_SHARED_SHIELD):
+					continue
+				out.append(c2)
+			UPGRADE_ID, DEMOLISH_ID, TRANSCEND_ID, REORG_ID, REBOOT_ID:
+				if ally_like:
+					out.append(c2)
+			_:
+				pass
+	return out
 
 
 func _mass_daedalus_enter(p: Placement) -> void :
@@ -5344,7 +5553,7 @@ func _spell_card_gone(card: CardData, log_text := "") -> bool:
 	return false
 
 
-func use_spell(hand_index: int, target = null) -> String:
+func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 	# 选牌 pending 期间**不许再出别的牌** —— 否则玩家可以在选牌过程中把目标那张
 	# 顺手打掉，下标就失效了。界面本身会拦点击（选卡页是模态的），这里是给联机 /
 	# 回放路径兜底。（R209：`sys_upgrade_pending` 已删，手牌目标改由选卡页驱动。）
@@ -5399,7 +5608,9 @@ func use_spell(hand_index: int, target = null) -> String:
 				WHIRL_BLADE_NEED - state.self_card_plays, state.self_card_plays]
 	# 流星雨（9083）：X = 扣费前剩余的**全部能量**（_pay 会把它一次清零）→ 先抓再付。
 	_x_spell_value = maxi(0, state.energy_of(SIDE_SELF)) if card.x_cost else 0
-	_pay(card)
+	# R288：`free_cast` = 失控要塞 9161 凭空生成的技能卡（卡面写「释放」，不向玩家收费）。
+	if not free_cast:
+		_pay(card)
 	state.hand.remove_at(hand_index)
 	# 蓄力（9085）：先取走待用层数再结算 —— 蓄力是结算时才上层的，不会把自己翻倍
 	var times:= _charge_take(SIDE_SELF)
@@ -6152,7 +6363,8 @@ func cast_infiltrate(hand_index: int, ally_cell: Vector2i, dst: Vector2i) -> Str
 	return detail
 
 
-func cast_swap_units(hand_index: int, cell_a: Vector2i, cell_b: Vector2i) -> String:
+func cast_swap_units(hand_index: int, cell_a: Vector2i, cell_b: Vector2i,
+		free_cast := false) -> String:
 	## 「双向传送」（8061，R102，机械之心 0 费稀有）的两段施放入口：
 	## UI 先点单位甲、再点单位乙。
 	##
@@ -6185,7 +6397,8 @@ func cast_swap_units(hand_index: int, cell_a: Vector2i, cell_b: Vector2i) -> Str
 				else pb.card.card_name
 		_log("双向传送：%s 换过去会落到对方后排，交换没有生效" % sw_nm)
 		return "（%s 不能换到对方后排，交换没有生效）" % sw_nm
-	_pay(card)
+	if not free_cast:
+		_pay(card)
 	state.hand.remove_at(hand_index)
 	var detail := _swap_two_units(cell_a, cell_b)
 	_log("使用技能 %s → %s" % [card.card_name, detail])
@@ -6262,7 +6475,7 @@ func _swap_auto_cells(side: String) -> Array:
 	return []
 
 
-func cast_sys_upgrade(hand_index: int, target_hand_index: int) -> String:
+func cast_sys_upgrade(hand_index: int, target_hand_index: int, free_cast := false) -> String:
 	## 「系统升级」（8039，R90，机械之心 1 费稀有）的两段施放入口：
 	## UI 先点「系统升级」→ 再点**手牌里**一张盟友 / 工事。
 	##
@@ -6281,7 +6494,8 @@ func cast_sys_upgrade(hand_index: int, target_hand_index: int) -> String:
 			if target_hand_index >= 0 and target_hand_index < state.hand.size() else null
 	if tgt == null or (tgt.kind != "盟友" and not tgt.is_fort()):
 		return "（只能改造手牌里的盟友或工事）"
-	_pay(card)
+	if not free_cast:
+		_pay(card)
 	state.hand.remove_at(hand_index)   # 目标下标若在被移除项之后要顺移
 	if target_hand_index > hand_index:
 		target_hand_index -= 1
@@ -6293,7 +6507,7 @@ func cast_sys_upgrade(hand_index: int, target_hand_index: int) -> String:
 	return detail
 
 
-func cast_lighten(hand_index: int, target_hand_index: int) -> String:
+func cast_lighten(hand_index: int, target_hand_index: int, free_cast := false) -> String:
 	## 「轻量化」（8068，R269，机械之心 2 费普通）的两段施放入口：
 	## UI 先点「轻量化」→ 再点**手牌里**一张盟友。
 	##
@@ -6311,7 +6525,8 @@ func cast_lighten(hand_index: int, target_hand_index: int) -> String:
 			if target_hand_index >= 0 and target_hand_index < state.hand.size() else null
 	if tgt == null or tgt.kind != "盟友":
 		return "（只能改造手牌里的盟友）"
-	_pay(card)
+	if not free_cast:
+		_pay(card)
 	state.hand.remove_at(hand_index)   # 目标下标若在被移除项之后要顺移
 	if target_hand_index > hand_index:
 		target_hand_index -= 1
@@ -6323,7 +6538,7 @@ func cast_lighten(hand_index: int, target_hand_index: int) -> String:
 	return detail
 
 
-func cast_recycle(hand_index: int, target_hand_index: int) -> String:
+func cast_recycle(hand_index: int, target_hand_index: int, free_cast := false) -> String:
 	## 「回收」（8064，R198，机械之心 2 费史诗）的两段施放入口：
 	## UI 先点「回收」→ 再点**手牌里任意一张卡**（不限盟友/工事 —— 回收就是
 	## 把卡换成素体，技能/场地卡同样能回收；不能选自己）。
@@ -6348,7 +6563,8 @@ func cast_recycle(hand_index: int, target_hand_index: int) -> String:
 			if target_hand_index >= 0 and target_hand_index < state.hand.size() else null
 	if tgt == null:
 		return "（回收：目标手牌序号无效）"
-	_pay(card)
+	if not free_cast:
+		_pay(card)
 	state.hand.remove_at(hand_index)   # 目标下标若在被移除项之后要顺移
 	if target_hand_index > hand_index:
 		target_hand_index -= 1
@@ -6379,7 +6595,7 @@ func cast_recycle(hand_index: int, target_hand_index: int) -> String:
 	return "%s → 素体（%d 攻 / %d 血）" % [rc_old, body.power, body.health]
 
 
-func cast_reload(hand_index: int, target_hand_index: int) -> String:
+func cast_reload(hand_index: int, target_hand_index: int, free_cast := false) -> String:
 	## 「填充」（9146，R202，机械之心 0 费普通技能）的两段施放入口：
 	## UI 先点「填充」→ 再点**手牌里任意一张卡**，目标被原位替换为「聚能炮击」。
 	## 与「回收」（8064）同套路：费用在这里扣；目标不限种类；不能选自己。
@@ -6394,7 +6610,8 @@ func cast_reload(hand_index: int, target_hand_index: int) -> String:
 			if target_hand_index >= 0 and target_hand_index < state.hand.size() else null
 	if tgt == null:
 		return "（填充：目标手牌序号无效）"
-	_pay(card)
+	if not free_cast:
+		_pay(card)
 	state.hand.remove_at(hand_index)   # 目标下标若在被移除项之后要顺移
 	if target_hand_index > hand_index:
 		target_hand_index -= 1

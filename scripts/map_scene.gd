@@ -1347,7 +1347,7 @@ func _draw_relics() -> void:
 		if rel == null:
 			continue
 		var rect := _relic_rect(i)
-		var scol := rel.source_color()
+		var scol := rel.badge_color()
 		draw_rect(rect, Color(scol, 0.18), true)
 		draw_rect(rect, scol, false, 1.4)
 		var chip := Rect2(rect.position + Vector2(5, 5), Vector2(7, rect.size.y - 10))
@@ -1397,14 +1397,14 @@ func _relic_names_tail(from_i: int) -> String:
 
 
 func _draw_relic_tip(repo: RelicRepo, rel: RelicData, note: String) -> void:
-	var text := "「%s」（%s · %s）：%s%s" % [rel.relic_name, rel.source_label(),
-			rel.kind, rel.desc, ("  " + note) if note != "" else ""]
+	var text := "「%s」（%s）：%s%s" % [rel.relic_name, rel.tag_line(),
+			rel.desc, ("  " + note) if note != "" else ""]
 	var w := 480.0
 	var lines := CardFace.wrap_text(_font, text, w - 20.0, 13)
 	var tx: float = clampf(_mouse.x - w / 2, 8, size.x - w - 8)
 	var panel := Rect2(tx, 46, w, 12.0 + lines.size() * 18.0)
 	draw_rect(panel, Color(0.10, 0.11, 0.15, 0.95), true)
-	draw_rect(panel, rel.source_color(), false, 1.2)
+	draw_rect(panel, rel.badge_color(), false, 1.2)
 	for i in lines.size():
 		draw_string(_font, panel.position + Vector2(10, 22 + i * 18), lines[i],
 				HORIZONTAL_ALIGNMENT_LEFT, w - 20, UiTheme.FS_LABEL, Color("eee6c8"))
@@ -1422,8 +1422,8 @@ func _relic_panel_rows() -> Array:
 		if note != "":
 			body += "  （%s）" % note
 		var lines := _wrap_relic_text(body, RELIC_P_W - 90.0, RELIC_P_DESC)
-		rows.append(["「%s」（%s · %s）" % [rel.relic_name, rel.source_label(), rel.kind],
-				lines, rel.source_color(),
+		rows.append(["「%s」（%s）" % [rel.relic_name, rel.tag_line()],
+				lines, rel.badge_color(),
 				RELIC_P_ROWH + lines.size() * RELIC_P_LINE + 10.0])
 	return rows
 
