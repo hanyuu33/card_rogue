@@ -580,6 +580,22 @@ func _ready() -> void:
 		engine.state.hand.clear()
 		status_text = "跨屏轮流：先看发动者，再看受影者"
 		queue_redraw()
+	if "--r288knife" in args and engine != null:
+		# R288b 出图：弹跳飞刀（9160）—— 主刀 + 两跳合成**一条**演出。
+		# 期望：主刀格 (2,1) 两圈脉冲，两条光带分别射向 (0,1) 与 (1,2)，
+		# 三格各套一个落点环（一眼看出「一刀下去弹到谁」）。
+		# 出图：`battle.tscn -- --screenshot --level 0 --r288knife --shotframe 600`
+		_cue_demo = true
+		_grid_intro_t = -1.0            # 关掉开场巡场（它会抢镜头）
+		engine.ai_enabled = false
+		engine.state.board.clear()
+		var rk_repo := CardRepo.load_json()
+		for rk_c: Vector2i in [Vector2i(2, 1), Vector2i(0, 1), Vector2i(1, 2)]:
+			engine.state.place(CardData.from_dict(rk_repo.get_card(8003).to_dict()),
+					rk_c, GameEngine.SIDE_OPPONENT)
+		engine.state.hand.clear()
+		status_text = "弹跳飞刀：1 费 · 主刀 5 伤 + 两跳各 3 伤"
+		queue_redraw()
 	if "--r285swap" in args and engine != null:
 		# R285 出图：双向传送选中我方单位后，第二段候选**不能包含敌方后排**。
 		# 布景：(4,1) 我方、(0,1) 敌方（敌方后排 = HP 行）、(2,2) 敌方中场。
@@ -2450,6 +2466,12 @@ var _cue_pin := 0               # R288：出图时钉在第几个镜头段（跨
 
 func _demo_tick() -> void:
 	_demo_frame += 1
+	if _shot_pending and "--r288knife" in _demo_args \
+			and _demo_frame == _shot_frame - 12 and engine != null:
+		# 真走引擎结算：主刀 `_op_deal_damage` + 两跳 `_hit_unit`，
+		# 三条 fx_impact 会被界面合并成一条演出（光带才连得起来）。
+		var rk_card := CardRepo.load_json().get_card(9160)
+		engine._bounce_knife(GameEngine.SIDE_SELF, Vector2i(2, 1), rk_card)
 	if _shot_pending and "--r288span" in _demo_args \
 			and _demo_frame == _shot_frame - 12 and engine != null:
 		# 跨屏：发动者 (5,1) 与受影者 (0,1) 一起入队 → _begin_cue 自动切成两段
@@ -7671,6 +7693,19 @@ func _fx_claim(cell: Vector2i) -> void:
 	_fx_claimed[cell] = _now()
 
 
+func _fx_unqueue_hit(cell: Vector2i) -> void:
+	## 专属落点表现（meteor 这类）到了 → 撤掉**同一格**还排着的通用 `fx_hit`，
+	## 否则那一格会「紫色爆点 + -N」连演两遍。cue 的脉冲 / 光带**不撤**
+	## —— 那是「谁打谁」的因果连线，跟爆点是两件事。
+	for i in range(_delayed.size() - 1, -1, -1):
+		var ev: Dictionary = _delayed[i]
+		if str(ev.get("kind", "")) != "fx_hit":
+			continue
+		var d: Dictionary = ev.get("data", {})
+		if d.get("cell") == cell:
+			_delayed.remove_at(i)
+
+
 func _cam_to_scroll(target: float, ms: int) -> void:
 	_cam_from = _grid_scroll
 	_cam_to = clampf(target, _grid_scroll_min(), _grid_scroll_max())
@@ -9125,6 +9160,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"meteor":
 			# 流星雨（9083）：每一颗的落点（引擎给 cell）—— 紫色爆点 + 伤害飘字
 			var m_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			_fx_unqueue_hit(m_cell)   # R288b：本格已有专属落点爆点 → 撤掉通用那一次
 			var m_pos := _cell_center(m_cell) if m_cell.x >= 0 \
 					else Vector2(GRID_X + GRID_W / 2, GRID_Y - 36)
 			_bursts.append({"pos": m_pos, "sc": _grid_scroll, "start": n, "dur": 520,
