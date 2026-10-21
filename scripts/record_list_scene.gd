@@ -289,7 +289,7 @@ func _relic_entries(rec: Dictionary) -> Array:
 		var rel := repo.get_relic(int(v))
 		if rel == null:
 			continue
-		out.append({"name": rel.relic_name, "col": rel.source_color()})
+		out.append({"name": rel.relic_name, "col": rel.badge_color()})
 	return out
 
 

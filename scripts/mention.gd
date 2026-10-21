@@ -228,9 +228,9 @@ static func draw_tip(canvas: CanvasItem, font: Font, font_bold: Font,
 	var inner := RELIC_W - p * 2.0
 	canvas.draw_string(font_bold, frame.position + Vector2(p, p + 16.0),
 			rel.relic_name, HORIZONTAL_ALIGNMENT_LEFT, inner,
-			UiTheme.FS_SUBHEAD, rel.source_color())
+			UiTheme.FS_SUBHEAD, rel.badge_color())
 	canvas.draw_string(font, frame.position + Vector2(p, p + 34.0),
-			"%s · %s" % [rel.kind, rel.source_label()], HORIZONTAL_ALIGNMENT_LEFT,
+			rel.tag_line(), HORIZONTAL_ALIGNMENT_LEFT,
 			inner, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
 	var y := frame.position.y + p + 45.0
 	for t: String in CardFace.wrap_text(font, rel.desc, inner, UiTheme.FS_LABEL):
@@ -267,7 +267,7 @@ static func summary_lines(font: Font, ref: Dictionary, max_w: float, max_lines :
 		var r := relic_of(int(ref.get("id", -1)))
 		if r == null:
 			return out
-		body = "%s · %s；%s" % [r.kind, r.source_label(),
+		body = "%s；%s" % [r.tag_line(),
 				CardText.naturalize(r.desc).replace("\n", " ").strip_edges()]
 	var lines: Array[String] = CardFace.wrap_text(font, body, max_w, UiTheme.FS_CAPTION)
 	for i in lines.size():

@@ -251,8 +251,8 @@ func _row_block(e: Dictionary, max_lines: int) -> Dictionary:
 		lines = lines.slice(0, max_lines)
 		lines[max_lines - 1] = lines[max_lines - 1] + "…"
 	return {"name": rel.relic_name,
-			"tag": "%s · %s" % [rel.source_label(), rel.kind],
-			"lines": lines, "scol": rel.source_color(),
+			"tag": rel.tag_line(),
+			"lines": lines, "scol": rel.badge_color(),
 			"h": H_NAME + lines.size() * H_LINE + H_GAP}
 
 
@@ -374,7 +374,7 @@ func _on_panel_draw() -> void:
 		var e: Dictionary = list[i]
 		var rel: RelicData = e["relic"]
 		var y := grid_y + (i - skip) * ROW_H
-		var scol := rel.source_color()
+		var scol := rel.badge_color()
 		# 左侧来源色块（白描边在浅底上不醒目，用实心块 + 深描边，与战斗道具栏一致）
 		_panel.draw_rect(Rect2(px + PAD, y + 4, 10, ROW_H - 14), scol, true)
 		_panel.draw_rect(Rect2(px + PAD, y + 4, 10, ROW_H - 14), Color(0, 0, 0, 0.45), false, 1.0)
@@ -399,7 +399,7 @@ func _on_panel_draw() -> void:
 
 func _tag_of(e: Dictionary) -> String:
 	var rel: RelicData = e["relic"]
-	return "%s · %s" % [rel.source_label(), rel.kind]
+	return rel.tag_line()
 
 
 func _on_panel_input(event: InputEvent) -> void:

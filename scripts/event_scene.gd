@@ -964,7 +964,7 @@ func _on_main() -> void:
 			desc.text = "箱盖吱呀一声打开——里面躺着一件道具。\n「%s」已放进待领奖励，请在上面弹出的奖励悬浮窗里查看。" % rname
 			result_label.text = "开出道具「%s」（待领：见奖励悬浮窗）" % rname
 			result_label.add_theme_color_override("font_color",
-					rc.source_color() if rc != null else Color("d89a2e"))
+					rc.badge_color() if rc != null else Color("d89a2e"))
 			if _reward_panel != null:
 				_reward_panel.open()
 		_redraw()
@@ -992,7 +992,7 @@ func _on_main() -> void:
 				desc.text = "箱盖掀开——里面躺着一件道具！\n「%s」已放进待领奖励，请在上面的奖励悬浮窗里查看。" % rname
 				result_label.text = "开出道具「%s」（待领：见奖励悬浮窗）" % rname
 				result_label.add_theme_color_override("font_color",
-						rc.source_color() if rc != null else Color("d89a2e"))
+						rc.badge_color() if rc != null else Color("d89a2e"))
 				if _reward_panel != null:
 					_reward_panel.open()
 				_redraw()

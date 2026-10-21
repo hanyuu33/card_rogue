@@ -125,8 +125,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 243,
-			"图鉴 = 243 张（R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
+	check(repo.all_cards().size() == 244,
+			"图鉴 = 244 张（R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -139,7 +139,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 190 and grp_enemy.size() == 53,
+	check(grp_player.size() == 191 and grp_enemy.size() == 53,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 184 / 53；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -169,7 +169,7 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 167,
+	check(pool.size() == 168,
 			"奖励池 167 张（R275 重组降为普通后进池；R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；**R282 改装者 8076（普通，进池）**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
@@ -3570,6 +3570,48 @@ func _init() -> void:
 			"事件道具池：6010 只在事件池（不进初始/奖励池）")
 	check(srepo.get_relic(6010).kind != "" and srepo.get_relic(6010).source_label() == "事件道具",
 			"道具来源标签：source_label() = 事件道具")
+
+	# ---- R289 奖励道具二级分档：一般 / 传奇（现有 11 件全为一般）----
+	var r289_repo := RelicRepo.load_json()
+	var r289_all := r289_repo.reward_ids()
+	check(r289_all.size() == 11 and r289_repo.normal_reward_ids().size() == 11,
+			"奖励分档：奖励池 11 件全在「一般」档（实际 %d / %d）"
+			% [r289_all.size(), r289_repo.normal_reward_ids().size()])
+	check(r289_repo.legendary_reward_ids().is_empty(),
+			"奖励分档：传奇池目前为空（%d 件）" % r289_repo.legendary_reward_ids().size())
+	var r289_tier_ok := true
+	for r289_id in r289_all:
+		var r289_rel := r289_repo.get_relic(int(r289_id))
+		if r289_rel == null or r289_rel.tier != RelicData.TIER_NORMAL:
+			r289_tier_ok = false
+	check(r289_tier_ok, "奖励分档：11 件的 tier 字段都是「一般」")
+	check(RelicData.RELIC_TIERS.size() == 2
+			and RelicData.RELIC_TIERS.has(RelicData.TIER_NORMAL)
+			and RelicData.RELIC_TIERS.has(RelicData.TIER_LEGENDARY),
+			"奖励分档：档位枚举只有 一般 / 传奇 两个值")
+	check(RelicData.normalize_tier("传奇") == "传奇"
+			and RelicData.normalize_tier("传说") == "一般"
+			and RelicData.normalize_tier("") == "一般",
+			"奖励分档：非法档位回落「一般」")
+	var r289_rng := RandomNumberGenerator.new()
+	r289_rng.seed = 20261021
+	check(r289_repo.roll_reward(r289_rng, "传奇") == -1,
+			"奖励分档：传奇池空时按档抽取返回 -1（不崩）")
+	check(r289_repo.reward_ids("上古").is_empty(),
+			"奖励分档：未知档位当空池处理")
+	check(r289_repo.get_relic(6005).tag_line() == "奖励道具 · 战斗 · 一般"
+			and r289_repo.get_relic(6005).tier_label() == "一般道具",
+			"奖励分档：6005 鸭蹼标签 = 奖励道具 · 战斗 · 一般")
+	check(r289_repo.get_relic(6001).tag_line() == "初始道具 · 即时",
+			"奖励分档：非奖励道具不带档位后缀（6001 = 初始道具 · 即时）")
+	check(r289_repo.get_relic(6005).badge_color() == r289_repo.get_relic(6005).source_color()
+			and not r289_repo.get_relic(6005).is_legendary(),
+			"奖励分档：一般道具徽章色沿用来源色（传奇才换橙金）")
+	var r289_scope_ok := true
+	for r289_rel2: RelicData in r289_repo.all_relics():
+		if r289_rel2.tier != RelicData.TIER_NORMAL and r289_rel2.source != RelicData.SRC_REWARD:
+			r289_scope_ok = false
+	check(r289_scope_ok, "奖励分档：非奖励道具不允许标成非一般档")
 
 	# ---- 道具「鸭梨」（6019）：鸭梨山大事件道具（第二层事件）----
 	check(srepo.get_relic(6019) != null and srepo.get_relic(6019).relic_name == "鸭梨",
@@ -7155,7 +7197,7 @@ func _init() -> void:
 	check(eng_egg.state.discard.size() == egg_discard,
 			"鸭蛋：被击破不进弃牌区（战斗内召唤物，不会污染牌库）")
 
-	# ---- 鸭语耳环（6015）：每回合 +1 能量；第 1 回合不抽牌改自动出牌 ----
+	# ---- 鸭语耳环（6015）：每回合 +1 能量；第 1 回合正常抽牌后自动出牌 ----
 	var ear_deck: Array[CardData] = []
 	for i in 10:
 		ear_deck.append(_card(8001, "木栅栏", "工事", 2, 0, 6))
@@ -7163,25 +7205,39 @@ func _init() -> void:
 	eng_ear.self_relics = [6015]
 	eng_ear.start_game()
 	check(eng_ear.state.board.size() == 3,
-			"鸭语耳环：第 1 回合不抽牌 → 自动出牌（6 费打出 3 张 2 费工事，实际 %d）"
-			% eng_ear.state.board.size())
-	check(eng_ear.state.energy == 0 and eng_ear.state.hand.size() == 1,
-			"鸭语耳环：能量不足即停止（付不起的第 4 张留在手里 = 1 张）")
+			"鸭语耳环：第 1 回合正常抽牌后自动出牌（6 费打出 3 张 2 费工事，实际 %d）"
+		% eng_ear.state.board.size())
+	check(eng_ear.state.energy == 0 and eng_ear.state.hand.size() == 2,
+			"鸭语耳环：能量不足即停止（抽 5 张打 3 张，剩 2 张在手里）")
 	# 每回合 +1 能量：第 2 回合 = 5（回合结束重置）+ 1（耳环）
 	eng_ear.end_turn()
 	eng_ear.end_turn()
 	check(eng_ear.state.energy == FieldState.ENERGY_PER_TURN + 1,
 			"鸭语耳环：每回合获得的能量 +1（第 2 回合 5+1 = %d）" % eng_ear.state.energy)
-	# 上限 20 张（防死循环）：30 张 0 费效果卡只打出 20 张
+	# 自动出牌只打当前手牌，不打牌库：10 张 0 费效果卡只打出抽到的 5 张
 	var ear_free: Array[CardData] = []
-	for i in 30:
+	for i in 10:
 		ear_free.append(_card(8001, "测试效果", "效果", 0, 0, 0))
 	var eng_ear2 := _new_engine(ear_free, 20, 20, -1, false)
 	eng_ear2.self_relics = [6015]
 	eng_ear2.start_game()
-	check(eng_ear2.state.effects.size() == GameEngine.EARRING_AUTOPLAY_MAX,
-			"鸭语耳环：自动出牌上限 %d 张（防死循环，实际 %d）"
-			% [GameEngine.EARRING_AUTOPLAY_MAX, eng_ear2.state.effects.size()])
+	check(eng_ear2.state.effects.size() == FieldState.HAND_DRAW_PER_TURN,
+			"鸭语耳环：自动出牌只打手牌内的牌（抽到 %d 张，实际打出 %d 张）"
+		% [FieldState.HAND_DRAW_PER_TURN, eng_ear2.state.effects.size()])
+	# 多轮扫描：第一轮没有合法目标的升级，在 0 费盟友上场后第二轮能打出去
+	var ear_pass: Array[CardData] = []
+	ear_pass.append(CardData.from_dict(repo.get_card(8027).to_dict()))   # 升级（2 费，目标 unit）
+	ear_pass.append(_card(8003, "树人", "盟友", 0, 1, 1))
+	var eng_ear4 := _new_engine(ear_pass, 20, 20, -1, false)
+	eng_ear4.self_relics = [6015]
+	eng_ear4.start_game()
+	check(eng_ear4.state.board.size() == 1,
+			"鸭语耳环：多轮扫描——0 费盟友先上场（实际 %d）" % eng_ear4.state.board.size())
+	var ear_up_found := false
+	for ear_p: Placement in eng_ear4.state.board.values():
+		if eng_ear4._is_upgraded(ear_p):
+			ear_up_found = true
+	check(ear_up_found, "鸭语耳环：多轮扫描——第二轮升级命中刚上场的盟友")
 	# 牌库抽空即结束
 	var ear_few: Array[CardData] = []
 	for i in 4:
@@ -7500,10 +7556,10 @@ func _init() -> void:
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 68
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 61
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 51
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 52
 			and int(dr_cls_count.get("敌人", 0)) == 53
 			and int(dr_cls_count.get("", 0)) == 10,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 68 / 61 / 51 / 53；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 68 / 61 / 52 / 53；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -7806,7 +7862,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 167, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，R282 改装者 8076（普通，进池）+1 = 167，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 168, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，R282 改装者 8076（普通，进池）+1 = 167，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -13820,9 +13876,8 @@ func _init() -> void:
 		GameEngine.SIDE_SELF)                       # 待改造
 	r97_e5._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)   # (4,1) 被改造
 	var r97_tg: Array[Vector2i] = r97_e5._autoplay_spell_targets(r97_def)
-	check(r97_tg.size() == 1 and r97_tg[0] == Vector2i(4, 1),
-		"R97 拆解自动出牌：优先选**被改造**的己方单位 (4,1)，而非未改造的 (4,0)（实际 %s）"
-			% str(r97_tg))
+	check(r97_tg.has(Vector2i(4, 1)),
+		"R97 拆解自动出牌：被改造的己方单位 (4,1) 是合法目标（实际 %s）" % str(r97_tg))
 
 	# ══════════════════════════════════════════════════════════════
 	# R98 测试：新字段「超负荷」（旧式机兵 8050）—— 死亡延迟到己方回合结束
@@ -19714,8 +19769,8 @@ func _init() -> void:
 			Vector2i(4, 0), GameEngine.SIDE_SELF)
 	var r269_a1_ss := CardData.from_dict(r269_ss.to_dict())
 	var r269_a1_targets := r269_a1._autoplay_spell_targets(r269_a1_ss)
-	check(r269_a1_targets.size() == 1 and r269_a1_targets[0] == Vector2i(4, 0),
-			"R269 共享护盾：自动出牌挑中己方盟友那一格（不会选到敌方 / 空格）")
+	check(r269_a1_targets.has(Vector2i(4, 0)),
+			"R269 共享护盾：己方盟友 (4,0) 是合法目标（不会选到敌方 / 空格，实际 %s）" % str(r269_a1_targets))
 
 	# ---- ⑥ UI 可选目标：敌方 / 工事 / 已挂字段的单位不许列进来（R287 修复）----
 	# 8069 原先漏了 `_spell_target_cells()` 的分支 → 落进 else = 敌我全列，敌方格子
@@ -20963,6 +21018,91 @@ func _init() -> void:
 	var r285_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 	check(r285_src.find("dst.x == forbidden_row_for") < 0,
 			"R285 源码锁：落点判定已全部改走 unit_slot_allowed（不再散装比 dst.x）")
+
+	# ---- R288 失控要塞（9161）：本次对战中每用过一张「聚能炮击」→ 随机释放一张职业技能卡 ----
+	# ① 一张炮击都没用过 → 白板（0/1 的脆皮，不给任何效果）
+	var r288_deck: Array[CardData] = []
+	for i in 10:
+		r288_deck.append(CardData.from_dict(repo.get_card(9161).to_dict()))
+	var r288_e0 := _new_engine(r288_deck, 20, 20, -1, false)
+	r288_e0.start_game()
+	r288_e0.state.energy = 20
+	r288_e0.state.hand.append(_card(8003, "树人", "盟友", 0, 1, 1))
+	var r288_def: CardData = repo.get_card(9161)
+	check(r288_def.kind == "工事" and r288_def.rarity == 2 and r288_def.cost == 2
+			and r288_def.power == 0 and r288_def.health == 1 and r288_def.move_speed == 0
+			and r288_def.card_class == "机械之心",
+			"R288 失控要塞：机械之心史诗工事 —— 2 费 0 攻 / 1 血 / 不可移动")
+	check(r288_e0.play_from_hand(0, Vector2i(5, 0)) != null,
+			"R288 失控要塞：史诗工事能正常上场（落点限自己半场）")
+	check(r288_e0.fort_casts.is_empty(),
+			"R288 失控要塞：本次对战没用过聚能炮击 → 不释放技能（实际 %d 张）"
+			% r288_e0.fort_casts.size())
+
+	# ② 3 张炮击 + 能量只够要塞自己：随机释放**不额外收费**（否则一张都放不出来）
+	var r288_e1 := _new_engine(r288_deck, 20, 20, -1, false)
+	r288_e1.start_game()
+	r288_e1.state.self_cannon_plays = 3
+	r288_e1.state.hand.append(_card(8003, "树人", "盟友", 0, 1, 1))
+	r288_e1.state.hand.append(_card(8003, "树人", "盟友", 0, 1, 1))
+	r288_e1.state.discard.append(_card(8003, "树人", "盟友", 0, 1, 1))
+	r288_e1.state.energy = 2   # 刚好等于要塞自己的费用
+	check(r288_e1.play_from_hand(0, Vector2i(5, 0)) != null,
+			"R288 失控要塞：用过 3 张炮击时正常上场")
+	check(r288_e1.fort_casts.size() >= 1 and r288_e1.fort_casts.size() <= 3,
+			"R288 失控要塞：3 张炮击 → 随机释放 1~3 张技能（实际 %d 张：%s）"
+			% [r288_e1.fort_casts.size(), str(r288_e1.fort_casts)])
+	# ⚠️ 不能断言 == 0：随机池里的「拆解」自带回费（DEMOLISH_REFUND）、
+	#    「超越极限」也会给资源 —— 抽到它们时能量会比 0 高，这是技能自身效果，
+	#    不是要塞多收了费。判据只能取「绝不为负 + 技能不额外扣钱」。
+	check(r288_e1.state.energy >= 0,
+			"R288 失控要塞：只付自己的 2 费，随机释放的技能不额外收费（余 %d，拆解等自带回费时更高）"
+			% r288_e1.state.energy)
+	# 铁证：能量被要塞付到 0 之后仍能继续凭空释放技能 —— 若技能要付费，
+	# energy=2 时第一张就因为付不起而放不出来，fort_casts 会是空的。
+	check(not r288_e1.fort_casts.is_empty() and r288_e1.state.energy >= 0,
+			"R288 失控要塞：0 能量状态下仍能凭空释放技能（免费机制生效）")
+
+	# ③ 目标在**手牌里**的技能（系统升级 8039）也能凭空释放：临时卡插进手牌末尾再走原入口
+	var r288_e2 := _new_engine([], 20, 20, -1, false)
+	r288_e2.start_game()
+	r288_e2.state.board.clear()
+	r288_e2.state.place(CardData.from_dict(_card(8003, "树人", "盟友", 0, 1, 1).to_dict()),
+			Vector2i(4, 0), GameEngine.SIDE_SELF)
+	r288_e2.state.hand.clear()
+	r288_e2.state.hand.append(_card(8003, "树人", "盟友", 0, 1, 1))
+	var r288_su: CardData = CardData.from_dict(repo.get_card(GameEngine.SYS_UPGRADE_ID).to_dict())
+	var r288_before: int = r288_e2.state.self_card_plays
+	check(r288_e2._fort_play(r288_su),
+			"R288 失控要塞：需要**选手牌**的技能（系统升级 8039）能凭空释放")
+	check(r288_e2.state.self_card_plays == r288_before + 1,
+			"R288 失控要塞：凭空释放算一次出牌")
+	check(r288_e2.state.hand.size() == 1 and r288_e2.state.hand[0].kind == "盟友",
+			"R288 失控要塞：临时生成的那张卡不残留在手牌（手牌 %d 张）"
+			% r288_e2.state.hand.size())
+
+	# ④ 目标在**弃牌区**的技能（返修 9127）也能凭空释放，且选牌 pending 就地收掉
+	var r288_e3 := _new_engine([], 20, 20, -1, false)
+	r288_e3.start_game()
+	r288_e3.state.hand.clear()
+	r288_e3.state.discard.append(_card(8003, "树人", "盟友", 0, 1, 1))
+	var r288_oh: CardData = CardData.from_dict(repo.get_card(GameEngine.OVERHAUL_ID).to_dict())
+	check(r288_e3._fort_play(r288_oh),
+			"R288 失控要塞：需要从**弃牌区**选的技能（返修 9127）能凭空释放")
+	check(r288_e3.state.hand.size() == 1,
+			"R288 失控要塞：返修把弃牌区那张取回手牌（手牌 %d 张）" % r288_e3.state.hand.size())
+	check(not r288_e3.overhaul_pending,
+			"R288 失控要塞：返修的选牌 pending 已就地收掉（不留交互给玩家）")
+
+	# ⑤ 随机池 = 本职业技能卡（不写死 id）：机械之心技能 21 张，且不含初始 / 史诗以外越界卡
+	var r288_pool := r288_e0._fort_skill_pool()
+	var r288_pool_bad := 0
+	for r288_pc: CardData in r288_pool:
+		if r288_pc.card_class != PlayerClass.MECH or r288_pc.kind != "技能" or r288_pc.rarity > 2:
+			r288_pool_bad += 1
+	check(r288_pool_bad == 0 and r288_pool.size() >= 15,
+			"R288 失控要塞：随机池只装本职业技能卡（%d 张，越界 %d）"
+			% [r288_pool.size(), r288_pool_bad])
 
 	# ================= R288：通用效果演出（隐形伤害看得见）=================
 	# 现象：远古虚骨龙这类「被动 / 回合开始」效果只 `_log()` 一句就结算完了，

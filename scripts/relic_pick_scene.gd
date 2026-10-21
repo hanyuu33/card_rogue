@@ -82,12 +82,12 @@ func _draw() -> void:
 			draw_rect(rect.grow(10.0), Color(1, 1, 1, 0.10), true)
 		# 面板：深色底 + 来源色边框（初始白/奖励黄/事件紫）
 		draw_rect(rect, UiTheme.PANEL_DARK, true)   # R154：暗底锚点
-		draw_rect(rect, rel.source_color(), false, 2.5)
+		draw_rect(rect, rel.badge_color(), false, 2.5)
 		# 顶部来源色带 + 类别名
 		var band := Rect2(rect.position, Vector2(rect.size.x, 34))
-		draw_rect(band, Color(rel.source_color(), 0.30), true)
+		draw_rect(band, Color(rel.badge_color(), 0.30), true)
 		draw_string(_font_bold, band.position + Vector2(0, 23), "道具 · %s" % rel.kind,
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_BODY, rel.source_color())
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_BODY, rel.badge_color())
 		# 名称
 		draw_string(_font_bold, rect.position + Vector2(0, 78), rel.relic_name,
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_HEADING, Color("f2ead0"))

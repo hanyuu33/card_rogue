@@ -42,11 +42,39 @@ func initial_ids() -> Array[int]:
 	return [6001, 6002, 6004, 6021, 6030, 6031, 6032]
 
 
-func reward_ids() -> Array[int]:
+func reward_ids(tier: String = "") -> Array[int]:
 	## 奖励道具池（精英 / Boss 掉落、大宝箱开箱等途径；不进起点三选一）。
 	## R224：新增苹果 6027（+14 最大生命并回满）/ 牛奶 6028（随机两种附魔）。
 	## R244：**苹果 6027 移出奖励池** → 改为第二层事件「苹果与医生」专属的道具。
-	return [6005, 6006, 6007, 6008, 6009, 6013, 6020, 6024, 6026, 6028, 6029]
+	## R289：加 `tier` 形参做二级分档 —— "" = 全池（旧行为不变）；
+	##       "一般" / "传奇" = 只返回该档的 id。
+	return _filter_by_tier([6005, 6006, 6007, 6008, 6009, 6013, 6020, 6024,
+			6026, 6028, 6029], tier)
+
+
+func normal_reward_ids() -> Array[int]:
+	## 奖励池里的「一般道具」（R289：目前全部 11 件都在这一档）。
+	return reward_ids(RelicData.TIER_NORMAL)
+
+
+func legendary_reward_ids() -> Array[int]:
+	## 奖励池里的「传奇道具」（R289：目前是空池 —— 调用方必须能忍住空）。
+	return reward_ids(RelicData.TIER_LEGENDARY)
+
+
+func _filter_by_tier(ids: Array[int], tier: String) -> Array[int]:
+	## 按分档筛 id：空串 = 原样返回；未知档位 = 空池 + 警告（不猜、不回落）。
+	if tier == "":
+		return ids
+	if not RelicData.RELIC_TIERS.has(tier):
+		push_warning("RelicRepo：未知道具分档「%s」，按空池处理" % tier)
+		return []
+	var out: Array[int] = []
+	for id: int in ids:
+		var r: RelicData = get_relic(id)
+		if r != null and r.tier == tier:
+			out.append(id)
+	return out
 
 
 func event_ids() -> Array[int]:
@@ -77,9 +105,10 @@ func class_ids() -> Array[int]:
 	return [6022, 6023, 6025]
 
 
-func roll_reward(rng: RandomNumberGenerator) -> int:
+func roll_reward(rng: RandomNumberGenerator, tier: String = "") -> int:
 	## 从奖励池随机抽一个道具 id（奖励界面上架/掉落用）。
-	var pool := reward_ids()
+	## R289：`tier` 传 "一般" / "传奇" 可只在该档里抽；空串 = 全池（旧行为）。
+	var pool := reward_ids(tier)
 	if pool.is_empty():
 		return -1
 	return pool[rng.randi() % pool.size()]
