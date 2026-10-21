@@ -16,6 +16,7 @@ const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiRoll = preload("res://scripts/ui_roll.gd")
 const UiPop = preload("res://scripts/ui_pop.gd")
+const CardInfoBoxes = preload("res://scripts/card_info_boxes.gd")
 
 const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
@@ -1157,6 +1158,54 @@ func _ready() -> void:
 		status_text = "R118：① 战场卡面不再标「交换」（手牌上仍写）"
 		status_text += "② 误点空位只上膛 —— 琥珀「取消?」= 再点一次才取消"
 		_shot_t0 = _now()
+		queue_redraw()
+	if "--r297hand" in args and engine != null:
+		# R297 演示②：**手牌技能卡**（没有力量 / 生命框）—— 效果框 + 字段框 + 附魔框。
+		# 出图：`battle.tscn -- --screenshot --level 0 --r297hand --shotframe 600`
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		var rh_card: CardData = null
+		for rh_c: CardData in repo.all_cards():
+			if rh_c.kind == "技能" and rh_c.group == "player" \
+					and rh_c.effect_text.length() > 28:
+				rh_card = CardData.from_dict(rh_c.to_dict())
+				break
+		if rh_card != null:
+			rh_card.add_affix("次元")
+			rh_card.enchant = "damage"
+			engine.state.hand.append(rh_card)
+			_demo_hover_idx = engine.state.hand.size() - 1
+			_hover_pl = null
+			selection = null
+		status_text = "R297：手牌技能卡 —— 只有效果框 / 字段框 / 附魔框（没有数值框）"
+		queue_redraw()
+	if "--r297boxes" in args and engine != null:
+		# R297 演示：左栏「框体流」验收 —— 一个单位同时带「字段 ×3 / buff ×5 / 附魔 ×1」，
+		# 效果文案也够长（效果框因此比别人高，正好验「框高随文字量变」）。
+		# 出图：`battle.tscn -- --screenshot --level 0 --r297boxes --shotframe 600`
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		var rb_card: CardData = CardData.from_dict(repo.get_card(8056).to_dict())
+		rb_card.add_affix("嘲讽")
+		rb_card.add_affix("疾行")
+		rb_card.enchant = "save"      # 附魔选「保存」：不改数值，出图不会自相矛盾
+		rb_card.add_affix("保存")      # 附魔本身就会赋这个字段
+		var rb_u: Placement = engine.state.place(rb_card, Vector2i(4, 1), GameEngine.SIDE_SELF)
+		if rb_u != null:
+			rb_u.upgrade_stacks = 2
+			rb_u.upgrade_atk = 2
+			rb_u.upgrade_hp = 5
+			rb_u.atk_buff = 2
+			rb_u.armor = 3
+			rb_u.first_hit_shield = true
+			rb_u.moved = true
+			rb_u.tapped = false
+		_hover_card = null
+		_hover_hand = -1
+		_hover_pl = null
+		selection = ["board", Vector2i(4, 1)]
+		status_text = "R297：左栏框体流（数值两框 / 效果自适应框 / 字段框 / buff 框）"
 		queue_redraw()
 	if "--r120" in args and engine != null:
 		# 演示（R120）—— 侦察塔 8032 的**光环易伤**：
@@ -10960,6 +11009,90 @@ func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
 				cc + Vector2(0, kw * 1.06), COL_BONUS, Color(0.14, 0.11, 0.03, 0.86))
 
 
+static func _info_blocks(card: CardData, pl: Placement) -> Array:
+	## 左栏框体流的**唯一组装口**（R297）。顺序就是用户口径：
+	##   数值两框 → 「效果」小标题 + 效果文本框 → 字段解释框（每个字段一个）
+	##   → buff 框（每种一个；**附魔也算 buff**，排在最前面 —— 花钱买的，最该被看见）。
+	## ⚠️ 字段 / buff 的**文案与图标一律从数据层读**（`CardData.AFFIX_DEFS` /
+	##    `ENCHANT_DEFS` / `Placement.status_entries()`）：这里不许为某张卡写特例，
+	##    否则新卡加进来又得回来补一段。
+	## ⚠️ 数值不拆行：「力量 + 生命」一个框、「攻击距离 + 移动速度」一个框（图标 + 数字）。
+	var out: Array = []
+	# ① 数值框（只有场上单位 / 工事才有值意义）
+	if card.kind == "盟友" or card.kind == "工事":
+		var hp_now: int = pl.health if pl != null else card.health
+		var hp_txt: String = "%d/%d" % [hp_now, card.health] if pl != null else str(card.health)
+		var pw_now: int = pl.effective_power() if pl != null else card.power
+		var pw_txt: String = str(pw_now)
+		if pl != null and pw_now != card.power:
+			pw_txt = "%d（原 %d）" % [pw_now, card.power]
+		out.append({
+			"type": "stats", "kind": "stats", "col": Color("6b6155"),
+			"items": [
+				{"icon": UiAssets.badge_icon("power"), "text": pw_txt, "col": UiTheme.STAT_POWER},
+				{"icon": UiAssets.badge_icon("health"), "text": hp_txt,
+						"col": UiTheme.STAT_HEALTH},
+			],
+		})
+		# ⚠️ 移速 / 射程一律走 `effective_*()`：夜鸭的奇数回合 -1、暗影领主、动员的
+		# 场上修正都要看得见（旧注释里那条「栏里写速 2、实际只走得动 1 格」的教训）。
+		var rng_shown: int = pl.effective_range() if pl != null else card.attack_range
+		var spd_shown: int = pl.effective_speed() if pl != null else card.move_speed
+		# 场上修正（夜鸭 / 暗影领主 / 动员）改了数值时标出原值 —— 否则玩家会以为卡面写错了
+		var rng_txt: String = str(rng_shown)
+		if pl != null and rng_shown != card.attack_range:
+			rng_txt = "%d（原 %d）" % [rng_shown, card.attack_range]
+		var spd_txt: String = str(spd_shown)
+		if pl != null and spd_shown != card.move_speed:
+			spd_txt = "%d（原 %d）" % [spd_shown, card.move_speed]
+		var mv_items: Array = [
+			{"icon": UiAssets.badge_icon("range"), "text": rng_txt,
+					"col": UiTheme.INK_600},
+		]
+		if card.kind == "盟友":
+			mv_items.append({"icon": UiAssets.badge_icon("speed"), "text": spd_txt,
+					"col": UiTheme.INK_600})
+		out.append({"type": "stats", "kind": "stats", "col": Color("6b6155"), "items": mv_items})
+	# ② 效果正文：单独一个框，**高度随文字量**（`CardInfoBoxes.box_h` 折行数出来）
+	out.append({"type": "caption", "kind": "caption", "title": "效果", "col": Color("2a5a8a")})
+	out.append({"type": "text", "kind": "text", "col": Color("2a5a8a"),
+			"segs": CardText.parse(card.effect_text)})
+	# ③ 字段解释框：每个字段一个，框内「图标 名字：解释」
+	for a: String in card.affixes:
+		var ac := CardData.affix_colors(a)
+		var col: Color = (ac[1] as Color).darkened(0.30)   # 亮色压暗，浅底上才读得清
+		out.append({
+			"type": "line", "kind": "affix",
+			"glyph": CardData.affix_glyph(a),
+			"col": col,
+			"title": CardData.affix_label(a),
+			"segs": [{"text": CardData.affix_label(a), "bold": true},
+					{"text": "：" + CardData.affix_desc(a)}],
+		})
+	# ④ buff 框：每种一个（附魔按用户口径也算 buff）
+	if card.has_enchant():
+		out.append({
+			"type": "line", "kind": "enchant",
+			"icon": UiAssets.enchant_icon(card.enchant),
+			"col": CardData.enchant_color(card.enchant).darkened(0.12),
+			"title": CardData.enchant_name(card.enchant),
+			"segs": [{"text": "附魔 · " + CardData.enchant_name(card.enchant), "bold": true},
+					{"text": "：" + CardData.enchant_desc(card.enchant)}],
+		})
+	if pl != null:
+		for e: Dictionary in pl.status_entries():
+			var k := str(e.get("kind", "buff"))
+			out.append({
+				"type": "line", "kind": "buff",
+				"glyph": "up" if k == "buff" else ("down" if k == "debuff" else "dot"),
+				"col": e.get("col", UiTheme.INK_600),
+				"title": str(e.get("label", "")),
+				"segs": [{"text": str(e.get("label", ""))}],
+			})
+	return out
+
+
+
 func _draw_info_panel() -> void:
 	## 左侧信息栏（悬停优先，其次选中的卡）：卡的**详细效果**。
 	## 手牌卡底沉出窗口后，「程 / 速」这类小字只能在这里看全，所以这栏要写满：
@@ -11025,86 +11158,23 @@ func _draw_info_panel() -> void:
 			_draw_string_nw(_font, UiTheme.FS_MICRO, str(now.get("note", "")),
 					Vector2(left + 6.0, y), Color("8a5a2a"))
 			y += 19.0
-	# 数值：与卡面同配色（力量金黄 / 生命红）；战场上的单位显示当前/上限
-	if card.kind == "盟友" or card.kind == "工事":
-		var hp_now: int = pl.health if pl != null else card.health
-		var hp_txt: String = "%d/%d" % [hp_now, card.health] if pl != null else str(card.health)
-		var pw_now: int = pl.effective_power() if pl != null else card.power
-		var pw_txt: String = str(pw_now)
-		if pl != null and pw_now != card.power:
-			pw_txt = "%d（原 %d）" % [pw_now, card.power]
-		_draw_string_nw(_font_bold, UiTheme.FS_MICRO, "力量 %s" % pw_txt, Vector2(left, y),
-				UiTheme.STAT_POWER)
-		_draw_string_nw(_font_bold, UiTheme.FS_MICRO, "生命 %s" % hp_txt, Vector2(left + inner_w / 2, y),
-				UiTheme.STAT_HEALTH)
-		y += 17.0
-		var rng_shown := pl.effective_range() if pl != null else card.attack_range
-		# ⚠️ 移速也走 `effective_speed()`，别再读 `card.move_speed` ——
-		# 那样夜鸭（R270 奇数回合 -1）/ 暗影领主 / 动员的场上修正全看不见，
-		# 会出现「栏里写速 2，实际只走得动 1 格」的自相矛盾。
-		var spd_shown := pl.effective_speed() if pl != null else card.move_speed
-		var mv: String = "射程 %d   移速 %d" % [rng_shown, spd_shown] \
-				if card.kind == "盟友" else "射程 %d" % rng_shown
-		_draw_string_nw(_font, UiTheme.FS_MICRO, mv, Vector2(left, y), UiTheme.INK_600)
-		y += 17.0
-	if card.actions > 1:
-		_draw_string_nw(_font, UiTheme.FS_MICRO, "每回合可行动 %d 次" % card.actions, Vector2(left, y),
-				UiTheme.INK_600)
-		y += 17.0
 	if not card.traits.is_empty():
 		var tt := ""
 		for t in card.traits:
 			tt += (" · " if tt != "" else "") + str(t)
 		_draw_string_nw(_font, UiTheme.FS_MICRO, "词条：" + tt, Vector2(left, y), Color("886000"))
 		y += 17.0
-	# R214：**附魔**（商店附魔）—— 附魔的数值早已烤进 cost/power/health，卡面上只看得出
-	# 「这张卡数值比原卡高」，看不出是附魔来的。左栏补一行来源，与卡面费用正下方的
-	# 附魔标记同色（`CardData.enchant_color`），悬停时一目了然。
-	# 空态不画（免得每张卡都顶着一行「附魔：无」）。
-	if card.has_enchant():
-		_draw_string_nw(_font_bold, UiTheme.FS_MICRO,
-				"附魔：" + CardData.enchant_name(card.enchant), Vector2(left, y),
-				CardData.enchant_color(card.enchant))
-		y += 17.0
-	# R211：**字段**（affix）与上面的「词条」（traits）是两回事 —— 卡面那行「技能 · 次元」的
-	# 后半截就是它（`CardData.affix_line()`）。以前左栏只列 traits，于是次元 / 疾行 / 幻影 /
-	# 超负荷这些字段在战斗里**根本看不到**（R195 起手牌卡面只剩卡名，小卡面又画不下种类行）。
-	# 空态不画（免得每张卡都顶着一行「字段：无」）。
-	if not card.affixes.is_empty():
-		var at := ""
-		for a in card.affixes:
-			at += (" · " if at != "" else "") + CardData.affix_label(str(a))
-		_draw_string_nw(_font_bold, UiTheme.FS_MICRO, "字段：" + at, Vector2(left, y),
-				Color("6b3fa0"))
-		y += 17.0
-	# 【R106】状态：这张战场单位**此刻已获得**的增益 / 减益，逐条一行。
-	# 空态不画（免得每张卡都顶着一行「状态：无」占地方）。放在「效果」之前 ——
-	# 状态是本回合临时、最该被看见的信息，压在长文案后面会被省略号吃掉。
-	if pl != null:
-		var st: Array[Dictionary] = pl.status_entries()
-		if not st.is_empty():
-			_draw_string_nw(_font_bold, UiTheme.FS_MICRO, "状态", Vector2(left, y), Color("8a4a00"))
-			y += 15.0
-			for e in st:
-				if y > top + GRID_H - 14.0:
-					_draw_string_nw(_font, UiTheme.FS_MICRO, "……", Vector2(left, y), Color("8a4a00"))
-					y += 14.0
-					break
-				_draw_string_nw(_font, UiTheme.FS_MICRO, "· " + str(e["label"]), Vector2(left, y),
-						e["col"])
-				y += 14.0
-	_draw_string_nw(_font_bold, UiTheme.FS_MICRO, "效果", Vector2(left, y), Color("2a5a8a"))
-	y += 15.0
-	# 效果描述：按面板宽度自动换行 + **Markdown 富文本**（R106）。
-	# `CardText` 顺手隐藏「（…）」补注 —— 补注是规则说明，不该挤在句子主干里。
-	var res := CardText.draw_wrapped_hits(self, _font, _font_bold,
-			CardText.parse(card.effect_text), left, y, inner_w, 9, 14.0,
-			Color("2a5a8a"), top + GRID_H - 12.0, -1.0, UiTheme.PANEL_PAPER_BG)
-	# R168：这条文案提到的卡 / 道具，摘要接在效果说明下方（放不下就自动截断，
-	# 绝不越出面板 —— 悬浮件的边界感优先）。提及名在上一句里已自动换色。
+	# R297：**框体流**（用户口径）—— 数值两框 → 效果文本框 → 字段框 → buff 框。
+	# 以前这些全是纯文本行「力量 3 生命 5 / 字段：嘲讽 · 次元 / · 护盾：免疫…」，
+	# 一层层堆下来读不出结构；现在每类一个框，**框高随内容量变**（`CardInfoBoxes.box_h`）。
+	var blocks := _info_blocks(card, pl)
+	var used: float = CardInfoBoxes.draw_all(self, blocks, left, y, inner_w,
+			CardInfoBoxes.FS, top + GRID_H - 12.0)
+	# 提及的引用块（原样保留）：效果文案里提到过的卡 / 道具，摘要接在最后一块下面。
 	Mention.draw_reference_block(self, _font, _font_bold, card.effect_text, left,
-			float(res["y"]) + 10.0, inner_w, Color("2a5a8a"), true,
+			used + 6.0, inner_w, Color("2a5a8a"), true,
 			top + GRID_H - 12.0, UiTheme.PANEL_PAPER_BG)
+
 
 
 func _draw_game_over() -> void:

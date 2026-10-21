@@ -51,16 +51,16 @@ const RARITY_COLORS: Array[Color] = [Color("2c2c2a"), Color("1f5fbf"),
 ##   ⚠️ **手牌 / 图鉴 / 牌库 / 卡组编辑不过滤**：那几处正是这两种字段唯一有意义的
 ##   地方（玩家要靠它知道「这张牌能顶掉我场上的单位」）。
 const AFFIX_DEFS: Dictionary = {
-	"疾行": {"label": "疾行", "desc": "一回合行动两次。", "bg": "0e2e1a", "fg": "3fbf6f"},
-	"嘲讽": {"label": "嘲讽", "desc": "敌方只能攻击这张卡。", "bg": "331c05", "fg": "ffa41f"},
-	"死亡": {"label": "死亡", "desc": "这张卡被破坏时生效（具体效果见卡面）。", "bg": "330f14", "fg": "ff7a7a"},
-	"幻影": {"label": "幻影", "desc": "打出后手牌里多一张这张卡的短暂复制（回合结束消失）。", "on_board": false, "bg": "1f1a38", "fg": "b79cff"},
-	"护盾": {"label": "护盾", "desc": "第一次受到的伤害为 0（一次性，用完消失）。", "bg": "0f2a33", "fg": "6ec6ff"},
-	"次元": {"label": "次元", "desc": "使用后 / 离开战场后消失，不会进入弃牌区。", "bg": "2a0d33", "fg": "e58cff"},
-	"超负荷": {"label": "超负荷", "desc": "生命降到 0 以下不会立即死亡，会以负数血量继续存活；在自己回合结束时若生命仍是负数则死亡（伤害不会溢出）。", "bg": "33120a", "fg": "ff7a3c"},
-	"交换": {"label": "交换", "desc": "可放置在已有友方单位的格子上，原本在那个格子上的友方单位返回手卡。", "on_board": false, "bg": "0a2a2e", "fg": "5fe0d0"},
-	"保存": {"label": "保存", "desc": "回合结束时，手牌里的这张卡不会丢弃（保留到下一回合）。", "on_board": false, "bg": "1a2a0a", "fg": "b9e85a"},
-	"共享护盾": {"label": "共享护盾", "desc": "我方 HP 要受到伤害时，改由这张卡承受（每次都能顶，顶到它死亡）。", "bg": "33161c", "fg": "ff8fa8"},
+	"疾行": {"label": "疾行", "desc": "一回合可以行动两次。", "glyph": "run", "bg": "0e2e1a", "fg": "3fbf6f"},
+	"嘲讽": {"label": "嘲讽", "desc": "可以攻击到这张卡的单位只能攻击这张卡。", "glyph": "taunt", "bg": "331c05", "fg": "ffa41f"},
+	"死亡": {"label": "死亡", "desc": "这张卡被破坏时生效（具体效果见卡面）。", "glyph": "death", "bg": "330f14", "fg": "ff7a7a"},
+	"幻影": {"label": "幻影", "desc": "打出后手牌里多一张这张卡的短暂复制（回合结束消失）。", "glyph": "ghost", "on_board": false, "bg": "1f1a38", "fg": "b79cff"},
+	"护盾": {"label": "护盾", "desc": "第一次受到的伤害为 0（一次性，用完消失）。", "glyph": "shield", "bg": "0f2a33", "fg": "6ec6ff"},
+	"次元": {"label": "次元", "desc": "使用后 / 离开战场后消失，不会进入弃牌区。", "glyph": "portal", "bg": "2a0d33", "fg": "e58cff"},
+	"超负荷": {"label": "超负荷", "desc": "生命降到 0 以下不会立即死亡，会以负数血量继续存活；在自己回合结束时若生命仍是负数则死亡（伤害不会溢出）。", "glyph": "overload", "bg": "33120a", "fg": "ff7a3c"},
+	"交换": {"label": "交换", "desc": "可放置在已有友方单位的格子上，原本在那个格子上的友方单位返回手卡。", "glyph": "swap", "on_board": false, "bg": "0a2a2e", "fg": "5fe0d0"},
+	"保存": {"label": "保存", "desc": "回合结束时，手牌里的这张卡不会丢弃（保留到下一回合）。", "glyph": "save", "on_board": false, "bg": "1a2a0a", "fg": "b9e85a"},
+	"共享护盾": {"label": "共享护盾", "desc": "我方 HP 要受到伤害时，改由这张卡承受（每次都能顶，顶到它死亡）。", "glyph": "share", "bg": "33161c", "fg": "ff8fa8"},
 }
 
 ## ── 【商店附魔】（R214）`enchant` = 这张卡吃过的商店附魔 id（"" = 没附魔）──
@@ -78,11 +78,16 @@ const AFFIX_DEFS: Dictionary = {
 ##   * `icon`  `assets/ui/` 下的素材名（就是商店第二行那张图标 —— 「与附魔种类相同」）
 ##   * `col`   附魔种类色：标记描边环 / 左栏文字 / 商店悬停描边共用
 const ENCHANT_DEFS: Dictionary = {
-	"costdown": {"label": "费用 -1", "icon": "shop_icon_costdown", "col": "6db2f0"},
-	"damage": {"label": "伤害 +10", "icon": "shop_icon_damage", "col": "f08a5a"},
-	"dimension": {"label": "次元之力", "icon": "shop_icon_dimension", "col": "c08cf0"},
-	"save": {"label": "保存", "icon": "shop_icon_save", "col": "8fdc9f"},
-	"opening": {"label": "起手", "icon": "shop_icon_opening", "col": "f0c860"},
+	"costdown": {"label": "费用 -1", "icon": "shop_icon_costdown", "col": "6db2f0",
+			"desc": "这张卡的打出费用永久降低 1 点（最低 0）。"},
+	"damage": {"label": "伤害 +10", "icon": "shop_icon_damage", "col": "f08a5a",
+			"desc": "这张技能卡造成的伤害 +10。"},
+	"dimension": {"label": "次元之力", "icon": "shop_icon_dimension", "col": "c08cf0",
+			"desc": "获得「次元」字段，并 +2 力量 / +10 生命。"},
+	"save": {"label": "保存", "icon": "shop_icon_save", "col": "8fdc9f",
+			"desc": "回合结束时这张卡留在手里，不会被丢弃。"},
+	"opening": {"label": "起手", "icon": "shop_icon_opening", "col": "f0c860",
+			"desc": "第一回合必定抽到这张卡。"},
 }
 
 var id: int = 0
@@ -356,6 +361,13 @@ static func affix_desc(name: String) -> String:
 	return str(d.get("desc", ""))
 
 
+## 字段的图标名（R297，自绘符号；`CardInfoBoxes.draw_glyph()` 认这些名字）。
+## 未注册 → 空串（调用方回退成中性小菱形，不空白）。
+static func affix_glyph(name: String) -> String:
+	var d: Dictionary = AFFIX_DEFS.get(name, {})
+	return str(d.get("glyph", ""))
+
+
 ## 这个字段在这张卡**已经站在场上**之后还有意义吗（R118，`AFFIX_DEFS.on_board`）。
 ## 只有「打出手 / 放置那一刻的规则」才是 false（当前：交换 / 幻影），其余一律 true。
 ## **唯一判定口** —— 战场卡面（`field_affix_line`）、战场徽标与悬停
@@ -396,6 +408,14 @@ static func enchant_color(id: String) -> Color:
 
 
 ## 附魔图标素材名（`UiAssets.enchant_icon()` 的入参）；未注册 → 空串（调用方回退首字）。
+static func enchant_desc(id: String) -> String:
+	## 附魔的一句话解释（R297：左栏把它当 buff 框的正文）。未注册 → 空串。
+	if id == "":
+		return ""
+	var d: Dictionary = ENCHANT_DEFS.get(id, {})
+	return str(d.get("desc", ""))
+
+
 static func enchant_icon_name(id: String) -> String:
 	var d: Dictionary = ENCHANT_DEFS.get(id, {})
 	return str(d.get("icon", ""))

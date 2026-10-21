@@ -17839,6 +17839,75 @@ func _init() -> void:
 			and not FileAccess.file_exists("res://scenes/replay_list.tscn"),
 		"R215 回放机制已删（replay_log / replay_list 都不在了）")
 	# ================================================================
+	# R297：左栏「框体流」—— 数值两框 / 效果自适应框 / 字段框 / buff 框
+	# ================================================================
+	var r297_cib: GDScript = load("res://scripts/card_info_boxes.gd")
+	var r297_bsc: GDScript = load("res://scripts/battle_scene.gd")
+	# ① 每个字段都要有图标名 + 一句解释（框里「图标 名字：解释」两样缺一不可）
+	var r297_noglyph: Array = []
+	var r297_nodesc: Array = []
+	for nm: String in CardData.AFFIX_DEFS.keys():
+		var r297_d: Dictionary = CardData.AFFIX_DEFS[nm]
+		if str(r297_d.get("glyph", "")) == "":
+			r297_noglyph.append(nm)
+		if CardData.affix_desc(nm) == "":
+			r297_nodesc.append(nm)
+	check(r297_noglyph.is_empty() and r297_nodesc.is_empty(),
+			"R297 字段：%d 个字段全部有图标名与解释（缺图标 %s / 缺解释 %s）"
+			% [CardData.AFFIX_DEFS.size(), str(r297_noglyph), str(r297_nodesc)])
+	check(CardData.affix_glyph("嘲讽") == "taunt"
+			and CardData.affix_desc("嘲讽").contains("只能攻击这张卡"),
+			"R297 字段：嘲讽 = 靶心图标 + 「可以攻击到这张卡的单位只能攻击这张卡」")
+	# ② 附魔按用户口径也算 buff —— 一样要有解释
+	var r297_e_nod: Array = []
+	for eid: String in CardData.ENCHANT_DEFS.keys():
+		if CardData.enchant_desc(eid) == "":
+			r297_e_nod.append(eid)
+	check(r297_e_nod.is_empty(),
+			"R297 附魔：%d 种附魔都有解释（缺 %s）"
+			% [CardData.ENCHANT_DEFS.size(), str(r297_e_nod)])
+	# ③ 框高随文字量变（这就是「框大小不固定」），数值框则固定
+	var r297_short := {"type": "text", "segs": [{"text": "短"}]}
+	var r297_long := {"type": "text", "segs": [{"text": "很长的一段效果说明".repeat(12)}]}
+	var r297_h1: float = r297_cib.box_h(r297_short, 252.0)
+	var r297_h2: float = r297_cib.box_h(r297_long, 252.0)
+	check(r297_h2 > r297_h1 * 2.0,
+			"R297 框体：效果框高度随文字量变（短 %.0f / 长 %.0f）" % [r297_h1, r297_h2])
+	check(is_equal_approx(r297_cib.box_h({"type": "stats", "items": []}, 252.0),
+			float(r297_cib.STATS_PAD_Y) * 2.0 + float(r297_cib.STATS_H)),
+			"R297 框体：数值框高度固定（里面只有一行图标 + 数字）")
+	# ④ 组装：字段框数 = 字段数 / buff 框数 = 状态数 / 附魔 1 框 / 数值 2 框
+	var r297_repo := CardRepo.load_json()
+	var r297_card: CardData = CardData.from_dict(r297_repo.get_card(8056).to_dict())
+	r297_card.add_affix("嘲讽")
+	r297_card.enchant = "save"
+	var r297_fs := FieldState.new()
+	var r297_pl := r297_fs.place(r297_card, Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r297_pl.upgrade_stacks = 2
+	r297_pl.atk_buff = 2
+	r297_pl.frozen = true
+	var r297_blocks: Array = r297_bsc._info_blocks(r297_card, r297_pl)
+	var r297_c := {"stats": 0, "affix": 0, "buff": 0, "enchant": 0, "text": 0, "caption": 0}
+	for b: Dictionary in r297_blocks:
+		var k := str(b.get("kind", ""))
+		r297_c[k] = int(r297_c.get(k, 0)) + 1
+	check(int(r297_c["affix"]) == r297_card.affixes.size()
+			and int(r297_c["buff"]) == r297_pl.status_entries().size()
+			and int(r297_c["enchant"]) == 1 and int(r297_c["text"]) == 1,
+			"R297 组装：字段框 %d = 字段数 %d / buff 框 %d = 状态数 %d / 附魔框 1 / 效果框 1"
+			% [int(r297_c["affix"]), r297_card.affixes.size(),
+			int(r297_c["buff"]), r297_pl.status_entries().size()])
+	check(int(r297_c["stats"]) == 2,
+			"R297 组装：数值恰好两框（力量+生命 / 攻击距离+移动速度）")
+	# ⑤ 源码锁：左栏不再拼旧的纯文本行（力量 / 射程 / 字段：/ 状态）
+	var r297_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r297_src.find('"力量 %s"') < 0
+			and r297_src.find('"射程 %d   移速 %d"') < 0
+			and r297_src.find('"字段："') < 0
+			and r297_src.find('"状态"') < 0,
+			"R297 源码锁：左栏不再拼纯文本「力量 / 射程 / 字段：/ 状态」")
+
+	# ================================================================
 	# R241：随机种子（全局同一随机源）+ 对战记录详情快照
 	# ================================================================
 	# ① 同一种子开两次 → 地图 / 本层 Boss / 接下来的随机串**完全一致**
