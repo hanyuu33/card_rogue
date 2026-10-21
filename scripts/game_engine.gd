@@ -9087,6 +9087,13 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 		p.health -= amount2
 		if p.owner == SIDE_OPPONENT and amount2 > 0:
 			_mark_spell_enemy_hit()
+		if amount2 > 0:
+			# R288b：单目标技能伤害**不走 `_hit_unit`**（自己扣血），于是界面上
+			# 「血条数字变了、画面一动不动」—— 弹跳飞刀的主刀就是这么静悄悄的。
+			# 与 `_hit_unit` 尾部同口径补一条通用受击事件；必须在 `_destroy_dead()` 之前发，
+			# 否则单位已离场，`_cell_of()` 拿不到格子。
+			action.emit("fx_impact", {"cell": _cell_of(p), "amount": amount2,
+					"source": "技能", "side": p.owner})
 		_log("%s 受到 %d 点效果伤害（剩余 %d）" % [p.card.card_name, amount2, p.health])
 		if p.health <= 0:
 			_destroy_dead()

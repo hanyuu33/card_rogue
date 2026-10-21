@@ -21040,6 +21040,43 @@ func _init() -> void:
 			and r288_ui.find("const CUE_MERGE_MS := ") >= 0,
 			"R288 源码锁：同笔结算的「发动 → 命中」走 _cue_absorb 合并（光带才画得出来）")
 
+	# ⑥ R288b：弹跳飞刀 9160 —— **主刀**（_op_deal_damage）原来自己扣血、一个事件都不发，
+	# 于是主目标血条变了画面不动，反倒是两跳弹射有紫色爆点。主刀必须也发 fx_impact，
+	# 三条并成一条演出后才有「一刀下去弹到谁」的光带。
+	var r288b_hits: Array = []
+	var r288b_d := _new_engine([], 40, 40, -1, false)
+	r288b_d.start_game()
+	r288b_d.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r288b_d.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r288b_d.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
+	r288b_d.action.connect(func(k: String, d3: Dictionary) -> void:
+		if k == "fx_impact":
+			r288b_hits.append(d3))
+	r288b_d._bounce_knife(GameEngine.SIDE_SELF, Vector2i(2, 1), repo.get_card(9160))
+	var r288b_main := false
+	for h in r288b_hits:
+		if (h as Dictionary).get("cell") == Vector2i(2, 1):
+			r288b_main = true
+	check(r288b_main,
+			"R288b 弹跳飞刀：**主刀**也发 fx_impact（原来只有弹跳那两跳有，主刀静悄悄）")
+	check(r288b_hits.size() == 3,
+			"R288b 弹跳飞刀：主刀 + 两跳 = 3 条受击事件，能并成一条演出（实际 %d 条）"
+			% r288b_hits.size())
+
+	# ⑦ 源码锁：`_op_deal_damage` 里必须发 fx_impact —— 它是 19 张单目标技能的扣血口，
+	# 以后谁把 emit 删了，这 19 张会一起变回「血条变了画面不动」。
+	var r288b_eng := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	var r288b_at := r288b_eng.find("func _op_deal_damage")
+	var r288b_seg := r288b_eng.substr(r288b_at, 1200) if r288b_at >= 0 else ""
+	check(r288b_at >= 0 and r288b_seg.find("fx_impact") >= 0,
+			"R288b 源码锁：_op_deal_damage 必须发 fx_impact（单目标技能的血不能白掉）")
+	var r288b_unq := r288_ui.find("func _fx_unqueue_hit(")
+	check(r288b_unq >= 0,
+			"R288b 源码锁：专属落点表现（meteor）到达时撤掉同格 fx_hit（否则双爆点双飘字）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
