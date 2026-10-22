@@ -3057,8 +3057,45 @@ func _init() -> void:
 			"夜衰：只改场上值，卡面数据不动（绝不写回 card）")
 	check(nw_other.night_owl_weak == 0 and nw_other.effective_speed() == 1,
 			"夜衰：只打夜鸭（9027），别的敌方单位不沾")
-	check(nw_p.status_entries().any(func(e): return str(e.get("label", "")).begins_with("夜衰")),
-			"夜衰：左栏列出一条减益")
+	check(nw_p.status_entries().any(func(e): return str(e.get("label", "")).begins_with("畏光")),
+			"R304 畏光：左栏列出一条减益（旧显示名「夜衰」）")
+
+	# ===== R304：精英「越远越多」+ 「?」房精英降权 =====
+	# ① 距离系数：起点旁 0.8、最远 1.5
+	check(is_equal_approx(RogueMap.elite_far_factor(RogueMap.START_COL, RogueMap.START_ROW),
+			RogueMap.ELITE_FAR_MIN)
+			and is_equal_approx(RogueMap.elite_far_factor(0, 0), RogueMap.ELITE_FAR_MAX),
+			"R304 精英距离：起点旁 %.2f / 最远 %.2f（用户口径 80%%~150%%）"
+			% [RogueMap.ELITE_FAR_MIN, RogueMap.ELITE_FAR_MAX])
+	# ② 离得越远系数越大（逐行两两比较）
+	var r304_mono := true
+	for rr in RogueMap.ROWS:
+		for cc in RogueMap.COLS:
+			var d1: int = absi(cc - RogueMap.START_COL) + absi(rr - RogueMap.START_ROW)
+			for cc2 in RogueMap.COLS:
+				var d2: int = absi(cc2 - RogueMap.START_COL) + absi(rr - RogueMap.START_ROW)
+				if d1 < d2 and RogueMap.elite_far_factor(cc, rr) >= RogueMap.elite_far_factor(cc2, rr):
+					r304_mono = false
+	check(r304_mono, "R304 精英距离：曼哈顿距离越大系数越大（单调）")
+	# ③ 归一化：按平均系数缩放后，**全图精英权重总和不变** → 总期望不变
+	var r304_sum := 0.0
+	var r304_n := 0
+	for rr in RogueMap.ROWS:
+		for cc in RogueMap.COLS:
+			r304_sum += RogueMap.elite_far_factor(cc, rr)
+			r304_n += 1
+	var r304_norm: float = r304_sum / float(r304_n)
+	var r304_scaled := 0.0
+	for rr in RogueMap.ROWS:
+		for cc in RogueMap.COLS:
+			r304_scaled += RogueMap.elite_weight_scaled(2, cc, rr, r304_norm)
+	check(is_equal_approx(r304_scaled, 2.0 * float(r304_n)),
+			"R304 精英距离：归一化后精英权重总和 = 原总和（%.2f vs %.2f），总概率不变"
+			% [r304_scaled, 2.0 * float(r304_n)])
+	# ④ 「?」房精英权重 3 → 2（占比约降三成）
+	check(int(RogueMap.WEIGHTS_UNKNOWN.get("elite", 0)) == 2
+			and int(RogueMap.WEIGHTS.get("elite", 0)) == 2,
+			"R304 「?」房：精英权重 3 → 2（明房保持 2）")
 	check(nw_p.status_badges().any(func(b): return str(b.get("text", "")) == "夜衰"),
 			"夜衰：战场卡面显示「夜衰」徽标")
 	var nw_weak_cells: int = nw_e._reachable(Vector2i(1, 0), GameEngine.SIDE_OPPONENT).size()

@@ -95,7 +95,16 @@ const SHOP_MAX := 1
 const WEIGHTS := {"battle": 7, "event": 2, "elite": 2}
 ## 「?」房的实际类型权重。R192：战斗中签概率砍半（50%→25%），省下的比例按
 ## 事件:精英:宝箱:商店 = 4:1:1:1 原比例分给其他类型（战斗仍是明房最大宗）。
-const WEIGHTS_UNKNOWN := {"battle": 7, "event": 12, "elite": 3, "chest": 3, "shop": 3}
+## R304（用户口径「进一步降低「?」出精英的几率」）：elite 3 → **2**
+## （? 房里精英占比 10.7% → 7.4%，约降三成）。
+const WEIGHTS_UNKNOWN := {"battle": 7, "event": 12, "elite": 2, "chest": 3, "shop": 3}
+
+## R304（用户口径）：**精英越远离起点越容易遇到** —— 距离系数线性 0.8（起点旁）→ 1.5（最远）。
+## 距离用曼哈顿步数（与战斗里的距离口径一致）。
+## ⚠️ 系数只在候选格上按**全图平均**归一化之后才乘进权重（见 `generate()` 的 `far_norm`），
+##    所以它只是把精英**重新分布**，**总期望不变**。
+const ELITE_FAR_MIN := 0.8
+const ELITE_FAR_MAX := 1.5
 
 ## R142：卡牌宝箱（事件子类型 treasure）有**一半概率**装的是一件道具（而不是卡牌三选一）。
 ## 摇在**地图生成期**（走本局 run_rng 的链条）→ 同一种子必然生成同一张图。
@@ -157,6 +166,21 @@ static func is_bigchest(i: int) -> bool:
 		if idx(p.x, p.y) == i:
 			return true
 	return false
+
+
+static func elite_far_factor(col: int, row: int) -> float:
+	## R304：这一格的「精英距离系数」—— 起点旁 0.8、最远 1.5（线性）。
+	var d := absi(col - START_COL) + absi(row - START_ROW)
+	var dmax := maxi(START_COL, COLS - 1 - START_COL) \
+			+ maxi(START_ROW, ROWS - 1 - START_ROW)
+	if dmax <= 0:
+		return 1.0
+	return ELITE_FAR_MIN + (ELITE_FAR_MAX - ELITE_FAR_MIN) * float(d) / float(dmax)
+
+
+static func elite_weight_scaled(base: int, col: int, row: int, norm: float) -> float:
+	## 归一化之后的精英权重（`norm` = 候选格的平均系数）。测试与 `_weighted_far()` 共用。
+	return float(base) * elite_far_factor(col, row) / maxf(0.01, norm)
 
 
 static func is_fixed_shop(i: int) -> bool:
@@ -428,6 +452,21 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 	var start_nbs := {}          # R192：起点后第一格（起点的每一个邻居）类型约束用
 	for nb in adj[start_i]:
 		start_nbs[int(nb)] = true
+	# R304：**精英越远越多** —— 先算「真正参与权重抽取」的候选格平均距离系数。
+	# 起点 / 大宝箱 / 固定商店 / 休息 / 随机商店都是直接定类型的，不参与；
+	# 第一层起点后第一格固定「战斗或事件」，也不参与。
+	# 精英权重除以这个平均值再乘距离系数 → 分布变了，**总期望不变**。
+	var far_sum := 0.0
+	var far_n := 0
+	for fi in CELLS:
+		if fi == start_i or is_bigchest(fi) or is_fixed_shop(fi) \
+				or rest_set.has(fi) or shop_set.has(fi):
+			continue
+		if start_nbs.has(fi) and layer == GameLayers.LAYER_DEFAULT:
+			continue
+		far_sum += elite_far_factor(col_of(fi), row_of(fi))
+		far_n += 1
+	var far_norm: float = (far_sum / float(far_n)) if far_n > 0 else 1.0
 	for i in CELLS:
 		var type := "battle"
 		var hidden := false
@@ -457,7 +496,8 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 					type = _weighted(nb_w, rng)
 			else:
 				hidden = rng.randf() < P_UNKNOWN
-				type = _weighted(WEIGHTS_UNKNOWN if hidden else WEIGHTS, rng)
+				type = _weighted_far(WEIGHTS_UNKNOWN if hidden else WEIGHTS, rng,
+						col_of(i), row_of(i), far_norm)
 		var cell := {
 			"id": i,
 			"col": col_of(i), "row": row_of(i),
@@ -479,6 +519,32 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 				cell["treasure_relic"] = rng.randf() < TREASURE_RELIC_CHANCE
 		cells.append(cell)
 	return cells
+
+
+static func _weighted_far(w: Dictionary, rng: RandomNumberGenerator, col: int, row: int,
+		norm: float) -> String:
+	## R304：与 `_weighted()` **同一套抽法**（只消耗一次 `randi_range`，随机链条不额外错位），
+	## 只是把 **elite** 那一项的权重乘上 `elite_far_factor() / norm`。
+	## 所有权重整体 ×100 只是为了容纳小数系数，彼此比例不变。
+	var ww := {}
+	var total := 0
+	var base_w := int(w.get("elite", 0))
+	if base_w > 0:
+		ww["elite"] = maxi(1, roundi(100.0 * elite_weight_scaled(base_w, col, row, norm)))
+	for k in w:
+		if str(k) == "elite":
+			continue
+		ww[k] = int(w[k]) * 100
+		total += int(ww[k])
+	total += int(ww.get("elite", 0))
+	if total <= 0:
+		return "battle"
+	var roll := rng.randi_range(1, total)
+	for k in ww:
+		roll -= int(ww[k])
+		if roll <= 0:
+			return str(k)
+	return "battle"
 
 
 static func _weighted(w: Dictionary, rng: RandomNumberGenerator) -> String:

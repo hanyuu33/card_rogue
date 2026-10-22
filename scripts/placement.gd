@@ -277,7 +277,7 @@ func status_entries() -> Array[Dictionary]:
 		out.append({"label": "中毒：剩 %d 跳，每跳 %d 伤" % [poison_left, poison_dmg],
 				"col": COL_D, "kind": "debuff"})
 	if night_owl_weak > 0:
-		out.append({"label": "夜衰（奇数回合）：移速 -%d、攻程 -%d" % [night_owl_weak, night_owl_weak],
+		out.append({"label": "畏光（奇数回合）：移速 -%d、攻程 -%d" % [night_owl_weak, night_owl_weak],
 				"col": COL_D, "kind": "debuff"})
 	return out
 
