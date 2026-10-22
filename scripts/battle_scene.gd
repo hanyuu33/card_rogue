@@ -4582,6 +4582,10 @@ func _pick_active_kind() -> String:
 	# R292：拒绝命运（9098）改自动结算 → 不再有 "fate" 选卡场景。
 	# R298 合体（9167）：场上目标已选 → 弹「从卡组选素体」面板。
 	# 放在 focus 之前：合体有自己的待办字段（merge_pending），与专注互斥但不共用面板。
+	# R317 淘汰（9174）：从卡组选一张盟友 / 工事变成素体。
+	# 与合体互斥但**不共用字段**（各有 pending）：混用会在取消时清错状态。
+	if engine.eliminate_pending:
+		return "eliminate"
 	if engine.merge_pending:
 		return "merge"
 	if engine.focus_pending:
@@ -4798,6 +4802,16 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"cards": merged.map(func(m: Dictionary) -> CardData: return m["card"]),
 					"counts": merged.map(func(m: Dictionary) -> int: return m["count"]),
 					"max_sel": 1, "confirm_label": "确认移除", "cancel_label": "取消%s" % fl}
+		"eliminate":
+			# R317 淘汰（9174）：候选 = 卡组里的**盟友 / 工事**（下标，不按 id ——
+			# 同名卡可能有被改造过的副本，按 id 会改错那一张）。
+			var elopts := engine.eliminate_options()
+			return {"kind": k, "short": "淘汰",
+					"opts": elopts,
+					"title": "淘汰：从卡组选一张盟友或工事，把它变成「素体」",
+					"note": "变成 0 费 1/1 的「素体」（回合结束不弃牌）；原来的改造不保留",
+					"cards": elopts.map(func(i: int) -> CardData: return engine.state.deck[i]),
+					"max_sel": 1, "confirm_label": "确认淘汰", "cancel_label": "取消（不改卡组）"}
 		"merge":
 			# R298 合体（9167）：候选 = 卡组里**所有素体**（8025）。
 			# ⚠️ opts 存的是**卡组下标**（不是 id）：卡组里可能同时有未经改造的原版素体
@@ -5037,6 +5051,17 @@ func _on_pick_confirmed(sel: Array) -> void:
 				else:
 					status_text = "%s：已移除 %d 张卡，它们本次对战中消失" % [
 						engine.focus_label, engine.focus_total]
+		"eliminate":
+			# R317 淘汰（9174）：确认 → 卡组那张原位变成新素体（抽牌早在施放时结算过）。
+			var eli := int(opts[sel[0]])
+			var elnm := "?"
+			if eli >= 0 and eli < engine.state.deck.size():
+				elnm = engine.state.deck[eli].card_name
+			if engine.eliminate_pick(eli):
+				status_text = "淘汰：卡组里的 %s → 「素体」" % elnm
+			else:
+				_say("淘汰：没能选中这张卡（它仍在卡组里）")
+			_clear_selection()
 		"merge":
 			# R298 合体（9167）：确认 → 素体**本场消失**（进消耗区）→ 再调 use_spell 真正打出。
 			# 付费 / 弃牌 / 出牌计数 / 次元判定全部由 use_spell 统一收尾，这里不重复一遍。
@@ -5078,6 +5103,9 @@ func _on_pick_cancelled() -> void:
 			var fc_label := engine.focus_label
 			engine.focus_cancel()
 			status_text = "%s：已取消剩余的移除" % fc_label
+		"eliminate":
+			engine.eliminate_cancel()
+			status_text = "已取消：卡组不变（抽到的 4 张保留）"
 		"merge":
 			engine.merge_cancel()
 			status_text = "已取消：合体仍在手牌（未扣费）"
@@ -9916,6 +9944,17 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
 					"text": "激发 · 全体 -%d%s" % [in_d, (" ×%d" % in_n) if in_n > 1 else ""],
 					"col": Color("a05ad0"), "size": 17, "start": n, "dur": 1600})
+		"reflex":
+			# R317 身法 9173：抽 5 张，但本回合不能再用盟友 / 工事卡。
+			_say("◇ 身法：抽 %d 张 —— 本回合不能再使用盟友和工事卡"
+					% int(data.get("drawn", 0)))
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
+					"text": "身法 · 本回合禁用盟友/工事",
+					"col": Color("b9a6ff"), "size": 15, "start": n, "dur": 1700})
+		"eliminate_pending":
+			# R317 淘汰 9174：面板由 `_sync_pick` 自动弹（engine.eliminate_pending）。
+			_say("◆ 淘汰：抽 %d 张 —— 从卡组选一张盟友或工事变成素体"
+					% int(data.get("drawn", 0)))
 		"rapid":
 			# R316 极速 9171：抽到的 0 费张数 → 本回合所有敌人受到伤害 +N。
 			var rp_zero := int(data.get("zero", 0))

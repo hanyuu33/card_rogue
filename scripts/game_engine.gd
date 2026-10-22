@@ -48,6 +48,10 @@ var popcorn_draw:= 0
 ## R316 极速（9171）：「本回合所有敌人受到伤害 +N」的当前值（0 = 没加成）。
 ## 由 `极速` 结算时按「抽到的 0 费张数」累加；**回合结束清零**（与本回合其它一次性 buff 同口径）。
 var _rapid_enemy_bonus:= 0
+## R317 身法（9173）：本回合剩余时间**不能使用盟友 / 工事卡**（回合结束复位）。
+var _no_unit_play_this_turn:= false
+## R317 淘汰（9174）：等玩家从**卡组**挑一张盟友 / 工事变成「素体」（UI kind = "eliminate"）。
+var eliminate_pending:= false
 var log: Array[String] = []
 var rng:= RandomNumberGenerator.new()
 var self_relics: Array[int] = []
@@ -394,6 +398,17 @@ const RAPID_PER_ZERO:= 1
 # R316 激光扫射（9172，机械之心 2 费稀有技能）：对所有敌人造成 9 点伤害。
 const LASER_SWEEP_ID:= 9172
 const LASER_SWEEP_DMG:= 9
+# R317 身法（9173，暗影刺客 1 费普通技能）：抽 5 张；**这回合结束为止不能使用盟友和工事卡**。
+#   锁的判据放在 `can_use_card()`（显示 / UI / 引擎同一口）+ `play_from_hand()` 兜底；
+#   只锁**盟友 / 工事**，场地卡与技能 / 效果卡照旧能打。
+const REFLEX_ID:= 9173
+const REFLEX_DRAW:= 5
+# R317 淘汰（9174，机械之心 1 费史诗技能）：从**卡组**选一张盟友或工事 → 变成「素体」，抽 4 张。
+#   选牌走 `eliminate_pending` + `eliminate_pick()`（UI kind = "eliminate"），
+#   ⚠️ 抽 4 张在**打开面板之前**就结算 —— 取消面板只是放弃「变素体」，
+#      不该把整张卡的收益一起吞掉（与合体那种「付费前挂起」的口径不同：这张已付费）。
+const ELIMINATE_ID:= 9174
+const ELIMINATE_DRAW:= 4
 const BASIN_RELIC_ID:= 6041
 const COURAGE_RELIC_ID:= 6031
 const COURAGE_ELITE_TURNS:= 1
@@ -3012,6 +3027,8 @@ func end_turn() -> void :
 		turn_spell_bonus = 0
 		# R316 极速：敌人易伤也是「本回合」限定 —— 与我方其它一次性 buff 一起清。
 		_rapid_enemy_bonus = 0
+		# R317 身法：出牌限制同样只到本回合结束。
+		_no_unit_play_this_turn = false
 	else:
 		state.opp_hand_count = 0
 
@@ -3847,6 +3864,11 @@ func _card_leaving_field(p: Placement) -> CardData:
 
 func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	var card:= state.hand[hand_index]
+	# R317 身法（9173）：引擎侧兜底 —— `can_use_card` 管 UI，这里管「绕过去」的路径
+	#（联机回放 / 自动出牌 / 以后新加的效果）。放在 `_pay` 之前：拒绝不扣费。
+	if _no_unit_play_this_turn and (card.kind == "盟友" or card.is_fort()):
+		_log("身法：本回合不能使用盟友和工事卡（%s 未打出）" % card.card_name)
+		return null
 	var cap_msg:= _play_cap_blocked()
 	if cap_msg != "":
 		_log(cap_msg)
@@ -4881,6 +4903,55 @@ func _first_proto_index() -> int:
 		if state.deck[i].id == PROTO_ID:
 			return i
 	return -1
+
+
+func eliminate_options() -> Array[int]:
+	## R317 淘汰（9174）：卡组里**可作为目标**的下标 —— 盟友 / 工事。
+	## ⚠️ 给下标不给 id：卡组里可能有被生产订单 / 自主升级改过数值的同 id 副本，
+	##    按 id 找会变成「改错那一张」（与 `merge_deck_options` 同一条纪律）。
+	var out: Array[int] = []
+	for i in state.deck.size():
+		var c: CardData = state.deck[i]
+		if c == null:
+			continue
+		if c.kind == "盟友" or c.is_fort():
+			out.append(i)
+	return out
+
+
+func eliminate_pick(deck_index: int) -> bool:
+	## R317 淘汰（9174）面板「确认」的唯一结算口：把卡组第 deck_index 张**换成一张新素体**。
+	## * 素体是**全新副本**（不是改造过的）：卡面写的是「变成素体」，改造不保留；
+	## * 原位替换 → 之后抽到它时就是素体（0 费 1/1 盟友、回合结束不弃牌）；
+	## * 抽 4 张**已经在施放时结算过**，这里不再抽（见 `ELIMINATE_ID` 的注释）。
+	if not eliminate_pending:
+		return false
+	if deck_index < 0 or deck_index >= state.deck.size():
+		return false
+	var old_card: CardData = state.deck[deck_index]
+	if old_card == null or not (old_card.kind == "盟友" or old_card.is_fort()):
+		return false
+	var repo := CardRepo.load_json()
+	var proto: CardData = repo.get_card(PROTO_ID)
+	if proto == null:
+		eliminate_pending = false
+		return false
+	var new_card := CardData.from_dict(proto.to_dict())
+	state.deck[deck_index] = new_card
+	eliminate_pending = false
+	_log("淘汰：卡组里的 %s → 「素体」（0 费 1/1，回合结束不弃牌）" % old_card.card_name)
+	action.emit("eliminate_pick", {"old": old_card, "card": new_card,
+			"index": deck_index})
+	return true
+
+
+func eliminate_cancel() -> void:
+	## 淘汰面板取消：只是放弃「变素体」，**抽到的 4 张不收回**（它们早就进手牌了）。
+	if not eliminate_pending:
+		return
+	eliminate_pending = false
+	_log("淘汰：已取消变素体（抽牌照旧保留）")
+	action.emit("eliminate_cancel", {"side": SIDE_SELF})
 
 
 func merge_deck_options() -> Array[int]:
@@ -6854,6 +6925,11 @@ func _dodge_spell(side: String) -> String:
 
 
 func can_use_card(card: CardData, side:= SIDE_SELF) -> bool:
+	# R317 身法（9173）：本回合用了身法 → 盟友 / 工事卡不可使用（UI 置灰同一判据）。
+	# ⚠️ 只锁这两类：场地卡（`is_field()`）不是单位，技能 / 效果卡也不受影响。
+	if side == SIDE_SELF and _no_unit_play_this_turn and card != null \
+			and (card.kind == "盟友" or card.is_fort()):
+		return false
 	## 能量之外的「使用条件」（显示 / UI / 引擎同一判定）：
 	## 回旋斩（9096）：本回合使用 4 张以上其他卡后才能使用。
 	if card != null and card.id == WHIRL_BLADE_ID:
@@ -8004,6 +8080,33 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			_destroy_dead()
 			_log("激光扫射：对所有敌人造成 %d 点伤害（%d 个目标）" % [ls_dmg, ls_hits])
 			return "对所有敌人造成 %d 点伤害（%d 个目标）" % [ls_dmg, ls_hits]
+		REFLEX_ID:
+			# 身法（9173，R317，暗影刺客 1 费普通技能）：
+			#   抽 5 张 → **这回合结束为止不能使用盟友和工事卡**。
+			# ⚠️ 锁只到本回合：`end_turn` 清（与本回合其它一次性 buff 同组）。
+			# ⚠️ 已经打出的单位不受影响，也不能再被打出 —— 只拦「继续铺场」。
+			var rf_drawn := _draw_many(REFLEX_DRAW)
+			_no_unit_play_this_turn = true
+			_log("身法：抽 %d 张；本回合不能再使用盟友和工事卡" % rf_drawn)
+			action.emit("reflex", {"drawn": rf_drawn, "side": side})
+			return "抽 %d 张；本回合不能使用盟友和工事卡" % rf_drawn
+		ELIMINATE_ID:
+			# 淘汰（9174，R317，机械之心 1 费史诗技能）：
+			#   抽 4 张 → 从卡组选一张盟友 / 工事变成「素体」（面板接管）。
+			# ⚠️ 敌方 AI 不用这张（改玩家牌组是玩家侧决策，与专注 9122 / 负重减轻同口径）：
+			#    它只结算抽牌，不开面板。
+			var el_drawn := _draw_many(ELIMINATE_DRAW)
+			if side != SIDE_SELF:
+				return "抽 %d 张" % el_drawn
+			var el_opts := eliminate_options()
+			if el_opts.is_empty():
+				_log("淘汰：卡组里没有盟友或工事，效果落空")
+				return "抽 %d 张；卡组里没有盟友或工事" % el_drawn
+			eliminate_pending = true
+			_log("淘汰：抽 %d 张 → 从卡组选一张盟友或工事（共 %d 张可选）"
+					% [el_drawn, el_opts.size()])
+			action.emit("eliminate_pending", {"count": el_opts.size(), "drawn": el_drawn})
+			return "抽 %d 张；从卡组选一张盟友或工事变成素体" % el_drawn
 		UPGRADE_ID:
 			# 升级 8027（R82，机械之心）：改造一个己方盟友或工事。
 			# 走 _run_spell_effect 而不是 use_spell 的分支 → 蓄力（9085）叠它会叠多次，

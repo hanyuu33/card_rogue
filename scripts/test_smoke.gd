@@ -52,6 +52,13 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_battle],
+		# R317：淘汰（9174）—— 从卡组选一张盟友 / 工事变成素体（面板接线）。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_eliminate_panel],
 		# R314（用户口径）：道具栏**高亮** + 风妖精飘字**必须有时间维度**
 		# （不是贴一张静态字，要能在 start~dur 之间移动 / 淡出）。
 		["res://scenes/battle.tscn", func():
@@ -303,6 +310,36 @@ func _prep_records() -> void:
 	RunRecord.finish("win")
 	RunRecord.begin_run("森林精魄")
 	RunRecord.finish("interrupted")
+
+
+func _check_eliminate_panel(scene: Variant) -> void:
+	## R317 淘汰（9174）：卡组里选一张盟友 / 工事变成「素体」。
+	## 断言三件事：① 面板真的弹出来且 kind 对；② 确认后卡组那张**原位变成素体**；
+	## ③ 面板收掉（pending 清空）—— 漏了这条会「确认完窗还在」。
+	var repo := CardRepo.load_json()
+	var deck: Array[CardData] = []
+	deck.append(CardData.from_dict(repo.get_card(8003).to_dict()))   # 树人（盟友）
+	deck.append(CardData.from_dict(repo.get_card(8002).to_dict()))   # 攻击（技能，不该入选）
+	scene.engine.state.deck = deck
+	scene.engine.eliminate_pending = true
+	scene._sync_pick()
+	if scene._pick == null or not scene._pick.is_picking():
+		_smoke_fail("R317 淘汰：挂起后应弹出卡组选牌面板")
+		return
+	if scene._pick.kind() != "eliminate":
+		_smoke_fail("R317 淘汰：面板 kind 应为 eliminate，实际 %s" % scene._pick.kind())
+		return
+	var opts: Array = scene._pick.opts()
+	if opts.size() != 1 or int(opts[0]) != 0:
+		_smoke_fail("R317 淘汰：候选应只有「树人」这一张盟友（实际 %s）" % str(opts))
+		return
+	scene._on_pick_confirmed([0])
+	if scene.engine.eliminate_pending:
+		_smoke_fail("R317 淘汰：确认后挂起状态应清空")
+		return
+	if scene.engine.state.deck[0].id != GameEngine.PROTO_ID:
+		_smoke_fail("R317 淘汰：卡组第 1 张应变成素体，实际 id=%d"
+				% scene.engine.state.deck[0].id)
 
 
 func _check_relic_highlight(scene: Variant) -> void:

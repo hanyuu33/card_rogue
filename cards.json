@@ -5273,6 +5273,44 @@
       "target_mode": "none",
       "color": "紫",
       "image": ""
+    },
+    {
+      "id": 9173,
+      "name": "身法",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "抽 5 张牌。这回合结束为止，你不能使用盟友和工事卡。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 9174,
+      "name": "淘汰",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "从卡组选择一张盟友或工事卡，将其变成「素体」。抽 4 张卡。",
+      "target_mode": "none",
+      "color": "紫",
+      "image": ""
     }
   ]
 }
