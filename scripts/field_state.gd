@@ -12,7 +12,7 @@ const BOARD_COLS := 3
 const OPPONENT_ROWS := 3
 const ENERGY_PER_TURN := 5
 const HAND_DRAW_PER_TURN := 5
-const HAND_LIMIT := 10           # 手牌上限：达到后不再抽牌（超出部分留在牌库）
+const HAND_LIMIT := 10           # 手牌上限：达到后**抽到的牌直接进弃牌区**（R299，不再留在牌库）
 const HASTE_TRAIT := "哈气"      # 效果卡「哈气」（9024）：所属阵营单位每回合行动 value 次
 const HASTE_START_TURN := 3     # 哈气前置：该方第 3 个回合起才生效（前两回合仍是每回合行动 1 次）
 const VANISH_TRAIT := "离场消失"  # 鸭蛋 9022 / 魔像 9080：离场即消失，不进弃牌区、不再洗回牌库
@@ -32,6 +32,10 @@ const SLEEP_TURNS := 2
 # 否则同名卡共享库内实例，一张的减费会串到卡组里其它同名卡上。
 const PER_INSTANCE_TRAITS: Array[String] = ["留手", "魔像"]
 
+## R299：手牌满时 `draw()` 抽出来的那张 —— 它**没进手牌、直接进了弃牌区**。
+## 返回 null（语义仍是「没进手牌」），界面靠这个字段播「牌堆 → 弃牌堆」的动画，
+## 引擎靠它区分「因为手牌满而进弃牌」与「牌库弃牌都空、真的抽不到」。
+var last_burn_card: CardData = null
 var deck: Array[CardData] = []
 var discard: Array[CardData] = []
 var hand: Array[CardData] = []
@@ -163,10 +167,12 @@ func hand_full() -> bool:
 
 
 func draw() -> CardData:
-	## 抽一张；手牌已满（>= HAND_LIMIT）→ 不抽并返回 null（**不洗牌、不丢牌**）；
-	## 牌库空了先把弃牌区整堆洗入牌库（用户规则），两者都空才返回 null。
-	if hand_full():
-		return null
+	## 抽一张。
+	## R299（用户规则）：**手牌满 → 照样从牌库抽出来，但直接进弃牌区** —— 不再「不抽、不丢牌」。
+	##   抽出来的那张记在 `last_burn_card` 上（界面据此播「牌堆 → 弃牌堆」动画），
+	##   返回值仍是 null（语义 = 没进手牌），调用方不必改判据。
+	## 牌库空了先把弃牌区整堆洗入牌库（用户规则），**两者都空**才返回 null（此时 last_burn_card 也为 null）。
+	last_burn_card = null
 	if deck.is_empty() and not discard.is_empty():
 		deck = discard.duplicate()
 		_shuffle_deck()
@@ -187,6 +193,13 @@ func draw() -> CardData:
 	if not card.own_copy:
 		card = CardData.from_dict(card.to_dict())
 		card.own_copy = true
+	# R299：手牌满 → 这张照样**离开牌库**，但直接进弃牌区（不再原地留在牌库）。
+	# ⚠️ 顺序：先 pop 再判满 —— 用户口径是「手牌满之后一切抽卡都改为进弃牌」，
+	#    不是「手牌满就不抽」。
+	if hand_full():
+		discard.append(card)
+		last_burn_card = card
+		return null
 	hand.append(card)
 	return card
 

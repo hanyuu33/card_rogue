@@ -810,6 +810,7 @@ func _ready() -> void:
 				engine.state.hand.size(), FieldState.HAND_LIMIT]
 		_shot_t0 = _now()
 		queue_redraw()
+
 	if "--hero" in args and engine != null:
 		# 演示：二层事件「绝赞五换一」的奖励卡「英雄」（9023）——
 		# 上场必须额外丢弃 4 张手牌 → 直接打开「选择 4 张丢弃」面板（截图验证用）。
@@ -2543,6 +2544,27 @@ func _demo_tick() -> void:
 		# 同上：钉住 0 号手牌的悬停，让左栏详情显示「费用 N（原 M）」标绿
 		_hover_hand = 0
 		_hover_card = engine.state.hand[0]
+	if "--r299burn" in _demo_args and _demo_frame == 40 and engine != null:
+		# R299 出图演示①（`--screenshot --r299burn --shotms 120`）：手牌满 → 再抽 3 张，
+		# 3 张都不进手、各发一条 hand_burn → 界面播「牌堆 → 弃牌堆」的飞行 + 提示。
+		for _i in 20:
+			if engine.state.hand_full():
+				break
+			if engine.state.draw() == null:
+				break
+		engine._draw_many(3)
+		status_text = "R299：手牌满 → 抽到的 3 张没进手，改飞弃牌堆"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r299dry" in _demo_args and _demo_frame == 40 and engine != null:
+		# R299 出图演示②（`--screenshot --r299dry --shotms 200`）：牌库与弃牌区都抽干
+		# → deck_empty 横幅（醒目但不拦操作）。
+		engine.state.deck.clear()
+		engine.state.discard.clear()
+		engine._draw_many(2)
+		status_text = "R299：牌库与弃牌区都已空 → 抽不到卡（不拦操作）"
+		_shot_t0 = _now()
+		queue_redraw()
 	if _demo_pending and _demo_frame == 20 and _tutorial.is_empty():
 		# 演示确定性：手牌里没有寒冰护盾就换进一张（仅新手试炼演示用）
 		var has_shield := false
@@ -8377,17 +8399,52 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": Vector2(COST_X + (TAP_W + 12) / 2, COST_Y + ENERGY_H + 70),
 					"text": "%s 生效" % ecard.card_name, "col": UiTheme.KIND_EFFECT,
 					"start": n, "dur": 1500})
+		"hand_burn":
+			# R299：手牌满时抽到 / 获得的牌 → **直接进弃牌区**。
+			# 复用「飞向弃牌堆」那条动画（mode out_d：缩小 + 末段盖板 = 滑进牌堆），
+			# 只把起点从手牌位换成**牌堆位** —— 玩家看到的是「牌堆里抽出一张，没进手，
+			# 拐去弃牌堆了」，这正是规则本身。
+			# ⚠️ 手牌阵列没变化 → `_hand_sync()` 的 diff 播不到任何东西，本条是唯一来路。
+			sfx.play("click")
+			var bcard: CardData = data.get("card")
+			if bcard != null:
+				var bdelay := 45 * int(data.get("seq", 0))
+				_hand_fly.append({"mode": "out_d", "card": bcard,
+						"from_rect": Rect2(DECK_X, DECK_Y, CARD_W, CARD_H),
+						"start": n + bdelay, "dur": 300})
+				_floaters.append({"pos": Vector2(DISCARD_X + CARD_W / 2.0, DISCARD_Y - 24),
+						"text": "手牌已满 · 进弃牌", "col": Color("b26a00"), "size": 14,
+						"start": n + bdelay, "dur": 1300})
 		"hand_full":
-			# 手牌达上限（FieldState.HAND_LIMIT）：不再抽牌
+			# 手牌达上限（FieldState.HAND_LIMIT）。R299：口径从「不再抽牌」改成
+			# 「照抽，但抽到的牌进弃牌区」—— 文案要跟着改，否则界面在骗人。
 			sfx.play("click")
 			var hlim := int(data.get("limit", 0))
-			_say("手牌已满（%d 张），不再抽牌" % hlim)
-			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
-					"text": "手牌已满 %d/%d" % [int(data.get("hand", 0)), hlim],
-					"col": Color("b26a00"), "size": 17,
-					"start": n, "dur": 2200})
+			var hburn := int(data.get("burned", 0))
+			if hburn > 0:
+				_say("手牌已满（%d 张）：%d 张抽到的牌已进弃牌区" % [hlim, hburn])
+				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+						"text": "手牌已满 %d/%d · %d 张进弃牌" % [
+								int(data.get("hand", 0)), hlim, hburn],
+						"col": Color("b26a00"), "size": 17,
+						"start": n, "dur": 2200})
+			else:
+				_say("手牌已满（%d 张）" % hlim)
+				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+						"text": "手牌已满 %d/%d" % [int(data.get("hand", 0)), hlim],
+						"col": Color("b26a00"), "size": 17,
+						"start": n, "dur": 2200})
 		"deck_empty":
-			_say("已经没有卡牌可以抽了")
+			# R299：牌库与弃牌区**都空** → 一张也抽不到。
+			# 用户口径「明显但不影响操作」：居中大号横幅 + 状态栏，不弹窗、不吃输入、
+			# 不暂停回合 —— 玩家照常出牌，只是知道「别指望再抽牌了」。
+			sfx.play("click")
+			var dn_want := int(data.get("want", 0))
+			var dn_got := int(data.get("got", 0))
+			_say("牌库与弃牌区都已空，抽不到卡了")
+			_floaters.append({"pos": Vector2(WINDOW_W / 2.0, WINDOW_H / 2.0 - 120.0),
+					"text": "牌库与弃牌区都已空 · 抽不到卡（要 %d / 抽到 %d）" % [dn_want, dn_got],
+					"col": Color("c0392b"), "size": 19, "start": n, "dur": 3000})
 		"whisper":
 			# 道具「鸭之低语」：每回合开始随机到的强化（费用/伤害/抽牌）
 			_whisper_txt = str(data.get("text", ""))

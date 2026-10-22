@@ -2207,25 +2207,66 @@ func _fallback_familiar() -> CardData:
 
 
 func _draw_many(n: int) -> int:
-
-
-
-	var got:= 0
-	for i in n:
-		if state.hand_full():
-			_log("手牌已满（%d 张），不再抽牌" % FieldState.HAND_LIMIT)
-			action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, 
-				"hand": state.hand.size()})
-			break
-		if state.draw() != null:
+	## 抽 n 张的**唯一口**（所有「抽卡」都走这里）。返回**真正进手牌**的张数。
+	## R299（用户规则）：手牌满时**不再停下不抽** —— 抽到的牌由 `FieldState.draw()` 直接丢进弃牌区，
+	## 这里逐张发 `hand_burn`（带序号，界面用来错开动画），最后汇总发一条 `hand_full`。
+	## ⚠️ 区分三种「没进手牌」：① 手牌满 → burn（卡进弃牌区）；② 牌库+弃牌区都空 → 抽不到；
+	##   ③ 抽到了但…（不存在）。判据只看 `state.last_burn_card`，不要去比较弃牌区张数
+	##   （弃牌区可能同时被别的效果改动）。
+	var got := 0
+	var burned := 0
+	for _i in n:
+		var c := state.draw()
+		if c != null:
 			got += 1
-	if got < n and state.deck.is_empty() and state.discard.is_empty():
-		_log("没有卡牌可以抽了")
-		action.emit("deck_empty", {})
+			continue
+		var bc: CardData = state.last_burn_card
+		if bc != null:
+			state.last_burn_card = null
+			burned += 1
+			action.emit("hand_burn", {"card": bc, "seq": burned - 1,
+					"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
+			continue
+		break   # 牌库与弃牌区都空：后面的也抽不到，直接收工
+	if burned > 0:
+		_log("手牌已满（%d 张）：%d 张抽到的牌直接进弃牌区" % [FieldState.HAND_LIMIT, burned])
+		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT,
+				"hand": state.hand.size(), "burned": burned})
+	if got + burned < n and state.deck.is_empty() and state.discard.is_empty():
+		_log("牌库与弃牌区都已空，没有卡牌可以抽了")
+		action.emit("deck_empty", {"want": n, "got": got, "burned": burned})
 	return got
 
 
-
+func _grant_to_hand(card: CardData, source: String) -> bool:
+	## R299（用户规则）：**一切「加入手卡」的唯一口**。
+	## * 手牌未满 → 进手牌，返回 true；
+	## * 手牌已满 → 直接进**弃牌区**，返回 false —— 并 emit `hand_burn` 让界面播
+	##   「卡从来源位置飞向弃牌堆」（与「抽到但手牌满」完全同一条动画 / 日志口径）。
+	## ⚠️ 卡**不会凭空消失**：以前各处「满就放弃」等于把这张牌蒸发掉，玩家既没得到、
+	##   也看不见它去了哪；现在它至少落在弃牌区，之后还能被洗回牌库（诅咒类也一样）。
+	if card == null:
+		return false
+	if state.hand_full():
+		if card.is_ephemeral:
+			# ⚠️ 衍生物（野兔 9032 的复制品）**不能进弃牌区** —— 弃牌区会被整堆洗回牌库，
+			#    于是这几张「本场战斗内的产物」会被永久抽出来，无限刷（见 discard_hand 的注释）。
+			#    它们拐进消耗区：一样是「没进手」，但本场彻底消失。
+			state.void_count += 1
+			state.void_cards.append(card)
+			_log("%s：手牌已满（%d 张）→ 衍生物「%s」本场消失" % [
+					source, FieldState.HAND_LIMIT, card.card_name])
+			action.emit("hand_burn", {"card": card, "seq": 0, "to": "void",
+					"limit": FieldState.HAND_LIMIT, "hand": state.hand.size(), "source": source})
+			return false
+		state.discard.append(card)
+		_log("%s：手牌已满（%d 张）→ 「%s」直接进弃牌区" % [
+				source, FieldState.HAND_LIMIT, card.card_name])
+		action.emit("hand_burn", {"card": card, "seq": 0, "to": "discard",
+				"limit": FieldState.HAND_LIMIT, "hand": state.hand.size(), "source": source})
+		return false
+	state.hand.append(card)
+	return true
 
 func apply_battle_start_relics(repo: CardRepo) -> void :
 
@@ -2258,15 +2299,11 @@ func apply_battle_start_relics(repo: CardRepo) -> void :
 		else:
 			var added:= 0
 			for _i in MECH_CORE_PROTO:
-				# 手牌满了就停 —— 不洗牌、不丢牌（与 _fetch_skill_card 同一口径）。
-				if state.hand_full():
-					_log("机械核心：手牌已满（%d 张），只加入 %d 张「素体」"
-						% [FieldState.HAND_LIMIT, added])
-					break
 				# 独立副本：素体带「留手」，若与牌库里的共享实例同对象，
 				# 回合结束的不弃判定与「按张记账」的表都会互相串。
-				state.hand.append(CardData.from_dict(proto.to_dict()))
-				added += 1
+				# R299：手牌满 → 素体**直接进弃牌区**（不再「满就停」把这张蒸发掉）。
+				if _grant_to_hand(CardData.from_dict(proto.to_dict()), "机械核心"):
+					added += 1
 			if added > 0:
 				_log("机械核心：开场手牌加入 %d 张「素体」（0 费 1/1，回合结束不弃）" % added)
 				action.emit("relic", {"id": MECH_CORE_RELIC_ID,
@@ -3417,15 +3454,12 @@ func _endless_blessing() -> void :
 		return
 	var given:= 0
 	for i in copies:
-		if state.hand_full():
-			_log("无尽加护：手牌已满（%d 张），本次不加入" % FieldState.HAND_LIMIT)
-			action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
-			break
 		var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
 		var copy:= CardData.from_dict(pick.to_dict())
-		state.hand.append(copy)
-		given += 1
-		_log("无尽加护：随机一张「%s」进入手卡" % copy.card_name)
+		# R299：手牌满 → 这张效果卡**直接进弃牌区**（照抽照给，只是不进手）。
+		if _grant_to_hand(copy, "无尽加护"):
+			given += 1
+			_log("无尽加护：随机一张「%s」进入手卡" % copy.card_name)
 	if given > 0:
 		action.emit("blessing", {"count": given})
 
@@ -4337,15 +4371,12 @@ func _spawn_self_clone(card: CardData) -> void :
 	## 手牌满了就**不生成**（不给白拿的牌，也不洗牌）—— 与 _fetch_skill_card 同一口径。
 	## 注：实际流程里**几乎走不到**这个分支 —— 复制发生在「打出的那张已离手」之后，
 	## 手牌刚好腾出一格，所以永远是「不满」。留着是防御（例如将来改成从别处触发复制）。
-	if state.hand_full():
-		_log("%s：手牌已满（%d 张），复制失败" % [card.card_name, FieldState.HAND_LIMIT])
-		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT,
-				"hand": state.hand.size()})
-		return
 	var clone:= CardData.from_dict(card.to_dict())
 	clone.traits = (card.traits as Array).duplicate()   # 切断与卡库的共享引用
 	clone.is_ephemeral = true      # 衍生物标记：离场消失、不进弃牌区（卡库原卡没有它）
-	state.hand.append(clone)
+	# R299：手牌满 → 走 `_grant_to_hand`；它认得 `is_ephemeral`，会把衍生物送进**消耗区**
+	# 而不是弃牌区（弃牌区会被洗回牌库 → 无限刷）。
+	_grant_to_hand(clone, card.card_name)
 	_log("%s：手牌增加一张复制（回合结束前可打出）" % card.card_name)
 	action.emit("self_clone", {"card": clone, "from": card})
 
@@ -4533,8 +4564,8 @@ func _cluster_turret_reload(p: Placement) -> void :
 	## 「集束炮台」9166（R298）的**每次获得改造**效果：从卡组把一张「聚能炮击」加入手卡。
 	## 挂点是 `_on_unit_upgraded()` —— 所有改造入口的统一后置口，所以「升级 / 加厚装甲 /
 	## 超越极限 / 拾荒者 / 模仿者传导 / 改造工厂」全都自动吃到，不必给每个入口补分支。
-	## ⚠️ 手牌满 → 那张炮击**留在卡组**（不销毁）：卡面只说「加入手卡」，没有「否则弃掉」
-	##    的口径，替玩家销毁一张牌是净亏损。
+	## ⚠️ R299（用户规则）：手牌满 → 那张炮击**照样从卡组取出来，直接进弃牌区** ——
+	##    以前是「留在卡组」，等于这次改造白改；现在它至少落在弃牌区，之后还能洗回牌库。
 	if p == null or p.card == null or p.owner != SIDE_SELF:
 		return
 	var di := -1
@@ -4545,13 +4576,10 @@ func _cluster_turret_reload(p: Placement) -> void :
 	if di < 0:
 		_log("集束炮台：卡组里已经没有「聚能炮击」了")
 		return
-	if state.hand_full():
-		_log("集束炮台：手牌已满 → 「聚能炮击」留在卡组（未销毁）")
-		return
 	var c: CardData = state.deck[di]
 	state.deck.remove_at(di)
-	state.hand.append(c)
-	_log("集束炮台：%s 获得改造 → 从卡组取「%s」加入手卡（牌库 %d 张）" % [
+	_grant_to_hand(c, "集束炮台")
+	_log("集束炮台：%s 获得改造 → 从卡组取「%s」（牌库 %d 张）" % [
 			p.card.card_name, c.card_name, state.deck.size()])
 	action.emit("cluster_reload", {"cell": _cell_of(p), "card": c, "side": p.owner})
 
@@ -4936,18 +4964,17 @@ func _feed_upgrade_card(p: Placement) -> void :
 		_log("无限装甲：卡库里找不到「升级」8027，本回合供能落空")
 		action.emit("inf_armor", {"card": null, "ok": false, "placement": p})
 		return
-	if state.hand_full():
-		_log("无限装甲：手牌已满（%d 张），供能落空"
-			% FieldState.HAND_LIMIT)
-		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT,
-			"hand": state.hand.size()})
-		action.emit("inf_armor", {"card": null, "ok": false, "placement": p})
-		return
 	# ⚠️ **必须 from_dict 复制成独立实例**（卡库是共享实例）：直接 append 卡库那张
 	# 会让 `hand_free` 的按实例标记串到别处，且以后改它会污染卡库。
 	var got := CardData.from_dict(src.to_dict())
 	got.traits = (got.traits as Array).duplicate()
-	state.hand.append(got)
+	# R299：手牌满 → 这张「升级」直接进弃牌区（以前是「供能落空」，等于白产出一张）。
+	# ⚠️ 仍然算「本回合已供过能」：产出的动作发生了，只是去处不同 —— 否则手牌一空出来，
+	#    同一回合再被改造一次就又能白拿一张。
+	if not _grant_to_hand(got, "无限装甲"):
+		p.upgrade_feed_turn = turn_total
+		action.emit("inf_armor", {"card": got, "ok": false, "placement": p})
+		return
 	state.hand_free[got] = true
 	p.upgrade_feed_turn = turn_total
 	_log("无限装甲：供能 —— 「%s」加入手牌，在手牌里费用为 %d"
@@ -5619,10 +5646,6 @@ func _contractor_enter(p: Placement) -> void :
 
 
 func _demon_fetch(_p: Placement) -> void :
-	if state.hand_full():
-		_log("以太恶魔：手牌已满（%d 张），没有取效果卡" % FieldState.HAND_LIMIT)
-		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
-		return
 	var cand: Array[int] = []
 	for i in state.deck.size():
 		if state.deck[i].is_effect():
@@ -5639,7 +5662,9 @@ func _demon_fetch(_p: Placement) -> void :
 		var own := CardData.from_dict(chosen.to_dict())
 		own.own_copy = true
 		chosen = own
-	state.hand.append(chosen)
+	# R299：手牌满 → 这张效果卡直接进弃牌区。减费标记**照旧挂在它身上**（本场永久），
+	# 之后洗回牌库再抽到仍然便宜 —— 与卡面「它的费用 -N」的口径一致。
+	_grant_to_hand(chosen, "以太恶魔")
 	state.card_discount[chosen] = int(state.card_discount.get(chosen, 0)) + DEMON_FETCH_DISCOUNT
 	_log("以太恶魔：从卡组取到效果卡「%s」，它的费用 -%d" % [
 		chosen.card_name, DEMON_FETCH_DISCOUNT])
@@ -5647,10 +5672,6 @@ func _demon_fetch(_p: Placement) -> void :
 
 
 func _owl_fetch() -> void :
-	if state.hand_full():
-		_log("猫头鹰：手牌已满（%d 张），没有取效果卡" % FieldState.HAND_LIMIT)
-		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
-		return
 	var cand: Array[int] = []
 	for i in state.deck.size():
 		if state.deck[i].is_effect():
@@ -5661,7 +5682,8 @@ func _owl_fetch() -> void :
 	var pick: int = cand[rng.randi() % cand.size()]
 	var chosen: CardData = state.deck[pick]
 	state.deck.remove_at(pick)
-	state.hand.append(chosen)
+	# R299：手牌满 → 直接进弃牌区（不再「满就落空」，白丢这次取牌）
+	_grant_to_hand(chosen, "猫头鹰")
 	_log("猫头鹰：从卡组取到效果卡「%s」" % chosen.card_name)
 	action.emit("owl_fetch", {"card": chosen})
 
@@ -5699,15 +5721,12 @@ func _fetch_skill_card(source: String) -> void :
 	if skill_idx.is_empty():
 		_log("%s：牌组里没有技能牌可抽取" % source)
 		return
-	if state.hand_full():
-		_log("%s：手牌已满（%d 张），无法抽取技能牌" % [source, FieldState.HAND_LIMIT])
-		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
-		return
 	var pick:= skill_idx[rng.randi() % skill_idx.size()]
 	var chosen: CardData = state.deck[pick]
 	state.deck.remove_at(pick)
 	var copy:= CardData.from_dict(chosen.to_dict())
-	state.hand.append(copy)
+	# R299：手牌满 → 直接进弃牌区；减费标记照旧挂着（本回合有效，回合结束清空）。
+	_grant_to_hand(copy, source)
 	state.turn_card_discount[copy] = int(state.turn_card_discount.get(copy, 0)) \
 			+ FETCH_SKILL_DISCOUNT
 	_log("%s：从卡组取到技能牌「%s」（**本回合仅这一张**费用 -%d）"
@@ -6218,10 +6237,8 @@ func _phantom_cloak_tick(side: String) -> void:
 
 func _fetch_skill_from_deck(mode: int) -> CardData:
 	## 从卡组随机取一张「技能卡」加入手卡。mode：0=任意 1=费用为0 2=费用不为0。
-	## 手牌已满 → 不动卡组直接落空（连刺 / 幽灵亡语 / 影子猫 / 预判② 共用）。
-	if state.hand_full():
-		_log("手牌已满（%d 张）→ 技能卡留在卡组" % FieldState.HAND_LIMIT)
-		return null
+	## R299：手牌满不再「不动卡组直接落空」—— 照样取出来，由 `_grant_to_hand` 送进弃牌区。
+	## 连刺 / 幽灵亡语 / 影子猫 / 预判② 共用本口。
 	var cand: Array[int] = []
 	for i in state.deck.size():
 		var dc: CardData = state.deck[i]
@@ -6237,7 +6254,7 @@ func _fetch_skill_from_deck(mode: int) -> CardData:
 	var pick := cand[rng.randi() % cand.size()]
 	var c: CardData = state.deck[pick]
 	state.deck.remove_at(pick)
-	state.hand.append(c)
+	_grant_to_hand(c, "卡组取技能卡")
 	return c
 
 
@@ -6403,13 +6420,12 @@ func _glowgrass_supply(side: String) -> void:
 	## 幽光（9099 效果卡）：回合开始时，把一张荧光草 token 加入手卡（手牌满 → 落空）。
 	if not _zone_has_id(side, GLOW_ID):
 		return
-	if state.hand_full():
-		_log("幽光：手牌已满，荧光草没有加入")
-		return
+
 	var repo := CardRepo.load_json()
 	var base: CardData = repo.get_card(GLOWGRASS_ID)
 	var grass := CardData.from_dict(base.to_dict()) if base != null else _fallback_glowgrass()
-	state.hand.append(grass)
+	# R299：手牌满 → 荧光草直接进弃牌区（不再「没有加入」凭空消失）
+	_grant_to_hand(grass, "幽光")
 	_log("幽光：一张「荧光草」加入手卡")
 	action.emit("glowgrass", {"card": grass})
 
@@ -6983,12 +6999,10 @@ func _life_cycle_death(p: Placement, cell: Vector2i) -> void :
 	if c == null:
 		_log("生命循环：卡池里没有盟友卡可加入手卡")
 		return
-	if state.hand_full():
-		_log("生命循环：手牌已满，「%s」无法加入手卡" % c.card_name)
-		return
 	var copy:= CardData.from_dict(c.to_dict())
 	copy.affixes = (c.affixes as Array).duplicate()
-	state.hand.append(copy)
+	# R299：手牌满 → 直接进弃牌区（亡语不再因为满手白掉）
+	_grant_to_hand(copy, "生命循环")
 	_log("生命循环：%s 被破坏 → 手卡加入「%s」" % [p.card.card_name, copy.card_name])
 	action.emit("life_cycle", {"card": copy, "from": p.card, "cell": cell})
 
@@ -7023,25 +7037,20 @@ func _blade_gift(target, side:= SIDE_SELF) -> String:
 func _blade_gift_death(p: Placement, cell: Vector2i) -> void :
 	## 辅助刃的「死亡」：被破坏时把**一张辅助刃**加入手卡。
 	## 与生命循环的随机盟友不同 —— 这里是**固定一张本卡**（卡面写的就是「一张辅助刃」）。
-	## 手牌满 → 这张卡不进来（与其它「加入手卡」同口径：写清楚，不静默丢）。
+	## R299：手牌满 → 这张「辅助刃」直接进弃牌区（不再「不进来」白丢）。
 	if p.owner != SIDE_SELF:
 		return                     # 只有玩家能施放本卡，敌方分支不需要效果
 	var proto: CardData = CardRepo.load_json().get_card(BLADE_GIFT_ID)
 	if proto == null:
 		_log("辅助刃：卡库缺少「辅助刃」(9164)，亡语落空")
 		return
-	if state.hand_full():
-		_log("辅助刃：手牌已满（%d 张），亡语无法加入手卡" % FieldState.HAND_LIMIT)
-		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT,
-				"hand": state.hand.size()})
-		return
 	# ⚠️ 必须 from_dict 复制成独立实例（卡库是共享实例）—— 与其它「加入手卡」同一条纪律。
 	var copy:= CardData.from_dict(proto.to_dict())
 	copy.traits = (proto.traits as Array).duplicate()
 	copy.affixes = (proto.affixes as Array).duplicate()
 	copy.own_copy = true
-	state.hand.append(copy)
-	_log("辅助刃：%s 被破坏 → 手卡加入「%s」" % [p.card.card_name, copy.card_name])
+	_grant_to_hand(copy, "辅助刃")
+	_log("辅助刃：%s 被破坏 → 「%s」入手/进弃牌" % [p.card.card_name, copy.card_name])
 	action.emit("blade_gift_death", {"card": copy, "from": p.card, "cell": cell})
 
 
@@ -7068,10 +7077,6 @@ func _duplicate_spell(target, side:= SIDE_SELF) -> String:
 		return "%s 不能被复制" % p.card.card_name
 	var made := 0
 	for _i in DUPLICATE_COUNT:
-		if state.hand_full():
-			_log("复制术：手牌已满（%d 张），少复制 %d 张" % [
-					FieldState.HAND_LIMIT, DUPLICATE_COUNT - made])
-			break
 		var copy:= CardData.from_dict(p.card.to_dict())
 		copy.traits = (p.card.traits as Array).duplicate()
 		copy.affixes = (p.card.affixes as Array).duplicate()
@@ -7084,11 +7089,12 @@ func _duplicate_spell(target, side:= SIDE_SELF) -> String:
 		copy.upgrade_stacks = 0                     # 数值已烤进副本 → 不再随身，防 place 双计
 		copy.own_copy = true
 		copy.add_affix(AFFIX_DIMENSION)
-		state.hand.append(copy)
+		# R299：手牌满 → 复制品直接进弃牌区（带「次元」，不会被洗回牌库变成永久卡）。
+		_grant_to_hand(copy, "复制术")
 		state.turn_free[copy] = true   # 本回合 0 费；end_turn 清空 → 没打出去的下回合原价
 		made += 1
 	if made == 0:
-		return "复制术：手牌已满，没有复制生成"
+		return "复制术：没有复制生成"
 	action.emit("duplicate", {"cell": target, "card": p.card, "count": made,
 			"placement": p})
 	_log("复制术：%s → %d 张带「次元」的复制加入手卡（本回合 0 费）" % [
@@ -7379,17 +7385,14 @@ func _space_guard(c: CardData) -> void :
 
 
 func _egg_to_hand(reason: String) -> void :
-	if state.hand_full():
-		_log("%s：手牌已满（%d 张），没有加入鸭蛋" % [reason, FieldState.HAND_LIMIT])
-		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
-		return
 	var repo:= CardRepo.load_json()
 	var base: CardData = repo.get_card(EGG_CARD_ID)
 	if base == null:
 		_log("%s：找不到鸭蛋（9022）" % reason)
 		return
 	var egg:= CardData.from_dict(base.to_dict())
-	state.hand.append(egg)
+	# R299：手牌满 → 鸭蛋直接进弃牌区
+	_grant_to_hand(egg, reason)
 	_log("%s：一张「%s」加入手卡" % [reason, egg.card_name])
 	action.emit("egg_token", {"card": egg})
 
@@ -7439,18 +7442,15 @@ func _crow_to_hand(side: String) -> void :
 	if side != SIDE_SELF:
 		_log("使魔之夜（敌方）：敌方 AI 不使用效果牌")
 		return
-	if state.hand_full():
-		_log("使魔之夜：手牌已满（%d 张），没有加入乌鸦" % FieldState.HAND_LIMIT)
-		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
-		return
 	var repo:= CardRepo.load_json()
 	var base: CardData = repo.get_card(CROW_ID)
 	var crow:= CardData.from_dict(base.to_dict()) if base != null else _fallback_crow()
 	# 当回合免费：不改卡本身的费用（那会永久变成 0 费），而是记进「本回合免费」名单，
 	# 回合结束随 turn_free 一起清空 → 之后再抽到就是原本的 1 费。
 	state.turn_free[crow] = true
-	state.hand.append(crow)
-	_log("使魔之夜：一张「%s」加入手卡（本回合费用 0）" % crow.card_name)
+	# R299：手牌满 → 乌鸦直接进弃牌区
+	_grant_to_hand(crow, "使魔之夜")
+	_log("使魔之夜：一张「%s」入手/进弃牌（本回合费用 0）" % crow.card_name)
 	action.emit("crow_token", {"card": crow})
 
 
@@ -8489,9 +8489,6 @@ func _on_ally_entered(p: Placement, side: String) -> void :
 func _rat_trigger() -> void :
 
 
-	if state.hand_full():
-		_log("巨鼠：手牌已满，无法抽取")
-		return
 	var cand: Array[int] = []
 	for i in state.deck.size():
 		var dc: CardData = state.deck[i]
@@ -8503,8 +8500,9 @@ func _rat_trigger() -> void :
 	var pick:= cand[rng.randi() % cand.size()]
 	var chosen: CardData = state.deck[pick]
 	state.deck.remove_at(pick)
-	state.hand.append(chosen)
-	_log("巨鼠：从卡组抽到 1 费盟友 %s" % chosen.card_name)
+	# R299：手牌满 → 那只 1 费盟友直接进弃牌区
+	_grant_to_hand(chosen, "巨鼠")
+	_log("巨鼠：从卡组取到 1 费盟友 %s" % chosen.card_name)
 
 
 func _forest_guard(side: String, target) -> String:
@@ -9976,14 +9974,12 @@ func _recycler_trigger(r: Placement, victim_power: int) -> void :
 		# R208：被破坏的卡力量是 0（工事 / 被削到 0）→ 攻击力一点没变，
 		# 别在战报里写「回收 0 力量」（用户口径：不该弹「+0 攻」）。
 		_log("零件回收者：被破坏的卡没有力量，攻击力不变（现 +%d 攻）" % r.upgrade_atk)
-	# 往手牌加一张「素体」（独立副本，与机械核心 6025 同口径；手牌满就停）。
-	if state.hand_full():
-		_log("零件回收者：手牌已满，未加入「素体」")
-	else:
-		var repo := CardRepo.load_json()
-		var proto: CardData = repo.get_card(PROTO_ID)
-		if proto != null:
-			state.hand.append(CardData.from_dict(proto.to_dict()))
+	# 往手牌加一张「素体」（独立副本，与机械核心 6025 同口径）。
+	# R299：手牌满 → 这张素体直接进弃牌区（不再「未加入」白丢）。
+	var repo := CardRepo.load_json()
+	var proto: CardData = repo.get_card(PROTO_ID)
+	if proto != null:
+		if _grant_to_hand(CardData.from_dict(proto.to_dict()), "零件回收者"):
 			_log("零件回收者：手牌 +1 张「素体」")
 	action.emit("recycler", {"cell": _cell_of(r), "power": victim_power, "side": SIDE_SELF})
 
@@ -10081,17 +10077,18 @@ func _demolish(target: Vector2i, side: String) -> String :
 	var got_proto:= 0
 	var repo := CardRepo.load_json()
 	var proto: CardData = repo.get_card(PROTO_ID) if repo != null else null
-	if proto != null and not state.hand_full():
-		state.hand.append(CardData.from_dict(proto.to_dict()))
+	# R299：手牌满 → 素体 / 升级直接进弃牌区；产出张数照算（日志说清给了什么）。
+	if proto != null:
+		_grant_to_hand(CardData.from_dict(proto.to_dict()), "拆解")
 		got_proto += 1
 	var got_upg:= 0
-	if was_upgraded and not state.hand_full():
+	if was_upgraded:
 		var up_repo := CardRepo.load_json()
 		var up_proto: CardData = up_repo.get_card(DEMOLISH_UPGRADE_BONUS) if up_repo != null else null
 		if up_proto != null:
-			state.hand.append(CardData.from_dict(up_proto.to_dict()))
+			_grant_to_hand(CardData.from_dict(up_proto.to_dict()), "拆解")
 			got_upg += 1
-	_log("拆解：破坏了%s（%s），回复 %d 费，手牌 +%d 素体%s"
+	_log("拆解：破坏了%s（%s），回复 %d 费，产出 %d 素体%s"
 		% [victim_name, "已改造" if was_upgraded else "未改造", DEMOLISH_REFUND,
 			got_proto, ("，额外 +%d 升级" % got_upg) if was_upgraded else ""])
 	action.emit("demolish", {"cell": target, "upgraded": was_upgraded,
@@ -10962,14 +10959,11 @@ func _emergency_ambush(side: String) -> String:
 		if forts.is_empty():
 			_log("紧急埋伏：卡组里已经没有工事卡")
 			break
-		if state.hand_full():
-			_log("紧急埋伏：手牌已满（%d 张），工事留在卡组" % FieldState.HAND_LIMIT)
-			action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
-			break
 		var pick: CardData = forts[rng.randi() % forts.size()]
 		forts.erase(pick)
 		state.deck.erase(pick)
-		state.hand.append(pick)
+		# R299：手牌满 → 直接从卡组进弃牌区（不再「留在卡组」白丢这次埋伏）
+		_grant_to_hand(pick, "紧急埋伏")
 		taken += 1
 		_log("紧急埋伏：卡组里的「%s」进入手卡" % pick.card_name)
 	if side == SIDE_SELF:
@@ -11000,13 +10994,10 @@ func _workshop_supply(side: String) -> void :
 		_log("机关工坊：奖励池中没有场地卡")
 		return
 	for i in workshops:
-		if state.hand_full():
-			_log("陷阱工坊：手牌已满（%d 张），本次不加入" % FieldState.HAND_LIMIT)
-			action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
-			return
 		var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
 		var copy:= CardData.from_dict(pick.to_dict())
-		state.hand.append(copy)
+		# R299：手牌满 → 直接进弃牌区（不再「本次不加入」白丢）
+		_grant_to_hand(copy, "陷阱工坊")
 		_log("机关工坊：随机一张场地「%s」进入手卡" % copy.card_name)
 		action.emit("blessing", {"count": 1})
 
@@ -11288,15 +11279,11 @@ func rebirth_pick(hand_index: int) -> bool:
 		var pool: Array[CardData] = repo.reward_pool_for(RunState.player_class)
 		if pool.is_empty():
 			_log("新生：%s 消失（本职业奖励池为空，没有可加入的牌）" % c.card_name)
-		elif state.hand_full():
-			_log("新生：%s 消失（手牌已满 %d 张，本次不加入随机卡）"
-					% [c.card_name, FieldState.HAND_LIMIT])
-			action.emit("hand_full", {"limit": FieldState.HAND_LIMIT,
-					"hand": state.hand.size()})
 		else:
 			var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
 			var copy:= CardData.from_dict(pick.to_dict())
-			state.hand.append(copy)
+			# R299：手牌满 → 直接进弃牌区（不再「本次不加入」白丢）
+			_grant_to_hand(copy, "新生")
 			given_name = copy.card_name
 			_log("新生：%s 消失 → 随机一张「%s」加入手牌" % [c.card_name, given_name])
 	action.emit("rebirth_pick", {"card": c, "given": given_name})
@@ -11419,17 +11406,15 @@ func _alertness(side: String) -> String:
 	## 那张卡**本回合内**费用 -ALERT_DISCOUNT（turn_card_discount = 本回合减费，
 	## 回合结束随表清空 → 不跨回合；显示 = 判定 = 实扣都走 cost_of）。**用后警觉自身消失。**
 	## 随机走引擎 rng（回放同种子可复现）；库内共享实例 → 复制后再进手。
-	if side == SIDE_SELF and state.hand_full():
-		_log("警觉：手牌已满（%d 张），场地卡无法加入" % FieldState.HAND_LIMIT)
-		action.emit("hand_full", {"limit": FieldState.HAND_LIMIT, "hand": state.hand.size()})
-		return "（警觉：手牌已满）"
+
 	# R77：取「场地」而不是「工事」；R116：池子构造走唯一口 `_field_card_pool`
 	var pool := _field_card_pool(side)
 	if pool.is_empty():
 		return "（警觉：奖励池中没有场地卡）"
 	var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
 	var copy:= CardData.from_dict(pick.to_dict())
-	state.hand.append(copy)
+	# R299：手牌满 → 直接进弃牌区（减费标记照旧挂着，本回合有效）
+	_grant_to_hand(copy, "警觉")
 	if side == SIDE_SELF:
 		# 本回合减费（不是 card_discount 那个永久实例减费）——回合结束自动失效
 		state.turn_card_discount[copy] = int(state.turn_card_discount.get(copy, 0)) \

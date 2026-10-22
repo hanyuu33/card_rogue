@@ -3174,32 +3174,46 @@ func _init() -> void:
 			"日志提示「没有卡牌可以抽了」")
 	check(eng_e.state.hand.is_empty(), "没有卡牌时手牌保持为空")
 
-	# ---- 手牌上限 10：达上限后不再抽牌（牌留在牌库，不洗牌、不丢牌） ----
+	# ---- 手牌上限 10（R299）：**满手后抽到的牌直接进弃牌区**，不再原地留在牌库 ----
+	# 用户口径：「手牌满之后，一切的抽卡、加入手卡，都改为进弃牌」。
 	var lim_deck: Array[CardData] = []
 	for i in 20:
 		lim_deck.append(_card(8002, "攻击", "技能", 1, 0, 0))
 	var eng_lim := _new_engine(lim_deck, 20, 20, -1, false)
 	var lim_events: Array = []
+	var lim_burns: Array = []
 	eng_lim.action.connect(func(k: String, d: Dictionary) -> void:
 			if k == "hand_full":
-				lim_events.append(d))
+				lim_events.append(d)
+			elif k == "hand_burn":
+				lim_burns.append(d))
 	eng_lim.start_game()                       # 起手 5 张
 	check(eng_lim.state.hand.size() == 5 and not eng_lim.state.hand_full(),
 			"手牌上限：起手 5 张，未达上限")
 	check(eng_lim._draw_many(3) == 3 and eng_lim.state.hand.size() == 8,
 			"手牌上限：8 张时照样能抽满")
 	check(eng_lim.state.deck.size() == 12, "手牌上限：抽牌只从牌库扣（20 - 8）")
-	var lim_got := eng_lim._draw_many(5)       # 只剩 2 张的位置
+	# 再抽 5 张：前 2 张进手（正好满 10），后 3 张**进弃牌区**
+	var lim_got := eng_lim._draw_many(5)
 	check(lim_got == 2 and eng_lim.state.hand.size() == FieldState.HAND_LIMIT,
-			"手牌上限：抽到 %d 张即停（实际得 %d 张）"
-			% [FieldState.HAND_LIMIT, lim_got])
+			"手牌上限：只有 2 张进手（实际得 %d 张 / 手牌 %d）"
+			% [lim_got, eng_lim.state.hand.size()])
 	check(eng_lim.state.hand_full(), "手牌上限：满手时 hand_full() 为真")
 	check(lim_events.size() == 1,
 			"手牌上限：满手时广播 hand_full（实际 %d 次）" % lim_events.size())
-	check(eng_lim.state.deck.size() == 10,
-			"手牌上限：满手后牌留在牌库（剩 10 张，没被抽走）")
-	check(eng_lim.state.discard.is_empty(), "手牌上限：满手抽牌不会误洗弃牌区")
-	check(eng_lim.state.draw() == null, "手牌上限：满手时 draw() 直接返回 null")
+	check(int(lim_events[0].get("burned", 0)) == 3,
+			"R299 手牌满抽牌：hand_full 事件带 burned=3（实际 %d）"
+			% int(lim_events[0].get("burned", 0)))
+	check(lim_burns.size() == 3,
+			"R299 手牌满抽牌：3 张各发一条 hand_burn（实际 %d 条）" % lim_burns.size())
+	check(eng_lim.state.deck.size() == 7,
+			"R299 手牌满抽牌：牌库照样被抽走 5 张（12 → %d）" % eng_lim.state.deck.size())
+	check(eng_lim.state.discard.size() == 3,
+			"R299 手牌满抽牌：3 张抽到的牌进了弃牌区（弃牌区 %d 张）"
+			% eng_lim.state.discard.size())
+	check(eng_lim.state.draw() == null and eng_lim.state.discard.size() == 4,
+			"R299 手牌满时 draw() 仍返回 null，但那张也进弃牌区（弃牌区 %d 张）"
+			% eng_lim.state.discard.size())
 	check(eng_lim.state.hand.size() == FieldState.HAND_LIMIT, "手牌上限：手牌数永不超上限")
 	check(not eng_lim.log.any(func(l: String): return l.contains("没有卡牌可以抽了")),
 			"手牌上限：牌库还有牌时不误报「没有卡牌可以抽了」")
@@ -3207,6 +3221,34 @@ func _init() -> void:
 			"手牌上限：日志提示「手牌已满」")
 	# 上限是常量，改它就必须同步调这里
 	check(FieldState.HAND_LIMIT == 10, "手牌上限常量为 10")
+
+	# R299：牌库与弃牌区**都空** → 抽不到，且必须发 deck_empty（界面据此弹提示）
+	var eng_dry := _new_engine([], 20, 20, -1, false)
+	var dry_events: Array = []
+	eng_dry.action.connect(func(k: String, d: Dictionary) -> void:
+			if k == "deck_empty":
+				dry_events.append(d))
+	eng_dry.state.hand.clear()
+	eng_dry.state.deck.clear()
+	eng_dry.state.discard.clear()
+	check(eng_dry._draw_many(3) == 0 and dry_events.size() == 1,
+			"R299 抽空提示：牌库与弃牌区都空 → 发一条 deck_empty（实际 %d 条）"
+			% dry_events.size())
+	check(int(dry_events[0].get("want", 0)) == 3 and int(dry_events[0].get("got", 0)) == 0,
+			"R299 抽空提示：事件带 want=3 / got=0（实际 want=%d / got=%d）"
+			% [int(dry_events[0].get("want", -1)), int(dry_events[0].get("got", -1))])
+	# 手牌满 + 牌库空 + 弃牌区非空 → 洗牌回库再抽，抽到的仍进弃牌区（不会卡死在空库）
+	var eng_cyc := _new_engine([], 20, 20, -1, false)
+	eng_cyc.state.hand.clear()
+	eng_cyc.state.deck.clear()
+	eng_cyc.state.discard.clear()
+	for i in FieldState.HAND_LIMIT:
+		eng_cyc.state.hand.append(_card(8002, "攻击", "技能", 1, 0, 0))
+	eng_cyc.state.discard.append(_card(8003, "农民", "盟友", 3, 3, 8))
+	check(eng_cyc.state.draw() == null and eng_cyc.state.deck.is_empty()
+			and eng_cyc.state.discard.size() == 1,
+			"R299 手牌满 + 牌库空：弃牌区洗回牌库 → 抽出的那张仍进弃牌区（弃牌 %d / 牌库 %d）"
+			% [eng_cyc.state.discard.size(), eng_cyc.state.deck.size()])
 
 	# ---- 牌库空 → 弃牌区洗回 ----
 	var small: Array[CardData] = []
@@ -9283,13 +9325,17 @@ func _init() -> void:
 			"警觉：减费不跨回合（回合结束后 %d → %d）"
 			% [r54_h_new.cost, r54_h.cost_of(r54_h_new)])
 
-	# 警觉：手牌已满 → 工事无法加入
+	# R299：手牌已满 → 场地卡**照样产出，但直接进弃牌区**（不再「无法加入」白丢）
 	var r54_i := _new_engine([], 30, 30)
 	for i in FieldState.HAND_LIMIT:
 		r54_i.state.hand.append(_card(7900 + i, "垫手卡%d" % i, "技能", 0, 0, 0))
+	var r54_i_disc0: int = r54_i.state.discard.size()
 	var r54_i_res := r54_i._alertness(GameEngine.SIDE_SELF)
-	check(r54_i_res.contains("手牌已满") and r54_i.state.hand.size() == FieldState.HAND_LIMIT,
-			"警觉：手牌已满 → 不加入工事")
+	check(r54_i.state.hand.size() == FieldState.HAND_LIMIT
+			and r54_i.state.discard.size() == r54_i_disc0 + 1
+			and not r54_i_res.contains("手牌已满"),
+			"R299 警觉：手牌已满 → 场地卡直接进弃牌区（手牌 %d / 弃牌 %d→%d）" % [
+				r54_i.state.hand.size(), r54_i_disc0, r54_i.state.discard.size()])
 
 
 	# ================= R60（2026-10-03）：使魔之力 9115 =================
@@ -21904,16 +21950,19 @@ func _init() -> void:
 				r296_e1_deck0, r296_e1.state.deck.size(),
 				r296_e1_hand0, r296_e1.state.hand.size()])
 
-	# ③ 手牌满 → 炮击留在卡组（不销毁玩家的牌）
+	# ③ R299：手牌满 → 炮击**照样从卡组取出，直接进弃牌区**（不再「留在卡组」）
 	while not r296_e1.state.hand_full():
 		r296_e1.state.hand.append(_card(8002, "攻击", "技能", 1, 0, 0))
 	var r296_e1_deck1: int = r296_e1.state.deck.size()
 	var r296_e1_hand1: int = r296_e1.state.hand.size()
+	var r296_e1_disc1: int = r296_e1.state.discard.size()
 	r296_e1._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
-	check(r296_e1.state.deck.size() == r296_e1_deck1
-			and r296_e1.state.hand.size() == r296_e1_hand1,
-			"R298 集束炮台：手牌已满 → 炮击留在卡组（牌库 %d / 手牌 %d 均未变）" % [
-				r296_e1_deck1, r296_e1_hand1])
+	check(r296_e1.state.deck.size() == r296_e1_deck1 - 1
+			and r296_e1.state.hand.size() == r296_e1_hand1
+			and r296_e1.state.discard.size() == r296_e1_disc1 + 1,
+			"R299 集束炮台：手牌已满 → 炮击从卡组直接进弃牌区（牌库 %d→%d / 弃牌 %d→%d）" % [
+				r296_e1_deck1, r296_e1.state.deck.size(),
+				r296_e1_disc1, r296_e1.state.discard.size()])
 
 	# ④ 合体：场上选完只挂起面板 —— 费用未扣、卡仍在手牌（取消 = 什么都没发生）
 	var r296_e2 := _new_engine([], 20, 20, -1, false)
@@ -22008,6 +22057,78 @@ func _init() -> void:
 			and r296_ui.find('"merge":') >= 0
 			and r296_ui.find("engine.merge_pending") >= 0,
 			"R298 源码锁：battle_scene 登记了合体的目标枚举 / merge 面板 / 待办判定")
+
+	# ================= R299：手牌满 → 抽卡 / 加入手卡 一律进弃牌区 =================
+	# 用户口径：「手牌满之后，一切的抽卡、加入手卡，都改为进弃牌（需要有正确的动画，
+	# 比如诅咒直接加入弃牌等等）」。唯一口 = `_grant_to_hand()`（加入手卡）+ `draw()`（抽卡）。
+	var r299_e := _new_engine([], 20, 20, -1, false)
+	var r299_events: Array = []
+	r299_e.action.connect(func(k: String, d: Dictionary) -> void:
+			if k == "hand_burn":
+				r299_events.append(d))
+	r299_e.state.hand.clear()
+	r299_e.state.deck.clear()
+	r299_e.state.discard.clear()
+	# ① 未满 → 正常进手牌，不发 hand_burn
+	var r299_a := _card(9002, "削弱", "技能", 1, 0, 0)
+	check(r299_e._grant_to_hand(r299_a, "测试") and r299_e.state.hand.size() == 1
+			and r299_events.is_empty(),
+			"R299 _grant_to_hand：手牌未满 → 进手牌，不发 hand_burn")
+	# ② 满 → 进弃牌区，并发 hand_burn(to=discard)
+	while not r299_e.state.hand_full():
+		r299_e.state.hand.append(_card(8002, "攻击", "技能", 1, 0, 0))
+	var r299_b := _card(9003, "寒冰箭", "技能", 1, 0, 0)
+	var r299_ok := r299_e._grant_to_hand(r299_b, "测试满手")
+	check(not r299_ok and r299_e.state.hand.size() == FieldState.HAND_LIMIT
+			and r299_e.state.discard.size() == 1
+			and r299_e.state.discard[r299_e.state.discard.size() - 1] == r299_b,
+			"R299 _grant_to_hand：手牌满 → 直接进弃牌区（手牌 %d / 弃牌 %d）" % [
+				r299_e.state.hand.size(), r299_e.state.discard.size()])
+	check(r299_events.size() == 1 and str(r299_events[0].get("to", "")) == "discard"
+			and (r299_events[0].get("card") as CardData) == r299_b,
+			"R299 _grant_to_hand：发了 hand_burn（to=discard，带卡面）—— 界面按它播飞向弃牌堆")
+	# ③ 满 + 衍生物 → 进**消耗区**（弃牌区会被洗回牌库 → 无限刷）
+	var r299_der := _card(9004, "火焰箭", "技能", 1, 0, 0)
+	r299_der.is_ephemeral = true
+	var r299_void0: int = r299_e.state.void_count
+	r299_e._grant_to_hand(r299_der, "测试衍生物")
+	check(r299_e.state.void_count == r299_void0 + 1
+			and r299_e.state.discard.size() == 1,
+			"R299 _grant_to_hand：衍生物不进弃牌区、改记消耗区（void %d→%d，弃牌仍 %d）" % [
+				r299_void0, r299_e.state.void_count, r299_e.state.discard.size()])
+	check(str(r299_events[r299_events.size() - 1].get("to", "")) == "void",
+			"R299 _grant_to_hand：衍生物那条 hand_burn 标 to=void（界面改成上飞消散）")
+
+	# ④ 具体来源各走一遍：手牌满时「产出」照样落地（不是白丢）
+	#   拆解 8049：破坏自己一个单位 → 素体直接进弃牌区
+	var r299_d := _new_engine([], 20, 20, -1, false)
+	r299_d.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r299_d.state.hand.clear()
+	while not r299_d.state.hand_full():
+		r299_d.state.hand.append(_card(8002, "攻击", "技能", 1, 0, 0))
+	r299_d.state.discard.clear()
+	r299_d.state.energy = 5
+	r299_d._demolish(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	# ⚠️ 弃牌区里会有两张：被破坏的树人（_destroy 的常规去处）+ 这次产出的素体。
+	var r299_d_has_proto := false
+	for r299_dc: CardData in r299_d.state.discard:
+		if r299_dc.id == GameEngine.PROTO_ID:
+			r299_d_has_proto = true
+	check(r299_d.state.hand.size() == FieldState.HAND_LIMIT
+			and r299_d.state.discard.size() == 2 and r299_d_has_proto,
+			"R299 拆解：手牌满 → 素体进弃牌区（弃牌 %d 张，含素体 = %s）" % [
+				r299_d.state.discard.size(), str(r299_d_has_proto)])
+
+	# ⑤ 源码锁：引擎里不该再有「手牌满就放弃产出」的老口径字眼
+	var r299_eng := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r299_eng.find("func _grant_to_hand") >= 0
+			and r299_eng.find('"hand_burn"') >= 0,
+			"R299 源码锁：引擎有 _grant_to_hand 唯一口 + hand_burn 事件")
+	var r299_ui := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r299_ui.find('"hand_burn":') >= 0,
+			"R299 源码锁：界面登记了 hand_burn 分支（飞向弃牌堆的动画）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
