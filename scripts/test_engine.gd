@@ -22697,48 +22697,78 @@ func _init() -> void:
 
 	# ---- 地图：持有骰子 → 除固定房间外全是「?」----
 	# 两张图用**同一个种子**生成：一张普通、一张 all_unknown。
-	# 类型必须逐格一致 —— 这是「盖成 ? 不消耗随机数、不打乱随机链」的证明。
-	# ⚠️ 必须**显式设同一个种子**：`RandomNumberGenerator.new()` 默认随机播种，
-	#    漏了这两行就成了「两张不同种子的图」，比对类型必然失败（本断言踩过一次）。
-	var r311_s1 := RandomNumberGenerator.new()
-	r311_s1.seed = 20261022
-	var r311_s2 := RandomNumberGenerator.new()
-	r311_s2.seed = 20261022
-	check(RogueMap != null, "R311 地图：RogueMap 可访问")
-	var r311_m1 := RogueMap.generate(r311_s1, GameLayers.LAYER_DEFAULT)
-	var r311_m2 := RogueMap.generate(r311_s2, GameLayers.LAYER_DEFAULT, true)
-	var r311_same_types := r311_m1.size() == r311_m2.size() and r311_m2.size() > 0
-	var r311_nonfixed_hidden := true
-	var r311_fixed_open := true
-	if r311_same_types:
-		for k in r311_m1.size():
-			if str(r311_m1[k]["type"]) != str(r311_m2[k]["type"]):
-				r311_same_types = false
-			if RogueMap.is_fixed_open(r311_m2[k]):
-				# 固定房间（起点 / 大宝箱 / 右上角商店 / 篝火）**不能被盖**
-				if bool(r311_m2[k]["hidden"]):
-					r311_fixed_open = false
+	# R312（用户口径改口径）：变成「?」的房间要**重摇内容**，不是只遮门牌。
+	# ⚠️ 必须**显式设种子**：`RandomNumberGenerator.new()` 默认随机播种。
+	var r312_s1 := RandomNumberGenerator.new()
+	r312_s1.seed = 20261022
+	var r312_s2 := RandomNumberGenerator.new()
+	r312_s2.seed = 20261022
+	var r312_dr1 := RandomNumberGenerator.new()
+	r312_dr1.seed = 777001
+	var r312_dr2 := RandomNumberGenerator.new()
+	r312_dr2.seed = 777001
+	var r312_plain := RogueMap.generate(r312_s1, GameLayers.LAYER_DEFAULT)
+	var r312_dice := RogueMap.generate(r312_s2, GameLayers.LAYER_DEFAULT, r312_dr1)
+	check(r312_plain.size() == RogueMap.CELLS and r312_dice.size() == RogueMap.CELLS,
+			"R312 地图：有 / 没骰子都生成出 %d 格（%d / %d）"
+				% [RogueMap.CELLS, r312_plain.size(), r312_dice.size()])
+	var r312_nonfixed_hidden := true
+	var r312_fixed_kept := true
+	var r312_rerolled := 0
+	var r312_bad := 0
+	var r312_type_changed := 0   # 重摇后**真的换了房型**的格数（证明不是空转）
+	if r312_dice.size() == r312_plain.size():
+		for k in r312_dice.size():
+			var cd: Dictionary = r312_dice[k]
+			var cp: Dictionary = r312_plain[k]
+			if RogueMap.is_fixed_open(cd):
+				# 固定房间：既不能被盖，内容也不能被换
+				if bool(cd["hidden"]) or str(cd["type"]) != str(cp["type"]):
+					r312_fixed_kept = false
+				continue
+			if not bool(cd["hidden"]) or bool(cd["revealed"]) \
+					or RogueMap.display_type(cd) != "unknown":
+				r312_nonfixed_hidden = false
+			# 「本来就 ?」的格子沿用原内容；「本来是明房」的格子必须重摇过
+			if bool(cp["hidden"]):
+				if str(cd["type"]) != str(cp["type"]):
+					r312_bad += 1   # 本来就 ? 却被重摇了
 			else:
-				# 其它房间必须都是「?」，且 `display_type` 也要读成 unknown
-				if not bool(r311_m2[k]["hidden"]) or bool(r311_m2[k]["revealed"]) \
-						or RogueMap.display_type(r311_m2[k]) != "unknown":
-					r311_nonfixed_hidden = false
-	check(r311_same_types,
-			"R311 水晶骰子：盖成「?」**不消耗随机数**（同种子下 35 格的类型逐格一致）")
-	check(r311_nonfixed_hidden, "R311 水晶骰子：除固定房间外，所有房间都是「?」")
-	check(r311_fixed_open, "R311 水晶骰子：起点 / 大宝箱 / 右上角商店 / 篝火 保持明牌")
-	# 当刻重刷（拿到道具那一瞬间）：已揭晓的格子也要盖回去
-	var r311_live := r311_m1.duplicate(true)
-	var r311_changed := RunState.hide_rooms_as_unknown(r311_live)
-	check(r311_changed > 0, "R311 水晶骰子：拿到当刻把现有地图盖成「?」（改了 %d 格）"
-			% r311_changed)
-	var r311_live_ok := true
-	for c: Dictionary in r311_live:
+				r312_rerolled += 1
+				# 重摇**可以**摇出同一房型（`?` 权重里战斗占比不小），所以不能按
+				# 「类型必须变」判；真正要钉的是「至少有一格确实换了」+「? 房一格没动」。
+				if str(cd["type"]) != str(cp["type"]):
+					r312_type_changed += 1
+	check(r312_nonfixed_hidden, "R312 水晶骰子：除固定房间外，所有房间都是「?」")
+	check(r312_fixed_kept, "R312 水晶骰子：起点 / 大宝箱 / 右上角商店 / 篝火 连内容都不动")
+	check(r312_rerolled > 0 and r312_bad == 0 and r312_type_changed > 0,
+			"R312 水晶骰子：**变成 ? 的房间重摇了内容**（重摇 %d 格 / 真换房型 %d 格 / ? 房被误改 %d 格）"
+				% [r312_rerolled, r312_type_changed, r312_bad])
+	# 确定性：同一条骰子流重放 → 内容逐格一致
+	var r312_s3 := RandomNumberGenerator.new()
+	r312_s3.seed = 20261022
+	var r312_dice2 := RogueMap.generate(r312_s3, GameLayers.LAYER_DEFAULT, r312_dr2)
+	var r312_same := r312_dice2.size() == r312_dice.size()
+	if r312_same:
+		for r312_k2 in r312_dice.size():
+			if str(r312_dice2[r312_k2]["type"]) != str(r312_dice[r312_k2]["type"]) \
+					or str(r312_dice2[r312_k2]["event_kind"]) != str(r312_dice[r312_k2]["event_kind"]):
+				r312_same = false
+	check(r312_same, "R312 水晶骰子：重摇是**确定性**的（同种子重放逐格一致）")
+	# 拿到当刻重摇：现有地图当场变 ?，且幂等
+	var r312_live := r312_plain.duplicate(true)
+	var r312_changed := RunState.reroll_map_as_unknown(r312_live)
+	var r312_again := RunState.reroll_map_as_unknown(r312_live)
+	check(r312_changed > 0 and r312_again == 0,
+			"R312 水晶骰子：拿到当刻重摇 %d 格、再调一次是空操作（%d 格）"
+				% [r312_changed, r312_again])
+	var r312_live_ok := true
+	for c: Dictionary in r312_live:
 		if RogueMap.is_fixed_open(c):
 			continue
 		if RogueMap.display_type(c) != "unknown":
-			r311_live_ok = false
-	check(r311_live_ok, "R311 水晶骰子：重刷后非固定房间全部读作「?」")
+			r312_live_ok = false
+	check(r312_live_ok, "R312 水晶骰子：重摇后非固定房间全部读作「?」")
 
 	# ---- 骰子：? 房开战掷骰 → 前 X 回合每回合 +1 费 ----
 	var r311_deng := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)),
@@ -22818,6 +22848,62 @@ func _init() -> void:
 				% RunState.offer_relic_drop("elite"))
 	RunState.relics = []
 	RunState.basin_charge = 0
+
+
+	# ================= R312：种子机制审计 =================
+	# 用户口径：「全局种子确定的情况下，所有分类的种子都唯一确定」。
+	# 这里钉三件事：① 纯函数（同一局多次调用同值）；② 分类/序号互不相同；
+	#              ③ 与 `run_rng` 的当前位置无关（不读不写主链）。
+	RunState.run_seed = 20261022
+	var s_a := RunState.seed_of("dice_map", 1)
+	var s_b := RunState.seed_of("dice_map", 1)
+	check(s_a == s_b and s_a > 0,
+			"R312 分类种子：同一 (seed, 分类, 序号) 恒为同值（%d）" % s_a)
+	var s_cat := {}
+	for cat: String in ["dice_map", "battle", "card_reward", "relic", "event", "level"]:
+		s_cat[cat] = RunState.seed_of(cat, 1)
+	var s_dup := 0
+	var s_keys: Array = s_cat.keys()
+	for i in s_keys.size():
+		for j in range(i + 1, s_keys.size()):
+			if int(s_cat[s_keys[i]]) == int(s_cat[s_keys[j]]):
+				s_dup += 1
+	check(s_dup == 0,
+			"R312 分类种子：6 个分类在同一序号下互不相同（重复 %d 对）" % s_dup)
+	var s_idx_dup := 0
+	for i in range(1, 9):
+		if RunState.seed_of("dice_map", i) == RunState.seed_of("dice_map", i + 1):
+			s_idx_dup += 1
+	check(s_idx_dup == 0,
+			"R312 分类种子：同一分类下相邻序号的种子互不相同（重复 %d 对）" % s_idx_dup)
+	# ③ 与主链位置无关：先抽几个随机数，再算种子，值必须一样
+	var s_rng := RandomNumberGenerator.new()
+	s_rng.seed = 20261022
+	RunState.run_rng = s_rng
+	var s_before := int(RunState.run_rng.state)
+	var s_first := RunState.seed_of("dice_map", 2)
+	for _i in 5:
+		RunState.run_rng.randi()
+	var s_after_pull := RunState.seed_of("dice_map", 2)
+	check(s_first == s_after_pull,
+			"R312 分类种子：与 `run_rng` 当前位置无关（%d / %d）" % [s_first, s_after_pull])
+	# 骰子流本身也不能动主链
+	RunState.run_rng.state = s_before
+	var s_state0 := int(RunState.run_rng.state)
+	var s_dr := RunState.dice_map_rng()
+	var s_state1 := int(RunState.run_rng.state)
+	check(s_state0 == s_state1 and s_dr != null,
+			"R312 分类种子：取 `dice_map_rng()` 不消耗主链（state %d → %d）"
+				% [s_state0, s_state1])
+	# 骰子流按层区分：同一层恒同值，不同层不同值
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
+	var l1a := int(RunState.dice_map_rng().seed)
+	var l1b := int(RunState.dice_map_rng().seed)
+	RunState.current_layer = GameLayers.LAYER_TWO
+	var l2 := int(RunState.dice_map_rng().seed)
+	check(l1a == l1b and l1a != l2,
+			"R312 骰子重摇流：同一层恒同值（%d）、跨层不同值（%d）" % [l1a, l2])
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

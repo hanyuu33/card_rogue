@@ -194,25 +194,31 @@ static func is_fixed_shop(i: int) -> bool:
 # ------------------------------------------------------------ 生成
 
 static func generate(rng: RandomNumberGenerator,
-		layer := GameLayers.LAYER_DEFAULT, all_unknown := false) -> Array:
+		layer := GameLayers.LAYER_DEFAULT,
+		dice_rng: RandomNumberGenerator = null) -> Array:
 	## 生成一整张 5×7 地图（返回 35 个 cell 的数组，下标即 id）。
 	## 完全确定：同一 rng 状态必然得到同一张图（重试次数也确定）。
 	## ⚠️ R142：内容层校验（每个起点邻居都能不回头走到宝箱）**必须等类型摇完**才判 ——
 	##    宝箱是一种「类型」，而类型在 `_make_cells` 里才摇。所以一次重摇 =
 	##    「重新连边 + 重新定类型」，不是只重摇结构。
-	## R311：`all_unknown = true`（持有「水晶骰子」6040）→ 生成完之后把**除固定房间外**
-	##    的所有格子都盖成「?」。做法放在 `_make_cells` **之后**、且**不消耗任何随机数**
-	##    （见 `hide_fixed_open`），所以同一 seed 的地图内容与不加道具时完全一致，
-	##    只是「玩家看得见多少」变了 —— 道具不会把整张图的随机链条打乱。
+	## R312（用户口径）：`dice_rng != null`（持有「水晶骰子」6040）→ 生成完之后调用
+	##    `reroll_as_unknown()`：**本来不是「?」的房间要重摇内容**。变成「?」意味着
+	##    「它现在装的是一个「?」房该装的东西」，不能只把门牌遮起来、里面还留着原来那间。
+	## ⚠️ 重摇走**独立**随机流（`dice_rng`），不借 `rng` 用 —— 这样「要不要重摇」本身
+	##    **一个随机数都不多花**在 `rng` 上，主链位置与「没拿这件道具」时完全相同。
+	## ⚠️ 唯一例外：重摇换掉了房型（可能把唯一可达的宝箱摇没）→ `exits_reach_chest()`
+	##    判不过 → 像正常生成一样**重摇结构**（这一步会动 `rng`）。它同样是确定性的
+	##    （同输入必然同样重试），回放不受影响，只是「有 / 无道具」的主链位置可能错开。
+	## ⚠️ 可达性校验放在重摇**之后**：门没动，但房型（含宝箱）变了，得按新内容判。
 	for attempt in MAX_ATTEMPTS:
 		var adj := _build_adjacency(rng)
 		if adj.is_empty():
 			continue
 		var cells := _make_cells(adj, rng, layer)
+		if dice_rng != null:
+			reroll_as_unknown(cells, dice_rng, layer)
 		if not exits_reach_chest(cells):
 			continue
-		if all_unknown:
-			hide_fixed_open(cells)
 		last_attempts = attempt + 1
 		return cells
 	push_error("RogueMap：%d 次尝试仍未生成满足约束的 5×7 地图" % MAX_ATTEMPTS)
@@ -236,21 +242,79 @@ static func is_fixed_open(cell: Dictionary) -> bool:
 	return str(cell.get("type", "")) == "rest"
 
 
-static func hide_fixed_open(cells: Array) -> int:
-	## R311（水晶骰子 6040）：把「除固定房间外」的所有格子盖成「?」房，返回改动格数。
-	## ⚠️ 只翻 `hidden` / `revealed`，**不动 `type`** —— 房间内容在生成时就已经定好，
-	##    这个道具只负责「不让你看见」，不重摇内容（同一 seed 仍然可复现）。
-	## ⚠️ 已揭晓的格子也一并盖回去（`revealed = false`）—— 用户口径是「所有房间变成 ?」，
-	##    留着已揭晓的会让「刚拿到道具的当刻」看不出统一的变化。
-	## ⚠️ 本函数**不消耗随机数**，所以放在生成末尾调也绝不会把随机链条推歪。
-	var n := 0
+static func _unknown_weights(cell: Dictionary, layer: int, start_nbs: Dictionary) -> Dictionary:
+	## R312：这一格「按「?」房的权重」该用哪张表 —— 与 `_make_cells` 里的分支**同一口径**。
+	##   * 起点后第一格（第一层）：只可能是战斗 / 事件（R192 的约束，重摇也要守）；
+	##   * 起点后第一格（其它层）：`WEIGHTS_UNKNOWN` 但去掉精英；
+	##   * 其余：完整 `WEIGHTS_UNKNOWN`。
+	var i := int(cell.get("id", -1))
+	if start_nbs.has(i):
+		if layer == GameLayers.LAYER_DEFAULT:
+			return {"battle": 7, "event": 2}
+		var nb_w: Dictionary = WEIGHTS_UNKNOWN.duplicate()
+		nb_w.erase("elite")
+		return nb_w
+	return WEIGHTS_UNKNOWN
+
+
+static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: int) -> int:
+	## R312（用户口径）：**本来不是「?」的房间，一变成「?」就重摇内容** —— 返回重摇格数。
+	##
+	## 口径：
+	##   * 已经**是**「?」的格子**不动**：它们本来就是按「?」权重摇出来的，重摇只会白折腾；
+	##   * **固定房间**（起点 / 大宝箱 / 右上角商店 / 篝火）不动 —— 见 `is_fixed_open()`；
+	##   * 其余格子：按「?」权重重定 `type`，并把 `hidden` / `revealed` 一起翻成「未揭晓」；
+	##   * 事件子类型（`event_kind`）与「宝箱里是不是道具」跟着重摇，且**不与图上已有事件重名**；
+	##   * 精英仍按距离系数分布（`_weighted_far`，与生成期同一套）。
+	##
+	## ⚠️ 幂等：重摇过的格子已经 `hidden`，再调一次不会重摇（所以「拿到当刻」与「换层」
+	##    两条路可以安全地都调）。
+	## ⚠️ 随机流由调用方给（`RunState.dice_map_rng()`）—— 本函数不碰全局 `run_rng`。
+	if cells.is_empty():
+		return 0
+	var start_i := idx(START_COL, START_ROW)
+	var start_nbs := {}
+	if start_i >= 0 and start_i < cells.size():
+		for nb in (cells[start_i].get("doors", []) as Array):
+			start_nbs[int(nb)] = true
+	# ① 先算「参与重摇的格子」的平均距离系数（与生成期同一口径，总期望不变）
+	var far_sum := 0.0
+	var far_n := 0
 	for cell: Dictionary in cells:
-		if cell.is_empty() or is_fixed_open(cell):
+		var i := int(cell.get("id", -1))
+		if i < 0 or is_fixed_open(cell) or bool(cell.get("hidden", false)):
 			continue
-		if bool(cell.get("hidden", false)) and not bool(cell.get("revealed", true)):
-			continue   # 本来就盖着，不算改动
-		cell["hidden"] = true
-		cell["revealed"] = false
+		if start_nbs.has(i) and layer == GameLayers.LAYER_DEFAULT:
+			continue
+		far_sum += elite_far_factor(col_of(i), row_of(i))
+		far_n += 1
+	var far_norm: float = (far_sum / float(far_n)) if far_n > 0 else 1.0
+	# ② 事件子类型「本张图不重复」：把**仍然留在图上**的事件先登记进去（含没被重摇的 ? 房）
+	var used_events := {}
+	for cell2: Dictionary in cells:
+		var ek := str(cell2.get("event_kind", ""))
+		if str(cell2.get("type", "")) == "event" and ek != "":
+			used_events[ek] = true
+	var n := 0
+	for cell3: Dictionary in cells:
+		var i3 := int(cell3.get("id", -1))
+		if i3 < 0 or is_fixed_open(cell3) or bool(cell3.get("hidden", false)):
+			continue
+		var w := _unknown_weights(cell3, layer, start_nbs)
+		var t := ""
+		if start_nbs.has(i3) and layer == GameLayers.LAYER_DEFAULT:
+			t = _weighted(w, rng)
+		else:
+			t = _weighted_far(w, rng, col_of(i3), row_of(i3), far_norm)
+		cell3["type"] = t
+		cell3["hidden"] = true
+		cell3["revealed"] = false
+		cell3["event_kind"] = ""
+		cell3["treasure_relic"] = false
+		if t == "event":
+			cell3["event_kind"] = GameLayers.roll_event_kind(layer, rng, used_events)
+			if str(cell3["event_kind"]) == "treasure":
+				cell3["treasure_relic"] = rng.randf() < TREASURE_RELIC_CHANCE
 		n += 1
 	return n
 

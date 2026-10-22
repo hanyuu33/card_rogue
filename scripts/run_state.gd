@@ -160,6 +160,37 @@ const FATIGUE_CARD_ID := 9149
 # ---- 本局种子：run 层唯一随机源 ----
 static var run_seed: int = 0                 # 本局种子（run 层全部随机由它派生；同一种子重跑必然一致）
 static var run_rng := RandomNumberGenerator.new()   # 本局随机源（地图/道具/关卡/掉落/五换一）
+
+
+static func seed_of(category: String, index := 0) -> int:
+	## **分类种子**的唯一派生口（R312）—— 由「全局 `run_seed` + 分类名 + 序号」纯函数算出。
+	##
+	## 为什么需要它：`run_rng` 是一条**顺序链**，谁先抽谁后抽会互相影响。
+	## 于是「某个子系统多抽了一个随机数」就会把后面所有分类的结果整体推歪
+	## （典型：拿了水晶骰子去重摇地图 → 这一局之后的所有掉落/关卡都变了一遍）。
+	## 分类种子把这种耦合切断：同一 (run_seed, category, index) **永远**得到同一个值，
+	## 且**不消耗** `run_rng` 的状态。
+	##
+	## 保证（回归里逐条钉住）：
+	##   ① **确定性**：同一局同一分类，多次调用结果相同；跨进程重开同一 seed 也相同；
+	##   ② **唯一性**：不同 `category` / 不同 `index` 得到不同值（31 位混洗，实际不碰撞）；
+	##   ③ **无关性**：与 `run_rng` 当前状态无关（不读不写它）。
+	##
+	## 实现：FNV-1a 打分类名 → 折进 run_seed → 线性同余 + xorshift 混洗。
+	## ⚠️ 全程用 `& 0x7FFFFFFF` 压在 31 位：GDScript 的 int 是 64 位有符号，
+	##    不夹住的话乘法会溢出成负数（种子不要求符号，但负数让断言/日志难对）。
+	## 消费点：`dice_map_rng()`（水晶骰子的重摇流）；后续新子系统请**一律走这里**，
+	##          不要再往 `run_rng` 上加新的抽取点。
+	var h := 2166136261 & 0x7FFFFFFF
+	h = (h ^ (run_seed & 0x7FFFFFFF)) & 0x7FFFFFFF
+	for i in category.length():
+		h = (h ^ category.unicode_at(i)) & 0x7FFFFFFF
+		h = (h * 131) & 0x7FFFFFFF
+	h = (h * 1103515245 + 12345 + index * 2654435761) & 0x7FFFFFFF
+	h = (h ^ (h >> 13)) & 0x7FFFFFFF
+	h = (h * 1274126177) & 0x7FFFFFFF
+	h = (h ^ (h >> 16)) & 0x7FFFFFFF
+	return h
 ## R261：对玩家展示的种子 = **10 位大写字母 / 数字**（标准 base36：0-9 在前、A-Z 在后，
 ## 所以补位字符是 0、字母位值是 10~35）。
 ## 与 `run_seed` 一一对应（`seed_text_of` / `seed_value_of` 互逆）—— 玩家抄这 10 位就能
@@ -652,9 +683,11 @@ static func advance_layer(layer: int) -> int:
 	reward_kinds = []
 	reward_type = "normal"
 	# 本层地图用本局种子续摇（同一 run 的随机链条：start_run → 各次 advance_layer）
-	# R311：持有「水晶骰子」→ 本层地图除固定房间外全部是「?」（生成期就盖好，
-	# 不额外消耗随机数，所以同 seed 的其它道具组合不受影响）。
-	map_cells = RogueMap.generate(run_rng, layer, relics.has(DICE_RELIC_ID))
+	# R312：持有「水晶骰子」→ 本层地图除固定房间外全部是「?」，且**内容按「?」重摇**。
+	# 重摇本身走**独立**的分类种子流（`dice_map_rng()`），一个随机数都不花在主链上；
+	# 只有「重摇把可达宝箱摇没了 → 触发结构重试」那一步才会动 `run_rng`（确定性，可复现）。
+	map_cells = RogueMap.generate(run_rng, layer,
+			dice_map_rng() if relics.has(DICE_RELIC_ID) else null)
 	relic_choice = _roll_relic_choice()
 	chocolate = chocolate_per_layer()   # 新一层：巧克力重新满上（R223 难度 8 起 = 11）
 	sync_fatigue()                # R223 难度 5：新层巧克力满 → 疲惫出卡组
@@ -756,8 +789,8 @@ static func gain_relic(id: int) -> void:
 			_apply_milk()
 		BASIN_RELIC_ID:   # 不锈钢盆（R311）：拿到就满 10 点计数
 			basin_charge = BASIN_MAX
-		DICE_RELIC_ID:   # 水晶骰子（R311）：**当前这张图**的非固定房间当场全部变「?」
-			hide_rooms_as_unknown()
+		DICE_RELIC_ID:   # 水晶骰子（R312）：**当前这张图**的非固定房间当场变「?」并重摇内容
+			reroll_map_as_unknown()
 
 
 static func _apply_pot() -> void:
@@ -841,14 +874,24 @@ static func basin_pay() -> bool:
 	return true
 
 
-static func hide_rooms_as_unknown(cells: Array = []) -> int:
-	## R311 水晶骰子：把一张地图上「除固定房间外」的格子全部盖成「?」。
-	## 空数组 = 当前局的 `map_cells`（拿到道具当刻用）；返回改动格数。
-	## 实现在 `RogueMap.hide_fixed_open()`（判据唯一口，生成期与当刻共用一套）。
+static func dice_map_rng() -> RandomNumberGenerator:
+	## 水晶骰子（6040）的**重摇流**（R312）：按 (run_seed, 层) 派生，与 `run_rng` 完全隔离。
+	## ⚠️ 用「当前层」当序号：同一层不管调几次都是同一条流 → 重摇可复现、
+	##    而且「换层生成」与「拿到当刻重摇」用的是同一条流（幂等）。
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_of("dice_map", current_layer)
+	return rng
+
+
+static func reroll_map_as_unknown(cells: Array = []) -> int:
+	## R312 水晶骰子：把一张地图上「除固定房间外、且还不是 ? 的」格子**重摇内容**。
+	## 空数组 = 当前局的 `map_cells`（拿到道具当刻用）；返回重摇格数。
+	## 实现在 `RogueMap.reroll_as_unknown()`（判据 / 权重唯一口，生成期与当刻共用一套）。
+	## ⚠️ 幂等：已经是「?」的格子不会重摇，所以「换层生成过」之后再调一次是空操作。
 	var arr: Array = cells if not cells.is_empty() else map_cells
 	if arr.is_empty():
 		return 0
-	return RogueMap.hide_fixed_open(arr)
+	return RogueMap.reroll_as_unknown(arr, dice_map_rng(), current_layer)
 
 
 static func offer_relic_drop(node_type: String) -> int:

@@ -144,6 +144,10 @@ func _init(deck_cards: Array[CardData] = [], hp_me := 20, hp_foe := 20,
 func _shuffle_deck() -> void:
 	## 洗牌：注入了 rng（固定种子 / 回归测试）就走可复现的 Fisher-Yates，否则用引擎全局随机。
 	if rng == null:
+		# ⚠️ R312（种子审计）：rng 为 null 这条兜底**不可复现** —— 全局随机源既不受本局
+		# 种子控制，也不进录像 / 存档。真实战斗（battle_scene.load_level 传 brng）与联机
+		# （R312 起按卡组哈希播种）都走不到这里；只有测试 / 演示故意不传 rng 时会用到。
+		# 新增调用方请一律传 rng，不要依赖这条兜底。
 		deck.shuffle()
 		return
 	for i in range(deck.size() - 1, 0, -1):

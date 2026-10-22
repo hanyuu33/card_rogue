@@ -2968,7 +2968,15 @@ func _setup_net() -> void:
 	## 我方动作发出去、对方动作收进来按 450ms 间隔回放。
 	_net_mode = true
 	var deck: Array[CardData] = repo.starter_deck()
-	var state := FieldState.new(deck, 20, 20, -1, "联机对战", true)
+	# R312（种子审计）：**洗牌种子必须可复现**。这里原来不传 rng → `FieldState` 退回
+	# 「全局随机洗牌」，两台机器会各自洗出不同顺序，镜像引擎从第一回合就对不上。
+	# 现在用**卡组内容哈希**当种子：双方用同一套卡组时必然同一顺序（默认新手卡组即如此）。
+	var net_rng := RandomNumberGenerator.new()
+	var net_h := 2166136261
+	for nc: CardData in deck:
+		net_h = ((net_h ^ nc.id) * 16777619) & 0x7FFFFFFF
+	net_rng.seed = net_h
+	var state := FieldState.new(deck, 20, 20, -1, "联机对战", true, net_rng)
 	engine = GameEngine.new(state)
 	engine.ai_enabled = false
 	engine.action.connect(_on_engine_action)
