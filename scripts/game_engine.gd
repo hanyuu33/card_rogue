@@ -45,6 +45,9 @@ var _popcorn_quiet:= true
 ## R315 爆米花：**下个我方回合**的额外抽牌张数（回合结束时累加、下回合开始消费清零）。
 ## 不复用 `state.self_next_draw`：那条日志写死了「负重减轻」，混用会张冠李戴。
 var popcorn_draw:= 0
+## R316 极速（9171）：「本回合所有敌人受到伤害 +N」的当前值（0 = 没加成）。
+## 由 `极速` 结算时按「抽到的 0 费张数」累加；**回合结束清零**（与本回合其它一次性 buff 同口径）。
+var _rapid_enemy_bonus:= 0
 var log: Array[String] = []
 var rng:= RandomNumberGenerator.new()
 var self_relics: Array[int] = []
@@ -383,6 +386,14 @@ const EMERGENCY_POWER_ID:= 9170
 const EMERGENCY_POWER_ENERGY:= 1
 const EMERGENCY_POWER_DRAW:= 1
 const EMERGENCY_POWER_HEAL:= 2
+# R316 极速（9171，暗影刺客 1 费稀有技能）：抽 2 张；抽到的牌里每有一张 0 费 →
+#   **本回合所有敌人受到伤害 +1**（任何来源，与侦察塔光环同一个施加口）。
+const RAPID_ID:= 9171
+const RAPID_DRAW:= 2
+const RAPID_PER_ZERO:= 1
+# R316 激光扫射（9172，机械之心 2 费稀有技能）：对所有敌人造成 9 点伤害。
+const LASER_SWEEP_ID:= 9172
+const LASER_SWEEP_DMG:= 9
 const BASIN_RELIC_ID:= 6041
 const COURAGE_RELIC_ID:= 6031
 const COURAGE_ELITE_TURNS:= 1
@@ -2999,6 +3010,8 @@ func end_turn() -> void :
 
 		_rice_used = false
 		turn_spell_bonus = 0
+		# R316 极速：敌人易伤也是「本回合」限定 —— 与我方其它一次性 buff 一起清。
+		_rapid_enemy_bonus = 0
 	else:
 		state.opp_hand_count = 0
 
@@ -4662,6 +4675,23 @@ func _scout_aura_bonus(victim: Placement, victim_cell: Vector2i) -> int:
 		if manhattan(other, victim_cell) <= u.effective_range():
 			bonus += u.upgrade_stacks
 	return bonus
+
+
+func _apply_rapid_marks(p: Placement, amount: int) -> int:
+	## R316 极速（9171）：「本回合所有敌人受到伤害 +N」的**统一施加口**。
+	## 与「侦察塔光环」必须成对出现在**同两个落地口**：`_hit_unit`（普攻 / 多格效果 /
+	## 陷阱 / 亡语…）与 `_op_deal_damage`（单目标技能卡）—— 只挂一处会让另一条路被绕过
+	## （侦察塔当年就踩过这个坑，见 `_apply_scout_aura` 的注释）。
+	## ⚠️ 只作用于**敌方单位**：我方单位被打不该吃自己的易伤；敌方 HP（没有 Placement）
+	##    也不在此列 —— 与侦察塔「只加单位」同一口径。
+	## ⚠️ 调用方要保证「一次伤害只加一次」（`_hit_unit` 里放在 `allow_redirect` 分支内）。
+	if p == null or p.card == null or _rapid_enemy_bonus <= 0:
+		return amount
+	if p.owner == SIDE_SELF:
+		return amount
+	_log("极速：%s 受到的伤害 +%d（%d → %d）" % [
+			p.card.card_name, _rapid_enemy_bonus, amount, amount + _rapid_enemy_bonus])
+	return amount + _rapid_enemy_bonus
 
 
 func _apply_scout_aura(p: Placement, amount: int) -> int:
@@ -7925,6 +7955,55 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 							EMERGENCY_POWER_HEAL, ep_total])
 			return "获得 %d 点费用，抽 %d 张卡，%d 个友方单位各回复 %d 点生命" \
 					% [EMERGENCY_POWER_ENERGY, ep_drawn, ep_n, EMERGENCY_POWER_HEAL]
+		RAPID_ID:
+			# 极速（9171，R316，暗影刺客 1 费稀有技能）：
+			#   抽 2 张 → 抽到的牌里每有一张「0 费」，本回合所有敌人受到伤害 +1。
+			# ⚠️ 「0 费」按**当前费用**算（`cost_of`）：本回合减费 / 免费把它压到 0 也算 ——
+			#    玩家看的是手牌上那个数字，不是卡库里的原始费用。
+			# ⚠️ 只数**真进手牌**的：手牌满时抽到的牌会直接进弃牌区（`hand_burn`），
+			#    那张不算「抽到手里」，与 `_draw_many` 的返回口径一致。
+			var rp_before: int = state.hand.size()
+			var rp_got := _draw_many(RAPID_DRAW)
+			var rp_zero := 0
+			for rp_i in range(rp_before, state.hand.size()):
+				if cost_of(state.hand[rp_i]) <= 0:
+					rp_zero += 1
+			if rp_zero > 0:
+				_rapid_enemy_bonus += rp_zero * RAPID_PER_ZERO
+				_log("极速：抽 %d 张，其中 %d 张 0 费 → 本回合所有敌人受到伤害 +%d（累计 +%d）"
+						% [rp_got, rp_zero, rp_zero * RAPID_PER_ZERO, _rapid_enemy_bonus])
+			else:
+				_log("极速：抽 %d 张，没有 0 费卡 → 敌人易伤不增加（当前 +%d）"
+						% [rp_got, _rapid_enemy_bonus])
+			action.emit("rapid", {"drawn": rp_got, "zero": rp_zero,
+					"bonus": _rapid_enemy_bonus, "side": side})
+			return "抽 %d 张（0 费 %d 张），本回合敌人受到伤害 +%d" \
+					% [rp_got, rp_zero, _rapid_enemy_bonus]
+		LASER_SWEEP_ID:
+			# 激光扫射（9172，R316，机械之心 2 费稀有技能）：对所有敌人造成 9 点伤害。
+			# 与激发 8077 / 风妖精 6042 同口径：逐格走 `_hit_unit`（护盾 / 减伤 / 光环照常），
+			# 致死统一交 `_destroy_dead()`；格子先排序，回放 / 同种子必须逐帧一致。
+			# 只打**场上的敌方单位**，不直击敌方 HP（没有单位时效果落空）。
+			var ls_dmg: int = _spell_dmg(side, LASER_SWEEP_DMG, card)
+			var ls_cells: Array[Vector2i] = []
+			for ls_cell: Vector2i in state.board:
+				var ls_u: Placement = state.board[ls_cell]
+				if ls_u != null and ls_u.owner != side:
+					ls_cells.append(ls_cell)
+			if ls_cells.is_empty():
+				_log("激光扫射：场上没有敌方单位，效果落空")
+				return "场上没有敌人"
+			ls_cells.sort()
+			var ls_hits := 0
+			for ls_c2: Vector2i in ls_cells:
+				var ls_q: Placement = state.board.get(ls_c2, null)
+				if ls_q == null or ls_q.health <= 0:
+					continue
+				_hit_unit(ls_q, ls_dmg, "激光扫射")
+				ls_hits += 1
+			_destroy_dead()
+			_log("激光扫射：对所有敌人造成 %d 点伤害（%d 个目标）" % [ls_dmg, ls_hits])
+			return "对所有敌人造成 %d 点伤害（%d 个目标）" % [ls_dmg, ls_hits]
 		UPGRADE_ID:
 			# 升级 8027（R82，机械之心）：改造一个己方盟友或工事。
 			# 走 _run_spell_effect 而不是 use_spell 的分支 → 蓄力（9085）叠它会叠多次，
@@ -9257,6 +9336,7 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	#    在那儿再加一次会**双算**。
 	if allow_redirect:
 		amount = _apply_scout_aura(p, amount)
+		amount = _apply_rapid_marks(p, amount)   # R316 极速：敌人易伤（任何来源）
 	# 快速符文（6043，R313）：「**对下回合不能行动的敌人效果加倍**」的那一半。
 	# `_spell_dmg()` 已经按普通目标加过一次（保证预览值 == 实际值），这里补差额：
 	#   amount = B × (100+p)/100  ⇒  B ≈ amount×100/(100+p)  ⇒  再补 B×p/100。
@@ -10202,7 +10282,9 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 			return "%s 免疫法术" % p.card.card_name
 		# R138：技能卡伤害也要吃「侦察塔」光环易伤 —— 与 `_hit_unit` 同一条口径
 		# （原先只挂在 `_hit_unit`，单目标技能走这里 → 光环被绕过）。
-		var amount2:= _unit_damage_taken(p, _apply_scout_aura(p, amount), "spell")
+		# R316 极速与侦察塔光环走同一处：单目标技能卡也必须吃到敌人易伤。
+		var amount2:= _unit_damage_taken(p, _apply_rapid_marks(p,
+				_apply_scout_aura(p, amount)), "spell")
 		p.health -= amount2
 		if p.owner == SIDE_OPPONENT and amount2 > 0:
 			_mark_spell_enemy_hit()

@@ -5235,6 +5235,44 @@
       "target_mode": "none",
       "color": "紫",
       "image": ""
+    },
+    {
+      "id": 9171,
+      "name": "极速",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "抽 2 张牌。抽到的牌里每有一张 0 费，本回合所有敌人受到伤害 +1。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 9172,
+      "name": "激光扫射",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "对所有敌人造成 9 点伤害。",
+      "target_mode": "none",
+      "color": "紫",
+      "image": ""
     }
   ]
 }

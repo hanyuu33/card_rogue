@@ -9916,6 +9916,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
 					"text": "激发 · 全体 -%d%s" % [in_d, (" ×%d" % in_n) if in_n > 1 else ""],
 					"col": Color("a05ad0"), "size": 17, "start": n, "dur": 1600})
+		"rapid":
+			# R316 极速 9171：抽到的 0 费张数 → 本回合所有敌人受到伤害 +N。
+			var rp_zero := int(data.get("zero", 0))
+			var rp_bonus := int(data.get("bonus", 0))
+			_say("◆ 极速：抽 %d 张（0 费 %d 张）→ 本回合敌人受到伤害 +%d"
+					% [int(data.get("drawn", 0)), rp_zero, rp_bonus])
+			if rp_zero > 0:
+				_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
+						"text": "极速 · 敌人受伤 +%d" % rp_bonus,
+						"col": Color("8fd8ff"), "size": 16, "start": n, "dur": 1700})
 		"popcorn":
 			# R315 爆米花 6046：本回合没用技能指向敌人 → 下回合多抽 1 张。
 			# 飘字只写「拿到了什么」，有时间维度（start + dur → 位移 + 淡出）。
