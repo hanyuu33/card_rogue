@@ -1164,6 +1164,13 @@ func _ready() -> void:
 		status_text += "② 误点空位只上膛 —— 琥珀「取消?」= 再点一次才取消"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r307statue" in args and engine != null:
+		# R307 演示：道具栏里「雕像（3）」—— 名字旁显示累计使用张数（出图核验）。
+		RunState.relics = [6039, 6035]
+		engine.self_relics = [6039, 6035]
+		RunState.statue_charge = 3
+		status_text = "R307：雕像（3）= 道具名旁显示累计张数（每 10 张回 1 能量）"
+		queue_redraw()
 	if "--r303tip" in args and engine != null:
 		# R303 演示：提及浮窗**完整版**（卡面 + 效果正文 + 字段解释）——
 		# 用一张自带字段的卡（救援构装体 8056 带「交换」），钉住浮窗不看鼠标。
@@ -4507,6 +4514,8 @@ func _pick_active_kind() -> String:
 		return "sysup"
 	if _recycle_idx >= 0:
 		return "recycle"
+	if engine.wish_pending:
+		return "wish"
 	if engine.crow_pending:
 		return "crow"
 	if engine.whale_pending:
@@ -4616,6 +4625,16 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"cards": hopts.map(func(i: int) -> CardData: return engine.state.hand[i]),
 					"max_sel": GameEngine.HERO_DISCARD,
 					"confirm_label": "确认丢弃", "cancel_label": "取消上场"}
+		"wish":
+			# R306 许愿（9168）：从**卡组**选一张卡加入手卡。
+			var wopts: Array = engine.wish_options()
+			return {"kind": k, "short": "许愿", "opts": wopts,
+					"title": "许愿：从卡组选择一张卡加入手卡（卡组 %d 张）"
+							% engine.state.deck.size(),
+					"note": "点卡选中，再点确认 —— 它立即进入你的手牌（从卡组取走）",
+					"cards": wopts.map(func(i: int) -> CardData:
+						return engine.state.deck[i]),
+					"max_sel": 1, "confirm_label": "确认", "cancel_label": "放弃许愿"}
 		"crow":
 			var copts: Array = engine.crow_options()
 			return {"kind": k, "short": "乌鸦", "opts": copts,
@@ -4825,6 +4844,15 @@ func _on_pick_confirmed(sel: Array) -> void:
 				_net_send({"type": "action", "act": "play", "card": card.to_dict(),
 						"cell": [cell.x, cell.y]})
 				status_text = "%s 上场：付出代价（丢弃 %d 张手牌）" % [card.card_name, drop.size()]
+		"wish":
+			# R306 许愿：确认 → 卡组那张进手牌。
+			var wi := int(opts[sel[0]])
+			var wnm := "?"
+			if wi >= 0 and wi < engine.state.deck.size():
+				wnm = engine.state.deck[wi].card_name
+			if engine.wish_pick(wi):
+				status_text = "许愿：%s 从卡组加入手卡" % wnm
+			_clear_selection()
 		"crow":
 			var ci := int(opts[sel[0]])
 			var cnm := "?"
@@ -5776,7 +5804,8 @@ func _on_hover(pos: Vector2) -> void:
 					# 道具描述可能很长（叠加态的鸭等）：完整说明走浮动折行面板，
 					# 不再塞进工具栏一行（会横向溢出窗口）
 					var note := RunState.relic_state_note(engine.self_relics[i])
-					_hover_relic_tip = "「%s」（%s）%s%s" % [rel.relic_name,
+					_hover_relic_tip = "「%s」（%s）%s%s" % [
+							RunState.relic_display_name(engine.self_relics[i]),
 							rel.tag_line(), rel.desc,
 							("\n" + note) if note != "" else ""]
 				break
@@ -10532,7 +10561,8 @@ func _draw_relic_bar() -> void:
 		var chip := Rect2(rect.position + Vector2(4, 4), Vector2(6, rect.size.y - 8))
 		draw_rect(chip, scol, true)
 		draw_rect(chip, Color(0, 0, 0, 0.5), false, 1.0)
-		_draw_string_center(_font_bold, UiTheme.FS_MICRO, rel.relic_name,
+		_draw_string_center(_font_bold, UiTheme.FS_MICRO,
+				RunState.relic_display_name(ids[i]),
 				Vector2(rect.position.x + 12.0 + (rect.size.x - 12.0) / 2,
 						rect.position.y + 14.0),
 				Color("4a3c14"))

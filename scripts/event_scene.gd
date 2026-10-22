@@ -160,6 +160,32 @@ const MERCHANT_DONE_DESC := """摊主把那张牌收进袖子里，冲你抬了�
 
 「成交。下回还来。」"""
 
+const DIVINATION_DESC := """屋里只点着一支蜡烛，水晶球里浮着一层不肯散去的雾。
+
+「看得到什么，全看你相信什么。」
+
+占卜师收完钱就不见了，只留下这颗球，和一阵檀香。"""
+
+const DIVINATION_DONE_DESC := """水晶球重新蒙上雾，好像什么都没发生过。"""
+
+const DIV_WHALE_DESC := """雾散开一角，一条鲸鱼在星光里缓缓转身，尾鳍扫过整片海。
+
+你觉得——"""
+
+const DIV_LIQUID_DESC := """球里盛着一杯液体，杯沿结着薄霜，颜色在灯下慢慢变。
+
+你觉得——"""
+
+const DIV_THORN_DESC := """球里长出一片荆棘，尖刺密密麻麻缠成一条路。
+
+你觉得——"""
+
+const DIV_FEAST_DESC := """球里摆开一桌佳肴，热气还在往上飘，却听不见一点人声。
+
+你觉得——"""
+
+const DIVINATION_KINDS := 4
+
 const LAKE_DESC := """雾从水面浮起来，一只戴着水草冠的手从雾里伸出来，掌心朝上。
 
 「说个谎吧，我替你扔掉一件旧东西。
@@ -170,6 +196,12 @@ const LAKE_DONE_DESC := """水面合拢，雾气散得干干净净。手心里�
 
 func _rest_desc() -> String:
 	## 休息处文案（R237：恢复篝火回血 —— 休息与烤肉二选一）。
+	## R307 圣餐（6038）：持有它时休息直接回满，文案要跟着改（不然按钮说回 5 实际回满）。
+	if RunState.has_relic(RunState.RELIC_SACRAMENT_ID):
+		return """篝火旁摆着一份还没凉透的圣餐。
+在篝火旁休息，生命直接回满；
+也可以烤一块肉带在身上，留到 Boss 战前享用。
+（两样只能挑一样——选完这一处就到头了。）"""
 	return """前路的战斗还在等着你。
 在篝火旁休息，恢复 %d%% 最大生命；
 也可以烤一块肉带在身上，留到 Boss 战前享用。
@@ -195,6 +227,9 @@ var _arcane_drunk := false    # 奥秘之泉：是否已选择「喝下泉水」
 var _reward_claimed := false  # R147：本次事件访问是否已领过奖励（一次访问只领一份，见 _claim_reward）
 var _oblivion_done := false   # 遗忘之泉：是否已经遗忘过一张卡（或已选择去删卡）
 var _smith_done := false      # 鸭鸭工匠：是否已经锻造过（或已选择去锻造）
+var _div_stage := 0           # R308 占卜室：0 = 还没占卜 / 1 = 已占卜待解读 / 2 = 已解读完
+var _div_rolled := 0          # R308 占卜室：本次占卜出的是第几种幻象（1~4）
+var _div_result := ""         # R308 占卜室：解读后的结果行（收尾态复用）
 var _merchant_done := false   # R305 卡片商人：是否已经做过一笔交易
 var _lake_done := false       # R305 湖中仙女：是否已经许过愿
 var _treasure_taken := false  # 宝箱（支付生命换卡牌奖励）：是否已开
@@ -316,6 +351,11 @@ func _is_lake_lady() -> bool:
 	return _is_event_node() and _pending_kind() == "lake_lady"
 
 
+func _is_divination() -> bool:
+	## R308 占卜室（第一 / 第二层）：占卜 → 随机幻象 → 两个解读，各给一张卡或一件道具。
+	return _is_event_node() and _pending_kind() == "divination"
+
+
 func _is_struggle() -> bool:
 	return _is_event_node() and _pending_kind() == "struggle"
 
@@ -343,7 +383,8 @@ func _is_treasure() -> bool:
 			and not _is_bluefish() and not _is_apple() and not _is_relic_chest() \
 			and not _is_arcane() and not _is_oblivion() and not _is_smith() \
 			and not _is_delivery() and not _is_delivery_done() \
-			and not _is_card_merchant() and not _is_lake_lady()
+			and not _is_card_merchant() and not _is_lake_lady() \
+			and not _is_divination()
 
 
 func _kind() -> String:
@@ -370,6 +411,8 @@ func _kind() -> String:
 		return "card_merchant"
 	if _is_lake_lady():
 		return "lake_lady"
+	if _is_divination():
+		return "divination"
 	if _is_bluefish():
 		return "bluefish"
 	if _is_delivery():
@@ -529,6 +572,17 @@ func _ready() -> void:
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "card_merchant"
 			RunState.deck_ids = [8001, 8002, 8003, 9018, 8060, 8001, 9154, 9083]
+		if args[i] == "--divination":  # 演示：占卜室（初始态）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "divination"
+		for _di in 4:
+			if args[i] == "--div%d" % (_di + 1):  # 演示：占卜室的第 1~4 种幻象（解读态）
+				RunState.run_active = true
+				RunState.pending_node = {"type": "event"}
+				RunState.pending_event = "divination"
+				_div_stage = 1
+				_div_rolled = _di + 1
 		if args[i] == "--lakelady":  # 演示：湖中仙女（R305 出图核验两项选项）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -649,6 +703,23 @@ func _ready() -> void:
 				result_label.add_theme_color_override("font_color", Color("9a968c"))
 	elif _is_arcane():
 		_setup_arcane()
+	elif _is_divination():
+		event_name.text = "占 卜 室"
+		if _div_stage >= 2:
+			desc.text = DIVINATION_DONE_DESC
+			_collapse_to_leave()
+			result_label.text = _div_result
+			result_label.add_theme_color_override("font_color", Color("8a9ad8"))
+		elif _div_stage == 1:
+			# 演示 / 回档：已经占卜过 → 直接铺解读选项
+			_apply_divination_text()
+		else:
+			desc.text = DIVINATION_DESC
+			rest_btn.text = "进行占卜"
+			rest_btn.disabled = false
+			bbq_btn.visible = false
+			leave_btn.text = "离开（不占卜）"
+			result_label.text = ""
 	elif _is_card_merchant():
 		event_name.text = "卡 片 商 人"
 		desc.text = MERCHANT_DONE_DESC if _merchant_done else MERCHANT_DESC
@@ -776,7 +847,12 @@ func _ready() -> void:
 		event_name.text = "休息处"
 		desc.text = _rest_desc()
 		var rest_gain := mini(RunState.rest_heal_amount(), RunState.max_hp - RunState.hp)
-		rest_btn.text = "在这里休息（回复 %d 生命）" % rest_gain
+		if RunState.has_relic(RunState.RELIC_SACRAMENT_ID):
+			# R307 圣餐：休息直接回满 —— 按钮上写明，不然和实际结算对不上。
+			rest_gain = RunState.max_hp - RunState.hp
+			rest_btn.text = "在这里休息（生命回满 · 圣餐）"
+		else:
+			rest_btn.text = "在这里休息（回复 %d 生命）" % rest_gain
 		rest_btn.disabled = rest_gain <= 0   # 满血 → 休息没意义，置灰
 		# R234 止血绷带（6029）：进休息处时结算本层累计的额外回血（结算后清零）。
 		var bandage_heal := RunState.consume_bandage_heal()
@@ -849,6 +925,20 @@ func _on_main() -> void:
 	## 宝箱层 → 开箱获得 1 个随机奖励道具。
 	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
 	sfx.play("click")
+	if _is_divination():
+		if _div_stage == 0:
+			# 进行占卜：1~4 随机（**走本局 run_rng**，同种子一致）
+			_div_rolled = RunState.run_rng.randi_range(1, DIVINATION_KINDS)
+			_div_stage = 1
+			_apply_divination_text()
+			sfx.play("click")
+			_redraw()
+			return
+		if _div_stage == 1:
+			_resolve_divination(true)
+			return
+		_on_leave()
+		return
 	if _is_lake_lady():
 		if _lake_done:
 			_on_leave()
@@ -1330,7 +1420,7 @@ func _refresh() -> void:
 			or _is_gaze() or _is_pear() or _is_apple() or _is_hero() or _is_bluefish() \
 			or _is_relic_chest() or _is_arcane() or _is_oblivion() \
 			or _is_smith() or _is_delivery() or _is_delivery_done() \
-			or _is_card_merchant() or _is_lake_lady():
+			or _is_card_merchant() or _is_lake_lady() or _is_divination():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。
@@ -1362,6 +1452,66 @@ func _refresh_bbq() -> void:
 		bbq_btn.disabled = false
 
 
+func _apply_divination_text() -> void:
+	## R308 占卜室的「已占卜」态：换成幻象文案 + 两个解读选项（阶段①）。
+	bbq_btn.visible = true
+	leave_btn.text = "离开（不去解读）"
+	result_label.text = ""
+	match _div_rolled:
+		1:
+			desc.text = DIV_WHALE_DESC
+			rest_btn.text = "我会为它而战（获得「鲸鱼之怒」）"
+			bbq_btn.text = "它将听我差遣（获得「许愿」）"
+		2:
+			desc.text = DIV_LIQUID_DESC
+			rest_btn.text = "你会需要它（获得道具「泉水」）"
+			bbq_btn.text = "它很危险（获得道具「思想钢印」）"
+		3:
+			desc.text = DIV_THORN_DESC
+			rest_btn.text = "在充满困难的道路上前行（获得「烈火之剑」）"
+			bbq_btn.text = "拥抱伤痛（获得道具「荆棘指环」）"
+		_:
+			desc.text = DIV_FEAST_DESC
+			rest_btn.text = "是慷慨的赐予（获得道具「圣餐」）"
+			bbq_btn.text = "是最后的怜悯（获得道具「雕像」）"
+	rest_btn.visible = true
+	rest_btn.disabled = false
+	bbq_btn.disabled = false
+
+
+func _resolve_divination(first: bool) -> void:
+	## R308 占卜室 · 解读：按「第几种幻象 + 选了哪一项」发对应的卡 / 道具。
+	## 全部走既有入口（`RunState.add_card` / `gain_relic`），不新造发放路径。
+	var card_id := 0
+	var relic_id := 0
+	match _div_rolled:
+		1:
+			card_id = WHALE_CARD_ID if first else GameEngine.WISH_ID
+		2:
+			relic_id = GameEngine.SPRING_RELIC_ID if first else GameEngine.STEEL_STAMP_RELIC_ID
+		3:
+			card_id = GameEngine.FLAME_SWORD_ID if first else 0
+			relic_id = 0 if first else GameEngine.THORN_RING_RELIC_ID
+		_:
+			relic_id = RunState.RELIC_SACRAMENT_ID if first else RunState.RELIC_STATUE_ID
+	if card_id > 0:
+		RunState.add_card(card_id)
+		var c := CardRepo.load_json().get_card(card_id)
+		_div_result = "「%s」已加入卡组。" % (c.card_name if c != null else str(card_id))
+	elif relic_id > 0:
+		RunState.gain_relic(relic_id)
+		_div_result = "「%s」已收进道具栏。" % RunState.relic_display_name(relic_id)
+	else:
+		return
+	_div_stage = 2
+	_claim_reward(rest_btn if first else bbq_btn)
+	_collapse_to_leave()
+	desc.text = DIVINATION_DONE_DESC
+	result_label.text = _div_result
+	result_label.add_theme_color_override("font_color", Color("8a9ad8"))
+	_redraw()
+
+
 func _on_alt() -> void:
 	## R305 卡片商人 · **随机折价**（第三选项）：随机失去一张非诅咒卡，换 100 金币。
 	## 只有卡片商人打开这个按钮，别的分支直接返回。
@@ -1388,6 +1538,10 @@ func _on_bbq() -> void:
 	## 休息处「烤肉」：获得事件道具「烤肉」（进入 Boss 战时自动消耗 → 回复 25% 生命）。
 	## 奥秘之泉：这一路是「选择2 · 喝下泉水」→ 去卡牌奖励界面（限定效果 / 技能）。
 	sfx.play("click")
+	if _is_divination():
+		if _div_stage == 1:
+			_resolve_divination(false)
+		return
 	if _is_lake_lady():
 		if _lake_done:
 			return

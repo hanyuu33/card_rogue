@@ -43,6 +43,7 @@ const LAYERS := {
 			"treasure": 31,   # 宝箱（卡牌奖励）
 			"delivery": 20,  # 运送委托（R200，第一层专属）：选 1~6 张「货物」入卡组
 			"lake_lady": 16,  # 湖中仙女（R305，第一层专属）：谎言删一张初始卡 / 诚实得随机史诗卡
+			"divination": 14,  # 占卜室（R308）：占卜后随机 4 种幻象，每种两个解读（卡 / 道具）
 		},
 	},
 	2: {
@@ -65,6 +66,8 @@ const LAYERS := {
 			# 前两层，第三层落地时**记得在那一层的 events 表里同步登记**（内容按层隔离，
 			# 不登记就不会出现）。
 			"card_merchant": 16,
+			# R308：占卜室（用户口径「1、2、3 层都有」）—— 第三层落地时同样要在这里补登记。
+			"divination": 12,
 		},
 	},
 }
@@ -85,6 +88,7 @@ const EVENT_NAMES := {
 	"smith": "鸭鸭工匠",
 	"card_merchant": "卡片商人",
 	"lake_lady": "湖中仙女",
+	"divination": "占卜室",
 	"delivery": "运送委托",
 	"delivery_done": "委托完成",
 	"treasure": "卡牌宝箱",

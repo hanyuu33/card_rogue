@@ -238,7 +238,7 @@ func _row_block(e: Dictionary, max_lines: int) -> Dictionary:
 	if max_lines < 99 and lines.size() > max_lines:
 		lines = lines.slice(0, max_lines)
 		lines[max_lines - 1] = lines[max_lines - 1] + "…"
-	return {"name": rel.relic_name,
+	return {"name": RunState.relic_display_name(rel.id),
 			"tag": rel.tag_line(),
 			"lines": lines, "scol": rel.badge_color(),
 			"h": H_NAME + lines.size() * H_LINE + H_GAP}
@@ -287,7 +287,7 @@ func _on_hover_draw() -> void:
 		_hover_layer.draw_rect(Rect2(r.position.x + PAD * 0.5, y + 2, 6, H_NAME + 4),
 				Color(0, 0, 0, 0.5), false, 1.0)
 		_hover_layer.draw_string(_font_bold, r.position + Vector2(PAD * 0.6 + 12, y + 15),
-				"「%s」" % rel.relic_name, HORIZONTAL_ALIGNMENT_LEFT,
+				"「%s」" % RunState.relic_display_name(rel.id), HORIZONTAL_ALIGNMENT_LEFT,
 				180.0, UiTheme.FS_LABEL, Color("f4eeda"))
 		_hover_layer.draw_string(_font, r.position + Vector2(PAD * 0.6 + 196, y + 15),
 				str(b["tag"]), HORIZONTAL_ALIGNMENT_LEFT, 180.0, UiTheme.FS_CAPTION, Color("9a927f"))
@@ -368,7 +368,8 @@ func _on_panel_draw() -> void:
 		_panel.draw_rect(Rect2(px + PAD, y + 4, 10, ROW_H - 14), Color(0, 0, 0, 0.45), false, 1.0)
 		# 名称 + 来源标签 + 生效时机（字号比速览浮层大一档）
 		_panel.draw_string(_font_bold, Vector2(px + PAD + 22, y + 22),
-				"「%s」" % rel.relic_name, HORIZONTAL_ALIGNMENT_LEFT, 300, P_NAME, Color("2f2a20"))
+				"「%s」" % RunState.relic_display_name(rel.id),
+				HORIZONTAL_ALIGNMENT_LEFT, 300, P_NAME, Color("2f2a20"))
 		_panel.draw_string(_font, Vector2(px + PAD + 216, y + 22),
 				"（%s）" % str(_tag_of(e)), HORIZONTAL_ALIGNMENT_LEFT, 300, P_TAG, Color("8a8172"))
 		var lines := _row_lines(e)

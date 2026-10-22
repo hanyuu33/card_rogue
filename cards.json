@@ -5168,6 +5168,50 @@
       "value": 3,
       "color": "紫",
       "image": ""
+    },
+    {
+      "id": 9168,
+      "name": "许愿",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "事件"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "从卡组选择一张卡加入手卡。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 9169,
+      "name": "烈火之剑",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "事件"
+      ],
+      "affixes": [],
+      "effect_text": "对每一列最靠前的敌人造成 10 点伤害。",
+      "target_mode": "none",
+      "color": "红",
+      "image": ""
     }
   ]
 }

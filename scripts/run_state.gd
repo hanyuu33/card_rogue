@@ -57,6 +57,13 @@ static var reward_kinds: Array[String] = []  # 本次卡牌奖励的卡类限制
 ## R305：有「刚入队、还没给玩家看过」的奖励 → 下一次进地图补弹一次奖励悬浮窗。
 ## 用途 = 卡片商人的「以卡易物」：奖励在 deck_edit 场景里入队，那里没有奖励面板。
 ## ⚠️ 一次性开关（地图弹过就置回 false）；不参与存档 —— 丢了只是少看一次弹窗，奖励还在队列里。
+## R307 雕像（6039）：累计「已使用多少张牌」，满 10 张换 1 点能量。
+## **跨回合、跨战斗累计** → 存在局状态里（随存档走）。
+static var statue_charge := 0
+const RELIC_STATUE_ID := 6039
+const RELIC_SACRAMENT_ID := 6038
+const STATUE_EVERY := 10
+
 static var reward_popup_pending := false
 static var battle_log: Array = []            # 本局战斗记录（与持久化文件同步追加）
 ## R177 玩家地图标记（当局内共享）：`map_strokes` = 画图模式折线，每条
@@ -330,8 +337,23 @@ static func rest_heal_amount() -> int:
 
 
 static func rest() -> int:
-	## 「休息」事件：R224 起休息处不再回复生命（全档位 rest_pct = 0）→ 恒返回 0。
+	## 「休息」事件：回复 `rest_heal_amount()` 点生命。
+	## R307 圣餐（6038）：持有它 → **直接回满**（不按百分比算）。
+	if has_relic(RELIC_SACRAMENT_ID):
+		return heal(max_hp - hp)
 	return heal(rest_heal_amount())
+
+
+static func relic_display_name(id: int) -> String:
+	## 道具的**显示名唯一口**（R307）：名字后面要补动态信息时只改这里。
+	## 目前只有雕像（6039）需要写累计张数 —— 如「雕像（3）」。
+	## 计数为 0 时只写名字（免得刚拿到手就顶着「（0）」）。
+	var rel := RelicRepo.load_json().get_relic(id)
+	if rel == null:
+		return str(id)
+	if id == RELIC_STATUE_ID and statue_charge > 0:
+		return "%s（%d）" % [rel.relic_name, statue_charge]
+	return rel.relic_name
 
 
 static func bandage_add(n: int) -> void:
@@ -496,6 +518,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	pending_node = {}
 	reward_context = ""
 	pending_deck_edit = ""
+	statue_charge = 0          # R307 雕像：新的一局从 0 开始数
 	reward_kinds = []
 	# 开局卡组 = 公共部分 + 2 张角色基础盟友（森林精魄 → 树人；暗影刺客 → 幽影）
 	# + 角色专属卡（森林精魄 → 熊 8004；暗影刺客 → 突袭 9086）。见 PlayerClass.start_deck_ids。

@@ -59,6 +59,9 @@ var merge_body_hp:= -1         # 面板选中的素体生命（同上）
 var merge_body_name:= ""       # 面板选中的素体名（日志 / 目标失效时的提示）
 var whale_remaining:= 0
 var foresight_mode:= false  # 预判（9097）：等玩家选效果①/②
+var wish_pending:= false    # 许愿（9168）：等玩家从**卡组**选一张卡加入手卡
+var _steel_stamp_used:= false  # R307 思想钢印：本场战斗是否已经救过一次（每场一次）
+var _thorn_ring_turn:= -1      # R307 荆棘指环：上次触发是第几回合（每回合一次）
 var foresight_pick:= false  # 预判①：等玩家从弃牌区选一张 0 费技能卡
 var foresight_vanish:= false  # 预判①选完后：把本卡从弃牌区移除（本卡消失）
 ## R292：拒绝命运（9098）改成**自动结算**（丢光手卡 → 弃牌区所有 0/1 费卡按顺序回手），
@@ -320,6 +323,12 @@ const JAR_TOKEN_ID:= 9158
 const VERSATILE_RELIC_ID:= 6033
 
 
+## R307「占卜室」五件道具
+const SPRING_RELIC_ID := 6035        # 泉水：后排单位每回合回 4
+const STEEL_STAMP_RELIC_ID := 6036   # 思想钢印：每场战斗第一个被破坏的我方单位回手卡
+const THORN_RING_RELIC_ID := 6037    # 荆棘指环：每回合第一次受伤抽 2
+const STATUE_RELIC_ID := 6039        # 雕像：每 10 张牌回 1 能量（计数在 RunState）
+const SPRING_HEAL := 4
 const PEAR_RELIC_ID:= 6019
 
 
@@ -611,6 +620,10 @@ const WHIRL_BLADE_DMG:= 17
 const WHIRL_BLADE_NEED:= 4
 # 夜行（9155 技能，R232，暗影刺客史诗）：2 费；本回合我方所有卡费用为 0；
 # 本回合我方出牌上限 NIGHT_WALK_MAX 张（**含本卡**，无论之前还是之后用的）。
+## R306「占卜室」两张事件卡
+const WISH_ID := 9168            # 许愿：0 费技能，从卡组选一张卡加入手卡（带「次元」字段）
+const FLAME_SWORD_ID := 9169     # 烈火之剑：2 费技能，对每一列最靠前的敌人各造成 10 点伤害
+const FLAME_SWORD_DMG := 10
 const NIGHT_WALK_ID:= 9155
 const NIGHT_WALK_MAX:= 5
 # 蓄势（9156 技能，R232，暗影刺客普通）：1 费 + 保存；造成 value 点伤害（初始 0）；
@@ -1493,6 +1506,9 @@ static func hp_row_owner(row: int) -> String:
 
 
 func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
+	wish_pending = false
+	_steel_stamp_used = false   # R307：思想钢印每场战斗一次
+	_thorn_ring_turn = -1
 	state.starting_hand(starting_hand)
 	state.energy = FieldState.ENERGY_PER_TURN
 	state.opp_energy = FieldState.ENERGY_PER_TURN
@@ -1603,6 +1619,7 @@ func _begin_turn(side: String) -> void :
 			_finish("失败", "%d 回合内未击破敌方 HP" % state.turn_limit)
 			return
 
+		_spring_tick()          # R307 泉水：后排单位每回合回 4
 		_tick_enemy_growth()
 		var extra_draw:= 0
 		if self_relics.has(6005) and turn_number <= 2:
@@ -1827,6 +1844,26 @@ func enable_enemy_effects(cards: Array[CardData]) -> void :
 	_refresh_hecaton(SIDE_OPPONENT)
 	_refresh_mnemosyne()               # R271 谟涅摩叙涅：开局先算一次
 	_refresh_night_owl()               # R270 夜鸭：开局先按当前回合数定一次
+
+
+func _spring_tick() -> void:
+	## 泉水（6035，R307）：我方**后排**（最后一行）的单位每回合开始回复 4 点生命。
+	## ⚠️ 上限 = `p.card.health`（与「自我修复 / 回血」同一个口径，含改造加的血）。
+	if not self_relics.has(SPRING_RELIC_ID):
+		return
+	var back_row: int = FieldState.BOARD_ROWS - 1
+	for col in FieldState.BOARD_COLS:
+		var p: Placement = state.unit_at(Vector2i(back_row, col))
+		if p == null or p.owner != SIDE_SELF:
+			continue
+		if p.health >= p.card.health:
+			continue
+		var before: int = p.health
+		p.health = mini(p.card.health, p.health + SPRING_HEAL)
+		_log("泉水：%s 回复 %d 点生命（%d → %d）" % [p.card.card_name,
+				p.health - before, before, p.health])
+		action.emit("self_heal", {"healed": p.health - before, "hp": state.hp_self})
+	_check_game_over()
 
 
 func _apply_growth(side: String) -> void :
@@ -6186,6 +6223,14 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 	_gale_tick(side, played)
 	_lurker_tick(side, played)
 	_sleepless_tick(side)
+	# R307 雕像（6039）：每使用 10 张牌回复 1 点能量（**跨回合、跨战斗**累计）。
+	if side == SIDE_SELF and self_relics.has(STATUE_RELIC_ID):
+		RunState.statue_charge += 1
+		if RunState.statue_charge >= RunState.STATUE_EVERY:
+			RunState.statue_charge -= RunState.STATUE_EVERY
+			state.energy += 1
+			_log("雕像：累计使用 %d 张牌 → 回复 1 点能量（当前 %d）"
+					% [RunState.STATUE_EVERY, state.energy])
 
 
 func _raid_dmg(side: String) -> int:
@@ -7638,6 +7683,35 @@ func remote_curse(card: CardData, side:= SIDE_OPPONENT) -> void:
 
 func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 	match card.id:
+		WISH_ID:
+			# 许愿（9168，R306）：**从卡组**选一张卡加入手卡 —— 选卡页接管（`wish_pending`），
+			# 结算口是 `wish_pick()`。卡组空了就白打（这张卡自己仍按「次元」进消耗区）。
+			if state.deck.is_empty():
+				_log("许愿：卡组是空的，愿望没有着落")
+				return "卡组是空的，什么也没抽到"
+			wish_pending = true
+			_log("许愿：从卡组选择一张卡加入手卡（卡组 %d 张）" % state.deck.size())
+			return "从卡组选一张卡加入手卡"
+		FLAME_SWORD_ID:
+			# 烈火之剑（9169，R306）：对**每一列最靠前的敌人**各造成 10 点伤害。
+			# 「最靠前」= 该列里最靠近我方的那一行（行号最大）；空列跳过。
+			# ⚠️ 行 = `cell.x`、列 = `cell.y`（见 battle_scene 的 `_cell_rect`）。
+			var fs_dmg: int = _spell_dmg(side, FLAME_SWORD_DMG, card)
+			var fs_n := 0
+			for fs_col in FieldState.BOARD_COLS:
+				var fs_best := Vector2i(-1, -1)
+				for fs_row in FieldState.BOARD_ROWS:
+					var fs_cell := Vector2i(fs_row, fs_col)
+					var fs_u: Placement = state.unit_at(fs_cell)
+					if fs_u == null or fs_u.owner == side:
+						continue
+					if fs_best.x < 0 or fs_row > fs_best.x:
+						fs_best = fs_cell
+				if fs_best.x >= 0:
+					_op_deal_damage(side, fs_dmg, fs_best)
+					fs_n += 1
+			_log("烈火之剑：%d 列各受到 %d 点伤害" % [fs_n, fs_dmg])
+			return "烈火之剑：%d 列各受到 %d 点伤害" % [fs_n, fs_dmg]
 		NIGHT_WALK_ID:
 			# 夜行（9155，R232）：本回合我方所有卡免费；本回合出牌上限 NIGHT_WALK_MAX 张（含本卡）。
 			state.turn_all_free = true
@@ -8763,6 +8837,29 @@ func _is_crow(c: CardData) -> bool:
 	return c != null and (c.id == CROW_ID or c.traits.has(CROW_TRAIT))
 
 
+func wish_options() -> Array[int]:
+	## 许愿（9168）：可选目标 = 卡组**全部**卡的下标（顺序即卡组顺序）。
+	var out: Array[int] = []
+	for i in state.deck.size():
+		out.append(i)
+	return out
+
+
+func wish_pick(deck_index: int) -> bool:
+	## 许愿的结算口：把卡组第 deck_index 张**取出来**放进手牌（卡组里就没有了）。
+	## ⚠️ 只做下界与状态校验：手牌上限由这张卡自己让出的位置保证（打出时已经离手）。
+	if not wish_pending:
+		return false
+	if deck_index < 0 or deck_index >= state.deck.size():
+		return false
+	var c: CardData = state.deck[deck_index]
+	state.deck.remove_at(deck_index)
+	state.hand.append(c)
+	wish_pending = false
+	_log("许愿：%s 从卡组加入手卡" % c.card_name)
+	return true
+
+
 func crow_trigger() -> void :
 
 
@@ -9157,7 +9254,11 @@ func _on_self_damaged() -> void :
 
 func _on_self_hp_damaged() -> void :
 
-
+	# R307 荆棘指环（6037）：每回合**第一次**受到伤害 → 抽 2 张卡。
+	if self_relics.has(THORN_RING_RELIC_ID) and _thorn_ring_turn != turn_number:
+		_thorn_ring_turn = turn_number
+		_log("荆棘指环：本回合第一次受伤 → 抽 2 张卡")
+		_draw_many(2)
 
 	if not self_relics.has(PEAR_RELIC_ID):
 		return
@@ -10204,6 +10305,18 @@ func _destroy(cell: Vector2i) -> void :
 				_rec_list.append(ru)
 	state.board.erase(cell)
 	_credit_kill(p)
+	# R307 思想钢印（6036）：每场战斗**第一个**被破坏的我方单位不会死 —— 回手卡。
+	# ⚠️ 带「次元」/ 衍生物 / 离场消失的单位**不救**：它们本来就该消失（救回来会破坏语义）。
+	if p.owner == SIDE_SELF and self_relics.has(STEEL_STAMP_RELIC_ID) \
+			and not _steel_stamp_used \
+			and not p.card.has_affix(AFFIX_DIMENSION) \
+			and not p.card.traits.has(EGG_VANISH_TRAIT) \
+			and not p.card.is_ephemeral:
+		_steel_stamp_used = true
+		state.hand.append(p.card)
+		_log("思想钢印：%s 被破坏 → 回到手卡（本场第一次）" % p.card.card_name)
+		action.emit("self_heal", {"healed": 0, "hp": state.hp_self})
+		return
 	if p.owner == SIDE_SELF:
 		# R227：带「次元」字段的**单位**同样离场即消失（此前只有「离场消失」trait 会走这条；
 		# 现在字段本身也算数 —— 卡面写的是「离开战场后消失，不会进入弃牌区」）。

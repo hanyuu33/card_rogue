@@ -67,6 +67,7 @@ static func snapshot() -> Dictionary:
 		"pending_relic": RunState.pending_relic,
 		"pending_relic_drop": RunState.pending_relic_drop,
 		"pending_deck_edit": RunState.pending_deck_edit,
+		"statue_charge": RunState.statue_charge,
 		"pending_event": RunState.pending_event,
 		"reward_type": RunState.reward_type,
 		"reward_context": RunState.reward_context,
@@ -144,6 +145,7 @@ static func apply(d: Dictionary) -> bool:
 	RunState.pending_relic = int(d.get("pending_relic", -1))
 	RunState.pending_relic_drop = int(d.get("pending_relic_drop", -1))
 	RunState.pending_deck_edit = str(d.get("pending_deck_edit", ""))
+	RunState.statue_charge = int(d.get("statue_charge", 0))
 	RunState.pending_event = str(d.get("pending_event", ""))
 	RunState.reward_type = str(d.get("reward_type", "normal"))
 	RunState.reward_context = str(d.get("reward_context", ""))
