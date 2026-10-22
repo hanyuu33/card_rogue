@@ -5991,7 +5991,8 @@ func _on_over_restart() -> void:
 	##   * 其余（通关无下一层 / 失败 / 单关）→ 回标题。
 	if RunState.run_active and _run_next_layer > 0:
 		RunState.advance_layer(_run_next_layer)
-		SceneFx.goto("res://scenes/relic_pick.tscn")
+		# R310：进新层的起点 = 卷卷的对话事件（原「起始道具三选一」面板）
+		SceneFx.goto("res://scenes/curtain.tscn")
 	elif RunState.run_active and not _run_boss_win:
 		# R119：卡牌奖励已由奖励悬浮窗处理（没收的会留在「待领奖励」入口里），
 		# 这里只把节点标记完成、回地图 —— 不再切到独立的卡牌奖励场景。

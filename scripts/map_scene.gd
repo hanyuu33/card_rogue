@@ -190,12 +190,14 @@ func _ready() -> void:
 	# -- --marks：演示玩家标记（R177：画图 / 旗子，截图核验用）
 	if "--marks" in OS.get_cmdline_user_args():
 		_prep_marks_demo()
-	# 起点三选一 / 待办卡组操作：先走它们，别停在地图上。
-	# ⚠️ **截图核验模式要跳过**：否则刚开的一局带着「起点道具三选一」，
+	# 起点事件 / 待办卡组操作：先走它们，别停在地图上。
+	# R310：起点那「三件起始道具」不再用面板三选一（relic_pick），改由**卷卷**
+	# 这位豚鼠吟游诗人开场对话（curtain.tscn）—— 三个选项就是这三件道具的名字。
+	# ⚠️ **截图核验模式要跳过**：否则刚开的一局带着「起点事件」，
 	# 会立刻把场景切走 → 截图截到的是别的界面（甚至什么都截不到）。
 	if "--screenshot" not in OS.get_cmdline_user_args():
 		if RunState.run_active and not RunState.relic_choice.is_empty():
-			SceneFx.goto("res://scenes/relic_pick.tscn", true)
+			SceneFx.goto("res://scenes/curtain.tscn", true)
 			return
 		var pick_scene := RunState.waiting_pick_scene()   # R216：唯一判据口
 		if pick_scene != "":

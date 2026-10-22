@@ -98,6 +98,18 @@ func _initialize() -> void:
 				_reset()
 				RunState.start_run(_map())
 				RunState.relic_choice = [6001, 6002, 6003]],
+		# R310：每层起点的「卷卷」对话（原起点三选一入口）。第一层不切立绘。
+		["res://scenes/curtain.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relic_choice = [6001, 6002, 6003]],
+		# R310：第二层 + 机械之心 → 走「收下道具 → 立绘出场 → 角色回答」那一支，
+		# 顺带把效果浮窗、名称牌换字、立绘贴图全部渲染一遍（缺图 / 空引用会在这里炸）。
+		["res://scenes/curtain.tscn", func():
+				_reset()
+				RunState.start_run(_map(), GameLayers.LAYER_TWO, PlayerClass.MECH)
+				RunState.relic_choice = [6014, 6015, 6016],
+			func(s): _check_curtain_reply(s)],
 		["res://scenes/deck_edit.tscn", func():
 				_reset()
 				RunState.start_run(_map())
@@ -3513,3 +3525,18 @@ func _check_overflow(scene: Variant) -> void:
 	else:
 		print("SMOKE OK 溢出兜底：效果区 %d 槽 / 敌方效果 %d 槽 / 道具 %d 槽（末位均不越界，超出改画 +N 摘要）"
 				% [cap_eff, cap_ee, cap_rel])
+
+
+func _check_curtain_reply(s: Node) -> void:
+	## R310：第二层收下道具后应当是「立绘出场 + 角色回答」那一态。
+	## 这里直接调场景自己的私有方法（同仓其它 smoke 用例也是这么做的）。
+	if s == null or not s.has_method("_pick"):
+		print("  [smoke] curtain: 场景没有 _pick()，跳过")
+		return
+	s.call("_pick", 0)
+	var hero: Variant = s.get("_hero")
+	var title: Variant = s.get("_title")
+	var ok_hero: bool = hero != null and (hero as TextureRect).visible \
+			and (hero as TextureRect).texture != null
+	var ok_name: bool = title != null and (title as Label).text == PlayerClass.MECH
+	print("  [smoke] curtain 回答态：立绘=%s 名称牌=%s" % [ok_hero, ok_name])

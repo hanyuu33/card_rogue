@@ -22624,6 +22624,58 @@ func _init() -> void:
 			% r300_eng.count("_inspire_tick()   # R300 激发"))
 
 
+	# ── R310 卷卷（每层起点的豚鼠吟游诗人）────────────────────────────────
+	# 起点那三件道具不再走面板三选一，改由一段对话发出去。这里只钉**数据层**：
+	# 文案口径、层/职业分支、候选仍然是 `relic_choice` 那三件、收下后必须清空。
+	check(CurtainLines.greeting(GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+			== "看看这里有什么能帮到你的。",
+			"R310 卷卷：第一层的招呼是一句通用的「看看这里有什么能帮到你的。」")
+	check(CurtainLines.greeting(GameLayers.LAYER_DEFAULT, PlayerClass.MECH)
+			== CurtainLines.greeting(GameLayers.LAYER_DEFAULT, PlayerClass.ROGUE),
+			"R310 卷卷：第一层不分支（三个职业同一句）")
+	check(CurtainLines.greeting(GameLayers.LAYER_TWO, PlayerClass.DRUID)
+			== "在这里遇到你真开心。"
+			and CurtainLines.greeting(GameLayers.LAYER_TWO, PlayerClass.ROGUE)
+			== "这些就当做定金吧。"
+			and CurtainLines.greeting(GameLayers.LAYER_TWO, PlayerClass.MECH)
+			== "你喜欢音乐吗？",
+			"R310 卷卷：第二层按玩家职业分三句")
+	check(CurtainLines.reply(GameLayers.LAYER_TWO, PlayerClass.DRUID) == "我也是。"
+			and CurtainLines.reply(GameLayers.LAYER_TWO, PlayerClass.ROGUE) == "……"
+			and CurtainLines.reply(GameLayers.LAYER_TWO, PlayerClass.MECH)
+			== "是的，这个节奏让我安心。",
+			"R310 卷卷：第二层拿取道具后，三个职业各回一句")
+	check(not CurtainLines.has_reply(GameLayers.LAYER_DEFAULT)
+			and CurtainLines.has_reply(GameLayers.LAYER_TWO)
+			and CurtainLines.reply(GameLayers.LAYER_DEFAULT, PlayerClass.DRUID) == "",
+			"R310 卷卷：**只有第二层起**才有角色回答（第一层不切立绘）")
+	check(CurtainLines.greeting(GameLayers.LAYER_THREE, PlayerClass.DRUID)
+			== CurtainLines.greeting(GameLayers.LAYER_TWO, PlayerClass.DRUID),
+			"R310 卷卷：第三层（当前无战斗关卡）沿用「二层起」那一套")
+	# 候选就是起点那三件道具；收下后候选必须清空（否则地图会把玩家再送回来）
+	var r310_rng := RandomNumberGenerator.new()
+	r310_rng.seed = 20261022
+	RunState.start_run(RogueMap.generate(r310_rng, GameLayers.LAYER_DEFAULT),
+			GameLayers.LAYER_DEFAULT)
+	check(RunState.relic_choice.size() == 3,
+			"R310 卷卷：起点仍然摇出 3 件起始道具（候选数 %d）" % RunState.relic_choice.size())
+	var r310_pick: int = RunState.relic_choice[0] if RunState.relic_choice.size() > 0 else -1
+	if r310_pick > 0:
+		RunState.choose_start_relic(r310_pick)
+		check(RunState.has_relic(r310_pick) and RunState.relic_choice.is_empty(),
+				"R310 卷卷：收下第 1 件 → 道具进栏、候选清空")
+	# 源码锁：起点与换层都跳 curtain（不能再跳回 relic_pick 面板）
+	var r310_map := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	var r310_bat := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r310_map.find('SceneFx.goto("res://scenes/curtain.tscn", true)') >= 0,
+			"R310 源码锁：map_scene 的起点重定向跳到 curtain.tscn")
+	check_src(r310_bat.find('SceneFx.goto("res://scenes/curtain.tscn")') >= 0,
+			"R310 源码锁：battle_scene 打完 Boss 进新层也跳 curtain.tscn")
+	check_src(r310_map.find('RunState.relic_choice.is_empty()') >= 0
+			and r310_map.find('RunState.relic_choice.is_empty()') <
+			r310_map.find('res://scenes/curtain.tscn'),
+			"R310 源码锁：重定向的判据仍是 `relic_choice` 非空（候选清空 = 本层起点已过完）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
