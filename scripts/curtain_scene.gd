@@ -477,7 +477,8 @@ func _tip_metrics() -> Dictionary:
 	var r := _box_rect()
 	# 靠左摆：中间偏右是卷卷的脸，浮窗压上去会让人看不清她（用户口径：悬停只看道具效果）
 	var x: float = r.position.x + 30.0
-	var y: float = r.position.y - h - 14.0
+	# 再往上让 34：名称牌骑在对话框上沿，浮窗压上去会把说话人盖掉
+	var y: float = r.position.y - h - 48.0
 	if y < 60.0:
 		y = 60.0
 	return {"rect": Rect2(x, y, TIP_W, h), "lines": lines, "relic": rel}
