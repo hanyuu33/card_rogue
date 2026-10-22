@@ -409,7 +409,6 @@ var _map_visible := false       # 冒险地图总览面板开关（R64：战斗�
 # ⚠️ R141：**棋盘**已改成常显（不再看这个开关）—— 战场 3×6 上下有空间就画；
 #        这一支现在只剩「地图总览」那类进新手的容器在用。
 var _show_scroll_hint := false
-var _discard_visible := false   # 弃牌区浏览面板开关（点弃牌区切换）
 var _effects_visible := false   # 效果区浏览面板开关（点左侧效果区查看）
 var _enemy_effects_visible := false  # 敌方效果区浏览面板开关
 var _deck_visible := false      # 卡组（抽牌堆）浏览面板开关（点卡组牌堆查看，不显示顺序）
@@ -2583,6 +2582,51 @@ func _demo_tick() -> void:
 		status_text = "R300 激发 ×2：一次改造 → 全体敌人各 -6（3 点 × 2 轮）"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r301color" in _demo_args and _demo_frame == 40 and engine != null:
+		# R301 出图演示①（`--screenshot --r301color --shotms 200`）：四项数值相对**卡库原型**
+		# 的涨跌染色 —— 力/程/速 高绿低红；生命四态（受伤红 / 高于原本绿 / 等于白 / 低于黄）。
+		# 手卡：白（原样）· 绿（改造过）· 黄+红（削过，满血上限低 → 黄，力量低 → 红）
+		_banner = {}          # 出图：先收掉「我方回合」大字横幅，别挡住棋盘徽章
+		var rr := CardRepo.load_json()
+		var base_hand: CardData = rr.get_card(8003)   # 树人 3/8/1/1
+		engine.state.hand.clear()
+		engine.state.hand.append(CardData.from_dict(base_hand.to_dict()))
+		var c_up := CardData.from_dict(base_hand.to_dict())
+		c_up.power += 2
+		c_up.health += 6
+		engine.state.hand.append(c_up)
+		var c_dn := CardData.from_dict(base_hand.to_dict())
+		c_dn.power -= 2
+		c_dn.health -= 3
+		engine.state.hand.append(c_dn)
+		# 场上：一个**受过伤**的己方单位（生命 = 红），一个**改造过且满血**的（生命 = 绿）
+		var up1: Placement = engine.state.unit_at(Vector2i(2, 2))
+		if up1 == null:
+			up1 = engine.state.place(rr.get_card(8003), Vector2i(2, 2), GameEngine.SIDE_SELF)
+		if up1 != null:
+			up1.health = maxi(1, up1.card.health - 3)   # 受伤 → 红
+		var up2: Placement = engine.state.unit_at(Vector2i(3, 2))
+		if up2 == null:
+			up2 = engine.state.place(CardData.from_dict(base_hand.to_dict()),
+					Vector2i(3, 2), GameEngine.SIDE_SELF)
+		if up2 != null:
+			up2.card.power += 2
+			up2.card.health += 6
+			up2.health = up2.card.health            # 满血 → 绿
+		status_text = "R301：力/程/速 高=绿 低=红；生命 受伤=红 · 高于原本且满血=绿 · 持平=白 · 低于原本且满血=黄"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r301view" in _demo_args and _demo_frame == 40 and engine != null:
+		# R301 出图演示②（`--screenshot --r301view --shotms 260`）：弃牌区 = 全屏浏览窗
+		# （复用选卡页排版：每行 5 张放大卡 + 滚动 + 底部描述条）。
+		var rv := CardRepo.load_json()
+		engine.state.discard.clear()
+		for sid: int in [8003, 8001, 8002, 8004, 9007, 8003, 1011, 1053, 8003, 8001, 8002, 9001]:
+			engine.state.discard.append(CardData.from_dict(rv.get_card(sid).to_dict()))
+		_open_discard_view()
+		status_text = "R301：弃牌区改成选卡页那种全屏窗口（每行 5 张 · 滚动 · 底部描述）"
+		_shot_t0 = _now()
+		queue_redraw()
 	if _demo_pending and _demo_frame == 20 and _tutorial.is_empty():
 		# 演示确定性：手牌里没有寒冰护盾就换进一张（仅新手试炼演示用）
 		var has_shield := false
@@ -3303,8 +3347,9 @@ func _gui_input(event: InputEvent) -> void:
 		# 地图总览（R128）：5×7 格子整屏装得下 → 不再滚动，滚轮在此吞掉
 		if _map_visible:
 			return
-		# R155：区域浏览面板（卡组/弃牌/消耗/效果区）开着 → 滚轮翻页
-		if _discard_visible or _effects_visible or _enemy_effects_visible \
+		# R155：区域浏览面板（卡组/消耗/效果区）开着 → 滚轮翻页
+		# （弃牌区 R301 起走全屏浏览窗，滚轮由 PickOverlay 自己处理）
+		if _effects_visible or _enemy_effects_visible \
 				or _deck_visible or _run_deck_visible or _void_visible:
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				_zone_page = maxi(0, _zone_page - 1)
@@ -3372,6 +3417,13 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	match k.keycode:
 		KEY_ESCAPE:
+			# R301：全屏选卡页 / 弃牌浏览窗开着 → Esc 先关它。
+			# 正常情况下 PickOverlay 自己的 `_unhandled_key_input` 已经吃掉这个键；
+			# 这里只是**兜底**：万一节点顺序让战斗场景先收到，也不能在窗上直接弹主菜单。
+			if _pick != null and _pick.is_picking():
+				if _pick.visible:
+					_pick.collapse()
+				return
 			# R148：Esc = 主菜单。层级仍是「先关更上层的浮层」：菜单自己 → 地图总览 →
 			# 才轮到开菜单。⚠️ 原来这里做的是「取消选中」，那一支交给右键
 			# （`_on_right_click` / 再点一次，两个口子都还在）。
@@ -3387,8 +3439,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				_ee_popup = false
 				queue_redraw()
 				return
-			# R155：区域浏览面板（卡组/弃牌/消耗/效果/道具）也是一层浮层 → 先关它再轮到自己开菜单
-			if _discard_visible or _effects_visible or _enemy_effects_visible or _relics_visible \
+			# R155：区域浏览面板（卡组/消耗/效果/道具）也是一层浮层 → 先关它再轮到自己开菜单
+			if _effects_visible or _enemy_effects_visible or _relics_visible \
 					or _deck_visible or _run_deck_visible or _void_visible:
 				_close_zone_panels()
 				queue_redraw()
@@ -3623,7 +3675,7 @@ func _on_left_click(pos: Vector2) -> void:
 		_map_visible = false
 		queue_redraw()
 		return
-	if _discard_visible or _effects_visible or _enemy_effects_visible or _relics_visible\
+	if _effects_visible or _enemy_effects_visible or _relics_visible\
 			or _deck_visible or _run_deck_visible or _void_visible:
 		# R155：‹ › 翻页 / 右上「×」/ 点面板**外**才关闭 —— 旧版「点任意处关闭」
 		# 让面板内的点击（想看另一页、想细看）都变成了关面板，太毛躁。
@@ -3662,8 +3714,7 @@ func _on_left_click(pos: Vector2) -> void:
 	var discard_rect := Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H)
 	if discard_rect.has_point(pos) and not engine.state.discard.is_empty():
 		_pass_moved_pending()
-		_discard_visible = true
-		queue_redraw()
+		_open_discard_view()   # R301：全屏浏览窗（与选卡页同一套排版）
 		return
 	# R155 消耗（消失）区：点开浏览面板 —— 本局消失的卡逐张可回看（相同卡合并 ×N）
 	if Rect2(VOID_X, VOID_Y, CARD_W, CARD_H).has_point(pos) and engine.state.void_count > 0:
@@ -4661,10 +4712,50 @@ func _build_pick_cfg(k: String) -> Dictionary:
 	return {}
 
 
+func _open_discard_view() -> void:
+	## R301（用户口径）：弃牌区点开后**不再是那个居中的窄面板**，改成「选卡页那种全屏窗口」。
+	## 实现上直接复用 `PickOverlay` 的排版（整屏半透明罩 + 每行 5 张放大卡 + 垂直滚动 +
+	## 底部描述条），只把 cfg 标成 `view_only` —— 于是点卡不选中、「关闭」= 关窗，
+	## 与选卡流程的行为差异全部收在 `PickOverlay.is_view()` 里。
+	##
+	## ⚠️ 顺序 = **先弃的在前**（`state.discard` 原序，不排序不打乱）—— 玩家看得见「哪几张
+	##    是被挤掉进弃牌堆的」，与旧面板标题的「从左到右：先弃的在前」同一口径。
+	## ⚠️ 不做同名合并：弃牌区每一张都是**独立实例**（可能被生产订单 / 自主升级改过数值），
+	##    按 id 合并会把「+N 的那张」并进原卡（与 `_merged_deck` 的理由相同）。
+	if _pick == null:
+		return
+	var n := engine.state.discard.size()
+	if n == 0:
+		return
+	var opts: Array = []
+	var cards: Array = []
+	for i in n:
+		opts.append(i)
+		cards.append(engine.state.discard[i])
+	_pick.open({
+		"kind": "view_discard",
+		"short": "弃牌区",
+		"view_only": true,
+		"title": "弃牌区 %d 张（从左到右：先弃的在前）" % n,
+		"note": "滚轮 / 拖动翻页；悬停或点卡在下方看描述 —— 点「关闭」或右键返回战斗",
+		"opts": opts,
+		"cards": cards,
+		"max_sel": 0,
+		"confirm_label": "关闭",
+		"cancel_label": "",
+	})
+	status_text = "弃牌区：%d 张（先弃的在前）" % n
+	queue_redraw()
+
+
 func _sync_pick() -> void:
 	## 全屏选卡页的驱动器（每帧一次，开销极小）：pending 出现 → 打开；消失 → 关闭；
 	## 场景切换 → 重开。回放模式不弹（回放 act 直接结算）。
 	if _pick == null or engine == null:
+		return
+	# R301：全屏**浏览**窗（弃牌区）没有引擎待办 —— 它自己开、自己关。
+	# ⚠️ 必须先放行：否则下一步 `_pick_active_kind()` 返回 "" 就会把它每帧关掉。
+	if _pick.is_view():
 		return
 	var k := _pick_active_kind()
 	if k == "":
@@ -4861,7 +4952,12 @@ func _on_pick_confirmed(sel: Array) -> void:
 
 func _on_pick_cancelled() -> void:
 	## 底栏「放弃」按钮（仅 whale / hero / focus 有）。
+	## R301：全屏浏览窗的「关闭 / 返回 / Esc / 右键」也走这里 —— 纯查看，不动引擎状态。
 	if _pick == null:
+		return
+	if _pick.kind() == "view_discard":
+		_pick.close()
+		queue_redraw()
 		return
 	match _pick.kind():
 		"whale":
@@ -4912,7 +5008,6 @@ func _draw_pick_banner() -> void:
 			r.get_center(), Color("ffd27d"))
 func _close_zone_panels() -> void:
 	## 关掉所有区域浏览面板（专注选完 / 取消后收干净）。
-	_discard_visible = false
 	_effects_visible = false
 	_enemy_effects_visible = false
 	_relics_visible = false
@@ -5454,8 +5549,10 @@ func _hover_covered() -> bool:
 	## 它们的共同点：鼠标坐标仍落在下层元素上，但玩家看不见 —— 此时再按鼠标位置
 	## 弹说明，就会出现「看不见道具栏却在它上面弹出悬浮效果」（R121 用户报告）。
 	## ⚠️ **不含** `_effects_visible` / `_enemy_effects_visible` / `_deck_visible` /
-	##    `_run_deck_visible` / `_discard_visible` —— 那些区域面板里的卡是**要**悬停查看的，
+	##    `_run_deck_visible` —— 那些区域面板里的卡是**要**悬停查看的，
 	##    由 `_on_hover` 的 ⓪ 分支单独处理，别在这里误杀。
+	##    （弃牌区 R301 起改成 PickOverlay 全屏窗 —— 它自己是 Control、直接吃掉鼠标事件，
+	##      `_on_hover` 根本收不到，因此也不需要在这里列。）
 	if UiGate.blocked():
 		return true
 	if _reward_panel != null and _reward_panel.is_open():
@@ -6102,7 +6199,6 @@ func _toggle_map() -> void:
 		return
 	_map_visible = not _map_visible
 	if _map_visible:
-		_discard_visible = false
 		_effects_visible = false
 		_enemy_effects_visible = false
 		_deck_visible = false
@@ -6795,8 +6891,7 @@ func _draw() -> void:
 		_draw_log_panel()
 	if _map_visible:
 		_draw_map_panel()
-	if _discard_visible:
-		_draw_discard_panel()
+
 	if _deck_visible:
 		# R207：右下牌堆 = **现有卡组**（本场还没抽到的牌，会越抽越少）
 		var deck_title := "剩余牌堆 %d 张（本场未抽到 · 同名合并）" % engine.state.deck.size()
@@ -8624,8 +8719,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					% [str((data.get("card", null) as CardData).card_name),
 						int(data.get("hp", 0)), int(data.get("regen", 0))])
 			if (data.get("cell", Vector2i(-1, -1)) as Vector2i).x >= 0:
-				_floaters.append({"pos": sr_pos, "sc": _grid_scroll, "text": "+%d 血 / 回 %d"
-						% [int(data.get("hp", 0)), int(data.get("regen", 0))],
+				# R301：血量增量交给卡面染色；「每回合回 N」是机制值不是数值增减 → 保留
+				_floaters.append({"pos": sr_pos, "sc": _grid_scroll, "text": "自我修复 · 回 %d"
+						% int(data.get("regen", 0)),
 						"col": Color("8ce09a"), "start": n, "dur": 2000, "size": 14})
 		"charge_heal":
 			# 充电装置（8041，R91）：被「接通」的己方单位每回合结束回血 → 该格飘字。
@@ -8662,8 +8758,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("✧ 模仿者模仿 %s 的改造：+%d 攻 / +%d 血"
 					% [str(data.get("from", "")), mu_atk, mu_hp])
 			if mu_cell.x >= 0:
+				# R301：数值交给卡面染色，飘字只写「模仿了改造」
 				_floaters.append({"pos": _cell_center(mu_cell), "sc": _grid_scroll,
-					"text": "+%d 攻 / +%d 血" % [mu_atk, mu_hp],
+					"text": "模仿改造",
 					"col": Color("8ce09a"), "start": n, "dur": 1800, "size": 15})
 		"chimera":
 			# 嵌合暴君（8047，R96）：使用时破坏接通的己方卡并吸收其攻/血。
@@ -8679,8 +8776,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				if ch_cell.x >= 0:
 					_bursts.append({"pos": _cell_center(ch_cell), "sc": _grid_scroll, "start": n,
 							"dur": 420, "col": COL_SPELL})
+					# R301：数值交给卡面染色，飘字只写「融合了几张」
 					_floaters.append({"pos": _cell_center(ch_cell), "sc": _grid_scroll,
-							"text": "+%d 攻 / +%d 血" % [ch_atk, ch_hp],
+							"text": "融合 %d 张" % ch_abs,
 							"col": Color("caa6ff"), "start": n, "dur": 1900, "size": 16})
 		"recycler":
 			# 零件回收者（8046，R96）：接通的己方「素体以外」卡被销毁 → 回收其力量 + 手牌加素体。
@@ -8693,8 +8791,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if rc_pow > 0:
 				_say("零件回收者回收 %d 力量，手牌 +1 张「素体」" % rc_pow)
 				if rc_cell.x >= 0:
+					# R301：数值交给卡面染色，飘字只写「回收了什么」
 					_floaters.append({"pos": _cell_center(rc_cell), "sc": _grid_scroll,
-							"text": "+%d 攻" % rc_pow,
+							"text": "回收力量",
 							"col": Color("ffa41f"), "start": n, "dur": 1700, "size": 16})
 			else:
 				_say("零件回收者：被破坏的卡没有力量（攻击力不变），手牌 +1 张「素体」")
@@ -8760,7 +8859,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_say("✦ 批量改造：手牌里 %d 张盟友/工事各 +1 生命（本场战斗内一直有效）"
 						% bu_n)
 				_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 30),
-						"text": "批量改造 · %d 张 +1 血" % bu_n,
+						"text": "批量改造 · %d 张" % bu_n,
 						"col": Color("8ad4f0"), "start": n, "dur": 2000})
 		"overload":
 			# 过载 8030（R85，机械之心）：给牌库里一张盟友加上「一回合行动两次」。
@@ -8787,9 +8886,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_say("✦ 自主升级：手牌里的「%s」被改造（+%d 攻 / +%d 血，本场有效）" % [
 						au_card.card_name,
 						GameEngine.AUTO_UPGRADE_ATK, GameEngine.AUTO_UPGRADE_HP])
+				# R301：卡面染色已表达涨跌 → 飘字只报卡名与被改造，不再写「+N 攻 +N 血」
 				_floaters.append({"pos": Vector2(HAND_BASE_X + HAND_BASE_W / 2, HAND_BASE_Y - 10),
-						"text": "%s · +%d 攻 +%d 血" % [au_card.card_name,
-							GameEngine.AUTO_UPGRADE_ATK, GameEngine.AUTO_UPGRADE_HP],
+						"text": "%s 改造" % au_card.card_name,
 						"col": Color("ffc94d"), "start": n, "dur": 2200, "size": 14})
 			else:
 				_say("自主升级：手牌里没有盟友 / 工事，本回合落空")
@@ -8824,8 +8923,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			else:
 				_say("◆ 升级：%s" % ug_txt)
 			if ug_cell.x >= 0:
+				# R301（用户口径）：**卡面不再写「+2攻 +10血」这种字** —— 四项数值的涨跌
+				# 已由徽章**颜色**表达（高 = 绿 / 低 = 红），完整数值在详情栏（左栏 / 悬停面板）
+				# 里。飘字只留「发生了什么」，不重复数字。
+				var ug_float: String = ug_txt
+				if ug_atk != 0 or ug_hp != 0:
+					ug_float = "%s 改造" % ug_name
 				_floaters.append({"pos": _cell_center(ug_cell), "sc": _grid_scroll,
-						"text": ug_txt, "col": Color("8ad4f0"),
+						"text": ug_float, "col": Color("8ad4f0"),
 						"start": n, "dur": 2200})
 		"sys_upgrade":
 			# 系统升级 8039（R90）：手牌里一张牌被改造（+1费/+3力/+6血）→ 手牌区飘字。
@@ -8836,8 +8941,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sfx.play("spell")
 				_say("◆ 系统升级：%s → %d 费 / %d 攻 / %d 血（本场战斗永久）" % [
 					su_d.card_name, su_d.cost, su_d.power, su_d.health])
+				# R301：同上 —— 费用与四项数值都由卡面染色 / 数字表达，飘字不重复
 				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
-					"text": "%s +1费 +3攻 +6血" % su_d.card_name,
+					"text": "%s 改造" % su_d.card_name,
 					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 			else:
 				_say("系统升级：手牌里没有可选的盟友或工事")
@@ -11342,11 +11448,6 @@ func _draw_confetti() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0)
 
 
-func _draw_discard_panel() -> void:
-	## 弃牌区浏览面板：全部弃牌正面横排，点击任意处关闭。
-	_draw_zone_panel("弃牌区 %d 张（从左到右：先弃的在前）" % engine.state.discard.size(),
-			engine.state.discard)
-
 
 func _zone_panel_cards() -> Array:
 	## 当前打开的「区域浏览面板」里的卡（都没打开 → 空数组）。
@@ -11366,8 +11467,7 @@ func _zone_panel_cards() -> Array:
 	if _void_visible:
 		return _merged_deck(engine.state.void_cards).map(
 				func(m: Dictionary) -> CardData: return m["card"])
-	if _discard_visible:
-		return engine.state.discard
+	# R301：弃牌区不再走本面板（改全屏浏览窗 `_open_discard_view()`）
 	return []
 
 

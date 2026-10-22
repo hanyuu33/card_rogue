@@ -92,6 +92,11 @@ func close() -> void:
 
 func collapse() -> void:
 	## 返回 = 收起看战场；pending 与选中都保留，`reopen()` 回来继续选。
+	## R301：**纯浏览**没有「待办」可言 —— 收起再点「继续选择」回来毫无意义，
+	## 所以浏览模式下「返回」= 直接关窗（走 `cancelled` 让调用方收尾）。
+	if is_view():
+		cancelled.emit()
+		return
 	visible = false
 	collapsed_changed.emit(true)
 
@@ -107,6 +112,16 @@ func reopen() -> void:
 func is_picking() -> bool:
 	## 有 cfg 在管（不管当前是展开还是收起）—— battle_scene 据此画「继续选择」浮条。
 	return not _cfg.is_empty()
+
+
+func is_view() -> bool:
+	## R301：**纯浏览**模式（弃牌区翻阅）—— 没有「选中 / 确认结算」，点卡只是看描述。
+	## 与选卡模式的差别（全部只在本文件内判）：
+	##   · 点卡**不选中**（不画金框、不改「已选」计数），只把描述条切到那张；
+	##   · 「确认」= 关闭（不 emit `confirmed`，那会把网格下标丢给业务层）；
+	##   · 「返回」/ Esc / 右键 = **直接关窗**，不像选卡那样收起去看战场
+	##     （浏览没有待办，收起后再点「继续选择」回来是没有意义的）。
+	return bool(_cfg.get("view_only", false))
 
 
 func kind() -> String:
@@ -201,6 +216,9 @@ func _cancel_rect() -> Rect2:
 
 
 func _can_confirm() -> bool:
+	# R301：浏览模式的「关闭」按钮永远可点（没有选中数量这回事）。
+	if is_view():
+		return true
 	# R200：支持区间多选（min_sel..max_sel；min 默认 = max → 旧行为「恰好 N 张」）。
 	var mx := int(_cfg.get("max_sel", 1))
 	var mn := int(_cfg.get("min_sel", mx))
@@ -243,12 +261,17 @@ func _draw() -> void:
 	draw_string(_font_bold, Vector2(0, TOP_H / 2.0 + title_fs * 0.35),
 			String(_cfg.get("title", "")), HORIZONTAL_ALIGNMENT_CENTER, w,
 			title_fs, Color("f2ead8"))
-	# 顶栏右侧：已选计数
+	# 顶栏右侧：选卡模式 = 已选计数；浏览模式 = 共几张
 	var max_sel := int(_cfg.get("max_sel", 1))
-	draw_string(_font_bold, Vector2(w - 240.0, TOP_H / 2.0 + UiTheme.FS_LABEL * 0.35),
-			"已选 %d / %d" % [_selected.size(), max_sel],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL,
-			Color("ffd27d") if _can_confirm() else Color("9a94a8"))
+	if is_view():
+		draw_string(_font_bold, Vector2(w - 240.0, TOP_H / 2.0 + UiTheme.FS_LABEL * 0.35),
+				"共 %d 张" % _cards.size(),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL, Color("c9c2d4"))
+	else:
+		draw_string(_font_bold, Vector2(w - 240.0, TOP_H / 2.0 + UiTheme.FS_LABEL * 0.35),
+				"已选 %d / %d" % [_selected.size(), max_sel],
+				HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL,
+				Color("ffd27d") if _can_confirm() else Color("9a94a8"))
 	# 描述条（R191）：卡面只留卡名 → 点选/悬停的卡在这里读描述
 	var desc_idx := _hover_idx
 	if desc_idx < 0 and not _selected.is_empty():
@@ -289,7 +312,7 @@ func _draw() -> void:
 	draw_rect(ok, Color(0.24, 0.44, 0.30, 0.98) if can else Color(0.24, 0.23, 0.28, 0.9))
 	draw_rect(ok, Color("7fc98a") if can else UiTheme.INK_500, false, 2.0)
 	var label := String(_cfg.get("confirm_label", "确认"))
-	if max_sel > 1:
+	if max_sel > 1 and not is_view():
 		label += "（%d/%d）" % [_selected.size(), max_sel]
 	draw_string(_font_bold, Vector2(ok.position.x, _center_y(ok, UiTheme.FS_LABEL)),
 			label, HORIZONTAL_ALIGNMENT_CENTER, ok.size.x,
@@ -420,6 +443,11 @@ func _tap(pos: Vector2) -> void:
 		collapse()
 		return
 	if _confirm_rect().has_point(pos):
+		if is_view():
+			# 浏览模式「关闭」：不 emit confirmed —— `[]` 会被调用方当成「没选」直接返回，
+			# 窗就关不掉了。统一走 cancelled 让调用方收尾。
+			cancelled.emit()
+			return
 		if _can_confirm():
 			var sel := _selected.duplicate()
 			confirmed.emit(sel)
@@ -433,7 +461,8 @@ func _tap(pos: Vector2) -> void:
 		# 光靠悬停跟踪的话点了卡描述条也不动；选满时 `_toggle` 会忽略，
 		# 但「点一下看看这张」仍然应该成立。
 		_hover_idx = k
-		_toggle(k)
+		if not is_view():
+			_toggle(k)   # R301：浏览模式点卡只换描述条，不选中
 
 
 func _card_at(pos: Vector2) -> int:

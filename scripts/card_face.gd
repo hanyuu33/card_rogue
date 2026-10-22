@@ -44,6 +44,12 @@ const CARD_H_DESIGN := 70.0   # 缩放基准高（battle 版小卡高）
 # 稀有度主通道 = 右上角**缎带素材**（`_draw_rarity_ribbon`），不再是框线色/色块旗。
 
 static var _art_cache := {}   # "id[_职业后缀][_sleep]" -> Texture2D / null（找不到图也缓存，避免反复查盘）
+# ── R301：数值「涨跌染色」用的**卡库原型**缓存 ──
+## 卡面每帧都要画、一手牌 + 一战场十几张 → 不能每次都 `CardRepo.load_json()`（会反复读盘）。
+## 这里缓存**一个 repo 实例** + 按 id 缓存四项原始数值。
+## ⚠️ 存的是**原始数值**而不是 CardData 引用：卡库是共享实例，持有四个 int 更省也更快。
+static var _repo_cache: CardRepo = null
+static var _base_cache := {}   # id -> {power, health, range, speed}
 ## R292：折行算法搬到 `scripts/text_wrap.gd`（唯一口：断行禁则 / 引号成对 / 西文成词），
 ## 缓存也一并搬过去 —— 这里不再自己攒表（R187 那张 `_wrap_cache` 已删）。
 
@@ -658,11 +664,18 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	var health_x: float = rect.end.x          # ⑤ 与 ① 左右反向（卡框右沿）
 	var speed_x: float = health_x - step      # ④
 	# ── ② 力量（剑） + ③ 攻击距离（弓）──
+	# ── R301：四项数值相对**卡库原型**的染色 ──
+	# 力 / 程 / 速：单一维度（高 = 绿 / 低 = 红 / 一样 = 白）。
+	# 生命：**四态**（受伤红 / 高于原本绿 / 等于原本白 / 低于原本黄）—— 见 `_health_col()`。
+	# 手卡 / 场上 / 弃牌区 / 图鉴全部走这里，调用方不用管（也不用各自判涨跌）。
+	var bv := _base_vals(card)
 	var shown_power: int = power_override if power_override >= 0 else card.power
 	draw_badge(canvas, font_bold, Vector2(power_x, bar_y), r, fs, "power",
-			str(shown_power), UiTheme.BADGE_POWER)
+			str(shown_power), UiTheme.BADGE_POWER,
+			_delta_col(shown_power, bv.get("power")))
 	draw_badge(canvas, font_bold, Vector2(range_x, bar_y), r, fs, "range",
-			str(card.attack_range), UiTheme.BADGE_RANGE)
+			str(card.attack_range), UiTheme.BADGE_RANGE,
+			_delta_col(card.attack_range, bv.get("range")))
 	# ── ④ 移动距离（鞋）+ ⑤ 生命（血）──
 	# ⚠️ 阅读方向必须与左半排一致（力 程 … 速 生）：跨过中间空档后仍是「先读到的在左」。
 	# 先前按「离卡角最近的是第一个」做成镜像（力 程 速 生 → 生 速），出图一看就读反了 ——
@@ -670,10 +683,103 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	# 工事不会移动 → 不画鞋，生命直接占最外侧那张（贴右框线）。
 	if is_unit:
 		draw_badge(canvas, font_bold, Vector2(speed_x, bar_y), r, fs, "speed",
-				str(card.move_speed), UiTheme.BADGE_SPEED)
+				str(card.move_speed), UiTheme.BADGE_SPEED,
+				_delta_col(card.move_speed, bv.get("speed")))
 	draw_badge(canvas, font_bold, Vector2(health_x, bar_y), r, fs, "health",
-			str(hp), UiTheme.BADGE_HEALTH)
+			str(hp), UiTheme.BADGE_HEALTH,
+			_health_col(card, hp, bv.get("health")))
 
+
+static func _base_repo() -> CardRepo:
+	## 卡库单例（懒加载）：`CardRepo.load_json()` 每次都会读盘，卡面绘制不能那么干。
+	if _repo_cache == null:
+		_repo_cache = CardRepo.load_json()
+	return _repo_cache
+
+
+static func _base_vals(card: CardData) -> Dictionary:
+	## 这张卡的**卡库原型**四项数值（{power, health, range, speed}）。
+	## 找不到（动态生成的衍生物 / 卡库没有的 id）→ 空字典 = 一律按「没变」处理（不染色）。
+	if card == null:
+		return {}
+	if _base_cache.has(card.id):
+		return _base_cache[card.id]
+	var d := {}
+	var repo := _base_repo()
+	var proto: CardData = repo.get_card(card.id) if repo != null else null
+	if proto != null:
+		d = {"power": proto.power, "health": proto.health,
+				"range": proto.attack_range, "speed": proto.move_speed}
+	_base_cache[card.id] = d
+	return d
+
+
+static func _delta_col(cur: int, base: Variant) -> Color:
+	## 当前值 vs 卡库原型：高了绿、低了红、一样就保持白色（默认）。
+	## `base == null`（原型查不到）→ 白字，绝不给一个来路不明的红/绿。
+	if base == null:
+		return UiTheme.BADGE_VALUE
+	var b := int(base)
+	if cur > b:
+		return UiTheme.BADGE_UP
+	if cur < b:
+		return UiTheme.BADGE_DOWN
+	return UiTheme.BADGE_VALUE
+
+static func _health_col(card: CardData, cur_hp: int, base: Variant) -> Color:
+	## 生命徽章的**四态**染色（R301，用户口径）。生命不能只按「比原本高/低」一个维度：
+	## 「最大生命被削」和「当前受伤」是两件事，用同一套红绿会互相掩盖。
+	##   ① 当前生命 < 最大生命（受过伤）  → **红**（受伤，优先级最高，压过涨跌）
+	##   ② 满血 + 最大生命 > 原本          → **绿**（被加强）
+	##   ③ 满血 + 最大生命 == 原本         → **白**（正常）
+	##   ④ 满血 + 最大生命 < 原本          → **黄**（上限被削但没掉血：警示，不是损失）
+	## ⚠️ `cur_hp` 与 `card.health` 都取**显示值**：战场传进来的是 `_show_hp()`（含尚未
+	##    演出的伤害）→ 命中动画期间数字还没掉、颜色也还没变红，与数字严格同步。
+	## ⚠️ 找不到原型（动态衍生物）→ 只判受伤、不判涨跌：没有基准就不该给出绿/黄。
+	if base == null:
+		return UiTheme.BADGE_HURT if cur_hp < card.health else UiTheme.BADGE_VALUE
+	if cur_hp < card.health:
+		return UiTheme.BADGE_HURT
+	var b := int(base)
+	if card.health > b:
+		return UiTheme.BADGE_UP
+	if card.health < b:
+		return UiTheme.BADGE_WARN
+	return UiTheme.BADGE_VALUE
+
+
+static func _rel_lum(c: Color) -> float:
+	## WCAG 相对亮度（对比度计算的中间量）。逐通道 sRGB 线性化后加权。
+	var r: float = c.r / 12.92 if c.r <= 0.03928 else pow((c.r + 0.055) / 1.055, 2.4)
+	var g: float = c.g / 12.92 if c.g <= 0.03928 else pow((c.g + 0.055) / 1.055, 2.4)
+	var b: float = c.b / 12.92 if c.b <= 0.03928 else pow((c.b + 0.055) / 1.055, 2.4)
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+static func _contrast(a: Color, b: Color) -> float:
+	var la := _rel_lum(a)
+	var lb := _rel_lum(b)
+	if la < lb:
+		var t := la
+		la = lb
+		lb = t
+	return (la + 0.05) / (lb + 0.05)
+
+
+static func _legible(col: Color, bg: Color, min_ratio := 3.0) -> Color:
+	## R301：**缺图标**时数字压在语义色圆盘上，做一层对比度保底。
+	## 典型冲突：生命圆盘本身就是亮红 `#c1121f`，「受伤红」压上去只有 2.0:1 —— 红字糊在
+	## 红盘里，玩家根本读不出数字（用户明确指出这一点）。
+	## 做法：保住色相、只往白里提，直到对比度达标（最多 8 档，8 档还不够就干脆用白）。
+	## 有图标时**不走这里** —— 图标（酒滴画稿）本身是深底，原色已经够亮。
+	if _contrast(col, bg) >= min_ratio:
+		return col
+	var c := col
+	for _i in 8:
+		c = c.lerp(Color.WHITE, 0.18)
+		if _contrast(c, bg) >= min_ratio:
+			return c
+	return Color.WHITE
 
 static func draw_badge(canvas: CanvasItem, font_bold: Font, center: Vector2, r: float, fs: int,
 		key: String, value: String, disc: Color,
@@ -703,6 +809,10 @@ static func draw_badge(canvas: CanvasItem, font_bold: Font, center: Vector2, r: 
 		canvas.draw_circle(center, r, disc)
 		canvas.draw_arc(center, r, 0.0, TAU, 20, disc.darkened(0.34),
 				maxf(1.0, r * 0.16), true)
+		# R301：没有图标素材时，数字是**直接压在语义色圆盘**上的。
+		# 生命圆盘 = 亮红 #c1121f，而「受伤红」数字也是红 → 对比度只有 2:1，糊成一片。
+		# 这里把数字往白里提到「至少 3:1」，保色相、只改亮度；有图标时不触发。
+		value_col = _legible(value_col, disc)
 	var sz: int = fs
 	while sz > 6 and font_bold.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x 			> r * 1.75:
 		sz -= 1

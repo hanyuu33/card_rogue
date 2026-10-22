@@ -52,6 +52,14 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_battle],
+		# R301：弃牌区点开 = 「选卡页那种全屏窗口」（PickOverlay view_only）。
+		# 断言三件事：① 真的弹出、② 进的是浏览模式、③ 关闭后不动引擎状态。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_discard_view],
 		# 战斗场景 + 机械之心（R82）：开场「机械核心」6025 要往手牌塞 2 张素体，
 		# 且素体带「留手」—— 这一路能跑通就说明新道具 / 新卡 / 衍生物判定都接好了。
 		["res://scenes/battle.tscn", func():
@@ -275,6 +283,38 @@ func _prep_records() -> void:
 	RunRecord.finish("win")
 	RunRecord.begin_run("森林精魄")
 	RunRecord.finish("interrupted")
+
+
+func _check_discard_view(scene: Variant) -> void:
+	## R301（用户口径）：弃牌区的弹窗改成「选卡那种全屏窗口」。
+	## 旧实现是居中窄面板（`_draw_zone_panel`）—— 卡小、一页只放得下几张。
+	## 现在复用 PickOverlay 的排版，只把 cfg 标成 `view_only`：
+	##   · 点卡不选中（只换底部描述条）；
+	##   · 「关闭 / 返回 / Esc / 右键」= 直接关窗，不像选卡那样收起去看战场；
+	##   · 关窗不动引擎状态（纯浏览，弃牌堆一张不少）。
+	var repo := CardRepo.load_json()
+	scene.engine.state.discard.clear()
+	for _i in 3:
+		scene.engine.state.discard.append(CardData.from_dict(repo.get_card(8003).to_dict()))
+	scene._open_discard_view()
+	if scene._pick == null or not scene._pick.is_picking():
+		_smoke_fail("R301 弃牌区：点开后应弹出全屏浏览窗")
+		return
+	if scene._pick.kind() != "view_discard" or not scene._pick.is_view():
+		_smoke_fail("R301 弃牌区：窗应处于 view_discard 的纯浏览模式，实际 kind=%s view=%s"
+				% [scene._pick.kind(), str(scene._pick.is_view())])
+		return
+	if scene._pick.is_picking() and scene._pick.opts().size() != 3:
+		_smoke_fail("R301 弃牌区：候选应为 3 张，实际 %d" % scene._pick.opts().size())
+		return
+	var n_before: int = scene.engine.state.discard.size()
+	scene._pick.collapse()   # 浏览模式下「返回」= 关窗（不是收起看战场）
+	if scene._pick.is_picking():
+		_smoke_fail("R301 弃牌区：关闭后 overlay 不应仍在 picking")
+		return
+	if scene.engine.state.discard.size() != n_before:
+		_smoke_fail("R301 弃牌区：纯浏览不应改动弃牌堆（%d → %d）"
+				% [n_before, scene.engine.state.discard.size()])
 
 
 func _check_duck_blood_instant(scene: Variant) -> void:
@@ -2016,23 +2056,24 @@ func _check_r208(scene: Variant) -> void:
 	if rec.rarity != 2:
 		_smoke_fail("R208 零件回收者：应为史诗（rarity 2），实际 %d" % rec.rarity)
 		return
-	# ── ② 飘字：力量 0 不飘，力量 > 0 照飘 ──
+	# ── ② 飘字：力量 0 不飘，力量 > 0 飘一句「回收力量」 ──
+	# R301（用户口径）：**卡面不再写「+N 攻」这种数字** —— 四项数值的涨跌已由徽章
+	# **颜色**表达，明细在状态栏 / 详情栏里。所以这里既不能出现「+0 攻」（R208 口径：
+	# 没加力量就别飘），也不能出现「+6 攻」（R301：不再写数字）。
 	var n0: int = scene._floaters.size()
 	scene._on_engine_action("recycler", {"cell": Vector2i(2, 2), "power": 0,
 			"side": GameEngine.SIDE_SELF})
-	for f0: Dictionary in scene._floaters.slice(n0):
-		if str(f0.get("text", "")).contains("+0 攻"):
-			_smoke_fail("R208 零件回收者：力量 0 时不应飘「+0 攻」")
-			return
+	if scene._floaters.size() != n0:
+		_smoke_fail("R208 零件回收者：力量 0 时不应有任何飘字")
+		return
 	var n1: int = scene._floaters.size()
 	scene._on_engine_action("recycler", {"cell": Vector2i(2, 2), "power": 6,
 			"side": GameEngine.SIDE_SELF})
-	var got_six := false
+	var got_txt := ""
 	for f1: Dictionary in scene._floaters.slice(n1):
-		if str(f1.get("text", "")) == "+6 攻":
-			got_six = true
-	if not got_six:
-		_smoke_fail("R208 零件回收者：真加了 6 攻时必须照旧飘「+6 攻」")
+		got_txt = str(f1.get("text", ""))
+	if got_txt != "回收力量":
+		_smoke_fail("R301 零件回收者：力量 > 0 时飘字应为「回收力量」（不写数字），实际「%s」" % got_txt)
 		return
 	# ── ③ 源码守卫：底衬不许回潮（函数与色常量都已删除）──
 	var cf := FileAccess.get_file_as_string("res://scripts/card_face.gd")
