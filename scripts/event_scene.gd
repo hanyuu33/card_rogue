@@ -151,6 +151,23 @@ const DELIVERY_DONE_DESC := """第二层的第一个事件房里，货主早就�
 还有藏得最深的大奖——一块巧克力（概率 10%%）。
 交付完成后货物全部收走（从卡组里删除）。"""
 
+const MERCHANT_DESC := """「旧牌换新牌，五费换宝箱，贱卖也收。」
+摊主把三张牌在桌面上翻来翻去，帽檐下只看得见半张笑。
+
+他脚边立着一只落了锁的大箱子，锁孔里透出一点金光。"""
+
+const MERCHANT_DONE_DESC := """摊主把那张牌收进袖子里，冲你抬了抬下巴。
+
+「成交。下回还来。」"""
+
+const LAKE_DESC := """雾从水面浮起来，一只戴着水草冠的手从雾里伸出来，掌心朝上。
+
+「说个谎吧，我替你扔掉一件旧东西。
+或者说句实话，我送你一件礼物。」"""
+
+const LAKE_DONE_DESC := """水面合拢，雾气散得干干净净。手心里那点温度还留着。"""
+
+
 func _rest_desc() -> String:
 	## 休息处文案（R237：恢复篝火回血 —— 休息与烤肉二选一）。
 	return """前路的战斗还在等着你。
@@ -178,6 +195,8 @@ var _arcane_drunk := false    # 奥秘之泉：是否已选择「喝下泉水」
 var _reward_claimed := false  # R147：本次事件访问是否已领过奖励（一次访问只领一份，见 _claim_reward）
 var _oblivion_done := false   # 遗忘之泉：是否已经遗忘过一张卡（或已选择去删卡）
 var _smith_done := false      # 鸭鸭工匠：是否已经锻造过（或已选择去锻造）
+var _merchant_done := false   # R305 卡片商人：是否已经做过一笔交易
+var _lake_done := false       # R305 湖中仙女：是否已经许过愿
 var _treasure_taken := false  # 宝箱（支付生命换卡牌奖励）：是否已开
 var _delivery_taken := false  # R200 运送委托：本次是否已接取（选过货物）
 var _delivery_count := 0      # R200 运送委托：本次接了几张
@@ -204,6 +223,9 @@ var _tip_demo := ""              # 演示参数 --tip <名字>：锁住悬浮供
 @onready var desc: Label = $Center/Desc
 @onready var rest_btn: Button = $Center/RestBtn
 @onready var bbq_btn: Button = $Center/BBQBtn
+## R305：**第三选项**按钮（卡片商人）。原来只有「主选项 / 第二选项 / 离开」三个位置，
+## 三选一事件需要第四个按钮。默认 hidden，只有卡片商人在 `_ready` 里打开。
+@onready var alt_btn: Button = $Center/AltBtn
 @onready var leave_btn: Button = $Center/LeaveBtn
 @onready var result_label: Label = $Center/ResultLabel
 
@@ -284,6 +306,16 @@ func _is_smith() -> bool:
 	return _is_event_node() and _pending_kind() == "smith"
 
 
+func _is_card_merchant() -> bool:
+	## R305 卡片商人（第二层专属）：换卡 / 5 费卡换大宝箱 / 随机折价。
+	return _is_event_node() and _pending_kind() == "card_merchant"
+
+
+func _is_lake_lady() -> bool:
+	## R305 湖中仙女（第一层专属）：谎言删一张初始卡 / 诚实得随机史诗卡。
+	return _is_event_node() and _pending_kind() == "lake_lady"
+
+
 func _is_struggle() -> bool:
 	return _is_event_node() and _pending_kind() == "struggle"
 
@@ -310,7 +342,8 @@ func _is_treasure() -> bool:
 			and not _is_gaze() and not _is_pear() and not _is_hero() \
 			and not _is_bluefish() and not _is_apple() and not _is_relic_chest() \
 			and not _is_arcane() and not _is_oblivion() and not _is_smith() \
-			and not _is_delivery() and not _is_delivery_done()
+			and not _is_delivery() and not _is_delivery_done() \
+			and not _is_card_merchant() and not _is_lake_lady()
 
 
 func _kind() -> String:
@@ -333,6 +366,10 @@ func _kind() -> String:
 		return "oblivion"
 	if _is_smith():
 		return "smith"
+	if _is_card_merchant():
+		return "card_merchant"
+	if _is_lake_lady():
+		return "lake_lady"
 	if _is_bluefish():
 		return "bluefish"
 	if _is_delivery():
@@ -392,7 +429,7 @@ func _ready() -> void:
 	_font_bold = UiTheme.font_bold()
 	# R113：事件底色 #252A34 = 暗底 → on_dark = true。
 	# 事件是**选择类界面**：三个选项等价，所以全部是次按钮（「一屏最多一个主按钮」的例外）。
-	for _b: Button in [rest_btn, bbq_btn, leave_btn]:
+	for _b: Button in [rest_btn, bbq_btn, alt_btn, leave_btn]:
 		UiTheme.apply_button(_b, false, true)
 	sfx = Sfx.new()
 	add_child(sfx)
@@ -487,6 +524,16 @@ func _ready() -> void:
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "smith"
 			RunState.deck_ids = [8001, 8001, 8001, 8002, 8002, 8003, 9003, 9016, 9019]
+		if args[i] == "--cardmerchant":  # 演示：卡片商人（R305 出图核验三项选项）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "card_merchant"
+			RunState.deck_ids = [8001, 8002, 8003, 9018, 8060, 8001, 9154, 9083]
+		if args[i] == "--lakelady":  # 演示：湖中仙女（R305 出图核验两项选项）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "lake_lady"
+			RunState.deck_ids = [8001, 8002, 8003, 8004, 9018]
 		if args[i] == "--delivery":  # 演示：伪装 run 运送委托事件（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -507,6 +554,7 @@ func _ready() -> void:
 		if args[i] == "--tip" and i + 1 < args.size():
 			_tip_demo = args[i + 1]   # 演示：锁住某个名字的悬浮提示（截图核验用）
 	bbq_btn.visible = false   # 「烤肉」只在休息处出现，事件节点隐藏
+	alt_btn.visible = false   # R305：第三选项只有卡片商人用
 	if _is_whisper():
 		event_name.text = "鸭鸭低语"
 		desc.text = WHISPER_DESC
@@ -601,6 +649,47 @@ func _ready() -> void:
 				result_label.add_theme_color_override("font_color", Color("9a968c"))
 	elif _is_arcane():
 		_setup_arcane()
+	elif _is_card_merchant():
+		event_name.text = "卡 片 商 人"
+		desc.text = MERCHANT_DONE_DESC if _merchant_done else MERCHANT_DESC
+		if _merchant_done:
+			_collapse_to_leave()
+			result_label.text = "这一处你已经做过一笔交易了。"
+			result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		else:
+			var has_five := not RunState.deck_indices_with_cost(
+					RunState.MERCHANT_MIN_COST).is_empty()
+			rest_btn.text = "换卡：选一张卡变成随机本职业奖励卡"
+			rest_btn.disabled = RunState.deck_ids.is_empty()
+			bbq_btn.visible = true
+			bbq_btn.text = "易物：交出 5 费卡换一个大宝箱" if has_five \
+					else "易物：（卡组里没有 5 费及以上的卡）"
+			bbq_btn.disabled = not has_five
+			alt_btn.visible = true
+			var has_sell := not RunState.deck_indices_not_curse().is_empty()
+			alt_btn.text = ("折价：随机失去一张非诅咒卡换 %d 金币"
+					% RunState.VENDOR_GOLD) if has_sell else "折价：（卡组里只剩诅咒卡）"
+			alt_btn.disabled = not has_sell
+			leave_btn.text = "离开（什么都不换）"
+			result_label.text = ""
+	elif _is_lake_lady():
+		event_name.text = "湖 中 仙 女"
+		desc.text = LAKE_DONE_DESC if _lake_done else LAKE_DESC
+		if _lake_done:
+			_collapse_to_leave()
+			result_label.text = "水面已经平静了。"
+			result_label.add_theme_color_override("font_color", Color("8a9ad8"))
+		else:
+			var has_initial := not RunState.deck_indices_of_rarity(
+					RunState.LAKE_INITIAL_RARITY).is_empty()
+			rest_btn.text = "谎言：随机扔掉一张初始卡" if has_initial \
+					else "谎言：（卡组里没有初始卡了）"
+			rest_btn.disabled = not has_initial
+			bbq_btn.visible = true
+			bbq_btn.text = "诚实：获得一张随机史诗卡"
+			bbq_btn.disabled = false
+			leave_btn.text = "离开（什么也不说）"
+			result_label.text = ""
 	elif _is_oblivion():
 		event_name.text = "遗 忘 之 泉"
 		desc.text = OBLIVION_DONE_DESC if _oblivion_done else OBLIVION_DESC
@@ -760,6 +849,34 @@ func _on_main() -> void:
 	## 宝箱层 → 开箱获得 1 个随机奖励道具。
 	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
 	sfx.play("click")
+	if _is_lake_lady():
+		if _lake_done:
+			_on_leave()
+			return
+		var lie := RunState.lake_lady_lie()
+		if not bool(lie.get("ok", false)):
+			return
+		_lake_done = true
+		_claim_reward(rest_btn)
+		_collapse_to_leave()
+		desc.text = LAKE_DONE_DESC
+		result_label.text = "谎言应验：「%s」从卡组里消失了。" % str(lie.get("lost_name", ""))
+		result_label.add_theme_color_override("font_color", Color("8a9ad8"))
+		_redraw()
+		return
+	if _is_card_merchant():
+		if _merchant_done:
+			_on_leave()
+			return
+		if RunState.deck_ids.is_empty():
+			return
+		# 换卡交给卡组编辑场景（与遗忘之泉 / 鸭鸭工匠共用同一套选牌 UI）
+		_merchant_done = true
+		_claim_reward(rest_btn)
+		RunState.complete_current()
+		RunState.pending_deck_edit = "transform_class"
+		SceneFx.goto("res://scenes/deck_edit.tscn")
+		return
 	if _is_whisper():
 		if _whisper_taken:
 			_on_leave()
@@ -1139,7 +1256,7 @@ func _claim_reward(keep: Button) -> void:
 	## 它会变成「继续」，保留可用）。单奖励事件里另一个按钮本来就不可见 → 这里是空操作，
 	## 所以「所有事件共用同一条规则」不需要每个事件各写一遍。
 	_reward_claimed = true
-	for b: Button in [rest_btn, bbq_btn]:
+	for b: Button in [rest_btn, bbq_btn, alt_btn]:
 		if b == null or b == keep or not b.visible:
 			continue
 		b.disabled = true
@@ -1155,6 +1272,8 @@ func _collapse_to_leave() -> void:
 	rest_btn.visible = false
 	if bbq_btn != null:
 		bbq_btn.visible = false
+	if alt_btn != null:
+		alt_btn.visible = false
 	leave_btn.visible = true
 	leave_btn.text = "离开"
 	leave_btn.disabled = false
@@ -1210,7 +1329,8 @@ func _refresh() -> void:
 	if _is_treasure() or _is_whisper() or _is_struggle() \
 			or _is_gaze() or _is_pear() or _is_apple() or _is_hero() or _is_bluefish() \
 			or _is_relic_chest() or _is_arcane() or _is_oblivion() \
-			or _is_smith() or _is_delivery() or _is_delivery_done():
+			or _is_smith() or _is_delivery() or _is_delivery_done() \
+			or _is_card_merchant() or _is_lake_lady():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。
@@ -1242,10 +1362,57 @@ func _refresh_bbq() -> void:
 		bbq_btn.disabled = false
 
 
+func _on_alt() -> void:
+	## R305 卡片商人 · **随机折价**（第三选项）：随机失去一张非诅咒卡，换 100 金币。
+	## 只有卡片商人打开这个按钮，别的分支直接返回。
+	sfx.play("click")
+	if not _is_card_merchant() or _merchant_done:
+		return
+	var res := RunState.vendor_discard_random()
+	if not bool(res.get("ok", false)):
+		result_label.text = "卡组里没有可以折价的卡（诅咒不算）。"
+		result_label.add_theme_color_override("font_color", Color("c86a5a"))
+		_redraw()
+		return
+	_merchant_done = true
+	_claim_reward(alt_btn)
+	_collapse_to_leave()
+	desc.text = MERCHANT_DONE_DESC
+	result_label.text = "「%s」被折价收走，换来 %d 金币。" % [
+			str(res.get("lost_name", "")), int(res.get("gold", 0))]
+	result_label.add_theme_color_override("font_color", Color("d7a54a"))
+	_redraw()
+
+
 func _on_bbq() -> void:
 	## 休息处「烤肉」：获得事件道具「烤肉」（进入 Boss 战时自动消耗 → 回复 25% 生命）。
 	## 奥秘之泉：这一路是「选择2 · 喝下泉水」→ 去卡牌奖励界面（限定效果 / 技能）。
 	sfx.play("click")
+	if _is_lake_lady():
+		if _lake_done:
+			return
+		var truth := RunState.lake_lady_truth()
+		if not bool(truth.get("ok", false)):
+			return
+		_lake_done = true
+		_claim_reward(bbq_btn)
+		_collapse_to_leave()
+		desc.text = LAKE_DONE_DESC
+		result_label.text = "实话换来的礼物：「%s」已加入卡组。" % str(truth.get("name", ""))
+		result_label.add_theme_color_override("font_color", Color("8a9ad8"))
+		_redraw()
+		return
+	if _is_card_merchant():
+		if _merchant_done:
+			return
+		if RunState.deck_indices_with_cost(RunState.MERCHANT_MIN_COST).is_empty():
+			return
+		_merchant_done = true
+		_claim_reward(bbq_btn)
+		RunState.complete_current()
+		RunState.pending_deck_edit = "vendor"
+		SceneFx.goto("res://scenes/deck_edit.tscn")
+		return
 	if _is_arcane():
 		# R71：判断「能不能喝泉水」只看 `_arcane_drunk`（喝过）与 `_arcane_charm_taken`
 		#（**本次**取走过护符）—— **不能**用 `RunState.has_relic()`：那会把上一处泉水 /

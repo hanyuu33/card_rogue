@@ -54,6 +54,10 @@ static var reward_type := "normal"           # 奖励类型："normal" / "boss"�
 static var pending_event := ""               # 即将进入的事件子类型："treasure" / "whisper"
 static var pending_deck_edit := ""           # 事件「遗忘之泉」的待办卡组操作："" / "delete"（删一张卡）
 static var reward_kinds: Array[String] = []  # 本次卡牌奖励的卡类限制（空 = 不限制；如 ["效果","技能"]）
+## R305：有「刚入队、还没给玩家看过」的奖励 → 下一次进地图补弹一次奖励悬浮窗。
+## 用途 = 卡片商人的「以卡易物」：奖励在 deck_edit 场景里入队，那里没有奖励面板。
+## ⚠️ 一次性开关（地图弹过就置回 false）；不参与存档 —— 丢了只是少看一次弹窗，奖励还在队列里。
+static var reward_popup_pending := false
 static var battle_log: Array = []            # 本局战斗记录（与持久化文件同步追加）
 ## R177 玩家地图标记（当局内共享）：`map_strokes` = 画图模式折线，每条
 ## `{"pts": PackedVector2Array, "col": Color}`（一次拖拽一条，坐标 = 地图场景屏幕坐标，
@@ -193,6 +197,14 @@ const HERO_CARD_ID := 9023
 # ⚠️ R112：铁栅栏 9072 的**卡面费用就是 2 费**（早前是 0 费卡 + 运行时按 2 费计）。
 # 费用只有一个来源（cards.json），所以这里只记 id，不再有 SMITH_COST / 覆盖表。
 const FENCE_CARD_ID := 9072
+
+# ================= R305：卡片商人 / 湖中仙女 =================
+const MERCHANT_MIN_COST := 5      # 卡片商人「以卡易物」收的卡：**5 费及以上**
+const BIGCHEST_GOLD := 80         # 大宝箱里的金币（与地图上的大宝箱房同一个数）
+const VENDOR_GOLD := 100          # 卡片商人「随机折价」给的金币
+const LAKE_INITIAL_RARITY := 3    # 湖中仙女「谎言」删的卡：稀有度 3 = 初始
+const LAKE_EPIC_RARITY := 2       # 湖中仙女「诚实」给的卡：稀有度 2 = 史诗
+const CURSE_RARITY := 6           # 稀有度 6 = 诅咒（「随机折价」不碰这些）
 
 # 事件「运送委托」（R200）的货物卡（cards.json）：3 费工事 0/6/0/0（R280 由 1 费上调），
 # **被破坏时从卡组中删除**（引擎 `_destroy` 的货物分支是唯一口）。
@@ -973,20 +985,142 @@ static func delete_deck_card(index: int) -> bool:
 	return true
 
 
-static func transform_deck_card(repo: CardRepo, index: int) -> Dictionary:
-	## 源数之力：把卡组中第 index 张卡变成一张随机奖励卡。
+static func transform_deck_card(repo: CardRepo, index: int, same_class := false) -> Dictionary:
+	## 源数之力 / 卡片商人「旧换新」：把卡组中第 index 张卡变成一张随机奖励卡。
+	## `same_class = true` 时**只出本职业（或本局职业）的奖励卡**（R305 卡片商人的口径）。
 	## 返回 {ok, old_id, new_id}（供界面/日志展示）。
 	if index < 0 or index >= deck_ids.size():
 		return {"ok": false, "old_id": 0, "new_id": 0}
 	var old_id: int = deck_ids[index]
 	# 修复（实机体验）：必须用本局 run_rng —— 否则走全局随机，破坏「同一种子必然一致」的确定性
-	var rolled := CardReward.roll(repo, "normal", 1, run_rng)
+	var want_cid := ("" if all_class_rewards() else player_class) if same_class else ""
+	var rolled := CardReward.roll(repo, "normal", 1, run_rng, [], want_cid)
 	var new_id: int = rolled[0].id if not rolled.is_empty() else old_id
 	deck_ids[index] = new_id
 	if index < deck_mods.size():
 		deck_mods[index] = {}       # R181：变形后附魔失效
 	pending_relic = -1
 	return {"ok": true, "old_id": old_id, "new_id": new_id}
+
+# ------------------------------------------------------------ R305：两个新事件的候选 / 动作
+
+static func deck_indices_with_cost(min_cost: int) -> Array[int]:
+	## 卡组里**卡面费用 ≥ min_cost** 的卡的下标（卡片商人 · 以卡易物：5 费及以上）。
+	## ⚠️ 判据用 `CardData.cost`（卡面费用），**不看附魔减费** —— 「这是不是一张 5 费卡」
+	## 是玩家看得见的卡面事实，被减费附魔改一下就不收反而奇怪。
+	var out: Array[int] = []
+	var repo := CardRepo.load_json()
+	for i in deck_ids.size():
+		var c := repo.get_card(int(deck_ids[i]))
+		if c != null and c.cost >= min_cost:
+			out.append(i)
+	return out
+
+
+static func deck_indices_of_rarity(rarity: int) -> Array[int]:
+	## 卡组里指定稀有度的卡下标（湖中仙女 · 谎言：稀有度 3 = 初始卡）。
+	var out: Array[int] = []
+	var repo := CardRepo.load_json()
+	for i in deck_ids.size():
+		var c := repo.get_card(int(deck_ids[i]))
+		if c != null and c.rarity == rarity:
+			out.append(i)
+	return out
+
+
+static func deck_indices_not_curse() -> Array[int]:
+	## 卡组里**非诅咒**卡的下标（卡片商人 · 随机折价）。诅咒稀有度 = 6。
+	var out: Array[int] = []
+	var repo := CardRepo.load_json()
+	for i in deck_ids.size():
+		var c := repo.get_card(int(deck_ids[i]))
+		if c != null and c.rarity != CURSE_RARITY:
+			out.append(i)
+	return out
+
+
+static func random_deck_index(pool: Array[int]) -> int:
+	## 从候选下标里随机取一个（只走本局 `run_rng`，同种子必然一致）。空池 → -1。
+	## ⚠️ **不许用裸随机调用**：R241/R261 有源码锁（`run_state` 里裸随机只允许 1 处 =
+	## 摇新种子），多一处就会破坏「同一种子必然一致」。
+	if pool.is_empty():
+		return -1
+	return int(pool[run_rng.randi_range(0, pool.size() - 1)])
+
+
+static func grant_bigchest() -> Dictionary:
+	## **「大宝箱」的唯一口**（R305 从 map_scene 抽出来）：
+	## 1 件随机奖励道具 + 1 组卡牌奖励（三选一）+ 80 金币。
+	## 地图上大宝箱房与卡片商人「以卡易物」都走这里 —— 数值只在这里写一次。
+	## 返回 {relic_id, gold, reward_idx}（relic_id = -1 表示奖励道具已全拿完）。
+	gain_gold(BIGCHEST_GOLD)
+	var rid := roll_reward_relic()
+	queue_relic_reward(rid)
+	var idx := queue_card_reward("normal")
+	return {"relic_id": rid, "gold": BIGCHEST_GOLD, "reward_idx": idx}
+
+
+static func vendor_deck_card(repo: CardRepo, index: int) -> Dictionary:
+	## 卡片商人 · 以卡易物：交出一张 **5 费及以上**的卡，换一个大宝箱（见 `grant_bigchest()`）。
+	## 返回 {ok, old_id, old_name, relic_id, gold, reward_idx}。
+	## ⚠️ 奖励在 deck_edit 场景里入队 —— 那里没有奖励面板，所以置 `reward_popup_pending`，
+	##    回到地图时补弹一次。
+	if index < 0 or index >= deck_ids.size():
+		return {"ok": false}
+	var old_id := int(deck_ids[index])
+	var c := repo.get_card(old_id)
+	if c == null or c.cost < MERCHANT_MIN_COST:
+		return {"ok": false}
+	var old_name := c.card_name
+	if not delete_deck_card(index):
+		return {"ok": false}
+	pending_deck_edit = ""
+	var chest := grant_bigchest()
+	reward_popup_pending = true
+	return {"ok": true, "old_id": old_id, "old_name": old_name,
+			"relic_id": int(chest["relic_id"]), "gold": int(chest["gold"]),
+			"reward_idx": int(chest["reward_idx"])}
+
+
+static func vendor_discard_random() -> Dictionary:
+	## 卡片商人 · 随机折价：随机失去一张**非诅咒**卡，获得 100 金币。
+	## 返回 {ok, lost_id, lost_name, gold}。
+	var pool := deck_indices_not_curse()
+	var idx := random_deck_index(pool)
+	if idx < 0:
+		return {"ok": false}
+	var lost_id := int(deck_ids[idx])
+	var c := CardRepo.load_json().get_card(lost_id)
+	var nm := c.card_name if c != null else str(lost_id)
+	delete_deck_card(idx)
+	gain_gold(VENDOR_GOLD)
+	return {"ok": true, "lost_id": lost_id, "lost_name": nm, "gold": VENDOR_GOLD}
+
+
+static func lake_lady_lie() -> Dictionary:
+	## 湖中仙女 · 谎言：**随机删掉一张初始卡**（稀有度 3）。
+	## 返回 {ok, lost_id, lost_name}（卡组里没有初始卡 → ok = false，按钮该是禁用的）。
+	var pool := deck_indices_of_rarity(LAKE_INITIAL_RARITY)
+	var idx := random_deck_index(pool)
+	if idx < 0:
+		return {"ok": false}
+	var lost_id := int(deck_ids[idx])
+	var c := CardRepo.load_json().get_card(lost_id)
+	var nm := c.card_name if c != null else str(lost_id)
+	delete_deck_card(idx)
+	return {"ok": true, "lost_id": lost_id, "lost_name": nm}
+
+
+static func lake_lady_truth() -> Dictionary:
+	## 湖中仙女 · 诚实：获得一张**随机史诗卡**（本职业奖励池里稀有度 2 的卡）。
+	## 返回 {ok, card_id, name}。
+	var rolled := CardReward.roll_rarity(CardRepo.load_json(), LAKE_EPIC_RARITY, 1, run_rng)
+	if rolled.is_empty():
+		return {"ok": false}
+	var c: CardData = rolled[0]
+	add_card(c.id)
+	return {"ok": true, "card_id": c.id, "name": c.card_name}
+
 
 static func smith_deck_card(index: int) -> Dictionary:
 	## 事件「鸭鸭工匠」：把卡组中第 index 张卡**变成一张铁栅栏**。

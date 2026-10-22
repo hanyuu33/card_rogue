@@ -5846,14 +5846,16 @@ func _init() -> void:
 	# 「凝视 / 一袋米抗几楼」已挪到第二层；第一层换成「奥秘之泉」，
 	# 「遗忘之泉」是写进每一层事件表的全层通用事件。
 	var ev_kinds_layer := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
-	check(ev_kinds_layer.size() == 7 and not ev_kinds_layer.has("monster") \
+	check(ev_kinds_layer.size() == 8 and not ev_kinds_layer.has("monster") \
 			and ev_kinds_layer.has("treasure") and ev_kinds_layer.has("arcane") \
 			and ev_kinds_layer.has("smith") and ev_kinds_layer.has("delivery") \
+			and ev_kinds_layer.has("lake_lady") \
 			and not ev_kinds_layer.has("gaze"),
-			"第一层事件池：7 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/卡牌宝箱；无凝视、无怪物）")
+			"第一层事件池：8 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/卡牌宝箱/湖中仙女；无凝视、无怪物）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
-	check(l2_ev_kinds.size() == 7 and l2_ev_kinds.has("smith"),
-			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 = 7 种子类型")
+	check(l2_ev_kinds.size() == 8 and l2_ev_kinds.has("smith")
+			and l2_ev_kinds.has("card_merchant"),
+			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 = 8 种子类型")
 	var pear_ev_kinds := l2_ev_kinds        # 旧用例里沿用的变量名（保持后文读到本地变量）
 	check(l2_ev_kinds.has("gaze") and not ev_kinds_layer.has("gaze"),
 			"鸭之凝视已改为第二层事件（第一层不再出 gaze）")
@@ -18045,6 +18047,95 @@ func _init() -> void:
 			and r303_msrc.find("wrap_segments") >= 0
 			and r303_msrc.find("draw_wrapped_hits") >= 0,
 			"R303 浮窗：测量与绘制共用 wrap_segments，不是各算一套")
+
+	# ================================================================
+	# R305：卡片商人（第二层）/ 湖中仙女（第一层）
+	# ================================================================
+	# 先把本局状态整份备份 —— 这几个动作会改卡组 / 金币 / 道具 / 奖励队列。
+	var r305_dids := RunState.deck_ids.duplicate()
+	var r305_dmods := RunState.deck_mods.duplicate(true)
+	var r305_gold := RunState.gold
+	var r305_relics := RunState.relics.duplicate()
+	var r305_skip := RunState.skipped_relics.duplicate()
+	var r305_rewards := RunState.pending_rewards.duplicate(true)
+	var r305_prelic := RunState.pending_relic
+	var r305_pedit := RunState.pending_deck_edit
+	var r305_popup := RunState.reward_popup_pending
+	var r305_active := RunState.run_active
+	RunState.run_active = true
+	var r305_repo := CardRepo.load_json()
+	# ① 候选筛选：5 费及以上 / 初始卡（稀有度 3）/ 非诅咒
+	RunState.deck_ids = [8001, 8002, 9018, 8060, 9154]
+	RunState.ensure_deck_mods()
+	var r305_five := RunState.deck_indices_with_cost(RunState.MERCHANT_MIN_COST)
+	check(r305_five.size() == 2 and r305_five.has(2) and r305_five.has(3),
+			"R305 卡片商人：5 费及以上只认出 2 张（9018 / 8060，实际 %s）" % str(r305_five))
+	check(RunState.deck_indices_of_rarity(RunState.LAKE_INITIAL_RARITY).size() == 2,
+			"R305 湖中仙女：初始卡（稀有度 3）认出 2 张（木栅栏 / 攻击）")
+	check(RunState.deck_indices_not_curse().size() == 4,
+			"R305 卡片商人：折价候选排除诅咒（5 张里 4 张）")
+	# ② 以卡易物：删掉那张 5 费卡 + 大宝箱（道具 + 一组奖励 + 80 金）
+	RunState.gold = 0
+	RunState.pending_rewards.clear()
+	var r305_v := RunState.vendor_deck_card(r305_repo, 2)
+	check(bool(r305_v.get("ok", false)) and RunState.deck_ids.size() == 4
+			and not RunState.deck_ids.has(9018)
+			and RunState.gold == RunState.BIGCHEST_GOLD
+			and RunState.has_pending_rewards() and RunState.reward_popup_pending,
+			"R305 卡片商人：交出 5 费卡 → 删卡 + 大宝箱（%d 金 / 奖励入队 %d 条）"
+			% [RunState.gold, RunState.pending_rewards.size()])
+	check(not bool(RunState.vendor_deck_card(r305_repo, 0).get("ok", false)),
+			"R305 卡片商人：非 5 费卡交不出去（木栅栏被拒）")
+	# ③ 随机折价：随机删一张非诅咒卡 + 100 金；只剩诅咒时不可用
+	RunState.deck_ids = [8001, 8002, 9154]
+	RunState.ensure_deck_mods()
+	RunState.gold = 0
+	var r305_s := RunState.vendor_discard_random()
+	check(bool(r305_s.get("ok", false)) and RunState.deck_ids.size() == 2
+			and RunState.gold == RunState.VENDOR_GOLD,
+			"R305 卡片商人：随机折价删一张非诅咒卡 + %d 金" % RunState.VENDOR_GOLD)
+	RunState.deck_ids = [9154]
+	RunState.ensure_deck_mods()
+	check(not bool(RunState.vendor_discard_random().get("ok", false)),
+			"R305 卡片商人：卡组只剩诅咒卡时折价不可用")
+	# ④ 湖中仙女：谎言只删初始卡；诚实给一张史诗并入组
+	RunState.deck_ids = [8001, 8002, 9018]
+	RunState.ensure_deck_mods()
+	var r305_l := RunState.lake_lady_lie()
+	check(bool(r305_l.get("ok", false)) and RunState.deck_ids.size() == 2
+			and RunState.deck_ids.has(9018),
+			"R305 湖中仙女：谎言只删初始卡（5 费的金属龙留着）")
+	var r305_t := RunState.lake_lady_truth()
+	var r305_c := r305_repo.get_card(int(r305_t.get("card_id", 0)))
+	check(bool(r305_t.get("ok", false)) and r305_c != null and r305_c.rarity == 2
+			and RunState.deck_ids.has(r305_c.id),
+			"R305 湖中仙女：诚实给一张随机史诗卡并入组（%s）"
+			% (r305_c.card_name if r305_c != null else "?"))
+	# ⑤ 事件登记：湖中仙女只在第一层、卡片商人只在第二层
+	check(int(GameLayers.event_weights(1).get("lake_lady", 0)) > 0
+			and int(GameLayers.event_weights(2).get("card_merchant", 0)) > 0
+			and not GameLayers.event_weights(2).has("lake_lady")
+			and not GameLayers.event_weights(1).has("card_merchant"),
+			"R305 事件登记：湖中仙女只在第一层 / 卡片商人只在第二层")
+	check(GameLayers.event_name("lake_lady") == "湖中仙女"
+			and GameLayers.event_name("card_merchant") == "卡片商人",
+			"R305 事件名：湖中仙女 / 卡片商人")
+	# ⑥ 大宝箱唯一口：地图不再裸写金币 / 奖励
+	var r305_msrc := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	check_src(r305_msrc.find("grant_bigchest()") >= 0
+			and r305_msrc.find("gain_gold(80)") < 0,
+			"R305 大宝箱：地图与商人共用 grant_bigchest() 唯一口")
+	# 还原
+	RunState.deck_ids = r305_dids
+	RunState.deck_mods = r305_dmods
+	RunState.gold = r305_gold
+	RunState.relics = r305_relics
+	RunState.skipped_relics = r305_skip
+	RunState.pending_rewards = r305_rewards
+	RunState.pending_relic = r305_prelic
+	RunState.pending_deck_edit = r305_pedit
+	RunState.reward_popup_pending = r305_popup
+	RunState.run_active = r305_active
 
 	# ================================================================
 	# R241：随机种子（全局同一随机源）+ 对战记录详情快照

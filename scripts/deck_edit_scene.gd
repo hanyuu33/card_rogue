@@ -5,6 +5,10 @@ extends Control
 ##   RunState.pending_relic = 6024 鸭血：从卡组中**最多选 2 张**卡，各复制一份加入卡组；
 ##   RunState.pending_deck_edit = "delete" 遗忘之泉（事件）：从卡组中选一张卡删除。
 ##   RunState.pending_deck_edit = "smith" 鸭鸭工匠（事件，R110）：从卡组中选一张卡锻造成 2 费铁栅栏。
+##   RunState.pending_deck_edit = "transform_class" 卡片商人（R305）·旧换新：
+##       选一张卡，变成一张随机**本职业**奖励卡。
+##   RunState.pending_deck_edit = "vendor" 卡片商人（R305）·以卡易物：
+##       选一张 **5 费及以上**的卡交出去，换一个大宝箱（道具 + 一组卡牌奖励 + 金币）。
 ## 模式判定见 _mode()：「遗忘之泉」优先于道具（两者不会同时存在）。
 ##
 ## 交互（v2：平铺网格 + 选中高亮 + 确定）：
@@ -80,6 +84,16 @@ func _ready() -> void:
 			RunState.gain_relic(mid)          # 走真实获得路径（含即时结算）
 			if RunState.pending_relic <= 0:
 				RunState.pending_relic = mid  # 兜底：该道具不需要选卡
+	# R305 演示：-- --edit vendor / -- --edit transform_class 直接进卡片商人的选卡模式
+	# （出图核验「只能选 5 费卡」与标题文案，不必真的从事件里点进来）。
+	if "--edit" in args:
+		var ei := args.find("--edit")
+		if ei >= 0 and ei + 1 < args.size():
+			RunState.run_active = true
+			if RunState.deck_ids.is_empty():
+				RunState.deck_ids = [8001, 8002, 8003, 9018, 8060, 9154]
+				RunState.ensure_deck_mods()
+			RunState.pending_deck_edit = str(args[ei + 1])
 	_cards = RunState.deck_ids.duplicate()
 	_reset_uids()
 	# R191：滚动网格 —— 裁剪容器 + 自绘子节点（卡画在它上面，滚出视区的被裁掉）
@@ -197,6 +211,10 @@ func _mode() -> String:
 		return "oblivion"
 	if RunState.pending_deck_edit == "smith":
 		return "smith"
+	if RunState.pending_deck_edit == "transform_class":
+		return "transform_class"      # R305 卡片商人 · 旧换新
+	if RunState.pending_deck_edit == "vendor":
+		return "vendor"               # R305 卡片商人 · 以卡易物
 	if RunState.pending_relic == 6004:
 		return "delete"
 	if RunState.pending_relic == RunState.SOURCE_POWER_ID:
@@ -229,6 +247,13 @@ func _refresh_title() -> void:
 		"smith":
 			title_label.text = "鸭鸭工匠 — 选择一张卡锻造成铁栅栏"
 			hint_label.text = "点一张卡选中（高亮），再点下方「确定」，把它锻造成一张 2 费铁栅栏。"
+		"transform_class":
+			title_label.text = "卡片商人 — 选择一张卡换掉"
+			hint_label.text = "点一张卡选中（高亮），再点下方「确定」，它会变成一张随机本职业奖励卡。"
+		"vendor":
+			title_label.text = "卡片商人 — 交出 5 费卡换大宝箱"
+			hint_label.text = "只能选 5 费及以上的卡（其余卡点不动）。确认后得到：一件道具 + 一组卡牌奖励 + %d 金币。" \
+					% RunState.BIGCHEST_GOLD
 		"duplicate":
 			title_label.text = "鸭血 — 选择最多 %d 张卡复制" % _limit()
 			hint_label.text = "点卡选中（可多选，已选 %d/%d），再点下方「确定」；每张被选中的卡都会复制一份加入卡组，原卡保留。一张都不选也可以。" % [_sel.size(), _limit()]
@@ -498,9 +523,22 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
+func _pick_allowed(pick: int) -> bool:
+	## R305：卡片商人的「以卡易物」只收 **5 费及以上**的卡 —— 其它格子点了不选中，
+	## 免得玩家以为「点得动就交得出」。
+	if _mode() != "vendor":
+		return true
+	if pick < 0 or pick >= _cards.size():
+		return false
+	var c := repo.get_card(int(_cards[pick]))
+	return c != null and c.cost >= RunState.MERCHANT_MIN_COST
+
+
 func _toggle_sel(pick: int) -> void:
 	## 选中 / 取消选中一个格子。**已满时点新的 → 替换最早选的那个**（单选模式
 	## limit=1，这套逻辑自然退化成「点新的替换旧的」，与原行为一致）。
+	if not _pick_allowed(pick):
+		return
 	if _sel.has(pick):
 		_sel.erase(pick)
 		return
@@ -610,6 +648,20 @@ func _apply(pick: int) -> void:
 					cname, int(sres.get("cost", 2)), int(sres.get("cost", 2))]
 		else:
 			_result = "锻造失败：卡组里没有这一张"
+	elif _mode() == "transform_class":
+		var tc := RunState.transform_deck_card(repo, pick, true)
+		var tc_card := repo.get_card(int(tc.get("new_id", 0)))
+		_result = "「%s」变成了「%s」（本职业奖励卡）" % [cname,
+				tc_card.card_name if tc_card != null else str(tc.get("new_id", 0))]
+		RunState.pending_deck_edit = ""
+	elif _mode() == "vendor":
+		var vr := RunState.vendor_deck_card(repo, pick)
+		if bool(vr.get("ok", false)):
+			var rel_txt := "一件道具" if int(vr.get("relic_id", -1)) > 0 else "道具（已全拿完）"
+			_result = "「%s」换来了大宝箱：%s + 一组卡牌奖励 + %d 金币" % [cname, rel_txt,
+					int(vr.get("gold", 0))]
+		else:
+			_result = "易物失败：这张卡不是 5 费卡"
 	elif RunState.pending_relic == RunState.SOURCE_POWER_ID:
 		var res := RunState.transform_deck_card(repo, pick)
 		var nc := repo.get_card(int(res["new_id"]))

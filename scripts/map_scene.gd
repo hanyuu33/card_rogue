@@ -212,6 +212,12 @@ func _ready() -> void:
 	# 别一进地图就糊上「入夜」黑屏。
 	if RunState.run_active and RunState.boss_pending:
 		_boss_hold = BOSS_HOLD_AFTER_ENTER
+	# R305：卡片商人的「以卡易物」在 deck_edit 场景里把奖励入队（那里没有奖励面板）→
+	# 回到地图补弹一次，玩家才看得到那组三选一。截图 / headless 不弹（挡住出图）。
+	if RunState.reward_popup_pending and not _shot \
+			and DisplayServer.get_name() != "headless":
+		RunState.reward_popup_pending = false
+		_open_reward_panel()
 	# R148：上栏原来挂着「回到标题 / 战斗记录 / 查看卡组」三个 chip —— 全部收进
 	# Esc 菜单（点齿轮或按 Esc 打开），上栏只留**一个齿轮**。
 	_menu_btn = Button.new()
@@ -500,9 +506,9 @@ func _commit_enter(cell: Dictionary) -> void:
 			_open_reward_panel()
 		"bigchest":
 			# 大宝箱：**1 个道具 + 一次卡牌奖励 + 80 金币**（R181）
-			RunState.gain_gold(80)
-			RunState.queue_relic_reward(RunState.roll_reward_relic())
-			RunState.queue_card_reward("normal")
+			# R305：抽成 `RunState.grant_bigchest()` 唯一口 —— 卡片商人的「以卡易物」
+			# 换的是**同一个**大宝箱，数值只在一处写。
+			RunState.grant_bigchest()
 			_open_reward_panel()
 		"shop":
 			# R181：神秘商店 —— 进入商店场景（3 行商品，金币消费）。

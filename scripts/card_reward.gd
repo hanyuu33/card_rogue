@@ -62,6 +62,37 @@ static func roll(repo: CardRepo, reward_type: String, count: int = CHOICES,
 	return out
 
 
+static func roll_rarity(repo: CardRepo, rarity: int, count := 1,
+		rng: RandomNumberGenerator = null, cid := "") -> Array[CardData]:
+	## 按**稀有度**抽卡（R305：湖中仙女 · 诚实 → 随机一张史诗）。
+	## 池子 = 本职业奖励池里 rarity 命中的卡（`repo.reward_pool_for(cid)`；cid 空 → 本局职业）。
+	## ⚠️ 不走 `TYPE_WEIGHTS`：那是「按稀有权重抽」，这里稀有度已经定死，再套权重就没意义。
+	## ⚠️ 随机源由调用方给（本局 `run_rng`）—— 同一种子必然一致。
+	var want := cid
+	if want == "":
+		want = "" if RunState.all_class_rewards() else RunState.player_class
+	var pool: Array[CardData] = []
+	for c: CardData in repo.reward_pool_for(want):
+		if c.rarity == rarity:
+			pool.append(c)
+	var out: Array[CardData] = []
+	if pool.is_empty() or count <= 0:
+		return out
+	var used := {}
+	for i in count:
+		var cands: Array[CardData] = []
+		for c: CardData in pool:
+			if not used.has(c.card_name):
+				cands.append(c)
+		if cands.is_empty():
+			break
+		var pick := (rng.randi_range(0, cands.size() - 1) if rng != null
+				else randi() % cands.size())
+		out.append(cands[pick])
+		used[cands[pick].card_name] = true
+	return out
+
+
 static func _pick_one(pool: Array[CardData], weights: Array,
 		used_names: Dictionary, rng: RandomNumberGenerator) -> CardData:
 	## 标准权重抽样：只在「仍有未选名称候选」的稀有度里，
