@@ -116,7 +116,8 @@ var action_growth_turns: int = 0   # 距离下次成长还剩几个回合
 ## 共享实例，直接改 card.move_speed 会把加成写进卡库、跨局泄漏。单位一离场字段随之消失，
 ## 因此无需 `_card_leaving_field` 还原。
 var summon_haste: int = 0          # 阿尔戈斯召唤加成（进 effective_speed）
-## 「夜衰」（夜鸭 9027，R270）：**奇数回合**移速 / 攻击距离各 -1（0 = 不生效，1 = 生效）。
+## 「惧光」（夜鸭 9027，R270 起，R324 改显示名）：**奇数回合**移速 / 攻击距离各 -1
+## 且力量**临时减半**（0 = 不生效，1 = 生效）。
 ## 与暗影领主同范式：只记 Placement、**绝不烤进 CardData**（敌方关卡单位是卡库共享实例），
 ## 由 `GameEngine._refresh_night_owl()` 在回合开始时按 `turn_number` 的奇偶重算。
 var night_owl_weak: int = 0
@@ -148,13 +149,22 @@ func effective_power() -> int:
 	## 由 `GameEngine._scout_aura_bonus()` 加在**敌人身上**（用户原话：是敌人**受到**的伤害
 	## +1，不是这张卡攻击时 +1）。于是塔自身 0 攻就是 0 攻，定位 = 标记一片区域的增伤辅助。
 	var debuff := atk_debuff if debuff_stage == 1 else 0
-	return maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
+	var total := maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
 			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk
 			- debuff - mnemo_down)
+	# R324「惧光」：夜鸭奇数回合**力量临时减半**，只作用在这个出口 ——
+	# 上面每一项（atk_buff / atk_growth / ramp_atk / upgrade_atk / dark_lord_atk …）
+	# 都是「永久」或「本回合」的真实加成，**一个字段都不改**，所以：
+	#   · 偶数回合自动回到原值，夜行（永久 +1/回合）累计的攻不会被吃掉；
+	#   · 卡面 / 徽标 / 攻击结算全部读这个口，不会出现「显示减半、打出来是原值」。
+	# 去尾口径与 `_spell_dmg_pct` 一致（整数除法向零截断，正数即 floor）：5 → 2。
+	if night_owl_weak > 0:
+		total = total / 2
+	return total
 
 
 func effective_speed() -> int:
-	## 实际移动速度（R111）：卡面移速 + 场上加成（鸭之暗面的暗影领主）- 夜衰（夜鸭奇数回合）。最低 0。
+	## 实际移动速度（R111）：卡面移速 + 场上加成（鸭之暗面的暗影领主）- 惧光（夜鸭奇数回合）。最低 0。
 	## 与 effective_power 对称：**不写回 card**，所以 `_move_bfs` / AI 都要读这个口。
 	if card == null:
 		return 0
@@ -163,7 +173,7 @@ func effective_speed() -> int:
 
 func effective_range() -> int:
 	## 实际攻击距离（R150）：卡面射程 + **只在场上有效**的加成（赫菲斯托斯的锻造成长）
-	## - 夜衰（夜鸭 9027 奇数回合 -1）。
+	## - 惧光（夜鸭 9027 奇数回合 -1）。
 	## R279：「改造攻程」（榴弹击手）的 +N **已经烤在这张卡的副本上**（`card.attack_range`），
 	## 所以这里不再加 `upgrade_range`（加了会双计）。`upgrade_range` 只负责两件事：
 	## ① 徽标显示 / ② 离场时 `_card_leaving_field` 按它减回去。
@@ -287,7 +297,9 @@ func status_entries() -> Array[Dictionary]:
 		out.append({"label": "中毒：剩 %d 跳，每跳 %d 伤" % [poison_left, poison_dmg],
 				"col": COL_D, "kind": "debuff"})
 	if night_owl_weak > 0:
-		out.append({"label": "畏光（奇数回合）：移速 -%d、攻程 -%d" % [night_owl_weak, night_owl_weak],
+		# R324：显示名统一为「惧光」（旧名「夜衰 / 畏光」），并把力量减半写进同一行。
+		out.append({"label": "惧光（奇数回合）：移速 -%d、攻程 -%d、力量减半"
+				% [night_owl_weak, night_owl_weak],
 				"col": COL_D, "kind": "debuff"})
 	return out
 
@@ -318,5 +330,5 @@ func status_badges() -> Array[Dictionary]:
 	if forge_period > 0:
 		out.append({"text": "锻 %d/%d" % [forge_idle, forge_period], "col": Color("ff7043")})
 	if night_owl_weak > 0:
-		out.append({"text": "夜衰", "col": Color("8a6d1f")})
+		out.append({"text": "惧光", "col": Color("8a6d1f")})
 	return out

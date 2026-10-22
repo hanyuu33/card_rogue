@@ -3024,21 +3024,29 @@ func _init() -> void:
 	check(nd_card.power == 5 and nd_card.health == 35 and nd_card.value == 1
 			and nd_card.traits.has("夜行") and nd_card.effect_text.contains("回合开始时"),
 			"夜鸭：5 攻 35 血，trait 夜行（回合开始 +1 攻）")
-	# 夜行（9027）：所属方回合开始时力量 +1（永久累计）
+	# 夜行（9027）：所属方回合开始时力量 +1（永久累计）。
+	# ⚠️ R324 起夜鸭同时带「惧光」（奇数回合力量临时减半），所以这里**同时验两件事**：
+	#    永久加攻照旧写进 atk_growth 字段，减半只发生在 effective_power() 出口。
 	var ng_e := _new_engine([], 20, 20, -1, false)
 	ng_e.start_game(0)
 	var ng_duck := CardData.from_dict(repo.get_card(9027).to_dict())
 	ng_e.state.place(ng_duck, Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
-	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 5, "夜行：上场 5 攻")
+	ng_e._refresh_night_owl()   # 开局布置完敌方才上场 → 手动按当前回合刷一次惧光
+	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 2,
+			"夜行 + 惧光：第 1 回合（奇数）5 攻减半去尾 = 2")
 	ng_e.end_turn()   # 我方 → 敌方（敌方回合开始 → 夜行 +1）
+	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 3,
+			"夜行：永久 +1（5→6）后仍被惧光折半 = 3（加攻确实进了字段）")
+	ng_e.end_turn()   # 敌方 → 我方（第 2 回合，偶数）
 	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 6,
-			"夜行：敌方回合开始 +1 攻（5 → 6）")
-	ng_e.end_turn()   # 敌方 → 我方
+			"惧光：第 2 回合（偶数）恢复，永久加攻照常生效（6）")
 	ng_e.end_turn()   # 我方 → 敌方（再 +1）
 	check(ng_e.state.unit_at(Vector2i(1, 0)).effective_power() == 7,
-			"夜行：每个自己的回合开始都 +1（6 → 7）")
+			"夜行：每个自己的回合开始都 +1，且减半不污染永久值（6 → 7）")
+	check(ng_duck.power == 5,
+			"惧光：card.power 全程 5 不变（减半绝不写回卡面）")
 
-	# ===== R270：夜鸭「夜衰」—— 奇数回合移速 -1 / 攻击距离 -1 =====
+	# ===== R270：夜鸭「惧光」—— 奇数回合移速 -1 / 攻击距离 -1 =====
 	# 判据 = `Placement.night_owl_weak`，由 `GameEngine._refresh_night_owl()` 在双方回合开始
 	# 与开局刷新；奇偶用 `turn_number`（玩家看到的回合数），**不是** turn_total（双方各 +1）。
 	var nw_e := _new_engine([], 20, 20, -1, false)
@@ -3050,15 +3058,25 @@ func _init() -> void:
 	nw_e._refresh_night_owl()
 	var nw_p: Placement = nw_e.state.unit_at(Vector2i(1, 0))
 	var nw_other: Placement = nw_e.state.unit_at(Vector2i(1, 2))
-	check(nw_e.turn_number == 1, "夜衰：开局是我方第 1 回合（奇数）")
+	check(nw_e.turn_number == 1, "惧光：开局是我方第 1 回合（奇数）")
 	check(nw_p.effective_speed() == 1 and nw_p.effective_range() == 1,
-			"夜衰：奇数回合 速 2→1、攻程 2→1")
-	check(nw_p.card.move_speed == 2 and nw_p.card.attack_range == 2,
-			"夜衰：只改场上值，卡面数据不动（绝不写回 card）")
+			"惧光：奇数回合 速 2→1、攻程 2→1")
+	check(nw_p.effective_power() == 2,
+			"惧光：奇数回合 5 攻临时减半去尾 = 2（R324 追加）")
+	check(nw_p.card.move_speed == 2 and nw_p.card.attack_range == 2
+			and nw_p.card.power == 5,
+			"惧光：只改场上值，卡面数据不动（速 / 程 / 攻都不写回 card）")
 	check(nw_other.night_owl_weak == 0 and nw_other.effective_speed() == 1,
-			"夜衰：只打夜鸭（9027），别的敌方单位不沾")
-	check(nw_p.status_entries().any(func(e): return str(e.get("label", "")).begins_with("畏光")),
-			"R304 畏光：左栏列出一条减益（旧显示名「夜衰」）")
+			"惧光：只打夜鸭（9027），别的敌方单位不沾")
+	# ⚠️ 别在一行 lambda 的 return 后面换行接 `and` —— 会被当成语句结束（Parse Error）。
+	var nw_dread_label := ""
+	for e: Dictionary in nw_p.status_entries():
+		var lbl := str(e.get("label", ""))
+		if lbl.begins_with("惧光"):
+			nw_dread_label = lbl
+	check(nw_dread_label.contains("力量减半"),
+			"R324 惧光：左栏一条减益，写明移速 / 攻程 / 力量减半（旧显示名「夜衰 / 畏光」；实得「%s」）"
+			% nw_dread_label)
 
 	# ===== R304：精英「越远越多」+ 「?」房精英降权 =====
 	# ① 距离系数：起点旁 0.8、最远 1.5
@@ -3096,27 +3114,49 @@ func _init() -> void:
 	check(int(RogueMap.WEIGHTS_UNKNOWN.get("elite", 0)) == 2
 			and int(RogueMap.WEIGHTS.get("elite", 0)) == 2,
 			"R304 「?」房：精英权重 3 → 2（明房保持 2）")
-	check(nw_p.status_badges().any(func(b): return str(b.get("text", "")) == "夜衰"),
-			"夜衰：战场卡面显示「夜衰」徽标")
+	check(nw_p.status_badges().any(func(b): return str(b.get("text", "")) == "惧光"),
+			"R324 惧光：战场卡面**头顶**徽标显示「惧光」（旧显示名「夜衰」）")
 	var nw_weak_cells: int = nw_e._reachable(Vector2i(1, 0), GameEngine.SIDE_OPPONENT).size()
 	nw_e.end_turn()   # → 敌方第 1 回合（turn_number 仍 1，仍奇数）
 	check(nw_e.turn_number == 1 and nw_p.effective_speed() == 1
 			and nw_p.effective_range() == 1,
-			"夜衰：敌方第 1 回合仍是奇数回合，继续削弱（两侧同回合一致）")
+			"惧光：敌方第 1 回合仍是奇数回合，继续削弱（两侧同回合一致）")
 	nw_e.end_turn()   # → 我方第 2 回合（偶数）
+	# ⚠️ 这里力量是 6 而不是 5：中间敌方回合开始触发过一次夜行（+1 永久），
+	# 惧光只是不再折半 —— 6 恰好证明「永久加攻留在字段里、减半只临时」。
 	check(nw_e.turn_number == 2 and nw_p.effective_speed() == 2
-			and nw_p.effective_range() == 2,
-			"夜衰：第 2 回合（偶数）恢复 速2 程2")
+			and nw_p.effective_range() == 2 and nw_p.effective_power() == 6,
+			"惧光：第 2 回合（偶数）恢复 速2 程2，力量 5+夜行1=6 不再折半")
 	var nw_full_cells: int = nw_e._reachable(Vector2i(1, 0), GameEngine.SIDE_OPPONENT).size()
 	check(nw_full_cells > nw_weak_cells,
-			"夜衰：移速 2→1 真的少走（可达 %d 格 → %d 格）" % [nw_full_cells, nw_weak_cells])
+			"惧光：移速 2→1 真的少走（可达 %d 格 → %d 格）" % [nw_full_cells, nw_weak_cells])
 	nw_e.end_turn()   # → 敌方第 2 回合（仍偶数）
-	check(nw_p.effective_speed() == 2, "夜衰：敌方第 2 回合不削弱")
+	check(nw_p.effective_speed() == 2, "惧光：敌方第 2 回合不削弱")
 	nw_e.end_turn()   # → 我方第 3 回合（奇数）
 	check(nw_e.turn_number == 3 and nw_p.effective_speed() == 1
 			and nw_p.effective_range() == 1,
-			"夜衰：第 3 回合（奇数）再次削弱")
-	check(not nw_p.status_badges().is_empty(), "夜衰：徽标随状态出现/消失，不留残影")
+			"惧光：第 3 回合（奇数）再次削弱")
+	check(not nw_p.status_badges().is_empty(), "惧光：徽标随状态出现/消失，不留残影")
+
+	# R324：惧光减半**绝不吃永久加攻** —— 永久 +3 后奇数回合折半、偶数回合原样，
+	# 且 `atk_buff` 字段全程不被改写（改造 / 光环 / 击杀成长都写这类字段）。
+	var nw2_e := _new_engine([], 20, 20, -1, false)
+	nw2_e.start_game(0)   # 我方第 1 回合（奇数）
+	nw2_e.state.place(CardData.from_dict(repo.get_card(9027).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var nw2_p: Placement = nw2_e.state.unit_at(Vector2i(1, 0))
+	nw2_p.atk_buff = 3          # 模拟永久加攻
+	nw2_e._refresh_night_owl()
+	check(nw2_p.effective_power() == 4,
+			"惧光：永久 +3 后奇数回合 (5+3)/2 = 4（去尾）")
+	nw2_e.turn_number = 2       # 不走 end_turn，避开夜行顺手 +1 的干扰
+	nw2_e._refresh_night_owl()
+	check(nw2_p.effective_power() == 8 and nw2_p.atk_buff == 3,
+			"惧光：偶数回合恢复 5+3=8，永久加攻字段未被减半改写")
+	nw2_e.turn_number = 1
+	nw2_e._refresh_night_owl()
+	check(nw2_p.effective_power() == 4 and nw2_p.atk_buff == 3,
+			"惧光：再回到奇数回合仍是 4（反复折半不累积损伤）")
 
 	# 精进（9021 白魔法鸭）：每个自己的回合开始力量 +1（永久累计，无前置条件）
 	var sl_e := _new_engine([], 20, 20, -1, false)

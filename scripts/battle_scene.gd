@@ -987,7 +987,7 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--nightduck" in args and engine != null:
-		# 演示（R270）：夜鸭 9027 的「夜衰」—— **奇数回合**移速 -1、攻击距离 -1。
+		# 演示（R270）：夜鸭 9027 的「惧光」—— **奇数回合**移速 -1、攻击距离 -1、力量减半。
 		# 配 `--level 11`（夜鸭阵：中排两只夜鸭）出图；再加 `--nightduckeven` 看偶数回合对照。
 		engine.turn_number = 2 if "--nightduckeven" in args else 1
 		engine._refresh_night_owl()
@@ -1001,9 +1001,11 @@ func _ready() -> void:
 			_hover_pl = r270_p
 			_hover_card = r270_p.card
 			_hover_hand = -1
-			status_text = "R270：夜鸭 第 %d 回合 → 场上 速 %d / 攻程 %d（卡面 %d / %d）" % [
+			_banner = {}   # 出图清横幅：否则「我方回合 · 第 N 回合」会压住卡顶的惧光徽标
+			status_text = "R324：夜鸭 第 %d 回合 → 场上 速 %d / 攻程 %d / 攻 %d（卡面 %d / %d / %d）" % [
 					engine.turn_number, r270_p.effective_speed(), r270_p.effective_range(),
-					r270_p.card.move_speed, r270_p.card.attack_range]
+					r270_p.effective_power(),
+					r270_p.card.move_speed, r270_p.card.attack_range, r270_p.card.power]
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r271" in args and engine != null:

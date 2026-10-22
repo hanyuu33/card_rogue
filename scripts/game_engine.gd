@@ -547,7 +547,8 @@ const OWL_ID:= 9073
 const SPRITE_ID:= 9074
 const SPRITE_EFFECT_DISCOUNT:= 2
 const NIGHT_GROW_TRAIT:= "夜行"
-## 夜鸭（9027，R270）：**奇数回合**时移速 -1、攻击距离 -1（`Placement.night_owl_weak`）。
+## 夜鸭（9027，R270）：「惧光」—— **奇数回合**时移速 -1、攻击距离 -1，
+## 且力量**临时减半**（R324 追加，实现在 `Placement.effective_power()` 出口，只算不写回）。
 ## 判据用 **id 而不是 trait** —— 「夜行」是「回合开始力量 +1」的成长族 trait，
 ## 以后再有夜行单位不该被顺手削弱；这条明确只属于夜鸭。
 const NIGHT_DUCK_ID:= 9027
@@ -1883,7 +1884,7 @@ func _begin_turn(side: String) -> void :
 		_refresh_dark_lord(SIDE_SELF)
 		_refresh_hecaton(SIDE_SELF)
 		_refresh_mnemosyne()           # R271 谟涅摩叙涅：按改造层数重算敌方力量减益
-		_refresh_night_owl()           # R270 夜鸭：按本回合奇偶刷新夜衰
+		_refresh_night_owl()           # R270 夜鸭：按本回合奇偶刷新「惧光」
 		_run_battlecries(SIDE_SELF)
 		_log("── 我方第 %d 回合：能量重置为 %d%s%s%s%s%s%s%s（共 %d），抽 %d 张" % [
 			turn_number, FieldState.ENERGY_PER_TURN,
@@ -1949,7 +1950,7 @@ func _begin_turn(side: String) -> void :
 		_refresh_dark_lord(SIDE_OPPONENT)
 		_refresh_hecaton(SIDE_OPPONENT)
 		_refresh_mnemosyne()           # R271 谟涅摩叙涅：对称保留（敌方正常拿不到）
-		_refresh_night_owl()           # R270 夜鸭：奇数回合夜衰（与上一行同回合内一致）
+		_refresh_night_owl()           # R270 夜鸭：奇数回合「惧光」（与上一行同回合内一致）
 		_run_battlecries(SIDE_OPPONENT)
 		_log("── 对手回合开始：能量 %d（上回合结束已清零，本回合重新发放基础费用），手牌 +%d" % [
 			FieldState.ENERGY_PER_TURN, FieldState.HAND_DRAW_PER_TURN])
@@ -13262,12 +13263,15 @@ func _refresh_hecaton(side: String) -> void:
 					n])
 
 
-# ================= R270：夜鸭「夜衰」 =================
+# ================= R270：夜鸭「惧光」 =================
 
 func _refresh_night_owl() -> void:
 	## 夜鸭（9027）：**奇数回合**（`turn_number % 2 == 1`，即玩家看到的第 1/3/5… 回合）
 	## 移动速度 -1、攻击距离 -1，偶数回合恢复 —— 用户口径「削弱夜鸭：奇数回合时，
 	## 移动速度攻击距离-1」。
+	## R324 追加：同一回合内力量**临时减半**（用户口径「攻击力也临时减半，仅临时，
+	## 不要和原本永久加攻冲突」）—— 减半不在这里做，只在 `Placement.effective_power()`
+	## 的出口按本字段折半，于是永久加攻（夜行 / 各类 atk_buff）的字段分文不动。
 	## 与 `_refresh_dark_lord` 同范式：**只写 Placement 字段、不碰 card**
 	## （敌方关卡单位用的是卡库共享实例，写 card 会跨局泄漏；不写 card 也就无需离场还原）。
 	## 调用点 = 双方回合开始各一次（`_begin_turn` 两个分支）+ 开局
