@@ -2565,6 +2565,24 @@ func _demo_tick() -> void:
 		status_text = "R299：牌库与弃牌区都已空 → 抽不到卡（不拦操作）"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r300inspire" in _demo_args and _demo_frame == 40 and engine != null:
+		# R300 出图演示（`--screenshot --r300inspire --shotms 150`）：效果区两张「激发」，
+		# 场上一个己方单位被「升级」改造 → 全体敌人各 -6（3 × 2 轮）。
+		var insp := CardRepo.load_json().get_card(GameEngine.INSPIRE_ID)
+		if insp != null:
+			engine.state.effects.append(CardData.from_dict(insp.to_dict()))
+			engine.state.effects.append(CardData.from_dict(insp.to_dict()))
+		var demo_repo := CardRepo.load_json()
+		if not engine.state.board.has(Vector2i(1, 0)):
+			engine.state.place(demo_repo.get_card(1011), Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+		if not engine.state.board.has(Vector2i(1, 2)):
+			engine.state.place(demo_repo.get_card(1011), Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
+		if not engine.state.board.has(Vector2i(4, 1)):
+			engine.state.place(demo_repo.get_card(8003), Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+		status_text = "R300 激发 ×2：一次改造 → 全体敌人各 -6（3 点 × 2 轮）"
+		_shot_t0 = _now()
+		queue_redraw()
 	if _demo_pending and _demo_frame == 20 and _tutorial.is_empty():
 		# 演示确定性：手牌里没有寒冰护盾就换进一张（仅新手试炼演示用）
 		var has_shield := false
@@ -9617,6 +9635,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"text": "警觉 · %s -%d 费" % [al_name, al_disc],
 					"col": UiTheme.KIND_SKILL, "start": n, "dur": 1800, "size": 18})
 			_say("🃏 警觉：随机工事「%s」进入手卡（费用 -%d）" % [al_name, al_disc])
+		"inspire":
+			# R300 激发 8077：一张卡被改造 → 对所有敌人造成 3 点伤害（可叠加）。
+			# 它是效果卡、作用对象是**全体**，所以飘字放在棋盘上沿中线，不绑某一格。
+			sfx.play("click")
+			var in_n := int(data.get("count", 0))
+			var in_d := int(data.get("dmg", 0))
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
+					"text": "激发 · 全体 -%d%s" % [in_d, (" ×%d" % in_n) if in_n > 1 else ""],
+					"col": Color("a05ad0"), "size": 17, "start": n, "dur": 1600})
 		_:
 			# R288：兜底 —— 任何**还没有专属表现**的事件，只要带格子，就至少演一次
 			# 「脉冲 + 镜头」。以后新加的事件不会再静悄悄发生（这是这套演出的兜底价值）。

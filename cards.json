@@ -5146,6 +5146,28 @@
       "target_mode": "unit",
       "color": "蓝",
       "image": ""
+    },
+    {
+      "id": 8077,
+      "name": "激发",
+      "kind": "效果",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [],
+      "effect_text": "每次你的一张卡被改造时，对所有敌人造成 **3** 点伤害。可叠加。",
+      "target_mode": "none",
+      "value": 3,
+      "color": "紫",
+      "image": ""
     }
   ]
 }

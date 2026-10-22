@@ -48,6 +48,9 @@ var focus_label:= "专注"       # 面板文案标签（专注 / 负重减轻）
 ## R298 合体 9167：场上目标已选、等玩家从**卡组**挑一张「素体」的待办（UI kind = "merge"）。
 ## `merge_hand_index` / `merge_cell` 在面板期间一直留着 —— 面板确认后由 battle_scene 用它们
 ## 调 `use_spell()`，付费 / 弃牌 / 出牌计数 / 次元判定全部交回 use_spell 统一收尾。
+## R300 激发 8077：重入保护 —— 它自己造成伤害，若某张敌方亡语反过来改造了我方卡，
+## 会再次走进 `_inspire_tick()`。这个标记保证「一次结算不会被自己递归放大」。
+var _inspire_busy:= false
 var merge_pending:= false
 var merge_hand_index:= -1
 var merge_cell:= Vector2i(-1, -1)
@@ -1034,6 +1037,20 @@ const CLUSTER_TURRET_TRAIT:= "集束"   # 只做标记（与「废铁」/「拾�
 #      会白丢 1 费 + 一张史诗牌。
 #   ⚠️ 数值取**卡组里那张副本**（可能被生产订单 8048 / 自主升级改过），不取卡库原型。
 const MERGE_ID:= 9167
+# ── R300：激发 8077（机械之心 2 费**史诗效果卡**）──
+# 卡面：「每次你的一张卡被改造时，对所有敌人造成 3 点伤害。可叠加。」
+# 三条口径（用户原话）：
+#   ① **无论在哪** —— 手牌 / 牌库 / 场上的己方卡被改造都算（触发点因此要覆盖
+#      系统升级 8039（手牌）、自主升级 8045（牌库）、升级 8027（场上）三类入口）；
+#   ② **无论一次性改造多少张都算一次** —— 「批量改造 8031」「批量传输 8040」
+#      「改装者 8076」这种一次改一整批的，只触发**一次**；
+#   ③ **可叠加** —— 效果区每有一张激发，每次触发就各打一轮（2 张 = 每轮 3 点、打 2 轮）。
+# ⚠️ 触发口绝不能挂进 `_field_upgrade_grant()` / `_on_unit_upgraded()` 那种**逐张**口，
+#    否则批量改造 10 张会打 10 次。必须在**动作级**函数末尾各调一次 `_inspire_tick()`。
+# ⚠️ 「改造」= 走 `_upgrade_atk_gain` / `_upgrade_hp_gain` 的**数值改造**（与 `_is_upgraded()`
+#    同口径）。只加字段 / 加 trait 的（能量屏障 8033 加「护盾」、过载 8030 加双动）**不算**。
+const INSPIRE_ID:= 8077
+const INSPIRE_DMG:= 3
 # 「代达罗斯」8060（R271 重做，5 费**史诗盟友** 8/18/1/1，嘲讽）：
 #   入场时本次对战每用过一张聚能炮击 → 生命 +3；本回合手卡里的聚能炮击费用为 0。
 const DAEDALUS_HP_PER_CANNON:= 3
@@ -3871,6 +3888,7 @@ func _modder_enter(p: Placement) -> void :
 		hand_names.append("%s %d血" % [c.card_name, up.health])
 	_log("改装者：场上 %d 个盟友 / 手牌 %d 个盟友各获得改造（生命 +%d）" % [field_got, hand_got, MODDER_HP])
 	action.emit("modder_enter", {"field": field_got, "hand": hand_got, "hp": MODDER_HP})
+	_inspire_tick()   # R300 激发：改装者入场一次改全体 → 只算一次
 
 func _cannon_mech_enter(p: Placement) -> void :
 	## 「聚能机兵」8073（R271，2 费普通盟友 1/8/1/1）：入场时，本次对战中你每使用过
@@ -4288,6 +4306,7 @@ func creation_pick(hand_index: int) -> bool:
 		body.upgrade_stacks += 1
 		_log("创意：%s → %s（改造 +生命，%d 攻 / %d 血）"
 				% [str(res.get("old", null)), body.card_name, body.power, body.health])
+		_inspire_tick()   # R300 激发：创意改造一张手牌 = 一次改造动作
 	creation_remaining = maxi(0, creation_remaining - 1)
 	if creation_remaining == 0:
 		creation_pending = false
@@ -4584,6 +4603,56 @@ func _cluster_turret_reload(p: Placement) -> void :
 	action.emit("cluster_reload", {"cell": _cell_of(p), "card": c, "side": p.owner})
 
 
+# ================= R300：激发 8077 =================
+
+
+func _inspire_tick() -> int:
+	## 「激发」8077（R300，机械之心 2 费**史诗效果卡**）的**唯一结算口**：
+	## 对所有敌人造成 INSPIRE_DMG 点伤害 —— 效果区**每有一张**就各打一轮（卡面「可叠加」）。
+	##
+	## 调用点必须全部是 **「改造动作」的末尾**（每个动作只调一次）：
+	## 用户口径「无论一次性改造多少张都算一次」—— 批量改造 10 张也只打一轮。
+	## 所以它**不**挂在 `_field_upgrade_grant()` / `_on_unit_upgraded()`（那两个是逐张的）。
+	##
+	## 三条落地细节：
+	##   * 伤害走 `_hit_unit`（护盾 / 减伤 / 石肤 / 石肤光环照常生效），致死统一交
+	##     `_destroy_dead()` —— 与废弃机器人 9152 的「全体 ping」同口径；
+	##   * 只打**场上的敌方单位**，不直击敌方 HP（没有单位时效果落空）；
+	##   * ⚠️ 重入保护：本函数自己造成伤害 → 若某张敌方亡语反过来改造了我方卡，
+	##     会再走进来。`_inspire_busy` 保证一次结算不被自己递归放大。
+	if _inspire_busy:
+		return 0
+	var n := 0
+	for c: CardData in state.effects:
+		if c != null and c.id == INSPIRE_ID:
+			n += 1
+	if n <= 0:
+		return 0
+	var cells: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var u: Placement = state.board[cell]
+		if u != null and u.owner == SIDE_OPPONENT:
+			cells.append(cell)
+	if cells.is_empty():
+		_log("激发：场上没有敌方单位，效果落空")
+		return 0
+	cells.sort()   # 固定顺序：回放 / 同种子必须一致
+	_inspire_busy = true
+	var hits := 0
+	for _i in n:
+		for c2: Vector2i in cells:
+			var q: Placement = state.board.get(c2, null)
+			if q == null or q.health <= 0:
+				continue
+			_hit_unit(q, INSPIRE_DMG, "激发")
+			hits += 1
+		_destroy_dead()
+	_inspire_busy = false
+	_log("激发：一张卡被改造 → 对所有敌人造成 %d 点伤害（叠加 ×%d，共 %d 次命中）" % [
+			INSPIRE_DMG, n, hits])
+	action.emit("inspire", {"count": n, "dmg": INSPIRE_DMG, "hits": hits})
+	return n
+
 func _first_proto_index() -> int:
 	## 卡组里第一张「素体」8025 的下标（-1 = 没有）。
 	## 判据用 id 比对 PROTO_ID —— 与 R221「拆素体不触发回收者」同口径（全库仅 8025 是素体）。
@@ -4722,6 +4791,7 @@ func _merge_spell(target, side: String) -> String:
 	_clear_merge_pick()
 	_log("合体：%s 消失 → %s 获得改造（力量 +%d、生命 +%d）" % [src_name, nm, atk, hp])
 	_field_upgrade_grant(p, atk, hp, "合体")
+	_inspire_tick()   # R300 激发：合体 = 一次改造动作
 	action.emit("merge", {"cell": _cell_of(p), "card": p.card, "atk": atk, "hp": hp,
 			"side": side})
 	return "%s 获得改造（+%d 攻 / +%d 血）" % [nm, atk, hp]
@@ -4752,6 +4822,7 @@ func _scavenger_tick(side: String) -> void :
 		var tgt: Placement = picks[rng.randi() % picks.size()]
 		_log("拾荒者（%s）：回合开始 → 改造 %s" % [sc.card.card_name, tgt.card.card_name])
 		_field_upgrade_grant(tgt, SCAVENGER_ATK, SCAVENGER_HP, "拾荒者")
+	_inspire_tick()   # R300 激发：拾荒者改造一次（每只各自算一次）
 
 
 func _breach_tick(side: String) -> void :
@@ -4922,6 +4993,7 @@ func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	_feed_upgrade_card(p)
 	_on_unit_upgraded(p)
 	_refresh_mnemosyne()   # R271：谟涅摩叙涅被「升级」改造 → 敌方立刻多降一层
+	_inspire_tick()   # R300 激发：升级 = 一次改造动作（一次动作只触发一次）
 	return "%s 改造完成（+%d 攻 / +%d 血）" % [p.card.card_name, atk_gain, hp_gain]
 
 
@@ -5037,6 +5109,7 @@ func _transcend(target, side:= SIDE_SELF) -> String :
 	# 「无限装甲」8038（R89）：被改造时每回合供一张 0 费改造牌（与 _upgrade_unit 同）。
 	_feed_upgrade_card(p)
 	_on_unit_upgraded(p)
+	_inspire_tick()   # R300 激发：超越极限 = 一次改造动作
 	return "%s 获得超负荷" % p.card.card_name
 
 
@@ -5105,6 +5178,7 @@ func _batch_upgrade(_side: String) -> String :
 		return "手牌里没有盟友或工事"
 	_log("批量改造：手牌 %d 张盟友/工事各 +1 生命（%s）" % [touched, "、".join(names)])
 	action.emit("batch_upgrade", {"count": touched, "cards": names})
+	_inspire_tick()   # R300 激发：批量改造一次改满手 → 只算一次
 	return "%d 张手牌各 +1 生命" % touched
 
 
@@ -5147,6 +5221,7 @@ func _sys_upgrade_hand_card(hand_index: int) -> String :
 			up.cost, up.power, up.health])
 	action.emit("sys_upgrade", {"card": up, "hand_index": hand_index,
 		"cost_add": SYS_UPGRADE_COST_ADD, "atk": su_atk, "hp": su_hp})
+	_inspire_tick()   # R300 激发：系统升级改造一张手牌 = 一次改造动作
 	return "%s 改造完成（%d 费 / %d 攻 / %d 血）" % [up.card_name, up.cost, up.power, up.health]
 
 
@@ -5186,6 +5261,7 @@ func _lighten_hand_card(hand_index: int) -> String :
 			c.card_name, cost_before, up.cost, speed_before, up.move_speed, li_atk, li_hp])
 	action.emit("lighten", {"card": up, "hand_index": hand_index,
 			"cost": up.cost, "speed": up.move_speed, "atk": li_atk, "hp": li_hp})
+	_inspire_tick()   # R300 激发：轻量化改造一张手牌 = 一次改造动作
 	return "%s 改造完成（%d 费 / 移速 %d）" % [up.card_name, up.cost, up.move_speed]
 
 
@@ -5231,6 +5307,7 @@ func _batch_transfer(side: String) -> String :
 		% [touched, BATCH_TRANSFER_ATK, BATCH_TRANSFER_HP])
 	_log("批量传输：%s；抽 %d 张卡" % ["、".join(names), got])
 	action.emit("batch_transfer", {"count": touched, "cards": names, "draw": got})
+	_inspire_tick()   # R300 激发：批量传输一次改满手 → 只算一次
 	return "%d 张手牌改造，抽 %d 张卡" % [touched, got]
 
 
@@ -5327,6 +5404,7 @@ func _self_repair(target, side:= SIDE_SELF) -> String :
 	action.emit("self_repair", {"cell": target, "card": p.card, "placement": p,
 			"hp": hp_gain, "regen": SELF_REPAIR_REGEN, "side": side})
 	_on_unit_upgraded(p)
+	_inspire_tick()   # R300 激发：自我修复 = 一次改造动作
 	return "%s 自我修复完成（+%d 血 / 每回合回 %d）" % [
 			p.card.card_name, hp_gain, SELF_REPAIR_REGEN]
 
@@ -5375,6 +5453,7 @@ func _armor_plate(target, side:= SIDE_SELF) -> String :
 	# 「无限装甲」8038（R89）：被改造时**每回合一次**供一张 0 费改造牌到手。
 	_feed_upgrade_card(p)
 	_on_unit_upgraded(p)
+	_inspire_tick()   # R300 激发：加厚装甲 = 一次改造动作
 	return "%s 加装完成（+%d 血 / 受伤 -%d）" % [
 			p.card.card_name, hp_gain, ARMOR_PLATE_REDUCE]
 
@@ -5400,6 +5479,7 @@ func _shared_shield(target, side:= SIDE_SELF) -> String :
 	# 走**场上改造唯一口**（R228）：复制副本 + 一层改造 + `_on_unit_upgraded()`
 	# （侦察塔 / 堡垒 / 无限装甲 / 模仿者照常响应）。数值 +0，只挂字段。
 	_field_upgrade_grant(p, 0, 0, "共享护盾", AFFIX_SHARED_SHIELD)
+	_inspire_tick()   # R300 激发：共享护盾 = 一次改造动作
 	_log("共享护盾：%s 获得字段「共享护盾」→ 我方 HP 将受到的伤害改由它承受" % p.card.card_name)
 	action.emit("shared_shield", {"cell": target, "card": p.card})
 	return "%s 获得共享护盾（替我方 HP 承伤）" % p.card.card_name
@@ -5442,6 +5522,7 @@ func _auto_upgrade(side: String) -> void :
 	_log("自主升级：「%s」在手牌里被改造 → 力量 +%d（%d）、生命 +%d（%d）" % [
 			before.card_name, au_atk, up.power, au_hp, up.health])
 	action.emit("auto_upgrade", {"card": up, "ok": true, "from": before, "side": side})
+	_inspire_tick()   # R300 激发：自主升级改造一张 = 一次改造动作
 
 
 func _regen_tick(side: String) -> void :
@@ -6926,6 +7007,7 @@ func cast_recycle(hand_index: int, target_hand_index: int, free_cast := false) -
 		% [rc_old, rc_hp, body.power, body.health])
 	_note_card_played(SIDE_SELF, card)
 	state.discard.append(card)
+	_inspire_tick()   # R300 激发：回收把一张手牌变成改造素体 = 一次改造动作
 	return "%s → 素体（%d 攻 / %d 血）" % [rc_old, body.power, body.health]
 
 
@@ -7026,6 +7108,7 @@ func _blade_gift(target, side:= SIDE_SELF) -> String:
 	# 「死亡」字段是不是这张卡**原本没有**的 —— 只有新加的才记进 `blade_added`（离场要摘）。
 	var new_death_affix := not p.card.has_affix(AFFIX_DEATH)
 	_field_upgrade_grant(p, BLADE_ATK, 0, "辅助刃", AFFIX_DEATH)
+	_inspire_tick()   # R300 激发：辅助刃 = 一次改造动作
 	if new_death_affix and not p.blade_added.has(AFFIX_DEATH):
 		p.blade_added.append(AFFIX_DEATH)
 	p.blade_gift = true
@@ -8243,6 +8326,7 @@ func overhaul_recall(discard_index: int) -> bool:
 		overhaul_remaining = 0
 	_log("返修：%s 从弃牌区回到手牌，生命 +%d → %d（本场战斗永久；还要选 %d 张）"
 			% [c.card_name, oh_hp, up.health, overhaul_remaining])
+	_inspire_tick()   # R300 激发：返修改造一张 = 一次改造动作
 	action.emit("overhaul_recall", {"card": up, "hp": oh_hp})
 	return true
 
@@ -10046,6 +10130,8 @@ func _production_order(side: String) -> String :
 		% [added, PROD_ORDER_ATK, PROD_ORDER_HP])
 	action.emit("prod_order", {"count": added, "atk": PROD_ORDER_ATK,
 		"hp": PROD_ORDER_HP, "side": side})
+	if added > 0:
+		_inspire_tick()   # R300 激发：一次产出多张改造素体 → 只算一次
 	return "卡组 +%d 张改造素体" % added
 
 
@@ -10866,6 +10952,7 @@ func _field_aura_tick(side: String) -> void :
 	if healed > 0:
 		_log("持续型场地：%d 个单位在自己回合结束时回复了生命" % healed)
 	if upgraded > 0:
+		_inspire_tick()   # R300 激发：改造工厂一次结算改多个单位 → 只算一次
 		_log("改造工厂：%d 个单位获得改造（每回合 +%d 力 / +%d 血，可无限叠）" % [
 			upgraded, UPGRADE_FACTORY_ATK, UPGRADE_FACTORY_HP])
 
