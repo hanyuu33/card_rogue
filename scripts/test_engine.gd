@@ -3662,11 +3662,11 @@ func _init() -> void:
 	check(srepo.get_relic(6010).kind != "" and srepo.get_relic(6010).source_label() == "事件道具",
 			"道具来源标签：source_label() = 事件道具")
 
-	# ---- R289 奖励道具二级分档：一般 / 传奇（R311 起 13 件，全为一般）----
+	# ---- R289 奖励道具二级分档：一般 / 传奇（R313 起 15 件，全为一般）----
 	var r289_repo := RelicRepo.load_json()
 	var r289_all := r289_repo.reward_ids()
-	check(r289_all.size() == 13 and r289_repo.normal_reward_ids().size() == 13,
-			"奖励分档：奖励池 13 件全在「一般」档（实际 %d / %d）"
+	check(r289_all.size() == 15 and r289_repo.normal_reward_ids().size() == 15,
+			"奖励分档：奖励池 15 件全在「一般」档（实际 %d / %d）"
 			% [r289_all.size(), r289_repo.normal_reward_ids().size()])
 	check(r289_repo.legendary_reward_ids().is_empty(),
 			"奖励分档：传奇池目前为空（%d 件）" % r289_repo.legendary_reward_ids().size())
@@ -3675,7 +3675,7 @@ func _init() -> void:
 		var r289_rel := r289_repo.get_relic(int(r289_id))
 		if r289_rel == null or r289_rel.tier != RelicData.TIER_NORMAL:
 			r289_tier_ok = false
-	check(r289_tier_ok, "奖励分档：13 件的 tier 字段都是「一般」")
+	check(r289_tier_ok, "奖励分档：15 件的 tier 字段都是「一般」")
 	check(RelicData.RELIC_TIERS.size() == 2
 			and RelicData.RELIC_TIERS.has(RelicData.TIER_NORMAL)
 			and RelicData.RELIC_TIERS.has(RelicData.TIER_LEGENDARY),
@@ -22904,6 +22904,112 @@ func _init() -> void:
 	check(l1a == l1b and l1a != l2,
 			"R312 骰子重摇流：同一层恒同值（%d）、跨层不同值（%d）" % [l1a, l2])
 	RunState.current_layer = GameLayers.LAYER_DEFAULT
+
+
+	# ================= R313：风妖精 6042 / 快速符文 6043 =================
+	var r313_repo := RelicRepo.load_json()
+	var r313_wf := r313_repo.get_relic(6042)
+	var r313_rune := r313_repo.get_relic(6043)
+	check(r313_wf != null and r313_rune != null
+			and r313_wf.source == RelicData.SRC_REWARD
+			and r313_rune.source == RelicData.SRC_REWARD,
+			"R313 两件新道具都在奖励池来源")
+	check(r313_repo.reward_ids().has(6042) and r313_repo.reward_ids().has(6043),
+			"R313 风妖精 / 快速符文 已进奖励池（%d 件）" % r313_repo.reward_ids().size())
+	check(r313_wf.desc.contains("第五张") and r313_wf.desc.contains("4"),
+			"R313 风妖精文案：写明「第五张」与 4 点伤害")
+	check(r313_rune.desc.contains("10") and r313_rune.desc.contains("加倍")
+			and r313_rune.desc.contains("冰封"),
+			"R313 快速符文文案：写明 10% / 加倍 / 冰封沉睡")
+
+	# ---- 风妖精：第 5 张牌 → 全体 4 伤 ----
+	var r313_fe := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)),
+			40, 40, -1, false)
+	r313_fe.self_relics = [GameEngine.WIND_FAIRY_RELIC_ID]
+	var r313_e1: Placement = r313_fe.state.place(
+			_card(1053, "骷髅兵", "盟友", 1, 1, 6, 1, 1), Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r313_e2: Placement = r313_fe.state.place(
+			_card(1053, "骷髅兵", "盟友", 1, 1, 6, 1, 1), Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
+	for _i in 4:
+		r313_fe._note_card_played(GameEngine.SIDE_SELF)
+	check(r313_e1.health == 6 and r313_e2.health == 6,
+			"R313 风妖精：前 4 张牌不触发（%d / %d）" % [r313_e1.health, r313_e2.health])
+	r313_fe._note_card_played(GameEngine.SIDE_SELF)
+	check(r313_e1.health == 2 and r313_e2.health == 2,
+			"R313 风妖精：第 5 张牌 → 全体各 -4（%d / %d）"
+				% [r313_e1.health, r313_e2.health])
+	r313_fe._note_card_played(GameEngine.SIDE_SELF)
+	check(r313_e1.health == 2,
+			"R313 风妖精：第 6 张牌不再触发（每回合一次，%d）" % r313_e1.health)
+	# 没有道具 → 第 5 张牌什么都不发生
+	var r313_fe2 := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)),
+			40, 40, -1, false)
+	var r313_e3: Placement = r313_fe2.state.place(
+			_card(1053, "骷髅兵", "盟友", 1, 1, 6, 1, 1), Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	for _i in 5:
+		r313_fe2._note_card_played(GameEngine.SIDE_SELF)
+	check(r313_e3.health == 6, "R313 风妖精：没这件道具时第 5 张牌不触发（%d）"
+			% r313_e3.health)
+
+	# ---- 快速符文：每张牌 +10%（加算、去尾）/ 对不能行动的敌人加倍 ----
+	var r313_se := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)),
+			40, 40, -1, false)
+	r313_se.self_relics = [GameEngine.SWIFT_RUNE_RELIC_ID]
+	check(GameEngine.SWIFT_RUNE_PCT == 10 and GameEngine.SWIFT_RUNE_RELIC_ID == 6043,
+			"R313 快速符文常量：6043 / 每张 +10%")
+	check(r313_se._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
+			"R313 快速符文：本回合还没出牌 → 不加成（%d）"
+				% r313_se._spell_dmg(GameEngine.SIDE_SELF, 10))
+	r313_se.state.self_card_plays = 3
+	check(r313_se._swift_rune_pct() == 30,
+			"R313 快速符文：出 3 张 → 百分比 30（%d）" % r313_se._swift_rune_pct())
+	check(r313_se._spell_dmg(GameEngine.SIDE_SELF, 10) == 13,
+			"R313 快速符文：10 点技能伤害 → 13（10 × 1.3，去尾）")
+	check(r313_se._spell_dmg(GameEngine.SIDE_SELF, 7) == 9,
+			"R313 快速符文：7 点 → 9（9.1 去尾，不是四舍五入到 9 / 10 之间摇摆）")
+	check(r313_se._spell_dmg(GameEngine.SIDE_OPPONENT, 10) == 10,
+			"R313 快速符文：敌方技能不受影响（%d）"
+				% r313_se._spell_dmg(GameEngine.SIDE_OPPONENT, 10))
+	# 加倍：目标处于「下回合不能行动」
+	var r313_d1: Placement = r313_se.state.place(
+			_card(1053, "冻结兵", "盟友", 1, 1, 80, 1, 1), Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+	var r313_d2: Placement = r313_se.state.place(
+			_card(1053, "正常兵", "盟友", 1, 1, 80, 1, 1), Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
+	check(not r313_d1.cannot_act_next_turn() and not r313_d2.cannot_act_next_turn(),
+			"R313 不能行动判据：默认不成立")
+	r313_se._spell_scope_depth = 1   # 模拟「正在结算技能卡」
+	r313_se._hit_unit(r313_d1, 13, "测试")
+	check(r313_d1.health == 80 - 13,
+			"R313 快速符文：**没被控**的敌人只吃基础加成（-13，%d）"
+				% (80 - r313_d1.health))
+	r313_d1.health = 80
+	r313_d1.frozen = true
+	check(r313_d1.cannot_act_next_turn(), "R313 不能行动判据：冰封 → 成立")
+	r313_se._hit_unit(r313_d1, 13, "测试")
+	check(r313_d1.health == 80 - 16,
+			"R313 快速符文：冰封的敌人**效果加倍**（-16 = 10 × 1.6，%d）"
+				% (80 - r313_d1.health))
+	# 沉睡也算；禁足不算
+	r313_d1.health = 80
+	r313_d1.frozen = false
+	r313_d1.sleep_left = 1
+	check(r313_d1.cannot_act_next_turn(), "R313 不能行动判据：沉睡 → 成立")
+	r313_d1.sleep_left = 0
+	r313_d1.rooted = 2
+	check(not r313_d1.cannot_act_next_turn(),
+			"R313 不能行动判据：禁足只拦移动 → **不算**不能行动")
+	r313_d1.rooted = 0
+	# 不在技能作用域里（效果 / 陷阱 / 反伤）→ 不加倍
+	r313_d1.frozen = true
+	r313_se._spell_scope_depth = 0
+	r313_se._hit_unit(r313_d1, 13, "测试")
+	check(r313_d1.health == 80 - 13,
+			"R313 快速符文：非技能伤害（陷阱 / 反伤）不加倍（-13，%d）"
+				% (80 - r313_d1.health))
+	# 结算完必须把作用域关干净（否则后面所有伤害都会被当成技能）
+	r313_se._run_spell_effect(_card(9999, "测试技能", "技能", 1, 0, 0), null)
+	check(r313_se._spell_scope_depth == 0 and not r313_se._in_spell_scope(),
+			"R313 技能作用域：结算结束后必须归零（%d）" % r313_se._spell_scope_depth)
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

@@ -32,6 +32,10 @@ var dice_energy_turns:= 0
 ## R311 不锈钢盆（6041）：剩余点数（0 = 没有盆）。
 ## battle_scene 从 `RunState.basin_charge` 灌入；承伤时递减，`basin` 动作回写界面。
 var basin_charge:= 0
+## R313：**技能卡结算作用域**（深度计数）。快速符文的百分比只认技能伤害 ——
+## 效果卡 / 陷阱 / 反伤打出来的伤害不享受。
+## ⚠️ 用深度而不是布尔：回响会嵌套重放同一张技能卡，布尔会在内层退出时提前关掉。
+var _spell_scope_depth:= 0
 var log: Array[String] = []
 var rng:= RandomNumberGenerator.new()
 var self_relics: Array[int] = []
@@ -333,6 +337,20 @@ const DUCK_WING_ENERGY:= 3
 const DICE_RELIC_ID:= 6040
 const DICE_FACES:= 6          # 骰子面数（1~6）
 const DICE_ENERGY:= 1         # 「前 X 回合」每回合的额外费用
+# ── R313：风妖精 6042 / 快速符文 6043 ──
+# 风妖精（6042）：**一回合打出第五张牌时**，对所有敌人造成 4 点伤害。
+#   挂 `_note_card_played()`（出牌唯一收尾口），判 `self_card_plays == 5`。
+# 快速符文（6043）：每打出一张牌，本回合**技能伤害 +10%**（加算、去尾）；
+#   **对「下回合不能行动」的敌人效果加倍**（即 +20%/张）。
+#   * 百分比在 `_spell_dmg()` 里按「普通目标」结算一次（保证界面预览值 == 实际扣血值）；
+#   * 「加倍」那一半在 `_hit_unit()` 里逐目标补（只有那里知道目标状态）；
+#   * 只认**技能卡**：结算期由 `_run_spell_effect()` 打开 `_spell_scope`，
+#     效果卡 / 陷阱 / 反伤不在此列。
+const WIND_FAIRY_RELIC_ID:= 6042
+const WIND_FAIRY_AT:= 5          # 第几张牌触发（每回合清零，故一回合只可能一次）
+const WIND_FAIRY_DMG:= 4
+const SWIFT_RUNE_RELIC_ID:= 6043
+const SWIFT_RUNE_PCT:= 10        # 每张牌的百分比（加倍时 ×2）
 const BASIN_RELIC_ID:= 6041
 const COURAGE_RELIC_ID:= 6031
 const COURAGE_ELITE_TURNS:= 1
@@ -4682,6 +4700,40 @@ func _cluster_turret_reload(p: Placement) -> void :
 # ================= R300：激发 8077 =================
 
 
+func _wind_fairy_tick(side: String) -> void:
+	## 风妖精（6042，R313）：**一回合打出第五张牌时**，对所有敌人造成 4 点伤害。
+	## 挂点是 `_note_card_played()` —— 所有出牌路径（手牌 / 技能 / 效果 / 联机 / 回放）
+	## 的唯一收尾口，计数在调用本函数前已经 +1。
+	## ⚠️ 判「**恰好**第 5 张」而不是取模：计数每回合清零，一回合只可能触发一次；
+	##    写取模会在计数被别的效果改动时冒出「第 10 张又触发一次」的歧义。
+	## ⚠️ 伤害走 `_hit_unit()`（护盾 / 减伤 / 侦察塔光环照常生效），致死交 `_destroy_dead()`；
+	##    与激发 8077 / 废弃机器人 9152 的「全体 ping」同口径。
+	if side != SIDE_SELF or not self_relics.has(WIND_FAIRY_RELIC_ID):
+		return
+	if state.self_card_plays != WIND_FAIRY_AT:
+		return
+	var cells: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var q: Placement = state.board[cell]
+		if q != null and q.owner == SIDE_OPPONENT and q.health > 0:
+			cells.append(cell)
+	if cells.is_empty():
+		_log("风妖精：场上没有敌方单位，效果落空")
+		return
+	cells.sort()   # 固定顺序：回放 / 同种子必须一致
+	var hit:= 0
+	for c: Vector2i in cells:
+		var q2: Placement = state.board.get(c, null)
+		if q2 == null or q2.health <= 0:
+			continue
+		_hit_unit(q2, WIND_FAIRY_DMG, "风妖精")
+		hit += 1
+	_destroy_dead()
+	_log("风妖精：本回合第 %d 张牌 → 对所有敌人造成 %d 点伤害（%d 个目标）"
+			% [WIND_FAIRY_AT, WIND_FAIRY_DMG, hit])
+	action.emit("wind_fairy", {"dmg": WIND_FAIRY_DMG, "hits": hit})
+
+
 func _inspire_tick() -> int:
 	## 「激发」8077（R300，机械之心 2 费**史诗效果卡**）的**唯一结算口**：
 	## 对所有敌人造成 INSPIRE_DMG 点伤害 —— 效果区**每有一张**就各打一轮（卡面「可叠加」）。
@@ -6262,6 +6314,7 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 	_gale_tick(side, played)
 	_lurker_tick(side, played)
 	_sleepless_tick(side)
+	_wind_fairy_tick(side)
 	# R307 雕像（6039）：每使用 10 张牌回复 1 点能量（**跨回合、跨战斗**累计）。
 	if side == SIDE_SELF and self_relics.has(STATUE_RELIC_ID):
 		RunState.statue_charge += 1
@@ -7721,7 +7774,17 @@ func remote_curse(card: CardData, side:= SIDE_OPPONENT) -> void:
 
 
 func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
-	match card.id:
+	## R313：**技能伤害的作用域**。结算期间打开 `_spell_scope`，让 `_hit_unit()` 知道
+	## 「这一笔是技能卡打出来的」（快速符文 6043 只认技能，不认效果 / 陷阱 / 反伤）。
+	## ⚠️ GDScript 没有 finally → 把函数体整体挪进 `_body`，由这一层无条件收尾，
+	##    否则任何一条 `return` 都会把作用域留在打开状态（后面所有伤害都被误算成技能）。
+	_spell_scope_depth += 1
+	var out_det:= _run_spell_effect_body(card, target, side)
+	_spell_scope_depth -= 1
+	return out_det
+
+
+func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:	match card.id:
 		WISH_ID:
 			# 许愿（9168，R306）：**从卡组**选一张卡加入手卡 —— 选卡页接管（`wish_pending`），
 			# 结算口是 `wish_pick()`。卡组空了就白打（这张卡自己仍按「次元」进消耗区）。
@@ -9095,6 +9158,15 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	#    在那儿再加一次会**双算**。
 	if allow_redirect:
 		amount = _apply_scout_aura(p, amount)
+	# 快速符文（6043，R313）：「**对下回合不能行动的敌人效果加倍**」的那一半。
+	# `_spell_dmg()` 已经按普通目标加过一次（保证预览值 == 实际值），这里补差额：
+	#   amount = B × (100+p)/100  ⇒  B ≈ amount×100/(100+p)  ⇒  再补 B×p/100。
+	# ⚠️ 三个前提：① 在**技能卡**结算里（`_in_spell_scope()`，效果/陷阱不算）；
+	#    ② 不是单位普攻（`is_attack`）；③ 目标是敌人 —— 我方单位被打不该吃这件道具；
+	#    另加 `allow_redirect` 防「护盾生成器转发」时重复补。
+	if allow_redirect and not is_attack and _in_spell_scope() \
+			and p.owner == SIDE_OPPONENT and p.cannot_act_next_turn():
+		amount += _swift_rune_extra(amount)
 
 
 	if amount <= 0:
@@ -9271,7 +9343,48 @@ func _spell_dmg(side: String, base: int, card: CardData = null) -> int:
 	and _trait_copies(state.effects, MAGIC_CORE_TRAIT) > 0:
 		out += MAGIC_CORE_DMG        # 魔力核心：每回合第一张技能伤害 +1
 	out += turn_spell_bonus
-	return out + turn_dmg_bonus
+	out += turn_dmg_bonus
+	# 快速符文（6043，R313）：本回合技能伤害 +10% × 已出牌数（加算、去尾）。
+	# ⚠️ 放在**所有加法之后**再按百分比放大：固定加成（荧光草 +1 / 魔力核心 +1…）
+	#    也一起吃百分比，与「先算总量再乘」的直觉一致。
+	# ⚠️ 「对不能行动的敌人加倍」不在这里做 —— 那要逐目标判，在 `_hit_unit()` 补。
+	out += _swift_rune_bonus(out)
+	return out
+
+
+func _in_spell_scope() -> bool:
+	## 当前是否处在**技能卡结算**里（快速符文只认技能伤害）。见 `_spell_scope_depth`。
+	return _spell_scope_depth > 0
+
+
+func _swift_rune_pct() -> int:
+	## 快速符文（6043）本回合的**百分比基数**（未加倍）：10 × 本回合已打出的牌数。
+	## ⚠️ 口径 = **不含正在结算的这张**：`_note_card_played()` 在出牌收尾才 +1，
+	##    与「终结 9086 的 X = 本回合已用张数」同一套计数，玩家看到的就是这个数。
+	##    于是「先垫 3 张，再打一发大招」= +30%，与直觉一致。
+	if not self_relics.has(SWIFT_RUNE_RELIC_ID):
+		return 0
+	return SWIFT_RUNE_PCT * maxi(0, state.self_card_plays)
+
+
+func _swift_rune_bonus(amount: int) -> int:
+	## 把「技能伤害 +N%」折成**整数增量**（去尾统一在这里做）。
+	## ⚠️ `amount * pct / 100` 用整数除法 = 向零截断；amount 为正时等价于 floor（去尾）。
+	var pct := _swift_rune_pct()
+	if pct <= 0 or amount <= 0:
+		return 0
+	return (amount * pct) / 100
+
+
+func _swift_rune_extra(amount: int) -> int:
+	## 「加倍」的那**差额**：入参是**已经含过一次加成**的 amount。
+	## 推导：amount = floor(B×(100+p)/100) ⇒ B ≈ amount×100/(100+p) ⇒ 差额 = B×p/100。
+	## 结果就是让总量从「+p%」变成「+2p%」—— 卡面写的「效果加倍」指加成部分，不是总量翻倍。
+	var pct := _swift_rune_pct()
+	if pct <= 0 or amount <= 0:
+		return 0
+	var base:= (amount * 100) / (100 + pct)
+	return (base * pct) / 100
 
 
 func _turn_dmg_bonus(side: String) -> int:

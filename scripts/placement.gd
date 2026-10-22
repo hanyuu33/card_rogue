@@ -183,6 +183,16 @@ func effective_range() -> int:
 ##
 ## 只列**此刻真的成立**的项：`atk_debuff` 未到生效回合（debuff_stage==0）不算，
 ## 满血（regen 等）该显示的还是显示 —— 它是「拥有」这个状态，不是「正在生效的数值」。
+func cannot_act_next_turn() -> bool:
+	## R313（快速符文 6043）：「下回合不能行动」状态的**唯一判据口**。
+	## 目前两只：
+	##   * 冰封 `frozen`（寒冰箭 / 冰霜新星）—— 下回合开始时不重置，横置着动不了；
+	##   * 沉睡 `sleep_left > 0`（恶魔鸭 9116）—— 还要睡几点，期间不行动。
+	## ⚠️ **禁足 `rooted` 不算**：它只拦移动，照样能攻击 —— 卡面口径是「不能行动」。
+	## 引擎（伤害加成加倍）与界面（提示文案）共用这一处，别再各写各的。
+	return frozen or sleep_left > 0
+
+
 func status_entries() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var COL_B := Color("2f8f4f")   # 增益：绿

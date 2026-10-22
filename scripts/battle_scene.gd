@@ -9901,6 +9901,17 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
 					"text": "激发 · 全体 -%d%s" % [in_d, (" ×%d" % in_n) if in_n > 1 else ""],
 					"col": Color("a05ad0"), "size": 17, "start": n, "dur": 1600})
+		"wind_fairy":
+			# R313 风妖精 6042：一回合打出第五张牌 → 对所有敌人 4 点伤害。
+			# 作用对象是**全体敌人**，落点放棋盘上沿中线（不绑某一格），与激发 8077 同口径。
+			sfx.play("click")
+			var wf_d := int(data.get("dmg", 0))
+			var wf_n := int(data.get("hits", 0))
+			_say("✦ 风妖精：本回合第 5 张牌 → 对所有敌人造成 %d 点伤害（%d 个目标）"
+					% [wf_d, wf_n])
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
+					"text": "风妖精 · 全体 -%d" % wf_d,
+					"col": Color("7fd2a0"), "size": 17, "start": n, "dur": 1900})
 		_:
 			# R288：兜底 —— 任何**还没有专属表现**的事件，只要带格子，就至少演一次
 			# 「脉冲 + 镜头」。以后新加的事件不会再静悄悄发生（这是这套演出的兜底价值）。
