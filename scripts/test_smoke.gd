@@ -3605,14 +3605,26 @@ func _check_overflow(scene: Variant) -> void:
 
 func _check_curtain_reply(s: Node) -> void:
 	## R310：第二层收下道具后应当是「立绘出场 + 角色回答」那一态。
+	## R320：顺带钉住「任意键 / 点任意处离开」的开关时机。
 	## 这里直接调场景自己的私有方法（同仓其它 smoke 用例也是这么做的）。
 	if s == null or not s.has_method("_pick"):
 		print("  [smoke] curtain: 场景没有 _pick()，跳过")
 		return
+	# ① 台词还在流式输出 → 还不能走（不然一点就跳过整段开场）
+	if bool(s.call("_can_walk_away")):
+		_smoke_fail("R320 卷卷：台词打字中不该允许任意键离开")
+	s.call("_finish_typing")
+	# ② 三个起始道具还挂着 → 也不能走（误触就白丢一件道具）
+	if bool(s.call("_can_walk_away")):
+		_smoke_fail("R320 卷卷：三选一还没选，不该允许任意键离开")
 	s.call("_pick", 0)
+	s.call("_finish_typing")   # 回答念完 = 收尾态（stage 仍是 2，不是 3）
+	# ③ 收尾态 → 任意键 / 点任意处都能走
+	if not bool(s.call("_can_walk_away")):
+		_smoke_fail("R320 卷卷：回答念完后应进入「任意键 / 点任意处可离开」的收尾态")
 	var title: Variant = s.get("_title")
 	var desc: Variant = s.get("_desc")
 	var ok_name: bool = title != null and (title as Label).text == PlayerClass.MECH
 	var ok_text: bool = desc != null \
 			and (desc as Label).text == CurtainLines.reply(GameLayers.LAYER_TWO, PlayerClass.MECH)
-	print("  [smoke] curtain 回答态：名称牌=%s 台词=%s" % [ok_name, ok_text])
+	print("  [smoke] curtain 回答态：名称牌=%s 台词=%s 收尾可离开=True" % [ok_name, ok_text])

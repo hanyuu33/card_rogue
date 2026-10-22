@@ -8,6 +8,8 @@ extends Control
 ##       再点同一项 = 收下（桌面悬停即预览，单击直接收下）。
 ##   2 · 第二层起：玩家收下道具 → **角色立绘出场**，回一句（CurtainLines.reply）。
 ##   3 · 收尾：只留一个「离开」。
+##       R320（用户口径）：收尾态**任意键 / 点屏幕任意处**都等于「离开」——
+##       右上角那颗按钮从此只是「看得见」的提示，不再是唯一出口。
 ##
 ## 素材（缺失都不空白、不报错）：
 ##   assets/ui/bg_curtain.png          整屏背景（卷卷的森林 CG）
@@ -151,6 +153,10 @@ func _build_nodes() -> void:
 	add_child(_bg)
 	move_child(_bg, 0)
 	_bg.visible = _bg.texture != null
+	# R320：缺背景图时露出来的就是这层暗底 —— 它是 Control，**默认会把点击全吃掉**，
+	# `_gui_input` 于是收不到「点了屏幕一下」（有背景图时才正常）。统一设成不吃鼠标，
+	# 让「点任意处」在两种情况下都成立。
+	($BG as ColorRect).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if _bg.visible:
 		($BG as ColorRect).visible = false      # 让位给自定义背景（否则暗底会压在上面）
 	# ② 对话框（羊皮纸，九宫格：左右边角不拉伸、中间拉宽）
@@ -307,6 +313,17 @@ func _on_type_done() -> void:
 		_show_options(true)
 
 
+func _can_walk_away() -> bool:
+	## R320（用户口径）：「对话收尾」这一态 —— 台词出完了，也没有别的东西等着玩家点。
+	##
+	## ⚠️ **不能**写成 `_stage == 3`：`_on_type_done()` 只把 **stage 0** 推到 1，
+	##    所以「收下道具之后那句回答念完」的终点状态**仍然是 2**（3 只有点跳过按钮才会到）。
+	##    用户说的「最后一句只能点右上角离开」，卡住的就是这个 stage 2。
+	## ⚠️ stage 1 **不算**：那时三个起始道具还挂着等玩家挑，误触一次（随便按个键 /
+	##    点一下空白）就白丢一件道具 —— 这个「任意键离开」只给收尾态开。
+	return not _typing and _stage >= 2
+
+
 func _show_options(on: bool) -> void:
 	for b: Button in _opts:
 		b.visible = on
@@ -414,6 +431,14 @@ func _gui_input(event: InputEvent) -> void:
 		if _typing:
 			_finish_typing()
 			return
+		# R320（用户口径）：收尾态 → **点屏幕任意位置**就是「离开」，
+		# 不用去够右上角那颗小按钮（触屏上尤其难按）。
+		# 到不了这里的两种情况都是对的：
+		#   · 右上角「离开」/ 三个道具都是 Button，落在它们身上的点击被按钮自己吃掉；
+		#   · 菜单开着时 UiMenu 那层全屏遮罩（MOUSE_FILTER_STOP）先吃掉，不会穿过来。
+		if _can_walk_away():
+			_on_skip()
+			return
 		# 点到空白处 → 收起触屏摊开的效果
 		if _tap >= 0:
 			_tap = -1
@@ -423,12 +448,20 @@ func _gui_input(event: InputEvent) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _menu != null and _menu.handle_esc(event):
 		return
+	# R320：菜单开着时一律不响应 —— 别让「任意键」顺手把菜单连同本场景一起关掉
+	# （菜单自己跑在暂停里，`_unhandled_input` 理论上收不到，这里是显式兜一道）。
+	if _menu != null and _menu.is_open():
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_SPACE or event.keycode == KEY_ENTER:
-			if _typing:
-				_finish_typing()
-			elif _stage == 3:
-				_leave()
+		# R320（用户口径）：原来只认空格 / 回车，现在**任何键**都算：
+		#   台词没打完 → 直接补完（省一次点击）；已经收尾 → 走人。
+		# ⚠️ Esc 不在此列 —— 它在上两行被 `handle_esc()` 吃成「打开菜单」，这是全局约定，
+		#    「离开」不该抢它的活。
+		if _typing:
+			_finish_typing()
+			return
+		if _can_walk_away():
+			_on_skip()
 
 
 # ──────────────────────────────────────────────────────── 效果浮窗
