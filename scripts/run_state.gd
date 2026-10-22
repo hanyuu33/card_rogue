@@ -64,6 +64,17 @@ const RELIC_STATUE_ID := 6039
 const RELIC_SACRAMENT_ID := 6038
 const STATUE_EVERY := 10
 
+## R311 不锈钢盆（6041）：剩余计数（0 = 没有 / 已归零）。
+## **跨战斗累计**（10 点 = 一整局的总量）→ 存在局状态里、随存档走。
+## 消费点 = 战斗内 `GameEngine._damage_player`（代替承伤）与商店 `_pay()`（抵账）。
+static var basin_charge := 0
+const BASIN_RELIC_ID := 6041
+const BASIN_MAX := 10
+
+## R311 水晶骰子（6040）：持有期间「除起点/大宝箱/右上角商店/篝火外」全是「?」房；
+## 在「?」房进战斗时掷骰，前 X 回合每回合 +1 费（X = 点数，见 GameEngine）。
+const DICE_RELIC_ID := 6040
+
 static var reward_popup_pending := false
 static var battle_log: Array = []            # 本局战斗记录（与持久化文件同步追加）
 ## R177 玩家地图标记（当局内共享）：`map_strokes` = 画图模式折线，每条
@@ -353,6 +364,9 @@ static func relic_display_name(id: int) -> String:
 		return str(id)
 	if id == RELIC_STATUE_ID and statue_charge > 0:
 		return "%s（%d）" % [rel.relic_name, statue_charge]
+	# R311 不锈钢盆：名字后面写**剩余点数**（10 点打完就失去 —— 玩家得看得见进度）
+	if id == BASIN_RELIC_ID and basin_charge > 0:
+		return "%s（%d）" % [rel.relic_name, basin_charge]
 	return rel.relic_name
 
 
@@ -519,6 +533,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	reward_context = ""
 	pending_deck_edit = ""
 	statue_charge = 0          # R307 雕像：新的一局从 0 开始数
+	basin_charge = 0           # R311 不锈钢盆：新的一局没有盆（重拿时再灌满）
 	reward_kinds = []
 	# 开局卡组 = 公共部分 + 2 张角色基础盟友（森林精魄 → 树人；暗影刺客 → 幽影）
 	# + 角色专属卡（森林精魄 → 熊 8004；暗影刺客 → 突袭 9086）。见 PlayerClass.start_deck_ids。
@@ -637,7 +652,9 @@ static func advance_layer(layer: int) -> int:
 	reward_kinds = []
 	reward_type = "normal"
 	# 本层地图用本局种子续摇（同一 run 的随机链条：start_run → 各次 advance_layer）
-	map_cells = RogueMap.generate(run_rng, layer)
+	# R311：持有「水晶骰子」→ 本层地图除固定房间外全部是「?」（生成期就盖好，
+	# 不额外消耗随机数，所以同 seed 的其它道具组合不受影响）。
+	map_cells = RogueMap.generate(run_rng, layer, relics.has(DICE_RELIC_ID))
 	relic_choice = _roll_relic_choice()
 	chocolate = chocolate_per_layer()   # 新一层：巧克力重新满上（R223 难度 8 起 = 11）
 	sync_fatigue()                # R223 难度 5：新层巧克力满 → 疲惫出卡组
@@ -737,6 +754,10 @@ static func gain_relic(id: int) -> void:
 			_apply_pot()
 		MILK_RELIC_ID:   # 牛奶（R224）：随机两种附魔，附给能附魔的卡
 			_apply_milk()
+		BASIN_RELIC_ID:   # 不锈钢盆（R311）：拿到就满 10 点计数
+			basin_charge = BASIN_MAX
+		DICE_RELIC_ID:   # 水晶骰子（R311）：**当前这张图**的非固定房间当场全部变「?」
+			hide_rooms_as_unknown()
 
 
 static func _apply_pot() -> void:
@@ -789,6 +810,45 @@ static func enchant_master_on_rest() -> Dictionary:
 
 static func has_relic(id: int) -> bool:
 	return relics.has(id)
+
+
+static func lose_relic(id: int) -> bool:
+	## 失去道具（R311）：烤肉 6011 / 不锈钢盆 6041 这类「用完就走」的统一出口。
+	## 返回是否真的失去了（本来就没有 → false）。
+	## ⚠️ 不锈钢盆归零要顺手清 `basin_charge`：否则以后再拿到同 id 时，
+	##    `gain_relic` 里那条「已持有就 return」会带着旧计数进来（看似给了 0 点）。
+	if not relics.has(id):
+		return false
+	if id == BASIN_RELIC_ID:
+		basin_charge = 0
+	relics.erase(id)
+	return true
+
+
+static func has_basin() -> bool:
+	## 不锈钢盆还在用吗（持有 **且** 计数 > 0）。**唯一判据口** —— 商店 / 战斗共用，
+	## 免得两处各自写一遍「有道具但没有点数」的边界。
+	return relics.has(BASIN_RELIC_ID) and basin_charge > 0
+
+
+static func basin_pay() -> bool:
+	## 商店抵账（R311，用户口径）：**不付金币，改为失去不锈钢盆**。
+	## 返回是否抵账成功（没有盆 / 已归零 → false，调用方照常收金币）。
+	if not has_basin():
+		return false
+	basin_charge = 0
+	relics.erase(BASIN_RELIC_ID)
+	return true
+
+
+static func hide_rooms_as_unknown(cells: Array = []) -> int:
+	## R311 水晶骰子：把一张地图上「除固定房间外」的格子全部盖成「?」。
+	## 空数组 = 当前局的 `map_cells`（拿到道具当刻用）；返回改动格数。
+	## 实现在 `RogueMap.hide_fixed_open()`（判据唯一口，生成期与当刻共用一套）。
+	var arr: Array = cells if not cells.is_empty() else map_cells
+	if arr.is_empty():
+		return 0
+	return RogueMap.hide_fixed_open(arr)
 
 
 static func offer_relic_drop(node_type: String) -> int:

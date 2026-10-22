@@ -3662,11 +3662,11 @@ func _init() -> void:
 	check(srepo.get_relic(6010).kind != "" and srepo.get_relic(6010).source_label() == "事件道具",
 			"道具来源标签：source_label() = 事件道具")
 
-	# ---- R289 奖励道具二级分档：一般 / 传奇（现有 11 件全为一般）----
+	# ---- R289 奖励道具二级分档：一般 / 传奇（R311 起 13 件，全为一般）----
 	var r289_repo := RelicRepo.load_json()
 	var r289_all := r289_repo.reward_ids()
-	check(r289_all.size() == 11 and r289_repo.normal_reward_ids().size() == 11,
-			"奖励分档：奖励池 11 件全在「一般」档（实际 %d / %d）"
+	check(r289_all.size() == 13 and r289_repo.normal_reward_ids().size() == 13,
+			"奖励分档：奖励池 13 件全在「一般」档（实际 %d / %d）"
 			% [r289_all.size(), r289_repo.normal_reward_ids().size()])
 	check(r289_repo.legendary_reward_ids().is_empty(),
 			"奖励分档：传奇池目前为空（%d 件）" % r289_repo.legendary_reward_ids().size())
@@ -3675,7 +3675,7 @@ func _init() -> void:
 		var r289_rel := r289_repo.get_relic(int(r289_id))
 		if r289_rel == null or r289_rel.tier != RelicData.TIER_NORMAL:
 			r289_tier_ok = false
-	check(r289_tier_ok, "奖励分档：11 件的 tier 字段都是「一般」")
+	check(r289_tier_ok, "奖励分档：13 件的 tier 字段都是「一般」")
 	check(RelicData.RELIC_TIERS.size() == 2
 			and RelicData.RELIC_TIERS.has(RelicData.TIER_NORMAL)
 			and RelicData.RELIC_TIERS.has(RelicData.TIER_LEGENDARY),
@@ -22675,6 +22675,149 @@ func _init() -> void:
 			and r310_map.find('RunState.relic_choice.is_empty()') <
 			r310_map.find('res://scenes/curtain.tscn'),
 			"R310 源码锁：重定向的判据仍是 `relic_choice` 非空（候选清空 = 本层起点已过完）")
+
+
+	# ================= R311：水晶骰子 6040 / 不锈钢盆 6041 =================
+	var r311_repo := RelicRepo.load_json()
+	var r311_dice := r311_repo.get_relic(6040)
+	var r311_basin := r311_repo.get_relic(6041)
+	check(r311_dice != null and r311_basin != null
+			and r311_dice.source == RelicData.SRC_REWARD
+			and r311_basin.source == RelicData.SRC_REWARD,
+			"R311 两件新道具都是奖励来源（%s / %s）"
+				% [str(r311_dice.source) if r311_dice != null else "?",
+						str(r311_basin.source) if r311_basin != null else "?"])
+	check(r311_repo.reward_ids().has(6040) and r311_repo.reward_ids().has(6041),
+			"R311 水晶骰子 / 不锈钢盆 已进奖励池（%d 件）" % r311_repo.reward_ids().size())
+	# 用户口径「括号内不写入文本」：卡面文案里不能出现括号里的那两句说明。
+	check(not r311_dice.desc.contains("任意种") and not r311_dice.desc.contains("无论"),
+			"R311 水晶骰子：卡面不写「（任意种）」这类括号说明")
+	check(not r311_basin.desc.contains("重复出现") and not r311_basin.desc.contains("确保"),
+			"R311 不锈钢盆：卡面不写「（确保同种奖励道具不会重复出现）」")
+
+	# ---- 地图：持有骰子 → 除固定房间外全是「?」----
+	# 两张图用**同一个种子**生成：一张普通、一张 all_unknown。
+	# 类型必须逐格一致 —— 这是「盖成 ? 不消耗随机数、不打乱随机链」的证明。
+	# ⚠️ 必须**显式设同一个种子**：`RandomNumberGenerator.new()` 默认随机播种，
+	#    漏了这两行就成了「两张不同种子的图」，比对类型必然失败（本断言踩过一次）。
+	var r311_s1 := RandomNumberGenerator.new()
+	r311_s1.seed = 20261022
+	var r311_s2 := RandomNumberGenerator.new()
+	r311_s2.seed = 20261022
+	check(RogueMap != null, "R311 地图：RogueMap 可访问")
+	var r311_m1 := RogueMap.generate(r311_s1, GameLayers.LAYER_DEFAULT)
+	var r311_m2 := RogueMap.generate(r311_s2, GameLayers.LAYER_DEFAULT, true)
+	var r311_same_types := r311_m1.size() == r311_m2.size() and r311_m2.size() > 0
+	var r311_nonfixed_hidden := true
+	var r311_fixed_open := true
+	if r311_same_types:
+		for k in r311_m1.size():
+			if str(r311_m1[k]["type"]) != str(r311_m2[k]["type"]):
+				r311_same_types = false
+			if RogueMap.is_fixed_open(r311_m2[k]):
+				# 固定房间（起点 / 大宝箱 / 右上角商店 / 篝火）**不能被盖**
+				if bool(r311_m2[k]["hidden"]):
+					r311_fixed_open = false
+			else:
+				# 其它房间必须都是「?」，且 `display_type` 也要读成 unknown
+				if not bool(r311_m2[k]["hidden"]) or bool(r311_m2[k]["revealed"]) \
+						or RogueMap.display_type(r311_m2[k]) != "unknown":
+					r311_nonfixed_hidden = false
+	check(r311_same_types,
+			"R311 水晶骰子：盖成「?」**不消耗随机数**（同种子下 35 格的类型逐格一致）")
+	check(r311_nonfixed_hidden, "R311 水晶骰子：除固定房间外，所有房间都是「?」")
+	check(r311_fixed_open, "R311 水晶骰子：起点 / 大宝箱 / 右上角商店 / 篝火 保持明牌")
+	# 当刻重刷（拿到道具那一瞬间）：已揭晓的格子也要盖回去
+	var r311_live := r311_m1.duplicate(true)
+	var r311_changed := RunState.hide_rooms_as_unknown(r311_live)
+	check(r311_changed > 0, "R311 水晶骰子：拿到当刻把现有地图盖成「?」（改了 %d 格）"
+			% r311_changed)
+	var r311_live_ok := true
+	for c: Dictionary in r311_live:
+		if RogueMap.is_fixed_open(c):
+			continue
+		if RogueMap.display_type(c) != "unknown":
+			r311_live_ok = false
+	check(r311_live_ok, "R311 水晶骰子：重刷后非固定房间全部读作「?」")
+
+	# ---- 骰子：? 房开战掷骰 → 前 X 回合每回合 +1 费 ----
+	var r311_deng := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)),
+			40, 40, -1, false)
+	check(GameEngine.DICE_RELIC_ID == 6040 and GameEngine.BASIN_RELIC_ID == 6041,
+			"R311 引擎常量：6040 = 水晶骰子 / 6041 = 不锈钢盆")
+	r311_deng.self_relics = [GameEngine.DICE_RELIC_ID]
+	r311_deng.dice_battle = true
+	r311_deng.apply_battle_start_relics(null)
+	var r311_x: int = r311_deng.dice_energy_turns
+	check(r311_x >= 1 and r311_x <= GameEngine.DICE_FACES,
+			"R311 水晶骰子：「?」房开战掷出 1~6 点（实际 %d）" % r311_x)
+	r311_deng.start_game()
+	check(r311_deng.state.energy == FieldState.ENERGY_PER_TURN + GameEngine.DICE_ENERGY,
+			"R311 水晶骰子：第 1 回合 +1 费（%d）" % r311_deng.state.energy)
+	var r311_all_bonus := true
+	for _i in r311_x - 1:
+		r311_deng.end_turn()
+		r311_deng.end_turn()
+		if r311_deng.state.energy != FieldState.ENERGY_PER_TURN + GameEngine.DICE_ENERGY:
+			r311_all_bonus = false
+	check(r311_all_bonus, "R311 水晶骰子：前 %d 回合每回合都 +1 费" % r311_x)
+	r311_deng.end_turn()
+	r311_deng.end_turn()
+	check(r311_deng.state.energy == FieldState.ENERGY_PER_TURN,
+			"R311 水晶骰子：第 %d 回合起不再加费（%d）"
+				% [r311_x + 1, r311_deng.state.energy])
+	# 不是「?」房 / 没带道具 → 不掷骰
+	var r311_neng := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)),
+			40, 40, -1, false)
+	r311_neng.self_relics = [GameEngine.DICE_RELIC_ID]
+	r311_neng.apply_battle_start_relics(null)   # dice_battle 默认 false
+	r311_neng.start_game()
+	check(r311_neng.dice_energy_turns == 0
+			and r311_neng.state.energy == FieldState.ENERGY_PER_TURN,
+			"R311 水晶骰子：普通房间的战斗不掷骰、不加费（%d）" % r311_neng.state.energy)
+
+	# ---- 不锈钢盆：10 点计数代替承伤，归零失去 ----
+	var r311_beng := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)),
+			40, 40, -1, false)
+	r311_beng.basin_charge = 10
+	var r311_hp0: int = r311_beng.state.hp_self
+	r311_beng._damage_player(GameEngine.SIDE_SELF, 4, "测试")
+	check(r311_beng.state.hp_self == r311_hp0 and r311_beng.basin_charge == 6,
+			"R311 不锈钢盆：吃下 4 点 → 玩家 HP 不变（%d）/ 剩 6 点（%d）"
+				% [r311_beng.state.hp_self, r311_beng.basin_charge])
+	r311_beng._damage_player(GameEngine.SIDE_SELF, 15, "测试")
+	check(r311_beng.state.hp_self == r311_hp0 - 9 and r311_beng.basin_charge == 0,
+			"R311 不锈钢盆：只剩 6 点时挨 15 → 盆吃 6、玩家吃 9（HP %d / 剩 %d）"
+				% [r311_beng.state.hp_self, r311_beng.basin_charge])
+	r311_beng._damage_player(GameEngine.SIDE_SELF, 3, "测试")
+	check(r311_beng.state.hp_self == r311_hp0 - 12,
+			"R311 不锈钢盆：归零后不再代伤（HP %d）" % r311_beng.state.hp_self)
+
+	# ---- 不锈钢盆：商店优先抵账 ----
+	RunState.relics = []
+	RunState.basin_charge = 0
+	RunState.gain_relic(RunState.BASIN_RELIC_ID)
+	check(RunState.basin_charge == RunState.BASIN_MAX and RunState.has_basin(),
+			"R311 不锈钢盆：拿到就满 10 点（%d）" % RunState.basin_charge)
+	check(RunState.relic_display_name(RunState.BASIN_RELIC_ID).contains("10"),
+			"R311 不锈钢盆：道具名旁写剩余点数（%s）"
+				% RunState.relic_display_name(RunState.BASIN_RELIC_ID))
+	check(RunState.basin_pay(), "R311 不锈钢盆：商店抵账成功（不花金币）")
+	check(not RunState.has_basin() and not RunState.relics.has(RunState.BASIN_RELIC_ID)
+			and RunState.basin_charge == 0,
+			"R311 不锈钢盆：抵账一次后就失去道具")
+	check(not RunState.basin_pay(), "R311 不锈钢盆：只有一次抵账机会（第二次返回 false）")
+
+	# ---- 奖励道具去重（用户口径：同种奖励道具不会重复出现）----
+	RunState.relics = RelicRepo.load_json().reward_ids()
+	check(RunState.roll_reward_relic() == -1,
+			"R311 奖励去重：已拥有全部奖励道具 → 不再摇出重复的（返回 %d）"
+				% RunState.roll_reward_relic())
+	check(RunState.offer_relic_drop("elite") == -1,
+			"R311 奖励去重：精英掉落同样不会给已有道具（返回 %d）"
+				% RunState.offer_relic_drop("elite"))
+	RunState.relics = []
+	RunState.basin_charge = 0
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

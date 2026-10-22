@@ -2659,6 +2659,21 @@ func _demo_tick() -> void:
 		status_text = "R301：弃牌区改成选卡页那种全屏窗口（每行 5 张 · 滚动 · 底部描述）"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r311dice" in _demo_args and _demo_frame == 40 and engine != null:
+		# R311 出图（`--screenshot --r311dice --shotms 700`）：水晶骰子掷骰 → 飘字 + 状态栏。
+		# ⚠️ 走真实入口 `apply_battle_start_relics()`（用**战斗种子**掷），只是开局已经
+		#    过了，第 1 回合那份加费在 `_begin_turn` 里发不出来 —— 这里按同一条规则补一次，
+		#    好让出图能看到「能量 6」而不是「能量 5」。真实路径由回归断言钉住。
+		_banner = {}          # 出图：收掉「我方回合」大字横幅，别挡住飘字
+		engine.self_relics = [GameEngine.DICE_RELIC_ID]
+		engine.dice_battle = true
+		engine.apply_battle_start_relics(repo)
+		if engine.dice_energy_turns > 0:
+			engine.state.energy += GameEngine.DICE_ENERGY
+		status_text = "R311 水晶骰子：骰出 %d 点 → 前 %d 回合每回合 +1 费" % [
+				engine.dice_roll, engine.dice_energy_turns]
+		_shot_t0 = _now()
+		queue_redraw()
 	if _demo_pending and _demo_frame == 20 and _tutorial.is_empty():
 		# 演示确定性：手牌里没有寒冰护盾就换进一张（仅新手试炼演示用）
 		var has_shield := false
@@ -3138,6 +3153,14 @@ func load_level(lvl: Dictionary) -> void:
 	var _tier_for_kind := int(lvl.get("tier", -1))
 	engine.battle_kind = "boss" if _tier_for_kind == GameLevels.TIER_BOSS \
 			else ("elite" if _tier_for_kind >= GameLevels.TIER_ELITE_EASY else "battle")
+	# R311 水晶骰子：本场是不是从「?」房进来的？判据用地图节点的 `hidden` ——
+	# 那是**房间生来就有的性质**（揭晓后 `revealed` 变 true，`hidden` 不变），
+	# 所以「走进 ? 房、看到是精英、开打」这一路仍然算「? 房的战斗」。
+	# ⚠️ 不用 `display_type()`：它按 revealed 判，开打那一刻已经揭晓了。
+	engine.dice_battle = RunState.run_active \
+			and bool(RunState.pending_node.get("hidden", false))
+	# R311 不锈钢盆：剩余点数跨战斗累计（存在局状态里），由引擎在承伤时递减。
+	engine.basin_charge = RunState.basin_charge
 	# R77：鸭语耳环（6015）改成**逐张**自动出牌 —— 由 _tick_earring_autoplay 每帧推进一步，
 	# 这样每张牌的抽牌 / 出牌 / 落位动画都能看清。
 	engine.autoplay_stepwise = true
@@ -8733,8 +8756,45 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 30),
 					"text": rtext, "col": Color("3fc7d4"),
 					"start": n, "dur": 1800})
-		"pear":
-			# 道具「鸭梨」：我方 HP 受伤 → 最大生命 +1（只提高上限，不回复生命）
+		"dice_roll":
+			# R311 水晶骰子：「?」房开战掷骰 → 前 X 回合每回合 +1 费。
+			# 落点在棋盘上沿（作用对象是**整场战斗**，不绑某一格）。
+			sfx.play("click")
+			var dr_n := int(data.get("roll", 0))
+			var dr_t := int(data.get("turns", 0))
+			_say("✦ 水晶骰子：掷出 %d 点 —— 前 %d 回合每回合额外 %d 点费用"
+					% [dr_n, dr_t, int(data.get("energy", 1))])
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
+					"text": "骰子 %d 点 · 前 %d 回合 +%d 费"
+							% [dr_n, dr_t, int(data.get("energy", 1))],
+					"col": Color("7fd2f0"), "size": 18, "start": n, "dur": 2600})
+		"basin_absorb":
+			# R311 不锈钢盆：代替玩家承受伤害 → 棋盘上沿飘「-N（剩 M）」并同步局状态。
+			# ⚠️ 点数**必须**回写 `RunState`：跨战斗累计，丢一次就等于白送一件消耗品。
+			sfx.play("heal")
+			var ba_take := int(data.get("take", 0))
+			var ba_left := int(data.get("left", 0))
+			RunState.basin_charge = ba_left
+			if engine != null:
+				engine.basin_charge = ba_left
+			_say("✧ 不锈钢盆承受 %d 点伤害（剩余 %d 点）" % [ba_take, ba_left])
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 60.0),
+					"text": "不锈钢盆 -%d（剩 %d）" % [ba_take, ba_left],
+					"col": Color("b8c4cc"), "size": 16, "start": n, "dur": 1800})
+		"basin_break":
+			# R311 不锈钢盆：计数归零 → **失去此道具**（局状态与引擎两侧都得清）。
+			# `engine.self_relics` 与 `RunState.relics` 是同一个数组，但这里仍显式重挂一次 ——
+			# 将来若改成各持一份副本，这条也不会悄悄失效。
+			sfx.play("click")
+			RunState.lose_relic(RunState.BASIN_RELIC_ID)
+			if engine != null:
+				engine.basin_charge = 0
+				engine.self_relics = RunState.relics
+			_say("✧ 不锈钢盆计数归零 —— 失去此道具")
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 60.0),
+					"text": "不锈钢盆 碎了", "col": Color("8a949c"),
+					"size": 17, "start": n, "dur": 2200})
+		"pear":			# 道具「鸭梨」：我方 HP 受伤 → 最大生命 +1（只提高上限，不回复生命）
 			sfx.play("heal")
 			_say("✦ 鸭梨：受到伤害 → 最大生命 +1（当前 %d/%d）"
 					% [int(data.get("hp", 0)), int(data.get("max_hp", 0))])

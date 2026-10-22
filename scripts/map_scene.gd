@@ -175,6 +175,23 @@ func _ready() -> void:
 	if "--whistle" in OS.get_cmdline_user_args():
 		RunState.relics = [6001, 6005, 6026]
 		RunState.relic_choice = []
+	# -- --r311map：演示「水晶骰子 6040」—— 除起点 / 大宝箱 / 右上角商店 / 篝火外，
+	# 整张图都是「?」。出图：`map.tscn -- --screenshot --r311map`。
+	# ⚠️ 用同种子重新生成（`RogueMap.generate(..., true)`）而不是就地翻标志 ——
+	#    这样截到的就是「持有道具后新开一层」的真实形态。
+	if "--r311map" in OS.get_cmdline_user_args():
+		RunState.relics = [6040]
+		RunState.relic_choice = []
+		var dice_rng := RandomNumberGenerator.new()
+		dice_rng.seed = RunState.run_seed
+		RunState.map_cells = RogueMap.generate(dice_rng, RunState.current_layer, true)
+		# ⚠️ 出图要点：**整张图都算「见过」**。否则雾本来就把未探索的格子盖成云朵 + ?，
+		#    看不出「骰子把房型换成了 ?」这件事 —— 只有已见过的格子才会暴露差别：
+		#    正常是「战 / 息 / 事」，带骰子之后必须也读成「?」（固定房间照样写明）。
+		RunState.seen_ids = []
+		for i in RunState.map_cells.size():
+			RunState.seen_ids.append(i)
+		RunState.reveal_known()
 	# -- --midway：演示「走过一片区域」的状态（截图核验视野规则用）
 	if "--midway" in OS.get_cmdline_user_args():
 		_prep_midway_demo()

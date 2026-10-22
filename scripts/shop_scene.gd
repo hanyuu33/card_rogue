@@ -123,6 +123,26 @@ func _ready() -> void:
 		t2.timeout.connect(func(): _demo_enchant(cand, commit, ench_id))
 		add_child(t2)
 		t2.start()
+	# 演示参数（R311）：`--r311basin` 持有不锈钢盆 + **0 金币** → 顶栏写「本次购买抵账」，
+	# 并买下第一张卡，提示里应写「不锈钢盆抵账」（证明不花金币）。
+	# 出图：`shop.tscn -- --screenshot --r311basin`
+	if "--r311basin" in args:
+		if not RunState.run_active:
+			RunState.run_active = true
+			RunState.start_run([], GameLayers.LAYER_DEFAULT)
+		RunState.gold = 0
+		RunState.pending_node = {"type": "shop"}
+		RunState.relics = []
+		RunState.basin_charge = 0
+		RunState.gain_relic(RunState.BASIN_RELIC_ID)
+		# 加 `--r311buy` 才真的买：不带它时截的是「买之前」的顶栏（盆还在、写余量）
+		if "--r311buy" in args:
+			var tb := Timer.new()
+			tb.wait_time = 0.3
+			tb.one_shot = true
+			tb.timeout.connect(func(): _buy_card(0))
+			add_child(tb)
+			tb.start()
 	# 演示参数（R214）：`--delpick` 打开「删除一张卡」的选卡页 —— 核验**选卡页大卡**
 	# （150×190，`CardFace.draw_pick()`）上也有附魔标记。顺带给卡组前两张塞附魔，
 	# 否则初始卡组是一张张素卡，出图看不出任何标记。
@@ -356,6 +376,7 @@ func _draw_header() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, 180, UiTheme.FS_SUBHEAD, Color("ffd75a"))
 
 
+
 func _draw_shelves() -> void:
 	## 三层货架背景（放在商品背后）：有 shelf.png 则铺货架区，缺图回退程序画木板横条。
 	var rects := _row_rects()
@@ -570,6 +591,14 @@ func _draw_leave() -> void:
 
 
 func _draw_hint() -> void:
+	# R311 不锈钢盆：**常驻**一行（不是 2.4 秒就消失的 hint）—— 玩家得事先知道
+	# 「这单不花金币」，而不是买完才从提示里发现盆没了。
+	# ⚠️ 位置特意放**底部提示条上方**：顶栏（金币那行）会被第一排商品的价签压住，
+	#    实测「不锈钢盆 10」会被价签的水晶盖掉一半。
+	if RunState.has_basin():
+		draw_string(_font, Vector2(0, _vs().y - 48),
+				"不锈钢盆 %d 点 · 本次购买优先抵账（不花金币）" % RunState.basin_charge,
+				HORIZONTAL_ALIGNMENT_CENTER, _vs().x, UiTheme.FS_CAPTION, Color("b8c4cc"))
 	if _hint_t <= 0.0 or _hint == "":
 		return
 	draw_string(_font, Vector2(0, _vs().y - 26), _hint,
@@ -837,16 +866,44 @@ func _on_click(pos: Vector2) -> void:
 		_buy_row3(hit - _row3_base)
 
 
+## R311 不锈钢盆（6041）：本次购买是不是用盆抵的账（由 `_pay()` 写，供提示用）。
+var _paid_by_basin := false
+
+
+func _can_pay(price: int) -> bool:
+	## 付不付得起：**只要盆还在，就一定付得起**（用户口径：购买时优先用盆抵账）。
+	## ⚠️ 判据必须与 `_pay()` 完全同源 —— 否则会出现「预检说不够、其实盆能抵」
+	##    （附魔 / 删卡这两条是先预检、后扣款的路径，最容易被这种分叉咬到）。
+	return RunState.has_basin() or RunState.gold >= price
+
+
+func _pay(price: int) -> bool:
+	## 商店付费的**唯一口**（卡 / 附魔 / 最大生命 / 巧克力 / 删卡 五处共用）。
+	## R311（用户口径）：持有不锈钢盆时**优先用它交换** —— 不扣金币，改为失去道具。
+	## 返回是否付成功（false = 金币不够且没有盆）。
+	## ⚠️ 顺序不能反：先判盆、再扣金币。反过来会出现「既扣了钱又没了盆」。
+	_paid_by_basin = RunState.basin_pay()
+	if _paid_by_basin:
+		return true
+	return RunState.spend_gold(price)
+
+
+func _paid_tag(price: int) -> String:
+	## 购买提示的付费后缀（**唯一口**）：盆抵账 or 具体金币数。
+	## 五处购买点共用，免得某处改成盆、另一处还在说「-50 金币」。
+	return "不锈钢盆抵账" if _paid_by_basin else "%d 金币" % price
+
+
 func _buy_card(i: int) -> void:
 	var e: Dictionary = _row1[i]
 	var card: CardData = e["card"]
 	var price := _card_price(card)
-	if not RunState.spend_gold(price):
+	if not _pay(price):
 		_set_hint("金币不足（需要 %d）" % price)
 		return
 	e["sold"] = true
 	RunState.add_card(card.id)
-	_set_hint("购买「%s」（%d 金币）" % [card.card_name, price])
+	_set_hint("购买「%s」（%s）" % [card.card_name, _paid_tag(price)])
 
 
 func _start_enchant(i: int) -> void:
@@ -898,7 +955,7 @@ func _buy_row3(i: int) -> void:
 		if RunState.deck_ids.is_empty():
 			_set_hint("卡组里没有卡可删")
 			return
-		if RunState.gold < price:
+		if not _can_pay(price):
 			_set_hint("金币不足（需要 %d）" % price)
 			return
 		_deleting = true
@@ -906,20 +963,20 @@ func _buy_row3(i: int) -> void:
 		_build_deck_cards()
 		_ask_redraw()          # R218：同 `_start_enchant`，否则删除选卡页不出现
 	elif key == "maxhp":
-		if not RunState.spend_gold(price):
+		if not _pay(price):
 			_set_hint("金币不足（需要 %d）" % price)
 			return
 		e["sold"] = true
 		RunState.gain_max_hp(5)
-		_set_hint("最大生命 +5（并回复 5 点）")
+		_set_hint("最大生命 +5（并回复 5 点）· %s" % _paid_tag(price))
 	elif key == "choco":
-		if not RunState.spend_gold(price):
+		if not _pay(price):
 			_set_hint("金币不足（需要 %d）" % price)
 			return
 		e["sold"] = true
 		RunState.add_chocolate(1)   # R236：体力回到 > 0 会撤销「耗尽→开 Boss」的待触发
 		RunState.sync_fatigue()   # R223 难度 5：巧克力回到 6 以上 → 疲惫出卡组
-		_set_hint("巧克力 +1")
+		_set_hint("巧克力 +1 · %s" % _paid_tag(price))
 
 
 func _on_pick_click(pos: Vector2) -> void:
@@ -961,7 +1018,8 @@ func _on_pick_click(pos: Vector2) -> void:
 	# ---- 删除模式 ----
 	if _deleting:
 		var del_price: int = _row3[0]["price"]
-		if RunState.gold < del_price:
+		# R311：预检同样要认「有盆就一定付得起」（与 `_can_pay` 同源）
+		if not _can_pay(del_price):
 			_set_hint("金币不足（需要 %d）" % del_price)
 			_deleting = false
 			_ask_redraw()
@@ -976,9 +1034,9 @@ func _on_pick_click(pos: Vector2) -> void:
 			_deleting = false
 			_ask_redraw()
 			return
-		RunState.gold -= del_price
+		_pay(del_price)   # R311：有盆就用盆抵（前面 `_can_pay` 已经把「付不起」挡掉了）
 		_row3[0]["sold"] = true
-		_set_hint("删除了「%s」" % del_name)
+		_set_hint("删除了「%s」（%s）" % [del_name, _paid_tag(del_price)])
 		_deleting = false
 		_hover_enchant_card = -1
 		_ask_redraw()
@@ -986,7 +1044,7 @@ func _on_pick_click(pos: Vector2) -> void:
 	# ---- 附魔模式 ----
 	var ench: Dictionary = _row2[_enchanting]["ench"]
 	var price: int = ench["price"]
-	if RunState.gold < price:
+	if not _can_pay(price):
 		_set_hint("金币不足（需要 %d）" % price)
 		_enchanting = -1
 		_ask_redraw()
@@ -998,10 +1056,11 @@ func _on_pick_click(pos: Vector2) -> void:
 		_enchanting = -1
 		_ask_redraw()
 		return
-	RunState.gold -= price
+	_pay(price)   # R311：有盆就用盆抵（预检已过，这里不会失败）
 	_row2[_enchanting]["sold"] = true
 	var c := _repo.get_card(RunState.deck_ids[idx])
-	_set_hint("「%s」获得附魔「%s」" % [c.card_name if c != null else str(idx), _ench_name(ench)])
+	_set_hint("「%s」获得附魔「%s」（%s）" % [c.card_name if c != null else str(idx),
+			_ench_name(ench), _paid_tag(price)])
 	_enchanting = -1
 	_hover_enchant_card = -1
 	_ask_redraw()

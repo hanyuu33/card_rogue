@@ -23,6 +23,15 @@ var ai_enabled:= true
 ## 由 battle_scene 按**关卡 tier** 写入一次；引擎不自己读 RunState.pending_node ——
 ## 单关演示 / 单元测试都能显式指定，判据只有一处（`_courage_energy` 的消费方）。
 var battle_kind:= "battle"
+## R311 水晶骰子（6040）：本场战斗是否来自「?」房（battle_scene 写）。
+## `dice_roll` / `dice_energy_turns` 在 `apply_battle_start_relics()` 里定；
+## 没持有道具 / 不是「?」房 → 0，一切照旧。
+var dice_battle:= false
+var dice_roll:= 0
+var dice_energy_turns:= 0
+## R311 不锈钢盆（6041）：剩余点数（0 = 没有盆）。
+## battle_scene 从 `RunState.basin_charge` 灌入；承伤时递减，`basin` 动作回写界面。
+var basin_charge:= 0
 var log: Array[String] = []
 var rng:= RandomNumberGenerator.new()
 var self_relics: Array[int] = []
@@ -313,6 +322,18 @@ const DUCK_WING_RELIC_ID:= 6007
 const DUCK_WING_TURN:= 3
 const DUCK_WING_ENERGY:= 3
 # R245 初始道具「勇气徽章」（6031）：精英战**首回合**、Boss 战**前两回合**各额外 +1 费用。
+# ── R311：水晶骰子 6040 / 不锈钢盆 6041 ──
+# 水晶骰子（6040）：「?」房里的**任意种**战斗开始时掷一颗骰子（1~6），
+#   **前 X 回合每回合额外 +1 费**（X = 点数）。
+#   ⚠️ 「是不是 ? 房」由 battle_scene 写在 `dice_battle` 上（引擎不读地图）；
+#   ⚠️ 点数在本文件用**战斗种子**（`rng`）掷 —— 回放同一 seed 必然同点数，
+#      放到 battle_scene 用 run_rng 掷会让「重放一局」点出不同的数。
+# 不锈钢盆（6041）：10 点计数**代替玩家承受等量伤害**，归零即失去道具（跨战斗累计）。
+#   部分吸收：伤害 15 / 剩 10 → 盆吃 10、玩家只吃 5（**溢出部分还给玩家**，不吞）。
+const DICE_RELIC_ID:= 6040
+const DICE_FACES:= 6          # 骰子面数（1~6）
+const DICE_ENERGY:= 1         # 「前 X 回合」每回合的额外费用
+const BASIN_RELIC_ID:= 6041
 const COURAGE_RELIC_ID:= 6031
 const COURAGE_ELITE_TURNS:= 1
 const COURAGE_BOSS_TURNS:= 2
@@ -1674,6 +1695,13 @@ func _begin_turn(side: String) -> void :
 		if self_relics.has(VERSATILE_RELIC_ID):
 			state.energy += 1
 			_log("兼修：本回合费用 +1")
+		# 水晶骰子（6040，R311）：前 X 回合每回合 +1 费（X = 开场掷出的点数）。
+		# ⚠️ 判据只看 `dice_energy_turns`（开局已按「持有道具 + ? 房」定好），
+		#    这里不再复查道具 —— 中途丢掉道具不该让「已经骰出来的回合数」消失。
+		if dice_energy_turns > 0 and turn_number <= dice_energy_turns:
+			state.energy += DICE_ENERGY
+			_log("水晶骰子：第 %d/%d 回合，费用 +%d"
+					% [turn_number, dice_energy_turns, DICE_ENERGY])
 
 		var whisper_txt:= ""
 		if self_relics.has(6010):
@@ -2362,6 +2390,17 @@ func apply_battle_start_relics(repo: CardRepo) -> void :
 				_log("机械核心：开场手牌加入 %d 张「素体」（0 费 1/1，回合结束不弃）" % added)
 				action.emit("relic", {"id": MECH_CORE_RELIC_ID,
 						"text": "机械核心：手牌 +%d 张「素体」" % added})
+	# 水晶骰子（6040，R311）：「?」房进战斗 → 掷骰，前 X 回合每回合 +1 费。
+	# ⚠️ 放在本函数**最后**：前面那些开场道具一个都不消耗随机数，
+	#    追加在末尾不会改动它们已有的抽卡 / 落位表现。
+	# ⚠️ 只有「持有道具 + 本场来自 ? 房」两条同时成立才掷 —— 别把普通战斗也算进去。
+	if self_relics.has(DICE_RELIC_ID) and dice_battle:
+		dice_roll = rng.randi_range(1, DICE_FACES)
+		dice_energy_turns = dice_roll
+		_log("水晶骰子：掷出 %d 点 → 前 %d 回合每回合额外 %d 点费用"
+				% [dice_roll, dice_energy_turns, DICE_ENERGY])
+		action.emit("dice_roll", {"roll": dice_roll, "turns": dice_energy_turns,
+				"energy": DICE_ENERGY})
 
 
 func _heal_aura(side: String) -> void :
@@ -10012,12 +10051,22 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 			return state.hp_self
 
 		var dmg:= _hp_damage_taken(amount)
+		# 不锈钢盆（6041，R311）：**代替玩家承受等量伤害**，计数归零即失去道具。
+		# 位置在减伤**之后**：卡面写的是「等量」—— 等的是「本来会掉到你身上的血」，
+		# 放在减伤之前会替玩家白挡掉鸭嘴 / 迅捷那一层，等于把减伤也吃了。
+		# 部分吸收（伤害 15 / 剩 10）→ 盆吃 10、玩家吃 5：溢出部分**还给玩家**，不吞掉。
+		var basin_take:= _basin_absorb(dmg)
+		if basin_take > 0:
+			dmg -= basin_take
 		_last_hp_damage = dmg           # R145：减伤之后**真正**掉的血
 		state.hp_self = maxi(0, state.hp_self - dmg)
 		# R234：累计本场我方 HP 实际受到的伤害（止血绷带 6029 的判定依据）。
 		if dmg > 0:
 			state.self_hp_damage_taken += dmg
-		if dmg != amount:
+		# R311：差值可能是**不锈钢盆**吃掉的那部分 —— 别把盆说成「减伤」，两种来源分开写。
+		if basin_take > 0:
+			_log("不锈钢盆挡下 %d 点 → 实际掉血 %d" % [basin_take, dmg])
+		elif dmg != amount:
 			_log("减伤（迅捷/鸭嘴）：伤害 %d → %d" % [amount, dmg])
 		_log("我方 HP -%d（%s），剩余 %d" % [dmg, source, state.hp_self])
 		if dmg > 0:
@@ -10033,6 +10082,25 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 	_log("敌方 HP -%d（%s），剩余 %d" % [amount, source, left2])
 	_check_game_over()
 	return left2
+
+
+func _basin_absorb(dmg: int) -> int:
+	## 不锈钢盆（6041，R311）的唯一结算口：返回它**实际吃下**的点数（0 = 没吃 / 没有盆）。
+	## * 计数不足时只吃剩下的那部分（`mini`）—— 溢出部分留给调用方落回玩家 HP；
+	## * 吃完归零 → 再发一条 `basin_break`，界面据此把道具从栏里拿走；
+	## * ⚠️ 不判 `self_relics`：`basin_charge` 本身就是「还在不在」的唯一状态
+	##   （界面在 `basin_break` 之后会把它清 0 并移除道具，两条路不会各行其是）。
+	if dmg <= 0 or basin_charge <= 0:
+		return 0
+	var take:= mini(dmg, basin_charge)
+	basin_charge -= take
+	_log("不锈钢盆：承受 %d 点伤害（剩余 %d）" % [take, basin_charge])
+	action.emit("basin_absorb", {"take": take, "left": basin_charge,
+			"hp_dmg": dmg - take})
+	if basin_charge <= 0:
+		_log("不锈钢盆：计数归零 → 失去此道具")
+		action.emit("basin_break", {"id": BASIN_RELIC_ID})
+	return take
 
 
 func _cell_of(p: Placement) -> Vector2i:

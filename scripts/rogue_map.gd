@@ -194,12 +194,16 @@ static func is_fixed_shop(i: int) -> bool:
 # ------------------------------------------------------------ 生成
 
 static func generate(rng: RandomNumberGenerator,
-		layer := GameLayers.LAYER_DEFAULT) -> Array:
+		layer := GameLayers.LAYER_DEFAULT, all_unknown := false) -> Array:
 	## 生成一整张 5×7 地图（返回 35 个 cell 的数组，下标即 id）。
 	## 完全确定：同一 rng 状态必然得到同一张图（重试次数也确定）。
 	## ⚠️ R142：内容层校验（每个起点邻居都能不回头走到宝箱）**必须等类型摇完**才判 ——
 	##    宝箱是一种「类型」，而类型在 `_make_cells` 里才摇。所以一次重摇 =
 	##    「重新连边 + 重新定类型」，不是只重摇结构。
+	## R311：`all_unknown = true`（持有「水晶骰子」6040）→ 生成完之后把**除固定房间外**
+	##    的所有格子都盖成「?」。做法放在 `_make_cells` **之后**、且**不消耗任何随机数**
+	##    （见 `hide_fixed_open`），所以同一 seed 的地图内容与不加道具时完全一致，
+	##    只是「玩家看得见多少」变了 —— 道具不会把整张图的随机链条打乱。
 	for attempt in MAX_ATTEMPTS:
 		var adj := _build_adjacency(rng)
 		if adj.is_empty():
@@ -207,10 +211,48 @@ static func generate(rng: RandomNumberGenerator,
 		var cells := _make_cells(adj, rng, layer)
 		if not exits_reach_chest(cells):
 			continue
+		if all_unknown:
+			hide_fixed_open(cells)
 		last_attempts = attempt + 1
 		return cells
 	push_error("RogueMap：%d 次尝试仍未生成满足约束的 5×7 地图" % MAX_ATTEMPTS)
 	return []
+
+
+static func is_fixed_open(cell: Dictionary) -> bool:
+	## R311：这格是不是「水晶骰子**管不到**的固定房间」—— 用户口径明确只有四类：
+	## **起点 / 大宝箱 / 右上角的商店 / 篝火（休息处）**。
+	## 判据**按 cell 内容**（不是按坐标猜）：随机商店也带 `type == "shop"`，但它是随机刷的，
+	## 不在豁免名单里 —— 所以「固定商店」只能靠坐标认（`is_fixed_shop`）。
+	if cell.is_empty():
+		return false
+	var i := int(cell.get("id", -1))
+	if i < 0:
+		return false
+	if i == idx(START_COL, START_ROW):
+		return true
+	if is_bigchest(i) or is_fixed_shop(i):
+		return true
+	return str(cell.get("type", "")) == "rest"
+
+
+static func hide_fixed_open(cells: Array) -> int:
+	## R311（水晶骰子 6040）：把「除固定房间外」的所有格子盖成「?」房，返回改动格数。
+	## ⚠️ 只翻 `hidden` / `revealed`，**不动 `type`** —— 房间内容在生成时就已经定好，
+	##    这个道具只负责「不让你看见」，不重摇内容（同一 seed 仍然可复现）。
+	## ⚠️ 已揭晓的格子也一并盖回去（`revealed = false`）—— 用户口径是「所有房间变成 ?」，
+	##    留着已揭晓的会让「刚拿到道具的当刻」看不出统一的变化。
+	## ⚠️ 本函数**不消耗随机数**，所以放在生成末尾调也绝不会把随机链条推歪。
+	var n := 0
+	for cell: Dictionary in cells:
+		if cell.is_empty() or is_fixed_open(cell):
+			continue
+		if bool(cell.get("hidden", false)) and not bool(cell.get("revealed", true)):
+			continue   # 本来就盖着，不算改动
+		cell["hidden"] = true
+		cell["revealed"] = false
+		n += 1
+	return n
 
 
 static func _shuffle(arr: Array, rng: RandomNumberGenerator) -> void:
