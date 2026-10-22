@@ -74,6 +74,8 @@ static func snapshot() -> Dictionary:
 		"reward_type": RunState.reward_type,
 		"reward_context": RunState.reward_context,
 		"difficulty": RunState.difficulty,
+		# R323：正停在一场没打完的战斗里时记下来（继续游戏据此直接回那一场）
+		"resume_battle": RunState.resume_battle,
 	}
 
 
@@ -161,9 +163,17 @@ static func apply(d: Dictionary) -> bool:
 	# R223 难度 5：读档后按存档里的巧克力纠正「疲惫」在不在卡组
 	# （老存档没有它、难度也是旧的，直接按当前口径推导最稳）
 	RunState.sync_fatigue()
+	# R323：续档停在一场战斗里 → 把那一场的「关卡 / 房间」一起还原，
+	# 战斗场景的 `_load_entry_level()` 就是读 `pending_level` 开局的。
+	var rb: Variant = d.get("resume_battle", {})
+	RunState.resume_battle = rb if rb is Dictionary else {}
+	if not RunState.resume_battle.is_empty():
+		RunState.pending_level = RunState.resume_battle.get("level", {})
+		RunState.pending_node = RunState.resume_battle.get("node", {})
 	# 瞬时转换字段不存档（安全检查点上它们本就为空）：读档后复位，走地图重新触发
-	RunState.pending_level = {}
-	RunState.pending_node = {}
+	if RunState.resume_battle.is_empty():
+		RunState.pending_level = {}
+		RunState.pending_node = {}
 	RunState.reward_kinds = []
 	RunState.battle_log = []
 	return true

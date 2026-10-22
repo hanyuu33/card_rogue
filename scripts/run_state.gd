@@ -24,6 +24,13 @@ static var deck_ids: Array[int] = []         # 当前卡组（卡 id，可重复
 ## 只改这一张卡（不改卡库共享实例）：`build_deck` 按 mod 生成独立副本再应用。
 ## 每张卡只能有一个附魔（enchant_deck_card 会拒绝已附魔的卡）。跨战斗、跨层保留。
 static var deck_mods: Array = []
+## R323：牛奶（6028）这次附了哪两张卡 —— 界面拿它播「把附魔标志贴上去」的动画。
+## [{card_id, ench}]，界面读一次就清空；`_apply_milk()` 每次重写。
+static var milk_anim: Array = []
+## R323：「我正停在一场没打完的战斗里」—— {"node": 房间格, "level": 关卡}。
+## 进战斗时写、战斗结束清；随存档走。没有它，「在战斗里返回标题 → 继续游戏」
+## 会回到地图，而那一格早在进战斗时就被标成「已走过」→ 这场战斗永远打不到。
+static var resume_battle: Dictionary = {}
 ## 卡组费用**一律以卡面为准**（R112）：早前鸭鸭工匠产物靠 `deck_cost_at_index()` 把卡组里的
 ## 铁栅栏现算成 2 费、而卡面是 0 费 → 「图鉴 0 费 / 卡组 2 费」两处不一致。用户拍板
 ## 「只保留 2 费」后，直接把 **9072 的卡面改成 2 费**，那套运行时费用改写已整块删除。
@@ -606,6 +613,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# + 角色专属卡（森林精魄 → 熊 8004；暗影刺客 → 突袭 9086）。见 PlayerClass.start_deck_ids。
 	deck_ids = PlayerClass.start_deck_ids(player_class)
 	deck_mods = []                # R181：新开一局 → 附魔清空
+	milk_anim = []                # R323：牛奶的演示数据也清掉
+	resume_battle = {}            # R323：清掉「正在打的这场」（下面按需重写）
 	ensure_deck_mods()            # R204：立刻对齐成等长（否则附魔必越界，见函数注释）
 	sync_fatigue()                # R223 难度 5：开局巧克力满 → 先入/出一次（<6 才生效）
 	battle_wins = 0
@@ -655,6 +664,8 @@ static func end_run(clear_save: bool = true) -> void:
 	player_class = PlayerClass.default_id()
 	deck_ids = []
 	deck_mods = []                # R181：本局结束 → 附魔清掉
+	milk_anim = []                # R323：牛奶的演示数据也清掉
+	resume_battle = {}            # R323：清掉「正在打的这场」（下面按需重写）
 	map_cells = []
 	current_layer = GameLayers.LAYER_DEFAULT
 	current_node_id = -1
@@ -2085,6 +2096,8 @@ static func _apply_milk() -> void:
 	## ⚠️ 随机一律走 `run_rng`（run 层唯一源 → 同一种子重放一致）。
 	## 某种附魔此刻没有合规目标（或两种摇重复后池子空了）就跳过 ——
 	## 绝不为「附满 2 种」而附到不合规 / 已附魔的卡上。
+	# R323：每次结算重写演示数据（界面读走即清，不会串到下一次）
+	milk_anim = []
 	var pool: Array[String] = []
 	for eid: String in CardData.ENCHANT_DEFS.keys():
 		if not _milk_targets(eid).is_empty():
@@ -2099,7 +2112,9 @@ static func _apply_milk() -> void:
 		if targets.is_empty():
 			continue
 		var idx: int = targets[run_rng.randi() % targets.size()]
-		enchant_deck_card(idx, enchant_mod(eid))
+		if enchant_deck_card(idx, enchant_mod(eid)):
+			# R323：记下来给界面演「这张卡被贴了哪种附魔」
+			milk_anim.append({"card_id": deck_ids[idx], "ench": eid})
 
 
 static func deck_summary(repo: CardRepo) -> Array:

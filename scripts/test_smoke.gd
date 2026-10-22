@@ -125,6 +125,14 @@ func _initialize() -> void:
 				RunState.start_run(_map(), GameLayers.LAYER_TWO, PlayerClass.MECH)
 				RunState.relic_choice = [6014, 6015, 6016],
 			func(s): _check_curtain_reply(s)],
+		# R323：牛奶 6028 —— 领取后要弹「这两张卡被贴了附魔」的演示视图（点一下收起）。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relic_choice = []
+				RunState.pending_rewards = []
+				RunState.queue_relic_reward(RunState.MILK_RELIC_ID),
+			func(s): _check_milk_enchant(s)],
 		["res://scenes/deck_edit.tscn", func():
 				_reset()
 				RunState.start_run(_map())
@@ -3602,6 +3610,50 @@ func _check_overflow(scene: Variant) -> void:
 	else:
 		print("SMOKE OK 溢出兜底：效果区 %d 槽 / 敌方效果 %d 槽 / 道具 %d 槽（末位均不越界，超出改画 +N 摘要）"
 				% [cap_eff, cap_ee, cap_rel])
+
+
+func _check_milk_enchant(s: Node) -> void:
+	## R323（用户口径）：牛奶附完魔，要**把两张卡摆出来 + 用动画把附魔标志贴上**。
+	## 这里真走一遍「领取 → 演示视图 → 点一下收起」，并核对演示数据与真落地的一致。
+	var p: Variant = s.get("_reward_panel")
+	if p == null:
+		_smoke_fail("R323 牛奶：场景没有挂上 RewardPanel")
+		return
+	var idx := -1
+	for i in RunState.pending_rewards.size():
+		var e: Dictionary = RunState.pending_rewards[i]
+		if str(e.get("kind", "")) == "relic" \
+				and int(e.get("id", -1)) == RunState.MILK_RELIC_ID:
+			idx = i
+			break
+	if idx < 0:
+		_smoke_fail("R323 牛奶：待领奖励里找不到牛奶那一条")
+		return
+	p.open()
+	p._claim_entry(idx)
+	if int(p._view) != RewardPanel.VIEW_ENCHANT:
+		_smoke_fail("R323 牛奶：领取后应切到附魔演示视图（实际 view=%d）" % int(p._view))
+		return
+	if RunState.milk_anim.is_empty():
+		_smoke_fail("R323 牛奶：演示数据为空（界面没东西可画）")
+		return
+	var n_cards: int = (p.get("_ench_cards") as Array).size()
+	var n_ids: int = (p.get("_ench_ids") as Array).size()
+	if n_cards < 1 or n_cards != n_ids:
+		_smoke_fail("R323 牛奶：演示卡面 / 附魔 id 数量对不上（%d / %d）"
+				% [n_cards, n_ids])
+		return
+	# 点一下（左键）→ 收起回列表，且演示数据清空（不会串到下一次）
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = Vector2(10, 10)
+	p._on_input(ev)
+	if int(p._view) != RewardPanel.VIEW_LIST or not RunState.milk_anim.is_empty():
+		_smoke_fail("R323 牛奶：点一下应收起演示并清空数据（view=%d anim=%d）"
+				% [int(p._view), RunState.milk_anim.size()])
+		return
+	print("  [smoke] 牛奶附魔演示：%d 张卡 / 点一下收起" % n_cards)
 
 
 func _check_curtain_reply(s: Node) -> void:

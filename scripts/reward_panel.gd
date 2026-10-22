@@ -2,6 +2,7 @@ class_name RewardPanel
 extends CanvasLayer
 
 const UiPop = preload("res://scripts/ui_pop.gd")
+const UiAssets = preload("res://scripts/ui_assets.gd")
 ## 奖励悬浮窗（R119）—— 一次获得的**所有**奖励都在这里处理。
 ##
 ## 为什么要有它：
@@ -32,6 +33,13 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 const VIEW_LIST := 0
 const VIEW_RELIC := 1
 const VIEW_CARDS := 2
+## R323：牛奶 6028 的「附魔贴上去了」演示视图 —— 只播动画，点一下就回列表。
+const VIEW_ENCHANT := 3
+const ENCH_CARD_IN := 220       # 两张卡淡入用时（ms）
+const ENCH_STEP := 620          # 第一张开始贴 → 第二张开始贴，间隔
+const ENCH_STAMP := 380         # 一张卡的「贴上去」时长
+const ENCH_DROP := 64.0         # 徽章从上方多高落下（再高会压到标题）
+const ENCH_BADGE_K := 1.9       # 演示里徽章放大倍数（比卡面大，看得清）
 
 ## R121：本面板是「满屏 + 接管鼠标」的覆盖层 → 打开/关闭时在 UiGate 登记/撤销，
 ## 让下层的道具悬停（RelicViewer 速览浮层等）自动让位。
@@ -68,6 +76,10 @@ var _mention_pin := {}          # R302：触屏点一下钉住的那份说明（
 var _pick_sel := -1           # R167：卡牌三选一里「已点选、待确认」的那张（触屏没有悬停）
 var _scroll := 0.0
 var _cached_n := -1
+var _ench_t0 := 0                # R323：附魔演示的起点（毫秒）
+var _ench_pin := -1.0            # R323：>=0 时把演示进度钉在这个毫秒数（出图核验）
+var _ench_cards: Array = []      # R323：演示用的两份卡面（已烤好附魔数值）
+var _ench_ids: Array = []        # R323：对应的附魔 id
 var _repo_cards: CardRepo
 var _repo_relics: RelicRepo
 ## R216：跳去选卡页**之前**让宿主收尾（战斗：房间标记完成 / Boss 推进层；事件：房间完成）。
@@ -140,6 +152,7 @@ func open() -> void:
 	_hover_row = -1
 	_hover_card = -1
 	_pick_sel = -1
+	_ench_t0 = 0
 	_refresh_btn()
 	_root.queue_redraw()
 
@@ -151,6 +164,7 @@ func close() -> void:
 	_view = VIEW_LIST
 	_scroll = 0.0
 	_pick_sel = -1
+	_ench_t0 = 0
 	_refresh_btn()
 
 
@@ -163,6 +177,9 @@ func _exit_tree() -> void:
 func _process(_delta: float) -> void:
 	if _cached_n != RunState.pending_reward_count():
 		_refresh_btn()
+	# R323：附魔演示是**时间基**动画 —— 只有这一种视图需要逐帧重绘
+	if _view == VIEW_ENCHANT and _root != null and _root.visible:
+		_root.queue_redraw()
 	# R186：面板绘制无时间基元素（悬停 / 滚动 / 提及悬浮均由事件驱动重绘）
 	# → 不逐帧重绘（移动端耗电；PC 端闲置占用同步下降）。
 
@@ -265,13 +282,69 @@ func _wrap(text: String, max_w: float, size: int) -> Array[String]:
 func _claim_entry(i: int) -> void:
 	if i < 0 or i >= RunState.pending_rewards.size():
 		return
+	var was_milk := _is_milk_entry(i)
 	RunState.claim_pending_reward(i)
 	_view = VIEW_LIST
 	_scroll = 0.0
+	# R323（用户口径）：牛奶附完魔，**把两张卡摆出来、用动画把标志贴上去** ——
+	# 原来两张卡当场被默默改掉，玩家根本不知道附了什么。
+	if was_milk and not RunState.milk_anim.is_empty():
+		_open_enchant_view()
+		return
 	_root.queue_redraw()
 	# R216：即时道具（鸭血 / 源数之力 / 失忆药水）领完**立刻**去选卡 ——
 	# 旧版要玩家先关掉本界面、回到地图 `_ready` 才跳，表现就是「拿了鸭血没反应」。
 	_route_if_waiting_pick()
+
+
+func _is_milk_entry(i: int) -> bool:
+	## 这条待领奖励是不是「牛奶 6028」。（牛奶也可能从陶罐里掉出来，所以按 id 判，
+	## 不按来源判。）
+	if i < 0 or i >= RunState.pending_rewards.size():
+		return false
+	var e: Dictionary = RunState.pending_rewards[i]
+	return str(e.get("kind", "")) == "relic" \
+			and int(e.get("id", -1)) == RunState.MILK_RELIC_ID
+
+
+func _open_enchant_view() -> void:
+	## R323：把 `RunState.milk_anim` 里那两张卡做成**卡面副本**（数值已烤上附魔），
+	## 然后逐张播放「附魔标志从上方落下 → 印在费用正下方」的动画。
+	## ⚠️ 副本上的 `enchant` 先清空 —— 静态标记由动画接管，否则会先出现一次再被贴一次。
+	_ench_cards = []
+	_ench_ids = []
+	for it: Dictionary in RunState.milk_anim:
+		var base: CardData = _repo_cards.get_card(int(it.get("card_id", 0)))
+		var eid := str(it.get("ench", ""))
+		if base == null or eid == "":
+			continue
+		var c := CardData.from_dict(base.to_dict())
+		RunState._apply_mod(c, RunState.enchant_mod(eid))
+		c.enchant = ""            # 静态标记交给动画画
+		_ench_cards.append(c)
+		_ench_ids.append(eid)
+	if _ench_cards.is_empty():
+		_root.queue_redraw()
+		return
+	# 正常路径是从「领取」进来的（面板本来就开着）；出图 / 演示路径是直接调这里，
+	# 所以缺一次「真正打开」的登记（否则 `_on_draw` 开头的 `if not _open` 会直接吞掉）。
+	if not _open:
+		_open = true
+		UiGate.push(GATE_ID)
+		_root.visible = true
+		UiPop.play(_root, 1.0)
+	_view = VIEW_ENCHANT
+	_ench_t0 = Time.get_ticks_msec()
+	_root.queue_redraw()
+
+
+func _close_enchant_view() -> void:
+	RunState.milk_anim = []
+	_ench_cards = []
+	_ench_ids = []
+	_view = VIEW_LIST
+	_ench_t0 = 0
+	_root.queue_redraw()
 
 
 func _route_if_waiting_pick() -> void:
@@ -352,6 +425,8 @@ func _on_draw() -> void:
 			_draw_relic()
 		VIEW_CARDS:
 			_draw_cards()
+		VIEW_ENCHANT:
+			_draw_enchant()
 		_:
 			_draw_list()
 	_draw_mention_tip()   # R168：悬浮件画在最后（压在所有内容之上）
@@ -445,6 +520,107 @@ func _draw_row(i: int, rr: Rect2) -> void:
 	# 已处理 → 整条蒙一层白（置灰）
 	if settled:
 		_root.draw_rect(rr, Color(1, 1, 1, 0.62), true)
+
+
+func _enchant_panel_rect() -> Rect2:
+	## R323：附魔演示的面板（两张卡并排 + 标题 + 底部提示）。
+	var vs := _vs()
+	var pw := minf(vs.x - 72.0, 2.0 * CARD_W + 180.0)
+	var ph := minf(vs.y - 64.0, CARD_H + 226.0)
+	return Rect2(Vector2((vs.x - pw) / 2.0, (vs.y - ph) / 2.0), Vector2(pw, ph))
+
+
+func _draw_enchant_badge(center: Vector2, r: float, eid: String, alpha: float) -> void:
+	## R323：附魔徽章（与卡面 `_draw_enchant_mark` 同一套视觉：深色圆盘 + 种类色环 + 素材图标），
+	## 但**透明度 / 半径由动画控制**，所以这里重画一份而不是调卡面那口。
+	if r < 2.0 or alpha <= 0.01:
+		return
+	var col: Color = CardData.enchant_color(eid)
+	var disc: Color = col.darkened(0.74)
+	disc.a = 0.94 * alpha
+	_root.draw_circle(center, r, disc)
+	_root.draw_arc(center, r, 0.0, TAU, 28, Color(col.r, col.g, col.b, alpha),
+			maxf(1.2, r * 0.20), true)
+	var icon: Texture2D = UiAssets.enchant_icon(eid)
+	if icon != null:
+		var ir := r * 0.86
+		_root.draw_texture_rect(icon,
+				Rect2(center - Vector2(ir, ir), Vector2(ir, ir) * 2.0), false,
+				Color(1, 1, 1, alpha))
+	else:
+		var fs: int = maxi(8, roundi(r * 1.1))
+		_root.draw_string(_font_bold, center + Vector2(-fs * 0.5, fs * 0.38),
+				CardData.enchant_name(eid).substr(0, 1),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, alpha))
+
+
+func _draw_enchant() -> void:
+	## R323（用户口径）：牛奶附魔后**显示这两张卡**，并用动画**把附魔标志贴上**。
+	##   · 0 ~ ENCH_CARD_IN：两张卡淡入（微微放大落定）
+	##   · 之后每张各来一次「徽章从上方落下 → 印在费用正下方 → 一圈扩散环」
+	##   · 全部贴完 → 底部提示「点击任意处继续」
+	var vs := _vs()
+	var now := Time.get_ticks_msec()
+	var el := _ench_pin if _ench_pin >= 0.0 else float(now - _ench_t0)
+	_root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.045, 0.08, 0.90), true)
+	var pr := _enchant_panel_rect()
+	UiTheme.draw_scroll_bg(_root, pr)
+	var ink := Color("2f2a20")
+	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
+			"牛奶 —— 随机附魔", HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
+			UiTheme.FS_HEADING, ink)
+	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 76),
+			"这两张卡被贴上了附魔（数值已经生效）",
+			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
+	var n := _ench_cards.size()
+	var total := n * CARD_W + maxi(0, n - 1) * CARD_GAP
+	var x0 := pr.position.x + (pr.size.x - total) / 2.0
+	var y0: float = pr.position.y + 112.0
+	var card_u := clampf(el / ENCH_CARD_IN, 0.0, 1.0)
+	var all_done := true
+	for i in n:
+		var card: CardData = _ench_cards[i]
+		var eid := str(_ench_ids[i])
+		var rr := Rect2(x0 + i * (CARD_W + CARD_GAP), y0, CARD_W, CARD_H)
+		# 卡面：淡入 + 从 0.94 放大到 1.0（用 draw 的缩放只能靠画两次，这里只做透明度）
+		if card_u < 1.0:
+			# 未完全淡入：先画一层暗的占位（避免「凭空出现」）
+			_root.draw_rect(rr, Color(0.9, 0.88, 0.82, 0.20 * card_u), true)
+		CardFace.draw_pick(_root, card, rr, _font, _font_bold, false)
+		if card_u < 1.0:
+			_root.draw_rect(rr, Color(0.05, 0.045, 0.08, 0.75 * (1.0 - card_u)), true)
+		# 附魔标志下落 + 印上
+		var dt := el - float(ENCH_CARD_IN + i * ENCH_STEP)
+		if dt < 0.0:
+			all_done = false
+			continue
+		var u := clampf(dt / float(ENCH_STAMP), 0.0, 1.0)
+		var ev := 1.0 - pow(1.0 - u, 3.0)          # ease-out cubic
+		var center := CardFace.enchant_badge_center(rr)
+		var r: float = CardFace.badge_radius(rr) * ENCH_BADGE_K
+		var drop := center + Vector2(0, -ENCH_DROP * (1.0 - ev))
+		var a := clampf(u * 3.0, 0.0, 1.0)
+		_draw_enchant_badge(drop, r * lerpf(1.25, 1.0, ev), eid, a)
+		if u >= 0.62:
+			# 印上去那一下：一圈扩散环
+			var k := (u - 0.62) / 0.38
+			var col: Color = CardData.enchant_color(eid)
+			_root.draw_arc(center, r * (1.0 + 2.4 * k), 0.0, TAU, 28,
+					Color(col.r, col.g, col.b, (1.0 - k) * 0.9), 2.5, true)
+		if u < 1.0:
+			all_done = false
+		# 卡下：卡名 · 附魔名
+		var label := "%s · %s" % [card.card_name, CardData.enchant_name(eid)]
+		var lw := _font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				UiTheme.FS_BODY).x
+		_root.draw_string(_font_bold,
+				Vector2(rr.position.x + CARD_W / 2.0 - lw / 2.0, rr.end.y + 34.0),
+				label, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_BODY,
+				CardData.enchant_color(eid))
+	if all_done or el > 3200.0:
+		_root.draw_string(_font, Vector2(pr.position.x, pr.end.y - 30.0),
+				"点击任意处继续", HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
+				UiTheme.FS_CAPTION, UiTheme.INK_600)
 
 
 func _draw_relic() -> void:
@@ -713,6 +889,13 @@ func _card_rect_in(e: Dictionary, i: int) -> Rect2:
 func _on_input(event: InputEvent) -> void:
 	if not _open:
 		return
+	# R323：附魔演示视图 —— 左键 / 右键都直接收起（不打断动画也不卡住玩家）
+	if _view == VIEW_ENCHANT:
+		if event is InputEventMouseButton and event.pressed \
+				and (event.button_index == MOUSE_BUTTON_LEFT \
+				or event.button_index == MOUSE_BUTTON_RIGHT):
+			_close_enchant_view()
+		return
 	if event is InputEventMouseMotion:
 		_on_motion(event.position)
 		return
@@ -870,6 +1053,29 @@ func _demo_start() -> void:
 		if a.begins_with("--r119"):
 			mode = a
 			break
+	# R323 出图：牛奶附魔演示 —— 不碰卡组，直接造两份演示数据。
+	#   `-- --screenshot --milkdemo`            整段动画（约 1.2s 后落定）
+	#   `-- --screenshot --milkdemo --milkpin 900` 把进度钉在 900ms（一张已贴、一张在下落）
+	if "--milkdemo" in args:
+		RunState.run_active = true
+		var pin := -1.0
+		for k2 in args.size():
+			if args[k2] == "--milkpin" and k2 + 1 < args.size():
+				pin = float(int(args[k2 + 1]))
+		# 两种不同附魔：颜色不同，玩家才看得出「这两张贴的不是同一种」
+		RunState.milk_anim = [
+			{"card_id": 8003, "ench": "costdown"},
+			{"card_id": 8002, "ench": "damage"},
+		]
+		var tm := Timer.new()
+		tm.wait_time = 0.25
+		tm.one_shot = true
+		tm.timeout.connect(func():
+			_open_enchant_view()
+			_ench_pin = pin)
+		add_child(tm)
+		tm.start()
+		return
 	if mode == "":
 		return
 	var forced := -1

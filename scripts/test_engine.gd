@@ -8405,6 +8405,28 @@ func _init() -> void:
 			if not r224_ok_j:
 				r224_ok = false
 	check(r224_ok, "牛奶：每张被附的卡都过 enchant_ok 资格判定（附魔前判定）")
+	# R323：`milk_anim` 是界面演「把附魔标志贴上去」用的数据 —— 必须与真落地的附魔一致
+	# （记错卡 / 记错附魔种类，玩家就会看到「贴了 A、实际生效的是 B」）。
+	var r323_bad := 0
+	for it: Dictionary in RunState.milk_anim:
+		var cid := int(it.get("card_id", 0))
+		var eid := str(it.get("ench", ""))
+		# ⚠️ 卡组里**同名卡有多张**（初始卡组就有重复）→ 不能只认「第一个 id 相同的」，
+		# 要扫描全部同 id 的槽位，只要有一个挂了这种附魔就算对上（第一版这么错过一次）。
+		var hit := false
+		for i in RunState.deck_ids.size():
+			if int(RunState.deck_ids[i]) == cid \
+					and RunState.enchant_id_of(RunState.deck_mods[i]) == eid:
+				hit = true
+				break
+		if not hit:
+			r323_bad += 1
+	check(not RunState.milk_anim.is_empty() and r323_bad == 0,
+			"R323 牛奶：演示数据 %d 条，每条都对应卡组里真实落地的附魔（不符 %d 条）"
+					% [RunState.milk_anim.size(), r323_bad])
+	check(RunState.milk_anim.size() <= RunState.MILK_ENCHANTS,
+			"R323 牛奶：演示数据不超过 %d 条（实际 %d）"
+					% [RunState.MILK_ENCHANTS, RunState.milk_anim.size()])
 	# ④ 附魔资格唯一口（R224 从 shop_scene._enchant_ok 上移）
 	var r224_okrepo := CardRepo.load_json()
 	check(RunState.enchant_ok("damage", r224_okrepo.get_card(9003), 9999)

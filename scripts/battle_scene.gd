@@ -505,6 +505,7 @@ func _ready() -> void:
 	_build_level_menu()
 	_build_over_panel()
 	_load_entry_level()
+	_mark_battle_checkpoint()
 	# R113：顶栏按钮统一走 chip（实心 + compact —— 顶栏按钮只有 28px 高，标准内距会撑出格子）
 	for _tb: Button in [log_btn, deck_btn, map_btn, end_turn_btn, menu_btn]:
 		UiTheme.apply_chip(_tb, true, true)
@@ -6058,6 +6059,32 @@ func _build_over_panel() -> void:
 		b.pressed.connect(func(): sfx.play("click"))
 
 
+func _mark_battle_checkpoint() -> void:
+	## R323：**进战斗时写一份存档**，记下「我正停在这一场」——
+	## 玩家在战斗里点「返回标题」，标题页的「继续游戏」才能回到这一场。
+	## 原来存档只在地图检查点写，于是回到地图时那一格早被标成「已走过」
+	## （`advance()` 在点格子那一刻就标了），这场战斗再也打不到。
+	## ⚠️ 只在真实游玩时写：出图 / headless 探针不落盘。
+	if not RunState.run_active or _shot_pending or _net_mode:
+		return
+	if DisplayServer.get_name() == "headless":
+		return
+	if _cur_level.is_empty():
+		return
+	RunState.resume_battle = {"node": RunState.pending_node, "level": _cur_level}
+	RunSave.save_run()
+
+
+func _clear_battle_checkpoint() -> void:
+	## R323：这一场打完了（胜 / 负）→ 立刻清掉「正在打的这场」并落盘，
+	## 否则继续游戏会把你送回一场已经打完的战斗。
+	if RunState.resume_battle.is_empty():
+		return
+	RunState.resume_battle = {}
+	if RunState.run_active and DisplayServer.get_name() != "headless":
+		RunSave.save_run()
+
+
 func _settle_before_pick() -> void:
 	## R216：奖励界面为了「即时道具立刻结算」要跳走时，先把本场的收尾做完。
 	## 口径与 `_on_over_restart` 一致：Boss 通关有下一层 → 推进层；普通胜利 → 房间完成。
@@ -6090,6 +6117,7 @@ func _on_over_restart() -> void:
 
 func _show_over(win: bool) -> void:
 	_over_shown = true
+	_clear_battle_checkpoint()   # R323：这场结束了 → 续档不再指向它
 	_run_next_layer = 0
 	_over_hint.text = ""
 	_over_hint.add_theme_color_override("font_color", UiTheme.INK_600)

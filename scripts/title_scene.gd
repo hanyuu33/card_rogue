@@ -183,6 +183,11 @@ func _on_continue() -> void:
 		push_warning("RunSave：继续游戏读档失败，留在标题")
 		return
 	RunRecord.resume()   # 这一局接着打 → 保证有开始时间（对战记录收尾时才写得出来）
+	# R323：存档若停在**一场没打完的战斗**里 → 直接回那一场；
+	# 回地图的话，那一格早在进战斗时就被标成「已走过」，这场就永远打不到了。
+	if not RunState.resume_battle.is_empty():
+		SceneFx.goto("res://scenes/battle.tscn")
+		return
 	SceneFx.goto("res://scenes/map.tscn")
 
 

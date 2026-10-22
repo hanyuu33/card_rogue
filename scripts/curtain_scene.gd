@@ -103,6 +103,12 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(t)
 		t.start()
+	# R323：开局（选完角色）/ 换层之后，这里就是「本层起点」—— 立刻存一份，
+	# 否则玩家在卷卷这段对话里点「返回标题」，标题页连「继续游戏」都没有
+	# （地图检查点还没机会写）。存档带着 relic_choice，继续游戏会把人送回这段对话。
+	if RunState.run_active and DisplayServer.get_name() != "headless" \
+			and "--screenshot" not in OS.get_cmdline_user_args():
+		RunSave.save_run()
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续这段对话",
 		"sub": "起点 · 按 Esc 返回",
