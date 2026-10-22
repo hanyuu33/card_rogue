@@ -252,13 +252,14 @@ static func draw_glyph(cv: CanvasItem, c: Vector2, r: float, glyph: String, col:
 			var bm_e := bm.duplicate()
 			bm_e.append(bm[0])
 			cv.draw_polyline(bm_e, col, 1.4)
-		"up", "down":              # buff 增益 / 减益：粗箭头
-			var sgn: float = -1.0 if glyph == "up" else 1.0
-			cv.draw_line(c + Vector2(0.0, sgn * -r * 0.58), c + Vector2(0.0, sgn * r * 0.56),
+		"up", "down":              # buff 增益（向上）/ 减益（向下）：粗箭头
+			# ⚠️ R304 修：旧写法把 up/down 画反了（增益显示成向下箭头，减益反而朝上）。
+			var sgn: float = 1.0 if glyph == "up" else -1.0
+			cv.draw_line(c + Vector2(0.0, sgn * r * 0.58), c + Vector2(0.0, -sgn * r * 0.60),
 					col, 1.6)
 			cv.draw_colored_polygon(PackedVector2Array([
-				c + Vector2(0.0, sgn * -r * 0.82), c + Vector2(-r * 0.44, sgn * -r * 0.20),
-				c + Vector2(r * 0.44, sgn * -r * 0.20)]), col)
+				c + Vector2(0.0, -sgn * r * 0.82), c + Vector2(-r * 0.44, sgn * r * 0.20),
+				c + Vector2(r * 0.44, sgn * r * 0.20)]), col)
 		_:                         # 中性 / 未知：小菱形
 			cv.draw_colored_polygon(PackedVector2Array([
 				c + Vector2(0.0, -r * 0.52), c + Vector2(r * 0.52, 0.0),
