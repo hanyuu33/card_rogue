@@ -39,6 +39,12 @@ var _spell_scope_depth:= 0
 ## R314 lucky 7（6045）：当下这一轮是否处在「生效回合」。
 ## ⚠️ 由**我方回合开始**置位 / 复位，敌方回合**不清** —— 见常量区的口径说明。
 var _lucky7_active:= false
+## R315 爆米花（6046）：本回合**还没有**以敌人 / 敌人所在格为目标使用技能。
+## 每个我方回合开始置 true；一旦有这么一次技能就置 false；回合结束时按它决定下回合多抽。
+var _popcorn_quiet:= true
+## R315 爆米花：**下个我方回合**的额外抽牌张数（回合结束时累加、下回合开始消费清零）。
+## 不复用 `state.self_next_draw`：那条日志写死了「负重减轻」，混用会张冠李戴。
+var popcorn_draw:= 0
 var log: Array[String] = []
 var rng:= RandomNumberGenerator.new()
 var self_relics: Array[int] = []
@@ -365,6 +371,18 @@ const SWIFT_RUNE_PCT:= 10        # 每张牌的百分比（加倍时 ×2）
 const STORAGE_RELIC_ID:= 6044
 const LUCKY7_RELIC_ID:= 6045
 const LUCKY7_DMG:= 7
+# R315 爆米花（6046）：**本回合没有以敌人（或敌人所在格）为目标使用技能** → 下回合多抽 1 张。
+#   * 判据是「**目标**」，不是「造成了伤害」—— 与虚空主宰 9082 的 `_spell_hit_enemy`
+#     （看窗口内有没有打到敌人）刻意分开：打空地 / 打自己人的技能照样算「指向了敌人」之外，
+#     而 AoE 扫到敌人但目标是空格时**不算**（卡面写的是「以…为目标」）。
+#   * 只在 `use_spell`（技能卡）里记账；效果卡 / 单位攻击都不算「使用技能」。
+const POPCORN_RELIC_ID:= 6046
+const POPCORN_DRAW:= 1
+# R315 应急电源（9170，机械之心 0 费史诗技能 · 次元）：+1 费 + 抽 1 + 全体友方回 2。
+const EMERGENCY_POWER_ID:= 9170
+const EMERGENCY_POWER_ENERGY:= 1
+const EMERGENCY_POWER_DRAW:= 1
+const EMERGENCY_POWER_HEAL:= 2
 const BASIN_RELIC_ID:= 6041
 const COURAGE_RELIC_ID:= 6031
 const COURAGE_ELITE_TURNS:= 1
@@ -1678,6 +1696,8 @@ func _begin_turn(side: String) -> void :
 		# ⚠️ 复位放在这里（而不是回合结束）：置位后要覆盖「我方回合 + 紧接着的敌方回合」，
 		#    下个我方回合开始时才清 —— 敌方回合才是真正会掉血的时段。
 		_lucky7_active = false
+		# R315 爆米花（6046）：新回合开始 → 「本回合还没指向敌人」。
+		_popcorn_quiet = true
 		if self_relics.has(LUCKY7_RELIC_ID) and RunState.lucky7_tick():
 			_lucky7_active = true
 			_log("lucky 7：第 %d 个回合生效 —— 本回合免疫所有 HP 伤害，技能额外 +%d"
@@ -1758,6 +1778,13 @@ func _begin_turn(side: String) -> void :
 					whisper_txt = "本回合多抽 1 张卡"
 			_log("鸭之低语：%s" % whisper_txt)
 			action.emit("whisper", {"text": whisper_txt})
+		# R315 爆米花：上回合攒下的「没用技能打敌人」奖励 → 本回合多抽（只发一次）。
+		if popcorn_draw > 0:
+			extra_draw += popcorn_draw
+			var pc_draw := popcorn_draw
+			popcorn_draw = 0
+			_log("爆米花：上回合没用技能指向敌人 → 本回合多抽 %d 张" % pc_draw)
+			action.emit("popcorn", {"draw": pc_draw, "side": SIDE_SELF})
 		# 负重减轻（8066，R201）：上回合「选卡消失」换来的额外抽牌，**只在本回合发放一次**
 		if state.self_next_draw > 0:
 			extra_draw += state.self_next_draw
@@ -2934,6 +2961,13 @@ func end_turn() -> void :
 	if current_side == SIDE_SELF:
 		# 罐子（9157，R245）：回合结束时**还在手卡**的这张卡 → 本场消失 + 召唤友方工事。
 		# ⚠️ 必须排在 `discard_hand()` **之前**：手牌先被弃掉，这效果就永远触发不了。
+		# R315 爆米花（6046）：本回合**一次都没**以敌人 / 敌人所在格为目标用过技能 → 下回合多抽 1。
+		# ⚠️ 放在弃牌**之前**：这两个都是「回合结束的收尾」，顺序无关，但挨着 `_jar_tick`
+		#    好读，也保证它一定在本方回合的收尾里跑到。
+		if self_relics.has(POPCORN_RELIC_ID) and _popcorn_quiet:
+			popcorn_draw += POPCORN_DRAW
+			_log("爆米花：本回合没用技能指向敌人 → 下回合多抽 %d 张（累计 %d）"
+					% [POPCORN_DRAW, popcorn_draw])
 		_jar_tick()
 		# R314 储物箱（6044）：持有 → 回合结束**不弃手牌**（keep_all）。
 		# 日志分开写：读者要能一眼看出「这次一张都没弃，是因为道具」。
@@ -6202,6 +6236,13 @@ func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 	# 虚空主宰（9082）：技能结算窗口 —— 窗口内对敌方造成过伤害就记一笔（手卡里本卡 -2 费）
 	_spell_active = true
 	_spell_hit_enemy = false
+	# R315 爆米花（6046）：记「本回合有没有以敌人 / 敌人所在的格子为目标使用技能」。
+	# 放在**结算之前**、蓄力循环之外：蓄力重放同一张卡不会改变「目标是不是敌人」这件事。
+	# ⚠️ 只认 `use_spell`（我方的技能卡）—— `remote_spell` 是敌方，与这件道具无关。
+	if target is Vector2i:
+		var pc_t: Placement = state.unit_at(target)
+		if pc_t != null and pc_t.owner != SIDE_SELF:
+			_popcorn_quiet = false
 	var detail:= ""
 	for _ch_i in times:
 		var _ch_d:= _run_spell_effect(card, target)
@@ -7855,6 +7896,35 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			return str(_op_deal_damage(side, _spell_dmg(side, card.value, card), target))
 		8002:
 			return str(_op_deal_damage(side, _spell_dmg(side, 4, card), target))
+		EMERGENCY_POWER_ID:
+			# 应急电源（9170，R315，机械之心 0 费史诗技能 · 次元）：
+			#   +1 费 → 抽 1 张 → 场上**所有友方单位**各回复 2 点生命（不超过各自最大生命）。
+			# * 加费直接 `state.energy +=`（与拆解 8049 同口径：不污染 self_energy_spent，
+			#   当回合可超额）；界面靠能量变化的逐帧差值自动飘字。
+			# * 回血逐格发 `heal` 动作 → 战斗场景走既有的治疗表现，不新造一套。
+			# * 「友方单位」= 该 side 场上的盟友 / 工事（`_side_cells` 只给有单位的格子）。
+			state.energy += EMERGENCY_POWER_ENERGY
+			var ep_drawn := _draw_many(EMERGENCY_POWER_DRAW)
+			var ep_n := 0
+			var ep_total := 0
+			for ep_cell: Vector2i in _side_cells(side):
+				var ep_p: Placement = state.unit_at(ep_cell)
+				if ep_p == null or ep_p.owner != side:
+					continue
+				var ep_before: int = ep_p.health
+				ep_p.health = mini(ep_p.card.health,
+						ep_p.health + EMERGENCY_POWER_HEAL)
+				var ep_gain: int = ep_p.health - ep_before
+				ep_n += 1
+				if ep_gain > 0:
+					ep_total += ep_gain
+					action.emit("heal", {"cell": ep_cell, "card": ep_p.card,
+							"amount": ep_gain, "health": ep_p.health, "side": side})
+			_log("应急电源：+%d 费，抽 %d 张，%d 个友方单位各回复 %d（共 %d）"
+					% [EMERGENCY_POWER_ENERGY, ep_drawn, ep_n,
+							EMERGENCY_POWER_HEAL, ep_total])
+			return "获得 %d 点费用，抽 %d 张卡，%d 个友方单位各回复 %d 点生命" \
+					% [EMERGENCY_POWER_ENERGY, ep_drawn, ep_n, EMERGENCY_POWER_HEAL]
 		UPGRADE_ID:
 			# 升级 8027（R82，机械之心）：改造一个己方盟友或工事。
 			# 走 _run_spell_effect 而不是 use_spell 的分支 → 蓄力（9085）叠它会叠多次，
@@ -10257,6 +10327,9 @@ func relic_highlight(id: int) -> bool:
 			return state.self_card_plays == WIND_FAIRY_AT - 1
 		LUCKY7_RELIC_ID:
 			return _lucky7_active
+		POPCORN_RELIC_ID:
+			# 本回合到现在还没指向敌人 → 只要这么保持到回合结束就会拿到那 1 张抽牌
+			return _popcorn_quiet
 		DUCK_WING_RELIC_ID:
 			return turn_number == DUCK_WING_TURN
 		6005:   # 鸭蹼：前两回合开局多抽一张 → 该回合一开始就亮

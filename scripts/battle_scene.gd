@@ -9916,6 +9916,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
 					"text": "激发 · 全体 -%d%s" % [in_d, (" ×%d" % in_n) if in_n > 1 else ""],
 					"col": Color("a05ad0"), "size": 17, "start": n, "dur": 1600})
+		"popcorn":
+			# R315 爆米花 6046：本回合没用技能指向敌人 → 下回合多抽 1 张。
+			# 飘字只写「拿到了什么」，有时间维度（start + dur → 位移 + 淡出）。
+			var pc_d := int(data.get("draw", 1))
+			_say("◇ 爆米花：没用技能指向敌人 → 下回合多抽 %d 张" % pc_d)
+			_floaters.append({"pos": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 30.0),
+					"text": "爆米花 · 下回合 +%d 抽" % pc_d,
+					"col": Color("f0d68a"), "size": 15, "start": n, "dur": 1700})
 		"lucky7":
 			# R314 lucky 7 6045：满 7 回合 → 本轮回免疫 HP 伤害 + 技能 +7。
 			# 只演「生效了」这一下：飘字有时长（start + dur → 位移 + 淡出），不是静态贴图。

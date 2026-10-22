@@ -5212,6 +5212,29 @@
       "target_mode": "none",
       "color": "红",
       "image": ""
+    },
+    {
+      "id": 9170,
+      "name": "应急电源",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "获得 1 点费用，抽 1 张卡。场上所有友方单位回复 2 点生命。",
+      "target_mode": "none",
+      "color": "紫",
+      "image": ""
     }
   ]
 }
