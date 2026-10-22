@@ -24,6 +24,13 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const PAD := 24.0            # 卡面浮窗内边距：必须 ≥ 徽章半径 20.24（规范 §4.10 纪律 3）
 const CARD_SCALE := 2.4      # 卡面浮窗缩放（与事件页原口径一致）
+## R303（用户口径）：**浮窗不能只给一张卡面** —— 战斗内卡面只剩卡名（`name_only`），
+## 光看卡面读不到任何效果。现在浮窗 = 上半卡面（只作视觉识别）+ 下半**详细描述**：
+## 「种类 · 费用 · 稀有度 / 数值 / 效果正文 / 每个字段的名字+解释 / 附魔」。
+const TIP_W := 348.0         # 浮窗宽度（描述整宽折行，比原来 199 的窄条好读）
+const TIP_PAD := 14.0
+const TIP_CARD_H := 128.0    # 浮窗里那张卡面的高度（宽按卡面比例 63:76）
+const TIP_INFO_GAP := 20.0   # 卡面与文字区之间（留出数值徽章外溢的余量）
 const RELIC_W := 352.0       # 道具浮窗宽度
 const RELIC_PAD := 14.0
 const BLOCK_HEAD := "这条文案里提到的"   # 附带块标题
@@ -174,9 +181,12 @@ static func kind_label(ref: Dictionary) -> String:
 static func tip_size(font: Font, ref: Dictionary) -> Vector2:
 	## 悬浮件尺寸（不含位置）。
 	if str(ref.get("kind", "")) == "card":
-		var ch := 76.0 * CARD_SCALE
-		var cw := ch * 63.0 / 76.0
-		return Vector2(cw + PAD * 2.0, ch + PAD * 2.0)
+		var card := card_of(int(ref.get("id", -1)))
+		if card == null:
+			return Vector2(TIP_W, TIP_PAD * 2.0)
+		var h := TIP_PAD * 2.0 + TIP_CARD_H + TIP_INFO_GAP \
+				+ _blocks_h(font, _card_tip_blocks(card), TIP_W - TIP_PAD * 2.0)
+		return Vector2(TIP_W, h)
 	var rel := relic_of(int(ref.get("id", -1)))
 	var w := RELIC_W
 	var lines: Array[String] = []
@@ -216,10 +226,14 @@ static func draw_tip(canvas: CanvasItem, font: Font, font_bold: Font,
 		var card := card_of(int(ref.get("id", -1)))
 		if card == null:
 			return 0.0
-		var ch := 76.0 * CARD_SCALE
-		var cw := ch * 63.0 / 76.0
-		CardFace.draw(canvas, card, Rect2(frame.position + Vector2(PAD, PAD),
-				Vector2(cw, ch)), card.health, false, false, font, font_bold, -1, false)
+		# 卡面居中、只画卡名与数值徽章（效果写在下半，不挤在一张小卡上）
+		var cw := TIP_CARD_H * 63.0 / 76.0
+		var cx := frame.position.x + (sz.x - cw) * 0.5
+		CardFace.draw(canvas, card, Rect2(Vector2(cx, frame.position.y + TIP_PAD),
+				Vector2(cw, TIP_CARD_H)), card.health, false, false, font, font_bold,
+				-1, false, false, true)
+		_draw_card_tip_body(canvas, font, font_bold, card, frame,
+				frame.position.y + TIP_PAD + TIP_CARD_H + TIP_INFO_GAP)
 		return _draw_tip_block(canvas, font, font_bold, frame, sz, extra_bottom, block_text)
 	var rel := relic_of(int(ref.get("id", -1)))
 	if rel == null:
@@ -238,6 +252,65 @@ static func draw_tip(canvas: CanvasItem, font: Font, font_bold: Font,
 				HORIZONTAL_ALIGNMENT_LEFT, inner, UiTheme.FS_LABEL, Color("f0ead8"))
 		y += 19.0
 	return _draw_tip_block(canvas, font, font_bold, frame, sz, extra_bottom, block_text)
+
+
+static func _card_tip_blocks(card: CardData) -> Array:
+	## 卡牌浮窗下半段的**文字块**（R303）。顺序 = 基本信息 → 效果 → 字段 → 附魔。
+	## ⚠️ 文案与配色全部读数据层（`CardData` 的字段 / 附魔表），界面里不写特例。
+	var out: Array = []
+	out.append({"segs": [{"text": "%s · %d 费 · %s" % [card.kind, card.cost,
+			card.rarity_name()]}],
+			"col": Color("c9c3b4"), "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 0.0})
+	if card.kind == "盟友" or card.kind == "工事":
+		out.append({"segs": [{"text": CardFace.stats_line(card)}],
+				"col": Color("c9c3b4"), "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 2.0})
+	out.append({"segs": [{"text": "效果", "bold": true}], "col": UiTheme.ACCENT_GOLD,
+			"size": UiTheme.FS_CAPTION, "line": 16.0, "gap": 9.0})
+	out.append({"segs": CardText.parse(card.effect_text), "col": Color("f0ead8"),
+			"size": UiTheme.FS_LABEL, "line": 19.0, "gap": 3.0})
+	if not card.affixes.is_empty():
+		out.append({"segs": [{"text": "字段", "bold": true}], "col": UiTheme.ACCENT_GOLD,
+				"size": UiTheme.FS_CAPTION, "line": 16.0, "gap": 10.0})
+		for a: String in card.affixes:
+			var ac := CardData.affix_colors(a)
+			out.append({"segs": [{"text": CardData.affix_label(a), "bold": true},
+					{"text": "：" + CardData.affix_desc(a)}],
+					"col": ac[1] as Color, "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 4.0})
+	if card.has_enchant():
+		out.append({"segs": [
+				{"text": "附魔 · " + CardData.enchant_name(card.enchant), "bold": true},
+				{"text": "：" + CardData.enchant_desc(card.enchant)}],
+				"col": CardData.enchant_color(card.enchant), "size": UiTheme.FS_CAPTION,
+				"line": 17.0, "gap": 8.0})
+	return out
+
+
+static func _blocks_h(font: Font, blocks: Array, w: float) -> float:
+	## 文字块总高 —— 与 `_draw_card_tip_body()` **共用同一个折行口**
+	## （`CardText.wrap_segments`），测量与绘制不会各算一套（那是「字戳出框」的老病根）。
+	var fb := UiTheme.font_bold()
+	var h := 0.0
+	for b: Dictionary in blocks:
+		var size := int(b["size"])
+		var n := CardText.wrap_segments(font, fb, b["segs"], w, size).size()
+		h += float(b["gap"]) + float(n) * float(b["line"])
+	return h
+
+
+static func _draw_card_tip_body(canvas: CanvasItem, font: Font, font_bold: Font,
+		card: CardData, frame: Rect2, y: float) -> float:
+	## 画下半段文字（逐块推进 y）。提及名在暗底上用亮金（`bg_col` 传浮窗底色，
+	## 别让它拿正文色去猜亮度 —— R206 的老坑）。
+	var x := frame.position.x + TIP_PAD
+	var w := frame.size.x - TIP_PAD * 2.0
+	for b: Dictionary in _card_tip_blocks(card):
+		var size := int(b["size"])
+		y += float(b["gap"])
+		var asc := float(font.get_ascent(size))
+		var res := CardText.draw_wrapped_hits(canvas, font, font_bold, b["segs"], x, y + asc,
+				w, size, float(b["line"]), b["col"], -1.0, -1.0, Color("1a1c22"))
+		y = float(res.get("y", y + asc)) - asc
+	return y
 
 
 static func _draw_tip_block(canvas: CanvasItem, font: Font, font_bold: Font,

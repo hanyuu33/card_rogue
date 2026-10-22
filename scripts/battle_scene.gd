@@ -1164,6 +1164,19 @@ func _ready() -> void:
 		status_text += "② 误点空位只上膛 —— 琥珀「取消?」= 再点一次才取消"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r303tip" in args and engine != null:
+		# R303 演示：提及浮窗**完整版**（卡面 + 效果正文 + 字段解释）——
+		# 用一张自带字段的卡（救援构装体 8056 带「交换」），钉住浮窗不看鼠标。
+		# 出图：`battle.tscn -- --screenshot --level 0 --r303tip --shotframe 600`
+		var rt_c: CardData = repo.get_card(8056)
+		_mention_pin = {"kind": "card", "id": rt_c.id, "name": rt_c.card_name,
+				"rect": Rect2(INFO_X + 24.0, 250.0, 70.0, 16.0)}
+		_hover_mention = {}
+		_hover_card = null
+		_hover_hand = -1
+		selection = null
+		status_text = "R303：提及浮窗 = 卡面 + 效果正文 + 字段解释（不只是卡面）"
+		queue_redraw()
 	if ("--r297hand" in args or "--r302mention" in args) and engine != null:
 		# R297 演示②：**手牌技能卡**（没有力量 / 生命框）—— 效果框 + 字段框 + 附魔框。
 		# 出图：`battle.tscn -- --screenshot --level 0 --r297hand --shotframe 600`

@@ -17975,6 +17975,40 @@ func _init() -> void:
 	check(r298_m.size() == 1 and str(r298_m[0].get("name", "")) == "素体",
 			"R302 提及：卡面文案里的「素体」能被识别（%d 处）" % r298_m.size())
 
+	# ---- R303：提及浮窗不能只有卡面（战斗内卡面只剩卡名，光给卡面等于没说）----
+	var r303_repo := CardRepo.load_json()
+	var r303_card: CardData = CardData.from_dict(r303_repo.get_card(8025).to_dict())
+	var r303_text := ""
+	var r303_has_head := false
+	for b: Dictionary in Mention._card_tip_blocks(r303_card):
+		var bt := ""
+		for sg: Dictionary in b.get("segs", []):
+			bt += str(sg.get("text", ""))
+		r303_text += bt
+		if bt.contains("效果"):
+			r303_has_head = true
+	check(r303_has_head and r303_text.contains("回合结束时"),
+			"R303 浮窗：卡牌浮窗带「效果」标题与效果正文（不只是卡面）")
+	# 尺寸必须含描述区（比「一张卡面」高）
+	var r303_sz := Mention.tip_size(UiTheme.font(), {"kind": "card", "id": 8025})
+	check(r303_sz.x >= 300.0 and r303_sz.y > float(Mention.TIP_CARD_H) + 40.0,
+			"R303 浮窗：尺寸含描述区（%.0f × %.0f）" % [r303_sz.x, r303_sz.y])
+	# 字段解释 / 附魔也要进浮窗（与左栏同口径）
+	r303_card.add_affix("嘲讽")
+	r303_card.enchant = "save"
+	var r303_text2 := ""
+	for b: Dictionary in Mention._card_tip_blocks(r303_card):
+		for sg: Dictionary in b.get("segs", []):
+			r303_text2 += str(sg.get("text", ""))
+	check(r303_text2.contains("只能攻击这张卡") and r303_text2.contains("附魔"),
+			"R303 浮窗：字段解释与附魔也进浮窗")
+	# 测量与绘制必须共用折行口（各写一套 = 字戳出框）
+	var r303_msrc := FileAccess.get_file_as_string("res://scripts/mention.gd")
+	check_src(r303_msrc.find("_blocks_h(font, _card_tip_blocks(card)") >= 0
+			and r303_msrc.find("wrap_segments") >= 0
+			and r303_msrc.find("draw_wrapped_hits") >= 0,
+			"R303 浮窗：测量与绘制共用 wrap_segments，不是各算一套")
+
 	# ================================================================
 	# R241：随机种子（全局同一随机源）+ 对战记录详情快照
 	# ================================================================
