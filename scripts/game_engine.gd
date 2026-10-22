@@ -45,6 +45,15 @@ var focus_remaining:= 0        # 还要移除几张
 var focus_total:= 0            # 本层面板总共要移除几张（文案用：专注 2 / 负重减轻 1）
 var focus_draw_bonus:= false   # 负重减轻（8066，R201）：选完后下个回合开始多抽 1 张（focus_pick 完成时发放）
 var focus_label:= "专注"       # 面板文案标签（专注 / 负重减轻）；battle_scene 按它切标题与提示
+## R298 合体 9167：场上目标已选、等玩家从**卡组**挑一张「素体」的待办（UI kind = "merge"）。
+## `merge_hand_index` / `merge_cell` 在面板期间一直留着 —— 面板确认后由 battle_scene 用它们
+## 调 `use_spell()`，付费 / 弃牌 / 出牌计数 / 次元判定全部交回 use_spell 统一收尾。
+var merge_pending:= false
+var merge_hand_index:= -1
+var merge_cell:= Vector2i(-1, -1)
+var merge_body_atk:= -1        # 面板选中的素体力量（-1 = 未预取 → 自动取卡组第一张）
+var merge_body_hp:= -1         # 面板选中的素体生命（同上）
+var merge_body_name:= ""       # 面板选中的素体名（日志 / 目标失效时的提示）
 var whale_remaining:= 0
 var foresight_mode:= false  # 预判（9097）：等玩家选效果①/②
 var foresight_pick:= false  # 预判①：等玩家从弃牌区选一张 0 费技能卡
@@ -997,6 +1006,34 @@ const MODDER_HP:= 4
 #        抽到的技能此刻没有合法目标就换一张，最多把池子试一圈（`_fort_cast_one`）。
 const OUT_OF_CONTROL_FORT_ID:= 9161
 const OUT_OF_CONTROL_MAX_CASTS:= 20
+# ── R298：集束炮台 9166 / 合体 9167（机械之心）──
+# 「集束炮台」（9166，2 费**普通**盟友 1/6/1/1，机械之心）：两条效果各有一个唯一口 ——
+#   ① **入场** → `_cluster_turret_enter()`：往抽牌库塞 CLUSTER_TURRET_CANNON_COUNT 张
+#      「聚能炮击」9145（与生产订单 8048 同口径：`from_dict` 复制，绝不塞卡库共享实例）；
+#   ② **每次获得改造时** → 挂 `_on_unit_upgraded()`（所有改造入口的统一后置口，与机器鸟
+#      「改造抽牌」/ 榴弹击手「改造攻程」同一族）→ `_cluster_turret_reload()`：从卡组里
+#      捞一张聚能炮击**加入手卡**（手牌满则留在卡组，不销毁玩家的牌）。
+#   ⚠️ 只对**场上**的集束炮台生效 —— `_on_unit_upgraded()` 仅在场上 Placement 上被调，
+#      手牌 / 牌库里的改造（系统升级 8039 / 批量改造 8031）走不到这里（它得在场才装填）。
+#   ⚠️ 「改造」本身不给它数值：卡面没写 +攻/血 → **不填** `upgrade_*_bonus`
+#      （填了会被 `_upgrade_atk_gain` 当成「被改造时 +N」白送）。
+const CLUSTER_TURRET_ID:= 9166
+const CLUSTER_TURRET_CANNON_COUNT:= 2
+const CLUSTER_TURRET_TRAIT:= "集束"   # 只做标记（与「废铁」/「拾荒」同套路），判据只认它
+# 「合体」（9167，1 费**史诗**技能，机械之心，目标 = 己方盟友或工事）：
+#   两段式，全靠 `cast_merge()` 这一口：
+#    ① 先在**场上**指定一张己方盟友或工事（`target_mode = "unit"`，拖拽 / 点选同一条路）；
+#    ② 再弹「从卡组选一张素体」面板（`merge_pending`，UI kind = "merge"）；
+#    ③ 选中那张素体 → 它**消失**（进消耗区 `void_count` / `void_cards`，不进弃牌区 ——
+#       与专注 9122 / 负重减轻 8066 同口径），**然后**才扣费并打出去；
+#    ④ 目标获得一次改造：**力 + 那张素体的 power、血 + 那张素体的 health** ——
+#       走 `_field_upgrade_grant()`（场上改造唯一口）→ 层数 +1、受体自己的改造奖励
+#       （战斗骨骼 +2+2 / 素体 +1 血）照算，模仿者传导 / 侦察塔 / 堡垒全部联动。
+#   ⚠️ **付费点故意挪到第 ③ 步之后**：面板打开期间合体仍在手牌、费用未扣 → 取消 = 什么都没
+#      发生（与回收 / 填充「取消不扣费」同口径）；否则玩家先在场上点了目标、又在面板里放弃，
+#      会白丢 1 费 + 一张史诗牌。
+#   ⚠️ 数值取**卡组里那张副本**（可能被生产订单 8048 / 自主升级改过），不取卡库原型。
+const MERGE_ID:= 9167
 # 「代达罗斯」8060（R271 重做，5 费**史诗盟友** 8/18/1/1，嘲讽）：
 #   入场时本次对战每用过一张聚能炮击 → 生命 +3；本回合手卡里的聚能炮击费用为 0。
 const DAEDALUS_HP_PER_CANNON:= 3
@@ -3669,6 +3706,8 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 		_modder_enter(p)          # R282 改装者：入场全体己方盟友（场上+手牌）改造 +4 生命
 	if card.id == OUT_OF_CONTROL_FORT_ID:
 		_out_of_control_fort_enter(p)   # R288 失控要塞：每用过一张聚能炮击 → 随机释放一张技能卡
+	if card.id == CLUSTER_TURRET_ID:
+		_cluster_turret_enter(p)        # R298 集束炮台：入场往抽牌库塞两张聚能炮击
 	_refresh_mnemosyne()            # R271：刚落地 / 刚被换上场的那只可能是谟涅摩叙涅
 
 	if card.id == FOX_ID:
@@ -4457,6 +4496,207 @@ func _on_unit_upgraded(p: Placement) -> void :
 		_log("改造触发：%s 改造时抽1张" % p.card.card_name)
 	if p.card.traits.has(WASTE_BOT_TRAIT):          # R228 废弃机器人：每次被改造 → 全体敌方 1 伤
 		_waste_bot_ping(p)
+	if p.card.traits.has(CLUSTER_TURRET_TRAIT):     # R298 集束炮台：每次被改造 → 从卡组捞一张聚能炮击
+		_cluster_turret_reload(p)
+
+# ================= R298：集束炮台 9166 / 合体 9167 =================
+
+
+func _cluster_turret_enter(p: Placement) -> void :
+	## 「集束炮台」9166（R298，机械之心 2 费普通盟友 1/6/1/1）的**入场**效果：
+	## 往抽牌库（`state.deck`）末尾塞 CLUSTER_TURRET_CANNON_COUNT 张「聚能炮击」9145。
+	## ⚠️ 与生产订单 8048 同口径：`from_dict` 复制成独立实例 —— 卡库是共享实例，
+	##    直接塞进去会让「这张炮击被改造 / 被附魔」泄漏到图鉴与下一局。
+	if p == null or p.card == null:
+		return
+	if p.owner != SIDE_SELF:
+		# 敌方没有真实牌库（只有抽象计数 opp_deck_count）→ 不入库，免得污染玩家卡组。
+		_log("集束炮台：%s 入场（非我方，跳过入库）" % p.card.card_name)
+		return
+	var repo := CardRepo.load_json()
+	var proto: CardData = repo.get_card(ENERGY_CANNON_ID) if repo != null else null
+	if proto == null:
+		_log("集束炮台：卡库缺少「聚能炮击」(9145)，入场效果落空")
+		return
+	var added := 0
+	for _i in CLUSTER_TURRET_CANNON_COUNT:
+		var c := CardData.from_dict(proto.to_dict())
+		c.traits = (c.traits as Array).duplicate()
+		state.deck.append(c)
+		action.emit("deck_added", {"card": c, "side": p.owner})
+		added += 1
+	_log("集束炮台：%s 入场 → 卡组 +%d 张「聚能炮击」（牌库 %d 张）" % [
+			p.card.card_name, added, state.deck.size()])
+
+
+func _cluster_turret_reload(p: Placement) -> void :
+	## 「集束炮台」9166（R298）的**每次获得改造**效果：从卡组把一张「聚能炮击」加入手卡。
+	## 挂点是 `_on_unit_upgraded()` —— 所有改造入口的统一后置口，所以「升级 / 加厚装甲 /
+	## 超越极限 / 拾荒者 / 模仿者传导 / 改造工厂」全都自动吃到，不必给每个入口补分支。
+	## ⚠️ 手牌满 → 那张炮击**留在卡组**（不销毁）：卡面只说「加入手卡」，没有「否则弃掉」
+	##    的口径，替玩家销毁一张牌是净亏损。
+	if p == null or p.card == null or p.owner != SIDE_SELF:
+		return
+	var di := -1
+	for i in state.deck.size():
+		if state.deck[i].id == ENERGY_CANNON_ID:
+			di = i
+			break
+	if di < 0:
+		_log("集束炮台：卡组里已经没有「聚能炮击」了")
+		return
+	if state.hand_full():
+		_log("集束炮台：手牌已满 → 「聚能炮击」留在卡组（未销毁）")
+		return
+	var c: CardData = state.deck[di]
+	state.deck.remove_at(di)
+	state.hand.append(c)
+	_log("集束炮台：%s 获得改造 → 从卡组取「%s」加入手卡（牌库 %d 张）" % [
+			p.card.card_name, c.card_name, state.deck.size()])
+	action.emit("cluster_reload", {"cell": _cell_of(p), "card": c, "side": p.owner})
+
+
+func _first_proto_index() -> int:
+	## 卡组里第一张「素体」8025 的下标（-1 = 没有）。
+	## 判据用 id 比对 PROTO_ID —— 与 R221「拆素体不触发回收者」同口径（全库仅 8025 是素体）。
+	for i in state.deck.size():
+		if state.deck[i].id == PROTO_ID:
+			return i
+	return -1
+
+
+func merge_deck_options() -> Array[int]:
+	## 合体面板的候选：卡组里**所有**「素体」（8025）的下标。
+	## ⚠️ 给的是**下标**不是 id —— 卡组里的素体可能是被生产订单 8048 / 自主升级改造过的副本
+	##    （同 id、不同数值），按 id 找第一张会吃错那一只。
+	var out: Array[int] = []
+	for i in state.deck.size():
+		if state.deck[i].id == PROTO_ID:
+			out.append(i)
+	out.reverse()   # 与专注面板同口径：反转让第 1 张更接近「牌组开头」
+	return out
+
+
+func _clear_merge_pick() -> String:
+	## 清掉合体的全部挂起状态，返回「已经消失掉的那张素体名」（没有则空串）。
+	## 目标在面板期间被破坏 / 抬走时，那张素体已经没了 —— 提示里要如实说清楚，
+	## 不能假装「什么都没发生」（与本文件一贯的「已移除的不回收」口径一致）。
+	var lost := merge_body_name
+	merge_pending = false
+	merge_hand_index = -1
+	merge_cell = Vector2i(-1, -1)
+	merge_body_atk = -1
+	merge_body_hp = -1
+	merge_body_name = ""
+	return lost
+
+
+func cast_merge(hand_index: int, target, free_cast := false) -> String:
+	## 「合体」（9167，R298，机械之心 1 费史诗技能）的**两段施放入口**。
+	## 第一段（本函数）：场上指定一张己方盟友或工事 → 挂起 `merge_pending`，
+	## 由 battle_scene 弹出「从卡组选一张素体」面板（UI kind = "merge"）。
+	## 第二段（`merge_pick`）：选中素体 → 它**消失**（进消耗区）→ 由界面接着调 `use_spell()`
+	## 真正把合体打出去，结算口是 `_merge_spell()`。
+	## ⚠️ **付费点故意在第二段之后**：面板打开期间合体仍在手牌、费用未扣 → 取消就等于
+	##    没打出过（与回收 / 填充「取消不扣费」同口径）。否则玩家先在场上点了目标、
+	##    又在面板里放弃，会白丢 1 费 + 一张史诗牌。
+	if hand_index < 0 or hand_index >= state.hand.size():
+		return "（合体：手牌序号无效）"
+	var card: CardData = state.hand[hand_index]
+	if card == null or card.id != MERGE_ID:
+		return "（这不是合体）"
+	var p := _target_placement(SIDE_SELF, target)
+	if p == null or p.owner != SIDE_SELF:
+		return "合体：只能指定自己的盟友或工事"
+	if p.card.kind != "盟友" and not p.card.is_fort():
+		return "合体：%s 不能被改造" % p.card.card_name
+	if merge_pending:
+		return "（合体：已经在选素体了）"
+	if _first_proto_index() < 0:
+		return "合体：卡组里没有「素体」"
+	# 失控要塞 9161 这类「凭空释放」没有玩家交互 → 直接按卡组顺序取第一张素体结算。
+	if free_cast:
+		return _merge_spell(target, SIDE_SELF)
+	merge_pending = true
+	merge_hand_index = hand_index
+	merge_cell = _cell_of(p)
+	_log("合体：目标 %s 已指定 → 从卡组挑一张「素体」" % p.card.card_name)
+	action.emit("merge_pending", {"cell": merge_cell, "card": p.card,
+			"count": merge_deck_options().size()})
+	return "选择卡组里的「素体」"
+
+
+func merge_pick(deck_index: int) -> bool:
+	## 合体面板「确认」的唯一结算口：让选中的素体**本场消失**，并把它的数值记在
+	## `merge_body_*` 上 —— 真正的改造由随后那次 `use_spell()` → `_merge_spell()` 落地。
+	## ⚠️ 这里**不扣费、不弃牌**：那两件事归 `use_spell()` 统一收尾（付费 / 蓄力次数 /
+	##    虚空主宰 / 出牌计数 / 次元判定，一个都不漏）。
+	if not merge_pending:
+		return false
+	if deck_index < 0 or deck_index >= state.deck.size():
+		return false
+	var body: CardData = state.deck[deck_index]
+	if body == null or body.id != PROTO_ID:
+		_log("合体：选中的不是「素体」，已忽略")
+		return false
+	state.deck.remove_at(deck_index)
+	state.void_count += 1
+	state.void_cards.append(body)   # R140 消耗区：本次对战中消失
+	merge_body_atk = maxi(0, body.power)
+	merge_body_hp = maxi(0, body.health)
+	merge_body_name = body.card_name
+	merge_pending = false
+	_log("合体：%s 从卡组消失（本次对战移除，%d 攻 / %d 血）" % [
+			body.card_name, merge_body_atk, merge_body_hp])
+	action.emit("merge_void", {"card": body, "atk": merge_body_atk, "hp": merge_body_hp})
+	return true
+
+
+func merge_cancel() -> void:
+	## 合体面板取消：清挂起状态。此时**什么都没发生** —— 素体没消失、费用没扣、卡还在手牌。
+	if not merge_pending:
+		return
+	_log("合体：已取消选择（合体仍在手牌，未扣费）")
+	_clear_merge_pick()
+
+
+func _merge_spell(target, side: String) -> String:
+	## 「合体」的**统一结算口**（`_run_spell_effect` 的 MERGE_ID 分支）：
+	## 让一张素体消失 → 场上的目标获得改造（力 +素体的力量、血 +素体的生命）。
+	## * 素体来源：优先取 `merge_pick()` 预存的数值（玩家在面板里挑的那一张）；
+	##   没有预存（失控要塞 9161 凭空释放 / 蓄力叠了第二次）→ 按卡组顺序取第一张。
+	## * 改造走 `_field_upgrade_grant()`（场上改造唯一口）→ 层数 +1、受体自己的改造奖励
+	##   （战斗骨骼 +2+2 / 素体 +1 血）照算，模仿者传导 / 侦察塔 / 堡垒全部联动。
+	var p := _target_placement(side, target)
+	if p == null or p.owner != side or (p.card.kind != "盟友" and not p.card.is_fort()):
+		var lost := _clear_merge_pick()
+		if lost != "":
+			_log("合体：目标已不在场 → 只失去了「%s」" % lost)
+			return "合体：目标不合法，「%s」已消失" % lost
+		return "（合体：需要指定一个己方盟友或工事）"
+	var atk := merge_body_atk
+	var hp := merge_body_hp
+	var src_name := merge_body_name
+	if atk < 0 or hp < 0:
+		var di := _first_proto_index()
+		if di < 0:
+			_clear_merge_pick()
+			_log("合体：卡组里没有「素体」，效果落空")
+			return "合体：卡组里没有素体"
+		var body: CardData = state.deck[di]
+		state.deck.remove_at(di)
+		state.void_count += 1
+		state.void_cards.append(body)
+		atk = maxi(0, body.power)
+		hp = maxi(0, body.health)
+		src_name = body.card_name
+	var nm: String = p.card.card_name
+	_clear_merge_pick()
+	_log("合体：%s 消失 → %s 获得改造（力量 +%d、生命 +%d）" % [src_name, nm, atk, hp])
+	_field_upgrade_grant(p, atk, hp, "合体")
+	action.emit("merge", {"cell": _cell_of(p), "card": p.card, "atk": atk, "hp": hp,
+			"side": side})
+	return "%s 获得改造（+%d 攻 / +%d 血）" % [nm, atk, hp]
 
 func _scavenger_tick(side: String) -> void :
 	## 拾荒者（9151，R228）：**己方回合开始时**，每个拾荒者各挑一个「拾荒者以外」的
@@ -5685,6 +5925,11 @@ func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 	# 费用已经扣了、卡也已经从手牌里拿走了。
 	if card.id == SWAP_UNITS_ID:
 		return "双向传送：先点第一个单位，再点第二个单位（右键取消）"
+	# 合体（9167，R298）：UI 走 `cast_merge()` 两段式（先场上目标、再卡组素体面板）。
+	# 单段入口没有目标时**绝不能**往里走 —— 否则会先扣费、把卡从手牌吃掉，才回一句
+	# 「需要指定目标」，白丢 1 费 + 一张史诗牌（与潜入 / 双向传送同一条纪律）。
+	if card.id == MERGE_ID and not (target is Vector2i):
+		return "合体：先点一个自己的盟友或工事"
 	# 回旋斩（9096）：本回合使用 4 张以上其他卡后才能使用（付费用之前拦截）。
 	if card.id == WHIRL_BLADE_ID and state.self_card_plays < WHIRL_BLADE_NEED:
 		return "回旋斩：本回合还需先使用 %d 张其他卡（已用 %d）" % [
@@ -7392,6 +7637,11 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 		DUPLICATE_ID:
 			# 复制术 9165（R291，机械之心）：复制己方一个盟友 / 工事两份到手卡（带「次元」，本回合 0 费）。
 			return _duplicate_spell(target, side)
+		MERGE_ID:
+			# 合体 9167（R298，机械之心）：素体消失 → 目标获得改造（+素体的力量 / 生命）。
+			# 面板路径的素体已由 `merge_pick()` 抹掉并记在 merge_body_* 上；
+			# 失控要塞 9161 凭空释放 / 蓄力叠第二次时没有预取 → 按卡组顺序自动再取一张。
+			return _merge_spell(target, side)
 		SCRAP_ID:
 			# 报废 8071（R271，机械之心）：手牌里其他所有卡变成聚能炮击（本回合 0 费）。
 			return _scrap_hand(side)

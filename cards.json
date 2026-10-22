@@ -5102,6 +5102,50 @@
       "target_mode": "unit",
       "color": "紫",
       "image": ""
+    },
+    {
+      "id": 9166,
+      "name": "集束炮台",
+      "kind": "盟友",
+      "cost": 2,
+      "power": 1,
+      "health": 6,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "集束"
+      ],
+      "affixes": [],
+      "effect_text": "入场时，将两张「聚能炮击」加入抽牌库。每次获得改造时，从卡组把一张「聚能炮击」加入手卡。",
+      "target_mode": "none",
+      "color": "白",
+      "image": ""
+    },
+    {
+      "id": 9167,
+      "name": "合体",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "改造"
+      ],
+      "affixes": [],
+      "effect_text": "选择卡组一张「素体」，使其**消失**（本场对战移除）；使场上一张己方盟友或工事获得改造：力量与生命各增加那张素体的数值。",
+      "target_mode": "unit",
+      "color": "蓝",
+      "image": ""
     }
   ]
 }

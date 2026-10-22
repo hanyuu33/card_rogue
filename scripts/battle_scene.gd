@@ -3790,6 +3790,8 @@ func _use_hand_card(i: int) -> void:
 				target_hint = "**一个目标**（8 伤；之后从弃牌区任选一张卡回手）"
 			elif card.id == GameEngine.UPGRADE_ID:
 				target_hint = "**自己的一个盟友或工事**（+2 攻 / +8 血）"
+			elif card.id == GameEngine.MERGE_ID:
+				target_hint = "**自己的一个盟友或工事**（之后从卡组选一张素体）"
 			elif card.id == GameEngine.ARMOR_PLATE_ID:
 				target_hint = "**自己的一个盟友**（生命 +4，算一层改造）"
 			elif card.id == GameEngine.DEMOLISH_ID:
@@ -4214,6 +4216,14 @@ func _cast_spell(i: int, cell: Vector2i, card: CardData) -> void:
 				card.card_name, GameEngine.WHIRL_BLADE_NEED, engine.state.self_card_plays])
 		_clear_selection()
 		return
+	# R298 合体（9167）：先在场上点了目标 → 只**挂起**并弹出「从卡组选素体」面板。
+	# ⚠️ 这里不扣费、不吃手牌：真正的付费在面板确认之后（引擎 cast_merge / merge_pick
+	#    的注释）。面板里放弃 = 什么都没发生，不会白丢 1 费 + 一张史诗牌。
+	if card.id == GameEngine.MERGE_ID:
+		_clear_selection()
+		status_text = "合体 → %s" % engine.cast_merge(i, cell)
+		queue_redraw()
+		return
 	_clear_selection()
 	engine.use_spell(i, cell)
 	_net_send({"type": "action", "act": "spell", "card": card.to_dict(),
@@ -4389,6 +4399,10 @@ func _pick_active_kind() -> String:
 	if engine.foresight_pick:
 		return "foresight"
 	# R292：拒绝命运（9098）改自动结算 → 不再有 "fate" 选卡场景。
+	# R298 合体（9167）：场上目标已选 → 弹「从卡组选素体」面板。
+	# 放在 focus 之前：合体有自己的待办字段（merge_pending），与专注互斥但不共用面板。
+	if engine.merge_pending:
+		return "merge"
 	if engine.focus_pending:
 		return "focus"
 	return ""
@@ -4593,6 +4607,17 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"cards": merged.map(func(m: Dictionary) -> CardData: return m["card"]),
 					"counts": merged.map(func(m: Dictionary) -> int: return m["count"]),
 					"max_sel": 1, "confirm_label": "确认移除", "cancel_label": "取消%s" % fl}
+		"merge":
+			# R298 合体（9167）：候选 = 卡组里**所有素体**（8025）。
+			# ⚠️ opts 存的是**卡组下标**（不是 id）：卡组里可能同时有未经改造的原版素体
+			#    和被生产订单 8048 / 自主升级改过数值的副本 —— 按 id 取第一张会吃错那一只。
+			var mopts := engine.merge_deck_options()
+			return {"kind": k, "short": "合体",
+					"opts": mopts,
+					"title": "合体：从卡组选一张「素体」，让它消失",
+					"note": "它的力量与生命加到场上的目标身上（本场对战消失，不进弃牌区）",
+					"cards": mopts.map(func(i: int) -> CardData: return engine.state.deck[i]),
+					"max_sel": 1, "confirm_label": "确认合体", "cancel_label": "取消合体"}
 	return {}
 
 
@@ -4772,6 +4797,21 @@ func _on_pick_confirmed(sel: Array) -> void:
 				else:
 					status_text = "%s：已移除 %d 张卡，它们本次对战中消失" % [
 						engine.focus_label, engine.focus_total]
+		"merge":
+			# R298 合体（9167）：确认 → 素体**本场消失**（进消耗区）→ 再调 use_spell 真正打出。
+			# 付费 / 弃牌 / 出牌计数 / 次元判定全部由 use_spell 统一收尾，这里不重复一遍。
+			var mgi := int(opts[sel[0]])
+			var mhi := engine.merge_hand_index
+			var mcell := engine.merge_cell
+			var mnm := "素体"
+			if mgi >= 0 and mgi < engine.state.deck.size():
+				mnm = engine.state.deck[mgi].card_name
+			if engine.merge_pick(mgi):
+				var mdet := engine.use_spell(mhi, mcell)
+				status_text = "合体：「%s」消失 → %s" % [mnm, mdet]
+			else:
+				_say("合体：没能选中这张素体（它仍在卡组里）")
+			_clear_selection()
 	# 累计型（鲸鱼 / 命运 / 取牌 / 专注）确认一张后 pending 可能还在：
 	# 候选变了 → 用新 cfg 刷新（标题里的剩余数同步更新）；pending 没了由 _sync_pick 关。
 	if _pick.is_picking() and _pick_active_kind() == k:
@@ -4793,6 +4833,10 @@ func _on_pick_cancelled() -> void:
 			var fc_label := engine.focus_label
 			engine.focus_cancel()
 			status_text = "%s：已取消剩余的移除" % fc_label
+		"merge":
+			engine.merge_cancel()
+			status_text = "已取消：合体仍在手牌（未扣费）"
+			_clear_selection()
 		"reload":
 			_reload_idx = -1
 			status_text = "已取消：填充仍在手牌（未扣费）"
@@ -4973,8 +5017,10 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 					and not lcp.life_cycle:
 				out.append(c)
 		out.sort()
-	elif card.id == GameEngine.UPGRADE_ID:
-		# 升级 8027（R82，机械之心）：只列**己方盟友或工事**。
+	elif card.id == GameEngine.UPGRADE_ID or card.id == GameEngine.MERGE_ID:
+		# 升级 8027（R82）/ 合体 9167（R298）：只列**己方盟友或工事**（合体的目标同样是
+		# 「场上一张卡」，而工事也能被改造 —— 与 `_upgrade_unit` / `_field_upgrade_grant`
+		# 的受理口径一致）。
 		# 必须在这里过滤掉敌方 —— 引擎侧 `_upgrade_unit` 也会拒敌方单位，
 		# 但那时玩家已经付了费用、点了格子，提示「只能改造自己的单位」太晚。
 		for c: Vector2i in engine.state.board:

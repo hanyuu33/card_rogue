@@ -137,8 +137,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 248,
-			"图鉴 = 248 张（R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
+	check(repo.all_cards().size() == 250,
+			"图鉴 = 250 张（R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -151,7 +151,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 195 and grp_enemy.size() == 53,
+	check(grp_player.size() == 197 and grp_enemy.size() == 53,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 184 / 53；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -181,8 +181,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 172,
-			"奖励池 172 张（R291 辅助刃 / 复制术进池；R290 集中突破 / 冲击炮进池；R275 重组降为普通后进池；R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；**R282 改装者 8076（普通，进池）**；实际 %d）"
+	check(pool.size() == 174,
+			"奖励池 174 张（R298 集束炮台（普通）· 合体（史诗）均进池；R291 辅助刃 / 复制术进池；R290 集中突破 / 冲击炮进池；R275 重组降为普通后进池；R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 史诗不入池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；**R282 改装者 8076（普通，进池）**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -7568,10 +7568,10 @@ func _init() -> void:
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 68
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 61
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 56
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 58
 			and int(dr_cls_count.get("敌人", 0)) == 53
 			and int(dr_cls_count.get("", 0)) == 10,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 68 / 61 / 56 / 53；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 68 / 61 / 58 / 53；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -7874,7 +7874,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 172, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，R282 改装者 8076（普通，进池）+1 = 167，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 174, "R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，R282 改装者 8076（普通，进池）+1 = 167，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -8338,7 +8338,7 @@ func _init() -> void:
 	check(r226_bad_ok,
 			"R226：伤害 +10 拒绝「不能直接造成伤害」的技能卡（自然之力/智慧/重组/坚固围栏/闪躲/能量屏障）"
 			+ ("：全部被拒" if r226_bad_ok else "：被放行 " + ", ".join(r226_bad_names)))
-	# 判据唯一口 `CardData.is_damage_spell()`：79 张玩家技能卡里恰好 29 张能直接造成伤害（R290 两张新卡文案含「造成…伤害」→ 自动入判据）
+	# 判据唯一口 `CardData.is_damage_spell()`：80 张玩家技能卡里恰好 29 张能直接造成伤害（R290 两张新卡文案含「造成…伤害」→ 自动入判据；R298 合体 9167 只改造不造成伤害 → 技能 +1、伤害数不变）
 	var r226_dmg := 0
 	var r226_skills := 0
 	var r226_leak: Array[String] = []
@@ -8350,7 +8350,7 @@ func _init() -> void:
 			r226_dmg += 1
 		elif r226_card.effect_text.contains("造成") and r226_card.effect_text.contains("伤害"):
 			r226_leak.append(r226_card.card_name)
-	check(r226_skills == 79 and r226_dmg == 29 and r226_leak.is_empty(),
+	check(r226_skills == 80 and r226_dmg == 29 and r226_leak.is_empty(),
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 			% [r226_skills, r226_dmg, "0 张" if r226_leak.is_empty() else str(r226_leak)])
 	check(RunState.enchant_ok("damage", r224_okrepo.get_card(9083), 9999)
@@ -21854,6 +21854,160 @@ func _init() -> void:
 	check_src(r288b_unq >= 0,
 			"R288b 源码锁：专属落点表现（meteor）到达时撤掉同格 fx_hit（否则双爆点双飘字）")
 
+	# ================= R298：集束炮台 9166 / 合体 9167 =================
+	# 集束炮台 = 2 费普通盟友 1/6/1/1：入场往抽牌库塞 2 张「聚能炮击」9145；
+	#            每次获得改造时，从卡组把一张「聚能炮击」加入手卡。
+	# 合体     = 1 费史诗技能：场上指定一张己方盟友 / 工事 → 从卡组选一张素体，
+	#            素体本场消失，目标获得改造（力 +素体的力量、血 +素体的生命）。
+	var r296_turret: CardData = repo.get_card(GameEngine.CLUSTER_TURRET_ID)
+	check(r296_turret != null and r296_turret.card_name == "集束炮台"
+			and r296_turret.kind == "盟友" and r296_turret.cost == 2
+			and r296_turret.power == 1 and r296_turret.health == 6
+			and r296_turret.attack_range == 1 and r296_turret.move_speed == 1
+			and r296_turret.rarity == 0 and r296_turret.card_class == "机械之心"
+			and r296_turret.traits.has(GameEngine.CLUSTER_TURRET_TRAIT),
+			"R298 集束炮台：机械之心普通盟友 —— 2 费 1/6/1/1，带「集束」标记")
+	var r296_merge: CardData = repo.get_card(GameEngine.MERGE_ID)
+	check(r296_merge != null and r296_merge.card_name == "合体"
+			and r296_merge.kind == "技能" and r296_merge.cost == 1
+			and r296_merge.rarity == 2 and r296_merge.card_class == "机械之心"
+			and r296_merge.target_mode == "unit" and r296_merge.needs_target(),
+			"R298 合体：机械之心史诗技能 —— 1 费 / 需选一个场上目标")
+
+	# ① 入场：卡组 +2 张聚能炮击，且是各自独立的副本（不共享卡库实例）
+	var r296_e1 := _new_engine([], 20, 20, -1, false)
+	r296_e1.state.hand.clear()
+	r296_e1.state.hand.append(CardData.from_dict(r296_turret.to_dict()))
+	r296_e1.state.deck.clear()
+	r296_e1.state.energy = 5
+	r296_e1.play_from_hand(0, Vector2i(4, 1))
+	var r296_e1_cannon := 0
+	var r296_e1_ids: Array[int] = []
+	for r296_c: CardData in r296_e1.state.deck:
+		if r296_c.id == GameEngine.ENERGY_CANNON_ID:
+			r296_e1_cannon += 1
+			r296_e1_ids.append(r296_c.get_instance_id())
+	check(r296_e1_cannon == GameEngine.CLUSTER_TURRET_CANNON_COUNT,
+			"R298 集束炮台：入场 → 卡组 +%d 张「聚能炮击」（实际 %d 张）" % [
+				GameEngine.CLUSTER_TURRET_CANNON_COUNT, r296_e1_cannon])
+	check(r296_e1_ids.size() == 2 and r296_e1_ids[0] != r296_e1_ids[1],
+			"R298 集束炮台：两张炮击是各自独立的副本（不共享卡库实例）")
+
+	# ② 每次获得改造时 → 从卡组捞一张聚能炮击加入手卡
+	var r296_e1_deck0: int = r296_e1.state.deck.size()
+	var r296_e1_hand0: int = r296_e1.state.hand.size()
+	r296_e1._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r296_e1.state.deck.size() == r296_e1_deck0 - 1
+			and r296_e1.state.hand.size() == r296_e1_hand0 + 1
+			and r296_e1.state.hand[r296_e1.state.hand.size() - 1].id == GameEngine.ENERGY_CANNON_ID,
+			"R298 集束炮台：被「升级」改造 → 从卡组取一张炮击入手卡（牌库 %d → %d，手牌 %d → %d）" % [
+				r296_e1_deck0, r296_e1.state.deck.size(),
+				r296_e1_hand0, r296_e1.state.hand.size()])
+
+	# ③ 手牌满 → 炮击留在卡组（不销毁玩家的牌）
+	while not r296_e1.state.hand_full():
+		r296_e1.state.hand.append(_card(8002, "攻击", "技能", 1, 0, 0))
+	var r296_e1_deck1: int = r296_e1.state.deck.size()
+	var r296_e1_hand1: int = r296_e1.state.hand.size()
+	r296_e1._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r296_e1.state.deck.size() == r296_e1_deck1
+			and r296_e1.state.hand.size() == r296_e1_hand1,
+			"R298 集束炮台：手牌已满 → 炮击留在卡组（牌库 %d / 手牌 %d 均未变）" % [
+				r296_e1_deck1, r296_e1_hand1])
+
+	# ④ 合体：场上选完只挂起面板 —— 费用未扣、卡仍在手牌（取消 = 什么都没发生）
+	var r296_e2 := _new_engine([], 20, 20, -1, false)
+	r296_e2.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r296_e2.state.hand.clear()
+	r296_e2.state.hand.append(CardData.from_dict(r296_merge.to_dict()))
+	r296_e2.state.deck.clear()
+	r296_e2.state.deck.append(CardData.from_dict(repo.get_card(GameEngine.PROTO_ID).to_dict()))
+	r296_e2.state.energy = 5
+	var r296_hold: String = r296_e2.cast_merge(0, Vector2i(4, 1))
+	check(r296_e2.merge_pending and r296_e2.merge_hand_index == 0
+			and r296_e2.merge_cell == Vector2i(4, 1)
+			and r296_e2.state.energy == 5 and r296_e2.state.hand.size() == 1,
+			"R298 合体：场上指定目标 → 只挂起面板（能量 %d / 手牌 %d / %s）" % [
+				r296_e2.state.energy, r296_e2.state.hand.size(), r296_hold])
+	var r296_opt: Array[int] = r296_e2.merge_deck_options()
+	check(r296_opt.size() == 1
+			and r296_e2.state.deck[r296_opt[0]].id == GameEngine.PROTO_ID,
+			"R298 合体：面板候选只列卡组里的「素体」（%d 张）" % r296_opt.size())
+	r296_e2.merge_cancel()
+	check(not r296_e2.merge_pending and r296_e2.state.deck.size() == 1
+			and r296_e2.state.hand.size() == 1 and r296_e2.state.energy == 5,
+			"R298 合体：取消 → 素体没消失、费用没扣、合体仍在手牌")
+
+	# ⑤ 合体确认：素体从卡组消失（进消耗区）→ 目标获得改造（取那张副本的数值）
+	var r296_e3 := _new_engine([], 20, 20, -1, false)
+	var r296_t3: Placement = r296_e3.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r296_e3.state.hand.clear()
+	r296_e3.state.hand.append(CardData.from_dict(r296_merge.to_dict()))
+	r296_e3.state.deck.clear()
+	var r296_body: CardData = CardData.from_dict(repo.get_card(GameEngine.PROTO_ID).to_dict())
+	r296_body.power += 3
+	r296_body.health += 5
+	r296_e3.state.deck.append(r296_body)
+	r296_e3.state.energy = 5
+	r296_e3.cast_merge(0, Vector2i(4, 1))
+	var r296_void0: int = r296_e3.state.void_count
+	var r296_picked: bool = r296_e3.merge_pick(0)
+	check(r296_picked and r296_e3.state.deck.is_empty()
+			and r296_e3.state.void_count == r296_void0 + 1,
+			"R298 合体：选中素体 → 它从卡组消失并计入消耗区（牌库 %d / 消耗 %d）" % [
+				r296_e3.state.deck.size(), r296_e3.state.void_count])
+	var r296_cast: String = r296_e3.use_spell(0, Vector2i(4, 1))
+	check(r296_t3.upgrade_stacks == 1
+			and r296_t3.effective_power() == 1 + r296_body.power
+			and r296_t3.health == 10 + r296_body.health,
+			"R298 合体：目标获得改造 —— 力 +%d、血 +%d（现 %d 攻 / %d 血，%d 层）— %s" % [
+				r296_body.power, r296_body.health, r296_t3.effective_power(),
+				r296_t3.health, r296_t3.upgrade_stacks, r296_cast])
+	check(r296_e3.state.energy == 4,
+			"R298 合体：费用 1 点在真正打出时才扣（5 → %d）" % r296_e3.state.energy)
+
+	# ⑥ 卡组没有素体 → 不开面板、不扣费；敌方单位不能当目标
+	var r296_e4 := _new_engine([], 20, 20, -1, false)
+	r296_e4.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r296_e4.state.hand.clear()
+	r296_e4.state.hand.append(CardData.from_dict(r296_merge.to_dict()))
+	r296_e4.state.deck.clear()
+	r296_e4.state.energy = 5
+	var r296_no_body: String = r296_e4.cast_merge(0, Vector2i(4, 1))
+	check(not r296_e4.merge_pending and r296_no_body.contains("素体")
+			and r296_e4.state.hand.size() == 1 and r296_e4.state.energy == 5,
+			"R298 合体：卡组里没有素体 → 不开面板、不扣费（%s）" % r296_no_body)
+	r296_e4.state.place(_card(1011, "铁壁卫兵", "盟友", 4, 4, 40),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r296_foe: String = r296_e4.cast_merge(0, Vector2i(1, 0))
+	check(not r296_e4.merge_pending and r296_foe.contains("自己"),
+			"R298 合体：敌方单位不能当目标（%s）" % r296_foe)
+
+	# ⑦ 失控要塞随机池 / 机械之心奖励池都会自动纳入这两张（不写死 id）
+	var r296_e5 := _new_engine([], 20, 20, -1, false)
+	var r296_fpool: Array = r296_e5._fort_skill_pool()
+	var r296_fpool_has := false
+	for r296_pc: CardData in r296_fpool:
+		if r296_pc.id == GameEngine.MERGE_ID:
+			r296_fpool_has = true
+	check(r296_fpool_has,
+			"R298 失控要塞：随机池按职业 / 稀有度自动纳入合体（池 %d 张）" % r296_fpool.size())
+	var r296_reward: Array[int] = []
+	for r296_rc: CardData in repo.reward_pool_for(PlayerClass.MECH):
+		r296_reward.append(r296_rc.id)
+	check(r296_reward.has(GameEngine.CLUSTER_TURRET_ID)
+			and r296_reward.has(GameEngine.MERGE_ID),
+			"R298：集束炮台与合体都进机械之心奖励池")
+
+	# ⑧ 源码锁：界面必须登记合体的目标分支与 merge 选卡页（否则落进 else = 敌我全列）
+	var r296_ui := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r296_ui.find("card.id == GameEngine.MERGE_ID") >= 0
+			and r296_ui.find('"merge":') >= 0
+			and r296_ui.find("engine.merge_pending") >= 0,
+			"R298 源码锁：battle_scene 登记了合体的目标枚举 / merge 面板 / 待办判定")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
