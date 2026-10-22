@@ -7121,7 +7121,11 @@ func _draw_string_center(font: Font, px: int, text: String, center: Vector2, col
 	# 因此这里手动按文本宽度计算偏移，使文字真正以 center 为中心居中。
 	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 	var pos := Vector2(center.x - w * 0.5, center.y + px * 0.36)
-	if outline <= 0:
+	# R309（用户口径）：outline 传**负数** = 明确不描边。小字号上 `_auto_outline()` 给 2px，
+	# 笔画本来就细，描一圈反而糊成一片（道具栏的「雕像（3）」就是这样看不清的）。
+	if outline < 0:
+		outline = 0
+	elif outline == 0:
 		outline = _auto_outline(px)
 		outline_col = TEXT_OUTLINE_COL
 	if outline > 0:
@@ -7134,7 +7138,9 @@ func _draw_string_nw(font: Font, px: int, text: String, pos: Vector2, col: Color
 		outline := 0, outline_col := UiTheme.SURFACE) -> void:
 	if px < 7:
 		px = 7
-	if outline <= 0:
+	if outline < 0:
+		outline = 0            # R309：负数 = 明确不描边
+	elif outline == 0:
 		outline = _auto_outline(px)
 		outline_col = TEXT_OUTLINE_COL
 	if outline > 0:
@@ -10555,17 +10561,22 @@ func _draw_relic_bar() -> void:
 			continue
 		var rect := _relic_rect(i)
 		var scol := rel.badge_color()
-		draw_rect(rect, Color(scol, 0.28), true)
+		# R309（用户口径「道具名不太清晰」）：去掉描边 + 底衬改成**浅实色** ——
+		# 来源色向白混 62%，深棕字压在浅底上才有对比度；原来 28% 半透明会透出草地，
+		# 深棕字和背景糊成一片（加 2px 描边只会更糊）。
+		draw_rect(rect, scol.lerp(Color.WHITE, 0.62), true)
 		draw_rect(rect, scol, false, 1.2)
 		# 来源色块（白色描述边在浅底上不醒目，配实心块 + 深描边）
 		var chip := Rect2(rect.position + Vector2(4, 4), Vector2(6, rect.size.y - 8))
 		draw_rect(chip, scol, true)
 		draw_rect(chip, Color(0, 0, 0, 0.5), false, 1.0)
+		# R309：**不描边**（outline = -1）—— 8~10 号字上 2px 描边会把笔画糊掉，
+		# 「雕像（3）」这种带括号的名字尤其看不清。
 		_draw_string_center(_font_bold, UiTheme.FS_MICRO,
 				RunState.relic_display_name(ids[i]),
 				Vector2(rect.position.x + 12.0 + (rect.size.x - 12.0) / 2,
 						rect.position.y + 14.0),
-				Color("4a3c14"))
+				Color("4a3c14"), -1)
 	# 道具太多装不下 → 末位换成「+N 点击查看全部」摘要行（点道具栏打开浏览面板）
 	if n_rel > shown_r:
 		_draw_more_tile(_relic_rect(shown_r), "+%d" % (n_rel - shown_r), "点击查看全部")

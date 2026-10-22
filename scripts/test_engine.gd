@@ -18309,6 +18309,27 @@ func _init() -> void:
 			and r308_src.find("RunState.relic_display_name") >= 0,
 			"R308 占卜室：4 种幻象 / 解读结算口 / 道具名计数都在")
 
+	# ---- R309：第三层只登记事件（不影响当前流程）+ 道具名不描边 ----
+	var r309_l3 := GameLayers.event_weights(GameLayers.LAYER_THREE)
+	check(int(r309_l3.get("card_merchant", 0)) > 0
+			and int(r309_l3.get("divination", 0)) > 0
+			and int(r309_l3.get("oblivion", 0)) > 0
+			and int(r309_l3.get("smith", 0)) > 0,
+			"R309 第三层：卡片商人 / 占卜室 / 遗忘之泉 / 鸭鸭工匠 都登记了")
+	check(GameLayers.layer_name(GameLayers.LAYER_THREE) == "第三层"
+			and GameLayers.event_name("divination") == "占卜室",
+			"R309 第三层：层名与事件名都在")
+	# 关键：第三层**只有事件、没有战斗关卡** → 打完第二层 Boss 仍然是通关（不把人送进空层）
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_THREE).is_empty()
+			and GameLayers.next_layer(GameLayers.LAYER_TWO) == 0
+			and GameLayers.next_layer(GameLayers.LAYER_DEFAULT) == GameLayers.LAYER_TWO,
+			"R309 第三层：没有关卡 → next_layer(2) 仍是 0（当前流程不变）")
+	# 道具名不描边：绘制口认负数，道具栏那处明确传 -1
+	var r309_bsrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r309_bsrc.find("if outline < 0:") >= 0
+			and r309_bsrc.find('Color("4a3c14"), -1)') >= 0,
+			"R309 道具名：去描边（outline = -1），绘制口支持负数")
+
 	# ================================================================
 	# R241：随机种子（全局同一随机源）+ 对战记录详情快照
 	# ================================================================

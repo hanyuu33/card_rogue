@@ -26,6 +26,10 @@ extends RefCounted
 
 const LAYER_DEFAULT := 1      # 第一层
 const LAYER_TWO := 2          # 第二层
+## R309（用户口径）：第三层**先把事件登记上**，不影响当前游玩 ——
+## 它的战斗关卡还没做，所以 `next_layer()` 里加了「下一层必须有战斗关卡才算数」的判据，
+## 打完第二层 Boss 仍然是整局通关。等第三层关卡落地时，这一层的事件自动就位。
+const LAYER_THREE := 3        # 第三层（仅事件已登记，关卡待做）
 
 const LAYERS := {
 	1: {
@@ -62,12 +66,24 @@ const LAYERS := {
 			"apple_doctor": 18,  # 苹果与医生（R244，第二层专属）：收下苹果（+14 最大生命并回满）或放弃
 			"oblivion": 14,   # 遗忘之泉（全层通用）：可从卡组删一张卡，或离开
 			"smith": 12,       # 鸭鸭工匠（R110，全层通用）：把卡组里一张卡变成「2 费铁栅栏」
-			# R305：卡片商人（第二层专属）。⚠️ 用户口径是「2、3 层都有」—— 目前只实现了
-			# 前两层，第三层落地时**记得在那一层的 events 表里同步登记**（内容按层隔离，
-			# 不登记就不会出现）。
+			# R305：卡片商人（第二层）。R309 起第三层也登记了（见 LAYERS[3]）。
 			"card_merchant": 16,
-			# R308：占卜室（用户口径「1、2、3 层都有」）—— 第三层落地时同样要在这里补登记。
+			# R308：占卜室（R309 起第三层也登记了，见 LAYERS[3]）。
 			"divination": 12,
+		},
+	},
+	3: {
+		"name": "第三层",
+		# ⚠️ 本层**只有事件表**：战斗关卡还没做。`content_layers` 写 [3] 是为了将来
+		# 关卡做好后自动生效（内容按层隔离，不会顺手拿到前两层的东西）。
+		"content_layers": [3],
+		"events": {
+			# 「全层通用」的两个（约定：每层都写一份，不继承）
+			"oblivion": 14,   # 遗忘之泉（全层通用）：可从卡组删一张卡，或离开
+			"smith": 12,      # 鸭鸭工匠（全层通用）：把卡组里一张卡变成「2 费铁栅栏」
+			# 用户口径要「2、3 层都有」/「1、2、3 层都有」的两个
+			"card_merchant": 16,  # 卡片商人：换卡 / 5 费卡换大宝箱 / 随机折价
+			"divination": 12,     # 占卜室：占卜 → 随机 4 种幻象 → 两种解读
 		},
 	},
 }
@@ -121,8 +137,15 @@ static func content_layers(layer: int) -> Array[int]:
 
 static func next_layer(layer: int) -> int:
 	## 本层的下一层；0 = 没有下一层（打完本层 Boss 即整局通关）。
+	## ⚠️ R309：还要**真的有战斗关卡**才算「有下一层」——
+	##    第三层目前只登记了事件表（没有关卡），若只判 `LAYERS.has()`，
+	##    打完第二层 Boss 会把玩家送进一张没有任何战斗的地图。
 	var nxt := layer + 1
-	return nxt if LAYERS.has(nxt) else 0
+	if not LAYERS.has(nxt):
+		return 0
+	if GameLevels.levels_of_layer(nxt).is_empty():
+		return 0
+	return nxt
 
 
 static func event_weights(layer: int) -> Dictionary:
