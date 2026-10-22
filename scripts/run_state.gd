@@ -1668,6 +1668,32 @@ static func can_move_to(node_id: int) -> bool:
 	return RogueMap.doors_between(map_cells, current_node_id, node_id)
 
 
+static func can_reach(node_id: int) -> bool:
+	## R322（用户口径）：**能去的不只是当前房的相邻格** ——
+	## 走过的房间可以自由穿行（零消耗、什么都不会发生），所以
+	## 「走过的房间」以及「它们的所有相邻格」都算可达。
+	## 判据唯一口：地图点击 / 绿框高亮 / 悬停提示全部读这里。
+	if node_id < 0 or node_id >= map_cells.size():
+		return false
+	if current_node_id < 0:
+		return true          # 还没出发：允许站上起点（与 can_move_to 同口径）
+	if node_id == current_node_id:
+		return false
+	return not path_to(node_id).is_empty()
+
+
+static func path_to(node_id: int) -> Array:
+	## 走到 node_id 的逐格路线（不含当前房间，末位 = 目标）；不可达返回 []。
+	## 中途只穿**走过的**房间 —— 那是唯一「零消耗、无事件」的一段。
+	if node_id < 0 or node_id >= map_cells.size() or current_node_id < 0:
+		return []
+	var allowed := {}
+	for cid in cleared_ids:
+		allowed[int(cid)] = true
+	allowed[current_node_id] = true     # 当前房一定允许（起点本身可能还没记进 cleared）
+	return RogueMap.path_through(map_cells, current_node_id, node_id, allowed)
+
+
 static func advance(node_id: int) -> Dictionary:
 	## 走进一个房间。返回本次移动的结果：
 	##   {"ok", "is_new", "cost", "revealed", "chocolate"}

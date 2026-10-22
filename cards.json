@@ -5078,7 +5078,9 @@
       "group": "player",
       "class": "机械之心",
       "traits": [],
-      "affixes": [],
+      "affixes": [
+        "次元"
+      ],
       "effect_text": "使一个己方盟友获得改造：**力 +2**，并获得「死亡」：它被破坏时，将一张「辅助刃」加入手卡。",
       "target_mode": "unit",
       "color": "紫",

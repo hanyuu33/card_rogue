@@ -13245,8 +13245,23 @@ func _init() -> void:
 	var r91_sw := CardData.from_dict(r91_repo.get_card(9031).to_dict())
 	check(r91_sw.active_affixes(2, false).has("疾行"),
 		"R91 active_affixes：还剩 2 轮行动 → 显示「疾行」")
-	check(not r91_sw.active_affixes(1, false).has("疾行"),
-		"R91 active_affixes：用掉一轮后（acts_left=1）→ **不再显示**「疾行」")
+	# R322（用户口径）：卡面自带疾行的单位（白狼 / 鸭子队长）**动过之后也一直显示** ——
+	# 那是「它天生双动」这条卡面信息，藏一半玩家就会以为它和普通单位一样。
+	check(r91_sw.active_affixes(1, false).has("疾行"),
+		"R322 active_affixes：卡面自带疾行（白狼 actions=2）→ 用掉一轮后**仍然显示**")
+	# 但「后来才获得」的临时双动（哈气 / 场上的赫利俄斯）用掉就要收 ——
+	# 显示「疾行」却打不出第二下，那才是真误导（R135 的原意）。
+	var r322_tmp := CardData.from_dict(r91_repo.get_card(8003).to_dict())
+	r322_tmp.add_affix(GameEngine.AFFIX_SWIFT)
+	check(r322_tmp.actions < 2 and not r322_tmp.active_affixes(1, false).has("疾行")
+			and r322_tmp.active_affixes(2, false).has("疾行"),
+			"R322 active_affixes：**后天获得**的疾行 → 还剩 2 轮时显示、用掉就收")
+	# 过载把 actions 改成 2（永久改造，不是「临时」）→ 按自带处理，常驻
+	var r322_ov := CardData.from_dict(r91_repo.get_card(8003).to_dict())
+	r322_ov.actions = 2
+	r322_ov.add_affix(GameEngine.AFFIX_SWIFT)
+	check(r322_ov.active_affixes(1, false).has("疾行"),
+		"R322 active_affixes：被过载改成双动（actions=2）→ 同样常驻显示")
 	var r91_sh := CardData.from_dict(r91_repo.get_card(8003).to_dict())
 	r91_sh.add_affix(GameEngine.FIELD_BARRIER)
 	check(r91_sh.active_affixes(1, true).has("护盾")
@@ -21802,6 +21817,58 @@ func _init() -> void:
 	check(r321_seg.find("label != \"\" and has_src") >= 0,
 			"R321 源码锁：卡名标签也要 has_src 才画（否则挂在「第一个受害者」头上）")
 
+	# ================= R322：地图可点范围 = 走过的连通区 + 其相邻格 =================
+	# 用户口径：不只要「当前房的相邻格」，走过的房间可以自由穿行（零消耗、无事件），
+	# 所以「隔着一间走过的空房再去下一间」也该点得到。判据唯一口：
+	#   · `RogueMap.path_through()`（纯函数：路线；中途只能踩走过的）
+	#   · `RunState.can_reach()` / `path_to()`（带局状态的那一层）
+	var r322_rng := RandomNumberGenerator.new()
+	r322_rng.seed = 20261022
+	var r322_map := RogueMap.generate(r322_rng, GameLayers.LAYER_DEFAULT)
+	var r322_all := {}
+	for i in r322_map.size():
+		r322_all[i] = true
+	var r322_start := 0
+	var r322_path := RogueMap.path_through(r322_map, r322_start, 5, r322_all)
+	# 起点 0 走到 5（顶层中间）—— 用「全部允许」先拿到一条真实路线当样本
+	var r322_ok := r322_path.size() >= 2 and int(r322_path[r322_path.size() - 1]) == 5
+	check(r322_ok,
+			"R322 路线：全允许时能从 0 走到 5（%d 步）" % r322_path.size())
+	if r322_ok:
+		var r322_mid := int(r322_path[0])
+		var r322_far := int(r322_path[1])
+		var r322_third := int(r322_path[2]) if r322_path.size() > 2 else -1
+		# 只把「起点 + 第一格」算作走过 → 第二格（相邻于走过的第一格）可达，
+		# 第三格（相邻于**没走过**的第二格）就不可达。
+		var r322_seen := {r322_start: true, r322_mid: true}
+		check(RogueMap.path_through(r322_map, r322_start, r322_far, r322_seen).size() == 2,
+				"R322 路线：走过的房间的**相邻格**算可达（0 → %d）" % r322_far)
+		if r322_third >= 0:
+			check(RogueMap.path_through(r322_map, r322_start, r322_third, r322_seen).is_empty(),
+					"R322 路线：隔着**没走过**的房间就走不到（0 → %d 应为空）" % r322_third)
+			r322_seen[r322_far] = true
+			check(RogueMap.path_through(r322_map, r322_start, r322_third, r322_seen).size() == 3,
+					"R322 路线：把中间那格也标记走过 → 再远一格就通了（%d 步）"
+							% RogueMap.path_through(r322_map, r322_start, r322_third, r322_seen).size())
+		# 局状态那一层：can_reach 与 path_to 必须同源
+		var r322_old_cells: Array = RunState.map_cells
+		var r322_old_cur: int = RunState.current_node_id
+		var r322_old_cleared: Array = RunState.cleared_ids
+		RunState.map_cells = r322_map
+		RunState.current_node_id = r322_start
+		RunState.cleared_ids = [r322_start, r322_mid]
+		check(RunState.can_reach(r322_far) and not RunState.can_reach(r322_third),
+				"R322 can_reach：走过 + 相邻可点，隔两格不可点（%s / %s）"
+						% [RunState.can_reach(r322_far), RunState.can_reach(r322_third)])
+		check(not RunState.can_reach(RunState.current_node_id),
+				"R322 can_reach：当前所在房间不算「可去」")
+		check(RunState.path_to(r322_far).size() == 2
+				and RunState.path_to(r322_far)[1] == r322_far,
+				"R322 path_to：路线末位就是目标格（%s）" % [RunState.path_to(r322_far)])
+		RunState.map_cells = r322_old_cells
+		RunState.current_node_id = r322_old_cur
+		RunState.cleared_ids = r322_old_cleared
+
 	# ================= R290：机械之心两张伤害技能（集中突破 9162 / 冲击炮 9163）=================
 	# 集中突破 = 2 费普通技能：10 伤 + 场上**己方**每层改造 +4（只数场上，手牌 / 牌库不算）。
 	# 冲击炮   = 2 费稀有技能：8 伤 + 把目标击退 2 格（走唯一口 _knockback）。
@@ -21953,6 +22020,8 @@ func _init() -> void:
 			and r291_bg.card_class == "机械之心" and r291_bg.target_mode == "unit"
 			and r291_bg.needs_target(),
 			"R291 辅助刃：机械之心普通技能 —— 0 费 / 需选一个目标")
+	check(r291_bg.has_affix(GameEngine.AFFIX_DIMENSION),
+			"R322 辅助刃：带「次元」字段（打出后消失，不进弃牌区）")
 	var r291_dup: CardData = repo.get_card(GameEngine.DUPLICATE_ID)
 	check(r291_dup != null and r291_dup.card_name == "复制术"
 			and r291_dup.kind == "技能" and r291_dup.cost == 5 and r291_dup.rarity == 2

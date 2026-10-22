@@ -379,7 +379,14 @@ func _cell_at(pos: Vector2) -> Dictionary:
 
 
 func _is_available(cell: Dictionary) -> bool:
-	## 从当前房间能否走到它（必须真的有门 —— 与 RunState.can_move_to 同源）。
+	## R322（用户口径）：能去的范围 = **走过的连通区 + 它们的相邻格**，不只是当前房的相邻格。
+	## 判据唯一口 `RunState.can_reach()`（点击 / 高亮 / 悬停全读它）。
+	return RunState.can_reach(int(cell["id"]))
+
+
+func _is_adjacent(cell: Dictionary) -> bool:
+	## 是不是「下一步就能进」的相邻房（有门）。只用于**区分高亮档位**：
+	## 相邻 = 绿脉动框（原样）；隔着一间走过的空房 = 淡青细框。
 	return RunState.can_move_to(int(cell["id"]))
 
 
@@ -483,6 +490,14 @@ func _enter_node(cell: Dictionary, animate := true) -> void:
 	## * 回到**走过的**房间 → 不播过场，直接走原逻辑（什么都不会发生）。
 	if cell.is_empty() or not _anim_cell.is_empty():
 		return
+	# R322（用户口径）：点的可能是「隔着几间走过的空房」的那一格 ——
+	# 先把中间那段**静默走掉**（走过的房间：零消耗、不结算、不播过场），
+	# 最后一步再按正常流程进房。不这么做，`advance()` 会因「不直接相邻」直接拒绝。
+	var tid := int(cell["id"])
+	if RunState.current_node_id >= 0 and not RunState.can_move_to(tid):
+		var mid := RunState.path_to(tid)
+		for i in maxi(0, mid.size() - 1):
+			RunState.advance(int(mid[i]))
 	if animate and not _visited(cell) and RunState.can_move_to(int(cell["id"])):
 		_anim_cell = cell
 		_anim_t = 0.0
@@ -836,10 +851,21 @@ func _draw_states() -> void:
 			draw_rect(r.grow(3.0), UiTheme.ACCENT_LIT, false, 3.0)
 			draw_rect(r.grow(8.0), Color(0.95, 0.76, 0.31, 0.28), false, 5.0)
 			_draw_player_marker(r)   # R166：当前格叠角色头像，一眼看到「我在这」
-		elif _is_available(cell):
+		elif _is_adjacent(cell):
+			# 「下一步」：绿脉动框（原样，最醒目）
 			var pulse := 0.5 + 0.5 * sin(_t * 4.0)
 			draw_rect(r.grow(2.0),
 					Color(0.45, 0.90, 0.50, 0.42 + 0.42 * pulse), false, 2.6)
+		elif _is_available(cell):
+			# R322：隔着一间走过的空房也能去（或那格本身走过）→ **虚线**细框。
+			# 用虚线不是随手选的：实线框是「下一步」（上面那档、会呼吸），
+			# 虚线是「走得到但不是下一步」—— 形状上一眼可分，满图绿框也不会抢指向性。
+			var rc := Color(0.45, 0.90, 0.50, 0.62)
+			var g := r.grow(1.0)
+			draw_dashed_line(g.position, Vector2(g.end.x, g.position.y), rc, 1.8, 7.0)
+			draw_dashed_line(Vector2(g.end.x, g.position.y), g.end, rc, 1.8, 7.0)
+			draw_dashed_line(g.end, Vector2(g.position.x, g.end.y), rc, 1.8, 7.0)
+			draw_dashed_line(Vector2(g.position.x, g.end.y), g.position, rc, 1.8, 7.0)
 		if _hover_id == id and _is_available(cell):
 			draw_rect(r.grow(5.0), Color(1, 1, 1, 0.75), false, 2.0)
 		# 鸭之低语：命运替玩家选中的那间（紫色脉动圈）

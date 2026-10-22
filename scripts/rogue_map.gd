@@ -710,6 +710,50 @@ static func doors_between(cells: Array, a_id: int, b_id: int) -> bool:
 			and neighbor_ids(cells[b_id]).has(a_id)
 
 
+static func path_through(cells: Array, from_id: int, to_id: int,
+		allowed: Dictionary) -> Array:
+	## R322（用户口径）：从 `from_id` 走到 `to_id` 的**逐格路线**（不含 from，末位 = to）。
+	## 中途只允许踩在 `allowed`（= **已经走过**的房间）里；**终点不受限**。
+	## 走不通返回空数组 —— 调用方一律用「空 = 去不了」判。
+	##
+	## 为什么需要它：走过的房间可以自由穿行（`RunState.advance()` 对已走过的房间
+	## 零消耗、什么都不会发生），所以「能去的地方」不只是当前房的相邻格，而是
+	## **走过的连通区 + 它们的所有相邻格**。地图点击按这条口径放行。
+	## 纯函数（只读 cells + allowed）→ 回归可以直接钉，不用造局状态。
+	var out: Array = []
+	if from_id < 0 or to_id < 0 or from_id >= cells.size() or to_id >= cells.size():
+		return out
+	if from_id == to_id:
+		return out
+	var parent := {from_id: from_id}
+	var q: Array = [from_id]
+	var head := 0
+	var hit := -1
+	while head < q.size() and hit < 0:
+		var cur: int = int(q[head])
+		head += 1
+		for nb in neighbor_ids(cells[cur]):
+			var b := int(nb)
+			if b < 0 or b >= cells.size() or parent.has(b):
+				continue
+			# 中途只能踩「走过的」房间；终点那一步不限（它就是玩家想去的下一间）
+			if b != to_id and not allowed.has(b):
+				continue
+			parent[b] = cur
+			if b == to_id:
+				hit = b
+				break
+			q.append(b)
+	if hit < 0:
+		return out
+	var cur2 := hit
+	while cur2 != from_id:
+		out.append(cur2)
+		cur2 = int(parent[cur2])
+	out.reverse()
+	return out
+
+
 static func steps_from(cells: Array, from_id: int) -> Dictionary:
 	## 从某格出发的步数表（id -> 步数）。只走有门的相邻格。
 	var adj: Array = []
