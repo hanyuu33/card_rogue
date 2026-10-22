@@ -523,9 +523,12 @@ static func scaled_enemy_card(card: CardData) -> CardData:
 		return card
 	var c := CardData.from_dict(card.to_dict())
 	if pct > 0.0:
-		c.health += ceili(card.health * pct)
+		var hp_add := ceili(card.health * pct)
+		c.health += hp_add
+		c.diff_health += hp_add       # R325：单独记账 → 卡面染色不把难度加成当「变强」
 	if add > 0 and not skip_power:
 		c.power += add
+		c.diff_power += add
 	return c
 
 

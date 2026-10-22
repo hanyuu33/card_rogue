@@ -24,6 +24,7 @@ var _hover := -1
 var _last_mp := Vector2.INF
 var _seed_edit: LineEdit = null   # R241「下一局种子」输入框（唯一的原生控件）
 var _seed_guard := false          # 防止 text_changed 里改 text 触发二次回调
+var _seed_hover := false          # R325：「复制」按钮的悬停态（自绘按钮要自己记）
 
 
 func _ready() -> void:
@@ -56,6 +57,31 @@ func _seed_panel_rect() -> Rect2:
 	## 三行开关下面的一块 —— 本局种子（只读）+ 下一局种子（可填）。
 	var last := _row_rect(ROW_COUNT - 1)
 	return Rect2(last.position.x, last.end.y + 22.0, ROW_W, SEED_H)
+
+
+func _seed_copy_rect() -> Rect2:
+	## R325：种子面板右上角的「复制」按钮（跟在「本局种子」一行的右端）。
+	var p := _seed_panel_rect()
+	return Rect2(p.position.x + p.size.x - 92.0, p.position.y + 30.0, 72.0, 26.0)
+
+
+func _seed_copy_text() -> String:
+	## 复制什么：优先**本局种子**（有进行中的对局时）；
+	## 没有对局就退回「下一局种子」——那串码同样值得抄出去分享 / 复现。
+	if RunState.run_active and RunState.run_seed != 0:
+		return RunState.seed_text()
+	return GameSettings.next_seed_code
+
+
+func _copy_seed() -> void:
+	## R325：种子写进**系统剪贴板**。`DisplayServer.clipboard_set` 在桌面与安卓是同一口
+	## （安卓走 JNI 的 ClipboardManager），所以手机上复制完直接长按粘贴就行。
+	var code := _seed_copy_text()
+	if code == "":
+		UiToast.toast("还没有可复制的种子：先开一局，或在下面填「下一局种子」")
+		return
+	DisplayServer.clipboard_set(code)
+	UiToast.toast("已复制种子 %s" % code)
 
 
 func _seed_edit_rect() -> Rect2:
@@ -174,14 +200,22 @@ func _row_at(pos: Vector2) -> int:
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		var h := _row_at(event.position)
-		if h != _hover:
+		var sh := _seed_copy_rect().has_point(event.position)
+		if h != _hover or sh != _seed_hover:
 			_hover = h
+			_seed_hover = sh
 			queue_redraw()
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
 		if _back_rect().has_point(event.position):
 			sfx.play("click")
 			_back_to_title()
+			return
+		if _seed_copy_rect().has_point(event.position):
+			if _seed_copy_text() != "":
+				sfx.play("click")
+			_copy_seed()
+			queue_redraw()
 			return
 		var i := _row_at(event.position)
 		if i >= 0:
@@ -329,6 +363,16 @@ func _draw_seed_panel() -> void:
 	draw_string(_font, p.position + Vector2(20, 120),
 			"留空 = 每局随机；填入 10 位大写字母 / 数字 → 下一局用同一种子（用一次自动清空）",
 			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 40.0, UiTheme.FS_CAPTION, Color("7d8590"))
+	# R325：一键复制 —— 10 位码手抄太容易错一位（抄错 = 复现不出同一局）。
+	# 按钮紧跟「本局种子」一行右端；没有可复制的码时置灰并吞掉点击。
+	var cr := _seed_copy_rect()
+	var can_copy := _seed_copy_text() != ""
+	var hov := _seed_hover and can_copy
+	draw_rect(cr, Color("414860") if hov else Color("2b2e38"), true)
+	draw_rect(cr, Color("8a93a6") if hov else Color("4a4e58"), false, 1.4)
+	draw_string(_font_bold, cr.position + Vector2(0, 18), "复制",
+			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_CAPTION,
+			Color("f0ece2") if can_copy else Color("63687a"))
 
 
 func _draw_row(i: int, d: Dictionary) -> void:

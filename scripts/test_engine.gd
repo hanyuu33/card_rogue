@@ -19041,6 +19041,31 @@ func _init() -> void:
 	check(RunState.scaled_enemy_card(r223_foe) == r223_foe,
 			"R223 难度 0：两个缩放都关 → 原样返回（连副本都不做）")
 
+	# R325：难度档位给的攻 / 血**单独记账**（diff_power / diff_health）——
+	# 卡面染色把它算进基准，于是难度加成**仍显示白字**（用户口径「视为没有增加过」）。
+	RunState.set_difficulty(6)
+	var r325_scaled: CardData = RunState.scaled_enemy_card(r223_foe)
+	check(r325_scaled.diff_health == 4 and r325_scaled.diff_power == 1,
+			"R325 难度 6：+4 血 / +1 攻单独记账（diff_health=4 / diff_power=1）")
+	check(r325_scaled.health == 44 and r325_scaled.power == 4,
+			"R325 记账不影响结算：数值照旧 4/44（引擎读的仍是 power / health）")
+	check(CardFace._delta_col(r325_scaled.power,
+			r223_foe.power + r325_scaled.diff_power) == UiTheme.BADGE_VALUE,
+			"R325 卡面：难度 +1 攻算进基准 → 白字（不给绿）")
+	check(CardFace._health_col(r325_scaled, r325_scaled.health,
+			r223_foe.health + r325_scaled.diff_health) == UiTheme.BADGE_VALUE,
+			"R325 卡面：难度 +10%% 血算进基准 → 白字（不给绿）")
+	# 同样的卡如果**没有被难度加成**走过染色，仍是白字（基准没被污染）
+	check(CardFace._delta_col(r223_foe.power, r223_foe.power) == UiTheme.BADGE_VALUE,
+			"R325 卡面：原卡（无难度加成）同样是白字")
+	var r325_copy: CardData = CardData.from_dict(r325_scaled.to_dict())
+	check(r325_copy.diff_power == 1 and r325_copy.diff_health == 4,
+			"R325 记账随 to_dict / from_dict 走（复制 / 离场还原后染色不会又变绿）")
+	RunState.set_difficulty(0)
+	check(RunState.scaled_enemy_card(r223_foe).diff_power == 0
+			and RunState.scaled_enemy_card(r223_foe).diff_health == 0,
+			"R325 难度 0：没加成也就不记账")
+
 	# 开局接线：金钱 / 巧克力 / 最大生命
 	RunState.set_difficulty(0)
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
@@ -22451,6 +22476,32 @@ func _init() -> void:
 	var r288b_unq := r288_ui.find("func _fx_unqueue_hit(")
 	check_src(r288b_unq >= 0,
 			"R288b 源码锁：专属落点表现（meteor）到达时撤掉同格 fx_hit（否则双爆点双飘字）")
+
+	# ================= R325：图鉴 / 双伤害飘字 / 种子复制 =================
+	var r325_gal := FileAccess.get_file_as_string("res://scripts/gallery_scene.gd")
+	check_src(r325_gal.find("+ Vector2(0, scroll.scroll_vertical)") < 0,
+			"R325 源码锁：图鉴命中不再重复补偿 scroll_vertical（否则往下滚多少就点错多少行）")
+	check_src(r325_gal.find("func _cell_rect") >= 0
+			and r325_gal.find("_cell_rect(i).grow(5.0).has_point(pos)") >= 0,
+			"R325 源码锁：图鉴绘制与命中**共用** _cell_rect()（两处各算一遍迟早算岔）")
+	check_src(r325_gal.find("var top := float(scroll.scroll_vertical) - CELL_H") >= 0
+			and r325_gal.find("scroll.get_v_scroll_bar().value_changed") >= 0,
+			"R325 源码锁：图鉴只画可见行 + 滚动后重绘（258 张一次全画会撑爆安卓）")
+	check_src(r325_gal.find("func _apply_project_fonts") >= 0
+			and r325_gal.find("_apply_project_fonts(self)") >= 0,
+			"R325 源码锁：图鉴字体换工程内嵌字体（安卓上没有任何微软雅黑）")
+	var r325_fx_at := r288_ui.find("func _fx_claim(")
+	var r325_fx_seg := r288_ui.substr(r325_fx_at, 1800) if r325_fx_at >= 0 else ""
+	check_src(r325_fx_seg.find("_fx_unqueue_hit(cell)") >= 0,
+			"R325 源码锁：认领专属命中时撤掉同格 fx_hit（引擎先发 fx_impact 后发 attack）")
+	var r325_tr_at := r288_ui.find("\"trample_hit\":")
+	var r325_tr_seg := r288_ui.substr(r325_tr_at, 900) if r325_tr_at >= 0 else ""
+	check_src(r325_tr_at >= 0 and r325_tr_seg.find("_fx_claim(th_cell)") >= 0,
+			"R325 源码锁：践踏那一格也要认领（否则践踏同样飘两次伤害）")
+	var r325_set := FileAccess.get_file_as_string("res://scripts/settings_scene.gd")
+	check_src(r325_set.find("DisplayServer.clipboard_set(code)") >= 0
+			and r325_set.find("func _seed_copy_rect") >= 0,
+			"R325 源码锁：设置页种子一键复制（DisplayServer 同一口，安卓可用）")
 
 	# ================= R302：集束炮台 9166 / 合体 9167 =================
 	# 集束炮台 = 2 费普通盟友 1/6/1/1：入场往抽牌库塞 2 张「聚能炮击」9145；

@@ -172,6 +172,18 @@ var enchant: String = ""
 ## **卡库里的原卡也带同一个 trait**（否则引擎认不出该给谁发复制），
 ## 若只判 trait，原卡被打死时也会被当成衍生物「消失」—— 它就该老实地进弃牌区被洗回牌库。
 ## 于是规矩是：trait 决定「**会不会自己复制**」，本字段决定「**是不是衍生物**」。
+## **难度档位带来的开场加成**（R325）：生命 +10%（难度 ≥3）/ 攻击 +1（难度 ≥6）。
+##
+## 为什么单独记一份，而不是让它混进 `power` / `health` 就算完：
+## 卡面染色（`CardFace._draw_badges`）是拿**卡库原型**当基准比大小的 —— 难度加成混进去
+## 就会让整场怪的攻 / 血全变绿，看起来像是「这怪被强化过」。用户口径是
+## 「因难度选择而增加的生命和攻击，依然显示白色（视为没有增加过）」，
+## 所以这里把难度给的那一份**单独记账**，染色时把它算进基准（base + diff）。
+## ⚠️ 不影响任何结算：引擎读的仍是 `power` / `health`（已经把加成烤进去了）。
+## ⚠️ 必须随 `to_dict` 走 —— 复制副本（改造 / 离场还原 / 联机）时这份账不能丢，
+##    否则染色又会把难度加成当成「变强」。
+var diff_power: int = 0
+var diff_health: int = 0
 ## ⚠️ 不是 cards.json 的字段，**不进 to_dict** —— 序列化出去时衍生物应当退化成普通卡。
 var is_ephemeral: bool = false
 
@@ -203,6 +215,9 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.regen_per_turn = maxi(0, int(d.get("regen_per_turn", 0)))
 	c.own_copy = bool(d.get("own_copy", false))
 	c.random_born = bool(d.get("random_born", false))
+	# R325：难度档位加成（只给染色用，结算早已烤进 power / health）
+	c.diff_power = int(d.get("diff_power", 0))
+	c.diff_health = int(d.get("diff_health", 0))
 	# R214：附魔 id 随序列化走（烤数值之后它是「这张卡被附魔过」的唯一凭据）
 	c.enchant = str(d.get("enchant", ""))
 	# ⚠️ 数组字段**必须逐个 append**（不能直接接字典里那个 Array）：
@@ -241,6 +256,8 @@ func to_dict() -> Dictionary:
 		"own_copy": own_copy,
 		# R271：「随机变化入手」标记同样必须随序列化走（复制 / 离场还原共用这条通道）。
 		"random_born": random_born,
+		# R325：难度加成必须随复制通道走（否则复制后的怪染色又变绿）。
+		"diff_power": diff_power, "diff_health": diff_health,
 		# R214：附魔 id **必须**在这里 —— 复制 / 离场还原 / 联机共用这条通道，
 		# 漏了它 = 卡一进战场附魔标记就没了（数值还在，看不出是附魔来的）。
 		"enchant": enchant,

@@ -36,6 +36,7 @@ var _search := ""
 var _class_filter := "全部"       # R77：按职业查找（"" = 无归属 / 通用）
 
 var _menu: UiMenu = null      # Esc 主菜单（R148）
+var _shot_scroll := 0         # R325：出图前先滚到这个位置（`--scroll N`，视觉验证用）
 
 var _font: Font
 var _font_bold: Font
@@ -63,6 +64,11 @@ var _font_bold: Font
 func _ready() -> void:
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
+	# R325：**字体统一换成工程内嵌的思源黑体**。
+	# 场景里那套 `SystemFont("Microsoft YaHei UI" / "SimHei")` 是给 Windows 用的，
+	# 安卓上这几个字体名**一个都不存在** —— 手机上不是豆腐块就是取不到字形
+	# （进图鉴黑屏的嫌疑之一，另一个是一次画 258 张卡的绘制 / 字形压力，见 _on_grid_draw）。
+	_apply_project_fonts(self)
 	# R113：图鉴页底色 #E9E7E2 = 亮底 → 浅底 chip；两个 tab 是 toggle，选中态由 button_pressed 驱动
 	for _b: Button in [player_tab, enemy_tab, back_btn]:
 		UiTheme.apply_chip(_b, false)
@@ -92,12 +98,18 @@ func _ready() -> void:
 	enemy_tab.toggled.connect(_on_group_toggled.bind("enemy"))
 	grid.draw.connect(_on_grid_draw)
 	grid.gui_input.connect(_on_grid_input)
+	# R325：`_on_grid_draw` 现在**只画可见行** —— 滚动后必须重画，否则新露出来的那几行
+	# 是空白（绘制的坐标变换会跟着滚动走，但 `_draw` 不会自动重跑）。
+	scroll.get_v_scroll_bar().value_changed.connect(func(_v: float): grid.queue_redraw())
 	$DetailPanel.draw.connect(_on_detail_draw)
 	# 命令行 -- --group enemy：直接打开敌人图鉴（演示 / 截图用）
 	var args := OS.get_cmdline_user_args()
 	for i in args.size():
 		if args[i] == "--group" and i + 1 < args.size() and str(args[i + 1]) == "enemy":
 			enemy_tab.button_pressed = true
+		# R325：`--scroll N` 出图前先滚到 N —— 可见行裁剪之后要证明「滚下去照样画」。
+		if args[i] == "--scroll" and i + 1 < args.size():
+			_shot_scroll = int(args[i + 1])
 	_rebuild_kinds()
 	_apply_filters()
 	# 命令行 -- --screenshot：打开后自动截图退出（视觉验证用）
@@ -106,6 +118,10 @@ func _ready() -> void:
 		t.wait_time = 0.6
 		t.one_shot = true
 		t.timeout.connect(func():
+			if _shot_scroll > 0:
+				scroll.scroll_vertical = _shot_scroll
+				await get_tree().process_frame
+				await get_tree().process_frame
 			var img := get_viewport().get_texture().get_image()
 			img.save_png(ProjectSettings.globalize_path("res://screenshot_gallery.png"))
 			get_tree().quit())
@@ -248,34 +264,66 @@ func _apply_filters() -> void:
 		_refresh_detail()
 
 
+func _apply_project_fonts(n: Node) -> void:
+	## 递归把控件上的**字体 override** 换成工程字体。
+	## 只动「字体」这一项，字号 / 颜色 / 对齐等 override 原样保留 ——
+	## 场景文件里写死的 SystemFont 会被 `add_theme_font_override` 顶掉。
+	if n is Control:
+		var c := n as Control
+		for key: StringName in [&"font", &"normal_font", &"bold_font"]:
+			if c.has_theme_font_override(key):
+				c.add_theme_font_override(key, _font)
+	for ch in n.get_children():
+		_apply_project_fonts(ch)
+
+
+func _cell_rect(i: int) -> Rect2:
+	## 第 i 张卡在**网格自身坐标系**里的矩形 —— 绘制与点击共用这一口。
+	## ⚠️ R325：以前两处各算一遍，命中那边还多加了一次 `scroll.scroll_vertical`
+	## （ScrollContainer 是靠移动子节点位置的，`gui_input` 的坐标里已经含滚动量），
+	## 于是往下滚之后点到的永远是上面几行的卡。共用函数 + 不加偏移是唯一的解。
+	var cols := int(GRID_W / CELL_W)
+	return Rect2((i % cols) * CELL_W + (CELL_W - CARD_W) / 2.0,
+			(i / cols) * CELL_H + (CELL_H - CARD_H) / 2.0, CARD_W, CARD_H)
+
+
 # ------------------------------------------------------------ 网格绘制
 
 func _on_grid_draw() -> void:
-	var cols := int(GRID_W / CELL_W)
+	## ⚠️ R325：**只画看得见的那几行**。
+	## 图鉴最多 258 张卡（7 列 = 37 行）：以前一次全画，每帧上千条绘制命令，
+	## 几百个卡名 / 效果文的字形都要进动态字体图集 —— 安卓上直接把纹理内存撑爆
+	## （用户实测「进图鉴直接黑屏」），PC 上滚起来也发卡。
+	## 卡面尺寸 76×92，每行 CELL_H = 117，所以只留上下各一行余量就够。
+	var top := float(scroll.scroll_vertical) - CELL_H
+	var bottom := float(scroll.scroll_vertical) + scroll.size.y + CELL_H
 	for i in _shown.size():
-		var r := i / cols
-		var col := i % cols
-		# +10 而不是 +4：首行的费用徽章会露到卡片上方一个半径，得留在网格内部
-		# （网格在 ScrollContainer 里，露出去会被裁掉）。
-		var rect := Rect2(col * CELL_W + (CELL_W - CARD_W) / 2.0,
-				r * CELL_H + (CELL_H - CARD_H) / 2.0, CARD_W, CARD_H)
+		var rect := _cell_rect(i)
+		if rect.end.y < top or rect.position.y > bottom:
+			continue
 		CardFace.draw(grid, _shown[i], rect, _shown[i].health,
 				_shown[i] == _selected, false, _font, _font_bold)
 
 
 func _on_grid_input(event: InputEvent) -> void:
+	## R325：命中判定改成**逐张卡的矩形**，与绘制共用 `_cell_rect()`。
+	## ⚠️ 之前那句「event.position 再加一次竖向滚动量」是**重复补偿**：
+	## ScrollContainer 靠移动子节点位置实现滚动，`gui_input` 收到的局部坐标已经含滚动量，
+	## 于是往下滚多少、就点错多少行（用户报「点不中 / 选中了别的卡」）。
 	if event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
-		var pos: Vector2 = event.position + Vector2(0, scroll.scroll_vertical)
-		var cols := int(GRID_W / CELL_W)
-		var col := int(pos.x / CELL_W)
-		var r := int((pos.y - (CELL_H - CARD_H) / 2.0) / CELL_H)
-		if col >= 0 and col < cols and r >= 0:
-			var idx := r * cols + col
-			if idx < _shown.size():
-				_selected = _shown[idx]
+		# 用**事件自带**的坐标：`gui_input` 收到的 position 已经是网格自身坐标系
+		# （ScrollContainer 靠移动子节点滚动，坐标里天然含滚动量），
+		# 而且触摸 / 笔 / 鼠标三种来源走的是同一条通道。
+		var pos: Vector2 = (event as InputEventMouseButton).position
+		for i in _shown.size():
+			# grow(5)：卡与卡之间有一条 25×25 的缝（CELL 101/117 减卡 76/92），
+			# 点在缝里也该算中这一张，不然看着点准了却没反应。
+			if _cell_rect(i).grow(5.0).has_point(pos):
+				_selected = _shown[i]
 				_refresh_detail()
 				grid.queue_redraw()
+				return
 
 
 # ------------------------------------------------------------ 详情面板

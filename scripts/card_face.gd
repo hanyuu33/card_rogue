@@ -669,10 +669,20 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	# 生命：**四态**（受伤红 / 高于原本绿 / 等于原本白 / 低于原本黄）—— 见 `_health_col()`。
 	# 手卡 / 场上 / 弃牌区 / 图鉴全部走这里，调用方不用管（也不用各自判涨跌）。
 	var bv := _base_vals(card)
+	# R325：难度档位给的攻 / 血**不算「变强」** —— 算进基准，卡面保持白字
+	#（用户口径「因难度选择而增加的，依然显示白色，视为没有增加过」）。
+	# ⚠️ 只加在本地副本上：`_base_vals()` 的字典是**按 id 缓存**的，改它会污染同 id 的
+	#    所有卡（手牌里那张没有难度加成，也会跟着变成「本来就这么高」）。
+	var base_power: Variant = bv.get("power")
+	if base_power != null:
+		base_power = int(base_power) + card.diff_power
+	var base_health: Variant = bv.get("health")
+	if base_health != null:
+		base_health = int(base_health) + card.diff_health
 	var shown_power: int = power_override if power_override >= 0 else card.power
 	draw_badge(canvas, font_bold, Vector2(power_x, bar_y), r, fs, "power",
 			str(shown_power), UiTheme.BADGE_POWER,
-			_delta_col(shown_power, bv.get("power")))
+			_delta_col(shown_power, base_power))
 	draw_badge(canvas, font_bold, Vector2(range_x, bar_y), r, fs, "range",
 			str(card.attack_range), UiTheme.BADGE_RANGE,
 			_delta_col(card.attack_range, bv.get("range")))
@@ -687,7 +697,7 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 				_delta_col(card.move_speed, bv.get("speed")))
 	draw_badge(canvas, font_bold, Vector2(health_x, bar_y), r, fs, "health",
 			str(hp), UiTheme.BADGE_HEALTH,
-			_health_col(card, hp, bv.get("health")))
+			_health_col(card, hp, base_health))
 
 
 static func _base_repo() -> CardRepo:

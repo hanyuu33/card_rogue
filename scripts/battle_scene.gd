@@ -531,6 +531,12 @@ func _ready() -> void:
 		_shot_frame = 45 if "--spellshot" in args else 150  # 45 = 法术飘字进行中
 	if "--customdeck" in args:
 		pass  # 卡组构筑已移除（肉鸽版固定初始卡组），参数保留兼容旧命令
+	# R325：`--diff N` = 难度档位（出图核验「难度加成仍是白字」用）。
+	# ⚠️ 必须**先于** `--level` 生效 —— 敌方攻 / 血是在 load_level 里按难度缩放的。
+	for i in args.size():
+		if args[i] == "--diff" and i + 1 < args.size():
+			RunState.set_difficulty(clampi(int(args[i + 1]), 0,
+					RunState.DIFFICULTY_COUNT - 1))
 	for i in args.size():
 		if args[i] == "--level" and i + 1 < args.size():
 			var li := int(args[i + 1])
@@ -8126,7 +8132,15 @@ func _push_cue(cells: Array, label: String, col: Color,
 func _fx_claim(cell: Vector2i) -> void:
 	## 这一格已经有**专属命中表现**（普通攻击 / 践踏 / 直击）→ 通用受击演出让路，
 	## 免得同一个伤口炸两次。
+	#
+	# ⚠️ R325：认领的同时**必须撤掉这一格已经排着的通用受击**（`fx_hit`）。
+	# 引擎 `_hit_unit()` 是**先发 `fx_impact`、后发 `attack`** 的：battle_scene 收到
+	# `fx_impact` 那一刻这一格还没被认领 → 通用受击（紫爆点 + `-N`）先排队了，
+	# 等 `attack` 到了再认领已经来不及 —— 同一次攻击于是飘出**两个**伤害数字
+	# （用户报「攻击会弹出两次伤害显示」，就是这条时序）。
+	# 认领处顺手撤销是唯一可靠的时机：谁声明「这一下我有专属演出」，谁负责清场。
 	_fx_claimed[cell] = _now()
+	_fx_unqueue_hit(cell)
 
 
 func _fx_unqueue_hit(cell: Vector2i) -> void:
@@ -8684,6 +8698,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 补一次命中演出（不重播攻击者的攻击动作），排在这次攻击「命中」之后再播，
 			# 视觉上就是「伤害穿过了前一具尸体」。
 			var th_cell: Vector2i = data["cell"]
+			# R325：践踏这一格同样要认领 —— 它的 `_hit_unit` 也先发过 `fx_impact`，
+			# 不认领就会和上面那条一样「紫爆点 + 橙爆点」各飘一次。
+			_fx_claim(th_cell)
 			var th_pl := engine.state.unit_at(th_cell)
 			var th_dmg := int(data.get("amount", 0))
 			var th_at := n
