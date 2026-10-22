@@ -13,7 +13,8 @@ extends Control
 ##   assets/ui/bg_curtain.png          整屏背景（卷卷的森林 CG）
 ##   assets/ui/curtain_box.png         羊皮纸对话框（九宫格，中心留白写字）
 ##   assets/ui/curtain_plate.png       名称牌
-##   assets/ui/curtain_hero_<key>.png  三个职业的立绘（key 走 UiAssets.class_key）
+## ⚠️ R310 修订（用户口径）：**不再使用角色立绘** —— 二层回答改成只换名称牌 + 台词，
+##    立绘素材（curtain_hero_*）已从 assets/ui 撤掉，源图留在 art_src 备查。
 ##
 ## 文案唯一口 = `CurtainLines`（本文件只负责排版与状态机）。
 ##
@@ -52,7 +53,6 @@ var _instant := false            # 打字瞬完（出图 / 测试）
 var _tip_demo := -1              # 演示参数 --curtaintip N：锁住第 N 项的效果浮窗（出图核验）
 
 var _bg: TextureRect = null
-var _hero: TextureRect = null
 var _box: Panel = null
 var _plate: TextureRect = null
 var _title: Label = null
@@ -142,7 +142,10 @@ func _build_nodes() -> void:
 	# ① 背景（缺图 → 退 v 内置暗底 ColorRect）
 	_bg = TextureRect.new()
 	_bg.texture = UiAssets.get_tex("bg_curtain")
-	_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	# 用户口径：**背景图不拉伸** —— 等比完整显示、居中；
+	# 窗口不是 16:9 时宁可两侧/上下留暗边，也不裁掉画面、更不拉变形。
+	_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_bg)
@@ -150,14 +153,7 @@ func _build_nodes() -> void:
 	_bg.visible = _bg.texture != null
 	if _bg.visible:
 		($BG as ColorRect).visible = false      # 让位给自定义背景（否则暗底会压在上面）
-	# ② 立绘（第二层起的回答态才显示）
-	_hero = TextureRect.new()
-	_hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_hero.visible = false
-	add_child(_hero)
-	# ③ 对话框（羊皮纸，九宫格：左右边角不拉伸、中间拉宽）
+	# ② 对话框（羊皮纸，九宫格：左右边角不拉伸、中间拉宽）
 	_box = Panel.new()
 	_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sb := StyleBoxTexture.new()
@@ -266,15 +262,6 @@ func _relayout() -> void:
 	# 跳过 / 离开（屏幕右上角，不压对话框的藤蔓角饰）
 	_skip.size = Vector2(150.0, 34.0)
 	_skip.position = Vector2(size.x - _skip.size.x - 22.0, 18.0)
-	# 立绘：右下，底部压在对话框上沿之内（对话框盖住它下半）
-	if _hero != null and _hero.visible:
-		var hh: float = minf(430.0, size.y * 0.60)
-		var tex := _hero.texture
-		var hw: float = hh * 0.62
-		if tex != null and tex.get_height() > 0:
-			hw = hh * float(tex.get_width()) / float(tex.get_height())
-		_hero.size = Vector2(hw, hh)
-		_hero.position = Vector2(r.end.x - hw - 26.0, r.position.y + 14.0 - hh)
 
 
 # ──────────────────────────────────────────────────────── 台词 / 状态机
@@ -377,8 +364,7 @@ func _pick(i: int) -> void:
 	RunState.choose_start_relic(id)
 	var name: String = RunState.relic_display_name(id)
 	if CurtainLines.has_reply(_layer):
-		# 二层起：角色立绘出场，回一句
-		_show_hero()
+		# 二层起：角色回一句（R310 修订：只换名称牌，不再出立绘 —— 用户口径）
 		_say(CurtainLines.reply(_layer, _cls), CurtainLines.reply_speaker(_layer, _cls))
 		_skip.text = "离开"
 	elif name != "":
@@ -386,16 +372,6 @@ func _pick(i: int) -> void:
 		_skip.text = "离开"
 	else:
 		_end_stage()
-
-
-func _show_hero() -> void:
-	var key := UiAssets.class_key(CurtainLines.reply_speaker(_layer, _cls))
-	var tex: Texture2D = UiAssets.get_tex("curtain_hero_" + key) if key != "" else null
-	if tex == null:
-		return
-	_hero.texture = tex
-	_hero.visible = true
-	_relayout()
 
 
 func _end_stage() -> void:

@@ -3534,9 +3534,9 @@ func _check_curtain_reply(s: Node) -> void:
 		print("  [smoke] curtain: 场景没有 _pick()，跳过")
 		return
 	s.call("_pick", 0)
-	var hero: Variant = s.get("_hero")
 	var title: Variant = s.get("_title")
-	var ok_hero: bool = hero != null and (hero as TextureRect).visible \
-			and (hero as TextureRect).texture != null
+	var desc: Variant = s.get("_desc")
 	var ok_name: bool = title != null and (title as Label).text == PlayerClass.MECH
-	print("  [smoke] curtain 回答态：立绘=%s 名称牌=%s" % [ok_hero, ok_name])
+	var ok_text: bool = desc != null \
+			and (desc as Label).text == CurtainLines.reply(GameLayers.LAYER_TWO, PlayerClass.MECH)
+	print("  [smoke] curtain 回答态：名称牌=%s 台词=%s" % [ok_name, ok_text])

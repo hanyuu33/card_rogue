@@ -12,6 +12,10 @@
 | `curtain_hero_rogue.png` | `EXACT_SAME_CHARACTER_…07-54-39.png` | 立绘 516×760（暗影刺客） |
 | `curtain_hero_mech.png` | `EXACT_SAME_CHARACTER_…07-55-07.png` | 立绘 276×760（机械之心） |
 
+> ⚠️ **R310 修订（用户口径）**：三张立绘**不再接入游戏**（`assets/ui/curtain_hero_*.png` 已删除），
+> 二层回答改成只换名称牌 + 台词。源图仍留在本目录（`EXACT_SAME_CHARACTER_…png`），要恢复直接
+> 重新拷回 `assets/ui/` 并跑 `--headless --import`。背景图改为**等比完整显示**（不拉伸、不裁切）。
+
 ## 处理链（`_make_curtain.py` → `_recut.py`）
 1. 洋红底出图（**直接要透明底会被画成棋盘格**，`assets/ui/图片命名说明.txt` R154 的老结论）。
 2. 四角洪水填充标洋红 → 4px 采样 + 只保留最大连通块（顺手干掉水印小岛）。
