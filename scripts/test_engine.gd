@@ -17243,9 +17243,9 @@ func _init() -> void:
 	check(r202_can != null and r202_can.is_spell() and r202_can.cost == 1 and r202_can.rarity == 0
 			and r202_can.target_mode == "unit" and r202_can.effect_text.contains("9"),
 		"R202 聚能炮击：1 费普通技能，需选目标，打 9 伤")
-	check(r202_rel != null and r202_rel.is_spell() and r202_rel.cost == 0 and r202_rel.rarity == 0
+	check(r202_rel != null and r202_rel.is_spell() and r202_rel.cost == 0 and r202_rel.rarity == 1
 			and r202_rel.target_mode == "hand_any",
-		"R202 填充：0 费普通技能，选手牌目标")
+			"R202/R321 填充：0 费**稀有**技能，选手牌目标")
 	check(pool_ids.has(GameEngine.INVENTION_EXPERT_ID) and pool_ids.has(GameEngine.ASSEMBLE_ID)
 			and pool_ids.has(GameEngine.ENERGY_CANNON_ID) and pool_ids.has(GameEngine.RELOAD_ID),
 		"R202 四张新卡均进入奖励池")
@@ -21768,6 +21768,39 @@ func _init() -> void:
 	check_src(r288_ui.find("_cue_absorb(") >= 0
 			and r288_ui.find("const CUE_MERGE_MS := ") >= 0,
 			"R288 源码锁：同笔结算的「发动 → 命中」走 _cue_absorb 合并（光带才画得出来）")
+
+	# ================= R321：只有「有发动者」的演出才拉镜头 / 画光带 =================
+	# 用户口径：普通攻击已有卡牌位移，不需要激光；「其他原因造成伤害」也不要拉动屏幕。
+	# 判据抽成纯函数 `cue_should_pan(has_src, rows, scroll)` → 这里直接钉死：
+	#   ① 没有发动者 → 永不挪镜头（哪怕目标在屏幕外）
+	#   ② 有发动者但该行已完整可见 → 不挪（居中不是目的）
+	#   ③ 有发动者且在屏幕外 → 才挪
+	var r321_bs = load("res://scripts/battle_scene.gd")
+	var r321_min: float = r321_bs._grid_scroll_min()
+	var r321_max: float = r321_bs._grid_scroll_max()
+	check(not bool(r321_bs.cue_should_pan(false, [0], r321_max)),
+			"R321 镜头：**没有发动者**的伤害一律不挪镜头（第 0 行在屏幕外也不挪）")
+	check(not bool(r321_bs.cue_should_pan(false, [5], r321_min)),
+			"R321 镜头：没有发动者 → 第 5 行在屏幕外也不挪（反方向同样成立）")
+	check(not bool(r321_bs.cue_should_pan(true, [5], float(r321_bs.cue_scroll_for([5])))),
+			"R321 镜头：有发动者但该行**已经完整在画面里** → 不挪（居中不是目的）")
+	check(bool(r321_bs.cue_should_pan(true, [5], r321_min)),
+			"R321 镜头：有发动者且该行在屏幕外 → 才挪（虚骨龙吐息要看得见发动者）")
+	check(bool(r321_bs.cue_rows_visible([2, 4], float(r321_bs.cue_scroll_for([2, 4]))))
+			and not bool(r321_bs.cue_rows_visible([0, 5], r321_min)),
+			"R321 镜头：相邻两行同屏算「已可见」，跨 6 行算「看不见」")
+
+	# 源码锁：光带 / 卡名都必须在 has_src 分支内 —— 无发动者只画落点环。
+	var r321_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r321_i := r321_src.find("func _draw_cues(")
+	var r321_j := r321_src.find("func _tick_anims(", r321_i)
+	# ⚠️ `FileAccess.get_file_as_string()` 读出来是 **CRLF**，比对前必须去掉 \r，
+	#    否则 "\t\tif has_src:\n\t\t\tdraw_line" 这种跨行锚点永远匹配不上（本断言踩过）。
+	var r321_seg := r321_src.substr(r321_i, maxi(0, r321_j - r321_i)).replace("\r", "")
+	check(r321_i >= 0 and r321_seg.find("\t\tif has_src:\n\t\t\tdraw_line(src, dst") >= 0,
+			"R321 源码锁：光带只在 `if has_src:` 分支内画（无发动者只画落点环）")
+	check(r321_seg.find("label != \"\" and has_src") >= 0,
+			"R321 源码锁：卡名标签也要 has_src 才画（否则挂在「第一个受害者」头上）")
 
 	# ================= R290：机械之心两张伤害技能（集中突破 9162 / 冲击炮 9163）=================
 	# 集中突破 = 2 费普通技能：10 伤 + 场上**己方**每层改造 +4（只数场上，手牌 / 牌库不算）。

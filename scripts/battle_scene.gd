@@ -393,6 +393,9 @@ var _cue_t0 := 0                # 当前 cue 的起点（0 = 空闲）
 var _cue_cells: Array = []      # 本条涉及的格（cells[0] = 发动者，其余 = 受影者）
 var _cue_shots: Array = []      # 镜头段 [{rows, scroll}]
 var _cue_home := 0.0            # 本条开始时的滚动位置（播完回到这里）
+## R321：本条的**发动者**格（-1 = 没有发动者，只有「某格受了伤」）。
+## 只有它存在时才画脉冲 / 光带 / 拉镜头 —— 见 `_draw_cues()` 的注释。
+var _cue_src := Vector2i(-1, -1)
 var _cam_from := 0.0
 var _cam_to := 0.0
 var _cam_t0 := 0
@@ -587,8 +590,8 @@ func _ready() -> void:
 		queue_redraw()
 	if "--r288knife" in args and engine != null:
 		# R288b 出图：弹跳飞刀（9160）—— 主刀 + 两跳合成**一条**演出。
-		# 期望：主刀格 (2,1) 两圈脉冲，两条光带分别射向 (0,1) 与 (1,2)，
-		# 三格各套一个落点环（一眼看出「一刀下去弹到谁」）。
+		# R321 起：技能卡在手里、棋盘上没有「发动者」→ **只画三格落点环**，不连线、
+		# 不挪镜头（用户口径：普通伤害不需要激光）。要看光带请用 --r288pulse（虚骨龙）。
 		# 出图：`battle.tscn -- --screenshot --level 0 --r288knife --shotframe 600`
 		_cue_demo = true
 		_grid_intro_t = -1.0            # 关掉开场巡场（它会抢镜头）
@@ -2556,7 +2559,8 @@ func _demo_tick() -> void:
 	if _shot_pending and "--r288span" in _demo_args \
 			and _demo_frame == _shot_frame - 12 and engine != null:
 		# 跨屏：发动者 (5,1) 与受影者 (0,1) 一起入队 → _begin_cue 自动切成两段
-		_push_cue([Vector2i(5, 1), Vector2i(0, 1)], "龙息", Color("8f5ad0"))
+		_push_cue([Vector2i(5, 1), Vector2i(0, 1)], "龙息", Color("8f5ad0"),
+				Vector2i(5, 1))   # R321：带上发动者，出图才还有光带
 	if _shot_pending and "--r288pulse" in _demo_args \
 			and _demo_frame == _shot_frame - 12 and engine != null:
 		# R288：只播表现、不真扣血（出图要可重复，不能被伤害次数带偏）
@@ -5565,7 +5569,10 @@ func _on_board_click(cell: Vector2i) -> void:
 			# 而拖拽路径（_own_place_cells → _field_place_cells）本来就是对的。
 			# 现在两条路径**同源**：合法格一律问 `_field_place_cells`（内部再问引擎）。
 			if not _field_place_cells(card).has(cell):
-				_say("%s：这一格放不了场地，换一格" % card.card_name)
+				# R321（用户口径）：点了不正确的对象 → **取消选中手里的牌**
+				# （原来是「只提示、卡还举着」，玩家会以为点了没反应）。
+				_say("%s：这一格放不了场地（已取消选中）" % card.card_name)
+				_clear_selection()
 			elif not engine.can_pay_card(card):
 				_energy_fail(card, i)   # R151 P2-15
 			else:
@@ -5576,16 +5583,21 @@ func _on_board_click(cell: Vector2i) -> void:
 			if p != null and not engine.fence_merge_target(cell, card) \
 					and not (card.has_affix(GameEngine.AFFIX_SWAP) \
 					and p.owner == GameEngine.SIDE_SELF):
-				_say("那格已有 %s，换一格放置" % p.card.card_name)
+				_say("那格已有 %s（已取消选中）" % p.card.card_name)
+				_clear_selection()
 			elif FieldState.cell_owner(cell.x) != "self":
-				_say("%s 只能放到自己半场（下 3 行）" % card.card_name)
+				_say("%s 只能放到自己半场（下 3 行）（已取消选中）" % card.card_name)
+				_clear_selection()
 			elif not engine.can_pay_card(card):
 				_energy_fail(card, i)   # R151 P2-15
 			else:
 				_try_play_hand_card(i, cell)   # 英雄要先付「弃 4 张」的代价
 				return
 		else:
-			_say("%s 是技能：再点一次手牌上的它来使用" % card.card_name)
+			# 技能卡：选中它只是「准备」，真正施放要**再点一次手牌上的它**。
+			# 点棋盘格不算目标确认 → 取消选中（R321 用户口径）。
+			_say("%s 是技能：再点一次手牌上的它才能选目标（已取消选中）" % card.card_name)
+			_clear_selection()
 		return
 	# 选中战场单位
 	if p != null and p.owner == GameEngine.SIDE_SELF and not p.tapped:
@@ -8039,9 +8051,16 @@ func _cue_dur() -> int:
 	return CUE_MS * maxi(1, _cue_shots.size())
 
 
-func _push_cue(cells: Array, label: String, col: Color) -> void:
+func _push_cue(cells: Array, label: String, col: Color,
+		src := Vector2i(-1, -1)) -> void:
 	## 收一条通用演出（R288 唯一入口）。出图模式不排队（否则 --shotframe 时序全乱）；
 	## 积压时只留最近 8 条，避免一次大结算把队列撑成十几秒。
+	##
+	## R321（用户口径）：`src` = **发动者**格。
+	##   * 给了（`card_pulse` 那条路，典型是「远古虚骨龙」原地吐息）→ 脉冲 + 光带 + 拉镜头；
+	##   * 没给（`fx_impact` 通用受击 / 陷阱 / 反伤 / 各种被动）→ 只在受影者那格画落点环。
+	##     这些伤害要么本来就有专属动作（普通攻击的卡牌位移），要么根本不知道该算谁打的，
+	##     再补一条激光 + 挪镜头就是纯干扰。
 	if _shot_pending and not _cue_demo:
 		return
 	var uniq: Array = []
@@ -8064,11 +8083,11 @@ func _push_cue(cells: Array, label: String, col: Color) -> void:
 	elif not _cues.is_empty():
 		tail = _cues[_cues.size() - 1]
 	if not tail.is_empty() and _now() - int(tail.get("at", 0)) <= CUE_MERGE_MS:
-		_cue_absorb(tail, uniq, label, tail_live)
+		_cue_absorb(tail, uniq, label, tail_live, src)
 		queue_redraw()
 		return
 	_cues.append({"cells": uniq, "rows": rows, "label": label,
-			"col": col, "at": _now()})
+			"col": col, "at": _now(), "src": src})
 	if _cues.size() > 8:
 		_cues = _cues.slice(_cues.size() - 8)
 	queue_redraw()
@@ -8107,6 +8126,7 @@ func _cam_cancel() -> void:
 	_cue_t0 = 0
 	_cue_cur = {}
 	_cue_cells = []
+	_cue_src = Vector2i(-1, -1)
 	_cue_shots = []
 
 
@@ -8137,8 +8157,15 @@ func _cue_shots_of(rows: Array) -> Array:
 
 
 func _cue_absorb(cue: Dictionary, cells: Array, label: String,
-		live: bool) -> void:
+		live: bool, src := Vector2i(-1, -1)) -> void:
 	## 把后来的格子并进已有演出（发动者 + 受影者 = 一条完整的因果）。
+	## R321：后到的这条若带来了**发动者**（先入队的恰是受影者），要把它补进 cue ——
+	## 否则光带会以「第一个受害者」为起点，画成两个受害者之间的激光。
+	var had_src: bool = int((cue.get("src", Vector2i(-1, -1)) as Vector2i).x) >= 0
+	if not had_src and int(src.x) >= 0:
+		cue["src"] = src
+		if live:
+			_cue_src = src
 	var dst: Array = cue["cells"]
 	var rows: Array = cue["rows"]
 	var grew := false
@@ -8159,9 +8186,43 @@ func _cue_absorb(cue: Dictionary, cells: Array, label: String,
 		_cue_shots = shots
 		# 只并进格子、段数没变时不要重排镜头（否则正在滑的补间会被打断）
 		if grew and _cam_ms == 0:
-			var want := float(shots[0]["scroll"])
-			if absf(want - _grid_scroll) > 1.0:
-				_cam_to_scroll(want, CUE_CAM_MS)
+			_cue_pan_to(shots, 0)
+
+
+static func cue_rows_visible(rows: Array, scroll: float) -> bool:
+	## R321：这些行**整段**是不是已经在可视窗里（纯函数 → 回归直接钉）。
+	## 原来只要「落位滚动量 != 当前滚动量」就滑一下，于是**同屏内的伤害也会把画面扯一下**
+	## （用户口径：「其他原因造成伤害，也不要拉动屏幕了」）。
+	var lo := 99
+	var hi := -1
+	for r in rows:
+		lo = mini(lo, int(r))
+		hi = maxi(hi, int(r))
+	if hi < 0:
+		return true
+	var top := float(lo) * CELL
+	var bottom := float(hi + 1) * CELL
+	return top >= scroll - 0.5 and bottom <= scroll + GRID_H + 0.5
+
+
+static func cue_should_pan(has_src: bool, rows: Array, scroll: float) -> bool:
+	## R321：cue 要不要挪镜头 —— **唯一判据**（纯函数，回归直接钉）。
+	##   ① 没有发动者 → 不挪：只有「谁发动 → 谁受伤」这种因果才值得把画面带走，
+	##      只是「某格掉了血」（陷阱 / 反伤 / 各类被动）不该让人头晕；
+	##   ② 要展示的行已经在画面里 → 不挪：落位只是「居中」，居中不是目的。
+	return has_src and not cue_rows_visible(rows, scroll)
+
+
+func _cue_pan_to(shots: Array, i: int) -> void:
+	## R321：cue 的唯一镜头口 —— 判据全在 `cue_should_pan()`（纯函数，回归可钉）。
+	if i < 0 or i >= shots.size():
+		return
+	var has_src: bool = _cue_src.x >= 0 and _cue_cells.has(_cue_src)
+	if not cue_should_pan(has_src, shots[i]["rows"], _grid_scroll):
+		return
+	var want := float(shots[i]["scroll"])
+	if absf(want - _grid_scroll) > 1.0:
+		_cam_to_scroll(want, CUE_CAM_MS)
 
 
 func _begin_cue(cue: Dictionary) -> void:
@@ -8169,11 +8230,11 @@ func _begin_cue(cue: Dictionary) -> void:
 	_cue_cur = cue
 	_cue_t0 = n
 	_cue_home = _grid_scroll
+	_cue_src = cue.get("src", Vector2i(-1, -1))
 	_cue_cells = cue["cells"]
 	var shots := _cue_shots_of(cue["rows"])
 	_cue_shots = shots
-	if not shots.is_empty():
-		_cam_to_scroll(float(shots[0]["scroll"]), CUE_CAM_MS)
+	_cue_pan_to(shots, 0)
 	queue_redraw()
 
 
@@ -8181,6 +8242,7 @@ func _end_cue() -> void:
 	_cue_t0 = 0
 	_cue_cur = {}
 	_cue_cells = []
+	_cue_src = Vector2i(-1, -1)
 	_cue_shots = []
 	if _cues.is_empty():
 		# 演完回到玩家原本的位置 —— 别把人留在敌方半场
@@ -8234,9 +8296,7 @@ func _tick_cues(_delta: float) -> bool:
 		var t0 := CUE_MS * i
 		if el >= t0 and el < t0 + CUE_MS:
 			if _cam_ms == 0:
-				var want := float(shots[i]["scroll"])
-				if absf(want - _grid_scroll) > 1.0:
-					_cam_to_scroll(want, CUE_CAM_MS)
+				_cue_pan_to(shots, i)
 			break
 	if el >= _cue_dur():
 		if _cue_demo and _shot_pending:
@@ -8249,6 +8309,14 @@ func _tick_cues(_delta: float) -> bool:
 func _draw_cues() -> void:
 	## 通用演出本体（唯一口）：发动脉冲 ＋ 指向受影者的光带 ＋ 受影者落点环 ＋ 卡名。
 	## 画在棋盘 transform 内（跟着开场缩放 / 震动一起动），并压在卡牌之上。
+	##
+	## ⚠️ R321（用户口径）：**只有「有发动者」的演出才画脉冲 / 光带 / 卡名**。
+	##   * 有发动者 = 引擎 `_fx_pulse()`（`card_pulse`）报过来的那一格。典型就是
+	##     「远古虚骨龙」吐息：它**原地不动**、伤害来自效果，没有位移动作可看，
+	##     不画那条光带，玩家根本不知道是谁打的。
+	##   * 没有发动者 = 只是「某格受了伤」（`fx_impact` 通用受击 / 陷阱 / 反伤 / 被动）。
+	##     这些**只画落点环**（原地指示）：普通攻击本来就有卡牌位移 + 爆点，
+	##     再补一条激光纯属重复；连起来了还会把「两个受害者」画成因果关系，纯误导。
 	var n := _now()
 	if _cue_t0 == 0 or _cue_cur.is_empty() or _cue_cells.is_empty():
 		return
@@ -8256,29 +8324,36 @@ func _draw_cues() -> void:
 	var u := clampf(float(n - _cue_t0) / float(total), 0.0, 1.0)
 	if _cue_demo and _shot_pending:
 		u = CUE_SHOT_U   # 出图：钉住进度，免得抓到的永远是尾声（alpha 已衰减到看不见）
-	var src: Vector2 = _cell_center(_cue_cells[0])
+	var has_src: bool = _cue_src.x >= 0 and _cue_cells.has(_cue_src)
+	var src_cell: Vector2i = _cue_src if has_src else (_cue_cells[0] as Vector2i)
+	var src: Vector2 = _cell_center(src_cell)
 	var col: Color = _cue_cur.get("col", UiTheme.KIND_SKILL)
 	# ① 发动脉冲：两圈错相位向外扩散（单圈一闪太容易被当成卡面自带光环）
-	for i in 2:
-		var k := fmod(u * 2.2 + float(i) * 0.5, 1.0)
-		var rr := 22.0 + 46.0 * k
-		draw_arc(src, rr, 0.0, TAU, 28,
-				Color(col.r, col.g, col.b, 0.85 * (1.0 - k)), 3.5)
-	# ② 光带 + 受影者落点环：一条线把因果连起来，受影者那头再套一圈 ——
-	#    谁发动、谁挨打，不看战报也一眼看得出（跨屏时靠镜头段轮流去看两头）。
-	if _cue_cells.size() > 1:
-		var a := clampf(1.0 - u * 0.7, 0.15, 1.0)
-		for j in range(1, _cue_cells.size()):
-			var dst: Vector2 = _cell_center(_cue_cells[j])
+	#    只在**有发动者**时画 —— 没有发动者时「源头」只是第一个受害者，画了就是撒谎。
+	if has_src:
+		for i in 2:
+			var k := fmod(u * 2.2 + float(i) * 0.5, 1.0)
+			var rr := 22.0 + 46.0 * k
+			draw_arc(src, rr, 0.0, TAU, 28,
+					Color(col.r, col.g, col.b, 0.85 * (1.0 - k)), 3.5)
+	# ② 受影者落点环（每格一个）；光带只在有发动者时画 ——
+	#    那条线表达的是「谁打谁」，没有发动者就无从谈起。
+	var a := clampf(1.0 - u * 0.7, 0.15, 1.0)
+	for j in _cue_cells.size():
+		var c: Vector2i = _cue_cells[j]
+		if has_src and c == _cue_src:
+			continue                 # 发动者自己那格有脉冲，不再套环
+		var dst: Vector2 = _cell_center(c)
+		if has_src:
 			draw_line(src, dst, Color(col.r, col.g, col.b, a * 0.20), 18.0)
 			draw_line(src, dst, Color(col.r, col.g, col.b, a * 0.70), 7.0)
 			draw_line(src, dst, Color(1, 1, 1, a * 0.85), 2.5)
-			draw_arc(dst, 34.0 + 10.0 * u, 0.0, TAU, 26,
-					Color(col.r, col.g, col.b, a * 0.90), 3.5)
-			draw_arc(dst, 34.0 + 10.0 * u, 0.0, TAU, 26,
-					Color(1, 1, 1, a * 0.50), 1.5)
+		draw_arc(dst, 34.0 + 10.0 * u, 0.0, TAU, 26,
+				Color(col.r, col.g, col.b, a * 0.90), 3.5)
+		draw_arc(dst, 34.0 + 10.0 * u, 0.0, TAU, 26,
+				Color(1, 1, 1, a * 0.50), 1.5)
 	var label := str(_cue_cur.get("label", ""))
-	if label != "":
+	if label != "" and has_src:
 		_draw_string_box_center(UiTheme.font_bold(), 15, label,
 				src + Vector2(0, -BOARD_CARD_H * 0.5 - 18), Color.WHITE,
 				Color(0.10, 0.09, 0.13, 0.88))
@@ -8642,7 +8717,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						cp_col = UiTheme.KIND_FORT
 					elif cp_card.kind == "盟友":
 						cp_col = UiTheme.KIND_ALLY
-				_push_cue([cp_cell], str(data.get("label", "")), cp_col)
+				# R321：这是**唯一**有发动者的来路 → 只有它会画脉冲 / 光带 / 拉镜头。
+				_push_cue([cp_cell], str(data.get("label", "")), cp_col, cp_cell)
 		"fx_impact":
 			# R288：通用受击（引擎 `_hit_unit` 唯一口发出）。只有**没有专属表现**的
 			# 伤害才演（普通攻击 / 践踏已经在同帧认领了那一格）。

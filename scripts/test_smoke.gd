@@ -1921,8 +1921,9 @@ func _check_reload(scene: Variant) -> void:
 		return
 	var repo := CardRepo.load_json()
 	var rl: CardData = repo.get_card(GameEngine.RELOAD_ID)
-	if rl == null or rl.cost != 0 or rl.rarity != 0:
-		_smoke_fail("填充：卡面应是 0 费普通技能")
+	# R321：填充改为**稀有**（用户口径）；费用仍是 0。
+	if rl == null or rl.cost != 0 or rl.rarity != 1:
+		_smoke_fail("填充：卡面应是 0 费**稀有**技能")
 		return
 	# R213：手牌目标技能的**唯一判据口** —— 拖拽 / 点击 / 区域文案三处共用它。
 	if String(scene._hand_target_pick_kind(repo.get_card(GameEngine.SYS_UPGRADE_ID))) != "sysup" \

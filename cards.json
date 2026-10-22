@@ -4351,7 +4351,7 @@
       "health": 0,
       "attack_range": 0,
       "move_speed": 0,
-      "rarity": 0,
+      "rarity": 1,
       "group": "player",
       "class": "机械之心",
       "traits": [],
