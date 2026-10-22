@@ -92,9 +92,11 @@ static func measure(blocks: Array, w: float, size: int = FS) -> float:
 # ------------------------------------------------------------ 绘制
 
 static func draw_all(cv: CanvasItem, blocks: Array, x: float, y: float, w: float,
-		size: int = FS, max_y := -1.0) -> float:
+		size: int = FS, max_y := -1.0, hits_out: Array = []) -> float:
 	## 逐块画；**放不下就整块不画**（不做半块截断 —— 半块框比没有更难看），
 	## 并在原地画一行「……」告诉玩家下面还有内容。返回画完后的 y。
+	## `hits_out`（可选）：把各块里「提到的卡 / 道具」的命中矩形收进来 ——
+	## 调用方拿它做**悬浮窗**（R302：不再把摘要固定列在详情底部）。
 	var font := UiTheme.font()
 	var font_bold := UiTheme.font_bold()
 	for b: Dictionary in blocks:
@@ -112,13 +114,13 @@ static func draw_all(cv: CanvasItem, blocks: Array, x: float, y: float, w: float
 					b.get("col", UiTheme.INK_600))
 			y += h + GAP
 			continue
-		_draw_box(cv, font, font_bold, b, Rect2(x, y, w, h), size)
+		_draw_box(cv, font, font_bold, b, Rect2(x, y, w, h), size, hits_out)
 		y += h + GAP
 	return y
 
 
 static func _draw_box(cv: CanvasItem, font: Font, font_bold: Font, b: Dictionary,
-		rect: Rect2, size: int) -> void:
+		rect: Rect2, size: int, hits_out: Array = []) -> void:
 	var col: Color = b.get("col", UiTheme.INK_600)
 	var bg: Color = b.get("bg", Color(1.0, 1.0, 1.0, 0.42))
 	cv.draw_rect(rect, bg, true)
@@ -141,8 +143,13 @@ static func _draw_box(cv: CanvasItem, font: Font, font_bold: Font, b: Dictionary
 	var tx := rect.position.x + PAD_X + (ICON + 3.0 if has_icon(b) else 0.0)
 	var tw := rect.size.x - (tx - rect.position.x) - PAD_X
 	var base := rect.position.y + PAD_Y + float(font.get_ascent(size))
-	CardText.draw_wrapped(cv, font, font_bold, b.get("segs", []), tx, base, tw, size,
-			LINE_H, UiTheme.INK_600)
+	# R302：用 `draw_wrapped_hits` 而不是 `draw_wrapped` —— 提及（「素体」这类名字）
+	# 既要换色，也要把**命中矩形**交出去给悬浮层。底色传羊皮纸：提及色按底色挑，
+	# 否则深蓝正文会被判成暗底、用亮金画在浅框上看不清（R206 的同一个坑）。
+	var res := CardText.draw_wrapped_hits(cv, font, font_bold, b.get("segs", []), tx, base,
+			tw, size, LINE_H, UiTheme.INK_600, -1.0, -1.0, UiTheme.PANEL_PAPER_BG)
+	for h: Dictionary in res.get("hits", []):
+		hits_out.append(h)
 
 
 static func _draw_stats(cv: CanvasItem, font_bold: Font, b: Dictionary, rect: Rect2,

@@ -1297,8 +1297,14 @@ func _check_card_detail_block(_scene: Variant) -> void:
 	if detail_src.find("box.position.x + pad, float(res") >= 0:
 		_smoke_fail("R206 详情条：提及块还从**左栏** x 起画（应改成右栏 ex / ew）")
 		return
-	if detail_src.find('ex, float(res["y"]) + 8.0, ew') < 0:
-		_smoke_fail("R206 详情条：提及块必须画在右栏（x = ex、w = ew）")
+	# R302（用户口径）：附带块**整体取消** —— 提及名只做「悬停弹窗」（触屏点住），
+	# 不再把摘要固定列在详情里。这条断言因此从「块要画在右栏」改成「块不许再出现，
+	# 但命中矩形必须交出去」。
+	if detail_src.find("draw_reference_block") >= 0:
+		_smoke_fail("R302 详情条：提及块不该再固定画（只悬停名字弹窗）")
+		return
+	if detail_src.find('_mention_hits = res["hits"]') < 0:
+		_smoke_fail("R302 详情条：正文的提及命中矩形必须交给 _mention_hits")
 		return
 	# ② 强调色按真实底色挑（浅底 → 琥珀棕；暗底 → 亮金）
 	if Mention.text_color_on(UiTheme.PANEL_PAPER_BG) != UiTheme.MENTION_ON_LIGHT:

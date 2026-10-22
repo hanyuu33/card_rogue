@@ -64,6 +64,7 @@ var _hover_row := -1
 var _hover_card := -1
 var _mention_hits: Array = []   # R168：本帧「提到的卡牌 / 道具」的命中矩形
 var _hover_mention := {}        # R168：当前鼠标压中的那一个（{} = 没有）
+var _mention_pin := {}          # R302：触屏点一下钉住的那份说明（再点别处收起）
 var _pick_sel := -1           # R167：卡牌三选一里「已点选、待确认」的那张（触屏没有悬停）
 var _scroll := 0.0
 var _cached_n := -1
@@ -480,14 +481,9 @@ func _draw_relic() -> void:
 	var res := CardText.draw_wrapped_hits(_root, _font, _font_bold, segs, txt_x,
 			r.position.y + HEAD_H + 68.0 - _scroll, txt_w, UiTheme.FS_BODY, 24.0,
 			Color("3a342a"), bottom, r.position.y + HEAD_H + 56.0, Color("f0ede4"))
+	# R302：**不再**把「这条文案里提到的…」固定列在详情底部 —— 只要悬停名字弹说明
+	#（触屏：点一下钉住）。命中矩形由上面的 `draw_wrapped_hits` 直接交出。
 	_mention_hits = res["hits"]
-	# 附带块：描述里提到的卡 / 道具，名字 + 摘要一并列出来（放得下才画）。
-	var blk := Mention.draw_reference_block(_root, _font, _font_bold, _relic_desc_text(e),
-			txt_x, float(res["y"]) + 12.0, txt_w, Color("3a342a"), true, -1.0,
-			Color("f0ede4"))
-	if float(blk["y"]) < bottom:
-		for h: Dictionary in blk["hits"]:
-			_mention_hits.append(h)
 	if CardText.wrap_segments(_font, _font_bold, segs, txt_w, UiTheme.FS_BODY).size() \
 			* 24.0 > (PANEL_H - HEAD_H - FOOT_H - 68.0):
 		_root.draw_string(_font, Vector2(r.position.x + PANEL_W - PAD - 120,
@@ -639,12 +635,8 @@ func _draw_card_detail(cands: Array) -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, ew, UiTheme.FS_CAPTION, ink)
 	var res := CardText.draw_wrapped_hits(_root, _font, _font_bold, segs, ex,
 			box.position.y + pad + 34.0, ew, 13, 19.0, ink, box.end.y - pad, -1.0, bg)
+	# R302：同上 —— 提及只做「悬停弹窗」，不再固定列在详情底部。
 	_mention_hits = res["hits"]
-	# R168（用户口径）：这张卡的文案提到另一张卡 / 道具时，**详情里顺带把它的信息列出来**。
-	var blk := Mention.draw_reference_block(_root, _font, _font_bold, card.effect_text,
-			ex, float(res["y"]) + 8.0, ew, ink, true, box.end.y - pad, bg)
-	for h: Dictionary in blk["hits"]:
-		_mention_hits.append(h)
 
 
 func _draw_btn(r: Rect2, text: String, primary: bool, disabled: bool) -> void:
@@ -773,6 +765,16 @@ func _on_motion(pos: Vector2) -> void:
 
 
 func _on_click(pos: Vector2) -> void:
+	# R302：触屏没有 hover —— 点「提及」那两个字 = 钉住说明（再点别处收起）。
+	for h: Dictionary in _mention_hits:
+		if (h["rect"] as Rect2).has_point(pos):
+			_mention_pin = h
+			_hover_mention = {}
+			_root.queue_redraw()
+			return
+	if not _mention_pin.is_empty():
+		_mention_pin = {}
+		_root.queue_redraw()
 	match _view:
 		VIEW_RELIC:
 			if _btn_back_rect().has_point(pos):
@@ -834,17 +836,18 @@ func _draw_mention_tip() -> void:
 	## R168：悬浮「提到的卡 / 道具」→ 画详情（与事件页**同一套**悬浮件：暗底 + 金边，
 	## 卡牌用真实卡面、道具用名称 + 来源 + 完整说明）—— 全工程一个语言。
 	## 位置：优先贴命中矩形**右侧**，放不下换左侧，最后夹进窗口。
-	if _hover_mention.is_empty():
+	var ref: Dictionary = _hover_mention if not _hover_mention.is_empty() else _mention_pin
+	if ref.is_empty():
 		return
 	var vs := _vs()
-	var sz := Mention.tip_size(_font, _hover_mention)
-	var anchor: Rect2 = _hover_mention.get("rect", Rect2())
+	var sz := Mention.tip_size(_font, ref)
+	var anchor: Rect2 = ref.get("rect", Rect2())
 	var x := anchor.end.x + 12.0
 	if x + sz.x > vs.x - 8.0:
 		x = anchor.position.x - sz.x - 12.0
 	x = clampf(x, 8.0, maxf(8.0, vs.x - sz.x - 8.0))
 	var y := clampf(anchor.position.y - 8.0, 8.0, maxf(8.0, vs.y - sz.y - 8.0))
-	Mention.draw_tip(_root, _font, _font_bold, _hover_mention, Vector2(x, y))
+	Mention.draw_tip(_root, _font, _font_bold, ref, Vector2(x, y))
 
 
 func _max_scroll() -> float:

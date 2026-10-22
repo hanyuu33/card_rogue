@@ -17953,6 +17953,28 @@ func _init() -> void:
 			and r297_src.find('"状态"') < 0,
 			"R297 源码锁：左栏不再拼纯文本「力量 / 射程 / 字段：/ 状态」")
 
+	# ---- R302：提及（「素体」这类名字）只做悬停 / 点击弹窗，不再固定列在详情底部 ----
+	var r298_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r298_rw := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	check_src(r298_src.find("draw_reference_block") < 0
+			and r298_rw.find("draw_reference_block") < 0,
+			"R302 提及：战斗左栏 / 奖励面板都不再固定列「这条文案里提到的」")
+	check_src(r298_src.find("_mention_hits") >= 0
+			and r298_src.find("_draw_mention_tip") >= 0
+			and r298_src.find("_mention_pin") >= 0,
+			"R302 提及：悬停弹窗 + 触屏点住（_mention_hits / _draw_mention_tip / _mention_pin）")
+	check_src(r298_src.find("_info_panel_rect") >= 0,
+			"R302 提及：左栏是可停留区（鼠标滑进左栏不清卡，才悬停得到那两个字）")
+	# 框体绘制必须把命中矩形交出去（画完就丢 = 悬停无从判定）
+	var r298_cibsrc := FileAccess.get_file_as_string("res://scripts/card_info_boxes.gd")
+	check_src(r298_cibsrc.find("draw_wrapped_hits") >= 0
+			and r298_cibsrc.find("hits_out.append") >= 0,
+			"R302 提及：框体绘制把提及的命中矩形收进 hits_out")
+	# 文案里的「素体」确实能被识别成提及（与「升级」8027 的卡面文案同源）
+	var r298_m := Mention.scan("改造一个己方盟友或工事，使其力量 +2、生命 +10。若改造的是「素体」，它还会额外获得 +1 生命。")
+	check(r298_m.size() == 1 and str(r298_m[0].get("name", "")) == "素体",
+			"R302 提及：卡面文案里的「素体」能被识别（%d 处）" % r298_m.size())
+
 	# ================================================================
 	# R241：随机种子（全局同一随机源）+ 对战记录详情快照
 	# ================================================================
@@ -21900,7 +21922,7 @@ func _init() -> void:
 	check_src(r288b_unq >= 0,
 			"R288b 源码锁：专属落点表现（meteor）到达时撤掉同格 fx_hit（否则双爆点双飘字）")
 
-	# ================= R298：集束炮台 9166 / 合体 9167 =================
+	# ================= R302：集束炮台 9166 / 合体 9167 =================
 	# 集束炮台 = 2 费普通盟友 1/6/1/1：入场往抽牌库塞 2 张「聚能炮击」9145；
 	#            每次获得改造时，从卡组把一张「聚能炮击」加入手卡。
 	# 合体     = 1 费史诗技能：场上指定一张己方盟友 / 工事 → 从卡组选一张素体，
@@ -22049,7 +22071,7 @@ func _init() -> void:
 		r296_reward.append(r296_rc.id)
 	check(r296_reward.has(GameEngine.CLUSTER_TURRET_ID)
 			and r296_reward.has(GameEngine.MERGE_ID),
-			"R298：集束炮台与合体都进机械之心奖励池")
+			"R302：集束炮台与合体都进机械之心奖励池")
 
 	# ⑧ 源码锁：界面必须登记合体的目标分支与 merge 选卡页（否则落进 else = 敌我全列）
 	var r296_ui := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")

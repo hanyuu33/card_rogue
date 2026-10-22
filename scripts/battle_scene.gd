@@ -273,6 +273,11 @@ var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本�
 var _cancel_armed := false
 var _whisper_txt := ""          # 道具「鸭之低语」：本回合随机到的强化（常驻显示）
 var _hover_relic_tip := ""      # 道具悬停：完整说明走浮动折行面板（工具栏一行放不下）
+## R302：效果文本里「提到的卡 / 道具」的**命中矩形**（每帧由左栏绘制重建）。
+## 以前这些摘要是**固定列在详情底部**的（用户口径：不要固定显示，只要悬停时弹窗）。
+var _mention_hits: Array = []
+var _hover_mention: Dictionary = {}   # 鼠标压在提及上 → 画真实卡面 / 道具说明
+var _mention_pin: Dictionary = {}     # 触屏（安卓）：点一下钉住，再点别处撤掉
 var _demo_tip_text := ""       # --relictip 演示：每帧重设悬停提示（warp 的合成移动会清掉一次性设置）
 var _demo_hover_idx := -1      # --xtext 演示：每帧重设悬停手牌卡（合成鼠标移动会清掉一次性设置）
 var _demo_pick_sel := -1       # --reloadpick 演示：选卡页展开后预选第 N 张（一次性，出图看选中态）
@@ -1159,7 +1164,7 @@ func _ready() -> void:
 		status_text += "② 误点空位只上膛 —— 琥珀「取消?」= 再点一次才取消"
 		_shot_t0 = _now()
 		queue_redraw()
-	if "--r297hand" in args and engine != null:
+	if ("--r297hand" in args or "--r302mention" in args) and engine != null:
 		# R297 演示②：**手牌技能卡**（没有力量 / 生命框）—— 效果框 + 字段框 + 附魔框。
 		# 出图：`battle.tscn -- --screenshot --level 0 --r297hand --shotframe 600`
 		engine.state.hand.clear()
@@ -1177,7 +1182,9 @@ func _ready() -> void:
 			_demo_hover_idx = engine.state.hand.size() - 1
 			_hover_pl = null
 			selection = null
-		status_text = "R297：手牌技能卡 —— 只有效果框 / 字段框 / 附魔框（没有数值框）"
+		status_text = ("R302：悬停「素体」才弹卡面 —— 详情底部不再固定列提及"
+				if "--r302mention" in args
+				else "R297：手牌技能卡 —— 只有效果框 / 字段框 / 附魔框（没有数值框）")
 		queue_redraw()
 	if "--r297boxes" in args and engine != null:
 		# R297 演示：左栏「框体流」验收 —— 一个单位同时带「字段 ×3 / buff ×5 / 附魔 ×1」，
@@ -2515,6 +2522,11 @@ var _cue_pin := 0               # R288：出图时钉在第几个镜头段（跨
 
 func _demo_tick() -> void:
 	_demo_frame += 1
+	if "--r302mention" in _demo_args and engine != null and not _mention_hits.is_empty():
+		# R302 演示：鼠标压在第一个「提及」命中矩形上 → 左栏底部没有固定摘要块，
+		# 而是弹出真实卡面（触屏路径是「点一下钉住」，走 `_on_left_click`）。
+		var rm: Dictionary = _mention_hits[0]
+		_on_hover((rm["rect"] as Rect2).get_center())
 	if _shot_pending and "--r288knife" in _demo_args \
 			and _demo_frame == _shot_frame - 12 and engine != null:
 		# 真走引擎结算：主刀 `_op_deal_damage` + 两跳 `_hit_unit`，
@@ -3644,6 +3656,16 @@ func _on_left_click(pos: Vector2) -> void:
 	# R288：玩家一动手就交还镜头（滚轮 / 拖棋盘已有，点击这条别漏 ——
 	# 否则演到一半点张牌，棋盘还停在敌方半场，自己出的牌在哪都看不见）。
 	_cam_cancel()
+	# R302：触屏没有 hover —— 点「提及」那两个字 = 钉住说明（再点别处收起）。
+	for h: Dictionary in _mention_hits:
+		if (h["rect"] as Rect2).has_point(pos):
+			_mention_pin = h
+			_hover_mention = {}
+			queue_redraw()
+			return
+	if not _mention_pin.is_empty():
+		_mention_pin = {}
+		queue_redraw()
 	# R294：**点击 = 「指针确实在这里」**，顺手按落点把悬停状态刷一次。
 	# 悬停只在 MouseMotion 里更新，却是左栏描述的**最高优先级**来源 →
 	# 出牌后手牌左移、或触屏（根本没有 motion 事件）时，缓存会停在旧卡上，
@@ -5526,6 +5548,7 @@ func _clear_hover_state() -> void:
 	_hover_pl = null
 	_hover_hand = -1
 	_hover_relic_tip = ""
+	_hover_mention = {}          # R302：提及浮窗跟着一起收
 
 
 func _hover_purge_stale() -> void:
@@ -5568,6 +5591,16 @@ func _on_hover(pos: Vector2) -> void:
 	if _hero_pick_idx >= 0 or _hover_covered():
 		_clear_hover_state()
 		return
+	# R302：左栏本身是「可停留区」—— 鼠标从手牌滑进左栏时**不清卡**，否则要悬停
+	# 「提及」那两个字的一瞬间左栏已经空了，根本没东西可悬停。提及判定排在最前。
+	if _info_panel_rect().has_point(pos):
+		_hover_mention = {}
+		for h: Dictionary in _mention_hits:
+			if (h["rect"] as Rect2).has_point(pos):
+				_hover_mention = h
+				break
+		return
+	_hover_mention = {}
 	_clear_hover_state()
 	var tip := ""
 	# ⓪ 区域浏览面板（效果区 / 敌方效果区 / 弃牌区）开着时：面板盖住了棋盘与手牌，
@@ -6887,6 +6920,7 @@ func _draw() -> void:
 	_draw_screen_flash()
 	_draw_drag()
 	_draw_info_panel()
+	_draw_mention_tip()
 	if _log_visible:
 		_draw_log_panel()
 	if _map_visible:
@@ -11404,13 +11438,37 @@ func _draw_info_panel() -> void:
 	# 以前这些全是纯文本行「力量 3 生命 5 / 字段：嘲讽 · 次元 / · 护盾：免疫…」，
 	# 一层层堆下来读不出结构；现在每类一个框，**框高随内容量变**（`CardInfoBoxes.box_h`）。
 	var blocks := _info_blocks(card, pl)
-	var used: float = CardInfoBoxes.draw_all(self, blocks, left, y, inner_w,
-			CardInfoBoxes.FS, top + GRID_H - 12.0)
-	# 提及的引用块（原样保留）：效果文案里提到过的卡 / 道具，摘要接在最后一块下面。
-	Mention.draw_reference_block(self, _font, _font_bold, card.effect_text, left,
-			used + 6.0, inner_w, Color("2a5a8a"), true,
-			top + GRID_H - 12.0, UiTheme.PANEL_PAPER_BG)
+	# R302：把「提及」的命中矩形交出去（悬停「素体」两个字才弹说明）。
+	# 用户口径：**不要**再把摘要固定列在详情底部 —— 那块地方还给效果框 / buff 框。
+	_mention_hits.clear()
+	CardInfoBoxes.draw_all(self, blocks, left, y, inner_w, CardInfoBoxes.FS,
+			top + GRID_H - 12.0, _mention_hits)
 
+
+
+func _info_panel_rect() -> Rect2:
+	## 左栏（卡牌详情）的矩形 —— 绘制与「鼠标能不能停在上面」共用这一个口。
+	return Rect2(INFO_X, GRID_Y, INFO_W, GRID_H)
+
+
+func _draw_mention_tip() -> void:
+	## R302：悬停（触屏：点住）效果文本里的「提及」→ 弹真实卡面 / 道具说明。
+	## 与奖励面板 / 事件页**同一套**悬浮件（`Mention.draw_tip`：暗底 + 金边）。
+	## 位置：优先贴命中矩形**右侧**，放不下换左侧，最后夹进窗口。
+	var ref: Dictionary = _hover_mention if not _hover_mention.is_empty() else _mention_pin
+	if ref.is_empty():
+		return
+	var sz := Mention.tip_size(_font, ref)
+	var anchor: Rect2 = ref.get("rect", Rect2())
+	var x := anchor.end.x + 10.0
+	# 命中就在左栏里 → 浮窗放到左栏**右外侧**（它比左栏还宽，贴右侧会把左栏盖掉）
+	if anchor.end.x <= INFO_X + INFO_W:
+		x = INFO_X + INFO_W + 8.0
+	if x + sz.x > WINDOW_W - 8.0:
+		x = anchor.position.x - sz.x - 10.0
+	x = clampf(x, 8.0, maxf(8.0, WINDOW_W - sz.x - 8.0))
+	var y := clampf(anchor.position.y - 8.0, 8.0, maxf(8.0, WINDOW_H - sz.y - 8.0))
+	Mention.draw_tip(self, _font, _font_bold, ref, Vector2(x, y))
 
 
 func _draw_game_over() -> void:
