@@ -1241,8 +1241,11 @@ const ROCKFALL_TRAP_DMG:= 29
 # * 原地已有场地效果时**不覆盖**（那张多半是玩家自己埋的）→ 见 `_deathrattle_place_trap`。
 const TRAPPER_ID:= 9126
 # 活体栅栏（8018 工事，R54）：2 费稀有；2/8/1。可攻击的【栅栏】类工事（带 FENCE_TRAIT，
-#   可参与「叠栅栏」）；本身无其它特殊机制。
+#   可参与「叠栅栏」）。
+# R319（用户口径）：效果与文案统一成「**入场时抽一张卡**」—— 挂点是 `play_from_hand`
+#   里其它 `_xxx_enter(p)` 那一排，走 `_draw_many` 统一口。
 const LIVING_FENCE_ID:= 8018
+const LIVING_FENCE_DRAW:= 1   # 入场时抽几张
 # 警觉（9109 技能，R54）：2 费稀有。**第 1 回合必定抽到**（开局把牌库里那张挪到牌库顶）；
 #   使用时把一张随机工事（本角色奖励池）加入手卡，那张卡**本回合内**费用 -ALERT_DISCOUNT
 #   （R60 改：用 state.turn_card_discount 本回合减费表，回合结束清空 → 不跨回合；
@@ -1412,6 +1415,10 @@ const MAGE_GROW_BUFF:= 1
 # ⚠️ 复制卡**保留**「自我复制」trait —— 用户口径是「复制卡上场后还能再复制」，
 # 于是可以链式增殖：这是这张卡强度爆炸的根源，改口径要同时改这里与卡面文案。
 const CLONE_TRAIT:= "自我复制"
+# R319（用户口径）：野兔的复制统一成「**短暂复制**」—— 定义是：
+#   ① 带**次元**字段（徽标显示次元；离场 / 用后即消失）；② `is_ephemeral` → 手牌回合结束消失。
+# 于是复制品生成时**去掉幻影、换上次元**：幻影只描述「手牌里会消失」，看不出离场那条；
+# 本体自己**保留**幻影（它才是「打出后多一张短暂复制」的触发标记）。
 # 「升级」（8027，2 费技能，机械之心）：改造一个己方盟友或工事 → +2 攻 / +8 血。
 # 加成**只在场上有效**、离场由 _card_leaving_field 还原（不烤进 CardData）。
 # R84：每张卡**自己的**改造奖励（素体 +1 血 / 战斗骨骼 +2 力 +2 血）**读卡面字段**
@@ -3951,6 +3958,12 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 		_out_of_control_fort_enter(p)   # R288 失控要塞：每用过一张聚能炮击 → 随机释放一张技能卡
 	if card.id == CLUSTER_TURRET_ID:
 		_cluster_turret_enter(p)        # R298 集束炮台：入场往抽牌库塞两张聚能炮击
+	if card.id == LIVING_FENCE_ID:
+		# R319（用户口径）：活体栅栏改成「入场时抽一张卡」。
+		# 走 `_draw_many` 统一口：手牌满时会 burn 进弃牌区并播动画，不会悄悄吞掉。
+		var lf_drawn := _draw_many(LIVING_FENCE_DRAW)
+		_log("活体栅栏：入场抽 %d 张卡" % lf_drawn)
+		action.emit("living_fence", {"drawn": lf_drawn})
 	_refresh_mnemosyne()            # R271：刚落地 / 刚被换上场的那只可能是谟涅摩叙涅
 
 	if card.id == FOX_ID:
@@ -4585,6 +4598,10 @@ func _spawn_self_clone(card: CardData) -> void :
 	var clone:= CardData.from_dict(card.to_dict())
 	clone.traits = (card.traits as Array).duplicate()   # 切断与卡库的共享引用
 	clone.is_ephemeral = true      # 衍生物标记：离场消失、不进弃牌区（卡库原卡没有它）
+	# R319（用户口径）：复制品是「短暂复制」= 次元 + 回合结束消失 → 徽标写**次元**，
+	# 不再是本体那个「幻影」（幻影只说明「手牌里会消失」，看不出离场也消失）。
+	# ⚠️ 必须**换新数组**：直接改 `clone.affixes` 会串到卡库共享实例上。
+	clone.affixes = [AFFIX_DIMENSION]
 	# R299：手牌满 → 走 `_grant_to_hand`；它认得 `is_ephemeral`，会把衍生物送进**消耗区**
 	# 而不是弃牌区（弃牌区会被洗回牌库 → 无限刷）。
 	_grant_to_hand(clone, card.card_name)

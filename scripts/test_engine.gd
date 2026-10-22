@@ -13358,9 +13358,12 @@ func _init() -> void:
 	for c93 in r91_e5.state.hand:
 		if c93.is_ephemeral:
 			r91_clone = c93
+		# R319（用户口径）：复制品统一是「短暂复制」= **次元** + 回合结束消失，
+		# 所以徽标从「幻影」换成「次元」（幻影只留在本体上作触发标记）。
 		check(r91_clone != null and r91_clone.card_name == "树人"
-			and r91_clone.has_affix(GameEngine.AFFIX_PHANTOM),
-		"R91 幻影字段：给任意卡加上字段 → 打出后手牌里出现它的复制（%d → %d 张）"
+			and r91_clone.has_affix(GameEngine.AFFIX_DIMENSION)
+			and not r91_clone.has_affix(GameEngine.AFFIX_PHANTOM),
+		"R91 幻影字段：给任意卡加上字段 → 打出后手牌里出现它的「短暂复制」（%d → %d 张）"
 			% [r91_h0, r91_e5.state.hand.size()])
 	# 幻影回合结束消失
 	r91_e5.end_turn()
@@ -13574,14 +13577,16 @@ func _init() -> void:
 	var r93_hare: CardData = CardData.from_dict(r93_repo.get_card(9032).to_dict())
 	r93_e._spawn_self_clone(r93_hare)
 	var r93_clone: CardData = r93_e.state.hand[0]
-	check(r93_clone.is_ephemeral and r93_clone.has_affix(GameEngine.AFFIX_PHANTOM)
-			and not r93_clone.has_affix(GameEngine.AFFIX_DIMENSION),
-		"R93 衍生物在**手牌里**不带次元（那是「幻影」的回合结束消失，两者刻意区分）")
+	# R319（用户口径改口）：衍生物就是「**短暂复制**」—— 手牌里**就带次元**（徽标看得见），
+	# 同时 `is_ephemeral` 管「回合结束消失」；不再分「幻影 / 次元」两段。
+	check(r93_clone.is_ephemeral and r93_clone.has_affix(GameEngine.AFFIX_DIMENSION)
+			and not r93_clone.has_affix(GameEngine.AFFIX_PHANTOM),
+		"R319 衍生物在**手牌里**就带次元（短暂复制），不再挂幻影")
 	var r93_clone_p: Placement = r93_e.state.place(r93_clone, Vector2i(4, 1),
 			GameEngine.SIDE_SELF)
 	check(r93_clone_p.card.has_affix(GameEngine.AFFIX_DIMENSION)
-			and r93_clone_p.card.has_affix(GameEngine.AFFIX_PHANTOM),
-		"R93 衍生物**上场后**挂上「次元」（离场即消失，不进弃牌区）")
+			and not r93_clone_p.card.has_affix(GameEngine.AFFIX_PHANTOM),
+		"R319 衍生物上场后仍是「次元」（离场即消失，不进弃牌区）")
 	# 正常单位上场**不会**被误挂（卡库原卡没有 is_ephemeral）
 	var r93_tree_p: Placement = r93_e.state.place(
 		CardData.from_dict(r93_repo.get_card(8003).to_dict()), Vector2i(4, 0),
@@ -23576,6 +23581,58 @@ func _init() -> void:
 			GameEngine.SIDE_OPPONENT)
 	check(not r317_el4.eliminate_pending,
 			"R317 淘汰：敌方结算不会给玩家挂起选牌面板")
+
+	# ================= R319：野兔「短暂复制」/ 活体栅栏「入场抽 1」 =================
+	var r319_repo := CardRepo.load_json()
+	var r319_hare: CardData = r319_repo.get_card(9032)
+	check(r319_hare.effect_text.contains("短暂复制")
+			and r319_hare.effect_text.contains("次元")
+			and r319_hare.effect_text.contains("回合结束"),
+			"R319 野兔文案：写明「短暂复制（次元；回合结束时消失）」")
+	check(r319_hare.has_affix(GameEngine.AFFIX_PHANTOM)
+			and not r319_hare.has_affix(GameEngine.AFFIX_DIMENSION),
+			"R319 野兔**本体**仍只挂「幻影」（它自己不会消失，消失的是复制品）")
+
+	# 复制品 = 次元 + 回合结束消失（三件事一起验）
+	var r319_e := _new_engine([], 20, 20, -1, false)
+	r319_e.start_game()
+	r319_e.state.hand.clear()
+	var r319_src: CardData = CardData.from_dict(r319_hare.to_dict())
+	r319_e._spawn_self_clone(r319_src)
+	var r319_clone: CardData = r319_e.state.hand[0]
+	check(r319_clone != null and r319_clone.has_affix(GameEngine.AFFIX_DIMENSION)
+			and not r319_clone.has_affix(GameEngine.AFFIX_PHANTOM),
+			"R319 短暂复制：带「次元」、不带「幻影」（%s）" % str(r319_clone.affixes))
+	check(r319_clone.is_ephemeral,
+			"R319 短暂复制：标了 is_ephemeral（回合结束消失、离场不进弃牌区）")
+	check(r319_clone.traits.has("自我复制"),
+			"R319 短暂复制：保留「自我复制」→ 打出它还能再复制")
+	check(not r319_src.has_affix(GameEngine.AFFIX_DIMENSION),
+			"R319 短暂复制：不污染源卡（from_dict 出的独立实例）")
+
+	# 活体栅栏：入场时抽一张卡
+	var r319_fence: CardData = r319_repo.get_card(8018)
+	check(r319_fence.effect_text == "入场时抽一张卡。",
+			"R319 活体栅栏文案 = 「入场时抽一张卡。」（实际「%s」）" % r319_fence.effect_text)
+	check(r319_fence.traits.has("工事") and r319_fence.traits.has("栅栏"),
+			"R319 活体栅栏：仍是【工事】且带「栅栏」（叠栅栏照旧可用）")
+	var r319_fdeck: Array[CardData] = []
+	for _i in 5:
+		r319_fdeck.append(_card(9993, "填充", "技能", 1, 0, 0))
+	var r319_f := _new_engine(r319_fdeck, 20, 20, -1, false)
+	r319_f.state.hand.clear()
+	r319_f.state.hand.append(CardData.from_dict(r319_fence.to_dict()))
+	r319_f.state.energy = 10
+	var r319_f_hand0: int = r319_f.state.hand.size()
+	var r319_f_deck0: int = r319_f.state.deck.size()
+	var r319_fp: Placement = r319_f.play_from_hand(0, Vector2i(4, 1))
+	check(r319_fp != null,
+			"R319 活体栅栏：能正常上场（放在自己半场）")
+	check(r319_f.state.deck.size() == r319_f_deck0 - 1
+			and r319_f.state.hand.size() == r319_f_hand0,
+			"R319 活体栅栏：入场抽 1 张（牌库 %d → %d，手牌 %d → %d）"
+			% [r319_f_deck0, r319_f.state.deck.size(),
+				r319_f_hand0, r319_f.state.hand.size()])
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
