@@ -3662,20 +3662,26 @@ func _init() -> void:
 	check(srepo.get_relic(6010).kind != "" and srepo.get_relic(6010).source_label() == "事件道具",
 			"道具来源标签：source_label() = 事件道具")
 
-	# ---- R289 奖励道具二级分档：一般 / 传奇（R313 起 15 件，全为一般）----
+	# ---- R289 奖励道具二级分档：一般 / 传奇（R314 起 17 件 = 14 一般 + 3 传奇）----
 	var r289_repo := RelicRepo.load_json()
 	var r289_all := r289_repo.reward_ids()
-	check(r289_all.size() == 15 and r289_repo.normal_reward_ids().size() == 15,
-			"奖励分档：奖励池 15 件全在「一般」档（实际 %d / %d）"
-			% [r289_all.size(), r289_repo.normal_reward_ids().size()])
-	check(r289_repo.legendary_reward_ids().is_empty(),
-			"奖励分档：传奇池目前为空（%d 件）" % r289_repo.legendary_reward_ids().size())
+	var r289_nor := r289_repo.normal_reward_ids()
+	var r289_leg := r289_repo.legendary_reward_ids()
+	check(r289_all.size() == 17 and r289_nor.size() == 14 and r289_leg.size() == 3,
+			"奖励分档：奖励池 17 件 = 一般 14 + 传奇 3（实际 %d / %d / %d）"
+			% [r289_all.size(), r289_nor.size(), r289_leg.size()])
 	var r289_tier_ok := true
-	for r289_id in r289_all:
+	for r289_id in r289_nor:
 		var r289_rel := r289_repo.get_relic(int(r289_id))
 		if r289_rel == null or r289_rel.tier != RelicData.TIER_NORMAL:
 			r289_tier_ok = false
-	check(r289_tier_ok, "奖励分档：15 件的 tier 字段都是「一般」")
+	check(r289_tier_ok, "奖励分档：一般池 14 件的 tier 都是「一般」")
+	var r289_leg_ok := true
+	for r289_lid in r289_leg:
+		var r289_lrel := r289_repo.get_relic(int(r289_lid))
+		if r289_lrel == null or r289_lrel.tier != RelicData.TIER_LEGENDARY:
+			r289_leg_ok = false
+	check(r289_leg_ok, "奖励分档：传奇池 3 件的 tier 都是「传奇」")
 	check(RelicData.RELIC_TIERS.size() == 2
 			and RelicData.RELIC_TIERS.has(RelicData.TIER_NORMAL)
 			and RelicData.RELIC_TIERS.has(RelicData.TIER_LEGENDARY),
@@ -3686,8 +3692,8 @@ func _init() -> void:
 			"奖励分档：非法档位回落「一般」")
 	var r289_rng := RandomNumberGenerator.new()
 	r289_rng.seed = 20261021
-	check(r289_repo.roll_reward(r289_rng, "传奇") == -1,
-			"奖励分档：传奇池空时按档抽取返回 -1（不崩）")
+	check(r289_leg.has(r289_repo.roll_reward(r289_rng, "传奇")),
+			"奖励分档：按「传奇」档抽只出传奇池里的 id")
 	check(r289_repo.reward_ids("上古").is_empty(),
 			"奖励分档：未知档位当空池处理")
 	check(r289_repo.get_relic(6005).tag_line() == "奖励道具 · 战斗 · 一般"
@@ -23011,6 +23017,196 @@ func _init() -> void:
 	check(r313_se._spell_scope_depth == 0 and not r313_se._in_spell_scope(),
 			"R313 技能作用域：结算结束后必须归零（%d）" % r313_se._spell_scope_depth)
 
+
+	# ================= R314：传奇档 / 储物箱 6044 / lucky 7 6045 / 道具高亮 =================
+	var r314_repo := RelicRepo.load_json()
+	check(r314_repo.get_relic(6040).tier == RelicData.TIER_LEGENDARY
+			and r314_repo.get_relic(6044).tier == RelicData.TIER_LEGENDARY
+			and r314_repo.get_relic(6045).tier == RelicData.TIER_LEGENDARY,
+			"R314 水晶骰子 / 储物箱 / lucky 7 三件都是「传奇」档")
+	check(r314_repo.get_relic(6044).relic_name == "储物箱"
+			and r314_repo.get_relic(6045).relic_name == "lucky 7",
+			"R314 两件新道具名字正确（储物箱 / lucky 7）")
+	check(r314_repo.get_relic(6044).desc.contains("不")
+			and r314_repo.get_relic(6044).desc.contains("手牌"),
+			"R314 储物箱文案：写明回合结束不弃手牌")
+	check(r314_repo.get_relic(6045).desc.contains("7")
+			and r314_repo.get_relic(6045).desc.contains("免疫"),
+			"R314 lucky 7 文案：写明 7 个回合 / 免疫 HP 伤害")
+
+	# ---- 传奇概率：5% × 当前层数，大宝箱翻倍 ----
+	var r314_layer_saved: int = RunState.current_layer
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
+	check(is_equal_approx(RunState.legendary_chance(), 0.05) \
+			and is_equal_approx(RunState.legendary_chance(true), 0.10),
+			"R314 传奇概率：第一层 5%%，大宝箱 10%%（%f / %f）"
+				% [RunState.legendary_chance(), RunState.legendary_chance(true)])
+	RunState.current_layer = GameLayers.LAYER_TWO
+	check(is_equal_approx(RunState.legendary_chance(), 0.10) \
+			and is_equal_approx(RunState.legendary_chance(true), 0.20),
+			"R314 传奇概率：第二层 10%%，大宝箱 20%%（%f / %f）"
+				% [RunState.legendary_chance(), RunState.legendary_chance(true)])
+
+	# ---- 抽取：同一发 randf 落在不同阈值区间，验「层数 / 大宝箱」确实在起作用 ----
+	# 找一个「首发 randf 落在 5%~10% 之间」的种子：第一层必出一般，第二层 / 大宝箱必出传奇。
+	var r314_relics_saved: Array = RunState.relics.duplicate()
+	var r314_skipped_saved: Array = RunState.skipped_relics.duplicate()
+	var r314_state_saved: int = RunState.run_rng.state
+	RunState.relics = []
+	RunState.skipped_relics = []
+	var r314_seed := -1
+	for s in 4000:
+		RunState.run_rng.seed = s
+		var v: float = RunState.run_rng.randf()
+		if v > 0.06 and v < 0.09:
+			r314_seed = s
+			break
+	check(r314_seed > 0, "R314 抽取：能找到首发 randf 落在 6%%~9%% 的种子（%d）" % r314_seed)
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
+	RunState.run_rng.seed = r314_seed
+	var r314_id1 := RunState.roll_reward_relic()
+	check(r314_id1 > 0 and r314_repo.get_relic(r314_id1).tier == RelicData.TIER_NORMAL,
+			"R314 抽取：第一层 5%% → 落在 6%%~9%% 的这次不给传奇（%d）" % r314_id1)
+	RunState.run_rng.seed = r314_seed
+	var r314_id2 := RunState.roll_reward_relic(true)
+	check(r314_id2 > 0 and r314_repo.get_relic(r314_id2).tier == RelicData.TIER_LEGENDARY,
+			"R314 抽取：同一次掷点，大宝箱翻倍到 10%% → 出传奇（%d）" % r314_id2)
+	RunState.current_layer = GameLayers.LAYER_TWO
+	RunState.run_rng.seed = r314_seed
+	var r314_id3 := RunState.roll_reward_relic()
+	check(r314_id3 > 0 and r314_repo.get_relic(r314_id3).tier == RelicData.TIER_LEGENDARY,
+			"R314 抽取：第二层 10%% → 同一次掷点也出传奇（%d）" % r314_id3)
+	# 全池拿满 → 返回 -1（不崩）
+	RunState.relics = r314_repo.reward_ids()
+	check(RunState.roll_reward_relic() == -1,
+			"R314 抽取：奖励池全拿满 → 返回 -1")
+	RunState.relics = r314_relics_saved
+	RunState.skipped_relics = r314_skipped_saved
+	RunState.run_rng.state = r314_state_saved
+	RunState.current_layer = r314_layer_saved
+
+	# ---- 储物箱 6044：回合结束不弃手牌 ----
+	var r314_no := _new_engine([], 20, 20)
+	r314_no.self_relics = []
+	for _i in 3:
+		r314_no.state.hand.append(_card(1013, "树人", "盟友", 2, 3, 8))
+	r314_no.end_turn()
+	check(r314_no.state.hand.is_empty() and r314_no.state.discard.size() == 3,
+			"R314 储物箱：没道具时回合照旧弃光手牌（手 %d / 弃 %d）"
+				% [r314_no.state.hand.size(), r314_no.state.discard.size()])
+	var r314_yes := _new_engine([], 20, 20)
+	r314_yes.self_relics = [GameEngine.STORAGE_RELIC_ID]
+	for _i in 3:
+		r314_yes.state.hand.append(_card(1013, "树人", "盟友", 2, 3, 8))
+	r314_yes.end_turn()
+	check(r314_yes.state.hand.size() == 3 and r314_yes.state.discard.is_empty(),
+			"R314 储物箱：持有 → 手牌 3 张全留、弃牌区空（手 %d / 弃 %d）"
+				% [r314_yes.state.hand.size(), r314_yes.state.discard.size()])
+	# 「离场消失」的卡照旧消失（那不是「弃」）—— 否则衍生物会在手里堆死
+	var r314_gone := _new_engine([], 20, 20)
+	r314_gone.self_relics = [GameEngine.STORAGE_RELIC_ID]
+	var r314_v := _card(9022, "鸭蛋", "盟友", 1, 0, 1)
+	r314_v.traits.append(FieldState.VANISH_TRAIT)
+	r314_gone.state.hand.append(r314_v)
+	r314_gone.state.hand.append(_card(1013, "树人", "盟友", 2, 3, 8))
+	r314_gone.end_turn()
+	check(r314_gone.state.hand.size() == 1
+			and r314_gone.state.hand[0].id == 1013 \
+			and r314_gone.state.void_count == 1,
+			"R314 储物箱：「离场消失」的卡照旧消失（剩 %d 张 / 消耗 %d）"
+				% [r314_gone.state.hand.size(), r314_gone.state.void_count])
+
+	# ---- lucky 7 6045：跨战斗计数 ----
+	var r314_l7_saved: int = RunState.lucky7_turns
+	RunState.lucky7_turns = 0
+	var r314_hits: Array = []
+	for i in 15:
+		if RunState.lucky7_tick():
+			r314_hits.append(RunState.lucky7_turns)
+	check(r314_hits == [7, 14],
+			"R314 lucky 7：第 7 / 14 个回合生效（实际 %s）" % str(r314_hits))
+	RunState.lucky7_turns = 5
+	check(RunState.lucky7_left() == 2,
+			"R314 lucky 7：计数 5 → 距生效还有 2 个回合（%d）" % RunState.lucky7_left())
+	RunState.lucky7_turns = 7
+	check(RunState.lucky7_is_due() and RunState.lucky7_left() == 7,
+			"R314 lucky 7：计数 7 → 正在生效，下一次还差 7 回合")
+	RunState.lucky7_turns = 0
+	check(RunState.relic_state_note(6045) == "",
+			"R314 lucky 7：未持有时没有状态说明")
+	RunState.relics = [GameEngine.LUCKY7_RELIC_ID]
+	check(RunState.relic_state_note(6045).contains("7"),
+			"R314 lucky 7：持有时状态说明写清还剩几回合（%s）"
+				% RunState.relic_state_note(6045))
+	RunState.relics = []
+
+	# ---- lucky 7：回合置位 + 免疫 + 技能 +7 ----
+	RunState.lucky7_turns = 0
+	var r314_l7 := _new_engine([], 30, 30)
+	r314_l7.self_relics = [GameEngine.LUCKY7_RELIC_ID]
+	var r314_lit := -1
+	for i in 7:
+		r314_l7._begin_turn(GameEngine.SIDE_SELF)
+		if r314_l7._lucky7_active:
+			r314_lit = i + 1
+	check(r314_lit == 7,
+			"R314 lucky 7：只在第 7 个我方回合置位（实际第 %d 个）" % r314_lit)
+	r314_l7._begin_turn(GameEngine.SIDE_SELF)
+	check(not r314_l7._lucky7_active,
+			"R314 lucky 7：第 8 个我方回合起复位（不连续生效）")
+	# 免疫 HP 伤害（整轮：含敌方回合 —— 置位后我方回合结束也不清）
+	r314_l7._lucky7_active = true
+	var r314_hp0: int = r314_l7.state.hp_self
+	r314_l7._damage_player(GameEngine.SIDE_SELF, 5, "测试")
+	check(r314_l7.state.hp_self == r314_hp0,
+			"R314 lucky 7：生效回合免疫 HP 伤害（%d → %d）"
+				% [r314_hp0, r314_l7.state.hp_self])
+	r314_l7._lucky7_active = false
+	r314_l7._damage_player(GameEngine.SIDE_SELF, 5, "测试")
+	check(r314_l7.state.hp_self == r314_hp0 - 5,
+			"R314 lucky 7：非生效回合照常掉血（%d → %d）"
+				% [r314_hp0, r314_l7.state.hp_self])
+	# 技能额外 +7（只认我方）
+	r314_l7._lucky7_active = true
+	check(r314_l7._spell_dmg(GameEngine.SIDE_SELF, 10) == 17,
+			"R314 lucky 7：生效回合技能 +7（10 → %d）"
+				% r314_l7._spell_dmg(GameEngine.SIDE_SELF, 10))
+	check(r314_l7._spell_dmg(GameEngine.SIDE_OPPONENT, 10) == 10,
+			"R314 lucky 7：敌方的技能不吃这 +7")
+	r314_l7._lucky7_active = false
+	check(r314_l7._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
+			"R314 lucky 7：非生效回合技能不加成（%d）"
+				% r314_l7._spell_dmg(GameEngine.SIDE_SELF, 10))
+	RunState.lucky7_turns = r314_l7_saved
+
+	# ---- 道具高亮：只亮「这一刻会 / 正在真的触发」的 ----
+	var r314_hl := _new_engine([], 20, 20)
+	r314_hl.self_relics = [6042, 6045, 6007, 6006, 6044, 6005]
+	r314_hl.turn_number = 5
+	r314_hl.state.self_card_plays = 3
+	check(not r314_hl.relic_highlight(6042),
+			"R314 高亮：风妖精第 3 张牌时不亮（还差两张）")
+	r314_hl.state.self_card_plays = 4
+	check(r314_hl.relic_highlight(6042),
+			"R314 高亮：风妖精下一张就是第 5 张 → 亮")
+	r314_hl.state.self_card_plays = 5
+	check(not r314_hl.relic_highlight(6042),
+			"R314 高亮：风妖精本回合已触发过 → 灭")
+	r314_hl._lucky7_active = true
+	check(r314_hl.relic_highlight(6045), "R314 高亮：lucky 7 在生效回合亮")
+	r314_hl._lucky7_active = false
+	check(not r314_hl.relic_highlight(6045), "R314 高亮：lucky 7 非生效回合灭")
+	r314_hl.turn_number = 3
+	check(r314_hl.relic_highlight(6007), "R314 高亮：鸭翼在生效回合（第 3 回合）亮")
+	r314_hl.turn_number = 4
+	check(not r314_hl.relic_highlight(6007), "R314 高亮：鸭翼过了第 3 回合就灭")
+	r314_hl.turn_number = 1
+	check(r314_hl.relic_highlight(6005), "R314 高亮：鸭蹼在生效回合（前两回合）亮")
+	r314_hl.turn_number = 5
+	check(not r314_hl.relic_highlight(6005), "R314 高亮：鸭蹼第 3 回合起灭")
+	check(not r314_hl.relic_highlight(6006), "R314 高亮：鸭嘴一直在生效 → 不亮")
+	check(not r314_hl.relic_highlight(6044), "R314 高亮：储物箱一直在生效 → 不亮")
+	check(not r314_hl.relic_highlight(9999), "R314 高亮：未持有的道具不会亮")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

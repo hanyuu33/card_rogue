@@ -36,6 +36,9 @@ var basin_charge:= 0
 ## 效果卡 / 陷阱 / 反伤打出来的伤害不享受。
 ## ⚠️ 用深度而不是布尔：回响会嵌套重放同一张技能卡，布尔会在内层退出时提前关掉。
 var _spell_scope_depth:= 0
+## R314 lucky 7（6045）：当下这一轮是否处在「生效回合」。
+## ⚠️ 由**我方回合开始**置位 / 复位，敌方回合**不清** —— 见常量区的口径说明。
+var _lucky7_active:= false
 var log: Array[String] = []
 var rng:= RandomNumberGenerator.new()
 var self_relics: Array[int] = []
@@ -351,6 +354,17 @@ const WIND_FAIRY_AT:= 5          # 第几张牌触发（每回合清零，故一
 const WIND_FAIRY_DMG:= 4
 const SWIFT_RUNE_RELIC_ID:= 6043
 const SWIFT_RUNE_PCT:= 10        # 每张牌的百分比（加倍时 ×2）
+# R314 两件**传奇**道具：
+#   储物箱（6044）：回合结束时**不弃手牌** —— 判定在 `end_turn` 里那个 `discard_hand` 调用点，
+#     实现是 `FieldState.discard_hand(keep_all)`（「消失」类照旧消失，见那里的注释）。
+#   lucky 7（6045）：跨战斗计数（`RunState.lucky7_turns`），每 7 个我方回合**整轮生效**：
+#     * 免疫所有 HP 伤害 —— `_damage_player` 里在减伤/盆之前直接挡掉；
+#     * 技能额外 +7 —— `_spell_dmg` 里当固定加成，放在快速符文百分比**之前**（与鸭之眼同层）；
+#     * 「本回合」= 从本次我方回合开始，**一直到下个我方回合开始**（含敌方回合）——
+#       否则「免疫 HP 伤害」只在自家回合有效，而敌方回合才真会掉血，等于白给。
+const STORAGE_RELIC_ID:= 6044
+const LUCKY7_RELIC_ID:= 6045
+const LUCKY7_DMG:= 7
 const BASIN_RELIC_ID:= 6041
 const COURAGE_RELIC_ID:= 6031
 const COURAGE_ELITE_TURNS:= 1
@@ -1660,6 +1674,15 @@ func _begin_turn(side: String) -> void :
 
 		_spring_tick()          # R307 泉水：后排单位每回合回 4
 		_tick_enemy_growth()
+		# R314 lucky 7（6045）：**每个我方回合开始**推一格跨战斗计数；满 7 的倍数 → 本轮回生效。
+		# ⚠️ 复位放在这里（而不是回合结束）：置位后要覆盖「我方回合 + 紧接着的敌方回合」，
+		#    下个我方回合开始时才清 —— 敌方回合才是真正会掉血的时段。
+		_lucky7_active = false
+		if self_relics.has(LUCKY7_RELIC_ID) and RunState.lucky7_tick():
+			_lucky7_active = true
+			_log("lucky 7：第 %d 个回合生效 —— 本回合免疫所有 HP 伤害，技能额外 +%d"
+					% [RunState.lucky7_turns, LUCKY7_DMG])
+			action.emit("lucky7", {"turns": RunState.lucky7_turns, "dmg": LUCKY7_DMG})
 		var extra_draw:= 0
 		if self_relics.has(6005) and turn_number <= 2:
 			extra_draw = 1
@@ -2912,8 +2935,14 @@ func end_turn() -> void :
 		# 罐子（9157，R245）：回合结束时**还在手卡**的这张卡 → 本场消失 + 召唤友方工事。
 		# ⚠️ 必须排在 `discard_hand()` **之前**：手牌先被弃掉，这效果就永远触发不了。
 		_jar_tick()
-		var n:= state.discard_hand()
-		_log("回合结束：弃掉 %d 张手牌" % n)
+		# R314 储物箱（6044）：持有 → 回合结束**不弃手牌**（keep_all）。
+		# 日志分开写：读者要能一眼看出「这次一张都没弃，是因为道具」。
+		var chest_keep:= self_relics.has(STORAGE_RELIC_ID)
+		var n:= state.discard_hand(chest_keep)
+		if chest_keep:
+			_log("储物箱：回合结束不弃手牌（保留 %d 张）" % state.hand.size())
+		else:
+			_log("回合结束：弃掉 %d 张手牌" % n)
 		# 使魔之夜的乌鸦只在给的那一回合免费 → 回合结束清掉免费名单
 		if not state.turn_free.is_empty():
 			state.turn_free.clear()
@@ -9344,6 +9373,10 @@ func _spell_dmg(side: String, base: int, card: CardData = null) -> int:
 		out += MAGIC_CORE_DMG        # 魔力核心：每回合第一张技能伤害 +1
 	out += turn_spell_bonus
 	out += turn_dmg_bonus
+	# lucky 7（6045，R314）：生效回合技能额外 +7。
+	# ⚠️ 放在快速符文百分比**之前**：与鸭之眼 / 荧光草同属「固定加成」，一起被百分比放大。
+	if _lucky7_active:
+		out += LUCKY7_DMG
 	# 快速符文（6043，R313）：本回合技能伤害 +10% × 已出牌数（加算、去尾）。
 	# ⚠️ 放在**所有加法之后**再按百分比放大：固定加成（荧光草 +1 / 魔力核心 +1…）
 	#    也一起吃百分比，与「先算总量再乘」的直觉一致。
@@ -10163,6 +10196,16 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 			_last_hp_damage = 0         # 替己方 HP 承伤的单位全挡下了
 			return state.hp_self
 
+		# lucky 7（6045，R314）：生效回合 → **免疫所有 HP 伤害**。
+		# 位置在减伤 / 不锈钢盆**之前**：伤害整个不落地，所以不该消耗盆的点数，
+		# 也不该触发「减伤把 15 变 14」这种日志（那会让人以为只是少掉一点）。
+		if _lucky7_active and amount > 0:
+			_log("lucky 7：本回合免疫 HP 伤害（挡下 %d 点）" % amount)
+			action.emit("lucky7_immune", {"amount": amount})
+			_last_hp_damage = 0
+			_check_game_over()
+			return state.hp_self
+
 		var dmg:= _hp_damage_taken(amount)
 		# 不锈钢盆（6041，R311）：**代替玩家承受等量伤害**，计数归零即失去道具。
 		# 位置在减伤**之后**：卡面写的是「等量」—— 等的是「本来会掉到你身上的血」，
@@ -10195,6 +10238,49 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 	_log("敌方 HP -%d（%s），剩余 %d" % [amount, source, left2])
 	_check_game_over()
 	return left2
+
+
+func relic_highlight(id: int) -> bool:
+	## R314（用户口径）：道具栏**高亮**的唯一判定口 —— 「这一刻会不会真的落到触发点上」。
+	## 界面（`battle_scene._draw_relic_bar`）只负责画亮边，判据全在这里，好在回归里逐条钉。
+	##
+	## 口径：
+	##   * **临近触发 / 正在生效** → 亮（风妖精差一张牌、鸭翼/勇气徽章在生效回合、lucky 7 生效轮）；
+	##   * **一直被动生效**的 → **不亮**（鸭嘴/鸭之眼/快速符文/水晶骰子/不锈钢盆 …）。
+	##     它们没有「这一刻」可言，常亮等于没有信息量（用户明确排除这类）。
+	##   * 未持有 → 不亮。
+	if not self_relics.has(id):
+		return false
+	match id:
+		WIND_FAIRY_RELIC_ID:
+			# 下一张牌就是第 5 张（`_note_card_played` 在出牌**之后**才 +1）
+			return state.self_card_plays == WIND_FAIRY_AT - 1
+		LUCKY7_RELIC_ID:
+			return _lucky7_active
+		DUCK_WING_RELIC_ID:
+			return turn_number == DUCK_WING_TURN
+		6005:   # 鸭蹼：前两回合开局多抽一张 → 该回合一开始就亮
+			return turn_number <= 2
+		6003:   # 鸡煲：第 1 回合、以及用过效果卡的回合（回合结束才结算）
+			return current_side == SIDE_SELF \
+					and (turn_number == 1 or state.self_effect_plays > 0)
+		6020:   # 奥秘护符：本回合第一张效果牌 -1 → 还没打过效果牌时亮
+			return state.self_effect_plays == 0
+		6008:   # 鸭绒：每回合**第一个**单位 +2 血 → 还没打过单位时亮
+			return not _unit_played_this_turn
+		6023:   # 幻影斗篷：每两张牌触发 → 已经打了一张（下一张就触发）
+			return state.self_card_plays > 0 and state.self_card_plays % 2 == 1
+		COURAGE_RELIC_ID:
+			var span:= 0
+			if battle_kind == "elite":
+				span = COURAGE_ELITE_TURNS
+			elif battle_kind == "boss":
+				span = COURAGE_BOSS_TURNS
+			return span > 0 and turn_number <= span
+		STATUE_RELIC_ID:
+			# 雕像：每 10 张牌回 1 能量 → 差 1 张就满的时候亮
+			return RunState.statue_charge % 10 == 9
+	return false
 
 
 func _basin_absorb(dmg: int) -> int:

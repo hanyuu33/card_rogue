@@ -2648,6 +2648,21 @@ func _demo_tick() -> void:
 		status_text = "R301：力/程/速 高=绿 低=红；生命 受伤=红 · 高于原本且满血=绿 · 持平=白 · 低于原本且满血=黄"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r314relic" in _demo_args and _demo_frame == 40 and engine != null:
+		# R314 出图演示（`--screenshot --r314relic --shotms 900`）：道具栏**高亮**。
+		# 亮 = 这一刻真的会 / 正在触发：
+		#   风妖精（下一张就是第 5 张）· 鸭翼（第 3 回合）· lucky 7（生效回合）
+		# 不亮 = 一直在被动生效：鸭嘴 · 储物箱（用户口径：这类不做）
+		_banner = {}
+		var r314_ids: Array[int] = [6042, 6045, 6007, 6006, 6044]
+		engine.self_relics = r314_ids
+		engine.turn_number = 3            # 鸭翼：第 3 回合
+		engine.state.self_turn_no = 3
+		engine.state.self_card_plays = 4  # 风妖精：下一张就是第 5 张
+		engine._lucky7_active = true      # lucky 7：本回合生效
+		status_text = "R314：亮 = 这一刻会触发（风妖精/鸭翼/lucky 7）；常亮失效的不亮（鸭嘴/储物箱）"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--r301view" in _demo_args and _demo_frame == 40 and engine != null:
 		# R301 出图演示②（`--screenshot --r301view --shotms 260`）：弃牌区 = 全屏浏览窗
 		# （复用选卡页排版：每行 5 张放大卡 + 滚动 + 底部描述条）。
@@ -9901,6 +9916,22 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
 					"text": "激发 · 全体 -%d%s" % [in_d, (" ×%d" % in_n) if in_n > 1 else ""],
 					"col": Color("a05ad0"), "size": 17, "start": n, "dur": 1600})
+		"lucky7":
+			# R314 lucky 7 6045：满 7 回合 → 本轮回免疫 HP 伤害 + 技能 +7。
+			# 只演「生效了」这一下：飘字有时长（start + dur → 位移 + 淡出），不是静态贴图。
+			sfx.play("click")
+			var l7_d := int(data.get("dmg", 7))
+			_say("✦ lucky 7：第 %d 个回合生效 —— 本回合免疫所有 HP 伤害，技能额外 +%d"
+					% [int(data.get("turns", 0)), l7_d])
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 60.0),
+					"text": "lucky 7 · 免疫 HP 伤害 / 技能 +%d" % l7_d,
+					"col": Color("ffd25a"), "size": 17, "start": n, "dur": 2100})
+		"lucky7_immune":
+			# 免疫挡下了一笔 HP 伤害：飘在顶栏血量条下方，和掉血飘字区分开
+			var imm := int(data.get("amount", 0))
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 24.0),
+					"text": "lucky 7 · 免疫 %d" % imm,
+					"col": Color("ffe08a"), "size": 15, "start": n, "dur": 1500})
 		"wind_fairy":
 			# R313 风妖精 6042：一回合打出第五张牌 → 对所有敌人 4 点伤害。
 			# 作用对象是**全体敌人**，落点放棋盘上沿中线（不绑某一格），与激发 8077 同口径。
@@ -10623,6 +10654,17 @@ func _relic_bar_overflowed() -> bool:
 	return engine.self_relics.size() > _relic_max_slots()
 
 
+func _relic_bar_lit() -> bool:
+	## R314：道具栏里**有没有亮着的徽章**（有 → 需要逐帧呼吸重绘，见 `_process`）。
+	## 判据全部在 `GameEngine.relic_highlight()`；这里只做「是否至少有一个」。
+	if engine == null:
+		return false
+	for rid: int in engine.self_relics:
+		if engine.relic_highlight(rid):
+			return true
+	return false
+
+
 func _draw_relic_bar() -> void:
 	## 右栏道具栏：本局获得的道具（来源色块 = 初始白 / 奖励黄 / 事件紫）。
 	var ids := engine.self_relics
@@ -10646,6 +10688,25 @@ func _draw_relic_bar() -> void:
 		# 深棕字和背景糊成一片（加 2px 描边只会更糊）。
 		draw_rect(rect, scol.lerp(Color.WHITE, 0.62), true)
 		draw_rect(rect, scol, false, 1.2)
+		# R314（用户口径）：**这一刻会不会真的触发**的道具要亮起 ——
+		# 呼吸外框（金） + 更亮的底。判据见 `GameEngine.relic_highlight()`：
+		# 「一直被动生效」的那些（鸭嘴 / 鸭之眼 / 快速符文 / 水晶骰子…）不在其中，
+		# 因为常亮等于没有信息量。
+		if engine.relic_highlight(ids[i]):
+			var lit_ph := 0.5 + 0.5 * sin(float(_now()) / 220.0)   # 约 1.4 秒一个来回
+			var glow := Rect2(rect.position - Vector2(2.0, 2.0),
+					rect.size + Vector2(4.0, 4.0))
+			# ⚠️ 高亮色**不能用金色**：奖励 / 传奇徽章本来就是黄橙（#e0b23c / #e8933a），
+			#    金边压上去几乎看不出来（实测出图分辨不出哪一行亮着）。改用**青白**（补色），
+			#    在黄橙底上一眼就能分出来。
+			var lit_col := Color(0.56, 0.92, 1.0)
+			draw_rect(glow, Color(lit_col.r, lit_col.g, lit_col.b, 0.30 + 0.34 * lit_ph), true)
+			draw_rect(glow, Color(lit_col.r, lit_col.g, lit_col.b, 0.80 + 0.20 * lit_ph), false, 1.8)
+			draw_rect(rect, scol.lerp(Color.WHITE, 0.86), true)   # 底再提亮一档
+			# 右端一颗呼吸亮点：即使缩到最小尺寸 / 灰度打印也读得出「这行在亮」
+			var dot := Vector2(rect.position.x + rect.size.x - 9.0,
+					rect.position.y + rect.size.y / 2.0)
+			draw_circle(dot, 3.0 + 1.4 * lit_ph, lit_col)
 		# 来源色块（白色描述边在浅底上不醒目，配实心块 + 深描边）
 		var chip := Rect2(rect.position + Vector2(4, 4), Vector2(6, rect.size.y - 8))
 		draw_rect(chip, scol, true)
@@ -12009,7 +12070,8 @@ func _process(delta: float) -> void:
 	if _board_has_taunt() or _board_has_frozen() or _board_has_sleep() \
 			or _board_has_fuse() or _board_has_shield() or _board_has_activatable() \
 			or _board_has_actable() or _cancel_armed \
-			or (engine != null and _board_has_pulsing_field()):
+			or (engine != null and _board_has_pulsing_field()) \
+			or _relic_bar_lit():          # R314：道具栏有亮着的徽章 → 呼吸要连续重绘
 		_pulse_redraw()
 	if not _confetti.is_empty():
 		if _tick_confetti(delta):

@@ -208,8 +208,11 @@ func draw() -> CardData:
 	return card
 
 
-func discard_hand() -> int:
+func discard_hand(keep_all := false) -> int:
 	## 回合结束：弃掉全部手牌 → 弃牌区。返回**离开手牌**的张数。
+	## R314 储物箱（6044）：`keep_all = true` → **一张都不弃**（直接返回 0）。
+	## ⚠️ 只跳过「进水弃牌区」这一步：带「离场消失」的卡与衍生物**照旧消失** ——
+	##    那是「消失」不是「丢弃」，若也保留，野兔复制出来的衍生物会无限堆在手里。
 	## 例外一：带「离场消失」的卡（鸭蛋 9022）离场即消失，不进弃牌区、不会再被洗回卡组。
 	## 例外二：带「留手」的卡（陨石术 9077 / 素体 8025）留在手卡里，下个回合继续用。
 	## 例外三（R82）：**衍生物**（`CardData.is_ephemeral`，野兔 9032 复制出来的那些）
@@ -219,6 +222,9 @@ func discard_hand() -> int:
 	var n := 0
 	var kept: Array[CardData] = []
 	for c: CardData in hand:
+		if keep_all and not c.traits.has(VANISH_TRAIT) and not c.is_ephemeral:
+			kept.append(c)
+			continue
 		if c.traits.has(VANISH_TRAIT):
 			n += 1
 			void_count += 1   # R140：离场消失 → 计入消耗区

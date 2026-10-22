@@ -52,6 +52,14 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_battle],
+		# R314（用户口径）：道具栏**高亮** + 风妖精飘字**必须有时间维度**
+		# （不是贴一张静态字，要能在 start~dur 之间移动 / 淡出）。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_relic_highlight],
 		# R301：弃牌区点开 = 「选卡页那种全屏窗口」（PickOverlay view_only）。
 		# 断言三件事：① 真的弹出、② 进的是浏览模式、③ 关闭后不动引擎状态。
 		["res://scenes/battle.tscn", func():
@@ -295,6 +303,37 @@ func _prep_records() -> void:
 	RunRecord.finish("win")
 	RunRecord.begin_run("森林精魄")
 	RunRecord.finish("interrupted")
+
+
+func _check_relic_highlight(scene: Variant) -> void:
+	## R314：① 道具栏高亮 —— 风妖精差一张就亮、鸭翼 / lucky 7 在生效回合亮、
+	## 一直被动的（鸭嘴 / 储物箱）不亮；② 风妖精的飘字带 start + dur（有时间维度）。
+	# ⚠️ 必须用**类型化数组**：`self_relics` 是 Array[int]，直接赋无类型字面量会报
+	#    「Invalid assignment … of type Array」（运行时报错但值又会被塞进去，最容易漏看）。
+	var r314_ids: Array[int] = [6042, 6045, 6007, 6006, 6044]
+	scene.engine.self_relics = r314_ids
+	scene.engine.state.self_card_plays = 4
+	if not scene.engine.relic_highlight(6042):
+		_smoke_fail("R314 高亮：风妖精「下一张就是第 5 张」应当亮起")
+		return
+	if not scene._relic_bar_lit():
+		_smoke_fail("R314 高亮：有亮着的徽章时 _relic_bar_lit 必须为真（不然呼吸会卡住）")
+		return
+	scene.engine.state.self_card_plays = 2
+	scene.engine.turn_number = 1
+	if scene.engine.relic_highlight(6006) or scene.engine.relic_highlight(6044):
+		_smoke_fail("R314 高亮：鸭嘴 / 储物箱一直在生效，不该亮")
+		return
+	# 风妖精飘字：start 记在当下、dur 有时长 → 逐帧会位移 + 淡出
+	var n0: int = scene._floaters.size()
+	scene._on_engine_action("wind_fairy", {"dmg": 4, "hits": 2})
+	if scene._floaters.size() <= n0:
+		_smoke_fail("R314 风妖精：触发时应有一条飘字")
+		return
+	var wf: Dictionary = scene._floaters[scene._floaters.size() - 1]
+	if int(wf.get("dur", 0)) <= 0 or int(wf.get("start", 0)) <= 0:
+		_smoke_fail("R314 风妖精：飘字必须带时间维度（start=%s dur=%s）"
+				% [str(wf.get("start")), str(wf.get("dur"))])
 
 
 func _check_discard_view(scene: Variant) -> void:

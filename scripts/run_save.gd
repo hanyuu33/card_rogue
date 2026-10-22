@@ -69,6 +69,7 @@ static func snapshot() -> Dictionary:
 		"pending_deck_edit": RunState.pending_deck_edit,
 		"statue_charge": RunState.statue_charge,
 		"basin_charge": RunState.basin_charge,   # R311 不锈钢盆：剩余点数（跨战斗累计）
+		"lucky7_turns": RunState.lucky7_turns,   # R314 lucky 7：跨战斗回合计数
 		"pending_event": RunState.pending_event,
 		"reward_type": RunState.reward_type,
 		"reward_context": RunState.reward_context,
@@ -151,6 +152,8 @@ static func apply(d: Dictionary) -> bool:
 	RunState.basin_charge = int(d.get("basin_charge", 0))
 	if RunState.has_relic(RunState.BASIN_RELIC_ID) and RunState.basin_charge <= 0:
 		RunState.basin_charge = RunState.BASIN_MAX
+	# R314 lucky 7：老存档没有这个字段 → 按 0（下次开始我方回合起重新累计）
+	RunState.lucky7_turns = int(d.get("lucky7_turns", 0))
 	RunState.pending_event = str(d.get("pending_event", ""))
 	RunState.reward_type = str(d.get("reward_type", "normal"))
 	RunState.reward_context = str(d.get("reward_context", ""))

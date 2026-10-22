@@ -75,6 +75,22 @@ const BASIN_MAX := 10
 ## 在「?」房进战斗时掷骰，前 X 回合每回合 +1 费（X = 点数，见 GameEngine）。
 const DICE_RELIC_ID := 6040
 
+## R314：两件**传奇**道具。
+##   储物箱（6044）：回合结束不弃手牌（纯战斗内，判定在 `GameEngine.end_turn`）；
+##   lucky 7（6045）：每 7 个**我方回合**（跨战斗累计）→ 该回合免疫所有 HP 伤害 + 技能额外 7 伤。
+const STORAGE_RELIC_ID := 6044
+const LUCKY7_RELIC_ID := 6045
+const LUCKY7_EVERY := 7
+## lucky 7 的**跨战斗**计数：每开始一个我方回合 +1（`lucky7_tick()`），
+## 满 7 的倍数那一回合生效。随存档走（run_save）。
+static var lucky7_turns := 0
+
+## R314 传奇掉落概率：**5% × 当前层数**；大宝箱翻倍。
+## 层数取 `current_layer`（第一层 1 / 第二层 2 …），所以第一层 5%、第二层 10%；
+## 大宝箱第一层 10%、第二层 20%。上限 100%（层数继续加也不会溢出）。
+const LEGEND_CHANCE_PER_LAYER := 0.05
+const BIGCHEST_LEGEND_MULT := 2.0
+
 static var reward_popup_pending := false
 static var battle_log: Array = []            # 本局战斗记录（与持久化文件同步追加）
 ## R177 玩家地图标记（当局内共享）：`map_strokes` = 画图模式折线，每条
@@ -401,6 +417,26 @@ static func relic_display_name(id: int) -> String:
 	return rel.relic_name
 
 
+static func lucky7_tick() -> bool:
+	## R314 lucky 7（6045）：**每开始一个我方回合**调用一次（跨战斗累计，随存档）。
+	## 返回「这一回合是否生效」—— 只在 `lucky7_turns` 是 7 的倍数时为 true。
+	## ⚠️ 计数**无条件累加**（只要持有道具就一直在走），判定用过不过 7 取模算 ——
+	##    于是「第 7、14、21 … 回合」必然生效，不会因为战斗切换而错位。
+	lucky7_turns += 1
+	return lucky7_turns % LUCKY7_EVERY == 0
+
+
+static func lucky7_left() -> int:
+	## 距下一次生效还有几个回合（刚生效过则返回 7；计数为 0 时返回 7）。
+	var r := lucky7_turns % LUCKY7_EVERY
+	return LUCKY7_EVERY if r == 0 else LUCKY7_EVERY - r
+
+
+static func lucky7_is_due() -> bool:
+	## 当前计数是否正处在「刚满 7」的生效回合计（供界面 / 断言读）。
+	return lucky7_turns > 0 and lucky7_turns % LUCKY7_EVERY == 0
+
+
 static func bandage_add(n: int) -> void:
 	## R234 止血绷带：一场战斗受伤 > 20 → 记一层 +8（同层累计）。
 	bandage_pending += maxi(0, n)
@@ -589,6 +625,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	pending_relic_drop = -1
 	pending_rewards = []   # R119：开新 run 清空待领奖励
 	duck_revive_chance = 100
+	lucky7_turns = 0            # R314：新开一局 → lucky 7 的跨战斗计数归零
 	delivery_done = false       # R200：新开一局 → 「委托完成」未结算
 	pending_event = ""
 	# 角色赠品道具（森林精魄 → 荒野形态 6022）：不入随机池，也不占起点三选一的名额
@@ -648,6 +685,7 @@ static func end_run(clear_save: bool = true) -> void:
 	pending_relic = -1
 	pending_relic_drop = -1
 	duck_revive_chance = 100
+	lucky7_turns = 0            # R314：本局结束 → lucky 7 计数复位
 	delivery_done = false       # R200：本局结束 → 复位
 	pending_event = ""
 
@@ -798,14 +836,14 @@ static func _apply_pot() -> void:
 	## 再塞一张「罐子」（9157）诅咒进卡组。
 	## 随机源走 `run_rng` → 同一种子必然同样的两件；抽中的即时道具（牛奶等）照常递归结算。
 	## ⚠️ 池子空了就少给（奖励池只有 11 件，理论上不会，但别让边界炸掉）。
-	var pool: Array[int] = []
-	for id in RelicRepo.load_json().reward_ids():
-		if not relics.has(id) and not skipped_relics.has(id):
-			pool.append(id)
+	# R314：两件各走一次 `roll_reward_relic()`（传奇判定同样生效）；
+	# `exclude` 传已抽到的 id，保证两件不重复（原实现靠从池子里 pop 达到同样效果）。
+	var got: Array = []
 	for _i in POT_RELIC_COUNT:
-		if pool.is_empty():
+		var pick := roll_reward_relic(false, got)
+		if pick < 0:
 			break
-		var pick: int = pool.pop_at(run_rng.randi() % pool.size())
+		got.append(pick)
 		gain_relic(pick)
 	add_card(JAR_CURSE_ID)
 
@@ -900,13 +938,9 @@ static func offer_relic_drop(node_type: String) -> int:
 	## 掉落登记到 pending_relic_drop，由奖励界面领取；没有可掉落的返回 -1。
 	if node_type != "elite" and node_type != "boss":
 		return -1
-	var pool: Array[int] = []
-	for id in RelicRepo.load_json().reward_ids():
-		if not relics.has(id) and not skipped_relics.has(id):
-			pool.append(id)
-	if pool.is_empty():
-		return -1
-	pending_relic_drop = pool[run_rng.randi() % pool.size()]
+	# R314：掉落也走同一个抽取口 → 传奇概率（5% × 层数）对精英 / Boss 同样生效。
+	# ⚠️ 精英 / Boss **不算**大宝箱，不翻倍。
+	pending_relic_drop = roll_reward_relic()
 	return pending_relic_drop
 
 
@@ -932,15 +966,41 @@ static func skip_relic_drop() -> int:
 	return id
 
 
-static func roll_reward_relic() -> int:
-	## 宝箱层开箱：随机一个「尚未拥有、也未被跳过」的奖励道具 id（没有时返回 -1）。
+static func legendary_chance(bigchest := false) -> float:
+	## R314（用户口径）：获得道具时「5% × 当前层数」的概率出**传奇**；大宝箱翻倍。
+	## 唯一口 —— 抽取（`roll_reward_relic`）与界面提示都读这里，别各算一份。
+	var layer := maxi(1, int(current_layer))
+	var p := LEGEND_CHANCE_PER_LAYER * float(layer)
+	if bigchest:
+		p *= BIGCHEST_LEGEND_MULT
+	return clampf(p, 0.0, 1.0)
+
+
+static func _reward_pool(tier: String, exclude: Array = []) -> Array[int]:
+	## 某一档里「尚未拥有、也未被跳过」的奖励道具 id。
 	var pool: Array[int] = []
-	for id in RelicRepo.load_json().reward_ids():
-		if not relics.has(id) and not skipped_relics.has(id):
+	for id in RelicRepo.load_json().reward_ids(tier):
+		if not relics.has(id) and not skipped_relics.has(id) and not exclude.has(id):
 			pool.append(id)
-	if pool.is_empty():
-		return -1
-	return pool[run_rng.randi() % pool.size()]
+	return pool
+
+
+static func roll_reward_relic(bigchest := false, exclude: Array = []) -> int:
+	## 随机一件奖励道具（没有可给的返回 -1）。
+	## R314：**先按「5% × 层数」摇一次传奇判定**（大宝箱翻倍）——
+	##   * 命中且传奇池非空 → 从传奇池取；
+	##   * 否则从一般池取；一般池空了才回落到传奇池（不让「只差传奇没拿」变成「什么都不给」）。
+	## ⚠️ 传奇池为空时**不消耗**那次 randf：池子状态本身就决定了结果，白花一个随机数
+	##    只会让「同一 seed 下拿到的道具顺序」凭空错位（可复现但不必要）。
+	var leg := _reward_pool(RelicData.TIER_LEGENDARY, exclude)
+	if not leg.is_empty() and run_rng.randf() < legendary_chance(bigchest):
+		return leg[run_rng.randi() % leg.size()]
+	var nor := _reward_pool(RelicData.TIER_NORMAL, exclude)
+	if nor.is_empty():
+		if leg.is_empty():
+			return -1
+		return leg[run_rng.randi() % leg.size()]
+	return nor[run_rng.randi() % nor.size()]
 
 
 static func _drop_settled_batch() -> void:
@@ -1088,6 +1148,11 @@ static func relic_state_note(id: int) -> String:
 	## 道具的动态状态说明（叠加态的鸭：当前复活概率）；无动态状态时返回 ""。
 	if id == STACK_DUCK_RELIC_ID and relics.has(STACK_DUCK_RELIC_ID):
 		return "当前复活概率 %d%%。" % duck_revive_chance
+	# R314 lucky 7：写清「还差几个回合生效」—— 它的效果是周期性脉冲，不是常亮
+	if id == LUCKY7_RELIC_ID and relics.has(LUCKY7_RELIC_ID):
+		if lucky7_is_due():
+			return "本回合生效：免疫所有 HP 伤害 + 技能额外 7 点伤害。"
+		return "距下次生效还有 %d 个回合。" % lucky7_left()
 	return ""
 
 
@@ -1180,7 +1245,8 @@ static func grant_bigchest() -> Dictionary:
 	## 地图上大宝箱房与卡片商人「以卡易物」都走这里 —— 数值只在这里写一次。
 	## 返回 {relic_id, gold, reward_idx}（relic_id = -1 表示奖励道具已全拿完）。
 	gain_gold(BIGCHEST_GOLD)
-	var rid := roll_reward_relic()
+	# R314：**大宝箱**的传奇概率翻倍（5% × 层数 → 10% × 层数），所以这里必须传 `true`。
+	var rid := roll_reward_relic(true)
 	queue_relic_reward(rid)
 	var idx := queue_card_reward("normal")
 	return {"relic_id": rid, "gold": BIGCHEST_GOLD, "reward_idx": idx}
