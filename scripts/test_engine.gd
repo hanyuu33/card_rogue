@@ -1,6 +1,6 @@
 extends SceneTree
 ## headless 引擎规则测试（肉鸽版）：godot --headless -s scripts/test_engine.gd
-## 覆盖：新数值（农民3费3/8、栅栏2费6血、攻击1费4伤）、能量机制、每回合抽 5、
+## 覆盖：新数值（农民3费3/8、栅栏2费6血、攻击1费4伤）、费用机制、每回合抽 5、
 ## 回合结束弃全部手牌、牌库空时弃牌洗回、抽空提示、效果卡（迅捷减伤）、
 ## 击退/智慧/闪电链/火球术、鸭子骑士关卡、放置/移动/攻击/AI/胜负。
 
@@ -234,7 +234,7 @@ func _init() -> void:
 			and repo.get_card(9081).group == "player",
 			"第 37 轮新卡都归玩家图鉴（含 token 魔像 9080）")
 
-	# ---- 流星雨（9083，2026-10-01）：X 费技能 —— 消耗全部能量，对随机敌人打 8 伤 X 次 ----
+	# ---- 流星雨（9083，2026-10-01）：X 费技能 —— 消耗全部费用，对随机敌人打 8 伤 X 次 ----
 	var ms_card := repo.get_card(9083)
 	check(ms_card != null and ms_card.is_spell() and ms_card.rarity == 0
 			and ms_card.group == "player" and ms_card.x_cost and ms_card.cost == 0
@@ -255,37 +255,37 @@ func _init() -> void:
 	ms_e.state.hand.append(CardData.from_dict(ms_card.to_dict()))
 	ms_e.state.energy = 5
 	check(ms_e.cost_of(ms_e.state.hand[0]) == 5 and ms_e.can_pay_card(ms_e.state.hand[0]),
-			"流星雨：5 点能量时费用 = 5（X 费 = 剩余的全部能量）")
+			"流星雨：5 点费用时费用 = 5（X 费 = 剩余的全部费用）")
 	ms_e.use_spell(0)
 	var ms_lost := ms_before - (ms_pa.health + ms_pb.health + ms_pc.health)
 	check(ms_lost == 40, "流星雨：X=5 → 5 次 × 8 = 40 点伤害（实际 %d）" % ms_lost)
-	check(ms_e.state.energy == 0, "流星雨：一次吃掉全部能量（5 → 0）")
+	check(ms_e.state.energy == 0, "流星雨：一次吃掉全部费用（5 → 0）")
 	check(ms_e.state.hp_opponent == 30,
 			"流星雨：场上还有敌人时，没有一颗落到敌方 HP")
 	ms_e.state.hand.append(CardData.from_dict(ms_card.to_dict()))
-	# ---- R124：X 费卡 0 能量也能使用（X 记 0）----
+	# ---- R124：X 费卡 0 费用也能使用（X 记 0）----
 	# 口径来自用户：「费用为 X 的牌即使当前没有费用也能使用，那个场合 X 当作 0 计算」。
 	check(ms_e.cost_of(ms_e.state.hand[0]) == 0 and ms_e.can_pay_card(ms_e.state.hand[0]),
-			"R124 流星雨：0 能量时费用 0 但**可以使用**（X 记 0）")
+			"R124 流星雨：0 费用时费用 0 但**可以使用**（X 记 0）")
 	check(ms_e.can_pay_card(CardData.from_dict(ms_card.to_dict()), GameEngine.SIDE_OPPONENT),
-			"R124 流星雨：敌方 0 能量同样可施放（同一口径）")
+			"R124 流星雨：敌方 0 费用同样可施放（同一口径）")
 	check(not ms_e.can_pay_card(repo.get_card(9002)),
-			"R124：这条只对 X 费卡生效 —— 普通 2 费牌在 0 能量时仍不可用")
+			"R124：这条只对 X 费卡生效 —— 普通 2 费牌在 0 费用时仍不可用")
 	var r124_hp := ms_e.state.hp_opponent
 	var r124_units := ms_pa.health + ms_pb.health + ms_pc.health
 	var r124_disc := ms_e.state.discard.size()
 	var r124_detail := ms_e.use_spell(0)
 	check(ms_pa.health + ms_pb.health + ms_pc.health == r124_units
 			and ms_e.state.hp_opponent == r124_hp,
-			"R124 流星雨：0 能量施放 → 单位与 HP 都不掉血（%s）" % r124_detail)
+			"R124 流星雨：0 费用施放 → 单位与 HP 都不掉血（%s）" % r124_detail)
 	check(ms_e.state.hand.is_empty() and ms_e.state.discard.size() == r124_disc + 1,
-			"R124 流星雨：0 能量施放后照常离手进弃牌区（弃牌 %d 张）" % ms_e.state.discard.size())
+			"R124 流星雨：0 费用施放后照常离手进弃牌区（弃牌 %d 张）" % ms_e.state.discard.size())
 	var r124_e := _new_engine([], 30, 30)
 	r124_e.state.hand.clear()
 	r124_e.state.hand.append(CardData.from_dict(ms_card.to_dict()))
 	r124_e.state.energy = 0
 	check(r124_e.can_play_from_hand(0),
-			"R124 流星雨：0 能量时 can_play_from_hand 也放行（界面/AI 共用这个口）")
+			"R124 流星雨：0 费用时 can_play_from_hand 也放行（界面/AI 共用这个口）")
 	# 场上没有敌方单位 → 每一颗直击敌方 HP
 	var ms_empty := _new_engine([], 30, 30)
 	ms_empty.state.hand.clear()
@@ -927,10 +927,10 @@ func _init() -> void:
 	check(eng_coord.cost_of(coord) == 0,
 			"协同攻击：我方 3 个盟友 → 费用 0（不为负；敌方盟友不计）")
 	eng_coord.state.energy = 0
-	check(eng_coord.can_pay_card(coord), "协同攻击：0 费时即使能量为 0 也能打出")
+	check(eng_coord.can_pay_card(coord), "协同攻击：0 费时即使费用为 0 也能打出")
 	eng_coord.state.energy = 3
 	eng_coord.use_spell(0, Vector2i(1, 0))   # 打敌方鸭子骑士
-	check(eng_coord.state.energy == 3, "协同攻击：实际费用 0 → 一点能量都不扣")
+	check(eng_coord.state.energy == 3, "协同攻击：实际费用 0 → 一点费用都不扣")
 	var coord_q: Placement = eng_coord.state.unit_at(Vector2i(1, 0))
 	check(coord_q != null and coord_q.health == 16, "协同攻击：造成 14 点伤害（30 → 16）")
 
@@ -1004,7 +1004,7 @@ func _init() -> void:
 		eng_lion.state.discard.append(_card(8003, "农民", "盟友", 3, 3, 8))
 	check(eng_lion.cost_of(lion) == 0, "狮子：弃牌区 4 个盟友 → 费用 4-4=0（不为负）")
 	eng_lion.state.energy = 0
-	check(eng_lion.can_pay_card(lion), "狮子：实际费用 0 时 0 能量也能打出")
+	check(eng_lion.can_pay_card(lion), "狮子：实际费用 0 时 0 费用也能打出")
 	# 使用时：自己场上「其他」盟友攻击 +2（不含狮子自己；永久保留）
 	eng_lion.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(4, 0))
 	eng_lion.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(4, 2))
@@ -1133,7 +1133,7 @@ func _init() -> void:
 	check(eng_qs.cost_of(qs_spell) == 1 and eng_qs.cost_of(qs_wall) == 2,
 			"快速出击：技能/工事费用不受影响")
 	eng_qs.state.energy = 0
-	check(not eng_qs.can_pay_card(qs_ally), "快速出击：减后 2 费在 0 能量时仍打不出")
+	check(not eng_qs.can_pay_card(qs_ally), "快速出击：减后 2 费在 0 费用时仍打不出")
 	eng_qs._begin_turn(GameEngine.SIDE_SELF)
 	check(eng_qs.state.self_ally_cost_reduction == 0 and eng_qs.cost_of(qs_ally) == 3,
 			"快速出击：回合开始清零 → 盟友费用回到 3")
@@ -2122,7 +2122,7 @@ func _init() -> void:
 	var bar_ret := bar_e.use_spell(0)
 	check(bar_e._aether_left == 2 and bar_ret.contains("2"),
 			"以太屏障：X = 本回合已用效果牌数 2（%s）" % bar_ret)
-	check(bar_e.state.energy == 5, "以太屏障：0 费，能量不减")
+	check(bar_e.state.energy == 5, "以太屏障：0 费，费用不减")
 	var bar_hp0 := bar_e.state.hp_self
 	bar_e._damage_player(GameEngine.SIDE_SELF, 9, "测试")
 	check(bar_e.state.hp_self == bar_hp0 - 1 and bar_e._aether_left == 1,
@@ -3214,17 +3214,17 @@ func _init() -> void:
 	check(sl5_p.health == 25 and sl5_p.effective_power() == 1,
 			"精进：与治疗并存——回合开始回 5 血且 +1 攻（20→25，0→1）")
 
-	# ---- 能量与回合流程 ----
+	# ---- 费用与回合流程 ----
 	var eng := _new_engine(_ordered_deck(), 20, 20, -1, false)
 	eng.start_game()
 	check(eng.turn_number == 1 and eng.current_side == GameEngine.SIDE_SELF, "开局我方先手第 1 回合")
-	check(eng.state.energy == 5, "第 1 回合能量 = 5（实际 %d）" % eng.state.energy)
+	check(eng.state.energy == 5, "第 1 回合费用 = 5（实际 %d）" % eng.state.energy)
 	check(eng.state.hand.size() == 5, "开局抽 5 张（实际 %d）" % eng.state.hand.size())
-	check(eng.can_pay(5) and not eng.can_pay(6), "能量够 5 不够 6")
+	check(eng.can_pay(5) and not eng.can_pay(6), "费用够 5 不够 6")
 	var farmer_idx := _find(eng.state.hand, 8003)
 	check(farmer_idx >= 0, "起手有农民可上")
 	eng.play_from_hand(farmer_idx, Vector2i(4, 1))
-	check(eng.state.energy == 2, "上场农民扣 3 能量（剩 %d）" % eng.state.energy)
+	check(eng.state.energy == 2, "上场农民扣 3 费用（剩 %d）" % eng.state.energy)
 	check(eng.state.unit_at(Vector2i(4, 1)) != null, "农民在 (4,1)")
 	var p := eng.state.unit_at(Vector2i(4, 1))
 	check(not p.tapped and not p.moved, "上场单位未横置，可移动/攻击")
@@ -3233,10 +3233,10 @@ func _init() -> void:
 	check(eng.state.hand.is_empty(), "回合结束弃掉全部手牌")
 	check(eng.state.discard.size() == 4, "4 张手牌进弃牌区（实际 %d）" % eng.state.discard.size())
 	check(eng.current_side == GameEngine.SIDE_OPPONENT and eng.state.opp_energy == 5,
-			"对方回合：对方能量 = 5")
+			"对方回合：对方费用 = 5")
 	eng.end_turn()
 	check(eng.turn_number == 2, "回到我方第 2 回合")
-	check(eng.state.energy == 5, "能量不累积：回合结束重置为 5（实际 %d）" % eng.state.energy)
+	check(eng.state.energy == 5, "费用不累积：回合结束重置为 5（实际 %d）" % eng.state.energy)
 	check(eng.state.hand.size() == 5, "第 2 回合再抽 5 张")
 	check(eng.state.deck.size() == deck_left - 5,
 			"每回合抽 5 张（牌库 %d → %d）" % [deck_left, eng.state.deck.size()])
@@ -3349,7 +3349,7 @@ func _init() -> void:
 	var e0 := eng3.state.energy
 	var detail := eng3.use_spell(0, Vector2i(2, 1))
 	check(eng3.state.unit_at(Vector2i(2, 1)) == null, "攻击 4 伤击杀 2 血骷髅兵（%s）" % detail)
-	check(eng3.state.energy == e0 - 1, "攻击扣 1 能量")
+	check(eng3.state.energy == e0 - 1, "攻击扣 1 费用")
 	check(not eng3.state.discard.any(func(c: CardData): return c.id == 1053)
 			and eng3.state.discard.any(func(c: CardData): return c.id == 8002),
 			"被击杀的敌方卡移出场外；用掉的技能进我方弃牌区")
@@ -3371,7 +3371,7 @@ func _init() -> void:
 	eng_f.use_effect(0)
 	check(eng_f.state.effects.size() == 1 and eng_f.state.hand.is_empty(),
 			"效果卡进入效果区，离开手牌")
-	check(eng_f.state.energy == 3, "效果卡扣 2 能量（5 - 2 = 3）")
+	check(eng_f.state.energy == 3, "效果卡扣 2 费用（5 - 2 = 3）")
 	check(not eng_f.state.discard.any(func(c: CardData): return c.id == 9002),
 			"效果卡不进弃牌区（持续生效）")
 	var my_farmer := _card(8003, "农民", "盟友", 3, 3, 8)
@@ -3522,7 +3522,7 @@ func _init() -> void:
 	eng_web.end_turn()
 	check(eng_web.state.hand.size() == FieldState.HAND_DRAW_PER_TURN,
 			"鸭蹼：第 3 回合起恢复正常抽牌数（实际 %d）" % eng_web.state.hand.size())
-	# 鸭翼：第 3 回合额外 3 费（能量回合结束重置为 5：5 / 5 / 8 / 5）—— R81 由 2 加强到 3
+	# 鸭翼：第 3 回合额外 3 费（费用回合结束重置为 5：5 / 5 / 8 / 5）—— R81 由 2 加强到 3
 	var eng_wing := _new_engine(_ordered_deck(), 20, 20, -1, false)
 	eng_wing.self_relics = [6007]
 	eng_wing.start_game()
@@ -3884,7 +3884,7 @@ func _init() -> void:
 			tag = "多抽1张"
 		else:
 			wis_ok = false
-			print("    异常组合：能量%d 伤害+%d 手牌%d" % [e_now, d_d, h])
+			print("    异常组合：费用%d 伤害+%d 手牌%d" % [e_now, d_d, h])
 		if tag != "":
 			seen_buffs[tag] = true
 	check(wis_ok, "鸭之低语：每回合开始恰好掷出三种强化之一")
@@ -6752,9 +6752,9 @@ func _init() -> void:
 		var r157_d4: Dictionary = bs_script.call("_hand_diff", [8, 8, 9], [8, 9, 8])
 		check((r157_d4["removed"] as Array).size() == 1 and (r157_d4["added"] as Array).size() == 1,
 				"R157 _hand_diff 同 id 换位：一增一删不错配（实际 %s）" % str(r157_d4))
-		# R156 能量口径：战斗里不再显示敌方能量数值
-		check(r148_bs.find("\"敌方能量 %d\"") < 0,
-				"R156 战斗内不再显示敌方能量数值（用户口径）")
+		# R156 费用口径：战斗里不再显示敌方费用数值
+		check(r148_bs.find("\"敌方费用 %d\"") < 0,
+				"R156 战斗内不再显示敌方费用数值（用户口径）")
 		# Esc 分支：切出 `_unhandled_key_input` 的函数体再在体内找
 		# ⚠️ 本文件是 CRLF → 别用跨行字面量配源码（`\n` 单个字符配不上 `\r\n`）。
 		var r148_i_key := r148_bs.find("func _unhandled_key_input")
@@ -7320,7 +7320,7 @@ func _init() -> void:
 	check(eng_hv._reachable(Vector2i(4, 1), GameEngine.SIDE_SELF).size() > 4,
 			"重鸭：只限制敌方 —— 我方速2 单位照样能走 2 格")
 
-	# ---- 冰淇淋与汽水（6016）：开场 -3 生命；第 1 回合 +2 能量 / 多抽 3 张（R340 下调）----
+	# ---- 冰淇淋与汽水（6016）：开场 -3 生命；第 1 回合 +2 费用 / 多抽 3 张（R340 下调）----
 	var ice_deck: Array[CardData] = []
 	for i in 14:
 		ice_deck.append(_card(8002, "攻击", "技能", 1, 0, 0))
@@ -7337,13 +7337,13 @@ func _init() -> void:
 			"冰淇淋与汽水：第 1 回合加费抽牌时广播台词「你跑不过我你信吗」（实际 %s）"
 			% str(ice_lines))
 	check(eng_ice.state.energy == FieldState.ENERGY_PER_TURN + 2,
-			"冰淇淋与汽水：第 1 回合额外 +2 能量（实际 %d）" % eng_ice.state.energy)
+			"冰淇淋与汽水：第 1 回合额外 +2 费用（实际 %d）" % eng_ice.state.energy)
 	check(eng_ice.state.hand.size() == FieldState.HAND_DRAW_PER_TURN + 3,
 			"冰淇淋与汽水：第 1 回合多抽 3 张（实际 %d）" % eng_ice.state.hand.size())
 	eng_ice.end_turn()
 	eng_ice.end_turn()
 	check(eng_ice.state.energy == FieldState.ENERGY_PER_TURN,
-			"冰淇淋与汽水：只有第 1 回合有额外能量（第 2 回合重置为 5，实际 %d）"
+			"冰淇淋与汽水：只有第 1 回合有额外费用（第 2 回合重置为 5，实际 %d）"
 			% eng_ice.state.energy)
 	var eng_ice2 := _new_engine(ice_deck, 2, 20, -1, false)
 	eng_ice2.self_relics = [6016]
@@ -7366,7 +7366,7 @@ func _init() -> void:
 	check(eng_egg.state.discard.size() == egg_discard,
 			"鸭蛋：被击破不进弃牌区（战斗内召唤物，不会污染牌库）")
 
-	# ---- 鸭语耳环（6015）：每回合 +1 能量；第 1 回合正常抽牌后自动出牌 ----
+	# ---- 鸭语耳环（6015）：每回合 +1 费用；第 1 回合正常抽牌后自动出牌 ----
 	var ear_deck: Array[CardData] = []
 	for i in 10:
 		ear_deck.append(_card(8001, "木栅栏", "工事", 2, 0, 6))
@@ -7377,12 +7377,12 @@ func _init() -> void:
 			"鸭语耳环：第 1 回合正常抽牌后自动出牌（6 费打出 3 张 2 费工事，实际 %d）"
 		% eng_ear.state.board.size())
 	check(eng_ear.state.energy == 0 and eng_ear.state.hand.size() == 2,
-			"鸭语耳环：能量不足即停止（抽 5 张打 3 张，剩 2 张在手里）")
-	# 每回合 +1 能量：第 2 回合 = 5（回合结束重置）+ 1（耳环）
+			"鸭语耳环：费用不足即停止（抽 5 张打 3 张，剩 2 张在手里）")
+	# 每回合 +1 费用：第 2 回合 = 5（回合结束重置）+ 1（耳环）
 	eng_ear.end_turn()
 	eng_ear.end_turn()
 	check(eng_ear.state.energy == FieldState.ENERGY_PER_TURN + 1,
-			"鸭语耳环：每回合获得的能量 +1（第 2 回合 5+1 = %d）" % eng_ear.state.energy)
+			"鸭语耳环：每回合获得的费用 +1（第 2 回合 5+1 = %d）" % eng_ear.state.energy)
 	# 自动出牌只打当前手牌，不打牌库：10 张 0 费效果卡只打出抽到的 5 张
 	var ear_free: Array[CardData] = []
 	for i in 10:
@@ -7659,13 +7659,13 @@ func _init() -> void:
 	eng_rst.state.energy = 99        # 模拟没花完攒了一大笔
 	eng_rst.end_turn()               # 我方回合结束 → 清零（基础费用留到下次回合开始发）
 	check(eng_rst.state.energy == 0,
-			"我方回合结束：能量清零（实际 %d）" % eng_rst.state.energy)
+			"我方回合结束：费用清零（实际 %d）" % eng_rst.state.energy)
 	check(eng_rst.state.opp_energy == FieldState.ENERGY_PER_TURN,
 			"对方回合开始：先领到本回合基础费用（%d）" % eng_rst.state.opp_energy)
 	eng_rst.state.opp_energy = 99
 	eng_rst.end_turn()               # 对方回合结束 → 清零
 	check(eng_rst.state.opp_energy == 0,
-			"对方回合结束：能量清零（实际 %d）" % eng_rst.state.opp_energy)
+			"对方回合结束：费用清零（实际 %d）" % eng_rst.state.opp_energy)
 	check(eng_rst.state.energy == FieldState.ENERGY_PER_TURN,
 			"我方回合开始：重新领到本回合基础费用（不累积对方那笔）（实际 %d）"
 			% eng_rst.state.energy)
@@ -7949,7 +7949,7 @@ func _init() -> void:
 	var r259_m := _new_engine([], 30, 30)
 	r259_m.state.energy = 3
 	check(int(r259_m.spell_now(r259_meteor).get("dmg", -1)) == 24,
-			"R262 流星雨：3 点能量 → 预览 8×3=24 伤")
+			"R262 流星雨：3 点费用 → 预览 8×3=24 伤")
 	check(r259_m.spell_now(_card(8001, "树人", "盟友", 2, 2, 6, 1, 1)).is_empty(),
 			"R262 预览：非技能卡不出这一行")
 
@@ -8237,7 +8237,7 @@ func _init() -> void:
 	r45_wb.state.hand.append(repo.get_card(GameEngine.WHIRL_BLADE_ID))
 	var r45_wb_detail := r45_wb.use_spell(0, Vector2i(2, 1))
 	check(r45_wb.state.hand.size() == 1 and r45_wb.state.energy == 5,
-			"回旋斩：本回合其他卡不足 4 张 → 不能用（卡留在手、能量不动）")
+			"回旋斩：本回合其他卡不足 4 张 → 不能用（卡留在手、费用不动）")
 	r45_wb.state.self_card_plays = 4
 	r45_wb.use_spell(0, Vector2i(2, 1))
 	check(r45_wb_e1.health == 38 and r45_wb_e2.health == 38,
@@ -8299,7 +8299,7 @@ func _init() -> void:
 	r45_if.state.hand.append(repo.get_card(GameEngine.INFILTRATE_ID))
 	var r45_if_bad := r45_if.cast_infiltrate(0, Vector2i(4, 1), Vector2i(0, 2))
 	check(r45_if_bad.begins_with("（目的地") and r45_if.state.energy == 5,
-			"潜入：对方后排是禁区（能量不动）")
+			"潜入：对方后排是禁区（费用不动）")
 	r45_if.cast_infiltrate(0, Vector2i(4, 1), Vector2i(3, 2))
 	check(r45_if.state.unit_at(Vector2i(3, 2)) != null
 			and r45_if.state.unit_at(Vector2i(4, 1)) == null
@@ -8697,14 +8697,14 @@ func _init() -> void:
 			% [r48_ee1.effective_power(), r48_ee2.effective_power()])
 	check(r48_ee1.debuff_stage == 1 and r48_ee2.debuff_stage == 1,
 			"回响：降力量与敲晕/幻影斗篷同源（debuff_stage=1，敌方回合结束时清）")
-	check(r48_e.state.energy == 4, "回响：1 费（能量 5 → %d）" % r48_e.state.energy)
+	check(r48_e.state.energy == 4, "回响：1 费（费用 5 → %d）" % r48_e.state.energy)
 	check(r48_e.state.hand.size() == 1 and r48_e.state.hand[0].id == GameEngine.ECHO_ID
 			and r48_e.state.discard.is_empty(),
 			"回响：使用后返回手卡（不进弃牌区）")
 	r48_e.use_spell(0, null)
 	check(r48_ee1.health == 51 and r48_ee2.health == 51 and r48_e.state.energy == 3
 			and r48_e.state.hand.size() == 1,
-			"回响：回手后可再打（55 → %d，能量 %d，仍在手卡）"
+			"回响：回手后可再打（55 → %d，费用 %d，仍在手卡）"
 			% [r48_ee1.health, r48_e.state.energy])
 
 	# 回响：费用下限 1（任何减费都压不到 0）
@@ -8720,9 +8720,9 @@ func _init() -> void:
 	r48_cf.state.turn_free[r48_cf_card] = true
 	check(r48_cf.cost_of(r48_cf_card) == 1, "回响：本回合免费名单也压不到 0（最低 1 费）")
 	r48_cf.state.energy = 0
-	check(not r48_cf.can_pay_card(r48_cf_card), "回响：0 能量时不能打（费用下限 = 1）")
+	check(not r48_cf.can_pay_card(r48_cf_card), "回响：0 费用时不能打（费用下限 = 1）")
 	r48_cf.state.energy = 1
-	check(r48_cf.can_pay_card(r48_cf_card), "回响：1 点能量即可打")
+	check(r48_cf.can_pay_card(r48_cf_card), "回响：1 点费用即可打")
 
 	# 回响：场上没有敌人不直击对方 HP；免疫法术的敌人不受伤也不被削弱
 	var r48_e2 := _new_engine([], 30, 30)
@@ -8748,7 +8748,7 @@ func _init() -> void:
 	r48_d.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
 	r48_d.use_spell(0, null)
 	check(r48_d.dodge_active(GameEngine.SIDE_SELF) and r48_d.state.energy == 5,
-			"闪躲：0 费；打出后「盟友代受」窗口开启（能量仍是 %d）" % r48_d.state.energy)
+			"闪躲：0 费；打出后「盟友代受」窗口开启（费用仍是 %d）" % r48_d.state.energy)
 	r48_d._damage_player(GameEngine.SIDE_SELF, 5, "测试")
 	check(r48_d_ally.health == 3 and r48_d.state.hp_self == 30,
 			"闪躲：5 伤全部由盟友代受（幽影 8 → %d，我方 HP 仍是 %d）"
@@ -8830,7 +8830,7 @@ func _init() -> void:
 	r49_e.state.hand.append(_card(8002, "攻击", "技能", 1, 0, 0, 0, 0))
 	r49_e.use_spell(0, Vector2i(2, 1))
 	check(r49_foe.health == 49 and r49_e.state.energy == 4,
-			"收尾：手卡里还有别的牌 → 6 伤（55 → %d，能量 5 → %d）"
+			"收尾：手卡里还有别的牌 → 6 伤（55 → %d，费用 5 → %d）"
 			% [r49_foe.health, r49_e.state.energy])
 
 	# 打出时它是手卡里仅剩的一张 → 15 伤；用完进弃牌区（不回手，与回响不同）
@@ -8971,7 +8971,7 @@ func _init() -> void:
 	var r74_b_ret: Placement = r74_b.play_from_hand(0, Vector2i(r74_ban, 1))
 	check(r74_b_ret == null and r74_b.state.field_effects.is_empty()
 			and r74_b.state.energy == 5 and not r74_b.state.hand.is_empty(),
-		"R74 场地：不能放自己后排行（%s）→ 拒绝出手且退还费用（能量仍 %d）"
+		"R74 场地：不能放自己后排行（%s）→ 拒绝出手且退还费用（费用仍 %d）"
 			% [r74_ban, r74_b.state.energy])
 	check(not GameEngine.field_place_allowed(Vector2i(r74_ban, 1))
 			and GameEngine.field_place_allowed(Vector2i(0, 1))
@@ -9146,7 +9146,7 @@ func _init() -> void:
 			GameEngine.POISON_TRAP_ID).to_dict()))
 	r74_m1.use_effect(0)
 	check(r74_m1.state.effects.size() == 1 and r74_m1.state.energy == 7,
-		"R74 场地精通：2 费效果卡正常启用（能量 9 → %d）" % r74_m1.state.energy)
+		"R74 场地精通：2 费效果卡正常启用（费用 9 → %d）" % r74_m1.state.energy)
 	r74_m1.play_from_hand(0, Vector2i(4, 1))
 	r74_m1.current_side = GameEngine.SIDE_OPPONENT
 	r74_m1.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
@@ -9665,7 +9665,7 @@ func _init() -> void:
 	check(r55_f.state.self_next_energy == 2,
 			"活力转移：效果区 2 张仍只结转 1 层（4/2=2，不是 4）")
 
-	# 走真实路径：end_turn() 在能量清零前结算
+	# 走真实路径：end_turn() 在费用清零前结算
 	var r55_g := _new_engine([], 30, 30)
 	var r55_gp := r55_g.state.place(CardData.from_dict(r55_cat.to_dict()),
 			Vector2i(4, 2), GameEngine.SIDE_SELF)
@@ -9674,9 +9674,9 @@ func _init() -> void:
 	r55_g.state.energy = 4
 	r55_g.end_turn()
 	check(r55_gp.end_atk == 4 and r55_g.state.self_next_energy == 2,
-			"end_turn 真实路径：能量清零前先结算（成长 +4、结转 2）")
+			"end_turn 真实路径：费用清零前先结算（成长 +4、结转 2）")
 	check(r55_g.state.energy == 0 and r55_g.current_side == GameEngine.SIDE_OPPONENT,
-			"end_turn 之后：我方能量已清零并切到敌方回合（%d / %s）"
+			"end_turn 之后：我方费用已清零并切到敌方回合（%d / %s）"
 			% [r55_g.state.energy, r55_g.current_side])
 
 	# 角色介绍改为概括性文案（R55）：不再出现具体卡名 / 数值，但保留打法取向
@@ -9854,7 +9854,7 @@ func _init() -> void:
 	check(r56_jcat.end_atk == 6 and r56_j.state.self_next_energy == 3,
 			"end_turn 真实路径：黑暗领主 +5 优先 → 地狱猫 +6、活力转移结转 3"
 			+ "（实际 +%d / %d）" % [r56_jcat.end_atk, r56_j.state.self_next_energy])
-	check(r56_j.state.energy == 0, "end_turn 之后能量仍按规矩清零（%d）" % r56_j.state.energy)
+	check(r56_j.state.energy == 0, "end_turn 之后费用仍按规矩清零（%d）" % r56_j.state.energy)
 
 	# ================= R57（2026-10-03）：黑暗扩散 9113 / 地狱咏唱者 8022 / 黑暗祭坛 8023 / 无尽黑暗 9114 =================
 	var r57_spread := repo.get_card(9113)
@@ -12935,7 +12935,7 @@ func _init() -> void:
 		r89_e4.state.hand.append(CardData.from_dict(r89_repo.get_card(8001).to_dict()))
 	var r89_full0: int = r89_e4.state.hand.size()
 	r89_e4.state.energy = 9
-	# 直接调引擎口（手牌满了塞不进「升级」，用 5 费能量硬调）
+	# 直接调引擎口（手牌满了塞不进「升级」，用 5 费费用硬调）
 	r89_e4._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
 	check(r89_e4.state.hand.size() == r89_full0,
 		"R89 手牌已满（%d）时供能落空，不超上限" % r89_full0)
@@ -13037,7 +13037,7 @@ func _init() -> void:
 	var r90_r1 := r90_e2.cast_sys_upgrade(1, 0)
 	check(r90_r1.contains("盟友或工事") and r90_e2.state.hand.size() == 2
 			and r90_e2.state.energy == 5,
-		"R90 系统升级：目标是技能卡 → 拒绝，**不扣费**（手牌仍 %d 张 / 能量 %d）"
+		"R90 系统升级：目标是技能卡 → 拒绝，**不扣费**（手牌仍 %d 张 / 费用 %d）"
 			% [r90_e2.state.hand.size(), r90_e2.state.energy])
 	check(r90_e2.state.hand[0].cost == r90_skill_cost,
 		"R90 拒绝时目标卡数值不变（仍是 %d 费）" % r90_skill_cost)
@@ -13060,7 +13060,7 @@ func _init() -> void:
 	var r90_single := r90_e4.use_spell(0, null)
 	check(r90_single.contains("先点手牌") and r90_e4.state.hand.size() == 1
 			and r90_e4.state.energy == 5,
-		"R90 系统升级：单段 use_spell 被**付费前拦截**（卡还在手牌、能量仍 %d）"
+		"R90 系统升级：单段 use_spell 被**付费前拦截**（卡还在手牌、费用仍 %d）"
 			% r90_e4.state.energy)
 
 	# ---- ⑦ 批量传输：手牌全体改造 + 抽 1 张 ----
@@ -13168,7 +13168,7 @@ func _init() -> void:
 			% r198_e1.state.hand.size())
 	check(r198_msg.contains("素体"), "R198 回收：返回文案提到素体（%s）" % r198_msg)
 	check(r198_e1.state.energy == 3,
-		"R198 回收：扣 2 费（能量 %d，期望 3）" % r198_e1.state.energy)
+		"R198 回收：扣 2 费（费用 %d，期望 3）" % r198_e1.state.energy)
 	var r198_disc_rc := false
 	for c: CardData in r198_e1.state.discard:
 		if c.id == GameEngine.RECYCLE_ID:
@@ -13212,7 +13212,7 @@ func _init() -> void:
 	var r198_r3 := r198_e3.cast_recycle(0, 0)
 	check(r198_r3.contains("不能回收自己") and r198_e3.state.hand.size() == 1
 			and r198_e3.state.energy == 5,
-		"R198 回收：不能回收自己 → 拒绝，**不扣费**（手牌仍 %d 张 / 能量 %d）" % [
+		"R198 回收：不能回收自己 → 拒绝，**不扣费**（手牌仍 %d 张 / 费用 %d）" % [
 			r198_e3.state.hand.size(), r198_e3.state.energy])
 	var r198_r3b := r198_e3.cast_recycle(0, 5)
 	check(r198_r3b.contains("目标手牌序号无效"),
@@ -13228,7 +13228,7 @@ func _init() -> void:
 	var r198_single := r198_e4.use_spell(0, null)
 	check(r198_single.contains("先点手牌") and r198_e4.state.hand.size() == 1
 			and r198_e4.state.energy == 5,
-		"R198 回收：单段 use_spell 被**付费前拦截**（卡还在手牌、能量仍 %d）"
+		"R198 回收：单段 use_spell 被**付费前拦截**（卡还在手牌、费用仍 %d）"
 			% r198_e4.state.energy)
 
 	# ---- R200：货物 8065（运送委托）—— 被破坏时从卡组中删除 ----
@@ -14416,7 +14416,7 @@ func _init() -> void:
 	check(r102_e1.state.hand.size() == r102_hand0 - 1,
 		"R102 双向传送：技能离手进弃牌区（手牌 -1）")
 	check(r102_e1.state.energy_of(GameEngine.SIDE_SELF) == r102_energy0,
-		"R102 双向传送：0 费 → 能量不变（%d）" % r102_e1.state.energy_of(GameEngine.SIDE_SELF))
+		"R102 双向传送：0 费 → 费用不变（%d）" % r102_e1.state.energy_of(GameEngine.SIDE_SELF))
 	check(r102_msg.contains("交换"), "R102 双向传送：结算有回执（实际 %s）" % r102_msg)
 
 	# R103 测试：夜蚀 8062（回合结束 · 按剩余费用回复生命）
@@ -14617,7 +14617,7 @@ func _init() -> void:
 		"R108 影袭：对目标 8 伤（55 → %d）" % r108_foe.health)
 	# 本回合第 1 张卡：1 - 1 = 0 张（含本卡），未满 3 → 不回费
 	check(r108_e1.state.energy == 4,
-		"R108 影袭：本回合第 1 张（未满 3 张）→ 不回费（能量 5 → %d）" % r108_e1.state.energy)
+		"R108 影袭：本回合第 1 张（未满 3 张）→ 不回费（费用 5 → %d）" % r108_e1.state.energy)
 
 	# ---- ② 影袭：含本卡累计第 3 张 → 回 1 费 ----
 	var r108_e2 := _new_engine([], 30, 30)
@@ -14635,7 +14635,7 @@ func _init() -> void:
 	r108_e2.use_spell(r108_e2.state.hand.size() - 1, Vector2i(2, 1))
 	# 打出这张（-1）再回费（+1）→ 净 0
 	check(r108_e2.state.energy == r108_e2_before,
-		"R108 影袭：含本卡本回合第 3 张 → 回 1 费，抵消本次 1 费（能量 %d → %d）"
+		"R108 影袭：含本卡本回合第 3 张 → 回 1 费，抵消本次 1 费（费用 %d → %d）"
 			% [r108_e2_before, r108_e2.state.energy])
 	check(r108_foe2.health == 47,
 		"R108 影袭：回费分支同样打出 8 伤（55 → %d）" % r108_foe2.health)
@@ -14651,7 +14651,7 @@ func _init() -> void:
 	var r108_e3_before := r108_e3.state.energy
 	r108_e3.use_spell(r108_e3.state.hand.size() - 1, Vector2i(2, 1))
 	check(r108_e3.state.energy == r108_e3_before,
-		"R108 影袭：含本卡第 4 张（≥3）→ 仍回 1 费（能量 %d → %d）"
+		"R108 影袭：含本卡第 4 张（≥3）→ 仍回 1 费（费用 %d → %d）"
 			% [r108_e3_before, r108_e3.state.energy])
 	check(r108_foe3.health == 47,
 		"R108 影袭：第 4 张照样打出 8 伤（55 → %d）" % r108_foe3.health)
@@ -15542,6 +15542,36 @@ func _init() -> void:
 			and r344_seg.contains("UiTheme.INK_600, -1)")
 			and not r344_seg.contains("UiTheme.INK_600)"),
 		"R344 道具面板：名字 / 标签 / 说明三行都传 outline = -1（不描边）")
+
+	# ============================================================
+	#  R345：术语唯一口 —— 资源只有「费用」一种叫法
+	# ============================================================
+	# 背景：卡面早就叫「费用」，道具说明与战斗播报却写「能量」，同一个东西两个名字。
+	# 用户口径（R345）：统一成「费用」；卡名「能量屏障」（8033）是专有名词，保留。
+	# ⚠️ 刻意**不**在 CardText.PHRASE_FIXES 里加「能量 → 费用」——那会把卡名
+	#    「能量屏障」也改成「费用屏障」。术语只能靠数据侧守，不能靠显示层兜。
+	# ---- ① 数据层：卡面文案不再出现「能量」----
+	var r345_cards_bad := ""
+	for r345_c: CardData in repo.all_cards():
+		var r345_t: String = r345_c.effect_text
+		if r345_t.replace("能量屏障", "").contains("能量"):
+			r345_cards_bad = "%d:%s" % [r345_c.id, r345_t]
+	check(r345_cards_bad == "",
+		"R345 文案：卡面只写「费用」，不再出现「能量」（卡名「能量屏障」除外；漏网 %s）"
+			% r345_cards_bad)
+	# ---- ② 道具说明（面板是纯文本绘制，不走 CardText）----
+	var r345_relic_bad := ""
+	for r345_r: RelicData in RelicRepo.load_json().all_relics():
+		if r345_r.desc.contains("能量"):
+			r345_relic_bad = "%d:%s" % [r345_r.id, r345_r.desc]
+	check(r345_relic_bad == "",
+		"R345 文案：道具说明也统一成「费用」（漏网 %s）" % r345_relic_bad)
+	# ---- ③ 战斗播报 / 界面硬编码字符串（status_text / _say / _log 不走显示层）----
+	var r345_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd") \
+			+ FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(r345_src != "" and r345_src.replace("能量屏障", "").find("能量") < 0,
+		"R345 文案：战斗界面与引擎播报里也不再有「能量」（漏网 %d 处）"
+			% max(0, r345_src.replace("能量屏障", "").count("能量")))
 
 	# ---- ⑥ 战场单位的 buff / debuff 逐条列出 ----
 	var r106_e := _new_engine([], 30, 30)
@@ -17485,7 +17515,7 @@ func _init() -> void:
 	r202_rl.cast_reload(0, 1)
 	check(r202_rl.state.hand.size() == 1 and r202_rl.state.hand[0].id == GameEngine.ENERGY_CANNON_ID,
 		"R202 填充：攻击（8002）被变成聚能炮击")
-	check(r202_rl.state.energy == 0, "R202 填充：0 费不改变能量")
+	check(r202_rl.state.energy == 0, "R202 填充：0 费不改变费用")
 	check(r202_rl.state.discard.is_empty() and r202_rl.state.void_count == 1
 			and r202_rl.state.void_cards.size() == 1
 			and r202_rl.state.void_cards[0].id == GameEngine.RELOAD_ID,
@@ -18493,7 +18523,7 @@ func _init() -> void:
 	RunState.relics = [6038]
 	RunState.rest()
 	check(RunState.hp == 60, "R307 圣餐：篝火休息直接回满（10 → %d）" % RunState.hp)
-	# 雕像：第 10 张牌 → 能量 +1、计数清零；名字旁显示剩余张数
+	# 雕像：第 10 张牌 → 费用 +1、计数清零；名字旁显示剩余张数
 	RunState.statue_charge = 9
 	var r307_statue := _new_engine([], 20, 20, -1, false)
 	r307_statue.start_game(0)
@@ -18501,7 +18531,7 @@ func _init() -> void:
 	var r307_e0: int = r307_statue.state.energy
 	r307_statue._note_card_played(GameEngine.SIDE_SELF)
 	check(RunState.statue_charge == 0 and r307_statue.state.energy == r307_e0 + 1,
-			"R307 雕像：第 10 张牌 → 能量 +1（%d → %d），计数清零"
+			"R307 雕像：第 10 张牌 → 费用 +1（%d → %d），计数清零"
 			% [r307_e0, r307_statue.state.energy])
 	RunState.statue_charge = 3
 	check(RunState.relic_display_name(6039) == "雕像（3）",
@@ -19278,7 +19308,7 @@ func _init() -> void:
 			and r223_ce.state.discard[0].is_curse()
 			and r223_ce.state.self_skill_plays == r223_spell0
 			and r223_ce.state.self_card_plays == r223_plays0 + 1,
-			"R223 use_curse：扣 1 能量、离手进弃牌区；不记技能出牌（%s）" % r223_detail)
+			"R223 use_curse：扣 1 费用、离手进弃牌区；不记技能出牌（%s）" % r223_detail)
 
 	var r223_re := _new_engine([], 30, 30)
 	r223_re.state.opp_hand_count = 3
@@ -19288,7 +19318,7 @@ func _init() -> void:
 	r223_re.remote_curse(CardData.from_dict(r223_fatigue.to_dict()))
 	check(r223_re.state.opp_energy == 3 and r223_re.state.opp_hand_count == 2
 			and r223_re.state.opp_card_plays == r223_opp0 + 1,
-			"R223 remote_curse：对方打出诅咒 → 能量 -1 / 手牌数 -1 / 记一次出牌")
+			"R223 remote_curse：对方打出诅咒 → 费用 -1 / 手牌数 -1 / 记一次出牌")
 
 	var r223_ae := _new_engine([], 30, 30)
 	r223_ae.state.hand.clear()
@@ -20311,7 +20341,7 @@ func _init() -> void:
 				r263_hit_others, r263_splash_total])
 	check(r263_e.state.energy == 4 and r263_e.state.discard.size() == 1
 			and r263_e.state.discard[0].id == 9160,
-			"R263 弹跳飞刀：1 费（5 → %d 能量），用完进弃牌区" % r263_e.state.energy)
+			"R263 弹跳飞刀：1 费（5 → %d 费用），用完进弃牌区" % r263_e.state.energy)
 	check(r263_msg.contains("弹跳"), "R263 弹跳飞刀：结算文案报出弹跳结果（%s）" % r263_msg)
 	# ② 「最多」的边界：场上只有主目标 → 一刀 5 伤，不弹
 	var r263_solo := _new_engine([], 30, 30)
@@ -20506,7 +20536,7 @@ func _init() -> void:
 			"R269 共享护盾：absorbs_for_hp() 认这个字段（与森林守护 / 铁栅栏同一绿环）")
 	check(r269_s1.state.energy == 9
 			and r269_s1.state.discard.any(func(c: CardData): return c.id == GameEngine.SHARED_SHIELD_ID),
-			"R269 共享护盾：0 费（能量不变），自己进弃牌区")
+			"R269 共享护盾：0 费（费用不变），自己进弃牌区")
 
 	# 我方 HP 要掉血 → 改由它承受（每次都能顶）
 	r269_s1._damage_player(GameEngine.SIDE_SELF, 5, "测试直伤")
@@ -21488,7 +21518,7 @@ func _init() -> void:
 		r276_e4.state.hand_cost_turn.clear()
 		r276_e4._assemble_at_will(GameEngine.SIDE_SELF)
 	# ⚠️ 这里**不能**拿 `cost_of(c) == c.cost` 当「没减费」的判据：`cost_of` 里还有一堆
-	#    全局减费（道具 / 进化 / X 费卡按剩余能量算…），前面用例可能给 RunState 留过东西，
+	#    全局减费（道具 / 进化 / X 费卡按剩余费用算…），前面用例可能给 RunState 留过东西，
 	#    那样会随随机结果翻红（R276 实踩）。改成验**结构**：减费表的键必须全是此刻还在
 	#    手牌里的**盟友**卡、值都是 1；「差 1 点」另用手造卡做前后对比。
 	var r276_bad := 0
@@ -21583,7 +21613,7 @@ func _init() -> void:
 		"R277 双向传送：赫菲斯托斯免疫位移 → 两边都没换位")
 	check(r277_sw.contains("免疫位移") and r277_e3.state.energy == 5
 			and r277_e3.state.hand.size() == 1,
-		"R277 双向传送：拒绝时**不扣费、技能留手牌**（能量 %d / 手牌 %d / %s）"
+		"R277 双向传送：拒绝时**不扣费、技能留手牌**（费用 %d / 手牌 %d / %s）"
 		% [r277_e3.state.energy, r277_e3.state.hand.size(), r277_sw])
 	# 对照：换成普通敌人就能换
 	var r277_e4 := _new_engine([], 30, 30, -1, false)
@@ -21960,7 +21990,7 @@ func _init() -> void:
 			"R288 失控要塞：本次对战没用过聚能炮击 → 不释放技能（实际 %d 张）"
 			% r288_e0.fort_casts.size())
 
-	# ② 3 张炮击 + 能量只够要塞自己：随机释放**不额外收费**（否则一张都放不出来）
+	# ② 3 张炮击 + 费用只够要塞自己：随机释放**不额外收费**（否则一张都放不出来）
 	var r288_e1 := _new_engine(r288_deck, 20, 20, -1, false)
 	r288_e1.start_game()
 	r288_e1.state.self_cannon_plays = 3
@@ -21974,15 +22004,15 @@ func _init() -> void:
 			"R288 失控要塞：3 张炮击 → 随机释放 1~3 张技能（实际 %d 张：%s）"
 			% [r288_e1.fort_casts.size(), str(r288_e1.fort_casts)])
 	# ⚠️ 不能断言 == 0：随机池里的「拆解」自带回费（DEMOLISH_REFUND）、
-	#    「超越极限」也会给资源 —— 抽到它们时能量会比 0 高，这是技能自身效果，
+	#    「超越极限」也会给资源 —— 抽到它们时费用会比 0 高，这是技能自身效果，
 	#    不是要塞多收了费。判据只能取「绝不为负 + 技能不额外扣钱」。
 	check(r288_e1.state.energy >= 0,
 			"R288 失控要塞：只付自己的 2 费，随机释放的技能不额外收费（余 %d，拆解等自带回费时更高）"
 			% r288_e1.state.energy)
-	# 铁证：能量被要塞付到 0 之后仍能继续凭空释放技能 —— 若技能要付费，
+	# 铁证：费用被要塞付到 0 之后仍能继续凭空释放技能 —— 若技能要付费，
 	# energy=2 时第一张就因为付不起而放不出来，fort_casts 会是空的。
 	check(not r288_e1.fort_casts.is_empty() and r288_e1.state.energy >= 0,
-			"R288 失控要塞：0 能量状态下仍能凭空释放技能（免费机制生效）")
+			"R288 失控要塞：0 费用状态下仍能凭空释放技能（免费机制生效）")
 
 	# ③ 目标在**手牌里**的技能（系统升级 8039）也能凭空释放：临时卡插进手牌末尾再走原入口
 	var r288_e2 := _new_engine([], 20, 20, -1, false)
@@ -22831,7 +22861,7 @@ func _init() -> void:
 	check(r296_e2.merge_pending and r296_e2.merge_hand_index == 0
 			and r296_e2.merge_cell == Vector2i(4, 1)
 			and r296_e2.state.energy == 5 and r296_e2.state.hand.size() == 1,
-			"R298 合体：场上指定目标 → 只挂起面板（能量 %d / 手牌 %d / %s）" % [
+			"R298 合体：场上指定目标 → 只挂起面板（费用 %d / 手牌 %d / %s）" % [
 				r296_e2.state.energy, r296_e2.state.hand.size(), r296_hold])
 	var r296_opt: Array[int] = r296_e2.merge_deck_options()
 	check(r296_opt.size() == 1
@@ -24211,7 +24241,7 @@ func _init() -> void:
 	var r327_txt := r327_e.use_effect(0)
 	check(r327_e.state.effects.size() == 1 and r327_e.state.energy == 3
 			and r327_txt.contains("生效中"),
-			"R327 送葬：打出后进效果区、付 2 费（效果区 %d 张 / 能量 %d / 「%s」）"
+			"R327 送葬：打出后进效果区、付 2 费（效果区 %d 张 / 费用 %d / 「%s」）"
 			% [r327_e.state.effects.size(), r327_e.state.energy, r327_txt])
 
 	# ② 己方单位被破坏 → 抽 1
@@ -24406,7 +24436,7 @@ func _init() -> void:
 	r332_e1.use_spell(0, null)
 	check(r332_e1.state.energy == 3 and r332_e1.state.hand.is_empty()
 			and r332_e1.state.discard.size() == r332_e1_d + 1,
-			"R332 本能：牌库空 → 仍照常付 2 费、弃牌 +1（能量 %d / 弃牌 +%d）"
+			"R332 本能：牌库空 → 仍照常付 2 费、弃牌 +1（费用 %d / 弃牌 +%d）"
 			% [r332_e1.state.energy, r332_e1.state.discard.size() - r332_e1_d])
 
 	# ---- ② 牌库 3 张 ≤1 费技能 → 全部打出 ----
@@ -24517,9 +24547,9 @@ func _init() -> void:
 			and r336_night.traits.has("永夜"),
 			"R340 永夜：敌方效果卡，trait「永夜」")
 	check(r336_rrepo.get_relic(6001).desc.contains("+10")
-			and r336_rrepo.get_relic(6016).desc.contains("2 点能量")
+			and r336_rrepo.get_relic(6016).desc.contains("2 点费用")
 			and r336_rrepo.get_relic(6018).desc.contains("宠物鸭"),
-			"R340 道具文案：类固醇 +10 最大生命 / 冰淇淋 2 点能量 / 生蛋鸭写明宠物鸭")
+			"R340 道具文案：类固醇 +10 最大生命 / 冰淇淋 2 点费用 / 生蛋鸭写明宠物鸭")
 	# ① 类固醇：最大生命 +10（当前生命同 +10）
 	RunState.end_run()
 	var r336_rng := RandomNumberGenerator.new()
@@ -24593,13 +24623,13 @@ func _init() -> void:
 	check(r336_weak0 == 1 and r336_weak1 == 0,
 			"R340 永夜：奇数回合夜鸭原本虚弱 1（实际 %d），带永夜后归 0（实际 %d）"
 			% [r336_weak0, r336_weak1])
-	# ⑤ 冰淇淋与汽水：第 1 回合 +2 能量 / 多抽 3 张
+	# ⑤ 冰淇淋与汽水：第 1 回合 +2 费用 / 多抽 3 张
 	var r336_ie := _new_engine(r336_deck, 20, 20, -1, false)
 	r336_ie.self_relics = [6016]
 	r336_ie.start_game(0)
 	check(r336_ie.state.energy == FieldState.ENERGY_PER_TURN + 2
 			and r336_ie.state.hand.size() == FieldState.HAND_DRAW_PER_TURN + 3,
-			"R340 冰淇淋与汽水：第 1 回合 +2 能量（%d）/ 多抽 3 张（%d）"
+			"R340 冰淇淋与汽水：第 1 回合 +2 费用（%d）/ 多抽 3 张（%d）"
 			% [r336_ie.state.energy, r336_ie.state.hand.size()])
 	# ⑥ 新关卡：永夜鸭群（第一层精英困难，双夜鸭 + 永夜）
 	var r336_lv: Dictionary = _level_named("永夜鸭群")

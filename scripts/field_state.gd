@@ -3,8 +3,8 @@ extends RefCounted
 ## 一局对局的场地状态（肉鸽版）。
 ## 战场 6 行 x 3 列：第 0~2 行对手、第 3~5 行自己；格子键 = Vector2i(行, 列)。
 ##
-## 肉鸽费用规则：没有费用区卡牌，改为能量计数 —— 每回合固定 ENERGY_PER_TURN 点，
-## 出牌时扣除；**回合结束时剩余能量作废、重置回 ENERGY_PER_TURN**（不跨回合累积）。
+## 肉鸽费用规则：没有费用区卡牌，改为费用计数 —— 每回合固定 ENERGY_PER_TURN 点，
+## 出牌时扣除；**回合结束时剩余费用作废、重置回 ENERGY_PER_TURN**（不跨回合累积）。
 ## 牌库循环：抽牌时牌库空了 → 把弃牌区整堆洗入牌库继续抽。
 
 const BOARD_ROWS := 6
@@ -41,8 +41,8 @@ var discard: Array[CardData] = []
 var hand: Array[CardData] = []
 var effects: Array[CardData] = []   # 我方效果区：使用后的效果卡，正面朝上持续生效
 var enemy_effects: Array[CardData] = []  # 敌方效果区：开局即启用，正面朝上持续生效
-var energy := ENERGY_PER_TURN  # 我方能量计数（开局即有一回合的量；回合结束重置回它）
-var opp_energy := ENERGY_PER_TURN  # 对方能量计数（同上：回合结束重置）
+var energy := ENERGY_PER_TURN  # 我方费用计数（开局即有一回合的量；回合结束重置回它）
+var opp_energy := ENERGY_PER_TURN  # 对方费用计数（同上：回合结束重置）
 var self_cost_reduction := 0    # 赤狐：本回合我方出牌费用 -N（回合开始清零，只影响我方）
 var self_ally_cost_reduction := 0  # 快速出击：本回合我方手牌中「盟友」费用 -N（回合开始清零）
 var self_next_ally_reduction := 0  # 斑鸠：本回合「下一个盟友」费用 -N（用掉 / 回合开始即清零）

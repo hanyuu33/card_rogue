@@ -123,7 +123,7 @@ var _space_fires:= 0
 # 虚空主宰（9082）：技能结算窗口 —— 窗口内只要有伤害落在敌方身上就记一次（见 _mark_spell_enemy_hit）
 var _spell_active:= false
 var _spell_hit_enemy:= false
-# 流星雨（9083）：本次施放消耗的能量（X）—— 在 _pay 之前抓取（见 use_spell / remote_spell）
+# 流星雨（9083）：本次施放消耗的费用（X）—— 在 _pay 之前抓取（见 use_spell / remote_spell）
 var _x_spell_value:= 0
 # 火墙术（9084）：正在燃烧的横行。每项 {side, row, pass_dmg, dealt}；
 # dealt 记录每个单位已从这面火墙吃到的伤害（同一单位累计上限 FIRE_WALL_CAP）。
@@ -453,7 +453,7 @@ const VERSATILE_RELIC_ID:= 6033
 const SPRING_RELIC_ID := 6035        # 泉水：后排单位每回合回 4
 const STEEL_STAMP_RELIC_ID := 6036   # 思想钢印：每场战斗第一个被破坏的我方单位回手卡
 const THORN_RING_RELIC_ID := 6037    # 荆棘指环：每回合第一次受伤抽 2
-const STATUE_RELIC_ID := 6039        # 雕像：每 10 张牌回 1 能量（计数在 RunState）
+const STATUE_RELIC_ID := 6039        # 雕像：每 10 张牌回 1 费用（计数在 RunState）
 const SPRING_HEAL := 4
 const PEAR_RELIC_ID:= 6019
 
@@ -624,11 +624,11 @@ const VOID_LORD_PRESENCE_DISCOUNT:= 1
 const VOID_LORD_DMG_DISCOUNT:= 2
 
 # ── 流星雨（9083 技能，2026-10-01）──
-# X 费卡：施放瞬间 X = 该方剩余的全部能量，一次性全部消耗（类杀戮尖塔）。
+# X 费卡：施放瞬间 X = 该方剩余的全部费用，一次性全部消耗（类杀戮尖塔）。
 # 对随机敌人造成 METEOR_SHOWER_DMG 点伤害、重复 X 次，每次独立随机选目标；
 # 费用挂 cost_of（显示=判定=实扣），X 在 use_spell / remote_spell 里**扣费之前**抓取。
-# R124：**0 能量时也能使用**（此时 X 记 0）—— can_pay_card 对 X 费卡一律放行，
-#       不再是「0 能量打不出/不可点」；空放会照常把这张卡消耗掉（离手进弃牌区）。
+# R124：**0 费用时也能使用**（此时 X 记 0）—— can_pay_card 对 X 费卡一律放行，
+#       不再是「0 费用打不出/不可点」；空放会照常把这张卡消耗掉（离手进弃牌区）。
 const METEOR_SHOWER_ID:= 9083
 const METEOR_SHOWER_DMG:= 8
 
@@ -1230,7 +1230,7 @@ const SURPRISE_ID:= 8079
 # ── R332：暗影刺客稀有技能「本能」9176 ──
 # 2 费：**随机打出抽牌库中 3 张费用 ≤1 的技能卡**。
 #   * 候选 = `state.deck` 里 `is_spell()` 且 `cost_of(card, side) <= INSTINCT_MAX_COST`；
-#     X 费卡（流星雨 9083）**显式排除** —— 0 能量时它也算「可打出」，等于白丢一张；
+#     X 费卡（流星雨 9083）**显式排除** —— 0 费用时它也算「可打出」，等于白丢一张；
 #     本能自身也排除，防止被减费后自我递归。
 #   * 打出走 `use_spell(..., free_cast = true)`：**不向玩家收费**，但保留全部既有守卫
 #     （夜行出牌上限 / 两段式技能打不出 / 没有合法目标 / 选牌面板）——
@@ -1329,7 +1329,7 @@ const ALERT_ID:= 9109
 const ALERT_DISCOUNT:= 2
 
 # ---- R55「回合结束 · 剩余费用」系列（2026-10-03）----
-# 三张卡共用**一个结算入口** _end_turn_surplus()：自己回合结束、能量清零**之前**调用，
+# 三张卡共用**一个结算入口** _end_turn_surplus()：自己回合结束、费用清零**之前**调用，
 # 读该方**本回合没用完的剩余费用**（state.energy_of(side)），按各自的换算比例结算。
 #   * 地狱猫 8019（0 费普通盟友 1/1）：剩余费用每 1 点 → 本卡 +1 力 +2 血；
 #   * 鲜血堡垒 8020（0 费稀有工事 1/1/程1）：剩余费用每 1 点 → 本卡 +1 力 +3 血；
@@ -1417,7 +1417,7 @@ const REBIRTH_TRAIT:= "新生"
 # 与那几张的**关键区别**：那几张给的是**永久成长**（Placement.end_atk / 直接加 p.health，
 #   等于抬上限），夜蚀是**回复**（把已损失的血补回来，**上限仍是卡面 health**），
 #   所以走的是 _regen_tick 那一套「不满血才回、mini 夹上限」的口径。
-# 结算入口同样挂在 _end_turn_surplus()（能量清零之前），读同一个 left。
+# 结算入口同样挂在 _end_turn_surplus()（费用清零之前），读同一个 left。
 # 满血时不结算也不刷飘字（与 _regen_tick / _charge_tick 一致，避免「回复 0」噪声）。
 const NIGHT_EROSION_ID:= 8062
 const NIGHT_EROSION_TRAIT:= "夜蚀"
@@ -1841,7 +1841,7 @@ func _begin_turn(side: String) -> void :
 		if self_relics.has(EARRING_RELIC_ID):
 			earring_energy = 1
 			state.energy += earring_energy
-			_log("鸭语耳环：本回合能量 +1")
+			_log("鸭语耳环：本回合费用 +1")
 
 		# 活力转移（9110，R55）：上回合剩余费用换来的额外费用，**只在本回合发放一次**。
 		var transfer_energy := state.self_next_energy
@@ -1856,7 +1856,7 @@ func _begin_turn(side: String) -> void :
 			ice_energy = ICECREAM_ENERGY
 			state.energy += ice_energy
 			extra_draw += ICECREAM_DRAW
-			_log("冰淇淋与汽水：第 1 回合额外 +%d 能量、多抽 %d 张"
+			_log("冰淇淋与汽水：第 1 回合额外 +%d 费用、多抽 %d 张"
 				%[ICECREAM_ENERGY, ICECREAM_DRAW])
 			action.emit("icecream", {"text": ICECREAM_LINE, 
 				"energy": ICECREAM_ENERGY, "draw": ICECREAM_DRAW})
@@ -1976,7 +1976,7 @@ func _begin_turn(side: String) -> void :
 		_refresh_mnemosyne()           # R271 谟涅摩叙涅：按改造层数重算敌方力量减益
 		_refresh_night_owl()           # R270 夜鸭：按本回合奇偶刷新「惧光」
 		_run_battlecries(SIDE_SELF)
-		_log("── 我方第 %d 回合：能量重置为 %d%s%s%s%s%s%s%s（共 %d），抽 %d 张" % [
+		_log("── 我方第 %d 回合：费用重置为 %d%s%s%s%s%s%s%s（共 %d），抽 %d 张" % [
 			turn_number, FieldState.ENERGY_PER_TURN,
 			"（+%d 鸭翼）" % bonus_energy if bonus_energy > 0 else "",
 			"（+%d 鸭语耳环）" % earring_energy if earring_energy > 0 else "",
@@ -2042,7 +2042,7 @@ func _begin_turn(side: String) -> void :
 		_refresh_mnemosyne()           # R271 谟涅摩叙涅：对称保留（敌方正常拿不到）
 		_refresh_night_owl()           # R270 夜鸭：奇数回合「惧光」（与上一行同回合内一致）
 		_run_battlecries(SIDE_OPPONENT)
-		_log("── 对手回合开始：能量 %d（上回合结束已清零，本回合重新发放基础费用），手牌 +%d" % [
+		_log("── 对手回合开始：费用 %d（上回合结束已清零，本回合重新发放基础费用），手牌 +%d" % [
 			FieldState.ENERGY_PER_TURN, FieldState.HAND_DRAW_PER_TURN])
 
 
@@ -2870,8 +2870,8 @@ func _autoplay_play(hand_index: int) -> bool:
 		_log("鸭语耳环：%s 是诅咒卡，自动出牌跳过" % card.card_name)
 		return false
 	if card.x_cost:
-		# X 费卡（流星雨）：会一口气吃掉全部能量 → 自动出牌不碰它（留在手里）。
-		# ⚠️ R124 起它在 0 能量时也算「可打出」（X 记 0）→ 自动出牌**更**不该碰它，
+		# X 费卡（流星雨）：会一口气吃掉全部费用 → 自动出牌不碰它（留在手里）。
+		# ⚠️ R124 起它在 0 费用时也算「可打出」（X 记 0）→ 自动出牌**更**不该碰它，
 		#    否则等于白白丢掉一张手牌。
 		_log("鸭语耳环：%s 是 X 费卡，自动出牌跳过" % card.card_name)
 		return false
@@ -3133,7 +3133,7 @@ func end_turn() -> void :
 		state.opp_hand_count = 0
 
 
-	# 活力转移 / 地狱猫 / 鲜血堡垒（R55）：**能量清零之前**结算本回合没用完的剩余费用。
+	# 活力转移 / 地狱猫 / 鲜血堡垒（R55）：**费用清零之前**结算本回合没用完的剩余费用。
 	_end_turn_surplus(current_side)
 
 	if current_side == SIDE_SELF:
@@ -3191,7 +3191,7 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 	# 夜行（9155，R232）：本回合我方所有卡费用为 0 —— 放在最前，X 费卡与「最低 N 费」也一并免费。
 	if side == SIDE_SELF and state.turn_all_free:
 		return 0
-	# X 费卡（流星雨 9083）：费用 = 该方当前剩余的**全部能量**（显示=判定=实扣 都读这里）。
+	# X 费卡（流星雨 9083）：费用 = 该方当前剩余的**全部费用**（显示=判定=实扣 都读这里）。
 	if card != null and card.x_cost:
 		return maxi(0, state.energy_of(side))
 	# 使魔之夜的乌鸦：只在本回合免费（回合结束 turn_free 清空 → 恢复原价）
@@ -3199,7 +3199,7 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 		return _cost_floor(card, 0)
 	# 「在手牌里期间免费」（R89 无限装甲 8038 供能的改造牌）：
 	# ⚠️ 判据是**这张卡此刻还在不在手牌里**，不是回合 —— 所以打出 / 弃掉后自动恢复原价，
-	# 不需要在那 10 处离手口逐个清标记。放在 X 费判定**之后**：X 费卡费用由剩余能量决定，
+	# 不需要在那 10 处离手口逐个清标记。放在 X 费判定**之后**：X 费卡费用由剩余费用决定，
 	# 已经是 0 了不需要管；但若一张 X 费卡被标记，它仍按 X 费口径（更符合卡面）。
 	if card != null and state.hand_free.has(card) and state.hand.has(card):
 		return _cost_floor(card, 0)
@@ -3280,7 +3280,7 @@ func _charge_up_text(v: int) -> String:
 
 
 func _charge_up_grow(left: int) -> void:
-	## 蓄势（9156，R232）：回合结束、能量清零之前，手卡里每张「蓄势」按剩余费用涨伤害。
+	## 蓄势（9156，R232）：回合结束、费用清零之前，手卡里每张「蓄势」按剩余费用涨伤害。
 	if left <= 0:
 		return
 	for c: CardData in state.hand:
@@ -3293,7 +3293,7 @@ func _charge_up_grow(left: int) -> void:
 
 
 func can_pay_card(card: CardData, side:= SIDE_SELF) -> bool:
-	# X 费卡（流星雨 9083）：**任何时候都能打** —— 0 能量时 X 记 0（R124 用户口径：
+	# X 费卡（流星雨 9083）：**任何时候都能打** —— 0 费用时 X 记 0（R124 用户口径：
 	# 「费用为 X 的牌即使当前没有费用也能使用，那个场合 X 当作 0 计算」）。
 	# ⚠️ 这里**不再**要求 energy >= 1：要不要空放由玩家自己决定，卡照常离手进弃牌区。
 	if card != null and card.x_cost:
@@ -3515,13 +3515,13 @@ func _meteor_shower(side: String, card: CardData) -> String:
 
 
 	## 流星雨（9083）：对随机敌人造成 METEOR_SHOWER_DMG 点伤害，重复 X 次
-	## （X = 施放时消耗的全部能量，见 use_spell）。每次**独立**随机选目标。
+	## （X = 施放时消耗的全部费用，见 use_spell）。每次**独立**随机选目标。
 	## 场上没有敌方单位时改为直击敌方 HP（与疾风之力同处理）；
 	## 命中带「法术免疫」的单位 → 那一颗被拦下（与龙息同一判据）。
 	var times:= maxi(0, _x_spell_value)
 	if times <= 0:
-		# R124：0 能量施放是**合法**的（X 记 0），不是出错 —— 文案据实描述即可。
-		return "流星雨：X = 0（没有能量），一颗流星都没落下"
+		# R124：0 费用施放是**合法**的（X 记 0），不是出错 —— 文案据实描述即可。
+		return "流星雨：X = 0（没有费用），一颗流星都没落下"
 	var hit:= _spell_dmg(side, METEOR_SHOWER_DMG, card)
 	var foe:= SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
 	var total:= 0
@@ -3781,7 +3781,7 @@ func _pay(card: CardData) -> int:
 	## 支付并**返回实付点数**（R74：出手被拒时要用它退款，见 _pay_refund）。
 	var c:= cost_of(card)
 	state.pay_energy(c)
-	_log("支付 %d 能量使用 %s" % [c, card.card_name])
+	_log("支付 %d 费用使用 %s" % [c, card.card_name])
 	return c
 
 
@@ -6557,7 +6557,7 @@ func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 	if card.id == WHIRL_BLADE_ID and state.self_card_plays < WHIRL_BLADE_NEED:
 		return "回旋斩：本回合还需先使用 %d 张其他卡（已用 %d）" % [
 				WHIRL_BLADE_NEED - state.self_card_plays, state.self_card_plays]
-	# 流星雨（9083）：X = 扣费前剩余的**全部能量**（_pay 会把它一次清零）→ 先抓再付。
+	# 流星雨（9083）：X = 扣费前剩余的**全部费用**（_pay 会把它一次清零）→ 先抓再付。
 	_x_spell_value = maxi(0, state.energy_of(SIDE_SELF)) if card.x_cost else 0
 	# R288：`free_cast` = 失控要塞 9161 凭空生成的技能卡（卡面写「释放」，不向玩家收费）。
 	if not free_cast:
@@ -6722,7 +6722,7 @@ func use_effect(hand_index: int) -> String:
 
 
 func use_curse(hand_index: int) -> String:
-	## R223：打出**诅咒卡**（「疲惫」9149）—— 用户口径「打出无效果」：付能量、离手、
+	## R223：打出**诅咒卡**（「疲惫」9149）—— 用户口径「打出无效果」：付费用、离手、
 	## 进弃牌区，就这些。
 	## R239：去向改走**唯一口 `_spell_card_gone`** —— 带「次元」的诅咒（破绽 9154）
 	## 「打出后消失」（进消耗区，本场不再出现），其余诅咒（疲惫 9149）照旧进弃牌区。
@@ -6779,13 +6779,13 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 	_lurker_tick(side, played)
 	_sleepless_tick(side)
 	_wind_fairy_tick(side)
-	# R307 雕像（6039）：每使用 10 张牌回复 1 点能量（**跨回合、跨战斗**累计）。
+	# R307 雕像（6039）：每使用 10 张牌回复 1 点费用（**跨回合、跨战斗**累计）。
 	if side == SIDE_SELF and self_relics.has(STATUE_RELIC_ID):
 		RunState.statue_charge += 1
 		if RunState.statue_charge >= RunState.STATUE_EVERY:
 			RunState.statue_charge -= RunState.STATUE_EVERY
 			state.energy += 1
-			_log("雕像：累计使用 %d 张牌 → 回复 1 点能量（当前 %d）"
+			_log("雕像：累计使用 %d 张牌 → 回复 1 点费用（当前 %d）"
 					% [RunState.STATUE_EVERY, state.energy])
 
 
@@ -6851,7 +6851,7 @@ func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 	## R262（用户口径）：**「现在打出会造成多少伤害」** —— 战斗左栏详情用。
 	## 只覆盖**卡面文案给不出确数**的伤害技能（数字随局势变），其余卡返回 {} 让界面不画：
 	##   终结 9086 = 2 + 本回合已用张数；连环戏法 9093 = 5 / 10（含本卡是否第 3 张）；
-	##   偷袭 9090 = 6（满血 12，目标未知时按 6 报）；流星雨 9083 = 8 × 剩余能量。
+	##   偷袭 9090 = 6（满血 12，目标未知时按 6 报）；流星雨 9083 = 8 × 剩余费用。
 	## ⚠️ 基数**复用结算分支的常量与判据**（`_raid_dmg` / COMBO_TRICK_* / SNEAK_* / METEOR_SHOWER_*），
 	## 最后统一过 `_spell_dmg()` —— 附魔「伤害 +10」（烤在 power 里）、魔法塔、荧光草、
 	## 鸭之眼、魔力核心、回合加成都算进去，所以**显示值 == 实际扣血值**。
@@ -6878,7 +6878,7 @@ func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 	if card.id == METEOR_SHOWER_ID:
 		var times: int = maxi(0, state.energy_of(SIDE_SELF)) if side == SIDE_SELF else 0
 		var per: int = _spell_dmg(side, METEOR_SHOWER_DMG, card)
-		return {"dmg": per * times, "note": "%d × %d 颗（清空能量）" % [METEOR_SHOWER_DMG, times]}
+		return {"dmg": per * times, "note": "%d × %d 颗（清空费用）" % [METEOR_SHOWER_DMG, times]}
 	return {}
 
 
@@ -7223,7 +7223,7 @@ func can_use_card(card: CardData, side:= SIDE_SELF) -> bool:
 	if side == SIDE_SELF and _no_unit_play_this_turn and card != null \
 			and (card.kind == "盟友" or card.is_fort()):
 		return false
-	## 能量之外的「使用条件」（显示 / UI / 引擎同一判定）：
+	## 费用之外的「使用条件」（显示 / UI / 引擎同一判定）：
 	## 回旋斩（9096）：本回合使用 4 张以上其他卡后才能使用。
 	if card != null and card.id == WHIRL_BLADE_ID:
 		var plays := state.self_card_plays if side == SIDE_SELF else state.opp_card_plays
@@ -7399,7 +7399,7 @@ func cast_swap_units(hand_index: int, cell_a: Vector2i, cell_b: Vector2i,
 	var pb := state.unit_at(cell_b)
 	if pa == null or pb == null:
 		return "（需要指定两个都在场上的单位）"
-	# R277：位移免疫 —— **付费之前**拦，否则能量白扣、卡也没了。
+	# R277：位移免疫 —— **付费之前**拦，否则费用白扣、卡也没了。
 	if pa.card.traits.has(DISPLACE_IMMUNE_TRAIT) \
 			or pb.card.traits.has(DISPLACE_IMMUNE_TRAIT):
 		var imm_nm: String = pa.card.card_name \
@@ -7408,7 +7408,7 @@ func cast_swap_units(hand_index: int, cell_a: Vector2i, cell_b: Vector2i,
 		return "（%s 免疫位移，无法交换）" % imm_nm
 	# R285：换位也是位移 —— 按**交换后的归属**判（pa 去 cell_b、pb 去 cell_a），
 	# 只要有一方要落进对方后排就整笔拒绝。必须放在 `_pay` 之前：
-	# 否则能量白扣、卡也没了（R277 双向传送踩过的同一个坑）。
+	# 否则费用白扣、卡也没了（R277 双向传送踩过的同一个坑）。
 	if not swap_pair_allowed(cell_a, cell_b):
 		var sw_nm := pa.card.card_name if not unit_slot_allowed(cell_b, pa.owner) \
 				else pb.card.card_name
@@ -8204,7 +8204,7 @@ func remote_play(card: CardData, cell: Vector2i) -> Placement:
 		_note_card_played(SIDE_OPPONENT, card)
 		return null
 	var p:= state.place(card, cell, SIDE_OPPONENT)
-	_log("对方支付 %d 能量，%s 上场（%s）" % [card.cost, card.card_name, cell])
+	_log("对方支付 %d 费用，%s 上场（%s）" % [card.cost, card.card_name, cell])
 	action.emit("place", {"cell": cell, "card": card, "side": SIDE_OPPONENT})
 	_note_card_played(SIDE_OPPONENT, card)
 	return p
@@ -8212,7 +8212,7 @@ func remote_play(card: CardData, cell: Vector2i) -> Placement:
 
 func remote_spell(card: CardData, target, side:= SIDE_OPPONENT) -> String:
 	if card != null and card.x_cost:
-		# R124：敌我同一口径 —— 0 能量也能施放，此时 X = 0（pay_energy(0) 分文不扣）。
+		# R124：敌我同一口径 —— 0 费用也能施放，此时 X = 0（pay_energy(0) 分文不扣）。
 		_x_spell_value = maxi(0, state.energy_of(side))
 		state.pay_energy(state.energy_of(side), side)
 	else:
@@ -8232,7 +8232,7 @@ func remote_spell(card: CardData, target, side:= SIDE_OPPONENT) -> String:
 
 
 func remote_curse(card: CardData, side:= SIDE_OPPONENT) -> void:
-	## R223：对方打出诅咒（无效果）—— 镜像侧只做「扣能量 + 手牌数 -1 + 记一次出牌」，
+	## R223：对方打出诅咒（无效果）—— 镜像侧只做「扣费用 + 手牌数 -1 + 记一次出牌」，
 	## 不进弃牌区（镜像侧不维护对方弃牌堆的具体内容，与 remote_spell 同口径）。
 	if card == null:
 		return
@@ -8302,7 +8302,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			# 应急电源（9170，R315，机械之心 0 费史诗技能 · 次元）：
 			#   +1 费 → 抽 1 张 → 场上**所有友方单位**各回复 2 点生命（不超过各自最大生命）。
 			# * 加费直接 `state.energy +=`（与拆解 8049 同口径：不污染 self_energy_spent，
-			#   当回合可超额）；界面靠能量变化的逐帧差值自动飘字。
+			#   当回合可超额）；界面靠费用变化的逐帧差值自动飘字。
 			# * 回血逐格发 `heal` 动作 → 战斗场景走既有的治疗表现，不新造一套。
 			# * 「友方单位」= 该 side 场上的盟友 / 工事（`_side_cells` 只给有单位的格子）。
 			state.energy += EMERGENCY_POWER_ENERGY
@@ -10926,7 +10926,7 @@ func relic_highlight(id: int) -> bool:
 				span = COURAGE_BOSS_TURNS
 			return span > 0 and turn_number <= span
 		STATUE_RELIC_ID:
-			# 雕像：每 10 张牌回 1 能量 → 差 1 张就满的时候亮
+			# 雕像：每 10 张牌回 1 费用 → 差 1 张就满的时候亮
 			return RunState.statue_charge % 10 == 9
 	return false
 
@@ -12112,7 +12112,7 @@ func _workshop_supply(side: String) -> void :
 
 func _end_turn_surplus(side: String) -> void :
 	## 「回合结束 · 剩余费用 / 已花费用」系列六张卡的**唯一结算入口**
-	## （end_turn 里在能量清零之前调用）。结算顺序是**规则的一部分**，按序：
+	## （end_turn 里在费用清零之前调用）。结算顺序是**规则的一部分**，按序：
 	##   0) 黑暗领主 8021：在场每一个 → 本方费用 +5（**优先结算**，见下）；
 	##   1) 重读剩余费用 left（已含黑暗领主加的 5 点）；
 	##   2) 地狱猫 8019 / 鲜血堡垒 8020：场上本方每一个 → 力量 +left×N、生命 +left×M（永久）；
@@ -12124,7 +12124,7 @@ func _end_turn_surplus(side: String) -> void :
 	## 「优先结算」= 第 0 步先跑：黑暗领主给的 5 点会被第 1~5 步一起读到。
 	_dark_lord_energy(side)
 	var left := state.energy_of(side)
-	# 蓄势（9156，R232）：回合结束、能量清零之前 —— 手卡里每张「蓄势」按 left 涨伤害。
+	# 蓄势（9156，R232）：回合结束、费用清零之前 —— 手卡里每张「蓄势」按 left 涨伤害。
 	if side == SIDE_SELF:
 		_charge_up_grow(left)
 	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
@@ -12291,7 +12291,7 @@ func _endless_dark(side: String) -> void :
 		action.emit("endless_dark", {"dropped": 0, "names": [],
 				"energy": 0, "side": side, "pending": false})
 		return
-	# 开选牌面板：费用**等选完再给**（选牌面板期间不给能量，避免「先拿钱再选」）。
+	# 开选牌面板：费用**等选完再给**（选牌面板期间不给费用，避免「先拿钱再选」）。
 	endless_pending = true
 	_log("无尽黑暗：从手牌中选择 1 张弃掉（不能不选）→ 之后费用 +%d"
 			% ENDLESS_DARK_ENERGY)

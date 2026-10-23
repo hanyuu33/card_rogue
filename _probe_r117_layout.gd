@@ -29,7 +29,7 @@ func _init() -> void:
 	print("== 关键区域（与 R116 对照）==")
 	print(_rect("棋盘 GRID", Rect2(s.GRID_X, s.GRID_Y, s.GRID_W, s.GRID_H)))
 	print(_rect("信息栏", Rect2(s.INFO_X, s.GRID_Y, s.INFO_W, s.GRID_H)))
-	print(_rect("能量面板", Rect2(s.COST_X, s.COST_Y, s.TAP_W + 12, s.ENERGY_H)))
+	print(_rect("费用面板", Rect2(s.COST_X, s.COST_Y, s.TAP_W + 12, s.ENERGY_H)))
 	print(_rect("效果区", s._own_effect_zone_rect()))
 	print(_rect("敌方效果区", s._enemy_zone_rect()))
 	print(_rect("道具栏", s._relic_zone_rect()))

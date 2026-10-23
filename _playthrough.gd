@@ -381,7 +381,7 @@ func _resolve_pendings(engine: GameEngine) -> void:
 
 func _try_play(engine: GameEngine) -> bool:
 	## 出一张牌（带优先级：效果 → 技能 → 盟友 → 工事 → X 费最后——
-	## 流星雨等 X 费会吃光全部能量，必须最后打）。
+	## 流星雨等 X 费会吃光全部费用，必须最后打）。
 	var hand := engine.state.hand
 	for pass_no in 5:
 		for i in hand.size():

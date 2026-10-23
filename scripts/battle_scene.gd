@@ -91,7 +91,7 @@ const GRID_INTRO_ZOOM := 1.15
 const GRID_HINT_INSET := 22.0
 const COST_X := 310.0
 const COST_Y := GRID_Y
-const ENERGY_H := 96.0         # 左栏顶部能量面板高度（下面是效果区）
+const ENERGY_H := 96.0         # 左栏顶部费用面板高度（下面是效果区）
 const DECK_X := WINDOW_W - CARD_W - 60.0
 const DECK_Y := WINDOW_H - CARD_H - 44.0
 const DISCARD_X := DECK_X
@@ -314,7 +314,7 @@ var _frame_tex: Texture2D      # R137：棋盘边框角花素材（assets/ui/gri
 var _discard_tex: Texture2D    # R140：弃牌区图标（assets/ui/discard_icon.png）
 var _void_tex: Texture2D       # R140：消耗（消失）区次元图标（assets/ui/void_icon.png）
 var _hp_icon: Texture2D        # R156：双方血量图标（icon_health.png，与生命徽章同款血滴）
-var _energy_icon: Texture2D    # R156：能量图标（icon_cost.png，与费用徽章同款水晶）
+var _energy_icon: Texture2D    # R156：费用图标（icon_cost.png，与费用徽章同款水晶）
 var _font: FontFile
 var _font_bold: FontFile
 
@@ -370,7 +370,7 @@ var _earring_missed := 0        # 耳环连出期间压下的飞出数（>3 → 
 var _void_known := 0            # void_count 快照：增量 = 这段时间被「消耗」的张数（飞出改上飞）
 # R151 批 1 · P0-4：出牌落位 —— 「place」事件用它把 _slides 的 from 换成真实松手/手牌位置
 var _place_from := {}           # {pos, card_id, at}；_finish_play 武装，"place" 事件消费
-# R151 批 1 · P0-3：能量变化量飘字（HP 掉血已有飘字体系，能量原来什么都没有）
+# R151 批 1 · P0-3：费用变化量飘字（HP 掉血已有飘字体系，费用原来什么都没有）
 var _energy_known := -1
 # R151 批 2（动效设计 §四/§五）：回合归属 / 手牌下沉 / 冲击帧 / 力量跳动 / 治疗粒子 / 非法抖动
 var _hand_turn_dy := 0.0     # P1-6/7：手牌区纵向偏移（敌方回合 +6 下沉；我方回合 −3 上浮）
@@ -782,11 +782,11 @@ func _ready() -> void:
 		for pf_i in 4:
 			_heal_fx.append({"pos": _cell_center(Vector2i(4, 1)), "sc": _grid_scroll,
 					"start": pf_n - 30000 - pf_i * 2000, "dur": 60000, "seed": pf_i})
-		# ⑤ P1-6/7 敌方回合态（直接钉死缓动终值：红边呼吸 + 手牌下沉 + 暗罩 + 敌方能量框）
+		# ⑤ P1-6/7 敌方回合态（直接钉死缓动终值：红边呼吸 + 手牌下沉 + 暗罩 + 敌方费用框）
 		engine.current_side = GameEngine.SIDE_OPPONENT
 		_hand_turn_dy = 6.0
 		_turn_dim = 0.22
-		# ⑥ P2-15 拒绝抖动 + 能量面板红闪（钉在 t=0.5）
+		# ⑥ P2-15 拒绝抖动 + 费用面板红闪（钉在 t=0.5）
 		if not engine.state.hand.is_empty():
 			_shake_card = {"idx": 0, "start": pf_n - 30000, "dur": 60000}
 		_reject_flash["energy"] = {"start": pf_n - 30000, "dur": 60000}
@@ -853,12 +853,12 @@ func _ready() -> void:
 		status_text = "演示：手牌飞行动画钉帧（飞入 ×1 / 弃牌 ×1 / 消耗 ×1 / 落位缩放 ×1）"
 		queue_redraw()
 	if "--icecream" in args and engine != null:
-		# 演示：冰淇淋与汽水（6016）—— 第 1 回合 +4 能量 / 多抽 3 张 → 台词飘字。
+		# 演示：冰淇淋与汽水（6016）—— 第 1 回合 +4 费用 / 多抽 3 张 → 台词飘字。
 		# 必须重跑 load_level：第 1 回合结算发生在 start_game 内部，
 		# 而 load_level 会用 RunState.relics 覆盖 engine.self_relics。
 		RunState.relics = [6016]
 		load_level(GameLevels.builtin_levels()[0])
-		status_text = "冰淇淋与汽水：第 1 回合 +4 能量 / 多抽 3 张 ——「你跑不过我你信吗」"
+		status_text = "冰淇淋与汽水：第 1 回合 +4 费用 / 多抽 3 张 ——「你跑不过我你信吗」"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--fan" in args and engine != null:
@@ -1228,7 +1228,7 @@ func _ready() -> void:
 		RunState.relics = [6039, 6035]
 		engine.self_relics = [6039, 6035]
 		RunState.statue_charge = 3
-		status_text = "R307：雕像（3）= 道具名旁显示累计张数（每 10 张回 1 能量）"
+		status_text = "R307：雕像（3）= 道具名旁显示累计张数（每 10 张回 1 费用）"
 		queue_redraw()
 	if "--r303tip" in args and engine != null:
 		# R303 演示：提及浮窗**完整版**（卡面 + 效果正文 + 字段解释）——
@@ -1424,11 +1424,11 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--meteor" in args and engine != null:
-		# 演示（2026-10-01；R124 改）：流星雨（9083）—— X 费：消耗全部能量，打 9 伤 X 次。
-		# 先用 5 能量打一次（5 颗、每次随机选目标）→ 看陨石爆点/飘字；
-		# 再把能量清零、补一张进手牌并悬停。R124 的核验点有两个：
-		#   ① 0 能量时这张卡**仍然可点**（不再提示「能量不足」）；
-		#   ② 左栏写「费用 X（消耗全部能量）」、卡面费用圆是「X」。
+		# 演示（2026-10-01；R124 改）：流星雨（9083）—— X 费：消耗全部费用，打 9 伤 X 次。
+		# 先用 5 费用打一次（5 颗、每次随机选目标）→ 看陨石爆点/飘字；
+		# 再把费用清零、补一张进手牌并悬停。R124 的核验点有两个：
+		#   ① 0 费用时这张卡**仍然可点**（不再提示「费用不足」）；
+		#   ② 左栏写「费用 X（X = 剩余全部费用）」、卡面费用圆是「X」。
 		engine.state.hand.clear()
 		engine.state.hand.append(repo.get_card(GameEngine.METEOR_SHOWER_ID))
 		engine.state.energy = 5
@@ -1442,7 +1442,7 @@ func _ready() -> void:
 		engine.state.energy = 0
 		engine.state.hand.append(repo.get_card(GameEngine.METEOR_SHOWER_ID))
 		_demo_hover_idx = 0
-		status_text = "R124：流星雨 0 能量也能用（X 记 0）—— 点它只会空放，不砸任何流星"
+		status_text = "R124：流星雨 0 费用也能用（X 记 0）—— 点它只会空放，不砸任何流星"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--fire" in args and engine != null:
@@ -1642,10 +1642,10 @@ func _ready() -> void:
 		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
 				Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
 		engine.use_spell(0, null)                  # 回响：两个敌人各 -2、力量 -1，卡回手
-		engine.use_spell(0, null)                  # 再用一次（能量 5 → 4 → 3）
+		engine.use_spell(0, null)                  # 再用一次（费用 5 → 4 → 3）
 		_demo_hover_idx = 0
 		_hover_hand = 0
-		status_text = "回响：所有敌人各 2 伤 + 力量 -1；使用后返回手卡（费用最低 1，能量 5→3）"
+		status_text = "回响：所有敌人各 2 伤 + 力量 -1；使用后返回手卡（费用最低 1，费用 5→3）"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--dodge" in args and engine != null:
@@ -1937,7 +1937,7 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r273ov" in args and engine != null:
-		# 演示（R273）：过载 8030 改成 0 费 —— 能量 0 也能打出，牌库里随机一张盟友永久双动。
+		# 演示（R273）：过载 8030 改成 0 费 —— 费用 0 也能打出，牌库里随机一张盟友永久双动。
 		RunState.player_class = PlayerClass.MECH
 		engine.state.hand.clear()
 		engine.state.deck = [CardData.from_dict(repo.get_card(8004).to_dict())]
@@ -1947,7 +1947,7 @@ func _ready() -> void:
 		engine.state.energy = 0
 		_demo_hover_idx = 0
 		_hover_hand = 0
-		status_text = "R273 过载：0 费（能量 0 也能打）→ 牌库一张盟友永久双动"
+		status_text = "R273 过载：0 费（费用 0 也能打）→ 牌库一张盟友永久双动"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r274fort" in args and engine != null:
@@ -1973,7 +1973,7 @@ func _ready() -> void:
 		queue_redraw()
 	if "--r327funeral" in args and engine != null:
 		# 演示（R327）：效果区挂一张「送葬」，再当场打掉己方一个树人 → 抽 1 张。
-		# 手牌不清空（留几张才看得出「多了一张」）；能量给 6，效果区那张是白送的。
+		# 手牌不清空（留几张才看得出「多了一张」）；费用给 6，效果区那张是白送的。
 		RunState.player_class = PlayerClass.DRUID
 		engine.state.energy = 6
 		engine.state.effects.append(CardData.from_dict(repo.get_card(9175).to_dict()))
@@ -2036,7 +2036,7 @@ func _ready() -> void:
 		queue_redraw()
 	if "--r326chimera" in args and engine != null:
 		# 演示（R326）：嵌合暴君入场「融合」→ **每破坏 1 张回复 1 费**（这条不写进卡面文本）。
-		# 摆两张己方树人接通、手上放暴君：4 费打出 → 破坏 2 张、回 2 费（能量 6 → 4）。
+		# 摆两张己方树人接通、手上放暴君：4 费打出 → 破坏 2 张、回 2 费（费用 6 → 4）。
 		# ⚠️ 不设 `_hover_card`：让 `_say()` 那句留在状态栏，截出来就是战斗内的真实提示。
 		RunState.player_class = PlayerClass.MECH
 		engine.state.hand.clear()
@@ -2228,7 +2228,7 @@ func _ready() -> void:
 		# 演示（2026-10-03，R55）：活力转移（9110）+ 地狱猫（8019）+ 鲜血堡垒（8020）。
 		#   三张都读「自己回合结束时的剩余费用」：本回合留 3 点费用 →
 		#   地狱猫 +3 力 +6 生、鲜血堡垒 +3 力 +9 生；活力转移 3/2 = 结转 1 点费用，
-		#   结束本回合后进入下个我方回合，能量栏可见 5+1=6（飘字提示）。
+		#   结束本回合后进入下个我方回合，费用栏可见 5+1=6（飘字提示）。
 		RunState.player_class = PlayerClass.ROGUE
 		engine.state.hand.clear()
 		engine.state.effects.append(CardData.from_dict(
@@ -2867,7 +2867,7 @@ func _demo_tick() -> void:
 		# R311 出图（`--screenshot --r311dice --shotms 700`）：水晶骰子掷骰 → 飘字 + 状态栏。
 		# ⚠️ 走真实入口 `apply_battle_start_relics()`（用**战斗种子**掷），只是开局已经
 		#    过了，第 1 回合那份加费在 `_begin_turn` 里发不出来 —— 这里按同一条规则补一次，
-		#    好让出图能看到「能量 6」而不是「能量 5」。真实路径由回归断言钉住。
+		#    好让出图能看到「费用 6」而不是「费用 5」。真实路径由回归断言钉住。
 		_banner = {}          # 出图：收掉「我方回合」大字横幅，别挡住飘字
 		engine.self_relics = [GameEngine.DICE_RELIC_ID]
 		engine.dice_battle = true
@@ -3073,7 +3073,7 @@ func _demo_aoe_drag() -> void:
 		else:
 			engine.state.hand[0] = hc
 		_banner = {}    # 只截图：回合横幅会压在 AOE 范围顶部
-		engine.state.energy = 99        # 出图不该卡在「能量不足」
+		engine.state.energy = 99        # 出图不该卡在「费用不足」
 		_start_drag(0, _cell_center(Vector2i(4, 0)))
 		queue_redraw()
 		return
@@ -3279,7 +3279,7 @@ func _apply_net_msg(msg: Dictionary) -> void:
 			# 对方主动发动（熊 8004「回春」）
 			engine.activate(_net_vec(args[0]), GameEngine.SIDE_OPPONENT)
 		"curse":
-			# R223：对方打出诅咒（无效果）—— 镜像侧扣能量、手牌数 -1、记一次出牌
+			# R223：对方打出诅咒（无效果）—— 镜像侧扣费用、手牌数 -1、记一次出牌
 			engine.remote_curse(CardData.from_dict(msg["card"]))
 
 
@@ -4067,20 +4067,20 @@ func _on_left_click(pos: Vector2) -> void:
 			elif card.is_spell() and card.needs_target():
 				status_text = "%s（技能）：再点一次使用，需点击一个目标" % card.card_name
 			elif card.is_spell() and card.x_cost:
-				# R124：0 能量也能用（X 记 0）—— 这时别再说「消耗 0 点」，
+				# R124：0 费用也能用（X 记 0）—— 这时别再说「消耗 0 点」，
 				# 直接讲清「这一下砸不出流星」，玩家自己决定要不要空放。
 				if engine.energy_of() > 0:
-					status_text = "%s（技能）：再点一次使用 —— 消耗当前全部能量 %d 点，随机砸 %d 次" % [
+					status_text = "%s（技能）：再点一次使用 —— 消耗当前全部费用 %d 点，随机砸 %d 次" % [
 							card.card_name, engine.energy_of(), engine.energy_of()]
 				else:
-					status_text = "%s（技能）：再点一次使用 —— 当前没有能量，X 记 0（砸不出流星）" % card.card_name
+					status_text = "%s（技能）：再点一次使用 —— 当前没有费用，X 记 0（砸不出流星）" % card.card_name
 			elif card.is_spell():
 				status_text = "%s（技能）：再点一次使用" % card.card_name
 			elif engine.discard_cost_of(card) > 0:
 				status_text = "%s：点击自己半场（下 3 行）空格放置 —— 上场需额外丢弃 %d 张手牌" \
 						% [card.card_name, engine.discard_cost_of(card)]
 			elif not card.is_spell() and not engine.can_pay_card(card):
-				_energy_fail(card, hi)   # R151 P2-15：提示 + 抖动 + 能量框红闪
+				_energy_fail(card, hi)   # R151 P2-15：提示 + 抖动 + 费用框红闪
 			elif engine.fence_merge_allowed(card):
 				status_text = "%s：点绿格放置；点橙色「叠」格 = 与已有栅栏合并；再点一次 = 使用" % card.card_name
 			else:
@@ -4095,7 +4095,7 @@ func _on_left_click(pos: Vector2) -> void:
 func _use_hand_card(i: int) -> void:
 	var card := engine.state.hand[i]
 	if card.is_curse():
-		# R223：诅咒卡（「疲惫」9149）—— 唯一打出入口 use_curse（付能量、无效果；
+		# R223：诅咒卡（「疲惫」9149）—— 唯一打出入口 use_curse（付费用、无效果；
 		# 打完之后去哪由引擎 `_spell_card_gone` 定：带「次元」的破绽 9154 消失，其余进弃牌区）。
 		# 必须拦在随从 / 技能分支**之前**：诅咒既不是单位也不是技能，掉进任一条都会被拒。
 		if not engine.can_pay_card(card):
@@ -4107,7 +4107,7 @@ func _use_hand_card(i: int) -> void:
 		queue_redraw()
 		return
 	if card.is_effect():
-		# 效果卡：支付能量 → 进入左侧效果区持续生效
+		# 效果卡：支付费用 → 进入左侧效果区持续生效
 		if not engine.can_pay_card(card):
 			_energy_fail(card, i)   # R151 P2-15
 		else:
@@ -4162,7 +4162,7 @@ func _use_hand_card(i: int) -> void:
 		status_text = "填充：在弹出的选卡页里点一张手牌"
 		return
 	if card.needs_target():
-		# 需要选目标的技能：进入选目标模式（技能还在手牌，能量未付）
+		# 需要选目标的技能：进入选目标模式（技能还在手牌，费用未付）
 		var targets := _spell_target_cells(card)
 		if targets.is_empty():
 			if card.id in [8002, 9003]:
@@ -4241,7 +4241,7 @@ func _start_drag(i: int, pos: Vector2) -> void:
 		_drag_spell_cells = []
 		_drag_anywhere = true
 		if not engine.can_pay_card(card):
-			status_text = "%s：能量不足（需要 %d，当前 %d）——松手不会生效" % [
+			status_text = "%s：费用不足（需要 %d，当前 %d）——松手不会生效" % [
 					card.card_name, engine.cost_of(card), engine.energy_of()]
 		else:
 			status_text = "%s：拖到棋盘任意处打出（无效果）" % card.card_name
@@ -4255,7 +4255,7 @@ func _start_drag(i: int, pos: Vector2) -> void:
 		_drag_place = true
 		_drag_place_cells = _own_place_cells(card)
 		if not engine.can_pay_card(card):
-			status_text = "%s：能量不足（需要 %d，当前 %d）——松手不会生效" % [
+			status_text = "%s：费用不足（需要 %d，当前 %d）——松手不会生效" % [
 					card.card_name, engine.cost_of(card), engine.energy_of()]
 		elif card.is_field():
 			status_text = "%s：拖到高亮格放置（可落在已有单位上）" % card.card_name
@@ -6073,11 +6073,11 @@ func _on_hover(pos: Vector2) -> void:
 				if bonus_txt != "":
 					tip += "　★ " + bonus_txt
 				break
-	# ③ 左栏：能量面板 / 效果区（正面朝上，可逐张悬停查看）
+	# ③ 左栏：费用面板 / 效果区（正面朝上，可逐张悬停查看）
 	if _hover_card == null:
 		var energy_rect := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
 		if energy_rect.has_point(pos):
-			tip = "能量 %d：每回合 5 点，回合结束重置（不累积），出牌消耗" % engine.state.energy
+			tip = "费用 %d：每回合 5 点，回合结束重置（不累积），出牌消耗" % engine.state.energy
 	if _hover_card == null:
 		var merged_eff := _merged_effects(engine.state.effects)
 		for i in merged_eff.size():
@@ -7241,7 +7241,7 @@ func _on_end_turn() -> void:
 	if not engine.ai_enabled:
 		# 教程关：对手不行动，直接轮回我方
 		engine.end_turn()
-		status_text = "第 %d 回合：能量重置为 5，抽 5 张%s" % [engine.turn_number, _whisper_suffix()]
+		status_text = "第 %d 回合：费用重置为 5，抽 5 张%s" % [engine.turn_number, _whisper_suffix()]
 		_show_banner("我方回合 · 第 %d 回合" % engine.turn_number, UiTheme.SIDE_SELF_TEXT)
 		sfx.play("turn")
 		queue_redraw()
@@ -7264,7 +7264,7 @@ func _ai_step() -> void:
 		_ai_timer.stop()
 		engine.end_turn()
 		if not engine.over:
-			status_text = "第 %d 回合：能量重置为 5，抽 5 张%s" % [engine.turn_number, _whisper_suffix()]
+			status_text = "第 %d 回合：费用重置为 5，抽 5 张%s" % [engine.turn_number, _whisper_suffix()]
 			_show_banner("我方回合 · 第 %d 回合" % engine.turn_number, UiTheme.SIDE_SELF_TEXT)
 			sfx.play("turn")
 		queue_redraw()
@@ -7439,9 +7439,9 @@ const TEXT_BG_PAD_Y := 3.0
 const TXT_LIGHT := Color("f2ecdd")    # 一般文字（亮米白）
 const TXT_SELF := Color("9fe0a6")     # 我方（绿）
 const TXT_FOE := Color("ffb3b3")      # 敌方（红）
-const TXT_POWER := Color("ffd27a")    # 能量 / 力量（金）
+const TXT_POWER := Color("ffd27a")    # 费用 / 力量（金）
 const TXT_WARN := Color("ff9a76")     # 警示（手牌满 / 闪躲）
-const FX_ENERGY_SPEND := Color("8fb4d8")  # 能量支出飘字（收入复用 TXT_POWER 金）
+const FX_ENERGY_SPEND := Color("8fb4d8")  # 费用支出飘字（收入复用 TXT_POWER 金）
 
 
 func _auto_outline(px: int) -> int:
@@ -8180,7 +8180,7 @@ func _hand_sync() -> void:
 		_hand_known_init = true
 		_void_known = engine.state.void_count
 		# R151 P0-3：新一场战斗的滚动从「当前实际值」起锚（UiRoll 是 static 跨场景共享，
-		# 不起锚会从上一场的残值滚过来 —— 观感 = 血条空降 / 能量乱跳）
+		# 不起锚会从上一场的残值滚过来 —— 观感 = 血条空降 / 费用乱跳）
 		UiRoll.snap("hp_self", engine.state.hp_self)
 		UiRoll.snap("hp_opp", engine.state.hp_opponent)
 		UiRoll.snap("hp_self_bar", engine.state.hp_self)
@@ -8274,7 +8274,7 @@ func _hand_fly_in_slot(i: int) -> bool:
 
 
 func _energy_tick() -> void:
-	## R151 P0-3：能量变化量飘字（打出 −N / 回合重置 +N）；滚动数字本身走 _roll（UiRoll）。
+	## R151 P0-3：费用变化量飘字（打出 −N / 回合重置 +N）；滚动数字本身走 _roll（UiRoll）。
 	if engine == null:
 		return
 	if _shot_pending:
@@ -8285,7 +8285,7 @@ func _energy_tick() -> void:
 		var d := e - _energy_known
 		var sign := "+" if d > 0 else ""
 		_floaters.append({"pos": Vector2(COST_X + (TAP_W + 12) / 2.0, COST_Y + 30),
-				"text": "%s%d 能量" % [sign, d],
+				"text": "%s%d 费用" % [sign, d],
 				"col": TXT_POWER if d > 0 else FX_ENERGY_SPEND, "size": 15,
 				"start": _now(), "dur": 900})
 	_energy_known = e
@@ -8705,14 +8705,14 @@ func _tick_anims() -> bool:
 
 
 func _energy_fail(card: CardData, idx: int) -> void:
-	## 能量不足统一口（R151 P2-15）：提示 + 卡面回弹抖动 + 能量面板红闪。
-	_say("能量不足：%s 需要 %d，当前能量 %d" % [
+	## 费用不足统一口（R151 P2-15）：提示 + 卡面回弹抖动 + 费用面板红闪。
+	_say("费用不足：%s 需要 %d，当前费用 %d" % [
 			card.card_name, engine.cost_of(card), engine.energy_of()])
 	_reject_fx(idx, "energy")
 
 
 func _reject_fx(idx: int, reason := "", target = null) -> void:
-	## R151 P2-15：打出被拒（能量不足 / 落点非法）→ 卡回弹抖动 + 目标红闪。
+	## R151 P2-15：打出被拒（费用不足 / 落点非法）→ 卡回弹抖动 + 目标红闪。
 	if _shot_pending:
 		return
 	_shake_card = {"idx": idx, "start": _now(), "dur": 150}
@@ -9158,12 +9158,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if str(data.get("side", "")) == GameEngine.SIDE_OPPONENT:
 				_say("✚ 白魔法师治疗了 %s（+%d）" % [hname, int(data.get("amount", 0))])
 		"icecream":
-			# 道具「冰淇淋与汽水」（6016）：第 1 回合 +4 能量 / 多抽 3 张 → 飘出台词
+			# 道具「冰淇淋与汽水」（6016）：第 1 回合 +4 费用 / 多抽 3 张 → 飘出台词
 			# （刻意比开场 -3 生命的 relic 飘字高 66px，两条同时出现也不会叠在一起；
 			#   用深一号的蓝 + 18px 字号，浅色棋盘上才读得清）
 			sfx.play("heal")
 			var ice_line := str(data.get("text", ""))
-			_say("✦ 冰淇淋与汽水：+%d 能量 / 多抽 %d 张 ——「%s」"
+			_say("✦ 冰淇淋与汽水：+%d 费用 / 多抽 %d 张 ——「%s」"
 					% [int(data.get("energy", 0)), int(data.get("draw", 0)), ice_line])
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 96),
 					"text": ice_line, "col": Color("1f7fc4"), "size": 18, "outline": 6,
@@ -10109,7 +10109,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			sfx.play("attack")
 		"endless_dark":
 			# 无尽黑暗 9114（R70）：不再随机弃牌，改为**开面板让玩家选**。
-			# pending=true → 只提示「请选一张」；pending=false 且能量 0 → 手牌为空、本回合落空。
+			# pending=true → 只提示「请选一张」；pending=false 且费用 0 → 手牌为空、本回合落空。
 			if bool(data.get("pending", false)):
 				_say("∞ 无尽黑暗：请从手牌里选 1 张弃掉（不能不选）→ 之后费用 +%d"
 						% int(data.get("energy", 0)))
@@ -10799,7 +10799,7 @@ func _scroll_dy(sc: float) -> Vector2:
 func _fx_pos(f: Dictionary) -> Vector2:
 	## 特效字典的当前绘制位置（R171 唯一取值口）：带 "sc" 标签（创建时的
 	## _grid_scroll）的是格锚特效 → 做滚动补正；没标签的是 UI 锚点
-	## （能量面板 / HP 横幅 / 手牌区 / 卡组列），本来就不随棋盘滚。
+	## （费用面板 / HP 横幅 / 手牌区 / 卡组列），本来就不随棋盘滚。
 	var p: Vector2 = f["pos"]
 	if f.has("sc"):
 		p += _scroll_dy(float(f["sc"]))
@@ -10956,7 +10956,7 @@ func _draw_frame_corner(src: Rect2, at: Vector2, sz: Vector2) -> void:
 
 func _draw_hp_banner() -> void:
 	## R156：双方血量图标化 —— 血滴素材（与生命徽章同款）+ 滚动数字（底条亮字保留）。
-	## 能量不再出现在这里：我方能量只有**左上能量面板**一处；敌方能量数值不再显示
+	## 费用不再出现在这里：我方费用只有**左上费用面板**一处；敌方费用数值不再显示
 	##（两条都是用户口径）。
 	var mid_x := GRID_X + GRID_W + 18
 	# R151 P0-3：HP 数字滚动 —— 目标值仍走 _show_hp（命中演出前冻结），滚动接在冻结解除后。
@@ -10972,7 +10972,7 @@ func _draw_hp_banner() -> void:
 
 
 func _enemy_zone_rect() -> Rect2:
-	## 右栏敌方效果区外框（敌方 HP/能量文本下方）。
+	## 右栏敌方效果区外框（敌方 HP/费用文本下方）。
 	return Rect2(GRID_X + GRID_W + 18, GRID_Y + 88, TAP_W + 12, 3 * (TAP_H + 10) + 44)
 
 
@@ -11223,16 +11223,16 @@ func _draw_relic_bar() -> void:
 ## ⚠️ 删的只是**显示**：`engine.state.opp_hand_count` 仍是敌方 AI 的施法依据
 ## （remote_spell 先扣它再结算），引擎侧一行都没动。
 func _draw_cost_zone() -> void:
-	## 左栏：顶部能量面板 + 下方效果区（效果卡正面朝上，持续生效）。
+	## 左栏：顶部费用面板 + 下方效果区（效果卡正面朝上，持续生效）。
 	var state := engine.state
 	var mid_x := COST_X + (TAP_W + 12) / 2
 	var bottom := GRID_Y + GRID_H
-	_draw_string_box_center(_font_bold, UiTheme.FS_MICRO, "能量",
+	_draw_string_box_center(_font_bold, UiTheme.FS_MICRO, "费用",
 			Vector2(mid_x, COST_Y - 12), TXT_POWER)
 	var epanel := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
 	draw_rect(epanel, Color(1, 1, 1, 0.55), true)
 	draw_rect(epanel, UiTheme.INK_300, false, 1.0)
-	# R156：能量数值配水晶图标（与费用徽章同款素材），图标 + 数字作为一对整体居中
+	# R156：费用数值配水晶图标（与费用徽章同款素材），图标 + 数字作为一对整体居中
 	var e_txt := str(_roll("energy", state.energy))
 	var e_w := _font_bold.get_string_size(e_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_HEADING).x
 	var gem := 26.0
@@ -11254,7 +11254,7 @@ func _draw_cost_zone() -> void:
 				Vector2(mid_x, COST_Y + 108), TXT_WARN)
 	# 角色（左栏常驻）：本局选定的角色
 	# R117：棋盘上移到 y=52 之后，原来的 `COST_Y - 26`（=26）会落进顶栏（36px 高，
-	# 且顶栏是子节点、画在本层之上）→ 被整条吃掉。收进能量面板上方的空档：
+	# 且顶栏是子节点、画在本层之上）→ 被整条吃掉。收进费用面板上方的空档：
 	# 面板是 56..148，大数字在 +46、副标题在 +70，这一带原本就是空的。
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "角色：%s" % RunState.player_class,
 			Vector2(mid_x, COST_Y + 14), UiTheme.KIND_EFFECT)
@@ -11362,14 +11362,14 @@ func _effect_rect(i: int) -> Rect2:
 
 
 func _own_effect_zone_rect() -> Rect2:
-	## 【R106】我方「效果区」的外框（左栏能量面板下方那一整块）。
+	## 【R106】我方「效果区」的外框（左栏费用面板下方那一整块）。
 	## 点它 = 打开浏览面板；把手里的一张**效果卡**拖到它上面松手 = 直接启用。
 	## 两处共用这一个矩形 —— 免得点得到的范围和拖得到的范围对不上。
 	return Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, GRID_H - ENERGY_H)
 
 
 func _effect_drop_rect() -> Rect2:
-	## R117：效果卡的「可用投放区」= **左半边整片**（信息栏 + 能量面板 + 效果区 + 棋盘）。
+	## R117：效果卡的「可用投放区」= **左半边整片**（信息栏 + 费用面板 + 效果区 + 棋盘）。
 	## 此前只认效果区那 88px 宽的一小块（用户口径「拖拽使用的区域加大」）。
 	## ⚠️ 为什么连**棋盘**也算：`_finish_drag` 里效果卡落到棋盘格上同样调 `use_effect()`
 	##    （R106 起就是两条等效路径）。区域只画左栏、棋盘不画的话，玩家把卡拖到棋盘上时
@@ -11603,7 +11603,7 @@ func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> voi
 
 func _draw_turn_owner_fx() -> void:
 	## R151 P1-6：回合归属的持续指示 —— 敌方回合：敌方单位极淡红边呼吸（硬边，不是辉光）
-	## + 敌方能量框提亮；我方回合：手牌区轻微上浮（位移与暗罩在 _draw_hand_card）。
+	## + 敌方费用框提亮；我方回合：手牌区轻微上浮（位移与暗罩在 _draw_hand_card）。
 	if engine.over:
 		return
 	# R165：敌方「可行动」提示不再用红色呼吸边——统一改由 `_draw_ready_aura`
@@ -11673,7 +11673,7 @@ func _draw_impacts() -> void:
 
 
 func _draw_reject_fx() -> void:
-	## R151 P2-15：打出被拒 —— 能量面板红闪 / 目标格红闪（卡的抖动在 _draw_hand_card）。
+	## R151 P2-15：打出被拒 —— 费用面板红闪 / 目标格红闪（卡的抖动在 _draw_hand_card）。
 	var n := _now()
 	var ef = _reject_flash.get("energy")
 	if ef != null:
@@ -12091,8 +12091,8 @@ func _draw_info_panel() -> void:
 	var cost_line: String = "%s · 费用 %d%s · %s" % [card.kind, show_cost,
 			"（原 %d）" % card.cost if cost_low else "", card.rarity_name()]
 	if card.x_cost:
-		# X 费卡（流星雨）：费用随剩余能量浮动 → 左栏直接写「费用 X（消耗全部能量）」
-		cost_line = "%s · 费用 X（消耗全部能量）· %s" % [card.kind, card.rarity_name()]
+		# X 费卡（流星雨）：费用随剩余费用浮动 → 左栏直接写「费用 X（X = 剩余全部费用）」
+		cost_line = "%s · 费用 X（X = 剩余全部费用）· %s" % [card.kind, card.rarity_name()]
 	_draw_string_nw(_font, UiTheme.FS_MICRO, cost_line,
 			Vector2(left, y), COL_COST_LOW_BG if cost_low else UiTheme.INK_600)
 	y += 13.0
@@ -12547,7 +12547,7 @@ func _process(delta: float) -> void:
 	if _tick_cues(delta):
 		queue_redraw()   # R288：通用演出 / 镜头补间进行中
 	_hand_sync()          # R151 P0-1/2：手牌差异 → 抽牌飞入 / 弃牌·消耗飞出
-	_energy_tick()        # R151 P0-3：能量变化量飘字
+	_energy_tick()        # R151 P0-3：费用变化量飘字
 	# R151 P1-6/7：回合归属 —— 敌方回合手牌下沉 +6 / 暗罩 0.22；我方回合上浮 −3 / 无罩（~150ms 缓动）
 	var turn_foe: bool = engine.current_side != GameEngine.SIDE_SELF and not engine.over
 	_hand_turn_dy = lerpf(_hand_turn_dy, 6.0 if turn_foe else -3.0, minf(1.0, delta * 8.0))

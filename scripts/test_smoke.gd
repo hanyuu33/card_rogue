@@ -2065,7 +2065,7 @@ func _check_reload(scene: Variant) -> void:
 				% [eng.state.hand[0].card_name, eng.state.hand[0].id])
 		return
 	if eng.state.energy != 3:
-		_smoke_fail("填充：应 0 费（能量 %d，期望 3）" % eng.state.energy)
+		_smoke_fail("填充：应 0 费（费用 %d，期望 3）" % eng.state.energy)
 		return
 	# R211：填充带「次元」→ 用后**消失**（进消耗区），不进弃牌区
 	var reload_in_void := false
@@ -2086,7 +2086,7 @@ func _check_reload(scene: Variant) -> void:
 	if scene._pick != null and scene._pick.is_picking():
 		_smoke_fail("填充：结算完选卡页应自动关闭")
 		return
-	# 取消路径：再填充一次 → 点「取消（不扣费）」→ 手牌 / 能量原样
+	# 取消路径：再填充一次 → 点「取消（不扣费）」→ 手牌 / 费用原样
 	eng.state.hand.clear()
 	eng.state.hand.append(CardData.from_dict(rl.to_dict()))
 	eng.state.hand.append(CardData.from_dict(repo.get_card(8004).to_dict()))
@@ -2100,7 +2100,7 @@ func _check_reload(scene: Variant) -> void:
 	scene._sync_pick()
 	scene._on_pick_cancelled()
 	if int(scene._reload_idx) >= 0 or eng.state.hand.size() != 2 or eng.state.energy != 3:
-		_smoke_fail("填充（取消路径）：取消后手牌/能量应原样（%d 张 / %d 费）"
+		_smoke_fail("填充（取消路径）：取消后手牌/费用应原样（%d 张 / %d 费）"
 				% [eng.state.hand.size(), eng.state.energy])
 		return
 	scene._sync_pick()
@@ -2411,13 +2411,13 @@ func _check_recycle(scene: Variant) -> void:
 				% got.upgrade_stacks)
 		return
 	if eng.state.energy != 3:
-		_smoke_fail("回收：应扣 2 费（能量 %d，期望 3）" % eng.state.energy)
+		_smoke_fail("回收：应扣 2 费（费用 %d，期望 3）" % eng.state.energy)
 		return
 	scene._sync_pick()
 	if scene._pick != null and scene._pick.is_picking():
 		_smoke_fail("回收：结算完选卡页应自动关闭")
 		return
-	# ── 4) 取消路径：点「取消（不扣费）」→ 手牌 / 能量原样 ──
+	# ── 4) 取消路径：点「取消（不扣费）」→ 手牌 / 费用原样 ──
 	eng.state.hand.clear()
 	eng.state.hand.append(CardData.from_dict(rc.to_dict()))
 	eng.state.hand.append(CardData.from_dict(repo.get_card(8004).to_dict()))   # 熊
@@ -2432,7 +2432,7 @@ func _check_recycle(scene: Variant) -> void:
 	scene._sync_pick()
 	scene._on_pick_cancelled()
 	if int(scene._recycle_idx) >= 0 or eng.state.hand.size() != 2 or eng.state.energy != 5:
-		_smoke_fail("回收（取消路径）：取消后手牌/能量应原样（%d 张 / %d 费）"
+		_smoke_fail("回收（取消路径）：取消后手牌/费用应原样（%d 张 / %d 费）"
 				% [eng.state.hand.size(), eng.state.energy])
 		return
 	scene._sync_pick()
@@ -2503,7 +2503,7 @@ func _check_sysupgrade(scene: Variant) -> void:
 				% up.upgrade_stacks)
 		return
 	if eng.state.energy != 4:
-		_smoke_fail("系统升级：应扣 1 费（能量 %d，期望 4）" % eng.state.energy)
+		_smoke_fail("系统升级：应扣 1 费（费用 %d，期望 4）" % eng.state.energy)
 		return
 	scene._sync_pick()
 	if scene._pick != null and scene._pick.is_picking():
@@ -2521,7 +2521,7 @@ func _check_sysupgrade(scene: Variant) -> void:
 	scene._on_pick_cancelled()
 	if int(scene._sys_upgrade_idx) >= 0 or eng.state.hand.size() != 2 \
 			or eng.state.energy != 5:
-		_smoke_fail("系统升级（取消路径）：取消后手牌/能量应原样（%d 张 / %d 费）"
+		_smoke_fail("系统升级（取消路径）：取消后手牌/费用应原样（%d 张 / %d 费）"
 				% [eng.state.hand.size(), eng.state.energy])
 		return
 	eng.state.hand.clear()
