@@ -25031,6 +25031,22 @@ func _init() -> void:
 	var r346_cp_src := FileAccess.get_file_as_string("res://scripts/class_pick_scene.gd")
 	check_src(r346_cp_src.find("ban.tscn") >= 0,
 			"R346 界面：角色选择页有「禁卡表」入口")
+	# ---- ⑧ 故事界面三态只用图标（R347 用户口径：「不要用文字，用一个小图标表示」）----
+	# 扫的是**带 ASCII 双引号的字面量**，不是裸词 —— 注释里写「不写未达成 / 可查看…」
+	# 是说明，不该被判红；真正要拦的是 draw_string 把这三个字当**参数**那种写法。
+	var r347_story_src := FileAccess.get_file_as_string("res://scripts/story_scene.gd")
+	var r347_words: Array[String] = []
+	for w: String in ["未达成", "可查看", "已查看", "已读完"]:
+		if r347_story_src.contains("\"%s\"" % w):
+			r347_words.append(w)
+	check_src(r347_words.is_empty(),
+			"R347 故事界面：三态只用图标，不写状态文字（漏网 %s）"
+			% ", ".join(r347_words))
+	check_src(r347_story_src.find("_draw_state_icon") >= 0
+			and r347_story_src.find("_state_color") >= 0,
+			"R347 故事界面：三态图标 / 配色各有一个唯一口（_draw_state_icon / _state_color）")
+	check_src(r347_story_src.find("_draw_legend") >= 0,
+			"R347 故事界面：顶部总览也是一图标一数字，不退回文字版")
 	# 收尾：删临时剧情文件（档案文件交给下一次 set_test_mode 清）
 	if FileAccess.file_exists(r346_probe_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(r346_probe_path))

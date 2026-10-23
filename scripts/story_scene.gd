@@ -2,9 +2,17 @@ extends Control
 ## 故事 / 剧情解锁界面（R346）—— 主界面「查看故事」进来这里。
 ##
 ## 三段状态（`StoryRepo.episode_state()` 是唯一判定口）：
-##   locked  条件没达成 → 标题灰掉、右侧写条件与进度（`0 / 1`）
-##   ready   条件达成、还没点开看过 → 金色「可查看」，点开弹正文
-##   read    看过了 → 绿色「已查看」（卡牌 / 道具已经发放）
+##   locked  条件没达成          锁        标题灰掉，右侧写条件与进度（`0 / 1`）
+##   ready   条件达成、还没点开过 亮点（环+中心点）  金色，点开弹正文
+##   read    已经看过            对勾      绿色（卡牌 / 道具已经发放）
+##
+## ⚠️ R347 用户口径：**状态不要用文字，用一个小图标表示**。
+##    所以列表行右侧、顶部总览、正文面板标题前一律只画图标，
+##    不写「未达成 / 可查看 / 已查看 / 已读完」这类状态词。
+##    * 图标唯一口 = `_draw_state_icon()`，配色唯一口 = `_state_color()`
+##      （左沿色条 / 顶部图例 / 正文面板都读它，别在别处再判一次三态）。
+##    * 列表行的副标题仍可写东西，但只能是**条件**（锁着时的达成进度）
+##      或**这一段给什么**（可查看时的解锁内容）—— 这两样不是状态。
 ##
 ## 用户口径（R346）：「解锁时在故事界面点击查看故事解锁，之后可以解锁一些卡牌/道具
 ## 加入奖励池」—— 所以**条件达成 ≠ 发奖励**，必须在正文面板里点「收下」才发。
@@ -15,6 +23,7 @@ extends Control
 ## 出图参数：
 ##   `-- --screenshot`                 直接截列表
 ##   `-- --screenshot --demo`          先把全部剧情解锁（写进**测试档案**，不碰真实进度）再截
+##   `-- --screenshot --demomix`       凑齐三种状态：第 0 段已读、第 1 段可查看、其余未达成
 ##   `-- --screenshot --demo --story N` 再打开第 N 段（0 起）的正文面板
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
@@ -45,11 +54,14 @@ func _ready() -> void:
 	Bgm.play("title")
 	var args := OS.get_cmdline_user_args()
 	# 出图 / 验收用：把剧情全部解锁（**测试档案**，不写玩家真实进度）
-	if "--demo" in args:
+	var demo := "--demo" in args or "--demomix" in args
+	if demo:
 		ProfileData.set_test_mode()
 	_repo = StoryRepo.load_json()
 	_refresh()
-	if "--demo" in args:
+	if "--demomix" in args:
+		_demo_mix()
+	elif "--demo" in args:
 		_satisfy_all()
 	ProfileData.check_achievements(_repo)
 	ProfileData.flush()
@@ -102,6 +114,18 @@ func _satisfy_all() -> void:
 		else:
 			ProfileData.bump(str(ach.get("stat_prefix", "demo:")) + "__demo", need)
 	ProfileData.check_achievements(_repo)
+
+
+func _demo_mix() -> void:
+	## 出图用：一次凑齐三种状态 —— 第 0 段「已读」、第 1 段「可查看」、其余「未达成」。
+	## 只改**测试档案**（`--demomix` 已在 `_ready` 里先 `set_test_mode()`）。
+	## ⚠️ 顺序要紧：`mark_story_read()` 之前该段必须先 `unlock_story()` ——
+	##    `episode_state()` 里 read 的判定在最前面，没有 unlocked 就直接标 read 的话
+	##    「解锁过」这一步等于被跳过（不是崩，是状态语义不对）。
+	for i in mini(2, _episodes.size()):
+		ProfileData.unlock_story(str((_episodes[i] as Dictionary).get("id", "")))
+	if not _episodes.is_empty():
+		ProfileData.mark_story_read(str((_episodes[0] as Dictionary).get("id", "")))
 
 
 # ------------------------------------------------------------ 几何
@@ -248,6 +272,62 @@ func _back_to_title() -> void:
 	SceneFx.goto("res://scenes/title.tscn")
 
 
+# ------------------------------------------------------------ 三态图标
+
+func _state_color(st: String) -> Color:
+	## 三态配色唯一口：左沿色条 / 顶部图例 / 列表图标 / 正文面板标题前全读它。
+	## 想改「可查看是金、已读是绿」只改这里一处。
+	if st == StoryRepo.STATE_READY:
+		return Color("f0c860")     # 金：有东西可看，等你点开
+	if st == StoryRepo.STATE_READ:
+		return Color("8fd7a5")     # 绿：看过了，东西已经发下来
+	return Color("6f7684")         # 灰：条件还没达成
+
+
+func _draw_state_icon(c: Vector2, st: String, k := 1.0) -> void:
+	## 三态小图标（R347：状态**只用图标**，不写文字）。`c` = 图标中心，`k` = 缩放。
+	##   locked → 锁：半圆锁梁 + 方形锁身 + 钥匙孔
+	##   ready  → 亮点：圆环 + 中心实心点（「有新东西」的通用语汇）
+	##   read   → 对勾：三段折线
+	## 三者形态差得够远（实心块 / 环 / 折线），缩到 10px 也不会认错。
+	var col := _state_color(st)
+	var rad := 12.0 * k
+	if st == StoryRepo.STATE_LOCKED:
+		# 锁梁：上半圆，开口朝下扣在锁身上
+		draw_arc(c + Vector2(0, -rad * 0.30), rad * 0.46, PI, TAU, 18, col, 2.0 * k, true)
+		# 锁身（重心比中心略低，所以整体上移一点看起来才「坐在中间」）
+		draw_rect(Rect2(c + Vector2(-rad * 0.72, -rad * 0.30), Vector2(rad * 1.44, rad * 1.06)),
+				col, true)
+		# 钥匙孔：挖背景色做不出真孔，涂一个半透明暗点即可
+		draw_circle(c + Vector2(0, rad * 0.10), rad * 0.16, Color(0, 0, 0, 0.5), true)
+	elif st == StoryRepo.STATE_READY:
+		draw_arc(c, rad * 0.78, 0.0, TAU, 28, col, 2.2 * k, true)
+		draw_circle(c, rad * 0.34, col, true)
+	else:
+		draw_polyline(PackedVector2Array([
+			c + Vector2(-rad * 0.62, rad * 0.02),
+			c + Vector2(-rad * 0.16, rad * 0.52),
+			c + Vector2(rad * 0.66, -rad * 0.52),
+		]), col, 2.8 * k, true)
+
+
+func _draw_legend(center: Vector2, counts: Dictionary) -> void:
+	## 顶部三态总览：`图标 + 数量` × 3，整体以 `center` 居中。
+	## 三种状态**恒常显示**，数量为 0 也照样画（颜色压淡）—— 忽有忽无的图例等于没有。
+	var states := [StoryRepo.STATE_LOCKED, StoryRepo.STATE_READY, StoryRepo.STATE_READ]
+	var box := 96.0
+	var x := center.x - box * 1.5
+	for st: String in states:
+		var n := int(counts.get(st, 0))
+		var col := _state_color(st)
+		if n == 0:
+			col.a = 0.32
+		_draw_state_icon(Vector2(x + 16.0, center.y), st, 0.82)
+		draw_string(_font_bold, Vector2(x + 34.0, center.y + 6.0), str(n),
+				HORIZONTAL_ALIGNMENT_LEFT, 52.0, UiTheme.FS_BODY, col)
+		x += box
+
+
 # ------------------------------------------------------------ 绘制
 
 func _draw() -> void:
@@ -259,18 +339,13 @@ func _draw() -> void:
 				top.lerp(bottom, t), true)
 	draw_string(_font_bold, Vector2(0, 62), "故 事", HORIZONTAL_ALIGNMENT_CENTER,
 			size.x, UiTheme.FS_HEADING, UiTheme.SAND)
-	var unlocked := 0
-	var read := 0
+	# 顶部总览：三态**只给图标 + 数量**（R347 用户口径），不写「已解锁 / 已读」这类状态词。
+	var counts := {StoryRepo.STATE_LOCKED: 0, StoryRepo.STATE_READY: 0,
+			StoryRepo.STATE_READ: 0}
 	for ep: Dictionary in _episodes:
 		var st := _repo.episode_state(str(ep.get("id", "")))
-		if st != StoryRepo.STATE_LOCKED:
-			unlocked += 1
-		if st == StoryRepo.STATE_READ:
-			read += 1
-	draw_string(_font, Vector2(0, 94),
-			"已解锁 %d / %d 段 · 已读 %d 段 · 达成条件后点开才能收下这一段的内容"
-			% [unlocked, _episodes.size(), read],
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
+		counts[st] = int(counts.get(st, 0)) + 1
+	_draw_legend(Vector2(size.x / 2.0, 96.0), counts)
 	# 返回
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
@@ -318,13 +393,9 @@ func _draw_row(idx: int, ep: Dictionary) -> void:
 		bg = bg.lightened(0.08)
 	draw_rect(r, bg, true)
 	draw_rect(r, Color("6a768c") if hov else Color("444a58"), false, 1.6)
-	# 左沿状态色条
-	var stripe := Color("4a4e58")
-	if st == StoryRepo.STATE_READY:
-		stripe = Color("c8951c")
-	elif st == StoryRepo.STATE_READ:
-		stripe = Color("4f9e6a")
-	draw_rect(Rect2(r.position.x, r.position.y, 5.0, r.size.y), stripe, true)
+	# 左沿状态色条（与右侧图标同源；压暗一档免得抢标题）
+	draw_rect(Rect2(r.position.x, r.position.y, 5.0, r.size.y),
+			_state_color(st).darkened(0.34), true)
 	# 章节小标
 	var chap := str(ep.get("chapter", "?"))
 	draw_string(_font, r.position + Vector2(20, 26), chap,
@@ -333,28 +404,36 @@ func _draw_row(idx: int, ep: Dictionary) -> void:
 	var title := _repo.episode_label(ep)
 	var tcol := Color("6f7684") if locked else Color("f2ead0")
 	draw_string(_font_bold, r.position + Vector2(20, 52), title,
-			HORIZONTAL_ALIGNMENT_LEFT, 560, UiTheme.FS_SUBHEAD, tcol)
-	# 右侧状态
-	var tag := "未达成"
-	var tcol2 := Color("8a8f9c")
-	if st == StoryRepo.STATE_READY:
-		tag = "可查看"
-		tcol2 = Color("f0c860")
-	elif st == StoryRepo.STATE_READ:
-		tag = "已查看"
-		tcol2 = Color("8fd7a5")
-	draw_string(_font_bold, r.position + Vector2(r.size.x - 130, 34), tag,
-			HORIZONTAL_ALIGNMENT_RIGHT, 110, UiTheme.FS_BODY, tcol2)
-	# 条件提示 / 简介
+			HORIZONTAL_ALIGNMENT_LEFT, 480, UiTheme.FS_SUBHEAD, tcol)
+	# 右侧状态：**只画图标**（R347 用户口径：「不要用文字，用一个小图标表示」）
+	_draw_state_icon(Vector2(r.end.x - 40.0, r.position.y + r.size.y * 0.5), st)
+	# 副标题：锁着 → 条件与进度（这是**条件**，不是状态，要留）；
+	#        可查看 → 这一段给什么（没挂东西就空着）；已读 → 空着。
+	#        R347 起不再写「点开查看这一段」「已读完」这类状态文字。
 	var sub := ""
 	if locked:
 		sub = _repo.requirement_text(eid)
 	elif st == StoryRepo.STATE_READY:
-		sub = "点开查看这一段（看过才会收下卡牌 / 道具）"
-	else:
-		sub = "已读完"
-	draw_string(_font, r.position + Vector2(r.size.x - 470, 58), sub,
-			HORIZONTAL_ALIGNMENT_RIGHT, 450, UiTheme.FS_CAPTION, Color("9aa0ad"))
+		sub = _grants_summary(eid)
+	if sub != "":
+		draw_string(_font, r.position + Vector2(r.size.x - 470, 58), sub,
+				HORIZONTAL_ALIGNMENT_RIGHT, 372, UiTheme.FS_CAPTION, Color("9aa0ad"))
+
+
+func _grants_summary(eid: String) -> String:
+	## 「可查看」行副标题：这一段看完给什么。什么都没挂 → 空串
+	## （不写「无奖励」三个字占地方，玩家看图标就知道能点了）。
+	var g := _repo.episode_grants(eid)
+	var nc := (g.get("cards", []) as Array).size()
+	var nr := (g.get("relics", []) as Array).size()
+	if nc == 0 and nr == 0:
+		return ""
+	var parts: Array[String] = []
+	if nc > 0:
+		parts.append("卡牌 %d" % nc)
+	if nr > 0:
+		parts.append("道具 %d" % nr)
+	return "解锁：" + " · ".join(parts)
 
 
 func _draw_detail() -> void:
@@ -368,8 +447,10 @@ func _draw_detail() -> void:
 	var x0 := r.position.x + 28.0
 	var x1 := r.end.x - 28.0
 	var w := x1 - x0
-	draw_string(_font_bold, Vector2(x0, r.position.y + 38.0), _repo.episode_label(ep),
-			HORIZONTAL_ALIGNMENT_LEFT, w - 60.0, UiTheme.FS_HEADING, UiTheme.SAND)
+	# 标题前也放同一个小图标（列表里认什么、打开还是什么，不用再读文字判断）
+	_draw_state_icon(Vector2(x0 + 11.0, r.position.y + 30.0), st, 0.95)
+	draw_string(_font_bold, Vector2(x0 + 34.0, r.position.y + 38.0), _repo.episode_label(ep),
+			HORIZONTAL_ALIGNMENT_LEFT, w - 94.0, UiTheme.FS_HEADING, UiTheme.SAND)
 	# 关闭
 	var cr := _detail_close_rect()
 	draw_rect(cr, Color("4a2c2c") if cr.has_point(get_local_mouse_position())
