@@ -5154,6 +5154,50 @@
       "image": ""
     },
     {
+      "id": 8078,
+      "name": "隐藏能源",
+      "kind": "效果",
+      "cost": 3,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "隐藏能源"
+      ],
+      "affixes": [],
+      "effect_text": "友方单位入场时，获得改造，并获得「死亡」——它被破坏时，对距离 1 的随机一个敌人造成 **8** 点伤害。",
+      "target_mode": "none",
+      "value": 8,
+      "color": "紫",
+      "image": ""
+    },
+    {
+      "id": 8079,
+      "name": "惊喜运单",
+      "kind": "效果",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "惊喜运单"
+      ],
+      "affixes": [],
+      "effect_text": "回合开始时，选卡组一张卡，把它变成一张随机卡并加入手卡。",
+      "target_mode": "none",
+      "value": 1,
+      "color": "紫",
+      "image": ""
+    },
+    {
       "id": 9168,
       "name": "许愿",
       "kind": "技能",

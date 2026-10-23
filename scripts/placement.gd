@@ -139,7 +139,14 @@ var life_cycle_added: Array[String] = []
 ##    幼龙 / 腐化尸鬼 / 捕兽大师等各有各的亡语（按卡 id 结算），认字段会串戏。
 var blade_gift: bool = false
 var blade_added: Array[String] = []
-
+## 「隐藏能源」（8078，R331，机械之心 3 费稀有效果）：
+##   * `hidden_energy` —— 这个单位被本卡挂过「死亡」（被破坏时要「对距离 1 的随机一个敌人 8 伤」）；
+##   * `hidden_energy_added` —— 本卡实际**新加**的字段（「死亡」）。离场（重启 / 回收 / 返修 /
+##     被击破进弃牌区）时由 `_card_leaving_field` **逐个摘掉** —— 与生命循环 / 辅助刃同口径，
+##     否则那张卡再上场会带着一个不会触发的「死亡」标记。
+## ⚠️ 判据只认这两个标记，**不认** `has_affix("死亡")` —— 「死亡」是通用字段，认字段会串戏。
+var hidden_energy: bool = false
+var hidden_energy_added: Array[String] = []
 
 func effective_power() -> int:
 	## 实际攻击力：卡面力量 + 生效中的增益 + 关卡成长修正 - 生效中的削弱，最低 0。

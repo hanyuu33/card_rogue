@@ -1949,6 +1949,36 @@ func _ready() -> void:
 		_hover_hand = -1
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r331hidden" in args and engine != null:
+		# 演示（R331）：隐藏能源 8078 —— 效果区挂它 → 友方单位入场获得改造 +「死亡」。
+		# 敌方单位摆在 (3,1)，与出牌的 (4,1) 曼哈顿距离正好 1（亡语必中它）。
+		# ⚠️ 「打掉那个单位」不在这里：放在截图前 40 帧（见 `_demo_tick`），
+		#    否则 `--shotframe 600` 时 1600ms 的「隐藏能源 -8」飘字早就消失了。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 8
+		engine.state.effects.append(CardData.from_dict(repo.get_card(8078).to_dict()))
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+		engine.state.hand.append(CardData.from_dict(repo.get_card(8003).to_dict()))
+		engine.play_from_hand(0, Vector2i(4, 1))   # 农民上场 → 触发隐藏能源
+		_hover_hand = -1
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r331surprise" in args and engine != null:
+		# 演示（R331）：惊喜运单 8079 —— 回合开始「从卡组选一张」的面板。
+		# 牌库清空后只塞 4 张，截图里候选列表才看得清。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.deck.clear()
+		engine.state.energy = 8
+		engine.state.effects.append(CardData.from_dict(repo.get_card(8079).to_dict()))
+		for _sid in [8025, 8044, 9145, 8070]:
+			engine.state.deck.append(CardData.from_dict(repo.get_card(_sid).to_dict()))
+		engine._surprise_tick(GameEngine.SIDE_SELF)   # 弹面板由 `_sync_pick` 接管
+		_hover_hand = -1
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--r326chimera" in args and engine != null:
 		# 演示（R326）：嵌合暴君入场「融合」→ **每破坏 1 张回复 1 费**（这条不写进卡面文本）。
 		# 摆两张己方树人接通、手上放暴君：4 费打出 → 破坏 2 张、回 2 费（能量 6 → 4）。
@@ -2633,6 +2663,14 @@ func _demo_tick() -> void:
 		engine._destroy_dead()
 		# 窗口开局时系统鼠标会投一次 MouseMotion（正好压在树人身上）→ 左栏详情
 		# 会盖住「效果区」。出图前把悬停 + 选中一起清掉（左栏也认 `selection` 兜底）。
+		_clear_hover_state()
+		selection = null
+	if _shot_pending and "--r331hidden" in _demo_args \
+			and _demo_frame == _shot_frame - 40 and engine != null:
+		# R331 出图：截图前 40 帧打掉那个带「死亡」的单位 —— 躲过开局横幅，
+		# 又让「隐藏能源 -8」飘字还在屏上（1600ms 生命周期）。
+		engine.damage_cell(Vector2i(4, 1), 99, "演示")
+		engine._destroy_dead()
 		_clear_hover_state()
 		selection = null
 	if _shot_pending and "--r288knife" in _demo_args \
@@ -4664,6 +4702,9 @@ func _pick_active_kind() -> String:
 		return "creation"
 	if engine.cannonize_pending:
 		return "cannonize"
+	# R331：惊喜运单（8079）回合开始 —— 候选是**卡组**（与淘汰 9174 同形态）。
+	if engine.surprise_pending:
+		return "surprise"
 	if _recall_pending():
 		return "recall"
 	if engine.foresight_pick:
@@ -4901,6 +4942,17 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"note": "变成 0 费 1/1 的「素体」（回合结束不弃牌）；原来的改造不保留",
 					"cards": elopts.map(func(i: int) -> CardData: return engine.state.deck[i]),
 					"max_sel": 1, "confirm_label": "确认淘汰", "cancel_label": "取消（不改卡组）"}
+		"surprise":
+			# R331 惊喜运单（8079）：候选 = 卡组**全部**卡（下标，不按 id —— 卡组里可能
+			# 有被生产订单 / 自主升级 / 淘汰改过数值的同 id 副本）。
+			var sp_opts := engine.surprise_options()
+			return {"kind": k, "short": "惊喜运单",
+					"opts": sp_opts,
+					"title": "惊喜运单：从卡组选一张卡，把它变成一张随机卡并加入手卡",
+					"note": "点卡选中，再点确认 —— 它离开卡组，随机卡进手牌（还要选 %d 张）"
+							% engine.surprise_remaining,
+					"cards": sp_opts.map(func(i: int) -> CardData: return engine.state.deck[i]),
+					"max_sel": 1, "confirm_label": "确认变化", "cancel_label": ""}
 		"merge":
 			# R298 合体（9167）：候选 = 卡组里**所有素体**（8025）。
 			# ⚠️ opts 存的是**卡组下标**（不是 id）：卡组里可能同时有未经改造的原版素体
@@ -5150,6 +5202,17 @@ func _on_pick_confirmed(sel: Array) -> void:
 				status_text = "淘汰：卡组里的 %s → 「素体」" % elnm
 			else:
 				_say("淘汰：没能选中这张卡（它仍在卡组里）")
+			_clear_selection()
+		"surprise":
+			# R331 惊喜运单（8079）：确认 → 卡组那张离开卡组，随机奖励卡加入手卡。
+			var spi := int(opts[sel[0]])
+			var spnm := "?"
+			if spi >= 0 and spi < engine.state.deck.size():
+				spnm = engine.state.deck[spi].card_name
+			if engine.surprise_pick(spi):
+				status_text = "惊喜运单：卡组里的 %s → 一张随机卡入手" % spnm
+			else:
+				_say("惊喜运单：没能选中这张卡（它仍在卡组里）")
 			_clear_selection()
 		"merge":
 			# R298 合体（9167）：确认 → 素体**本场消失**（进消耗区）→ 再调 use_spell 真正打出。
@@ -10170,6 +10233,29 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# R317 淘汰 9174：面板由 `_sync_pick` 自动弹（engine.eliminate_pending）。
 			_say("◆ 淘汰：抽 %d 张 —— 从卡组选一张盟友或工事变成素体"
 					% int(data.get("drawn", 0)))
+		"hidden_energy":
+			# R331 隐藏能源 8078：单位入场 → 改造 +1 层，并获得「死亡」。
+			var he_c: CardData = data.get("card", null)
+			var he_st := int(data.get("stacks", 0))
+			_say("◈ 隐藏能源：%s 改造 +%d 层 +「死亡」" % [
+					he_c.card_name if he_c != null else "单位", he_st])
+		"hidden_energy_death":
+			# R331 隐藏能源 8078：被挂过「死亡」的单位被破坏 → 距离 1 随机一个敌人 8 伤。
+			var hd_a := int(data.get("amount", 0))
+			var hd_c: CardData = data.get("card", null)
+			var hd_t: Vector2i = data.get("target", Vector2i(0, 0))
+			_say("◈ 隐藏能源：距离 1 的敌人 -%d" % hd_a)
+			_floaters.append({"pos": _cell_center(hd_t), "text": "隐藏能源 -%d" % hd_a,
+					"col": Color("c07ad0"), "size": 16, "start": n, "dur": 1600})
+		"surprise":
+			# R331 惊喜运单 8079：回合开始开面板（由 `_sync_pick` 自动弹）。
+			_say("◈ 惊喜运单：从卡组选一张卡 → 变成随机卡并加入手卡")
+		"surprise_pick":
+			# R331 惊喜运单 8079：选完一张。
+			var sp_c: CardData = data.get("card", null)
+			if sp_c != null:
+				_say("◈ 惊喜运单：变出「%s」%s" % [sp_c.card_name,
+						"入手" if bool(data.get("landed", false)) else "（手牌已满 → 进弃牌区）"])
 		"rapid":
 			# R316 极速 9171：抽到的 0 费张数 → 本回合所有敌人受到伤害 +N。
 			var rp_zero := int(data.get("zero", 0))

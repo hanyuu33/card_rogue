@@ -105,6 +105,11 @@ var creation_remaining:= 0
 var cannonize_pending:= false
 var cannonize_remaining:= 0
 var cannonize_src:= ""
+## R331 惊喜运单 8079：回合开始「选卡组一张卡变成随机卡入手」的待办（UI kind = "surprise"）。
+## 与创意 8070 / 新生 9148 同形态：`_surprise_tick()` 开面板，`surprise_pick()` 结算。
+## ⚠️ 与 `cannonize_pending` 各用各的字段（混用会在取消 / 连开时清错状态）。
+var surprise_pending:= false
+var surprise_remaining:= 0
 var _aether_left:= 0
 var _aether_used:= false
 var _stoneskin_left:= 0
@@ -1172,6 +1177,21 @@ const INSPIRE_DMG:= 3
 # 「代达罗斯」8060（R271 重做；R330 调为 4 费**史诗盟友** 5/16/1/1，嘲讽）：
 #   入场时本次对战每用过一张聚能炮击 → 生命 +3；本回合手卡里的聚能炮击费用为 0。
 const DAEDALUS_HP_PER_CANNON:= 3
+
+# ── R331：机械之心两张稀有效果卡（隐藏能源 8078 / 惊喜运单 8079）──
+# 「隐藏能源」8078（3 费**稀有效果**）：**友方单位入场时**，获得一次改造，
+#   并获得「死亡」—— 它被破坏时，对**距离 1** 的随机一个敌人造成 HIDDEN_ENERGY_DMG 点伤害。
+#   * 「距离」用**曼哈顿**（与 `attack_distance` / 侦察塔光环同一口径），1 = 上下左右相邻；
+#   * 友方 = 出牌那一方（敌方效果区里的本卡只给敌方单位挂，敌我对称）；
+#   * 效果区**多张不叠加**：同一单位只挂一次（与送葬 / 巨炮「可叠加才叠加」同口径）；
+#   * 判据只认 `Placement.hidden_energy`（「死亡」是通用字段，认字段会串戏）。
+const HIDDEN_ENERGY_ID:= 8078
+const HIDDEN_ENERGY_DMG:= 8
+const HIDDEN_ENERGY_RANGE:= 1
+# 「惊喜运单」8079（2 费**稀有效果**）：**回合开始时**，选卡组一张卡 →
+#   把它变成一张随机卡（本职业奖励池，`_random_reward_card()` 与随心组装 9144 同池）
+#   并加入手卡。效果区几张就结算几次（与创意 / 新生同口径）；敌方不做选牌决策 → 落空。
+const SURPRISE_ID:= 8079
 const UPGRADE_RANGE_TRAIT:= "改造攻程"
 ## R275：重甲战车 8058 移除本 trait（改为「每层改造受到的伤害 -1」）——
 ## 当前**没有任何卡**带「改造移速」，分支保留给未来的卡用。
@@ -1896,6 +1916,7 @@ func _begin_turn(side: String) -> void :
 		_glowgrass_supply(SIDE_SELF)
 		_rebirth_tick(SIDE_SELF)          # 新生 9148（R222）：抽牌之后，选一张手卡消失
 		_creation_tick(SIDE_SELF)         # 创意 8070（R271）：抽牌之后，选一张手卡随机变形
+		_surprise_tick(SIDE_SELF)         # 惊喜运单 8079（R331）：抽牌之后，选一张卡组卡变形
 		_ghost_self_destruct(SIDE_SELF)
 		_assassin_summon(SIDE_SELF)
 		_refresh_dark_lord(SIDE_SELF)
@@ -3856,18 +3877,22 @@ func _card_leaving_field(p: Placement) -> CardData:
 	# 否则那张卡再上场会带着一个不会触发的「死亡」标记（卡面写着效果却不生效）。
 	if p.fence_bonus_hp <= 0 and p.fence_bonus_traits.is_empty() and p.upgrade_hp <= 0 \
 			and p.upgrade_range <= 0 and p.upgrade_speed <= 0 \
-			and p.life_cycle_added.is_empty() and p.blade_added.is_empty():
+			and p.life_cycle_added.is_empty() and p.blade_added.is_empty() \
+			and p.hidden_energy_added.is_empty():
 		return p.card
 	var out:= CardData.from_dict(p.card.to_dict())
 	out.traits = (p.card.traits as Array).duplicate()   # 同上：必须切断与卡库的共享引用
 	# R291：生命循环与辅助刃都是「场上这段」的字段 —— 合成一次 duplicate 再逐个摘，
 	# 分两段各 duplicate 一次会让后一段把前一段的删除覆盖掉。
-	if not p.life_cycle_added.is_empty() or not p.blade_added.is_empty():
+	if not p.life_cycle_added.is_empty() or not p.blade_added.is_empty() \
+			or not p.hidden_energy_added.is_empty():
 		out.affixes = (p.card.affixes as Array).duplicate()
 		for lc_a: String in p.life_cycle_added:
 			out.affixes.erase(lc_a)
 		for bg_a: String in p.blade_added:
 			out.affixes.erase(bg_a)
+		for he_a: String in p.hidden_energy_added:
+			out.affixes.erase(he_a)
 	out.health = maxi(1, p.card.health - p.fence_bonus_hp - p.upgrade_hp)
 	for t in p.fence_bonus_traits:
 		out.traits.erase(t)
@@ -4527,6 +4552,80 @@ func creation_pick(hand_index: int) -> bool:
 	action.emit("creation_pick", {"card": body, "index": hand_index,
 			"remaining": creation_remaining})
 	return body != null
+
+
+func _surprise_tick(side: String) -> void :
+	## 「惊喜运单」8079（R331，机械之心 2 费稀有效果）：**回合开始时**，
+	## 选卡组一张卡 → 把它变成一张随机卡并加入手卡。
+	## * 挂在 `_begin_turn` **抽牌之后**（与创意 / 新生同位置：刚抽完的牌库才是候选）；
+	## * 效果区几张就逐份结算（`surprise_remaining`，与创意 / 新生同口径）；
+	## * 敌方侧不做选牌决策（AI 没有「选卡组一张」这一层）→ 对称落空。
+	var copies := 0
+	for c: CardData in (state.effects if side == SIDE_SELF else state.enemy_effects):
+		if c.id == SURPRISE_ID:
+			copies += 1
+	if copies <= 0:
+		return
+	if side != SIDE_SELF:
+		_log("惊喜运单（对方）：敌方不做选牌决策 → 效果落空")
+		return
+	if state.deck.is_empty():
+		_log("惊喜运单：卡组为空 → 本回合不触发")
+		action.emit("surprise", {"pending": false, "copies": copies, "remaining": 0})
+		return
+	surprise_pending = true
+	surprise_remaining = copies
+	_log("惊喜运单：效果区 %d 张 → 待选 %d 张卡组卡" % [copies, copies])
+	action.emit("surprise", {"pending": true, "copies": copies, "remaining": copies})
+
+
+func surprise_options() -> Array[int]:
+	## 面板候选 = **全部**卡组下标（业务下标 = 牌库下标）；空数组 = 没有待办。
+	## ⚠️ 给下标不给 id：卡组里可能有被生产订单 / 自主升级 / 淘汰改过数值的同 id 副本。
+	if not surprise_pending:
+		return []
+	var out: Array[int] = []
+	for i in state.deck.size():
+		out.append(i)
+	return out
+
+
+func surprise_pick(deck_index: int) -> bool:
+	## 确认一张：卡组第 deck_index 张**离开卡组**，换成一张随机奖励卡**加入手卡**。
+	## * 随机池 = `_random_reward_card()`（本职业奖励池按稀有度三等分随机，
+	##   与随心组装 9144 同池）—— 「随机卡」不会变成别职业的卡或诅咒；
+	## * 这是**随机**变化 → `random_born = true` + `_apply_random_born()`
+	##   （谟涅摩叙涅 -2 费 / 量产型代达罗斯 +2+2 照常触发）；
+	## * 「变化一张卡」→ 走 `_invention_refund()`（发明专家 9143 照常回费）。
+	if not surprise_pending:
+		return false
+	if deck_index < 0 or deck_index >= state.deck.size():
+		return false
+	var old_card: CardData = state.deck[deck_index]
+	state.deck.remove_at(deck_index)
+	var out_card: CardData = null
+	var landed := false
+	var pick: CardData = _random_reward_card(SIDE_SELF)
+	if pick != null:
+		out_card = CardData.from_dict(pick.to_dict())
+		out_card.traits = (pick.traits as Array).duplicate()
+		out_card.affixes = (pick.affixes as Array).duplicate()
+		out_card.random_born = true
+		out_card.own_copy = true
+		landed = _grant_to_hand(out_card, "惊喜运单")
+		_apply_random_born(out_card)
+		_invention_refund(SIDE_SELF, "惊喜运单")
+	surprise_remaining = maxi(0, surprise_remaining - 1)
+	if surprise_remaining == 0:
+		surprise_pending = false
+	if out_card == null:
+		_log("惊喜运单：卡组里的 %s 已移除，但随机池为空 → 没变出卡" % old_card.card_name)
+	else:
+		_log("惊喜运单：卡组里的 %s → 随机「%s」（%s）" % [old_card.card_name,
+				out_card.card_name, "加入手卡" if landed else "手牌已满 → 进弃牌区"])
+	action.emit("surprise_pick", {"old": old_card, "card": out_card,
+			"index": deck_index, "remaining": surprise_remaining, "landed": landed})
+	return out_card != null
 
 
 func _scrap_hand(side: String) -> String :
@@ -6306,6 +6405,8 @@ func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 		return "创意：请先选一张手卡让它变成随机可改造卡"
 	if cannonize_pending:
 		return "量产型代达罗斯：请先选一张手卡让它变成聚能炮击"
+	if surprise_pending:
+		return "惊喜运单：请先从卡组选一张卡"
 
 	var card:= state.hand[hand_index]
 	var cap_msg:= _play_cap_blocked()
@@ -9020,7 +9121,10 @@ func _on_ally_entered(p: Placement, side: String) -> void :
 
 
 
-	if p == null or p.card.kind != "盟友":
+	if p == null or p.card == null:
+		return
+	_hidden_energy_tick(p, side)   # R331：友方**单位**（含工事）入场 → 改造 +「死亡」
+	if p.card.kind != "盟友":
 		return
 	var dmg:= _wind_force_dmg(side)
 	if dmg <= 0:
@@ -9040,6 +9144,60 @@ func _on_ally_entered(p: Placement, side: String) -> void :
 	var dealt:= _hit_unit(q, dmg, "疾风之力")
 	_log("疾风之力：%s 登场 → %s -%d（剩余 %d）" % [
 		p.card.card_name, q.card.card_name, dealt, maxi(0, q.health)])
+	if q.health <= 0:
+		_destroy_dead()
+
+
+func _hidden_energy_tick(p: Placement, side: String) -> void :
+	## 「隐藏能源」8078（R331，机械之心 3 费稀有效果）。
+	## * 改造走 `_field_upgrade_grant()`（场上改造唯一口）—— 层数 / 卡面改造奖励 /
+	##   「每次被改造」那一族（侦察塔 / 堡垒 / 无限装甲 / 废弃机器人 / 激发）全部自动生效。
+	##   atk / hp 都传 0：本卡的改造**不带数值**，只挂亡语（与共享护盾 8069 同形态）。
+	## * ⚠️ 判据只认 `Placement.hidden_energy` 标记，**不认** `has_affix("死亡")`。
+	## * ⚠️ 走到这里时 p 还没被别的效果改过，`has_affix` 读到的是卡面原值 ——
+	##   「死亡」只有本卡**新挂**上去时才记进 `hidden_energy_added`（离场要摘）。
+	if not _zone_has_id(side, HIDDEN_ENERGY_ID):
+		return
+	if p.hidden_energy:
+		return
+	var new_death: bool = not p.card.has_affix(AFFIX_DEATH)
+	_field_upgrade_grant(p, 0, 0, "隐藏能源", AFFIX_DEATH)
+	if new_death and not p.hidden_energy_added.has(AFFIX_DEATH):
+		p.hidden_energy_added.append(AFFIX_DEATH)
+	p.hidden_energy = true
+	_log("隐藏能源：%s 入场 → 改造 +1 层（第 %d 层），并获得「死亡」（距离 %d 内随机一个敌人 %d 伤）" % [
+			p.card.card_name, p.upgrade_stacks, HIDDEN_ENERGY_RANGE, HIDDEN_ENERGY_DMG])
+	action.emit("hidden_energy", {"cell": _cell_of(p), "card": p.card,
+			"dmg": HIDDEN_ENERGY_DMG, "stacks": p.upgrade_stacks})
+
+
+func _hidden_energy_death(p: Placement, cell: Vector2i) -> void :
+	## 「隐藏能源」的死亡：对**距离 1 内**的随机一个敌人造成 8 点伤害。
+	## * 「距离」= 曼哈顿（与 `attack_distance` / 侦察塔光环同一口径）；
+	## * 只在**有敌方单位**时结算 —— 卡面写的是「随机一个敌人」，不溢出到对方 HP；
+	## * 候选先 `sort()` 再抽：rng 消耗顺序稳定 → 同种子回放可复现；
+	## * 伤害走 `_hit_unit`（护盾 / 减伤 / 石肤照常生效），致死交给 `_destroy_dead()`。
+	var foe := SIDE_OPPONENT if p.owner == SIDE_SELF else SIDE_SELF
+	var cand: Array[Vector2i] = []
+	for c: Vector2i in state.board:
+		if state.board[c].owner != foe:
+			continue
+		if manhattan(c, cell) <= HIDDEN_ENERGY_RANGE:
+			cand.append(c)
+	cand.sort()
+	if cand.is_empty():
+		_log("隐藏能源：%s 被破坏，但距离 %d 内没有敌人 → 落空"
+				% [p.card.card_name, HIDDEN_ENERGY_RANGE])
+		return
+	var t: Vector2i = cand[rng.randi() % cand.size()]
+	var q: Placement = state.unit_at(t)
+	if q == null:
+		return
+	var dealt: int = _hit_unit(q, HIDDEN_ENERGY_DMG, "隐藏能源")
+	_log("隐藏能源：%s 被破坏 → 距离 %d 内的 %s 受到 %d 点伤害（剩余 %d）" % [
+			p.card.card_name, HIDDEN_ENERGY_RANGE, q.card.card_name, dealt, maxi(0, q.health)])
+	action.emit("hidden_energy_death", {"cell": cell, "target": t, "card": q.card,
+			"amount": dealt})
 	if q.health <= 0:
 		_destroy_dead()
 
@@ -9906,6 +10064,9 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 	# 同样只认 Placement 标记（不认「死亡」字段）。
 	if p.blade_gift:
 		_blade_gift_death(p, cell)
+	# R331 隐藏能源：被本卡挂过「死亡」的单位被破坏 → 距离 1 内随机一个敌人 8 伤。
+	if p.hidden_energy:
+		_hidden_energy_death(p, cell)
 	match p.card.id:
 		WYVERN_ID:
 			_summon_token(WYVERN_TOKEN_ID, cell, p.owner, 1)
