@@ -341,6 +341,16 @@ const BOX_CARD_ID := 9179
 # R341 洞窟绳（6048，第一层初始池）：Boss 以外的战斗可以逃跑，逃跑即失去道具。
 # 判据只留一处 `can_use_cave_rope()` —— 战斗界面的按钮显隐与真正的逃跑结算共用它。
 const CAVE_ROPE_RELIC_ID := 6048
+# R342 采集刀（6050，**传奇**奖励池）：「战斗后额外获得一份卡牌奖励」。
+# 唯一消费点 = `queue_battle_card_rewards()` —— 战斗胜利的卡牌奖励只从那里入队。
+const HARVEST_KNIFE_RELIC_ID := 6050
+const HARVEST_KNIFE_EXTRA := 1
+# R342 火柴（6051，一般奖励池）：卡牌奖励界面可以「刷新」重摇一组候选，一共 3 次。
+# 计数**跨战斗累计**（一局的总量）→ 存在局状态里、随存档走（与不锈钢盆 6041 同口径）。
+# 用完 3 次道具仍留在道具栏（只是不再生效），免得「用完自动消失」把图鉴记录也抹掉。
+const MATCH_RELIC_ID := 6051
+const MATCH_CHARGES := 3
+static var match_charge := 0
 
 
 static func reset(new_max := 50) -> void:
@@ -630,6 +640,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	pending_deck_edit = ""
 	statue_charge = 0          # R307 雕像：新的一局从 0 开始数
 	basin_charge = 0           # R311 不锈钢盆：新的一局没有盆（重拿时再灌满）
+	match_charge = 0           # R342 火柴：新的一局没有火柴（重拿时再灌满 3 次）
 	reward_kinds = []
 	# 开局卡组 = 公共部分 + 2 张角色基础盟友（森林精魄 → 树人；暗影刺客 → 幽影）
 	# + 角色专属卡（森林精魄 → 熊 8004；暗影刺客 → 突袭 9086）。见 PlayerClass.start_deck_ids。
@@ -719,6 +730,7 @@ static func end_run(clear_save: bool = true) -> void:
 	skipped_relics = []
 	pending_relic = -1
 	pending_relic_drop = -1
+	match_charge = 0            # R342：本局结束 → 火柴次数复位
 	duck_revive_chance = 100
 	lucky7_turns = 0            # R314：本局结束 → lucky 7 计数复位
 	delivery_done = false       # R200：本局结束 → 复位
@@ -865,6 +877,8 @@ static func gain_relic(id: int) -> void:
 			_apply_milk()
 		BASIN_RELIC_ID:   # 不锈钢盆（R311）：拿到就满 10 点计数
 			basin_charge = BASIN_MAX
+		MATCH_RELIC_ID:   # 火柴（R342）：拿到就满 3 次刷新
+			match_charge = MATCH_CHARGES
 		DICE_RELIC_ID:   # 水晶骰子（R312）：**当前这张图**的非固定房间当场变「?」并重摇内容
 			reroll_map_as_unknown()
 
@@ -1088,6 +1102,72 @@ static func queue_card_reward(reward_type: String = "normal",
 	return pending_rewards.size() - 1
 
 
+static func queue_battle_card_rewards(reward_type: String = "normal") -> int:
+	## 战斗胜利后的卡牌奖励**唯一入队口**（battle_scene 只调这里，别直接调
+	## `queue_card_reward`）。持有采集刀 6050（传奇）→ 额外再来一组。
+	## 返回实际入队的组数（卡池空、摇不出候选的那一组不算）。
+	## ⚠️ 组与组之间是**各自独立的三选一**（各有自己的 candidates），不是把 3 张变 6 张 ——
+	##    用户可以各选一张，也可以只选一组、放弃另一组。
+	## ⚠️ `queue_card_reward` 内部会试清上一批；第一批入队后待领数 > 0，
+	##    第二批就不会再清（`_drop_settled_batch` 只在待领为 0 时动手），同一批里两条并存。
+	var groups := 1
+	if relics.has(HARVEST_KNIFE_RELIC_ID):
+		groups += HARVEST_KNIFE_EXTRA
+	var queued := 0
+	for _i in groups:
+		if queue_card_reward(reward_type) >= 0:
+			queued += 1
+	return queued
+
+
+static func can_reroll_reward() -> bool:
+	## 火柴（6051）：「刷新」按钮能不能点的**唯一判据口**（持有 + 还有次数）。
+	## 按钮显隐 / 置灰 / 真正刷新都问这里，别在界面里各写一份 `match_charge > 0`。
+	return relics.has(MATCH_RELIC_ID) and match_charge > 0
+
+
+static func reroll_pending_cards(idx: int) -> bool:
+	## 火柴（6051）：把第 idx 组卡牌奖励的候选**重摇一遍**，次数 -1。
+	## 返回是否真的刷新了（false = 没火柴 / 次数用完 / 这条不是待领的卡牌组 / 摇不出来）。
+	##
+	## 三条纪律：
+	##  ① **排除旧候选**（`exclude_ids`）—— 刷新后不该再看到刚刚那三张，
+	##     否则「刷了等于没刷」；池子不够时才允许重复（`CardReward.roll` 内部回退）。
+	##  ② 类型 / 卡类限制（`type` / `kinds`）**照旧沿用**：在事件里刷出来的还是那类卡
+	##     （例如「奥秘之泉」只在效果/技能里刷），不然火柴能用来绕开事件规则。
+	##  ③ `picked` 清回 -1、`rerolls` 记一笔 —— 这条又变回「没选过」的状态。
+	## 随机源与 `queue_card_reward` 同口径（run 进行中走 run_rng，演示模式才用全局随机）。
+	if idx < 0 or idx >= pending_rewards.size():
+		return false
+	if not can_reroll_reward():
+		return false
+	var e: Dictionary = pending_rewards[idx]
+	if str(e.get("kind", "")) != "cards":
+		return false
+	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
+		return false
+	var old_ids: Array[int] = []
+	for v: Variant in e.get("candidates", []):
+		old_ids.append(int(v))
+	var ekinds: Array[String] = []
+	for k: Variant in e.get("kinds", []):
+		if k is String:
+			ekinds.append(str(k))
+	var roll_rng: RandomNumberGenerator = run_rng if run_active else null
+	var rolled := CardReward.roll(CardRepo.load_json(), str(e.get("type", "normal")),
+			CardReward.CHOICES, roll_rng, ekinds, "", old_ids)
+	var ids: Array[int] = []
+	for c: CardData in rolled:
+		ids.append(c.id)
+	if ids.is_empty():
+		return false       # 摇不出来就别扣次数
+	match_charge -= 1
+	e["candidates"] = ids
+	e["picked"] = -1
+	e["rerolls"] = int(e.get("rerolls", 0)) + 1
+	return true
+
+
 static func pending_reward_count() -> int:
 	## 还没处理的奖励条数（state = pending）—— 就是常驻入口上那个「N」。
 	var n := 0
@@ -1195,6 +1275,8 @@ static func relic_state_note(id: int) -> String:
 	if id == STACK_DUCK_RELIC_ID and relics.has(STACK_DUCK_RELIC_ID):
 		return "当前复活概率 %d%%。" % duck_revive_chance
 	# R314 lucky 7：写清「还差几个回合生效」—— 它的效果是周期性脉冲，不是常亮
+	if id == MATCH_RELIC_ID and relics.has(MATCH_RELIC_ID):
+		return "剩余刷新次数 %d 次。" % maxi(0, match_charge)
 	if id == LUCKY7_RELIC_ID and relics.has(LUCKY7_RELIC_ID):
 		if lucky7_is_due():
 			return "本回合生效：免疫所有 HP 伤害 + 技能额外 7 点伤害。"

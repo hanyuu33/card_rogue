@@ -750,6 +750,13 @@ func _draw_cards() -> void:
 	# 悬停详情（卡面放不下效果文本）
 	_draw_card_detail(cands)
 	_draw_btn(_btn_cards_back_rect(), "← 返回列表", false, false)
+	# R342 火柴：只在**持有**时出现（没有火柴就别放个永远点不动的按钮占位）。
+	# 次数用完 → 保留按钮但置灰，让玩家看得见「3 次真的用光了」。
+	if RunState.has_relic(RunState.MATCH_RELIC_ID):
+		var rb := _btn_cards_reroll_rect()
+		var left := maxi(0, RunState.match_charge)
+		var rtxt := "刷新 · 剩 %d" % left if rb.size.x >= 132.0 else "刷新 %d" % left
+		_draw_btn(rb, rtxt, false, settled or left <= 0)
 	_draw_btn(_btn_cards_skip_rect(), "放弃这组", false, settled)
 	# R167：确认按钮（触屏必需 —— 没有悬停就得靠它「先看后拿」）
 	var can_pick := (not settled) and _pick_sel >= 0 and _pick_sel < cands.size()
@@ -877,6 +884,19 @@ func _btn_cards_back_rect() -> Rect2:
 	return Rect2(pr.position.x + 36.0, pr.end.y - 56.0, 130.0, 38.0)
 
 
+func _btn_cards_reroll_rect() -> Rect2:
+	## R342 火柴：「刷新」按钮（塞在「← 返回列表」与「放弃这组」之间）。
+	## 面板宽度随屏幕变（`_cards_panel_rect` 有 min），所以宽度按**可用间隙**收缩 ——
+	## 小窗口下宁可字少一点，也不要压到隔壁按钮。
+	var back := _btn_cards_back_rect()
+	var skip := _btn_cards_skip_rect()
+	var gap := skip.position.x - back.end.x - 28.0
+	var w := clampf(gap, 96.0, 150.0)
+	var x := back.end.x + 14.0 + maxf(0.0, (gap - w) / 2.0)
+	x = minf(x, skip.position.x - 8.0 - w)
+	return Rect2(x, back.position.y, w, back.size.y)
+
+
 func _btn_cards_skip_rect() -> Rect2:
 	var pr := _cards_panel_rect()
 	return Rect2(pr.position.x + pr.size.x / 2.0 - 160.0, pr.end.y - 56.0, 140.0, 38.0)
@@ -990,6 +1010,15 @@ func _on_click(pos: Vector2) -> void:
 			var e: Dictionary = RunState.pending_rewards[_sel]
 			if _settled(e):
 				return
+			# R342 火柴：刷新 → 重摇一组候选 + 次数 -1。已点选的那张要清掉
+			# （`_pick_sel` 是**下标**，刷新后它指向的是另一张卡，留着必错）。
+			if RunState.has_relic(RunState.MATCH_RELIC_ID) \
+					and _btn_cards_reroll_rect().has_point(pos):
+				if RunState.reroll_pending_cards(_sel):
+					_pick_sel = -1
+					_hover_card = -1
+					_root.queue_redraw()
+				return
 			var cands: Array = e.get("candidates", [])
 			# R167：**先看后拿**。点卡 = 选中并显示说明（触屏没悬停，旧版一点就直接入组、
 			# 根本看不到卡面效果），再点「确认选择这张」才真的加入卡组。
@@ -1057,11 +1086,13 @@ func _demo_start() -> void:
 	## -- --r119：造一批「长描述道具 + 卡牌奖励」并直接弹窗（截图验证用）。
 	## --r119relic / --r119cards：额外切到「道具详情」/「卡牌三选一」视图，方便逐屏核验。
 	## --r119pick：卡牌三选一 + **已点选待确认**（R167 触屏「先看后拿」流程的出图核验）。
+	## --r119match：卡牌三选一 + **持有火柴**（R342「刷新」按钮）——
+	##   默认剩 3 次；再加 `--matchleft 0` 可看「三次用完、按钮置灰」的样子。
 	## --r119chip：只铺奖励、**不弹窗** —— 核验常驻入口「✦ 待领奖励 N」的位置。
 	var args := OS.get_cmdline_user_args()
 	var mode := ""
 	for a: String in args:
-		if a.begins_with("--r119"):
+		if a.begins_with("--r119") or a.begins_with("--r342"):
 			mode = a
 			break
 	# R323 出图：牛奶附魔演示 —— 不碰卡组，直接造两份演示数据。
@@ -1107,6 +1138,20 @@ func _demo_start() -> void:
 			var en: Dictionary = RunState.pending_rewards[i]
 			if str(en.get("kind", "")) == "cards":
 				en["candidates"] = [forced, forced, forced]
+	# R342 出图：`--r342relic` = 奖励列表里只放两件新道具
+	# （核验徽章色：采集刀传奇橙金 / 火柴一般黄；以及长描述在行内的换行）
+	if mode == "--r342relic":
+		RunState.pending_rewards = []
+		RunState.queue_relic_reward(RunState.HARVEST_KNIFE_RELIC_ID)
+		RunState.queue_relic_reward(RunState.MATCH_RELIC_ID)
+	# R342 火柴：`--r119match` 造「持火柴」的三选一画面
+	if mode == "--r119match":
+		RunState.relics.append(RunState.MATCH_RELIC_ID)
+		var left_n := RunState.MATCH_CHARGES
+		for k3 in args.size():
+			if args[k3] == "--matchleft" and k3 + 1 < args.size():
+				left_n = int(args[k3 + 1])
+		RunState.match_charge = maxi(0, left_n)
 	if mode == "--r119chip":
 		return
 	var t := Timer.new()
@@ -1116,7 +1161,7 @@ func _demo_start() -> void:
 		open()
 		if mode == "--r119relic":
 			_open_entry(0)
-		elif mode == "--r119cards":
+		elif mode == "--r119cards" or mode == "--r119match":
 			for i in RunState.pending_rewards.size():
 				if str((RunState.pending_rewards[i] as Dictionary).get("kind", "")) == "cards":
 					_open_entry(i)

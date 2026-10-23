@@ -6399,7 +6399,9 @@ func _show_over(win: bool) -> void:
 			var dropped := RunState.offer_relic_drop(node_type)
 			if dropped > 0:
 				RunState.queue_relic_reward(dropped)
-			RunState.queue_card_reward(RunState.reward_type)
+			# R342：战斗胜利的卡牌奖励**只走这一个口** —— 持有「采集刀」6050 时
+			# 它内部会多入队一组（各自独立三选一）。别在这里直接调 queue_card_reward。
+			RunState.queue_battle_card_rewards(RunState.reward_type)
 			if _run_boss_win:
 				# R339：Boss 已击破 → 记账（`boss_beaten` + 清 `boss_pending`）。
 				# ⚠️ 放在算 `_run_next_layer` **之前**：advance_layer 会清这个标记，

@@ -3702,26 +3702,26 @@ func _init() -> void:
 	check(srepo.get_relic(6010).kind != "" and srepo.get_relic(6010).source_label() == "事件道具",
 			"道具来源标签：source_label() = 事件道具")
 
-	# ---- R289 奖励道具二级分档：一般 / 传奇（R315 起 18 件 = 15 一般 + 3 传奇）----
+	# ---- R289 奖励道具二级分档：一般 / 传奇（R342 起 20 件 = 16 一般 + 4 传奇）----
 	var r289_repo := RelicRepo.load_json()
 	var r289_all := r289_repo.reward_ids()
 	var r289_nor := r289_repo.normal_reward_ids()
 	var r289_leg := r289_repo.legendary_reward_ids()
-	check(r289_all.size() == 18 and r289_nor.size() == 15 and r289_leg.size() == 3,
-			"奖励分档：奖励池 18 件 = 一般 15 + 传奇 3（实际 %d / %d / %d）"
+	check(r289_all.size() == 20 and r289_nor.size() == 16 and r289_leg.size() == 4,
+			"奖励分档：奖励池 20 件 = 一般 16 + 传奇 4（实际 %d / %d / %d）"
 			% [r289_all.size(), r289_nor.size(), r289_leg.size()])
 	var r289_tier_ok := true
 	for r289_id in r289_nor:
 		var r289_rel := r289_repo.get_relic(int(r289_id))
 		if r289_rel == null or r289_rel.tier != RelicData.TIER_NORMAL:
 			r289_tier_ok = false
-	check(r289_tier_ok, "奖励分档：一般池 15 件的 tier 都是「一般」")
+	check(r289_tier_ok, "奖励分档：一般池 16 件的 tier 都是「一般」")
 	var r289_leg_ok := true
 	for r289_lid in r289_leg:
 		var r289_lrel := r289_repo.get_relic(int(r289_lid))
 		if r289_lrel == null or r289_lrel.tier != RelicData.TIER_LEGENDARY:
 			r289_leg_ok = false
-	check(r289_leg_ok, "奖励分档：传奇池 3 件的 tier 都是「传奇」")
+	check(r289_leg_ok, "奖励分档：传奇池 4 件的 tier 都是「传奇」")
 	check(RelicData.RELIC_TIERS.size() == 2
 			and RelicData.RELIC_TIERS.has(RelicData.TIER_NORMAL)
 			and RelicData.RELIC_TIERS.has(RelicData.TIER_LEGENDARY),
@@ -24631,6 +24631,106 @@ func _init() -> void:
 	RunState.relics = r337_relics_before
 	check(not RunState.can_use_cave_rope("battle"),
 			"R341 洞窟绳：失去道具后不能再逃跑")
+
+	# ---- ⑧ R342 采集刀 6050（传奇）：战斗后额外获得一份卡牌奖励 ----
+	var r342_relics_bak: Array[int] = RunState.relics.duplicate()
+	var r342_deck_bak: Array[int] = RunState.deck_ids.duplicate()
+	var r342_repo := RelicRepo.load_json()
+	check(r342_repo.reward_ids().has(RunState.HARVEST_KNIFE_RELIC_ID)
+			and r342_repo.legendary_reward_ids().has(RunState.HARVEST_KNIFE_RELIC_ID)
+			and not r342_repo.initial_ids().has(RunState.HARVEST_KNIFE_RELIC_ID),
+			"R342 采集刀：只在奖励池的传奇档（不进起点三选一 / 一般档）")
+	RunState.relics = []
+	RunState.pending_rewards = []
+	check(RunState.queue_battle_card_rewards("normal") == 1
+			and RunState.pending_rewards.size() == 1,
+			"R342 采集刀：没有道具时战斗后只入队 1 组卡牌奖励")
+	RunState.relics = [RunState.HARVEST_KNIFE_RELIC_ID]
+	RunState.pending_rewards = []
+	var r342_got := RunState.queue_battle_card_rewards("normal")
+	check(r342_got == 2 and RunState.pending_rewards.size() == 2,
+			"R342 采集刀：持有后战斗后给 2 组卡牌奖励（实际 %d 组）" % r342_got)
+	var r342_shape := true
+	for r342_i in RunState.pending_rewards.size():
+		var r342_e: Dictionary = RunState.pending_rewards[r342_i]
+		if str(r342_e.get("kind", "")) != "cards" \
+				or str(r342_e.get("type", "")) != "normal" \
+				or (r342_e.get("candidates", []) as Array).size() != 3:
+			r342_shape = false
+	check(r342_shape and RunState.pending_reward_count() == 2,
+			"R342 采集刀：两组都是独立的 3 张三选一、同时待领（不是合成 6 张）")
+	var r342_deck0 := RunState.deck_ids.size()
+	var r342_ca: Array = (RunState.pending_rewards[0] as Dictionary).get("candidates", [])
+	var r342_cb: Array = (RunState.pending_rewards[1] as Dictionary).get("candidates", [])
+	RunState.pick_pending_card(0, int(r342_ca[0]))
+	RunState.pick_pending_card(1, int(r342_cb[0]))
+	check(RunState.deck_ids.size() == r342_deck0 + 2 and RunState.pending_reward_count() == 0,
+			"R342 采集刀：两组各选一张都能进卡组（%d → %d）"
+			% [r342_deck0, RunState.deck_ids.size()])
+
+	# ---- ⑨ R342 火柴 6051：卡牌奖励界面 3 次「刷新」 ----
+	RunState.relics = []
+	RunState.pending_rewards = []
+	RunState.match_charge = 0
+	RunState.deck_ids = r342_deck_bak.duplicate()
+	check(not RunState.can_reroll_reward(),
+			"R342 火柴：没有道具时刷新入口一律关闭")
+	RunState.gain_relic(RunState.MATCH_RELIC_ID)
+	check(RunState.match_charge == RunState.MATCH_CHARGES and RunState.can_reroll_reward(),
+			"R342 火柴：拿到即满 %d 次（实际 %d）"
+			% [RunState.MATCH_CHARGES, RunState.match_charge])
+	check(r342_repo.reward_ids().has(RunState.MATCH_RELIC_ID)
+			and r342_repo.normal_reward_ids().has(RunState.MATCH_RELIC_ID),
+			"R342 火柴：在奖励池的一般档")
+	RunState.run_rng = RandomNumberGenerator.new()
+	RunState.run_rng.seed = 20261023
+	var r342_ci := RunState.queue_card_reward("normal")
+	var r342_old: Array = ((RunState.pending_rewards[r342_ci] as Dictionary)
+			.get("candidates", []) as Array).duplicate()
+	check(not RunState.reroll_pending_cards(99),
+			"R342 火柴：队列下标越界 → 拒绝（不扣次数）")
+	var r342_ok := RunState.reroll_pending_cards(r342_ci)
+	var r342_new: Array = (RunState.pending_rewards[r342_ci] as Dictionary).get("candidates", [])
+	check(r342_ok and RunState.match_charge == 2,
+			"R342 火柴：刷新一次 → 次数 3 → 2（实际 %d）" % RunState.match_charge)
+	check(r342_new.size() == 3 and JSON.stringify(r342_new) != JSON.stringify(r342_old),
+			"R342 火柴：刷新后候选确实换了一组")
+	var r342_overlap := 0
+	for r342_c: Variant in r342_new:
+		if r342_old.has(r342_c):
+			r342_overlap += 1
+	check(r342_overlap == 0,
+			"R342 火柴：新候选与旧的三张完全不重叠（实际重叠 %d 张）" % r342_overlap)
+	check(int((RunState.pending_rewards[r342_ci] as Dictionary).get("rerolls", 0)) == 1,
+			"R342 火柴：刷新在条目上留痕（rerolls = 1）")
+	RunState.reroll_pending_cards(r342_ci)
+	RunState.reroll_pending_cards(r342_ci)
+	check(RunState.match_charge == 0 and not RunState.can_reroll_reward(),
+			"R342 火柴：3 次用完 → 入口关闭（实际剩 %d）" % RunState.match_charge)
+	var r342_frozen: Array = ((RunState.pending_rewards[r342_ci] as Dictionary)
+			.get("candidates", []) as Array).duplicate()
+	check(not RunState.reroll_pending_cards(r342_ci)
+			and JSON.stringify((RunState.pending_rewards[r342_ci] as Dictionary)
+				.get("candidates", [])) == JSON.stringify(r342_frozen),
+			"R342 火柴：次数用完后刷新被拒（候选不再变）")
+	check(RunState.relic_state_note(RunState.MATCH_RELIC_ID) == "剩余刷新次数 0 次。",
+			"R342 火柴：图鉴状态行写清剩余次数")
+	# 道具还在身上（用完不消失），只是不再生效
+	check(RunState.has_relic(RunState.MATCH_RELIC_ID),
+			"R342 火柴：3 次用完后道具仍留在道具栏（只是不再生效）")
+	# 存档：次数随档走
+	RunState.match_charge = 2
+	var r342_snap := RunSave.snapshot()
+	check(int(r342_snap.get("match_charge", -1)) == 2,
+			"R342 火柴：存档里带上剩余次数（实际 %s）" % str(r342_snap.get("match_charge", "缺")))
+	RunState.match_charge = 0
+	r342_snap["match_charge"] = 2
+	var r342_applied := RunSave.apply(r342_snap)
+	check(r342_applied and RunState.match_charge == 2,
+			"R342 火柴：读档还原剩余次数（实际 %d）" % RunState.match_charge)
+	RunState.relics = r342_relics_bak.duplicate()
+	RunState.pending_rewards = []
+	RunState.match_charge = 0
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

@@ -27,9 +27,12 @@ static func type_label(reward_type: String) -> String:
 ## rng 可注入（测试用）；缺省用全局随机。
 ## cid = 角色过滤（R47）：排除**其他角色专属卡**（暗影刺客不会摇到森林精魄的身份卡，反之亦然）。
 ## 留空 = 用当前 run 的角色（RunState.player_class）—— 游戏内调用一律走这条。
+## exclude_ids（R342，火柴 6051）：**先把这些 id 从池子里摘掉**再抽 —— 「刷新」不该刷出
+## 玩家刚刚见过的那三张。摘完不够 count 张时**不自作聪明**：放弃排除、按原池抽
+## （宁可重复，也不能给出半组奖励）。确定性不变：同一操作序列消耗同样多个随机数。
 static func roll(repo: CardRepo, reward_type: String, count: int = CHOICES,
 		rng: RandomNumberGenerator = null, kinds: Array[String] = [],
-		cid: String = "") -> Array[CardData]:
+		cid: String = "", exclude_ids: Array[int] = []) -> Array[CardData]:
 	# R246 兼修（6033）：持有它 → 奖励（连带商店那一行）不再按职业过滤。
 	# ⚠️ 只影响「默认 cid」这一支：显式传 cid 的调用（事件 / 测试）语义不变。
 	var want_cid := cid
@@ -42,6 +45,13 @@ static func roll(repo: CardRepo, reward_type: String, count: int = CHOICES,
 			if c.kind in kinds:
 				filtered.append(c)
 		pool = filtered
+	if not exclude_ids.is_empty():
+		var kept: Array[CardData] = []
+		for c: CardData in pool:
+			if not exclude_ids.has(c.id):
+				kept.append(c)
+		if kept.size() >= count:
+			pool = kept
 	var out: Array[CardData] = []
 	if pool.is_empty() or count <= 0:
 		return out
