@@ -1422,8 +1422,10 @@ func _draw_relics() -> void:
 		var chip := Rect2(rect.position + Vector2(5, 5), Vector2(7, rect.size.y - 10))
 		draw_rect(chip, scol, true)
 		draw_rect(chip, Color(0, 0, 0, 0.55), false, 1.0)
+		# R343：传奇道具名走亮金（底是来源色 18% 覆在地图上，属深底）。
 		draw_string(_font_bold, rect.position + Vector2(14, 18), rel.relic_name,
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 18, UiTheme.FS_LABEL, Color("eee6c8"))
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 18, UiTheme.FS_LABEL,
+				rel.name_color(Color("eee6c8")))
 		if hover_ok and rect.has_point(_mouse):
 			hovered = i
 	if _relic_bar_overflowed():

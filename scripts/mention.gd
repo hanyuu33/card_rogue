@@ -240,9 +240,10 @@ static func draw_tip(canvas: CanvasItem, font: Font, font_bold: Font,
 		return 0.0
 	var p := RELIC_PAD
 	var inner := RELIC_W - p * 2.0
+	# R343：名字色 = 徽章色的「传奇提亮版」（普通道具仍是徽章色，观感不变）。
 	canvas.draw_string(font_bold, frame.position + Vector2(p, p + 16.0),
 			rel.relic_name, HORIZONTAL_ALIGNMENT_LEFT, inner,
-			UiTheme.FS_SUBHEAD, rel.badge_color())
+			UiTheme.FS_SUBHEAD, rel.name_color(rel.badge_color()))
 	canvas.draw_string(font, frame.position + Vector2(p, p + 34.0),
 			rel.tag_line(), HORIZONTAL_ALIGNMENT_LEFT,
 			inner, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)

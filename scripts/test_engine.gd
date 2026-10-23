@@ -3750,6 +3750,36 @@ func _init() -> void:
 			r289_scope_ok = false
 	check(r289_scope_ok, "奖励分档：非奖励道具不允许标成非一般档")
 
+	# ---- R343 名字色：传奇道具名与普通道具区分开（用户口径）----
+	var r343_leg := r289_repo.get_relic(RunState.HARVEST_KNIFE_RELIC_ID)   # 采集刀（传奇）
+	var r343_nor := r289_repo.get_relic(RunState.MATCH_RELIC_ID)           # 火柴（一般）
+	var r343_ink := Color("1a1c22")     # 浅底（羊皮纸）上的正文墨色
+	var r343_pale := Color("f2e6c8")    # 深底（墨蓝夜色）上的米白正文
+	check(r343_leg != null and r343_leg.is_legendary()
+			and r343_leg.name_color(r343_ink) == RelicData.NAME_LEGENDARY_ON_LIGHT,
+			"R343 名字色：传奇道具在浅底上走暗金")
+	check(r343_leg != null and r343_leg.name_color(r343_pale)
+			== RelicData.NAME_LEGENDARY_ON_DARK,
+			"R343 名字色：传奇道具在深底上走亮金")
+	check(r343_nor != null and not r343_nor.is_legendary()
+			and r343_nor.name_color(r343_ink) == r343_ink
+			and r343_nor.name_color(r343_pale) == r343_pale,
+			"R343 名字色：普通道具原样沿用调用方的正文色（深浅两种底都不变）")
+	check(RelicData.NAME_LEGENDARY_ON_LIGHT != r343_ink
+			and RelicData.NAME_LEGENDARY_ON_DARK != r343_pale
+			and RelicData.NAME_LEGENDARY_ON_LIGHT.get_luminance()
+				< RelicData.NAME_LEGENDARY_ON_DARK.get_luminance(),
+			"R343 名字色：两档金橙都区别于正文色，且亮金确实比暗金亮")
+	var r343_all_ok := true
+	for r343_r: RelicData in r289_repo.all_relics():
+		var r343_got: Color = r343_r.name_color(r343_ink)
+		if r343_r.is_legendary():
+			if r343_got != RelicData.NAME_LEGENDARY_ON_LIGHT:
+				r343_all_ok = false
+		elif r343_got != r343_ink:
+			r343_all_ok = false
+	check(r343_all_ok, "R343 名字色：全库扫过（传奇=暗金 / 其余=原色，没有漏网的）")
+
 	# ---- 道具「鸭梨」（6019）：鸭梨山大事件道具（第二层事件）----
 	check(srepo.get_relic(6019) != null and srepo.get_relic(6019).relic_name == "鸭梨",
 			"鸭梨：已登记到 relics.json（鸭梨山大事件道具）")
@@ -18468,9 +18498,11 @@ func _init() -> void:
 			and GameLayers.next_layer(GameLayers.LAYER_DEFAULT) == GameLayers.LAYER_TWO,
 			"R309 第三层：没有关卡 → next_layer(2) 仍是 0（当前流程不变）")
 	# 道具名不描边：绘制口认负数，道具栏那处明确传 -1
+	# R343：颜色那格改成 `rel.name_color(Color("4a3c14"))`（传奇名显金），
+	# 所以守卫跟着认带 name_color 的写法 —— 守的还是「最后那个参数是 -1」。
 	var r309_bsrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 	check_src(r309_bsrc.find("if outline < 0:") >= 0
-			and r309_bsrc.find('Color("4a3c14"), -1)') >= 0,
+			and r309_bsrc.find('rel.name_color(Color("4a3c14")), -1)') >= 0,
 			"R309 道具名：去描边（outline = -1），绘制口支持负数")
 
 	# ================================================================

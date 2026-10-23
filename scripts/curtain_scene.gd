@@ -508,9 +508,10 @@ func _draw_tip() -> void:
 	var rel: RelicData = m["relic"]
 	_tip.draw_rect(rect, Color(0.10, 0.11, 0.15, 0.96), true)
 	_tip.draw_rect(rect, rel.badge_color(), false, 2.0)
+	# R343：传奇道具名走亮金（提示框是深底）。
 	_tip.draw_string(_font_bold, rect.position + Vector2(16, 28), rel.relic_name,
 			HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 32.0, UiTheme.FS_SUBHEAD,
-			Color("f2e6c8"))
+			rel.name_color(Color("f2e6c8")))
 	_tip.draw_string(_font, rect.position + Vector2(16, 50), "道具 · %s" % rel.kind,
 			HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 32.0, UiTheme.FS_CAPTION,
 			rel.badge_color())

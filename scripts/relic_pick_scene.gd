@@ -89,8 +89,10 @@ func _draw() -> void:
 		draw_string(_font_bold, band.position + Vector2(0, 23), "道具 · %s" % rel.kind,
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_BODY, rel.badge_color())
 		# 名称
+		# R343：传奇道具名走亮金（面板是深底）。
 		draw_string(_font_bold, rect.position + Vector2(0, 78), rel.relic_name,
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_HEADING, Color("f2ead0"))
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_HEADING,
+				rel.name_color(Color("f2ead0")))
 		# 描述（字符级换行）
 		var y := 116.0
 		for line: String in _wrap_text(rel.desc, rect.size.x - 40.0, 15):

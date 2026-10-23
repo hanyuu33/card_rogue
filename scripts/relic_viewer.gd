@@ -288,7 +288,7 @@ func _on_hover_draw() -> void:
 				Color(0, 0, 0, 0.5), false, 1.0)
 		_hover_layer.draw_string(_font_bold, r.position + Vector2(PAD * 0.6 + 12, y + 15),
 				"「%s」" % RunState.relic_display_name(rel.id), HORIZONTAL_ALIGNMENT_LEFT,
-				180.0, UiTheme.FS_LABEL, Color("f4eeda"))
+				180.0, UiTheme.FS_LABEL, rel.name_color(Color("f4eeda")))
 		_hover_layer.draw_string(_font, r.position + Vector2(PAD * 0.6 + 196, y + 15),
 				str(b["tag"]), HORIZONTAL_ALIGNMENT_LEFT, 180.0, UiTheme.FS_CAPTION, Color("9a927f"))
 		var lines: PackedStringArray = b["lines"]
@@ -367,9 +367,10 @@ func _on_panel_draw() -> void:
 		_panel.draw_rect(Rect2(px + PAD, y + 4, 10, ROW_H - 14), scol, true)
 		_panel.draw_rect(Rect2(px + PAD, y + 4, 10, ROW_H - 14), Color(0, 0, 0, 0.45), false, 1.0)
 		# 名称 + 来源标签 + 生效时机（字号比速览浮层大一档）
+		# R343：名字色走 `RelicData.name_color` —— 传奇金橙、普通沿用原来的墨色。
 		_panel.draw_string(_font_bold, Vector2(px + PAD + 22, y + 22),
 				"「%s」" % RunState.relic_display_name(rel.id),
-				HORIZONTAL_ALIGNMENT_LEFT, 300, P_NAME, Color("2f2a20"))
+				HORIZONTAL_ALIGNMENT_LEFT, 300, P_NAME, rel.name_color(Color("2f2a20")))
 		_panel.draw_string(_font, Vector2(px + PAD + 216, y + 22),
 				"（%s）" % str(_tag_of(e)), HORIZONTAL_ALIGNMENT_LEFT, 300, P_TAG, Color("8a8172"))
 		var lines := _row_lines(e)

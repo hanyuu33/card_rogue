@@ -102,6 +102,26 @@ func tier_color() -> Color:
 	return Color("9aa0a6")
 
 
+## 名字色（R343，用户口径「传奇道具的名字颜色要和普通道具区分开」）。
+##
+## 传奇 = 金橙，普通道具**原样返回调用方给的正文色**（不抢眼、也不改现有观感）。
+## 名字会画在两种底上，所以分两档：
+##   · 浅底（羊皮纸 / 米白，正文是深墨 `#1a1c22` 那一类）→ 用**暗金**（亮金压米白会糊成一团）；
+##   · 深底（墨蓝夜色，正文是米白 `#f2e6c8` 那一类）→ 用**亮金**。
+## 判据 = 调用方原本的正文色 `base` 的亮度：亮 → 说明字是浅色的，底就是深的。
+## 消费方 = 奖励列表 / 奖励详情 / 道具图鉴（列表 + 浮层）/ 地图道具栏 / 起点三选一 /
+##          幕间提示 / 战斗道具栏 / 战斗道具面板 / 记录页 / 提及浮窗。
+const NAME_LEGENDARY_ON_LIGHT := Color("a85a10")   # 浅底上的暗琥珀金（对 #efece4 ≈ 4.3:1）
+const NAME_LEGENDARY_ON_DARK := Color("f2bb45")    # 深底上的亮金
+
+
+func name_color(base: Color) -> Color:
+	if not is_legendary():
+		return base
+	return NAME_LEGENDARY_ON_DARK if base.get_luminance() > 0.45 \
+			else NAME_LEGENDARY_ON_LIGHT
+
+
 func badge_color() -> Color:
 	## 玩家看到的徽章色**唯一口**：传奇一律橙金（盖过来源色），其余沿用来源色。
 	## 消费方 = 奖励悬浮窗 / 道具图鉴（浮层 + 列表）/ 提及浮窗 / 地图道具面板 / 记录页。

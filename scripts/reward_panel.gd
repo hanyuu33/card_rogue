@@ -251,6 +251,15 @@ func _entry_color(e: Dictionary) -> Color:
 	return UiTheme.ACCENT_GOLD
 
 
+func _entry_name_color(e: Dictionary, base: Color) -> Color:
+	## R343：条目名字色 —— 传奇道具走金橙（`RelicData.name_color`），其余保持调用方原色。
+	## 界面里**不许**自己判 `tier == 传奇` 挑色，档位色的唯一口在数据层。
+	if str(e.get("kind", "")) != "relic":
+		return base
+	var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
+	return r.name_color(base) if r != null else base
+
+
 func _state_label(e: Dictionary) -> String:
 	match str(e.get("state", RunState.REWARD_PENDING)):
 		RunState.REWARD_CLAIMED:
@@ -517,7 +526,7 @@ func _draw_row(i: int, rr: Rect2) -> void:
 	# 名称 + 标签
 	_root.draw_string(_font_bold, Vector2(rr.position.x + 24, rr.position.y + 34),
 			"「%s」" % _entry_name(e), HORIZONTAL_ALIGNMENT_LEFT, 560,
-			UiTheme.FS_SUBHEAD, UiTheme.INK_900)
+			UiTheme.FS_SUBHEAD, _entry_name_color(e, UiTheme.INK_900))
 	_root.draw_string(_font, Vector2(rr.position.x + 24, rr.position.y + 60),
 			_entry_tag(e), HORIZONTAL_ALIGNMENT_LEFT, 560,
 			UiTheme.FS_CAPTION, UiTheme.INK_600)
@@ -645,7 +654,7 @@ func _draw_relic() -> void:
 	_draw_btn(_btn_back_rect(), "← 返回列表", false, false)
 	_root.draw_string(_font_bold, Vector2(r.position.x + 180, r.position.y + 40),
 			"「%s」" % _entry_name(e), HORIZONTAL_ALIGNMENT_LEFT, 520,
-			UiTheme.FS_HEADING, UiTheme.INK_900)
+			UiTheme.FS_HEADING, _entry_name_color(e, UiTheme.INK_900))
 	# R206：改半透明奶油底（透出羊皮卷纹理）+ **高度随内容自适应** —— 与卡牌三选一的
 	# 详情条同一语言。旧版是**实心** `f0ede4` 铺满整块，短描述就在卷轴上摊一张白纸，
 	# 和两边卷边完全脱节；现在内容少就收短，长描述仍然吃满（超出照样滚动）。

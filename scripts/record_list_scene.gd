@@ -289,7 +289,9 @@ func _relic_entries(rec: Dictionary) -> Array:
 		var rel := repo.get_relic(int(v))
 		if rel == null:
 			continue
-		out.append({"name": rel.relic_name, "col": rel.badge_color()})
+		# R343：名字另配一色（传奇金橙）—— `col` 仍是左侧圆点的徽章色。
+		out.append({"name": rel.relic_name, "col": rel.badge_color(),
+				"ncol": rel.name_color(Color("d8d3c6"))})
 	return out
 
 
@@ -393,7 +395,8 @@ func _draw_detail() -> void:
 			var e: Dictionary = relics[i]
 			draw_circle(Vector2(x0 + 5.0, ly + 8.0), 4.0, e["col"])
 			draw_string(_font, Vector2(x0 + 18.0, ly + 14.0), str(e["name"]),
-					HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_LABEL, Color("d8d3c6"))
+					HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_LABEL,
+					e.get("ncol", Color("d8d3c6")))
 			ly += 22.0
 		if relics.size() > max_rel:
 			draw_string(_font, Vector2(x0 + 18.0, ly + 14.0),

@@ -752,6 +752,15 @@ func _ready() -> void:
 		# 演示：右栏道具栏（截图验证用；放在 args 循环后，避免被 --level 重建覆盖）
 		engine.self_relics = [6001, 6005, 6010]   # 初始白 / 奖励黄 / 事件紫
 		_whisper_txt = "本回合造成的伤害 +1"
+	if "--r343names" in args and engine != null:
+		# R343 出图：道具栏 / 道具面板里「传奇 vs 普通」的名字色对比。
+		# 出图命令：`-- --screenshot --r343names --shotframe 600`
+		#           加 `--relicpanel` 看放大的道具面板（名字与标签是分开画的）。
+		engine.self_relics = [RunState.MATCH_RELIC_ID, RunState.HARVEST_KNIFE_RELIC_ID]
+		if "--relicpanel" in args:
+			_relics_visible = true
+		status_text = "传奇「采集刀」名字金橙，普通「火柴」仍是深棕"
+		queue_redraw()
 	if "--layer2" in args and engine != null:
 		# 演示：第二层起始道具（截图验证用）—— 生蛋鸭开场鸭蛋 + 冰淇淋与汽水开场 -3 生命
 		engine.self_relics = [6016, 6018]
@@ -11192,11 +11201,13 @@ func _draw_relic_bar() -> void:
 		draw_rect(chip, Color(0, 0, 0, 0.5), false, 1.0)
 		# R309：**不描边**（outline = -1）—— 8~10 号字上 2px 描边会把笔画糊掉，
 		# 「雕像（3）」这种带括号的名字尤其看不清。
+		# R343：传奇道具名走**暗金**（底是来源色向白混 62% 的浅实色 → 亮金会糊），
+		# 普通道具仍是原来的深棕。判据在 `RelicData.name_color()`，这里不写特例。
 		_draw_string_center(_font_bold, UiTheme.FS_MICRO,
 				RunState.relic_display_name(ids[i]),
 				Vector2(rect.position.x + 12.0 + (rect.size.x - 12.0) / 2,
 						rect.position.y + 14.0),
-				Color("4a3c14"), -1)
+				rel.name_color(Color("4a3c14")), -1)
 	# 道具太多装不下 → 末位换成「+N 点击查看全部」摘要行（点道具栏打开浏览面板）
 	if n_rel > shown_r:
 		_draw_more_tile(_relic_rect(shown_r), "+%d" % (n_rel - shown_r), "点击查看全部")
@@ -12373,15 +12384,18 @@ func _relic_panel_rows() -> Array:
 		var desc := rel.desc if rel != null else ""
 		var scol := rel.badge_color() if rel != null else Color.GRAY
 		var tag := rel.tag_line() if rel != null else "道具"
-		rows.append(["「%s」（%s）" % [nm, tag],
-				_wrap_lines(_font, RELIC_P_DESC, desc, RELIC_PANEL_W - 96.0), scol])
+		# R343：名字与标签**分开画** —— 传奇道具名要单独换色，混在一整串里就得整串变金
+		#（标签也跟着金，「来源 · 时机」就不好读了）。位置按名字实际宽度顺排。
+		var ncol: Color = rel.name_color(Color("4a3c14")) if rel != null else Color("4a3c14")
+		rows.append(["「%s」" % nm, "（%s）" % tag,
+				_wrap_lines(_font, RELIC_P_DESC, desc, RELIC_PANEL_W - 96.0), scol, ncol])
 	return rows
 
 
 func _relic_panel_rows_height() -> float:
 	var h := 0.0
 	for r in _relic_panel_rows():
-		h += RELIC_P_ROWH + (r[1] as PackedStringArray).size() * RELIC_P_LINE + 10.0
+		h += RELIC_P_ROWH + (r[2] as PackedStringArray).size() * RELIC_P_LINE + 10.0
 	return h
 
 
@@ -12410,15 +12424,21 @@ func _draw_relic_panel() -> void:
 		return
 	var y := py + 56.0 - _relic_scroll
 	for r in rows:
-		var name_line: String = r[0]
-		var dlines: PackedStringArray = r[1]
-		var scol: Color = r[2]
+		var name_str: String = r[0]
+		var tag_str: String = r[1]
+		var dlines: PackedStringArray = r[2]
+		var scol: Color = r[3]
+		var ncol: Color = r[4]
 		var row_h: float = RELIC_P_ROWH + dlines.size() * RELIC_P_LINE + 10.0
 		# 只画面板内可见的行（滚出面板的内容自然被面板矩形盖不住 → 手动跳过）
 		if y + row_h > py + 46.0 and y < py + ph - 8.0:
 			draw_rect(Rect2(px + 16, y - 16, 10, row_h - 8.0), scol, true)
-			_draw_string_nw(_font_bold, RELIC_P_NAME, name_line,
-					Vector2(px + 36, y), Color("4a3c14"))
+			_draw_string_nw(_font_bold, RELIC_P_NAME, name_str,
+					Vector2(px + 36, y), ncol)
+			var nw: float = _font_bold.get_string_size(name_str,
+					HORIZONTAL_ALIGNMENT_LEFT, -1, RELIC_P_NAME).x
+			_draw_string_nw(_font_bold, RELIC_P_NAME, tag_str,
+					Vector2(px + 36 + nw + 6.0, y), Color("4a3c14"))
 			for d_i in dlines.size():
 				_draw_string_nw(_font, RELIC_P_DESC, dlines[d_i],
 						Vector2(px + 36, y + RELIC_P_ROWH - 8.0 + d_i * RELIC_P_LINE),
