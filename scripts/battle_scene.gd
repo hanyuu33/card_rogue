@@ -1900,6 +1900,19 @@ func _ready() -> void:
 				r274_demo_fort.health]
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r327funeral" in args and engine != null:
+		# 演示（R327）：效果区挂一张「送葬」，再当场打掉己方一个树人 → 抽 1 张。
+		# 手牌不清空（留几张才看得出「多了一张」）；能量给 6，效果区那张是白送的。
+		RunState.player_class = PlayerClass.DRUID
+		engine.state.energy = 6
+		engine.state.effects.append(CardData.from_dict(repo.get_card(9175).to_dict()))
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		# ⚠️ 击杀动作**不在这里**：放在截图前 40 帧（见 `_demo_tick`），
+		#    否则 `--shotframe 600` 时 1600ms 的「送葬 +N 张」飘字早就消失了。
+		_hover_hand = -1
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--r326chimera" in args and engine != null:
 		# 演示（R326）：嵌合暴君入场「融合」→ **每破坏 1 张回复 1 费**（这条不写进卡面文本）。
 		# 摆两张己方树人接通、手上放暴君：4 费打出 → 破坏 2 张、回 2 费（能量 6 → 4）。
@@ -2576,6 +2589,16 @@ func _demo_tick() -> void:
 		# 而是弹出真实卡面（触屏路径是「点一下钉住」，走 `_on_left_click`）。
 		var rm: Dictionary = _mention_hits[0]
 		_on_hover((rm["rect"] as Rect2).get_center())
+	if _shot_pending and "--r327funeral" in _demo_args \
+			and _demo_frame == _shot_frame - 40 and engine != null:
+		# R327 出图：截图前 40 帧（≈0.67s）再打掉那个树人 —— 既躲过开局横幅
+		# （`--shotframe 600`），又让「送葬 +1 张」飘字还在屏上（1600ms 生命周期）。
+		engine.damage_cell(Vector2i(4, 1), 99, "演示")
+		engine._destroy_dead()
+		# 窗口开局时系统鼠标会投一次 MouseMotion（正好压在树人身上）→ 左栏详情
+		# 会盖住「效果区」。出图前把悬停 + 选中一起清掉（左栏也认 `selection` 兜底）。
+		_clear_hover_state()
+		selection = null
 	if _shot_pending and "--r288knife" in _demo_args \
 			and _demo_frame == _shot_frame - 12 and engine != null:
 		# 真走引擎结算：主刀 `_op_deal_damage` + 两跳 `_hit_unit`，
@@ -9618,6 +9641,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_delayed.append({"at": hide_at, "kind": "destroy_fx",
 					"data": {"center": center, "sc": _grid_scroll,
 							"card": data["card"], "cell": cell}})
+		"funeral":
+			# R327 送葬（9175）：**任意一方**单位被破坏 → 抽 1 张卡。抽牌本身有手牌动画，
+			# 这里只在手牌上方飘一句「送葬 +N 张」，让玩家知道这张牌是**效果卡**给的。
+			var fn_drawn := int(data.get("drawn", 0))
+			if fn_drawn > 0:
+				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 62),
+						"text": "送葬 +%d 张" % fn_drawn,
+						"col": UiTheme.KIND_EFFECT, "start": n, "dur": 1600, "size": 20})
 		"blast":
 			# 爆炎鸭亡语 / 爆炸陷阱（R50）：尸体周围四格炸出的火焰（不分敌我）—— 同特效同源。
 			# 起播稍微延后一点，读起来就是「先倒下 → 再爆开」。

@@ -1550,6 +1550,16 @@ const DARK_LORD_SPEED_PER_ASSASSIN:= 1  # 每个存活暗杀者 +1 速
 const PHASE_TRAIT:= "穿行"              # 移动无视单位阻挡
 const ASSASSIN_SUMMON_TRAIT:= "暗杀召唤"
 
+# ---- R327：送葬（9175，森林精魄 2 费稀有·效果）----
+# 「场上每有一个单位被破坏，抽 1 张卡。」挂在己方效果区，在**全局唯一破坏口**
+# `_destroy` 尾部结算（所以亡语、溢出、超负荷真死、思想钢印救回都算）。
+#   * 任何一方的单位都算 —— 卡面写的是「场上」，不限定敌我。
+#   * 效果区**多张不叠加**（沿用效果区惯例：卡面没写「可叠加」就只算一张）。
+#   * 「思想钢印」救回手卡的那张**也算被破坏**（与嵌合暴君回费同口径）。
+const FUNERAL_ID:= 9175
+const FUNERAL_TRAIT:= "送葬"
+const FUNERAL_DRAW:= 1            # 每破坏 1 个单位抽几张
+
 
 func _init(state_: FieldState) -> void :
 	state = state_
@@ -10869,6 +10879,7 @@ func _destroy(cell: Vector2i) -> void :
 		state.hand.append(p.card)
 		_log("思想钢印：%s 被破坏 → 回到手卡（本场第一次）" % p.card.card_name)
 		action.emit("self_heal", {"healed": 0, "hp": state.hp_self})
+		_funeral_tick(p.card.card_name)   # R327：救回手卡也算「被破坏」
 		return
 	if p.owner == SIDE_SELF:
 		# R227：带「次元」字段的**单位**同样离场即消失（此前只有「离场消失」trait 会走这条；
@@ -10932,6 +10943,24 @@ func _destroy(cell: Vector2i) -> void :
 	_refresh_hecaton(p.owner)
 	# R271 谟涅摩叙涅：场上少了一张（可能是它自己）→ 光环立刻重算。
 	_refresh_mnemosyne()
+	# R327 送葬：放在**所有**离场结算之后 —— 先炸（亡语/回收/光环重算）再抽牌，
+	# 抽到的牌不会插进亡语动画中间。判据只看「己方效果区有没有这张」。
+	_funeral_tick(p.card.card_name)
+
+
+func _funeral_tick(source_name: String) -> void :
+	## R327 送葬（9175）：场上每有一个单位被破坏 → **抽 1 张卡**。
+	## ⚠️ 只认己方效果区（`state.effects`），敌方效果区即使有同名卡也不给玩家抽。
+	## ⚠️ 多张不叠加 → 用 `_zone_has`（有没有）而不是 `_trait_copies`（有几张）。
+	## 抽卡一律走 `_draw_many` 唯一口：手牌满时会 burn 进弃牌区并播动画，不会静静吞掉。
+	if not _zone_has(state.effects, FUNERAL_TRAIT):
+		return
+	var got:= _draw_many(FUNERAL_DRAW)
+	if got > 0:
+		_log("送葬：%s 被破坏 → 抽 %d 张卡" % [source_name, got])
+	else:
+		_log("送葬：%s 被破坏 → 牌库与弃牌区都空，抽不到牌" % source_name)
+	action.emit("funeral", {"name": source_name, "drawn": got})
 
 
 

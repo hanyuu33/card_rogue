@@ -5313,6 +5313,27 @@
       "target_mode": "none",
       "color": "紫",
       "image": ""
+    },
+    {
+      "id": 9175,
+      "name": "送葬",
+      "kind": "效果",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [
+        "送葬"
+      ],
+      "affixes": [],
+      "effect_text": "场上每有一个单位被破坏，抽 1 张卡。",
+      "target_mode": "none",
+      "color": "绿",
+      "image": ""
     }
   ]
 }
