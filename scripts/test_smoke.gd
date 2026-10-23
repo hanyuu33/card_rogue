@@ -452,6 +452,44 @@ func _check_duck_blood_instant(scene: Variant) -> void:
 	p._claim_entry(0)
 	if routed.size() != 1:
 		_smoke_fail("R216 普通道具：不需要选卡却转页了（%s）" % str(routed))
+	# R340（用户报「打完 Boss 拿完道具直接进二层、没拿卡牌奖励」）：
+	# 同一批里「道具 + 卡牌三选一」都在时，领道具**不许**立刻跳走 ——
+	# 跳走会先调宿主 `_settle_before_pick()` → `advance_layer()`，卡牌还没展示就换层了。
+	# 先把道具从身上摘掉：`gain_relic` 对「已拥有」直接 return，不置 `pending_relic`。
+	RunState.relics.erase(RunState.DUCK_BLOOD_RELIC_ID)
+	RunState.pending_relic = -1
+	RunState.pending_relic_drop = -1
+	RunState.pending_rewards = [
+			{"kind": "relic", "id": RunState.DUCK_BLOOD_RELIC_ID,
+					"state": RunState.REWARD_PENDING},
+			{"kind": "cards", "type": "boss", "kinds": [], "candidates": [8001, 8002, 9018],
+					"picked": -1, "state": RunState.REWARD_PENDING}]
+	routed.clear()
+	hooked[0] = false
+	var deck_before: Array = RunState.deck_ids.duplicate()
+	p.open()
+	p._claim_entry(0)
+	var bad340 := ""
+	if RunState.pending_relic != RunState.DUCK_BLOOD_RELIC_ID:
+		bad340 = "领鸭血后应置待选卡，实际 %d" % RunState.pending_relic
+	elif not routed.is_empty():
+		bad340 = "本批还有卡牌三选一没处理，却跳走了（%s）" % str(routed)
+	elif bool(hooked[0]):
+		bad340 = "不该调用宿主收尾（会在卡牌奖励之前抢先换层）"
+	elif RunState.pending_reward_count() != 1:
+		bad340 = "卡牌条目应仍在待领，实际 %d" % RunState.pending_reward_count()
+	if bad340 == "":
+		# 把这一组的卡选掉 = 本批真正结束 → 这时才允许转去卡组选择页
+		RunState.pick_pending_card(1, 9018)
+		RunState.deck_ids.assign(deck_before)   # 还原卡组，别污染后面的用例
+		if RunState.pending_reward_count() != 0:
+			bad340 = "选完卡后待领应清零，实际 %d" % RunState.pending_reward_count()
+		elif RewardPanel.route_target_after_pick() != "res://scenes/deck_edit.tscn":
+			bad340 = "本批处理完之后应允许转卡组选择页"
+	if bad340 != "":
+		_smoke_fail("R340 Boss 奖励：领道具不该越过卡牌三选一换层 —— " + bad340)
+	else:
+		print("SMOKE OK R340 奖励批次：本批没处理完不跳走，处理完才转卡组选择页")
 	p.route_fn = Callable()
 	p.on_before_pick = Callable()
 	RunState.pending_relic = -1
