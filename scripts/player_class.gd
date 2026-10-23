@@ -22,6 +22,32 @@ const MECH := "机械之心"          # R82：0 费素体滚雪球 + 「升级�
 const BASE_COMMON: Array[int] = [8001, 8001, 8001, 8001, 8001,
 		8002, 8002, 8002, 8002, 8002]
 
+## R328：**公用初始卡**（去重后的 BASE_COMMON）—— 木栅栏 8001 / 攻击 8002。
+##
+## 归属口径：这两张在 cards.json 里 `class` **留空**（= 公用，不归任何角色），
+## 但三个职业的初始卡组都各带 5 张（见 BASE_COMMON）。
+##
+## ⚠️ 它们和「事件 / 诅咒」那类 class 留空的卡**不一样**：
+##   公用初始卡在战斗中吃**当前职业**的颜色与卡图（`CardFace.paper_tint` /
+##   `CardFace.art_for` 都走 `skin_class()`），事件 / 诅咒仍走中性灰。
+const BASE_COMMON_IDS: Array[int] = [8001, 8002]
+
+
+static func is_base_common(id: int) -> bool:
+	## 是不是「公用初始卡」（三职业通用、战斗表现跟随当前职业）。
+	return BASE_COMMON_IDS.has(id)
+
+
+static func skin_class(id: int, own_class: String) -> String:
+	## 卡面**表现**该用哪个职业的皮（颜色 + 卡图）—— **唯一口**。
+	##   公用初始卡（8001/8002）→ `RunState.player_class`（当前在玩谁就穿谁的皮）；
+	##   其它卡 → 原样返回自己的 `card_class`（class 空的仍走中性灰）。
+	## 为什么不用 `card_class` 判断：公用初始卡的 class 是空的，
+	## 直接读字段会让三职业的卡面都变成灰纸 —— 这正是 R328 要修的问题。
+	if is_base_common(id):
+		return RunState.player_class
+	return own_class
+
 ## 玩家初始最大生命的**基础值**（R182 起按职业加加成）。
 ## 角色选择界面读 base_hp_of 展示，RunState.start_run 用它初始化玩家生命。
 const BASE_HP := 50

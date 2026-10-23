@@ -159,9 +159,13 @@ static func _draw_name_marquee(canvas: CanvasItem, font: Font, sz: int, text: St
 	canvas.draw_string(font, Vector2(fx, baseline), text.substr(first, last - first + 1),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, sz, col)
 
-# R185：8002「攻击」卡图按当前职业切换（森林精魄=爪击 / 暗影刺客=匕首刺 / 机械之心=浮游炮）。
-const ATTACK_ART_ID := 8002
-const ATTACK_ART_SUFFIX := {"森林精魄": "forest", "暗影刺客": "shadow", "机械之心": "mech"}
+# ── 【公用初始卡的职业皮】（R185 起 / R328 扩到木栅栏）──
+## 木栅栏 8001 与攻击 8002 是**三职业共用的初始卡**（归属 class 留空），
+## 但卡面要「吃本职业的色 + 本职业的图」—— 取哪套由 `PlayerClass.skin_class()` 决定。
+## 这里只负责「职业 → 文件名后缀」的映射（`<id>_forest.png` 等）。
+## 缺图自动回退 `<id>.png`（见 art_for），所以新增变体图不需要改代码。
+const ART_VARIANT_SUFFIX := {"森林精魄": "forest", "暗影刺客": "shadow", "机械之心": "mech"}
+const ATTACK_ART_ID := 8002       # 旧名保留（test_smoke 引用了它）
 
 
 ## ── 【卡底面的职业色】（R267）──
@@ -181,9 +185,11 @@ const CLASS_PAPER_MIX := 0.60
 
 static func paper_tint(card: CardData) -> Color:
 	## 卡底面的乘色（唯一口）。`Color.WHITE` = 不上色。
+	## R328：取色过 `PlayerClass.skin_class()` —— 公用初始卡（木栅栏/攻击）穿**当前职业**色，
+	## 其余卡仍按自身 `card_class`（事件 / 诅咒留空的照旧中性灰）。
 	if card == null:
 		return Color.WHITE
-	var c: Color = UiTheme.class_color(card.card_class)
+	var c: Color = UiTheme.class_color(PlayerClass.skin_class(card.id, card.card_class))
 	if c.a <= 0.0:
 		return Color.WHITE
 	return c.lerp(Color.WHITE, CLASS_PAPER_MIX)
@@ -192,11 +198,12 @@ static func paper_tint(card: CardData) -> Color:
 static func art_for(id: int, sleeping := false) -> Texture2D:
 	# sleeping=true 时优先取沉睡专用图 `<id>_sleep.png`（R182 恶魔鸭沉睡状态）；
 	# 沉睡图缺失则回退普通卡图 —— 不空白、不报错。
-	# 8002「攻击」按 RunState.player_class 换图；职业图缺失回退 `8002.png` 通用图；
-	# 图鉴等非 run 场景 player_class 为默认值（森林精魄），显示爪击版。
+	# 公用初始卡（8001 木栅栏 / 8002 攻击）按 RunState.player_class 换图；
+	# 职业图缺失回退 `<id>.png` 通用图（8001 目前还没有职业变体，走这条回退）；
+	# 图鉴等非 run 场景 player_class 为默认值（森林精魄），显示森林版。
 	var suffix := ""
-	if id == ATTACK_ART_ID:
-		suffix = "_" + String(ATTACK_ART_SUFFIX.get(RunState.player_class, "forest"))
+	if PlayerClass.is_base_common(id):
+		suffix = "_" + String(ART_VARIANT_SUFFIX.get(RunState.player_class, "forest"))
 	var key := str(id) + suffix + ("_sleep" if sleeping else "")
 	if not _art_cache.has(key):
 		var path := "res://assets/pics/%d.png" % id
@@ -512,7 +519,8 @@ static func banner_cols(card: CardData) -> Array:
 	## R277：**无图回退横幅**也按卡的**归属**上色 —— 189 张卡还没有卡图，横幅就是它们的
 	##    卡面，颜色不跟归属走的话「敌人红 / 公用灰」在这些卡上根本看不见
 	##    （原来敌人卡取卡种色、公用卡取卡种色，一张盟友卡永远是绿的）。
-	var c: Color = UiTheme.class_color(card.card_class)
+	# R328：与 paper_tint 同一条口径（公用初始卡跟当前职业），两处不能各写一份。
+	var c: Color = UiTheme.class_color(PlayerClass.skin_class(card.id, card.card_class))
 	if c.a <= 0.01:
 		c = UiTheme.kind_color(card.kind)
 	var w := Color(1, 1, 1)

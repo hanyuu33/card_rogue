@@ -277,7 +277,7 @@
       "move_speed": 0,
       "rarity": 3,
       "group": "player",
-      "class": "森林精魄",
+      "class": "",
       "traits": [
         "工事",
         "防御",
@@ -295,7 +295,7 @@
       "cost": 1,
       "rarity": 3,
       "group": "player",
-      "class": "森林精魄",
+      "class": "",
       "traits": [
         "攻击"
       ],

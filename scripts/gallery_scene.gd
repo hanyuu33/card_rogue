@@ -346,7 +346,11 @@ func _refresh_detail() -> void:
 	var c: CardData = _selected
 	detail_name.text = c.card_name
 	# R77：详情里带上职业（图鉴现在支持按职业查了，写出来才看得到筛选是否对）
-	var cls_txt: String = c.card_class if c.card_class != "" else "无归属"
+	# R328：class 留空的卡分两种 —— 公用初始卡（木栅栏/攻击，三职业共用）写「公用初始」，
+	# 其余（事件产出 / 诅咒）仍写「无归属」，别让这两类在详情里混成同一个标签。
+	var cls_txt: String = c.card_class
+	if cls_txt == "":
+		cls_txt = "公用初始" if PlayerClass.is_base_common(c.id) else "无归属"
 	detail_kind.text = "%s · %s · %d 费 · %s · %s" % [
 			"玩家" if _group == "player" else "敌方", _kind_label(c), c.cost,
 			c.color, cls_txt]

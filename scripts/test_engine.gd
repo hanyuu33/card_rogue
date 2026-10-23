@@ -7693,18 +7693,18 @@ func _init() -> void:
 	check(dr_cls_bad.is_empty() and dr_cls_enemy_bad.is_empty(),
 			"角色系统：非敌方卡 class 都在可选角色内（或留空 = 通用卡）、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
-	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 69
+	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 67
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 63
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 62
 			and int(dr_cls_count.get("敌人", 0)) == 54 - 1
-			and int(dr_cls_count.get("", 0)) == 12,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 69 / 63 / 62 / 53；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
+			and int(dr_cls_count.get("", 0)) == 14,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 67 / 63 / 62 / 53；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
 				int(dr_cls_count.get("敌人", 0))])
-	check(int(dr_cls_count.get("", 0)) == 12,
-			"角色系统：class 留空（公用卡）= 疲惫 9149 + 破绽 9154 + 罐子 9157 / 9158 + R277 六张事件 / 道具产出卡 + R306 许愿 / 烈火之剑（实际 %d）"
+	check(int(dr_cls_count.get("", 0)) == 14,
+			"角色系统：class 留空（公用）= 公用初始卡 8001/8002 + 疲惫 9149 + 破绽 9154 + 罐子 9157 / 9158 + R277 六张事件 / 道具产出卡 + R306 许愿 / 烈火之剑（实际 %d）"
 			% int(dr_cls_count.get("", 0)))
 	check(PlayerClass.ids() == ["森林精魄", "暗影刺客", "机械之心"]
 			and PlayerClass.default_id() == "森林精魄",
@@ -8314,14 +8314,54 @@ func _init() -> void:
 	var r45_cls_count := {}
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
-	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 69
+	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 67
 			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 63,
-			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1）"
+			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R328 森林精魄 -2 = 木栅栏/攻击改公用）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
-	check(int(r45_cls_count.get("", 0)) == 12,
-			"R223/R231/R245/R277/R306：class 留空（公用卡）= 诅咒 9149/9154/9157 + 罐子 9158 + 事件产出 9018 金属龙 / 9022 鸭蛋 / 9023 英雄 / 9050 鲸鱼之怒 / 8065 货物 / 9072 铁栅栏 / 9168 许愿 / 9169 烈火之剑（%d 张）"
+	check(int(r45_cls_count.get("", 0)) == 14,
+			"R223/R231/R245/R277/R306/R328：class 留空（公用）= 公用初始卡 8001/8002 + 诅咒 9149/9154/9157 + 罐子 9158 + 事件产出 9018 金属龙 / 9022 鸭蛋 / 9023 英雄 / 9050 鲸鱼之怒 / 8065 货物 / 9072 铁栅栏 / 9168 许愿 / 9169 烈火之剑（%d 张）"
 			% int(r45_cls_count.get("", 0)))
+
+	# ---- R328：公用初始卡（木栅栏 8001 / 攻击 8002）----
+	# 归属 = 公用（class 留空），但卡面吃**当前职业**的颜色与卡图（PlayerClass.skin_class）。
+	# 判据三件套：① 数据上 class 空 + rarity 3；② BASE_COMMON_IDS 与 BASE_COMMON 去重后一致；
+	#             ③ 三职业的卡底色互不相同（且不是事件/诅咒那种中性灰）。
+	var r328_uniq: Array[int] = []
+	for r328_id: int in PlayerClass.BASE_COMMON:
+		if not r328_uniq.has(r328_id):
+			r328_uniq.append(r328_id)
+	check(r328_uniq == PlayerClass.BASE_COMMON_IDS,
+			"R328：BASE_COMMON_IDS 必须 = BASE_COMMON 去重（%s vs %s）"
+			% [str(r328_uniq), str(PlayerClass.BASE_COMMON_IDS)])
+	var r328_cards_ok := true
+	var r328_bad := ""
+	for r328_cid: int in PlayerClass.BASE_COMMON_IDS:
+		var r328_c: CardData = repo.get_card(r328_cid)
+		if r328_c == null or r328_c.card_class != "" or r328_c.rarity != 3:
+			r328_cards_ok = false
+			r328_bad += "%d " % r328_cid
+	check(r328_cards_ok,
+			"R328：公用初始卡 8001/8002 的 class 必须留空且 rarity=3（异常：%s）" % ("无" if r328_cards_ok else r328_bad))
+	var r328_prev := RunState.player_class
+	var r328_tints := {}
+	var r328_tint_ok := true
+	var r328_grey: Color = UiTheme.class_color("").lerp(Color.WHITE, CardFace.CLASS_PAPER_MIX)
+	for r328_cls in PlayerClass.ids():
+		RunState.player_class = r328_cls
+		var r328_fence: CardData = repo.get_card(8001)
+		var r328_atk: CardData = repo.get_card(8002)
+		var r328_t: Color = CardFace.paper_tint(r328_fence)
+		r328_tints[r328_t] = r328_cls
+		if r328_t == Color.WHITE or r328_t == r328_grey \
+				or CardFace.paper_tint(r328_atk) != r328_t:
+			r328_tint_ok = false
+	RunState.player_class = r328_prev
+	check(r328_tint_ok,
+			"R328：公用初始卡按当前职业上色 —— 木栅栏与攻击同色、且都不是中性灰 / 不上色")
+	check(r328_tints.size() == PlayerClass.ids().size(),
+			"R328：三职业的公用初始卡卡底色互不相同（实际 %d 种，应为 %d）"
+			% [r328_tints.size(), PlayerClass.ids().size()])
 
 	# ---- R47：难度档位 / 事件遭遇战计入难度 / 奖励池角色过滤 / 荒野形态强化 ----
 

@@ -562,6 +562,32 @@ func _ready() -> void:
 			# 「拖向敌方那半场时放大 / 拖回我方时还原大小」）。
 			_grid_intro_t = -1.0
 			_grid_zoom = clampf(float(args[i + 1]), 1.0, 2.0)
+	if "--r328common" in args and engine != null:
+		## R328 出图：**公用初始卡**（木栅栏 8001 / 攻击 8002）的卡面颜色 + 卡图跟着当前职业走。
+		## 三张对拍（其余条件完全相同，只有职业不同）：
+		##   `battle.tscn -- --screenshot --level 0 --r328common forest --shotframe 600`
+		##   `... --r328common shadow` / `... --r328common mech`
+		## 期望：森林=绿纸+爪击图 / 暗影=紫纸+匕首图 / 机械=黄铜纸+浮游炮图；
+		##      木栅栏三张暂时都用同一张 8001.png（职业变体图还没做），但**纸色各自不同**。
+		var rc_key := "forest"
+		for i in args.size():
+			if args[i] == "--r328common" and i + 1 < args.size():
+				rc_key = args[i + 1]
+		var rc_map := {"forest": PlayerClass.DRUID, "shadow": PlayerClass.ROGUE,
+				"mech": PlayerClass.MECH}
+		RunState.player_class = String(rc_map.get(rc_key, PlayerClass.DRUID))
+		_grid_intro_t = -1.0            # 关掉开场巡场，钉死构图
+		engine.ai_enabled = false
+		engine.state.board.clear()
+		engine.state.hand.clear()
+		var rc_repo := CardRepo.load_json()
+		engine.state.hand.append(CardData.from_dict(rc_repo.get_card(8001).to_dict()))
+		engine.state.hand.append(CardData.from_dict(rc_repo.get_card(8002).to_dict()))
+		engine.state.energy = 10
+		status_text = "公用初始卡 · " + RunState.player_class
+		_clear_hover_state()
+		selection = null
+		queue_redraw()
 	if "--r288pulse" in args and engine != null:
 		# R288 出图：通用效果演出 —— 虚骨龙吐息（我方 4,1 → 敌方 2,1，两格同屏一段演完）。
 		# 期望画面：龙身两圈扩散脉冲 + 上方卡名标签「龙息」+ 指向受影者的光带。

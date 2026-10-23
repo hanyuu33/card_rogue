@@ -2776,18 +2776,22 @@ func _check_back_key(scene: Variant) -> void:
 
 func _check_attack_art_variant() -> void:
 	## R185：8002「攻击」卡图按当前职业切换（森林精魄=爪击 / 暗影刺客=匕首刺 / 机械之心=浮游炮）。
-	## `CardFace.art_for` 按 RunState.player_class 取 `8002_<suffix>.png`；未知职业回退 forest。
+	## R328：公用初始卡扩到**木栅栏 8001** —— 两张都按 `RunState.player_class` 取
+	## `<id>_<suffix>.png`；职业变体图缺失时**回退 `<id>.png`**（8001 目前还没有职业变体，
+	## 走的就是这条回退；等图放进 assets/pics，这条断言自动改判成变体图，不用动代码）。
 	var prev := RunState.player_class
 	var cases := {"森林精魄": "forest", "暗影刺客": "shadow", "机械之心": "mech", "不存在职业": "forest"}
-	for cls in cases:
-		RunState.player_class = cls
-		var tex := CardFace.art_for(CardFace.ATTACK_ART_ID)
-		var want := "res://assets/pics/8002_%s.png" % cases[cls]
-		if tex == null or tex.resource_path != want:
-			_smoke_fail("攻击卡图职业变体：%s 应取 %s，实际 %s"
-					% [cls, want, tex.resource_path if tex != null else "null"])
+	for id: int in PlayerClass.BASE_COMMON_IDS:
+		for cls in cases:
+			RunState.player_class = cls
+			var tex := CardFace.art_for(id)
+			var variant := "res://assets/pics/%d_%s.png" % [id, cases[cls]]
+			var want := variant if CardFace._pic_exists(variant) else "res://assets/pics/%d.png" % id
+			if tex == null or tex.resource_path != want:
+				_smoke_fail("公用初始卡职业变体：%d 在 %s 下应取 %s，实际 %s"
+						% [id, cls, want, tex.resource_path if tex != null else "null"])
 	RunState.player_class = prev
-	print("SMOKE OK 攻击卡图职业变体：三职业各取各图，未知职业回退 forest")
+	print("SMOKE OK 公用初始卡职业变体：木栅栏/攻击各按职业取图，缺图回退通用图")
 
 
 func _check_r106(scene: Variant) -> void:
