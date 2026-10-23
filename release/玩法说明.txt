@@ -611,7 +611,7 @@
   窗口标题已覆盖为「卡牌肉鸽」。
   若杀毒软件误报，属于 Godot 打包可执行文件的常见现象，添加信任即可。
 
-  版本：本次发布对应开发代号 R323（Windows 单 exe，pck 已内嵌；Android APK 含 arm64-v8a + armeabi-v7a）。
+  版本：本次发布对应开发代号 R341（Windows 为 DuckCardsRogue.exe + 同目录 .pck 两个文件；Android APK 含 arm64-v8a + armeabi-v7a）。
 
   R341 新增（**三件起始道具：惊奇盒子 / 洞窟绳 / 鹿首标本**）：
     · **惊奇盒子**（6047，第一层初始道具 · 即时）：获得时把一张同名工事

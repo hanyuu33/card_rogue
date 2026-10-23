@@ -22013,9 +22013,9 @@ func _init() -> void:
 	# ⚠️ `FileAccess.get_file_as_string()` 读出来是 **CRLF**，比对前必须去掉 \r，
 	#    否则 "\t\tif has_src:\n\t\t\tdraw_line" 这种跨行锚点永远匹配不上（本断言踩过）。
 	var r321_seg := r321_src.substr(r321_i, maxi(0, r321_j - r321_i)).replace("\r", "")
-	check(r321_i >= 0 and r321_seg.find("\t\tif has_src:\n\t\t\tdraw_line(src, dst") >= 0,
+	check_src(r321_i >= 0 and r321_seg.find("\t\tif has_src:\n\t\t\tdraw_line(src, dst") >= 0,
 			"R321 源码锁：光带只在 `if has_src:` 分支内画（无发动者只画落点环）")
-	check(r321_seg.find("label != \"\" and has_src") >= 0,
+	check_src(r321_seg.find("label != \"\" and has_src") >= 0,
 			"R321 源码锁：卡名标签也要 has_src 才画（否则挂在「第一个受害者」头上）")
 
 	# ================= R322：地图可点范围 = 走过的连通区 + 其相邻格 =================
