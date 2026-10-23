@@ -20702,6 +20702,81 @@ func _init() -> void:
 			% ["?" if r271_drawn == null else str(r271_drawn.cost),
 				"?" if r271_drawn == null else str(r271_e6.cost_of(r271_drawn))])
 
+	# ---- ⑦b R341 量产型谟涅摩叙涅 8075：每回合一次 → 炮击伤害 +7 且抽到的卡 -1 费 ----
+	var r341_card: CardData = r271_repo.get_card(8075)
+	check(r341_card != null and GameEngine.MASS_MNEMOSYNE_DMG == 7
+			and r341_card.effect_text.contains("伤害 +7"),
+		"R341 8075 卡面文案与常量一致（+%d）" % GameEngine.MASS_MNEMOSYNE_DMG)
+	check(r341_card != null and r341_card.effect_text.begins_with("**每回合一次**"),
+		"R341 8075 卡面文案开头写明「每回合一次」")
+	var r341_e := _new_engine([], 40, 40, -1, false)
+	r341_e.start_game()
+	var r341_foe: Placement = r341_e.state.place(
+			CardData.from_dict(r271_repo.get_card(8003).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r341_foe.health = 60
+	r341_foe.card.health = 60
+	r341_e.state.place(CardData.from_dict(r271_repo.get_card(8075).to_dict()),
+			Vector2i(4, 3), GameEngine.SIDE_SELF)
+	r341_e.state.hand = [CardData.from_dict(r271_repo.get_card(9145).to_dict()),
+			CardData.from_dict(r271_repo.get_card(9145).to_dict())]
+	r341_e.state.deck = [CardData.from_dict(r271_repo.get_card(8001).to_dict()),
+			CardData.from_dict(r271_repo.get_card(8001).to_dict())]
+	r341_e.state.energy = 20
+	var r341_hp0: int = r341_foe.health
+	r341_e.use_spell(0, Vector2i(0, 1))
+	check(r341_hp0 - r341_foe.health == 16,
+		"R341 量产型谟涅摩叙涅：本回合第一发聚能炮击 9+7=16 伤（实际 %d）"
+			% (r341_hp0 - r341_foe.health))
+	check(r341_e._mass_mnemo_turn == r341_e.turn_total,
+		"R341 量产型谟涅摩叙涅：用掉额度后记下本回合号（实际 %d / 当前 %d）"
+			% [r341_e._mass_mnemo_turn, r341_e.turn_total])
+	# 同回合第二发：不再 +7，也不再给抽到的那张减费
+	var r341_hp1: int = r341_foe.health
+	r341_e.use_spell(0, Vector2i(0, 1))
+	check(r341_hp1 - r341_foe.health == 9,
+		"R341 「每回合一次」：同回合第二发只打 9（实际 %d）"
+			% (r341_hp1 - r341_foe.health))
+	var r341_disc := 0
+	for r341_c: CardData in r341_e.state.hand:
+		if r341_c.id == 8001 and r341_e.cost_of(r341_c) < r341_c.cost:
+			r341_disc += 1
+	check(r341_disc == 1,
+		"R341 「每回合一次」：只有第一发抽到的卡 -1 费（实际 %d 张打折）" % r341_disc)
+	# 下个回合额度恢复（把标记推到上一回合 = 已跨过 turn_total）
+	var r341_e2 := _new_engine([], 40, 40, -1, false)
+	r341_e2.start_game()
+	var r341_foe2: Placement = r341_e2.state.place(
+			CardData.from_dict(r271_repo.get_card(8003).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r341_foe2.health = 60
+	r341_foe2.card.health = 60
+	r341_e2.state.place(CardData.from_dict(r271_repo.get_card(8075).to_dict()),
+			Vector2i(4, 3), GameEngine.SIDE_SELF)
+	r341_e2.state.hand = [CardData.from_dict(r271_repo.get_card(9145).to_dict())]
+	r341_e2.state.deck = [CardData.from_dict(r271_repo.get_card(8001).to_dict())]
+	r341_e2.state.energy = 20
+	r341_e2._mass_mnemo_turn = r341_e2.turn_total - 1
+	r341_e2.use_spell(0, Vector2i(0, 1))
+	check(60 - r341_foe2.health == 16,
+		"R341 「每回合一次」：下个回合额度恢复 → 又是 16 伤（实际 %d）"
+			% (60 - r341_foe2.health))
+	# 场上没有这座工事 → 不加成也不减费
+	var r341_e3 := _new_engine([], 40, 40, -1, false)
+	r341_e3.start_game()
+	var r341_foe3: Placement = r341_e3.state.place(
+			CardData.from_dict(r271_repo.get_card(8003).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r341_foe3.health = 60
+	r341_foe3.card.health = 60
+	r341_e3.state.hand = [CardData.from_dict(r271_repo.get_card(9145).to_dict())]
+	r341_e3.state.deck = [CardData.from_dict(r271_repo.get_card(8001).to_dict())]
+	r341_e3.state.energy = 20
+	r341_e3.use_spell(0, Vector2i(0, 1))
+	check(60 - r341_foe3.health == 9,
+		"R341 量产型谟涅摩叙涅：场上没有这座工事 → 只打 9（实际 %d）"
+			% (60 - r341_foe3.health))
+
 	# ---- ⑧ 报废 8071：手牌里其他卡全变聚能炮击（本回合 0 费，回合结束失效）----
 	var r271_e7 := _new_engine([], 40, 40, -1, false)
 	r271_e7.start_game()
