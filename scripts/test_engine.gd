@@ -15570,8 +15570,8 @@ func _init() -> void:
 	var r345_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd") \
 			+ FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 	check(r345_src != "" and r345_src.replace("能量屏障", "").find("能量") < 0,
-		"R345 文案：战斗界面与引擎播报里也不再有「能量」（漏网 %d 处）"
-			% max(0, r345_src.replace("能量屏障", "").count("能量")))
+		"R345 文案：战斗界面与引擎播报里也不再有「能量」（源码 %d 字节，残留 %d 处）"
+			% [r345_src.length(), max(0, r345_src.replace("能量屏障", "").count("能量"))])
 
 	# ---- ⑥ 战场单位的 buff / debuff 逐条列出 ----
 	var r106_e := _new_engine([], 30, 30)
