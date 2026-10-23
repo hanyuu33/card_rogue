@@ -1144,7 +1144,8 @@ const MASS_DAEDALUS_BORN_HP:= 2
 #   且它因自身效果抽到的那张卡费用 -1（实例级减费 `state.card_discount`，本场有效）。
 #   ⚠️ R341 改版（用户口径）：原先只有减费、没有「每回合一次」。现在**伤害加成与减费
 #   共用同一个额度** —— 只有拿到 +7 的那一发炮击才给抽到的卡减费。
-#   额度记 engine `_mass_mnemo_turn`（比对 `turn_total`），在场多座也不各算一份。
+#   额度记 **`Placement.mass_mnemo_turn`**（比对 `turn_total`，与无限装甲 8038 同范式）——
+#   **每座工事各一份**：场上两座 = 一回合两次；工事被打掉 / 回手额度随之消失。
 const MASS_MNEMOSYNE_ID:= 8075
 const MASS_MNEMOSYNE_DMG:= 7
 const MASS_MNEMOSYNE_DISCOUNT:= 1
