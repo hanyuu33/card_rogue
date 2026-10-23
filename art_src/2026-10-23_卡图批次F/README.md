@@ -138,6 +138,31 @@ blue-white arc light at the battery. FULL-BLEED, square composition filling the 
 NO white background, NO border, NO text, NO watermark.
 ```
 
+## R334 重画：9146 填充
+
+用户口径：**「填充卡图不太合理，应该从炮身那边更换，电池可以更薄一点」**
+
+第一版（`raw/9146_v1.png`）的问题：电池舱做成了**炮尾外挂的一个大方盒子**，读起来像
+「炮后面挂了个配件」，不像炮身本身的一部分；而且电池是标准汽车电瓶那种厚方块，
+塞进那个盒子后整体显得笨重。
+
+重画两次，都走 img2img（`image1` = `raw/9145.png`）：
+
+| 版本 | 改动 | 结果 |
+|---|---|---|
+| v2（`raw/9146_v2.png`） | 舱口改到炮身中段**侧面**、上掀盖板；电池压薄约 1/3 | 方向对了，但电池位置偏下、被三脚架挡住一角，缩到卡面尺寸后读不清 |
+| **v3（`raw/9146_v3.png`，采用）** | 侧面开一条**水平插槽**，电池沿槽**水平推入一半**，加了一双机械手套在推；电池再做薄到约 1/4，顶部加薄散热鳍 | 动作明确、电池轮廓在 448×403 下仍清楚 |
+
+v3 的提示词关键句（反面也写死了，不然模型会保留炮尾盒子）：
+
+```
+the battery goes in THROUGH A HORIZONTAL SLOT ON THE SIDE FACE OF THE CANNON BODY ...
+NO external battery box anywhere on the weapon, no box hanging off the rear
+```
+
+教训：**「同款装备换个状态」时，要显式否定上一版的结构**。只说「改成从侧面换」，
+模型会把侧面的新舱口和上一版的尾部盒子**同时**画出来。
+
 ## 验收
 
 - 图鉴详情：`gallery.tscn -- --screenshot --card 8071|9145|9146` → 三张卡面都正常上色。

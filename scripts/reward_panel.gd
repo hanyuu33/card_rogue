@@ -356,6 +356,17 @@ func _route_if_waiting_pick() -> void:
 
 static func route_target_after_pick() -> String:
 	## 领取之后是否要立刻转去选卡页（"" = 不用）。判据只有 `RunState` 一个口。
+	## R340（用户报「打完 Boss 拿完道具直接进二层、没拿卡牌奖励」）：
+	## **本批奖励还没处理完时一律不跳走。**
+	## 旧逻辑是「一领到即时道具（鸭血 6024 / 源数之力 6002 / 失忆药水 6004）就立刻转
+	## `deck_edit`」，转之前会调宿主 `battle_scene._settle_before_pick()`，而那里在
+	## Boss 通关（`_run_next_layer > 0`）时当场 `advance_layer()` —— 于是卡牌三选一
+	## 还没展示，人已经在下一层了，条目还躺在队列里没人再弹。
+	## 现在：先让玩家把这一批领完 / 选完，`pending_relic` 留在 `RunState` 里，
+	## 由下一次 `waiting_pick_scene()` 接住（`map_scene._ready` 与 `curtain._leave`
+	## 两个入口都查它），跳转时机就落在「本批真正结束之后」。
+	if RunState.pending_reward_count() > 0:
+		return ""
 	return RunState.waiting_pick_scene()
 
 
