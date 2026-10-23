@@ -1617,9 +1617,9 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--finisher" in args and engine != null:
-		# 演示（2026-10-02，R49）：收尾（9104）—— 1 费稀有；平时 4 伤，**打出时它是手卡里
-		#   仅剩的一张** → 15 伤。这里连着打两张：第一张（手卡还剩一张）打左敌 4 伤，
-		#   第二张（只剩它）打右敌 15 伤 —— 两张飘字并排，一眼看出差别。
+		# 演示（2026-10-02，R49）：收尾（9104）—— 1 费普通（R329 由稀有降）；平时 6 伤，
+		#   **打出时它是手卡里仅剩的一张** → 22 伤。这里连着打两张：第一张（手卡还剩一张）
+		#   打左敌 6 伤，第二张（只剩它）打右敌 22 伤 —— 两张飘字并排，一眼看出差别。
 		#   实际出牌延到第 80 帧（_demo_tick），避开开局「我方回合」横幅压住飘字。
 		RunState.player_class = PlayerClass.ROGUE
 		engine.state.hand.clear()
@@ -1652,8 +1652,8 @@ func _ready() -> void:
 		queue_redraw()
 	if "--traps" in args and engine != null:
 		# 演示（2026-10-03，R51）：陷阱精通（9105）+ 冻结 / 剧毒陷阱。
-		#   先拍陷阱精通 → 两个亡灵领主分别踩冻结陷阱（3+2×2=7 伤 + 冰冻）
-		#   和剧毒陷阱（每跳 6+2×2=10）。冰霜陷阱（1 费：4+2=6 伤 + 禁足）机制见回归测试。
+		#   先拍陷阱精通（R329：加成 2X → 3X；这三张场地都是 1 费 → 各 +3）→ 亡灵领主分别踩
+		#   冻结陷阱（3+3=6 伤 + 冰冻）和剧毒陷阱（每跳 6+3=9）。冰霜陷阱（9+3=12 伤 + 禁足）见回归测试。
 		RunState.player_class = PlayerClass.ROGUE
 		engine.state.hand.clear()
 		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.TRAP_MASTERY_ID).to_dict()))
@@ -1671,38 +1671,33 @@ func _ready() -> void:
 		engine.move(Vector2i(3, 0), Vector2i(4, 0), GameEngine.SIDE_OPPONENT)   # 经过剧毒陷阱
 		_demo_hover_idx = 0
 		_hover_hand = 0
-		status_text = "陷阱精通：陷阱伤害 +2×原费 —— 冻结陷阱 3+4=7 伤+冰冻；剧毒陷阱每跳 6+4=10"
+		status_text = "陷阱精通 3×原费：冻结 6 伤 / 剧毒 9"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--hunt" in args and engine != null:
-		# 演示（2026-10-03，R52）：紧急埋伏 + 陷阱工坊 + 暗影狩猎。
-		#   ① 紧急埋伏：场上 2 敌人 → 卡组 2 张工事进手，手里的工事费用 -1（绿字）；
-		#   ② 亡灵领主两击打死陷阱工坊（10 血）→ 工坊被破坏：攻击者反受 8 伤并记「触发过工事」；
-		#   ③ 暗影狩猎打它 —— 本回合刚触发还不翻倍（12 伤）；「上回合触发 → 24」由回归测试验证。
+		# 演示（2026-10-03 R52 起 / R329 更新）：陷阱工坊 + 暗影狩猎。
+		#   （R329 删除 9106 紧急埋伏后，这里不再演示「工事进手 + 费用 -1」那一步。）
+		#   ① 亡灵领主两击打死陷阱工坊（10 血）→ 工坊被破坏：攻击者反受 8 伤并记「触发过场地」；
+		#   ② 暗影狩猎打它 —— 本回合刚触发还不翻倍（16 伤）；「上回合触发 → 30」由回归测试验证。
 		RunState.player_class = PlayerClass.ROGUE
 		engine.state.hand.clear()
 		engine.state.energy = 9
-		engine.state.deck.append(CardData.from_dict(repo.get_card(GameEngine.TRAP_ID).to_dict()))
-		engine.state.deck.append(CardData.from_dict(repo.get_card(GameEngine.POISON_TRAP_ID).to_dict()))
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.AMBUSH_ID).to_dict()))
 		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.HUNT_ID).to_dict()))
 		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
 				Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
 		var r52_foe := engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
 				Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
 		r52_foe.health = 60
-		engine.use_spell(0)                       # 紧急埋伏：2 张工事进手 + 下一张工事 -1
 		engine.state.place(CardData.from_dict(repo.get_card(GameEngine.WORKSHOP_ID).to_dict()),
 				Vector2i(4, 1), GameEngine.SIDE_SELF)
 		engine.attack(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)   # 8 伤 → 工坊剩 2
 		r52_foe.tapped = false
 		engine.attack(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)   # 破坏 → 反受 8
 		r52_foe.tapped = false
-		engine.use_spell(0, Vector2i(3, 1))       # 暗影狩猎：12（触发记在本回合，下回合才翻倍）
+		engine.use_spell(0, Vector2i(3, 1))       # 暗影狩猎：16（触发记在本回合，下回合才翻倍）
 		_demo_hover_idx = 0
 		_hover_hand = 0
-		_hover_card = engine.state.hand[0]        # 手里的工事 → 费用圆显绿（紧急埋伏 -1）
-		status_text = "陷阱工坊被攻击破坏 → 攻击者反受 8 伤；它「上回合触发过工事」→ 暗影狩猎改为 24"
+		status_text = "工坊被破坏 → 反伤 8；暗影狩猎 16"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--pierce" in args and engine != null:
@@ -2841,11 +2836,11 @@ func _demo_tick() -> void:
 		_shot_t0 = _now()
 	if "--finisher" in _demo_args and _demo_frame == 80 and engine != null:
 		# 收尾演示的实际出牌（延到第 80 帧，避开开局「我方回合」横幅盖住飘字）。
-		engine.use_spell(0, Vector2i(2, 0))        # 手卡还剩一张 → 4 伤
-		engine.use_spell(0, Vector2i(2, 2))        # 只剩它自己 → 15 伤
+		engine.use_spell(0, Vector2i(2, 0))        # 手卡还剩一张 → 6 伤
+		engine.use_spell(0, Vector2i(2, 2))        # 只剩它自己 → 22 伤
 		_demo_hover_idx = -1
 		_hover_hand = -1
-		status_text = "收尾（9104）：1 费；手卡还有别的牌时 4 伤（左 51/55），只剩它自己时 15 伤（右 40/55）"
+		status_text = "收尾 6 伤 / 手卡仅剩它 22 伤"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--bypassshot" in _demo_args and _demo_frame == 60:
@@ -9522,7 +9517,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					("（超出 %d 由自己承担）" % int(data.get("rest", 0)))
 					if int(data.get("rest", 0)) > 0 else ""])
 		"finisher":
-			# 收尾（9104）：手卡里仅剩它 → 15 伤（金色大飘字）；平时 4 伤（普通飘字）。
+			# 收尾（9104）：手卡里仅剩它 → 22 伤（金色大飘字）；平时 6 伤（普通飘字）。
 			var fn_last := bool(data.get("last", false))
 			var fn_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var fn_pos := _cell_center(fn_cell) if fn_cell.x >= 0 \
@@ -9726,7 +9721,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						"text": "中毒 -%d" % int(data.get("amount", 0)),
 						"col": Color("3e8a2f"), "start": n, "dur": 1400, "size": 18})
 		"hunt":
-			# 暗影狩猎（9107，R52）：紫色爆点 —— 基础 12 伤；目标上回合触发过工事 → 24（金紫大字）
+			# 暗影狩猎（9107，R52）：紫色爆点 —— 基础 16 伤；目标上回合触发过场地 → 30（金紫大字）
 			sfx.play("spell")
 			var hu_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
 			var hu_big := bool(data.get("big", false))

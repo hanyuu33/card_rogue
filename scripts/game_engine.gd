@@ -809,6 +809,10 @@ const POISON_DMG:= 6
 const POISON_TURNS:= 4
 const TRAP_MASTERY_ID:= 9105
 const TRAP_MASTERY_TRAIT:= "场地精通"   # 9105 陷阱精通 R74 改名：口径从「工事」改成「场地」
+## R329（用户口径）：加成 2X → 3X（X = 该场地卡的原本费用）。
+## ⚠️ 这里是**唯一倍数口** —— 卡面文案（cards.json 的 9105 effect_text）必须与它一致，
+##    引擎所有场地伤害都经 `_field_mastery()` 取这个值，别在别处再写死倍数。
+const TRAP_MASTERY_MULT:= 3
 
 # 机关工坊（8015 工事，R52 起；R74 改名「陷阱工坊」→「机关工坊」）：
 #   **它仍然是「工事」，不属于场地卡**（卡名去掉「陷阱」只是文案去混淆）。
@@ -817,10 +821,9 @@ const TRAP_MASTERY_TRAIT:= "场地精通"   # 9105 陷阱精通 R74 改名：口
 const WORKSHOP_ID:= 8015
 const WORKSHOP_TRAIT:= "机关工坊"
 const WORKSHOP_DMG:= 8
-const AMBUSH_ID:= 9106   # 紧急埋伏（9106 技能）：从**卡组**取工事 + 下一张工事 -1 费（工事口径不变）
-const HUNT_ID:= 9107     # 暗影狩猎（9107 技能）：目标上回合触发过**场地** → 12 伤改 24 伤
-const HUNT_DMG:= 12
-const HUNT_BIG_DMG:= 24
+const HUNT_ID:= 9107     # 暗影狩猎（9107 技能）：目标上回合触发过**场地** → 16 伤改 30 伤
+const HUNT_DMG:= 16      # R329（用户口径）：12 → 16
+const HUNT_BIG_DMG:= 30  # R329（用户口径）：24 → 30
 
 const PIERCE_TRAP_ID:= 8016
 const PIERCE_TRAP_TRAIT:= "穿刺陷阱"
@@ -1214,7 +1217,7 @@ const SHADOW_SPLIT_TRAIT:= "分裂之影"
 # 降力量复用「威慑 / 敲晕 / 幻影斗篷 / 回响」那套 `atk_debuff + debuff_stage = 1`：
 #   debuff_stage=1 = **立即生效**，在**该单位所属方的回合结束时**清除 ——
 #   陷阱是敌方移动时踩的（= 敌方回合内），所以正好覆盖「它本回合剩下的攻击」。
-# ⚠️ 0 费 → 场地精通（9105）加成是 2×0 = 0；这张本来就不造成伤害，加成无意义。
+# ⚠️ 0 费 → 场地精通（9105）加成是 3×0 = 0；这张本来就不造成伤害，加成无意义。
 const DARK_TRAP_ID:= 8063
 const DARK_TRAP_TRAIT:= "黑暗陷阱"
 const DARK_TRAP_DEBUFF:= 1      # 本回合攻击时力量 -1
@@ -3135,7 +3138,6 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 		c -= _demon_discount(card)
 		c -= _iron_fence_discount(card)
 		c -= _sprite_effect_discount(card)
-		c -= _fort_discount(card, side)
 	c -= _quick_strike_discount(card)
 	c -= _frenzy_discount(card, side)
 	c -= _instance_discount(card, side)
@@ -3213,14 +3215,6 @@ func _charge_up_grow(left: int) -> void:
 			_log("蓄势：剩余费用 %d → %s 伤害 +%d（现 %d）" % [
 				left, c.card_name, left * CHARGE_UP_PER_ENERGY, c.value])
 			action.emit("charge_up", {"card": c, "left": left, "value": c.value})
-
-
-func _fort_discount(card: CardData, side: String) -> int:
-	## 紧急埋伏（9106，R52）：「你使用的下一张工事卡费用 -1」——只对 kind=工事 生效，
-	## 计数挂在 FieldState（跨回合保留，直到真正打出一张工事才消费；可叠加）。
-	if card == null or not card.is_fort():
-		return 0
-	return state.fort_discount_self if side == SIDE_SELF else state.fort_discount_opp
 
 
 func can_pay_card(card: CardData, side:= SIDE_SELF) -> bool:
@@ -6500,13 +6494,6 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 		state.self_card_plays += 1
 	else:
 		state.opp_card_plays += 1
-	# 紧急埋伏（9106，R52）：使用了一张工事卡 → 消费一层「下一张工事费用 -1」。
-	if played != null and played.is_fort():
-		if side == SIDE_SELF and state.fort_discount_self > 0:
-			state.fort_discount_self -= 1
-			_log("紧急埋伏：本张工事卡费用 -1（剩余 %d 层）" % state.fort_discount_self)
-		elif side == SIDE_OPPONENT and state.fort_discount_opp > 0:
-			state.fort_discount_opp -= 1
 	# R271：聚能体系计数 —— 本次对战中我方**使用过几张「聚能炮击」**（9145）。
 	# 记账口就这一处：play_from_hand / use_spell / use_effect / remote_* 全都会走到这里。
 	# 记在 `played` 上（而不是扫描效果区）：聚能炮击是技能卡，用完就进弃牌区了。
@@ -8509,14 +8496,12 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			return _echo_spell(side, card)
 		DODGE_ID:
 			return _dodge_spell(side)
-		AMBUSH_ID:
-			return _emergency_ambush(side)
 		ALERT_ID:
 			return _alertness(side)
 		HUNT_ID:
-			# 暗影狩猎（9107；R74 口径改为「场地」）：12 伤；目标「上回合触发过场地」→ 24 伤。
+			# 暗影狩猎（9107；R74 口径改为「场地」）：16 伤；目标「上回合触发过场地」→ 30 伤。
 			# 判据仍是 trap_trig_turn 与当前全局半回合号差 1（隔回合失效）；
-			# 场地触发与机关工坊被破坏都会记这个号，所以两者都吃这 24 伤。
+			# 场地触发与机关工坊被破坏都会记这个号，所以两者都吃这 30 伤。
 			var hu_p := _target_placement(side, target)
 			if hu_p == null:
 				return "（暗影狩猎：需要指定一个目标）"
@@ -8526,7 +8511,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			var hu_dmg := _spell_dmg(side, HUNT_BIG_DMG if hunt_big else HUNT_DMG, card)
 			var hu_s := str(_op_deal_damage(side, hu_dmg, target))
 			if hunt_big:
-				_log("暗影狩猎：%s 上回合触发过场地 → 伤害 12 → %d" % [hu_p.card.card_name, hu_dmg])
+				_log("暗影狩猎：%s 上回合触发过场地 → 伤害 16 → %d" % [hu_p.card.card_name, hu_dmg])
 			action.emit("hunt", {"cell": _cell_of(hu_p), "dmg": hu_dmg, "big": hunt_big,
 					"name": hu_p.card.card_name})
 			return hu_s
@@ -11259,12 +11244,12 @@ func _field_kind(c: CardData) -> String:
 
 func _field_mastery(field_side: String, field_card: CardData) -> int:
 	## 场地精通（9105，R74 由「陷阱精通」改名）：持有方效果区有它 →
-	## 该方**场地**效果造成的伤害 +2× 该场地卡的**原本费用**。
+	## 该方**场地**效果造成的伤害 +`TRAP_MASTERY_MULT`× 该场地卡的**原本费用**（R329：2× → 3×）。
 	## 多张不叠加（与哈气同取一张）；按卡面原费算，不吃任何减费。
 	var zone: Array[CardData] = state.effects if field_side == SIDE_SELF else state.enemy_effects
 	for c: CardData in zone:
 		if c.traits.has(TRAP_MASTERY_TRAIT):
-			return 2 * field_card.cost
+			return TRAP_MASTERY_MULT * field_card.cost
 	return 0
 
 
@@ -11721,41 +11706,6 @@ func _revenge_hurt(p: Placement, cell: Vector2i) -> void :
 	action.emit("demon_revenge", {"cell": cell, "card": p.card,
 		"amount": REVENGE_ATK_PER_HIT, "end_amount": REVENGE_END_ATK_PER_HIT,
 		"stacked": p.atk_buff_turn, "power": total})
-
-
-func _emergency_ambush(side: String) -> String:
-	## 紧急埋伏（9106，R52）：场上每有一个敌人 → 从**卡组**随机取一张工事进手
-	## （卡组没有工事则该次落空；手满则留在卡组）。之后「你使用的下一张工事卡费用 -1」
-	## 无条件生效（FieldState.fort_discount_self/opp，消费点唯一在 _note_card_played）。
-	## 随机走引擎 rng → 回放同种子可复现。
-	var foes:= 0
-	for p: Placement in state.board.values():
-		if p.owner != side:
-			foes += 1
-	var forts: Array[CardData] = []
-	for c: CardData in state.deck:
-		if c.is_fort():
-			forts.append(c)
-	var taken:= 0
-	for i in foes:
-		if forts.is_empty():
-			_log("紧急埋伏：卡组里已经没有工事卡")
-			break
-		var pick: CardData = forts[rng.randi() % forts.size()]
-		forts.erase(pick)
-		state.deck.erase(pick)
-		# R299：手牌满 → 直接从卡组进弃牌区（不再「留在卡组」白丢这次埋伏）
-		_grant_to_hand(pick, "紧急埋伏")
-		taken += 1
-		_log("紧急埋伏：卡组里的「%s」进入手卡" % pick.card_name)
-	if side == SIDE_SELF:
-		state.fort_discount_self += 1
-	else:
-		state.fort_discount_opp += 1
-	_log("紧急埋伏：你使用的下一张工事卡费用 -1")
-	if taken > 0:
-		action.emit("blessing", {"count": taken})
-	return "紧急埋伏：%d 张工事进手，下一张工事 -1 费" % taken
 
 
 func _workshop_supply(side: String) -> void :
