@@ -1900,6 +1900,23 @@ func _ready() -> void:
 				r274_demo_fort.health]
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r326chimera" in args and engine != null:
+		# 演示（R326）：嵌合暴君入场「融合」→ **每破坏 1 张回复 1 费**（这条不写进卡面文本）。
+		# 摆两张己方树人接通、手上放暴君：4 费打出 → 破坏 2 张、回 2 费（能量 6 → 4）。
+		# ⚠️ 不设 `_hover_card`：让 `_say()` 那句留在状态栏，截出来就是战斗内的真实提示。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 6
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(3, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(4, 0), GameEngine.SIDE_SELF)
+		engine.state.hand = [CardData.from_dict(
+				repo.get_card(GameEngine.CHIMERA_ID).to_dict())]
+		engine.play_from_hand(0, Vector2i(4, 1))
+		_hover_hand = -1
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--r275tank" in args and engine != null:
 		# 演示（R275）：重甲战车「每拥有一层改造，受到的伤害 -1（至少 1）」——
 		# 层数在**手牌**里攒的也算（与 R274 同口径），所以先改造 2 次再上场。
@@ -9085,18 +9102,26 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var ch_abs: int = int(data.get("absorbed", 0))
 			var ch_atk: int = int(data.get("atk", 0))
 			var ch_hp: int = int(data.get("hp", 0))
+			var ch_refund: int = int(data.get("refund", 0))   # R326：每破坏一个回复 1 费
 			if ch_abs <= 0:
 				_say("嵌合暴君：周围没有己方卡可融合")
 			else:
 				sfx.play("attack")
+				# ⚠️ 状态栏**不写回费**：`StatusLabel` 只有 264px（≈19 全角字），
+				# 加上「、回复 N 费」会被裁成省略号（R326 出图验证过）。回费改用卡上飘字。
 				_say("嵌合暴君融合 %d 张卡：+%d 攻 / +%d 血" % [ch_abs, ch_atk, ch_hp])
 				if ch_cell.x >= 0:
 					_bursts.append({"pos": _cell_center(ch_cell), "sc": _grid_scroll, "start": n,
-							"dur": 420, "col": COL_SPELL})
+							"dur": 420, "col": COL_SPELL, "big": false})
 					# R301：数值交给卡面染色，飘字只写「融合了几张」
 					_floaters.append({"pos": _cell_center(ch_cell), "sc": _grid_scroll,
 							"text": "融合 %d 张" % ch_abs,
 							"col": Color("caa6ff"), "start": n, "dur": 1900, "size": 16})
+					if ch_refund > 0:
+						# R326：每破坏一个回复 1 费 —— 飘在卡下方（与「融合 N 张」错开一行）。
+						_floaters.append({"pos": _cell_center(ch_cell) + Vector2(0, 30),
+								"sc": _grid_scroll, "text": "+%d 费" % ch_refund,
+								"col": TXT_POWER, "start": n + 120, "dur": 1600, "size": 15})
 		"recycler":
 			# 零件回收者（8046，R96）：接通的己方「素体以外」卡被销毁 → 回收其力量 + 手牌加素体。
 			# ⚠️ R221：被销毁的是「素体」→ 引擎根本不发这条 action（不触发即无动画）。
@@ -10185,7 +10210,9 @@ func _draw_bursts() -> void:
 		if t <= 0.0:
 			continue
 		var pos: Vector2 = _fx_pos(b)
-		var big: bool = b.big
+		# ⚠️ 用 `get` 兜底：`_bursts` 是「谁 push 谁负责带键」的松散结构，漏了 `big`
+		# 以前会每帧 SCRIPT ERROR（R326 发现嵌合暴君那处一直漏），画错也不要炸画面。
+		var big: bool = bool(b.get("big", false))
 		var r_max := 52.0 if big else 34.0
 		var col: Color = b.col
 		# 扩散环（外圈）

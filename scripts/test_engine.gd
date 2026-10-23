@@ -13923,9 +13923,13 @@ func _init() -> void:
 		CardData.from_dict(r96_chi_def.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
 	var r96_chi4_atk0: int = r96_chi4.effective_power()
 	var r96_chi4_hp0: int = r96_chi4.health
+	var r326_en4: int = r96_e4.state.energy
 	r96_e4._chimera_fuse(r96_chi4)
 	check(not r96_e4.state.board.has(Vector2i(4, 0)),
 		"R96 嵌合暴君：接通的己方盟友被**破坏**（(4,0) 已离场）")
+	check(r96_e4.state.energy == r326_en4 + 1,
+		"R326 嵌合暴君：破坏 1 张 → 回复 1 费（%d → %d）"
+			% [r326_en4, r96_e4.state.energy])
 	check(r96_chi4.upgrade_atk == r96_tree4_pow
 			and r96_chi4.upgrade_hp == r96_tree4_hp
 			and r96_chi4.effective_power() == r96_chi4_atk0 + r96_tree4_pow
@@ -13943,13 +13947,39 @@ func _init() -> void:
 		CardData.from_dict(r96_chi_def.to_dict()), Vector2i(3, 1), GameEngine.SIDE_SELF)
 	var r96_chi5_atk0: int = r96_chi5.effective_power()
 	var r96_chi5_hp0: int = r96_chi5.health
+	var r326_en5: int = r96_e5.state.energy
 	r96_e5._chimera_fuse(r96_chi5)
+	check(r96_e5.state.energy == r326_en5,
+		"R326 嵌合暴君：没有己方卡可融合 → **不回复费用**（仍 %d）"
+			% r96_e5.state.energy)
 	check(r96_e5.state.board.has(Vector2i(2, 1))
 			and r96_chi5.upgrade_atk == 0 and r96_chi5.upgrade_hp == 0
 			and r96_chi5.effective_power() == r96_chi5_atk0
 			and r96_chi5.health == r96_chi5_hp0,
 		"R96 嵌合暴君：**只吸收己方**——相邻敌方卡未被破坏也未吸收（敌 %d 仍在场，暴君仍 %d 攻 / %d 血）"
 			% [9201, r96_chi5.effective_power(), r96_chi5.health])
+
+	# ---- ④b R326：破坏 2 张 → 回复 2 费（按破坏张数累加，不是「一次 +1」）----
+	var r326_e := _new_engine([], 40, 40, -1, false)
+	r326_e.start_game()
+	r326_e.state.place(
+		CardData.from_dict(r96_repo.get_card(8003).to_dict()), Vector2i(3, 1),
+		GameEngine.SIDE_SELF)
+	r326_e.state.place(
+		CardData.from_dict(r96_repo.get_card(8003).to_dict()), Vector2i(4, 0),
+		GameEngine.SIDE_SELF)
+	var r326_chi: Placement = r326_e.state.place(
+		CardData.from_dict(r96_chi_def.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r326_en0: int = r326_e.state.energy
+	r326_e._chimera_fuse(r326_chi)
+	check(not r326_e.state.board.has(Vector2i(3, 1))
+			and not r326_e.state.board.has(Vector2i(4, 0)),
+		"R326 嵌合暴君：两张接通的己方卡都被破坏")
+	check(r326_e.state.energy == r326_en0 + 2,
+		"R326 嵌合暴君：破坏 2 张 → 回复 2 费（%d → %d）"
+			% [r326_en0, r326_e.state.energy])
+	check(r326_chi.upgrade_atk == r96_repo.get_card(8003).power * 2,
+		"R326 嵌合暴君：吸收照旧（+%d 攻，回费不影响吸收）" % r326_chi.upgrade_atk)
 
 	# ---- ⑥ 嵌合暴君：离场还原成原卡，不污染卡库 ----
 	var r96_leave: CardData = r96_e4._card_leaving_field(r96_chi4)

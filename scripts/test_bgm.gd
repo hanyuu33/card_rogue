@@ -110,9 +110,13 @@ func _run(b: Bgm) -> void:
 	check(bool(b.debug_state()["fading"]), "0.3s 时仍在淡入（< FADE_SEC 0.6s）")
 	b._process(0.4)
 	var stf: Dictionary = b.debug_state()
+	# ⚠️ 终点音量读 `Bgm.target_db()`，**不要硬写 `BGM_VOLUME_DB`**：
+	# `Bgm._ready()` 会把玩家 `settings.cfg` 的 `music_volume` 读进来（R246），
+	# 本机把音乐调到 30% 时 target_db = -22.46dB —— 硬写 -12 会因为「玩家设置」
+	# 而假失败（R326 修）。
 	check(not bool(stf["fading"]) and int(stf["out_id"]) == 0
-			and is_equal_approx(float(stf["active_db"]), Bgm.BGM_VOLUME_DB),
-			"0.7s 后淡入完成：淡出播放器已停、在播音量 = -12dB")
+			and is_equal_approx(float(stf["active_db"]), Bgm.target_db()),
+			"0.7s 后淡入完成：淡出播放器已停、在播音量 = 目标 %.2fdB" % Bgm.target_db())
 
 	b.play("battle")
 	st = b.debug_state()

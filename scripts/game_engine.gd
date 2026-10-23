@@ -1004,6 +1004,10 @@ const RECYCLER_ID:= 8046
 #     故意**不**走 `_upgrade_unit` / 不调 `_mimic_relay` → 不会触发侦察塔层数 / 模仿者传导（这是专属吸收）。
 #   * 吸收的「生命」取被吞卡**场上副本的最大生命**（`u.card.health`，含其受到的场上加成）。
 const CHIMERA_ID:= 8047
+## R326（用户口径）：入场效果**追加** —— 每破坏一个回复 1 点费用。
+## ⚠️ 这条**不写入卡面文本**（8047 的 `effect_text` 保持原样），属于隐藏的入场收益。
+## 回费口径同「拆解」8049：直接 `state.energy +=`，不污染 `self_energy_spent`，允许当回合超额。
+const CHIMERA_REFUND_PER_KILL:= 1
 # 「生产订单」（8048，1 费**普通**技能）：将两张「素体」加入**抽牌堆**，各获得改造 +1 攻 +4 血
 #   （永久、烤进副本，不污染卡库；与「过载」8030 / 「自主升级」8045 同口径）。
 const PROD_ORDER_ID:= 8048
@@ -10732,6 +10736,7 @@ func _chimera_fuse(tyrant: Placement) -> void :
 		return
 	var got_atk:= 0
 	var got_hp:= 0
+	var got_refund:= 0
 	for c: Vector2i in targets:
 		var u: Placement = state.unit_at(c)
 		if u == null:
@@ -10739,15 +10744,20 @@ func _chimera_fuse(tyrant: Placement) -> void :
 		got_atk += u.effective_power()
 		got_hp += u.card.health
 		_destroy(c)
+		# R326：每破坏一个回复 1 费。破坏张数 = 真正走完 `_destroy` 的次数，
+		# 所以「思想钢印回手卡」的那一张**也算破坏**（它确实被破坏了），照给。
+		state.energy += CHIMERA_REFUND_PER_KILL
+		got_refund += CHIMERA_REFUND_PER_KILL
 	# 吸收到的攻/血落到嵌合暴君（与 _upgrade_unit 同口径，离场由 _card_leaving_field 还原）。
 	tyrant.upgrade_atk += got_atk
 	tyrant.upgrade_hp += got_hp
 	tyrant.card.health += got_hp
 	tyrant.health += got_hp
-	_log("嵌合暴君：融合 %d 张卡 → 力量 +%d、生命 +%d（现 %d 攻 / %d 血）" % [
-		targets.size(), got_atk, got_hp, tyrant.effective_power(), tyrant.health])
+	_log("嵌合暴君：融合 %d 张卡 → 力量 +%d、生命 +%d、回复 %d 费（现 %d 攻 / %d 血）" % [
+		targets.size(), got_atk, got_hp, got_refund,
+		tyrant.effective_power(), tyrant.health])
 	action.emit("chimera", {"cell": _cell_of(tyrant), "absorbed": targets.size(),
-		"atk": got_atk, "hp": got_hp, "side": SIDE_SELF})
+		"atk": got_atk, "hp": got_hp, "refund": got_refund, "side": SIDE_SELF})
 
 
 func _production_order(side: String) -> String :
