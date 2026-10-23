@@ -1358,6 +1358,19 @@ func _ready() -> void:
 		status_text = "长描述改版：威慑 / 镜像 / 以太咆哮 / 空间守护 / 鸭窝"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r333card" in args and engine != null:
+		# 演示（R333）：卡图批次 F —— 报废 8071 / 聚能炮击 9145 / 填充 9146。
+		# 三张并排：缩到 99×119 也能靠色块分开（暖金光柱 / 青白激光 / 蓝白电弧）。
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		for _cid in [8071, 9145, 9146]:
+			engine.state.hand.append(CardData.from_dict(repo.get_card(_cid).to_dict()))
+		_demo_hover_idx = 1
+		_hover_hand = 1
+		_hover_card = engine.state.hand[1]
+		status_text = "批次 F：报废 / 聚能炮击 / 填充"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--r330card" in args and engine != null:
 		# 演示（R330）：以太恶魔 9068 费用 5 → 6 / 代达罗斯 8060 5 费 8/18 → 4 费 5/16。
 		#   效果区摆 2 张效果卡 → 以太恶魔实际 6-2=4 费（手卡绿圈），左栏详情仍是原价 6 费。
