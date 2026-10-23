@@ -12413,14 +12413,16 @@ func _draw_relic_panel() -> void:
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
 	UiTheme.draw_panel_bg(self, Rect2(px, py, pw, ph))
 	draw_rect(Rect2(px, py, pw, ph), UiTheme.INK_600, false, 2.0)
+	# R344：整块面板是浅底（羊皮纸），文字一律**不描边** —— 描边色是深色，
+	# 描在小字号笔画外面等于给每个字套一圈灰边，13px 的说明读起来就是糊的。
 	_draw_string_center(_font_bold, UiTheme.FS_SUBHEAD,
 			"道具 %d 个 — 悬浮即可看说明，这里是放大版%s" % [n,
 					"（滚轮翻动 · 点击任意处关闭）" if scroll_max > 0.0
 					else "（点击任意处关闭）"],
-			Vector2(WINDOW_W / 2, py + 30), UiTheme.INK_800)
+			Vector2(WINDOW_W / 2, py + 30), UiTheme.INK_800, -1)
 	if n == 0:
 		_draw_string_center(_font, UiTheme.FS_BODY, "本局还没有道具",
-				Vector2(WINDOW_W / 2, py + 76), UiTheme.INK_500)
+				Vector2(WINDOW_W / 2, py + 76), UiTheme.INK_500, -1)
 		return
 	var y := py + 56.0 - _relic_scroll
 	for r in rows:
@@ -12434,15 +12436,15 @@ func _draw_relic_panel() -> void:
 		if y + row_h > py + 46.0 and y < py + ph - 8.0:
 			draw_rect(Rect2(px + 16, y - 16, 10, row_h - 8.0), scol, true)
 			_draw_string_nw(_font_bold, RELIC_P_NAME, name_str,
-					Vector2(px + 36, y), ncol)
+					Vector2(px + 36, y), ncol, -1)
 			var nw: float = _font_bold.get_string_size(name_str,
 					HORIZONTAL_ALIGNMENT_LEFT, -1, RELIC_P_NAME).x
 			_draw_string_nw(_font_bold, RELIC_P_NAME, tag_str,
-					Vector2(px + 36 + nw + 6.0, y), Color("4a3c14"))
+					Vector2(px + 36 + nw + 6.0, y), Color("4a3c14"), -1)
 			for d_i in dlines.size():
 				_draw_string_nw(_font, RELIC_P_DESC, dlines[d_i],
 						Vector2(px + 36, y + RELIC_P_ROWH - 8.0 + d_i * RELIC_P_LINE),
-						UiTheme.INK_600)
+						UiTheme.INK_600, -1)
 		y += row_h
 
 

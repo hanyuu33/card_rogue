@@ -39,11 +39,22 @@ static var _parse_cache := {}
 ## 这些修正刻意只在**显示层**做 —— `cards.json` 是权威数据、测试里有
 ## `effect_text.contains("返回手卡")` 这类的断言，动数据会连带改坏断言。
 const PHRASE_FIXES := [
+	# R344：术语三统一（**只在显示层**，cards.json 保持原样 —— 测试按原文断言）。
+	# ① 「攻击力」→「力量」：卡面数值、左栏信息、道具说明里都叫「力量」，
+	#    只有数据里的旧写法还是「攻击力」，同一个数字两个名字最伤阅读。
+	# ② 「HP」→「生命」：状态栏写的是 50/50 的生命，卡面却写 HP 伤害 —— 英文缩写
+	#    在正文里既不统一也不好读。「HP 伤害」连读会留下多余空格，所以单独排一条。
+	# ③ 「效果牌 / 技能牌」→「效果卡 / 技能卡」：卡牌种类本身叫「效果」「技能」，
+	#    数据里牌 / 卡两种写法混着用（9056「效果牌」vs 9058「效果卡」）。
+	["HP 伤害", "生命伤害"],
+	["HP", "生命"],
+	["攻击力", "力量"],
+	["效果牌", "效果卡"],
+	["技能牌", "技能卡"],
 	["返回手卡", "收回手牌"],
 	["抽牌库", "抽牌堆"],
 	["手卡", "手牌"],
 	["费用变为0", "费用变为 0"],
-	["登场时攻击力", "登场时力量"],
 ]
 
 
@@ -82,12 +93,23 @@ static func _space_units(s: String) -> String:
 	return out
 
 
+## R344：两个汉字之间的空格一律压掉。
+## 术语替换会留下这种空格（`敌方 HP 造成` → `敌方 生命 造成`），中文句子里夹一个
+## 半角空格看着像错字；而 `伤害 -2`、`4 点` 这类**汉字↔数字/符号**之间的空格要保留。
+static var _cjk_gap: RegEx = null
+
+
 static func naturalize_phrases(s: String) -> String:
 	## 词句归一：术语统一 + 数值与汉字之间补空格（**不改数据**，只改显示）。
 	var out := s
 	for pair in PHRASE_FIXES:
 		out = out.replace(pair[0], pair[1])
-	return _space_units(out)
+	out = _space_units(out)
+	if _cjk_gap == null:
+		_cjk_gap = RegEx.new()
+		_cjk_gap.compile("(?<=[\\x{4e00}-\\x{9fff}])\\s+(?=[\\x{4e00}-\\x{9fff}])")
+	out = _cjk_gap.sub(out, "", true)
+	return out
 
 
 static func _seg(text: String, bold: bool, italic: bool, code: bool) -> Dictionary:

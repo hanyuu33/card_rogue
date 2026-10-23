@@ -15492,6 +15492,57 @@ func _init() -> void:
 		"R106 卡面文本：to_bbcode 产出 BBCode（实际「%s」）"
 			% CardText.to_bbcode("**加粗**与`代码`"))
 
+	# ============================================================
+	#  R344：文案整理（术语归一 + 去掉工程口吻）+ 道具说明不描边
+	# ============================================================
+	# ---- ① 术语三统一（显示层）----
+	var r344_s1: String = CardText.naturalize("使一个单位下回合攻击力 -9。")
+	check(r344_s1 == "使一个单位下回合力量 -9。",
+		"R344 文案：卡面里的「攻击力」统一成「力量」（实际「%s」）" % r344_s1)
+	var r344_s2: String = CardText.naturalize("亡语：对敌方 HP 造成 5 点伤害。")
+	check(r344_s2 == "亡语：对敌方生命造成 5 点伤害。",
+		"R344 文案：卡面里的「HP」统一成「生命」，且不留空格（实际「%s」）" % r344_s2)
+	var r344_s3: String = CardText.naturalize("每回合你的第一张效果牌费用 -1。")
+	check(r344_s3 == "每回合你的第一张效果卡费用 -1。",
+		"R344 文案：「效果牌」统一成「效果卡」（实际「%s」）" % r344_s3)
+	var r344_s4: String = CardText.naturalize("造成 4 点伤害。")
+	check(r344_s4 == "造成 4 点伤害。",
+		"R344 文案：汉字与数字之间本来就该有的空格不受影响（实际「%s」）" % r344_s4)
+	# ---- ② 数据层：真正的工程符号 / 口吻 ----
+	check(not repo.get_card(8075).effect_text.contains("因自身效果")
+			and repo.get_card(8075).effect_text.contains("因此抽到"),
+		"R344 文案：8075 去掉「因自身效果」这种实现口径")
+	check(not repo.get_card(8046).effect_text.contains("+=")
+			and repo.get_card(8046).effect_text.contains("力量增加等量数值"),
+		"R344 文案：8046 不再用 `+=` 这种代码符号")
+	check(not repo.get_card(9022).effect_text.contains("3/15/1/1")
+			and repo.get_card(9022).effect_text.contains("3 攻 15 血"),
+		"R344 文案：鸭蛋不再给玩家看 3/15/1/1 这种数值串")
+	check(not repo.get_card(8030).effect_text.contains("从卡组（抽牌堆）里随机一张"),
+		"R344 文案：过载的补注被显示层藏掉后会缺动词，已改成完整句子")
+	# ---- ③ 数据层：道具说明去掉与「来源 · 时机」标签重复的前缀 ----
+	var r344_rrepo := RelicRepo.load_json()
+	var r344_desc_ok := true
+	var r344_desc_bad := ""
+	for r344_r: RelicData in r344_rrepo.all_relics():
+		var r344_d: String = r344_r.desc
+		if r344_d.contains("持续生效：") or r344_d.contains("立即生效：") \
+				or r344_d.contains("HP") or r344_d.contains("效果牌"):
+			r344_desc_ok = false
+			r344_desc_bad = "%s:%s" % [r344_r.id, r344_d]
+	check(r344_desc_ok,
+		"R344 文案：道具说明去掉重复的「XX生效：」前缀、HP / 效果牌也归一（漏网 %s）"
+			% r344_desc_bad)
+	# ---- ④ 道具说明面板不描边（浅底 + 小字号，描边会糊）----
+	var r344_bsrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r344_i := r344_bsrc.find("func _draw_relic_panel()")
+	var r344_seg := r344_bsrc.substr(r344_i, 3200)
+	check(r344_i > 0 and r344_seg.contains("ncol, -1)")
+			and r344_seg.contains('Color("4a3c14"), -1)')
+			and r344_seg.contains("UiTheme.INK_600, -1)")
+			and not r344_seg.contains("UiTheme.INK_600)"),
+		"R344 道具面板：名字 / 标签 / 说明三行都传 outline = -1（不描边）")
+
 	# ---- ⑥ 战场单位的 buff / debuff 逐条列出 ----
 	var r106_e := _new_engine([], 30, 30)
 	var r106_p: Placement = r106_e.state.place(
