@@ -1123,9 +1123,8 @@ func _ready() -> void:
 			_hover_pl = r271_dp
 			_hover_card = r271_dp.card
 			_hover_hand = -1
-			status_text = "R271：代达罗斯 入场（已用聚能炮击 %d 张）→ 生命 %d（18 +3×%d），本回合手卡聚能炮击 %d 费" % [
+			status_text = "代达罗斯 16+3×%d=%d 血 / 手卡炮击 %d 费" % [
 					engine.state.self_cannon_plays, r271_dp.health,
-					engine.state.self_cannon_plays,
 					engine.cost_of(engine.state.hand[0]) if not engine.state.hand.is_empty() else -1]
 		_shot_t0 = _now()
 		queue_redraw()
@@ -1357,6 +1356,22 @@ func _ready() -> void:
 		engine.state.energy = 9
 		_demo_hover_idx = 3
 		status_text = "长描述改版：威慑 / 镜像 / 以太咆哮 / 空间守护 / 鸭窝"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r330card" in args and engine != null:
+		# 演示（R330）：以太恶魔 9068 费用 5 → 6 / 代达罗斯 8060 5 费 8/18 → 4 费 5/16。
+		#   效果区摆 2 张效果卡 → 以太恶魔实际 6-2=4 费（手卡绿圈），左栏详情仍是原价 6 费。
+		engine.state.hand.clear()
+		engine.state.effects.clear()
+		engine.state.energy = 9
+		engine.state.effects.append(repo.get_card(9002))
+		engine.state.effects.append(repo.get_card(9058))
+		engine.state.hand.append(CardData.from_dict(repo.get_card(9068).to_dict()))
+		engine.state.hand.append(CardData.from_dict(repo.get_card(8060).to_dict()))
+		_demo_hover_idx = 1
+		_hover_hand = 1
+		_hover_card = engine.state.hand[1]
+		status_text = "以太恶魔 6-2=4 费 / 代达罗斯 4 费 5/16"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--mage" in args and engine != null:

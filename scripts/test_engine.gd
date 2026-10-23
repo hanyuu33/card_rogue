@@ -2502,19 +2502,19 @@ func _init() -> void:
 	check(ag_e2.state.unit_at(Vector2i(4, 1)) == null,
 			"以太守卫：1 血替 HP 承受 5 点后被击破离场")
 
-	# ---- 以太恶魔（9068）：5 费史诗盟友 5/10/1/1 ----
+	# ---- 以太恶魔（9068）：6 费史诗盟友 5/10/1/1 ----
 	var nc_dm := repo.get_card(9068)
-	check(nc_dm.card_name == "以太恶魔" and nc_dm.kind == "盟友" and nc_dm.cost == 5
+	check(nc_dm.card_name == "以太恶魔" and nc_dm.kind == "盟友" and nc_dm.cost == 6
 			and nc_dm.rarity == 2 and nc_dm.power == 5 and nc_dm.health == 10
 			and nc_dm.attack_range == 1 and nc_dm.move_speed == 1
 			and nc_dm.traits.has("以太恶魔"),
-			"以太恶魔：史诗 5 费 5/10 程1 速1，trait 以太恶魔")
+			"以太恶魔：史诗 6 费 5/10 程1 速1，trait 以太恶魔")
 	var dm_e := _new_engine([], 20, 20, -1, false)
 	dm_e.start_game(0)
-	check(dm_e.cost_of(repo.get_card(9068)) == 5, "以太恶魔：效果区为空 → 原价 5 费")
+	check(dm_e.cost_of(repo.get_card(9068)) == 6, "以太恶魔：效果区为空 → 原价 6 费")
 	dm_e.state.effects.append(repo.get_card(9002))
 	dm_e.state.effects.append(repo.get_card(9058))
-	check(dm_e.cost_of(repo.get_card(9068)) == 3, "以太恶魔：效果区 2 张 → 费用 5-2=3")
+	check(dm_e.cost_of(repo.get_card(9068)) == 4, "以太恶魔：效果区 2 张 → 费用 6-2=4")
 	dm_e.state.deck = [repo.get_card(9062)]      # 使魔之夜：3 费效果卡
 	dm_e.state.hand = [repo.get_card(9068)]
 	dm_e.state.energy = 9
@@ -15321,11 +15321,11 @@ func _init() -> void:
 		"R101 机器鸟 8059：1 费普通盟友 2/1/1/1，机械之心，带 trait「改造抽牌」（实际 kind=%s）"
 		% [r101_bird.kind])
 	var r101_dae := r101_repo.get_card(8060)
-	check(r101_dae != null and r101_dae.kind == "盟友" and r101_dae.cost == 5
-			and r101_dae.power == 8 and r101_dae.health == 18
+	check(r101_dae != null and r101_dae.kind == "盟友" and r101_dae.cost == 4
+			and r101_dae.power == 5 and r101_dae.health == 16
 			and r101_dae.rarity == 2 and r101_dae.card_class == "机械之心"
 			and r101_dae.has_affix(GameEngine.AFFIX_TAUNT),
-		"R271 代达罗斯 8060（重做）：5 费史诗盟友 8/18/1/1，机械之心，带「嘲讽」（实际 %s/%s/%s/%s/%s）"
+		"R271 代达罗斯 8060（重做）：4 费史诗盟友 5/16/1/1，机械之心，带「嘲讽」（实际 %s/%s/%s/%s/%s）"
 		% [r101_dae.kind, r101_dae.cost, r101_dae.power, r101_dae.health, r101_dae.rarity])
 
 	# ---- ① 交换：放在己方单位上 → 原单位回手，新卡占据该格 ----
@@ -15416,8 +15416,8 @@ func _init() -> void:
 	r101_e5.state.energy = 10
 	r101_e5.state.self_cannon_plays = 2     # 本次对战已用过 2 张聚能炮击
 	var r101_d: Placement = r101_e5.play_from_hand(0, Vector2i(4, 1))
-	check(r101_d != null and r101_d.card.health == 24 and r101_d.health == 24,
-		"R271 代达罗斯：入场按 2 张聚能炮击 → 18+6=24 血（实际 %s）"
+	check(r101_d != null and r101_d.card.health == 22 and r101_d.health == 22,
+		"R271 代达罗斯：入场按 2 张聚能炮击 → 16+6=22 血（实际 %s）"
 			% ("null" if r101_d == null else str(r101_d.health)))
 	check(r101_d != null and r101_d.card.has_affix(GameEngine.AFFIX_TAUNT),
 		"R271 代达罗斯：卡面带「嘲讽」字段（敌方只能打它）")
@@ -15425,8 +15425,8 @@ func _init() -> void:
 	check(r101_cannon_cost == 0,
 		"R271 代达罗斯：本回合手卡里的聚能炮击费用变 0（实际 %d）" % r101_cannon_cost)
 	var r101_back := r101_e5._card_leaving_field(r101_d)
-	check(r101_back.health == 18,
-		"R271 代达罗斯：离场还原后卡面生命回到 18（实际 %d）" % r101_back.health)
+	check(r101_back.health == 16,
+		"R271 代达罗斯：离场还原后卡面生命回到 16（实际 %d）" % r101_back.health)
 
 
 	# ============================================================
@@ -17653,8 +17653,8 @@ func _init() -> void:
 			CardData.from_dict(r209_repo.get_card(8060).to_dict()), Vector2i(4, 3),
 			GameEngine.SIDE_SELF)
 	r209_e8b._daedalus_enter(r209_dae)
-	check(r209_dae.health == 27 and r209_dae.card.health == 27,
-		"R271 代达罗斯：3 张聚能炮击 → 18+9=27 血（实际 %s）" % str(r209_dae.health))
+	check(r209_dae.health == 25 and r209_dae.card.health == 25,
+		"R271 代达罗斯：3 张聚能炮击 → 16+9=25 血（实际 %s）" % str(r209_dae.health))
 	check(r209_e8b.state.turn_cannon_free,
 		"R271 代达罗斯：入场后本回合手卡聚能炮击 0 费（turn_cannon_free）")
 	# ---- ⑨ 场上改造**不写回卡**（离场还原后层数回到随身值）----
@@ -18208,11 +18208,11 @@ func _init() -> void:
 	RunState.run_active = true
 	var r305_repo := CardRepo.load_json()
 	# ① 候选筛选：5 费及以上 / 初始卡（稀有度 3）/ 非诅咒
-	RunState.deck_ids = [8001, 8002, 9018, 8060, 9154]
+	RunState.deck_ids = [8001, 8002, 9018, 9068, 9154]
 	RunState.ensure_deck_mods()
 	var r305_five := RunState.deck_indices_with_cost(RunState.MERCHANT_MIN_COST)
 	check(r305_five.size() == 2 and r305_five.has(2) and r305_five.has(3),
-			"R305 卡片商人：5 费及以上只认出 2 张（9018 / 8060，实际 %s）" % str(r305_five))
+			"R305 卡片商人：5 费及以上只认出 2 张（9018 / 9068，实际 %s）" % str(r305_five))
 	check(RunState.deck_indices_of_rarity(RunState.LAKE_INITIAL_RARITY).size() == 2,
 			"R305 湖中仙女：初始卡（稀有度 3）认出 2 张（木栅栏 / 攻击）")
 	check(RunState.deck_indices_not_curse().size() == 4,
@@ -20781,8 +20781,8 @@ func _init() -> void:
 	r271_e9.state.hand = [CardData.from_dict(r271_repo.get_card(8060).to_dict())]
 	r271_e9.state.energy = 6
 	var r271_d0: Placement = r271_e9.play_from_hand(0, Vector2i(4, 1))
-	check(r271_d0 != null and r271_d0.health == 18 and r271_d0.card.health == 18,
-		"R271 代达罗斯：0 张聚能炮击 → 入场不加血（18 血，实际 %s）"
+	check(r271_d0 != null and r271_d0.health == 16 and r271_d0.card.health == 16,
+		"R271 代达罗斯：0 张聚能炮击 → 入场不加血（16 血，实际 %s）"
 			% ("null" if r271_d0 == null else str(r271_d0.health)))
 	check(r271_e9.state.turn_cannon_free,
 		"R271 代达罗斯：入场即点亮「本回合手卡聚能炮击 0 费」")

@@ -1169,7 +1169,7 @@ const MERGE_ID:= 9167
 #    同口径）。只加字段 / 加 trait 的（能量屏障 8033 加「护盾」、过载 8030 加双动）**不算**。
 const INSPIRE_ID:= 8077
 const INSPIRE_DMG:= 3
-# 「代达罗斯」8060（R271 重做，5 费**史诗盟友** 8/18/1/1，嘲讽）：
+# 「代达罗斯」8060（R271 重做；R330 调为 4 费**史诗盟友** 5/16/1/1，嘲讽）：
 #   入场时本次对战每用过一张聚能炮击 → 生命 +3；本回合手卡里的聚能炮击费用为 0。
 const DAEDALUS_HP_PER_CANNON:= 3
 const UPGRADE_RANGE_TRAIT:= "改造攻程"
@@ -4051,7 +4051,7 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 
 
 func _daedalus_enter(p: Placement) -> void :
-	## 「代达罗斯」8060（**R271 重做**，机械之心 5 费史诗盟友 8/18/1/1，嘲讽）：
+	## 「代达罗斯」8060（**R271 重做**，R330 调为机械之心 4 费史诗盟友 5/16/1/1，嘲讽）：
 	##   ① 入场时：本次对战中你**每使用过一张「聚能炮击」** → 这张卡生命 +3；
 	##   ② 本回合：你手卡里的「聚能炮击」费用为 0。
 	## ⚠️ 加血记 `upgrade_hp`（**不**加 `upgrade_stacks` —— 这是入场成长，不是「改造」）：
