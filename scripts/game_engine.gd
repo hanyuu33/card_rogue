@@ -1192,6 +1192,19 @@ const HIDDEN_ENERGY_RANGE:= 1
 #   把它变成一张随机卡（本职业奖励池，`_random_reward_card()` 与随心组装 9144 同池）
 #   并加入手卡。效果区几张就结算几次（与创意 / 新生同口径）；敌方不做选牌决策 → 落空。
 const SURPRISE_ID:= 8079
+
+# ── R332：暗影刺客稀有技能「本能」9176 ──
+# 2 费：**随机打出抽牌库中 3 张费用 ≤1 的技能卡**。
+#   * 候选 = `state.deck` 里 `is_spell()` 且 `cost_of(card, side) <= INSTINCT_MAX_COST`；
+#     X 费卡（流星雨 9083）**显式排除** —— 0 能量时它也算「可打出」，等于白丢一张；
+#     本能自身也排除，防止被减费后自我递归。
+#   * 打出走 `use_spell(..., free_cast = true)`：**不向玩家收费**，但保留全部既有守卫
+#     （夜行出牌上限 / 两段式技能打不出 / 没有合法目标 / 选牌面板）——
+#     打不出的卡**放回牌库原位**，不占「3 张」配额。
+#   * 随机源只用引擎 `rng`（RunState.run_seed）：先取下标再删牌 → 回放一致。
+const INSTINCT_ID:= 9176
+const INSTINCT_COUNT:= 3
+const INSTINCT_MAX_COST:= 1
 const UPGRADE_RANGE_TRAIT:= "改造攻程"
 ## R275：重甲战车 8058 移除本 trait（改为「每层改造受到的伤害 -1」）——
 ## 当前**没有任何卡**带「改造移速」，分支保留给未来的卡用。
@@ -6515,6 +6528,75 @@ func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 	return detail
 
 
+func _instinct_panel_open() -> bool:
+	## 本能 9176（R332）：结算中间出现「等玩家选」的面板就得收手 ——
+	## 继续「随机打出」会把面板依赖的下标/候选弄失效（与 use_spell 开头那四个守卫同源，
+	## 这里把弃牌区/卡组/手牌/合并等其余 pending 也一并算上）。
+	return overhaul_pending or creation_pending or cannonize_pending or surprise_pending \
+		or focus_pending or wish_pending or shadow_step_pending or revive_pending \
+		or merge_pending or crow_pending or whale_pending or endless_pending \
+		or rebirth_pending or eliminate_pending
+
+
+func _instinct_cast(side: String) -> String:
+	## 本能（9176，R332，暗影刺客 2 费稀有技能）：随机打出抽牌库中 3 张费用 ≤ 1 的技能卡。
+	## ⚠️ 这里用 `state.hand.append()` 而**不是** `_grant_to_hand()`：那张卡只是临时借道手牌
+	##    去走 `use_spell(hand_index)`（`_grant_to_hand` 在手牌满时会改投弃牌区，语义不对）。
+	## ⚠️ 候选池存的是 **CardData 引用**而不是下标：每打出一张，`state.deck` 就会变短，
+	##    先前记下的下标会整体错位。真正出牌前才用 `state.deck.find(card)` 取当前下标。
+	var names: Array[String] = []
+	var pool: Array[CardData] = []
+	for c: CardData in state.deck:
+		if c == null or not c.is_spell():
+			continue
+		if c.id == INSTINCT_ID or c.x_cost:
+			continue
+		if cost_of(c, side) > INSTINCT_MAX_COST:
+			continue
+		pool.append(c)
+	while names.size() < INSTINCT_COUNT and not pool.is_empty():
+		if _instinct_panel_open():
+			_log("本能：上一张卡留下了选牌面板，停止后续打出")
+			break
+		var k: int = rng.randi() % pool.size()
+		var card: CardData = pool[k]
+		pool.remove_at(k)
+		var pick: int = state.deck.find(card)
+		if pick < 0:
+			# 前一张打出的卡带抽牌效果，把这张抽走了 → 当没抽到。
+			continue
+		var tgt = null
+		if card.needs_target():
+			var cells := _autoplay_spell_targets(card)
+			if cells.is_empty():
+				_log("本能：%s 没有合法目标，跳过" % card.card_name)
+				continue
+			tgt = cells[rng.randi() % cells.size()]
+		state.deck.remove_at(pick)
+		state.hand.append(card)
+		var hi: int = state.hand.size() - 1
+		var plays_before: int = state.self_card_plays
+		use_spell(hi, tgt, true)
+		if state.self_card_plays > plays_before:
+			names.append(card.card_name)
+			continue
+		# 被打回（夜行上限 / 两段式技能 / 目标无效）→ 放回牌库**原位**，不占「3 张」配额。
+		var back: int = state.hand.find(card)
+		if back >= 0:
+			state.hand.remove_at(back)
+		state.deck.insert(mini(pick, state.deck.size()), card)
+		_log("本能：%s 打出被拒，放回牌库" % card.card_name)
+		if _play_cap_blocked() != "":
+			break
+	if names.is_empty():
+		_log("本能：抽牌库里没有费用 %d 或以下的技能卡" % INSTINCT_MAX_COST)
+		return "抽牌库里没有费用 %d 或以下的技能卡" % INSTINCT_MAX_COST
+	var det := "本能：随机打出 %s" % "、".join(names)
+	_log(det)
+	action.emit("instinct", {"cards": names})
+	return det
+
+
 func use_effect(hand_index: int) -> String:
 
 
@@ -8110,6 +8192,9 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 					fs_n += 1
 			_log("烈火之剑：%d 列各受到 %d 点伤害" % [fs_n, fs_dmg])
 			return "烈火之剑：%d 列各受到 %d 点伤害" % [fs_n, fs_dmg]
+		INSTINCT_ID:
+			# 本能（9176，R332）：随机打出抽牌库中 3 张费用 ≤1 的技能卡。
+			return _instinct_cast(side)
 		NIGHT_WALK_ID:
 			# 夜行（9155，R232）：本回合我方所有卡免费；本回合出牌上限 NIGHT_WALK_MAX 张（含本卡）。
 			state.turn_all_free = true

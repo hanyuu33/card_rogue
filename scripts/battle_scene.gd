@@ -1979,6 +1979,26 @@ func _ready() -> void:
 		_hover_hand = -1
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r332instinct" in args and engine != null:
+		# 演示（R332）：本能 9176 —— 牌库里只放 3 张 ≤1 费技能 + 4 张高费干扰，
+		# 截图上能直接看出「1 费的被打出去、2 费的还留在牌库」。
+		# ⚠️ 出牌动作**不在这里**：放在截图前 40 帧（见 `_demo_tick`），
+		#    否则 `--shotframe 600` 时状态栏播报与「本能 · …」飘字早就过去了。
+		RunState.player_class = PlayerClass.ROGUE
+		engine.state.hand.clear()
+		engine.state.deck.clear()
+		engine.state.energy = 6
+		for _sid in [9094, 9103, 9087, 9095, 9098, 9095, 9098]:
+			engine.state.deck.append(CardData.from_dict(repo.get_card(_sid).to_dict()))
+		for _cell in [Vector2i(2, 1), Vector2i(2, 3)]:
+			var _foe: Placement = engine.state.place(
+					CardData.from_dict(repo.get_card(8003).to_dict()),
+					_cell, GameEngine.SIDE_OPPONENT)
+			_foe.health = 30
+		engine.state.hand.append(CardData.from_dict(repo.get_card(9176).to_dict()))
+		_hover_hand = -1
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--r326chimera" in args and engine != null:
 		# 演示（R326）：嵌合暴君入场「融合」→ **每破坏 1 张回复 1 费**（这条不写进卡面文本）。
 		# 摆两张己方树人接通、手上放暴君：4 费打出 → 破坏 2 张、回 2 费（能量 6 → 4）。
@@ -2663,6 +2683,13 @@ func _demo_tick() -> void:
 		engine._destroy_dead()
 		# 窗口开局时系统鼠标会投一次 MouseMotion（正好压在树人身上）→ 左栏详情
 		# 会盖住「效果区」。出图前把悬停 + 选中一起清掉（左栏也认 `selection` 兜底）。
+		_clear_hover_state()
+		selection = null
+	if _shot_pending and "--r332instinct" in _demo_args \
+			and _demo_frame == _shot_frame - 40 and engine != null:
+		# R332 出图：截图前 40 帧才打本能 —— 躲过开局横幅，又让状态栏播报 +
+		# 「本能 · 卡名列表」飘字还在屏上（1700ms 生命周期）。
+		engine.use_spell(0, null)
 		_clear_hover_state()
 		selection = null
 	if _shot_pending and "--r331hidden" in _demo_args \
@@ -10250,6 +10277,18 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"surprise":
 			# R331 惊喜运单 8079：回合开始开面板（由 `_sync_pick` 自动弹）。
 			_say("◈ 惊喜运单：从卡组选一张卡 → 变成随机卡并加入手卡")
+		"instinct":
+			# R332 本能 9176：随机打出抽牌库中 3 张 ≤1 费技能卡（免费打出）。
+			# 状态栏只写张数（264px ≈ 19 全角字），卡名列表走飘字。
+			var in_cards: Array = data.get("cards", [])
+			_say("◈ 本能：随机打出 %d 张技能卡" % in_cards.size())
+			if not in_cards.is_empty():
+				var in_names: Array[String] = []
+				for _in in in_cards:
+					in_names.append(str(_in))
+				_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
+						"text": "本能 · " + "、".join(in_names),
+						"col": Color("b9a6ff"), "size": 15, "start": n, "dur": 1700})
 		"surprise_pick":
 			# R331 惊喜运单 8079：选完一张。
 			var sp_c: CardData = data.get("card", null)

@@ -5360,6 +5360,27 @@
       "target_mode": "none",
       "color": "绿",
       "image": ""
+    },
+    {
+      "id": 9176,
+      "name": "本能",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [
+        "本能"
+      ],
+      "affixes": [],
+      "effect_text": "随机打出抽牌库中 3 张费用 1 或以下的技能卡。",
+      "target_mode": "none",
+      "color": "紫",
+      "image": ""
     }
   ]
 }
