@@ -70,6 +70,12 @@ static func snapshot() -> Dictionary:
 		"statue_charge": RunState.statue_charge,
 		"basin_charge": RunState.basin_charge,   # R311 不锈钢盆：剩余点数（跨战斗累计）
 		"lucky7_turns": RunState.lucky7_turns,   # R314 lucky 7：跨战斗回合计数
+		"bandage_pending": RunState.bandage_pending,  # R339：止血绷带的本层累计（原先漏存 → 续档归零）
+		"boss_beaten": RunState.boss_beaten,          # R339：本层 Boss 已打（一层只开一次）
+		"run_finished": RunState.run_finished,        # R339：本局已收尾（地图不再兜底开新局）
+		"delivery_done": RunState.delivery_done,        # R339：委托完成（一次性，原先漏存）
+		"map_strokes": RunState.map_strokes,            # R339：玩家在地图上画的线（原先漏存）
+		"map_flags": RunState.map_flags,                # R339：玩家在地图上插的旗
 		"pending_event": RunState.pending_event,
 		"reward_type": RunState.reward_type,
 		"reward_context": RunState.reward_context,
@@ -83,7 +89,15 @@ static func save_run() -> bool:
 	## 把当前 run 写入本地存档。非 run 中 / 写盘失败返回 false。
 	if not RunState.run_active:
 		return false
-	var root := {"__runsave__": FORMAT, "d": snapshot()}
+	return save_snapshot(snapshot())
+
+
+static func save_snapshot(d: Dictionary) -> bool:
+	## 把**指定的一份快照**写盘（R339）。
+	## 战斗检查点必须写「进战斗之前」的那一份：`battle_scene` 在 `_load_entry_level()`
+	## **之前**抓 `snapshot()`，否则开局第 1 个我方回合已经推过 lucky 7 计数（+1），
+	## 续档重打这一场又从「已 +1」的计数起步 → 每续一次多算一格（用户报的计数错乱）。
+	var root := {"__runsave__": FORMAT, "d": d}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f == null:
 		push_warning("RunSave：无法写入存档 " + SAVE_PATH)
@@ -156,6 +170,15 @@ static func apply(d: Dictionary) -> bool:
 		RunState.basin_charge = RunState.BASIN_MAX
 	# R314 lucky 7：老存档没有这个字段 → 按 0（下次开始我方回合起重新累计）
 	RunState.lucky7_turns = int(d.get("lucky7_turns", 0))
+	# R339：止血绷带的本层累计 —— 老存档没有这个字段 → 按 0
+	RunState.bandage_pending = maxi(0, int(d.get("bandage_pending", 0)))
+	# R339：本层 Boss 是否已打（老存档 → false，等于「这一层还没打过」）
+	RunState.boss_beaten = bool(d.get("boss_beaten", false))
+	RunState.run_finished = bool(d.get("run_finished", false))
+	# R339：委托完成 / 地图标记 —— 老存档没有这些字段 → 按空处理
+	RunState.delivery_done = bool(d.get("delivery_done", false))
+	RunState.map_strokes = d.get("map_strokes", []) if d.get("map_strokes", []) is Array else []
+	RunState.map_flags = d.get("map_flags", []) if d.get("map_flags", []) is Array else []
 	RunState.pending_event = str(d.get("pending_event", ""))
 	RunState.reward_type = str(d.get("reward_type", "normal"))
 	RunState.reward_context = str(d.get("reward_context", ""))

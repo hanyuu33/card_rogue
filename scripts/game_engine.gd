@@ -59,6 +59,10 @@ var _unit_played_this_turn:= false
 var turn_dmg_bonus:= 0
 var duck_revive_chance:= 100
 var turn_spell_bonus:= 0
+## R341 鹿首标本（6049）：本场战斗累计的「技能与陷阱 / 场地伤害 +N」层数。
+## 每个我方回合开始 +1（`_begin_turn`）。**只在战斗内累计** —— 引擎一场一个实例，
+## 换场自然归零，不需要额外复位（道具本身跨战斗保留，层数不保留）。
+var deer_bonus:= 0
 var _rice_used:= false
 var crow_pending:= false
 var whale_pending:= false
@@ -161,6 +165,12 @@ const CERAMIC_CARD_ID:= 9026
 # 改为相邻空格里随机挑一个只召唤 1 只，并给所有陶瓷鸭 +1 血量（见 _kiln_hatch）。
 const KILN_CROWDED_COUNT:= 3
 const EGG_CARD_ID:= 9022
+
+# R340：生蛋鸭 / 鸭蛋（9022）在**我方回合结束**仍存活 → 原地变成「宠物鸭」（9177）。
+# 它 3 攻 15 血、程 1 速 1，并**代替我方 HP 承受伤害** —— 判据接进 `absorbs_for_hp()`，
+# 与森林守护 / 铁栅栏 / 以太守卫走同一条通道（战场绿环与伤害结算同源，不会两处漂移）。
+const PET_DUCK_ID:= 9177
+const PET_DUCK_TRAIT:= "宠物鸭"
 # ---- 「钢铁要塞」关卡（R149，第二层精英困难）----
 # 量产型赫卡同克瑞斯（9133）上场就带铸造倒计时：**我方回合结束** -1，
 # 减到 0 → 破坏自身并在**原地**立起一座钢铁要塞（9134，工事 5/100 程2 嘲讽）。
@@ -336,7 +346,7 @@ const EARRING_RELIC_ID:= 6015
 const EARRING_AUTOPLAY_MAX:= 20
 const ICECREAM_RELIC_ID:= 6016
 const ICECREAM_HP_COST:= 3
-const ICECREAM_ENERGY:= 4
+const ICECREAM_ENERGY:= 2    # R340 下调：+4 → +2（抽牌仍是 3 张）
 const ICECREAM_DRAW:= 3
 const ICECREAM_LINE:= "你跑不过我你信吗"
 const HEAVY_DUCK_RELIC_ID:= 6017
@@ -390,6 +400,20 @@ const LUCKY7_DMG:= 7
 #   * 只在 `use_spell`（技能卡）里记账；效果卡 / 单位攻击都不算「使用技能」。
 const POPCORN_RELIC_ID:= 6046
 const POPCORN_DRAW:= 1
+# ── R341 三件起始道具 ──
+# 惊奇盒子（6047，第一层初始池）：获得时把一张 9179「惊奇盒子」加进卡组（结算在 RunState）；
+#   卡片本身是 1 费 0/1 工事，**被攻击时**给攻击者挂「眩晕」—— 见 `attack()` 里的钩子
+#   与 `_apply_stun()`（施加眩晕的唯一入口）。
+#   盒子只有 1 血：任何攻击都会把它打掉，所以钩子**不判它是否还活着**（判了等于永不触发）。
+# 洞窟绳（6048，第一层初始池）：Boss 以外的战斗能「逃跑」，用掉即失去 —— 不含引擎逻辑
+#   （按钮与收尾都在 battle_scene，判据口 `RunState.can_use_cave_rope()`）。
+# 鹿首标本（6049，第二层起始池）：每个我方回合开始 +1 层，本场战斗**永久累计**；
+#   技能伤害在 `_spell_dmg()` 吃，陷阱 / 场地伤害在 `_field_trigger()` 吃 —— 两个口都要加。
+const STUN_BOX_ID:= 9179
+const STUN_BOX_TRAIT:= "惊奇盒子"
+const STUN_TURNS:= 1
+const CAVE_ROPE_RELIC_ID:= 6048
+const DEER_TROPHY_RELIC_ID:= 6049
 # R315 应急电源（9170，机械之心 0 费史诗技能 · 次元）：+1 费 + 抽 1 + 全体友方回 2。
 const EMERGENCY_POWER_ID:= 9170
 const EMERGENCY_POWER_ENERGY:= 1
@@ -558,6 +582,10 @@ const NIGHT_GROW_TRAIT:= "夜行"
 ## 以后再有夜行单位不该被顺手削弱；这条明确只属于夜鸭。
 const NIGHT_DUCK_ID:= 9027
 const NIGHT_DUCK_WEAK:= 1
+
+## R340：敌方效果卡「永夜」（9178）—— 夜鸭**不再虚弱**：奇数回合也不吃「惧光」。
+## 判据只看**敌方效果区**有没有这个 trait（见 `_refresh_night_owl`），多张不叠加。
+const ETERNAL_NIGHT_TRAIT:= "永夜"
 
 # ── 第 37 轮（2026-10-01）新卡 ──
 # 魔法塔（9075 工事）：在场时，该方「伤害类技能」原本费用每 1 点 → 额外 1 点伤害。
@@ -1776,6 +1804,11 @@ func _begin_turn(side: String) -> void :
 
 		_spring_tick()          # R307 泉水：后排单位每回合回 4
 		_tick_enemy_growth()
+		# R341 鹿首标本（6049）：**每个我方回合开始** +1 层（本场永久累计）。
+		# ⚠️ 第一个我方回合也 +1 —— 卡面写的是「每回合开始时」，开局那一回合同样算。
+		if self_relics.has(DEER_TROPHY_RELIC_ID):
+			deer_bonus += 1
+			_log("鹿首标本：技能与陷阱 / 场地伤害 +%d（本场累计）" % deer_bonus)
 		# R314 lucky 7（6045）：**每个我方回合开始**推一格跨战斗计数；满 7 的倍数 → 本轮回生效。
 		# ⚠️ 复位放在这里（而不是回合结束）：置位后要覆盖「我方回合 + 紧接着的敌方回合」，
 		#    下个我方回合开始时才清 —— 敌方回合才是真正会掉血的时段。
@@ -3044,7 +3077,7 @@ func end_turn() -> void :
 		_forge_tick()      # R150 赫菲斯托斯：连续空转 → 力量 / 攻程 +1
 
 	if current_side == SIDE_SELF:
-		# 罐子（9157，R245）：回合结束时**还在手卡**的这张卡 → 本场消失 + 召唤友方工事。
+		# 罐子（9157，R245；R340 改为直接召唤敌人）：回合结束时**还在手卡**的这张卡 → 本场消失 + 召唤一个敌人。
 		# ⚠️ 必须排在 `discard_hand()` **之前**：手牌先被弃掉，这效果就永远触发不了。
 		# R315 爆米花（6046）：本回合**一次都没**以敌人 / 敌人所在格为目标用过技能 → 下回合多抽 1。
 		# ⚠️ 放在弃牌**之前**：这两个都是「回合结束的收尾」，顺序无关，但挨着 `_jar_tick`
@@ -3053,6 +3086,8 @@ func end_turn() -> void :
 			popcorn_draw += POPCORN_DRAW
 			_log("爆米花：本回合没用技能指向敌人 → 下回合多抽 %d 张（累计 %d）"
 					% [POPCORN_DRAW, popcorn_draw])
+		# R340 生蛋鸭：存活到回合结束的鸭蛋 → 原地孵成宠物鸭（与罐子同一段收尾，先于弃手牌）
+		_egg_hatch_tick()
 		_jar_tick()
 		# R314 储物箱（6044）：持有 → 回合结束**不弃手牌**（keep_all）。
 		# 日志分开写：读者要能一眼看出「这次一张都没弃，是因为道具」。
@@ -9346,6 +9381,8 @@ func absorbs_for_hp(p: Placement) -> bool:
 		return false
 	return p.guarding or p.card.traits.has(AETHER_GUARD_TRAIT)\
 	or p.card.traits.has(IRON_FENCE_TRAIT)\
+	# R340：宠物鸭也替我方 HP 承受伤害（与森林守护 / 铁栅栏 / 以太守卫同一条通道）
+	or p.card.traits.has(PET_DUCK_TRAIT)\
 	or p.card.has_affix(AFFIX_SHARED_SHIELD)
 
 
@@ -9384,7 +9421,8 @@ func _absorb_by_guard(amount: int) -> bool:
 	var gname:= g.card.card_name
 	var how:= "共享护盾" if g.card.has_affix(AFFIX_SHARED_SHIELD)\
 	else ("以太守卫" if g.card.traits.has(AETHER_GUARD_TRAIT)\
-	else ("铁栅栏" if g.card.traits.has(IRON_FENCE_TRAIT) else "森林守护"))
+	else ("铁栅栏" if g.card.traits.has(IRON_FENCE_TRAIT)\
+	else ("宠物鸭" if g.card.traits.has(PET_DUCK_TRAIT) else "森林守护")))
 	var dealt:= _hit_unit(g, amount, how)
 	_log("%s：%s 替我方 HP 承受 %d 点伤害（剩余 %d）" % [how, gname, dealt, g.health])
 	action.emit("guard_absorb", {"card": g.card, "how": how, "amount": dealt})
@@ -9771,6 +9809,19 @@ func _apply_frozen(p: Placement, source: String) -> void:
 			"source": source})
 
 
+func _apply_stun(p: Placement, source: String) -> void:
+	## **施加眩晕的唯一入口**（R341，惊奇盒子 9179 被攻击时）。
+	## `stun_left > 0` → 下个自己回合开始 `reset_units` 不重置（横置保持 = 不能行动），
+	## 同时把 `stun_left` 减 1，所以只挡一个回合，之后自动恢复。
+	## 与冰封 / 沉睡共用同一条横置通道，`cannot_act_next_turn()` 也认它。
+	if p == null or p.health <= 0:
+		return
+	p.stun_left = maxi(p.stun_left, STUN_TURNS)
+	_log("%s 被眩晕（%s）：下回合不能行动" % [p.card.card_name, source])
+	action.emit("stun", {"cell": _cell_of(p), "name": p.card.card_name,
+			"source": source})
+
+
 func damage_cell(cell: Vector2i, amount: int, source:= "效果") -> int:
 
 
@@ -9886,6 +9937,7 @@ func _spell_dmg(side: String, base: int, card: CardData = null) -> int:
 		out += MAGIC_CORE_DMG        # 魔力核心：每回合第一张技能伤害 +1
 	out += turn_spell_bonus
 	out += turn_dmg_bonus
+	out += deer_bonus   # R341 鹿首标本：每回合 +1（本场累计）
 	# lucky 7（6045，R314）：生效回合技能额外 +7。
 	# ⚠️ 放在快速符文百分比**之前**：与鸭之眼 / 荧光草同属「固定加成」，一起被百分比放大。
 	if _lucky7_active:
@@ -10182,7 +10234,7 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 			_deathrattle_place_trap(cell, p)
 		JAR_TOKEN_ID:
 			# R245 罐子（工事 0/1/0）：死亡 → 召唤一个本层非 Boss 的随机敌人
-			_summon_jar_enemy(cell, p)
+			_summon_jar_enemy("罐子亡语")
 		_:
 			pass
 
@@ -10227,7 +10279,10 @@ func _can_hold(cell: Vector2i, side: String) -> bool:
 
 func _jar_tick() -> void :
 	## 罐子（9157，诅咒 · 1 费）的「留手惩罚」：**我方回合结束时**，还留在手卡里的这张卡
-	## → 本场消失（进消耗区，与「次元」/「离场消失」同一口径）+ 随机位置召唤一个友方工事「罐子」。
+	## → 本场消失（进消耗区，与「次元」/「离场消失」同一口径）+ **直接召唤一个敌人**。
+	## R340（用户口径「改为回合结束如果这张卡在手直接召唤敌人而不是罐子」）：
+	## 原来「召唤一个友方 0/1 工事罐子、它死了再召敌人」的两步并成一步 ——
+	## 留手的代价当场兑现，不再有「先送一个 1 血工事垫背」的缓冲。
 	## 一次把手里所有罐子都结算（同名多张各算一次）；随机源走引擎 rng → 回放可复现。
 	## 注：**打出**这张卡不会有这个效果（`use_curse` 付 1 费进弃牌区）—— 那是唯一的规避手段。
 	var count:= 0
@@ -10242,28 +10297,38 @@ func _jar_tick() -> void :
 	if count == 0:
 		return
 	state.hand = rest
-	_log("罐子：回合结束仍在手卡 %d 张 → 消失，召唤 %d 个「罐子」" % [count, count])
+	_log("罐子：回合结束仍在手卡 %d 张 → 消失，召唤 %d 个敌人" % [count, count])
 	action.emit("jar", {"count": count})
 	for _i in count:
-		_summon_jar_token()
+		_summon_jar_enemy("罐子")
 
 
-func _summon_jar_token() -> void :
-	## 召唤友方工事「罐子」（9158，0/1/0）：位置随机，**优先自家后排**。
-	var repo:= CardRepo.load_json()
-	var token: CardData = repo.get_card(JAR_TOKEN_ID)
-	if token == null:
-		_log("罐子：卡牌库里没有召唤物 9158")
+func _egg_hatch_tick() -> void :
+	## 生蛋鸭（6018）/ 鸭蛋（9022，R340）：**我方回合结束时**仍存活的鸭蛋
+	## → **原地**变成「宠物鸭」（9177，盟友 3/15/程 1 /速 1），替我方 HP 承受伤害。
+	## ⚠️ 用 `state.place()` **覆盖同一格**，不走进 `_destroy`：这是「孵化」不是「死亡」，
+	##    不该触发亡语 / 击杀记功 / 后排溢出伤害；鸭蛋本身也没有亡语，语义上更接近「变幻」。
+	## ⚠️ 副本必须 `from_dict` + `traits.duplicate()`：卡库实例共享，场上被改造会跨局泄漏。
+	var cells: Array[Vector2i] = []
+	for cell: Vector2i in state.board.keys():
+		var p: Placement = state.unit_at(cell)
+		if p != null and p.owner == SIDE_SELF and p.card.id == EGG_CARD_ID:
+			cells.append(cell)
+	if cells.is_empty():
 		return
-	var spot:= _jar_spot(SIDE_SELF)
-	if spot == Vector2i(-1, -1):
-		_log("罐子：我方半场已满，无法召唤")
+	var base: CardData = CardRepo.load_json().get_card(PET_DUCK_ID)
+	if base == null:
+		_log("生蛋鸭：卡牌库里没有「宠物鸭」（%d）" % PET_DUCK_ID)
 		return
-	var copy:= CardData.from_dict(token.to_dict())   # 独立副本：别和库内实例共享
-	var summoned:= state.place(copy, spot, SIDE_SELF, true)
-	_log("罐子：召唤了一个工事「罐子」（%s）" % spot)
-	action.emit("place", {"cell": spot, "card": copy, "side": SIDE_SELF})
-	_on_ally_entered(summoned, SIDE_SELF)
+	for cell: Vector2i in cells:
+		if not state.board.has(cell):
+			continue
+		var copy: CardData = CardData.from_dict(base.to_dict())
+		copy.traits = (copy.traits as Array).duplicate()
+		var born:= state.place(copy, cell, SIDE_SELF)
+		_log("鸭蛋孵化：%s 的鸭蛋 → 「宠物鸭」（%d 攻 / %d 血，代替我方 HP 承受伤害）" % [
+				str(cell), born.effective_power(), born.health])
+		action.emit("place", {"cell": cell, "card": copy, "side": SIDE_SELF, "hatch": true})
 
 
 func _jar_spot(side: String) -> Vector2i:
@@ -10280,22 +10345,24 @@ func _jar_spot(side: String) -> Vector2i:
 	return _random_free_half_cell(side)
 
 
-func _summon_jar_enemy(cell: Vector2i, p: Placement) -> void :
-	## 罐子（9158）亡语：召唤一个**本层非 Boss** 的随机敌人 —— 优先敌方后排（第 0 行），
-	## 满了再退敌方半场随机；敌方半场全满则召唤失败（不炸场、不卡死）。
+func _summon_jar_enemy(reason: String) -> void :
+	## 罐子（9157 留手 / 9158 亡语，R245 起；R340 起留手也走这里）的唯一召唤口：
+	## 召唤一个**本层非 Boss** 的随机敌人 —— 优先敌方后排（第 0 行），满了再退敌方半场随机；
+	## 敌方半场全满则召唤失败（不炸场、不卡死）。
+	## ⚠️ `reason` 只用于日志（「罐子」/「罐子亡语」），不再依赖被破坏单位的 Placement ——
+	##    R340 的留手惩罚没有「被破坏的东西」，硬传会为 null。
 	var layer:= RunState.current_layer if RunState.run_active else GameLayers.LAYER_DEFAULT
 	var card:= _jar_enemy_card(layer)
 	if card == null:
-		_log("罐子亡语：本层没有可召唤的敌人")
+		_log("%s：本层没有可召唤的敌人" % reason)
 		return
 	var spot:= _jar_spot(SIDE_OPPONENT)
 	if spot == Vector2i(-1, -1):
-		_log("罐子亡语：敌方半场已满，召唤失败")
+		_log("%s：敌方半场已满，召唤失败" % reason)
 		return
 	var copy:= CardData.from_dict(card.to_dict())
 	state.place(copy, spot, SIDE_OPPONENT, true)
-	_log("罐子亡语：%s 被破坏 → 召唤敌人「%s」（%s）"
-			% [p.card.card_name, card.card_name, spot])
+	_log("%s：召唤敌人「%s」（%s）" % [reason, card.card_name, spot])
 	action.emit("place", {"cell": spot, "card": copy, "side": SIDE_OPPONENT})
 	# 场上多了一个敌方单位 → 暗影领主 / 赫卡同克瑞斯 的光环立刻重算（与其它召唤同口径）
 	_refresh_dark_lord(SIDE_OPPONENT)
@@ -11615,7 +11682,10 @@ func _field_trigger(cell: Vector2i, mover: Placement) -> void :
 	var card := state.clear_field(cell)
 	# 暗影狩猎（R74 口径）：踩场地 = 「触发场地」→ 记全局半回合号供上回合判定
 	mover.trap_trig_turn = turn_total
-	var bonus:= _field_mastery(owner_side, card)
+	# R341 鹿首标本（6049）：**我方**的陷阱 / 场地伤害同样按层 +N。
+	# 判据看场地主人（`owner_side`）—— 敌人踩响我方的场地，加成按我方的算（与场地精通同口径）。
+	var bonus:= _field_mastery(owner_side, card)\
+			+ (deer_bonus if owner_side == SIDE_SELF else 0)
 	action.emit("field_trigger", {"cell": cell, "card": card,
 		"name": mover.card.card_name, "side": mover.owner})
 	if card.traits.has(TRAP_TRAIT):
@@ -12479,6 +12549,11 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	var hp_before:= defender.health
 	defender.last_hit_by = src          # 击杀记功：鸭子骑士靠它结算「每击杀一个敌人 +2 攻击力」
 	var def_dmg:= _hit_unit(defender, atk_power, "战斗", true, true)
+	# R341 惊奇盒子（9179）：**被攻击时**给攻击者挂「眩晕」（下个自己回合不能行动）。
+	# ⚠️ 不判「盒子还活着」：它只有 1 血，任何攻击都会把它打掉 —— 判存活等于这条效果永不触发。
+	# ⚠️ 放在 `_destroy` 之前：盒子被打死后就没有「被攻击时」这个时机了。
+	if defender.card.traits.has(STUN_BOX_TRAIT):
+		_apply_stun(attacker, "惊奇盒子")
 	# R74：场地卡**不是单位**（不在 board 里），所以打不到、也不会被「攻击即死」——
 	# 它的触发点唯一在 _field_trigger（挂在 move 上）。这里不再有任何陷阱即死分支。
 	# R225：践踏 → 击杀的溢出伤害不丢（沿击杀目标那一列继续传下去）；
@@ -13514,6 +13589,10 @@ func _refresh_night_owl() -> void:
 	## ⚠️ 一律用 `turn_number`（我方回合数）判奇偶，**不要用 `turn_total`**：
 	##    后者双方各 +1，敌方回合永远是偶数 → 夜鸭等于没被削。
 	var weak:= NIGHT_DUCK_WEAK if turn_number % 2 == 1 else 0
+	# R340：敌方效果区有「永夜」（9178）→ 夜鸭永不虚弱（奇数回合也按 0 结算）。
+	# 只影响**敌方**夜鸭：`state.enemy_effects` 是对方的常量区，玩家侧的夜鸭不吃这条。
+	if weak > 0 and _zone_has(state.enemy_effects, ETERNAL_NIGHT_TRAIT):
+		weak = 0
 	for c: Vector2i in state.board:
 		var p: Placement = state.board[c]
 		if p.card != null and p.card.id == NIGHT_DUCK_ID:

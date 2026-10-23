@@ -91,6 +91,17 @@ theme_override_fonts/font = SubResource("SysFont_cjk")
 theme_override_font_sizes/font_size = 14
 text = "回合结束"
 
+[node name="FleeBtn" type="Button" parent="Toolbar"]
+layout_mode = 0
+offset_left = 1124.0
+offset_top = 4.0
+offset_right = 1226.0
+offset_bottom = 32.0
+visible = false
+theme_override_fonts/font = SubResource("SysFont_cjk")
+theme_override_font_sizes/font_size = 13
+text = "逃跑"
+
 [node name="MenuBtn" type="Button" parent="Toolbar"]
 layout_mode = 0
 offset_left = 1234.0

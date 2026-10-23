@@ -160,7 +160,21 @@ func _ready() -> void:
 	sfx = Sfx.new()
 	add_child(sfx)
 	_records = RunState.load_records()
+	# R339：本层 Boss 已经打完、但层还没推进（在结算面板上直接关掉游戏 / 走选卡页回到地图）
+	# → 这里补一次推进。否则地图会停在「Boss 已打、巧克力 0」的死局：既不会再入夜，也走不动。
+	# ⚠️ 必须排在兜底 start_run **之前**：advance_layer 会换层 + 满血，不需要再开新局。
+	# ⚠️ 这里只**推进**、不自己跳卷卷：`advance_layer` 会把本层的起始道具候选填回
+	#    `relic_choice`，下面那段既有的「候选非空 → 去卷卷」重定向会接着做（源码锁也认那条判据）。
+	if RunState.run_active and RunState.boss_beaten:
+		var nxt := GameLayers.next_layer(RunState.current_layer)
+		if nxt > 0:
+			RunState.advance_layer(nxt)
 	# 兜底：直接打开地图场景（调试）时临时开一局，避免空场景
+	# ⚠️ R339：**本局已经收尾**（通关 / 失败）时不兜底 —— 否则通关那一场若因奖励面板转去选卡、
+	#    再回到地图，会在这张图上「诈尸」出一个新局（玩家看到的是「刚通关又回地图」）。
+	if RunState.run_finished:
+		SceneFx.goto("res://scenes/title.tscn", true)
+		return
 	if not RunState.run_active or RunState.map_cells.is_empty():
 		RunState.start_run(RogueMap.generate(_rng(), GameLayers.LAYER_DEFAULT),
 				GameLayers.LAYER_DEFAULT)
@@ -588,7 +602,10 @@ func _process(delta: float) -> void:
 	# ⚠️ 回放模式同样要触发（boss_pending 由 advance 确定性地置位），只是不等那 2 秒。
 	# R236：再加一道 `chocolate <= 0` 兜底 —— 体力若被商店买回 > 0，即使 boss_pending
 	# 因故残留也不该入夜（正常流程 add_chocolate 已清掉它，这里是双保险）。
-	if RunState.run_active and RunState.boss_pending and RunState.chocolate <= 0 \
+	# R339：再加一道 `not boss_beaten` —— 本层 Boss 打过就**永远**不再入夜，
+	# 不能只靠「巧克力见底」这一个条件（打完 Boss 剩 0 块，回地图再走一格就会满足它）。
+	if RunState.run_active and not RunState.boss_beaten \
+			and RunState.boss_pending and RunState.chocolate <= 0 \
 			and not _boss_alert \
 			and _boss_hold <= 0.0 and _anim_cell.is_empty() \
 			and (_reward_panel == null or not _reward_panel.is_open()):

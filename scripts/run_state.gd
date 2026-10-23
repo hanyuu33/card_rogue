@@ -52,6 +52,15 @@ static var chocolate := 0
 ## 跨战斗、跨层保留（同一局）；start_run 重置 100、end_run 清 0。advance_layer 不清。
 static var gold := 0
 static var boss_pending := false             # 巧克力已耗尽，等当前房间结算完就开 Boss 战
+## R339：**本层的 Boss 已经打过了**（一层只开一次 Boss 战）。
+## 用户报的问题：打完 Boss 回到地图，再走一格 / 继续游戏之后又进同一场 Boss 战。
+## 唯一置位口 = `mark_boss_beaten()`（Boss 战胜利时调用）；`start_run` / `advance_layer` /
+## `end_run` 复位。两条消费点：`advance()` 不再因巧克力见底重新置 `boss_pending`；
+## `map_scene` 的入夜判据也不再看巧克力（打过的层永远不再入夜）。
+static var boss_beaten := false
+## R339：`end_run()` 置位 —— 本局已经收尾。地图场景的「兜底开新局」据此收手：
+## 通关那一场若因奖励面板转去选卡、再回地图，不该在地图上**诈尸**出一个新局。
+static var run_finished := false
 ## R234 止血绷带（6029）：本层累计的「下次休息额外回血」点数。换层 / 开新局 / 结束局清零。
 static var bandage_pending := 0
 static var pending_level: Dictionary = {}    # 即将进入的战斗关卡（地图 → 战斗）
@@ -324,6 +333,14 @@ const MILK_ENCHANTS := 2
 const BANDAGE_RELIC_ID := 6029
 const BANDAGE_THRESHOLD := 20   # 「超过 20 点」= 严格大于
 const BANDAGE_HEAL := 8
+# R341 惊奇盒子（6047，第一层初始池）：获得时把一张「惊奇盒子」（9179，工事 1 费 0/1）
+# 加进卡组 —— 与行囊 6030 同一条路（`add_card` 内部会 ensure_deck_mods()）。
+# 卡片机制「被攻击时使攻击者下回合眩晕」在引擎（`GameEngine.STUN_BOX_TRAIT`）。
+const BOX_RELIC_ID := 6047
+const BOX_CARD_ID := 9179
+# R341 洞窟绳（6048，第一层初始池）：Boss 以外的战斗可以逃跑，逃跑即失去道具。
+# 判据只留一处 `can_use_cave_rope()` —— 战斗界面的按钮显隐与真正的逃跑结算共用它。
+const CAVE_ROPE_RELIC_ID := 6048
 
 
 static func reset(new_max := 50) -> void:
@@ -604,6 +621,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	chocolate = chocolate_per_layer()   # R223 难度 8「行动力降低」：8 档起 = 11
 	gold = start_gold()           # R181 初始 100 金；R223 难度 0 +50、难度 7 起降回 100
 	boss_pending = false
+	boss_beaten = false       # R339：新的一局 → 本层 Boss 还没打
+	run_finished = false       # R339：新的一局 → 上一局的收尾标记作废
 	battle_log = []
 	pending_level = {}
 	pending_node = {}
@@ -677,6 +696,8 @@ static func end_run(clear_save: bool = true) -> void:
 	chocolate = 0
 	gold = 0                      # R181：本局结束 → 金币清掉
 	boss_pending = false
+	boss_beaten = false       # R339：一局结束 → 标记回到初值
+	run_finished = true       # R339：本局已收尾（地图场景据此不再兜底开新局）
 	pending_level = {}
 	pending_node = {}
 	reward_context = ""
@@ -744,6 +765,7 @@ static func advance_layer(layer: int) -> int:
 	chocolate = chocolate_per_layer()   # 新一层：巧克力重新满上（R223 难度 8 起 = 11）
 	sync_fatigue()                # R223 难度 5：新层巧克力满 → 疲惫出卡组
 	boss_pending = false
+	boss_beaten = false           # R339：新的一层 → 这一层的 Boss 还没打
 	current_node_id = -1
 	if not map_cells.is_empty():
 		var sc2 := RogueMap.start_cell(map_cells)
@@ -816,9 +838,9 @@ static func gain_relic(id: int) -> void:
 	if relic == null:
 		return
 	match relic.id:
-		6001:   # 类固醇：最大生命 +6（当前生命同 +6）
-			max_hp += 6
-			hp += 6
+		6001:   # 类固醇（R340：+6 → +10）：最大生命 +10（当前生命同 +10）
+			max_hp += 10
+			hp += 10
 		6002:   # 源数之力（SOURCE_POWER_ID）：先失去 5 点最大生命，再进入卡组选择
 			lose_max_hp(SOURCE_POWER_HP_COST)
 			pending_relic = relic.id
@@ -837,6 +859,8 @@ static func gain_relic(id: int) -> void:
 			add_card(PACK_CARD_ID)   # 内部会 ensure_deck_mods()，附魔槽位不会错位
 		POT_RELIC_ID:   # 陶罐（R245）：随机 2 件奖励道具 + 一张「罐子」诅咒进卡组
 			_apply_pot()
+		BOX_RELIC_ID:   # 惊奇盒子（R341）：把一张「惊奇盒子」加进卡组
+			add_card(BOX_CARD_ID)
 		MILK_RELIC_ID:   # 牛奶（R224）：随机两种附魔，附给能附魔的卡
 			_apply_milk()
 		BASIN_RELIC_ID:   # 不锈钢盆（R311）：拿到就满 10 点计数
@@ -895,6 +919,14 @@ static func enchant_master_on_rest() -> Dictionary:
 
 static func has_relic(id: int) -> bool:
 	return relics.has(id)
+
+
+static func can_use_cave_rope(battle_kind: String) -> bool:
+	## R341 洞窟绳（6048）：**能不能逃跑的唯一判据口**。
+	## 两个条件：① 还带着绳子；② 这场不是 Boss 战（`battle_kind` 由 battle_scene 按关卡
+	## tier 写入引擎，与勇气徽章读的是同一个字段）。
+	## 按钮显隐与真正的逃跑结算都走这里，免得两处各自写一遍再分叉。
+	return relics.has(CAVE_ROPE_RELIC_ID) and battle_kind != "boss"
 
 
 static func lose_relic(id: int) -> bool:
@@ -1729,7 +1761,9 @@ static func advance(node_id: int) -> Dictionary:
 			c["revealed"] = true
 			revealed = true
 		chocolate = maxi(0, chocolate - cost)
-		if chocolate <= 0:
+		# R339：本层 Boss 已经打过 → 巧克力见底也不再入夜（否则打完 Boss 再走一格，
+		#       map_scene 会立刻又开同一场 Boss 战 —— 用户报的「回地图再次进 Boss」）。
+		if chocolate <= 0 and not boss_beaten:
 			boss_pending = true
 		# R223 难度 5「行动力低时疲惫」：巧克力跨过 6 的临界 → 疲惫入 / 出卡组
 		# （唯一推导口 sync_fatigue，从 deck_ids 直接判，不加布尔 flag）
@@ -1795,6 +1829,16 @@ static func on_battle_won(node_type: String) -> void:
 		battle_wins += 1
 	elif node_type == "elite":
 		elite_wins += 1
+	elif node_type == "boss":
+		mark_boss_beaten()      # R339：本层 Boss 记成「已打」→ 这一层不再入夜
+
+
+static func mark_boss_beaten() -> void:
+	## R339：本层 Boss 已击破 —— 唯一置位口。
+	## 顺带清掉 `boss_pending`：Boss 战打完时这条「等房间结算完就入夜」的待触发必须失效，
+	## 否则回地图就可能再开一次（原先只靠 `map_scene._start_boss_battle` 提前清，是个单点依赖）。
+	boss_beaten = true
+	boss_pending = false
 
 
 static func node_layer(node: Dictionary) -> int:

@@ -447,6 +447,12 @@ var _over_btn_level: Button
 var _over_btn_title: Button
 var _run_boss_win := false      # run 结算：本场是否为 Boss 通关（决定按钮路由）
 var _run_next_layer := 0        # Boss 通关后要进入的下一层（0 = 没有下一层 → 结束 run）
+## R339：**进战斗之前**的一份局状态快照（战斗检查点写它，而不是写当下状态）。
+## 为什么：`_load_entry_level()` → `start_game()` 会跑第 1 个我方回合，
+## 而 lucky 7 的跨战斗计数就在那一步 +1。检查点若在这之后写盘，
+## 「继续游戏」重打这一场就等于从「已 +1」的计数起步 → 每续一次多算一格（用户报的计数错乱）。
+## 顺带把开场就改动的其它局状态（烤肉消耗 / 回血 / 随机源步进）一起回滚成开打前的样子。
+var _pre_battle_snap: Dictionary = {}
 var _reward_panel: RewardPanel = null   # R119：奖励悬浮窗（掉落道具 / 卡牌奖励都在这里处理）
 
 # 联机模式（NetSession.active 时启用）：镜像引擎 + 动作收发回放
@@ -464,6 +470,8 @@ var _net_wait := 0.0
 @onready var map_btn: Button = $Toolbar/MapBtn
 @onready var end_turn_btn: Button = $Toolbar/EndTurnBtn
 @onready var menu_btn: Button = $Toolbar/MenuBtn
+# R341 洞窟绳（6048）：Boss 以外的战斗、且还带着绳子时才显示（见 `_refresh_flee_btn`）。
+@onready var flee_btn: Button = $Toolbar/FleeBtn
 
 
 func _ready() -> void:
@@ -488,6 +496,7 @@ func _ready() -> void:
 	add_child(sfx)
 	end_turn_btn.pressed.connect(_on_end_turn)
 	menu_btn.pressed.connect(_open_menu)
+	flee_btn.pressed.connect(_on_flee)
 	# R155：顶栏操作按钮 —— 记录（偏左）/ 卡组·地图（右侧）。不再只藏在 Esc 菜单里。
 	log_btn.pressed.connect(_toggle_log)
 	deck_btn.pressed.connect(_toggle_deck_panel)
@@ -495,7 +504,7 @@ func _ready() -> void:
 	hp_strip.draw.connect(_draw_hp_strip)
 	# 齿轮图标**自绘**（字体里的 ⚙ 不保证有，缺字会变成一个方框）—— 见 UiTheme.draw_gear
 	menu_btn.draw.connect(_draw_menu_gear)
-	for b: Button in [log_btn, deck_btn, map_btn, end_turn_btn, menu_btn]:
+	for b: Button in [log_btn, deck_btn, map_btn, end_turn_btn, menu_btn, flee_btn]:
 		b.pressed.connect(func(): sfx.play("click"))
 	_ai_timer = Timer.new()
 	_ai_timer.wait_time = 1.6
@@ -504,10 +513,14 @@ func _ready() -> void:
 	_build_tut_bar()
 	_build_level_menu()
 	_build_over_panel()
+	# R339：**必须在 `_load_entry_level()` 之前**抓 —— 那一句会跑开局第 1 个我方回合，
+	#       跨战斗计数（lucky 7）当场 +1。检查点要的是「这一场开打之前」的局状态。
+	if RunState.run_active:
+		_pre_battle_snap = RunSave.snapshot()
 	_load_entry_level()
 	_mark_battle_checkpoint()
 	# R113：顶栏按钮统一走 chip（实心 + compact —— 顶栏按钮只有 28px 高，标准内距会撑出格子）
-	for _tb: Button in [log_btn, deck_btn, map_btn, end_turn_btn, menu_btn]:
+	for _tb: Button in [log_btn, deck_btn, map_btn, end_turn_btn, menu_btn, flee_btn]:
 		UiTheme.apply_chip(_tb, true, true)
 	# R119：奖励悬浮窗 —— 战斗胜利后的掉落道具 / 卡牌奖励都先入队，由它逐项展示
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
@@ -3287,6 +3300,35 @@ func _net_disconnect() -> void:
 	t.start()
 
 
+func _refresh_flee_btn() -> void:
+	## R341 洞窟绳（6048）：按钮显隐 = `RunState.can_use_cave_rope()` 那一处判据。
+	## ⚠️ `engine` 可能还没建（`load_level` 之前）→ 直接藏起来，别访问 null。
+	if engine == null:
+		flee_btn.visible = false
+		return
+	flee_btn.visible = RunState.run_active \
+			and RunState.can_use_cave_rope(engine.battle_kind)
+
+func _on_flee() -> void:
+	## R341 洞窟绳：**逃跑 = 放弃本场**。
+	##   * 不拿任何奖励（金币 / 道具 / 卡牌全不发），也不记胜场；
+	##   * 体力在**进房间时**已经照常扣掉了，这里不再补扣；
+	##   * 当前生命原样带回（逃跑不是「重置」）；
+	##   * 道具用掉即消失（一次性），并且清掉续档检查点 —— 逃跑的这场不该还能「继续游戏」。
+	if engine == null or not RunState.run_active or _over_shown:
+		return
+	if not RunState.can_use_cave_rope(engine.battle_kind):
+		return
+	if not RunState.lose_relic(RunState.CAVE_ROPE_RELIC_ID):
+		return
+	_ai_timer.stop()
+	_clear_battle_checkpoint()
+	RunState.hp = maxi(0, engine.state.hp_self)
+	RunState.max_hp = maxi(RunState.max_hp, engine.state.max_hp_self)
+	RunState.complete_current()
+	SceneFx.goto("res://scenes/map.tscn")
+
+
 func _on_back_to_title() -> void:
 	_ai_timer.stop()
 	if RunState.run_active:
@@ -3423,6 +3465,7 @@ func load_level(lvl: Dictionary) -> void:
 	_hover_card = null
 	_hover_pl = null
 	_cur_level = lvl
+	_refresh_flee_btn()   # R341 洞窟绳：换关（含重开）后重新判一次能不能逃跑
 	# R176：战斗 BGM 按关卡分级取（一般 Dramatic / 精英 EpicBattle / Boss Raid_FolkMetal）。
 	# 挂在这里而不是 _ready —— load_level 是「换关」的唯一入口，选关 / 换层都走到。
 	Bgm.play_battle(int(lvl.get("tier", -1)))
@@ -6259,7 +6302,14 @@ func _mark_battle_checkpoint() -> void:
 	if _cur_level.is_empty():
 		return
 	RunState.resume_battle = {"node": RunState.pending_node, "level": _cur_level}
-	RunSave.save_run()
+	# R339：写「进战斗之前」那份快照（不是当前状态）—— 见 `_pre_battle_snap` 的说明。
+	# 快照为空（例如老路径 / 非 run）时退回写当下状态，行为与 R323 一致。
+	if _pre_battle_snap.is_empty():
+		RunSave.save_run()
+		return
+	var d: Dictionary = _pre_battle_snap.duplicate(true)
+	d["resume_battle"] = RunState.resume_battle
+	RunSave.save_snapshot(d)
 
 
 func _clear_battle_checkpoint() -> void:
@@ -6304,6 +6354,7 @@ func _on_over_restart() -> void:
 
 func _show_over(win: bool) -> void:
 	_over_shown = true
+	flee_btn.visible = false   # R341：打完了就不该再挂着一个「逃跑」
 	_clear_battle_checkpoint()   # R323：这场结束了 → 续档不再指向它
 	_run_next_layer = 0
 	_over_hint.text = ""
@@ -6350,6 +6401,11 @@ func _show_over(win: bool) -> void:
 				RunState.queue_relic_reward(dropped)
 			RunState.queue_card_reward(RunState.reward_type)
 			if _run_boss_win:
+				# R339：Boss 已击破 → 记账（`boss_beaten` + 清 `boss_pending`）。
+				# ⚠️ 放在算 `_run_next_layer` **之前**：advance_layer 会清这个标记，
+				#    顺序反了就等于白记；而这里记的是「刚刚这一层」。`on_battle_won` 里也调了一次
+				#    （pending_node 不是 boss 的极端路径），幂等。
+				RunState.mark_boss_beaten()
 				# Boss 通关：本层打完了 —— 有下一层就推进（满血 + 新地图 + 起始道具
 				# 三选一），没有下一层才结束整局 run。
 				_run_next_layer = GameLayers.next_layer(RunState.current_layer)
@@ -9823,6 +9879,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": fz_pos + Vector2(0, -14), "sc": _grid_scroll, "text": "冰封",
 					"col": Color("2b6fb3"), "start": n, "dur": 1500, "size": 20})
 			_say("❄ %s 被冰封：下回合不能行动" % str(data.get("name", "")))
+		"stun":
+			# R341 惊奇盒子（9179）：攻击者被眩晕 —— 金黄爆点 + 「眩晕」飘字。
+			# 常驻状态本身由 Placement.stun_left 画（状态栏 / 徽标），这里只演「施加的那一下」。
+			var st_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
+			_bursts.append({"pos": st_pos, "sc": _grid_scroll, "start": n, "dur": 560,
+					"col": Color("f0c040"), "big": false})
+			_floaters.append({"pos": st_pos + Vector2(0, -14), "sc": _grid_scroll,
+					"text": "眩晕", "col": Color("8a6d1f"), "start": n, "dur": 1500, "size": 20})
+			_say("💫 %s 被眩晕：下回合不能行动" % str(data.get("name", "")))
 		"poison":
 			# 剧毒陷阱（R51）：挂毒（apply）与回合开始的毒跳 —— 绿泡 + 飘字
 			var po_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))

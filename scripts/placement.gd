@@ -76,6 +76,11 @@ var regen: int = 0           # 自我修复（8035，R87）：每回合结束回
 ## 且这张被打死离场后额度随之消失（新的那张重新算，符合「这张卡每回合一次」的字面）。
 var upgrade_feed_turn: int = -1
 var sleep_left: int = 0       # 沉睡（恶魔鸭 9116）：还要睡几点（>0 = 本回合不行动）；自己的回合结束 -1，受伤也 -1（R122）
+## 「眩晕」（R341，惊奇盒子 9179 被攻击时挂给攻击者）：>0 = 下个自己回合不能行动。
+## 走的是与冰封 / 沉睡**同一条**「横置不重置」通道（见 FieldState.reset_units），
+## 所以 move / attack / attack_hp / AI 队列全部自然被拦住；`cannot_act_next_turn()`
+## 也认它（快速符文的「对不能行动的敌人加倍」照样吃）。到点自动清零，只挡一个回合。
+var stun_left: int = 0
 ## 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：还剩几个**我方回合**就会「破坏自身、
 ## 在原地立起一座钢铁要塞」。0 = 不带这个倒计时。
 ## ⚠️ 递减口只有一处（`GameEngine._fuse_tick`，我方回合结束），且**不是亡语** ——
@@ -202,12 +207,13 @@ func effective_range() -> int:
 ## 满血（regen 等）该显示的还是显示 —— 它是「拥有」这个状态，不是「正在生效的数值」。
 func cannot_act_next_turn() -> bool:
 	## R313（快速符文 6043）：「下回合不能行动」状态的**唯一判据口**。
-	## 目前两只：
+	## 目前三只：
 	##   * 冰封 `frozen`（寒冰箭 / 冰霜新星）—— 下回合开始时不重置，横置着动不了；
-	##   * 沉睡 `sleep_left > 0`（恶魔鸭 9116）—— 还要睡几点，期间不行动。
+	##   * 沉睡 `sleep_left > 0`（恶魔鸭 9116）—— 还要睡几点，期间不行动；
+	##   * 眩晕 `stun_left > 0`（R341 惊奇盒子 9179）—— 下个自己回合不能行动。
 	## ⚠️ **禁足 `rooted` 不算**：它只拦移动，照样能攻击 —— 卡面口径是「不能行动」。
 	## 引擎（伤害加成加倍）与界面（提示文案）共用这一处，别再各写各的。
-	return frozen or sleep_left > 0
+	return frozen or sleep_left > 0 or stun_left > 0
 
 
 func status_entries() -> Array[Dictionary]:
@@ -292,6 +298,8 @@ func status_entries() -> Array[Dictionary]:
 		out.append({"label": "力量 -%d（本回合）" % debuff, "col": COL_D, "kind": "debuff"})
 	if frozen:
 		out.append({"label": "冰封：下回合不能行动", "col": COL_D, "kind": "debuff"})
+	if stun_left > 0:
+		out.append({"label": "眩晕：下回合不能行动", "col": COL_D, "kind": "debuff"})
 	if sleep_left > 0:
 		out.append({"label": "沉睡：还剩 %d（回合/受伤各 -1）" % sleep_left,
 				"col": COL_D, "kind": "debuff"})
@@ -328,6 +336,8 @@ func status_badges() -> Array[Dictionary]:
 		out.append({"text": "护甲 %d" % armor, "col": Color("2a9d8f")})
 	if poison_left > 0:
 		out.append({"text": "中毒 %d" % poison_left, "col": Color("5a9e2f")})
+	if stun_left > 0:
+		out.append({"text": "眩晕", "col": Color("b8860b")})
 	if rooted > 0:
 		out.append({"text": "禁足", "col": Color("8a6d1f")})
 	if guarding:

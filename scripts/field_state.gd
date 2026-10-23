@@ -475,6 +475,11 @@ func reset_units(side: String) -> void:
 				# 寒冰箭：本回合开始不重置——横置保持（不能再行动），冰封解除
 				p.tapped = true
 				p.frozen = false
+			elif p.stun_left > 0:
+				# 眩晕（R341，惊奇盒子 9179）：与冰封同一条通道 —— 本回合横置保持、不吃行动权，
+				# 眩晕本身解除（只挡一个自己回合）。
+				p.tapped = true
+				p.stun_left -= 1
 			elif p.sleep_left > 0:
 				# 沉睡（恶魔鸭 9116，R63）：还在睡 → 本回合**不行动**（复用横置通道，
 				# 于是 move / attack / attack_hp / AI 队列全部自然被拦住，不用各写一遍）。

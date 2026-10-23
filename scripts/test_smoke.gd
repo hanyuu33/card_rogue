@@ -52,6 +52,24 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_battle],
+		# R339：战斗检查点必须写「进战斗之前」的局状态 —— lucky 7 的跨战斗计数在开局
+		# 第 1 个我方回合就 +1，若检查点写「当下」，续档重打这一场就会越续越多（用户报）。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relics = [RunState.LUCKY7_RELIC_ID]
+				RunState.lucky7_turns = 10
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r335_pre_battle_snap],
+		# R341 洞窟绳（6048）：Boss 以外的战斗顶栏多一个「逃跑」；Boss 战没有。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relics = [RunState.CAVE_ROPE_RELIC_ID]
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r337_flee_btn],
 		# R317：淘汰（9174）—— 从卡组选一张盟友 / 工事变成素体（面板接线）。
 		["res://scenes/battle.tscn", func():
 				_reset()
@@ -1767,6 +1785,39 @@ func _check_battle(scene: Variant) -> void:
 	_check_r208(scene)
 	_check_enchant_mark(scene)
 	_check_r277_field_tap(scene)
+
+
+func _check_r335_pre_battle_snap(scene: Variant) -> void:
+	## R339：`_pre_battle_snap` 必须是**进战斗之前**抓的 —— 开局第 1 个我方回合会把
+	## lucky 7 的跨战斗计数 +1，快照里存的应该还是进战斗前的那个数。
+	## 检查点写它，续档重打这一场才不会被「提前 +1」污染（用户报的计数错乱）。
+	var snap: Dictionary = scene.get("_pre_battle_snap")
+	var in_snap := int(snap.get("lucky7_turns", -1))
+	var live: int = RunState.lucky7_turns
+	if in_snap != 10:
+		_smoke_fail("R339 检查点：快照里的 lucky 7 计数应是 10（开打前），实际 %d" % in_snap)
+	elif live != 11:
+		_smoke_fail("R339 检查点：开局第 1 个我方回合应把计数推到 11，实际 %d" % live)
+	else:
+		print("SMOKE OK R339 检查点：快照存开打前的 10 / 实时已 +1 到 11")
+
+
+func _check_r337_flee_btn(scene: Variant) -> void:
+	## R341 洞窟绳（6048）：按钮显隐只看 `RunState.can_use_cave_rope(engine.battle_kind)` ——
+	## 普通 / 精英战显示，Boss 战藏起来。这里直接改 `battle_kind` 再刷一次即可。
+	var btn := scene.get("flee_btn") as Button
+	if btn == null:
+		_smoke_fail("R341 逃跑按钮：battle.tscn 里没有 FleeBtn")
+		return
+	if not btn.visible:
+		_smoke_fail("R341 逃跑按钮：带着洞窟绳打普通战斗时应显示")
+		return
+	scene.engine.battle_kind = "boss"
+	scene._refresh_flee_btn()
+	if btn.visible:
+		_smoke_fail("R341 逃跑按钮：Boss 战不该显示逃跑")
+	else:
+		print("SMOKE OK R341 逃跑按钮：普通战显示 / Boss 战隐藏")
 
 
 func _check_r277_field_tap(scene: Variant) -> void:

@@ -76,7 +76,7 @@ static func level_names() -> Array[String]:
 static func builtin_levels() -> Array:
 	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×8（第一层 4 + 第二层 4）→
 	## 精英简单×5（第一层 2 + 第二层 3）→ 精英困难×5（第一层 2 + 第二层 3）→
-	## Boss×5（第一层 3 + 第二层 2）。合计 31 关（R174 百眼动员进第二层普通简单）。
+	## Boss×5（第一层 3 + 第二层 2）。合计 32 关（R174 百眼动员进第二层普通简单；R340 永夜鸭群进第一层精英困难）。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_frost_line(), _assembly_line(), _mass_anvil(), _argos_mobilize(),
@@ -85,7 +85,7 @@ static func builtin_levels() -> Array:
 		_captain(), _duck_kiln(), _breath_charge(), _hermes(), _dragon_nest(),
 		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(), _asclepius(),
 		_boss_dragon(), _boss_demon_duck(), _boss_duck_darkside(),
-			_mech_duck_boss(), _hephaestus(), _scrapyard()]
+			_mech_duck_boss(), _hephaestus(), _scrapyard(), _eternal_night()]
 
 
 static func layer_of(level: Dictionary) -> int:
@@ -743,8 +743,8 @@ static func _white_mage_guard() -> Dictionary:
 
 
 static func _night_ducks() -> Dictionary:
-	## 第一层·普通敌人-困难（R158 从「第二层·普通敌人-简单」上调）：中排左右各一只夜鸭
-	## （6/35，程 2 速 2，回合开始 +1 攻），前排左右各一只使魔鸭子（4/15，程 1 速 1）护阵，
+	## 第一层·普通敌人-困难（R158 从「第二层·普通敌人-简单」上调；R340 改为**一只**夜鸭）：
+	## 中排一只夜鸭（5/35，程 2 速 2，回合开始 +1 攻），前排左右各一只使魔鸭子（4/15，程 1 速 1）护阵，
 	## AI 推进。
 	return {
 		"name": "夜鸭阵",
@@ -760,10 +760,36 @@ static func _night_ducks() -> Dictionary:
 		"starting_hand": 0,
 		"enemy_units": [
 			[9027, "夜鸭", 5, 35, 2, 2, Vector2i(1, 0)],
-			[9027, "夜鸭", 5, 35, 2, 2, Vector2i(1, 2)],
 			[9009, "使魔鸭子", 4, 15, 1, 1, Vector2i(2, 0)],
 			[9009, "使魔鸭子", 4, 15, 1, 1, Vector2i(2, 2)],
 		],
+		"tutorial": [],
+	}
+
+
+static func _eternal_night() -> Dictionary:
+	## 第一层·精英敌人-困难（R340）：中排左右各一只夜鸭（5/35，程 2 速 2，回合开始 +1 攻），
+	## 敌方开局启用效果卡「永夜」（9178）—— **夜鸭不再虚弱**：奇数回合也不吃「惧光」
+	## （既不降攻击距离 / 移动速度，也不减半力量）。
+	## 定位：比「夜鸭阵」更硬的双鸭阵 —— 玩家原本可以靠「奇数回合夜鸭够不着 / 打不痛」
+	## 拖节奏，带上永夜之后这条窗口彻底关掉，只能硬碰 2 只每回合 +1 攻的夜鸭。
+	return {
+		"name": "永夜鸭群",
+		"key": "eternal_night",
+		"tier": TIER_ELITE_HARD,
+		"layer": GameLayers.LAYER_DEFAULT,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9027, "夜鸭", 5, 35, 2, 2, Vector2i(1, 0)],
+			[9027, "夜鸭", 5, 35, 2, 2, Vector2i(1, 2)],
+		],
+		"enemy_effects": [9178],
 		"tutorial": [],
 	}
 
