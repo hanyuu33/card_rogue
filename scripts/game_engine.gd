@@ -95,7 +95,6 @@ var foresight_mode:= false  # 预判（9097）：等玩家选效果①/②
 var wish_pending:= false    # 许愿（9168）：等玩家从**卡组**选一张卡加入手卡
 var _steel_stamp_used:= false  # R307 思想钢印：本场战斗是否已经救过一次（每场一次）
 var _thorn_ring_turn:= -1      # R307 荆棘指环：上次触发是第几回合（每回合一次）
-var _mass_mnemo_turn:= -1      # R341 量产型谟涅摩叙涅：上次给出炮击加成是第几回合（每回合一次）
 var foresight_pick:= false  # 预判①：等玩家从弃牌区选一张 0 费技能卡
 var foresight_vanish:= false  # 预判①选完后：把本卡从弃牌区移除（本卡消失）
 ## R292：拒绝命运（9098）改成**自动结算**（丢光手卡 → 弃牌区所有 0/1 费卡按顺序回手），
@@ -1698,7 +1697,6 @@ func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	wish_pending = false
 	_steel_stamp_used = false   # R307：思想钢印每场战斗一次
 	_thorn_ring_turn = -1
-	_mass_mnemo_turn = -1       # R341：量产型谟涅摩叙涅的炮击加成额度
 	state.starting_hand(starting_hand)
 	state.energy = FieldState.ENERGY_PER_TURN
 	state.opp_energy = FieldState.ENERGY_PER_TURN
@@ -4722,28 +4720,41 @@ func _mass_mnemosyne_cannon_bonus(side: String) -> int:
 	## 返回 `MASS_MNEMOSYNE_DMG` = 这一发给 +7 并把本回合额度用掉；返回 0 = 不给。
 	##
 	## 三条纪律：
-	##  ① 额度记 `_mass_mnemo_turn`（比对 `turn_total`，与无限装甲 8038 / 荆棘指环
-	##     同一范式）—— **整张效果一回合一次**，场上摆多座也**不各算一份**
-	##     （沿用原先「多座不叠加 / 只看有没有」的口径）。`start_game()` 里置 -1。
+	##  ① **每座工事各一份额度**（用户口径 R341「各触发一次」）：额度记在
+	##     `Placement.mass_mnemo_turn`（比对 `turn_total`，与无限装甲 8038 的
+	##     `upgrade_feed_turn` 同一范式）→ 场上两座 = 一回合能触发两次；
+	##     这座被打掉 / 回手后额度随之消失（新上场的那座重新算）。
 	##  ② 判据只看**场上**（`state.board` 里 owner = 我方）。手牌 / 牌库 / 弃牌区里的
 	##     8075 不算 —— 卡面写的是工事在场，与谟涅摩叙涅 8072 的光环同口径。
-	##  ③ **本函数有副作用**（判到额度就当场置位）。所以调用方只能「打一发调一次」——
-	##     目前唯一调用点是 `ENERGY_CANNON_ID` 分支的开头，顺序必须是
-	##     「先判额度 → 再算伤害 → 再抽牌」。
+	##  ③ **本函数有副作用**（挑到哪座就把哪座的额度用掉）。所以调用方只能
+	##     「打一发调一次」—— 目前唯一调用点是 `ENERGY_CANNON_ID` 分支的开头，
+	##     顺序必须是「先判额度 → 再算伤害 → 再抽牌」。
+	##
+	## 挑哪座：**格位序号最小的那座**（`cell.y * 100 + cell.x`）。挑法必须确定 ——
+	## `state.board` 是 Dictionary，单位移动是 erase + insert，遍历顺序会变，
+	## 不排序的话回放会出现「两座之间该先烧哪座」的分歧（同卡同伤时看不出来，
+	## 但额度消耗与减费落到哪张抽牌上是有差的）。
 	##
 	## 加成并进 **base** 再走 `_spell_dmg()`：附魔 / 魔法塔 / 荧光草 / 鸭之眼照常叠在
 	## 「9+7」之上（与集中突破 9162 的改造加成同一口径，别直接改 `_op_deal_damage` 的入参）。
-	if side != SIDE_SELF or _mass_mnemo_turn == turn_total:
+	if side != SIDE_SELF:
 		return 0
-	var has_fort := false
-	for p: Placement in state.board.values():
-		if p.owner == SIDE_SELF and p.card.id == MASS_MNEMOSYNE_ID:
-			has_fort = true
-			break
-	if not has_fort:
+	var pick: Placement = null
+	var pick_key := 1 << 30
+	for cell: Vector2i in state.board.keys():
+		var p: Placement = state.board[cell]
+		if p == null or p.owner != SIDE_SELF or p.card == null:
+			continue
+		if p.card.id != MASS_MNEMOSYNE_ID or p.mass_mnemo_turn == turn_total:
+			continue
+		var k:= cell.y * 100 + cell.x
+		if k < pick_key:
+			pick_key = k
+			pick = p
+	if pick == null:
 		return 0
-	_mass_mnemo_turn = turn_total
-	_log("量产型谟涅摩叙涅：本回合第一次「聚能炮击」→ 伤害 +%d（额度已用）"
+	pick.mass_mnemo_turn = turn_total
+	_log("量产型谟涅摩叙涅：这一发「聚能炮击」伤害 +%d（本座工事的额度已用）"
 			% MASS_MNEMOSYNE_DMG)
 	return MASS_MNEMOSYNE_DMG
 
