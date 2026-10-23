@@ -2,12 +2,14 @@
 
 | id | 卡名 | 问题 | 改法 |
 |---|---|---|---|
-| 8057 | 榴弹击手 | 「右手更像加特林而不是榴弹炮」 | 多管旋转炮 → **单管大口径 + 方形制退器 + 侧面圆盘弹鼓** |
+| 8057 | 榴弹击手 | 「右手更像加特林而不是榴弹炮」→ 再修「应该是单一炮管，就用普通的炮管」 | 多管旋转炮 → **单管 + 一根普通光滑圆管炮口 + 侧面圆盘弹鼓** |
 | 8038 | 无限装甲 | 「需要有更多『违规改装加装配件』的感觉」 | 正规出厂新车 → **来源不一的装甲层层压焊 + 外挂废件** |
 
 ## 用户口径（R337 原话）
 
 > 榴弹击手的右手更像加特林而不是榴弹炮，修改。无尽装甲需要有更多"违规改装加装配件"的感觉
+
+> 不，榴弹击手的炮管应该是单一炮管，就用普通的炮管
 
 （卡名实为 8038「无限装甲」。）
 
@@ -16,24 +18,30 @@
 **根因是我自己写进去的**：R336 那版提示词里写了「旋转弹巢 / 叠层弹鼓 / 枪口内壁装填余温」，
 「旋转弹巢」就是加特林。所以这次不是「加强描述」，是**把这个结构从提示词里彻底删掉**。
 
-榴弹炮的辨识度靠三样，这次全部点名：
+最终形制（三稿收敛）：
 
-- **单管**：一根短粗滑膛管，炮口是个大黑圆，内壁一圈橙红余温
-- **方形炮口制退器**：整块方块扣在管口，侧向开三道长方形排气槽、槽口熏黑——
-  这一块和「多管」在剪影上完全不冲突，是最强区分点
-- **侧面平贴的圆盘弹鼓**：像车轮一样贴在炮身外侧，正面一圈弹位里插着粗短榴弹，
-  再一根短供弹臂把它接进机匣
+- **单管**：一根从头到尾等径的光滑圆管，就是最普通的炮管
+- **炮口就是一个朴素的大圆孔**：管壁略厚，孔内一圈暗橙余温
+- 近口处只留**一道普通的加厚加强环**，此外再没有任何附件
+- 侧面平贴的**圆盘弹鼓**（正面一圈弹位插着粗短榴弹）+ 一根短供弹臂接进机匣
+- 顶部铰链炮闩掀开、半插一发带铜壳的榴弹；下方回弹液压筒 + 两根外露弹簧
 
-配套：顶部铰链炮闩掀开、半插一发带铜壳的榴弹；下方回弹液压筒 + 两根外露弹簧；
-顶部折叠标尺 + 仰角齿弧手轮；肩部插口露出的线束和冷却管。
+### 第一稿的坑：方块炮口制退器
+
+第一稿改成「单管 + 方形炮口制退器（侧向开三道长条排气槽）」，**在 448×403 卡面尺寸下
+那三道槽会被读成三根并排的管子**，视觉效果又滑回机枪。所以第二稿把炮口附件**全部清空**。
+
+> **教训：「单一炮管」不只是「一根管子」，还要把炮口附件清干净。**
+> 制退器 / 排气槽 / 格栅 / 散热片 / 多道装饰环，缩图后都会被重新组装成「多管」。
 
 **排他句**（写死在提示词里）：
 
 ```
-NO multiple barrels, NO parallel barrel cluster, NO revolving cylinder in the middle
-of the weapon, NO ring of circular holes around the barrel, NO rotary gatling assembly,
-NO minigun, NO long thin rifle barrel, NO cooling fins, NO belt of small rifle cartridges.
-There is exactly ONE barrel and exactly ONE flat disc drum.
+NO multiple barrels, NO parallel barrel cluster, NO revolving cylinder,
+NO ring of circular holes around the barrel, NO rotary gatling assembly, NO minigun,
+NO muzzle brake, NO squared block muzzle, NO venting slots, NO side ports,
+NO grille, NO multiple openings, NO cooling fins, NO fluted barrel.
+The end of the gun is ONE plain round tube with ONE plain round hole.
 ```
 
 ## 8038 无限装甲
@@ -65,11 +73,15 @@ NO standardized military tank silhouette, NO glossy pristine paint, NO sci-fi en
   第二版把否定句加到四句（`NO ring of circular ports / NO revolving cylinder /
   NO rotary gatling assembly / NO multi-barrel cluster`），**那圈孔还在**。
   原因很简单——原图里那个形状已经在潜空间里，参照图的分量压过文字。
+- **第三版（纯文生图）成功，第四版（改炮口）又反过来靠 img2img 成功**：
+  因为第四版只是「把炮口一个显眼部件换成另一个形状」，属于**替换**而不是「删掉埋在中段的
+  一圈孔」，且提示词第一句就写 `CHANGE ONLY THE MUZZLE`。
 
-> **判断规则**：要「删掉原图里的某个结构」时，img2img 的否定句基本无效；
-> 第三版直接**不带参照图、纯文生图重画**，把角色特征（配色 / 目镜 / 站姿 / 背景 /
-> 光照方向）逐条重写一遍，一次就对了。
-> 加东西 → img2img；删结构 → 文生图重画。
+> **判断规则**：
+> - 往原图里**加**东西 → img2img（`image1` 旧成品 + `input_fidelity` high/medium）
+> - 要**删掉**原图里某个已成形的结构 → 摘掉参照图、纯文生图重画，
+>   把角色特征（配色 / 目镜 / 站姿 / 背景 / 光照方向）逐条重写
+> - 只是**替换一个显眼部件**、且其余全部要保持 → img2img + `CHANGE ONLY THE …` 开头
 
 ## 出图记录
 
@@ -77,7 +89,8 @@ NO standardized military tank silhouette, NO glossy pristine paint, NO sci-fi en
 |---|---|
 | 8057 v1 | 大口径炮口成立，中段六孔残留 → 废弃（`8057_v1_废弃.png`） |
 | 8057 v1b | 加了方形制退器，六孔仍在 → 废弃（`8057_v1b_残留六孔.png`） |
-| 8057 v2 | **采用**（纯文生图） |
+| 8057 v2 | 单管成立，但方块制退器的三道槽在缩图后读成「三根管」→ 被否（`8057_v2.png`） |
+| 8057 v3 | **采用**：普通圆管炮口（img2img，`CHANGE ONLY THE MUZZLE`） |
 | 8038 v2 | **采用**（一次过） |
 
 原图（1024）全留档在 `raw/`，按卡 id 命名，废弃版带原因后缀——以后回看能知道
@@ -92,7 +105,8 @@ NO standardized military tank silhouette, NO glossy pristine paint, NO sci-fi en
 
 ## 验收
 
-- 缩到 448×403 后主体完整、水印干净（对照图 `art_src/_review/_r337_cardfix.png`，左旧右新）
+- 缩到 448×403 后主体完整、水印干净（对照图 `art_src/_review/_r337_cardfix.png`，
+  上排 8057 三稿演进「原加特林 → 方块制退器 → 普通炮管」，下排 8038 旧/新）
 - 图鉴详情 `gallery.tscn -- --screenshot --card 8057 / 8038` 两张抽查正常
 - `_art_index.py --check` → 体检通过
 - `_verify.py` 五套全绿（纯插画替换，不涉及任何机制 / 计数）
