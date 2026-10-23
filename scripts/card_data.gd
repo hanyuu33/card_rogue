@@ -186,6 +186,13 @@ var diff_power: int = 0
 var diff_health: int = 0
 ## ⚠️ 不是 cards.json 的字段，**不进 to_dict** —— 序列化出去时衍生物应当退化成普通卡。
 var is_ephemeral: bool = false
+## **是否默认锁在随机池外**（R346 剧情解锁系统）。
+##   * `false`（缺省）= 老行为：这张卡一直在奖励池 / 商店里；
+##   * `true` = **默认拿不到**，必须先在故事界面解锁（`ProfileData.is_card_unlocked`）才进池。
+## 解锁**状态**不存在卡数据里（卡数据是只读原型），只存 `ProfileData.unlocked_cards`；
+## 这里只回答「这张卡要不要先解锁」。
+## ⚠️ 判据唯一口 = `CardRepo.reward_pool()`，别在商店 / 事件里各写一遍。
+var locked: bool = false
 
 
 static func from_dict(d: Dictionary) -> CardData:
@@ -215,6 +222,8 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.regen_per_turn = maxi(0, int(d.get("regen_per_turn", 0)))
 	c.own_copy = bool(d.get("own_copy", false))
 	c.random_born = bool(d.get("random_born", false))
+	# R346：剧情解锁标记（缺省 false = 老数据不用改，一直在池子里）
+	c.locked = bool(d.get("locked", false))
 	# R325：难度档位加成（只给染色用，结算早已烤进 power / health）
 	c.diff_power = int(d.get("diff_power", 0))
 	c.diff_health = int(d.get("diff_health", 0))
@@ -256,6 +265,8 @@ func to_dict() -> Dictionary:
 		"own_copy": own_copy,
 		# R271：「随机变化入手」标记同样必须随序列化走（复制 / 离场还原共用这条通道）。
 		"random_born": random_born,
+		# R346：剧情解锁标记随复制通道走（复制出来的卡不该突然变成「已解锁」的普通卡）。
+		"locked": locked,
 		# R325：难度加成必须随复制通道走（否则复制后的怪染色又变绿）。
 		"diff_power": diff_power, "diff_health": diff_health,
 		# R214：附魔 id **必须**在这里 —— 复制 / 离场还原 / 联机共用这条通道，

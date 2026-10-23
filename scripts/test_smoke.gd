@@ -29,8 +29,13 @@ var _pair_reported := {}  # R66：已打印过「牌库/道具成对」的场景
 
 
 func _initialize() -> void:
+	# R346：冒烟会实例化各场景（含剧情 / 禁卡），绝不许写玩家真实档案
+	ProfileData.set_test_mode()
 	_plan = [
 		["res://scenes/title.tscn", func(): _reset()],
+		# R346：剧情解锁界面 + 禁卡表（两个都是自绘界面，_draw 里的空引用只有冒烟能抓到）
+		["res://scenes/story.tscn", func(): _reset()],
+		["res://scenes/ban.tscn", func(): _reset()],
 		# 角色选择（R43 新增：定角色 → 发专属卡与赠品道具 → 进地图）
 		["res://scenes/class_pick.tscn", func(): _reset()],
 		# 角色选择 + 机械之心（R82：第三个角色，3 张卡面要放得下 1280 视口）

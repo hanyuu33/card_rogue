@@ -6390,6 +6390,10 @@ func _show_over(win: bool) -> void:
 			RunState.record_battle(repo, str(lvl.get("name", "?")), tier,
 					true, RunState.hp)
 			_run_boss_win = tier == GameLevels.TIER_BOSS
+			# R346 成就统计：击败的是**哪一只** Boss —— 按关卡名记账（「打过特定 boss」
+			# 这类成就读它；`RunState.on_battle_won` 那边只记「赢了几个 Boss」的总数）。
+			if _run_boss_win:
+				ProfileData.bump(ProfileData.K_BOSS_KILL + str(lvl.get("name", "?")))
 			# R181：战斗胜利掉金币（按关卡分级：普通简单 20 / 普通困难 30 / 精英 50/65 / Boss 100）
 			var gold_gain := RunState.gold_for_tier(tier)
 			if gold_gain > 0:
@@ -6436,6 +6440,12 @@ func _show_over(win: bool) -> void:
 			_over_btn_level.visible = false
 			_over_btn_title.visible = false
 			if _run_boss_win and _run_next_layer <= 0:
+				# R346 成就统计：通关 —— 「用该职业通关该难度」。
+				# ⚠️ 必须在 `end_run()` **之前**读 player_class / difficulty：
+				#    它俩会被 end_run 直接复位，读完就没了（顺序反了 = 记成全默认值）。
+				ProfileData.bump(ProfileData.K_CLEAR + "%s:%d"
+					% [RunState.player_class, RunState.difficulty])
+				ProfileData.bump(ProfileData.K_RUN_WIN)
 				RunRecord.finish("win")   # 通关：整局结果记一行
 				RunState.end_run()
 		else:
@@ -6464,6 +6474,11 @@ func _show_over(win: bool) -> void:
 	if _net_mode:
 		_net_send({"type": "bye"})
 		_over_btn_restart.disabled = true   # 联机不能重开（同 Python 版）
+	# R346 剧情解锁：本场战斗的统计（出牌 / 道具 / 胜场 / Boss）已经记完 →
+	# 刷一次成就、落盘一次。**不在 `bump()` 里写盘**是这个设计的核心纪律：
+	# 一场战斗要打十几张牌，每张都写一次 JSON 纯属浪费。
+	ProfileData.check_achievements(StoryRepo.load_json())
+	ProfileData.flush()
 	var sb := _over_panel.get_theme_stylebox("panel") as StyleBoxFlat
 	sb.border_color = COL_WIN if win else COL_LOSE
 	_over_title.text = "胜  利" if win else "失  败"

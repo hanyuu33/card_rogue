@@ -1,0 +1,98 @@
+{
+	"version": 1,
+	"_note": "R346 剧情/成就定义。剧情正文与 grants 现在全空（空壳期）：列表显示 episodeX-？？？。填内容不用改代码。统计键见 profile_data.gd 顶部注释。",
+	"episodes": [
+		{
+			"id": "episode1",
+			"chapter": "episode1",
+			"title": "？？？",
+			"text": [],
+			"grants": {"cards": [], "relics": []}
+		},
+		{
+			"id": "episode2",
+			"chapter": "episode2",
+			"title": "？？？",
+			"text": [],
+			"grants": {"cards": [], "relics": []}
+		},
+		{
+			"id": "episode3",
+			"chapter": "episode3",
+			"title": "？？？",
+			"text": [],
+			"grants": {"cards": [], "relics": []}
+		},
+		{
+			"id": "episode4",
+			"chapter": "episode4",
+			"title": "？？？",
+			"text": [],
+			"grants": {"cards": [], "relics": []}
+		},
+		{
+			"id": "episode5",
+			"chapter": "episode5",
+			"title": "？？？",
+			"text": [],
+			"grants": {"cards": [], "relics": []}
+		},
+		{
+			"id": "episode6",
+			"chapter": "episode6",
+			"title": "？？？",
+			"text": [],
+			"grants": {"cards": [], "relics": []}
+		}
+	],
+	"achievements": [
+		{
+			"id": "ach_boss_kill",
+			"name": "？？？",
+			"hint": "击败一位强大的敌人",
+			"stat_prefix": "boss_kill:",
+			"min": 1,
+			"episodes": ["episode1"]
+		},
+		{
+			"id": "ach_clear",
+			"name": "？？？",
+			"hint": "用某位角色通关某个难度",
+			"stat_prefix": "clear:",
+			"min": 1,
+			"episodes": ["episode2"]
+		},
+		{
+			"id": "ach_kind_skill",
+			"name": "？？？",
+			"hint": "累计使用 100 张技能牌",
+			"stat": "kind_play:技能",
+			"min": 100,
+			"episodes": ["episode3"]
+		},
+		{
+			"id": "ach_relic_got",
+			"name": "？？？",
+			"hint": "累计获得 20 件道具",
+			"stat_prefix": "relic_got:",
+			"min": 20,
+			"episodes": ["episode4"]
+		},
+		{
+			"id": "ach_battle_win",
+			"name": "？？？",
+			"hint": "累计打赢 30 场战斗",
+			"stat": "battle_win",
+			"min": 30,
+			"episodes": ["episode5"]
+		},
+		{
+			"id": "ach_card_play",
+			"name": "？？？",
+			"hint": "累计使用 200 张牌",
+			"stat_prefix": "card_play:",
+			"min": 200,
+			"episodes": ["episode6"]
+		}
+	]
+}

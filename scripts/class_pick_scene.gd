@@ -33,6 +33,9 @@ var _picked := false
 var _seed_edit: LineEdit = null   # R261：种子输入框（唯一的原生控件，手机点它弹软键盘）
 var _seed_guard := false          # 防止 text_changed 里改 text 触发二次回调
 var _seed_bad := false            # 输入的种子不合法（红框 + 提示；不静默换成随机）
+## R346：上次选中的角色下标 —— 从「禁卡表」回来时**恢复**原来的选择。
+## 这个界面每次进都重建，不留一份就会「去禁个卡，回来角色变回第一个」。
+static var last_selected := 0
 
 
 func _ready() -> void:
@@ -63,6 +66,9 @@ func _ready() -> void:
 	for ai in uargs.size():
 		if uargs[ai] == "--sel" and ai + 1 < uargs.size():
 			_selected = clampi(int(uargs[ai + 1]), 0, PlayerClass.ids().size() - 1)
+	# R346：从禁卡表回来 → 恢复上次选的角色（`--sel` 显式指定时以它为准）
+	if uargs.find("--sel") < 0:
+		_selected = clampi(last_selected, 0, PlayerClass.ids().size() - 1)
 	# R223：`-- --screenshot --diff N` 预选难度档位（0~10，看累计 debuff 文本的换行情况）。
 	for ai in uargs.size():
 		if uargs[ai] == "--diff" and ai + 1 < uargs.size():
@@ -143,6 +149,12 @@ func _seed_edit_rect() -> Rect2:
 	return Rect2(p.position.x + 18.0, p.position.y + 40.0, p.size.x - 36.0, 34.0)
 
 
+func _ban_rect() -> Rect2:
+	## R346：禁卡表入口 —— 摆在种子面板正上方（同一列、同宽），不挡 CG 也不压头像行。
+	var p := _seed_panel_rect()
+	return Rect2(p.position.x, p.position.y - 48.0, p.size.x, 36.0)
+
+
 func _build_seed_edit() -> void:
 	## 原生 LineEdit（手机上点它才会弹软键盘）—— 样式与设置页的种子框同一套。
 	GameSettings.ensure_loaded()
@@ -177,6 +189,22 @@ func _build_seed_edit() -> void:
 	resized.connect(_sync_seed_edit)
 
 
+func _draw_ban_button() -> void:
+	## R346：禁卡表按钮（额度 / 已禁张数直接写在按钮上，不用进去才知道有没有名额）。
+	var r := _ban_rect()
+	var repo := CardRepo.load_json()
+	var quota := ProfileData.ban_total_quota(repo)
+	var used: int = ProfileData.banned_cards.size()
+	var hov := r.has_point(get_local_mouse_position())
+	var bg := Color(0.10, 0.11, 0.15, 0.86) if not hov else Color(0.16, 0.18, 0.24, 0.92)
+	draw_rect(r, bg, true)
+	draw_rect(r, Color("8f9ab4") if hov else Color(1, 1, 1, 0.22), false, 1.4)
+	var label := "禁卡表 · 已禁 %d / 名额 %d" % [used, quota]
+	var col := Color("e0b23c") if quota > 0 else Color("9a968c")
+	draw_string(_font_bold, Vector2(r.position.x, r.position.y + 24.0), label,
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, col)
+
+
 func _sync_seed_edit() -> void:
 	if _seed_edit == null:
 		return
@@ -204,6 +232,7 @@ func _on_seed_changed(txt: String) -> void:
 
 
 func _draw_seed_panel() -> void:
+	_draw_ban_button()
 	var p := _seed_panel_rect()
 	draw_rect(p, Color(0.04, 0.05, 0.08, 0.78), true)
 	draw_rect(p, Color("b4523f") if _seed_bad else Color(1, 1, 1, 0.22), false, 1.6)
@@ -407,6 +436,11 @@ func _gui_input(event: InputEvent) -> void:
 			if _confirm_rect().has_point(pos):
 				_choose(PlayerClass.ids()[_selected])
 				return
+			if _ban_rect().has_point(pos):
+				# R346：去禁卡表（账号级选择，回来还停在原来选的角色上）
+				sfx.play("click")
+				SceneFx.goto("res://scenes/ban.tscn")
+				return
 			if _diff_left_rect().has_point(pos) or _diff_right_rect().has_point(pos):
 				var dir := -1 if _diff_left_rect().has_point(pos) else 1
 				RunState.set_difficulty(RunState.difficulty + dir)
@@ -416,6 +450,7 @@ func _gui_input(event: InputEvent) -> void:
 		for i in PlayerClass.ids().size():
 			if _av_rect(i).grow(5.0).has_point(pos):
 				_selected = i
+				last_selected = i
 				sfx.play("click")
 				queue_redraw()   # R186（原来靠 _process 每帧重绘）
 				return

@@ -25,6 +25,8 @@ func _mk(id: int, name: String, rarity: int) -> CardData:
 
 
 func _init() -> void:
+	# R346：测试进程绝不许写玩家真实档案
+	ProfileData.set_test_mode()
 	print("== 肉鸽卡牌奖励测试（卡牌肉鸽版） ==")
 	var repo := CardRepo.load_json()
 

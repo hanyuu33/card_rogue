@@ -6766,6 +6766,13 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 	##   5) 不眠（9101 效果）：结算收尾时手里没牌 → 抽 1 张（0 费卡本回合 +1 费）。
 	if side == SIDE_SELF:
 		state.self_card_plays += 1
+		# R346 成就统计：累计「用过多少张牌」—— 按卡 id 与卡类各记一份。
+		# 记在这里是因为 `_note_card_played` 是**唯一**出牌收尾口（play_from_hand /
+		# use_spell / use_effect / remote_* 全都会走到），别在这四处各写一遍。
+		# ⚠️ 只在真局里记（`run_active`）—— 演示 / 单关战斗不该往玩家档案里灌统计。
+		if played != null and RunState.run_active:
+			ProfileData.bump(ProfileData.K_CARD_PLAY + str(played.id))
+			ProfileData.bump(ProfileData.K_KIND_PLAY + played.kind)
 	else:
 		state.opp_card_plays += 1
 	# R271：聚能体系计数 —— 本次对战中我方**使用过几张「聚能炮击」**（9145）。

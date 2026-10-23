@@ -51,14 +51,36 @@ func enemy_cards() -> Array[CardData]:
 	return by_group("enemy")
 
 
-func reward_pool() -> Array[CardData]:
-	## 肉鸽卡牌奖励的候选池：只有 普通/稀有/史诗（rarity 0~2）能通过奖励获得；
-	## 初始（3）、怪物（4）与事件卡（5）排除。当前卡池尚未加入奖励卡时返回空数组。
+func obtainable_cards() -> Array[CardData]:
+	## 「可获得池」= 奖励池去掉**禁卡**那一层（R346）。
+	## 为什么要单独一个口：禁卡界面必须**列出已被禁的卡**，否则玩家一点它就消失、
+	## 再也点不回来（取消禁卡都做不到）。所以：
+	##   * 本函数：稀有度 0~2 + 过剧情锁（不含禁卡过滤）→ 禁卡界面的列表口径；
+	##   * `reward_pool()`：在本函数之上再摘掉禁卡 → 真正的随机池。
+	ProfileData.ensure_loaded()
 	var out: Array[CardData] = []
 	for c: CardData in _cards.values():
-		if c.rarity <= 2 and not c.traits.has("测试"):
-			out.append(c)
+		if c.rarity > 2 or c.traits.has("测试"):
+			continue
+		if c.locked and not ProfileData.is_card_unlocked(c.id):
+			continue
+		out.append(c)
 	out.sort_custom(func(a: CardData, b: CardData): return a.id < b.id)
+	return out
+
+
+func reward_pool() -> Array[CardData]:
+	## 肉鸽卡牌奖励的候选池：只有 普通/稀有/史诗（rarity 0~2）能通过奖励获得；
+	## 初始（3）、怪物（4）与事件卡（5）排除。
+	## R346 起再按玩家的**账号进度**过闸（唯一口 —— 商店 / 事件 / 奖励全都读这里）：
+	##   ① 剧情锁定：`locked = true` 且还没在故事界面解锁 → 不进池（在 `obtainable_cards` 里）；
+	##   ② 玩家禁卡：`ProfileData.banned_cards` 里的 → 不进池（就是下面这一段）。
+	## 两道闸都默认「空」，所以老存档 / 新玩家看到的池子与以前完全一致。
+	var out: Array[CardData] = []
+	for c: CardData in obtainable_cards():
+		if ProfileData.is_banned(c.id):
+			continue
+		out.append(c)
 	return out
 
 

@@ -101,6 +101,8 @@ func _single_deck(card: CardData) -> Array[CardData]:
 
 
 func _init() -> void:
+	# R346：测试进程绝不许写玩家真实档案（剧情 / 成就 / 禁卡进度都在里面）
+	ProfileData.set_test_mode()
 	print("== 肉鸽引擎规则测试 ==")
 	var repo := CardRepo.load_json()
 
@@ -24844,6 +24846,195 @@ func _init() -> void:
 	RunState.relics = r342_relics_bak.duplicate()
 	RunState.pending_rewards = []
 	RunState.match_charge = 0
+
+	# ============================================================
+	#  R346：剧情解锁 / 成就统计 / 卡牌道具解锁 / 禁卡表（框架）
+	# ============================================================
+	# 只验**框架**：数据形状、条件判定、解锁链路、奖励池闸门、禁卡额度。
+	# 内容（剧情正文 / 具体解锁了哪些卡）现在全是空的，所以断言不写死具体 id。
+	# ---- ① stories.json 结构 ----
+	var r346_repo := StoryRepo.load_json()
+	check(r346_repo.episodes.size() >= 6,
+			"R346 剧情：stories.json 至少 6 段（实际 %d 段）" % r346_repo.episodes.size())
+	var r346_seen := {}
+	var r346_dup := ""
+	for ep: Dictionary in r346_repo.episodes:
+		var eid := str(ep.get("id", ""))
+		if eid == "" or r346_seen.has(eid):
+			r346_dup = eid
+		r346_seen[eid] = true
+	check(r346_dup == "", "R346 剧情：每段都有唯一 id（重复 / 空：%s）" % r346_dup)
+	var r346_bad_ref := ""
+	var r346_referenced := {}
+	for ach: Dictionary in r346_repo.achievements:
+		var aeps: Array = ach.get("episodes", [])
+		if aeps.is_empty():
+			r346_bad_ref = "成就 %s 没挂剧情" % str(ach.get("id", ""))
+		for v: Variant in aeps:
+			var eid2 := str(v)
+			r346_referenced[eid2] = true
+			if r346_repo.episode(eid2).is_empty():
+				r346_bad_ref = "成就 %s 引用了不存在的剧情 %s" % [str(ach.get("id", "")), eid2]
+	check(r346_bad_ref == "", "R346 剧情：成就引用的剧情都存在（%s）" % r346_bad_ref)
+	var r346_noach := ""
+	for ep2: Dictionary in r346_repo.episodes:
+		if not r346_referenced.has(str(ep2.get("id", ""))):
+			r346_noach = str(ep2.get("id", ""))
+	check(r346_noach == "", "R346 剧情：每段剧情都挂在一个成就下（漏：%s）" % r346_noach)
+
+	# ---- ② 条件判定 → 解锁 → 看过才发奖励 ----
+	ProfileData.set_test_mode()
+	var r346_ach: Dictionary = r346_repo.achievements[0]
+	var r346_ep: String = str((r346_ach.get("episodes", []) as Array)[0])
+	check(r346_repo.episode_state(r346_ep) == StoryRepo.STATE_LOCKED,
+			"R346 条件没达成 → 状态 locked（实际 %s）" % r346_repo.episode_state(r346_ep))
+	var r346_need := int(r346_ach.get("min", 1))
+	var r346_key := str(r346_ach.get("stat", ""))
+	var r346_prefix := str(r346_ach.get("stat_prefix", ""))
+	if r346_need > 1:
+		if r346_key != "":
+			ProfileData.bump(r346_key, r346_need - 1)
+		else:
+			ProfileData.bump(r346_prefix + "__r346", r346_need - 1)
+		check(r346_repo.episode_state(r346_ep) == StoryRepo.STATE_LOCKED,
+				"R346 差一点不算达成（%d / %d）" % [r346_need - 1, r346_need])
+	if r346_key != "":
+		ProfileData.bump(r346_key)
+	else:
+		ProfileData.bump(r346_prefix + "__r346")
+	var r346_new := ProfileData.check_achievements(r346_repo)
+	check(r346_new.has(r346_ep), "R346 达成条件 → 成就解锁对应剧情（本次 %s）" % str(r346_new))
+	check(r346_repo.episode_state(r346_ep) == StoryRepo.STATE_READY,
+			"R346 达成但还没看过 → 状态 ready")
+	check(ProfileData.check_achievements(r346_repo).is_empty(),
+			"R346 重复检查不会重复解锁（幂等）")
+	var r346_claim := ProfileData.claim_episode(r346_repo, r346_ep)
+	check(bool(r346_claim.get("ok", false)),
+			"R346 点开看过后可以收下（%s）" % str(r346_claim.get("reason", "")))
+	check(r346_repo.episode_state(r346_ep) == StoryRepo.STATE_READ,
+			"R346 收下后状态 read")
+	check(not bool(ProfileData.claim_episode(r346_repo, r346_ep).get("ok", true)),
+			"R346 同一段不能收下两次")
+
+	# ---- ③ 收下真的会解锁卡牌 / 道具（临时剧情文件，用真实 loader 读）----
+	# ⚠️ 不走 `repo.episodes.append()` —— 那样绕过 `_ep` 索引，`episode()` 查不到。
+	var r346_probe_path := "user://r346_stories_probe.json"
+	var r346_probe := {
+		"version": 1,
+		"episodes": [{"id": "ep_test", "chapter": "episodeT", "title": "测试段",
+				"text": ["第一句占位。", "第二句占位。"],
+				"grants": {"cards": [9003, 9004], "relics": [6005]}}],
+		"achievements": [{"id": "ach_test", "name": "测试成就", "hint": "灌满探针",
+				"stat": "r346_probe", "min": 2, "episodes": ["ep_test"]}],
+	}
+	var r346_pf := FileAccess.open(r346_probe_path, FileAccess.WRITE)
+	check(r346_pf != null, "R346 测试：能写临时剧情文件")
+	if r346_pf != null:
+		r346_pf.store_string(JSON.stringify(r346_probe))
+		r346_pf.close()
+	var r346_repo2 := StoryRepo.load_json(r346_probe_path)
+	check(r346_repo2.episodes.size() == 1 and not r346_repo2.episode("ep_test").is_empty(),
+			"R346 测试：临时剧情文件能被 StoryRepo 读进索引")
+	check(not bool(ProfileData.claim_episode(r346_repo2, "ep_test").get("ok", true)),
+			"R346 条件没达成时收不了（先解锁才谈得上领）")
+	ProfileData.bump("r346_probe", 2)
+	check(ProfileData.check_achievements(r346_repo2).has("ep_test"),
+			"R346 探针成就达成 → 临时剧情解锁")
+	var r346_c2 := ProfileData.claim_episode(r346_repo2, "ep_test")
+	check((r346_c2.get("cards", []) as Array).size() == 2
+			and ProfileData.is_card_unlocked(9003) and ProfileData.is_card_unlocked(9004),
+			"R346 收下会解锁这一段挂的 2 张卡")
+	check((r346_c2.get("relics", []) as Array).size() == 1
+			and ProfileData.is_relic_unlocked(6005),
+			"R346 收下会解锁这一段挂的 1 件道具")
+
+	# ---- ④ 奖励池两道闸：剧情锁定 / 玩家禁卡 ----
+	ProfileData.clear_memory()
+	var r346_repo_cards := CardRepo.load_json()
+	var r346_expect := 0
+	for c0: CardData in r346_repo_cards.all_cards():
+		if c0.rarity <= 2 and not c0.traits.has("测试"):
+			r346_expect += 1
+	check(r346_repo_cards.reward_pool().size() == r346_expect,
+			"R346 奖励池：默认闸门全开（%d 张）" % r346_expect)
+	var r346_lock := CardData.from_dict({"id": 99801, "name": "锁定探针", "kind": "盟友",
+			"cost": 1, "power": 1, "health": 1, "rarity": 0, "class": "森林精魄",
+			"locked": true})
+	check(r346_lock.locked, "R346 卡数据：locked 字段能从 JSON 读出来")
+	r346_repo_cards._cards[99801] = r346_lock
+	var r346_locked_in_pool := false
+	for c1: CardData in r346_repo_cards.reward_pool():
+		if c1.id == 99801:
+			r346_locked_in_pool = true
+	check(not r346_locked_in_pool, "R346 奖励池：locked 且没解锁的卡不进池")
+	ProfileData.unlock_card(99801)
+	var r346_unlocked_in_pool := false
+	for c2: CardData in r346_repo_cards.reward_pool():
+		if c2.id == 99801:
+			r346_unlocked_in_pool = true
+	check(r346_unlocked_in_pool, "R346 奖励池：解锁后同一张卡进池")
+	r346_repo_cards._cards.erase(99801)
+
+	# ---- ⑤ 禁卡：额度 = 同稀有度已解锁张数 ----
+	ProfileData.clear_memory()
+	ProfileData.unlock_card(9003)      # 普通 ×2
+	ProfileData.unlock_card(9004)
+	ProfileData.unlock_card(8001)      # 初始（稀有度 3）→ 不占奖励池额度
+	var r346_q := ProfileData.ban_quota(r346_repo_cards)
+	check(int(r346_q.get(0, -1)) == 2,
+			"R346 禁卡额度：普通档 = 2 张已解锁（实际 %d）" % int(r346_q.get(0, -1)))
+	check(int(r346_q.get(1, -1)) == 0 and int(r346_q.get(2, -1)) == 0,
+			"R346 禁卡额度：稀有 / 史诗档没解锁就没额度")
+	check(ProfileData.can_ban(9005, r346_repo_cards), "R346 禁卡：有名额时普通卡可禁")
+	check(ProfileData.toggle_ban(9005, r346_repo_cards) and ProfileData.is_banned(9005),
+			"R346 禁卡：禁用成功并记进档案")
+	check(not ProfileData.can_ban(9005, r346_repo_cards), "R346 禁卡：同一张不能重复占名额")
+	check(ProfileData.toggle_ban(9010, r346_repo_cards), "R346 禁卡：第二张（额度刚好用完）")
+	check(not ProfileData.can_ban(9011, r346_repo_cards), "R346 禁卡：额度用完后第三张禁不了")
+	check(not ProfileData.can_ban(9006, r346_repo_cards), "R346 禁卡：没有史诗名额时史诗禁不了")
+	var r346_banned_in_pool := false
+	for c3: CardData in r346_repo_cards.reward_pool():
+		if c3.id == 9005 or c3.id == 9010:
+			r346_banned_in_pool = true
+	check(not r346_banned_in_pool, "R346 禁卡：禁掉的卡不进奖励池")
+	check(not ProfileData.toggle_ban(9005, r346_repo_cards) and not ProfileData.is_banned(9005),
+			"R346 禁卡：再点一下取消（取消永远允许）")
+	check(ProfileData.can_ban(9005, r346_repo_cards), "R346 禁卡：取消后名额回来了")
+
+	# ---- ⑥ 档案落盘 / 读回（同一份文件）----
+	ProfileData.bump("r346_persist_probe", 7)   # ⑤ 清过内存，这里重新灌一个可辨认的数
+	ProfileData.mark_story_read("ep_persist")     # 已读列表也要验 round-trip
+	ProfileData.save()
+	var r346_stats_n := int(ProfileData.stats.get("r346_persist_probe", 0))
+	var r346_cards_n := ProfileData.unlocked_cards.size()
+	var r346_bans_n := ProfileData.banned_cards.size()
+	ProfileData.clear_memory()
+	ProfileData._loaded = false
+	ProfileData.ensure_loaded()
+	check(int(ProfileData.stats.get("r346_persist_probe", -1)) == r346_stats_n
+			and r346_stats_n == 7,
+			"R346 档案：统计计数读写一致（%d）" % r346_stats_n)
+	check(ProfileData.unlocked_cards.size() == r346_cards_n,
+			"R346 档案：已解锁卡牌读写一致（%d 张）" % r346_cards_n)
+	check(ProfileData.banned_cards.size() == r346_bans_n,
+			"R346 档案：禁卡表读写一致（%d 张）" % r346_bans_n)
+	check(ProfileData.is_story_read("ep_persist"), "R346 档案：已读剧情读写一致")
+
+	# ---- ⑦ 界面接线（源码守卫）----
+	var r346_title_src := FileAccess.get_file_as_string("res://scripts/title_scene.gd")
+	check_src(r346_title_src.find("查看故事") >= 0
+			and r346_title_src.find("story.tscn") >= 0,
+			"R346 界面：主界面有「查看故事」入口并指向 story.tscn")
+	check_src(FileAccess.file_exists("res://scenes/story.tscn")
+			and FileAccess.file_exists("res://scenes/ban.tscn"),
+			"R346 界面：story / ban 两个场景文件都在")
+	var r346_cp_src := FileAccess.get_file_as_string("res://scripts/class_pick_scene.gd")
+	check_src(r346_cp_src.find("ban.tscn") >= 0,
+			"R346 界面：角色选择页有「禁卡表」入口")
+	# 收尾：删临时剧情文件（档案文件交给下一次 set_test_mode 清）
+	if FileAccess.file_exists(r346_probe_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(r346_probe_path))
+	ProfileData.clear_memory()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

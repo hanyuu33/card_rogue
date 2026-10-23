@@ -41,19 +41,26 @@ func _ready() -> void:
 	set_btn.tooltip_text = "音效 / 音乐 / 全屏"
 	$Buttons.add_child(set_btn)
 	set_btn.pressed.connect(_on_settings)
+	# R346：剧情解锁入口 —— 条件达成后点开剧情，收下里面解锁的卡牌 / 道具。
+	var story_btn := Button.new()
+	story_btn.text = "查看故事"
+	story_btn.tooltip_text = "成就解锁的剧情；看完会解锁新的卡牌 / 道具"
+	$Buttons.add_child(story_btn)
+	story_btn.pressed.connect(_on_story)
 	# 续档入口（"继续游戏"）：有本地存档才显示，放在「开始」之后。
 	var cont_btn := Button.new()
 	cont_btn.text = "继续游戏"
 	$Buttons.add_child(cont_btn)
 	cont_btn.pressed.connect(_on_continue)
 	cont_btn.visible = RunSave.has_save()
-	# 顺序固定：开始 / 继续 / 图鉴 / 记录 / 设置 / 退出
+	# 顺序固定：开始 / 继续 / 图鉴 / 记录 / 故事 / 设置 / 退出
 	$Buttons.move_child(cont_btn, 1)
 	$Buttons.move_child(rec_btn, 3)
-	$Buttons.move_child(set_btn, 4)
-	$Buttons.move_child($Buttons/QuitBtn, 5)
+	$Buttons.move_child(story_btn, 4)
+	$Buttons.move_child(set_btn, 5)
+	$Buttons.move_child($Buttons/QuitBtn, 6)
 	for b: Button in [$Buttons/StartBtn, $Buttons/GalleryBtn, $Buttons/QuitBtn,
-			cont_btn, rec_btn, set_btn]:
+			cont_btn, rec_btn, set_btn, story_btn]:
 		b.pressed.connect(func(): sfx.play("click"))
 	# R113 按钮主次：**一屏只有一个主按钮**（开始对战）。规格全部来自 UiTheme.apply_button，
 	# 这里不写任何字号 / 圆角 / 颜色 —— 以后新界面照抄这几行即可。
@@ -63,6 +70,7 @@ func _ready() -> void:
 	UiTheme.apply_button($Buttons/QuitBtn, false)
 	UiTheme.apply_button(rec_btn, false)
 	UiTheme.apply_button(set_btn, false)
+	UiTheme.apply_button(story_btn, false)
 	# R166：难度档位不再在标题页选 —— 挪到角色选择界面（class_pick_scene）。
 	# R215：设置（音效 / 音乐 / 全屏）按上次保存的值套上；上次启动留下的「没打完的一局」
 	# 在这里补记成「中断」（关窗口 / 崩溃都算）。
@@ -203,6 +211,11 @@ func _on_quit() -> void:
 
 func _on_records() -> void:
 	SceneFx.goto("res://scenes/record_list.tscn")
+
+
+func _on_story() -> void:
+	## R346：剧情解锁界面（条件达成的条目可以点开，看完收下解锁的卡牌 / 道具）。
+	SceneFx.goto("res://scenes/story.tscn")
 
 
 func _on_settings() -> void:

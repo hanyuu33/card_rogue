@@ -39,6 +39,12 @@ var kind := KIND_INSTANT
 var source := SRC_INITIAL
 var tier := TIER_NORMAL
 var desc := ""
+## **是否默认锁在随机池外**（R346 剧情解锁系统）。
+##   * `false`（缺省）= 老行为：一直在奖励池里；
+##   * `true` = 必须先在故事界面解锁（`ProfileData.is_relic_unlocked`）才进奖励池。
+## ⚠️ 只影响**奖励池**（`RelicRepo.reward_ids()`）：初始池 / 二层池 / 事件池 / 角色赠品
+##    是显式 id 列表，不走随机，锁定标记对它们没有意义。
+var locked := false
 
 
 static func normalize_tier(raw: String) -> String:
@@ -54,6 +60,8 @@ static func from_dict(d: Dictionary) -> RelicData:
 	r.source = str(d.get("source", SRC_INITIAL))
 	r.tier = normalize_tier(str(d.get("tier", TIER_NORMAL)))
 	r.desc = str(d.get("desc", ""))
+	# R346：剧情解锁标记（缺省 false = 老数据不用改，一直在奖励池里）
+	r.locked = bool(d.get("locked", false))
 	return r
 
 

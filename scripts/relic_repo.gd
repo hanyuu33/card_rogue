@@ -59,9 +59,24 @@ func reward_ids(tier: String = "") -> Array[int]:
 	## R315：新增「爆米花」6046（本回合没用技能指向敌人 → 下回合多抽 1 张），「一般」档。
 	## R342：新增传奇「采集刀」6050（战斗胜利后多给一组卡牌奖励）与「火柴」6051
 	##       （卡牌奖励界面 3 次刷新，一般档）。
-	return _filter_by_tier([6005, 6006, 6007, 6008, 6009, 6013, 6020, 6024,
+	## R346：**剧情锁定**的道具（`RelicData.locked`）在解锁前不进奖励池 ——
+	##       过闸的唯一口就是这里；初始池 / 二层池 / 事件池 / 角色赠品是显式 id 列表，不受影响。
+	var ids: Array[int] = [6005, 6006, 6007, 6008, 6009, 6013, 6020, 6024,
 			6026, 6028, 6029, 6040, 6041, 6042, 6043, 6044, 6045, 6046,
-			6050, 6051], tier)
+			6050, 6051]
+	return _filter_by_tier(_drop_locked(ids), tier)
+
+
+func _drop_locked(ids: Array[int]) -> Array[int]:
+	## R346：去掉「剧情还没解锁」的道具（未标记 locked 的照旧全留）。
+	ProfileData.ensure_loaded()
+	var out: Array[int] = []
+	for id: int in ids:
+		var r: RelicData = get_relic(id)
+		if r != null and r.locked and not ProfileData.is_relic_unlocked(id):
+			continue
+		out.append(id)
+	return out
 
 
 func normal_reward_ids() -> Array[int]:

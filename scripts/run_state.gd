@@ -846,6 +846,9 @@ static func gain_relic(id: int) -> void:
 	if relics.has(id):
 		return
 	relics.append(id)
+	# R346 成就统计：「首次获得道具 XX」这类成就读的就是这条计数（>= 1 即首次）。
+	# ⚠️ 放在 `relics.has(id)` 之后 —— 重复获得不再计数（本局同一件只拿一次）。
+	ProfileData.bump(ProfileData.K_RELIC_GOT + str(id))
 	var relic := RelicRepo.load_json().get_relic(id)
 	if relic == null:
 		return
@@ -1909,10 +1912,15 @@ static func on_battle_won(node_type: String) -> void:
 	## 玩家可以靠怪物事件反复刷简单战斗。
 	if node_type == "battle" or node_type == "event":
 		battle_wins += 1
+		ProfileData.bump(ProfileData.K_BATTLE_WIN)   # R346：成就统计（累计胜场）
 	elif node_type == "elite":
 		elite_wins += 1
+		ProfileData.bump(ProfileData.K_ELITE_WIN)    # R346
 	elif node_type == "boss":
 		mark_boss_beaten()      # R339：本层 Boss 记成「已打」→ 这一层不再入夜
+		ProfileData.bump(ProfileData.K_BOSS_WIN)     # R346
+		# 击败的是**哪一只** Boss 由 battle_scene 另记（那里才有关卡名）——
+		# 这里只记「打赢了一次 Boss」，别把两套口径混成一个键。
 
 
 static func mark_boss_beaten() -> void:
