@@ -215,14 +215,13 @@ func _initialize() -> void:
 				RunState.start_run(_map())
 				RunState.pending_node = {"type": "event"}
 				RunState.pending_event = "treasure"],
-		# R142：卡牌宝箱的「箱子里是道具」那一半（旗标由地图生成期摇定）
+		# R372：小宝箱免费开、只给卡牌（不再扣 5 生命、不再随机成道具）
 		["res://scenes/event.tscn", func():
 				_reset()
 				RunState.start_run(_map())
-				RunState.pending_node = {"type": "event", "event_kind": "treasure",
-						"treasure_relic": true}
+				RunState.pending_node = {"type": "event", "event_kind": "treasure"}
 				RunState.pending_event = "treasure",
-			_check_treasure_relic_loot],
+			_check_treasure_free_cards],
 		# R142：**真实流程**的事件房只塞 pending_node（不写 pending_event）→ 子类型必须
 		# 从节点自带的 event_kind 读出来（R128 漏了这一步，所有事件房都变成卡牌宝箱）。
 		["res://scenes/event.tscn", func():
@@ -3279,17 +3278,18 @@ func _cleanup_cancel_dummy(eng: GameEngine, src: Vector2i, tgt: Vector2i) -> voi
 	eng.state.board.erase(tgt)
 
 
-func _check_treasure_relic_loot(scene: Variant) -> void:
-	## R142：卡牌宝箱「装道具」的那一半 —— 支付 5 生命后应得**一件道具**（入队待领），
-	## 而不是卡牌三选一。旗标读的是地图节点自带的 `treasure_relic`。
-	if not bool(scene._is_treasure()) or not bool(scene._is_treasure_relic()):
-		_smoke_fail("R142 宝箱：treasure_relic 旗标没有被认出来")
+func _check_treasure_free_cards(scene: Variant) -> void:
+	## R372（用户口径）：小宝箱**不付任何代价** —— 生命一点不掉，内容恒为一组卡牌奖励。
+	## 原来 R142 那条「一半概率装道具、支付 5 生命」的用例在这里整体反过来了：
+	## 断言的是「**没有**扣血」+「**没有**道具奖励」。
+	if not bool(scene._is_treasure()):
+		_smoke_fail("R372 宝箱：没认出卡牌宝箱分支")
 		return
 	RunState.pending_rewards = []          # 清干净，免得别的用例的残留进来搅局
 	var before_hp: int = RunState.hp
 	scene._on_main()
-	if RunState.hp != maxi(1, before_hp - 5):
-		_smoke_fail("R142 宝箱：应付 5 生命（%d → %d）" % [before_hp, RunState.hp])
+	if RunState.hp != before_hp:
+		_smoke_fail("R372 宝箱：开箱不应扣生命（%d → %d）" % [before_hp, RunState.hp])
 		return
 	var has_relic := false
 	var has_cards := false
@@ -3298,14 +3298,14 @@ func _check_treasure_relic_loot(scene: Variant) -> void:
 			has_relic = true
 		elif str(e.get("kind", "")) == "cards":
 			has_cards = true
-	if not has_relic or has_cards:
-		_smoke_fail("R142 宝箱：待领奖励应只有道具，实际 relic=%s cards=%s"
+	if has_relic or not has_cards:
+		_smoke_fail("R372 宝箱：待领奖励应只有卡牌，实际 relic=%s cards=%s"
 				% [str(has_relic), str(has_cards)])
 		return
 	if scene._reward_panel == null or not scene._reward_panel.is_open():
-		_smoke_fail("R142 宝箱：开箱后奖励悬浮窗应当自动打开")
+		_smoke_fail("R372 宝箱：开箱后奖励悬浮窗应当自动打开")
 		return
-	print("SMOKE OK R142 宝箱：支付 5 生命 → 开出道具（入队待领 + 悬浮窗自动打开），不给卡牌")
+	print("SMOKE OK R372 宝箱：免费开 → 只有卡牌奖励（不扣生命、不再随机成道具）")
 
 
 func _check_event_kind_from_node(scene: Variant) -> void:

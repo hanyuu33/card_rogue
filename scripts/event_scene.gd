@@ -3,8 +3,8 @@ extends Control
 ##   * rest  休息处：恢复 25% 最大生命（向上取整，不超过上限）；
 ##            另有「烤肉」选项：获得事件道具「烤肉」（进入 Boss 战时自动消耗
 ##            并回复 25% 最大生命）。持有烤肉时不能再选，消耗后可再次烤制。
-##   * event + treasure 宝箱：支付 5 生命开箱 —— **一半概率**是一组卡牌奖励（选 1 张入卡组）、
-##     另一半是一件道具（R142；箱子里装什么在地图生成时就摇定了）；也可以跳过不付生命；
+##   * event + treasure 小宝箱（R372）：**免费**打开 —— 直接给一组卡牌奖励（选 1 张入卡组）。
+##     原来「支付 5 生命开箱 / 一半概率是道具」的口径已作废：不扣生命、内容恒为卡牌；
 ##   * event + whisper  鸭鸭低语：获得事件道具「鸭之低语」，或放弃；
 ##   * event + struggle 挣扎：失去 21 点生命，将一张「金属龙」加入卡组，或离开；
 ##   * event + gaze     鸭之凝视：获得事件道具「一袋米抗几楼」，或放弃；
@@ -313,12 +313,6 @@ func _pending_kind() -> String:
 	return str(RunState.pending_node.get("event_kind", ""))
 
 
-func _is_treasure_relic() -> bool:
-	## R142：这只卡牌宝箱里装的是**道具**而不是卡牌 —— 旗标在地图生成期就摇定
-	## （`RogueMap._make_cells`，走本局 run_rng → 同一种子必然同一个结果）。
-	return bool(RunState.pending_node.get("treasure_relic", false))
-
-
 func _is_whisper() -> bool:
 	return _is_event_node() and _pending_kind() == "whisper"
 
@@ -403,7 +397,7 @@ func _is_relic_chest() -> bool:
 
 
 func _is_treasure() -> bool:
-	## 卡牌宝箱（支付 5 生命换一组卡牌奖励）：事件节点中未被其它子类型认领的情况。
+	## 小宝箱（R372：**免费**开箱，内容恒为一组卡牌奖励）：事件节点中未被其它子类型认领的情况。
 	return _is_event_node() and not _is_whisper() and not _is_struggle() \
 			and not _is_gaze() and not _is_pear() and not _is_hero() \
 			and not _is_bluefish() and not _is_apple() and not _is_relic_chest() \
@@ -527,11 +521,6 @@ func _ready() -> void:
 		if args[i] == "--treasure":  # 演示：伪装 run 宝箱节点（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
-			RunState.pending_event = "treasure"
-		if args[i] == "--treasureRelic":  # 演示：伪装「箱子里是道具」的卡牌宝箱（截图验证）
-			RunState.run_active = true
-			RunState.pending_node = {"type": "event", "event_kind": "treasure",
-					"treasure_relic": true}
 			RunState.pending_event = "treasure"
 		if args[i] == "--whisper":  # 演示：伪装 run 鸭鸭低语事件（截图验证）
 			RunState.run_active = true
@@ -885,13 +874,13 @@ func _ready() -> void:
 		result_label.text = ""
 	elif _is_treasure():
 		event_name.text = "宝  箱"
-		# R142：箱子里可能是**卡牌**、也可能是**道具**（开箱前不告诉玩家是哪一种）。
+		# R372：统一免费开、内容恒为卡牌（不再扣生命、不再随机成道具）。
 		desc.text = "路旁放着一只落满灰尘的宝箱……\n" \
-				+ "支付 5 生命打开它——箱子里可能是一组卡牌（选 1 张加入卡组），\n" \
-				+ "也可能是一件道具（直接进道具栏）。也可以转身离开，分文不取。"
-		rest_btn.text = "支付 5 生命，打开宝箱"
-		rest_btn.disabled = RunState.hp <= 5   # 至少保留 1 点生命
-		$Center/LeaveBtn.text = "跳过（不支付生命）"
+				+ "掀开箱盖，里面躺着一叠卡牌（挑 1 张加入卡组）。\n" \
+				+ "不需要付出任何代价。也可以转身离开，分文不取。"
+		rest_btn.text = "打开宝箱（获得卡牌奖励）"
+		rest_btn.disabled = false
+		$Center/LeaveBtn.text = "不打开（转身离开）"
 		result_label.text = ""
 	elif _is_struggle():
 		event_name.text = "挣  扎"
@@ -991,7 +980,7 @@ func _fit_center() -> void:
 
 
 func _on_main() -> void:
-	## 主按钮：宝箱 → 支付 5 生命后转交卡牌奖励；鸭鸭低语 / 鸭之凝视 → 收下事件道具；
+	## 主按钮：小宝箱 → 免费转交卡牌奖励（R372）；鸭鸭低语 / 鸭之凝视 → 收下事件道具；
 	## 宝箱层 → 开箱获得 1 个随机奖励道具。
 	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
 	sfx.play("click")
@@ -1267,36 +1256,16 @@ func _on_main() -> void:
 		if _treasure_taken:
 			_on_leave()
 			return
-		if RunState.hp <= 5:
-			return
-		RunState.take_damage(5)
 		_treasure_taken = true
 		_claim_reward(rest_btn)   # R147
 		_collapse_to_leave()
-		result_label.text = "已支付 5 生命（当前 %d/%d）" % [RunState.hp, RunState.max_hp]
-		result_label.add_theme_color_override("font_color", Color("9a968c"))
-		# R142：箱子内容在**生成地图时**就摇定（`treasure_relic` 旗标）：
-		# 一半概率是一件道具，否则是原来的卡牌三选一。
-		if _is_treasure_relic():
-			var got := RunState.roll_reward_relic()
-			if got > 0:
-				RunState.queue_relic_reward(got)
-				var rc := RelicRepo.load_json().get_relic(got)
-				var rname := rc.relic_name if rc != null else str(got)
-				desc.text = "箱盖掀开——里面躺着一件道具！\n「%s」已放进待领奖励，请在上面的奖励悬浮窗里查看。" % rname
-				result_label.text = "开出道具「%s」（待领：见奖励悬浮窗）" % rname
-				result_label.add_theme_color_override("font_color",
-						rc.badge_color() if rc != null else Color("d89a2e"))
-				if _reward_panel != null:
-					_reward_panel.open()
-				_redraw()
-				return
-			# 奖励道具已全部拥有 / 全被跳过 → 退回卡牌奖励，绝不让这 5 点生命白花。
-			result_label.text = "已支付 5 生命（当前 %d/%d）——箱底没有道具了，改给卡牌" \
-					% [RunState.hp, RunState.max_hp]
+		# R372（用户口径）：**免费**开箱、内容统一是卡牌 —— 不再扣 5 生命，
+		# 也不再按 `treasure_relic` 旗标随机成道具（道具那一半整条分支已删）。
 		# R119：卡牌奖励**先入队** → 奖励悬浮窗里看完三张候选再挑一张。
 		RunState.queue_card_reward("normal")
 		desc.text = "箱盖掀开，里面是一叠卡牌……\n请在上面的奖励悬浮窗里查看并挑走一张。"
+		result_label.text = "开出卡牌奖励（待领：见奖励悬浮窗）"
+		result_label.add_theme_color_override("font_color", Color("c8a86a"))
 		if _reward_panel != null:
 			_reward_panel.open()
 		_redraw()

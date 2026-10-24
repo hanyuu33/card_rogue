@@ -6250,10 +6250,11 @@ func _init() -> void:
 	check(q_exit_ok, "R142 地图：连生成 80 张全部满足「起点邻居不回头可达宝箱」（%s）"
 			% ("全部通过" if q_exit_ok else q_exit_bad))
 
-	# ==== R142：卡牌宝箱「一半概率装道具」的旗标 ====
+	# ==== R372：小宝箱统一「免费开 + 只给卡牌」→ 地图不再带 treasure_relic 旗标 ====
+	# 原来 R142 在这里断言「旗标是 bool、两种内容都出现过」；R372 把道具那一半删掉之后，
+	# 这条断言改成**反向**的：事件房**不许**再出现这个键（否则说明摇骰子又回来了）。
 	var q_tr_bad := ""
-	var q_tr_true := false
-	var q_tr_false := false
+	var q_tr_n := 0
 	var q_tr_rng := RandomNumberGenerator.new()
 	q_tr_rng.seed = 31337
 	for q_ti in 120:
@@ -6261,24 +6262,16 @@ func _init() -> void:
 		for q_tc: Dictionary in q_tm:
 			if str(q_tc["type"]) != "event":
 				continue
-			var q_flag2: Variant = q_tc.get("treasure_relic", null)
-			if typeof(q_flag2) != TYPE_BOOL:
-				q_tr_bad = "事件房 treasure_relic 不是 bool（%s）" % str(q_flag2)
+			if q_tc.has("treasure_relic"):
+				q_tr_bad = "事件房 %s 仍带着 treasure_relic 旗标" % str(q_tc.get("event_kind", ""))
 				break
 			if str(q_tc.get("event_kind", "")) == "treasure":
-				if bool(q_flag2):
-					q_tr_true = true
-				else:
-					q_tr_false = true
-			elif bool(q_flag2):
-				q_tr_bad = "非卡牌宝箱的事件 %s 带上了 treasure_relic" % str(q_tc.get("event_kind", ""))
-				break
+				q_tr_n += 1
 		if q_tr_bad != "":
 			break
-	check(q_tr_bad == "", "R142 地图：treasure_relic 是 bool，且只有卡牌宝箱才可能为真（%s）"
-			% ("符合" if q_tr_bad == "" else q_tr_bad))
-	check(q_tr_true and q_tr_false,
-			"R142 地图：120 张里卡牌宝箱的两种内容（道具 / 卡牌）都出现过")
+	check(q_tr_bad == "" and q_tr_n > 0,
+			"R372 地图：事件房不再带 treasure_relic 旗标（120 张里卡牌宝箱 %d 个，%s）"
+			% [q_tr_n, "符合" if q_tr_bad == "" else q_tr_bad])
 
 	# ---- 第二层地图：layer 标记 + 事件不串层 ----
 	var q_l2_rng := RandomNumberGenerator.new()
@@ -20057,20 +20050,17 @@ func _init() -> void:
 	r245_eng_b.end_turn()
 	r245_eng_b.end_turn()
 	var r245_b2: int = r245_eng_b.state.energy
-	r245_eng_b.end_turn()
-	r245_eng_b.end_turn()
-	check(r245_b1 == FieldState.ENERGY_PER_TURN + 1 and r245_b2 == FieldState.ENERGY_PER_TURN + 1
-			and r245_eng_b.state.energy == FieldState.ENERGY_PER_TURN,
-			"R245 勇气徽章：Boss 战前两回合各 +1 费、第 3 回合恢复（%d / %d / %d）"
-			% [r245_b1, r245_b2, r245_eng_b.state.energy])
+	# R372（用户口径）：Boss 战从「前两回合」收成**同样只给首回合** —— 与精英战完全一致。
+	check(r245_b1 == FieldState.ENERGY_PER_TURN + 1 and r245_b2 == FieldState.ENERGY_PER_TURN,
+			"R372 勇气徽章：Boss 战与精英战一致，只在首回合 +1（第 1 / 2 回合 %d / %d）"
+			% [r245_b1, r245_b2])
 	var r245_eng_n := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)), 40, 40, -1, false)
 	r245_eng_n.self_relics = [6031]
 	r245_eng_n.start_game()
 	check(r245_eng_n.state.energy == FieldState.ENERGY_PER_TURN,
 			"R245 勇气徽章：普通战斗不加费（%d）" % r245_eng_n.state.energy)
-	check(GameEngine.COURAGE_RELIC_ID == 6031 and GameEngine.COURAGE_ELITE_TURNS == 1
-			and GameEngine.COURAGE_BOSS_TURNS == 2,
-			"R245 勇气徽章：数值只有一份来源（引擎常量 6031 / 1 / 2）")
+	check(GameEngine.COURAGE_RELIC_ID == 6031 and GameEngine.COURAGE_TURNS == 1,
+			"R372 勇气徽章：数值只有一份来源（引擎常量 6031 / 首回合，精英与 Boss 共用）")
 	# 陶罐：随机 2 件奖励道具 + 一张「罐子」进卡组
 	RunState.end_run()
 	var r245_run_rng := RandomNumberGenerator.new()
@@ -27107,6 +27097,47 @@ func _init() -> void:
 	var r371_after2 := r371_e._hit_unit(r371_boss, 10, "技能")
 	check(r371_after2 == 10,
 			"R371 阶段 3：场上只剩玩家单位时不算「有随从」（实际 -%d）" % r371_after2)
+	# ================= R372：小宝箱免费 / 第三层起点只回血 / 勇气徽章统一首回合 =================
+	# 用户口径：「小宝箱房间统一改为无需支付生命值直接获得卡牌奖励。3 层的起始点不需要
+	# 道具事件，只需要回复生命就可以了。勇气徽章改为统一精英和 boss 第一回合 +1 费。」
+	# ---- ① 小宝箱：结算段不扣血、固定发卡牌，且「箱子里是道具」整条分支已删 ----
+	var r372_ev := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	check_src(r372_ev.find("_is_treasure_relic") < 0,
+			"R372 源码锁：小宝箱不再有「装道具」的旗标分支（_is_treasure_relic 已删）")
+	var r372_map := FileAccess.get_file_as_string("res://scripts/rogue_map.gd")
+	check_src(r372_map.find("TREASURE_RELIC_CHANCE") < 0
+			and r372_map.find('"treasure_relic"') < 0,
+			"R372 源码锁：地图不再摇 treasure_relic（连那次随机数一起删掉）")
+	var r372_anchor := r372_ev.find("R372（用户口径）：**免费**开箱")
+	# 结算段区间 = 本分支起点 → 下一个 `if _is_struggle():`（用固定 900 字会跨到挣扎分支的扣血上）
+	var r372_seg: String = ""
+	if r372_anchor >= 0:
+		var r372_end := r372_ev.find("if _is_struggle():", r372_anchor)
+		if r372_end > r372_anchor:
+			r372_seg = r372_ev.substr(r372_anchor, r372_end - r372_anchor)
+	check_src(r372_anchor >= 0 and r372_seg.find("take_damage") < 0,
+			"R372 源码锁：小宝箱结算段一次 take_damage 都没有（免费开箱）")
+	check_src(r372_seg.find('queue_card_reward("normal")') >= 0,
+			"R372 源码锁：小宝箱结算段固定发一组卡牌奖励（不再按旗标分岔）")
+	# ---- ② 第三层起点：只回血，不再摇起始道具三选一 ----
+	RunState.end_run()
+	var r372_rng := RandomNumberGenerator.new()
+	r372_rng.seed = 20261025
+	RunState.start_run(RogueMap.generate(r372_rng, GameLayers.LAYER_DEFAULT),
+			GameLayers.LAYER_DEFAULT)
+	var r372_l1 := RunState.relic_choice.size()
+	RunState.advance_layer(GameLayers.LAYER_TWO)
+	var r372_l2 := RunState.relic_choice.size()
+	RunState.advance_layer(GameLayers.LAYER_THREE)
+	var r372_l3 := RunState.relic_choice.size()
+	check(r372_l1 == 3 and r372_l2 == 3 and r372_l3 == 0,
+			"R372 第三层起点：前两层照旧 3 件起始道具，第三层**一件都不摇**（%d / %d / %d）"
+			% [r372_l1, r372_l2, r372_l3])
+	check(RunState.current_layer == GameLayers.LAYER_THREE and RunState.hp == RunState.max_hp,
+			"R372 第三层起点：进层即满血（%d/%d）—— 起点格只负责回血"
+			% [RunState.hp, RunState.max_hp])
+	check_src(r372_map.find('"treasure_relic"') < 0,
+			"R372 源码锁：直道 cell 也不再带这个键（地图里一次都不出现）")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

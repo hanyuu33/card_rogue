@@ -342,7 +342,7 @@ const PACK_RELIC_ID := 6030
 const PACK_GOLD := 100
 const PACK_CARD_ID := 8001        # 木栅栏
 # R245 新道具：勇气徽章（6031，初始池）—— 战斗内生效，判定与数值都在引擎
-# （`GameEngine.COURAGE_RELIC_ID` / `COURAGE_ELITE_TURNS` / `COURAGE_BOSS_TURNS`）。
+# （`GameEngine.COURAGE_RELIC_ID` / `COURAGE_TURNS`；R372 起精英 / Boss 都只给首回合）。
 const COURAGE_RELIC_ID := 6031
 # R245 新道具：陶罐（6032，初始池）—— 获得时随机 2 件奖励道具 + 一张「罐子」诅咒进卡组。
 const POT_RELIC_ID := 6032
@@ -844,7 +844,15 @@ static func advance_layer(layer: int) -> int:
 	# 只有「重摇把可达宝箱摇没了 → 触发结构重试」那一步才会动 `run_rng`（确定性，可复现）。
 	map_cells = RogueMap.generate(run_rng, layer,
 			dice_map_rng() if relics.has(DICE_RELIC_ID) else null)
-	relic_choice = _roll_relic_choice()
+	# R372（用户口径）：**第三层的起点只要回血** —— 这一层不再摇起始道具三选一。
+	# 直道只有 5 格，进层时弹一段「卷卷开场 + 三选一」既没有空间也不需要；
+	# 空候选 = map_scene 的「候选非空 → 去卷卷」重定向不会触发，玩家直接落在地图上，
+	# 走到起点格就回满生命（`map_scene._commit_enter` 的起点补给）。
+	# ⚠️ 不摇也不消耗任何随机数（`_roll_relic_choice()` 会花 3 次 run_rng）。
+	if layer == GameLayers.LAYER_THREE:
+		relic_choice = []
+	else:
+		relic_choice = _roll_relic_choice()
 	fatigue_granted_layer = -1    # R358：换层 → 新的一层重新拥有一次「获得疲惫」的机会
 	chocolate = chocolate_per_layer()   # 新一层：巧克力重新满上（R223 难度 8 起 = 11）
 	sync_fatigue()                # R223 难度 5：新层巧克力满 → 疲惫出卡组

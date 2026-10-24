@@ -185,6 +185,8 @@ func _ready() -> void:
 	# ⚠️ 必须排在兜底 start_run **之前**：advance_layer 会换层 + 满血，不需要再开新局。
 	# ⚠️ 这里只**推进**、不自己跳卷卷：`advance_layer` 会把本层的起始道具候选填回
 	#    `relic_choice`，下面那段既有的「候选非空 → 去卷卷」重定向会接着做（源码锁也认那条判据）。
+	# ⚠️ R372：**第三层故意不填**（用户口径「3 层的起始点不需要道具事件，只需要回复生命」）——
+	#    `advance_layer` 在这一层把候选置空，于是不会跳卷卷，玩家直接落在地图上。
 	if RunState.run_active and RunState.boss_beaten:
 		var nxt := GameLayers.next_layer(RunState.current_layer)
 		if nxt > 0:

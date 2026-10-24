@@ -129,10 +129,6 @@ const WEIGHTS_UNKNOWN := {"battle": 7, "event": 12, "elite": 2, "chest": 3, "sho
 const ELITE_FAR_MIN := 0.8
 const ELITE_FAR_MAX := 1.5
 
-## R142：卡牌宝箱（事件子类型 treasure）有**一半概率**装的是一件道具（而不是卡牌三选一）。
-## 摇在**地图生成期**（走本局 run_rng 的链条）→ 同一种子必然生成同一张图。
-const TREASURE_RELIC_CHANCE := 0.5
-
 const MAX_ATTEMPTS := 200
 ## 上一次 generate() 实际用了几次重摇（1 = 一次成功）。仅供测试与调参看；
 ## 生成结果本身与它无关（同一 rng 状态必然得到同一张图）。
@@ -224,7 +220,7 @@ static func line_cells(layer := GameLayers.LAYER_THREE) -> Array:
 		cells.append({
 			"id": i, "col": col_of(i), "row": row_of(i),
 			"type": "", "hidden": false, "revealed": true, "doors": [],
-			"layer": layer, "event_kind": "", "treasure_relic": false,
+			"layer": layer, "event_kind": "",
 			"void": true,
 		})
 	for k in LINE_COLS.size():
@@ -373,11 +369,8 @@ static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: i
 		cell3["hidden"] = true
 		cell3["revealed"] = false
 		cell3["event_kind"] = ""
-		cell3["treasure_relic"] = false
 		if t == "event":
 			cell3["event_kind"] = GameLayers.roll_event_kind(layer, rng, used_events)
-			if str(cell3["event_kind"]) == "treasure":
-				cell3["treasure_relic"] = rng.randf() < TREASURE_RELIC_CHANCE
 		n += 1
 	return n
 
@@ -694,16 +687,12 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 			"doors": (adj[i] as Array).duplicate(),
 			"layer": layer,
 			"event_kind": "",
-			"treasure_relic": false,      # R142：卡牌宝箱里装的是道具还是卡牌（下面摇）
 		}
 		if type == "event":
 			# 事件子类型：本张地图上不重复（全出过一遍后才允许重复）。
+			# R372：小宝箱统一「免费开 + 只给卡牌」，不再有「箱子里装道具」的旗标
+			# （原来那一半道具的概率连随机数一起吃掉了）。
 			cell["event_kind"] = GameLayers.roll_event_kind(layer, rng, used_events)
-			# R142：卡牌宝箱一半概率装的是一件道具（其余照旧是卡牌三选一）。
-			# ⚠️ 只在**真是卡牌宝箱**时才摇这个随机数：别的子类型不消耗它 →
-			#    同一 seed 的前面那些地图的随机链条不会整体错位。
-			if str(cell["event_kind"]) == "treasure":
-				cell["treasure_relic"] = rng.randf() < TREASURE_RELIC_CHANCE
 		cells.append(cell)
 	return cells
 

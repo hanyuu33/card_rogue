@@ -32,7 +32,7 @@ var defer_death_effects:= false
 var _death_effects:= {}
 ## R245：本场战斗的节点类型（"battle" / "elite" / "boss"）。
 ## 由 battle_scene 按**关卡 tier** 写入一次；引擎不自己读 RunState.pending_node ——
-## 单关演示 / 单元测试都能显式指定，判据只有一处（`_courage_energy` 的消费方）。
+## 单关演示 / 单元测试都能显式指定，判据只有一处（`_courage_active()` 的消费方）。
 var battle_kind:= "battle"
 ## R356：本关的胜利条件是否为「击破指定 Boss」（启示者 9200；0 = 不是）。
 ## 第三层 Boss 关的敌方 HP 是 ∞（`enemy_hp_infinite`），直击永远打不空 ——
@@ -408,7 +408,7 @@ const EGG_DUCK_RELIC_ID:= 6018
 const DUCK_WING_RELIC_ID:= 6007
 const DUCK_WING_TURN:= 3
 const DUCK_WING_ENERGY:= 3
-# R245 初始道具「勇气徽章」（6031）：精英战**首回合**、Boss 战**前两回合**各额外 +1 费用。
+# R245 / R372 初始道具「勇气徽章」（6031）：精英战与 Boss 战**都只在首回合**额外 +1 费用。
 # ── R311：水晶骰子 6040 / 不锈钢盆 6041 ──
 # 水晶骰子（6040）：「?」房里的**任意种**战斗开始时掷一颗骰子（1~6），
 #   **前 X 回合每回合额外 +1 费**（X = 点数）。
@@ -500,8 +500,10 @@ const INVENTORY_COUNT:= 2
 const INVENTORY_REROLL:= 6          # 「变成**另一张**卡」的同 id 重摇上限（防死循环）
 const BASIN_RELIC_ID:= 6041
 const COURAGE_RELIC_ID:= 6031
-const COURAGE_ELITE_TURNS:= 1
-const COURAGE_BOSS_TURNS:= 2
+## R372（用户口径「勇气徽章改为统一精英和 boss 第一回合 +1 费」）：
+## 原来精英 1 回合、Boss **2** 回合 → 现在两档都只给**首回合**，所以合并成一个常量
+## （留两个各 =1 的常量会给以后「又改回两档」留漂移口）。
+const COURAGE_TURNS:= 1
 # R245 诅咒「罐子」（9157）与它的召唤物（9158）。
 # R351 赏月产出的两张效果卡（都在 `battle_end_rewards()` 里结算）。
 const MOON_CARD_ID:= 9180
@@ -1951,18 +1953,16 @@ func _begin_turn(side: String) -> void :
 				"energy": ICECREAM_ENERGY, "draw": ICECREAM_DRAW})
 
 
-		# 勇气徽章（6031，R245）：精英战首回合 / Boss 战前两回合，各额外 +1 费用。
+		# 勇气徽章（6031，R245 / R372）：精英战与 Boss 战**都只在首回合**额外 +1 费用。
 		# 「哪一场算精英 / Boss」由 battle_scene 写入 `battle_kind`，引擎只看这个字段。
 		if self_relics.has(COURAGE_RELIC_ID):
 			var brave_span:= 0
-			if battle_kind == "elite":
-				brave_span = COURAGE_ELITE_TURNS
-			elif battle_kind == "boss":
-				brave_span = COURAGE_BOSS_TURNS
+			if battle_kind == "elite" or battle_kind == "boss":
+				brave_span = COURAGE_TURNS
 			if brave_span > 0 and turn_number <= brave_span:
 				state.energy += 1
-				_log("勇气徽章：%s第 %d 回合，费用 +1"
-						% ["精英战" if battle_kind == "elite" else "Boss 战", turn_number])
+				_log("勇气徽章：%s首回合，费用 +1"
+						% ("精英战" if battle_kind == "elite" else "Boss 战"))
 
 		# 兼修（6033，R246）：我方每回合额外 +1 费用（不分战斗类型）。
 		if self_relics.has(VERSATILE_RELIC_ID):
@@ -11734,11 +11734,10 @@ func relic_highlight(id: int) -> bool:
 		6023:   # 幻影斗篷：每两张牌触发 → 已经打了一张（下一张就触发）
 			return state.self_card_plays > 0 and state.self_card_plays % 2 == 1
 		COURAGE_RELIC_ID:
+			# R372：精英 / Boss 两档统一成「只在首回合」，高亮判据与发费判据同源。
 			var span:= 0
-			if battle_kind == "elite":
-				span = COURAGE_ELITE_TURNS
-			elif battle_kind == "boss":
-				span = COURAGE_BOSS_TURNS
+			if battle_kind == "elite" or battle_kind == "boss":
+				span = COURAGE_TURNS
 			return span > 0 and turn_number <= span
 		STATUE_RELIC_ID:
 			# 雕像：每 10 张牌回 1 费用 → 差 1 张就满的时候亮
