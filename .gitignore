@@ -36,6 +36,15 @@ __pycache__/
 #   靠 art_src/.gdignore 让 Godot 忽略它（不导入、不进发布包）。
 #   ⚠️ 别把它写进任何忽略规则。
 
+# R368 例外：启示者阶段 1/3 的探索稿（8 个目录 ≈17MB）。
+#   失败原因已逐条写进 art_src/2026-10-24_启示者卡图/README.md「五个坑」，
+#   重跑提示词即可复现；定稿来源 raw3 / raw6 / raw9 照常入库。
+/art_src/2026-10-24_启示者卡图/raw2/
+/art_src/2026-10-24_启示者卡图/raw4/
+/art_src/2026-10-24_启示者卡图/raw5/
+/art_src/2026-10-24_启示者卡图/raw7/
+/art_src/2026-10-24_启示者卡图/raw8/
+
 # BGM 候选曲暂存（~485MB，可由 _download.py / _download_opentracks.js 幂等重下）
 # 选曲后只有成品进 assets/audio/bgm/（.ogg，届时入库）
 /assets/audio/_audition/raw/
