@@ -43,6 +43,9 @@ __pycache__/
 # 音频可由 _refetch_mp3.py + _make_audition.py 幂等重下。
 /assets/audio/_audition/*/raw/
 /assets/audio/_audition/*/audition/
+# R364：按 zip 偏移抓出来的 loop ogg（12MB）—— 现役副本在 assets/audio/bgm/，
+# 这里只是「从哪来的」证据，可由 ../_grab_zip_member.py 重新抓。
+/assets/audio/_audition/*/loop/
 
 # 历史验证截图归档（.gdignore 已挡在 res:// 之外，这里再挡 git）
 art_src/_shots/

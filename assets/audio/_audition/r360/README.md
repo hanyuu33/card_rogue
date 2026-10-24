@@ -6,6 +6,22 @@
 > **怎么听**：双击 `试听.html`（或从 IDE 预览）。页面里每条都是本地 mp3，
 > 点播放即可，preload=none 不会一次加载 60MB。
 
+> **R364 定稿（2026-10-24，已接入，本目录转为「来源记录」）**
+>
+> | 场景 | 接入槽位 | 选中的曲子 |
+> |---|---|---|
+> | 第三层地图 | `map3.ogg` | **Firmament3（Calm）** |
+> | 启示者 第 1 阶段 | `battle_revelator_p1.ogg` | **Soaring** |
+> | 启示者 第 2 阶段 | `battle_revelator_p2.ogg` | **Relentless** |
+> | 启示者 第 3 阶段 | `battle_revelator_p3.ogg` | **Havoc** |
+>
+> - Boss 从「一个 `battle_boss_revelator`」改成**按阶段三槽位**：换卡面那一帧一起换曲，
+>   由 `Bgm.battle_slot(tier, key, phase)` 按引擎的 `Placement.boss_phase` 取。
+> - 四首都是 PeriTune 官方 **loop 版 `.ogg` 原文件**（未裁剪 / 未变调 / 未重编码）。
+> - ⚠️ **Relentless 是 2026-08 的新曲**，走 PeriTune 新规约：商用可以、署名任意，
+>   但「同梱（打包进作品二次配布）**仅限非营利**」—— **本作一旦收费售卖，这首必须换掉**。
+>   同期老曲 `Firmament3 Active` / `Rapid5` / `Augury` 都还是 CC BY 4.0，可直接替换。
+
 ---
 
 ## 一、当前的选曲空缺
@@ -88,7 +104,7 @@ PeriTune 已于 **2026-03-01** 换规约（详见 `https://peritune.com/blog/202
 
 ---
 
-## 六、定稿后的接入步骤（本轮未做）
+## 六、定稿后的接入步骤（R364 已全部执行）
 
 1. 取 PeriTune 官方 `PerituneMaterial_<Name>_loop.zip` → 解出 `.ogg`（无缝循环版）。
 2. 存成 `assets/audio/bgm/map3.ogg` / `battle_boss_revelator.ogg`。

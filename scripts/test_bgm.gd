@@ -11,8 +11,9 @@ extends SceneTree
 ##
 ## ⚠️ `Bgm` 是 `class_name`（不是 autoload），全局类名在 `_init()` 阶段就能解析。
 
-const SLOTS := ["title", "class_pick", "map", "map2",
-		"battle", "battle_elite", "battle_boss"]
+const SLOTS := ["title", "class_pick", "map", "map2", "map3",
+		"battle", "battle_elite", "battle_boss",
+		"battle_revelator_p1", "battle_revelator_p2", "battle_revelator_p3"]
 
 var fails := 0
 
@@ -62,7 +63,7 @@ func _run(b: Bgm) -> void:
 		# ⚠️ 判存走 ResourceLoader.exists：导出包里没有源 .ogg（只有 .import + oggvorbisstr），FileAccess 恒假。
 		if not ResourceLoader.exists("res://assets/audio/bgm/%s.ogg" % slot):
 			missing.append(slot)
-	check(missing.is_empty(), "7 个 BGM 槽位素材齐全（缺 %s）" % str(missing))
+	check(missing.is_empty(), "11 个 BGM 槽位素材齐全（缺 %s）" % str(missing))
 
 	# ---- 载入 + loop + 时长 ----
 	var bad_stream := []
@@ -77,9 +78,9 @@ func _run(b: Bgm) -> void:
 		if s.get_length() < 10.0:
 			short_stream.append(slot)
 	check(bad_stream.is_empty(),
-			"7 首全部载入为 Ogg 且 loop=on（异常 %s）" % str(bad_stream))
+			"11 首全部载入为 Ogg 且 loop=on（异常 %s）" % str(bad_stream))
 	check(short_stream.is_empty(),
-			"7 首时长都 > 10s（异常 %s）" % str(short_stream))
+			"11 首时长都 > 10s（异常 %s）" % str(short_stream))
 
 	# ---- 分级 → 战斗槽位（纯函数） ----
 	check(Bgm.battle_slot(GameLevels.TIER_NORMAL_EASY) == "battle"
@@ -92,6 +93,20 @@ func _run(b: Bgm) -> void:
 			"Boss → battle_boss")
 	check(Bgm.battle_slot(-1) == "battle",
 			"无 tier（-1）→ battle（兜底，不炸）")
+	# R364：启示者按阶段换曲（key 走 GameLevels.bg_key，phase 由引擎 boss_phase 给）
+	check(Bgm.battle_slot(GameLevels.TIER_BOSS, "boss_revelator") == "battle_revelator_p1",
+			"启示者不传 phase（默认 1 阶段）→ battle_revelator_p1（Soaring）")
+	check(Bgm.battle_slot(GameLevels.TIER_BOSS, "boss_revelator", 2) == "battle_revelator_p2"
+			and Bgm.battle_slot(GameLevels.TIER_BOSS, "boss_revelator", 3) == "battle_revelator_p3",
+			"启示者 2/3 阶段 → p2（Relentless）/ p3（Havoc）")
+	check(Bgm.battle_slot(GameLevels.TIER_BOSS, "boss_revelator", 0) == "battle_revelator_p1"
+			and Bgm.battle_slot(GameLevels.TIER_BOSS, "boss_revelator", 9) == "battle_revelator_p3",
+			"phase 越界（0 / 9）夹到 1 / 3，不拼出不存在的槽位")
+	check(Bgm.battle_slot(GameLevels.TIER_BOSS) == "battle_boss"
+			and Bgm.battle_slot(GameLevels.TIER_BOSS, "boss_dragon") == "battle_boss",
+			"其余 Boss（不传 key / 别的 key）→ battle_boss，不被启示者抢走")
+	check(Bgm.battle_slot(GameLevels.TIER_NORMAL_HARD, "boss_revelator") == "battle",
+			"key 只对 Boss 生效：普通难度的同名字段不会串到专属曲")
 
 	# ---- 播放语义 ----
 	b.play("title")
@@ -132,13 +147,24 @@ func _run(b: Bgm) -> void:
 	check(str(b.debug_state()["current"]) == "map", "play_map(第一层) → map")
 	b.play_map(GameLayers.LAYER_TWO)
 	check(str(b.debug_state()["current"]) == "map2", "play_map(第二层) → map2")
+	b.play_map(GameLayers.LAYER_THREE)
+	check(str(b.debug_state()["current"]) == "map3", "play_map(第三层) → map3（空艇直道）")
 
 	# ---- 战斗按分级 ----
+	# ⚠️ 轮换断言要比「调用前后」的 active 实例，**不能硬比 id2**：
+	#    R364 之后 play_map 多了一次切换（第一/二/三层），再切一次就正好轮回到 id2。
+	var before_id := int(b.debug_state()["active_id"])
 	b.play_battle(GameLevels.TIER_BOSS)
 	var st3: Dictionary = b.debug_state()
 	check(str(st3["current"]) == "battle_boss", "play_battle(TIER_BOSS) → battle_boss")
-	check(int(st3["active_id"]) != id2,
+	check(int(st3["active_id"]) != before_id,
 			"连续切歌仍能轮换播放器（两台够用，不叠音）")
+	b.play_battle(GameLevels.TIER_BOSS, "boss_revelator")
+	check(str(b.debug_state()["current"]) == "battle_revelator_p1",
+			"play_battle(TIER_BOSS, boss_revelator) → battle_revelator_p1")
+	b.play_battle(GameLevels.TIER_BOSS, "boss_revelator", 3)
+	check(str(b.debug_state()["current"]) == "battle_revelator_p3",
+			"阶段推进到 3 → battle_revelator_p3（换曲真的换槽位）")
 
 	# ---- 缺槽位：静默不崩 ----
 	var before := str(b.debug_state()["current"])
@@ -189,7 +215,7 @@ func _run(b: Bgm) -> void:
 			if imp.find("loop=true") < 0:
 				bad_loop.append(slot2)
 		check(bad_loop.is_empty(),
-				"7 个 .ogg.import 都是 loop=true（异常 %s）" % str(bad_loop))
+				"11 个 .ogg.import 都是 loop=true（异常 %s）" % str(bad_loop))
 		check(FileAccess.file_exists("res://assets/audio/_audition/.gdignore"),
 				"assets/audio/_audition/.gdignore 在位（候选曲不进导入表/发布包）")
 

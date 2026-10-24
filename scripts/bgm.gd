@@ -4,8 +4,9 @@ extends Node
 ##
 ## 用法（场景脚本只调这几个静态口）：
 ##   Bgm.play("title")                       # 直接点名槽位
-##   Bgm.play_map(RunState.current_layer)    # 地图：按层自动选 map / map2
-##   Bgm.play_battle(int(lvl["tier"]))       # 战斗：按关卡分级自动选
+##   Bgm.play_map(RunState.current_layer)    # 地图：按层自动选 map / map2 / map3
+##   Bgm.play_battle(int(lvl["tier"]), GameLevels.bg_key(lvl))
+##                                           # 战斗：按分级自动选（启示者有专属曲）
 ##
 ## 槽位（文件 = `assets/audio/bgm/<槽位>.ogg`，全部 PeriTune 官方 loop 版，
 ## 已按无缝循环导入 —— `.import` 里 `loop=true`）：
@@ -16,9 +17,13 @@ extends Node
 ## | `class_pick`   | 角色选择     | PerituneMaterial_Piano_Refreshing |
 ## | `map`          | 第一层地图   | PerituneMaterial_Poema |
 ## | `map2`         | 第二层地图   | PerituneMaterial_Strategy4 |
+## | `map3`         | 第三层地图   | PerituneMaterial_Firmament3_Calm |
 ## | `battle`       | 一般战斗     | PerituneMaterial_Dramatic |
 ## | `battle_elite` | 精英战斗     | PerituneMaterial_EpicBattle |
 ## | `battle_boss`  | Boss 战斗    | PerituneMaterial_Raid_FolkMetal |
+## | `battle_revelator_p1` | 启示者 第 1 阶段 | PerituneMaterial_Soaring |
+## | `battle_revelator_p2` | 启示者 第 2 阶段 | PeriTune_Relentless |
+## | `battle_revelator_p3` | 启示者 第 3 阶段 | PerituneMaterial_Havoc |
 ##
 ## ⚠️ **为什么不用 autoload**（R176 踩过的坑，别改回去）：
 ## autoload 的「全局标识符」要等主循环对象建好、由 `Main::start()` 把节点
@@ -44,6 +49,9 @@ const BGM_DIR := "res://assets/audio/bgm/"
 const BGM_VOLUME_DB := -12.0
 const FADE_SEC := 0.6
 const SILENT_DB := -60.0
+## R364：启示者三阶段各有一首（用户口径：一阶段 Soaring / 二阶段 Relentless /
+## 三阶段 Havoc）。阶段号越界由 `battle_slot()` 夹在这个范围内。
+const REV_PHASES := 3
 ## R246：音量倍率（0.0~1.0 线性）。**100% 时目标音量仍是 BGM_VOLUME_DB** ——
 ## 换句话说「音量 100%」= 以前一直听到的那一档，不凭空变响。
 static var volume := 1.0
@@ -54,9 +62,13 @@ const SLOT_TRACKS := {
 	"class_pick": "PerituneMaterial_Piano_Refreshing",
 	"map": "PerituneMaterial_Poema",
 	"map2": "PerituneMaterial_Strategy4",
+	"map3": "PerituneMaterial_Firmament3_Calm",
 	"battle": "PerituneMaterial_Dramatic",
 	"battle_elite": "PerituneMaterial_EpicBattle",
 	"battle_boss": "PerituneMaterial_Raid_FolkMetal",
+	"battle_revelator_p1": "PerituneMaterial_Soaring",
+	"battle_revelator_p2": "PeriTune_Relentless",
+	"battle_revelator_p3": "PerituneMaterial_Havoc",
 }
 
 static var _inst: Bgm = null                       # 唯一实例（惰性创建）
@@ -154,23 +166,34 @@ static func play(slot: String) -> void:
 		n._pending = slot          # 节点这一帧还没挂上 root → `_ready` 里补播
 
 
-## 地图：第一层 `map` / 第二层及更深 `map2`。
+## 地图：第一层 `map` / 第二层 `map2` / 第三层 `map3`。
+## R364：第三层是空艇直道（白天科幻），与第二层的城堡推进气味不合，单独给了槽位。
 static func play_map(layer: int) -> void:
-	play("map" if layer <= GameLayers.LAYER_DEFAULT else "map2")
+	if layer >= GameLayers.LAYER_THREE:
+		play("map3")
+	elif layer <= GameLayers.LAYER_DEFAULT:
+		play("map")
+	else:
+		play("map2")
 
 
 ## 关卡分级 → 战斗槽位。**纯函数**（可单测）：精英 = TIER_ELITE_EASY/HARD，
 ## Boss = TIER_BOSS，其余（含未知 -1）= 一般战斗。
-static func battle_slot(tier: int) -> String:
+## R364：「启示者」按**阶段**换曲 —— key 为 `boss_revelator` 时取
+## `battle_revelator_p<phase>`（1 Soaring / 2 Relentless / 3 Havoc）；
+## 其余 Boss 仍是 `battle_boss`（不传 key 时一律走旧槽位，缺参数不会静音）。
+static func battle_slot(tier: int, key := "", phase := 1) -> String:
 	if tier == GameLevels.TIER_BOSS:
+		if key == "boss_revelator":
+			return "battle_revelator_p%d" % clampi(phase, 1, REV_PHASES)
 		return "battle_boss"
 	if tier == GameLevels.TIER_ELITE_EASY or tier == GameLevels.TIER_ELITE_HARD:
 		return "battle_elite"
 	return "battle"
 
 
-static func play_battle(tier: int) -> void:
-	play(battle_slot(tier))
+static func play_battle(tier: int, key := "", phase := 1) -> void:
+	play(battle_slot(tier, key, phase))
 
 
 static func stop() -> void:

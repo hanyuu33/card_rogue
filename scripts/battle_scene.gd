@@ -3857,8 +3857,10 @@ func load_level(lvl: Dictionary) -> void:
 	_cur_level = lvl
 	_refresh_flee_btn()   # R341 洞窟绳：换关（含重开）后重新判一次能不能逃跑
 	# R176：战斗 BGM 按关卡分级取（一般 Dramatic / 精英 EpicBattle / Boss Raid_FolkMetal）。
+	# R364：启示者（key = boss_revelator）**按阶段**换曲（Soaring / Relentless / Havoc），
+	# 开局要按「当前阶段」起 —— 续档/中断重进时可能已经在第 2、3 阶段，不能一律从第一首起。
 	# 挂在这里而不是 _ready —— load_level 是「换关」的唯一入口，选关 / 换层都走到。
-	Bgm.play_battle(int(lvl.get("tier", -1)))
+	Bgm.play_battle(int(lvl.get("tier", -1)), GameLevels.bg_key(lvl), _rev_bgm_phase(lvl))
 	_refresh_bg_texture()
 	_tutorial = lvl["tutorial"]
 	tutorial_step = 0
@@ -11232,6 +11234,19 @@ func _rev_art_phase(p: Placement) -> int:
 	return maxi(1, p.boss_phase)
 
 
+func _rev_bgm_phase(lvl: Dictionary) -> int:
+	## R364：开局该放启示者**第几阶段**的曲子。只有启示者按阶段换曲，其余关卡恒为 1。
+	## 续档 / 中断重进时引擎那边可能已经是第 2、3 阶段（`Placement.boss_phase`）——
+	## 按实际阶段起，否则会出现「卡面是第 3 阶段、音乐还是第一阶段」。
+	if engine == null or GameLevels.bg_key(lvl) != "boss_revelator":
+		return 1
+	for c: Vector2i in engine.state.board.keys():
+		var p := engine.state.unit_at(c)
+		if p != null and p.card != null and p.card.id == GameEngine.REVELATOR_ID:
+			return clampi(p.boss_phase, 1, Bgm.REV_PHASES)
+	return 1
+
+
 func _draw_rev_fx() -> void:
 	## R357：转阶段的两段特效（用户口径）——
 	##   1→2 **淡蓝色透明蜂窝（小正六边形）电磁屏障从上到下覆盖卡面**；
@@ -13512,6 +13527,9 @@ func _process(delta: float) -> void:
 	# R357：转阶段特效到点 → **这时候才换卡面**（用户口径：特效动画播完再改卡面）。
 	if not _rev_fx.is_empty() and _now() >= int(_rev_fx.start) + int(_rev_fx.dur):
 		_rev_face_phase = maxi(_rev_face_phase, _rev_fx_phase)
+		# R364：阶段曲与卡面**同一帧**换。提前进来会抢在屏幕特效之前，拖后又和
+		# 「第 N 阶段」横幅错开 —— 这一帧正是「转阶段真正落地」的时刻。
+		Bgm.play_battle(GameLevels.TIER_BOSS, "boss_revelator", _rev_face_phase)
 		_rev_fx = {}
 		_rev_fx_phase = 0
 		queue_redraw()
