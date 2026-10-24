@@ -238,6 +238,9 @@ static func is_story_read(id: String) -> bool:
 
 
 # ------------------------------------------------------------ 卡牌 / 道具解锁
+#
+# R355：解锁 = **进奖励池**，不是发放到手（唯一判据见 `claim_episode()` 的注释）。
+# 消费端只有两处闸门：`CardRepo.obtainable_cards()` 与 `RelicRepo._drop_locked()`。
 
 static func unlock_card(id: int) -> bool:
 	ensure_loaded()
@@ -297,10 +300,18 @@ static func achievement_progress(ach: Dictionary) -> int:
 
 
 static func claim_episode(repo: StoryRepo, episode_id: String) -> Dictionary:
-	## 「在故事界面点开看完」→ 标记已读 + 发放这一段的卡牌 / 道具解锁。
-	## 返回 `{ok, cards: Array[int], relics: Array[int], reason}`。
-	## ⚠️ **只有看过才发奖励**（用户口径：解锁时点查看故事，之后才解锁卡牌/道具）——
-	##    所以 `mark_story_read()` 和发放必须在同一处，不能拆开。
+	## 「在故事界面点开看完」→ 标记已读 + **把这一段的卡牌 / 道具解锁进奖励池**。
+	## 返回 `{ok, cards: Array[int], relics: Array[int], reason}`
+	## （cards / relics = **本次新解锁的** id，也就是「刚进池的」，已解锁过的不重复返回）。
+	##
+	## ⚠️ **这里不是发放（R355 用户口径）**：解锁 = 让这些东西**可以从游戏里获得**。
+	##    所以在解锁之前它们根本不属于奖励池（`CardRepo.reward_pool()` /
+	##    `RelicRepo.reward_ids()` 会按住它们），解锁之后才进池。
+	##    本函数只往 `unlocked_cards` / `unlocked_relics` 两个白名单里记 id ——
+	##    **不许碰 `RunState.relics`、不许往卡组塞卡、不许产生待领奖励**。
+	##
+	## ⚠️ **只有看过才解锁**（用户口径：解锁时点查看故事，之后才解锁卡牌/道具）——
+	##    所以 `mark_story_read()` 和白名单写入必须在同一处，不能拆开。
 	var res := {"ok": false, "cards": [], "relics": [], "reason": ""}
 	if repo == null:
 		res["reason"] = "剧情数据缺失"

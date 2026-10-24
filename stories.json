@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"_note": "R346 剧情/成就定义；R352 起开始填内容（第一章「游移的音准」已实装，grants = 摇篮曲 9182 + 森林的朋友们 9183 + 竖琴 6052）。列表标签 = chapter-title。统计键见 profile_data.gd 顶部注释。",
+	"_note": "R346 剧情/成就定义；R352 起开始填内容（第一章「游移的音准」已实装）。grants = 这一段看完之后**加入奖励池**的卡/道具（R355 口径：解锁 ≠ 发放，解锁前它们不属于奖励池），所以这里点到的 id 必须在 cards.json / relics.json 里标 locked:true。列表标签 = chapter-title。统计键见 profile_data.gd 顶部注释。",
 	"episodes": [
 		{
 			"id": "episode1",

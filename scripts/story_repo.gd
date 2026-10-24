@@ -4,12 +4,15 @@ extends RefCounted
 ##
 ## 一份 `stories.json` 里两组东西：
 ##   episodes      剧情段。[{id, chapter, title, text: [行], grants: {cards, relics}}]
+##                 `grants` = 看完之后**加入奖励池**的 id（不是发到手里，R355 用户口径）——
+##                 所以这里点到的卡 / 道具必须在 cards.json / relics.json 里标 `locked: true`，
+##                 否则它本来就在池子里，「解锁」对玩家没有任何意义（test_engine R355 有守卫）。
 ##   achievements  成就。[{id, name, hint, stat | stat_prefix, min, episodes: [剧情 id]}]
 ##
 ## 三段状态（`episode_state()` 的唯一判定口）：
 ##   locked  条件还没达成  —— 列表里显示「？？？」与条件提示
 ##   ready   条件已达成、还没点开看过 —— 可以点开看
-##   read    已经看过（卡牌 / 道具已经发放）
+##   read    已经看过（卡牌 / 道具已加入奖励池）
 ##
 ## ⚠️ 「解锁」与「看过」是**两步**：条件达成只让条目亮起来（`unlocked_stories`），
 ##    玩家点开看过之后才发卡牌/道具（`read_stories`）。用户口径：
@@ -119,7 +122,8 @@ func episode_text_lines(ep_id: String) -> Array[String]:
 
 
 func episode_grants(ep_id: String) -> Dictionary:
-	## 看完能拿到什么：`{cards: Array[int], relics: Array[int]}`（现在全空）。
+	## 看完**解锁进奖励池**的东西：`{cards: Array[int], relics: Array[int]}`。
+	## ⚠️ 不是「发到手里」的清单 —— 界面上要说「加入奖励池」，不要说「获得」（R355）。
 	var ep := episode(ep_id)
 	var g: Variant = ep.get("grants", {})
 	if not (g is Dictionary):
