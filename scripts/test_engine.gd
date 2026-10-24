@@ -19305,11 +19305,64 @@ func _init() -> void:
 			"R223 巧克力回到 6：疲惫被移出卡组")
 	RunState.chocolate = 0
 	RunState.sync_fatigue()
-	check(RunState.deck_ids.has(RunState.FATIGUE_CARD_ID), "R223 巧克力 0：疲惫重新入卡组")
+	# R358：改成「每层只发一次」—— 这一层已经在 5 块时发过，涨回 6 洗掉之后掉回 0
+	# 也**不再补第二张**；要换层才重新有机会。
+	check(not RunState.deck_ids.has(RunState.FATIGUE_CARD_ID),
+			"R358 同一层内：疲惫被洗掉后掉回 0 也不再补（每层只发一次）")
 	RunState.set_difficulty(4)
 	RunState.sync_fatigue()
 	check(not RunState.deck_ids.has(RunState.FATIGUE_CARD_ID),
 			"R223 难度 4（未到 5 档）：即使巧克力 0 也不进疲惫")
+	RunState.end_run()
+
+	# ---- R358：每层只会获得一次疲惫（用户实测口径）----
+	# 场景：难度 6 已经入过疲惫 → 商店把疲惫删掉 → 买巧克力 → 再走一格扣 1 块。
+	# 修复前：sync_fatigue 是纯状态推导（巧克力 <6 且卡组没疲惫就补），第三格走完
+	# 疲惫会原样回来 —— 删卡服务等于白花钱，还能无限刷。
+	RunState.set_difficulty(6)
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	check(RunState.fatigue_granted_layer == -1,
+			"R358 开局：本层还没发过疲惫（记账 -1）")
+	RunState.chocolate = 5
+	RunState.sync_fatigue()
+	check(RunState.deck_ids.count(RunState.FATIGUE_CARD_ID) == 1
+			and RunState.fatigue_granted_layer == RunState.current_layer,
+			"R358 难度 6 + 巧克力 5：发一张疲惫，记账落在当前层")
+	# ① 玩家把疲惫删掉（商店 / 篝火的「移除卡牌」服务）—— 9149 不是 no_remove，删得掉
+	RunState.remove_all_cards(RunState.FATIGUE_CARD_ID)
+	check(not RunState.deck_ids.has(RunState.FATIGUE_CARD_ID),
+			"R358 模拟删除：卡组里已经没有疲惫")
+	# ② 获取巧克力 5 → 6：sync 走「移除」分支，卡本来就不在 → 什么都不发生
+	RunState.add_chocolate(1)
+	RunState.sync_fatigue()
+	check(RunState.chocolate == 6 and not RunState.deck_ids.has(RunState.FATIGUE_CARD_ID),
+			"R358 买巧克力到 6：疲惫没有被补回来")
+	# ③ 再扣一点 6 → 5（advance 内部扣完调的就是这个口）
+	RunState.chocolate -= 1
+	RunState.sync_fatigue()
+	check(not RunState.deck_ids.has(RunState.FATIGUE_CARD_ID),
+			"R358 删疲惫 → 买巧克力 → 掉回 5：不再重新获得疲惫")
+	# ④ 换层 → 记账重置，新的一层重新拥有一次机会
+	RunState.advance_layer(GameLayers.LAYER_TWO)
+	check(RunState.fatigue_granted_layer == -1,
+			"R358 换层：发放记账重置成 -1")
+	RunState.chocolate = 5
+	RunState.sync_fatigue()
+	check(RunState.deck_ids.count(RunState.FATIGUE_CARD_ID) == 1
+			and RunState.fatigue_granted_layer == RunState.current_layer,
+			"R358 换层后巧克力 5：新的一层重新发一张疲惫")
+	# ⑤ 存档往返：记账跟着走，读档不会凭「巧克力低」白送一张
+	RunState.remove_all_cards(RunState.FATIGUE_CARD_ID)
+	var r358_snap: Dictionary = RunSave.snapshot()
+	# ⚠️ 弄脏内存只能用**值类型**字段：snapshot() 里的 deck_ids 存的是**数组引用**，
+	#    往 deck_ids 里 append 会把快照本身也改掉（第一次就栽在这儿，断言假红）。
+	RunState.chocolate = 0
+	RunState.fatigue_granted_layer = -9
+	RunSave.apply(r358_snap)
+	check(RunState.fatigue_granted_layer == RunState.current_layer
+			and RunState.chocolate == 5
+			and not RunState.deck_ids.has(RunState.FATIGUE_CARD_ID),
+			"R358 存档往返：记账随档恢复，读档后不会白送第二张疲惫")
 	RunState.end_run()
 
 	# 诅咒的打出 / 涨价：引擎侧

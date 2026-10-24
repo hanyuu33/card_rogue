@@ -144,6 +144,7 @@ const DEMON_DUCK_BOSS_NAME := "恶魔鸭"       # 第一层触发条件：摇中
 #   3 = 开场时敌人生命值 +10%（向上取整）
 #   4 = 稀有卡牌获取概率降低（稀有权重 ×0.5）
 #   5 = 行动力低时疲惫（巧克力 <6 → 一张诅咒「疲惫」9149 加入卡组；≥6 移除）
+#       R358：**每层最多发一次**（`fatigue_granted_layer` 记账），删掉 / 洗掉后同层不再补。
 #   6 = 敌人更加凶猛（除原本 0 攻工事外，所有敌人攻击 +1）
 #   7 = 金钱减少（初始金钱 150 → 100，后续每层也都是 100）
 #   8 = 行动力降低（每层初始巧克力 12 → 11）
@@ -191,6 +192,11 @@ const DIFF_CHOCO_HIGH := 11        # 8 档起「行动力降低」：每层初�
 const DIFF_MAX_HP_MUL := 0.8       # 9 档起「虚弱」：最大生命 ×80%（截断取整）
 ## 诅咒卡「疲惫」（9149）：1 费诅咒，打出无效果；**在手里时**所有技能卡费用 +1。
 const FATIGUE_CARD_ID := 9149
+## R358：疲惫卡的**发放记账** —— 最近一次发放在哪一层（-1 = 本局还没发过）。
+## 用户口径「确保每层只会获得一次疲惫」：玩家把疲惫删掉、或巧克力涨回 6 把它洗掉之后，
+## 同一层内不再补第二张；`start_run` / `advance_layer` 重置成 -1（新层重新拥有一次机会）。
+## ⚠️ 必须进存档（run_save）：否则「删疲惫 → 存档 → 读档」会被 sync_fatigue 立刻补回来。
+static var fatigue_granted_layer := -1
 
 # ---- 本局种子：run 层唯一随机源 ----
 static var run_seed: int = 0                 # 本局种子（run 层全部随机由它派生；同一种子重跑必然一致）
@@ -572,6 +578,11 @@ static func sync_fatigue() -> void:
 	## 调用点：start_run / advance_layer / advance（扣巧克力后）/ 事件与商店的巧克力加法 /
 	## RunSave.load_run（读档后按巧克力纠正）。
 	## ⚠️ 战斗内不调用（战斗中巧克力不变；手牌每场从 deck_ids 重抽，删卡组即生效）。
+	## ⚠️ R358：**每层最多发一次**（用户口径「确保每层只会获得一次疲惫」）。
+	##    `fatigue_granted_layer` 记「最近一次发放在哪一层」：玩家把疲惫删掉、或巧克力
+	##    涨回 6 把它洗掉之后，同一层内不再补第二张；换层 / 新开一局重置成 -1。
+	##    没有这道闸门时，用户场景「删疲惫 → 买巧克力 → 再走一格」会把它原样补回来
+	##    —— 商店的「移除卡」等于对疲惫无效，而且能无限刷。
 	# R357：第三层没有巧克力 → 「行动力低时疲惫」在这一层不存在。
 	# 从第二层带进来的那张疲惫卡（难度 8 起、进层时巧克力还低过）在这里要拿掉，
 	# 否则玩家会带着一张「这一层根本不会自然消除」的废卡打启示者。
@@ -581,7 +592,12 @@ static func sync_fatigue() -> void:
 		return
 	if fatigue_active() and chocolate < DIFF_FATIGUE_LIMIT:
 		if not deck_ids.has(FATIGUE_CARD_ID):
+			# R358：本层已经发过一次（被删 / 被洗掉）→ 不再补第二张。
+			# 用 `>=` 而不是 `==`：万一漏了某条重置路径，也只会「少发」，不会「多发」。
+			if fatigue_granted_layer >= current_layer:
+				return
 			add_card(FATIGUE_CARD_ID)
+			fatigue_granted_layer = current_layer
 	elif deck_ids.has(FATIGUE_CARD_ID):
 		remove_all_cards(FATIGUE_CARD_ID)
 
@@ -646,6 +662,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	cleared_ids = []
 	seen_ids = []                 # R207：新开一局 → 迷雾记忆清空
 	chocolate = chocolate_per_layer()   # R223 难度 8「行动力降低」：8 档起 = 11
+	fatigue_granted_layer = -1    # R358：新的一局 → 疲惫还没发过
 	gold = start_gold()           # R181 初始 100 金；R223 难度 0 +50、难度 7 起降回 100
 	boss_pending = false
 	boss_beaten = false       # R339：新的一局 → 本层 Boss 还没打
@@ -794,6 +811,7 @@ static func advance_layer(layer: int) -> int:
 	map_cells = RogueMap.generate(run_rng, layer,
 			dice_map_rng() if relics.has(DICE_RELIC_ID) else null)
 	relic_choice = _roll_relic_choice()
+	fatigue_granted_layer = -1    # R358：换层 → 新的一层重新拥有一次「获得疲惫」的机会
 	chocolate = chocolate_per_layer()   # 新一层：巧克力重新满上（R223 难度 8 起 = 11）
 	sync_fatigue()                # R223 难度 5：新层巧克力满 → 疲惫出卡组
 	boss_pending = false

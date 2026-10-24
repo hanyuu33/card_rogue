@@ -49,6 +49,7 @@ static func snapshot() -> Dictionary:
 		"cleared_ids": RunState.cleared_ids,
 		"seen_ids": RunState.seen_ids,       # R207：迷雾记忆（揭开过的房间不再还原）
 		"chocolate": RunState.chocolate,
+		"fatigue_granted_layer": RunState.fatigue_granted_layer,   # R358：疲惫每层只发一次
 		"boss_pending": RunState.boss_pending,
 		"player_class": RunState.player_class,
 		"battle_wins": RunState.battle_wins,
@@ -145,6 +146,8 @@ static func apply(d: Dictionary) -> bool:
 	RunState.seen_ids = _int_array(d.get("seen_ids", []))
 	RunState.reveal_known()
 	RunState.chocolate = int(d.get("chocolate", 0))
+	# R358：老存档没有这个字段 → -1（等同「本层还没发过」），下面 sync 按旧口径补一次
+	RunState.fatigue_granted_layer = int(d.get("fatigue_granted_layer", -1))
 	RunState.boss_pending = bool(d.get("boss_pending", false))
 	RunState.player_class = str(d.get("player_class", PlayerClass.default_id()))
 	RunState.battle_wins = int(d.get("battle_wins", 0))
