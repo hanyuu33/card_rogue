@@ -39,6 +39,10 @@ __pycache__/
 # BGM 候选曲暂存（~485MB，可由 _download.py / _download_opentracks.js 幂等重下）
 # 选曲后只有成品进 assets/audio/bgm/（.ogg，届时入库）
 /assets/audio/_audition/raw/
+# R360：按轮次分包（r360/ 下）的试听素材同样不入库 —— 只提交脚本 / 试听页 / README，
+# 音频可由 _refetch_mp3.py + _make_audition.py 幂等重下。
+/assets/audio/_audition/*/raw/
+/assets/audio/_audition/*/audition/
 
 # 历史验证截图归档（.gdignore 已挡在 res:// 之外，这里再挡 git）
 art_src/_shots/
