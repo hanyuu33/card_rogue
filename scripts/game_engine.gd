@@ -6932,6 +6932,17 @@ func mass_mnemosyne_bonus_ready(side: String = SIDE_SELF) -> bool:
 	return false
 
 
+static func dmg_expr_text(base: int, dmg: int) -> String:
+	## R349：加法型算式的**唯一写法**（`10＋8` / `10－2`）。相等返回 "" ——
+	## 卡面写的就是这个数，界面不必再啰嗦（R262 定下的口径）。
+	## 注意「条件档位型」不走这里（收尾 6→22 是「改为」不是「加」），它们 expr 直接给 ""。
+	if dmg == base:
+		return ""
+	if dmg > base:
+		return "%d＋%d" % [base, dmg - base]
+	return "%d－%d" % [base, base - dmg]
+
+
 func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 	## R262（用户口径）：**「现在打出会造成多少伤害」** —— 战斗左栏详情用。
 	## R348 重构：从「手挑 4 张特例」改成**统一口** —— `SPELL_BASE_DMG` 登记全部伤害技能的
@@ -6952,21 +6963,32 @@ func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 		if card.id == METEOR_SHOWER_ID:
 			var times: int = maxi(0, state.energy_of(SIDE_SELF)) if side == SIDE_SELF else 0
 			var per: int = _spell_dmg(side, METEOR_SHOWER_DMG, card)
-			return {"dmg": per * times,
+			return {"dmg": per * times, "base": per,
+					"expr": "%d × %d" % [per, times], "anchor": str(per),
 					"note": "%d × %d 颗（清空费用）" % [METEOR_SHOWER_DMG, times]}
 		if card.id == RAID_SPELL_ID:
-			return {"dmg": _spell_dmg(side, _raid_dmg(side), card),
+			var rd: int = _spell_dmg(side, _raid_dmg(side), card)
+			# anchor 是 `2+X` —— 正文写的就是这四个字符，直接替换成 `4（2＋2）`。
+			return {"dmg": rd, "base": RAID_BASE_DMG,
+					"expr": dmg_expr_text(RAID_BASE_DMG, rd),
+					"anchor": "%d+X" % RAID_BASE_DMG,
 					"note": "%d + 本回合已用 %d 张" % [RAID_BASE_DMG, plays]}
 		if card.id == COMBO_TRICK_ID:
 			var n: int = plays + 1
 			if n >= COMBO_TRICK_NEED:
+				# 条件档位型：正文「…则改为造成 10 点伤害」已经写清了，只把 10 染色。
 				return {"dmg": _spell_dmg(side, COMBO_TRICK_FULL_DMG, card),
+						"base": COMBO_TRICK_DMG, "expr": "", "anchor": "",
 						"note": "含本卡本回合第 %d 张 → 强化" % n}
 			return {"dmg": _spell_dmg(side, COMBO_TRICK_DMG, card),
+					"base": COMBO_TRICK_DMG, "expr": "", "anchor": "",
 					"note": "本回合第 %d 张（满 %d 张强化）" % [n, COMBO_TRICK_NEED]}
 		if card.id == SNEAK_ID:
 			# 目标未定时按**未受伤目标**报 6，满血值写进 note（提前知道「这一下能翻倍」）
-			return {"dmg": _spell_dmg(side, SNEAK_DMG, card),
+			# 档位型：正文「若目标处于满血状态则改为造成 12 点伤害」→ 预览时目标未定，
+			# dmg 仍等于卡面 6 → `inline_damage` 判定「没偏离」不动正文（既不染色也不加括号）。
+			return {"dmg": _spell_dmg(side, SNEAK_DMG, card), "base": SNEAK_DMG,
+					"expr": "", "anchor": "",
 					"note": "目标满血时 %d" % _spell_dmg(side, SNEAK_FULL_DMG, card)}
 		if card.id == FINISHER_ID:
 			# ⚠️ 预览时本卡**还在手上**，「仅剩它」= 手牌只有这一张；
@@ -6976,15 +6998,22 @@ func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 					if side == SIDE_SELF else state.opp_hand_count <= 1
 			if last:
 				return {"dmg": _spell_dmg(side, FINISHER_LAST_DMG, card),
+						"base": FINISHER_DMG, "expr": "", "anchor": "",
 						"note": "手牌只剩这一张 → 强化"}
 			return {"dmg": _spell_dmg(side, FINISHER_DMG, card),
+					"base": FINISHER_DMG, "expr": "", "anchor": "",
 					"note": "手牌仅剩它时 %d" % _spell_dmg(side, FINISHER_LAST_DMG, card)}
 		if card.id == HUNT_ID:
-			return {"dmg": _spell_dmg(side, HUNT_DMG, card),
+			return {"dmg": _spell_dmg(side, HUNT_DMG, card), "base": HUNT_DMG,
+					"expr": "", "anchor": "",
 					"note": "目标上回合触发过场地 → %d" % _spell_dmg(side, HUNT_BIG_DMG, card)}
 		if card.id == BREAKTHROUGH_ID:
 			var st: int = _side_upgrade_stacks(side)
-			return {"dmg": _spell_dmg(side, BREAKTHROUGH_DMG + st * BREAKTHROUGH_PER_STACK, card),
+			# 加成型：正文 `造成**10**点伤害` → 界面显示 `造成 18（10＋8）点伤害`
+			# （用户 R349 举的就是这张卡的例子）。anchor 自动取 base 的 "10"。
+			var bd: int = _spell_dmg(side, BREAKTHROUGH_DMG + st * BREAKTHROUGH_PER_STACK, card)
+			return {"dmg": bd, "base": BREAKTHROUGH_DMG,
+					"expr": dmg_expr_text(BREAKTHROUGH_DMG, bd), "anchor": "",
 					"note": "场上改造 %d 层 → %d + %d" % [st, BREAKTHROUGH_DMG,
 							st * BREAKTHROUGH_PER_STACK]}
 		# 名单里却没有分支 → 宁可不错报（R348 ② 断言会把这个矛盾立刻拦下来）
@@ -6996,8 +7025,12 @@ func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 		if eb <= 0 and ed == ENERGY_CANNON_DMG:
 			return {}   # 卡面写的就是 9，没 8075 也没别的加成 → 不啰嗦
 		if eb > 0:
-			return {"dmg": ed, "note": "含谟涅摩叙涅 +%d" % eb}
-		return {"dmg": ed, "note": "卡面 %d ＋ 加成 %d" % [ENERGY_CANNON_DMG, ed - ENERGY_CANNON_DMG]}
+			return {"dmg": ed, "base": ENERGY_CANNON_DMG,
+					"expr": dmg_expr_text(ENERGY_CANNON_DMG, ed), "anchor": "",
+					"note": "含谟涅摩叙涅 +%d" % eb}
+		return {"dmg": ed, "base": ENERGY_CANNON_DMG,
+				"expr": dmg_expr_text(ENERGY_CANNON_DMG, ed), "anchor": "",
+				"note": "卡面 %d ＋ 加成 %d" % [ENERGY_CANNON_DMG, ed - ENERGY_CANNON_DMG]}
 	# ---------- ② 固定卡：卡面已给确数，只有加了成才报 ----------
 	# 蓄势 9156 的 base 是实例数据（`_charge_up_grow` 逐回合累加，卡面由
 	# `_charge_up_text(card.value)` 同步写出）→ 单独取，不读表。
@@ -7005,7 +7038,8 @@ func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 	var fin: int = _spell_dmg(side, base, card)
 	if fin == base:
 		return {}
-	return {"dmg": fin, "note": "卡面 %d ＋ 加成 %d" % [base, fin - base]}
+	return {"dmg": fin, "base": base, "expr": dmg_expr_text(base, fin), "anchor": "",
+			"note": "卡面 %d ＋ 加成 %d" % [base, fin - base]}
 
 
 func _finisher_dmg(side: String) -> int:

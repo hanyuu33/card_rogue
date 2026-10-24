@@ -331,6 +331,11 @@ const SIDE_FOE := Color("c62828")        ## 敌方：框 / 标记
 const STAT_POWER := Color("8a5f00")   ## 力量（5.64:1；原 #b8860b 只有 3.25:1，未过 AA）
 const STAT_HEALTH := Color("c1121f")  ## 生命 / 伤害（6.22:1）
 
+## R349（用户口径）：伤害数**内联在效果正文里**染色，不再单开一行「现在打出」。
+## 两个色各管一件事 —— 总值要最跳，算式要能读但不抢。
+const DMG_NOW := Color("c1121f")       ## 当前总伤害（与生命同色系，浅底上最醒目）
+const DMG_CALC := Color("8a6a45")      ## 算式（10＋8）：暖褐，和红色明显分开
+
 # ── 卡种（`card_face.gd` 的种类着色）──
 const KIND_ALLY := Color("2a7a2a")    ## 盟友
 const KIND_SKILL := Color("7a2a7a")   ## 技能

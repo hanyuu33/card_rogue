@@ -1394,9 +1394,10 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r348bt" in args and engine != null:
-		# 演示（R348）：左栏「现在打出：N 点伤害」。
-		# 手牌 = [集中突破 9162（场上改造 3 层 → 22）／ 火焰箭 9003（附魔 +10 → 27）]，
-		# 参数 0 / 1 选 hover 哪一张（默认 0）。
+		# 演示（R348 立 · R349 改）：左栏**伤害内联**的两张代表卡。
+		#   R349 起不再单独画「现在打出：N 点伤害」，改成要塞进效果正文里：
+		#   0 = 集中突破 9162（场上改造 2 层 → `造成 18（10＋8）点伤害`，正是用户举的例子）
+		#   1 = 火焰箭 9003（附魔 +10   → `造成 27（17＋10）点伤害`）
 		engine.state.hand.clear()
 		engine.state.energy = 9
 		var bt1: Placement = engine.state.place(
@@ -1404,11 +1405,6 @@ func _ready() -> void:
 				Vector2i(2, 1), GameEngine.SIDE_SELF)
 		if bt1 != null:
 			bt1.upgrade_stacks = 2
-		var bt2: Placement = engine.state.place(
-				CardData.from_dict(repo.get_card(8001).to_dict()),
-				Vector2i(2, 2), GameEngine.SIDE_SELF)
-		if bt2 != null:
-			bt2.upgrade_stacks = 1
 		engine.state.hand.append(CardData.from_dict(repo.get_card(9162).to_dict()))
 		var fx: CardData = CardData.from_dict(repo.get_card(9003).to_dict())
 		fx.power = 10     # 附魔「伤害 +10」烤进 power
@@ -1421,7 +1417,7 @@ func _ready() -> void:
 		_demo_hover_idx = bidx
 		_hover_hand = bidx
 		_hover_card = engine.state.hand[bidx]
-		status_text = "R348 左栏「现在打出」"
+		status_text = "R349 伤害内联 · 集中突破 / 附魔火焰箭"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--nowshow" in args and engine != null:
@@ -1441,7 +1437,7 @@ func _ready() -> void:
 		_demo_hover_idx = 0
 		_hover_hand = 0
 		_hover_card = engine.state.hand[0] if not engine.state.hand.is_empty() else null
-		status_text = "R348 现在打出 · %d" % nid
+		status_text = "R349 伤害内联 · %d" % nid
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r330card" in args and engine != null:
@@ -12030,7 +12026,7 @@ func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
 				cc + Vector2(0, kw * 1.06), COL_BONUS, Color(0.14, 0.11, 0.03, 0.86))
 
 
-static func _info_blocks(card: CardData, pl: Placement) -> Array:
+static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 	## 左栏框体流的**唯一组装口**（R297）。顺序就是用户口径：
 	##   数值两框 → 「效果」小标题 + 效果文本框 → 字段解释框（每个字段一个）
 	##   → buff 框（每种一个；**附魔也算 buff**，排在最前面 —— 花钱买的，最该被看见）。
@@ -12076,8 +12072,16 @@ static func _info_blocks(card: CardData, pl: Placement) -> Array:
 		out.append({"type": "stats", "kind": "stats", "col": Color("6b6155"), "items": mv_items})
 	# ② 效果正文：单独一个框，**高度随文字量**（`CardInfoBoxes.box_h` 折行数出来）
 	out.append({"type": "caption", "kind": "caption", "title": "效果", "col": Color("2a5a8a")})
+	# R349（用户口径）：伤害**内联进正文**，不再另起一行「现在打出」。
+	#   `now` 只有「这张卡正在手牌上」时才非空 → 弃牌区 / 卡组 / 敌方卡一律原样。
+	#   例：集中突破 `造成 **10** 点伤害` → `造成 18（10＋8）点伤害`。
+	var body_segs: Array = CardText.parse(card.effect_text)
+	if not now.is_empty():
+		body_segs = CardText.inline_damage(body_segs, int(now.get("dmg", 0)),
+				int(now.get("base", 0)), str(now.get("expr", "")),
+				str(now.get("anchor", "")))
 	out.append({"type": "text", "kind": "text", "col": Color("2a5a8a"),
-			"segs": CardText.parse(card.effect_text)})
+			"segs": body_segs})
 	# ③ 字段解释框：每个字段一个，框内「图标 名字：解释」
 	for a: String in card.affixes:
 		var ac := CardData.affix_colors(a)
@@ -12141,8 +12145,10 @@ func _draw_info_panel() -> void:
 	var right := INFO_X + INFO_W - 10.0
 	var inner_w := INFO_W - 20.0
 	var y := top + 21.0
+	# R349（用户口径）：左栏是**浅羊皮纸底**，文字一律不描边（`-1`）——
+	# 小字号自动描 2~3px 会把笔画糊成一团（R309 的同一个坑，这次连正文一起清干净）。
 	_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "#%d %s" % [card.id, card.card_name],
-			Vector2(left, y), card.rarity_color())
+			Vector2(left, y), card.rarity_color(), -1)
 	y += 17.0
 	# 费用：显示**当前实际费用**（悬停/选中手牌时套用本回合减费，低于卡面则标绿）
 	var hand_idx := _hover_hand
@@ -12160,35 +12166,29 @@ func _draw_info_panel() -> void:
 		# X 费卡（流星雨）：费用随剩余费用浮动 → 左栏直接写「费用 X（X = 剩余全部费用）」
 		cost_line = "%s · 费用 X（X = 剩余全部费用）· %s" % [card.kind, card.rarity_name()]
 	_draw_string_nw(_font, UiTheme.FS_MICRO, cost_line,
-			Vector2(left, y), COL_COST_LOW_BG if cost_low else UiTheme.INK_600)
+			Vector2(left, y), COL_COST_LOW_BG if cost_low else UiTheme.INK_600, -1)
 	y += 13.0
 	draw_line(Vector2(left, y), Vector2(right, y), Color("cfcbc2"), 1.0)
 	y += 17.0
-	# R262（用户口径）：**「现在打出会造成多少伤害」**——只对**卡面文案给不出确数**的技能卡显示
-	#（终结 2+X / 连环戏法 5→10 / 偷袭 6→12 / 流星雨 8×X）。这类卡玩家只能心算，
-	# 详情里直接报当前真实值；数值与结算同源（`GameEngine.spell_now()` → `_spell_dmg()`）。
-	# ⚠️ 只在**手牌**上显示：费用区 / 弃牌区 / 敌方卡上算这个数没有意义。
+	# R349（用户口径）：**不再单开一行「现在打出：N 点伤害」** —— 那个数改成在效果正文里
+	# 内联显示（`造成 18（10＋8）点伤害`，18 醒目、算式次色），见 `CardText.inline_damage()`。
+	# 数值仍与结算同源（`GameEngine.spell_now()` → `_spell_dmg()`）。
+	# ⚠️ 只在**手牌**上算：费用区 / 弃牌区 / 敌方卡上算这个数没有意义。
+	var now: Dictionary = {}
 	if hand_idx >= 0 and hand_idx < engine.state.hand.size() \
 				and engine.state.hand[hand_idx] == card:
-		var now := engine.spell_now(card)
-		if not now.is_empty():
-			_draw_string_nw(_font_bold, UiTheme.FS_MICRO,
-					"现在打出：%d 点伤害" % int(now.get("dmg", 0)), Vector2(left, y),
-					Color("a3241c"))
-			y += 15.0
-			_draw_string_nw(_font, UiTheme.FS_MICRO, str(now.get("note", "")),
-					Vector2(left + 6.0, y), Color("8a5a2a"))
-			y += 19.0
+		now = engine.spell_now(card)
 	if not card.traits.is_empty():
 		var tt := ""
 		for t in card.traits:
 			tt += (" · " if tt != "" else "") + str(t)
-		_draw_string_nw(_font, UiTheme.FS_MICRO, "词条：" + tt, Vector2(left, y), Color("886000"))
+		_draw_string_nw(_font, UiTheme.FS_MICRO, "词条：" + tt, Vector2(left, y),
+				Color("886000"), -1)
 		y += 17.0
 	# R297：**框体流**（用户口径）—— 数值两框 → 效果文本框 → 字段框 → buff 框。
 	# 以前这些全是纯文本行「力量 3 生命 5 / 字段：嘲讽 · 次元 / · 护盾：免疫…」，
 	# 一层层堆下来读不出结构；现在每类一个框，**框高随内容量变**（`CardInfoBoxes.box_h`）。
-	var blocks := _info_blocks(card, pl)
+	var blocks := _info_blocks(card, pl, now)
 	# R302：把「提及」的命中矩形交出去（悬停「素体」两个字才弹说明）。
 	# 用户口径：**不要**再把摘要固定列在详情底部 —— 那块地方还给效果框 / buff 框。
 	_mention_hits.clear()

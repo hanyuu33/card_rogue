@@ -455,7 +455,10 @@ static func wrap_rich(font: Font, font_bold: Font, segs: Array, max_w: float, si
 		var seg: Dictionary = segs[si]
 		var t := str(seg.get("text", ""))
 		var b := bool(seg.get("bold", false))
-		sig += "%d%s," % [t.length(), "b" if b else "-"]
+		# R349：col 进 key —— 同一段文字配不同颜色（伤害内联着色）时不能共用折行缓存。
+		var sc: Variant = seg.get("col")
+		var cs := (sc as Color).to_html(false) if sc is Color else ""
+		sig += "%d%s%s," % [t.length(), "b" if b else "-", cs]
 		for i in t.length():
 			chars.append({"c": t[i], "si": si, "b": b})
 	var plain := _plain_of(chars)
@@ -490,8 +493,11 @@ static func wrap_rich(font: Font, font_bold: Font, segs: Array, max_w: float, si
 static func _carry(seg: Dictionary, text: String) -> Dictionary:
 	## 折行会把一个片段切成多段 → 新片段必须**原样带走** `mention`
 	## （漏带会让「提及」在换行处突然变回普通文字：颜色与悬浮一起丢）。
+	## R349：`col` 也要带走 —— 伤害数内联染色断行时会变成半红半黑。
 	var d := {"text": text, "bold": seg.get("bold", false),
 			"italic": seg.get("italic", false), "code": seg.get("code", false)}
 	if seg.has("mention"):
 		d["mention"] = seg["mention"]
+	if seg.has("col"):
+		d["col"] = seg["col"]
 	return d

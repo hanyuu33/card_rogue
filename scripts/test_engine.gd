@@ -25163,6 +25163,104 @@ func _init() -> void:
 	check(r348_nonote.is_empty(),
 			"R348 文案：凡报出「现在打出」的卡都带一行来源小字（缺 %s）"
 			% ", ".join(r348_nonote))
+	# ============================================================
+	#  R349：伤害内联染色（不再单开一行「现在打出」）+ 左栏去描边
+	# ============================================================
+	# 用户口径：`集中突破 / 对一个敌人造成18（10＋8）伤害，……`
+	#   → 18 用更醒目的颜色、（10＋8）用另一种颜色，**直接长在原文里**。
+	# ---- ① 加成型：`**10**` → `22（10＋12）` ----
+	var r349_md := "对一个敌人造成**10**点伤害。场上的己方单位每有 1 层改造，伤害 +4。"
+	var r349_add := CardText.inline_damage(CardText.parse(r349_md), 22, 10, "10＋12")
+	var r349_plain := CardText.segments_plain(r349_add)
+	check(r349_plain.begins_with("对一个敌人造成 22（10＋12）点伤害"),
+			"R349 内联：加成型 → 「造成 22（10＋12）点伤害」（实际 %s）" % r349_plain)
+	var r349_hot := -1
+	var r349_calc := -1
+	for r349_i in r349_add.size():
+		var r349_s: Dictionary = r349_add[r349_i]
+		if str(r349_s.get("text", "")) == "22":
+			r349_hot = r349_i
+		if str(r349_s.get("text", "")) == "（10＋12）":
+			r349_calc = r349_i
+	check(r349_hot >= 0 and (r349_add[r349_hot] as Dictionary).get("col") == UiTheme.DMG_NOW,
+			"R349 内联：总值 22 用 DMG_NOW（醒目色）")
+	check(r349_calc >= 0 and (r349_add[r349_calc] as Dictionary).get("col") == UiTheme.DMG_CALC,
+			"R349 内联：算式（10＋12）用 DMG_CALC（次色）")
+	check(r349_hot >= 0 and bool((r349_add[r349_hot] as Dictionary).get("bold", false)),
+			"R349 内联：总值加粗（颜色 + 字重两样叠起来才够跳）")
+	# ---- ② 没偏离不标：卡面写的就是这个数 ----
+	var r349_same := CardText.inline_damage(CardText.parse("对一个目标造成 17 点伤害。"),
+			17, 17, "")
+	check(CardText.segments_plain(r349_same) == "对一个目标造成 17 点伤害。",
+			"R349 内联：dmg == base → 正文一个字都不动（卡面已说清，标出来是噪音）")
+	# ---- ③ 档位型（expr 空）：正文本来有两档 → 只染生效那档，文字不变 ----
+	var r349_pick_md := "造成 6 点伤害，若这张卡是你手牌中仅剩的一张则改为造成 22 点伤害。"
+	var r349_pick := CardText.inline_damage(CardText.parse(r349_pick_md), 22, 6, "")
+	check(CardText.segments_plain(r349_pick) == r349_pick_md,
+			"R349 内联：档位型 → 正文一字不改（两档原文里都有）")
+	var r349_pick_hot := false
+	var r349_pick_six := false
+	for r349_s2: Dictionary in r349_pick:
+		if str(r349_s2.get("text", "")) == "22":
+			r349_pick_hot = r349_s2.get("col") == UiTheme.DMG_NOW
+		if str(r349_s2.get("text", "")) == "6":
+			r349_pick_six = r349_s2.get("col") == UiTheme.DMG_NOW
+	check(r349_pick_hot, "R349 内联：档位型 → 当前生效的 22 被染色")
+	check(not r349_pick_six, "R349 内联：档位型 → 未生效的 6 保持原色（只有生效那档跳）")
+	# ---- ④ 锚点对不上 → 原样（蓄势正文写 0，真值由 card.value 实时写）----
+	var r349_miss_raw := "造成 0 点伤害。回合结束时，每有 1 点未使用的费用，手牌的此卡伤害 +3。"
+	var r349_miss := CardText.inline_damage(CardText.parse(r349_miss_raw), 7, 0, "0＋7", "9")
+	check(CardText.segments_plain(r349_miss) == CardText.naturalize(r349_miss_raw),
+			"R349 内联：锚点对不上 → 原样返回（宁可不标，也不标错）")
+	# ---- ⑤ spell_now 真把 base / expr / anchor 交出来 ----
+	var r349_e := _new_engine([], 30, 30)
+	var r349_bt2 := _card(9162, "集中突破", "技能", 2, 0, 0, 0, 0)
+	var r349_p := r349_e.state.place(_card(8001, "树人", "盟友", 2, 2, 8, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_SELF)
+	if r349_p != null:
+		r349_p.upgrade_stacks = 2
+	var r349_now := r349_e.spell_now(r349_bt2)
+	check(int(r349_now.get("dmg", -1)) == 18,
+			"R349 引擎：集中突破 2 层改造 → 18 伤（用户举的那个例子）")
+	check(int(r349_now.get("base", -1)) == 10 and str(r349_now.get("expr", "")) == "10＋8",
+			"R349 引擎：集中突破交 base=10 / expr=10＋8（界面据此内联成 18（10＋8））")
+	var r349_raid := _new_engine([], 30, 30)
+	r349_raid.state.self_card_plays = 2
+	var r349_rn := r349_raid.spell_now(_card(9086, "终结", "技能", 1, 0, 0, 0, 0))
+	check(str(r349_rn.get("anchor", "")) == "2+X" and int(r349_rn.get("dmg", -1)) == 4,
+			"R349 引擎：终结 anchor=2+X / dmg=4（正文写的是「造成 2+X 点伤害」）")
+	var r349_fx := _new_engine([], 30, 30)
+	var r349_fx_card := _card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0)
+	r349_fx_card.power = 10
+	var r349_fn := r349_fx.spell_now(r349_fx_card)
+	check(int(r349_fn.get("base", -1)) == 17 and str(r349_fn.get("expr", "")) == "17＋10",
+			"R349 引擎：火焰箭附魔 → base=17 / expr=17＋10")
+	# ---- ⑥ 源码守卫：左栏不再画「现在打出」那一行；每处文字都不描边 ----
+	var r349_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r349_src.find("现在打出：%d") < 0,
+			"R349 源码：左栏不再画「现在打出：N 点伤害」（改成正文内联）")
+	check_src(r349_src.find("CardText.inline_damage") >= 0,
+			"R349 源码：效果正文走 inline_damage 这个唯一口")
+	var r349_p0 := r349_src.find("func _draw_info_panel(")
+	var r349_p1 := r349_src.find("func _info_panel_rect(", r349_p0)
+	var r349_panel := ""
+	if r349_p0 >= 0 and r349_p1 > r349_p0:
+		r349_panel = r349_src.substr(r349_p0, r349_p1 - r349_p0)
+	var r349_bad := 0
+	var r349_calls := 0
+	var r349_q := 0
+	while true:
+		var r349_at := r349_panel.find("_draw_string_nw(", r349_q)
+		if r349_at < 0:
+			break
+		r349_calls += 1
+		# 跨行调用，往后看 220 字符内必须出现 -1（明确不描边）
+		if r349_panel.substr(r349_at, 220).find("-1") < 0:
+			r349_bad += 1
+		r349_q = r349_at + 16
+	check_src(r349_calls >= 3 and r349_bad == 0,
+			"R349 源码：左栏每处 _draw_string_nw 都传 outline=-1（%d 处调用，%d 处漏）"
+			% [r349_calls, r349_bad])
 	# 收尾：删临时剧情文件（档案文件交给下一次 set_test_mode 清）
 	if FileAccess.file_exists(r346_probe_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(r346_probe_path))

@@ -287,13 +287,99 @@ static func to_bbcode(md: String, hide_parens := HIDE_PARENS) -> String:
 	return out
 
 
+static func _find_token_in(s: String, token: String) -> int:
+	## 在**单段文本**里找 token 的首次出现，且要求左侧不是数字。
+	## 为什么要判左界：`2` 会命中 `12` / `22` 里的那一位 —— 标错数字比不标更糟。
+	## 右界同理（token 末位是数字时）：`8` 不许命中 `80`。
+	if token == "" or s == "":
+		return -1
+	var from := 0
+	while true:
+		var i := s.find(token, from)
+		if i < 0:
+			return -1
+		var ok := true
+		if i > 0 and _is_digit(s[i - 1]):
+			ok = false
+		var j := i + token.length()
+		if ok and _is_digit(token[token.length() - 1]) and j < s.length() and _is_digit(s[j]):
+			ok = false
+		if ok:
+			return i
+		from = i + 1
+	return -1
+
+
+static func _seg_colored(seg: Dictionary, text: String, col: Color, bold := false) -> Dictionary:
+	## 复制一个片段并改字 / 改色（**不改原字典** —— parse 的缓存片段是共享的）。
+	var d := {"text": text, "bold": bold, "italic": false, "code": false, "col": col}
+	if seg.has("mention"):
+		d["mention"] = seg["mention"]
+	return d
+
+
+static func inline_damage(segs: Array, dmg: int, base: int, expr: String,
+		anchor := "") -> Array:
+	## R349（用户口径）：把「现在打出多少伤害」**内联进效果正文**，不再单开一行。
+	##   加成型（expr 非空）→ 把正文里的基础数字换成 `总值（算式）`，例如
+	##       `造成 **10** 点伤害` → `造成 18（10＋8）点伤害`
+	##     其中 18 = DMG_NOW（醒目）、（10＋8）= DMG_CALC（次色）
+	##   条件档位型（expr 为空）→ 正文本来就写了两档（「则改为造成 22 点伤害」），
+	##      只把**当前生效那一档**染成 DMG_NOW，正文一个字都不改。
+	## ⚠️ 口径：`dmg == base` 一律不动 —— 卡面已经说清了，标出来是噪音（R262 定下的规矩）。
+	## ⚠️ 找不到锚点（正文给不出确数，如蓄势由 value 实时写）→ 原样返回，宁可不标也不标错。
+	if segs.is_empty() or dmg == base:
+		return segs
+	var token := anchor
+	if token == "":
+		token = str(base) if expr != "" else str(dmg)
+	for idx in segs.size():
+		var seg: Dictionary = segs[idx]
+		var t := str(seg.get("text", ""))
+		var i := _find_token_in(t, token)
+		if i < 0:
+			continue
+		var out: Array = []
+		for k in idx:
+			out.append(segs[k])
+		var pre := t.substr(0, i)
+		if pre != "":
+			# 数字与汉字之间留一个半角空格（与 `_space_units` 同一口径）。
+			# 原文 `**10**点伤害` 里的星号挡住了那层判断，换成实体数字后得自己补，
+			# 否则会排成「造成22」这种贴着的字。
+			if _is_cjk(pre[pre.length() - 1]):
+				pre += " "
+			out.append(_carry(seg, pre))
+		elif not out.is_empty():
+			# token **独占一段**（`**10**` 被 parse 成单独一个 bold 片段）→ 空格只能
+			# 补到上一个片段的末尾，否则「造成」和「22」会贴在一起。
+			var last_i := out.size() - 1
+			var last_t := str((out[last_i] as Dictionary).get("text", ""))
+			if last_t != "" and last_t[last_t.length() - 1] != " " \
+					and _is_cjk(last_t[last_t.length() - 1]):
+				out[last_i] = _carry(out[last_i] as Dictionary, last_t + " ")
+		out.append(_seg_colored(seg, str(dmg), UiTheme.DMG_NOW, true))
+		if expr != "":
+			out.append(_seg_colored(seg, "（" + expr + "）", UiTheme.DMG_CALC))
+		var post := t.substr(i + token.length())
+		if post != "":
+			out.append(_carry(seg, post))
+		for k in range(idx + 1, segs.size()):
+			out.append(segs[k])
+		return out
+	return segs
+
+
 static func _carry(seg: Dictionary, text: String) -> Dictionary:
 	## ⚠️ R168：必须**原样带走 `mention`** —— 折行会把一个片段切成多段，
 	##    漏带就会让「提及」在换行处突然变回普通文字（颜色与悬浮一起丢）。
+	## R349：`col` 同理 —— 伤害数内联染色靠它，丢在换行处就是「同一句话两种颜色」。
 	var d := {"text": text, "bold": seg.get("bold", false),
 			"italic": seg.get("italic", false), "code": seg.get("code", false)}
 	if seg.has("mention"):
 		d["mention"] = seg["mention"]
+	if seg.has("col"):
+		d["col"] = seg["col"]
 	return d
 
 
@@ -341,13 +427,19 @@ static func draw_wrapped_hits(canvas: CanvasItem, font: Font, font_bold: Font, s
 		for seg in line:
 			var f: Font = fnt_b if bool(seg.get("bold", false)) else font
 			var col: Color = base_col
+			# R349：片段显式带了 col（伤害内联着色）→ 直接用它，**不再**被 code / bold
+			# 的「同色系压暗」改写 —— 否则红数字加粗后会变成暗红，和不加粗的挤在一起。
+			var own_col: Variant = seg.get("col")
+			var own := own_col is Color
+			if own:
+				col = own_col as Color
 			if skip_draw:
 				cx += f.get_string_size(str(seg.get("text", "")),
 						HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 				continue
-			if bool(seg.get("code", false)):
+			if not own and bool(seg.get("code", false)):
 				col = UiTheme.CODE_TEXT
-			elif bool(seg.get("bold", false)):
+			elif not own and bool(seg.get("bold", false)):
 				col = bold_col
 			var men: Dictionary = seg.get("mention", {})
 			var t: String = str(seg.get("text", ""))
