@@ -8539,17 +8539,27 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			#   **所有单位**（不分敌我）1 回合不能行动。
 			# ⚠️ 「1 回合」对两个阵营是**两种不同的挡法**，不能一律 `_apply_stun`：
 			#   * 非施放方（敌方）→ `_apply_stun` 正好挡住**即将到来的**那个敌方回合；
-			#   * 施放方（我方）→ `_apply_stun` 挡的是**下个**我方回合，等于两回合不能动，
-			#     所以只能就地横置（本回合剩余时间不能动），下个我方回合照常恢复。
-			# 这正是卡面「不分敌我」的代价：5 费换掉对手一整回合，自己也交出这一回合。
+			#   * 施放方（我方）再分两种（R352 用户口径）：
+			#     ① 本回合**还没动** → 就地横置，当场交出这一回合的行动权；
+			#     ② 本回合**已经动过** → 横置没有意义（本来就没行动权了），
+			#        所以改成 `_apply_stun` —— **下个我方回合不能动**，
+			#        这样每个单位恰好少一回合，不会因为「已经动过」而免费。
+			#     判据为何要排除 frozen / stun_left / sleep_left：那三种情况下 `tapped`
+			#     是「被状态挡住」而不是「已经动过」，再叠一层眩晕 = 白扣一回合。
 			var lull_n := 0
 			var lull_self := 0
+			var lull_used_n := 0
 			for lull_cell: Vector2i in state.board.keys():
 				var lull_p: Placement = state.unit_at(lull_cell)
 				if lull_p == null or lull_p.health <= 0:
 					continue
 				if lull_p.owner == side:
-					if not lull_p.tapped:
+					var lull_used: bool = lull_p.tapped and not lull_p.frozen \
+							and lull_p.stun_left <= 0 and lull_p.sleep_left <= 0
+					if lull_used:
+						_apply_stun(lull_p, "摇篮曲")
+						lull_used_n += 1
+					elif not lull_p.tapped:
 						lull_p.tapped = true
 						lull_p.moved = true
 						action.emit("tap", {"cell": lull_cell, "card": lull_p.card})
@@ -8561,6 +8571,8 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			if lull_n == 0:
 				_log("摇篮曲：场上没有任何单位，效果落空")
 				return "场上没有单位，什么也没发生"
+			if lull_used_n > 0:
+				_log("摇篮曲：我方 %d 个已经行动过的单位 → 下个我方回合不能行动" % lull_used_n)
 			_log("摇篮曲：%d 个单位 1 回合不能行动（其中我方 %d 个）" % [lull_n, lull_self])
 			return "%d 个单位 1 回合不能行动（不分敌我）" % lull_n
 		FOREST_FRIENDS_ID:

@@ -752,6 +752,15 @@ func _ready() -> void:
 		# 演示：右栏道具栏（截图验证用；放在 args 循环后，避免被 --level 重建覆盖）
 		engine.self_relics = [6001, 6005, 6010]   # 初始白 / 奖励黄 / 事件紫
 		_whisper_txt = "本回合造成的伤害 +1"
+	if "--r352harp" in args and engine != null:
+		# R352 出图：竖琴（**一般档**）与传奇道具并排 —— 确认档位徽章与名字色都对，
+		# 而不是被 R289 那条「传奇档只能是奖励道具」逼成传奇。
+		# 出图：`-- --screenshot --r352harp --relicpanel --shotframe 600`
+		engine.self_relics = [GameEngine.HARP_RELIC_ID, RunState.HARVEST_KNIFE_RELIC_ID]
+		if "--relicpanel" in args:
+			_relics_visible = true
+		status_text = "R352：竖琴（一般档·深棕名字）vs 采集刀（传奇·金橙名字）"
+		queue_redraw()
 	if "--r343names" in args and engine != null:
 		# R343 出图：道具栏 / 道具面板里「传奇 vs 普通」的名字色对比。
 		# 出图命令：`-- --screenshot --r343names --shotframe 600`

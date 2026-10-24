@@ -25402,8 +25402,9 @@ func _init() -> void:
 	var r352_relic_repo := RelicRepo.load_json()
 	var r352_harp_data := r352_relic_repo.get_relic(6052)
 	check(r352_harp_data != null and r352_harp_data.relic_name == "竖琴"
-			and r352_harp_data.is_legendary(),
-			"R352 道具：竖琴 6052（传奇）")
+			and r352_harp_data.tier == RelicData.TIER_NORMAL
+			and not r352_harp_data.is_legendary(),
+			"R352 道具：竖琴 6052（**一般档**，不是传奇）")
 
 	# ---- ② 故事 1：内容 / 条件 / 奖励 ----
 	var r352_story := StoryRepo.load_json()
@@ -25516,6 +25517,28 @@ func _init() -> void:
 	check(lul_self.stun_left == 0,
 			"R352 摇篮曲：我方不吃眩晕（否则会变成两回合不能动）")
 	check(lul_foe.stun_left > 0, "R352 摇篮曲：敌方单位吃眩晕（下一个敌方回合不能行动）")
+	# 用户口径：**本回合已经行动过**的我方单位，再横置没意义（本来就没行动权了），
+	# 所以要改成**下个我方回合不能动** —— 否则它等于白拿一回合。
+	var lul_e2 := _new_engine([], 30, 30)
+	var lul_used := lul_e2.state.place(CardData.from_dict(r352_repo.get_card(8003).to_dict()),
+			Vector2i(1, 4), GameEngine.SIDE_SELF)
+	var lul_fresh := lul_e2.state.place(CardData.from_dict(r352_repo.get_card(8003).to_dict()),
+			Vector2i(2, 4), GameEngine.SIDE_SELF)
+	var lul_frozen := lul_e2.state.place(CardData.from_dict(r352_repo.get_card(8003).to_dict()),
+			Vector2i(3, 4), GameEngine.SIDE_SELF)
+	lul_used.tapped = true       # 模拟「本回合已经行动过」（`_tap()` 后的真实形态：tapped=true / moved=false）
+	lul_frozen.tapped = true
+	lul_frozen.frozen = true     # 被冰封挡住的横置不算「已行动」
+	lul_e2.state.hand.clear()
+	lul_e2.state.hand.append(CardData.from_dict(r352_lull_data.to_dict()))
+	lul_e2.state.energy = 10
+	lul_e2.use_spell(0)
+	check(lul_used.stun_left > 0,
+			"R352 摇篮曲：本回合已经行动过的我方单位 → 下个我方回合不能动")
+	check(lul_fresh.tapped and lul_fresh.stun_left == 0,
+			"R352 摇篮曲：还没行动的我方单位 → 只就地横置（不吃眩晕）")
+	check(lul_frozen.frozen and lul_frozen.stun_left == 0,
+			"R352 摇篮曲：被冰封横置的单位不叠眩晕（否则白扣一回合）")
 
 	# ---- ⑥ 森林的朋友们：随机森林盟友入手 + 本回合费用 -2 ----
 	var ff_e := _new_engine([], 30, 30)

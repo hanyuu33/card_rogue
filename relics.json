@@ -413,7 +413,7 @@
       "name": "竖琴",
       "kind": "战斗",
       "source": "奖励",
-      "tier": "传奇",
+      "tier": "一般",
       "desc": "所有盟友 +2 力量。",
       "locked": true
     }
