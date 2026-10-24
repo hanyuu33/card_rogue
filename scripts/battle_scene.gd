@@ -380,6 +380,16 @@ var _flyout_skip: Array = []    # 本帧「是打出不是消失」的卡 id（p
 var _flyout_skip_all := false   # batch_transfer（手牌洗回牌库）：整批移除不播飞出
 var _flyin_skip: Array = []     # 本帧「来源不是抽牌堆」的入手卡 id（swap 顶回手）
 var _deck_fly: Array = []       # R283：卡入牌库飞行动画 {card, from, start, dur, curse}
+# R362：诅咒（破绽 9154）入牌库的**展示队列** —— 用户口径「展示诅咒『破绽』，然后那张卡
+# 进入卡组；一个动画完了才能结算另外一个」。三只厄倪俄同回合各塞一张时，原来三张卡背
+# 同帧一起掠进牌库，根本看不清（用户报「不太明显」）。现在逐张播：
+#   ① 卡面放大居中（暗幕 + 紫光 + 「诅咒」标签 + 来源）→ ② 缩小收进卡组堆 → 下一张。
+# ⚠️ 排队只发生在**界面**：引擎那几张早已同时入账（牌库张数 / 抽牌顺序 / 回放一字未变）。
+# ⚠️ 展示期间 `_curse_busy()` 让操作 / AI / 耳环全让路，否则玩家能在半空里出牌。
+const CURSE_SHOW_MS := 560.0    # 卡面居中展示（含前 240ms 升起 + 缩放入场）
+const CURSE_FLY_MS := 400.0     # 收进牌库（缩小 + 飞向卡组堆 + 换成卡背落库）
+var _curse_queue: Array = []    # 待播 [{card, from}]
+var _curse_cur: Dictionary = {} # 正在播 {card, from, t0, dur}
 var _transform_fx: Array = []   # R284：变幻特效 {zone, slot, start, dur}（zone: hand/deck/discard）
 var _earring_missed := 0        # 耳环连出期间压下的飞出数（>3 → 收尾合并一次整体淡出）
 var _void_known := 0            # void_count 快照：增量 = 这段时间被「消耗」的张数（飞出改上飞）
@@ -3058,7 +3068,22 @@ func _demo_tick() -> void:
 		if not engine.state.board.has(Vector2i(4, 1)):
 			engine.state.place(demo_repo.get_card(8003), Vector2i(4, 1), GameEngine.SIDE_SELF)
 		engine._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
-		status_text = "R300 激发 ×2：一次改造 → 全体敌人各 -6（3 点 × 2 轮）"
+		status_text = "R300/R362 激发 ×2：一次改造 → 每轮随机 2 个敌人各 -3（两轮共 -6）"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r362curse" in _demo_args and _demo_frame == 40 and engine != null:
+		# R362 出图（`--screenshot --r362curse --shotframe 99999 --shotms N`）：
+		# 三张「破绽」压进队列 —— 对应「三只量产型俄倪俄同回合各塞一张」。
+		# 截图模式下 `curse_added` 事件**不排队**（否则暗幕会把整张图糊住），
+		# 所以这里直接往队列里塞，专门拍这段演出。
+		# 时间轴：0~560 展示 → 560~960 飞入 → 960 起第二张。三张 ≈ 2.88s。
+		var cr_repo := CardRepo.load_json()
+		var cr_card: CardData = cr_repo.get_card(GameEngine.BREACH_CURSE_ID)
+		if cr_card != null:
+			for _i in 3:
+				_curse_queue.append({"card": CardData.from_dict(cr_card.to_dict()),
+						"from": "量产型俄倪俄"})
+			status_text = "R362 破绽展示：三只俄倪俄 → 逐张展示后进卡组"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r301color" in _demo_args and _demo_frame == 40 and engine != null:
@@ -3864,8 +3889,15 @@ func _death_wait() -> bool:
 	return engine != null and engine.has_pending_death_effects()
 
 
+func _curse_busy() -> bool:
+	## R362：诅咒展示还在播（或队列里还有没播的）→ 这一小段不收操作。
+	## 窗口 = 每张 CURSE_SHOW_MS + CURSE_FLY_MS（≈0.96s）；三只厄倪俄 ≈ 2.9s。
+	## ⚠️ 纯界面状态，**不进引擎**：联机镜像两侧都跑同一份事件流，各自播各自的。
+	return not _curse_cur.is_empty() or not _curse_queue.is_empty()
+
+
 func _gui_input(event: InputEvent) -> void:
-	if engine == null or engine.over or _net_locked() or _death_wait():
+	if engine == null or engine.over or _net_locked() or _death_wait() or _curse_busy():
 		return
 	# R136：巡场动画播放中，玩家一按鼠标就停（动画只是提示，绝不吞操作）。
 	if event is InputEventMouseButton and event.pressed and _grid_intro_t >= 0.0:
@@ -4026,8 +4058,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				_menu.open()
 			return
 		KEY_E:
-			if _death_wait():
-				return          # R360：死亡效果未结算，别抢着结束回合
+			if _death_wait() or _curse_busy():
+				return          # R360/R362：死亡效果未结算 / 诅咒还没展示完，别抢着结束回合
 			_on_end_turn()
 			queue_redraw()
 		KEY_M:
@@ -6413,7 +6445,8 @@ func _on_hover(pos: Vector2) -> void:
 					# 不再塞进工具栏一行（会横向溢出窗口）
 					var note := RunState.relic_state_note(engine.self_relics[i])
 					_hover_relic_tip = "「%s」（%s）%s%s" % [
-							RunState.relic_display_name(engine.self_relics[i]),
+							RunState.relic_display_name(engine.self_relics[i],
+									engine.state.self_card_plays),
 							rel.tag_line(), rel.desc,
 							("\n" + note) if note != "" else ""]
 				break
@@ -7573,7 +7606,8 @@ func _on_end_turn() -> void:
 func _ai_step() -> void:
 	# R360：死亡效果还在等击破演出 → 这一拍先跳过（下一次 timer 再来）。
 	# 不这样的话 AI 会在「亡语未结算」的中间态上继续决策。
-	if _death_wait():
+	# R362：诅咒展示同理 —— 演出没播完就别推 AI 的下一步。
+	if _death_wait() or _curse_busy():
 		return
 	if engine.over:
 		_ai_timer.stop()
@@ -7651,6 +7685,7 @@ func _draw() -> void:
 	_draw_impacts()
 	_draw_reject_fx()
 	_draw_screen_flash()
+	_draw_curse_show()     # R362：诅咒展示（暗幕 + 卡面）—— 盖在手牌与面板之上
 	_draw_drag()
 	_draw_info_panel()
 	_draw_mention_tip()
@@ -8463,7 +8498,8 @@ func _tick_earring_autoplay() -> bool:
 	if engine == null or not engine.earring_autoplay_active():
 		return false
 	# R360：死亡效果等击破演出 → 这一帧不推下一张（否则会在半结算状态下出牌）
-	if _death_wait():
+	# R362：诅咒展示中同理（展示卡盖在屏幕上，这时候出牌会穿过暗幕）
+	if _death_wait() or _curse_busy():
 		return true
 	var n := _now()
 	if n - _earring_at < _earring_gap:
@@ -9059,6 +9095,8 @@ func _tick_anims() -> bool:
 	_heal_fx = _heal_fx.filter(func(f): return n - int(f.start) < int(f.dur))
 	_deck_fly = _deck_fly.filter(func(f): return n - int(f.start) < int(f.dur))
 	_transform_fx = _transform_fx.filter(func(x): return n - int(x.start) < int(x.dur))
+	# R362：诅咒展示队列（逐张：展示 → 收进卡组 → 下一张）
+	var curse_busy := _tick_curse_show(n)
 	if not _screen_flash.is_empty() and n - int(_screen_flash.start) >= int(_screen_flash.dur):
 		_screen_flash = {}
 	# R360：死亡效果还没结算 → 仍然算「演出中」（结算面板 / 回合推进都别抢跑）。
@@ -9074,7 +9112,8 @@ func _tick_anims() -> bool:
 			or not _delayed.is_empty() or n < _shake_until \
 			or not _impacts.is_empty() or not _pow_fx.is_empty() \
 			or not _heal_fx.is_empty() or not _screen_flash.is_empty() \
-			or not _deck_fly.is_empty() or not _transform_fx.is_empty()
+			or not _deck_fly.is_empty() or not _transform_fx.is_empty() \
+			or curse_busy
 
 
 func _energy_fail(card: CardData, idx: int) -> void:
@@ -9261,21 +9300,24 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 								"敌方" if hp_side == GameEngine.SIDE_SELF else "我方",
 								hp_dmg]}})
 		"curse_added":
-			# R231 破绽：俄倪厄往卡组塞诅咒 —— 牌库张数会自己跳，玩家不一定看得出来，
-			# 这里补一句播报（不播动画：诅咒是凭空进牌库，没有「从哪儿飞」（0,0））。
+			# R231 破绽：俄倪厄往卡组塞诅咒 —— 牌库张数会自己跳，玩家不一定看得出来。
+			# R362（用户口径「展示诅咒，然后那张卡进入卡组，一个动画完了才能结算另外一个」）：
+			# 原来是一张**卡背**从棋盘右侧掠进牌库（360ms、无正文）—— 三只厄倪俄同回合
+			# 三张一起飞，玩家只看见一坨紫色闪过去。现在改成队列：**卡面**放大居中展示，
+			# 让玩家看清「这张是破绽、几费」，再收进卡组；播完一张才开下一张。
+			# ⚠️ 排队只发生在界面：引擎侧那几张早已同时入账（见 `_curse_queue` 的定义处）。
+			# ⚠️ 出图模式（`_shot_pending`）不排队 —— 否则截图会被一段 1 秒的暗幕糊住；
+			#    那时只留播报，与 R231 的老行为一致。
 			var ca_from := ""
 			if data.get("from") is CardData:
 				ca_from = (data["from"] as CardData).card_name
 			if data.get("card") is CardData:
 				var ca_card := data["card"] as CardData
-				if not _shot_pending:
-					_deck_fly.append({"card": ca_card,
-						"from": Vector2(GRID_X + GRID_W + 46, GRID_Y + GRID_H - 20),
-						"start": n, "dur": 360, "curse": true})
-				if not _shot_pending:
-					_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
-				_say("⚡ 破绽：%s 把「%s」（%d 费诅咒）塞进了卡组" % [
-						ca_from, ca_card.card_name, ca_card.cost])
+				if _shot_pending:
+					_say("⚡ 破绽：%s 把「%s」（%d 费诅咒）塞进了卡组" % [
+							ca_from, ca_card.card_name, ca_card.cost])
+				else:
+					_curse_queue.append({"card": ca_card, "from": ca_from})
 		"transform":
 			# R283：随机变化卡进手卡 -> 不再走「从抽牌堆飞入」的抽牌动画；
 			#   改为「变幻」特效（光环 + 火花），并跳过该卡的抽 / 弃飞行动画。
@@ -10714,14 +10756,25 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": UiTheme.KIND_SKILL, "start": n, "dur": 1800, "size": 18})
 			_say("🃏 警觉：随机工事「%s」进入手卡（费用 -%d）" % [al_name, al_disc])
 		"inspire":
-			# R300 激发 8077：一张卡被改造 → 对所有敌人造成 3 点伤害（可叠加）。
-			# 它是效果卡、作用对象是**全体**，所以飘字放在棋盘上沿中线，不绑某一格。
+			# R300 激发 8077：一张卡被改造 → 敌人掉血（可叠加）。
+			# R362（用户口径「改成对随机两个敌人造成 3 点」+「激发打出时不应该造成伤害」）：
+			#   ① 目标不再固定是全体 → 飘字**绑在真正被命中的单位头上**（原来固定在棋盘
+			#      上沿写「全体 -3」，改随机之后那样写就是假的）；
+			#   ② 飘字写明来源「激发」、用紫色，与风妖精的绿色「风妖精 -4」分开 ——
+			#      原来两条都是「· 全体 -N」压在同一个位置，玩家打出效果卡时若刚好凑满
+			#      风妖精的第 5 张，就会读成「激发这张卡打出就打伤害」（实际是风妖精 4 点）。
 			sfx.play("click")
 			var in_n := int(data.get("count", 0))
 			var in_d := int(data.get("dmg", 0))
-			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
-					"text": "激发 · 全体 -%d%s" % [in_d, (" ×%d" % in_n) if in_n > 1 else ""],
-					"col": Color("a05ad0"), "size": 17, "start": n, "dur": 1600})
+			for ic: Vector2i in (data.get("cells", []) as Array):
+				_floaters.append({"pos": _cell_center(ic) + Vector2(0, -24),
+						"sc": _grid_scroll, "text": "激发 -%d" % in_d,
+						"col": Color("b46ae0"), "size": 15, "start": n, "dur": 1400})
+			if in_n > 1:
+				_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
+						"text": "激发 ×%d 轮 · 每轮随机 %d 个 -%d" % [
+								in_n, int(data.get("targets", 1)), in_d],
+						"col": Color("a05ad0"), "size": 15, "start": n, "dur": 1600})
 		"reflex":
 			# R317 身法 9173：抽 5 张，但本回合不能再用盟友 / 工事卡。
 			_say("◇ 身法：抽 %d 张 —— 本回合不能再使用盟友和工事卡"
@@ -10810,9 +10863,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var wf_n := int(data.get("hits", 0))
 			_say("✦ 风妖精：本回合第 5 张牌 → 对所有敌人造成 %d 点伤害（%d 个目标）"
 					% [wf_d, wf_n])
-			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
-					"text": "风妖精 · 全体 -%d" % wf_d,
-					"col": Color("7fd2a0"), "size": 17, "start": n, "dur": 1900})
+			# R362：飘字改成绑**被命中的单位** + 写明来源。原来一律压在棋盘上沿写
+			# 「风妖精 · 全体 -4」，玩家打出效果卡（比如激发）刚好凑满第 5 张时，
+			# 会以为是那张卡造成的伤害（实机反馈「激发打出时就掉血」）。
+			for wc: Vector2i in (data.get("cells", []) as Array):
+				_floaters.append({"pos": _cell_center(wc) + Vector2(0, -24),
+						"sc": _grid_scroll, "text": "风妖精 -%d" % wf_d,
+						"col": Color("7fd2a0"), "size": 15, "start": n, "dur": 1500})
 		"boss_phase":
 			# R356 启示者转阶段 —— 用户口径「转换阶段需要有明确的动画提示，并重新弹出
 			# 敌方效果显示」：横幅 + 震屏 + 本体双层爆点 + 镜头收过去，然后把
@@ -11859,7 +11916,7 @@ func _draw_relic_bar() -> void:
 		# R343：传奇道具名走**暗金**（底是来源色向白混 62% 的浅实色 → 亮金会糊），
 		# 普通道具仍是原来的深棕。判据在 `RelicData.name_color()`，这里不写特例。
 		_draw_string_center(_font_bold, UiTheme.FS_MICRO,
-				RunState.relic_display_name(ids[i]),
+				RunState.relic_display_name(ids[i], engine.state.self_card_plays),
 				Vector2(rect.position.x + 12.0 + (rect.size.x - 12.0) / 2,
 						rect.position.y + 14.0),
 				rel.name_color(Color("4a3c14")), -1)
@@ -12402,6 +12459,109 @@ func _draw_hand_fly() -> void:
 				_draw_zone_icon(_discard_tex, Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H),
 						Color("a08a52"))
 
+
+
+func _tick_curse_show(n: int) -> bool:
+	## R362：诅咒展示队列的推进口（`_tick_anims` 每帧调一次）。
+	## 一条播完 → **同一帧**接下一张（留空帧画面会闪一下）。
+	## 播报也是逐张播：原来 `curse_added` 事件到达时三条同帧互相覆盖，
+	## 玩家只看到最后一条（「三只厄倪厄」时等于只报了一次）。
+	while true:
+		if _curse_cur.is_empty():
+			if _curse_queue.is_empty():
+				return false
+			var item: Dictionary = _curse_queue.pop_front()
+			var cc: CardData = item.get("card", null)
+			if cc == null:
+				continue          # 坏数据（不该发生）：跳过，绝不让队列卡死操作
+			_curse_cur = {"card": cc, "from": str(item.get("from", "")),
+					"t0": n, "dur": int(CURSE_SHOW_MS + CURSE_FLY_MS)}
+			# 破绽是在**回合开始**结算的，那一刻正好也会弹「我方回合」大字横幅 ——
+			# 两者叠在一起，卡面被横条切一半（实机出图确认）。展示优先，横幅让位。
+			_banner = {}
+			_say("⚡ 破绽：%s 把「%s」（%d 费诅咒）塞进了卡组" % [
+					_curse_cur["from"], cc.card_name, cc.cost])
+			sfx.play("spell")
+		if n - int(_curse_cur["t0"]) < int(_curse_cur["dur"]):
+			return true
+		_curse_cur = {}
+	return false
+
+
+func _draw_curse_show() -> void:
+	## R362：诅咒进牌库的展示演出（唯一口）。
+	## ① 展示段（CURSE_SHOW_MS）：暗幕 + 卡面放大到 2.35 倍居中 + 紫光呼吸
+	##    + 上方「诅咒」标签与卡名，下方写来源「量产型俄倪厄 → 你的卡组」。
+	## ② 飞行段（CURSE_FLY_MS）：整卡缩小 + 加速飞向卡组堆，后 30% 换成**卡背**
+	##    （那时尺寸只剩 1/4，切换看不出来），牌库位补一圈落库紫环。
+	## ⚠️ 卡面走 `_draw_card_face()` —— 费用 / 卡名 / 种类全按卡库排版，
+	##    所以玩家看到的是「这张真的是破绽、2 费」，不是一个抽象的紫方块。
+	## ⚠️ 卡面没有 alpha 通道可调，所以飞行段靠**换卡背 + 落库光圈**收尾，
+	##    不做整体淡出（淡不了，硬要的话得把整张卡重画成全透明色）。
+	if _curse_cur.is_empty():
+		return
+	var card: CardData = _curse_cur.get("card", null)
+	if card == null:
+		return
+	var n := _now()
+	var el := float(n - int(_curse_cur["t0"]))
+	var show_ms := CURSE_SHOW_MS
+	var fly_ms := CURSE_FLY_MS
+	var deck_ctr := Vector2(DECK_X + CARD_W / 2.0, DECK_Y + CARD_H / 2.0)
+	var ctr := Vector2(WINDOW_W / 2.0, WINDOW_H / 2.0 - 18.0)
+	var sc := 2.35
+	var fly_t := 0.0
+	var flying := el > show_ms
+	if flying:
+		fly_t = clampf((el - show_ms) / fly_ms, 0.0, 1.0)
+		var e2 := fly_t * fly_t                      # 加速：先慢后快地「吸」进牌堆
+		ctr = ctr.lerp(deck_ctr, e2)
+		sc *= lerpf(1.0, 0.26, e2)
+	else:
+		# 升起 + 缩放入场（前 240ms，ease-out）—— 卡是从下方「浮」上来的
+		var k := clampf(el / 240.0, 0.0, 1.0)
+		var e1 := 1.0 - pow(1.0 - k, 3.0)
+		ctr += Vector2(0.0, 92.0 * (1.0 - e1))
+		sc *= lerpf(0.64, 1.0, e1)
+	# 暗幕：展示段渐入，飞行后半段跟着缩回去（别挡着玩家看牌堆）
+	var dim_a := 0.46 * clampf(el / 130.0, 0.0, 1.0)
+	if flying:
+		dim_a *= 1.0 - smoothstep(0.35, 1.0, fly_t)
+	draw_rect(Rect2(Vector2.ZERO, Vector2(WINDOW_W, WINDOW_H)),
+			Color(0.07, 0.02, 0.12, dim_a), true)
+	var rect := Rect2(ctr - Vector2(CARD_W, CARD_H) * sc / 2.0,
+			Vector2(CARD_W, CARD_H) * sc)
+	var pulse := 0.5 + 0.5 * sin(el / 150.0)
+	var out_a := 1.0 if not flying else 1.0 - smoothstep(0.55, 1.0, fly_t)
+	# 紫光底衬 + 外框（呼吸）
+	draw_rect(rect.grow(7.0 + 3.5 * pulse), Color(0.60, 0.26, 0.92, 0.26 * out_a), true)
+	draw_rect(rect.grow(3.0), Color(0.82, 0.46, 1.0, 0.90 * out_a), false, 2.0)
+	if flying and fly_t > 0.70:
+		# 后段：正面 → 卡背（此时只剩 1/4 大小，切换读不出来）
+		_draw_card_back(rect)
+	else:
+		_draw_card_face(card, rect, card.health, false, false, engine.cost_of(card))
+	if flying:
+		# 落库光环：越接近牌堆越亮
+		var ring_a := smoothstep(0.45, 1.0, fly_t)
+		if ring_a > 0.01:
+			# ⚠️ 半径必须**大于**卡面（收尾时约 16×20）—— 原来 34→14 会缩到卡里，
+			#    被卡面整块盖掉，等于没画。
+			draw_arc(deck_ctr, lerpf(58.0, 26.0, fly_t), 0.0, TAU, 30,
+					Color(0.85, 0.52, 1.0, 0.90 * ring_a), 3.0)
+			draw_arc(deck_ctr, lerpf(78.0, 40.0, fly_t), 0.0, TAU, 30,
+					Color(0.62, 0.30, 0.92, 0.60 * ring_a), 2.0)
+	else:
+		# 展示段文字：上面「诅咒」+ 卡名，下面来源
+		var top := rect.position.y - 46.0
+		_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "诅 咒",
+				Vector2(ctr.x, top), Color(0.86, 0.58, 1.0, 0.95))
+		_draw_string_center(_font_bold, UiTheme.FS_HEADING, card.card_name,
+				Vector2(ctr.x, top + 30.0), Color(1.0, 0.93, 1.0))
+		var src: String = str(_curse_cur.get("from", ""))
+		var sub := "→ 你的卡组" if src == "" else "%s → 你的卡组" % src
+		_draw_string_center(_font_bold, UiTheme.FS_CAPTION, sub,
+				Vector2(ctr.x, rect.end.y + 26.0), Color(0.78, 0.62, 1.0, 0.9))
 
 
 func _draw_deck_fly() -> void:

@@ -90,6 +90,15 @@ static var basin_charge := 0
 const BASIN_RELIC_ID := 6041
 const BASIN_MAX := 10
 
+## R362 风妖精（6042）：一回合打出第 5 张牌 → 对所有敌人 4 伤。
+## 玩家得看得见「还差几张」，所以在道具名旁写「已打出 / 需要」。
+## ⚠️ 计数本身**不进这里** —— 唯一真源是 `FieldState.self_card_plays`（每回合清零），
+##    由战斗界面把它当参数传进来（`relic_display_name(id, plays)`），
+##    这里只负责排版。两个常量必须与 `GameEngine.WIND_FAIRY_RELIC_ID / WIND_FAIRY_AT`
+##    一致（test_engine R362 段有对账）。
+const RELIC_WIND_FAIRY_ID := 6042
+const WIND_FAIRY_NEED := 5
+
 ## R311 水晶骰子（6040）：持有期间「除起点/大宝箱/右上角商店/篝火外」全是「?」房；
 ## 在「?」房进战斗时掷骰，前 X 回合每回合 +1 费（X = 点数，见 GameEngine）。
 const DICE_RELIC_ID := 6040
@@ -449,10 +458,16 @@ static func rest() -> int:
 	return heal(rest_heal_amount())
 
 
-static func relic_display_name(id: int) -> String:
+static func relic_display_name(id: int, plays := -1) -> String:
 	## 道具的**显示名唯一口**（R307）：名字后面要补动态信息时只改这里。
 	## 目前只有雕像（6039）需要写累计张数 —— 如「雕像（3）」。
 	## 计数为 0 时只写名字（免得刚拿到手就顶着「（0）」）。
+	##
+	## R362 风妖精（6042）：写「已打出 / 需要」，如「风妖精（3/5）」。
+	## `plays` = 本回合已打出的张数（战斗界面传 `engine.state.self_card_plays`）；
+	## 不传（-1）时只写名字 —— 图鉴 / 事件 / 商店那些地方没有「当前回合」可言。
+	## ⚠️ 判定用 `>=` 而不是 `==`：风妖精自己那次结算之后计数还会继续涨，
+	##    溢出时写「5/5」而不是变成「6/5」（看着像还能再触发）。
 	var rel := RelicRepo.load_json().get_relic(id)
 	if rel == null:
 		return str(id)
@@ -461,6 +476,9 @@ static func relic_display_name(id: int) -> String:
 	# R311 不锈钢盆：名字后面写**剩余点数**（10 点打完就失去 —— 玩家得看得见进度）
 	if id == BASIN_RELIC_ID and basin_charge > 0:
 		return "%s（%d）" % [rel.relic_name, basin_charge]
+	# R362 风妖精：本回合已打出张数 / 触发所需 —— 玩家一眼看出「还差几张」
+	if id == RELIC_WIND_FAIRY_ID and plays >= 0:
+		return "%s（%d/%d）" % [rel.relic_name, mini(plays, WIND_FAIRY_NEED), WIND_FAIRY_NEED]
 	return rel.relic_name
 
 

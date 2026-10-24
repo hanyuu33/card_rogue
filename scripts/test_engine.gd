@@ -22726,7 +22726,7 @@ func _init() -> void:
 			and r360_ui.find("engine.flush_death_effects(") >= 0,
 			"R360 源码锁：击破演出到点给闹钟、并调 flush_death_effects")
 	check_src(r360_ui.find("func _death_wait() -> bool:") >= 0
-			and r360_ui.find("or _death_wait():") >= 0,
+			and r360_ui.find("or _death_wait()") >= 0,
 			"R360 源码锁：待结算期间 `_gui_input` / AI 都要让路")
 	check_src(r360_ui.find("engine.flush_all_death_effects()") >= 0,
 			"R360 源码锁：界面有兜底 flush（不会把操作永久锁死）")
@@ -22746,6 +22746,124 @@ func _init() -> void:
 			"R361 源码锁：冲击在撞击那一刻才到位（不再提前 260ms 到位干等爆点）")
 	check_src(r361_ui.find("var push := 76.0 if is_hp else 14.0") >= 0,
 			"R361 源码锁：直击 HP 的冲锋幅度够看得见（原来 30px ≈ 1/4 格）")
+
+	# ---- R362：激发改随机两个 / 打出激发不造成伤害 / 风妖精计数 / 破绽展示队列 ----
+	# ⚠️ 这一段与 R300 段不在同一个作用域里（R300 在自己的代码块里），所以卡定义要自己取。
+	var r362_insp: CardData = CardRepo.load_json().get_card(GameEngine.INSPIRE_ID)
+	check(r362_insp != null, "R362 激发：卡库里找得到 8077")
+	check(GameEngine.INSPIRE_TARGETS == 2,
+			"R362 激发：每次命中**随机 2 个**敌人（INSPIRE_TARGETS = %d）"
+			% GameEngine.INSPIRE_TARGETS)
+	check(r362_insp.effect_text.contains("随机 **2** 个"),
+			"R362 激发卡面：文案写明「随机 2 个」（实际 %s）" % r362_insp.effect_text)
+
+	# ① 三个敌人 → 恰好两个掉血（第三个一动不动）
+	var r362_e1 := _new_engine([], 20, 20, -1, false)
+	r362_e1.rng.seed = 20261024
+	r362_e1.state.effects.append(CardData.from_dict(r362_insp.to_dict()))
+	var r362_foes: Array[Placement] = []
+	for r362_col in 3:
+		r362_foes.append(r362_e1.state.place(
+				_card(1011, "铁壁卫兵", "盟友", 4, 4, 40), Vector2i(1, r362_col),
+				GameEngine.SIDE_OPPONENT))
+	r362_e1.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r362_e1._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r362_hurt := 0
+	var r362_intact := 0
+	for q: Placement in r362_foes:
+		if q.health == 40 - GameEngine.INSPIRE_DMG:
+			r362_hurt += 1
+		elif q.health == 40:
+			r362_intact += 1
+	check(r362_hurt == 2 and r362_intact == 1,
+			"R362 激发：3 个敌人时**只有 2 个**掉血、另一个不动（受伤 %d / 完好 %d）"
+			% [r362_hurt, r362_intact])
+
+	# ② 同种子 → 同一组目标（选人走 rng，回放必须复现）
+	var r362_e2 := _new_engine([], 20, 20, -1, false)
+	r362_e2.rng.seed = 20261024
+	r362_e2.state.effects.append(CardData.from_dict(r362_insp.to_dict()))
+	var r362_foes2: Array[Placement] = []
+	for r362_col2 in 3:
+		r362_foes2.append(r362_e2.state.place(
+				_card(1011, "铁壁卫兵", "盟友", 4, 4, 40), Vector2i(1, r362_col2),
+				GameEngine.SIDE_OPPONENT))
+	r362_e2.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r362_e2._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r362_same := true
+	for r362_i in r362_foes.size():
+		if r362_foes[r362_i].health != r362_foes2[r362_i].health:
+			r362_same = false
+	check(r362_same, "R362 激发：同种子 → 命中同一组目标（回放一致）")
+
+	# ③ 打出这张卡本身不造成任何伤害（用户口径「激发打出时不应该造成伤害」）
+	var r362_e3 := _new_engine([], 20, 20, -1, false)
+	var r362_f3: Placement = r362_e3.state.place(
+			_card(1011, "铁壁卫兵", "盟友", 4, 4, 40), Vector2i(1, 0),
+			GameEngine.SIDE_OPPONENT)
+	r362_e3.state.hand.clear()
+	r362_e3.state.energy = 20
+	r362_e3.state.hand.append(CardData.from_dict(r362_insp.to_dict()))
+	var r362_f3_hp: int = r362_f3.health
+	var r362_hit_events: Array[String] = []
+	r362_e3.action.connect(func(kind: String, _dd: Dictionary):
+		if kind == "inspire" or kind == "fx_impact":
+			r362_hit_events.append(kind))
+	r362_e3.use_effect(0)
+	check(r362_f3.health == r362_f3_hp,
+			"R362 激发：**打出这张卡本身**不造成伤害（%d→%d）"
+			% [r362_f3_hp, r362_f3.health])
+	check(r362_hit_events.is_empty(),
+			"R362 激发：打出的那一下不发 inspire / 受击事件（实际 %s）"
+			% str(r362_hit_events))
+	check(r362_e3.state.effects.size() == 1,
+			"R362 激发：打出后只是进效果区（效果区 %d 张）"
+			% r362_e3.state.effects.size())
+
+	# ④ 源码锁：出效果卡的入口里绝不能有激发触发（唯一触发源是「改造动作」）
+	var r362_eng := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	var r362_ue_at := r362_eng.find("func use_effect(hand_index: int)")
+	var r362_ue_body := ""
+	if r362_ue_at >= 0:
+		var r362_ue_next := r362_eng.find("\nfunc ", r362_ue_at + 10)
+		r362_ue_body = r362_eng.substr(r362_ue_at, r362_ue_next - r362_ue_at)
+	check_src(r362_ue_body != "" and r362_ue_body.find("_inspire_tick") < 0,
+			"R362 源码锁：`use_effect` 里没有激发触发（否则打出这张卡就会打人）")
+
+	# ⑤ 风妖精计数：名字旁写「已打出 / 5」
+	check(RunState.RELIC_WIND_FAIRY_ID == GameEngine.WIND_FAIRY_RELIC_ID
+			and RunState.WIND_FAIRY_NEED == GameEngine.WIND_FAIRY_AT,
+			"R362 风妖精计数：常量与引擎对账（%d / %d）" % [
+				RunState.RELIC_WIND_FAIRY_ID, RunState.WIND_FAIRY_NEED])
+	check(RunState.relic_display_name(RunState.RELIC_WIND_FAIRY_ID, 3) == "风妖精（3/5）",
+			"R362 风妖精计数：本回合第 3 张 → 「3/5」（实际 %s）"
+			% RunState.relic_display_name(RunState.RELIC_WIND_FAIRY_ID, 3))
+	check(RunState.relic_display_name(RunState.RELIC_WIND_FAIRY_ID) == "风妖精",
+			"R362 风妖精计数：不传张数（图鉴 / 事件）时只写名字（实际 %s）"
+			% RunState.relic_display_name(RunState.RELIC_WIND_FAIRY_ID))
+	check(RunState.relic_display_name(RunState.RELIC_WIND_FAIRY_ID, 9).ends_with("（5/5）"),
+			"R362 风妖精计数：溢出显示 5/5（不写 9/5，实际 %s）"
+			% RunState.relic_display_name(RunState.RELIC_WIND_FAIRY_ID, 9))
+
+	# ⑥ 破绽展示队列（界面侧）：源码锁 —— 入队 / 逐张推进 / 绘制 / 三处让路
+	var r362_ui := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r362_ui.find("func _tick_curse_show(n: int) -> bool:") >= 0,
+			"R362 源码锁：破绽有逐张推进的队列口（一个动画完了才开下一个）")
+	check_src(r362_ui.find("func _draw_curse_show() -> void:") >= 0,
+			"R362 源码锁：破绽有独立的展示演出（暗幕 + 卡面 + 来源）")
+	check_src(r362_ui.find("_curse_queue.append(") >= 0,
+			"R362 源码锁：curse_added 走队列，不再直接播")
+	check_src(r362_ui.find('_deck_fly.append({"card": ca_card') < 0,
+			"R362 源码锁：破绽不再是一张卡背掠进牌库（用户报「不太明显」的根因）")
+	check_src(r362_ui.find("engine.over or _net_locked() or _death_wait() or _curse_busy()") >= 0
+			and r362_ui.find("if _death_wait() or _curse_busy():") >= 0,
+			"R362 源码锁：展示期间操作 / E 键 / AI / 耳环全让路（不会在半空里出牌）")
+	check_src(r362_ui.find('"text": "风妖精 -%d"') >= 0
+			and r362_ui.find('"text": "激发 -%d"') >= 0,
+			"R362 源码锁：两个被动伤害的飘字都绑在被命中的单位上（不再都写「全体」）")
+
 
 	# ============================================================
 	#  R292：拒绝命运自动化 / 战斗骨骼 +2+2 / 回收归入「变成」/ 严格自动折行

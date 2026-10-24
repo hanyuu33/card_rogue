@@ -1254,7 +1254,8 @@ const CLUSTER_TURRET_TRAIT:= "集束"   # 只做标记（与「废铁」/「拾�
 #   ⚠️ 数值取**卡组里那张副本**（可能被生产订单 8048 / 自主升级改过），不取卡库原型。
 const MERGE_ID:= 9167
 # ── R300：激发 8077（机械之心 2 费**史诗效果卡**）──
-# 卡面：「每次你的一张卡被改造时，对所有敌人造成 3 点伤害。可叠加。」
+# 卡面：「每次你的一张卡被改造时，对随机 2 个敌人造成 3 点伤害。可叠加。」
+# R362（用户口径）：**原先打全体，改成打随机两个** —— 场上只剩一只时就有多少打多少。
 # 三条口径（用户原话）：
 #   ① **无论在哪** —— 手牌 / 牌库 / 场上的己方卡被改造都算（触发点因此要覆盖
 #      系统升级 8039（手牌）、自主升级 8045（牌库）、升级 8027（场上）三类入口）；
@@ -1267,6 +1268,9 @@ const MERGE_ID:= 9167
 #    同口径）。只加字段 / 加 trait 的（能量屏障 8033 加「护盾」、过载 8030 加双动）**不算**。
 const INSPIRE_ID:= 8077
 const INSPIRE_DMG:= 3
+## R362：每次触发命中**随机几个**敌人（每轮各自抽，两轮可以打不同两只）。
+## ⚠️ 选人走 `rng`（不是当前毫秒）：回放 / 同种子必须复现同一组目标。
+const INSPIRE_TARGETS:= 2
 # 「代达罗斯」8060（R271 重做；R330 调为 4 费**史诗盟友** 5/16/1/1，嘲讽）：
 #   入场时本次对战每用过一张聚能炮击 → 生命 +3；本回合手卡里的聚能炮击费用为 0。
 const DAEDALUS_HP_PER_CANNON:= 3
@@ -5389,21 +5393,25 @@ func _wind_fairy_tick(side: String) -> void:
 		return
 	cells.sort()   # 固定顺序：回放 / 同种子必须一致
 	var hit:= 0
+	var wf_cells: Array[Vector2i] = []   # R362：命中格子（界面绑着单位飘数字）
 	for c: Vector2i in cells:
 		var q2: Placement = state.board.get(c, null)
 		if q2 == null or q2.health <= 0:
 			continue
 		_hit_unit(q2, WIND_FAIRY_DMG, "风妖精")
+		wf_cells.append(c)
 		hit += 1
 	_destroy_dead()
 	_log("风妖精：本回合第 %d 张牌 → 对所有敌人造成 %d 点伤害（%d 个目标）"
 			% [WIND_FAIRY_AT, WIND_FAIRY_DMG, hit])
-	action.emit("wind_fairy", {"dmg": WIND_FAIRY_DMG, "hits": hit})
+	action.emit("wind_fairy", {"dmg": WIND_FAIRY_DMG, "hits": hit, "cells": wf_cells})
 
 
 func _inspire_tick() -> int:
 	## 「激发」8077（R300，机械之心 2 费**史诗效果卡**）的**唯一结算口**：
-	## 对所有敌人造成 INSPIRE_DMG 点伤害 —— 效果区**每有一张**就各打一轮（卡面「可叠加」）。
+	## 对**随机 INSPIRE_TARGETS 个敌人**各造成 INSPIRE_DMG 点伤害 ——
+	## 效果区**每有一张**就各打一轮（卡面「可叠加」）。
+	## R362（用户口径）：原先是「对所有敌人」，改成「随机两个」——场上不足两只时有多少打多少。
 	##
 	## 调用点必须全部是 **「改造动作」的末尾**（每个动作只调一次）：
 	## 用户口径「无论一次性改造多少张都算一次」—— 批量改造 10 张也只打一轮。
@@ -5413,6 +5421,8 @@ func _inspire_tick() -> int:
 	##   * 伤害走 `_hit_unit`（护盾 / 减伤 / 石肤 / 石肤光环照常生效），致死统一交
 	##     `_destroy_dead()` —— 与废弃机器人 9152 的「全体 ping」同口径；
 	##   * 只打**场上的敌方单位**，不直击敌方 HP（没有单位时效果落空）；
+	##   * 每轮**独立抽取**：两轮可以打到不同两只，也可能重复打同一只（各自 3 点）；
+	##     抽取走 `rng`（回放一致），命中顺序按格子排序（日志 / 飘字顺序稳定）；
 	##   * ⚠️ 重入保护：本函数自己造成伤害 → 若某张敌方亡语反过来改造了我方卡，
 	##     会再走进来。`_inspire_busy` 保证一次结算不被自己递归放大。
 	if _inspire_busy:
@@ -5434,18 +5444,39 @@ func _inspire_tick() -> int:
 	cells.sort()   # 固定顺序：回放 / 同种子必须一致
 	_inspire_busy = true
 	var hits := 0
+	# R362：命中的格子一并带出去 —— 界面要**绑在被命中的单位头上**飘数字。
+	# 改成「随机两个」之后，原来那行固定在棋盘上沿的「全体 -3」就是假的
+	# （而且和风妖精的「全体 -4」长得像，实机被读成「激发打出就造成伤害」）。
+	var hit_cells: Array[Vector2i] = []
 	for _i in n:
+		# R362：本轮**存活**的敌方格子重新收一遍（上一轮可能刚打死两只）。
+		var pool: Array[Vector2i] = []
 		for c2: Vector2i in cells:
-			var q: Placement = state.board.get(c2, null)
+			var q0: Placement = state.board.get(c2, null)
+			if q0 != null and q0.health > 0:
+				pool.append(c2)
+		if pool.is_empty():
+			break
+		# 无放回抽 min(INSPIRE_TARGETS, 存活数) 个 —— 不足两只时就是「有多少打多少」。
+		var picks: Array[Vector2i] = []
+		for _k in mini(INSPIRE_TARGETS, pool.size()):
+			var j: int = rng.randi_range(0, pool.size() - 1)
+			picks.append(pool[j])
+			pool.remove_at(j)
+		picks.sort()   # 命中顺序与选人无关，只按格子排（日志 / 飘字稳定）
+		for c3: Vector2i in picks:
+			var q: Placement = state.board.get(c3, null)
 			if q == null or q.health <= 0:
 				continue
 			_hit_unit(q, INSPIRE_DMG, "激发")
+			hit_cells.append(c3)
 			hits += 1
 		_destroy_dead()
 	_inspire_busy = false
-	_log("激发：一张卡被改造 → 对所有敌人造成 %d 点伤害（叠加 ×%d，共 %d 次命中）" % [
-			INSPIRE_DMG, n, hits])
-	action.emit("inspire", {"count": n, "dmg": INSPIRE_DMG, "hits": hits})
+	_log("激发：一张卡被改造 → 随机 %d 个敌人各受 %d 点伤害（叠加 ×%d，共 %d 次命中）" % [
+			INSPIRE_TARGETS, INSPIRE_DMG, n, hits])
+	action.emit("inspire", {"count": n, "dmg": INSPIRE_DMG, "hits": hits,
+			"targets": INSPIRE_TARGETS, "cells": hit_cells})
 	return n
 
 func _first_proto_index() -> int:

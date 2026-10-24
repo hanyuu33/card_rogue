@@ -394,7 +394,9 @@ func _check_relic_highlight(scene: Variant) -> void:
 		return
 	# 风妖精飘字：start 记在当下、dur 有时长 → 逐帧会位移 + 淡出
 	var n0: int = scene._floaters.size()
-	scene._on_engine_action("wind_fairy", {"dmg": 4, "hits": 2})
+	# R362：飘字改成**绑在被命中的单位**上（事件带 cells），没格子就没有落点。
+	scene._on_engine_action("wind_fairy", {"dmg": 4, "hits": 2,
+			"cells": [Vector2i(1, 0), Vector2i(1, 2)]})
 	if scene._floaters.size() <= n0:
 		_smoke_fail("R314 风妖精：触发时应有一条飘字")
 		return
