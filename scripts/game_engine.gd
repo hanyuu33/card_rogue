@@ -6854,39 +6854,158 @@ func hand_bonus_text(card: CardData) -> String:
 	return ""
 
 
+# ══════════════════════════════════════════════════════════════════════════
+#  「现在打出会造成多少伤害」（R262 立 · R348 重构为统一口）
+# ══════════════════════════════════════════════════════════════════════════
+# 为什么必须有一张表：技能卡的 `power` **恒为 0**（伤害写死在各结算分支的常量里），
+# 运行时拿不到「这张卡的基础伤害」；而 `_spell_dmg()` 的加成（附魔 +10 / 魔法塔 /
+# 荧光草 / 鸭之眼 / 魔力核心 / 回合加成 / 鹿首标本 / lucky7 / 快速符文）会让**每一张**
+# 伤害技能偏离卡面，卡面却永远只写基础值 —— 玩家只能心算。
+#
+# ⚠️ 四条纪律：
+#   ① 表里每个值 == 该卡 `effect_text` 里**第一个「N 点伤害」的 N**（R348 断言逐条对，
+#      改数值忘了同步就红）。**蓄势 9156 除外**：它的卡面由 `_charge_up_text(card.value)`
+#      动态生成，表里记初始值 0。
+#   ② 新增伤害技能卡**必须**登记，否则 `spell_now()` 当它不是伤害卡、左栏静默不显示
+#      （R348 ① 会拦下来 —— 这正是 R348 之前集中突破 9162 / 收尾 9104 / 暗影狩猎 9107 /
+#      聚能炮击 9145 漏显示的根因）。
+#   ③ 表里只放**基础值**，加成一律现算 —— 别把「9 + 7 = 16」这种烘焙进来。
+#   ④ 本表是**只读数据**，不许在 `_spell_dmg()` 之外被谁改写。
+const SPELL_BASE_DMG := {
+	8002: 4,     # 攻击
+	9003: 17,    # 火焰箭
+	9006: 11,    # 闪电链（每个被连到的单位）
+	9007: 20,    # 火球术
+	9011: 3,     # 寒冰箭
+	9035: 14,    # 协同攻击
+	9050: 11,    # 鲸鱼之怒
+	9054: 4,     # 龙息（4 × 5 次）
+	9077: 40,    # 陨石术
+	9083: 8,     # 流星雨（× 剩余费用）
+	9084: 15,    # 火墙术（每格；另有 8 点持续伤害）
+	9086: 2,     # 终结（2 + 本回合已用张数）
+	9087: 4,     # 连刺
+	9088: 3,     # 敲晕
+	9090: 6,     # 偷袭（目标满血 12）
+	9093: 5,     # 连环戏法（本回合第 3 张 → 10）
+	9095: 10,    # 怒涛
+	9096: 17,    # 回旋斩
+	9102: 2,     # 回响
+	9104: 6,     # 收尾（手牌仅剩它 → 22）
+	9107: 16,    # 暗影狩猎（目标上回合触发过场地 → 30）
+	9119: 4,     # 起手式
+	9120: 8,     # 影袭
+	9121: 8,     # 暗影步
+	9145: 9,     # 聚能炮击（8075 在场 → +7）
+	9156: 0,     # 蓄势（吃 card.value，卡面自己会写）
+	9160: 5,     # 弹跳飞刀（另有最多 2 个目标各 3）
+	9162: 10,    # 集中突破（+4 × 场上改造层数）
+	9163: 8,     # 冲击炮
+	9169: 10,    # 烈火之剑
+	9172: 9,     # 激光扫射
+}
+
+# 卡面**给不出确数**的伤害技能（数字随局势变）→ 即使一点加成都沒有也要报当前值。
+# 这张表就是 `spell_now()` 的**分流口**：名单里的走 ① 动态分支（每张都有自己的分支），
+# 名单外的（但在 `SPELL_BASE_DMG` 里）走 ② 固定分支，只在真有加成才报。
+#
+# ⚠️ 9145 聚能炮击**刻意不在名单里**：它的偏离是**条件性**的（只有 8075 在场才 +7），
+#    没 8075 时卡面的 9 就是准确值 → 归「没加成不画」的固定口径。但它的加成不走
+#    `_spell_dmg()`（是 8075 的专门每回合额度），所以 `spell_now()` 里给它单列了分支。
+# ⚠️ 蓄势 9156 也不在名单里：卡面由 `_charge_up_text(card.value)` 实时写出当前伤害，
+#    本来就说清楚了；只有附魔这类额外加成才会让它偏离卡面。
+const SPELL_DYNAMIC_IDS: Array[int] = [9083, 9086, 9090, 9093, 9104, 9107, 9162]
+
+
+func mass_mnemosyne_bonus_ready(side: String = SIDE_SELF) -> bool:
+	## 量产型谟涅摩叙涅 8075 的炮击额度**当前还剩不剩** —— R348 新增的**只读预览口**。
+	## ⚠️ 千万别改用 `_mass_mnemosyne_cannon_bonus()`：那是有副作用的**消费口**，
+	##    拖牌看一眼详情就会把额度提前烧掉，真打出去反而拿不到 +7（R341 的额度按座记账）。
+	## 判据与消费口逐条对齐：只看**场上**我方、本座 `mass_mnemo_turn != turn_total`。
+	if side != SIDE_SELF or state.board.is_empty():
+		return false
+	for p: Placement in state.board.values():
+		if p == null or p.card == null or p.owner != SIDE_SELF:
+			continue
+		if p.card.id == MASS_MNEMOSYNE_ID and p.mass_mnemo_turn != turn_total:
+			return true
+	return false
+
+
 func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 	## R262（用户口径）：**「现在打出会造成多少伤害」** —— 战斗左栏详情用。
-	## 只覆盖**卡面文案给不出确数**的伤害技能（数字随局势变），其余卡返回 {} 让界面不画：
-	##   终结 9086 = 2 + 本回合已用张数；连环戏法 9093 = 5 / 10（含本卡是否第 3 张）；
-	##   偷袭 9090 = 6（满血 12，目标未知时按 6 报）；流星雨 9083 = 8 × 剩余费用。
-	## ⚠️ 基数**复用结算分支的常量与判据**（`_raid_dmg` / COMBO_TRICK_* / SNEAK_* / METEOR_SHOWER_*），
-	## 最后统一过 `_spell_dmg()` —— 附魔「伤害 +10」（烤在 power 里）、魔法塔、荧光草、
-	## 鸭之眼、魔力核心、回合加成都算进去，所以**显示值 == 实际扣血值**。
-	## 返回 {"dmg": int, "note": String}；note 是给玩家看的算式来源（界面第二行小字）。
+	## R348 重构：从「手挑 4 张特例」改成**统一口** —— `SPELL_BASE_DMG` 登记全部伤害技能的
+	## 基数，`SPELL_DYNAMIC_IDS` 就是分流口：
+	##   ① 名单里的（卡面给不出确数）→ 每张一个分支，永远报一个当前值；
+	##   ② 名单外的 → 只有 `_spell_dmg()` 真加了东西时才报，没加成返回 {} 让界面不画
+	##      （R262 定的口径：界面与卡面一致时不啰嗦）。
+	## 两类都统一过 `_spell_dmg()` → **显示值 == 实际扣血值**。
+	## 返回 {"dmg": int, "note": String}；note 说明这个数是怎么来的（界面第二行小字）。
+	## ⚠️ 本函数**必须只读**：拖牌时每帧都可能调它。
 	if card == null or card.kind != "技能":
 		return {}
+	if not SPELL_BASE_DMG.has(card.id):
+		return {}
 	var plays: int = state.self_card_plays if side == SIDE_SELF else state.opp_card_plays
-	if card.id == RAID_SPELL_ID:
-		return {"dmg": _spell_dmg(side, _raid_dmg(side), card),
-				"note": "%d + 本回合已用 %d 张" % [RAID_BASE_DMG, plays]}
-	if card.id == COMBO_TRICK_ID:
-		var n: int = plays + 1
-		var full: bool = n >= COMBO_TRICK_NEED
-		var base: int = COMBO_TRICK_DMG
-		var note: String = "本回合第 %d 张（满 %d 张强化）" % [n, COMBO_TRICK_NEED]
-		if full:
-			base = COMBO_TRICK_FULL_DMG
-			note = "含本卡本回合第 %d 张 → 强化" % n
-		return {"dmg": _spell_dmg(side, base, card), "note": note}
-	if card.id == SNEAK_ID:
-		# 目标未定时按**未受伤目标**报 6，满血值写进 note（提前知道「这一下能翻倍」）
-		return {"dmg": _spell_dmg(side, SNEAK_DMG, card),
-				"note": "目标满血时 %d" % _spell_dmg(side, SNEAK_FULL_DMG, card)}
-	if card.id == METEOR_SHOWER_ID:
-		var times: int = maxi(0, state.energy_of(SIDE_SELF)) if side == SIDE_SELF else 0
-		var per: int = _spell_dmg(side, METEOR_SHOWER_DMG, card)
-		return {"dmg": per * times, "note": "%d × %d 颗（清空费用）" % [METEOR_SHOWER_DMG, times]}
-	return {}
+	# ---------- ① 动态卡 ----------
+	if card.id in SPELL_DYNAMIC_IDS:
+		if card.id == METEOR_SHOWER_ID:
+			var times: int = maxi(0, state.energy_of(SIDE_SELF)) if side == SIDE_SELF else 0
+			var per: int = _spell_dmg(side, METEOR_SHOWER_DMG, card)
+			return {"dmg": per * times,
+					"note": "%d × %d 颗（清空费用）" % [METEOR_SHOWER_DMG, times]}
+		if card.id == RAID_SPELL_ID:
+			return {"dmg": _spell_dmg(side, _raid_dmg(side), card),
+					"note": "%d + 本回合已用 %d 张" % [RAID_BASE_DMG, plays]}
+		if card.id == COMBO_TRICK_ID:
+			var n: int = plays + 1
+			if n >= COMBO_TRICK_NEED:
+				return {"dmg": _spell_dmg(side, COMBO_TRICK_FULL_DMG, card),
+						"note": "含本卡本回合第 %d 张 → 强化" % n}
+			return {"dmg": _spell_dmg(side, COMBO_TRICK_DMG, card),
+					"note": "本回合第 %d 张（满 %d 张强化）" % [n, COMBO_TRICK_NEED]}
+		if card.id == SNEAK_ID:
+			# 目标未定时按**未受伤目标**报 6，满血值写进 note（提前知道「这一下能翻倍」）
+			return {"dmg": _spell_dmg(side, SNEAK_DMG, card),
+					"note": "目标满血时 %d" % _spell_dmg(side, SNEAK_FULL_DMG, card)}
+		if card.id == FINISHER_ID:
+			# ⚠️ 预览时本卡**还在手上**，「仅剩它」= 手牌只有这一张；
+			#    结算时本卡已被移出手牌、判据是「手牌为空」（`_finisher_is_last()`）。
+			#    照抄那边的判据 → 手里只剩它时也永远报 6，这个预览就白做了。
+			var last: bool = (state.hand.size() == 1 and state.hand[0] == card) \
+					if side == SIDE_SELF else state.opp_hand_count <= 1
+			if last:
+				return {"dmg": _spell_dmg(side, FINISHER_LAST_DMG, card),
+						"note": "手牌只剩这一张 → 强化"}
+			return {"dmg": _spell_dmg(side, FINISHER_DMG, card),
+					"note": "手牌仅剩它时 %d" % _spell_dmg(side, FINISHER_LAST_DMG, card)}
+		if card.id == HUNT_ID:
+			return {"dmg": _spell_dmg(side, HUNT_DMG, card),
+					"note": "目标上回合触发过场地 → %d" % _spell_dmg(side, HUNT_BIG_DMG, card)}
+		if card.id == BREAKTHROUGH_ID:
+			var st: int = _side_upgrade_stacks(side)
+			return {"dmg": _spell_dmg(side, BREAKTHROUGH_DMG + st * BREAKTHROUGH_PER_STACK, card),
+					"note": "场上改造 %d 层 → %d + %d" % [st, BREAKTHROUGH_DMG,
+							st * BREAKTHROUGH_PER_STACK]}
+		# 名单里却没有分支 → 宁可不错报（R348 ② 断言会把这个矛盾立刻拦下来）
+		return {}
+	# ---------- 聚能炮击：**条件性**偏离（只有 8075 在场才 +7）----------
+	if card.id == ENERGY_CANNON_ID:
+		var eb: int = MASS_MNEMOSYNE_DMG if mass_mnemosyne_bonus_ready(side) else 0
+		var ed: int = _spell_dmg(side, ENERGY_CANNON_DMG + eb, card)
+		if eb <= 0 and ed == ENERGY_CANNON_DMG:
+			return {}   # 卡面写的就是 9，没 8075 也没别的加成 → 不啰嗦
+		if eb > 0:
+			return {"dmg": ed, "note": "含谟涅摩叙涅 +%d" % eb}
+		return {"dmg": ed, "note": "卡面 %d ＋ 加成 %d" % [ENERGY_CANNON_DMG, ed - ENERGY_CANNON_DMG]}
+	# ---------- ② 固定卡：卡面已给确数，只有加了成才报 ----------
+	# 蓄势 9156 的 base 是实例数据（`_charge_up_grow` 逐回合累加，卡面由
+	# `_charge_up_text(card.value)` 同步写出）→ 单独取，不读表。
+	var base: int = card.value if card.id == CHARGE_UP_ID else int(SPELL_BASE_DMG[card.id])
+	var fin: int = _spell_dmg(side, base, card)
+	if fin == base:
+		return {}
+	return {"dmg": fin, "note": "卡面 %d ＋ 加成 %d" % [base, fin - base]}
 
 
 func _finisher_dmg(side: String) -> int:

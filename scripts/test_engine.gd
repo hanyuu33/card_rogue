@@ -25047,6 +25047,122 @@ func _init() -> void:
 			"R347 故事界面：三态图标 / 配色各有一个唯一口（_draw_state_icon / _state_color）")
 	check_src(r347_story_src.find("_draw_legend") >= 0,
 			"R347 故事界面：顶部总览也是一图标一数字，不退回文字版")
+	# ============================================================
+	#  R348：「现在打出」统一口 —— 覆盖所有卡面说不清的伤害技能
+	# ============================================================
+	# 用户报：集中突破 9162 的伤害随场上改造层数浮动，左栏却没有「现在打出」。
+	# 根因 = `spell_now()` 当初只手挑了 4 张特例（终结 / 连环戏法 / 偷袭 / 流星雨），
+	# 之后新加的动态伤害卡（集中突破 / 收尾 / 暗影狩猎 / 聚能炮击）全漏了。
+	# 修法 = 统一口：`SPELL_BASE_DMG` 登记每张伤害技能的基数 + `SPELL_DYNAMIC_IDS`
+	# 标出「卡面给不出确数」的那几张；固定卡只在真有加成才报，没加成不啰嗦。
+	# ---- ① 覆盖率：每张伤害技能都必须登记（漏登记 = 左栏静默不显示）----
+	var r348_re := RegEx.new()
+	r348_re.compile("(\\d+)\\s*点伤害")
+	var r348_missing: Array[String] = []
+	var r348_mismatch: Array[String] = []
+	for r348_c: CardData in repo.all_cards():
+		if r348_c.kind != "技能" or r348_c.group != "player":
+			continue
+		var r348_m := r348_re.search(r348_c.effect_text.replace("*", ""))
+		if r348_m == null:
+			continue      # 文案里没有「N 点伤害」→ 不是伤害卡
+		if not GameEngine.SPELL_BASE_DMG.has(r348_c.id):
+			r348_missing.append("%d:%s" % [r348_c.id, r348_c.card_name])
+			continue
+		if r348_c.id == GameEngine.CHARGE_UP_ID:
+			continue      # 蓄势卡面由 _charge_up_text(card.value) 动态写，首数字是当前蓄力值
+		var r348_want := int(r348_m.get_string(1))
+		var r348_have := int(GameEngine.SPELL_BASE_DMG[r348_c.id])
+		if r348_want != r348_have:
+			r348_mismatch.append("%d:%s 卡面%d/表%d"
+					% [r348_c.id, r348_c.card_name, r348_want, r348_have])
+	check(r348_missing.is_empty(),
+			"R348 覆盖：每张伤害技能都登记在 SPELL_BASE_DMG（漏 %s）"
+			% ", ".join(r348_missing))
+	check(r348_mismatch.is_empty(),
+			"R348 同步：表里的基数 == 卡面首个「N 点伤害」（不一致 %s）"
+			% ", ".join(r348_mismatch))
+	# ---- ② 动态卡：名单里每张都必须真报出当前值（防退化）----
+	var r348_dyn := _new_engine([], 30, 30)
+	var r348_dyn_bad: Array[String] = []
+	for r348_did: int in GameEngine.SPELL_DYNAMIC_IDS:
+		var r348_dc: CardData = repo.get_card(r348_did)
+		if r348_dc == null or r348_dyn.spell_now(r348_dc).is_empty():
+			r348_dyn_bad.append(str(r348_did))
+	check(r348_dyn_bad.is_empty(),
+			"R348 动态卡：SPELL_DYNAMIC_IDS 里每张都报出当前值（漏 %s）"
+			% ", ".join(r348_dyn_bad))
+	# ---- ③ 集中突破 9162：10 + 4 × 场上己方改造层数（用户报的那张）----
+	var r348_bt := _new_engine([], 30, 30)
+	var r348_bt_card := _card(9162, "集中突破", "技能", 2, 0, 0, 0, 0)
+	check(int(r348_bt.spell_now(r348_bt_card).get("dmg", -1)) == 10,
+			"R348 集中突破：场上没改造 → 预览 10 伤")
+	var r348_btp1 := r348_bt.state.place(_card(8001, "树人", "盟友", 2, 2, 8, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_SELF)
+	if r348_btp1 != null:
+		r348_btp1.upgrade_stacks = 2
+	var r348_btp2 := r348_bt.state.place(_card(8001, "树人", "盟友", 2, 2, 8, 1, 1),
+			Vector2i(2, 2), GameEngine.SIDE_SELF)
+	if r348_btp2 != null:
+		r348_btp2.upgrade_stacks = 1
+	check(r348_btp1 != null and r348_btp2 != null,
+			"R348 集中突破：前置 —— 两座带改造的单位已上场")
+	check(int(r348_bt.spell_now(r348_bt_card).get("dmg", -1)) == 22,
+			"R348 集中突破：场上共 3 层改造 → 预览 10+3×4=22 伤")
+	check(str(r348_bt.spell_now(r348_bt_card).get("note", "")).contains("层"),
+			"R348 集中突破：小字写明改造层数来源")
+	# ---- ④ 收尾 9104：预览时本卡还在手上，判据必须是「手牌只有这一张」----
+	var r348_fi := _new_engine([], 30, 30)
+	var r348_fi_card := _card(9104, "收尾", "技能", 1, 0, 0, 0, 0)
+	r348_fi.state.hand.clear()
+	r348_fi.state.hand.append(r348_fi_card)
+	check(int(r348_fi.spell_now(r348_fi_card).get("dmg", -1)) == 22,
+			"R348 收尾：手牌只剩它 → 预览 22 伤")
+	r348_fi.state.hand.append(_card(8002, "攻击", "技能", 1, 0, 0, 0, 0))
+	check(int(r348_fi.spell_now(r348_fi_card).get("dmg", -1)) == 6,
+			"R348 收尾：手牌还有别的 → 预览 6 伤")
+	check(str(r348_fi.spell_now(r348_fi_card).get("note", "")).contains("22"),
+			"R348 收尾：小字写明「手牌仅剩它时 22」")
+	# ---- ⑤ 暗影狩猎 9107：16，小字注明触发场地时 30 ----
+	var r348_hu := _new_engine([], 30, 30)
+	var r348_hu_card := _card(9107, "暗影狩猎", "技能", 2, 0, 0, 0, 0)
+	check(int(r348_hu.spell_now(r348_hu_card).get("dmg", -1)) == 16,
+			"R348 暗影狩猎：默认预览 16 伤")
+	check(str(r348_hu.spell_now(r348_hu_card).get("note", "")).contains("30"),
+			"R348 暗影狩猎：小字写明触发场地时 30 伤")
+	# ---- ⑥ 聚能炮击 9145：8075 在场 → 9+7；且预览**不许**烧掉炮击额度 ----
+	var r348_ec := _new_engine([], 30, 30)
+	var r348_ec_card := _card(9145, "聚能炮击", "技能", 1, 0, 0, 0, 0)
+	check(r348_ec.spell_now(r348_ec_card).is_empty(),
+			"R348 聚能炮击：没有 8075 也没加成 → 不画（卡面已写 9）")
+	var r348_ecp := r348_ec.state.place(_card(8075, "量产型谟涅摩叙涅", "工事", 2, 0, 10, 0, 0),
+			Vector2i(2, 1), GameEngine.SIDE_SELF)
+	check(r348_ecp != null, "R348 聚能炮击：前置 —— 8075 已上场")
+	check(int(r348_ec.spell_now(r348_ec_card).get("dmg", -1)) == 16,
+			"R348 聚能炮击：8075 在场 → 预览 9+7=16 伤")
+	check(r348_ecp != null and r348_ecp.mass_mnemo_turn != r348_ec.turn_total,
+			"R348 聚能炮击：预览是**只读**的，没把 8075 的每回合额度烧掉")
+	# ---- ⑦ 固定卡口径：没加成不画，有加成才报 ----
+	var r348_fx := _new_engine([], 30, 30)
+	var r348_fx_card := _card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0)
+	check(r348_fx.spell_now(r348_fx_card).is_empty(),
+			"R348 固定卡：火焰箭没加成 → 不画（卡面已写 17）")
+	r348_fx_card.power = 10      # 附魔「伤害 +10」烤进 power
+	check(int(r348_fx.spell_now(r348_fx_card).get("dmg", -1)) == 27,
+			"R348 固定卡：附魔 +10 → 预览 27 伤")
+	# ---- ⑧ 只要报数就必须有 note（界面第二行小字）----
+	var r348_nonote: Array[String] = []
+	var r348_note_eng := _new_engine([], 30, 30)
+	for r348_nid: Variant in GameEngine.SPELL_BASE_DMG.keys():
+		var r348_nc: CardData = repo.get_card(int(r348_nid))
+		if r348_nc == null:
+			continue
+		var r348_nr: Dictionary = r348_note_eng.spell_now(r348_nc)
+		if not r348_nr.is_empty() and str(r348_nr.get("note", "")).strip_edges() == "":
+			r348_nonote.append(str(r348_nid))
+	check(r348_nonote.is_empty(),
+			"R348 文案：凡报出「现在打出」的卡都带一行来源小字（缺 %s）"
+			% ", ".join(r348_nonote))
 	# 收尾：删临时剧情文件（档案文件交给下一次 set_test_mode 清）
 	if FileAccess.file_exists(r346_probe_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(r346_probe_path))

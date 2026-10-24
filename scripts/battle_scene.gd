@@ -1393,6 +1393,37 @@ func _ready() -> void:
 		status_text = "批次 F：报废 / 聚能炮击 / 填充"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r348bt" in args and engine != null:
+		# 演示（R348）：左栏「现在打出：N 点伤害」。
+		# 手牌 = [集中突破 9162（场上改造 3 层 → 22）／ 火焰箭 9003（附魔 +10 → 27）]，
+		# 参数 0 / 1 选 hover 哪一张（默认 0）。
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		var bt1: Placement = engine.state.place(
+				CardData.from_dict(repo.get_card(8001).to_dict()),
+				Vector2i(2, 1), GameEngine.SIDE_SELF)
+		if bt1 != null:
+			bt1.upgrade_stacks = 2
+		var bt2: Placement = engine.state.place(
+				CardData.from_dict(repo.get_card(8001).to_dict()),
+				Vector2i(2, 2), GameEngine.SIDE_SELF)
+		if bt2 != null:
+			bt2.upgrade_stacks = 1
+		engine.state.hand.append(CardData.from_dict(repo.get_card(9162).to_dict()))
+		var fx: CardData = CardData.from_dict(repo.get_card(9003).to_dict())
+		fx.power = 10     # 附魔「伤害 +10」烤进 power
+		engine.state.hand.append(fx)
+		var bidx := 0
+		for bi in args.size():
+			if args[bi] == "--r348bt" and bi + 1 < args.size() \
+					and str(args[bi + 1]).is_valid_int():
+				bidx = clampi(int(args[bi + 1]), 0, 1)
+		_demo_hover_idx = bidx
+		_hover_hand = bidx
+		_hover_card = engine.state.hand[bidx]
+		status_text = "R348 左栏「现在打出」"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--r330card" in args and engine != null:
 		# 演示（R330）：以太恶魔 9068 费用 5 → 6 / 代达罗斯 8060 5 费 8/18 → 4 费 5/16。
 		#   效果区摆 2 张效果卡 → 以太恶魔实际 6-2=4 费（手卡绿圈），左栏详情仍是原价 6 费。
