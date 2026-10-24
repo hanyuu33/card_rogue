@@ -228,26 +228,36 @@ func _cards_entry_with(card_id: int) -> int:
 
 
 func _entry_name(e: Dictionary) -> String:
-	if str(e.get("kind", "")) == "relic":
+	var k := str(e.get("kind", ""))
+	if k == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		return r.relic_name if r != null else "未知道具"
+	# R351 月亮（9180）：这条不是「挑一张卡」，是「给一次删卡机会」。
+	if k == "deck_delete":
+		return "删除卡组中的一张卡"
 	return "卡牌奖励（三选一）"
 
 
 func _entry_tag(e: Dictionary) -> String:
-	if str(e.get("kind", "")) == "relic":
+	var k := str(e.get("kind", ""))
+	if k == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		if r == null:
 			return "奖励道具"
 		return r.tag_line()
+	if k == "deck_delete":
+		return "卡组操作 · 点它领下，随后挑一张永久删除"
 	return "卡牌奖励 · %s" % CardReward.type_label(str(e.get("type", "normal")))
 
 
 func _entry_color(e: Dictionary) -> Color:
-	if str(e.get("kind", "")) == "relic":
+	var k := str(e.get("kind", ""))
+	if k == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		if r != null:
 			return r.badge_color()
+	if k == "deck_delete":
+		return Color("6f86b8")     # 月亮的凉色，和卡牌/道具两条都区分得开
 	return UiTheme.ACCENT_GOLD
 
 
@@ -415,7 +425,14 @@ func _open_entry(i: int) -> void:
 		return
 	_sel = i
 	var e: Dictionary = RunState.pending_rewards[i]
-	if str(e.get("kind", "")) == "relic":
+	var k := str(e.get("kind", ""))
+	# R351 删卡奖励没有候选可挑 —— 点它就直接领下，然后由
+	# `_claim_entry → _route_if_waiting_pick` 决定是立刻跳 deck_edit 还是等本批处理完。
+	if k == "deck_delete":
+		if not _settled(e):
+			_claim_entry(i)
+		return
+	if k == "relic":
 		_view = VIEW_RELIC
 	else:
 		_view = VIEW_CARDS
@@ -497,7 +514,7 @@ func _draw_list() -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, 560, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	else:
 		_root.draw_string(_font, Vector2(r.position.x + PAD, done.position.y + 12),
-				"卡牌奖励需要点进去挑一张（不能一键领取）" if pend > 0 else "全部奖励都已处理，可以点「完成」",
+				"卡牌奖励 / 删卡奖励要点进去处理（不能一键领取）" if pend > 0 else "全部奖励都已处理，可以点「完成」",
 				HORIZONTAL_ALIGNMENT_LEFT, 620, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	_draw_btn(done, "完成", false, false)
 

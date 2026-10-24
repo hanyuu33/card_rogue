@@ -1123,6 +1123,19 @@ static func queue_battle_card_rewards(reward_type: String = "normal") -> int:
 	return queued
 
 
+static func queue_deck_delete_reward(count: int = 1) -> int:
+	## R351 月亮（9180）：战斗结束后往奖励队列里多塞一条「从卡组删除一张卡」。
+	## 返回队列下标（-1 = 无效）。
+	## 走的是**同一条** `pending_rewards` 通道 —— 所以 R340 的「一批奖励没处理完
+	## 不许跳场景 / 不许换层」对它同样生效（`pending_reward_count()` 会数到它）。
+	if count <= 0:
+		return -1
+	_drop_settled_batch()
+	pending_rewards.append({"kind": "deck_delete", "count": count,
+			"state": REWARD_PENDING})
+	return pending_rewards.size() - 1
+
+
 static func can_reroll_reward() -> bool:
 	## 火柴（6051）：「刷新」按钮能不能点的**唯一判据口**（持有 + 还有次数）。
 	## 按钮显隐 / 置灰 / 真正刷新都问这里，别在界面里各写一份 `match_charge > 0`。
@@ -1205,6 +1218,14 @@ static func claim_pending_reward(idx: int) -> bool:
 	var e: Dictionary = pending_rewards[idx]
 	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
 		return false
+	# R351：删卡奖励 —— 领下的效果是「给一次删卡待办」，真正删卡在 deck_edit 里进行。
+	# `pending_deck_edit` 是 deck_edit 的待办标记（遗忘之泉 / 鸭鸭工匠同一套），
+	# 由 `waiting_pick_scene()` 接住跳转；本批还有别的奖励时 `route_target_after_pick()`
+	# 会先把跳转按住，等玩家处理完再走。
+	if str(e.get("kind", "")) == "deck_delete":
+		e["state"] = REWARD_CLAIMED
+		pending_deck_edit = "delete"
+		return true
 	if str(e.get("kind", "")) != "relic":
 		return false
 	var rid := int(e.get("id", 0))
@@ -1224,6 +1245,9 @@ static func skip_pending_reward(idx: int) -> bool:
 	var e: Dictionary = pending_rewards[idx]
 	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
 		return false
+	if str(e.get("kind", "")) == "deck_delete":
+		e["state"] = REWARD_SKIPPED
+		return true
 	if str(e.get("kind", "")) == "relic":
 		var rid := int(e.get("id", 0))
 		if pending_relic_drop == rid:
@@ -1885,6 +1909,14 @@ static func gain_gold(amount: int) -> int:
 	var before := gold
 	gold = maxi(0, gold + maxi(0, amount))
 	return gold - before
+
+
+static func clear_gold() -> int:
+	## R351 赏月：「失去所有金币」的唯一口。返回实际失去的数量。
+	## ⚠️ 不要在图里写 `gold = 0` —— 需要走这里才能在日志/统计里留下一条。
+	var lost := gold
+	gold = 0
+	return lost
 
 
 static func spend_gold(amount: int) -> bool:

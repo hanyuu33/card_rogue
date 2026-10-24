@@ -28,7 +28,8 @@ extends Control
 ##
 ## 插图与背景走 assets/ui/ 的可替换图片（详见 assets/ui/图片命名说明.txt）：
 ##   event_<事件>.png 插图（标题下方） / bg_<事件>.png 整屏背景；
-##   事件 = rest / treasure / whisper / struggle / gaze / pear / apple_doctor / bluefish / relic_chest。
+##   事件 = rest / treasure / whisper / struggle / gaze / pear / apple_doctor / bluefish /
+##          moon（R351 赏月）/ relic_chest。
 ## 缺图时回退内置绘制（所有事件共用的篝火动画 / 深灰底色）。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
@@ -90,6 +91,23 @@ const BLUEFISH_DESC := """一条通体蓝色的大肥鱼搁浅在岸边，肚皮
 
 const BLUEFISH_TAKEN_DESC := """大肥鱼心满意足地打了个嗝，翻着肚皮漂远了。
 「鲸鱼之怒」已经躺进你的卡组——什么时候用它，就看你了。"""
+
+# R351 赏月（第二层专属事件）产出的两张效果卡。都带 `no_remove`（不可从卡组删除）。
+const MOON_CARD_ID := 9180
+const COIN_CARD_ID := 9181
+
+const MOON_DESC := """天色暗下来，月亮低低地挂在山脊上，把水面照成一条银路。
+石台上摆着两样东西，都泛着不属于这里的光——
+「月亮」：3 费效果。战斗结束后奖励界面多一条「删除一张卡」。
+此卡不可以从卡组删除。
+「硬币」：1 费效果。战斗结束后额外获得 25 金币。此卡不可以从卡组删除。
+月亮的代价是此刻的全部金币；硬币什么都不要。两样只能拿走一样。"""
+
+const MOON_TAKEN_DESC := """月亮落进你的口袋，钱袋却空了。
+它凉得很，像刚从水里捞上来。"""
+
+const COIN_TAKEN_DESC := """硬币贴着掌心，凉的。
+远处传来一声很轻的、像是叹气的水响。"""
 
 const CHEST_LAYER_DESC := """这一层堆满了落满灰尘的宝箱。
 每个宝箱里都躺着一件道具——开启它，带走其中一件。"""
@@ -215,6 +233,9 @@ var _gaze_taken := false      # 鸭之凝视：是否已收下道具
 var _pear_taken := false      # 鸭梨山大：是否已收下道具
 var _apple_taken := false     # 苹果与医生（R244）：本次是否已收下「苹果」
 var _bluefish_taken := false  # 蓝色大肥鱼：是否已收下「鲸鱼之怒」
+## R351 赏月：本次拿走的是 "moon"（花光金币换月亮）/ "coin"（直接拿硬币）/ ""（还没拿）。
+## 两个选项**互斥**，拿了一个另一个就收起 —— 走 `_claim_reward()` 那条统一规则。
+var _moon_pick := ""
 var _chest_opened := false    # 宝箱层：是否已开箱
 var _chest_relic := -1        # 宝箱层：开出的道具 id（-1 = 未开 / 已无货）
 var _struggled := false       # 挣扎：是否已接受（失去生命换金属龙）
@@ -321,6 +342,11 @@ func _is_bluefish() -> bool:
 	return _is_event_node() and _pending_kind() == "bluefish"
 
 
+func _is_moon() -> bool:
+	## R351 赏月（第二层专属）：失去全部金币换「月亮」，或直接拿「硬币」。
+	return _is_event_node() and _pending_kind() == "moon"
+
+
 func _is_hero() -> bool:
 	## 绝赞五换一（第二层专属）：随机删 5 张不同名的卡 → 得一张「英雄」（9023）。
 	return _is_event_node() and _pending_kind() == "hero"
@@ -384,7 +410,7 @@ func _is_treasure() -> bool:
 			and not _is_arcane() and not _is_oblivion() and not _is_smith() \
 			and not _is_delivery() and not _is_delivery_done() \
 			and not _is_card_merchant() and not _is_lake_lady() \
-			and not _is_divination()
+			and not _is_divination() and not _is_moon()
 
 
 func _kind() -> String:
@@ -415,6 +441,8 @@ func _kind() -> String:
 		return "divination"
 	if _is_bluefish():
 		return "bluefish"
+	if _is_moon():
+		return "moon"
 	if _is_delivery():
 		return "delivery"
 	if _is_delivery_done():
@@ -529,6 +557,16 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "bluefish"
+		if args[i] == "--moon":  # 演示：伪装 run 赏月事件（第二层专属，带 120 金币）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "moon"
+			RunState.gold = 120
+		if args[i] == "--moonpoor":  # 演示：赏月 + 身上没钱（验「月亮」那项置灰）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "moon"
+			RunState.gold = 0
 		if args[i] == "--hero":  # 演示：伪装 run 绝赞五换一（卡组 6 种不同名，可交易）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -676,6 +714,28 @@ func _ready() -> void:
 			rest_btn.text = "收下「鲸鱼之怒」（加入卡组）"
 			rest_btn.disabled = false
 			$Center/LeaveBtn.text = "不捡（放弃）"
+			result_label.text = ""
+	elif _is_moon():
+		event_name.text = "赏 月"
+		desc.text = MOON_TAKEN_DESC if _moon_pick == "moon" \
+				else (COIN_TAKEN_DESC if _moon_pick == "coin" else MOON_DESC)
+		if _moon_pick != "":
+			_collapse_to_leave()
+			result_label.text = "石台上已经空了——两样东西只剩一样，而你只拿得走一样。"
+			result_label.add_theme_color_override("font_color", Color("b9c8e8"))
+		else:
+			# 月亮那一项要「失掉全部金币」——身上一分钱没有就构不成交换，置灰。
+			var g := RunState.gold
+			if g > 0:
+				rest_btn.text = "失去 %d 金币，拿走「月亮」" % g
+				rest_btn.disabled = false
+			else:
+				rest_btn.text = "身上没有金币，换不到「月亮」"
+				rest_btn.disabled = true
+			alt_btn.visible = true
+			alt_btn.text = "拿走「硬币」"
+			alt_btn.disabled = false
+			$Center/LeaveBtn.text = "什么都不拿（离开）"
 			result_label.text = ""
 	elif _is_hero():
 		event_name.text = "绝赞五换一"
@@ -1038,6 +1098,23 @@ func _on_main() -> void:
 		result_label.text = "「%s」已加入卡组：%s" % [wname,
 				CardText.naturalize(wcard.effect_text) if wcard != null else ""]
 		result_label.add_theme_color_override("font_color", UiTheme.RARITY_RARE)
+		_redraw()
+		return
+	if _is_moon():
+		if _moon_pick != "":
+			_on_leave()
+			return
+		# 月亮：把金币清空（走唯一口，别在图里写 gold = 0），换一张效果卡进卡组。
+		var lost := RunState.clear_gold()
+		RunState.add_card(MOON_CARD_ID)
+		_moon_pick = "moon"
+		_claim_reward(rest_btn)
+		var mcard := CardRepo.load_json().get_card(MOON_CARD_ID)
+		_collapse_to_leave()
+		desc.text = MOON_TAKEN_DESC
+		result_label.text = "「%s」已加入卡组，%d 金币留在了石台上。" % [
+				mcard.card_name if mcard != null else "月亮", lost]
+		result_label.add_theme_color_override("font_color", Color("b9c8e8"))
 		_redraw()
 		return
 	if _is_delivery():
@@ -1420,7 +1497,8 @@ func _refresh() -> void:
 			or _is_gaze() or _is_pear() or _is_apple() or _is_hero() or _is_bluefish() \
 			or _is_relic_chest() or _is_arcane() or _is_oblivion() \
 			or _is_smith() or _is_delivery() or _is_delivery_done() \
-			or _is_card_merchant() or _is_lake_lady() or _is_divination():
+			or _is_card_merchant() or _is_lake_lady() or _is_divination() \
+			or _is_moon():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。
@@ -1512,10 +1590,29 @@ func _resolve_divination(first: bool) -> void:
 	_redraw()
 
 
+func _claim_moon_coin() -> void:
+	## R351 赏月 · 第三选项：「硬币」直接进卡组（不花钱，也没有别的代价）。
+	if _moon_pick != "":
+		_on_leave()
+		return
+	RunState.add_card(COIN_CARD_ID)
+	_moon_pick = "coin"
+	_claim_reward(alt_btn)
+	var ccard := CardRepo.load_json().get_card(COIN_CARD_ID)
+	_collapse_to_leave()
+	desc.text = COIN_TAKEN_DESC
+	result_label.text = "「%s」已加入卡组。" % (ccard.card_name if ccard != null else "硬币")
+	result_label.add_theme_color_override("font_color", Color("d7c48a"))
+	_redraw()
+
+
 func _on_alt() -> void:
 	## R305 卡片商人 · **随机折价**（第三选项）：随机失去一张非诅咒卡，换 100 金币。
-	## 只有卡片商人打开这个按钮，别的分支直接返回。
+	## R351 赏月也用它当「拿硬币」的按钮。
 	sfx.play("click")
+	if _is_moon():
+		_claim_moon_coin()
+		return
 	if not _is_card_merchant() or _merchant_done:
 		return
 	var res := RunState.vendor_discard_random()

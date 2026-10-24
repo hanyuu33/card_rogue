@@ -70,6 +70,8 @@ const LAYERS := {
 			"card_merchant": 16,
 			# R308：占卜室（R309 起第三层也登记了，见 LAYERS[3]）。
 			"divination": 12,
+			# R351 赏月（第二层专属）：失去全部金币换「月亮」，或直接拿「硬币」。
+			"moon": 20,
 		},
 	},
 	3: {
@@ -105,6 +107,7 @@ const EVENT_NAMES := {
 	"card_merchant": "卡片商人",
 	"lake_lady": "湖中仙女",
 	"divination": "占卜室",
+	"moon": "赏月",
 	"delivery": "运送委托",
 	"delivery_done": "委托完成",
 	"treasure": "卡牌宝箱",

@@ -139,8 +139,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 264,
-			"图鉴 = 264 张（R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
+	check(repo.all_cards().size() == 266,
+			"图鉴 = 266 张（R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -153,8 +153,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 210 and grp_enemy.size() == 54,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 210 / 54；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 212 and grp_enemy.size() == 54,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 212 / 54；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -5931,9 +5931,10 @@ func _init() -> void:
 			and not ev_kinds_layer.has("gaze"),
 			"第一层事件池：9 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/卡牌宝箱/湖中仙女/占卜室；无凝视、无怪物）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
-	check(l2_ev_kinds.size() == 9 and l2_ev_kinds.has("smith")
+	check(l2_ev_kinds.size() == 10 and l2_ev_kinds.has("smith") \
+			and l2_ev_kinds.has("moon")
 			and l2_ev_kinds.has("card_merchant") and l2_ev_kinds.has("divination"),
-			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 = 9 种子类型")
+			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 = 10 种子类型")
 	var pear_ev_kinds := l2_ev_kinds        # 旧用例里沿用的变量名（保持后文读到本地变量）
 	check(l2_ev_kinds.has("gaze") and not ev_kinds_layer.has("gaze"),
 			"鸭之凝视已改为第二层事件（第一层不再出 gaze）")
@@ -7729,14 +7730,14 @@ func _init() -> void:
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 63
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 64
 			and int(dr_cls_count.get("敌人", 0)) == 54
-			and int(dr_cls_count.get("", 0)) == 16,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 67 / 63 / 64 / 53；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
+			and int(dr_cls_count.get("", 0)) == 18,
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 67 / 63 / 64 / 54，公用 18；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
 				int(dr_cls_count.get("敌人", 0))])
-	check(int(dr_cls_count.get("", 0)) == 16,
-			"角色系统：class 留空（公用）= 公用初始卡 8001/8002 + 疲惫 9149 + 破绽 9154 + 罐子 9157 / 9158 + R277 六张事件 / 道具产出卡 + R306 许愿 / 烈火之剑（实际 %d）"
+	check(int(dr_cls_count.get("", 0)) == 18,
+			"角色系统：class 留空（公用）= 公用初始卡 8001/8002 + 疲惫 9149 + 破绽 9154 + 罐子 9157 / 9158 + R277 六张事件 / 道具产出卡 + R306 许愿 / 烈火之剑 + R351 月亮 9180 / 硬币 9181（实际 %d）"
 			% int(dr_cls_count.get("", 0)))
 	check(PlayerClass.ids() == ["森林精魄", "暗影刺客", "机械之心"]
 			and PlayerClass.default_id() == "森林精魄",
@@ -8351,8 +8352,8 @@ func _init() -> void:
 			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R328 森林精魄 -2 = 木栅栏/攻击改公用；R329 暗影刺客 -1 = 删紧急埋伏 9106）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
-	check(int(r45_cls_count.get("", 0)) == 16,
-			"R223/R231/R245/R277/R306/R328：class 留空（公用）= 公用初始卡 8001/8002 + 诅咒 9149/9154/9157 + 罐子 9158 + R340 宠物鸭 9177 + 事件产出 9018 金属龙 / 9022 鸭蛋 / 9023 英雄 / 9050 鲸鱼之怒 / 8065 货物 / 9072 铁栅栏 / 9168 许愿 / 9169 烈火之剑（%d 张）"
+	check(int(r45_cls_count.get("", 0)) == 18,
+			"R223/R231/R245/R277/R306/R328/R351：class 留空（公用）= 公用初始卡 8001/8002 + 诅咒 9149/9154/9157 + 罐子 9158 + R340 宠物鸭 9177 + 事件产出 9018 金属龙 / 9022 鸭蛋 / 9023 英雄 / 9050 鲸鱼之怒 / 8065 货物 / 9072 铁栅栏 / 9168 许愿 / 9169 烈火之剑 / R351 月亮 9180 + 硬币 9181（%d 张）"
 			% int(r45_cls_count.get("", 0)))
 
 	# ---- R328：公用初始卡（木栅栏 8001 / 攻击 8002）----
@@ -25261,6 +25262,110 @@ func _init() -> void:
 	check_src(r349_calls >= 3 and r349_bad == 0,
 			"R349 源码：左栏每处 _draw_string_nw 都传 outline=-1（%d 处调用，%d 处漏）"
 			% [r349_calls, r349_bad])
+	# ==== R351：赏月事件 + 月亮 / 硬币 + 不可从卡组删除 ====
+	# ---- 数据：两张事件效果卡 ----
+	var r351_moon := repo.get_card(9180)
+	check(r351_moon != null and r351_moon.card_name == "月亮"
+			and r351_moon.is_effect() and r351_moon.cost == 3
+			and r351_moon.rarity == 5 and r351_moon.no_remove
+			and r351_moon.traits.has("月亮"),
+			"R351 月亮 9180：3 费稀有效果卡 · no_remove · trait 月亮")
+	var r351_coin := repo.get_card(9181)
+	check(r351_coin != null and r351_coin.card_name == "硬币"
+			and r351_coin.is_effect() and r351_coin.cost == 1
+			and r351_coin.rarity == 5 and r351_coin.no_remove
+			and r351_coin.value == 25,
+			"R351 硬币 9181：1 费稀有效果卡 · no_remove · value=25")
+	var r351_jar := repo.get_card(9157)
+	check(r351_jar != null and r351_jar.no_remove,
+			"R351 罐子 9157：no_remove（陶罐塞进卡组的那张诅咒删不掉）")
+	check(not repo.get_card(9065).no_remove and not repo.get_card(8001).no_remove,
+			"R351 no_remove 缺省 false：自愈 / 木栅栏仍可正常删除")
+	# 复制通道（from_dict(to_dict)）必须带走 no_remove
+	var r351_copy := CardData.from_dict(r351_moon.to_dict())
+	check(r351_copy.no_remove and r351_copy.cost == 3,
+			"R351 no_remove 随 to_dict → from_dict 复制通道走（复制出来的月亮也不许删）")
+	# rarity 5 = 事件档 → 不进奖励池
+	var r351_in_pool := false
+	var r351_pool_n := 0
+	for c: CardData in repo.reward_pool():
+		r351_pool_n += 1
+		if c.id == 9180 or c.id == 9181:
+			r351_in_pool = true
+	# ⚠️ 这里不打印池子张数：前面的 R346 禁卡用例已经禁掉一张，此刻不是 184。
+	check(not r351_in_pool and r351_pool_n > 0,
+			"R351 月亮 / 硬币是 rarity 5（事件档）→ 不进奖励池")
+	# ---- 事件登记：第二层专属 ----
+	check(GameLayers.event_kinds(GameLayers.LAYER_TWO).has("moon")
+			and not GameLayers.event_kinds(GameLayers.LAYER_DEFAULT).has("moon")
+			and GameLayers.event_name("moon") == "赏月",
+			"R351 赏月登记在第二层事件池（第一层不出），显示名「赏月」")
+	# ---- RunState：清空金币的唯一口 ----
+	RunState.gold = 137
+	check(RunState.clear_gold() == 137 and RunState.gold == 0,
+			"R351 clear_gold：返回失去的数量并把金币清零（137 → 0）")
+	check(RunState.clear_gold() == 0 and RunState.gold == 0,
+			"R351 clear_gold：本来就没钱 → 返回 0（幂等）")
+	# ---- 引擎：战斗结束的卡牌收益 ----
+	var r351_e := _new_engine([], 20, 20, -1, false)
+	r351_e.start_game(0)
+	var r351_fx0: Dictionary = r351_e.battle_end_rewards()
+	check(not bool(r351_fx0.get("moon", true)) and int(r351_fx0.get("coin", -1)) == 0,
+			"R351 战斗结束收益：没打出效果卡 → 月亮不生效 / 金币 0")
+	r351_e.state.effects.append(repo.get_card(9180))
+	var r351_fx1: Dictionary = r351_e.battle_end_rewards()
+	check(bool(r351_fx1.get("moon", false)) and int(r351_fx1.get("coin", -1)) == 0,
+			"R351 战斗结束收益：效果区有月亮 → moon=true（金币项仍 0）")
+	var r351_e2 := _new_engine([], 20, 20, -1, false)
+	r351_e2.start_game(0)
+	r351_e2.state.effects.append(repo.get_card(9181))
+	var r351_fx2: Dictionary = r351_e2.battle_end_rewards()
+	check(int(r351_fx2.get("coin", 0)) == 25 and not bool(r351_fx2.get("moon", true)),
+			"R351 战斗结束收益：效果区有硬币 → coin=25")
+	r351_e2.state.effects.append(repo.get_card(9181))
+	check(int(r351_e2.battle_end_rewards().get("coin", 0)) == 25,
+			"R351 战斗结束收益：硬币**不叠加**（效果区 2 张也只 25）")
+	# ---- RunState：删卡奖励入队 / 领取 ----
+	RunState.pending_rewards.clear()
+	RunState.pending_deck_edit = ""
+	var r351_idx := RunState.queue_deck_delete_reward(1)
+	check(r351_idx >= 0 and RunState.pending_reward_count() == 1
+			and str(RunState.pending_rewards[r351_idx].get("kind", "")) == "deck_delete",
+			"R351 queue_deck_delete_reward：入队一条 deck_delete（待领 +1）")
+	check(RunState.claim_pending_reward(r351_idx)
+			and str(RunState.pending_rewards[r351_idx].get("state", "")) == RunState.REWARD_CLAIMED
+			and RunState.pending_deck_edit == "delete",
+			"R351 领取删卡奖励：置灰 + 挂上 pending_deck_edit=delete（deck_edit 接住去挑卡）")
+	check(not RunState.claim_pending_reward(r351_idx),
+			"R351 删卡奖励不能重复领取")
+	check(RunState.queue_deck_delete_reward(0) == -1,
+			"R351 queue_deck_delete_reward(0) = -1（不发空奖励）")
+	RunState.pending_rewards.clear()
+	RunState.pending_deck_edit = ""
+	# ---- 源码守卫 ----
+	var r351_deck_src := FileAccess.get_file_as_string("res://scripts/deck_edit_scene.gd")
+	check_src(r351_deck_src.contains("func _is_remove_mode")
+			and r351_deck_src.contains("no_remove"),
+			"R351 源码：deck_edit 有「不可删除」拦截（_is_remove_mode + no_remove）")
+	var r351_ev_src := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	check_src(r351_ev_src.contains("func _is_moon")
+			and r351_ev_src.contains("MOON_CARD_ID") and r351_ev_src.contains("clear_gold"),
+			"R351 源码：赏月事件走 clear_gold 唯一口 + 两张卡 id 常量")
+	var r351_sfx_src := FileAccess.get_file_as_string("res://scripts/sfx.gd")
+	check_src(r351_sfx_src.contains('"coin": _sfx_coin()'),
+			"R351 源码：金币音效 coin 已注册进 Sfx")
+	var r351_top_src := FileAccess.get_file_as_string("res://scripts/top_bar.gd")
+	check_src(r351_top_src.contains("func _play_delta")
+			and r351_top_src.contains('_sfx.play("coin")'),
+			"R351 源码：顶栏数值变化特效 + 金币音效挂上")
+	# 锁标记：绘制口在 CardFace，且判据只认 `CardData.no_remove`
+	# （选卡页提示行说「带锁标记的卡不可以从卡组删除」，卡面必须真的画出来）
+	var r351_face_src := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+	check_src(r351_face_src.contains("static func _draw_lock_mark")
+			and r351_face_src.contains("_draw_lock_mark(canvas, card, rect)")
+			and r351_face_src.contains("card.no_remove"),
+			"R351 源码：锁标记由 card_face 画在 draw_pick 上，判据是 no_remove")
+
 	# 收尾：删临时剧情文件（档案文件交给下一次 set_test_mode 清）
 	if FileAccess.file_exists(r346_probe_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(r346_probe_path))

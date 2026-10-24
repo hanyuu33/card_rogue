@@ -379,6 +379,43 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 	_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold)   # R193：姓名牌内框 + 居中卡名（只留卡名）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, card.health, -1)
 	_draw_enchant_mark(canvas, card, rect, font_bold)            # R214：选卡页也要看到附魔标记
+	_draw_lock_mark(canvas, card, rect)                          # R351：不可删除的卡带锁
+
+
+static func _draw_lock_mark(canvas: CanvasItem, card: CardData, rect: Rect2) -> void:
+	## **锁标记**（R351）：`CardData.no_remove` 的卡（月亮 9180 / 硬币 9181 / 罐子 9157）
+	## 在选卡页上盖一枚金锁 —— 与 `deck_edit_scene` 提示行「带锁标记的卡不可以从卡组删除」
+	## 对上，玩家不用试错就知道哪张点不动。
+	##
+	## 位置：**卡图区右侧、稀有度缎带正下方**（缎带占到卡高 38%，再往下才是空地）。
+	##   ⚠️ 不能放姓名牌里 —— 卡名居中且占满内框宽度，长卡名会直接撞上。
+	## 尺寸一律按 `rect` 边长取比例（选卡页 448×403、卡组网格更小，都跟着缩）。
+	## 只挂 `draw_pick()`：手牌 / 战场 / 图鉴走 `draw()`，那里不需要这层提示。
+	if card == null or not card.no_remove:
+		return
+	var u: float = minf(rect.size.x, rect.size.y)
+	# ⚠️ 尺寸按 `u` 取比例而不是写死像素：卡组网格里一张卡只有 ~160×120，
+	#    0.052u 的锁（直径 21px）糊成一团 —— 0.085u 才读得出「锁」。
+	var r: float = u * 0.080
+	var c := Vector2(rect.end.x - u * 0.150, rect.position.y + rect.size.y * 0.50)
+	var gold := Color("f2bb45")
+	var ring_w: float = maxf(1.2, u * 0.012)
+	# 深色圆盘打底：卡图可能很花，直接压金锁会糊掉
+	canvas.draw_circle(c, r, Color(0.09, 0.07, 0.06, 0.80))
+	canvas.draw_circle(c, r, gold, false, ring_w)
+	# 锁体（实心方块，坐下半）+ 锁梁（上半圆，开口朝下）—— 纯几何，无素材依赖
+	var bw: float = r * 0.98          # 锁体宽
+	var bh: float = r * 0.70          # 锁体高
+	var arch_w: float = maxf(1.6, u * 0.024)
+	var body := Rect2(c.x - bw / 2.0, c.y + r * 0.06 - bh / 2.0, bw, bh)
+	canvas.draw_arc(Vector2(c.x, body.position.y), bw * 0.30,
+			PI, TAU, 16, gold, arch_w)
+	canvas.draw_rect(body, gold, true)
+	# 锁孔：一个小深色圆点 + 下方短竖线（钥匙孔的读法），让锁体不是一块死金块
+	var kh := Vector2(c.x, body.position.y + bh * 0.42)
+	canvas.draw_circle(kh, maxf(1.1, r * 0.19), Color(0.09, 0.07, 0.06, 0.88))
+	canvas.draw_line(kh, kh + Vector2(0.0, bh * 0.26),
+			Color(0.09, 0.07, 0.06, 0.88), maxf(1.1, r * 0.16))
 
 
 static func _draw_enchant_mark(canvas: CanvasItem, card: CardData, rect: Rect2,

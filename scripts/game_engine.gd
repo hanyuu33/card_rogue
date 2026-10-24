@@ -443,6 +443,10 @@ const COURAGE_RELIC_ID:= 6031
 const COURAGE_ELITE_TURNS:= 1
 const COURAGE_BOSS_TURNS:= 2
 # R245 诅咒「罐子」（9157）与它的召唤物（9158）。
+# R351 赏月产出的两张效果卡（都在 `battle_end_rewards()` 里结算）。
+const MOON_CARD_ID:= 9180
+const COIN_CARD_ID:= 9181
+
 const JAR_CURSE_ID:= 9157
 const JAR_TOKEN_ID:= 9158
 # R246 二层起始道具「兼修」（6033）：我方每回合额外 +1 费用（与其它「回合开始加费」并列）。
@@ -3142,6 +3146,24 @@ func end_turn() -> void :
 		state.opp_energy = 0
 	var nxt:= SIDE_OPPONENT if current_side == SIDE_SELF else SIDE_SELF
 	_begin_turn(nxt)
+
+
+func battle_end_rewards() -> Dictionary:
+	## R351：战斗结束后由**效果卡**给出的额外收益。
+	##   月亮 9180 → 奖励界面多一条「从卡组删除一张卡」；
+	##   硬币 9181 → 额外获得 `value` 金币（卡面写 25）。
+	## 返回 {"moon": bool, "coin": int}（没打出就是 {"moon": false, "coin": 0}）。
+	## ⚠️ 不叠加：效果区里有多张同名也按**一张**算 —— 与自愈（9065）同一口径。
+	var m := false
+	var coin := 0
+	for c: CardData in state.effects:
+		if c == null:
+			continue
+		if c.id == MOON_CARD_ID:
+			m = true
+		elif c.id == COIN_CARD_ID:
+			coin = maxi(coin, maxi(1, c.value))
+	return {"moon": m, "coin": coin}
 
 
 func battle_end_heal() -> int:

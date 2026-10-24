@@ -17,6 +17,15 @@ var _last_hp := -999
 var _last_max := -999
 var _last_gold := -999
 
+## R351：数值变化的反馈（用户口径「获得金币和回复 HP 需要添加特效，金币最好带音效」）。
+## 只在**数值真的变了**时触发；切场景 / 首次显示走 `silent = true`，不播。
+const COL_HP_UP := Color("8ef0a0")
+const COL_HP_DOWN := Color("ff8a7a")
+const COL_GOLD_UP := Color("ffd75a")
+const COL_GOLD_DOWN := Color("e0a48a")
+const FX_FLOAT_SEC := 0.9
+var _sfx: Sfx
+
 
 func _ready() -> void:
 	layer = 90
@@ -80,6 +89,9 @@ func _ready() -> void:
 	gold.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(gold)
 
+	_sfx = Sfx.new()
+	add_child(_sfx)
+
 	visible = false
 
 
@@ -95,10 +107,10 @@ func _process(_delta: float) -> void:
 		_last_scene_path = path
 		visible = need
 		if need:
-			_update()
+			_update(true)      # 刚露头只是同步，不播特效（否则每次切场景都闪一下）
 	if need and (_last_hp != RunState.hp or _last_max != RunState.max_hp \
 			or _last_gold != RunState.gold):
-		_update()
+		_update(false)
 
 
 func _is_menu_scene(path: String) -> bool:
@@ -109,7 +121,9 @@ func _is_menu_scene(path: String) -> bool:
 	return false
 
 
-func _update() -> void:
+func _update(silent := false) -> void:
+	var d_hp := RunState.hp - _last_hp if _last_hp != -999 else 0
+	var d_gold := RunState.gold - _last_gold if _last_gold != -999 else 0
 	_last_hp = RunState.hp
 	_last_max = RunState.max_hp
 	var panel := get_child(0) as Panel
@@ -124,3 +138,57 @@ func _update() -> void:
 	gicon.texture = UiAssets.get_tex("icon_gold")
 	var gold: Label = panel.get_node("GoldLabel")
 	gold.text = "%d" % RunState.gold
+	if silent:
+		return
+	if d_hp != 0:
+		_play_delta(panel, hp, d_hp, true)
+	if d_gold != 0:
+		_play_delta(panel, gold, d_gold, false)
+
+
+func _play_delta(panel: Panel, lbl: Label, delta: int, is_hp: bool) -> void:
+	## 一次数值变化的完整反馈：① 数字弹一下并染色 ② 上方浮出 ±N ③ 音效（只给「往好处走」的）。
+	## ⚠️ 浮字必须加在 **panel 里**（不是本 CanvasLayer）：它要跟着面板的 8,8 偏移一起走，
+	##    而且面板显隐由本层统一管，加在外面会在隐藏时留在屏幕上。
+	var up := delta > 0
+	var col := COL_HP_UP if is_hp else COL_GOLD_UP
+	if not up:
+		col = COL_HP_DOWN if is_hp else COL_GOLD_DOWN
+	var base_col := TEXT if is_hp else GOLD_TEXT
+
+	# ① 数字染色 + 弹一下（回弹用 BACK，才有「蹦」出来的手感）
+	lbl.pivot_offset = lbl.size * 0.5
+	lbl.add_theme_color_override("font_color", col)
+	lbl.scale = Vector2(1.30, 1.30)
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(lbl, "scale", Vector2.ONE, 0.34) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(lbl, "modulate", Color(1, 1, 1, 1), 0.34)
+	tw.chain().tween_callback(func() -> void:
+		lbl.add_theme_color_override("font_color", base_col))
+
+	# ② 上方浮出的 ±N
+	var fl := Label.new()
+	fl.text = ("+%d" % delta) if up else ("-%d" % absi(delta))
+	fl.add_theme_font_override("font", UiTheme.font_bold())
+	fl.add_theme_font_size_override("font_size", 17)
+	fl.add_theme_color_override("font_color", col)
+	fl.position = lbl.position + Vector2(0, -4)
+	fl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(fl)
+	var tw2 := create_tween()
+	tw2.set_parallel(true)
+	tw2.tween_property(fl, "position:y", fl.position.y - 24.0, FX_FLOAT_SEC) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw2.tween_property(fl, "modulate:a", 0.0, FX_FLOAT_SEC * 0.7) \
+			.set_delay(FX_FLOAT_SEC * 0.3)
+	tw2.chain().tween_callback(fl.queue_free)
+
+	# ③ 音效：拿到钱 / 回血才响；掉钱掉血是「负面」，不给奖励音。
+	if not _sfx.enabled:
+		return
+	if is_hp and up:
+		_sfx.play("heal")
+	elif not is_hp and up:
+		_sfx.play("coin")

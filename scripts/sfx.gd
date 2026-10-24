@@ -38,6 +38,7 @@ func _ready() -> void:
 		"win": _sfx_win(),
 		"lose": _sfx_lose(),
 		"turn": _sfx_turn(),
+		"coin": _sfx_coin(),
 	}
 
 
@@ -87,6 +88,26 @@ func _sfx_click() -> AudioStreamWAV:
 	for i in s.size():
 		var t := float(i) / RATE
 		s[i] = 0.45 * sin(TAU * 1150.0 * t) * exp(-t * 80.0)
+	return _wav(s)
+
+
+func _sfx_coin() -> AudioStreamWAV:
+	## R351：金币到手的音色 —— 两声清脆的金属「叮」，第二声高一个八度偏上。
+	## 用非整数倍泛音（3.1x / 5.4x）而不是 2x / 3x：整数倍听起来像风琴，
+	## 非整数倍才有「硬币碰硬币」的脆感。两声间隔 75ms。
+	var s := _buf(0.34)
+	for i in s.size():
+		var t := float(i) / RATE
+		var v := 0.0
+		for k in 2:
+			var t0: float = 0.0 if k == 0 else 0.075
+			if t < t0:
+				continue
+			var tt := t - t0
+			var f: float = (1568.0 if k == 0 else 2093.0) * (1.0 + 0.06 * exp(-tt * 40.0))
+			v += (sin(TAU * f * tt) + 0.42 * sin(TAU * f * 3.1 * tt)
+					+ 0.22 * sin(TAU * f * 5.4 * tt)) * exp(-tt * 16.0)
+		s[i] = 0.30 * v
 	return _wav(s)
 
 

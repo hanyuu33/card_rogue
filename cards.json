@@ -4917,11 +4917,12 @@
         "罐子"
       ],
       "affixes": [],
-      "effect_text": "打出无效果。回合结束时若这张卡仍在手牌：这张卡消失，并在敌方半场随机位置召唤一个敌人。",
+      "effect_text": "打出无效果。回合结束时若这张卡仍在手牌：这张卡消失，并在敌方半场随机位置召唤一个敌人。此卡不可以从卡组删除。",
       "target_mode": "none",
       "value": 0,
       "color": "灰",
-      "image": ""
+      "image": "",
+      "no_remove": true
     },
     {
       "id": 9158,
@@ -5449,6 +5450,52 @@
       "target_mode": "none",
       "color": "灰",
       "image": ""
+    },
+    {
+      "id": 9180,
+      "name": "月亮",
+      "kind": "效果",
+      "cost": 3,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "月亮"
+      ],
+      "affixes": [],
+      "effect_text": "本场战斗结束后：奖励界面增加一条奖励，可以从卡组删除一张卡。此卡不可以从卡组删除。",
+      "target_mode": "none",
+      "value": 1,
+      "color": "白",
+      "image": "",
+      "no_remove": true
+    },
+    {
+      "id": 9181,
+      "name": "硬币",
+      "kind": "效果",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "硬币"
+      ],
+      "affixes": [],
+      "effect_text": "本场战斗结束后：获得额外的 25 金币。此卡不可以从卡组删除。",
+      "target_mode": "none",
+      "value": 25,
+      "color": "金",
+      "image": "",
+      "no_remove": true
     }
   ]
 }

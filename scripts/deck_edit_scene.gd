@@ -91,7 +91,8 @@ func _ready() -> void:
 		if ei >= 0 and ei + 1 < args.size():
 			RunState.run_active = true
 			if RunState.deck_ids.is_empty():
-				RunState.deck_ids = [8001, 8002, 8003, 9018, 8060, 9154]
+				# R351：末尾补一张 9180（月亮，`no_remove`）—— 出图核验「带锁标记的卡点不动」。
+				RunState.deck_ids = [8001, 8002, 9180, 9018, 8060]
 				RunState.ensure_deck_mods()
 			RunState.pending_deck_edit = str(args[ei + 1])
 	_cards = RunState.deck_ids.duplicate()
@@ -110,6 +111,14 @@ func _ready() -> void:
 	_refresh_title()
 	_layout()
 	_refresh_ui()
+	# R351 演示：-- --editpick N 进来后**直接试着点第 N 张**（0 起）——
+	# 出图核验「带锁标记的卡点不动」：能选中（高亮 + 确定按钮亮）就说明拦截失效。
+	if "--editpick" in args:
+		var pi := args.find("--editpick")
+		if pi >= 0 and pi + 1 < args.size():
+			_toggle_sel(int(args[pi + 1]))
+			_refresh_ui()
+			_grid.queue_redraw()
 	# -- --screenshot：自动截图退出（视觉验证用）
 	if "--screenshot" in args:
 		var t := Timer.new()
@@ -262,9 +271,20 @@ func _refresh_title() -> void:
 			hint_label.text = ""
 	if not _cards.is_empty():
 		hint_label.text += "　（卡组共 %d 张）" % _cards.size()
+	if _is_remove_mode() and _has_no_remove_card():
+		hint_label.text += "　｜　带锁标记的卡不可以从卡组删除"
 	if _mode() == "transform":
 		hint_label.text += "　｜　代价：失去 %d 点最大生命（已结算）" \
 				% RunState.SOURCE_POWER_HP_COST
+
+
+func _has_no_remove_card() -> bool:
+	## 卡组里是否存在不可删除的卡（决定提示行要不要补那句话）。
+	for cid: int in _cards:
+		var c := repo.get_card(cid)
+		if c != null and c.no_remove:
+			return true
+	return false
 
 
 # ------------------------------------------------------------ 网格布局
@@ -523,14 +543,30 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
+func _is_remove_mode() -> bool:
+	## R351：会让**这张卡离开卡组**的全部模式：
+	##   * 删卡：遗忘之泉 oblivion / 失忆药水 delete；
+	##   * 交出去换东西：卡片商人「以卡易物」vendor；
+	##   * 改造成别的卡（原卡就没了）：鸭鸭工匠 smith / 旧换新 transform_class / 源数之力 transform。
+	## 不可删除的卡（`CardData.no_remove`）在这几种模式里**一律点不动**。
+	## 复制 duplicate 不算 —— 原卡还在，不在拦截范围内。
+	var m := _mode()
+	return m == "oblivion" or m == "delete" or m == "vendor" \
+			or m == "smith" or m == "transform_class" or m == "transform"
+
+
 func _pick_allowed(pick: int) -> bool:
 	## R305：卡片商人的「以卡易物」只收 **5 费及以上**的卡 —— 其它格子点了不选中，
 	## 免得玩家以为「点得动就交得出」。
-	if _mode() != "vendor":
-		return true
 	if pick < 0 or pick >= _cards.size():
 		return false
 	var c := repo.get_card(int(_cards[pick]))
+	# R351：不可删除的卡（月亮 9180 / 硬币 9181 / 罐子 9157）点不动。
+	# 判据只认 `CardData.no_remove`，**不许**在这里按 id 硬编码。
+	if c != null and c.no_remove and _is_remove_mode():
+		return false
+	if _mode() != "vendor":
+		return true
 	return c != null and c.cost >= RunState.MERCHANT_MIN_COST
 
 
@@ -625,6 +661,14 @@ func _apply_duplicate() -> void:
 
 
 func _apply(pick: int) -> void:
+	var id0: int = _cards[pick] if pick >= 0 and pick < _cards.size() else 0
+	var guard := repo.get_card(id0)
+	# R351 兜底：选卡阶段已经拦过，这里再判一次 —— `_sel` 可能在模式切换后留下旧下标。
+	if guard != null and guard.no_remove and _is_remove_mode():
+		sfx.play("click")
+		_result = "「%s」不可以从卡组删除" % guard.card_name
+		_go_back_soon()
+		return
 	_done = true
 	sfx.play("click")
 	var id: int = _cards[pick]

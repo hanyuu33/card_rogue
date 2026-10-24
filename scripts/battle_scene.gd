@@ -6445,6 +6445,13 @@ func _show_over(win: bool) -> void:
 			var gold_gain := RunState.gold_for_tier(tier)
 			if gold_gain > 0:
 				RunState.gain_gold(gold_gain)
+			# R351：**效果卡**的战斗结束收益（月亮 9180 / 硬币 9181）。
+			# 只管入队 / 加钱 —— 队列后面交给结算面板的奖励悬浮窗，别在这里弹界面。
+			var fx := engine.battle_end_rewards()
+			if int(fx.get("coin", 0)) > 0:
+				RunState.gain_gold(int(fx["coin"]))
+			if bool(fx.get("moon", false)):
+				RunState.queue_deck_delete_reward(1)
 			# R151 P1-18：Boss 击破与胜利 → 全屏黑白闪（≤40ms，绝不滥用 —— 只有这一处）
 			if win and _run_boss_win and not _shot_pending:
 				_screen_flash = {"start": _now(), "dur": 40}
