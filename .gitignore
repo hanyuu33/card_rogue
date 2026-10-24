@@ -39,3 +39,6 @@ __pycache__/
 # BGM 候选曲暂存（~485MB，可由 _download.py / _download_opentracks.js 幂等重下）
 # 选曲后只有成品进 assets/audio/bgm/（.ogg，届时入库）
 /assets/audio/_audition/raw/
+
+# 历史验证截图归档（.gdignore 已挡在 res:// 之外，这里再挡 git）
+art_src/_shots/
