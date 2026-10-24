@@ -431,7 +431,7 @@
       "id": 9004,
       "name": "击退",
       "kind": "技能",
-      "cost": 1,
+      "cost": 2,
       "power": 0,
       "health": 0,
       "attack_range": 0,
@@ -5043,7 +5043,7 @@
       "class": "机械之心",
       "traits": [],
       "affixes": [],
-      "effect_text": "对一个敌人造成**8**点伤害，并将其击退 2 格。",
+      "effect_text": "对一个敌人造成**10**点伤害，并将其击退 1 格。",
       "target_mode": "unit",
       "color": "紫",
       "image": ""

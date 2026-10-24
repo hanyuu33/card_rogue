@@ -1019,8 +1019,8 @@ const BREAKTHROUGH_PER_STACK:= 4
 #   并把目标击退 IMPACT_CANNON_STEPS 格（走唯一口 `_knockback`：位移免疫 / 被挡住 /
 #   朝目标所属方后排，全部自动生效；先伤害再击退，被打死就不击退）。
 const IMPACT_CANNON_ID:= 9163
-const IMPACT_CANNON_DMG:= 8
-const IMPACT_CANNON_STEPS:= 2
+const IMPACT_CANNON_DMG:= 10        # R369：8 → 10（用户口径）
+const IMPACT_CANNON_STEPS:= 1       # R369：2 → 1 格（用户口径）
 # ── R291：机械之心两张技能（辅助刃 9164 / 复制术 9165）──
 # 「辅助刃」（9164，0 费**普通**技能，目标 = 己方盟友）：
 #   * 一次改造 = **+BLADE_ATK 力量**，走 `_field_upgrade_grant()` 唯一口 —— 于是层数
@@ -7254,7 +7254,7 @@ const SPELL_BASE_DMG := {
 	9156: 0,     # 蓄势（吃 card.value，卡面自己会写）
 	9160: 5,     # 弹跳飞刀（另有最多 2 个目标各 3）
 	9162: 10,    # 集中突破（+4 × 场上改造层数）
-	9163: 8,     # 冲击炮
+	9163: 10,    # 冲击炮（R369：8 → 10）
 	9169: 10,    # 烈火之剑
 	9172: 9,     # 激光扫射
 }

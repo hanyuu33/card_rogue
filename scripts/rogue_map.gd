@@ -90,14 +90,18 @@ const TYPE_MARKS := {
 }
 
 const P_UNKNOWN := 0.34              # 「?」房占比（其余格直接写明类型）
+## R369：篝火**保底 2 间**（用户口径复述，原本就是这个值；实测 8000 张图 100% 达成，
+## 由 test_engine 的 R369 段钉住）。
 const REST_MIN := 2                  # 每张地图的休息点数量区间
 const REST_MAX := 4
 ## R181：商店节点。数量区间与休息点相当（「概率和篝火相当」）—— 独立先定（像 rest 一样
 ## 不从权重里抽），约束同样是「不与起点 / 宝箱 / 休息点 / 另一个商店相邻」。
-## R243：右上角**固定**商店之后，随机商店降到 0~1 间 ——
-## 每层商店总量仍是 1~2 间（与改动前一致），不会因为固定角多出一倍商店。
-const SHOP_MIN := 0
-const SHOP_MAX := 1
+## R369（用户口径）：「除了右上角的商店，商店保底有 2 个」—— 随机商店由 0~1 间改成
+## **恒 2 间**，于是每层至少 1（固定角）+ 2（保底）= 3 间，再叠「?」房自己摇出来的那些。
+## ⚠️ 上限同样写 2：保底只是**下限**，不该顺手把随机区间的上半段也拉长（会临场再造
+##    一倍商店）。权重表一个字没动 —— 保底靠「独立先定」实现，不靠调概率。
+const SHOP_MIN := 2
+const SHOP_MAX := 2
 ## 普通格（明房）的类型权重。R192：事件明房权重降到与其他齐平（2），战斗仍是明房最大宗。
 ## ⚠️ R243：明格**没有 chest / shop** ——
 ##   * 普通宝箱：只在「?」房里出（见 `WEIGHTS_UNKNOWN`）；
@@ -603,6 +607,24 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 				break
 		if sok:
 			shop_set[i] = true
+	# R369 保底：上面的严格约束（不与宝箱 / 休息点 / 彼此相邻）在休息点扎堆时可能把候选
+	# 吃光 → 一间都摆不下。这里**再补一遍**，放宽到「只避开起点 / 固定商店 / 彼此」：
+	#   * 用同一份已打乱的 `shop_cands`，**不额外摇随机数** → 同种子的其它随机结果不变；
+	#   * `shop_cands` 本来就剔掉了起点 / 大宝箱 / 固定商店 / 休息点，所以不会压到它们身上。
+	# 严格轮次已经摆够时这段**一次都不进**，所以对现有地图零影响。
+	if shop_set.size() < want_shop:
+		for i2: int in shop_cands:
+			if shop_set.size() >= want_shop:
+				break
+			if shop_set.has(i2):
+				continue
+			var sok2 := true
+			for nb2: int in adj[i2]:
+				if nb2 == start_i or shop_set.has(nb2) or is_fixed_shop(nb2):
+					sok2 = false
+					break
+			if sok2:
+				shop_set[i2] = true
 
 	# --- 逐格定类型
 	var used_events := {}

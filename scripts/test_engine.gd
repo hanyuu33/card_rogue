@@ -22335,7 +22335,7 @@ func _init() -> void:
 
 	# ================= R290：机械之心两张伤害技能（集中突破 9162 / 冲击炮 9163）=================
 	# 集中突破 = 2 费普通技能：10 伤 + 场上**己方**每层改造 +4（只数场上，手牌 / 牌库不算）。
-	# 冲击炮   = 2 费稀有技能：8 伤 + 把目标击退 2 格（走唯一口 _knockback）。
+	# 冲击炮   = 2 费稀有技能：10 伤 + 把目标击退 1 格（走唯一口 _knockback；R369 调参）。
 	var r290_bt: CardData = repo.get_card(GameEngine.BREAKTHROUGH_ID)
 	check(r290_bt != null and r290_bt.card_name == "集中突破"
 			and r290_bt.kind == "技能" and r290_bt.cost == 2 and r290_bt.rarity == 0
@@ -22395,7 +22395,7 @@ func _init() -> void:
 	check(r290_e2._side_upgrade_stacks(GameEngine.SIDE_SELF) == 0,
 			"R290 集中突破：场上层数统计为 0（手牌 5 层不上场不计数）")
 
-	# ④ 冲击炮：8 伤 + 击退 2 格（敌方 → 朝敌方后排，2,1 → 0,1）
+	# ④ 冲击炮：10 伤 + 击退 1 格（敌方 → 朝敌方后排，2,1 → 1,1；R369 调参后）
 	var r290_e3 := _new_engine([], 20, 20, -1, false)
 	var r290_foe3 := r290_e3.state.place(_card(1011, "铁壁卫兵", "盟友", 4, 4, 40),
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
@@ -22403,11 +22403,11 @@ func _init() -> void:
 	r290_e3.state.hand.append(CardData.from_dict(r290_ic.to_dict()))
 	r290_e3.state.energy = 5
 	var r290_d3: String = r290_e3.use_spell(0, Vector2i(2, 1))
-	check(r290_foe3.health == 32,
-			"R290 冲击炮：造成 8 点伤害（实际 -%d）" % (40 - r290_foe3.health))
-	check(r290_e3.state.unit_at(Vector2i(0, 1)) == r290_foe3
+	check(r290_foe3.health == 30,
+			"R369 冲击炮：造成 10 点伤害（实际 -%d）" % (40 - r290_foe3.health))
+	check(r290_e3.state.unit_at(Vector2i(1, 1)) == r290_foe3
 			and r290_e3.state.unit_at(Vector2i(2, 1)) == null,
-			"R290 冲击炮：目标被击退 2 格（2,1 → 0,1）—— %s" % r290_d3)
+			"R369 冲击炮：目标被击退 1 格（2,1 → 1,1）—— %s" % r290_d3)
 
 	# ⑤ 击退被挡住时停在原地（前面有己方单位，不越位、不挤开）
 	var r290_e4 := _new_engine([], 20, 20, -1, false)
@@ -22432,8 +22432,8 @@ func _init() -> void:
 	r290_e5.state.energy = 5
 	var r290_d5: String = r290_e5.use_spell(0, Vector2i(2, 1))
 	check(r290_e5.state.unit_at(Vector2i(2, 1)) == null
-			and r290_e5.state.unit_at(Vector2i(0, 1)) == null,
-			"R290 冲击炮：目标被击破 → 不产生空格击退（%s）" % r290_d5)
+			and r290_e5.state.unit_at(Vector2i(1, 1)) == null,
+			"R369 冲击炮：目标被击破 → 不产生空格击退（%s）" % r290_d5)
 
 	# ⑦ 位移免疫（赫菲斯托斯 9135）：伤害照常，击退无效（唯一口 _knockback 判定）
 	var r290_e6 := _new_engine([], 20, 20, -1, false)
@@ -22446,7 +22446,7 @@ func _init() -> void:
 	var r290_d6: String = r290_e6.use_spell(0, Vector2i(2, 1))
 	check(r290_e6.state.unit_at(Vector2i(2, 1)) == r290_foe6
 			and r290_foe6.health == r290_imm.health - GameEngine.IMPACT_CANNON_DMG,
-			"R290 冲击炮：位移免疫单位照样吃 8 伤、但不会被击退（%s）" % r290_d6)
+			"R369 冲击炮：位移免疫单位照样吃 10 伤、但不会被击退（%s）" % r290_d6)
 
 	# ⑧ 失控要塞随机池自动纳入两张新卡；场上目标只认敌方
 	var r290_e7 := _new_engine([], 20, 20, -1, false)
@@ -23690,34 +23690,44 @@ func _init() -> void:
 	check(r312_plain.size() == RogueMap.CELLS and r312_dice.size() == RogueMap.CELLS,
 			"R312 地图：有 / 没骰子都生成出 %d 格（%d / %d）"
 				% [RogueMap.CELLS, r312_plain.size(), r312_dice.size()])
+	# ① 集成：走 `generate(…, dice_rng)` 出来的图，除固定房间外全是「?」
 	var r312_nonfixed_hidden := true
+	for c312: Dictionary in r312_dice:
+		if RogueMap.is_fixed_open(c312):
+			continue
+		if not bool(c312["hidden"]) or bool(c312["revealed"]) \
+				or RogueMap.display_type(c312) != "unknown":
+			r312_nonfixed_hidden = false
+	check(r312_nonfixed_hidden, "R312 水晶骰子：除固定房间外，所有房间都是「?」")
+	# ② 逐格语义：拿**同一张图**的副本重摇再比 —— 不能拿两次 generate 的结果互比。
+	#    ⚠️ R369：重摇可能把唯一可达的宝箱摇没 → `generate` 内部会**重摇结构**再试，
+	#    于是「带骰子那张图」有可能压根不是同一次尝试的产物 → 旧写法逐格比出来是**假红**
+	#    （R369 改保底商店后实测就红在这里：3 格「? 房被误改」+ 固定房间也对不上）。
+	#    副本直摇只测「重摇本身」，语义更纯；集成那条由 ① 与末尾的确定性检查兜住。
+	var r312_cmp: Array = r312_plain.duplicate(true)
+	RogueMap.reroll_as_unknown(r312_cmp, r312_dr1, GameLayers.LAYER_DEFAULT)
 	var r312_fixed_kept := true
 	var r312_rerolled := 0
 	var r312_bad := 0
 	var r312_type_changed := 0   # 重摇后**真的换了房型**的格数（证明不是空转）
-	if r312_dice.size() == r312_plain.size():
-		for k in r312_dice.size():
-			var cd: Dictionary = r312_dice[k]
-			var cp: Dictionary = r312_plain[k]
-			if RogueMap.is_fixed_open(cd):
-				# 固定房间：既不能被盖，内容也不能被换
-				if bool(cd["hidden"]) or str(cd["type"]) != str(cp["type"]):
-					r312_fixed_kept = false
-				continue
-			if not bool(cd["hidden"]) or bool(cd["revealed"]) \
-					or RogueMap.display_type(cd) != "unknown":
-				r312_nonfixed_hidden = false
-			# 「本来就 ?」的格子沿用原内容；「本来是明房」的格子必须重摇过
-			if bool(cp["hidden"]):
-				if str(cd["type"]) != str(cp["type"]):
-					r312_bad += 1   # 本来就 ? 却被重摇了
-			else:
-				r312_rerolled += 1
-				# 重摇**可以**摇出同一房型（`?` 权重里战斗占比不小），所以不能按
-				# 「类型必须变」判；真正要钉的是「至少有一格确实换了」+「? 房一格没动」。
-				if str(cd["type"]) != str(cp["type"]):
-					r312_type_changed += 1
-	check(r312_nonfixed_hidden, "R312 水晶骰子：除固定房间外，所有房间都是「?」")
+	for k in r312_cmp.size():
+		var cd: Dictionary = r312_cmp[k]
+		var cp: Dictionary = r312_plain[k]
+		if RogueMap.is_fixed_open(cd):
+			# 固定房间：既不能被盖，内容也不能被换
+			if bool(cd["hidden"]) or str(cd["type"]) != str(cp["type"]):
+				r312_fixed_kept = false
+			continue
+		# 「本来就 ?」的格子沿用原内容；「本来是明房」的格子必须重摇过
+		if bool(cp["hidden"]):
+			if str(cd["type"]) != str(cp["type"]):
+				r312_bad += 1   # 本来就 ? 却被重摇了
+		else:
+			r312_rerolled += 1
+			# 重摇**可以**摇出同一房型（`?` 权重里战斗占比不小），所以不能按
+			# 「类型必须变」判；真正要钉的是「至少有一格确实换了」+「? 房一格没动」。
+			if str(cd["type"]) != str(cp["type"]):
+				r312_type_changed += 1
 	check(r312_fixed_kept, "R312 水晶骰子：起点 / 大宝箱 / 右上角商店 / 篝火 连内容都不动")
 	check(r312_rerolled > 0 and r312_bad == 0 and r312_type_changed > 0,
 			"R312 水晶骰子：**变成 ? 的房间重摇了内容**（重摇 %d 格 / 真换房型 %d 格 / ? 房被误改 %d 格）"
@@ -26785,6 +26795,73 @@ func _init() -> void:
 		var r367_pf := FileAccess.open(RunRecord.PENDING_PATH, FileAccess.WRITE)
 		r367_pf.store_string(r367_pend_bak)
 		r367_pf = null
+
+	# ================= R369：商店 / 篝火保底 + 冲击炮与击退调参 =================
+	# 用户口径：「除了右上角的商店，商店保底有 2 个，篝火保底有 2 个，每层（不影响其他概率，
+	# 只是保底）」；「冲击炮改为 10 伤害击退 1 格，击退改为 2 费」。
+	# ① 权重表一个字没动 —— 保底靠「独立先定 + 补位」实现，不靠挪概率
+	check(int(RogueMap.WEIGHTS.get("battle", 0)) == 7
+			and int(RogueMap.WEIGHTS.get("event", 0)) == 2
+			and int(RogueMap.WEIGHTS.get("elite", 0)) == 2,
+			"R369 明房权重未动（7 / 2 / 2）")
+	check(int(RogueMap.WEIGHTS_UNKNOWN.get("battle", 0)) == 7
+			and int(RogueMap.WEIGHTS_UNKNOWN.get("event", 0)) == 12
+			and int(RogueMap.WEIGHTS_UNKNOWN.get("elite", 0)) == 2
+			and int(RogueMap.WEIGHTS_UNKNOWN.get("chest", 0)) == 3
+			and int(RogueMap.WEIGHTS_UNKNOWN.get("shop", 0)) == 3,
+			"R369 「?」房权重未动（7 / 12 / 2 / 3 / 3）")
+	check(RogueMap.SHOP_MIN == 2 and RogueMap.SHOP_MAX == 2,
+			"R369 随机商店保底 2 间（上限也 2：保底不额外拉长随机区间）")
+	check(RogueMap.REST_MIN == 2, "R369 篝火保底 2 间（常量）")
+
+	# ② 实测 400 张图 × 两层：每层商店 ≥3 间（1 固定角 + 2 保底）、篝火 ≥2 间
+	var r369_bad_shop := 0
+	var r369_bad_rest := 0
+	var r369_shop_sum := 0
+	var r369_rest_sum := 0
+	for r369_layer: int in [GameLayers.LAYER_DEFAULT, GameLayers.LAYER_TWO]:
+		for r369_k in 200:
+			var r369_rng := RandomNumberGenerator.new()
+			r369_rng.seed = 369000 + r369_k * 13 + r369_layer
+			var r369_map: Array = RogueMap.generate(r369_rng, r369_layer)
+			var r369_ns := 0
+			var r369_nr := 0
+			for r369_c: Dictionary in r369_map:
+				if RogueMap.is_void(r369_c):
+					continue
+				var r369_t := str(r369_c.get("type", ""))
+				if r369_t == "shop":
+					r369_ns += 1
+				elif r369_t == "rest":
+					r369_nr += 1
+			if r369_ns < 3:
+				r369_bad_shop += 1
+			if r369_nr < 2:
+				r369_bad_rest += 1
+			r369_shop_sum += r369_ns
+			r369_rest_sum += r369_nr
+	check(r369_bad_shop == 0,
+			"R369 商店保底：400 张图全部 ≥3 间（1 固定角 + 2 保底；实测均值 %.2f）"
+			% (float(r369_shop_sum) / 400.0))
+	check(r369_bad_rest == 0,
+			"R369 篝火保底：400 张图全部 ≥2 间（实测均值 %.2f）"
+			% (float(r369_rest_sum) / 400.0))
+
+	# ③ 冲击炮 = 10 伤 + 击退 1 格；击退 = 2 费
+	check(GameEngine.IMPACT_CANNON_DMG == 10 and GameEngine.IMPACT_CANNON_STEPS == 1,
+			"R369 冲击炮：常量改为 10 伤 / 击退 1 格")
+	var r369_cannon: CardData = repo.get_card(GameEngine.IMPACT_CANNON_ID)
+	check(r369_cannon != null and r369_cannon.cost == 2
+			and r369_cannon.effect_text.contains("**10**")
+			and r369_cannon.effect_text.contains("1 格"),
+			"R369 冲击炮卡面：2 费 / 文案写 10 伤 + 击退 1 格")
+	var r369_kb: CardData = repo.get_card(9004)
+	check(r369_kb != null and r369_kb.cost == 2 and r369_kb.effect_text.contains("2 格"),
+			"R369 击退：费用 1 → 2（击退距离仍 2 格）")
+	# 源码锁：左栏预览的伤害表也得跟着改（漏了就是「卡面 10、预览 8」）
+	var r369_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r369_src.find("9163: 10,") >= 0,
+			"R369 源码锁：SPELL_BASE_DMG 里 9163 = 10")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
