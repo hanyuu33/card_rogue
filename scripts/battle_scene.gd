@@ -9508,6 +9508,20 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_say("✶ %s：%s -> %s" % [str(data.get("source", "")),
 					(tr_old.card_name if tr_old is CardData else "?"),
 					(tr_new.card_name if tr_new is CardData else "?")])
+		"deck_transform":
+			# R370 库存整理（9184）：**卡组里**两张卡被原位换成别的卡。
+			# 卡组不在视野内 —— 不播报的话玩家只看到「卡打出去了、什么也没发生」，
+			# 会误以为是废牌。所以这里给出「A → B、C → D」的明确播报 + 卡组区变幻特效。
+			var dt_names: Array[String] = []
+			for dt_p: Dictionary in (data.get("pairs", []) as Array):
+				var dt_o: CardData = dt_p.get("old")
+				var dt_n: CardData = dt_p.get("new")
+				if dt_o != null and dt_n != null:
+					dt_names.append("%s → %s" % [dt_o.card_name, dt_n.card_name])
+			if not dt_names.is_empty():
+				_say("✶ 库存整理：%s" % "、".join(dt_names))
+				if not _shot_pending:
+					_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
 		"deck_added":
 			# R283：卡入牌库（镜面反射 / 生产订单）-> 卡背飞入卡组区（普通调，无紫）。
 			var da_card: CardData = data.get("card")

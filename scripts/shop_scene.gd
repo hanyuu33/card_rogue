@@ -48,6 +48,9 @@ const ENCHANTS := [
 	# R246：起手 50 → **30 金**（用户口径：第一回合抽到的附魔价格降为 30）。
 	{"id": "opening", "name": "起手", "desc": "第一回合必定抽到（任何卡都能选）",
 		"price": 30, "icon": "shop_icon_opening"},
+	# R370：用户口径「打出后抽一张卡，售价 40」。
+	{"id": "draw", "name": "抽牌 +1", "desc": "打出这张卡后抽一张卡（任何卡都能选）",
+		"price": 40, "icon": "shop_icon_draw"},
 ]
 
 var _font: Font
@@ -208,7 +211,7 @@ func _setup_shop() -> void:
 	_row1 = []
 	for c: CardData in rolled:
 		_row1.append({"card": c, "sold": false})
-	# 第二行：从 4 种附魔随机抽 3 种不重复
+	# 第二行：从全部附魔里随机抽 3 种不重复（R370 起 6 种 → 抽 3）
 	var pool := ENCHANTS.duplicate()
 	RunState.shuffle_rng(pool)   # R241：`Array.shuffle()` 是全局随机源，这里不能直接用
 	_row2 = []

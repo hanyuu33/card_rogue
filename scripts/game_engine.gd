@@ -484,6 +484,14 @@ const REFLEX_DRAW:= 5
 #      不该把整张卡的收益一起吞掉（与合体那种「付费前挂起」的口径不同：这张已付费）。
 const ELIMINATE_ID:= 9174
 const ELIMINATE_DRAW:= 4
+# R370 库存整理（9184，机械之心 1 费史诗技能）：从**卡组**随机挑 2 张，各变成随机一张卡。
+#   * 随机池 = `_random_reward_card()`（本职业奖励池、稀有度三等分，与随心组装 9144 同源）
+#     → 没解锁的剧情卡 / 被 ban 的卡**不会**冒出来；
+#   * 抽哪两张也走引擎 `rng`（洗下标取前 N）→ 同种子回放一致；
+#   * 敌方 AI 不用（改玩家牌组属玩家侧决策，与淘汰 9174 / 专注 9122 同口径）。
+const INVENTORY_ID:= 9184
+const INVENTORY_COUNT:= 2
+const INVENTORY_REROLL:= 6          # 「变成**另一张**卡」的同 id 重摇上限（防死循环）
 const BASIN_RELIC_ID:= 6041
 const COURAGE_RELIC_ID:= 6031
 const COURAGE_ELITE_TURNS:= 1
@@ -590,6 +598,10 @@ const LIFE_CYCLE_ID:= 9150
 # R229：商店附魔「起手」的 id —— 带这个附魔的卡**第 1 回合必定被抽到**
 # （开局把它挪到牌库顶，与警觉 9109 同一套 `_ensure_opening_card` 手法，不动随机源）。
 const ENCHANT_OPENING:= "opening"
+# R370：商店附魔「抽牌 +1」的 id —— 带这个附魔的卡**打出后抽 1 张**。
+# 挂点 = `_note_card_played()`（出牌**唯一**收尾口）→ 单位 / 工事 / 场地 / 技能 / 效果 /
+# 两段式技能全部自动吃到，不必去 8 个 `cast_*` 各补一遍。
+const ENCHANT_DRAW:= "draw"
 
 
 
@@ -7148,6 +7160,12 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 			state.energy += 1
 			_log("雕像：累计使用 %d 张牌 → 回复 1 点费用（当前 %d）"
 					% [RunState.STATUE_EVERY, state.energy])
+	# R370 附魔「抽牌 +1」：带这个附魔的卡**打出后抽 1 张**。
+	# 放在收尾口最末：这张卡的所有结算都已完成（手牌早已离手，抽到的卡不会顶掉自己）。
+	# ⚠️ 抽牌一律走 `_draw_many()` 唯一口 —— 手牌满时 burn 进弃牌区，不会悄悄吞掉。
+	if side == SIDE_SELF and played != null and played.enchant == ENCHANT_DRAW:
+		var ed_n := _draw_many(1)
+		_log("附魔「抽牌 +1」：打出 %s 后抽 %d 张" % [played.card_name, ed_n])
 
 
 func _raid_dmg(side: String) -> int:
@@ -8380,6 +8398,60 @@ func _random_reward_card(side: String) -> CardData:
 	return lst[rng.randi() % lst.size()]
 
 
+func _inventory_sort(side: String) -> String:
+	## 「库存整理」9184（R370，机械之心 1 费史诗技能）：
+	##   从**卡组**随机挑 `INVENTORY_COUNT` 张 → 各**原位**换成一张随机卡。
+	## * 池子走 `_random_reward_card()`（本职业奖励池 / 稀有度三等分）—— 与随心组装 9144 同源；
+	## * 「变成**另一张**卡」：摇到与旧卡同 id 就重摇，最多 `INVENTORY_REROLL` 次
+	##   （池子里同 id 只有一张时允许兜底同卡，不死循环）；
+	## * 替换的一定是**新副本**（`from_dict` + 切断 traits 共享引用），不动卡库实例；
+	## * 卡组不足 2 张就有几张变几张；一张都没有 → 效果落空（与淘汰 9174 同口径）。
+	var total := state.deck.size()
+	if total <= 0:
+		_log("库存整理：卡组是空的，效果落空")
+		return "卡组是空的，效果落空"
+	var idxs: Array[int] = []
+	for i in total:
+		idxs.append(i)
+	# 洗下标（Fisher-Yates，走 rng）→ 前 N 个就是「被整理的那几张」，卡组顺序本身不动
+	for k in range(idxs.size() - 1, 0, -1):
+		var j: int = rng.randi() % (k + 1)
+		var t: int = idxs[k]
+		idxs[k] = idxs[j]
+		idxs[j] = t
+	var picked: Array[int] = []
+	for k in mini(INVENTORY_COUNT, idxs.size()):
+		picked.append(idxs[k])
+	picked.sort()   # 升序 → 日志 / 事件顺序稳定，便于测试与回放对账
+	var pairs: Array = []
+	for di: int in picked:
+		var old: CardData = state.deck[di]
+		if old == null:
+			continue
+		var pick: CardData = _random_reward_card(side)
+		var guard := 0
+		while pick != null and pick.id == old.id and guard < INVENTORY_REROLL:
+			pick = _random_reward_card(side)
+			guard += 1
+		if pick == null:
+			continue
+		var nc: CardData = CardData.from_dict(pick.to_dict())
+		nc.traits = (nc.traits as Array).duplicate()
+		state.deck[di] = nc
+		pairs.append({"index": di, "old": old, "new": nc})
+	if pairs.is_empty():
+		_log("库存整理：卡库里没有可变的卡，效果落空")
+		return "卡组里没有可变的卡"
+	var names: Array[String] = []
+	for pr: Dictionary in pairs:
+		names.append("%s → %s" % [(pr["old"] as CardData).card_name,
+				(pr["new"] as CardData).card_name])
+	var txt := "、".join(names)
+	_log("库存整理：卡组 %d 张变成随机卡（%s）" % [pairs.size(), txt])
+	action.emit("deck_transform", {"pairs": pairs, "side": side})
+	return "卡组 %d 张变成随机卡（%s）" % [pairs.size(), txt]
+
+
 func _invention_refund(side: String, source_name: String) -> void:
 	## 「发明专家」9143 的触发唯一口：每变化一张卡回 2 费，多张发明专家不叠加。
 	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
@@ -9017,6 +9089,10 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 					% [el_drawn, el_opts.size()])
 			action.emit("eliminate_pending", {"count": el_opts.size(), "drawn": el_drawn})
 			return "抽 %d 张；从卡组选一张盟友或工事变成素体" % el_drawn
+		INVENTORY_ID:
+			# 库存整理（9184，R370，机械之心 1 费史诗技能）：
+			#   从卡组随机两张 → 各原位换成一张随机卡，直接结算、不开任何面板。
+			return _inventory_sort(side)
 		UPGRADE_ID:
 			# 升级 8027（R82，机械之心）：改造一个己方盟友或工事。
 			# 走 _run_spell_effect 而不是 use_spell 的分支 → 蓄力（9085）叠它会叠多次，

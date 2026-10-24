@@ -88,6 +88,11 @@ const ENCHANT_DEFS: Dictionary = {
 			"desc": "回合结束时这张卡留在手里，不会被丢弃。"},
 	"opening": {"label": "起手", "icon": "shop_icon_opening", "col": "f0c860",
 			"desc": "第一回合必定抽到这张卡。"},
+	# R370：打出后抽一张（售价 40，商店与牛奶随机附魔都能出）。
+	# ⚠️ `label` 是显示名**唯一真源** —— `shop_scene.ENCHANTS` 的 `name` 必须与它逐字一致
+	#    （smoke 逐条比对，分叉即红）。
+	"draw": {"label": "抽牌 +1", "icon": "shop_icon_draw", "col": "5fd8c8",
+			"desc": "打出这张卡后抽一张卡。"},
 }
 
 var id: int = 0

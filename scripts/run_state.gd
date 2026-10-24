@@ -2296,6 +2296,10 @@ static func enchant_ok(ench_id: String, c: CardData, deck_idx: int) -> bool:
 					and not c.is_effect()
 		"save":
 			return true          # 任何卡都能保存
+		"draw":
+			# R370「抽牌 +1」：任何卡都能附 —— 盟友 / 工事 / 场地 / 技能 / 效果都算「打出」，
+			# 挂点统一在 `GameEngine._note_card_played()`，所以没有种类限制。
+			return true
 		"opening":
 			# R229「起手」：任何卡都能附（第 1 回合必定抽到，单位 / 技能 / 效果都一样）。
 			# 「一张卡只能一个附魔」在上面统一拦（`_mod_at()` 非空即拒），这里不重复判。
@@ -2318,6 +2322,10 @@ static func enchant_mod(ench_id: String) -> Dictionary:
 		"save": m = {"affix": "保存"}
 		# R229「起手」：**不改任何数值**，只记 id —— 抽牌时引擎按 `card.enchant` 认它。
 		"opening": m = {}
+		# R370「抽牌 +1」：同样不改数值，只记 id —— 引擎在出牌收尾口按 `card.enchant` 认它。
+		# ⚠️ **不要**写成 `{"draw": 1}`：`_apply_mod()` 只认 cost/power/health/affix/note，
+		#    多出来的键会被静默忽略，将来有人误读成「已经烤进数值了」。
+		"draw": m = {}
 		_: return {}
 	m["id"] = ench_id
 	return m

@@ -139,8 +139,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 272,
-			"图鉴 = 272 张（R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
+	check(repo.all_cards().size() == 273,
+			"图鉴 = 273 张（R370 +库存整理 9184（机械之心史诗技能）；R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -153,8 +153,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 214 and grp_enemy.size() == 58,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 214 / 58；R356 +4 张敌方卡（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫）；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 215 and grp_enemy.size() == 58,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 215 / 58；R370 +1 张玩家卡（库存整理 9184）；R356 +4 张敌方卡（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫）；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -184,8 +184,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 184,
-			"奖励池 184 张（R332 +本能 9176（稀有，进池）；R331 +隐藏能源 / 惊喜运单（均稀有）+2；R329：删**紧急埋伏 9106**（稀有）−1、**嵌合暴君 8047** 由初始升史诗 +1，仍 181；R327 +送葬 9175（稀有，进池）；R317 +身法 / 淘汰；R316 +极速 / 激光扫射；R315 +应急电源 9170 进池；R300 激发（史诗）进池；R298 集束炮台（普通）· 合体（史诗）均进池；R291 辅助刃 / 复制术进池；R290 集中突破 / 冲击炮进池；R275 重组降为普通后进池；R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 R329 起为史诗 → 进池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；**R282 改装者 8076（普通，进池）**；实际 %d）"
+	check(pool.size() == 185,
+			"奖励池 185 张（R370 +库存整理 9184（史诗）进池；R332 +本能 9176（稀有，进池）；R331 +隐藏能源 / 惊喜运单（均稀有）+2；R329：删**紧急埋伏 9106**（稀有）−1、**嵌合暴君 8047** 由初始升史诗 +1，仍 181；R327 +送葬 9175（稀有，进池）；R317 +身法 / 淘汰；R316 +极速 / 激光扫射；R315 +应急电源 9170 进池；R300 激发（史诗）进池；R298 集束炮台（普通）· 合体（史诗）均进池；R291 辅助刃 / 复制术进池；R290 集中突破 / 冲击炮进池；R275 重组降为普通后进池；R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 R329 起为史诗 → 进池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；**R282 改装者 8076（普通，进池）**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -7762,10 +7762,10 @@ func _init() -> void:
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 67
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 63
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 64
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 65
 			and int(dr_cls_count.get("敌人", 0)) == 58
 			and int(dr_cls_count.get("", 0)) == 20,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 67 / 63 / 64 / 58；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 18；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 67 / 63 / 65 / 58；R370 机械之心 +1（库存整理 9184）；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 18；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -8068,7 +8068,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 184, "R332 +本能 9176（稀有，进池）= 184；R331 +隐藏能源 / 惊喜运单（均稀有）+2 = 183；R329：删紧急埋伏 −1、嵌合暴君升史诗进池 +1；R327 送葬（稀有）进池 +1 = 181；R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，R282 改装者 8076（普通，进池）+1 = 167，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 185, "R370 +库存整理 9184（史诗，进池）= 185；R332 +本能 9176（稀有，进池）= 184；R331 +隐藏能源 / 惊喜运单（均稀有）+2 = 183；R329：删紧急埋伏 −1、嵌合暴君升史诗进池 +1；R327 送葬（稀有）进池 +1 = 181；R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，R282 改装者 8076（普通，进池）+1 = 167，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -8606,7 +8606,7 @@ func _init() -> void:
 			r226_dmg += 1
 		elif r226_card.effect_text.contains("造成") and r226_card.effect_text.contains("伤害"):
 			r226_leak.append(r226_card.card_name)
-	check(r226_skills == 89 and r226_dmg == 31 and r226_leak.is_empty(),
+	check(r226_skills == 90 and r226_dmg == 31 and r226_leak.is_empty(),
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 			% [r226_skills, r226_dmg, "0 张" if r226_leak.is_empty() else str(r226_leak)])
 	check(RunState.enchant_ok("damage", r224_okrepo.get_card(9083), 9999)
@@ -17990,7 +17990,7 @@ func _init() -> void:
 	check(r214_built.size() == 4 and r214_got == ["damage", "dimension", "", "save"],
 		"R214 附魔：build_deck 给每张附魔卡写上种类 id（实际 %s）" % str(r214_got))
 	# ---- R229「起手」附魔：必定第 1 回合抽到 + 一张卡只能一个附魔 ----
-	check(CardData.ENCHANT_DEFS.size() == 5
+	check(CardData.ENCHANT_DEFS.size() == 6
 			and CardData.enchant_name("opening") == "起手"
 			and CardData.enchant_icon_name("opening") == "shop_icon_opening"
 			and CardData.enchant_color("opening").is_equal_approx(Color("f0c860")),
@@ -20263,17 +20263,10 @@ func _init() -> void:
 	check(not r246_mod.is_empty(), "R246 附魔大师：附魔真的写进了 deck_mods")
 	var r246_card := CardRepo.load_json().get_card(RunState.deck_ids[r246_idx])
 	var r246_eid := str(r246_em.get("ench", ""))
-	var r246_legal := false
-	match r246_eid:
-		"damage":
-			r246_legal = r246_card.is_damage_spell()
-		"dimension":
-			r246_legal = (r246_card.kind == "盟友" or r246_card.is_fort()) \
-					and not r246_card.is_effect()
-		"costdown":
-			r246_legal = r246_card.cost > 1 and not r246_card.x_cost
-		"save", "opening":
-			r246_legal = true
+	# R370：判据收成**唯一口** `RunState.enchant_ok()` —— 原来这里手抄了第二份规则表，
+	# 每加一种附魔都得回来补一个分支（draw 一上来就掉进「没有分支 → false」的假红）。
+	# deck_idx 传 9999 → `_mod_at` 越界返回 {}，不会因「已附魔」挡路。
+	var r246_legal := RunState.enchant_ok(r246_eid, r246_card, 9999)
 	check(r246_legal, "R246 附魔大师：附上的附魔对目标合规（%s → %s）"
 			% [r246_eid, r246_card.card_name])
 	var r246_enchanted := 0
@@ -26862,6 +26855,164 @@ func _init() -> void:
 	var r369_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 	check_src(r369_src.find("9163: 10,") >= 0,
 			"R369 源码锁：SPELL_BASE_DMG 里 9163 = 10")
+
+	# ================= R370：库存整理 9184 + 附魔「抽牌 +1」 =================
+	# 用户口径：「新增机械之心史诗法术，库存整理：1费，将卡组两张卡随机变成另一张卡。
+	#            新增附魔种类：打出后抽一张卡，售价40（商店和随机都能得到）」
+	# ① 卡面定义
+	var r370_inv: CardData = repo.get_card(GameEngine.INVENTORY_ID)
+	check(r370_inv != null and r370_inv.card_name == "库存整理"
+			and r370_inv.kind == "技能" and r370_inv.cost == 1
+			and r370_inv.rarity == 2 and r370_inv.card_class == PlayerClass.MECH
+			and r370_inv.target_mode == "none" and not r370_inv.needs_target(),
+			"R370 库存整理：1 费 · 史诗 · 机械之心 · 无目标技能（界面点一下就直接施放）")
+	# ② 进机械之心奖励池（商店第一行 / 战斗奖励都能摇到）
+	var r370_pool: Array[CardData] = repo.reward_pool_for(PlayerClass.MECH)
+	var r370_in_pool := false
+	for c: CardData in r370_pool:
+		if c.id == GameEngine.INVENTORY_ID:
+			r370_in_pool = true
+	check(r370_in_pool, "R370 库存整理进机械之心奖励池（共 %d 张）" % r370_pool.size())
+
+	# ③ 结算：卡组随机 2 张 → 各变成**另一张**卡（假 id 保证「换过」一定看得出来）
+	var r370_deck: Array[CardData] = []
+	for i in 6:
+		r370_deck.append(_card(9994 + i, "库存%d" % i, "盟友", 2, 2, 6))
+	var r370_e := _new_engine(r370_deck, 20, 20, -1, false)
+	r370_e.state.hand.clear()
+	r370_e.state.hand.append(CardData.from_dict(r370_inv.to_dict()))
+	r370_e.state.energy = 10
+	var r370_before: Array[int] = []
+	for c: CardData in r370_e.state.deck:
+		r370_before.append(c.id)
+	var r370_txt := r370_e.use_spell(0, null)
+	var r370_changed := 0
+	for i in r370_e.state.deck.size():
+		var c: CardData = r370_e.state.deck[i]
+		if c.id != r370_before[i]:
+			r370_changed += 1
+	check(r370_e.state.deck.size() == 6 and r370_changed == 2,
+			"R370 库存整理：卡组张数不变（%d 张），恰好 2 张被换（实际 %d）"
+			% [r370_e.state.deck.size(), r370_changed])
+	check(r370_e.state.deck.size() - r370_changed == 4,
+			"R370 库存整理：另外 4 张原样不动")
+	check(r370_txt.contains("2 张"),
+			"R370 库存整理：结算说明写明「变了 2 张」（%s）" % r370_txt)
+	# 换出来的新卡必须**不是**旧卡 id（池子里的真卡），且是卡库里的正常卡
+	var r370_ok_new := true
+	for c: CardData in r370_e.state.deck:
+		if c.id >= 9994:
+			continue
+		if repo.get_card(c.id) == null:
+			r370_ok_new = false
+	check(r370_ok_new, "R370 库存整理：换出来的都是卡库里真实存在的卡（不是假 id / 空壳）")
+
+	# ④ 随机只走引擎 rng → 同种子两次结果一致（回放 / 联机一致性的前提）
+	var r370_s1: Array[int] = []
+	var r370_s2: Array[int] = []
+	for r370_round in 2:
+		var r370_dd: Array[CardData] = []
+		for i in 6:
+			r370_dd.append(_card(9994 + i, "库存%d" % i, "盟友", 2, 2, 6))
+		var r370_ee := _new_engine(r370_dd, 20, 20, -1, false)
+		r370_ee.rng.seed = 370370
+		r370_ee.state.hand.clear()
+		r370_ee.state.hand.append(CardData.from_dict(r370_inv.to_dict()))
+		r370_ee.state.energy = 10
+		r370_ee.use_spell(0, null)
+		var r370_ids: Array[int] = []
+		for c: CardData in r370_ee.state.deck:
+			r370_ids.append(c.id)
+		if r370_round == 0:
+			r370_s1 = r370_ids
+		else:
+			r370_s2 = r370_ids
+	check(r370_s1 == r370_s2,
+			"R370 库存整理：同种子结果一致（回放确定性）")
+
+	# ⑤ 空卡组 → 效果落空、不崩
+	var r370_empty := _new_engine([] as Array[CardData], 20, 20, -1, false)
+	r370_empty.state.hand.clear()
+	r370_empty.state.hand.append(CardData.from_dict(r370_inv.to_dict()))
+	r370_empty.state.energy = 10
+	var r370_empty_txt := r370_empty.use_spell(0, null)
+	check(r370_empty_txt.contains("卡组"),
+			"R370 库存整理：卡组为空时明确落空（%s）" % r370_empty_txt)
+
+	# ⑥ 附魔定义（label / icon / 颜色）
+	check(CardData.enchant_name("draw") == "抽牌 +1"
+			and CardData.enchant_icon_name("draw") == "shop_icon_draw"
+			and CardData.enchant_color("draw").is_equal_approx(Color("5fd8c8")),
+			"R370 附魔「抽牌 +1」：定义齐（label 抽牌 +1 / icon shop_icon_draw / 颜色 5fd8c8）")
+	# ⑦ 任何卡都能附（单位 / 技能 / 工事 / 效果），且 mod 不含数值键
+	check(RunState.enchant_ok("draw", repo.get_card(8003), 9999)
+			and RunState.enchant_ok("draw", repo.get_card(8002), 9999)
+			and RunState.enchant_ok("draw", repo.get_card(8052), 9999),
+			"R370 附魔「抽牌 +1」：单位 / 技能 / 工事都能附")
+	var r370_mod := RunState.enchant_mod("draw")
+	check(str(r370_mod.get("id", "")) == "draw" and not r370_mod.has("cost")
+			and not r370_mod.has("power") and not r370_mod.has("health")
+			and not r370_mod.has("affix"),
+			"R370 附魔「抽牌 +1」：mod 只记 id、不烤任何数值（%s）" % str(r370_mod))
+	# ⑧ 商店售价 40（真源 = shop_scene.ENCHANTS）
+	var r370_shop: GDScript = load("res://scripts/shop_scene.gd") as GDScript
+	var r370_cmap: Dictionary = r370_shop.get_script_constant_map()
+	var r370_prices := {}
+	for e: Dictionary in (r370_cmap["ENCHANTS"] as Array):
+		r370_prices[str(e["id"])] = int(e["price"])
+	check(int(r370_prices.get("draw", -1)) == 40,
+			"R370 附魔「抽牌 +1」：商店售价 40 金（实际 %s）"
+			% str(r370_prices.get("draw", -1)))
+	# ⑨ 随机也能得到：牛奶走 `CardData.ENCHANT_DEFS.keys()` → 池里必须有 draw
+	check(CardData.ENCHANT_DEFS.has("draw"),
+			"R370 附魔「抽牌 +1」：牛奶随机附魔池 = ENCHANT_DEFS.keys()，含 draw")
+
+	# ⑩ 打出后真的抽 1 张（技能卡：激光扫射 9172，无目标 → 落空也照算「打出」）
+	var r370_dd2: Array[CardData] = []
+	for i in 6:
+		r370_dd2.append(_card(9994, "牌%d" % i, "盟友", 2, 2, 6))
+	var r370_e3 := _new_engine(r370_dd2, 20, 20, -1, false)
+	r370_e3.state.hand.clear()
+	var r370_ec := _card(9172, "激光扫射", "技能", 2, 0, 0)
+	r370_ec.enchant = "draw"
+	r370_e3.state.hand.append(r370_ec)
+	r370_e3.state.energy = 10
+	r370_e3.use_spell(0, null)
+	check(r370_e3.state.hand.size() == 1,
+			"R370 附魔「抽牌 +1」：技能卡打出后抽 1（手牌 %d 张）"
+			% r370_e3.state.hand.size())
+	# 对照：同构造但不附魔 → 手牌 0 张（证明多出来的那 1 张确实是附魔给的）
+	var r370_dd3: Array[CardData] = []
+	for i in 6:
+		r370_dd3.append(_card(9994, "牌%d" % i, "盟友", 2, 2, 6))
+	var r370_e4 := _new_engine(r370_dd3, 20, 20, -1, false)
+	r370_e4.state.hand.clear()
+	r370_e4.state.hand.append(_card(9172, "激光扫射", "技能", 2, 0, 0))
+	r370_e4.state.energy = 10
+	r370_e4.use_spell(0, null)
+	check(r370_e4.state.hand.size() == 0,
+			"R370 附魔对照：不附魔的技能卡打出后不抽牌（手牌 %d 张）"
+			% r370_e4.state.hand.size())
+	# ⑪ 盟友卡也吃（打出后抽 1）：证明挂点在**出牌唯一收尾口**而不是技能专属
+	var r370_dd4: Array[CardData] = []
+	for i in 6:
+		r370_dd4.append(_card(9994, "牌%d" % i, "盟友", 2, 2, 6))
+	var r370_e5 := _new_engine(r370_dd4, 20, 20, -1, false)
+	r370_e5.state.hand.clear()
+	var r370_ally := _card(9995, "铁卫", "盟友", 1, 2, 5)
+	r370_ally.enchant = "draw"
+	r370_e5.state.hand.append(r370_ally)
+	r370_e5.state.energy = 10
+	r370_e5.play_from_hand(0, Vector2i(1, 1))
+	check(r370_e5.state.hand.size() == 1,
+			"R370 附魔「抽牌 +1」：盟友卡上场后同样抽 1（手牌 %d 张）"
+			% r370_e5.state.hand.size())
+	# ⑫ 源码锁：钩子必须留在 `_note_card_played()` 里（别处再写第二份 = 重复抽牌）
+	var r370_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r370_src.find("played.enchant == ENCHANT_DRAW") >= 0,
+			"R370 源码锁：附魔抽牌挂在出牌唯一收尾口（played.enchant == ENCHANT_DRAW）")
+	check_src(r370_src.count("ENCHANT_DRAW") == 2,
+			"R370 源码锁：ENCHANT_DRAW 恰好 2 处（常量 + 收尾口判定），不许多写第二份抽牌")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
