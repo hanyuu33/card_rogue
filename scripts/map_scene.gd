@@ -151,12 +151,24 @@ var _move_note_t := 0.0
 var _anim_cell: Dictionary = {}  # 正在播进场过场的房间（空 = 没在播）
 var _anim_t := 0.0               # 过场已播时长（秒）
 var _anim_hold := false          # 演示用：停在过场末尾不真的进入（截图核验）
+## 出图用：强行指定「画哪一层的背景图」（`-- --bg 3`）——
+## 第三层目前只有事件、没有战斗关卡，进不去；靠它才能单独验 map_bg_3 的观感。
+## 0 = 不覆盖，照常跟 RunState.current_layer 走。
+var _bg_layer := 0
 
 
 func _ready() -> void:
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	_shot = "--screenshot" in OS.get_cmdline_user_args()
+	# ⚠️ 出图/调试先把档案切到测试档：地图 _ready 会 start_run（bump run_start）+
+	#    check_achievements，不切就会把玩家真实统计写脏（R353 的教训，story 那边踩过）。
+	if _shot:
+		ProfileData.set_test_mode()
+	var _bg_args := OS.get_cmdline_user_args()
+	var _bi := _bg_args.find("--bg")
+	if _bi >= 0 and _bi + 1 < _bg_args.size():
+		_bg_layer = maxi(0, int(str(_bg_args[_bi + 1])))
 	sfx = Sfx.new()
 	add_child(sfx)
 	_records = RunState.load_records()
@@ -688,7 +700,8 @@ func _draw() -> void:
 
 func _draw_background() -> void:
 	## 本层背景图铺满整屏（保持比例裁切）；缺图时回退成纵向渐变 —— 不空白也不报错。
-	var tex := UiAssets.map_bg(RunState.current_layer)
+	var lay := _bg_layer if _bg_layer > 0 else RunState.current_layer
+	var tex := UiAssets.map_bg(lay)
 	if tex != null:
 		draw_texture_rect(tex, Rect2(0, 0, size.x, size.y), false)
 		# 压一层很淡的暗罩：保证格子上的文字在任何背景上都读得清。

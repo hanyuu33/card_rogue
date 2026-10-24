@@ -7636,6 +7636,27 @@ func _init() -> void:
 			"战斗背景：第一层底图能真的加载出来（map_bg_1.png）")
 	check(UiAssets.battle_bg("", 99) != null,
 			"战斗背景：全局兜底也能真的加载出来（battle_bg.png）")
+	# R354：第三层背景（巨大机械方舟）—— 层号 3 必须能落到自己的底图，且**三层同尺寸**，
+	# 否则铺满时会被 draw_texture_rect 拉伸变形。
+	check(UiAssets.battle_bg_path("", 3) == "res://assets/ui/map_bg_3.png",
+			"战斗背景：第三层 → assets/ui/map_bg_3.png（R354 机械方舟）")
+	var r354_sizes := ""
+	var r354_same := true
+	for r354_l in [1, 2, 3]:
+		var r354_t := UiAssets.map_bg(r354_l)
+		if r354_t == null:
+			r354_same = false
+			r354_sizes += "第%d层=缺图 " % r354_l
+			continue
+		r354_sizes += "第%d层=%dx%d " % [r354_l, r354_t.get_width(), r354_t.get_height()]
+		if r354_t.get_width() != 1280 or r354_t.get_height() != 720:
+			r354_same = false
+	check(r354_same, "R354 背景尺寸：三层都是 1280×720（%s）" % r354_sizes)
+	var r354_map_src := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	# ⚠️ 必须用 check_src：这条读的是 .gd 源码，打包环境里没有源码 → 普通 check 会红，
+	#    包内「engine 预期 2 项失败」的基线就被打破（R354 踩过一次）。
+	check_src(r354_map_src.find('find("--bg")') >= 0 and r354_map_src.find("_bg_layer") >= 0,
+			"R354 源码：地图出图参数 --bg <层号>（第三层还没关卡，靠它单独验背景）")
 	var doc_path := "res://assets/ui/图片命名说明.txt"
 	# 导出版按设计排除 *.txt（export_presets.cfg 的 exclude_filter），说明文本不随包发布，
 	# 此时文档断言不适用 → 跳过（不算失败）。用「export_presets.cfg 是否存在」判断是否在
@@ -25449,7 +25470,7 @@ func _init() -> void:
 	check(bool(r352_claim.get("ok", false))
 			and (r352_claim.get("cards", []) as Array).size() == 2
 			and (r352_claim.get("relics", []) as Array).size() == 1,
-			"R352 故事：收下后发 2 张卡 + 1 件道具")
+			"R352 故事：收下后 2 张卡 + 1 件道具加入奖励池（不是发到手里）")
 	check(ProfileData.is_card_unlocked(9182) and ProfileData.is_card_unlocked(9183)
 			and ProfileData.is_relic_unlocked(6052),
 			"R352 故事：三样都记进档案")
@@ -25624,6 +25645,118 @@ func _init() -> void:
 	var r353_story_src2 := FileAccess.get_file_as_string("res://scripts/story_scene.gd")
 	check_src(r353_story_src2.find("继 续") >= 0,
 			"R353 源码：故事解锁动画末尾画「继续」按钮")
+
+	# ============================================================
+	#  R355：故事解锁 = **加入奖励池**，不是发放到手
+	#        用户口径：解锁前 竖琴 / 剧情卡 不属于奖励池；解锁后才进池；ban = 移出。
+	# ============================================================
+	ProfileData.set_test_mode()
+	var r355_crepo := CardRepo.load_json()
+	var r355_rrepo := RelicRepo.load_json()
+	var r355_story := StoryRepo.load_json()
+
+	# ---- ① 剧情点名的东西必须真的「锁着」 ----
+	# 没标 locked 的卡 / 道具本来就在池里 —— 那样 grants 等于空转，
+	# 玩家会以为「领了才拿到」，其实是「早晚都有」。加内容时最容易漏这一步。
+	check(r355_rrepo.get_relic(6052).locked
+			and r355_crepo.get_card(9182).locked
+			and r355_crepo.get_card(9183).locked,
+			"R355 数据：竖琴 6052 / 摇篮曲 9182 / 森林的朋友们 9183 都标了 locked")
+
+	# ---- ② 全量对账（两个方向） ----
+	var r355_gc := {}
+	var r355_gr := {}
+	for r355_epd: Dictionary in r355_story.episodes:
+		var r355_g: Variant = r355_epd.get("grants", {})
+		if not (r355_g is Dictionary):
+			continue
+		for r355_v: Variant in ((r355_g as Dictionary).get("cards", []) as Array):
+			r355_gc[int(r355_v)] = true
+		for r355_v2: Variant in ((r355_g as Dictionary).get("relics", []) as Array):
+			r355_gr[int(r355_v2)] = true
+	var r355_bad: Array[String] = []
+	for r355_cid: Variant in r355_gc.keys():
+		var r355_c := r355_crepo.get_card(int(r355_cid))
+		if r355_c == null:
+			r355_bad.append("剧情点了不存在的卡 %d" % int(r355_cid))
+		elif not r355_c.locked:
+			r355_bad.append("卡 %d 没标 locked（本来就在池里）" % int(r355_cid))
+	for r355_rid: Variant in r355_gr.keys():
+		var r355_r := r355_rrepo.get_relic(int(r355_rid))
+		if r355_r == null:
+			r355_bad.append("剧情点了不存在的道具 %d" % int(r355_rid))
+		elif not r355_r.locked:
+			r355_bad.append("道具 %d 没标 locked（本来就在池里）" % int(r355_rid))
+	check(r355_bad.is_empty(),
+			"R355 数据：剧情 grants 点到的卡 / 道具都带 locked（问题 %s）" % str(r355_bad))
+	# 反方向：标了 locked 却没人发 → 玩家永远拿不到，等于从游戏里删掉了。
+	var r355_orphan: Array[String] = []
+	for r355_c2: CardData in r355_crepo.all_cards():
+		if r355_c2.locked and not r355_gc.has(r355_c2.id):
+			r355_orphan.append("卡 %d" % r355_c2.id)
+	for r355_r2: RelicData in r355_rrepo.all_relics():
+		if r355_r2.locked and not r355_gr.has(r355_r2.id):
+			r355_orphan.append("道具 %d" % r355_r2.id)
+	check(r355_orphan.is_empty(),
+			"R355 数据：没有「锁着却没人解锁」的孤儿（问题 %s）" % str(r355_orphan))
+
+	# ---- ③ 解锁不发放：claim 全程不碰本局 ----
+	check(not r355_rrepo.reward_ids().has(6052),
+			"R355 解锁前：竖琴不在道具奖励池里")
+	var r355_pool_locked := {}
+	for r355_c3: CardData in r355_crepo.reward_pool():
+		r355_pool_locked[r355_c3.id] = true
+	check(not r355_pool_locked.has(9182) and not r355_pool_locked.has(9183),
+			"R355 解锁前：两张剧情卡也不在卡牌奖励池里")
+	var r355_deck0: Array = RunState.deck_ids.duplicate()
+	var r355_rel0: Array = RunState.relics.duplicate()
+	var r355_pend0 := RunState.pending_rewards.size()
+	ProfileData.bump(ProfileData.K_RUN_START)
+	ProfileData.check_achievements(r355_story)
+	var r355_res := ProfileData.claim_episode(r355_story, "episode1")
+	check(bool(r355_res.get("ok", false)),
+			"R355 解锁：故事 1 能收下（%s）" % str(r355_res.get("reason", "")))
+	check(RunState.deck_ids == r355_deck0 and RunState.relics == r355_rel0
+			and RunState.pending_rewards.size() == r355_pend0,
+			"R355 解锁不发放：卡组 / 道具栏 / 待领奖励一个都没动")
+	check(r355_rrepo.reward_ids().has(6052),
+			"R355 解锁后：竖琴进入道具奖励池")
+	var r355_pool_open := {}
+	for r355_c4: CardData in r355_crepo.reward_pool():
+		r355_pool_open[r355_c4.id] = true
+	check(r355_pool_open.has(9182) and r355_pool_open.has(9183),
+			"R355 解锁后：两张剧情卡进入卡牌奖励池")
+
+	# ---- ④ ban = 从奖励池**移出**（不是删掉这张卡） ----
+	check(ProfileData.toggle_ban_for(9182, r355_crepo, PlayerClass.DRUID),
+			"R355 禁卡：森林精魄禁掉摇篮曲")
+	var r355_druid_pool := {}
+	for r355_c5: CardData in r355_crepo.reward_pool_for(PlayerClass.DRUID):
+		r355_druid_pool[r355_c5.id] = true
+	check(not r355_druid_pool.has(9182),
+			"R355 禁卡：摇篮曲从森林精魄的奖励池里移出")
+	var r355_still_listed := false
+	for r355_c6: CardData in r355_crepo.obtainable_cards():
+		if r355_c6.id == 9182:
+			r355_still_listed = true
+	check(r355_still_listed,
+			"R355 禁卡：禁掉的卡仍在可获列表里（能点回来，不是从游戏里消失）")
+
+	# ---- ⑤ 清掉档案就回退成「不在池里」（白名单是唯一判据） ----
+	ProfileData.clear_memory()
+	check(not r355_rrepo.reward_ids().has(6052),
+			"R355 回退：档案清空后竖琴又回到「不属于奖励池」")
+
+	# ---- ⑥ 源码守卫：解锁路径里不许出现「发放」动作 ----
+	var r355_pd_src := FileAccess.get_file_as_string("res://scripts/profile_data.gd")
+	var r355_claim_at := r355_pd_src.find("static func claim_episode")
+	check_src(r355_claim_at >= 0, "R355 源码：能定位 claim_episode")
+	if r355_claim_at >= 0:
+		var r355_claim_body := r355_pd_src.substr(r355_claim_at, 2600)
+		check_src(r355_claim_body.find("gain_relic(") < 0
+				and r355_claim_body.find("pending_rewards.append") < 0
+				and r355_claim_body.find("deck_ids") < 0,
+				"R355 源码：claim_episode 里没有发放动作（只写解锁白名单）")
 
 	# 收尾：删临时剧情文件（档案文件交给下一次 set_test_mode 清）
 	if FileAccess.file_exists(r346_probe_path):
