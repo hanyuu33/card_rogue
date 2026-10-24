@@ -101,7 +101,7 @@ const MOON_DESC := """天色暗下来，月亮低低地挂在山脊上，把水�
 「月亮」：3 费效果。战斗结束后奖励界面多一条「删除一张卡」。
 此卡不可以从卡组删除。
 「硬币」：1 费效果。战斗结束后额外获得 25 金币。此卡不可以从卡组删除。
-月亮的代价是此刻的全部金币；硬币什么都不要。两样只能拿走一样。"""
+月亮的代价是此刻的全部金币；硬币什么都不要。两样必须拿走一样。"""
 
 const MOON_TAKEN_DESC := """月亮落进你的口袋，钱袋却空了。
 它凉得很，像刚从水里捞上来。"""
@@ -735,7 +735,10 @@ func _ready() -> void:
 			alt_btn.visible = true
 			alt_btn.text = "拿走「硬币」"
 			alt_btn.disabled = false
-			$Center/LeaveBtn.text = "什么都不拿（离开）"
+			# R365（用户口径）：赏月**没有「什么都不拿」这一项** —— 两样东西摆在石台上，
+			# 走到这儿就得拿走一样。不会卡死：月亮够不着（没钱）时硬币一定够得着，
+			# 而领走任一样之后 `_collapse_to_leave()` 会把唯一的「离开」还回来。
+			leave_btn.visible = false
 			result_label.text = ""
 	elif _is_hero():
 		event_name.text = "绝赞五换一"
@@ -924,6 +927,11 @@ func _ready() -> void:
 	$Center/LeaveBtn.pressed.connect(func(): _ui_leave())
 	rest_btn.pressed.connect(func(): _ui_main())
 	bbq_btn.pressed.connect(func(): _ui_bbq())
+	# R365：**第三选项（AltBtn）从来没接过信号** —— R305 卡片商人的「折价」、
+	# R351 赏月的「拿走硬币」都挂在这个按钮上，`_on_alt()` 从 R305 起就没有任何调用者，
+	# 于是点下去毫无反应（用户实测：赏月点「拿走硬币」＝硬币拿不到）。
+	# 三个选项必须走同一条路进来；`_ui_alt` 与 `_ui_main` / `_ui_bbq` 同构。
+	alt_btn.pressed.connect(func(): _ui_alt())
 	_apply_ui_assets()
 	_refresh()
 	_fit_center()   # 布局就位后先校准一次
@@ -936,6 +944,8 @@ func _ready() -> void:
 		_on_bbq()
 		if _reward_panel != null:
 			_reward_panel.close()   # 演示：关掉奖励窗，露出「两个选项都锁死」的界面
+	elif "--mooncoin" in args:      # R365：赏月「已拿走硬币」的收尾态（配 --moon 用）
+		_ui_alt()
 	# 命令行 -- --screenshot：打开后自动截图退出（视觉验证用）
 	if "--screenshot" in args:
 		var t := Timer.new()
@@ -1704,6 +1714,11 @@ func _ui_bbq() -> void:
 
 func _ui_leave() -> void:
 	_on_leave()
+
+
+func _ui_alt() -> void:
+	## R365：第三选项（AltBtn）的入口 —— 卡片商人「折价」/ 赏月「拿走硬币」共用。
+	_on_alt()
 
 
 func _settle_before_pick() -> void:

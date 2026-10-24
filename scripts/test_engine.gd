@@ -26532,6 +26532,27 @@ func _init() -> void:
 	check_src(r357_esrc2.find('"from": from_cell') >= 0,
 			"R357 引擎：boss_phase 事件带 from（退回前站的那一格）")
 
+	# ==== R365：事件第三选项（AltBtn）接线 + 赏月没有「什么都不拿」 ====
+	# 用户实测两件事：① 赏月点「拿走硬币」毫无反应，硬币拿不到；② 这个事件不该有
+	# 「什么都不拿」这条出口。根因是 `alt_btn.pressed` **从 R305 引入第三选项起就没接过
+	# 信号** —— `_on_alt()` 零调用者，于是卡片商人的「折价」也一起躺了很久。
+	var r365_ev := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	check_src(r365_ev.find("alt_btn.pressed.connect(func(): _ui_alt())") >= 0,
+			"R365 源码：AltBtn 已接信号（`_on_alt` 零调用者 = 硬币 / 折价点了没反应）")
+	check_src(r365_ev.find("func _ui_alt() -> void:") >= 0
+			and r365_ev.find("_on_alt()\n") >= 0,
+			"R365 源码：`_ui_alt()` 入口存在（与 _ui_main / _ui_bbq 同构）")
+	check_src(r365_ev.find("什么都不拿（离开）") < 0,
+			"R365 赏月：事件里没有「什么都不拿」这条出口（旧文案已删）")
+	# 藏 leave 的那一行只在赏月分支里出现：`MOON_TAKEN_DESC` 之后紧跟着的判断块。
+	var r365_moon_at := r365_ev.find("elif _is_moon():")
+	var r365_hide_at := r365_ev.find("leave_btn.visible = false", r365_moon_at)
+	check_src(r365_moon_at >= 0 and r365_hide_at > r365_moon_at
+			and r365_hide_at - r365_moon_at < 1600,
+			"R365 源码：赏月分支里把「离开」藏起来（没有第三条路可走）")
+	check_src(r365_ev.find("两样必须拿走一样。") >= 0,
+			"R365 文案：描述写明「两样必须拿走一样」（原来写『只能』，像还可以都不要）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

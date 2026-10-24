@@ -319,6 +319,26 @@ func _initialize() -> void:
 				RunState.pending_event = "delivery_done"
 				RunState.deck_ids = [8001, 8001, 8002, 8003, 8065, 8065, 8065],
 			_check_delivery_done],
+		# R365（用户实测）：赏月点「拿走硬币」没有任何反应 —— `alt_btn.pressed` 从 R305
+		#   引入第三选项起就没接过信号。这里走**真实按钮点击**（`pressed.emit()`）：
+		#   信号没接上时 emit 静默无效，卡组里就不会多出 9181（正是用户看到的现象）。
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map(), GameLayers.LAYER_TWO)
+				RunState.gold = 120
+				RunState.deck_ids = [8001, 8002, 8003, 9018]
+				RunState.pending_node = {"type": "event"}
+				RunState.pending_event = "moon",
+			_check_r365_moon],
+		# R365：卡片商人的「折价」也挂在同一个 AltBtn 上（同一个根因）→ 点下去要真成交
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map(), GameLayers.LAYER_TWO)
+				RunState.gold = 0
+				RunState.deck_ids = [8001, 8002, 8003, 9018]
+				RunState.pending_node = {"type": "event"}
+				RunState.pending_event = "card_merchant",
+			_check_r365_merchant],
 	]
 	print("SMOKE === 开始（%d 项场景用例）===" % _plan.size())
 	_next()
@@ -3783,3 +3803,61 @@ func _check_curtain_reply(s: Node) -> void:
 	var ok_text: bool = desc != null \
 			and (desc as Label).text == CurtainLines.reply(GameLayers.LAYER_TWO, PlayerClass.MECH)
 	print("  [smoke] curtain 回答态：名称牌=%s 台词=%s 收尾可离开=True" % [ok_name, ok_text])
+
+func _check_r365_moon(s: Node) -> void:
+	## R365（用户实测）两件事：
+	##   ① 赏月点「拿走硬币」毫无反应 → `alt_btn.pressed` 从 R305 起没接过信号；
+	##   ② 这个事件不该有「什么都不拿」这条出口。
+	## 不看源码文本，直接点：信号没接上时 `pressed.emit()` 静默无效，
+	## 卡组里不会多出 9181 —— 正是用户看到的「硬币拿不到」。
+	var alt: Button = s.get("alt_btn") as Button
+	var leave: Button = s.get("leave_btn") as Button
+	if alt == null or leave == null:
+		_smoke_fail("R365 赏月：场景里找不到 AltBtn / LeaveBtn")
+		return
+	if not alt.visible or alt.disabled:
+		_smoke_fail("R365 赏月：「拿走硬币」应可点（可见=%s 禁用=%s）"
+				% [alt.visible, alt.disabled])
+		return
+	if leave.visible:
+		_smoke_fail("R365 赏月：不该有「什么都不拿」这条出口（LeaveBtn 还露着）")
+		return
+	if alt.pressed.get_connections().is_empty():
+		_smoke_fail("R365 赏月：「拿走硬币」的 pressed 信号没有任何接收者")
+		return
+	var before: int = RunState.deck_ids.count(9181)
+	alt.pressed.emit()
+	var after: int = RunState.deck_ids.count(9181)
+	if after != before + 1:
+		_smoke_fail("R365 赏月：点了「拿走硬币」，卡组里 9181 没有 +1（%d → %d）"
+				% [before, after])
+		return
+	if not leave.visible:
+		_smoke_fail("R365 赏月：领走硬币后应只剩一个「离开」出口")
+		return
+	print("  [smoke] R365 赏月：硬币 +1（%d → %d），领完只留「离开」" % [before, after])
+
+func _check_r365_merchant(s: Node) -> void:
+	## R365：卡片商人的「折价」和赏月「拿走硬币」共用 AltBtn —— 同一条从 R305 起
+	## 就没接过的信号。这里真点一次，断言「卡少 1 张 + 金币多 VENDOR_GOLD + 只剩离开」。
+	var alt: Button = s.get("alt_btn") as Button
+	var leave: Button = s.get("leave_btn") as Button
+	if alt == null or leave == null or not alt.visible or alt.disabled:
+		_smoke_fail("R365 卡片商人：折价按钮不可用（组合里 4 张卡都该能折价）")
+		return
+	var gold0 := RunState.gold
+	var n0: int = RunState.deck_ids.size()
+	alt.pressed.emit()
+	if RunState.gold != gold0 + RunState.VENDOR_GOLD:
+		_smoke_fail("R365 卡片商人：折价后金币应 +%d（%d → %d）"
+				% [RunState.VENDOR_GOLD, gold0, RunState.gold])
+		return
+	if RunState.deck_ids.size() != n0 - 1:
+		_smoke_fail("R365 卡片商人：折价应移走 1 张卡（%d → %d）"
+				% [n0, RunState.deck_ids.size()])
+		return
+	if not leave.visible:
+		_smoke_fail("R365 卡片商人：折价后应只剩一个「离开」")
+		return
+	print("  [smoke] R365 卡片商人：折价成交（金币 %d → %d，卡 %d → %d）"
+			% [gold0, RunState.gold, n0, RunState.deck_ids.size()])
