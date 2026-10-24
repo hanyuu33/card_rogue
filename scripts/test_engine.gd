@@ -26801,8 +26801,8 @@ func _init() -> void:
 			and int(RogueMap.WEIGHTS_UNKNOWN.get("event", 0)) == 12
 			and int(RogueMap.WEIGHTS_UNKNOWN.get("elite", 0)) == 2
 			and int(RogueMap.WEIGHTS_UNKNOWN.get("chest", 0)) == 3
-			and int(RogueMap.WEIGHTS_UNKNOWN.get("shop", 0)) == 3,
-			"R369 「?」房权重未动（7 / 12 / 2 / 3 / 3）")
+			and int(RogueMap.WEIGHTS_UNKNOWN.get("shop", 0)) == 2,
+			"R369 / R371 「?」房权重：shop 3 → 2（7 / 12 / 2 / 3 / 2）")
 	check(RogueMap.SHOP_MIN == 2 and RogueMap.SHOP_MAX == 2,
 			"R369 随机商店保底 2 间（上限也 2：保底不额外拉长随机区间）")
 	check(RogueMap.REST_MIN == 2, "R369 篝火保底 2 间（常量）")
@@ -27013,6 +27013,100 @@ func _init() -> void:
 			"R370 源码锁：附魔抽牌挂在出牌唯一收尾口（played.enchant == ENCHANT_DRAW）")
 	check_src(r370_src.count("ENCHANT_DRAW") == 2,
 			"R370 源码锁：ENCHANT_DRAW 恰好 2 处（常量 + 收尾口判定），不许多写第二份抽牌")
+
+	# ================= R371：加强启示者 + 「?」房商店权重下调 =================
+	# 用户口径：「加强启示者：全阶段免疫位置移动效果。1 阶段进入 2 阶段会获得：移动速度 -1，
+	# 可行动两次。2 阶段进入 3 阶段会破坏场上所有其他单位，攻击距离 +2，场上有其他单位时
+	# 免疫攻击以外的伤害。把事件出商店的权重降低到 2，常规出商店的概率（不考虑保底）也
+	# 降低大约 30%」。
+	# ---- ① 权重：shop 3 → 2，占比 11.5% → 8.0%（降 30.4%）----
+	var r371_den := 0
+	for r371_w: int in RogueMap.WEIGHTS_UNKNOWN.values():
+		r371_den += r371_w
+	var r371_share: float = float(RogueMap.WEIGHTS_UNKNOWN["shop"]) / float(r371_den)
+	var r371_old_share: float = 3.0 / 27.0
+	check(r371_den == 26 and absf(r371_share - 2.0 / 26.0) < 0.0001,
+			"R371 「?」房权重总和 27 → 26、商店占比 11.1%% → 7.7%%（实际 %.1f%%，降 %.1f%% ≈ 30%%）"
+			% [r371_share * 100.0, (1.0 - r371_share / r371_old_share) * 100.0])
+	check(int(RogueMap.WEIGHTS.get("battle", 0)) == 7
+			and int(RogueMap.WEIGHTS.get("event", 0)) == 2
+			and int(RogueMap.WEIGHTS.get("elite", 0)) == 2,
+			"R371 明房权重不受影响（7 / 2 / 2）")
+
+	# ---- ② 启示者：全阶段位移免疫 / 阶段 2 移速-1 + 双动 / 阶段 3 清场 + 射程 +2 + 免技能 ----
+	var r371_card := repo.get_card(GameEngine.REVELATOR_ID)
+	var r371_e := _new_engine([], 20, 30)
+	r371_e.enemy_hp_infinite = true
+	r371_e.win_on_boss = GameEngine.REVELATOR_ID
+	var r371_boss := r371_e.state.place(CardData.from_dict(r371_card.to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r371_ally := r371_e.state.place(_card(99021, "我方兵", "盟友", 1, 3, 30, 1, 1),
+			Vector2i(3, 3), GameEngine.SIDE_SELF)
+	# 位移免疫（阶段 1）：击退与双向传送都无效
+	var r371_bcell := r371_e._cell_of(r371_boss)
+	var r371_kb := r371_e._knockback(GameEngine.SIDE_SELF, r371_bcell, 2)
+	check(str(r371_kb).find("免疫位移") >= 0
+			and r371_e._cell_of(r371_boss) == r371_bcell,
+			"R371 阶段 1：击退无效（%s，仍在 %s）" % [r371_kb, r371_e._cell_of(r371_boss)])
+	var r371_sw := r371_e._swap_two_units(r371_bcell, Vector2i(3, 3))
+	check(str(r371_sw).find("免疫位移") >= 0
+			and r371_e.state.unit_at(r371_bcell) == r371_boss
+			and r371_e.state.unit_at(Vector2i(3, 3)) == r371_ally,
+			"R371 阶段 1：双向传送不生效（%s）" % r371_sw)
+	check(r371_boss.effective_speed() == 2 and r371_boss.effective_range() == 2
+			and r371_e.state.unit_actions(r371_boss, GameEngine.SIDE_OPPONENT) == 1,
+			"R371 阶段 1：移速 2 / 射程 2 / 每回合 1 动（未被加强项影响）")
+
+	# 阶段 2：移速 -1、可行动两次；位移免疫仍在
+	r371_boss.health = GameEngine.REVELATOR_PHASE_2_HP
+	r371_e._revelator_check_phase(r371_boss)
+	var r371_acts2: int = r371_e.state.unit_actions(r371_boss, GameEngine.SIDE_OPPONENT)
+	check(r371_boss.boss_phase == 2 and r371_boss.effective_speed() == 1,
+			"R371 阶段 2：移动速度 2 → 1（实际 %d）" % r371_boss.effective_speed())
+	check(r371_acts2 == 2,
+			"R371 阶段 2：每回合可行动两次（实际 %d）" % r371_acts2)
+	var r371_kb2 := r371_e._knockback(GameEngine.SIDE_SELF,
+			r371_e._cell_of(r371_boss), 2)
+	check(str(r371_kb2).find("免疫位移") >= 0,
+			"R371 阶段 2：仍然免疫位移（%s）" % r371_kb2)
+
+	# 阶段 3：破坏场上所有其他单位（我方兵 + 任何敌方随从都清掉），只留它自己
+	var r371_escort := r371_e.state.place(_card(99022, "护卫", "盟友", 1, 2, 20, 1, 1),
+			Vector2i(2, 3), GameEngine.SIDE_OPPONENT)
+	r371_boss.health = GameEngine.REVELATOR_PHASE_3_HP
+	r371_e._revelator_check_phase(r371_boss)
+	check(r371_boss.boss_phase == 3 and r371_e.state.board.size() == 1
+			and not r371_e.state.board.values().has(r371_ally)
+			and not r371_e.state.board.values().has(r371_escort),
+			"R371 阶段 3：破坏场上所有其他单位（剩 %d 个，我方兵 / 护卫都没了）"
+			% r371_e.state.board.size())
+	check(r371_boss.effective_range() == 4,
+			"R371 阶段 3：攻击距离 2 → 4（实际 %d）" % r371_boss.effective_range())
+	check(r371_e._cell_of(r371_boss) == GameEngine.REVELATOR_HOME
+			and r371_boss.effective_speed() == 0,
+			"R371 阶段 3：仍退回后排中间、移速 0（实际 %s / %d）"
+			% [str(r371_e._cell_of(r371_boss)), r371_boss.effective_speed()])
+	# 场上有随从 → 非攻击伤害完全免疫；攻击照常
+	var r371_guard := r371_e.state.place(_card(99023, "随从", "盟友", 1, 2, 20, 1, 1),
+			Vector2i(2, 3), GameEngine.SIDE_OPPONENT)
+	var r371_imm := r371_e._hit_unit(r371_boss, 10, "技能")
+	check(r371_imm == 0 and r371_boss.health == GameEngine.REVELATOR_PHASE_3_HP,
+			"R371 阶段 3：有随从时免疫非攻击伤害（实际 -%d，血 %d）"
+			% [r371_imm, r371_boss.health])
+	var r371_atk := r371_e._hit_unit(r371_boss, 10, "战斗", true, true)
+	check(r371_atk == 10,
+			"R371 阶段 3：攻击伤害照常（有随从也不免疫，实际 -%d）" % r371_atk)
+	# 随从清掉之后技能又能打了（口径 = 先清随从）
+	r371_e._destroy(Vector2i(2, 3))
+	var r371_after := r371_e._hit_unit(r371_boss, 10, "技能")
+	check(r371_after == 10,
+			"R371 阶段 3：随从被清掉后非攻击伤害恢复（实际 -%d）" % r371_after)
+	# 只数**自己一方**：贴在我方半场的自家单位不算它的随从
+	r371_e.state.place(_card(99024, "我方哨兵", "盟友", 1, 2, 20, 1, 1),
+			Vector2i(4, 4), GameEngine.SIDE_SELF)
+	var r371_after2 := r371_e._hit_unit(r371_boss, 10, "技能")
+	check(r371_after2 == 10,
+			"R371 阶段 3：场上只剩玩家单位时不算「有随从」（实际 -%d）" % r371_after2)
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

@@ -202,7 +202,12 @@ func effective_speed() -> int:
 	# 自然读到 0，不必在 `_move_bfs` 里另写一条分支。
 	if boss_phase >= 3:
 		return 0
-	return maxi(0, card.move_speed + dark_lord_speed + summon_haste - night_owl_weak)
+	var sp := card.move_speed + dark_lord_speed + summon_haste - night_owl_weak
+	# R371：启示者阶段 2 起「移动速度 -1」（阶段 3 上面那行已经直接归零）。
+	# 走这个出口 = 移动 / AI 队列全部自然读到，不必在 `_move_bfs` 里另写分支。
+	if boss_phase >= 2:
+		sp -= GameEngine.REVELATOR_SPEED_DOWN
+	return maxi(0, sp)
 
 
 func effective_range() -> int:
@@ -216,7 +221,10 @@ func effective_range() -> int:
 	##    别再直接读 `card.attack_range` —— 那个不含场上加成。
 	if card == null:
 		return 0
-	return maxi(0, card.attack_range + forge_range - night_owl_weak)
+	# R371：启示者阶段 3「攻击距离 +2」。与 effective_speed 同款 —— 走这个出口，
+	# 于是 `attack_targets` 的够不够得着、AI 选目标、界面射程圈全部自动生效。
+	var rev_rng := GameEngine.REVELATOR_RANGE_UP if boss_phase >= 3 else 0
+	return maxi(0, card.attack_range + forge_range - night_owl_weak + rev_rng)
 
 
 ## 【R106】这张卡**此刻已获得**的增益 / 减益，逐条列出（一条一个 Dictionary）。

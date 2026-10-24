@@ -11201,6 +11201,21 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_bursts.append({"pos": _cell_center(rc_c), "sc": _grid_scroll, "start": n,
 					"dur": 560, "col": Color("b06be0"), "big": true})
 			_say("⚠ 后排中间被 %s 占据 → 转阶前消灭它" % rc_name)
+		"revelator_purge":
+			# R371 启示者进入第三阶段：**破坏场上所有其他单位**（敌我双方）。
+			# 引擎那边是逐个 `_destroy` 瞬结，逐个 `destroy` 事件演出来像「陆续死掉」——
+			# 这里给一条**总括演出**：满屏橙色爆点 + 重震屏 + 一句播报，前后衔接 `boss_phase`
+			# 的横幅（横幅随后到，所以这句要先说清楚「发生了什么」）。
+			var rp_ids: Array = data.get("cells", [])
+			var rp_n := int(data.get("count", rp_ids.size()))
+			sfx.play("spell")
+			n = _now()
+			_shake(12.0, 560)
+			for i in rp_ids.size():
+				var rp_c: Vector2i = rp_ids[i]
+				_bursts.append({"pos": _cell_center(rp_c), "sc": _grid_scroll,
+						"start": n, "dur": 560, "col": Color("e2703a"), "big": true})
+			_say("✦ 启示者进入第三阶段：冲击波撕碎场上 %d 个单位" % rp_n)
 		_:
 			# R288：兜底 —— 任何**还没有专属表现**的事件，只要带格子，就至少演一次
 			# 「脉冲 + 镜头」。以后新加的事件不会再静悄悄发生（这是这套演出的兜底价值）。

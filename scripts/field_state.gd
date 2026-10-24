@@ -363,6 +363,10 @@ func unit_actions(p: Placement, side: String) -> int:
 	##   都必须走这个口 —— 漏一处就会出现「上场那回合不动、下回合才双动」的错位。
 	var n := maxi(p.card.actions, extra_actions(side))
 	n = maxi(n, p.action_growth_extra)
+	# R371：启示者阶段 2 起「每回合可行动两次」—— 与卡面 `actions` / 哈气 同一条
+	# 「取最大」通道，于是 place / reset_units / apply_extra_actions 三处自动一致。
+	if p.boss_phase >= 2:
+		n = maxi(n, GameEngine.REVELATOR_ACTIONS)
 	if p.card.id == GameEngine.SUN_FORGE_FURY_ID and has_sun_forge(side):
 		n = maxi(n, GameEngine.SUN_FORGE_ACTIONS)
 	return n

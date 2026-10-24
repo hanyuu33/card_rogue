@@ -315,9 +315,12 @@ const ASSEMBLY_POOL:= [9131, 9137]   # 量产型俄倪厄 / 量产型赫利俄�
 #   ① 阶段 1（300~201）：「舰炮 9201」——该方回合开始随机轰击一列，该列**对方**全部单位
 #      各受 5 伤；整列没有目标则改打对方 HP。自身：每个回合力量 +1。
 #   ② 阶段 2（200~101）：「电磁屏障 9202」——攻击启示者的单位受到 5 伤。
-#      自身：践踏 + 受到的**技能**伤害减半。
+#      自身：践踏 + 受到的**技能**伤害减半 + **移速 -1** + **每回合可行动两次**（R371）。
 #   ③ 阶段 3（100~0）：「紧急呼叫 9203」——**玩家每个回合开始**召唤一只力量 +10 的量产型
-#      （优先出现在启示者身边）。自身：移速 0 + 与它接通的友方单位代它承受一半伤害（去尾）。
+#      （优先出现在启示者身边）。自身：移速 0 + 与它接通的友方单位代它承受一半伤害（去尾）
+#      + **登场时破坏场上所有其他单位** + **攻击距离 +2** + **有随从时免疫非攻击伤害**（R371）。
+#   R371（用户口径「加强启示者」）：**全阶段免疫位置移动效果** —— 击退 / 换位一律无效，
+#      判据收敛在 `_displace_immune()`（`_knockback` / `_swap_two_units` / 双向传送三处共用）。
 # 阶段转移（`_revelator_enter_phase`）：退回后排中间（原格有东西就消灭它）→ 换掉场上效果卡 →
 #   血量下限钳到 1 → 发 `boss_phase` 事件（界面播横幅 + 重弹敌方效果 + 右栏效果区自动刷新）。
 # ⚠️ 阶段只记 `Placement.boss_phase`，**绝不烤进 CardData**（敌方单位用的是卡库共享实例）。
@@ -329,6 +332,9 @@ const REVELATOR_PHASE_2_HP:= 200      # 生命 ≤ 200 → 第二阶段
 const REVELATOR_PHASE_3_HP:= 100      # 生命 ≤ 100 → 第三阶段
 const REVELATOR_HOME:= Vector2i(0, 1) # 每次转阶段都退回这里（后排中间）
 const REVELATOR_ATK_UP:= 1            # 阶段 1：每个（敌方）回合力量 +1
+const REVELATOR_SPEED_DOWN:= 1        # R371 阶段 2 起：移动速度 -1（阶段 3 直接 0）
+const REVELATOR_ACTIONS:= 2           # R371 阶段 2 起：每回合可行动两次
+const REVELATOR_RANGE_UP:= 2          # R371 阶段 3：攻击距离 +2（卡面 2 → 4）
 const NAVAL_GUN_TRAIT:= "舰炮"
 const NAVAL_GUN_DMG:= 5               # 卡面 value 同值；取效果区**最大**一张，不叠加
 const EM_SHIELD_TRAIT:= "电磁屏障"
@@ -2596,6 +2602,29 @@ func _revelator_enter_phase(p: Placement, phase: int) -> void:
 		_destroy(home)
 	if from_cell.x >= 0 and from_cell != home and state.board.has(from_cell):
 		state.move_unit(from_cell, home)
+	# R371：2 → 3 阶段「破坏场上所有其他单位」（敌我双方全算，只留它自己）。
+	# 走 `_destroy` 唯一口（亡语 / 击杀记功 / 离场记账与别处完全一致）。
+	# ⚠️ 先把格子抄一份再逐个杀 —— `_destroy` 里的亡语可能往 board 里**放新单位**，
+	#    直接遍历 `state.board.keys()` 等于在迭代中改字典（会漏格 / 会重复杀）。
+	var purge_cells: Array[Vector2i] = []
+	var purge_names: Array[String] = []
+	if phase >= 3:
+		for pc: Vector2i in state.board.keys():
+			var pu: Placement = state.board[pc]
+			if pu == null or pu == p:
+				continue
+			purge_cells.append(pc)
+			purge_names.append(pu.card.card_name)
+		for pc: Vector2i in purge_cells:
+			var pu2: Placement = state.unit_at(pc)
+			if pu2 == null or pu2 == p:
+				continue
+			_log("启示者进入第三阶段：%s 被冲击波撕碎" % pu2.card.card_name)
+			_destroy(pc)
+		if not purge_cells.is_empty():
+			action.emit("revelator_purge", {"cell": home, "card": p.card,
+					"cells": purge_cells, "names": purge_names,
+					"count": purge_cells.size()})
 	var eff_id:= REVELATOR_NAVAL_GUN_ID
 	match phase:
 		2:
@@ -2628,6 +2657,18 @@ func _set_revelator_effect(card_id: int) -> void:
 	var copy:= CardData.from_dict(proto.to_dict())
 	state.enemy_effects.append(copy)
 	_log("启示者阶段效果：%s 启用" % copy.card_name)
+
+
+func _revelator_has_escort(p: Placement) -> bool:
+	## 启示者阶段 3（R371）：「场上有其他单位时免疫攻击以外的伤害」的**唯一判据口**。
+	## 「其他单位」只数**启示者自己一方**的 —— 要是敌我双方都数，玩家场上只要还有一只单位
+	## 它就永久免疫技能，机制会退化成「技能永远打不动本体」，那不是这条要表达的意思。
+	## 实战口径 = **先清掉它的随从（紧急呼叫召来的量产型），技能才打得进本体**；攻击不受限。
+	for c: Vector2i in state.board:
+		var q: Placement = state.board[c]
+		if q != null and q != p and q.owner == p.owner:
+			return true
+	return false
 
 
 func _revelator_split(p: Placement, amount: int, source: String) -> int:
@@ -7932,10 +7973,10 @@ func cast_swap_units(hand_index: int, cell_a: Vector2i, cell_b: Vector2i,
 	if pa == null or pb == null:
 		return "（需要指定两个都在场上的单位）"
 	# R277：位移免疫 —— **付费之前**拦，否则费用白扣、卡也没了。
-	if pa.card.traits.has(DISPLACE_IMMUNE_TRAIT) \
-			or pb.card.traits.has(DISPLACE_IMMUNE_TRAIT):
+	# R371：判据换成 `_displace_immune()` → 启示者（9200）全阶段也算免疫。
+	if _displace_immune(pa) or _displace_immune(pb):
 		var imm_nm: String = pa.card.card_name \
-				if pa.card.traits.has(DISPLACE_IMMUNE_TRAIT) else pb.card.card_name
+				if _displace_immune(pa) else pb.card.card_name
 		_log("双向传送：%s 免疫位移，交换没有生效" % imm_nm)
 		return "（%s 免疫位移，无法交换）" % imm_nm
 	# R285：换位也是位移 —— 按**交换后的归属**判（pa 去 cell_b、pb 去 cell_a），
@@ -7963,8 +8004,8 @@ func _swap_two_units(cell_a: Vector2i, cell_b: Vector2i) -> String:
 	var pa: Placement = state.board[cell_a]
 	var pb: Placement = state.board[cell_b]
 	# R277：兜底闸门 —— 敌方 AI（`_swap_auto_cells`）与任何直接调用都不会绕过免疫。
-	if pa.card.traits.has(DISPLACE_IMMUNE_TRAIT) \
-			or pb.card.traits.has(DISPLACE_IMMUNE_TRAIT):
+	# R371：同上，统一走 `_displace_immune()`。
+	if _displace_immune(pa) or _displace_immune(pb):
 		return "（有人免疫位移，交换没有生效）"
 	# R285：兜底闸门 —— 与免疫同款，任何直接调用（AI / 以后的新入口）都绕不过去。
 	if not swap_pair_allowed(cell_a, cell_b):
@@ -10449,6 +10490,14 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		dmg = maxi(1, dmg / 2)
 		if dmg != rvb:
 			_log("启示者（电磁屏障）：技能伤害 %d → %d（减半）" % [rvb, dmg])
+	# ③c 启示者阶段 3（R371）：「场上有其他单位时免疫攻击以外的伤害」。
+	#     排在 ③b **之后**：阶段 3 已经不吃电磁屏障那条（`boss_phase == 2` 才减半），
+	#     这里是**完全免疫**，所以直接返回 0。
+	#     判据收敛在 `_revelator_has_escort()`（只数它自己一方的随从，理由写在那儿）。
+	if p != null and p.card != null and dmg > 0 and kind != "attack" \
+			and p.boss_phase >= 3 and _revelator_has_escort(p):
+		_log("启示者（阶段 3）：场上还有随从 → 免疫这次非攻击伤害")
+		return 0
 	if p != null and p.owner == SIDE_SELF:
 		dmg = _relic_damage_taken(dmg)
 	# R162：护甲优先吸收伤害（只扣护甲、不扣生命；吸收不完的才扣 HP）。
@@ -10788,13 +10837,30 @@ func _on_self_hp_damaged() -> void :
 	action.emit("pear", {"hp": state.hp_self, "max_hp": state.max_hp_self})
 
 
+func _displace_immune(p: Placement) -> bool:
+	## 「位置移动效果对它无效」的**唯一判据口**（R277 起，R371 纳入启示者）。
+	##   * R277：赫菲斯托斯 9135 带「位移免疫」trait；
+	##   * R371：启示者 9200 **全阶段**免疫 —— 用户口径「加强启示者：全阶段免疫位置移动效果」。
+	## ⚠️ 只认这**一个**口：`_knockback`（击退 / 清退 / 空间守护 / 暗影锁链）与
+	##    `_swap_two_units`（双向传送，含付费前预判）都必须调它，别再各处直接判 trait ——
+	##    那样每加一个免疫来源就要改三遍，漏一处就是「某张卡能把 Boss 推走」。
+	if p == null or p.card == null:
+		return false
+	if p.card.traits.has(DISPLACE_IMMUNE_TRAIT):
+		return true
+	if p.card.id == REVELATOR_ID:
+		return true
+	return false
+
+
 func _knockback(side: String, target, steps: int) -> String:
 	var p:= _target_placement(side, target)
 	if p == null:
 		return "（没有目标）"
 	# R277：位移免疫（赫菲斯托斯 9135）—— 判据放在这个**唯一口**，
 	# 清退陷阱 / 击退 9004 / 空间守护 9064 / 暗影锁链 9112 就全都自动生效。
-	if p.card.traits.has(DISPLACE_IMMUNE_TRAIT):
+	# R371：启示者（9200）同样走这里 → 全阶段免疫位置移动效果。
+	if _displace_immune(p):
 		_log("%s 免疫位移：没有被击退" % p.card.card_name)
 		return "%s 免疫位移" % p.card.card_name
 	var cell:= _cell_of(p)

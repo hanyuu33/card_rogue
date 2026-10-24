@@ -123,7 +123,18 @@ LEVEL_NOTES = {
 （`_rev_face_phase`，比引擎晚一拍）→ ④ 再重弹「敌方效果」弹窗。
 
 **本层不走巧克力**（R357）：直道 4 格 `cost` 恒为 0，HUD 不显示步数计数，
-永不入夜 —— **走到 Boss 格即开战**（`map_scene._commit_enter` 的 `"boss"` 分支）。''',
+永不入夜 —— **走到 Boss 格即开战**（`map_scene._commit_enter` 的 `"boss"` 分支）。
+
+**三阶段强化（R371，用户口径「加强启示者」）**：
+* **全阶段免疫位置移动** —— 击退 / 推走 / 换位置一律无效，判据收在
+  `GameEngine._displace_immune()`（`_knockback` / `_swap_two_units` / 双向传送付费前预判三处共用）。
+* **1 → 2 阶段**：**移动速度 -1**（2 → 1，走 `Placement.effective_speed()`）、
+  **每回合可行动两次**（`FieldState.unit_actions()` 的「取最大」通道，常量 `REVELATOR_ACTIONS = 2`）。
+* **2 → 3 阶段**：**登场瞬间破坏场上所有其他单位**（敌我双方全清，走 `_destroy` 唯一口，
+  界面播 `revelator_purge` 事件）、**攻击距离 +2**（2 → 4，`effective_range()`）、
+  **场上有其他友方单位时免疫攻击以外的伤害**（判据 `_revelator_has_escort()` ——
+  只数**它自己一方**的随从；敌我双方都数会让玩家场上还有单位时它永久免技能）。
+* 阶段 3 原有的「移速 0 + 接通代受」不变；三阶段卡图 / 转阶段演出顺序同 R357。''',
 }
 
 # ---------- 3. 总览 ----------
