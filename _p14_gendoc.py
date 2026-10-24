@@ -58,13 +58,16 @@ for ch in re.split(r'\n(?=static func _)', src):
     if um:
         for line in um.group(1).split('\n'):
             mm = re.match(
-                r'\s*\[(\d+),\s*"([^"]+)",\s*(-?\d+),\s*(-?\d+),\s*(-?\d+),\s*(-?\d+),\s*Vector2i\((\d+),\s*(\d+)\)\]', line)
+                r'\s*\[(\d+),\s*"([^"]+)",\s*(-?\d+),\s*(-?\d+),\s*(-?\d+),\s*(-?\d+),\s*Vector2i\((\d+),\s*(\d+)\)'
+                r'(?:,\s*\{"range_bonus":\s*(-?\d+)\})?\]', line)
             if mm:
                 units.append({
                     'id': int(mm.group(1)), 'name': mm.group(2),
                     'power': int(mm.group(3)), 'health': int(mm.group(4)),
                     'range': int(mm.group(5)), 'speed': int(mm.group(6)),
                     'row': int(mm.group(7)), 'col': int(mm.group(8)),
+                    # R366：编成元组第 8 项 = 本关专属加成（目前只有 range_bonus）
+                    'bonus': int(mm.group(9)) if mm.group(9) else 0,
                 })
     levels[key] = {
         'func': '_' + key, 'name': g('name'), 'key': g('key'),
@@ -105,6 +108,23 @@ w = out.write
 w('# 卡牌肉鸽 · 关卡与敌人配置总览\n\n')
 w('> 由 `scripts/game_levels.gd` + `cards.json` **自动抽取**生成；改数据后重跑 `_p14_gendoc.py` 即可刷新。\n')
 w('> 棋盘 = **6 行 × 3 列**，格子键 `Vector2i(行, 列)`；敌方占 row 0~2，**row 0 = 最后排**（最靠敌方底线）。\n\n')
+
+# R366：**关卡手写备注**——原样写进 §四 该关编成表之后。
+# 这些段落以前是直接改 md 写进去的，重跑生成器就被整段吃掉；搬到这里才安全。
+LEVEL_NOTES = {
+    'boss_revelator': '''**三阶段卡图（R357）**：`assets/pics/9200.png` = 第 1 阶段（远景·舰炮开火），
+`9200_p2.png` = 第 2 阶段（近景·电磁屏障展开），`9200_p3.png` = 第 3 阶段（舰内·破损起火）。
+取图口径在 `CardFace.art_for(id, sleeping, phase)`：`phase >= 2` 时优先取 `<id>_p<phase>.png`，
+缺图逐级回退到基础图。画面上**不再叠加任何阶段文字**——阶段信息由横幅 / 飘字负责。
+
+**转阶段演出顺序（R357，用户口径）**：① 本体先**滑回后排中间**（`_slides` 补间，460ms）
+→ ② 播特效动画（900ms）：1→2 是淡蓝透明**蜂窝（小正六边形）电磁屏障从上到下覆盖卡面**，
+2→3 是**燃烧从上往下掠过卡面**（留下焦痕与余烬）→ ③ 特效**播完之后**才换卡面
+（`_rev_face_phase`，比引擎晚一拍）→ ④ 再重弹「敌方效果」弹窗。
+
+**本层不走巧克力**（R357）：直道 4 格 `cost` 恒为 0，HUD 不显示步数计数，
+永不入夜 —— **走到 Boss 格即开战**（`map_scene._commit_enter` 的 `"boss"` 分支）。''',
+}
 
 # ---------- 3. 总览 ----------
 w('## 一、总览\n\n')
@@ -219,9 +239,18 @@ for li, (layer, lst) in enumerate([('第一层', l1), ('第二层', l2), ('第�
             w('| 卡 id | 名称 | 攻 | 血 | 程 | 速 | 位置(行,列) | 排位 |\n|---|---|---|---|---|---|---|---|\n')
             for u in lv['units']:
                 pos = '后排' if u['row'] == 0 else ('中排' if u['row'] == 1 else '前排')
-                w('| %d | %s | %d | %d | %d | %d | (%d,%d) | %s |\n'
-                  % (u['id'], u['name'], u['power'], u['health'], u['range'], u['speed'], u['row'], u['col'], pos))
+                # R366：元组第 8 项存在时，程写成「实际值（+N）」
+                rng_s = ('%d（+%d）' % (u['range'], u['bonus'])) if u.get('bonus') else str(u['range'])
+                w('| %d | %s | %d | %d | %s | %d | (%d,%d) | %s |\n'
+                  % (u['id'], u['name'], u['power'], u['health'], rng_s, u['speed'], u['row'], u['col'], pos))
+            ov = [u for u in lv['units'] if u.get('bonus')]
+            if ov:
+                w('\n- **本关专属加成**：' + '；'.join(
+                    '%s (%d,%d) 程 +%d（元组第 8 项 `range_bonus`）'
+                    % (u['name'], u['row'], u['col'], u['bonus']) for u in ov) + '\n')
         w('\n')
+        if lv['key'] in LEVEL_NOTES:
+            w(LEVEL_NOTES[lv['key']] + '\n\n')
 
 # 彩蛋关卡（不在 builtin_levels，独立一节）
 rv = levels.get('boss_demon_duck_revenge')
@@ -330,7 +359,8 @@ w('抽取口径：\n\n')
 w('- 关卡列表 = `builtin_levels()` 的 return 数组顺序（**唯一权威顺序**），逐个解析对应 `static func _xxx()`\n')
 w('- `tier` 常量 → 分级名；`layer` 常量 → 层名\n')
 w('- 敌方卡 = `cards.json` 中 `class == "敌人"` 的卡（共 %d 张）\n' % len(enemy_cards))
-w('- 「登场关卡」按各关 `enemy_units` 元组统计（**不含** `enemy_effects` 效果卡）\n\n')
+w('- 「登场关卡」按各关 `enemy_units` 元组统计（**不含** `enemy_effects` 效果卡）\n')
+w('- 编成元组第 8 项 = 本关专属加成（`{"range_bonus": N}`）：程一栏写成 `2（+1）`，并单列一行\n\n')
 w('⚠️ 若新增关卡，请同步：① `builtin_levels()` 挂载 ② §二分级分布 ③ §四关卡明细 ④ 基线测试\n')
 
 open(os.path.join(ROOT, '关卡与敌人配置总览.md'), 'wb').write(out.getvalue().encode('utf-8'))

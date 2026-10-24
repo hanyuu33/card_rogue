@@ -5888,8 +5888,10 @@ func _init() -> void:
 				continue
 			if om_ucard.group != "enemy":     # 图鉴分组：关卡单位必须在敌人图鉴里
 				om_drift += " %s/%s(分组%s)" % [om_lvl2["name"], om_ucard.card_name, om_ucard.group]
+			# R366：程允许比卡库高 —— 编成元组第 8 项 `range_bonus` 是**本关专属**加成
+			# （百臂工场两座塔 1 → 2）。同源口径 = 卡库程 + 本关加成，其它项一字不让。
 			if om_ucard.power != int(om_u[2]) or om_ucard.health != int(om_u[3]) \
-					or om_ucard.attack_range != int(om_u[4]) \
+					or om_ucard.attack_range + GameLevels.unit_range_bonus(om_u) != int(om_u[4]) \
 					or om_ucard.move_speed != int(om_u[5]):
 				om_drift += " %s/%s" % [om_lvl2["name"], om_ucard.card_name]
 		# 图鉴分组：敌方关卡效果同样必须落在敌人图鉴里（且被识别为「关卡效果」）
@@ -16680,20 +16682,45 @@ func _init() -> void:
 	var r152_units: Array = r152_lv["enemy_units"]
 	check(r152_units.size() == 3
 			and int(r152_units[0][0]) == 9136 and r152_units[0][6] == Vector2i(0, 1)
-			and int(r152_units[1][0]) == 9137 and r152_units[1][6] == Vector2i(1, 0)
-			and int(r152_units[2][0]) == 9137 and r152_units[2][6] == Vector2i(1, 2),
-			"R152 站位：赫卡同克瑞斯 (0,1) 后排中央 + 两座量产型赫利俄斯 (1,0) / (1,2) 中排左右")
-	# 元组只是**文档**：引擎 `repo.get_card(id)` 命中时读卡库那份 → 逐项同源
+			and int(r152_units[1][0]) == 9137 and r152_units[1][6] == Vector2i(2, 0)
+			and int(r152_units[2][0]) == 9137 and r152_units[2][6] == Vector2i(2, 2),
+			"R152/R366 站位：赫卡同克瑞斯 (0,1) 后排中央 + 两座塔 (2,0) / (2,2) 顶到前排")
+	# R366（用户口径「百臂工厂需要加强，让那个敌方工事攻击距离+1且移动到敌方前排
+	# (2,0) 和 (2,2)」）：元组第 4 项（程）写**实际值 2**，第 8 项才是加成本体。
+	check(int(r152_units[1][4]) == 2 and int(r152_units[2][4]) == 2
+			and GameLevels.unit_range_bonus(r152_units[1]) == 1
+			and GameLevels.unit_range_bonus(r152_units[2]) == 1,
+			"R366 百臂工场：两座塔元组程写 2，第 8 项 range_bonus = 1")
+	check(GameLevels.unit_range_bonus([]) == 0
+			and GameLevels.unit_range_bonus(r152_units[0]) == 0,
+			"R366 加成只认第 8 项：没写 / 大哥那条都是 0（不误伤别的单位）")
+	# 加成走**副本**：套完卡库原卡必须还是程 1（否则图鉴 / 量产流水线 / 百眼动员一起变）
+	var r152_buffed: CardData = GameLevels.with_unit_override(
+			r152_repo.get_card(9137), r152_units[1])
+	check(r152_buffed != null and r152_buffed.attack_range == 2,
+			"R366 关卡加成：塔的副本程 1 → 2（实际 %d）"
+			% (r152_buffed.attack_range if r152_buffed != null else -1))
+	check(r152_mh.attack_range == 1 and r152_repo.get_card(9137).attack_range == 1,
+			"R366 卡库原卡不受影响：9137 仍是程 1（只加强百臂工场这一关）")
+	check(GameLevels.with_unit_override(r152_mh,
+			[9137, "量产型赫利俄斯", 6, 30, 1, 0, Vector2i(1, 0)]).attack_range == 1,
+			"R366 with_unit_override：没有第 8 项时原样返回（不吃加成）")
+	# 元组只是**文档 + 缺卡兜底**：卡库命中时读那份 → 逐项同源（程 = 卡库 + 本关加成）
 	var r152_src := true
 	for r152_u: Array in r152_units:
 		var r152_uc: CardData = r152_repo.get_card(int(r152_u[0]))
 		if not (str(r152_u[1]) == r152_uc.card_name
 				and int(r152_u[2]) == r152_uc.power
 				and int(r152_u[3]) == r152_uc.health
-				and int(r152_u[4]) == r152_uc.attack_range
+				and int(r152_u[4]) == r152_uc.attack_range \
+						+ GameLevels.unit_range_bonus(r152_u)
 				and int(r152_u[5]) == r152_uc.move_speed):
 			r152_src = false
-	check(r152_src, "R152 三个单位的元组与卡库卡面逐项同源（名/力/生/程/速）")
+	check(r152_src, "R152/R366 元组与卡库逐项同源（程 = 卡库 + 本关加成）")
+	# `load_level` 是唯一铺敌方单位的口：元组第 8 项必须真的被套上去（否则白写）
+	var r366_bsrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r366_bsrc.find("GameLevels.with_unit_override(card, e)") >= 0,
+			"R366 源码：load_level 铺单位时套用编成加成（副本，不动卡库）")
 
 	# ① 量产型赫利俄斯光环：技能伤害减半（向上取整）；光环源自己不吃、攻击不吃
 	var r152_e := _new_engine([], 30, 30)

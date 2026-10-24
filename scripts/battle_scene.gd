@@ -3800,8 +3800,13 @@ func load_level(lvl: Dictionary) -> void:
 			card.cost = 1
 			card.power = int(e[2])
 			card.health = int(e[3])
-			card.attack_range = int(e[4])
+			# R366：元组第 4 项写的是**加成后的实际程**，所以这里要先减回卡库基础值 ——
+			# 加成统一由下面的 `with_unit_override` 套一次，不然这条兜底路会双计。
+			card.attack_range = int(e[4]) - GameLevels.unit_range_bonus(e)
 			card.move_speed = int(e[5])
+		# R366：编成元组第 8 项可以**单独**给这只单位加成（百臂工场两座塔程 +1）。
+		# 卡库命中时 `card` 是原卡，就地改 = 改全局 → `with_unit_override` 返回副本。
+		card = GameLevels.with_unit_override(card, e)
 		# R223 难度 3 / 6：敌方开场缩放（生命 +10% / 攻击 +1）。scaled_enemy_card
 		# 内部按需返回**副本**、否则原样返回 —— 绝不改卡库原卡（卡库与关卡编成同源）。
 		# 与下面的 configure_growth（atk_growth 独立叠加）互不相干。

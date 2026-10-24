@@ -339,6 +339,15 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "event"}
 				RunState.pending_event = "card_merchant",
 			_check_r365_merchant],
+		# R366（用户口径）：百臂工场加强 —— 两座量产型赫利俄斯攻击距离 +1 并顶到敌方前排
+		#   (2,0)/(2,2)。这里走**真场景**：引擎侧只看元组和 helper 是验不到「铺上去的
+		#   到底是不是副本 + 程到底几」的，必须在 load_level 跑完之后读场面。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map(), GameLayers.LAYER_TWO)
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = GameLevels.builtin_levels()[13],
+			_check_r366_hecaton],
 	]
 	print("SMOKE === 开始（%d 项场景用例）===" % _plan.size())
 	_next()
@@ -3861,3 +3870,37 @@ func _check_r365_merchant(s: Node) -> void:
 		return
 	print("  [smoke] R365 卡片商人：折价成交（金币 %d → %d，卡 %d → %d）"
 			% [gold0, RunState.gold, n0, RunState.deck_ids.size()])
+
+func _check_r366_hecaton(s: Node) -> void:
+	## R366：百臂工场（builtin 下标 13）开局盘面 = 大哥 (0,1) + 两座塔 (2,0)/(2,2)，
+	## 塔的实际程必须是 **2**（元组第 8 项 range_bonus 只在 load_level 里生效）。
+	## 顺带钉住「加成走副本」：卡库里的 9137 必须还是程 1。
+	var eng: Variant = s.get("engine")
+	if eng == null:
+		_smoke_fail("R366 百臂工场：战斗场景没有 engine")
+		return
+	var want := {Vector2i(0, 1): 9136, Vector2i(2, 0): 9137, Vector2i(2, 2): 9137}
+	for cell: Vector2i in want.keys():
+		var p: Placement = eng.state.unit_at(cell)
+		if p == null:
+			_smoke_fail("R366 百臂工场：%s 上没有单位（期望 %d）" % [str(cell), want[cell]])
+			return
+		if p.card.id != int(want[cell]):
+			_smoke_fail("R366 百臂工场：%s 上是 %d，期望 %d"
+					% [str(cell), p.card.id, int(want[cell])])
+			return
+	for cell: Vector2i in [Vector2i(2, 0), Vector2i(2, 2)]:
+		var p2: Placement = eng.state.unit_at(cell)
+		if p2.effective_range() != 2:
+			_smoke_fail("R366 百臂工场：%s 的塔程 = %d，期望 2"
+					% [str(cell), p2.effective_range()])
+			return
+		if p2.card.attack_range != 2:
+			_smoke_fail("R366 百臂工场：%s 的塔本体程 = %d，期望副本里的 2"
+					% [str(cell), p2.card.attack_range])
+			return
+	if CardRepo.load_json().get_card(9137).attack_range != 1:
+		_smoke_fail("R366 百臂工场：卡库 9137 被改成了程 %d（应为 1）"
+				% CardRepo.load_json().get_card(9137).attack_range)
+		return
+	print("  [smoke] R366 百臂工场：(0,1) 大哥 + (2,0)/(2,2) 塔，塔程 2，卡库仍 1")

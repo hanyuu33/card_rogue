@@ -180,9 +180,34 @@ static func extra_cards(_repo: CardRepo) -> Array[CardData]:
 	return []
 
 
+static func unit_range_bonus(e: Array) -> int:
+	## R366：编成元组**第 8 项**（可选字典）= 这一关单独给该单位的加成。
+	## 当前只认 `{"range_bonus": N}` —— 百臂工场把两座量产型赫利俄斯的程 1 提到 2。
+	## ⚠️ 元组前六项只是「文档 + 卡库缺卡时的兜底」：卡库里有定义时 `load_level` 一律读
+	##    卡库那份（`repo.get_card()` 命中就直接用）。所以**想只加强某一关的某一只，
+	##    只能走这里** —— 改 cards.json 会让三关（百臂工场 / 量产流水线 / 百眼动员）一起变。
+	if e.size() < 8 or not (e[7] is Dictionary):
+		return 0
+	return int((e[7] as Dictionary).get("range_bonus", 0))
+
+
+static func with_unit_override(card: CardData, e: Array) -> CardData:
+	## R366：把编成加成套到**副本**上。`card` 本身绝不被修改（返回新实例或原样返回）。
+	## ⚠️ 必须复制：卡库命中时传进来的就是 `repo.get_card()` 的**原卡**，`place()` 也直接
+	##    引用它 —— 就地 `attack_range += 1` 会把加强烙进卡库（图鉴 / 另外两关跟着变，
+	##    而且当局结束也不会还原）。与 R325 `RunState.scaled_enemy_card` 同一条纪律。
+	var bonus := unit_range_bonus(e)
+	if card == null or bonus == 0:
+		return card
+	var c := CardData.from_dict(card.to_dict())
+	c.attack_range += bonus
+	return c
+
+
 static func _encounter() -> Dictionary:
 	## 普通敌人-简单：中排左右各一只鸭子骑士（3/30，速 2，击杀成长），AI 推进。
-	## enemy_units: [id, 名称, 力, 生, 程, 速, 格子]
+	## enemy_units: [id, 名称, 力, 生, 程, 速, 格子]（第 8 项可选 = 本关专属加成，
+	##   现在只认 `{"range_bonus": N}`；见 `unit_range_bonus()` / `with_unit_override()`）
 	return {
 		"name": "鸭子骑士来袭",
 		"key": "duck_knight",
@@ -963,7 +988,7 @@ static func _sun_forge() -> Dictionary:
 
 static func _hecaton() -> Dictionary:
 	## 第二层·普通敌人-困难（R152「百臂工场」）：一只赫卡同克瑞斯（9136，8/50 程1 速1）
-	## + 两座量产型赫利俄斯（9137，**工事** 6/30 程1 速0 —— 打得到人但不会移动）。
+	## + 两座量产型赫利俄斯（9137，**工事** 6/30 **程2** 速0 —— 打得到人但不会移动）。
 	##
 	## 赫卡同克瑞斯（R152）：**回合开始时**若场上没有其他己方单位，获得力量 +2 与
 	## 「受到的攻击伤害减半」—— 实时扫场面（`_refresh_hecaton`），塔一倒就生效、
@@ -974,7 +999,13 @@ static func _hecaton() -> Dictionary:
 	## 取舍：两座塔各 30 血、打人 6，还压着全场的技能流；拆掉它们大哥就会狂暴
 	## （10 攻 + 攻击减半）。先拆塔还是先磨 50 血的大哥，就是这关的核心决策。
 	## ⚠️ 站位按 `Vector2i(行, 列)`（board key 语义，敌方占 row 0~2，row 0 = 最后排）：
-	##    大哥 (0,1) 坐镇后排中央，两座塔 (1,0)/(1,2) 扎中排左右。
+	##    大哥 (0,1) 坐镇后排中央，两座塔 **(2,0)/(2,2) 顶到前排**。
+	## R366（用户口径「百臂工厂需要加强，让那个敌方工事攻击距离+1且移动到敌方前排
+	## (2,0) 和 (2,2)」）：塔从中排挪到前排，程 1 → 2；程的加强写在元组第 8 项
+	## `{"range_bonus": 1}`（**只加强这一关**，卡库 9137 仍是程 1）。
+	##    距离是**曼哈顿**：塔窝在中排 row 1 程 1 时够得着的只有自家半场，等于纯肉盾；
+	##    顶到前排 row 2 程 2 才真能打到我方 (3,0)/(3,1)/(4,0) 一带 —— 这才是「加强」，
+	##    同时也把「前排被塔占住、中路 (2,1) 留一个口」的取舍摆到玩家面前。
 	## ⚠️ 摆放顺序：赫卡同克瑞斯写在**数组最前**（与 _sun_forge 的赫利俄斯同理 ——
 	##    光环源先上场，随后 `_refresh_hecaton` 才能立刻把它算进「唯一单位」判定）。
 	return {
@@ -991,8 +1022,8 @@ static func _hecaton() -> Dictionary:
 		"starting_hand": 0,
 		"enemy_units": [
 			[9136, "赫卡同克瑞斯", 8, 50, 1, 1, Vector2i(0, 1)],
-			[9137, "量产型赫利俄斯", 6, 30, 1, 0, Vector2i(1, 0)],
-			[9137, "量产型赫利俄斯", 6, 30, 1, 0, Vector2i(1, 2)],
+			[9137, "量产型赫利俄斯", 6, 30, 2, 0, Vector2i(2, 0), {"range_bonus": 1}],
+			[9137, "量产型赫利俄斯", 6, 30, 2, 0, Vector2i(2, 2), {"range_bonus": 1}],
 		],
 		"tutorial": [],
 	}
