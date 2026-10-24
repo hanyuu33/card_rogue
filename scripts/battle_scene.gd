@@ -1424,6 +1424,26 @@ func _ready() -> void:
 		status_text = "R348 左栏「现在打出」"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--nowshow" in args and engine != null:
+		# 演示（R348）：**任意一张伤害技能**的左栏「现在打出：N 点伤害」—— 逐张验收用。
+		# 参数 = 卡 id（如 --nowshow 9104）。手牌**只放这一张**：收尾 9104 的强化判据是
+		# 「手牌仅剩它」，多放一张就测不到强化分支。
+		var nid := 0
+		for ni in args.size():
+			if args[ni] == "--nowshow":
+				if ni + 1 < args.size() and str(args[ni + 1]).is_valid_int():
+					nid = int(args[ni + 1])
+		engine.state.hand.clear()
+		engine.state.energy = 9
+		var ncard: CardData = repo.get_card(nid) if nid > 0 else null
+		if ncard != null:
+			engine.state.hand.append(CardData.from_dict(ncard.to_dict()))
+		_demo_hover_idx = 0
+		_hover_hand = 0
+		_hover_card = engine.state.hand[0] if not engine.state.hand.is_empty() else null
+		status_text = "R348 现在打出 · %d" % nid
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--r330card" in args and engine != null:
 		# 演示（R330）：以太恶魔 9068 费用 5 → 6 / 代达罗斯 8060 5 费 8/18 → 4 费 5/16。
 		#   效果区摆 2 张效果卡 → 以太恶魔实际 6-2=4 费（手卡绿圈），左栏详情仍是原价 6 费。
