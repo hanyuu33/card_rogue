@@ -233,6 +233,10 @@ const SEED_ALPHABET := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # ---- 道具 ----
 static var relics: Array[int] = []           # 已拥有的道具 id（跨战斗保留）
+## R352：本局的**禁卡快照**（开局那一刻从 `ProfileData.bans_of(职业)` 复制一份）。
+## 用户口径：「禁用可以随时修改，但是当前正在进行的战斗只遵照开始前设置的禁用」——
+## 所以局内奖励池只认这一份，局外改禁卡表**不影响**进行中的这一局。
+static var run_bans: Array[int] = []
 static var skipped_relics: Array[int] = []   # 奖励掉落里被「跳过」的道具 id：本局后续不再随机出来
 static var relic_choice: Array[int] = []     # 起点三选一的候选（选定后清空）
 static var pending_relic := -1               # 等待卡组选择的即时道具 id（-1 = 无）
@@ -624,6 +628,9 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	run_rng.seed = run_seed
 	run_active = true
 	player_class = cid if cid != "" else PlayerClass.default_id()
+	# R352：统计「开局次数」—— 故事 1 的解锁条件就是「进行任意一局游戏」。
+	# 只记内存 + 置脏，落盘交给 `flush()`（`map_scene` 进地图时会调）。
+	ProfileData.bump(ProfileData.K_RUN_START)
 	map_cells = map if not map.is_empty() else RogueMap.generate(run_rng, layer)
 	current_layer = layer
 	cleared_ids = []
@@ -660,6 +667,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# 「第一层是否摇中恶魔鸭」置位。顺序不能反，否则会用到上一局残留的 pending。
 	revenge_pending = false
 	boss_pick = _roll_boss(current_layer)
+	# R352：禁卡开局快照 —— 必须在 `player_class` 定下来之后取。
+	run_bans = ProfileData.bans_of(player_class)
 	relics = []
 	bandage_pending = 0
 	skipped_relics = []
@@ -724,6 +733,7 @@ static func end_run(clear_save: bool = true) -> void:
 	used_levels = []
 	map_strokes = []              # R177：本局结束 → 标记随之清掉
 	map_flags = []
+	run_bans = []          # R352：本局结束 → 禁卡快照作废（下一局重新取）
 	relics = []
 	bandage_pending = 0
 	relic_choice = []
@@ -932,6 +942,17 @@ static func enchant_master_on_rest() -> Dictionary:
 	var c := CardRepo.load_json().get_card(deck_ids[idx])
 	return {"ok": true, "idx": idx, "ench": eid2,
 			"card": c.card_name if c != null else "?"}
+
+
+static func is_card_banned(id: int) -> bool:
+	## 奖励池禁卡的**唯一判据**（R352）—— `CardRepo.reward_pool()` 读它。
+	##   * 局内（`run_active`）→ 只认**开局快照** `run_bans`；
+	##   * 局外（标题 / 图鉴 / 演示 / 测试）→ 退回账号表「任意职业禁过都算禁」。
+	## ⚠️ 别在别处直接读 `ProfileData.bans_of()` 去过滤奖励池：那会让局外改禁卡表
+	##    立刻影响正在进行的这一局，与用户口径冲突。
+	if run_active:
+		return run_bans.has(id)
+	return ProfileData.is_banned_any(id)
 
 
 static func has_relic(id: int) -> bool:

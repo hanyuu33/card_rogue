@@ -160,6 +160,10 @@ func _ready() -> void:
 	sfx = Sfx.new()
 	add_child(sfx)
 	_records = RunState.load_records()
+	# R352：进地图检查一次成就 —— 「进行任意一局游戏」解锁故事 1。
+	# 幂等，随便多调（读档续战也会跑到这里，不会重复解锁）。
+	ProfileData.check_achievements(StoryRepo.load_json())
+	ProfileData.flush()
 	# R339：本层 Boss 已经打完、但层还没推进（在结算面板上直接关掉游戏 / 走选卡页回到地图）
 	# → 这里补一次推进。否则地图会停在「Boss 已打、巧克力 0」的死局：既不会再入夜，也走不动。
 	# ⚠️ 必须排在兜底 start_run **之前**：advance_layer 会换层 + 满血，不需要再开新局。

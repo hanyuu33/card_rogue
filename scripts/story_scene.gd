@@ -20,8 +20,14 @@ extends Control
 ## 现在是**空壳期**：正文全部为空（显示「（这一段故事还没有写。）」），`grants` 也全空。
 ## 填内容只需要改 `stories.json`，这个界面一行都不用动。
 ##
+## 解锁动画（R352）：在正文面板点「收下这一段」后，拿到的卡牌 / 道具会**逐个浮现**
+## 出来（名字 + 稀有度 + 类型），玩家一眼看清「往奖励池里加了什么」。
+## 动画是纯时间驱动（`_reveal_t` + `_process` 推进），不用 Tween —— 这样截图能精确停在
+## 任意一帧，出图验收不用赌一个 `await`。
+##
 ## 出图参数：
 ##   `-- --screenshot`                 直接截列表
+##   `-- --screenshot --reveal`        演一遍解锁动画（测试档案；第 1 段的条件直接灌满）
 ##   `-- --screenshot --demo`          先把全部剧情解锁（写进**测试档案**，不碰真实进度）再截
 ##   `-- --screenshot --demomix`       凑齐三种状态：第 0 段已读、第 1 段可查看、其余未达成
 ##   `-- --screenshot --demo --story N` 再打开第 N 段（0 起）的正文面板
@@ -31,6 +37,10 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 const ROW_H := 76.0
 const ROW_W := 980.0
 const LIST_Y := 132.0
+## R352 解锁动画的节奏：每张间隔 / 单张淡入时长 / 行高。
+const REVEAL_INTERVAL := 0.30
+const REVEAL_FADE := 0.26
+const REVEAL_ROW_H := 92.0
 
 var _font: Font
 var _font_bold: Font
@@ -44,6 +54,9 @@ var _sel := -1                       # 打开的正文下标（-1 = 列表）
 var _toast := ""                     # 底部一次性提示（「已解锁」/「条件还没达成」）
 var _toast_t := 0.0
 var _last_mp := Vector2.INF
+## R352 解锁动画的条目：{kind, name, sub, col}。非空 = 动画正在播 / 播完等点击。
+var _reveal: Array = []
+var _reveal_t := 0.0
 
 
 func _ready() -> void:
@@ -65,12 +78,20 @@ func _ready() -> void:
 		_satisfy_all()
 	ProfileData.check_achievements(_repo)
 	ProfileData.flush()
+	if "--reveal" in args:
+		# 出图：在**测试档案**里把第 1 段的条件灌满并直接收下 → 演解锁动画。
+		# 走的是真实链路（claim_episode → _start_reveal），不是硬造数据。
+		_satisfy_all()
+		if not _episodes.is_empty():
+			var rv_res := ProfileData.claim_episode(_repo,
+					str((_episodes[0] as Dictionary).get("id", "")))
+			_start_reveal(rv_res.get("cards", []), rv_res.get("relics", []))
 	if "--screenshot" in OS.get_cmdline_user_args():
 		var di := args.find("--story")
 		if di >= 0 and di + 1 < args.size() and not _episodes.is_empty():
 			_open_detail(clampi(int(args[di + 1]), 0, _episodes.size() - 1))
 		var t := Timer.new()
-		t.wait_time = 0.6
+		t.wait_time = 1.05 if not _reveal.is_empty() else 0.6
 		t.one_shot = true
 		t.timeout.connect(func():
 			var img := get_viewport().get_texture().get_image()
@@ -180,6 +201,14 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	# R352 解锁动画：播完之前吞掉所有点击，播完点一下关掉（别让玩家漏看奖励）。
+	if not _reveal.is_empty():
+		if event is InputEventMouseButton and event.pressed \
+				and event.button_index == MOUSE_BUTTON_LEFT and _reveal_finished():
+			sfx.play("click")
+			_reveal = []
+			queue_redraw()
+		return
 	# 正文面板打开时，输入全交给面板
 	if _sel >= 0:
 		if event is InputEventMouseButton and event.pressed \
@@ -240,14 +269,9 @@ func _claim(idx: int) -> void:
 		sfx.play("lose")
 		return
 	sfx.play("win")
-	var cards: Array = res.get("cards", [])
-	var relics: Array = res.get("relics", [])
-	if cards.is_empty() and relics.is_empty():
-		_set_toast("已解锁（这一段暂时没有额外奖励）")
-	else:
-		_set_toast("已解锁：卡牌 %d 张 · 道具 %d 件已加入奖励池" % [cards.size(), relics.size()])
 	_close_detail()
-	queue_redraw()
+	# R352：不再只弹一行 toast —— 拿到的每一样都会在解锁动画里逐个浮现。
+	_start_reveal(res.get("cards", []), res.get("relics", []))
 
 
 func _set_toast(msg: String) -> void:
@@ -257,6 +281,9 @@ func _set_toast(msg: String) -> void:
 
 
 func _process(delta: float) -> void:
+	if not _reveal.is_empty() and not _reveal_finished():
+		_reveal_t += delta
+		queue_redraw()
 	if _toast_t > 0.0:
 		_toast_t = maxf(0.0, _toast_t - delta)
 		if _toast_t <= 0.0:
@@ -378,6 +405,8 @@ func _draw() -> void:
 				HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, UiTheme.FS_LABEL, Color("f2d99a"))
 	if _sel >= 0 and _sel < _episodes.size():
 		_draw_detail()
+	if not _reveal.is_empty():
+		_draw_reveal()
 
 
 func _draw_row(idx: int, ep: Dictionary) -> void:
@@ -515,3 +544,86 @@ func _wrapped_body(eid: String, w: float) -> Array[String]:
 		for line: String in TextWrap.wrap_plain(_font, para, w, UiTheme.FS_BODY):
 			out.append(line)
 	return out
+
+
+# ------------------------------------------------------------ 解锁动画（R352）
+
+func _start_reveal(cards: Array, relics: Array) -> void:
+	## 把「这一段给了什么」整理成动画条目并开播。
+	## cards / relics 是 `ProfileData.claim_episode()` 的返回（**本次新解锁的**，
+	## 已经解锁过的不会重复出现在这里）。
+	_reveal = []
+	var crepo := CardRepo.load_json()
+	for v: Variant in cards:
+		var c := crepo.get_card(int(v))
+		if c == null:
+			continue
+		var rar := clampi(c.rarity, 0, 6)
+		_reveal.append({
+			"kind": "card",
+			"name": c.card_name,
+			"sub": "%s · %s · %d 费" % [CardData.RARITY_NAMES[rar],
+					c.kind, c.cost],
+			"col": CardData.RARITY_COLORS[rar],
+		})
+	var rrepo := RelicRepo.load_json()
+	for v2: Variant in relics:
+		var r := rrepo.get_relic(int(v2))
+		if r == null:
+			continue
+		_reveal.append({
+			"kind": "relic",
+			"name": r.relic_name,
+			"sub": "道具 · %s" % r.tier_label(),
+			"col": r.tier_color(),
+		})
+	_reveal_t = 0.0
+	if _reveal.is_empty():
+		_set_toast("已解锁（这一段没有额外奖励）")
+	queue_redraw()
+
+
+func _reveal_finished() -> bool:
+	## 最后一条也淡入完了 → 可以点掉。
+	if _reveal.is_empty():
+		return false
+	var n := _reveal.size()
+	return _reveal_t >= (n - 1) * REVEAL_INTERVAL + REVEAL_FADE + 0.30
+
+
+func _draw_reveal() -> void:
+	## 解锁动画：全屏压暗 + 居中面板，奖励条目逐个淡入并轻微上浮。
+	## 用 `_draw()` 而不是 Control 节点 —— 与这个界面其它部分一致，且截图稳定。
+	var n := _reveal.size()
+	var panel_h := 156.0 + REVEAL_ROW_H * n
+	var r := Rect2((size.x - 620.0) / 2.0, (size.y - panel_h) / 2.0, 620.0, panel_h)
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.76), true)
+	draw_rect(r, Color("1c1f27"), true)
+	draw_rect(r, Color("c8951c"), false, 2.0)
+	draw_string(_font_bold, Vector2(r.position.x, r.position.y + 44), "解 锁",
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_HEADING, UiTheme.SAND)
+	draw_string(_font, Vector2(r.position.x, r.position.y + 70),
+			"以下内容已加入奖励池",
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, Color("9aa0ad"))
+	for i in n:
+		var a := clampf((_reveal_t - i * REVEAL_INTERVAL) / REVEAL_FADE, 0.0, 1.0)
+		if a <= 0.0:
+			continue
+		var item: Dictionary = _reveal[i]
+		var col: Color = item.get("col", Color("e8e4da"))
+		var y := r.position.y + 92.0 + i * REVEAL_ROW_H + (1.0 - a) * 16.0
+		var row := Rect2(r.position.x + 36.0, y, r.size.x - 72.0, REVEAL_ROW_H - 14.0)
+		draw_rect(row, Color(0.13, 0.145, 0.19, 0.92 * a), true)
+		draw_rect(row, Color(col.r, col.g, col.b, 0.88 * a), false, 1.6)
+		draw_rect(Rect2(row.position.x, row.position.y, 5.0, row.size.y),
+				Color(col.r, col.g, col.b, a), true)
+		draw_string(_font_bold, row.position + Vector2(22, 32),
+				str(item.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT,
+				row.size.x - 44, UiTheme.FS_SUBHEAD, Color(0.96, 0.93, 0.86, a))
+		draw_string(_font, row.position + Vector2(22, 58),
+				str(item.get("sub", "")), HORIZONTAL_ALIGNMENT_LEFT,
+				row.size.x - 44, UiTheme.FS_CAPTION, Color(0.66, 0.69, 0.75, a))
+	if _reveal_finished():
+		draw_string(_font, Vector2(r.position.x, r.end.y - 20), "点击任意处继续",
+				HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_CAPTION,
+				Color("9aa0ad"))

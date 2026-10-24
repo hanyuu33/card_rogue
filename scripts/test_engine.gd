@@ -139,8 +139,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 266,
-			"图鉴 = 266 张（R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
+	check(repo.all_cards().size() == 268,
+			"图鉴 = 268 张（R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -153,8 +153,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 212 and grp_enemy.size() == 54,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 212 / 54；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 214 and grp_enemy.size() == 54,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 214 / 54；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -7730,14 +7730,14 @@ func _init() -> void:
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 63
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 64
 			and int(dr_cls_count.get("敌人", 0)) == 54
-			and int(dr_cls_count.get("", 0)) == 18,
+			and int(dr_cls_count.get("", 0)) == 20,
 		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 67 / 63 / 64 / 54，公用 18；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
 				int(dr_cls_count.get("敌人", 0))])
-	check(int(dr_cls_count.get("", 0)) == 18,
-			"角色系统：class 留空（公用）= 公用初始卡 8001/8002 + 疲惫 9149 + 破绽 9154 + 罐子 9157 / 9158 + R277 六张事件 / 道具产出卡 + R306 许愿 / 烈火之剑 + R351 月亮 9180 / 硬币 9181（实际 %d）"
+	check(int(dr_cls_count.get("", 0)) == 20,
+			"角色系统：class 留空（公用）= 公用初始卡 8001/8002 + 疲惫 9149 + 破绽 9154 + 罐子 9157 / 9158 + R277 六张事件 / 道具产出卡 + R306 许愿 / 烈火之剑 + R351 月亮 9180 / 硬币 9181 + R352 摇篮曲 9182 / 森林的朋友们 9183（实际 %d）"
 			% int(dr_cls_count.get("", 0)))
 	check(PlayerClass.ids() == ["森林精魄", "暗影刺客", "机械之心"]
 			and PlayerClass.default_id() == "森林精魄",
@@ -8352,8 +8352,8 @@ func _init() -> void:
 			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R328 森林精魄 -2 = 木栅栏/攻击改公用；R329 暗影刺客 -1 = 删紧急埋伏 9106）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
-	check(int(r45_cls_count.get("", 0)) == 18,
-			"R223/R231/R245/R277/R306/R328/R351：class 留空（公用）= 公用初始卡 8001/8002 + 诅咒 9149/9154/9157 + 罐子 9158 + R340 宠物鸭 9177 + 事件产出 9018 金属龙 / 9022 鸭蛋 / 9023 英雄 / 9050 鲸鱼之怒 / 8065 货物 / 9072 铁栅栏 / 9168 许愿 / 9169 烈火之剑 / R351 月亮 9180 + 硬币 9181（%d 张）"
+	check(int(r45_cls_count.get("", 0)) == 20,
+			"R223/R231/R245/R277/R306/R328/R351：class 留空（公用）= 公用初始卡 8001/8002 + 诅咒 9149/9154/9157 + 罐子 9158 + R340 宠物鸭 9177 + 事件产出 9018 金属龙 / 9022 鸭蛋 / 9023 英雄 / 9050 鲸鱼之怒 / 8065 货物 / 9072 铁栅栏 / 9168 许愿 / 9169 烈火之剑 / R351 月亮 9180 + 硬币 9181 + R352 摇篮曲 9182 / 森林的朋友们 9183（%d 张）"
 			% int(r45_cls_count.get("", 0)))
 
 	# ---- R328：公用初始卡（木栅栏 8001 / 攻击 8002）----
@@ -8560,7 +8560,7 @@ func _init() -> void:
 	check(r226_bad_ok,
 			"R226：伤害 +10 拒绝「不能直接造成伤害」的技能卡（自然之力/智慧/重组/坚固围栏/闪躲/能量屏障）"
 			+ ("：全部被拒" if r226_bad_ok else "：被放行 " + ", ".join(r226_bad_names)))
-	# 判据唯一口 `CardData.is_damage_spell()`：87 张玩家技能卡里恰好 31 张能直接造成伤害（R332 本能 9176 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R329 删紧急埋伏 9106 → 技能 -1）（R290 两张新卡文案含「造成…伤害」→ 自动入判据；R298 合体 9167 只改造不造成伤害 → 技能 +1、伤害数不变）
+	# 判据唯一口 `CardData.is_damage_spell()`：89 张玩家技能卡里恰好 31 张能直接造成伤害（R352 摇篮曲 9182 / 森林的朋友们 9183 都不造伤害 → 技能 +2、伤害数不变）（R332 本能 9176 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R329 删紧急埋伏 9106 → 技能 -1）（R290 两张新卡文案含「造成…伤害」→ 自动入判据；R298 合体 9167 只改造不造成伤害 → 技能 +1、伤害数不变）
 	var r226_dmg := 0
 	var r226_skills := 0
 	var r226_leak: Array[String] = []
@@ -8572,7 +8572,7 @@ func _init() -> void:
 			r226_dmg += 1
 		elif r226_card.effect_text.contains("造成") and r226_card.effect_text.contains("伤害"):
 			r226_leak.append(r226_card.card_name)
-	check(r226_skills == 87 and r226_dmg == 31 and r226_leak.is_empty(),
+	check(r226_skills == 89 and r226_dmg == 31 and r226_leak.is_empty(),
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 			% [r226_skills, r226_dmg, "0 张" if r226_leak.is_empty() else str(r226_leak)])
 	check(RunState.enchant_ok("damage", r224_okrepo.get_card(9083), 9999)
@@ -24954,7 +24954,9 @@ func _init() -> void:
 	var r346_repo_cards := CardRepo.load_json()
 	var r346_expect := 0
 	for c0: CardData in r346_repo_cards.all_cards():
-		if c0.rarity <= 2 and not c0.traits.has("测试"):
+		# R352：剧情锁定的卡（locked 且档案里没解锁）不进池，空档案时它们不算数。
+		if c0.rarity <= 2 and not c0.traits.has("测试") and not (
+				c0.locked and not ProfileData.is_card_unlocked(c0.id)):
 			r346_expect += 1
 	check(r346_repo_cards.reward_pool().size() == r346_expect,
 			"R346 奖励池：默认闸门全开（%d 张）" % r346_expect)
@@ -24976,31 +24978,42 @@ func _init() -> void:
 	check(r346_unlocked_in_pool, "R346 奖励池：解锁后同一张卡进池")
 	r346_repo_cards._cards.erase(99801)
 
-	# ---- ⑤ 禁卡：额度 = 同稀有度已解锁张数 ----
+	# ---- ⑤ 禁卡：额度 = 同稀有度已解锁张数（R352 起**按职业记账**）----
 	ProfileData.clear_memory()
-	ProfileData.unlock_card(9003)      # 普通 ×2
+	RunState.run_active = false        # 局外口径：奖励池禁卡读账号表（任意职业禁过都算）
+	ProfileData.unlock_card(9003)      # 普通 ×2（都是森林精魄）
 	ProfileData.unlock_card(9004)
 	ProfileData.unlock_card(8001)      # 初始（稀有度 3）→ 不占奖励池额度
-	var r346_q := ProfileData.ban_quota(r346_repo_cards)
+	var r346_q := ProfileData.ban_quota_for(r346_repo_cards, PlayerClass.DRUID)
 	check(int(r346_q.get(0, -1)) == 2,
-			"R346 禁卡额度：普通档 = 2 张已解锁（实际 %d）" % int(r346_q.get(0, -1)))
+			"R346 禁卡额度：森林精魄普通档 = 2 张已解锁（实际 %d）" % int(r346_q.get(0, -1)))
 	check(int(r346_q.get(1, -1)) == 0 and int(r346_q.get(2, -1)) == 0,
 			"R346 禁卡额度：稀有 / 史诗档没解锁就没额度")
-	check(ProfileData.can_ban(9005, r346_repo_cards), "R346 禁卡：有名额时普通卡可禁")
-	check(ProfileData.toggle_ban(9005, r346_repo_cards) and ProfileData.is_banned(9005),
+	check(int(ProfileData.ban_quota_for(r346_repo_cards, PlayerClass.ROGUE).get(0, -1)) == 0,
+			"R352 禁卡额度：森林的职业卡不给暗影刺客加名额")
+	check(ProfileData.can_ban_for(9005, r346_repo_cards, PlayerClass.DRUID),
+			"R346 禁卡：有名额时普通卡可禁")
+	check(ProfileData.toggle_ban_for(9005, r346_repo_cards, PlayerClass.DRUID)
+			and ProfileData.is_banned_for(9005, PlayerClass.DRUID),
 			"R346 禁卡：禁用成功并记进档案")
-	check(not ProfileData.can_ban(9005, r346_repo_cards), "R346 禁卡：同一张不能重复占名额")
-	check(ProfileData.toggle_ban(9010, r346_repo_cards), "R346 禁卡：第二张（额度刚好用完）")
-	check(not ProfileData.can_ban(9011, r346_repo_cards), "R346 禁卡：额度用完后第三张禁不了")
-	check(not ProfileData.can_ban(9006, r346_repo_cards), "R346 禁卡：没有史诗名额时史诗禁不了")
+	check(not ProfileData.can_ban_for(9005, r346_repo_cards, PlayerClass.DRUID),
+			"R346 禁卡：同一张不能重复占名额")
+	check(ProfileData.toggle_ban_for(9010, r346_repo_cards, PlayerClass.DRUID),
+			"R346 禁卡：第二张（额度刚好用完）")
+	check(not ProfileData.can_ban_for(9011, r346_repo_cards, PlayerClass.DRUID),
+			"R346 禁卡：额度用完后第三张禁不了")
+	check(not ProfileData.can_ban_for(9006, r346_repo_cards, PlayerClass.DRUID),
+			"R346 禁卡：没有史诗名额时史诗禁不了")
 	var r346_banned_in_pool := false
 	for c3: CardData in r346_repo_cards.reward_pool():
 		if c3.id == 9005 or c3.id == 9010:
 			r346_banned_in_pool = true
 	check(not r346_banned_in_pool, "R346 禁卡：禁掉的卡不进奖励池")
-	check(not ProfileData.toggle_ban(9005, r346_repo_cards) and not ProfileData.is_banned(9005),
+	check(not ProfileData.toggle_ban_for(9005, r346_repo_cards, PlayerClass.DRUID)
+			and not ProfileData.is_banned_for(9005, PlayerClass.DRUID),
 			"R346 禁卡：再点一下取消（取消永远允许）")
-	check(ProfileData.can_ban(9005, r346_repo_cards), "R346 禁卡：取消后名额回来了")
+	check(ProfileData.can_ban_for(9005, r346_repo_cards, PlayerClass.DRUID),
+			"R346 禁卡：取消后名额回来了")
 
 	# ---- ⑥ 档案落盘 / 读回（同一份文件）----
 	ProfileData.bump("r346_persist_probe", 7)   # ⑤ 清过内存，这里重新灌一个可辨认的数
@@ -25008,7 +25021,7 @@ func _init() -> void:
 	ProfileData.save()
 	var r346_stats_n := int(ProfileData.stats.get("r346_persist_probe", 0))
 	var r346_cards_n := ProfileData.unlocked_cards.size()
-	var r346_bans_n := ProfileData.banned_cards.size()
+	var r346_bans_n := ProfileData.bans_of(PlayerClass.DRUID).size()
 	ProfileData.clear_memory()
 	ProfileData._loaded = false
 	ProfileData.ensure_loaded()
@@ -25017,7 +25030,7 @@ func _init() -> void:
 			"R346 档案：统计计数读写一致（%d）" % r346_stats_n)
 	check(ProfileData.unlocked_cards.size() == r346_cards_n,
 			"R346 档案：已解锁卡牌读写一致（%d 张）" % r346_cards_n)
-	check(ProfileData.banned_cards.size() == r346_bans_n,
+	check(ProfileData.bans_of(PlayerClass.DRUID).size() == r346_bans_n,
 			"R346 档案：禁卡表读写一致（%d 张）" % r346_bans_n)
 	check(ProfileData.is_story_read("ep_persist"), "R346 档案：已读剧情读写一致")
 
@@ -25365,6 +25378,197 @@ func _init() -> void:
 			and r351_face_src.contains("_draw_lock_mark(canvas, card, rect)")
 			and r351_face_src.contains("card.no_remove"),
 			"R351 源码：锁标记由 card_face 画在 draw_pick 上，判据是 no_remove")
+
+	# ============================================================
+	#  R352：故事 1（游移的音准）+ 摇篮曲 / 森林的朋友们 / 竖琴
+	#        + ban 位改为**按职业记账** + 开局禁用快照
+	# ============================================================
+	ProfileData.set_test_mode()
+
+	# ---- ① 两张新卡 / 一件新道具的数据 ----
+	var r352_repo := CardRepo.load_json()
+	var r352_lull_data := r352_repo.get_card(9182)
+	var r352_ff_data := r352_repo.get_card(9183)
+	check(r352_lull_data != null and r352_lull_data.card_name == "摇篮曲"
+			and r352_lull_data.kind == "技能" and r352_lull_data.cost == 5
+			and r352_lull_data.rarity == 2 and r352_lull_data.card_class == "",
+			"R352 卡数据：摇篮曲 = 5 费史诗技能 · 公用")
+	check(r352_lull_data.affixes.has("次元"), "R352 卡数据：摇篮曲带「次元」字段")
+	check(r352_ff_data != null and r352_ff_data.card_name == "森林的朋友们"
+			and r352_ff_data.kind == "技能" and r352_ff_data.cost == 0
+			and r352_ff_data.rarity == 1 and r352_ff_data.card_class == "",
+			"R352 卡数据：森林的朋友们 = 0 费稀有技能 · 公用")
+	check(r352_ff_data.affixes.has("次元"), "R352 卡数据：森林的朋友们也带「次元」")
+	var r352_relic_repo := RelicRepo.load_json()
+	var r352_harp_data := r352_relic_repo.get_relic(6052)
+	check(r352_harp_data != null and r352_harp_data.relic_name == "竖琴"
+			and r352_harp_data.is_legendary(),
+			"R352 道具：竖琴 6052（传奇）")
+
+	# ---- ② 故事 1：内容 / 条件 / 奖励 ----
+	var r352_story := StoryRepo.load_json()
+	var r352_ep := r352_story.episode("episode1")
+	check(not r352_ep.is_empty() and str(r352_ep.get("title", "")) != "？？？",
+			"R352 故事：episode1 已填标题（%s）" % str(r352_ep.get("title", "")))
+	check(r352_story.episode_text_lines("episode1").size() == 5,
+			"R352 故事：正文 5 行（实际 %d）"
+			% r352_story.episode_text_lines("episode1").size())
+	var r352_g := r352_story.episode_grants("episode1")
+	# ⚠️ JSON 里的数字一律是 float，而 `[9182.0] == [9182]` 在 Godot 4.3 里是 **false**
+	#    （数组逐元素比较走严格类型）→ 一律 int() 转一遍再比。
+	var r352_gc: Array = []
+	for r352_v1: Variant in (r352_g.get("cards", []) as Array):
+		r352_gc.append(int(r352_v1))
+	var r352_gr: Array = []
+	for r352_v2: Variant in (r352_g.get("relics", []) as Array):
+		r352_gr.append(int(r352_v2))
+	check(r352_gc == [9182, 9183] and r352_gr == [6052],
+			"R352 故事：奖励 = 摇篮曲 + 森林的朋友们 + 竖琴（实际 %s / %s）"
+			% [str(r352_gc), str(r352_gr)])
+	var r352_ach := r352_story.achievement_for_episode("episode1")
+	check(str(r352_ach.get("stat", "")) == ProfileData.K_RUN_START
+			and int(r352_ach.get("min", 0)) == 1,
+			"R352 故事：条件 = 进行任意一局游戏（run_start >= 1）")
+	check(r352_story.episode_state("episode1") == StoryRepo.STATE_LOCKED,
+			"R352 故事：空档案里故事 1 是锁着的")
+	# 剧情锁：没解锁时两张卡 / 竖琴都**不进**任何池子（否则「解锁才拿到」不成立）
+	var r352_pool_locked := {}
+	for c355: CardData in r352_repo.reward_pool():
+		r352_pool_locked[c355.id] = true
+	check(not r352_pool_locked.has(9182) and not r352_pool_locked.has(9183),
+			"R352 奖励池：剧情没解锁时两张新卡都不在池里（locked 闸门）")
+	check(not r352_relic_repo.reward_ids().has(6052),
+			"R352 奖励池：剧情没解锁时竖琴也不在道具池里")
+	ProfileData.bump(ProfileData.K_RUN_START)
+	check(ProfileData.check_achievements(r352_story).has("episode1"),
+			"R352 故事：开局一次 → 故事 1 解锁")
+	check(r352_story.episode_state("episode1") == StoryRepo.STATE_READY,
+			"R352 故事：解锁后是「可查看」")
+	var r352_claim := ProfileData.claim_episode(r352_story, "episode1")
+	check(bool(r352_claim.get("ok", false))
+			and (r352_claim.get("cards", []) as Array).size() == 2
+			and (r352_claim.get("relics", []) as Array).size() == 1,
+			"R352 故事：收下后发 2 张卡 + 1 件道具")
+	check(ProfileData.is_card_unlocked(9182) and ProfileData.is_card_unlocked(9183)
+			and ProfileData.is_relic_unlocked(6052),
+			"R352 故事：三样都记进档案")
+	var r352_pool_open := {}
+	for c357: CardData in r352_repo.reward_pool():
+		r352_pool_open[c357.id] = true
+	check(r352_pool_open.has(9182) and r352_pool_open.has(9183),
+			"R352 奖励池：收下故事后两张新卡进入奖励池")
+	check(r352_relic_repo.reward_ids().has(6052),
+			"R352 奖励池：收下故事后竖琴进入道具池")
+
+	# ---- ③ ban 位按职业：公用卡给**每个职业**各 1 个名额 ----
+	var r352_qf := ProfileData.ban_quota_for(r352_repo, PlayerClass.DRUID)
+	check(int(r352_qf.get(2, 0)) == 1 and int(r352_qf.get(1, 0)) == 1,
+			"R352 禁卡：公用史诗（摇篮曲）+ 公用稀有（森林的朋友们）→ 森林各 +1 名额")
+	var r352_qs := ProfileData.ban_quota_for(r352_repo, PlayerClass.ROGUE)
+	check(int(r352_qs.get(2, 0)) == 1 and int(r352_qs.get(1, 0)) == 1,
+			"R352 禁卡：同一张公用卡给暗影刺客**也各** +1（公用卡 = 每个职业一个 ban 位）")
+	ProfileData.unlock_card(9006)      # 闪电链：森林精魄 · 史诗
+	check(int(ProfileData.ban_quota_for(r352_repo, PlayerClass.DRUID).get(2, 0)) == 2,
+			"R352 禁卡：解锁森林史诗卡 → 森林史诗档再 +1")
+	check(int(ProfileData.ban_quota_for(r352_repo, PlayerClass.ROGUE).get(2, 0)) == 1,
+			"R352 禁卡：职业卡不给别的职业加名额")
+
+	var r352_epic_target := 0
+	for c352: CardData in r352_repo.obtainable_cards():
+		if c352.rarity == 2 and c352.id == 9182:
+			r352_epic_target = c352.id
+	check(r352_epic_target == 9182, "R352 禁卡：公用史诗卡能找到")
+	check(ProfileData.toggle_ban_for(9182, r352_repo, PlayerClass.DRUID),
+			"R352 禁卡：森林禁掉摇篮曲（公用史诗）")
+	check(ProfileData.is_banned_for(9182, PlayerClass.DRUID)
+			and not ProfileData.is_banned_for(9182, PlayerClass.ROGUE),
+			"R352 禁卡：禁用只记在这个职业名下")
+
+	# ---- ④ 开局快照：局外改禁用不影响进行中的局 ----
+	RunState.end_run(false)
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID, 20261024)
+	check(RunState.run_bans.has(9182), "R352 快照：开局把当前职业的禁用带进本局")
+	ProfileData.toggle_ban_for(9182, r352_repo, PlayerClass.DRUID)
+	check(not ProfileData.is_banned_for(9182, PlayerClass.DRUID),
+			"R352 快照：局外把这张解禁了（账号表已改）")
+	check(RunState.is_card_banned(9182),
+			"R352 快照：局内奖励池照样禁着 —— 只遵照开始前设置的禁用")
+	var r352_pool_has := false
+	for c353: CardData in r352_repo.reward_pool():
+		if c353.id == 9182:
+			r352_pool_has = true
+	check(not r352_pool_has, "R352 快照：本局奖励池里确实没有这张卡")
+	RunState.end_run(false)
+	check(not RunState.is_card_banned(9182),
+			"R352 快照：局结束后回到账号表口径 → 这张已经解禁")
+
+	# ---- ⑤ 摇篮曲：所有单位 1 回合不能行动，不分敌我 ----
+	var lul_e := _new_engine([], 30, 30)
+	var lul_self := lul_e.state.place(CardData.from_dict(r352_repo.get_card(8003).to_dict()),
+			Vector2i(1, 4), GameEngine.SIDE_SELF)
+	var lul_foe := lul_e.state.place(CardData.from_dict(r352_repo.get_card(8003).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	lul_e.state.hand.clear()
+	lul_e.state.hand.append(CardData.from_dict(r352_lull_data.to_dict()))
+	lul_e.state.energy = 10
+	lul_e.use_spell(0)
+	check(lul_self.tapped, "R352 摇篮曲：我方单位就地横置（本回合不能再行动）")
+	check(lul_self.stun_left == 0,
+			"R352 摇篮曲：我方不吃眩晕（否则会变成两回合不能动）")
+	check(lul_foe.stun_left > 0, "R352 摇篮曲：敌方单位吃眩晕（下一个敌方回合不能行动）")
+
+	# ---- ⑥ 森林的朋友们：随机森林盟友入手 + 本回合费用 -2 ----
+	var ff_e := _new_engine([], 30, 30)
+	ff_e.state.hand.clear()
+	ff_e.state.hand.append(CardData.from_dict(r352_ff_data.to_dict()))
+	ff_e.state.energy = 10
+	ff_e.use_spell(0)
+	var ff_got: CardData = null
+	for c354: CardData in ff_e.state.hand:
+		if c354.id != 9183:
+			ff_got = c354
+	check(ff_got != null, "R352 森林的朋友们：手卡里多了一张")
+	check(ff_got != null and ff_got.kind == "盟友"
+			and ff_got.card_class == PlayerClass.DRUID,
+			"R352 森林的朋友们：来的是**森林精魄**盟友")
+	check(ff_got != null and ff_e.cost_of(ff_got) == maxi(0, ff_got.cost - 2),
+			"R352 森林的朋友们：那张卡本回合费用 -2")
+
+	# ---- ⑦ 竖琴：所有盟友 +2 力量（每个单位只吃一次）----
+	RunState.relics = [6052]
+	var harp_e := _new_engine([], 30, 30)
+	var harp_p := harp_e.state.place(CardData.from_dict(r352_repo.get_card(8003).to_dict()),
+			Vector2i(1, 4), GameEngine.SIDE_SELF)
+	var harp_before := harp_p.card.power
+	harp_e._sync_harp()
+	check(harp_p.card.power == harp_before + GameEngine.HARP_ATK,
+			"R352 竖琴：在场上盟友 +%d 力量（%d → %d）"
+			% [GameEngine.HARP_ATK, harp_before, harp_p.card.power])
+	check(harp_p.harp_buffed, "R352 竖琴：吃过的单位打上标记")
+	harp_e._sync_harp()
+	check(harp_p.card.power == harp_before + GameEngine.HARP_ATK,
+			"R352 竖琴：重复同步不会叠加")
+	var harp_foe := harp_e.state.place(CardData.from_dict(r352_repo.get_card(8003).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	var harp_foe_base := harp_foe.card.power
+	harp_e._sync_harp()
+	check(harp_foe.card.power == harp_foe_base,
+			"R352 竖琴：只加己方盟友（敌方不变）")
+	RunState.relics = []
+
+	# ---- ⑧ 源码守卫：解锁动画 / 快照唯一口 ----
+	var r352_story_src := FileAccess.get_file_as_string("res://scripts/story_scene.gd")
+	check_src(r352_story_src.find("_start_reveal") >= 0
+			and r352_story_src.find("_draw_reveal") >= 0
+			and r352_story_src.find("_reveal_finished") >= 0,
+			"R352 源码：故事界面有解锁动画（收下后逐个浮现奖励）")
+	var r352_repo_src := FileAccess.get_file_as_string("res://scripts/card_repo.gd")
+	check_src(r352_repo_src.find("RunState.is_card_banned") >= 0,
+			"R352 源码：奖励池禁卡判据走 RunState.is_card_banned（局内=快照）")
+	var r352_prof_src := FileAccess.get_file_as_string("res://scripts/profile_data.gd")
+	check_src(r352_prof_src.find("banned_by_class") >= 0
+			and r352_prof_src.find("ban_quota_for") >= 0,
+			"R352 源码：禁卡按职业记账（banned_by_class + ban_quota_for）")
 
 	# 收尾：删临时剧情文件（档案文件交给下一次 set_test_mode 清）
 	if FileAccess.file_exists(r346_probe_path):

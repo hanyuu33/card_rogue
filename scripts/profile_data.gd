@@ -13,7 +13,8 @@ extends RefCounted
 ##   read_stories     已经**点开看过**的剧情 id（看过的才会发放卡牌 / 道具）
 ##   unlocked_cards   已解锁的卡牌 id（这些卡才会进奖励池）
 ##   unlocked_relics  已解锁的道具 id（这些道具才会进奖励池）
-##   banned_cards     玩家禁掉的卡牌 id（本局奖励池里不再出现）
+##   banned_by_class  玩家禁掉的卡牌 id，**按职业分组**（R352）：{职业: [卡 id]}
+##                    —— 一张公用卡在三个职业的奖励池里都会出现，所以每个职业各要一个名额
 ##
 ## ── 统计键（新加统计**只在这里登记**，别在各处散着拼字符串）──
 ##   `boss_kill:<关卡名>`   击败该 Boss 的次数
@@ -22,6 +23,7 @@ extends RefCounted
 ##   `kind_play:<卡类>`     累计使用该类卡的次数（盟友 / 技能 / 工事 / 效果 / 场地）
 ##   `relic_got:<道具 id>`  获得该道具的次数（首次 = 1，「首次获得」判据就是 >= 1）
 ##   `battle_win` / `elite_win` / `boss_win` / `run_win`   各类胜场
+##   `run_start`            开局次数（R352：故事 1「进行任意一局游戏」的判据）
 ##
 ## ⚠️ **写盘纪律**：`bump()` 只改内存 + 置脏，`flush()` 才落盘 —— 战斗中每打一张牌都写文件
 ##    太浪费。`flush()` 的调用点 = 战斗结算 / 剧情解锁 / 禁卡变更 / 回标题。
@@ -41,13 +43,17 @@ const K_BATTLE_WIN := "battle_win"
 const K_ELITE_WIN := "elite_win"
 const K_BOSS_WIN := "boss_win"
 const K_RUN_WIN := "run_win"
+const K_RUN_START := "run_start"     # R352：开局次数（故事 1 的判据）
 
 static var stats: Dictionary = {}
 static var unlocked_stories: Array[String] = []
 static var read_stories: Array[String] = []
 static var unlocked_cards: Array[int] = []
 static var unlocked_relics: Array[int] = []
-static var banned_cards: Array[int] = []
+## R352：禁卡表**按职业分组**（原来是扁平 Array[int]）—— 用户口径
+## 「每获得一张卡新增一个 ban 位（公用卡则是每个职业一个 ban 位）」，
+## 公用卡会在三个职业的奖励池里都出现，所以要 ban 三次，各职业各一个名额。
+static var banned_by_class: Dictionary = {}
 
 static var _loaded := false
 static var _dirty := false
@@ -74,7 +80,7 @@ static func clear_memory() -> void:
 	read_stories = []
 	unlocked_cards = []
 	unlocked_relics = []
-	banned_cards = []
+	banned_by_class = {}
 	_dirty = false
 
 
@@ -111,7 +117,17 @@ static func ensure_loaded() -> void:
 	read_stories = _str_array(d.get("read_stories", []))
 	unlocked_cards = _int_array(d.get("unlocked_cards", []))
 	unlocked_relics = _int_array(d.get("unlocked_relics", []))
-	banned_cards = _int_array(d.get("banned_cards", []))
+	# R352：禁卡表按职业分组。老档案（R346~R351）是扁平数组 `banned_cards` →
+	# 视为「三个职业都禁过同样的卡」迁移过来，别把玩家的设置丢掉。
+	var bb: Variant = d.get("banned_by_class", {})
+	if bb is Dictionary and not (bb as Dictionary).is_empty():
+		for k: Variant in (bb as Dictionary).keys():
+			banned_by_class[str(k)] = _int_array((bb as Dictionary)[k])
+	else:
+		var old_bans := _int_array(d.get("banned_cards", []))
+		if not old_bans.is_empty():
+			for cls: String in PlayerClass.ids():
+				banned_by_class[cls] = old_bans.duplicate()
 
 
 static func save() -> bool:
@@ -123,7 +139,7 @@ static func save() -> bool:
 		"read_stories": read_stories,
 		"unlocked_cards": unlocked_cards,
 		"unlocked_relics": unlocked_relics,
-		"banned_cards": banned_cards,
+		"banned_by_class": banned_by_class,
 	}
 	var f := FileAccess.open(_path, FileAccess.WRITE)
 	if f == null:
@@ -321,29 +337,63 @@ static func claim_episode(repo: StoryRepo, episode_id: String) -> Dictionary:
 
 
 # ------------------------------------------------------------ 禁卡
+#
+# R352 用户口径：「每获得一张卡，新增一个 ban 位（公用卡则是每个职业一个 ban 位），
+# 玩家可以在 ban 卡界面选择同等稀有度的卡，将其禁用，使其不会出现在奖励池。」
+#
+# 于是禁卡 = **(职业, 稀有度)** 二元额度：
+#   * 一张**职业卡**解锁 → 只给该职业 1 个该档名额；
+#   * 一张**公用卡**（class 为空）解锁 → **每个职业各** 1 个该档名额
+#     （它在三个职业的奖励池里都会出现，所以要 ban 三次）。
+# 存档形状：`banned_by_class = {职业 id: Array[int]}`。
 
-static func ban_quota(repo: CardRepo) -> Dictionary:
-	## 每档稀有度的**禁卡额度** = 该档「已通过剧情解锁」的卡牌张数（用户口径：
-	## 「根据解锁的卡牌的张数和稀有度，获得等量张数的 ban 掉等稀有度卡牌的权利」）。
-	## 返回 {rarity: int}，只含 0/1/2 三档（奖励池只有这三档）。
+static func bans_of(cls: String) -> Array[int]:
+	## 该职业的禁用表（局外编辑用）。空职业 → 空数组。
+	if cls == "":
+		return []
+	ensure_loaded()
+	var v: Variant = banned_by_class.get(cls, [])
+	return _int_array(v)
+
+
+static func is_banned_for(card_id: int, cls: String) -> bool:
+	ensure_loaded()
+	return bans_of(cls).has(card_id)
+
+
+static func is_banned_any(card_id: int) -> bool:
+	## 局外兜底判据：**任意职业**禁过就算禁。
+	## 只有「不在局内」的读取方（图鉴 / 演示 / 测试）才该用它 ——
+	## 局内一律走 `RunState.is_card_banned()`（读开局快照）。
+	ensure_loaded()
+	for k: Variant in banned_by_class.keys():
+		if _int_array(banned_by_class[k]).has(card_id):
+			return true
+	return false
+
+
+static func ban_quota_for(repo: CardRepo, cls: String) -> Dictionary:
+	## 该职业的禁卡额度，按稀有度分档 {0/1/2: int}。
+	## = 「这个职业拿得到、且已通过剧情解锁」的卡牌张数；公用卡对每个职业都算一张。
 	var out := {0: 0, 1: 0, 2: 0}
-	if repo == null:
+	if repo == null or cls == "":
 		return out
 	ensure_loaded()
 	for id: int in unlocked_cards:
 		var c := repo.get_card(id)
 		if c == null or c.rarity > 2:
 			continue
+		if c.card_class != "" and c.card_class != cls:
+			continue
 		out[c.rarity] = int(out.get(c.rarity, 0)) + 1
 	return out
 
 
-static func banned_by_rarity(repo: CardRepo) -> Dictionary:
+static func banned_by_rarity_for(repo: CardRepo, cls: String) -> Dictionary:
 	var out := {0: 0, 1: 0, 2: 0}
-	if repo == null:
+	if repo == null or cls == "":
 		return out
-	ensure_loaded()
-	for id: int in banned_cards:
+	for id: int in bans_of(cls):
 		var c := repo.get_card(id)
 		if c == null:
 			continue
@@ -351,56 +401,65 @@ static func banned_by_rarity(repo: CardRepo) -> Dictionary:
 	return out
 
 
-static func is_banned(id: int) -> bool:
-	ensure_loaded()
-	return banned_cards.has(id)
-
-
-static func can_ban(card_id: int, repo: CardRepo) -> bool:
-	## 能不能再禁这一张：卡在奖励池里、还没禁、该档还有剩余额度。
-	if repo == null:
+static func can_ban_for(card_id: int, repo: CardRepo, cls: String) -> bool:
+	## 能不能再禁这一张：卡在该职业能拿到的范围里、还没禁、该档还有剩余名额。
+	if repo == null or cls == "":
 		return false
 	var c := repo.get_card(card_id)
 	if c == null or c.rarity > 2 or c.traits.has("测试"):
 		return false
-	if is_banned(card_id):
+	# 不是这个职业能拿到的卡，禁了也没有意义（公用卡 class 为空，两边都算）
+	if c.card_class != "" and c.card_class != cls:
 		return false
-	var quota := ban_quota(repo)
-	var used := banned_by_rarity(repo)
+	if is_banned_for(card_id, cls):
+		return false
+	var quota := ban_quota_for(repo, cls)
+	var used := banned_by_rarity_for(repo, cls)
 	return int(used.get(c.rarity, 0)) < int(quota.get(c.rarity, 0))
 
 
-static func toggle_ban(card_id: int, repo: CardRepo) -> bool:
+static func toggle_ban_for(card_id: int, repo: CardRepo, cls: String) -> bool:
 	## 点一下切禁 / 取消禁。返回**操作后**是否处于「已禁」。
-	## 取消禁永远允许；加禁要走额度判定。
+	## 取消禁永远允许（不占额度）；加禁要走额度判定。
 	ensure_loaded()
-	if is_banned(card_id):
-		banned_cards.erase(card_id)
+	if cls == "":
+		return false
+	var cur := bans_of(cls)
+	if cur.has(card_id):
+		cur.erase(card_id)
+		banned_by_class[cls] = cur
 		_dirty = true
 		flush()
 		return false
-	if not can_ban(card_id, repo):
+	if not can_ban_for(card_id, repo, cls):
 		return false
-	banned_cards.append(card_id)
+	cur.append(card_id)
+	banned_by_class[cls] = cur
 	_dirty = true
 	flush()
 	return true
 
 
-static func clear_bans() -> void:
+static func clear_bans(cls: String = "") -> void:
+	## 清空某一个职业的禁用（`cls` 为空 = 三个职业全清）。
 	ensure_loaded()
-	if banned_cards.is_empty():
-		return
-	banned_cards = []
+	if cls == "":
+		if banned_by_class.is_empty():
+			return
+		banned_by_class = {}
+	else:
+		if not banned_by_class.has(cls):
+			return
+		banned_by_class.erase(cls)
 	_dirty = true
 	flush()
 
 
-static func ban_summary(repo: CardRepo) -> String:
+static func ban_summary_for(repo: CardRepo, cls: String) -> String:
 	## 禁卡额度的一行摘要（禁卡界面标题下 + 无额度时的说明都读它）。
 	## 口径写成「已禁 / 名额」：两个数字同档比较时，先说已用多少、再说总共多少。
-	var quota := ban_quota(repo)
-	var used := banned_by_rarity(repo)
+	var quota := ban_quota_for(repo, cls)
+	var used := banned_by_rarity_for(repo, cls)
 	var parts: Array[String] = []
 	for r in [0, 1, 2]:
 		parts.append("%s 已禁 %d / 名额 %d" % [CardData.RARITY_NAMES[r],
@@ -408,9 +467,25 @@ static func ban_summary(repo: CardRepo) -> String:
 	return " · ".join(parts)
 
 
-static func ban_total_quota(repo: CardRepo) -> int:
-	var quota := ban_quota(repo)
+static func ban_total_quota_for(repo: CardRepo, cls: String) -> int:
+	var quota := ban_quota_for(repo, cls)
 	return int(quota.get(0, 0)) + int(quota.get(1, 0)) + int(quota.get(2, 0))
+
+
+static func ban_total_quota_all(repo: CardRepo) -> int:
+	## 三个职业合计 —— 角色选择页的按钮只有一行位置，那里显示总数。
+	var total := 0
+	for cls: String in PlayerClass.ids():
+		total += ban_total_quota_for(repo, cls)
+	return total
+
+
+static func ban_total_used_all() -> int:
+	ensure_loaded()
+	var total := 0
+	for k: Variant in banned_by_class.keys():
+		total += _int_array(banned_by_class[k]).size()
+	return total
 
 
 # ------------------------------------------------------------ 工具

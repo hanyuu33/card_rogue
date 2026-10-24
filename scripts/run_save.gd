@@ -57,6 +57,7 @@ static func snapshot() -> Dictionary:
 		"boss_pick": RunState.boss_pick,
 		"revenge_pending": RunState.revenge_pending,
 		"relics": RunState.relics,
+		"run_bans": RunState.run_bans,   # R352：本局禁卡快照（续档要接着用同一份）
 		"skipped_relics": RunState.skipped_relics,
 		"duck_revive_chance": RunState.duck_revive_chance,
 		"run_seed": RunState.run_seed,
@@ -152,6 +153,8 @@ static func apply(d: Dictionary) -> bool:
 	RunState.boss_pick = d.get("boss_pick", {}) if d.get("boss_pick", {}) is Dictionary else {}
 	RunState.revenge_pending = bool(d.get("revenge_pending", false))
 	RunState.relics = _int_array(d.get("relics", []))
+	# R352：老存档没有这个字段 → 空数组 = 这一局不禁卡（保守，不误伤奖励池）
+	RunState.run_bans = _int_array(d.get("run_bans", []))
 	RunState.skipped_relics = _int_array(d.get("skipped_relics", []))
 	RunState.duck_revive_chance = int(d.get("duck_revive_chance", 100))
 	RunState.run_seed = int(d.get("run_seed", 0))

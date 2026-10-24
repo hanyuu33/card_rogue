@@ -474,6 +474,15 @@ const FETCH_SKILL_DISCOUNT:= 1
 const COORD_ATTACK_ID:= 9035
 const COORD_ATTACK_DMG:= 14
 const BEAST_HEART_ID:= 9036
+# R352 摇篮曲（9182，全职业公用 5 费史诗技能 · 次元）：所有单位 1 回合不能行动，不分敌我。
+const LULLABY_ID:= 9182
+# R352 森林的朋友们（9183，全职业公用 0 费稀有技能 · 次元）：
+#   一张随机**森林精魄**盟友加入手卡，那张卡本回合费用 -2。
+const FOREST_FRIENDS_ID:= 9183
+const FOREST_FRIENDS_DISCOUNT:= 2
+# R352 竖琴（6052，剧情解锁道具）：所有己方盟友 +2 力量。
+const HARP_RELIC_ID:= 6052
+const HARP_ATK:= 2
 const FOREST_GUARD_ID:= 9037
 const LION_ID:= 9038
 const LION_ATK_BUFF:= 2
@@ -1806,6 +1815,7 @@ func _begin_turn(side: String) -> void :
 		_dodge_active = false   # 闪躲（9103）：含敌方回合在内的一整个来回结束 → 到期
 		_roar_fires = 0
 		_space_fires = 0
+		_sync_harp()   # R352 竖琴：战斗中拿到的道具 / 读档续战，此处补齐在场上盟友的 +2
 		state.energy = FieldState.ENERGY_PER_TURN
 		if state.turn_limit >= 0 and turn_number > state.turn_limit:
 			turn_number = state.turn_limit
@@ -4078,6 +4088,13 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 
 	if card.id == FOX_ID:
 		_fox_trigger()
+
+	# R352 竖琴（6052）：所有己方盟友 +2 力量 —— 上场即生效（与野兽之心同口径）。
+	if RunState.has_relic(HARP_RELIC_ID) and p.owner == SIDE_SELF \
+			and card.kind == "盟友" and not p.harp_buffed:
+		p.harp_buffed = true
+		p.card.power += HARP_ATK
+		_log("竖琴：%s 获得 +%d 力量（%d）" % [card.card_name, HARP_ATK, p.card.power])
 
 	var beast_hp:= _beast_hp_bonus(card)
 	if beast_hp > 0:
@@ -7991,6 +8008,43 @@ func _random_ally_card(side: String) -> CardData:
 	return pool[rng.randi() % pool.size()]
 
 
+func _sync_harp() -> void:
+	## 竖琴（6052，R352）：「所有盟友 +2 力量」对**已经在场**的己方盟友补一次加成。
+	## 为什么需要它：道具可能在**战斗中途**拿到（宝箱 / 精英掉落），那批盟友上场时还没有竖琴；
+	## 读档续战同理。每个 Placement 只吃一次（`harp_buffed`），所以随便多调。
+	if not RunState.has_relic(HARP_RELIC_ID):
+		return
+	for cell: Vector2i in state.board.keys():
+		var p: Placement = state.unit_at(cell)
+		if p == null or p.owner != SIDE_SELF or p.health <= 0:
+			continue
+		if p.card.kind != "盟友" or p.harp_buffed:
+			continue
+		p.harp_buffed = true
+		p.card.power += HARP_ATK
+		_log("竖琴：%s 补吃 +%d 力量（%d）" % [p.card.card_name, HARP_ATK, p.card.power])
+
+
+func _random_forest_ally() -> CardData:
+	## 森林精魄奖励池里的随机**盟友**卡（森林的朋友们 9183 的随机源，R352）。
+	## 与 `_random_ally_card()` 的区别：那里取「本角色」，这里**写死森林精魄**——
+	## 卡面写的就是「森林的朋友们」，暗影 / 机械角色打出它也该来森林的盟友。
+	## 池子走 `reward_pool_for()` → 剧情锁定与**本局禁卡**一并生效。
+	var repo := CardRepo.load_json()
+	var pool: Array[CardData] = []
+	for c: CardData in repo.reward_pool_for(PlayerClass.DRUID):
+		if c.kind == "盟友":
+			pool.append(c)
+	if pool.is_empty():
+		# 退路：奖励池被禁卡 / 剧情锁清空时，直接翻全部森林盟友卡
+		for c2: CardData in repo.player_cards():
+			if c2.kind == "盟友" and c2.class == PlayerClass.DRUID:
+				pool.append(c2)
+	if pool.is_empty():
+		return null
+	return pool[rng.randi() % pool.size()]
+
+
 func _random_reward_card(side: String) -> CardData:
 	## 从本角色奖励卡池里按「稀有度三等分」随机取一张卡（R202 随心组装）。
 	## 稀有度 0/1/2 各取一份，先均匀挑稀有度，再在该稀有度里随机挑卡。
@@ -8480,6 +8534,57 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			return str(_op_deal_damage(side, _spell_dmg(side, card.value, card), target))
 		8002:
 			return str(_op_deal_damage(side, _spell_dmg(side, 4, card), target))
+		LULLABY_ID:
+			# 摇篮曲（9182，R352，全职业公用 5 费史诗技能 · 次元）：
+			#   **所有单位**（不分敌我）1 回合不能行动。
+			# ⚠️ 「1 回合」对两个阵营是**两种不同的挡法**，不能一律 `_apply_stun`：
+			#   * 非施放方（敌方）→ `_apply_stun` 正好挡住**即将到来的**那个敌方回合；
+			#   * 施放方（我方）→ `_apply_stun` 挡的是**下个**我方回合，等于两回合不能动，
+			#     所以只能就地横置（本回合剩余时间不能动），下个我方回合照常恢复。
+			# 这正是卡面「不分敌我」的代价：5 费换掉对手一整回合，自己也交出这一回合。
+			var lull_n := 0
+			var lull_self := 0
+			for lull_cell: Vector2i in state.board.keys():
+				var lull_p: Placement = state.unit_at(lull_cell)
+				if lull_p == null or lull_p.health <= 0:
+					continue
+				if lull_p.owner == side:
+					if not lull_p.tapped:
+						lull_p.tapped = true
+						lull_p.moved = true
+						action.emit("tap", {"cell": lull_cell, "card": lull_p.card})
+						_log("摇篮曲：%s 就地横置（本回合不能再行动）" % lull_p.card.card_name)
+					lull_self += 1
+				else:
+					_apply_stun(lull_p, "摇篮曲")
+				lull_n += 1
+			if lull_n == 0:
+				_log("摇篮曲：场上没有任何单位，效果落空")
+				return "场上没有单位，什么也没发生"
+			_log("摇篮曲：%d 个单位 1 回合不能行动（其中我方 %d 个）" % [lull_n, lull_self])
+			return "%d 个单位 1 回合不能行动（不分敌我）" % lull_n
+		FOREST_FRIENDS_ID:
+			# 森林的朋友们（9183，R352，全职业公用 0 费稀有技能 · 次元）：
+			#   把一张随机**森林精魄**盟友加入手卡，那张卡**本回合**费用 -2。
+			# * 随机源走引擎 rng → 同种子同结果、回放可复现（与生命循环 9150 同口径）。
+			# * 减费走 `state.hand_cost_turn`（本回合专用表，`end_turn` 清空）；
+			#   判据是「这张卡此刻还在手牌里」，离手自动恢复原价，不必逐处清标记。
+			# * 手牌满 → 走 `_grant_to_hand` 的通用口径（进弃牌区，不蒸发）。
+			var ff_c := _random_forest_ally()
+			if ff_c == null:
+				_log("森林的朋友们：卡池里没有森林精魄盟友卡")
+				return "卡池里没有森林精魄盟友，效果落空"
+			var ff_copy := CardData.from_dict(ff_c.to_dict())
+			ff_copy.affixes = (ff_c.affixes as Array).duplicate()
+			if not _grant_to_hand(ff_copy, "森林的朋友们"):
+				_log("森林的朋友们：手牌已满 → 「%s」直接进弃牌区" % ff_copy.card_name)
+				return "手牌已满，「%s」进了弃牌区" % ff_copy.card_name
+			state.hand_cost_turn[ff_copy] = int(state.hand_cost_turn.get(ff_copy, 0)) \
+					+ FOREST_FRIENDS_DISCOUNT
+			_log("森林的朋友们：手卡加入「%s」，其本回合费用 -%d"
+					% [ff_copy.card_name, FOREST_FRIENDS_DISCOUNT])
+			return "「%s」加入手卡，其本回合费用 -%d" % [ff_copy.card_name,
+					FOREST_FRIENDS_DISCOUNT]
 		EMERGENCY_POWER_ID:
 			# 应急电源（9170，R315，机械之心 0 费史诗技能 · 次元）：
 			#   +1 费 → 抽 1 张 → 场上**所有友方单位**各回复 2 点生命（不超过各自最大生命）。

@@ -1,45 +1,51 @@
 {
 	"version": 1,
-	"_note": "R346 剧情/成就定义。剧情正文与 grants 现在全空（空壳期）：列表显示 episodeX-？？？。填内容不用改代码。统计键见 profile_data.gd 顶部注释。",
+	"_note": "R346 剧情/成就定义；R352 起开始填内容（第一章「游移的音准」已实装，grants = 摇篮曲 9182 + 森林的朋友们 9183 + 竖琴 6052）。列表标签 = chapter-title。统计键见 profile_data.gd 顶部注释。",
 	"episodes": [
 		{
 			"id": "episode1",
-			"chapter": "episode1",
-			"title": "？？？",
-			"text": [],
-			"grants": {"cards": [], "relics": []}
+			"chapter": "第一章",
+			"title": "游移的音准",
+			"text": [
+				"森林的伙伴们翘首以盼，吟游诗人会带来怎么样的曲子。",
+				"游移的音准，紧涩的颤音，令人揪心的曲调从琴弓中拨出。",
+				"“看上去你有些烦恼。”",
+				"吟游诗人叹了口气：“最近鸭子们不太安分。”",
+				"“那就让我去跟他们聊聊吧。”"
+			],
+			"grants": {"cards": [9182, 9183], "relics": [6052]}
 		},
 		{
 			"id": "episode2",
-			"chapter": "episode2",
+			"chapter": "第二章",
 			"title": "？？？",
 			"text": [],
 			"grants": {"cards": [], "relics": []}
 		},
 		{
 			"id": "episode3",
-			"chapter": "episode3",
+			"chapter": "第三章",
 			"title": "？？？",
 			"text": [],
 			"grants": {"cards": [], "relics": []}
 		},
 		{
 			"id": "episode4",
-			"chapter": "episode4",
+			"chapter": "第四章",
 			"title": "？？？",
 			"text": [],
 			"grants": {"cards": [], "relics": []}
 		},
 		{
 			"id": "episode5",
-			"chapter": "episode5",
+			"chapter": "第五章",
 			"title": "？？？",
 			"text": [],
 			"grants": {"cards": [], "relics": []}
 		},
 		{
 			"id": "episode6",
-			"chapter": "episode6",
+			"chapter": "第六章",
 			"title": "？？？",
 			"text": [],
 			"grants": {"cards": [], "relics": []}
@@ -47,10 +53,10 @@
 	],
 	"achievements": [
 		{
-			"id": "ach_boss_kill",
-			"name": "？？？",
-			"hint": "击败一位强大的敌人",
-			"stat_prefix": "boss_kill:",
+			"id": "ach_first_run",
+			"name": "森林的伙伴们",
+			"hint": "进行任意一局游戏",
+			"stat": "run_start",
 			"min": 1,
 			"episodes": ["episode1"]
 		},

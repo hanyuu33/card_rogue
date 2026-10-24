@@ -5496,6 +5496,52 @@
       "color": "金",
       "image": "",
       "no_remove": true
+    },
+    {
+      "id": 9182,
+      "name": "摇篮曲",
+      "kind": "技能",
+      "cost": 5,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "",
+      "traits": [],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "所有单位 1 回合不能行动，不分敌我。",
+      "target_mode": "none",
+      "value": 1,
+      "color": "紫",
+      "image": "",
+      "locked": true
+    },
+    {
+      "id": 9183,
+      "name": "森林的朋友们",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "",
+      "traits": [],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "将一张随机森林精魄盟友加入手卡，其本回合费用 -2。",
+      "target_mode": "none",
+      "value": 2,
+      "color": "绿",
+      "image": "",
+      "locked": true
     }
   ]
 }

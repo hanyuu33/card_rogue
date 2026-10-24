@@ -193,8 +193,9 @@ func _draw_ban_button() -> void:
 	## R346：禁卡表按钮（额度 / 已禁张数直接写在按钮上，不用进去才知道有没有名额）。
 	var r := _ban_rect()
 	var repo := CardRepo.load_json()
-	var quota := ProfileData.ban_total_quota(repo)
-	var used: int = ProfileData.banned_cards.size()
+	# R352：禁卡按职业分页记账 → 按钮上显示三个职业的**合计**（一行放不下三行）。
+	var quota := ProfileData.ban_total_quota_all(repo)
+	var used: int = ProfileData.ban_total_used_all()
 	var hov := r.has_point(get_local_mouse_position())
 	var bg := Color(0.10, 0.11, 0.15, 0.86) if not hov else Color(0.16, 0.18, 0.24, 0.92)
 	draw_rect(r, bg, true)

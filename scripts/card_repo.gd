@@ -74,11 +74,12 @@ func reward_pool() -> Array[CardData]:
 	## 初始（3）、怪物（4）与事件卡（5）排除。
 	## R346 起再按玩家的**账号进度**过闸（唯一口 —— 商店 / 事件 / 奖励全都读这里）：
 	##   ① 剧情锁定：`locked = true` 且还没在故事界面解锁 → 不进池（在 `obtainable_cards` 里）；
-	##   ② 玩家禁卡：`ProfileData.banned_cards` 里的 → 不进池（就是下面这一段）。
+	##   ② 玩家禁卡：走 `RunState.is_card_banned()`（R352：局内 = 开局快照，
+##      局外 = 账号表任意职业禁过都算）→ 不进池（就是下面这一段）。
 	## 两道闸都默认「空」，所以老存档 / 新玩家看到的池子与以前完全一致。
 	var out: Array[CardData] = []
 	for c: CardData in obtainable_cards():
-		if ProfileData.is_banned(c.id):
+		if RunState.is_card_banned(c.id):
 			continue
 		out.append(c)
 	return out
