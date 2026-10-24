@@ -174,12 +174,17 @@ func _play_delta(panel: Panel, lbl: Label, delta: int, is_hp: bool) -> void:
 	fl.add_theme_font_override("font", UiTheme.font_bold())
 	fl.add_theme_font_size_override("font_size", 17)
 	fl.add_theme_color_override("font_color", col)
-	fl.position = lbl.position + Vector2(0, -4)
+	# 深底描边：顶栏是深色面板（不是羊皮纸），描边在这里是**加清晰度**（浅底才禁止描边）。
+	# 不给描边的话金币浮字「+50」会直接压在金色数字「150」上糊成一片。
+	fl.add_theme_constant_override("outline_size", 4)
+	fl.add_theme_color_override("font_outline_color", Color(0.06, 0.05, 0.04, 0.92))
+	# 起点从数值上方 10px 起、再飘 30px —— 全程浮字与数字不重叠
+	fl.position = lbl.position + Vector2(0, -10)
 	fl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(fl)
 	var tw2 := create_tween()
 	tw2.set_parallel(true)
-	tw2.tween_property(fl, "position:y", fl.position.y - 24.0, FX_FLOAT_SEC) \
+	tw2.tween_property(fl, "position:y", fl.position.y - 30.0, FX_FLOAT_SEC) \
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tw2.tween_property(fl, "modulate:a", 0.0, FX_FLOAT_SEC * 0.7) \
 			.set_delay(FX_FLOAT_SEC * 0.3)
