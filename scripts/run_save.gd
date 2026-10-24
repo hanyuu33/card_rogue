@@ -101,12 +101,27 @@ static func save_snapshot(d: Dictionary) -> bool:
 	## **之前**抓 `snapshot()`，否则开局第 1 个我方回合已经推过 lucky 7 计数（+1），
 	## 续档重打这一场又从「已 +1」的计数起步 → 每续一次多算一格（用户报的计数错乱）。
 	var root := {"__runsave__": FORMAT, "d": d}
-	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	# R359：**原子写** —— 先写 `.tmp` 再替换。原来直接覆盖 SAVE_PATH，写到一半被杀
+	# （关窗口 / 手机切后台 / 断电）就留下半截档：下次标题页 `has_save()` 仍然为真，
+	# 「继续游戏」按钮亮着，点下去 `str_to_var` 解析失败 → 静默留在标题，
+	# 玩家看到的就是**「继续游戏点了没反应」**。半截档不会被读到，也就不会再骗人。
+	var tmp_path := SAVE_PATH + ".tmp"
+	var f := FileAccess.open(tmp_path, FileAccess.WRITE)
 	if f == null:
-		push_warning("RunSave：无法写入存档 " + SAVE_PATH)
+		push_warning("RunSave：无法写入存档 " + tmp_path)
 		return false
 	f.store_string(var_to_str(root))
 	f.close()
+	var dir := DirAccess.open("user://")
+	if dir == null:
+		push_warning("RunSave：打不开 user://，存档没替换成功")
+		return false
+	if dir.file_exists(SAVE_PATH):
+		dir.remove(SAVE_PATH)
+	var err := dir.rename(tmp_path, SAVE_PATH)
+	if err != OK:
+		push_warning("RunSave：存档替换失败 err=%d" % err)
+		return false
 	return true
 
 
@@ -123,6 +138,15 @@ static func load_run() -> bool:
 		return false
 	var d: Dictionary = (root as Dictionary).get("d", {})
 	if not (d is Dictionary):
+		return false
+	# R359：**已收尾的一局不算「可继续」**。`end_run(false)`（回标题）以前也把
+	# `run_finished` 置真并保档 —— 那份档读进来后 `map_scene._ready` 立刻按
+	# 「本局已收尾」把人踢回标题，表现是「点了继续游戏又回到标题」的循环。
+	# 现在 `end_run(false)` 不再置真（见 run_state），这里再加一道：老档 / 异常档
+	# 里带着 `run_finished: true` 就直接当废档清掉，别留一个死按钮。
+	if bool(d.get("run_finished", false)):
+		push_warning("RunSave：存档是已收尾的一局，删掉不继续")
+		clear_save()
 		return false
 	return apply(d)
 

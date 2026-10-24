@@ -150,6 +150,12 @@ func _demo_mix() -> void:
 	## ⚠️ 顺序要紧：`mark_story_read()` 之前该段必须先 `unlock_story()` ——
 	##    `episode_state()` 里 read 的判定在最前面，没有 unlocked 就直接标 read 的话
 	##    「解锁过」这一步等于被跳过（不是崩，是状态语义不对）。
+	# R359：空正文的段落现在恒为 locked，出图要凑齐三态就得给第 1 段**内存里**塞一行
+	# 占位正文（只改这个 repo 实例，绝不写 stories.json）。
+	if _episodes.size() > 1:
+		var dem_ep: Dictionary = _episodes[1]
+		if not _repo.has_content(str(dem_ep.get("id", ""))):
+			dem_ep["text"] = ["（出图占位：这一段正文还没写）"]
 	for i in mini(2, _episodes.size()):
 		ProfileData.unlock_story(str((_episodes[i] as Dictionary).get("id", "")))
 	if not _episodes.is_empty():

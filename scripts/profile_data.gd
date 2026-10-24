@@ -316,6 +316,11 @@ static func claim_episode(repo: StoryRepo, episode_id: String) -> Dictionary:
 	if repo == null:
 		res["reason"] = "剧情数据缺失"
 		return res
+	# R359：没写正文的段落不能领 —— 界面已经不给点（`episode_state` 恒 locked），
+	# 这里是**纵深防御**：万一路径漏判，也不许把空段落的奖励记账写进档案。
+	if not repo.has_content(episode_id):
+		res["reason"] = "这一段还没有内容"
+		return res
 	if not is_story_unlocked(episode_id):
 		res["reason"] = "条件还没达成"
 		return res

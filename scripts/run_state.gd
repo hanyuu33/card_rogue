@@ -744,7 +744,10 @@ static func end_run(clear_save: bool = true) -> void:
 	gold = 0                      # R181：本局结束 → 金币清掉
 	boss_pending = false
 	boss_beaten = false       # R339：一局结束 → 标记回到初值
-	run_finished = true       # R339：本局已收尾（地图场景据此不再兜底开新局）
+	# R339：本局已收尾（地图场景据此不再兜底开新局）。
+	# R359：**只有真的结束才算收尾** —— 回标题（clear_save=false）是「先离开一下」，
+	# 这一局还要接着打，置真的话内存里就自相矛盾（保了档却说自己已结束）。
+	run_finished = clear_save
 	pending_level = {}
 	pending_node = {}
 	reward_context = ""

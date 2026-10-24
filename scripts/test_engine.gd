@@ -25035,6 +25035,84 @@ func _init() -> void:
 			and ProfileData.is_relic_unlocked(6005),
 			"R346 收下会解锁这一段挂的 1 件道具")
 
+	# ---- R359：**没写正文的段落默认上锁**（用户口径）----
+	# 空壳期 episode2~6 的 text 是空的，但成就在这段时间里就达成了 → 档案里早已有
+	# unlocked_stories 记录，于是列表显示成「可查看」金色亮点、点开只有一句
+	# 「（这一段故事还没有写。）」。修法 = 状态判定先看有没有正文。
+	ProfileData.clear_memory()
+	var r359_repo := StoryRepo.load_json()
+	var r359_empty := ""
+	var r359_named := ""
+	var r359_full := 0
+	for r359_ep: Dictionary in r359_repo.episodes:
+		var r359_id := str(r359_ep.get("id", ""))
+		if r359_repo.has_content(r359_id):
+			r359_full += 1
+		elif r359_empty == "":
+			r359_empty = r359_id
+	check(r359_full >= 1 and r359_empty != "",
+			"R359 取材：既有写了正文的段落（%d 段），也有没写的（%s）" % [r359_full, r359_empty])
+	if r359_empty != "":
+		ProfileData.unlock_story(r359_empty)   # 档案层面「条件已达成」
+		check(r359_repo.episode_state(r359_empty) == StoryRepo.STATE_LOCKED,
+				"R359 没写正文：即使档案里已解锁，状态也是 locked")
+		check(r359_repo.requirement_text(r359_empty) == "",
+				"R359 没写正文：不显示条件与进度（锁图标自己就说明了）")
+		check(not bool(ProfileData.claim_episode(r359_repo, r359_empty).get("ok", true)),
+				"R359 没写正文：claim_episode 也拒绝（纵深防御）")
+		check(not ProfileData.is_story_read(r359_empty),
+				"R359 没写正文：被拒之后不会留下已读记录")
+	ProfileData.unlock_story("episode1")
+	check(r359_repo.has_content("episode1")
+			and r359_repo.episode_state("episode1") == StoryRepo.STATE_READY,
+			"R359 有正文的段落不受影响：解锁后照旧是 ready")
+
+	# ---- R359b：续档健壮性（原子写 / 废档拒绝 / 回标题不标「已收尾」）----
+	# 用户报「从 esc 菜单回标题后不能正常选择继续游戏」。两条可能的机械原因：
+	#   ① 直接覆盖写存档 → 写一半被杀 = 半截档，has_save 仍为真、点下去解析失败，
+	#      表现就是「按钮点了没反应」；
+	#   ② end_run(false) 连「本局已收尾」一起置真并保档 → 读进来的那份档会让
+	#      map_scene 立刻把人踢回标题，表现是「点了继续又回标题」。
+	RunState.set_difficulty(0)
+	RunSave.clear_save()
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	var r359b_choco: int = RunState.chocolate
+	check(RunSave.save_run(), "R359b 正常局写档成功")
+	check(RunSave.has_save() and RunSave.load_run() and RunState.chocolate == r359b_choco,
+			"R359b 原子写落盘后能原样读回（巧克力 %d）" % RunState.chocolate)
+	# 半截档：手动写一段坏内容 → 必须读不出来（不能假装档是好的）
+	var r359b_f := FileAccess.open(RunSave.SAVE_PATH, FileAccess.WRITE)
+	check(r359b_f != null, "R359b 能手动造一个坏档")
+	if r359b_f != null:
+		r359b_f.store_string("{\"__runsave__\": 1, \"d\": {")
+		r359b_f.close()
+	check(not RunSave.load_run(), "R359b 半截档读不出来（不再静默留在标题猜）")
+	RunSave.clear_save()
+	# 「已收尾」的档：读不出来，且被清掉
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	RunState.run_finished = true
+	check(RunSave.save_run(), "R359b 已收尾的局也能写（造一个废档）")
+	RunState.run_finished = false
+	check(not RunSave.load_run(), "R359b 已收尾的档拒绝继续（不会点了又弹回标题）")
+	check(not RunSave.has_save(), "R359b 废档读失败后被清掉（按钮随之消失）")
+	# end_run(false) 不标「已收尾」
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	check(RunSave.save_run(), "R359b 再存一份")
+	RunState.end_run(false)
+	check(not RunState.run_finished,
+			"R359b 回标题（end_run(false)）不标「已收尾」—— 这一局还要接着打")
+	RunState.end_run()
+	check(RunState.run_finished, "R359b 真结束（end_run()）才标「已收尾」")
+	# 源码守卫：这两条路径不许回潮
+	var r359b_save_src := FileAccess.get_file_as_string("res://scripts/run_save.gd")
+	check(r359b_save_src.find("SAVE_PATH + \".tmp\"") >= 0
+			and r359b_save_src.find("dir.rename(tmp_path, SAVE_PATH)") >= 0,
+			"R359b 源码：存档走「先写 .tmp 再 rename」的原子替换")
+	var r359b_title_src := FileAccess.get_file_as_string("res://scripts/title_scene.gd")
+	check(r359b_title_src.find("RunSave.clear_save()") >= 0
+			and r359b_title_src.find("存档读取失败") >= 0,
+			"R359b 源码：读档失败会清坏档并给出可见提示（不是静默 return）")
+
 	# ---- ④ 奖励池两道闸：剧情锁定 / 玩家禁卡 ----
 	ProfileData.clear_memory()
 	var r346_repo_cards := CardRepo.load_json()

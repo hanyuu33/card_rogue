@@ -10,7 +10,8 @@ extends RefCounted
 ##   achievements  成就。[{id, name, hint, stat | stat_prefix, min, episodes: [剧情 id]}]
 ##
 ## 三段状态（`episode_state()` 的唯一判定口）：
-##   locked  条件还没达成  —— 列表里显示「？？？」与条件提示
+##   locked  条件还没达成 / **这一段根本没写正文**（R359）
+##           —— 列表里显示「？？？」与条件提示（没正文时不写进度，只有锁图标）
 ##   ready   条件已达成、还没点开看过 —— 可以点开看
 ##   read    已经看过（卡牌 / 道具已加入奖励池）
 ##
@@ -82,7 +83,25 @@ func achievement_for_episode(ep_id: String) -> Dictionary:
 	return v if v is Dictionary else {}
 
 
+func has_content(ep_id: String) -> bool:
+	## 这一段有没有**正文**（R359）：`text` 里至少一行非空字符串。
+	## 空壳期的占位段落（`text: []`）一律算「没做」—— 点开只能看到
+	## 「（这一段故事还没有写。）」，那不该算一段可以看的故事。
+	var ep := episode(ep_id)
+	for v: Variant in (ep.get("text", []) as Array):
+		if str(v).strip_edges() != "":
+			return true
+	return false
+
+
 func episode_state(ep_id: String) -> String:
+	# R359：**没写正文的段落默认上锁**（用户口径「没有写的故事，没有上锁，应该默认上锁」）。
+	# 玩家档案里很可能已经有它的解锁记录（成就在空壳期就达成了，episode2~6 全是这样），
+	# 但「条件够了」不等于「有东西可看」—— 列表里给金色亮点、点开却是空占位，比锁更糟。
+	# ⚠️ 只影响**显示判定**，不动 `unlocked_stories` 的记账：将来把正文填进 stories.json，
+	#    条件早就达成的玩家会立刻变成 ready（不用再补一次性迁移）。
+	if not has_content(ep_id):
+		return STATE_LOCKED
 	if ProfileData.is_story_read(ep_id):
 		return STATE_READ
 	if ProfileData.is_story_unlocked(ep_id):
@@ -99,6 +118,10 @@ func episode_label(ep: Dictionary) -> String:
 func requirement_text(ep_id: String) -> String:
 	## 未达成时显示的条件提示：成就的 hint + 进度（`0 / 1`）。
 	## 成就没写 hint → 一句兜底，别让界面空着。
+	# R359：没正文的段落不显示「已达成（1/1）」这种进度 —— 状态既然锁着，
+	# 写一条「条件已满」的提示只会让人以为坏了。锁图标已经说明一切。
+	if not has_content(ep_id):
+		return ""
 	var ach := achievement_for_episode(ep_id)
 	if ach.is_empty():
 		return ""

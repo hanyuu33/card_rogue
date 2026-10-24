@@ -9,6 +9,9 @@ var _font: Font
 var sfx: Sfx
 var _t := 0.0
 var _petals: Array = []         # {x, y, spd, ph, sc, rot, kind}  R154 飘落花瓣 / 光尘（换掉漂浮白方块）
+var _cont_btn: Button = null    # 「继续游戏」按钮（R359：读档失败时要能立刻藏掉 + 提示）
+var _toast := ""                # 底部一次性提示（读档失败）
+var _toast_t := 0.0
 
 
 
@@ -53,6 +56,7 @@ func _ready() -> void:
 	$Buttons.add_child(cont_btn)
 	cont_btn.pressed.connect(_on_continue)
 	cont_btn.visible = RunSave.has_save()
+	_cont_btn = cont_btn
 	# 顺序固定：开始 / 继续 / 图鉴 / 记录 / 故事 / 设置 / 退出
 	$Buttons.move_child(cont_btn, 1)
 	$Buttons.move_child(rec_btn, 3)
@@ -102,8 +106,22 @@ func _ready() -> void:
 		t.start()
 
 
+func _refresh_continue() -> void:
+	## R359：「继续游戏」只在**真的有可用档**时出现。
+	## 存档可能被别处清掉（坏档自愈 / 开新局），别让一个旧状态挂在屏幕上。
+	if _cont_btn != null:
+		var has := RunSave.has_save()
+		if _cont_btn.visible != has:
+			_cont_btn.visible = has
+
+
 func _process(delta: float) -> void:
 	_t += delta
+	_refresh_continue()
+	if _toast_t > 0.0:
+		_toast_t = maxf(0.0, _toast_t - delta)
+		if _toast_t <= 0.0:
+			_toast = ""
 	for f: Dictionary in _petals:
 		f.y += float(f.spd) * delta
 		if float(f.y) > 770.0:
@@ -148,6 +166,12 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	draw_string(_font, Vector2(14, size.y - 16), "Godot 4.3 自包含副本",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
+	# R359：读档失败的提示（只在失败后 3 秒内出现）—— 浅底面板上 outline = -1
+	if _toast != "" and _toast_t > 0.0:
+		var tw := _font.get_string_size(_toast, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				UiTheme.FS_LABEL).x
+		draw_string(_font, Vector2((size.x - tw) * 0.5, size.y - 52), _toast,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL, Color("b03a3a"))
 
 
 const PETAL_COLORS: Array[Color] = [
@@ -188,7 +212,13 @@ func _on_start() -> void:
 func _on_continue() -> void:
 	## 继续游戏：读本地存档恢复当前局 → 进冒险地图（地图场景按存档状态自行路由）。
 	if not RunSave.load_run():
-		push_warning("RunSave：继续游戏读档失败，留在标题")
+		# R359：**不能静默留在标题** —— 玩家点了没反应 = 以为按钮坏了。
+		# 废档（半截 / 已收尾）已经没救了，清掉并把按钮藏起来，再用一行字说明。
+		push_warning("RunSave：继续游戏读档失败，已清除坏档")
+		RunSave.clear_save()
+		_refresh_continue()
+		_toast = "存档读取失败（可能已损坏），已清除"
+		_toast_t = 3.2
 		return
 	RunRecord.resume()   # 这一局接着打 → 保证有开始时间（对战记录收尾时才写得出来）
 	# R323：存档若停在**一场没打完的战斗**里 → 直接回那一场；
