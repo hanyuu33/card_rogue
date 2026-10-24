@@ -22622,6 +22622,116 @@ func _init() -> void:
 			"R291 源码锁：两张新卡都登记了界面目标分支（不会敌我全列）")
 
 	# ============================================================
+	#  R360：死亡效果延迟结算（辅助刃回手不再抢在击破演出之前）
+	# ============================================================
+
+	# ---- ① 默认同步：headless 不置 defer → `_destroy` 立刻结算（守 R291 那批断言）----
+	var r360_e1 := _new_engine([], 20, 20, -1, false)
+	r360_e1.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r360_e1._blade_gift(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r360_e1.state.hand.clear()
+	check(not r360_e1.defer_death_effects and not r360_e1.has_pending_death_effects(),
+			"R360：默认 defer_death_effects == false / 队列空（测试与回放走同步）")
+	r360_e1._destroy(Vector2i(4, 1))
+	check(r360_e1.state.hand.size() == 1
+			and r360_e1.state.hand[0].id == GameEngine.BLADE_GIFT_ID
+			and not r360_e1.has_pending_death_effects(),
+			"R360：不延迟时 `_destroy` 同帧就把辅助刃入账（手牌 %d 张）"
+			% r360_e1.state.hand.size())
+
+	# ---- ② 开启延迟：`_destroy` 之后手牌不变、队列里有这一格 ----
+	var r360_e2 := _new_engine([], 20, 20, -1, false)
+	r360_e2.defer_death_effects = true
+	r360_e2.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r360_e2._blade_gift(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r360_e2.state.hand.clear()
+	r360_e2._destroy(Vector2i(4, 1))
+	check(r360_e2.state.hand.is_empty() and r360_e2.has_pending_death_effects(),
+			"R360：延迟时 `_destroy` 只入队 —— 此刻手牌还是 0 张、场上那张卡已移除（"
+			+ "queue=%d）" % r360_e2._death_effects.size())
+
+	# ---- ③ flush 本格 → 辅助刃才回手 ----
+	r360_e2.flush_death_effects(Vector2i(4, 1))
+	check(r360_e2.state.hand.size() == 1
+			and r360_e2.state.hand[0].id == GameEngine.BLADE_GIFT_ID
+			and not r360_e2.has_pending_death_effects(),
+			"R360：`flush_death_effects(cell)` 之后辅助刃才入账（手牌 %d 张）"
+			% r360_e2.state.hand.size())
+
+	# ---- ④ 只结算本格：同帧死两个，另一格的亡语不许被带走 ----
+	var r360_e3 := _new_engine([], 20, 20, -1, false)
+	r360_e3.defer_death_effects = true
+	r360_e3.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r360_e3.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r360_e3._blade_gift(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r360_e3._blade_gift(Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r360_e3.state.hand.clear()
+	r360_e3._destroy(Vector2i(4, 1))
+	r360_e3._destroy(Vector2i(3, 1))
+	r360_e3.flush_death_effects(Vector2i(4, 1))
+	check(r360_e3.state.hand.size() == 1 and r360_e3.has_pending_death_effects(),
+			"R360：flush 只结算本格 —— 收下 1 张、另一格还排着（手牌 %d / 剩 %d 格）" % [
+				r360_e3.state.hand.size(), r360_e3._death_effects.size()])
+	r360_e3.flush_death_effects(Vector2i(3, 1))
+	check(r360_e3.state.hand.size() == 2 and not r360_e3.has_pending_death_effects(),
+			"R360：第二格到点 → 两张辅助刃都回到手卡（手牌 %d 张）"
+			% r360_e3.state.hand.size())
+
+	# ---- ⑤ 兜底口：一次跑完全部（闹钟丢了也不会把操作锁死）----
+	var r360_e4 := _new_engine([], 20, 20, -1, false)
+	r360_e4.defer_death_effects = true
+	r360_e4.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r360_e4.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(2, 1), GameEngine.SIDE_SELF)
+	r360_e4._blade_gift(Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r360_e4._blade_gift(Vector2i(2, 1), GameEngine.SIDE_SELF)
+	r360_e4.state.hand.clear()
+	r360_e4._destroy(Vector2i(4, 1))
+	r360_e4._destroy(Vector2i(2, 1))
+	r360_e4.flush_all_death_effects()
+	check(r360_e4.state.hand.size() == 2 and not r360_e4.has_pending_death_effects(),
+			"R360：`flush_all_death_effects()` 兜底跑完（手牌 %d 张 / 队列空）"
+			% r360_e4.state.hand.size())
+
+	# ---- ⑥ 送葬抽牌也一起被延后（同一批死亡效果，不是只照顾辅助刃）----
+	var r360_e5 := _new_engine([], 20, 20, -1, false)
+	r360_e5.defer_death_effects = true
+	var r360_fn := _card(GameEngine.FUNERAL_ID, "送葬", "效果", 0, 0, 0)
+	r360_fn.traits = [GameEngine.FUNERAL_TRAIT]
+	r360_e5.state.effects.append(r360_fn)
+	r360_e5.state.place(_card(8003, "树人", "盟友", 0, 1, 10),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r360_e5.state.hand.clear()
+	r360_e5.state.deck.clear()
+	for _d in 3:
+		r360_e5.state.deck.append(_card(9086, "终结", "技能", 0, 0, 0, 0, 0))
+	r360_e5._destroy(Vector2i(4, 1))
+	check(r360_e5.state.hand.is_empty(),
+			"R360：送葬的「抽 1 张」也延后 —— `_destroy` 当帧不抽（手牌 %d 张）"
+			% r360_e5.state.hand.size())
+	r360_e5.flush_death_effects(Vector2i(4, 1))
+	check(r360_e5.state.hand.size() == 1,
+			"R360：flush 之后才抽到那张（手牌 %d 张）" % r360_e5.state.hand.size())
+
+	# ---- ⑦ 源码锁：界面必须开队列 + 起闹钟 + 演出期间锁操作 ----
+	var r360_ui := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r360_ui.find("engine.defer_death_effects = true") >= 0,
+			"R360 源码锁：单机战斗开启死亡效果延迟队列")
+	check_src(r360_ui.find('"kind": "death_effects"') >= 0
+			and r360_ui.find("engine.flush_death_effects(") >= 0,
+			"R360 源码锁：击破演出到点给闹钟、并调 flush_death_effects")
+	check_src(r360_ui.find("func _death_wait() -> bool:") >= 0
+			and r360_ui.find("or _death_wait():") >= 0,
+			"R360 源码锁：待结算期间 `_gui_input` / AI 都要让路")
+	check_src(r360_ui.find("engine.flush_all_death_effects()") >= 0,
+			"R360 源码锁：界面有兜底 flush（不会把操作永久锁死）")
+
+	# ============================================================
 	#  R292：拒绝命运自动化 / 战斗骨骼 +2+2 / 回收归入「变成」/ 严格自动折行
 	# ============================================================
 

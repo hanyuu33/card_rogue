@@ -19,6 +19,17 @@ var over:= false
 var result:= ""
 var result_reason:= ""
 var ai_enabled:= true
+## R360：死亡效果延迟结算（**只影响时机，不改逻辑顺序**）。
+## 根因：`_destroy()` 里亡语是同步跑的，而界面要等击破演出（`DESTROY_HOLD_MS` + 幽灵淡出）
+## 才把那把卡抹掉 —— 于是「辅助刃」这类回手亡语先出现在手卡、场上那张卡还站着。
+## headless（单元测试 / 回放）保持 false → 同步结算，断言不受影响；
+## battle_scene 只对**单机战斗**置 true，由击破演出到点调 `flush_death_effects(cell)`。
+## ⚠️ 联机镜像模式必须保持 false：两侧靠同一份 action 序列对齐，不能掺本地动画时间。
+var defer_death_effects:= false
+## R360：待结算的死亡效果 —— `cell -> Array[Callable]`。
+## 用格子当键、而不是一条全局队列：同一帧死两个单位时，各自的亡语要等**自己那张卡的**
+## 击破演出到点才结算，不会因为先播完的那个把后面的一起跑掉。
+var _death_effects:= {}
 ## R245：本场战斗的节点类型（"battle" / "elite" / "boss"）。
 ## 由 battle_scene 按**关卡 tier** 写入一次；引擎不自己读 RunState.pending_node ——
 ## 单关演示 / 单元测试都能显式指定，判据只有一处（`_courage_energy` 的消费方）。
@@ -11803,6 +11814,42 @@ func _demolish(target: Vector2i, side: String) -> String :
 		("，额外获得升级" if was_upgraded else "")]
 
 
+func has_pending_death_effects() -> bool:
+	## R360：还有死亡效果没结算 —— 界面据此锁操作 / 让 AI 等一拍。
+	return not _death_effects.is_empty()
+
+
+func _queue_death_effect(cell: Vector2i, fn: Callable) -> void:
+	## R360：死亡效果入队。`defer_death_effects == false` 时等同于「立刻执行」——
+	## 单元测试与回放走的都是这条，断言时序一点没变。
+	if not defer_death_effects:
+		fn.call()
+		return
+	if not _death_effects.has(cell):
+		_death_effects[cell] = []
+	(_death_effects[cell] as Array).append(fn)
+
+
+func flush_death_effects(cell: Vector2i) -> void :
+	## R360：这一格的击破演出到点了 → 把攒着的死亡效果按入队顺序结算。
+	## 只取本格：同帧多处死亡，各等各的演出。
+	if not _death_effects.has(cell):
+		return
+	var queue: Array = _death_effects[cell]
+	_death_effects.erase(cell)
+	for fn: Callable in queue:
+		fn.call()
+
+
+func flush_all_death_effects() -> void :
+	## R360：兜底口 —— 界面上的闹钟丢了（动画被打断 / 定时器被清空）就一次跑完，
+	## 绝不让「待结算」把玩家操作永久锁死。带次数上限：亡语互相引爆时不会在这里打转。
+	var guard:= 0
+	while not _death_effects.is_empty() and guard < 128:
+		flush_death_effects(_death_effects.keys()[0] as Vector2i)
+		guard += 1
+
+
 func _destroy(cell: Vector2i) -> void :
 	if not state.board.has(cell):
 		return
@@ -11884,14 +11931,30 @@ func _destroy(cell: Vector2i) -> void :
 		_log("%s 被击破，移出场外" % p.card.card_name)
 	action.emit("destroy", {"cell": cell, "card": p.card, "placement": p})
 
+	# R360：亡语这一批**不在这一帧结算** —— 界面此刻还停在击破演出上（卡要留
+	# `DESTROY_HOLD_MS` 才抹掉，幽灵淡出还要 800ms）。同步跑就会出现
+	# 「辅助刃先回手 / 送葬先抽牌，而场上那张卡还站着」的时序倒错。
+	# 现在统一入队，由 battle_scene 在那张卡的击破演出到点时调 `flush_death_effects(cell)`。
+	# ⚠️ 入队顺序 = 原来的执行顺序；`defer_death_effects == false`（测试 / 回放）立即执行。
+	_queue_death_effect(cell,
+			_settle_death.bind(cell, p, _rec_victim_ok, _rec_power, _rec_list))
+
+
+func _settle_death(cell: Vector2i, p: Placement, rec_ok: bool, rec_power: int,
+		rec_list: Array) -> void :
+	## R360：一个单位被破坏之后的**全部**触发 —— 爆炎鸭爆炸 / 亡语 / 胜负判定 /
+	## 零件回收者 / 三个光环重算 / 送葬抽牌。顺序与 R327 时完全一致，
+	## 只是从 `_destroy()` 尾部搬到这里，好让界面决定「什么时候才跑」。
+	## ⚠️ 别把「进弃牌区 / 离场摘字段」搬进来：那部分仍在 `_destroy()` 里同步做
+	##    （它们在 emit 之前，玩家看不到，也不该等动画）。
 	if p.card.id == BLAZE_DUCK_ID:
 		_death_blast(cell, BLAZE_DUCK_DAMAGE, p.card)
 	_deathrattle(cell, p)
 	_check_game_over()
 	# R96：零件回收者 —— 被销毁的是己方「素体以外」盟友/工事时，连通块内的回收者回收其力量 + 手牌加素体。
-	if _rec_victim_ok:
-		for _r in _rec_list:
-			_recycler_trigger(_r, _rec_power)
+	if rec_ok:
+		for _r: Placement in rec_list:
+			_recycler_trigger(_r, rec_power)
 	# R111 暗影领主：场上少了一个单位 → 重算（死的是暗杀者时鸭之暗面立刻掉 3 力 1 速）。
 	_refresh_dark_lord(p.owner)
 	# R152 赫卡同克瑞斯：场上单位数变了 → 孤军判定重算（塔被拆 → 立刻狂暴）。

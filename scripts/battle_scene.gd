@@ -212,6 +212,9 @@ const ATK_WINDUP_T := 0.10      # 开始后仰蓄力
 const ATK_LAUNCH_T := 0.30      # 弹体发射
 const ATK_IMPACT_T := 0.62      # 弹体命中目标
 const DESTROY_HOLD_MS := 140    # 命中后卡牌「留一帧」再消失：先看得见伤害，再击破
+## R360：卡被抹掉 / 白闪 / 爆点起播之后，再等这么久才结算「死亡效果」（辅助刃回手、
+## 生命循环、送葬抽牌…）—— 落在幽灵淡出最浓的那一段，读起来就是「卡碎了 → 刃飞回来」。
+const DEATH_SETTLE_DELAY_MS := 180
 const MOVE_SLIDE_BASE_MS := 160     # 移动滑行：起步耗时（1 格 = 420ms，与旧版一致）
 const MOVE_SLIDE_PER_STEP_MS := 260 # 移动滑行：每多走 1 格再加这么久
 
@@ -2082,6 +2085,27 @@ func _ready() -> void:
 		_hover_hand = -1
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--r360probe" in args and engine != null:
+		# R360 时序探针（headless）：给树人挂上「辅助刃」的「死亡」，再由 `_demo_tick`
+		# 打掉它，逐帧记录「卡什么时候消失 / 亡语什么时候才入账」。
+		#   godot --headless --path . battle.tscn -- --r360probe
+		# 期望：`hand` 变多的时刻 **晚于** 卡被抹掉的时刻（R360 之前是同一帧甚至更早）。
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 8
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		var r360_ret: String = engine._blade_gift(Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.hand.clear()
+		var r360_tree: Placement = engine.state.unit_at(Vector2i(4, 1))
+		print("[R360] 挂「死亡」：%s｜blade_gift=%s｜力量 %d" % [
+				r360_ret, str(r360_tree.blade_gift if r360_tree != null else false),
+				r360_tree.effective_power() if r360_tree != null else -1])
+		_r360_probe = true
+		_r360_hand0 = engine.state.hand.size()
+		_clear_hover_state()
+		selection = null
+		print("[R360] 场景就绪：树人 (4,1) 已挂「死亡」，手牌 %d 张" % _r360_hand0)
 	if "--r332instinct" in args and engine != null:
 		# 演示（R332）：本能 9176 —— 牌库里只放 3 张 ≤1 费技能 + 4 张高费干扰，
 		# 截图上能直接看出「1 费的被打出去、2 费的还留在牌库」。
@@ -2765,10 +2789,55 @@ var _demo_pending := false
 var _demo_args: Array = []      # -- 后的用户参数（demo 分支判断用）
 var _demo_frame := 0
 var _shot_frame := 150
+## R360 时序探针（只服务 `--r360probe`，不进正式流程）：记录「击破演出 / 亡语结算」的先后。
+var _r360_probe := false
+var _r360_probe_frame := 0
+var _r360_t_kill := 0
+var _r360_t_hide := 0        # 那张卡真正被抹掉（击破演出起播）的时刻
+var _r360_t_hand := 0        # 手牌第一次变多的时刻
+var _r360_hand0 := 0
 var _shot_ms := 0               # --shotms：距演示动作的毫秒数（比帧号稳定）
 var _shot_t0 := 0               # 演示动作起始时刻（_now）
 var _cue_demo := false          # R288：--r288pulse 出图时允许演出队列照常推进
 var _cue_pin := 0               # R288：出图时钉在第几个镜头段（跨屏轮流取证用）
+
+
+func _r360_probe_tick() -> void:
+	## R360 时序探针：只打印**状态变化**那几行，跑完自动退出（headless 用）。
+	## ⚠️ 不挂在 `_demo_tick` 上：那个函数只有 `--screenshot` 才会被调用。
+	if _r360_t_kill == 0:
+		_r360_probe_frame += 1
+		if _r360_probe_frame < 4:
+			return
+		if engine == null:
+			return
+		# 第 4 帧打掉那个挂了「死亡」的树人 —— 之后全交给引擎队列 + 界面闹钟。
+		engine.damage_cell(Vector2i(4, 1), 99, "演示")
+		engine._destroy_dead()
+		_r360_t_kill = _now()
+		_shot_t0 = _r360_t_kill      # 出图时 `--shotms` 从这一刻起算
+		print("[R360] 击杀：t=0ms（damage_cell + _destroy_dead）")
+		return
+	var t := _now() - _r360_t_kill
+	# 卡被抹掉 = `_dying` 里那一格消失（`destroy_fx` 到点把它移出 `_dying`）
+	if _r360_t_hide == 0 and _dying.is_empty():
+		_r360_t_hide = t
+		print("[R360] t=%dms  卡被抹掉 → 击破演出起播（幽灵淡出 800ms）" % t)
+	if _r360_t_hand == 0 and engine.state.hand.size() > _r360_hand0:
+		_r360_t_hand = t
+		print("[R360] t=%dms  手牌 %d → %d 张：「%s」入账" % [
+				t, _r360_hand0, engine.state.hand.size(),
+				engine.state.hand[engine.state.hand.size() - 1].card_name])
+	if t >= 1300:
+		var ok := _r360_t_hide > 0 and _r360_t_hand > _r360_t_hide
+		print("[R360] 结论：卡抹掉 %dms / 亡语入账 %dms → %s" % [
+				_r360_t_hide, _r360_t_hand,
+				"✓ 先死亡演出、后结算" if ok else "✗ 仍然是结算抢在演出前"])
+		print("[R360] 末态：hand=%d  pending=%s  dying=%d  delayed=%d" % [
+				engine.state.hand.size(), str(engine.has_pending_death_effects()),
+				_dying.size(), _delayed.size()])
+		if not _shot_pending:
+			get_tree().quit()     # 出图模式交给 `--shotms` 截图后自己退
 
 
 func _demo_tick() -> void:
@@ -3073,7 +3142,10 @@ func _demo_tick() -> void:
 		_demo_aoe_drag()          # R242 演示：AOE 范围 / 自伤警告 / 条件额外加成
 	var shot_due := _shot_pending and _demo_frame == _shot_frame
 	if _shot_pending and _shot_t0 > 0 and _now() - _shot_t0 >= _shot_ms \
-			and "--shotms" in _demo_args:
+			and "--shotms" in _demo_args \
+			and (not _r360_probe or _r360_t_kill > 0):
+		# R360：`--r360probe` 的毫秒要从「击杀」起算 —— 场景加载本身就要几百毫秒，
+		# 不拦这一下，250ms 那张会拍在开局横幅上。
 		shot_due = true   # 按「距击杀动作的毫秒数」触发，比帧号稳定
 	if shot_due:
 		var img := get_viewport().get_texture().get_image()
@@ -3482,6 +3554,9 @@ func load_level(lvl: Dictionary) -> void:
 			int(lvl["turn_limit"]), str(lvl["name"]), bool(lvl["shuffle"]), brng)
 	state.max_hp_self = RunState.max_hp   # 上限独立于当前值（休息事件可回复）
 	engine = GameEngine.new(state)
+	# R360：单机战斗开启「死亡效果延迟结算」—— 亡语要等那张卡的击破演出到点才跑
+	# （否则辅助刃先回手、场上那张卡还站着）。联机镜像模式**不开**：见引擎侧注释。
+	engine.defer_death_effects = true
 	if RunState.run_active:
 		engine.rng.seed = battle_seed   # 战斗内全部随机（含 AI）可复现
 	engine.ai_enabled = bool(lvl["enemy_ai"])
@@ -3692,8 +3767,14 @@ func _pass_moved_pending() -> void:
 
 # ------------------------------------------------------------ 输入
 
+func _death_wait() -> bool:
+	## R360：还有死亡效果在等击破演出 → 这段时间不收操作、也不让 AI 推进。
+	## 窗口很短（卡抹掉后 180ms）；判据只有引擎那一条队列，界面不自己算。
+	return engine != null and engine.has_pending_death_effects()
+
+
 func _gui_input(event: InputEvent) -> void:
-	if engine == null or engine.over or _net_locked():
+	if engine == null or engine.over or _net_locked() or _death_wait():
 		return
 	# R136：巡场动画播放中，玩家一按鼠标就停（动画只是提示，绝不吞操作）。
 	if event is InputEventMouseButton and event.pressed and _grid_intro_t >= 0.0:
@@ -3854,6 +3935,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				_menu.open()
 			return
 		KEY_E:
+			if _death_wait():
+				return          # R360：死亡效果未结算，别抢着结束回合
 			_on_end_turn()
 			queue_redraw()
 		KEY_M:
@@ -7397,6 +7480,10 @@ func _on_end_turn() -> void:
 
 
 func _ai_step() -> void:
+	# R360：死亡效果还在等击破演出 → 这一拍先跳过（下一次 timer 再来）。
+	# 不这样的话 AI 会在「亡语未结算」的中间态上继续决策。
+	if _death_wait():
+		return
 	if engine.over:
 		_ai_timer.stop()
 		status_text = "对局结束：%s（%s）" % [engine.result, engine.result_reason]
@@ -8258,6 +8345,9 @@ func _tick_earring_autoplay() -> bool:
 	## 返回 true = 还在播（界面要继续逐帧重绘、且玩家操作应被锁住）。
 	if engine == null or not engine.earring_autoplay_active():
 		return false
+	# R360：死亡效果等击破演出 → 这一帧不推下一张（否则会在半结算状态下出牌）
+	if _death_wait():
+		return true
 	var n := _now()
 	if n - _earring_at < _earring_gap:
 		return true
@@ -8840,7 +8930,14 @@ func _tick_anims() -> bool:
 	_transform_fx = _transform_fx.filter(func(x): return n - int(x.start) < int(x.dur))
 	if not _screen_flash.is_empty() and n - int(_screen_flash.start) >= int(_screen_flash.dur):
 		_screen_flash = {}
-	return any or not _ghosts.is_empty() or not _floaters.is_empty() \
+	# R360：死亡效果还没结算 → 仍然算「演出中」（结算面板 / 回合推进都别抢跑）。
+	# 兜底：闹钟丢了（`_delayed` 被清 / 演出被打断）就一次跑完 ——
+	# 宁可亡语早到账，也不能让「待结算」把玩家操作永久锁死。
+	var death_busy := _death_wait()
+	if death_busy and _delayed.is_empty():
+		engine.flush_all_death_effects()
+		death_busy = _death_wait()
+	return any or death_busy or not _ghosts.is_empty() or not _floaters.is_empty() \
 			or not _bursts.is_empty() or not _dying.is_empty() \
 			or not _wake_rings.is_empty() \
 			or not _delayed.is_empty() or n < _shake_until \
@@ -9993,6 +10090,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_delayed.append({"at": hide_at, "kind": "destroy_fx",
 					"data": {"center": center, "sc": _grid_scroll,
 							"card": data["card"], "cell": cell}})
+			# R360：亡语（辅助刃回手 / 生命循环 / 送葬抽牌…）等**自己那张卡**的击破演出
+			# 过去再结算 —— 卡抹掉 + 白闪 + 大爆点之后 `DEATH_SETTLE_DELAY_MS`。
+			# 这里只给闹钟，结不结算由引擎的队列说了算（联机不开队列 → 空操作）。
+			_delayed.append({"at": hide_at + DEATH_SETTLE_DELAY_MS,
+					"kind": "death_effects", "data": {"cell": cell}})
 		"funeral":
 			# R327 送葬（9175）：**任意一方**单位被破坏 → 抽 1 张卡。抽牌本身有手牌动画，
 			# 这里只在手牌上方飘一句「送葬 +N 张」，让玩家知道这张牌是**效果卡**给的。
@@ -10937,6 +11039,11 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 	## 定时特效到点：攻击在冲刺结束那一刻才"命中"。
 	var n := _now()
 	match kind:
+		"death_effects":
+			# R360：这张卡的击破演出到点 → 结算它的死亡效果（辅助刃回手等）。
+			if engine != null:
+				engine.flush_death_effects(d.get("cell", Vector2i(-1, -1)) as Vector2i)
+				queue_redraw()
 		"destroy_fx":
 			if d.has("cell"):
 				var c: Vector2i = d["cell"]
@@ -13007,6 +13114,8 @@ func _process(delta: float) -> void:
 	# 结算面板：等所有攻击/命中/击破/飘字等动画特效播完后再弹出。
 	if engine.over and not _over_shown and not anim_busy:
 		_show_over(engine.result == "胜利")
+	if _r360_probe:
+		_r360_probe_tick()
 	# 地图总览的「下一步可走」绿环 / 棋盘双箭头呼吸脉动 → 同走脉冲节流（R180）。
 	if _map_visible or _grid_scrollable():
 		_pulse_redraw()
