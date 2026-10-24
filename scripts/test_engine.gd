@@ -22731,6 +22731,22 @@ func _init() -> void:
 	check_src(r360_ui.find("engine.flush_all_death_effects()") >= 0,
 			"R360 源码锁：界面有兜底 flush（不会把操作永久锁死）")
 
+	# ---- R361：攻击动画 / 伤害特效同一刻（「特效早于动画」的守卫）----
+	var r361_ui := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r361_ui.find("func _impact_floor(n: int) -> int:") >= 0,
+			"R361 源码锁：通用受击有「等主体攻击落地」的时刻闸")
+	check_src(r361_ui.find("maxi(n + 160, _impact_floor(n))") >= 0,
+			"R361 源码锁：fx_hit 不再固定 160ms 抢跑（攻击 HP 时的余波最容易看出来）")
+	check_src(r361_ui.find("func _anim_end_for(p: Placement, cap_ms := ATK_DUR_MS)") >= 0,
+			"R361 源码锁：排队上限不短于一条攻击动画（短了会顶掉正在播的那段）")
+	check_src(r361_ui.find('"say": "⚔ %s 攻击 %s！"') >= 0
+			and r361_ui.find('"say": "⚔ %s 直击%s HP！-%d"') >= 0,
+			"R361 源码锁：播报挂在撞击时刻，不再 t=0 就把结果写出来")
+	check_src(r361_ui.find("off = lerpf(back, push, k2 * k2)") >= 0,
+			"R361 源码锁：冲击在撞击那一刻才到位（不再提前 260ms 到位干等爆点）")
+	check_src(r361_ui.find("var push := 76.0 if is_hp else 14.0") >= 0,
+			"R361 源码锁：直击 HP 的冲锋幅度够看得见（原来 30px ≈ 1/4 格）")
+
 	# ============================================================
 	#  R292：拒绝命运自动化 / 战斗骨骼 +2+2 / 回收归入「变成」/ 严格自动折行
 	# ============================================================

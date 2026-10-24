@@ -2106,6 +2106,30 @@ func _ready() -> void:
 		_clear_hover_state()
 		selection = null
 		print("[R360] 场景就绪：树人 (4,1) 已挂「死亡」，手牌 %d 张" % _r360_hand0)
+	if "--r361probe" in args and engine != null:
+		# R361 时序探针：我方树人 (1,0) 打敌方树人 (1,1) / 或直击敌方 HP (0,0)，
+		# 逐帧记录「攻击动画走到哪」与「伤害特效排在何时」。
+		#   godot --headless --path . scenes/battle.tscn -- --r361probe [--r361hp]
+		RunState.player_class = PlayerClass.MECH
+		engine.state.hand.clear()
+		engine.state.energy = 99
+		_r361_mode = "hp" if "--r361hp" in args else "unit"
+		if "--r361ai" in args:
+			_r361_mode = "ai"
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(1, 0), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
+		if _r361_mode == "ai":
+			# AI 实测：敌方树人在 (1,1) 打我方 (1,0)；我方后排全空 → 顺带测「移动 + 直击 HP」。
+			engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+					Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+		_r361_probe = true
+		_clear_hover_state()
+		selection = null
+		print("[R361] 就绪：模式 %s" % _r361_mode)
 	if "--r332instinct" in args and engine != null:
 		# 演示（R332）：本能 9176 —— 牌库里只放 3 张 ≤1 费技能 + 4 张高费干扰，
 		# 截图上能直接看出「1 费的被打出去、2 费的还留在牌库」。
@@ -2789,6 +2813,14 @@ var _demo_pending := false
 var _demo_args: Array = []      # -- 后的用户参数（demo 分支判断用）
 var _demo_frame := 0
 var _shot_frame := 150
+## R361 时序探针（只服务 `--r361probe`）：记录「攻击动画 / 伤害特效」的先后。
+var _r361_probe := false
+var _r361_frame := 0
+var _r361_t0 := 0
+var _r361_mode := "unit"
+var _r361_cell := Vector2i(1, 0)
+var _r361_last := ""
+var _r361_ai_at := 0
 ## R360 时序探针（只服务 `--r360probe`，不进正式流程）：记录「击破演出 / 亡语结算」的先后。
 var _r360_probe := false
 var _r360_probe_frame := 0
@@ -2800,6 +2832,65 @@ var _shot_ms := 0               # --shotms：距演示动作的毫秒数（比�
 var _shot_t0 := 0               # 演示动作起始时刻（_now）
 var _cue_demo := false          # R288：--r288pulse 出图时允许演出队列照常推进
 var _cue_pin := 0               # R288：出图时钉在第几个镜头段（跨屏轮流取证用）
+
+
+func _r361_note(kind: String) -> void:
+	## R361 探针：伤害特效**真正触发**的那一刻，攻击者动画处于什么相位。
+	## 相位 < 0.62 = 还没撞上（特效早到）；无动画 = 根本没演。
+	if kind != "hit" and kind != "hp_hit" and kind != "fx_hit":
+		return
+	var t := _now() - _r361_t0
+	var act := ""
+	for pp: Placement in _attacks.keys():
+		var a: Dictionary = _attacks[pp]
+		var ph := float(_now() - int(a.start)) / float(a.dur)
+		act += "%s(%s 相位%.2f) " % [pp.card.card_name, str(a.get("kind", "unit")), ph]
+	if act == "":
+		act = "无动画"
+	print("[R361] ★特效 %s @t=%dms ｜ %s" % [kind, t, act])
+
+
+func _r361_probe_tick() -> void:
+	## R361 探针：每帧打印「动画相位 / 特效排队」的变化，跑完自动退出。
+	if _r361_t0 == 0:
+		_r361_frame += 1
+		if _r361_frame < 4 or engine == null:
+			return
+		_r361_t0 = _now()
+		_shot_t0 = _r361_t0
+		if _r361_mode == "hp":
+			engine.attack_hp(_r361_cell, Vector2i(0, 0), GameEngine.SIDE_SELF)
+		elif _r361_mode == "ai":
+			engine.end_turn()
+		else:
+			engine.attack(_r361_cell, Vector2i(1, 1), GameEngine.SIDE_SELF)
+		print("[R361] ── %s 触发 t=0 ──" % _r361_mode)
+		return
+	var t := _now() - _r361_t0
+	if _r361_mode == "ai" and _r361_t0 > 0 and t - _r361_ai_at >= 700:
+		_r361_ai_at = t
+		_ai_step()
+	var att: Placement = engine.state.unit_at(_r361_cell)
+	var desc := "无"
+	var off := 0.0
+	if att != null and _attacks.has(att):
+		var a: Dictionary = _attacks[att]
+		desc = "kind=%s start=%d dur=%d" % [str(a.get("kind", "")),
+				int(a.start) - _r361_t0, int(a.dur)]
+		var dv: Vector2 = _display_center(att, _r361_cell) - _cell_center(_r361_cell)
+		off = dv.dot((a.dir as Vector2))
+	var dly := ""
+	for ev: Dictionary in _delayed:
+		dly += "%s@%d " % [str(ev.kind), int(ev.at) - _r361_t0]
+	var sig := "%s|%s|%d|%d" % [desc, dly, _floaters.size(), _bursts.size()]
+	if sig != _r361_last:
+		_r361_last = sig
+		print("[R361] t=%4dms  %s  前冲=%.1f  延迟[%s] 飘字=%d 爆点=%d" % [
+				t, desc, off, dly, _floaters.size(), _bursts.size()])
+	var t_end := 8000 if _r361_mode == "ai" else 2400
+	if t >= t_end:
+		print("[R361] 结束。")
+		get_tree().quit()
 
 
 func _r360_probe_tick() -> void:
@@ -8241,10 +8332,27 @@ func _pulse_redraw() -> void:
 	queue_redraw()
 
 
-func _anim_end_for(p: Placement, cap_ms := 900) -> int:
+func _set_attack_anim(p: Placement, a: Dictionary) -> void:
+	## R361：攻击动画的**唯一入口**。原来 `attack` / `hp` 两处直接 `_attacks[p] =`，
+	## 而 `_attacks` 是「一单位一槽」—— 同一单位在上一段动画还没播完时又来一次攻击，
+	## 新动画会**原地顶掉**旧的，旧动画的伤害特效却仍按旧时刻炸 → 特效早于动画。
+	## 这里只做一件事：把覆盖这件事**记下来**（探针 / 断言都靠它）。
+	if _r361_probe and _attacks.has(p):
+		var old: Dictionary = _attacks[p]
+		if int(a.start) < int(old.start) + int(old.dur):
+			print("[R361] ⚠ 覆盖未播完的动画：旧 kind=%s [%d,+%d] → 新 kind=%s start=%d" % [
+					str(old.get("kind", "")), int(old.start) - _r361_t0, int(old.dur),
+					str(a.get("kind", "")), int(a.start) - _r361_t0])
+	_attacks[p] = a
+
+
+func _anim_end_for(p: Placement, cap_ms := ATK_DUR_MS) -> int:
 	## 该单位身上「已排队动画」的结束时刻 —— 新动作排到它后面，避免后一个动作
 	## 把前一段演出整段吞掉（AI 一步内连做移动+攻击时最明显）。
 	## 上限 cap_ms：多动单位连续行动时不让队列越积越长，最多推迟这么久。
+	## ⚠️ R361：cap **不得短于 `ATK_DUR_MS`**（原来 900 < 1500）。短了就出现
+	## 「新攻击动画插进旧动画的区间里」→ `_attacks` 是单槽，旧的被顶掉，
+	## 而旧那一下的伤害特效仍按旧时刻炸 = 特效先于（新）动画。
 	var n0 := _now()
 	var until := n0
 	if _slides.has(p):
@@ -8324,18 +8432,27 @@ func _display_center(p: Placement, cell: Vector2i) -> Vector2:
 			var is_hp := str(l.get("kind", "unit")) == "hp"
 			# 攻击者原地演出：后仰蓄力 → 发射时前倾后坐 → 缓缓回正（弹体负责飞行）
 			# 直击 HP 是「冲锋撞击」：没有弹体，前冲幅度更大、撞击感更强。
-			var back := -24.0 if is_hp else -22.0
-			var push := 30.0 if is_hp else 10.0
+			# R361：直击 HP 的「冲锋」原来只有 30px（约 1/4 格），而伤害特效落在
+			# 离单位很远的 HP 横幅上 —— 画面读起来就是「数字先炸、单位没动」。
+			# 幅度加到 76px（撞到目标格上），撞击那一刻才到位，撞后顿 12% 再回正。
+			var back := -32.0 if is_hp else -22.0
+			var push := 76.0 if is_hp else 14.0
 			var off := 0.0
 			if t2 < ATK_LAUNCH_T:
 				var k := clampf((t2 - ATK_WINDUP_T) / (ATK_LAUNCH_T - ATK_WINDUP_T), 0.0, 1.0)
 				off = back * sin(k * PI * 0.5)           # 后仰蓄力
 			elif t2 < ATK_IMPACT_T:
+				# R361：`k2 * 2.2` 会让单位在 0.45 进度就趴在目标脸上干等爆点（提前 260ms）
+				# → 改成加速曲线，**撞上那一刻才到位**，位移与爆点同一帧。
 				var k2 := (t2 - ATK_LAUNCH_T) / (ATK_IMPACT_T - ATK_LAUNCH_T)
-				off = lerpf(back, push, minf(k2 * 2.2, 1.0))   # 冲上去撞击
+				off = lerpf(back, push, k2 * k2)
 			else:
 				var k3 := (t2 - ATK_IMPACT_T) / (1.0 - ATK_IMPACT_T)
-				off = push * (1.0 - (1.0 - pow(1.0 - k3, 2.0)))  # 缓缓回正
+				if k3 < 0.12:
+					off = push                              # 顿帧：撞住不放
+				else:
+					var kr := (k3 - 0.12) / 0.88
+					off = push * (1.0 - pow(kr, 1.6))        # 快速回正
 			return asrc + adir * off + _scroll_dy(float(l.get("sc", _grid_scroll)))
 	return base
 
@@ -8635,6 +8752,20 @@ func _fx_unqueue_hit(cell: Vector2i) -> void:
 		var d: Dictionary = ev.get("data", {})
 		if d.get("cell") == cell:
 			_delayed.remove_at(i)
+
+
+func _impact_floor(n: int) -> int:
+	## R361：**画面上还没落地的那一击**会在什么时候撞上（取最近的一次，+60ms 余波）。
+	## 没有在播的攻击动画就返回 0（调用方自己兜 `n + 160`）。
+	## 存在的意义：让「跟着攻击一起结算的附带伤害」跟主体攻击**同时**落地，
+	## 而不是按入队时刻抢跑（攻击 HP 时最容易看出来）。
+	var best := 0
+	for pp: Placement in _attacks.keys():
+		var a: Dictionary = _attacks[pp]
+		var hit_at := int(a.start) + int(ATK_IMPACT_T * int(a.dur))
+		if hit_at > n and (best == 0 or hit_at < best):
+			best = hit_at
+	return best + 60 if best > 0 else 0
 
 
 func _cam_to_scroll(target: float, ms: int) -> void:
@@ -9085,14 +9216,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var a_start := n
 			if atk_pl != null:
 				a_start = maxi(n, _anim_end_for(atk_pl))
-				_attacks[atk_pl] = {"kind": "unit", "dir": adir, "src": src_c, "dst": dst_c,
-						"sc": _grid_scroll,
-						"start": a_start, "dur": ATK_DUR_MS, "dmg": int(data["damage"])}
+				_set_attack_anim(atk_pl, {"kind": "unit", "dir": adir, "src": src_c,
+						"dst": dst_c, "sc": _grid_scroll,
+						"start": a_start, "dur": ATK_DUR_MS, "dmg": int(data["damage"])})
 			# 弹体命中时刻 = ATK_IMPACT_T × 总时长：爆点/闪红/伤害数字那时才出现
 			_delayed.append({"at": a_start + int(ATK_IMPACT_T * ATK_DUR_MS), "kind": "hit",
 					"data": {"pos": dst_c, "sc": _grid_scroll,
-							"dmg": int(data["damage"]), "def": def_pl}})
-			_say("⚔ %s 攻击 %s！" % [data.get("atk_name", "?"), data.get("def_name", "?")])
+							"dmg": int(data["damage"]), "def": def_pl,
+							# R361：播报跟撞击同一刻（原来 t=0 就写「攻击了」，比动画早 930ms）
+							"say": "⚔ %s 攻击 %s！" % [data.get("atk_name", "?"),
+									data.get("def_name", "?")]}})
 		"hp":
 			# 攻击方 side；被打的是对面 → 飘字/爆点落在对应 HP 横幅。
 			# 直击 HP 也让单位「冲锋撞上去」——否则 AI 单位只闪一行数字、毫无动作。
@@ -9114,19 +9247,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				var hs := _cell_center(data["src"])
 				var hd := _cell_center(data["dst"])
 				var hdir: Vector2 = (hd - hs).normalized()
-				_attacks[hp_atk] = {"kind": "hp", "dir": hdir, "src": hs, "dst": hd,
+				_set_attack_anim(hp_atk, {"kind": "hp", "dir": hdir, "src": hs, "dst": hd,
 						"sc": _grid_scroll,
-						"start": h_start, "dur": ATK_DUR_MS, "dmg": hp_dmg}
+						"start": h_start, "dur": ATK_DUR_MS, "dmg": hp_dmg})
 			if hp_dmg > 0:
 				# 撞击时刻才出爆点/飘字/震屏，与单位动作对齐
 				_delayed.append({"at": h_start + int(ATK_IMPACT_T * ATK_DUR_MS),
 						"kind": "hp_hit",
 						"data": {"pos": Vector2(GRID_X + GRID_W + 46, banner_y),
-						"dmg": hp_dmg, "hpkey": hp_key}})
-				if hp_side == GameEngine.SIDE_SELF:
-					_say("⚔ %s 直击敌方 HP！-%d" % [data.get("atk_name", "?"), hp_dmg])
-				else:
-					_say("⚔ %s 直击我方 HP！-%d" % [data.get("atk_name", "?"), hp_dmg])
+						"dmg": hp_dmg, "hpkey": hp_key,
+						# R361：播报/数字都等冲锋撞到横幅那一刻
+						"say": "⚔ %s 直击%s HP！-%d" % [data.get("atk_name", "?"),
+								"敌方" if hp_side == GameEngine.SIDE_SELF else "我方",
+								hp_dmg]}})
 		"curse_added":
 			# R231 破绽：俄倪厄往卡组塞诅咒 —— 牌库张数会自己跳，玩家不一定看得出来，
 			# 这里补一句播报（不播动画：诅咒是凭空进牌库，没有「从哪儿飞」（0,0））。
@@ -9264,7 +9397,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				var fi_owned := _fx_claimed.has(fc) and n - int(_fx_claimed[fc]) < 700
 				if not fi_owned:
 					_fx_claim(fc)
-					_delayed.append({"at": n + 160, "kind": "fx_hit",
+					# R361：画面里还有一击没落地（`_attacks` 里撞击时刻在未来）→ 这笔受击
+					# 跟着它一起落地。否则「攻击 HP 顺带的余波 / 溢出」会在 160ms 就炸，
+					# 而主体攻击动画还要 930ms 才撞到 —— 读起来就是特效早于动画。
+					_delayed.append({"at": maxi(n + 160, _impact_floor(n)), "kind": "fx_hit",
 							"data": {"cell": fc, "dmg": int(data.get("amount", 0)),
 							"source": str(data.get("source", ""))}})
 					_push_cue([fc], "", Color("8f5ad0"))
@@ -11036,6 +11172,8 @@ func _draw_wake_rings() -> void:
 
 
 func _apply_delayed(kind: String, d: Dictionary) -> void:
+	if _r361_probe:
+		_r361_note(kind)
 	## 定时特效到点：攻击在冲刺结束那一刻才"命中"。
 	var n := _now()
 	match kind:
@@ -11054,6 +11192,8 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 					d.card as CardData)
 		"hit":
 			sfx.play("attack")
+			if d.has("say"):
+				_say(str(d["say"]))      # R361：播报与撞击同一刻
 			var def = d.get("def")
 			if def != null:
 				_flashes[def] = {"col": Color(0.9, 0.15, 0.1), "start": n, "dur": 420}
@@ -11079,6 +11219,8 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 						"start": n, "dur": 1150})
 				_shake(3.0, 180)
 		"hp_hit":
+			if d.has("say"):
+				_say(str(d["say"]))      # R361：播报与撞击同一刻
 			var hk = d.get("hpkey")
 			if hk != null:
 				_drop_hp(hk)   # 撞击演出到点：HP 横幅数字才开始往下掉
@@ -13116,6 +13258,8 @@ func _process(delta: float) -> void:
 		_show_over(engine.result == "胜利")
 	if _r360_probe:
 		_r360_probe_tick()
+	if _r361_probe:
+		_r361_probe_tick()
 	# 地图总览的「下一步可走」绿环 / 棋盘双箭头呼吸脉动 → 同走脉冲节流（R180）。
 	if _map_visible or _grid_scrollable():
 		_pulse_redraw()
