@@ -111,7 +111,7 @@ func _ready() -> void:
 		RunSave.save_run()
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续这段对话",
-		"sub": "起点 · 按 Esc 返回",
+		"sub": "起点",
 	})
 
 

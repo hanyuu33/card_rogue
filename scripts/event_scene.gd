@@ -951,7 +951,7 @@ func _ready() -> void:
 	# 场景自己身上，菜单里只放「画面之外」的操作：返回事件 / 音效 / 返回标题。
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "返回事件",
-		"sub": "事件 · 按 Esc 返回",
+		"sub": "事件",
 	})
 
 

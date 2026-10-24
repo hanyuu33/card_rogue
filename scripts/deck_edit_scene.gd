@@ -174,7 +174,7 @@ func _ready() -> void:
 	# R148：Esc 主菜单
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续",
-		"sub": "卡组编辑 · 按 Esc 返回",
+		"sub": "卡组编辑",
 	})
 
 
@@ -246,26 +246,26 @@ func _refresh_title() -> void:
 	match _mode():
 		"oblivion":
 			title_label.text = "遗忘之泉 — 选择一张卡遗忘"
-			hint_label.text = "点一张卡选中（高亮），再点下方「确定」，把它从卡组中永久删除。"
+			hint_label.text = "选中的卡会从卡组中永久删除。"
 		"delete":
 			title_label.text = "失忆药水 — 选择一张卡删除"
-			hint_label.text = "点一张卡选中（高亮），再点下方「确定」，把它永远删除。"
+			hint_label.text = "选中的卡会被永远删除。"
 		"transform":
 			title_label.text = "源数之力 — 选择一张卡改造"
-			hint_label.text = "点一张卡选中（高亮），再点下方「确定」，把它变成一张随机奖励卡牌。"
+			hint_label.text = "选中的卡会变成一张随机奖励卡牌。"
 		"smith":
 			title_label.text = "鸭鸭工匠 — 选择一张卡锻造成铁栅栏"
-			hint_label.text = "点一张卡选中（高亮），再点下方「确定」，把它锻造成一张 2 费铁栅栏。"
+			hint_label.text = "选中的卡会被锻造成一张 2 费铁栅栏。"
 		"transform_class":
 			title_label.text = "卡片商人 — 选择一张卡换掉"
-			hint_label.text = "点一张卡选中（高亮），再点下方「确定」，它会变成一张随机本职业奖励卡。"
+			hint_label.text = "选中的卡会变成一张随机本职业奖励卡。"
 		"vendor":
 			title_label.text = "卡片商人 — 交出 5 费卡换大宝箱"
-			hint_label.text = "只能选 5 费及以上的卡（其余卡点不动）。确认后得到：一件道具 + 一组卡牌奖励 + %d 金币。" \
+			hint_label.text = "只能选 5 费及以上的卡。确认后得到：一件道具 + 一组卡牌奖励 + %d 金币。" \
 					% RunState.BIGCHEST_GOLD
 		"duplicate":
 			title_label.text = "鸭血 — 选择最多 %d 张卡复制" % _limit()
-			hint_label.text = "点卡选中（可多选，已选 %d/%d），再点下方「确定」；每张被选中的卡都会复制一份加入卡组，原卡保留。一张都不选也可以。" % [_sel.size(), _limit()]
+			hint_label.text = "每张选中的卡都会复制一份加入卡组，原卡保留（可多选，已选 %d/%d；一张都不选也可以）。" % [_sel.size(), _limit()]
 		_:
 			title_label.text = "卡组编辑"
 			hint_label.text = ""
@@ -369,8 +369,14 @@ func _draw() -> void:
 	# 背景（根节点自绘在子节点之下，BG 色块会盖住 _draw，故在这里画）
 	draw_rect(Rect2(Vector2.ZERO, size), UiTheme.SCREEN_BG)   # R154：墨蓝夜色锚点（清单 §2.6）
 	if _cards.is_empty():
-		draw_string(_font, Vector2(0, size.y / 2), "卡组是空的……（点击继续）",
+		draw_string(_font, Vector2(0, size.y / 2), "卡组是空的……",
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_ON_DARK)
+		# R353：「继续」画成按钮 —— 可交互性靠 UI 表达，不写「（点击继续）」。
+		var btn := Rect2(size.x / 2.0 - 80.0, size.y / 2.0 + 24.0, 160.0, 36.0)
+		draw_rect(btn, Color("414860"), true)
+		draw_rect(btn, Color("8a93ad"), false, 1.5)
+		draw_string(_font_bold, btn.position + Vector2(0, 24), "继 续",
+				HORIZONTAL_ALIGNMENT_CENTER, btn.size.x, UiTheme.FS_BODY, UiTheme.SAND)
 		return
 	_layout()
 	# R191 描述条：卡面只留卡名 → 点选/悬停的卡在这里读描述（画在网格区之下、按钮之上）

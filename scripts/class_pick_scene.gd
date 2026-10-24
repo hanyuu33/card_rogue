@@ -77,7 +77,7 @@ func _ready() -> void:
 	# R148：Esc 主菜单
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续选角色",
-		"sub": "选择角色 · 按 Esc 返回",
+		"sub": "选择角色",
 	})
 
 

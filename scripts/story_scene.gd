@@ -81,6 +81,9 @@ func _ready() -> void:
 	if "--reveal" in args:
 		# 出图：在**测试档案**里把第 1 段的条件灌满并直接收下 → 演解锁动画。
 		# 走的是真实链路（claim_episode → _start_reveal），不是硬造数据。
+		# ⚠️ 必须先 set_test_mode：否则 claim 会写玩家真实档案 —— 而且第二次出图时
+		#    真实档案里已是「已领取」，claim 返回空 → 动画根本不播（R353 踩过）。
+		ProfileData.set_test_mode()
 		_satisfy_all()
 		if not _episodes.is_empty():
 			var rv_res := ProfileData.claim_episode(_repo,
@@ -92,6 +95,10 @@ func _ready() -> void:
 			_open_detail(clampi(int(args[di + 1]), 0, _episodes.size() - 1))
 		var t := Timer.new()
 		t.wait_time = 1.05 if not _reveal.is_empty() else 0.6
+		# `--shotwait <秒>`：手动指定截图时机（比如要拍解锁动画播完后的「继续」按钮）。
+		var swi := args.find("--shotwait")
+		if swi >= 0 and swi + 1 < args.size():
+			t.wait_time = maxf(0.1, float(str(args[swi + 1])))
 		t.one_shot = true
 		t.timeout.connect(func():
 			var img := get_viewport().get_texture().get_image()
@@ -101,7 +108,7 @@ func _ready() -> void:
 		t.start()
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续",
-		"sub": "故事 · 按 Esc 返回",
+		"sub": "故事",
 	})
 
 
@@ -392,7 +399,7 @@ func _draw() -> void:
 		_draw_row(idx, _episodes[idx])
 	if _episodes.size() > _max_rows():
 		draw_string(_font, Vector2(0, size.y - 12),
-				"滚轮翻页 · 第 %d–%d 段 / 共 %d 段"
+				"第 %d–%d 段 / 共 %d 段"
 				% [_scroll + 1, mini(_scroll + _max_rows(), _episodes.size()), _episodes.size()],
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
 				UiTheme.INK_ON_DARK)
@@ -624,6 +631,9 @@ func _draw_reveal() -> void:
 				str(item.get("sub", "")), HORIZONTAL_ALIGNMENT_LEFT,
 				row.size.x - 44, UiTheme.FS_CAPTION, Color(0.66, 0.69, 0.75, a))
 	if _reveal_finished():
-		draw_string(_font, Vector2(r.position.x, r.end.y - 20), "点击任意处继续",
-				HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_CAPTION,
-				Color("9aa0ad"))
+		# R353：「继续」画成按钮 —— 可交互性靠 UI 表达，不写「点击任意处继续」。
+		var btn := Rect2(r.position.x + r.size.x / 2.0 - 70.0, r.end.y - 34.0, 140.0, 28.0)
+		draw_rect(btn, Color(0.30, 0.40, 0.26, 0.95), true)
+		draw_rect(btn, Color("c8f0a0"), false, 1.5)
+		draw_string(_font_bold, btn.position + Vector2(0, 19), "继 续",
+				HORIZONTAL_ALIGNMENT_CENTER, btn.size.x, UiTheme.FS_CAPTION, Color("0e2010"))

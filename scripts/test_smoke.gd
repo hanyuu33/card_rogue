@@ -674,10 +674,12 @@ func _check_relic_hover_gate(scene: Variant) -> void:
 	if not bool(rv._want_hover(btn_pt)):
 		_smoke_fail("R121 覆盖层让位：面板关闭后道具悬停没有恢复")
 		return
-	if str(rv._btn.tooltip_text) == "":
-		_smoke_fail("R121 覆盖层让位：面板关闭后道具按钮的 tooltip 没有恢复")
+	# R353：tooltip 已永远摘除（交互靠速览浮层本身表达）—— 这里改成断言它**保持为空**。
+	if str(rv._btn.tooltip_text) != "":
+		_smoke_fail("R353：道具按钮不该再挂文字 tooltip，实际「%s」"
+				% str(rv._btn.tooltip_text))
 		return
-	print("SMOKE OK R121 覆盖层让位：奖励悬浮窗开/关 → 道具速览浮层与 tooltip 正确让位/恢复")
+	print("SMOKE OK R121 覆盖层让位：奖励悬浮窗开/关 → 道具速览浮层正确让位/恢复（R353 起不再挂 tooltip）")
 
 
 func _check_battle_hover_gate(scene: Variant) -> void:

@@ -142,7 +142,7 @@ func _ready() -> void:
 	# R148：Esc 主菜单（图鉴页没有 sfx → 菜单里不给音效项）
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续看图鉴",
-		"sub": "卡图鉴 · 按 Esc 返回",
+		"sub": "卡图鉴",
 	})
 
 

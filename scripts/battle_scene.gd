@@ -2738,7 +2738,7 @@ func _ready() -> void:
 	# （`--menu` 演示由 UiMenu 自己识别：它开着菜单出图时会强制不暂停）
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "返回战斗",
-		"sub": "战斗中 · 按 Esc 返回",
+		"sub": "战斗中",
 	})
 
 
@@ -5140,7 +5140,7 @@ func _open_discard_view() -> void:
 		"short": "弃牌区",
 		"view_only": true,
 		"title": "弃牌区 %d 张（从左到右：先弃的在前）" % n,
-		"note": "滚轮 / 拖动翻页；悬停或点卡在下方看描述 —— 点「关闭」或右键返回战斗",
+		"note": "",
 		"opts": opts,
 		"cards": cards,
 		"max_sel": 0,
@@ -6122,7 +6122,7 @@ func _on_hover(pos: Vector2) -> void:
 				_hover_hand = i
 				_hover_card = engine.state.hand[i]
 				# 效果详情显示在左侧信息栏（自动换行），顶部状态栏只留简短提示
-				tip = "%s 费用%d（效果见左侧）" % [_hover_card.card_name,
+				tip = "%s 费用%d" % [_hover_card.card_name,
 						_hover_card.cost]
 				# R65：这张现在打出去能吃到额外效果 → 状态栏补一句金色高亮的理由
 				var bonus_txt := engine.hand_bonus_text(_hover_card)
@@ -6141,7 +6141,7 @@ func _on_hover(pos: Vector2) -> void:
 				var m: Dictionary = merged_eff[i]
 				_hover_card = m["card"]
 				var cnt: int = m["count"]
-				tip = "效果区 %d/%d 种：%s%s（效果见左侧，点击查看全部）" % [i + 1,
+				tip = "效果区 %d/%d 种：%s%s" % [i + 1,
 						merged_eff.size(), _hover_card.card_name,
 						" ×%d" % cnt if cnt > 1 else ""]
 				break
@@ -6151,7 +6151,7 @@ func _on_hover(pos: Vector2) -> void:
 			if engine.state.effects.is_empty():
 				tip = "效果区（空）：效果卡使用后放在这里，持续生效"
 			else:
-				tip = "效果区 %d 张，持续生效中（点击查看全部）" % engine.state.effects.size()
+				tip = "效果区 %d 张，持续生效中" % engine.state.effects.size()
 	# ③' 右栏：敌方效果区（开局启用，正面朝上，可逐张悬停查看）
 	if _hover_card == null:
 		var merged_ee := _merged_effects(engine.state.enemy_effects)
@@ -6160,7 +6160,7 @@ func _on_hover(pos: Vector2) -> void:
 				var m: Dictionary = merged_ee[i]
 				_hover_card = m["card"]
 				var cnt: int = m["count"]
-				tip = "敌方效果 %d/%d 种：%s%s（效果见左侧，点击查看全部）" % [i + 1,
+				tip = "敌方效果 %d/%d 种：%s%s" % [i + 1,
 						merged_ee.size(), _hover_card.card_name,
 						" ×%d" % cnt if cnt > 1 else ""]
 				break
@@ -6168,7 +6168,7 @@ func _on_hover(pos: Vector2) -> void:
 		if engine.state.enemy_effects.is_empty():
 			tip = "敌方效果区（空）"
 		else:
-			tip = "敌方效果 %d 张，持续生效中（点击查看全部）" % engine.state.enemy_effects.size()
+			tip = "敌方效果 %d 张，持续生效中" % engine.state.enemy_effects.size()
 	# ③'' 右栏道具栏：悬停看道具描述（装不下时悬停「+N」摘要 → 提示点开看全部）
 	if _hover_card == null:
 		var rel_hit := false
@@ -6193,8 +6193,7 @@ func _on_hover(pos: Vector2) -> void:
 				break
 		if not rel_hit and tip == "" and _relic_zone_rect().has_point(pos):
 			# 悬浮就能逐个看描述；装不下时才有「点开看全部」这条路
-			tip = "道具 %d 个（悬浮看说明%s）" % [engine.self_relics.size(),
-					"，点击查看全部" if _relic_bar_overflowed() else "，已全部列出"]
+			tip = "道具 %d 个" % engine.self_relics.size()
 	# ④ 弃牌区（R140 改图标后不再显示顶牌 → 悬停只报张数，详情进点击面板）
 	if _hover_card == null:
 		var discard_rect := Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H)
@@ -6203,7 +6202,7 @@ func _on_hover(pos: Vector2) -> void:
 			if dis.is_empty():
 				tip = "弃牌区（空）：被击破/用掉/弃掉的卡会进这里"
 			else:
-				tip = "弃牌区 %d 张（点击浏览全部）" % dis.size()
+				tip = "弃牌区 %d 张" % dis.size()
 	# ⑤ 卡组：点击查看（相同卡合并，不泄露抽牌顺序）
 	if _hover_card == null:
 		var deck_rect := Rect2(DECK_X, DECK_Y, CARD_W, CARD_H)
@@ -6211,8 +6210,7 @@ func _on_hover(pos: Vector2) -> void:
 			if engine.state.deck.is_empty():
 				tip = "剩余牌堆（空）：抽牌堆用完了会把弃牌洗回来"
 			else:
-				tip = "剩余牌堆 %d 张（本场还没抽到；点开查看，不显示抽牌顺序）" \
-						% engine.state.deck.size()
+				tip = "剩余牌堆 %d 张" % engine.state.deck.size()
 	# ⑥ R140 消耗（消失）区：本局消失的卡
 	if _hover_card == null:
 		if Rect2(VOID_X, VOID_Y, CARD_W, CARD_H).has_point(pos):
@@ -6808,7 +6806,7 @@ func _draw_map_panel() -> void:
 				RunState.deck_ids.size()],
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 48.0), UiTheme.INK_300)
 	_draw_string_center(_font, UiTheme.FS_CAPTION,
-			"本层 Boss：%s　·　M / 地图 按钮 或 点击任意处关闭（战斗中不能改路线）"
+			"本层 Boss：%s　·　战斗中不能改路线"
 			% str(RunState.boss_level().get("name", "")),
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 68.0), Color("8f8b80"))
 	# ⚠️ 顺序不可换：格子底 → 通路（小桥） → 图标（与冒险地图同一套）。
@@ -11147,9 +11145,12 @@ func _draw_enemy_effect_popup() -> void:
 			y += 17.0
 		y += 12.0
 	var left := maxi(0, int(ceil(ee_popup_left_sec(_ee_popup_t0, _now()))))
-	_draw_string_center(_font, UiTheme.FS_CAPTION,
-			"点击任意处继续 · %d 秒后自动关闭" % left,
-			c + Vector2(0.0, EE_TEXT_HH - 22.0), Color(0.66, 0.66, 0.74))
+	# R353：「继续」画成按钮 —— 可交互性靠 UI 表达，不写「点击任意处继续」。
+	var ee_btn := Rect2(c.x - 70.0, c.y + EE_TEXT_HH - 37.0, 140.0, 30.0)
+	draw_rect(ee_btn, Color(0.30, 0.40, 0.26, 0.95), true)
+	draw_rect(ee_btn, Color("c8f0a0"), false, 1.5)
+	_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "继续（%d 秒）" % left,
+			ee_btn.get_center() + Vector2(0, 1), Color("0e2010"))
 
 
 func _draw_enemy_effects() -> void:
@@ -11177,7 +11178,7 @@ func _draw_enemy_effects() -> void:
 					(m2["card"] as CardData).health, false, false)
 			_draw_count_badge(_enemy_effect_rect(i), m2["count"])
 		_draw_more_tile(_enemy_effect_rect(cap_e - 1), "+%d" % (n_ee - (cap_e - 1)),
-				"点击查看全部")
+				"")
 	_draw_relic_bar()
 
 
@@ -11288,7 +11289,7 @@ func _draw_relic_bar() -> void:
 				rel.name_color(Color("4a3c14")), -1)
 	# 道具太多装不下 → 末位换成「+N 点击查看全部」摘要行（点道具栏打开浏览面板）
 	if n_rel > shown_r:
-		_draw_more_tile(_relic_rect(shown_r), "+%d" % (n_rel - shown_r), "点击查看全部")
+		_draw_more_tile(_relic_rect(shown_r), "+%d" % (n_rel - shown_r), "")
 	# 鸭之低语：本回合随机得到的强化，常驻显示在道具栏下方
 	if engine.self_relics.has(6010):
 		_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION,
@@ -11361,7 +11362,7 @@ func _draw_cost_zone() -> void:
 					(m2["card"] as CardData).health, false, false)
 			_draw_counter_badge(m2["card"], _effect_rect(i))
 			_draw_count_badge(_effect_rect(i), m2["count"])
-		_draw_more_tile(_effect_rect(cap - 1), "+%d" % (n_eff - (cap - 1)), "点击查看全部")
+		_draw_more_tile(_effect_rect(cap - 1), "+%d" % (n_eff - (cap - 1)), "")
 
 
 func _merged_effects(cards: Array) -> Array:
@@ -11425,11 +11426,12 @@ func _draw_more_tile(rect: Rect2, label: String, sub: String) -> void:
 	draw_rect(rect, Color("9a8f70"), false, 1.0)
 	if rect.size.y >= 40.0:
 		_draw_string_center(_font_bold, UiTheme.FS_LABEL, label,
-				Vector2(cx, rect.position.y + rect.size.y * 0.40), Color("6a6040"))
-		_draw_string_center(_font, UiTheme.FS_MICRO, sub,
-				Vector2(cx, rect.position.y + rect.size.y * 0.72), Color("7a7050"))
+				Vector2(cx, rect.position.y + rect.size.y * (0.50 if sub == "" else 0.40)), Color("6a6040"))
+		if sub != "":
+			_draw_string_center(_font, UiTheme.FS_MICRO, sub,
+					Vector2(cx, rect.position.y + rect.size.y * 0.72), Color("7a7050"))
 	else:
-		_draw_string_center(_font_bold, UiTheme.FS_MICRO, "%s %s" % [label, sub],
+		_draw_string_center(_font_bold, UiTheme.FS_MICRO, label if sub == "" else "%s %s" % [label, sub],
 				Vector2(cx, rect.position.y + rect.size.y * 0.5 + 3.0), Color("6a6040"))
 
 
@@ -12417,10 +12419,10 @@ func _draw_zone_panel(title: String, cards: Array, counts: Array = []) -> void:
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
 	UiTheme.draw_panel_bg(self, Rect2(px, py, pw, ph))
 	draw_rect(Rect2(px, py, pw, ph), UiTheme.ACCENT_GOLD, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "%s — 点击面板外关闭" % title,
+	_draw_string_center(_font_bold, UiTheme.FS_LABEL, title,
 			Vector2(WINDOW_W / 2, py + 24), UiTheme.INK_800)
 	if pages > 1:
-		_draw_string_center(_font, UiTheme.FS_CAPTION, "第 %d/%d 页（滚轮翻页）" % [_zone_page + 1, pages],
+		_draw_string_center(_font, UiTheme.FS_CAPTION, "第 %d/%d 页" % [_zone_page + 1, pages],
 				Vector2(WINDOW_W / 2, py + ph - 15), UiTheme.INK_500)
 		_draw_string_center(_font_bold, UiTheme.FS_HEADING, "<",
 				_zone_prev_page_rect().get_center() + Vector2(0, 1),
@@ -12498,9 +12500,7 @@ func _draw_relic_panel() -> void:
 	# R344：整块面板是浅底（羊皮纸），文字一律**不描边** —— 描边色是深色，
 	# 描在小字号笔画外面等于给每个字套一圈灰边，13px 的说明读起来就是糊的。
 	_draw_string_center(_font_bold, UiTheme.FS_SUBHEAD,
-			"道具 %d 个 — 悬浮即可看说明，这里是放大版%s" % [n,
-					"（滚轮翻动 · 点击任意处关闭）" if scroll_max > 0.0
-					else "（点击任意处关闭）"],
+			"我的道具（共 %d 件）" % n,
 			Vector2(WINDOW_W / 2, py + 30), UiTheme.INK_800, -1)
 	if n == 0:
 		_draw_string_center(_font, UiTheme.FS_BODY, "本局还没有道具",

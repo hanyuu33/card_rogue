@@ -54,7 +54,7 @@ func _ready() -> void:
 	# R148：Esc 主菜单
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续选道具",
-		"sub": "选择起始道具 · 按 Esc 返回",
+		"sub": "选择起始道具",
 	})
 
 
@@ -99,8 +99,6 @@ func _draw() -> void:
 			draw_string(_font, rect.position + Vector2(20, y), line,
 					HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 40.0, UiTheme.FS_BODY, Color("cfcabb"))
 			y += 24.0
-		draw_string(_font, rect.position + Vector2(0, rect.size.y - 18),
-				"点击收下", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 
 
 func _wrap_text(text: String, max_w: float, px: int) -> Array[String]:

@@ -259,8 +259,8 @@ func _rebuild() -> void:
 		_box.remove_child(c)
 		c.queue_free()
 	_box.add_child(_mk_label("菜单", UiTheme.FS_HEADING, Color("f2e7cd"), true))
-	_box.add_child(_mk_label(_sub_text if _sub_text != "" else "按 Esc 关闭",
-			UiTheme.FS_CAPTION, Color("9a958a"), false))
+	if _sub_text != "":
+		_box.add_child(_mk_label(_sub_text, UiTheme.FS_CAPTION, Color("9a958a"), false))
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 6)
 	_box.add_child(gap)

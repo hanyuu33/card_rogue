@@ -53,7 +53,7 @@ func _ready() -> void:
 		t.start()
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续",
-		"sub": "对战记录 · 按 Esc 返回",
+		"sub": "对战记录",
 	})
 
 
@@ -241,15 +241,10 @@ func _draw() -> void:
 		_draw_detail()   # R241：详情盖在列表之上
 	if _rows.size() > _max_rows():
 		draw_string(_font, Vector2(0, size.y - 12),
-				"滚轮翻页 · 第 %d–%d 条 / 共 %d 条"
+				"第 %d–%d 条 / 共 %d 条"
 				% [_scroll + 1, mini(_scroll + _max_rows(), _rows.size()), _rows.size()],
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
 				UiTheme.INK_ON_DARK)
-	# R241：列表底部提示「点一行看详情」（列表不长时也有地方说）
-	if _rows.size() <= _max_rows():
-		draw_string(_font, Vector2(0, size.y - 12), "点任意一行查看这局的最终详情",
-				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
-				Color("7d8590"))
 
 
 # ------------------------------------------------------------ 详情（R241）
@@ -431,7 +426,7 @@ func _draw_detail() -> void:
 		dy += row_h
 	if max_scroll > 0:
 		draw_string(_font, Vector2(mid, r.end.y - 16.0),
-				"滚轮翻卡组 · 第 %d–%d 行 / 共 %d 行"
+				"卡组 第 %d–%d 行 / 共 %d 行"
 				% [_deck_scroll + 1, mini(_deck_scroll + max_deck, deck.size()), deck.size()],
 				HORIZONTAL_ALIGNMENT_LEFT, 460, UiTheme.FS_CAPTION, Color("7d8590"))
 

@@ -188,7 +188,7 @@ func _refresh_btn() -> void:
 	_cached_n = RunState.pending_reward_count()
 	_btn.visible = _cached_n > 0 and not _open
 	_btn.text = "✦ 待领奖励 %d" % _cached_n
-	_btn.tooltip_text = "点开处理这批奖励（查看 / 领取 / 放弃）"
+	_btn.tooltip_text = ""
 
 
 func _vs() -> Vector2:
@@ -494,10 +494,6 @@ func _draw_list() -> void:
 		if rr.position.y > r.position.y + HEAD_H + view_h:
 			break
 		_draw_row(i, rr)
-	if total > _rows_per_page():
-		_root.draw_string(_font, Vector2(r.position.x + PANEL_W - PAD - 90,
-				r.position.y + HEAD_H - 8),
-				"滚轮翻页", HORIZONTAL_ALIGNMENT_RIGHT, 90, UiTheme.FS_CAPTION, UiTheme.INK_500)
 
 	# 底部按钮
 	var done := _btn_done_rect()
@@ -655,9 +651,12 @@ func _draw_enchant() -> void:
 				label, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_BODY,
 				CardData.enchant_color(eid))
 	if all_done or el > 3200.0:
-		_root.draw_string(_font, Vector2(pr.position.x, pr.end.y - 30.0),
-				"点击任意处继续", HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
-				UiTheme.FS_CAPTION, UiTheme.INK_600)
+		# R353：「继续」画成按钮 —— 可交互性靠 UI 表达，不写「点击任意处继续」。
+		var btn := Rect2(pr.position.x + pr.size.x / 2.0 - 70.0, pr.end.y - 40.0, 140.0, 28.0)
+		_root.draw_rect(btn, Color("3f8a4f"), true)
+		_root.draw_rect(btn, Color("c8f0a0"), false, 1.5)
+		_root.draw_string(_font_bold, btn.position + Vector2(0, 19), "继 续",
+				HORIZONTAL_ALIGNMENT_CENTER, btn.size.x, UiTheme.FS_CAPTION, Color("0e2010"))
 
 
 func _draw_relic() -> void:
@@ -697,11 +696,6 @@ func _draw_relic() -> void:
 	# R302：**不再**把「这条文案里提到的…」固定列在详情底部 —— 只要悬停名字弹说明
 	#（触屏：点一下钉住）。命中矩形由上面的 `draw_wrapped_hits` 直接交出。
 	_mention_hits = res["hits"]
-	if CardText.wrap_segments(_font, _font_bold, segs, txt_w, UiTheme.FS_BODY).size() \
-			* 24.0 > (PANEL_H - HEAD_H - FOOT_H - 68.0):
-		_root.draw_string(_font, Vector2(r.position.x + PANEL_W - PAD - 120,
-				r.position.y + PANEL_H - FOOT_H - 8.0),
-				"滚轮滚动", HORIZONTAL_ALIGNMENT_RIGHT, 120, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	# 底部动作
 	var claim := _btn_claim_rect()
 	var skip := _btn_skip_rect()
@@ -787,9 +781,10 @@ func _draw_cards() -> void:
 	# R167：确认按钮（触屏必需 —— 没有悬停就得靠它「先看后拿」）
 	var can_pick := (not settled) and _pick_sel >= 0 and _pick_sel < cands.size()
 	_draw_btn(_btn_confirm_rect(), "确认选择这张", true, not can_pick)
-	_root.draw_string(_font, Vector2(pr.position.x, pr.end.y - 66.0),
-			"点一张卡先看说明 → 再点「确认选择这张」加入卡组" if not settled else "这组已经处理过了",
-			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_CAPTION, UiTheme.INK_600)
+	if settled:
+		_root.draw_string(_font, Vector2(pr.position.x, pr.end.y - 66.0),
+				"这组已经处理过了",
+				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_CAPTION, UiTheme.INK_600)
 
 
 func _draw_card_detail(cands: Array) -> void:

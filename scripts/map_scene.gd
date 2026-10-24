@@ -270,14 +270,14 @@ func _ready() -> void:
 	_deck_btn.text = "卡组"
 	_deck_btn.position = Vector2(size.x - 24.0 - CHOCO_PANEL_W - 12.0 - 76.0, CHOCO_PANEL_Y - 2.0)
 	_deck_btn.size = Vector2(76, 30)
-	_deck_btn.tooltip_text = "查看当前卡组（Esc 菜单里也有）"
+	_deck_btn.tooltip_text = ""
 	_deck_btn.pressed.connect(_toggle_deck)
 	_deck_btn.pressed.connect(func(): sfx.play("click"))
 	UiTheme.apply_chip(_deck_btn, true)
 	add_child(_deck_btn)
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "返回地图",
-		"sub": "冒险地图 · 按 Esc 返回",
+		"sub": "冒险地图",
 	})
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
 	# 道具「鸭之低语」（6010）：玩家失去选择权 → 系统随机挑路并自动前进。
@@ -1528,7 +1528,7 @@ func _draw_relic_panel() -> void:
 	draw_rect(Rect2(px, py, RELIC_P_W, ph), UiTheme.PAPER)
 	draw_rect(Rect2(px, py, RELIC_P_W, ph), UiTheme.INK_600, false, 2.0)
 	draw_string(_font_bold, Vector2(px + 22, py + 36),
-			"我的道具（共 %d 件 · 完整效果 · 滚轮翻页 · 点击任意处关闭）"
+			"我的道具（共 %d 件 · 完整效果）"
 			% RunState.relics.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, RELIC_P_W - 44, UiTheme.FS_SUBHEAD, UiTheme.INK_800)
 	var y := py + 56.0 - _relic_scroll
@@ -1545,10 +1545,6 @@ func _draw_relic_panel() -> void:
 						HORIZONTAL_ALIGNMENT_LEFT, RELIC_P_W - 60, RELIC_P_DESC,
 						Color("4a4438"))
 		y += row_h
-	if smax > 0.0:
-		draw_string(_font, Vector2(px + RELIC_P_W - 240, py + ph - 14),
-				"滚轮翻页（已滚 %.0f / %.0f）" % [_relic_scroll, smax],
-				HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_CAPTION, UiTheme.INK_500)
 
 
 # ------------------------------------------------------------ 面板
@@ -1658,7 +1654,7 @@ func _draw_deck_panel() -> void:
 	draw_rect(rect, Color("22242c"), true)
 	draw_rect(rect, Color("6a665c"), false, 2.0)
 	draw_string(_font_bold, rect.position + Vector2(20, 34),
-			"我的卡组（共 %d 张 · 滚轮翻页 · 点击空白处关闭）" % RunState.deck_ids.size(),
+			"我的卡组（共 %d 张）" % RunState.deck_ids.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, 520, UiTheme.FS_BODY, UiTheme.SAND)
 	if _deck_rows.is_empty():
 		draw_string(_font, rect.position + Vector2(20, 90), "卡组是空的。",
@@ -1703,7 +1699,7 @@ func _draw_records_panel() -> void:
 	draw_rect(rect, Color("22242c"), true)
 	draw_rect(rect, Color("6a665c"), false, 2.0)
 	draw_string(_font_bold, rect.position + Vector2(20, 34),
-			"战斗记录（共 %d 场，滚动：滚轮）" % _records.size(),
+			"战斗记录（共 %d 场）" % _records.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_BODY, UiTheme.SAND)
 	var inner := Rect2(rect.position + Vector2(20, 52), rect.size - Vector2(40, 70))
 	var line_h := 40.0

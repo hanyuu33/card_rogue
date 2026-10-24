@@ -145,7 +145,7 @@ func _on_panel_draw() -> void:
 	_panel.draw_rect(Rect2(px, py, pw, ph), UiTheme.PAPER)
 	_panel.draw_rect(Rect2(px, py, pw, ph), UiTheme.INK_600, false, 2.0)
 	_panel.draw_string(_font_bold, Vector2(px + 20, py + 32),
-			"我的卡组（共 %d 张 · 相同卡合并 · 滚轮翻页 · 点击任意处关闭）" % RunState.deck_ids.size(),
+			"我的卡组（共 %d 张 · 相同卡合并）" % RunState.deck_ids.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, pw - 40, UiTheme.FS_BODY, UiTheme.INK_800)
 	if n == 0:
 		_panel.draw_string(_font, Vector2(px + 20, py + 80), "卡组是空的。",

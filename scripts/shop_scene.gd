@@ -665,13 +665,13 @@ func _draw_pick_overlay() -> void:
 	if _deleting:
 		draw_string(_font_bold, Vector2(0, 60), "选择要删除的卡",
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, Color("ff9a9a"))
-		draw_string(_font, Vector2(0, 92), "点一张卡查看（再点一次删除；点「取消」返回）",
+		draw_string(_font, Vector2(0, 92), "选中的卡会被永久删除。",
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, Color("ece7db"))
 	else:
 		var ench: Dictionary = _row2[_enchanting]["ench"]
 		draw_string(_font_bold, Vector2(0, 60), "选择要附魔的卡 —— %s" % _ench_name(ench),
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, Color("ffd75a"))
-		draw_string(_font, Vector2(0, 92), "点一张高亮的卡选中，再点「确定」完成附魔（或再点一次同一张）；点「取消」返回",
+		draw_string(_font, Vector2(0, 92), "给选中的卡附加「%s」。" % _ench_name(ench),
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, Color("ece7db"))
 	# ⚠️ 这里**绝对不能**调 `_build_deck_cards()`（R204 修卡死）：
 	# 它会把 `_sel_pick` 重置成 -1，而 `_draw()` 在每次 `queue_redraw()` 之后都会跑 →
@@ -698,15 +698,15 @@ func _draw_pick_overlay() -> void:
 		draw_string(_font, Vector2(0, 300),
 				"没有符合这张附魔条件的卡" if not _deleting else "卡组里没有卡可删",
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_SUBHEAD, Color("ffb0b0"))
-	# R235：附魔模式底部多一个「确定」（选中卡后点它成交）；删除模式仍只有「取消」。
-	if _enchanting >= 0 and not _deleting:
-		var confirm := _pick_confirm_rect()
-		var ready := _sel_pick >= 0
-		draw_rect(confirm, Color("3f8a4f") if ready else Color("2a3a2e"), true)
-		draw_rect(confirm, Color("c8f0a0") if ready else Color("5a6a5e"), false, 2.0)
-		draw_string(_font_bold, confirm.position + Vector2(0, 29), "确定",
-				HORIZONTAL_ALIGNMENT_CENTER, confirm.size.x, UiTheme.FS_BODY,
-				Color("0e2010") if ready else Color("8c9a90"))
+	# R235 + R353：「确定」按钮（选中卡后点它成交）—— 附魔与删除**都有**。
+	# 原来删除只有「取消」，成交只能靠「再点一次同一张」，交互没有 UI 表达。
+	var confirm := _pick_confirm_rect()
+	var ready := _sel_pick >= 0
+	draw_rect(confirm, Color("3f8a4f") if ready else Color("2a3a2e"), true)
+	draw_rect(confirm, Color("c8f0a0") if ready else Color("5a6a5e"), false, 2.0)
+	draw_string(_font_bold, confirm.position + Vector2(0, 29), "确定",
+			HORIZONTAL_ALIGNMENT_CENTER, confirm.size.x, UiTheme.FS_BODY,
+			Color("0e2010") if ready else Color("8c9a90"))
 	var cancel := _pick_cancel_rect()
 	draw_rect(cancel, Color("8a6d1f"), true)
 	draw_rect(cancel, Color("ffd75a"), false, 2.0)
@@ -804,15 +804,13 @@ func _pick_card_rect(i: int) -> Rect2:
 
 
 func _pick_cancel_rect() -> Rect2:
-	## R235：底部「取消」按钮矩形 —— 附魔模式与「确定」并排（整组居中），删除模式仍居中。
+	## 底部「取消」按钮矩形 —— 与「确定」并排（整组居中）。R353 起删除模式也有「确定」。
 	var vs := _vs()
-	if _enchanting >= 0 and not _deleting:
-		return Rect2(vs.x / 2.0 + 12, vs.y - 80, 160, 44)
-	return Rect2(vs.x / 2.0 - 80, vs.y - 80, 160, 44)
+	return Rect2(vs.x / 2.0 + 12, vs.y - 80, 160, 44)
 
 
 func _pick_confirm_rect() -> Rect2:
-	## R235：附魔模式专用的「确定」按钮（删除模式不显示、不响应）。
+	## 「确定」按钮矩形（R353 起附魔与删除模式都显示、都响应）。
 	var vs := _vs()
 	return Rect2(vs.x / 2.0 - 172, vs.y - 80, 160, 44)
 
@@ -981,10 +979,11 @@ func _buy_row3(i: int) -> void:
 
 func _on_pick_click(pos: Vector2) -> void:
 	## 选卡覆盖层的点击：附魔模式（_enchanting）或删除模式（_deleting）共用。
-	# R235：附魔模式的「确定」按钮 —— 选中一张卡后点它成交（复用「再点同一张」的成交路径）。
-	if _enchanting >= 0 and not _deleting and _pick_confirm_rect().has_point(pos):
+	# R235 + R353：「确定」按钮 —— 选中一张卡后点它成交（复用「再点同一张」的成交路径；
+	# 删除模式同样走这里）。
+	if _pick_confirm_rect().has_point(pos):
 		if _sel_pick < 0:
-			_set_hint("请先点选一张要高亮的卡，再点「确定」")
+			_set_hint("请先点选一张卡")
 			return
 		_on_pick_click(_pick_card_rect(_sel_pick).get_center())
 		return

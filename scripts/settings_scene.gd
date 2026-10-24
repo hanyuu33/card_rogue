@@ -47,7 +47,7 @@ func _ready() -> void:
 	_build_seed_edit()
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续",
-		"sub": "设置 · 按 Esc 返回",
+		"sub": "设置",
 	})
 
 
@@ -323,7 +323,7 @@ func _draw() -> void:
 				top.lerp(bottom, t), true)
 	draw_string(_font_bold, Vector2(0, 78), "设 置",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_HEADING, UiTheme.SAND)
-	draw_string(_font, Vector2(0, 110), "点一行即可切换 · 音量点 − / +（或点进度条）· 自动保存",
+	draw_string(_font, Vector2(0, 110), "所有设置自动保存",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())

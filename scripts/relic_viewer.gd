@@ -166,10 +166,8 @@ func _refresh_btn() -> void:
 	_btn.disabled = not clickable
 	# R121：覆盖层盖着时**不给按钮挂 tooltip** —— Button 的 tooltip 是顶层弹窗，
 	# 不认 CanvasLayer 层级，会直接浮在奖励悬浮窗上（用户看到的「看不见道具栏却有悬浮效果」）。
-	if _blocked:
-		_btn.tooltip_text = ""
-	else:
-		_btn.tooltip_text = "悬浮查看全部道具" if not clickable else "悬浮速览 · 点击看完整详情"
+	# R353：不再挂文字 tooltip —— 悬浮即展开速览浮层，交互已由 UI 表达。
+	_btn.tooltip_text = ""
 
 
 func _need_detail() -> bool:
@@ -270,7 +268,7 @@ func _on_hover_draw() -> void:
 				r.size.x - 24.0, UiTheme.FS_CAPTION, UiTheme.INK_300)
 		return
 	_hover_layer.draw_string(_font_bold, r.position + Vector2(PAD * 0.6, 20),
-			"我的道具（共 %d 件 · 悬浮查看）" % list.size(),
+			"我的道具（共 %d 件）" % list.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, UiTheme.FS_LABEL, Color("f0ead8"))
 	var y := r.position.y + 30.0
 	var bottom := r.end.y - 22.0
@@ -344,7 +342,7 @@ func _on_panel_draw() -> void:
 	_panel.draw_rect(Rect2(px, py, PANEL_W, PANEL_H), UiTheme.PAPER)
 	_panel.draw_rect(Rect2(px, py, PANEL_W, PANEL_H), UiTheme.INK_600, false, 2.0)
 	_panel.draw_string(_font_bold, Vector2(px + PAD, py + 40),
-			"我的道具（共 %d 件 · 完整效果 · 滚轮翻页 · 点击任意处关闭）" % n,
+			"我的道具（共 %d 件 · 完整效果）" % n,
 			HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - PAD * 2.0, UiTheme.FS_SUBHEAD, UiTheme.INK_800)
 	if n == 0:
 		_panel.draw_string(_font, Vector2(px + PAD, py + 96),

@@ -18160,8 +18160,8 @@ func _init() -> void:
 		"R215 敌方效果弹窗：5 秒到期（剩下 5 / 2 / 0 秒）")
 	var r215_besrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 	check_src(r215_besrc.find("ee_popup_expired()") >= 0
-			and r215_besrc.find("秒后自动关闭") >= 0,
-		"R215 敌方效果弹窗：到期由 _process 收起 + 底部有倒计时文案")
+			and r215_besrc.find("继续（%d 秒）") >= 0,
+		"R215 敌方效果弹窗：到期由 _process 收起 + 底部「继续」按钮带倒计时（R353）")
 	# ⑨ 设置落盘：音效开关写进 user://settings.cfg 并能读回
 	var r215_sfx := GameSettings.sfx_on
 	GameSettings.ensure_loaded()
@@ -25592,6 +25592,38 @@ func _init() -> void:
 	check_src(r352_prof_src.find("banned_by_class") >= 0
 			and r352_prof_src.find("ban_quota_for") >= 0,
 			"R352 源码：禁卡按职业记账（banned_by_class + ban_quota_for）")
+
+	# ---- R353：界面不许再用文字教玩家怎么操作（可交互性靠 UI 表达）----
+	# 用户口径：「悬浮即可看说明，这里是放大版」这种文字不需要。
+	# 黑名单 = 被删掉的交互教学句式；谁把它们加回来谁就在这里吃红。
+	var r353_banned: Array[String] = [
+		"悬浮即可看说明", "悬浮看说明", "点击任意处继续", "点击任意处关闭",
+		"点击面板外关闭", "点击查看全部", "点击浏览全部", "点击收下",
+		"滚轮翻页", "滚轮滚动", "按 Esc 返回", "按 Esc 关闭",
+		"点一行即可切换", "点任意一行查看", "点一张卡先看说明",
+	]
+	var r353_files: Array[String] = [
+		"battle_scene", "map_scene", "relic_viewer", "deck_viewer", "ban_scene",
+		"story_scene", "record_list_scene", "reward_panel", "settings_scene",
+		"shop_scene", "deck_edit_scene", "relic_pick_scene", "ui_menu",
+		"class_pick_scene", "curtain_scene", "event_scene", "gallery_scene",
+	]
+	for r353_f in r353_files:
+		# 只查**会被画出来的**文字：先把每行 # 之后的注释剥掉再搜（注释里允许复盘旧文案）。
+		var r353_raw := FileAccess.get_file_as_string("res://scripts/%s.gd" % r353_f)
+		var r353_src := ""
+		for r353_line in r353_raw.split("\n"):
+			r353_src += r353_line.get_slice("#", 0) + "\n"
+		for r353_bad in r353_banned:
+			check_src(r353_src.find(r353_bad) < 0,
+					"R353 交互教学文字黑名单：%s.gd 不得出现「%s」" % [r353_f, r353_bad])
+	# 正向钉三件替代物：商店删除的「确定」按钮、EE 弹窗与故事解锁动画的「继续」按钮。
+	var r353_shop_src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	check_src(r353_shop_src.find("R353 起附魔与删除模式都显示") >= 0,
+			"R353 源码：商店删除模式也配「确定」按钮（不再只靠双击成交）")
+	var r353_story_src2 := FileAccess.get_file_as_string("res://scripts/story_scene.gd")
+	check_src(r353_story_src2.find("继 续") >= 0,
+			"R353 源码：故事解锁动画末尾画「继续」按钮")
 
 	# 收尾：删临时剧情文件（档案文件交给下一次 set_test_mode 清）
 	if FileAccess.file_exists(r346_probe_path):

@@ -78,7 +78,7 @@ func _ready() -> void:
 		t.start()
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续",
-		"sub": "禁卡表 · 按 Esc 返回",
+		"sub": "禁卡表",
 	})
 
 
@@ -315,7 +315,7 @@ func _draw() -> void:
 		_draw_row(idx, _cards[idx])
 	if _cards.size() > _max_rows():
 		draw_string(_font, Vector2(0, size.y - 12),
-				"滚轮翻页 · 第 %d–%d 张 / 共 %d 张"
+				"第 %d–%d 张 / 共 %d 张"
 				% [_scroll + 1, mini(_scroll + _max_rows(), _cards.size()), _cards.size()],
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
 				UiTheme.INK_ON_DARK)
