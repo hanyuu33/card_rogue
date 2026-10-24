@@ -22865,6 +22865,117 @@ func _init() -> void:
 			"R362 源码锁：两个被动伤害的飘字都绑在被命中的单位上（不再都写「全体」）")
 
 
+	# ---- R363：灰烬龙战吼的演出与口径 / 幼龙亡语不会连带另一只 ----
+	# ① 卡面文案：时机是「登场后首个回合开始时」（引擎在 `_begin_turn` 里跑 `_run_battlecries`），
+	#    原来写「登场：」—— 读起来像落地瞬间就炸，而实际要到**该方第一个回合开始**才结算。
+	var r363_repo := CardRepo.load_json()
+	var r363_ash: CardData = r363_repo.get_card(1013)
+	check(r363_ash != null and r363_ash.effect_text.begins_with("登场后首个回合开始时"),
+			"R363 文案：灰烬龙写清战吼时机（实际 %s）"
+			% ("?" if r363_ash == null else r363_ash.effect_text))
+	check(r363_ash != null and not r363_ash.effect_text.begins_with("登场："),
+			"R363 文案：灰烬龙不再写「登场：」（与引擎触发时机不一致）")
+	var r363_frost: CardData = r363_repo.get_card(1031)
+	check(r363_frost != null and r363_frost.effect_text.begins_with("登场后首个回合开始时"),
+			"R363 文案：冰冻术士同一套战吼时机，一并改准")
+
+	# ② 真实效果：我方**全部单位（含工事）**各 4；己方大营不动；我方 HP 不动
+	var r363_e := _new_engine([], 20, 30, -1, false)
+	r363_e.state.place(_card(1013, "灰烬龙", "盟友", 7, 5, 45), Vector2i(0, 1),
+			GameEngine.SIDE_OPPONENT)
+	r363_e.state.place(_card(8003, "树人", "盟友", 3, 3, 8), Vector2i(3, 0),
+			GameEngine.SIDE_SELF)
+	r363_e.state.place(_card(8001, "木栅栏", "工事", 1, 0, 6), Vector2i(4, 1),
+			GameEngine.SIDE_SELF)
+	r363_e.state.place(_card(1014, "幼龙", "盟友", 5, 5, 25), Vector2i(1, 0),
+			GameEngine.SIDE_OPPONENT)
+	var r363_hp0 := r363_e.state.hp_self
+	var r363_fx: Array = []
+	r363_e.action.connect(func(k: String, dd: Dictionary) -> void:
+		if k == "fx_impact":
+			r363_fx.append(dd))
+	r363_e._begin_turn(GameEngine.SIDE_OPPONENT)
+	var r363_u: Placement = r363_e.state.unit_at(Vector2i(3, 0))
+	check(r363_u != null and r363_u.health == 4,
+			"R363 灰烬龙：我方单位 -4（8 → %d）" % (-1 if r363_u == null else r363_u.health))
+	var r363_fc: Placement = r363_e.state.unit_at(Vector2i(4, 1))
+	check(r363_fc != null and r363_fc.health == 2,
+			"R363 灰烬龙：工事也吃这 4 点（6 → %d）" % (-1 if r363_fc == null else r363_fc.health))
+	var r363_al: Placement = r363_e.state.unit_at(Vector2i(1, 0))
+	check(r363_al != null and r363_al.health == 25,
+			"R363 灰烬龙：己方大营不吃（幼龙仍 25 血）")
+	check(r363_e.state.hp_self == r363_hp0,
+			"R363 灰烬龙：只打单位，不直击我方 HP（%d → %d）" % [r363_hp0, r363_e.state.hp_self])
+	# 多目标受击带 `seq` 序号（界面按序号逐格错开 90ms 落地，不再同帧齐爆）
+	var r363_seqs: Array = []
+	for r363_d in r363_fx:
+		if r363_d.has("seq"):
+			r363_seqs.append(int(r363_d["seq"]))
+	check(r363_seqs.size() == 2 and int(r363_seqs[0]) == 0 and int(r363_seqs[1]) == 1,
+			"R363 灰烬龙：两个目标的受击带 0/1 序号（实际 %s）" % str(r363_seqs))
+
+	# ③ 「每回合行动两次」是真生效的（卡面写这条，`acts_left` 必须给到 2）
+	var r363_acts := _new_engine([], 20, 30, -1, false)
+	var r363_dc := CardData.from_dict(r363_repo.get_card(1013).to_dict())
+	var r363_dp: Placement = r363_acts.state.place(r363_dc, Vector2i(0, 1),
+			GameEngine.SIDE_OPPONENT)
+	check(r363_dp.acts_left == 2,
+			"R363 灰烬龙：上场即 2 次行动（acts_left = %d）" % r363_dp.acts_left)
+
+	# ④ 幼龙亡语：**只把自己**原地换成龙裔，绝不连带另一只
+	for r363_dead_col in [0, 2]:
+		var r363_keep_col: int = 2 if r363_dead_col == 0 else 0
+		var r363_w := _new_engine([], 20, 30, -1, false)
+		r363_w.state.place(CardData.from_dict(r363_repo.get_card(1014).to_dict()),
+				Vector2i(1, r363_dead_col), GameEngine.SIDE_OPPONENT)
+		r363_w.state.place(CardData.from_dict(r363_repo.get_card(1014).to_dict()),
+				Vector2i(1, r363_keep_col), GameEngine.SIDE_OPPONENT)
+		var r363_places: Array = []
+		r363_w.action.connect(func(k: String, dd: Dictionary) -> void:
+			if k == "place":
+				r363_places.append(dd))
+		r363_w._destroy(Vector2i(1, r363_dead_col))
+		var r363_born: Placement = r363_w.state.unit_at(Vector2i(1, r363_dead_col))
+		check(r363_born != null and r363_born.card.id == 9028,
+				"R363 幼龙（打 %d 列）：亡语在原格召唤龙裔 9028" % r363_dead_col)
+		var r363_other: Placement = r363_w.state.unit_at(Vector2i(1, r363_keep_col))
+		check(r363_other != null and r363_other.card.id == 1014,
+				"R363 幼龙（打 %d 列）：另一只幼龙不受影响（实际 %s）"
+				% [r363_dead_col, "无" if r363_other == null else str(r363_other.card.id)])
+		check(r363_places.size() == 1 and bool(r363_places[0].get("summon", false)),
+				"R363 召唤（打 %d 列）：place 事件带 summon 标记（界面据此报出「谁出来了」）"
+				% r363_dead_col)
+		check(r363_places.size() == 1 and r363_places[0].get("from") is Vector2i
+				and (r363_places[0]["from"] as Vector2i) == Vector2i(1, r363_dead_col),
+				"R363 召唤（打 %d 列）：事件写明是原地召出的" % r363_dead_col)
+
+	# ⑤ 源码锁：引擎先报发动者 / 界面有战吼演出与错峰落地
+	var r363_esrc := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r363_esrc.find('_fx_pulse(cell, p.card, "灰烬")') >= 0,
+			"R363 源码锁：灰烬龙战吼先发 `card_pulse`（卡身脉冲 + 卡名 + 镜头）")
+	var r363_ash_i := r363_esrc.find("func _battlecry_ash(")
+	var r363_bc_i := r363_esrc.find('action.emit("battlecry"', r363_ash_i)
+	var r363_hit_i := r363_esrc.find("_hit_unit(q2, ASH_DRAGON_AOE", r363_ash_i)
+	check_src(r363_ash_i >= 0 and r363_bc_i > r363_ash_i and r363_hit_i > r363_bc_i,
+			"R363 源码锁：战吼事件在伤害**之前**发出（播报不会被数字抢先）")
+	check_src(r363_esrc.find('fi["seq"] = seq') >= 0,
+			"R363 源码锁：多目标受击把 seq 带进 fx_impact")
+	var r363_ui2 := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r363_ui2.find('"battlecry":') >= 0,
+			"R363 源码锁：界面接了战吼事件（原来完全没接线 = 没有任何特效）")
+	check_src(r363_ui2.find("const FX_MULTI_HIT_GAP_MS := 90") >= 0
+			and r363_ui2.find("fi_at += fi_seq * FX_MULTI_HIT_GAP_MS") >= 0,
+			"R363 源码锁：多目标受击逐格错开落地（不同帧齐爆）")
+	check_src(r363_ui2.find("_freeze_hp(fi_pl, fi_dmg)") >= 0
+			and r363_ui2.find("_drop_hp(fpl)") >= 0,
+			"R363 源码锁：AOE 的卡面生命等爆点落地才掉（不再「血先掉、特效后到」）")
+	check_src(r363_ui2.find('bool(data.get("summon", false))') >= 0
+			and r363_ui2.find('"text": "召唤 %s"') >= 0,
+			"R363 源码锁：召唤有身份提示（玩家分得出「死了变成」还是「旁边那只被换」）")
+	check_src(r363_ui2.find('"text": "%s 击破" % str(card.card_name)') >= 0,
+			"R363 源码锁：击破飘字带卡名（两只同卡也能指出是哪只死了）")
+
+
 	# ============================================================
 	#  R292：拒绝命运自动化 / 战斗骨骼 +2+2 / 回收归入「变成」/ 严格自动折行
 	# ============================================================

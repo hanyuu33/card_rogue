@@ -10407,10 +10407,12 @@ func _fx_pulse(cell: Vector2i, card: CardData, label := "") -> void:
 
 
 func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= true,
-		is_attack:= false) -> int:
+		is_attack:= false, seq:= -1) -> int:
 	## R152：`is_attack` = 这一笔是不是**单位普通攻击**（只有 8466 行「战斗」那处传 true）。
 	## 「百臂工场」两条减伤按来源分流：赫卡同克瑞斯只减攻击、量产型赫利俄斯只减技能。
 	## 默认 false（技能/效果/陷阱/反伤…）—— 新增伤害路径时不用改这里。
+	## R363：`seq` = **一次效果打多个目标**时的受击序号（0 起）。只影响界面演出节奏
+	## （逐格错开落地），引擎数值 / 日志 / 回放一字不动。默认 -1 = 不参与错峰。
 	# 「侦察塔」（8032）光环易伤（R120）：攻击范围内的敌人，受到**任何来源**的伤害 +1/层。
 	# ⚠️ 必须放在 `amount <= 0` **之前**：0 攻的侦察塔自己攻击时基础伤害是 0，
 	#    而卡面口径是「自己打也算」—— 光环得先加进去，否则那一下会被直接吞掉。
@@ -10480,8 +10482,11 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	# 屏幕上一动不动。事件只报**受击点 + 数值 + 来源名**：发动者由各卡自己的
 	# `_fx_pulse()` 补，引擎不必在这里知道「谁打的」。
 	if dmg > 0:
-		action.emit("fx_impact", {"cell": _cell_of(p), "amount": dmg,
-				"source": source, "side": p.owner})
+		var fi:= {"cell": _cell_of(p), "amount": dmg,
+				"source": source, "side": p.owner}
+		if seq >= 0:
+			fi["seq"] = seq     # R363：多目标效果 → 界面按序号逐格错开落地
+		action.emit("fx_impact", fi)
 	return dmg
 
 
@@ -10845,21 +10850,37 @@ func _battlecry(cell: Vector2i, p: Placement) -> void :
 
 
 func _battlecry_ash(cell: Vector2i, p: Placement) -> void :
+	## 灰烬龙（1013）战吼：对**对方所有单位**（含工事）各 4 点，己方 / HP 都不吃这笔。
+	## R363：原来这里只有一行 `_log`，界面侧连 `battlecry` 事件都没接线 ——
+	## 玩家看到的是「自己整排单位同时少了 4 血，谁干的不知道」（用户口径：
+	## 「伤害效果触发时没有动画特效，看起来很诡异」）。现在：
+	##   ① `_fx_pulse()` 先报「这张卡发动了」（卡身脉冲 + 卡名 + 镜头）；
+	##   ② `battlecry` 事件**先于**伤害发出 → 播报写清「N 个单位各 -4」；
+	##   ③ 每一下带 `seq` → 界面逐格错开 90ms 落地（一排数字同帧炸 = 看不出因果）。
 	var foe:= SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
-	var hits:= 0
-	_begin_hp_once()
+	var cells: Array[Vector2i] = []
 	for c: Vector2i in state.board.keys().duplicate():
 		var q:= state.unit_at(c)
-		if q == null or q.owner != foe:
-			continue
-		_hit_unit(q, ASH_DRAGON_AOE, "灰烬龙")
+		if q != null and q.owner == foe:
+			cells.append(c)
+	# 选人顺序排序：日志 / 演出顺序可复现（不依赖字典迭代顺序）。
+	cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return a.x < b.x if a.x != b.x else a.y < b.y)
+	_fx_pulse(cell, p.card, "灰烬")
+	action.emit("battlecry", {"cell": cell, "card": p.card, "kind": "ash",
+		"amount": ASH_DRAGON_AOE, "hits": cells.size()})
+	var hits:= 0
+	_begin_hp_once()
+	for c2: Vector2i in cells:
+		var q2:= state.unit_at(c2)
+		if q2 == null or q2.owner != foe:
+			continue      # 前面的击杀可能已经把它带走（护盾转发 / 启示者接通代受）
+		_hit_unit(q2, ASH_DRAGON_AOE, "灰烬龙", true, false, hits)
 		hits += 1
 	if hits > 0:
 		_destroy_dead()
 	_end_hp_once()
 	_log("%s 战吼：对 %d 个敌方单位造成 %d 点伤害" % [p.card.card_name, hits, ASH_DRAGON_AOE])
-	action.emit("battlecry", {"cell": cell, "card": p.card, "kind": "ash", 
-		"amount": ASH_DRAGON_AOE, "hits": hits})
 
 
 func _battlecry_frost(cell: Vector2i, p: Placement) -> void :
@@ -10929,6 +10950,12 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 
 
 func _summon_token(card_id: int, near: Vector2i, side: String, count: int) -> void :
+	## R363：亡语 / 效果召唤的**唯一口**。
+	## ⚠️ 落点规则没变：先原地（`near`），原地被占才退到四邻 —— 但**绝不覆盖**已有单位
+	##    （`_can_hold` 挡住），退位时写一行日志，方便查「怎么出现在这格」。
+	## `place` 事件带 `summon: true`：界面据此演成「召唤」（名字 + 落点光环），
+	## 而不是「一张卡凭空出现」—— 幼龙死后原地变龙裔那条曾被玩家读成
+	## 「旁边那只幼龙也被换了」，就是因为召唤没有任何身份提示。
 	var repo:= CardRepo.load_json()
 	var spawn: CardData = repo.get_card(card_id)
 	if spawn == null:
@@ -10937,10 +10964,17 @@ func _summon_token(card_id: int, near: Vector2i, side: String, count: int) -> vo
 	for i in count:
 		var spot:= _token_spot(near, side)
 		if spot == Vector2i(-1, -1):
+			_log("召唤失败：%s 周围没有空位（原地 %s）" % [spawn.card_name, str(near)])
+			break
+		if spot != near:
+			_log("召唤：原地 %s 已被占，%s 落在 %s" % [str(near), spawn.card_name, str(spot)])
+		if state.board.has(spot):
+			_log("召唤被拦下：%s 已经有单位" % str(spot))
 			break
 		var summoned:= state.place(spawn, spot, side)
 		_log("亡语：召唤了 %s（%s）" % [spawn.card_name, spot])
-		action.emit("place", {"cell": spot, "card": spawn, "side": side})
+		action.emit("place", {"cell": spot, "card": spawn, "side": side,
+				"summon": true, "from": near})
 		_on_ally_entered(summoned, side)
 
 

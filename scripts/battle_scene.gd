@@ -212,6 +212,9 @@ const ATK_WINDUP_T := 0.10      # 开始后仰蓄力
 const ATK_LAUNCH_T := 0.30      # 弹体发射
 const ATK_IMPACT_T := 0.62      # 弹体命中目标
 const DESTROY_HOLD_MS := 140    # 命中后卡牌「留一帧」再消失：先看得见伤害，再击破
+## R363：**一次效果打多个目标**（灰烬龙战吼 / 全场 AOE）时，每一格之间的落地间隔。
+## 原来所有格子同帧起爆 —— 一排「-4」同时冒出来，看不出是谁打的、也读不出扫过去的感觉。
+const FX_MULTI_HIT_GAP_MS := 90
 ## R360：卡被抹掉 / 白闪 / 爆点起播之后，再等这么久才结算「死亡效果」（辅助刃回手、
 ## 生命循环、送葬抽牌…）—— 落在幽灵淡出最浓的那一段，读起来就是「卡碎了 → 刃飞回来」。
 const DEATH_SETTLE_DELAY_MS := 180
@@ -583,6 +586,8 @@ func _ready() -> void:
 				load_level(levels[li])  # 截图验证用：--level 0
 		if args[i] == "--shotframe" and i + 1 < args.size():
 			_shot_frame = maxi(int(args[i + 1]), 10)  # 截图时机（帧），捕弹体/爆点用
+		if args[i] == "--r363col" and i + 1 < args.size():
+			_r363_col = clampi(int(args[i + 1]), 0, FieldState.BOARD_COLS - 1)
 		if args[i] == "--shotms" and i + 1 < args.size():
 			_shot_ms = maxi(int(args[i + 1]), 10)  # 截图时机（距演示动作的毫秒数）
 		if args[i] == "--gridscroll" and i + 1 < args.size():
@@ -2116,6 +2121,11 @@ func _ready() -> void:
 		_clear_hover_state()
 		selection = null
 		print("[R360] 场景就绪：树人 (4,1) 已挂「死亡」，手牌 %d 张" % _r360_hand0)
+	if "--r363trace" in args and engine != null:
+		# R363 追踪：真场景打掉一只幼龙，看另一只是不是也被换成龙裔。
+		_r363_trace = true
+		_clear_hover_state()
+		selection = null
 	if "--r361probe" in args and engine != null:
 		# R361 时序探针：我方树人 (1,0) 打敌方树人 (1,1) / 或直击敌方 HP (0,0)，
 		# 逐帧记录「攻击动画走到哪」与「伤害特效排在何时」。
@@ -2838,6 +2848,13 @@ var _r360_t_kill := 0
 var _r360_t_hide := 0        # 那张卡真正被抹掉（击破演出起播）的时刻
 var _r360_t_hand := 0        # 手牌第一次变多的时刻
 var _r360_hand0 := 0
+## R363 事件追踪（只服务 `--r363trace`）：把 place / destroy 事件连同棋盘快照打出来，
+## 查「一只幼龙死了，另一只也变成龙裔」到底发生在引擎还是界面。
+var _r363_trace := false
+var _r363_frame := 0
+var _r363_t0 := 0
+var _r363_stage := 0
+var _r363_col := 0
 var _shot_ms := 0               # --shotms：距演示动作的毫秒数（比帧号稳定）
 var _shot_t0 := 0               # 演示动作起始时刻（_now）
 var _cue_demo := false          # R288：--r288pulse 出图时允许演出队列照常推进
@@ -2900,6 +2917,48 @@ func _r361_probe_tick() -> void:
 	var t_end := 8000 if _r361_mode == "ai" else 2400
 	if t >= t_end:
 		print("[R361] 结束。")
+		get_tree().quit()
+
+
+func _board_brief() -> String:
+	## R363 追踪用：一行棋盘摘要（格子=卡名 id）。
+	if engine == null:
+		return "-"
+	var keys: Array[Vector2i] = []
+	for c: Vector2i in engine.state.board.keys():
+		keys.append(c)
+	keys.sort()
+	var out: Array[String] = []
+	for c: Vector2i in keys:
+		var p: Placement = engine.state.unit_at(c)
+		if p != null:
+			out.append("%s=%s%d" % [str(c), p.card.card_name, p.card.id])
+	return " ".join(out)
+
+
+func _r363_trace_tick() -> void:
+	## R363 追踪：真场景里打掉 (1,0) 的幼龙，再结束回合让 AI 参与，全程打印事件 + 棋盘。
+	if _r363_t0 == 0:
+		_r363_frame += 1
+		if _r363_frame < 6 or engine == null:
+			return
+		_r363_t0 = _now()
+		print("[R363] ── 开局棋盘：%s" % _board_brief())
+		var rc := Vector2i(1, _r363_col)
+		engine.damage_cell(rc, 99, "追踪")
+		engine._destroy_dead()
+		print("[R363] t=0 打掉 %s：%s" % [str(rc), _board_brief()])
+		return
+	var t := _now() - _r363_t0
+	if _r363_stage == 0 and not engine.has_pending_death_effects():
+		_r363_stage = 1
+		print("[R363] t=%dms 队列已清空：%s" % [t, _board_brief()])
+	if _r363_stage == 1 and t > 2400:
+		_r363_stage = 2
+		print("[R363] t=%dms 结束回合（让 AI 动）" % t)
+		engine.end_turn()
+	if t > 12000:
+		print("[R363] 终态：%s" % _board_brief())
 		get_tree().quit()
 
 
@@ -3069,6 +3128,34 @@ func _demo_tick() -> void:
 			engine.state.place(demo_repo.get_card(8003), Vector2i(4, 1), GameEngine.SIDE_SELF)
 		engine._upgrade_unit(Vector2i(4, 1), GameEngine.SIDE_SELF)
 		status_text = "R300/R362 激发 ×2：一次改造 → 每轮随机 2 个敌人各 -3（两轮共 -6）"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r363ash" in _demo_args and _demo_frame == 40 and engine != null:
+		# R363 出图（`--screenshot --level 20 --r363ash --shotms N`）：灰烬龙战吼的演出。
+		# 时间轴：0 起播发动者（橙红爆点 + 战吼播报）→ 160ms 起我方单位逐格 -4（每格 +90ms）。
+		_banner = {}
+		var as_repo := CardRepo.load_json()
+		engine.state.board.clear()
+		engine.state.place(CardData.from_dict(as_repo.get_card(1013).to_dict()),
+				Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+		for as_c in [Vector2i(3, 0), Vector2i(3, 2)]:
+			engine.state.place(CardData.from_dict(as_repo.get_card(8003).to_dict()),
+					as_c, GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(as_repo.get_card(8001).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(as_repo.get_card(1014).to_dict()),
+				Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+		engine._run_battlecries(GameEngine.SIDE_OPPONENT)
+		status_text = "R363 灰烬龙战吼：我方全场 -4（发动者脉冲 → 逐格落地）"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r363nest" in _demo_args and _demo_frame == 40 and engine != null:
+		# R363 复现（`--screenshot --level 20 --r363nest --shotms N`）：打掉 (1,0) 的幼龙，
+		# 看亡语召出的龙裔会不会把另一只幼龙 (1,2) 一起换掉。
+		_banner = {}
+		engine.damage_cell(Vector2i(1, 0), 99, "演示")
+		engine._destroy_dead()
+		status_text = "R363 幼龙亡语复现：(1,0) 被打掉"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r362curse" in _demo_args and _demo_frame == 40 and engine != null:
@@ -9137,6 +9224,15 @@ func _reject_fx(idx: int, reason := "", target = null) -> void:
 func _on_engine_action(kind: String, data: Dictionary) -> void:
 	## 引擎动作 → 动画 + 音效。
 	var n := _now()
+	if _r363_trace and kind in ["place", "destroy", "deathrattle", "battlecry"]:
+		var tc := "-"
+		if data.has("cell"):
+			tc = str(data["cell"])
+		var tid := -1
+		if data.get("card") is CardData:
+			tid = (data["card"] as CardData).id
+		print("[R363] %s cell=%s id=%d pending=%s | %s" % [
+				kind, tc, tid, str(engine.has_pending_death_effects()), _board_brief()])
 	# R151 P0-2：「打出 / 转移」不是「消失」—— 这些事件对应的移除不播飞出
 	# （单位有 P0-4 落位、效果卡进效果区、技能当场结算，都已经看得见去向）。
 	if kind == "spell" or kind == "effect" \
@@ -9204,6 +9300,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						"from_grid": pl_from_grid}
 				if pl_sc != 1.0:
 					_slides[pl]["from_scale"] = pl_sc
+				# R363：**召唤**（亡语 / 效果）要报出「谁出来了」——
+				# 幼龙死后原地变龙裔，原来只看到一张新卡凭空出现：玩家分不清是
+				# 「这只幼龙死了变龙裔」还是「旁边那只幼龙被换了」。
+				if bool(data.get("summon", false)):
+					var sm_pos := _cell_center(cell)
+					_bursts.append({"pos": sm_pos, "sc": _grid_scroll, "start": n, "dur": 560,
+							"col": Color("7ad6a0"), "big": false})
+					_floaters.append({"pos": sm_pos + Vector2(0, -22), "sc": _grid_scroll,
+							"text": "召唤 %s" % pl.card.card_name,
+							"col": Color("2f6f4f"), "start": n, "dur": 1600, "size": 18})
+					_say("✚ 召唤：%s（%d 攻 / %d 血）@ %s" % [pl.card.card_name,
+							pl.effective_power(), pl.health,
+							"我方" if pl.owner == GameEngine.SIDE_SELF else "敌方"])
 		"fence_merge":
 			# 栅栏修复术（6021）：两张栅栏合并 → 加固爆点 + 「生+N」飘字
 			sfx.play("place")
@@ -9430,6 +9539,31 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						cp_col = UiTheme.KIND_ALLY
 				# R321：这是**唯一**有发动者的来路 → 只有它会画脉冲 / 光带 / 拉镜头。
 				_push_cue([cp_cell], str(data.get("label", "")), cp_col, cp_cell)
+		"battlecry":
+			# R363：战吼的**发动者**演出。引擎这侧原来完全没接线（只有一行 `_log`）——
+			# 灰烬龙对我方全场打 4 时，玩家看到的只是自己整排单位同时掉血，
+			# 既没有「谁在发动」，也没有播报（用户口径：没有任何动画特效、很诡异）。
+			# 事件在伤害**之前**发出 → 先演发动者、再逐格落地（`fx_impact` 排队）。
+			if str(data.get("kind", "")) == "ash":
+				var bc_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+				var bc_card = data.get("card")
+				var bc_name := (bc_card as CardData).card_name if bc_card is CardData else "灰烬龙"
+				if bc_cell.x >= 0:
+					var bc_pos := _cell_center(bc_cell)
+					sfx.play("destroy")
+					# 灰烬环：橙红大爆点 + 一层金色余烬，贴在龙身上（不是打在目标身上）
+					_bursts.append({"pos": bc_pos, "sc": _grid_scroll, "start": n, "dur": 640,
+							"col": Color("ff6a2b"), "big": true})
+					_bursts.append({"pos": bc_pos, "sc": _grid_scroll, "start": n + 130, "dur": 540,
+							"col": Color("ffcf7a"), "big": false})
+					_floaters.append({"pos": bc_pos + Vector2(0, -28), "sc": _grid_scroll,
+							"text": "战吼 · 全场 -%d" % int(data.get("amount", 0)),
+							"col": Color("d84a12"), "start": n, "dur": 1600, "size": 20})
+					_shake(6.0, 320)
+				_say("🔥 %s 战吼：%d 个单位各 -%d" % [bc_name,
+						int(data.get("hits", 0)), int(data.get("amount", 0))]
+						if int(data.get("hits", 0)) > 0
+						else "🔥 %s 战吼：场上没有目标" % bc_name)
 		"fx_impact":
 			# R288：通用受击（引擎 `_hit_unit` 唯一口发出）。只有**没有专属表现**的
 			# 伤害才演（普通攻击 / 践踏已经在同帧认领了那一格）。
@@ -9442,9 +9576,24 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					# R361：画面里还有一击没落地（`_attacks` 里撞击时刻在未来）→ 这笔受击
 					# 跟着它一起落地。否则「攻击 HP 顺带的余波 / 溢出」会在 160ms 就炸，
 					# 而主体攻击动画还要 930ms 才撞到 —— 读起来就是特效早于动画。
-					_delayed.append({"at": maxi(n + 160, _impact_floor(n)), "kind": "fx_hit",
-							"data": {"cell": fc, "dmg": int(data.get("amount", 0)),
-							"source": str(data.get("source", ""))}})
+					var fi_at := maxi(n + 160, _impact_floor(n))
+					# R363：带 `seq` = 一次效果打多个目标 → 按序号逐格错开落地。
+					var fi_seq := int(data.get("seq", -1))
+					if fi_seq >= 0:
+						fi_at += fi_seq * FX_MULTI_HIT_GAP_MS
+					# 卡面生命也跟着冻结：数字等**这一格**的爆点落地才往下掉
+					# （与普通攻击同一条口径）。原来 AOE 的卡面血量在事件到达时就变了，
+					# 玩家看到的是「血先掉、然后才冒紫点」——用户说的「没有动画特效」。
+					# ⚠️ 只冻**还活着**的：被这一下打死的卡由击破演出接管（卡面显示 0）。
+					var fi_pl := engine.state.unit_at(fc)
+					var fi_dmg := int(data.get("amount", 0))
+					var fi_hold := fi_seq >= 0 and fi_pl != null and fi_pl.health > 0
+					if fi_hold:
+						_freeze_hp(fi_pl, fi_dmg)
+					_delayed.append({"at": fi_at, "kind": "fx_hit",
+							"data": {"cell": fc, "dmg": fi_dmg,
+							"source": str(data.get("source", "")),
+							"pl": fi_pl, "hold": fi_hold}})
 					_push_cue([fc], "", Color("8f5ad0"))
 		"spell":
 			sfx.play("heal" if int(data["card"].id) in [2002, 7202] else "spell")
@@ -11275,6 +11424,12 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 						"text": "-%d" % int(d.get("dmg", 0)), "col": UiTheme.SIDE_FOE,
 						"start": n, "dur": 1150})
 				_shake(3.0, 180)
+				# R363：多目标效果（带 `seq`）到点 → 受击闪红 + 卡面生命这一刻才掉，
+				# 与普通攻击的「闪红 → 掉血」完全同一条读法。
+				var fpl = d.get("pl")
+				if fpl != null and bool(d.get("hold", false)):
+					_flashes[fpl] = {"col": Color(0.9, 0.15, 0.1), "start": n, "dur": 420}
+					_drop_hp(fpl)
 		"hp_hit":
 			if d.has("say"):
 				_say(str(d["say"]))      # R361：播报与撞击同一刻
@@ -11302,7 +11457,8 @@ func _play_destroy_fx(center: Vector2, card: CardData) -> void:
 			"name": str(card.card_name), "start": _now() + 60, "dur": 800})
 	_bursts.append({"pos": center, "sc": _grid_scroll, "start": _now() + 60, "dur": 640,
 			"col": Color("e53935"), "big": true})
-	_floaters.append({"pos": center + Vector2(0, -14), "sc": _grid_scroll, "text": "击破",
+	_floaters.append({"pos": center + Vector2(0, -14), "sc": _grid_scroll,
+			"text": "%s 击破" % str(card.card_name),
 			"col": UiTheme.INK_600, "start": _now(), "dur": 1000})
 	_shake(9.0, 380)
 
@@ -13416,6 +13572,8 @@ func _process(delta: float) -> void:
 	# 结算面板：等所有攻击/命中/击破/飘字等动画特效播完后再弹出。
 	if engine.over and not _over_shown and not anim_busy:
 		_show_over(engine.result == "胜利")
+	if _r363_trace:
+		_r363_trace_tick()
 	if _r360_probe:
 		_r360_probe_tick()
 	if _r361_probe:
