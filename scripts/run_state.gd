@@ -251,6 +251,15 @@ const SEED_ALPHABET := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # ---- 道具 ----
 static var relics: Array[int] = []           # 已拥有的道具 id（跨战斗保留）
+## R367：**已耗尽的道具**（不锈钢盆计数归零 / 洞窟绳逃跑用掉）——
+## 不从 `relics` 里删掉，而是留在道具栏里**画灰**：记录页的「最终道具」才能看出
+## 这一局用过它（用户口径：「方便对战记录统计」）。
+## ⚠️「还有没有效」的唯一判据是 `has_relic()`（它排除这里）；批量读 `relics`
+##    的地方都是**展示**，别拿 `relics.has()` 当生效判定。
+static var spent_relics: Array[int] = []
+## R367：本局**打过的 Boss**（`{layer, key, name}`，按层去重，顺序 = 击破顺序）。
+## 记录页据此写出「第 1 层 · 鸭之暗面」这种每层战果。
+static var boss_kills: Array = []
 ## R352：本局的**禁卡快照**（开局那一刻从 `ProfileData.bans_of(职业)` 复制一份）。
 ## 用户口径：「禁用可以随时修改，但是当前正在进行的战斗只遵照开始前设置的禁用」——
 ## 所以局内奖励池只认这一份，局外改禁卡表**不影响**进行中的这一局。
@@ -693,6 +702,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	statue_charge = 0          # R307 雕像：新的一局从 0 开始数
 	basin_charge = 0           # R311 不锈钢盆：新的一局没有盆（重拿时再灌满）
 	match_charge = 0           # R342 火柴：新的一局没有火柴（重拿时再灌满 3 次）
+	spent_relics.clear()       # R367：新的一局没有「已耗尽」的道具
+	boss_kills.clear()         # R367：新的一局重新记每层 Boss
 	reward_kinds = []
 	# 开局卡组 = 公共部分 + 2 张角色基础盟友（森林精魄 → 树人；暗影刺客 → 幽影）
 	# + 角色专属卡（森林精魄 → 熊 8004；暗影刺客 → 突袭 9086）。见 PlayerClass.start_deck_ids。
@@ -783,6 +794,8 @@ static func end_run(clear_save: bool = true) -> void:
 	map_flags = []
 	run_bans = []          # R352：本局结束 → 禁卡快照作废（下一局重新取）
 	relics = []
+	spent_relics.clear()       # R367：灰显标记随本局一起清掉
+	boss_kills.clear()         # R367：本局 Boss 战果不跨局
 	bandage_pending = 0
 	relic_choice = []
 	skipped_relics = []
@@ -903,11 +916,16 @@ static func choose_start_relic(id: int) -> void:
 static func gain_relic(id: int) -> void:
 	## 获得道具：登记进列表；即时类当场结算。
 	if relics.has(id):
-		return
-	relics.append(id)
-	# R346 成就统计：「首次获得道具 XX」这类成就读的就是这条计数（>= 1 即首次）。
-	# ⚠️ 放在 `relics.has(id)` 之后 —— 重复获得不再计数（本局同一件只拿一次）。
-	ProfileData.bump(ProfileData.K_RELIC_GOT + str(id))
+		# R367：之前**耗尽**过的（盆碎过 / 绳子用掉过）不算重复持有 —— 拿回来就重新
+		# 生效、从灰里复活；只有「还活着的那件」才是真的重复（直接 return）。
+		if not spent_relics.has(id):
+			return
+		spent_relics.erase(id)
+	else:
+		relics.append(id)
+		# R346 成就统计：「首次获得道具 XX」这类成就读的就是这条计数（>= 1 即首次）。
+		# ⚠️ 放在 `relics.has(id)` 之后 —— 重复获得不再计数（本局同一件只拿一次）。
+		ProfileData.bump(ProfileData.K_RELIC_GOT + str(id))
 	var relic := RelicRepo.load_json().get_relic(id)
 	if relic == null:
 		return
@@ -1005,7 +1023,45 @@ static func is_card_banned(id: int) -> bool:
 
 
 static func has_relic(id: int) -> bool:
-	return relics.has(id)
+	## R367：**「还有没有效」的唯一判据** —— 已耗尽（灰掉）的在这里一律 false。
+	return relics.has(id) and not spent_relics.has(id)
+
+
+static func is_relic_spent(id: int) -> bool:
+	## 还挂在栏里、但已经用尽（画灰 + 状态注）。
+	return relics.has(id) and spent_relics.has(id)
+
+
+static func spend_relic(id: int) -> bool:
+	## 消耗型道具**用尽**（R367），返回是否真的用掉：
+	##   * 不锈钢盆（6041）计数归零 / 商店抵账 → 灰；
+	##   * 洞窟绳（6048）逃跑用掉 → 灰。
+	## 与 `lose_relic()` 的区别：**不移出道具栏**，只在 `spent_relics` 里记一笔。
+	## 烤肉（6011）**不走这里** —— 一次性食物，用掉就该从栏里消失（用户口径）。
+	if not relics.has(id) or spent_relics.has(id):
+		return false
+	if id == BASIN_RELIC_ID:
+		basin_charge = 0
+	spent_relics.append(id)
+	return true
+
+
+static func active_relics() -> Array[int]:
+	## 引擎侧道具列表（**排除已耗尽**）。`engine.self_relics` 一律挂这一份 ——
+	## 否则灰掉的盆 / 绳子在引擎眼里还算「持有」，效果会偷偷继续生效。
+	var out: Array[int] = []
+	for id: int in relics:
+		if not spent_relics.has(id):
+			out.append(id)
+	return out
+
+
+static func note_boss_kill(layer: int, key: String, nm: String) -> void:
+	## R367：记下「这一层的 Boss 是哪一只」。同一层只留一条（重打 / 续档不重复）。
+	for b: Variant in boss_kills:
+		if b is Dictionary and int((b as Dictionary).get("layer", 0)) == layer:
+			return
+	boss_kills.append({"layer": layer, "key": key, "name": nm})
 
 
 static func can_use_cave_rope(battle_kind: String) -> bool:
@@ -1013,7 +1069,8 @@ static func can_use_cave_rope(battle_kind: String) -> bool:
 	## 两个条件：① 还带着绳子；② 这场不是 Boss 战（`battle_kind` 由 battle_scene 按关卡
 	## tier 写入引擎，与勇气徽章读的是同一个字段）。
 	## 按钮显隐与真正的逃跑结算都走这里，免得两处各自写一遍再分叉。
-	return relics.has(CAVE_ROPE_RELIC_ID) and battle_kind != "boss"
+	# R367：走 `has_relic()` —— 绳子用掉后灰在栏里，不能再「逃跑」第二次。
+	return has_relic(CAVE_ROPE_RELIC_ID) and battle_kind != "boss"
 
 
 static func lose_relic(id: int) -> bool:
@@ -1025,6 +1082,9 @@ static func lose_relic(id: int) -> bool:
 		return false
 	if id == BASIN_RELIC_ID:
 		basin_charge = 0
+	# R367：真正「从栏里消失」的路径（烤肉这类一次性道具）也要把灰显标记清掉，
+	# 免得以后再拿到同 id 时带着「已耗尽」进来。
+	spent_relics.erase(id)
 	relics.erase(id)
 	return true
 
@@ -1040,9 +1100,8 @@ static func basin_pay() -> bool:
 	## 返回是否抵账成功（没有盆 / 已归零 → false，调用方照常收金币）。
 	if not has_basin():
 		return false
-	basin_charge = 0
-	relics.erase(BASIN_RELIC_ID)
-	return true
+	# R367：抵账也是「用完」—— 盆留在栏里画灰，不再凭空消失。
+	return spend_relic(BASIN_RELIC_ID)
 
 
 static func dice_map_rng() -> RandomNumberGenerator:
@@ -1369,6 +1428,9 @@ static func clear_pending_rewards() -> void:
 
 static func relic_state_note(id: int) -> String:
 	## 道具的动态状态说明（叠加态的鸭：当前复活概率）；无动态状态时返回 ""。
+	# R367：已耗尽（灰掉）的优先说清楚 —— 这不是「没有状态」，是**这件已经用完了**。
+	if is_relic_spent(id):
+		return "已耗尽，效果不再生效。"
 	if id == STACK_DUCK_RELIC_ID and relics.has(STACK_DUCK_RELIC_ID):
 		return "当前复活概率 %d%%。" % duck_revive_chance
 	# R314 lucky 7：写清「还差几个回合生效」—— 它的效果是周期性脉冲，不是常亮

@@ -212,7 +212,9 @@ func _entries() -> Array:
 		var rel := repo.get_relic(int(id))
 		if rel == null:
 			continue
-		out.append({"relic": rel, "note": RunState.relic_state_note(int(id))})
+		# R367：`spent` = 已耗尽（钢盆碎了 / 绳子用掉）—— 条目不删，画灰 + 标状态。
+		out.append({"relic": rel, "note": RunState.relic_state_note(int(id)),
+				"spent": RunState.is_relic_spent(int(id))})
 	return out
 
 
@@ -236,9 +238,12 @@ func _row_block(e: Dictionary, max_lines: int) -> Dictionary:
 	if max_lines < 99 and lines.size() > max_lines:
 		lines = lines.slice(0, max_lines)
 		lines[max_lines - 1] = lines[max_lines - 1] + "…"
+	# R367：已耗尽的：标签前加「已耗尽」、来源色块压灰。
+	var spent := bool(e.get("spent", false))
 	return {"name": RunState.relic_display_name(rel.id),
-			"tag": rel.tag_line(),
-			"lines": lines, "scol": rel.badge_color(),
+			"tag": _tag_of(e),
+			"lines": lines,
+			"scol": Color("6a7078") if spent else rel.badge_color(),
 			"h": H_NAME + lines.size() * H_LINE + H_GAP}
 
 
@@ -286,7 +291,9 @@ func _on_hover_draw() -> void:
 				Color(0, 0, 0, 0.5), false, 1.0)
 		_hover_layer.draw_string(_font_bold, r.position + Vector2(PAD * 0.6 + 12, y + 15),
 				"「%s」" % RunState.relic_display_name(rel.id), HORIZONTAL_ALIGNMENT_LEFT,
-				180.0, UiTheme.FS_LABEL, rel.name_color(Color("f4eeda")))
+				180.0, UiTheme.FS_LABEL,
+				Color("7d8590") if bool(e.get("spent", false))
+						else rel.name_color(Color("f4eeda")))
 		_hover_layer.draw_string(_font, r.position + Vector2(PAD * 0.6 + 196, y + 15),
 				str(b["tag"]), HORIZONTAL_ALIGNMENT_LEFT, 180.0, UiTheme.FS_CAPTION, Color("9a927f"))
 		var lines: PackedStringArray = b["lines"]
@@ -368,7 +375,9 @@ func _on_panel_draw() -> void:
 		# R343：名字色走 `RelicData.name_color` —— 传奇金橙、普通沿用原来的墨色。
 		_panel.draw_string(_font_bold, Vector2(px + PAD + 22, y + 22),
 				"「%s」" % RunState.relic_display_name(rel.id),
-				HORIZONTAL_ALIGNMENT_LEFT, 300, P_NAME, rel.name_color(Color("2f2a20")))
+				HORIZONTAL_ALIGNMENT_LEFT, 300, P_NAME,
+				Color("9a9385") if bool(e.get("spent", false))
+						else rel.name_color(Color("2f2a20")))
 		_panel.draw_string(_font, Vector2(px + PAD + 216, y + 22),
 				"（%s）" % str(_tag_of(e)), HORIZONTAL_ALIGNMENT_LEFT, 300, P_TAG, Color("8a8172"))
 		var lines := _row_lines(e)
@@ -386,8 +395,9 @@ func _on_panel_draw() -> void:
 
 
 func _tag_of(e: Dictionary) -> String:
+	## R367：已耗尽的在标签前挂「已耗尽」—— 名称本身不塞状态词，读起来仍是原名。
 	var rel: RelicData = e["relic"]
-	return rel.tag_line()
+	return ("已耗尽 · " + rel.tag_line()) if bool(e.get("spent", false)) else rel.tag_line()
 
 
 func _on_panel_input(event: InputEvent) -> void:

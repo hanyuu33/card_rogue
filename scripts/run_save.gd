@@ -58,6 +58,9 @@ static func snapshot() -> Dictionary:
 		"boss_pick": RunState.boss_pick,
 		"revenge_pending": RunState.revenge_pending,
 		"relics": RunState.relics,
+		# R367：已耗尽的道具（灰显的那些）与每层 Boss 战果 —— 续档要接着画灰 / 接着记。
+		"spent_relics": RunState.spent_relics,
+		"boss_kills": RunState.boss_kills,
 		"run_bans": RunState.run_bans,   # R352：本局禁卡快照（续档要接着用同一份）
 		"skipped_relics": RunState.skipped_relics,
 		"duck_revive_chance": RunState.duck_revive_chance,
@@ -180,6 +183,15 @@ static func apply(d: Dictionary) -> bool:
 	RunState.boss_pick = d.get("boss_pick", {}) if d.get("boss_pick", {}) is Dictionary else {}
 	RunState.revenge_pending = bool(d.get("revenge_pending", false))
 	RunState.relics = _int_array(d.get("relics", []))
+	# R367：灰显道具 / Boss 战果。**必须在 `relics` 之后、下面盆与火柴的复查之前**赋值 ——
+	# 那两处用 `has_relic()`（已排除 spent）决定要不要补满点数。
+	RunState.spent_relics = _int_array(d.get("spent_relics", []))
+	var bk_raw: Variant = d.get("boss_kills", [])
+	RunState.boss_kills = []
+	if bk_raw is Array:
+		for b: Variant in bk_raw:
+			if b is Dictionary and (b as Dictionary).has("layer"):
+				RunState.boss_kills.append(b)
 	# R352：老存档没有这个字段 → 空数组 = 这一局不禁卡（保守，不误伤奖励池）
 	RunState.run_bans = _int_array(d.get("run_bans", []))
 	RunState.skipped_relics = _int_array(d.get("skipped_relics", []))

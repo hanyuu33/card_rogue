@@ -23811,9 +23811,12 @@ func _init() -> void:
 			"R311 不锈钢盆：道具名旁写剩余点数（%s）"
 				% RunState.relic_display_name(RunState.BASIN_RELIC_ID))
 	check(RunState.basin_pay(), "R311 不锈钢盆：商店抵账成功（不花金币）")
-	check(not RunState.has_basin() and not RunState.relics.has(RunState.BASIN_RELIC_ID)
+	# R367（用户口径）：抵账 = 「用完」，盆**灰在道具栏里**而不是凭空消失 ——
+	# 判定「还有没有盆」仍然只看 `has_basin()`（灰掉的盆 has_relic 为 false）。
+	check(not RunState.has_basin() and RunState.relics.has(RunState.BASIN_RELIC_ID)
+			and RunState.is_relic_spent(RunState.BASIN_RELIC_ID)
 			and RunState.basin_charge == 0,
-			"R311 不锈钢盆：抵账一次后就失去道具")
+			"R311 不锈钢盆：抵账一次后就失效（R367：灰在栏里，不再凭空消失）")
 	check(not RunState.basin_pay(), "R311 不锈钢盆：只有一次抵账机会（第二次返回 false）")
 
 	# ---- 奖励道具去重（用户口径：同种奖励道具不会重复出现）----
@@ -26579,6 +26582,209 @@ func _init() -> void:
 			"R365 源码：赏月分支里把「离开」藏起来（没有第三条路可走）")
 	check_src(r365_ev.find("两样必须拿走一样。") >= 0,
 			"R365 文案：描述写明「两样必须拿走一样」（原来写『只能』，像还可以都不要）")
+
+
+	# ================================================================
+	# R367（用户口径）：① 消耗型道具**灰在道具栏里**（不移出，烤肉除外）；
+	#                    ② 每层打过的 Boss 也记录；③ 失败不许没记录。
+	# ================================================================
+	var r367_rec_bak := FileAccess.get_file_as_string(RunRecord.PATH) \
+			if FileAccess.file_exists(RunRecord.PATH) else ""
+	var r367_pend_bak := FileAccess.get_file_as_string(RunRecord.PENDING_PATH) \
+			if FileAccess.file_exists(RunRecord.PENDING_PATH) else ""
+	RunState.end_run(false)
+	RunRecord.clear_all()
+	if FileAccess.file_exists(RunRecord.PENDING_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(RunRecord.PENDING_PATH))
+
+	# ---- ① 钢盆：耗尽 = 灰在栏里，但不再生效 ----
+	RunState.relics = [RunState.BASIN_RELIC_ID]
+	RunState.spent_relics.clear()
+	RunState.basin_charge = RunState.BASIN_MAX
+	check(RunState.has_relic(RunState.BASIN_RELIC_ID)
+			and not RunState.is_relic_spent(RunState.BASIN_RELIC_ID),
+		"R367 道具：满计数的盆是「有效」的")
+	check(RunState.spend_relic(RunState.BASIN_RELIC_ID),
+		"R367 道具：spend_relic 能把盆用尽")
+	check(RunState.relics.has(RunState.BASIN_RELIC_ID)
+			and RunState.is_relic_spent(RunState.BASIN_RELIC_ID),
+		"R367 道具：用尽的盆**还留在道具栏里**（灰掉，不删）")
+	check(not RunState.has_relic(RunState.BASIN_RELIC_ID) and RunState.basin_charge == 0,
+		"R367 道具：灰掉的盆不再生效（has_relic false + 计数 0）")
+	check(not RunState.active_relics().has(RunState.BASIN_RELIC_ID),
+		"R367 道具：active_relics() 排除灰掉的（引擎侧不会偷着生效）")
+	check(not RunState.spend_relic(RunState.BASIN_RELIC_ID),
+		"R367 道具：spend_relic 幂等（已经灰了再调返回 false）")
+	check(RunState.relic_state_note(RunState.BASIN_RELIC_ID).find("已耗尽") >= 0,
+		"R367 道具：状态注写「已耗尽…」（悬浮提示说清它为什么不生效）")
+
+	# ---- 烤肉「保持原样」：用掉就从栏里消失，不进 spent ----
+	RunState.relics = [RunState.BARBECUE_RELIC_ID]
+	RunState.spent_relics.clear()
+	RunState.max_hp = 40
+	RunState.hp = 10
+	check(RunState.consume_barbecue() > 0,
+		"R367 道具：烤肉照旧可以吃（回复 25% 最大生命）")
+	check(not RunState.relics.has(RunState.BARBECUE_RELIC_ID),
+		"R367 道具：烤肉用掉后**从道具栏消失**（保持原样，不灰）")
+	check(RunState.spent_relics.is_empty(),
+		"R367 道具：烤肉不进「已耗尽」名单")
+
+	# ---- 洞窟绳：用掉后灰在栏里，但不能再逃第二次 ----
+	RunState.relics = [RunState.CAVE_ROPE_RELIC_ID]
+	RunState.spent_relics.clear()
+	check(RunState.can_use_cave_rope("battle"),
+		"R367 绳子：没用过的绳子能逃跑")
+	RunState.spend_relic(RunState.CAVE_ROPE_RELIC_ID)
+	check(RunState.is_relic_spent(RunState.CAVE_ROPE_RELIC_ID)
+			and RunState.relics.has(RunState.CAVE_ROPE_RELIC_ID),
+		"R367 绳子：用掉后灰在道具栏里（不消失）")
+	check(not RunState.can_use_cave_rope("battle"),
+		"R367 绳子：灰掉之后 `can_use_cave_rope` 为 false（不能逃第二次）")
+
+	# ---- 商店抵账：盆灰在栏里，而不是凭空消失 ----
+	RunState.relics = [RunState.BASIN_RELIC_ID]
+	RunState.spent_relics.clear()
+	RunState.basin_charge = RunState.BASIN_MAX
+	check(RunState.basin_pay() and RunState.is_relic_spent(RunState.BASIN_RELIC_ID)
+			and RunState.relics.has(RunState.BASIN_RELIC_ID),
+		"R367 商店：用盆抵账后盆灰在栏里（不再凭空消失）")
+
+	# ---- 再拿到曾经耗尽的 → 从灰里复活并重新充满 ----
+	RunState.relics = [RunState.BASIN_RELIC_ID]
+	RunState.spent_relics = [RunState.BASIN_RELIC_ID]
+	RunState.basin_charge = 0
+	RunState.gain_relic(RunState.BASIN_RELIC_ID)
+	check(not RunState.is_relic_spent(RunState.BASIN_RELIC_ID)
+			and RunState.has_relic(RunState.BASIN_RELIC_ID)
+			and RunState.basin_charge == RunState.BASIN_MAX,
+		"R367 道具：再拿到曾经耗尽的盆 → 复活 + 重新充满（不会带着 0 点进来）")
+
+	# ---- ② Boss 战果：同层去重、跨层各一条 ----
+	RunState.boss_kills.clear()
+	RunState.note_boss_kill(1, "duck_dark", "鸭之暗面")
+	RunState.note_boss_kill(1, "again", "重打的同一层")
+	RunState.note_boss_kill(2, "revelator", "启示者")
+	check(RunState.boss_kills.size() == 2
+			and str((RunState.boss_kills[0] as Dictionary).get("name", "")) == "鸭之暗面",
+		"R367 Boss：同一层只记一条（重打 / 续档不重复）")
+	check(str((RunState.boss_kills[1] as Dictionary).get("key", "")) == "revelator",
+		"R367 Boss：第二层单独一条（按层留 key 与名字）")
+
+	# ---- 快照：道具灰名单 + Boss 战果都进记录 ----
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, "森林精魄", 20261024)
+	RunState.relics = [RunState.BASIN_RELIC_ID, 6001]
+	RunState.spent_relics = [RunState.BASIN_RELIC_ID]
+	RunState.basin_charge = 0
+	RunState.boss_kills.clear()
+	RunState.note_boss_kill(1, "duck_dark", "鸭之暗面")
+	var r367_rec := RunRecord.snapshot()
+	var r367_spent: Array = r367_rec.get("spent", [])
+	var r367_bosses: Array = r367_rec.get("bosses", [])
+	check(r367_spent.has(RunState.BASIN_RELIC_ID),
+		"R367 记录：快照带上「已耗尽」名单（记录页据此画灰）")
+	check(r367_bosses.size() == 1
+			and str((r367_bosses[0] as Dictionary).get("name", "")) == "鸭之暗面",
+		"R367 记录：快照带上每层 Boss")
+
+	# ---- 「已耗尽」判定必须扛得住 JSON 的 float（实测踩过的坑）----
+	var r367_rt: Variant = JSON.parse_string(JSON.stringify(
+			{"spent": [RunState.BASIN_RELIC_ID]}))
+	var r367_rt_rec: Dictionary = r367_rt as Dictionary
+	var r367_rt_sp: Array = r367_rt_rec.get("spent", [])
+	check(not r367_rt_sp.has(RunState.BASIN_RELIC_ID),
+		"R367 记录：JSON 读回的 spent 是 float —— `Array.has(int)` 恒 false（就是那个坑）")
+	check(RunRecord.is_spent_in(r367_rt_rec, RunState.BASIN_RELIC_ID),
+		"R367 记录：`is_spent_in()` 逐个 int() 比 → JSON round-trip 后仍认得出灰盆")
+	check(not RunRecord.is_spent_in({}, RunState.BASIN_RELIC_ID),
+		"R367 记录：老记录没有 spent 字段 → 不判灰（兼容旧档）")
+
+	# ---- 续档：灰显与 Boss 战果都要活下来 ----
+	var r367_save := RunSave.snapshot()
+	var r367_spent_saved: Array = r367_save.get("spent_relics", [])
+	check(r367_spent_saved.has(RunState.BASIN_RELIC_ID),
+		"R367 存档：spent_relics 写进存档")
+	RunSave.apply(r367_save.duplicate(true))
+	check(RunState.spent_relics.has(RunState.BASIN_RELIC_ID)
+			and RunState.basin_charge == 0,
+		"R367 存档：续档后盆**仍是灰的**（不会被「有盆就补满」救活）")
+	check(RunState.boss_kills.size() == 1
+			and str((RunState.boss_kills[0] as Dictionary).get("key", "")) == "duck_dark",
+		"R367 存档：Boss 战果跟着续档（记录里不会丢层数）")
+
+	# ---- ③ 失败必留记录：pending 丢了也要兜一条 ----
+	RunRecord.clear_all()
+	RunRecord.finish("lose")
+	check(RunRecord.list_records().is_empty(),
+		"R367 记录：默认仍「不凭空造记录」（单关 / 演示不会留假记录）")
+	RunRecord.finish("lose", true)
+	var r367_lo := RunRecord.list_records()
+	check(r367_lo.size() == 1 and str(r367_lo[0].get("result", "")) == "lose",
+		"R367 记录：明确打完的一局 —— pending 丢了也兜一条「失败」")
+	check(int(r367_lo[0].get("hp", -1)) == 0,
+		"R367 记录：兜底写出的失败记录同样「生命记 0」")
+
+	# ---- 中断补记必须用 pending 里的快照（不被新局内存状态盖掉）----
+	RunRecord.clear_all()
+	var r367_f := FileAccess.open(RunRecord.PENDING_PATH, FileAccess.WRITE)
+	r367_f.store_string(JSON.stringify({
+		"format": RunRecord.FORMAT, "session": "r367-old",
+		"time": "2026-01-01T00:00:00", "start_unix": 0, "elapsed": 100,
+		"class": "森林精魄", "difficulty": 0, "seed": 4242,
+		"snap": {"hp": 7, "max_hp": 50, "gold": 33, "layer": 1,
+				"battles": 3, "elites": 1, "relics": [6001], "deck": []}}))
+	r367_f = null
+	RunState.run_active = true
+	RunState.hp = 44          # 内存里是「另一局」的状态
+	RunState.gold = 999
+	RunRecord.finish("interrupted")
+	var r367_it := RunRecord.list_records()
+	check(r367_it.size() == 1 and int(r367_it[0].get("hp", -1)) == 7
+			and int(r367_it[0].get("gold", -1)) == 33,
+		"R367 记录：中断补记用 pending 的快照（不被新局内存状态盖掉）")
+
+	# ---- 源码守卫：三条链路的唯一入口 ----
+	var r367_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r367_bs.find("RunState.spend_relic(RunState.BASIN_RELIC_ID)") >= 0,
+		"R367 源码：钢盆归零走 spend_relic（不是 lose_relic）")
+	check_src(r367_bs.find("RunState.spend_relic(RunState.CAVE_ROPE_RELIC_ID)") >= 0,
+		"R367 源码：洞窟绳用掉走 spend_relic")
+	check_src(r367_bs.find("engine.self_relics = RunState.active_relics()") >= 0,
+		"R367 源码：引擎拿到的是排除已耗尽的那份道具表")
+	check_src(r367_bs.find("func _record_defeat()") >= 0
+			and r367_bs.find("_record_defeat()") >= 0,
+		"R367 源码：败北记账有唯一入口 _record_defeat")
+	check_src(r367_bs.find("if engine.over and not _over_shown and engine.result != \"胜利\":") >= 0,
+		"R367 源码：`engine.over` 首帧就记败北（不等结算面板）")
+	check_src(r367_bs.find("RunRecord.finish(\"lose\", true)") >= 0,
+		"R367 源码：失败记账允许兜底（pending 丢了也要留痕）")
+	check_src(r367_bs.find("RunState.note_boss_kill(") >= 0,
+		"R367 源码：Boss 通关时写入每层战果")
+	var r367_rsrc := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	check_src(r367_rsrc.find("static func spend_relic") >= 0
+			and r367_rsrc.find("static func active_relics") >= 0,
+		"R367 源码：spend_relic / active_relics 是道具灰显的唯一口")
+	check_src(r367_rsrc.find("return relics.has(id) and not spent_relics.has(id)") >= 0,
+		"R367 源码：has_relic 排除已耗尽（生效判定只有这一个口）")
+
+	# ---- 收尾：把真实记录文件还回去 ----
+	RunState.end_run(false)
+	RunState.relics = []
+	RunState.spent_relics.clear()
+	RunState.boss_kills.clear()
+	if r367_rec_bak == "":
+		RunRecord.clear_all()
+	else:
+		var r367_rf := FileAccess.open(RunRecord.PATH, FileAccess.WRITE)
+		r367_rf.store_string(r367_rec_bak)
+		r367_rf = null
+	if r367_pend_bak == "":
+		if FileAccess.file_exists(RunRecord.PENDING_PATH):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(RunRecord.PENDING_PATH))
+	else:
+		var r367_pf := FileAccess.open(RunRecord.PENDING_PATH, FileAccess.WRITE)
+		r367_pf.store_string(r367_pend_bak)
+		r367_pf = null
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

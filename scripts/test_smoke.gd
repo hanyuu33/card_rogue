@@ -348,6 +348,24 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = GameLevels.builtin_levels()[13],
 			_check_r366_hecaton],
+		# R367（用户口径）：消耗型道具用尽后**灰在道具栏里**（不移出 —— 记录统计要看得出
+		#   这局用过它），但引擎侧不能再算持有。这里走真场景读道具栏与面板行。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relics = [RunState.BASIN_RELIC_ID]
+				RunState.basin_charge = RunState.BASIN_MAX
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r367_spent_bar],
+		# R367：失败必须留下对战记录 —— 败北记账在 `engine.over` 就落，且不会写两条。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"})
+				RunRecord.begin_run("森林精魄"),
+			_check_r367_defeat_record],
 	]
 	print("SMOKE === 开始（%d 项场景用例）===" % _plan.size())
 	_next()
@@ -3005,7 +3023,11 @@ func _check_relic_gate(scene: Variant) -> void:
 		_smoke_fail("道具栏：可见槽位数 %d（应 >= 1）" % cap)
 		return
 	var saved: Array[int] = eng.self_relics.duplicate()
+	# R367：道具栏的**显示**取 `RunState.relics`（全量，含已耗尽的灰显项），
+	# 引擎那份 `self_relics` 只决定「生效」。用例两边一起改，才是真实同源。
+	var saved_rs: Array[int] = RunState.relics.duplicate()
 	eng.self_relics = [6001, 6003]
+	RunState.relics = [6001, 6003]
 	if scene._relic_bar_overflowed():
 		_smoke_fail("道具栏：2 件（容量 %d）却判定为装不下" % cap)
 		return
@@ -3013,6 +3035,7 @@ func _check_relic_gate(scene: Variant) -> void:
 	eng.self_relics = []
 	for i in cap:
 		eng.self_relics.append(6001)
+	RunState.relics = eng.self_relics.duplicate()
 	scene._relics_visible = false
 	scene._on_left_click(scene._relic_zone_rect().get_center())
 	if scene._relics_visible:
@@ -3022,6 +3045,7 @@ func _check_relic_gate(scene: Variant) -> void:
 	# 超出容量：必须能点开
 	for i in range(0, cap + 2):
 		eng.self_relics.append(6001)
+	RunState.relics = eng.self_relics.duplicate()
 	if not scene._relic_bar_overflowed():
 		_smoke_fail("道具栏：%d 件（容量 %d）却判定为装得下" % [eng.self_relics.size(), cap])
 		eng.self_relics = saved
@@ -3044,6 +3068,7 @@ func _check_relic_gate(scene: Variant) -> void:
 		eng.self_relics = saved
 		return
 	eng.self_relics = saved
+	RunState.relics = saved_rs
 	print("SMOKE OK 道具查看：战斗道具栏容量 %d 个 / 装满点不开 / %d 件可点开 / 详情全列且字号 %d>%d"
 			% [cap, cap + 2, int(scene.RELIC_P_NAME), int(scene.RELIC_P_DESC)])
 
@@ -3904,3 +3929,76 @@ func _check_r366_hecaton(s: Node) -> void:
 				% CardRepo.load_json().get_card(9137).attack_range)
 		return
 	print("  [smoke] R366 百臂工场：(0,1) 大哥 + (2,0)/(2,2) 塔，塔程 2，卡库仍 1")
+
+func _check_r367_spent_bar(scene: Node) -> void:
+	## R367：盆用尽 → 道具栏里**还列得出**（灰着），引擎侧不再持有；面板行标「已耗尽」。
+	if scene == null or scene.engine == null:
+		_smoke_fail("R367 道具栏：战斗场景没起来")
+		return
+	if not scene.engine.self_relics.has(RunState.BASIN_RELIC_ID):
+		_smoke_fail("R367 道具栏：开场引擎里就没有盆（用例前置没铺上）")
+		return
+	# 走真实路径：用尽 + 界面把引擎侧那份重挂（`basin_break` 分支就是这么做的）
+	RunState.spend_relic(RunState.BASIN_RELIC_ID)
+	scene.engine.basin_charge = 0
+	scene.engine.self_relics = RunState.active_relics()
+	var ids: Array = scene._relic_bar_ids()
+	if not ids.has(RunState.BASIN_RELIC_ID):
+		_smoke_fail("R367 道具栏：用完的盆从栏里消失了（应该灰在原位）")
+		return
+	if scene.engine.self_relics.has(RunState.BASIN_RELIC_ID):
+		_smoke_fail("R367 道具栏：灰掉的盆还在 engine.self_relics 里（效果会偷着生效）")
+		return
+	var marked := false
+	for r: Variant in scene._relic_panel_rows():
+		if r is Array and str((r as Array)[0]).find("不锈钢盆") >= 0:
+			marked = str((r as Array)[0]).find("已耗尽") >= 0 \
+					or str((r as Array)[1]).find("已耗尽") >= 0
+	if not marked:
+		_smoke_fail("R367 道具栏：面板行里没写「已耗尽」")
+		return
+	print("  [smoke] R367 道具栏：用完的盆灰着留在栏里（栏里 %d 件 / 引擎 %d 件）"
+			% [ids.size(), scene.engine.self_relics.size()])
+
+
+func _check_r367_defeat_record(scene: Node) -> void:
+	## R367：`_record_defeat()` 落一条「失败」记录，且幂等（再调不会写第二条）。
+	## 会动真实的 run_records / battle_records → 前后各备份恢复一次。
+	if scene == null or scene.engine == null:
+		_smoke_fail("R367 失败记录：战斗场景没起来")
+		return
+	var bak_rec := FileAccess.get_file_as_string(RunRecord.PATH) \
+			if FileAccess.file_exists(RunRecord.PATH) else ""
+	var bak_bat := FileAccess.get_file_as_string(RunState.RECORDS_PATH) \
+			if FileAccess.file_exists(RunState.RECORDS_PATH) else ""
+	var before := RunRecord.list_records().size()
+	scene._record_defeat()
+	scene._record_defeat()          # 幂等：不该再写一条
+	var after := RunRecord.list_records()
+	# 还原盘上文件（这条用例不该污染玩家的历史记录）
+	if bak_rec == "":
+		RunRecord.clear_all()
+	else:
+		var f1 := FileAccess.open(RunRecord.PATH, FileAccess.WRITE)
+		f1.store_string(bak_rec)
+		f1 = null
+	if bak_bat == "":
+		if FileAccess.file_exists(RunState.RECORDS_PATH):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(RunState.RECORDS_PATH))
+	else:
+		var f2 := FileAccess.open(RunState.RECORDS_PATH, FileAccess.WRITE)
+		f2.store_string(bak_bat)
+		f2 = null
+	if after.size() != before + 1:
+		_smoke_fail("R367 失败记录：调两次写了 %d 条（应为 1）" % (after.size() - before))
+		return
+	var last: Dictionary = after[after.size() - 1]
+	if str(last.get("result", "")) != "lose":
+		_smoke_fail("R367 失败记录：最后一条是「%s」而不是「失败」"
+				% str(last.get("result", "")))
+		return
+	if int(last.get("hp", -1)) != 0:
+		_smoke_fail("R367 失败记录：失败记录的生命应记 0（现在 %d）" % int(last.get("hp", -1)))
+		return
+	print("  [smoke] R367 失败记录：败北立刻留一条「失败」（幂等，不会写两条）")
+

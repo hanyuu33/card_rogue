@@ -279,14 +279,18 @@ func _relic_entries(rec: Dictionary) -> Array:
 	if not (raw is Array):
 		return []
 	var repo := RelicRepo.load_json()
+	# R367：已耗尽的道具**留在记录里**（钢盆碎了 / 绳子用掉）—— 名字加后缀并画灰。
+	# 老记录没有 spent 字段 → 全视为生效。判定走 `RunRecord.is_spent_in()`（float 坑）。
 	var out: Array = []
 	for v: Variant in raw:
 		var rel := repo.get_relic(int(v))
 		if rel == null:
 			continue
+		var spent := RunRecord.is_spent_in(rec, int(v))
 		# R343：名字另配一色（传奇金橙）—— `col` 仍是左侧圆点的徽章色。
-		out.append({"name": rel.relic_name, "col": rel.badge_color(),
-				"ncol": rel.name_color(Color("d8d3c6"))})
+		out.append({"name": rel.relic_name + ("（已耗尽）" if spent else ""),
+				"col": Color("6a7078") if spent else rel.badge_color(),
+				"ncol": Color("8d857a") if spent else rel.name_color(Color("d8d3c6"))})
 	return out
 
 
@@ -363,8 +367,19 @@ func _draw_detail() -> void:
 				% [int(rec.get("gold", 0)), int(rec.get("layer", 0)),
 				int(rec.get("battles", 0)), int(rec.get("elites", 0))],
 				HORIZONTAL_ALIGNMENT_LEFT, 640, UiTheme.FS_LABEL, UiTheme.INK_300)
+	# R367：每层打过的 Boss（老记录没有 `bosses` 字段 → 整行不画）
+	var bosses: Variant = rec.get("bosses", [])
+	if bosses is Array and not (bosses as Array).is_empty():
+		var parts: Array[String] = []
+		for b: Variant in bosses:
+			if b is Dictionary:
+				parts.append("第 %d 层 · %s" % [int((b as Dictionary).get("layer", 0)),
+						str((b as Dictionary).get("name", "?"))])
+		draw_string(_font, Vector2(x0, r.position.y + 102.0),
+				"Boss：" + "　/　".join(parts),
+				HORIZONTAL_ALIGNMENT_LEFT, 900, UiTheme.FS_LABEL, Color("e8b04a"))
 	# 分隔线
-	var sep_y := r.position.y + 100.0
+	var sep_y := r.position.y + 118.0
 	draw_line(Vector2(x0, sep_y), Vector2(x1, sep_y), Color("3d424e"), 1.0)
 	var body_y := sep_y + 26.0
 	if not has_snap:

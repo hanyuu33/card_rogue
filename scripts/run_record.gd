@@ -76,13 +76,30 @@ static func resume() -> void:
 	_write_pending(cls, base)
 
 
-static func finish(result: String) -> void:
+static func finish(result: String, allow_fallback := false) -> void:
 	## 一局结束（win / lose / quit / interrupted）：落盘并清掉 pending。
 	## 没有 pending（续档补记失败 / 单关模式）→ 什么都不写，绝不凭空造记录。
+	## `allow_fallback`（R367）：只有**确定「这真是一局打完」的调用方**才传 true
+	## （战斗场景的 `_record_defeat()`）—— pending 丢了也要用内存状态兜出一条，
+	## 否则玩家输掉一整局却什么都没留下。默认 false，保住「不凭空造记录」的纪律。
 	## R241：连**最终状态快照**一起记（血量 / 道具 / 卡组…），记录页才能看详情。
 	var p := _read_pending()
 	if p.is_empty():
-		return
+		# R367：**明确的胜负不许丢**。pending 可能因为崩溃 / 顺序问题 / 旧版本档而缺，
+		# 原来这里静默 return —— 玩家打完一整局（尤其是打输）却什么都没留下，
+		# 下次启动被 `recover()` 补成「中断」。只要内存里这一局还在，就用它兜一条。
+		# interrupted 不兜：那本来就是「不知道发生了什么」，不能凭空造开始时间。
+		if not allow_fallback:
+			return
+		if result != "win" and result != "lose":
+			return
+		if not RunState.run_active:
+			return
+		push_warning("RunRecord：没有 pending —— 用内存快照兜底记一条「%s」" % result)
+		p = {"time": Time.get_datetime_string_from_system(),
+				"start_unix": Time.get_unix_time_from_system(), "elapsed": 0,
+				"class": RunState.player_class, "difficulty": RunState.difficulty,
+				"seed": RunState.run_seed}
 	var now := Time.get_unix_time_from_system()
 	var start := float(p.get("start_unix", now))
 	if start <= 0.0:
@@ -102,7 +119,10 @@ static func finish(result: String) -> void:
 	# 快照来源：本局还活着 → 现取；否则（启动时补记「中断」）→ 用 pending 里存的
 	# 最后一份检查点快照（`update_pending()` 写的）。
 	var snap: Variant = p.get("snap", {})
-	if RunState.run_active:
+	# R367：**中断补记一律用 pending 里的快照**。`begin_run()` 打开新局时是先
+	# `start_run()`（内存已换成新的一局）再收上一局的 pending，这里若按「内存还活着」
+	# 取快照，上一局的中断记录会被写成**新局**的卡组 / 种子 / 血量（记录内容全错）。
+	if RunState.run_active and result != "interrupted":
 		snap = snapshot()
 	if snap is Dictionary:
 		entry.merge(snap as Dictionary, true)
@@ -132,6 +152,11 @@ static func snapshot() -> Dictionary:
 	var relics: Array = []
 	for id: int in RunState.relics:
 		relics.append(int(id))
+	# R367：已耗尽的道具**仍在 relics 里**（栏里画灰），另记一份 spent 名单给记录页着色。
+	# 分开存是为了老记录照旧能读（老记录没有 spent = 全部视为生效）。
+	var spent: Array = []
+	for id: int in RunState.spent_relics:
+		spent.append(int(id))
 	return {
 		"seed": RunState.run_seed,
 		"hp": RunState.hp,
@@ -141,6 +166,8 @@ static func snapshot() -> Dictionary:
 		"battles": RunState.battle_wins,
 		"elites": RunState.elite_wins,
 		"relics": relics,
+		"spent": spent,
+		"bosses": RunState.boss_kills.duplicate(true),
 		"deck": deck,
 	}
 
@@ -216,6 +243,20 @@ static func list_records() -> Array:
 
 
 # ------------------------------------------------------------ 展示
+
+static func is_spent_in(rec: Dictionary, id: int) -> bool:
+	## 记录里的这件道具是不是「已耗尽」（R367，灰掉的那些）。
+	## ⚠️ **必须逐个 `int()` 比较**：记录是 JSON 读回来的，数字是 **float**，
+	##    `spent_ids.has(6041)`（int）在 Godot 里**恒为 false** —— 实测踩过一次，
+	##    表现就是「记录页里灰盆看着跟正常盆一样」。
+	var raw: Variant = rec.get("spent", [])
+	if not (raw is Array):
+		return false
+	for v: Variant in raw:
+		if int(v) == id:
+			return true
+	return false
+
 
 static func result_label(result: String) -> String:
 	match result:

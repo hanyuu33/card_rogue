@@ -473,6 +473,9 @@ var _over_hint: Label            # 结算面板副标题（难度档位信息等
 var _over_btn_restart: Button
 var _over_btn_level: Button
 var _over_btn_title: Button
+## R367：本场「输」是否已经落过记录 —— `_record_defeat()` 的幂等标记。
+## 结算面板要等演出播完才弹，但记录必须在 `engine.over` 那一刻就写。
+var _lose_recorded := false
 var _run_boss_win := false      # run 结算：本场是否为 Boss 通关（决定按钮路由）
 var _run_next_layer := 0        # Boss 通关后要进入的下一层（0 = 没有下一层 → 结束 run）
 ## R339：**进战斗之前**的一份局状态快照（战斗检查点写它，而不是写当下状态）。
@@ -778,6 +781,19 @@ func _ready() -> void:
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		RunState.pending_node = {"type": "boss"}
 		engine._finish("胜利", "演示：Boss 关卡结算")
+	if "--r367spent" in args and engine != null:
+		# R367 出图：盆用尽 → **灰在道具栏里**（不是消失）。旁边留两件正常道具做对比。
+		# 出图：`-- --screenshot --r367spent --shotframe 600`
+		RunState.relics = [RunState.BASIN_RELIC_ID, 6001, 6003]
+		RunState.spent_relics.clear()
+		RunState.spend_relic(RunState.BASIN_RELIC_ID)
+		RunState.basin_charge = 0
+		engine.basin_charge = 0
+		engine.self_relics = RunState.active_relics()
+		if "--relicpanel" in args:
+			_relics_visible = true
+		status_text = "R367：不锈钢盆已耗尽 → 灰在道具栏里（其余道具照常）"
+		queue_redraw()
 	if "--relics" in args and engine != null:
 		# 演示：右栏道具栏（截图验证用；放在 args 循环后，避免被 --level 重建覆盖）
 		engine.self_relics = [6001, 6005, 6010]   # 初始白 / 奖励黄 / 事件紫
@@ -3578,6 +3594,7 @@ func _setup_net() -> void:
 	_tut_update_bar()
 	_over_panel.visible = false
 	_over_shown = false
+	_lose_recorded = false
 	_confetti.clear()
 	status_text = "联机对局 vs %s —— %s" % [NetSession.opp_name,
 			"你先手，请行动" if NetSession.i_start else "等待对方行动…"]
@@ -3701,8 +3718,10 @@ func _on_flee() -> void:
 		return
 	if not RunState.can_use_cave_rope(engine.battle_kind):
 		return
-	if not RunState.lose_relic(RunState.CAVE_ROPE_RELIC_ID):
+	# R367：用掉 = **灰在道具栏里**（不凭空消失），引擎侧同步摘掉。
+	if not RunState.spend_relic(RunState.CAVE_ROPE_RELIC_ID):
 		return
+	engine.self_relics = RunState.active_relics()
 	_ai_timer.stop()
 	_clear_battle_checkpoint()
 	RunState.hp = maxi(0, engine.state.hp_self)
@@ -3714,6 +3733,10 @@ func _on_flee() -> void:
 func _on_back_to_title() -> void:
 	_ai_timer.stop()
 	if RunState.run_active:
+		# R367：结算面板还没弹就先跳走（死亡演出期间点「返回标题」）—— 这一局已经
+		# 定了输，先补一条记录再走；否则盘上只剩一个 pending，下次启动被补成「中断」。
+		if engine != null and engine.over and engine.result != "胜利":
+			_record_defeat()
 		# R167：回标题**不再放弃本局** —— 只复位内存状态，续档保留，
 		# 标题页「继续游戏」可以从上一次地图检查点接着打。
 		RunState.end_run(false)
@@ -3763,7 +3786,8 @@ func load_level(lvl: Dictionary) -> void:
 	if RunState.run_active:
 		engine.rng.seed = battle_seed   # 战斗内全部随机（含 AI）可复现
 	engine.ai_enabled = bool(lvl["enemy_ai"])
-	engine.self_relics = RunState.relics   # 道具（鸡煲等战斗内效果由引擎结算）
+	# R367：给引擎的是**排除已耗尽**的那份 —— 灰掉的盆 / 绳子在引擎眼里不该还算持有。
+	engine.self_relics = RunState.active_relics()
 	# R245：战斗类型只在这里判一次（勇气徽章等「按战斗类型生效」的道具读引擎这个字段）。
 	# 用**关卡 tier** 而不是 pending_node 的 type：演示参数 / 单关入口也走同一条路，
 	# 不会出现「地图说是精英、结算按普通」这种两处判据分叉。
@@ -3873,6 +3897,7 @@ func load_level(lvl: Dictionary) -> void:
 	_tut_update_bar()
 	_over_panel.visible = false
 	_over_shown = false
+	_lose_recorded = false
 	_confetti.clear()
 	var limit: int = int(lvl["turn_limit"])
 	if limit > 0:
@@ -6527,26 +6552,27 @@ func _on_hover(pos: Vector2) -> void:
 		# R171b：只检测**看得见的**徽章 —— 道具溢出时，不可见徽章的矩形会一路排到
 		# 道具栏外（下面）；长说明悬浮窗翻到栏下时正好压在这些「幽灵矩形」上 →
 		# 鼠标明明悬在悬浮窗 / 空白处也弹说明（用户实测）。可见数与 _draw_relic_bar 同源。
-		var rel_shown: int = engine.self_relics.size() \
-				if engine.self_relics.size() <= _relic_max_slots() \
+		var hids := _relic_bar_ids()
+		var rel_shown: int = hids.size() \
+				if hids.size() <= _relic_max_slots() \
 				else _relic_max_slots() - 1
 		for i in rel_shown:
 			if _relic_rect(i).has_point(pos):
 				rel_hit = true
-				var rel := RelicRepo.load_json().get_relic(engine.self_relics[i])
+				var rel := RelicRepo.load_json().get_relic(hids[i])
 				if rel != null:
 					# 道具描述可能很长（叠加态的鸭等）：完整说明走浮动折行面板，
 					# 不再塞进工具栏一行（会横向溢出窗口）
-					var note := RunState.relic_state_note(engine.self_relics[i])
+					var note := RunState.relic_state_note(hids[i])
 					_hover_relic_tip = "「%s」（%s）%s%s" % [
-							RunState.relic_display_name(engine.self_relics[i],
+							RunState.relic_display_name(hids[i],
 									engine.state.self_card_plays),
 							rel.tag_line(), rel.desc,
 							("\n" + note) if note != "" else ""]
 				break
 		if not rel_hit and tip == "" and _relic_zone_rect().has_point(pos):
 			# 悬浮就能逐个看描述；装不下时才有「点开看全部」这条路
-			tip = "道具 %d 个" % engine.self_relics.size()
+			tip = "道具 %d 个" % _relic_bar_ids().size()
 	# ④ 弃牌区（R140 改图标后不再显示顶牌 → 悬停只报张数，详情进点击面板）
 	if _hover_card == null:
 		var discard_rect := Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H)
@@ -6768,6 +6794,21 @@ func _on_over_restart() -> void:
 		SceneFx.goto("res://scenes/title.tscn")
 
 
+func _record_defeat() -> void:
+	## R367：**输掉的那一刻就落记录**，不等死亡演出播完弹结算面板。
+	## 原来只在 `_show_over()` 里写 —— 玩家在演出那一两秒里点「返回标题」/ 关窗口，
+	## 这一局就什么都不剩（下次启动被 `recover()` 补成「中断」，看起来像「失败没记录」）。
+	## 幂等：`_lose_recorded` 挡住第二次调用。
+	if _lose_recorded or not RunState.run_active or engine == null:
+		return
+	_lose_recorded = true
+	var lvl: Dictionary = _cur_level if not _cur_level.is_empty() else {}
+	RunState.record_battle(repo, str(lvl.get("name", "?")), int(lvl.get("tier", -1)),
+			false, maxi(0, engine.state.hp_self))
+	# `true` = 允许在 pending 缺失时用内存状态兜底 —— 这一局确实打完了。
+	RunRecord.finish("lose", true)
+
+
 func _show_over(win: bool) -> void:
 	_over_shown = true
 	flee_btn.visible = false   # R341：打完了就不该再挂着一个「逃跑」
@@ -6801,6 +6842,10 @@ func _show_over(win: bool) -> void:
 			# 这类成就读它；`RunState.on_battle_won` 那边只记「赢了几个 Boss」的总数）。
 			if _run_boss_win:
 				ProfileData.bump(ProfileData.K_BOSS_KILL + str(lvl.get("name", "?")))
+				# R367：记下「这一层打的是哪只 Boss」—— 对战记录详情按层列出。
+				# 用 `current_layer`（推进层在 `_on_over_restart` 才发生，此刻还是本层）。
+				RunState.note_boss_kill(RunState.current_layer,
+						str(lvl.get("key", "")), str(lvl.get("name", "?")))
 			# R181：战斗胜利掉金币（按关卡分级：普通简单 20 / 普通困难 30 / 精英 50/65 / Boss 100）
 			var gold_gain := RunState.gold_for_tier(tier)
 			if gold_gain > 0:
@@ -6863,9 +6908,9 @@ func _show_over(win: bool) -> void:
 				RunRecord.finish("win")   # 通关：整局结果记一行
 				RunState.end_run()
 		else:
-			RunState.record_battle(repo, str(lvl.get("name", "?")), tier,
-					false, maxi(0, engine.state.hp_self))
-			RunRecord.finish("lose")   # 失败：整局结果记一行
+			# R367：正常路径下这里已经是第二次（`engine.over` 首帧就记过了）——
+			# `_record_defeat()` 自带幂等，不会写出两条「失败」。
+			_record_defeat()
 			RunState.end_run()
 			_run_boss_win = false
 			_over_btn_restart.visible = false
@@ -9783,11 +9828,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# `engine.self_relics` 与 `RunState.relics` 是同一个数组，但这里仍显式重挂一次 ——
 			# 将来若改成各持一份副本，这条也不会悄悄失效。
 			sfx.play("click")
-			RunState.lose_relic(RunState.BASIN_RELIC_ID)
+			# R367：**不再从栏里消失** —— 灰掉留在原位，记录页才统计得出「这局用过它」。
+			RunState.spend_relic(RunState.BASIN_RELIC_ID)
 			if engine != null:
 				engine.basin_charge = 0
-				engine.self_relics = RunState.relics
-			_say("✧ 不锈钢盆计数归零 —— 失去此道具")
+				engine.self_relics = RunState.active_relics()
+			_say("✧ 不锈钢盆计数归零 —— 已耗尽")
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 60.0),
 					"text": "不锈钢盆 碎了", "col": Color("8a949c"),
 					"size": 17, "start": n, "dur": 2200})
@@ -12017,6 +12063,17 @@ func _relic_rect(i: int) -> Rect2:
 	return Rect2(z.position.x + 4, z.position.y + 24.0 + i * 24.0, z.size.x - 8, 22.0)
 
 
+func _relic_bar_ids() -> Array:
+	## R367：道具栏显示的是**本局全部道具**（含已经用尽、画灰的那些）。
+	## 引擎效果那一份是 `engine.self_relics` = `RunState.active_relics()`（排除灰掉的）——
+	## 两者**不能混用**：显示要全，生效要有效。
+	# 真实战斗 / 出图演示都可能直接铺 `RunState.relics`；两者都空才回退到引擎那份
+	# （单关演示只设了 `engine.self_relics` 的情况）。
+	if not RunState.relics.is_empty():
+		return RunState.relics
+	return engine.self_relics
+
+
 func _relic_max_slots() -> int:
 	## 道具栏在不越界的前提下能放几个徽章（每个高 22、步进 24，从 +24 起）。
 	var z := _relic_zone_rect()
@@ -12027,7 +12084,7 @@ func _relic_max_slots() -> int:
 func _relic_bar_overflowed() -> bool:
 	## 道具栏装不下全部道具（会出现「+N」摘要）—— 点开浏览面板的**唯一**判定口。
 	## 装得下时悬浮已能看全，不给点击入口（用户要求）。
-	return engine.self_relics.size() > _relic_max_slots()
+	return _relic_bar_ids().size() > _relic_max_slots()
 
 
 func _relic_bar_lit() -> bool:
@@ -12043,7 +12100,7 @@ func _relic_bar_lit() -> bool:
 
 func _draw_relic_bar() -> void:
 	## 右栏道具栏：本局获得的道具（来源色块 = 初始白 / 奖励黄 / 事件紫）。
-	var ids := engine.self_relics
+	var ids := _relic_bar_ids()
 	var z := _relic_zone_rect()
 	draw_rect(z, Color(1.0, 0.96, 0.82, 0.30), true)
 	draw_rect(z, Color("b09a5a"), false, 1.0)
@@ -12058,11 +12115,14 @@ func _draw_relic_bar() -> void:
 		if rel == null:
 			continue
 		var rect := _relic_rect(i)
-		var scol := rel.badge_color()
+		# R367：已经用尽的（盆碎 / 绳用掉）**留在栏里画灰** —— 记录统计看得出，
+		# 玩家也不会以为「我明明拿过，怎么不见了」。
+		var rspent := RunState.is_relic_spent(int(ids[i]))
+		var scol := Color("8a8f98") if rspent else rel.badge_color()
 		# R309（用户口径「道具名不太清晰」）：去掉描边 + 底衬改成**浅实色** ——
 		# 来源色向白混 62%，深棕字压在浅底上才有对比度；原来 28% 半透明会透出草地，
 		# 深棕字和背景糊成一片（加 2px 描边只会更糊）。
-		draw_rect(rect, scol.lerp(Color.WHITE, 0.62), true)
+		draw_rect(rect, Color("d9d7cf") if rspent else scol.lerp(Color.WHITE, 0.62), true)
 		draw_rect(rect, scol, false, 1.2)
 		# R314（用户口径）：**这一刻会不会真的触发**的道具要亮起 ——
 		# 呼吸外框（金） + 更亮的底。判据见 `GameEngine.relic_highlight()`：
@@ -12095,7 +12155,7 @@ func _draw_relic_bar() -> void:
 				RunState.relic_display_name(ids[i], engine.state.self_card_plays),
 				Vector2(rect.position.x + 12.0 + (rect.size.x - 12.0) / 2,
 						rect.position.y + 14.0),
-				rel.name_color(Color("4a3c14")), -1)
+				Color("9a9488") if rspent else rel.name_color(Color("4a3c14")), -1)
 	# 道具太多装不下 → 末位换成「+N 点击查看全部」摘要行（点道具栏打开浏览面板）
 	if n_rel > shown_r:
 		_draw_more_tile(_relic_rect(shown_r), "+%d" % (n_rel - shown_r), "")
@@ -13371,7 +13431,7 @@ func _wrap_lines(font: Font, px: int, text: String, max_w: float) -> PackedStrin
 
 func _relic_panel_rows() -> Array:
 	## 道具面板的每行内容：[名称行, 描述折行数组, 来源色]。
-	var ids := engine.self_relics
+	var ids := _relic_bar_ids()
 	var repo := RelicRepo.load_json()
 	var rows: Array = []
 	for i in ids.size():
@@ -13380,9 +13440,20 @@ func _relic_panel_rows() -> Array:
 		var desc := rel.desc if rel != null else ""
 		var scol := rel.badge_color() if rel != null else Color.GRAY
 		var tag := rel.tag_line() if rel != null else "道具"
+		# R367：已耗尽的留在列表里，名字后缀 + 标签前缀 + 色块压灰，正文补一句状态。
+		var rspent := RunState.is_relic_spent(int(ids[i]))
+		if rspent:
+			nm += "（已耗尽）"
+			tag = "已耗尽 · " + tag
+			scol = Color("8a8f98")
+			var s_note := RunState.relic_state_note(int(ids[i]))
+			if s_note != "":
+				desc += "  （%s）" % s_note
 		# R343：名字与标签**分开画** —— 传奇道具名要单独换色，混在一整串里就得整串变金
 		#（标签也跟着金，「来源 · 时机」就不好读了）。位置按名字实际宽度顺排。
 		var ncol: Color = rel.name_color(Color("4a3c14")) if rel != null else Color("4a3c14")
+		if rspent:
+			ncol = Color("9a9488")
 		rows.append(["「%s」" % nm, "（%s）" % tag,
 				_wrap_lines(_font, RELIC_P_DESC, desc, RELIC_PANEL_W - 96.0), scol, ncol])
 	return rows
@@ -13397,7 +13468,7 @@ func _relic_panel_rows_height() -> float:
 
 func _draw_relic_panel() -> void:
 	## 道具浏览面板：本局全部道具 + 完整说明（长描述自动折行；太多时滚轮翻动）。
-	var ids := engine.self_relics
+	var ids := _relic_bar_ids()
 	var n := ids.size()
 	var pw := minf(WINDOW_W - 160.0, RELIC_PANEL_W)
 	var ph := minf(WINDOW_H - 40.0, 620.0)
@@ -13592,6 +13663,10 @@ func _process(delta: float) -> void:
 			queue_redraw()
 		else:
 			_banner = {}
+	# R367：**败北立刻记账**（幂等）—— 面板要等演出播完才弹，但「输」在 `engine.over`
+	# 那一刻就已经定了；记录不能跟着面板一起等（否则这期间的退出会变成「中断」）。
+	if engine.over and not _over_shown and engine.result != "胜利":
+		_record_defeat()
 	# 结算面板：等所有攻击/命中/击破/飘字等动画特效播完后再弹出。
 	if engine.over and not _over_shown and not anim_busy:
 		_show_over(engine.result == "胜利")

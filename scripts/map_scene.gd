@@ -1485,8 +1485,10 @@ func _draw_relics() -> void:
 		if rel == null:
 			continue
 		var rect := _relic_rect(i)
-		var scol := rel.badge_color()
-		draw_rect(rect, Color(scol, 0.18), true)
+		# R367：已耗尽的画灰（边框 / 色块 / 名称一起压暗），一眼能看出「这件用完了」。
+		var spent := RunState.is_relic_spent(int(RunState.relics[i]))
+		var scol := Color("6a7078") if spent else rel.badge_color()
+		draw_rect(rect, Color(scol, 0.10 if spent else 0.18), true)
 		draw_rect(rect, scol, false, 1.4)
 		var chip := Rect2(rect.position + Vector2(5, 5), Vector2(7, rect.size.y - 10))
 		draw_rect(chip, scol, true)
@@ -1494,7 +1496,7 @@ func _draw_relics() -> void:
 		# R343：传奇道具名走亮金（底是来源色 18% 覆在地图上，属深底）。
 		draw_string(_font_bold, rect.position + Vector2(14, 18), rel.relic_name,
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 18, UiTheme.FS_LABEL,
-				rel.name_color(Color("eee6c8")))
+				Color("8d8577") if spent else rel.name_color(Color("eee6c8")))
 		if hover_ok and rect.has_point(_mouse):
 			hovered = i
 	if _relic_bar_overflowed():
@@ -1562,8 +1564,10 @@ func _relic_panel_rows() -> Array:
 		if note != "":
 			body += "  （%s）" % note
 		var lines := _wrap_relic_text(body, RELIC_P_W - 90.0, RELIC_P_DESC)
-		rows.append(["「%s」（%s）" % [rel.relic_name, rel.tag_line()],
-				lines, rel.badge_color(),
+		var spent := RunState.is_relic_spent(int(id))
+		rows.append(["「%s」（%s%s）" % [rel.relic_name,
+				"已耗尽 · " if spent else "", rel.tag_line()],
+				lines, Color("6a7078") if spent else rel.badge_color(),
 				RELIC_P_ROWH + lines.size() * RELIC_P_LINE + 10.0])
 	return rows
 
