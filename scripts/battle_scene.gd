@@ -263,6 +263,7 @@ var _grid_zoom := 1.0
 ## R215：**不点也会自己关** —— 5 秒后自动收起（倒计时画在底部提示行上）。
 var _ee_popup := false
 var _ee_popup_t0 := 0            # 弹窗开启时刻（msec）—— 自动关闭的计时起点
+var _ee_popup_at := 0            # R356：转阶段排队重弹的时刻（0 = 没有排队）
 var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本不覆盖
 ## R118：左键点「空位」**不再一步取消**。为 true = 本轮的第一次空位点击已经发生 ——
 ## 选区、绿色移动格、红色攻击格、深红 HP 格**全部原样保留**（于是这时点目标照样能打），
@@ -2791,6 +2792,25 @@ func _demo_tick() -> void:
 		engine._destroy_dead()
 		_clear_hover_state()
 		selection = null
+	# ⚠️ 触发点用**固定帧 300**：`_shot_frame` 到点就会截图，而帧号推进比毫秒快得多，
+	# 用 `-40` 会让「截图」总是抢在延后 0.7s 的重弹之前（实测两次都拍在同一个 66ms）。
+	# 配 `--shotframe 99999 --shotms N` 才真正按毫秒控制时机。
+	if _shot_pending and "--bossphase" in _demo_args \
+			and _demo_frame == 300 and engine != null:
+		# R356 出图：把启示者的转阶段**当场演一遍** —— 阶段横幅 + 震屏 + 本体爆点 +
+		# 重新弹出敌方效果。配 `--shotms 80` 看爆点、`--shotms 1400` 看换过的效果卡。
+		# 出图：`battle.tscn -- --screenshot --level 33 --bossphase 2 --shotframe 600 --shotms 400`
+		var bp_want := 2
+		for bp_i in _demo_args.size():
+			if _demo_args[bp_i] == "--bossphase" and bp_i + 1 < _demo_args.size():
+				bp_want = clampi(int(_demo_args[bp_i + 1]), 2, 3)
+		var bp_p := engine.state.unit_at(GameEngine.REVELATOR_HOME)
+		if bp_p != null:
+			while bp_p.boss_phase < bp_want:
+				engine._revelator_enter_phase(bp_p, bp_p.boss_phase + 1)
+		_shot_t0 = _now()
+		_clear_hover_state()
+		selection = null
 	if _shot_pending and "--r288knife" in _demo_args \
 			and _demo_frame == _shot_frame - 12 and engine != null:
 		# 真走引擎结算：主刀 `_op_deal_damage` + 两跳 `_hit_unit`，
@@ -3450,6 +3470,11 @@ func load_level(lvl: Dictionary) -> void:
 	var _tier_for_kind := int(lvl.get("tier", -1))
 	engine.battle_kind = "boss" if _tier_for_kind == GameLevels.TIER_BOSS \
 			else ("elite" if _tier_for_kind >= GameLevels.TIER_ELITE_EASY else "battle")
+	# R356：第三层 Boss 关（启示者）的两条特殊规则 —— 必须在摆单位 / 启用效果卡之前写入：
+	# `enemy_hp_infinite` 决定「敌方 HP 归零」这条胜利条件失效、界面显示 ∞；
+	# `win_on_boss` 决定唯一的胜利条件是击破本体（三阶段打完场上还剩一堆量产型）。
+	engine.enemy_hp_infinite = bool(lvl.get("enemy_hp_infinite", false))
+	engine.win_on_boss = int(lvl.get("win_on_boss", 0))
 	# R311 水晶骰子：本场是不是从「?」房进来的？判据用地图节点的 `hidden` ——
 	# 那是**房间生来就有的性质**（揭晓后 `revealed` 变 true，`hidden` 不变），
 	# 所以「走进 ? 房、看到是精英、开打」这一路仍然算「? 房的战斗」。
@@ -3564,6 +3589,7 @@ func load_level(lvl: Dictionary) -> void:
 		_show_banner("我方回合 · 第 1 回合")
 	# R136/R146：开场巡场 —— 停自己半场 → 推进到对方半场（放大）→ **拖回我方 + 还原大小**。
 	_ee_popup = false   # R197：新一场战斗，开场弹窗重新计一次
+	_ee_popup_at = 0    # R356：上一场排队中的「转阶段重弹」不许漏到这一场
 	if _grid_scrollable():
 		_grid_scroll = _grid_scroll_max()
 		_grid_zoom = 1.0
@@ -6693,7 +6719,9 @@ func _draw_hp_strip() -> void:
 		hp_strip.draw_texture_rect(_hp_icon, Rect2(x, cy - icon / 2.0, icon, icon), false, Color("ffb0a8"))
 	x += icon + 4.0
 	hp_strip.draw_string(_font_bold, Vector2(x, cy + 5),
-			"%d/%d" % [_roll("hp_opp_bar", engine.state.hp_opponent), engine.state.max_hp_opponent],
+			"∞/∞" if engine.enemy_hp_infinite \
+					else "%d/%d" % [_roll("hp_opp_bar", engine.state.hp_opponent),
+							engine.state.max_hp_opponent],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("f0a89e"))
 
 
@@ -6886,6 +6914,8 @@ func _draw_map_fog() -> void:
 	## 只是格子小一圈 → 云团也按比例缩小（半径都取 `r.size.x` 的百分比）。
 	## ⚠️ 只在总览面板内部画，绝不越出面板。
 	for cell: Dictionary in RunState.map_cells:
+		if RogueMap.is_void(cell):
+			continue          # R356：第三层直道之外没有地面
 		var id := int(cell["id"])
 		if RunState.known_node(id):
 			continue
@@ -6928,6 +6958,8 @@ func _draw_map_tiles() -> void:
 	## 格子底 + 类型色描边（与冒险地图同一套）。与图标分两趟画 —— 中间夹一层通路。
 	## R145：看不见内容的格子走**中性底**（按类型染色等于把内容漏出去）。
 	for cell: Dictionary in RunState.map_cells:
+		if RogueMap.is_void(cell):
+			continue          # R356：第三层直道之外没有地面
 		var r := _mapview_cell_rect(cell)
 		if not RunState.known_node(int(cell["id"])):
 			draw_rect(r, Color(0.10, 0.12, 0.17, 0.62), true)
@@ -6943,6 +6975,8 @@ func _draw_map_tiles() -> void:
 func _draw_map_nodes() -> void:
 	var t := float(Time.get_ticks_msec()) * 0.004
 	for cell: Dictionary in RunState.map_cells:
+		if RogueMap.is_void(cell):
+			continue          # R356：第三层直道之外没有地面
 		var r := _mapview_cell_rect(cell)
 		var id := int(cell["id"])
 		var known := RunState.known_node(id)
@@ -8813,7 +8847,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		# 交换：原单位从场上顶回手牌（不是抽的）→ 不播「从抽牌堆飞入」
 		_flyin_skip.append((data["old"] as CardData).id)
 	# R151 P2-13：力量成长事件族（升级 / 骑士 / 锻造 / 夜行 / 精进 / 使魔）→ 卡面数字跳动 + 扩散环
-	if kind in ["upgrade", "knight_grow", "heph_grow", "night_grow", "mage_grow", "familiar_grow"]:
+	if kind in ["upgrade", "knight_grow", "heph_grow", "night_grow", "mage_grow", "familiar_grow",
+			"revelator_grow"]:
 		var pg_cell = data.get("cell")
 		if pg_cell is Vector2i and (pg_cell as Vector2i).x >= 0 and not _shot_pending:
 			_pow_fx.append({"cell": pg_cell, "start": n, "dur": 300})
@@ -10505,6 +10540,104 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
 					"text": "风妖精 · 全体 -%d" % wf_d,
 					"col": Color("7fd2a0"), "size": 17, "start": n, "dur": 1900})
+		"boss_phase":
+			# R356 启示者转阶段 —— 用户口径「转换阶段需要有明确的动画提示，并重新弹出
+			# 敌方效果显示」：横幅 + 震屏 + 本体双层爆点 + 镜头收过去，然后把
+			# `_ee_popup` 放下来重弹一次（开场弹窗每场只弹一次的守卫在
+			# `_maybe_open_enemy_effect_popup` 里，不先复位就永远弹不出来）。
+			var bp_cell: Vector2i = data.get("cell", Vector2i(0, 0))
+			var bp_ph := int(data.get("phase", 2))
+			var bp_name := "启示者"
+			if data.get("card") is CardData:
+				bp_name = (data["card"] as CardData).card_name
+			var bp_col := Color("b06be0") if bp_ph == 2 else Color("e2703a")
+			sfx.play("spell")
+			n = _now()
+			_shake(9.0, 440)
+			_bursts.append({"pos": _cell_center(bp_cell), "sc": _grid_scroll, "start": n,
+					"dur": 940, "col": bp_col, "big": true})
+			_bursts.append({"pos": _cell_center(bp_cell), "sc": _grid_scroll,
+					"start": n + 170, "dur": 780, "col": Color("fff4d0"), "big": true})
+			_floaters.append({"pos": _cell_center(bp_cell) + Vector2(0, -26), "sc": _grid_scroll,
+					"text": "阶段 %d" % bp_ph, "col": bp_col, "size": 22,
+					"start": n, "dur": 1700})
+			_show_banner("第 %d 阶段 · %s" % [bp_ph, bp_name], bp_col, 1700)
+			_push_cue([bp_cell], "阶段 %d" % bp_ph, bp_col)
+			_ee_popup = false                          # 收掉旧的（开场那份 / 上一阶段那份）
+			_ee_popup_at = n + EE_PHASE_POPUP_DELAY    # 0.7s 后重弹，避开这一下的演出
+			_say("⚠ 启示者进入第 %d 阶段（生命 %d）" % [bp_ph, int(data.get("health", 0))])
+		"naval_gun":
+			# R356 舰炮 9201（阶段 1）：列号 -1 = 三列全空 → 改打 HP。
+			# 每个受击单位的伤害数字由 `_hit_unit` 自己的飘字出，这里只报「轰的是哪一列」。
+			var ng_d := int(data.get("damage", 0))
+			var ng_col := int(data.get("col", -1))
+			var ng_top := Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 32.0)
+			sfx.play("hit")
+			_shake(4.0, 240)
+			if ng_col < 0:
+				_floaters.append({"pos": ng_top, "text": "舰炮 · 无目标 → 直击 HP -%d" % ng_d,
+						"col": Color("e2703a"), "size": 16, "start": n, "dur": 1700})
+				_say("🜂 舰炮：整片战场没有目标 → 直击 HP %d" % ng_d)
+			else:
+				_floaters.append({"pos": ng_top, "text": "舰炮 · 第 %d 列 各 -%d" % [ng_col + 1, ng_d],
+						"col": Color("e2703a"), "size": 16, "start": n, "dur": 1700})
+				for ng_c: Vector2i in engine.state.board.keys():
+					if (ng_c as Vector2i).y == ng_col:
+						_bursts.append({"pos": _cell_center(ng_c), "sc": _grid_scroll,
+								"start": n + 90, "dur": 520, "col": Color("e2703a"), "big": false})
+				_say("🜂 舰炮：轰击第 %d 列，每个目标 -%d" % [ng_col + 1, ng_d])
+		"revelator_shield":
+			# R356 电磁屏障 9202（阶段 2）：电的是**攻击者**，不是启示者。
+			var rs_c: Vector2i = data.get("src", Vector2i(0, 0))
+			var rs_d := int(data.get("amount", 0))
+			sfx.play("hit")
+			_bursts.append({"pos": _cell_center(rs_c), "sc": _grid_scroll, "start": n,
+					"dur": 500, "col": Color("6fd2f0"), "big": false})
+			_floaters.append({"pos": _cell_center(rs_c) + Vector2(0, -22), "sc": _grid_scroll,
+					"text": "电磁屏障 -%d" % rs_d, "col": Color("6fd2f0"),
+					"start": n, "dur": 1500, "size": 15})
+			_say("⚡ 电磁屏障：攻击启示者的单位受到 %d 点伤害" % rs_d)
+		"emergency_call":
+			# R356 紧急呼叫 9203（阶段 3）：量产型落位（力量 +10 已烤在引擎那份副本上）。
+			var ec_cell: Vector2i = data.get("cell", Vector2i(0, 0))
+			var ec_name := "量产型"
+			if data.get("card") is CardData:
+				ec_name = (data["card"] as CardData).card_name
+			sfx.play("place")
+			var ec_p := engine.state.unit_at(ec_cell)
+			if ec_p != null:
+				_slides[ec_p] = {"from": _cell_center(ec_cell) + Vector2(0, -110),
+						"to": _cell_center(ec_cell), "start": n, "dur": 420,
+						"sc": _grid_scroll, "from_grid": true}
+			_bursts.append({"pos": _cell_center(ec_cell), "sc": _grid_scroll, "start": n,
+					"dur": 540, "col": Color("e2a03a"), "big": false})
+			_floaters.append({"pos": _cell_center(ec_cell) + Vector2(0, -20), "sc": _grid_scroll,
+					"text": "力量 +%d" % GameEngine.EMERGENCY_CALL_ATK,
+					"col": Color("e2a03a"), "size": 16, "start": n, "dur": 1500})
+			_say("📣 紧急呼叫：%s 登场（力量 +%d）" % [ec_name, GameEngine.EMERGENCY_CALL_ATK])
+		"revelator_cover":
+			# R356 阶段 3「接通代受」：启示者身边接通的友军替它吃一半（去尾）。
+			var rv_from: Vector2i = data.get("cell", Vector2i(0, 0))
+			var rv_to: Vector2i = data.get("to", Vector2i(0, 0))
+			var rv_d := int(data.get("amount", 0))
+			var rv_name := "友军"
+			if data.get("to_card") is CardData:
+				rv_name = (data["to_card"] as CardData).card_name
+			_bursts.append({"pos": _cell_center(rv_to), "sc": _grid_scroll, "start": n,
+					"dur": 480, "col": Color("6fd2f0"), "big": false})
+			_floaters.append({"pos": _cell_center(rv_to) + Vector2(0, -20), "sc": _grid_scroll,
+					"text": "代受 -%d" % rv_d, "col": Color("6fd2f0"),
+					"start": n, "dur": 1400, "size": 15})
+			_say("🛡 %s 与启示者接通 → 代它承受 %d 点" % [rv_name, rv_d])
+		"revelator_clear":
+			# R356 转阶退回后排中间时，那一格原本有东西 → 消灭它。
+			var rc_c: Vector2i = data.get("cell", Vector2i(0, 0))
+			var rc_name := "单位"
+			if data.get("card") is CardData:
+				rc_name = (data["card"] as CardData).card_name
+			_bursts.append({"pos": _cell_center(rc_c), "sc": _grid_scroll, "start": n,
+					"dur": 560, "col": Color("b06be0"), "big": true})
+			_say("⚠ 后排中间被 %s 占据 → 转阶前消灭它" % rc_name)
 		_:
 			# R288：兜底 —— 任何**还没有专属表现**的事件，只要带格子，就至少演一次
 			# 「脉冲 + 镜头」。以后新加的事件不会再静悄悄发生（这是这套演出的兜底价值）。
@@ -11038,7 +11171,10 @@ func _draw_hp_banner() -> void:
 	# R151 P0-3：HP 数字滚动 —— 目标值仍走 _show_hp（命中演出前冻结），滚动接在冻结解除后。
 	if _hp_icon != null:
 		draw_texture_rect(_hp_icon, Rect2(mid_x - 3, GRID_Y + 4, 24, 24), false)
-	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION, "敌方 HP %d" % _roll("hp_opp", _show_hp("hp_opp", engine.state.hp_opponent)),
+	# R356：敌方 HP 为 ∞ 的关卡（启示者）直接写 ∞ —— 数字滚动毫无意义，也不该显示 30。
+	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION,
+			"敌方 HP ∞" if engine.enemy_hp_infinite \
+					else "敌方 HP %d" % _roll("hp_opp", _show_hp("hp_opp", engine.state.hp_opponent)),
 			Vector2(mid_x + 26, GRID_Y + 8 + UiTheme.FS_CAPTION), TXT_FOE)
 	if _hp_icon != null:
 		draw_texture_rect(_hp_icon, Rect2(mid_x - 3, GRID_Y + GRID_H - 34, 24, 24), false)
@@ -11070,6 +11206,10 @@ const EE_TEXT_HH := 126.0
 ## R215：开场弹窗的自动关闭时长（秒）。原来必须点一下才关 —— 玩家在等，
 ## 界面在等，实际上什么也没等。5 秒足够读完 3 条效果。
 const EE_POPUP_SEC := 5.0
+## R356：启示者转阶段「重新弹出敌方效果」的**延后量**（ms）。
+## 不能立刻弹 —— 洞口一开就把阶段横幅 / 震屏 / 本体爆点整个盖住了，
+## 用户要的是「明确的动画提示」**加上**「重新弹出效果」，不是二选一。
+const EE_PHASE_POPUP_DELAY := 700
 
 
 func _enemy_effect_popup_rect() -> Rect2:
@@ -12617,6 +12757,10 @@ func _process(delta: float) -> void:
 	if _net_mode:
 		_net_poll(delta)
 	_grid_intro_tick(delta)         # R136/R146：开场巡场（自己半场 → 对方半场放大 → 拖回我方）
+	# R356：转阶段的「重新弹出敌方效果」到点了 —— 横幅 / 爆点这时候已经演完。
+	if _ee_popup_at > 0 and _now() >= _ee_popup_at:
+		_ee_popup_at = 0
+		_maybe_open_enemy_effect_popup()
 	# R215：开场弹窗**不点也会关** —— 5 秒到点自动收起（倒计时由这里逐帧推进重绘）。
 	if _ee_popup:
 		if ee_popup_expired():

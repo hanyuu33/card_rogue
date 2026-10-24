@@ -2,7 +2,8 @@
 """抽取 game_levels.gd 的关卡数据 + cards.json 的敌方卡，生成 Markdown 文档。"""
 import json, re, io, os
 
-ROOT = r'D:\work\card_rogue'
+# 以脚本自身位置推导工程根目录，双机通用（R356 修正：原来写死 D 盘）
+ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # ---------- 1. 解析 game_levels.gd ----------
 src = open(os.path.join(ROOT, r'scripts\game_levels.gd'), encoding='utf-8').read()
@@ -30,7 +31,8 @@ TIER_MAP = {
     'TIER_NORMAL_EASY': 0, 'TIER_NORMAL_HARD': 1, 'TIER_ELITE_EASY': 2,
     'TIER_ELITE_HARD': 3, 'TIER_BOSS': 4,
 }
-LAYER_MAP = {'GameLayers.LAYER_DEFAULT': '第一层', 'GameLayers.LAYER_TWO': '第二层'}
+LAYER_MAP = {'GameLayers.LAYER_DEFAULT': '第一层', 'GameLayers.LAYER_TWO': '第二层',
+             'GameLayers.LAYER_THREE': '第三层'}
 # 对映 ui_theme.gd 的 RARITY_* 下标（0 普通 / 1 稀有 / 2 史诗 / 3 初始 / 4 怪物 / 5 事件）
 RARITY_NAMES = {0: '普通', 1: '稀有', 2: '史诗', 3: '初始', 4: '怪物', 5: '事件'}
 
@@ -69,7 +71,8 @@ for ch in re.split(r'\n(?=static func _)', src):
         'tier': TIER_MAP.get((g('tier') or '').strip(), 0),
         'layer': LAYER_MAP.get((g('layer') or '').strip(), '第一层'),
         'deck_key': g('deck_key'), 'player_hp': g('player_hp'),
-        'enemy_hp': g('enemy_hp'), 'turn_limit': g('turn_limit'),
+        'enemy_hp': ('∞' if 'enemy_hp_infinite' in body else g('enemy_hp')),
+        'enemy_hp_raw': g('enemy_hp'), 'turn_limit': g('turn_limit'),
         'starting_hand': g('starting_hand'), 'units': units,
     }
 
@@ -77,6 +80,7 @@ builtin = [levels[k] for k in order if k in levels]
 missing = [k for k in order if k not in levels]
 l1 = [x for x in builtin if x['layer'] == '第一层']
 l2 = [x for x in builtin if x['layer'] == '第二层']
+l3 = [x for x in builtin if x['layer'] == '第三层']
 
 # ---------- 2. 解析 cards.json 敌方卡 ----------
 d = json.load(open(os.path.join(ROOT, 'cards.json'), encoding='utf-8'))
@@ -108,6 +112,7 @@ w('| 指标 | 数值 |\n|---|---|\n')
 w('| 内置关卡总数 | **%d** |\n' % len(builtin))
 w('| 第一层（LAYER_DEFAULT） | %d |\n' % len(l1))
 w('| 第二层（LAYER_TWO） | %d |\n' % len(l2))
+w('| 第三层（LAYER_THREE） | %d |\n' % len(l3))
 w('| 敌方卡总数 | %d |\n' % len(enemy_cards))
 w('| 敌方单位实例总数（各关编成求和） | %d |\n' % sum(len(x['units']) for x in builtin))
 w('| 彩蛋关卡 | 1（恶魔鸭·复仇，`revenge_boss()`，刻意不在 builtin_levels） |\n\n')
@@ -115,16 +120,17 @@ w('| 彩蛋关卡 | 1（恶魔鸭·复仇，`revenge_boss()`，刻意不在 buil
 # ---------- 4. 分级分布 ----------
 w('## 二、分级分布（比例总览）\n\n')
 w('### 2.1 分级 × 层 交叉表\n\n')
-w('| 分级 | 全体 | 第一层 | 第二层 |\n|---|---|---|---|\n')
+w('| 分级 | 全体 | 第一层 | 第二层 | 第三层 |\n|---|---|---|---|---|\n')
 for t in range(5):
     a = len([x for x in builtin if x['tier'] == t])
     b = len([x for x in l1 if x['tier'] == t])
     c = len([x for x in l2 if x['tier'] == t])
-    w('| %s | %d | %d | %d |\n' % (TIER_NAMES[t], a, b, c))
-w('| **合计** | **%d** | **%d** | **%d** |\n\n' % (len(builtin), len(l1), len(l2)))
+    d3 = len([x for x in l3 if x['tier'] == t])
+    w('| %s | %d | %d | %d | %d |\n' % (TIER_NAMES[t], a, b, c, d3))
+w('| **合计** | **%d** | **%d** | **%d** | **%d** |\n\n' % (len(builtin), len(l1), len(l2), len(l3)))
 
 w('### 2.2 各层分级占比（= 地图节点抽卡权重）\n\n')
-for layer, lst in [('第一层', l1), ('第二层', l2)]:
+for layer, lst in [('第一层', l1), ('第二层', l2), ('第三层', l3)]:
     w('**%s**（共 %d 关）\n\n' % (layer, len(lst)))
     w('| 分级 | 关数 | 占比 |\n|---|---|---|\n')
     for t in range(5):
@@ -162,7 +168,7 @@ def verdict(tname, n):
 
 
 w('| 层 | 分级 | 关数 | 评估 |\n|---|---|---|---|\n')
-for layer, lst in [('第一层', l1), ('第二层', l2)]:
+for layer, lst in [('第一层', l1), ('第二层', l2), ('第三层', l3)]:
     for t in range(5):
         n = len([x for x in lst if x['tier'] == t])
         w('| %s | %s | %d | %s |\n' % (layer, TIER_NAMES[t], n, verdict(TIER_NAMES[t], n)))
@@ -192,13 +198,13 @@ w('- **普通-简单**总量 %d 关（第一层 %d + 第二层 %d）。\n'
      len([x for x in l1 if x['tier'] == 0]), len([x for x in l2 if x['tier'] == 0])))
 w('- **Boss 池**：第一层 %d 个、第二层 %d 个；第二层含「恶魔鸭·复仇」彩蛋位（不进池）。\n'
   % (len([x for x in l1 if x['tier'] == 4]), len([x for x in l2 if x['tier'] == 4])))
-w('- 层数分布：第一层 %d 关 / 第二层 %d 关。\n' % (len(l1), len(l2)))
+w('- 层数分布：第一层 %d 关 / 第二层 %d 关 / 第三层 %d 关。\n' % (len(l1), len(l2), len(l3)))
 w('- **敌方卡复用率**：%d 张敌方卡中，有 %d 张**未在任何内置关卡登场**（见 §5.2）；\n' % (len(enemy_cards), len([cid for cid in enemy_cards if cid not in appear])))
 w('  其中部分为敌方「效果卡」（通过 `enemy_effects` 机制进入关卡），不占用 `enemy_units` 编成，属正常。\n\n')
 
 # ---------- 6. 关卡明细 ----------
 w('## 四、关卡明细\n\n')
-for li, (layer, lst) in enumerate([('第一层', l1), ('第二层', l2)]):
+for li, (layer, lst) in enumerate([('第一层', l1), ('第二层', l2), ('第三层', l3)]):
     w('### 4.%d %s（%d 关）\n\n' % (li + 1, layer, len(lst)))
     for i, lv in enumerate(lst):
         idx = builtin.index(lv)
@@ -220,7 +226,7 @@ for li, (layer, lst) in enumerate([('第一层', l1), ('第二层', l2)]):
 # 彩蛋关卡（不在 builtin_levels，独立一节）
 rv = levels.get('boss_demon_duck_revenge')
 if rv:
-    w('### 4.3 彩蛋关卡（刻意不在 builtin_levels）\n\n')
+    w('### 4.%d 彩蛋关卡（刻意不在 builtin_levels）\n\n' % (len([l1, l2, l3]) + 1))
     w('#### %s · %s\n\n' % (rv['name'], TIER_NAMES[rv['tier']]))
     w('- **key**：`%s`　|　**函数**：`GameLevels.%s()`\n' % (rv['key'], rv['func']))
     w('- **生命**：我方 %s / 敌方 %s　|　**卡组**：`%s`\n'
@@ -328,7 +334,7 @@ w('- 「登场关卡」按各关 `enemy_units` 元组统计（**不含** `enemy_
 w('⚠️ 若新增关卡，请同步：① `builtin_levels()` 挂载 ② §二分级分布 ③ §四关卡明细 ④ 基线测试\n')
 
 open(os.path.join(ROOT, '关卡与敌人配置总览.md'), 'wb').write(out.getvalue().encode('utf-8'))
-print('builtin:', len(builtin), 'L1:', len(l1), 'L2:', len(l2))
+print('builtin:', len(builtin), 'L1:', len(l1), 'L2:', len(l2), 'L3:', len(l3))
 print('enemy cards:', len(enemy_cards), 'unused:', len(unused))
 print('order missing:', missing)
 for t in range(5):

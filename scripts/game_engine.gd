@@ -23,6 +23,12 @@ var ai_enabled:= true
 ## 由 battle_scene 按**关卡 tier** 写入一次；引擎不自己读 RunState.pending_node ——
 ## 单关演示 / 单元测试都能显式指定，判据只有一处（`_courage_energy` 的消费方）。
 var battle_kind:= "battle"
+## R356：本关的胜利条件是否为「击破指定 Boss」（启示者 9200；0 = 不是）。
+## 第三层 Boss 关的敌方 HP 是 ∞（`enemy_hp_infinite`），直击永远打不空 ——
+## 不留这条，玩家绕开本体一路糊脸就能跳过整场三阶段。battle_scene 按关卡表写入。
+var win_on_boss:= 0
+## R356：本关敌方 HP 为 ∞。置位后 `_damage_player` 对**敌方 HP** 不再扣血，界面显示「∞」。
+var enemy_hp_infinite:= false
 ## R311 水晶骰子（6040）：本场战斗是否来自「?」房（battle_scene 写）。
 ## `dice_roll` / `dice_energy_turns` 在 `apply_battle_start_relics()` 里定；
 ## 没持有道具 / 不是「?」房 → 0，一切照旧。
@@ -292,6 +298,35 @@ const ARGOS_SUMMON_HASTE:= 1      # 召唤出的俄倪厄移速加成（Placemen
 const ASSEMBLY_CARD_ID:= 9147     # 流水线装配（效果卡，卡面 value = 间隔回合）
 const ASSEMBLY_TRAIT:= "装配"
 const ASSEMBLY_POOL:= [9131, 9137]   # 量产型俄倪厄 / 量产型赫利俄斯
+
+# ---- R356：第三层 Boss「启示者」（9200）与它的三张场上效果卡 ----
+# 启示者：攻 15 / 血 300 / 程 2 / 速 2，后排中央 (0, 1)。**三个阶段**，每损失 100 生命进一阶：
+#   ① 阶段 1（300~201）：「舰炮 9201」——该方回合开始随机轰击一列，该列**对方**全部单位
+#      各受 5 伤；整列没有目标则改打对方 HP。自身：每个回合力量 +1。
+#   ② 阶段 2（200~101）：「电磁屏障 9202」——攻击启示者的单位受到 5 伤。
+#      自身：践踏 + 受到的**技能**伤害减半。
+#   ③ 阶段 3（100~0）：「紧急呼叫 9203」——**玩家每个回合开始**召唤一只力量 +10 的量产型
+#      （优先出现在启示者身边）。自身：移速 0 + 与它接通的友方单位代它承受一半伤害（去尾）。
+# 阶段转移（`_revelator_enter_phase`）：退回后排中间（原格有东西就消灭它）→ 换掉场上效果卡 →
+#   血量下限钳到 1 → 发 `boss_phase` 事件（界面播横幅 + 重弹敌方效果 + 右栏效果区自动刷新）。
+# ⚠️ 阶段只记 `Placement.boss_phase`，**绝不烤进 CardData**（敌方单位用的是卡库共享实例）。
+const REVELATOR_ID:= 9200
+const REVELATOR_NAVAL_GUN_ID:= 9201
+const REVELATOR_SHIELD_ID:= 9202
+const REVELATOR_CALL_ID:= 9203
+const REVELATOR_PHASE_2_HP:= 200      # 生命 ≤ 200 → 第二阶段
+const REVELATOR_PHASE_3_HP:= 100      # 生命 ≤ 100 → 第三阶段
+const REVELATOR_HOME:= Vector2i(0, 1) # 每次转阶段都退回这里（后排中间）
+const REVELATOR_ATK_UP:= 1            # 阶段 1：每个（敌方）回合力量 +1
+const NAVAL_GUN_TRAIT:= "舰炮"
+const NAVAL_GUN_DMG:= 5               # 卡面 value 同值；取效果区**最大**一张，不叠加
+const EM_SHIELD_TRAIT:= "电磁屏障"
+const EM_SHIELD_REFLECT:= 5           # 阶段 2：攻击启示者的单位受到 5 伤
+const EMERGENCY_CALL_TRAIT:= "紧急呼叫"
+const EMERGENCY_CALL_ATK:= 10         # 阶段 3：召唤出的量产型力量 +10（只属于那一只）
+## 阶段 3「量产型」召唤池：名字带「量产型」的敌方单位
+## （俄倪厄 / 赫利俄斯 / 赫菲斯托斯 / 阿尔戈斯 / 赫卡同克瑞斯）。
+const EMERGENCY_POOL:= [9131, 9137, 9138, 9142, 9133]
 
 # ---- R162：阿斯克勒庇厄斯「护甲积攒」----
 # 每回合开始时获得 ASCLEPIUS_ARMOR 点护甲；若获得前已有护甲，则清零并对随机敌方单位
@@ -1726,15 +1761,22 @@ func _log(text: String) -> void :
 
 
 func _check_game_over() -> bool:
+	## R356：`enemy_hp_infinite` → 「敌方 HP 归零」这条胜利条件整条失效（打不空），
+	## 胜负改由「击破指定 Boss」（`win_on_boss`）与「我方 HP 归零」两条决定。
 	if over:
 		return true
-	if state.hp_opponent <= 0:
+	if not enemy_hp_infinite and state.hp_opponent <= 0:
 		_finish("胜利", "敌方 HP 归零")
 		return true
 	if state.hp_self <= 0:
 		if _try_revive():
 			return false
 		_finish("失败", "我方 HP 归零")
+		return true
+	# R356：击破启示者即通关。**排在「清场」之前** —— 三阶段打完场上还剩一堆量产型，
+	# 用清场判等于要求玩家把它们也扫干净，那不是这张关卡的题面。
+	if win_on_boss > 0 and _cell_of_unit(win_on_boss) == Vector2i(-1, -1):
+		_finish("胜利", "击破启示者")
 		return true
 	if state.clear_win and _side_cells(SIDE_OPPONENT).is_empty():
 		_finish("胜利", "敌方场上单位全灭")
@@ -1969,6 +2011,7 @@ func _begin_turn(side: String) -> void :
 		_summon_familiars(SIDE_SELF)
 		_effect_summons(SIDE_SELF)
 		_assembly_tick(SIDE_SELF)     # 流水线装配 9147（R219，对称保留）
+		_emergency_call()             # R356 紧急呼叫 9203：**玩家**回合开始 → 启示者身边召唤量产型
 		_demon_summon(SIDE_SELF)      # 恶魔使魔 9117：每 2 回合随机空格召唤使魔鸭子
 		_auto_upgrade(SIDE_SELF)          # 自主升级 8045（R95）：回合开始随机改造抽牌堆 1 张
 		_breach_tick(SIDE_SELF)           # R231 破绽：己方俄倪厄往对方卡组塞诅咒（对称保留）
@@ -2051,6 +2094,8 @@ func _begin_turn(side: String) -> void :
 		_ghost_self_destruct(SIDE_OPPONENT)
 		_assassin_summon(SIDE_OPPONENT)
 		_cannon_fire(SIDE_OPPONENT)   # R158 充能巨炮 9139：己方回合开始随机破坏一个我方单位
+		_naval_gun(SIDE_OPPONENT)     # R356 舰炮 9201：阶段 1，每回合随机轰击一列
+		_revelator_phase_tick(SIDE_OPPONENT)   # R356 阶段 1「自身效果」：每个回合力量 +1
 		_refresh_dark_lord(SIDE_OPPONENT)
 		_refresh_hecaton(SIDE_OPPONENT)
 		_refresh_mnemosyne()           # R271 谟涅摩叙涅：对称保留（敌方正常拿不到）
@@ -2365,6 +2410,232 @@ func _cannon_fire(side: String) -> void :
 		_log("充能巨炮：破坏 %s（%s）" % [q.card.card_name, t])
 		action.emit("cannon_fire", {"cell": t, "card": q.card, "side": foe})
 		_destroy(t)
+
+
+# ------------------------------------------------------------ R356 启示者（第三层 Boss）
+
+func _cell_of_unit(card_id: int) -> Vector2i:
+	## 场上第一只 `card_id` 所在格（找不到返回 (-1, -1)）。
+	## 启示者只有一只，所以「第一只」就是「那一只」—— 也用作「它还在不在场」的判据
+	## （`_check_game_over` 的 `win_on_boss`）。
+	for cell: Vector2i in state.board:
+		var p: Placement = state.board[cell]
+		if p != null and p.card != null and p.card.id == card_id:
+			return cell
+	return Vector2i(-1, -1)
+
+
+func _naval_gun(side: String) -> void:
+	## 舰炮（9201，R356 启示者阶段 1）：该方**回合开始**时随机挑一列，对那一列里
+	## **对方**的全部单位各造成 5 伤；那一列一个目标都没有 → 改为直击对方 HP。
+	##   * 候选列只取「有目标」的列 —— 这就是用户口径的「优先有单位的列」；
+	##     三列全空才走 HP（而且只打**一次** 5 点，不是三列各一次）。
+	##   * 列号走引擎 `rng` → 回放同种子可复现。
+	##   * 伤害走 `_hit_unit`（与技能同口径：光环易伤 / 护盾 / 减伤都吃），
+	##     结算完统一 `_destroy_dead()`（击杀记功 / 亡语与别处一致）。
+	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
+	var dmg:= 0
+	for c: CardData in zone:
+		if c.traits.has(NAVAL_GUN_TRAIT):
+			dmg = maxi(dmg, maxi(1, c.value))
+	if dmg <= 0:
+		return
+	var foe:= SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	var cols: Array[int] = []
+	for col in FieldState.BOARD_COLS:
+		for cell: Vector2i in state.board:
+			if cell.y == col and state.board[cell].owner == foe:
+				cols.append(col)
+				break
+	if cols.is_empty():
+		_log("舰炮：整片战场没有目标 → 直击 HP %d" % dmg)
+		action.emit("naval_gun", {"col": -1, "damage": dmg, "side": foe})
+		_damage_player(foe, dmg, "舰炮")
+		return
+	var pick: int = cols[rng.randi_range(0, cols.size() - 1)]
+	var targets: Array[Vector2i] = []
+	for cell2: Vector2i in state.board:
+		if cell2.y == pick and state.board[cell2].owner == foe:
+			targets.append(cell2)
+	targets.sort_custom(func(a: Vector2i, b: Vector2i): return a < b)
+	_log("舰炮：轰击第 %d 列（%d 个目标，各 %d）" % [pick + 1, targets.size(), dmg])
+	action.emit("naval_gun", {"col": pick, "damage": dmg, "side": foe})
+	for t: Vector2i in targets:
+		if over or not state.board.has(t):
+			continue
+		var q: Placement = state.unit_at(t)
+		var dealt:= _hit_unit(q, dmg, "舰炮")
+		_log("舰炮：%s -%d（剩余 %d）" % [q.card.card_name, dealt, maxi(0, q.health)])
+	_destroy_dead()
+
+
+func _emergency_call() -> void:
+	## 紧急呼叫（9203，R356 启示者阶段 3）：**玩家每个回合开始时**，随机召唤一只
+	## 「量产型」敌人（`EMERGENCY_POOL`）到敌方半场，**力量 +10**（烤在这份独立副本上）。
+	##   * 落点**优先启示者身边**（四方向相邻的空格），身边满了才退到敌方半场随机空格；
+	##   * 触发时机是「玩家回合」而卡挂在敌方效果区 → 本函数**不带 side**：固定读
+	##     `state.enemy_effects`、固定召唤给 SIDE_OPPONENT（不假装对称，免得读错效果区）；
+	##   * 抽卡与落点都走引擎 `rng` → 回放同种子可复现。
+	var has:= false
+	for c: CardData in state.enemy_effects:
+		if c.traits.has(EMERGENCY_CALL_TRAIT):
+			has = true
+			break
+	if not has or over:
+		return
+	var repo:= CardRepo.load_json()
+	var pick: int = int(EMERGENCY_POOL[rng.randi_range(0, EMERGENCY_POOL.size() - 1)])
+	var proto: CardData = repo.get_card(pick)
+	if proto == null:
+		_log("紧急呼叫失败：卡牌库里没有 id=%d" % pick)
+		return
+	var spot:= _revelator_free_cell()
+	if spot == Vector2i(-1, -1):
+		_log("紧急呼叫：敌方半场已满，本回合不召唤")
+		return
+	var copy:= CardData.from_dict(proto.to_dict())   # 独立副本：+10 力只属于这一只
+	copy.power += EMERGENCY_CALL_ATK
+	var spawned:= state.place(copy, spot, SIDE_OPPONENT, true)
+	_log("紧急呼叫：%s 力量 +%d 登场（%s）" % [copy.card_name, EMERGENCY_CALL_ATK, spot])
+	action.emit("emergency_call", {"cell": spot, "card": copy, "side": SIDE_OPPONENT})
+	if spawned != null:
+		_on_ally_entered(spawned, SIDE_OPPONENT)
+
+
+func _revelator_free_cell() -> Vector2i:
+	## 紧急呼叫的落点：启示者四方向相邻的空格优先（用户口径「优先在启示者身边」），
+	## 身边全满 / 启示者不在场 → 退到敌方半场随机空格（`_random_free_half_cell`）。
+	var boss_cell:= _cell_of_unit(REVELATOR_ID)
+	var near: Array[Vector2i] = []
+	if boss_cell.x >= 0:
+		for d: Vector2i in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
+			var c: Vector2i = boss_cell + d
+			if c.x < 0 or c.x >= FieldState.OPPONENT_ROWS \
+					or c.y < 0 or c.y >= FieldState.BOARD_COLS:
+				continue
+			if not state.board.has(c):
+				near.append(c)
+	if not near.is_empty():
+		return near[rng.randi_range(0, near.size() - 1)]
+	return _random_free_half_cell(SIDE_OPPONENT)
+
+
+func _revelator_phase_tick(side: String) -> void:
+	## 启示者阶段 1 的「自身效果：每个回合力量 +1」（R356）。
+	## 只在该方**第 1 阶段**生效 —— 卡面写明「自身效果」随阶段更换，转阶之后这条就没了。
+	## 走 `atk_buff`：与鸭子骑士 / 齿轮升腾同一条「永久累计、无上限」通道。
+	for cell: Vector2i in state.board:
+		var p: Placement = state.board[cell]
+		if p == null or p.card.id != REVELATOR_ID or p.owner != side:
+			continue
+		if p.boss_phase != 1:
+			continue
+		p.atk_buff += REVELATOR_ATK_UP
+		_log("启示者：阶段 1 力量 +%d（现 %d）" % [REVELATOR_ATK_UP, p.effective_power()])
+		action.emit("revelator_grow", {"cell": cell, "card": p.card, "side": side})
+
+
+func _revelator_check_phase(p: Placement) -> void:
+	## 「每损失 100 生命进入下一个阶段」（R356）：300 → 200 → 100。
+	## **一次大伤害可能连跳两阶**（比如 210 血吃了 120）→ 循环处理，每阶各发一次
+	## `boss_phase` 事件（界面排队播，不合并成一条）。
+	## ⚠️ 只在**扣血之后**调 —— 两个伤害落地口（`_hit_unit` / `_op_deal_damage`）。
+	if p == null or p.card == null or p.card.id != REVELATOR_ID:
+		return
+	if p.boss_phase <= 0:
+		return
+	while p.boss_phase < 3 and not over:
+		var gate: int = REVELATOR_PHASE_2_HP if p.boss_phase == 1 else REVELATOR_PHASE_3_HP
+		if p.health > gate:
+			return
+		_revelator_enter_phase(p, p.boss_phase + 1)
+
+
+func _revelator_enter_phase(p: Placement, phase: int) -> void:
+	## 转阶段（R356）——用户口径「明确的动画提示 + 重新弹出敌方效果」的引擎侧：
+	##   ① 退回后排中间 (0, 1)：原格**有东西就消灭它**（走 `_destroy` 唯一口，
+	##      亡语 / 击杀记功 / 离场记账与别处完全一致）；
+	##   ② 换掉场上效果卡（舰炮 → 电磁屏障 → 紧急呼叫，右栏效果区随之变化）；
+	##   ③ 血量钳到至少 1 —— 一次大伤害把血打成负数时，转阶段不该直接判死；
+	##   ④ 发 `boss_phase` 事件：界面播阶段横幅 + 重弹敌方效果 + 把镜头带到它身上。
+	var from_cell:= _cell_of(p)
+	p.boss_phase = phase
+	var home:= REVELATOR_HOME
+	if state.board.has(home) and state.board[home] != p:
+		var squatter: Placement = state.board[home]
+		_log("启示者转阶段：%s 占着后排中间 → 消灭它" % squatter.card.card_name)
+		action.emit("revelator_clear", {"cell": home, "card": squatter.card,
+				"side": squatter.owner})
+		_destroy(home)
+	if from_cell.x >= 0 and from_cell != home and state.board.has(from_cell):
+		state.move_unit(from_cell, home)
+	var eff_id:= REVELATOR_NAVAL_GUN_ID
+	match phase:
+		2:
+			eff_id = REVELATOR_SHIELD_ID
+		3:
+			eff_id = REVELATOR_CALL_ID
+	_set_revelator_effect(eff_id)
+	if p.health < 1:
+		p.health = 1
+	_log("启示者进入第 %d 阶段（剩余生命 %d）" % [phase, p.health])
+	action.emit("boss_phase", {"cell": home, "card": p.card, "phase": phase,
+			"health": p.health, "effect_id": eff_id})
+
+
+func _set_revelator_effect(card_id: int) -> void:
+	## 把启示者那一套场上效果换成 `card_id`（R356）。
+	## 只动 9201 / 9202 / 9203 这三张：别的敌方效果（将来关卡表里再挂的）不碰。
+	## 挂的是**独立副本** —— 效果区里那份要是卡库实例，任何临时改动都会跨局泄漏。
+	var pool:= [REVELATOR_NAVAL_GUN_ID, REVELATOR_SHIELD_ID, REVELATOR_CALL_ID]
+	for c: CardData in state.enemy_effects.duplicate():
+		if c.id in pool:
+			state.enemy_effects.erase(c)
+	var repo:= CardRepo.load_json()
+	var proto: CardData = repo.get_card(card_id)
+	if proto == null:
+		_log("启示者阶段效果失败：卡牌库里没有 id=%d" % card_id)
+		return
+	var copy:= CardData.from_dict(proto.to_dict())
+	state.enemy_effects.append(copy)
+	_log("启示者阶段效果：%s 启用" % copy.card_name)
+
+
+func _revelator_split(p: Placement, amount: int, source: String) -> int:
+	## 启示者阶段 3（R356）：「与它接通的友方单位代替它承受一半伤害」。
+	##   * 去尾 = 向下取整（10 → 5、5 → 2），剩下那一半仍由启示者自己吃；
+	##   * 接通 = `_component_of_cell()` 的四方向相邻连通（与闪电链 / 护盾生成器同一套），
+	##     且**只认敌方自己人**（玩家的单位贴在旁边不算「友方」）；
+	##   * 代受者挑**当前生命最高**的那一只 —— 确定性选择，不掷骰子，回放与回归都稳；
+	##   * 代受走 `_hit_unit(..., allow_redirect = false)`：不再往下转发，避免互相弹。
+	## 返回**剩余**伤害（调用方接着结算）。
+	if p == null or p.card == null or p.card.id != REVELATOR_ID or p.boss_phase < 3:
+		return amount
+	if amount < 2:
+		return amount
+	var cell:= _cell_of(p)
+	if cell.x < 0:
+		return amount
+	var best: Placement = null
+	var best_cell:= Vector2i(-1, -1)
+	for c: Vector2i in _component_of_cell(cell):
+		var q: Placement = state.unit_at(c)
+		if q == null or q == p or q.owner != SIDE_OPPONENT:
+			continue
+		if best == null or q.health > best.health:
+			best = q
+			best_cell = c
+	if best == null:
+		return amount
+	var half: int = amount / 2
+	_log("紧急呼叫：%s 与启示者接通 → 代它承受 %d 点（%s）" % [
+			best.card.card_name, half, source])
+	action.emit("revelator_cover", {"cell": cell, "to": best_cell, "to_card": best.card,
+			"amount": half, "source": source})
+	_hit_unit(best, half, "接通代受", false)
+	if best.health <= 0:
+		_destroy_dead()
+	return amount - half
 
 
 func _asclepius_armor_tick(side: String) -> void:
@@ -10050,6 +10321,14 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		dmg = maxi(1, (dmg + 1) / 2)
 		if dmg != mb:
 			_log("%s：技能伤害 %d → %d（量产型赫利俄斯光环，向上取整）" % [p.card.card_name, mb, dmg])
+	# ③b 启示者阶段 2（R356）：「自身受到技能伤害减半」—— 与量产型赫利俄斯同一条通道
+	#     （非攻击即技能），但**只对启示者自己**生效，且去尾（向下取整、至少 1）。
+	if p != null and p.card != null and dmg > 0 and kind != "attack" \
+			and p.boss_phase == 2:
+		var rvb:= dmg
+		dmg = maxi(1, dmg / 2)
+		if dmg != rvb:
+			_log("启示者（电磁屏障）：技能伤害 %d → %d（减半）" % [rvb, dmg])
 	if p != null and p.owner == SIDE_SELF:
 		dmg = _relic_damage_taken(dmg)
 	# R162：护甲优先吸收伤害（只扣护甲、不扣生命；吸收不完的才扣 HP）。
@@ -10108,6 +10387,9 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 		amount += _swift_rune_extra(amount)
 
 
+	# R356：启示者阶段 3「与它接通的友方单位代它承受一半伤害（去尾）」——
+	# 位置放在**所有易伤加成之后、减伤之前**：代受的是「这一刻真正要落下来的伤害」。
+	amount = _revelator_split(p, amount, source)
 	if amount <= 0:
 		return 0
 	# 能量屏障（8033，R87）：**本场战斗中第一次受到的伤害完全免掉**（一次性护盾）。
@@ -10135,6 +10417,10 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 			return 0
 	var dmg:= _unit_damage_taken(p, amount, "attack" if is_attack else "spell")
 	p.health -= dmg
+	# R356：扣血之后立刻判阶段 —— 启示者掉到 200 / 100 就在**这一下**里转阶段，
+	# 不等回合计。别的单位 boss_phase == 0，这里只是一个布尔判断。
+	if p.boss_phase > 0:
+		_revelator_check_phase(p)
 	_log("%s 受到 %d 点%s伤害（剩余 %d）" % [p.card.card_name, dmg, source, p.health])
 	# 恶魔鸭 9116（R63）：受击反应挂在这里 = 所有伤害路径（普通攻击 / 技能 / 效果）的唯一口。
 	# 死了就不再触发（沉睡了也没意义），所以只在活着的分支调。
@@ -11075,9 +11361,14 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 		# R138：技能卡伤害也要吃「侦察塔」光环易伤 —— 与 `_hit_unit` 同一条口径
 		# （原先只挂在 `_hit_unit`，单目标技能走这里 → 光环被绕过）。
 		# R316 极速与侦察塔光环走同一处：单目标技能卡也必须吃到敌人易伤。
+		# R356：启示者阶段 3 的「接通代受」对**单目标技能**同样成立 ——
+		# 这条伤害不走 `_hit_unit`（自己扣血），所以要在减伤之前单独调一次。
+		amount = _revelator_split(p, amount, "技能")
 		var amount2:= _unit_damage_taken(p, _apply_rapid_marks(p,
 				_apply_scout_aura(p, amount)), "spell")
 		p.health -= amount2
+		if p.boss_phase > 0:
+			_revelator_check_phase(p)
 		if p.owner == SIDE_OPPONENT and amount2 > 0:
 			_mark_spell_enemy_hit()
 		if amount2 > 0:
@@ -11176,6 +11467,11 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 		return state.hp_self
 	if amount > 0:
 		_mark_spell_enemy_hit()
+	# R356：敌方 HP 为 ∞ 的关卡（启示者）—— 伤害不落地，只报一句。
+	if enemy_hp_infinite:
+		_last_hp_damage = 0
+		_log("敌方 HP 为 ∞：%d 点伤害未计（%s）" % [amount, source])
+		return state.hp_opponent
 	state.hp_opponent = maxi(0, state.hp_opponent - amount)
 	_last_hp_damage = amount      # R145：敌方 HP 没有减伤链，实际 = 账面
 	var left2:= state.hp_opponent
@@ -12917,7 +13213,8 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	# 它的触发点唯一在 _field_trigger（挂在 move 上）。这里不再有任何陷阱即死分支。
 	# R225：践踏 → 击杀的溢出伤害不丢（沿击杀目标那一列继续传下去）；
 	# 非践踏保持原规则：只有被击穿的是对方**后排**单位，溢出才漏到 HP。
-	var trample: bool = attacker.card.traits.has(TRAMPLE_TRAIT)
+	# R356：启示者阶段 2 起自带「践踏」（阶段效果，不烤进 CardData → 这里补一条判据）。
+	var trample: bool = attacker.card.traits.has(TRAMPLE_TRAIT) or attacker.boss_phase >= 2
 	var overflow:= 0
 	if def_dmg > hp_before and (trample or dst.x == back_row(defender.owner)):
 		overflow = def_dmg - maxi(hp_before, 0)
@@ -12953,6 +13250,17 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		action.emit("trap_hit", {"cell": src, "amount": w_dmg, "kind": "工坊",
 				"name": attacker.card.card_name})
 		_destroy_dead()
+	# 启示者阶段 2「电磁屏障」（R356）：**攻击它的单位受到 5 伤**。
+	# 位置在「防守方结算完」之后、`_tap` 之前：攻击者若被电死，下面 `board.has(src)` 为假，
+	# 自然会跳过「行动完毕」的横置（它已经不在了）。
+	# 反伤走 `_hit_unit`（与技能同一口径：吃光环 / 护盾 / 减伤），击杀走 `_destroy_dead`。
+	if state.board.has(src) and defender.card.id == REVELATOR_ID and defender.boss_phase >= 2:
+		var eb:= _hit_unit(attacker, EM_SHIELD_REFLECT, "电磁屏障", false)
+		_log("电磁屏障：%s 攻击启示者 → 反受 %d 点伤害" % [attacker.card.card_name, eb])
+		action.emit("revelator_shield", {"cell": dst, "src": src, "amount": eb,
+				"atk_name": attacker.card.card_name})
+		if attacker.health <= 0:
+			_destroy_dead()
 	if state.board.has(src):
 		if attacker.card.id == LURKER_ID and attacker.ramp_atk > 0:
 			attacker.ramp_atk = 0

@@ -162,6 +162,14 @@ var blade_added: Array[String] = []
 ## ⚠️ 判据只认这两个标记，**不认** `has_affix("死亡")` —— 「死亡」是通用字段，认字段会串戏。
 var hidden_energy: bool = false
 var hidden_energy_added: Array[String] = []
+## 「启示者」（9200，R356，第三层 Boss）：当前阶段，**1~3**（0 = 不是阶段 Boss）。
+## ⚠️ 阶段**绝不烤进 CardData**（敌方关卡单位用的是卡库共享实例，改 trait / 数值会跨局泄漏），
+##    三阶段的差异全部由引擎按这个字段实时判定：
+##      * 阶段 1 → 每个（敌方）回合力量 +1；
+##      * 阶段 2 → 践踏 + 受到的**技能**伤害减半（`GameEngine._unit_damage_taken`）；
+##      * 阶段 3 → 移速 0（`effective_speed()`）+ 接通的友方单位代它承受一半伤害（`_hit_unit`）。
+##    卡面上的「自身效果」也要跟着阶段变，所以信息栏 / 徽标都读这里。
+var boss_phase: int = 0
 
 func effective_power() -> int:
 	## 实际攻击力：卡面力量 + 生效中的增益 + 关卡成长修正 - 生效中的削弱，最低 0。
@@ -189,6 +197,10 @@ func effective_speed() -> int:
 	## 实际移动速度（R111）：卡面移速 + 场上加成（鸭之暗面的暗影领主）- 惧光（夜鸭奇数回合）。最低 0。
 	## 与 effective_power 对称：**不写回 card**，所以 `_move_bfs` / AI 都要读这个口。
 	if card == null:
+		return 0
+	# 启示者第三阶段（R356）：「移动速度变为 0」。走这个出口 = 移动 / AI 队列全部
+	# 自然读到 0，不必在 `_move_bfs` 里另写一条分支。
+	if boss_phase >= 3:
 		return 0
 	return maxi(0, card.move_speed + dark_lord_speed + summon_haste - night_owl_weak)
 
@@ -302,6 +314,11 @@ func status_entries() -> Array[Dictionary]:
 		out.append({"label": "锻造：空转 %d/%d 个我方回合 → 已 +%d 力、+%d 程（亲手击杀则清零）"
 				% [forge_idle, forge_period, forge_range, forge_range],
 				"col": COL_I, "kind": "info"})
+	# 启示者（9200，R356）：当前阶段。三条阶段效果写在卡面 effect_text 上，这里只报进度
+	# —— 信息栏是「此刻的状态」，不是第二份卡面。
+	if boss_phase > 0:
+		out.append({"label": "阶段 %d/3（击破前不会离场）" % boss_phase,
+				"col": COL_B, "kind": "buff"})
 
 	# ---------------- 减益 ----------------
 	if debuff > 0:
@@ -358,4 +375,6 @@ func status_badges() -> Array[Dictionary]:
 		out.append({"text": "锻 %d/%d" % [forge_idle, forge_period], "col": Color("ff7043")})
 	if night_owl_weak > 0:
 		out.append({"text": "惧光", "col": Color("8a6d1f")})
+	if boss_phase > 0:
+		out.append({"text": "阶段 %d" % boss_phase, "col": Color("c0392b")})
 	return out

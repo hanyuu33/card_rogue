@@ -105,6 +105,7 @@ const ENTER_LABELS := {
 	"bigchest": "大宝箱",
 	"shop": "神秘商店",
 	"start": "起点",
+	"boss": "首领战",       # R356：第三层直道尽头的启示者
 }
 
 # ---- 巧克力计数（R131：素材改成「长方形整块」→ 图标槽改成横向的）----
@@ -194,6 +195,15 @@ func _ready() -> void:
 	if not RunState.run_active or RunState.map_cells.is_empty():
 		RunState.start_run(RogueMap.generate(_rng(), GameLayers.LAYER_DEFAULT),
 				GameLayers.LAYER_DEFAULT)
+	# R356 出图：`-- --screenshot --layer 3` 直接开一局第三层 ——
+	# 直道要打完第二层才能看到，没有这个口子就没法单独验（也验不了起点回血）。
+	# ⚠️ 只在出图模式生效，正常游玩永远走上面那条。
+	if _shot:
+		var _lay_args := OS.get_cmdline_user_args()
+		var _lay_i := _lay_args.find("--layer")
+		if _lay_i >= 0 and _lay_i + 1 < _lay_args.size():
+			var _lay_v := maxi(1, int(str(_lay_args[_lay_i + 1])))
+			RunState.start_run(RogueMap.generate(_rng(), _lay_v), _lay_v)
 	# R176：地图 BGM 按层取（第一层 Poema / 第二层 Strategy4）。
 	# 位置必须在上面那段兜底 start_run **之后** —— 否则 current_layer 还没定。
 	Bgm.play_map(RunState.current_layer)
@@ -405,7 +415,11 @@ func _cell_at(pos: Vector2) -> Dictionary:
 	var row := int((pos.y - MAP_Y0) / CELL)
 	if not RogueMap.in_bounds(col, row):
 		return {}
-	return RunState.map_cells[RogueMap.idx(col, row)]
+	var cell: Dictionary = RunState.map_cells[RogueMap.idx(col, row)]
+	# R356：第三层直道之外是「不存在的地面」→ 悬停 / 点击一律落空。
+	if RogueMap.is_void(cell):
+		return {}
+	return cell
 
 
 func _is_available(cell: Dictionary) -> bool:
@@ -545,6 +559,17 @@ func _commit_enter(cell: Dictionary) -> void:
 	var res := RunState.advance(id)
 	if not bool(res.get("ok", false)):
 		return
+	# R356：第三层的**起点是补给点** —— 站在那里就回满生命（终局段唯一的回血口：
+	# R224 起「到新的一层以外一律不回血」，而这一层只有 5 格、没有战斗后回血）。
+	# ⚠️ 放在 `is_new` 判定**之前**：走回起点（走过的房间）同样能补给，
+	#    这样「打不过就退回去补满再上」是这张图的合法节奏。
+	if str(cell.get("type", "")) == "start" \
+			and int(cell.get("layer", 0)) == GameLayers.LAYER_THREE:
+		var gained := RunState.heal(RunState.max_hp - RunState.hp)
+		if gained > 0:
+			_set_note("起点补给：回复 %d 点生命（%d/%d）" % [gained, RunState.hp, RunState.max_hp])
+		else:
+			_set_note("起点补给：生命已满（%d/%d）" % [RunState.hp, RunState.max_hp])
 	if not bool(res.get("is_new", false)):
 		# 原路返回：不扣巧克力、不结算 —— 给一句轻提示，免得玩家以为点击失效。
 		_set_note("这里是走过的房间，什么都不会发生（不消耗巧克力）")
@@ -558,7 +583,7 @@ func _commit_enter(cell: Dictionary) -> void:
 	RunState.pending_node = cell
 	var dtype := RogueMap.display_type(cell)
 	match dtype:
-		"battle", "elite":
+		"battle", "elite", "boss":
 			RunState.pending_level = RunState.next_level(cell)
 			SceneFx.goto("res://scenes/battle.tscn")
 		"rest", "event":
@@ -722,6 +747,8 @@ func _draw_cell_tiles() -> void:
 	##    房间图标之下。
 	## R145：内容看不见的格子走**中性底** —— 按类型染色等于把「里面是什么」漏出去。
 	for cell: Dictionary in RunState.map_cells:
+		if RogueMap.is_void(cell):
+			continue          # R356：直道之外没有地面，一个像素都不画
 		var r := _cell_rect(cell)
 		var done := _visited(cell)
 		if not RunState.known_node(int(cell["id"])):
@@ -743,6 +770,8 @@ func _draw_cell_icons() -> void:
 	## 图标缺图时才回退成格子中央的汉字（规范要求「缺图不空白也不报错」）。
 	## R145：`known_node` 说不看得见的，**一个像素都不画**（迷雾下面不许漏内容）。
 	for cell: Dictionary in RunState.map_cells:
+		if RogueMap.is_void(cell):
+			continue          # R356：直道之外没有地面
 		var r := _cell_rect(cell)
 		var done := _visited(cell)
 		if not RunState.known_node(int(cell["id"])):
@@ -772,6 +801,8 @@ func _draw_fog() -> void:
 	## ⚠️ 桥**不**在这里盖（它画在两格之间的墙上、不在格子里）→ 路线始终可见。
 	## 判定口只有 `RunState.known_node()` 一个（战斗内地图总览读同一个）。
 	for cell: Dictionary in RunState.map_cells:
+		if RogueMap.is_void(cell):
+			continue          # R356：直道之外没有地面 → 雾也无处可盖
 		var id := int(cell["id"])
 		if RunState.known_node(id):
 			continue
@@ -863,6 +894,8 @@ func _draw_bridges() -> void:
 	var pulse := 0.5 + 0.5 * sin(_t * 4.0)
 	var drawn := {}          # 去重：两格之间只盖一座桥（两个方向是同一处）
 	for cell: Dictionary in RunState.map_cells:
+		if RogueMap.is_void(cell):
+			continue          # R356：直道之外没有地面，也就没有桥
 		var ctr := _cell_center(cell)
 		for nid in cell["doors"]:
 			var nb: Dictionary = RunState.map_cells[int(nid)]
@@ -879,6 +912,8 @@ func _draw_bridges() -> void:
 func _draw_states() -> void:
 	## 当前房间（金框 + 光晕）/ 可走房间（绿脉动框）/ 悬停（白框）。
 	for cell: Dictionary in RunState.map_cells:
+		if RogueMap.is_void(cell):
+			continue          # R356：直道之外没有地面 → 不画金框 / 绿框 / 悬停
 		var r := _cell_rect(cell)
 		var id := int(cell["id"])
 		if _is_current(cell):

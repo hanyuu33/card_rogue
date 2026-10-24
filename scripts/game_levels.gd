@@ -76,7 +76,8 @@ static func level_names() -> Array[String]:
 static func builtin_levels() -> Array:
 	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×8（第一层 4 + 第二层 4）→
 	## 精英简单×5（第一层 2 + 第二层 3）→ 精英困难×5（第一层 2 + 第二层 3）→
-	## Boss×5（第一层 3 + 第二层 2）。合计 32 关（R174 百眼动员进第二层普通简单；R340 永夜鸭群进第一层精英困难）。
+	## Boss×6（第一层 3 + 第二层 2 + 第三层 1）。合计 33 关（R174 百眼动员进第二层普通简单；
+	## R340 永夜鸭群进第一层精英困难；**R356 启示者进第三层**）。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_frost_line(), _assembly_line(), _mass_anvil(), _argos_mobilize(),
@@ -85,7 +86,8 @@ static func builtin_levels() -> Array:
 		_captain(), _duck_kiln(), _breath_charge(), _hermes(), _dragon_nest(),
 		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(), _asclepius(),
 		_boss_dragon(), _boss_demon_duck(), _boss_duck_darkside(),
-			_mech_duck_boss(), _hephaestus(), _scrapyard(), _eternal_night()]
+			_mech_duck_boss(), _hephaestus(), _scrapyard(), _eternal_night(),
+			_boss_revelator()]
 
 
 static func layer_of(level: Dictionary) -> int:
@@ -521,6 +523,41 @@ static func _hephaestus() -> Dictionary:
 		"enemy_units": [
 			[9135, "赫菲斯托斯", 5, 120, 1, 1, Vector2i(0, 1)],
 		],
+		"tutorial": [],
+	}
+
+
+static func _boss_revelator() -> Dictionary:
+	## 第三层 Boss「启示者」（R356）：攻 15 / 血 300 / 程 2 / 速 2，后排中央 (0, 1)。
+	## 第三层是一条 5 格直道（起点 → 精英 → 商店 → 篝火 → Boss，见 RogueMap.line_cells），
+	## 本关是那条道的终点。
+	##   * **敌方 HP 为 ∞**（`enemy_hp_infinite`）：直击打不空，唯一的胜利条件是击破启示者
+	##     本体（`win_on_boss`）—— 否则玩家绕开本体、一路糊脸就能跳过整场三阶段；
+	##   * **三阶段**（阈值在引擎 `REVELATOR_PHASE_2_HP` / `REVELATOR_PHASE_3_HP`）：
+	##     每损失 100 生命进入下一阶段 → 退回后排中间 (0, 1)（原格有东西就**消灭它**）、
+	##     换掉场上效果卡、界面播阶段横幅并重新弹一次敌方效果；
+	##   * 阶段效果全部在 GameEngine 一处结算（`_revelator_*` 系列），卡面只是同一口径的文案。
+	## ⚠️ `enemy_effects` 只写第一阶段的「舰炮 9201」—— 二、三阶段的 9202 / 9203 由引擎
+	##    在阶段转移时换上，不进关卡表（否则开局就会同时启用三张）。
+	return {
+		"name": "启示者",
+		"key": "boss_revelator",
+		"tier": TIER_BOSS,
+		"layer": GameLayers.LAYER_THREE,
+		"deck_key": "starter",
+		"intro": "……抬头看。",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"enemy_hp_infinite": true,
+		"win_on_boss": 9200,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9200, "启示者", 15, 300, 2, 2, Vector2i(0, 1)],
+		],
+		"enemy_effects": [9201],
 		"tutorial": [],
 	}
 

@@ -5542,6 +5542,93 @@
       "color": "绿",
       "image": "",
       "locked": true
+    },
+    {
+      "id": 9200,
+      "name": "启示者",
+      "kind": "盟友",
+      "cost": 0,
+      "power": 15,
+      "health": 300,
+      "attack_range": 2,
+      "move_speed": 2,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [],
+      "effect_text": "三个阶段，每损失 100 生命进入下一阶段：退回后排中间，并更换场上效果。 第一阶段·舰炮：每回合随机轰击一列，该列全部敌方单位受到 5 伤害；该列没有单位则改为直击玩家 HP。自身：每个回合力量 +1。 第二阶段·电磁屏障：攻击它的单位受到 5 伤害。自身：践踏，受到的技能伤害减半。 第三阶段·紧急呼叫：玩家每个回合开始时召唤一只力量 +10 的量产型。自身：移速 0，与它接通的友方单位代它承受一半伤害。",
+      "target_mode": "none",
+      "color": "金",
+      "image": ""
+    },
+    {
+      "id": 9201,
+      "name": "舰炮",
+      "kind": "效果",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "舰炮"
+      ],
+      "affixes": [],
+      "effect_text": "每回合随机轰击一列：该列所有敌方单位受到 5 伤害；该列没有单位则改为直击玩家 HP。",
+      "target_mode": "none",
+      "value": 5,
+      "color": "灰",
+      "image": ""
+    },
+    {
+      "id": 9202,
+      "name": "电磁屏障",
+      "kind": "效果",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "电磁屏障"
+      ],
+      "affixes": [],
+      "effect_text": "攻击启示者的单位受到 5 伤害。",
+      "target_mode": "none",
+      "value": 5,
+      "color": "蓝",
+      "image": ""
+    },
+    {
+      "id": 9203,
+      "name": "紧急呼叫",
+      "kind": "效果",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "紧急呼叫"
+      ],
+      "affixes": [],
+      "effect_text": "玩家每个回合开始时，随机召唤一只力量 +10 的量产型敌人。",
+      "target_mode": "none",
+      "value": 10,
+      "color": "金",
+      "image": ""
     }
   ]
 }

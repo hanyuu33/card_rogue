@@ -139,8 +139,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 268,
-			"图鉴 = 268 张（R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
+	check(repo.all_cards().size() == 272,
+			"图鉴 = 272 张（R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -153,8 +153,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 214 and grp_enemy.size() == 54,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 214 / 54；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 214 and grp_enemy.size() == 58,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 214 / 58；R356 +4 张敌方卡（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫）；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -167,11 +167,12 @@ func _init() -> void:
 	for c: CardData in grp_enemy:
 		if c.is_level_effect():
 			enemy_eff.append(c.id)
-	check(enemy_eff.size() == 10 and enemy_eff.has(9013) and enemy_eff.has(9015)
+	check(enemy_eff.size() == 13 and enemy_eff.has(9013) and enemy_eff.has(9015)
 			and enemy_eff.has(9024) and enemy_eff.has(9049) and enemy_eff.has(9115)
 			and enemy_eff.has(9117) and enemy_eff.has(9125) and enemy_eff.has(9139)
-			and enemy_eff.has(9147) and enemy_eff.has(9178),
-			"图鉴分组：敌人图鉴含 10 张敌方关卡效果 9013/9015/9024/9049/9115/9117/9125/**9139 充能巨炮 R158**/**9147 流水线装配 R219**/**9178 永夜 R340**（实际 %s）" % str(enemy_eff))
+			and enemy_eff.has(9147) and enemy_eff.has(9178)
+			and enemy_eff.has(9201) and enemy_eff.has(9202) and enemy_eff.has(9203),
+			"图鉴分组：敌人图鉴含 13 张敌方关卡效果 9013/9015/9024/9049/9115/9117/9125/**9139 充能巨炮 R158**/**9147 流水线装配 R219**/**9178 永夜 R340**/**9201 舰炮 · 9202 电磁屏障 · 9203 紧急呼叫（R356 启示者三阶段）**（实际 %s）" % str(enemy_eff))
 	check(repo.get_card(9022).group == "player" and repo.get_card(9044).group == "player"
 			and repo.get_card(9072).group == "player" and repo.get_card(9018).group == "player"
 			and repo.get_card(9023).group == "player" and repo.get_card(9050).group == "player",
@@ -5184,7 +5185,7 @@ func _init() -> void:
 
 	# ---- 新关卡：使魔鸭群 / 骑士冲锋 / 队长与巫师 / 爆炎鸭阵 / 白魔法鸭护阵 ----
 	var lvls := GameLevels.builtin_levels()
-	check(lvls.size() == 33, "内置关卡共 33 关（8 普简 + 9 普难 + 5 精英简单 + 6 精英困难 + 5 Boss；R340 永夜鸭群进第一层精英困难；"
+	check(lvls.size() == 34, "内置关卡共 34 关（8 普简 + 9 普难 + 5 精英简单 + 6 精英困难 + 6 Boss；R356 第三层启示者进 Boss；R340 永夜鸭群进第一层精英困难；"
 			+ "R135 太阳熔炉进第二层普通困难 / R149 钢铁要塞·R162 阿斯克勒庇厄斯进第二层精英困难 / R150 赫菲斯托斯工坊进第二层 Boss"
 			+ " / R158 量产流水线·量产铁砧进第二层普通简单、双机炮阵进第二层普通困难 / R228 废料场进第二层普通困难）")
 	var lva: Dictionary = _level_named("使魔鸭群")
@@ -5661,10 +5662,19 @@ func _init() -> void:
 			"爆炎鸭阵进入第一层普通战斗池（会被地图抽到）")
 
 	# ---- 分层：各层内容互不串层（第一层 [1] / 第二层 [2]，各自专属） ----
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_DEFAULT).size() == lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
-			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关）" % [lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(), GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size()])
+	var lv_rest := lvls.size() - GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() \
+			- GameLevels.levels_of_layer(GameLayers.LAYER_THREE).size()
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_DEFAULT).size() == lv_rest,
+			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关、第三层那 %d 关）" % [lv_rest,
+				GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
+				GameLevels.levels_of_layer(GameLayers.LAYER_THREE).size()])
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 17,
 			"第二层自带 17 关（R228 废料场 +1；太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法鸭护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层）")
+	# R356：第三层只有 1 关（启示者），且它就是这一层的专属 Boss
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_THREE).size() == 1
+			and GameLevels.boss_pool(GameLayers.LAYER_THREE).size() == 1
+			and str((GameLevels.boss_pool(GameLayers.LAYER_THREE)[0] as Dictionary).get("key", "")) == "boss_revelator",
+			"R356 第三层：只有启示者这 1 个 Boss 关（boss_pool(3) 也只认它）")
 	# 内容池：第一层 = [1]；第二层 = [2]（各层内容互不串层）
 	var cl1 := GameLayers.content_layers(GameLayers.LAYER_DEFAULT)
 	var cl2 := GameLayers.content_layers(GameLayers.LAYER_TWO)
@@ -5891,7 +5901,7 @@ func _init() -> void:
 			elif om_ecard.group != "enemy" or not om_ecard.is_level_effect():
 				om_drift += " %s/关卡效果%d" % [om_lvl2["name"], int(om_e)]
 	check(om_drift == "", "关卡 enemy_units 的 力/生/程/速 与 cards.json 同源（漂移:%s）" % om_drift)
-	check(om_lv_eff == 11, "关卡共挂 11 个敌方关卡效果（4 + 使魔之力 9115 挂 2 个巫师关卡 + 恶魔使魔 9117 + 暗影召唤 9125 各挂 1 个 Boss 关卡 + **充能巨炮 9139 挂双机炮阵 R158** + **流水线装配 9147 挂量产流水线 R219** + **永夜 9178 挂永夜鸭群 R340**），且都属敌人图鉴（实际 %d）" % om_lv_eff)
+	check(om_lv_eff == 12, "关卡共挂 12 个敌方关卡效果（+ R356 启示者挂舰炮 9201 一张，阶段 2/3 由引擎换卡）（4 + 使魔之力 9115 挂 2 个巫师关卡 + 恶魔使魔 9117 + 暗影召唤 9125 各挂 1 个 Boss 关卡 + **充能巨炮 9139 挂双机炮阵 R158** + **流水线装配 9147 挂量产流水线 R219** + **永夜 9178 挂永夜鸭群 R340**），且都属敌人图鉴（实际 %d）" % om_lv_eff)
 
 	# ---- 二层强力怪物：一回合行动两次（2026-09-30 新增）----
 	# 挑选三只「巨兽 / 领主」级单位赋予双动：后排也能一回合绕开前排再出手。
@@ -5987,8 +5997,9 @@ func _init() -> void:
 			"层名显示：第一层")
 	check(GameLayers.layer_name(GameLayers.LAYER_TWO) == "第二层", "层名显示：第二层")
 	check(GameLayers.next_layer(GameLayers.LAYER_DEFAULT) == GameLayers.LAYER_TWO
-			and GameLayers.next_layer(GameLayers.LAYER_TWO) == 0,
-			"层推进：第一层 → 第二层 → 无（打完第二层 Boss 即通关）")
+			and GameLayers.next_layer(GameLayers.LAYER_TWO) == GameLayers.LAYER_THREE
+			and GameLayers.next_layer(GameLayers.LAYER_THREE) == 0,
+			"层推进：第一层 → 第二层 → 第三层 → 无（打完第三层启示者才是通关）")
 	check(not GameLayers.has_events(9),
 			"未配置的层：没有事件池（不会顺手拿到第一层的内容）")
 	# R128：**事件房间不再遭遇战斗** —— 事件池里的 monster（遭遇怪物）已移除
@@ -7750,9 +7761,9 @@ func _init() -> void:
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 67
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 63
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 64
-			and int(dr_cls_count.get("敌人", 0)) == 54
+			and int(dr_cls_count.get("敌人", 0)) == 58
 			and int(dr_cls_count.get("", 0)) == 20,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 67 / 63 / 64 / 54，公用 18；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 67 / 63 / 64 / 58；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 18；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -18597,11 +18608,12 @@ func _init() -> void:
 	check(GameLayers.layer_name(GameLayers.LAYER_THREE) == "第三层"
 			and GameLayers.event_name("divination") == "占卜室",
 			"R309 第三层：层名与事件名都在")
-	# 关键：第三层**只有事件、没有战斗关卡** → 打完第二层 Boss 仍然是通关（不把人送进空层）
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_THREE).is_empty()
-			and GameLayers.next_layer(GameLayers.LAYER_TWO) == 0
+	# R356：第三层关卡已落地（启示者）→ 打完第二层 Boss 进第三层，打完启示者才是整局通关。
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_THREE).size() == 1
+			and GameLayers.next_layer(GameLayers.LAYER_TWO) == GameLayers.LAYER_THREE
+			and GameLayers.next_layer(GameLayers.LAYER_THREE) == 0
 			and GameLayers.next_layer(GameLayers.LAYER_DEFAULT) == GameLayers.LAYER_TWO,
-			"R309 第三层：没有关卡 → next_layer(2) 仍是 0（当前流程不变）")
+			"R356 第三层：启示者已挂关 → next_layer(2) = 3、next_layer(3) = 0（打完启示者才是通关）")
 	# 道具名不描边：绘制口认负数，道具栏那处明确传 -1
 	# R343：颜色那格改成 `rel.name_color(Color("4a3c14"))`（传奇名显金），
 	# 所以守卫跟着认带 name_color 的写法 —— 守的还是「最后那个参数是 -1」。
@@ -25762,6 +25774,197 @@ func _init() -> void:
 	if FileAccess.file_exists(r346_probe_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(r346_probe_path))
 	ProfileData.clear_memory()
+
+	# ================================================================
+	# R356：第三层一字直道 + 启示者（∞ HP / 三阶段 / 电磁屏障 / 紧急呼叫 / 接通代受）
+	# ================================================================
+	# ---- ① 地图：直道仍是 35 格契约，真房间 5 / void 30 ----
+	var r356_rng := RandomNumberGenerator.new()
+	r356_rng.seed = 356
+	var r356_cells: Array = RogueMap.generate(r356_rng, GameLayers.LAYER_THREE)
+	var r356_real: Array = []
+	var r356_void := 0
+	for r356_c: Dictionary in r356_cells:
+		if RogueMap.is_void(r356_c):
+			r356_void += 1
+		else:
+			r356_real.append(r356_c)
+	check(r356_cells.size() == 35 and r356_real.size() == 5 and r356_void == 30,
+			"R356 直道：仍是 35 格契约（真房间 5 / void 30，实际 %d / %d）"
+			% [r356_real.size(), r356_void])
+	var r356_types: Array = []
+	var r356_xy: Array = []
+	for r356_c2: Dictionary in r356_real:
+		r356_types.append(str(r356_c2["type"]))
+		r356_xy.append(Vector2i(int(r356_c2["col"]), int(r356_c2["row"])))
+	check(r356_types == ["start", "elite", "shop", "rest", "boss"]
+			and r356_xy == [Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2),
+				Vector2i(4, 2), Vector2i(5, 2)],
+			"R356 直道：起点在左 → 精英 → 商店 → 篝火 → Boss，一字排在第 2 行（实际 %s）"
+			% str(r356_types))
+	var r356_start: Dictionary = RogueMap.start_cell(r356_cells)
+	check(int(r356_start.get("col", -1)) == 1 and int(r356_start.get("row", -1)) == 2,
+			"R356 直道：start_cell 按「type == start」找，不假设 (3,4)")
+	check((r356_real[0]["doors"] as Array).size() == 1
+			and (r356_real[4]["doors"] as Array).size() == 1
+			and (r356_real[2]["doors"] as Array).size() == 2,
+			"R356 直道：门是一条链（起点 / Boss 各 1 个门，中间格 2 个）")
+	var r356_seed_before: int = r356_rng.state
+	var r356_again: Array = RogueMap.generate(r356_rng, GameLayers.LAYER_THREE)
+	check(r356_rng.state == r356_seed_before
+			and int(RogueMap.start_cell(r356_again).get("id", -1)) == int(r356_start["id"]),
+			"R356 直道：生成过程一个随机数都不花（水晶骰子在这一层不生效）")
+
+	# ---- ② 关卡：启示者 = 第三层唯一的 Boss，敌方 HP ∞，赢法写在 win_on_boss ----
+	var r356_bosses: Array = GameLevels.boss_pool(GameLayers.LAYER_THREE)
+	check(r356_bosses.size() == 1,
+			"R356 关卡：第三层只有启示者这 1 个 Boss（实际 %d）" % r356_bosses.size())
+	var r356_lv: Dictionary = r356_bosses[0]
+	check(bool(r356_lv.get("enemy_hp_infinite", false))
+			and int(r356_lv.get("win_on_boss", 0)) == GameEngine.REVELATOR_ID
+			and (r356_lv.get("enemy_effects", []) as Array) == [GameEngine.REVELATOR_NAVAL_GUN_ID],
+			"R356 关卡：敌方 HP ∞ + 击破启示者 9200 即胜，开局挂舰炮 9201")
+	var r356_units: Array = r356_lv["enemy_units"]
+	check(r356_units.size() == 1 and int(r356_units[0][0]) == GameEngine.REVELATOR_ID
+			and int(r356_units[0][2]) == 15 and int(r356_units[0][3]) == 300
+			and int(r356_units[0][4]) == 2 and int(r356_units[0][5]) == 2
+			and (r356_units[0][6] as Vector2i) == GameEngine.REVELATOR_HOME,
+			"R356 关卡：启示者 攻15 / 血300 / 程2 / 速2，开局站后排中间 (0,1)")
+
+	# ---- ③ 卡面：数据在 value 上，实现口径（括号里那三句）不许写进文本 ----
+	var r356_boss_card := repo.get_card(GameEngine.REVELATOR_ID)
+	check(r356_boss_card != null and r356_boss_card.is_enemy_card()
+			and r356_boss_card.power == 15 and r356_boss_card.health == 300
+			and r356_boss_card.attack_range == 2 and r356_boss_card.move_speed == 2,
+			"R356 卡：启示者 9200 攻15 / 血300 / 程2 / 速2")
+	var r356_gun := repo.get_card(GameEngine.REVELATOR_NAVAL_GUN_ID)
+	var r356_shield := repo.get_card(GameEngine.REVELATOR_SHIELD_ID)
+	var r356_call := repo.get_card(GameEngine.REVELATOR_CALL_ID)
+	check(r356_gun != null and r356_gun.traits.has(GameEngine.NAVAL_GUN_TRAIT)
+			and r356_gun.value == GameEngine.NAVAL_GUN_DMG
+			and r356_shield != null and r356_shield.traits.has(GameEngine.EM_SHIELD_TRAIT)
+			and r356_shield.value == GameEngine.EM_SHIELD_REFLECT
+			and r356_call != null and r356_call.traits.has(GameEngine.EMERGENCY_CALL_TRAIT)
+			and r356_call.value == GameEngine.EMERGENCY_CALL_ATK,
+			"R356 卡：舰炮 5 / 电磁屏障 5 / 紧急呼叫 +10 都写在自己的 value 上")
+	var r356_all_txt := "%s|%s|%s|%s" % [r356_boss_card.effect_text, r356_gun.effect_text,
+			r356_shield.effect_text, r356_call.effect_text]
+	check(r356_all_txt.find("身边") < 0 and r356_all_txt.find("去尾") < 0
+			and r356_all_txt.find("向上取整") < 0 and r356_all_txt.find("向下取整") < 0
+			and r356_all_txt.find("如果有东西占位") < 0 and r356_all_txt.find("消灭它") < 0,
+			"R356 卡面：不写「召唤在身边 / 去尾 / 占位就消灭」这类实现口径")
+
+	# ---- ④ 阶段推进：300 → 200 → 100，换效果卡 + 退回后排中间（占位者被消灭）----
+	var r356_e := _new_engine([], 20, 30)
+	r356_e.enemy_hp_infinite = true
+	r356_e.win_on_boss = GameEngine.REVELATOR_ID
+	var r356_boss := r356_e.state.place(CardData.from_dict(r356_boss_card.to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r356_e.enable_enemy_effects([CardData.from_dict(r356_gun.to_dict())])
+	check(r356_boss != null and r356_boss.boss_phase == 1
+			and r356_boss.effective_speed() == 2,
+			"R356 阶段 1：一上场就是第 1 阶段，速度按卡面 2")
+	var r356_squat := r356_e.state.place(CardData.from_dict(repo.get_card(1011).to_dict()),
+			GameEngine.REVELATOR_HOME, GameEngine.SIDE_OPPONENT)
+	r356_boss.health = GameEngine.REVELATOR_PHASE_2_HP
+	r356_e._revelator_check_phase(r356_boss)
+	var r356_eff: Array = []
+	for r356_ec: CardData in r356_e.state.enemy_effects:
+		r356_eff.append(r356_ec.id)
+	check(r356_boss.boss_phase == 2
+			and r356_e._cell_of(r356_boss) == GameEngine.REVELATOR_HOME
+			and not r356_e.state.board.values().has(r356_squat),
+			"R356 阶段 2：掉到 200 血 → 退回 (0,1)，原本占着那格的单位被消灭")
+	check(r356_eff == [GameEngine.REVELATOR_SHIELD_ID],
+			"R356 阶段 2：效果区换成电磁屏障 9202（舰炮被移出，实际 %s）" % str(r356_eff))
+	var r356_skill := r356_e._hit_unit(r356_boss, 10, "技能")
+	check(r356_skill == 5,
+			"R356 电磁屏障：自身受到的技能伤害减半（10 → 5，实际 %d）" % r356_skill)
+	var r356_atk_u := r356_e.state.place(_card(99001, "测试兵", "盟友", 1, 4, 40, 1, 1),
+			Vector2i(1, 1), GameEngine.SIDE_SELF)
+	r356_e.attack(Vector2i(1, 1), GameEngine.REVELATOR_HOME, GameEngine.SIDE_SELF)
+	check(r356_atk_u.health == 40 - GameEngine.EM_SHIELD_REFLECT,
+			"R356 电磁屏障：攻击它的单位反受 5（40 → %d）" % r356_atk_u.health)
+	r356_boss.health = GameEngine.REVELATOR_PHASE_3_HP
+	r356_e._revelator_check_phase(r356_boss)
+	r356_eff.clear()
+	for r356_ec2: CardData in r356_e.state.enemy_effects:
+		r356_eff.append(r356_ec2.id)
+	check(r356_boss.boss_phase == 3 and r356_boss.effective_speed() == 0,
+			"R356 阶段 3：移动速度变为 0")
+	check(r356_eff == [GameEngine.REVELATOR_CALL_ID],
+			"R356 阶段 3：效果区换成紧急呼叫 9203（实际 %s）" % str(r356_eff))
+
+	# ---- ⑤ 阶段 3「接通代受」：一半（去尾）转给接通友军，剩下的自己吃 ----
+	var r356_friend := r356_e.state.place(_card(99002, "接通友军", "盟友", 1, 3, 40, 1, 1),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	var r356_left := r356_e._revelator_split(r356_boss, 11, "测试")
+	check(r356_left == 6 and r356_friend.health == 40 - 5,
+			"R356 接通代受：11 点 → 友军吃 5（去尾）、启示者留 6（实际 %d / %d）"
+			% [r356_left, r356_friend.health])
+	# 旁边贴着的**我方**单位不算「友方」→ 不该被挑去代受
+	var r356_self_near := r356_e.state.place(_card(99003, "贴脸我方", "盟友", 1, 3, 40, 1, 1),
+			Vector2i(0, 2), GameEngine.SIDE_SELF)
+	var r356_left2 := r356_e._revelator_split(r356_boss, 9, "测试")
+	check(r356_left2 == 5 and r356_self_near.health == 40 and r356_friend.health == 31,
+			"R356 接通代受：只认敌方自己人（贴着的我方单位一点没扣；9 → 友军 4 / 自留 5，实际 %d / %d / %d）"
+			% [r356_left2, r356_friend.health, r356_self_near.health])
+
+	# ---- ⑥ 阶段 3「紧急呼叫」：玩家回合开始随机召唤量产型，力量 +10 ----
+	var r356_before := r356_e.state.board.size()
+	r356_e._emergency_call()
+	var r356_newp: Placement = null
+	for r356_cell: Vector2i in r356_e.state.board.keys():
+		var r356_pp: Placement = r356_e.state.board[r356_cell]
+		if r356_pp.owner == GameEngine.SIDE_OPPONENT and GameEngine.EMERGENCY_POOL.has(r356_pp.card.id) \
+				and r356_pp.card.id != GameEngine.REVELATOR_ID:
+			r356_newp = r356_pp
+	check(r356_e.state.board.size() == r356_before + 1 and r356_newp != null,
+			"R356 紧急呼叫：玩家回合开始多召唤 1 只（%d → %d）"
+			% [r356_before, r356_e.state.board.size()])
+	var r356_base := repo.get_card(r356_newp.card.id) if r356_newp != null else null
+	check(r356_newp != null and r356_base != null
+			and r356_newp.card.power == r356_base.power + GameEngine.EMERGENCY_CALL_ATK,
+			"R356 紧急呼叫：召唤的是量产型，且力量已烤进那份独立副本（+10）")
+
+	# ---- ⑦ ∞ HP：敌方 HP 打不掉；赢法只有击破本体 ----
+	var r356_hp_before := r356_e.state.hp_opponent
+	r356_e._damage_player(GameEngine.SIDE_OPPONENT, 7, "测试")
+	check(r356_e.state.hp_opponent == r356_hp_before,
+			"R356 ∞ HP：敌方 HP 不再掉（%d → %d）" % [r356_hp_before, r356_e.state.hp_opponent])
+	var r356_win := _new_engine([], 20, 30)
+	r356_win.enemy_hp_infinite = true
+	r356_win.win_on_boss = GameEngine.REVELATOR_ID
+	var r356_win_boss := r356_win.state.place(CardData.from_dict(r356_boss_card.to_dict()),
+			GameEngine.REVELATOR_HOME, GameEngine.SIDE_OPPONENT)
+	r356_win_boss.health = 0
+	r356_win._destroy_dead()
+	check(r356_win.over and r356_win.result == "胜利",
+			"R356 胜利条件：敌方 HP 仍是满的，击破启示者本体即胜（%s / %s）"
+			% [r356_win.result, r356_win.result_reason])
+
+	# ---- ⑧ 源码守卫：三个钩子确实挂在回合开始上；转阶会重弹敌方效果 ----
+	var r356_esrc := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r356_esrc.find("_naval_gun(SIDE_OPPONENT)") >= 0
+			and r356_esrc.find("# R356 紧急呼叫") >= 0
+			and r356_esrc.find("_revelator_phase_tick(SIDE_OPPONENT)") >= 0,
+			"R356 源码：舰炮 / 紧急呼叫 / 阶段成长都挂在 _begin_turn 上")
+	var r356_msrc := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	check_src(r356_msrc.find("RunState.heal(RunState.max_hp - RunState.hp)") >= 0
+			and r356_msrc.find("== GameLayers.LAYER_THREE:") >= 0
+			and r356_msrc.find("if RogueMap.is_void(cell):") >= 0
+			and r356_msrc.find('"boss": "首领战"') >= 0,
+			"R356 地图：起点补给挂在第三层起点格上；void 格命中先落空；首领节点有门牌")
+	var r356_bsrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r356_bp_at := r356_bsrc.find('"boss_phase":')
+	var r356_bp_body := r356_bsrc.substr(r356_bp_at, 1600) if r356_bp_at >= 0 else ""
+	check_src(r356_bp_at >= 0
+			and r356_bp_body.find("_ee_popup = false") >= 0
+			and r356_bp_body.find("_ee_popup_at = n + EE_PHASE_POPUP_DELAY") >= 0,
+			"R356 界面：转阶段先收掉旧弹窗，再排队 0.7s 后重弹敌方效果（不盖住动画）")
+	check_src(r356_bsrc.find("if _ee_popup_at > 0 and _now() >= _ee_popup_at:") >= 0
+			and r356_bsrc.find("_ee_popup_at = 0") >= 0,
+			"R356 界面：排队到点在 _process 里真正弹出来")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

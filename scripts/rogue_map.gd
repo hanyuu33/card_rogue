@@ -53,6 +53,18 @@ const ROWS := 5                      # 纵向格数
 const CELLS := COLS * ROWS           # 35
 const MAX_STEPS := 12                # 每层的巧克力块数 = 可探索的新房间数
 
+## ── R356：第三层 = 一条**一字型直道**（不是随机网格）──
+## 用户口径：一共 5 格，起点在左边 —— 起点 → 精英战斗（沿用第二层）→ 商店 → 篝火 → Boss。
+## 实现方式：**仍然返回 35 个 cell**（`CELLS` 是地图 / 存档 / 战斗内总览共用的契约），
+## 把这条道摆在第 `LINE_ROW` 行（正中一行）的第 1~5 列 —— 横向居中、纵向居中；
+## 其余 30 格一律标 `void = true`：
+##   * `void` 格**不画、不可点、不可达**（渲染与点击都先问 `is_void()`）；
+##   * 直道上的 id 与 `idx(col, row)` 完全一致（15~19）→ `cell_of()` / 存档 / 回放不必换口径。
+## 这一层**不掷骰子**：不随机生成、不重摇（水晶骰子也不生效 —— 房型是设计定的）。
+const LINE_ROW := 2
+const LINE_COLS := [1, 2, 3, 4, 5]                 # 起点在最左
+const LINE_TYPES := ["start", "elite", "shop", "rest", "boss"]
+
 ## ⚠️ 门的存储口径：`cell["doors"]` 是**邻居房间的 id 列表**（不是方向索引）。
 ## 生成时邻接表就是按 id 建的，直接沿用最不容易出错；
 ## 需要「哪条边」时用 `dir_between(a_id, b_id)` 从两格坐标反算（只有画门用到）。
@@ -68,13 +80,13 @@ const SHOP_POS := [Vector2i(6, 0)]
 const TYPE_LABELS := {
 	"start": "起点", "battle": "战斗", "elite": "精英", "rest": "休息",
 	"event": "事件", "chest": "宝箱", "bigchest": "大宝箱", "shop": "商店",
-	"unknown": "未知",
+	"unknown": "未知", "boss": "首领",
 }
 ## 格子正中间的短标记（没有对应图标素材时用）。
 const TYPE_MARKS := {
 	"start": "起", "battle": "战", "elite": "英", "rest": "息",
 	"event": "事", "chest": "箱", "bigchest": "大", "shop": "商",
-	"unknown": "?",
+	"unknown": "?", "boss": "王",
 }
 
 const P_UNKNOWN := 0.34              # 「?」房占比（其余格直接写明类型）
@@ -183,6 +195,40 @@ static func elite_weight_scaled(base: int, col: int, row: int, norm: float) -> f
 	return float(base) * elite_far_factor(col, row) / maxf(0.01, norm)
 
 
+static func is_void(cell) -> bool:
+	## R356：这一格是不是「直道之外、不存在的地面」（第三层专用标记）。
+	## 渲染（格子底 / 图标 / 迷雾 / 占位）与点击命中都要先过这一关 ——
+	## 漏一处的表现是「空白处凭空多出一块可以点的迷雾格」。
+	if not (cell is Dictionary):
+		return false
+	return bool((cell as Dictionary).get("void", false))
+
+
+static func line_cells(layer := GameLayers.LAYER_THREE) -> Array:
+	## R356：第三层的直道（5 格，一字排开，起点在最左）。
+	## 返回**完整 35 格**：`LINE_COLS` 上那 5 格是真的房间，其余全 `void`。
+	## 不消耗任何随机数 —— 这一层的房型与顺序都是设计定的。
+	var cells: Array = []
+	for i in CELLS:
+		cells.append({
+			"id": i, "col": col_of(i), "row": row_of(i),
+			"type": "", "hidden": false, "revealed": true, "doors": [],
+			"layer": layer, "event_kind": "", "treasure_relic": false,
+			"void": true,
+		})
+	for k in LINE_COLS.size():
+		var c: Dictionary = cells[idx(int(LINE_COLS[k]), LINE_ROW)]
+		c["void"] = false
+		c["type"] = str(LINE_TYPES[k])
+	# 门：相邻两格互连（双向），于是直道是可以原路返回的一条链。
+	for k in range(1, LINE_COLS.size()):
+		var a := idx(int(LINE_COLS[k - 1]), LINE_ROW)
+		var b := idx(int(LINE_COLS[k]), LINE_ROW)
+		(cells[a]["doors"] as Array).append(b)
+		(cells[b]["doors"] as Array).append(a)
+	return cells
+
+
 static func is_fixed_shop(i: int) -> bool:
 	## R243：右上角那间**固定商店**（每层都有，不参与随机摆位）。
 	for p in SHOP_POS:
@@ -210,6 +256,12 @@ static func generate(rng: RandomNumberGenerator,
 	##    判不过 → 像正常生成一样**重摇结构**（这一步会动 `rng`）。它同样是确定性的
 	##    （同输入必然同样重试），回放不受影响，只是「有 / 无道具」的主链位置可能错开。
 	## ⚠️ 可达性校验放在重摇**之后**：门没动，但房型（含宝箱）变了，得按新内容判。
+	# R356：第三层固定是一字型直道（`line_cells`）—— 不生成、不重摇、不掷骰子。
+	# ⚠️ 水晶骰子（6040）在这一层不生效：它会把「本来不是 ? 的房间」重摇成 ?，
+	#    而这条道的 5 个房型是设计定的（精英 / 商店 / 篝火 / Boss 缺一不可）。
+	if layer == GameLayers.LAYER_THREE:
+		last_attempts = 1
+		return line_cells(layer)
 	for attempt in MAX_ATTEMPTS:
 		var adj := _build_adjacency(rng)
 		if adj.is_empty():
@@ -676,9 +728,13 @@ static func cell_at(cells: Array, col: int, row: int) -> Dictionary:
 
 
 static func start_cell(cells: Array) -> Dictionary:
-	if cells.size() != CELLS:
-		return {}
-	return cells[idx(START_COL, START_ROW)]
+	## 起点格 = **type == "start"** 的那一格。
+	## R356：第三层是直道，起点不在 (3,4)；7×5 网格里起点也永远只有一格，
+	## 所以按类型找与按坐标找完全等价，而且不必再假设「size 一定是 35、位置一定在 (3,4)」。
+	for c: Dictionary in cells:
+		if str(c.get("type", "")) == "start":
+			return c
+	return {}
 
 
 static func neighbor_ids(cell: Dictionary) -> Array:

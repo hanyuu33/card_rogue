@@ -447,6 +447,11 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	if card.traits.has(GameEngine.ACTION_GROWTH_TRAIT):
 		p.action_growth_turns = 0
 		p.action_growth_extra = p.card.actions   # 总行动数目标，成长时 +1
+	# 启示者（9200，R356，第三层 Boss）：一上场就是**第 1 阶段**。
+	# 同样放在 place 里 = 唯一初始化口（关卡摆位 / 将来任何召唤路径都一致）；
+	# 之后的 2、3 阶段由引擎按血量在 `_revelator_check_phase()` 里推进。
+	if card.id == GameEngine.REVELATOR_ID:
+		p.boss_phase = 1
 	# 能量屏障（8033，R87）：带该 trait 的单位一上场就获得「首次受伤免掉」的一次性护盾。
 	# 放在 place 里 = **唯一初始化口**，于是无论它是手牌打出来的、关卡摆位的、
 	# 还是效果卡召唤出来的，都一致（漏了某条路径 = 那条路径出来的没有护盾）。
