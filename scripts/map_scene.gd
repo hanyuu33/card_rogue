@@ -16,6 +16,9 @@ extends Control
 ##   * 每层 12 块巧克力：进入**没走过**的房间扣 1 块（悬浮会提示 -1），
 ##     原路返回走过的房间不扣、并且什么都不发生；
 ##   * 巧克力扣到 0 → 当前房间结算完 → 「入夜了，强大的敌人来袭」→ Boss 战。
+##   * ⚠️ R357：**第三层不用这套**（用户口径「第三层不再使用巧克力机制」）：
+##     这一层是一字直道，格子不扣块数、HUD 不显示计数、永不入夜 ——
+##     Boss 战只由「走到直道尽头的 Boss 格」触发（`_commit_enter` 的 "boss" 分支）。
 ##
 ## 界面：每层一张背景图（缺图回退渐变）+ **半透明格子**（尽量不把背景图挡死）。
 ## 地图整体（826 × 590）能完整放进视口 —— 所以旧版的滚动 / 滚动提示 / 滚动条已全部移除。
@@ -572,7 +575,11 @@ func _commit_enter(cell: Dictionary) -> void:
 			_set_note("起点补给：生命已满（%d/%d）" % [RunState.hp, RunState.max_hp])
 	if not bool(res.get("is_new", false)):
 		# 原路返回：不扣巧克力、不结算 —— 给一句轻提示，免得玩家以为点击失效。
-		_set_note("这里是走过的房间，什么都不会发生（不消耗巧克力）")
+		# R357：第三层本来就不消耗步数，提示里不该再提「巧克力」这三个字。
+		if RunState.current_layer == GameLayers.LAYER_THREE:
+			_set_note("这里是走过的房间，什么都不会发生")
+		else:
+			_set_note("这里是走过的房间，什么都不会发生（不消耗巧克力）")
 		return
 	# R200：持有货物 → 第二层第一个事件房替换成「委托完成」（一次性）。
 	# ⚠️ 必须在 pending_node = cell **之前**改：Dictionary 是引用，后改会断开。
@@ -645,7 +652,10 @@ func _process(delta: float) -> void:
 	# 因故残留也不该入夜（正常流程 add_chocolate 已清掉它，这里是双保险）。
 	# R339：再加一道 `not boss_beaten` —— 本层 Boss 打过就**永远**不再入夜，
 	# 不能只靠「巧克力见底」这一个条件（打完 Boss 剩 0 块，回地图再走一格就会满足它）。
+	# R357：第三层不走进夜这条路（这一层的 Boss 战由 Boss 格触发）——
+	# 判据直接读 `current_layer`，不靠「巧克力永远不会是 0」这种间接保证。
 	if RunState.run_active and not RunState.boss_beaten \
+			and RunState.current_layer != GameLayers.LAYER_THREE \
 			and RunState.boss_pending and RunState.chocolate <= 0 \
 			and not _boss_alert \
 			and _boss_hold <= 0.0 and _anim_cell.is_empty() \
@@ -967,9 +977,12 @@ func _draw_hud() -> void:
 			RunState.hp, RunState.max_hp, RunState.deck_ids.size()]
 	draw_string(_font, Vector2(size.x / 2 - 140, 52), hp_txt,
 			HORIZONTAL_ALIGNMENT_CENTER, 280, UiTheme.FS_LABEL, UiTheme.INK_300)
-	# 信息行：左边 Boss 名牌（玩家要能提前知道打谁），右边巧克力计数
+	# 信息行：左边 Boss 名牌（玩家要能提前知道打谁），右边巧克力计数。
+	# R357：第三层没有步数机制 → 计数面板整块不画（它旁边的悬浮「-1」也在
+	# `_draw_chocolate()` 里，一并消失；不然会有一块空面板 + 一个永远不动的 12）。
 	_draw_boss_chip()
-	_draw_chocolate()
+	if RunState.current_layer != GameLayers.LAYER_THREE:
+		_draw_chocolate()
 
 
 func _draw_boss_chip() -> void:
@@ -1138,7 +1151,8 @@ func _draw_anim_icon(cell: Dictionary, box: Rect2, alpha: float) -> void:
 
 func _draw_anim_cost(alpha: float, pop: float) -> void:
 	## 过场里在**巧克力计数旁**（左侧）亮出「巧克力图标 -1」。
-	if alpha <= 0.0:
+	## R357：第三层不扣步数 → 这里也不许亮「-1」（计数面板本身都没画了）。
+	if alpha <= 0.0 or RunState.current_layer == GameLayers.LAYER_THREE:
 		return
 	var panel := _choco_panel_rect()
 	var k := lerpf(0.86, 1.0, pop)          # 跟着图标一起「落定」的小弹跳
@@ -1182,8 +1196,11 @@ func _draw_sidebar() -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, 64, UiTheme.FS_CAPTION, UiTheme.SAND)
 		x += 84.0
 	# 右下提示
+	# R357：第三层是一条直道、不吃巧克力 —— 提示换成「走到首领格就开打」。
 	var hint := "小桥＝通路，全图可见 · 迷雾遮住房间内容，只看得清「下一步」的几间 · 走过的房间可免费返回 · 巧克力用完即打 Boss"
-	if _whisper_auto:
+	if RunState.current_layer == GameLayers.LAYER_THREE:
+		hint = "第三层是一条直道：起点 → 精英 → 商店 → 篝火 → 首领 · 这一层不消耗巧克力 · 走到首领格即开战"
+	elif _whisper_auto:
 		hint = "【鸭之低语】前路已被命运选定，你无法自主选择……"
 	elif RunState.has_relic(RunState.EAGLE_WHISTLE_RELIC_ID):
 		hint = "鹰哨：全图迷雾已散，每一格都看得见 · 小桥＝通路 · 巧克力用完即打 Boss"

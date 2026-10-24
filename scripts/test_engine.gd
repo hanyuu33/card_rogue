@@ -25957,14 +25957,94 @@ func _init() -> void:
 			"R356 地图：起点补给挂在第三层起点格上；void 格命中先落空；首领节点有门牌")
 	var r356_bsrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 	var r356_bp_at := r356_bsrc.find('"boss_phase":')
-	var r356_bp_body := r356_bsrc.substr(r356_bp_at, 1600) if r356_bp_at >= 0 else ""
+	var r356_bp_body := r356_bsrc.substr(r356_bp_at, 2600) if r356_bp_at >= 0 else ""
 	check_src(r356_bp_at >= 0
 			and r356_bp_body.find("_ee_popup = false") >= 0
-			and r356_bp_body.find("_ee_popup_at = n + EE_PHASE_POPUP_DELAY") >= 0,
-			"R356 界面：转阶段先收掉旧弹窗，再排队 0.7s 后重弹敌方效果（不盖住动画）")
+			and r356_bp_body.find(
+				"_ee_popup_at = n + REV_RETURN_MS - 60 + REV_FX_MS + REV_FACE_GAP_MS") >= 0,
+			"R357 界面：转阶段先收掉旧弹窗，重弹排在「退回后排 + 特效」之后（不盖住动画）")
 	check_src(r356_bsrc.find("if _ee_popup_at > 0 and _now() >= _ee_popup_at:") >= 0
 			and r356_bsrc.find("_ee_popup_at = 0") >= 0,
 			"R356 界面：排队到点在 _process 里真正弹出来")
+
+	# ================================================================
+	# R357：第三层不用巧克力机制 + 启示者三阶段卡图 / 转阶段演出顺序
+	# ================================================================
+	# ---- ① 直道：走进每一格都不扣巧克力，也永不置 boss_pending ----
+	RunState.start_run([], GameLayers.LAYER_THREE, PlayerClass.DRUID, 357)
+	var r357_choco: int = RunState.chocolate
+	var r357_start_col: int = int(RogueMap.start_cell(RunState.map_cells)["col"])
+	var r357_ahead: Array = []
+	for r357_c: Dictionary in RunState.map_cells:
+		if not RogueMap.is_void(r357_c) and int(r357_c["col"]) > r357_start_col:
+			r357_ahead.append(int(r357_c["id"]))
+	r357_ahead.sort()
+	var r357_costs: Array = []
+	for r357_nid: int in r357_ahead:
+		var r357_mv: Dictionary = RunState.advance(r357_nid)
+		r357_costs.append(int(r357_mv.get("cost", -1)))
+	check(r357_costs == [0, 0, 0, 0],
+			"R357 第三层：直道 4 格全部 cost=0（实际 %s）" % str(r357_costs))
+	check(RunState.chocolate == r357_choco and not RunState.boss_pending,
+			"R357 第三层：走过整条道巧克力一块没少（%d），boss_pending 一次都没置位"
+			% RunState.chocolate)
+
+	# ---- ② 站在 Boss 格上 = 该打启示者（走进它就进 Boss 战）----
+	var r357_boss_cell: Dictionary = {}
+	for r357_c2: Dictionary in RunState.map_cells:
+		if int(r357_c2["id"]) == RunState.current_node_id:
+			r357_boss_cell = r357_c2
+	check(str(r357_boss_cell.get("type", "")) == "boss"
+			and RogueMap.display_type(r357_boss_cell) == "boss"
+			and str(RunState.next_level(r357_boss_cell).get("key", "")) == "boss_revelator",
+			"R357 第三层：直道尽头是 Boss 格，next_level 给的就是启示者那关")
+
+	# ---- ③ 疲惫：这一层没有步数，就不该有「行动力低时疲惫」----
+	RunState.add_card(RunState.FATIGUE_CARD_ID)
+	RunState.sync_fatigue()
+	check(not RunState.deck_ids.has(RunState.FATIGUE_CARD_ID),
+			"R357 第三层：疲惫卡被 sync_fatigue 清掉（这一层不会自然消除它）")
+
+	# ---- ④ 卡图：三阶段三张图，取图按阶段走 ----
+	var r357_has := true
+	for r357_sfx: String in ["", "_p2", "_p3"]:
+		if not CardFace._pic_exists("res://assets/pics/9200%s.png" % r357_sfx):
+			r357_has = false
+	check(r357_has, "R357 卡图：启示者三阶段各一张（9200.png / 9200_p2.png / 9200_p3.png）")
+	var r357_t1 := CardFace.art_for(GameEngine.REVELATOR_ID, false, 1)
+	var r357_t2 := CardFace.art_for(GameEngine.REVELATOR_ID, false, 2)
+	var r357_t3 := CardFace.art_for(GameEngine.REVELATOR_ID, false, 3)
+	check(r357_t1 != null and r357_t2 != null and r357_t3 != null
+			and r357_t1.resource_path != r357_t2.resource_path
+			and r357_t2.resource_path != r357_t3.resource_path,
+			"R357 卡图：第 1 / 2 / 3 阶段取到三张不同的图")
+
+	# ---- ⑤ 源码守卫：三条闸门 + 演出顺序 ----
+	var r357_rsrc := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	check_src(r357_rsrc.find("cost = 0 if free_layer else 1") >= 0
+			and r357_rsrc.find("== GameLayers.LAYER_THREE") >= 0,
+			"R357 源码：第三层免步数只写在 advance() 这一个口")
+	var r357_msrc2 := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	check_src(r357_msrc2.find("if RunState.current_layer != GameLayers.LAYER_THREE:\n\t\t_draw_chocolate()") >= 0
+			and r357_msrc2.find("and RunState.current_layer != GameLayers.LAYER_THREE") >= 0,
+			"R357 地图：第三层不画巧克力计数，也不走进夜那条路")
+	var r357_bsrc2 := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r357_bsrc2.find("func _draw_rev_honeycomb") >= 0
+			and r357_bsrc2.find("func _draw_rev_burn") >= 0
+			and r357_bsrc2.find('"kind": "honeycomb" if bp_ph == 2 else "burn"') >= 0,
+			"R357 界面：1→2 蜂窝电磁屏障 / 2→3 燃烧掠过（两段特效各自一个绘制口）")
+	check_src(r357_bsrc2.find('_slides[bp_p] = {"from": _cell_center(bp_from)') >= 0,
+			"R357 界面：转阶段先把它**滑回后排**（不是瞬移）")
+	check_src(r357_bsrc2.find("_rev_face_phase = maxi(_rev_face_phase, _rev_fx_phase)") >= 0
+			and r357_bsrc2.find("if not _rev_fx.is_empty() and _now() >= int(_rev_fx.start) + int(_rev_fx.dur):") >= 0,
+			"R357 界面：卡面在特效**播完之后**才换（_rev_face_phase 延后一拍）")
+	var r357_cfsrc := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+	check_src(r357_cfsrc.find("_p%d.png") >= 0
+			and r357_cfsrc.find('var phase_suffix := ""') >= 0,
+			"R357 卡面：art_for 认 <id>_p<阶段>.png 的阶段变体图")
+	var r357_esrc2 := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r357_esrc2.find('"from": from_cell') >= 0,
+			"R357 引擎：boss_phase 事件带 from（退回前站的那一格）")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

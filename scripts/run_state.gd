@@ -46,6 +46,9 @@ static var cleared_ids: Array = []
 static var seen_ids: Array = []
 ## R128 巧克力：每层固定 RogueMap.MAX_STEPS 块。进入**没走过**的房间扣 1 块，
 ## 原路返回走过的房间不扣。扣到 0 → 本房间内容结算完立刻开 Boss 战（boss_pending）。
+## ⚠️ R357：**第三层不适用**（用户口径「第三层不再使用巧克力机制」）——
+##    直道的格子一格都不扣（`advance()` 里 cost = 0），Boss 战只由「走到 Boss 格」触发；
+##    连带 `boss_pending` 永不置位、`sync_fatigue()` 在这一层直接清掉疲惫卡。
 static var chocolate := 0
 ## R181 金币：本局货币。初始 100；战斗胜利按难度掉落（普通简单 20 / 普通困难 30 /
 ## 精英简单 50 / 精英困难 65 / Boss 100）；开普通宝箱 +50、大宝箱 +80；商店消费。
@@ -569,6 +572,13 @@ static func sync_fatigue() -> void:
 	## 调用点：start_run / advance_layer / advance（扣巧克力后）/ 事件与商店的巧克力加法 /
 	## RunSave.load_run（读档后按巧克力纠正）。
 	## ⚠️ 战斗内不调用（战斗中巧克力不变；手牌每场从 deck_ids 重抽，删卡组即生效）。
+	# R357：第三层没有巧克力 → 「行动力低时疲惫」在这一层不存在。
+	# 从第二层带进来的那张疲惫卡（难度 8 起、进层时巧克力还低过）在这里要拿掉，
+	# 否则玩家会带着一张「这一层根本不会自然消除」的废卡打启示者。
+	if current_layer == GameLayers.LAYER_THREE:
+		if deck_ids.has(FATIGUE_CARD_ID):
+			remove_all_cards(FATIGUE_CARD_ID)
+		return
 	if fatigue_active() and chocolate < DIFF_FATIGUE_LIMIT:
 		if not deck_ids.has(FATIGUE_CARD_ID):
 			add_card(FATIGUE_CARD_ID)
@@ -1884,20 +1894,26 @@ static func advance(node_id: int) -> Dictionary:
 	var cost := 0
 	var revealed := false
 	if is_new:
-		cost = 1
-		cleared_ids.append(node_id)
 		var c: Dictionary = map_cells[node_id]
+		# R357（用户口径「第三层不再使用巧克力机制」）：第三层的格子**不收步数**。
+		# 这一层的终局是「走到 Boss 格就开打」（map_scene._commit_enter 的 "boss" 分支），
+		# 与「巧克力耗尽 → 入夜 → Boss 战」那条旧链路彻底解耦 —— 所以三个后续动作
+		# （扣块数 / 置 boss_pending / 按块数同步疲惫）在第三层**一个都不做**。
+		var free_layer: bool = int(c.get("layer", current_layer)) == GameLayers.LAYER_THREE
+		cost = 0 if free_layer else 1
+		cleared_ids.append(node_id)
 		if bool(c.get("hidden", false)) and not bool(c.get("revealed", false)):
 			c["revealed"] = true
 			revealed = true
-		chocolate = maxi(0, chocolate - cost)
-		# R339：本层 Boss 已经打过 → 巧克力见底也不再入夜（否则打完 Boss 再走一格，
-		#       map_scene 会立刻又开同一场 Boss 战 —— 用户报的「回地图再次进 Boss」）。
-		if chocolate <= 0 and not boss_beaten:
-			boss_pending = true
-		# R223 难度 5「行动力低时疲惫」：巧克力跨过 6 的临界 → 疲惫入 / 出卡组
-		# （唯一推导口 sync_fatigue，从 deck_ids 直接判，不加布尔 flag）
-		sync_fatigue()
+		if cost > 0:
+			chocolate = maxi(0, chocolate - cost)
+			# R339：本层 Boss 已经打过 → 巧克力见底也不再入夜（否则打完 Boss 再走一格，
+			#       map_scene 会立刻又开同一场 Boss 战 —— 用户报的「回地图再次进 Boss」）。
+			if chocolate <= 0 and not boss_beaten:
+				boss_pending = true
+			# R223 难度 5「行动力低时疲惫」：巧克力跨过 6 的临界 → 疲惫入 / 出卡组
+			# （唯一推导口 sync_fatigue，从 deck_ids 直接判，不加布尔 flag）
+			sync_fatigue()
 	current_node_id = node_id
 	reveal_known()   # R207：走进来之后立刻把新视野记进 seen —— 旧邻居不会因为
 	                 #      「已经不是邻居」而重新被雾盖回去（用户口径）

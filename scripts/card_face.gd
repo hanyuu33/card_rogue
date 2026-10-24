@@ -195,7 +195,7 @@ static func paper_tint(card: CardData) -> Color:
 	return c.lerp(Color.WHITE, CLASS_PAPER_MIX)
 
 
-static func art_for(id: int, sleeping := false) -> Texture2D:
+static func art_for(id: int, sleeping := false, phase := 0) -> Texture2D:
 	# sleeping=true 时优先取沉睡专用图 `<id>_sleep.png`（R182 恶魔鸭沉睡状态）；
 	# 沉睡图缺失则回退普通卡图 —— 不空白、不报错。
 	# 公用初始卡（8001 木栅栏 / 8002 攻击）按 RunState.player_class 换图；
@@ -204,7 +204,13 @@ static func art_for(id: int, sleeping := false) -> Texture2D:
 	var suffix := ""
 	if PlayerClass.is_base_common(id):
 		suffix = "_" + String(ART_VARIANT_SUFFIX.get(RunState.player_class, "forest"))
-	var key := str(id) + suffix + ("_sleep" if sleeping else "")
+	# R357：**阶段变体图**（多阶段 Boss）—— `phase >= 2` 时优先取 `<id>_p<phase>.png`。
+	# 约定：`<id>.png` = 第 1 阶段的图，`<id>_p2.png` / `<id>_p3.png` = 后续阶段的图。
+	# 缺图逐级回退（p3 → p2 → 基础图），所以新阶段图没做好时只是「图不变」，不会空白。
+	var phase_suffix := ""
+	if phase >= 2:
+		phase_suffix = "_p%d" % phase
+	var key := str(id) + suffix + ("_sleep" if sleeping else "") + phase_suffix
 	if not _art_cache.has(key):
 		var path := "res://assets/pics/%d.png" % id
 		if suffix != "":
@@ -215,6 +221,12 @@ static func art_for(id: int, sleeping := false) -> Texture2D:
 			var sp := "res://assets/pics/%d%s_sleep.png" % [id, suffix]
 			if _pic_exists(sp):
 				path = sp
+		if phase >= 2:
+			for ph in range(phase, 1, -1):
+				var pp := "res://assets/pics/%d%s_p%d.png" % [id, suffix, ph]
+				if _pic_exists(pp):
+					path = pp
+					break
 		_art_cache[key] = load(path) if _pic_exists(path) else null
 	return _art_cache[key]
 
@@ -307,7 +319,7 @@ static func text_zone_bottom(rect: Rect2) -> float:
 static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		selected: bool, is_tapped: bool, font: Font, font_bold: Font,
 		power_override := -1, on_board := false, sleeping := false,
-		name_only := false) -> void:
+		name_only := false, phase := 0) -> void:
 	## 卡面一律按 rect **完整排版**，与图鉴/战场小卡同一套比例，没有「按可见高度重锚」
 	## 之类的特例 —— 手牌卡底沉出窗口下沿时，被挡住的那截就让它挡住
 	## （作者口径：卡片是一个整体，排版要与正常状态完全一致，别为了躲裁剪挪数值）。
@@ -337,7 +349,7 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		canvas.draw_rect(Rect2(rect.position.x + bw / 2.0, frame_top + bw / 2.0,
 				rect.size.x - bw, rect.end.y - frame_top - bw), UiTheme.CARD_FRAME, false, bw)
 	# ④ 卡图区（上半）
-	_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold, sleeping)
+	_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold, sleeping, phase)
 	# ④b 稀有度缎带（R170）：挂在**右上角**、压在卡图之上。
 	#     （旧色块小旗画在卡图**之前**，被开放式卡图整个盖住 —— 等于没画。）
 	_draw_rarity_ribbon(canvas, card, rect, k, pad)
@@ -498,7 +510,7 @@ static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 
 
 static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float, pad: float,
-		is_tapped: bool, font_bold: Font, sleeping := false) -> void:
+		is_tapped: bool, font_bold: Font, sleeping := false, phase := 0) -> void:
 	## 卡图区 = 卡片上半（R114 起）。R165：卡图**开放**——左/右/上直接出血到卡边，
 	## 不再有内框；卡框只留在底部（见 `draw()` ③）。
 	## sleeping=true → 取沉睡专用图（`<id>_sleep.png`，缺失回退普通卡图）。
@@ -506,7 +518,7 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 			Vector2(rect.size.x, rect.size.y * UiTheme.CARD_ART_RATIO))
 	if box.size.x < 6.0 or box.size.y < 6.0:
 		return
-	var tex := art_for(card.id, sleeping)
+	var tex := art_for(card.id, sleeping, phase)
 	if tex != null:
 		# 覆盖式铺满（cover）：卡图出血到卡边、不留白（R165 开放式卡图）。
 		canvas.draw_texture_rect_region(tex, box, cover_region(tex.get_size(), box), Color.WHITE)

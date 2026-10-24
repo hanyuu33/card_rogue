@@ -2579,8 +2579,10 @@ func _revelator_enter_phase(p: Placement, phase: int) -> void:
 	if p.health < 1:
 		p.health = 1
 	_log("启示者进入第 %d 阶段（剩余生命 %d）" % [phase, p.health])
+	# R357：带上 `from`（退回前的格子）—— 界面要先把它**滑回**后排（`_slides`），
+	# 再播阶段特效，最后才换卡图。没有这个字段，界面就只知道「它已经在后排了」。
 	action.emit("boss_phase", {"cell": home, "card": p.card, "phase": phase,
-			"health": p.health, "effect_id": eff_id})
+			"health": p.health, "effect_id": eff_id, "from": from_cell})
 
 
 func _set_revelator_effect(card_id: int) -> void:

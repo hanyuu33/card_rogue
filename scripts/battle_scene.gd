@@ -264,6 +264,17 @@ var _grid_zoom := 1.0
 var _ee_popup := false
 var _ee_popup_t0 := 0            # 弹窗开启时刻（msec）—— 自动关闭的计时起点
 var _ee_popup_at := 0            # R356：转阶段排队重弹的时刻（0 = 没有排队）
+## R357：转阶段的演出三段（用户口径「先移回后排 → 播特效动画 → 播完再改换卡面」）。
+## 三个状态必须分开存 —— 只有分开，卡面才能比引擎晚一拍：
+##   `_rev_fx`        正在播的那段特效（{} = 没在播）
+##   `_rev_fx_phase`  这段特效播完要换上的阶段（0 = 没有排队）
+##   `_rev_face_phase` 当前**显示**用的卡面阶段（0 = 跟随引擎的 `boss_phase`）
+var _rev_fx := {}
+var _rev_fx_phase := 0
+var _rev_face_phase := 0
+const REV_RETURN_MS := 460      # 本体滑回后排的时长（先演这个）
+const REV_FX_MS := 900          # 屏障 / 燃烧覆盖卡面的时长（后演这个）
+const REV_FACE_GAP_MS := 160    # 特效收尾 → 重弹敌方效果的间隔
 var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本不覆盖
 ## R118：左键点「空位」**不再一步取消**。为 true = 本轮的第一次空位点击已经发生 ——
 ## 选区、绿色移动格、红色攻击格、深红 HP 格**全部原样保留**（于是这时点目标照样能打），
@@ -2811,6 +2822,17 @@ func _demo_tick() -> void:
 		_shot_t0 = _now()
 		_clear_hover_state()
 		selection = null
+	if _shot_pending and "--revface" in _demo_args \
+			and _demo_frame == 300 and engine != null:
+		# R357 出图：**不播转阶段**，只把「当前显示哪一阶段卡面」钉死。
+		# 用途 = 单独核对三张卡图（引擎的 `boss_phase` 不动，界面也不会自动改回去）。
+		# 出图：`battle.tscn -- --screenshot --level 33 --revface 2 --shotframe 600`
+		for rvf_i in _demo_args.size():
+			if _demo_args[rvf_i] == "--revface" and rvf_i + 1 < _demo_args.size():
+				_rev_face_phase = clampi(int(_demo_args[rvf_i + 1]), 1, 3)
+		_shot_t0 = _now()
+		_clear_hover_state()
+		selection = null
 	if _shot_pending and "--r288knife" in _demo_args \
 			and _demo_frame == _shot_frame - 12 and engine != null:
 		# 真走引擎结算：主刀 `_op_deal_damage` + 两跳 `_hit_unit`，
@@ -3590,6 +3612,10 @@ func load_level(lvl: Dictionary) -> void:
 	# R136/R146：开场巡场 —— 停自己半场 → 推进到对方半场（放大）→ **拖回我方 + 还原大小**。
 	_ee_popup = false   # R197：新一场战斗，开场弹窗重新计一次
 	_ee_popup_at = 0    # R356：上一场排队中的「转阶段重弹」不许漏到这一场
+	# R357：转阶段特效 / 待换卡面同样不许漏场（新一场的启示者必须从第 1 张图开始）。
+	_rev_fx = {}
+	_rev_fx_phase = 0
+	_rev_face_phase = 0
 	if _grid_scrollable():
 		_grid_scroll = _grid_scroll_max()
 		_grid_zoom = 1.0
@@ -6826,12 +6852,19 @@ func _draw_map_panel() -> void:
 	draw_rect(pr, Color("6a6f7d"), false, 2.0)
 	_draw_string_center(_font_bold, UiTheme.FS_BODY, "冒 险 地 图（战斗中查看）",
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 26.0), UiTheme.SAND)
-	_draw_string_center(_font, UiTheme.FS_CAPTION,
-			"%s    已探索 %d / %d 间    巧克力 ×%d    生命 %d/%d    卡组 %d 张" % [
+	# R357：第三层没有步数机制 → 这一行里不再出现「巧克力 ×N」（否则永远显示满格的
+	# 12，玩家会以为「还有 12 步可以走」）。
+	var mv_info := "%s    已探索 %d / %d 间    生命 %d/%d    卡组 %d 张" % [
+			GameLayers.layer_name(RunState.current_layer),
+			RunState.cleared_ids.size(), RunState.map_cells.size(),
+			RunState.hp, RunState.max_hp, RunState.deck_ids.size()]
+	if RunState.current_layer != GameLayers.LAYER_THREE:
+		mv_info = "%s    已探索 %d / %d 间    巧克力 ×%d    生命 %d/%d    卡组 %d 张" % [
 				GameLayers.layer_name(RunState.current_layer),
 				RunState.cleared_ids.size(), RunState.map_cells.size(),
 				RunState.chocolate, RunState.hp, RunState.max_hp,
-				RunState.deck_ids.size()],
+				RunState.deck_ids.size()]
+	_draw_string_center(_font, UiTheme.FS_CAPTION, mv_info,
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 48.0), UiTheme.INK_300)
 	_draw_string_center(_font, UiTheme.FS_CAPTION,
 			"本层 Boss：%s　·　战斗中不能改路线"
@@ -7411,6 +7444,7 @@ func _draw() -> void:
 	_draw_highlights()
 	_draw_bursts()
 	_draw_cues()          # R288：通用效果演出（脉冲 / 光带 / 卡名）—— 压在卡牌之上才看得见
+	_draw_rev_fx()        # R357：转阶段特效（蜂窝电磁屏障 / 燃烧）—— 盖在启示者卡面上
 	_draw_wake_rings()
 	# R139：边框跟着战场本体滚动 → 顶带 / 底带会越过可视窗上下沿，必须**先画边框、
 	# 再画遮罩**把溢出裁掉；顺序反了边框就会糊在工具栏与手牌上。
@@ -7493,7 +7527,8 @@ func _art(card: CardData, rect: Rect2) -> void:
 
 
 func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_tapped: bool,
-		cost_override := -1, power_override := -1, on_board := false, sleeping := false) -> void:
+		cost_override := -1, power_override := -1, on_board := false, sleeping := false,
+		phase := 0) -> void:
 	## 卡面一律按 rect 完整排版（含手牌）—— 卡底沉出窗口下沿的那截由视口裁掉，
 	## 卡面内容**不做**任何偏移补偿：卡片是一个整体，被挡住就挡住。
 	## cost_override >= 0 且不等于卡面费用 → 在费用圆上重画**绿色**数字，
@@ -7504,7 +7539,7 @@ func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_ta
 	## name_only = true（战斗内一律）→ 卡面**只画卡名**，不画种类·字段与效果文 ——
 	##   效果详情由悬停/点选的描述面板提供（左侧信息栏「悬停优先，其次选中的卡」）。
 	CardFace.draw(self, card, rect, hp, selected, is_tapped, _font, _font_bold, power_override,
-			on_board, sleeping, true)
+			on_board, sleeping, true, phase)
 	if not card.x_cost and cost_override >= 0 and cost_override != card.cost:
 		# ⚠️ R122：**必须走 CardFace.draw_badge()**（同一个槽位的唯一绘制口）。
 		# 这里原来自己 `draw_circle` 盖一个纯色圆盘 —— R115 把费用徽章换成
@@ -7759,7 +7794,7 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	# 沉睡（恶魔鸭 9116，sleep_left>0）→ 换沉睡专用卡图；其余状态用普通卡图。
 	_draw_card_face(p.card, Rect2(center - Vector2(w, h) / 2.0, Vector2(w, h)),
 			_show_hp(p, p.health), selected, false, -1, p.effective_power(), true,
-			p.sleep_left > 0)
+			p.sleep_left > 0, _rev_art_phase(p))
 	# R165：移除「横置」视觉——不再把卡转横。改用青色**就绪光环**标明「可行动」：
 	# 凡本回合还有行动权（未横置）的单位都亮脉动环（敌我同标），以此区分不能动的卡。
 	if not p.tapped:
@@ -10550,21 +10585,38 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var bp_name := "启示者"
 			if data.get("card") is CardData:
 				bp_name = (data["card"] as CardData).card_name
+			var bp_from: Vector2i = data.get("from", Vector2i(-1, -1))
 			var bp_col := Color("b06be0") if bp_ph == 2 else Color("e2703a")
 			sfx.play("spell")
 			n = _now()
+			# ① 先移回后排：引擎那边是瞬移（结算要先落地），这里把它**演**出来 ——
+			#    本体从被击中的格子滑回后排中间，滑动期间不播特效。
+			var bp_p := engine.state.unit_at(bp_cell)
+			if bp_p != null and bp_from.x >= 0 and bp_from != bp_cell:
+				_slides[bp_p] = {"from": _cell_center(bp_from), "to": _cell_center(bp_cell),
+						"start": n, "dur": REV_RETURN_MS, "sc": _grid_scroll, "from_grid": true}
 			_shake(9.0, 440)
 			_bursts.append({"pos": _cell_center(bp_cell), "sc": _grid_scroll, "start": n,
 					"dur": 940, "col": bp_col, "big": true})
 			_bursts.append({"pos": _cell_center(bp_cell), "sc": _grid_scroll,
 					"start": n + 170, "dur": 780, "col": Color("fff4d0"), "big": true})
-			_floaters.append({"pos": _cell_center(bp_cell) + Vector2(0, -26), "sc": _grid_scroll,
-					"text": "阶段 %d" % bp_ph, "col": bp_col, "size": 22,
+			# R357：阶段飘字原来压在卡面上（-26 还在卡内），把正在播的屏障 / 燃烧挡住了 ——
+			# 上移到卡顶之上（-52），字号略收（22 → 20），让「卡面在演什么」看得见。
+			_floaters.append({"pos": _cell_center(bp_cell) + Vector2(0, -52), "sc": _grid_scroll,
+					"text": "阶段 %d" % bp_ph, "col": bp_col, "size": 20,
 					"start": n, "dur": 1700})
 			_show_banner("第 %d 阶段 · %s" % [bp_ph, bp_name], bp_col, 1700)
 			_push_cue([bp_cell], "阶段 %d" % bp_ph, bp_col)
+			# ② 退回演完之后才起特效：1→2 蜂窝电磁屏障覆盖、2→3 燃烧掠过（见 `_draw_rev_fx`）。
+			_rev_fx = {"kind": "honeycomb" if bp_ph == 2 else "burn",
+					"start": n + REV_RETURN_MS - 60, "dur": REV_FX_MS, "cell": bp_cell}
+			_rev_fx_phase = bp_ph
+			queue_redraw()
+			# ③ 卡面**不许现在换**（`_rev_face_phase` 留给特效收尾那一刻）——
+			#    于是这段时间里读到的仍是上一阶段的图。
 			_ee_popup = false                          # 收掉旧的（开场那份 / 上一阶段那份）
-			_ee_popup_at = n + EE_PHASE_POPUP_DELAY    # 0.7s 后重弹，避开这一下的演出
+			# ④ 重弹敌方效果排到「特效播完 + 换好卡面」之后，不盖住演出。
+			_ee_popup_at = n + REV_RETURN_MS - 60 + REV_FX_MS + REV_FACE_GAP_MS
 			_say("⚠ 启示者进入第 %d 阶段（生命 %d）" % [bp_ph, int(data.get("health", 0))])
 		"naval_gun":
 			# R356 舰炮 9201（阶段 1）：列号 -1 = 三列全空 → 改打 HP。
@@ -10723,6 +10775,139 @@ func _draw_bursts() -> void:
 			var dir := Vector2(cos(ang), sin(ang))
 			var lcol := Color(col.r, col.g, col.b, 0.9 * (1.0 - t))
 			draw_line(pos + dir * near, pos + dir * far, lcol, 2.0 if big else 1.5)
+
+
+func _rev_art_phase(p: Placement) -> int:
+	## 场上单位该用哪张「阶段卡图」（R357）。只有启示者有多阶段卡图，其余恒为 0。
+	## `_rev_face_phase` 非 0 时以它为准 —— 那是「特效还没播完、先别改卡面」的延迟口径；
+	## 为 0 时跟随引擎的 `boss_phase`（第 1 阶段 → 基础图 `<id>.png`）。
+	if p == null or p.card == null or p.card.id != GameEngine.REVELATOR_ID:
+		return 0
+	if _rev_face_phase > 0:
+		return _rev_face_phase
+	return maxi(1, p.boss_phase)
+
+
+func _draw_rev_fx() -> void:
+	## R357：转阶段的两段特效（用户口径）——
+	##   1→2 **淡蓝色透明蜂窝（小正六边形）电磁屏障从上到下覆盖卡面**；
+	##   2→3 **燃烧从上往下掠过卡面**。
+	## 画在卡牌之后，所以是盖在启示者卡面上；仍在棋盘变换里 → 跟着震屏一起动，
+	## 外溢部分由棋盘遮罩裁掉（不会糊到左右面板上）。
+	if _rev_fx.is_empty():
+		return
+	var n := _now()
+	var t: float = float(n - int(_rev_fx.start)) / maxf(1.0, float(_rev_fx.dur))
+	if t < 0.0:
+		return
+	t = clampf(t, 0.0, 1.0)
+	var cell: Vector2i = _rev_fx.get("cell", Vector2i(0, 0))
+	var box := Rect2(_cell_center(cell) - Vector2(BOARD_CARD_W, BOARD_CARD_H) * 0.5,
+			Vector2(BOARD_CARD_W, BOARD_CARD_H))
+	if str(_rev_fx.get("kind", "")) == "honeycomb":
+		_draw_rev_honeycomb(box, t, n)
+	else:
+		_draw_rev_burn(box, t)
+
+
+func _draw_rev_honeycomb(box: Rect2, t: float, n: int) -> void:
+	## 阶段 1→2：蜂窝电磁屏障。前 55% 的时间**从上到下**把卡面铺满，之后整片呼吸两下。
+	## 淡蓝、低透明度 —— 卡面必须仍然看得清（这是「罩上去一层」，不是「糊一块板」）。
+	var cover: float = 1.0 - pow(1.0 - clampf(t / 0.55, 0.0, 1.0), 3.0)   # ease-out
+	var y_end: float = box.position.y + box.size.y * cover
+	if y_end <= box.position.y + 0.5:
+		return
+	draw_rect(Rect2(box.position, Vector2(box.size.x, y_end - box.position.y)),
+			Color(0.42, 0.78, 1.0, 0.13), true)
+	# 小正六边形网格：横向步进 √3·r、纵向 1.5·r（尖顶六边形密铺的正确间距）
+	var r: float = maxf(3.2, box.size.x / 9.0)
+	var hw: float = r * 1.7320508
+	var vh: float = r * 1.5
+	var breathe: float = 0.78 + 0.22 * sin(float(n) / 210.0)
+	var row := 0
+	var y: float = box.position.y + r
+	while y < y_end:
+		var x: float = box.position.x + hw * (0.5 if row % 2 == 1 else 0.0)
+		while x < box.end.x + hw * 0.5:
+			if y + r * 0.5 <= y_end:   # 只画「已经铺到」的那部分
+				var hex := PackedVector2Array([
+						Vector2(x, y - r), Vector2(x + hw * 0.5, y - r * 0.5),
+						Vector2(x + hw * 0.5, y + r * 0.5), Vector2(x, y + r),
+						Vector2(x - hw * 0.5, y + r * 0.5),
+						Vector2(x - hw * 0.5, y - r * 0.5), Vector2(x, y - r)])
+				draw_polyline(hex, Color(0.62, 0.90, 1.0, 0.55 * breathe), 1.0)
+			x += hw
+		y += vh
+		row += 1
+	# 推进中的那条亮边 —— 全靠它读得出「从上往下覆盖」的方向
+	if cover < 1.0:
+		draw_line(Vector2(box.position.x, y_end), Vector2(box.end.x, y_end),
+				Color(0.88, 0.97, 1.0, 0.9), 2.0)
+		draw_rect(Rect2(box.position.x, y_end - 3.0, box.size.x, 3.0),
+				Color(0.72, 0.93, 1.0, 0.35), true)
+	# 铺满之后闪一下再收（屏障「立起来」的定格）
+	if t > 0.75:
+		var fade: float = 1.0 - (t - 0.75) / 0.25
+		draw_rect(box, Color(0.80, 0.96, 1.0, 0.18 * fade), true)
+
+
+func _draw_rev_burn(box: Rect2, t: float) -> void:
+	## 阶段 2→3：一条火带从上往下**掠过**卡面，扫过的地方留一层焦黑。
+	## ⚠️ 第一版画成三层不透明多边形 → 出图读成「一块实心橙板」，卡面全被糊住。
+	## 现在：① 每层只画**带 + 向上火舌**（不是整块矩形）；② 三层透明度压到 0.34~0.42
+	## （要能看见卡面在烧）；③ 火舌用确定性哈希取长短，锯齿幅度按带高比例放大。
+	var band_h: float = box.size.y * 0.46
+	var y: float = box.position.y - band_h + (box.size.y + band_h * 1.5) * t
+	var scorch_to: float = minf(box.end.y, y - band_h * 0.1)
+	if scorch_to > box.position.y:
+		draw_rect(Rect2(box.position, Vector2(box.size.x, scorch_to - box.position.y)),
+				Color(0.06, 0.035, 0.02, 0.26), true)
+	# ① 火舌（向上翘的三角）先画，压在带子上就是「从带子里窜出来」的感觉
+	var steps := 6
+	for k in steps:
+		var fx: float = box.position.x + box.size.x * (float(k) + 0.5) / float(steps)
+		var fw: float = box.size.x / float(steps) * 0.42
+		var fh: float = band_h * (0.35 + 0.5 * _rev_hash(k, 9, 3))
+		var tongue := PackedVector2Array([
+				Vector2(fx - fw * 0.5, y), Vector2(fx, y - fh), Vector2(fx + fw * 0.5, y)])
+		draw_colored_polygon(tongue, Color(1.0, 0.62, 0.16, 0.40))
+	# ② 色阶带：深橙 → 亮橙 → 奶白，上沿锯齿
+	for i in 3:
+		var hh: float = band_h * (1.0 - 0.30 * i)
+		var yy: float = y + band_h * 0.12 * i
+		var col: Color = Color(0.88, 0.26, 0.06, 0.42)
+		if i == 1:
+			col = Color(1.0, 0.55, 0.12, 0.38)
+		elif i == 2:
+			col = Color(1.0, 0.94, 0.76, 0.34)
+		var pts := PackedVector2Array()
+		pts.append(Vector2(box.position.x, yy + hh))
+		var jag_n := 9
+		for k in jag_n + 1:
+			var fx: float = box.position.x + box.size.x * float(k) / float(jag_n)
+			pts.append(Vector2(fx, yy + (_rev_hash(k, i, 11) * 0.7 - 0.3) * hh))
+		pts.append(Vector2(box.end.x, yy + hh))
+		draw_colored_polygon(pts, col)
+	# ③ 火带前锋的亮线
+	var front: float = y + band_h * 0.92
+	if front > box.position.y and front < box.end.y:
+		draw_line(Vector2(box.position.x, front), Vector2(box.end.x, front),
+				Color(1.0, 0.88, 0.58, 0.72), 1.4)
+	# ④ 余烬：几颗小亮点随火带往下飘
+	for e in 7:
+		var ex: float = box.position.x + box.size.x * _rev_hash(e, 3, 5)
+		var ey: float = y + band_h * (0.4 + 0.7 * _rev_hash(e, 7, 2))
+		if ey > box.position.y and ey < box.end.y:
+			draw_circle(Vector2(ex, ey), 1.2, Color(1.0, 0.74, 0.32, 0.75))
+
+
+static func _rev_hash(a: int, b: int, c: int) -> float:
+	## 转阶段特效用的**确定性**伪随机（0~1）。不读 `run_rng` ——
+	## 演出不许把随机数消耗带进回放（这是这个仓库反复踩过的坑）。
+	var h: int = (a * 73856093) ^ (b * 19349663) ^ (c * 83492791)
+	h = (h ^ (h >> 13)) * 1274126177
+	h = h ^ (h >> 16)
+	return float(absi(h) % 1000) / 1000.0
 
 
 func _draw_wake_rings() -> void:
@@ -11206,10 +11391,12 @@ const EE_TEXT_HH := 126.0
 ## R215：开场弹窗的自动关闭时长（秒）。原来必须点一下才关 —— 玩家在等，
 ## 界面在等，实际上什么也没等。5 秒足够读完 3 条效果。
 const EE_POPUP_SEC := 5.0
-## R356：启示者转阶段「重新弹出敌方效果」的**延后量**（ms）。
-## 不能立刻弹 —— 洞口一开就把阶段横幅 / 震屏 / 本体爆点整个盖住了，
-## 用户要的是「明确的动画提示」**加上**「重新弹出效果」，不是二选一。
-const EE_PHASE_POPUP_DELAY := 700
+## R356：启示者转阶段「重新弹出敌方效果」要**延后**，不能立刻弹 ——
+## 洞口一开就把阶段横幅 / 震屏 / 本体爆点整个盖住了，用户要的是「明确的动画提示」
+## **加上**「重新弹出效果」，不是二选一。
+## R357：延后量改成跟着演出走（退回后排 → 阶段特效 → 换卡面），由
+## `REV_RETURN_MS / REV_FX_MS / REV_FACE_GAP_MS` 三段相加得到 ——
+## 原来的固定 700ms 盖不住这轮演出（特效本身就要 900ms），常量已删除。
 
 
 func _enemy_effect_popup_rect() -> Rect2:
@@ -12757,6 +12944,12 @@ func _process(delta: float) -> void:
 	if _net_mode:
 		_net_poll(delta)
 	_grid_intro_tick(delta)         # R136/R146：开场巡场（自己半场 → 对方半场放大 → 拖回我方）
+	# R357：转阶段特效到点 → **这时候才换卡面**（用户口径：特效动画播完再改卡面）。
+	if not _rev_fx.is_empty() and _now() >= int(_rev_fx.start) + int(_rev_fx.dur):
+		_rev_face_phase = maxi(_rev_face_phase, _rev_fx_phase)
+		_rev_fx = {}
+		_rev_fx_phase = 0
+		queue_redraw()
 	# R356：转阶段的「重新弹出敌方效果」到点了 —— 横幅 / 爆点这时候已经演完。
 	if _ee_popup_at > 0 and _now() >= _ee_popup_at:
 		_ee_popup_at = 0

@@ -37,7 +37,7 @@ echo.
 
 echo ============================================================
 echo  [done] every suite must print an "all passed" line.
-echo         baseline: engine 3542 / reward 26 / bgm 23 / smoke 44 checks, 0 failed.
+echo         baseline: engine 4145 / reward 26 / bgm 31 / smoke 46 checks, 0 failed.
 echo         (engine counts lower here than in 玩法说明.txt: source-text guards are skipped inside the pack.)
 echo ============================================================
 pause
