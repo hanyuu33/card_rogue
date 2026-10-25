@@ -14485,28 +14485,19 @@ func _assassin_cells(src: Vector2i) -> Array[Vector2i]:
 	return out
 
 
-func _nearest_foe_dist(dst: Vector2i) -> int:
-	## 到最近我方单位的曼哈顿距离；场上没有我方单位时退回「到我方后排最近格」的距离。
-	## 用曼哈顿（不是走位 BFS）—— 这里是**闪现**，不走路、不受阻挡影响。
-	var best:= AI_NO_ROUTE
-	for c: Vector2i in state.board:
-		var q: Placement = state.board[c]
-		if q.owner == SIDE_SELF:
-			best = mini(best, manhattan(dst, c))
-	if best != AI_NO_ROUTE:
-		return best
-	var row:= back_row(SIDE_SELF)
-	for col in FieldState.BOARD_COLS:
-		best = mini(best, manhattan(dst, Vector2i(row, col)))
-	return best
-
-
 func _assassin_cell_key(src: Vector2i, dst: Vector2i, p: Placement) -> Array:
 	## 闪现候选排序键（字典序，越小越好）：
-	##   ① 能打到我方单位优先（0 优于 1）；
+	##   ① **能打到我方单位才算有效落点**（0 优于 1）；
 	##   ② 能打时：目标血量越低越好（易击杀）、力量越高越好（威胁大）；
-	##   ③ 打不到时：离最近我方单位越近越好（逼近施压，下回合就能咬上）；
-	##   ④ 平手时**原地优先**（manhattan 0）→ 不会无意义乱跳；末位按格位定序（确定性可复现）。
+	##   ③ 平手时**原地优先**（manhattan 0）→ 不会无意义乱跳；末位按格位定序（确定性可复现）。
+	##
+	## ⚠️ R379（用户口径「必须确保自己能攻击到敌方单位才移动」）：
+	##   **这里不再有「打不到就往前靠」那一档**。闪现是全场任意空格、不受距离与阻挡影响 ——
+	##   「离得近」不积累任何优势（下回合照样能从任何一格闪到最优位），单纯挪位置只是
+	##   白烧一次行动，玩家看到的就是「AI 抽风乱跳」。
+	##   于是「一个落点都打不到」时所有候选在 ①②上完全平手 → ③ 原地胜出 →
+	##   `_assassin_step` 返回 null → 这回合按兵不动，把局面交给能打到的同伴
+	##   （鸭子骑士 / 鸭之暗面）处理。
 	var targets:= attack_targets(dst, SIDE_OPPONENT, p.card)
 	var can_hit:= 1 if targets.is_empty() else 0
 	var t_hp:= 999
@@ -14516,8 +14507,7 @@ func _assassin_cell_key(src: Vector2i, dst: Vector2i, p: Placement) -> Array:
 		if q != null:
 			t_hp = q.health if q.health > 0 else 999
 			t_pow = q.effective_power()
-	return [can_hit, t_hp, - t_pow, _nearest_foe_dist(dst) * 10,
-			manhattan(src, dst), dst.x, dst.y]
+	return [can_hit, t_hp, - t_pow, manhattan(src, dst), dst.x, dst.y]
 
 
 func _assassin_step(src: Vector2i, p: Placement) -> Variant:
@@ -14539,6 +14529,8 @@ func _assassin_step(src: Vector2i, p: Placement) -> Variant:
 func _assassin_act(cell: Vector2i, p: Placement) -> void :
 	## 鸭子暗杀者专属 AI（R111）：行动时先闪现到最优空格，再打射程内的我方单位。
 	## 它打不到对方 HP（hp_targets 已门禁），所以只要「找最好落点 → 打得到就打」。
+	## R379：**打不到就不闪**（`_assassin_cell_key` 里已去掉「逼近」档）——
+	## 闪现全场可达，挪位置换不来任何下回合优势，只会白烧一次行动。
 	var dst = _assassin_step(cell, p)
 	if dst != null:
 		move(cell, dst, SIDE_OPPONENT, true)
@@ -14551,7 +14543,7 @@ func _assassin_act(cell: Vector2i, p: Placement) -> void :
 		p = moved
 	if _ai_attack_if_any(cell, p):
 		return
-	_tap(p, "AI：暗杀者游走（本轮无可攻击目标）")
+	_tap(p, "AI：暗杀者按兵不动（这一格怎么闪都打不着，交给同伴）")
 
 
 # ================= R111：暗影领主成长 / 暗杀召唤 =================

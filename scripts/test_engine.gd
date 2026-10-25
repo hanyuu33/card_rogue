@@ -15945,6 +15945,85 @@ func _init() -> void:
 	check(r111_pg.state.hp_self == 20,
 		"R111 暗杀者 AI：全程**不打我方 HP**（仍 %d）" % r111_pg.state.hp_self)
 
+	# ---- R379：暗杀者「打不到就不闪」（用户口径：必须确保能攻击到才移动）----
+	# 闪现是**全场任意空格**、不看距离也不看阻挡 → 「靠近」不积累任何优势
+	# （下回合照样能从任何一格闪到最优位），白挪位置只会让玩家看到 AI 乱跳，
+	# 还白烧掉一次行动。所以：一个落点都打不到时 → 原地待命，交给能打到的同伴。
+	var r379_repo := CardRepo.load_json()
+	var r379_assi := CardData.from_dict(r379_repo.get_card(9123).to_dict())
+	var r379_knight := CardData.from_dict(r379_repo.get_card(9001).to_dict())
+
+	# ① 队友（鸭子骑士）正好占住唯一攻击位 → 怎么闪都打不到 → 不闪
+	var r379_a := _new_engine([], 20, 20)
+	r379_a.state.place(CardData.from_dict(r379_knight.to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	var r379_aa := r379_a.state.place(CardData.from_dict(r379_assi.to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	r379_a.state.place(_card(8379, "树人", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(5, 1), GameEngine.SIDE_SELF)
+	var r379_any_hit := false
+	for r379_c in r379_a._assassin_cells(Vector2i(0, 0)):
+		if not r379_a.attack_targets(r379_c, GameEngine.SIDE_OPPONENT, r379_aa.card).is_empty():
+			r379_any_hit = true
+	check(not r379_any_hit,
+		"R379 暗杀者 AI：前提成立 —— 全场**没有一格**能打到树人（队友占住了唯一攻击位）")
+	check(r379_a._assassin_step(Vector2i(0, 0), r379_aa) == null,
+		"R379 暗杀者 AI：怎么闪都打不到 → **不闪现**（原地待命，把局面交给队友）")
+
+	# ② 实跑一轮：真的没挪窝，只是横置结束行动（不是「跳过但不结算」）
+	r379_a.current_side = GameEngine.SIDE_OPPONENT
+	r379_a.ai_enabled = true
+	r379_a.run_ai_unit(Vector2i(0, 0))
+	check(r379_a.state.unit_at(Vector2i(0, 0)) == r379_aa and r379_aa.tapped,
+		"R379 暗杀者 AI：实跑一轮 → 仍在原地且已完成行动（没有白跳一格）")
+
+	# ③ 场上一个玩家单位都没有 → 也不许朝玩家后排「压上去」
+	var r379_b := _new_engine([], 20, 20)
+	r379_b.state.place(CardData.from_dict(r379_knight.to_dict()),
+			Vector2i(5, 2), GameEngine.SIDE_OPPONENT)
+	var r379_bb := r379_b.state.place(CardData.from_dict(r379_assi.to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	check(r379_b._assassin_step(Vector2i(0, 0), r379_bb) == null,
+		"R379 暗杀者 AI：场上没有玩家单位 → 原地待命（不再朝后排瞎靠）")
+
+	# ④ 对照：有落点真能打到 → 必须闪过去（不能为了「不动」而不动）
+	var r379_c := _new_engine([], 20, 20)
+	r379_c.state.place(CardData.from_dict(r379_knight.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var r379_cc := r379_c.state.place(CardData.from_dict(r379_assi.to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	var r379_ct := r379_c.state.place(_card(8378, "树人", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(5, 0), GameEngine.SIDE_SELF)
+	var r379_cstep = r379_c._assassin_step(Vector2i(0, 0), r379_cc)
+	check(r379_cstep != null
+			and not r379_c.attack_targets(r379_cstep, GameEngine.SIDE_OPPONENT, r379_cc.card).is_empty(),
+		"R379 暗杀者 AI 对照：存在能打到的落点 → 照样闪现（且落点确实打得到）")
+
+	# ⑤ 原地本来就能打 → 不为了「站得更漂亮」挪窝，直接开打
+	var r379_d := _new_engine([], 20, 20)
+	r379_d.state.place(CardData.from_dict(r379_knight.to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	var r379_dd := r379_d.state.place(CardData.from_dict(r379_assi.to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	var r379_dt := r379_d.state.place(_card(8377, "树人", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(5, 1), GameEngine.SIDE_SELF)
+	check(r379_d._assassin_step(Vector2i(4, 1), r379_dd) == null,
+		"R379 暗杀者 AI：原地就能打到 → 不闪（位置本身不带来优势）")
+	r379_d.current_side = GameEngine.SIDE_OPPONENT
+	r379_d.ai_enabled = true
+	r379_d.run_ai_unit(Vector2i(4, 1))
+	check(r379_dt.health == 8 - 6 and r379_d.state.unit_at(Vector2i(4, 1)) == r379_dd,
+		"R379 暗杀者 AI：原地出手打掉 6 血（8 → %d），人没离开原格" % r379_dt.health)
+
+	# ⑥ 源码锁：「打不到就靠近」那一档不许回潮
+	var r379_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(not r379_src.contains("_nearest_foe_dist")
+			and r379_src.contains("return [can_hit, t_hp, - t_pow, manhattan(src, dst), dst.x, dst.y]"),
+		"R379 源码：_assassin_cell_key 的「打不到就逼近」档已删（排序键 7 项 → 5 项）")
+	check(r379_src.contains("AI：暗杀者按兵不动")
+			and not r379_src.contains("AI：暗杀者游走"),
+		"R379 文案：打不到时播报「按兵不动」，不再说「游走」（它确实没游走）")
+
 	# ---- R116：捕兽大师 9126（暗影刺客史诗盟友 3 费 2/8）+ 亡语「原地留下一个随机陷阱」----
 	var r116_saved_cls: String = RunState.player_class
 	var r116_repo := CardRepo.load_json()
