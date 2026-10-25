@@ -48,6 +48,7 @@ static func snapshot() -> Dictionary:
 		"current_node_id": RunState.current_node_id,
 		"cleared_ids": RunState.cleared_ids,
 		"seen_ids": RunState.seen_ids,       # R207：迷雾记忆（揭开过的房间不再还原）
+		"event_kinds_used": RunState.event_kinds_used,   # R374：本局已出过的事件（一局只出一次）
 		"chocolate": RunState.chocolate,
 		"fatigue_granted_layer": RunState.fatigue_granted_layer,   # R358：疲惫每层只发一次
 		"boss_pending": RunState.boss_pending,
@@ -172,6 +173,12 @@ static func apply(d: Dictionary) -> bool:
 	#（老存档没有这个字段 → 空数组，补完等于「读档那一刻看见的都记住」）。
 	RunState.seen_ids = _int_array(d.get("seen_ids", []))
 	RunState.reveal_known()
+	# R374：事件账本（老存档没有 → 空表；最坏结果只是这一局后半段又抽到一个旧事件）
+	var eku_raw: Variant = d.get("event_kinds_used", {})
+	RunState.event_kinds_used = {}
+	if eku_raw is Dictionary:
+		for eku_k: Variant in (eku_raw as Dictionary).keys():
+			RunState.event_kinds_used[str(eku_k)] = true
 	RunState.chocolate = int(d.get("chocolate", 0))
 	# R358：老存档没有这个字段 → -1（等同「本层还没发过」），下面 sync 按旧口径补一次
 	RunState.fatigue_granted_layer = int(d.get("fatigue_granted_layer", -1))

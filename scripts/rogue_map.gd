@@ -248,7 +248,8 @@ static func is_fixed_shop(i: int) -> bool:
 
 static func generate(rng: RandomNumberGenerator,
 		layer := GameLayers.LAYER_DEFAULT,
-		dice_rng: RandomNumberGenerator = null) -> Array:
+		dice_rng: RandomNumberGenerator = null,
+		used_bank: Dictionary = {}) -> Array:
 	## 生成一整张 5×7 地图（返回 35 个 cell 的数组，下标即 id）。
 	## 完全确定：同一 rng 状态必然得到同一张图（重试次数也确定）。
 	## ⚠️ R142：内容层校验（每个起点邻居都能不回头走到宝箱）**必须等类型摇完**才判 ——
@@ -269,15 +270,22 @@ static func generate(rng: RandomNumberGenerator,
 	if layer == GameLayers.LAYER_THREE:
 		last_attempts = 1
 		return line_cells(layer)
+	# R374：`used_bank` = **本局**已出过的事件子类型（`RunState.event_kinds_used`）。
+	# 传空表（默认）= 老行为：只在「这一张图」内不重复。
+	# ⚠️ 重试循环里每轮都从 `used_bank` **重新拷一份**：失败的那几次尝试不许污染账本，
+	#    否则「同一局重试三次」会把三次的临时事件都记成已出过，池子白白被吃空。
 	for attempt in MAX_ATTEMPTS:
+		var used := used_bank.duplicate()
 		var adj := _build_adjacency(rng)
 		if adj.is_empty():
 			continue
-		var cells := _make_cells(adj, rng, layer)
+		var cells := _make_cells(adj, rng, layer, used)
 		if dice_rng != null:
-			reroll_as_unknown(cells, dice_rng, layer)
+			reroll_as_unknown(cells, dice_rng, layer, used)
 		if not exits_reach_chest(cells):
 			continue
+		used_bank.clear()
+		used_bank.merge(used)
 		last_attempts = attempt + 1
 		return cells
 	push_error("RogueMap：%d 次尝试仍未生成满足约束的 5×7 地图" % MAX_ATTEMPTS)
@@ -316,7 +324,8 @@ static func _unknown_weights(cell: Dictionary, layer: int, start_nbs: Dictionary
 	return WEIGHTS_UNKNOWN
 
 
-static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: int) -> int:
+static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: int,
+		used: Dictionary = {}) -> int:
 	## R312（用户口径）：**本来不是「?」的房间，一变成「?」就重摇内容** —— 返回重摇格数。
 	##
 	## 口径：
@@ -348,8 +357,10 @@ static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: i
 		far_sum += elite_far_factor(col_of(i), row_of(i))
 		far_n += 1
 	var far_norm: float = (far_sum / float(far_n)) if far_n > 0 else 1.0
-	# ② 事件子类型「本张图不重复」：把**仍然留在图上**的事件先登记进去（含没被重摇的 ? 房）
-	var used_events := {}
+	# ② 事件子类型：从**本局账本**（`used`）出发，再把「仍然留在图上」的事件登记进去
+	# （含没被重摇的 ? 房）。R374：`used` 就是全局账本本身（就地写回），
+	# 所以重摇出来的新事件同样受「一局只出一次」约束。
+	var used_events: Dictionary = used
 	for cell2: Dictionary in cells:
 		var ek := str(cell2.get("event_kind", ""))
 		if str(cell2.get("type", "")) == "event" and ek != "":
@@ -370,7 +381,11 @@ static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: i
 		cell3["revealed"] = false
 		cell3["event_kind"] = ""
 		if t == "event":
-			cell3["event_kind"] = GameLayers.roll_event_kind(layer, rng, used_events)
+			var ek3 := GameLayers.roll_event_kind(layer, rng, used_events)
+			if ek3 == "":
+				cell3["type"] = "battle"   # R374：本局事件池用尽 → 这格是一场普通战斗
+			else:
+				cell3["event_kind"] = ek3
 		n += 1
 	return n
 
@@ -562,7 +577,8 @@ static func _bfs(adj: Array, src: int) -> Dictionary:
 	return dist
 
 
-static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> Array:
+static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
+		used_events: Dictionary = {}) -> Array:
 	## 把邻接表定型成 35 个 cell 字典。
 	var start_i := idx(START_COL, START_ROW)
 
@@ -627,7 +643,6 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 				shop_set[i2] = true
 
 	# --- 逐格定类型
-	var used_events := {}
 	var cells: Array = []
 	var start_nbs := {}          # R192：起点后第一格（起点的每一个邻居）类型约束用
 	for nb in adj[start_i]:
@@ -689,10 +704,19 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int) -> A
 			"event_kind": "",
 		}
 		if type == "event":
-			# 事件子类型：本张地图上不重复（全出过一遍后才允许重复）。
+			# R374（用户口径）：**一个事件在一局里只被抽出一次** —— `used_events` 是整局账本
+			# （`RunState.event_kinds_used`，跨层共用），抽空了不重开。
+			# 用尽时 `roll_event_kind` 返回空串 → **这一格降级成一般战斗**。
+			# 「?」房对玩家本来就是未知的，走进去打一场，看不出「少了一个事件」。
+			# ⚠️ 事件格数量（实测均值 7.3 / 峰值 13）本来就可能大于单层事件池（9~10 种），
+			#    所以「用尽」是正常路径，不是异常 —— 别当成错误去 push_error。
 			# R372：小宝箱统一「免费开 + 只给卡牌」，不再有「箱子里装道具」的旗标
 			# （原来那一半道具的概率连随机数一起吃掉了）。
-			cell["event_kind"] = GameLayers.roll_event_kind(layer, rng, used_events)
+			var ek := GameLayers.roll_event_kind(layer, rng, used_events)
+			if ek == "":
+				cell["type"] = "battle"
+			else:
+				cell["event_kind"] = ek
 		cells.append(cell)
 	return cells
 

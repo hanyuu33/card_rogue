@@ -6365,14 +6365,18 @@ func _init() -> void:
 	check(q_r68_round1.size() == q_r68_uniq.size() and q_r68_uniq.size() == q_r68_l1.size(),
 			"R68 事件不重复：连抽 %d 次得到 %d 种互不相同的事件（第一层池子正好 %d 种）"
 			% [q_r68_round1.size(), q_r68_uniq.size(), q_r68_l1.size()])
+	# R374（用户口径改口）：池子抽空后**不再清空重开** —— 一局只出一次，抽空返回空串。
+	# 原来这里断言「第二轮仍能抽到池内事件」，那正是用户要废掉的「同一局重复出同一个事件」。
 	var q_r68_round2 := []
 	for _i2 in q_r68_l1.size():
-		var q_r68_k := GameLayers.roll_event_kind(GameLayers.LAYER_DEFAULT, q_l2_ev_rng, q_r68_u)
-		q_r68_round2.append(q_r68_k)
-		if not q_r68_l1.has(q_r68_k):
-			q_r68_uniq["__bad__"] = true
-	check(not q_r68_uniq.has("__bad__") and q_r68_round2.size() == q_r68_l1.size(),
-			"R68 全部事件都出过一次后才允许重复（第二轮 %d 次仍是池内事件）" % q_r68_round2.size())
+		q_r68_round2.append(GameLayers.roll_event_kind(GameLayers.LAYER_DEFAULT, q_l2_ev_rng, q_r68_u))
+	var q_r68_all_empty := true
+	for q_r68_k2 in q_r68_round2:
+		if str(q_r68_k2) != "":
+			q_r68_all_empty = false
+	check(q_r68_all_empty,
+			"R374 事件池抽空后不再重开一轮：再抽 %d 次全部返回空串（实际 %s）"
+			% [q_r68_round2.size(), str(q_r68_round2)])
 	check(GameLayers.event_kinds(GameLayers.LAYER_TWO).has(
 			GameLayers.roll_event_kind(GameLayers.LAYER_TWO, q_l2_ev_rng)),
 			"R68 roll_event_kind 不传 used 时行为不变（按权重抽本层事件）")
@@ -6413,6 +6417,100 @@ func _init() -> void:
 			q_r68_cnt2[q_r68_k2] = int(q_r68_cnt2.get(q_r68_k2, 0)) + 1
 	check(q_r68_l2_ok, "R68 第二层地图：首轮 %d 种事件互不重复，违例 %s"
 			% [q_r68_l2_pool_n, ("无" if q_r68_l2_ok else q_r68_l2_bad)])
+
+	# ---- R374（用户口径）：**一个事件在一局里只被抽出一次** ----
+	# 旧口径是「一张图内不重复、池子抽空还能重开一轮」，而且 `used` 每层各建一份 →
+	# 第一层抽过的「遗忘之泉 / 鸭鸭工匠 / 占卜室」，第二层照样能再抽到（实测 81% 的局都会撞）。
+	# 现在：账本 = `RunState.event_kinds_used`（**跨层共用**），池子抽空 → 那格降级成一般战斗。
+	var r374_dup := ""
+	var r374_total_ok := true
+	var r374_cross_ok := true
+	for r374_s in 40:
+		var r374_bank := {}
+		var r374_r1 := RandomNumberGenerator.new()
+		r374_r1.seed = 770000 + r374_s
+		var r374_m1: Array = RogueMap.generate(r374_r1, GameLayers.LAYER_DEFAULT, null, r374_bank)
+		var r374_k1 := {}
+		for r374_n1: Dictionary in r374_m1:
+			if str(r374_n1["type"]) == "event":
+				var r374_e1 := str(r374_n1.get("event_kind", ""))
+				if r374_k1.has(r374_e1):
+					r374_total_ok = false
+				r374_k1[r374_e1] = true
+		var r374_r2 := RandomNumberGenerator.new()
+		r374_r2.seed = 880000 + r374_s
+		var r374_m2: Array = RogueMap.generate(r374_r2, GameLayers.LAYER_TWO, null, r374_bank)
+		var r374_k2 := {}
+		for r374_n2: Dictionary in r374_m2:
+			if str(r374_n2["type"]) != "event":
+				continue
+			var r374_e2 := str(r374_n2.get("event_kind", ""))
+			if r374_k2.has(r374_e2):
+				r374_total_ok = false
+			r374_k2[r374_e2] = true
+			if r374_k1.has(r374_e2):
+				r374_cross_ok = false
+				if r374_dup == "":
+					r374_dup = r374_e2
+		# 账本里登记的必须正好是两层出过的那批（一个不多、一个不少）
+		var r374_union := r374_k1.duplicate()
+		r374_union.merge(r374_k2)
+		if r374_union.size() != r374_bank.size():
+			r374_total_ok = false
+			if r374_dup == "":
+				r374_dup = "账本 %d 种 / 图上 %d 种" % [r374_bank.size(), r374_union.size()]
+	check(r374_total_ok,
+			"R374 一局内每种事件最多出现一次，且账本与图上事件严格对齐（违例：%s）"
+			% ("无" if r374_total_ok else r374_dup))
+	check(r374_cross_ok,
+			"R374 跨层共用账本：第一层出过的事件，第二层不再出（违例：%s）"
+			% ("无" if r374_cross_ok else r374_dup))
+
+	# ② 池子用尽 → 那一格降级成一般战斗（不是空事件格、也不是消失的格子）
+	var r374_starve_bank := {}
+	for r374_k_all in GameLayers.event_kinds(GameLayers.LAYER_DEFAULT):
+		r374_starve_bank[r374_k_all] = true
+	var r374_srng := RandomNumberGenerator.new()
+	r374_srng.seed = 990001
+	var r374_smap: Array = RogueMap.generate(r374_srng, GameLayers.LAYER_DEFAULT, null,
+			r374_starve_bank)
+	var r374_left := 0
+	var r374_bad_cell := ""
+	for r374_c: Dictionary in r374_smap:
+		if str(r374_c["type"]) == "event":
+			r374_left += 1
+			r374_bad_cell = "仍有事件房：%s" % str(r374_c.get("event_kind", ""))
+		if str(r374_c.get("event_kind", "")) != "" and str(r374_c["type"]) != "event":
+			r374_bad_cell = "非事件格残留 event_kind"
+	check(r374_left == 0 and r374_bad_cell == "",
+			"R374 池子先用光 → 整张图不再出现事件房，且没有残留 event_kind（%s）"
+			% ("无" if r374_bad_cell == "" else r374_bad_cell))
+
+	# ③ 续档：账本要跟着存档走，否则读档后同一局又能抽到旧事件
+	RunState.end_run()
+	RunState.start_run([], GameLayers.LAYER_DEFAULT)
+	RunState.event_kinds_used = {"whisper": true, "moon": true}
+	var r374_snap: Dictionary = RunSave.snapshot()
+	RunState.event_kinds_used = {}
+	RunSave.apply(r374_snap)
+	check(RunState.event_kinds_used.size() == 2 and RunState.event_kinds_used.has("whisper")
+			and RunState.event_kinds_used.has("moon"),
+			"R374 续档：event_kinds_used 进存档并能原样读回（%s）"
+			% str(RunState.event_kinds_used))
+
+	# ④ 外部预生成的地图（map_scene 兜底 / 出图都这么干）→ start_run 要把图上事件登记进账本
+	var r374_pre_rng := RandomNumberGenerator.new()
+	r374_pre_rng.seed = 660001
+	var r374_pre: Array = RogueMap.generate(r374_pre_rng, GameLayers.LAYER_DEFAULT)
+	var r374_pre_first := ""
+	for r374_pc: Dictionary in r374_pre:
+		if str(r374_pc["type"]) == "event":
+			r374_pre_first = str(r374_pc.get("event_kind", ""))
+			break
+	RunState.start_run(r374_pre, GameLayers.LAYER_DEFAULT)
+	check(r374_pre_first != "" and RunState.event_kinds_used.has(r374_pre_first),
+			"R374 预生成地图：start_run 把图上已有事件登记进本局账本（%s）" % r374_pre_first)
+	RunState.end_run()
 
 	# ---- run 流程：开局 / 走节点 / 卡组增长 / 战斗记录持久化 ----
 	RunState.end_run()

@@ -34,6 +34,12 @@ static var resume_battle: Dictionary = {}
 ## 卡组费用**一律以卡面为准**（R112）：早前鸭鸭工匠产物靠 `deck_cost_at_index()` 把卡组里的
 ## 铁栅栏现算成 2 费、而卡面是 0 费 → 「图鉴 0 费 / 卡组 2 费」两处不一致。用户拍板
 ## 「只保留 2 费」后，直接把 **9072 的卡面改成 2 费**，那套运行时费用改写已整块删除。
+## R374（用户口径）：「一个事件在一局里只能被抽出一次」的**账本** ——
+## 键 = `event_kind`（whisper / pear / treasure …），值恒 true。
+## **跨层共用同一份**（第一层抽过的「遗忘之泉」，第二层不再抽），换层不清空；
+## 新开一局清空；随续档走。生成时传给 `RogueMap.generate(..., event_kinds_used)`，
+## 池子用尽后那张图的格子降级成一般战斗（`_make_cells` 里唯一处理点）。
+static var event_kinds_used: Dictionary = {}
 static var map_cells: Array = []             # RogueMap.generate 的结果（5×7 = 35 个房间，下标即 id）
 static var current_layer := GameLayers.LAYER_DEFAULT  # 本局地图所属的层（第一层）
 static var current_node_id := -1             # 玩家所在房间（-1 = 还没出发）
@@ -684,7 +690,18 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# R352：统计「开局次数」—— 故事 1 的解锁条件就是「进行任意一局游戏」。
 	# 只记内存 + 置脏，落盘交给 `flush()`（`map_scene` 进地图时会调）。
 	ProfileData.bump(ProfileData.K_RUN_START)
-	map_cells = map if not map.is_empty() else RogueMap.generate(run_rng, layer)
+	# R374：新的一局 → 事件账本清空。⚠️ 外部**预生成**的地图（`map` 非空，map_scene 的兜底
+	# 与出图都这么干）要把图上已有的事件登记进来，否则换到第二层时会跟第一层撞同一个事件。
+	event_kinds_used = {}
+	if not map.is_empty():
+		for c: Dictionary in map:
+			if str(c.get("type", "")) == "event":
+				var ek0 := str(c.get("event_kind", ""))
+				if ek0 != "":
+					event_kinds_used[ek0] = true
+		map_cells = map
+	else:
+		map_cells = RogueMap.generate(run_rng, layer, null, event_kinds_used)
 	current_layer = layer
 	cleared_ids = []
 	seen_ids = []                 # R207：新开一局 → 迷雾记忆清空
@@ -842,8 +859,10 @@ static func advance_layer(layer: int) -> int:
 	# R312：持有「水晶骰子」→ 本层地图除固定房间外全部是「?」，且**内容按「?」重摇**。
 	# 重摇本身走**独立**的分类种子流（`dice_map_rng()`），一个随机数都不花在主链上；
 	# 只有「重摇把可达宝箱摇没了 → 触发结构重试」那一步才会动 `run_rng`（确定性，可复现）。
+	# R374：`event_kinds_used` 跨层共用 —— 换层**不清空**，这就是「一局只出一次」的落点。
 	map_cells = RogueMap.generate(run_rng, layer,
-			dice_map_rng() if relics.has(DICE_RELIC_ID) else null)
+			dice_map_rng() if relics.has(DICE_RELIC_ID) else null,
+			event_kinds_used)
 	# R372（用户口径）：**第三层的起点只要回血** —— 这一层不再摇起始道具三选一。
 	# 直道只有 5 格，进层时弹一段「卷卷开场 + 三选一」既没有空间也不需要；
 	# 空候选 = map_scene 的「候选非空 → 去卷卷」重定向不会触发，玩家直接落在地图上，
@@ -1129,7 +1148,8 @@ static func reroll_map_as_unknown(cells: Array = []) -> int:
 	var arr: Array = cells if not cells.is_empty() else map_cells
 	if arr.is_empty():
 		return 0
-	return RogueMap.reroll_as_unknown(arr, dice_map_rng(), current_layer)
+	# R374：重摇同样受「一局只出一次」约束，并且**就地写回账本**（全局字典传引用）。
+	return RogueMap.reroll_as_unknown(arr, dice_map_rng(), current_layer, event_kinds_used)
 
 
 static func offer_relic_drop(node_type: String) -> int:

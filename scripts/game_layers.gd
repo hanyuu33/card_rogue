@@ -195,11 +195,13 @@ static func roll_event_kind(layer: int, rng: RandomNumberGenerator,
 		used: Dictionary = {}) -> String:
 	## 按本层权重抽一个事件子类型（权重 ≤ 0 的不会被抽到）。
 	##
-	## **不重复（R68）**：传入 `used`（本层已出过的子类型集合，键 = 子类型名）时，
-	## 已经在 `used` 里的子类型本轮不再参与抽取 —— 于是「一轮之内每种事件只出一次」。
-	## **本层池子被抽空一轮后自动清空 `used` 开始下一轮**，所以事件节点数多于池子大小时
-	## 仍能正常生成（只有这时才会重复出现）。`used` 是**就地修改**的（Dictionary 传引用）。
-	## 不传 `used`（默认空表）= 旧行为：纯按权重抽、允许重复。
+	## **一局只出一次（R374，取代 R68 的「一轮之内不重复」）**：`used` = **本局**已经出过的
+	## 子类型集合（`RunState.event_kinds_used`，键 = 子类型名，跨层共用同一份）。
+	## 在 `used` 里的子类型不再参与抽取；**池子用完了不会清空重来** —— 直接返回 `""`，
+	## 由调用方把那格降级成一般战斗（唯一处理点 = `RogueMap._make_cells`）。
+	## `used` 是**就地修改**的（Dictionary 传引用）。
+	## ⚠️ 每层各建一份 `used` = 回到「层内不重复、换层又撞」的老毛病 —— 必须跨层共用。
+	## 不传 `used`（默认空表）= 纯按权重抽、允许重复（测试 / 工具用）。
 	var w := event_weights(layer)
 	if w.is_empty():
 		return "treasure"
@@ -210,12 +212,9 @@ static func roll_event_kind(layer: int, rng: RandomNumberGenerator,
 			cand[k] = int(w[k])
 	for k in used.keys():
 		cand.erase(str(k))
-	# 全部子类型都出过一次了 → 清空记录，开始新一轮（此时才允许重复）
+	# R374：本局的池子已经空了 → **不重开**，交回空串让调用方降级（一局只出一次）
 	if cand.is_empty():
-		used.clear()
-		for k in w:
-			if int(w[k]) > 0:
-				cand[k] = int(w[k])
+		return ""
 	var total := 0
 	for k in cand:
 		total += int(cand[k])
