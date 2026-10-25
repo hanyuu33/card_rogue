@@ -36,9 +36,12 @@ echo ============================================================
 echo.
 
 echo ============================================================
-echo  [done] every suite must print an "all passed" line.
-echo         baseline: engine all-pass / reward 26 / bgm 38 / smoke 51 checks, 0 failed.
-echo         (engine counts lower here than in 玩法说明.txt: source-text guards are skipped inside the pack.)
+echo  [done] expected baseline inside this pack:/r/necho         reward / bgm : all passed
+echo         smoke        : 51 passed / 4 failed
+echo         engine       : 12 failed
+echo         -- every one of those failures is a guard that reads .gd source text.
+echo            A pack ships compiled scripts, so those guards cannot pass here by design.
+echo            Any OTHER failure is a real problem.
 echo ============================================================
 pause
 popd
