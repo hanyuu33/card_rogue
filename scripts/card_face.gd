@@ -706,8 +706,13 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	var fs: int = maxi(7, roundi(UiTheme.CARD_FS_BADGE * kc))
 	# ── ① 左上角：费用（水晶）—— 圆心压在卡框左上角上 ──
 	# X 费卡（流星雨 9083）：费用不是定值 → 徽章上直接画「X」
+	# R373：**不能打出**的诅咒（麻痹 9185）把费用位打成「×」——
+	# 比写 0 更清楚：玩家一眼知道「这不是 0 费能白嫖的牌，是根本打不出去」。
+	var cost_txt := "X" if card.x_cost else str(card.cost)
+	if card.unplayable:
+		cost_txt = "×"
 	draw_badge(canvas, font_bold, cost_badge_center(rect), r, fs, "cost",
-			"X" if card.x_cost else str(card.cost), UiTheme.BADGE_COST)
+			cost_txt, UiTheme.BADGE_COST)
 	# 技能 / 效果卡没有攻防数值，只有费用
 	var is_unit: bool = card.kind == "盟友"
 	if not is_unit and card.kind != "工事":

@@ -200,6 +200,10 @@ var is_ephemeral: bool = false
 var locked: bool = false
 ## R351：不可从卡组删除（事件专属卡 / 陶罐诅咒）。删卡界面据此拦住，**删不掉**。
 var no_remove: bool = false
+## R373：**这张卡不能打出**（诅咒「麻痹」9185）。
+## 判据只认本字段 —— 界面置灰 / 引擎三个出牌入口（play_from_hand / use_spell /
+## use_curse）全部读它，不许按 id 硬编码。
+var unplayable: bool = false
 
 
 static func from_dict(d: Dictionary) -> CardData:
@@ -234,6 +238,8 @@ static func from_dict(d: Dictionary) -> CardData:
 	# R351：**这张卡不能从卡组删除**（月亮 9180 / 硬币 9181 / 罐子 9157）。
 	# 缺省 false → 老数据一行都不用改；判据只认本字段，界面里不许按 id 硬编码。
 	c.no_remove = bool(d.get("no_remove", false))
+	# R373：不能打出的诅咒（麻痹 9185）；缺省 false → 老数据一行都不用改
+	c.unplayable = bool(d.get("unplayable", false))
 	# R325：难度档位加成（只给染色用，结算早已烤进 power / health）
 	c.diff_power = int(d.get("diff_power", 0))
 	c.diff_health = int(d.get("diff_health", 0))
@@ -279,6 +285,7 @@ func to_dict() -> Dictionary:
 		"locked": locked,
 		# R351：不可删除标记同样随复制通道走（复制出来的月亮 / 硬币也不许删）。
 		"no_remove": no_remove,
+		"unplayable": unplayable,
 		# R325：难度加成必须随复制通道走（否则复制后的怪染色又变绿）。
 		"diff_power": diff_power, "diff_health": diff_health,
 		# R214：附魔 id **必须**在这里 —— 复制 / 离场还原 / 联机共用这条通道，

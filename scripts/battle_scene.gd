@@ -4527,6 +4527,13 @@ func _on_left_click(pos: Vector2) -> void:
 
 func _use_hand_card(i: int) -> void:
 	var card := engine.state.hand[i]
+	# R373：**不能打出**的诅咒（麻痹 9185）—— 拦在所有分支之前，任何点击路径都只给说明。
+	# 引擎侧三个入口（play_from_hand / use_spell / use_curse）另有兜底。
+	if card.unplayable:
+		_say("「%s」不能打出 —— 回合结束还留在手牌就会消失" % card.card_name)
+		_clear_selection()
+		queue_redraw()
+		return
 	if card.is_curse():
 		# R223：诅咒卡（「疲惫」9149）—— 唯一打出入口 use_curse（付费用、无效果；
 		# 打完之后去哪由引擎 `_spell_card_gone` 定：带「次元」的破绽 9154 消失，其余进弃牌区）。
@@ -9460,6 +9467,22 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						"say": "⚔ %s 直击%s HP！-%d" % [data.get("atk_name", "?"),
 								"敌方" if hp_side == GameEngine.SIDE_SELF else "我方",
 								hp_dmg]}})
+		"paralysis_added":
+			# R373：启示者阶段 2 每吃一次技能伤害 → 一张「麻痹」进玩家**弃牌库**。
+			# 一次多段技能可能连塞好几张，所以这里**不排队播卡面**（会卡住出牌节奏），
+			# 只播一句 + 弃牌区闪一下；张数直接报给玩家，免得「怎么突然多了几张牌」。
+			var pa_n := int(data.get("discard", 0))
+			if _shot_pending:
+				_say("⚡ 麻痹：一张「麻痹」进了弃牌区（共 %d 张）" % pa_n)
+			else:
+				sfx.play("draw")
+				_shake(4.0, 220)
+				_say("⚡ 电磁屏障：一张「麻痹」进入你的弃牌区（%d 张）" % pa_n)
+		"paralysis_gone":
+			# R373：回合结束仍在手卡 → 消失（引擎侧已经进消耗区，这里只播报）。
+			var pg_n := int(data.get("count", 0))
+			if pg_n > 0:
+				_say("麻痹：%d 张「麻痹」随回合结束消散" % pg_n)
 		"curse_added":
 			# R231 破绽：俄倪厄往卡组塞诅咒 —— 牌库张数会自己跳，玩家不一定看得出来。
 			# R362（用户口径「展示诅咒，然后那张卡进入卡组，一个动画完了才能结算另外一个」）：

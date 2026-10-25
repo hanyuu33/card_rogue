@@ -510,6 +510,9 @@ const MOON_CARD_ID:= 9180
 const COIN_CARD_ID:= 9181
 
 const JAR_CURSE_ID:= 9157
+# R373 诅咒「麻痹」（9185）：启示者阶段 2 的电磁屏障**每次**受到技能伤害 → 往玩家弃牌库
+# 塞一张。无费用、**不能打出**（`CardData.unplayable`）、回合结束仍在手牌就消失。
+const PARALYSIS_CARD_ID:= 9185
 const JAR_TOKEN_ID:= 9158
 # R246 二层起始道具「兼修」（6033）：我方每回合额外 +1 费用（与其它「回合开始加费」并列）。
 const VERSATILE_RELIC_ID:= 6033
@@ -3450,6 +3453,7 @@ func end_turn() -> void :
 		# R340 生蛋鸭：存活到回合结束的鸭蛋 → 原地孵成宠物鸭（与罐子同一段收尾，先于弃手牌）
 		_egg_hatch_tick()
 		_jar_tick()
+		_paralysis_tick()   # R373 麻痹：回合结束仍在手卡 → 消失（排在弃手牌之前）
 		# R314 储物箱（6044）：持有 → 回合结束**不弃手牌**（keep_all）。
 		# 日志分开写：读者要能一眼看出「这次一张都没弃，是因为道具」。
 		var chest_keep:= self_relics.has(STORAGE_RELIC_ID)
@@ -4334,6 +4338,10 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	var card:= state.hand[hand_index]
 	# R317 身法（9173）：引擎侧兜底 —— `can_use_card` 管 UI，这里管「绕过去」的路径
 	#（联机回放 / 自动出牌 / 以后新加的效果）。放在 `_pay` 之前：拒绝不扣费。
+	if card.unplayable:
+		# R373：不能打出的诅咒（麻痹 9185）—— 引擎侧兜底，联机 / 回放 / 自动出牌都挡在这里。
+		_log("%s：这张卡不能打出" % card.card_name)
+		return null
 	if _no_unit_play_this_turn and (card.kind == "盟友" or card.is_fort()):
 		_log("身法：本回合不能使用盟友和工事卡（%s 未打出）" % card.card_name)
 		return null
@@ -6907,6 +6915,10 @@ func _spell_card_gone(card: CardData, log_text := "") -> bool:
 
 
 func use_spell(hand_index: int, target = null, free_cast := false) -> String:
+	# R373：不能打出的诅咒（麻痹 9185）—— 引擎侧兜底（UI 走 `can_use_card` 置灰）。
+	if hand_index >= 0 and hand_index < state.hand.size() \
+			and state.hand[hand_index] != null and state.hand[hand_index].unplayable:
+		return "%s：这张卡不能打出" % state.hand[hand_index].card_name
 	# 选牌 pending 期间**不许再出别的牌** —— 否则玩家可以在选牌过程中把目标那张
 	# 顺手打掉，下标就失效了。界面本身会拦点击（选卡页是模态的），这里是给联机 /
 	# 回放路径兜底。（R209：`sys_upgrade_pending` 已删，手牌目标改由选卡页驱动。）
@@ -7141,6 +7153,9 @@ func use_curse(hand_index: int) -> String:
 	##    「用了一张牌」的通用收尾仍走 `_note_card_played`（终结/回转的 X、幻影斗篷、
 	##    疾风、潜影者、不眠……都该把它算成一次出牌）。
 	var card := state.hand[hand_index]
+	# R373：不能打出的诅咒（麻痹 9185）—— 连「付费用掉它」这条规避手段都不给。
+	if card.unplayable:
+		return "%s：这张卡不能打出" % card.card_name
 	var cap_msg := _play_cap_blocked()
 	if cap_msg != "":
 		return cap_msg
@@ -7793,6 +7808,10 @@ func _dodge_spell(side: String) -> String:
 
 
 func can_use_card(card: CardData, side:= SIDE_SELF) -> bool:
+	# R373：**不能打出的卡**（诅咒「麻痹」9185）—— 判据只认 `CardData.unplayable`，
+	# UI 置灰与引擎三个出牌入口读的是同一个字段。
+	if card != null and card.unplayable:
+		return false
 	# R317 身法（9173）：本回合用了身法 → 盟友 / 工事卡不可使用（UI 置灰同一判据）。
 	# ⚠️ 只锁这两类：场地卡（`is_field()`）不是单位，技能 / 效果卡也不受影响。
 	if side == SIDE_SELF and _no_unit_play_this_turn and card != null \
@@ -10499,6 +10518,11 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		dmg = maxi(1, dmg / 2)
 		if dmg != rvb:
 			_log("启示者（电磁屏障）：技能伤害 %d → %d（减半）" % [rvb, dmg])
+		# R373（用户口径「每次启示者受到技能伤害，向对方弃牌库中添加一张麻痹」）：
+		# **每一次**技能伤害都塞 —— 多段技能就是多张（这是这一阶段的压力来源）。
+		# ⚠️ 判据与上面这条减半完全同源（非攻击 + boss_phase == 2），所以「能吃减半的
+		#    那一下」与「会塞麻痹的那一下」永远是同一批，不会出现只给其中一边。
+		_add_paralysis(p)
 	# ③c 启示者阶段 3（R371）：「场上有其他单位时免疫攻击以外的伤害」。
 	#     排在 ③b **之后**：阶段 3 已经不吃电磁屏障那条（`boss_phase == 2` 才减半），
 	#     这里是**完全免疫**，所以直接返回 0。
@@ -11149,6 +11173,48 @@ func _can_hold(cell: Vector2i, side: String) -> bool:
 		return false
 	# R285：行归属走唯一口（越界 + 对方后排都不行）
 	return unit_slot_allowed(cell, side)
+
+
+func _add_paralysis(p: Placement) -> void:
+	## 诅咒「麻痹」（9185）进**玩家弃牌库**的唯一口（R373）。
+	## 触发源：启示者阶段 2「电磁屏障」每次受到技能伤害（见 `_unit_damage_taken` 的 ③b）。
+	## * 目标是**弃牌库**（`state.discard`），不是牌库 —— 用户口径原话「向对方弃牌库中添加」；
+	##   它会随下一次「牌库抽空 → 洗回」进牌库，不会立刻改变本回合的抽牌顺序。
+	## * 副本必须 `from_dict`：卡库实例是共享的，直接塞库实例会让场上改动泄漏到图鉴。
+	## * 不排队播卡面（`curse_added` 那套会卡住出牌节奏）—— 一次技能可能连塞 3~5 张，
+	##   界面只播报 + 弃牌区闪一下（`paralysis_added`）。
+	var base: CardData = CardRepo.load_json().get_card(PARALYSIS_CARD_ID)
+	if base == null:
+		_log("麻痹：找不到诅咒卡定义（%d）" % PARALYSIS_CARD_ID)
+		return
+	var card := CardData.from_dict(base.to_dict())
+	state.discard.append(card)
+	_log("麻痹：%s 受到技能伤害 → 一张「麻痹」进入你的弃牌库（弃牌区 %d 张）"
+			% [p.card.card_name, state.discard.size()])
+	action.emit("paralysis_added", {"card": card, "discard": state.discard.size(),
+			"cell": _cell_of(p), "from": p.card})
+
+
+func _paralysis_tick() -> void :
+	## 诅咒「麻痹」（9185）的「留手惩罚」：**我方回合结束时**，还留在手卡里的这张卡
+	## → 本场消失（进消耗区 `void_cards`，与罐子 / 次元同一口径：不会洗回牌库再抽到）。
+	## 与罐子（`_jar_tick`）的区别：罐子留手要**付代价**（召唤敌人），麻痹留手只是
+	## 「白占一个手牌位」—— 它的代价在**抽牌那一刻**就已经付掉了（那张牌本来该是别的）。
+	## ⚠️ 必须排在 `discard_hand()` **之前**（和罐子同一个位置）。
+	var count:= 0
+	var rest: Array[CardData] = []
+	for c: CardData in state.hand:
+		if c != null and c.id == PARALYSIS_CARD_ID:
+			count += 1
+			state.void_count += 1
+			state.void_cards.append(c)
+		else:
+			rest.append(c)
+	if count == 0:
+		return
+	state.hand = rest
+	_log("麻痹：回合结束仍在手卡 %d 张 → 消失" % count)
+	action.emit("paralysis_gone", {"count": count})
 
 
 func _jar_tick() -> void :
