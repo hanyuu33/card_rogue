@@ -198,8 +198,23 @@ func _ready() -> void:
 		SceneFx.goto("res://scenes/title.tscn", true)
 		return
 	if not RunState.run_active or RunState.map_cells.is_empty():
-		RunState.start_run(RogueMap.generate(_rng(), GameLayers.LAYER_DEFAULT),
-				GameLayers.LAYER_DEFAULT)
+		# R377：内存里没活局（例如刚在别处 `end_run(false)` 清过，或者被拉回地图时
+		# 状态已被清空），但盘上还有一份**能读的**续档 → 先把档读回来。
+		# 直接 `start_run()` 会用一张新图把玩家真正的续档覆盖掉，那就是
+		# 「继续游戏进去发现不是原来那一局 / 卡组没了」的来源。
+		var _resumed := false
+		# ⚠️ 出图 / 演示模式不许读档：否则 `--screenshot --layer 3` 会先被玩家的真档拦下来，
+		# 截出来的东西取决于那个人当时打到哪了（回归里也最怕这种「看运气的截图」）。
+		if (not _shot and not RunState.run_active
+				and RunState.map_cells.is_empty() and RunSave.has_save()):
+			_resumed = RunSave.load_run()
+			if _resumed and not RunState.resume_battle.is_empty():
+				# 档停在「一场没打完的战斗」里 → 回那一场（与标题页「继续游戏」同口径）
+				SceneFx.goto("res://scenes/battle.tscn", true)
+				return
+		if not _resumed:
+			RunState.start_run(RogueMap.generate(_rng(), GameLayers.LAYER_DEFAULT),
+					GameLayers.LAYER_DEFAULT)
 	# R356 出图：`-- --screenshot --layer 3` 直接开一局第三层 ——
 	# 直道要打完第二层才能看到，没有这个口子就没法单独验（也验不了起点回血）。
 	# ⚠️ 只在出图模式生效，正常游玩永远走上面那条。
@@ -1647,7 +1662,15 @@ func _toggle_sound() -> void:
 func _on_back_to_title() -> void:
 	## 回到标题：R167 起**保留续档** —— 回标题后可点「继续游戏」从地图检查点接着来。
 	## （本局没结束，所以不写对战记录 —— 真的不打了，下次开新局 / 关窗口时才补「中断」。）
+	##
+	## ⚠️ R377（用户报「用 Esc 菜单回标题后不能继续游戏」）：离开前**先落一份盘**。
+	## 地图是唯一的安全检查点，但 `end_run()` 会把内存清空 —— 以前这里只清内存、不写盘，
+	## 于是「继续游戏」读到的永远是**上一次检查点**；只要那次检查点没写成（写盘被中断 /
+	## 玩家这局还没进过战斗），回到标题后那个按钮就是空的或者进了旧局面。
+	## 现在先存再清：存不下来（盘满 / 被占用）也能在 `save_trace.log` 里留下一条。
 	if RunState.run_active:
+		if not _shot and DisplayServer.get_name() != "headless":
+			RunSave.save_run()
 		RunState.end_run(false)
 	SceneFx.goto("res://scenes/title.tscn")
 

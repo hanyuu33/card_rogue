@@ -25592,9 +25592,84 @@ func _init() -> void:
 			and r359b_save_src.find("dir.rename(tmp_path, SAVE_PATH)") >= 0,
 			"R359b 源码：存档走「先写 .tmp 再 rename」的原子替换")
 	var r359b_title_src := FileAccess.get_file_as_string("res://scripts/title_scene.gd")
-	check(r359b_title_src.find("RunSave.clear_save()") >= 0
-			and r359b_title_src.find("存档读取失败") >= 0,
-			"R359b 源码：读档失败会清坏档并给出可见提示（不是静默 return）")
+	# R377：读档失败**不再 clear_save()**（改成隔离成 .bad，把现场留给事后查证），
+	# 但「不能静默留在标题」这条不变 —— 必须有可见提示。
+	check(r359b_title_src.find("存档读取失败") >= 0
+			and r359b_title_src.find("RunSave.load_run()") >= 0,
+			"R359b 源码：读档失败会给出可见提示（不是静默 return）")
+
+	# ---- R377：续档「任何一刻盘上都要有一份能读的档」+ 事故取证 ----
+	# 用户报「从上方 tab 开关卡组 → Esc 菜单回标题 → 继续游戏没了」，而且
+	# **战斗记录里多了「中断」**。R359 的原子写是「删旧档 → rename 新档」：
+	# 两步之间被打断（关窗口 / 切后台 / 被杀软短暂占用 / 双开抢同一个 user://），
+	# 两份都不在了 —— 不是「半截档」，是**档蒸发**，`has_save()` 直接为假。
+	# 现在三档：.tmp 写完自检 → 旧档挪 .prev（不删）→ 换新档，失败回滚 .prev。
+	RunState.set_difficulty(0)
+	for r377_suf: String in ["", ".tmp", ".prev", ".bad"]:
+		var r377_p: String = RunSave.SAVE_PATH + r377_suf
+		if FileAccess.file_exists(r377_p):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(r377_p))
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	check(RunSave.save_run(), "R377 写档成功")
+	check(not FileAccess.file_exists(RunSave.SAVE_PATH + ".tmp")
+			and not FileAccess.file_exists(RunSave.SAVE_PATH + ".prev"),
+			"R377 写完不留 .tmp / .prev 残渣（下次不会误判「上一份还在」）")
+
+	# ① 自愈：正式档蒸发、只剩一份完整的 .tmp → has_save() 自己提回来
+	var r377_txt := FileAccess.get_file_as_string(RunSave.SAVE_PATH)
+	for r377_suf2: String in ["", ".tmp"]:
+		var r377_p2: String = RunSave.SAVE_PATH + r377_suf2
+		if FileAccess.file_exists(r377_p2):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(r377_p2))
+	var r377_tf := FileAccess.open(RunSave.SAVE_PATH + ".tmp", FileAccess.WRITE)
+	check(r377_tf != null, "R377 能造出「只写了一半换档」的现场")
+	if r377_tf != null:
+		r377_tf.store_string(r377_txt)
+		r377_tf.close()
+	check(RunSave.has_save(), "R377 正式档不在但 .tmp 完整 → has_save() 自愈为真")
+	check(RunSave.load_run() and RunState.deck_ids.size() > 0,
+			"R377 自愈提回来的档能正常继续（不是空壳）")
+
+	# ② 坏档：隔离成 .bad，**不删**
+	var r377_bf := FileAccess.open(RunSave.SAVE_PATH, FileAccess.WRITE)
+	check(r377_bf != null, "R377 能手动造一个坏档（模拟写坏）")
+	if r377_bf != null:
+		r377_bf.store_string("{\"__runsave__\": 1, \"d\": {")
+		r377_bf.close()
+	check(not RunSave.load_run(), "R377 坏档仍然读不出来")
+	check(FileAccess.file_exists(RunSave.SAVE_PATH + ".bad"),
+			"R377 坏档被隔离成 run_save.sav.bad（证据不丢，能事后查证）")
+	check(not FileAccess.file_exists(RunSave.SAVE_PATH),
+			"R377 隔离后正式档消失（按钮随之隐藏，不会骗人白点）")
+
+	# ③ 已收尾的档同样只隔离，不删
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	RunState.run_finished = true
+	check(RunSave.save_run(), "R377 已收尾的局也能写（造废档）")
+	RunState.run_finished = false
+	check(not RunSave.load_run(), "R377 已收尾的档拒绝继续")
+	check(FileAccess.file_exists(RunSave.SAVE_PATH + ".bad"),
+			"R377 已收尾的档也是隔离而非删除")
+
+	# ④ 源码守卫：三档写 / 自愈 / 隔离 / 回标题先存
+	var r377_src := FileAccess.get_file_as_string("res://scripts/run_save.gd")
+	check(r377_src.find("SAVE_PATH + \".prev\"") >= 0
+			and r377_src.find("dir.rename(SAVE_PATH, prev_path)") >= 0,
+			"R377 源码：旧档先挪 .prev 再换新档（任何一步失败旧档都还在）")
+	check(r377_src.find("_recover_tmp()") >= 0 and r377_src.find("_quarantine(") >= 0,
+			"R377 源码：有「.tmp 自愈」与「坏档隔离」两条兜底")
+	check(r377_src.find("clear_save(src := \"\")") >= 0,
+			"R377 源码：clear_save 带来源参数（删档要留痕）")
+	var r377_map_src := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	check(r377_map_src.find("RunSave.save_run()") >= 0
+			and r377_map_src.find("RunSave.load_run()") >= 0,
+			"R377 源码：地图「回标题」先存盘 / 「兜底开局」先试读档")
+
+	# 收尾：伴侣文件清干净，别污染后面的用例
+	for r377_suf3: String in ["", ".tmp", ".prev", ".bad"]:
+		var r377_p3: String = RunSave.SAVE_PATH + r377_suf3
+		if FileAccess.file_exists(r377_p3):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(r377_p3))
 
 	# ---- ④ 奖励池两道闸：剧情锁定 / 玩家禁卡 ----
 	ProfileData.clear_memory()

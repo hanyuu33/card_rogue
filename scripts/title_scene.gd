@@ -205,7 +205,7 @@ func _on_start() -> void:
 	## 开始肉鸽 run：先选角色（角色决定初始卡组追加卡 + 战斗赠品道具）→
 	## 满血 + 初始卡组 + 生成 14 层地图（第一层，含第 6 层宝箱层 + 第 9 层固定休息层）→ 进冒险地图。
 	## 地图层级决定本局出现的战斗关卡与事件（见 GameLayers）。
-	RunSave.clear_save()   # 开新局 = 弃旧档（旧的"继续游戏"存档随之作废）
+	RunSave.clear_save("title.start_new")   # 开新局 = 弃旧档（旧的"继续游戏"存档随之作废）
 	SceneFx.goto("res://scenes/class_pick.tscn")
 
 
@@ -213,12 +213,13 @@ func _on_continue() -> void:
 	## 继续游戏：读本地存档恢复当前局 → 进冒险地图（地图场景按存档状态自行路由）。
 	if not RunSave.load_run():
 		# R359：**不能静默留在标题** —— 玩家点了没反应 = 以为按钮坏了。
-		# 废档（半截 / 已收尾）已经没救了，清掉并把按钮藏起来，再用一行字说明。
-		push_warning("RunSave：继续游戏读档失败，已清除坏档")
-		RunSave.clear_save()
+		# R377：不再 `clear_save()` —— `load_run()` 已经把出问题的档**隔离**成
+		# `run_save.sav.bad`（那是唯一能事后查证的现场，删了就永远不知道当时档里是什么），
+		# 这里只负责把原因说清楚。
+		push_warning("RunSave：继续游戏读档失败，问题档已隔离为 run_save.sav.bad")
 		_refresh_continue()
-		_toast = "存档读取失败（可能已损坏），已清除"
-		_toast_t = 3.2
+		_toast = "存档读取失败（已备份为 run_save.sav.bad）"
+		_toast_t = 4.0
 		return
 	RunRecord.resume()   # 这一局接着打 → 保证有开始时间（对战记录收尾时才写得出来）
 	# R323：存档若停在**一场没打完的战斗**里 → 直接回那一场；

@@ -826,8 +826,9 @@ static func end_run(clear_save: bool = true) -> void:
 
 
 	# 续档：run 结束（通关 / 失败 / 放弃）→ 本地存档随之失效。
+	# R377：带来源，方便在 `save_trace.log` 里分清是「真结束」还是「有人误调」。
 	if clear_save:
-		RunSave.clear_save()
+		RunSave.clear_save("end_run")
 
 
 static func advance_layer(layer: int) -> int:

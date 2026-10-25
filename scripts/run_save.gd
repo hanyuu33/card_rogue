@@ -20,11 +20,18 @@ extends RefCounted
 
 const SAVE_PATH := "user://run_save.sav"
 const FORMAT := 1
+## R377：存档事故取证日志（谁 SAVE / LOAD / CLEAR / QUARANTINE 了，一行一条）。
+const TRACE_PATH := "user://save_trace.log"
+const TRACE_KEEP := 200
 
 
 # ------------------------------------------------------------ 查询
 
 static func has_save() -> bool:
+	# R377：先自愈。上次写盘若在「旧档已挪走、新档还没换上」那一刻被打断
+	# （关窗口 / 切后台 / 被杀 / 文件被杀软短暂占用），盘上只剩一份完整的 .tmp ——
+	# 它内容就是新档，直接提升回来。不然按钮白白消失，玩家以为「档没了」。
+	_recover_tmp()
 	return FileAccess.file_exists(SAVE_PATH)
 
 
@@ -104,28 +111,59 @@ static func save_snapshot(d: Dictionary) -> bool:
 	## 战斗检查点必须写「进战斗之前」的那一份：`battle_scene` 在 `_load_entry_level()`
 	## **之前**抓 `snapshot()`，否则开局第 1 个我方回合已经推过 lucky 7 计数（+1），
 	## 续档重打这一场又从「已 +1」的计数起步 → 每续一次多算一格（用户报的计数错乱）。
+	##
+	## ⚠️ R377（用户报「回标题后不能继续游戏」的根因）：**任何一刻盘上都必须有一份能读的档**。
+	## R359 的写法是「删掉旧档 → rename 新档」，两步之间被打断（关窗口 / 切后台 / 被
+	## 杀软短暂占用 / 双开抢同一个 user://）就**两份都没有** —— 而且不会留下半截档
+	## （.tmp 是完整的），`has_save()` 直接变假、「继续游戏」按钮凭空消失。
+	## 现在改成三档，任何一步失败上一份好档都还在：
+	##   ① 先整份写 .tmp，写完**自检**（读回来必须能解析、关键字段在）；
+	##   ② 旧档 rename 成 .prev（**不删**）；
+	##   ③ .tmp 换上正式名；失败就把 .prev 回滚回来。
 	var root := {"__runsave__": FORMAT, "d": d}
-	# R359：**原子写** —— 先写 `.tmp` 再替换。原来直接覆盖 SAVE_PATH，写到一半被杀
-	# （关窗口 / 手机切后台 / 断电）就留下半截档：下次标题页 `has_save()` 仍然为真，
-	# 「继续游戏」按钮亮着，点下去 `str_to_var` 解析失败 → 静默留在标题，
-	# 玩家看到的就是**「继续游戏点了没反应」**。半截档不会被读到，也就不会再骗人。
 	var tmp_path := SAVE_PATH + ".tmp"
+	var prev_path := SAVE_PATH + ".prev"
 	var f := FileAccess.open(tmp_path, FileAccess.WRITE)
 	if f == null:
 		push_warning("RunSave：无法写入存档 " + tmp_path)
+		_trace("SAVE-FAIL 打不开 .tmp")
 		return false
 	f.store_string(var_to_str(root))
 	f.close()
+	# 自检：写出去的必须是「读得回来」的档（防某天某个字段序列化成怪东西）
+	if not _readable(tmp_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp_path))
+		push_warning("RunSave：新档自检不通过，本次不覆盖旧档")
+		_trace("SAVE-FAIL .tmp 自检不通过（旧档未动）")
+		return false
 	var dir := DirAccess.open("user://")
 	if dir == null:
 		push_warning("RunSave：打不开 user://，存档没替换成功")
+		_trace("SAVE-FAIL 打不开 user://")
 		return false
-	if dir.file_exists(SAVE_PATH):
-		dir.remove(SAVE_PATH)
+	if FileAccess.file_exists(prev_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(prev_path))
+	if FileAccess.file_exists(SAVE_PATH):
+		if dir.rename(SAVE_PATH, prev_path) != OK:
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp_path))
+			push_warning("RunSave：旧档挪不动（被占用？），本次不覆盖")
+			_trace("SAVE-FAIL 旧档挪不动（旧档完好）")
+			return false
 	var err := dir.rename(tmp_path, SAVE_PATH)
 	if err != OK:
-		push_warning("RunSave：存档替换失败 err=%d" % err)
+		# 回滚：旧档还回正式名 —— 别让玩家连旧档都没有
+		if FileAccess.file_exists(prev_path):
+			dir.rename(prev_path, SAVE_PATH)
+		push_warning("RunSave：存档替换失败 err=%d（旧档已回滚）" % err)
+		_trace("SAVE-FAIL 换档失败 err=%d（旧档已回滚）" % err)
 		return false
+	if FileAccess.file_exists(prev_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(prev_path))
+	_trace("SAVE ok deck=%d map=%d layer=%d node=%d finished=%s" % [
+			(d.get("deck_ids", []) as Array).size(),
+			(d.get("map_cells", []) as Array).size(),
+			int(d.get("current_layer", -1)), int(d.get("current_node_id", -9)),
+			str(d.get("run_finished", "?"))])
 	return true
 
 
@@ -133,26 +171,32 @@ static func save_snapshot(d: Dictionary) -> bool:
 
 static func load_run() -> bool:
 	## 从本地存档恢复 run（写入 RunState 静态字段）。成功返回 true。
+	_recover_tmp()
 	if not FileAccess.file_exists(SAVE_PATH):
+		_trace("LOAD-FAIL 盘上没有档")
+		return false
+	if not _readable(SAVE_PATH):
+		push_warning("RunSave：存档格式不兼容或已损坏")
+		_quarantine("格式损坏")
 		return false
 	var txt := FileAccess.get_file_as_string(SAVE_PATH)
 	var root: Variant = str_to_var(txt)
-	if not (root is Dictionary) or int((root as Dictionary).get("__runsave__", 0)) != FORMAT:
-		push_warning("RunSave：存档格式不兼容或已损坏")
-		return false
 	var d: Dictionary = (root as Dictionary).get("d", {})
-	if not (d is Dictionary):
-		return false
 	# R359：**已收尾的一局不算「可继续」**。`end_run(false)`（回标题）以前也把
 	# `run_finished` 置真并保档 —— 那份档读进来后 `map_scene._ready` 立刻按
 	# 「本局已收尾」把人踢回标题，表现是「点了继续游戏又回到标题」的循环。
 	# 现在 `end_run(false)` 不再置真（见 run_state），这里再加一道：老档 / 异常档
 	# 里带着 `run_finished: true` 就直接当废档清掉，别留一个死按钮。
+	# R377：**这里不再删档**，只隔离成 `run_save.sav.bad` —— 以前 `clear_save()` 一删，
+	# 玩家那份档就真的没了，连事后人工捞回来的机会都没有。
 	if bool(d.get("run_finished", false)):
-		push_warning("RunSave：存档是已收尾的一局，删掉不继续")
-		clear_save()
+		push_warning("RunSave：存档是已收尾的一局，隔离不继续")
+		_quarantine("已收尾")
 		return false
-	return apply(d)
+	var ok := apply(d)
+	_trace("LOAD %s deck=%d map=%d layer=%d" % ["ok" if ok else "FAIL",
+			RunState.deck_ids.size(), RunState.map_cells.size(), RunState.current_layer])
+	return ok
 
 
 static func apply(d: Dictionary) -> bool:
@@ -260,9 +304,87 @@ static func apply(d: Dictionary) -> bool:
 
 # ------------------------------------------------------------ 删除
 
-static func clear_save() -> void:
+static func clear_save(src := "") -> void:
+	## 删档。R377：带上 `src` 才会写进 `save_trace.log` ——
+	## 「谁把玩家的档删了」这个问题光靠读代码猜不出来，必须留证据。
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	if src != "":
+		_trace("CLEAR by %s" % src)
+	# 顺手把伴侣文件也收干净，别留下让 `_recover_tmp()` 误判的孤儿
+	for suf: String in [".tmp", ".prev"]:
+		var p2 := SAVE_PATH + suf
+		if FileAccess.file_exists(p2):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(p2))
+
+
+# ------------------------------------------------------------ R377 取证 / 自愈
+
+static func _readable(path: String) -> bool:
+	## 只判「这份文件能不能当成一份存档读出来」，**不写 RunState**。
+	if not FileAccess.file_exists(path):
+		return false
+	var root: Variant = str_to_var(FileAccess.get_file_as_string(path))
+	if not (root is Dictionary):
+		return false
+	if int((root as Dictionary).get("__runsave__", 0)) != FORMAT:
+		return false
+	var d: Variant = (root as Dictionary).get("d", null)
+	return d is Dictionary and not (d as Dictionary).is_empty()
+
+
+static func _recover_tmp() -> void:
+	## R377：把「上次没换上的新档」提回来。.tmp 是**完整写完并自检过**才会 rename 的，
+	## 所以只要正式档不在、.tmp 能读，它就是玩家那一局的最新状态。
+	var tmp := SAVE_PATH + ".tmp"
+	if not FileAccess.file_exists(tmp):
+		return
+	if FileAccess.file_exists(SAVE_PATH):
+		# 正式档还在（上次其实成功了，.tmp 是残留）→ 丢掉残留
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
+		return
+	if not _readable(tmp):
+		return
+	var dir := DirAccess.open("user://")
+	if dir == null:
+		return
+	if dir.rename(tmp, SAVE_PATH) == OK:
+		_trace("RECOVER-TMP 把上次没换上的存档提升为正式档")
+
+
+static func _quarantine(reason: String) -> void:
+	## R377：出问题的档**不删**，改名成 `run_save.sav.bad` 留着。
+	## 一是取证（「不能继续」到底档里长什么样，看这个文件就知道），
+	## 二是万一判定过严，玩家还有机会捞回来。
+	var bad := SAVE_PATH + ".bad"
+	if FileAccess.file_exists(bad):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(bad))
+	DirAccess.rename_absolute(ProjectSettings.globalize_path(SAVE_PATH),
+			ProjectSettings.globalize_path(bad))
+	_trace("QUARANTINE(%s) → run_save.sav.bad" % reason)
+
+
+static func _trace(msg: String) -> void:
+	## R377：存档事故的**唯一取证口**（`user://save_trace.log`，留最近 200 行）。
+	## **只在真实游玩时写** —— headless / 出图 / 回归套件一律不写，
+	## 免得把测试噪声混进玩家现场。
+	if DisplayServer.get_name() == "headless":
+		return
+	var args := OS.get_cmdline_user_args()
+	if "--screenshot" in args or "--demo" in args:
+		return
+	var line := "%s %s" % [Time.get_datetime_string_from_system(), msg]
+	var lines: PackedStringArray = PackedStringArray()
+	if FileAccess.file_exists(TRACE_PATH):
+		lines = FileAccess.get_file_as_string(TRACE_PATH).split("\n", false)
+	lines.append(line)
+	while lines.size() > TRACE_KEEP:
+		lines.remove_at(0)
+	var f := FileAccess.open(TRACE_PATH, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string("\n".join(lines) + "\n")
+	f.close()
 
 
 # ------------------------------------------------------------ 工具
