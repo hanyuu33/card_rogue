@@ -45,6 +45,10 @@ __pycache__/
 /art_src/2026-10-24_启示者卡图/raw7/
 /art_src/2026-10-24_启示者卡图/raw8/
 
+# R376 例外：机械之心这批的 raw 原图（31 张 ≈45MB）。定稿都裁成了 448×403 的
+#   `裁切_*.png` 并已落进 assets/pics/，重跑提示词即可再生。
+/art_src/2026-10-25_机械之心卡图/raw/
+
 # BGM 候选曲暂存（~485MB，可由 _download.py / _download_opentracks.js 幂等重下）
 # 选曲后只有成品进 assets/audio/bgm/（.ogg，届时入库）
 /assets/audio/_audition/raw/
