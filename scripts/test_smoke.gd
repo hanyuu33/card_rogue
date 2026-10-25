@@ -31,6 +31,8 @@ var _pair_reported := {}  # R66：已打印过「牌库/道具成对」的场景
 func _initialize() -> void:
 	# R346：冒烟会实例化各场景（含剧情 / 禁卡），绝不许写玩家真实档案
 	ProfileData.set_test_mode()
+	# R378：存档也换独立文件 —— 否则跑一次测试就把玩家正在打的那一局删了
+	RunSave.set_test_mode()
 	_plan = [
 		["res://scenes/title.tscn", func(): _reset()],
 		# R346：剧情解锁界面 + 禁卡表（两个都是自绘界面，_draw 里的空引用只有冒烟能抓到）

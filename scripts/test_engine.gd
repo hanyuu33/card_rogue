@@ -103,6 +103,8 @@ func _single_deck(card: CardData) -> Array[CardData]:
 func _init() -> void:
 	# R346：测试进程绝不许写玩家真实档案（剧情 / 成就 / 禁卡进度都在里面）
 	ProfileData.set_test_mode()
+	# R378：存档也换独立文件 —— 否则跑一次测试就把玩家正在打的那一局删了
+	RunSave.set_test_mode()
 	print("== 肉鸽引擎规则测试 ==")
 	var repo := CardRepo.load_json()
 
@@ -25664,6 +25666,21 @@ func _init() -> void:
 	check(r377_map_src.find("RunSave.save_run()") >= 0
 			and r377_map_src.find("RunSave.load_run()") >= 0,
 			"R377 源码：地图「回标题」先存盘 / 「兜底开局」先试读档")
+
+	# ---- R378：测试进程的存档路径必须与玩家那份隔离 ----
+	# 用户二次上报「你测试的时候可能没有问题，可是我玩的时候就是会有」——
+	# 真正的原因是回归套件里几十处 clear_save() 全打在玩家那份 user://run_save.sav 上。
+	# 开发机与玩家是同一台机器 → 跑一次 test_engine 就把正在打的那一局删了，
+	# 跑 test_smoke 又会造一份假档让标题页冒出「继续游戏」。
+	check(RunSave.SAVE_PATH == RunSave.TEST_SAVE_PATH
+			and RunSave.SAVE_PATH != RunSave.REAL_SAVE_PATH,
+			"R378 测试进程的存档路径已隔离（绝不碰玩家那份 run_save.sav）")
+	check(RunSave.SAVE_PATH.ends_with("run_save_test.sav"),
+			"R378 隔离路径 = run_save_test.sav（同目录、不同文件）")
+	for r378_p: String in ["scripts/test_engine.gd", "scripts/test_smoke.gd", "scripts/test_reward.gd"]:
+		check_src(FileAccess.get_file_as_string("res://" + r378_p).find(
+				"RunSave.set_test_mode()") >= 0,
+				"R378 源码：" + r378_p + " 入口先切测试存档")
 
 	# 收尾：伴侣文件清干净，别污染后面的用例
 	for r377_suf3: String in ["", ".tmp", ".prev", ".bad"]:

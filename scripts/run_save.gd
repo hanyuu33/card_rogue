@@ -18,11 +18,25 @@ extends RefCounted
 ## ⚠️ 续档只恢复到**地图层**：战斗中关掉 app，下次从"这场之前"的地图检查点接着来
 ##   （那场重打）—— 与杀戮尖塔等同类肉鸽一致，避免存半场战斗导致"已走过的战斗房卡死"。
 
-const SAVE_PATH := "user://run_save.sav"
+## ⚠️ R378：`SAVE_PATH` 从 const 改成 **static var** —— 测试模式要换成另一条路径。
+## 玩家那份永远是 `run_save.sav`；回归套件走 `run_save_test.sav`。
+const REAL_SAVE_PATH := "user://run_save.sav"
+const TEST_SAVE_PATH := "user://run_save_test.sav"
+static var SAVE_PATH := REAL_SAVE_PATH
 const FORMAT := 1
 ## R377：存档事故取证日志（谁 SAVE / LOAD / CLEAR / QUARANTINE 了，一行一条）。
 const TRACE_PATH := "user://save_trace.log"
 const TRACE_KEEP := 200
+
+
+static func set_test_mode() -> void:
+	## R378（用户二次上报「你测试的时候可能没有问题，可是我玩的时候就是会有」的真正原因）：
+	## 回归套件里几十处 `clear_save()` / `save_run()`，**全打在同一个 `user://run_save.sav` 上**。
+	## 开发机和玩家是同一台机器 → 跑一次 test_engine 就把正在打的那一局删掉了；
+	## 跑 test_smoke 又会造一份假档，让标题页冒出「继续游戏」并进一个假局。
+	## 测试进程一律改走 `run_save_test.sav`，**永远别碰玩家那份**。
+	## ⚠️ 三个测试脚本入口（test_engine / test_smoke / test_reward）第一行就得调它。
+	SAVE_PATH = TEST_SAVE_PATH
 
 
 # ------------------------------------------------------------ 查询
