@@ -92,6 +92,13 @@ func _ready() -> void:
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	_repo = CardRepo.load_json()
+	# R375（用户口径）：**商店里也要能查看自己的卡组与道具** —— 与事件 / 休息 / 选卡等
+	# 界面同款的一对悬浮层（右上角「牌库 N」+「道具 N」）。
+	# ⚠️ 两个必须**成对**挂：smoke 有「挂了牌库却没有道具 → 直接红」的对等断言。
+	# ⚠️ 位置取默认 / 1044：商店顶部 0~84 是空的（标题居中、金币在左），
+	#    老板立绘从 `_top_h() + 20` 才开始画 —— 两个按钮不会压到立绘或标题。
+	DeckViewer.attach(self)
+	RelicViewer.attach(self, Vector2(1044, 6))
 	_setup_shop()
 	# 演示参数：--shop 造一个 run + 金币（截图核验商店界面）。
 	var args := OS.get_cmdline_user_args()

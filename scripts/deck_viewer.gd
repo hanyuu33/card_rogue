@@ -28,6 +28,7 @@ var _font: Font
 var _font_bold: Font
 var _open := false
 var _scroll := 0.0          # 已滚动的行数（浮点，按行步进）
+var _shown_n := -1          # 按钮上当前写的张数（R375：数量变了要自己刷新）
 
 
 static func attach(host: Node, btn_pos := Vector2(1150, 6)) -> DeckViewer:
@@ -73,8 +74,22 @@ func _ready() -> void:
 		t.start()
 
 
+func _process(_delta: float) -> void:
+	## R375：卡组会在**别的界面**里变（商店买卡 / 删卡 / 事件加卡 / 休息附魔），
+	## 而按钮上的张数原来只在 `_ready` 与开关面板时刷新 —— 商店里买完卡，
+	## 右上角还写着买之前的数字。这里只比一个 int，代价可以忽略。
+	## 面板开着时连内容一起重画（同 id 的 ×N 张数角标也会跟着变）。
+	var n := RunState.deck_ids.size()
+	if n == _shown_n:
+		return
+	_refresh_btn()
+	if _open:
+		_panel.queue_redraw()
+
+
 func _refresh_btn() -> void:
-	_btn.text = "牌库 %d" % RunState.deck_ids.size()
+	_shown_n = RunState.deck_ids.size()
+	_btn.text = "牌库 %d" % _shown_n
 
 
 func _toggle() -> void:

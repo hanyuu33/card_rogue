@@ -809,6 +809,20 @@ func _check_shop_enchant(scene: Variant) -> void:
 	##      两段式点击永远走不到成交，选卡页退不出去（= 卡死）。→ 源码守卫 + 双击断言。
 	##   ② `deck_mods` 与 `deck_ids` 不等长 → `enchant_deck_card` 写入越界 →
 	##      附魔必失败（钱还照扣）。→ 等长断言。
+	# R375（用户口径）：**商店里也要能查看自己的卡组与道具** —— 两个悬浮层必须成对挂在
+	# 商店场景上。只挂一个也红：DeckViewer 有牌库、没道具是 smoke 的既有对等约定
+	# （`_process` 里那条通用检查只在跑了成对时才打印，这里把它钉成硬断言）。
+	var r375_dv := 0
+	var r375_rv := 0
+	for ch in (scene as Node).get_children():
+		if ch is DeckViewer:
+			r375_dv += 1
+		elif ch is RelicViewer:
+			r375_rv += 1
+	if r375_dv != 1 or r375_rv != 1:
+		_smoke_fail("R375 商店：卡组 / 道具查看器应各挂 1 个（实际 %d / %d）"
+				% [r375_dv, r375_rv])
+		return
 	# ① 源码守卫：选卡覆盖层的绘制函数里不许再出现 `_build_deck_cards()` **调用**。
 	# ⚠️ 必须逐行精确比对（整行 strip 后等于调用本身）：函数里那段「不许调它」的注释
 	#    也含这个字面量，用 contains() 会误判（R204 自己踩过）。

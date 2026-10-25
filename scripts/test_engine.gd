@@ -6992,10 +6992,16 @@ func _init() -> void:
 	# ---- 第二层：起始道具池 / 满血接层 / 层推进 ----
 	var l2repo := RelicRepo.load_json()
 	var l2ids := l2repo.layer2_ids()
-	check(l2ids.size() == 8 and l2ids.has(6014) and l2ids.has(6015)
+	check(l2ids.size() == 7 and l2ids.has(6014) and l2ids.has(6015)
 			and l2ids.has(6016) and l2ids.has(6017) and l2ids.has(6018)
-			and l2ids.has(6033) and l2ids.has(6034) and l2ids.has(6049),
-			"第二层起始道具池 8 件（黄桃罐头/鸭语耳环/冰淇淋与汽水/重鸭/生蛋鸭 + R246 兼修 6033 / 附魔大师 6034 + R341 鹿首标本 6049）")
+			and l2ids.has(6033) and l2ids.has(6049),
+			"第二层起始道具池 7 件（黄桃罐头/鸭语耳环/冰淇淋与汽水/重鸭/生蛋鸭 + R246 兼修 6033 + R341 鹿首标本 6049）")
+	# R375（用户口径）：附魔大师 6034 移出二层起始池 —— 数据还在（旧存档 / 图鉴照样能读），
+	# 但任何池子都不再发它（奖励池 / 事件池 / 初始池本来就没有）。
+	check(not l2ids.has(6034) and l2repo.get_relic(6034) != null
+			and not l2repo.initial_ids().has(6034) and not l2repo.reward_ids().has(6034)
+			and not l2repo.event_ids().has(6034),
+			"R375 附魔大师 6034 移出二层起始池（定义仍在，四个池子都不发）")
 	var l2_overlap := false
 	for rid in l2ids:
 		if l2repo.initial_ids().has(rid) or l2repo.reward_ids().has(rid) \
@@ -20280,15 +20286,16 @@ func _init() -> void:
 	# ---- 两件二层起始道具的数据 ----
 	var r246_rrepo := RelicRepo.load_json()
 	var r246_l2 := r246_rrepo.layer2_ids()
-	check(r246_l2.size() == 8 and r246_l2.has(6033) and r246_l2.has(6034),
-			"R246 二层起始道具池：+兼修 6033 / +附魔大师 6034（%d 件）" % r246_l2.size())
+	# R375 起附魔大师 6034 被移出（`not r246_l2.has(6034)`）—— 道具数据本身不动。
+	check(r246_l2.size() == 7 and r246_l2.has(6033) and not r246_l2.has(6034),
+			"R246 二层起始道具池：兼修 6033 在池里 / 附魔大师 6034 已移出（%d 件）" % r246_l2.size())
 	check(r246_rrepo.get_relic(6033) != null
 			and r246_rrepo.get_relic(6033).source == RelicData.SRC_LAYER2
 			and r246_rrepo.get_relic(6033).kind == "战斗"
 			and r246_rrepo.get_relic(6034) != null
 			and r246_rrepo.get_relic(6034).source == RelicData.SRC_LAYER2
 			and r246_rrepo.get_relic(6034).kind == "持续",
-			"R246 两件新二层道具：来源=二层，兼修=战斗类 / 附魔大师=持续类")
+			"R246 两件二层道具数据不变：来源=二层，兼修=战斗类 / 附魔大师=持续类")
 	check(not r246_rrepo.initial_ids().has(6033) and not r246_rrepo.reward_ids().has(6033)
 			and not r246_rrepo.event_ids().has(6034),
 			"R246 两件新道具只进二层起始池（不串初始 / 奖励 / 事件池）")
