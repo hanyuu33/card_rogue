@@ -87,10 +87,16 @@ var sleep_left: int = 0       # 沉睡（恶魔鸭 9116）：还要睡几点（>
 ## 所以 move / attack / attack_hp / AI 队列全部自然被拦住；`cannot_act_next_turn()`
 ## 也认它（快速符文的「对不能行动的敌人加倍」照样吃）。到点自动清零，只挡一个回合。
 var stun_left: int = 0
-## R352 竖琴（6052）：「所有盟友 +2 力量」只吃一次 —— 上场 / 回合开始各补一次，
-## 这个标记保证同一个 Placement 不会被反复加（离场再上场算新单位，会再吃一次，
-## 与 9036 野兽之心的 +2 生命同口径）。
-var harp_buffed: bool = false
+## R372 竖琴（6052）：「所有盟友 +2 力量」是**持续 buff** —— 只记在这个字段上，
+## 由 `effective_power()` 并进攻击力，**绝不写回 `card.power`**。
+## 为什么改成这样（用户口径「竖琴的效果是持续 buff 类，不论如何都只 +2」）：
+## 原来是把 +2 烤进 `card.power`（卡面基础值），而 `state.place()` 用的是**共享的
+## CardData 实例** —— 同一个单位回手 / 原卡再次上场时，卡上已经是 +2 的基数，
+## 再吃一次就变成 +4。改成字段+出口之后：
+##   * 赋值而不是累加 → 重复同步永远还是 2；
+##   * 卡本体不被污染 → 同一张卡反复上场，每次也只 +2；
+##   * 离场即随 Placement 消失（离场再上场重新拿 2，不会越滚越大）。
+var harp_atk: int = 0
 ## 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：还剩几个**我方回合**就会「破坏自身、
 ## 在原地立起一座钢铁要塞」。0 = 不带这个倒计时。
 ## ⚠️ 递减口只有一处（`GameEngine._fuse_tick`，我方回合结束），且**不是亡语** ——
@@ -180,7 +186,7 @@ func effective_power() -> int:
 	## +1，不是这张卡攻击时 +1）。于是塔自身 0 攻就是 0 攻，定位 = 标记一片区域的增伤辅助。
 	var debuff := atk_debuff if debuff_stage == 1 else 0
 	var total := maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
-			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk
+			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk + harp_atk
 			- debuff - mnemo_down)
 	# R324「惧光」：夜鸭奇数回合**力量临时减半**，只作用在这个出口 ——
 	# 上面每一项（atk_buff / atk_growth / ramp_atk / upgrade_atk / dark_lord_atk …）

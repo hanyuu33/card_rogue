@@ -4430,12 +4430,14 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	if card.id == FOX_ID:
 		_fox_trigger()
 
-	# R352 竖琴（6052）：所有己方盟友 +2 力量 —— 上场即生效（与野兽之心同口径）。
-	if RunState.has_relic(HARP_RELIC_ID) and p.owner == SIDE_SELF \
-			and card.kind == "盟友" and not p.harp_buffed:
-		p.harp_buffed = true
-		p.card.power += HARP_ATK
-		_log("竖琴：%s 获得 +%d 力量（%d）" % [card.card_name, HARP_ATK, p.card.power])
+	# R372 竖琴（6052）：所有己方盟友 +2 力量 —— **持续 buff**（用户口径「不论如何都只 +2」）。
+	# 只写 `p.harp_atk`（赋值），由 `effective_power()` 并进攻击力；
+	# ⚠️ **不许**再 `p.card.power += HARP_ATK` —— `place()` 接管的是共享 CardData 实例，
+	#    烤进去之后同一张卡再次上场会变成 +4。
+	if RunState.has_relic(HARP_RELIC_ID) and p.owner == SIDE_SELF and card.kind == "盟友":
+		p.harp_atk = HARP_ATK
+		_log("竖琴：%s 获得 +%d 力量（%d）"
+				% [card.card_name, HARP_ATK, p.effective_power()])
 
 	var beast_hp:= _beast_hp_bonus(card)
 	if beast_hp > 0:
@@ -8383,20 +8385,27 @@ func _random_ally_card(side: String) -> CardData:
 
 
 func _sync_harp() -> void:
-	## 竖琴（6052，R352）：「所有盟友 +2 力量」对**已经在场**的己方盟友补一次加成。
-	## 为什么需要它：道具可能在**战斗中途**拿到（宝箱 / 精英掉落），那批盟友上场时还没有竖琴；
-	## 读档续战同理。每个 Placement 只吃一次（`harp_buffed`），所以随便多调。
-	if not RunState.has_relic(HARP_RELIC_ID):
-		return
+	## 竖琴（6052，R352 / R372）：「所有盟友 +2 力量」是**持续 buff**，记在
+	## `Placement.harp_atk` 上，由 `Placement.effective_power()` 并进攻击力。
+	## 这个函数只负责「让场上每个己方盟友的 buff 与当前是否持有竖琴对齐」：
+	##   * 持有 → 一律**赋值**成 `HARP_ATK`（不是 +=）→ 调多少次都还是 2；
+	##   * 不持有 → 清 0（中途失去道具时不会留下幽灵加成）。
+	## 需要它的原因：道具可能在**战斗中途**拿到（宝箱 / 精英掉落），那批盟友上场时
+	## 还没有竖琴；读档续战同理。幂等，随便多调。
+	var has_harp := RunState.has_relic(HARP_RELIC_ID)
 	for cell: Vector2i in state.board.keys():
 		var p: Placement = state.unit_at(cell)
-		if p == null or p.owner != SIDE_SELF or p.health <= 0:
+		if p == null or p.owner != SIDE_SELF or p.health <= 0 or p.card == null:
 			continue
-		if p.card.kind != "盟友" or p.harp_buffed:
+		if p.card.kind != "盟友":
 			continue
-		p.harp_buffed = true
-		p.card.power += HARP_ATK
-		_log("竖琴：%s 补吃 +%d 力量（%d）" % [p.card.card_name, HARP_ATK, p.card.power])
+		var want := HARP_ATK if has_harp else 0
+		if p.harp_atk == want:
+			continue
+		p.harp_atk = want
+		if want > 0:
+			_log("竖琴：%s 补吃 +%d 力量（%d）"
+					% [p.card.card_name, HARP_ATK, p.effective_power()])
 
 
 func _random_forest_ally() -> CardData:

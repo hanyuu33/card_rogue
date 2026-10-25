@@ -26099,26 +26099,46 @@ func _init() -> void:
 	check(ff_got != null and ff_e.cost_of(ff_got) == maxi(0, ff_got.cost - 2),
 			"R352 森林的朋友们：那张卡本回合费用 -2")
 
-	# ---- ⑦ 竖琴：所有盟友 +2 力量（每个单位只吃一次）----
+	# ---- ⑦ 竖琴：所有盟友 +2 力量（**持续 buff**，不论如何都只 +2）----
+	# 用户口径（R372）：「竖琴的效果是持续 buff 类，不论如何都只 +2」。
+	# 所以断言全部走 `effective_power()`（力量唯一出口），并额外钉住两件事：
+	#   ① 卡面基础力量 `card.power` **不许被改写**（原来 +2 是烤进这里的）；
+	#   ② 同一张卡反复上场（place 接管的是共享 CardData 实例）也只 +2，不会累加成 +4。
 	RunState.relics = [6052]
 	var harp_e := _new_engine([], 30, 30)
-	var harp_p := harp_e.state.place(CardData.from_dict(r352_repo.get_card(8003).to_dict()),
-			Vector2i(1, 4), GameEngine.SIDE_SELF)
-	var harp_before := harp_p.card.power
+	var harp_proto: CardData = CardData.from_dict(r352_repo.get_card(8003).to_dict())
+	var harp_base_power: int = harp_proto.power
+	var harp_p := harp_e.state.place(harp_proto, Vector2i(1, 4), GameEngine.SIDE_SELF)
 	harp_e._sync_harp()
-	check(harp_p.card.power == harp_before + GameEngine.HARP_ATK,
-			"R352 竖琴：在场上盟友 +%d 力量（%d → %d）"
-			% [GameEngine.HARP_ATK, harp_before, harp_p.card.power])
-	check(harp_p.harp_buffed, "R352 竖琴：吃过的单位打上标记")
+	check(harp_p.effective_power() == harp_base_power + GameEngine.HARP_ATK,
+			"R372 竖琴：在场上盟友 +%d 力量（%d → %d）"
+			% [GameEngine.HARP_ATK, harp_base_power, harp_p.effective_power()])
+	check(harp_p.card.power == harp_base_power,
+			"R372 竖琴：卡面基础力量不被改写（仍是 %d）" % harp_p.card.power)
 	harp_e._sync_harp()
-	check(harp_p.card.power == harp_before + GameEngine.HARP_ATK,
-			"R352 竖琴：重复同步不会叠加")
+	harp_e._sync_harp()
+	check(harp_p.effective_power() == harp_base_power + GameEngine.HARP_ATK,
+			"R372 竖琴：重复同步不会叠加（仍是 +%d）" % GameEngine.HARP_ATK)
+	var harp_p2 := harp_e.state.place(harp_proto, Vector2i(2, 4), GameEngine.SIDE_SELF)
+	harp_e._sync_harp()
+	var harp_p3 := harp_e.state.place(harp_proto, Vector2i(3, 4), GameEngine.SIDE_SELF)
+	harp_e._sync_harp()
+	check(harp_p2.effective_power() == harp_base_power + GameEngine.HARP_ATK
+			and harp_p3.effective_power() == harp_base_power + GameEngine.HARP_ATK,
+			"R372 竖琴：同一张卡多次上场仍只 +%d（%d / %d）"
+			% [GameEngine.HARP_ATK, harp_p2.effective_power(), harp_p3.effective_power()])
 	var harp_foe := harp_e.state.place(CardData.from_dict(r352_repo.get_card(8003).to_dict()),
 			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
-	var harp_foe_base := harp_foe.card.power
 	harp_e._sync_harp()
-	check(harp_foe.card.power == harp_foe_base,
-			"R352 竖琴：只加己方盟友（敌方不变）")
+	check(harp_foe.effective_power() == harp_base_power,
+			"R372 竖琴：只加己方盟友（敌方不变，%d）" % harp_foe.effective_power())
+	# 中途失去道具 → 补零，不留幽灵加成（持续 buff 的「持续」也要能结束）
+	RunState.relics = []
+	harp_e._sync_harp()
+	check(harp_p.effective_power() == harp_base_power
+			and harp_p3.effective_power() == harp_base_power,
+			"R372 竖琴：失去道具后加成归零（%d / %d）"
+			% [harp_p.effective_power(), harp_p3.effective_power()])
 	RunState.relics = []
 
 	# ---- ⑧ 源码守卫：解锁动画 / 快照唯一口 ----
