@@ -27337,6 +27337,59 @@ func _init() -> void:
 	check_src(r373_src.count("unplayable") >= 4,
 			"R373 源码：unplayable 在引擎里至少 4 处（can_use_card + 三个出牌入口）")
 
+	# ==== R376：无尽黑暗「面板收起 → 回合结束不了」的死锁（用户上报）====
+	# 复现口径：把 9114 放进效果区 → 过一整个来回 → 进入待选弃牌。
+	var r376_repo := CardRepo.load_json()
+	var r376_eng := _new_engine(_single_deck(_card(1051, "农民", "盟友", 3, 3, 8)), 40, 40, -1, false)
+	r376_eng.start_game()
+	r376_eng.state.effects.append(CardData.from_dict(r376_repo.get_card(9114).to_dict()))
+	r376_eng.end_turn()
+	r376_eng.end_turn()
+	check(r376_eng.endless_pending,
+			"R376 无尽黑暗：回合开始抽牌后进入待选弃牌（pending = true）")
+	check(r376_eng.endless_options().size() == r376_eng.state.hand.size(),
+			"R376 无尽黑暗：待选候选 = 全部手牌（%d 张）" % r376_eng.state.hand.size())
+	# ① 兜底落空：清 pending，不弃牌不给费
+	var r376_hand := r376_eng.state.hand.size()
+	var r376_energy: int = r376_eng.state.energy
+	var r376_disc := r376_eng.state.discard.size()
+	r376_eng.endless_abort()
+	check(not r376_eng.endless_pending
+			and r376_eng.state.hand.size() == r376_hand
+			and r376_eng.state.energy == r376_energy
+			and r376_eng.state.discard.size() == r376_disc,
+			"R376 无尽黑暗：endless_abort 落空 —— 清 pending、不弃牌、不给费还是 %d" % r376_energy)
+	check(r376_eng.endless_options().is_empty() and not r376_eng.endless_pick(0),
+			"R376 无尽黑暗：落空之后没有候选、也点不动（不会卡在空网格上）")
+	# ② 正常路径仍然通：再走一遍，选一张 → 弃 1 张 + 2 费
+	r376_eng.end_turn()
+	r376_eng.end_turn()
+	if r376_eng.endless_pending:
+		var r376_e0: int = r376_eng.state.energy
+		var r376_h0 := r376_eng.state.hand.size()
+		var r376_ok: bool = r376_eng.endless_pick(0)
+		check(r376_ok and not r376_eng.endless_pending
+				and r376_eng.state.hand.size() == r376_h0 - 1
+				and r376_eng.state.energy == r376_e0 + GameEngine.ENDLESS_DARK_ENERGY,
+				"R376 无尽黑暗：选一张 → 弃 1 张 + 费用 %d → %d"
+						% [r376_e0, r376_eng.state.energy])
+	else:
+		check(false, "R376 无尽黑暗：第二轮没进入待选（手牌 %d 张）" % r376_eng.state.hand.size())
+	# ③ 源码守卫：`_on_end_turn` 里每个「先选完」的守卫都必须先弹回选卡页
+	var r376_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r376_a := r376_src.find("func _ensure_pick_visible")
+	var r376_b := r376_src.find("func _ai_step")
+	var r376_guard := r376_a >= 0 and r376_b > r376_a
+	if r376_guard:
+		var r376_body := r376_src.substr(r376_a, r376_b - r376_a)
+		for r376_kind: String in ["crow", "whale", "endless", "rebirth", "recall", "foresight"]:
+			if r376_body.find("_ensure_pick_visible(\"%s\")" % r376_kind) < 0:
+				r376_guard = false
+	check(r376_guard,
+			"R376 源码：_on_end_turn 的 6 条 pending 守卫都调 _ensure_pick_visible（收起后点结束回合会弹回来）")
+	check(r376_src.find("engine.endless_abort()") >= 0,
+			"R376 源码：_sync_pick 在候选为空时调 endless_abort（不留空网格）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

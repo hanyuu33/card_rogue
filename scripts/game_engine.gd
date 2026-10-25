@@ -13240,6 +13240,19 @@ func _endless_dark(side: String) -> void :
 			"energy": ENDLESS_DARK_ENERGY, "side": side, "pending": true})
 
 
+func endless_abort() -> void:
+	## R376：**兜底落空** —— 待选状态下已经没有可弃的牌了（手牌被别的东西抽干 /
+	## 被事件吃掉），就把待选收掉：不弃、不给费。
+	## 没有这一条的话，「pending 挂着 + 手牌空 + 面板是个空网格」三件事凑在一起，
+	## 就是「面板点不动、回合也结束不了」的死锁（用户报的现象）。
+	if not endless_pending:
+		return
+	endless_pending = false
+	_log("无尽黑暗：没有可弃的牌 → 本回合不弃也不给费用")
+	action.emit("endless_dark", {"dropped": 0, "names": [], "energy": 0,
+			"side": SIDE_SELF, "pending": false})
+
+
 func endless_options() -> Array[int]:
 	## 无尽黑暗：可弃的手牌下标（面板用；空数组 = 本回合没有待弃的牌）。
 	if not endless_pending:

@@ -5545,6 +5545,11 @@ func _sync_pick() -> void:
 	if _pick.is_view():
 		return
 	var k := _pick_active_kind()
+	# R376：候选空了（手牌被抽干 / 被别的东西吃光）→ 立刻落空收掉待选。
+	# 否则会开出一个**点不动的空网格**：面板在、没有东西可选、回合也结束不了。
+	if k == "endless" and engine.endless_options().is_empty():
+		engine.endless_abort()
+		return
 	if k == "":
 		if _pick.is_picking():
 			_pick.close()
@@ -5609,6 +5614,9 @@ func _on_pick_confirmed(sel: Array) -> void:
 				enm = engine.state.hand[ei].card_name
 			if engine.endless_pick(ei):
 				status_text = "无尽黑暗：弃掉 %s → 费用 +%d" % [enm, GameEngine.ENDLESS_DARK_ENERGY]
+			else:
+				# R376：原来这里静默失败 —— 玩家点了没反应，只会觉得「卡住了」。
+				_say("无尽黑暗：这张牌已经不在手牌里了，请重新选一张")
 			_clear_selection()
 		"rebirth":
 			# R222：新生（9148）—— 确认 → 目标手牌消失 + 随机一张本职业奖励卡进手牌。
@@ -7692,25 +7700,54 @@ func _draw_mouse_icon(pos: Vector2, right_click: bool, t: float, arrow: bool) ->
 
 # ------------------------------------------------------------ 回合流程
 
+func _ensure_pick_visible(kind: String) -> void:
+	## R376：**收起的选卡页必须点得回来**。
+	## 玩家按 Esc / 右键把选卡页收起（`_pick.collapse()`）之后，选卡页只是 `visible`
+	## 变 false、`_cfg` 还在 → `_sync_pick()` 认为「已经在选」不会重开。
+	## 于是点「结束回合」只会得到一句「请先选择」，面板却要玩家自己去点顶部那条
+	## 「继续选择」浮条 —— 实战里极容易被当成「回合卡死」（用户报的就是这个）。
+	## 现在凡是被 pending 拦下的收尾口都先过这一道：面板不可见就当场弹回来。
+	if _pick == null or engine == null or kind == "":
+		return
+	if _pick.is_view():
+		return
+	if _pick.is_picking() and _pick.kind() == kind:
+		if not _pick.visible:
+			_pick.reopen()
+			queue_redraw()
+		return
+	_pick.open(_build_pick_cfg(kind))
+	queue_redraw()
+
+
 func _on_end_turn() -> void:
 	if engine == null or engine.over:
 		return
+	# R376：这几条「要先选完才能过回合」的守卫，一律先把选卡页弹回来再说 ——
+	# 只发一句提示而不弹面板，就是玩家眼里的「卡住了」。
 	if engine.crow_pending:
+		_ensure_pick_visible("crow")
 		_say("乌鸦：请先选择一张要回到手牌的盟友")
 		return
 	if engine.whale_pending:
+		_ensure_pick_visible("whale")
 		_say("鲸鱼之怒：请先点一张卡取回，或点「不选了」结束取牌")
 		return
 	if engine.endless_pending:
+		_ensure_pick_visible("endless")
 		_say("无尽黑暗：请先从手牌里选一张弃掉（不能不选）")
 		return
 	if engine.rebirth_pending:
+		_ensure_pick_visible("rebirth")
 		_say("新生：请先从手牌里选一张使其消失（不能不选）")
 		return
 	if _recall_pending():
+		_ensure_pick_visible("recall")
 		_say("%s：请先选择一张要回到手牌的卡" % _recall_mode())
 		return
 	if engine.foresight_mode or engine.foresight_pick:
+		if engine.foresight_pick:
+			_ensure_pick_visible("foresight")
 		_say("预判：请先完成选择")
 		return
 	if _net_mode:
