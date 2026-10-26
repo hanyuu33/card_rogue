@@ -5758,8 +5758,37 @@ func _sync_pick() -> void:
 	if not _pick.is_picking() or _pick.kind() != k:
 		if k == "focus":
 			_close_zone_panels()   # 专注走选卡页，不再复用卡组浏览面板
-		_pick.open(_build_pick_cfg(k))
+		var cfg := _build_pick_cfg(k)
+		# R395（用户报「选卡页弹出来、有返回按钮和提示，但没有待选卡，选不了，
+		# 回合也结束不了」）：**候选为空就不许开页**。开出来是一个「有壳没卡」的空网格 ——
+		# 玩家既选不了、又被 `is_picking()` 挡着收尾，只能退出重进。
+		if (cfg.get("cards", []) as Array).is_empty():
+			_abort_empty_pick(k)
+			return
+		_pick.open(cfg)
 		queue_redraw()
+
+
+func _abort_empty_pick(kind: String) -> void:
+	## R395：选卡页的候选**空了**（手牌/卡组在「点了技能」和「开页」之间被吃掉、
+	## 或读档恢复出的局面本来就没有可选项）→ 收起待选、说一句原因，**绝不留空网格**。
+	## 只收**本场景自己的**那几个下标（引擎侧的 pending 各有自己的「不选了」出口，
+	## 不在这里替它们做决定）。
+	match kind:
+		"hero":
+			_hero_pick_idx = -1
+			_hero_pick_cell = Vector2i(-1, -1)
+		"reload":
+			_reload_idx = -1
+		"sysup":
+			_sys_upgrade_idx = -1
+		"recycle":
+			_recycle_idx = -1
+	if _pick != null and _pick.is_picking():
+		_pick.close()
+	_say("没有可选的卡，已自动取消（%s）" % kind)
+	status_text = "没有可选的卡 —— 请重新选择要使用的卡"
+	queue_redraw()
 
 
 func _on_pick_confirmed(sel: Array) -> void:
@@ -7980,6 +8009,13 @@ func _on_end_turn() -> void:
 		if engine.foresight_pick:
 			_ensure_pick_visible("foresight")
 		_say("预判：请先完成选择")
+		return
+	# R395（用户报「提示选择进行中，最上方旧的按钮却好像能点」）：场景级的几个手牌目标
+	# 选卡（填充 / 系统升级 / 回收 / 英雄代价）以前**不在**这条守卫里 —— 选卡页是全屏的，
+	# 大按钮点不到，但顶栏那个 Button 画在本层之上照样收得到点击，于是能「选到一半就把回合交了」。
+	if _pick != null and _pick.is_picking() and not _pick.is_view():
+		_ensure_pick_visible(_pick.kind())
+		_say("请先完成当前的选择")
 		return
 	if _net_mode:
 		# 联机：发给对方 → 本机进入对方回合 → 等待回放
@@ -12495,6 +12531,9 @@ func _end_turn_ready() -> bool:
 			or engine.rebirth_pending or _recall_pending():
 		return false
 	if engine.foresight_mode or engine.foresight_pick:
+		return false
+	# R395：任何选卡页开着（含填充 / 系统升级 / 回收 / 英雄代价这些场景级待选）都不给结束回合
+	if _pick != null and _pick.is_picking() and not _pick.is_view():
 		return false
 	return true
 

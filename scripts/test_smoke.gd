@@ -83,6 +83,14 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r393_absorb_timing],
+		# R395（用户报）：继续游戏进战斗后用「填充」，选卡页弹出来**没有待选卡**，
+		# 选不了、回合也结束不了。规则：候选空 → 不许开空网格；选卡页开着 → 不给结束回合。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r395_empty_pick],
 		# R339：战斗检查点必须写「进战斗之前」的局状态 —— lucky 7 的跨战斗计数在开局
 		# 第 1 个我方回合就 +1，若检查点写「当下」，续档重打这一场就会越续越多（用户报）。
 		["res://scenes/battle.tscn", func():
@@ -1788,6 +1796,59 @@ func _check_card_detail_block(_scene: Variant) -> void:
 		return
 	print("SMOKE OK R206 详情条：提及块在右栏 / 浅底琥珀棕 / 预算高度 %.0f == 公式（%d 个提及）"
 			% [got, refs.size()])
+
+
+func _check_r395_empty_pick(scene) -> void:
+	## R395（用户报「选卡页有壳没卡、选不了、结束回合也点不动」）：
+	##   ① 候选为空 → **绝不开**空网格，待选下标当场清掉；
+	##   ② 选卡页开着时 `_end_turn_ready()` 为假、`_on_end_turn()` 也不许真过回合
+	##      （顶栏那个旧 Button 画在本层之上，绕过了大按钮的守卫）。
+	if not scene.has_method("_sync_pick") or not scene.has_method("_abort_empty_pick"):
+		_smoke_fail("R395：战斗场景缺少 _sync_pick / _abort_empty_pick")
+		return
+	var eng: Variant = scene.engine
+	if eng == null:
+		_smoke_fail("R395：场景里没有引擎")
+		return
+	var filler: CardData = scene.repo.get_card(GameEngine.RELOAD_ID)
+	var other: CardData = scene.repo.get_card(8002)
+	if filler == null or other == null:
+		_smoke_fail("R395：取不到 9146 / 8002")
+		return
+	# ① 手牌只剩「填充」自己 → 候选必然为空 → 不许开页
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(filler.to_dict()))
+	scene._reload_idx = 0
+	scene._sync_pick()
+	if bool(scene._pick.is_picking()):
+		_smoke_fail("R395：候选为空仍然开出了选卡页（空网格 = 选不了也结束不了）")
+		return
+	if int(scene._reload_idx) != -1:
+		_smoke_fail("R395：候选为空后 _reload_idx 没清掉（%d）" % int(scene._reload_idx))
+		return
+	# ② 手牌有两张 → 正常开页；此时结束回合必须被挡（大按钮判据 + 顶栏那条路）
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(filler.to_dict()))
+	eng.state.hand.append(CardData.from_dict(other.to_dict()))
+	scene._reload_idx = 0
+	scene._sync_pick()
+	if not bool(scene._pick.is_picking()):
+		_smoke_fail("R395：手牌有可选项时选卡页没开出来")
+		return
+	if bool(scene._end_turn_ready()):
+		_smoke_fail("R395：选卡页开着时大按钮仍被判为「可按」")
+		return
+	var side_before := str(eng.current_side)
+	var turn_before := int(eng.turn_number)
+	scene._on_end_turn()
+	if str(eng.current_side) != side_before or int(eng.turn_number) != turn_before:
+		_smoke_fail("R395：选卡页开着时居然真的过了回合（顶栏旧按钮绕过了守卫）")
+		return
+	# 收尾：清掉待选，别影响后面的用例
+	scene._reload_idx = -1
+	if bool(scene._pick.is_picking()):
+		scene._pick.close()
+	print("SMOKE OK R395 空候选不开空网格 / 选卡中结束回合被拦（大按钮与顶栏同源）")
 
 
 func _check_r393_absorb_timing(scene) -> void:

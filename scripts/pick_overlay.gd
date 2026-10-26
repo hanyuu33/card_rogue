@@ -64,6 +64,13 @@ func _ready() -> void:
 	_grid.overlay = self
 	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE   # 命中判定全在 PickOverlay 手动做
 	_clip.add_child(_grid)
+	# R395：尺寸晚到（首帧 anchors / 安卓切前台 / 分辨率变化）也要重排 ——
+	# 否则面板还开着、网格却按旧尺寸裁，卡会整片看不见。
+	resized.connect(func():
+		if visible:
+			_layout()
+			_grid.queue_redraw()
+			queue_redraw())
 
 
 # ── 对外接口 ─────────────────────────────────────────────────
@@ -162,13 +169,20 @@ func refresh() -> void:
 # ── 布局 ─────────────────────────────────────────────────────
 
 func _layout() -> void:
-	if size.x < 10.0:
+	# R395（用户报「选卡页弹出来，有返回按钮和提示，但看不到任何待选卡」）：
+	# 旧代码只兜底 `size.x < 10`。**高度**没结算时（首帧 anchors 还没生效 / 从小窗切回）
+	# `h - TOP_H - GRID_TOP - BOT_H - DESC_H - 14` 会算成 0 甚至负数 → 网格被裁成 0 高：
+	# 顶栏（画在 clip 之外）照常可见，卡却一张都看不见，正是这个现象。
+	if size.x < 10.0 or size.y < 10.0:
 		# 首帧 anchors 还没结算（或 headless 探针直调 open）→ 按视口尺寸兜底
 		size = get_viewport_rect().size
+	if size.x < 10.0 or size.y < 10.0:
+		size = Vector2(1280, 720)      # 视口也拿不到（极早期）→ 退回设计分辨率
 	var w := size.x
 	var h := size.y
 	_clip.position = Vector2(SIDE, TOP_H + GRID_TOP)
-	_clip.size = Vector2(w - SIDE * 2.0, h - TOP_H - GRID_TOP - BOT_H - DESC_H - 14.0)
+	_clip.size = Vector2(maxf(1.0, w - SIDE * 2.0),
+			maxf(1.0, h - TOP_H - GRID_TOP - BOT_H - DESC_H - 14.0))
 	_grid.position = Vector2(0, -_scroll)
 	_grid.size = Vector2(_clip.size.x, _content_h())
 
