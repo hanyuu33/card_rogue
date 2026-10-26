@@ -28002,6 +28002,152 @@ func _init() -> void:
 	check_src(r383_plc.find("var sword_atk: int = 0") >= 0
 			and r383_plc.find("hecaton_atk + harp_atk + sword_atk") >= 0,
 			"R383 源码：力量走 Placement.sword_atk → effective_power（同竖琴，不烤进 CardData）")
+
+	# ================= R384：伤害预览（目标格上的「-N」）=================
+	# 用户口径：「拖动技能卡 / 双击技能卡选目标时要能预览**实际**会造成多少伤害（最终结果），
+	#   攻击选目标前同理」，外加「这种生效后无条件加伤害的要进详情页」。
+	# 这块钉两件事：① 预览值 == 真实扣血值（逐条减伤分支都过一遍）；
+	#   ② 拿不准就给 -1（界面不画数字）—— 宁可不说，也不许说错。
+	RunState.relics = []
+	var r384_repo := CardRepo.load_json()
+
+	# ① 普通攻击：无减伤时预览 == 攻击力，且 == 实际掉血
+	var r384_e := _new_engine([], 40, 40, -1, false)
+	r384_e.start_game(0)
+	var r384_me: Placement = r384_e.state.place(_card(8391, "木桩甲", "盟友", 0, 3, 8),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	var r384_tgt: Placement = r384_e.state.place(_card(8392, "靶子", "盟友", 0, 0, 40),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r384_pv: Dictionary = r384_e.preview_attack_damage(Vector2i(3, 1), Vector2i(2, 1))
+	check(int(r384_pv["dmg"]) == r384_me.effective_power(),
+			"R384 预览：无减伤 → 等于攻击力（%d / %d）"
+			% [int(r384_pv["dmg"]), r384_me.effective_power()])
+	var r384_hp0 := r384_tgt.health
+	r384_e.attack(Vector2i(3, 1), Vector2i(2, 1))
+	check(r384_hp0 - r384_tgt.health == int(r384_pv["dmg"]),
+			"R384 预览 == 实际：普通攻击（预览 %d，实际 %d）"
+			% [int(r384_pv["dmg"]), r384_hp0 - r384_tgt.health])
+
+	# ② 犀牛减伤 + 护甲：预览要把减伤算进去，但**绝不真的扣护甲**
+	var r384_e2 := _new_engine([], 40, 40, -1, false)
+	r384_e2.start_game(0)
+	var r384_me2: Placement = r384_e2.state.place(_card(8393, "木桩乙", "盟友", 0, 5, 8),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	var r384_rh: Placement = r384_e2.state.place(
+			CardData.from_dict(r384_repo.get_card(9016).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r384_pv2: Dictionary = r384_e2.preview_attack_damage(Vector2i(3, 1), Vector2i(2, 1))
+	check(int(r384_pv2["dmg"])
+			== maxi(1, r384_me2.effective_power() - GameEngine.RHINO_DAMAGE_REDUCE),
+			"R384 预览：犀牛减伤也算进去（5 → %d）" % int(r384_pv2["dmg"]))
+	var r384_rh_hp0 := r384_rh.health
+	r384_e2.attack(Vector2i(3, 1), Vector2i(2, 1))
+	check(r384_rh_hp0 - r384_rh.health == int(r384_pv2["dmg"]),
+			"R384 预览 == 实际：犀牛减伤（预览 %d，实际 %d）"
+			% [int(r384_pv2["dmg"]), r384_rh_hp0 - r384_rh.health])
+	r384_rh.armor = 20
+	var r384_armor0 := r384_rh.armor
+	var r384_pv3: Dictionary = r384_e2.preview_attack_damage(Vector2i(3, 1), Vector2i(2, 1))
+	check(int(r384_pv3["dmg"]) == 0 and r384_rh.armor == r384_armor0,
+			"R384 预览：护甲吸收算进结果，且护甲没被预览扣掉（%d，护甲仍 %d）"
+			% [int(r384_pv3["dmg"]), r384_rh.armor])
+
+	# ③ 拿不准就不报：一次性护盾 / 打自己人
+	r384_tgt.first_hit_shield = true
+	var r384_pv4: Dictionary = r384_e.preview_attack_damage(Vector2i(3, 1), Vector2i(2, 1))
+	check(int(r384_pv4["dmg"]) == GameEngine.PREVIEW_NO_DMG
+			and str(r384_pv4["tag"]).contains("免疫"),
+			"R384 预览：有一次性护盾 → 不给数字（%d / %s）"
+			% [int(r384_pv4["dmg"]), str(r384_pv4["tag"])])
+	check(int(r384_e.preview_attack_damage(Vector2i(3, 1), Vector2i(3, 1))["dmg"])
+			== GameEngine.PREVIEW_NO_DMG,
+			"R384 预览：不能打自己人 → 不给数字")
+
+	# ④ 技能卡：没有加成时也要报卡面值（这里用火焰箭 17），且 == 实际扣血
+	var r384_e3 := _new_engine([], 40, 40, -1, false)
+	r384_e3.start_game(0)
+	var r384_fire: CardData = CardData.from_dict(r384_repo.get_card(9003).to_dict())
+	var r384_mob: Placement = r384_e3.state.place(_card(8394, "靶子乙", "盟友", 0, 0, 40),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r384_e3.state.hand = [r384_fire]
+	r384_e3.state.energy = 20
+	var r384_spv: Dictionary = r384_e3.preview_spell_damage(r384_fire, Vector2i(2, 1))
+	check(int(r384_spv["dmg"]) == int(GameEngine.SPELL_BASE_DMG[9003]),
+			"R384 预览：无加成的技能卡照报卡面值（火焰箭 %d）" % int(r384_spv["dmg"]))
+	var r384_mob_hp0 := r384_mob.health
+	r384_e3.use_spell(0, Vector2i(2, 1))
+	check(r384_mob_hp0 - r384_mob.health == int(r384_spv["dmg"]),
+			"R384 预览 == 实际：技能卡（预览 %d，实际 %d）"
+			% [int(r384_spv["dmg"]), r384_mob_hp0 - r384_mob.health])
+	check(int(r384_e3.preview_spell_damage(r384_fire, Vector2i(0, 0))["dmg"])
+			== GameEngine.PREVIEW_NO_DMG,
+			"R384 预览：技能点空格 → 不给数字（各卡口径不同，硬猜必错）")
+	var r384_breath: CardData = CardData.from_dict(r384_repo.get_card(9054).to_dict())
+	check(r384_breath.id in GameEngine.SPELL_NO_CELL_PREVIEW
+			and int(r384_e3.preview_spell_damage(r384_breath, Vector2i(2, 1))["dmg"])
+					== GameEngine.PREVIEW_NO_DMG,
+			"R384 预览：多段 / 随机目标卡（龙息 9054）在排除表里 → 不给数字")
+	var r384_guard: CardData = CardData.from_dict(r384_repo.get_card(9037).to_dict())
+	check(int(r384_e3.preview_spell_damage(r384_guard, Vector2i(2, 1))["dmg"])
+			== GameEngine.PREVIEW_NO_DMG,
+			"R384 预览：非伤害技能（森林守护 9037）→ 不给数字")
+
+	# ⑤ 直击 HP：我方打敌方 = 纯攻击力（`attack_hp` 我方分支没有减伤）；反向不报
+	var r384_e4 := _new_engine([], 40, 40, -1, false)
+	r384_e4.start_game(0)
+	r384_e4.state.place(_card(8395, "木桩丙", "盟友", 0, 4, 8), Vector2i(3, 1),
+			GameEngine.SIDE_SELF)
+	var r384_hpv: Dictionary = r384_e4.preview_attack_hp(Vector2i(3, 1))
+	check(int(r384_hpv["dmg"]) == 4,
+			"R384 预览：直击 HP = 攻击力（4 → %d）" % int(r384_hpv["dmg"]))
+	check(int(r384_e4.preview_attack_hp(Vector2i(3, 1), GameEngine.SIDE_OPPONENT)["dmg"])
+			== GameEngine.PREVIEW_NO_DMG,
+			"R384 预览：敌方打我方 HP（守护 / 荒野形态会减伤）→ 不给数字")
+
+	# ⑥ 骑士剑这类「生效后无条件加伤」：预览要跟着涨，详情页要写明来源
+	RunState.relics = [6053]
+	var r384_e5 := _new_engine([], 40, 40, -1, false)
+	r384_e5.start_game(0)
+	r384_e5._knight_sword_fired = true
+	var r384_me5: Placement = r384_e5.state.place(_card(8396, "木桩丁", "盟友", 0, 4, 8),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r384_e5._sync_knight_sword()
+	r384_e5.state.place(_card(8397, "靶子丙", "盟友", 0, 0, 40), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
+	var r384_pv5: Dictionary = r384_e5.preview_attack_damage(Vector2i(3, 1), Vector2i(2, 1))
+	check(int(r384_pv5["dmg"]) == 4 + GameEngine.KNIGHT_SWORD_ATK,
+			"R384 骑士剑：生效后攻击预览也 +%d（4 → %d）"
+			% [GameEngine.KNIGHT_SWORD_ATK, int(r384_pv5["dmg"])])
+	var r384_tags := ""
+	for r384_se: Dictionary in r384_me5.status_entries():
+		r384_tags += str(r384_se.get("label", "")) + "|"
+	check(r384_tags.contains("骑士剑"),
+			"R384 详情：骑士剑生效后 buff 框写明来源（%s）" % r384_tags)
+	r384_me5.harp_atk = 2
+	var r384_tags2 := ""
+	for r384_se2: Dictionary in r384_me5.status_entries():
+		r384_tags2 += str(r384_se2.get("label", "")) + "|"
+	check(r384_tags2.contains("竖琴"),
+			"R384 详情：竖琴的 +2 同样写明来源（%s）" % r384_tags2)
+	RunState.relics = []
+
+	# ⑦ 源码锁：目标格数字只有一个绘制口；预览口必须只读
+	var r384_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r384_bs.find("func _draw_dmg_preview") >= 0
+			and r384_bs.find("_draw_dmg_preview(cell, engine.preview_attack_damage(") >= 0
+			and r384_bs.find("_draw_dmg_preview(c, engine.preview_spell_damage(") >= 0
+			and r384_bs.find("_draw_dmg_preview(center, engine.preview_spell_damage(") >= 0,
+			"R384 源码：攻击目标 + 技能目标（AOE 逐格 / 非 AOE 中心）都接同一个绘制口")
+	var r384_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	var r384_i0 := r384_ge.find("func preview_hit_damage")
+	var r384_i1 := r384_ge.find("func preview_spell_damage")
+	var r384_body := ""
+	if r384_i0 >= 0 and r384_i1 > r384_i0:
+		r384_body = r384_ge.substr(r384_i0, r384_i1 - r384_i0)
+	check_src(r384_i0 >= 0 and r384_i1 > r384_i0
+			and r384_body.find("p.health -=") < 0
+			and r384_body.find("p.armor -=") < 0,
+			"R384 源码：预览口只读 —— 不扣血、不扣护甲（否则拖牌每帧都在扣）")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

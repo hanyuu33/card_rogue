@@ -11717,14 +11717,43 @@ func _draw_floaters() -> void:
 				Color(TEXT_BG.r, TEXT_BG.g, TEXT_BG.b, TEXT_BG.a * alpha))
 
 
+func _draw_dmg_preview(cell: Vector2i, info: Dictionary) -> void:
+	## R384（用户口径：「选目标前要能预览实际会造成多少伤害」）——
+	## 目标格右下角那个「-N」，**最终值**（全部加成与减伤都算完），不是卡面数字。
+	## 数值一律来自引擎的只读口（`preview_attack_damage` / `preview_attack_hp` /
+	## `preview_spell_damage`）；`dmg < 0` = 引擎自己都拿不准 → **什么都不画**。
+	## ⚠️ 0 也要画：玩家得知道「这一下打不穿护甲 / 被挡掉了」，不画会被读成「没生效」。
+	## 位置挑右下角：卡面主体居中、血条在底部正中、状态徽标在顶部 —— 只剩这里不挡东西。
+	var d := int(info.get("dmg", -1))
+	if d < 0:
+		return
+	var r := _cell_rect(cell)
+	var text := ("-%d" % d) if d > 0 else "0"
+	var fg := Color("fff1e0") if d > 0 else Color("ddd6c8")
+	var bg := Color(0.42, 0.09, 0.07, 0.92) if d > 0 else Color(0.17, 0.16, 0.15, 0.86)
+	_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, text,
+			Vector2(r.position.x + r.size.x - 22.0, r.position.y + r.size.y - 13.0), fg, bg)
+
+
 func _draw_highlights() -> void:
+	# R384：攻击预览要先知道「谁在打」—— 只认**选中的己方单位**（选中敌方时
+	# `preview_*` 一律返回 -1，数字不会冒出来）。
+	var atk_src := Vector2i(-1, -1)
+	if selection != null and selection[0] == "board" and engine != null:
+		var sp := engine.state.unit_at(selection[1])
+		if sp != null and sp.owner == GameEngine.SIDE_SELF:
+			atk_src = selection[1]
 	for cell in move_targets:
 		_hl(cell, COL_MOVE)
 	for cell in attack_targets_arr:
 		_hl(cell, COL_ATTACK)
+		if atk_src.x >= 0:
+			_draw_dmg_preview(cell, engine.preview_attack_damage(atk_src, cell))
 	for cell in hp_targets_arr:
 		_hl(cell, COL_HP)
 		_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, "HP", _cell_center(cell), Color.WHITE)
+		if atk_src.x >= 0:
+			_draw_dmg_preview(cell, engine.preview_attack_hp(atk_src))
 	for cell in spell_targets:
 		_hl(cell, COL_SPELL)
 	# R242：「点手卡 → 点目标」这条路上，鼠标停在某一格时同样给 AOE 范围 / 自伤警告。
@@ -13082,6 +13111,12 @@ func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
 			var r := _cell_rect(c).grow(-2.0)
 			draw_rect(r, COL_AOE, true)
 			draw_rect(r, COL_AOE_EDGE, false, 1.6)
+			# R384：AOE 也是逐格报最终伤害（每格的护甲 / 减伤都可能不同）。
+			_draw_dmg_preview(c, engine.preview_spell_damage(card, c))
+	# R384（用户口径）：**这一发会掉多少血** —— 非 AOE 卡只有中心那一格，
+	# 这里补上（AOE 卡上面已经逐格画过，`cells.has(center)` 时跳过，免得同一处画两遍）。
+	if not cells.has(center):
+		_draw_dmg_preview(center, engine.preview_spell_damage(card, center))
 	# ② 自伤警告：红框按时间做呼吸（相位取 _now()，不额外开 Timer）
 	var own := int(info["own"])
 	if own > 0 or bool(info["hp"]):

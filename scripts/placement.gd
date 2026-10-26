@@ -292,6 +292,15 @@ func status_entries() -> Array[Dictionary]:
 	if mnemo_down > 0:
 		out.append({"label": "谟涅摩叙涅：力 -%d" % mnemo_down,
 				"col": COL_D, "kind": "debuff"})
+	# R384（用户口径「这种生效后无条件加伤害的要能看见」）：道具给的**本场持续**加力量，
+	# 数值早就并进了 `effective_power()`，但信息栏此前只有「力量 5（原 3）」—— 看不出
+	# 是谁加的。这里补一条来源，判据只看字段本身有没有值（不逐道具写特例）。
+	if harp_atk > 0:
+		out.append({"label": "竖琴：力量 +%d（本场，不叠加）" % harp_atk,
+				"col": COL_B, "kind": "buff"})
+	if sword_atk > 0:
+		out.append({"label": "骑士剑：力量 +%d（本场首次击杀后）" % sword_atk,
+				"col": COL_B, "kind": "buff"})
 	if atk_buff > 0:
 		out.append({"label": "力量 +%d（成长光环）" % atk_buff, "col": COL_B, "kind": "buff"})
 	if atk_buff_turn > 0:

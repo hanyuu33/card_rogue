@@ -7369,6 +7369,13 @@ const SPELL_BASE_DMG := {
 #    本来就说清楚了；只有附魔这类额外加成才会让它偏离卡面。
 const SPELL_DYNAMIC_IDS: Array[int] = [9083, 9086, 9090, 9093, 9104, 9107, 9162]
 
+# R384：**不给「目标格数字」**的伤害技能 —— `spell_now().dmg` 对它们不是「这一格掉多少」。
+#   * 9083 流星雨：随机目标、打 X 颗，dmg 是**总量**；
+#   * 9054 龙息：4 点 × 5 次打同一批，每下**分别过减伤链**，总量 ≠ 5 × 单下；
+#   * 9160 弹跳飞刀：主目标 5、最多 2 个次目标各 3，同一张卡对不同格数字不同。
+# 这些卡仍享受 AOE 覆盖 / 自伤警告预览，只是不报数字（宁可不说，也不许说错）。
+const SPELL_NO_CELL_PREVIEW: Array[int] = [DRAGON_BREATH_ID, METEOR_SHOWER_ID, 9160]
+
 
 func mass_mnemosyne_bonus_ready(side: String = SIDE_SELF) -> bool:
 	## 量产型谟涅摩叙涅 8075 的炮击额度**当前还剩不剩** —— R348 新增的**只读预览口**。
@@ -10609,6 +10616,150 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		if dmg <= 0:
 			return 0
 	return dmg
+
+
+# ══════════════════════════════════════════════════════════════════════════
+#  R384：伤害预览（**只读**）—— 目标格上那个「-N」的唯一来源
+# ══════════════════════════════════════════════════════════════════════════
+# 为什么不直接 `_hit_unit()` 试打一下：它会真扣血、真扣护甲、真发 `action`、真写日志，
+#   还会触发护盾转发 / 启示者代受 / 死亡结算 —— 拖牌时每帧调一次等于把整场打穿。
+# 为什么不用「深拷贝 state 再试打」：技能结算里还夹着 RunState 道具、rng、手牌流失，
+#   拷一个 FieldState 盖不住，算出来的数也不可信。
+# 所以这里是 `_hit_unit()` / `_op_deal_damage()` 减伤链的**逐条只读镜像**。
+# ⚠️ 纪律：改 `_unit_damage_taken()` 的减伤链，**必须同步改这里**；
+#    `test_engine.gd` 的 R384 断言块锁住「预览值 == 实际扣血值」（改漏了就红）。
+# ⚠️ 拿不准就给 -1（界面干脆不画数字）—— 报错一次比不报的伤害大得多。
+const PREVIEW_NO_DMG := -1
+
+func _revelator_cover_amount(p: Placement, amount: int) -> int:
+	## `_revelator_split()` 的**只读**版：只算「会被接通友军分走多少」，不结算。
+	## 分走的永远是 `amount / 2`，与挑哪一只友军无关 → 不必复刻「挑血最高」那段。
+	if p == null or p.card == null or p.card.id != REVELATOR_ID or p.boss_phase < 3:
+		return 0
+	if amount < 2:
+		return 0
+	var cell:= _cell_of(p)
+	if cell.x < 0:
+		return 0
+	for c: Vector2i in _component_of_cell(cell):
+		var q: Placement = state.unit_at(c)
+		if q != null and q != p and q.owner == SIDE_OPPONENT:
+			return amount / 2
+	return 0
+
+
+func preview_hit_damage(p: Placement, amount: int, is_attack := false,
+		in_spell := false) -> Dictionary:
+	## 这一个单位**最终会掉多少血**（只读）。返回 `{"dmg": int, "tag": String}`：
+	##   `dmg == -1` = 给不出确数（界面不画数字）；`tag` = 为什么 / 被谁挡了。
+	## `is_attack` = 单位普通攻击（减伤链按「攻击」分流）；`in_spell` = 处在技能卡结算里
+	## （快速符文「对不能行动的敌人加倍」只认技能，也只在这一路补差额）。
+	if p == null or p.card == null:
+		return {"dmg": PREVIEW_NO_DMG, "tag": ""}
+	# ① 易伤（对应 `_hit_unit` 开头那两条，顺序不能反：先加伤、再减伤）
+	var amount2:= amount
+	var aura:= _scout_aura_bonus(p, _cell_of(p))
+	if aura > 0:
+		amount2 += aura
+	if p.owner != SIDE_SELF and _rapid_enemy_bonus > 0:
+		amount2 += _rapid_enemy_bonus
+	if in_spell and not is_attack and p.owner == SIDE_OPPONENT and p.cannot_act_next_turn():
+		amount2 += _swift_rune_extra(amount2)
+	if amount2 <= 0:
+		return {"dmg": 0, "tag": ""}
+	# ② 一次性防御：`_hit_unit` 与 `_op_deal_damage` 对它们处理不同（单目标技能卡**不**消耗
+	#    能量屏障、**不**被护盾生成器转发）→ 预览不去猜走的是哪条路，一律不报数字。
+	if p.first_hit_shield:
+		return {"dmg": PREVIEW_NO_DMG, "tag": "免疫下一次伤害"}
+	if _shield_gen_for(p) != null:
+		return {"dmg": PREVIEW_NO_DMG, "tag": "改由护盾生成器承受"}
+	# ③ 启示者阶段 3：有随从 → 完全免疫；有接通友军 → 只吃一半（去尾）
+	if not is_attack and p.boss_phase >= 3:
+		if _revelator_has_escort(p):
+			return {"dmg": 0, "tag": "阶段 3：免疫"}
+		var cover:= _revelator_cover_amount(p, amount2)
+		if cover > 0:
+			amount2 = maxi(0, amount2 - cover)
+			if amount2 <= 0:
+				return {"dmg": 0, "tag": "阶段 3：接通友军代受"}
+	# ④ 减伤链（顺序逐条对齐 `_unit_damage_taken`）
+	var dmg:= amount2
+	if dmg > 0 and p.card.traits.has(RHINO_TRAIT):
+		dmg = maxi(1, dmg - RHINO_DAMAGE_REDUCE)
+	if dmg > 0 and p.card.id == HEAVY_TANK_ID and p.upgrade_stacks > 0:
+		dmg = maxi(1, dmg - p.upgrade_stacks * HEAVY_TANK_REDUCE_PER_STACK)
+	if dmg > 0 and p.dmg_reduce > 0:
+		dmg = maxi(1, dmg - p.dmg_reduce)
+	if dmg > 0 and is_attack and p.hecaton_atk > 0:
+		dmg = maxi(1, dmg / 2)
+	if dmg > 0 and not is_attack and p.card.id != MASS_HELIOS_ID \
+			and state.has_mass_helios(p.owner):
+		dmg = maxi(1, (dmg + 1) / 2)
+	if dmg > 0 and not is_attack and p.boss_phase == 2:
+		dmg = maxi(1, dmg / 2)
+	if dmg > 0 and p.owner == SIDE_SELF:
+		dmg = _relic_damage_taken(dmg)
+	# ⑤ 护甲：**只算吸收掉多少**，绝不真的扣（`_unit_damage_taken` 里是会扣的）
+	if dmg > 0 and p.armor > 0:
+		dmg = maxi(0, dmg - p.armor)
+	return {"dmg": dmg, "tag": ""}
+
+
+func preview_attack_damage(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> Dictionary:
+	## 单位普攻打这一个目标 → 最终掉多少血（只读）。攻击力口径逐条照抄 `attack()`。
+	var attacker:= state.unit_at(src)
+	var defender:= state.unit_at(dst)
+	if attacker == null or defender == null or defender.owner == side:
+		return {"dmg": PREVIEW_NO_DMG, "tag": ""}
+	var power:= attacker.effective_power() + _turn_dmg_bonus(side) \
+			+ _ally_dmg_bonus(attacker.card, side)
+	return preview_hit_damage(defender, power, true, false)
+
+
+func preview_attack_hp(src: Vector2i, side:= SIDE_SELF) -> Dictionary:
+	## 单位直击对方 HP 会打掉多少。我方打敌方 = **纯粹扣 `power`**
+	## （`attack_hp` 的我方分支没有任何减伤）。敌方打我方的减伤取决于「谁替它挡」
+	## （森林守护 / 荒野形态 / 石肤），预览不猜 → 不报数字。
+	if side != SIDE_SELF:
+		return {"dmg": PREVIEW_NO_DMG, "tag": ""}
+	var attacker:= state.unit_at(src)
+	if attacker == null:
+		return {"dmg": PREVIEW_NO_DMG, "tag": ""}
+	var power:= attacker.effective_power() + _turn_dmg_bonus(side) \
+			+ _ally_dmg_bonus(attacker.card, side)
+	return {"dmg": maxi(0, power), "tag": ""}
+
+
+func preview_spell_damage(card: CardData, dst: Vector2i, side:= SIDE_SELF) -> Dictionary:
+	## 技能卡落在这一格 → 这个单位最终掉多少血（只读）。
+	## 基础值走 `spell_now()`（唯一口，全部加成都在里面），再过一遍减伤链。
+	## ⚠️ **只对「格子上有单位」给数字**：空格是「打 HP」还是「这卡本来就不打人」，
+	##    每张卡都不一样，硬猜必然报错 —— 那时只画 AOE 覆盖，不画数字。
+	if card == null or card.kind != "技能":
+		return {"dmg": PREVIEW_NO_DMG, "tag": ""}
+	if card.id in SPELL_NO_CELL_PREVIEW:
+		return {"dmg": PREVIEW_NO_DMG, "tag": ""}
+	var p:= state.unit_at(dst)
+	if p == null:
+		return {"dmg": PREVIEW_NO_DMG, "tag": ""}
+	if p.card != null and p.card.traits.has(SPELL_IMMUNE_TRAIT):
+		return {"dmg": 0, "tag": "免疫法术"}
+	# ⚠️ `spell_now()` 对「卡面值就是实际值」的固定卡**返回空**（R262 定的口径：不啰嗦）。
+	#    但目标格上的数字本来就是要给玩家看的 —— 没加成的火焰箭也该显示 17。
+	#    所以空结果回退到 `SPELL_BASE_DMG`（这张卡的基础值），而不是当成「不报」。
+	var base:= 0
+	var now:= spell_now(card, side)
+	if not now.is_empty():
+		base = int(now.get("dmg", 0))
+	elif card.id == CHARGE_UP_ID:
+		base = card.value       # 蓄势的「卡面值」是实例数据，不在表里
+	elif SPELL_BASE_DMG.has(card.id):
+		base = int(SPELL_BASE_DMG[card.id])
+	else:
+		return {"dmg": PREVIEW_NO_DMG, "tag": ""}
+	if base <= 0:
+		return {"dmg": PREVIEW_NO_DMG, "tag": ""}
+	return preview_hit_damage(p, base, false, true)
 
 
 func _fx_pulse(cell: Vector2i, card: CardData, label := "") -> void:
