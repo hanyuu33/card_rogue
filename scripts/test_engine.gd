@@ -28603,6 +28603,44 @@ func _init() -> void:
 	check_src(r391_bs.find("if _end_turn_big_rect().has_point(pos):\r\n\t\t_on_end_turn()") >= 0,
 			"R391 源码：点大按钮走 _on_end_turn()（与顶栏小按钮同一条路）")
 
+
+	# ------------------------------------------------------------------ R392
+	# 用户报（安卓）：「用 esc 菜单的返回菜单，依然会发生无法继续游戏」。
+	# 根因：`SceneFx.goto()` 在转场没走完（<STUCK_MS）时**直接 return 丢掉**请求，
+	# 而且不重试 —— 返回标题的擦除还在揭开时点「继续游戏」，那一下就等于没点。
+	# 这里钉两件事：① 转场途中的请求必须被 `absorb_goto()` 收下；② 源码里不许再出现
+	# 「途中直接丢」的写法。
+	var fx: Variant = load("res://scripts/scene_fx.gd").new()
+	fx._phase = 1
+	fx._target = "res://scenes/old.tscn"
+	var took1: bool = fx.absorb_goto("res://scenes/new.tscn")
+	check(took1, "R392 转场中（擦出）来的切换被收下，不当场丢")
+	check(str(fx._target) == "res://scenes/new.tscn",
+			"R392 擦出中改目的地（最后一个赢），不白走一个中间场景")
+	check(str(fx._pending) == "", "R392 擦出中不改排队位（目标还没提交）")
+	fx._phase = 2
+	var took2: bool = fx.absorb_goto("res://scenes/battle.tscn")
+	check(took2, "R392 转场中（揭开）来的切换被收下")
+	check(str(fx._pending) == "res://scenes/battle.tscn",
+			"R392 揭开中排进 _pending，揭开完接着走（玩家点「继续游戏」就靠这一条）")
+	check(str(fx._target) == "res://scenes/new.tscn",
+			"R392 揭开中不动已提交的目标（场景已经换过去了）")
+	fx._phase = 0
+	check(not fx.absorb_goto("res://scenes/x.tscn"),
+			"R392 空闲时不接管（交给正常的 _begin 走转场）")
+	fx.free()
+	var fxs := ""
+	if ResourceLoader.exists("res://scripts/scene_fx.gd"):
+		fxs = FileAccess.get_file_as_string("res://scripts/scene_fx.gd")
+	check_src(fxs.find("_inst.absorb_goto(path)") >= 0,
+			"R392 源码：goto() 走进 absorb_goto()，不再自己 return 丢掉")
+	check_src(fxs.find('if _pending != "":') >= 0,
+			"R392 源码：揭开结束要把 _pending 接上（否则排队等于没排）")
+	check_src(fxs.find("_begin(q)") >= 0,
+			"R392 源码：排队的那次切换真的被 _begin() 播出")
+	check_src(fxs.find("func absorb_goto(path: String) -> bool:") >= 0,
+			"R392 源码：absorb_goto() 在位（phase 1 改目的地 / phase 2 排队）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
