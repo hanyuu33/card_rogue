@@ -118,7 +118,10 @@ func _ready() -> void:
 	#    老板立绘从 `_top_h() + 20` 才开始画 —— 两个按钮不会压到立绘或标题。
 	DeckViewer.attach(self)
 	RelicViewer.attach(self, Vector2(1044, 6))
-	_setup_shop()
+	# ⚠️ `_setup_shop()` **必须在演示参数之后**（R390）：`--shop` 会造 run 并把
+	# `current_node_id` 从 -1 补成一个有效格子，而 `_setup_shop()` 要拿它当
+	# `_shop_node` 去存取货架状态。放在前面 → `_shop_node` 恒为 -1 → 状态存不下，
+	# 出图核验「重进原样」时永远重摇（R390 踩过）。
 	# 演示参数：--shop 造一个 run + 金币（截图核验商店界面）。
 	var args := OS.get_cmdline_user_args()
 	if "--shop" in args:
@@ -127,6 +130,11 @@ func _ready() -> void:
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		RunState.gold = 100
 		RunState.pending_node = {"type": "shop"}
+		if RunState.current_node_id < 0:
+			# 出图专用：`start_run([])` 没有地图 → 当前格是 -1，货架状态就没地方存
+			# （`_sync_shop_state()` 见 `_shop_node < 0` 直接返回 → 重进必重摇）。
+			# 真实流程永远是从地图格走进来，`current_node_id` 一定有效。
+			RunState.current_node_id = 0
 	# R390 出图：`--touchui` 强制走触摸界面 —— 安卓的「购买」按钮只在触屏出现，
 	# 桌面出图否则永远截不到。只切绘制/交互分支，不碰任何数据。
 	if "--touchui" in args:
@@ -145,6 +153,33 @@ func _ready() -> void:
 			_ask_redraw())
 		add_child(tf)
 		tf.start()
+	# R390 出图：`--clickcard N` 用**真实点击路径**（`_on_click`）点第一行第 N 张 ——
+	# 核验「电脑端单击一次就买」这条分支真的通（不是直接调 `_buy_card` 抄近路）。
+	# 出图：`shop.tscn -- --screenshot --shop --clickcard 1`
+	if "--clickcard" in args:
+		var ci := args.find("--clickcard")
+		var idx := int(args[ci + 1]) if ci + 1 < args.size() else 0
+		var tc := Timer.new()
+		tc.wait_time = 0.3
+		tc.one_shot = true
+		tc.timeout.connect(func():
+			if idx >= 0 and idx < _row1.size():
+				_on_click(_row1_rect(idx).get_center())
+			_ask_redraw())
+		add_child(tc)
+		tc.start()
+	# R390 出图：`--revisit` 在买完之后**再走一遍进店初始化**（等于离开再回来），
+	# 截图里必须看到「已经买过的那张还是已售罄、其余位置没动」。
+	# 出图：`shop.tscn -- --screenshot --shop --clickcard 0 --revisit`
+	if "--revisit" in args:
+		var tv := Timer.new()
+		tv.wait_time = 0.45
+		tv.one_shot = true
+		tv.timeout.connect(func():
+			_setup_shop()
+			_ask_redraw())
+		add_child(tv)
+		tv.start()
 	# 演示参数：--picksel N 选中查看第一行第 N 张卡（截图核验描述板 / 选中高亮）。
 	var ps := args.find("--picksel")
 	if ps >= 0 and ps + 1 < args.size():
@@ -190,6 +225,7 @@ func _ready() -> void:
 			tb.timeout.connect(func(): _buy_card(0))
 			add_child(tb)
 			tb.start()
+	_setup_shop()   # R390：见上面那条注释 —— 必须在所有「造 run / 改当前格」的演示参数之后
 	# 演示参数（R214）：`--delpick` 打开「删除一张卡」的选卡页 —— 核验**选卡页大卡**
 	# （150×190，`CardFace.draw_pick()`）上也有附魔标记。顺带给卡组前两张塞附魔，
 	# 否则初始卡组是一张张素卡，出图看不出任何标记。
