@@ -28699,7 +28699,7 @@ func _init() -> void:
 	check_src(bs.find("func _pending_impact_ms() -> int:") >= 0,
 			"R393 源码：代受演出按「攻击撞击帧」排（_pending_impact_ms 唯一口）")
 	var absorb_at := bs.count('"at": _pending_impact_ms()')
-	check(absorb_at == 3,
+	check_src(absorb_at == 3,
 			"R393 源码：护盾生成器 / 守护代受 / 闪躲三条代受路径都排队（实际 %d 处）" % absorb_at)
 	check_src(bs.find('"absorb_fx"') >= 0,
 			"R393 源码：延迟队列里有 absorb_fx 的落地点")
