@@ -67,6 +67,14 @@ func _initialize() -> void:
 				RunState.pending_level = RunState.next_level({"type": "battle"})
 				_seed_rewards(),
 			_check_r389_auto_leave],
+		# R391（用户口径）：「增加一个更大更明显的回合结束按钮放在道具栏上方」。
+		# 自绘 + 在 `_on_left_click` 里判矩形 —— 只有真场景能验「画在那 / 点了有反应」。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r391_end_turn_btn],
 		# R339：战斗检查点必须写「进战斗之前」的局状态 —— lucky 7 的跨战斗计数在开局
 		# 第 1 个我方回合就 +1，若检查点写「当下」，续档重打这一场就会越续越多（用户报）。
 		["res://scenes/battle.tscn", func():
@@ -1702,6 +1710,41 @@ func _check_card_detail_block(_scene: Variant) -> void:
 		return
 	print("SMOKE OK R206 详情条：提及块在右栏 / 浅底琥珀棕 / 预算高度 %.0f == 公式（%d 个提及）"
 			% [got, refs.size()])
+
+
+func _check_r391_end_turn_btn(scene) -> void:
+	## R391（用户口径）：「增加一个更大更明显的回合结束按钮放在道具栏上方」。
+	## 断言四件事：① 明显更大 ② 在道具栏**正上方**且不重叠 ③ 我方回合时是「可按」态
+	## ④ **点它真的结束回合**。第 ④ 条必须走 `_on_left_click`（真实点击入口）——
+	## 直接调 `_on_end_turn()` 会把「按钮画在那儿、点了却没人接」这类接缝问题放过去。
+	if not scene.has_method("_end_turn_big_rect") or not scene.has_method("_end_turn_ready"):
+		_smoke_fail("R391：战斗场景没有 _end_turn_big_rect / _end_turn_ready 唯一口")
+		return
+	var r: Rect2 = scene._end_turn_big_rect()
+	var relic: Rect2 = scene._relic_zone_rect()
+	if r.size.x < 200.0 or r.size.y < 80.0:
+		_smoke_fail("R391：大按钮太小（%.0f×%.0f）" % [r.size.x, r.size.y])
+		return
+	var small: Button = scene.end_turn_btn
+	if small != null and (r.size.x < small.size.x * 1.8 or r.size.y < small.size.y * 2.0):
+		_smoke_fail("R391：大按钮没有明显大于顶栏那颗（%.0f×%.0f vs %.0f×%.0f）"
+				% [r.size.x, r.size.y, small.size.x, small.size.y])
+		return
+	if r.intersects(relic) or r.position.y + r.size.y > relic.position.y:
+		_smoke_fail("R391：大按钮没落在道具栏正上方（按钮 %s / 道具栏 %s）" % [r, relic])
+		return
+	if not scene._end_turn_ready():
+		_smoke_fail("R391：我方回合刚开始，大按钮却不是「可按」状态")
+		return
+	scene._ee_popup = false      # 敌方效果开场弹窗会吃掉第一下点击（不是本用例要验的）
+	var eng = scene.engine
+	var turn0: int = eng.turn_number
+	scene._on_left_click(r.get_center())
+	if eng.current_side == GameEngine.SIDE_SELF and eng.turn_number == turn0:
+		_smoke_fail("R391：点大按钮没有结束回合（仍是第 %d 回合我方）" % turn0)
+		return
+	print("SMOKE OK R391 回合结束大按钮：%.0f×%.0f @ (%.0f,%.0f)，道具栏正上方，点击真的过回合"
+			% [r.size.x, r.size.y, r.position.x, r.position.y])
 
 
 func _smoke_fail(msg: String) -> void:

@@ -28544,6 +28544,65 @@ func _init() -> void:
 			and r390_ss.find("draw_arc(_deck_btn_center(), 22.0 + 26.0 * p") >= 0,
 			"R390 源码：飞到牌库按钮上时点亮一圈金环")
 
+	# ================= R391：费用显示改成「X / Y」（Y = 满费上限） =================
+	# 用户口径：「费用显示为 X/Y，Y 为最大费用。其中每个回合都+费用的效果（道具或者
+	# 效果卡等）视为最大费用，只在特定回合或特定条件加的不视为。」
+	# 所以 `max_energy()` 的口径 = 基础 5 + **每回合都给**的加成；一次性的、
+	# 指定回合的、随机的不进分母（否则 Y 会每回合乱跳）。
+	var eng_r391a := _new_engine(_ordered_deck(), 20, 20, -1, false)
+	eng_r391a.start_game()
+	check(eng_r391a.max_energy() == FieldState.ENERGY_PER_TURN
+			and eng_r391a.state.energy == eng_r391a.max_energy(),
+			"R391 满费：裸装 = 基础 %d（实际 %d / %d）" % [FieldState.ENERGY_PER_TURN,
+					eng_r391a.state.energy, eng_r391a.max_energy()])
+	# 兼修 6033：每回合额外 +1 费 → 计入上限（且实发费用必须**等于**上限）
+	var eng_r391b := _new_engine(_ordered_deck(), 20, 20, -1, false)
+	eng_r391b.self_relics = [GameEngine.VERSATILE_RELIC_ID]
+	eng_r391b.start_game()
+	check(eng_r391b.max_energy() == FieldState.ENERGY_PER_TURN + 1
+			and eng_r391b.state.energy == eng_r391b.max_energy(),
+			"R391 满费：兼修 → 上限 6，且回合开始实发 6（实际 %d / %d）"
+			% [eng_r391b.state.energy, eng_r391b.max_energy()])
+	# 鸭语耳环 6015 同为「每回合 +1」→ 与兼修叠加到 7
+	var eng_r391c := _new_engine(_ordered_deck(), 20, 20, -1, false)
+	eng_r391c.self_relics = [GameEngine.EARRING_RELIC_ID, GameEngine.VERSATILE_RELIC_ID]
+	check(eng_r391c.max_energy() == FieldState.ENERGY_PER_TURN + 2,
+			"R391 满费：耳环 + 兼修 → 上限 7（实际 %d）" % eng_r391c.max_energy())
+	# 只在**特定回合**给的：鸭翼（第 3 回合 +3）/ 冰淇淋（第 1 回合 +2）→ 不进分母
+	var eng_r391d := _new_engine(_ordered_deck(), 20, 20, -1, false)
+	eng_r391d.self_relics = [GameEngine.DUCK_WING_RELIC_ID, GameEngine.ICECREAM_RELIC_ID]
+	eng_r391d.start_game()
+	check(eng_r391d.max_energy() == FieldState.ENERGY_PER_TURN,
+			"R391 满费：鸭翼 / 冰淇淋（指定回合）不计入上限（实际 %d）"
+			% eng_r391d.max_energy())
+	check(eng_r391d.state.energy > eng_r391d.max_energy(),
+			"R391 满费：第 1 回合冰淇淋让实发超过上限（%d > %d）—— X/Y 允许 X > Y，照实显示"
+			% [eng_r391d.state.energy, eng_r391d.max_energy()])
+	# 效果卡「无尽黑暗」9114：每回合弃 1 张换 2 费 → 属于「每回合都给」→ 进分母
+	var eng_r391e := _new_engine(_ordered_deck(), 20, 20, -1, false)
+	eng_r391e.start_game()
+	eng_r391e.state.effects.append(CardRepo.load_json().get_card(GameEngine.ENDLESS_DARK_ID))
+	check(eng_r391e.max_energy() == FieldState.ENERGY_PER_TURN + GameEngine.ENDLESS_DARK_ENERGY,
+			"R391 满费：效果卡无尽黑暗 → 上限 7（实际 %d）" % eng_r391e.max_energy())
+	# 源码锁：左栏那行硬编码的「每回合重置为 5」必须真的没了，显示改走 max_energy()
+	var r391_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r391_bs.find("每回合重置为") < 0,
+			"R391 源码：面板里不再硬编码「每回合重置为 N」（分母只有一个来源）")
+	check_src(r391_bs.find("var e_max_txt := \"/%d\" % engine.max_energy()") >= 0,
+			"R391 源码：费用按「X / max_energy()」渲染（分母只有一个来源）")
+	check_src(r391_bs.find("费用重置为 %d，抽 5 张") >= 0,
+			"R391 源码：回合开始的提示文字也读 max_energy()（不再写死 5）")
+	# 顶栏加高 + 大按钮：不硬编码数字，只锁「接线还在」
+	var r391_tscn := FileAccess.get_file_as_string("res://scenes/battle.tscn")
+	check_src(r391_tscn.find("offset_bottom = 44.0") >= 0,
+			"R391 源码：顶栏高度 36 → 44（字变大后不贴边）")
+	check_src(r391_bs.find("func _draw_end_turn_big() -> void:") >= 0
+			and r391_bs.find("_draw_end_turn_big()     # R391") >= 0,
+			"R391 源码：道具栏上方的大号「回合结束」已接进 _draw()")
+	# ⚠️ battle_scene 是 **CRLF**：跨行 find 要写 `\r\n`，只写 `\n` 永远找不到（R391 踩过）
+	check_src(r391_bs.find("if _end_turn_big_rect().has_point(pos):\r\n\t\t_on_end_turn()") >= 0,
+			"R391 源码：点大按钮走 _on_end_turn()（与顶栏小按钮同一条路）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

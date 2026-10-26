@@ -93,7 +93,9 @@ const GRID_INTRO_ZOOM := 1.15
 const GRID_HINT_INSET := 22.0
 const COST_X := 310.0
 const COST_Y := GRID_Y
-const ENERGY_H := 96.0         # 左栏顶部费用面板高度（下面是效果区）
+const ENERGY_H := 132.0        # 左栏顶部费用面板高度（下面是效果区）
+                            # R391：96 → 132 —— 里面现在有三行：角色 / 费用 X-Y /
+                            # 蓄力·闪躲（状态行）；13~30px 的字需要这个高度
 const DECK_X := WINDOW_W - CARD_W - 60.0
 const DECK_Y := WINDOW_H - CARD_H - 44.0
 const DISCARD_X := DECK_X
@@ -164,7 +166,29 @@ const HAND_FAN_DROP := 4.0        # 扇弧两端相对扇心的下沉像素（�
 const HAND_FAN_HOVER_LIFT := 28.0 # 悬停时抬手高度（纯显示，不影响命中判定）
 const HAND_SELECT_RAISE := 28.0   # 选中手牌时抬起的高度
 const INFO_X := 8.0
-const INFO_W := 272.0   # 左栏（详细效果 / 对局记录）：宽一点，效果正文少折几行
+const INFO_W := 296.0   # 左栏（详细效果 / 对局记录）：宽一点，效果正文少折几行
+                        # R391：272 → 296 —— 正文 10 → 13px 后要有对应的宽度，
+                        # 否则每行只剩十几个字（COST_X = 310，还留 6px 缝）。
+
+# ── R391：战斗界面 UI 字号（**卡面 / 道具栏 / 卡内角标不走这里**）──
+## 用户口径「除了卡面、商店，战斗界面 UI 中字体需要加大，对应窗体也同步加大；
+## 道具栏暂时不动」。
+## 为什么不直接改 `UiTheme.FS_*`：那 9 档是**全工程共用**的（商店 / 地图 / 标题页 /
+## 图鉴 / 卡组编辑全读它），改一处就连锁改七处。这里只抬高**战斗界面自己画**的那些
+## 文字，每档 +2~6px，档与档之间的层级差保持不变。
+## 不进这套的（= 视觉上属于「卡面」的一部分）：`card_face.gd` 的 CARD_FS_*、
+## 战场单位的状态徽标（`_draw_state_badge`）、效果卡的「×N / 剩 N」角标、
+## 区域方块（卡组/弃牌/消耗 63×76）的区域名与张数徽章、以及**道具栏**。
+const UI_FS_MICRO := 13      ## 原 FS_MICRO 10（表头 / 计数 / 面板脚注）
+const UI_FS_CAPTION := 15    ## 原 FS_CAPTION 12（说明 / HP / 区域标题）
+const UI_FS_LABEL := 17      ## 原 FS_LABEL 14
+const UI_FS_BODY := 19       ## 原 FS_BODY 16
+const UI_FS_SUBHEAD := 24    ## 原 FS_SUBHEAD 20
+const UI_FS_HEADING := 30    ## 原 FS_HEADING 24（费用数字 / 大按钮 / 结算大字）
+## 顶栏血量条（`_draw_hp_strip` 自绘，原来写死 14）
+const HP_STRIP_FS := 17
+## 左栏详情正文（`CardInfoBoxes` 的 size；框高 / 行高会按它同比放大）
+const INFO_BODY_FS := 13
 
 # ------------------------------------------------------------ 颜色
 
@@ -288,6 +312,8 @@ const REV_RETURN_MS := 460      # 本体滑回后排的时长（先演这个）
 const REV_FX_MS := 900          # 屏障 / 燃烧覆盖卡面的时长（后演这个）
 const REV_FACE_GAP_MS := 160    # 特效收尾 → 重弹敌方效果的间隔
 var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本不覆盖
+## R391：最近一次悬停/点击的**画布坐标** —— 自绘的大号「回合结束」按钮用它判 hover。
+var _mouse_ui := Vector2(-9999.0, -9999.0)
 ## R388：倍速状态 + 演出时钟。
 ##   * `_foe_speed` —— 1.0 / 1.5 / 2.0（按钮循环，落盘在 GameSettings）；
 ##   * `_foe_phase` —— 敌方回合窗口（含最后一击的收尾演出），只有它里面按倍速走；
@@ -4550,6 +4576,11 @@ func _on_left_click(pos: Vector2) -> void:
 			_close_zone_panels()
 			queue_redraw()
 		return
+	# R391：大号「回合结束」按钮（自绘 → 这里判矩形）。放在浏览面板之后：
+	# 面板开着时点它是「关面板」，与点面板外任意处一致。
+	if _end_turn_big_rect().has_point(pos):
+		_on_end_turn()
+		return
 	# 效果区：点击查看全部效果卡（持续生效中）
 	var effects_rect := _own_effect_zone_rect()
 	if effects_rect.has_point(pos) and not engine.state.effects.is_empty():
@@ -5259,7 +5290,7 @@ func _draw_foresight_mode() -> void:
 			rs[0].size.x + 52.0, 168.0)
 	UiTheme.draw_panel_bg(self, box)
 	draw_rect(box, UiTheme.INK_600, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "预判：选择一个效果",
+	_draw_string_center(_font_bold, UI_FS_LABEL, "预判：选择一个效果",
 			Vector2(WINDOW_W / 2, rs[0].position.y - 28), UiTheme.INK_800)
 	var labels := [
 		"① 从弃牌区选一张费用为 0 的技能卡加入手卡（之后本卡消失）",
@@ -5268,7 +5299,7 @@ func _draw_foresight_mode() -> void:
 	for k in 2:
 		draw_rect(rs[k], Color("e8e2f4") if k == 0 else Color("e2ecf4"))
 		draw_rect(rs[k], Color("7a5ea8") if k == 0 else Color("4a7ea8"), false, 1.5)
-		_draw_string_center(_font, UiTheme.FS_CAPTION, labels[k],
+		_draw_string_center(_font, UI_FS_CAPTION, labels[k],
 				rs[k].position + rs[k].size / 2.0, Color("222222"))
 
 
@@ -5951,7 +5982,7 @@ func _draw_pick_banner() -> void:
 	var r := _pick_banner_rect()
 	draw_rect(r, Color(0.14, 0.12, 0.20, 0.95))
 	draw_rect(r, Color("ffd27d"), false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
+	_draw_string_center(_font_bold, UI_FS_LABEL,
 			"选择进行中：%s —— 点击继续" % String(_pick.cfg_short()),
 			r.get_center(), Color("ffd27d"))
 func _close_zone_panels() -> void:
@@ -6522,6 +6553,7 @@ func _on_hover(pos: Vector2) -> void:
 	## 操作反馈保护期只保护状态栏文字；信息栏始终跟随悬停。
 	## 英雄的弃牌代价面板、以及 R121 的各类满屏覆盖层：都不跟手牌/棋盘
 	## （面板挡在上面，避免信息栏乱跳、避免在看不见的道具栏上弹说明）。
+	_mouse_ui = pos            # R391：自绘按钮的 hover 判定要读它
 	if _hero_pick_idx >= 0 or _hover_covered():
 		_clear_hover_state()
 		return
@@ -6644,7 +6676,8 @@ func _on_hover(pos: Vector2) -> void:
 	if _hover_card == null:
 		var energy_rect := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
 		if energy_rect.has_point(pos):
-			tip = "费用 %d：每回合 5 点，回合结束重置（不累积），出牌消耗" % engine.state.energy
+			tip = "费用 %d/%d：每回合回到 %d 点（不累积），出牌消耗" % [
+					engine.state.energy, engine.max_energy(), engine.max_energy()]
 	if _hover_card == null:
 		var merged_eff := _merged_effects(engine.state.effects)
 		for i in merged_eff.size():
@@ -6752,19 +6785,19 @@ func _build_tut_bar() -> void:
 
 	_tut_title = Label.new()
 	_tut_title.position = Vector2(12, 2)
-	_tut_title.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
+	_tut_title.add_theme_font_size_override("font_size", UI_FS_LABEL)
 	_tut_title.add_theme_color_override("font_color", Color("7a5200"))
 	_tut_bar.add_child(_tut_title)
 
 	_tut_prog = Label.new()
 	_tut_prog.position = Vector2(WINDOW_W - 330, 2)
-	_tut_prog.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
+	_tut_prog.add_theme_font_size_override("font_size", UI_FS_CAPTION)
 	_tut_prog.add_theme_color_override("font_color", Color("c08a1a"))
 	_tut_bar.add_child(_tut_prog)
 
 	_tut_check = Label.new()
 	_tut_check.position = Vector2(WINDOW_W - 190, 2)
-	_tut_check.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
+	_tut_check.add_theme_font_size_override("font_size", UI_FS_CAPTION)
 	_tut_check.add_theme_color_override("font_color", UiTheme.SIDE_SELF)
 	_tut_bar.add_child(_tut_check)
 
@@ -6772,14 +6805,14 @@ func _build_tut_bar() -> void:
 	_tut_body.position = Vector2(12, 20)
 	_tut_body.size = Vector2(WINDOW_W - 170, 56)
 	_tut_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_tut_body.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
+	_tut_body.add_theme_font_size_override("font_size", UI_FS_CAPTION)
 	_tut_body.add_theme_color_override("font_color", Color("3d3325"))
 	_tut_bar.add_child(_tut_body)
 
 	_tut_task = Label.new()
 	_tut_task.position = Vector2(12, TUT_BAR_MAX_H - 22)
 	_tut_task.size = Vector2(WINDOW_W - 170, 20)
-	_tut_task.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
+	_tut_task.add_theme_font_size_override("font_size", UI_FS_CAPTION)
 	_tut_task.add_theme_color_override("font_color", Color("a05a00"))
 	_tut_bar.add_child(_tut_task)
 
@@ -6836,7 +6869,7 @@ func _build_over_panel() -> void:
 	var hint := Label.new()
 	hint.name = "Hint"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
+	hint.add_theme_font_size_override("font_size", UI_FS_CAPTION)
 	hint.add_theme_color_override("font_color", UiTheme.INK_600)
 	box.add_child(hint)
 	_over_hint = hint
@@ -7246,17 +7279,18 @@ func _draw_hp_strip() -> void:
 		hp_strip.draw_texture_rect(_hp_icon, Rect2(x, cy - icon / 2.0, icon, icon), false)
 	x += icon + 4.0
 	var self_txt := "%d/%d" % [_roll("hp_self_bar", engine.state.hp_self), engine.state.max_hp_self]
-	hp_strip.draw_string(_font_bold, Vector2(x, cy + 5), self_txt,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("a9e6a0"))
-	x += _font_bold.get_string_size(self_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 16.0
+	hp_strip.draw_string(_font_bold, Vector2(x, cy + 6), self_txt,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, HP_STRIP_FS, Color("a9e6a0"))
+	x += _font_bold.get_string_size(self_txt, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			HP_STRIP_FS).x + 18.0
 	if _hp_icon != null:
 		hp_strip.draw_texture_rect(_hp_icon, Rect2(x, cy - icon / 2.0, icon, icon), false, Color("ffb0a8"))
 	x += icon + 4.0
-	hp_strip.draw_string(_font_bold, Vector2(x, cy + 5),
+	hp_strip.draw_string(_font_bold, Vector2(x, cy + 6),
 			"∞/∞" if engine.enemy_hp_infinite \
 					else "%d/%d" % [_roll("hp_opp_bar", engine.state.hp_opponent),
 							engine.state.max_hp_opponent],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("f0a89e"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, HP_STRIP_FS, Color("f0a89e"))
 
 
 # ------------------------------------------------------------ 战斗内地图总览（R64）
@@ -7358,7 +7392,7 @@ func _draw_map_panel() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.55))
 	draw_rect(pr, Color("1b1c22"))
 	draw_rect(pr, Color("6a6f7d"), false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_BODY, "冒 险 地 图（战斗中查看）",
+	_draw_string_center(_font_bold, UI_FS_BODY, "冒 险 地 图（战斗中查看）",
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 26.0), UiTheme.SAND)
 	# R357：第三层没有步数机制 → 这一行里不再出现「巧克力 ×N」（否则永远显示满格的
 	# 12，玩家会以为「还有 12 步可以走」）。
@@ -7372,9 +7406,9 @@ func _draw_map_panel() -> void:
 				RunState.cleared_ids.size(), RunState.map_cells.size(),
 				RunState.chocolate, RunState.hp, RunState.max_hp,
 				RunState.deck_ids.size()]
-	_draw_string_center(_font, UiTheme.FS_CAPTION, mv_info,
+	_draw_string_center(_font, UI_FS_CAPTION, mv_info,
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 48.0), UiTheme.INK_300)
-	_draw_string_center(_font, UiTheme.FS_CAPTION,
+	_draw_string_center(_font, UI_FS_CAPTION,
 			"本层 Boss：%s　·　战斗中不能改路线"
 			% str(RunState.boss_level().get("name", "")),
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 68.0), Color("8f8b80"))
@@ -7535,7 +7569,7 @@ func _draw_map_nodes() -> void:
 		elif known:
 			draw_string(_font_bold, Vector2(r.position.x, r.position.y + 44.0),
 					RogueMap.type_mark(dtype), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
-					UiTheme.FS_SUBHEAD, Color(1, 1, 1, 0.45) if done else UiTheme.PAPER)
+					UI_FS_SUBHEAD, Color(1, 1, 1, 0.45) if done else UiTheme.PAPER)
 		if _mapview_is_current(cell):
 			draw_rect(r.grow(2.5), UiTheme.ACCENT_LIT, false, 2.2)
 		elif _mapview_is_next(cell):
@@ -7551,11 +7585,11 @@ func _draw_map_legend(pr: Rect2) -> void:
 		var base: Color = UiTheme.MAP_NODE_COLORS.get(type, UiTheme.INK_500)
 		draw_rect(Rect2(x, y - 10.0, 12.0, 12.0), base, true)
 		draw_string(_font, Vector2(x + 16.0, y), RogueMap.type_label(type),
-				HORIZONTAL_ALIGNMENT_LEFT, 58, UiTheme.FS_CAPTION, Color("cfd3da"))
+				HORIZONTAL_ALIGNMENT_LEFT, 58, UI_FS_CAPTION, Color("cfd3da"))
 		x += 73.0
 	draw_string(_font, Vector2(pr.position.x + 12.0, y + 24.0),
 			"金框＝当前房间　绿框＝可以走过去　小桥＝通路（全图可见）　迷雾＝还看不清里面是什么",
-			HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 24.0, UiTheme.FS_CAPTION, Color("9aa0aa"))
+			HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 24.0, UI_FS_CAPTION, Color("9aa0aa"))
 
 
 func _toggle_sound() -> void:
@@ -7789,7 +7823,7 @@ func _draw_tutorial_cue() -> void:
 	var col := Color(1.0, 0.62, 0.0, alpha)
 	for r: Rect2 in rects:
 		draw_rect(r, col, false, 3.0)
-	_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, label,
+	_draw_string_nw(_font_bold, UI_FS_CAPTION, label,
 			rects[0].position + Vector2(4, -2), Color("a05a00"))
 	# 动态鼠标图标：按键侧压下 + 点击波纹（对应 Python 版 guide.draw_mouse_icon）
 	var right_click: bool = label.contains("右键")
@@ -7921,7 +7955,8 @@ func _on_end_turn() -> void:
 	if not engine.ai_enabled:
 		# 教程关：对手不行动，直接轮回我方
 		engine.end_turn()
-		status_text = "第 %d 回合：费用重置为 5，抽 5 张%s" % [engine.turn_number, _whisper_suffix()]
+		status_text = "第 %d 回合：费用重置为 %d，抽 5 张%s" % [engine.turn_number,
+				engine.max_energy(), _whisper_suffix()]
 		_show_banner("我方回合 · 第 %d 回合" % engine.turn_number, UiTheme.SIDE_SELF_TEXT)
 		sfx.play("turn")
 		queue_redraw()
@@ -7951,7 +7986,8 @@ func _ai_step() -> void:
 		_ai_timer.stop()
 		engine.end_turn()
 		if not engine.over:
-			status_text = "第 %d 回合：费用重置为 5，抽 5 张%s" % [engine.turn_number, _whisper_suffix()]
+			status_text = "第 %d 回合：费用重置为 %d，抽 5 张%s" % [engine.turn_number,
+				engine.max_energy(), _whisper_suffix()]
 			_show_banner("我方回合 · 第 %d 回合" % engine.turn_number, UiTheme.SIDE_SELF_TEXT)
 			sfx.play("turn")
 		queue_redraw()
@@ -8006,6 +8042,7 @@ func _draw() -> void:
 	_draw_deck_fly()
 	_draw_hp_banner()
 	_draw_enemy_effects()
+	_draw_end_turn_big()     # R391：道具栏上方的大号「回合结束」
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)  # 结束震动，后续 UI 不抖
 	_draw_level_plate()
 	_draw_hand_base()
@@ -12035,7 +12072,7 @@ func _draw_dmg_preview(cell: Vector2i, info: Dictionary) -> void:
 	var text := ("-%d" % d) if d > 0 else "0"
 	var fg := Color("fff1e0") if d > 0 else Color("ddd6c8")
 	var bg := Color(0.42, 0.09, 0.07, 0.92) if d > 0 else Color(0.17, 0.16, 0.15, 0.86)
-	_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, text,
+	_draw_string_box_center(_font_bold, UI_FS_LABEL, text,
 			Vector2(r.position.x + r.size.x - 22.0, r.position.y + r.size.y - 13.0), fg, bg)
 
 
@@ -12055,7 +12092,7 @@ func _draw_highlights() -> void:
 			_draw_dmg_preview(cell, engine.preview_attack_damage(atk_src, cell))
 	for cell in hp_targets_arr:
 		_hl(cell, COL_HP)
-		_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, "HP", _cell_center(cell), Color.WHITE)
+		_draw_string_box_center(_font_bold, UI_FS_LABEL, "HP", _cell_center(cell), Color.WHITE)
 		if atk_src.x >= 0:
 			_draw_dmg_preview(cell, engine.preview_attack_hp(atk_src))
 	for cell in spell_targets:
@@ -12077,7 +12114,7 @@ func _draw_highlights() -> void:
 		var sel_card: CardData = engine.state.hand[selection[1]]
 		for mcell in _fence_merge_cells(sel_card):
 			_hl(mcell, COL_FENCE_MERGE)
-			_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, "叠", _cell_center(mcell), Color.WHITE)
+			_draw_string_box_center(_font_bold, UI_FS_LABEL, "叠", _cell_center(mcell), Color.WHITE)
 
 
 func _picked_src() -> Vector2i:
@@ -12100,7 +12137,7 @@ func _draw_picked_marker() -> void:
 	# 角标：右上角小方块 + 「已选」两字
 	var tag := Rect2(r.position.x + r.size.x - 34.0, r.position.y + 1.0, 33.0, 14.0)
 	draw_rect(tag, COL_PICKED)
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "已选",
+	_draw_string_center(_font_bold, UI_FS_MICRO, "已选",
 			tag.position + tag.size / 2.0, Color.BLACK)
 
 
@@ -12129,7 +12166,7 @@ func _draw_cancel_armed_marker() -> void:
 	draw_rect(r, col, false, 3.0 + 2.0 * pulse)
 	var tag := Rect2(r.position.x + r.size.x - 45.0, r.position.y + 2.0, 44.0, 15.0)
 	draw_rect(tag, COL_CANCEL_ARMED)
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "取消?",
+	_draw_string_center(_font_bold, UI_FS_MICRO, "取消?",
 			tag.position + tag.size / 2.0, Color(0.10, 0.07, 0.02))
 
 
@@ -12230,11 +12267,11 @@ func _draw_level_plate() -> void:
 	if _tut_bar != null and _tut_bar.visible:
 		return
 	var txt := "关卡：%s" % engine.state.level_name
-	var px := UiTheme.FS_LABEL
+	var px := UI_FS_LABEL
 	var tw := _font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 	var pad_x := 18.0
-	var ph := 30.0
-	var rect := Rect2(WINDOW_W - 18.0 - (tw + pad_x * 2.0), 40.0, tw + pad_x * 2.0, ph)
+	var ph := 34.0
+	var rect := Rect2(WINDOW_W - 18.0 - (tw + pad_x * 2.0), 50.0, tw + pad_x * 2.0, ph)
 	draw_rect(rect.grow(2.0), Color(0, 0, 0, 0.22), true)          # 投影：把铭牌从底图上托出来
 	draw_rect(rect, Color(0.09, 0.075, 0.05, 0.78), true)          # 深色铭牌底
 	draw_rect(rect, UiTheme.ACCENT_GOLD, false, 1.5)               # 金边
@@ -12294,8 +12331,12 @@ func _draw_grid_frame() -> void:
 func _draw_grid_caption() -> void:
 	## R139：边框会滚了，「战场」标题就**不能再挂在边框上**（否则跟着飘走）——
 	## 改成固定在可视窗正上方的栏目标题（深棕字 + 浅金描边，压得住金饰带）。
-	_draw_string_box_center(_font_bold, UiTheme.FS_MICRO, "战场",
-			Vector2(GRID_X + GRID_W / 2, GRID_Y - 12), TXT_LIGHT)
+	# ⚠️ R391：顶栏长到 44px 之后，「棋盘上方 12px」那条缝只剩 8px —— 带底衬的
+	#    表头会被整条吃掉（顶栏是子节点、画在本层之上）。改成**不铺底、只描边**，
+	#    压在边框上沿：既不占高度，也不遮第一行卡面。
+	_draw_string_center(_font_bold, UI_FS_MICRO, "战场",
+			Vector2(GRID_X + GRID_W / 2, GRID_Y - 3), TXT_LIGHT, 3,
+			Color(0.10, 0.08, 0.05, 0.92))
 
 
 func _draw_frame_corner(src: Rect2, at: Vector2, sz: Vector2) -> void:
@@ -12312,15 +12353,84 @@ func _draw_hp_banner() -> void:
 	if _hp_icon != null:
 		draw_texture_rect(_hp_icon, Rect2(mid_x - 3, GRID_Y + 4, 24, 24), false)
 	# R356：敌方 HP 为 ∞ 的关卡（启示者）直接写 ∞ —— 数字滚动毫无意义，也不该显示 30。
-	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION,
+	_draw_string_box_nw(_font_bold, UI_FS_CAPTION,
 			"敌方 HP ∞" if engine.enemy_hp_infinite \
 					else "敌方 HP %d" % _roll("hp_opp", _show_hp("hp_opp", engine.state.hp_opponent)),
-			Vector2(mid_x + 26, GRID_Y + 8 + UiTheme.FS_CAPTION), TXT_FOE)
+			Vector2(mid_x + 26, GRID_Y + 8 + UI_FS_CAPTION), TXT_FOE)
 	if _hp_icon != null:
 		draw_texture_rect(_hp_icon, Rect2(mid_x - 3, GRID_Y + GRID_H - 34, 24, 24), false)
-	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION, "我方 HP %d/%d" % [_roll("hp_self", _show_hp("hp_self", engine.state.hp_self)),
+	_draw_string_box_nw(_font_bold, UI_FS_CAPTION, "我方 HP %d/%d" % [_roll("hp_self", _show_hp("hp_self", engine.state.hp_self)),
 			engine.state.max_hp_self],
-			Vector2(mid_x + 26, GRID_Y + GRID_H - 30 + UiTheme.FS_CAPTION), TXT_SELF)
+			Vector2(mid_x + 26, GRID_Y + GRID_H - 30 + UI_FS_CAPTION), TXT_SELF)
+
+
+## ── R391：大号「回合结束」按钮（道具栏正上方）──
+## 用户口径：「增加一个更大更明显的回合结束按钮放在道具栏上方」。
+## 道具栏 = `_relic_zone_rect()` = (900, 402, 240, 172) → 按钮压在它正上方，
+## 左边让开敌方效果区（右沿 882）、右边让开卡组列（DECK_X ≈ 1157）。
+func _end_turn_big_rect() -> Rect2:
+	return Rect2(898.0, 286.0, 244.0, 100.0)
+
+
+func _end_turn_ready() -> bool:
+	## 大按钮能不能按 —— 与 `_on_end_turn()` 的守卫**同源**：那边会直接 return 的
+	## 几种状态（对手回合 / 已结算 / 有必须先选完的待办）在这里提前显形，
+	## 按钮画灰并写明「对手行动中…」，别让玩家对着一个没反应的按钮点。
+	if engine == null or engine.over:
+		return false
+	if engine.current_side != GameEngine.SIDE_SELF:
+		return false
+	if engine.crow_pending or engine.whale_pending or engine.endless_pending \
+			or engine.rebirth_pending or _recall_pending():
+		return false
+	if engine.foresight_mode or engine.foresight_pick:
+		return false
+	return true
+
+
+func _draw_end_turn_big() -> void:
+	## R391：**自绘**而不是挂一个 Button 节点 —— 这个场景的点击判定全在
+	## `_gui_input` / `_on_left_click` 里；插一个 Button 会在**拖牌经过**时抢走
+	## 松手事件（牌就卡在手上放不下去了），而自绘只要在 `_on_left_click` 里
+	## 判一个矩形。有效性的唯一判据是 `_end_turn_ready()`。
+	var r := _end_turn_big_rect()
+	var ready := _end_turn_ready()
+	var hover: bool = ready and r.has_point(_mouse_ui)
+	var t := float(_now()) / 1000.0
+	var ph := 0.5 + 0.5 * sin(t * 2.2)          # 约 2.9 秒一个来回
+	# 金晕只在**能按**的时候呼吸（常亮等于没有信息量）
+	if ready:
+		for i in 4:
+			var g := r.grow(2.0 + float(i) * 5.0)
+			var a := (0.20 - float(i) * 0.045) * (0.45 + 0.55 * ph)
+			draw_rect(g, Color(1.0, 0.80, 0.30, maxf(a, 0.0)), true)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.11, 0.09, 0.06, 0.94) if ready else Color(0.18, 0.18, 0.20, 0.88)
+	sb.border_color = UiTheme.ACCENT_LIT if ready else Color(0.55, 0.55, 0.58)
+	sb.set_border_width_all(3 if ready else 2)
+	sb.set_corner_radius_all(14)
+	draw_style_box(sb, r)
+	# 内圈细线：让边框看起来是「双线」，比单线厚一档
+	draw_rect(r.grow(-7.0), Color(1.0, 0.86, 0.55, 0.32 if ready else 0.12), false, 1.0)
+	# 左侧「推进」图标：两枚三角（字体里的 ▶ 不保证有字形 → 一律程序画）
+	var icon_c := Vector2(r.position.x + 42.0, r.get_center().y - 9.0)
+	var icon_col := Color(1.0, 0.85, 0.45) if ready else Color(0.55, 0.55, 0.58)
+	for k in 2:
+		var ox := float(k) * 15.0
+		draw_colored_polygon(PackedVector2Array([
+				icon_c + Vector2(ox - 6.0, -13.0), icon_c + Vector2(ox + 7.0, 0.0),
+				icon_c + Vector2(ox - 6.0, 13.0)]), icon_col)
+	# 主文案 + 副文案
+	var text_cx := r.position.x + r.size.x * 0.5 + 16.0
+	_draw_string_center(_font_bold, UI_FS_HEADING, "回合结束",
+			Vector2(text_cx, r.position.y + 38.0),
+			Color("fff2cf") if ready else Color("a8a8ac"), 2, Color(0, 0, 0, 0.55))
+	var sub := "点击结束我方回合" if ready else "对手行动中…"
+	if hover:
+		sub = "▶ 结束我方回合"
+	_draw_string_center(_font, UI_FS_CAPTION, sub,
+			Vector2(text_cx, r.position.y + 74.0),
+			Color(1.0, 0.92, 0.72, 0.95) if ready else Color(0.62, 0.62, 0.66))
 
 
 func _enemy_zone_rect() -> Rect2:
@@ -12403,13 +12513,13 @@ func _draw_enemy_effect_popup() -> void:
 		_draw_void_portal_fallback(r)
 	var merged := _merged_effects(engine.state.enemy_effects)
 	var max_w := EE_TEXT_HW * 2.0 - 28.0
-	_draw_string_center(_font_bold, UiTheme.FS_SUBHEAD, "敌方效果",
+	_draw_string_center(_font_bold, UI_FS_SUBHEAD, "敌方效果",
 			c + Vector2(0.0, -EE_TEXT_HH + 26.0), Color.WHITE)
 	var y := c.y - EE_TEXT_HH + 62.0
 	var bottom := c.y + EE_TEXT_HH - 30.0
 	for m in merged:
 		if y > bottom - 24.0:
-			_draw_string_center(_font, UiTheme.FS_CAPTION,
+			_draw_string_center(_font, UI_FS_CAPTION,
 					"……共 %d 张，点右侧「敌方效果」区查看全部" % merged.size(),
 					Vector2(c.x, bottom), Color(0.72, 0.72, 0.78))
 			break
@@ -12417,12 +12527,12 @@ func _draw_enemy_effect_popup() -> void:
 		var nm: String = card.card_name
 		if int(m["count"]) > 1:
 			nm += " ×%d" % int(m["count"])
-		_draw_string_center(_font_bold, UiTheme.FS_BODY, nm,
+		_draw_string_center(_font_bold, UI_FS_BODY, nm,
 				Vector2(c.x, y), Color.WHITE)
 		y += 24.0
 		var desc := CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
-		for ln in _wrap_lines(_font, UiTheme.FS_CAPTION, desc, max_w):
-			_draw_string_center(_font, UiTheme.FS_CAPTION, ln,
+		for ln in _wrap_lines(_font, UI_FS_CAPTION, desc, max_w):
+			_draw_string_center(_font, UI_FS_CAPTION, ln,
 					Vector2(c.x, y), Color(0.93, 0.93, 0.97))
 			y += 17.0
 		y += 12.0
@@ -12431,7 +12541,7 @@ func _draw_enemy_effect_popup() -> void:
 	var ee_btn := Rect2(c.x - 70.0, c.y + EE_TEXT_HH - 37.0, 140.0, 30.0)
 	draw_rect(ee_btn, Color(0.30, 0.40, 0.26, 0.95), true)
 	draw_rect(ee_btn, Color("c8f0a0"), false, 1.5)
-	_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "继续（%d 秒）" % left,
+	_draw_string_center(_font_bold, UI_FS_CAPTION, "继续（%d 秒）" % left,
 			ee_btn.get_center() + Vector2(0, 1), Color("0e2010"))
 
 
@@ -12441,7 +12551,7 @@ func _draw_enemy_effects() -> void:
 	var z := _enemy_zone_rect()
 	draw_rect(z, Color(0.88, 0.72, 0.72, 0.30), true)
 	draw_rect(z, Color("a87a7a"), false, 1.0)
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "敌方效果 %d" % state.enemy_effects.size(),
+	_draw_string_center(_font_bold, UI_FS_MICRO, "敌方效果 %d" % state.enemy_effects.size(),
 			Vector2(z.position.x + z.size.x / 2, z.position.y + 22.0), Color("7a3a3a"))
 	# 同名合并显示（左下角 ×N 角标）
 	var merged_e := _merged_effects(state.enemy_effects)
@@ -12588,7 +12698,7 @@ func _draw_relic_bar() -> void:
 		_draw_more_tile(_relic_rect(shown_r), "+%d" % (n_rel - shown_r), "")
 	# 鸭之低语：本回合随机得到的强化，常驻显示在道具栏下方
 	if engine.self_relics.has(6010):
-		_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION,
+		_draw_string_box_nw(_font_bold, UI_FS_CAPTION,
 				"鸭之低语：%s" % (_whisper_txt if _whisper_txt != "" else "…"),
 				Vector2(z.position.x + 6.0, z.position.y + z.size.y + 20.0), Color("d9a8ff"))
 
@@ -12602,42 +12712,58 @@ func _draw_cost_zone() -> void:
 	var state := engine.state
 	var mid_x := COST_X + (TAP_W + 12) / 2
 	var bottom := GRID_Y + GRID_H
-	_draw_string_box_center(_font_bold, UiTheme.FS_MICRO, "费用",
-			Vector2(mid_x, COST_Y - 12), TXT_POWER)
+	# ⚠️ R391 起**不再画「费用」小标题**：顶栏长到 44px 之后，那条 `COST_Y - 12`
+	#    （= 40）整条落在顶栏底边里（顶栏是子节点、画在本层之上）→ 一个字都看不见。
+	#    面板里已经有「角色」+ 水晶图标 +「X/Y」，标题纯属冗余。
 	var epanel := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
 	draw_rect(epanel, Color(1, 1, 1, 0.55), true)
 	draw_rect(epanel, UiTheme.INK_300, false, 1.0)
-	# R156：费用数值配水晶图标（与费用徽章同款素材），图标 + 数字作为一对整体居中
-	var e_txt := str(_roll("energy", state.energy))
-	var e_w := _font_bold.get_string_size(e_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_HEADING).x
-	var gem := 26.0
-	var pair_x := mid_x - (gem + 4.0 + e_w) / 2.0
+	# 角色（左栏常驻）：本局选定的角色 —— 面板第一行
+	# ⚠️ 只写职业名，不带「角色：」前缀：面板只有 88 宽，15px 下「角色：森林精魄」
+	#    量到 105px，会左右各戳出面板 8px（实测出图里字压在棋盘边上）。
+	_draw_string_center(_font_bold, UI_FS_CAPTION, RunState.player_class,
+			Vector2(mid_x, COST_Y + 18), UiTheme.KIND_EFFECT)
+	# R391（用户口径）：费用显示成 **X / Y** —— X = 当前可用（滚动数字），
+	# Y = **满费上限** `GameEngine.max_energy()`（只算「每个回合都会给」的那部分）。
+	# 原来面板底下那行写死的「回合重置 N 点」删掉：一旦有耳环 / 兼修 / 无尽黑暗，
+	# 那个 N 就是错的。分母比分子小一档、颜色更淡 —— 「当前」是第一眼的数字，
+	# 「上限」只是参照物。
+	var e_cur := str(_roll("energy", state.energy))
+	var e_max_txt := "/%d" % engine.max_energy()
+	var e_w := _font_bold.get_string_size(e_cur, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			UI_FS_HEADING).x
+	var m_w := _font_bold.get_string_size(e_max_txt, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			UI_FS_LABEL).x
+	var gem := 30.0
+	var pair_w := gem + 6.0 + e_w + m_w
+	var pair_x := mid_x - pair_w / 2.0
 	if _energy_icon != null:
-		draw_texture_rect(_energy_icon, Rect2(pair_x, COST_Y + 46 - gem / 2.0, gem, gem), false)
-	_draw_string_center(_font_bold, UiTheme.FS_HEADING, e_txt,
-			Vector2(pair_x + gem + 4.0 + e_w / 2.0, COST_Y + 46), UiTheme.STAT_POWER)
-	_draw_string_center(_font, UiTheme.FS_MICRO, "每回合重置为 5",
-			Vector2(mid_x, COST_Y + 70), UiTheme.INK_500)
+		draw_texture_rect(_energy_icon,
+				Rect2(pair_x, COST_Y + 66 - gem / 2.0, gem, gem), false)
+	_draw_string_center(_font_bold, UI_FS_HEADING, e_cur,
+			Vector2(pair_x + gem + 6.0 + e_w / 2.0, COST_Y + 66), UiTheme.STAT_POWER)
+	_draw_string_center(_font_bold, UI_FS_LABEL, e_max_txt,
+			Vector2(pair_x + pair_w - m_w / 2.0, COST_Y + 71), UiTheme.INK_500)
 	# 蓄力（9085）：待用层数（0 层不画）—— 下一张技能的结算次数 = 1 + 层数
+	# ⚠️ 面板只有 88 宽：原来那一长串「蓄力 ×N（下一张技能 ×N+1）」在 13px 下量到
+	#    ~156px，会横着糊到棋盘上 → 拆成两行（字要变大，但不能溢出面板）。
 	var chg := engine.charge_count(GameEngine.SIDE_SELF)
+	var status_y := COST_Y + 98.0
 	if chg > 0:
-		_draw_string_center(_font_bold, UiTheme.FS_MICRO, "蓄力 ×%d（下一张技能 ×%d）" % [chg, chg + 1],
-				Vector2(mid_x, COST_Y + 84), UiTheme.STAT_POWER)
+		_draw_string_center(_font_bold, UI_FS_MICRO, "蓄力 ×%d" % chg,
+				Vector2(mid_x, status_y), UiTheme.STAT_POWER)
+		_draw_string_center(_font, UI_FS_MICRO, "技能 ×%d" % (chg + 1),
+				Vector2(mid_x, status_y + 16.0), UiTheme.STAT_POWER)
+		status_y += 32.0
 	# 闪躲（9103）：盟友代受窗口（未开启不画）
 	if engine.dodge_active(GameEngine.SIDE_SELF):
-		_draw_string_box_center(_font_bold, UiTheme.FS_MICRO, "闪躲：伤害由盟友代受",
-				Vector2(mid_x, COST_Y + 108), TXT_WARN)
-	# 角色（左栏常驻）：本局选定的角色
-	# R117：棋盘上移到 y=52 之后，原来的 `COST_Y - 26`（=26）会落进顶栏（36px 高，
-	# 且顶栏是子节点、画在本层之上）→ 被整条吃掉。收进费用面板上方的空档：
-	# 面板是 56..148，大数字在 +46、副标题在 +70，这一带原本就是空的。
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "角色：%s" % RunState.player_class,
-			Vector2(mid_x, COST_Y + 14), UiTheme.KIND_EFFECT)
+		_draw_string_box_center(_font_bold, UI_FS_MICRO, "闪躲：盟友代受",
+				Vector2(mid_x, status_y + 6.0), TXT_WARN)
 	# 效果区
 	var zone := Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, bottom - COST_Y - ENERGY_H)
 	draw_rect(zone, Color(0.72, 0.86, 0.72, 0.30), true)
 	draw_rect(zone, Color("7aa87a"), false, 1.0)
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "效果区 %d" % state.effects.size(),
+	_draw_string_center(_font_bold, UI_FS_MICRO, "效果区 %d" % state.effects.size(),
 			Vector2(mid_x, COST_Y + ENERGY_H + 22.0), Color("4a6a4a"))
 	# 效果卡：同名合并显示（左下角 ×N 角标），栏高固定、最多画满可见槽位；
 	# 装不下的用一张「+N」摘要卡兜底（点区域看全部）
@@ -12721,13 +12847,13 @@ func _draw_more_tile(rect: Rect2, label: String, sub: String) -> void:
 	draw_rect(rect, Color(0.96, 0.95, 0.88, 0.95), true)
 	draw_rect(rect, Color("9a8f70"), false, 1.0)
 	if rect.size.y >= 40.0:
-		_draw_string_center(_font_bold, UiTheme.FS_LABEL, label,
+		_draw_string_center(_font_bold, UI_FS_LABEL, label,
 				Vector2(cx, rect.position.y + rect.size.y * (0.50 if sub == "" else 0.40)), Color("6a6040"))
 		if sub != "":
-			_draw_string_center(_font, UiTheme.FS_MICRO, sub,
+			_draw_string_center(_font, UI_FS_MICRO, sub,
 					Vector2(cx, rect.position.y + rect.size.y * 0.72), Color("7a7050"))
 	else:
-		_draw_string_center(_font_bold, UiTheme.FS_MICRO, label if sub == "" else "%s %s" % [label, sub],
+		_draw_string_center(_font_bold, UI_FS_MICRO, label if sub == "" else "%s %s" % [label, sub],
 				Vector2(cx, rect.position.y + rect.size.y * 0.5 + 3.0), Color("6a6040"))
 
 
@@ -12928,7 +13054,7 @@ func _draw_hand() -> void:
 	# 标签放在手牌左侧、竖直居中于**可见**卡面（卡底沉在窗口外，别贴着屏幕底）
 	var label_y: float = OWN_HAND_Y + minf(HAND_CARD_H, WINDOW_H - OWN_HAND_Y) / 2
 	var left: float = _hand_rect(0).position.x if n > 0 else WINDOW_W / 2
-	_draw_string_box_center(_font_bold, UiTheme.FS_MICRO, "手牌 %d/%d" % [n, FieldState.HAND_LIMIT],
+	_draw_string_box_center(_font_bold, UI_FS_MICRO, "手牌 %d/%d" % [n, FieldState.HAND_LIMIT],
 			Vector2(minf(WINDOW_W / 2 - 330, left - 56), label_y),
 			TXT_WARN if full else TXT_LIGHT)
 	# 悬停的那张抬起来、并压在最上层（重叠时才看得清）
@@ -13217,13 +13343,13 @@ func _draw_curse_show() -> void:
 	else:
 		# 展示段文字：上面「诅咒」+ 卡名，下面来源
 		var top := rect.position.y - 46.0
-		_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "诅 咒",
+		_draw_string_center(_font_bold, UI_FS_CAPTION, "诅 咒",
 				Vector2(ctr.x, top), Color(0.86, 0.58, 1.0, 0.95))
-		_draw_string_center(_font_bold, UiTheme.FS_HEADING, card.card_name,
+		_draw_string_center(_font_bold, UI_FS_HEADING, card.card_name,
 				Vector2(ctr.x, top + 30.0), Color(1.0, 0.93, 1.0))
 		var src: String = str(_curse_cur.get("from", ""))
 		var sub := "→ 你的卡组" if src == "" else "%s → 你的卡组" % src
-		_draw_string_center(_font_bold, UiTheme.FS_CAPTION, sub,
+		_draw_string_center(_font_bold, UI_FS_CAPTION, sub,
 				Vector2(ctr.x, rect.end.y + 26.0), Color(0.78, 0.62, 1.0, 0.9))
 
 
@@ -13277,7 +13403,7 @@ func _draw_transform_fx() -> void:
 			var p0 := ctr + Vector2(cos(ang), sin(ang)) * rad * 0.5
 			var p1 := ctr + Vector2(cos(ang), sin(ang)) * rad * 1.05
 			draw_line(p0, p1, Color(0.90, 0.62, 1.0, a * 0.8), 2.0)
-		_draw_string_center(_font_bold, UiTheme.FS_LABEL, "变幻",
+		_draw_string_center(_font_bold, UI_FS_LABEL, "变幻",
 			ctr + Vector2(0.0, -CARD_H * 0.5 - 8.0), Color(0.85, 0.50, 1.0, a))
 
 func _draw_card_back_fade(rect: Rect2, alpha: float) -> void:
@@ -13326,7 +13452,7 @@ func _draw_drag() -> void:
 			# 已有栅栏的格子（叠栅栏）用橙色 + 「叠」标记，与绿色空格区分
 			if engine.state.board.has(cell):
 				_hl(cell, COL_FENCE_MERGE)
-				_draw_string_center(_font_bold, UiTheme.FS_LABEL, "叠", _cell_center(cell), Color.WHITE)
+				_draw_string_center(_font_bold, UI_FS_LABEL, "叠", _cell_center(cell), Color.WHITE)
 			else:
 				_hl(cell, COL_MOVE)
 	var card := engine.state.hand[_drag_idx]
@@ -13343,7 +13469,7 @@ func _draw_drag() -> void:
 		draw_rect(ez, Color(0.30, 0.75, 0.55, 0.22 if over else 0.10), true)
 		draw_rect(ez, Color(0.28, 0.82, 0.58, 0.95 if over else 0.45), false,
 				3.0 if over else 1.5)
-		_draw_string_center(_font_bold, UiTheme.FS_MICRO, "效果卡放这里",
+		_draw_string_center(_font_bold, UI_FS_MICRO, "效果卡放这里",
 				ez.position + Vector2(ez.size.x / 2.0, ez.size.y - 12.0),
 				Color(0.12, 0.42, 0.30))
 	# ── R117：标出「松手即生效」的**区域**（用户口径「标明拖拽后可以使用的区域」）──
@@ -13357,7 +13483,7 @@ func _draw_drag() -> void:
 		draw_rect(zone, Color(COL_DROP_ZONE.r, COL_DROP_ZONE.g, COL_DROP_ZONE.b,
 				0.09 if in_zone else 0.04), true)
 		draw_rect(zone, COL_DROP_ZONE, false, 2.5 if in_zone else 1.5)
-		_draw_string_center(_font_bold, UiTheme.FS_CAPTION, _drag_zone_label(),
+		_draw_string_center(_font_bold, UI_FS_CAPTION, _drag_zone_label(),
 				Vector2(zone.position.x + zone.size.x / 2.0, zone.position.y - 8.0),
 				COL_DROP_ZONE)
 	# 跟着光标走的卡与手牌同尺寸（从手牌里"拿起来"不会突然变小）；
@@ -13435,7 +13561,7 @@ func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
 			txt = "⚠ 不分敌我：我行单位立刻 -%d，走过去还会被烧" % GameEngine.FIRE_WALL_DMG
 		else:
 			txt = "⚠ 会波及自己人 ×%d" % own
-		_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, txt,
+		_draw_string_box_center(_font_bold, UI_FS_LABEL, txt,
 				Vector2(bb.get_center().x, bb.position.y - 13.0), Color("ffe2e2"),
 				Color(0.22, 0.05, 0.05, 0.88))
 	# ③ 条件额外效果：金色双环 + 文案（在格子下方，不挡飘字）
@@ -13445,7 +13571,7 @@ func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
 		var kw := minf(CELL, CELL_W)
 		draw_arc(cc, kw * 0.60, 0, TAU, 32, COL_BONUS, 2.5)
 		draw_arc(cc, kw * 0.72, 0, TAU, 32, COL_BONUS, 1.4)
-		_draw_string_box_center(_font_bold, UiTheme.FS_CAPTION, bonus,
+		_draw_string_box_center(_font_bold, UI_FS_CAPTION, bonus,
 				cc + Vector2(0, kw * 1.06), COL_BONUS, Color(0.14, 0.11, 0.03, 0.86))
 
 
@@ -13567,12 +13693,12 @@ func _draw_info_panel() -> void:
 	var left := INFO_X + 10.0
 	var right := INFO_X + INFO_W - 10.0
 	var inner_w := INFO_W - 20.0
-	var y := top + 21.0
+	var y := top + 24.0
 	# R349（用户口径）：左栏是**浅羊皮纸底**，文字一律不描边（`-1`）——
 	# 小字号自动描 2~3px 会把笔画糊成一团（R309 的同一个坑，这次连正文一起清干净）。
-	_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "#%d %s" % [card.id, card.card_name],
+	_draw_string_nw(_font_bold, UI_FS_CAPTION, "#%d %s" % [card.id, card.card_name],
 			Vector2(left, y), card.rarity_color(), -1)
-	y += 17.0
+	y += 22.0
 	# 费用：显示**当前实际费用**（悬停/选中手牌时套用本回合减费，低于卡面则标绿）
 	var hand_idx := _hover_hand
 	if hand_idx < 0 and selection != null and selection[0] == "hand":
@@ -13588,11 +13714,11 @@ func _draw_info_panel() -> void:
 	if card.x_cost:
 		# X 费卡（流星雨）：费用随剩余费用浮动 → 左栏直接写「费用 X（X = 剩余全部费用）」
 		cost_line = "%s · 费用 X（X = 剩余全部费用）· %s" % [card.kind, card.rarity_name()]
-	_draw_string_nw(_font, UiTheme.FS_MICRO, cost_line,
+	_draw_string_nw(_font, UI_FS_MICRO, cost_line,
 			Vector2(left, y), COL_COST_LOW_BG if cost_low else UiTheme.INK_600, -1)
-	y += 13.0
+	y += 18.0
 	draw_line(Vector2(left, y), Vector2(right, y), Color("cfcbc2"), 1.0)
-	y += 17.0
+	y += 20.0
 	# R349（用户口径）：**不再单开一行「现在打出：N 点伤害」** —— 那个数改成在效果正文里
 	# 内联显示（`造成 18（10＋8）点伤害`，18 醒目、算式次色），见 `CardText.inline_damage()`。
 	# 数值仍与结算同源（`GameEngine.spell_now()` → `_spell_dmg()`）。
@@ -13605,9 +13731,9 @@ func _draw_info_panel() -> void:
 		var tt := ""
 		for t in card.traits:
 			tt += (" · " if tt != "" else "") + str(t)
-		_draw_string_nw(_font, UiTheme.FS_MICRO, "词条：" + tt, Vector2(left, y),
+		_draw_string_nw(_font, UI_FS_MICRO, "词条：" + tt, Vector2(left, y),
 				Color("886000"), -1)
-		y += 17.0
+		y += 20.0
 	# R297：**框体流**（用户口径）—— 数值两框 → 效果文本框 → 字段框 → buff 框。
 	# 以前这些全是纯文本行「力量 3 生命 5 / 字段：嘲讽 · 次元 / · 护盾：免疫…」，
 	# 一层层堆下来读不出结构；现在每类一个框，**框高随内容量变**（`CardInfoBoxes.box_h`）。
@@ -13615,7 +13741,7 @@ func _draw_info_panel() -> void:
 	# R302：把「提及」的命中矩形交出去（悬停「素体」两个字才弹说明）。
 	# 用户口径：**不要**再把摘要固定列在详情底部 —— 那块地方还给效果框 / buff 框。
 	_mention_hits.clear()
-	CardInfoBoxes.draw_all(self, blocks, left, y, inner_w, CardInfoBoxes.FS,
+	CardInfoBoxes.draw_all(self, blocks, left, y, inner_w, INFO_BODY_FS,
 			top + GRID_H - 12.0, _mention_hits)
 
 
@@ -13652,8 +13778,8 @@ func _draw_game_over() -> void:
 	var col := COL_WIN if win else COL_LOSE
 	UiTheme.draw_panel_bg(self, Rect2(GRID_X + 12, cy - 58, GRID_W - 24, 116))
 	draw_rect(Rect2(GRID_X + 12, cy - 58, GRID_W - 24, 116), col, false, 3.0)
-	_draw_string_center(_font_bold, UiTheme.FS_HEADING, "胜  利" if win else "失  败", Vector2(cx, cy - 20), col)
-	_draw_string_center(_font, UiTheme.FS_MICRO, engine.result_reason, Vector2(cx, cy + 28), UiTheme.INK_600)
+	_draw_string_center(_font_bold, UI_FS_HEADING, "胜  利" if win else "失  败", Vector2(cx, cy - 20), col)
+	_draw_string_center(_font, UI_FS_MICRO, engine.result_reason, Vector2(cx, cy + 28), UiTheme.INK_600)
 
 
 func _draw_banner() -> void:
@@ -13668,7 +13794,7 @@ func _draw_banner() -> void:
 	var cy := GRID_Y + GRID_H * 0.42 - 18.0 * p
 	draw_rect(Rect2(cx - 150, cy - 30, 300, 60), Color(1, 1, 1, 0.72 * alpha))
 	draw_rect(Rect2(cx - 150, cy - 30, 300, 60), Color(col.r, col.g, col.b, alpha), false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_HEADING, str(_banner.text), Vector2(cx, cy + 8), col)
+	_draw_string_center(_font_bold, UI_FS_HEADING, str(_banner.text), Vector2(cx, cy + 8), col)
 
 
 func _draw_confetti() -> void:
@@ -13767,10 +13893,12 @@ func _zone_panel_layout(n: int) -> Dictionary:
 	var rows := maxi(1, int(ceil(float(n) / float(cols))))
 	var grid_w := cols * (CARD_W + ZONE_CARD_GAP) - ZONE_CARD_GAP
 	var pw := minf(WINDOW_W - 80.0, grid_w + 60.0)
-	var rows_fit := maxi(1, int((WINDOW_H - 40.0 - 86.0 + ZONE_CARD_GAP) / (CARD_H + ZONE_CARD_GAP)))
+	# 98 = 顶部标题区（54）+ 底部翻页区（44）。R391：标题 14 → 17px、卡面上下各外溢
+	# 约 10px，原来的 86 会让标题和第一行卡的徽章咬在一起（出图实测）。
+	var rows_fit := maxi(1, int((WINDOW_H - 40.0 - 98.0 + ZONE_CARD_GAP) / (CARD_H + ZONE_CARD_GAP)))
 	var page_rows := mini(rows, rows_fit)
 	var pages := maxi(1, int(ceil(float(rows) / float(page_rows))))
-	var ph := minf(WINDOW_H - 40.0, page_rows * (CARD_H + ZONE_CARD_GAP) + 86.0)
+	var ph := minf(WINDOW_H - 40.0, page_rows * (CARD_H + ZONE_CARD_GAP) + 98.0)
 	var px := (WINDOW_W - pw) / 2
 	var py := (WINDOW_H - ph) / 2
 	var x0 := px + (pw - grid_w) / 2
@@ -13783,7 +13911,7 @@ func _zone_card_rect(i: int, L: Dictionary) -> Rect2:
 	var cols: int = L["cols"]
 	var row_in_page := int(i / cols) - _zone_page * int(L["page_rows"])
 	return Rect2(L["x0"] + (i % cols) * (CARD_W + ZONE_CARD_GAP),
-			L["py"] + 42.0 + row_in_page * (CARD_H + ZONE_CARD_GAP), CARD_W, CARD_H)
+			L["py"] + 54.0 + row_in_page * (CARD_H + ZONE_CARD_GAP), CARD_W, CARD_H)
 
 
 func _zone_panel_rect() -> Rect2:
@@ -13824,10 +13952,10 @@ func _draw_zone_panel(title: String, cards: Array, counts: Array = []) -> void:
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
 	UiTheme.draw_panel_bg(self, Rect2(px, py, pw, ph))
 	draw_rect(Rect2(px, py, pw, ph), UiTheme.ACCENT_GOLD, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL, title,
-			Vector2(WINDOW_W / 2, py + 24), UiTheme.INK_800)
+	_draw_string_center(_font_bold, UI_FS_LABEL, title,
+			Vector2(WINDOW_W / 2, py + 26), UiTheme.INK_800)
 	if pages > 1:
-		_draw_string_center(_font, UiTheme.FS_CAPTION, "第 %d/%d 页" % [_zone_page + 1, pages],
+		_draw_string_center(_font, UI_FS_CAPTION, "第 %d/%d 页" % [_zone_page + 1, pages],
 				Vector2(WINDOW_W / 2, py + ph - 15), UiTheme.INK_500)
 		_draw_string_center(_font_bold, UiTheme.FS_HEADING, "<",
 				_zone_prev_page_rect().get_center() + Vector2(0, 1),
@@ -13838,7 +13966,7 @@ func _draw_zone_panel(title: String, cards: Array, counts: Array = []) -> void:
 	# 右上「×」
 	draw_rect(_zone_close_rect(), Color("c9bfa6"), true)
 	draw_rect(_zone_close_rect(), UiTheme.INK_300, false, 1.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "×",
+	_draw_string_center(_font_bold, UI_FS_LABEL, "×",
 			_zone_close_rect().get_center() + Vector2(0, 1), UiTheme.INK_800)
 	if n == 0:
 		return
@@ -13915,11 +14043,11 @@ func _draw_relic_panel() -> void:
 	draw_rect(Rect2(px, py, pw, ph), UiTheme.INK_600, false, 2.0)
 	# R344：整块面板是浅底（羊皮纸），文字一律**不描边** —— 描边色是深色，
 	# 描在小字号笔画外面等于给每个字套一圈灰边，13px 的说明读起来就是糊的。
-	_draw_string_center(_font_bold, UiTheme.FS_SUBHEAD,
+	_draw_string_center(_font_bold, UI_FS_SUBHEAD,
 			"我的道具（共 %d 件）" % n,
 			Vector2(WINDOW_W / 2, py + 30), UiTheme.INK_800, -1)
 	if n == 0:
-		_draw_string_center(_font, UiTheme.FS_BODY, "本局还没有道具",
+		_draw_string_center(_font, UI_FS_BODY, "本局还没有道具",
 				Vector2(WINDOW_W / 2, py + 76), UiTheme.INK_500, -1)
 		return
 	var y := py + 56.0 - _relic_scroll
@@ -13984,17 +14112,24 @@ func _draw_log_panel() -> void:
 	var rect := Rect2(INFO_X, GRID_Y, INFO_W, GRID_H)
 	draw_rect(rect, Color("2b2b2b"))
 	draw_rect(rect, UiTheme.INK_300, false, 1.0)
-	_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "对局记录（L 关闭）",
+	_draw_string_nw(_font_bold, UI_FS_CAPTION, "对局记录（L 关闭）",
 			Vector2(INFO_X + 10, GRID_Y + 18), Color("f0f0f0"))
 	var lines := engine.log
+	var lpx: int = UI_FS_MICRO
+	var max_w := INFO_W - 20.0
 	var show := mini(lines.size(), 21)
-	var y := GRID_Y + 40.0
+	var y := GRID_Y + 44.0
 	for i in range(lines.size() - show, lines.size()):
 		var t := str(lines[i])
-		if t.length() > 28:
-			t = t.substr(0, 28) + "…"
-		_draw_string_nw(_font, UiTheme.FS_MICRO, t, Vector2(INFO_X + 8, y), Color("d8d8d8"))
-		y += 17.0
+		# ⚠️ 原来写死「超过 28 个字就截」—— 那是按 10px 量出来的经验值。字号涨到 13 之后
+		#    28 个汉字 ≈ 364px，比左栏还宽，会直接糊到棋盘上。改成**按实际宽度**截。
+		if _font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, lpx).x > max_w:
+			while t.length() > 1 and _font.get_string_size(t + "…",
+					HORIZONTAL_ALIGNMENT_LEFT, -1, lpx).x > max_w:
+				t = t.substr(0, t.length() - 1)
+			t += "…"
+		_draw_string_nw(_font, UI_FS_MICRO, t, Vector2(INFO_X + 8, y), Color("d8d8d8"))
+		y += 21.0
 
 
 # ------------------------------------------------------------ 每帧刷新工具栏文字
@@ -14092,7 +14227,8 @@ func _process(delta: float) -> void:
 			or _board_has_fuse() or _board_has_shield() or _board_has_activatable() \
 			or _board_has_actable() or _cancel_armed \
 			or (engine != null and _board_has_pulsing_field()) \
-			or _relic_bar_lit():          # R314：道具栏有亮着的徽章 → 呼吸要连续重绘
+			or _relic_bar_lit() \
+			or _end_turn_ready():         # R391：大按钮的金晕要呼吸（同一口节流）
 		_pulse_redraw()
 	if not _confetti.is_empty():
 		if _tick_confetti(delta):

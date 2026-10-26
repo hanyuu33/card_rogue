@@ -6910,6 +6910,33 @@ func dodge_active(side:= SIDE_SELF) -> bool:
 	return side == SIDE_SELF and _dodge_active
 
 
+func max_energy() -> int:
+	## 我方本回合的**满费**（费用条 X/Y 里的 Y，R391 用户口径）。
+	## 只把「**每个回合都会给**」的那部分算进上限：
+	##   道具 —— 鸭语耳环 6015 / 兼修 6033（各 +1，`_begin_turn` 里无条件发放）；
+	##   效果卡 —— 无尽黑暗 9114（每回合弃 1 张换 2 费）。
+	## **只在特定回合 / 特定条件**给的**不算** —— 它们是「这一回合多出来的」，不是
+	## 「每回合都有」，写进分母会让 Y 每回合乱跳：
+	##   鸭翼（第 3 回合 +3）/ 冰淇淋（第 1 回合 +2）/ 勇气徽章（精英·Boss 首回合 +1）/
+	##   水晶骰子（前 X 回合 +1）/ 活力转移（上回合结转）/ 鸭之低语（随机 1/3）/
+	##   雕像（每用 10 张牌回 1）/ 契约签订者等「一次性回费」。
+	return FieldState.ENERGY_PER_TURN + permanent_energy_bonus()
+
+
+func permanent_energy_bonus() -> int:
+	## 「每个回合都给」的费用加成合计（= 满费上限相对基础值 5 的增量）。
+	## ⚠️ 以后再加「每回合 +N 费」的道具 / 效果卡，**必须**在这里登记 ——
+	##    否则费用条的分母会少算（显示 5/5，实际却能用 7 点）。
+	var n := 0
+	if self_relics.has(EARRING_RELIC_ID):
+		n += 1
+	if self_relics.has(VERSATILE_RELIC_ID):
+		n += 1
+	if _zone_has(state.effects, ENDLESS_DARK_TRAIT):
+		n += ENDLESS_DARK_ENERGY
+	return n
+
+
 func _charge_take(side: String) -> int:
 	## 取走并清空该方的蓄力 → 返回这次技能该结算几次（1 = 没蓄力）。
 	## 必须在 _run_spell_effect **之前**调用：蓄力是结算时才上层的，不会把自己翻倍。
