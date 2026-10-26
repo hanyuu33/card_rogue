@@ -560,6 +560,8 @@ var _hover_card: CardData = null  # 鼠标悬停的卡（左侧信息栏优先�
 var _hover_pl: Placement = null   # 悬停的战场单位（可显示当前生命）
 var _hover_hand := -1             # 悬停的手牌下标（-1 = 无）：仅用于绘制时抬手
 var _over_shown := false        # 结算覆盖层是否已弹出（边沿检测）
+var over_route_fn: Callable = Callable()   # R389 烟测接缝：只记录目标，不真换场景
+var _demo_story_notice := ""                 # R389 出图：--storyunlock 时假装新解锁一段
 var _over_panel: PanelContainer
 var _over_title: Label
 var _over_hint: Label            # 结算面板副标题（难度档位信息等）
@@ -659,6 +661,8 @@ func _ready() -> void:
 	# R216：领到「要立刻选卡」的即时道具时，奖励界面会当场转去卡组选择页 ——
 	# 跳走之前先让本场把尾收掉（房间标记完成 / Boss 推进层），否则结算会被甩掉。
 	_reward_panel.on_before_pick = _settle_before_pick
+	# R389：玩家自己关掉奖励窗 → 领完了就直接回地图（不再点一次结算按钮）
+	_reward_panel.on_closed = _on_reward_panel_closed
 	# R189：全屏选卡页 —— 乌鸦/鲸鱼/无尽/取牌/预判/命运/专注/英雄代价的统一入口。
 	# 作为最后一个子节点挂上（盖住按钮栏，展开时吃掉全部点击）。
 	_pick = PickOverlay.new()
@@ -873,6 +877,10 @@ func _ready() -> void:
 	if "--over" in args:
 		# 演示：直接进入结算（验证结算覆盖层 / 彩带 / 胜利音效）
 		engine._finish("胜利", "演示：结算界面")
+	if "--storyunlock" in args:
+		# R389 出图：假装刚解锁一段**有正文**的剧情 —— 核验结算面板副标题 + 底部轻提示。
+		# 出图：`battle.tscn -- --screenshot --over --storyunlock --shotframe 40`
+		_demo_story_notice = "✦ 新剧情解锁：第一章-游移的音准"
 	if "--bosswin" in args and engine != null:
 		# R179 演示：**Boss 通关结算**（核验短按钮文案 + Boss 档卡牌三选一）。
 		# 必须配 `--level <Boss 关下标>` 用（`_run_boss_win` 由关卡 tier 决定）。
@@ -6903,21 +6911,38 @@ func _settle_before_pick() -> void:
 
 
 func _on_over_restart() -> void:
-	## 结算面板主按钮：
+	## 结算面板主按钮 / R389 领完奖励的自动出口：
 	##   * Boss 通关且有下一层 → 推进到下一层（满血 + 新地图）→ 起始道具三选一；
 	##   * run 中（非 Boss 通关）→ 回冒险地图（奖励已由结算悬浮窗处理，R137 文案同步）；
 	##   * 其余（通关无下一层 / 失败 / 单关）→ 回标题。
 	if RunState.run_active and _run_next_layer > 0:
 		RunState.advance_layer(_run_next_layer)
 		# R310：进新层的起点 = 卷卷的对话事件（原「起始道具三选一」面板）
-		SceneFx.goto("res://scenes/curtain.tscn")
+		_goto_scene("res://scenes/curtain.tscn")
 	elif RunState.run_active and not _run_boss_win:
 		# R119：卡牌奖励已由奖励悬浮窗处理（没收的会留在「待领奖励」入口里），
 		# 这里只把节点标记完成、回地图 —— 不再切到独立的卡牌奖励场景。
 		RunState.complete_current()
-		SceneFx.goto("res://scenes/map.tscn")
+		_goto_scene("res://scenes/map.tscn")
 	else:
-		SceneFx.goto("res://scenes/title.tscn")
+		_goto_scene("res://scenes/title.tscn")
+
+
+func _goto_scene(path: String) -> void:
+	## R389：切场景的唯一收口 —— 烟测里用 `over_route_fn` 截获目标，不真换场景树
+	## （headless 下真换会把用例自己的树掀掉）。
+	if over_route_fn.is_valid():
+		over_route_fn.call(path)
+	else:
+		SceneFx.goto(path)
+
+
+func _on_reward_panel_closed() -> void:
+	## R389：玩家**自己点关**奖励窗之后走这里（转场关闭已被 `_closing_to_route` 挡掉）。
+	## 判据在 `RewardPanel` 那边 —— 是个纯静态函数，engine 单测得到；这里只负责执行。
+	if not RewardPanel.can_auto_leave_after_reward(_over_shown, RunState.pending_reward_count()):
+		return
+	_on_over_restart()
 
 
 func _record_defeat() -> void:
@@ -7062,8 +7087,19 @@ func _show_over(win: bool) -> void:
 	# R346 剧情解锁：本场战斗的统计（出牌 / 道具 / 胜场 / Boss）已经记完 →
 	# 刷一次成就、落盘一次。**不在 `bump()` 里写盘**是这个设计的核心纪律：
 	# 一场战斗要打十几张牌，每张都写一次 JSON 纯属浪费。
-	ProfileData.check_achievements(StoryRepo.load_json())
+	var story_repo := StoryRepo.load_json()
+	var story_new := ProfileData.check_achievements(story_repo)
 	ProfileData.flush()
+	# R389：真的解锁了**有正文**的剧情 → 结算面板副标题 + 底部轻提示各报一句。
+	# 没写正文的段落（episode3~6）不提示 —— `unlock_notice()` 里已经挡掉。
+	var story_note := story_repo.unlock_notice(story_new)
+	if story_note == "" and _demo_story_notice != "":
+		story_note = _demo_story_notice   # 出图用（真实路径永远是上面那一行）
+	if story_note != "":
+		_over_hint.text = story_note
+		# 结算面板是米色羊皮卷底：亮金（ACCENT_LIT）在上面发灰，用深一档的金
+		_over_hint.add_theme_color_override("font_color", UiTheme.ACCENT_GOLD)
+		UiToast.toast(story_note, 3200)
 	var sb := _over_panel.get_theme_stylebox("panel") as StyleBoxFlat
 	sb.border_color = COL_WIN if win else COL_LOSE
 	_over_title.text = "胜  利" if win else "失  败"

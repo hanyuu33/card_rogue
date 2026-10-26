@@ -85,6 +85,10 @@ var _repo_relics: RelicRepo
 ## R216：跳去选卡页**之前**让宿主收尾（战斗：房间标记完成 / Boss 推进层；事件：房间完成）。
 ## 顺序很重要 —— 先收尾再换场景，否则「跳走」会把没做完的结算甩掉。
 var on_before_pick: Callable = Callable()
+## R389：**玩家自己关掉**奖励窗之后的回调（battle_scene 用它做「领完直接回地图」）。
+## 转场导致的自动关闭**不触发** —— 那条路已经安排好下一个场景了，再跳一次就是打架。
+var on_closed: Callable = Callable()
+var _closing_to_route := false
 ## 烟测接缝：非空时代替真跳转（headless 没有场景可换）。正式流程永远为空。
 var route_fn: Callable = Callable()
 
@@ -133,6 +137,16 @@ func _ready() -> void:
 
 # ------------------------------------------------------------ 开关 / 每帧
 
+static func can_auto_leave_after_reward(over_shown: bool, pending: int) -> bool:
+	## R389：奖励窗关掉之后要不要**直接走**（用户口径：领完就该回地图，
+	## 别再让玩家去点一次结算面板上的「返回冒险地图」）。
+	## 两个前提缺一不可：
+	##   * 结算面板已经出来了 —— 失败 / 单关演示根本不走这条路；
+	##   * 这一批奖励**确实领完了** —— 还有没领的就停在原地，
+	##     左上角「✦ 待领奖励 N」随时能回来，不能把人直接拽走。
+	return over_shown and pending <= 0
+
+
 func is_open() -> bool:
 	return _open
 
@@ -166,6 +180,8 @@ func close() -> void:
 	_pick_sel = -1
 	_ench_t0 = 0
 	_refresh_btn()
+	if not _closing_to_route and on_closed.is_valid():
+		on_closed.call()
 
 
 func _exit_tree() -> void:
@@ -393,7 +409,9 @@ func _settle_then_route(target: String) -> void:
 	## 先让宿主收尾 → 关界面 → 换场景。
 	if on_before_pick.is_valid():
 		on_before_pick.call()
+	_closing_to_route = true    # R389：转场关闭 → 不惊动 on_closed
 	close()
+	_closing_to_route = false
 	if route_fn.is_valid():
 		route_fn.call(target)      # 烟测：只记录目标，不真换场景
 	else:

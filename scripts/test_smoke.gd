@@ -59,6 +59,14 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_battle],
+		# R389（用户口径）：战斗结束**领完奖励就直接回地图**，但离开必须玩家自己点「完成」。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"})
+				_seed_rewards(),
+			_check_r389_auto_leave],
 		# R339：战斗检查点必须写「进战斗之前」的局状态 —— lucky 7 的跨战斗计数在开局
 		# 第 1 个我方回合就 +1，若检查点写「当下」，续档重打这一场就会越续越多（用户报）。
 		["res://scenes/battle.tscn", func():
@@ -626,6 +634,53 @@ func _seed_rewards() -> void:
 	RunState.queue_relic_reward(6013)   # 叠加态的鸭：desc 最长的一件（专治「介绍太长」）
 	RunState.queue_card_reward("normal")
 	RunState.queue_relic_reward(6005)
+
+
+func _check_r389_auto_leave(scene: Variant) -> void:
+	## R389：奖励窗关掉之后走不走，只有**玩家自己点关**才会问（转场关闭不惊动）。
+	## 三个状态都要走一遍：
+	##   ① 还有没领的 → 停在结算面板（左上角「待领奖励 N」还在，不能把人拽走）
+	##   ② 全部领完   → 直接回地图（不用再点一次结算按钮）
+	##   ③ 转场关闭   → 只去一个目标（不能半路又跳一次地图）
+	var p: Variant = scene.get("_reward_panel")
+	if p == null:
+		_smoke_fail("R389：战斗场景没有挂上 RewardPanel")
+		return
+	var routed: Array = []
+	scene.set("over_route_fn", func(t): routed.append(t))
+	scene.set("_over_shown", true)
+	if RunState.pending_reward_count() != 3:
+		_smoke_fail("R389：用例需要 3 条待领奖励，实际 %d" % RunState.pending_reward_count())
+		return
+	# ① 还有奖励没领
+	p.open()
+	p.close()
+	if not routed.is_empty():
+		_smoke_fail("R389 还有奖励没领：不该自动离开（实际去了 %s）" % str(routed))
+		return
+	# ② 全部领完 → 直接回地图
+	routed.clear()
+	p.open()
+	RunState.pending_rewards.clear()
+	p.close()
+	if routed != ["res://scenes/map.tscn"]:
+		_smoke_fail("R389 领完奖励：应直接回地图，实际 %s" % str(routed))
+		return
+	# ③ 转场关闭不该再触发一次
+	routed.clear()
+	_seed_rewards()
+	p.open()
+	var keep_before: Callable = p.on_before_pick
+	p.on_before_pick = Callable()   # 别让宿主的收尾逻辑改 RunState（这里是假跳）
+	p.route_fn = func(t): routed.append(t)
+	p._settle_then_route("res://scenes/pick.tscn")
+	p.route_fn = Callable()
+	p.on_before_pick = keep_before
+	if routed != ["res://scenes/pick.tscn"]:
+		_smoke_fail("R389 转场关闭：只该去一个目标，实际 %s" % str(routed))
+		return
+	scene.set("over_route_fn", Callable())
+	print("SMOKE OK R389 领完奖励：关窗即回地图 / 没领完不动 / 转场不重复跳")
 
 
 func _check_reward_panel_view(scene: Variant, want_view: int, label: String) -> void:

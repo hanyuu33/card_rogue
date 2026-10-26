@@ -23820,7 +23820,8 @@ func _init() -> void:
 	var r310_bat := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 	check_src(r310_map.find('SceneFx.goto("res://scenes/curtain.tscn", true)') >= 0,
 			"R310 源码锁：map_scene 的起点重定向跳到 curtain.tscn")
-	check_src(r310_bat.find('SceneFx.goto("res://scenes/curtain.tscn")') >= 0,
+	# R389：结算出口统一收进 （烟测要截获目标、不真换树），这里跟着换口。
+	check_src(r310_bat.find('_goto_scene("res://scenes/curtain.tscn")') >= 0,
 			"R310 源码锁：battle_scene 打完 Boss 进新层也跳 curtain.tscn")
 	check_src(r310_map.find('RunState.relic_choice.is_empty()') >= 0
 			and r310_map.find('RunState.relic_choice.is_empty()') <
@@ -28402,6 +28403,43 @@ func _init() -> void:
 			"R388 源码：SpeedBtn 在顶栏 / 演出时钟只在 _foe_phase 里按倍速走")
 	check_src(r388_bs.find("AI_STEP_SEC / maxf(1.0, _foe_speed)") >= 0,
 			"R388 源码：敌方 AI 步进间隔跟着倍率折算（1× 1.6s / 2× 0.8s）")
+
+	# ================= R389：战斗结束的剧情解锁提示 / 领完奖励直接回地图 =================
+	# 用户口径：「战斗结束解锁了剧情应该弹提示；领完奖励直接回地图（但离开必须玩家自己点）」。
+	# ---- ① 剧情提示：只报**有正文**的段落 ----
+	var r389_story := StoryRepo.load_json()
+	var r389_one := r389_story.unlock_notice(["episode1"])
+	check(r389_one.find("新剧情解锁") >= 0 and r389_one.find("游移的音准") >= 0,
+			"R389 剧情提示：单段有正文 → 「%s」" % r389_one)
+	# ---- ② 空壳段落不提示（点进去只有「？？？」，报了更糟）----
+	check(r389_story.unlock_notice(["episode3", "episode6"]) == "",
+			"R389 剧情提示：没写正文的段落一条都不报")
+	# ---- ③ 混着来：只报有正文的那一段 ----
+	check(r389_story.unlock_notice(["episode2", "episode4"]).find("鸭鸭王国的请托") >= 0,
+			"R389 剧情提示：空壳段被过滤，只报有正文的")
+	# ---- ④ 多段有正文 → 只报数量（结算面板副标题只有 280px）----
+	var r389_two := r389_story.unlock_notice(["episode1", "episode2"])
+	check(r389_two.find("2 段") >= 0, "R389 剧情提示：多段只报数量 → 「%s」" % r389_two)
+	check(r389_story.unlock_notice([]) == "", "R389 剧情提示：没有新解锁 → 空串")
+	# ---- ⑤ 自动离开判据：还有没领的就不许走 ----
+	check(not RewardPanel.can_auto_leave_after_reward(false, 0),
+			"R389 回地图判据：结算面板还没出 → 不走")
+	check(not RewardPanel.can_auto_leave_after_reward(true, 3),
+			"R389 回地图判据：还有 3 条没领 → 不走（左上角「待领奖励」还在）")
+	check(RewardPanel.can_auto_leave_after_reward(true, 0),
+			"R389 回地图判据：结算面板已出 + 全部领完 → 直接回地图")
+	# ---- ⑥ 源码锁：接线（关窗回调 / 统一出口 / 剧情提示）----
+	var r389_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r389_bs.find("_reward_panel.on_closed = _on_reward_panel_closed") >= 0
+			and r389_bs.find("RewardPanel.can_auto_leave_after_reward(_over_shown") >= 0,
+			"R389 源码：奖励窗关了会问「该不该走」，判据是 run 里的那一份")
+	check_src(r389_bs.find("unlock_notice(story_new)") >= 0
+			and r389_bs.find("UiToast.toast(story_note, 3200)") >= 0,
+			"R389 源码：结算时取新解锁剧情 → 副标题 + 轻提示各报一句")
+	var r389_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	check_src(r389_rp.find("if not _closing_to_route and on_closed.is_valid():") >= 0
+			and r389_rp.find("_closing_to_route = true") >= 0,
+			"R389 源码：转场关闭不触发 on_closed（否则换场景半路再跳一次）")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

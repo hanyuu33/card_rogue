@@ -157,3 +157,22 @@ func episode_grants(ep_id: String) -> Dictionary:
 func grant_count(ep_id: String) -> int:
 	var g := episode_grants(ep_id)
 	return (g.get("cards", []) as Array).size() + (g.get("relics", []) as Array).size()
+
+
+func unlock_notice(ids: Array) -> String:
+	## R389：把「刚解锁的剧情 id」变成一句提示（空串 = 不用提示）。
+	##
+	## ⚠️ 只算**有正文**的段落：空壳期的 episode3~6 条件达成也会进 `unlocked_stories`
+	##    （成就在空壳期就能达成），但界面上它们是 `locked` 的「？？？」——
+	##    弹一句「解锁了剧情」再点进去只看得到占位，比不提示更糟。
+	## 多段只报数量，一段报章节名（结算面板的副标题行只有 280px 宽）。
+	var ready: Array[String] = []
+	for v: Variant in ids:
+		var eid := str(v)
+		if has_content(eid):
+			ready.append(eid)
+	if ready.is_empty():
+		return ""
+	if ready.size() == 1:
+		return "✦ 新剧情解锁：%s" % episode_label(episode(ready[0]))
+	return "✦ 新剧情解锁 %d 段（主界面查看）" % ready.size()
