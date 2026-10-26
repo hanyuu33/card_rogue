@@ -17,6 +17,8 @@ const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiRoll = preload("res://scripts/ui_roll.gd")
 const UiPop = preload("res://scripts/ui_pop.gd")
 const CardInfoBoxes = preload("res://scripts/card_info_boxes.gd")
+## R386：战场对话气泡（自绘，见该文件头部的设计与时间轴说明）
+const SpeechBubble = preload("res://scripts/speech_bubble.gd")
 
 const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
@@ -325,6 +327,80 @@ func _say(text: String) -> void:
 	## 操作反馈消息：2.5 秒内不被悬停信息覆盖。
 	status_text = text
 	_status_hold_until = Time.get_ticks_msec() + 2500
+
+func say_bubble(cell: Vector2i, text: String, opts := {}) -> void:
+	## R386 唯一口：让**某一格上的卡**开口说话 —— 气泡从卡片顶边冒出来。
+	##
+	##     say_bubble(Vector2i(4, 1), "这一下我来。")
+	##     say_bubble(Vector2i(1, 0), "站住。", {"speaker": UiTheme.SIDE_FOE})
+	##     say_bubble(cell, "第二句", {"delay": 220})     # 错开 220ms 再冒
+	##
+	## opts：
+	##   speaker : Color —— 尾巴颜色。默认按该格单位的阵营取（我方绿 / 敌方红），
+	##             空格用金色；想按职业上色就自己传 `UiTheme.class_color(...)`。
+	##   delay   : int   —— 延后多少毫秒开始（连排多句时错开，别一起冒）。
+	##   stack   : bool  —— 同一格正在说话时是否排队（默认 true）。
+	##
+	## ⚠️ 气泡是**纯表现**：不阻塞回合、不参与结算、不进录像。想让它和某次结算对齐，
+	## 就在那条播报后面调它（布景例子见 `_demo_bubbles()`）。
+	var msg := str(text).strip_edges()
+	if msg == "":
+		return
+	var now := _now()
+	if bool(opts.get("stack", true)):
+		for b: SpeechBubble in _bubbles:
+			if b.cell == cell and not b.is_finished(now):
+				b.stack(msg)
+				return
+	while _bubbles.size() >= BUBBLE_MAX_ALIVE:
+		# 挤掉最老的一句：新台词优先，不能因为排队把新的话吞掉
+		var old: SpeechBubble = _bubbles.pop_front()
+		if old.has_queue():
+			old.queue.clear()
+	var nb := SpeechBubble.new(_font)
+	nb.cell = cell
+	nb.speaker = opts.get("speaker", _bubble_speaker_color(cell))
+	nb.restart(msg, now + maxi(int(opts.get("delay", 0)), 0))
+	_bubbles.append(nb)
+	queue_redraw()
+
+
+func clear_bubbles() -> void:
+	## 收干净（换关 / 结算 / 打开全屏面板时）—— 气泡是「这一场这一格」的临时表现。
+	if _bubbles.is_empty():
+		return
+	_bubbles.clear()
+	queue_redraw()
+
+
+func speaking_cells() -> Array:
+	## 当前正在说话的格子（探针 / 断言用；将来「点气泡快进」也从这里接）。
+	var out: Array = []
+	for b: SpeechBubble in _bubbles:
+		out.append(b.cell)
+	return out
+
+
+func _bubble_speaker_color(cell: Vector2i) -> Color:
+	var p: Placement = null
+	if engine != null:
+		p = engine.state.unit_at(cell)
+	if p == null:
+		return UiTheme.ACCENT_GOLD
+	return UiTheme.SIDE_SELF if p.owner == GameEngine.SIDE_SELF else UiTheme.SIDE_FOE
+
+
+func _bubble_anchor(cell: Vector2i) -> Vector2:
+	## 锚点 = 该格**卡片的顶边中心**。走 `_display_center` 而不是格心：单位滑动 /
+	## 突进时气泡跟着卡走，不会留在原地。空格退回格心（关卡也可能让空格上的
+	## 场地 / 标记说话）。
+	var r := _cell_rect(cell)
+	var p: Placement = null
+	if engine != null:
+		p = engine.state.unit_at(cell)
+	var center: Vector2 = r.get_center() if p == null else _display_center(p, cell)
+	return Vector2(center.x, center.y - BOARD_CARD_H * 0.5)
+
 var _ai_timer: Timer
 var _bg_tex: Texture2D
 var _back_tex: Texture2D
@@ -367,6 +443,12 @@ var _delayed: Array = []        # {at, kind, data}                             �
 var _ghosts: Array = []         # {center, name, start, dur}                  击破淡出
 var _dying: Array = []          # {cell, card, p, hide_at}                    已归零但仍要显示到命中时刻的卡
 var _floaters: Array = []       # {pos, text, col, start, dur}                伤害/治疗飘字
+## R386：战场对话气泡（`SpeechBubble` 实例）。台词由关卡 / 道具 / 引擎播报通过
+## `say_bubble()` 排进来；本层只负责按格锚点绘制、排队推进与回收。
+## 同时最多 3 句 —— 再多就互相盖住；同一张卡连说两句走**队列**（一句接一句），
+## 不是并排两句。
+const BUBBLE_MAX_ALIVE := 3
+var _bubbles: Array = []
 var _flashes := {}              # Placement -> {col, start, dur}              受击闪色覆盖
 ## R180：脉冲动画重绘节流。呼吸/脉动类光环（就绪/嘲讽/冰封/沉睡/铸造/屏障/可发动/
 ## 场地标记/取消环/地图绿环/棋盘双箭头）不再**每帧** queue_redraw，而是统一降到
@@ -2623,6 +2705,14 @@ func _ready() -> void:
 				engine.state.effects.append(sk_c)
 		engine._stoneskin_left = 3
 		status_text = "石肤：效果区卡面右下角显示剩余次数（当前剩 3 次，可叠加、跨回合保留）"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--bubbles" in args and engine != null:
+		## R386 出图：战场对话气泡。三句不同长度 + 两个阵营同框，一次核验：
+		## 自适应宽度 / 折行 / 尾巴朝向（下半场朝上、上半场朝下）/ 说话者配色。
+		##   battle.tscn -- --screenshot --level 0 --bubbles --shotframe 60
+		_demo_bubbles(true)
+		status_text = "对话气泡：自适应大小 + 弹出 / 收起 + 文字流式出现（尾巴色 = 说话者阵营）"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--taunt" in args and engine != null:
@@ -7848,6 +7938,7 @@ func _draw() -> void:
 	draw_set_transform(shake, 0.0, Vector2.ONE)   # 复位缩放，回到屏幕空间（只留震动）
 	_draw_grid_mask()
 	_draw_grid_caption()
+	_draw_speech_bubbles()   # R386：对话气泡 —— 压在卡牌之上、面板与手牌之下
 	_draw_floaters()
 	# ---- 面板区：一律画在遮罩**之后** ----
 	# R146 起遮罩会横向加宽（棋盘放大时把外溢的石色裁掉）→ 两侧栏位若先画就会被裁掉。
@@ -11697,6 +11788,76 @@ func _draw_ghosts() -> void:
 				Color(0.3, 0.3, 0.3, alpha))
 
 
+func _draw_speech_bubbles() -> void:
+	## R386：气泡画在**遮罩之后、面板之前**的屏幕空间（与飘字同层，共享震屏偏移）——
+	## 这样它盖得住卡牌与状态徽标，又不会盖住手牌和左栏详情。
+	if _bubbles.is_empty():
+		return
+	var n := _now()
+	var bounds := Rect2(GRID_X, GRID_Y, GRID_W, GRID_H)
+	for b: SpeechBubble in _bubbles:
+		var at := _bubble_anchor(b.cell)
+		# 说话者已经滚出可视窗 → 不画（否则气泡会被 clamp 成贴在棋盘边缘的一片）
+		var off_top := at.y < bounds.position.y - BOARD_CARD_H * 0.5
+		var off_bot := at.y > bounds.position.y + bounds.size.y + BOARD_CARD_H * 0.5
+		if off_top or off_bot:
+			continue
+		b.draw(self, n, at, bounds)
+
+
+func _tick_bubbles() -> void:
+	## 气泡推进：演完的接队列里的下一句，没有下一句就回收。
+	var n := _now()
+	var i := 0
+	while i < _bubbles.size():
+		var b: SpeechBubble = _bubbles[i]
+		if b.is_finished(n):
+			if b.has_queue():
+				b.restart(b.queue.pop_front(), n)
+			else:
+				_bubbles.remove_at(i)
+				continue
+		i += 1
+	if not _bubbles.is_empty():
+		queue_redraw()     # 吐字逐帧推进，不能走 _pulse_redraw 降频
+
+
+func _demo_bubbles(place_first: bool) -> void:
+	## `--bubbles` 出图布景。`place_first` 只有第一次为 true —— 演出循环时只重发台词，
+	## 否则每循环一次都会再 place 一批单位（棋盘会越堆越满）。
+	if engine == null:
+		return
+	if repo == null:
+		repo = CardRepo.load_json()
+	if place_first:
+		engine.ai_enabled = false
+		engine.state.board.clear()
+		engine.state.hand.clear()
+		var bb_rows := [
+			{"cell": Vector2i(4, 1), "id": 8003, "say": "我准备好了。"},
+			{"cell": Vector2i(1, 0), "id": 1011,
+					"say": "站住。想从这儿过去，先问过我手里这面盾。"},
+			{"cell": Vector2i(2, 2), "id": 1055, "say": "……嘎。"},
+		]
+		for row: Dictionary in bb_rows:
+			var bb_cell: Vector2i = row["cell"]
+			var bb_card: CardData = repo.get_card(int(row["id"]))
+			if bb_card == null:
+				continue
+			var bb_side := GameEngine.SIDE_OPPONENT
+			if bb_cell.x >= 3:
+				bb_side = GameEngine.SIDE_SELF
+			engine.state.place(bb_card, bb_cell, bb_side)
+		_grid_intro_t = -1.0
+		# 钉在棋盘顶部：row 0/1 的卡（上半场）不出画面，尾巴朝下才有对照
+		_grid_scroll = _grid_scroll_min()
+		_banner = {}                     # 开局「我方回合」横幅会盖住上半场的泡泡
+	for row2: Dictionary in [
+			{"cell": Vector2i(4, 1), "say": "我准备好了。"},
+			{"cell": Vector2i(1, 0), "say": "站住。想从这儿过去，先问过我手里这面盾。"},
+			{"cell": Vector2i(2, 2), "say": "……嘎。"}]:
+		say_bubble(row2["cell"], str(row2["say"]))
+
 func _draw_floaters() -> void:
 	var n := _now()
 	for f: Dictionary in _floaters:
@@ -13709,6 +13870,9 @@ func _process(delta: float) -> void:
 		_hover_pl = null
 	if engine == null:
 		return
+	_tick_bubbles()          # R386：对话气泡推进（演完回收 / 接队列）
+	if "--bubbles" in _demo_args and _bubbles.is_empty():
+		_demo_bubbles(false)  # 演示循环播：任何 --shotframe 都截得到
 	# R186：触屏长按到时 → 右键等价（放弃取牌 / 取消专注 / 取消选中）。
 	# 同时摘掉待结算的左键按下 —— 否则松手时模拟鼠标会补发一发左键点击。
 	_sync_pick()

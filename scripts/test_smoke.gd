@@ -1894,6 +1894,124 @@ func _check_battle(scene: Variant) -> void:
 	_check_r208(scene)
 	_check_enchant_mark(scene)
 	_check_r277_field_tap(scene)
+	_check_speech_bubble(scene)
+
+
+func _check_speech_bubble(scene: Variant) -> void:
+	## R386：战场对话气泡 —— 说 → 同格排队 → 上限挤占 → 锚点/配色 → 收干净。
+	##
+	## 为什么放 smoke：气泡是**画进 battle_scene._draw 的一层**（三角化 / 描边 /
+	## 顶点色渐变 / 吐字光标），只有真跑场景才会执行到那些绘制调用。「三角化退化
+	## 每帧刷 Invalid polygon data」这类崩溃 headless 断言抓不到，只能靠 smoke 的
+	## ERROR 门禁。这里只断言「接口与锚点对不对」，画得对不对交给 ERROR 判定。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("R386 气泡：拿不到 engine")
+		return
+	# 脚本常量走 constant_map 取：`instance.CONST` 在 4.3 里不保证可解析
+	var cmap: Dictionary = scene.get_script().get_script_constant_map()
+	var me_cell := Vector2i(-1, -1)
+	var foe_cell := Vector2i(-1, -1)
+	var empty_cell := Vector2i(-1, -1)
+	var free_cells: Array = []
+	for r in 6:
+		for c in 3:
+			var cell := Vector2i(r, c)
+			var p = eng.state.unit_at(cell)
+			if p == null:
+				if empty_cell.x < 0:
+					empty_cell = cell
+				free_cells.append(cell)
+			elif p.owner == GameEngine.SIDE_SELF:
+				if me_cell.x < 0:
+					me_cell = cell
+			else:
+				if foe_cell.x < 0:
+					foe_cell = cell
+	if me_cell.x < 0 or foe_cell.x < 0:
+		_smoke_fail("R386 气泡：这一场找不到「我方 + 敌方」各一格，没法验锚点")
+		return
+
+	# ── 1) 说一句：进列表、折好行、尾巴颜色按阵营 ──
+	scene.clear_bubbles()
+	scene.say_bubble(me_cell, "这一下我来。")
+	var cells: Array = scene.speaking_cells()
+	if cells.size() != 1 or cells[0] != me_cell:
+		_smoke_fail("R386 气泡：say_bubble 之后 speaking_cells 应是 [%s]，实际 %s"
+				% [str(me_cell), str(cells)])
+		return
+	if scene._bubble_speaker_color(me_cell) != UiTheme.SIDE_SELF:
+		_smoke_fail("R386 气泡：我方单位的尾巴应是我方绿")
+		return
+	if scene._bubble_speaker_color(foe_cell) != UiTheme.SIDE_FOE:
+		_smoke_fail("R386 气泡：敌方单位的尾巴应是敌方红")
+		return
+	if empty_cell.x >= 0 and scene._bubble_speaker_color(empty_cell) != UiTheme.ACCENT_GOLD:
+		_smoke_fail("R386 气泡：空格（场地/标记）的尾巴应是金色")
+		return
+
+	# ── 2) 锚点 = 该格**卡片**的顶边中心（气泡从卡里冒出来）──
+	# ⚠️ 不是格子矩形的顶边：卡片比格子矮（BOARD_CARD_H < CELL）且居中摆，
+	#    两者差 8.8px；按格子矩形断言会假失败（R386 踩过）。
+	var at: Vector2 = scene._bubble_anchor(me_cell)
+	var mid: Vector2 = scene._cell_center(me_cell)
+	var card_h: float = float(cmap.get("BOARD_CARD_H", 0.0))
+	if card_h <= 0.0:
+		_smoke_fail("R386 气泡：取不到 BOARD_CARD_H，锚点无从核对")
+		return
+	if absf(at.x - mid.x) > 1.5:
+		_smoke_fail("R386 气泡：锚点横向应居中于卡（%.1f vs %.1f）" % [at.x, mid.x])
+		return
+	if absf(at.y - (mid.y - card_h * 0.5)) > 2.0:
+		_smoke_fail("R386 气泡：锚点应在卡片顶边（%.1f vs %.1f，卡高 %.1f）"
+				% [at.y, mid.y - card_h * 0.5, card_h])
+		return
+	# 语义兜底：气泡的尾巴绝不能长在单位身子的中间
+	if at.y >= mid.y - card_h * 0.25:
+		_smoke_fail("R386 气泡：锚点太靠下（%.1f），气泡会盖住单位本体" % at.y)
+		return
+
+	# ── 3) 同格再说话 → 排队，不会同时冒两个气泡 ──
+	scene.say_bubble(me_cell, "守住左路。")
+	var b0 = scene._bubbles[0]
+	if scene._bubbles.size() != 1 or b0.queue.size() != 1:
+		_smoke_fail("R386 气泡：同格连说应排队（气泡 %d 个 / 队列 %d 句）"
+				% [scene._bubbles.size(), b0.queue.size()])
+		return
+
+	# ── 4) 空台词直接丢掉 ──
+	scene.say_bubble(me_cell, "   ")
+	if b0.queue.size() != 1:
+		_smoke_fail("R386 气泡：空白台词不该进队列")
+		return
+
+	# ── 5) 上限：同时最多 BUBBLE_MAX_ALIVE 句，多出来的挤掉最老的 ──
+	var used := 0
+	for cell2 in free_cells:
+		scene.say_bubble(cell2, "让开。")
+		used += 1
+		if used >= 6:
+			break
+	var cap := 3
+	if cmap.has("BUBBLE_MAX_ALIVE"):
+		cap = int(cmap["BUBBLE_MAX_ALIVE"])
+	if scene._bubbles.size() > cap:
+		_smoke_fail("R386 气泡：同时最多 %d 句，实际 %d 个"
+				% [cap, scene._bubbles.size()])
+		return
+
+	# ── 6) 收干净 ──
+	scene.clear_bubbles()
+	if not scene.speaking_cells().is_empty():
+		_smoke_fail("R386 气泡：clear_bubbles 之后还有 %d 个在说话"
+				% scene.speaking_cells().size())
+		return
+
+	# 留一句活着：后面几帧会真的走 _draw_speech_bubbles / _tick_bubbles，
+	# 三角化 / 描边 / 光标若有问题由 ERROR 门禁抓。
+	scene.say_bubble(me_cell, "别急，让他们先动。")
+	print("SMOKE OK R386 气泡：说/排队/上限 %d/锚点在卡顶/尾巴按阵营/可清空（绘制由 ERROR 门禁判）"
+			% cap)
 
 
 func _check_r335_pre_battle_snap(scene: Variant) -> void:

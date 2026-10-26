@@ -7,6 +7,9 @@ extends SceneTree
 ## R277：卡面配色（归属色）在 test_engine 里也要断言 —— ui_theme.gd 没有 class_name，
 ## 只能显式 preload（与 battle_scene / gallery_scene 同一写法）。
 const UiTheme = preload("res://scripts/ui_theme.gd")
+## R386：战场对话气泡同样是「无 class_name 的纯自绘 RefCounted」→ 显式 preload。
+## ⚠️ 别给它加 class_name：`--check-only` / 跨脚本引用时会 Parse Error（R386 踩过）。
+const SpeechBubble = preload("res://scripts/speech_bubble.gd")
 
 var fails := 0
 
@@ -28148,6 +28151,148 @@ func _init() -> void:
 			and r384_body.find("p.health -=") < 0
 			and r384_body.find("p.armor -=") < 0,
 			"R384 源码：预览口只读 —— 不扣血、不扣护甲（否则拖牌每帧都在扣）")
+
+	# ══════════════════════════════════════════════════════════════════
+	# R386：战场对话气泡（scripts/speech_bubble.gd）
+	# 纯自绘 RefCounted、不碰场景 → 布局 / 时间轴 / 队列 / 轮廓在这里直接测；
+	# 「真的画进 battle_scene._draw 里会不会刷 ERROR」由 smoke 抓（headless 不渲染）。
+	# ⚠️ `restart()` 会把 `_laid` 置 false，`_w` / `_h` / `_lines` 要等 `total_ms()`
+	#    （= `_ensure_layout()`）之后才准；直接读会读到上一句或默认值。
+	# ══════════════════════════════════════════════════════════════════
+	var r386_font := UiTheme.font()
+	check(r386_font != null, "R386 气泡：拿得到字体（UiTheme.font()）")
+
+	# ① 自适应大小：短句撑到最小宽，长句折行不超框，行数多了封顶加省略号
+	var sb_short = SpeechBubble.new(r386_font)
+	sb_short.restart("嗯。", 0)
+	var r386_short_ms := sb_short.total_ms()
+	check(r386_short_ms > 0 and sb_short._lines.size() == 1,
+			"R386 布局：短句独占一行（%d 行 / 整句 %d ms）"
+			% [sb_short._lines.size(), r386_short_ms])
+	check(is_equal_approx(sb_short._w, SpeechBubble.MIN_W),
+			"R386 布局：「嗯。」撑到最小宽 %.0f，不许挤成竖条（实际 %.1f）"
+			% [SpeechBubble.MIN_W, sb_short._w])
+
+	var r386_long := "这一格我来守，你们从左路绕过去，别让后排的法师读到第三次咒文，一旦读到他就能一次带走我们两个人。"
+	var sb_long = SpeechBubble.new(r386_font)
+	sb_long.restart(r386_long, 0)
+	var r386_long_ms := sb_long.total_ms()
+	var r386_limit := SpeechBubble.MAX_W - SpeechBubble.PAD_X * 2.0
+	var r386_widest := 0.0
+	for r386_ln: String in sb_long._lines:
+		r386_widest = maxf(r386_widest, r386_font.get_string_size(r386_ln,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, SpeechBubble.FS).x)
+	check(sb_long._lines.size() > 1 and r386_widest <= r386_limit + 0.5,
+			"R386 布局：长句折成 %d 行、最宽一行 %.1f ≤ %.1f（不超框）"
+			% [sb_long._lines.size(), r386_widest, r386_limit])
+	check(sb_long._h > sb_short._h and sb_long._lines.size() <= SpeechBubble.MAX_LINES,
+			"R386 布局：气泡高度跟着行数长（%.1f > %.1f），最多 %d 行"
+			% [sb_long._h, sb_short._h, SpeechBubble.MAX_LINES])
+
+	var sb_cut = SpeechBubble.new(r386_font)
+	sb_cut.restart(r386_long + r386_long + r386_long, 0)
+	sb_cut.total_ms()
+	check(sb_cut._lines.size() == SpeechBubble.MAX_LINES
+			and str(sb_cut._lines[SpeechBubble.MAX_LINES - 1]).ends_with("…"),
+			"R386 布局：超 %d 行就截断、末行补省略号（末行「%s」）"
+			% [SpeechBubble.MAX_LINES, sb_cut._lines[SpeechBubble.MAX_LINES - 1]])
+
+	# ② 时间轴：弹出期间不吐字 → 逐字露出 → 吐满 → 停留 → 收起
+	var r386_n: int = sb_long._n_chars
+	var r386_t_type := int(float(SpeechBubble.POP_MS) * SpeechBubble.TYPE_FROM)
+	check(sb_long.visible_chars(0) == 0 and sb_long.visible_chars(r386_t_type) == 0,
+			"R386 时序：弹出阶段一个字都不露（到 %d ms 仍是 0 字）" % r386_t_type)
+	var r386_t_mid := r386_t_type + SpeechBubble.TYPE_MS * 6
+	var r386_mid: int = sb_long.visible_chars(r386_t_mid)
+	check(r386_mid > 0 and r386_mid < r386_n,
+			"R386 时序：流式吐字 —— %d ms 露出 %d / %d 字（不是一次性全给）"
+			% [r386_t_mid, r386_mid, r386_n])
+	check(sb_long.visible_chars(r386_t_type + SpeechBubble.TYPE_MS * 400) == r386_n,
+			"R386 时序：吐完停在满字（%d 字）" % r386_n)
+	check(not sb_long.is_finished(r386_long_ms - 1) and sb_long.is_finished(r386_long_ms),
+			"R386 时序：整句 %d ms 收尾（-1 ms 未完 / 到点算完）" % r386_long_ms)
+	check(r386_long_ms == r386_t_type + r386_n * SpeechBubble.TYPE_MS
+			+ SpeechBubble.HOLD_MIN_MS + r386_n * SpeechBubble.HOLD_PER_CHAR_MS
+			+ SpeechBubble.OUT_MS,
+			"R386 时序：总时长 = 吐字 + 停留（保底 %d / 每字 %d）+ 收起 %d"
+			% [SpeechBubble.HOLD_MIN_MS, SpeechBubble.HOLD_PER_CHAR_MS,
+					SpeechBubble.OUT_MS])
+	check(sb_long.visible_chars(r386_t_mid) <= sb_long.visible_chars(r386_t_mid + 40),
+			"R386 时序：露字数单调不减（40 ms 后不会缩回去）")
+
+	# ③ 队列：同一张卡连说
+	var sb_q = SpeechBubble.new(r386_font)
+	sb_q.restart("第一句。", 1000)
+	sb_q.stack("   ")
+	check(not sb_q.has_queue(), "R386 队列：空白台词不进队列")
+	sb_q.stack("第二句。")
+	sb_q.stack("第三句。")
+	check(sb_q.has_queue() and sb_q.queue.size() == 2 and sb_q.queue[0] == "第二句。",
+			"R386 队列：连说依次排队（%d 句 / 首句「%s」）" % [sb_q.queue.size(), sb_q.queue[0]])
+	sb_q.restart("换一句。", 5000)
+	check(sb_q.elapsed(5000) == 0 and sb_q.text == "换一句。"
+			and sb_q.visible_chars(5000) == 0,
+			"R386 队列：restart 换句 → 时间轴归零、从 0 字重吐")
+
+	# ④ 定位：默认在卡片上方、贴顶翻到下方、贴墙不出容器、尾巴跟着说话者
+	var r386_bounds := Rect2(0.0, 0.0, 372.0, 600.0)
+	var sb_place = SpeechBubble.new(r386_font)
+	sb_place.restart(r386_long, 0)
+	sb_place.total_ms()
+	var r386_box_hi := sb_place._place(Vector2(186.0, 400.0), r386_bounds)
+	check(not sb_place._tail_up
+			and absf(r386_box_hi.position.y + r386_box_hi.size.y
+					- (400.0 - SpeechBubble.GAP)) < 0.01,
+			"R386 定位：默认长在卡片上方、底边留 %.0f 间隙给尾巴" % SpeechBubble.GAP)
+	var r386_box_lo := sb_place._place(Vector2(186.0, 12.0), r386_bounds)
+	check(sb_place._tail_up
+			and r386_box_lo.position.y >= r386_bounds.position.y + SpeechBubble.EDGE - 0.01,
+			"R386 定位：贴着顶边时翻到卡片下方（尾巴朝上），仍不越容器留白")
+	var r386_box_left := sb_place._place(Vector2(4.0, 400.0), r386_bounds)
+	check(r386_box_left.position.x >= r386_bounds.position.x + SpeechBubble.EDGE - 0.01,
+			"R386 定位：卡片贴左墙时气泡被夹进容器（x = %.1f）" % r386_box_left.position.x)
+	var r386_tx: float = sb_place._tail_x(r386_box_left, 4.0)
+	check(r386_tx >= r386_box_left.position.x + SpeechBubble.RADIUS
+			and r386_tx <= r386_box_left.position.x + r386_box_left.size.x - SpeechBubble.RADIUS,
+			"R386 定位：尾巴被夹进气泡体内（tail_x = %.1f，不指歪）" % r386_tx)
+
+	# ⑤ 轮廓不能退化：首尾重合 / 相邻重合都会让 draw_polygon 每帧刷
+	#    「Invalid polygon data, triangulation failed」（R386 实测踩过）
+	var r386_pts: PackedVector2Array = sb_place._outline(r386_box_hi, false, false,
+			sb_place._tail_x(r386_box_hi, 186.0))
+	check(r386_pts.size() > 12
+			and r386_pts[0].distance_to(r386_pts[r386_pts.size() - 1]) > 0.01,
+			"R386 轮廓：%d 个点、首尾不重合（三角化不会失败）" % r386_pts.size())
+	var r386_dup := 0
+	for r386_i in range(1, r386_pts.size()):
+		if r386_pts[r386_i].distance_to(r386_pts[r386_i - 1]) < 0.01:
+			r386_dup += 1
+	check(r386_dup == 0, "R386 轮廓：相邻点无重合（%d 对）" % r386_dup)
+	var r386_flat: PackedVector2Array = sb_place._outline(r386_box_hi, false, true)
+	check(r386_flat.size() > 0
+			and r386_flat[0].distance_to(r386_flat[r386_flat.size() - 1]) > 0.01,
+			"R386 轮廓：内圈金线（flat）同样首尾不重合")
+
+	# ⑥ 源码锁：接进 battle_scene 的位置不对，气泡就会盖住手牌 / 详情栏
+	var r386_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r386_bs.find("func say_bubble(") >= 0
+			and r386_bs.find("func clear_bubbles(") >= 0
+			and r386_bs.find("func speaking_cells(") >= 0
+			and r386_bs.find("const SpeechBubble = preload(\"res://scripts/speech_bubble.gd\")") >= 0,
+			"R386 源码：battle_scene 提供 say_bubble / clear_bubbles / speaking_cells 唯一口")
+	var r386_i_cap := r386_bs.find("_draw_grid_caption()")
+	var r386_i_bub := r386_bs.find("_draw_speech_bubbles()")
+	var r386_i_flt := r386_bs.find("_draw_floaters()")
+	var r386_i_hnd := r386_bs.find("_draw_hand(")
+	check_src(r386_i_cap >= 0 and r386_i_bub > r386_i_cap and r386_i_flt > r386_i_bub
+			and r386_i_hnd > r386_i_bub,
+			"R386 源码：气泡画在字幕之上、浮字与手牌之下（顺序错了会盖住手牌）")
+	check_src(r386_bs.find("_tick_bubbles()") >= 0,
+			"R386 源码：_tick_bubbles 挂在 _process（演完回收 / 接队列 / 吐字期间不降频）")
+	var r386_sbs := FileAccess.get_file_as_string("res://scripts/speech_bubble.gd")
+	check_src(r386_sbs.length() > 0 and r386_sbs.find("class_name") < 0,
+			"R386 源码：speech_bubble 不写 class_name（跨脚本解析不了，只能 preload）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
