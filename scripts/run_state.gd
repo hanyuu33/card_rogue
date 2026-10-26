@@ -884,7 +884,10 @@ static func advance_layer(layer: int) -> int:
 	current_layer = layer
 	battle_wins = 0
 	elite_wins = 0
-	used_levels = []
+	# R398（用户口径「三层会重复遇到二层精英，优先避免重复」）：
+	# `used_levels` **换层不清空** —— 第三层的精英池沿用第二层（`content_layers = [2, 3]`），
+	# 清空就等于把「这一局刚打过谁」忘掉，直道第 2 格必然可能撞回同一只。
+	# 池子真被用尽时 `_pick_level()` 自带「允许循环复用」兜底，不会走进死路。
 	# 本层 Boss 开局摇定（换层要重摇：第二层只有机械巨鸭）
 	boss_pick = _roll_boss(layer)
 	reset_shop_session()          # R390：换层 = 新地图 → 上一层的店全部作废
@@ -1406,6 +1409,46 @@ static func waiting_pick_scene() -> String:
 	if pending_relic > 0 or pending_deck_edit != "":
 		return "res://scenes/deck_edit.tscn"
 	return ""
+
+
+static func claim_deck_delete_reward(idx: int, deck_index: int) -> bool:
+	## R398（用户报「月亮的效果生效后没有立即进入选卡过程，而是在奖励界面结束后才选卡」）：
+	## 月亮的删卡奖励改成**在奖励面板里就地完成** —— 一次调用同时「删掉卡组第 deck_index 张」
+	## 和「把这条奖励置为已领」。
+	##
+	## 旧路是「领下 → `pending_deck_edit = "delete"` → 跳 deck_edit」，但 R340 规定
+	## 「本批奖励没处理完**不许跳场景**」（否则会像当年那样把没展示的卡牌奖励甩掉），
+	## 于是删卡被一路压到整批结束之后 —— 玩家得先关掉奖励界面才会进选卡。
+	##
+	## ⚠️ 不能复用 `claim_pending_reward`：那个会把 `pending_deck_edit` 设上，
+	##    删完回地图又会跳一次 deck_edit（重复删 / 空待办）。
+	if idx < 0 or idx >= pending_rewards.size():
+		return false
+	var e: Dictionary = pending_rewards[idx]
+	if str(e.get("kind", "")) != "deck_delete":
+		return false
+	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
+		return false
+	# `delete_deck_card()` 里有 `pending_relic = -1`（那是失忆药水的待办口径）——
+	# 这里不是那条路，别把玩家还没领的即时道具待办顺手清掉。
+	var keep_pr := pending_relic
+	var ok := delete_deck_card(deck_index)
+	pending_relic = keep_pr
+	if not ok:
+		return false
+	e["state"] = REWARD_CLAIMED
+	e["deleted"] = deck_index
+	return true
+
+
+static func deck_deletable(index: int) -> bool:
+	## R398：卡组第 index 张能不能删 —— 奖励面板的就地删卡与 `deck_edit_scene` 同一判据
+	## （只认 `CardData.no_remove`，**不许**在界面里按 id 硬编码）。
+	if index < 0 or index >= deck_ids.size():
+		return false
+	var repo := CardRepo.load_json()
+	var c: CardData = repo.get_card(int(deck_ids[index]))
+	return c != null and not c.no_remove
 
 
 static func claim_pending_reward(idx: int) -> bool:

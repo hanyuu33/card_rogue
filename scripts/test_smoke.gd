@@ -99,6 +99,14 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r396_same_id_flyin],
+		# R398（用户报）：「月亮的效果生效后没有立即进入选卡过程，而是在奖励界面结束后才选卡」。
+		# 现在点那条奖励就进「删卡视图」，点一张卡立刻删掉、这条同时置已领。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r398_deck_delete],
 		# R339：战斗检查点必须写「进战斗之前」的局状态 —— lucky 7 的跨战斗计数在开局
 		# 第 1 个我方回合就 +1，若检查点写「当下」，续档重打这一场就会越续越多（用户报）。
 		["res://scenes/battle.tscn", func():
@@ -1804,6 +1812,65 @@ func _check_card_detail_block(_scene: Variant) -> void:
 		return
 	print("SMOKE OK R206 详情条：提及块在右栏 / 浅底琥珀棕 / 预算高度 %.0f == 公式（%d 个提及）"
 			% [got, refs.size()])
+
+
+func _check_r398_deck_delete(scene) -> void:
+	## R398（用户口径）：「月亮的效果生效后没有立即进入选卡过程，而是在奖励界面结束后才选」。
+	## 规则：点那条奖励 → **立刻**进删卡视图（不跳场景、不等本批结束）；点一张卡 → 当场删掉，
+	## 这条同时置为已领；带锁的卡点了不动。
+	var rp: Variant = scene.get("_reward_panel")
+	if rp == null:
+		_smoke_fail("R398：战斗场景没有奖励面板")
+		return
+	RunState.pending_rewards.clear()
+	RunState.pending_deck_edit = ""
+	# 卡组里塞一张带锁的（月亮 9180）—— 它自己不能删；同时留一张普通卡可删
+	RunState.deck_ids.append(9180)
+	var lock_i: int = RunState.deck_ids.size() - 1
+	var idx: int = RunState.queue_deck_delete_reward(1)
+	if idx < 0:
+		_smoke_fail("R398：删卡奖励没入队")
+		return
+	rp.open()
+	rp._open_entry(idx)
+	if int(rp._view) != 4:                      # VIEW_DECK
+		_smoke_fail("R398：点删卡奖励没进删卡视图（view=%d）" % int(rp._view))
+		return
+	# 几何自洽：第 0 张卡的命中必须回到下标 0
+	var r0: Rect2 = rp._deck_card_rect(0)
+	if int(rp._deck_index_at(r0.get_center())) != 0:
+		_smoke_fail("R398：删卡视图的命中判定对不上（点第 0 张得到 %d）"
+				% int(rp._deck_index_at(r0.get_center())))
+		return
+	# 带锁的卡点了不删
+	var n_before: int = RunState.deck_ids.size()
+	rp._on_click(rp._deck_card_rect(lock_i).get_center())
+	if RunState.deck_ids.size() != n_before:
+		_smoke_fail("R398：带锁的卡（月亮）居然被删掉了")
+		return
+	if str(RunState.pending_rewards[idx].get("state", "")) == RunState.REWARD_CLAIMED:
+		_smoke_fail("R398：点了锁卡却把奖励置成了已领（玩家会白白丢掉这次删卡）")
+		return
+	# 点一张普通卡 → 当场删掉、回列表、这条已领
+	var r_del: Rect2 = rp._deck_card_rect(0)
+	rp._on_click(r_del.get_center())
+	if RunState.deck_ids.size() != n_before - 1:
+		_smoke_fail("R398：点卡后卡组没减少（%d → %d）"
+				% [n_before, RunState.deck_ids.size()])
+		return
+	if str(RunState.pending_rewards[idx].get("state", "")) != RunState.REWARD_CLAIMED:
+		_smoke_fail("R398：删完卡这条奖励没置为已领")
+		return
+	if int(rp._view) != 0:                      # 回列表
+		_smoke_fail("R398：删完卡没回列表（view=%d）" % int(rp._view))
+		return
+	if RunState.pending_deck_edit != "":
+		_smoke_fail("R398：删完卡留下了 pending_deck_edit（回地图会再跳一次删卡）")
+		return
+	rp.close()
+	RunState.pending_rewards.clear()
+	RunState.deck_ids.remove_at(RunState.deck_ids.size() - 1)   # 清掉演示塞的月亮
+	print("SMOKE OK R398 月亮删卡：点奖励立刻进删卡视图 / 锁卡点不动 / 点一张当场删掉并回列表")
 
 
 func _check_r396_same_id_flyin(scene) -> void:

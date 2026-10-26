@@ -287,7 +287,12 @@ func _ready() -> void:
 	# ⚠️ **截图核验模式要跳过**：否则刚开的一局带着「起点事件」，
 	# 会立刻把场景切走 → 截图截到的是别的界面（甚至什么都截不到）。
 	if "--screenshot" not in OS.get_cmdline_user_args():
-		if RunState.run_active and not RunState.relic_choice.is_empty():
+		# R398（用户口径「三层初始点不应该有选择道具的事件，删掉」）：
+		# **第三层一律不跳卷卷**。R372 只是让 `advance_layer` 不摇候选，可
+		# `curtain_scene` 有个「候选为空就自己摇一组」的自愈（旧档 / 别处填过时会给它东西），
+		# 一旦走进那条路，三层照样会弹「卷卷开场 + 三选一」。这里按**层**直接堵死。
+		if RunState.run_active and not RunState.relic_choice.is_empty() \
+				and RunState.current_layer != GameLayers.LAYER_THREE:
 			SceneFx.goto("res://scenes/curtain.tscn", true)
 			return
 		var pick_scene := RunState.waiting_pick_scene()   # R216：唯一判据口

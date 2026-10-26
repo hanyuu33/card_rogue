@@ -28837,6 +28837,77 @@ func _init() -> void:
 		"R397 量产型赫菲斯托斯践踏：4 攻打穿 1 血单位，溢出 3 打到同列下一个（20 → %s）"
 			% (str(r397_back.health) if r397_back != null else "null"))
 
+
+	# ------------------------------------------------------------------ R398
+	# 用户三条：① 月亮的效果生效后要**立即**进选卡（旧版被 R340 的「本批没处理完不许跳」
+	# 压到奖励界面结束之后）；② 三层初始点不该有「选择道具」的事件；③ 三层精英沿用
+	# 第二层池，但**优先避免重复**。
+	RunState.start_run([], GameLayers.LAYER_DEFAULT)
+	RunState.pending_rewards.clear()
+	RunState.pending_deck_edit = ""
+
+	# ① 删卡奖励就地完成：一次调用 = 删卡 + 这条置已领
+	var r398_n0: int = RunState.deck_ids.size()
+	var r398_idx: int = RunState.queue_deck_delete_reward(1)
+	check(r398_idx >= 0, "R398 月亮：删卡奖励入队成功")
+	var r398_pr0 := RunState.pending_relic
+	var r398_ok: bool = RunState.claim_deck_delete_reward(r398_idx, 0)
+	check(r398_ok and RunState.deck_ids.size() == r398_n0 - 1,
+		"R398 删卡奖励：一次调用就删掉卡组第 0 张（%d → %d）"
+			% [r398_n0, RunState.deck_ids.size()])
+	check(str(RunState.pending_rewards[r398_idx].get("state", "")) == RunState.REWARD_CLAIMED,
+		"R398 删卡奖励：这条同时置为已领（不用再跳 deck_edit）")
+	check(RunState.pending_deck_edit == "",
+		"R398 删卡奖励：**不**设 pending_deck_edit（否则回地图又跳一次删卡）")
+	check(RunState.pending_relic == r398_pr0,
+		"R398 删卡奖励：不碰 pending_relic（那是即时道具的待办）")
+	# 重复领取 / 越界都不生效
+	check(not RunState.claim_deck_delete_reward(r398_idx, 0),
+		"R398 删卡奖励：已领过的条目再点无效（不会删第二张）")
+	check(not RunState.claim_deck_delete_reward(999, 0), "R398 删卡奖励：下标越界返回 false")
+	# 带锁的卡（月亮 9180 自己 no_remove）不可删
+	RunState.deck_ids.append(9180)
+	var r398_lock: int = RunState.deck_ids.size() - 1
+	check(not RunState.deck_deletable(r398_lock),
+		"R398 带锁的卡（月亮 9180 · no_remove）不可删")
+	check(RunState.deck_deletable(0), "R398 普通卡可删")
+	RunState.deck_ids.remove_at(r398_lock)
+
+	# ② 三层进层：不摇起始道具，且**不清** used_levels
+	RunState.used_levels = ["赫菲斯托斯的试炼", "阿斯克勒庇厄斯的试炼"]
+	RunState.advance_layer(GameLayers.LAYER_THREE)
+	check(RunState.relic_choice.is_empty(),
+		"R398 第三层进层不摇起始道具（relic_choice 为空，不会弹三选一）")
+	check(RunState.used_levels.has("赫菲斯托斯的试炼") \
+			and RunState.used_levels.has("阿斯克勒庇厄斯的试炼"),
+		"R398 换层**不清** used_levels（三层还记得第二层打过谁）")
+
+	# ③ 三层精英池 = 第二层 6 关；挑关优先避开本局打过的
+	var r398_pool: Array[Dictionary] = GameLevels.elite_pool(GameLayers.LAYER_THREE)
+	check(r398_pool.size() == 6,
+		"R398 三层精英池 = 第二层 6 关（content_layers [2, 3]；实际 %d）" % r398_pool.size())
+	# 只剩最后一个没用过 → **必然**挑它（这就是「优先避免重复」）
+	RunState.used_levels = []
+	for r398_i in r398_pool.size() - 1:
+		RunState.used_levels.append(str(r398_pool[r398_i]["name"]))
+	var r398_pick: Dictionary = RunState._pick_level(r398_pool)
+	check(str(r398_pick.get("name", "")) == str(r398_pool[r398_pool.size() - 1]["name"]),
+		"R398 三层精英：避开用过的，只剩一个候选时必然挑那一个（挑到「%s」）"
+			% str(r398_pick.get("name", "?")))
+	# 全用过 → 允许循环复用（兜底，不会走死路）
+	RunState.used_levels = []
+	for r398_lv: Dictionary in r398_pool:
+		RunState.used_levels.append(str(r398_lv["name"]))
+	var r398_pick2: Dictionary = RunState._pick_level(r398_pool)
+	check(not r398_pick2.is_empty(),
+		"R398 三层精英：池子全用过时允许复用（不会返回空关卡）")
+
+	var r398_map := ""
+	if ResourceLoader.exists("res://scripts/map_scene.gd"):
+		r398_map = FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	check_src(r398_map.find("RunState.current_layer != GameLayers.LAYER_THREE") >= 0,
+		"R398 源码：第三层一律不跳「卷卷 + 起点道具三选一」")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

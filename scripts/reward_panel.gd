@@ -35,6 +35,18 @@ const VIEW_RELIC := 1
 const VIEW_CARDS := 2
 ## R323：牛奶 6028 的「附魔贴上去了」演示视图 —— 只播动画，点一下就回列表。
 const VIEW_ENCHANT := 3
+## R398（用户报「月亮的效果生效后没有立即进入选卡，而是等奖励界面结束才选」）：
+## 月亮的删卡奖励改成**在面板里就地选卡** —— 新增一个卡组网格视图。
+const VIEW_DECK := 4
+const DECK_COLS := 6            # 一行 6 张
+const DECK_CARD_W := 112.0
+const DECK_CARD_H := 135.0
+## ⚠️ 间距要**宽于卡面外侧的数值徽章**（`CardFace._draw_badges` 的徽章一半骑在卡框外，
+## 左右各外扩 ~12px、上下各 ~10px）。16/14 会让相邻两张的徽章互相撞上（出图实测）。
+const DECK_CARD_GAP := 34.0
+const DECK_ROW_GAP := 24.0
+const DECK_HEAD_H := 96.0       # 标题 + 一行说明
+const DECK_FOOT_H := 58.0       # 底部按钮带
 const ENCH_CARD_IN := 220       # 两张卡淡入用时（ms）
 const ENCH_STEP := 620          # 第一张开始贴 → 第二张开始贴，间隔
 const ENCH_STAMP := 380         # 一张卡的「贴上去」时长
@@ -74,6 +86,7 @@ var _mention_hits: Array = []   # R168：本帧「提到的卡牌 / 道具」的
 var _hover_mention := {}        # R168：当前鼠标压中的那一个（{} = 没有）
 var _mention_pin := {}          # R302：触屏点一下钉住的那份说明（再点别处收起）
 var _pick_sel := -1           # R167：卡牌三选一里「已点选、待确认」的那张（触屏没有悬停）
+var _deck_hover := -1         # R398：删卡视图里鼠标压中的卡组下标（-1 = 没有）
 var _scroll := 0.0
 var _cached_n := -1
 var _ench_t0 := 0                # R323：附魔演示的起点（毫秒）
@@ -444,11 +457,15 @@ func _open_entry(i: int) -> void:
 	_sel = i
 	var e: Dictionary = RunState.pending_rewards[i]
 	var k := str(e.get("kind", ""))
-	# R351 删卡奖励没有候选可挑 —— 点它就直接领下，然后由
-	# `_claim_entry → _route_if_waiting_pick` 决定是立刻跳 deck_edit 还是等本批处理完。
+	# R398：删卡奖励**就地选卡**（旧版是「领下 → 等本批结束 → 跳 deck_edit」，
+	# 用户报「月亮的效果生效后没有立即进入选卡过程，而是在奖励界面结束后才选卡」）。
 	if k == "deck_delete":
-		if not _settled(e):
-			_claim_entry(i)
+		if _settled(e):
+			return
+		_view = VIEW_DECK
+		_scroll = 0.0
+		_deck_hover = -1
+		_root.queue_redraw()
 		return
 	if k == "relic":
 		_view = VIEW_RELIC
@@ -482,6 +499,8 @@ func _on_draw() -> void:
 			_draw_cards()
 		VIEW_ENCHANT:
 			_draw_enchant()
+		VIEW_DECK:
+			_draw_deck()
 		_:
 			_draw_list()
 	_draw_mention_tip()   # R168：悬浮件画在最后（压在所有内容之上）
@@ -735,6 +754,113 @@ func _cards_panel_rect() -> Rect2:
 	var pw := minf(vs.x - 72.0, 1056.0)
 	var ph := minf(vs.y - 56.0, 668.0)
 	return Rect2(Vector2((vs.x - pw) / 2.0, (vs.y - ph) / 2.0), Vector2(pw, ph))
+
+
+# ------------------------------------------------------------ R398 删卡视图
+
+func _deck_panel_rect() -> Rect2:
+	## 删卡视图的羊皮卷面板 —— 比卡牌三选一更宽（要摆卡组网格）。
+	var vs := _vs()
+	var pw := minf(vs.x - 72.0, 1100.0)
+	var ph := minf(vs.y - 56.0, 668.0)
+	return Rect2(Vector2((vs.x - pw) / 2.0, (vs.y - ph) / 2.0), Vector2(pw, ph))
+
+
+func _deck_clip_rect() -> Rect2:
+	## 卡组网格的可视区（标题以下、按钮带以上）。
+	var pr := _deck_panel_rect()
+	return Rect2(pr.position.x + 28.0, pr.position.y + DECK_HEAD_H,
+			pr.size.x - 56.0, pr.size.y - DECK_HEAD_H - DECK_FOOT_H)
+
+
+func _deck_grid_w() -> float:
+	return DECK_COLS * DECK_CARD_W + (DECK_COLS - 1) * DECK_CARD_GAP
+
+
+func _deck_content_h() -> float:
+	var n := RunState.deck_ids.size()
+	if n <= 0:
+		return 0.0
+	var rows := int(ceil(float(n) / float(DECK_COLS)))
+	return rows * DECK_CARD_H + (rows - 1) * DECK_ROW_GAP
+
+
+func _deck_card_rect(i: int) -> Rect2:
+	## 第 i 张卡在屏幕上的矩形（**已含滚动偏移**）—— 绘制与点击命中共用这一个口。
+	var c := _deck_clip_rect()
+	var x0 := c.position.x + (c.size.x - _deck_grid_w()) / 2.0
+	var col := i % DECK_COLS
+	var row := i / DECK_COLS
+	return Rect2(x0 + col * (DECK_CARD_W + DECK_CARD_GAP),
+			c.position.y - _scroll + row * (DECK_CARD_H + DECK_ROW_GAP),
+			DECK_CARD_W, DECK_CARD_H)
+
+
+func _deck_index_at(pos: Vector2) -> int:
+	var c := _deck_clip_rect()
+	if not c.has_point(pos):
+		return -1
+	for i in RunState.deck_ids.size():
+		if _deck_card_rect(i).grow(4.0).has_point(pos):
+			return i
+	return -1
+
+
+func _btn_deck_back_rect() -> Rect2:
+	var pr := _deck_panel_rect()
+	return Rect2(pr.position.x + pr.size.x / 2.0 - 254.0, pr.end.y - 48.0, 240.0, 36.0)
+
+
+func _btn_deck_skip_rect() -> Rect2:
+	var pr := _deck_panel_rect()
+	return Rect2(pr.position.x + pr.size.x / 2.0 + 14.0, pr.end.y - 48.0, 240.0, 36.0)
+
+
+func _draw_deck() -> void:
+	## 月亮的删卡视图：整副卡组摊开，**点一张直接删**。
+	## 走 `RunState.claim_deck_delete_reward()` 一个口 —— 删卡与「这条奖励置为已领」同时完成，
+	## 所以不需要再跳 `deck_edit`，也就不会被 R340 的「本批没处理完不许跳」压到最后。
+	if _sel >= RunState.pending_rewards.size():
+		_back_to_list()
+		return
+	var e: Dictionary = RunState.pending_rewards[_sel]
+	var settled := _settled(e)
+	var vs := _vs()
+	_root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.045, 0.08, 0.86), true)
+	var pr := _deck_panel_rect()
+	UiTheme.draw_scroll_bg(_root, pr)
+	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
+			"删除卡组中的一张卡", HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
+			UiTheme.FS_HEADING, Color("2f2a20"))
+	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 78),
+			"点一张直接删 —— 这一局不会再回来；带锁的卡不能删",
+			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
+	var c := _deck_clip_rect()
+	var n := RunState.deck_ids.size()
+	if n <= 0:
+		_root.draw_string(_font, c.position + Vector2(0, 40), "卡组里没有可删的卡",
+				HORIZONTAL_ALIGNMENT_CENTER, c.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
+	for i in n:
+		var rr := _deck_card_rect(i)
+		# 滚出可视区的**整张卡**不画（reward_panel 是纯自绘，没有 clip 容器）
+		if rr.end.y < c.position.y - 2.0 or rr.position.y > c.end.y + 2.0:
+			continue
+		var card: CardData = _repo_cards.get_card(int(RunState.deck_ids[i]))
+		if card == null:
+			continue
+		var can := RunState.deck_deletable(i) and not settled
+		if can and i == _deck_hover:
+			_root.draw_rect(rr.grow(6.0), Color(1, 1, 1, 0.75), true)
+		CardFace.draw_pick(_root, card, rr, _font, _font_bold, false)
+		if not can:
+			# 不可删 / 已处理 → 蒙一层暗色（卡面上那枚锁是 `draw_pick` 自己画的）
+			_root.draw_rect(rr, Color(0.06, 0.06, 0.08, 0.42), true)
+	if _max_scroll() > 0.0:
+		_root.draw_string(_font, Vector2(c.position.x, c.end.y - 2.0),
+				"滚轮查看更多（%d 张）" % n, HORIZONTAL_ALIGNMENT_RIGHT, c.size.x,
+				UiTheme.FS_CAPTION, UiTheme.INK_600)
+	_draw_btn(_btn_deck_back_rect(), "← 返回列表", false, false)
+	_draw_btn(_btn_deck_skip_rect(), "放弃这次删卡", false, settled)
 
 
 func _draw_cards() -> void:
@@ -1012,6 +1138,8 @@ func _on_motion(pos: Vector2) -> void:
 				if _card_rect_in(e, i).grow(6.0).has_point(pos):
 					_hover_card = i
 					break
+		VIEW_DECK:
+			_deck_hover = _deck_index_at(pos)
 	if old_row != _hover_row or old_card != _hover_card \
 			or not Mention.same(old_men, _hover_mention):
 		_root.queue_redraw()
@@ -1039,6 +1167,27 @@ func _on_click(pos: Vector2) -> void:
 			if _btn_skip_rect().has_point(pos):
 				_skip_entry(_sel)
 				return
+		VIEW_DECK:
+			if _btn_deck_back_rect().has_point(pos):
+				_back_to_list()
+				return
+			if _btn_deck_skip_rect().has_point(pos):
+				_skip_entry(_sel)
+				return
+			if _sel < RunState.pending_rewards.size() \
+					and _settled(RunState.pending_rewards[_sel]):
+				return
+			var di := _deck_index_at(pos)
+			if di < 0:
+				return
+			# 带锁的卡（`no_remove`：月亮自己 / 硬币 / 罐子）点了没反应 ——
+			# 卡面已有锁标记、标题下那行也写明了，不给额外弹窗。
+			if not RunState.deck_deletable(di):
+				return
+			if RunState.claim_deck_delete_reward(_sel, di):
+				_deck_hover = -1
+				_back_to_list()
+			return
 		VIEW_CARDS:
 			if _btn_cards_back_rect().has_point(pos):
 				_back_to_list()
@@ -1113,6 +1262,8 @@ func _draw_mention_tip() -> void:
 
 
 func _max_scroll() -> float:
+	if _view == VIEW_DECK:
+		return maxf(0.0, _deck_content_h() - _deck_clip_rect().size.y)
 	var n := RunState.pending_rewards.size()
 	var content := n * (ROW_H + ROW_GAP) - ROW_GAP
 	var view := PANEL_H - HEAD_H - FOOT_H
@@ -1179,6 +1330,15 @@ func _demo_start() -> void:
 				en["candidates"] = [forced, forced, forced]
 	# R342 出图：`--r342relic` = 奖励列表里只放两件新道具
 	# （核验徽章色：采集刀传奇橙金 / 火柴一般黄；以及长描述在行内的换行）
+	# R398 出图：`--r119deck` = 月亮删卡视图（卡组摊开 + 一张带锁的月亮自己）
+	if mode == "--r119deck":
+		if RunState.deck_ids.is_empty():
+			RunState.start_run([], GameLayers.LAYER_DEFAULT)
+		RunState.pending_rewards = []
+		if not RunState.deck_ids.has(9180):
+			RunState.deck_ids.append(9180)
+		RunState.queue_deck_delete_reward(1)
+		RunState.pending_deck_edit = ""
 	if mode == "--r342relic":
 		RunState.pending_rewards = []
 		RunState.queue_relic_reward(RunState.HARVEST_KNIFE_RELIC_ID)
@@ -1205,6 +1365,11 @@ func _demo_start() -> void:
 				if str((RunState.pending_rewards[i] as Dictionary).get("kind", "")) == "cards":
 					_open_entry(i)
 					_hover_card = 0
+					break
+		elif mode == "--r119deck":
+			for i in RunState.pending_rewards.size():
+				if str((RunState.pending_rewards[i] as Dictionary).get("kind", "")) == "deck_delete":
+					_open_entry(i)
 					break
 		elif mode == "--r119pick":
 			# R167：不设悬停，改用「已点选」—— 复现触屏上「点一下卡 → 看说明 → 待确认」的画面
