@@ -829,23 +829,26 @@ func _check_shop_enchant(scene: Variant) -> void:
 	# ⚠️ 必须逐行精确比对（整行 strip 后等于调用本身）：函数里那段「不许调它」的注释
 	#    也含这个字面量，用 contains() 会误判（R204 自己踩过）。
 	var src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
-	var a := src.find("func _draw_pick_overlay")
-	var b := src.find("func _build_deck_cards")
-	var bad_call := false
-	if a >= 0 and b > a:
-		for ln in src.substr(a, b - a).split("\n"):
-			if ln.strip_edges() == "_build_deck_cards()":
-				bad_call = true
-				break
-	if bad_call:
-		_smoke_fail("商店附魔：_draw_pick_overlay 里不能再调 _build_deck_cards()"
-				+ "（会把 _sel_pick 抹回 -1 → 选卡页点不动 = 卡死）")
-		return
-	# R236：商店「巧克力 +1」必须走 RunState.add_chocolate(1) —— 它会撤销
-	# 「体力耗尽 → 开 Boss」的 boss_pending；否则最后一格进商店买巧克力后离店仍进 Boss。
-	if src.find("RunState.add_chocolate(1)") < 0 or src.find("RunState.chocolate += 1") >= 0:
-		_smoke_fail("R236 商店：买巧克力应走 RunState.add_chocolate(1)（撤销 boss_pending），不能再裸 +=1")
-		return
+	if not src.is_empty():
+		var a := src.find("func _draw_pick_overlay")
+		var b := src.find("func _build_deck_cards")
+		var bad_call := false
+		if a >= 0 and b > a:
+			for ln in src.substr(a, b - a).split("\n"):
+				if ln.strip_edges() == "_build_deck_cards()":
+					bad_call = true
+					break
+		if bad_call:
+			_smoke_fail("商店附魔：_draw_pick_overlay 里不能再调 _build_deck_cards()"
+					+ "（会把 _sel_pick 抹回 -1 → 选卡页点不动 = 卡死）")
+			return
+		# R236：商店「巧克力 +1」必须走 RunState.add_chocolate(1) —— 它会撤销
+		# 「体力耗尽 → 开 Boss」的 boss_pending；否则最后一格进商店买巧克力后离店仍进 Boss。
+		if src.find("RunState.add_chocolate(1)") < 0 or src.find("RunState.chocolate += 1") >= 0:
+			_smoke_fail("R236 商店：买巧克力应走 RunState.add_chocolate(1)（撤销 boss_pending），不能再裸 +=1")
+			return
+	else:
+		print("  · [跳过] 商店附魔 / R236 源码守卫 —— 打包环境读不到源文本")
 	# ② 附魔槽位必须与卡组等长，否则 enchant_deck_card 越界。
 	if RunState.deck_mods.size() != RunState.deck_ids.size():
 		_smoke_fail("商店附魔：deck_mods 应与 deck_ids 等长（%d vs %d）"
@@ -1511,24 +1514,27 @@ func _check_card_detail_block(_scene: Variant) -> void:
 	##      羊皮纸上（对比度 ~1.6:1，几乎看不见）；
 	##   ③ 附带块的**预算高度**与**实画行距**各写一套数字 → 自适应出来的横条装不下内容。
 	var rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
-	var a := rp.find("func _draw_card_detail")
-	var b := rp.find("\nfunc ", a + 10)
-	if a < 0 or b <= a:
-		_smoke_fail("R206 详情条：找不到 _draw_card_detail()")
-		return
-	var detail_src := rp.substr(a, b - a)
-	if detail_src.find("box.position.x + pad, float(res") >= 0:
-		_smoke_fail("R206 详情条：提及块还从**左栏** x 起画（应改成右栏 ex / ew）")
-		return
-	# R302（用户口径）：附带块**整体取消** —— 提及名只做「悬停弹窗」（触屏点住），
-	# 不再把摘要固定列在详情里。这条断言因此从「块要画在右栏」改成「块不许再出现，
-	# 但命中矩形必须交出去」。
-	if detail_src.find("draw_reference_block") >= 0:
-		_smoke_fail("R302 详情条：提及块不该再固定画（只悬停名字弹窗）")
-		return
-	if detail_src.find('_mention_hits = res["hits"]') < 0:
-		_smoke_fail("R302 详情条：正文的提及命中矩形必须交给 _mention_hits")
-		return
+	if not rp.is_empty():
+		var a := rp.find("func _draw_card_detail")
+		var b := rp.find("\nfunc ", a + 10)
+		if a < 0 or b <= a:
+			_smoke_fail("R206 详情条：找不到 _draw_card_detail()")
+			return
+		var detail_src := rp.substr(a, b - a)
+		if detail_src.find("box.position.x + pad, float(res") >= 0:
+			_smoke_fail("R206 详情条：提及块还从**左栏** x 起画（应改成右栏 ex / ew）")
+			return
+		# R302（用户口径）：附带块**整体取消** —— 提及名只做「悬停弹窗」（触屏点住），
+		# 不再把摘要固定列在详情里。这条断言因此从「块要画在右栏」改成「块不许再出现，
+		# 但命中矩形必须交出去」。
+		if detail_src.find("draw_reference_block") >= 0:
+			_smoke_fail("R302 详情条：提及块不该再固定画（只悬停名字弹窗）")
+			return
+		if detail_src.find('_mention_hits = res["hits"]') < 0:
+			_smoke_fail("R302 详情条：正文的提及命中矩形必须交给 _mention_hits")
+			return
+	else:
+		print("  · [跳过] R206 详情条 / reward_panel 源码守卫 —— 打包环境读不到源文本")
 	# ② 强调色按真实底色挑（浅底 → 琥珀棕；暗底 → 亮金）
 	if Mention.text_color_on(UiTheme.PANEL_PAPER_BG) != UiTheme.MENTION_ON_LIGHT:
 		_smoke_fail("R206 详情条：羊皮纸浅底上提及名应取 MENTION_ON_LIGHT（琥珀棕）")
@@ -1542,19 +1548,19 @@ func _check_card_detail_block(_scene: Variant) -> void:
 		return
 	# ③ 预算高度 == 实画行距（两边都只许用 BLOCK_* 常量）
 	var ms := FileAccess.get_file_as_string("res://scripts/mention.gd")
-	if ms.is_empty():
-		_smoke_fail("R206 详情条：读不到 mention.gd（源码守卫失效）")
-		return
-	# 正向守卫：行距必须走 BLOCK_* 常量（含 head 行）；旧的字面量推进一旦回潮就报。
-	for need: String in ["ty += BLOCK_HEAD_H", "ty += BLOCK_ITEM_H", "ty += BLOCK_LINE_H",
-			"ty += BLOCK_GAP"]:
-		if not ms.contains(need):
-			_smoke_fail("R206 详情条：mention.gd 缺少行距推进 `%s`" % need)
-			return
-	for bad: String in ["ty += 16.0", "ty += 15.0", "ty += 3.0", "ty += 20.0"]:
-		if ms.contains(bad):
-			_smoke_fail("R206 详情条：附带块行距仍在写字面量 `%s`（应改用 BLOCK_* 常量）" % bad)
-			return
+	if not ms.is_empty():
+		# 正向守卫：行距必须走 BLOCK_* 常量（含 head 行）；旧的字面量推进一旦回潮就报。
+		for need: String in ["ty += BLOCK_HEAD_H", "ty += BLOCK_ITEM_H", "ty += BLOCK_LINE_H",
+				"ty += BLOCK_GAP"]:
+			if not ms.contains(need):
+				_smoke_fail("R206 详情条：mention.gd 缺少行距推进 `%s`" % need)
+				return
+		for bad: String in ["ty += 16.0", "ty += 15.0", "ty += 3.0", "ty += 20.0"]:
+			if ms.contains(bad):
+				_smoke_fail("R206 详情条：附带块行距仍在写字面量 `%s`（应改用 BLOCK_* 常量）" % bad)
+				return
+	else:
+		print("  · [跳过] R206 详情条 / mention.gd 源码守卫 —— 打包环境读不到源文本")
 	var card: CardData = Mention.card_of(8046)
 	if card == null:
 		_smoke_fail("R206 详情条：卡牌 8046 不在卡库（用例前提失效）")
@@ -1580,6 +1586,19 @@ func _check_card_detail_block(_scene: Variant) -> void:
 func _smoke_fail(msg: String) -> void:
 	print("SMOKE FAIL %s" % msg)
 	_fail += 1
+
+## 打包环境（.pck）里脚本是**二进制 token** → `FileAccess.get_file_as_string`
+## 读任何 .gd 都返回空串，所以「读源码做断言」的守卫在包里**必然失败**。
+## ⚠️ R386 实测发现：这种失败以前一直被 exit code 吞掉 —— test_smoke 无论
+##    失败与否都 exit 0，`_release.py` 第 4 步只看 rc → 「包内 smoke 全绿」是假绿。
+## 判 dev 的唯一口径 = `export_presets.cfg` 存在（`*.cfg` 不进 pck）。
+## 用法：`if _src_guard_skip("xxx"): return` 放在 `var src := ...` 之前；
+##      源码段若夹在函数中间，用 `if not src.is_empty():` 包住，后续断言照跑。
+func _src_guard_skip(what: String) -> bool:
+	if FileAccess.file_exists("res://export_presets.cfg"):
+		return false
+	print("  · [跳过] ", what, " —— 打包环境读不到源文本")
+	return true
 
 
 func _hand_card_extent(scene: Variant, i: int) -> Vector2:
@@ -2457,6 +2476,8 @@ func _check_r208(scene: Variant) -> void:
 		_smoke_fail("R301 零件回收者：力量 > 0 时飘字应为「回收力量」（不写数字），实际「%s」" % got_txt)
 		return
 	# ── ③ 源码守卫：底衬不许回潮（函数与色常量都已删除）──
+	if _src_guard_skip("R208 卡面底衬守卫"):
+		return
 	var cf := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 	if cf.is_empty():
 		_smoke_fail("R208 卡面：读不到 card_face.gd（源码守卫失效）")
@@ -3043,6 +3064,8 @@ func _check_back_key(scene: Variant) -> void:
 		return
 	if scene.get_tree().quit_on_go_back:
 		_smoke_fail("BackKey：quit_on_go_back 应为 false（否则安卓返回键直接退 App）")
+		return
+	if _src_guard_skip("BackKey 源码守卫"):
 		return
 	var src := FileAccess.get_file_as_string("res://scripts/back_key.gd")
 	if src.find("Input.parse_input_event") < 0 or src.find("KEY_ESCAPE") < 0 \
