@@ -5587,7 +5587,7 @@
       "name": "漩涡",
       "kind": "场地",
       "cost": 1,
-      "rarity": 1,
+      "rarity": 0,
       "group": "player",
       "class": "森林精魄",
       "traits": [
@@ -5610,7 +5610,7 @@
       "health": 9,
       "attack_range": 1,
       "move_speed": 1,
-      "rarity": 2,
+      "rarity": 0,
       "group": "player",
       "class": "森林精魄",
       "traits": [

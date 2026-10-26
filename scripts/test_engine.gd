@@ -25601,8 +25601,8 @@ func _init() -> void:
 			"R346 收下会解锁这一段挂的 1 件道具")
 
 	# ---- R359：**没写正文的段落默认上锁**（用户口径）----
-	# 空壳期 episode2~6 的 text 是空的，但成就在这段时间里就达成了 → 档案里早已有
-	# unlocked_stories 记录，于是列表显示成「可查看」金色亮点、点开只有一句
+	# 空壳期 episode3~6 的 text 还是空的（R382 起 episode2 已填正文），但成就在这段时间里
+	# 就达成了 → 档案里早已有 unlocked_stories 记录，于是列表显示成「可查看」金色亮点、点开只有一句
 	# 「（这一段故事还没有写。）」。修法 = 状态判定先看有没有正文。
 	ProfileData.clear_memory()
 	var r359_repo := StoryRepo.load_json()
@@ -26508,10 +26508,10 @@ func _init() -> void:
 	check(r355_bad.is_empty(),
 			"R355 数据：剧情 grants 点到的卡 / 道具都带 locked（问题 %s）" % str(r355_bad))
 	# 反方向：标了 locked 却没人发 → 玩家永远拿不到，等于从游戏里删掉了。
-	# ⚠️ R381：漩涡 9186 / 鹅 9187 是用户明确要求「**暂无解锁渠道**」的剧情卡，
-	#    属于「已知待接」而不是漏洞 —— 放一份白名单，别为了过测试给它们瞎编一条来源。
-	#    将来接上渠道时把 id 从这里删掉即可，孤儿检查会自动开始接住它们。
-	var r355_pending: Array[int] = [9186, 9187]
+	# ⚠️ R382：R381 的漩涡 9186 / 鹅 9187 已经挂到故事 2 的 grants 上了，白名单清空 ——
+	#    它们改由上面那条孤儿检查正式接管（以后谁把它们从 grants 里拿掉，这里就红）。
+	#    机制留着给下一批「有意待接」的卡用。
+	var r355_pending: Array[int] = []
 	var r355_orphan: Array[String] = []
 	for r355_c2: CardData in r355_crepo.all_cards():
 		if (r355_c2.locked and not r355_gc.has(r355_c2.id)
@@ -27632,11 +27632,13 @@ func _init() -> void:
 			"R380 源码：rogue_map 的精英概率 / 「?」房表都读 RunState 的唯一口")
 	RunState.set_difficulty(0)
 
-	# ================= R381：漩涡 9186 / 鹅 9187（森林精魄剧情卡 · 暂无解锁渠道）=================
-	# 用户口径：「新增森林精魄故事卡牌（暂无解锁渠道）」
+	# ================= R381：漩涡 9186 / 鹅 9187（森林精魄剧情卡）+ R382 解锁渠道 =================
+	# 用户口径（R381）：「新增森林精魄故事卡牌（暂无解锁渠道）」
 	#   漩涡：1 费场地 —— 处于此格的单位**行动时**，会随机向一个方向移动一格。
 	#   鹅：2 费盟友 1 攻 / 9 血 —— 攻击敌人会将其向后击退一格，自己前进一格（如果可能）。
-	# 两张都是 `locked: true` 且**不写进任何 episode 的 grants** —— 这就是「暂无解锁渠道」。
+	# 用户口径（R382）：「以上两张卡由 episode2 解锁。使用森林精魄角色通关一次解锁。
+	#   （注意，解锁后卡牌 ban 位只增加森林精魄的），这两张卡为普通稀有度。」
+	#   → grants 挂在 episode2；条件 = clear:森林精魄:* >= 1；rarity 0；职业卡（class 有值）。
 	var r381_repo := CardRepo.load_json()
 	var r381_v: CardData = r381_repo.get_card(9186)
 	var r381_g: CardData = r381_repo.get_card(9187)
@@ -27651,19 +27653,89 @@ func _init() -> void:
 			and r381_g.card_class == "森林精魄"
 			and r381_g.traits.has(GameEngine.GOOSE_TRAIT),
 			"R381 鹅 9187：2 费盟友 1 攻 / 9 血 / 射程 1 / 移速 1（森林精魄）")
-	# ① 解锁口径：两张默认锁定、不进奖励池、也不在任何故事的 grants 里
+	# ① 解锁口径（R382 改）：两张默认锁定、不进奖励池；解锁渠道 = 故事 2
+	#    用户口径：「由 episode2 解锁，使用森林精魄角色通关一次解锁」
+	ProfileData.set_test_mode()
+	RunState.run_active = false      # 局外口径：奖励池的禁卡判定退回账号表
+	RunState.run_bans = []
 	check(r381_v.locked and r381_g.locked,
-			"R381：漩涡 / 鹅都是 locked（默认不进奖励池）")
+			"R382：漩涡 / 鹅默认 locked（不进奖励池）")
 	var r381_leak := 0
-	for r381_pc: CardData in r381_repo.reward_pool_for("森林精魄"):
+	for r381_pc: CardData in r381_repo.reward_pool_for(PlayerClass.DRUID):
 		if r381_pc.id == 9186 or r381_pc.id == 9187:
 			r381_leak += 1
 	check(r381_leak == 0,
-			"R381：锁定的两张都没漏进森林精魄奖励池（漏进 %d 张）" % r381_leak)
-	var r381_st_txt := FileAccess.get_file_as_string("res://stories.json")
-	check(r381_st_txt != "" and r381_st_txt.find("9186") < 0
-			and r381_st_txt.find("9187") < 0,
-			"R381：stories.json 的 grants 里没有这两张（暂无解锁渠道）")
+			"R382：锁定的两张都没漏进森林精魄奖励池（漏进 %d 张）" % r381_leak)
+	check(r381_v.rarity == 0 and r381_g.rarity == 0,
+			"R382：两张都是普通稀有度（实际 %d / %d）" % [r381_v.rarity, r381_g.rarity])
+	var r382_story := StoryRepo.load_json()
+	var r382_g := r382_story.episode_grants("episode2")
+	var r382_gc: Array = []
+	for r382_v: Variant in (r382_g.get("cards", []) as Array):
+		r382_gc.append(int(r382_v))
+	check(r382_gc == [9186, 9187],
+			"R382：故事 2 的 grants 就是这两张（实际 %s）" % str(r382_gc))
+	check(r382_story.has_content("episode2")
+			and str(r382_story.episode("episode2").get("title", "")) != "？？？",
+			"R382：故事 2 有正文（空正文会被 R359 的门一直锁着，渠道等于没接上）")
+	var r382_ach := r382_story.achievement_for_episode("episode2")
+	check(str(r382_ach.get("stat", "")) == ""
+			and str(r382_ach.get("stat_prefix", "")) == ProfileData.K_CLEAR + PlayerClass.DRUID + ":"
+			and int(r382_ach.get("min", 0)) == 1,
+			"R382：条件 = 森林精魄通关 1 次（实际 %s）" % str(r382_ach.get("stat_prefix", "")))
+	check(r382_story.requirement_text("episode2").find(PlayerClass.DRUID) >= 0,
+			"R382：故事 2 的条件提示写明「森林精魄」（%s）"
+			% r382_story.requirement_text("episode2"))
+
+	# ①b 通关链路 + 「ban 位只加森林精魄的」（用户口径）
+	var r382_q_d0 := ProfileData.ban_quota_for(r381_repo, PlayerClass.DRUID)
+	var r382_q_r0 := ProfileData.ban_quota_for(r381_repo, PlayerClass.ROGUE)
+	var r382_q_m0 := ProfileData.ban_quota_for(r381_repo, PlayerClass.MECH)
+	ProfileData.bump(ProfileData.K_CLEAR + PlayerClass.ROGUE + ":0")
+	check(not ProfileData.check_achievements(r382_story).has("episode2"),
+			"R382：暗影刺客通关 → 故事 2 不解锁（只认森林精魄）")
+	ProfileData.bump(ProfileData.K_CLEAR + PlayerClass.DRUID + ":0")
+	check(ProfileData.check_achievements(r382_story).has("episode2"),
+			"R382：森林精魄通关 1 次 → 故事 2 解锁")
+	var r382_claim := ProfileData.claim_episode(r382_story, "episode2")
+	check(bool(r382_claim.get("ok", false))
+			and (r382_claim.get("cards", []) as Array).size() == 2
+			and ProfileData.is_card_unlocked(9186) and ProfileData.is_card_unlocked(9187),
+			"R382：收下故事 2 → 两张卡解锁（%s）" % str(r382_claim.get("reason", "")))
+	var r382_pool := {}
+	for r382_pc: CardData in r381_repo.reward_pool_for(PlayerClass.DRUID):
+		r382_pool[r382_pc.id] = true
+	check(r382_pool.has(9186) and r382_pool.has(9187),
+			"R382：解锁后两张进森林精魄奖励池")
+	var r382_pool_r := {}
+	for r382_pc2: CardData in r381_repo.reward_pool_for(PlayerClass.ROGUE):
+		r382_pool_r[r382_pc2.id] = true
+	check(not r382_pool_r.has(9186) and not r382_pool_r.has(9187),
+			"R382：两张是森林精魄职业卡，不进别的职业的奖励池")
+	var r382_q_d1 := ProfileData.ban_quota_for(r381_repo, PlayerClass.DRUID)
+	check(int(r382_q_d1.get(0, 0)) == int(r382_q_d0.get(0, 0)) + 2
+			and int(r382_q_d1.get(1, 0)) == int(r382_q_d0.get(1, 0))
+			and int(r382_q_d1.get(2, 0)) == int(r382_q_d0.get(2, 0)),
+			"R382：森林精魄普通档 ban 名额 +2（%s → %s）" % [str(r382_q_d0), str(r382_q_d1)])
+	check(ProfileData.ban_quota_for(r381_repo, PlayerClass.ROGUE) == r382_q_r0,
+			"R382：暗影刺客 ban 名额一个都没变（%s）" % str(r382_q_r0))
+	check(ProfileData.ban_quota_for(r381_repo, PlayerClass.MECH) == r382_q_m0,
+			"R382：机械之心 ban 名额一个都没变（%s）" % str(r382_q_m0))
+	# 新增的 2 个普通位是真的能用：连禁两张普通卡，第三张才被额度拦住
+	var r382_banned := 0
+	for r382_bc: CardData in r381_repo.obtainable_cards():
+		if r382_bc.card_class != "" and r382_bc.card_class != PlayerClass.DRUID:
+			continue
+		if ProfileData.toggle_ban_for(r382_bc.id, r381_repo, PlayerClass.DRUID):
+			r382_banned += 1
+		if r382_banned >= 2:
+			break
+	check(r382_banned == 2,
+			"R382：森林精魄普通档的 2 个新名额能真的用上（禁掉 %d 张）" % r382_banned)
+	check(int(ProfileData.banned_by_rarity_for(r381_repo, PlayerClass.DRUID).get(0, 0)) == 2,
+			"R382：森林精魄禁用表里正好 2 张普通卡")
+	ProfileData.set_test_mode()      # 收尾：别把上面的解锁/禁用留给后面的用例
+	RunState.run_bans = []
 
 	# ② 漩涡：站在上面 → 行动结束被卷走**恰好 1 格**，且场地不消失（20 次全中）
 	var r381_e := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
