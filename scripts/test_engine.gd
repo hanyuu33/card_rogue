@@ -28370,6 +28370,39 @@ func _init() -> void:
 			"R387 火墙术：上限 25（15+10）→ 第二次只补 7，合计 -%d（旧版会卡在 15）"
 			% [r387_walk_hp - r387_walk.health])
 
+	# ================= R388：战斗内「敌方动画倍速」按钮（1× / 1.5× / 2×，永久保存） =================
+	# 用户口径：「战斗中加个倍速按钮，点一次 1.5，点两次 2 倍，永久保存开关状态，
+	#  只改动敌人动画速度。」—— 三档循环 + 落盘 + 只挂在敌方演出窗口上。
+	# ---- ① 档位循环：1 → 1.5 → 2 → 1 ----
+	var r388_s1 := GameSettings.next_foe_speed(1.0)
+	var r388_s2 := GameSettings.next_foe_speed(r388_s1)
+	var r388_s3 := GameSettings.next_foe_speed(r388_s2)
+	check(is_equal_approx(r388_s1, 1.5) and is_equal_approx(r388_s2, 2.0)
+			and is_equal_approx(r388_s3, 1.0),
+			"R388 倍速循环：1× → %.1f× → %.1f× → %.1f×" % [r388_s1, r388_s2, r388_s3])
+	# ---- ② 非法值回落（旧档 / 手改配置不能冒出 3.7×）----
+	check(is_equal_approx(GameSettings.normalize_foe_speed(3.7), 1.0)
+			and is_equal_approx(GameSettings.normalize_foe_speed(1.4999), 1.5),
+			"R388 倍速归一：不认识的档位回落 1×，1.4999 认成 1.5×")
+	# ---- ③ 落盘：写 2× → 重新读盘还是 2×（关掉游戏再开也保留）----
+	var r388_keep := GameSettings.foe_speed
+	GameSettings.set_foe_speed(2.0)
+	GameSettings._loaded = false
+	GameSettings.ensure_loaded()
+	check(is_equal_approx(GameSettings.foe_speed, 2.0),
+			"R388 倍速落盘：写 2× 后重新读盘仍是 2×（实际 %.1f×）" % GameSettings.foe_speed)
+	GameSettings.set_foe_speed(r388_keep)
+	GameSettings._loaded = false
+	GameSettings.ensure_loaded()   # 还原玩家原值
+	# ---- ④ 源码锁：按钮在场景里，倍速只挂在敌方窗口上 ----
+	var r388_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r388_bs.find("$Toolbar/SpeedBtn") >= 0
+			and r388_bs.find("_clock_ms += delta * 1000.0 * (_foe_speed if _foe_phase else 1.0)") >= 0
+			and r388_bs.find("_foe_phase = false") >= 0,
+			"R388 源码：SpeedBtn 在顶栏 / 演出时钟只在 _foe_phase 里按倍速走")
+	check_src(r388_bs.find("AI_STEP_SEC / maxf(1.0, _foe_speed)") >= 0,
+			"R388 源码：敌方 AI 步进间隔跟着倍率折算（1× 1.6s / 2× 0.8s）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

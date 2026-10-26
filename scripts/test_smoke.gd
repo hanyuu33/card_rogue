@@ -1767,7 +1767,9 @@ func _check_move_path(scene: Variant) -> void:
 	var dur: int = int(sl.get("dur", 0))
 	for i in 9:
 		var frac: float = float(i) / 8.0
-		sl["start"] = Time.get_ticks_msec() - int(float(dur) * frac)
+		# R388：动画进度一律用**场景演出时钟**（_now()）设置 —— 它与 Time.get_ticks_msec()
+		# 只在 1× 时近似相等；倍速会上过弦。
+		sl["start"] = scene._now() - int(float(dur) * frac)
 		var pos: Vector2 = scene._display_center(pl2, Vector2i(4, 1))
 		worst = maxf(worst, _dist_to_polyline(pos, want))
 	# 反证：直线插值（修复前的行为）在这条 L 形路径上必然偏得很远，
@@ -1914,6 +1916,70 @@ func _check_battle(scene: Variant) -> void:
 	_check_enchant_mark(scene)
 	_check_r277_field_tap(scene)
 	_check_speech_bubble(scene)
+	_check_foe_speed(scene)
+
+
+func _check_foe_speed(scene: Variant) -> void:
+	## R388：顶栏倍速按钮 —— 点一次 1.5×、点两次 2×、第三次回 1×，并落盘；
+	## 演出时钟只在敌方窗口（`_foe_phase`）按倍速走，我方回合仍是 1×。
+	##
+	## 为什么放 smoke：按钮 / 时钟 / Timer 折算都是**场景里真的有状态**的东西，
+	## 纯引擎断言只能验到 GameSettings 那三个函数。这里走真实按钮实例。
+	var btn := scene.get("speed_btn") as Button
+	if btn == null:
+		_smoke_fail("R388 倍速按钮：battle.tscn 里没有 SpeedBtn")
+		return
+	var keep: float = GameSettings.foe_speed
+	# 先归到 1×，再从 1× 一路点上去（玩家的档位不该左右这条断言）
+	while float(scene.get("_foe_speed")) > 1.0:
+		scene._on_speed_pressed()
+	if btn.text != "×1":
+		_smoke_fail("R388 倍速按钮：1× 时按钮文字应是 ×1，实际「%s」" % btn.text)
+		return
+	scene._on_speed_pressed()
+	if not is_equal_approx(float(scene.get("_foe_speed")), 1.5) or btn.text != "×1.5":
+		_smoke_fail("R388 倍速按钮：点一次应是 1.5×，实际 %s / 「%s」"
+				% [str(scene.get("_foe_speed")), btn.text])
+		return
+	if not is_equal_approx(GameSettings.foe_speed, 1.5):
+		_smoke_fail("R388 倍速按钮：1.5× 没写进 GameSettings（实际 %.2f）"
+				% GameSettings.foe_speed)
+		return
+	scene._on_speed_pressed()
+	if not is_equal_approx(float(scene.get("_foe_speed")), 2.0) or btn.text != "×2":
+		_smoke_fail("R388 倍速按钮：点两次应是 2×，实际 %s / 「%s」"
+				% [str(scene.get("_foe_speed")), btn.text])
+		return
+	# 2× 的 AI 步进间隔应折半（1.6s → 0.8s）
+	var step_2x := float(scene._ai_step_sec())
+	if not is_equal_approx(step_2x, 0.8):
+		_smoke_fail("R388 倍速：2× 的敌方 AI 步进应是 0.8s，实际 %.3f" % step_2x)
+		return
+	scene._on_speed_pressed()
+	if not is_equal_approx(float(scene.get("_foe_speed")), 1.0) or btn.text != "×1":
+		_smoke_fail("R388 倍速按钮：第三次应回到 1×，实际 %s / 「%s」"
+				% [str(scene.get("_foe_speed")), btn.text])
+		return
+	# 演出时钟：同样是 0.1s，我方回合走 100ms，敌方窗口（2×）走 200ms
+	scene.set("_foe_speed", 2.0)
+	scene.set("_foe_phase", false)
+	var t0: int = scene._now()
+	scene._advance_clock(0.1)
+	var d_self: int = scene._now() - t0
+	scene.set("_foe_phase", true)
+	t0 = scene._now()
+	scene._advance_clock(0.1)
+	var d_foe: int = scene._now() - t0
+	scene.set("_foe_phase", false)
+	# 还原玩家状态（本用例不许把手感留在 2×）
+	scene.set("_foe_speed", keep)
+	GameSettings.set_foe_speed(keep)
+	scene._sync_speed_btn()
+	if d_self != 100 or d_foe != 200:
+		_smoke_fail("R388 倍速时钟：我方 0.1s 应走 100ms / 敌方 2× 应走 200ms（实际 %d / %d）"
+				% [d_self, d_foe])
+		return
+	print("SMOKE OK R388 倍速按钮：1× → 1.5× → 2× → 1×，落盘；只快敌方演出")
 
 
 func _check_speech_bubble(scene: Variant) -> void:
@@ -2999,7 +3065,7 @@ func _check_long_press(scene: Variant) -> void:
 		return
 	# 3) 重新按下并把计时拨回过去 → 下一帧 _process 必须触发一次右键等价
 	scene._gui_input(down)
-	scene._lp_t0 = Time.get_ticks_msec() - scene.LP_MS - 100
+	scene._lp_t0 = scene._now() - scene.LP_MS - 100   # R388：长按计时同样走演出时钟
 	scene._press_idx = 3   # 模拟「按住一张手牌」：触发后必须摘掉，否则松手会补发左键
 	scene.status_text = "长按测试基准"
 	scene._process(0.016)

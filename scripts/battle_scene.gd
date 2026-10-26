@@ -222,6 +222,10 @@ const FX_MULTI_HIT_GAP_MS := 90
 const DEATH_SETTLE_DELAY_MS := 180
 const MOVE_SLIDE_BASE_MS := 160     # 移动滑行：起步耗时（1 格 = 420ms，与旧版一致）
 const MOVE_SLIDE_PER_STEP_MS := 260 # 移动滑行：每多走 1 格再加这么久
+## R388：战斗内「敌方演出倍速」—— 顶栏一个按钮在 1× / 1.5× / 2× 之间循环（落盘）。
+## 它缩放的是**演出时间轴**（`_now()`），所以敌人的走位 / 攻击 / 命中 / 击破 / 飘字
+## 会一起变快；引擎结算是同步的、不读时间 —— 数值与判定一分不变。
+const AI_STEP_SEC := 1.6           # 敌方 AI 每步的真实间隔（1× 时）
 
 # R288：通用效果演出（cue）的时间轴 —— 一段演出 = 一个镜头段，够玩家看清「谁对谁做了什么」。
 const CUE_MS := 760              # 单个镜头段的长度（占时间让玩家反应，不是一帧闪过）
@@ -284,6 +288,13 @@ const REV_RETURN_MS := 460      # 本体滑回后排的时长（先演这个）
 const REV_FX_MS := 900          # 屏障 / 燃烧覆盖卡面的时长（后演这个）
 const REV_FACE_GAP_MS := 160    # 特效收尾 → 重弹敌方效果的间隔
 var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本不覆盖
+## R388：倍速状态 + 演出时钟。
+##   * `_foe_speed` —— 1.0 / 1.5 / 2.0（按钮循环，落盘在 GameSettings）；
+##   * `_foe_phase` —— 敌方回合窗口（含最后一击的收尾演出），只有它里面按倍速走；
+##   * `_clock_ms`  —— `_now()` 的唯一来源：每帧按「真实 delta × 当前倍率」累加。
+var _foe_speed := 1.0
+var _foe_phase := false
+var _clock_ms := 0.0
 ## R118：左键点「空位」**不再一步取消**。为 true = 本轮的第一次空位点击已经发生 ——
 ## 选区、绿色移动格、红色攻击格、深红 HP 格**全部原样保留**（于是这时点目标照样能打），
 ## **再点一次空位**才真取消（含「已移动未攻击 → 放弃攻击并就地横置」）。
@@ -585,9 +596,15 @@ var _net_wait := 0.0
 @onready var menu_btn: Button = $Toolbar/MenuBtn
 # R341 洞窟绳（6048）：Boss 以外的战斗、且还带着绳子时才显示（见 `_refresh_flee_btn`）。
 @onready var flee_btn: Button = $Toolbar/FleeBtn
+# R388：顶栏最左的「敌方动画倍速」按钮（×1 → ×1.5 → ×2 → ×1，状态永久保存）。
+@onready var speed_btn: Button = $Toolbar/SpeedBtn
 
 
 func _ready() -> void:
+	# R388：演出时钟先从真实毫秒起步（`_now()` 唯一来源）；倍速读玩家上次的选择。
+	_clock_ms = float(Time.get_ticks_msec())
+	GameSettings.ensure_loaded()
+	_foe_speed = GameSettings.foe_speed
 	# 顶栏的 HpLabel / StatusLabel 在 battle.tscn 里声明了溢出策略：
 	# clip_text + text_overrun_behavior=3（省略号）。状态行会串进战斗日志，长度不可控，
 	# 固定 310px 会把后半句静默切掉（R113 修的）。⚠️ .tscn 里不能写 # 注释，说明只能挂在这里。
@@ -610,6 +627,7 @@ func _ready() -> void:
 	end_turn_btn.pressed.connect(_on_end_turn)
 	menu_btn.pressed.connect(_open_menu)
 	flee_btn.pressed.connect(_on_flee)
+	speed_btn.pressed.connect(_on_speed_pressed)   # R388
 	# R155：顶栏操作按钮 —— 记录（偏左）/ 卡组·地图（右侧）。不再只藏在 Esc 菜单里。
 	log_btn.pressed.connect(_toggle_log)
 	deck_btn.pressed.connect(_toggle_deck_panel)
@@ -617,10 +635,10 @@ func _ready() -> void:
 	hp_strip.draw.connect(_draw_hp_strip)
 	# 齿轮图标**自绘**（字体里的 ⚙ 不保证有，缺字会变成一个方框）—— 见 UiTheme.draw_gear
 	menu_btn.draw.connect(_draw_menu_gear)
-	for b: Button in [log_btn, deck_btn, map_btn, end_turn_btn, menu_btn, flee_btn]:
+	for b: Button in [log_btn, deck_btn, map_btn, end_turn_btn, menu_btn, flee_btn, speed_btn]:
 		b.pressed.connect(func(): sfx.play("click"))
 	_ai_timer = Timer.new()
-	_ai_timer.wait_time = 1.6
+	_ai_timer.wait_time = _ai_step_sec()   # R388：按当前倍速折算（1× = 1.6s）
 	_ai_timer.timeout.connect(_ai_step)
 	add_child(_ai_timer)
 	_build_tut_bar()
@@ -633,8 +651,9 @@ func _ready() -> void:
 	_load_entry_level()
 	_mark_battle_checkpoint()
 	# R113：顶栏按钮统一走 chip（实心 + compact —— 顶栏按钮只有 28px 高，标准内距会撑出格子）
-	for _tb: Button in [log_btn, deck_btn, map_btn, end_turn_btn, menu_btn, flee_btn]:
+	for _tb: Button in [log_btn, deck_btn, map_btn, end_turn_btn, menu_btn, flee_btn, speed_btn]:
 		UiTheme.apply_chip(_tb, true, true)
+	_sync_speed_btn()   # R388：文字 / 染色跟着上次保存的倍速
 	# R119：奖励悬浮窗 —— 战斗胜利后的掉落道具 / 卡牌奖励都先入队，由它逐项展示
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
 	# R216：领到「要立刻选卡」的即时道具时，奖励界面会当场转去卡组选择页 ——
@@ -3813,6 +3832,7 @@ func _on_flee() -> void:
 		return
 	engine.self_relics = RunState.active_relics()
 	_ai_timer.stop()
+	_foe_phase = false
 	_clear_battle_checkpoint()
 	RunState.hp = maxi(0, engine.state.hp_self)
 	RunState.max_hp = maxi(RunState.max_hp, engine.state.max_hp_self)
@@ -3822,6 +3842,7 @@ func _on_flee() -> void:
 
 func _on_back_to_title() -> void:
 	_ai_timer.stop()
+	_foe_phase = false
 	if RunState.run_active:
 		# R367：结算面板还没弹就先跳走（死亡演出期间点「返回标题」）—— 这一局已经
 		# 定了输，先补一条记录再走；否则盘上只剩一个 pending，下次启动被补成「中断」。
@@ -7873,6 +7894,8 @@ func _on_end_turn() -> void:
 	_show_banner("对手回合", Color("8a2b2b"))
 	sfx.play("turn")
 	queue_redraw()
+	_foe_phase = true                      # R388：这条回合的演出按倍速走
+	_ai_timer.wait_time = _ai_step_sec()
 	_ai_timer.start()
 
 
@@ -8624,7 +8647,67 @@ func _draw_dying() -> void:
 
 
 func _now() -> int:
-	return Time.get_ticks_msec()
+	## R388：**演出时钟**（毫秒）—— 敌方回合窗口里按倍速快进，其它时候 1×。
+	## 全场所有动画（滑行 / 攻击 / 命中 / 击破 / 飘字 / 横幅 / 气泡）都以它为准，
+	## 所以倍速是「一处改、整层生效」；引擎结算不读时间，数值完全不受影响。
+	return int(_clock_ms)
+
+
+func _advance_clock(delta: float) -> void:
+	## R388：每帧推进演出时钟。倍速只在 `_foe_phase` 里生效 —— 玩家自己的
+	## 出牌 / 拖拽 / 飘字始终 1×，符合「只改敌人动画速度」。
+	_clock_ms += delta * 1000.0 * (_foe_speed if _foe_phase else 1.0)
+
+
+func _ai_step_sec() -> float:
+	## R388：敌方 AI 每步的真实间隔（1× = 1.6s，1.5× ≈ 1.07s，2× = 0.8s）。
+	return AI_STEP_SEC / maxf(1.0, _foe_speed)
+
+
+func _foe_speed_text() -> String:
+	match _foe_speed:
+		1.5:
+			return "×1.5"
+		2.0:
+			return "×2"
+	return "×1"
+
+
+func _sync_speed_btn() -> void:
+	## R388：按钮文字 = 当前档位；开着倍速染金（1× 是常态亮字），并给出切换说明。
+	if speed_btn == null:
+		return
+	speed_btn.text = _foe_speed_text()
+	var on := _foe_speed > 1.0
+	speed_btn.add_theme_color_override("font_color",
+			UiTheme.BTN_PRIMARY_LINE if on else UiTheme.CHIP_SOLID_TEXT)
+	speed_btn.add_theme_color_override("font_hover_color",
+			UiTheme.BTN_PRIMARY_LINE_FOCUS if on else UiTheme.CHIP_SOLID_TEXT_HOVER)
+	speed_btn.tooltip_text = "敌方动画速度 %s（点击切换 1× / 1.5× / 2×）" % _foe_speed_text()
+
+
+func _on_speed_pressed() -> void:
+	## R388：1× → 1.5× → 2× → 1×。**立即生效**（敌人回合中途点也能提速），
+	## 并且落盘 —— 下次开游戏还是这一档。
+	_foe_speed = GameSettings.next_foe_speed(_foe_speed)
+	GameSettings.set_foe_speed(_foe_speed)
+	_sync_speed_btn()
+	_apply_ai_speed()
+	_say("敌方动画速度 %s（只影响敌方演出）" % _foe_speed_text())
+
+
+func _apply_ai_speed() -> void:
+	## R388：改倍速时把 AI 的**当前**周期按比例折算 —— Timer 改 `wait_time` 只对
+	## 下一个周期生效，敌人正在「想事情」的那一步会多等一整档，体感就是点了没反应。
+	var sec := _ai_step_sec()
+	var old := _ai_timer.wait_time
+	if is_equal_approx(sec, old):
+		return
+	var left := _ai_timer.time_left
+	var running := not _ai_timer.is_stopped() and left > 0.0
+	_ai_timer.wait_time = sec
+	if running:
+		_ai_timer.start(maxf(0.02, left * sec / maxf(0.02, old)))
 
 
 func _pulse_redraw() -> void:
@@ -13863,6 +13946,7 @@ func _draw_log_panel() -> void:
 # ------------------------------------------------------------ 每帧刷新工具栏文字
 
 func _process(delta: float) -> void:
+	_advance_clock(delta)   # R388：演出时钟（敌方回合窗口里按倍速走）
 	# R281：卡名超宽时是**横向滚动**的 —— 需要连续重绘才会动。
 	# 自持循环：`_draw_name_marquee()` 记时刻 → 这里看到 → 请求下一帧 → 继续画。
 	if CardFace.scrolling_recent():
@@ -13921,6 +14005,11 @@ func _process(delta: float) -> void:
 	# 这样同一帧里刚出的牌动画能立刻开始播。
 	var earring_busy := _tick_earring_autoplay()
 	var anim_busy := _tick_anims()
+	# R388：敌方演出窗口的收尾 —— AI 停了、动画也播完了才回 1×。
+	# 不等这一步的话，最后一击的击破 / 飘字会被「已经轮到我方」砍回半速。
+	if _foe_phase and _ai_timer.is_stopped() and not anim_busy and _delayed.is_empty() \
+			and (engine == null or engine.over or engine.current_side == GameEngine.SIDE_SELF):
+		_foe_phase = false
 	if _tick_cues(delta):
 		queue_redraw()   # R288：通用演出 / 镜头补间进行中
 	_hand_sync()          # R151 P0-1/2：手牌差异 → 抽牌飞入 / 弃牌·消耗飞出

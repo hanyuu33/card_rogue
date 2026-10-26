@@ -27,6 +27,13 @@ static var music_volume := 1.0
 ## 迁移成同值的 10 位码，复现结果不变。
 ## R261 起角色选择页也有种子输入框（那里更贴近「开局前」），这里是跨进程保留的默认值。
 static var next_seed_code := ""
+## R388：战斗内「敌方动画倍速」—— 1.0 / 1.5 / 2.0 三档，顶栏按钮循环切换。
+## 它只作用在**敌方回合的演出时钟**上（见 battle_scene 的 `_foe_phase`）：
+## 玩家自己的出牌 / 拖拽 / 飘字一律照常，敌人那套走位、攻击、击破按 1.5× / 2× 播。
+static var foe_speed := 1.0
+
+## R388：合法档位 —— 按钮就是在这三个值里循环（1 → 1.5 → 2 → 1）。
+const FOE_SPEEDS := [1.0, 1.5, 2.0]
 
 static var _loaded := false
 
@@ -44,6 +51,7 @@ static func ensure_loaded() -> void:
 	sfx_volume = clampf(float(cf.get_value("audio", "sfx_volume", 1.0)), 0.0, 1.0)
 	music_volume = clampf(float(cf.get_value("audio", "music_volume", 1.0)), 0.0, 1.0)
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
+	foe_speed = normalize_foe_speed(float(cf.get_value("battle", "foe_speed", 1.0)))
 	next_seed_code = str(cf.get_value("run", "seed_code", ""))
 	if next_seed_code == "":
 		# 旧版（R241~R260）的 int 种子 → 迁移成同值的 10 位种子码（复现结果不变）
@@ -59,6 +67,7 @@ static func save() -> void:
 	cf.set_value("audio", "sfx_volume", sfx_volume)
 	cf.set_value("audio", "music_volume", music_volume)
 	cf.set_value("display", "fullscreen", fullscreen)
+	cf.set_value("battle", "foe_speed", foe_speed)
 	cf.set_value("run", "seed_code", next_seed_code)
 	# 旧键（int 种子）清掉：否则玩家把种子清空后，下次启动又被旧键迁移回来
 	if cf.has_section_key("run", "seed"):
@@ -109,6 +118,33 @@ static func set_fullscreen(v: bool) -> void:
 		return
 	fullscreen = v
 	apply_display()
+	save()
+
+
+static func normalize_foe_speed(v: float) -> float:
+	## R388：不认识的数（旧档 / 手改配置文件）一律回落 1× ——
+	## 宁可没加速，也不能出现 3.7× 这种玩家没选过的档位。
+	for s in FOE_SPEEDS:
+		if absf(v - float(s)) < 0.01:
+			return float(s)
+	return 1.0
+
+
+static func next_foe_speed(v: float) -> float:
+	## R388：点一次按钮的下一个档位：1 → 1.5 → 2 → 1（循环）。
+	var cur := normalize_foe_speed(v)
+	var i: int = FOE_SPEEDS.find(cur)
+	return float(FOE_SPEEDS[(i + 1) % FOE_SPEEDS.size()])
+
+
+static func set_foe_speed(v: float) -> void:
+	## R388：与其它 setter 同一条纪律 —— 只在**真的变了**时写盘
+	## （战斗里每点一次都会调到，但点回同一档不该动文件）。
+	ensure_loaded()
+	var nv := normalize_foe_speed(v)
+	if is_equal_approx(nv, foe_speed):
+		return
+	foe_speed = nv
 	save()
 
 
