@@ -1275,7 +1275,7 @@ const OUT_OF_CONTROL_MAX_CASTS:= 20
 #      「改造抽牌」/ 榴弹击手「改造攻程」同一族）→ `_cluster_turret_reload()`：从卡组里
 #      捞一张聚能炮击**加入手卡**（手牌满则留在卡组，不销毁玩家的牌）。
 #   ⚠️ 只对**场上**的集束炮台生效 —— `_on_unit_upgraded()` 仅在场上 Placement 上被调，
-#      手牌 / 牌库里的改造（系统升级 8039 / 批量改造 8031）走不到这里（它得在场才装填）。
+#      手牌 / 牌库里的改造（系统升级 8039 / 集体改造 8031）走不到这里（它得在场才装填）。
 #   ⚠️ 「改造」本身不给它数值：卡面没写 +攻/血 → **不填** `upgrade_*_bonus`
 #      （填了会被 `_upgrade_atk_gain` 当成「被改造时 +N」白送）。
 const CLUSTER_TURRET_ID:= 9166
@@ -1301,7 +1301,7 @@ const MERGE_ID:= 9167
 # 三条口径（用户原话）：
 #   ① **无论在哪** —— 手牌 / 牌库 / 场上的己方卡被改造都算（触发点因此要覆盖
 #      系统升级 8039（手牌）、自主升级 8045（牌库）、升级 8027（场上）三类入口）；
-#   ② **无论一次性改造多少张都算一次** —— 「批量改造 8031」「批量传输 8040」
+#   ② **无论一次性改造多少张都算一次** —— 「集体改造 8031」「批量传输 8040」
 #      「改装者 8076」这种一次改一整批的，只触发**一次**；
 #   ③ **可叠加** —— 效果区每有一张激发，每次触发就各打一轮（2 张 = 每轮 3 点、打 2 轮）。
 # ⚠️ 触发口绝不能挂进 `_field_upgrade_grant()` / `_on_unit_upgraded()` 那种**逐张**口，
@@ -1621,11 +1621,12 @@ const BATTLE_BONE_ID:= 8029     # 战斗骨骼（2 费 2/7/1/1，改造时 +2 �
 const OVERLOAD_ID:= 8030
 const OVERLOAD_TRAIT:= "过载"
 const DOUBLE_ACTION:= 2          # 「一回合行动两次」的 actions 值（= 卡面自带双动的口径）
-# 「批量改造」（8031，1 费技能，机械之心，R86）：手牌里**所有盟友和工事**生命 +1，
+# 「集体改造」（8031，1 费技能，机械之心，R86）：手牌里**所有盟友和工事**生命 +1，
 # **整场战斗内有效**（回合结束弃回牌库、再抽到仍带）。改的是**手牌里的副本** ——
 # `build_deck` 给的是卡库共享实例，不复制就会跨 run 泄漏。
 const BATCH_UPGRADE_ID:= 8031
-const BATCH_UPGRADE_HP:= 1
+## R394（用户口径）：改名「集体改造」，范围从「手牌」扩到「手牌 + 卡组」，每张 +1 → **+3**。
+const BATCH_UPGRADE_HP:= 3
 # 「侦察塔」（8032，工事，机械之心，R86）：R276 起 **2 费 / 0 攻 / 8 血 / 攻程 2**。
 #   * **0 攻也能攻击** —— 用户口径「只有 0 攻程不能攻击」；引擎的 `attack_targets`
 #     本来就只看 `attack_range` 不看 `power`，所以无需改引擎。
@@ -5008,7 +5009,7 @@ func _random_creation_card() -> CardData:
 
 func creation_pick(hand_index: int) -> bool:
 	## 选一张手卡 → 随机变形成「被改造有额外效果」的卡，并获得改造：生命 +2。
-	## 「获得改造」与批量改造 8031 完全同一条口径：奖励走唯一口（素体 +1 血 / 骨骼 +1 攻 +1 血）
+	## 「获得改造」与集体改造 8031 完全同一条口径：奖励走唯一口（素体 +1 血 / 骨骼 +1 攻 +1 血）
 	## + 层数随身带（侦察塔 / 堡垒 / 无限装甲都会照常响应）。
 	if not creation_pending:
 		return false
@@ -5253,7 +5254,7 @@ func _spawn_self_clone(card: CardData) -> void :
 ##
 ##   R84 起「被改造时 +N 力 / +M 血」改读**卡面字段**（`CardData.upgrade_atk_bonus` /
 ##   `upgrade_hp_bonus`），但当时只有「升级」8027 与「加厚装甲」8044 两个入口真的读了它 ——
-##   自我修复 8035 / 改造工厂 8037 / 超越极限 8053 / 批量改造 8031 / 系统升级 8039 /
+##   自我修复 8035 / 改造工厂 8037 / 超越极限 8053 / 集体改造 8031 / 系统升级 8039 /
 ##   批量传输 8040 / 自主升级 8045 / 生产订单 8048 / 代达罗斯 8060 全都漏掉，
 ##   于是素体（+1 生命）在这些改造下**白挨**（用户 R120 报的缺陷）。
 ##
@@ -5988,13 +5989,13 @@ func _feed_upgrade_card(p: Placement) -> void :
 	##  ③ **每回合一次**记 `p.upgrade_feed_turn`（比对 `turn_total`）——
 	##     记在这个单位实例上，换一张装甲上场就有一份额度。
 	##
-	## 触发源**只有 `_upgrade_unit`**（「升级」技能 / 「自我修复」/ 「批量改造」共用它）。
+	## 触发源**只有 `_upgrade_unit`**（「升级」技能 / 「自我修复」/ 「集体改造」共用它）。
 	## 「改造工厂」（8037，R88）在 `_field_aura_tick` 里自己加攻加血、**不走这里** ——
 	## 它是场地效果不是「改造技能」，否则每回合自动触发一次，装甲会变成印钞机。
 	if p == null or p.card == null or not p.card.traits.has(INF_ARMOR_TRAIT):
 		return
 	# R210：**只有「场上的这张卡」被改造才生效**（用户口径）。
-	# 桌外（手牌 / 牌库 / 弃牌区）的改造只把数值烤进那张卡：系统升级 8039 / 批量改造 8031 /
+	# 桌外（手牌 / 牌库 / 弃牌区）的改造只把数值烤进那张卡：系统升级 8039 / 集体改造 8031 /
 	# 批量传输 8040 / 回收 8064 / 返修 9127 / 生产订单 8048 / 自主升级 8045 / 代达罗斯 8060
 	# （三区），**一律不供能**。以前这里只判「这个 Placement 带不带 trait」= 等于「谁被当成
 	# 改造目标就供能」，一旦以后哪条桌外路径把升级传进来（例如手牌副本也能拿到 Placement），
@@ -6120,9 +6121,10 @@ func _reboot(target, side:= SIDE_SELF) -> String :
 
 
 func _batch_upgrade(_side: String) -> String :
-	## 「批量改造」（8031，R86，机械之心）：手卡里**所有盟友和工事**生命 +1。
+	## 「集体改造」（8031，R86 → R394 改名 / 加强）：**手牌 + 卡组（抽牌堆）**里
+	## **所有盟友和工事**生命 +3。
 	##
-	## 口径（已与用户确认）：**整场战斗内一直有效** —— 回合结束弃回牌库、再抽到仍然带 +1。
+	## 口径（已与用户确认）：**整场战斗内一直有效** —— 回合结束弃回牌库、再抽到仍然带着加成。
 	## 这自动成立，因为下一场战斗 `RunState.build_deck()` 会重新从**卡库**取实例。
 	##
 	## ⚠️ **必须 `from_dict` 复制成新实例再替换**：`build_deck` 用 `repo.get_card(id)`，
@@ -6135,27 +6137,47 @@ func _batch_upgrade(_side: String) -> String :
 	## 层数**随卡走**（`CardData.upgrade_stacks`），上场由 `FieldState.place()` 接上。
 	var touched := 0
 	var names: Array[String] = []
+	# ① 手牌
 	for i in state.hand.size():
 		var c: CardData = state.hand[i]
 		if c.kind != "盟友" and not c.is_fort():
 			continue
-		var up := CardData.from_dict(c.to_dict())
-		# R120：改造奖励走**唯一口** —— 素体在手牌里被「批量改造」也额外 +1 血
-		#（用户口径：任何改造都生效，含手牌与牌库）；战斗骨骼同理 +2 力 +2 血。
-		up.power += _upgrade_atk_gain(up, 0)
-		up.health += _upgrade_hp_gain(up, BATCH_UPGRADE_HP)
-		up.upgrade_stacks += 1        # R209：层数随身带（上场时由 place() 接到 Placement）
+		var up := _batch_adapt(c)
 		state.hand[i] = up
 		touched += 1
 		names.append("%s %d血" % [c.card_name, up.health])
+	# ② 卡组（抽牌堆）—— R394 新增：用户口径「手牌和卡组所有盟友和工事卡全部生命 +3」。
+	# 与手牌同一条改造口径（`_batch_adapt`），顺序不变，只换元素。
+	for i in state.deck.size():
+		var d: CardData = state.deck[i]
+		if d.kind != "盟友" and not d.is_fort():
+			continue
+		var dup := _batch_adapt(d)
+		state.deck[i] = dup
+		touched += 1
+		names.append("%s %d血" % [d.card_name, dup.health])
 	if touched == 0:
-		_log("批量改造：手牌里没有盟友或工事，效果落空")
+		_log("集体改造：手牌和卡组里没有盟友或工事，效果落空")
 		action.emit("batch_upgrade", {"count": 0, "cards": []})
-		return "手牌里没有盟友或工事"
-	_log("批量改造：手牌 %d 张盟友/工事各 +1 生命（%s）" % [touched, "、".join(names)])
+		return "手牌和卡组里没有盟友或工事"
+	var shown := names if names.size() <= 6 else names.slice(0, 6) + ["等 %d 张" % names.size()]
+	_log("集体改造：手牌 + 卡组 %d 张盟友/工事各 +%d 生命（%s）"
+			% [touched, BATCH_UPGRADE_HP, "、".join(shown)])
 	action.emit("batch_upgrade", {"count": touched, "cards": names})
-	_inspire_tick()   # R300 激发：批量改造一次改满手 → 只算一次
-	return "%d 张手牌各 +1 生命" % touched
+	_inspire_tick()   # R300 激发：集体改造一次改满手 → 只算一次
+	return "%d 张各 +%d 生命" % [touched, BATCH_UPGRADE_HP]
+
+
+func _batch_adapt(c: CardData) -> CardData:
+	## R394：「集体改造」对**单张卡**的改造口径（手牌与卡组共用，别各写一份）。
+	## ⚠️ 必须 `from_dict` 复制成新实例：`build_deck` 给的是**卡库共享实例**，
+	## 直接 `c.health += 3` 会把卡库那张一起改 —— 跨局泄漏（旧版踩过）。
+	var up := CardData.from_dict(c.to_dict())
+	# R120：改造奖励走**唯一口** —— 素体 / 战斗骨骼这类「改造即额外加成」的卡也算进来
+	up.power += _upgrade_atk_gain(up, 0)
+	up.health += _upgrade_hp_gain(up, BATCH_UPGRADE_HP)
+	up.upgrade_stacks += 1        # R209：层数随身带（上场时由 place() 接到 Placement）
+	return up
 
 
 # ── R90：改造手牌（烤进 CardData，本场战斗永久）──
@@ -6174,7 +6196,7 @@ func _sys_upgrade_hand_card(hand_index: int) -> String :
 	## ⚠️ **必须 `from_dict` 复制成新实例再原位替换**：`build_deck` 用 `repo.get_card(id)`，
 	## 那是**卡库共享实例**。直接 `state.hand[i].health += 6` 会把卡库那张一起改 ——
 	## 于是本局之后、甚至下一局新 run 抽到那张卡都天生是加强版（跨 run 泄漏）。
-	## 与「批量改造」8031 是同一套纪律。
+	## 与「集体改造」8031 是同一套纪律。
 	if hand_index < 0 or hand_index >= state.hand.size():
 		return "（手牌序号无效）"
 	var c: CardData = state.hand[hand_index]
@@ -6245,7 +6267,7 @@ func _batch_transfer(side: String) -> String :
 	## 「批量传输」（8040，R90，机械之心 1 费稀有）：**手牌里所有**盟友 / 工事
 	## 获得「改造」（力量 +1 / 生命 +4，**不涨费用**），**然后抽 1 张卡**。
 	##
-	## 与「批量改造」8031 的差别（R90 刻意做的升级版）：
+	## 与「集体改造」8031 的差别（R90 刻意做的升级版）：
 	##   * 8031：只 +1 生命，**不抽牌**；
 	##   * 8040：+1 力 / +4 血（**不加费**），**外加抽 1 张**。
 	## 两者**都只改手牌**，都**烤进副本**，都**本场战斗永久**。
@@ -9365,13 +9387,13 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			# 生命循环 9150（R227，森林精魄）：己方盟友获得「次元」+「死亡」。
 			return _life_cycle(target, side)
 		BATCH_UPGRADE_ID:
-			# 批量改造 8031（R86，机械之心）：手牌里所有盟友 / 工事 +1 生命。
+			# 集体改造 8031（R86 → R394）：手牌 + 卡组里所有盟友 / 工事 +3 生命。
 			return _batch_upgrade(side)
 		BATCH_TRANSFER_ID:
 			# 批量传输 8040（R90，机械之心）：手牌里所有盟友 / 工事 +1 费 / +3 力 / +6 血
 			# （烤进副本、本场战斗永久），**然后抽 1 张**。无目标、不可选。
 			# ⚠️ 走 `_run_spell_effect` → 蓄力（9085）叠它会叠多次（抽多张牌），
-			# 与「批量改造」等普通技能同一口径。
+			# 与「集体改造」等普通技能同一口径。
 			return _batch_transfer(side)
 		BARRIER_ID:
 			# 能量屏障 8033（R87）：从抽牌堆随机改造一张还没护盾的盟友 / 工事。无目标。

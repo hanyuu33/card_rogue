@@ -12257,19 +12257,19 @@ func _init() -> void:
 			% r85_e4.state.discard[0].actions)
 
 	# ================================================================
-	# R86：「批量改造」（8031）+「侦察塔」（8032，0 攻工事 + 改造层数加伤）
+	# R86：「集体改造」（8031）+「侦察塔」（8032，0 攻工事 + 改造层数加伤）
 	# ================================================================
 	var r86_repo := CardRepo.load_json()
-	# ---- ① 批量改造：卡面 ----
+	# ---- ① 集体改造：卡面 ----
 	var r86_bu: CardData = r86_repo.get_card(GameEngine.BATCH_UPGRADE_ID)
-	check(r86_bu != null and r86_bu.card_name == "批量改造" and r86_bu.kind == "技能"
+	check(r86_bu != null and r86_bu.card_name == "集体改造" and r86_bu.kind == "技能"
 			and r86_bu.cost == 1 and r86_bu.rarity == 0
 			and r86_bu.card_class == PlayerClass.MECH
 			and r86_bu.target_mode == "none",
-		"R86 批量改造 8031：机械之心的 1 费普通技能，无目标（一次改全部手牌）")
-	check(GameEngine.BATCH_UPGRADE_HP == 1,
-		"R86 批量改造：每张 +1 生命的常量 BATCH_UPGRADE_HP = 1")
-	# ---- ② 手牌里所有盟友和工事 +1 血，其它卡不动 ----
+		"R394 集体改造 8031：机械之心的 1 费普通技能，无目标（一次改手牌 + 卡组）")
+	check(GameEngine.BATCH_UPGRADE_HP == 3,
+		"R394 集体改造：每张 +3 生命的常量 BATCH_UPGRADE_HP = 3")
+	# ---- ② 手牌 + 卡组里所有盟友和工事 +3 血，其它卡不动 ----
 	var r86_e := _new_engine([], 30, 30, -1, false)
 	r86_e.start_game()
 	# 手牌：盟友 / 工事 / 技能 各一张
@@ -12277,56 +12277,73 @@ func _init() -> void:
 		_card(8003, "树人", "盟友", 3, 3, 8, 1, 1),          # 盟友 8 血
 		_card(8001, "木栅栏", "工事", 2, 0, 6, 0, 0),        # 工事 6 血
 		_card(8002, "攻击", "技能", 1, 0, 0, 0, 0),          # 技能：不该被动
-		CardData.from_dict(r86_bu.to_dict())]                # 批量改造本身
+		CardData.from_dict(r86_bu.to_dict())]                # 集体改造本身
+	# R394：卡组（抽牌堆）里同样放盟友 / 工事 / 技能各一张
+	r86_e.state.deck = [
+		_card(8003, "树人", "盟友", 3, 3, 8, 1, 1),
+		_card(8001, "木栅栏", "工事", 2, 0, 6, 0, 0),
+		_card(8002, "攻击", "技能", 1, 0, 0, 0, 0)]
 	r86_e.state.energy = 5
 	var r86_d: String = r86_e.use_spell(3)
-	check(r86_e.state.hand[0].health == 9,
-		"R86 批量改造：手牌里的**盟友** +1 生命（树人 8 → %d）" % r86_e.state.hand[0].health)
-	check(r86_e.state.hand[1].health == 7,
-		"R86 批量改造：手牌里的**工事**也 +1 生命（木栅栏 6 → %d）"
+	check(r86_e.state.hand[0].health == 11,
+		"R394 集体改造：**手牌**里的盟友 +3 生命（树人 8 → %d）" % r86_e.state.hand[0].health)
+	check(r86_e.state.hand[1].health == 9,
+		"R394 集体改造：**手牌**里的工事也 +3 生命（木栅栏 6 → %d）"
 			% r86_e.state.hand[1].health)
 	check(r86_e.state.hand[2].health == 0,
-		"R86 批量改造：**技能卡不受影响**（攻击仍是 %d 血）" % r86_e.state.hand[2].health)
-	check(r86_d.contains("2"), "R86 批量改造：结果文案写明改了几张（%s）" % r86_d)
+		"R394 集体改造：**技能卡不受影响**（攻击仍是 %d 血）" % r86_e.state.hand[2].health)
+	check(r86_e.state.deck[0].health == 11,
+		"R394 集体改造：**卡组**里的盟友也 +3 生命（树人 8 → %d）" % r86_e.state.deck[0].health)
+	check(r86_e.state.deck[1].health == 9,
+		"R394 集体改造：**卡组**里的工事也 +3 生命（木栅栏 6 → %d）"
+			% r86_e.state.deck[1].health)
+	check(r86_e.state.deck[2].health == 0,
+		"R394 集体改造：卡组里的技能卡不动（攻击仍是 %d 血）" % r86_e.state.deck[2].health)
+	check(r86_d.contains("4"), "R394 集体改造：结果文案写明改了几张（手牌 2 + 卡组 2 = %s）" % r86_d)
 	# ⚠️ **不能污染卡库**（build_deck 给的是卡库共享实例）
 	check(r86_repo.get_card(8003).health == 8 and r86_repo.get_card(8001).health == 6,
-		"R86 批量改造：**没有污染卡库**（树人仍 8 血 / 木栅栏仍 6 血，实际 %d / %d）"
+		"R394 集体改造：**没有污染卡库**（树人仍 8 血 / 木栅栏仍 6 血，实际 %d / %d）"
 			% [r86_repo.get_card(8003).health, r86_repo.get_card(8001).health])
 	check(r86_e.state.hand[0] != r86_repo.get_card(8003),
-		"R86 批量改造：被改的是 from_dict 出的**独立实例**（不与卡库共享对象）")
-	# 手牌里没有盟友 / 工事 → 落空
+		"R394 集体改造：手牌里改的是 from_dict 出的**独立实例**（不与卡库共享对象）")
+	check(r86_e.state.deck[0] != r86_repo.get_card(8003),
+		"R394 集体改造：卡组里改的也是**独立实例**（不污染卡库）")
+	# 手牌和卡组都只有技能卡 → 落空
 	var r86_e2 := _new_engine([], 30, 30, -1, false)
 	r86_e2.start_game()
 	r86_e2.state.hand = [_card(8002, "攻击", "技能", 1, 0, 0, 0, 0),
 			CardData.from_dict(r86_bu.to_dict())]
+	r86_e2.state.deck = [_card(8002, "攻击", "技能", 1, 0, 0, 0, 0)]
 	r86_e2.state.energy = 5
 	var r86_d2: String = r86_e2.use_spell(1)
-	check(r86_d2.contains("没有"), "R86 批量改造：手牌里只有技能卡 → 效果落空（%s）" % r86_d2)
-	# 「整场战斗内一直有效」：回合结束弃回牌库、再抽到仍然带 +1
+	check(r86_d2.contains("没有"),
+		"R394 集体改造：手牌和卡组里都只有技能卡 → 效果落空（%s）" % r86_d2)
+	# 「整场战斗内一直有效」：回合结束弃回牌库、再抽到仍然带着 +3
 	var r86_e3 := _new_engine([], 30, 30, -1, false)
 	r86_e3.start_game()
 	r86_e3.state.hand = [_card(8003, "树人", "盟友", 3, 3, 8, 1, 1),
 			CardData.from_dict(r86_bu.to_dict())]
+	r86_e3.state.deck = []
 	r86_e3.state.energy = 5
 	r86_e3.use_spell(1)
-	r86_e3.state.discard_hand()                     # 树人弃回牌库（带 +1 的那份副本）
+	r86_e3.state.discard_hand()                     # 树人弃回牌库（带 +3 的那份副本）
 	var r86_in_disc := false
 	for d86: CardData in r86_e3.state.discard:
-		if d86.id == 8003 and d86.health == 9:
+		if d86.id == 8003 and d86.health == 11:
 			r86_in_disc = true
 	check(r86_in_disc,
-		"R86 批量改造：回合结束弃回牌库后**仍然带 +1 血**（弃牌区里有张 9 血的树人）")
-	# 抽回手上 → 上场后血量上限也是 9
+		"R394 集体改造：回合结束弃回牌库后**仍然带 +3 血**（弃牌区里有张 11 血的树人）")
+	# 抽回手上 → 上场后血量上限也是 11
 	r86_e3.state.deck = r86_e3.state.discard.duplicate()
 	r86_e3.state.discard.clear()
 	var r86_drawn: CardData = r86_e3.state.draw()
-	check(r86_drawn != null and r86_drawn.health == 9,
-		"R86 批量改造：再抽到时仍是 9 血（%s）"
+	check(r86_drawn != null and r86_drawn.health == 11,
+		"R394 集体改造：再抽到时仍是 11 血（%s）"
 			% (str(r86_drawn.health) if r86_drawn != null else "null"))
 	var r86_pl: Placement = r86_e3.state.place(r86_drawn, Vector2i(4, 1),
 			GameEngine.SIDE_SELF)
-	check(r86_pl.card.health == 9 and r86_pl.health == 9,
-		"R86 批量改造：它上场时血量上限 9（实际 %d / %d）" % [r86_pl.card.health, r86_pl.health])
+	check(r86_pl.card.health == 11 and r86_pl.health == 11,
+		"R394 集体改造：它上场时血量上限 11（实际 %d / %d）" % [r86_pl.card.health, r86_pl.health])
 
 	# ---- ③ 侦察塔：卡面 ----
 	var r86_tw: CardData = r86_repo.get_card(GameEngine.SCOUT_TOWER_ID)
@@ -12504,7 +12521,7 @@ func _init() -> void:
 		"R120 侦察塔 + 改造工厂：结算记 %d 层 → 光环 +%d，自身攻仍 %d（改造工厂也不给塔加攻）"
 			% [r120_t5.upgrade_stacks, r120_e5._scout_aura_bonus(r120_f5, Vector2i(2, 1)),
 				r120_t5.effective_power()])
-	# ⑥ 批量改造 8031（**手牌**路径：用户口径「含手牌与牌库」）
+	# ⑥ 集体改造 8031（**手牌**路径：用户口径「含手牌与牌库」）
 	var r120_e6 := _new_engine([], 30, 30, -1, false)
 	r120_e6.start_game()
 	r120_e6.state.hand = [CardData.from_dict(r120_proto.to_dict()),
@@ -12516,7 +12533,7 @@ func _init() -> void:
 		if c.id == GameEngine.PROTO_ID:
 			r120_hand_hp = c.health
 	check(r120_hand_hp == 1 + GameEngine.BATCH_UPGRADE_HP + 1,
-		"R120 素体 + 批量改造（手牌）：1 + 1 + 素体 1 = %d 血" % r120_hand_hp)
+		"R120 素体 + 集体改造（手牌）：1 + 1 + 素体 1 = %d 血" % r120_hand_hp)
 	# ⑦ 光环只对**敌人**生效：己方单位站在塔的范围内不掉血
 	var r120_e7 := _new_engine([], 30, 30, -1, false)
 	r120_e7.start_game()
@@ -17941,7 +17958,7 @@ func _init() -> void:
 		r209_entry_txt += str(r209_s["label"]) + "｜"
 	check(r209_entry_txt.contains("改造 ×1"),
 		"R209 信息栏：同样列出「改造 ×1」（实际 %s）" % r209_entry_txt)
-	# ---- ④ 批量改造 8031 ----
+	# ---- ④ 集体改造 8031 ----
 	var r209_e4 := _new_engine([], 30, 30, -1, false)
 	r209_e4.start_game()
 	r209_e4.state.hand = [CardData.from_dict(r209_repo.get_card(8003).to_dict()),
@@ -17949,7 +17966,7 @@ func _init() -> void:
 	r209_e4.state.energy = 10
 	r209_e4.use_spell(1)
 	check(r209_e4.state.hand[0].upgrade_stacks == 1,
-		"R209 批量改造：手牌里的树人带 1 层（实际 %d）"
+		"R209 集体改造：手牌里的树人带 1 层（实际 %d）"
 			% r209_e4.state.hand[0].upgrade_stacks)
 	# ---- ⑤ 批量传输 8040 ----
 	var r209_e5 := _new_engine([], 30, 30, -1, false)

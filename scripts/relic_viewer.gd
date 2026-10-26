@@ -2,55 +2,45 @@ class_name RelicViewer
 extends CanvasLayer
 
 const UiPop = preload("res://scripts/ui_pop.gd")
+const UiTheme = preload("res://scripts/ui_theme.gd")
 ## 通用「道具查看」悬浮层 —— 与 DeckViewer（牌库查看）**完全对等**的一对。
 ##
-## 右上角一个「道具 N」按钮。**看描述不用点**：鼠标悬浮在按钮上（或速览浮层上）
-## 就展开一张速览浮层，逐条列出本局全部道具 —— 名称 + 来源标签 + 完整效果说明
-## （长文本自动折行）+ 来源色块（初始白 / 奖励黄 / 事件紫 / 二层青 / 角色绿），
-## 鼠标移开即消失。
-##
-## 只有当道具多到速览浮层**装不下全部**（条目数 > FOLD_MAX 或总高 > HOVER_MAX_H）时，
-## 按钮才**可点击**：此时点开的是一份**字号明显更大**的完整面板（滚轮翻页、
-## 点击任意处关闭）。装得下时按钮是禁用态 —— 悬浮即已看全，不需要点。
+## 交互（R394 按用户口径重做）：
+##   ① **悬停「道具 N」按钮**：不弹任何东西。
+##      旧版是「鼠标一沾就弹一张浮层」，而且判定里带了**浮层自己的矩形** ——
+##      浮层没显示时那块地方是**看不见的**，鼠标路过它就又冒出来
+##      （用户报「光标没放到道具两个字上，只是放到那个没有显示的窗体上，它也会显示」）。
+##   ② **点击「道具 N」**：在按钮下方那一行**从右往左**排出一串道具名胶囊，
+##      排不下就换行；**再点一次收起**。
+##   ③ 展开状态下把光标移到某个胶囊上 → 用共享悬浮件 `Mention.draw_tip()` 显示
+##      那件道具的完整效果（名称 / 类型·来源 / 说明三段）。版式与事件页 / 占卜室
+##      同一来源，不会再出现「名字和效果重叠」那种各写一套的偏差。
 ##
 ## 面板**不压暗背景**（与 DeckViewer 同款，用户要求）。
 ##
 ## 用法：在场景 _ready 里 `RelicViewer.attach(self)`（可选第二参数指定按钮位置）。
-## 命令行 -- --relicview：模拟悬浮（展开速览浮层，截图验证用）
-## 命令行 -- relicpanel：强制点开完整详情面板（截图验证用）
+## 命令行 `-- --relicview`：模拟点击按钮（展开胶囊行，截图验证用）
+## 命令行 `-- --relicpanel`：展开并钉住第一件道具的详情（截图验证版式用）
 
-# ---- 悬浮速览浮层（R75：看描述的唯一日常入口，不用点） ----
-const UiTheme = preload("res://scripts/ui_theme.gd")
-
-const HOVER_W := 430.0            # 浮层宽
-const HOVER_MAX_H := 430.0        # 浮层最大高（超过就装不下 → 允许点开详情）
-const FOLD_MAX := 6               # 浮层最多完整列出的条目数（超过同样允许点开详情）
-const HOVER_DESC_LINES := 3       # 浮层里单条说明最多折几行
-const H_NAME := 19.0              # 浮层：名称行高
-const H_LINE := 15.0              # 浮层：说明单行行高
-const H_GAP := 7.0                # 浮层：条目之间的间隔
-
-# ---- 点击才打开的完整详情面板（字号全面放大） ----
-const PANEL_W := 1120.0
-const PANEL_H := 600.0
-const ROW_H := 70.0              # 单行高（名称行 + 至多 3 行折行的说明）
-const PAD := 20.0
-const P_NAME := 19.0             # 详情面板：名称字号
-const P_TAG := 15.0              # 详情面板：来源标签字号
-const P_DESC := 16.0             # 详情面板：说明字号
-const P_LINE := 18.0             # 详情面板：说明行高
+# ---- 道具名胶囊（点击后按下展开的那一行） ----
+const CHIP_H := 30.0        # 胶囊高
+const CHIP_GAP := 8.0       # 胶囊之间的横向间隔
+const CHIP_PAD := 12.0      # 胶囊左右内边距
+const CHIP_ROW_GAP := 6.0   # 换行时的行距
+const CHIP_FS := UiTheme.FS_LABEL
+const CHIPS_LEFT_MIN := 16.0   # 换行左界（再往左就换行）
 
 var _btn: Button
+var _chip_block: Control         # 只盖住「胶囊行」那块矩形的点击拦截层
 var _hover_layer: Control
-var _panel: Control
 var _font: Font
 var _font_bold: Font
-var _open := false
-var _hover_on := false           # 鼠标当前在按钮或速览浮层上
-var _blocked := false            # R121：被满屏覆盖层压着（UiGate 登记非空）→ 悬停让位
+var _open := false               # 胶囊行展开中
+var _hover_on := false           # 鼠标在「道具 N」按钮上（只用来做按钮高亮）
+var _hover_chip := -1            # 悬停的胶囊下标（-1 = 没有）
+var _blocked := false            # R121：被满屏覆盖层压着 → 一切悬停 / 展开让位
 var _demo_lock := false          # 命令行演示：锁住状态不被 _process 的鼠标判定改掉
-var _cached_n := -1              # 上次刷新按钮时的道具数（变了就重刷 + 重判可否点击）
-var _scroll := 0.0               # 已滚动的行数（浮点，按行步进）
+var _cached_n := -1              # 上次刷新按钮时的道具数（变了就重刷）
 
 
 static func attach(host: Node, btn_pos := Vector2(1150, 6)) -> RelicViewer:
@@ -74,137 +64,112 @@ func _ready() -> void:
 	_btn.size = Vector2(100, 32)
 	_btn.add_theme_font_override("font", _font)
 	_btn.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
-	# 禁用态（悬浮就能看全时）保持正常配色，别灰得看不出是什么
+	# 禁用态（一件道具都没有）保持正常配色，别灰得看不出是什么
 	_btn.add_theme_color_override("font_disabled_color", UiTheme.SAND)
 	_btn.pressed.connect(_toggle)
-	UiTheme.apply_chip(_btn, false, true)   # 关闭按钮：面板是 PAPER 亮底 + 固定 32px 高 → 浅底 compact
+	UiTheme.apply_chip(_btn, false, true)
 	add_child(_btn)
 
-	# 速览浮层：IGNORE = 不吃点击也不挡下层界面（纯展示）
+	# 胶囊行会压在商店第一排商品上（用户口径就是「第二行」），而桌面端商品是**单击即买** ——
+	# 没有拦截层的话，点道具名会顺手买下一张卡。这一层只盖胶囊行那块矩形，吞掉点击。
+	_chip_block = Control.new()
+	_chip_block.mouse_filter = Control.MOUSE_FILTER_STOP
+	_chip_block.visible = false
+	add_child(_chip_block)
+
+	# 胶囊行 + 详情：IGNORE = 不吃点击也不挡下层界面（纯展示 + 自己算命中）
 	_hover_layer = Control.new()
 	_hover_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_hover_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hover_layer.visible = false
-	_hover_layer.draw.connect(_on_hover_draw)
+	_hover_layer.draw.connect(_on_layer_draw)
 	add_child(_hover_layer)
-
-	_panel = Control.new()
-	_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	_panel.visible = false
-	_panel.draw.connect(_on_panel_draw)
-	_panel.gui_input.connect(_on_panel_input)
-	add_child(_panel)
 
 	_refresh_btn()
 	_demo_start()
 
 
-# ------------------------------------------------------------ 悬浮检测（每帧）
+# ------------------------------------------------------------ 每帧
 
 func _process(_delta: float) -> void:
 	if _btn == null:
 		return
-	# R121：本层悬停判定读的是**鼠标坐标**（见 _want_hover），完全不认覆盖层 ——
-	# 所以必须显式问一句 UiGate：被奖励悬浮窗 / 牌库面板盖住时一律让位，
-	# 否则鼠标划过看不见的「道具 N」按钮，速览浮层会从面板背后冒出来。
+	# R121：本层悬停判定读的是**鼠标坐标**，完全不认覆盖层 —— 所以必须显式问一句
+	# UiGate：被奖励悬浮窗 / 牌库面板盖住时一律让位。
 	var blocked := UiGate.blocked()
 	if blocked != _blocked:
 		_blocked = blocked
-		# 让位 = 灭掉悬停 + 摘掉按钮 tooltip。**不动按钮显隐**（那会让「道具 N」
-		# 与「牌库 N」两个并列入口看起来一缺一留）。
-		# tooltip 必须处理：它是**顶层弹窗**，不认 CanvasLayer 层级，会直接浮在
-		# 奖励悬浮窗上面（用户看到的「看不见道具栏却有悬浮效果」之一）。
 		if blocked:
 			_hover_on = false
+			_open = false
+			_hover_chip = -1
 			_hover_layer.visible = false
 		_refresh_btn()
 	if _demo_lock:
 		return
-	# 道具增减（战斗掉落 / 事件给予）后按钮文案与「可否点击」要跟着变
+	# 道具增减（战斗掉落 / 事件给予）后按钮文案与「有没有东西可看」要跟着变
 	if _cached_n != RunState.relics.size():
 		_refresh_btn()
-	_hover_layer.queue_redraw()   # 速览浮层跟随鼠标（提示要画在鼠标旁边）
-	var want := _want_hover(get_viewport().get_mouse_position())
-	if want != _hover_on:
-		_hover_on = want
-		_hover_layer.visible = want
+	var mp := get_viewport().get_mouse_position()
+	_hover_on = _want_hover(mp)
+	_hover_chip = _chip_at(mp) if (_open and not _blocked) else -1
+	var vis := _open and not _blocked
+	if _hover_layer.visible != vis:
+		_hover_layer.visible = vis
+	if vis:
+		# 拦截层跟着胶囊行的外接矩形走（零尺寸时 STOP 也吃不到东西）
+		var bb := _chips_bbox()
+		_chip_block.position = bb.position
+		_chip_block.size = bb.size
+		_chip_block.visible = bb.size.x > 0.0 and bb.size.y > 0.0
+		_hover_layer.queue_redraw()
+	elif _chip_block.visible:
+		_chip_block.visible = false
 
 
 func _want_hover(mp: Vector2) -> bool:
-	## 悬停速览浮层的**唯一判定口**（绘制与测试都走这里）。
-	## R121：被覆盖层盖住时恒 false —— 玩家看不到道具栏，就不该弹出道具速览。
+	## 「鼠标在道具按钮上」的**唯一判定口**（绘制与测试都走这里）。
+	## ⚠️ R394：**只认按钮矩形**。旧版把 `_hover_rect()`（浮层自己的矩形）也算进来，
+	## 而那个浮层没显示时是**看不见的** —— 鼠标路过那块空白也会把浮层叫出来，
+	## 正是用户报的那个 bug。要看道具就点按钮（展开胶囊行）。
 	if UiGate.blocked():
 		return false
-	return not _open and not RunState.relics.is_empty() \
-			and (Rect2(_btn.position, _btn.size).has_point(mp) or _hover_rect().has_point(mp))
+	return not RunState.relics.is_empty() and _btn_rect().has_point(mp)
 
 
 func _btn_rect() -> Rect2:
 	return Rect2(_btn.position, _btn.size)
 
 
-func _hover_rect() -> Rect2:
-	## 速览浮层的屏幕矩形（紧贴按钮下方；太靠下就上移到屏幕内）。
-	var w := HOVER_W
-	var sw := float(get_viewport().get_visible_rect().size.x)
-	var h := _hover_h()
-	var x: float = clampf(_btn_rect().end.x - w, 8.0, maxf(8.0, sw - w - 8.0))
-	var y := _btn_rect().end.y + 6.0
-	var sh := float(get_viewport().get_visible_rect().size.y)
-	if y + h > sh - 8.0:
-		y = maxf(8.0, _btn_rect().position.y - h - 6.0)
-	return Rect2(x, y, w, h)
+# ------------------------------------------------------------ 展开 / 收起
 
+func _toggle() -> void:
+	# 被覆盖层盖着时不给展开（看不见的入口不该响应）
+	if UiGate.blocked():
+		return
+	_open = not _open
+	_hover_chip = -1
+	_hover_layer.visible = _open
+	if _open:
+		UiPop.play(_hover_layer, 1.0)   # R151 P1-9：入场淡入 160ms
+		_hover_layer.queue_redraw()
+	_refresh_btn()
 
-# ------------------------------------------------------------ 按钮
 
 func _refresh_btn() -> void:
 	_cached_n = RunState.relics.size()
 	_btn.text = "道具 %d" % _cached_n
-	var clickable := _need_detail()
-	_btn.disabled = not clickable
-	# R121：覆盖层盖着时**不给按钮挂 tooltip** —— Button 的 tooltip 是顶层弹窗，
-	# 不认 CanvasLayer 层级，会直接浮在奖励悬浮窗上（用户看到的「看不见道具栏却有悬浮效果」）。
-	# R353：不再挂文字 tooltip —— 悬浮即展开速览浮层，交互已由 UI 表达。
+	# R394：按钮**永远可点** —— 点一下展开 / 收起胶囊行（旧版「装不下才可点」，
+	# 装得下时按钮是禁用态，于是屏幕写着「点道具查看更多」却点不动，用户报的就是这个）。
+	_btn.disabled = _cached_n <= 0
+	# R121 / R353：不挂文字 tooltip —— Button 的 tooltip 是顶层弹窗，不认 CanvasLayer 层级。
 	_btn.tooltip_text = ""
-
-
-func _need_detail() -> bool:
-	## 速览浮层装不下全部道具时，才需要（允许）点开大字号详情面板。
-	## 判定唯一口：条目数超 FOLD_MAX，或按完整行高累加超 HOVER_MAX_H。
-	var list := _entries()
-	if list.size() > FOLD_MAX:
-		return true
-	var total := 0.0
-	for e in list:
-		total += _row_block(e, 99).h
-	return total + 30.0 > HOVER_MAX_H
-
-
-func _toggle() -> void:
-	# 装得下时按钮是禁用态走不到这里；这里再挡一道（--relicpanel 强制打开除外）
-	if not _open and not _need_detail() and not _force_panel():
-		return
-	_open = not _open
-	_panel.visible = _open
-	if _open:
-		UiPop.play(_panel, 1.0)   # R151 P1-9：入场淡入 160ms
-	_hover_on = false
-	_hover_layer.visible = false
-	_scroll = 0.0
-	_refresh_btn()
-	_panel.queue_redraw()
-
-
-func _force_panel() -> bool:
-	return "--relicpanel" in OS.get_cmdline_user_args()
 
 
 # ------------------------------------------------------------ 数据
 
 func _entries() -> Array:
-	## 本局道具条目：[{relic, note}]，按获得顺序（RunState.relics 的顺序）。
+	## 本局道具条目：[{relic, note, spent}]，按获得顺序（RunState.relics 的顺序）。
 	## 拿不到定义的 id 跳过（与卡组查看器对未知 id 的处理一致）。
 	var repo := RelicRepo.load_json()
 	var out: Array = []
@@ -218,210 +183,124 @@ func _entries() -> Array:
 	return out
 
 
-func _body_text(e: Dictionary) -> String:
-	## 单条道具的说明正文：完整效果 + 动态状态备注（如「当前复活概率 100%」）。
-	var rel: RelicData = e["relic"]
-	var note := str(e["note"])
-	return rel.desc if note == "" else ("%s  （%s）" % [rel.desc, note])
-
-
-func _wrap(text: String, max_w: float, px: int) -> PackedStringArray:
-	## 折行唯一口 = `TextWrap.wrap_plain`（R292；draw_string 不自动换行）。
-	return PackedStringArray(TextWrap.wrap_plain(_font, text, max_w, px))
-
-
-func _row_block(e: Dictionary, max_lines: int) -> Dictionary:
-	## 浮层里单条道具的排版块：{name, tag, lines, scol, h}。
-	## max_lines = 说明最多折几行（99 = 不截断，用于估算真实高度）。
-	var rel: RelicData = e["relic"]
-	var lines := _wrap(_body_text(e), HOVER_W - PAD * 2.0 - 16.0, 12)
-	if max_lines < 99 and lines.size() > max_lines:
-		lines = lines.slice(0, max_lines)
-		lines[max_lines - 1] = lines[max_lines - 1] + "…"
-	# R367：已耗尽的：标签前加「已耗尽」、来源色块压灰。
-	var spent := bool(e.get("spent", false))
-	return {"name": RunState.relic_display_name(rel.id),
-			"tag": _tag_of(e),
-			"lines": lines,
-			"scol": Color("6a7078") if spent else rel.badge_color(),
-			"h": H_NAME + lines.size() * H_LINE + H_GAP}
-
-
-func _hover_h() -> float:
-	## 速览浮层实际高度（超 HOVER_MAX_H 就截断，底部提示还有几件没显示）。
-	var list := _entries()
-	if list.is_empty():
-		return 46.0
-	var h := 30.0
-	for e in list:
-		h += _row_block(e, HOVER_DESC_LINES).h
-	return minf(h + 10.0, HOVER_MAX_H)
-
-
-# ------------------------------------------------------------ 速览浮层绘制
-
-func _on_hover_draw() -> void:
-	if not _hover_on:
-		return
-	var list := _entries()
-	var r := _hover_rect()
-	_hover_layer.draw_rect(r, Color(0.10, 0.11, 0.15, 0.96), true)
-	_hover_layer.draw_rect(r, UiTheme.ACCENT_GOLD, false, 1.2)
-	if list.is_empty():
-		_hover_layer.draw_string(_font, r.position + Vector2(PAD * 0.6, 26),
-				"还没有获得任何道具。", HORIZONTAL_ALIGNMENT_LEFT,
-				r.size.x - 24.0, UiTheme.FS_CAPTION, UiTheme.INK_300)
-		return
-	_hover_layer.draw_string(_font_bold, r.position + Vector2(PAD * 0.6, 20),
-			"我的道具（共 %d 件）" % list.size(),
-			HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, UiTheme.FS_LABEL, Color("f0ead8"))
-	var y := r.position.y + 30.0
-	var bottom := r.end.y - 22.0
-	var shown := 0
-	for e in list:
-		var b := _row_block(e, HOVER_DESC_LINES)
-		if y + b.h > bottom + 6.0:
-			break
-		var rel: RelicData = e["relic"]
-		var scol: Color = b["scol"]
-		# 左侧来源色块（实心 + 深描边，浅色来源在深底上也要看得见）
-		_hover_layer.draw_rect(Rect2(r.position.x + PAD * 0.5, y + 2, 6, H_NAME + 4),
-				scol, true)
-		_hover_layer.draw_rect(Rect2(r.position.x + PAD * 0.5, y + 2, 6, H_NAME + 4),
-				Color(0, 0, 0, 0.5), false, 1.0)
-		_hover_layer.draw_string(_font_bold, r.position + Vector2(PAD * 0.6 + 12, y + 15),
-				"「%s」" % RunState.relic_display_name(rel.id), HORIZONTAL_ALIGNMENT_LEFT,
-				180.0, UiTheme.FS_LABEL,
-				Color("7d8590") if bool(e.get("spent", false))
-						else rel.name_color(Color("f4eeda")))
-		_hover_layer.draw_string(_font, r.position + Vector2(PAD * 0.6 + 196, y + 15),
-				str(b["tag"]), HORIZONTAL_ALIGNMENT_LEFT, 180.0, UiTheme.FS_CAPTION, Color("9a927f"))
-		var lines: PackedStringArray = b["lines"]
-		for j in lines.size():
-			_hover_layer.draw_string(_font, r.position + Vector2(PAD * 0.6 + 12,
-					y + H_NAME + j * H_LINE), lines[j], HORIZONTAL_ALIGNMENT_LEFT,
-					r.size.x - PAD * 1.2, UiTheme.FS_CAPTION, Color("ddd6c4"))
-		y += b.h
-		shown += 1
-	# 底部：装不下就引导点按钮；装得下就明说「不用点」
-	if shown < list.size():
-		_hover_layer.draw_string(_font, Vector2(r.position.x + PAD * 0.6, r.end.y - 8),
-				"…另有 %d 件，点「道具 %d」看完整详情" % [list.size() - shown, list.size()],
-				HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, UiTheme.FS_CAPTION, UiTheme.ACCENT_GOLD)
-	elif _need_detail():
-		_hover_layer.draw_string(_font, Vector2(r.position.x + PAD * 0.6, r.end.y - 8),
-				"点「道具 %d」看完整详情（字号更大）" % list.size(),
-				HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 24.0, UiTheme.FS_CAPTION, Color("9a927f"))
-	else:
-		_hover_layer.draw_string(_font, Vector2(r.position.x + PAD * 0.6, r.end.y - 8),
-				"已全部显示，无需点击", HORIZONTAL_ALIGNMENT_LEFT,
-				r.size.x - 24.0, UiTheme.FS_CAPTION, Color("6f6a5e"))
-
-
-# ------------------------------------------------------------ 完整详情面板
-
-func _layout(n: int) -> Dictionary:
-	## 面板布局（绘制与滚动共用）。
-	var px := (1280.0 - PANEL_W) / 2.0
-	var py := (720.0 - PANEL_H) / 2.0
-	var grid_y := py + 62.0
-	var view_rows := int((py + PANEL_H - 16.0 - grid_y) / ROW_H)
-	return {"px": px, "py": py, "grid_y": grid_y,
-			"view_rows": maxi(1, view_rows), "max_scroll": maxi(0, n - view_rows)}
-
-
-func _row_lines(e: Dictionary) -> PackedStringArray:
-	## 详情面板里单条道具的说明折行（更宽 + 更大字号）。
-	var lines := _wrap(_body_text(e), PANEL_W - PAD * 2.0 - 130.0, P_DESC)
-	if lines.size() > 3:
-		lines = lines.slice(0, 3)
-		lines[2] = lines[2] + "…"
-	return lines
-
-
-func _on_panel_draw() -> void:
-	var list := _entries()
-	var n := list.size()
-	var L := _layout(n)
-	var px: float = L["px"]
-	var py: float = L["py"]
-	# 面板不压暗背景（与 DeckViewer 同款）
-	_panel.draw_rect(Rect2(px, py, PANEL_W, PANEL_H), UiTheme.PAPER)
-	_panel.draw_rect(Rect2(px, py, PANEL_W, PANEL_H), UiTheme.INK_600, false, 2.0)
-	_panel.draw_string(_font_bold, Vector2(px + PAD, py + 40),
-			"我的道具（共 %d 件 · 完整效果）" % n,
-			HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - PAD * 2.0, UiTheme.FS_SUBHEAD, UiTheme.INK_800)
-	if n == 0:
-		_panel.draw_string(_font, Vector2(px + PAD, py + 96),
-				"还没有获得任何道具。",
-				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_BODY, UiTheme.INK_500)
-		return
-	var grid_y: float = L["grid_y"]
-	var view_rows: int = L["view_rows"]
-	var max_scroll: int = L["max_scroll"]
-	_scroll = clampf(_scroll, 0.0, float(max_scroll))
-	var skip := int(_scroll)
-	for i in n:
-		if i < skip or i >= skip + view_rows:
-			continue
-		var e: Dictionary = list[i]
-		var rel: RelicData = e["relic"]
-		var y := grid_y + (i - skip) * ROW_H
-		var scol := rel.badge_color()
-		# 左侧来源色块（白描边在浅底上不醒目，用实心块 + 深描边，与战斗道具栏一致）
-		_panel.draw_rect(Rect2(px + PAD, y + 4, 10, ROW_H - 14), scol, true)
-		_panel.draw_rect(Rect2(px + PAD, y + 4, 10, ROW_H - 14), Color(0, 0, 0, 0.45), false, 1.0)
-		# 名称 + 来源标签 + 生效时机（字号比速览浮层大一档）
-		# R343：名字色走 `RelicData.name_color` —— 传奇金橙、普通沿用原来的墨色。
-		_panel.draw_string(_font_bold, Vector2(px + PAD + 22, y + 22),
-				"「%s」" % RunState.relic_display_name(rel.id),
-				HORIZONTAL_ALIGNMENT_LEFT, 300, P_NAME,
-				Color("9a9385") if bool(e.get("spent", false))
-						else rel.name_color(Color("2f2a20")))
-		_panel.draw_string(_font, Vector2(px + PAD + 216, y + 22),
-				"（%s）" % str(_tag_of(e)), HORIZONTAL_ALIGNMENT_LEFT, 300, P_TAG, Color("8a8172"))
-		var lines := _row_lines(e)
-		for j in lines.size():
-			_panel.draw_string(_font, Vector2(px + PAD + 22, y + 44 + j * P_LINE),
-					lines[j], HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - PAD * 2.0 - 40, P_DESC,
-					Color("4a4438"))
-		_panel.draw_line(Vector2(px + PAD, y + ROW_H - 6), Vector2(px + PANEL_W - PAD, y + ROW_H - 6),
-				Color(0, 0, 0, 0.10), 1.0)
-	# 滚动提示
-	if max_scroll > 0:
-		_panel.draw_string(_font, Vector2(px + PANEL_W - 220, py + PANEL_H - 14),
-				"第 %d/%d 屏" % [skip + 1, max_scroll + 1],
-				HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_CAPTION, UiTheme.INK_500)
-
-
 func _tag_of(e: Dictionary) -> String:
 	## R367：已耗尽的在标签前挂「已耗尽」—— 名称本身不塞状态词，读起来仍是原名。
 	var rel: RelicData = e["relic"]
 	return ("已耗尽 · " + rel.tag_line()) if bool(e.get("spent", false)) else rel.tag_line()
 
 
-func _on_panel_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		match event.button_index:
-			MOUSE_BUTTON_WHEEL_UP:
-				_scroll -= 1.0
-				_panel.queue_redraw()
-			MOUSE_BUTTON_WHEEL_DOWN:
-				_scroll += 1.0
-				_panel.queue_redraw()
-			MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT:
-				_toggle()
+# ------------------------------------------------------------ 胶囊行版式
+
+func _chip_text(e: Dictionary) -> String:
+	var rel: RelicData = e["relic"]
+	return RunState.relic_display_name(rel.id)
+
+
+func _chip_size(e: Dictionary) -> Vector2:
+	var t := _chip_text(e)
+	var w := _font_bold.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, CHIP_FS).x
+	return Vector2(w + CHIP_PAD * 2.0, CHIP_H)
+
+
+func _chip_rects() -> Array[Rect2]:
+	## 胶囊行的矩形（绘制 / 命中共用）。**从右往左**排，右沿对齐按钮右沿；
+	## 排到左界就换一行继续往左排。
+	var out: Array[Rect2] = []
+	var list := _entries()
+	if list.is_empty():
+		return out
+	var right := _btn_rect().end.x
+	var x := right
+	var y := _btn_rect().end.y + 6.0
+	var limit_y := float(get_viewport().get_visible_rect().size.y) - CHIP_H - 8.0
+	for e in list:
+		var sz := _chip_size(e)
+		if x - sz.x < CHIPS_LEFT_MIN:
+			x = right
+			y += CHIP_H + CHIP_ROW_GAP
+		if y > limit_y:
+			break
+		out.append(Rect2(Vector2(x - sz.x, y), sz))
+		x -= sz.x + CHIP_GAP
+	return out
+
+
+func _chips_bbox() -> Rect2:
+	## 胶囊行的外接矩形（点击拦截层用）。没有胶囊时返回零矩形。
+	var rs := _chip_rects()
+	if rs.is_empty():
+		return Rect2()
+	var r: Rect2 = rs[0]
+	for x: Rect2 in rs:
+		r = r.merge(x)
+	return r
+
+
+func _chip_at(mp: Vector2) -> int:
+	if not _open:
+		return -1
+	var rs := _chip_rects()
+	for i in rs.size():
+		if rs[i].has_point(mp):
+			return i
+	return -1
+
+
+func _tip_pos(chip: Rect2, sz: Vector2) -> Vector2:
+	## 详情浮窗的位置：默认贴在胶囊**下方**、右沿对齐；装不下就翻到胶囊上方。
+	var vp := get_viewport().get_visible_rect().size
+	var x := clampf(chip.end.x - sz.x, 8.0, maxf(8.0, vp.x - sz.x - 8.0))
+	var y := chip.end.y + 6.0
+	if y + sz.y > vp.y - 8.0:
+		y = maxf(8.0, chip.position.y - sz.y - 6.0)
+	return Vector2(x, y)
+
+
+# ------------------------------------------------------------ 绘制
+
+func _on_layer_draw() -> void:
+	if not _open:
+		return
+	var list := _entries()
+	var rs := _chip_rects()
+	for i in rs.size():
+		if i >= list.size():
+			break
+		var e: Dictionary = list[i]
+		var rel: RelicData = e["relic"]
+		var spent := bool(e.get("spent", false))
+		var hot := (i == _hover_chip)
+		var r := rs[i]
+		_hover_layer.draw_rect(r.grow(1.0), Color(0, 0, 0, 0.42), true)
+		_hover_layer.draw_rect(r, Color("fff6df") if hot else UiTheme.PAPER, true)
+		_hover_layer.draw_rect(r, UiTheme.ACCENT_GOLD if hot else UiTheme.INK_300, false,
+				2.0 if hot else 1.0)
+		# 左侧来源色块（初始白 / 奖励黄 / 事件紫 / 二层青 / 角色绿），已耗尽的压灰
+		_hover_layer.draw_rect(Rect2(r.position.x + 5.0, r.position.y + 6.0, 5.0,
+				r.size.y - 12.0), Color("6a7078") if spent else rel.badge_color(), true)
+		var t := _chip_text(e)
+		var tw := _font_bold.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, CHIP_FS).x
+		var col: Color = Color("8d8678") if spent else rel.name_color(UiTheme.INK_800)
+		_hover_layer.draw_string(_font_bold,
+				Vector2(r.get_center().x - tw * 0.5 + 3.0,
+						r.position.y + r.size.y * 0.5 + CHIP_FS * 0.36),
+				t, HORIZONTAL_ALIGNMENT_LEFT, -1, CHIP_FS, col)
+	# 悬停的那件 → 共享悬浮件画完整效果（名称 / 类型·来源 / 说明）
+	if _hover_chip >= 0 and _hover_chip < rs.size() and _hover_chip < list.size():
+		var rel2: RelicData = (list[_hover_chip] as Dictionary)["relic"]
+		var ref := {"kind": "relic", "id": rel2.id}
+		var sz := Mention.tip_size(_font, ref)
+		Mention.draw_tip(_hover_layer, _font, _font_bold, ref,
+				_tip_pos(rs[_hover_chip], sz), 0.0, "")
 
 
 # ------------------------------------------------------------ 命令行演示
 
 func _demo_start() -> void:
-	# -- --relicview：模拟鼠标悬浮（截图验证速览浮层）
 	if "--relicview" in OS.get_cmdline_user_args():
-		_demo("relicview")
-	# --relicpanel：强制点开完整详情面板（截图验证大字版式）
-	elif _force_panel():
-		_demo("relicpanel")
+		_demo("chips")
+	elif "--relicpanel" in OS.get_cmdline_user_args():
+		_demo("detail")
 
 
 func _demo(tag: String) -> void:
@@ -430,13 +309,10 @@ func _demo(tag: String) -> void:
 	t.wait_time = 0.3
 	t.one_shot = true
 	t.timeout.connect(func():
-		if tag == "relicpanel":
-			_open = true
-			_panel.visible = true
-			_panel.queue_redraw()
-		else:
-			_hover_on = true
-			_hover_layer.visible = true
-			_hover_layer.queue_redraw())
+		_open = true
+		_hover_layer.visible = true
+		if tag == "detail":
+			_hover_chip = 0 if not _entries().is_empty() else -1
+		_hover_layer.queue_redraw())
 	add_child(t)
 	t.start()

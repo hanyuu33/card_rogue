@@ -330,6 +330,14 @@ func _initialize() -> void:
 				_seed_rewards()
 				RunState.relics = [6001, 6002],
 			_check_relic_hover_gate],
+		# R394（用户口径）：商店里「光标没放在道具两个字上、只放在那个没显示的窗体上，
+		# 窗体也会显示」+「写着点击查看更多却点不动」。现在：只认按钮矩形，点击展开胶囊行。
+		["res://scenes/shop.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "shop"}
+				RunState.relics = [6035, 6036, 6015, 6001, 6003, 6005, 6010, 6041],
+			_check_r394_relic_chips],
 		["res://scenes/battle.tscn", func():
 				_reset()
 				RunState.start_run(_map())
@@ -802,6 +810,68 @@ func _check_reward_panel_view(scene: Variant, want_view: int, label: String) -> 
 	p._root.queue_redraw()
 	print("SMOKE OK R119 奖励悬浮窗：%s 视图渲染（%d 条待领，宿主 %s）"
 			% [label, RunState.pending_reward_count(), str(scene.name)])
+
+
+func _check_r394_relic_chips(scene: Variant) -> void:
+	## R394（用户口径，商店实测）：
+	##   ① 「光标没放在道具两个字上、只是放到那个没有显示的窗体上，窗体也会显示」
+	##      → 悬停判定只许认**按钮矩形**；
+	##   ② 「写着点击道具查看更多，实际没有办法查看」→ 点击**必然**展开（不再看装不装得下）；
+	##   ③ 展开后是一排道具名胶囊：**从右往左**、右沿对齐按钮、换行不出屏。
+	var rv: Variant = null
+	for c in scene.get_children():
+		if c is RelicViewer:
+			rv = c
+	if rv == null:
+		_smoke_fail("R394：商店没有挂上 RelicViewer")
+		return
+	if RunState.relics.is_empty():
+		_smoke_fail("R394：用例需要先给玩家道具")
+		return
+	var btn: Rect2 = Rect2(rv._btn.position, rv._btn.size)
+	# ① 「隐形窗体」那块地方（按钮正下方 90px）不许触发悬停
+	var phantom := Vector2(btn.get_center().x, btn.end.y + 90.0)
+	if bool(rv._want_hover(phantom)):
+		_smoke_fail("R394：按钮下方的空白处（旧浮层位置）仍被判定为悬停 —— 隐形窗体 bug 没修掉")
+		return
+	if not bool(rv._want_hover(btn.get_center())):
+		_smoke_fail("R394：指着「道具 N」按钮却不算悬停")
+		return
+	# ② 点一下就展开（旧版装得下时是禁用态 → 点了没反应）
+	rv._toggle()
+	if not bool(rv._open):
+		_smoke_fail("R394：点「道具 N」没有展开胶囊行")
+		return
+	var rs: Array = rv._chip_rects()
+	if rs.size() != RunState.relics.size():
+		_smoke_fail("R394：胶囊数 %d 与道具数 %d 不一致" % [rs.size(), RunState.relics.size()])
+		return
+	# ③ 从右往左：第一个胶囊的右沿 = 按钮右沿；后续逐个往左
+	var first: Rect2 = rs[0]
+	if absf(first.end.x - btn.end.x) > 1.0:
+		_smoke_fail("R394：第一个胶囊右沿 %.1f 没对齐按钮右沿 %.1f（应为右→左排）"
+				% [first.end.x, btn.end.x])
+		return
+	var vp := Vector2(1280, 720)
+	for i in rs.size():
+		var r: Rect2 = rs[i]
+		if r.position.x < 0.0 or r.end.x > vp.x or r.end.y > vp.y:
+			_smoke_fail("R394：第 %d 个胶囊跑出屏幕 %s" % [i, str(r)])
+			return
+	# 悬停命中：指第二个胶囊的中心应命中 1
+	if rs.size() > 1:
+		var second: Rect2 = rs[1]
+		if int(rv._chip_at(second.get_center())) != 1:
+			_smoke_fail("R394：指着第 2 个胶囊但命中判定返回 %d"
+					% int(rv._chip_at(second.get_center())))
+			return
+	# 再点一下收起
+	rv._toggle()
+	if bool(rv._open):
+		_smoke_fail("R394：再点「道具 N」没有收起")
+		return
+	print("SMOKE OK R394 道具胶囊行：悬停只认按钮 / 点击展开收起 / %d 件从右往左排"
+			% rs.size())
 
 
 func _check_relic_hover_gate(scene: Variant) -> void:

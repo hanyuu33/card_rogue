@@ -10452,16 +10452,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("8ce09a"), "start": n, "dur": 1400, "size": 16})
 			sfx.play("heal")
 		"batch_upgrade":
-			# 批量改造 8031（R86）：手牌里所有盟友/工事各 +1 生命。
+			# 集体改造 8031（R86 → R394）：手牌 + 卡组里所有盟友/工事各 +3 生命。
 			var bu_n: int = int(data.get("count", 0))
 			if bu_n <= 0:
-				_say("批量改造：手牌里没有盟友或工事，效果落空")
+				_say("集体改造：手牌和卡组里没有盟友或工事，效果落空")
 			else:
 				sfx.play("heal")
-				_say("✦ 批量改造：手牌里 %d 张盟友/工事各 +1 生命（本场战斗内一直有效）"
+				_say("✦ 集体改造：手牌 + 卡组 %d 张盟友/工事各 +3 生命（本场战斗内一直有效）"
 						% bu_n)
 				_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 30),
-						"text": "批量改造 · %d 张" % bu_n,
+						"text": "集体改造 · %d 张" % bu_n,
 						"col": Color("8ad4f0"), "start": n, "dur": 2000})
 		"overload":
 			# 过载 8030（R85，机械之心）：给牌库里一张盟友加上「一回合行动两次」。
@@ -10579,7 +10579,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			else:
 				_say("批量传输：手牌里没有盟友或工事（未改造），仍抽 %d 张卡" % bt_drw)
 			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
-				"text": "批量改造 %d 张 · 抽 %d" % [bt_n, bt_drw],
+				# R394：8031 改名「集体改造」后，这里再写「批量改造」会被读成那张卡
+				"text": "改造 %d 张 · 抽 %d" % [bt_n, bt_drw],
 				"col": Color("8ad4f0"), "start": n, "dur": 2000})
 		"inf_armor":
 			# 无限装甲（8038，R89）：被改造时供一张 0 费改造牌到手 —— 飘字落在**手牌区上方**，

@@ -225,6 +225,15 @@ func _ready() -> void:
 			tb.timeout.connect(func(): _buy_card(0))
 			add_child(tb)
 			tb.start()
+	# R394 出图：`--relicdemo` 塞 8 件道具（含用户报过的泉水 / 思想钢印），
+	# 配合 `--relicview` / `--relicpanel` 核验「点击展开胶囊行 / 悬停看详情」。
+	if "--relicdemo" in args:
+		if not RunState.run_active:
+			RunState.run_active = true
+			RunState.start_run([], GameLayers.LAYER_DEFAULT)
+		RunState.relics = []
+		for rid: int in [6035, 6036, 6015, 6001, 6003, 6005, 6010, 6041]:
+			RunState.gain_relic(rid)
 	_setup_shop()   # R390：见上面那条注释 —— 必须在所有「造 run / 改当前格」的演示参数之后
 	# 演示参数（R214）：`--delpick` 打开「删除一张卡」的选卡页 —— 核验**选卡页大卡**
 	# （150×190，`CardFace.draw_pick()`）上也有附魔标记。顺带给卡组前两张塞附魔，
