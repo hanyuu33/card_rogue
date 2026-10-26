@@ -62,9 +62,10 @@ func reward_ids(tier: String = "") -> Array[int]:
 	## R346：**剧情锁定**的道具（`RelicData.locked`）在解锁前不进奖励池 ——
 	##       过闸的唯一口就是这里；初始池 / 二层池 / 事件池 / 角色赠品是显式 id 列表，不受影响。
 	## R352：加「竖琴」6052（**一般档**，故事 1 解锁后发放；未解锁时被 `_drop_locked` 挡住）。
+	## R383：加「骑士剑」6053（**一般档**，故事 2 解锁；同样被 `_drop_locked` 挡住）。
 	var ids: Array[int] = [6005, 6006, 6007, 6008, 6009, 6013, 6020, 6024,
 			6026, 6028, 6029, 6040, 6041, 6042, 6043, 6044, 6045, 6046,
-			6050, 6051, 6052]
+			6050, 6051, 6052, 6053]
 	return _filter_by_tier(_drop_locked(ids), tier)
 
 
@@ -81,7 +82,7 @@ func _drop_locked(ids: Array[int]) -> Array[int]:
 
 
 func normal_reward_ids() -> Array[int]:
-	## 奖励池里的「一般道具」（R352 起 17 件；竖琴 6052 未解锁时仍是 16 件）。
+	## 奖励池里的「一般道具」（R383 起 18 件；竖琴 6052 / 骑士剑 6053 未解锁时各少 1 件）。
 	return reward_ids(RelicData.TIER_NORMAL)
 
 

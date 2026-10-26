@@ -27863,6 +27863,145 @@ func _init() -> void:
 	check_src(r381_src.find("func _goose_lunge") >= 0
 			and r381_src.find("\t\t_goose_lunge(attacker, dst)") >= 0,
 			"R381 源码：鹅的结算口只有 attack 尾部一处挂点")
+	# ================= R383：骑士剑 6053（故事 2 解锁 · 一般档）+ 故事 2 新正文 =================
+	# 用户口径：「episode2 解锁新普通道具：骑士剑：战斗内第一次击杀一个敌人后，
+	#   本次战斗内己方单位力量 +2，己方技能伤害 +2（力量 +2 逻辑同竖琴）」，
+	#   同时把 episode2 的正文换成用户给的台词（鸭子道歉 → 王国被入侵 → 带我去看看）。
+	var r383_repo := RelicRepo.load_json()
+	var r383_sword: RelicData = r383_repo.get_relic(6053)
+	check(r383_sword != null and r383_sword.relic_name == "骑士剑"
+			and r383_sword.kind == "战斗" and r383_sword.tier == "一般"
+			and r383_sword.source == "奖励" and r383_sword.locked,
+			"R383 道具：骑士剑 6053 = 战斗类 · 一般档 · 奖励来源 · 默认 locked")
+
+	# ① 故事 2：正文 = 用户给的 4 行；grants 带上骑士剑
+	var r383_story := StoryRepo.load_json()
+	var r383_ep := r383_story.episode("episode2")
+	var r383_text: Array = r383_ep.get("text", [])
+	check(r383_text.size() == 4
+			and str(r383_text[0]).find("落花流水") >= 0
+			and str(r383_text[1]).find("添麻烦") >= 0
+			and str(r383_text[2]).find("鸭鸭王国被奇怪的家伙们入侵") >= 0
+			and str(r383_text[3]).find("带我去看看") >= 0,
+			"R383 故事 2：正文换成鸭子道歉那 4 行（实际 %d 行）" % r383_text.size())
+	check(str(r383_ep.get("title", "")) != "？？？" and r383_story.has_content("episode2"),
+			"R383 故事 2：标题已填、正文非空（空正文会被 R359 的门锁死）")
+	var r383_g: Variant = r383_story.episode_grants("episode2")
+	var r383_gr: Array = []
+	for r383_v: Variant in ((r383_g as Dictionary).get("relics", []) as Array):
+		r383_gr.append(int(r383_v))
+	check(r383_gr == [6053],
+			"R383 故事 2：解锁的道具就是骑士剑（实际 %s）" % str(r383_gr))
+
+	# ② 解锁链路：没解锁 → 不在池；收下故事 2 → 进「一般」档
+	ProfileData.set_test_mode()
+	RunState.run_active = false
+	RunState.run_bans = []
+	check(not r383_repo.reward_ids().has(6053),
+			"R383 奖励池：没解锁时骑士剑不在池里（locked 闸门）")
+	ProfileData.bump(ProfileData.K_CLEAR + PlayerClass.DRUID + ":0")
+	ProfileData.check_achievements(r383_story)
+	var r383_claim := ProfileData.claim_episode(r383_story, "episode2")
+	var r383_got: Array = r383_claim.get("relics", [])
+	check(bool(r383_claim.get("ok", false)) and r383_got == [6053]
+			and ProfileData.is_relic_unlocked(6053),
+			"R383 故事 2：收下后骑士剑解锁（%s）" % str(r383_got))
+	var r383_rp := RelicRepo.load_json()
+	check(r383_rp.reward_ids().has(6053) and r383_rp.normal_reward_ids().has(6053)
+			and not r383_rp.legendary_reward_ids().has(6053),
+			"R383 奖励池：解锁后骑士剑进「一般」档（不进传奇档）")
+	ProfileData.set_test_mode()
+	RunState.run_bans = []
+
+	# ③ 触发前：不生效（力量 / 技能伤害都不加）
+	RunState.relics = [6053]
+	var ks_e := _new_engine([], 60, 60, -1, false)
+	ks_e.start_game()
+	var ks_card_repo := CardRepo.load_json()
+	var ks_proto: CardData = CardData.from_dict(ks_card_repo.get_card(8003).to_dict())
+	var ks_base: int = ks_proto.power
+	var ks_a: Placement = ks_e.state.place(CardData.from_dict(ks_proto.to_dict()),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	ks_e.state.place(_card(8301, "脆皮", "盟友", 1, 0, 1), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
+	check(not ks_e._knight_sword_fired and ks_a.effective_power() == ks_base,
+			"R383 骑士剑：还没击杀 → 力量不加（%d）" % ks_a.effective_power())
+	var ks_spell0 := ks_e._spell_dmg(GameEngine.SIDE_SELF, 10)
+	check(ks_spell0 == 10, "R383 骑士剑：还没击杀 → 技能伤害不加（10 → %d）" % ks_spell0)
+
+	# ④ 第一次击杀 → 场上己方盟友 +2 力量、技能伤害 +2；卡面基础力量不动
+	ks_e.attack(Vector2i(3, 1), Vector2i(2, 1))
+	check(ks_e._knight_sword_fired,
+			"R383 骑士剑：第一次击杀敌人 → 本场标记生效")
+	check(ks_a.effective_power() == ks_base + GameEngine.KNIGHT_SWORD_ATK,
+			"R383 骑士剑：场上盟友 +%d 力量（%d → %d）"
+			% [GameEngine.KNIGHT_SWORD_ATK, ks_base, ks_a.effective_power()])
+	check(ks_a.card.power == ks_base,
+			"R383 骑士剑：卡面基础力量不被改写（仍是 %d）" % ks_a.card.power)
+	var ks_spell1 := ks_e._spell_dmg(GameEngine.SIDE_SELF, 10)
+	check(ks_spell1 == 10 + GameEngine.KNIGHT_SWORD_SPELL,
+			"R383 骑士剑：技能伤害 +%d（10 → %d）"
+			% [GameEngine.KNIGHT_SWORD_SPELL, ks_spell1])
+
+	# ⑤ 触发之后才上场的己方盟友同样 +2（每回合开始那一处同步口）
+	var ks_b: Placement = ks_e.state.place(CardData.from_dict(ks_proto.to_dict()),
+			Vector2i(4, 0), GameEngine.SIDE_SELF)
+	ks_e._sync_knight_sword()
+	check(ks_b.effective_power() == ks_base + GameEngine.KNIGHT_SWORD_ATK,
+			"R383 骑士剑：触发后上场的盟友也 +%d（%d）"
+			% [GameEngine.KNIGHT_SWORD_ATK, ks_b.effective_power()])
+	var ks_foe: Placement = ks_e.state.place(CardData.from_dict(ks_proto.to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	ks_e._sync_knight_sword()
+	check(ks_foe.effective_power() == ks_base,
+			"R383 骑士剑：只加己方（敌方不变，%d）" % ks_foe.effective_power())
+
+	# ⑥ 只认第一次：第二次击杀不再叠（仍是 +2，不是 +4）
+	var ks_c: Placement = ks_e.state.place(CardData.from_dict(ks_proto.to_dict()),
+			Vector2i(3, 2), GameEngine.SIDE_SELF)
+	ks_e._sync_knight_sword()
+	ks_e.state.place(_card(8302, "脆皮", "盟友", 1, 0, 1), Vector2i(2, 2),
+			GameEngine.SIDE_OPPONENT)
+	ks_e.attack(Vector2i(3, 2), Vector2i(2, 2))
+	check(ks_a.effective_power() == ks_base + GameEngine.KNIGHT_SWORD_ATK
+			and ks_c.effective_power() == ks_base + GameEngine.KNIGHT_SWORD_ATK,
+			"R383 骑士剑：第二次击杀不再叠加（%d / %d）"
+			% [ks_a.effective_power(), ks_c.effective_power()])
+
+	# ⑦ 敌方打死我方单位 → 不算「我方的第一次击杀」
+	var ks_e2 := _new_engine([], 60, 60, -1, false)
+	ks_e2.start_game()
+	var ks_mine: Placement = ks_e2.state.place(CardData.from_dict(ks_proto.to_dict()),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	ks_e2.state.place(_card(8303, "凶鸭", "盟友", 1, 9, 20), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
+	ks_e2.attack(Vector2i(2, 1), Vector2i(3, 1))
+	check(not ks_e2._knight_sword_fired,
+			"R383 骑士剑：敌方打死我方单位 → 不触发（只认我方击杀）")
+	check(ks_mine.effective_power() == ks_base,
+			"R383 骑士剑：我方单位没吃到加成（%d）" % ks_mine.effective_power())
+	RunState.relics = []
+
+	# ⑧ 失去道具 → 加成归零（持续 buff 的「持续」也要能结束）
+	RunState.relics = []
+	ks_e._sync_knight_sword()
+	check(ks_a.effective_power() == ks_base
+			and ks_e._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
+			"R383 骑士剑：失去道具后力量与技能伤害都归零（%d）" % ks_a.effective_power())
+	RunState.relics = []
+
+	# ⑨ 源码锁：触发点唯一（`_destroy` 一处）+ 力量走 Placement 字段 + 技能走 `_spell_dmg`
+	var r383_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r383_src.find("func _knight_sword_on_kill") >= 0
+			and r383_src.find("\t\t_knight_sword_on_kill(p)") >= 0,
+			"R383 源码：骑士剑的触发点只有 `_destroy()` 一处")
+	check_src(r383_src.find("\tif _knight_sword_active():") >= 0
+			and r383_src.find("\t\tout += KNIGHT_SWORD_SPELL") >= 0,
+			"R383 源码：技能 +2 落在 `_spell_dmg()`（技能伤害的唯一口）")
+	var r383_plc := FileAccess.get_file_as_string("res://scripts/placement.gd")
+	check_src(r383_plc.find("var sword_atk: int = 0") >= 0
+			and r383_plc.find("hecaton_atk + harp_atk + sword_atk") >= 0,
+			"R383 源码：力量走 Placement.sword_atk → effective_power（同竖琴，不烤进 CardData）")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

@@ -97,6 +97,12 @@ var stun_left: int = 0
 ##   * 卡本体不被污染 → 同一张卡反复上场，每次也只 +2；
 ##   * 离场即随 Placement 消失（离场再上场重新拿 2，不会越滚越大）。
 var harp_atk: int = 0
+## R383 骑士剑（6053）：「己方所有盟友 +2 力量」与竖琴是**同一套持续 buff 写法** ——
+## 只记这个字段、由 `effective_power()` 并进攻击力，**绝不写回 `card.power`**。
+## 触发条件由引擎记（本场第一次击杀），这里只管「在场上就生效」：
+##   * 赋值而不是累加 → 重复同步永远还是 2，不会因为多次击杀变成 +4；
+##   * 离场即随 Placement 消失，重新上场时由 `place()` / `_sync_knight_sword()` 重新给。
+var sword_atk: int = 0
 ## 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：还剩几个**我方回合**就会「破坏自身、
 ## 在原地立起一座钢铁要塞」。0 = 不带这个倒计时。
 ## ⚠️ 递减口只有一处（`GameEngine._fuse_tick`，我方回合结束），且**不是亡语** ——
@@ -186,7 +192,7 @@ func effective_power() -> int:
 	## +1，不是这张卡攻击时 +1）。于是塔自身 0 攻就是 0 攻，定位 = 标记一片区域的增伤辅助。
 	var debuff := atk_debuff if debuff_stage == 1 else 0
 	var total := maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
-			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk + harp_atk
+			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk + harp_atk + sword_atk
 			- debuff - mnemo_down)
 	# R324「惧光」：夜鸭奇数回合**力量临时减半**，只作用在这个出口 ——
 	# 上面每一项（atk_buff / atk_growth / ramp_atk / upgrade_atk / dark_lord_atk …）

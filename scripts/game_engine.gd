@@ -112,6 +112,7 @@ var foresight_mode:= false  # 预判（9097）：等玩家选效果①/②
 var wish_pending:= false    # 许愿（9168）：等玩家从**卡组**选一张卡加入手卡
 var _steel_stamp_used:= false  # R307 思想钢印：本场战斗是否已经救过一次（每场一次）
 var _thorn_ring_turn:= -1      # R307 荆棘指环：上次触发是第几回合（每回合一次）
+var _knight_sword_fired:= false  # R383 骑士剑：本场战斗的第一次击杀是否已发生（每场一次）
 var foresight_pick:= false  # 预判①：等玩家从弃牌区选一张 0 费技能卡
 var foresight_vanish:= false  # 预判①选完后：把本卡从弃牌区移除（本卡消失）
 ## R292：拒绝命运（9098）改成**自动结算**（丢光手卡 → 弃牌区所有 0/1 费卡按顺序回手），
@@ -548,6 +549,11 @@ const FOREST_FRIENDS_DISCOUNT:= 2
 # R352 竖琴（6052，剧情解锁道具）：所有己方盟友 +2 力量。
 const HARP_RELIC_ID:= 6052
 const HARP_ATK:= 2
+# R383 骑士剑（6053，剧情解锁道具）：本场战斗**第一次击杀敌人**之后 ——
+#   己方所有盟友 +2 力量（与竖琴同一套持续 buff 写法），己方技能伤害 +2。
+const KNIGHT_SWORD_RELIC_ID:= 6053
+const KNIGHT_SWORD_ATK:= 2
+const KNIGHT_SWORD_SPELL:= 2
 const FOREST_GUARD_ID:= 9037
 const LION_ID:= 9038
 const LION_ATK_BUFF:= 2
@@ -1905,6 +1911,7 @@ func _begin_turn(side: String) -> void :
 		_roar_fires = 0
 		_space_fires = 0
 		_sync_harp()   # R352 竖琴：战斗中拿到的道具 / 读档续战，此处补齐在场上盟友的 +2
+		_sync_knight_sword()   # R383 骑士剑：同一处补齐（含中途拿到道具的情况）
 		state.energy = FieldState.ENERGY_PER_TURN
 		if state.turn_limit >= 0 and turn_number > state.turn_limit:
 			turn_number = state.turn_limit
@@ -4455,6 +4462,13 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 		p.harp_atk = HARP_ATK
 		_log("竖琴：%s 获得 +%d 力量（%d）"
 				% [card.card_name, HARP_ATK, p.effective_power()])
+
+	# R383 骑士剑（6053）：本场第一次击杀之后**才上场**的己方盟友同样 +2 力量。
+	# 与竖琴逐字同构（字段 + effective_power 出口，不烤进共享 CardData）。
+	if _knight_sword_active() and p.owner == SIDE_SELF and card.kind == "盟友":
+		p.sword_atk = KNIGHT_SWORD_ATK
+		_log("骑士剑：%s 获得 +%d 力量（%d）"
+				% [card.card_name, KNIGHT_SWORD_ATK, p.effective_power()])
 
 	var beast_hp:= _beast_hp_bonus(card)
 	if beast_hp > 0:
@@ -8436,6 +8450,48 @@ func _sync_harp() -> void:
 					% [p.card.card_name, HARP_ATK, p.effective_power()])
 
 
+func _knight_sword_active() -> bool:
+	## 骑士剑（6053）此刻是否生效 = **本场已经触发过** 且 **现在仍持有道具**。
+	## 拆成一个口，是因为有三处要判（place / 同步 / 技能伤害），口径必须一致。
+	return _knight_sword_fired and RunState.has_relic(KNIGHT_SWORD_RELIC_ID)
+
+
+func _knight_sword_on_kill(victim: Placement) -> void:
+	## R383 骑士剑（6053）：**本场战斗的第一次击杀** —— 己方所有盟友 +2 力量、
+	## 己方技能伤害 +2，持续到本场战斗结束。
+	## 只认第一次：`_knight_sword_fired` 一置位就再也不进门（不会叠成 +4）。
+	## 没持有道具时杀敌**不置位** —— 中途拿到道具，从拿到那一刻起算第一次。
+	if _knight_sword_fired or not RunState.has_relic(KNIGHT_SWORD_RELIC_ID):
+		return
+	_knight_sword_fired = true
+	_sync_knight_sword(true)
+	_log("骑士剑：击杀 %s → 本场战斗己方盟友 +%d 力量、技能伤害 +%d"
+			% [victim.card.card_name, KNIGHT_SWORD_ATK, KNIGHT_SWORD_SPELL])
+	action.emit("knight_sword", {"amount": KNIGHT_SWORD_ATK, "spell": KNIGHT_SWORD_SPELL,
+			"card": victim.card})
+
+
+func _sync_knight_sword(announce := false) -> void:
+	## 骑士剑（6053）「持续 buff」的同步口：把场上每个己方盟友的 `sword_atk` 与
+	## 「本场是否已触发 + 此刻是否持有」对齐（赋值，不累加 —— 与竖琴 R372 同一口径）。
+	## 需要它的原因：触发那一刻场上的人要吃、**之后上场**的人也要吃、中途拿到道具 / 失去
+	## 道具都要对齐。幂等，随便多调。`announce` 只给「刚触发」那一下打日志，例行同步不刷屏。
+	var active := _knight_sword_active()
+	for cell: Vector2i in state.board.keys():
+		var p: Placement = state.unit_at(cell)
+		if p == null or p.owner != SIDE_SELF or p.health <= 0 or p.card == null:
+			continue
+		if p.card.kind != "盟友":
+			continue
+		var want := KNIGHT_SWORD_ATK if active else 0
+		if p.sword_atk == want:
+			continue
+		p.sword_atk = want
+		if want > 0 and announce:
+			_log("骑士剑：%s 获得 +%d 力量（%d）"
+					% [p.card.card_name, KNIGHT_SWORD_ATK, p.effective_power()])
+
+
 func _random_forest_ally() -> CardData:
 	## 森林精魄奖励池里的随机**盟友**卡（森林的朋友们 9183 的随机源，R352）。
 	## 与 `_random_ally_card()` 的区别：那里取「本角色」，这里**写死森林精魄**——
@@ -10799,6 +10855,9 @@ func _spell_dmg(side: String, base: int, card: CardData = null) -> int:
 	out += turn_spell_bonus
 	out += turn_dmg_bonus
 	out += deer_bonus   # R341 鹿首标本：每回合 +1（本场累计）
+	# R383 骑士剑（6053）：本场第一次击杀之后，己方技能伤害 +2（固定值，只加一次）。
+	if _knight_sword_active():
+		out += KNIGHT_SWORD_SPELL
 	# lucky 7（6045，R314）：生效回合技能额外 +7。
 	# ⚠️ 放在快速符文百分比**之前**：与鸭之眼 / 荧光草同属「固定加成」，一起被百分比放大。
 	if _lucky7_active:
@@ -12248,6 +12307,11 @@ func _destroy(cell: Vector2i) -> void :
 				_rec_list.append(ru)
 	state.board.erase(cell)
 	_credit_kill(p)
+	# R383 骑士剑（6053）：「战斗内第一次击杀一个敌人」→ 己方全体 +2 力量 / 技能 +2。
+	# ⚠️ 判据只能是「被破坏的是敌方单位」—— 技能 / 陷阱 / 效果击杀都**不写
+	#    `last_hit_by`**（只有单位普攻写），拿 `_credit_kill` 那套判会漏掉大半击杀。
+	if p.owner != SIDE_SELF:
+		_knight_sword_on_kill(p)
 	# R307 思想钢印（6036）：每场战斗**第一个**被破坏的我方单位不会死 —— 回手卡。
 	# ⚠️ 带「次元」/ 衍生物 / 离场消失的单位**不救**：它们本来就该消失（救回来会破坏语义）。
 	if p.owner == SIDE_SELF and self_relics.has(STEEL_STAMP_RELIC_ID) \
