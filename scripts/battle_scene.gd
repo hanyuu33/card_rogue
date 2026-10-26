@@ -8665,19 +8665,37 @@ func _ai_step_sec() -> float:
 
 
 func _foe_speed_text() -> String:
+	## 纯倍率，给状态栏播报 / tooltip 用（不带播放三角，念出来才顺）。
 	match _foe_speed:
 		1.5:
-			return "×1.5"
+			return "1.5×"
 		2.0:
-			return "×2"
-	return "×1"
+			return "2×"
+	return "1×"
+
+
+func _foe_speed_icon() -> String:
+	## R388b：按钮上的「播放 / 快进」标志。
+	##
+	## ⚠️ 为什么不是 ⏩：⏩（U+23E9）在**思源黑体和 Microsoft YaHei 里都没有字形**，
+	## 硬写只会画成豆腐块；▶（U+25B6）也只有思源黑体有（battle.tscn 的 SystemFont 没有）。
+	## 所以按钮字体在 `_sync_speed_btn` 里换成 `UiTheme.font()`，快进则用**三角个数**
+	## 递进表达：1× 一个、1.5× 两个、2× 三个 —— 一眼看出快了几档，也不依赖 emoji 字体。
+	match _foe_speed:
+		1.5:
+			return "▶▶"
+		2.0:
+			return "▶▶▶"
+	return "▶"
 
 
 func _sync_speed_btn() -> void:
-	## R388：按钮文字 = 当前档位；开着倍速染金（1× 是常态亮字），并给出切换说明。
+	## R388：按钮文字 = 播放标志 + 当前档位；开着倍速染金（1× 是常态亮字）
+	## R388b：顺手把字体换成工程的思源黑体 —— ▶ 只有它有字形（幂等，重复设无害）。
 	if speed_btn == null:
 		return
-	speed_btn.text = _foe_speed_text()
+	speed_btn.add_theme_font_override("font", UiTheme.font())
+	speed_btn.text = _foe_speed_icon() + _foe_speed_text()
 	var on := _foe_speed > 1.0
 	speed_btn.add_theme_color_override("font_color",
 			UiTheme.BTN_PRIMARY_LINE if on else UiTheme.CHIP_SOLID_TEXT)

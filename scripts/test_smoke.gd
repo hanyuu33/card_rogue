@@ -1929,15 +1929,30 @@ func _check_foe_speed(scene: Variant) -> void:
 	if btn == null:
 		_smoke_fail("R388 倍速按钮：battle.tscn 里没有 SpeedBtn")
 		return
+	# R388b：按钮要画 ▶ / ▶▶ / ▶▶▶ —— 先确认字体**真的有这个字形**。
+	# battle.tscn 原本用的 SystemFont(Microsoft YaHei) 里没有 ▶，只有工程的思源黑体有；
+	# 少了这条守卫，界面上就是三个豆腐块，而逻辑断言全绿。
+	var bf := btn.get_theme_font("font")
+	if bf == null or not bf.has_char(0x25B6):
+		_smoke_fail("R388b 倍速按钮：当前字体没有 ▶ 字形（会画成豆腐块），应走 UiTheme.font()")
+		return
+	# 三档文案都得放得进按钮（▶▶▶2× 是最长的一条）
+	var bfs: int = btn.get_theme_font_size("font_size")
+	for t in ["▶1×", "▶▶1.5×", "▶▶▶2×"]:
+		var tw := bf.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, bfs).x
+		if tw > btn.size.x - 4.0:
+			_smoke_fail("R388b 倍速按钮：文案「%s」宽 %.1f，按钮只有 %.0f（会截断）"
+					% [t, tw, btn.size.x])
+			return
 	var keep: float = GameSettings.foe_speed
 	# 先归到 1×，再从 1× 一路点上去（玩家的档位不该左右这条断言）
 	while float(scene.get("_foe_speed")) > 1.0:
 		scene._on_speed_pressed()
-	if btn.text != "×1":
-		_smoke_fail("R388 倍速按钮：1× 时按钮文字应是 ×1，实际「%s」" % btn.text)
+	if btn.text != "▶1×":
+		_smoke_fail("R388 倍速按钮：1× 时按钮文字应是 ▶1×，实际「%s」" % btn.text)
 		return
 	scene._on_speed_pressed()
-	if not is_equal_approx(float(scene.get("_foe_speed")), 1.5) or btn.text != "×1.5":
+	if not is_equal_approx(float(scene.get("_foe_speed")), 1.5) or btn.text != "▶▶1.5×":
 		_smoke_fail("R388 倍速按钮：点一次应是 1.5×，实际 %s / 「%s」"
 				% [str(scene.get("_foe_speed")), btn.text])
 		return
@@ -1946,7 +1961,7 @@ func _check_foe_speed(scene: Variant) -> void:
 				% GameSettings.foe_speed)
 		return
 	scene._on_speed_pressed()
-	if not is_equal_approx(float(scene.get("_foe_speed")), 2.0) or btn.text != "×2":
+	if not is_equal_approx(float(scene.get("_foe_speed")), 2.0) or btn.text != "▶▶▶2×":
 		_smoke_fail("R388 倍速按钮：点两次应是 2×，实际 %s / 「%s」"
 				% [str(scene.get("_foe_speed")), btn.text])
 		return
@@ -1956,7 +1971,7 @@ func _check_foe_speed(scene: Variant) -> void:
 		_smoke_fail("R388 倍速：2× 的敌方 AI 步进应是 0.8s，实际 %.3f" % step_2x)
 		return
 	scene._on_speed_pressed()
-	if not is_equal_approx(float(scene.get("_foe_speed")), 1.0) or btn.text != "×1":
+	if not is_equal_approx(float(scene.get("_foe_speed")), 1.0) or btn.text != "▶1×":
 		_smoke_fail("R388 倍速按钮：第三次应回到 1×，实际 %s / 「%s」"
 				% [str(scene.get("_foe_speed")), btn.text])
 		return
