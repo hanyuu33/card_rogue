@@ -75,6 +75,14 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r391_end_turn_btn],
+		# R393（用户口径）：「代替承受伤害的受伤动画依然会快过攻击动画（1 倍速）」。
+		# 只有真场景能验 —— 要在真攻击动画排上之后，看代受演出排到了哪一刻。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r393_absorb_timing],
 		# R339：战斗检查点必须写「进战斗之前」的局状态 —— lucky 7 的跨战斗计数在开局
 		# 第 1 个我方回合就 +1，若检查点写「当下」，续档重打这一场就会越续越多（用户报）。
 		["res://scenes/battle.tscn", func():
@@ -1710,6 +1718,57 @@ func _check_card_detail_block(_scene: Variant) -> void:
 		return
 	print("SMOKE OK R206 详情条：提及块在右栏 / 浅底琥珀棕 / 预算高度 %.0f == 公式（%d 个提及）"
 			% [got, refs.size()])
+
+
+func _check_r393_absorb_timing(scene) -> void:
+	## R393（用户口径）：「代替承受伤害的受伤动画依然会快过攻击动画，测试时为一倍速」。
+	## 规则：代受 / 闪躲的演出必须排在**攻击撞击帧**（`ATK_IMPACT_T × ATK_DUR_MS`），
+	## 不能按「当下」直接播。这条只有真场景能验 —— 要先生成一份真的攻击动画。
+	if not scene.has_method("_pending_impact_ms"):
+		_smoke_fail("R393：战斗场景没有 _pending_impact_ms 唯一口")
+		return
+	var eng: Variant = scene.engine
+	if eng == null:
+		_smoke_fail("R393：场景里没有引擎，验不了代受时序")
+		return
+	var atk_cell := Vector2i(1, 1)
+	var def_cell := Vector2i(1, 2)
+	var gen_cell := Vector2i(4, 0)
+	var atk_card: CardData = scene.repo.get_card(1053)     # 骷髅兵
+	var gen_card: CardData = scene.repo.get_card(8042)     # 护盾生成器
+	var def_card: CardData = scene.repo.get_card(8003)     # 树人
+	if atk_card == null or gen_card == null or def_card == null:
+		_smoke_fail("R393：取不到演示用的卡（1053 / 8042 / 8003）")
+		return
+	eng.state.place(atk_card, atk_cell, GameEngine.SIDE_OPPONENT)
+	eng.state.place(def_card, def_cell, GameEngine.SIDE_SELF)
+	eng.state.place(gen_card, gen_cell, GameEngine.SIDE_SELF)
+
+	# 先排一段真的攻击动画（这一步和引擎打人时走的是同一条处理）
+	scene._on_engine_action("attack", {"src": atk_cell, "dst": def_cell, "damage": 5,
+			"atk_name": "骷髅兵", "def_name": "树人"})
+	var now0: int = scene._now()
+	var imp: int = scene._pending_impact_ms()
+	if imp <= now0:
+		_smoke_fail("R393：攻击已经排上，_pending_impact_ms() 却没给出未来的撞击帧（%d）" % imp)
+		return
+	scene._delayed.clear()      # 清掉攻击自己的 hit，只看代受排到哪
+	scene._on_engine_action("shield_redirect", {"cell": def_cell, "to": gen_cell,
+			"amount": 5, "card": gen_card})
+	var found: Dictionary = {}
+	for ev: Dictionary in scene._delayed:
+		if str(ev.get("kind", "")) == "absorb_fx":
+			found = ev
+			break
+	if found.is_empty():
+		_smoke_fail("R393：护盾代受没有排进延迟队列（会当场播 → 快过攻击动画）")
+		return
+	var at := int(found.get("at", 0))
+	if at != imp:
+		_smoke_fail("R393：代受演出排在 %d，应当是撞击帧 %d" % [at, imp])
+		return
+	print("SMOKE OK R393 代受演出与撞击同帧：now=%d → 撞击 %d（+%dms，1 倍速）"
+			% [now0, imp, imp - now0])
 
 
 func _check_r391_end_turn_btn(scene) -> void:

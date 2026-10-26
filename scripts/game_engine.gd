@@ -10358,7 +10358,10 @@ func _absorb_by_guard(amount: int) -> bool:
 	else ("宠物鸭" if g.card.traits.has(PET_DUCK_TRAIT) else "森林守护")))
 	var dealt:= _hit_unit(g, amount, how)
 	_log("%s：%s 替我方 HP 承受 %d 点伤害（剩余 %d）" % [how, gname, dealt, g.health])
-	action.emit("guard_absorb", {"card": g.card, "how": how, "amount": dealt})
+	# R393：带上**格子**——演出要等攻击撞到那一帧才播（用户报「代受的受伤动画快过
+	# 攻击动画」），没有格子的话场景只能干看着，不知道怎么冻结那个单位的血条数字。
+	action.emit("guard_absorb", {"card": g.card, "how": how, "amount": dealt,
+			"cell": cell})
 	if g.health <= 0:
 
 		_destroy(cell)

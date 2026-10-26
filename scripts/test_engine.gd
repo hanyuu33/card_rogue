@@ -28641,6 +28641,36 @@ func _init() -> void:
 	check_src(fxs.find("func absorb_goto(path: String) -> bool:") >= 0,
 			"R392 源码：absorb_goto() 在位（phase 1 改目的地 / phase 2 排队）")
 
+
+	# ------------------------------------------------------------------ R393
+	# 用户报四条：① 技能卡指目标时不报最终伤害（单体技能一个数字都没有）；
+	# ② 战场除道具区外的字没放大；③ 卡组/弃牌/消耗三块偏小；
+	# ④ 代受的受伤动画快过攻击动画。
+	# 这里锁 ①④ 的「不许退回」点（②③ 是纯视觉，出图核）。
+	var bs := ""
+	if ResourceLoader.exists("res://scripts/battle_scene.gd"):
+		bs = FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(bs.find("if not drawn_center:") >= 0,
+			"R393 源码：单体技能也报最终伤害（旧写法 `if not cells.has(center)` 恒假）")
+	check_src(bs.find("drawn_center = cells.has(center)") >= 0,
+			"R393 源码：AOE 分支要记下中心格已画过（否则会重画一遍）")
+	check_src(bs.find("preview_spell_damage(spell_card, cell)") >= 0,
+			"R393 源码：点选目标时每个可打单位都报最终伤害（触摸屏没有 hover）")
+	check_src(bs.find("func _pending_impact_ms() -> int:") >= 0,
+			"R393 源码：代受演出按「攻击撞击帧」排（_pending_impact_ms 唯一口）")
+	var absorb_at := bs.count('"at": _pending_impact_ms()')
+	check(absorb_at == 3,
+			"R393 源码：护盾生成器 / 守护代受 / 闪躲三条代受路径都排队（实际 %d 处）" % absorb_at)
+	check_src(bs.find('"absorb_fx"') >= 0,
+			"R393 源码：延迟队列里有 absorb_fx 的落地点")
+	check_src(bs.find("_drop_hp(ab_pl)") >= 0,
+			"R393 源码：代受单位的血条数字等撞击那一刻才往下掉（不是当场）")
+	var ge := ""
+	if ResourceLoader.exists("res://scripts/game_engine.gd"):
+		ge = FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(ge.find('"cell": cell})') >= 0 or ge.find('"cell": cell}') >= 0,
+			"R393 源码：guard_absorb 带上格子（否则场景没法冻结那个单位的血条）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
