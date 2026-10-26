@@ -253,6 +253,19 @@ func _ready() -> void:
 		for i in RunState.map_cells.size():
 			RunState.seen_ids.append(i)
 		RunState.reveal_known()
+	# -- --reshop：演示「离开商店后还能再进」的地图形态（R390）——
+	# 当前格改成已揭晓的商店 + 存一份货架 + 打开重进窗口，
+	# 出图应看到青色呼吸框与「可再进店」小字。出图：`map.tscn -- --screenshot --reshop`
+	if "--reshop" in OS.get_cmdline_user_args():
+		for _rc: Dictionary in RunState.map_cells:
+			if int(_rc["id"]) == RunState.current_node_id:
+				_rc["type"] = "shop"
+				_rc["hidden"] = false
+				_rc["revealed"] = true
+				break
+		RunState.store_shop_state(RunState.current_node_id,
+				{"row1": [[8001, 0]], "row2": [], "row3": []})
+		RunState.shop_mark_revisit(RunState.current_node_id)
 	# -- --midway：演示「走过一片区域」的状态（截图核验视野规则用）
 	if "--midway" in OS.get_cmdline_user_args():
 		_prep_midway_demo()
@@ -445,6 +458,10 @@ func _cell_at(pos: Vector2) -> Dictionary:
 func _is_available(cell: Dictionary) -> bool:
 	## R322（用户口径）：能去的范围 = **走过的连通区 + 它们的相邻格**，不只是当前房的相邻格。
 	## 判据唯一口 `RunState.can_reach()`（点击 / 高亮 / 悬停全读它）。
+	## R390：可重进的商店格**也算可用** —— 它就踩在脚下，而 `can_reach` 对
+	## 「当前所在格」一律返回 false，不补这一条就永远点不动自己站的店。
+	if RunState.shop_revisit_ok(int(cell["id"])):
+		return true
 	return RunState.can_reach(int(cell["id"]))
 
 
@@ -576,6 +593,16 @@ func _enter_node(cell: Dictionary, animate := true) -> void:
 func _commit_enter(cell: Dictionary) -> void:
 	## 真正的「进入」：结算 + 按房间类型分流。**只能由过场结束（或回放）调用。**
 	var id := int(cell["id"])
+	# R390（用户口径）：**商店在离开后的下一次移动之前可以重进**，货架原样。
+	# ⚠️ 必须判在 `advance()` 之前：重进时玩家就站在这格上，`advance()` 会因为
+	#    「这一格没换」直接返回 ok=false，走不到下面任何一行。
+	# 窗口的开关全在 RunState —— 一旦真的走去了别的格子，`advance()` 会把
+	# `shop_revisit_id` 清掉，这里自然就不成立了（用户口径的「下一次移动之前」）。
+	if (RogueMap.display_type(cell) == "shop"
+			and RunState.shop_revisit_ok(id) and RunState.run_active):
+		RunState.pending_node = cell
+		SceneFx.goto("res://scenes/shop.tscn")
+		return
 	var res := RunState.advance(id)
 	if not bool(res.get("ok", false)):
 		return
@@ -947,6 +974,18 @@ func _draw_states() -> void:
 			draw_rect(r.grow(3.0), UiTheme.ACCENT_LIT, false, 3.0)
 			draw_rect(r.grow(8.0), Color(0.95, 0.76, 0.31, 0.28), false, 5.0)
 			_draw_player_marker(r)   # R166：当前格叠角色头像，一眼看到「我在这」
+			# R390：这间商店还能再进 → 青色呼吸框 + 一行小字。没有这层提示，
+			# 「离开的店还能回去」在地图上和普通走过的格子长得一模一样，
+			# 功能等于没做（玩家不知道能点）。
+			if RunState.shop_revisit_ok(id):
+				var pcs := 0.5 + 0.5 * sin(_t * 5.0)
+				# ⚠️ 必须画在 grow(11) 上：当前格的金框 grow(3)+金晕 grow(8) 已经占满
+				#    半径 10.5 的一圈，画在 5 上会被整条盖掉（实测完全看不见）。
+				draw_rect(r.grow(11.0),
+						Color(0.42, 0.86, 0.96, 0.46 + 0.40 * pcs), false, 3.0)
+				draw_string(_font_bold, Vector2(r.position.x, r.end.y - 9.0),
+						"可再进店", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 11,
+						Color(0.60, 0.92, 1.0))
 		elif _is_adjacent(cell):
 			# 「下一步」：绿脉动框（原样，最醒目）
 			var pulse := 0.5 + 0.5 * sin(_t * 4.0)

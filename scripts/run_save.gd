@@ -90,6 +90,9 @@ static func snapshot() -> Dictionary:
 		"rng_seed": rng.seed if rng != null else 0,
 		"rng_state": rng.state if rng != null else 0,
 		"pending_rewards": RunState.pending_rewards,
+		# R390：商店会话（离开后下次移动前能重进，货架必须原样）
+		"shop_states": RunState.shop_states,
+		"shop_revisit_id": RunState.shop_revisit_id,
 		"relic_choice": RunState.relic_choice,
 		"pending_relic": RunState.pending_relic,
 		"pending_relic_drop": RunState.pending_relic_drop,
@@ -267,6 +270,10 @@ static func apply(d: Dictionary) -> bool:
 	rng.state = int(d.get("rng_state", 0))
 	RunState.run_rng = rng
 	RunState.pending_rewards = d.get("pending_rewards", []) if d.get("pending_rewards", []) is Array else []
+	# R390：商店会话。JSON 读回来的键是字符串，数值是 float —— 一律按原口径收拢。
+	var ss: Variant = d.get("shop_states", {})
+	RunState.shop_states = ss if ss is Dictionary else {}
+	RunState.shop_revisit_id = int(d.get("shop_revisit_id", -1))
 	RunState.relic_choice = _int_array(d.get("relic_choice", []))
 	RunState.pending_relic = int(d.get("pending_relic", -1))
 	RunState.pending_relic_drop = int(d.get("pending_relic_drop", -1))

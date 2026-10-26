@@ -189,6 +189,16 @@ func _initialize() -> void:
 				RunState.gold = 500
 				RunState.pending_node = {"type": "shop"},
 			_check_shop_enchant],
+		# R390（用户口径）：「商店在下一次移动之前能重新进，店内保持原样」。
+		# 这个只能走真场景验 —— 离开再回来走的是**另一条初始化分支**（恢复而非重摇），
+		# 纯逻辑测不到「打开时到底恢复没恢复」。
+		["res://scenes/shop.tscn", func():
+				_reset()
+				RunState.run_active = true
+				RunState.start_run(_map())
+				RunState.gold = 500
+				RunState.pending_node = {"type": "shop"},
+			_check_r390_shop_revisit],
 		# R206：卡牌三选一「详情条」的排版唯一性 —— 提及块必须画在右栏、预算高度与
 		# 实画行距同源、强调色按真实底色挑。用户口径：「卡片详细效果描述」的排版乱。
 		["res://scenes/event.tscn", func():
@@ -634,6 +644,62 @@ func _seed_rewards() -> void:
 	RunState.queue_relic_reward(6013)   # 叠加态的鸭：desc 最长的一件（专治「介绍太长」）
 	RunState.queue_card_reward("normal")
 	RunState.queue_relic_reward(6005)
+
+
+func _check_r390_shop_revisit(scene: Variant) -> void:
+	## R390（用户口径）：「商店在下一次移动之前能重新进，店内保持原样」。
+	## 走真实路径：买一张 → 离开 → 再进（`_ready` 的**恢复**分支）→ 那张必须还是售罄。
+	## 反过来（重摇）也是「能再进」，但那不是原样 —— 所以这里钉的是 id 与售罄位。
+	scene._setup_shop()          # 先落到「第一次进店」的确定状态
+	var node: int = RunState.current_node_id
+	if scene._row1.is_empty():
+		_smoke_fail("R390：商店第一行没有货，用例前提不成立")
+		return
+	var first_id := int(scene._row1[0]["card"].id)
+	var gold0 := RunState.gold
+	scene._buy_card(0)
+	if RunState.gold >= gold0:
+		_smoke_fail("R390：买下第一张却没扣钱（%d → %d）" % [gold0, RunState.gold])
+		return
+	if RunState.shop_state_of(node).is_empty():
+		_smoke_fail("R390：买完之后货架没有回写到局状态（重进必然变成另一家店）")
+		return
+	var routed: Array = []
+	scene.set("route_fn", func(t): routed.append(t))
+	scene._leave()
+	if routed != ["res://scenes/map.tscn"]:
+		_smoke_fail("R390 离开商店：应当回地图，实际 %s" % str(routed))
+		return
+	if not RunState.shop_revisit_ok(node):
+		_smoke_fail("R390：离开之后「重进窗口」没打开（地图上点不动那格）")
+		return
+	# 重进 = 同一个场景再走一遍 `_ready` 的初始化：先恢复，恢复不了才重摇
+	scene._setup_shop()
+	if scene._row1.is_empty():
+		_smoke_fail("R390 重进：货架空了")
+		return
+	if int(scene._row1[0]["card"].id) != first_id or not bool(scene._row1[0]["sold"]):
+		_smoke_fail("R390 重进：货架没原样（id=%d sold=%s，原本是 %d 已售罄）"
+				% [int(scene._row1[0]["card"].id), str(scene._row1[0]["sold"]), first_id])
+		return
+	# 挪一格 → 重进窗口必须关（用户口径是「下一次移动之前」）
+	var cell: Dictionary = {}
+	for c: Dictionary in RunState.map_cells:
+		if int(c["id"]) == node:
+			cell = c
+			break
+	var moved := false
+	for nb: Variant in RogueMap.neighbor_ids(cell):
+		if bool(RunState.advance(int(nb)).get("ok", false)):
+			moved = true
+			break
+	if not moved:
+		_smoke_fail("R390：起点的邻居一个都进不去，用例前提不成立")
+		return
+	if RunState.shop_revisit_ok(node):
+		_smoke_fail("R390：走出去之后还能重进（用户口径只给到「下一次移动之前」）")
+		return
+	print("SMOKE OK R390 商店重进：买过的那张仍是售罄 / 走出去就关门")
 
 
 func _check_r389_auto_leave(scene: Variant) -> void:

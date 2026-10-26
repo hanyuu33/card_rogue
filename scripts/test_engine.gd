@@ -28441,6 +28441,109 @@ func _init() -> void:
 			and r389_rp.find("_closing_to_route = true") >= 0,
 			"R389 源码：转场关闭不触发 on_closed（否则换场景半路再跳一次）")
 
+	# ================= R390：商店重进（货架原样）+ 平台分叉购买 =================
+	# 用户口径：「商店在下一次移动之前能重新进，店内保持原样」；
+	#           「安卓加购买按钮（直接买）、电脑端悬停查看 + 左键单击一次就购买」。
+	#           「买到的卡要有进卡组动画」。
+	# ---- ① 开局没有旧会话 ----
+	RunState.start_run([], GameLayers.LAYER_DEFAULT)
+	check(RunState.shop_states.is_empty() and RunState.shop_revisit_id == -1,
+			"R390 开局：没有旧货架，也没有可重进的店")
+	# ---- ② 货架状态往返（只存 id + 售罄位）----
+	var r390_cur := RunState.current_node_id
+	RunState.store_shop_state(r390_cur,
+			{"row1": [[8001, 1], [8004, 0]], "row2": [["save", 1], ["draw", 0]],
+			"row3": [["delete", 0], ["maxhp", 1], ["choco", 0]]})
+	var r390_back := RunState.shop_state_of(r390_cur)
+	check(r390_back.size() == 3
+			and (r390_back["row1"] as Array).size() == 2
+			and int((r390_back["row1"] as Array)[0][1]) == 1,
+			"R390 货架存取：三行都进得去、售罄位原样（row1 首张已售罄）")
+	check(RunState.shop_state_of(9999).is_empty(),
+			"R390 货架存取：没去过的格子取出来是空字典，不报错")
+	# ---- ③ 重进窗口：登记 → 可进；走出去 → 关 ----
+	RunState.shop_mark_revisit(r390_cur)
+	check(RunState.shop_revisit_ok(r390_cur), "R390 重进窗口：刚离开的店 → 可以再进")
+	check(not RunState.shop_revisit_ok(r390_cur + 1),
+			"R390 重进窗口：别的格子不沾光（只认那一间）")
+	# 同格重复进入不算移动 → 窗口不关（advance 对同格直接拒绝，什么都不做）
+	RunState.advance(r390_cur)
+	check(RunState.shop_revisit_ok(r390_cur),
+			"R390 重进窗口：同格重复进店不算移动，窗口还在")
+	# 真的挪到隔壁 → 窗口必须关掉（用户口径「下一次移动之前」）
+	var r390_cell: Dictionary = {}
+	for c390: Dictionary in RunState.map_cells:
+		if int(c390["id"]) == r390_cur:
+			r390_cell = c390
+			break
+	var r390_nbs: Array = RogueMap.neighbor_ids(r390_cell)
+	var r390_moved := false
+	for nb390: Variant in r390_nbs:
+		if bool(RunState.advance(int(nb390)).get("ok", false)):
+			r390_moved = true
+			break
+	check(r390_moved, "R390 前置：能从起点走进一个邻居（实际邻居 %d 个）" % r390_nbs.size())
+	check(not RunState.shop_revisit_ok(r390_cur),
+			"R390 移动之后：重进窗口关闭（走回那格也不能再进）")
+	check(not RunState.shop_state_of(r390_cur).is_empty(),
+			"R390 移动之后：货架数据还留着（只是入口关了，不炸数据）")
+	# ---- ④ 续档：货架与窗口跟着存档一起走 ----
+	RunState.store_shop_state(RunState.current_node_id,
+			{"row1": [[8001, 0]], "row2": [], "row3": []})
+	RunState.shop_mark_revisit(RunState.current_node_id)
+	var r390_snap := RunSave.snapshot()
+	var r390_node := RunState.current_node_id
+	RunState.reset_shop_session()
+	check(RunState.shop_state_of(r390_node).is_empty()
+			and not RunState.shop_revisit_ok(r390_node),
+			"R390 清空会话：货架与窗口一起没了")
+	RunSave.apply(r390_snap)
+	check(not RunState.shop_state_of(r390_node).is_empty(),
+			"R390 续档：货架状态跟着存档回来")
+	check(RunState.shop_revisit_ok(r390_node),
+			"R390 续档：重进窗口也回来（关掉游戏再续，还能回那间店）")
+	# ---- ⑤ 源码锁：重进的三个落点 ----
+	var r390_rs := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	check_src(r390_rs.find("if node_id != current_node_id:\n\t\tshop_revisit_id = -1") >= 0,
+			"R390 源码：`advance()` 真的移动了才清窗口（同格不误关）")
+	check_src(r390_rs.find("static func shop_revisit_ok(") >= 0
+			and r390_rs.find("static func store_shop_state(") >= 0,
+			"R390 源码：判定与存储都有唯一口")
+	var r390_ss := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	check_src(r390_ss.find("RunState.shop_mark_revisit(_shop_node)") >= 0,
+			"R390 源码：离开商店时登记重进窗口")
+	check_src(r390_ss.find("var saved := RunState.shop_state_of(_shop_node)") >= 0
+			and r390_ss.find("if not saved.is_empty() and _restore_shop(saved):") >= 0,
+			"R390 源码：进店先试恢复，恢复了就**不重摇**（不花 run_rng）")
+	check_src(r390_ss.find("RunState.store_shop_state(_shop_node,") >= 0
+			and r390_ss.find("_start_fly(card, _row1_rect(i))") >= 0,
+			"R390 源码：每次买卖都回写货架，买卡后立刻起飞")
+	var r390_ms := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	check_src(r390_ms.find("RunState.shop_revisit_ok(id)") >= 0
+			and r390_ms.find("RunState.pending_node = cell\n\t\tSceneFx.goto(\"res://scenes/shop.tscn\")") >= 0,
+			"R390 源码：地图把「可重进的店」接到商店场景（判在 advance 之前）")
+	check_src(r390_ms.find("if RunState.shop_revisit_ok(int(cell[\"id\"])):") >= 0,
+			"R390 源码：可重进的格子算「可点」（can_reach 对脚下这格一律 false）")
+	# ---- ⑥ 平台分叉：桌面单击买 / 安卓按钮买 ----
+	check_src(r390_ss.find("func _is_touch() -> bool:") >= 0
+			and r390_ss.find("return _force_touch or OS.get_name() == \"Android\"") >= 0,
+			"R390 源码：触摸端按平台判定（不看输入事件类型）")
+	check_src(r390_ss.find("\t\t\t_sel_row1 = -1\n\t\t\t_buy_card(i)") >= 0,
+			"R390 源码：电脑端点一下卡面直接成交（不再两段式）")
+	check_src(r390_ss.find("var bi := _buy_btn_at(pos)\n\tif bi >= 0:\n\t\t_buy_card(bi)") >= 0,
+			"R390 源码：安卓的「购买」按钮判在卡位命中之前")
+	check_src(r390_ss.find("func _draw_buy_buttons() -> void:") >= 0
+			and r390_ss.find("if not _is_touch():\n\t\treturn") >= 0,
+			"R390 源码：安卓才有购买按钮条（桌面不画）")
+	# ---- ⑦ 飞入卡组的动画 ----
+	check_src(r390_ss.find("const FLY_DUR := 0.55") >= 0
+			and r390_ss.find("func _draw_fly() -> void:") >= 0
+			and r390_ss.find("from.get_center().lerp(_deck_btn_center(), e)") >= 0,
+			"R390 源码：卡从货架卡位飞向牌库按钮（起点是那个卡位，不是写死坐标）")
+	check_src(r390_ss.find("_deck_flash_t = 0.32") >= 0
+			and r390_ss.find("draw_arc(_deck_btn_center(), 22.0 + 26.0 * p") >= 0,
+			"R390 源码：飞到牌库按钮上时点亮一圈金环")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
