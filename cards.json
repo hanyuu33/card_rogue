@@ -4712,8 +4712,8 @@
       "kind": "盟友",
       "cost": 5,
       "power": 8,
-      "health": 50,
-      "attack_range": 1,
+      "health": 80,
+      "attack_range": 2,
       "move_speed": 1,
       "rarity": 4,
       "group": "enemy",
@@ -4763,10 +4763,11 @@
       "class": "敌人",
       "traits": [
         "机械",
-        "量产锻造"
+        "量产锻造",
+        "践踏"
       ],
       "affixes": [],
-      "effect_text": "量产锻造：亲自击杀敌方单位时，在己方半场的随机空格锻造一只「量产型俄倪厄」（5/45）。",
+      "effect_text": "量产锻造：亲自击杀敌方单位时，在己方半场的随机空格锻造一只「量产型俄倪厄」（5/45）。践踏：击杀时溢出的伤害沿同一列继续打下一个我方单位。",
       "target_mode": "none",
       "color": "金",
       "image": ""
@@ -5708,6 +5709,27 @@
       "target_mode": "none",
       "value": 10,
       "color": "金",
+      "image": ""
+    },
+    {
+      "id": 9188,
+      "name": "量产型赫尔墨斯",
+      "kind": "盟友",
+      "cost": 4,
+      "power": 5,
+      "health": 55,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [],
+      "effect_text": "装甲运输车：量产型号，没有「行动力成长」，不会越拖越强。",
+      "target_mode": "none",
+      "color": "灰",
       "image": ""
     }
   ]
