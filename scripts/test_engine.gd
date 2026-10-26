@@ -15674,7 +15674,7 @@ func _init() -> void:
 	var r344_bsrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 	var r344_i := r344_bsrc.find("func _draw_relic_panel()")
 	var r344_seg := r344_bsrc.substr(r344_i, 3200)
-	check(r344_i > 0 and r344_seg.contains("ncol, -1)")
+	check_src(r344_i > 0 and r344_seg.contains("ncol, -1)")
 			and r344_seg.contains('Color("4a3c14"), -1)')
 			and r344_seg.contains("UiTheme.INK_600, -1)")
 			and not r344_seg.contains("UiTheme.INK_600)"),
@@ -15706,7 +15706,7 @@ func _init() -> void:
 	# ---- ③ 战斗播报 / 界面硬编码字符串（status_text / _say / _log 不走显示层）----
 	var r345_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd") \
 			+ FileAccess.get_file_as_string("res://scripts/game_engine.gd")
-	check(r345_src != "" and r345_src.replace("能量屏障", "").find("能量") < 0,
+	check_src(r345_src != "" and r345_src.replace("能量屏障", "").find("能量") < 0,
 		"R345 文案：战斗界面与引擎播报里也不再有「能量」（源码 %d 字节，残留 %d 处）"
 			% [r345_src.length(), max(0, r345_src.replace("能量屏障", "").count("能量"))])
 
@@ -16018,10 +16018,10 @@ func _init() -> void:
 
 	# ⑥ 源码锁：「打不到就靠近」那一档不许回潮
 	var r379_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
-	check(not r379_src.contains("_nearest_foe_dist")
+	check_src(not r379_src.contains("_nearest_foe_dist")
 			and r379_src.contains("return [can_hit, t_hp, - t_pow, manhattan(src, dst), dst.x, dst.y]"),
 		"R379 源码：_assassin_cell_key 的「打不到就逼近」档已删（排序键 7 项 → 5 项）")
-	check(r379_src.contains("AI：暗杀者按兵不动")
+	check_src(r379_src.contains("AI：暗杀者按兵不动")
 			and not r379_src.contains("AI：暗杀者游走"),
 		"R379 文案：打不到时播报「按兵不动」，不再说「游走」（它确实没游走）")
 
@@ -25670,13 +25670,13 @@ func _init() -> void:
 	check(RunState.run_finished, "R359b 真结束（end_run()）才标「已收尾」")
 	# 源码守卫：这两条路径不许回潮
 	var r359b_save_src := FileAccess.get_file_as_string("res://scripts/run_save.gd")
-	check(r359b_save_src.find("SAVE_PATH + \".tmp\"") >= 0
+	check_src(r359b_save_src.find("SAVE_PATH + \".tmp\"") >= 0
 			and r359b_save_src.find("dir.rename(tmp_path, SAVE_PATH)") >= 0,
 			"R359b 源码：存档走「先写 .tmp 再 rename」的原子替换")
 	var r359b_title_src := FileAccess.get_file_as_string("res://scripts/title_scene.gd")
 	# R377：读档失败**不再 clear_save()**（改成隔离成 .bad，把现场留给事后查证），
 	# 但「不能静默留在标题」这条不变 —— 必须有可见提示。
-	check(r359b_title_src.find("存档读取失败") >= 0
+	check_src(r359b_title_src.find("存档读取失败") >= 0
 			and r359b_title_src.find("RunSave.load_run()") >= 0,
 			"R359b 源码：读档失败会给出可见提示（不是静默 return）")
 
@@ -25735,15 +25735,15 @@ func _init() -> void:
 
 	# ④ 源码守卫：三档写 / 自愈 / 隔离 / 回标题先存
 	var r377_src := FileAccess.get_file_as_string("res://scripts/run_save.gd")
-	check(r377_src.find("SAVE_PATH + \".prev\"") >= 0
+	check_src(r377_src.find("SAVE_PATH + \".prev\"") >= 0
 			and r377_src.find("dir.rename(SAVE_PATH, prev_path)") >= 0,
 			"R377 源码：旧档先挪 .prev 再换新档（任何一步失败旧档都还在）")
-	check(r377_src.find("_recover_tmp()") >= 0 and r377_src.find("_quarantine(") >= 0,
+	check_src(r377_src.find("_recover_tmp()") >= 0 and r377_src.find("_quarantine(") >= 0,
 			"R377 源码：有「.tmp 自愈」与「坏档隔离」两条兜底")
-	check(r377_src.find("clear_save(src := \"\")") >= 0,
+	check_src(r377_src.find("clear_save(src := \"\")") >= 0,
 			"R377 源码：clear_save 带来源参数（删档要留痕）")
 	var r377_map_src := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
-	check(r377_map_src.find("RunSave.save_run()") >= 0
+	check_src(r377_map_src.find("RunSave.save_run()") >= 0
 			and r377_map_src.find("RunSave.load_run()") >= 0,
 			"R377 源码：地图「回标题」先存盘 / 「兜底开局」先试读档")
 
@@ -27571,9 +27571,9 @@ func _init() -> void:
 		for r376_kind: String in ["crow", "whale", "endless", "rebirth", "recall", "foresight"]:
 			if r376_body.find("_ensure_pick_visible(\"%s\")" % r376_kind) < 0:
 				r376_guard = false
-	check(r376_guard,
+	check_src(r376_guard,
 			"R376 源码：_on_end_turn 的 6 条 pending 守卫都调 _ensure_pick_visible（收起后点结束回合会弹回来）")
-	check(r376_src.find("engine.endless_abort()") >= 0,
+	check_src(r376_src.find("engine.endless_abort()") >= 0,
 			"R376 源码：_sync_pick 在候选为空时调 endless_abort（不留空网格）")
 
 	# ================= R380：难度 10「精英出现增多」 =================

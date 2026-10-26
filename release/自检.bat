@@ -37,11 +37,10 @@ echo.
 
 echo ============================================================
 echo  [done] what to expect inside this pack:
-echo         reward / bgm : all passed
-echo         smoke        : every scene opens, no script errors
-echo         engine       : a few guards that read .gd source text will fail --
-echo                        a pack ships compiled scripts only, so they cannot pass
-echo                        here by design. Any OTHER failure is a real problem.
+echo         all four suites should end with "all passed" / "0 failed".
+echo         checks that read .gd source text are skipped automatically here --
+echo         a pack ships compiled scripts only, so they cannot run by design.
+echo         Anything red is a real problem.
 echo ============================================================
 pause
 popd
