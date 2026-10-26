@@ -121,6 +121,9 @@ const WEIGHTS := {"battle": 7, "event": 2, "elite": 2}
 ##     正好降 **30.4%** ≈ 用户要的「大约 30%」。
 ## 其余四项权重一个字没动 → 其它房间类型之间的相对比例不变。
 const WEIGHTS_UNKNOWN := {"battle": 7, "event": 12, "elite": 2, "chest": 3, "shop": 2}
+## R380（难度 10「精英出现增多」）：10 档起「?」房**不再刷商店**（shop 键被裁掉 →
+## 每层商店固定 2 间 + 右上角 1 间），精英出现概率统一 ×1.3。裁剪后的表见 `_unknown_table()`
+## —— **别再直接读 `WEIGHTS_UNKNOWN`**（那会绕过难度 10 的口径）。
 
 ## R304（用户口径）：**精英越远离起点越容易遇到** —— 距离系数线性 0.8（起点旁）→ 1.5（最远）。
 ## 距离用曼哈顿步数（与战斗里的距离口径一致）。
@@ -309,6 +312,19 @@ static func is_fixed_open(cell: Dictionary) -> bool:
 	return str(cell.get("type", "")) == "rest"
 
 
+static func _unknown_table() -> Dictionary:
+	## 当前难度下「?」房该用的权重表。
+	## R380：难度 10 起去掉 `shop` —— 商店只剩「右上角固定 1 间 + `shop_set` 恒定 2 间」，
+	## 不再由「?」房额外贡献（用户口径「每层商店数量调整为固定 2 个，不算右上角」）。
+	## ⚠️ 生成期（`_make_cells`）与水晶骰子的重摇（`_unknown_weights`）都必须走这里，
+	##    否则两条路会给出不同的商店 / 精英分布。
+	if not RunState.unknown_shop_allowed():
+		var w: Dictionary = WEIGHTS_UNKNOWN.duplicate()
+		w.erase("shop")
+		return w
+	return WEIGHTS_UNKNOWN
+
+
 static func _unknown_weights(cell: Dictionary, layer: int, start_nbs: Dictionary) -> Dictionary:
 	## R312：这一格「按「?」房的权重」该用哪张表 —— 与 `_make_cells` 里的分支**同一口径**。
 	##   * 起点后第一格（第一层）：只可能是战斗 / 事件（R192 的约束，重摇也要守）；
@@ -318,10 +334,10 @@ static func _unknown_weights(cell: Dictionary, layer: int, start_nbs: Dictionary
 	if start_nbs.has(i):
 		if layer == GameLayers.LAYER_DEFAULT:
 			return {"battle": 7, "event": 2}
-		var nb_w: Dictionary = WEIGHTS_UNKNOWN.duplicate()
+		var nb_w: Dictionary = _unknown_table().duplicate()
 		nb_w.erase("elite")
 		return nb_w
-	return WEIGHTS_UNKNOWN
+	return _unknown_table()
 
 
 static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: int,
@@ -686,12 +702,12 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 					type = _weighted({"battle": 7, "event": 2}, rng)
 				else:
 					hidden = rng.randf() < P_UNKNOWN
-					var nb_w: Dictionary = (WEIGHTS_UNKNOWN if hidden else WEIGHTS).duplicate()
+					var nb_w: Dictionary = (_unknown_table() if hidden else WEIGHTS).duplicate()
 					nb_w.erase("elite")
 					type = _weighted(nb_w, rng)
 			else:
 				hidden = rng.randf() < P_UNKNOWN
-				type = _weighted_far(WEIGHTS_UNKNOWN if hidden else WEIGHTS, rng,
+				type = _weighted_far(_unknown_table() if hidden else WEIGHTS, rng,
 						col_of(i), row_of(i), far_norm)
 		var cell := {
 			"id": i,
@@ -726,15 +742,32 @@ static func _weighted_far(w: Dictionary, rng: RandomNumberGenerator, col: int, r
 	## R304：与 `_weighted()` **同一套抽法**（只消耗一次 `randi_range`，随机链条不额外错位），
 	## 只是把 **elite** 那一项的权重乘上 `elite_far_factor() / norm`。
 	## 所有权重整体 ×100 只是为了容纳小数系数，彼此比例不变。
+	## R380（难度 10「精英出现增多」）：精英权重乘 `RunState.elite_weight_mul()`，并且把
+	## **多出来的那部分按比例从其他类型里扣掉**（总权重不变）—— 于是涨的是**出现概率**
+	## （恰好 ×1.3），而不是「权重 ×1.3、占比只涨两成」。明房 / 「?」房共用这一个口。
+	## ⚠️ 低难度 `mul = 1.0` → `drop = 0` → `f = 1`，这条分支是**恒等**的：
+	##    同一个种子出图与改动前逐格一致（R380 回归里钉住这一点）。
 	var ww := {}
 	var total := 0
 	var base_w := int(w.get("elite", 0))
-	if base_w > 0:
-		ww["elite"] = maxi(1, roundi(100.0 * elite_weight_scaled(base_w, col, row, norm)))
+	var mul := RunState.elite_weight_mul()
+	var others := 0
 	for k in w:
 		if str(k) == "elite":
 			continue
-		ww[k] = int(w[k]) * 100
+		others += int(w[k]) * 100
+	var f := 1.0
+	if base_w > 0:
+		var e := 100.0 * elite_weight_scaled(base_w, col, row, norm)
+		var e_new := e * mul
+		var drop := e_new - e
+		if others > 0 and drop > 0.0:
+			f = maxf(0.0, (float(others) - drop) / float(others))
+		ww["elite"] = maxi(1, roundi(e_new))
+	for k in w:
+		if str(k) == "elite":
+			continue
+		ww[k] = maxi(1, roundi(float(int(w[k]) * 100) * f))
 		total += int(ww[k])
 	total += int(ww.get("elite", 0))
 	if total <= 0:

@@ -164,7 +164,8 @@ const DEMON_DUCK_BOSS_NAME := "恶魔鸭"       # 第一层触发条件：摇中
 #   7 = 金钱减少（初始金钱 150 → 100，后续每层也都是 100）
 #   8 = 行动力降低（每层初始巧克力 12 → 11）
 #   9 = 虚弱（最大生命 ×80%，截断取整）
-#   10 = 继承 0~9 全部 debuff，**无新增**（给「全都要」的玩家一个终点）
+#   10 = 精英出现增多（R380）：继承 0~9 全部 debuff，另外「?」房不再刷商店（每层商店
+#        固定 2 间 + 右上角 1 间）、明房与「?」房两条途径的精英出现概率统一 ×1.3（约 +30%）。
 # 档位只在角色选择界面改，不属于 run 状态（end_run / start_run 都不动它）。
 static var difficulty: int = 0
 const DIFFICULTY_COUNT := 11
@@ -185,7 +186,7 @@ const DIFFICULTY_TEXTS: Array[String] = [
 	"金钱减少",
 	"行动力降低",
 	"虚弱",
-	"",
+	"精英出现增多",
 ]
 ## R224：全局规则「除到达新的一层外不能回复 HP」→ 战斗胜利回血全档位归零。
 ## 表保留 11 长度（回归钉死口径；将来若再加「某档回血」类 debuff 改这张表即可）。
@@ -205,6 +206,14 @@ const DIFF_ENEMY_HP_PCT := 0.10    # 3 档起「敌人更加顽强」：敌人�
 const DIFF_ENEMY_POWER := 1        # 6 档起「敌人更加凶猛」：敌人攻击 +1
 const DIFF_CHOCO_HIGH := 11        # 8 档起「行动力降低」：每层初始巧克力 11（原 12）
 const DIFF_MAX_HP_MUL := 0.8       # 9 档起「虚弱」：最大生命 ×80%（截断取整）
+## R380（用户口径）：「当前难度 10 还没有新增效果，做成精英出现增多 —— 每层商店数量
+## 调整为固定 2 个（不算右上角），各种途径出现精英的概率上调约 30%」。
+##   * 「?」房不再刷出商店 → 每层商店恒为「右上角固定 1 间 + 随机 2 间」；
+##   * 明房与「?」房两条途径的精英出现概率统一 ×1.3（约 +30%）。
+## ⚠️ 唯一消费点 = `RogueMap._weighted_far()`（出现概率）/ `RogueMap._unknown_table()`
+##    （「?」房权重表）—— 别在地图生成之外再乘一次，否则会被重复加权。
+const DIFF_ELITE_FROM := 10        # 10 档起「精英出现增多」
+const DIFF_ELITE_MUL := 1.3        # 精英出现概率乘数（≈ +30%，扣除法见 _weighted_far）
 ## 诅咒卡「疲惫」（9149）：1 费诅咒，打出无效果；**在手里时**所有技能卡费用 +1。
 const FATIGUE_CARD_ID := 9149
 ## R358：疲惫卡的**发放记账** —— 最近一次发放在哪一层（-1 = 本局还没发过）。
@@ -445,6 +454,8 @@ static func difficulty_summary() -> String:
 		bits.append("敌攻 +%d" % enemy_power_bonus())
 	if d >= 9:
 		bits.append("最大生命 %d%%" % int(round(max_hp_mul() * 100.0)))
+	if d >= DIFF_ELITE_FROM:
+		bits.append("精英 ×%.1f" % elite_weight_mul())
 	return " · ".join(bits)
 
 
@@ -579,6 +590,23 @@ static func rare_weight_mul() -> float:
 static func fatigue_active() -> bool:
 	## 5 档起「行动力低时疲惫」是否生效。
 	return _diff() >= DIFF_FATIGUE_FROM
+
+
+static func elite_weight_mul() -> float:
+	## 10 档起「精英出现增多」：地图生成时**精英出现概率**的统一乘数。
+	## 注意这是「概率」不是「权重」：`RogueMap._weighted_far()` 会把多出来的权重从
+	## 其他类型里扣掉，所以精英占比恰好涨 ×1.3，而不是权重 ×1.3 后只涨两成。
+	## 明房（`RogueMap.WEIGHTS`）与「?」房（`RogueMap.WEIGHTS_UNKNOWN`）两条途径都乘它，
+	## 而唯一消费点是 `RogueMap._weighted_far()` —— 所以「各种途径」天然只有一个口。
+	return DIFF_ELITE_MUL if _diff() >= DIFF_ELITE_FROM else 1.0
+
+
+static func unknown_shop_allowed() -> bool:
+	## 10 档起「精英出现增多」的配套：**「?」房不再刷出商店**。
+	## 于是每层商店 = 右上角那间固定商店 + `RogueMap.SHOP_MIN/MAX` 那 2 间，数量恒定
+	## （用户口径「每层商店数量调整为固定 2 个，不算右上角」）。
+	## 低档位维持原样（「?」房仍可能刷出商店）。
+	return _diff() < DIFF_ELITE_FROM
 
 
 static func scaled_enemy_card(card: CardData) -> CardData:

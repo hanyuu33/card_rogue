@@ -8535,7 +8535,7 @@ func _init() -> void:
 	# 0 = 金钱 150；1 = 休息回复降低（R224 起无数值效果，文本保留）；
 	# 2 = 战斗胜利不回血（R224 起全档位同此，文本保留）；3 = 敌血 +10%；4 = 稀有率 ×0.5；
 	# 5 = 疲惫诅咒；6 = 敌攻 +1；7 = 金钱 100；8 = 巧克力 11；9 = 最大生命 80%；
-	# 10 = 继承 0~9 全部、无新增。
+	# 10 = 精英出现增多（R380：「?」房不再刷商店 + 明房 / 「?」房精英出现概率 ×1.3）。
 	# R224 全局规则「除到达新的一层外不能回复 HP」：战斗胜利回血 / 休息回血两表归零，
 	# 下面难度 0/1/2 的回血断言全部改成「恒 0」。
 	RunState.set_difficulty(0)
@@ -8575,10 +8575,11 @@ func _init() -> void:
 	RunState.set_difficulty(9)
 	check(RunState.max_hp_mul() == 0.8, "难度 9：最大生命 ×80%")
 	RunState.set_difficulty(10)
-	check(RunState.difficulty_note() == "无新增",
-			"难度 10：自身无新增 debuff → 文本「无新增」（%s）" % RunState.difficulty_note())
+	check(RunState.difficulty_note() == "精英出现增多",
+			"难度 10：新增「精英出现增多」（R380，%s）" % RunState.difficulty_note())
 	check(RunState.difficulty_summary().contains("初始金钱 100")
 			and RunState.difficulty_summary().contains("最大生命 80%")
+			and RunState.difficulty_summary().contains("精英 ×1.3")
 			and not RunState.difficulty_summary().contains("篝火"),
 			"难度 10：数值摘要列出全部生效项、不再列「篝火」（%s）" % RunState.difficulty_summary())
 	RunState.set_difficulty(3)
@@ -27560,6 +27561,62 @@ func _init() -> void:
 			"R376 源码：_on_end_turn 的 6 条 pending 守卫都调 _ensure_pick_visible（收起后点结束回合会弹回来）")
 	check(r376_src.find("engine.endless_abort()") >= 0,
 			"R376 源码：_sync_pick 在候选为空时调 endless_abort（不留空网格）")
+
+	# ================= R380：难度 10「精英出现增多」 =================
+	# 用户口径：「当前难度 10 还没有新增效果，做成精英出现增多 —— 每层商店数量调整为
+	# 固定 2 个（不算右上角），各种途径出现精英的概率上调约 30%」。
+	# ① 常量 + 两个取值函数（界面 / 地图生成 / 测试唯一口）
+	check(RunState.DIFF_ELITE_FROM == 10 and is_equal_approx(RunState.DIFF_ELITE_MUL, 1.3),
+			"R380 常量：10 档起精英出现概率 ×1.3（约 +30%）")
+	RunState.set_difficulty(9)
+	check(RunState.elite_weight_mul() == 1.0 and RunState.unknown_shop_allowed(),
+			"R380 难度 9：精英概率不动、「?」房照样能刷商店（只 10 档变）")
+	RunState.set_difficulty(10)
+	check(is_equal_approx(RunState.elite_weight_mul(), 1.3) and not RunState.unknown_shop_allowed(),
+			"R380 难度 10：精英 ×1.3 且「?」房不再刷商店")
+	check(not RogueMap._unknown_table().has("shop") and RogueMap.WEIGHTS_UNKNOWN.has("shop"),
+			"R380 「?」房权重表：10 档裁掉 shop（常量表本身不动）")
+
+	# ② 实测对拍：同一批种子分别按 0 档 / 10 档生成
+	var r380_elite := [0, 0]        # [0 档, 10 档] 精英格总数
+	var r380_qshop := [0, 0]        # 「?」房刷出来的商店格数
+	var r380_bad3 := 0              # 10 档里商店 != 3 间的图数
+	var r380_maps := [0, 0]
+	for r380_layer: int in [GameLayers.LAYER_DEFAULT, GameLayers.LAYER_TWO]:
+		for r380_k in 120:
+			for r380_d in 2:
+				RunState.set_difficulty(0 if r380_d == 0 else 10)
+				var r380_rng := RandomNumberGenerator.new()
+				r380_rng.seed = 380000 + r380_k * 17 + r380_layer
+				var r380_map: Array = RogueMap.generate(r380_rng, r380_layer)
+				var r380_ns := 0
+				for r380_c: Dictionary in r380_map:
+					if RogueMap.is_void(r380_c):
+						continue
+					var r380_t := str(r380_c.get("type", ""))
+					if r380_t == "elite":
+						r380_elite[r380_d] += 1
+					elif r380_t == "shop":
+						r380_ns += 1
+						if bool(r380_c.get("hidden", false)):
+							r380_qshop[r380_d] += 1
+				r380_maps[r380_d] += 1
+				if r380_d == 1 and r380_ns != 3:
+					r380_bad3 += 1
+	var r380_ratio: float = float(r380_elite[1]) / maxf(1.0, float(r380_elite[0]))
+	check(r380_ratio > 1.15 and r380_ratio < 1.45,
+			"R380 实测 %d 张图：10 档精英格 / 0 档 = %.2f（用户口径约 +30%%）"
+			% [r380_maps[0] + r380_maps[1], r380_ratio])
+	check(r380_qshop[1] == 0 and r380_qshop[0] > 0,
+			"R380 实测：10 档「?」房一间商店都不刷（0 档 %d 间）" % r380_qshop[0])
+	check(r380_bad3 == 0,
+			"R380 实测：10 档每层商店恒 3 间（右上角 1 + 固定 2，%d 张图全中）" % r380_maps[1])
+	# ③ 源码锁：难度口径必须从 RunState 读，别在 rogue_map 里写死 1.3
+	var r380_src := FileAccess.get_file_as_string("res://scripts/rogue_map.gd")
+	check_src(r380_src.find("RunState.elite_weight_mul()") >= 0
+			and r380_src.find("RunState.unknown_shop_allowed()") >= 0,
+			"R380 源码：rogue_map 的精英概率 / 「?」房表都读 RunState 的唯一口")
+	RunState.set_difficulty(0)
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
