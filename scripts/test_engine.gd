@@ -141,8 +141,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 274,
-			"图鉴 = 274 张（R373 +麻痹 9185（0 费诅咒 · 不能打出 · 回合结束仍在手牌即消失）；R370 +库存整理 9184（机械之心史诗技能）；R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
+	check(repo.all_cards().size() == 276,
+			"图鉴 = 276 张（R381 +漩涡 9186 / 鹅 9187（森林精魄剧情卡 · 默认锁定）；R373 +麻痹 9185（0 费诅咒 · 不能打出 · 回合结束仍在手牌即消失）；R370 +库存整理 9184（机械之心史诗技能）；R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -155,8 +155,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 216 and grp_enemy.size() == 58,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 216 / 58；R373 +1 张玩家卡（麻痹 9185 · 诅咒）；R370 +1 张玩家卡（库存整理 9184）；R356 +4 张敌方卡（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫）；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 218 and grp_enemy.size() == 58,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 218 / 58；R381 +2 张玩家卡（漩涡 9186 / 鹅 9187）；R373 +1 张玩家卡（麻痹 9185 · 诅咒）；R370 +1 张玩家卡（库存整理 9184）；R356 +4 张敌方卡（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫）；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -7859,12 +7859,12 @@ func _init() -> void:
 	check(dr_cls_bad.is_empty() and dr_cls_enemy_bad.is_empty(),
 			"角色系统：非敌方卡 class 都在可选角色内（或留空 = 通用卡）、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
-	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 67
+	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 69
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 63
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 65
 			and int(dr_cls_count.get("敌人", 0)) == 58
 			and int(dr_cls_count.get("", 0)) == 21,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 67 / 63 / 65 / 58；R370 机械之心 +1（库存整理 9184）；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 18；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 69 / 63 / 65 / 58；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R370 机械之心 +1（库存整理 9184）；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 18；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -8480,9 +8480,9 @@ func _init() -> void:
 	var r45_cls_count := {}
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
-	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 67
+	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 69
 			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 63,
-			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R328 森林精魄 -2 = 木栅栏/攻击改公用；R329 暗影刺客 -1 = 删紧急埋伏 9106）"
+			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R328 森林精魄 -2 = 木栅栏/攻击改公用；R329 暗影刺客 -1 = 删紧急埋伏 9106）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
 	check(int(r45_cls_count.get("", 0)) == 21,
@@ -11344,9 +11344,9 @@ func _init() -> void:
 				r79_bad.append("%d@row%d(判定%s实际%s)" % [fid3, x6, str(allowed3), str(placed3)])
 			if not allowed3 and e3.state.energy != before3:
 				r79_bad.append("%d@row%d 拒放但没退费(%d→%d)" % [fid3, x6, before3, e3.state.energy])
-	check(r79_bad.is_empty() and r79_ids.size() == 11
-			and r79_enemy_cards == 8 and r79_both_cards == 1 and r79_ally_cards == 2,
-			"R79 玩家放场地：%d 张卡（%d 敌生效 / %d 双生效（清泉 8028）/ %d 友生效（维修间 8036 + 改造工厂 8037）），"
+	check(r79_bad.is_empty() and r79_ids.size() == 12
+			and r79_enemy_cards == 8 and r79_both_cards == 2 and r79_ally_cards == 2,
+			"R79 玩家放场地：%d 张卡（%d 敌生效 / %d 双生效（清泉 8028 + R381 漩涡 9186）/ %d 友生效（维修间 8036 + 改造工厂 8037）），"
 			% [r79_ids.size(), r79_enemy_cards, r79_both_cards, r79_ally_cards]
 			+ "%d 张 × %d 行「判定 == 实际」且拒放退费（%s）" % [
 				r79_ids.size(), FieldState.BOARD_ROWS,
@@ -26508,15 +26508,29 @@ func _init() -> void:
 	check(r355_bad.is_empty(),
 			"R355 数据：剧情 grants 点到的卡 / 道具都带 locked（问题 %s）" % str(r355_bad))
 	# 反方向：标了 locked 却没人发 → 玩家永远拿不到，等于从游戏里删掉了。
+	# ⚠️ R381：漩涡 9186 / 鹅 9187 是用户明确要求「**暂无解锁渠道**」的剧情卡，
+	#    属于「已知待接」而不是漏洞 —— 放一份白名单，别为了过测试给它们瞎编一条来源。
+	#    将来接上渠道时把 id 从这里删掉即可，孤儿检查会自动开始接住它们。
+	var r355_pending: Array[int] = [9186, 9187]
 	var r355_orphan: Array[String] = []
 	for r355_c2: CardData in r355_crepo.all_cards():
-		if r355_c2.locked and not r355_gc.has(r355_c2.id):
+		if (r355_c2.locked and not r355_gc.has(r355_c2.id)
+				and not r355_pending.has(r355_c2.id)):
 			r355_orphan.append("卡 %d" % r355_c2.id)
 	for r355_r2: RelicData in r355_rrepo.all_relics():
 		if r355_r2.locked and not r355_gr.has(r355_r2.id):
 			r355_orphan.append("道具 %d" % r355_r2.id)
 	check(r355_orphan.is_empty(),
-			"R355 数据：没有「锁着却没人解锁」的孤儿（问题 %s）" % str(r355_orphan))
+			"R355 数据：没有「锁着却没人解锁」的孤儿（问题 %s；R381 白名单 %s 属于有意待接）"
+			% [str(r355_orphan), str(r355_pending)])
+	# 白名单本身也要防止腐烂：点到的卡必须还在库里、且确实锁着
+	var r355_pend_bad: Array[String] = []
+	for r355_pid: int in r355_pending:
+		var r355_pc2: CardData = r355_crepo.get_card(r355_pid)
+		if r355_pc2 == null or not r355_pc2.locked:
+			r355_pend_bad.append("%d" % r355_pid)
+	check(r355_pend_bad.is_empty(),
+			"R381：待接渠道白名单里的卡都还在库里、都锁着（异常 %s）" % str(r355_pend_bad))
 
 	# ---- ③ 解锁不发放：claim 全程不碰本局 ----
 	check(not r355_rrepo.reward_ids().has(6052),
@@ -27618,6 +27632,165 @@ func _init() -> void:
 			"R380 源码：rogue_map 的精英概率 / 「?」房表都读 RunState 的唯一口")
 	RunState.set_difficulty(0)
 
+	# ================= R381：漩涡 9186 / 鹅 9187（森林精魄剧情卡 · 暂无解锁渠道）=================
+	# 用户口径：「新增森林精魄故事卡牌（暂无解锁渠道）」
+	#   漩涡：1 费场地 —— 处于此格的单位**行动时**，会随机向一个方向移动一格。
+	#   鹅：2 费盟友 1 攻 / 9 血 —— 攻击敌人会将其向后击退一格，自己前进一格（如果可能）。
+	# 两张都是 `locked: true` 且**不写进任何 episode 的 grants** —— 这就是「暂无解锁渠道」。
+	var r381_repo := CardRepo.load_json()
+	var r381_v: CardData = r381_repo.get_card(9186)
+	var r381_g: CardData = r381_repo.get_card(9187)
+	check(r381_v != null and r381_v.kind == "场地" and r381_v.cost == 1
+			and r381_v.card_class == "森林精魄" and r381_v.is_field()
+			and GameEngine.is_persistent_field(r381_v)
+			and r381_v.traits.has(GameEngine.PERSIST_VORTEX_TRAIT),
+			"R381 漩涡 9186：1 费持续场地（森林精魄），判据 trait「涡旋」")
+	check(r381_g != null and r381_g.kind == "盟友" and r381_g.cost == 2
+			and r381_g.power == 1 and r381_g.health == 9
+			and r381_g.attack_range == 1 and r381_g.move_speed == 1
+			and r381_g.card_class == "森林精魄"
+			and r381_g.traits.has(GameEngine.GOOSE_TRAIT),
+			"R381 鹅 9187：2 费盟友 1 攻 / 9 血 / 射程 1 / 移速 1（森林精魄）")
+	# ① 解锁口径：两张默认锁定、不进奖励池、也不在任何故事的 grants 里
+	check(r381_v.locked and r381_g.locked,
+			"R381：漩涡 / 鹅都是 locked（默认不进奖励池）")
+	var r381_leak := 0
+	for r381_pc: CardData in r381_repo.reward_pool_for("森林精魄"):
+		if r381_pc.id == 9186 or r381_pc.id == 9187:
+			r381_leak += 1
+	check(r381_leak == 0,
+			"R381：锁定的两张都没漏进森林精魄奖励池（漏进 %d 张）" % r381_leak)
+	var r381_st_txt := FileAccess.get_file_as_string("res://stories.json")
+	check(r381_st_txt != "" and r381_st_txt.find("9186") < 0
+			and r381_st_txt.find("9187") < 0,
+			"R381：stories.json 的 grants 里没有这两张（暂无解锁渠道）")
+
+	# ② 漩涡：站在上面 → 行动结束被卷走**恰好 1 格**，且场地不消失（20 次全中）
+	var r381_e := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
+	r381_e.start_game()
+	var r381_vc := Vector2i(3, 1)
+	var r381_ok := 0
+	var r381_where := {}
+	for r381_i in 20:
+		r381_e.state.set_field(r381_v, r381_vc, "self")
+		var r381_p: Placement = r381_e.state.place(_card(8101, "木桩", "盟友", 1, 0, 20),
+				r381_vc, "self")
+		r381_e._tap(r381_p, "R381 测试")
+		var r381_n: Vector2i = r381_e._cell_of(r381_p)
+		var r381_dd: Vector2i = r381_n - r381_vc
+		if absi(r381_dd.x) + absi(r381_dd.y) == 1 and r381_e.state.field_at(r381_vc) != null:
+			r381_ok += 1
+			r381_where[str(r381_dd)] = true
+		# 复位：把木桩搬回原格 + 清掉场地，下一轮重来
+		if r381_n != r381_vc and r381_e.state.board.has(r381_n):
+			r381_e.state.move_unit(r381_n, r381_vc)
+		r381_e.state.clear_field(r381_vc)
+		r381_e.state.board.erase(r381_vc)
+	check(r381_ok == 20,
+			"R381 漩涡：20 次「行动结束」全部被卷走 1 格、场地不消失（%d/20）" % r381_ok)
+	check(r381_where.size() >= 2,
+			"R381 漩涡：方向确实是随机的（20 次落到 %d 个不同方向）" % r381_where.size())
+
+	# ③ 漩涡：四面被挡 → 不动（不会硬挤）
+	var r381_e2 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
+	r381_e2.start_game()
+	r381_e2.state.set_field(r381_v, r381_vc, "self")
+	var r381_mid: Placement = r381_e2.state.place(_card(8111, "木桩", "盟友", 1, 0, 20),
+			r381_vc, "self")
+	r381_e2.state.place(_card(8112, "木桩", "盟友", 1, 0, 20), Vector2i(2, 1), "opponent")
+	r381_e2.state.place(_card(8113, "木桩", "盟友", 1, 0, 20), Vector2i(4, 1), "self")
+	r381_e2.state.place(_card(8114, "木桩", "盟友", 1, 0, 20), Vector2i(3, 0), "self")
+	r381_e2.state.place(_card(8115, "木桩", "盟友", 1, 0, 20), Vector2i(3, 2), "self")
+	r381_e2._tap(r381_mid, "R381 测试")
+	check(r381_e2._cell_of(r381_mid) == r381_vc,
+			"R381 漩涡：四面都被挡住 → 原地不动（%s）" % str(r381_e2._cell_of(r381_mid)))
+
+	# ④ 漩涡：位移免疫单位（赫菲斯托斯 9135）卷不动
+	var r381_e3 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
+	r381_e3.start_game()
+	r381_e3.state.set_field(r381_v, Vector2i(4, 1), "self")
+	var r381_imm: Placement = r381_e3.state.place(r381_repo.get_card(9135),
+			Vector2i(4, 1), "self")
+	r381_e3._tap(r381_imm, "R381 测试")
+	check(r381_e3._cell_of(r381_imm) == Vector2i(4, 1),
+			"R381 漩涡：位移免疫（9135）不被卷走（%s）" % str(r381_e3._cell_of(r381_imm)))
+
+	# ⑤ 漩涡：不站在上面就没事（相邻格不触发）
+	var r381_e4 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
+	r381_e4.start_game()
+	r381_e4.state.set_field(r381_v, r381_vc, "self")
+	var r381_side: Placement = r381_e4.state.place(_card(8121, "木桩", "盟友", 1, 0, 20),
+			Vector2i(4, 1), "self")
+	r381_e4._tap(r381_side, "R381 测试")
+	check(r381_e4._cell_of(r381_side) == Vector2i(4, 1),
+			"R381 漩涡：站在相邻格不会被卷（只有站在上面才触发）")
+
+	# ⑥ 漩涡：敌我都能被卷（卡面写的就是「场地生效·双」）
+	var r381_e5 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
+	r381_e5.start_game()
+	r381_e5.state.set_field(r381_v, Vector2i(1, 1), "self")
+	var r381_foe0: Placement = r381_e5.state.place(_card(8131, "木桩", "盟友", 1, 0, 20),
+			Vector2i(1, 1), "opponent")
+	r381_e5._tap(r381_foe0, "R381 测试")
+	check(r381_e5._cell_of(r381_foe0) != Vector2i(1, 1),
+			"R381 漩涡：敌方单位站上去同样被卷（%s）" % str(r381_e5._cell_of(r381_foe0)))
+
+	# ⑦ 鹅：攻击 → 目标后退 1 格 + 自己前进 1 格
+	var r381_e6 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 60, 60, -1, false)
+	r381_e6.start_game()
+	var r381_gs: Placement = r381_e6.state.place(r381_g, Vector2i(3, 1), "self")
+	var r381_f1: Placement = r381_e6.state.place(_card(8141, "铁壁卫兵", "盟友", 4, 3, 40),
+			Vector2i(2, 1), "opponent")
+	r381_e6.attack(Vector2i(3, 1), Vector2i(2, 1))
+	check(r381_e6._cell_of(r381_f1) == Vector2i(1, 1),
+			"R381 鹅：攻击后目标被击退 1 格（2,1 → %s）" % str(r381_e6._cell_of(r381_f1)))
+	check(r381_e6._cell_of(r381_gs) == Vector2i(2, 1),
+			"R381 鹅：自己跟着前进 1 格（3,1 → %s）" % str(r381_e6._cell_of(r381_gs)))
+
+	# ⑧ 鹅：目标后面被挡住 → 谁都动不了（「如果可能」）
+	var r381_e7 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 60, 60, -1, false)
+	r381_e7.start_game()
+	var r381_gs2: Placement = r381_e7.state.place(r381_g, Vector2i(3, 1), "self")
+	var r381_f2: Placement = r381_e7.state.place(_card(8151, "铁壁卫兵", "盟友", 4, 3, 40),
+			Vector2i(2, 1), "opponent")
+	var r381_f3: Placement = r381_e7.state.place(_card(8152, "铁壁卫兵", "盟友", 4, 3, 40),
+			Vector2i(1, 1), "opponent")
+	r381_e7.attack(Vector2i(3, 1), Vector2i(2, 1))
+	check(r381_e7._cell_of(r381_f2) == Vector2i(2, 1)
+			and r381_e7._cell_of(r381_f3) == Vector2i(1, 1),
+			"R381 鹅：目标后面有单位 → 目标被挡住不后退")
+	check(r381_e7._cell_of(r381_gs2) == Vector2i(3, 1),
+			"R381 鹅：目标没退开 → 自己也不前进（留在 3,1）")
+
+	# ⑨ 鹅：把目标打死了 → 没有击退，但自己照样走进腾出来的格子
+	var r381_e8 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 60, 60, -1, false)
+	r381_e8.start_game()
+	var r381_gs3: Placement = r381_e8.state.place(r381_g, Vector2i(3, 1), "self")
+	var r381_f4: Placement = r381_e8.state.place(_card(8161, "脆皮", "盟友", 1, 0, 1),
+			Vector2i(2, 1), "opponent")
+	r381_e8.attack(Vector2i(3, 1), Vector2i(2, 1))
+	check(r381_e8._cell_of(r381_gs3) == Vector2i(2, 1),
+			"R381 鹅：打死目标 → 自己走进那一格（%s）" % str(r381_e8._cell_of(r381_gs3)))
+
+	# ⑩ 鹅：目标位移免疫（启示者 9200）→ 不后退，自己也不前进
+	var r381_e9 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 60, 60, -1, false)
+	r381_e9.start_game()
+	var r381_gs4: Placement = r381_e9.state.place(r381_g, Vector2i(3, 1), "self")
+	var r381_f5: Placement = r381_e9.state.place(r381_repo.get_card(9200),
+			Vector2i(2, 1), "opponent")
+	r381_e9.attack(Vector2i(3, 1), Vector2i(2, 1))
+	check(r381_e9._cell_of(r381_f5) == Vector2i(2, 1)
+			and r381_e9._cell_of(r381_gs4) == Vector2i(3, 1),
+			"R381 鹅：目标免疫位移 → 双方都不动")
+
+	# ⑪ 源码锁：两个结算口各自只有一个挂点（别在 move / activate 里再抄一遍）
+	var r381_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r381_src.find("func _vortex_push") >= 0
+			and r381_src.find("\t_vortex_push(p)") >= 0,
+			"R381 源码：漩涡的结算口只有 `_tap()` 一处挂点")
+	check_src(r381_src.find("func _goose_lunge") >= 0
+			and r381_src.find("\t\t_goose_lunge(attacker, dst)") >= 0,
+			"R381 源码：鹅的结算口只有 attack 尾部一处挂点")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

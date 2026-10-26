@@ -968,6 +968,15 @@ const PERSIST_UPGRADE_TRAIT:= "持续改造"   # 改造工厂的判据 trait
 const PLAYER_ONLY_FIELD_TRAIT:= "仅玩家可放置"
 const UPGRADE_FACTORY_ATK:= 1
 const UPGRADE_FACTORY_HP:= 1
+# ── R381：漩涡 9186 / 鹅 9187（森林精魄剧情卡，暂无解锁渠道）──
+# 漩涡（1 费场地）：**第三族持续型场地** —— 前两族（清泉 / 维修间 / 改造工厂）挂在
+#   「自己回合结束时」结算（`_field_aura_tick`），它挂的是一个**新时机**：
+#   「站在上面的单位**行动结束时**」→ 挂在 `_tap()`（所有行动结束的唯一口），
+#   结算口 = `_vortex_push()`。
+const PERSIST_VORTEX_TRAIT:= "涡旋"   # 漩涡的判据 trait（持续型场地 · 行动后卷人）
+# 鹅（2 费盟友 1/9）：攻击后把目标向后击退 1 格、自己前进 1 格。
+# 结算口 = `_goose_lunge()`（挂在 attack 尾部「攻击者还活着」那块里）。
+const GOOSE_TRAIT:= "扑击"
 # ── R89：无限装甲 8038（机械之心史诗盟友 4 费 4/18/1/1）──
 # 「**每回合一次**：这张卡被「改造」时，将一张「升级」加入手牌，
 #  那张牌在手牌里费用为 0，离开手牌后恢复原价。」
@@ -10920,6 +10929,90 @@ func _knockback(side: String, target, steps: int) -> String:
 	return "%s 后退 %d 格" % [p.card.card_name, moved]
 
 
+func _vortex_push(p: Placement) -> void :
+	## **漩涡（9186，R381）的唯一结算口**：「处于此格的单位**行动结束后**，随机向一个方向
+	## 移动 1 格」。挂在 `_tap()`（所有行动结束的唯一口，见那里的注释）。
+	##
+	## 口径与边界（每条都别省）：
+	##   * 「处于此格」读的是**行动结束时脚下的格子** —— 它自己走出去就不再被卷
+	##     （漩涡管的是「还站在上面的人」，不是「从上面出发的人」）；
+	##   * 方向在**能落脚的方向**里随机（上下左右 4 选 1）；四面被挡 / 出界 → 不动；
+	##   * 随机数走引擎 `rng` → 回放同种子可复现；
+	##   * 这是**位移效果** → 照走 `_displace_immune()`（赫菲斯托斯 9135 / 启示者 9200）；
+	##   * 不判 `field_aim`：卡面写「场地生效·双」，敌我站上去都会被卷；
+	##   * 直接 `state.move_unit`（不消耗移动权、不触发沿途陷阱），与 `_knockback` 同口径 ——
+	##     所以被卷进**另一个**漩涡不会连锁（只有 `_tap` 触发，不递归）。
+	if p == null or p.card == null or over:
+		return
+	if p.health <= 0:
+		return
+	var cell: Vector2i = _cell_of(p)
+	if cell == Vector2i(-1, -1):
+		return
+	var f: CardData = state.field_at(cell)
+	if f == null or not f.traits.has(PERSIST_VORTEX_TRAIT):
+		return
+	if _displace_immune(p):
+		_log("%s 免疫位移：%s 没能把它卷走" % [p.card.card_name, f.card_name])
+		return
+	var dirs: Array[Vector2i] = [Vector2i(-1, 0), Vector2i(1, 0),
+			Vector2i(0, -1), Vector2i(0, 1)]
+	var spots: Array[Vector2i] = []
+	for d: Vector2i in dirs:
+		var nxt: Vector2i = cell + d
+		if nxt.x < 0 or nxt.x >= FieldState.BOARD_ROWS:
+			continue
+		if nxt.y < 0 or nxt.y >= FieldState.BOARD_COLS:
+			continue
+		if state.board.has(nxt):
+			continue
+		spots.append(nxt)
+	if spots.is_empty():
+		_log("%s 站在 %s 上，四面都被挡住：没有移动" % [p.card.card_name, f.card_name])
+		return
+	var dst: Vector2i = spots[rng.randi_range(0, spots.size() - 1)]
+	state.move_unit(cell, dst)
+	_log("%s 被 %s 卷走 1 格（%s → %s）" % [p.card.card_name, f.card_name, cell, dst])
+	var v_path: Array[Vector2i] = [cell, dst]
+	action.emit("move", {"src": cell, "dst": dst, "card": p.card,
+		"side": p.owner, "path": v_path})
+
+
+func _goose_lunge(attacker: Placement, tgt: Vector2i) -> void :
+	## **鹅（9187，R381）的唯一结算口**：「攻击敌人后，将其向后击退 1 格，自己前进 1 格
+	## （被挡住则不动）」。挂在 `attack()` 尾部「攻击者还活着」那块里（`_tap` 之前）。
+	##
+	## 两件事各自独立判：
+	##   ① 击退走**唯一口** `_knockback()` → 位移免疫 / 被己方单位挡住 / 边界全部自动生效；
+	##      目标已被打死（不在 board 里了）就没有「击退」这回事；
+	##   ② 前进 = 自己朝**对方后排**方向挪 1 格，只判「界内 + 那格空」—— 射程 1 时
+	##      正好落进目标腾出来的格子；目标没退开（被挡 / 免疫位移）自己也就跟不上去。
+	## ⚠️ 前进**不走 `move()`**：那不是一次「移动行动」，不该消耗移动权、也不该触发
+	##    沿途陷阱 —— 与 `_knockback` 同口径（`state.move_unit` + 补一条 move 动画）。
+	if attacker == null or attacker.card == null:
+		return
+	if not attacker.card.traits.has(GOOSE_TRAIT):
+		return
+	if state.board.has(tgt):
+		var d: Placement = state.board[tgt]
+		if d.health > 0 and d.owner != attacker.owner:
+			_knockback(attacker.owner, tgt, 1)
+	var src: Vector2i = _cell_of(attacker)
+	if src == Vector2i(-1, -1):
+		return
+	var dir: int = 1 if attacker.owner == SIDE_OPPONENT else -1
+	var nxt: Vector2i = src + Vector2i(dir, 0)
+	if nxt.x < 0 or nxt.x >= FieldState.BOARD_ROWS:
+		return
+	if state.board.has(nxt):
+		return
+	state.move_unit(src, nxt)
+	_log("%s 前进 1 格（%s → %s）" % [attacker.card.card_name, src, nxt])
+	var g_path: Array[Vector2i] = [src, nxt]
+	action.emit("move", {"src": src, "dst": nxt, "card": attacker.card,
+		"side": attacker.owner, "path": g_path})
+
+
 func _connected_components() -> Array:
 	var cells: Array[Vector2i] = []
 	for c: Vector2i in state.board:
@@ -11849,6 +11942,10 @@ func _cell_of(p: Placement) -> Vector2i:
 func _tap(p: Placement, reason:= "") -> void :
 
 
+	# R381 漩涡 9186：「处于此格的单位**行动结束后**随机移动 1 格」。
+	# 挂这里而不是 move / attack / activate 各写一遍 —— `_tap` 是**行动结束的唯一口**
+	# （攻击完毕 / 移动后放弃攻击 / 主动发动 / AI 待命·推进失败·按兵不动 全都经过它）。
+	_vortex_push(p)
 	if p.acts_left > 1:
 		p.acts_left -= 1
 		p.tapped = false
@@ -13625,6 +13722,9 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 			attacker.ramp_atk = 0
 			_log("潜影者：攻击后力量重置（当前 %d）" % attacker.effective_power())
 		_argos_summon(attacker)   # 百眼动员（9142，R174）：攻击单位 → 后排召唤俄倪厄
+		# R381 鹅 9187：攻击后「目标后退 1 格 + 自己前进 1 格」（各自判「能不能」）。
+		# 放在 `_tap` 之前 —— 前进完再结束行动，落点才是最终位置。
+		_goose_lunge(attacker, dst)
 		_attack_gain_energy(side, attacker)   # 地狱咏唱者 8022 / 黑暗祭坛 8023：攻击时 +1 费
 		_tap(attacker, "行动完毕")
 	_check_game_over()

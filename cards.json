@@ -5583,6 +5583,47 @@
       "unplayable": true
     },
     {
+      "id": 9186,
+      "name": "漩涡",
+      "kind": "场地",
+      "cost": 1,
+      "rarity": 1,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [
+        "场地生效·双",
+        "持续场地",
+        "涡旋"
+      ],
+      "effect_text": "场地效果。处于此格的单位**行动结束后**，随机向一个方向移动 1 格。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": "",
+      "locked": true
+    },
+    {
+      "id": 9187,
+      "name": "鹅",
+      "kind": "盟友",
+      "cost": 2,
+      "power": 1,
+      "health": 9,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 2,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [
+        "野兽",
+        "扑击"
+      ],
+      "effect_text": "攻击敌人后，将其向后击退 1 格，自己前进 1 格（被挡住则不动）。",
+      "target_mode": "none",
+      "color": "白",
+      "image": "",
+      "locked": true
+    },
+    {
       "id": 9200,
       "name": "启示者",
       "kind": "盟友",
