@@ -506,6 +506,11 @@ var _hand_known_init := false   # 首次 sync 只建快照不播（开场发牌�
 var _flyout_skip: Array = []    # 本帧「是打出不是消失」的卡 id（place/spell/effect 事件喂入，sync 消费并清空）
 var _flyout_skip_all := false   # batch_transfer（手牌洗回牌库）：整批移除不播飞出
 var _flyin_skip: Array = []     # 本帧「来源不是抽牌堆」的入手卡 id（swap 顶回手）
+## R396（用户报「聚能炮击的抽卡动画有可能被吞，如果抽到的是另一张聚能炮击」）：
+## 引擎通过 `card_gained` 报上来的「真的进了手牌」的**实例**（不是 id）。
+## `_hand_sync` 靠手牌 id 序列做 diff，可「打出一张 9145 又抽到一张 9145」时序列
+## 一模一样 → diff 判「没变化」→ 飞入动画被吞。这个队列专门补那种 diff 看不出的情形。
+var _drawn_pending: Array = []
 var _deck_fly: Array = []       # R283：卡入牌库飞行动画 {card, from, start, dur, curse}
 # R362：诅咒（破绽 9154）入牌库的**展示队列** —— 用户口径「展示诅咒『破绽』，然后那张卡
 # 进入卡组；一个动画完了才能结算另外一个」。三只厄倪俄同回合各塞一张时，原来三张卡背
@@ -1563,6 +1568,28 @@ func _ready() -> void:
 		status_text = "R211：填充带「次元」→ 左栏「字段：次元」；用后进消耗区（不进弃牌区）"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--hovercard" in args and engine != null:
+		# 出图（R396）：把**任意一张**卡放进手牌并悬停，核验左栏的「字段 / 效果 / 数值」框。
+		# 图鉴右栏不画字段框（那是图鉴自己的版式），要看「字段：次元」必须进战斗左栏。
+		# 用法：`battle.tscn -- --screenshot --hovercard 8071 --shotframe 320`
+		var hc_id := -1
+		for hi in args.size():
+			if args[hi] == "--hovercard" and hi + 1 < args.size() \
+					and not str(args[hi + 1]).begins_with("--"):
+				hc_id = int(args[hi + 1])
+		var hc_card: CardData = repo.get_card(hc_id) if hc_id >= 0 else null
+		if hc_card != null:
+			engine.state.hand.clear()
+			engine.state.energy = 9
+			engine.state.hand.append(CardData.from_dict(hc_card.to_dict()))
+			engine.state.hand.append(CardData.from_dict(
+					repo.get_card(GameEngine.ENERGY_CANNON_ID).to_dict()))
+			_hover_card = engine.state.hand[0]
+			_hover_pl = null
+			_hover_hand = 0
+			status_text = "出图：%s 的左栏详情" % hc_card.card_name
+			_shot_t0 = _now()
+			queue_redraw()
 	if "--xtext" in args and engine != null:
 		# 演示（2026-10-01）：长描述效果卡。
 		# 悬停最长的那张（空间守护 9064）→ 左栏信息面板用于像素级核验「长描述不溢出」。
@@ -9140,6 +9167,9 @@ func _hand_sync() -> void:
 		_flyin_skip.clear()
 		_flyout_skip_all = false
 		_void_known = engine.state.void_count
+		# R396：**id 序列一样 ≠ 没有抽牌** —— 打出一张 9145 又抽到另一张 9145 时，
+		# 序列一个字节都没变，diff 什么都看不出来。此时靠引擎报的 `_drawn_pending` 补播。
+		_play_hand_flyin(_take_drawn_pending([]))
 		return
 	var old_n := _hand_known.size()
 	# R157：diff 走 LCS 纯函数（重复 id 不错配；回归可直接调 _hand_diff 验证）
@@ -9148,6 +9178,7 @@ func _hand_sync() -> void:
 	var added: Array = []               # {card, idx}（新数组下标）
 	for a: Dictionary in d["added"]:
 		added.append({"card": engine.state.hand[int(a["idx"])], "idx": int(a["idx"])})
+	added = _take_drawn_pending(added)   # R396：diff 看不出来的「同 id 换了一张」
 	_hand_known = cur
 	var vd: int = engine.state.void_count - _void_known   # 这段时间被「消耗」的张数
 	_void_known = engine.state.void_count
@@ -9156,20 +9187,12 @@ func _hand_sync() -> void:
 		_flyout_skip.clear()
 		_flyin_skip.clear()
 		_flyout_skip_all = false
+		_drawn_pending.clear()
 		_earring_missed = 0
 		return
 	var n := _now()
 	# 新增 → 卡背从抽牌堆飞入手牌位（逐张错开 60ms）
-	var seq := 0
-	for a in added:
-		var card: CardData = a["card"]
-		if _flyin_skip.has(card.id):
-			_flyin_skip.erase(card.id)
-			continue
-		_hand_fly.append({"mode": "in", "card": card,
-				"from": Vector2(DECK_X + ZONE_W / 2.0, DECK_Y + ZONE_H / 2.0),
-				"slot": int(a["idx"]), "start": n + 60 * seq, "dur": 260})
-		seq += 1
+	_play_hand_flyin(added)
 	# 移除 → 默认飞弃牌区；消耗的份额（void 增量）改上飞；skip 名单 / 耳环连出不播
 	var earring := engine.earring_autoplay_active()
 	for r0 in removed:
@@ -9197,6 +9220,61 @@ func _hand_sync() -> void:
 	_flyout_skip.clear()
 	_flyin_skip.clear()
 	_flyout_skip_all = false
+
+
+func _play_hand_flyin(added: Array) -> void:
+	## 新增 → 卡背从抽牌堆飞入手牌位（逐张错开 60ms）。
+	## R396：从 `_hand_sync` 里抽出来，因为「id 序列没变、但其实抽了一张」那条路也要播。
+	if _shot_pending or added.is_empty():
+		return
+	var n := _now()
+	var seq := 0
+	for a: Dictionary in added:
+		var card: CardData = a.get("card")
+		if card == null:
+			continue
+		if _flyin_skip.has(card.id):
+			_flyin_skip.erase(card.id)
+			continue
+		_hand_fly.append({"mode": "in", "card": card,
+				"from": Vector2(DECK_X + ZONE_W / 2.0, DECK_Y + ZONE_H / 2.0),
+				"slot": int(a["idx"]), "start": n + 60 * seq, "dur": 260})
+		seq += 1
+
+
+func _take_drawn_pending(added: Array) -> Array:
+	## R396：把引擎 `card_gained` 报过、而 `_hand_diff` **看不出来**的入手补进 `added`。
+	## 判据必须是**实例同一张**（CardData 没重载 `==`，引用比较即可）——
+	## 用 id 比会把「原本就在手上的同 id 卡」误判成同一个。
+	## 已经由 diff 算进 `added` 的不重复补；已不在手牌的（满手被 burn / 被换走）跳过。
+	if engine == null:
+		_drawn_pending.clear()
+		return added
+	if _drawn_pending.is_empty():
+		return added
+	var seen: Dictionary = {}
+	for a: Dictionary in added:
+		seen[a.get("card")] = true
+	var extra: Array = []
+	for card: CardData in _drawn_pending:
+		if card == null or seen.has(card):
+			continue
+		var idx := -1
+		for i in engine.state.hand.size():
+			if engine.state.hand[i] == card:
+				idx = i
+				break
+		if idx < 0:
+			continue
+		extra.append({"card": card, "idx": idx})
+	_drawn_pending.clear()
+	if extra.is_empty():
+		return added
+	var out: Array = added.duplicate()
+	out.append_array(extra)
+	out.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
+		return int(x["idx"]) < int(y["idx"]))
+	return out
 
 
 func _hand_old_rect(n: int, idx: int) -> Rect2:
@@ -10109,6 +10187,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": Vector2(COST_X + (TAP_W + 12) / 2, COST_Y + ENERGY_H + 70),
 					"text": "%s 生效" % ecard.card_name, "col": UiTheme.KIND_EFFECT,
 					"start": n, "dur": 1500})
+		"card_gained":
+			# R396（用户报「聚能炮击的抽卡动画有可能被吞，如果抽到的是另一张聚能炮击」）：
+			# 抽到 / 加入手牌**同一张 id** 的另一张时，手牌 id 序列前后一模一样，
+			# `_hand_sync()` 的 diff 完全看不出来 → 飞入动画被吞。引擎在这里把
+			# **实例**报上来，`_hand_sync()` 用 `_take_drawn_pending()` 补播。
+			if data.get("card") is CardData:
+				_drawn_pending.append(data["card"])
 		"hand_burn":
 			# R299：手牌满时抽到 / 获得的牌 → **直接进弃牌区**。
 			# 复用「飞向弃牌堆」那条动画（mode out_d：缩小 + 末段盖板 = 滑进牌堆），

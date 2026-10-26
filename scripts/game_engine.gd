@@ -2868,10 +2868,12 @@ func _draw_many(n: int) -> int:
 	##   （弃牌区可能同时被别的效果改动）。
 	var got := 0
 	var burned := 0
+	var gained: Array = []
 	for _i in n:
 		var c := state.draw()
 		if c != null:
 			got += 1
+			gained.append(c)
 			continue
 		var bc: CardData = state.last_burn_card
 		if bc != null:
@@ -2888,6 +2890,13 @@ func _draw_many(n: int) -> int:
 	if got + burned < n and state.deck.is_empty() and state.discard.is_empty():
 		_log("牌库与弃牌区都已空，没有卡牌可以抽了")
 		action.emit("deck_empty", {"want": n, "got": got, "burned": burned})
+	# R396（用户报「聚能炮击的抽卡动画有可能被吞，如果抽到的是另一张聚能炮击」）：
+	# 界面判断「哪张卡是新进手牌的」靠**手牌 id 序列**做 diff（`battle_scene._hand_sync`），
+	# 可「打出一张 9145、又抽到另一张 9145」时序列**一个字节都没变**
+	# （[9145, 9145] → [9145, 9145]）→ diff 判「没变化」→ 抽卡飞入整个被吞掉。
+	# 抽牌这件事只有引擎知道，所以在这里逐张报实例上去，界面别再去猜。
+	for gc: CardData in gained:
+		action.emit("card_gained", {"card": gc, "how": "draw"})
 	return got
 
 
@@ -2919,6 +2928,8 @@ func _grant_to_hand(card: CardData, source: String) -> bool:
 				"limit": FieldState.HAND_LIMIT, "hand": state.hand.size(), "source": source})
 		return false
 	state.hand.append(card)
+	# R396：与 `_draw_many` 同一口径 —— 「进手牌」这件事由引擎报，界面不靠 id 序列猜
+	action.emit("card_gained", {"card": card, "how": source})
 	return true
 
 func apply_battle_start_relics(repo: CardRepo) -> void :

@@ -28688,6 +28688,78 @@ func _init() -> void:
 	check_src(ge.find('"cell": cell})') >= 0 or ge.find('"cell": cell}') >= 0,
 			"R393 源码：guard_absorb 带上格子（否则场景没法冻结那个单位的血条）")
 
+
+	# ------------------------------------------------------------------ R396
+	# 用户两条：① 「报废」8071 与「集束炮台」9166 加「次元」字段；
+	# ② 「聚能炮击」的抽卡动画可能被吞（抽到的正好是**另一张**聚能炮击）。
+	var r396_repo: CardRepo = CardRepo.load_json()
+	var r396_scrap: CardData = r396_repo.get_card(GameEngine.SCRAP_ID)
+	var r396_turret: CardData = r396_repo.get_card(GameEngine.CLUSTER_TURRET_ID)
+	var r396_cannon: CardData = r396_repo.get_card(GameEngine.ENERGY_CANNON_ID)
+	check(r396_scrap != null and r396_scrap.has_affix(GameEngine.AFFIX_DIMENSION),
+		"R396 报废 8071 挂上「次元」字段（用后消失，不进弃牌区）")
+	check(r396_turret != null and r396_turret.has_affix(GameEngine.AFFIX_DIMENSION),
+		"R396 集束炮台 9166 挂上「次元」字段（离场即消失）")
+	# ① 报废：打出后进消耗区、不进弃牌区
+	var r396_e := _new_engine([], 30, 30, -1, false)
+	r396_e.start_game()
+	r396_e.state.hand = [CardData.from_dict(r396_scrap.to_dict()),
+		_card(8002, "攻击", "技能", 1, 0, 0, 0, 0)]
+	r396_e.state.deck = []
+	r396_e.state.energy = 9
+	var r396_v0: int = r396_e.state.void_count
+	r396_e.use_spell(0)
+	check(r396_e.state.void_count == r396_v0 + 1,
+		"R396 报废：打出后进消耗区（void %d → %d）" % [r396_v0, r396_e.state.void_count])
+	var r396_in_disc := false
+	for r396_d: CardData in r396_e.state.discard:
+		if r396_d.id == GameEngine.SCRAP_ID:
+			r396_in_disc = true
+	check(not r396_in_disc, "R396 报废：**不进弃牌区**（次元 = 用后消失）")
+	# ② 集束炮台：被击破 → 同样进消耗区、不进弃牌区
+	var r396_e2 := _new_engine([], 30, 30, -1, false)
+	r396_e2.start_game()
+	r396_e2.state.hand = []
+	r396_e2.state.deck = []
+	r396_e2.state.place(CardData.from_dict(r396_turret.to_dict()), Vector2i(4, 2),
+		GameEngine.SIDE_SELF)
+	r396_e2.state.deck.clear()          # 入场效果塞进来的两张聚能炮击清掉，别干扰断言
+	var r396_v2: int = r396_e2.state.void_count
+	r396_e2._destroy(Vector2i(4, 2))
+	check(r396_e2.state.void_count == r396_v2 + 1,
+		"R396 集束炮台：被击破后进消耗区（void %d → %d）"
+			% [r396_v2, r396_e2.state.void_count])
+	var r396_t_disc := false
+	for r396_d2: CardData in r396_e2.state.discard:
+		if r396_d2.id == GameEngine.CLUSTER_TURRET_ID:
+			r396_t_disc = true
+	check(not r396_t_disc, "R396 集束炮台：**不进弃牌区**（离场即消失）")
+	# ③ 抽到同 id 的另一张 → 引擎必须报 `card_gained`（界面靠它补飞入动画）
+	var r396_e3 := _new_engine([], 30, 30, -1, false)
+	r396_e3.start_game()
+	r396_e3.state.place(_card(1053, "骷髅兵", "盟友", 3, 3, 40, 1, 1),
+		Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	# 手牌两张**同 id** 的聚能炮击；牌库顶也是它 → 打完抽到的那张与打出的那张同 id，
+	# 前后手牌 id 序列都是 [9145, 9145]（一个字节都没变）。
+	r396_e3.state.hand = [CardData.from_dict(r396_cannon.to_dict()),
+		CardData.from_dict(r396_cannon.to_dict())]
+	r396_e3.state.deck = [CardData.from_dict(r396_cannon.to_dict())]
+	r396_e3.state.energy = 9
+	var r396_gained: Array = []
+	r396_e3.action.connect(func(kind: String, d: Dictionary) -> void:
+		if kind == "card_gained":
+			r396_gained.append(d.get("card")))
+	r396_e3.use_spell(0, Vector2i(2, 1))
+	check(r396_e3.state.hand.size() == 2 and r396_e3.state.hand[1].id == GameEngine.ENERGY_CANNON_ID,
+		"R396 聚能炮击：打完一张又抽到一张同 id 的（手牌 %d 张，末张 %d）"
+			% [r396_e3.state.hand.size(),
+				r396_e3.state.hand[r396_e3.state.hand.size() - 1].id])
+	check(r396_gained.size() == 1,
+		"R396 聚能炮击：抽到同 id 的另一张时引擎照样报 card_gained（实收 %d 条）"
+			% r396_gained.size())
+	check(r396_gained.size() == 1 and r396_e3.state.hand.has(r396_gained[0]),
+		"R396 card_gained 报的是**真的进了手牌的那个实例**（界面靠它定位播飞入）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

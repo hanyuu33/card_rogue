@@ -91,6 +91,14 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r395_empty_pick],
+		# R396（用户报）：「聚能炮击的抽卡动画有可能被吞，如果抽到的是另一张聚能炮击」。
+		# 手牌 id 序列前后一模一样时，diff 判不出变化 → 靠引擎的 card_gained 补播飞入。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r396_same_id_flyin],
 		# R339：战斗检查点必须写「进战斗之前」的局状态 —— lucky 7 的跨战斗计数在开局
 		# 第 1 个我方回合就 +1，若检查点写「当下」，续档重打这一场就会越续越多（用户报）。
 		["res://scenes/battle.tscn", func():
@@ -1796,6 +1804,106 @@ func _check_card_detail_block(_scene: Variant) -> void:
 		return
 	print("SMOKE OK R206 详情条：提及块在右栏 / 浅底琥珀棕 / 预算高度 %.0f == 公式（%d 个提及）"
 			% [got, refs.size()])
+
+
+func _check_r396_same_id_flyin(scene) -> void:
+	## R396（用户口径）：「聚能炮击的抽卡动画有可能被吞（如果抽到的是另一张聚能炮击）」
+	## 根因：`_hand_sync()` 判断「谁新进手牌」靠手牌 **id 序列** diff —— 打出一张 9145
+	## 又抽到另一张 9145 时，前后都是 [9145, 9145]，一个字节都没变 → diff 说「没变化」
+	## → 飞入动画整段被吞。修法：引擎 `card_gained` 事件带**实例**报上来，界面补播。
+	## 这里钉三件事：① 事件接得住；② id 序列不变也能播；③ 不要和 diff 重复播。
+	var eng: Variant = scene.engine
+	if eng == null:
+		_smoke_fail("R396：场景里没有引擎")
+		return
+	var cannon: CardData = scene.repo.get_card(GameEngine.ENERGY_CANNON_ID)
+	if cannon == null:
+		_smoke_fail("R396：取不到聚能炮击 9145")
+		return
+	scene._hand_sync()                       # 先把 _hand_known 初始化掉
+
+	# ① 事件接得住
+	scene._drawn_pending.clear()
+	scene._on_engine_action("card_gained", {"card": cannon, "how": "draw"})
+	if int(scene._drawn_pending.size()) != 1:
+		_smoke_fail("R396：card_gained 事件没被接住（_drawn_pending %d）"
+				% int(scene._drawn_pending.size()))
+		return
+
+	# ② id 序列一模一样时也要播飞入
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(cannon.to_dict()))
+	var fresh: CardData = CardData.from_dict(cannon.to_dict())
+	eng.state.hand.append(fresh)             # 刚抽到的「另一张」（同 id）
+	scene._hand_known = [cannon.id, cannon.id]
+	scene._hand_fly.clear()
+	scene._flyin_skip.clear()
+	scene._drawn_pending.clear()
+	scene._drawn_pending.append(fresh)
+	scene._hand_sync()
+	var ins := 0
+	for f: Dictionary in scene._hand_fly:
+		if str(f.get("mode", "")) == "in":
+			ins += 1
+	if ins != 1:
+		_smoke_fail("R396：手牌 id 序列没变时抽到的同 id 卡**没有播飞入**（in 动画 %d 条）" % ins)
+		return
+	var slot := int((scene._hand_fly[scene._hand_fly.size() - 1] as Dictionary).get("slot", -1))
+	if slot != 1:
+		_smoke_fail("R396：飞入落位到了 slot %d，应当是刚抽到那张所在的第 1 格" % slot)
+		return
+
+	# ③ 不许和 diff 的 added 重复播。真实现场：手上 [攻击, 9145] → 打出攻击 → 抽到 9145
+	#    变 [9145(旧的), 9145(新的)]，diff 自己就能算出「新增一张 9145」。
+	var old_cannon: CardData = CardData.from_dict(cannon.to_dict())
+	var fresh2: CardData = CardData.from_dict(cannon.to_dict())
+	eng.state.hand.clear()
+	eng.state.hand.append(old_cannon)        # 打之前就在手上的那张
+	eng.state.hand.append(fresh2)            # 新抽到的另一张
+	scene._hand_known = [8002, cannon.id]    # 旧快照：攻击 + 那张 9145
+	scene._hand_fly.clear()
+	scene._flyin_skip.clear()
+	scene._drawn_pending.clear()
+	scene._drawn_pending.append(fresh2)
+	scene._hand_sync()
+	var ins2 := 0
+	for f2: Dictionary in scene._hand_fly:
+		if str(f2.get("mode", "")) == "in":
+			ins2 += 1
+	if ins2 != 1:
+		_smoke_fail("R396：diff 已算出新增时又补播了一次（in 动画 %d 条，应为 1）" % ins2)
+		return
+	# ④ 端到端：真打一发聚能炮击（走引擎 → 事件 → _hand_sync 整条链），飞入必须播
+	var e2: Variant = scene.engine
+	var target := Vector2i(2, 1)
+	if e2.state.unit_at(target) == null:
+		e2.state.place(CardData.from_dict(scene.repo.get_card(1053).to_dict()), target,
+			GameEngine.SIDE_OPPONENT)
+	e2.state.hand.clear()
+	e2.state.hand.append(CardData.from_dict(cannon.to_dict()))
+	e2.state.hand.append(CardData.from_dict(cannon.to_dict()))
+	e2.state.deck.clear()
+	e2.state.deck.append(CardData.from_dict(cannon.to_dict()))
+	e2.state.energy = 9
+	scene._hand_sync()                       # 快照 = 打之前的两张同 id
+	scene._hand_fly.clear()
+	scene._drawn_pending.clear()
+	e2.use_spell(0, target)
+	if int(scene._drawn_pending.size()) != 1:
+		_smoke_fail("R396：真打一发聚能炮击后 _drawn_pending 收到 %d 条（应为 1）"
+				% int(scene._drawn_pending.size()))
+		return
+	scene._hand_sync()
+	var ins3 := 0
+	for f3: Dictionary in scene._hand_fly:
+		if str(f3.get("mode", "")) == "in":
+			ins3 += 1
+	if ins3 != 1:
+		_smoke_fail("R396：真打一发（抽到同 id）后飞入动画 %d 条 —— 正是被吞的那个 bug" % ins3)
+		return
+	scene._drawn_pending.clear()
+	scene._hand_fly.clear()
+	print("SMOKE OK R396 同 id 抽卡：card_gained 接得住 / id 序列不变也播飞入 / 不与 diff 重复 / 真打一发也播")
 
 
 func _check_r395_empty_pick(scene) -> void:
