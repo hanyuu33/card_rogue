@@ -321,14 +321,20 @@ func _setup_shop() -> void:
 func _row3_template() -> Array:
 	## 第三行固定三项的**唯一定义**（R390 抽出来）：恢复货架时要按 key 反查，
 	## 两处各写一份 —— 改价只改一处、另一处还留着老价钱，是最典型的漂移。
-	return [
+	var out: Array = [
 		{"key": "delete", "name": "删除一张卡", "desc": "从卡组里删掉一张卡", "price": PRICE_DELETE,
 			"icon": "shop_icon_remove", "sold": false},
 		{"key": "maxhp", "name": "+5 最大生命", "desc": "最大生命 +5，并回复 5 点生命", "price": PRICE_MAXHP,
 			"icon": "shop_icon_maxhp", "sold": false},
-		{"key": "choco", "name": "巧克力", "desc": "获得一块巧克力（行动力 +1）", "price": PRICE_CHOCO,
-			"icon": "chocolate", "sold": false},
 	]
+	# R399（用户口径「第三层应该不再提供巧克力」）：第三层是直道、每格 cost 恒 0，
+	# 巧克力在那儿一块也用不掉 —— 这家店不再摆它。
+	# ⚠️ 绘制 / 命中 / 恢复货架全都按 `_row3.size()` 自适应，少一项不会留空位
+	#    （`_row3[0]` 仍是「删除一张卡」，没有硬编码下标会错位）。
+	if RunState.current_layer != GameLayers.LAYER_THREE:
+		out.append({"key": "choco", "name": "巧克力", "desc": "获得一块巧克力（行动力 +1）",
+			"price": PRICE_CHOCO, "icon": "chocolate", "sold": false})
+	return out
 
 
 func _row3_def(key: String) -> Dictionary:

@@ -410,6 +410,12 @@ const EGG_DUCK_RELIC_ID:= 6018
 const DUCK_WING_RELIC_ID:= 6007
 const DUCK_WING_TURN:= 3
 const DUCK_WING_ENERGY:= 3
+# 鸭嘴（6006，R399 加强）：**每满 5 点伤害减 2 点**，最少受 1 点。
+# 旧版是「伤害 ≥5 时固定 -1」—— 在大伤害面前几乎等于没有，改成阶梯式。
+#   5→3、9→7、10→6、15→9、20→12；不足 5 点的部分不折算（4 点照掉 4）。
+const DUCK_BILL_RELIC_ID:= 6006
+const DUCK_BILL_STEP:= 5
+const DUCK_BILL_STEP_REDUCE:= 2
 # R245 / R372 初始道具「勇气徽章」（6031）：精英战与 Boss 战**都只在首回合**额外 +1 费用。
 # ── R311：水晶骰子 6040 / 不锈钢盆 6041 ──
 # 水晶骰子（6040）：「?」房里的**任意种**战斗开始时掷一颗骰子（1~6），
@@ -10988,9 +10994,14 @@ func damage_cell(cell: Vector2i, amount: int, source:= "效果") -> int:
 
 
 func _relic_damage_taken(dmg: int) -> int:
-	## 道具「护心」（6006）：伤害 ≥ 5 时 -1（最少 1）。所有 HP 伤害的最后一道统一减伤。
-	if self_relics.has(6006) and dmg >= 5:
-		return maxi(1, dmg - 1)
+	## 鸭嘴（6006）：**每满 5 点伤害减 2 点**，最少受 1 点（R399 用户口径加强）。
+	##   5 → 3、9 → 7、10 → 6、15 → 9、20 → 12；不足 5 点的部分不折算（4 点照掉 4）。
+	## 我方**单位**受击（10685）与**玩家 HP**（11024）共用这一个口 —— 改这里两边一起变，
+	## 所以别在某一侧另写一份（旧注释里「护心」就是这个道具的旧名）。
+	if self_relics.has(DUCK_BILL_RELIC_ID):
+		var steps := dmg / DUCK_BILL_STEP
+		if steps > 0:
+			return maxi(1, dmg - steps * DUCK_BILL_STEP_REDUCE)
 	return dmg
 
 

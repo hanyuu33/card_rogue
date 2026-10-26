@@ -563,6 +563,11 @@ static func start_gold() -> int:
 
 static func chocolate_per_layer() -> int:
 	## 每层初始巧克力：8 档起「行动力降低」= 11，其余 = RogueMap.MAX_STEPS(12)。
+	## R399（用户口径「第三层应该不再提供巧克力」）：第三层是 5 格直道，每格 `cost` 恒为 0，
+	## 巧克力在那儿一块也用不掉 —— 直接给 0，不再显示一个永远花不掉的数字。
+	## ⚠️ 读的是**当前层**（`advance_layer` 里先赋 `current_layer` 再调本函数）。
+	if current_layer == GameLayers.LAYER_THREE:
+		return 0
 	return DIFF_CHOCO_HIGH if _diff() >= 8 else RogueMap.MAX_STEPS
 
 

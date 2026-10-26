@@ -3556,26 +3556,40 @@ func _init() -> void:
 	check(wr_repo.get_relic(6007).desc.contains("3 点额外费用")
 			and not wr_repo.get_relic(6007).desc.contains("2 点额外费用"),
 			"R81 鸭翼：卡面文案已同步为「3 点额外费用」")
-	# 鸭嘴：受到 5 以上伤害减 1（结算减伤后）
+	# 鸭嘴（R399 加强）：**每满 5 点伤害减 2 点**，最少受 1 点（旧版是「≥5 固定 -1」）
 	var eng_bill := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)), 20, 20, -1, false)
 	eng_bill.self_relics = [6006]
 	eng_bill.start_game()
 	eng_bill.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(3, 1), GameEngine.SIDE_SELF)
 	var m1 := eng_bill.state.unit_at(Vector2i(3, 1))
 	var got5 := eng_bill._hit_unit(m1, 5, "测试")
-	check(got5 == 4 and m1.health == 4, "鸭嘴：5 点伤害减 1（实际 %d）" % got5)
+	check(got5 == 3 and m1.health == 5, "R399 鸭嘴：5 点伤害减 2（实际掉 %d）" % got5)
 	var got4 := eng_bill._hit_unit(m1, 4, "测试")
-	check(got4 == 4 and m1.health == 0, "鸭嘴：4 点伤害不减")
+	check(got4 == 4 and m1.health == 1, "R399 鸭嘴：4 点伤害不足一档、照掉 4")
 	eng_bill.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(3, 1), GameEngine.SIDE_SELF)
 	var m2 := eng_bill.state.unit_at(Vector2i(3, 1))
 	var got20 := eng_bill._hit_unit(m2, 20, "测试")
-	check(got20 == 19, "鸭嘴：20 点伤害减 1（实际 %d）" % got20)
+	check(got20 == 12, "R399 鸭嘴：20 点伤害减 8（4 档 ×2，实际掉 %d）" % got20)
 	var eng_bill2 := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)), 20, 20, -1, false)
 	eng_bill2.self_relics = [6006]
 	eng_bill2.start_game()
 	eng_bill2._damage_player(GameEngine.SIDE_SELF, 5, "测试")
-	check(eng_bill2.state.hp_self == 16, "鸭嘴：我方 HP 受 5 点伤害减 1（20 → 16，实际 %d）"
+	check(eng_bill2.state.hp_self == 17, "R399 鸭嘴：我方 HP 受 5 点伤害减 2（20 → 17，实际 %d）"
 			% eng_bill2.state.hp_self)
+	# 阶梯口径逐档验（唯一口 `_relic_damage_taken`，绕开别的减伤层）
+	var r399_bad: Array = []
+	for r399_c: Array in [[1, 1], [4, 4], [5, 3], [9, 7], [10, 6], [15, 9], [20, 12], [30, 18]]:
+		var r399_in := int(r399_c[0])
+		var r399_want := int(r399_c[1])
+		var r399_got: int = eng_bill._relic_damage_taken(r399_in)
+		if r399_got != r399_want:
+			r399_bad.append("%d→%d(期望%d)" % [r399_in, r399_got, r399_want])
+	check(r399_bad.is_empty(),
+		"R399 鸭嘴阶梯：每满 5 减 2、最少受 1（1→1 / 4→4 / 5→3 / 9→7 / 10→6 / 15→9 / 20→12；异常 %s）"
+			% str(r399_bad))
+	var r399_repo_bill := RelicRepo.load_json()
+	check(r399_repo_bill.get_relic(6006).desc.contains("每满 5 点减少 2 点"),
+		"R399 鸭嘴：卡面文案同步成「每满 5 点减少 2 点」")
 	# 鸭绒：每回合使用的第一个单位 +2 生命（次回合重新计）
 	var deck_velvet: Array[CardData] = []
 	for i in 3:
@@ -28907,6 +28921,28 @@ func _init() -> void:
 		r398_map = FileAccess.get_file_as_string("res://scripts/map_scene.gd")
 	check_src(r398_map.find("RunState.current_layer != GameLayers.LAYER_THREE") >= 0,
 		"R398 源码：第三层一律不跳「卷卷 + 起点道具三选一」")
+
+
+	# ------------------------------------------------------------------ R399
+	# 用户两条：① 鸭嘴改「每满 5 点减 2 点、最少受 1 点」（数值断言在上面的 R81 段，
+	# 这里只补卡面文案与阶梯表的锁定）；② 第三层不再提供巧克力。
+	var r399_lv0 := RunState.current_layer
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
+	var r399_c1: int = RunState.chocolate_per_layer()
+	RunState.current_layer = GameLayers.LAYER_TWO
+	var r399_c2: int = RunState.chocolate_per_layer()
+	RunState.current_layer = GameLayers.LAYER_THREE
+	var r399_c3: int = RunState.chocolate_per_layer()
+	RunState.current_layer = r399_lv0
+	check(r399_c1 > 0 and r399_c3 == 0,
+		"R399 第三层不提供巧克力（一层 %d / 二层 %d / 三层 %d）" % [r399_c1, r399_c2, r399_c3])
+	check(RunState.chocolate_per_layer() == r399_c1 or RunState.current_layer != GameLayers.LAYER_DEFAULT,
+		"R399 巧克力层判定之后恢复了当前层（不留副作用）")
+	var r399_shop := ""
+	if ResourceLoader.exists("res://scripts/shop_scene.gd"):
+		r399_shop = FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	check_src(r399_shop.find("if RunState.current_layer != GameLayers.LAYER_THREE:") >= 0,
+		"R399 源码：第三层的商店货架不摆巧克力")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
