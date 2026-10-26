@@ -398,8 +398,15 @@ func status_badges() -> Array[Dictionary]:
 		out.append({"text": "禁足", "col": Color("8a6d1f")})
 	if guarding:
 		out.append({"text": "守护", "col": Color("2f8f4f")})
-	if summon_haste > 0:
-		out.append({"text": "速 +%d" % summon_haste, "col": Color("2f8f4f")})
+	# R387（用户口径「启示者 2 阶段减 1 速度的显示正常吗？」）：移速徽标改报
+	# **effective_speed() 相对卡面的净变化** —— 之前只写「动员 +N」一个来源，
+	# 阶段 2 的 -1 在卡面顶部完全看不见（只在左侧详情栏里）。判据只看净差，
+	# 增 / 减都会出现；「惧光」本身另有一条，不在这里重复算来源。
+	if card != null:
+		var sp_net: int = effective_speed() - card.move_speed
+		if sp_net != 0:
+			out.append({"text": "速 %+d" % sp_net,
+					"col": Color("2f8f4f") if sp_net > 0 else Color("c0392b")})
 	if forge_period > 0:
 		out.append({"text": "锻 %d/%d" % [forge_idle, forge_period], "col": Color("ff7043")})
 	if night_owl_weak > 0:

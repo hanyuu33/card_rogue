@@ -319,7 +319,8 @@ static func text_zone_bottom(rect: Rect2) -> float:
 static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		selected: bool, is_tapped: bool, font: Font, font_bold: Font,
 		power_override := -1, on_board := false, sleeping := false,
-		name_only := false, phase := 0) -> void:
+		name_only := false, phase := 0,
+		speed_override := -1, range_override := -1) -> void:
 	## 卡面一律按 rect **完整排版**，与图鉴/战场小卡同一套比例，没有「按可见高度重锚」
 	## 之类的特例 —— 手牌卡底沉出窗口下沿时，被挡住的那截就让它挡住
 	## （作者口径：卡片是一个整体，排版要与正常状态完全一致，别为了躲裁剪挪数值）。
@@ -361,7 +362,8 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	#    name_only=true → 只画卡名（战斗内卡面口径：效果详情走悬停/点选描述面板）。
 	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold, on_board, is_tapped, name_only)
 	# ⑦ 数值徽章 —— 最后画，压在卡图与文字之上（「额外挂载」的字面意思）
-	_draw_badges(canvas, font_bold, card, rect, k, kc, hp, power_override)
+	_draw_badges(canvas, font_bold, card, rect, k, kc, hp, power_override,
+			speed_override, range_override)
 	# ⑧ 附魔标记（R214）—— 同样压在最上层（它骑在卡图左上角上）
 	_draw_enchant_mark(canvas, card, rect, font_bold)
 
@@ -694,13 +696,17 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 
 
 static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, rect: Rect2,
-		k: float, kc: float, hp: int, power_override: int) -> void:
+		k: float, kc: float, hp: int, power_override: int,
+		speed_override := -1, range_override := -1) -> void:
 	## 数值「额外挂载」。位置是**固定槽位**，与卡的种类无关 ——
 	## 玩家的眼睛只需要记一次坐标：
 	##   ① 费用 = 卡框左上角 · ② 力量 = 卡框左下角（与 ① 同一条竖线）
 	##   ③ 攻击距离 = ② 右侧 · ④ 移动距离 = ⑤ 左侧 · ⑤ 生命 = 卡框右下角
 	## ⚠️ 于是 ② 与 ⑤ **分别向左右探出卡框**（R115 用户口径）—— 容器必须让出
 	##    `UiTheme.CARD_BLEED`，少让一点这两张就会骑到邻卡身上。
+	# R387（用户口径「启示者 2 阶段减 1 速度的显示正常吗？」）：程 / 速 与力量同一口径 ——
+	# 战场单位传 `effective_range()` / `effective_speed()`，徽章写**真正生效的数**，
+	# 并按卡库原型染色（2 → 1 = 红）。手牌 / 图鉴 / 选卡页不传，保持卡面粉数值。
 	var r: float = UiTheme.CARD_BADGE_R * kc
 	var gap: float = UiTheme.CARD_BADGE_GAP * kc
 	var fs: int = maxi(7, roundi(UiTheme.CARD_FS_BADGE * kc))
@@ -745,21 +751,31 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	draw_badge(canvas, font_bold, Vector2(power_x, bar_y), r, fs, "power",
 			str(shown_power), UiTheme.BADGE_POWER,
 			_delta_col(shown_power, base_power))
+	var shown_range: int = badge_shown(card.attack_range, range_override)
 	draw_badge(canvas, font_bold, Vector2(range_x, bar_y), r, fs, "range",
-			str(card.attack_range), UiTheme.BADGE_RANGE,
-			_delta_col(card.attack_range, bv.get("range")))
+			str(shown_range), UiTheme.BADGE_RANGE,
+			_delta_col(shown_range, bv.get("range")))
 	# ── ④ 移动距离（鞋）+ ⑤ 生命（血）──
 	# ⚠️ 阅读方向必须与左半排一致（力 程 … 速 生）：跨过中间空档后仍是「先读到的在左」。
 	# 先前按「离卡角最近的是第一个」做成镜像（力 程 速 生 → 生 速），出图一看就读反了 ——
 	# 两组之间「先读到的那个」忽左忽右，比单纯难看更糟：会读错数值。
 	# 工事不会移动 → 不画鞋，生命直接占最外侧那张（贴右框线）。
 	if is_unit:
+		var shown_speed: int = badge_shown(card.move_speed, speed_override)
 		draw_badge(canvas, font_bold, Vector2(speed_x, bar_y), r, fs, "speed",
-				str(card.move_speed), UiTheme.BADGE_SPEED,
-				_delta_col(card.move_speed, bv.get("speed")))
+				str(shown_speed), UiTheme.BADGE_SPEED,
+				_delta_col(shown_speed, bv.get("speed")))
 	draw_badge(canvas, font_bold, Vector2(health_x, bar_y), r, fs, "health",
 			str(hp), UiTheme.BADGE_HEALTH,
 			_health_col(card, hp, base_health))
+
+
+static func badge_shown(cur: int, override: int) -> int:
+	## 数值徽章的**显示值**（R387）：override >= 0 → 用它，否则用卡面粉数值。
+	## 力量早已走 `power_override`；这里把程 / 速 补成同一口径 ——
+	## 「显示值 == 实际生效值」是卡面的硬约束，染色也跟着显示值算。
+	## 抽成静态口是为了回归能直接断言，不必先起一个 CanvasItem 去画。
+	return override if override >= 0 else cur
 
 
 static func _base_repo() -> CardRepo:

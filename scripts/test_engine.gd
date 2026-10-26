@@ -28293,6 +28293,83 @@ func _init() -> void:
 	check_src(r386_sbs.length() > 0 and r386_sbs.find("class_name") < 0,
 			"R386 源码：speech_bubble 不写 class_name（跨脚本解析不了，只能 preload）")
 
+	# ================= R387：启示者阶段 2 减速的卡面显示 + 火墙术上限随伤害提升 =================
+	# 用户口径：「启示者 2 阶段减 1 速度的显示正常吗？」—— 引擎与左侧详情栏本来就对，
+	# 缺的是**战场卡面**：鞋子仍读 `card.move_speed`，阶段 2 的 -1 在卡上完全看不见。
+	# 「如果火墙术有附魔加伤等等，会不会受到单体 15 伤害的限制？这个限制应该随着火墙术
+	#  纸面伤害提升而提升。」
+	# ---- ① 数值徽章：程 / 速 与力量同口径 —— 显示值 == 实际生效值 ----
+	check(CardFace.badge_shown(2, 1) == 1 and CardFace.badge_shown(2, -1) == 2
+			and CardFace.badge_shown(3, 0) == 0,
+			"R387 徽章显示值：override >= 0 用实际值，否则用卡面粉数值（%d / %d / %d）" % [
+			CardFace.badge_shown(2, 1), CardFace.badge_shown(2, -1),
+			CardFace.badge_shown(3, 0)])
+	check(CardFace._delta_col(CardFace.badge_shown(2, 1), 2) == UiTheme.BADGE_DOWN
+			and CardFace._delta_col(CardFace.badge_shown(2, 3), 2) == UiTheme.BADGE_UP,
+			"R387 徽章染色跟着显示值算（实际 1 < 原型 2 → 红；实际 3 > 原型 2 → 绿）")
+	var r387_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r387_bs.find("p.effective_speed(), p.effective_range()") >= 0,
+			"R387 源码：战场卡面把 effective_speed / effective_range 传进卡面（不再读卡库原值）")
+
+	# ---- ② 启示者阶段 2：鞋子 1、顶部「速 -1」；阶段 3 鞋子 0 ----
+	var r387_e := _new_engine([], 20, 30)
+	r387_e.enemy_hp_infinite = true
+	r387_e.win_on_boss = GameEngine.REVELATOR_ID
+	var r387_boss := r387_e.state.place(
+			CardData.from_dict(repo.get_card(GameEngine.REVELATOR_ID).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r387_boss.health = GameEngine.REVELATOR_PHASE_2_HP
+	r387_e._revelator_check_phase(r387_boss)
+	check(r387_boss.boss_phase == 2 and r387_boss.effective_speed() == 1,
+			"R387 启示者阶段 2：实际移速 2 → 1（实际 %d）" % r387_boss.effective_speed())
+	check(CardFace.badge_shown(r387_boss.card.move_speed, r387_boss.effective_speed()) == 1,
+			"R387 启示者阶段 2：卡面鞋子显示 1（卡面原值 %d / 实际 %d）" % [
+			r387_boss.card.move_speed, r387_boss.effective_speed()])
+	var r387_badge := ""
+	for r387_b: Dictionary in r387_boss.status_badges():
+		r387_badge += str(r387_b["text"]) + "｜"
+	check(r387_badge.contains("速 -1"),
+			"R387 启示者阶段 2：顶部徽标报出「速 -1」（实际 %s）" % r387_badge)
+	r387_boss.health = GameEngine.REVELATOR_PHASE_3_HP
+	r387_e._revelator_check_phase(r387_boss)
+	check(CardFace.badge_shown(r387_boss.card.move_speed, r387_boss.effective_speed()) == 0,
+			"R387 启示者阶段 3：鞋子上写 0（实际 %d）" % r387_boss.effective_speed())
+
+	# ---- ③ 火墙术：单位上限跟着纸面伤害走（附魔 +10 → 即时 25 / 经过 18 / 上限 25）----
+	var r387_fw := _new_engine([], 30, 30, -1, false)
+	r387_fw.start_game(0)
+	var r387_tank := r387_fw.state.place(
+			CardData.from_dict(repo.get_card(1051).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r387_walk := r387_fw.state.place(
+			CardData.from_dict(repo.get_card(1051).to_dict()),
+			Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+	var r387_tank_hp: int = r387_tank.health
+	var r387_walk_hp: int = r387_walk.health
+	var r387_spell := CardData.from_dict(repo.get_card(9084).to_dict())
+	r387_spell.power = 10   # 商店附魔「技能伤害 +10」：纸面 15 → 25
+	r387_fw.state.hand = [r387_spell]
+	r387_fw.state.energy = 6
+	r387_fw.use_spell(0, Vector2i(1, 2))
+	check(r387_tank.health == r387_tank_hp - 25,
+			"R387 火墙术：附魔 +10 → 即时 25（%d→%d）" % [r387_tank_hp, r387_tank.health])
+	check(r387_walk.health == r387_walk_hp,
+			"R387 火墙术：不在这一行的单位不被点燃（%d）" % r387_walk.health)
+	r387_walk.moved = false
+	r387_walk.tapped = false
+	r387_fw.move(Vector2i(2, 0), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	check(r387_walk.health == r387_walk_hp - 18,
+			"R387 火墙术：附魔 +10 → 经过灼烧 18（%d→%d）" % [r387_walk_hp, r387_walk.health])
+	r387_walk.moved = false
+	r387_walk.tapped = false
+	r387_fw.move(Vector2i(1, 1), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r387_walk.moved = false
+	r387_walk.tapped = false
+	r387_fw.move(Vector2i(2, 1), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	check(r387_walk.health == r387_walk_hp - 25,
+			"R387 火墙术：上限 25（15+10）→ 第二次只补 7，合计 -%d（旧版会卡在 15）"
+			% [r387_walk_hp - r387_walk.health])
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

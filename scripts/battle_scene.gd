@@ -8015,18 +8015,21 @@ func _art(card: CardData, rect: Rect2) -> void:
 
 func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_tapped: bool,
 		cost_override := -1, power_override := -1, on_board := false, sleeping := false,
-		phase := 0) -> void:
+		phase := 0, speed_override := -1, range_override := -1) -> void:
 	## 卡面一律按 rect 完整排版（含手牌）—— 卡底沉出窗口下沿的那截由视口裁掉，
 	## 卡面内容**不做**任何偏移补偿：卡片是一个整体，被挡住就挡住。
 	## cost_override >= 0 且不等于卡面费用 → 在费用圆上重画**绿色**数字，
 	## 让玩家一眼看出「这张卡现在更便宜」（协同攻击等动态减费）。
 	## power_override >= 0 → 用实际力量重画左下角标（战场单位传 effective_power()）。
+	## speed_override / range_override >= 0（R387）→ 同理重画鞋 / 弓（战场单位传
+	##   effective_speed() / effective_range()）—— 启示者阶段 2 的「速 -1」以前只进了
+	##   引擎与左侧详情栏，卡面鞋子还在写卡库原值 2（用户实测报的显示 bug）。
 	## on_board = true → 卡面的「种类 · 字段」行只写**上场之后仍然有用**的字段
 	##   （R118：交换 / 幻影 是打出那一刻的规则，落在格子上之后再标就是噪音）。
 	## name_only = true（战斗内一律）→ 卡面**只画卡名**，不画种类·字段与效果文 ——
 	##   效果详情由悬停/点选的描述面板提供（左侧信息栏「悬停优先，其次选中的卡」）。
 	CardFace.draw(self, card, rect, hp, selected, is_tapped, _font, _font_bold, power_override,
-			on_board, sleeping, true, phase)
+			on_board, sleeping, true, phase, speed_override, range_override)
 	if not card.x_cost and cost_override >= 0 and cost_override != card.cost:
 		# ⚠️ R122：**必须走 CardFace.draw_badge()**（同一个槽位的唯一绘制口）。
 		# 这里原来自己 `draw_circle` 盖一个纯色圆盘 —— R115 把费用徽章换成
@@ -8281,7 +8284,7 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	# 沉睡（恶魔鸭 9116，sleep_left>0）→ 换沉睡专用卡图；其余状态用普通卡图。
 	_draw_card_face(p.card, Rect2(center - Vector2(w, h) / 2.0, Vector2(w, h)),
 			_show_hp(p, p.health), selected, false, -1, p.effective_power(), true,
-			p.sleep_left > 0, _rev_art_phase(p))
+			p.sleep_left > 0, _rev_art_phase(p), p.effective_speed(), p.effective_range())
 	# R165：移除「横置」视觉——不再把卡转横。改用青色**就绪光环**标明「可行动」：
 	# 凡本回合还有行动权（未横置）的单位都亮脉动环（敌我同标），以此区分不能动的卡。
 	if not p.tapped:
@@ -10841,9 +10844,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var fw_name := "火墙术"
 			if data.get("card") is CardData:
 				fw_name = (data["card"] as CardData).card_name
+			# R387：经过灼烧与单位上限都跟着**这张卡的实际伤害**走（附魔 / 鸭之眼 …），
+			# 所以读事件里带出来的值，不再写死在常量上。
 			_say("🔥 %s：第 %d 行燃起火墙（经过者 -%d，同一单位上限 %d）" % [
-					fw_name, fw_row2, GameEngine.FIRE_WALL_PASS_DMG,
-					GameEngine.FIRE_WALL_CAP])
+					fw_name, fw_row2,
+					int(data.get("pass_dmg", GameEngine.FIRE_WALL_PASS_DMG)),
+					int(data.get("cap", GameEngine.FIRE_WALL_CAP))])
 		"fire_wall_hit":
 			# 火墙开场那一炸：橙色爆点 + 伤害飘字
 			var fh_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))

@@ -144,7 +144,8 @@ var _spell_hit_enemy:= false
 # 流星雨（9083）：本次施放消耗的费用（X）—— 在 _pay 之前抓取（见 use_spell / remote_spell）
 var _x_spell_value:= 0
 # 火墙术（9084）：正在燃烧的横行。每项 {side, row, pass_dmg, dealt}；
-# dealt 记录每个单位已从这面火墙吃到的伤害（同一单位累计上限 FIRE_WALL_CAP）。
+# dealt 记录每个单位已从这面火墙吃到的伤害；同一单位的累计上限记在 rec["cap"]，
+# 由施放时的实际伤害算出（R387）—— 附魔加伤会把上限一起抬高。
 # 熄灭时机 = 施放方的下次回合开始（_begin_turn → _clear_fire_walls）。
 var _fire_walls: Array = []
 # 蓄力（9085）：该方「下一张技能多结算几次」的待用层数（按阵营记账，用掉即清）。
@@ -728,6 +729,9 @@ const METEOR_SHOWER_DMG:= 8
 # R264（用户口径「下调火墙术延迟伤害：10-8（15点即时伤害不变）」）：
 #   经过灼烧 10 → **8**；即时 15 与单位上限 15 都不动。
 #   8 + 7 = 15 → 同一单位最多穿过两次就吃满，第二次只补 CAP 余量（7 点）。
+# R387（用户口径「这个限制应该随着火墙术纸面伤害提升而提升」）：15 是**纸面值**，
+#   每一面火墙实际用的单位上限 = FIRE_WALL_CAP + 这张卡的即时伤害增量。
+#   附魔 +10 → 即时 25 / 经过 18 / 上限 25；没加成时仍是 15，旧行为一位不差。
 const FIRE_WALL_SPELL_ID:= 9084
 const FIRE_WALL_DMG:= 15
 const FIRE_WALL_PASS_DMG:= 8
@@ -3962,7 +3966,8 @@ func _fire_wall_spell(side: String, target, card: CardData) -> String:
 	## 火墙术（9084，R247 起不分敌我）：对一横行的**所有单位**（含施放方自己人）造成
 	## FIRE_WALL_DMG 点伤害，并让该行燃烧到施放方的下次回合开始 —— 期间任何单位
 	## （不分敌我）移动经过该行 → 再挨 FIRE_WALL_PASS_DMG 点（见 _fire_wall_pass）。
-	## 同一个单位从这面火墙上累计最多 FIRE_WALL_CAP 点（即时 + 经过合计）。
+	## 同一个单位从这面火墙上累计最多 `cap` 点（即时 + 经过合计），
+	## cap = FIRE_WALL_CAP + 这张卡的实际即时伤害增量（R387，附魔加伤会一起抬高）。
 	if not (target is Vector2i):
 		return "（需要指定一条横行）"
 	var row: int = (target as Vector2i).x
@@ -3970,7 +3975,13 @@ func _fire_wall_spell(side: String, target, card: CardData) -> String:
 		return "（横行不存在）"
 	var dmg:= _spell_dmg(side, FIRE_WALL_DMG, card)
 	var pass_dmg:= _spell_dmg(side, FIRE_WALL_PASS_DMG, card)
-	var rec:= {"side": side, "row": row, "pass_dmg": pass_dmg, "dealt": {}}
+	# R387：**同一单位上限跟着纸面伤害走** —— 卡面写「最多受到 15 点」，那个 15 就是
+	# 这次即时伤害的纸面值。附魔 / 鸭之眼 / 荧光草 … 每多 1 点伤害上限也 +1，
+	# 「即时 + 经过」的总量关系保持不变。上限按**这一面火墙**记账（rec["cap"]），
+	# 两面火墙各算各的；经过判定见 `_fire_wall_pass()`。
+	var cap: int = FIRE_WALL_CAP + maxi(0, dmg - FIRE_WALL_DMG)
+	var rec:= {"side": side, "row": row, "pass_dmg": pass_dmg, "cap": cap,
+			"dealt": {}}
 	var map: Dictionary = rec["dealt"]
 	var hits:= 0
 	var total:= 0
@@ -3991,12 +4002,13 @@ func _fire_wall_spell(side: String, target, card: CardData) -> String:
 		hits += 1
 		action.emit("fire_wall_hit", {"cell": c, "dmg": dealt, "card": card})
 	_fire_walls.append(rec)
-	action.emit("fire_wall", {"row": row, "side": side, "card": card})
+	action.emit("fire_wall", {"row": row, "side": side, "card": card,
+			"dmg": dmg, "pass_dmg": pass_dmg, "cap": cap})
 	if hits > 0:
 		_destroy_dead()
 	_end_hp_once()
 	_log("火墙术：第 %d 行燃起（%d 个单位共 -%d，不分敌我；经过者 -%d，同一单位上限 %d）" % [
-			row, hits, total, pass_dmg, FIRE_WALL_CAP])
+			row, hits, total, pass_dmg, cap])
 	var msg:= "第 %d 行火墙：%d 个单位 -%d（不分敌我）" % [row, hits, dmg]
 	if blocked > 0:
 		msg += "，%d 个免疫" % blocked
@@ -4008,7 +4020,7 @@ func _fire_wall_pass(path: Array[Vector2i]) -> void :
 
 	## 单位移动结束后的火墙判定（**不分敌我**）：path 是 BFS 路径（含起点与终点），
 	## 只要路径上「进入过」某条燃烧的横行（起点不算，那是站着不是经过）→ 挨一次灼烧。
-	## 同一个单位从同一面火墙上累计最多 FIRE_WALL_CAP 点（全卡合计上限）。
+	## 同一个单位从同一面火墙上累计最多 rec["cap"] 点（全卡合计上限，R387 起随纸面伤害提升）。
 	if _fire_walls.is_empty() or path.size() < 2:
 		return
 	var p: Placement = state.unit_at(path[path.size() - 1])
@@ -4026,16 +4038,19 @@ func _fire_wall_pass(path: Array[Vector2i]) -> void :
 		if not crossed:
 			continue
 		var map: Dictionary = rec["dealt"]
+		# R387：上限按**这一面火墙**算（rec["cap"]）；旧录像 / 旧数据没有这个键时
+		# 退回常量，行为与以前一致。
+		var cap: int = int(rec.get("cap", FIRE_WALL_CAP))
 		var used: int = int(map.get(p, 0))
-		var left: int = FIRE_WALL_CAP - used
+		var left: int = cap - used
 		if left <= 0:
-			_log("火墙：%s 已吃满 %d 点，本次不再受伤" % [p.card.card_name, FIRE_WALL_CAP])
+			_log("火墙：%s 已吃满 %d 点，本次不再受伤" % [p.card.card_name, cap])
 			continue
 		var dmg: int = mini(int(rec["pass_dmg"]), left)
 		var real:= _hit_unit(p, dmg, "火墙")
 		map[p] = used + real
 		_log("火墙：%s 穿过第 %d 行 → -%d（这面火墙累计 %d/%d）" % [
-				p.card.card_name, row, real, used + real, FIRE_WALL_CAP])
+				p.card.card_name, row, real, used + real, cap])
 		action.emit("fire_wall_pass", {"cell": path[path.size() - 1],
 				"dmg": real, "card": p.card})
 		if p.health <= 0:
