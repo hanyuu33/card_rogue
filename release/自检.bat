@@ -36,12 +36,12 @@ echo ============================================================
 echo.
 
 echo ============================================================
-echo  [done] expected baseline inside this pack:/r/necho         reward / bgm : all passed
-echo         smoke        : 51 passed / 4 failed
-echo         engine       : 12 failed
-echo         -- every one of those failures is a guard that reads .gd source text.
-echo            A pack ships compiled scripts, so those guards cannot pass here by design.
-echo            Any OTHER failure is a real problem.
+echo  [done] what to expect inside this pack:
+echo         reward / bgm : all passed
+echo         smoke        : every scene opens, no script errors
+echo         engine       : a few guards that read .gd source text will fail --
+echo                        a pack ships compiled scripts only, so they cannot pass
+echo                        here by design. Any OTHER failure is a real problem.
 echo ============================================================
 pause
 popd
