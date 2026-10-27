@@ -28883,12 +28883,12 @@ func _init() -> void:
 	# (d) 源码守卫：供能**只**在 `_on_unit_upgraded()` 里调一次；
 	#     且「只在场上生效」的守卫一个字没动 —— 这是收口改造时最容易被顺手删掉的两处。
 	var r391_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
-	check(r391_ge.count("_feed_upgrade_card(p)") == 1,
+	check_src(r391_ge.count("_feed_upgrade_card(p)") == 1,
 		"R391 源码：供能只在统一后置口调一次（实际 %d 次）"
 			% r391_ge.count("_feed_upgrade_card(p)"))
-	check(r391_ge.find("state.unit_at(_cell_of(p)) != p") >= 0,
+	check_src(r391_ge.find("state.unit_at(_cell_of(p)) != p") >= 0,
 		"R391 源码：**只在场上生效**的守卫仍在（桌外改造不供能）")
-	check(r391_ge.find("\t_feed_upgrade_card(p)\n\tif p.card.traits.has(UPGRADE_RANGE_TRAIT)") >= 0
+	check_src(r391_ge.find("\t_feed_upgrade_card(p)\n\tif p.card.traits.has(UPGRADE_RANGE_TRAIT)") >= 0
 			or r391_ge.find("\t_feed_upgrade_card(p)\r\n\tif p.card.traits.has(UPGRADE_RANGE_TRAIT)") >= 0,
 		"R391 源码：供能在统一后置口**最前面**（先于机器鸟等塞牌，才与旧行为等价）")
 
