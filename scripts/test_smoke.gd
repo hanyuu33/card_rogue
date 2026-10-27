@@ -3729,6 +3729,15 @@ func _check_rest_one_reward(scene: Variant) -> void:
 	if not rest.visible or not bbq.visible:
 		_smoke_fail("R237 休息处：「在这里休息」与「烤肉」两个选项都应可见")
 		return
+	# R390（用户口径）：第三个收益选项「添加柴火」（从卡组删一张卡）必须真的铺出来 ——
+	# 只写在文案里、按钮没接线，是这一处最可能出的错。
+	var alt: Button = scene.get_node_or_null("Center/AltBtn")
+	if alt == null or not alt.visible or alt.text.find("添加柴火") < 0:
+		_smoke_fail("R390 休息处：第三个选项「添加柴火」应可见且写明用途")
+		return
+	if alt.disabled and not RunState.deck_ids.is_empty():
+		_smoke_fail("R390 休息处：卡组非空时「添加柴火」不该置灰")
+		return
 	# 打残 → 点「休息」应回血，且只留离开（烤肉收起 = 二选一）
 	RunState.hp = maxi(1, RunState.max_hp - 12)
 	var hp0: int = RunState.hp
@@ -3748,7 +3757,7 @@ func _check_rest_one_reward(scene: Variant) -> void:
 	if not scene._reward_claimed:
 		_smoke_fail("R237 休息处：休息后应记下 _reward_claimed（一次访问只领一份）")
 		return
-	print("SMOKE OK R147/R237 休息处：篝火回血恢复（+%d）；休息后只留离开" % expect_gain)
+	print("SMOKE OK R147/R237/R390 休息处：篝火回血（+%d）+ 添加柴火第三选项；休息后只留离开" % expect_gain)
 
 
 func _check_frozen_aura(scene: Variant) -> void:

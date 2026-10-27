@@ -63,6 +63,7 @@ static func snapshot() -> Dictionary:
 		"hp": RunState.hp,
 		"deck_ids": RunState.deck_ids,
 		"deck_mods": RunState.deck_mods,
+		"card_growth": RunState.card_growth,   # R393：本局永久击杀成长
 		"gold": RunState.gold,
 		"map_cells": RunState.map_cells,
 		"current_layer": RunState.current_layer,
@@ -222,6 +223,22 @@ static func apply(d: Dictionary) -> bool:
 	RunState.deck_ids = _int_array(d.get("deck_ids", []))
 	RunState.deck_mods = d.get("deck_mods", []) if d.get("deck_mods", []) is Array else []
 	RunState.ensure_deck_mods()   # R204：老存档没有 deck_mods → 补齐成与 deck_ids 等长
+	# R393：本局永久击杀成长。老存档没有这个键 → 空账（卡面回到基础数值）。
+	RunState.card_growth = {}
+	var cg_raw: Variant = d.get("card_growth", {})
+	if cg_raw is Dictionary:
+		for cg_k: Variant in (cg_raw as Dictionary).keys():
+			var cg_v: Variant = (cg_raw as Dictionary)[cg_k]
+			if not (cg_v is Dictionary):
+				continue
+			var cg_d: Dictionary = cg_v
+			var cg_out := {}
+			for cg_stat in ["power", "health", "damage"]:
+				var cg_n := maxi(0, int(cg_d.get(cg_stat, 0)))
+				if cg_n != 0:
+					cg_out[cg_stat] = cg_n
+			if not cg_out.is_empty():
+				RunState.card_growth[str(cg_k)] = cg_out
 	RunState.gold = int(d.get("gold", 100))
 	RunState.map_cells = d.get("map_cells", []) if d.get("map_cells", []) is Array else []
 	RunState.current_layer = int(d.get("current_layer", GameLayers.LAYER_DEFAULT))

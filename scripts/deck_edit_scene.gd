@@ -22,6 +22,8 @@ extends Control
 ## 于是「点新的替换旧的」是同一套代码的自然结果，不另开一条通道。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+# R390：源数之力的卡片变化演出（RefCounted，无 class_name → 必须 preload）。
+const CardMorphFx = preload("res://scripts/card_morph_fx.gd")
 
 # R191（用户口径「事件选卡也要用全屏大选卡」）：固定**每行 5 张放大卡** +
 # 垂直滚动（滚轮 / 拖动 / 触屏拖动），卡面只留卡名，点选后描述在底部描述条读。
@@ -58,6 +60,12 @@ var _scroll := 0.0
 var _press := {}           # {pos, scroll, moved} 拖滚动手势
 var _clip: Control         # 裁剪容器（Godot 画布无裁剪 → clip_contents 容器裁子节点）
 var _grid: Control         # 卡片网格自绘节点（本地坐标；y = -_scroll）
+# ---- R390 源数之力演出 ----
+var _fx = null             # CardMorphFx 实例（时间轴 + 画法）
+var _fx_layer: Control     # 演出自绘层（永远在网格之上）
+var _fx_hide := -1         # 演出期间从网格里摘掉的那张卡（旧卡），-1 = 不摘
+var _fx_pick := -1         # 正在被改造的那张卡的下标（演出 150ms 之后 `_fx_hide` 才跟上它）
+var _back_delay := 1.4     # 结算后回地图的等待（演出要占掉 1.3s → 源数之力调到 2.1）
 
 @onready var title_label: Label = $TopBar/TitleLabel
 @onready var hint_label: Label = $HintLabel
@@ -106,6 +114,14 @@ func _ready() -> void:
 	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_clip.add_child(_grid)
 	_grid.draw.connect(_draw_grid)
+	# R390：演出层最后 add_child → 画在网格 / 提示条之上；mouse_filter = IGNORE
+	# 保证它不吃点击（演出期间唯一要响应的是「回地图」那条计时器）。
+	_fx = CardMorphFx.new()
+	_fx_layer = Control.new()
+	_fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fx_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_fx_layer)
+	_fx_layer.draw.connect(_draw_fx)
 	confirm_btn.pressed.connect(_on_confirm)
 	resized.connect(func(): _layout(); if _grid != null: _grid.queue_redraw(); queue_redraw())
 	_refresh_title()
@@ -170,12 +186,53 @@ func _ready() -> void:
 		pt.timeout.connect(_run_pickshot)
 		add_child(pt)
 		pt.start()
+	# R390 演示：-- --morphshot 自动选第一张 → 点「确定」→ 在演出各段各截一张图，
+	# 核验「旧卡碎开 / 光环扩散 / 新卡浮现 / 名字对照」四段真的画出来了。
+	if "--morphshot" in args:
+		RunState.run_active = true
+		if RunState.deck_ids.is_empty():
+			RunState.deck_ids = [8001, 8002, 8003, 9018, 8060]
+		if RunState.pending_relic <= 0:
+			RunState.gain_relic(RunState.SOURCE_POWER_ID)
+		_cards = RunState.deck_ids.duplicate()
+		_reset_uids()
+		_layout()
+		_refresh_ui()
+		var mt := Timer.new()
+		mt.wait_time = 0.6
+		mt.one_shot = true
+		mt.timeout.connect(_run_morphshot)
+		add_child(mt)
+		mt.start()
 	queue_redraw()
 	# R148：Esc 主菜单
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "继续",
 		"sub": "卡组编辑",
 	})
+
+
+func _run_morphshot() -> void:
+	## R390 演示：走真实路径（点选 → 确定）触发源数之力演出，在四个时间点各截一张。
+	## 产物：res://screenshot_morph_<ms>.png
+	## ⚠️ 计时靠 await create_timer：必须让引擎真的渲染过那几帧，
+	##    直接改时间戳去读中间态是读不到的（画面还没画出来）。
+	if _cards.is_empty() or _mode() != "transform":
+		push_warning("--morphshot 需要源数之力的选卡模式（pending_relic = 6002）")
+		get_tree().quit()
+		return
+	_toggle_sel(0)
+	_refresh_ui()
+	await get_tree().create_timer(0.15).timeout
+	_on_confirm()
+	var marks: Array[int] = [100, 450, 900, 1250]
+	var prev := 0
+	for m in marks:
+		await get_tree().create_timer(float(m - prev) / 1000.0).timeout
+		prev = m
+		var img := get_viewport().get_texture().get_image()
+		img.save_png(ProjectSettings.globalize_path("screenshot_morph_%d.png" % m))
+	get_tree().quit()
 
 
 func _run_pickshot() -> void:
@@ -201,6 +258,16 @@ func _run_pickshot() -> void:
 
 
 func _process(_delta: float) -> void:
+	# R390：演出在播 → 只重绘演出层（网格此刻是静止的，重绘它纯属浪费）。
+	if _fx != null and _fx_layer != null and _fx.playing(Time.get_ticks_msec()):
+		# 旧卡前 150ms **先留在原位**（被金光盖着「烧」），之后才真正摘掉。
+		# 一上来就摘的话，那个空槽会被读成「卡变成了一个黄块」而不是「卡烧起来了」。
+		var want: int = _fx_pick if _fx.elapsed(Time.get_ticks_msec()) >= 150 else -1
+		if want != _fx_hide:
+			_fx_hide = want
+			_grid.queue_redraw()
+		_fx_layer.queue_redraw()
+		return
 	# R186：滑位动画（_tween 非空）或鼠标移动时才重绘（原来无条件每帧重绘）。
 	# R191：卡片画在 `_grid` 子节点上 → 重绘要连带它（hover 高亮 / 补间都在那边）。
 	if not _tween.is_empty():
@@ -384,7 +451,7 @@ func _draw() -> void:
 	if desc_idx < 0 and not _sel.is_empty():
 		desc_idx = _sel[-1]
 	if desc_idx >= 0 and desc_idx < _cards.size():
-		var dc := repo.get_card(_cards[desc_idx])
+		var dc := _disp_card(desc_idx)
 		if dc != null:
 			var dr := Rect2(MARGIN, size.y - BOTTOM_RESERVE + 6.0,
 					size.x - MARGIN * 2.0, DESC_H)
@@ -395,6 +462,13 @@ func _draw() -> void:
 			draw_string(_font, dr.position + Vector2(14, 48),
 					"%s · %d 费 · %s" % [dc.kind, dc.cost, dc.rarity_name()],
 					HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_CAPTION, Color("9a94a8"))
+			# R393b：本局永久成长写在种类行下面 —— 删卡 / 锻造 / 改造前必须看得见，
+			# 否则玩家会把长到 +6 的猎杀当成普通卡送出去。
+			var grow_line := CardFace.growth_text(dc)
+			if grow_line != "":
+				draw_string(_font_bold, dr.position + Vector2(14, 68),
+						"本局永久成长 %s（跨战斗保留）" % grow_line,
+						HORIZONTAL_ALIGNMENT_LEFT, 180.0, UiTheme.FS_CAPTION, Color("8ce6a8"))
 			var lines := CardFace.wrap_text(_font, CardText.naturalize(dc.effect_text),
 					dr.size.x - 210.0, UiTheme.FS_BODY)
 			for li in mini(lines.size(), 3):
@@ -405,10 +479,29 @@ func _draw() -> void:
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("c8e6a0"))
 
 
+func _disp_card(i: int) -> CardData:
+	## R393b：**展示用卡实例** —— 带本局永久成长的独立副本（没成长就是卡库原型）。
+	## 卡面角标 / 底部描述条都走这一口，本局长到多少一眼看得见。
+	## ⚠️ 必须先确认 `_cards` 与 `RunState.deck_ids` **还对齐**：
+	##    本场景会先改 `_cards`（删卡 / 改造的即时反馈），错位时宁可退回原型，
+	##    也不能拿第 i 张的成长去装饰另一张卡。
+	if i < 0 or i >= _cards.size():
+		return null
+	if i < RunState.deck_ids.size() and RunState.deck_ids[i] == _cards[i]:
+		var cc := RunState.card_with_mod(repo, i)
+		if cc != null:
+			return cc
+	return repo.get_card(_cards[i])
+
+
 func _draw_grid() -> void:
 	## 卡片网格（`_grid` 子节点自绘，本地坐标；滚出 `_clip` 视区的部分被裁掉）。
 	var now_ms := Time.get_ticks_msec()
 	for i in _cards.size():
+		# R390：源数之力演出期间，被改写的那张旧卡由演出层接管（新卡已画在中央），
+		# 如果这里还画着，画面上会同时出现「改造前 / 改造后」两张，读起来像没生效。
+		if i == _fx_hide:
+			continue
 		var rect := _card_rect(i)
 		if rect.size.x <= 0.0:
 			continue
@@ -421,7 +514,7 @@ func _draw_grid() -> void:
 			_grid.draw_rect(rect.grow(UiTheme.CARD_BLEED), UiTheme.ACCENT_GOLD, false, 2.0)
 		elif hovered:
 			_grid.draw_rect(rect.grow(5.0), Color(1, 1, 1, 0.10), true)
-		var c := repo.get_card(_cards[i])
+		var c := _disp_card(i)
 		if c != null:
 			# R191：选卡场景卡面只留卡名（描述在底部描述条读）
 			CardFace.draw_pick(_grid, c, rect, _font, _font_bold, selected)
@@ -717,23 +810,60 @@ func _apply(pick: int) -> void:
 		var nc := repo.get_card(int(res["new_id"]))
 		_result = "「%s」变成了「%s」（源数之力）" % [cname,
 				nc.card_name if nc != null else str(res["new_id"])]
+		# R390（用户口径）：改造要看得见 —— 旧卡炸开 → 新卡浮现 → 名字对照。
+		# 结算在这一行之前就落了账，演出只是把「已经发生的事」演一遍；
+		# 所以即使演出被打断（切场景 / 退出），卡组状态也是对的。
+		_play_morph(pick, id, int(res.get("new_id", 0)))
+		_back_delay = 2.1
 	else:
 		_result = ""
 	confirm_btn.disabled = true
 	confirm_btn.text = "完成"
-	_go_back_soon()
+	_go_back_soon(_back_delay)
 
 
-func _go_back_soon() -> void:
+func _go_back_soon(delay := 1.4) -> void:
 	# R151 P2-17：结算结果同时发一条跨场景轻提示（回到地图也看得见）
+	# R390：`delay` 可调 —— 源数之力要等演出播完（1.3s）再走，否则新卡只闪一下。
 	if _result != "":
 		UiToast.toast(_result)
 	var t := Timer.new()
-	t.wait_time = 1.4
+	t.wait_time = delay
 	t.one_shot = true
 	t.timeout.connect(_go_back)
 	add_child(t)
 	t.start()
+
+
+func _play_morph(pick: int, old_id: int, new_id: int) -> void:
+	## R390：源数之力专属演出。旧卡在网格里的屏幕矩形当碎片锚点，
+	## 新卡定在屏幕中心偏上（不跟着滚动走 —— 那一刻网格已经不重要了）。
+	## ⚠️ 取矩形要算上 `_clip.position` 与 `_grid.position`：卡片画在 grid 本地坐标系里，
+	##    直接用 `_card_rect()` 会偏掉一个 MARGIN / 滚动量。
+	if _fx == null or _fx_layer == null or _cw <= 0.0:
+		return
+	var from := _card_rect(pick)
+	from.position += _clip.position + _grid.position
+	var center := Vector2(size.x * 0.5, size.y * 0.44)
+	var final := Rect2(center - Vector2(_cw, _ch) * 0.5, Vector2(_cw, _ch))
+	_fx_pick = pick
+	_fx_hide = -1
+	_fx.restart(from, final, repo.get_card(old_id), repo.get_card(new_id),
+			Time.get_ticks_msec())
+	_fx_layer.queue_redraw()
+	_grid.queue_redraw()
+	# 底部那行结果字（`_result` 画在 size.y - 72）会被「确定」按钮压住，而演出本身
+	# 已经在卡下写明「旧名 → 新名」了 → 这行改走跨场景轻提示，界面不再画第二遍。
+	if _result != "":
+		UiToast.toast(_result)
+		_result = ""
+
+
+func _draw_fx() -> void:
+	## 演出层自绘（坐标 = 场景坐标，与 `_card_rect()` 换算后的屏幕矩形同一套）。
+	if _fx == null or _fx_layer == null:
+		return
+	_fx.draw(_fx_layer, Time.get_ticks_msec(), _font, _font_bold)
 
 
 func _go_back() -> void:

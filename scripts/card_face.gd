@@ -36,6 +36,11 @@ class_name CardFace
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const CARD_H_DESIGN := 70.0   # 缩放基准高（battle 版小卡高）
+
+# R393b：「本局永久成长」角标的最小卡高。低于它（战场 58×70）不画 ——
+# 最窄的 `力+1` 也要三个字符，58px 宽的卡上会横跨整张卡图；而那张卡的数字
+# 本来就已经因为成长变绿，信息没丢。手牌 ~119 / 牌库 92 起全部照画。
+const GROWTH_MARK_MIN_H := 84.0
 # R165 卡面 v4：卡图**开放式**——左/右/上直接出血到卡边（不再留内框），
 # 卡框只留在**底部**（文字区那一截）。卡图区 = 顶部 0 .. CARD_ART_RATIO 的整块，
 # 直接在 `_draw_art()` 里按 rect 与 `UiTheme.CARD_ART_RATIO` 现算。
@@ -366,6 +371,8 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 			speed_override, range_override)
 	# ⑧ 附魔标记（R214）—— 同样压在最上层（它骑在卡图左上角上）
 	_draw_enchant_mark(canvas, card, rect, font_bold)
+	# ⑨ 本局成长角标（R393b）—— 卡图左下角，写明「哪几个数字是长出来的」
+	_draw_growth_mark(canvas, card, rect, font_bold)
 
 
 static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
@@ -394,6 +401,7 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 	_draw_badges(canvas, font_bold, card, rect, k, kc, card.health, -1)
 	_draw_enchant_mark(canvas, card, rect, font_bold)            # R214：选卡页也要看到附魔标记
 	_draw_lock_mark(canvas, card, rect)                          # R351：不可删除的卡带锁
+	_draw_growth_mark(canvas, card, rect, font_bold)            # R393b：本局成长角标
 
 
 static func _draw_lock_mark(canvas: CanvasItem, card: CardData, rect: Rect2) -> void:
@@ -926,6 +934,91 @@ static func stats_line(card: CardData, hp := -1) -> String:
 		"效果":
 			return "在效果区持续生效"
 	return ""
+
+
+static func growth_text(card: CardData) -> String:
+	## R393b：这张卡「本局永久成长」的**紧凑标记**（`力+1` / `力+3 生+6` / `伤+6`）。
+	## 没有成长 → 空串。力 / 生 / 伤 各一段，只列非零项。
+	## ⚠️ 只认 `CardData` 上烤好的 `growth_*`（由 `RunState.card_with_mod()` 写在副本上），
+	##    **不查 `RunState.card_growth`** —— 否则图鉴 / 奖励三选一里同 id 的卡
+	##    会显示别处的成长，一张从没上过场的卡也会带角标。
+	if card == null:
+		return ""
+	var parts: Array[String] = []
+	if card.growth_power > 0:
+		parts.append("力+%d" % card.growth_power)
+	if card.growth_health > 0:
+		parts.append("生+%d" % card.growth_health)
+	if card.growth_damage > 0:
+		parts.append("伤+%d" % card.growth_damage)
+	return " ".join(parts)
+
+
+static func growth_mark_font(rect: Rect2, card: CardData = null, font_bold: Font = null) -> int:
+	## 成长角标字号：跟 `ui_scale_of()` 走（有封顶），再把「装不下就缩」兜一层。
+	## 牌库面板一张卡只有 76×92，`力+3 生+6` 是七段宽 —— 固定字号必然顶出卡框。
+	var fs: int = maxi(7, roundi(9.5 * ui_scale_of(rect)))
+	if card != null and font_bold != null:
+		var maxw: float = maxf(24.0, rect.size.x - 6.0)
+		var txt := growth_text(card)
+		while fs > 7 and font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT,
+				-1, fs).x > maxw:
+			fs -= 1
+	return fs
+
+
+static func growth_mark_rect(card: CardData, rect: Rect2, font_bold: Font) -> Rect2:
+	## 成长角标的**位置与尺寸唯一口**（绘制与回归都读它，别各算一遍）。
+	## 位置：卡图区**左下角、贴着底边**，左沿只内缩 2px ——
+	##   · 不向左出血（左侧那条「费用 / 附魔 / 力量」竖列已经占满）；
+	##   · 不压卡名（姓名牌从 `CARD_ART_RATIO` 往下才出现）；
+	##   · 与右下角的锁标记（`draw_pick` 才画）不同侧，不会撞。
+	## 没有成长 → 空 Rect2（`size == Vector2.ZERO`）。
+	## ⚠️ **战场小卡（58×70）不画**：角标最窄也要 `力+1` 三个字符，在 58px 宽的
+	##    卡上会横跨整张卡图、把美术彻底盖掉；而那张卡的数字本来就因为成长变绿了，
+	##    信息没丢。手牌（~119）/ 牌库（92）/ 卡组编辑（~200）/ 奖励大卡全部照画。
+	if rect.size.y < GROWTH_MARK_MIN_H:
+		return Rect2()
+	var txt := growth_text(card)
+	if txt == "" or rect.size.x <= 8.0 or rect.size.y <= 8.0:
+		return Rect2()
+	var fs := growth_mark_font(rect, card, font_bold)
+	var tw: float = font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var padx: float = maxf(2.0, roundf(fs * 0.34))
+	var h: float = font_bold.get_height(fs) + maxf(2.0, roundf(fs * 0.26))
+	var art_bot: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
+	var y: float = art_bot - h - maxf(1.0, rect.size.y * 0.015)
+	var x: float = rect.position.x + 2.0
+	# 兜底：任何情况下都不许顶出卡框右沿（宁可压窄，也不骑到邻卡身上）
+	var maxw2: float = rect.end.x - 2.0 - x
+	return Rect2(x, y, minf(tw + padx * 2.0, maxw2), h)
+
+
+static func _draw_growth_mark(canvas: CanvasItem, card: CardData, rect: Rect2,
+		font_bold: Font) -> void:
+	## **本局成长角标**（R393b，用户口径「本局成长的需要在卡组界面卡面可显示」）。
+	## 一枚深底 + 绿字的小扁牌，压在卡图区左下角：`力+1` / `力+3 生+6` / `伤+6`。
+	## 读法直接对齐底部数值徽章的染色（`BADGE_UP` 绿 = 比卡库原型强）——
+	## 数字为什么是绿的，角标把原因写出来了。
+	## ⚠️ 走 `draw()` 与 `draw_pick()` 两口 → 战场 / 手牌 / 图鉴 / 牌库 / 地图卡组 /
+	##    选卡页 / 卡组编辑**全都有**，不用每个场景各画一遍。
+	if card == null:
+		return
+	var box := growth_mark_rect(card, rect, font_bold)
+	if box.size.x <= 0.0 or box.size.y <= 0.0:
+		return
+	var fs := growth_mark_font(rect, card, font_bold)
+	var col: Color = UiTheme.BADGE_UP
+	var bg := Color(0.07, 0.12, 0.07, 0.86)
+	canvas.draw_rect(box, bg)
+	canvas.draw_rect(box, Color(col.r, col.g, col.b, 0.85), false,
+			maxf(1.0, roundf(rect.size.y / 92.0)))
+	# 文字左右各留 padx，与 `growth_mark_rect()` 的算法同源
+	var padx: float = maxf(2.0, roundf(fs * 0.34))
+	var baseline: float = box.position.y + (box.size.y + font_bold.get_ascent(fs)
+			- font_bold.get_descent(fs)) * 0.5
+	canvas.draw_string(font_bold, Vector2(box.position.x + padx, baseline),
+			growth_text(card), HORIZONTAL_ALIGNMENT_LEFT, box.size.x - padx * 2.0, fs, col)
 
 
 static func wrap_text(font: Font, text: String, max_w: float, size: int) -> Array[String]:

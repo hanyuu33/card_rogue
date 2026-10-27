@@ -24,6 +24,13 @@ static var deck_ids: Array[int] = []         # 当前卡组（卡 id，可重复
 ## 只改这一张卡（不改卡库共享实例）：`build_deck` 按 mod 生成独立副本再应用。
 ## 每张卡只能有一个附魔（enchant_deck_card 会拒绝已附魔的卡）。跨战斗、跨层保留。
 static var deck_mods: Array = []
+## R393：**本局永久的卡牌成长**。键 = 卡 id 的字符串形式（JSON 存档里键会变字符串，
+## 所以内存里也统一用字符串，读写不出现 int/string 两套）。值 = {power, health, damage}。
+##   * 赏金猎人 9204 / 秃鹰 9206：每场战斗**首次**击杀 → power / health +N；
+##   * 猎杀 9205：每次击杀 → damage +N。
+## 这是**整轮 run** 的账，跨战斗、跨层、随存档保留；`card_with_mod()` 生成牌库时把它
+## 烤进**独立副本**（绝不改卡库原型）。新开一局 / 本局结束清空。
+static var card_growth: Dictionary = {}
 ## R323：牛奶（6028）这次附了哪两张卡 —— 界面拿它播「把附魔标志贴上去」的动画。
 ## [{card_id, ench}]，界面读一次就清空；`_apply_milk()` 每次重写。
 static var milk_anim: Array = []
@@ -124,6 +131,9 @@ static var lucky7_turns := 0
 ## 大宝箱第一层 10%、第二层 20%。上限 100%（层数继续加也不会溢出）。
 const LEGEND_CHANCE_PER_LAYER := 0.05
 const BIGCHEST_LEGEND_MULT := 2.0
+## R390（用户口径）：**Boss 关卡**掉传说的概率 ×3 —— 第一层 15%、第二层 30%、第三层 45%。
+## 与「大宝箱翻倍」正交：Boss 战不算大宝箱，两者不会叠在同一次判定上。
+const BOSS_LEGEND_MULT := 3.0
 
 static var reward_popup_pending := false
 static var battle_log: Array = []            # 本局战斗记录（与持久化文件同步追加）
@@ -754,6 +764,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# + 角色专属卡（森林精魄 → 熊 8004；暗影刺客 → 突袭 9086）。见 PlayerClass.start_deck_ids。
 	deck_ids = PlayerClass.start_deck_ids(player_class)
 	deck_mods = []                # R181：新开一局 → 附魔清空
+	card_growth = {}             # R393：新开一局 → 击杀成长清零
 	milk_anim = []                # R323：牛奶的演示数据也清掉
 	resume_battle = {}            # R323：清掉「正在打的这场」（下面按需重写）
 	ensure_deck_mods()            # R204：立刻对齐成等长（否则附魔必越界，见函数注释）
@@ -807,6 +818,7 @@ static func end_run(clear_save: bool = true) -> void:
 	player_class = PlayerClass.default_id()
 	deck_ids = []
 	deck_mods = []                # R181：本局结束 → 附魔清掉
+	card_growth = {}             # R393：本局结束 → 击杀成长随之消失
 	milk_anim = []                # R323：牛奶的演示数据也清掉
 	resume_battle = {}            # R323：清掉「正在打的这场」（下面按需重写）
 	map_cells = []
@@ -1189,7 +1201,9 @@ static func offer_relic_drop(node_type: String) -> int:
 		return -1
 	# R314：掉落也走同一个抽取口 → 传奇概率（5% × 层数）对精英 / Boss 同样生效。
 	# ⚠️ 精英 / Boss **不算**大宝箱，不翻倍。
-	pending_relic_drop = roll_reward_relic()
+	# R390（用户口径）：**Boss** 再吃一层 ×3 —— 走 `legendary_chance` 的 boss 参数，
+	# 不在这里自己乘一份，概率的唯一口仍在那边。
+	pending_relic_drop = roll_reward_relic(false, [], node_type == "boss")
 	return pending_relic_drop
 
 
@@ -1215,13 +1229,17 @@ static func skip_relic_drop() -> int:
 	return id
 
 
-static func legendary_chance(bigchest := false) -> float:
+static func legendary_chance(bigchest := false, boss := false) -> float:
 	## R314（用户口径）：获得道具时「5% × 当前层数」的概率出**传奇**；大宝箱翻倍。
+	## R390（用户口径）：**Boss 关卡**再 ×3（`BOSS_LEGEND_MULT`）。
+	## ⚠️ `boss` 缺省 false —— 精英 / 宝箱 / 其它调用的语义一个字都不变。
 	## 唯一口 —— 抽取（`roll_reward_relic`）与界面提示都读这里，别各算一份。
 	var layer := maxi(1, int(current_layer))
 	var p := LEGEND_CHANCE_PER_LAYER * float(layer)
 	if bigchest:
 		p *= BIGCHEST_LEGEND_MULT
+	if boss:
+		p *= BOSS_LEGEND_MULT
 	return clampf(p, 0.0, 1.0)
 
 
@@ -1234,7 +1252,8 @@ static func _reward_pool(tier: String, exclude: Array = []) -> Array[int]:
 	return pool
 
 
-static func roll_reward_relic(bigchest := false, exclude: Array = []) -> int:
+static func roll_reward_relic(bigchest := false, exclude: Array = [],
+		boss := false) -> int:
 	## 随机一件奖励道具（没有可给的返回 -1）。
 	## R314：**先按「5% × 层数」摇一次传奇判定**（大宝箱翻倍）——
 	##   * 命中且传奇池非空 → 从传奇池取；
@@ -1242,7 +1261,7 @@ static func roll_reward_relic(bigchest := false, exclude: Array = []) -> int:
 	## ⚠️ 传奇池为空时**不消耗**那次 randf：池子状态本身就决定了结果，白花一个随机数
 	##    只会让「同一 seed 下拿到的道具顺序」凭空错位（可复现但不必要）。
 	var leg := _reward_pool(RelicData.TIER_LEGENDARY, exclude)
-	if not leg.is_empty() and run_rng.randf() < legendary_chance(bigchest):
+	if not leg.is_empty() and run_rng.randf() < legendary_chance(bigchest, boss):
 		return leg[run_rng.randi() % leg.size()]
 	var nor := _reward_pool(RelicData.TIER_NORMAL, exclude)
 	if nor.is_empty():
@@ -2298,11 +2317,71 @@ static func card_with_mod(repo: CardRepo, index: int) -> CardData:
 	if c == null:
 		return null
 	var mod: Dictionary = _mod_at(index)
-	if mod.is_empty():
+	var growth := card_growth_of(deck_ids[index])
+	# R393：没有附魔、但有本局永久成长时**也必须复制** —— 否则会把成长写进卡库共享实例。
+	if mod.is_empty() and growth.is_empty():
 		return c
 	var cc := CardData.from_dict(c.to_dict())   # 独立副本（affixes 等数组也独立）
-	_apply_mod(cc, mod)
+	if not mod.is_empty():
+		_apply_mod(cc, mod)
+	_apply_card_growth(cc, growth)
 	return cc
+
+
+static func card_growth_of(card_id: int) -> Dictionary:
+	## 这张卡当前累计的本局永久成长（没有 = {}）。
+	## 返回**副本**，调用方拿去临时算就行，不会误改账本。
+	var raw: Variant = card_growth.get(str(card_id), {})
+	if not (raw is Dictionary):
+		return {}
+	var d: Dictionary = raw
+	var out := {}
+	for key in ["power", "health", "damage"]:
+		var n := int(d.get(key, 0))
+		if n != 0:
+			out[key] = n
+	return out
+
+
+static func grow_card(card_id: int, power := 0, health := 0, damage := 0) -> Dictionary:
+	## 给卡 id 记一笔**本局永久**成长，返回累计后的账。
+	## 负值按 0 收口（成长只增不减；要削弱请另开负修正字段，别混进这里）。
+	var key := str(card_id)
+	var cur: Variant = card_growth.get(key, {})
+	var d: Dictionary = cur if cur is Dictionary else {}
+	d["power"] = maxi(0, int(d.get("power", 0)) + maxi(0, power))
+	d["health"] = maxi(0, int(d.get("health", 0)) + maxi(0, health))
+	d["damage"] = maxi(0, int(d.get("damage", 0)) + maxi(0, damage))
+	card_growth[key] = d
+	return d.duplicate()
+
+
+static func _apply_card_growth(c: CardData, growth: Dictionary) -> void:
+	## 把本局永久成长烤进一张**副本**。调用方负责保证 c 不是卡库共享实例。
+	if c == null or growth.is_empty():
+		return
+	var gp := int(growth.get("power", 0))
+	var gh := int(growth.get("health", 0))
+	var gd := int(growth.get("damage", 0))
+	c.power += gp
+	c.health += gh
+	c.value += gd
+	# R393b：把「哪部分数字是长出来的」也记在卡上 —— 卡面角标与卡组详情读它，
+	# 才不会把附魔抬高的数值误报成本局成长。
+	c.growth_power += gp
+	c.growth_health += gh
+	c.growth_damage += gd
+
+
+static func battle_end_card_gold(repo: CardRepo) -> int:
+	## R393：卡组中带 `battle_end_gold` 的卡，在战斗胜利后给的金币。
+	## 同名多张**不叠加**（取最大值，与月亮 / 硬币同口径）—— 避免复制卡无限刷金币。
+	var best := 0
+	for id in deck_ids:
+		var c := repo.get_card(int(id))
+		if c != null:
+			best = maxi(best, c.battle_end_gold)
+	return best
 
 
 static func ensure_deck_mods() -> void:

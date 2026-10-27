@@ -88,7 +88,8 @@ func normal_reward_ids() -> Array[int]:
 
 func legendary_reward_ids() -> Array[int]:
 	## 奖励池里的「传奇道具」（R342 起 4 件：6040 水晶骰子 / 6044 储物箱 / 6045 lucky 7 /
-	## 6050 采集刀；R352 的竖琴 6052 是**一般档**，不在这里）。
+	## 6050 采集刀；R391 起 5 件：**鸭嘴 6006 由一般升为传奇**。
+	## R352 的竖琴 6052 是**一般档**，不在这里）。
 	## ⚠️ 调用方仍须能忍住空池（拿满 / 全跳过时的正常边界）。
 	return reward_ids(RelicData.TIER_LEGENDARY)
 

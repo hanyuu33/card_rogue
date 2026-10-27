@@ -100,7 +100,7 @@ const MOON_DESC := """天色暗下来，月亮低低地挂在山脊上，把水�
 石台上摆着两样东西，都泛着不属于这里的光——
 「月亮」：3 费效果。战斗结束后奖励界面多一条「删除一张卡」。
 此卡不可以从卡组删除。
-「硬币」：1 费效果。战斗结束后额外获得 25 金币。此卡不可以从卡组删除。
+「硬币」：2 费效果。战斗结束后额外获得 40 金币。此卡不可以从卡组删除。
 月亮的代价是此刻的全部金币；硬币什么都不要。两样必须拿走一样。"""
 
 const MOON_TAKEN_DESC := """月亮落进你的口袋，钱袋却空了。
@@ -218,12 +218,14 @@ func _rest_desc() -> String:
 	if RunState.has_relic(RunState.RELIC_SACRAMENT_ID):
 		return """篝火旁摆着一份还没凉透的圣餐。
 在篝火旁休息，生命直接回满；
-也可以烤一块肉带在身上，留到 Boss 战前享用。
-（两样只能挑一样——选完这一处就到头了。）"""
+也可以烤一块肉带在身上，留到 Boss 战前享用；
+还可以往火里添一根柴，让火替你烧掉卡组里的一张牌。
+（三样只能挑一样——选完这一处就到头了。）"""
 	return """前路的战斗还在等着你。
 在篝火旁休息，恢复 %d%% 最大生命；
-也可以烤一块肉带在身上，留到 Boss 战前享用。
-（两样只能挑一样——选完这一处就到头了。）""" % int(round(RunState.rest_pct() * 100.0))
+也可以烤一块肉带在身上，留到 Boss 战前享用；
+还可以往火里添一根柴，让火替你烧掉卡组里的一张牌。
+（三样只能挑一样——选完这一处就到头了。）""" % int(round(RunState.rest_pct() * 100.0))
 
 var _font: Font
 var sfx: Sfx
@@ -906,6 +908,13 @@ func _ready() -> void:
 		else:
 			rest_btn.text = "在这里休息（回复 %d 生命）" % rest_gain
 		rest_btn.disabled = rest_gain <= 0   # 满血 → 休息没意义，置灰
+		# R390（用户口径）：第三个收益选项「添加柴火」（删一张卡）—— 挂在这条链上唯一
+		# 空着的 AltBtn。与「休息 / 烤肉」构成三选一：任一选项结算后
+		# `_collapse_to_leave()` 会把另外两个收起，选完这一处就到头了
+		#（与 R147「一次访问只领一份」同一套规则，不另造闸门）。
+		alt_btn.visible = true
+		alt_btn.text = "添加柴火（从卡组删除一张卡）"
+		alt_btn.disabled = RunState.deck_ids.is_empty()
 		# R234 止血绷带（6029）：进休息处时结算本层累计的额外回血（结算后清零）。
 		var bandage_heal := RunState.consume_bandage_heal()
 		if bandage_heal > 0:
@@ -1569,6 +1578,19 @@ func _resolve_divination(first: bool) -> void:
 	_redraw()
 
 
+func _claim_rest_firewood() -> void:
+	## R390 休息处 ·「添加柴火」：从卡组删除一张卡（三选一里的一支）。
+	## 选卡 UI 与遗忘之泉共用 `deck_edit.tscn`（`pending_deck_edit = "delete"`），
+	## 不新造一套；节点在这里就算走完 —— 回地图后不会再被送回同一个休息处。
+	## ⚠️ 不在这里调 `_collapse_to_leave()`：马上跳场景了，它只会白闪一帧。
+	if _reward_claimed or RunState.deck_ids.is_empty():
+		return
+	_claim_reward(alt_btn)
+	RunState.complete_current()
+	RunState.pending_deck_edit = "delete"
+	SceneFx.goto("res://scenes/deck_edit.tscn")
+
+
 func _claim_moon_coin() -> void:
 	## R351 赏月 · 第三选项：「硬币」直接进卡组（不花钱，也没有别的代价）。
 	if _moon_pick != "":
@@ -1589,6 +1611,9 @@ func _on_alt() -> void:
 	## R305 卡片商人 · **随机折价**（第三选项）：随机失去一张非诅咒卡，换 100 金币。
 	## R351 赏月也用它当「拿硬币」的按钮。
 	sfx.play("click")
+	if _is_rest():
+		_claim_rest_firewood()
+		return
 	if _is_moon():
 		_claim_moon_coin()
 		return

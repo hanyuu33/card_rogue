@@ -7008,6 +7008,11 @@ func _show_over(win: bool) -> void:
 				RunState.gain_gold(int(fx["coin"]))
 			if bool(fx.get("moon", false)):
 				RunState.queue_deck_delete_reward(1)
+			# R393：卡组里的「赏金猎人」战斗结束给金币（同名多张不叠加，取 20）。
+			# 走 `RunState` 而不是效果区：它是盟友卡，不需要打出也按卡组拥有结算。
+			var deck_gold := RunState.battle_end_card_gold(repo)
+			if deck_gold > 0:
+				RunState.gain_gold(deck_gold)
 			# R151 P1-18：Boss 击破与胜利 → 全屏黑白闪（≤40ms，绝不滥用 —— 只有这一处）
 			if win and _run_boss_win and not _shot_pending:
 				_screen_flash = {"start": _now(), "dur": 40}
@@ -7016,7 +7021,7 @@ func _show_over(win: bool) -> void:
 			#   * 精英 / Boss 掉落道具（不与已拥有的重复；奖励池掉空则不掉）；
 			#   * 卡牌三选一：普通 / 精英 / **Boss** 都给（R179 起）。
 			#     Boss 走 `reward_type = "boss"` 的**好概率档**（普通 35% / 稀有 45% /
-			#     史诗 20%，明显优于普通过的 70/27/3）——在此之前 Boss 不发卡牌奖励，
+			#     史诗 20%，明显优于普通过的 68/27/5）——在此之前 Boss 不发卡牌奖励，
 			#     `reward_type = "boss"` 实际是**死数据**（没有任何消费方）。
 			# 「入队」不等于「发放」：玩家在悬浮窗里看过介绍、点过「领取」才真进袋子。
 			var dropped := RunState.offer_relic_drop(node_type)
@@ -7025,6 +7030,19 @@ func _show_over(win: bool) -> void:
 			# R342：战斗胜利的卡牌奖励**只走这一个口** —— 持有「采集刀」6050 时
 			# 它内部会多入队一组（各自独立三选一）。别在这里直接调 queue_card_reward。
 			RunState.queue_battle_card_rewards(RunState.reward_type)
+			# R390（用户口径）：**精英战**额外给一次删卡 —— 和月亮（9180）走同一条
+			# `deck_delete` 通道，所以它同样进奖励列表、同样受 R340「一批没处理完
+			# 不许换场景」约束。放在卡牌组之后：同一批里它排在卡牌下面，
+			# 「先挑卡、再删卡」的顺序和结算面板从上到下的阅读顺序一致。
+			# R392：再看一次关卡 tier，Boss 即使房间数据误标成 elite 也不发这份精英删卡。
+			# 月亮 9180 自己的 deck_delete 在上面独立结算，不受这条限制。
+			if node_type == "elite" and not _run_boss_win:
+				RunState.queue_deck_delete_reward(1)
+			# R390（用户口径）：**Boss** 额外一组「必定史诗」的卡牌奖励。
+			# 走独立的 "epic" 档（权重只留史诗），和上面那组 boss 档是两组
+			# **各自独立**的三选一 —— 玩家可以各选一张，也可以只选一组。
+			if _run_boss_win:
+				RunState.queue_card_reward("epic")
 			if _run_boss_win:
 				# R339：Boss 已击破 → 记账（`boss_beaten` + 清 `boss_pending`）。
 				# ⚠️ 放在算 `_run_next_layer` **之前**：advance_layer 会清这个标记，

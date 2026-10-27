@@ -3,16 +3,22 @@ extends RefCounted
 ## 肉鸽模式 · 卡牌奖励抽取规则。
 ##
 ## 两档奖励类型，稀有度概率构成不同（0=普通 1=稀有 2=史诗）：
-##   normal（普通过关奖励）：普通 70% / 稀有 27% / 史诗 3%
+##   normal（普通过关奖励）：普通 68% / 稀有 27% / 史诗 5%（R392）
 ##   boss  （Boss过关奖励）：普通 35% / 稀有 45% / 史诗 20%
+##   epic  （R390 Boss 额外那组）：100% 史诗（三张候选全史诗）
 ## 一次奖励给 3 张候选（互不重名），玩家选 1 张或跳过。
 
-const TYPES: Array[String] = ["normal", "boss"]
-const TYPE_LABELS := {"normal": "普通过关奖励", "boss": "Boss过关奖励"}
+const TYPES: Array[String] = ["normal", "boss", "epic"]
+const TYPE_LABELS := {"normal": "普通过关奖励", "boss": "Boss过关奖励",
+		"epic": "史诗卡牌奖励"}
 ## 每种奖励类型 → [普通, 稀有, 史诗] 概率权重（总和不必为 1，内部归一化）
 const TYPE_WEIGHTS := {
-	"normal": [0.70, 0.27, 0.03],
+	"normal": [0.68, 0.27, 0.05],
 	"boss": [0.35, 0.45, 0.20],
+	# R390（用户口径）：Boss 额外那一组「必定史诗」—— 权重只留史诗档，
+	# 于是三张候选必然都是史诗。史诗池空了 `_pick_one` 会返回 null，
+	# 那一组就不入队（宁可少给一组，也不拿稀有冒充史诗）。
+	"epic": [0.0, 0.0, 1.0],
 }
 const CHOICES := 3
 

@@ -8,6 +8,10 @@ const UiPop = preload("res://scripts/ui_pop.gd")
 ## 相同卡（同 id）合并、左下角 ×N 张数角标、按（费用, id）排序、滚轮翻页、
 ## 点击任意处关闭。面板不压暗背景（用户要求）。
 ##
+## R393b：**左键点一张卡 → 打开卡牌详情**（大卡 + 数值 + 本局永久成长 + 效果文），
+## 详情页点空白处回网格、右键关面板。详情页的成长行与卡面角标同源
+## （都读 `CardFace.growth_text()`），两处不会互相打脸。
+##
 ## 用法：在场景 _ready 里 `DeckViewer.attach(self)`（可选第二参数指定按钮位置）。
 ## 命令行 -- --deckview：打开后自动展开面板（截图验证用）。
 
@@ -21,6 +25,10 @@ const CARD_H := 92.0
 ##    直接把面板留在 1120 的话，GAP 24 会让列数从 11 掉到 10 —— 所以改成
 ##    **加宽面板**（1120 → 1150）把这一格吃回来：`int(1110 / 100) = 11` 仍是 11 列。
 const GAP := 24.0
+## 详情页「本局永久成长」那一行的字色：纸面（PAPER #f7f5f0）上的深绿。
+## ⚠️ 不能直接用 `UiTheme.BADGE_UP`（#2fd968）—— 那枚亮绿是给深底徽章画的，
+##    压在纸面上对比度不到 2:1。同色相压暗，只改亮度。
+const GROW_INK := Color("1d6b36")
 
 var _btn: Button
 var _panel: Control
@@ -29,6 +37,7 @@ var _font_bold: Font
 var _open := false
 var _scroll := 0.0          # 已滚动的行数（浮点，按行步进）
 var _shown_n := -1          # 按钮上当前写的张数（R375：数量变了要自己刷新）
+var _detail := -1           # R393b：详情页当前看的是「合并后第几组」，-1 = 网格
 
 
 static func attach(host: Node, btn_pos := Vector2(1150, 6)) -> DeckViewer:
@@ -95,6 +104,7 @@ func _refresh_btn() -> void:
 func _toggle() -> void:
 	_open = not _open
 	_panel.visible = _open
+	_detail = -1            # R393b：重开面板一定从网格开始，别停在上次那张详情上
 	if _open:
 		UiPop.play(_panel, 1.0)   # R151 P1-9：入场淡入 160ms
 	_scroll = 0.0
@@ -159,6 +169,16 @@ func _on_panel_draw() -> void:
 	# 面板不压暗背景（用户要求：点开面板时后面区域不要变暗）
 	_panel.draw_rect(Rect2(px, py, pw, ph), UiTheme.PAPER)
 	_panel.draw_rect(Rect2(px, py, pw, ph), UiTheme.INK_600, false, 2.0)
+	# R393b：详情页
+	if n == 0:
+		_detail = -1
+	if _detail >= 0:
+		_detail = clampi(_detail, 0, n - 1)
+		_panel.draw_string(_font_bold, Vector2(px + 20, py + 32),
+				"卡牌详情（左键点空白处返回卡组）",
+				HORIZONTAL_ALIGNMENT_LEFT, pw - 40, UiTheme.FS_BODY, UiTheme.INK_800)
+		_draw_detail(merged, L)
+		return
 	_panel.draw_string(_font_bold, Vector2(px + 20, py + 32),
 			"我的卡组（共 %d 张 · 相同卡合并）" % RunState.deck_ids.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, pw - 40, UiTheme.FS_BODY, UiTheme.INK_800)
@@ -176,8 +196,8 @@ func _on_panel_draw() -> void:
 		if r < skip_rows or r >= skip_rows + view_rows:
 			continue
 		var c: CardData = merged[i]["card"]
-		var rect := Rect2(L["grid_x"] + (i % cols) * (CARD_W + GAP),
-				L["grid_y"] + (r - skip_rows) * (CARD_H + GAP), CARD_W, CARD_H)
+		# ⚠️ 走 `_grid_rect()`（命中判定也用它）—— 两处各算一遍必然会漂。
+		var rect := _grid_rect(i, L, skip_rows)
 		CardFace.draw(_panel, c, rect, c.health, false, false, _font, _font_bold)
 		var cnt: int = merged[i]["count"]
 		if cnt > 1:
@@ -195,14 +215,118 @@ func _on_panel_draw() -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_CAPTION, UiTheme.INK_500)
 
 
+func _grid_rect(i: int, L: Dictionary, skip_rows: int) -> Rect2:
+	## 网格里第 i 组的卡框（绘制与命中判定共用 → 画在哪就点在哪）。
+	var cols: int = L["cols"]
+	var r: int = i / cols
+	return Rect2(L["grid_x"] + (i % cols) * (CARD_W + GAP),
+			L["grid_y"] + (r - skip_rows) * (CARD_H + GAP), CARD_W, CARD_H)
+
+
+func _index_at(pos: Vector2, merged: Array, L: Dictionary) -> int:
+	## 鼠标落在第几组卡上（-1 = 空白）。滚动位置与 `_on_panel_draw` 同口径。
+	if merged.is_empty():
+		return -1
+	var view_rows: int = L["view_rows"]
+	var skip_rows := int(clampf(_scroll, 0.0, maxf(0.0, float(L["rows"] - view_rows))))
+	for i in merged.size():
+		var r: int = i / int(L["cols"])
+		if r < skip_rows or r >= skip_rows + view_rows:
+			continue
+		if _grid_rect(i, L, skip_rows).has_point(pos):
+			return i
+	return -1
+
+
+func _draw_detail(merged: Array, L: Dictionary) -> void:
+	## R393b：**卡牌详情页**（用户口径「在卡组查看卡片详情也可以显示（成长）」）。
+	## 左半是大卡（照常走 `CardFace.draw()` → 卡面角标与数值徽章都在），
+	## 右半是文字：种类 / 职业 / 稀有度 / 费用 → 数值 → **本局永久成长** → 效果文 → 卡组张数。
+	## 成长期写「哪部分数字是长出来的 + 跨战斗保留 + 新开一局才清空」，
+	## 与 `玩法说明.txt` 的 R393 口径一致（玩家的疑问只会是「这个会掉吗」）。
+	var px: float = L["px"]
+	var py: float = L["py"]
+	var pw: float = L["pw"]
+	var ph: float = L["ph"]
+	var e: Dictionary = merged[_detail]
+	var c: CardData = e["card"]
+	var cnt: int = e["count"]
+	# ── 左：大卡 ──
+	var chh: float = minf(410.0, ph - 110.0)
+	var cw: float = chh * 0.82
+	var card_rect := Rect2(px + 44.0, py + 66.0, cw, chh)
+	CardFace.draw(_panel, c, card_rect, c.health, false, false, _font, _font_bold)
+	# ── 右：文字区 ──
+	var x: float = card_rect.end.x + 40.0
+	var w: float = px + pw - 44.0 - x
+	var y: float = py + 84.0
+	_panel.draw_string(_font_bold, Vector2(x, y), c.card_name,
+			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, UiTheme.INK_900)
+	y += 36.0
+	var fee_txt := "X 费" if c.x_cost else "%d 费" % c.cost
+	_panel.draw_string(_font, Vector2(x, y),
+			"%s · %s · %s · %s" % [c.kind, c.card_class, c.rarity_name(), fee_txt],
+			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL, UiTheme.INK_600)
+	y += 30.0
+	# 数值行：`stats_line()` 对技能卡只说「直接使用」→ 这里把伤害写出来，
+	# 否则「猎杀 25 伤害（长到 31）」的成长在详情页会没有落点。
+	var st := CardFace.stats_line(c)
+	if c.kind == "技能" and c.value > 0:
+		st = "造成 %d 点伤害" % c.value
+	_panel.draw_string(_font, Vector2(x, y), st,
+			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL, UiTheme.INK_800)
+	y += 38.0
+	# 本局永久成长
+	var gt := CardFace.growth_text(c)
+	if gt != "":
+		_panel.draw_rect(Rect2(x, y - 20.0, w, 56.0), Color(0.14, 0.42, 0.22, 0.10), true)
+		_panel.draw_rect(Rect2(x, y - 20.0, 3.0, 56.0), GROW_INK, true)
+		_panel.draw_string(_font_bold, Vector2(x + 12.0, y + 2.0),
+				"本局永久成长　%s" % gt, HORIZONTAL_ALIGNMENT_LEFT, w - 20.0,
+				UiTheme.FS_LABEL, GROW_INK)
+		_panel.draw_string(_font, Vector2(x + 12.0, y + 26.0),
+				"跨战斗保留 · 随存档走 · 新开一局才清空",
+				HORIZONTAL_ALIGNMENT_LEFT, w - 20.0, UiTheme.FS_CAPTION, UiTheme.INK_500)
+		y += 56.0
+	else:
+		y += 8.0
+	# 效果文
+	var lines := CardFace.wrap_text(_font, CardText.naturalize(c.effect_text), w, UiTheme.FS_BODY)
+	for li in mini(lines.size(), 7):
+		_panel.draw_string(_font, Vector2(x, y), lines[li],
+				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, UiTheme.INK_800)
+		y += 24.0
+	y += 12.0
+	_panel.draw_string(_font, Vector2(x, y), "卡组中同名同状态共 %d 张" % cnt,
+			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL, UiTheme.INK_600)
+	_panel.draw_string(_font, Vector2(px + pw - 300.0, py + ph - 12.0),
+			"左键点空白返回 · 右键关闭",
+			HORIZONTAL_ALIGNMENT_LEFT, 280.0, UiTheme.FS_CAPTION, UiTheme.INK_500)
+
+
 func _on_panel_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		match event.button_index:
-			MOUSE_BUTTON_WHEEL_UP:
-				_scroll -= 1.0
+	if not (event is InputEventMouseButton) or not event.pressed:
+		return
+	var mb := event as InputEventMouseButton
+	match mb.button_index:
+		MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN:
+			if _detail >= 0:
+				return          # 详情页只有一张卡，滚了也没内容
+			_scroll += -1.0 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0
+			_panel.queue_redraw()
+		MOUSE_BUTTON_RIGHT:
+			_toggle()
+		MOUSE_BUTTON_LEFT:
+			# R393b：详情页 → 点任意处先回网格（**不直接关面板**：
+			# 玩家多半是想看下一张，直接关掉等于逼他重点开一次）。
+			if _detail >= 0:
+				_detail = -1
 				_panel.queue_redraw()
-			MOUSE_BUTTON_WHEEL_DOWN:
-				_scroll += 1.0
+				return
+			var merged := _merged()
+			var hit := _index_at(mb.position, merged, _layout(merged.size()))
+			if hit >= 0:
+				_detail = hit
 				_panel.queue_redraw()
-			MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT:
-				_toggle()
+				return
+			_toggle()

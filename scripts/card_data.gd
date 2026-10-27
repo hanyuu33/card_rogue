@@ -204,6 +204,25 @@ var no_remove: bool = false
 ## 判据只认本字段 —— 界面置灰 / 引擎三个出牌入口（play_from_hand / use_spell /
 ## use_curse）全部读它，不许按 id 硬编码。
 var unplayable: bool = false
+## R393：**击杀成长**（赏金猎人 9204 / 秃鹰 9206）—— 每场战斗**首次**击杀敌人时，
+## 本局永久增加的数值。0 = 不带这条机制。
+## ⚠️ 这里只写「每次加多少」；本局已经累计了多少由 `RunState.card_growth` 存，
+##    生成牌库时由 `RunState.card_with_mod()` 烤进**独立副本**（绝不改卡库原型）。
+var first_kill_power: int = 0
+var first_kill_health: int = 0
+## R393：**每次击杀成长**（猎杀 9205）—— 这张技能卡每击杀一个敌人，
+## 本局永久增加的伤害。0 = 不带这条机制。
+var per_kill_damage: int = 0
+## R393：**战斗结束金币**（赏金猎人 9204）—— 战斗胜利后额外获得的金币。
+## 同名卡同时存在时按一张结算（与月亮 / 硬币同口径，不叠乘）。
+var battle_end_gold: int = 0
+## R393b：**本局永久成长的展示记录**（只读，供卡面 / 卡组详情显示「力+1」这类增量）。
+## 由 `RunState._apply_card_growth()` 写在**独立副本**上；卡库原型的这三个值恒为 0。
+## ⚠️ 为什么不直接拿现值减原型值：附魔（次元之力 +2 力 +10 血）也会把数值抬高，
+##    那样会把附魔算成成长。成长记在卡自己身上，来源才不含糊。
+var growth_power: int = 0
+var growth_health: int = 0
+var growth_damage: int = 0
 
 
 static func from_dict(d: Dictionary) -> CardData:
@@ -240,6 +259,14 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.no_remove = bool(d.get("no_remove", false))
 	# R373：不能打出的诅咒（麻痹 9185）；缺省 false → 老数据一行都不用改
 	c.unplayable = bool(d.get("unplayable", false))
+	# R393：击杀成长 / 战斗结束金币（缺省 0 → 老卡一行都不用改）
+	c.first_kill_power = maxi(0, int(d.get("first_kill_power", 0)))
+	c.first_kill_health = maxi(0, int(d.get("first_kill_health", 0)))
+	c.per_kill_damage = maxi(0, int(d.get("per_kill_damage", 0)))
+	c.battle_end_gold = maxi(0, int(d.get("battle_end_gold", 0)))
+	c.growth_power = maxi(0, int(d.get("growth_power", 0)))
+	c.growth_health = maxi(0, int(d.get("growth_health", 0)))
+	c.growth_damage = maxi(0, int(d.get("growth_damage", 0)))
 	# R325：难度档位加成（只给染色用，结算早已烤进 power / health）
 	c.diff_power = int(d.get("diff_power", 0))
 	c.diff_health = int(d.get("diff_health", 0))
@@ -286,6 +313,14 @@ func to_dict() -> Dictionary:
 		# R351：不可删除标记同样随复制通道走（复制出来的月亮 / 硬币也不许删）。
 		"no_remove": no_remove,
 		"unplayable": unplayable,
+		# R393：成长字段必须随复制 / 离场还原 / 联机通道走，漏了它 = 击杀成长静默失效。
+		"first_kill_power": first_kill_power,
+		"first_kill_health": first_kill_health,
+		"per_kill_damage": per_kill_damage,
+		"battle_end_gold": battle_end_gold,
+		"growth_power": growth_power,
+		"growth_health": growth_health,
+		"growth_damage": growth_damage,
 		# R325：难度加成必须随复制通道走（否则复制后的怪染色又变绿）。
 		"diff_power": diff_power, "diff_health": diff_health,
 		# R214：附魔 id **必须**在这里 —— 复制 / 离场还原 / 联机共用这条通道，

@@ -113,6 +113,10 @@ var wish_pending:= false    # 许愿（9168）：等玩家从**卡组**选一张
 var _steel_stamp_used:= false  # R307 思想钢印：本场战斗是否已经救过一次（每场一次）
 var _thorn_ring_turn:= -1      # R307 荆棘指环：上次触发是第几回合（每回合一次）
 var _knight_sword_fired:= false  # R383 骑士剑：本场战斗的第一次击杀是否已发生（每场一次）
+## R393：本场战斗里，哪些**卡 id** 的「首次击杀」成长已经结算过。
+## 每个新 GameEngine = 一场新战斗，`start_game()` 清空 → 「每场战斗首次」自然成立。
+## 按 id 而不是按单位实例：同名两张不会在同一场里各刷一次本局永久成长。
+var _first_kill_growth_done:= {}
 var foresight_pick:= false  # 预判①：等玩家从弃牌区选一张 0 费技能卡
 var foresight_vanish:= false  # 预判①选完后：把本卡从弃牌区移除（本卡消失）
 ## R292：拒绝命运（9098）改成**自动结算**（丢光手卡 → 弃牌区所有 0/1 费卡按顺序回手），
@@ -1344,6 +1348,11 @@ const SURPRISE_ID:= 8079
 const INSTINCT_ID:= 9176
 const INSTINCT_COUNT:= 3
 const INSTINCT_MAX_COST:= 1
+# ── R393：击杀成长（暗影刺客 / 森林精魄新卡）──
+# 猎杀 9205：3 费史诗技能 · 次元；基础伤害写在卡面 `value`（25），每击杀 +6 本局永久。
+# 赏金猎人 9204 / 秃鹰 9206 的「每场首次击杀」数值走卡面字段
+# `first_kill_power / first_kill_health`，引擎按字段判，不为卡名写死分支。
+const SLAY_ID:= 9205     # ⚠️ 别并进上面的 HUNT_ID（那是 9107 暗影狩猎），两个 id 语义不同
 const UPGRADE_RANGE_TRAIT:= "改造攻程"
 ## R275：重甲战车 8058 移除本 trait（改为「每层改造受到的伤害 -1」）——
 ## 当前**没有任何卡**带「改造移速」，分支保留给未来的卡用。
@@ -1802,6 +1811,7 @@ static func hp_row_owner(row: int) -> String:
 func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	wish_pending = false
 	_steel_stamp_used = false   # R307：思想钢印每场战斗一次
+	_first_kill_growth_done.clear()   # R393：击杀成长每场战斗各卡一次
 	_thorn_ring_turn = -1
 	state.starting_hand(starting_hand)
 	state.energy = FieldState.ENERGY_PER_TURN
@@ -3526,7 +3536,7 @@ func end_turn() -> void :
 func battle_end_rewards() -> Dictionary:
 	## R351：战斗结束后由**效果卡**给出的额外收益。
 	##   月亮 9180 → 奖励界面多一条「从卡组删除一张卡」；
-	##   硬币 9181 → 额外获得 `value` 金币（卡面写 25）。
+	##   硬币 9181 → 额外获得 `value` 金币（R390 起卡面写 40，费用 2）。
 	## 返回 {"moon": bool, "coin": int}（没打出就是 {"moon": false, "coin": 0}）。
 	## ⚠️ 不叠加：效果区里有多张同名也按**一张**算 —— 与自愈（9065）同一口径。
 	var m := false
@@ -5396,8 +5406,21 @@ func _on_unit_upgraded(p: Placement) -> void :
 	## R101：「每次获得改造时」触发（榴弹击手/重甲战车/机器鸟）。
 	## 在**所有**给这张单位施加改造的入口末尾调用（升级/自我修复/加厚装甲/
 	## 超越极限/模仿者传导/代达罗斯 群体改造）。
+	##
+	## R391（用户口径「无限装甲目前只有升级这一张卡触发」）：**无限装甲的供能也在这里**。
+	## 以前它在 `_upgrade_unit` / `_transcend` / `_armor_plate` 三个入口各手调一次，
+	## 于是凡是不走这三条路的改造 —— 自我修复 8035 / 共享护盾 8069 / 拾荒者 /
+	## 合体 / 改装者 / 改造工厂 8037 / 模仿者传导 —— 全都不供能，玩家体感是
+	## 「只有『升级』能触发」。现在统一在这个后置口触发，与「榴弹击手加射程」
+	## 「机器鸟抽牌」同源：**只要是「被改造」，就一定会走到这里**。
+	## ⚠️ 顺序：供能放在**最前面**。原先是 `_feed_upgrade_card()` 紧接
+	##    `_on_unit_upgraded()` 调用，供能先于其它 trait 响应；放最前面才与旧行为等价
+	##    （机器鸟等会往手里塞牌，先供能才不会被它挤掉手牌位置）。
+	## ⚠️ 每回合一次由 `_feed_upgrade_card` 内部 `upgrade_feed_turn` 把守 ——
+	##    改造工厂每回合都改造，不会变成白嫖多张。
 	if p == null or p.card == null:
 		return
+	_feed_upgrade_card(p)
 	if p.card.traits.has(UPGRADE_RANGE_TRAIT):      # 榴弹击手：攻击距离+1
 		p.upgrade_range += 1
 		p.card.attack_range += 1
@@ -5964,9 +5987,8 @@ func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	# 传的是 `atk_gain` / `hp_gain` —— 含受体自己的改造奖励（upgrade_*_bonus），
 	# 但**不含**「堡垒」trait 的额外 +STACK_HP_PER：那是**受体自身**的特性，不该被模仿出去。
 	_mimic_relay(p, atk_gain, hp_gain)
-	# 「无限装甲」8038（R89）：被改造时**每回合一次**供一张 0 费改造牌到手。
-	# 挂在**改造结算之后**（卡面写的是「被改造时」，那是改造完成的那一刻）。
-	_feed_upgrade_card(p)
+	# R391：无限装甲供能已收口到 `_on_unit_upgraded()`（统一后置口）——
+	# 这里不再单独调，否则「升级」会触发一次、统一口再触发一次。
 	_on_unit_upgraded(p)
 	_refresh_mnemosyne()   # R271：谟涅摩叙涅被「升级」改造 → 敌方立刻多降一层
 	_inspire_tick()   # R300 激发：升级 = 一次改造动作（一次动作只触发一次）
@@ -5988,9 +6010,15 @@ func _feed_upgrade_card(p: Placement) -> void :
 	##  ③ **每回合一次**记 `p.upgrade_feed_turn`（比对 `turn_total`）——
 	##     记在这个单位实例上，换一张装甲上场就有一份额度。
 	##
-	## 触发源**只有 `_upgrade_unit`**（「升级」技能 / 「自我修复」/ 「批量改造」共用它）。
-	## 「改造工厂」（8037，R88）在 `_field_aura_tick` 里自己加攻加血、**不走这里** ——
-	## 它是场地效果不是「改造技能」，否则每回合自动触发一次，装甲会变成印钞机。
+	## 触发源 = `_on_unit_upgraded()`（**所有**改造入口的统一后置口，R391 收口）。
+	##   * 技能改造：升级 8027 / 自我修复 8035 / 加厚装甲 8044 / 超越极限 8053 /
+	##     共享护盾 8069 / 拾荒者 / 合体 / 辅助刃 / 隐藏能源；
+	##   * 场外推动的改造：改装者 / 改造工厂 8037（每回合一次，被 `upgrade_feed_turn` 封顶）/
+	##     模仿者 8043 的传导。
+	## ⚠️ 「每回合一次」是这一层唯一的闸：没有它，改造工厂会让装甲每回合白吐一张「升级」。
+	## ⚠️ R391 之前这里的口径是「只有 `_upgrade_unit` 算」，于是自我修复 / 共享护盾 /
+	##    改造工厂改造它时都不供能（用户报「只有升级这一张卡触发」）。改口径时
+	##    一并把 `_on_unit_upgraded()` 里所有改造入口都接上，别再逐个入口补。
 	if p == null or p.card == null or not p.card.traits.has(INF_ARMOR_TRAIT):
 		return
 	# R210：**只有「场上的这张卡」被改造才生效**（用户口径）。
@@ -6082,8 +6110,7 @@ func _transcend(target, side:= SIDE_SELF) -> String :
 	# 「模仿者」8043（R92）：接通的我方模仿者获得相同改造（超负荷）。
 	# affix 非空 → `_mimic_relay` 的 guard 放行（哪怕攻/血增益都是 0）。
 	_mimic_relay(p, atk_gain, hp_gain, AFFIX_OVERLOAD)
-	# 「无限装甲」8038（R89）：被改造时每回合供一张 0 费改造牌（与 _upgrade_unit 同）。
-	_feed_upgrade_card(p)
+	# R391：无限装甲供能走 `_on_unit_upgraded()` 统一口（这里不再单独调）。
 	_on_unit_upgraded(p)
 	_inspire_tick()   # R300 激发：超越极限 = 一次改造动作
 	return "%s 获得超负荷" % p.card.card_name
@@ -6426,8 +6453,7 @@ func _armor_plate(target, side:= SIDE_SELF) -> String :
 	# 传 atk_gain / hp_gain —— 含受体自己的改造奖励，**不含**「堡垒」的额外 +STACK_HP_PER
 	# （那是受体自身的特性，不该被模仿出去）。
 	_mimic_relay(p, atk_gain, hp_gain)
-	# 「无限装甲」8038（R89）：被改造时**每回合一次**供一张 0 费改造牌到手。
-	_feed_upgrade_card(p)
+	# R391：无限装甲供能走 `_on_unit_upgraded()` 统一口（这里不再单独调）。
 	_on_unit_upgraded(p)
 	_inspire_tick()   # R300 激发：加厚装甲 = 一次改造动作
 	return "%s 加装完成（+%d 血 / 受伤 -%d）" % [
@@ -7371,6 +7397,7 @@ const SPELL_BASE_DMG := {
 	9163: 10,    # 冲击炮（R369：8 → 10）
 	9169: 10,    # 烈火之剑
 	9172: 9,     # 激光扫射
+	9205: 25,    # 猎杀（R393，暗影刺客史诗技能；本局永久成长会抬高 value → 预览按 value 取）
 }
 
 # 卡面**给不出确数**的伤害技能（数字随局势变）→ 即使一点加成都沒有也要报当前值。
@@ -7509,7 +7536,11 @@ func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 	# ---------- ② 固定卡：卡面已给确数，只有加了成才报 ----------
 	# 蓄势 9156 的 base 是实例数据（`_charge_up_grow` 逐回合累加，卡面由
 	# `_charge_up_text(card.value)` 同步写出）→ 单独取，不读表。
-	var base: int = card.value if card.id == CHARGE_UP_ID else int(SPELL_BASE_DMG[card.id])
+	# R393：猎杀 9205 的伤害是**实例值**（本局永久成长会一直抬高 `card.value`），
+	# 与蓄势同理不能读表里的固定基数，否则左栏会一直报 25、越打越不准。
+	var base: int = int(SPELL_BASE_DMG[card.id])
+	if card.id == CHARGE_UP_ID or card.id == SLAY_ID:
+		base = card.value
 	var fin: int = _spell_dmg(side, base, card)
 	if fin == base:
 		return {}
@@ -9075,6 +9106,22 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 		CHARGE_UP_ID:
 			# 蓄势（9156，R232）：对目标造成此卡当前伤害（value 随剩余费用成长）。
 			return str(_op_deal_damage(side, _spell_dmg(side, card.value, card), target))
+		SLAY_ID:
+			# 猎杀（9205，R393，暗影刺客史诗技能 · 次元）：
+			# 基础伤害 = card.value（卡面 25；本局永久成长会把它抬高）。
+			# 击杀判据必须在伤害结算**之前**抓目标格子：目标被破坏后拿不到 cell。
+			# 只在「目标原本是敌方单位，且结算后那个格子空了」时算击杀 ——
+			# 单纯打到 0 血但被「超负荷」留住的敌人不算。
+			var hunt_p: Placement = _target_placement(side, target)
+			var hunt_cell := Vector2i(-1, -1)
+			var hunt_enemy := false
+			if hunt_p != null:
+				hunt_cell = _cell_of(hunt_p)
+				hunt_enemy = hunt_p.owner != side
+			var hunt_out := _op_deal_damage(side, _spell_dmg(side, card.value, card), target)
+			if hunt_enemy and hunt_cell.x >= 0 and state.unit_at(hunt_cell) == null:
+				_spell_kill_damage_growth(card)
+			return hunt_out
 		8002:
 			return str(_op_deal_damage(side, _spell_dmg(side, 4, card), target))
 		LULLABY_ID:
@@ -10766,7 +10813,7 @@ func preview_spell_damage(card: CardData, dst: Vector2i, side:= SIDE_SELF) -> Di
 	var now:= spell_now(card, side)
 	if not now.is_empty():
 		base = int(now.get("dmg", 0))
-	elif card.id == CHARGE_UP_ID:
+	elif card.id == CHARGE_UP_ID or card.id == SLAY_ID:   # R393：猎杀同蓄势，卡面值 = 实例 value
 		base = card.value       # 蓄势的「卡面值」是实例数据，不在表里
 	elif SPELL_BASE_DMG.has(card.id):
 		base = int(SPELL_BASE_DMG[card.id])
@@ -10925,7 +10972,8 @@ func damage_cell(cell: Vector2i, amount: int, source:= "效果") -> int:
 
 
 func _relic_damage_taken(dmg: int) -> int:
-	## 道具「护心」（6006）：伤害 ≥ 5 时 -1（最少 1）。所有 HP 伤害的最后一道统一减伤。
+	## 道具「鸭嘴」（6006，R391 起为**传奇**档）：伤害 ≥ 5 时 -1（最少 1）。
+	## 所有 HP 伤害的最后一道统一减伤。
 	if self_relics.has(6006) and dmg >= 5:
 		return maxi(1, dmg - 1)
 	return dmg
@@ -12185,6 +12233,54 @@ func _tap(p: Placement, reason:= "") -> void :
 	action.emit("tap", {"cell": cell, "card": p.card})
 
 
+func _card_first_kill_growth(killer: Placement) -> void:
+	## R393：这张卡「每场战斗首次击杀」的本局永久成长（赏金猎人 / 秃鹰）。
+	## 数据驱动：卡面 `first_kill_power / first_kill_health`，不为卡名写分支。
+	##   * 同一场战斗里同一卡 id 只结算一次（`_first_kill_growth_done`）；
+	##   * 当前站场的那一张**立刻**跟着变强（复制副本再改，绝不污染卡库）；
+	##   * 数值同时记进 `RunState.card_growth`，下一场 `build_deck()` 会烤进新副本，
+	##     所以离场、阵亡、换层都保留。
+	if killer == null or killer.card == null:
+		return
+	var c: CardData = killer.card
+	var gain_power := maxi(0, c.first_kill_power)
+	var gain_health := maxi(0, c.first_kill_health)
+	if gain_power <= 0 and gain_health <= 0:
+		return
+	var key := str(c.id)
+	if _first_kill_growth_done.has(key):
+		return
+	_first_kill_growth_done[key] = true
+	if RunState.run_active:
+		RunState.grow_card(c.id, gain_power, gain_health, 0)
+	# 当前这张：换独立副本后抬基础数值（不写 atk_buff → 离场不会被还原掉）。
+	var grown := CardData.from_dict(c.to_dict())
+	grown.power += gain_power
+	grown.health += gain_health
+	killer.card = grown
+	killer.health += gain_health
+	_log("%s 本场首次击杀 → 本局永久 +%d 力量 / +%d 生命（现 %d/%d）" % [
+		grown.card_name, gain_power, gain_health, grown.power, killer.health])
+	action.emit("card_growth", {"cell": _cell_of(killer), "card": grown,
+		"power": gain_power, "health": gain_health, "permanent": true})
+
+
+func _spell_kill_damage_growth(card: CardData) -> void:
+	## R393：猎杀（9205）每次击杀 → 本局永久伤害 +`per_kill_damage`。
+	## 当前这张的 `value` 也立刻抬高（本场若被回收 / 复制，仍带新伤害）；
+	## 账本写进 RunState，下一场生成牌库时自动接上。
+	if card == null:
+		return
+	var inc := maxi(0, card.per_kill_damage)
+	if inc <= 0:
+		return
+	card.value += inc
+	if RunState.run_active:
+		RunState.grow_card(card.id, 0, 0, inc)
+	_log("%s 击杀敌人 → 本局永久伤害 +%d（现 %d）" % [card.card_name, inc, card.value])
+	action.emit("card_growth", {"card": card, "damage": inc, "permanent": true})
+
+
 func _credit_kill(victim: Placement) -> void :
 	## 击杀记功：把这次击杀算给「最后一下是谁打的」（last_hit_by）。
 	## 鸭子骑士（9001）：每击杀一个敌方单位，攻击力 +KNIGHT_KILL_BUFF（永久累计）。
@@ -12193,6 +12289,9 @@ func _credit_kill(victim: Placement) -> void :
 	var killer:= state.unit_at(victim.last_hit_by)
 	if killer == null or killer.owner == victim.owner:
 		return
+	# R393：赏金猎人 / 秃鹰 —— 每场**首次**亲手击杀 → 本局永久成长。
+	# 必须排在下面两条「击杀锻造」之前：那两条之后有骑士 trait 的 return，会漏掉新卡。
+	_card_first_kill_growth(killer)
 	# R150 赫菲斯托斯「亲手击杀 → 锻造量产型俄倪厄」；
 	# R158 量产型赫菲斯托斯「量产锻造」走同一条通路（两个函数各自按 trait 判，
 	# 互不干扰：Boss 看 forge_period > 0，量产型看「量产锻造」trait）。
