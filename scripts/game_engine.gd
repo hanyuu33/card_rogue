@@ -10426,7 +10426,9 @@ func _absorb_by_guard(amount: int) -> bool:
 
 func _dodge_absorb(amount: int) -> int:
 	## 闪躲（9103）：随机一个己方**盟友**（kind == "盟友"，工事不参战）代替本方 HP 承受伤害。
-	## 它生命不足 → 只吃掉剩余的生命（随即被破坏），剩下的照旧由自己承担。
+	## R403：**溢出也全部吃下** —— 用户口径「全按铁栅栏来做」：与森林守护 / 以太守卫 /
+	## 铁栅栏 / 护盾生成器同一条口径，代受单位吃满全额伤害，超出其生命的部分**不再回传**，
+	## 它随即被破坏。改之前这里只吃 `min(伤害, 剩余生命)`，是三条代受路径里唯一会漏的。
 	## 返回「仍需自己承担」的伤害量（0 = 全被盟友吃下）。
 	if amount <= 0:
 		return 0
@@ -10443,15 +10445,15 @@ func _dodge_absorb(amount: int) -> int:
 	var i:= rng.randi_range(0, allies.size() - 1)   # 走引擎 rng：回放同种子可复现
 	var g: Placement = allies[i]
 	var cell2: Vector2i = cells[i]
-	var absorbed:= mini(amount, maxi(0, g.health))
+	var absorbed:= amount
 	_hit_unit(g, absorbed, "闪躲代受")
-	_log("闪躲：%s 替我方 HP 承受 %d 点伤害（超出 %d 仍由自己承担）" % [
-			g.card.card_name, absorbed, amount - absorbed])
+	_log("闪躲：%s 替我方 HP 承受 %d 点伤害（溢出全吃，不再结算）" % [
+			g.card.card_name, absorbed])
 	action.emit("dodge_absorb", {"card": g.card, "cell": cell2,
-			"absorbed": absorbed, "rest": amount - absorbed})
+			"absorbed": absorbed, "rest": 0})
 	if g.health <= 0:
-		_destroy(cell2)
-	return amount - absorbed
+		_destroy(cell2)   # R403：直接销毁、不经 `_destroy_dead` → 站后排也不会漏溢出
+	return 0
 
 
 func _ally_dmg_bonus(card: CardData, side: String) -> int:
@@ -10934,7 +10936,14 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 			action.emit("shield_redirect", {"cell": _cell_of(p), "card": p.card,
 					"to": _cell_of(gen), "to_card": gen.card, "amount": amount,
 					"source": source, "side": p.owner})
+			var gen_cell:= _cell_of(gen)
 			_hit_unit(gen, amount, source, false)
+			# R403：生成器被打死 → **立刻就地销毁**，不要留给 `_destroy_dead()`。
+			# 它站后排（x=5）时 `_destroy_dead` 会把 `-health` 当「后排溢出」漏给玩家 HP，
+			# 站前排却不会 —— 同一张卡两种结果。走 `_destroy()` 与森林守护 / 铁栅栏完全
+			# 同形（亡语、击杀记功照常，只是不吃那条溢出）。
+			if gen_cell != Vector2i(-1, -1) and gen.health <= 0:
+				_destroy(gen_cell)
 			return 0
 	var dmg:= _unit_damage_taken(p, amount, "attack" if is_attack else "spell")
 	p.health -= dmg

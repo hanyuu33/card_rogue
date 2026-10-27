@@ -209,7 +209,7 @@ func _init() -> void:
 
 	# ---- 第 37 轮新卡（2026-10-01）：魔法塔 / 魔力核心 / 陨石术 / 复活术 / 魔像术 / 魔法学徒 ----
 	var mt := repo.get_card(9075)
-	check(mt.kind == "工事" and mt.cost == 2 and mt.power == 0 and mt.health == 11
+	check(mt.kind == "工事" and mt.cost == 2 and mt.power == 0 and mt.health == 12
 			and mt.attack_range == 0 and mt.move_speed == 0 and mt.rarity == 0
 			and mt.traits.has(GameEngine.MAGIC_TOWER_TRAIT),
 			"魔法塔：普通 2 费工事 0/%d 程0 速0" % mt.health)
@@ -234,9 +234,9 @@ func _init() -> void:
 			and golem.traits.has(FieldState.VANISH_TRAIT),
 			"魔像：token 3 费 3/10 程1 速1，嘲讽 + 离场消失")
 	var appr := repo.get_card(9081)
-	check(appr.kind == "盟友" and appr.cost == 2 and appr.power == 2 and appr.health == 5
+	check(appr.kind == "盟友" and appr.cost == 2 and appr.power == 3 and appr.health == 6
 			and appr.attack_range == 1 and appr.move_speed == 1 and appr.rarity == 1,
-			"魔法学徒：稀有 2 费 2/5 程1 速1")
+			"魔法学徒：稀有 2 费 3/6 程1 速1")
 	check(repo.get_card(9075).group == "player" and repo.get_card(9077).group == "player"
 			and repo.get_card(9078).group == "player" and repo.get_card(9080).group == "player"
 			and repo.get_card(9081).group == "player",
@@ -810,8 +810,8 @@ func _init() -> void:
 
 	# ---- 中立动物奖励卡（9031~9034，2026-09-30 新增） ----
 	check(repo.get_card(9031).actions == 2 and repo.get_card(9031).rarity == 2
-			and repo.get_card(9031).power == 4 and repo.get_card(9031).health == 8,
-			"白狼：史诗 3 费 4/8 程1 速1，每回合行动两次")
+			and repo.get_card(9031).power == 5 and repo.get_card(9031).health == 9,
+			"白狼：史诗 3 费 5/9 程1 速1，每回合行动两次")
 	# R82：野兔由「普通 1 费 1/2」改为「**稀有** 1 费 1/2」+ 新增「自我复制」。
 	check(repo.get_card(9032).cost == 1 and repo.get_card(9032).power == 1
 			and repo.get_card(9032).health == 2 and repo.get_card(9032).rarity == 1,
@@ -822,9 +822,9 @@ func _init() -> void:
 	check(repo.get_card(9033).cost == 2 and repo.get_card(9033).power == 2
 			and repo.get_card(9033).health == 7 and repo.get_card(9033).rarity == 1,
 			"山猫：稀有 2 费 2/7")
-	check(repo.get_card(9034).cost == 2 and repo.get_card(9034).power == 2
-			and repo.get_card(9034).health == 8 and repo.get_card(9034).rarity == 1,
-			"赤狐：稀有 2 费 2/8")
+	check(repo.get_card(9034).cost == 2 and repo.get_card(9034).power == 3
+			and repo.get_card(9034).health == 9 and repo.get_card(9034).rarity == 1,
+			"赤狐：稀有 2 费 3/9")
 	# 白狼：上场后 acts_left == 2（每回合行动两次）
 	var wolf := repo.get_card(9031)
 	var eng_wolf := _new_engine(_single_deck(wolf), 20, 20, -1, false)
@@ -1049,9 +1049,9 @@ func _init() -> void:
 			and nc_crow.attack_range == 1 and nc_crow.move_speed == 1,
 			"乌鸦：稀有 1 费 1/1 程1 速1")
 	var nc_hound := repo.get_card(9040)
-	check(nc_hound.kind == "盟友" and nc_hound.cost == 3 and nc_hound.power == 3
-			and nc_hound.health == 12 and nc_hound.rarity == 0,
-			"猎犬：普通 3 费 3/12 程1 速1")
+	check(nc_hound.kind == "盟友" and nc_hound.cost == 3 and nc_hound.power == 4
+			and nc_hound.health == 13 and nc_hound.rarity == 0,
+			"猎犬：普通 3 费 4/13 程1 速1")
 	var nc_qs := repo.get_card(9041)
 	check(nc_qs.is_spell() and nc_qs.cost == 1 and nc_qs.rarity == 1
 			and not nc_qs.needs_target(),
@@ -1109,12 +1109,12 @@ func _init() -> void:
 	eng_hound.play_from_hand(0, Vector2i(4, 1))
 	var pl_hound: Placement = eng_hound.state.unit_at(Vector2i(4, 1))
 	check(pl_hound != null and pl_hound.atk_buff == 4
-			and pl_hound.effective_power() == 7,
-			"猎犬：上场时场上 2 个其他盟友 → +4 力量（3 → 7；工事/敌方不算）")
+			and pl_hound.effective_power() == 8,
+			"猎犬：上场时场上 2 个其他盟友 → +4 力量（4 → 8；工事/敌方不算）")
 	eng_hound.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(3, 2))
-	check(pl_hound.effective_power() == 7, "猎犬：加成是上场快照 → 之后再上盟友不追加")
+	check(pl_hound.effective_power() == 8, "猎犬：加成是上场快照 → 之后再上盟友不追加")
 	eng_hound._destroy(Vector2i(4, 0))
-	check(pl_hound.effective_power() == 7, "猎犬：盟友阵亡也不回落（快照）")
+	check(pl_hound.effective_power() == 8, "猎犬：盟友阵亡也不回落（快照）")
 	var eng_hound_lone := _new_engine([], 20, 20, -1, false)
 	eng_hound_lone.start_game(1)
 	eng_hound_lone.state.hand = [repo.get_card(9040)]
@@ -1122,8 +1122,8 @@ func _init() -> void:
 	eng_hound_lone.play_from_hand(0, Vector2i(4, 0))
 	var pl_hound_lone: Placement = eng_hound_lone.state.unit_at(Vector2i(4, 0))
 	check(pl_hound_lone != null and pl_hound_lone.atk_buff == 0
-			and pl_hound_lone.effective_power() == 3,
-			"猎犬：场上没有其他盟友 → 保持 3 力量（不含自己）")
+			and pl_hound_lone.effective_power() == 4,
+			"猎犬：场上没有其他盟友 → 保持 4 力量（不含自己）")
 
 	# 快速出击：本回合手牌中盟友费用 -1（技能/工事不变；回合开始清零）
 	var eng_qs := _new_engine([], 20, 20, -1, false)
@@ -2948,11 +2948,11 @@ func _init() -> void:
 
 	# 新卡数值：犀牛（原「骑兵」）/ 鸭子弓手 / 金属龙
 	var nc_rider := repo.get_card(9016)
-	check(nc_rider.card_name == "犀牛" and nc_rider.cost == 4 and nc_rider.power == 6
+	check(nc_rider.card_name == "犀牛" and nc_rider.cost == 4 and nc_rider.power == 7
 			and nc_rider.health == 12 and nc_rider.attack_range == 1
 			and nc_rider.move_speed == 2 and nc_rider.rarity == 0
 			and nc_rider.regen_per_turn == 2,
-			"犀牛（R125 改名；R233 加强每回合回 2）：普通 4 费 6/12 程1 速2")
+			"犀牛（R125 改名；R233 加强每回合回 2）：普通 4 费 7/12 程1 速2")
 	var nc_archer := repo.get_card(9017)
 	check(nc_archer.card_name == "鸭子弓手" and nc_archer.power == 3
 			and nc_archer.health == 18 and nc_archer.attack_range == 2
@@ -2966,10 +2966,10 @@ func _init() -> void:
 			"金属龙：事件卡 5 费 6/21 程1 速1（不可奖励获取）")
 	var nc_tower := repo.get_card(9019)
 	check(nc_tower.card_name == "箭塔" and nc_tower.kind == "工事"
-			and nc_tower.cost == 3 and nc_tower.power == 5 and nc_tower.health == 10
+			and nc_tower.cost == 3 and nc_tower.power == 5 and nc_tower.health == 11
 			and nc_tower.attack_range == 2 and nc_tower.move_speed == 0
 			and nc_tower.rarity == 0 and nc_tower.is_fort(),
-			"箭塔：普通 3 费 工事 5/10 程2 不能移动")
+			"箭塔：普通 3 费 工事 5/11 程2 不能移动")
 	# 关卡：鸭子骑士来袭 + 巫师的召唤 + 鸭子队长登场（分级排序）
 	check(GameLevels.TIER_NAMES.size() == 5
 			and GameLevels.tier_name(0) == "普通敌人-简单"
@@ -8250,8 +8250,8 @@ func _init() -> void:
 	r45_sd.state.hand.append(r45_sd_spell)
 	r45_sd.play_from_hand(0, Vector2i(4, 1))
 	var r45_sd_p := r45_sd.state.unit_at(Vector2i(4, 1))
-	check(r45_sd_p.health == 14,
-			"影魔：1 张 0 费技能卡 → 生命 11+3=14（实际 %d）" % r45_sd_p.health)
+	check(r45_sd_p.health == 15,
+			"影魔：1 张 0 费技能卡 → 生命 12+3=15（实际 %d）" % r45_sd_p.health)
 	check(r45_sd.cost_of(r45_sd_spell) == 1,
 			"影魔：手卡 2 费技能牌本回合 1 费（实际 %d）" % r45_sd.cost_of(r45_sd_spell))
 
@@ -8373,10 +8373,10 @@ func _init() -> void:
 	var r45_lk_p := r45_lk.state.unit_at(Vector2i(4, 1))
 	r45_lk._note_card_played(GameEngine.SIDE_SELF, null)
 	r45_lk._note_card_played(GameEngine.SIDE_SELF, null)
-	check(r45_lk_p.effective_power() == 3,
-			"潜影者：用过 2 张牌 → 1+2=3（实际 %d）" % r45_lk_p.effective_power())
+	check(r45_lk_p.effective_power() == 4,
+			"潜影者：用过 2 张牌 → 2+2=4（实际 %d）" % r45_lk_p.effective_power())
 	r45_lk.attack(Vector2i(4, 1), Vector2i(3, 1), GameEngine.SIDE_SELF)
-	check(r45_lk_p.effective_power() == 1,
+	check(r45_lk_p.effective_power() == 2,
 			"潜影者：攻击后重置（实际 %d）" % r45_lk_p.effective_power())
 
 	# 回旋斩（9096）：门槛（先 4 张其他卡）+ 十字只打敌方单位
@@ -8908,8 +8908,10 @@ func _init() -> void:
 			"闪躲：5 伤全部由盟友代受（幽影 8 → %d，我方 HP 仍是 %d）"
 			% [r48_d_ally.health, r48_d.state.hp_self])
 	r48_d._damage_player(GameEngine.SIDE_SELF, 10, "测试")
-	check(r48_d.state.hp_self == 23 and r48_d.state.unit_at(Vector2i(4, 1)) == null,
-			"闪躲：盟友只剩 3 血 → 吃掉 3 点后倒下，超出 7 点自己承担（HP 30 → %d）"
+	# R403：溢出也全部吃下（用户口径「全按铁栅栏来做」）—— 盟友只剩 3 血也吃满 10 点，
+	# 我方 HP 一点不掉。改之前这里只吃 3 点、剩下 7 点漏回自己（HP 30 → 23）。
+	check(r48_d.state.hp_self == 30 and r48_d.state.unit_at(Vector2i(4, 1)) == null,
+			"闪躲：盟友只剩 3 血也把 10 点全吃下（溢出不再结算），我方 HP 仍是 %d"
 			% r48_d.state.hp_self)
 
 	# 闪躲：窗口在自己下个回合开始到期（含中间的敌方回合）
@@ -9444,8 +9446,8 @@ func _init() -> void:
 			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
 	r52_k.end_turn()   # → 对方回合（敌人在自己的回合攻击工事）
 	r52_k.attack(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
-	check(r52_k.state.unit_at(Vector2i(4, 1)).health == 2 and r52_k_foe.health == 60,
-			"陷阱工坊：被打但没破坏 → 不触发反伤（10 血 → 2，攻击者仍 60）")
+	check(r52_k.state.unit_at(Vector2i(4, 1)).health == 3 and r52_k_foe.health == 60,
+			"陷阱工坊：被打但没破坏 → 不触发反伤（11 血 → 3，攻击者仍 60）")
 	r52_k_foe.tapped = false
 	r52_k.attack(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
 	check(r52_k.state.unit_at(Vector2i(4, 1)) == null and r52_k_foe.health == 52
@@ -9874,12 +9876,12 @@ func _init() -> void:
 			and r56_blade.card_class == PlayerClass.ROGUE,
 			"R56 暗影之刃 9111：2 费稀有暗影刺客效果卡")
 	check(r56_lord != null and r56_lord.card_name == "黑暗领主"
-			and r56_lord.kind == "盟友" and r56_lord.cost == 4 and r56_lord.power == 5
-			and r56_lord.health == 10 and r56_lord.attack_range == 1
+			and r56_lord.kind == "盟友" and r56_lord.cost == 4 and r56_lord.power == 6
+			and r56_lord.health == 11 and r56_lord.attack_range == 1
 			and r56_lord.move_speed == 1 and r56_lord.rarity == 2
 			and r56_lord.traits.has(GameEngine.DARK_LORD_TRAIT)
 			and r56_lord.card_class == PlayerClass.ROGUE,
-			"R56 黑暗领主 8021：4 费史诗暗影刺客随从 5/10 程1 速1")
+			"R56 黑暗领主 8021：4 费史诗暗影刺客随从 6/11 程1 速1")
 	check(r56_chain != null and r56_chain.card_name == "暗影锁链"
 			and r56_chain.kind == "效果" and r56_chain.cost == 1
 			and r56_chain.rarity == 1
@@ -10022,11 +10024,11 @@ func _init() -> void:
 			"R57 黑暗扩散 9113：1 费史诗暗影刺客效果卡")
 	check(r57_chanter != null and r57_chanter.card_name == "地狱咏唱者"
 			and r57_chanter.kind == "盟友" and r57_chanter.cost == 3
-			and r57_chanter.power == 1 and r57_chanter.health == 11
+			and r57_chanter.power == 2 and r57_chanter.health == 11
 			and r57_chanter.attack_range == 2 and r57_chanter.move_speed == 1
 			and r57_chanter.rarity == 1
 			and r57_chanter.traits.has(GameEngine.CHANTER_TRAIT),
-			"R57/R282 地狱咏唱者 8022：3 费稀有暗影刺客盟友 1/11 程2 速1")
+			"R57/R282 地狱咏唱者 8022：3 费稀有暗影刺客盟友 2/11 程2 速1")
 	check(r57_altar != null and r57_altar.card_name == "黑暗祭坛"
 			and r57_altar.kind == "工事" and r57_altar.is_fort() and r57_altar.cost == 3
 			and r57_altar.power == 1 and r57_altar.health == 15
@@ -10069,7 +10071,7 @@ func _init() -> void:
 	r57_c.state.energy = 0
 	r57_c.attack_hp(Vector2i(2, 1), Vector2i(0, 1), GameEngine.SIDE_SELF)
 	check(r57_c.state.energy == GameEngine.ATTACK_GAIN_ENERGY
-			and r57_c.state.hp_opponent == 29,
+			and r57_c.state.hp_opponent == 28,
 			"地狱咏唱者：直击敌方 HP 同样 +%d 费（费用 %d、敌方 HP %d）"
 			% [GameEngine.ATTACK_GAIN_ENERGY, r57_c.state.energy, r57_c.state.hp_opponent])
 
@@ -10293,11 +10295,11 @@ func _init() -> void:
 	# 3 费普通暗影刺客盟友 2/8程1 速1：登场回复 4 点费用 + 本回合手卡全体费用 +4（**涨价**）。
 	var r63_ct := repo.get_card(8024)
 	check(r63_ct != null and r63_ct.card_name == "契约签订者" and r63_ct.kind == "盟友"
-			and r63_ct.cost == 3 and r63_ct.power == 2 and r63_ct.health == 8
+			and r63_ct.cost == 3 and r63_ct.power == 3 and r63_ct.health == 9
 			and r63_ct.attack_range == 1 and r63_ct.move_speed == 1
 			and r63_ct.rarity == 0 and r63_ct.card_class == PlayerClass.ROGUE
 			and r63_ct.traits.has(GameEngine.CONTRACTOR_TRAIT),
-			"R63 契约签订者 8024：3 费普通暗影刺客盟友 2/8 程1 速1")
+			"R63 契约签订者 8024：3 费普通暗影刺客盟友 3/9 程1 速1")
 	check(repo.reward_pool_for(PlayerClass.ROGUE).has(r63_ct)
 			and not repo.reward_pool_for(PlayerClass.DRUID).has(r63_ct),
 			"R63 契约签订者 8024：暗影刺客奖励池专属")
@@ -12108,10 +12110,10 @@ func _init() -> void:
 	var r84_bone: CardData = r84_repo.get_card(GameEngine.BATTLE_BONE_ID)
 	check(r84_bone != null and r84_bone.card_name == "战斗骨骼"
 			and r84_bone.kind == "盟友" and r84_bone.cost == 2
-			and r84_bone.power == 2 and r84_bone.health == 7
+			and r84_bone.power == 3 and r84_bone.health == 8
 			and r84_bone.attack_range == 1 and r84_bone.move_speed == 1
 			and r84_bone.rarity == 0 and r84_bone.card_class == PlayerClass.MECH,
-		"R84 战斗骨骼 8029：机械之心的 2 费普通盟友 2/7/1/1")
+		"R84 战斗骨骼 8029：机械之心的 2 费普通盟友 3/8/1/1")
 	check(r84_bone.upgrade_atk_bonus == 2 and r84_bone.upgrade_hp_bonus == 2,
 		"R84 战斗骨骼：卡面写明改造奖励 +%d 力 / +%d 血（R292：1/1 → 2/2，读字段不硬编码）"
 			% [r84_bone.upgrade_atk_bonus, r84_bone.upgrade_hp_bonus])
@@ -12131,9 +12133,9 @@ func _init() -> void:
 			r84_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
 	r84_e.state.energy = 5
 	r84_e.use_spell(0, Vector2i(4, 1))
-	check(r84_bp.effective_power() == 2 + GameEngine.UPGRADE_ATK + r84_bone.upgrade_atk_bonus
-			and r84_bp.health == 7 + GameEngine.UPGRADE_HP + r84_bone.upgrade_hp_bonus,
-		"R84 战斗骨骼：被改造一次 → %d 攻 / %d 血（2/7 + 升级基数 + 卡面 %d/%d）"
+	check(r84_bp.effective_power() == 3 + GameEngine.UPGRADE_ATK + r84_bone.upgrade_atk_bonus
+			and r84_bp.health == 8 + GameEngine.UPGRADE_HP + r84_bone.upgrade_hp_bonus,
+		"R84 战斗骨骼：被改造一次 → %d 攻 / %d 血（3/8 + 升级基数 + 卡面 %d/%d）"
 			% [r84_bp.effective_power(), r84_bp.health,
 				r84_bone.upgrade_atk_bonus, r84_bone.upgrade_hp_bonus])
 	# 可重复叠加，且离场还原（不烤进卡库）
@@ -12141,8 +12143,8 @@ func _init() -> void:
 			r84_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
 	r84_e.state.energy = 5
 	r84_e.use_spell(0, Vector2i(4, 1))
-	check(r84_bp.effective_power() == 2 + (GameEngine.UPGRADE_ATK + r84_bone.upgrade_atk_bonus) * 2
-			and r84_bp.health == 7 + (GameEngine.UPGRADE_HP + r84_bone.upgrade_hp_bonus) * 2,
+	check(r84_bp.effective_power() == 3 + (GameEngine.UPGRADE_ATK + r84_bone.upgrade_atk_bonus) * 2
+			and r84_bp.health == 8 + (GameEngine.UPGRADE_HP + r84_bone.upgrade_hp_bonus) * 2,
 		"R84 战斗骨骼：可重复叠加（第二次后 %d 攻 / %d 血）"
 			% [r84_bp.effective_power(), r84_bp.health])
 	r84_e._hit_unit(r84_bp, 999, "R84 测试")
@@ -12151,13 +12153,13 @@ func _init() -> void:
 	for d84 in r84_e.state.discard:
 		if d84.id == GameEngine.BATTLE_BONE_ID:
 			r84_back = d84
-	check(r84_back != null and r84_back.power == 2 and r84_back.health == 7,
-		"R84 战斗骨骼：离场还原成原卡 2/7（实际 %s/%s）"
+	check(r84_back != null and r84_back.power == 3 and r84_back.health == 8,
+		"R84 战斗骨骼：离场还原成原卡 3/8（实际 %s/%s）"
 			% [str(r84_back.power) if r84_back != null else "?",
 				str(r84_back.health) if r84_back != null else "?"])
 	var r84_lib: CardData = r84_repo.get_card(GameEngine.BATTLE_BONE_ID)
-	check(r84_lib.power == 2 and r84_lib.health == 7,
-		"R84 战斗骨骼：**没有污染卡库**（仍 2/%d）" % r84_lib.health)
+	check(r84_lib.power == 3 and r84_lib.health == 8,
+		"R84 战斗骨骼：**没有污染卡库**（仍 3/%d）" % r84_lib.health)
 	# 素体的改造奖励仍生效（回归护栏：改成读字段后别把素体弄坏）
 	var r84_pe := _new_engine([], 30, 30, -1, false)
 	r84_pe.start_game()
@@ -12375,10 +12377,10 @@ func _init() -> void:
 	# ---- ③ 侦察塔：卡面 ----
 	var r86_tw: CardData = r86_repo.get_card(GameEngine.SCOUT_TOWER_ID)
 	check(r86_tw != null and r86_tw.card_name == "侦察塔" and r86_tw.kind == "工事"
-			and r86_tw.cost == 2 and r86_tw.power == 0 and r86_tw.health == 8
+			and r86_tw.cost == 2 and r86_tw.power == 0 and r86_tw.health == 9
 			and r86_tw.attack_range == 2 and r86_tw.rarity == 0
 			and r86_tw.card_class == PlayerClass.MECH,
-		"R276 侦察塔 8032：机械之心的 2 费普通工事，0 攻 / 8 血 / 攻程 2")
+		"R276 侦察塔 8032：机械之心的 2 费普通工事，0 攻 / 9 血 / 攻程 2")
 	check(r86_tw.traits.has(GameEngine.STACK_DAMAGE_TRAIT),
 		"R86/R120 侦察塔：带 trait「改造层数」—— **光环易伤**按这个 trait 判定")
 	# ---- ④ 0 攻工事**能攻击**（用户口径：只有 0 攻程不能攻击）----
@@ -12480,7 +12482,7 @@ func _init() -> void:
 		"R86 层数是「只在场上有效」的（离场不写回卡：Placement 上仍是 %d 层）"
 			% r86_tp.upgrade_stacks)
 	var r86_tw_lib: CardData = r86_repo.get_card(GameEngine.SCOUT_TOWER_ID)
-	check(r86_tw_lib.power == 0 and r86_tw_lib.health == 8,
+	check(r86_tw_lib.power == 0 and r86_tw_lib.health == 9,
 		"R86 侦察塔：离场后**没有污染卡库**（仍 0 攻 / %d 血）" % r86_tw_lib.health)
 	# ================================================================
 	# R120：改造奖励的**唯一口**（素体）+ 侦察塔光环易伤
@@ -12609,10 +12611,10 @@ func _init() -> void:
 			and r87_bar.card_class == PlayerClass.MECH,
 		"R87 能量屏障 8033：机械之心的 2 费**稀有**技能")
 	check(r87_fort != null and r87_fort.card_name == "堡垒" and r87_fort.kind == "工事"
-			and r87_fort.cost == 3 and r87_fort.power == 3 and r87_fort.health == 10
+			and r87_fort.cost == 3 and r87_fort.power == 3 and r87_fort.health == 11
 			and r87_fort.attack_range == 1 and r87_fort.rarity == 1
 			and r87_fort.card_class == PlayerClass.MECH,
-		"R87 堡垒 8034：机械之心的 3 费**稀有**工事，3 攻 / 10 血 / 攻程 1")
+		"R87 堡垒 8034：机械之心的 3 费**稀有**工事，3 攻 / 11 血 / 攻程 1")
 	check(r87_fort.traits.has(GameEngine.STACK_HP_TRAIT),
 		"R87 堡垒：带 trait「改造生命层」（与侦察塔的「改造层数」是两套，别混）")
 	check(r87_rep != null and r87_rep.card_name == "自我修复" and r87_rep.kind == "技能"
@@ -12687,15 +12689,15 @@ func _init() -> void:
 	r87_e3.state.energy = 5
 	r87_e3.use_spell(0, Vector2i(4, 1))
 	check(r87_fp.upgrade_stacks == 1
-			and r87_fp.health == 10 + GameEngine.UPGRADE_HP + GameEngine.STACK_HP_PER,
-		"R87 堡垒：改造 1 次 → %d 层 / %d 血（10 + 改造 8 + 每层 3）"
+			and r87_fp.health == 11 + GameEngine.UPGRADE_HP + GameEngine.STACK_HP_PER,
+		"R87 堡垒：改造 1 次 → %d 层 / %d 血（11 + 改造 8 + 每层 3）"
 			% [r87_fp.upgrade_stacks, r87_fp.health])
 	r87_e3.state.hand = [CardData.from_dict(
 			r87_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
 	r87_e3.state.energy = 5
 	r87_e3.use_spell(0, Vector2i(4, 1))
 	check(r87_fp.upgrade_stacks == 2
-			and r87_fp.health == 10 + (GameEngine.UPGRADE_HP + GameEngine.STACK_HP_PER) * 2,
+			and r87_fp.health == 11 + (GameEngine.UPGRADE_HP + GameEngine.STACK_HP_PER) * 2,
 		"R87 堡垒：改造 2 次 → %d 层 / %d 血（可叠加）"
 			% [r87_fp.upgrade_stacks, r87_fp.health])
 	# ⚠️ 生命层数**不进攻击力**（那是侦察塔的活）—— 堡垒有 3 点基础攻，别按 0 攻算
@@ -12708,8 +12710,8 @@ func _init() -> void:
 	for d87 in r87_e3.state.discard:
 		if d87.id == GameEngine.FORT_ID:
 			r87_fback = d87
-	check(r87_fback != null and r87_fback.health == 10 and r87_fback.power == 3,
-		"R87 堡垒：离场还原成原卡 3/10（实际 %s/%s）"
+	check(r87_fback != null and r87_fback.health == 11 and r87_fback.power == 3,
+		"R87 堡垒：离场还原成原卡 3/11（实际 %s/%s）"
 			% [str(r87_fback.power) if r87_fback != null else "?",
 				str(r87_fback.health) if r87_fback != null else "?"])
 	# 侦察塔那边不受影响（回归护栏：生命层 ≠ 攻层）
@@ -12722,7 +12724,7 @@ func _init() -> void:
 			r87_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
 	r87_e4.state.energy = 5
 	r87_e4.use_spell(0, Vector2i(4, 1))
-	check(r87_tp.health == 8 + GameEngine.UPGRADE_HP,
+	check(r87_tp.health == 9 + GameEngine.UPGRADE_HP,
 		"R87 侦察塔（回归护栏）：改造 1 次只 +8 血（%d），**不吃**堡垒的每层 +3"
 			% r87_tp.health)
 
@@ -12988,9 +12990,9 @@ func _init() -> void:
 
 	# ---- ① 卡面数据 ----
 	check(r89_armor != null and r89_armor.kind == "盟友" and r89_armor.cost == 4
-			and r89_armor.power == 4 and r89_armor.health == 18
+			and r89_armor.power == 5 and r89_armor.health == 19
 			and r89_armor.attack_range == 1 and r89_armor.move_speed == 1,
-		"R89 无限装甲：盟友 / 4 费 4 攻 18 血 / 攻程 1 / 移速 1")
+		"R89 无限装甲：盟友 / 4 费 5 攻 19 血 / 攻程 1 / 移速 1")
 	check(r89_armor.rarity == 2 and r89_armor.card_class == PlayerClass.MECH,
 		"R89 无限装甲：史诗（rarity 2）+ 机械之心")
 	check(r89_armor.traits.has(GameEngine.INF_ARMOR_TRAIT),
@@ -13489,10 +13491,10 @@ func _init() -> void:
 
 	# ---- ① 卡面数据 ----
 	check(r91_ch != null and r91_ch.kind == "工事" and r91_ch.cost == 1
-			and r91_ch.power == 1 and r91_ch.health == 1 and r91_ch.attack_range == 1
+			and r91_ch.power == 1 and r91_ch.health == 2 and r91_ch.attack_range == 1
 			and r91_ch.move_speed == 0 and r91_ch.rarity == 0
 			and r91_ch.card_class == PlayerClass.MECH,
-		"R91 充电装置：工事 / 1 费 1 攻 1 血 / 攻程 1 / 移速 0 / 普通 / 机械之心")
+		"R91 充电装置：工事 / 1 费 1 攻 2 血 / 攻程 1 / 移速 0 / 普通 / 机械之心")
 	check(r91_ch.traits.has(GameEngine.CHARGE_TRAIT),
 		"R91 充电装置：带 trait「接通」（与闪电链同一个 trait 族）")
 
@@ -13692,18 +13694,18 @@ func _init() -> void:
 	var r92_gen_def: CardData = r92_repo.get_card(GameEngine.SHIELD_GEN_ID)
 	var r92_mim_def: CardData = r92_repo.get_card(GameEngine.MIMIC_ID)
 	check(r92_gen_def != null and r92_gen_def.kind == "工事" and r92_gen_def.cost == 2
-			and r92_gen_def.power == 0 and r92_gen_def.health == 10
+			and r92_gen_def.power == 0 and r92_gen_def.health == 11
 			and r92_gen_def.attack_range == 0 and r92_gen_def.move_speed == 0
 			and r92_gen_def.rarity == 0 and r92_gen_def.card_class == PlayerClass.MECH,
-		"R92 护盾生成器：工事 / 2 费 0 攻 **10 血**（R275 由 9 上调）/ 攻程 0 / 移速 0 / **普通** / 机械之心")
+		"R92 护盾生成器：工事 / 2 费 0 攻 **11 血**（R275 由 9 上调）/ 攻程 0 / 移速 0 / **普通** / 机械之心")
 	check(r92_gen_def.traits.has(GameEngine.CHARGE_TRAIT)
 			and r92_gen_def.traits.has("伤害转移"),
 		"R92 护盾生成器：带 trait「接通」与「伤害转移」")
 	check(r92_mim_def != null and r92_mim_def.kind == "盟友" and r92_mim_def.cost == 2
-			and r92_mim_def.power == 0 and r92_mim_def.health == 10
+			and r92_mim_def.power == 1 and r92_mim_def.health == 11
 			and r92_mim_def.attack_range == 1 and r92_mim_def.move_speed == 1
 			and r92_mim_def.rarity == 2 and r92_mim_def.card_class == PlayerClass.MECH,
-		"R92 模仿者：盟友 / 2 费 0 攻 10 血 / 攻程 1 / 移速 1 / **史诗** / 机械之心")
+		"R92 模仿者：盟友 / 2 费 1 攻 11 血 / 攻程 1 / 移速 1 / **史诗** / 机械之心")
 	check(r92_mim_def.traits.has(GameEngine.CHARGE_TRAIT)
 			and r92_mim_def.traits.has("模仿改造"),
 		"R92 模仿者：带 trait「接通」与「模仿改造」")
@@ -13748,11 +13750,11 @@ func _init() -> void:
 	var r92_foe_hp0: int = r92_foe2.health
 	var r92_iso_hp0: int = r92_iso.health
 	r92_e2._hit_unit(r92_foe2, 3, "测试")
-	check(r92_foe2.health == r92_foe_hp0 - 3 and r92_gen2.health == 10,
+	check(r92_foe2.health == r92_foe_hp0 - 3 and r92_gen2.health == 11,
 		"R92 护盾生成器「**只护我方**」：相邻的敌方单位照常受伤（%d→%d），生成器没掉血（%d）"
 			% [r92_foe_hp0, r92_foe2.health, r92_gen2.health])
 	r92_e2._hit_unit(r92_iso, 3, "测试")
-	check(r92_iso.health == r92_iso_hp0 - 3 and r92_gen2.health == 10,
+	check(r92_iso.health == r92_iso_hp0 - 3 and r92_gen2.health == 11,
 		"R92 护盾生成器：孤立的 (0,0) **不接通** → 不受保护（%d→%d），生成器仍 %d"
 			% [r92_iso_hp0, r92_iso.health, r92_gen2.health])
 
@@ -13796,14 +13798,14 @@ func _init() -> void:
 			% [GameEngine.UPGRADE_FACTORY_ATK, GameEngine.UPGRADE_FACTORY_HP,
 				r92_mim.effective_power(), r92_mim.health])
 	# ⚠️ 不污染卡库（卡库里那张模仿者仍是 0/10）
-	check(r92_repo.get_card(GameEngine.MIMIC_ID).health == 10
-			and r92_repo.get_card(GameEngine.MIMIC_ID).power == 0,
-		"R92 模仿者：**没有污染卡库**（仍是 0 攻 / %d 血）"
+	check(r92_repo.get_card(GameEngine.MIMIC_ID).health == 11
+			and r92_repo.get_card(GameEngine.MIMIC_ID).power == 1,
+		"R92 模仿者：**没有污染卡库**（仍是 1 攻 / %d 血）"
 			% r92_repo.get_card(GameEngine.MIMIC_ID).health)
 	# 离场还原
 	var r92_restored: CardData = r92_e3._card_leaving_field(r92_mim)
-	check(r92_restored != null and r92_restored.health == 10,
-		"R92 模仿者：离场时**还原成原卡**（%d 血 → 10 血）"
+	check(r92_restored != null and r92_restored.health == 11,
+		"R92 模仿者：离场时**还原成原卡**（%d 血 → 11 血）"
 			% (r92_restored.health if r92_restored != null else -1))
 
 	# ---- ④ 模仿者：**不接通不受益** ----
@@ -14048,19 +14050,19 @@ func _init() -> void:
 	var r96_chi_def: CardData = r96_repo.get_card(GameEngine.CHIMERA_ID)
 	var r96_ord_def: CardData = r96_repo.get_card(GameEngine.PROD_ORDER_ID)
 	check(r96_rec_def != null and r96_rec_def.kind == "盟友" and r96_rec_def.cost == 3
-			and r96_rec_def.power == 1 and r96_rec_def.health == 14
+			and r96_rec_def.power == 2 and r96_rec_def.health == 15
 			and r96_rec_def.attack_range == 1 and r96_rec_def.move_speed == 1
 			and r96_rec_def.rarity == 2 and r96_rec_def.card_class == PlayerClass.MECH
 			and not r96_rec_def.has_affix("嘲讽"),
-		"R96 零件回收者：盟友 / 3 费 1 攻 14 血 / 攻程 1 / 移速 1 / **史诗**（R208 升） / 机械之心")
+		"R96 零件回收者：盟友 / 3 费 2 攻 15 血 / 攻程 1 / 移速 1 / **史诗**（R208 升） / 机械之心")
 	check(r96_rec_def.traits.has("机械"),
 		"R96 零件回收者：带 trait「机械」")
 	check(r96_chi_def != null and r96_chi_def.kind == "盟友" and r96_chi_def.cost == 4
-			and r96_chi_def.power == 3 and r96_chi_def.health == 20
+			and r96_chi_def.power == 4 and r96_chi_def.health == 21
 			and r96_chi_def.attack_range == 1 and r96_chi_def.move_speed == 1
 			and r96_chi_def.rarity == 2 and r96_chi_def.card_class == PlayerClass.MECH
 			and r96_chi_def.traits.has("嘲讽") and r96_chi_def.has_affix("嘲讽"),
-		"R96 嵌合暴君：盟友 / 4 费 3 攻 20 血 / 攻程 1 / 移速 1 / **史诗** / 机械之心 / 带嘲讽")
+		"R96 嵌合暴君：盟友 / 4 费 4 攻 21 血 / 攻程 1 / 移速 1 / **史诗** / 机械之心 / 带嘲讽")
 	check(r96_ord_def != null and r96_ord_def.kind == "技能" and r96_ord_def.cost == 2
 			and r96_ord_def.rarity == 0 and r96_ord_def.card_class == PlayerClass.MECH
 			and r96_ord_def.target_mode == "none"
@@ -14222,9 +14224,9 @@ func _init() -> void:
 
 	# ---- ⑥ 嵌合暴君：离场还原成原卡，不污染卡库 ----
 	var r96_leave: CardData = r96_e4._card_leaving_field(r96_chi4)
-	check(r96_leave != null and r96_leave.health == 20 and r96_leave.power == 3
-			and r96_repo.get_card(GameEngine.CHIMERA_ID).health == 20
-			and r96_repo.get_card(GameEngine.CHIMERA_ID).power == 3,
+	check(r96_leave != null and r96_leave.health == 21 and r96_leave.power == 4
+			and r96_repo.get_card(GameEngine.CHIMERA_ID).health == 21
+			and r96_repo.get_card(GameEngine.CHIMERA_ID).power == 4,
 		"R96 嵌合暴君：离场还原成原卡（%d 攻 / %d 血），且卡库未被污染"
 			% [r96_leave.power if r96_leave != null else -1,
 				r96_leave.health if r96_leave != null else -1])
@@ -14349,8 +14351,8 @@ func _init() -> void:
 		"R98 旧式机兵 8050：存在且带「超负荷」字段（实际 %s）"
 			% ("" if r98_def == null else str(r98_def.affixes)))
 	check(r98_def.rarity == 0 and r98_def.card_class == "机械之心"
-		and r98_def.kind == "盟友" and r98_def.power == 3 and r98_def.health == 12,
-		"R98 旧式机兵：3 费普通盟友 3/12/1/1，机械之心（实际 稀有度%s / 职业%s / %s / %s力 / %s血）"
+		and r98_def.kind == "盟友" and r98_def.power == 4 and r98_def.health == 13,
+		"R98 旧式机兵：3 费普通盟友 4/13/1/1，机械之心（实际 稀有度%s / 职业%s / %s / %s力 / %s血）"
 			% [r98_def.rarity, r98_def.card_class, r98_def.kind, r98_def.power, r98_def.health])
 
 	# ---- ① 超负荷单位：负血仍存活，且不触发溢出伤害 ----
@@ -14415,11 +14417,11 @@ func _init() -> void:
 			% [r99_reorg.kind, r99_reorg.cost, r99_reorg.rarity, r99_reorg.target_mode])
 	var r99_wall := r99_repo.get_card(8052)
 	check(r99_wall != null and r99_wall.kind == "工事" and r99_wall.cost == 2
-			and r99_wall.power == 0 and r99_wall.health == 10
+			and r99_wall.power == 0 and r99_wall.health == 11
 			and r99_wall.rarity == 0 and r99_wall.has_affix("超负荷")
 			and r99_wall.has_affix(GameEngine.AFFIX_TAUNT)
 			and r99_wall.card_class == "机械之心",
-		"R99 城墙 8052：2 费普通工事 0/10/0，带超负荷 + **嘲讽**（R275 新增），机械之心（实际 %s / %s费 / %s攻 / %s血 / 稀有度%s）"
+		"R99 城墙 8052：2 费普通工事 0/11/0，带超负荷 + **嘲讽**（R275 新增），机械之心（实际 %s / %s费 / %s攻 / %s血 / 稀有度%s）"
 			% [r99_wall.kind, r99_wall.cost, r99_wall.power, r99_wall.health, r99_wall.rarity])
 	var r99_trans := r99_repo.get_card(8053)
 	check(r99_trans != null and r99_trans.kind == "技能" and r99_trans.cost == 0
@@ -14513,11 +14515,11 @@ func _init() -> void:
 		% [r100_reboot.kind, r100_reboot.cost, r100_reboot.rarity, r100_reboot.target_mode])
 	var r100_sg := r100_repo.get_card(8055)
 	check(r100_sg != null and r100_sg.kind == "盟友" and r100_sg.cost == 2
-			and r100_sg.power == 2 and r100_sg.health == 7
+			and r100_sg.power == 3 and r100_sg.health == 8
 			and r100_sg.attack_range == 1 and r100_sg.move_speed == 1
 			and r100_sg.rarity == 1 and r100_sg.card_class == "机械之心"
 			and r100_sg.has_affix("超负荷") and r100_sg.has_affix("嘲讽"),
-		"R100 钢铁卫士 8055：2 费稀有盟友 2/7/1/1，超负荷+嘲讽，机械之心（实际 %s / %s费 / %s攻 / %s血 / 程%s / 速%s / 稀有度%s）"
+		"R100 钢铁卫士 8055：2 费稀有盟友 3/8/1/1，超负荷+嘲讽，机械之心（实际 %s / %s费 / %s攻 / %s血 / 程%s / 速%s / 稀有度%s）"
 		% [r100_sg.kind, r100_sg.cost, r100_sg.power, r100_sg.health,
 			r100_sg.attack_range, r100_sg.move_speed, r100_sg.rarity])
 
@@ -14609,10 +14611,10 @@ func _init() -> void:
 	# ---- 卡面定义校验 ----
 	var r103_ne := r103_repo.get_card(8062)
 	check(r103_ne != null and r103_ne.kind == "盟友" and r103_ne.cost == 2
-			and r103_ne.power == 2 and r103_ne.health == 8
+			and r103_ne.power == 3 and r103_ne.health == 9
 			and r103_ne.attack_range == 1 and r103_ne.move_speed == 1
 			and r103_ne.rarity == 2 and r103_ne.card_class == "暗影刺客",
-		"R103 夜蚀 8062：2 费史诗盟友 2/8/1/1，暗影刺客（实际 %s）" % r103_ne.card_name)
+		"R103 夜蚀 8062：2 费史诗盟友 3/9/1/1，暗影刺客（实际 %s）" % r103_ne.card_name)
 	check(r103_ne.traits.has(GameEngine.NIGHT_EROSION_TRAIT),
 		"R103 夜蚀 8062：带「夜蚀」trait")
 	var r103_pool := r103_repo.reward_pool()
@@ -14640,8 +14642,8 @@ func _init() -> void:
 	r103_e1.state.energy = 7
 	r103_p.health = 3
 	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
-	check(r103_p.health == 8,
-		"R103 夜蚀：剩余费用 7 但只能回 5（3→8 不越界，实际 %d）" % r103_p.health)
+	check(r103_p.health == 9,
+		"R103 夜蚀：剩余费用 7 但只能回 5（3→9 不越界，实际 %d）" % r103_p.health)
 
 	# ---- ③ **回复不是成长**：卡面生命上限不该被这次结算抬高 ----
 	var r103_card_max := r103_p.card.health
@@ -14675,8 +14677,8 @@ func _init() -> void:
 		"R103 夜蚀：敌方回合结束不触发（仍 %d）" % r103_p.health)
 
 	# ---- ⑦ 卡库里的那张没被污染（回复只动场上实例）----
-	check(r103_repo.get_card(8062).health == 8,
-		"R103 夜蚀：卡库里的夜蚀仍是 8 血（未被场上的结算改动）")
+	check(r103_repo.get_card(8062).health == 9,
+		"R103 夜蚀：卡库里的夜蚀仍是 9 血（未被场上的结算改动）")
 
 	# ══════════════════════════════════════════════════════════════
 	# R104 测试：起手式 9119（1 费 · 对目标 4 伤 → 抽 1 张）
@@ -15505,27 +15507,27 @@ func _init() -> void:
 	# ---- 卡面定义校验 ----
 	var r101_rescue := r101_repo.get_card(8056)
 	check(r101_rescue != null and r101_rescue.kind == "盟友" and r101_rescue.cost == 2
-			and r101_rescue.power == 2 and r101_rescue.health == 8
+			and r101_rescue.power == 3 and r101_rescue.health == 9
 			and r101_rescue.attack_range == 1 and r101_rescue.move_speed == 1
 			and r101_rescue.rarity == 0 and r101_rescue.card_class == "机械之心"
 			and r101_rescue.has_affix("交换"),
-		"R101 救援构装体 8056：2 费普通盟友 2/8/1/1，机械之心，带字段「交换」（实际 kind=%s）"
+		"R101 救援构装体 8056：2 费普通盟友 3/9/1/1，机械之心，带字段「交换」（实际 kind=%s）"
 		% [r101_rescue.kind])
 	var r101_gren := r101_repo.get_card(8057)
 	check(r101_gren != null and r101_gren.kind == "盟友" and r101_gren.cost == 2
-			and r101_gren.power == 3 and r101_gren.health == 5
+			and r101_gren.power == 4 and r101_gren.health == 6
 			and r101_gren.rarity == 0 and r101_gren.card_class == "机械之心"
 			and r101_gren.traits.has("改造攻程"),
-		"R101 榴弹击手 8057：2 费普通盟友 3/5/1/1，机械之心，带 trait「改造攻程」（实际 kind=%s）"
+		"R101 榴弹击手 8057：2 费普通盟友 4/6/1/1，机械之心，带 trait「改造攻程」（实际 kind=%s）"
 		% [r101_gren.kind])
 	var r101_tank := r101_repo.get_card(8058)
 	check(r101_tank != null and r101_tank.kind == "盟友" and r101_tank.cost == 3
-			and r101_tank.power == 3 and r101_tank.health == 12
+			and r101_tank.power == 4 and r101_tank.health == 13
 			and r101_tank.attack_range == 1 and r101_tank.move_speed == 2
 			and r101_tank.rarity == 1 and r101_tank.card_class == "机械之心"
 			and r101_tank.has_affix(GameEngine.AFFIX_TAUNT)
 			and not r101_tank.traits.has("改造移速"),
-		"R101 重甲战车 8058（R275 重做）：3 费稀有盟友 3/12/2 移速/1，**嘲讽**，已移除「改造移速」（实际 kind=%s）"
+		"R101 重甲战车 8058（R275 重做）：3 费稀有盟友 4/13/2 移速/1，**嘲讽**，已移除「改造移速」（实际 kind=%s）"
 		% [r101_tank.kind])
 	var r101_bird := r101_repo.get_card(8059)
 	check(r101_bird != null and r101_bird.kind == "盟友" and r101_bird.cost == 1
@@ -15536,10 +15538,10 @@ func _init() -> void:
 		% [r101_bird.kind])
 	var r101_dae := r101_repo.get_card(8060)
 	check(r101_dae != null and r101_dae.kind == "盟友" and r101_dae.cost == 4
-			and r101_dae.power == 5 and r101_dae.health == 16
+			and r101_dae.power == 6 and r101_dae.health == 17
 			and r101_dae.rarity == 2 and r101_dae.card_class == "机械之心"
 			and r101_dae.has_affix(GameEngine.AFFIX_TAUNT),
-		"R271 代达罗斯 8060（重做）：4 费史诗盟友 5/16/1/1，机械之心，带「嘲讽」（实际 %s/%s/%s/%s/%s）"
+		"R271 代达罗斯 8060（重做）：4 费史诗盟友 6/17/1/1，机械之心，带「嘲讽」（实际 %s/%s/%s/%s/%s）"
 		% [r101_dae.kind, r101_dae.cost, r101_dae.power, r101_dae.health, r101_dae.rarity])
 
 	# ---- ① 交换：放在己方单位上 → 原单位回手，新卡占据该格 ----
@@ -15630,8 +15632,8 @@ func _init() -> void:
 	r101_e5.state.energy = 10
 	r101_e5.state.self_cannon_plays = 2     # 本次对战已用过 2 张聚能炮击
 	var r101_d: Placement = r101_e5.play_from_hand(0, Vector2i(4, 1))
-	check(r101_d != null and r101_d.card.health == 22 and r101_d.health == 22,
-		"R271 代达罗斯：入场按 2 张聚能炮击 → 16+6=22 血（实际 %s）"
+	check(r101_d != null and r101_d.card.health == 23 and r101_d.health == 23,
+		"R271 代达罗斯：入场按 2 张聚能炮击 → 17+6=23 血（实际 %s）"
 			% ("null" if r101_d == null else str(r101_d.health)))
 	check(r101_d != null and r101_d.card.has_affix(GameEngine.AFFIX_TAUNT),
 		"R271 代达罗斯：卡面带「嘲讽」字段（敌方只能打它）")
@@ -15639,8 +15641,8 @@ func _init() -> void:
 	check(r101_cannon_cost == 0,
 		"R271 代达罗斯：本回合手卡里的聚能炮击费用变 0（实际 %d）" % r101_cannon_cost)
 	var r101_back := r101_e5._card_leaving_field(r101_d)
-	check(r101_back.health == 16,
-		"R271 代达罗斯：离场还原后卡面生命回到 16（实际 %d）" % r101_back.health)
+	check(r101_back.health == 17,
+		"R271 代达罗斯：离场还原后卡面生命回到 17（实际 %d）" % r101_back.health)
 
 
 	# ============================================================
@@ -16157,11 +16159,11 @@ func _init() -> void:
 	var r116_judge := _new_engine([], 20, 20, -1, false)
 	var r116_c := r116_repo.get_card(9126)
 	check(r116_c != null and r116_c.card_name == "捕兽大师" and r116_c.kind == "盟友"
-			and r116_c.cost == 3 and r116_c.power == 2 and r116_c.health == 8
+			and r116_c.cost == 3 and r116_c.power == 3 and r116_c.health == 9
 			and r116_c.attack_range == 1 and r116_c.move_speed == 1
 			and r116_c.rarity == 2 and r116_c.group == "player"
 			and r116_c.card_class == "暗影刺客",
-		"R116 捕兽大师 9126：3 费**史诗**盟友 2/8/1/1，暗影刺客（实际 %s %d费 %d/%d/%d/%d 稀有度%d）"
+		"R116 捕兽大师 9126：3 费**史诗**盟友 3/9/1/1，暗影刺客（实际 %s %d费 %d/%d/%d/%d 稀有度%d）"
 		% [r116_c.card_name, r116_c.cost, r116_c.power, r116_c.health,
 			r116_c.attack_range, r116_c.move_speed, r116_c.rarity])
 	check(r116_c != null and r116_c.traits.has("亡语") and r116_c.affixes.has("死亡"),
@@ -16434,10 +16436,10 @@ func _init() -> void:
 	check(r125_rhino != null and r125_rhino.card_name == "犀牛"
 			and r125_rhino.traits.has(GameEngine.RHINO_TRAIT)
 			and not r125_rhino.traits.has("骑兵")
-			and r125_rhino.cost == 4 and r125_rhino.power == 6 and r125_rhino.health == 12
+			and r125_rhino.cost == 4 and r125_rhino.power == 7 and r125_rhino.health == 12
 			and r125_rhino.attack_range == 1 and r125_rhino.move_speed == 2
 			and r125_rhino.rarity == 0 and r125_rhino.card_class == "森林精魄",
-			"R125 犀牛：4 费 6/12 程1 速2 森林精魄（词条由「骑兵」改为「犀牛」）")
+			"R125 犀牛：4 费 7/12 程1 速2 森林精魄（词条由「骑兵」改为「犀牛」）")
 	check(r125_rhino.effect_text.contains("伤害") and r125_rhino.effect_text.contains("1"),
 			"R125 犀牛：卡面写明受到伤害 -1（%s）" % r125_rhino.effect_text)
 	var r125_named := 0
@@ -18138,8 +18140,8 @@ func _init() -> void:
 			CardData.from_dict(r209_repo.get_card(8060).to_dict()), Vector2i(4, 3),
 			GameEngine.SIDE_SELF)
 	r209_e8b._daedalus_enter(r209_dae)
-	check(r209_dae.health == 25 and r209_dae.card.health == 25,
-		"R271 代达罗斯：3 张聚能炮击 → 16+9=25 血（实际 %s）" % str(r209_dae.health))
+	check(r209_dae.health == 26 and r209_dae.card.health == 26,
+		"R271 代达罗斯：3 张聚能炮击 → 17+9=26 血（实际 %s）" % str(r209_dae.health))
 	check(r209_e8b.state.turn_cannon_free,
 		"R271 代达罗斯：入场后本回合手卡聚能炮击 0 费（turn_cannon_free）")
 	# ---- ⑨ 场上改造**不写回卡**（离场还原后层数回到随身值）----
@@ -19243,12 +19245,12 @@ func _init() -> void:
 	var r217_card := r217_repo.get_card(GameEngine.SHADOW_SPLIT_ID)
 	check(r217_card != null and r217_card.card_name == "分裂之影"
 			and r217_card.kind == "工事" and r217_card.cost == 2
-			and r217_card.power == 0 and r217_card.health == 5
+			and r217_card.power == 0 and r217_card.health == 6
 			and r217_card.attack_range == 0 and r217_card.move_speed == 0
 			and r217_card.rarity == 1 and r217_card.card_class == PlayerClass.ROGUE
 			and r217_card.traits.has("工事")
 			and r217_card.traits.has(GameEngine.SHADOW_SPLIT_TRAIT),
-			"R217 分裂之影 8067：2 费稀有**工事** 0/5/0、暗影刺客、带「分裂之影」trait")
+			"R217 分裂之影 8067：2 费稀有**工事** 0/6/0、暗影刺客、带「分裂之影」trait")
 	check(r217_repo.reward_pool().has(r217_card)
 			and r217_repo.reward_pool_for(PlayerClass.ROGUE).has(r217_card)
 			and not r217_repo.reward_pool_for(PlayerClass.DRUID).has(r217_card),
@@ -21087,20 +21089,20 @@ func _init() -> void:
 			% [r271_mnemo.power, r271_mnemo.health])
 	var r271_mech := r271_repo.get_card(8073)
 	check(r271_mech != null and r271_mech.kind == "盟友" and r271_mech.cost == 2
-			and r271_mech.power == 1 and r271_mech.health == 8 and r271_mech.rarity == 0,
-		"R271 聚能机兵 8073：2 费普通盟友 1/8/1/1（实际 %s/%s）"
+			and r271_mech.power == 2 and r271_mech.health == 9 and r271_mech.rarity == 0,
+		"R271 聚能机兵 8073：2 费普通盟友 2/9/1/1（实际 %s/%s）"
 			% [r271_mech.power, r271_mech.health])
 	var r271_massdae := r271_repo.get_card(8074)
 	check(r271_massdae != null and r271_massdae.kind == "盟友" and r271_massdae.cost == 3
-			and r271_massdae.power == 3 and r271_massdae.health == 12
+			and r271_massdae.power == 4 and r271_massdae.health == 13
 			and r271_massdae.rarity == 0,
-		"R271 量产型代达罗斯 8074：3 费普通盟友 3/12/1/1（实际 %s/%s）"
+		"R271 量产型代达罗斯 8074：3 费普通盟友 4/13/1/1（实际 %s/%s）"
 			% [r271_massdae.power, r271_massdae.health])
 	var r271_massmne := r271_repo.get_card(8075)
 	check(r271_massmne != null and r271_massmne.kind == "工事" and r271_massmne.cost == 2
-			and r271_massmne.power == 0 and r271_massmne.health == 10
+			and r271_massmne.power == 0 and r271_massmne.health == 11
 			and r271_massmne.attack_range == 0,
-		"R271 量产型谟涅摩叙涅 8075：2 费普通工事 0/10/程 0（实际 %s/%s/%s）"
+		"R271 量产型谟涅摩叙涅 8075：2 费普通工事 0/11/程 0（实际 %s/%s/%s）"
 			% [r271_massmne.power, r271_massmne.health, r271_massmne.attack_range])
 	check(r271_repo.get_card(9145).cost == 1,
 		"R271 前提：聚能炮击 9145 是 1 费（报废把它变 0 费才有意义）")
@@ -21124,13 +21126,13 @@ func _init() -> void:
 	r271_e2.state.energy = 5
 	r271_e2.state.self_cannon_plays = 3
 	var r271_mech_p: Placement = r271_e2.play_from_hand(0, Vector2i(4, 1))
-	check(r271_mech_p != null and r271_mech_p.effective_power() == 4,
-		"R271 聚能机兵：用过 3 张聚能炮击 → 1+3=4 攻（实际 %s）"
+	check(r271_mech_p != null and r271_mech_p.effective_power() == 5,
+		"R271 聚能机兵：用过 3 张聚能炮击 → 2+3=5 攻（实际 %s）"
 			% ("null" if r271_mech_p == null else str(r271_mech_p.effective_power())))
-	check(r271_mech_p != null and r271_mech_p.card.power == 1,
+	check(r271_mech_p != null and r271_mech_p.card.power == 2,
 		"R271 聚能机兵：卡面力量不变（加成记在 upgrade_atk，离场带走）")
 	var r271_mech_back := r271_e2._card_leaving_field(r271_mech_p)
-	check(r271_mech_back != null and r271_mech_back.power == 1,
+	check(r271_mech_back != null and r271_mech_back.power == 2,
 		"R271 聚能机兵：离场还原后仍是 1 攻的卡（不入库成雪球）")
 
 	# ---- ④ 谟涅摩叙涅 8072：光环「所有敌人力量 -= 改造层数」，层数一变立刻重算 ----
@@ -21203,8 +21205,8 @@ func _init() -> void:
 	var r271_born_md := CardData.from_dict(r271_repo.get_card(8074).to_dict())
 	r271_born_md.random_born = true
 	r271_e5._apply_random_born(r271_born_md)
-	check(r271_born_md.power == 5 and r271_born_md.health == 14,
-		"R271 量产型代达罗斯：随机变化入手 → 3/12 变 %d/%d"
+	check(r271_born_md.power == 6 and r271_born_md.health == 15,
+		"R271 量产型代达罗斯：随机变化入手 → 4/13 变 %d/%d"
 			% [r271_born_md.power, r271_born_md.health])
 	# 手牌为空时不弹面板（否则玩家会被一个没得选的面板卡死）
 	var r271_e5b := _new_engine([], 40, 40, -1, false)
@@ -21406,8 +21408,8 @@ func _init() -> void:
 	r271_e9.state.hand = [CardData.from_dict(r271_repo.get_card(8060).to_dict())]
 	r271_e9.state.energy = 6
 	var r271_d0: Placement = r271_e9.play_from_hand(0, Vector2i(4, 1))
-	check(r271_d0 != null and r271_d0.health == 16 and r271_d0.card.health == 16,
-		"R271 代达罗斯：0 张聚能炮击 → 入场不加血（16 血，实际 %s）"
+	check(r271_d0 != null and r271_d0.health == 17 and r271_d0.card.health == 17,
+		"R271 代达罗斯：0 张聚能炮击 → 入场不加血（17 血，实际 %s）"
 			% ("null" if r271_d0 == null else str(r271_d0.health)))
 	check(r271_e9.state.turn_cannon_free,
 		"R271 代达罗斯：入场即点亮「本回合手卡聚能炮击 0 费」")
@@ -21435,9 +21437,9 @@ func _init() -> void:
 			repo.get_card(GameEngine.SHARED_SHIELD_ID).to_dict())]
 	r272_e1.state.energy = 9
 	r272_e1.use_spell(0, Vector2i(4, 0))
-	check(r272_b1.effective_power() == 4 and r272_b1.health == 9
+	check(r272_b1.effective_power() == 5 and r272_b1.health == 10
 			and r272_b1.upgrade_stacks == 1,
-		"R272 共享护盾改造骨骼：2/7 → %d/%d（卡面 +2 力 +2 血照算），1 层改造"
+		"R272 共享护盾改造骨骼：3/8 → %d/%d（卡面 +2 力 +2 血照算），1 层改造"
 			% [r272_b1.effective_power(), r272_b1.health])
 	check(r272_b1.card.has_affix(GameEngine.AFFIX_SHARED_SHIELD),
 		"R272 共享护盾改造骨骼：字段照常挂上（奖励与字段互不挤占）")
@@ -21449,13 +21451,13 @@ func _init() -> void:
 	for d272 in r272_e1.state.discard:
 		if d272.id == GameEngine.BATTLE_BONE_ID:
 			r272_back = d272
-	check(r272_back != null and r272_back.power == 2 and r272_back.health == 7,
-		"R272 战斗骨骼：被共享护盾改造后离场 → 还原 2/7（实际 %s/%s）"
+	check(r272_back != null and r272_back.power == 3 and r272_back.health == 8,
+		"R272 战斗骨骼：被共享护盾改造后离场 → 还原 3/8（实际 %s/%s）"
 			% [str(r272_back.power) if r272_back != null else "?",
 				str(r272_back.health) if r272_back != null else "?"])
 	var r272_lib := repo.get_card(GameEngine.BATTLE_BONE_ID)
-	check(r272_lib.power == 2 and r272_lib.health == 7,
-		"R272 战斗骨骼：卡库未被污染（仍 2/%d）" % r272_lib.health)
+	check(r272_lib.power == 3 and r272_lib.health == 8,
+		"R272 战斗骨骼：卡库未被污染（仍 3/%d）" % r272_lib.health)
 
 	# ---- ③ 轻量化 8068（手牌改造）----
 	var r272_e2 := _new_engine([], 20, 20, -1, false)
@@ -21466,9 +21468,9 @@ func _init() -> void:
 	r272_e2.state.energy = 9
 	r272_e2.cast_lighten(0, 1)
 	var r272_lu: CardData = r272_e2.state.hand[0]
-	check(r272_lu.power == 4 and r272_lu.health == 9 and r272_lu.cost == 1
+	check(r272_lu.power == 5 and r272_lu.health == 10 and r272_lu.cost == 1
 			and r272_lu.move_speed == 2 and r272_lu.upgrade_stacks == 1,
-		"R272 轻量化改造骨骼：2/7 → %d/%d，并 2→1 费、速 1→2、1 层改造"
+		"R272 轻量化改造骨骼：3/8 → %d/%d，并 2→1 费、速 1→2、1 层改造"
 			% [r272_lu.power, r272_lu.health])
 
 	# ---- ④ 系统升级 8039（原本就走唯一口，做回归对照）----
@@ -21574,8 +21576,8 @@ func _init() -> void:
 	var r274_repo := CardRepo.load_json()
 	var r274_fort: CardData = r274_repo.get_card(GameEngine.FORT_ID)
 	var r274_up: CardData = r274_repo.get_card(GameEngine.UPGRADE_ID)
-	check(GameEngine.STACK_HP_PER == 3 and r274_fort.health == 10,
-		"R274 堡垒：基础 10 血 / 每层 +%d 血（常量 STACK_HP_PER）" % GameEngine.STACK_HP_PER)
+	check(GameEngine.STACK_HP_PER == 3 and r274_fort.health == 11,
+		"R274 堡垒：基础 11 血 / 每层 +%d 血（常量 STACK_HP_PER）" % GameEngine.STACK_HP_PER)
 
 	# ---- ① 场上改造（升级）：10 + UPGRADE_HP + 3 × 1 层 ----
 	var r274_e1 := _new_engine([], 30, 30, -1, false)
@@ -21586,9 +21588,9 @@ func _init() -> void:
 	r274_e1.state.energy = 9
 	r274_e1.use_spell(0, Vector2i(4, 1))
 	check(r274_f1.upgrade_stacks == 1
-			and r274_f1.health == 10 + GameEngine.UPGRADE_HP + 3
+			and r274_f1.health == 11 + GameEngine.UPGRADE_HP + 3
 			and r274_f1.stack_hp_applied == 3,
-		"R274 堡垒：场上被「升级」改造 → %d 血（10 + %d + 3）"
+		"R274 堡垒：场上被「升级」改造 → %d 血（11 + %d + 3）"
 			% [r274_f1.health, GameEngine.UPGRADE_HP])
 
 	# ---- ② 手牌改造（系统升级）：卡上还没有每层血，**上场才结算** ----
@@ -21600,15 +21602,15 @@ func _init() -> void:
 	r274_e2.cast_sys_upgrade(1, 0)
 	var r274_hand_fort: CardData = r274_e2.state.hand[0]
 	check(r274_hand_fort.upgrade_stacks == 1
-			and r274_hand_fort.health == 10 + GameEngine.SYS_UPGRADE_HP,
+			and r274_hand_fort.health == 11 + GameEngine.SYS_UPGRADE_HP,
 		"R274 手牌里的堡垒：系统升级后 %d 血 / %d 层（每层血不烤进卡面）"
 			% [r274_hand_fort.health, r274_hand_fort.upgrade_stacks])
 	r274_e2.play_from_hand(0, Vector2i(4, 1))
 	var r274_f2: Placement = r274_e2.state.unit_at(Vector2i(4, 1))
 	check(r274_f2 != null
-			and r274_f2.health == 10 + GameEngine.SYS_UPGRADE_HP + 3
+			and r274_f2.health == 11 + GameEngine.SYS_UPGRADE_HP + 3
 			and r274_f2.stack_hp_applied == 3,
-		"R274 堡垒：**手牌**改造 1 层 → 上场 %d 血（10 + %d + 3）"
+		"R274 堡垒：**手牌**改造 1 层 → 上场 %d 血（11 + %d + 3）"
 			% [r274_f2.health if r274_f2 != null else -1, GameEngine.SYS_UPGRADE_HP])
 
 	# ---- ③ 手牌连改 2 层 → 上场一次结清 +6 ----
@@ -21623,8 +21625,8 @@ func _init() -> void:
 	r274_e3.play_from_hand(0, Vector2i(4, 2))
 	var r274_f3: Placement = r274_e3.state.unit_at(Vector2i(4, 2))
 	check(r274_f3 != null and r274_f3.upgrade_stacks == 2
-			and r274_f3.health == 10 + GameEngine.SYS_UPGRADE_HP * 2 + 3 * 2,
-		"R274 堡垒：手牌连改 **2 层** → 上场 %d 血（10 + %d×2 + 3×2）"
+			and r274_f3.health == 11 + GameEngine.SYS_UPGRADE_HP * 2 + 3 * 2,
+		"R274 堡垒：手牌连改 **2 层** → 上场 %d 血（11 + %d×2 + 3×2）"
 			% [r274_f3.health if r274_f3 != null else -1, GameEngine.SYS_UPGRADE_HP])
 
 	# ---- ④ 不给自己加血的那种入口也得给（共享护盾：只挂字段）----
@@ -21635,8 +21637,8 @@ func _init() -> void:
 	# 共享护盾 / 拾荒者走 `_field_upgrade_grant()`（它自己给 0 攻 0 血）——
 	# 堡垒是**工事**、共享护盾只吃盟友，所以这里直接调那个唯一口，验「每层 +3」照给。
 	r274_e4._field_upgrade_grant(r274_f4, 0, 0, "共享护盾", "共享护盾")
-	check(r274_f4.upgrade_stacks == 1 and r274_f4.health == 10 + 3,
-		"R274 堡垒：共享护盾（原本白吃）改造 → %d 血（10 + 3）" % r274_f4.health)
+	check(r274_f4.upgrade_stacks == 1 and r274_f4.health == 11 + 3,
+		"R274 堡垒：共享护盾（原本白吃）改造 → %d 血（11 + 3）" % r274_f4.health)
 	# 幂等：同一层数重算两次只加一次
 	var r274_hp_idem: int = r274_f4.health
 	r274_e4._refresh_stack_hp(r274_f4)
@@ -21660,7 +21662,7 @@ func _init() -> void:
 		if d275.id == GameEngine.FORT_ID:
 			r274_back2 = d275
 	check(r274_back2 != null and r274_back2.upgrade_stacks == 1
-			and r274_back2.health == 10 + GameEngine.SYS_UPGRADE_HP,
+			and r274_back2.health == 11 + GameEngine.SYS_UPGRADE_HP,
 		"R274 堡垒：手牌改造的 %d 血 / 1 层**随身带走**（弃牌区 %s 血，下次上场再 +3）"
 			% [GameEngine.SYS_UPGRADE_HP,
 				str(r274_back2.health) if r274_back2 != null else "?"])
@@ -21674,7 +21676,7 @@ func _init() -> void:
 			r274_repo.get_card(GameEngine.TRANSCEND_ID).to_dict())]
 	r274_e6.state.energy = 9
 	r274_e6.use_spell(0, Vector2i(4, 1))
-	check(r274_f6.upgrade_stacks == 1 and r274_f6.health == 13,
+	check(r274_f6.upgrade_stacks == 1 and r274_f6.health == 14,
 		"R274 堡垒：超越极限改造（自身 +0 血）也按层给 3 → %d 血" % r274_f6.health)
 
 	# ---- ⑦ 离场还原：层数血不烤进卡面 ----
@@ -21684,7 +21686,7 @@ func _init() -> void:
 	for d274: CardData in r274_e1.state.discard:
 		if d274.id == GameEngine.FORT_ID:
 			r274_back = d274
-	check(r274_back != null and r274_back.health == 10
+	check(r274_back != null and r274_back.health == 11
 			and r274_back.upgrade_stacks == 0,
 		"R274 堡垒：场上改造离场 → 还原成原卡（%s 血 / 0 层），层数血不烤进卡面"
 			% (str(r274_back.health) if r274_back != null else "?"))
@@ -21837,8 +21839,8 @@ func _init() -> void:
 		Vector2i(4, 1), GameEngine.SIDE_SELF)
 	check(r275_wall.card.has_affix(GameEngine.AFFIX_TAUNT)
 			and r275_wall.card.has_affix(GameEngine.AFFIX_OVERLOAD)
-			and r275_wall.health == 10,
-		"R275 城墙：0/10 工事，同时带「嘲讽」与「超负荷」")
+			and r275_wall.health == 11,
+		"R275 城墙：0/11 工事，同时带「嘲讽」与「超负荷」")
 
 
 	# ================================================================
@@ -21849,7 +21851,7 @@ func _init() -> void:
 
 	# ---- ① 侦察塔 8032：3 费 12 血 → **2 费 8 血**（0 攻 / 攻程 2 不变）----
 	var r276_tw: CardData = r276_repo.get_card(GameEngine.SCOUT_TOWER_ID)
-	check(r276_tw != null and r276_tw.cost == 2 and r276_tw.health == 8
+	check(r276_tw != null and r276_tw.cost == 2 and r276_tw.health == 9
 			and r276_tw.power == 0 and r276_tw.attack_range == 2
 			and r276_tw.rarity == 0,
 		"R276 侦察塔：%d 费 / %d 攻 / %d 血 / 攻程 %d" % [
@@ -22400,9 +22402,9 @@ func _init() -> void:
 	r288_e0.state.hand.append(_card(8003, "树人", "盟友", 0, 1, 1))
 	var r288_def: CardData = repo.get_card(9161)
 	check(r288_def.kind == "工事" and r288_def.rarity == 2 and r288_def.cost == 2
-			and r288_def.power == 0 and r288_def.health == 1 and r288_def.move_speed == 0
+			and r288_def.power == 0 and r288_def.health == 2 and r288_def.move_speed == 0
 			and r288_def.card_class == "机械之心",
-			"R288 失控要塞：机械之心史诗工事 —— 2 费 0 攻 / 1 血 / 不可移动")
+			"R288 失控要塞：机械之心史诗工事 —— 2 费 0 攻 / 2 血 / 不可移动")
 	check(r288_e0.play_from_hand(0, Vector2i(5, 0)) != null,
 			"R288 失控要塞：史诗工事能正常上场（落点限自己半场）")
 	check(r288_e0.fort_casts.is_empty(),
@@ -23339,9 +23341,9 @@ func _init() -> void:
 			repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
 	r292_e2.state.energy = 9
 	r292_e2.use_spell(0, Vector2i(4, 1))
-	check(r292_bp.effective_power() == 2 + GameEngine.UPGRADE_ATK + 2
-			and r292_bp.health == 7 + GameEngine.UPGRADE_HP + 2,
-			"R292 战斗骨骼：改造一次 → %d 攻 / %d 血（2/7 + 升级 + 卡面 2/2）" % [
+	check(r292_bp.effective_power() == 3 + GameEngine.UPGRADE_ATK + 2
+			and r292_bp.health == 8 + GameEngine.UPGRADE_HP + 2,
+			"R292 战斗骨骼：改造一次 → %d 攻 / %d 血（3/8 + 升级 + 卡面 2/2）" % [
 				r292_bp.effective_power(), r292_bp.health])
 
 	# ---- ③ 回收归入「变成」：走 _transform_hand_card → 发明专家回费 ----
@@ -23566,11 +23568,11 @@ func _init() -> void:
 	var r296_turret: CardData = repo.get_card(GameEngine.CLUSTER_TURRET_ID)
 	check(r296_turret != null and r296_turret.card_name == "集束炮台"
 			and r296_turret.kind == "盟友" and r296_turret.cost == 2
-			and r296_turret.power == 1 and r296_turret.health == 6
+			and r296_turret.power == 2 and r296_turret.health == 6
 			and r296_turret.attack_range == 1 and r296_turret.move_speed == 1
 			and r296_turret.rarity == 0 and r296_turret.card_class == "机械之心"
 			and r296_turret.traits.has(GameEngine.CLUSTER_TURRET_TRAIT),
-			"R298 集束炮台：机械之心普通盟友 —— 2 费 1/6/1/1，带「集束」标记")
+			"R298 集束炮台：机械之心普通盟友 —— 2 费 2/6/1/1，带「集束」标记")
 	var r296_merge: CardData = repo.get_card(GameEngine.MERGE_ID)
 	check(r296_merge != null and r296_merge.card_name == "合体"
 			and r296_merge.kind == "技能" and r296_merge.cost == 1
@@ -27783,11 +27785,11 @@ func _init() -> void:
 			and r381_v.traits.has(GameEngine.PERSIST_VORTEX_TRAIT),
 			"R381 漩涡 9186：1 费持续场地（森林精魄），判据 trait「涡旋」")
 	check(r381_g != null and r381_g.kind == "盟友" and r381_g.cost == 2
-			and r381_g.power == 1 and r381_g.health == 9
+			and r381_g.power == 2 and r381_g.health == 10
 			and r381_g.attack_range == 1 and r381_g.move_speed == 1
 			and r381_g.card_class == "森林精魄"
 			and r381_g.traits.has(GameEngine.GOOSE_TRAIT),
-			"R381 鹅 9187：2 费盟友 1 攻 / 9 血 / 射程 1 / 移速 1（森林精魄）")
+			"R381 鹅 9187：2 费盟友 2 攻 / 10 血 / 射程 1 / 移速 1（森林精魄）")
 	# ① 解锁口径（R382 改）：两张默认锁定、不进奖励池；解锁渠道 = 故事 2
 	#    用户口径：「由 episode2 解锁，使用森林精魄角色通关一次解锁」
 	ProfileData.set_test_mode()
@@ -29087,6 +29089,60 @@ func _init() -> void:
 	check_src(r399_shop.find("if RunState.current_layer != GameLayers.LAYER_THREE:") >= 0,
 		"R399 源码：第三层的商店货架不摆巧克力")
 
+	# ================================================================
+	# R403：「代受」的溢出**一律不结算** —— 全部按铁栅栏的口径来
+	#   （用户口径：铁栅栏能吃满溢出，其它代受效果一律照它做）
+	#   之前分叉的两条：闪躲只吃 `min(伤害, 剩余生命)`；护盾生成器把伤害转给
+	#   `_hit_unit()` 后交给 `_destroy_dead()` —— 站**后排**（x=5）时会被
+	#   「后排溢出」规则漏给玩家 HP，站前排却不漏（同一张卡两种结果）。
+	# ================================================================
+	var r403_saved_cls: String = RunState.player_class
+	RunState.player_class = PlayerClass.MECH
+	var r403_repo := CardRepo.load_json()
+	var r403_gen_def: CardData = r403_repo.get_card(GameEngine.SHIELD_GEN_ID)
+	# ① 护盾生成器站**后排 x=5**（贴着我方 HP）代受致死 → 玩家一点不掉
+	for r403_row in [1, 2]:
+		var r403_e := _new_engine([], 30, 30)
+		r403_e.state.place(CardData.from_dict(r403_gen_def.to_dict()),
+				Vector2i(5, r403_row), GameEngine.SIDE_SELF)
+		var r403_tgt: Placement = r403_e.state.place(
+				_card(8003, "农民", "盟友", 3, 3, 8, 1, 1),
+				Vector2i(4, r403_row), GameEngine.SIDE_SELF)
+		r403_e._hit_unit(r403_tgt, 999, "R403 测试")
+		r403_e._destroy_dead()
+		check(r403_e.state.hp_self == 30
+				and r403_e.state.unit_at(Vector2i(5, r403_row)) == null,
+				"R403 护盾生成器（后排 x=5）代受致死 → 溢出**不漏**给玩家（HP %d）"
+				% r403_e.state.hp_self)
+	# ② 铁栅栏（基准口径）：站后排吃 30 伤，玩家一点不掉
+	var r403_e2 := _new_engine([], 30, 30)
+	var r403_bar: Placement = r403_e2.state.place(
+			CardData.from_dict(r403_repo.get_card(9072).to_dict()),
+			Vector2i(5, 2), GameEngine.SIDE_SELF)
+	var r403_bar_hp: int = r403_bar.health
+	r403_e2._damage_player(GameEngine.SIDE_SELF, 30, "R403 测试")
+	check(r403_e2.state.hp_self == 30 and r403_e2.state.unit_at(Vector2i(5, 2)) == null,
+			"R403 铁栅栏（基准）：%d 血吃满 30 伤，溢出不漏给玩家（HP %d）"
+			% [r403_bar_hp, r403_e2.state.hp_self])
+	# ③ 闪躲：代受盟友站后排也要吃满（改之前这里会漏 22 点）
+	var r403_e3 := _new_engine([], 30, 30)
+	r403_e3.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(5, 2), GameEngine.SIDE_SELF)
+	r403_e3.state.hand.append(CardData.from_dict(r403_repo.get_card(9103).to_dict()))
+	r403_e3.use_spell(0, null)
+	r403_e3._damage_player(GameEngine.SIDE_SELF, 30, "R403 测试")
+	check(r403_e3.state.hp_self == 30 and r403_e3.state.unit_at(Vector2i(5, 2)) == null,
+			"R403 闪躲（后排代受）：30 伤全吃下，玩家 HP 仍是 %d"
+			% r403_e3.state.hp_self)
+	RunState.player_class = r403_saved_cls
+	# ④ 源码锁：别让「只吃剩余生命」和「留给 _destroy_dead」两条老写法回来
+	var r403_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r403_src.find("var absorbed:= amount") >= 0,
+			"R403 源码：闪躲代受直接吃满全额（不再 `mini(伤害, 剩余生命)`）")
+	check_src(r403_src.find("_destroy(gen_cell)") >= 0,
+			"R403 源码：护盾生成器被打死就地在代受处销毁（不吃后排溢出）")
+	check_src(r403_src.find("mini(amount, maxi(0, g.health))") < 0,
+			"R403 源码：旧的「闪躲只吃剩余血」算法已删除")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
