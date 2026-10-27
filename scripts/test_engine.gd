@@ -30014,6 +30014,46 @@ func _init() -> void:
 			and r410_dice.tier == RelicData.TIER_LEGENDARY,
 			"R410 水晶骰子：仍是传奇道具（这次只改文案）")
 
+	# ---- ⑤ R411：全库带「次元」字段的卡，卡面必须写明后果 ----
+	# 用户口径「全部补齐」：R410 只补了报废 8071 / 集束炮台 9166，库里还有 20 张
+	# 带次元的卡描述里一个字都没提 —— 玩家看不出这张卡用掉就没了。
+	# ⚠️ 句式按**卡种**分，与引擎两条判定一一对应，别混：
+	#    · 技能 / 诅咒 → `_spell_card_gone()`：「打出后消失」；
+	#    · 盟友 / 工事 → 被破坏 / 离场：「离场即消失」。
+	var r411_repo := CardRepo.load_json()
+	var r411_n := 0
+	var r411_missing: Array[String] = []
+	var r411_wrong: Array[String] = []
+	var r411_paren: Array[String] = []
+	for r411_c: CardData in r411_repo.all_cards():
+		if not r411_c.has_affix(GameEngine.AFFIX_DIMENSION):
+			continue
+		r411_n += 1
+		var r411_t: String = r411_c.effect_text
+		if r411_t.find("字段「次元」") < 0:
+			r411_missing.append("%s(%d)" % [r411_c.card_name, r411_c.id])
+			continue
+		var r411_need: String = "打出后消失" if (r411_c.is_spell() or r411_c.is_curse()) \
+				else "离场即消失"
+		if r411_t.find(r411_need) < 0:
+			r411_wrong.append("%s(%d)" % [r411_c.card_name, r411_c.id])
+		if r411_t.find("（") >= 0:
+			r411_paren.append("%s(%d)" % [r411_c.card_name, r411_c.id])
+	check(r411_n >= 22, "R411 次元卡 %d 张（少于 22 说明卡库没加载全）" % r411_n)
+	check(r411_missing.is_empty(),
+			"R411 每张次元卡都写明后果（漏写：%s）" % ", ".join(r411_missing))
+	check(r411_wrong.is_empty(),
+			"R411 次元句式按卡种分对（技能/诅咒=打出后消失，盟友/工事=离场即消失；写错：%s）"
+			% ", ".join(r411_wrong))
+	check(r411_paren.is_empty(),
+			"R411 次元说明不靠括号补注（括号在卡面会被剥掉；含括号：%s）" % ", ".join(r411_paren))
+	# 拒绝命运 9098：括号里的「按弃牌区顺序 / 不超过手牌上限」是**真规则**
+	# （引擎里 `while ... and not state.hand_full()`），躲在括号里等于玩家看不到。
+	var r411_fate: CardData = r411_repo.get_card(GameEngine.FATE_REJECT_ID)
+	check(r411_fate != null and r411_fate.effect_text.find("按弃牌区顺序") >= 0 \
+			and r411_fate.effect_text.find("手牌上限") >= 0,
+			"R411 拒绝命运：「按弃牌区顺序 / 填到手牌上限」写成正文（原先是括号补注）")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
