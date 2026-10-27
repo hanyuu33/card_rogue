@@ -1624,6 +1624,24 @@ func _check_whisper(scene: Variant) -> void:
 func _check_relic_bar(scene: Variant) -> void:
 	## R75：**道具悬浮即看说明；只有一行放不下时才允许点开详情**，且详情字号更大。
 	## 地图侧断言：徽章不越界、装得下时无 +N、装不下时恰好一个 +N 且可点。
+	# R407（用户口径）：「卡组」按钮固定在右上角、道具那一行的最右端 ——
+	# ① 底沿不许越过描述浮窗的起点（旧位置贴在巧克力左边 y≈54，正压住说明文字）；
+	# ② 必须排在「第一个道具」前面（最右一枚徽章的右边），且不与它重叠。
+	var dbr: Rect2 = scene._deck_btn_rect()
+	var r0: Rect2 = scene._relic_rect(0)
+	if dbr.end.y > scene.RELIC_TIP_TOP:
+		_smoke_fail("R407 卡组按钮：底沿 %.1f 越过道具描述浮窗起点 %.1f（会挡住说明）"
+				% [dbr.end.y, scene.RELIC_TIP_TOP])
+		return
+	if dbr.position.x < r0.end.x or dbr.intersects(r0):
+		_smoke_fail("R407 卡组按钮：没排在第一个道具前面（按钮 %s / 首个道具 %s）"
+				% [str(dbr), str(r0)])
+		return
+	var dbb: Variant = scene._deck_btn
+	if dbb != null and (dbb as Button).position != dbr.position:
+		_smoke_fail("R407 卡组按钮：实际位置 %s 与唯一口 %s 不一致"
+				% [str((dbb as Button).position), str(dbr.position)])
+		return
 	var n_max: int = scene.RELIC_BADGE_MAX
 	# 徽章行整体不能压到标题（最左一个徽章的左沿要在标题右侧）
 	var left: float = scene._relic_rect(n_max - 1).position.x

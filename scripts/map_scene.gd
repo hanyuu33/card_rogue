@@ -142,6 +142,7 @@ var _menu: UiMenu = null          # Esc 主菜单（R148）
 var _menu_btn: Button = null      # 上栏那个齿轮（**自绘图标**，需要它算尺寸/hover）
 var _deck_btn: Button = null      # R155：右上「卡组」按钮（非战斗界面也能直接看卡组，不必先按 Esc）
 var _relic_scroll := 0.0
+var _relic_tip_pin := false       # R407 出图：把悬停钉在第一个道具上（--relictip）
 var _whisper_auto := false
 var _whisper_next: Dictionary = {}   # 命运本轮选中的下一间（画紫圈的目标）
 var _whisper_wait := 0.0             # 距命运落下一步还有多少秒（<= 0 即可走）
@@ -235,6 +236,11 @@ func _ready() -> void:
 	if "--relics" in OS.get_cmdline_user_args():
 		RunState.relics = [6001, 6005, 6010]
 		RunState.relic_choice = []
+	# -- --relictip：出图用 —— 把 `_mouse` 钉在第一个道具徽章上，让说明浮窗真的画出来
+	#（核验「卡组按钮已让开、不压说明」）。出图：
+	#  `map.tscn -- --screenshot --relics --relictip --shotwait 0.8`
+	if "--relictip" in OS.get_cmdline_user_args():
+		_relic_tip_pin = true
 	# -- --whistle：演示鹰哨（R145 起 = 全图迷雾散尽，每格内容都可见）
 	if "--whistle" in OS.get_cmdline_user_args():
 		RunState.relics = [6001, 6005, 6026]
@@ -329,11 +335,13 @@ func _ready() -> void:
 	_menu_btn.draw.connect(_draw_menu_gear)
 	UiTheme.apply_chip(_menu_btn, true)
 	add_child(_menu_btn)
-	# R155：右上「卡组」按钮 —— 贴在巧克力计数左边（原来卡组只能 Esc 菜单里看）
+	# R155：右上「卡组」按钮；R407 挪到**右上角最右端**（道具那一行的第一格）——
+	# 旧位置贴在巧克力面板左边（y≈54），正好压住悬停道具时从 46 起展开的描述浮窗。
 	_deck_btn = Button.new()
 	_deck_btn.text = "卡组"
-	_deck_btn.position = Vector2(size.x - 24.0 - CHOCO_PANEL_W - 12.0 - 76.0, CHOCO_PANEL_Y - 2.0)
-	_deck_btn.size = Vector2(76, 30)
+	var dbr := _deck_btn_rect()
+	_deck_btn.position = dbr.position
+	_deck_btn.size = dbr.size
 	_deck_btn.tooltip_text = ""
 	_deck_btn.pressed.connect(_toggle_deck)
 	_deck_btn.pressed.connect(func(): sfx.play("click"))
@@ -701,6 +709,10 @@ func _set_note(text: String) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	# R407 出图：没有真鼠标时钉住悬停位置，否则浮窗永远不出现
+	if _relic_tip_pin and not RunState.relics.is_empty():
+		_mouse = _relic_rect(0).get_center()
+		queue_redraw()
 	if _move_note_t > 0.0:
 		_move_note_t = maxf(0.0, _move_note_t - delta)
 	# 进场过场：走完才**真的进房间**（过场期间 RunState 一动不动）
@@ -1534,7 +1546,11 @@ func _ellipsis(text: String, max_w: float, px: int) -> String:
 # ------------------------------------------------------------ 道具栏
 
 const RELIC_BADGE_W := 106.0
-const RELIC_BADGE_MAX := 7
+const RELIC_BADGE_Y := 14.0    # R407：道具徽章行的顶沿（卡组按钮据此对齐）
+## R407：道具那一行最右端还坐着「卡组」按钮（`_deck_btn_rect()`）——
+## 76 + 8 的占位比一个徽章（106）窄、但比半个宽，所以直显数 7 → 6。
+## 总占宽 84 + 6×106 = 720 < 原来的 7×106 = 742，最左徽章反而更远离标题。
+const RELIC_BADGE_MAX := 6
 const RELIC_P_W := 900.0
 const RELIC_P_NAME := 17
 const RELIC_P_TAG := 13
@@ -1543,8 +1559,25 @@ const RELIC_P_ROWH := 24.0
 const RELIC_P_LINE := 17.0
 
 
+const DECK_BTN_W := 76.0
+const DECK_BTN_H := 30.0
+const DECK_BTN_GAP := 8.0     # 与最右一枚道具徽章之间留的空
+## 道具说明浮窗从这一条线往下展开（`_draw_relic_tip()` / `+N` 浮窗共用）。
+## ⚠️ 顶栏任何控件的底沿都不许越过它，否则悬停道具时就会盖住说明文字。
+const RELIC_TIP_TOP := 46.0
+
+func _deck_btn_rect() -> Rect2:
+	## R407（用户口径）：「卡组」按钮**固定**在右上角、道具那一行的最右端
+	##（= 第一件道具的前一格，道具仍从右往左排）。
+	## 高 30 夹在 12~42，重心与 14~40 的徽章同一条线；
+	## 底沿 42 < `RELIC_TIP_TOP`(46) —— 悬停道具时不再压住说明。
+	return Rect2(size.x - 24.0 - DECK_BTN_W, RELIC_BADGE_Y - 2.0, DECK_BTN_W, DECK_BTN_H)
+
 func _relic_rect(i: int) -> Rect2:
-	return Rect2(size.x - 24.0 - (i + 1) * RELIC_BADGE_W, 14.0, 98.0, 26.0)
+	## 道具徽章从右往左排；最右那一格留给「卡组」按钮（`_deck_btn_rect()`）。
+	## ⚠️ 别把卡组按钮搬回巧克力面板左边（旧位置 y≈54）：那正好压在说明浮窗上。
+	return Rect2(size.x - 24.0 - DECK_BTN_W - DECK_BTN_GAP - (i + 1) * RELIC_BADGE_W,
+			RELIC_BADGE_Y, 98.0, 26.0)
 
 
 func _relic_bar_overflowed() -> bool:
@@ -1604,7 +1637,7 @@ func _draw_relics() -> void:
 				"还有 %d 件未列出：%s。点击这枚「+N」看完整详情（字号更大）。"
 				% [miss, _relic_names_tail(shown)], w2 - 20.0, 13)
 		var tx2: float = clampf(_mouse.x - w2 / 2, 8, size.x - w2 - 8)
-		var panel2 := Rect2(tx2, 46, w2, 12.0 + lines2.size() * 18.0)
+		var panel2 := Rect2(tx2, RELIC_TIP_TOP, w2, 12.0 + lines2.size() * 18.0)
 		draw_rect(panel2, Color(0.10, 0.11, 0.15, 0.95), true)
 		draw_rect(panel2, UiTheme.ACCENT_GOLD, false, 1.2)
 		for i in lines2.size():
@@ -1629,7 +1662,7 @@ func _draw_relic_tip(repo: RelicRepo, rel: RelicData, note: String) -> void:
 	var w := 480.0
 	var lines := CardFace.wrap_text(_font, text, w - 20.0, 13)
 	var tx: float = clampf(_mouse.x - w / 2, 8, size.x - w - 8)
-	var panel := Rect2(tx, 46, w, 12.0 + lines.size() * 18.0)
+	var panel := Rect2(tx, RELIC_TIP_TOP, w, 12.0 + lines.size() * 18.0)
 	draw_rect(panel, Color(0.10, 0.11, 0.15, 0.95), true)
 	draw_rect(panel, rel.badge_color(), false, 1.2)
 	for i in lines.size():
