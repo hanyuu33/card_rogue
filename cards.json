@@ -4082,7 +4082,7 @@
         "机械"
       ],
       "affixes": [],
-      "effect_text": "入场时，所有场上和手卡盟友获得改造：生命 +4。",
+      "effect_text": "入场时，其他场上和手卡盟友获得改造：生命 +4。",
       "target_mode": "none",
       "color": "白",
       "image": ""

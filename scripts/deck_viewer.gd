@@ -5,13 +5,21 @@ const UiPop = preload("res://scripts/ui_pop.gd")
 ## 通用「牌库查看」悬浮层 —— 让牌库在游戏中任何界面都能查看。
 ##
 ## 右上角一个「牌库 N」按钮；点开后是本局卡组（RunState.deck_ids）的聚合网格：
-## 相同卡（同 id）合并、左下角 ×N 张数角标、按（费用, id）排序、滚轮翻页、
+## 相同卡（同 id）合并、左下角 ×N 张数角标、按（费用, id）排序、滚轮 / 按住拖动翻页、
 ## 点击任意处关闭。面板不压暗背景（用户要求）。
+##
+## R405（用户口径「安卓端要能查看全部卡组」）：原来**只认滚轮** —— 触屏没有滚轮，
+## 卡组一多就只看得到最上面一排。现在三种翻法并存：
+##   ① 滚轮（桌面老手感不变）；
+##   ② **按住拖动**（触屏与桌面同一套，走 `UiDrag`）—— 拖动过的抬起**不会关面板**；
+##   ③ 面板右下角一对 **▲ / ▼** 按钮，点一下翻一屏（最可靠的兜底）。
+## ⚠️ 拖动是**增量式**的：`_scroll` 单位仍是「行」，像素 / 行高换算在这里做。
 ##
 ## 用法：在场景 _ready 里 `DeckViewer.attach(self)`（可选第二参数指定按钮位置）。
 ## 命令行 -- --deckview：打开后自动展开面板（截图验证用）。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const UiDrag = preload("res://scripts/ui_drag.gd")
 
 const CARD_W := 76.0
 const CARD_H := 92.0
@@ -29,6 +37,8 @@ var _font_bold: Font
 var _open := false
 var _scroll := 0.0          # 已滚动的行数（浮点，按行步进）
 var _shown_n := -1          # 按钮上当前写的张数（R375：数量变了要自己刷新）
+## R405：按下状态 {pos, scroll, moved}。松手时靠它区分「点一下（关面板）」与「拖完松手」。
+var _press := {}
 
 
 static func attach(host: Node, btn_pos := Vector2(1150, 6)) -> DeckViewer:
@@ -146,6 +156,54 @@ func _layout(n: int) -> Dictionary:
 			"grid_x": grid_x, "grid_y": grid_y, "view_rows": view_rows}
 
 
+# ------------------------------------------------------------ 翻页按钮（R405）
+
+## 面板右下角那对 ▲ / ▼。尺寸按「手指点得到」定（触屏最小可靠尺寸 ~44px 见方，
+## 这里受面板高度限制取 34×26 —— 仍比文字链接大得多）。
+const PAGE_BTN_W := 34.0
+const PAGE_BTN_H := 26.0
+const PAGE_BTN_GAP := 6.0
+
+
+func _max_scroll() -> float:
+	## 滚动上限（单位「行」）—— 唯一口，绘制与输入都读它，避免两处各算一遍。
+	var L := _layout(_merged().size())
+	return maxf(0.0, float(int(L["rows"]) - int(L["view_rows"])))
+
+
+func _page_btns() -> Array[Rect2]:
+	## [上一屏, 下一屏] 的矩形，贴在面板底边内侧右角。
+	var L := _layout(_merged().size())
+	var px: float = L["px"]
+	var py: float = L["py"]
+	var pw: float = L["pw"]
+	var ph: float = L["ph"]
+	var y := py + ph - PAGE_BTN_H - 10.0
+	var x2 := px + pw - 14.0 - PAGE_BTN_W
+	var x1 := x2 - PAGE_BTN_GAP - PAGE_BTN_W
+	return [Rect2(x1, y, PAGE_BTN_W, PAGE_BTN_H), Rect2(x2, y, PAGE_BTN_W, PAGE_BTN_H)]
+
+
+func _page_hit(pos: Vector2) -> int:
+	## -1 = 上一屏 / +1 = 下一屏 / 0 = 没点中。
+	var rs := _page_btns()
+	if rs[0].has_point(pos):
+		return -1
+	if rs[1].has_point(pos):
+		return 1
+	return 0
+
+
+func _flip_page(dir: int) -> void:
+	## 翻**一整屏**（不是一行）—— 触屏上一行一行点太累了。
+	if dir == 0:
+		return
+	var L := _layout(_merged().size())
+	_scroll = clampf(_scroll + float(int(L["view_rows"])) * float(signi(dir)),
+			0.0, _max_scroll())
+	_panel.queue_redraw()
+
+
 # ------------------------------------------------------------ 绘制与输入
 
 func _on_panel_draw() -> void:
@@ -190,19 +248,54 @@ func _on_panel_draw() -> void:
 					"×%d" % cnt, HORIZONTAL_ALIGNMENT_CENTER, 26, UiTheme.FS_CAPTION, Color("d8f0d8"))
 	# 滚动提示
 	if max_scroll > 0:
-		_panel.draw_string(_font, Vector2(px + pw - 220, py + ph - 12),
-				"第 %d/%d 屏" % [skip_rows + 1, int(max_scroll) + 1],
-				HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_CAPTION, UiTheme.INK_500)
+		_panel.draw_string(_font, Vector2(px + pw - 300, py + ph - 12),
+				"第 %d/%d 屏（滚轮或按住拖动翻页）" % [skip_rows + 1, int(max_scroll) + 1],
+				HORIZONTAL_ALIGNMENT_LEFT, 240, UiTheme.FS_CAPTION, UiTheme.INK_500)
+		# R405：▲ / ▼ 兜底按钮 —— 触屏上最可靠的一手（拖动会被某些设备吞掉）
+		var btns := _page_btns()
+		for i in 2:
+			var r: Rect2 = btns[i]
+			var usable := (_scroll > 0.0) if i == 0 else (_scroll < max_scroll)
+			var ink: Color = UiTheme.INK_800 if usable else UiTheme.INK_300
+			_panel.draw_rect(r, UiTheme.PAPER)
+			_panel.draw_rect(r, ink, false, 1.2)
+			var c := r.get_center()
+			var dir := -1.0 if i == 0 else 1.0
+			_panel.draw_polyline(PackedVector2Array([
+					Vector2(c.x - 6.0, c.y - dir * 4.0),
+					Vector2(c.x, c.y + dir * 4.0),
+					Vector2(c.x + 6.0, c.y - dir * 4.0)]), ink, 2.4, true)
 
 
 func _on_panel_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		match event.button_index:
-			MOUSE_BUTTON_WHEEL_UP:
-				_scroll -= 1.0
-				_panel.queue_redraw()
-			MOUSE_BUTTON_WHEEL_DOWN:
-				_scroll += 1.0
-				_panel.queue_redraw()
-			MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT:
-				_toggle()
+	# ① 滚轮 / 按住拖动（R405：触屏也能滚了，见 UiDrag 头部）
+	var d := UiDrag.scroll_delta(event, CARD_H + GAP)
+	if d != 0.0:
+		_scroll = clampf(_scroll + d / (CARD_H + GAP), 0.0, _max_scroll())
+		if not _press.is_empty():
+			_press["moved"] = true
+		_panel.queue_redraw()
+		return
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index != MOUSE_BUTTON_LEFT and mb.button_index != MOUSE_BUTTON_RIGHT:
+			return
+		if mb.pressed:
+			_press = {"pos": mb.position, "scroll": _scroll, "moved": false}
+			return
+		# ② 松手：拖过的（含滚轮滚过）不算点击 —— 否则触屏一滑就把面板关了
+		var moved := bool(_press.get("moved", true))
+		_press = {}
+		if moved:
+			return
+		# ③ 先判翻页按钮，再按「点空白处 = 关闭」处理
+		var hit := _page_hit(mb.position)
+		if hit != 0:
+			_flip_page(hit)
+			return
+		_toggle()
+	elif event is InputEventMouseMotion:
+		# 拖动位移已经在上面的 UiDrag 分支里消化掉了；这里只兜「按住但一个字都没动」的情况
+		var mm := event as InputEventMouseMotion
+		if not _press.is_empty() and UiDrag.drag_moved(_press["pos"], mm.position):
+			_press["moved"] = true

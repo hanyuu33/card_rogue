@@ -3,6 +3,7 @@ extends CanvasLayer
 
 const UiPop = preload("res://scripts/ui_pop.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const UiDrag = preload("res://scripts/ui_drag.gd")
 ## 通用「道具查看」悬浮层 —— 与 DeckViewer（牌库查看）**完全对等**的一对。
 ##
 ## 交互（R394 按用户口径重做）：
@@ -18,6 +19,13 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 ##
 ## 面板**不压暗背景**（与 DeckViewer 同款，用户要求）。
 ##
+## R405（用户口径「安卓端要能查看全部遗物」）：胶囊行原来排到屏幕底就
+## `break` —— 触屏没有滚轮，道具一多，底下那几件**永远看不到也点不到**。
+## 现在整行**全部排出来**，可视窗固定成「按钮下沿 → 屏幕底」，多出来的靠
+## 滚轮 / 按住拖动（`UiDrag`）上下滚；按钮文案在装不下时补一个 ▾ 作为提示。
+## ⚠️ 出界的那几行仍然留在数组里（下标必须与 `_entries()` 一一对应），
+##    只是**不画、不命中** —— 所以别在 `_chip_rects()` 里把它们删掉。
+##
 ## 用法：在场景 _ready 里 `RelicViewer.attach(self)`（可选第二参数指定按钮位置）。
 ## 命令行 `-- --relicview`：模拟点击按钮（展开胶囊行，截图验证用）
 ## 命令行 `-- --relicpanel`：展开并钉住第一件道具的详情（截图验证版式用）
@@ -29,6 +37,7 @@ const CHIP_PAD := 12.0      # 胶囊左右内边距
 const CHIP_ROW_GAP := 6.0   # 换行时的行距
 const CHIP_FS := UiTheme.FS_LABEL
 const CHIPS_LEFT_MIN := 16.0   # 换行左界（再往左就换行）
+const CHIP_TOP_GAP := 6.0      # 胶囊行与按钮下沿的间距
 
 var _btn: Button
 var _chip_block: Control         # 只盖住「胶囊行」那块矩形的点击拦截层
@@ -41,6 +50,7 @@ var _hover_chip := -1            # 悬停的胶囊下标（-1 = 没有）
 var _blocked := false            # R121：被满屏覆盖层压着 → 一切悬停 / 展开让位
 var _demo_lock := false          # 命令行演示：锁住状态不被 _process 的鼠标判定改掉
 var _cached_n := -1              # 上次刷新按钮时的道具数（变了就重刷）
+var _chip_scroll := 0.0          # R405：胶囊行的纵向滚动（px，正 = 内容上移）
 
 
 static func attach(host: Node, btn_pos := Vector2(1150, 6)) -> RelicViewer:
@@ -75,6 +85,9 @@ func _ready() -> void:
 	_chip_block = Control.new()
 	_chip_block.mouse_filter = Control.MOUSE_FILTER_STOP
 	_chip_block.visible = false
+	# R405：胶囊行自己的滚动入口（触屏拖动 / 滚轮）。拦截层本来就盖在行上，
+	# 顺手当手势容器 —— 不用再叠一个控件。
+	_chip_block.gui_input.connect(_on_chip_input)
 	add_child(_chip_block)
 
 	# 胶囊行 + 详情：IGNORE = 不吃点击也不挡下层界面（纯展示 + 自己算命中）
@@ -127,6 +140,17 @@ func _process(_delta: float) -> void:
 		_chip_block.visible = false
 
 
+func _on_chip_input(event: InputEvent) -> void:
+	## 胶囊行的滚动（R405）：滚轮 / 按住拖动，走 `UiDrag` 唯一口。
+	## 拖动时把悬停的高亮与详情清掉 —— 手指下面的胶囊一直在换，留着会闪。
+	var d := UiDrag.scroll_delta(event, CHIP_H + CHIP_ROW_GAP)
+	if d == 0.0:
+		return
+	_chip_scroll = clampf(_chip_scroll + d, 0.0, _chip_max_scroll())
+	_hover_chip = -1
+	_hover_layer.queue_redraw()
+
+
 func _want_hover(mp: Vector2) -> bool:
 	## 「鼠标在道具按钮上」的**唯一判定口**（绘制与测试都走这里）。
 	## ⚠️ R394：**只认按钮矩形**。旧版把 `_hover_rect()`（浮层自己的矩形）也算进来，
@@ -149,6 +173,7 @@ func _toggle() -> void:
 		return
 	_open = not _open
 	_hover_chip = -1
+	_chip_scroll = 0.0        # R405：每次展开都从第一件开始看
 	_hover_layer.visible = _open
 	if _open:
 		UiPop.play(_hover_layer, 1.0)   # R151 P1-9：入场淡入 160ms
@@ -158,7 +183,9 @@ func _toggle() -> void:
 
 func _refresh_btn() -> void:
 	_cached_n = RunState.relics.size()
-	_btn.text = "道具 %d" % _cached_n
+	# R405：装不下时补一个 ▾ —— 触屏玩家不会知道「下面还有」，而这正是旧版的病根。
+	var overflowing := _chip_max_scroll() > 0.5
+	_btn.text = ("道具 %d ▾" % _cached_n) if overflowing else ("道具 %d" % _cached_n)
 	# R394：按钮**永远可点** —— 点一下展开 / 收起胶囊行（旧版「装不下才可点」，
 	# 装得下时按钮是禁用态，于是屏幕写着「点道具查看更多」却点不动，用户报的就是这个）。
 	_btn.disabled = _cached_n <= 0
@@ -202,37 +229,66 @@ func _chip_size(e: Dictionary) -> Vector2:
 	return Vector2(w + CHIP_PAD * 2.0, CHIP_H)
 
 
+func _chip_view() -> Dictionary:
+	## 胶囊行**可视窗**：[top, bottom]。上界 = 按钮下沿，下界 = 屏幕底（留 8px）。
+	var top := _btn_rect().end.y + CHIP_TOP_GAP
+	return {"top": top,
+			"bottom": float(get_viewport().get_visible_rect().size.y) - 8.0}
+
+
 func _chip_rects() -> Array[Rect2]:
 	## 胶囊行的矩形（绘制 / 命中共用）。**从右往左**排，右沿对齐按钮右沿；
 	## 排到左界就换一行继续往左排。
+	## ⚠️ R405：**不按屏幕底截断**（旧版 `break` 就是「只看得到最上面一排」的原因）——
+	##    全部排出来、整体减 `_chip_scroll`，再靠 `_chip_visible()` 决定画 / 命中。
+	##    数组下标必须与 `_entries()` 严格对应，出界的也留着。
 	var out: Array[Rect2] = []
 	var list := _entries()
 	if list.is_empty():
 		return out
 	var right := _btn_rect().end.x
 	var x := right
-	var y := _btn_rect().end.y + 6.0
-	var limit_y := float(get_viewport().get_visible_rect().size.y) - CHIP_H - 8.0
+	var y := _btn_rect().end.y + CHIP_TOP_GAP - _chip_scroll
 	for e in list:
 		var sz := _chip_size(e)
 		if x - sz.x < CHIPS_LEFT_MIN:
 			x = right
 			y += CHIP_H + CHIP_ROW_GAP
-		if y > limit_y:
-			break
 		out.append(Rect2(Vector2(x - sz.x, y), sz))
 		x -= sz.x + CHIP_GAP
 	return out
 
 
-func _chips_bbox() -> Rect2:
-	## 胶囊行的外接矩形（点击拦截层用）。没有胶囊时返回零矩形。
+func _chip_max_scroll() -> float:
+	## 滚动上限 = 内容总高 - 可视窗高（不足时 0）。唯一口，输入与绘制都读它。
 	var rs := _chip_rects()
 	if rs.is_empty():
-		return Rect2()
-	var r: Rect2 = rs[0]
-	for x: Rect2 in rs:
-		r = r.merge(x)
+		return 0.0
+	var v := _chip_view()
+	var top: float = v["top"]
+	var bottom: float = v["bottom"]
+	var content := (rs[rs.size() - 1].end.y + _chip_scroll) - top
+	return maxf(0.0, content - (bottom - top))
+
+
+func _chip_visible(r: Rect2) -> bool:
+	## 这一格的矩形整个落在可视窗里才算「能看」——半截的也被判出界，
+	## 免得滚到一半时上半部分压在按钮上。
+	var v := _chip_view()
+	return (r.position.y >= float(v["top"]) - 0.5
+			and r.end.y <= float(v["bottom"]) + 0.5)
+
+
+func _chips_bbox() -> Rect2:
+	## 胶囊行的外接矩形（点击拦截层用）。没有可视胶囊时返回零矩形。
+	## ⚠️ 只并**可视**的那些：滚出屏幕的行若并进来，拦截层会盖到按钮或屏幕外。
+	var r := Rect2()
+	var got := false
+	for x: Rect2 in _chip_rects():
+		if not _chip_visible(x):
+			continue
+		r = x if not got else r.merge(x)
+		got = true
 	return r
 
 
@@ -241,7 +297,7 @@ func _chip_at(mp: Vector2) -> int:
 		return -1
 	var rs := _chip_rects()
 	for i in rs.size():
-		if rs[i].has_point(mp):
+		if _chip_visible(rs[i]) and rs[i].has_point(mp):
 			return i
 	return -1
 
@@ -266,6 +322,8 @@ func _on_layer_draw() -> void:
 	for i in rs.size():
 		if i >= list.size():
 			break
+		if not _chip_visible(rs[i]):
+			continue          # R405：滚出可视窗的行不画（数组下标仍与 entries 对齐）
 		var e: Dictionary = list[i]
 		var rel: RelicData = e["relic"]
 		var spent := bool(e.get("spent", false))

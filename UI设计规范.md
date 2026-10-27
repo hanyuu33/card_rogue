@@ -891,6 +891,40 @@ R127 落地时新踩的坑：
   只动 `ui_theme.gd` 的三个令牌、**画法一行不改** → 三处容器（地图页 / 地图总览 / 战场）
   跟着一起变，视觉语言仍然统一。
 
+### 4.12.1 触屏上没有滚轮：滚动一律走 `UiDrag`（R405）
+
+用户实机报「安卓端菜单无法滑动，遗物 / 卡组多了只能看最上面一排」。根因不是布局，
+而是**全工程的滚动只认 `MOUSE_BUTTON_WHEEL_*`** —— 触屏设备压根没有滚轮，面板一装不下，
+下半截就永远看不到，也没有第二种翻法。
+
+**唯一口 = `scripts/ui_drag.gd`（`UiDrag`，无 `class_name`，`preload` 引入）**：
+
+- `UiDrag.scroll_delta(event, wheel_step)` → 这一次事件该滚多少像素（正 = 看到更靠下的内容）。
+  滚轮映射成 ±`wheel_step`；`InputEventMouseMotion` 且 `button_mask` 含左键 → `-relative.y`。
+- `UiDrag.drag_moved(press, now)` → 位移超过 `SLOP`(8px) 才算拖动，用于「抬起算点击还是收尾」。
+
+三条硬纪律：
+
+1. **不要处理 `InputEventScreenDrag`**。Godot 4 默认 `emulate_mouse_from_touch = true`：
+   同一根手指会先产生 `ScreenTouch` / `ScreenDrag`，**同时**被模拟成 `MouseButton` /
+   `MouseMotion`。两套都收 = 一次拖动滚两倍。触摸模拟出来的 `MouseMotion` 自带左键
+   `button_mask`，所以**只认 mouse 事件就能覆盖安卓**，且桌面「按住拖」与触屏同一套手感。
+2. **面板「点任意处关闭」要拆成按下 / 抬起**。原来 `LEFT.pressed` 就关面板 ——
+   触屏一滑，先来的是 pressed，面板当场没了。现在按下只记状态、抬起时 `moved == false` 才关
+   （`map_scene._panel_dragged` / `deck_viewer._press`）。
+3. **画 / 命中都要按可视窗裁剪，但数组下标不许删**。道具胶囊行原先是「排到屏幕底就
+   `break`」→ 后来的道具**连条目都不存在**。现在全部排出来、整体减滚动量，
+   用 `_chip_visible()` 决定「画不画 / 命中不命中」（下标仍与 `_entries()` 一一对应）。
+
+配套：牌库面板右下角另加一对 **▲ / ▼**（`_page_btns()` / `_page_hit()` / `_flip_page()`），
+点一下翻一整屏 —— 拖动在个别设备上可能被吞，按钮是不会失效的兜底。
+面板列表**只画整行都落在内容区里的行**（`y >= py + 52 且 y + row_h <= py + ph - 6`）：
+旧判据允许行顶跑到标题下面，滚到底时首行直接压在标题字上（截图实测抓到）。
+
+已接入：牌库面板（`deck_viewer`）、道具胶囊行（`relic_viewer`）、战斗道具面板
+（`battle_scene._relics_visible`）、地图的道具 / 记录 / 卡组面板（`map_scene`）。
+**新增任何可滚面板请直接走 `UiDrag`，不要再单独判滚轮。**
+
 ### 4.13 格子地图：房间写在格子里，**门只从走过的房间外露**（R128）
 
 冒险地图从「14 层圆节点 + 连线 + 上下滚动」重做成 **7 列 × 5 行的相接正方形格子**

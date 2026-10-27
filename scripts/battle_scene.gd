@@ -16,6 +16,7 @@ const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiRoll = preload("res://scripts/ui_roll.gd")
 const UiPop = preload("res://scripts/ui_pop.gd")
+const UiDrag = preload("res://scripts/ui_drag.gd")   # R405：滚轮 / 触屏拖动 的唯一口
 const CardInfoBoxes = preload("res://scripts/card_info_boxes.gd")
 ## R386：战场对话气泡（自绘，见该文件头部的设计与时间轴说明）
 const SpeechBubble = preload("res://scripts/speech_bubble.gd")
@@ -4327,6 +4328,13 @@ func _gui_input(event: InputEvent) -> void:
 			and event.button_index == MOUSE_BUTTON_RIGHT:
 		_on_right_click()
 		queue_redraw()
+	elif event is InputEventMouseMotion and _relics_visible:
+		# R405（用户口径「安卓端要看全遗物」）：道具浏览面板也要能**按住拖**。
+		# 触屏没有滚轮，旧版这里只认 `MOUSE_BUTTON_WHEEL_*` → 底下那几件永远翻不到。
+		# 放下层所有 motion 逻辑（棋盘拖动 / 手牌 drag）之前先吃掉 —— 面板是模态的。
+		_relic_scroll = maxf(0.0, _relic_scroll + UiDrag.scroll_delta(event, 34.0))
+		queue_redraw()
+		return
 	elif event is InputEventMouseMotion:
 		# R123：棋盘拖动滚动（空格左键 / 中键，拖过阈值生效；向上拖 = 内容上移）
 		if _grid_drag_arm and _drag_idx < 0:
@@ -14383,7 +14391,8 @@ func _draw_relic_panel() -> void:
 		var ncol: Color = r[4]
 		var row_h: float = RELIC_P_ROWH + dlines.size() * RELIC_P_LINE + 10.0
 		# 只画面板内可见的行（滚出面板的内容自然被面板矩形盖不住 → 手动跳过）
-		if y + row_h > py + 46.0 and y < py + ph - 8.0:
+		# R405：只画整行都在内容区里的（旧的半行判定会让首行压在标题上，见 map_scene 同处）
+		if y >= py + 52.0 and y + row_h <= py + ph - 6.0:
 			draw_rect(Rect2(px + 16, y - 16, 10, row_h - 8.0), scol, true)
 			_draw_string_nw(_font_bold, RELIC_P_NAME, name_str,
 					Vector2(px + 36, y), ncol, -1)

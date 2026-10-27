@@ -4621,7 +4621,9 @@ func _daedalus_enter(p: Placement) -> void :
 
 func _modder_enter(p: Placement) -> void :
 	## 「改装者」（8076，R282，机械之心 3 费**普通**盟友 3/8/1/1）：
-	##   入场时：**所有**己方盟友（场上 + 手牌）获得一次「改造」：生命 +4（不含工事，含它自己）。
+	##   入场时：**其他**己方盟友（场上 + 手牌）获得一次「改造」：生命 +4（不含工事）。
+	##   ⚠️ R405（用户口径「不应该可以改造自己」）：**它自己不吃这一层** —— 改造者改不了改造者。
+	##      场上的自己靠 `q != p` 排除（引用比较，`_cell_of()` 万一取不到也不至于失效）。
 	##   * **场上**盟友走 `_field_upgrade_grant()` 唯一口（场上改造离场即消失，与「升级」同口径）；
 	##     末尾自动 `_on_unit_upgraded()` → 被改的榴弹击手 +1 攻程、机器鸟抽牌照常触发。
 	##   * **手牌**盟友烤进副本（`from_dict` 复制 + 原位替换），生命 +4 并记一层 `upgrade_stacks`
@@ -4632,7 +4634,7 @@ func _modder_enter(p: Placement) -> void :
 	var field_got := 0
 	for cell: Vector2i in state.board:
 		var q: Placement = state.board[cell]
-		if q != null and q.owner == SIDE_SELF and q.card.kind == "盟友":
+		if q != null and q != p and q.owner == SIDE_SELF and q.card.kind == "盟友":
 			_field_upgrade_grant(q, 0, MODDER_HP, "改装者")
 			field_got += 1
 	var hand_got := 0

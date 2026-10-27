@@ -24,6 +24,7 @@ extends Control
 ## 地图整体（826 × 590）能完整放进视口 —— 所以旧版的滚动 / 滚动提示 / 滚动条已全部移除。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const UiDrag = preload("res://scripts/ui_drag.gd")   # R405：滚轮 / 触屏拖动 的唯一口
 const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiRoll = preload("res://scripts/ui_roll.gd")
 
@@ -145,6 +146,9 @@ var _whisper_auto := false
 var _whisper_next: Dictionary = {}   # 命运本轮选中的下一间（画紫圈的目标）
 var _whisper_wait := 0.0             # 距命运落下一步还有多少秒（<= 0 即可走）
 var _reward_panel: RewardPanel = null
+## R405：面板（道具 / 记录 / 卡组）这次按下**拖动过没有** ——
+## 触屏上「按下滑一下」与「点一下」是同一个手势序列，不分开就会「一滑就把面板关了」。
+var _panel_dragged := false
 var _drag_press_pos := Vector2.ZERO
 var _press_active := false
 var _dragging := false
@@ -510,8 +514,20 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion:
 		_mouse = event.position
-		if _deck_visible:
-			_hover_deck = _deck_row_at(event.position)
+		# R405：面板开着时，按住拖动 = 滚动（触屏没有滚轮，旧版只能看最上面一截）。
+		# ⚠️ 三个面板的单位不同：道具是**像素**、记录 / 卡组是**行** —— 各按自己的行高折算。
+		if _relics_visible or _records_visible or _deck_visible:
+			var d := UiDrag.scroll_delta(event, 34.0)
+			if d != 0.0:
+				if _relics_visible:
+					_relic_scroll = maxf(0.0, _relic_scroll + d)
+				elif _records_visible:
+					_records_scroll = maxf(0.0, _records_scroll + d / 24.0)
+				else:
+					_deck_scroll = maxf(0.0, _deck_scroll + d / DECK_ROW_H)
+				_panel_dragged = true
+			if _deck_visible:
+				_hover_deck = _deck_row_at(event.position)
 			queue_redraw()
 			return
 		var c := _cell_at(event.position)
@@ -521,6 +537,24 @@ func _gui_input(event: InputEvent) -> void:
 			queue_redraw()
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
+		# R405：面板开着时**按下不算数**，等于抬起时再判 —— 否则触屏一滑就关面板。
+		if _relics_visible or _records_visible or _deck_visible:
+			_panel_dragged = false
+			return
+		if _relic_bar_overflowed() and _relic_rect(_relic_shown()).has_point(event.position):
+			_relics_visible = true
+			_relic_scroll = 0.0
+			queue_redraw()
+			return
+		_drag_press_pos = event.position
+		_press_active = true
+		_dragging = false
+	elif event is InputEventMouseButton and not event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT:
+		if _panel_dragged:
+			# 拖动收尾 —— 这一下不是点击，面板保持打开（R405）
+			_panel_dragged = false
+			return
 		if _relics_visible:
 			_relics_visible = false
 			queue_redraw()
@@ -529,21 +563,11 @@ func _gui_input(event: InputEvent) -> void:
 			_records_visible = false
 			queue_redraw()
 			return
-		if _relic_bar_overflowed() and _relic_rect(_relic_shown()).has_point(event.position):
-			_relics_visible = true
-			_relic_scroll = 0.0
-			queue_redraw()
-			return
 		if _deck_visible:
 			if _deck_row_at(event.position) < 0:
 				_deck_visible = false
 			queue_redraw()
 			return
-		_drag_press_pos = event.position
-		_press_active = true
-		_dragging = false
-	elif event is InputEventMouseButton and not event.pressed \
-			and event.button_index == MOUSE_BUTTON_LEFT:
 		_press_active = false
 		if _dragging:
 			_dragging = false
@@ -1664,7 +1688,10 @@ func _draw_relic_panel() -> void:
 	var y := py + 56.0 - _relic_scroll
 	for r in rows:
 		var row_h: float = float(r[3])
-		if y + row_h > py + 46.0 and y < py + ph - 8.0:
+		# R405：只能画**整行都落在内容区里**的那些行。
+		# 旧判据（`y + row_h > py + 46`）允许行顶跑到标题下面去 —— 滚到底时
+		# 第一行会直接压在「我的道具（共 N 件）」上。手机上能滚之后这个位置一眼就撞见。
+		if y >= py + 52.0 and y + row_h <= py + ph - 6.0:
 			draw_rect(Rect2(px + 18, y - 16, 10, row_h - 8.0), r[2], true)
 			draw_string(_font_bold, Vector2(px + 38, y), str(r[0]),
 					HORIZONTAL_ALIGNMENT_LEFT, 460, RELIC_P_NAME, Color("2f2a20"))

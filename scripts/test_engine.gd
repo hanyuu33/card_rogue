@@ -10,6 +10,8 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 ## R386：战场对话气泡同样是「无 class_name 的纯自绘 RefCounted」→ 显式 preload。
 ## ⚠️ 别给它加 class_name：`--check-only` / 跨脚本引用时会 Parse Error（R386 踩过）。
 const SpeechBubble = preload("res://scripts/speech_bubble.gd")
+## R405：滚动手势唯一口（同样没有 class_name）—— 断言它的三种输入折算。
+const UiDrag = preload("res://scripts/ui_drag.gd")
 
 var fails := 0
 
@@ -29282,6 +29284,127 @@ func _init() -> void:
 			"R403 源码：护盾生成器被打死就地在代受处销毁（不吃后排溢出）")
 	check_src(r403_src.find("mini(amount, maxi(0, g.health))") < 0,
 			"R403 源码：旧的「闪躲只吃剩余血」算法已删除")
+
+	# ================= R405：骰子不碰第三层 / 改装者不改自己 / 触屏滚动 =================
+	# ---- ① 水晶骰子：第三层直道一根毛都不动 ----
+	# 用户口径「骰子需要修复：不影响第三层地图」。第三层是一字型直道（起点/精英/商店/篝火/Boss），
+	# 五格房型是**设计定的**。拿到骰子的当刻走 `reroll_map_as_unknown()` → 直接重摇，
+	# 而豁免名单只有「起点/大宝箱/右上角商店/篝火」→ 精英(16) 与 Boss(19) 会被摇成「?」。
+	var r405_line: Array = RogueMap.line_cells(GameLayers.LAYER_THREE)
+	var r405_before: Array = []
+	for r405_c: Dictionary in r405_line:
+		r405_before.append("%s|%s" % [str(r405_c.get("type", "")),
+				str(bool(r405_c.get("hidden", false)))])
+	var r405_dr := RandomNumberGenerator.new()
+	r405_dr.seed = 405405
+	var r405_n := RogueMap.reroll_as_unknown(r405_line, r405_dr, GameLayers.LAYER_THREE)
+	var r405_same := true
+	for r405_i in r405_line.size():
+		var r405_now := "%s|%s" % [str(r405_line[r405_i].get("type", "")),
+				str(bool(r405_line[r405_i].get("hidden", false)))]
+		if r405_now != str(r405_before[r405_i]):
+			r405_same = false
+	check(r405_n == 0 and r405_same,
+			"R405 水晶骰子：第三层直道**不重摇**（重摇 %d 格；35 格房型 / 隐藏位逐格未变）" % r405_n)
+	var r405_road: Array = []
+	for r405_k in RogueMap.LINE_COLS.size():
+		var r405_cell: Dictionary = r405_line[RogueMap.idx(
+				int(RogueMap.LINE_COLS[r405_k]), RogueMap.LINE_ROW)]
+		r405_road.append(str(r405_cell.get("type", "")))
+	check(str(r405_road) == str(RogueMap.LINE_TYPES),
+			"R405 水晶骰子：直道仍是 起点→精英→商店→篝火→Boss（%s）" % str(r405_road))
+	# 同一条口径走 `RunState` 那一层（拿到道具当刻真正调的就是它）
+	var r405_saved_layer: int = RunState.current_layer
+	var r405_saved_cells: Array = RunState.map_cells
+	RunState.current_layer = GameLayers.LAYER_THREE
+	RunState.map_cells = RogueMap.line_cells(GameLayers.LAYER_THREE)
+	var r405_rn := RunState.reroll_map_as_unknown()
+	var r405_road2: Array = []
+	for r405_k2 in RogueMap.LINE_COLS.size():
+		r405_road2.append(str((RunState.map_cells[RogueMap.idx(
+				int(RogueMap.LINE_COLS[r405_k2]), RogueMap.LINE_ROW)] as Dictionary)
+				.get("type", "")))
+	RunState.current_layer = r405_saved_layer
+	RunState.map_cells = r405_saved_cells
+	check(r405_rn == 0 and str(r405_road2) == str(RogueMap.LINE_TYPES),
+			"R405 水晶骰子：RunState 那一层也不动第三层（重摇 %d 格）" % r405_rn)
+
+	# ---- ② 改装者 8076：不能改造自己 ----
+	var r405_repo := CardRepo.load_json()
+	var r405_e := _new_engine([], 20, 20)
+	r405_e.state.energy = 20
+	r405_e.state.hand.clear()
+	r405_e.state.deck.clear()
+	var r405_mate: Placement = r405_e.state.place(
+			_card(8003, "农民", "盟友", 3, 3, 8, 1, 1), Vector2i(5, 1), GameEngine.SIDE_SELF)
+	var r405_mate_hp: int = r405_mate.health
+	r405_e.state.hand.append(CardData.from_dict(r405_repo.get_card(8076).to_dict()))
+	r405_e.state.hand.append(CardData.from_dict(r405_repo.get_card(8003).to_dict()))
+	var r405_me: Placement = r405_e.play_from_hand(0, Vector2i(4, 1))
+	check(r405_me != null and r405_me.card.id == 8076,
+			"R405 改装者：3 费付得起、正常上场")
+	check(r405_me != null and r405_me.health == 9,
+			"R405 改装者：**不改造自己**（自己 %d 血，卡面 9）"
+			% (r405_me.health if r405_me != null else -1))
+	check(r405_mate.health == r405_mate_hp + 4,
+			"R405 改装者：场上**其他**盟友照常 +4 血（%d → %d）"
+			% [r405_mate_hp, r405_mate.health])
+	var r405_hand: CardData = r405_e.state.hand[0]
+	check(r405_hand.health == 12 and r405_hand.upgrade_stacks == 1,
+			"R405 改装者：手牌**其他**盟友 +4 血并记一层改造（%d 血 / %d 层）"
+			% [r405_hand.health, r405_hand.upgrade_stacks])
+	check(r405_repo.get_card(8076).effect_text.contains("其他"),
+			"R405 卡面：改装者写「其他场上和手卡盟友」（不再写「所有」）")
+
+	# ---- ③ 滚动手势唯一口（触屏能滚的前提） ----
+	var r405_wheel := InputEventMouseButton.new()
+	r405_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	r405_wheel.pressed = true
+	check(is_equal_approx(UiDrag.scroll_delta(r405_wheel, 34.0), 34.0),
+			"R405 手势：滚轮下滚 = +34px")
+	r405_wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+	check(is_equal_approx(UiDrag.scroll_delta(r405_wheel, 34.0), -34.0),
+			"R405 手势：滚轮上滚 = -34px")
+	var r405_drag := InputEventMouseMotion.new()
+	r405_drag.button_mask = MOUSE_BUTTON_MASK_LEFT
+	r405_drag.relative = Vector2(0, -20)
+	check(is_equal_approx(UiDrag.scroll_delta(r405_drag, 34.0), 20.0),
+			"R405 手势：按住拖动（触屏模拟成这个）= 手指上移看到更下面（+20px）")
+	var r405_hover := InputEventMouseMotion.new()
+	r405_hover.relative = Vector2(0, -20)
+	check(UiDrag.scroll_delta(r405_hover, 34.0) == 0.0,
+			"R405 手势：没按住左键的移动（只是悬停）不滚动")
+	check(UiDrag.drag_moved(Vector2(10, 10), Vector2(10, 30))
+			and not UiDrag.drag_moved(Vector2(10, 10), Vector2(12, 12)),
+			"R405 手势：位移超过 8px 才算拖动（否则抬起仍算点击 / 关面板）")
+
+	# ---- ④ 源码锁：别让「只认滚轮」「按屏幕底截断」回潮 ----
+	var r405_rm_src := FileAccess.get_file_as_string("res://scripts/rogue_map.gd")
+	var r405_rr_at := r405_rm_src.find("func reroll_as_unknown")
+	# 守卫必须落在 `reroll_as_unknown` 函数体开头（取「函数起点之后 1500 字符内出现
+	# LAYER_THREE」当判据，不赌缩进 / 换行 —— 断言写死 tab 数太脆）。
+	var r405_guard_at := r405_rm_src.find("LAYER_THREE", r405_rr_at)
+	check_src(r405_rr_at >= 0 and r405_guard_at > r405_rr_at
+			and r405_guard_at - r405_rr_at < 1500,
+			"R405 源码：重摇的唯一实现口自己守着第三层（不是只守调用方）")
+	var r405_dv_src := FileAccess.get_file_as_string("res://scripts/deck_viewer.gd")
+	check_src(r405_dv_src.find("UiDrag.scroll_delta") >= 0,
+			"R405 源码：牌库面板接入手势口（触屏可拖）")
+	check_src(r405_dv_src.find("func _page_hit") >= 0,
+			"R405 源码：牌库面板带 ▲ / ▼ 翻页按钮（拖不动的设备也能翻）")
+	var r405_rv_src := FileAccess.get_file_as_string("res://scripts/relic_viewer.gd")
+	check_src(r405_rv_src.find("if y > limit_y") < 0,
+			"R405 源码：道具胶囊行不再「排到屏幕底就 break」")
+	check_src(r405_rv_src.find("func _chip_visible") >= 0,
+			"R405 源码：胶囊行出界的只不画不命中（下标仍与道具一一对应）")
+	check_src(r405_rv_src.find("UiDrag.scroll_delta") >= 0,
+			"R405 源码：胶囊行接入手势口")
+	var r405_map_src := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	check_src(r405_map_src.find("_panel_dragged") >= 0,
+			"R405 源码：地图面板区分「拖动」与「点一下」（不会一滑就关）")
+	var r405_bs_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r405_bs_src.find("InputEventMouseMotion and _relics_visible") >= 0,
+			"R405 源码：战斗道具面板支持按住拖动")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
