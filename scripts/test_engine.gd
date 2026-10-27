@@ -21083,8 +21083,8 @@ func _init() -> void:
 			% [r271_creation.kind, r271_creation.cost, r271_creation.rarity])
 	var r271_scrap := r271_repo.get_card(8071)
 	check(r271_scrap != null and r271_scrap.kind == "技能" and r271_scrap.cost == 3
-			and r271_scrap.rarity == 1 and r271_scrap.target_mode == "none",
-		"R271 报废 8071：3 费稀有技能卡，无需目标")
+			and r271_scrap.rarity == 2 and r271_scrap.target_mode == "none",
+		"R410 报废 8071：3 费史诗技能卡，无需目标")
 	var r271_mnemo := r271_repo.get_card(8072)
 	check(r271_mnemo != null and r271_mnemo.kind == "盟友" and r271_mnemo.cost == 4
 			and r271_mnemo.power == 5 and r271_mnemo.health == 16
@@ -29955,6 +29955,64 @@ func _init() -> void:
 			"R406 源码：基础数值走常量（7 伤 / 降 1 力，与卡面首个「7 点伤害」对齐）")
 	check_src(r406_src.find("9189: 7,") >= 0,
 			"R406 源码：独行登记在 SPELL_BASE_DMG（漏登记左栏会静默不显示）")
+
+	# ------------------------------------------------------------------ R410
+	# 用户两条：① 有些卡改了效果但描述没跟上（点名「报废」「集束炮台」加了次元字段却不写后果）；
+	#           ② 「报废」8071 改为史诗卡。
+	# 顺带修一处真正的漏改：失控要塞 9161 在 R404 把触发口径从「用过的聚能炮击」改成
+	# 「变化过的牌」（读 `state.self_card_changes`），卡面却还写着聚能炮击。
+	var r410_repo: CardRepo = CardRepo.load_json()
+	var r410_scrap: CardData = r410_repo.get_card(GameEngine.SCRAP_ID)
+	var r410_turret: CardData = r410_repo.get_card(GameEngine.CLUSTER_TURRET_ID)
+	var r410_fort: CardData = r410_repo.get_card(GameEngine.OUT_OF_CONTROL_FORT_ID)
+
+	# ---- ① 报废升史诗 ----
+	check(r410_scrap != null and r410_scrap.rarity == 2,
+			"R410 报废 8071：稀有 → 史诗（rarity 2，实际 %d）"
+				% (r410_scrap.rarity if r410_scrap != null else -1))
+	check(r410_scrap != null and r410_scrap.rarity_name() == "史诗",
+			"R410 报废 8071：稀有度名显示「史诗」（卡面边框跟着变紫）")
+	var r410_pool: Array[CardData] = r410_repo.reward_pool_for("机械之心")
+	var r410_in_epic := false
+	for r410_c: CardData in r410_pool:
+		if r410_c.id == GameEngine.SCRAP_ID:
+			r410_in_epic = r410_c.rarity == 2
+	check(r410_in_epic,
+			"R410 报废 8071：仍在机械之心奖励池里，且只从史诗档出（升档不是移出池子）")
+
+	# ---- ② 卡面把字段后果写出来（挂了次元却不写，等于玩家看不到）----
+	check(r410_scrap != null and r410_scrap.effect_text.find("次元") >= 0
+			and r410_scrap.effect_text.find("不进弃牌区") >= 0,
+			"R410 报废卡面写明「次元：打出后消失，不进弃牌区」")
+	check(r410_turret != null and r410_turret.effect_text.find("次元") >= 0
+			and r410_turret.effect_text.find("离场即消失") >= 0,
+			"R410 集束炮台卡面写明「次元：离场即消失，不进弃牌区」")
+	check(r410_scrap != null and r410_scrap.effect_text.begins_with("将手牌里"),
+			"R410 报废卡面：次元说明追加在效果之后，原有效果一个字没动")
+
+	# ---- ③ 失控要塞：卡面与 R404 口径一致 ----
+	check(r410_fort != null and r410_fort.effect_text.find("变化过一张牌") >= 0
+			and r410_fort.effect_text.find("聚能炮击") < 0,
+			"R410 失控要塞卡面：触发条件是「变化过一张牌」，不再写聚能炮击（R404 漏改）")
+	# ⚠️ 显示层 `CardText.naturalize()` 会剥掉成对括号补注 —— 写进括号等于玩家看不到，
+	#    所以「目标与落点随机 / 不消耗费用」这类关键口径必须写成正文。
+	check(r410_fort != null and r410_fort.effect_text.find("（") < 0
+			and r410_fort.effect_text.find("不消耗费用") >= 0,
+			"R410 失控要塞：随机 / 不消耗费用写成正文（括号补注在卡面会被剥掉）")
+	check(GameEngine.OUT_OF_CONTROL_FORT_ID == 9161
+			and r410_fort != null and r410_fort.rarity == 2,
+			"R410 失控要塞仍是 2 费史诗工事（这次只改文案，机制与稀有度不动）")
+
+	# ---- ④ 道具：水晶骰子不碰第三层（R405 改了机制，relics.json 的 desc 当时漏改）----
+	var r410_relics := RelicRepo.load_json()
+	var r410_dice: RelicData = r410_relics.get_relic(GameEngine.DICE_RELIC_ID)
+	check(r410_dice != null and r410_dice.desc.find("第三层") >= 0,
+			"R410 水晶骰子：道具说明写明「第三层不生效」（R405 只改了重摇口，描述漏改）")
+	check(r410_dice != null and r410_dice.desc.find("（") < 0,
+			"R410 水晶骰子：不靠括号补注（括号在卡面会被剥掉，等于没写）")
+	check(GameEngine.DICE_RELIC_ID == 6040 and r410_dice != null
+			and r410_dice.tier == RelicData.TIER_LEGENDARY,
+			"R410 水晶骰子：仍是传奇道具（这次只改文案）")
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

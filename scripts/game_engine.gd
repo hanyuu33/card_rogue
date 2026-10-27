@@ -1258,7 +1258,7 @@ const AFFIX_SHARED_SHIELD:= "共享护盾"
 #   或带「改造攻程 / 改造移速 / 改造抽牌」trait。层数照样 +1（侦察塔 / 堡垒会响应）。
 const CREATION_ID:= 8070
 const CREATION_HP:= 2
-# 「报废」8071（3 费**稀有技能**）：把手牌里**其他所有卡**变成「聚能炮击」，
+# 「报废」8071（R410 升**史诗**技能）：把手牌里**其他所有卡**变成「聚能炮击」，
 #   这些卡**本回合**费用为 0（`turn_card_discount`，回合结束随表清空）。
 const SCRAP_ID:= 8071
 # 「谟涅摩叙涅」8072（4 费**史诗盟友** 5/16/1/1）：在场时所有敌人力量 -X（X = 本卡改造层数）；
@@ -4539,7 +4539,7 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	if card.id == MODDER_ID:
 		_modder_enter(p)          # R282 改装者：入场全体己方盟友（场上+手牌）改造 +4 生命
 	if card.id == OUT_OF_CONTROL_FORT_ID:
-		_out_of_control_fort_enter(p)   # R288 失控要塞：每用过一张聚能炮击 → 随机释放一张技能卡
+		_out_of_control_fort_enter(p)   # R288 失控要塞：每变化过一张牌 → 随机释放一张技能卡（R404）
 	if card.id == CLUSTER_TURRET_ID:
 		_cluster_turret_enter(p)        # R298 集束炮台：入场往抽牌库塞两张聚能炮击
 	if card.id == LIVING_FENCE_ID:
@@ -5286,7 +5286,7 @@ func surprise_pick(deck_index: int) -> bool:
 
 
 func _scrap_hand(side: String) -> String :
-	## 「报废」8071（R271，机械之心 3 费稀有技能）：把手牌里**其他所有卡**变成
+	## 「报废」8071（R271，机械之心 3 费史诗技能；R410 稀有 → 史诗）：把手牌里**其他所有卡**变成
 	## 「聚能炮击」（此时报废自己已被 `use_spell` 移出手牌），并让这些卡**本回合**费用为 0。
 	## * 走 `_transform_hand_card()` → 「发明专家」照常回费、"transform" 动作照常播；
 	## * 「本回合 0 费」记 `turn_card_discount`（回合结束随表清空）——
