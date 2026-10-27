@@ -897,11 +897,16 @@ func _draw_cards() -> void:
 				_root.draw_rect(rr.grow(9.0), UiTheme.ACCENT_GOLD, false, 3.0)
 		CardFace.draw_pick(_root, card, rr, _font, _font_bold, false)   # R191：只留卡名
 		# R155：稀有度铭牌 —— 宽度按文字实测（旧版写死 90px，和 216 宽的卡面对不上），
-		# 深色底条压在**这张卡自己的中轴**正下方。
+		# 压在**这张卡自己的中轴**正下方。
+		# R401（用户口径「黑底彩色字不太清晰」）：底**从深色条换成半透明白底**。
+		# ⚠️ 稀有度 7 档色全是**深色**（本来就是给浅羊皮纸底配的）：普通 2c2c2a、
+		#    怪物 7a1f1f、诅咒 4e4560 压在 88% 不透明的深色条上 = 深字压深底，
+		#    糊成一片。只有反色才成立 —— 浅底 + 深字，稀有度色挪到一圈描边上，
+		#    「普通 / 史诗 / 怪物」的区分一点没丢。**别再把底色改回深色。**
 		var rn := card.rarity_name()
 		var lw := _font_bold.get_string_size(rn, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_BODY).x + 18.0
 		var plate := Rect2(rr.position.x + CARD_W / 2.0 - lw / 2.0, rr.position.y + CARD_H + 8.0, lw, 24.0)
-		_root.draw_rect(plate, Color(0.13, 0.14, 0.18, 0.88), true)
+		_root.draw_rect(plate, Color(1.0, 0.99, 0.95, 0.82), true)
 		_root.draw_rect(plate, card.rarity_color(), false, 1.2)
 		_root.draw_string(_font_bold, plate.position + Vector2(9, 17), rn,
 				HORIZONTAL_ALIGNMENT_LEFT, lw - 18.0, UiTheme.FS_BODY, card.rarity_color())
