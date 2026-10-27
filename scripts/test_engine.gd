@@ -26820,7 +26820,7 @@ func _init() -> void:
 			"R356 阶段 1：一上场就是第 1 阶段，速度按卡面 2")
 	var r356_squat := r356_e.state.place(CardData.from_dict(repo.get_card(1011).to_dict()),
 			GameEngine.REVELATOR_HOME, GameEngine.SIDE_OPPONENT)
-	r356_boss.health = GameEngine.REVELATOR_PHASE_2_HP
+	r356_boss.health = r356_e.revelator_gate_hp(r356_boss.card.health, 2)
 	r356_e._revelator_check_phase(r356_boss)
 	var r356_eff: Array = []
 	for r356_ec: CardData in r356_e.state.enemy_effects:
@@ -26839,7 +26839,7 @@ func _init() -> void:
 	r356_e.attack(Vector2i(1, 1), GameEngine.REVELATOR_HOME, GameEngine.SIDE_SELF)
 	check(r356_atk_u.health == 40 - GameEngine.EM_SHIELD_REFLECT,
 			"R356 电磁屏障：攻击它的单位反受 5（40 → %d）" % r356_atk_u.health)
-	r356_boss.health = GameEngine.REVELATOR_PHASE_3_HP
+	r356_boss.health = r356_e.revelator_gate_hp(r356_boss.card.health, 3)
 	r356_e._revelator_check_phase(r356_boss)
 	r356_eff.clear()
 	for r356_ec2: CardData in r356_e.state.enemy_effects:
@@ -27493,7 +27493,7 @@ func _init() -> void:
 			"R371 阶段 1：移速 2 / 射程 2 / 每回合 1 动（未被加强项影响）")
 
 	# 阶段 2：移速 -1、可行动两次；位移免疫仍在
-	r371_boss.health = GameEngine.REVELATOR_PHASE_2_HP
+	r371_boss.health = r371_e.revelator_gate_hp(r371_boss.card.health, 2)
 	r371_e._revelator_check_phase(r371_boss)
 	var r371_acts2: int = r371_e.state.unit_actions(r371_boss, GameEngine.SIDE_OPPONENT)
 	check(r371_boss.boss_phase == 2 and r371_boss.effective_speed() == 1,
@@ -27508,7 +27508,7 @@ func _init() -> void:
 	# 阶段 3：破坏场上所有其他单位（我方兵 + 任何敌方随从都清掉），只留它自己
 	var r371_escort := r371_e.state.place(_card(99022, "护卫", "盟友", 1, 2, 20, 1, 1),
 			Vector2i(2, 3), GameEngine.SIDE_OPPONENT)
-	r371_boss.health = GameEngine.REVELATOR_PHASE_3_HP
+	r371_boss.health = r371_e.revelator_gate_hp(r371_boss.card.health, 3)
 	r371_e._revelator_check_phase(r371_boss)
 	check(r371_boss.boss_phase == 3 and r371_e.state.board.size() == 1
 			and not r371_e.state.board.values().has(r371_ally)
@@ -27525,7 +27525,8 @@ func _init() -> void:
 	var r371_guard := r371_e.state.place(_card(99023, "随从", "盟友", 1, 2, 20, 1, 1),
 			Vector2i(2, 3), GameEngine.SIDE_OPPONENT)
 	var r371_imm := r371_e._hit_unit(r371_boss, 10, "技能")
-	check(r371_imm == 0 and r371_boss.health == GameEngine.REVELATOR_PHASE_3_HP,
+	check(r371_imm == 0
+			and r371_boss.health == r371_e.revelator_gate_hp(r371_boss.card.health, 3),
 			"R371 阶段 3：有随从时免疫非攻击伤害（实际 -%d，血 %d）"
 			% [r371_imm, r371_boss.health])
 	var r371_atk := r371_e._hit_unit(r371_boss, 10, "战斗", true, true)
@@ -28442,6 +28443,58 @@ func _init() -> void:
 	check_src(r387_bs.find("p.effective_speed(), p.effective_range()") >= 0,
 			"R387 源码：战场卡面把 effective_speed / effective_range 传进卡面（不再读卡库原值）")
 
+	# ---- R402：启示者阶段血线按**比例**（2/3、1/3），不再写死 200 / 100 ----
+	# 用户口径「高难度会按百分比增加启示者血量，阶段转换逻辑改为 2/3、1/3」。
+	# 难度 3 起敌方生命 ×1.1（`RunState.scaled_enemy_card`）→ 300 变 330，
+	# 写死的 200 / 100 就变成「刚过 61% / 30%」就转阶，三段份量全歪。
+	var r402_e := _new_engine([], 20, 30)
+	r402_e.enemy_hp_infinite = true
+	r402_e.win_on_boss = GameEngine.REVELATOR_ID
+	check(r402_e.revelator_gate_hp(300, 2) == 200 and r402_e.revelator_gate_hp(300, 3) == 100,
+			"R402 血线 2/3、1/3：300 血 → 200 / 100（与旧写死值一致，行为不变）")
+	check(r402_e.revelator_gate_hp(330, 2) == 220 and r402_e.revelator_gate_hp(330, 3) == 110,
+			"R402 血线跟着最大生命走：330 血（难度 3 起的 ×1.1）→ 220 / 110")
+	check(r402_e.revelator_gate_hp(301, 2) == 200 and r402_e.revelator_gate_hp(301, 3) == 100,
+			"R402 除不尽时向下取整（301 → 200 / 100，不允许浮点截断成 199）")
+	# 难度 3 的真实缩放链路：把 9200 过一遍 `scaled_enemy_card`，血量确为 330，血线自动跟到 220 / 110
+	var r402_diff_bak := RunState.difficulty
+	RunState.set_difficulty(3)
+	var r402_scaled: CardData = RunState.scaled_enemy_card(repo.get_card(GameEngine.REVELATOR_ID))
+	check(r402_scaled.health == 330
+			and r402_e.revelator_gate_hp(r402_scaled.health, 2) == 220
+			and r402_e.revelator_gate_hp(r402_scaled.health, 3) == 110,
+			"R402 难度 3 实战链路：启示者 300 → %d 血，血线 %d / %d"
+			% [r402_scaled.health,
+					r402_e.revelator_gate_hp(r402_scaled.health, 2),
+					r402_e.revelator_gate_hp(r402_scaled.health, 3)])
+	RunState.set_difficulty(r402_diff_bak)
+	# 真跑一遍 330 血的阶段推进：220 才进 2 阶、110 才进 3 阶
+	var r402_card := CardData.from_dict(repo.get_card(GameEngine.REVELATOR_ID).to_dict())
+	r402_card.health = 330
+	var r402_boss := r402_e.state.place(r402_card, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r402_boss.health = 221
+	r402_e._revelator_check_phase(r402_boss)
+	check(r402_boss.boss_phase == 1,
+			"R402 330 血剩 221 → 仍在阶段 1（旧口径这里已经跳阶了）")
+	r402_boss.health = 220
+	r402_e._revelator_check_phase(r402_boss)
+	check(r402_boss.boss_phase == 2,
+			"R402 330 血剩 220（= 2/3）→ 进阶段 2")
+	r402_boss.health = 111
+	r402_e._revelator_check_phase(r402_boss)
+	check(r402_boss.boss_phase == 2,
+			"R402 330 血剩 111 → 仍在阶段 2（旧口径 100 才跳，这里提前了）")
+	r402_boss.health = 110
+	r402_e._revelator_check_phase(r402_boss)
+	check(r402_boss.boss_phase == 3,
+			"R402 330 血剩 110（= 1/3）→ 进阶段 3")
+	# 源码守卫：血线只走唯一口，写死的常量不许回来
+	var r402_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r402_src.find("var gate: int = revelator_gate_hp(") >= 0
+			and r402_src.find("REVELATOR_PHASE_2_HP") < 0
+			and r402_src.find("REVELATOR_PHASE_3_HP") < 0,
+			"R402 源码：阶段血线走 revelator_gate_hp()，写死的 200 / 100 常量已删")
+
 	# ---- ② 启示者阶段 2：鞋子 1、顶部「速 -1」；阶段 3 鞋子 0 ----
 	var r387_e := _new_engine([], 20, 30)
 	r387_e.enemy_hp_infinite = true
@@ -28449,7 +28502,7 @@ func _init() -> void:
 	var r387_boss := r387_e.state.place(
 			CardData.from_dict(repo.get_card(GameEngine.REVELATOR_ID).to_dict()),
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-	r387_boss.health = GameEngine.REVELATOR_PHASE_2_HP
+	r387_boss.health = r387_e.revelator_gate_hp(r387_boss.card.health, 2)
 	r387_e._revelator_check_phase(r387_boss)
 	check(r387_boss.boss_phase == 2 and r387_boss.effective_speed() == 1,
 			"R387 启示者阶段 2：实际移速 2 → 1（实际 %d）" % r387_boss.effective_speed())
@@ -28461,7 +28514,7 @@ func _init() -> void:
 		r387_badge += str(r387_b["text"]) + "｜"
 	check(r387_badge.contains("速 -1"),
 			"R387 启示者阶段 2：顶部徽标报出「速 -1」（实际 %s）" % r387_badge)
-	r387_boss.health = GameEngine.REVELATOR_PHASE_3_HP
+	r387_boss.health = r387_e.revelator_gate_hp(r387_boss.card.health, 3)
 	r387_e._revelator_check_phase(r387_boss)
 	check(CardFace.badge_shown(r387_boss.card.move_speed, r387_boss.effective_speed()) == 0,
 			"R387 启示者阶段 3：鞋子上写 0（实际 %d）" % r387_boss.effective_speed())

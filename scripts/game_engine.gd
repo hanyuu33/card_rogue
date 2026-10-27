@@ -313,12 +313,12 @@ const ASSEMBLY_TRAIT:= "装配"
 const ASSEMBLY_POOL:= [9131, 9137]   # 量产型俄倪厄 / 量产型赫利俄斯
 
 # ---- R356：第三层 Boss「启示者」（9200）与它的三张场上效果卡 ----
-# 启示者：攻 15 / 血 300 / 程 2 / 速 2，后排中央 (0, 1)。**三个阶段**，每损失 100 生命进一阶：
-#   ① 阶段 1（300~201）：「舰炮 9201」——该方回合开始随机轰击一列，该列**对方**全部单位
+# 启示者：攻 15 / 血 300 / 程 2 / 速 2，后排中央 (0, 1)。**三个阶段**，剩余生命降到 2/3、1/3 时各进一阶：
+#   ① 阶段 1（剩余 > 2/3；300 血时 300~201）：「舰炮 9201」——该方回合开始随机轰击一列，该列**对方**全部单位
 #      各受 5 伤；整列没有目标则改打对方 HP。自身：每个回合力量 +1。
-#   ② 阶段 2（200~101）：「电磁屏障 9202」——攻击启示者的单位受到 5 伤。
+#   ② 阶段 2（剩余 1/3~2/3；300 血时 200~101）：「电磁屏障 9202」——攻击启示者的单位受到 5 伤。
 #      自身：践踏 + 受到的**技能**伤害减半 + **移速 -1** + **每回合可行动两次**（R371）。
-#   ③ 阶段 3（100~0）：「紧急呼叫 9203」——**玩家每个回合开始**召唤一只力量 +10 的量产型
+#   ③ 阶段 3（剩余 < 1/3；300 血时 100~0）：「紧急呼叫 9203」——**玩家每个回合开始**召唤一只力量 +10 的量产型
 #      （优先出现在启示者身边）。自身：移速 0 + 与它接通的友方单位代它承受一半伤害（去尾）
 #      + **登场时破坏场上所有其他单位** + **攻击距离 +2** + **有随从时免疫非攻击伤害**（R371）。
 #   R371（用户口径「加强启示者」）：**全阶段免疫位置移动效果** —— 击退 / 换位一律无效，
@@ -330,8 +330,11 @@ const REVELATOR_ID:= 9200
 const REVELATOR_NAVAL_GUN_ID:= 9201
 const REVELATOR_SHIELD_ID:= 9202
 const REVELATOR_CALL_ID:= 9203
-const REVELATOR_PHASE_2_HP:= 200      # 生命 ≤ 200 → 第二阶段
-const REVELATOR_PHASE_3_HP:= 100      # 生命 ≤ 100 → 第三阶段
+## R402（用户口径「阶段转换逻辑改为 2/3，1/3」）：阶段血线**按最大生命的比例**算，
+## **不再写死 200 / 100** —— 难度 3 起「敌人更加顽强」把敌方生命 ×1.1
+## （`RunState.scaled_enemy_card`），330 血时写死的 200 / 100 等于「刚过 61% / 30%
+## 就转阶」，三段的份量全歪（高难度下第一段被压扁、第二段被拉长）。
+## 唯一口 = `revelator_gate_hp()`（引擎 / 测试都读它，别在别处再写数字）。
 const REVELATOR_HOME:= Vector2i(0, 1) # 每次转阶段都退回这里（后排中间）
 const REVELATOR_ATK_UP:= 1            # 阶段 1：每个（敌方）回合力量 +1
 const REVELATOR_SPEED_DOWN:= 1        # R371 阶段 2 起：移动速度 -1（阶段 3 直接 0）
@@ -2598,8 +2601,22 @@ func _revelator_phase_tick(side: String) -> void:
 		action.emit("revelator_grow", {"cell": cell, "card": p.card, "side": side})
 
 
+func revelator_gate_hp(max_hp: int, next_phase: int) -> int:
+	## 「剩余生命 ≤ 返回值 → 进入 `next_phase` 阶段」的血线（R402 唯一口）。
+	## 口径 = 最大生命的 **2/3 / 1/3**：300 血 = 200 / 100（与旧写死值一致），
+	## 难度 3 起 ×1.1 的 330 血 = 220 / 110 —— 血量被整体上调时血线跟着走，比例不变。
+	## ⚠️ 必须走**整数除法**：别写 `int(max_hp * 2.0 / 3.0)` —— `300 * 2.0 / 3.0` 在浮点里
+	##    是 199.99999999999997，`int()` 截断后血线凭空少 1（变成 199，R402 差点踩到）。
+	## ⚠️ 取整方向 = **向下**：取「第一次真正 ≤ 2/3」的那一点，除不尽的零头不计。
+	var mx:= maxi(1, max_hp)
+	if next_phase >= 3:
+		return mx / 3
+	return (mx * 2) / 3
+
+
 func _revelator_check_phase(p: Placement) -> void:
-	## 「每损失 100 生命进入下一个阶段」（R356）：300 → 200 → 100。
+	## 「剩余生命降到 2/3、1/3 时各进入下一个阶段」（R356 起；R402 起按**比例**算）：
+	## 300 血 → 200 / 100；难度 3 起敌方生命 ×1.1 → 330 血 → 220 / 110。
 	## **一次大伤害可能连跳两阶**（比如 210 血吃了 120）→ 循环处理，每阶各发一次
 	## `boss_phase` 事件（界面排队播，不合并成一条）。
 	## ⚠️ 只在**扣血之后**调 —— 两个伤害落地口（`_hit_unit` / `_op_deal_damage`）。
@@ -2608,7 +2625,7 @@ func _revelator_check_phase(p: Placement) -> void:
 	if p.boss_phase <= 0:
 		return
 	while p.boss_phase < 3 and not over:
-		var gate: int = REVELATOR_PHASE_2_HP if p.boss_phase == 1 else REVELATOR_PHASE_3_HP
+		var gate: int = revelator_gate_hp(p.card.health, p.boss_phase + 1)
 		if p.health > gate:
 			return
 		_revelator_enter_phase(p, p.boss_phase + 1)
