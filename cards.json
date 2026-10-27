@@ -5646,6 +5646,24 @@
       "locked": true
     },
     {
+      "id": 9189,
+      "name": "独行",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "effect_text": "对一个敌人造成 7 点伤害，使其本回合失去 1 点力量。随机使手卡一张盟友或工事消失，将其生命值永久加到此卡的伤害上，将其力量永久加到此卡的降力上。",
+      "target_mode": "unit",
+      "color": "紫",
+      "image": ""
+    },
+    {
       "id": 9200,
       "name": "启示者",
       "kind": "盟友",

@@ -204,6 +204,16 @@ var no_remove: bool = false
 ## 判据只认本字段 —— 界面置灰 / 引擎三个出牌入口（play_from_hand / use_spell /
 ## use_curse）全部读它，不许按 id 硬编码。
 var unplayable: bool = false
+## **R406「独行」9189 的卡内累积**：本场战斗中每消失一张手卡，就把它的
+## **生命值**并进 `lone_dmg_bonus`、**力量**并进 `lone_str_bonus`；这两个值直接
+## 并进这张卡的伤害 / 降力（结算时 `LONE_WALK_DMG + lone_dmg_bonus`）。
+##
+## 「永久」的范围（用户 R406 括号里的口径）：**本次战斗有效** —— 战斗内只增不减，
+## 跨战斗归零。归零**不需要额外代码**：每场战斗都由 `RunState.build_deck()` 重建卡实例。
+## ⚠️ 必须随 `to_dict()` 走：这张卡被复制（幻影 / 改造 / 离场还原）时累积不能丢，
+##    否则同一场战斗里复制出来的「独行」会凭空退回 7 伤。
+var lone_dmg_bonus: int = 0
+var lone_str_bonus: int = 0
 
 
 static func from_dict(d: Dictionary) -> CardData:
@@ -240,6 +250,9 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.no_remove = bool(d.get("no_remove", false))
 	# R373：不能打出的诅咒（麻痹 9185）；缺省 false → 老数据一行都不用改
 	c.unplayable = bool(d.get("unplayable", false))
+	# R406：独行的卡内累积（缺省 0 → 老数据一行都不用改）
+	c.lone_dmg_bonus = maxi(0, int(d.get("lone_dmg_bonus", 0)))
+	c.lone_str_bonus = maxi(0, int(d.get("lone_str_bonus", 0)))
 	# R325：难度档位加成（只给染色用，结算早已烤进 power / health）
 	c.diff_power = int(d.get("diff_power", 0))
 	c.diff_health = int(d.get("diff_health", 0))
@@ -286,6 +299,8 @@ func to_dict() -> Dictionary:
 		# R351：不可删除标记同样随复制通道走（复制出来的月亮 / 硬币也不许删）。
 		"no_remove": no_remove,
 		"unplayable": unplayable,
+		# R406：独行的卡内累积随复制通道走（复制 / 离场还原之后不能退回 7 伤）。
+		"lone_dmg_bonus": lone_dmg_bonus, "lone_str_bonus": lone_str_bonus,
 		# R325：难度加成必须随复制通道走（否则复制后的怪染色又变绿）。
 		"diff_power": diff_power, "diff_health": diff_health,
 		# R214：附魔 id **必须**在这里 —— 复制 / 离场还原 / 联机共用这条通道，

@@ -817,6 +817,18 @@ const GOUGE_DMG:= 4
 const STUN_BLOW_ID:= 9088
 const STUN_BLOW_DMG:= 3
 const STUN_BLOW_DEBUFF:= 3
+# 独行（9189 技能，R406，暗影刺客 · 2 费）：对一个敌人造成 LONE_WALK_DMG 伤 + 本回合
+#   力量 -LONE_WALK_DEBUFF；**随机让手卡一张盟友 / 工事「消失」**（本场对战移除），
+#   把那两张卡的生命值 / 力量**永久**并进这张卡的伤害 / 降力（`CardData.lone_*_bonus`）。
+#   * 「含本次」（用户口径）：消失**先于**伤害结算 → 这一下就吃到刚消失那张的数值；
+#   * 「本次战斗有效」：累积记在**卡实例**上，跨战斗由每场 `build_deck()` 重建天然归零；
+#   * 降力与敲晕 / 威慑同源（atk_debuff + debuff_stage=1，它所属方回合结束清除）——
+#     用户卡面没写时效，但工程里**不存在跨回合降力机制**，降力本身仍按本回合口径；
+#     被永久加成的只有「这张卡**降多少**」，不是「降多久」；
+#   * 左栏不报数（随机 → 给不出最终伤害），见 `spell_now()` 的专门分支。
+const LONE_WALK_ID:= 9189
+const LONE_WALK_DMG:= 7
+const LONE_WALK_DEBUFF:= 1
 # 回转（9089 技能）：2 费；抽 X 张（X = 本回合已用卡牌数），这些牌本回合结束不弃（state.turn_keep）。
 const SPIN_DRAW_ID:= 9089
 # 影子猫（8006 盟友）：打出时，含此卡本回合已打出 ≥3 张 → 卡组随机技能卡入手。
@@ -7568,6 +7580,7 @@ const SPELL_BASE_DMG := {
 	9160: 5,     # 弹跳飞刀（另有最多 2 个目标各 3）
 	9162: 10,    # 集中突破（+4 × 场上改造层数）
 	9163: 10,    # 冲击炮（R369：8 → 10）
+	9189: 7,     # 独行（7 + 卡内累积；左栏刻意不报数，见 spell_now）
 	9169: 10,    # 烈火之剑
 	9172: 9,     # 激光扫射
 }
@@ -7691,6 +7704,14 @@ func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 					"note": "场上改造 %d 层 → %d + %d" % [st, BREAKTHROUGH_DMG,
 							st * BREAKTHROUGH_PER_STACK]}
 		# 名单里却没有分支 → 宁可不错报（R348 ② 断言会把这个矛盾立刻拦下来）
+		return {}
+	# ---------- 独行 9189：**永远不报数**（R406 用户口径）----------
+	# 「随机消失一张手卡 → 它的生命值并进伤害」→ **打出之前不可能知道最终伤害**。
+	# 用户口径：「由于有随机性不应该展示最终伤害」→ 左栏干脆不画这一行
+	# （卡面 7 是基础值，实际只会更高）。
+	# ⚠️ 哪怕附魔 +10 / 荧光草给了确定加成也不报 —— 一旦报数，玩家就会把那个数
+	#    当成「这一下总共掉多少」，而那恰恰是最容易说错的地方（宁可不说）。
+	if card.id == LONE_WALK_ID:
 		return {}
 	# ---------- 聚能炮击：**条件性**偏离（只有 8075 在场才 +7）----------
 	if card.id == ENERGY_CANNON_ID:
@@ -9098,6 +9119,35 @@ func _mirror_reflect(side: String, played: CardData) -> void :
 		_log("镜像（敌方）：本局卡组 +1 张「%s」" % played.card_name)
 
 
+func _lone_walk_vanish(side: String) -> CardData:
+	## 独行（9189，R406）：随机让**手卡**里一张盟友 / 工事**消失**（本场对战移除 ——
+	## `void_count` / `void_cards`，与专注 9122 / 负重减轻 8066 / 新生 9148 同口径：
+	## 既不回手牌也不进弃牌区），返回被抹掉的那张（调用方读它的生命 / 力量）。
+	##
+	## 手卡里没有盟友 / 工事 → 返回 null → 整段落空（这一下就只剩本卡的累积值）。
+	## ⚠️ 本函数**只负责消失**，不加成也不结算 ——「含本次」的语义由调用方在伤害之前
+	##    读返回值再并进卡里；两件事分开，测试才能分别钉住「抹了哪张」与「加了多少」。
+	## ⚠️ 随机走引擎 rng（回放可复现）；敌方没有真实手牌 → 对称落空。
+	if side != SIDE_SELF:
+		return null
+	var pool: Array[int] = []
+	for i in state.hand.size():
+		var c: CardData = state.hand[i]
+		if c == null:
+			continue
+		if c.kind == "盟友" or c.kind == "工事":
+			pool.append(i)
+	if pool.is_empty():
+		return null
+	var pick: int = pool[rng.randi_range(0, pool.size() - 1)]
+	var gone: CardData = state.hand[pick]
+	state.hand.remove_at(pick)
+	state.void_count += 1
+	state.void_cards.append(gone)
+	_log("独行：随机抹掉手卡「%s」（本场对战移除）" % gone.card_name)
+	return gone
+
+
 func _deterrence(side: String, amount: int) -> void :
 
 
@@ -9695,6 +9745,44 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 						"amount": STUN_BLOW_DEBUFF, "power": st_p.effective_power()})
 			_destroy_dead()
 			return st_s
+		LONE_WALK_ID:
+			# 独行（9189，R406）：7 伤 + 本回合力量 -1，并把「随机消失的手卡」永久并进来。
+			# ⚠️ 顺序是硬约束：**先消失、再打伤害** —— 用户口径「含本次」= 这一下就要
+			#    吃到刚消失那张卡的生命 / 力量，否则第一次永远是白板 7 伤。
+			var lw_p: Placement = _target_placement(side, target)
+			if lw_p == null:
+				return "（没有目标）"
+			if lw_p.card.traits.has(SPELL_IMMUNE_TRAIT):
+				return "%s 免疫法术" % lw_p.card.card_name
+			var lw_gone: CardData = _lone_walk_vanish(side)
+			if lw_gone != null:
+				# 生命 / 力量读的是**卡面当前值**（含改造 / 附魔烤进去的数值）——
+				# 与卡面显示一致，不做任何减免换算。
+				card.lone_dmg_bonus += maxi(0, lw_gone.health)
+				card.lone_str_bonus += maxi(0, lw_gone.power)
+				_log("独行：手卡「%s」并入本卡 → 伤害 +%d、降力 +%d（累计 %d / %d）" % [
+						lw_gone.card_name, lw_gone.health, lw_gone.power,
+						card.lone_dmg_bonus, card.lone_str_bonus])
+			else:
+				_log("独行：手卡里没有盟友或工事 → 本次不消失任何卡（只按累积值结算）")
+			var lw_dmg: int = _hit_unit(lw_p, _spell_dmg(side,
+					LONE_WALK_DMG + card.lone_dmg_bonus, card), "独行")
+			var lw_s := "%s -%d" % [lw_p.card.card_name, lw_dmg]
+			if lw_p.health > 0:
+				# 降力与敲晕 / 威慑同源：atk_debuff + debuff_stage=1（立即生效，
+				# 该单位所属方回合结束时清除）。「永久」只针对**这张卡降多少**。
+				var lw_n: int = LONE_WALK_DEBUFF + card.lone_str_bonus
+				lw_p.atk_debuff += lw_n
+				lw_p.debuff_stage = 1
+				lw_s += "，力量 -%d" % lw_n
+				_log("独行：%s 力量 -%d（当前 %d），持续到它的回合结束" % [
+						lw_p.card.card_name, lw_n, lw_p.effective_power()])
+				action.emit("stun_blow", {"cell": _cell_of(lw_p), "card": lw_p.card,
+						"amount": lw_n, "power": lw_p.effective_power()})
+			_destroy_dead()
+			if lw_gone != null:
+				lw_s += "；手卡「%s」消失" % lw_gone.card_name
+			return lw_s
 		SPIN_DRAW_ID:
 			if side != SIDE_SELF:
 				return "（回转：敌方 AI 不使用这张卡）"
