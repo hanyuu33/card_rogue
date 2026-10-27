@@ -123,7 +123,7 @@ const COL_FRAME_GOLD_DIM := Color("6b5426")    # 边框外沿内侧的暗金细�
 const COL_FRAME_GOLD_IN := Color("e6c87e")     # 边框内沿亮金收边（压住可视窗边界）
 const COL_COST_LOW_BG := Color("1d7a3f")        # 减费后的费用圆（深绿底）
 const COL_COST_LOW_FG := Color("b9f6ca")        # 减费后的费用数字（浅绿字，绿色系）
-const COL_GUARD := Color("1d9e4f")              # 替 HP 承伤（森林守护/以太守卫/铁栅栏）：绿环标记
+const COL_GUARD := Color("1d9e4f")              # 替 HP 承伤（森林守护/大树守卫/铁栅栏）：绿环标记
 ## R142：**可主动发动**（熊 8004「回春」）—— 亮黄绿脉动环 + 四向内箭头 + 「可发动 F」徽标。
 ## 用「黄绿」而不是普通绿：我方单位框本身就是深绿（SIDE_SELF），同色环会被读成「框变粗了」。
 const COL_ACTIVATABLE := Color(0.78, 1.0, 0.35)
@@ -1668,8 +1668,8 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r330card" in args and engine != null:
-		# 演示（R330）：以太恶魔 9068 费用 5 → 6 / 代达罗斯 8060 5 费 8/18 → 4 费 5/16。
-		#   效果区摆 2 张效果卡 → 以太恶魔实际 6-2=4 费（手卡绿圈），左栏详情仍是原价 6 费。
+		# 演示（R330）：水元素 9068 费用 5 → 6 / 代达罗斯 8060 5 费 8/18 → 4 费 5/16。
+		#   效果区摆 2 张效果卡 → 水元素实际 6-2=4 费（手卡绿圈），左栏详情仍是原价 6 费。
 		engine.state.hand.clear()
 		engine.state.effects.clear()
 		engine.state.energy = 9
@@ -1680,7 +1680,7 @@ func _ready() -> void:
 		_demo_hover_idx = 1
 		_hover_hand = 1
 		_hover_card = engine.state.hand[1]
-		status_text = "以太恶魔 6-2=4 费 / 代达罗斯 4 费 5/16"
+		status_text = "水元素 6-2=4 费 / 代达罗斯 4 费 5/16"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--mage" in args and engine != null:
@@ -2693,7 +2693,7 @@ func _ready() -> void:
 		queue_redraw()
 	if "--guard" in args and engine != null:
 		# 演示（2026-10-01）：「替己方 HP 承伤」的三种卡必须**同一特效** ——
-		#   森林守护盟友（9037）/ 铁栅栏（9072）/ 以太守卫（9067）各画一圈绿环，
+		#   森林守护盟友（9037）/ 铁栅栏（9072）/ 大树守卫（9067）各画一圈绿环，
 		#   普通盟友（8003 农民）不画。判定走 engine.absorbs_for_hp()，与结算同源。
 		engine.state.energy = 5
 		engine.state.place(repo.get_card(8003), Vector2i(4, 2), GameEngine.SIDE_SELF)
@@ -2703,7 +2703,7 @@ func _ready() -> void:
 		engine.state.place(CardData.from_dict(repo.get_card(9067).to_dict()),
 				Vector2i(5, 1), GameEngine.SIDE_SELF)
 		engine.state.place(repo.get_card(8003), Vector2i(5, 0), GameEngine.SIDE_SELF)
-		status_text = "替 HP 承伤统一特效：森林守护 / 铁栅栏 / 以太守卫 都画绿环，普通农民不画"
+		status_text = "替 HP 承伤统一特效：森林守护 / 铁栅栏 / 大树守卫 都画绿环，普通农民不画"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--lion" in args and engine != null:
@@ -2978,7 +2978,7 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--voidlord" in args and engine != null:
-		# 演示（2026-10-01，第 38 轮）：虚空主宰（9082）——
+		# 演示（2026-10-01，第 38 轮）：风元素（9082）——
 		# 手卡里的本卡：本次对战已用技能对敌造成 3 次伤害 → 10 - 6 = 4 费；
 		# 场上已有一座 → 手卡里的技能牌费用 -1（陨石术 10 → 9、魔像术 4 → 3）。
 		engine.state.hand.clear()
@@ -2991,7 +2991,7 @@ func _ready() -> void:
 				Vector2i(5, 0), GameEngine.SIDE_SELF)
 		_hover_card = engine.state.hand[0]
 		_hover_hand = 0   # 让左栏信息面板走 cost_of（显示当前实际费用，低于卡面标绿）
-		status_text = "虚空主宰：场上 1 张 → 技能牌 -1 费；已对敌伤害 3 次 → 本卡 10-6 = 4 费"
+		status_text = "风元素：场上 1 张 → 技能牌 -1 费；已对敌伤害 3 次 → 本卡 10-6 = 4 费"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--revive" in args and engine != null:
@@ -8566,7 +8566,7 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	if not p.tapped:
 		_draw_ready_aura(center, w, h)
 	if engine.absorbs_for_hp(p):
-		# 替己方 HP 承伤的统一表现（森林守护 9037 / 以太守卫 9067 / 铁栅栏 9072）：
+		# 替己方 HP 承伤的统一表现（森林守护 9037 / 大树守卫 9067 / 铁栅栏 9072）：
 		# 判定直接问引擎 absorbs_for_hp()，保证「同一机制 = 同一特效」，不再各写各的。
 		draw_arc(center, Vector2(w, h).length() * 0.5, 0, TAU, 30, COL_GUARD, 2.5)
 	if p.card.traits.has(GameEngine.TAUNT_TRAIT):
@@ -9960,8 +9960,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("▣ 栅栏修复术：两张栅栏合并 → %s 生命 %d" % [fm_name,
 					int(data.get("health", 0))])
 		"void_lord":
-			# 虚空主宰（9082）：本次对战中每用技能牌对敌方造成一次伤害 → 手卡里的本卡费用 -2
-			_say("◈ 虚空主宰：第 %d 次技能对敌造成伤害 → 本卡费用 -%d（现 %d 费）" % [
+			# 风元素（9082）：本次对战中每用技能牌对敌方造成一次伤害 → 手卡里的本卡费用 -2
+			_say("◈ 风元素：第 %d 次技能对敌造成伤害 → 本卡费用 -%d（现 %d 费）" % [
 					int(data.get("count", 0)), int(data.get("discount", 0)),
 					10 - int(data.get("discount", 0))])
 		"move":
@@ -10972,13 +10972,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				eg_name = (data["card"] as CardData).card_name
 			_say("鸭窝：一张「%s」加入手卡" % eg_name)
 		"aether_guard":
-			_say("以太守卫：效果区 %d 张效果卡 → +%d 力量、+%d 生命" % [
+			_say("大树守卫：效果区 %d 张效果卡 → +%d 力量、+%d 生命" % [
 					int(data.get("n", 0)), int(data.get("n", 0)), 2 * int(data.get("n", 0))])
 		"demon_fetch":
 			var df_name := "?"
 			if data.get("card") is CardData:
 				df_name = (data["card"] as CardData).card_name
-			_say("以太恶魔：从卡组取到「%s」，它的费用 -%d" % [df_name, 2])
+			_say("水元素：从卡组取到「%s」，它的费用 -%d" % [df_name, 2])
 		"owl_fetch":
 			var ow_name := "?"
 			if data.get("card") is CardData:

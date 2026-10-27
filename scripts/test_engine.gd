@@ -719,12 +719,12 @@ func _init() -> void:
 			"魔法学徒：被取走的技能卡离开卡组")
 
 
-	# ---- 第 38 轮新卡（2026-10-01）：虚空主宰 9082 ----
+	# ---- 第 38 轮新卡（2026-10-01）：风元素 9082 ----
 	var vl := repo.get_card(9082)
 	check(vl.kind == "盟友" and vl.cost == 10 and vl.power == 7 and vl.health == 20
 			and vl.attack_range == 2 and vl.move_speed == 1 and vl.rarity == 2
 			and vl.group == "player" and vl.traits.has(GameEngine.VOID_LORD_TRAIT),
-			"虚空主宰：史诗 10 费盟友 7/20 程2 速1，归玩家图鉴")
+			"风元素：史诗 10 费盟友 7/20 程2 速1，归玩家图鉴")
 
 	# ① 这张卡在场时，该方的技能牌费用 -1（多张叠加；只减技能；只按该方场上的张数算）
 	var vo_e := _new_engine([], 20, 20)
@@ -732,24 +732,24 @@ func _init() -> void:
 	vo_e.state.hand.append(CardData.from_dict(repo.get_card(9007).to_dict()))   # 火球术 4 费
 	vo_e.state.hand.append(CardData.from_dict(repo.get_card(8003).to_dict()))   # 农民 3 费
 	check(vo_e.cost_of(vo_e.state.hand[0]) == 4 and vo_e.cost_of(vo_e.state.hand[1]) == 3,
-			"虚空主宰不在场：技能 4 费 / 盟友 3 费 都是原价")
+			"风元素不在场：技能 4 费 / 盟友 3 费 都是原价")
 	vo_e.state.place(CardData.from_dict(vl.to_dict()), Vector2i(5, 0), GameEngine.SIDE_SELF)
 	check(vo_e.cost_of(vo_e.state.hand[0]) == 3,
-			"虚空主宰在场：技能牌费用 -1（火球术 4 → 3）")
+			"风元素在场：技能牌费用 -1（火球术 4 → 3）")
 	check(vo_e.cost_of(vo_e.state.hand[1]) == 3,
-			"虚空主宰在场：盟友（非技能）费用不变（农民仍是 3 费）")
+			"风元素在场：盟友（非技能）费用不变（农民仍是 3 费）")
 	vo_e.state.place(CardData.from_dict(vl.to_dict()), Vector2i(5, 1), GameEngine.SIDE_SELF)
-	check(vo_e.cost_of(vo_e.state.hand[0]) == 2, "虚空主宰两张在场：技能费用 -2（叠加）")
+	check(vo_e.cost_of(vo_e.state.hand[0]) == 2, "风元素两张在场：技能费用 -2（叠加）")
 	vo_e.state.place(CardData.from_dict(vl.to_dict()), Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
 	check(vo_e.cost_of(vo_e.state.hand[0]) == 2,
-			"虚空主宰：只按该方场上的张数算（敌方场上那张不减我方技能费用）")
+			"风元素：只按该方场上的张数算（敌方场上那张不减我方技能费用）")
 	check(vo_e._void_lord_presence(GameEngine.SIDE_SELF) == 2
 			and vo_e._void_lord_presence(GameEngine.SIDE_OPPONENT) == 1,
-			"虚空主宰：敌我两侧计数各自独立（我方 2 / 敌方 1）")
+			"风元素：敌我两侧计数各自独立（我方 2 / 敌方 1）")
 	check(vo_e._void_lord_discount(vo_e.state.hand[1], GameEngine.SIDE_SELF) == 0,
-			"虚空主宰：非技能卡不享受「在场 -1」（盟友 0）")
+			"风元素：非技能卡不享受「在场 -1」（盟友 0）")
 	check(vo_e._void_lord_discount(vo_e.state.hand[0], GameEngine.SIDE_OPPONENT) == 1,
-			"虚空主宰：敌方侧技能同样按敌方场上张数 -1（实际敌方拿不到这张卡，仅保持对称）")
+			"风元素：敌方侧技能同样按敌方场上张数 -1（实际敌方拿不到这张卡，仅保持对称）")
 
 	# 本体上场 / 离场：费用即时变化
 	var vp_e := _new_engine([], 20, 20)
@@ -757,16 +757,16 @@ func _init() -> void:
 	vp_e.state.hand.clear()
 	vp_e.state.hand.append(CardData.from_dict(vl.to_dict()))
 	vp_e.state.hand.append(CardData.from_dict(repo.get_card(9077).to_dict()))   # 陨石术 10 费
-	check(vp_e.cost_of(vp_e.state.hand[1]) == 10, "虚空主宰：本体上场前陨石术 10 费")
+	check(vp_e.cost_of(vp_e.state.hand[1]) == 10, "风元素：本体上场前陨石术 10 费")
 	var vp_p := vp_e.play_from_hand(0, Vector2i(5, 0))
 	check(vp_p != null and vp_e.state.unit_at(Vector2i(5, 0)) != null
 			and vp_e.state.unit_at(Vector2i(5, 0)).card.id == 9082,
-			"虚空主宰：10 费 7/20 照常上场")
+			"风元素：10 费 7/20 照常上场")
 	check(vp_e.cost_of(vp_e.state.hand[0]) == 9,
-			"虚空主宰：本体上场后手卡里的陨石术立刻 9 费")
+			"风元素：本体上场后手卡里的陨石术立刻 9 费")
 	vp_e._destroy(Vector2i(5, 0))
 	check(vp_e.cost_of(vp_e.state.hand[0]) == 10,
-			"虚空主宰：本体离场后技能牌恢复原价（10 费）")
+			"风元素：本体离场后技能牌恢复原价（10 费）")
 
 	# ② 本次对战中每用技能牌对敌方造成一次伤害 → 手卡里的本卡费用 -2
 	var vd_e := _new_engine([], 20, 20)
@@ -776,41 +776,41 @@ func _init() -> void:
 	vd_e.state.hand.append(vd_lord)                                             # [0]
 	vd_e.state.hand.append(CardData.from_dict(repo.get_card(9007).to_dict()))  # [1] 火球术
 	check(vd_e.state.void_dmg_spells == 0 and vd_e.cost_of(vd_lord) == 10,
-			"虚空主宰：开局手卡 10 费、伤害计数 0")
+			"风元素：开局手卡 10 费、伤害计数 0")
 	# 只打到自己人（寒冰箭 9011 点我方农民）→ 不算「对敌人造成伤害」
 	vd_e.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
 			Vector2i(4, 0), GameEngine.SIDE_SELF)
 	vd_e.state.hand.append(CardData.from_dict(repo.get_card(9011).to_dict()))  # [2] 寒冰箭
 	vd_e.use_spell(2, Vector2i(4, 0))
 	check(vd_e.state.void_dmg_spells == 0 and vd_e.cost_of(vd_lord) == 10,
-			"虚空主宰：技能只打到自己人 → 不计数（仍 10 费）")
+			"风元素：技能只打到自己人 → 不计数（仍 10 费）")
 	# 火球术打到敌方单位 → 记 1 次
 	vd_e.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
 			Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
 	vd_e.state.hand.append(CardData.from_dict(repo.get_card(9007).to_dict()))  # [2]
 	vd_e.use_spell(2, Vector2i(3, 0))
 	check(vd_e.state.void_dmg_spells == 1 and vd_e.cost_of(vd_lord) == 8,
-			"虚空主宰：技能对敌造成伤害 → 计数 1，手卡 10 - 2 = 8 费")
+			"风元素：技能对敌造成伤害 → 计数 1，手卡 10 - 2 = 8 费")
 	# 一次技能打中 2 个敌人：仍然只记 1 次（按「使用技能牌」计数，不按命中数）
 	vd_e.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
 			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
 	vd_e.state.hand.append(CardData.from_dict(repo.get_card(9007).to_dict()))  # [2]
 	vd_e.use_spell(2, Vector2i(3, 0))
 	check(vd_e.state.void_dmg_spells == 2 and vd_e.cost_of(vd_lord) == 6,
-			"虚空主宰：一次技能打中 2 个敌人也只记 1 次（10 - 4 = 6 费）")
+			"风元素：一次技能打中 2 个敌人也只记 1 次（10 - 4 = 6 费）")
 	# 不造成伤害的技能（复活术 9078）不计
 	vd_e.state.hand.append(CardData.from_dict(repo.get_card(9078).to_dict()))  # [2]
 	vd_e.use_spell(2)
 	check(vd_e.state.void_dmg_spells == 2 and vd_e.cost_of(vd_lord) == 6,
-			"虚空主宰：不造成伤害的技能（复活术）不计数（仍 6 费）")
+			"风元素：不造成伤害的技能（复活术）不计数（仍 6 费）")
 	# 减费跨回合保留（「本次对战中」= 整个战斗，不是单回合）
 	vd_e.state.energy = 30
 	vd_e.end_turn()
 	check(vd_e.state.void_dmg_spells == 2 and vd_e.cost_of(vd_lord) == 6,
-			"虚空主宰：减费跨回合保留（回合结束不清，本次对战中累计）")
+			"风元素：减费跨回合保留（回合结束不清，本次对战中累计）")
 	# 新一局：重新从 0 开始
 	check(_new_engine([], 20, 20).state.void_dmg_spells == 0,
-			"虚空主宰：新一局对战伤害计数从 0 开始")
+			"风元素：新一局对战伤害计数从 0 开始")
 
 	# ---- 中立动物奖励卡（9031~9034，2026-09-30 新增） ----
 	check(repo.get_card(9031).actions == 2 and repo.get_card(9031).rarity == 2
@@ -2251,7 +2251,7 @@ func _init() -> void:
 
 	# ============================================================
 	# 以太 / 守护一批（2026-09-30）：以太咆哮 9063 / 空间守护 9064 / 自愈 9065 /
-	#                              石肤 9066 / 以太守卫 9067 / 以太恶魔 9068 / 鸭窝 9069
+	#                              石肤 9066 / 大树守卫 9067 / 水元素 9068 / 鸭窝 9069
 	# ============================================================
 
 	# ---- 以太咆哮（9063）：1 费普通效果；每回合前 X 次使用**效果卡**（X=效果区张数）→ 对所有敌人造成 4 伤 ----
@@ -2478,13 +2478,13 @@ func _init() -> void:
 			"R145 显示：没有减伤时 `_last_hp_damage` = 账面伤害（%d）"
 			% hp_t2._last_hp_damage)
 
-	# ---- 以太守卫（9067）：1 费稀有盟友 1/1/1/1；替我方 HP 承伤 ----
+	# ---- 大树守卫（9067）：1 费稀有盟友 1/1/1/1；替我方 HP 承伤 ----
 	var nc_ag := repo.get_card(9067)
-	check(nc_ag.card_name == "以太守卫" and nc_ag.kind == "盟友" and nc_ag.cost == 1
+	check(nc_ag.card_name == "大树守卫" and nc_ag.kind == "盟友" and nc_ag.cost == 1
 			and nc_ag.rarity == 1 and nc_ag.power == 1 and nc_ag.health == 1
 			and nc_ag.attack_range == 1 and nc_ag.move_speed == 1
-			and nc_ag.traits.has("以太守卫"),
-			"以太守卫：稀有 1 费 1/1 程1 速1，trait 以太守卫")
+			and nc_ag.traits.has("大树守卫"),
+			"大树守卫：稀有 1 费 1/1 程1 速1，trait 大树守卫")
 	var ag_e := _new_engine([], 20, 20, -1, false)
 	ag_e.start_game(0)
 	ag_e.state.effects.append(repo.get_card(9002))
@@ -2494,7 +2494,7 @@ func _init() -> void:
 	ag_e.state.energy = 9
 	var ag_p := ag_e.play_from_hand(0, Vector2i(4, 1))
 	check(ag_p.effective_power() == 4 and ag_p.health == 7,
-			"以太守卫：效果区 3 张 → +3 力量 +6 生命（1/1 → 4/7）")
+			"大树守卫：效果区 3 张 → +3 力量 +6 生命（1/1 → 4/7）")
 	var ag_e3 := _new_engine([], 20, 20, -1, false)
 	ag_e3.start_game(0)
 	for _i in 7:
@@ -2503,39 +2503,39 @@ func _init() -> void:
 	ag_e3.state.energy = 9
 	var ag_p3 := ag_e3.play_from_hand(0, Vector2i(4, 1))
 	check(ag_p3.effective_power() == 6 and ag_p3.health == 11,
-			"以太守卫：效果区 7 张也只结算 5 次（+5 力 +10 血 → 6/11）")
+			"大树守卫：效果区 7 张也只结算 5 次（+5 力 +10 血 → 6/11）")
 	var ag_e2 := _new_engine([], 20, 20, -1, false)
 	ag_e2.start_game(0)
 	ag_e2.state.hand = [repo.get_card(9067)]
 	ag_e2.state.energy = 9
 	ag_e2.play_from_hand(0, Vector2i(4, 1))
 	ag_e2._damage_player(GameEngine.SIDE_SELF, 5, "测试")
-	check(ag_e2.state.hp_self == 20, "以太守卫：我方 HP 的伤害由它代受（HP 仍 20）")
+	check(ag_e2.state.hp_self == 20, "大树守卫：我方 HP 的伤害由它代受（HP 仍 20）")
 	check(ag_e2.state.unit_at(Vector2i(4, 1)) == null,
-			"以太守卫：1 血替 HP 承受 5 点后被击破离场")
+			"大树守卫：1 血替 HP 承受 5 点后被击破离场")
 
-	# ---- 以太恶魔（9068）：6 费史诗盟友 5/10/1/1 ----
+	# ---- 水元素（9068）：6 费史诗盟友 5/10/1/1 ----
 	var nc_dm := repo.get_card(9068)
-	check(nc_dm.card_name == "以太恶魔" and nc_dm.kind == "盟友" and nc_dm.cost == 6
+	check(nc_dm.card_name == "水元素" and nc_dm.kind == "盟友" and nc_dm.cost == 6
 			and nc_dm.rarity == 2 and nc_dm.power == 5 and nc_dm.health == 10
 			and nc_dm.attack_range == 1 and nc_dm.move_speed == 1
-			and nc_dm.traits.has("以太恶魔"),
-			"以太恶魔：史诗 6 费 5/10 程1 速1，trait 以太恶魔")
+			and nc_dm.traits.has("水元素"),
+			"水元素：史诗 6 费 5/10 程1 速1，trait 水元素")
 	var dm_e := _new_engine([], 20, 20, -1, false)
 	dm_e.start_game(0)
-	check(dm_e.cost_of(repo.get_card(9068)) == 6, "以太恶魔：效果区为空 → 原价 6 费")
+	check(dm_e.cost_of(repo.get_card(9068)) == 6, "水元素：效果区为空 → 原价 6 费")
 	dm_e.state.effects.append(repo.get_card(9002))
 	dm_e.state.effects.append(repo.get_card(9058))
-	check(dm_e.cost_of(repo.get_card(9068)) == 4, "以太恶魔：效果区 2 张 → 费用 6-2=4")
+	check(dm_e.cost_of(repo.get_card(9068)) == 4, "水元素：效果区 2 张 → 费用 6-2=4")
 	dm_e.state.deck = [repo.get_card(9062)]      # 使魔之夜：3 费效果卡
 	dm_e.state.hand = [repo.get_card(9068)]
 	dm_e.state.energy = 9
 	dm_e.play_from_hand(0, Vector2i(4, 1))
 	check(dm_e.state.deck.is_empty() and dm_e.state.hand.size() == 1
 			and dm_e.state.hand[0].id == 9062,
-			"以太恶魔：上场时从卡组将一张效果卡加入手卡")
+			"水元素：上场时从卡组将一张效果卡加入手卡")
 	check(dm_e.cost_of(dm_e.state.hand[0]) == 1,
-			"以太恶魔：取到的那张效果卡费用 -2（3 → 1）")
+			"水元素：取到的那张效果卡费用 -2（3 → 1）")
 
 	# ---- 鸭窝（9069）：2 费稀有效果；给鸭蛋；每回合前 X 次用效果牌（X=张数）再给一张 ----
 	var nc_dn := repo.get_card(9069)
@@ -2749,7 +2749,7 @@ func _init() -> void:
 			fences += 1
 	check(fences == 0, "坚固围栏：被拒的请求没有生成铁栅栏")
 
-	# ---- 统一「替 HP 承伤」判定（2026-10-01）：森林守护 / 以太守卫 / 铁栅栏同一机制，同一特效 ----
+	# ---- 统一「替 HP 承伤」判定（2026-10-01）：森林守护 / 大树守卫 / 铁栅栏同一机制，同一特效 ----
 	var gv_e := _new_engine([], 20, 20, -1, false)
 	var gv_plain := gv_e.state.place(_card(9201, "测试农民", "盟友", 3, 3, 8),
 			Vector2i(4, 0), GameEngine.SIDE_SELF)
@@ -2767,7 +2767,7 @@ func _init() -> void:
 	check(gv_e.absorbs_for_hp(gv_fence),
 			"承伤判定：铁栅栏 → 承伤（与森林守护同一绿环特效）")
 	check(gv_e.absorbs_for_hp(gv_aether),
-			"承伤判定：以太守卫 → 承伤（同一绿环特效）")
+			"承伤判定：大树守卫 → 承伤（同一绿环特效）")
 	check(gv_e._guard_cell(GameEngine.SIDE_SELF) != Vector2i(-1, -1),
 			"承伤判定：_guard_cell 走同一函数（特效与结算同源，不会两处漂移）")
 
@@ -8764,7 +8764,7 @@ func _init() -> void:
 			and not repo.is_own_class_card(repo.get_card(8004), PlayerClass.ROGUE)
 			and not repo.is_own_class_card(repo.get_card(9082), PlayerClass.ROGUE)
 			and repo.is_own_class_card(repo.get_card(9082), PlayerClass.DRUID),
-			"角色卡判定：熊 8004 / 虚空主宰 9082 只属于森林精魄")
+			"角色卡判定：熊 8004 / 风元素 9082 只属于森林精魄")
 	var r47_dr := repo.reward_pool_for(PlayerClass.DRUID)
 	var r47_rg := repo.reward_pool_for(PlayerClass.ROGUE)
 	var r47_dr_ids := {}
@@ -8778,7 +8778,7 @@ func _init() -> void:
 	check(not r47_dr_ids.has(9087) and not r47_dr_ids.has(9099) and not r47_dr_ids.has(9101),
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
-			"奖励池过滤：暗影刺客摇不到森林精魄卡（虚空主宰 / 蓄力 / 白魔法鸭）")
+			"奖励池过滤：暗影刺客摇不到森林精魄卡（风元素 / 蓄力 / 白魔法鸭）")
 	check(r47_dr.size() == 64 and r47_rg.size() == 63
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
@@ -11166,15 +11166,15 @@ func _init() -> void:
 				str(2 * GameEngine.SHADOW_DEMON_HP_PER)),
 			"R65 高亮：影魔手卡有 2 张 0 费技能牌 → 亮（生命 +%d）"
 			% (2 * GameEngine.SHADOW_DEMON_HP_PER))
-	# 以太守卫 9067：效果区非空 → 每张效果卡 +1 力量 +2 生命。
+	# 大树守卫 9067：效果区非空 → 每张效果卡 +1 力量 +2 生命。
 	var r65_c := _new_engine([], 30, 30)
 	var r65_ag: CardData = CardData.from_dict(repo.get_card(GameEngine.AETHER_GUARD_ID).to_dict())
 	r65_c.state.hand.append(r65_ag)
 	check(not r65_c.hand_bonus_ready(r65_ag),
-			"R65 高亮：以太守卫 9067 效果区为空 → 不亮")
+			"R65 高亮：大树守卫 9067 效果区为空 → 不亮")
 	r65_c.state.effects.append(CardData.from_dict(repo.get_card(9092).to_dict()))
 	check(r65_c.hand_bonus_ready(r65_ag) and r65_c.hand_bonus_text(r65_ag).contains("力量 +1"),
-			"R65 高亮：效果区 1 张 → 以太守卫亮（力量 +1 生命 +2）")
+			"R65 高亮：效果区 1 张 → 大树守卫亮（力量 +1 生命 +2）")
 	# 无条件效果的普通卡不亮（不能什么牌都亮，否则高亮就没意义了）
 	var r65_d := _new_engine([], 30, 30)
 	var r65_plain: CardData = _card(8003, "农民", "盟友", 3, 3, 8)

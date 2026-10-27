@@ -146,7 +146,7 @@ var _stoneskin_left:= 0
 # 「每回合第 X 次」的 X = 效果区张数 → 用计数记录本回合已触发几次（回合开始归零）
 var _roar_fires:= 0
 var _space_fires:= 0
-# 虚空主宰（9082）：技能结算窗口 —— 窗口内只要有伤害落在敌方身上就记一次（见 _mark_spell_enemy_hit）
+# 风元素（9082）：技能结算窗口 —— 窗口内只要有伤害落在敌方身上就记一次（见 _mark_spell_enemy_hit）
 var _spell_active:= false
 var _spell_hit_enemy:= false
 # 流星雨（9083）：本次施放消耗的费用（X）—— 在 _pay 之前抓取（见 use_spell / remote_spell）
@@ -195,7 +195,7 @@ const EGG_CARD_ID:= 9022
 
 # R340：生蛋鸭 / 鸭蛋（9022）在**我方回合结束**仍存活 → 原地变成「宠物鸭」（9177）。
 # 它 3 攻 15 血、程 1 速 1，并**代替我方 HP 承受伤害** —— 判据接进 `absorbs_for_hp()`，
-# 与森林守护 / 铁栅栏 / 以太守卫走同一条通道（战场绿环与伤害结算同源，不会两处漂移）。
+# 与森林守护 / 铁栅栏 / 大树守卫走同一条通道（战场绿环与伤害结算同源，不会两处漂移）。
 const PET_DUCK_ID:= 9177
 const PET_DUCK_TRAIT:= "宠物鸭"
 # ---- 「钢铁要塞」关卡（R149，第二层精英困难）----
@@ -465,7 +465,7 @@ const STORAGE_RELIC_ID:= 6044
 const LUCKY7_RELIC_ID:= 6045
 const LUCKY7_DMG:= 7
 # R315 爆米花（6046）：**本回合没有以敌人（或敌人所在格）为目标使用技能** → 下回合多抽 1 张。
-#   * 判据是「**目标**」，不是「造成了伤害」—— 与虚空主宰 9082 的 `_spell_hit_enemy`
+#   * 判据是「**目标**」，不是「造成了伤害」—— 与风元素 9082 的 `_spell_hit_enemy`
 #     （看窗口内有没有打到敌人）刻意分开：打空地 / 打自己人的技能照样算「指向了敌人」之外，
 #     而 AoE 扫到敌人但目标是空格时**不算**（卡面写的是「以…为目标」）。
 #   * 只在 `use_spell`（技能卡）里记账；效果卡 / 单位攻击都不算「使用技能」。
@@ -664,11 +664,14 @@ const SELF_HEAL_ID:= 9065
 const SELF_HEAL_TRAIT:= "自愈"
 const STONESKIN_ID:= 9066
 const STONESKIN_TRAIT:= "石肤"
+# R407 易名：标识符仍叫 AETHER_*（牵一发动全身，改标识符没有收益），
+# 但**卡名 / 词条值**是「大树守卫」—— 卡面「词条：」那一行读的是这里。
 const AETHER_GUARD_ID:= 9067
-const AETHER_GUARD_TRAIT:= "以太守卫"
+const AETHER_GUARD_TRAIT:= "大树守卫"
 const AETHER_GUARD_CAP:= 5
+# R407 易名：以太恶魔 → **水元素**（标识符保留 AETHER_DEMON_*）。
 const AETHER_DEMON_ID:= 9068
-const AETHER_DEMON_TRAIT:= "以太恶魔"
+const AETHER_DEMON_TRAIT:= "水元素"
 const DEMON_FETCH_DISCOUNT:= 2
 const DUCK_NEST_ID:= 9069
 const DUCK_NEST_TRAIT:= "鸭窝"
@@ -721,11 +724,13 @@ const GOLEM_TRAIT:= "魔像"
 const APPRENTICE_ID:= 9081
 
 # ── 第 38 轮（2026-10-01）新卡 ──
-# 虚空主宰（9082 盟友）：10 费 7/20 程2 速1。两条费用机制都挂在 cost_of 链上（显示=判定=实扣）。
+# 风元素（9082 盟友）：10 费 7/20 程2 速1。两条费用机制都挂在 cost_of 链上（显示=判定=实扣）。
 # ① 在场时：该方技能牌费用 -1（多张叠加 —— 按该方场上本卡张数算）。
 # ② 本次对战中每用技能牌对敌方造成一次伤害：手卡里的本卡费用 -2（本场战斗内累计，不跨战斗）。
+# R407 易名：虚空主宰 → **风元素**（标识符保留 VOID_LORD_*；`void_dmg_spells` 这个名字
+# 也是「虚空」来的，一并留着 —— 它记的是机制，不是卡名）。
 const VOID_LORD_ID:= 9082
-const VOID_LORD_TRAIT:= "虚空主宰"
+const VOID_LORD_TRAIT:= "风元素"
 const VOID_LORD_PRESENCE_DISCOUNT:= 1
 const VOID_LORD_DMG_DISCOUNT:= 2
 
@@ -917,7 +922,7 @@ const SLEEPLESS_ID:= 9101
 # 回响（9102 技能）：1 费稀有；对所有敌人造成 ECHO_DMG 点伤害，并让它们本回合
 #   力量 -ECHO_DEBUFF（与敲晕 / 幻影斗篷同源：atk_debuff + debuff_stage=1）。
 #   **使用后返回手卡** —— 唯一的循环代价就是费用，所以设了费用下限 ECHO_MIN_COST：
-#   任何减费（魔力核心 / 虚空主宰 / 小精灵…）都不能把它降到 0，否则 0 费无限回手。
+#   任何减费（魔力核心 / 风元素 / 小精灵…）都不能把它降到 0，否则 0 费无限回手。
 const ECHO_ID:= 9102
 const ECHO_DMG:= 2
 const ECHO_DEBUFF:= 1
@@ -1230,7 +1235,7 @@ const HAND_LIGHTEN_COST_DELTA:= -1
 const HAND_LIGHTEN_SPEED_ADD:= 1
 # 「共享护盾」（8069，0 费**稀有**技能，场上盟友目标）：给一个己方盟友挂字段「共享护盾」
 #   + 算一层改造 → 之后**我方 HP 要掉血时改由它承受**。
-#   判据唯一口 = `absorbs_for_hp()`（森林守护 / 以太守卫 / 铁栅栏 / 本字段共用一条通道），
+#   判据唯一口 = `absorbs_for_hp()`（森林守护 / 大树守卫 / 铁栅栏 / 本字段共用一条通道），
 #   于是引擎结算与战场绿环自动同源，battle_scene 一行都不用改。
 const SHARED_SHIELD_ID:= 8069
 const AFFIX_SWAP:= "交换"
@@ -3830,7 +3835,7 @@ func _magic_tower_bonus(side: String, card: CardData) -> int:
 
 
 func _void_lord_presence(side: String) -> int:
-	## 虚空主宰（9082）：该方场上有几张本卡。
+	## 风元素（9082）：该方场上有几张本卡。
 	var n:= 0
 	for p: Placement in state.board.values():
 		if p.owner == side and p.card.traits.has(VOID_LORD_TRAIT):
@@ -3839,7 +3844,7 @@ func _void_lord_presence(side: String) -> int:
 
 
 func _void_lord_owned(side:= SIDE_SELF) -> bool:
-	## 该方**拥有**虚空主宰（场上 / 手卡 / 牌库 / 弃牌区任意一处有本卡）。
+	## 该方**拥有**风元素（场上 / 手卡 / 牌库 / 弃牌区任意一处有本卡）。
 	## 用于把「对敌伤害计数」限定在真的持有本卡的一方。
 	for p: Placement in state.board.values():
 		if p.owner == side and p.card.traits.has(VOID_LORD_TRAIT):
@@ -3852,7 +3857,7 @@ func _void_lord_owned(side:= SIDE_SELF) -> bool:
 
 
 func _void_lord_discount(card: CardData, side:= SIDE_SELF) -> int:
-	## 虚空主宰（9082）的两条费用机制：
+	## 风元素（9082）的两条费用机制：
 	## ① 只要这张卡在场，该方的技能牌费用 -1（多张叠加：按场上本卡张数算）；
 	## ② 本次对战中每用技能牌对敌方造成一次伤害，手卡里的本卡费用 -2（战斗内累计）。
 	var d:= 0
@@ -3864,7 +3869,7 @@ func _void_lord_discount(card: CardData, side:= SIDE_SELF) -> int:
 
 
 func _mark_spell_enemy_hit() -> void :
-	## 虚空主宰（9082）伤害计数：只有在**技能结算窗口内**、且伤害落在**敌方**身上时才记一笔。
+	## 风元素（9082）伤害计数：只有在**技能结算窗口内**、且伤害落在**敌方**身上时才记一笔。
 	## 调用点 = 三个伤害下沉处（_hit_unit / _damage_player / _op_deal_damage）。
 	if _spell_active:
 		_spell_hit_enemy = true
@@ -5886,7 +5891,7 @@ func merge_pick(deck_index: int) -> bool:
 	## 合体面板「确认」的唯一结算口：让选中的素体**本场消失**，并把它的数值记在
 	## `merge_body_*` 上 —— 真正的改造由随后那次 `use_spell()` → `_merge_spell()` 落地。
 	## ⚠️ 这里**不扣费、不弃牌**：那两件事归 `use_spell()` 统一收尾（付费 / 蓄力次数 /
-	##    虚空主宰 / 出牌计数 / 次元判定，一个都不漏）。
+	##    风元素 / 出牌计数 / 次元判定，一个都不漏）。
 	if not merge_pending:
 		return false
 	if deck_index < 0 or deck_index >= state.deck.size():
@@ -6648,7 +6653,7 @@ func _shared_shield(target, side:= SIDE_SELF) -> String :
 	## 获得改造：挂上字段「共享护盾」+ 算一层改造。
 	##
 	## 字段语义（用户口径「代替自己 HP 承受伤害」）：**我方 HP 要掉血时，改由它挨打**。
-	## 判据唯一口 = `absorbs_for_hp()`（与森林守护 / 以太守卫 / 铁栅栏同一条通道）→
+	## 判据唯一口 = `absorbs_for_hp()`（与森林守护 / 大树守卫 / 铁栅栏同一条通道）→
 	## 引擎结算与战场绿环自动同源，这里不写任何显示代码。
 	## ⚠️ 只吃**盟友**（用户原话「一个随从」）；工事不是随从。
 	## ⚠️ 同一张卡重复给没有意义 → 已有该字段时直接拒绝（不白扣费用、也不刷改造层数）。
@@ -6888,11 +6893,11 @@ func _mimic_relay(src: Placement, atk_gain: int, hp_gain: int, affix: String = "
 func _aether_guard_enter(p: Placement) -> void :
 	var n:= mini(state.effects.size(), AETHER_GUARD_CAP)
 	if n <= 0:
-		_log("以太守卫：效果区没有效果卡，未获得加成")
+		_log("大树守卫：效果区没有效果卡，未获得加成")
 		return
 	p.atk_buff += n
 	p.health += 2 * n
-	_log("以太守卫：效果区 %d 张效果卡 → +%d 力量、+%d 生命（%d/%d）" % [
+	_log("大树守卫：效果区 %d 张效果卡 → +%d 力量、+%d 生命（%d/%d）" % [
 		state.effects.size(), n, 2 * n, p.effective_power(), p.health])
 	action.emit("aether_guard", {"n": n, "card": p.card})
 
@@ -6917,7 +6922,7 @@ func _demon_fetch(_p: Placement) -> void :
 		if state.deck[i].is_effect():
 			cand.append(i)
 	if cand.is_empty():
-		_log("以太恶魔：卡组里没有效果卡")
+		_log("水元素：卡组里没有效果卡")
 		return
 	var pick: int = cand[rng.randi() % cand.size()]
 	var chosen: CardData = state.deck[pick]
@@ -6930,9 +6935,9 @@ func _demon_fetch(_p: Placement) -> void :
 		chosen = own
 	# R299：手牌满 → 这张效果卡直接进弃牌区。减费标记**照旧挂在它身上**（本场永久），
 	# 之后洗回牌库再抽到仍然便宜 —— 与卡面「它的费用 -N」的口径一致。
-	_grant_to_hand(chosen, "以太恶魔")
+	_grant_to_hand(chosen, "水元素")
 	state.card_discount[chosen] = int(state.card_discount.get(chosen, 0)) + DEMON_FETCH_DISCOUNT
-	_log("以太恶魔：从卡组取到效果卡「%s」，它的费用 -%d" % [
+	_log("水元素：从卡组取到效果卡「%s」，它的费用 -%d" % [
 		chosen.card_name, DEMON_FETCH_DISCOUNT])
 	action.emit("demon_fetch", {"card": chosen})
 
@@ -7262,7 +7267,7 @@ func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 	state.hand.remove_at(hand_index)
 	# 蓄力（9085）：先取走待用层数再结算 —— 蓄力是结算时才上层的，不会把自己翻倍
 	var times:= _charge_take(SIDE_SELF)
-	# 虚空主宰（9082）：技能结算窗口 —— 窗口内对敌方造成过伤害就记一笔（手卡里本卡 -2 费）
+	# 风元素（9082）：技能结算窗口 —— 窗口内对敌方造成过伤害就记一笔（手卡里本卡 -2 费）
 	_spell_active = true
 	_spell_hit_enemy = false
 	# R315 爆米花（6046）：记「本回合有没有以敌人 / 敌人所在的格子为目标使用技能」。
@@ -7280,10 +7285,10 @@ func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 		detail = "蓄力 ×%d → %s" % [times, detail]
 	_spell_active = false
 	if _spell_hit_enemy and _void_lord_owned(SIDE_SELF):
-		# 修复（实机体验 R46 后）：没有虚空主宰时不再空转计数/打日志/发事件
-		# （此前对手牌里没有本卡的玩家也会一直弹「虚空主宰：…」状态栏文本）。
+		# 修复（实机体验 R46 后）：没有风元素时不再空转计数/打日志/发事件
+		# （此前对手牌里没有本卡的玩家也会一直弹「风元素：…」状态栏文本）。
 		state.void_dmg_spells += 1
-		_log("虚空主宰：本次对战中第 %d 次用技能对敌方造成伤害 → 手卡里的本卡费用 -%d" % [
+		_log("风元素：本次对战中第 %d 次用技能对敌方造成伤害 → 手卡里的本卡费用 -%d" % [
 			state.void_dmg_spells, state.void_dmg_spells * VOID_LORD_DMG_DISCOUNT])
 		action.emit("void_lord", {"count": state.void_dmg_spells,
 			"discount": state.void_dmg_spells * VOID_LORD_DMG_DISCOUNT})
@@ -7425,7 +7430,7 @@ func use_curse(hand_index: int) -> String:
 	## R239：去向改走**唯一口 `_spell_card_gone`** —— 带「次元」的诅咒（破绽 9154）
 	## 「打出后消失」（进消耗区，本场不再出现），其余诅咒（疲惫 9149）照旧进弃牌区。
 	## ⚠️ **不走 use_spell**：不记 `self_skill_plays`（不是技能），也不点亮技能类反应
-	##    （虚空主宰记账 / 蓄力 / 回合首张技能加成 / 陨石术的留手折价都不该被一张
+	##    （风元素记账 / 蓄力 / 回合首张技能加成 / 陨石术的留手折价都不该被一张
 	##    无效果诅咒触发）。
 	##    「用了一张牌」的通用收尾仍走 `_note_card_played`（终结/回转的 X、幻影斗篷、
 	##    疾风、潜影者、不眠……都该把它算成一次出牌）。
@@ -7527,7 +7532,7 @@ func hand_bonus_ready(card: CardData) -> bool:
 	##   * 收尾 9104：手卡仅剩它 → 4 伤变FINISHER_LAST_DMG 伤。
 	##     注意它结算时本卡已离手，所以这里判「手里只有这一张」。
 	##   * 影魔 8007：手卡里有费用为 0 的技能牌 → 每张 +SHADOW_DEMON_HP_PER 生命。
-	##   * 以太守卫 9067：效果区非空 → 每张效果卡 +1 力量 +2 生命。
+	##   * 大树守卫 9067：效果区非空 → 每张效果卡 +1 力量 +2 生命。
 	if card == null:
 		return false
 	if card.id == FINISHER_ID:
@@ -10635,14 +10640,14 @@ func _bite(side: String, target) -> String:
 
 
 func absorbs_for_hp(p: Placement) -> bool:
-	## 「谁替己方 HP 承受伤害」的**唯一判定**：森林守护（guarding）/ 以太守卫 / 铁栅栏
+	## 「谁替己方 HP 承受伤害」的**唯一判定**：森林守护（guarding）/ 大树守卫 / 铁栅栏
 	## 三种卡走的是同一套机制，所以战场表现也必须一致（同色绿环）。
 	## 以后再加同类机制，只改这里 —— 引擎与 battle_scene 读同一函数，不会两处漂移。
 	if p == null:
 		return false
 	return p.guarding or p.card.traits.has(AETHER_GUARD_TRAIT)\
 	or p.card.traits.has(IRON_FENCE_TRAIT)\
-	# R340：宠物鸭也替我方 HP 承受伤害（与森林守护 / 铁栅栏 / 以太守卫同一条通道）
+	# R340：宠物鸭也替我方 HP 承受伤害（与森林守护 / 铁栅栏 / 大树守卫同一条通道）
 	or p.card.traits.has(PET_DUCK_TRAIT)\
 	or p.card.has_affix(AFFIX_SHARED_SHIELD)
 
@@ -10681,7 +10686,7 @@ func _absorb_by_guard(amount: int) -> bool:
 	var g: Placement = state.board[cell]
 	var gname:= g.card.card_name
 	var how:= "共享护盾" if g.card.has_affix(AFFIX_SHARED_SHIELD)\
-	else ("以太守卫" if g.card.traits.has(AETHER_GUARD_TRAIT)\
+	else ("大树守卫" if g.card.traits.has(AETHER_GUARD_TRAIT)\
 	else ("铁栅栏" if g.card.traits.has(IRON_FENCE_TRAIT)\
 	else ("宠物鸭" if g.card.traits.has(PET_DUCK_TRAIT) else "森林守护")))
 	var dealt:= _hit_unit(g, amount, how)
@@ -10698,7 +10703,7 @@ func _absorb_by_guard(amount: int) -> bool:
 
 func _dodge_absorb(amount: int) -> int:
 	## 闪躲（9103）：随机一个己方**盟友**（kind == "盟友"，工事不参战）代替本方 HP 承受伤害。
-	## R403：**溢出也全部吃下** —— 用户口径「全按铁栅栏来做」：与森林守护 / 以太守卫 /
+	## R403：**溢出也全部吃下** —— 用户口径「全按铁栅栏来做」：与森林守护 / 大树守卫 /
 	## 铁栅栏 / 护盾生成器同一条口径，代受单位吃满全额伤害，超出其生命的部分**不再回传**，
 	## 它随即被破坏。改之前这里只吃 `min(伤害, 剩余生命)`，是三条代受路径里唯一会漏的。
 	## 返回「仍需自己承担」的伤害量（0 = 全被盟友吃下）。
