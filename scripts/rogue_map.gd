@@ -354,6 +354,15 @@ static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: i
 	## ⚠️ 幂等：重摇过的格子已经 `hidden`，再调一次不会重摇（所以「拿到当刻」与「换层」
 	##    两条路可以安全地都调）。
 	## ⚠️ 随机流由调用方给（`RunState.dice_map_rng()`）—— 本函数不碰全局 `run_rng`。
+	# R405（用户口径「骰子不影响第三层地图」）：第三层是**设计定死**的一字型直道
+	# （起点 → 精英 → 商店 → 篝火 → Boss），五个房型缺一不可。
+	# ⚠️ `generate()` 里那句 `layer == LAYER_THREE → line_cells()` 只挡住了「换层生成」
+	#    这一条路；**拿到骰子的当刻**走的是 `RunState.reroll_map_as_unknown()` → 直接进本函数，
+	#    那时直道上的精英(16) / Boss(19) 都不是「固定房间」（豁免名单只有起点/大宝箱/
+	#    右上角商店/篝火），会被就地重摇成「?」—— 直道当场碎掉，用户实机撞到的就是这条。
+	#    守卫因此必须写在**这里**（重摇的唯一实现口），而不是只守在调用方。
+	if layer == GameLayers.LAYER_THREE:
+		return 0
 	if cells.is_empty():
 		return 0
 	var start_i := idx(START_COL, START_ROW)

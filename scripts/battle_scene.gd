@@ -16,10 +16,12 @@ const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiRoll = preload("res://scripts/ui_roll.gd")
 const UiPop = preload("res://scripts/ui_pop.gd")
+const UiDrag = preload("res://scripts/ui_drag.gd")   # R405：滚轮 / 触屏拖动 的唯一口
 const CardInfoBoxes = preload("res://scripts/card_info_boxes.gd")
 ## R386：战场对话气泡（自绘，见该文件头部的设计与时间轴说明）
 const SpeechBubble = preload("res://scripts/speech_bubble.gd")
 
+const AI_STALL_LIMIT := 8                # R400：同一单位连续排在队首这么多拍 → 强制跳过
 const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
 const CARD_W := 63.0
@@ -93,17 +95,24 @@ const GRID_INTRO_ZOOM := 1.15
 const GRID_HINT_INSET := 22.0
 const COST_X := 310.0
 const COST_Y := GRID_Y
-const ENERGY_H := 96.0         # 左栏顶部费用面板高度（下面是效果区）
-const DECK_X := WINDOW_W - CARD_W - 60.0
-const DECK_Y := WINDOW_H - CARD_H - 44.0
+const ENERGY_H := 132.0        # 左栏顶部费用面板高度（下面是效果区）
+                            # R391：96 → 132 —— 里面现在有三行：角色 / 费用 X-Y /
+                            # 蓄力·闪躲（状态行）；13~30px 的字需要这个高度
+## R393（用户口径）：「卡组 / 弃牌 / 消耗三块位置放大一点点，占用右侧区域」。
+## 以前它们直接借手牌尺寸（63×76），在 1280 宽的窗口里显得又小又空，右边还留着 60px 白边。
+## 现在给一套**独立尺寸**：比手牌大一圈，右沿贴到 40px 边距（1257 → 1240... 见 DECK_X）。
+const ZONE_W := 80.0
+const ZONE_H := 96.0
+const DECK_X := WINDOW_W - ZONE_W - 40.0
+const DECK_Y := WINDOW_H - ZONE_H - 40.0
 const DISCARD_X := DECK_X
-const DISCARD_Y := DECK_Y - CARD_H - 52.0
+const DISCARD_Y := DECK_Y - ZONE_H - 46.0
 ## R140：这三块连成右列一竖 —— 「消耗区」在上、「弃牌区」居中（**位置不变**，用户口径）、
 ## 「卡组」在下。弃牌区不再显示顶牌卡面，改成 图标 + 张数徽章；卡组张数改成骑在卡背顶边上。
 const VOID_X := DECK_X
-const VOID_Y := DISCARD_Y - CARD_H - 26.0
-const ZONE_ICON := 50.0     # 区域内图标的绘制边长（正方形素材等比缩进这个方框）
-const ZONE_NAME_H := 14.0   # 区域名压条的厚度（压在方块下沿）
+const VOID_Y := DISCARD_Y - ZONE_H - 22.0
+const ZONE_ICON := 62.0     # 区域内图标的绘制边长（正方形素材等比缩进这个方框）
+const ZONE_NAME_H := 18.0   # 区域名压条的厚度（压在方块下沿；R393 14 → 18 配 13px 字）
 # ---- 手牌：比战场小卡大一号，卡身一路长到窗口下沿之外 ----
 # 空间账：手牌区只有 592~720 这 128px。既然「底部不必完全显示」，
 # 就把卡底往屏幕外沉 HAND_CROP_BOTTOM 像素，省下的位置全换成卡面尺寸：
@@ -164,7 +173,29 @@ const HAND_FAN_DROP := 4.0        # 扇弧两端相对扇心的下沉像素（�
 const HAND_FAN_HOVER_LIFT := 28.0 # 悬停时抬手高度（纯显示，不影响命中判定）
 const HAND_SELECT_RAISE := 28.0   # 选中手牌时抬起的高度
 const INFO_X := 8.0
-const INFO_W := 272.0   # 左栏（详细效果 / 对局记录）：宽一点，效果正文少折几行
+const INFO_W := 296.0   # 左栏（详细效果 / 对局记录）：宽一点，效果正文少折几行
+                        # R391：272 → 296 —— 正文 10 → 13px 后要有对应的宽度，
+                        # 否则每行只剩十几个字（COST_X = 310，还留 6px 缝）。
+
+# ── R391：战斗界面 UI 字号（**卡面 / 道具栏 / 卡内角标不走这里**）──
+## 用户口径「除了卡面、商店，战斗界面 UI 中字体需要加大，对应窗体也同步加大；
+## 道具栏暂时不动」。
+## 为什么不直接改 `UiTheme.FS_*`：那 9 档是**全工程共用**的（商店 / 地图 / 标题页 /
+## 图鉴 / 卡组编辑全读它），改一处就连锁改七处。这里只抬高**战斗界面自己画**的那些
+## 文字，每档 +2~6px，档与档之间的层级差保持不变。
+## 不进这套的（= 视觉上属于「卡面」的一部分）：`card_face.gd` 的 CARD_FS_*、
+## 战场单位的状态徽标（`_draw_state_badge`）、效果卡的「×N / 剩 N」角标、
+## 区域方块（卡组/弃牌/消耗 63×76）的区域名与张数徽章、以及**道具栏**。
+const UI_FS_MICRO := 13      ## 原 FS_MICRO 10（表头 / 计数 / 面板脚注）
+const UI_FS_CAPTION := 15    ## 原 FS_CAPTION 12（说明 / HP / 区域标题）
+const UI_FS_LABEL := 17      ## 原 FS_LABEL 14
+const UI_FS_BODY := 19       ## 原 FS_BODY 16
+const UI_FS_SUBHEAD := 24    ## 原 FS_SUBHEAD 20
+const UI_FS_HEADING := 30    ## 原 FS_HEADING 24（费用数字 / 大按钮 / 结算大字）
+## 顶栏血量条（`_draw_hp_strip` 自绘，原来写死 14）
+const HP_STRIP_FS := 17
+## 左栏详情正文（`CardInfoBoxes` 的 size；框高 / 行高会按它同比放大）
+const INFO_BODY_FS := 13
 
 # ------------------------------------------------------------ 颜色
 
@@ -288,6 +319,8 @@ const REV_RETURN_MS := 460      # 本体滑回后排的时长（先演这个）
 const REV_FX_MS := 900          # 屏障 / 燃烧覆盖卡面的时长（后演这个）
 const REV_FACE_GAP_MS := 160    # 特效收尾 → 重弹敌方效果的间隔
 var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本不覆盖
+## R391：最近一次悬停/点击的**画布坐标** —— 自绘的大号「回合结束」按钮用它判 hover。
+var _mouse_ui := Vector2(-9999.0, -9999.0)
 ## R388：倍速状态 + 演出时钟。
 ##   * `_foe_speed` —— 1.0 / 1.5 / 2.0（按钮循环，落盘在 GameSettings）；
 ##   * `_foe_phase` —— 敌方回合窗口（含最后一击的收尾演出），只有它里面按倍速走；
@@ -451,6 +484,8 @@ var _slides := {}               # Placement -> {from,to: 像素中心, start, du
                                 # pts = 逐格路径的中心点数组；给了就按它分段滑行（多格移动走真实轨迹）
 var _attacks := {}              # Placement -> {dir, src, dst, start, dur}     分阶段攻击动画
 var _delayed: Array = []        # {at, kind, data}                             命中/击破定时特效
+var _ai_stall_cell := Vector2i(-1, -1)   # R400：上一拍的队首格（看它会不会一直不变）
+var _ai_stall_n := 0                     # R400：同一格连续排在队首的拍数
 var _ghosts: Array = []         # {center, name, start, dur}                  击破淡出
 var _dying: Array = []          # {cell, card, p, hide_at}                    已归零但仍要显示到命中时刻的卡
 var _floaters: Array = []       # {pos, text, col, start, dur}                伤害/治疗飘字
@@ -475,6 +510,11 @@ var _hand_known_init := false   # 首次 sync 只建快照不播（开场发牌�
 var _flyout_skip: Array = []    # 本帧「是打出不是消失」的卡 id（place/spell/effect 事件喂入，sync 消费并清空）
 var _flyout_skip_all := false   # batch_transfer（手牌洗回牌库）：整批移除不播飞出
 var _flyin_skip: Array = []     # 本帧「来源不是抽牌堆」的入手卡 id（swap 顶回手）
+## R396（用户报「聚能炮击的抽卡动画有可能被吞，如果抽到的是另一张聚能炮击」）：
+## 引擎通过 `card_gained` 报上来的「真的进了手牌」的**实例**（不是 id）。
+## `_hand_sync` 靠手牌 id 序列做 diff，可「打出一张 9145 又抽到一张 9145」时序列
+## 一模一样 → diff 判「没变化」→ 飞入动画被吞。这个队列专门补那种 diff 看不出的情形。
+var _drawn_pending: Array = []
 var _deck_fly: Array = []       # R283：卡入牌库飞行动画 {card, from, start, dur, curse}
 # R362：诅咒（破绽 9154）入牌库的**展示队列** —— 用户口径「展示诅咒『破绽』，然后那张卡
 # 进入卡组；一个动画完了才能结算另外一个」。三只厄倪俄同回合各塞一张时，原来三张卡背
@@ -1004,7 +1044,7 @@ func _ready() -> void:
 		var hn: int = engine.state.hand.size()
 		if hn >= 1:
 			_hand_fly.append({"mode": "in", "card": engine.state.hand[0],
-					"from": Vector2(DECK_X + CARD_W / 2.0, DECK_Y + CARD_H / 2.0),
+					"from": Vector2(DECK_X + ZONE_W / 2.0, DECK_Y + ZONE_H / 2.0),
 					"slot": 0, "start": hf_n - 21000, "dur": 60000})
 		if hn >= 2:
 			_hand_fly.append({"mode": "out_d", "card": engine.state.hand[1],
@@ -1320,7 +1360,8 @@ func _ready() -> void:
 		RunState.player_class = PlayerClass.MECH
 		engine.state.hand.clear()
 		engine.state.energy = 6
-		engine.state.self_cannon_plays = 3
+		# R404：失控要塞的 X 从「用过的聚能炮击」改成「变化过的牌」
+		engine.state.self_card_changes = 3
 		engine.state.hand.append(
 				CardData.from_dict(repo.get_card(GameEngine.OUT_OF_CONTROL_FORT_ID).to_dict()))
 		# 手牌里留一张盟友，给「系统升级 / 轻量化」这类需要**选手牌**的技能当目标。
@@ -1330,8 +1371,8 @@ func _ready() -> void:
 		var r288_names := ""
 		for r288_n: String in engine.fort_casts:
 			r288_names = r288_n if r288_names == "" else "%s, %s" % [r288_names, r288_n]
-		status_text = "R288：失控要塞 入场（已用聚能炮击 %d 张）→ 随机释放 %d 张技能：%s" % [
-				engine.state.self_cannon_plays, engine.fort_casts.size(), r288_names]
+		status_text = "失控要塞 入场（本次对战已变化 %d 张牌）→ 随机释放 %d 张技能：%s" % [
+				engine.state.self_card_changes, engine.fort_casts.size(), r288_names]
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--trapper" in args and engine != null:
@@ -1532,6 +1573,28 @@ func _ready() -> void:
 		status_text = "R211：填充带「次元」→ 左栏「字段：次元」；用后进消耗区（不进弃牌区）"
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--hovercard" in args and engine != null:
+		# 出图（R396）：把**任意一张**卡放进手牌并悬停，核验左栏的「字段 / 效果 / 数值」框。
+		# 图鉴右栏不画字段框（那是图鉴自己的版式），要看「字段：次元」必须进战斗左栏。
+		# 用法：`battle.tscn -- --screenshot --hovercard 8071 --shotframe 320`
+		var hc_id := -1
+		for hi in args.size():
+			if args[hi] == "--hovercard" and hi + 1 < args.size() \
+					and not str(args[hi + 1]).begins_with("--"):
+				hc_id = int(args[hi + 1])
+		var hc_card: CardData = repo.get_card(hc_id) if hc_id >= 0 else null
+		if hc_card != null:
+			engine.state.hand.clear()
+			engine.state.energy = 9
+			engine.state.hand.append(CardData.from_dict(hc_card.to_dict()))
+			engine.state.hand.append(CardData.from_dict(
+					repo.get_card(GameEngine.ENERGY_CANNON_ID).to_dict()))
+			_hover_card = engine.state.hand[0]
+			_hover_pl = null
+			_hover_hand = 0
+			status_text = "出图：%s 的左栏详情" % hc_card.card_name
+			_shot_t0 = _now()
+			queue_redraw()
 	if "--xtext" in args and engine != null:
 		# 演示（2026-10-01）：长描述效果卡。
 		# 悬停最长的那张（空间守护 9064）→ 左栏信息面板用于像素级核验「长描述不溢出」。
@@ -3474,6 +3537,8 @@ func _demo_tick() -> void:
 		_shot_t0 = _now()
 	if _shot_pending and "--dragshot" in _demo_args:
 		_demo_dragshot()          # R117 临时演示：钉住一次拖拽（见函数注释）
+	if _shot_pending and "--spellsel" in _demo_args:
+		_demo_spell_select()      # R393 演示：点手卡 → 选目标（核验可打单位上都报最终伤害）
 	if _shot_pending and "--aoe" in _demo_args:
 		_demo_aoe_drag()          # R242 演示：AOE 范围 / 自伤警告 / 条件额外加成
 	var shot_due := _shot_pending and _demo_frame == _shot_frame
@@ -3542,6 +3607,49 @@ func _demo_dragshot() -> void:
 	var p := _demo_drag_pos()
 	if p != Vector2.ZERO:
 		_drag_pos = p
+	queue_redraw()
+
+
+func _demo_spell_select() -> void:
+	## R393 演示（**只服务出图**）：把「点手卡 → 进选目标」这一步钉在屏幕上。
+	## 用法：`scenes/battle.tscn -- --screenshot --spellsel --shotframe 120`
+	## 验的是：**每个可打单位格上都报最终伤害**（以前只有鼠标停在哪一格才报一次，
+	## 触摸屏根本没有 hover）。摆位与 `_demo_aoe_drag` 同一套靶子。
+	if engine == null or spell_pending >= 0:
+		return
+	var want := 8002
+	for i in _demo_args.size():
+		# ⚠️ 必须判「下一个不是 --xxx」：不然 `--spellsel --shotframe 320` 会拿
+		# "--shotframe" 去 int() → 0 → 找不到卡，演示静默不跑。
+		if _demo_args[i] == "--spellsel" and i + 1 < _demo_args.size() \
+				and not str(_demo_args[i + 1]).begins_with("--"):
+			want = int(_demo_args[i + 1])
+	# ⚠️ 卡名字段叫 `card_name`（不是 `name`）—— 写 `c.name` 会报
+	# 「Invalid access to property 'name' on RefCounted (CardData)」。
+	var c: CardData = repo.get_card(want)
+	if c == null:
+		return
+	if not engine.state.board.has(Vector2i(2, 1)):
+		engine.state.place(repo.get_card(1053), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	if not engine.state.board.has(Vector2i(2, 2)):
+		engine.state.place(repo.get_card(1053), Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
+	if engine.state.hand.is_empty():
+		engine.state.hand.append(CardData.from_dict(c.to_dict()))
+	else:
+		engine.state.hand[0] = CardData.from_dict(c.to_dict())
+	_banner = {}
+	engine.state.energy = 99
+	var targets := _spell_target_cells(engine.state.hand[0])
+	if targets.is_empty():
+		return
+	spell_pending = 0
+	spell_targets = targets
+	status_text = "演示：%s 选目标 —— 可打单位上都该有 -N" % c.card_name
+	# 出图时把「每格报多少」打到控制台：截图看不清字号时，用它核对数字对不对
+	for t: Vector2i in targets:
+		if engine.state.unit_at(t) != null:
+			print("  [spellsel] 格 %s → %s" % [str(t),
+					str(engine.preview_spell_damage(engine.state.hand[0], t))])
 	queue_redraw()
 
 
@@ -4220,6 +4328,13 @@ func _gui_input(event: InputEvent) -> void:
 			and event.button_index == MOUSE_BUTTON_RIGHT:
 		_on_right_click()
 		queue_redraw()
+	elif event is InputEventMouseMotion and _relics_visible:
+		# R405（用户口径「安卓端要看全遗物」）：道具浏览面板也要能**按住拖**。
+		# 触屏没有滚轮，旧版这里只认 `MOUSE_BUTTON_WHEEL_*` → 底下那几件永远翻不到。
+		# 放下层所有 motion 逻辑（棋盘拖动 / 手牌 drag）之前先吃掉 —— 面板是模态的。
+		_relic_scroll = maxf(0.0, _relic_scroll + UiDrag.scroll_delta(event, 34.0))
+		queue_redraw()
+		return
 	elif event is InputEventMouseMotion:
 		# R123：棋盘拖动滚动（空格左键 / 中键，拖过阈值生效；向上拖 = 内容上移）
 		if _grid_drag_arm and _drag_idx < 0:
@@ -4550,6 +4665,11 @@ func _on_left_click(pos: Vector2) -> void:
 			_close_zone_panels()
 			queue_redraw()
 		return
+	# R391：大号「回合结束」按钮（自绘 → 这里判矩形）。放在浏览面板之后：
+	# 面板开着时点它是「关面板」，与点面板外任意处一致。
+	if _end_turn_big_rect().has_point(pos):
+		_on_end_turn()
+		return
 	# 效果区：点击查看全部效果卡（持续生效中）
 	var effects_rect := _own_effect_zone_rect()
 	if effects_rect.has_point(pos) and not engine.state.effects.is_empty():
@@ -4570,13 +4690,13 @@ func _on_left_click(pos: Vector2) -> void:
 		_relic_scroll = 0.0
 		queue_redraw()
 		return
-	var discard_rect := Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H)
+	var discard_rect := _zone_rect("discard")
 	if discard_rect.has_point(pos) and not engine.state.discard.is_empty():
 		_pass_moved_pending()
 		_open_discard_view()   # R301：全屏浏览窗（与选卡页同一套排版）
 		return
 	# R155 消耗（消失）区：点开浏览面板 —— 本局消失的卡逐张可回看（相同卡合并 ×N）
-	if Rect2(VOID_X, VOID_Y, CARD_W, CARD_H).has_point(pos) and engine.state.void_count > 0:
+	if _zone_rect("void").has_point(pos) and engine.state.void_count > 0:
 		_pass_moved_pending()
 		_close_zone_panels()
 		_void_visible = true
@@ -4584,7 +4704,7 @@ func _on_left_click(pos: Vector2) -> void:
 		return
 	# 卡组（抽牌堆）：点开浏览 —— 相同卡合并显示张数，不泄露抽牌顺序
 	# R207：这里 = **现有卡组**（本场还没抽到的牌），顶栏按钮才是完整卡组 → 先关干净再开
-	var deck_rect := Rect2(DECK_X, DECK_Y, CARD_W, CARD_H)
+	var deck_rect := _zone_rect("deck")
 	if deck_rect.has_point(pos) and not engine.state.deck.is_empty():
 		_pass_moved_pending()
 		_close_zone_panels()
@@ -5259,7 +5379,7 @@ func _draw_foresight_mode() -> void:
 			rs[0].size.x + 52.0, 168.0)
 	UiTheme.draw_panel_bg(self, box)
 	draw_rect(box, UiTheme.INK_600, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "预判：选择一个效果",
+	_draw_string_center(_font_bold, UI_FS_LABEL, "预判：选择一个效果",
 			Vector2(WINDOW_W / 2, rs[0].position.y - 28), UiTheme.INK_800)
 	var labels := [
 		"① 从弃牌区选一张费用为 0 的技能卡加入手卡（之后本卡消失）",
@@ -5268,7 +5388,7 @@ func _draw_foresight_mode() -> void:
 	for k in 2:
 		draw_rect(rs[k], Color("e8e2f4") if k == 0 else Color("e2ecf4"))
 		draw_rect(rs[k], Color("7a5ea8") if k == 0 else Color("4a7ea8"), false, 1.5)
-		_draw_string_center(_font, UiTheme.FS_CAPTION, labels[k],
+		_draw_string_center(_font, UI_FS_CAPTION, labels[k],
 				rs[k].position + rs[k].size / 2.0, Color("222222"))
 
 
@@ -5677,8 +5797,37 @@ func _sync_pick() -> void:
 	if not _pick.is_picking() or _pick.kind() != k:
 		if k == "focus":
 			_close_zone_panels()   # 专注走选卡页，不再复用卡组浏览面板
-		_pick.open(_build_pick_cfg(k))
+		var cfg := _build_pick_cfg(k)
+		# R395（用户报「选卡页弹出来、有返回按钮和提示，但没有待选卡，选不了，
+		# 回合也结束不了」）：**候选为空就不许开页**。开出来是一个「有壳没卡」的空网格 ——
+		# 玩家既选不了、又被 `is_picking()` 挡着收尾，只能退出重进。
+		if (cfg.get("cards", []) as Array).is_empty():
+			_abort_empty_pick(k)
+			return
+		_pick.open(cfg)
 		queue_redraw()
+
+
+func _abort_empty_pick(kind: String) -> void:
+	## R395：选卡页的候选**空了**（手牌/卡组在「点了技能」和「开页」之间被吃掉、
+	## 或读档恢复出的局面本来就没有可选项）→ 收起待选、说一句原因，**绝不留空网格**。
+	## 只收**本场景自己的**那几个下标（引擎侧的 pending 各有自己的「不选了」出口，
+	## 不在这里替它们做决定）。
+	match kind:
+		"hero":
+			_hero_pick_idx = -1
+			_hero_pick_cell = Vector2i(-1, -1)
+		"reload":
+			_reload_idx = -1
+		"sysup":
+			_sys_upgrade_idx = -1
+		"recycle":
+			_recycle_idx = -1
+	if _pick != null and _pick.is_picking():
+		_pick.close()
+	_say("没有可选的卡，已自动取消（%s）" % kind)
+	status_text = "没有可选的卡 —— 请重新选择要使用的卡"
+	queue_redraw()
 
 
 func _on_pick_confirmed(sel: Array) -> void:
@@ -5951,7 +6100,7 @@ func _draw_pick_banner() -> void:
 	var r := _pick_banner_rect()
 	draw_rect(r, Color(0.14, 0.12, 0.20, 0.95))
 	draw_rect(r, Color("ffd27d"), false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL,
+	_draw_string_center(_font_bold, UI_FS_LABEL,
 			"选择进行中：%s —— 点击继续" % String(_pick.cfg_short()),
 			r.get_center(), Color("ffd27d"))
 func _close_zone_panels() -> void:
@@ -6258,6 +6407,18 @@ func _on_board_click(cell: Vector2i) -> void:
 	if engine.current_side != GameEngine.SIDE_SELF:
 		_say("现在是敌方回合，等对手行动完再操作自己的单位")
 		return
+	# R404 涂装机器人 8080：入场后等玩家在**场上**点一个己方单位（不是技能选目标那套）。
+	# 与 spell_pending 互斥 —— 它由引擎的入场效果直接挂起，玩家当时并没有在选技能。
+	if engine.paint_pending:
+		if engine.paint_options().has(cell):
+			if engine.paint_pick(cell):
+				status_text = "涂装机器人：那只单位变成了一只随机机械之心单位"
+			else:
+				status_text = "涂装机器人：这次没能变成（没有可变成的单位）"
+		else:
+			status_text = "涂装机器人：请点一个己方单位（右键放弃）"
+		queue_redraw()
+		return
 	# 技能选目标模式
 	if spell_pending >= 0:
 		var sp_card: CardData = engine.state.hand[spell_pending]
@@ -6422,6 +6583,12 @@ func _on_right_click() -> void:
 		_ee_popup = false
 		queue_redraw()
 		return
+	# R404 涂装机器人：右键 = 放弃这次变化（卡面没有「必须选」，与合体面板同口径）
+	if engine.paint_pending:
+		engine.paint_cancel()
+		status_text = "涂装机器人：已放弃这次变化"
+		queue_redraw()
+		return
 	# 乌鸦的回手面板：必须选一张（不接受取消）
 	if engine.crow_pending:
 		_say("乌鸦：必须从弃牌堆选择一张盟友回到手牌")
@@ -6522,6 +6689,7 @@ func _on_hover(pos: Vector2) -> void:
 	## 操作反馈保护期只保护状态栏文字；信息栏始终跟随悬停。
 	## 英雄的弃牌代价面板、以及 R121 的各类满屏覆盖层：都不跟手牌/棋盘
 	## （面板挡在上面，避免信息栏乱跳、避免在看不见的道具栏上弹说明）。
+	_mouse_ui = pos            # R391：自绘按钮的 hover 判定要读它
 	if _hero_pick_idx >= 0 or _hover_covered():
 		_clear_hover_state()
 		return
@@ -6644,7 +6812,8 @@ func _on_hover(pos: Vector2) -> void:
 	if _hover_card == null:
 		var energy_rect := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
 		if energy_rect.has_point(pos):
-			tip = "费用 %d：每回合 5 点，回合结束重置（不累积），出牌消耗" % engine.state.energy
+			tip = "费用 %d/%d：每回合回到 %d 点（不累积），出牌消耗" % [
+					engine.state.energy, engine.max_energy(), engine.max_energy()]
 	if _hover_card == null:
 		var merged_eff := _merged_effects(engine.state.effects)
 		for i in merged_eff.size():
@@ -6709,7 +6878,7 @@ func _on_hover(pos: Vector2) -> void:
 			tip = "道具 %d 个" % _relic_bar_ids().size()
 	# ④ 弃牌区（R140 改图标后不再显示顶牌 → 悬停只报张数，详情进点击面板）
 	if _hover_card == null:
-		var discard_rect := Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H)
+		var discard_rect := _zone_rect("discard")
 		if discard_rect.has_point(pos):
 			var dis := engine.state.discard
 			if dis.is_empty():
@@ -6718,7 +6887,7 @@ func _on_hover(pos: Vector2) -> void:
 				tip = "弃牌区 %d 张" % dis.size()
 	# ⑤ 卡组：点击查看（相同卡合并，不泄露抽牌顺序）
 	if _hover_card == null:
-		var deck_rect := Rect2(DECK_X, DECK_Y, CARD_W, CARD_H)
+		var deck_rect := _zone_rect("deck")
 		if deck_rect.has_point(pos):
 			if engine.state.deck.is_empty():
 				tip = "剩余牌堆（空）：抽牌堆用完了会把弃牌洗回来"
@@ -6726,7 +6895,7 @@ func _on_hover(pos: Vector2) -> void:
 				tip = "剩余牌堆 %d 张" % engine.state.deck.size()
 	# ⑥ R140 消耗（消失）区：本局消失的卡
 	if _hover_card == null:
-		if Rect2(VOID_X, VOID_Y, CARD_W, CARD_H).has_point(pos):
+		if _zone_rect("void").has_point(pos):
 			tip = "消耗区 %d 张：本局「消失」的卡（离场消失 / 用后消失 / 从牌库抹除，不进弃牌区）" \
 					% engine.state.void_count
 	if tip != "" and Time.get_ticks_msec() >= _status_hold_until:
@@ -6752,19 +6921,19 @@ func _build_tut_bar() -> void:
 
 	_tut_title = Label.new()
 	_tut_title.position = Vector2(12, 2)
-	_tut_title.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
+	_tut_title.add_theme_font_size_override("font_size", UI_FS_LABEL)
 	_tut_title.add_theme_color_override("font_color", Color("7a5200"))
 	_tut_bar.add_child(_tut_title)
 
 	_tut_prog = Label.new()
 	_tut_prog.position = Vector2(WINDOW_W - 330, 2)
-	_tut_prog.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
+	_tut_prog.add_theme_font_size_override("font_size", UI_FS_CAPTION)
 	_tut_prog.add_theme_color_override("font_color", Color("c08a1a"))
 	_tut_bar.add_child(_tut_prog)
 
 	_tut_check = Label.new()
 	_tut_check.position = Vector2(WINDOW_W - 190, 2)
-	_tut_check.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
+	_tut_check.add_theme_font_size_override("font_size", UI_FS_CAPTION)
 	_tut_check.add_theme_color_override("font_color", UiTheme.SIDE_SELF)
 	_tut_bar.add_child(_tut_check)
 
@@ -6772,14 +6941,14 @@ func _build_tut_bar() -> void:
 	_tut_body.position = Vector2(12, 20)
 	_tut_body.size = Vector2(WINDOW_W - 170, 56)
 	_tut_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_tut_body.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
+	_tut_body.add_theme_font_size_override("font_size", UI_FS_CAPTION)
 	_tut_body.add_theme_color_override("font_color", Color("3d3325"))
 	_tut_bar.add_child(_tut_body)
 
 	_tut_task = Label.new()
 	_tut_task.position = Vector2(12, TUT_BAR_MAX_H - 22)
 	_tut_task.size = Vector2(WINDOW_W - 170, 20)
-	_tut_task.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
+	_tut_task.add_theme_font_size_override("font_size", UI_FS_CAPTION)
 	_tut_task.add_theme_color_override("font_color", Color("a05a00"))
 	_tut_bar.add_child(_tut_task)
 
@@ -6836,7 +7005,7 @@ func _build_over_panel() -> void:
 	var hint := Label.new()
 	hint.name = "Hint"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", UiTheme.FS_CAPTION)
+	hint.add_theme_font_size_override("font_size", UI_FS_CAPTION)
 	hint.add_theme_color_override("font_color", UiTheme.INK_600)
 	box.add_child(hint)
 	_over_hint = hint
@@ -7264,17 +7433,18 @@ func _draw_hp_strip() -> void:
 		hp_strip.draw_texture_rect(_hp_icon, Rect2(x, cy - icon / 2.0, icon, icon), false)
 	x += icon + 4.0
 	var self_txt := "%d/%d" % [_roll("hp_self_bar", engine.state.hp_self), engine.state.max_hp_self]
-	hp_strip.draw_string(_font_bold, Vector2(x, cy + 5), self_txt,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("a9e6a0"))
-	x += _font_bold.get_string_size(self_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 16.0
+	hp_strip.draw_string(_font_bold, Vector2(x, cy + 6), self_txt,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, HP_STRIP_FS, Color("a9e6a0"))
+	x += _font_bold.get_string_size(self_txt, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			HP_STRIP_FS).x + 18.0
 	if _hp_icon != null:
 		hp_strip.draw_texture_rect(_hp_icon, Rect2(x, cy - icon / 2.0, icon, icon), false, Color("ffb0a8"))
 	x += icon + 4.0
-	hp_strip.draw_string(_font_bold, Vector2(x, cy + 5),
+	hp_strip.draw_string(_font_bold, Vector2(x, cy + 6),
 			"∞/∞" if engine.enemy_hp_infinite \
 					else "%d/%d" % [_roll("hp_opp_bar", engine.state.hp_opponent),
 							engine.state.max_hp_opponent],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("f0a89e"))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, HP_STRIP_FS, Color("f0a89e"))
 
 
 # ------------------------------------------------------------ 战斗内地图总览（R64）
@@ -7376,7 +7546,7 @@ func _draw_map_panel() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.55))
 	draw_rect(pr, Color("1b1c22"))
 	draw_rect(pr, Color("6a6f7d"), false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_BODY, "冒 险 地 图（战斗中查看）",
+	_draw_string_center(_font_bold, UI_FS_BODY, "冒 险 地 图（战斗中查看）",
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 26.0), UiTheme.SAND)
 	# R357：第三层没有步数机制 → 这一行里不再出现「巧克力 ×N」（否则永远显示满格的
 	# 12，玩家会以为「还有 12 步可以走」）。
@@ -7390,9 +7560,9 @@ func _draw_map_panel() -> void:
 				RunState.cleared_ids.size(), RunState.map_cells.size(),
 				RunState.chocolate, RunState.hp, RunState.max_hp,
 				RunState.deck_ids.size()]
-	_draw_string_center(_font, UiTheme.FS_CAPTION, mv_info,
+	_draw_string_center(_font, UI_FS_CAPTION, mv_info,
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 48.0), UiTheme.INK_300)
-	_draw_string_center(_font, UiTheme.FS_CAPTION,
+	_draw_string_center(_font, UI_FS_CAPTION,
 			"本层 Boss：%s　·　战斗中不能改路线"
 			% str(RunState.boss_level().get("name", "")),
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 68.0), Color("8f8b80"))
@@ -7553,7 +7723,7 @@ func _draw_map_nodes() -> void:
 		elif known:
 			draw_string(_font_bold, Vector2(r.position.x, r.position.y + 44.0),
 					RogueMap.type_mark(dtype), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
-					UiTheme.FS_SUBHEAD, Color(1, 1, 1, 0.45) if done else UiTheme.PAPER)
+					UI_FS_SUBHEAD, Color(1, 1, 1, 0.45) if done else UiTheme.PAPER)
 		if _mapview_is_current(cell):
 			draw_rect(r.grow(2.5), UiTheme.ACCENT_LIT, false, 2.2)
 		elif _mapview_is_next(cell):
@@ -7569,11 +7739,11 @@ func _draw_map_legend(pr: Rect2) -> void:
 		var base: Color = UiTheme.MAP_NODE_COLORS.get(type, UiTheme.INK_500)
 		draw_rect(Rect2(x, y - 10.0, 12.0, 12.0), base, true)
 		draw_string(_font, Vector2(x + 16.0, y), RogueMap.type_label(type),
-				HORIZONTAL_ALIGNMENT_LEFT, 58, UiTheme.FS_CAPTION, Color("cfd3da"))
+				HORIZONTAL_ALIGNMENT_LEFT, 58, UI_FS_CAPTION, Color("cfd3da"))
 		x += 73.0
 	draw_string(_font, Vector2(pr.position.x + 12.0, y + 24.0),
 			"金框＝当前房间　绿框＝可以走过去　小桥＝通路（全图可见）　迷雾＝还看不清里面是什么",
-			HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 24.0, UiTheme.FS_CAPTION, Color("9aa0aa"))
+			HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 24.0, UI_FS_CAPTION, Color("9aa0aa"))
 
 
 func _toggle_sound() -> void:
@@ -7807,7 +7977,7 @@ func _draw_tutorial_cue() -> void:
 	var col := Color(1.0, 0.62, 0.0, alpha)
 	for r: Rect2 in rects:
 		draw_rect(r, col, false, 3.0)
-	_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, label,
+	_draw_string_nw(_font_bold, UI_FS_CAPTION, label,
 			rects[0].position + Vector2(4, -2), Color("a05a00"))
 	# 动态鼠标图标：按键侧压下 + 点击波纹（对应 Python 版 guide.draw_mouse_icon）
 	var right_click: bool = label.contains("右键")
@@ -7915,6 +8085,16 @@ func _on_end_turn() -> void:
 			_ensure_pick_visible("foresight")
 		_say("预判：请先完成选择")
 		return
+	if engine.paint_pending:
+		_say("涂装机器人：请先点一个己方单位，或右键放弃")
+		return
+	# R395（用户报「提示选择进行中，最上方旧的按钮却好像能点」）：场景级的几个手牌目标
+	# 选卡（填充 / 系统升级 / 回收 / 英雄代价）以前**不在**这条守卫里 —— 选卡页是全屏的，
+	# 大按钮点不到，但顶栏那个 Button 画在本层之上照样收得到点击，于是能「选到一半就把回合交了」。
+	if _pick != null and _pick.is_picking() and not _pick.is_view():
+		_ensure_pick_visible(_pick.kind())
+		_say("请先完成当前的选择")
+		return
 	if _net_mode:
 		# 联机：发给对方 → 本机进入对方回合 → 等待回放
 		if engine.current_side != GameEngine.SIDE_SELF or _net_replaying:
@@ -7939,7 +8119,8 @@ func _on_end_turn() -> void:
 	if not engine.ai_enabled:
 		# 教程关：对手不行动，直接轮回我方
 		engine.end_turn()
-		status_text = "第 %d 回合：费用重置为 5，抽 5 张%s" % [engine.turn_number, _whisper_suffix()]
+		status_text = "第 %d 回合：费用重置为 %d，抽 5 张%s" % [engine.turn_number,
+				engine.max_energy(), _whisper_suffix()]
 		_show_banner("我方回合 · 第 %d 回合" % engine.turn_number, UiTheme.SIDE_SELF_TEXT)
 		sfx.play("turn")
 		queue_redraw()
@@ -7949,6 +8130,8 @@ func _on_end_turn() -> void:
 	sfx.play("turn")
 	queue_redraw()
 	_foe_phase = true                      # R388：这条回合的演出按倍速走
+	_ai_stall_n = 0                        # R400：新的一轮敌方回合，停滞计数归零
+	_ai_stall_cell = Vector2i(-1, -1)
 	_ai_timer.wait_time = _ai_step_sec()
 	_ai_timer.start()
 
@@ -7969,11 +8152,26 @@ func _ai_step() -> void:
 		_ai_timer.stop()
 		engine.end_turn()
 		if not engine.over:
-			status_text = "第 %d 回合：费用重置为 5，抽 5 张%s" % [engine.turn_number, _whisper_suffix()]
+			status_text = "第 %d 回合：费用重置为 %d，抽 5 张%s" % [engine.turn_number,
+				engine.max_energy(), _whisper_suffix()]
 			_show_banner("我方回合 · 第 %d 回合" % engine.turn_number, UiTheme.SIDE_SELF_TEXT)
 			sfx.play("turn")
 		queue_redraw()
 		return
+	# R400：**AI 卡死兜底**。同一格连着好几拍都还排第一 —— 说明它这次行动既没
+	# 横置、也没换人（`_assassin_act` 闪现未落地 / 被禁足就是这种）。
+	# 用户报过「敌方回合一直不动」，代价太大，这里宁可强行跳过它。
+	var head: Vector2i = queue[0]
+	if head == _ai_stall_cell:
+		_ai_stall_n += 1
+	else:
+		_ai_stall_cell = head
+		_ai_stall_n = 1
+	if _ai_stall_n >= AI_STALL_LIMIT:
+		_ai_stall_n = 0
+		_ai_stall_cell = Vector2i(-1, -1)
+		if engine.ai_force_tap(head):
+			_say("对手停滞，已跳过该单位")
 	engine.run_ai_unit(queue[0])
 	queue_redraw()
 
@@ -8024,6 +8222,7 @@ func _draw() -> void:
 	_draw_deck_fly()
 	_draw_hp_banner()
 	_draw_enemy_effects()
+	_draw_end_turn_big()     # R391：道具栏上方的大号「回合结束」
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)  # 结束震动，后续 UI 不抖
 	_draw_level_plate()
 	_draw_hand_base()
@@ -8249,7 +8448,7 @@ func _draw_grid() -> void:
 		var fw_rect := Rect2(GRID_X, GRID_Y + fw_row * CELL - _grid_scroll, GRID_W, CELL)
 		draw_rect(fw_rect, Color(1.0, 0.42, 0.10, 0.20))
 		draw_rect(fw_rect, Color("ff6a00"), false, 2.0)
-		_draw_string_box_center(_font_bold, UiTheme.FS_MICRO, "火墙",
+		_draw_string_box_center(_font_bold, UI_FS_MICRO, "火墙",
 				Vector2(GRID_X + GRID_W - 18, GRID_Y + fw_row * CELL + 11 - _grid_scroll),
 				Color("ff9a3c"))
 	# 敌我框 + 单位标记
@@ -8258,7 +8457,7 @@ func _draw_grid() -> void:
 		var rect := _cell_rect(cell)
 		draw_rect(rect, COL_OWN_FRAME if p.owner == GameEngine.SIDE_SELF else COL_ENEMY_FRAME, false, 3.0)
 		if p.tapped:
-			_draw_string_box_nw(_font_bold, UiTheme.FS_MICRO, "→", rect.position + Vector2(CELL_W - 14, 14), TXT_LIGHT)
+			_draw_string_box_nw(_font_bold, UI_FS_MICRO, "→", rect.position + Vector2(CELL_W - 18, 16), TXT_LIGHT)
 
 
 func _board_has_pulsing_field() -> bool:
@@ -8539,13 +8738,14 @@ func _draw_state_badge(center: Vector2, w: float, h: float, row: int, text: Stri
 	## 靠 `row`（第几个状态）往下错开 —— 各自算偏移早晚会在「三状态同时成立」时重叠，
 	## 重叠 = 既有信息被盖掉，等于没显示。row 0 压在卡上沿（半内半外），
 	## 之后每个往下挪一个徽标高。
-	var bw := maxf(40.0, 14.0 + float(text.length()) * 11.0)
-	var bh := 19.0
+	# R393：字号 12 → 15 后，底板必须同比放大，否则「倒数 3」这种四字徽标会把字挤出框
+	var bw := maxf(46.0, 16.0 + float(text.length()) * 13.0)
+	var bh := 23.0
 	var badge := Rect2(center + Vector2(-bw / 2.0,
 			-h / 2.0 - bh * 0.45 + float(row) * (bh + 2.0)), Vector2(bw, bh))
 	draw_rect(badge, bg, true)
 	draw_rect(badge, border, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_CAPTION, text, badge.position + badge.size / 2.0, fg, 3, shadow)
+	_draw_string_center(_font_bold, UI_FS_CAPTION, text, badge.position + badge.size / 2.0, fg, 3, shadow)
 
 
 func _draw_taunt_aura(center: Vector2, w: float, h: float, badge_row: int) -> void:
@@ -8831,6 +9031,26 @@ func _anim_end_for(p: Placement, cap_ms := ATK_DUR_MS) -> int:
 	return mini(until, n0 + cap_ms)
 
 
+func _pending_impact_ms() -> int:
+	## R393（用户口径：「代替承受伤害的受伤动画依然会快过攻击动画，测试时为一倍速」）。
+	## 攻击演出是先冲刺、到 `ATK_IMPACT_T`（0.62 × 1500ms ≈ 930ms）才撞到目标；
+	## 而代受 / 闪躲这类事件是引擎在**同一批**里紧接着发的，以前一律按「当下」就播 ——
+	## 于是「-N」和爆点比攻击动画还早 900 多毫秒，看起来像伤害先到、拳头后到。
+	## 这里取「已经排上但还没撞到」的**最早**那个撞击帧；没有pending 攻击就返回 now
+	## （纯法术触发的代受保持原样，不会凭空多等）。
+	var now_ms := _now()
+	var best := -1
+	# ⚠️ `_attacks` 是 **Dictionary**（Placement -> {start, dur, ...}），不是数组 ——
+	# 直接 `for a in _attacks` 拿到的是 Placement，`.get("start")` 会当场报错。
+	for a: Dictionary in _attacks.values():
+		var imp := int(a.get("start", 0)) + int(ATK_IMPACT_T * int(a.get("dur", ATK_DUR_MS)))
+		if imp < now_ms:
+			continue
+		if best < 0 or imp < best:
+			best = imp
+	return best if best >= 0 else now_ms
+
+
 func _freeze_hp(key: Variant, dmg: int) -> void:
 	## 记录一笔「尚未在命中演出中体现」的伤害：卡面 / HP 横幅数字冻结在扣血前，
 	## 等对应的 hit / hp_hit 定时特效触发才移除这一笔，数字才往下掉。
@@ -9014,6 +9234,9 @@ func _hand_sync() -> void:
 		_flyin_skip.clear()
 		_flyout_skip_all = false
 		_void_known = engine.state.void_count
+		# R396：**id 序列一样 ≠ 没有抽牌** —— 打出一张 9145 又抽到另一张 9145 时，
+		# 序列一个字节都没变，diff 什么都看不出来。此时靠引擎报的 `_drawn_pending` 补播。
+		_play_hand_flyin(_take_drawn_pending([]))
 		return
 	var old_n := _hand_known.size()
 	# R157：diff 走 LCS 纯函数（重复 id 不错配；回归可直接调 _hand_diff 验证）
@@ -9022,6 +9245,7 @@ func _hand_sync() -> void:
 	var added: Array = []               # {card, idx}（新数组下标）
 	for a: Dictionary in d["added"]:
 		added.append({"card": engine.state.hand[int(a["idx"])], "idx": int(a["idx"])})
+	added = _take_drawn_pending(added)   # R396：diff 看不出来的「同 id 换了一张」
 	_hand_known = cur
 	var vd: int = engine.state.void_count - _void_known   # 这段时间被「消耗」的张数
 	_void_known = engine.state.void_count
@@ -9030,20 +9254,12 @@ func _hand_sync() -> void:
 		_flyout_skip.clear()
 		_flyin_skip.clear()
 		_flyout_skip_all = false
+		_drawn_pending.clear()
 		_earring_missed = 0
 		return
 	var n := _now()
 	# 新增 → 卡背从抽牌堆飞入手牌位（逐张错开 60ms）
-	var seq := 0
-	for a in added:
-		var card: CardData = a["card"]
-		if _flyin_skip.has(card.id):
-			_flyin_skip.erase(card.id)
-			continue
-		_hand_fly.append({"mode": "in", "card": card,
-				"from": Vector2(DECK_X + CARD_W / 2.0, DECK_Y + CARD_H / 2.0),
-				"slot": int(a["idx"]), "start": n + 60 * seq, "dur": 260})
-		seq += 1
+	_play_hand_flyin(added)
 	# 移除 → 默认飞弃牌区；消耗的份额（void 增量）改上飞；skip 名单 / 耳环连出不播
 	var earring := engine.earring_autoplay_active()
 	for r0 in removed:
@@ -9071,6 +9287,61 @@ func _hand_sync() -> void:
 	_flyout_skip.clear()
 	_flyin_skip.clear()
 	_flyout_skip_all = false
+
+
+func _play_hand_flyin(added: Array) -> void:
+	## 新增 → 卡背从抽牌堆飞入手牌位（逐张错开 60ms）。
+	## R396：从 `_hand_sync` 里抽出来，因为「id 序列没变、但其实抽了一张」那条路也要播。
+	if _shot_pending or added.is_empty():
+		return
+	var n := _now()
+	var seq := 0
+	for a: Dictionary in added:
+		var card: CardData = a.get("card")
+		if card == null:
+			continue
+		if _flyin_skip.has(card.id):
+			_flyin_skip.erase(card.id)
+			continue
+		_hand_fly.append({"mode": "in", "card": card,
+				"from": Vector2(DECK_X + ZONE_W / 2.0, DECK_Y + ZONE_H / 2.0),
+				"slot": int(a["idx"]), "start": n + 60 * seq, "dur": 260})
+		seq += 1
+
+
+func _take_drawn_pending(added: Array) -> Array:
+	## R396：把引擎 `card_gained` 报过、而 `_hand_diff` **看不出来**的入手补进 `added`。
+	## 判据必须是**实例同一张**（CardData 没重载 `==`，引用比较即可）——
+	## 用 id 比会把「原本就在手上的同 id 卡」误判成同一个。
+	## 已经由 diff 算进 `added` 的不重复补；已不在手牌的（满手被 burn / 被换走）跳过。
+	if engine == null:
+		_drawn_pending.clear()
+		return added
+	if _drawn_pending.is_empty():
+		return added
+	var seen: Dictionary = {}
+	for a: Dictionary in added:
+		seen[a.get("card")] = true
+	var extra: Array = []
+	for card: CardData in _drawn_pending:
+		if card == null or seen.has(card):
+			continue
+		var idx := -1
+		for i in engine.state.hand.size():
+			if engine.state.hand[i] == card:
+				idx = i
+				break
+		if idx < 0:
+			continue
+		extra.append({"card": card, "idx": idx})
+	_drawn_pending.clear()
+	if extra.is_empty():
+		return added
+	var out: Array = added.duplicate()
+	out.append_array(extra)
+	out.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
+		return int(x["idx"]) < int(y["idx"]))
+	return out
 
 
 func _hand_old_rect(n: int, idx: int) -> Rect2:
@@ -9614,12 +9885,28 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			for ocf_n in (data.get("casts", []) as Array):
 				ocf_names = str(ocf_n) if ocf_names == "" \
 						else "%s, %s" % [ocf_names, str(ocf_n)]
-			if int(data.get("cannons", 0)) <= 0:
-				status_text = "R288：失控要塞 入场 —— 本次对战还没用过「聚能炮击」，没有技能可释放"
+			if int(data.get("changes", 0)) <= 0:
+				status_text = "失控要塞：本次对战还没变化过任何牌，没有技能可释放"
 			else:
-				status_text = "R288：失控要塞 入场（已用聚能炮击 %d 张）→ 随机释放 %d 张技能：%s" % [
-						int(data.get("cannons", 0)), (data.get("casts", []) as Array).size(), ocf_names]
+				status_text = "失控要塞：本次对战已变化 %d 张牌 → 随机释放 %d 张技能：%s" % [
+						int(data.get("changes", 0)), (data.get("casts", []) as Array).size(), ocf_names]
 			sfx.play("spell")
+		"paint_bot":
+			# R404 涂装机器人 8080：入场（pending=true）/ 已变成（old / new 都有）。
+			# 变化视觉复用 `_transform_fx` 的「变幻」，只是落点从手牌位换成棋盘格。
+			var pb_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var pb_new = data.get("new", null)
+			if pb_new == null:
+				if bool(data.get("pending", false)):
+					status_text = "涂装机器人：选一个友方单位，把它变成随机机械之心单位"
+				else:
+					status_text = "涂装机器人：场上没有其他友方单位，效果落空"
+			else:
+				status_text = "涂装机器人：%s → %s" % [str(data.get("old_name", "")),
+						(pb_new as CardData).card_name]
+				if pb_cell.x >= 0:
+					_transform_fx.append({"zone": "cell", "cell": pb_cell, "start": n, "dur": 520})
+				sfx.play("place")
 		"place":
 			sfx.play("place")
 			var cell: Vector2i = data["cell"]
@@ -9834,7 +10121,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"deck_added":
 			# R283：卡入牌库（镜面反射 / 生产订单）-> 卡背飞入卡组区（普通调，无紫）。
 			var da_card: CardData = data.get("card")
-			var da_from := Vector2(DECK_X + CARD_W / 2.0, DECK_Y - 130.0)
+			var da_from := Vector2(DECK_X + ZONE_W / 2.0, DECK_Y - 130.0)
 			if data.get("from") is Vector2:
 				da_from = data["from"]
 			if not _shot_pending:
@@ -9983,6 +10270,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": Vector2(COST_X + (TAP_W + 12) / 2, COST_Y + ENERGY_H + 70),
 					"text": "%s 生效" % ecard.card_name, "col": UiTheme.KIND_EFFECT,
 					"start": n, "dur": 1500})
+		"card_gained":
+			# R396（用户报「聚能炮击的抽卡动画有可能被吞，如果抽到的是另一张聚能炮击」）：
+			# 抽到 / 加入手牌**同一张 id** 的另一张时，手牌 id 序列前后一模一样，
+			# `_hand_sync()` 的 diff 完全看不出来 → 飞入动画被吞。引擎在这里把
+			# **实例**报上来，`_hand_sync()` 用 `_take_drawn_pending()` 补播。
+			if data.get("card") is CardData:
+				_drawn_pending.append(data["card"])
 		"hand_burn":
 			# R299：手牌满时抽到 / 获得的牌 → **直接进弃牌区**。
 			# 复用「飞向弃牌堆」那条动画（mode out_d：缩小 + 末段盖板 = 滑进牌堆），
@@ -9994,9 +10288,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if bcard != null:
 				var bdelay := 45 * int(data.get("seq", 0))
 				_hand_fly.append({"mode": "out_d", "card": bcard,
-						"from_rect": Rect2(DECK_X, DECK_Y, CARD_W, CARD_H),
+						"from_rect": _zone_rect("deck"),
 						"start": n + bdelay, "dur": 300})
-				_floaters.append({"pos": Vector2(DISCARD_X + CARD_W / 2.0, DISCARD_Y - 24),
+				_floaters.append({"pos": Vector2(DISCARD_X + ZONE_W / 2.0, DISCARD_Y - 24),
 						"text": "手牌已满 · 进弃牌", "col": Color("b26a00"), "size": 14,
 						"start": n + bdelay, "dur": 1300})
 		"hand_full":
@@ -10197,7 +10491,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sfx.play("place")
 				_say("✦ 能量屏障：%s 获得能量屏障（下次上场时第一次挨打完全免掉），抽 %d 张"
 						% [bg_card.card_name, bg_drw])
-				_floaters.append({"pos": Vector2(DECK_X + CARD_W / 2, DECK_Y - 14),
+				_floaters.append({"pos": Vector2(DECK_X + ZONE_W / 2, DECK_Y - 14),
 						"text": "%s · 获得护盾" % bg_card.card_name,
 						"col": Color("7fd6f0"), "start": n, "dur": 2200, "size": 14})
 			else:
@@ -10242,22 +10536,17 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"shield_redirect":
 			# 护盾生成器（8042，R92）：接通的我方单位受伤 → 伤害**改由它承受**，溢出不再结算。
 			# 演出分两头：受害格「接下 N」+ 生成器格爆点「-N」，让玩家看清伤害到底去了哪里。
-			sfx.play("heal")
+			# R393：**不许当场播** —— 排队到攻击撞到那一帧（见 `_pending_impact_ms()`）。
 			var sr_src := data.get("cell", Vector2i(-1, -1)) as Vector2i
 			var sr_dst := data.get("to", Vector2i(-1, -1)) as Vector2i
 			var sr_n: int = int(data.get("amount", 0))
-			_say("◈ %s 受到的 %d 点伤害被护盾生成器接下（溢出不再结算）"
-					% [str((data.get("card", null) as CardData).card_name), sr_n])
-			if sr_src.x >= 0:
-				_floaters.append({"pos": _cell_center(sr_src) + Vector2(0, -14), "sc": _grid_scroll,
-						"text": "接下 %d" % sr_n, "col": COL_FIELD_PERSIST,
-						"start": n, "dur": 1600, "size": 16})
-			if sr_dst.x >= 0:
-				_bursts.append({"pos": _cell_center(sr_dst), "sc": _grid_scroll, "start": n,
-						"dur": 520, "col": COL_FIELD_PERSIST, "big": true})
-				_floaters.append({"pos": _cell_center(sr_dst) + Vector2(0, -14), "sc": _grid_scroll,
-						"text": "-%d" % sr_n, "col": Color("f0a0a0"),
-						"start": n, "dur": 1600, "size": 17})
+			var sr_gen := engine.state.unit_at(sr_dst) if sr_dst.x >= 0 else null
+			if sr_gen != null:
+				_freeze_hp(sr_gen, sr_n)      # 生成器的血量数字等撞击那一刻再掉
+			_delayed.append({"at": _pending_impact_ms(), "kind": "absorb_fx",
+					"data": {"src": sr_src, "dst": sr_dst, "amount": sr_n,
+					"say": "◈ %s 受到的 %d 点伤害被护盾生成器接下（溢出不再结算）"
+							% [str((data.get("card", null) as CardData).card_name), sr_n]}})
 		"mimic_upgrade":
 			# 模仿者（8043，R92）：接通的我方盟友获得改造 → 它获得**相同改造**。
 			var mu_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
@@ -10367,16 +10656,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("8ce09a"), "start": n, "dur": 1400, "size": 16})
 			sfx.play("heal")
 		"batch_upgrade":
-			# 批量改造 8031（R86）：手牌里所有盟友/工事各 +1 生命。
+			# 集体改造 8031（R86 → R394）：手牌 + 卡组里所有盟友/工事各 +3 生命。
 			var bu_n: int = int(data.get("count", 0))
 			if bu_n <= 0:
-				_say("批量改造：手牌里没有盟友或工事，效果落空")
+				_say("集体改造：手牌和卡组里没有盟友或工事，效果落空")
 			else:
 				sfx.play("heal")
-				_say("✦ 批量改造：手牌里 %d 张盟友/工事各 +1 生命（本场战斗内一直有效）"
+				_say("✦ 集体改造：手牌 + 卡组 %d 张盟友/工事各 +3 生命（本场战斗内一直有效）"
 						% bu_n)
 				_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 30),
-						"text": "批量改造 · %d 张" % bu_n,
+						"text": "集体改造 · %d 张" % bu_n,
 						"col": Color("8ad4f0"), "start": n, "dur": 2000})
 		"overload":
 			# 过载 8030（R85，机械之心）：给牌库里一张盟友加上「一回合行动两次」。
@@ -10386,7 +10675,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sfx.play("place")
 				_say("✦ 过载：%s 现在一回合行动两次（之后每次抽到它都是双动）"
 						% ov_card.card_name)
-				_floaters.append({"pos": Vector2(DECK_X + CARD_W / 2, DECK_Y - 14),
+				_floaters.append({"pos": Vector2(DECK_X + ZONE_W / 2, DECK_Y - 14),
 						"text": "%s · 行动两次" % ov_card.card_name,
 						"col": Color("b98cf0"), "start": n, "dur": 2200, "size": 14})
 			else:
@@ -10494,7 +10783,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			else:
 				_say("批量传输：手牌里没有盟友或工事（未改造），仍抽 %d 张卡" % bt_drw)
 			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
-				"text": "批量改造 %d 张 · 抽 %d" % [bt_n, bt_drw],
+				# R394：8031 改名「集体改造」后，这里再写「批量改造」会被读成那张卡
+				"text": "改造 %d 张 · 抽 %d" % [bt_n, bt_drw],
 				"col": Color("8ad4f0"), "start": n, "dur": 2000})
 		"inf_armor":
 			# 无限装甲（8038，R89）：被改造时供一张 0 费改造牌到手 —— 飘字落在**手牌区上方**，
@@ -10611,8 +10901,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var ga_name := "?"
 			if data.get("card") is CardData:
 				ga_name = (data["card"] as CardData).card_name
-			_say("%s：%s 替我方 HP 承受 %d 点伤害" % [
-					str(data.get("how", "守护")), ga_name, int(data.get("amount", 0))])
+			var ga_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
+			var ga_n: int = int(data.get("amount", 0))
+			# R393：与护盾生成器同一处理 —— 等攻击撞击帧，别抢在动画前面
+			var ga_pl := engine.state.unit_at(ga_cell) if ga_cell.x >= 0 else null
+			if ga_pl != null:
+				_freeze_hp(ga_pl, ga_n)
+			_delayed.append({"at": _pending_impact_ms(), "kind": "absorb_fx",
+					"data": {"src": Vector2i(-1, -1), "dst": ga_cell, "amount": ga_n,
+					"say": "%s：%s 替我方 HP 承受 %d 点伤害" % [
+							str(data.get("how", "守护")), ga_name, ga_n]}})
 		"echo":
 			# 回响（9102）：每个敌人各吃 2 伤 + 力量 -1（紫色飘字压在卡上）
 			sfx.play("spell")
@@ -10639,14 +10937,18 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var da_name := "?"
 			if data.get("card") is CardData:
 				da_name = (data["card"] as CardData).card_name
-			var da_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_floaters.append({"pos": da_pos + Vector2(0, -12), "sc": _grid_scroll,
-					"text": "闪躲 → %s -%d" % [da_name, int(data.get("absorbed", 0))],
-					"col": UiTheme.KIND_EFFECT, "start": n, "dur": 1500, "size": 15})
-			_say("闪躲：%s 替我方 HP 承受 %d 点伤害%s" % [
-					da_name, int(data.get("absorbed", 0)),
-					("（超出 %d 由自己承担）" % int(data.get("rest", 0)))
-					if int(data.get("rest", 0)) > 0 else ""])
+			var da_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
+			var da_n: int = int(data.get("absorbed", 0))
+			# R393：闪躲也是代受 —— 同样等攻击撞击帧，否则「闪躲 -N」比拳头先到
+			var da_pl := engine.state.unit_at(da_cell) if da_cell.x >= 0 else null
+			if da_pl != null:
+				_freeze_hp(da_pl, da_n)
+			_delayed.append({"at": _pending_impact_ms(), "kind": "absorb_fx",
+					"data": {"src": Vector2i(-1, -1), "dst": da_cell, "amount": da_n,
+					"say": "闪躲：%s 替我方 HP 承受 %d 点伤害%s" % [
+							da_name, da_n,
+							("（超出 %d 由自己承担）" % int(data.get("rest", 0)))
+							if int(data.get("rest", 0)) > 0 else ""]}})
 		"finisher":
 			# 收尾（9104）：手卡里仅剩它 → 22 伤（金色大飘字）；平时 6 伤（普通飘字）。
 			var fn_last := bool(data.get("last", false))
@@ -11824,6 +12126,30 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 					"text": "-%d" % int(d.dmg), "col": UiTheme.SIDE_FOE,
 					"start": n, "dur": 1150})
 			_shake(5.0, 260)
+		"absorb_fx":
+			# R393：代受演出到点（与攻击撞击同帧）。两头都画：
+			# src（受害格）报「接下 N」，dst（承受格）爆点 + 「-N」。
+			sfx.play("heal")
+			if d.has("say"):
+				_say(str(d["say"]))
+			var ab_src: Vector2i = d.get("src", Vector2i(-1, -1))
+			var ab_dst: Vector2i = d.get("dst", Vector2i(-1, -1))
+			var ab_n: int = int(d.get("amount", 0))
+			if ab_src.x >= 0 and ab_n > 0:
+				_floaters.append({"pos": _cell_center(ab_src) + Vector2(0, -14),
+						"sc": _grid_scroll, "text": "接下 %d" % ab_n,
+						"col": COL_FIELD_PERSIST, "start": n, "dur": 1600, "size": 16})
+			if ab_dst.x >= 0:
+				var ab_pl := engine.state.unit_at(ab_dst) if engine != null else null
+				if ab_pl != null:
+					_flashes[ab_pl] = {"col": Color(0.9, 0.15, 0.1), "start": n, "dur": 420}
+					_drop_hp(ab_pl)      # 血条数字此刻才往下掉
+				_bursts.append({"pos": _cell_center(ab_dst), "sc": _grid_scroll,
+						"start": n, "dur": 520, "col": COL_FIELD_PERSIST, "big": true})
+				_floaters.append({"pos": _cell_center(ab_dst) + Vector2(0, -14),
+						"sc": _grid_scroll, "text": "-%d" % ab_n,
+						"col": Color("f0a0a0"), "start": n, "dur": 1600, "size": 17})
+				_shake(4.0, 220)
 		"fx_hit":
 			# R288：通用受击到点 —— 爆点 + 伤害数字（不分来源，谁打的都看得见）
 			sfx.play("attack")
@@ -11945,7 +12271,7 @@ func _draw_ghosts() -> void:
 				Vector2(BOARD_CARD_W, BOARD_CARD_H))
 		draw_rect(rect, Color(1, 1, 1, 0.85 * alpha))
 		draw_rect(rect, Color(0.6, 0.6, 0.6, alpha), false, 1.5)
-		_draw_string_center(_font, UiTheme.FS_MICRO, str(g.name), center + Vector2(0, 4),
+		_draw_string_center(_font, UI_FS_MICRO, str(g.name), center + Vector2(0, 4),
 				Color(0.3, 0.3, 0.3, alpha))
 
 
@@ -12053,7 +12379,7 @@ func _draw_dmg_preview(cell: Vector2i, info: Dictionary) -> void:
 	var text := ("-%d" % d) if d > 0 else "0"
 	var fg := Color("fff1e0") if d > 0 else Color("ddd6c8")
 	var bg := Color(0.42, 0.09, 0.07, 0.92) if d > 0 else Color(0.17, 0.16, 0.15, 0.86)
-	_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, text,
+	_draw_string_box_center(_font_bold, UI_FS_LABEL, text,
 			Vector2(r.position.x + r.size.x - 22.0, r.position.y + r.size.y - 13.0), fg, bg)
 
 
@@ -12073,11 +12399,23 @@ func _draw_highlights() -> void:
 			_draw_dmg_preview(cell, engine.preview_attack_damage(atk_src, cell))
 	for cell in hp_targets_arr:
 		_hl(cell, COL_HP)
-		_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, "HP", _cell_center(cell), Color.WHITE)
+		_draw_string_box_center(_font_bold, UI_FS_LABEL, "HP", _cell_center(cell), Color.WHITE)
 		if atk_src.x >= 0:
 			_draw_dmg_preview(cell, engine.preview_attack_hp(atk_src))
+	var spell_card: CardData = null
+	if spell_pending >= 0 and engine != null and spell_pending < engine.state.hand.size():
+		spell_card = engine.state.hand[spell_pending]
+	# R404 涂装机器人：可点来「变成」的己方单位（与技能目标同色，但来源是引擎的入场待办）
+	if engine != null and engine.paint_pending:
+		for pcell in engine.paint_options():
+			_hl(pcell, COL_SPELL)
 	for cell in spell_targets:
 		_hl(cell, COL_SPELL)
+		# R393（用户口径）：**点选目标这条路上也要报最终伤害**。以前只有鼠标停在哪一格
+		# 才由 `_draw_spell_preview` 临时报一次 —— 触摸屏根本没有 hover，等于永远看不到。
+		# 口径与攻击卡一致：只给「这一格真的有单位」的，空格不猜（见 preview_spell_damage）。
+		if spell_card != null and engine.state.unit_at(cell) != null:
+			_draw_dmg_preview(cell, engine.preview_spell_damage(spell_card, cell))
 	# R242：「点手卡 → 点目标」这条路上，鼠标停在某一格时同样给 AOE 范围 / 自伤警告。
 	# 与拖拽共用 `_draw_spell_preview`，两条路的画法不会分叉。
 	if spell_pending >= 0 and engine != null and spell_pending < engine.state.hand.size():
@@ -12095,7 +12433,7 @@ func _draw_highlights() -> void:
 		var sel_card: CardData = engine.state.hand[selection[1]]
 		for mcell in _fence_merge_cells(sel_card):
 			_hl(mcell, COL_FENCE_MERGE)
-			_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, "叠", _cell_center(mcell), Color.WHITE)
+			_draw_string_box_center(_font_bold, UI_FS_LABEL, "叠", _cell_center(mcell), Color.WHITE)
 
 
 func _picked_src() -> Vector2i:
@@ -12118,7 +12456,7 @@ func _draw_picked_marker() -> void:
 	# 角标：右上角小方块 + 「已选」两字
 	var tag := Rect2(r.position.x + r.size.x - 34.0, r.position.y + 1.0, 33.0, 14.0)
 	draw_rect(tag, COL_PICKED)
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "已选",
+	_draw_string_center(_font_bold, UI_FS_MICRO, "已选",
 			tag.position + tag.size / 2.0, Color.BLACK)
 
 
@@ -12147,7 +12485,7 @@ func _draw_cancel_armed_marker() -> void:
 	draw_rect(r, col, false, 3.0 + 2.0 * pulse)
 	var tag := Rect2(r.position.x + r.size.x - 45.0, r.position.y + 2.0, 44.0, 15.0)
 	draw_rect(tag, COL_CANCEL_ARMED)
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "取消?",
+	_draw_string_center(_font_bold, UI_FS_MICRO, "取消?",
 			tag.position + tag.size / 2.0, Color(0.10, 0.07, 0.02))
 
 
@@ -12248,11 +12586,11 @@ func _draw_level_plate() -> void:
 	if _tut_bar != null and _tut_bar.visible:
 		return
 	var txt := "关卡：%s" % engine.state.level_name
-	var px := UiTheme.FS_LABEL
+	var px := UI_FS_LABEL
 	var tw := _font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 	var pad_x := 18.0
-	var ph := 30.0
-	var rect := Rect2(WINDOW_W - 18.0 - (tw + pad_x * 2.0), 40.0, tw + pad_x * 2.0, ph)
+	var ph := 34.0
+	var rect := Rect2(WINDOW_W - 18.0 - (tw + pad_x * 2.0), 50.0, tw + pad_x * 2.0, ph)
 	draw_rect(rect.grow(2.0), Color(0, 0, 0, 0.22), true)          # 投影：把铭牌从底图上托出来
 	draw_rect(rect, Color(0.09, 0.075, 0.05, 0.78), true)          # 深色铭牌底
 	draw_rect(rect, UiTheme.ACCENT_GOLD, false, 1.5)               # 金边
@@ -12312,8 +12650,12 @@ func _draw_grid_frame() -> void:
 func _draw_grid_caption() -> void:
 	## R139：边框会滚了，「战场」标题就**不能再挂在边框上**（否则跟着飘走）——
 	## 改成固定在可视窗正上方的栏目标题（深棕字 + 浅金描边，压得住金饰带）。
-	_draw_string_box_center(_font_bold, UiTheme.FS_MICRO, "战场",
-			Vector2(GRID_X + GRID_W / 2, GRID_Y - 12), TXT_LIGHT)
+	# ⚠️ R391：顶栏长到 44px 之后，「棋盘上方 12px」那条缝只剩 8px —— 带底衬的
+	#    表头会被整条吃掉（顶栏是子节点、画在本层之上）。改成**不铺底、只描边**，
+	#    压在边框上沿：既不占高度，也不遮第一行卡面。
+	_draw_string_center(_font_bold, UI_FS_MICRO, "战场",
+			Vector2(GRID_X + GRID_W / 2, GRID_Y - 3), TXT_LIGHT, 3,
+			Color(0.10, 0.08, 0.05, 0.92))
 
 
 func _draw_frame_corner(src: Rect2, at: Vector2, sz: Vector2) -> void:
@@ -12330,15 +12672,87 @@ func _draw_hp_banner() -> void:
 	if _hp_icon != null:
 		draw_texture_rect(_hp_icon, Rect2(mid_x - 3, GRID_Y + 4, 24, 24), false)
 	# R356：敌方 HP 为 ∞ 的关卡（启示者）直接写 ∞ —— 数字滚动毫无意义，也不该显示 30。
-	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION,
+	_draw_string_box_nw(_font_bold, UI_FS_CAPTION,
 			"敌方 HP ∞" if engine.enemy_hp_infinite \
 					else "敌方 HP %d" % _roll("hp_opp", _show_hp("hp_opp", engine.state.hp_opponent)),
-			Vector2(mid_x + 26, GRID_Y + 8 + UiTheme.FS_CAPTION), TXT_FOE)
+			Vector2(mid_x + 26, GRID_Y + 8 + UI_FS_CAPTION), TXT_FOE)
 	if _hp_icon != null:
 		draw_texture_rect(_hp_icon, Rect2(mid_x - 3, GRID_Y + GRID_H - 34, 24, 24), false)
-	_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION, "我方 HP %d/%d" % [_roll("hp_self", _show_hp("hp_self", engine.state.hp_self)),
+	_draw_string_box_nw(_font_bold, UI_FS_CAPTION, "我方 HP %d/%d" % [_roll("hp_self", _show_hp("hp_self", engine.state.hp_self)),
 			engine.state.max_hp_self],
-			Vector2(mid_x + 26, GRID_Y + GRID_H - 30 + UiTheme.FS_CAPTION), TXT_SELF)
+			Vector2(mid_x + 26, GRID_Y + GRID_H - 30 + UI_FS_CAPTION), TXT_SELF)
+
+
+## ── R391：大号「回合结束」按钮（道具栏正上方）──
+## 用户口径：「增加一个更大更明显的回合结束按钮放在道具栏上方」。
+## 道具栏 = `_relic_zone_rect()` = (900, 402, 240, 172) → 按钮压在它正上方，
+## 左边让开敌方效果区（右沿 882）、右边让开卡组列（DECK_X ≈ 1157）。
+func _end_turn_big_rect() -> Rect2:
+	return Rect2(898.0, 286.0, 244.0, 100.0)
+
+
+func _end_turn_ready() -> bool:
+	## 大按钮能不能按 —— 与 `_on_end_turn()` 的守卫**同源**：那边会直接 return 的
+	## 几种状态（对手回合 / 已结算 / 有必须先选完的待办）在这里提前显形，
+	## 按钮画灰并写明「对手行动中…」，别让玩家对着一个没反应的按钮点。
+	if engine == null or engine.over:
+		return false
+	if engine.current_side != GameEngine.SIDE_SELF:
+		return false
+	if engine.crow_pending or engine.whale_pending or engine.endless_pending \
+			or engine.rebirth_pending or _recall_pending():
+		return false
+	if engine.foresight_mode or engine.foresight_pick:
+		return false
+	# R395：任何选卡页开着（含填充 / 系统升级 / 回收 / 英雄代价这些场景级待选）都不给结束回合
+	if _pick != null and _pick.is_picking() and not _pick.is_view():
+		return false
+	return true
+
+
+func _draw_end_turn_big() -> void:
+	## R391：**自绘**而不是挂一个 Button 节点 —— 这个场景的点击判定全在
+	## `_gui_input` / `_on_left_click` 里；插一个 Button 会在**拖牌经过**时抢走
+	## 松手事件（牌就卡在手上放不下去了），而自绘只要在 `_on_left_click` 里
+	## 判一个矩形。有效性的唯一判据是 `_end_turn_ready()`。
+	var r := _end_turn_big_rect()
+	var ready := _end_turn_ready()
+	var hover: bool = ready and r.has_point(_mouse_ui)
+	var t := float(_now()) / 1000.0
+	var ph := 0.5 + 0.5 * sin(t * 2.2)          # 约 2.9 秒一个来回
+	# 金晕只在**能按**的时候呼吸（常亮等于没有信息量）
+	if ready:
+		for i in 4:
+			var g := r.grow(2.0 + float(i) * 5.0)
+			var a := (0.20 - float(i) * 0.045) * (0.45 + 0.55 * ph)
+			draw_rect(g, Color(1.0, 0.80, 0.30, maxf(a, 0.0)), true)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.11, 0.09, 0.06, 0.94) if ready else Color(0.18, 0.18, 0.20, 0.88)
+	sb.border_color = UiTheme.ACCENT_LIT if ready else Color(0.55, 0.55, 0.58)
+	sb.set_border_width_all(3 if ready else 2)
+	sb.set_corner_radius_all(14)
+	draw_style_box(sb, r)
+	# 内圈细线：让边框看起来是「双线」，比单线厚一档
+	draw_rect(r.grow(-7.0), Color(1.0, 0.86, 0.55, 0.32 if ready else 0.12), false, 1.0)
+	# 左侧「推进」图标：两枚三角（字体里的 ▶ 不保证有字形 → 一律程序画）
+	var icon_c := Vector2(r.position.x + 42.0, r.get_center().y - 9.0)
+	var icon_col := Color(1.0, 0.85, 0.45) if ready else Color(0.55, 0.55, 0.58)
+	for k in 2:
+		var ox := float(k) * 15.0
+		draw_colored_polygon(PackedVector2Array([
+				icon_c + Vector2(ox - 6.0, -13.0), icon_c + Vector2(ox + 7.0, 0.0),
+				icon_c + Vector2(ox - 6.0, 13.0)]), icon_col)
+	# 主文案 + 副文案
+	var text_cx := r.position.x + r.size.x * 0.5 + 16.0
+	_draw_string_center(_font_bold, UI_FS_HEADING, "回合结束",
+			Vector2(text_cx, r.position.y + 38.0),
+			Color("fff2cf") if ready else Color("a8a8ac"), 2, Color(0, 0, 0, 0.55))
+	var sub := "点击结束我方回合" if ready else "对手行动中…"
+	if hover:
+		sub = "▶ 结束我方回合"
+	_draw_string_center(_font, UI_FS_CAPTION, sub,
+			Vector2(text_cx, r.position.y + 74.0),
+			Color(1.0, 0.92, 0.72, 0.95) if ready else Color(0.62, 0.62, 0.66))
 
 
 func _enemy_zone_rect() -> Rect2:
@@ -12421,13 +12835,13 @@ func _draw_enemy_effect_popup() -> void:
 		_draw_void_portal_fallback(r)
 	var merged := _merged_effects(engine.state.enemy_effects)
 	var max_w := EE_TEXT_HW * 2.0 - 28.0
-	_draw_string_center(_font_bold, UiTheme.FS_SUBHEAD, "敌方效果",
+	_draw_string_center(_font_bold, UI_FS_SUBHEAD, "敌方效果",
 			c + Vector2(0.0, -EE_TEXT_HH + 26.0), Color.WHITE)
 	var y := c.y - EE_TEXT_HH + 62.0
 	var bottom := c.y + EE_TEXT_HH - 30.0
 	for m in merged:
 		if y > bottom - 24.0:
-			_draw_string_center(_font, UiTheme.FS_CAPTION,
+			_draw_string_center(_font, UI_FS_CAPTION,
 					"……共 %d 张，点右侧「敌方效果」区查看全部" % merged.size(),
 					Vector2(c.x, bottom), Color(0.72, 0.72, 0.78))
 			break
@@ -12435,12 +12849,12 @@ func _draw_enemy_effect_popup() -> void:
 		var nm: String = card.card_name
 		if int(m["count"]) > 1:
 			nm += " ×%d" % int(m["count"])
-		_draw_string_center(_font_bold, UiTheme.FS_BODY, nm,
+		_draw_string_center(_font_bold, UI_FS_BODY, nm,
 				Vector2(c.x, y), Color.WHITE)
 		y += 24.0
 		var desc := CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
-		for ln in _wrap_lines(_font, UiTheme.FS_CAPTION, desc, max_w):
-			_draw_string_center(_font, UiTheme.FS_CAPTION, ln,
+		for ln in _wrap_lines(_font, UI_FS_CAPTION, desc, max_w):
+			_draw_string_center(_font, UI_FS_CAPTION, ln,
 					Vector2(c.x, y), Color(0.93, 0.93, 0.97))
 			y += 17.0
 		y += 12.0
@@ -12449,7 +12863,7 @@ func _draw_enemy_effect_popup() -> void:
 	var ee_btn := Rect2(c.x - 70.0, c.y + EE_TEXT_HH - 37.0, 140.0, 30.0)
 	draw_rect(ee_btn, Color(0.30, 0.40, 0.26, 0.95), true)
 	draw_rect(ee_btn, Color("c8f0a0"), false, 1.5)
-	_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "继续（%d 秒）" % left,
+	_draw_string_center(_font_bold, UI_FS_CAPTION, "继续（%d 秒）" % left,
 			ee_btn.get_center() + Vector2(0, 1), Color("0e2010"))
 
 
@@ -12459,7 +12873,7 @@ func _draw_enemy_effects() -> void:
 	var z := _enemy_zone_rect()
 	draw_rect(z, Color(0.88, 0.72, 0.72, 0.30), true)
 	draw_rect(z, Color("a87a7a"), false, 1.0)
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "敌方效果 %d" % state.enemy_effects.size(),
+	_draw_string_center(_font_bold, UI_FS_MICRO, "敌方效果 %d" % state.enemy_effects.size(),
 			Vector2(z.position.x + z.size.x / 2, z.position.y + 22.0), Color("7a3a3a"))
 	# 同名合并显示（左下角 ×N 角标）
 	var merged_e := _merged_effects(state.enemy_effects)
@@ -12606,7 +13020,7 @@ func _draw_relic_bar() -> void:
 		_draw_more_tile(_relic_rect(shown_r), "+%d" % (n_rel - shown_r), "")
 	# 鸭之低语：本回合随机得到的强化，常驻显示在道具栏下方
 	if engine.self_relics.has(6010):
-		_draw_string_box_nw(_font_bold, UiTheme.FS_CAPTION,
+		_draw_string_box_nw(_font_bold, UI_FS_CAPTION,
 				"鸭之低语：%s" % (_whisper_txt if _whisper_txt != "" else "…"),
 				Vector2(z.position.x + 6.0, z.position.y + z.size.y + 20.0), Color("d9a8ff"))
 
@@ -12620,42 +13034,58 @@ func _draw_cost_zone() -> void:
 	var state := engine.state
 	var mid_x := COST_X + (TAP_W + 12) / 2
 	var bottom := GRID_Y + GRID_H
-	_draw_string_box_center(_font_bold, UiTheme.FS_MICRO, "费用",
-			Vector2(mid_x, COST_Y - 12), TXT_POWER)
+	# ⚠️ R391 起**不再画「费用」小标题**：顶栏长到 44px 之后，那条 `COST_Y - 12`
+	#    （= 40）整条落在顶栏底边里（顶栏是子节点、画在本层之上）→ 一个字都看不见。
+	#    面板里已经有「角色」+ 水晶图标 +「X/Y」，标题纯属冗余。
 	var epanel := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
 	draw_rect(epanel, Color(1, 1, 1, 0.55), true)
 	draw_rect(epanel, UiTheme.INK_300, false, 1.0)
-	# R156：费用数值配水晶图标（与费用徽章同款素材），图标 + 数字作为一对整体居中
-	var e_txt := str(_roll("energy", state.energy))
-	var e_w := _font_bold.get_string_size(e_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_HEADING).x
-	var gem := 26.0
-	var pair_x := mid_x - (gem + 4.0 + e_w) / 2.0
+	# 角色（左栏常驻）：本局选定的角色 —— 面板第一行
+	# ⚠️ 只写职业名，不带「角色：」前缀：面板只有 88 宽，15px 下「角色：森林精魄」
+	#    量到 105px，会左右各戳出面板 8px（实测出图里字压在棋盘边上）。
+	_draw_string_center(_font_bold, UI_FS_CAPTION, RunState.player_class,
+			Vector2(mid_x, COST_Y + 18), UiTheme.KIND_EFFECT)
+	# R391（用户口径）：费用显示成 **X / Y** —— X = 当前可用（滚动数字），
+	# Y = **满费上限** `GameEngine.max_energy()`（只算「每个回合都会给」的那部分）。
+	# 原来面板底下那行写死的「回合重置 N 点」删掉：一旦有耳环 / 兼修 / 无尽黑暗，
+	# 那个 N 就是错的。分母比分子小一档、颜色更淡 —— 「当前」是第一眼的数字，
+	# 「上限」只是参照物。
+	var e_cur := str(_roll("energy", state.energy))
+	var e_max_txt := "/%d" % engine.max_energy()
+	var e_w := _font_bold.get_string_size(e_cur, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			UI_FS_HEADING).x
+	var m_w := _font_bold.get_string_size(e_max_txt, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			UI_FS_LABEL).x
+	var gem := 30.0
+	var pair_w := gem + 6.0 + e_w + m_w
+	var pair_x := mid_x - pair_w / 2.0
 	if _energy_icon != null:
-		draw_texture_rect(_energy_icon, Rect2(pair_x, COST_Y + 46 - gem / 2.0, gem, gem), false)
-	_draw_string_center(_font_bold, UiTheme.FS_HEADING, e_txt,
-			Vector2(pair_x + gem + 4.0 + e_w / 2.0, COST_Y + 46), UiTheme.STAT_POWER)
-	_draw_string_center(_font, UiTheme.FS_MICRO, "每回合重置为 5",
-			Vector2(mid_x, COST_Y + 70), UiTheme.INK_500)
+		draw_texture_rect(_energy_icon,
+				Rect2(pair_x, COST_Y + 66 - gem / 2.0, gem, gem), false)
+	_draw_string_center(_font_bold, UI_FS_HEADING, e_cur,
+			Vector2(pair_x + gem + 6.0 + e_w / 2.0, COST_Y + 66), UiTheme.STAT_POWER)
+	_draw_string_center(_font_bold, UI_FS_LABEL, e_max_txt,
+			Vector2(pair_x + pair_w - m_w / 2.0, COST_Y + 71), UiTheme.INK_500)
 	# 蓄力（9085）：待用层数（0 层不画）—— 下一张技能的结算次数 = 1 + 层数
+	# ⚠️ 面板只有 88 宽：原来那一长串「蓄力 ×N（下一张技能 ×N+1）」在 13px 下量到
+	#    ~156px，会横着糊到棋盘上 → 拆成两行（字要变大，但不能溢出面板）。
 	var chg := engine.charge_count(GameEngine.SIDE_SELF)
+	var status_y := COST_Y + 98.0
 	if chg > 0:
-		_draw_string_center(_font_bold, UiTheme.FS_MICRO, "蓄力 ×%d（下一张技能 ×%d）" % [chg, chg + 1],
-				Vector2(mid_x, COST_Y + 84), UiTheme.STAT_POWER)
+		_draw_string_center(_font_bold, UI_FS_MICRO, "蓄力 ×%d" % chg,
+				Vector2(mid_x, status_y), UiTheme.STAT_POWER)
+		_draw_string_center(_font, UI_FS_MICRO, "技能 ×%d" % (chg + 1),
+				Vector2(mid_x, status_y + 16.0), UiTheme.STAT_POWER)
+		status_y += 32.0
 	# 闪躲（9103）：盟友代受窗口（未开启不画）
 	if engine.dodge_active(GameEngine.SIDE_SELF):
-		_draw_string_box_center(_font_bold, UiTheme.FS_MICRO, "闪躲：伤害由盟友代受",
-				Vector2(mid_x, COST_Y + 108), TXT_WARN)
-	# 角色（左栏常驻）：本局选定的角色
-	# R117：棋盘上移到 y=52 之后，原来的 `COST_Y - 26`（=26）会落进顶栏（36px 高，
-	# 且顶栏是子节点、画在本层之上）→ 被整条吃掉。收进费用面板上方的空档：
-	# 面板是 56..148，大数字在 +46、副标题在 +70，这一带原本就是空的。
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "角色：%s" % RunState.player_class,
-			Vector2(mid_x, COST_Y + 14), UiTheme.KIND_EFFECT)
+		_draw_string_box_center(_font_bold, UI_FS_MICRO, "闪躲：盟友代受",
+				Vector2(mid_x, status_y + 6.0), TXT_WARN)
 	# 效果区
 	var zone := Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, bottom - COST_Y - ENERGY_H)
 	draw_rect(zone, Color(0.72, 0.86, 0.72, 0.30), true)
 	draw_rect(zone, Color("7aa87a"), false, 1.0)
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "效果区 %d" % state.effects.size(),
+	_draw_string_center(_font_bold, UI_FS_MICRO, "效果区 %d" % state.effects.size(),
 			Vector2(mid_x, COST_Y + ENERGY_H + 22.0), Color("4a6a4a"))
 	# 效果卡：同名合并显示（左下角 ×N 角标），栏高固定、最多画满可见槽位；
 	# 装不下的用一张「+N」摘要卡兜底（点区域看全部）
@@ -12698,13 +13128,14 @@ func _draw_count_badge(rect: Rect2, count: int) -> void:
 	## （左下力/程、右下生/速），原来在左下会被「力」徽章整个盖住。
 	if count < 2:
 		return
-	var bw := 26.0
+	# R393：字号 10 → 13，底板同步放大（还是 16 高的框会把字顶出去）
+	var bw := 32.0
 	var badge := Rect2(rect.end.x - bw - 2.0,
-			rect.position.y + 2.0, bw, 16.0)
+			rect.position.y + 2.0, bw, 21.0)
 	draw_rect(badge, Color(0.15, 0.18, 0.15, 0.88), true)
 	draw_rect(badge, Color("a8d8a8"), false, 1.0)
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "×%d" % count,
-			Vector2(badge.position.x + bw / 2, badge.position.y + 12.0), Color("d8f0d8"))
+	_draw_string_center(_font_bold, UI_FS_MICRO, "×%d" % count,
+			Vector2(badge.position.x + bw / 2, badge.position.y + 15.5), Color("d8f0d8"))
 
 
 func _draw_counter_badge(c: CardData, rect: Rect2) -> void:
@@ -12715,14 +13146,15 @@ func _draw_counter_badge(c: CardData, rect: Rect2) -> void:
 	var left := engine.effect_counter(c)
 	if left < 0:
 		return
-	var bw := 30.0
+	# R393：字号 10 → 13，底板同步放大，并整体下移到「×N」（21 高）之下
+	var bw := 36.0
 	## R114：同样让开底部数值条，堆在「×N」角标之下（两者可以同时出现）。
 	var badge := Rect2(rect.end.x - bw - 2.0,
-			rect.position.y + 20.0, bw, 16.0)
+			rect.position.y + 25.0, bw, 21.0)
 	draw_rect(badge, Color(0.15, 0.15, 0.18, 0.88), true)
 	draw_rect(badge, Color("d8cfa8"), false, 1.0)
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "剩 %d" % left,
-			Vector2(badge.position.x + bw / 2, badge.position.y + 12.0), Color("f0e6c8"))
+	_draw_string_center(_font_bold, UI_FS_MICRO, "剩 %d" % left,
+			Vector2(badge.position.x + bw / 2, badge.position.y + 15.5), Color("f0e6c8"))
 
 
 func _effect_zone_max_slots() -> int:
@@ -12739,13 +13171,13 @@ func _draw_more_tile(rect: Rect2, label: String, sub: String) -> void:
 	draw_rect(rect, Color(0.96, 0.95, 0.88, 0.95), true)
 	draw_rect(rect, Color("9a8f70"), false, 1.0)
 	if rect.size.y >= 40.0:
-		_draw_string_center(_font_bold, UiTheme.FS_LABEL, label,
+		_draw_string_center(_font_bold, UI_FS_LABEL, label,
 				Vector2(cx, rect.position.y + rect.size.y * (0.50 if sub == "" else 0.40)), Color("6a6040"))
 		if sub != "":
-			_draw_string_center(_font, UiTheme.FS_MICRO, sub,
+			_draw_string_center(_font, UI_FS_MICRO, sub,
 					Vector2(cx, rect.position.y + rect.size.y * 0.72), Color("7a7050"))
 	else:
-		_draw_string_center(_font_bold, UiTheme.FS_MICRO, label if sub == "" else "%s %s" % [label, sub],
+		_draw_string_center(_font_bold, UI_FS_MICRO, label if sub == "" else "%s %s" % [label, sub],
 				Vector2(cx, rect.position.y + rect.size.y * 0.5 + 3.0), Color("6a6040"))
 
 
@@ -12861,13 +13293,27 @@ func _drag_zone_label() -> String:
 	return ""
 
 
+static func _zone_rect(kind: String) -> Rect2:
+	## R393：右列三块（卡组 / 弃牌 / 消耗）的矩形**唯一口**。
+	## 尺寸从 CARD_W/CARD_H（手牌）换成了 ZONE_W/ZONE_H —— 凡是判定 / 起飞点 / 落点
+	## 都要走这里，别在别处再写一遍 `Rect2(DECK_X, DECK_Y, ...)`：改大小的时候漏一处，
+	## 就变成「看着在这儿、点不到」。
+	match kind:
+		"deck":
+			return Rect2(DECK_X, DECK_Y, ZONE_W, ZONE_H)
+		"discard":
+			return Rect2(DISCARD_X, DISCARD_Y, ZONE_W, ZONE_H)
+		_:
+			return Rect2(VOID_X, VOID_Y, ZONE_W, ZONE_H)
+
+
 func _draw_deck_and_discard() -> void:
 	## R140：右列一竖三块 —— **消耗区**（最上）· **弃牌区**（中，位置不变）· **卡组**（最下）。
 	## 用户口径：① 弃牌区只把「顶牌卡面」换成 图标 + 张数；② 卡组张数骑在卡背顶边上；
 	##          ③ 消耗区（本局消失的卡）摆在弃牌区**正上方**。
 	var state := engine.state
 	# ---- 卡组（抽牌堆）：卡背 + 顶边张数徽章 ----
-	var drect := Rect2(DECK_X, DECK_Y, CARD_W, CARD_H)
+	var drect := _zone_rect("deck")
 	if state.deck.is_empty():
 		draw_rect(drect, Color(0, 0, 0, 0.28), true)
 		draw_rect(drect, UiTheme.INK_300, false, 1.0)
@@ -12876,12 +13322,12 @@ func _draw_deck_and_discard() -> void:
 	_draw_zone_name(drect, "卡组")
 	_draw_zone_count(drect, state.deck.size())
 	# ---- 弃牌区：图标 + 张数（不再显示卡面）----
-	var crect := Rect2(DISCARD_X, DISCARD_Y, CARD_W, CARD_H)
+	var crect := _zone_rect("discard")
 	_draw_zone_icon(_discard_tex, crect, Color("a08a52"))
 	_draw_zone_name(crect, "弃牌")
 	_draw_zone_count(crect, state.discard.size())
 	# ---- 消耗区：次元图标 + 本局消失张数 ----
-	var vrect := Rect2(VOID_X, VOID_Y, CARD_W, CARD_H)
+	var vrect := _zone_rect("void")
 	_draw_zone_icon(_void_tex, vrect, Color("b06ae0"))
 	_draw_zone_name(vrect, "消耗")
 	_draw_zone_count(vrect, state.void_count)
@@ -12905,7 +13351,7 @@ func _draw_zone_name(rect: Rect2, label: String) -> void:
 	var plate := rect.grow(-3.0)
 	var strip := Rect2(plate.position.x, plate.end.y - ZONE_NAME_H, plate.size.x, ZONE_NAME_H)
 	draw_rect(strip, Color(0.04, 0.035, 0.03, 0.82), true)
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, label,
+	_draw_string_center(_font_bold, UI_FS_MICRO, label,
 			strip.get_center(), Color("e8dcc0"))
 
 
@@ -12913,10 +13359,10 @@ func _draw_zone_count(rect: Rect2, count: int) -> void:
 	## R140：区域张数徽章 —— **骑在方块顶边**上的小金牌（张数直接贴在区域上方）。
 	## 卡组、弃牌区、消耗区三块共用这一个口，样式一致。
 	var txt := str(count)
-	var px := UiTheme.FS_CAPTION
+	var px := UI_FS_CAPTION
 	var tw := _font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
-	var bw := maxf(30.0, tw + 18.0)
-	var bh := 20.0
+	var bw := maxf(34.0, tw + 20.0)
+	var bh := 24.0
 	var r := Rect2(rect.position.x + rect.size.x * 0.5 - bw * 0.5,
 			rect.position.y - bh * 0.6, bw, bh)
 	draw_rect(r.grow(1.5), Color(0, 0, 0, 0.45), true)
@@ -12946,7 +13392,7 @@ func _draw_hand() -> void:
 	# 标签放在手牌左侧、竖直居中于**可见**卡面（卡底沉在窗口外，别贴着屏幕底）
 	var label_y: float = OWN_HAND_Y + minf(HAND_CARD_H, WINDOW_H - OWN_HAND_Y) / 2
 	var left: float = _hand_rect(0).position.x if n > 0 else WINDOW_W / 2
-	_draw_string_box_center(_font_bold, UiTheme.FS_MICRO, "手牌 %d/%d" % [n, FieldState.HAND_LIMIT],
+	_draw_string_box_center(_font_bold, UI_FS_MICRO, "手牌 %d/%d" % [n, FieldState.HAND_LIMIT],
 			Vector2(minf(WINDOW_W / 2 - 330, left - 56), label_y),
 			TXT_WARN if full else TXT_LIGHT)
 	# 悬停的那张抬起来、并压在最上层（重叠时才看得清）
@@ -13235,13 +13681,13 @@ func _draw_curse_show() -> void:
 	else:
 		# 展示段文字：上面「诅咒」+ 卡名，下面来源
 		var top := rect.position.y - 46.0
-		_draw_string_center(_font_bold, UiTheme.FS_CAPTION, "诅 咒",
+		_draw_string_center(_font_bold, UI_FS_CAPTION, "诅 咒",
 				Vector2(ctr.x, top), Color(0.86, 0.58, 1.0, 0.95))
-		_draw_string_center(_font_bold, UiTheme.FS_HEADING, card.card_name,
+		_draw_string_center(_font_bold, UI_FS_HEADING, card.card_name,
 				Vector2(ctr.x, top + 30.0), Color(1.0, 0.93, 1.0))
 		var src: String = str(_curse_cur.get("from", ""))
 		var sub := "→ 你的卡组" if src == "" else "%s → 你的卡组" % src
-		_draw_string_center(_font_bold, UiTheme.FS_CAPTION, sub,
+		_draw_string_center(_font_bold, UI_FS_CAPTION, sub,
 				Vector2(ctr.x, rect.end.y + 26.0), Color(0.78, 0.62, 1.0, 0.9))
 
 
@@ -13282,12 +13728,20 @@ func _draw_transform_fx() -> void:
 			if slot < 0 or slot >= engine.state.hand.size():
 				continue
 			ctr = _hand_rect(slot).get_center()
+		elif zone == "cell":
+			# R404：棋盘格上的「变幻」（涂装机器人把场上的单位换成别的）——
+			# 前三种落点是手牌位 / 卡组堆 / 弃牌堆，这次多一种「格子」。
+			var fxc: Vector2i = f.get("cell", Vector2i(-1, -1))
+			if fxc.x < 0:
+				continue
+			ctr = _cell_center(fxc)
 		elif zone == "deck":
 			ctr = Vector2(DECK_X + CARD_W / 2.0, DECK_Y + CARD_H / 2.0)
 		else:  # discard
 			ctr = Vector2(DISCARD_X + CARD_W / 2.0, DISCARD_Y + CARD_H / 2.0)
 		var a := 1.0 - t
-		var rad := lerpf(CARD_W * 0.30, CARD_W * 1.10, t)
+		# 格子比手牌小一圈 → 棋盘格那支按 0.82 收一点，环不会糊到隔壁两格。
+		var rad := lerpf(CARD_W * 0.30, CARD_W * 1.10, t) * (0.82 if zone == "cell" else 1.0)
 		draw_arc(ctr, rad, 0.0, TAU, 30, Color(0.78, 0.40, 0.95, a * 0.9), 3.0)
 		draw_arc(ctr, rad * 0.6, 0.0, TAU, 26, Color(0.95, 0.72, 1.0, a * 0.7), 2.0)
 		for k in 6:
@@ -13295,7 +13749,7 @@ func _draw_transform_fx() -> void:
 			var p0 := ctr + Vector2(cos(ang), sin(ang)) * rad * 0.5
 			var p1 := ctr + Vector2(cos(ang), sin(ang)) * rad * 1.05
 			draw_line(p0, p1, Color(0.90, 0.62, 1.0, a * 0.8), 2.0)
-		_draw_string_center(_font_bold, UiTheme.FS_LABEL, "变幻",
+		_draw_string_center(_font_bold, UI_FS_LABEL, "变幻",
 			ctr + Vector2(0.0, -CARD_H * 0.5 - 8.0), Color(0.85, 0.50, 1.0, a))
 
 func _draw_card_back_fade(rect: Rect2, alpha: float) -> void:
@@ -13344,7 +13798,7 @@ func _draw_drag() -> void:
 			# 已有栅栏的格子（叠栅栏）用橙色 + 「叠」标记，与绿色空格区分
 			if engine.state.board.has(cell):
 				_hl(cell, COL_FENCE_MERGE)
-				_draw_string_center(_font_bold, UiTheme.FS_LABEL, "叠", _cell_center(cell), Color.WHITE)
+				_draw_string_center(_font_bold, UI_FS_LABEL, "叠", _cell_center(cell), Color.WHITE)
 			else:
 				_hl(cell, COL_MOVE)
 	var card := engine.state.hand[_drag_idx]
@@ -13361,7 +13815,7 @@ func _draw_drag() -> void:
 		draw_rect(ez, Color(0.30, 0.75, 0.55, 0.22 if over else 0.10), true)
 		draw_rect(ez, Color(0.28, 0.82, 0.58, 0.95 if over else 0.45), false,
 				3.0 if over else 1.5)
-		_draw_string_center(_font_bold, UiTheme.FS_MICRO, "效果卡放这里",
+		_draw_string_center(_font_bold, UI_FS_MICRO, "效果卡放这里",
 				ez.position + Vector2(ez.size.x / 2.0, ez.size.y - 12.0),
 				Color(0.12, 0.42, 0.30))
 	# ── R117：标出「松手即生效」的**区域**（用户口径「标明拖拽后可以使用的区域」）──
@@ -13375,7 +13829,7 @@ func _draw_drag() -> void:
 		draw_rect(zone, Color(COL_DROP_ZONE.r, COL_DROP_ZONE.g, COL_DROP_ZONE.b,
 				0.09 if in_zone else 0.04), true)
 		draw_rect(zone, COL_DROP_ZONE, false, 2.5 if in_zone else 1.5)
-		_draw_string_center(_font_bold, UiTheme.FS_CAPTION, _drag_zone_label(),
+		_draw_string_center(_font_bold, UI_FS_CAPTION, _drag_zone_label(),
 				Vector2(zone.position.x + zone.size.x / 2.0, zone.position.y - 8.0),
 				COL_DROP_ZONE)
 	# 跟着光标走的卡与手牌同尺寸（从手牌里"拿起来"不会突然变小）；
@@ -13428,6 +13882,7 @@ func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
 		return
 	var info := aoe_danger(engine.state, card, center)
 	var cells: Array[Vector2i] = info["cells"]
+	var drawn_center := false
 	if String(info["kind"]) != "":
 		for c: Vector2i in cells:
 			var r := _cell_rect(c).grow(-2.0)
@@ -13435,9 +13890,12 @@ func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
 			draw_rect(r, COL_AOE_EDGE, false, 1.6)
 			# R384：AOE 也是逐格报最终伤害（每格的护甲 / 减伤都可能不同）。
 			_draw_dmg_preview(c, engine.preview_spell_damage(card, c))
-	# R384（用户口径）：**这一发会掉多少血** —— 非 AOE 卡只有中心那一格，
-	# 这里补上（AOE 卡上面已经逐格画过，`cells.has(center)` 时跳过，免得同一处画两遍）。
-	if not cells.has(center):
+		drawn_center = cells.has(center)
+	# R384（用户口径）：**这一发会掉多少血** —— 非 AOE 卡只有中心那一格。
+	# ⚠️ R393 修：这里原来写的是 `if not cells.has(center)`，而 `aoe_cells("")` 返回的
+	# 就是 `[center]` → 条件恒假 → **单体技能一个数字都不报**（用户报「技能卡拖到场上
+	# 的卡上面没有显示最终伤害」）。AOE 分支已经逐格画过中心格，用 `drawn_center` 记一下再补。
+	if not drawn_center:
 		_draw_dmg_preview(center, engine.preview_spell_damage(card, center))
 	# ② 自伤警告：红框按时间做呼吸（相位取 _now()，不额外开 Timer）
 	var own := int(info["own"])
@@ -13453,7 +13911,7 @@ func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
 			txt = "⚠ 不分敌我：我行单位立刻 -%d，走过去还会被烧" % GameEngine.FIRE_WALL_DMG
 		else:
 			txt = "⚠ 会波及自己人 ×%d" % own
-		_draw_string_box_center(_font_bold, UiTheme.FS_LABEL, txt,
+		_draw_string_box_center(_font_bold, UI_FS_LABEL, txt,
 				Vector2(bb.get_center().x, bb.position.y - 13.0), Color("ffe2e2"),
 				Color(0.22, 0.05, 0.05, 0.88))
 	# ③ 条件额外效果：金色双环 + 文案（在格子下方，不挡飘字）
@@ -13463,7 +13921,7 @@ func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
 		var kw := minf(CELL, CELL_W)
 		draw_arc(cc, kw * 0.60, 0, TAU, 32, COL_BONUS, 2.5)
 		draw_arc(cc, kw * 0.72, 0, TAU, 32, COL_BONUS, 1.4)
-		_draw_string_box_center(_font_bold, UiTheme.FS_CAPTION, bonus,
+		_draw_string_box_center(_font_bold, UI_FS_CAPTION, bonus,
 				cc + Vector2(0, kw * 1.06), COL_BONUS, Color(0.14, 0.11, 0.03, 0.86))
 
 
@@ -13585,12 +14043,12 @@ func _draw_info_panel() -> void:
 	var left := INFO_X + 10.0
 	var right := INFO_X + INFO_W - 10.0
 	var inner_w := INFO_W - 20.0
-	var y := top + 21.0
+	var y := top + 24.0
 	# R349（用户口径）：左栏是**浅羊皮纸底**，文字一律不描边（`-1`）——
 	# 小字号自动描 2~3px 会把笔画糊成一团（R309 的同一个坑，这次连正文一起清干净）。
-	_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "#%d %s" % [card.id, card.card_name],
+	_draw_string_nw(_font_bold, UI_FS_CAPTION, "#%d %s" % [card.id, card.card_name],
 			Vector2(left, y), card.rarity_color(), -1)
-	y += 17.0
+	y += 22.0
 	# 费用：显示**当前实际费用**（悬停/选中手牌时套用本回合减费，低于卡面则标绿）
 	var hand_idx := _hover_hand
 	if hand_idx < 0 and selection != null and selection[0] == "hand":
@@ -13606,11 +14064,11 @@ func _draw_info_panel() -> void:
 	if card.x_cost:
 		# X 费卡（流星雨）：费用随剩余费用浮动 → 左栏直接写「费用 X（X = 剩余全部费用）」
 		cost_line = "%s · 费用 X（X = 剩余全部费用）· %s" % [card.kind, card.rarity_name()]
-	_draw_string_nw(_font, UiTheme.FS_MICRO, cost_line,
+	_draw_string_nw(_font, UI_FS_MICRO, cost_line,
 			Vector2(left, y), COL_COST_LOW_BG if cost_low else UiTheme.INK_600, -1)
-	y += 13.0
+	y += 18.0
 	draw_line(Vector2(left, y), Vector2(right, y), Color("cfcbc2"), 1.0)
-	y += 17.0
+	y += 20.0
 	# R349（用户口径）：**不再单开一行「现在打出：N 点伤害」** —— 那个数改成在效果正文里
 	# 内联显示（`造成 18（10＋8）点伤害`，18 醒目、算式次色），见 `CardText.inline_damage()`。
 	# 数值仍与结算同源（`GameEngine.spell_now()` → `_spell_dmg()`）。
@@ -13623,9 +14081,9 @@ func _draw_info_panel() -> void:
 		var tt := ""
 		for t in card.traits:
 			tt += (" · " if tt != "" else "") + str(t)
-		_draw_string_nw(_font, UiTheme.FS_MICRO, "词条：" + tt, Vector2(left, y),
+		_draw_string_nw(_font, UI_FS_MICRO, "词条：" + tt, Vector2(left, y),
 				Color("886000"), -1)
-		y += 17.0
+		y += 20.0
 	# R297：**框体流**（用户口径）—— 数值两框 → 效果文本框 → 字段框 → buff 框。
 	# 以前这些全是纯文本行「力量 3 生命 5 / 字段：嘲讽 · 次元 / · 护盾：免疫…」，
 	# 一层层堆下来读不出结构；现在每类一个框，**框高随内容量变**（`CardInfoBoxes.box_h`）。
@@ -13633,7 +14091,7 @@ func _draw_info_panel() -> void:
 	# R302：把「提及」的命中矩形交出去（悬停「素体」两个字才弹说明）。
 	# 用户口径：**不要**再把摘要固定列在详情底部 —— 那块地方还给效果框 / buff 框。
 	_mention_hits.clear()
-	CardInfoBoxes.draw_all(self, blocks, left, y, inner_w, CardInfoBoxes.FS,
+	CardInfoBoxes.draw_all(self, blocks, left, y, inner_w, INFO_BODY_FS,
 			top + GRID_H - 12.0, _mention_hits)
 
 
@@ -13670,8 +14128,8 @@ func _draw_game_over() -> void:
 	var col := COL_WIN if win else COL_LOSE
 	UiTheme.draw_panel_bg(self, Rect2(GRID_X + 12, cy - 58, GRID_W - 24, 116))
 	draw_rect(Rect2(GRID_X + 12, cy - 58, GRID_W - 24, 116), col, false, 3.0)
-	_draw_string_center(_font_bold, UiTheme.FS_HEADING, "胜  利" if win else "失  败", Vector2(cx, cy - 20), col)
-	_draw_string_center(_font, UiTheme.FS_MICRO, engine.result_reason, Vector2(cx, cy + 28), UiTheme.INK_600)
+	_draw_string_center(_font_bold, UI_FS_HEADING, "胜  利" if win else "失  败", Vector2(cx, cy - 20), col)
+	_draw_string_center(_font, UI_FS_MICRO, engine.result_reason, Vector2(cx, cy + 28), UiTheme.INK_600)
 
 
 func _draw_banner() -> void:
@@ -13686,7 +14144,7 @@ func _draw_banner() -> void:
 	var cy := GRID_Y + GRID_H * 0.42 - 18.0 * p
 	draw_rect(Rect2(cx - 150, cy - 30, 300, 60), Color(1, 1, 1, 0.72 * alpha))
 	draw_rect(Rect2(cx - 150, cy - 30, 300, 60), Color(col.r, col.g, col.b, alpha), false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_HEADING, str(_banner.text), Vector2(cx, cy + 8), col)
+	_draw_string_center(_font_bold, UI_FS_HEADING, str(_banner.text), Vector2(cx, cy + 8), col)
 
 
 func _draw_confetti() -> void:
@@ -13785,10 +14243,12 @@ func _zone_panel_layout(n: int) -> Dictionary:
 	var rows := maxi(1, int(ceil(float(n) / float(cols))))
 	var grid_w := cols * (CARD_W + ZONE_CARD_GAP) - ZONE_CARD_GAP
 	var pw := minf(WINDOW_W - 80.0, grid_w + 60.0)
-	var rows_fit := maxi(1, int((WINDOW_H - 40.0 - 86.0 + ZONE_CARD_GAP) / (CARD_H + ZONE_CARD_GAP)))
+	# 98 = 顶部标题区（54）+ 底部翻页区（44）。R391：标题 14 → 17px、卡面上下各外溢
+	# 约 10px，原来的 86 会让标题和第一行卡的徽章咬在一起（出图实测）。
+	var rows_fit := maxi(1, int((WINDOW_H - 40.0 - 98.0 + ZONE_CARD_GAP) / (CARD_H + ZONE_CARD_GAP)))
 	var page_rows := mini(rows, rows_fit)
 	var pages := maxi(1, int(ceil(float(rows) / float(page_rows))))
-	var ph := minf(WINDOW_H - 40.0, page_rows * (CARD_H + ZONE_CARD_GAP) + 86.0)
+	var ph := minf(WINDOW_H - 40.0, page_rows * (CARD_H + ZONE_CARD_GAP) + 98.0)
 	var px := (WINDOW_W - pw) / 2
 	var py := (WINDOW_H - ph) / 2
 	var x0 := px + (pw - grid_w) / 2
@@ -13801,7 +14261,7 @@ func _zone_card_rect(i: int, L: Dictionary) -> Rect2:
 	var cols: int = L["cols"]
 	var row_in_page := int(i / cols) - _zone_page * int(L["page_rows"])
 	return Rect2(L["x0"] + (i % cols) * (CARD_W + ZONE_CARD_GAP),
-			L["py"] + 42.0 + row_in_page * (CARD_H + ZONE_CARD_GAP), CARD_W, CARD_H)
+			L["py"] + 54.0 + row_in_page * (CARD_H + ZONE_CARD_GAP), CARD_W, CARD_H)
 
 
 func _zone_panel_rect() -> Rect2:
@@ -13842,21 +14302,21 @@ func _draw_zone_panel(title: String, cards: Array, counts: Array = []) -> void:
 	# 面板不再压暗背景（用户要求：点开面板时后面区域不要变暗）
 	UiTheme.draw_panel_bg(self, Rect2(px, py, pw, ph))
 	draw_rect(Rect2(px, py, pw, ph), UiTheme.ACCENT_GOLD, false, 2.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL, title,
-			Vector2(WINDOW_W / 2, py + 24), UiTheme.INK_800)
+	_draw_string_center(_font_bold, UI_FS_LABEL, title,
+			Vector2(WINDOW_W / 2, py + 26), UiTheme.INK_800)
 	if pages > 1:
-		_draw_string_center(_font, UiTheme.FS_CAPTION, "第 %d/%d 页" % [_zone_page + 1, pages],
+		_draw_string_center(_font, UI_FS_CAPTION, "第 %d/%d 页" % [_zone_page + 1, pages],
 				Vector2(WINDOW_W / 2, py + ph - 15), UiTheme.INK_500)
-		_draw_string_center(_font_bold, UiTheme.FS_HEADING, "<",
+		_draw_string_center(_font_bold, UI_FS_HEADING, "<",
 				_zone_prev_page_rect().get_center() + Vector2(0, 1),
 				UiTheme.INK_600 if _zone_page > 0 else UiTheme.INK_300)
-		_draw_string_center(_font_bold, UiTheme.FS_HEADING, ">",
+		_draw_string_center(_font_bold, UI_FS_HEADING, ">",
 				_zone_next_page_rect().get_center() + Vector2(0, 1),
 				UiTheme.INK_600 if _zone_page < pages - 1 else UiTheme.INK_300)
 	# 右上「×」
 	draw_rect(_zone_close_rect(), Color("c9bfa6"), true)
 	draw_rect(_zone_close_rect(), UiTheme.INK_300, false, 1.0)
-	_draw_string_center(_font_bold, UiTheme.FS_LABEL, "×",
+	_draw_string_center(_font_bold, UI_FS_LABEL, "×",
 			_zone_close_rect().get_center() + Vector2(0, 1), UiTheme.INK_800)
 	if n == 0:
 		return
@@ -13933,11 +14393,11 @@ func _draw_relic_panel() -> void:
 	draw_rect(Rect2(px, py, pw, ph), UiTheme.INK_600, false, 2.0)
 	# R344：整块面板是浅底（羊皮纸），文字一律**不描边** —— 描边色是深色，
 	# 描在小字号笔画外面等于给每个字套一圈灰边，13px 的说明读起来就是糊的。
-	_draw_string_center(_font_bold, UiTheme.FS_SUBHEAD,
+	_draw_string_center(_font_bold, UI_FS_SUBHEAD,
 			"我的道具（共 %d 件）" % n,
 			Vector2(WINDOW_W / 2, py + 30), UiTheme.INK_800, -1)
 	if n == 0:
-		_draw_string_center(_font, UiTheme.FS_BODY, "本局还没有道具",
+		_draw_string_center(_font, UI_FS_BODY, "本局还没有道具",
 				Vector2(WINDOW_W / 2, py + 76), UiTheme.INK_500, -1)
 		return
 	var y := py + 56.0 - _relic_scroll
@@ -13949,7 +14409,8 @@ func _draw_relic_panel() -> void:
 		var ncol: Color = r[4]
 		var row_h: float = RELIC_P_ROWH + dlines.size() * RELIC_P_LINE + 10.0
 		# 只画面板内可见的行（滚出面板的内容自然被面板矩形盖不住 → 手动跳过）
-		if y + row_h > py + 46.0 and y < py + ph - 8.0:
+		# R405：只画整行都在内容区里的（旧的半行判定会让首行压在标题上，见 map_scene 同处）
+		if y >= py + 52.0 and y + row_h <= py + ph - 6.0:
 			draw_rect(Rect2(px + 16, y - 16, 10, row_h - 8.0), scol, true)
 			_draw_string_nw(_font_bold, RELIC_P_NAME, name_str,
 					Vector2(px + 36, y), ncol, -1)
@@ -14002,17 +14463,24 @@ func _draw_log_panel() -> void:
 	var rect := Rect2(INFO_X, GRID_Y, INFO_W, GRID_H)
 	draw_rect(rect, Color("2b2b2b"))
 	draw_rect(rect, UiTheme.INK_300, false, 1.0)
-	_draw_string_nw(_font_bold, UiTheme.FS_CAPTION, "对局记录（L 关闭）",
+	_draw_string_nw(_font_bold, UI_FS_CAPTION, "对局记录（L 关闭）",
 			Vector2(INFO_X + 10, GRID_Y + 18), Color("f0f0f0"))
 	var lines := engine.log
+	var lpx: int = UI_FS_MICRO
+	var max_w := INFO_W - 20.0
 	var show := mini(lines.size(), 21)
-	var y := GRID_Y + 40.0
+	var y := GRID_Y + 44.0
 	for i in range(lines.size() - show, lines.size()):
 		var t := str(lines[i])
-		if t.length() > 28:
-			t = t.substr(0, 28) + "…"
-		_draw_string_nw(_font, UiTheme.FS_MICRO, t, Vector2(INFO_X + 8, y), Color("d8d8d8"))
-		y += 17.0
+		# ⚠️ 原来写死「超过 28 个字就截」—— 那是按 10px 量出来的经验值。字号涨到 13 之后
+		#    28 个汉字 ≈ 364px，比左栏还宽，会直接糊到棋盘上。改成**按实际宽度**截。
+		if _font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, lpx).x > max_w:
+			while t.length() > 1 and _font.get_string_size(t + "…",
+					HORIZONTAL_ALIGNMENT_LEFT, -1, lpx).x > max_w:
+				t = t.substr(0, t.length() - 1)
+			t += "…"
+		_draw_string_nw(_font, UI_FS_MICRO, t, Vector2(INFO_X + 8, y), Color("d8d8d8"))
+		y += 21.0
 
 
 # ------------------------------------------------------------ 每帧刷新工具栏文字
@@ -14110,7 +14578,8 @@ func _process(delta: float) -> void:
 			or _board_has_fuse() or _board_has_shield() or _board_has_activatable() \
 			or _board_has_actable() or _cancel_armed \
 			or (engine != null and _board_has_pulsing_field()) \
-			or _relic_bar_lit():          # R314：道具栏有亮着的徽章 → 呼吸要连续重绘
+			or _relic_bar_lit() \
+			or _end_turn_ready():         # R391：大按钮的金晕要呼吸（同一口节流）
 		_pulse_redraw()
 	if not _confetti.is_empty():
 		if _tick_confetti(delta):

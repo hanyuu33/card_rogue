@@ -26,6 +26,10 @@ static var SAVE_PATH := REAL_SAVE_PATH
 const FORMAT := 1
 ## R377：存档事故取证日志（谁 SAVE / LOAD / CLEAR / QUARANTINE 了，一行一条）。
 const TRACE_PATH := "user://save_trace.log"
+## R392：测试 / 探针那份单独放。`SAVE_PATH` 早就分了，日志却没分 ——
+## 跑一次窗口烟测（二十几条 `CLEAR by end_run`）就把玩家真正的现场冲干净了。
+const TEST_TRACE_PATH := "user://save_trace_test.log"
+static var TRACE_FILE := TRACE_PATH
 const TRACE_KEEP := 200
 
 
@@ -37,6 +41,7 @@ static func set_test_mode() -> void:
 	## 测试进程一律改走 `run_save_test.sav`，**永远别碰玩家那份**。
 	## ⚠️ 三个测试脚本入口（test_engine / test_smoke / test_reward）第一行就得调它。
 	SAVE_PATH = TEST_SAVE_PATH
+	TRACE_FILE = TEST_TRACE_PATH
 
 
 # ------------------------------------------------------------ 查询
@@ -91,6 +96,9 @@ static func snapshot() -> Dictionary:
 		"rng_seed": rng.seed if rng != null else 0,
 		"rng_state": rng.state if rng != null else 0,
 		"pending_rewards": RunState.pending_rewards,
+		# R390：商店会话（离开后下次移动前能重进，货架必须原样）
+		"shop_states": RunState.shop_states,
+		"shop_revisit_id": RunState.shop_revisit_id,
 		"relic_choice": RunState.relic_choice,
 		"pending_relic": RunState.pending_relic,
 		"pending_relic_drop": RunState.pending_relic_drop,
@@ -284,6 +292,10 @@ static func apply(d: Dictionary) -> bool:
 	rng.state = int(d.get("rng_state", 0))
 	RunState.run_rng = rng
 	RunState.pending_rewards = d.get("pending_rewards", []) if d.get("pending_rewards", []) is Array else []
+	# R390：商店会话。JSON 读回来的键是字符串，数值是 float —— 一律按原口径收拢。
+	var ss: Variant = d.get("shop_states", {})
+	RunState.shop_states = ss if ss is Dictionary else {}
+	RunState.shop_revisit_id = int(d.get("shop_revisit_id", -1))
 	RunState.relic_choice = _int_array(d.get("relic_choice", []))
 	RunState.pending_relic = int(d.get("pending_relic", -1))
 	RunState.pending_relic_drop = int(d.get("pending_relic_drop", -1))
@@ -406,12 +418,12 @@ static func _trace(msg: String) -> void:
 		return
 	var line := "%s %s" % [Time.get_datetime_string_from_system(), msg]
 	var lines: PackedStringArray = PackedStringArray()
-	if FileAccess.file_exists(TRACE_PATH):
-		lines = FileAccess.get_file_as_string(TRACE_PATH).split("\n", false)
+	if FileAccess.file_exists(TRACE_FILE):
+		lines = FileAccess.get_file_as_string(TRACE_FILE).split("\n", false)
 	lines.append(line)
 	while lines.size() > TRACE_KEEP:
 		lines.remove_at(0)
-	var f := FileAccess.open(TRACE_PATH, FileAccess.WRITE)
+	var f := FileAccess.open(TRACE_FILE, FileAccess.WRITE)
 	if f == null:
 		return
 	f.store_string("\n".join(lines) + "\n")

@@ -114,8 +114,12 @@ func _process(_delta: float) -> void:
 
 
 func _is_menu_scene(path: String) -> bool:
+	## 这些界面不显示全局状态条。R391 补了 `battle.tscn`：
+	## 战斗界面**左下有自己的各项 UI、顶栏也有自己的血条与按钮**，而这条状态条钉在
+	## 屏幕左上 (8, 8) 234×40 —— 正好整块压住战斗顶栏的「▶1x」与「记录」两颗按钮
+	## （实测出图：两颗按钮整条消失，只剩状态条）。战斗内又不用金币，所以一律不显示。
 	for suffix in ["title.tscn", "class_pick.tscn", "record_list.tscn",
-			"settings.tscn", "gallery.tscn"]:
+			"settings.tscn", "gallery.tscn", "battle.tscn"]:
 		if path.ends_with(suffix):
 			return true
 	return false

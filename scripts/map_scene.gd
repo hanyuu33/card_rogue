@@ -24,6 +24,7 @@ extends Control
 ## 地图整体（826 × 590）能完整放进视口 —— 所以旧版的滚动 / 滚动提示 / 滚动条已全部移除。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const UiDrag = preload("res://scripts/ui_drag.gd")   # R405：滚轮 / 触屏拖动 的唯一口
 const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiRoll = preload("res://scripts/ui_roll.gd")
 
@@ -145,6 +146,9 @@ var _whisper_auto := false
 var _whisper_next: Dictionary = {}   # 命运本轮选中的下一间（画紫圈的目标）
 var _whisper_wait := 0.0             # 距命运落下一步还有多少秒（<= 0 即可走）
 var _reward_panel: RewardPanel = null
+## R405：面板（道具 / 记录 / 卡组）这次按下**拖动过没有** ——
+## 触屏上「按下滑一下」与「点一下」是同一个手势序列，不分开就会「一滑就把面板关了」。
+var _panel_dragged := false
 var _drag_press_pos := Vector2.ZERO
 var _press_active := false
 var _dragging := false
@@ -253,6 +257,19 @@ func _ready() -> void:
 		for i in RunState.map_cells.size():
 			RunState.seen_ids.append(i)
 		RunState.reveal_known()
+	# -- --reshop：演示「离开商店后还能再进」的地图形态（R390）——
+	# 当前格改成已揭晓的商店 + 存一份货架 + 打开重进窗口，
+	# 出图应看到青色呼吸框与「可再进店」小字。出图：`map.tscn -- --screenshot --reshop`
+	if "--reshop" in OS.get_cmdline_user_args():
+		for _rc: Dictionary in RunState.map_cells:
+			if int(_rc["id"]) == RunState.current_node_id:
+				_rc["type"] = "shop"
+				_rc["hidden"] = false
+				_rc["revealed"] = true
+				break
+		RunState.store_shop_state(RunState.current_node_id,
+				{"row1": [[8001, 0]], "row2": [], "row3": []})
+		RunState.shop_mark_revisit(RunState.current_node_id)
 	# -- --midway：演示「走过一片区域」的状态（截图核验视野规则用）
 	if "--midway" in OS.get_cmdline_user_args():
 		_prep_midway_demo()
@@ -274,7 +291,12 @@ func _ready() -> void:
 	# ⚠️ **截图核验模式要跳过**：否则刚开的一局带着「起点事件」，
 	# 会立刻把场景切走 → 截图截到的是别的界面（甚至什么都截不到）。
 	if "--screenshot" not in OS.get_cmdline_user_args():
-		if RunState.run_active and not RunState.relic_choice.is_empty():
+		# R398（用户口径「三层初始点不应该有选择道具的事件，删掉」）：
+		# **第三层一律不跳卷卷**。R372 只是让 `advance_layer` 不摇候选，可
+		# `curtain_scene` 有个「候选为空就自己摇一组」的自愈（旧档 / 别处填过时会给它东西），
+		# 一旦走进那条路，三层照样会弹「卷卷开场 + 三选一」。这里按**层**直接堵死。
+		if RunState.run_active and not RunState.relic_choice.is_empty() \
+				and RunState.current_layer != GameLayers.LAYER_THREE:
 			SceneFx.goto("res://scenes/curtain.tscn", true)
 			return
 		var pick_scene := RunState.waiting_pick_scene()   # R216：唯一判据口
@@ -445,6 +467,10 @@ func _cell_at(pos: Vector2) -> Dictionary:
 func _is_available(cell: Dictionary) -> bool:
 	## R322（用户口径）：能去的范围 = **走过的连通区 + 它们的相邻格**，不只是当前房的相邻格。
 	## 判据唯一口 `RunState.can_reach()`（点击 / 高亮 / 悬停全读它）。
+	## R390：可重进的商店格**也算可用** —— 它就踩在脚下，而 `can_reach` 对
+	## 「当前所在格」一律返回 false，不补这一条就永远点不动自己站的店。
+	if RunState.shop_revisit_ok(int(cell["id"])):
+		return true
 	return RunState.can_reach(int(cell["id"]))
 
 
@@ -488,8 +514,20 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion:
 		_mouse = event.position
-		if _deck_visible:
-			_hover_deck = _deck_row_at(event.position)
+		# R405：面板开着时，按住拖动 = 滚动（触屏没有滚轮，旧版只能看最上面一截）。
+		# ⚠️ 三个面板的单位不同：道具是**像素**、记录 / 卡组是**行** —— 各按自己的行高折算。
+		if _relics_visible or _records_visible or _deck_visible:
+			var d := UiDrag.scroll_delta(event, 34.0)
+			if d != 0.0:
+				if _relics_visible:
+					_relic_scroll = maxf(0.0, _relic_scroll + d)
+				elif _records_visible:
+					_records_scroll = maxf(0.0, _records_scroll + d / 24.0)
+				else:
+					_deck_scroll = maxf(0.0, _deck_scroll + d / DECK_ROW_H)
+				_panel_dragged = true
+			if _deck_visible:
+				_hover_deck = _deck_row_at(event.position)
 			queue_redraw()
 			return
 		var c := _cell_at(event.position)
@@ -499,6 +537,24 @@ func _gui_input(event: InputEvent) -> void:
 			queue_redraw()
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
+		# R405：面板开着时**按下不算数**，等于抬起时再判 —— 否则触屏一滑就关面板。
+		if _relics_visible or _records_visible or _deck_visible:
+			_panel_dragged = false
+			return
+		if _relic_bar_overflowed() and _relic_rect(_relic_shown()).has_point(event.position):
+			_relics_visible = true
+			_relic_scroll = 0.0
+			queue_redraw()
+			return
+		_drag_press_pos = event.position
+		_press_active = true
+		_dragging = false
+	elif event is InputEventMouseButton and not event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT:
+		if _panel_dragged:
+			# 拖动收尾 —— 这一下不是点击，面板保持打开（R405）
+			_panel_dragged = false
+			return
 		if _relics_visible:
 			_relics_visible = false
 			queue_redraw()
@@ -507,21 +563,11 @@ func _gui_input(event: InputEvent) -> void:
 			_records_visible = false
 			queue_redraw()
 			return
-		if _relic_bar_overflowed() and _relic_rect(_relic_shown()).has_point(event.position):
-			_relics_visible = true
-			_relic_scroll = 0.0
-			queue_redraw()
-			return
 		if _deck_visible:
 			if _deck_row_at(event.position) < 0:
 				_deck_visible = false
 			queue_redraw()
 			return
-		_drag_press_pos = event.position
-		_press_active = true
-		_dragging = false
-	elif event is InputEventMouseButton and not event.pressed \
-			and event.button_index == MOUSE_BUTTON_LEFT:
 		_press_active = false
 		if _dragging:
 			_dragging = false
@@ -576,6 +622,16 @@ func _enter_node(cell: Dictionary, animate := true) -> void:
 func _commit_enter(cell: Dictionary) -> void:
 	## 真正的「进入」：结算 + 按房间类型分流。**只能由过场结束（或回放）调用。**
 	var id := int(cell["id"])
+	# R390（用户口径）：**商店在离开后的下一次移动之前可以重进**，货架原样。
+	# ⚠️ 必须判在 `advance()` 之前：重进时玩家就站在这格上，`advance()` 会因为
+	#    「这一格没换」直接返回 ok=false，走不到下面任何一行。
+	# 窗口的开关全在 RunState —— 一旦真的走去了别的格子，`advance()` 会把
+	# `shop_revisit_id` 清掉，这里自然就不成立了（用户口径的「下一次移动之前」）。
+	if (RogueMap.display_type(cell) == "shop"
+			and RunState.shop_revisit_ok(id) and RunState.run_active):
+		RunState.pending_node = cell
+		SceneFx.goto("res://scenes/shop.tscn")
+		return
 	var res := RunState.advance(id)
 	if not bool(res.get("ok", false)):
 		return
@@ -947,6 +1003,18 @@ func _draw_states() -> void:
 			draw_rect(r.grow(3.0), UiTheme.ACCENT_LIT, false, 3.0)
 			draw_rect(r.grow(8.0), Color(0.95, 0.76, 0.31, 0.28), false, 5.0)
 			_draw_player_marker(r)   # R166：当前格叠角色头像，一眼看到「我在这」
+			# R390：这间商店还能再进 → 青色呼吸框 + 一行小字。没有这层提示，
+			# 「离开的店还能回去」在地图上和普通走过的格子长得一模一样，
+			# 功能等于没做（玩家不知道能点）。
+			if RunState.shop_revisit_ok(id):
+				var pcs := 0.5 + 0.5 * sin(_t * 5.0)
+				# ⚠️ 必须画在 grow(11) 上：当前格的金框 grow(3)+金晕 grow(8) 已经占满
+				#    半径 10.5 的一圈，画在 5 上会被整条盖掉（实测完全看不见）。
+				draw_rect(r.grow(11.0),
+						Color(0.42, 0.86, 0.96, 0.46 + 0.40 * pcs), false, 3.0)
+				draw_string(_font_bold, Vector2(r.position.x, r.end.y - 9.0),
+						"可再进店", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 11,
+						Color(0.60, 0.92, 1.0))
 		elif _is_adjacent(cell):
 			# 「下一步」：绿脉动框（原样，最醒目）
 			var pulse := 0.5 + 0.5 * sin(_t * 4.0)
@@ -1620,7 +1688,10 @@ func _draw_relic_panel() -> void:
 	var y := py + 56.0 - _relic_scroll
 	for r in rows:
 		var row_h: float = float(r[3])
-		if y + row_h > py + 46.0 and y < py + ph - 8.0:
+		# R405：只能画**整行都落在内容区里**的那些行。
+		# 旧判据（`y + row_h > py + 46`）允许行顶跑到标题下面去 —— 滚到底时
+		# 第一行会直接压在「我的道具（共 N 件）」上。手机上能滚之后这个位置一眼就撞见。
+		if y >= py + 52.0 and y + row_h <= py + ph - 6.0:
 			draw_rect(Rect2(px + 18, y - 16, 10, row_h - 8.0), r[2], true)
 			draw_string(_font_bold, Vector2(px + 38, y), str(r[0]),
 					HORIZONTAL_ALIGNMENT_LEFT, 460, RELIC_P_NAME, Color("2f2a20"))

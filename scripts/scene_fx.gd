@@ -26,6 +26,13 @@ static var _inst: SceneFx = null
 var _phase := 0            # 0 闲 / 1 擦出 / 2 擦入
 var _t0 := 0
 var _target := ""
+## R392（用户报「安卓上菜单返回标题后无法继续游戏」的根因）：
+## 转场途中再来的 `goto()` 以前是**直接 return 丢掉** —— 玩家手快一点（返回标题的擦除还没
+## 走完就点「继续游戏」），那一下就等于没点，而且**不会重试**：表现是「按钮点了没反应，
+## 再点也进不去」。安卓上尤其容易撞（触摸抬手后紧跟第二下）。
+## 现在分两种情况收下：phase 1（还没提交目标）→ **改目的地**，省掉一个中间场景；
+## phase 2（目标已提交、屏幕正在揭开）→ 记在 `_pending`，揭开完立刻接着走。
+var _pending := ""
 var _cv: Control = null
 
 
@@ -42,13 +49,30 @@ static func goto(path: String, instant := false) -> void:
 		_inst = load("res://scripts/scene_fx.gd").new()
 		tree.root.add_child(_inst)
 	if _inst._phase != 0:
-		# 上一次转场还卡在半路：短暂等待是正常的（连点防护），但**卡太久就必须接手** ——
-		# 否则 `goto` 会被永远吞掉，表现就是「点哪都没反应」的假死。
+		# 上一次转场还在走。**不许丢**（R392）：丢了就是「点了没反应」。
 		if Time.get_ticks_msec() - _inst._t0 < STUCK_MS:
+			_inst.absorb_goto(path)       # R392：收下，**绝不丢**
 			return
+		# 卡太久（被暂停 / 掉帧 / 出意外）→ 接手，别拿死相位继续吞
 		_inst._phase = 0
+		_inst._pending = ""
 		_inst._cv.queue_redraw()
 	_inst._begin(path)
+
+
+func absorb_goto(path: String) -> bool:
+	## R392（用户报「安卓上菜单返回标题后无法继续游戏」的根因，可单测的那一半）：
+	## 转场途中又来了一个切换请求 —— **不许丢**。丢了就是「按钮点了没反应，再点也进不去」。
+	##   * phase 1（擦出中，目标还没提交）→ **改目的地**，最后一个赢，省掉一个中间场景；
+	##   * phase 2（目标已提交、屏幕正在揭开）→ 记进 `_pending`，揭开完立刻接着走。
+	## 返回 true = 已收下，调用方不要再 `_begin()`。
+	if _phase == 1:
+		_target = path
+		return true
+	if _phase == 2:
+		_pending = path
+		return true
+	return false
 
 
 static func _skip_fx() -> bool:
@@ -87,6 +111,11 @@ func _process(_delta: float) -> void:
 		_t0 = n
 	elif _phase == 2 and n - _t0 >= IN_MS + SETTLE_MS:
 		_phase = 0
+		if _pending != "":
+			# R392：转场途中被收下的那次切换 —— 揭开完立刻补上
+			var q := _pending
+			_pending = ""
+			_begin(q)
 	_cv.queue_redraw()
 
 

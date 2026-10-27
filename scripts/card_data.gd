@@ -147,7 +147,7 @@ var upgrade_hp_bonus: int = 0
 ## **这张卡随身携带的「改造层数」**（R209）—— 手牌 / 牌库 / 弃牌区里被改造过几次。
 ##
 ## 与 `Placement.upgrade_stacks` 是同一口径的**两段**：
-##   * **上桌前**的改造（系统升级 8039 / 批量改造 8031 / 批量传输 8040 / 自主升级 8045 /
+##   * **上桌前**的改造（系统升级 8039 / 集体改造 8031 / 批量传输 8040 / 自主升级 8045 /
 ##     生产订单 8048 / 回收 8064 / 返修 9127）把数值烤进这张卡的副本，层数记在这里 ——
 ##     否则那些卡上场后 `upgrade_stacks` 从 0 开始，侦察塔的光环（每层 +1 易伤）与卡面
 ##     「改造 ×N」徽标都看不到改造（用户实测报「系统升级改造侦查塔后没有获得一层改造」）。
@@ -223,6 +223,16 @@ var battle_end_gold: int = 0
 var growth_power: int = 0
 var growth_health: int = 0
 var growth_damage: int = 0
+## **R406「独行」9189 的卡内累积**：本场战斗中每消失一张手卡，就把它的
+## **生命值**并进 `lone_dmg_bonus`、**力量**并进 `lone_str_bonus`；这两个值直接
+## 并进这张卡的伤害 / 降力（结算时 `LONE_WALK_DMG + lone_dmg_bonus`）。
+##
+## 「永久」的范围（用户 R406 括号里的口径）：**本次战斗有效** —— 战斗内只增不减，
+## 跨战斗归零。归零**不需要额外代码**：每场战斗都由 `RunState.build_deck()` 重建卡实例。
+## ⚠️ 必须随 `to_dict()` 走：这张卡被复制（幻影 / 改造 / 离场还原）时累积不能丢，
+##    否则同一场战斗里复制出来的「独行」会凭空退回 7 伤。
+var lone_dmg_bonus: int = 0
+var lone_str_bonus: int = 0
 
 
 static func from_dict(d: Dictionary) -> CardData:
@@ -267,6 +277,9 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.growth_power = maxi(0, int(d.get("growth_power", 0)))
 	c.growth_health = maxi(0, int(d.get("growth_health", 0)))
 	c.growth_damage = maxi(0, int(d.get("growth_damage", 0)))
+	# R406：独行的卡内累积（缺省 0 → 老数据一行都不用改）
+	c.lone_dmg_bonus = maxi(0, int(d.get("lone_dmg_bonus", 0)))
+	c.lone_str_bonus = maxi(0, int(d.get("lone_str_bonus", 0)))
 	# R325：难度档位加成（只给染色用，结算早已烤进 power / health）
 	c.diff_power = int(d.get("diff_power", 0))
 	c.diff_health = int(d.get("diff_health", 0))
@@ -321,6 +334,8 @@ func to_dict() -> Dictionary:
 		"growth_power": growth_power,
 		"growth_health": growth_health,
 		"growth_damage": growth_damage,
+		# R406：独行的卡内累积随复制通道走（复制 / 离场还原之后不能退回 7 伤）。
+		"lone_dmg_bonus": lone_dmg_bonus, "lone_str_bonus": lone_str_bonus,
 		# R325：难度加成必须随复制通道走（否则复制后的怪染色又变绿）。
 		"diff_power": diff_power, "diff_health": diff_health,
 		# R214：附魔 id **必须**在这里 —— 复制 / 离场还原 / 联机共用这条通道，

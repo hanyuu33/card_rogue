@@ -178,6 +178,30 @@ static func kind_label(ref: Dictionary) -> String:
 	return "卡牌" if str(ref.get("kind", "")) == "card" else "道具"
 
 
+static func relic_tip_metrics(font: Font, font_bold: Font, n_lines: int) -> Dictionary:
+	## R394（用户报「道具弹窗名字和效果重叠」，占卜室的泉水 / 思想钢印都能看到）：
+	## 道具浮窗的**唯一版式**，`tip_size()` 与 `draw_tip()` 共用 —— 量法与画法不再各写一套。
+	##
+	## ⚠️ 根因：`draw_string(pos)` 的 pos 是**基线**（不是顶边）。旧代码按「顶边」排三行：
+	##   名称基线 p+16（20px）、类型基线 p+34（12px）、正文基线 p+45（14px）——
+	##   正文顶边 ≈ p+31，正好压在类型行（基线 p+34、字身 p+25~p+38）上。
+	## 现在一律用字体的 ascent / descent 往下推：谁的字号变了，间距自己跟着变。
+	var p := RELIC_PAD
+	var asc_n := font_bold.get_ascent(UiTheme.FS_SUBHEAD)
+	var dsc_n := font_bold.get_descent(UiTheme.FS_SUBHEAD)
+	var asc_t := font.get_ascent(UiTheme.FS_CAPTION)
+	var dsc_t := font.get_descent(UiTheme.FS_CAPTION)
+	var asc_d := font.get_ascent(UiTheme.FS_LABEL)
+	var dsc_d := font.get_descent(UiTheme.FS_LABEL)
+	var name_base := p + asc_n
+	var tag_base := name_base + dsc_n + 5.0 + asc_t
+	var desc_base := tag_base + dsc_t + 8.0 + asc_d
+	var line := 19.0
+	var h := desc_base + maxf(0.0, float(n_lines - 1)) * line + dsc_d + p
+	return {"name_base": name_base, "tag_base": tag_base, "desc_base": desc_base,
+			"line": line, "h": h}
+
+
 static func tip_size(font: Font, ref: Dictionary) -> Vector2:
 	## 悬浮件尺寸（不含位置）。
 	if str(ref.get("kind", "")) == "card":
@@ -192,7 +216,8 @@ static func tip_size(font: Font, ref: Dictionary) -> Vector2:
 	var lines: Array[String] = []
 	if rel != null:
 		lines = CardFace.wrap_text(font, rel.desc, w - RELIC_PAD * 2.0, UiTheme.FS_LABEL)
-	return Vector2(w, RELIC_PAD * 2.0 + 30.0 + float(lines.size()) * 19.0)
+	var m := relic_tip_metrics(font, UiTheme.font_bold(), lines.size())
+	return Vector2(w, float(m["h"]))
 
 
 static func block_height(font: Font, font_bold: Font, text: String, w: float,
@@ -240,18 +265,22 @@ static func draw_tip(canvas: CanvasItem, font: Font, font_bold: Font,
 		return 0.0
 	var p := RELIC_PAD
 	var inner := RELIC_W - p * 2.0
+	var lines := CardFace.wrap_text(font, rel.desc, inner, UiTheme.FS_LABEL)
+	var m := relic_tip_metrics(font, font_bold, lines.size())
 	# R343：名字色 = 徽章色的「传奇提亮版」（普通道具仍是徽章色，观感不变）。
-	canvas.draw_string(font_bold, frame.position + Vector2(p, p + 16.0),
+	canvas.draw_string(font_bold, Vector2(frame.position.x + p,
+			frame.position.y + float(m["name_base"])),
 			rel.relic_name, HORIZONTAL_ALIGNMENT_LEFT, inner,
 			UiTheme.FS_SUBHEAD, rel.name_color(rel.badge_color()))
-	canvas.draw_string(font, frame.position + Vector2(p, p + 34.0),
+	canvas.draw_string(font, Vector2(frame.position.x + p,
+			frame.position.y + float(m["tag_base"])),
 			rel.tag_line(), HORIZONTAL_ALIGNMENT_LEFT,
 			inner, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
-	var y := frame.position.y + p + 45.0
-	for t: String in CardFace.wrap_text(font, rel.desc, inner, UiTheme.FS_LABEL):
+	var y := frame.position.y + float(m["desc_base"])
+	for t: String in lines:
 		canvas.draw_string(font, Vector2(frame.position.x + p, y), t,
 				HORIZONTAL_ALIGNMENT_LEFT, inner, UiTheme.FS_LABEL, Color("f0ead8"))
-		y += 19.0
+		y += float(m["line"])
 	return _draw_tip_block(canvas, font, font_bold, frame, sz, extra_bottom, block_text)
 
 

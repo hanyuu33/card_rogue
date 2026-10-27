@@ -67,6 +67,46 @@ func _initialize() -> void:
 				RunState.pending_level = RunState.next_level({"type": "battle"})
 				_seed_rewards(),
 			_check_r389_auto_leave],
+		# R391（用户口径）：「增加一个更大更明显的回合结束按钮放在道具栏上方」。
+		# 自绘 + 在 `_on_left_click` 里判矩形 —— 只有真场景能验「画在那 / 点了有反应」。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r391_end_turn_btn],
+		# R393（用户口径）：「代替承受伤害的受伤动画依然会快过攻击动画（1 倍速）」。
+		# 只有真场景能验 —— 要在真攻击动画排上之后，看代受演出排到了哪一刻。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r393_absorb_timing],
+		# R395（用户报）：继续游戏进战斗后用「填充」，选卡页弹出来**没有待选卡**，
+		# 选不了、回合也结束不了。规则：候选空 → 不许开空网格；选卡页开着 → 不给结束回合。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r395_empty_pick],
+		# R396（用户报）：「聚能炮击的抽卡动画有可能被吞，如果抽到的是另一张聚能炮击」。
+		# 手牌 id 序列前后一模一样时，diff 判不出变化 → 靠引擎的 card_gained 补播飞入。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r396_same_id_flyin],
+		# R398（用户报）：「月亮的效果生效后没有立即进入选卡过程，而是在奖励界面结束后才选卡」。
+		# 现在点那条奖励就进「删卡视图」，点一张卡立刻删掉、这条同时置已领。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r398_deck_delete],
 		# R339：战斗检查点必须写「进战斗之前」的局状态 —— lucky 7 的跨战斗计数在开局
 		# 第 1 个我方回合就 +1，若检查点写「当下」，续档重打这一场就会越续越多（用户报）。
 		["res://scenes/battle.tscn", func():
@@ -189,6 +229,16 @@ func _initialize() -> void:
 				RunState.gold = 500
 				RunState.pending_node = {"type": "shop"},
 			_check_shop_enchant],
+		# R390（用户口径）：「商店在下一次移动之前能重新进，店内保持原样」。
+		# 这个只能走真场景验 —— 离开再回来走的是**另一条初始化分支**（恢复而非重摇），
+		# 纯逻辑测不到「打开时到底恢复没恢复」。
+		["res://scenes/shop.tscn", func():
+				_reset()
+				RunState.run_active = true
+				RunState.start_run(_map())
+				RunState.gold = 500
+				RunState.pending_node = {"type": "shop"},
+			_check_r390_shop_revisit],
 		# R206：卡牌三选一「详情条」的排版唯一性 —— 提及块必须画在右栏、预算高度与
 		# 实画行距同源、强调色按真实底色挑。用户口径：「卡片详细效果描述」的排版乱。
 		["res://scenes/event.tscn", func():
@@ -304,6 +354,14 @@ func _initialize() -> void:
 				_seed_rewards()
 				RunState.relics = [6001, 6002],
 			_check_relic_hover_gate],
+		# R394（用户口径）：商店里「光标没放在道具两个字上、只放在那个没显示的窗体上，
+		# 窗体也会显示」+「写着点击查看更多却点不动」。现在：只认按钮矩形，点击展开胶囊行。
+		["res://scenes/shop.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "shop"}
+				RunState.relics = [6035, 6036, 6015, 6001, 6003, 6005, 6010, 6041],
+			_check_r394_relic_chips],
 		["res://scenes/battle.tscn", func():
 				_reset()
 				RunState.start_run(_map())
@@ -636,6 +694,62 @@ func _seed_rewards() -> void:
 	RunState.queue_relic_reward(6005)
 
 
+func _check_r390_shop_revisit(scene: Variant) -> void:
+	## R390（用户口径）：「商店在下一次移动之前能重新进，店内保持原样」。
+	## 走真实路径：买一张 → 离开 → 再进（`_ready` 的**恢复**分支）→ 那张必须还是售罄。
+	## 反过来（重摇）也是「能再进」，但那不是原样 —— 所以这里钉的是 id 与售罄位。
+	scene._setup_shop()          # 先落到「第一次进店」的确定状态
+	var node: int = RunState.current_node_id
+	if scene._row1.is_empty():
+		_smoke_fail("R390：商店第一行没有货，用例前提不成立")
+		return
+	var first_id := int(scene._row1[0]["card"].id)
+	var gold0 := RunState.gold
+	scene._buy_card(0)
+	if RunState.gold >= gold0:
+		_smoke_fail("R390：买下第一张却没扣钱（%d → %d）" % [gold0, RunState.gold])
+		return
+	if RunState.shop_state_of(node).is_empty():
+		_smoke_fail("R390：买完之后货架没有回写到局状态（重进必然变成另一家店）")
+		return
+	var routed: Array = []
+	scene.set("route_fn", func(t): routed.append(t))
+	scene._leave()
+	if routed != ["res://scenes/map.tscn"]:
+		_smoke_fail("R390 离开商店：应当回地图，实际 %s" % str(routed))
+		return
+	if not RunState.shop_revisit_ok(node):
+		_smoke_fail("R390：离开之后「重进窗口」没打开（地图上点不动那格）")
+		return
+	# 重进 = 同一个场景再走一遍 `_ready` 的初始化：先恢复，恢复不了才重摇
+	scene._setup_shop()
+	if scene._row1.is_empty():
+		_smoke_fail("R390 重进：货架空了")
+		return
+	if int(scene._row1[0]["card"].id) != first_id or not bool(scene._row1[0]["sold"]):
+		_smoke_fail("R390 重进：货架没原样（id=%d sold=%s，原本是 %d 已售罄）"
+				% [int(scene._row1[0]["card"].id), str(scene._row1[0]["sold"]), first_id])
+		return
+	# 挪一格 → 重进窗口必须关（用户口径是「下一次移动之前」）
+	var cell: Dictionary = {}
+	for c: Dictionary in RunState.map_cells:
+		if int(c["id"]) == node:
+			cell = c
+			break
+	var moved := false
+	for nb: Variant in RogueMap.neighbor_ids(cell):
+		if bool(RunState.advance(int(nb)).get("ok", false)):
+			moved = true
+			break
+	if not moved:
+		_smoke_fail("R390：起点的邻居一个都进不去，用例前提不成立")
+		return
+	if RunState.shop_revisit_ok(node):
+		_smoke_fail("R390：走出去之后还能重进（用户口径只给到「下一次移动之前」）")
+		return
+	print("SMOKE OK R390 商店重进：买过的那张仍是售罄 / 走出去就关门")
+
+
 func _check_r389_auto_leave(scene: Variant) -> void:
 	## R389：奖励窗关掉之后走不走，只有**玩家自己点关**才会问（转场关闭不惊动）。
 	## 三个状态都要走一遍：
@@ -720,6 +834,68 @@ func _check_reward_panel_view(scene: Variant, want_view: int, label: String) -> 
 	p._root.queue_redraw()
 	print("SMOKE OK R119 奖励悬浮窗：%s 视图渲染（%d 条待领，宿主 %s）"
 			% [label, RunState.pending_reward_count(), str(scene.name)])
+
+
+func _check_r394_relic_chips(scene: Variant) -> void:
+	## R394（用户口径，商店实测）：
+	##   ① 「光标没放在道具两个字上、只是放到那个没有显示的窗体上，窗体也会显示」
+	##      → 悬停判定只许认**按钮矩形**；
+	##   ② 「写着点击道具查看更多，实际没有办法查看」→ 点击**必然**展开（不再看装不装得下）；
+	##   ③ 展开后是一排道具名胶囊：**从右往左**、右沿对齐按钮、换行不出屏。
+	var rv: Variant = null
+	for c in scene.get_children():
+		if c is RelicViewer:
+			rv = c
+	if rv == null:
+		_smoke_fail("R394：商店没有挂上 RelicViewer")
+		return
+	if RunState.relics.is_empty():
+		_smoke_fail("R394：用例需要先给玩家道具")
+		return
+	var btn: Rect2 = Rect2(rv._btn.position, rv._btn.size)
+	# ① 「隐形窗体」那块地方（按钮正下方 90px）不许触发悬停
+	var phantom := Vector2(btn.get_center().x, btn.end.y + 90.0)
+	if bool(rv._want_hover(phantom)):
+		_smoke_fail("R394：按钮下方的空白处（旧浮层位置）仍被判定为悬停 —— 隐形窗体 bug 没修掉")
+		return
+	if not bool(rv._want_hover(btn.get_center())):
+		_smoke_fail("R394：指着「道具 N」按钮却不算悬停")
+		return
+	# ② 点一下就展开（旧版装得下时是禁用态 → 点了没反应）
+	rv._toggle()
+	if not bool(rv._open):
+		_smoke_fail("R394：点「道具 N」没有展开胶囊行")
+		return
+	var rs: Array = rv._chip_rects()
+	if rs.size() != RunState.relics.size():
+		_smoke_fail("R394：胶囊数 %d 与道具数 %d 不一致" % [rs.size(), RunState.relics.size()])
+		return
+	# ③ 从右往左：第一个胶囊的右沿 = 按钮右沿；后续逐个往左
+	var first: Rect2 = rs[0]
+	if absf(first.end.x - btn.end.x) > 1.0:
+		_smoke_fail("R394：第一个胶囊右沿 %.1f 没对齐按钮右沿 %.1f（应为右→左排）"
+				% [first.end.x, btn.end.x])
+		return
+	var vp := Vector2(1280, 720)
+	for i in rs.size():
+		var r: Rect2 = rs[i]
+		if r.position.x < 0.0 or r.end.x > vp.x or r.end.y > vp.y:
+			_smoke_fail("R394：第 %d 个胶囊跑出屏幕 %s" % [i, str(r)])
+			return
+	# 悬停命中：指第二个胶囊的中心应命中 1
+	if rs.size() > 1:
+		var second: Rect2 = rs[1]
+		if int(rv._chip_at(second.get_center())) != 1:
+			_smoke_fail("R394：指着第 2 个胶囊但命中判定返回 %d"
+					% int(rv._chip_at(second.get_center())))
+			return
+	# 再点一下收起
+	rv._toggle()
+	if bool(rv._open):
+		_smoke_fail("R394：再点「道具 N」没有收起")
+		return
+	print("SMOKE OK R394 道具胶囊行：悬停只认按钮 / 点击展开收起 / %d 件从右往左排"
+			% rs.size())
 
 
 func _check_relic_hover_gate(scene: Variant) -> void:
@@ -1636,6 +1812,304 @@ func _check_card_detail_block(_scene: Variant) -> void:
 		return
 	print("SMOKE OK R206 详情条：提及块在右栏 / 浅底琥珀棕 / 预算高度 %.0f == 公式（%d 个提及）"
 			% [got, refs.size()])
+
+
+func _check_r398_deck_delete(scene) -> void:
+	## R398（用户口径）：「月亮的效果生效后没有立即进入选卡过程，而是在奖励界面结束后才选」。
+	## 规则：点那条奖励 → **立刻**进删卡视图（不跳场景、不等本批结束）；点一张卡 → 当场删掉，
+	## 这条同时置为已领；带锁的卡点了不动。
+	var rp: Variant = scene.get("_reward_panel")
+	if rp == null:
+		_smoke_fail("R398：战斗场景没有奖励面板")
+		return
+	RunState.pending_rewards.clear()
+	RunState.pending_deck_edit = ""
+	# 卡组里塞一张带锁的（月亮 9180）—— 它自己不能删；同时留一张普通卡可删
+	RunState.deck_ids.append(9180)
+	var lock_i: int = RunState.deck_ids.size() - 1
+	var idx: int = RunState.queue_deck_delete_reward(1)
+	if idx < 0:
+		_smoke_fail("R398：删卡奖励没入队")
+		return
+	rp.open()
+	rp._open_entry(idx)
+	if int(rp._view) != 4:                      # VIEW_DECK
+		_smoke_fail("R398：点删卡奖励没进删卡视图（view=%d）" % int(rp._view))
+		return
+	# 几何自洽：第 0 张卡的命中必须回到下标 0
+	var r0: Rect2 = rp._deck_card_rect(0)
+	if int(rp._deck_index_at(r0.get_center())) != 0:
+		_smoke_fail("R398：删卡视图的命中判定对不上（点第 0 张得到 %d）"
+				% int(rp._deck_index_at(r0.get_center())))
+		return
+	# 带锁的卡点了不删
+	var n_before: int = RunState.deck_ids.size()
+	rp._on_click(rp._deck_card_rect(lock_i).get_center())
+	if RunState.deck_ids.size() != n_before:
+		_smoke_fail("R398：带锁的卡（月亮）居然被删掉了")
+		return
+	if str(RunState.pending_rewards[idx].get("state", "")) == RunState.REWARD_CLAIMED:
+		_smoke_fail("R398：点了锁卡却把奖励置成了已领（玩家会白白丢掉这次删卡）")
+		return
+	# 点一张普通卡 → 当场删掉、回列表、这条已领
+	var r_del: Rect2 = rp._deck_card_rect(0)
+	rp._on_click(r_del.get_center())
+	if RunState.deck_ids.size() != n_before - 1:
+		_smoke_fail("R398：点卡后卡组没减少（%d → %d）"
+				% [n_before, RunState.deck_ids.size()])
+		return
+	if str(RunState.pending_rewards[idx].get("state", "")) != RunState.REWARD_CLAIMED:
+		_smoke_fail("R398：删完卡这条奖励没置为已领")
+		return
+	if int(rp._view) != 0:                      # 回列表
+		_smoke_fail("R398：删完卡没回列表（view=%d）" % int(rp._view))
+		return
+	if RunState.pending_deck_edit != "":
+		_smoke_fail("R398：删完卡留下了 pending_deck_edit（回地图会再跳一次删卡）")
+		return
+	rp.close()
+	RunState.pending_rewards.clear()
+	RunState.deck_ids.remove_at(RunState.deck_ids.size() - 1)   # 清掉演示塞的月亮
+	print("SMOKE OK R398 月亮删卡：点奖励立刻进删卡视图 / 锁卡点不动 / 点一张当场删掉并回列表")
+
+
+func _check_r396_same_id_flyin(scene) -> void:
+	## R396（用户口径）：「聚能炮击的抽卡动画有可能被吞（如果抽到的是另一张聚能炮击）」
+	## 根因：`_hand_sync()` 判断「谁新进手牌」靠手牌 **id 序列** diff —— 打出一张 9145
+	## 又抽到另一张 9145 时，前后都是 [9145, 9145]，一个字节都没变 → diff 说「没变化」
+	## → 飞入动画整段被吞。修法：引擎 `card_gained` 事件带**实例**报上来，界面补播。
+	## 这里钉三件事：① 事件接得住；② id 序列不变也能播；③ 不要和 diff 重复播。
+	var eng: Variant = scene.engine
+	if eng == null:
+		_smoke_fail("R396：场景里没有引擎")
+		return
+	var cannon: CardData = scene.repo.get_card(GameEngine.ENERGY_CANNON_ID)
+	if cannon == null:
+		_smoke_fail("R396：取不到聚能炮击 9145")
+		return
+	scene._hand_sync()                       # 先把 _hand_known 初始化掉
+
+	# ① 事件接得住
+	scene._drawn_pending.clear()
+	scene._on_engine_action("card_gained", {"card": cannon, "how": "draw"})
+	if int(scene._drawn_pending.size()) != 1:
+		_smoke_fail("R396：card_gained 事件没被接住（_drawn_pending %d）"
+				% int(scene._drawn_pending.size()))
+		return
+
+	# ② id 序列一模一样时也要播飞入
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(cannon.to_dict()))
+	var fresh: CardData = CardData.from_dict(cannon.to_dict())
+	eng.state.hand.append(fresh)             # 刚抽到的「另一张」（同 id）
+	scene._hand_known = [cannon.id, cannon.id]
+	scene._hand_fly.clear()
+	scene._flyin_skip.clear()
+	scene._drawn_pending.clear()
+	scene._drawn_pending.append(fresh)
+	scene._hand_sync()
+	var ins := 0
+	for f: Dictionary in scene._hand_fly:
+		if str(f.get("mode", "")) == "in":
+			ins += 1
+	if ins != 1:
+		_smoke_fail("R396：手牌 id 序列没变时抽到的同 id 卡**没有播飞入**（in 动画 %d 条）" % ins)
+		return
+	var slot := int((scene._hand_fly[scene._hand_fly.size() - 1] as Dictionary).get("slot", -1))
+	if slot != 1:
+		_smoke_fail("R396：飞入落位到了 slot %d，应当是刚抽到那张所在的第 1 格" % slot)
+		return
+
+	# ③ 不许和 diff 的 added 重复播。真实现场：手上 [攻击, 9145] → 打出攻击 → 抽到 9145
+	#    变 [9145(旧的), 9145(新的)]，diff 自己就能算出「新增一张 9145」。
+	var old_cannon: CardData = CardData.from_dict(cannon.to_dict())
+	var fresh2: CardData = CardData.from_dict(cannon.to_dict())
+	eng.state.hand.clear()
+	eng.state.hand.append(old_cannon)        # 打之前就在手上的那张
+	eng.state.hand.append(fresh2)            # 新抽到的另一张
+	scene._hand_known = [8002, cannon.id]    # 旧快照：攻击 + 那张 9145
+	scene._hand_fly.clear()
+	scene._flyin_skip.clear()
+	scene._drawn_pending.clear()
+	scene._drawn_pending.append(fresh2)
+	scene._hand_sync()
+	var ins2 := 0
+	for f2: Dictionary in scene._hand_fly:
+		if str(f2.get("mode", "")) == "in":
+			ins2 += 1
+	if ins2 != 1:
+		_smoke_fail("R396：diff 已算出新增时又补播了一次（in 动画 %d 条，应为 1）" % ins2)
+		return
+	# ④ 端到端：真打一发聚能炮击（走引擎 → 事件 → _hand_sync 整条链），飞入必须播
+	var e2: Variant = scene.engine
+	var target := Vector2i(2, 1)
+	if e2.state.unit_at(target) == null:
+		e2.state.place(CardData.from_dict(scene.repo.get_card(1053).to_dict()), target,
+			GameEngine.SIDE_OPPONENT)
+	e2.state.hand.clear()
+	e2.state.hand.append(CardData.from_dict(cannon.to_dict()))
+	e2.state.hand.append(CardData.from_dict(cannon.to_dict()))
+	e2.state.deck.clear()
+	e2.state.deck.append(CardData.from_dict(cannon.to_dict()))
+	e2.state.energy = 9
+	scene._hand_sync()                       # 快照 = 打之前的两张同 id
+	scene._hand_fly.clear()
+	scene._drawn_pending.clear()
+	e2.use_spell(0, target)
+	if int(scene._drawn_pending.size()) != 1:
+		_smoke_fail("R396：真打一发聚能炮击后 _drawn_pending 收到 %d 条（应为 1）"
+				% int(scene._drawn_pending.size()))
+		return
+	scene._hand_sync()
+	var ins3 := 0
+	for f3: Dictionary in scene._hand_fly:
+		if str(f3.get("mode", "")) == "in":
+			ins3 += 1
+	if ins3 != 1:
+		_smoke_fail("R396：真打一发（抽到同 id）后飞入动画 %d 条 —— 正是被吞的那个 bug" % ins3)
+		return
+	scene._drawn_pending.clear()
+	scene._hand_fly.clear()
+	print("SMOKE OK R396 同 id 抽卡：card_gained 接得住 / id 序列不变也播飞入 / 不与 diff 重复 / 真打一发也播")
+
+
+func _check_r395_empty_pick(scene) -> void:
+	## R395（用户报「选卡页有壳没卡、选不了、结束回合也点不动」）：
+	##   ① 候选为空 → **绝不开**空网格，待选下标当场清掉；
+	##   ② 选卡页开着时 `_end_turn_ready()` 为假、`_on_end_turn()` 也不许真过回合
+	##      （顶栏那个旧 Button 画在本层之上，绕过了大按钮的守卫）。
+	if not scene.has_method("_sync_pick") or not scene.has_method("_abort_empty_pick"):
+		_smoke_fail("R395：战斗场景缺少 _sync_pick / _abort_empty_pick")
+		return
+	var eng: Variant = scene.engine
+	if eng == null:
+		_smoke_fail("R395：场景里没有引擎")
+		return
+	var filler: CardData = scene.repo.get_card(GameEngine.RELOAD_ID)
+	var other: CardData = scene.repo.get_card(8002)
+	if filler == null or other == null:
+		_smoke_fail("R395：取不到 9146 / 8002")
+		return
+	# ① 手牌只剩「填充」自己 → 候选必然为空 → 不许开页
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(filler.to_dict()))
+	scene._reload_idx = 0
+	scene._sync_pick()
+	if bool(scene._pick.is_picking()):
+		_smoke_fail("R395：候选为空仍然开出了选卡页（空网格 = 选不了也结束不了）")
+		return
+	if int(scene._reload_idx) != -1:
+		_smoke_fail("R395：候选为空后 _reload_idx 没清掉（%d）" % int(scene._reload_idx))
+		return
+	# ② 手牌有两张 → 正常开页；此时结束回合必须被挡（大按钮判据 + 顶栏那条路）
+	eng.state.hand.clear()
+	eng.state.hand.append(CardData.from_dict(filler.to_dict()))
+	eng.state.hand.append(CardData.from_dict(other.to_dict()))
+	scene._reload_idx = 0
+	scene._sync_pick()
+	if not bool(scene._pick.is_picking()):
+		_smoke_fail("R395：手牌有可选项时选卡页没开出来")
+		return
+	if bool(scene._end_turn_ready()):
+		_smoke_fail("R395：选卡页开着时大按钮仍被判为「可按」")
+		return
+	var side_before := str(eng.current_side)
+	var turn_before := int(eng.turn_number)
+	scene._on_end_turn()
+	if str(eng.current_side) != side_before or int(eng.turn_number) != turn_before:
+		_smoke_fail("R395：选卡页开着时居然真的过了回合（顶栏旧按钮绕过了守卫）")
+		return
+	# 收尾：清掉待选，别影响后面的用例
+	scene._reload_idx = -1
+	if bool(scene._pick.is_picking()):
+		scene._pick.close()
+	print("SMOKE OK R395 空候选不开空网格 / 选卡中结束回合被拦（大按钮与顶栏同源）")
+
+
+func _check_r393_absorb_timing(scene) -> void:
+	## R393（用户口径）：「代替承受伤害的受伤动画依然会快过攻击动画，测试时为一倍速」。
+	## 规则：代受 / 闪躲的演出必须排在**攻击撞击帧**（`ATK_IMPACT_T × ATK_DUR_MS`），
+	## 不能按「当下」直接播。这条只有真场景能验 —— 要先生成一份真的攻击动画。
+	if not scene.has_method("_pending_impact_ms"):
+		_smoke_fail("R393：战斗场景没有 _pending_impact_ms 唯一口")
+		return
+	var eng: Variant = scene.engine
+	if eng == null:
+		_smoke_fail("R393：场景里没有引擎，验不了代受时序")
+		return
+	var atk_cell := Vector2i(1, 1)
+	var def_cell := Vector2i(1, 2)
+	var gen_cell := Vector2i(4, 0)
+	var atk_card: CardData = scene.repo.get_card(1053)     # 骷髅兵
+	var gen_card: CardData = scene.repo.get_card(8042)     # 护盾生成器
+	var def_card: CardData = scene.repo.get_card(8003)     # 树人
+	if atk_card == null or gen_card == null or def_card == null:
+		_smoke_fail("R393：取不到演示用的卡（1053 / 8042 / 8003）")
+		return
+	eng.state.place(atk_card, atk_cell, GameEngine.SIDE_OPPONENT)
+	eng.state.place(def_card, def_cell, GameEngine.SIDE_SELF)
+	eng.state.place(gen_card, gen_cell, GameEngine.SIDE_SELF)
+
+	# 先排一段真的攻击动画（这一步和引擎打人时走的是同一条处理）
+	scene._on_engine_action("attack", {"src": atk_cell, "dst": def_cell, "damage": 5,
+			"atk_name": "骷髅兵", "def_name": "树人"})
+	var now0: int = scene._now()
+	var imp: int = scene._pending_impact_ms()
+	if imp <= now0:
+		_smoke_fail("R393：攻击已经排上，_pending_impact_ms() 却没给出未来的撞击帧（%d）" % imp)
+		return
+	scene._delayed.clear()      # 清掉攻击自己的 hit，只看代受排到哪
+	scene._on_engine_action("shield_redirect", {"cell": def_cell, "to": gen_cell,
+			"amount": 5, "card": gen_card})
+	var found: Dictionary = {}
+	for ev: Dictionary in scene._delayed:
+		if str(ev.get("kind", "")) == "absorb_fx":
+			found = ev
+			break
+	if found.is_empty():
+		_smoke_fail("R393：护盾代受没有排进延迟队列（会当场播 → 快过攻击动画）")
+		return
+	var at := int(found.get("at", 0))
+	if at != imp:
+		_smoke_fail("R393：代受演出排在 %d，应当是撞击帧 %d" % [at, imp])
+		return
+	print("SMOKE OK R393 代受演出与撞击同帧：now=%d → 撞击 %d（+%dms，1 倍速）"
+			% [now0, imp, imp - now0])
+
+
+func _check_r391_end_turn_btn(scene) -> void:
+	## R391（用户口径）：「增加一个更大更明显的回合结束按钮放在道具栏上方」。
+	## 断言四件事：① 明显更大 ② 在道具栏**正上方**且不重叠 ③ 我方回合时是「可按」态
+	## ④ **点它真的结束回合**。第 ④ 条必须走 `_on_left_click`（真实点击入口）——
+	## 直接调 `_on_end_turn()` 会把「按钮画在那儿、点了却没人接」这类接缝问题放过去。
+	if not scene.has_method("_end_turn_big_rect") or not scene.has_method("_end_turn_ready"):
+		_smoke_fail("R391：战斗场景没有 _end_turn_big_rect / _end_turn_ready 唯一口")
+		return
+	var r: Rect2 = scene._end_turn_big_rect()
+	var relic: Rect2 = scene._relic_zone_rect()
+	if r.size.x < 200.0 or r.size.y < 80.0:
+		_smoke_fail("R391：大按钮太小（%.0f×%.0f）" % [r.size.x, r.size.y])
+		return
+	var small: Button = scene.end_turn_btn
+	if small != null and (r.size.x < small.size.x * 1.8 or r.size.y < small.size.y * 2.0):
+		_smoke_fail("R391：大按钮没有明显大于顶栏那颗（%.0f×%.0f vs %.0f×%.0f）"
+				% [r.size.x, r.size.y, small.size.x, small.size.y])
+		return
+	if r.intersects(relic) or r.position.y + r.size.y > relic.position.y:
+		_smoke_fail("R391：大按钮没落在道具栏正上方（按钮 %s / 道具栏 %s）" % [r, relic])
+		return
+	if not scene._end_turn_ready():
+		_smoke_fail("R391：我方回合刚开始，大按钮却不是「可按」状态")
+		return
+	scene._ee_popup = false      # 敌方效果开场弹窗会吃掉第一下点击（不是本用例要验的）
+	var eng = scene.engine
+	var turn0: int = eng.turn_number
+	scene._on_left_click(r.get_center())
+	if eng.current_side == GameEngine.SIDE_SELF and eng.turn_number == turn0:
+		_smoke_fail("R391：点大按钮没有结束回合（仍是第 %d 回合我方）" % turn0)
+		return
+	print("SMOKE OK R391 回合结束大按钮：%.0f×%.0f @ (%.0f,%.0f)，道具栏正上方，点击真的过回合"
+			% [r.size.x, r.size.y, r.position.x, r.position.y])
 
 
 func _smoke_fail(msg: String) -> void:

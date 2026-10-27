@@ -304,6 +304,17 @@ static var pending_relic_drop := -1          # 精英/Boss 掉落的道具 id（
 ## ⚠️ 只在 start_run 清空（**end_run 故意不清**）：通关那一场的奖励是「打完才弹窗看」的，
 ##    end_run 在结算面板里就跑了，此时清掉会让最后一击的战利品凭空消失。
 static var pending_rewards: Array = []
+# ---- R390：商店会话 —— 离开后**在下一次移动之前**可以重进，店内原样 ----
+## 存档键 = **地图格子 id 的字符串**（JSON 的键只能是字符串）。
+## 值 = {"row1": [[card_id, sold], ...],
+##       "row2": [[ench_id, sold], ...],
+##       "row3": [[key, sold], ...]}
+## 为什么必须存在局状态里而不是场景自己拿着：一换场景就没了，而重进**不能重摇**
+## —— 重摇会花掉 run_rng 的随机数，同一份存档读两次就是两家不同的店（确定性直接破）。
+static var shop_states: Dictionary = {}
+## 允许重进的商店格（-1 = 没有）。`advance()` 走出这一格就失效。
+## 用户口径是「在下一次移动之前能重新进」—— 挪过位置就不该再开门。
+static var shop_revisit_id := -1
 const REWARD_PENDING := "pending"    # 待领（悬浮窗里正常显示）
 const REWARD_CLAIMED := "claimed"    # 已领取（置灰）
 const REWARD_SKIPPED := "skipped"    # 已放弃（置灰）
@@ -562,6 +573,11 @@ static func start_gold() -> int:
 
 static func chocolate_per_layer() -> int:
 	## 每层初始巧克力：8 档起「行动力降低」= 11，其余 = RogueMap.MAX_STEPS(12)。
+	## R399（用户口径「第三层应该不再提供巧克力」）：第三层是 5 格直道，每格 `cost` 恒为 0，
+	## 巧克力在那儿一块也用不掉 —— 直接给 0，不再显示一个永远花不掉的数字。
+	## ⚠️ 读的是**当前层**（`advance_layer` 里先赋 `current_layer` 再调本函数）。
+	if current_layer == GameLayers.LAYER_THREE:
+		return 0
 	return DIFF_CHOCO_HIGH if _diff() >= 8 else RogueMap.MAX_STEPS
 
 
@@ -787,6 +803,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	pending_relic = -1
 	pending_relic_drop = -1
 	pending_rewards = []   # R119：开新 run 清空待领奖励
+	reset_shop_session()   # R390：新的一局没有旧货架，也没有可重进的店
 	duck_revive_chance = 100
 	lucky7_turns = 0            # R314：新开一局 → lucky 7 的跨战斗计数归零
 	delivery_done = false       # R200：新开一局 → 「委托完成」未结算
@@ -884,9 +901,13 @@ static func advance_layer(layer: int) -> int:
 	current_layer = layer
 	battle_wins = 0
 	elite_wins = 0
-	used_levels = []
+	# R398（用户口径「三层会重复遇到二层精英，优先避免重复」）：
+	# `used_levels` **换层不清空** —— 第三层的精英池沿用第二层（`content_layers = [2, 3]`），
+	# 清空就等于把「这一局刚打过谁」忘掉，直道第 2 格必然可能撞回同一只。
+	# 池子真被用尽时 `_pick_level()` 自带「允许循环复用」兜底，不会走进死路。
 	# 本层 Boss 开局摇定（换层要重摇：第二层只有机械巨鸭）
 	boss_pick = _roll_boss(layer)
+	reset_shop_session()          # R390：换层 = 新地图 → 上一层的店全部作废
 	cleared_ids = []
 	seen_ids = []                 # R207：换层 = 新地图 → 上一层记得的格子全部作废
 	pending_level = {}
@@ -1412,6 +1433,46 @@ static func waiting_pick_scene() -> String:
 	if pending_relic > 0 or pending_deck_edit != "":
 		return "res://scenes/deck_edit.tscn"
 	return ""
+
+
+static func claim_deck_delete_reward(idx: int, deck_index: int) -> bool:
+	## R398（用户报「月亮的效果生效后没有立即进入选卡过程，而是在奖励界面结束后才选卡」）：
+	## 月亮的删卡奖励改成**在奖励面板里就地完成** —— 一次调用同时「删掉卡组第 deck_index 张」
+	## 和「把这条奖励置为已领」。
+	##
+	## 旧路是「领下 → `pending_deck_edit = "delete"` → 跳 deck_edit」，但 R340 规定
+	## 「本批奖励没处理完**不许跳场景**」（否则会像当年那样把没展示的卡牌奖励甩掉），
+	## 于是删卡被一路压到整批结束之后 —— 玩家得先关掉奖励界面才会进选卡。
+	##
+	## ⚠️ 不能复用 `claim_pending_reward`：那个会把 `pending_deck_edit` 设上，
+	##    删完回地图又会跳一次 deck_edit（重复删 / 空待办）。
+	if idx < 0 or idx >= pending_rewards.size():
+		return false
+	var e: Dictionary = pending_rewards[idx]
+	if str(e.get("kind", "")) != "deck_delete":
+		return false
+	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
+		return false
+	# `delete_deck_card()` 里有 `pending_relic = -1`（那是失忆药水的待办口径）——
+	# 这里不是那条路，别把玩家还没领的即时道具待办顺手清掉。
+	var keep_pr := pending_relic
+	var ok := delete_deck_card(deck_index)
+	pending_relic = keep_pr
+	if not ok:
+		return false
+	e["state"] = REWARD_CLAIMED
+	e["deleted"] = deck_index
+	return true
+
+
+static func deck_deletable(index: int) -> bool:
+	## R398：卡组第 index 张能不能删 —— 奖励面板的就地删卡与 `deck_edit_scene` 同一判据
+	## （只认 `CardData.no_remove`，**不许**在界面里按 id 硬编码）。
+	if index < 0 or index >= deck_ids.size():
+		return false
+	var repo := CardRepo.load_json()
+	var c: CardData = repo.get_card(int(deck_ids[index]))
+	return c != null and not c.no_remove
 
 
 static func claim_pending_reward(idx: int) -> bool:
@@ -2067,6 +2128,11 @@ static func advance(node_id: int) -> Dictionary:
 	if not can_move_to(node_id):
 		return {"ok": false, "is_new": false, "cost": 0, "revealed": false,
 				"chocolate": chocolate}
+	# R390：**真的挪了位置** → 上一间商店的「重进」窗口就此关闭
+	# （用户口径：只在下一次移动之前能重新进）。同格重复进入不算移动，窗口保持。
+	# ⚠️ 放在 `can_move_to` 之后：那条路压根没动，不该关窗。
+	if node_id != current_node_id:
+		shop_revisit_id = -1
 	var is_new: bool = not cleared_ids.has(node_id)
 	var cost := 0
 	var revealed := false
@@ -2104,6 +2170,43 @@ static func complete_current() -> void:
 	if current_node_id >= 0 and not cleared_ids.has(current_node_id):
 		cleared_ids.append(current_node_id)
 	reveal_known()                # R207：幂等刷新（房间结算完的视野也记进 seen）
+
+
+# ------------------------------------------------------------ 商店会话（R390）
+
+static func shop_state_of(node_id: int) -> Dictionary:
+	## 取某间商店已经存下的货架状态（没有则空字典）。
+	if node_id < 0:
+		return {}
+	var v: Variant = shop_states.get(str(node_id), null)
+	return v if v is Dictionary else {}
+
+
+static func store_shop_state(node_id: int, st: Dictionary) -> void:
+	## 存货架状态 —— shop_scene 每次商品状态变化（售罄 / 附魔 / 删卡）后调用。
+	## 深拷贝：那边传进来的 `_row1/_row2/_row3` 还在被场景继续改，不能共用引用。
+	if node_id < 0:
+		return
+	shop_states[str(node_id)] = st.duplicate(true)
+
+
+static func shop_revisit_ok(node_id: int) -> bool:
+	## 这一格现在能不能「重新进店」：必须**正是上次离开的那间**，且货架状态还在。
+	## ⚠️ 只看 `shop_revisit_id` 就够了 —— 走出这一格时它已被 `advance()` 清空；
+	##    再加一次 `current_node_id` 判断反而会在「刚进店又出来」时误判。
+	return (node_id >= 0 and node_id == shop_revisit_id
+			and not shop_state_of(node_id).is_empty())
+
+
+static func shop_mark_revisit(node_id: int) -> void:
+	## 离开商店时登记重进窗口（`shop_scene._leave()` 的唯一口）。
+	shop_revisit_id = node_id
+
+
+static func reset_shop_session() -> void:
+	## 新局 / 换层：货架与重进窗口一起作废。
+	shop_states = {}
+	shop_revisit_id = -1
 
 
 static func gold_for_tier(tier: int) -> int:

@@ -38,6 +38,14 @@ const STATS_PAD_Y := 3.0    # 数值框的上下内边距（比正文块小：�
 const EDGE := 0.55          # 边框 / 竖条的不透明度
 
 
+static func k_of(size: int) -> float:
+	## 版式缩放比（R391）：上面那几档尺寸（内距 / 图标列 / 行高 / 行净高）原来是
+	## **只配 10px 正文**写死的常量。战斗界面把正文提到 13px 之后，13px 的字压进
+	## 14px 行距会糊成一片、图标列也挤——所以统一按 `size / FS` 同比放大，
+	## 调用方只需要传字号，不用再记一套尺寸。
+	return clampf(float(size) / float(FS), 0.75, 2.0)
+
+
 # ------------------------------------------------------------ 测量（纯函数，单测直接调）
 
 static func rows_of(segs: Array, w: float, size: int = FS) -> int:
@@ -52,26 +60,28 @@ static func has_icon(b: Dictionary) -> bool:
 	return str(b.get("glyph", "")) != "" or b.get("icon") is Texture2D
 
 
-static func text_width(w: float, b: Dictionary) -> float:
-	## 块内正文可用宽度（扣掉左右内边距与左侧图标列）。
-	var iw := ICON + 3.0 if has_icon(b) else 0.0
-	return maxf(8.0, w - PAD_X * 2.0 - iw)
+static func text_width(w: float, b: Dictionary, size: int = FS) -> float:
+	## 块内正文可用宽度（扣掉左右内边距与左侧图标列）。尺寸随 size 缩放（见 k_of）。
+	var k := k_of(size)
+	var iw := ICON * k + 3.0 * k if has_icon(b) else 0.0
+	return maxf(8.0, w - PAD_X * 2.0 * k - iw)
 
 
 static func box_h(b: Dictionary, w: float, size: int = FS) -> float:
 	## 单块高度：**文字行数决定**（这正是「框随文字量变」的实现处）。
 	var t := str(b.get("type", "text"))
+	var k := k_of(size)
 	if t == "stats":
-		return STATS_PAD_Y * 2.0 + STATS_H
+		return (STATS_PAD_Y * 2.0 + STATS_H) * k
 	if t == "caption":
-		return PAD_Y * 0.6 + LINE_H          # 小标题（不画框，只占一行）
-	var rows := rows_of(b.get("segs", []), text_width(w, b), size)
+		return (PAD_Y * 0.6 + LINE_H) * k     # 小标题（不画框，只占一行）
+	var rows := rows_of(b.get("segs", []), text_width(w, b, size), size)
 	if rows <= 0:
 		return 0.0
-	var body := float(rows) * LINE_H
+	var body := float(rows) * LINE_H * k
 	if has_icon(b):
-		body = maxf(body, ICON)
-	return PAD_Y * 2.0 + body
+		body = maxf(body, ICON * k)
+	return PAD_Y * 2.0 * k + body
 
 
 static func measure(blocks: Array, w: float, size: int = FS) -> float:
@@ -104,7 +114,7 @@ static func draw_all(cv: CanvasItem, blocks: Array, x: float, y: float, w: float
 		if h <= 0.0:
 			continue
 		if max_y >= 0.0 and y + h > max_y:
-			cv.draw_string(font, Vector2(x + PAD_X, y + font.get_ascent(size)),
+			cv.draw_string(font, Vector2(x + PAD_X * k_of(size), y + font.get_ascent(size)),
 					"……", HORIZONTAL_ALIGNMENT_LEFT, -1, size, UiTheme.INK_600)
 			return y
 		if str(b.get("type", "text")) == "caption":
@@ -121,6 +131,7 @@ static func draw_all(cv: CanvasItem, blocks: Array, x: float, y: float, w: float
 
 static func _draw_box(cv: CanvasItem, font: Font, font_bold: Font, b: Dictionary,
 		rect: Rect2, size: int, hits_out: Array = []) -> void:
+	var k := k_of(size)
 	var col: Color = b.get("col", UiTheme.INK_600)
 	var bg: Color = b.get("bg", Color(1.0, 1.0, 1.0, 0.42))
 	cv.draw_rect(rect, bg, true)
@@ -131,23 +142,23 @@ static func _draw_box(cv: CanvasItem, font: Font, font_bold: Font, b: Dictionary
 	if str(b.get("type", "text")) == "stats":
 		_draw_stats(cv, font_bold, b, rect, size)
 		return
-	var cx := rect.position.x + PAD_X + ICON * 0.5
-	var cy := rect.position.y + PAD_Y + LINE_H * 0.5
+	var cx := rect.position.x + (PAD_X + ICON * 0.5) * k
+	var cy := rect.position.y + (PAD_Y + LINE_H * 0.5) * k
 	var tex: Variant = b.get("icon")
 	if tex is Texture2D:
-		var ir := ICON * 0.42
+		var ir := ICON * k * 0.42
 		cv.draw_texture_rect(tex as Texture2D,
 				Rect2(Vector2(cx - ir, cy - ir), Vector2(ir, ir) * 2.0), false)
 	elif str(b.get("glyph", "")) != "":
-		draw_glyph(cv, Vector2(cx, cy), ICON * 0.42, str(b["glyph"]), col)
-	var tx := rect.position.x + PAD_X + (ICON + 3.0 if has_icon(b) else 0.0)
-	var tw := rect.size.x - (tx - rect.position.x) - PAD_X
-	var base := rect.position.y + PAD_Y + float(font.get_ascent(size))
+		draw_glyph(cv, Vector2(cx, cy), ICON * k * 0.42, str(b["glyph"]), col)
+	var tx := rect.position.x + PAD_X * k + ((ICON + 3.0) * k if has_icon(b) else 0.0)
+	var tw := rect.size.x - (tx - rect.position.x) - PAD_X * k
+	var base := rect.position.y + PAD_Y * k + float(font.get_ascent(size))
 	# R302：用 `draw_wrapped_hits` 而不是 `draw_wrapped` —— 提及（「素体」这类名字）
 	# 既要换色，也要把**命中矩形**交出去给悬浮层。底色传羊皮纸：提及色按底色挑，
 	# 否则深蓝正文会被判成暗底、用亮金画在浅框上看不清（R206 的同一个坑）。
 	var res := CardText.draw_wrapped_hits(cv, font, font_bold, b.get("segs", []), tx, base,
-			tw, size, LINE_H, UiTheme.INK_600, -1.0, -1.0, UiTheme.PANEL_PAPER_BG)
+			tw, size, LINE_H * k, UiTheme.INK_600, -1.0, -1.0, UiTheme.PANEL_PAPER_BG)
 	for h: Dictionary in res.get("hits", []):
 		hits_out.append(h)
 
@@ -156,9 +167,10 @@ static func _draw_stats(cv: CanvasItem, font_bold: Font, b: Dictionary, rect: Re
 		size: int) -> void:
 	## 数值框：图标 + 数字横排（力量 / 生命 一组，攻击距离 / 移动速度 一组）。
 	var items: Array = b.get("items", [])
+	var k := k_of(size)
 	var cy := rect.position.y + rect.size.y * 0.5
-	var x := rect.position.x + PAD_X + 2.0
-	var ir := 6.0
+	var x := rect.position.x + (PAD_X + 2.0) * k
+	var ir := 6.0 * k
 	var asc := float(font_bold.get_ascent(size))
 	for it: Dictionary in items:
 		var col: Color = it.get("col", UiTheme.INK_600)
@@ -170,10 +182,11 @@ static func _draw_stats(cv: CanvasItem, font_bold: Font, b: Dictionary, rect: Re
 		else:
 			cv.draw_circle(Vector2(cx, cy), ir * 0.82, col)
 		var txt := str(it.get("text", ""))
-		var tx := cx + ir + 3.0
+		var tx := cx + ir + 3.0 * k
 		cv.draw_string(font_bold, Vector2(tx, cy + asc * 0.42), txt,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)
-		x = tx + font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 12.0
+		x = tx + font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x \
+				+ 12.0 * k
 
 
 # ------------------------------------------------------------ 自绘图标

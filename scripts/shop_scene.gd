@@ -27,6 +27,10 @@ const PICK_GAP_X := 20.0
 const PICK_GAP_Y := 16.0
 const PICK_Y0 := 130.0
 
+# R390：买到的卡「飞进卡组」的时长（秒）。0.55 是实测手感：再短看不清，
+# 再长会挡着下一次点击（飞行中的卡画在最上层，但它不收输入）。
+const FLY_DUR := 0.55
+
 # 第三行固定商品的价钱（R295：**唯一来源**）—— `_row3` 逐项引用，改价只改这里。
 # 之前价钱写死在 `_row3` 字面量里，改一次要翻代码找，测试也没法按常量核对。
 const PRICE_DELETE := 50
@@ -76,6 +80,21 @@ var _deck_cards: Array = []    # [{id, name, card}]
 var _hint := ""
 var _hint_t := 0.0
 
+# ---- R390：商店会话 / 平台分叉 ----
+## 本次商店对应的地图格子 id（-1 = 演示 / 没有地图）。重进时用它去 RunState 找货架。
+var _shop_node := -1
+## 烟测接缝：非空时代替真跳转（headless / 冒烟里没有「下一个场景」可换）。
+## 与 `reward_panel.route_fn` 同款 —— 正式流程永远为空。
+var route_fn: Callable = Callable()
+## 出图用：强制走触摸界面（安卓的「购买」按钮平时在桌面上不出现，没法截图核验）。
+var _force_touch := false
+## 买到的卡的飞行动画实例：`[{card, from: Rect2, t: float}]`
+var _fly: Array = []
+## 出图用（`--flyhold`）：把飞行卡钉在半路，否则截图那一刻它早飞到牌库去了。
+var _fly_hold := false
+## 飞行落点的那圈金环（> 0 时画，逐帧递减）—— 告诉玩家「卡进到这里了」。
+var _deck_flash_t := 0.0
+
 # R218：**请求重绘的次数**（只增不减）。唯一重绘口 `_ask_redraw()` 自增，
 # 给「状态变了却没画」这类 bug 留一个可断言的接缝（Android 触摸没有鼠标移动，
 # 少一次 queue_redraw 就是「点了没反应」）。
@@ -99,7 +118,10 @@ func _ready() -> void:
 	#    老板立绘从 `_top_h() + 20` 才开始画 —— 两个按钮不会压到立绘或标题。
 	DeckViewer.attach(self)
 	RelicViewer.attach(self, Vector2(1044, 6))
-	_setup_shop()
+	# ⚠️ `_setup_shop()` **必须在演示参数之后**（R390）：`--shop` 会造 run 并把
+	# `current_node_id` 从 -1 补成一个有效格子，而 `_setup_shop()` 要拿它当
+	# `_shop_node` 去存取货架状态。放在前面 → `_shop_node` 恒为 -1 → 状态存不下，
+	# 出图核验「重进原样」时永远重摇（R390 踩过）。
 	# 演示参数：--shop 造一个 run + 金币（截图核验商店界面）。
 	var args := OS.get_cmdline_user_args()
 	if "--shop" in args:
@@ -108,6 +130,56 @@ func _ready() -> void:
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		RunState.gold = 100
 		RunState.pending_node = {"type": "shop"}
+		if RunState.current_node_id < 0:
+			# 出图专用：`start_run([])` 没有地图 → 当前格是 -1，货架状态就没地方存
+			# （`_sync_shop_state()` 见 `_shop_node < 0` 直接返回 → 重进必重摇）。
+			# 真实流程永远是从地图格走进来，`current_node_id` 一定有效。
+			RunState.current_node_id = 0
+	# R390 出图：`--touchui` 强制走触摸界面 —— 安卓的「购买」按钮只在触屏出现，
+	# 桌面出图否则永远截不到。只切绘制/交互分支，不碰任何数据。
+	if "--touchui" in args:
+		_force_touch = true
+	# R390 出图：`--flyhold` 买下第一张卡并把飞行中的卡**钉在半路** —— 核验
+	# 「卡飞进卡组」的形态。出图：`shop.tscn -- --screenshot --flyhold --shotframe ..`
+	if "--flyhold" in args:
+		var tf := Timer.new()
+		tf.wait_time = 0.25
+		tf.one_shot = true
+		tf.timeout.connect(func():
+			_buy_card(0)
+			for f: Dictionary in _fly:
+				f["t"] = 0.26
+			_fly_hold = true
+			_ask_redraw())
+		add_child(tf)
+		tf.start()
+	# R390 出图：`--clickcard N` 用**真实点击路径**（`_on_click`）点第一行第 N 张 ——
+	# 核验「电脑端单击一次就买」这条分支真的通（不是直接调 `_buy_card` 抄近路）。
+	# 出图：`shop.tscn -- --screenshot --shop --clickcard 1`
+	if "--clickcard" in args:
+		var ci := args.find("--clickcard")
+		var idx := int(args[ci + 1]) if ci + 1 < args.size() else 0
+		var tc := Timer.new()
+		tc.wait_time = 0.3
+		tc.one_shot = true
+		tc.timeout.connect(func():
+			if idx >= 0 and idx < _row1.size():
+				_on_click(_row1_rect(idx).get_center())
+			_ask_redraw())
+		add_child(tc)
+		tc.start()
+	# R390 出图：`--revisit` 在买完之后**再走一遍进店初始化**（等于离开再回来），
+	# 截图里必须看到「已经买过的那张还是已售罄、其余位置没动」。
+	# 出图：`shop.tscn -- --screenshot --shop --clickcard 0 --revisit`
+	if "--revisit" in args:
+		var tv := Timer.new()
+		tv.wait_time = 0.45
+		tv.one_shot = true
+		tv.timeout.connect(func():
+			_setup_shop()
+			_ask_redraw())
+		add_child(tv)
+		tv.start()
 	# 演示参数：--picksel N 选中查看第一行第 N 张卡（截图核验描述板 / 选中高亮）。
 	var ps := args.find("--picksel")
 	if ps >= 0 and ps + 1 < args.size():
@@ -153,6 +225,16 @@ func _ready() -> void:
 			tb.timeout.connect(func(): _buy_card(0))
 			add_child(tb)
 			tb.start()
+	# R394 出图：`--relicdemo` 塞 8 件道具（含用户报过的泉水 / 思想钢印），
+	# 配合 `--relicview` / `--relicpanel` 核验「点击展开胶囊行 / 悬停看详情」。
+	if "--relicdemo" in args:
+		if not RunState.run_active:
+			RunState.run_active = true
+			RunState.start_run([], GameLayers.LAYER_DEFAULT)
+		RunState.relics = []
+		for rid: int in [6035, 6036, 6015, 6001, 6003, 6005, 6010, 6041]:
+			RunState.gain_relic(rid)
+	_setup_shop()   # R390：见上面那条注释 —— 必须在所有「造 run / 改当前格」的演示参数之后
 	# 演示参数（R214）：`--delpick` 打开「删除一张卡」的选卡页 —— 核验**选卡页大卡**
 	# （150×190，`CardFace.draw_pick()`）上也有附魔标记。顺带给卡组前两张塞附魔，
 	# 否则初始卡组是一张张素卡，出图看不出任何标记。
@@ -210,6 +292,13 @@ func _ready() -> void:
 
 
 func _setup_shop() -> void:
+	## 货架初始化。R390：**先看这一格有没有存下来的店** —— 有就原样恢复，绝不重摇。
+	## ⚠️ 重摇不只是「商品变了」这么轻：它会消耗 `run_rng` 的随机数，
+	##    同一份存档读两次就是两家不同的店，确定性直接破。
+	_shop_node = RunState.current_node_id
+	var saved := RunState.shop_state_of(_shop_node)
+	if not saved.is_empty() and _restore_shop(saved):
+		return
 	# 第一行：随机本职业奖励卡（数量自适应，先按最多 6 张抽，绘制时按货架宽截断）。
 	# 走 Boss 档概率（普通 35% / 稀有 45% / 史诗 20%）。
 	# R241：必须走本局随机链 —— 原来没传 rng（= 全局随机源），同一份存档读两次
@@ -224,19 +313,113 @@ func _setup_shop() -> void:
 	_row2 = []
 	for i in 3:
 		_row2.append({"ench": pool[i], "sold": false})
-	# 第三行：固定 3 项
-	_row3 = [
+	_row3 = _row3_template()
+	_reindex_rows()
+	_sync_shop_state()
+
+
+func _row3_template() -> Array:
+	## 第三行固定三项的**唯一定义**（R390 抽出来）：恢复货架时要按 key 反查，
+	## 两处各写一份 —— 改价只改一处、另一处还留着老价钱，是最典型的漂移。
+	var out: Array = [
 		{"key": "delete", "name": "删除一张卡", "desc": "从卡组里删掉一张卡", "price": PRICE_DELETE,
 			"icon": "shop_icon_remove", "sold": false},
 		{"key": "maxhp", "name": "+5 最大生命", "desc": "最大生命 +5，并回复 5 点生命", "price": PRICE_MAXHP,
 			"icon": "shop_icon_maxhp", "sold": false},
-		{"key": "choco", "name": "巧克力", "desc": "获得一块巧克力（行动力 +1）", "price": PRICE_CHOCO,
-			"icon": "chocolate", "sold": false},
 	]
-	# 全局编号偏移
+	# R399（用户口径「第三层应该不再提供巧克力」）：第三层是直道、每格 cost 恒 0，
+	# 巧克力在那儿一块也用不掉 —— 这家店不再摆它。
+	# ⚠️ 绘制 / 命中 / 恢复货架全都按 `_row3.size()` 自适应，少一项不会留空位
+	#    （`_row3[0]` 仍是「删除一张卡」，没有硬编码下标会错位）。
+	if RunState.current_layer != GameLayers.LAYER_THREE:
+		out.append({"key": "choco", "name": "巧克力", "desc": "获得一块巧克力（行动力 +1）",
+			"price": PRICE_CHOCO, "icon": "chocolate", "sold": false})
+	return out
+
+
+func _row3_def(key: String) -> Dictionary:
+	## 按 key 取第三行商品定义（恢复货架用）。找不到返回空字典。
+	for d: Dictionary in _row3_template():
+		if str(d["key"]) == key:
+			return d
+	return {}
+
+
+func _ench_by_id(id: String) -> Dictionary:
+	## 按 id 取附魔定义。找不到返回空字典。
+	for e: Dictionary in ENCHANTS:
+		if str(e["id"]) == id:
+			return e
+	return {}
+
+
+func _reindex_rows() -> void:
+	## 全局商品编号：第一行 0..n1-1，第二行紧跟，第三行再紧跟（三行共用一套下标）。
 	_row1_base = 0
 	_row2_base = _row1.size()
 	_row3_base = _row1.size() + _row2.size()
+
+
+func _restore_shop(st: Dictionary) -> bool:
+	## 从 `RunState.shop_states` 恢复三行货架（R390）。任何一个 id 找不到 →
+	## 直接返回 false 让调用方重摇：宁可换一家店，也不能在货架上留一个空卡位
+	## （空卡位点得到、买不了，是最难向玩家解释的那种 bug）。
+	var r1: Array = st.get("row1", [])
+	var r2: Array = st.get("row2", [])
+	var r3: Array = st.get("row3", [])
+	var o1: Array = []
+	for it: Variant in r1:
+		if not (it is Array) or (it as Array).size() < 2:
+			return false
+		var a: Array = it
+		var c := _repo.get_card(int(a[0]))
+		if c == null:
+			return false
+		o1.append({"card": c, "sold": int(a[1]) != 0})
+	var o2: Array = []
+	for it2: Variant in r2:
+		if not (it2 is Array) or (it2 as Array).size() < 2:
+			return false
+		var b: Array = it2
+		var e := _ench_by_id(str(b[0]))
+		if e.is_empty():
+			return false
+		o2.append({"ench": e, "sold": int(b[1]) != 0})
+	var o3: Array = []
+	for it3: Variant in r3:
+		if not (it3 is Array) or (it3 as Array).size() < 2:
+			return false
+		var c3: Array = it3
+		var d := _row3_def(str(c3[0]))
+		if d.is_empty():
+			return false
+		d["sold"] = int(c3[1]) != 0
+		o3.append(d)
+	_row1 = o1
+	_row2 = o2
+	_row3 = o3
+	_reindex_rows()
+	return true
+
+
+func _sync_shop_state() -> void:
+	## 把当前三行货架写回 `RunState`（R390：重进必须原样）。
+	## 只存 id 与「售罄」位 —— CardData 是运行时对象，不能进存档。
+	## 每次商品状态变化（买入 / 附魔成交 / 删卡 / 服务售罄）都要调一次。
+	if _shop_node < 0:
+		return
+	var r1: Array = []
+	for e: Dictionary in _row1:
+		var c: CardData = e["card"]
+		r1.append([int(c.id), 1 if bool(e["sold"]) else 0])
+	var r2: Array = []
+	for e2: Dictionary in _row2:
+		var ench: Dictionary = e2["ench"]
+		r2.append([str(ench["id"]), 1 if bool(e2["sold"]) else 0])
+	var r3: Array = []
+	for e3: Dictionary in _row3:
+		r3.append([str(e3["key"]), 1 if bool(e3["sold"]) else 0])
+	RunState.store_shop_state(_shop_node, {"row1": r1, "row2": r2, "row3": r3})
 
 
 func _ask_redraw() -> void:
@@ -253,6 +436,20 @@ func _process(delta: float) -> void:
 	# 悬停高亮由 _on_motion 事件驱动重绘。
 	if _hint_t > 0.0:
 		_hint_t -= delta
+		_ask_redraw()
+	# R390：飞入卡组的动画。飞到终点的那一张摘掉，并点亮牌库按钮上的金环。
+	if not _fly.is_empty() and not _fly_hold:
+		var alive: Array = []
+		for f: Dictionary in _fly:
+			f["t"] = float(f["t"]) + delta
+			if float(f["t"]) < FLY_DUR:
+				alive.append(f)
+			else:
+				_deck_flash_t = 0.32
+		_fly = alive
+		_ask_redraw()
+	if _deck_flash_t > 0.0:
+		_deck_flash_t = maxf(0.0, _deck_flash_t - delta)
 		_ask_redraw()
 
 
@@ -352,12 +549,14 @@ func _draw() -> void:
 	# 三层货架 + 三行商品
 	_draw_shelves()
 	_draw_row1()
+	_draw_buy_buttons()   # R390：安卓专用（桌面端单击卡面即成交，不画按钮）
 	_draw_row2()
 	_draw_row3()
 	_draw_pick_overlay()
 	_draw_leave()
 	_draw_desc_plate()   # R203：悬停/选中卡的描述板（卡面只留卡名后的详情入口）
 	_draw_hint()
+	_draw_fly()          # R390：飞进卡组的卡（画在最上层，盖住一切）
 
 
 func _fit_cover(tex: Texture2D, box: Rect2) -> Rect2:
@@ -852,6 +1051,12 @@ func _on_click(pos: Vector2) -> void:
 	if _leave_rect().has_point(pos):
 		_leave()
 		return
+	# R390：安卓的「购买」按钮 —— 必须判在 `_hit_at` **之前**：它就压在卡位下方的
+	# 货架条上，先走 `_hit_at` 会被当成「点到了卡」。
+	var bi := _buy_btn_at(pos)
+	if bi >= 0:
+		_buy_card(bi)
+		return
 	var hit := _hit_at(pos)
 	if hit < 0:
 		if _sel_row1 >= 0:            # 点空白 → 取消「选中查看」
@@ -860,14 +1065,16 @@ func _on_click(pos: Vector2) -> void:
 		return
 	if hit >= _row1_base and hit < _row1_base + _row1.size():
 		var i := hit - _row1_base
-		if _sel_row1 == i:
-			# 第二击同一张 → 确认购买（R203 两段式：首击查看，再击成交）
-			_sel_row1 = -1
-			_buy_card(i)
-		else:
-			# 首击 → 选中查看（卡面高亮 + 描述板），不扣钱；移动端无 hover 时的详情入口
+		if _is_touch():
+			# 触摸端（用户口径 R390）：点卡 = 看说明，成交点卡下的「购买」按钮。
+			# 这里**不再保留「再点一次卡面就买」** —— 触摸上双击卡片等于误买，
+			# 而看说明本来就会连点两下。
 			_sel_row1 = i
 			_ask_redraw()
+		else:
+			# 电脑端（用户口径 R390）：悬停已经给出效果说明，**左键单击一次直接成交**。
+			_sel_row1 = -1
+			_buy_card(i)
 	elif hit >= _row2_base and hit < _row2_base + _row2.size():
 		_start_enchant(hit - _row2_base)
 	elif hit >= _row3_base and hit < _row3_base + _row3.size():
@@ -911,6 +1118,8 @@ func _buy_card(i: int) -> void:
 		return
 	e["sold"] = true
 	RunState.add_card(card.id)
+	_sync_shop_state()                                    # R390：重进要看到「已售罄」
+	_start_fly(card, _row1_rect(i))                       # R390：卡飞进卡组
 	_set_hint("购买「%s」（%s）" % [card.card_name, _paid_tag(price)])
 
 
@@ -975,6 +1184,7 @@ func _buy_row3(i: int) -> void:
 			_set_hint("金币不足（需要 %d）" % price)
 			return
 		e["sold"] = true
+		_sync_shop_state()      # R390
 		RunState.gain_max_hp(5)
 		_set_hint("最大生命 +5（并回复 5 点）· %s" % _paid_tag(price))
 	elif key == "choco":
@@ -982,6 +1192,7 @@ func _buy_row3(i: int) -> void:
 			_set_hint("金币不足（需要 %d）" % price)
 			return
 		e["sold"] = true
+		_sync_shop_state()      # R390
 		RunState.add_chocolate(1)   # R236：体力回到 > 0 会撤销「耗尽→开 Boss」的待触发
 		RunState.sync_fatigue()   # R223 难度 5：巧克力回到 6 以上 → 疲惫出卡组
 		_set_hint("巧克力 +1 · %s" % _paid_tag(price))
@@ -1045,6 +1256,7 @@ func _on_pick_click(pos: Vector2) -> void:
 			return
 		_pay(del_price)   # R311：有盆就用盆抵（前面 `_can_pay` 已经把「付不起」挡掉了）
 		_row3[0]["sold"] = true
+		_sync_shop_state()      # R390
 		_set_hint("删除了「%s」（%s）" % [del_name, _paid_tag(del_price)])
 		_deleting = false
 		_hover_enchant_card = -1
@@ -1067,6 +1279,7 @@ func _on_pick_click(pos: Vector2) -> void:
 		return
 	_pay(price)   # R311：有盆就用盆抵（预检已过，这里不会失败）
 	_row2[_enchanting]["sold"] = true
+	_sync_shop_state()      # R390
 	var c := _repo.get_card(RunState.deck_ids[idx])
 	_set_hint("「%s」获得附魔「%s」（%s）" % [c.card_name if c != null else str(idx),
 			_ench_name(ench), _paid_tag(price)])
@@ -1082,8 +1295,14 @@ func _ench_mod(ench_id: String) -> Dictionary:
 
 
 func _leave() -> void:
+	## 离开商店。R390（用户口径）：**在下一次移动之前**还能再进来，货架原样 ——
+	## 窗口在这里登记，玩家走出这一格时由 `RunState.advance()` 自动关闭。
+	RunState.shop_mark_revisit(_shop_node)
 	RunState.complete_current()
-	SceneFx.goto("res://scenes/map.tscn")
+	if route_fn.is_valid():
+		route_fn.call("res://scenes/map.tscn")
+	else:
+		SceneFx.goto("res://scenes/map.tscn")
 
 
 # ------------------------------------------------------------ 命中区
@@ -1120,3 +1339,103 @@ func _row3_rect(i: int) -> Rect2:
 func _leave_rect() -> Rect2:
 	var vs := _vs()
 	return Rect2(vs.x - 160, vs.y - 60, 140, 44)
+
+
+# ------------------------------------------------------------ R390：平台分叉购买
+
+func _is_touch() -> bool:
+	## 商店的交互风格按**平台**分叉（用户口径 R390）：
+	##   * 电脑端：鼠标悬停看说明，**左键单击一次就买**；
+	##   * 安卓端：触摸没有悬停 → 点卡看说明，再点卡下方的「购买」按钮成交。
+	## ⚠️ 判据只看平台名，**不看输入事件类型**：桌面接鼠标的安卓设备极少，
+	##    而按事件判会让第一下触摸落进桌面分支（就成了「点一下就买」的误触）。
+	return _force_touch or OS.get_name() == "Android"
+
+
+func _buy_btn_rect(i: int) -> Rect2:
+	## 安卓「购买」按钮的矩形 —— 压在卡牌正下方的**货架条**上（高 30，
+	## 按钮占 26 正好一条）。与 `_row1_rect` 同宽同起点：改卡宽只需改那一处。
+	var rr := _row1_rect(i)
+	return Rect2(rr.position.x + 8.0, rr.position.y + rr.size.y + 2.0, rr.size.x - 16.0, 26.0)
+
+
+func _buy_btn_at(pos: Vector2) -> int:
+	## 命中哪张卡的「购买」按钮（-1 = 没有）。只认**还没卖掉**的。
+	if not _is_touch() or _enchanting >= 0 or _deleting:
+		return -1
+	var n := _visible_row1_count()
+	for i in n:
+		if i >= _row1.size() or bool(_row1[i]["sold"]):
+			continue
+		if _buy_btn_rect(i).has_point(pos):
+			return i
+	return -1
+
+
+func _draw_buy_buttons() -> void:
+	## 安卓专用：卡下那条「购买 · 50」。桌面端不画 —— 那边单击卡面就成交，
+	## 多摆一个按钮只会让人以为「必须按这里才能买」。
+	if not _is_touch():
+		return
+	var n := _visible_row1_count()
+	for i in n:
+		if i >= _row1.size():
+			continue
+		var e: Dictionary = _row1[i]
+		if bool(e["sold"]):
+			continue
+		var rr := _buy_btn_rect(i)
+		var price := _card_price(e["card"])
+		var can := _can_pay(price)
+		draw_rect(rr, Color("3f8a4f") if can else Color("34343a"), true)
+		draw_rect(rr, Color("c8f0a0") if can else Color("64646c"), false, 2.0)
+		draw_string(_font_bold, rr.position + Vector2(0, 18), "购买 · %d" % price,
+				HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_CAPTION,
+				Color("0e2010") if can else Color("9a9aa2"))
+
+
+# ------------------------------------------------------------ R390：卡飞进卡组
+
+func _deck_btn_center() -> Vector2:
+	## 右上角「牌库 N」按钮的中心 = 飞行动画的终点。DeckViewer 固定贴在 (1150,6)、
+	## 尺寸 114×32（R375 同款位置），这里只算中心、不依赖它的实例。
+	return Vector2(_vs().x - 73.0, 22.0)
+
+
+func _start_fly(card: CardData, from: Rect2) -> void:
+	## 卡从货架上飞出去。`from` = 它刚才所在的那个卡位（不是固定坐标 ——
+	## 第一行张数会变、位置会挪，写死坐标在 4 张 / 5 张时会从空处起飞）。
+	_fly.append({"card": card, "from": from, "t": 0.0})
+	_ask_redraw()
+
+
+func _draw_fly() -> void:
+	## 买到的卡飞向右上角「牌库」并缩小消失 —— 让「它现在在卡组里」是**看见的**，
+	## 而不是只有底下一行提示。
+	## ⚠️ 为什么自己画缩略卡、而不是把 `CardFace.draw` 的 rect 缩到 0.2：
+	##    卡面排版按高度等比缩放，但文字有「最小字号 cap」不跟着缩 →
+	##    巴掌大的小卡上挂着正常字号，糊成一团。这里只画纸底 + 卡图 + 描边，
+	##    任何尺寸都干净。
+	for f: Dictionary in _fly:
+		var card: CardData = f["card"]
+		var from: Rect2 = f["from"]
+		var k: float = clampf(float(f["t"]) / FLY_DUR, 0.0, 1.0)
+		var e := 1.0 - pow(1.0 - k, 2.4)        # 起步快、到点收 —— 像被吸过去
+		var sc := lerpf(1.0, 0.16, e)
+		var c: Vector2 = from.get_center().lerp(_deck_btn_center(), e)
+		var rr := Rect2(c - from.size * sc * 0.5, from.size * sc)
+		var tint := CardFace.paper_tint(card)
+		tint.a = 1.0 - 0.2 * e
+		draw_rect(rr, tint, true)
+		var art := CardFace.art_for(card.id, false, 0)
+		if art != null and rr.size.x > 20.0:
+			var abox := Rect2(rr.position, Vector2(rr.size.x, rr.size.y * UiTheme.CARD_ART_RATIO))
+			draw_texture_rect_region(art, abox,
+					CardFace.cover_region(art.get_size(), abox),
+					Color(1, 1, 1, 1.0 - 0.2 * e))
+		draw_rect(rr, Color(1.0, 0.92, 0.62, 1.0 - 0.3 * e), false, maxf(1.2, 3.0 * sc))
+	# 落点金环：卡「进」到牌库按钮上的那一下
+	if _deck_flash_t > 0.0:
+		var p := 1.0 - _deck_flash_t / 0.32
+		draw_arc(_deck_btn_center(), 22.0 + 26.0 * p, 0.0, TAU, 32,
+				Color(1.0, 0.86, 0.42, 0.9 * (1.0 - p)), 3.0, true)
