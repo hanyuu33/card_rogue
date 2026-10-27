@@ -14209,6 +14209,21 @@ func run_ai_unit(cell: Vector2i) -> void :
 	_ai_act(cell, p)
 
 
+func ai_force_tap(cell: Vector2i) -> bool:
+	## R400：**AI 卡死兜底口**。某个敌方单位连着好几拍都还排在队首（既没横置、
+	## 也没把自己挪出队列），界面侧就调这里强行结束它的本回合行动。
+	## 正常路径永远走不到 —— 走到就说明 `_ai_act` / `_assassin_act` 有漏 `_tap` 的分支。
+	## ⚠️ 必须先把 `acts_left` 压到 1：`_tap()` 见 `acts_left > 1` 会「再开一轮」
+	## （tapped 仍为 false），那样兜底等于没兜。
+	var p:= state.unit_at(cell)
+	if p == null or p.owner != SIDE_OPPONENT or p.tapped:
+		return false
+	_log("AI 停滞兜底：%s 连续多拍无动作，强制结束本回合行动" % p.card.card_name)
+	p.acts_left = 1
+	_tap(p, "AI：停滞兜底")
+	return true
+
+
 func _ai_role(card: CardData) -> String:
 	## R159：按卡面能力给单位贴一个 AI 角色（只读 card，不读 Placement）。
 	## 分类不精确计算收益，只按 traits / kind / 数值 / 文本做快速归类。
@@ -14942,6 +14957,15 @@ func _assassin_act(cell: Vector2i, p: Placement) -> void :
 			return
 		var moved:= state.unit_at(dst)
 		if moved == null:
+			# R400（用户报「敌人 AI 卡死」）：闪现**没落地**也必须横置。
+			# 不 tap 的话 `ai_action_queue()` 下一拍又把它排回队首 → 敌方回合永远不结束。
+			# 已知三种起因：被禁足（`rooted > 0`，冰霜陷阱）、本回合已移动过
+			# （`moved` 且 `acts_left <= 1`）、落点被占。
+			# ⚠️ 普通 AI 那条早有 `_tap(p, "AI：推进失败")` 兜底，暗杀者这条 R111 漏了。
+			# ⚠️ 还要先确认它仍在场上：闪现途中被陷阱当场打死时 `_cell_of()` 是 (-1,-1)，
+			#    对一个已离场的对象调 `_tap()` 会 emit 一个不存在的格子。
+			if _cell_of(p) != Vector2i(-1, -1):
+				_tap(p, "AI：暗杀者闪现未落地（禁足 / 已移动 / 落点被占）")
 			return
 		cell = dst
 		p = moved

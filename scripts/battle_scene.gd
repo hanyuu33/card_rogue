@@ -20,6 +20,7 @@ const CardInfoBoxes = preload("res://scripts/card_info_boxes.gd")
 ## R386：战场对话气泡（自绘，见该文件头部的设计与时间轴说明）
 const SpeechBubble = preload("res://scripts/speech_bubble.gd")
 
+const AI_STALL_LIMIT := 8                # R400：同一单位连续排在队首这么多拍 → 强制跳过
 const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
 const CARD_W := 63.0
@@ -482,6 +483,8 @@ var _slides := {}               # Placement -> {from,to: 像素中心, start, du
                                 # pts = 逐格路径的中心点数组；给了就按它分段滑行（多格移动走真实轨迹）
 var _attacks := {}              # Placement -> {dir, src, dst, start, dur}     分阶段攻击动画
 var _delayed: Array = []        # {at, kind, data}                             命中/击破定时特效
+var _ai_stall_cell := Vector2i(-1, -1)   # R400：上一拍的队首格（看它会不会一直不变）
+var _ai_stall_n := 0                     # R400：同一格连续排在队首的拍数
 var _ghosts: Array = []         # {center, name, start, dur}                  击破淡出
 var _dying: Array = []          # {cell, card, p, hide_at}                    已归零但仍要显示到命中时刻的卡
 var _floaters: Array = []       # {pos, text, col, start, dur}                伤害/治疗飘字
@@ -8079,6 +8082,8 @@ func _on_end_turn() -> void:
 	sfx.play("turn")
 	queue_redraw()
 	_foe_phase = true                      # R388：这条回合的演出按倍速走
+	_ai_stall_n = 0                        # R400：新的一轮敌方回合，停滞计数归零
+	_ai_stall_cell = Vector2i(-1, -1)
 	_ai_timer.wait_time = _ai_step_sec()
 	_ai_timer.start()
 
@@ -8105,6 +8110,20 @@ func _ai_step() -> void:
 			sfx.play("turn")
 		queue_redraw()
 		return
+	# R400：**AI 卡死兜底**。同一格连着好几拍都还排第一 —— 说明它这次行动既没
+	# 横置、也没换人（`_assassin_act` 闪现未落地 / 被禁足就是这种）。
+	# 用户报过「敌方回合一直不动」，代价太大，这里宁可强行跳过它。
+	var head: Vector2i = queue[0]
+	if head == _ai_stall_cell:
+		_ai_stall_n += 1
+	else:
+		_ai_stall_cell = head
+		_ai_stall_n = 1
+	if _ai_stall_n >= AI_STALL_LIMIT:
+		_ai_stall_n = 0
+		_ai_stall_cell = Vector2i(-1, -1)
+		if engine.ai_force_tap(head):
+			_say("对手停滞，已跳过该单位")
 	engine.run_ai_unit(queue[0])
 	queue_redraw()
 

@@ -16059,6 +16059,83 @@ func _init() -> void:
 			and not r379_src.contains("AI：暗杀者游走"),
 		"R379 文案：打不到时播报「按兵不动」，不再说「游走」（它确实没游走）")
 
+	# ---- R400：暗杀者「闪现未落地」必须横置（用户报「敌人 AI 卡死」）----
+	# 根因：`_assassin_act` 里 `move()` 失败时 `state.unit_at(dst)` 为 null → 直接 return，
+	# **不 `_tap`**。于是 `ai_action_queue()` 下一拍又把它排回队首 —— 敌方回合永不结束。
+	# 普通 AI 那条早有 `_tap(p, "AI：推进失败")` 兜底，暗杀者这条 R111 漏了。
+	# 已知三种触发：被禁足（rooted > 0，冰霜陷阱；用户截图那局就是这种）、
+	# 本回合已移动过（moved 且 acts_left <= 1）、落点被占。
+	var r400_repo := CardRepo.load_json()
+
+	# ① 被禁足 → 闪不了，但**必须**完成行动
+	var r400_a := _new_engine([], 20, 20)
+	r400_a.state.place(CardData.from_dict(r400_repo.get_card(9124).to_dict()),
+			Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	var r400_aa := r400_a.state.place(CardData.from_dict(r400_repo.get_card(9123).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	r400_a.state.place(_card(8003, "农民", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(1, 1), GameEngine.SIDE_SELF)
+	r400_aa.rooted = 1
+	r400_a.current_side = GameEngine.SIDE_OPPONENT
+	r400_a.ai_enabled = true
+	check(r400_a.ai_action_queue().has(Vector2i(4, 1)),
+			"R400 暗杀者 AI：前提成立 —— 禁足的暗杀者仍排在行动队列里")
+	r400_a.run_ai_unit(Vector2i(4, 1))
+	check(r400_aa.tapped,
+			"R400 暗杀者 AI：被禁足闪不了也要横置（否则队首永不变化 → 敌方回合卡死）")
+	check(not r400_a.ai_action_queue().has(Vector2i(4, 1)),
+			"R400 暗杀者 AI：这一拍之后已退出队列（队列收敛，不再每拍空转）")
+
+	# ② 本回合已移动过（moved 且 acts_left = 1）→ move() 同样会拒，也必须横置
+	var r400_b := _new_engine([], 20, 20)
+	r400_b.state.place(CardData.from_dict(r400_repo.get_card(9124).to_dict()),
+			Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	var r400_bb := r400_b.state.place(CardData.from_dict(r400_repo.get_card(9123).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	r400_b.state.place(_card(8003, "农民", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(1, 1), GameEngine.SIDE_SELF)
+	r400_bb.moved = true
+	r400_bb.acts_left = 1
+	r400_b.current_side = GameEngine.SIDE_OPPONENT
+	r400_b.ai_enabled = true
+	r400_b.run_ai_unit(Vector2i(4, 1))
+	check(r400_bb.tapped,
+			"R400 暗杀者 AI：本回合已移动过（再闪会被 move() 拒）也要横置")
+
+	# ③ 对照组：正常局面照样能闪能打（别把修复做成「一律不许动」）
+	var r400_c := _new_engine([], 20, 20)
+	r400_c.state.place(CardData.from_dict(r400_repo.get_card(9124).to_dict()),
+			Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	var r400_cc := r400_c.state.place(CardData.from_dict(r400_repo.get_card(9123).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var r400_ct := r400_c.state.place(_card(8003, "农民", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_SELF)
+	r400_c.current_side = GameEngine.SIDE_OPPONENT
+	r400_c.ai_enabled = true
+	r400_c.run_ai_unit(Vector2i(0, 1))
+	check(r400_cc.tapped and r400_c.state.unit_at(Vector2i(0, 1)) == null,
+			"R400 暗杀者 AI 对照：正常局面照样闪过去并完成行动（没被兜底误伤）")
+	check(r400_ct.health < 8,
+			"R400 暗杀者 AI 对照：闪现后确实打到了我方单位（8 → %d）" % r400_ct.health)
+
+	# ④ 停滞兜底口：连续多拍不动时界面调 `ai_force_tap()` —— 多动单位也必须立刻横置
+	var r400_d := _new_engine([], 20, 20)
+	var r400_dd := r400_d.state.place(CardData.from_dict(r400_repo.get_card(9123).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	r400_dd.acts_left = 3
+	r400_d.current_side = GameEngine.SIDE_OPPONENT
+	check(r400_d.ai_force_tap(Vector2i(4, 1)) and r400_dd.tapped,
+			"R400 停滞兜底：ai_force_tap 把多动单位（acts_left=3）也当场横置，不留残余行动")
+	check(not r400_d.ai_force_tap(Vector2i(4, 1)),
+			"R400 停滞兜底：已横置的单位不重复处理（幂等）")
+
+	# ⑤ 源码锁：闪现未落地必须落到 `_tap`（不许再退回静默 return）
+	var r400_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r400_src.contains("AI：暗杀者闪现未落地"),
+			"R400 源码：闪现未落地时走 _tap 兜底（不再静默 return 卡住队列）")
+	check_src(r400_src.contains("func ai_force_tap(cell: Vector2i) -> bool:"),
+			"R400 源码：引擎留着 ai_force_tap() 这个停滞兜底口")
+
 	# ---- R116：捕兽大师 9126（暗影刺客史诗盟友 3 费 2/8）+ 亡语「原地留下一个随机陷阱」----
 	var r116_saved_cls: String = RunState.player_class
 	var r116_repo := CardRepo.load_json()
