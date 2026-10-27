@@ -111,6 +111,10 @@ var turn_cannon_free := false
 ## R271：**本次对战中我方使用过几张「聚能炮击」9145**（聚能机兵 / 代达罗斯 / 量产型的 X）。
 ## 记账口唯一 = `GameEngine._note_card_played()`。
 var self_cannon_plays := 0
+## R404：**本次对战中我方变化过几张牌**（失控要塞 9161 的 X）。
+## 记账口唯一 = `GameEngine._note_card_changed()`：手牌变化走 `_transform_hand_card()`，
+## 卡组变化走惊喜运单 8079 / 库存整理 9184。与 `self_cannon_plays` 并列、**回合不清零**。
+var self_card_changes := 0
 var turn_card_discount := {}    # CardData -> int：本回合这张**手卡**费用 -N（魔像术 9079；回合结束清空）
 var turn_card_raise := 0         # 本回合**手卡全体**费用 +N（契约签订者 8024；回合结束清空）
 var turn_keep: Array[CardData] = []  # 回转 9089 抽到的牌：本回合结束不弃（discard_hand 跳过；回合结束清空）

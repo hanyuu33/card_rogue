@@ -5200,6 +5200,27 @@
       "image": ""
     },
     {
+      "id": 8080,
+      "name": "涂装机器人",
+      "kind": "盟友",
+      "cost": 2,
+      "power": 2,
+      "health": 9,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械"
+      ],
+      "affixes": [],
+      "effect_text": "入场时，选场上其他一个友方单位：将其变成随机机械之心单位。",
+      "target_mode": "none",
+      "color": "蓝",
+      "image": ""
+    },
+    {
       "id": 9168,
       "name": "许愿",
       "kind": "技能",

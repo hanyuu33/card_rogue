@@ -132,6 +132,10 @@ var cannonize_src:= ""
 ## ⚠️ 与 `cannonize_pending` 各用各的字段（混用会在取消 / 连开时清错状态）。
 var surprise_pending:= false
 var surprise_remaining:= 0
+## R404 涂装机器人 8080：入场「选场上其他一个友方单位变成随机机械之心单位」的待办。
+## 与上面几个选**手牌 / 卡组**的 pending 不同，这个选的是**棋盘格** → UI 走格子高亮 + 点击。
+var paint_pending:= false
+var paint_src:= Vector2i(-1, -1)   # 机器人自己那格（候选要排除它 = 卡面的「其他」）
 var _aether_left:= 0
 var _aether_used:= false
 var _stoneskin_left:= 0
@@ -1263,8 +1267,11 @@ const MASS_MNEMOSYNE_DISCOUNT:= 1
 #   入场时己方**所有盟友**（场上 + 手牌）各获得一次「改造」：生命 +4（不含工事；含它自己）。
 const MODDER_ID:= 8076
 const MODDER_HP:= 4
-# 「失控要塞」9161（R288，2 费**史诗工事** 0 攻 / 1 血 / 无法移动，机械之心）：
-#   入场时，本次对战中你**每使用过一张「聚能炮击」9145** → **随机释放一张机械之心技能卡**。
+# 「失控要塞」9161（R288 实装 / R404 改触发口径，2 费**史诗工事** 0 攻 / 1 血 / 无法移动，机械之心）：
+#   入场时，本次对战中你**每变化过一张牌** → **随机释放一张机械之心技能卡**。
+#   ⚠️ R404（用户口径）：触发计数从「用过几张聚能炮击」换成「**变化过几张牌**」——
+#      计数走 `state.self_card_changes`（唯一记账口 `_note_card_changed()`），
+#      「变化」的语义与发明专家 9143「每变化一张卡」完全同源。
 #   三条口径，全部落在 `_fort_play()` 这一处：
 #     ① 卡是**凭空生成**的（不在手牌 / 牌库 / 弃牌区）→ 复制一份临时插进手牌末尾，再走
 #        原有的施放入口。这样「选手牌 / 卡组 / 弃牌区」这些需要**真实位置**的技能
@@ -1322,6 +1329,21 @@ const INSPIRE_DMG:= 3
 ## R362：每次触发命中**随机几个**敌人（每轮各自抽，两轮可以打不同两只）。
 ## ⚠️ 选人走 `rng`（不是当前毫秒）：回放 / 同种子必须复现同一组目标。
 const INSPIRE_TARGETS:= 2
+# 「涂装机器人」8080（R404，2 费**稀有盟友** 2/9/1/1，机械之心）：
+#   入场时，选场上**其他**一个友方单位 → 把它变成一张随机「机械之心」单位
+#   （池 = 本职业奖励卡池里的盟友 + 工事，`rarity <= 2`，见 `_paint_pool()`）——
+#   玩家据「随机」与「机械之心」两个词都能预期到它是随机池、且不会变出别职业的卡。
+#   四条口径：
+#     ① **要选人** → `paint_pending` + `paint_src`（自己那格，用来排除「其他」）；
+#        UI 高亮可点的己方单位，点一格走 `paint_pick()`、右键 `paint_cancel()`；
+#        场上没有别的己方单位 → 直接落空，**不挂 pending**（免得玩家被一个没得点的状态卡住）；
+#     ② 「变成」**不是**「被破坏」→ 旧单位直接从棋盘摘掉（`state.board.erase`），
+#        亡语 / 击杀记功 / 零件回收者 / 思想钢印一律不触发；
+#     ③ 「变成」**也不是**「入场」→ 新单位**不跑**入场效果。否则随机到失控要塞会再开一串技能、
+#        随机到量产型代达罗斯会开手牌面板，嵌套 pending 一路打不完；
+#     ④ 新单位以 `summon = true` 落地（本回合 1 次行动），并照常吃道具的常驻力量加成
+#        （`_relic_on_enter_buffs()`，与手牌打出同一个口）。
+const PAINT_BOT_ID:= 8080
 # 「代达罗斯」8060（R271 重做；R330 调为 4 费**史诗盟友** 5/16/1/1，嘲讽）：
 #   入场时本次对战每用过一张聚能炮击 → 生命 +3；本回合手卡里的聚能炮击费用为 0。
 const DAEDALUS_HP_PER_CANNON:= 3
@@ -4499,31 +4521,16 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 		var lf_drawn := _draw_many(LIVING_FENCE_DRAW)
 		_log("活体栅栏：入场抽 %d 张卡" % lf_drawn)
 		action.emit("living_fence", {"drawn": lf_drawn})
+	if card.id == PAINT_BOT_ID:
+		_paint_bot_enter(p)         # R404 涂装机器人：选场上其他一个友方单位 → 随机机械之心单位
 	_refresh_mnemosyne()            # R271：刚落地 / 刚被换上场的那只可能是谟涅摩叙涅
 
 	if card.id == FOX_ID:
 		_fox_trigger()
 
-	# R372 竖琴（6052）：所有己方盟友 +2 力量 —— **持续 buff**（用户口径「不论如何都只 +2」）。
-	# 只写 `p.harp_atk`（赋值），由 `effective_power()` 并进攻击力；
-	# ⚠️ **不许**再 `p.card.power += HARP_ATK` —— `place()` 接管的是共享 CardData 实例，
-	#    烤进去之后同一张卡再次上场会变成 +4。
-	if RunState.has_relic(HARP_RELIC_ID) and p.owner == SIDE_SELF and card.kind == "盟友":
-		p.harp_atk = HARP_ATK
-		_log("竖琴：%s 获得 +%d 力量（%d）"
-				% [card.card_name, HARP_ATK, p.effective_power()])
-
-	# R383 骑士剑（6053）：本场第一次击杀之后**才上场**的己方盟友同样 +2 力量。
-	# 与竖琴逐字同构（字段 + effective_power 出口，不烤进共享 CardData）。
-	if _knight_sword_active() and p.owner == SIDE_SELF and card.kind == "盟友":
-		p.sword_atk = KNIGHT_SWORD_ATK
-		_log("骑士剑：%s 获得 +%d 力量（%d）"
-				% [card.card_name, KNIGHT_SWORD_ATK, p.effective_power()])
-
-	var beast_hp:= _beast_hp_bonus(card)
-	if beast_hp > 0:
-		p.health += beast_hp
-		_log("野兽之心：%s 获得 +%d 生命（%d）" % [card.card_name, beast_hp, p.health])
+	# R372 竖琴 / R383 骑士剑 / 野兽之心：三条道具加成走**唯一口**——
+	# 涂装机器人 8080「变成」出来的单位也要吃，否则同一张盟友卡两条来路两种力量。
+	_relic_on_enter_buffs(p)
 
 	if card.id == LION_ID:
 		_lion_roar(p)
@@ -4663,19 +4670,21 @@ func _cannon_mech_enter(p: Placement) -> void :
 
 
 func _out_of_control_fort_enter(p: Placement) -> void :
-	## 「失控要塞」9161（R288，机械之心 2 费**史诗工事** 0 攻 / 1 血 / 不可移动）的入场效果：
-	##   本次对战中你**每使用过一张「聚能炮击」9145** → **随机释放一张机械之心技能卡**。
-	##   * 计数来源 = `state.self_cannon_plays`（`_note_card_played()` 唯一口记的，
-	##     与代达罗斯 8060 / 聚能机兵 8073 同源）；
-	##   * 一张都没用过 → 什么都不发生（0 攻 1 血、不能动的白板工事）；
-	##   * 上限 `OUT_OF_CONTROL_MAX_CASTS` 只是防呆（攒 20 张炮击本身已不现实）。
+	## 「失控要塞」9161（R288 实装 / R404 改口径；机械之心 2 费**史诗工事** 0 攻 / 1 血 / 不可移动）
+	## 的入场效果：本次对战中你**每变化过一张牌** → **随机释放一张机械之心技能卡**。
+	##   * 计数来源 = `state.self_card_changes`，唯一记账口 `_note_card_changed()`
+	##     （手牌变化 → `_transform_hand_card()`；卡组变化 → 惊喜运单 8079 / 库存整理 9184）；
+	##   * 一张都没变化过 → 什么都不发生（0 攻 1 血、不能动的白板工事）；
+	##   * 上限 `OUT_OF_CONTROL_MAX_CASTS` 只是防呆（一局变化 20 张已不现实）。
+	##   ⚠️ 不再是「用过几张聚能炮击」—— 那个计数（`self_cannon_plays`）仍归
+	##      代达罗斯 8060 / 聚能机兵 8073 用，别混。
 	fort_casts.clear()
-	var n := mini(state.self_cannon_plays, OUT_OF_CONTROL_MAX_CASTS)
+	var n := mini(state.self_card_changes, OUT_OF_CONTROL_MAX_CASTS)
 	if n <= 0:
-		_log("失控要塞入场：本次对战还没用过「聚能炮击」→ 没有技能可释放")
+		_log("失控要塞入场：本次对战还没变化过任何牌 → 没有技能可释放")
 		var none_casts: Array[String] = []
 		action.emit("out_of_control_fort", {"cell": _cell_of(p), "card": p.card,
-				"cannons": 0, "casts": none_casts})
+				"changes": 0, "casts": none_casts})
 		return
 	for i in n:
 		var nm := _fort_cast_one()
@@ -4686,10 +4695,10 @@ func _out_of_control_fort_enter(p: Placement) -> void :
 	var names := ""
 	for nm2: String in fort_casts:
 		names = nm2 if names == "" else "%s, %s" % [names, nm2]
-	_log("失控要塞入场：本次对战已用聚能炮击 %d 张 → 实际释放 %d 张技能（%s）"
-			% [state.self_cannon_plays, fort_casts.size(), names])
+	_log("失控要塞入场：本次对战已变化 %d 张牌 → 实际释放 %d 张技能（%s）"
+			% [state.self_card_changes, fort_casts.size(), names])
 	action.emit("out_of_control_fort", {"cell": _cell_of(p), "card": p.card,
-			"cannons": n, "casts": fort_casts.duplicate()})
+			"changes": n, "casts": fort_casts.duplicate()})
 
 
 func _fort_skill_pool() -> Array[CardData]:
@@ -4811,6 +4820,108 @@ func _fort_hand_target(card: CardData, own_index: int) -> int:
 	if cand.is_empty():
 		return -1
 	return cand[rng.randi() % cand.size()]
+
+
+func _paint_bot_enter(p: Placement) -> void :
+	## 「涂装机器人」8080（R404）的入场效果：请玩家选一个**其他**己方单位把它变掉。
+	## 场上没有别的己方单位 → 直接落空：**不挂 pending**，否则玩家会卡在一个没得点的状态里
+	## （与 `_start_cannonize()` 手牌为空时同样处理）。
+	paint_src = _cell_of(p)
+	# ⚠️ 先挂 pending 再问候选：`paint_options()` 开头有 `if not paint_pending: return []`
+	# 的守卫（它是给界面每帧调用的只读口），顺序反了会永远拿到空数组 → 效果恒落空。
+	paint_pending = true
+	if paint_src == Vector2i(-1, -1) or paint_options().is_empty():
+		paint_pending = false
+		paint_src = Vector2i(-1, -1)
+		_log("涂装机器人入场：场上没有其他友方单位 → 效果落空")
+		action.emit("paint_bot", {"cell": _cell_of(p), "card": p.card,
+				"old": null, "new": null, "pending": false})
+		return
+	_log("涂装机器人入场：待选一个友方单位变成随机机械之心单位")
+	action.emit("paint_bot", {"cell": paint_src, "card": p.card, "pending": true})
+
+
+func paint_options() -> Array[Vector2i] :
+	## 候选 = 场上**除自己以外**的己方单位（盟友 / 工事都算）；空数组 = 没有待办。
+	## 卡面写的是「其他一个友方单位」→ 自己那格必须排除，否则玩家能把它自己变掉
+	## （那只会在原地刷出一张随机卡，效果等于免费重抽）。
+	if not paint_pending:
+		return []
+	var out: Array[Vector2i] = []
+	for c: Vector2i in _side_cells(SIDE_SELF):
+		if c == paint_src:
+			continue
+		var u: Placement = state.unit_at(c)
+		if u != null and u.owner == SIDE_SELF:
+			out.append(c)
+	out.sort()
+	return out
+
+
+func paint_cancel() -> void :
+	## 取消选择（右键 / Esc）：效果作废，**不**补抽、**不**改选。
+	if not paint_pending:
+		return
+	paint_pending = false
+	paint_src = Vector2i(-1, -1)
+	_log("涂装机器人：取消选择 → 效果落空")
+
+
+func paint_pick(cell: Vector2i) -> bool :
+	## 确认一格：把它变成随机机械之心单位（池见 `_paint_pool()`）。
+	if not paint_pending:
+		return false
+	if not paint_options().has(cell):
+		return false
+	paint_pending = false
+	paint_src = Vector2i(-1, -1)
+	return _paint_morph(cell)
+
+
+func _paint_pool() -> Array[CardData] :
+	## 涂装机器人的随机池 = **本职业奖励池里的单位卡**：kind 盟友 / 工事 + 机械之心 + rarity <= 2
+	## （排除初始 3 / 怪物 4 / 事件 5 / 诅咒 6 —— 与奖励池、`_fort_skill_pool()` 同口径）。
+	## ⚠️ 不写死卡 id：以后机械之心新加的盟友 / 工事自动进池。
+	## ⚠️ 池里**含它自己** 8080：变出另一只涂装机器人是合法的，也不会连锁 ——
+	##    "变成"不跑入场效果（见常量处口径 ③）。
+	var out: Array[CardData] = []
+	var repo := CardRepo.load_json()
+	if repo == null:
+		return out
+	for c: CardData in repo.all_cards():
+		if c.card_class != PlayerClass.MECH or c.rarity > 2:
+			continue
+		if c.kind != "盟友" and not c.is_fort():
+			continue
+		out.append(c)
+	return out
+
+
+func _paint_morph(cell: Vector2i) -> bool :
+	## 把场上 `cell` 那个单位**原地变成**一张随机机械之心单位（涂装机器人的唯一结算口）。
+	## 三条要点：①「变成」不是「被破坏」→ 直接 `state.board.erase()`，**不**走 `_destroy()`
+	##   （亡语 / 击杀记功 / 零件回收者 / 思想钢印一个都不该触发）；
+	## ②「变成」也不是「入场」→ 新单位**不跑**入场效果（避免失控要塞 / 量产型代达罗斯嵌套 pending）；
+	## ③ 新单位照样吃道具常驻加成（`_relic_on_enter_buffs()`），与手牌打出同一口径。
+	var pool := _paint_pool()
+	var old: Placement = state.unit_at(cell)
+	if old == null or pool.is_empty():
+		_log("涂装机器人：没有可变成的单位 → 效果落空")
+		return false
+	var proto: CardData = pool[rng.randi() % pool.size()]
+	var old_card: CardData = old.card
+	state.board.erase(cell)
+	var copy := CardData.from_dict(proto.to_dict())
+	copy.traits = (copy.traits as Array).duplicate()
+	copy.affixes = (copy.affixes as Array).duplicate()
+	# `summon = true`：本回合 1 次行动（它是"刚出现"的单位，不该继承旧单位的行动数）。
+	var np := state.place(copy, cell, SIDE_SELF, true)
+	_relic_on_enter_buffs(np)
+	_refresh_mnemosyne()          # 变出来的可能是谟涅摩叙涅（光环要立刻生效）
+	_log("涂装机器人：%s → 随机机械之心「%s」" % [old_card.card_name, copy.card_name])
+	action.emit("paint_bot", {"cell": cell, "old": old_card, "new": copy,
+			"old_name": old_card.card_name, "pending": false})
+	return true
 
 
 func _fort_swap_pair() -> Array[Vector2i]:
@@ -7053,6 +7164,8 @@ func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 		return "量产型代达罗斯：请先选一张手卡让它变成聚能炮击"
 	if surprise_pending:
 		return "惊喜运单：请先从卡组选一张卡"
+	if paint_pending:
+		return "涂装机器人：请先在场上选一个友方单位"
 
 	var card:= state.hand[hand_index]
 	var cap_msg:= _play_cap_blocked()
@@ -7166,6 +7279,7 @@ func _instinct_panel_open() -> bool:
 	## 继续「随机打出」会把面板依赖的下标/候选弄失效（与 use_spell 开头那四个守卫同源，
 	## 这里把弃牌区/卡组/手牌/合并等其余 pending 也一并算上）。
 	return overhaul_pending or creation_pending or cannonize_pending or surprise_pending \
+		or paint_pending \
 		or focus_pending or wish_pending or shadow_step_pending or revive_pending \
 		or merge_pending or crow_pending or whale_pending or endless_pending \
 		or rebirth_pending or eliminate_pending
@@ -8678,6 +8792,10 @@ func _inventory_sort(side: String) -> String:
 		nc.traits = (nc.traits as Array).duplicate()
 		state.deck[di] = nc
 		pairs.append({"index": di, "old": old, "new": nc})
+	# R404：库存整理变的是**卡组**里的卡（不走 `_transform_hand_card` / `_invention_refund`）
+	# → 这里按「变了 N 张」单独补记，失控要塞 9161 才能把这几张数进去。
+	for _inv_i in pairs.size():
+		_note_card_changed(side)
 	if pairs.is_empty():
 		_log("库存整理：卡库里没有可变的卡，效果落空")
 		return "卡组里没有可变的卡"
@@ -8691,8 +8809,23 @@ func _inventory_sort(side: String) -> String:
 	return "卡组 %d 张变成随机卡（%s）" % [pairs.size(), txt]
 
 
+func _note_card_changed(side: String) -> void :
+	## **变化计数**唯一记账口（R404）—— `state.self_card_changes` 的消费方是失控要塞 9161
+	## （入场时每变化过一张牌 → 随机释放一张机械之心技能卡）。
+	## 调用点（一共三处，加新来路时照着补，别各写一遍 `+= 1`）：
+	##   * `_invention_refund()` 开头 —— 覆盖**所有手牌变化**（`_transform_hand_card()`：
+	##     回收 / 填充 / 创意 / 随心组装 / 报废 / 量产型代达罗斯 / 惊喜运单）；
+	##   * 库存整理 9184 —— 它变的是**卡组**里的卡，不走 `_transform_hand_card()`；
+	##   * 惊喜运单 8079 —— 卡组 → 手卡，已经过 `_invention_refund()`，不重复记。
+	## ⚠️ **只记我方**：敌方没有真实手牌，「变化」对它没有可结算的对象。
+	if side == SIDE_SELF:
+		state.self_card_changes += 1
+
+
 func _invention_refund(side: String, source_name: String) -> void:
 	## 「发明专家」9143 的触发唯一口：每变化一张卡回 2 费，多张发明专家不叠加。
+	## R404：开头先记「变化计数」（见 `_note_card_changed()`）—— 发明专家在不在场都记。
+	_note_card_changed(side)
 	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
 	var has_expert := false
 	for c: CardData in zone:
@@ -10464,6 +10597,32 @@ func _ally_dmg_bonus(card: CardData, side: String) -> int:
 		if c.traits.has(BEAST_TRAIT):
 			return BEAST_DMG_BONUS
 	return 0
+
+
+func _relic_on_enter_buffs(p: Placement) -> void :
+	## **单位落地那一刻**由道具提供的常驻加成 —— 竖琴 6052 / 骑士剑 6053 / 野兽之心。
+	## 唯一口（R404 抽出）：手牌打出（`play_from_hand`）与涂装机器人 8080「变成」出来的
+	## 单位共用，否则同一张盟友卡两条来路两种力量，玩家一眼就看出不对。
+	## ⚠️ 三处都只写 `Placement` 字段（`harp_atk` / `sword_atk` / `health`），**不烤进**
+	##    `p.card` —— `place()` 接管的是卡库共享实例，烤进去同一张卡再上场会叠成 +4。
+	if p == null:
+		return
+	var card: CardData = p.card
+	# R372 竖琴（6052）：所有己方盟友 +2 力量 —— **持续 buff**（用户口径「不论如何都只 +2」）。
+	if RunState.has_relic(HARP_RELIC_ID) and p.owner == SIDE_SELF and card.kind == "盟友":
+		p.harp_atk = HARP_ATK
+		_log("竖琴：%s 获得 +%d 力量（%d）"
+				% [card.card_name, HARP_ATK, p.effective_power()])
+	# R383 骑士剑（6053）：本场第一次击杀之后**才上场**的己方盟友同样 +2 力量。
+	# 与竖琴逐字同构（字段 + effective_power 出口，不烤进共享 CardData）。
+	if _knight_sword_active() and p.owner == SIDE_SELF and card.kind == "盟友":
+		p.sword_atk = KNIGHT_SWORD_ATK
+		_log("骑士剑：%s 获得 +%d 力量（%d）"
+				% [card.card_name, KNIGHT_SWORD_ATK, p.effective_power()])
+	var beast_hp:= _beast_hp_bonus(card)
+	if beast_hp > 0:
+		p.health += beast_hp
+		_log("野兽之心：%s 获得 +%d 生命（%d）" % [card.card_name, beast_hp, p.health])
 
 
 func _beast_hp_bonus(card: CardData) -> int:

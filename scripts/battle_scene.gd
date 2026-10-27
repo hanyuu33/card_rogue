@@ -1359,7 +1359,8 @@ func _ready() -> void:
 		RunState.player_class = PlayerClass.MECH
 		engine.state.hand.clear()
 		engine.state.energy = 6
-		engine.state.self_cannon_plays = 3
+		# R404：失控要塞的 X 从「用过的聚能炮击」改成「变化过的牌」
+		engine.state.self_card_changes = 3
 		engine.state.hand.append(
 				CardData.from_dict(repo.get_card(GameEngine.OUT_OF_CONTROL_FORT_ID).to_dict()))
 		# 手牌里留一张盟友，给「系统升级 / 轻量化」这类需要**选手牌**的技能当目标。
@@ -1369,8 +1370,8 @@ func _ready() -> void:
 		var r288_names := ""
 		for r288_n: String in engine.fort_casts:
 			r288_names = r288_n if r288_names == "" else "%s, %s" % [r288_names, r288_n]
-		status_text = "R288：失控要塞 入场（已用聚能炮击 %d 张）→ 随机释放 %d 张技能：%s" % [
-				engine.state.self_cannon_plays, engine.fort_casts.size(), r288_names]
+		status_text = "失控要塞 入场（本次对战已变化 %d 张牌）→ 随机释放 %d 张技能：%s" % [
+				engine.state.self_card_changes, engine.fort_casts.size(), r288_names]
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--trapper" in args and engine != null:
@@ -6398,6 +6399,18 @@ func _on_board_click(cell: Vector2i) -> void:
 	if engine.current_side != GameEngine.SIDE_SELF:
 		_say("现在是敌方回合，等对手行动完再操作自己的单位")
 		return
+	# R404 涂装机器人 8080：入场后等玩家在**场上**点一个己方单位（不是技能选目标那套）。
+	# 与 spell_pending 互斥 —— 它由引擎的入场效果直接挂起，玩家当时并没有在选技能。
+	if engine.paint_pending:
+		if engine.paint_options().has(cell):
+			if engine.paint_pick(cell):
+				status_text = "涂装机器人：那只单位变成了一只随机机械之心单位"
+			else:
+				status_text = "涂装机器人：这次没能变成（没有可变成的单位）"
+		else:
+			status_text = "涂装机器人：请点一个己方单位（右键放弃）"
+		queue_redraw()
+		return
 	# 技能选目标模式
 	if spell_pending >= 0:
 		var sp_card: CardData = engine.state.hand[spell_pending]
@@ -6560,6 +6573,12 @@ func _on_right_click() -> void:
 	# R197：敌方效果开场弹窗开着 → 右键只关弹窗
 	if _ee_popup:
 		_ee_popup = false
+		queue_redraw()
+		return
+	# R404 涂装机器人：右键 = 放弃这次变化（卡面没有「必须选」，与合体面板同口径）
+	if engine.paint_pending:
+		engine.paint_cancel()
+		status_text = "涂装机器人：已放弃这次变化"
 		queue_redraw()
 		return
 	# 乌鸦的回手面板：必须选一张（不接受取消）
@@ -8039,6 +8058,9 @@ func _on_end_turn() -> void:
 		if engine.foresight_pick:
 			_ensure_pick_visible("foresight")
 		_say("预判：请先完成选择")
+		return
+	if engine.paint_pending:
+		_say("涂装机器人：请先点一个己方单位，或右键放弃")
 		return
 	# R395（用户报「提示选择进行中，最上方旧的按钮却好像能点」）：场景级的几个手牌目标
 	# 选卡（填充 / 系统升级 / 回收 / 英雄代价）以前**不在**这条守卫里 —— 选卡页是全屏的，
@@ -9837,12 +9859,28 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			for ocf_n in (data.get("casts", []) as Array):
 				ocf_names = str(ocf_n) if ocf_names == "" \
 						else "%s, %s" % [ocf_names, str(ocf_n)]
-			if int(data.get("cannons", 0)) <= 0:
-				status_text = "R288：失控要塞 入场 —— 本次对战还没用过「聚能炮击」，没有技能可释放"
+			if int(data.get("changes", 0)) <= 0:
+				status_text = "失控要塞：本次对战还没变化过任何牌，没有技能可释放"
 			else:
-				status_text = "R288：失控要塞 入场（已用聚能炮击 %d 张）→ 随机释放 %d 张技能：%s" % [
-						int(data.get("cannons", 0)), (data.get("casts", []) as Array).size(), ocf_names]
+				status_text = "失控要塞：本次对战已变化 %d 张牌 → 随机释放 %d 张技能：%s" % [
+						int(data.get("changes", 0)), (data.get("casts", []) as Array).size(), ocf_names]
 			sfx.play("spell")
+		"paint_bot":
+			# R404 涂装机器人 8080：入场（pending=true）/ 已变成（old / new 都有）。
+			# 变化视觉复用 `_transform_fx` 的「变幻」，只是落点从手牌位换成棋盘格。
+			var pb_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var pb_new = data.get("new", null)
+			if pb_new == null:
+				if bool(data.get("pending", false)):
+					status_text = "涂装机器人：选一个友方单位，把它变成随机机械之心单位"
+				else:
+					status_text = "涂装机器人：场上没有其他友方单位，效果落空"
+			else:
+				status_text = "涂装机器人：%s → %s" % [str(data.get("old_name", "")),
+						(pb_new as CardData).card_name]
+				if pb_cell.x >= 0:
+					_transform_fx.append({"zone": "cell", "cell": pb_cell, "start": n, "dur": 520})
+				sfx.play("place")
 		"place":
 			sfx.play("place")
 			var cell: Vector2i = data["cell"]
@@ -12341,6 +12379,10 @@ func _draw_highlights() -> void:
 	var spell_card: CardData = null
 	if spell_pending >= 0 and engine != null and spell_pending < engine.state.hand.size():
 		spell_card = engine.state.hand[spell_pending]
+	# R404 涂装机器人：可点来「变成」的己方单位（与技能目标同色，但来源是引擎的入场待办）
+	if engine != null and engine.paint_pending:
+		for pcell in engine.paint_options():
+			_hl(pcell, COL_SPELL)
 	for cell in spell_targets:
 		_hl(cell, COL_SPELL)
 		# R393（用户口径）：**点选目标这条路上也要报最终伤害**。以前只有鼠标停在哪一格
@@ -13660,12 +13702,20 @@ func _draw_transform_fx() -> void:
 			if slot < 0 or slot >= engine.state.hand.size():
 				continue
 			ctr = _hand_rect(slot).get_center()
+		elif zone == "cell":
+			# R404：棋盘格上的「变幻」（涂装机器人把场上的单位换成别的）——
+			# 前三种落点是手牌位 / 卡组堆 / 弃牌堆，这次多一种「格子」。
+			var fxc: Vector2i = f.get("cell", Vector2i(-1, -1))
+			if fxc.x < 0:
+				continue
+			ctr = _cell_center(fxc)
 		elif zone == "deck":
 			ctr = Vector2(DECK_X + CARD_W / 2.0, DECK_Y + CARD_H / 2.0)
 		else:  # discard
 			ctr = Vector2(DISCARD_X + CARD_W / 2.0, DISCARD_Y + CARD_H / 2.0)
 		var a := 1.0 - t
-		var rad := lerpf(CARD_W * 0.30, CARD_W * 1.10, t)
+		# 格子比手牌小一圈 → 棋盘格那支按 0.82 收一点，环不会糊到隔壁两格。
+		var rad := lerpf(CARD_W * 0.30, CARD_W * 1.10, t) * (0.82 if zone == "cell" else 1.0)
 		draw_arc(ctr, rad, 0.0, TAU, 30, Color(0.78, 0.40, 0.95, a * 0.9), 3.0)
 		draw_arc(ctr, rad * 0.6, 0.0, TAU, 26, Color(0.95, 0.72, 1.0, a * 0.7), 2.0)
 		for k in 6:
