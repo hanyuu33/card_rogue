@@ -26440,20 +26440,47 @@ func _init() -> void:
 	# ---- RunState：删卡奖励入队 / 领取 ----
 	RunState.pending_rewards.clear()
 	RunState.pending_deck_edit = ""
+	var r414_bak: Array[int] = RunState.deck_ids.duplicate()
+	var r414_bak_mods: Array = RunState.deck_mods.duplicate(true)
+	RunState.deck_ids = [8001, 8001, 9180, 8002]   # 第 3 张是月亮（no_remove，删不掉）
+	RunState.deck_mods.clear()
+	RunState.ensure_deck_mods()
 	var r351_idx := RunState.queue_deck_delete_reward(1)
 	check(r351_idx >= 0 and RunState.pending_reward_count() == 1
 			and str(RunState.pending_rewards[r351_idx].get("kind", "")) == "deck_delete",
 			"R351 queue_deck_delete_reward：入队一条 deck_delete（待领 +1）")
-	check(RunState.claim_pending_reward(r351_idx)
-			and str(RunState.pending_rewards[r351_idx].get("state", "")) == RunState.REWARD_CLAIMED
-			and RunState.pending_deck_edit == "delete",
-			"R351 领取删卡奖励：置灰 + 挂上 pending_deck_edit=delete（deck_edit 接住去挑卡）")
-	check(not RunState.claim_pending_reward(r351_idx),
-			"R351 删卡奖励不能重复领取")
+	# R414（用户报「领了删卡奖励没反应、卡组张数一点没变」）：删卡奖励**没有「空手领下」**
+	# 这条路 —— 旧版 `claim_pending_reward` 置灰 + 挂 `pending_deck_edit` 就 return true，
+	# 调用方以为成了，卡组一张没少；那个待办还会被 R340 压到整批结束之后。
+	var r414_n := RunState.deck_ids.size()
+	check(not RunState.claim_pending_reward(r351_idx)
+			and str(RunState.pending_rewards[r351_idx].get("state", "")) == RunState.REWARD_PENDING
+			and RunState.pending_deck_edit == "",
+			"R414 删卡奖励：claim_pending_reward 一律拒绝（不改状态、不挂 pending_deck_edit）")
+	check(RunState.deck_ids.size() == r414_n,
+			"R414 删卡奖励：被拒绝时卡组一张不动")
+	check(not RunState.claim_deck_delete_reward(r351_idx, 2),
+			"R414 删卡奖励：带锁的卡（月亮 9180）删不掉 —— 数据层判据，不靠界面挡")
+	check(not RunState.claim_deck_delete_reward(r351_idx, 99),
+			"R414 删卡奖励：越界下标拒绝")
+	check(RunState.has_deletable_deck_card(),
+			"R414 删卡判据：卡组里还有能删的卡")
+	check(RunState.claim_deck_delete_reward(r351_idx, 0),
+			"R414 删卡奖励：就地删卡一次成功")
+	check(RunState.deck_ids.size() == r414_n - 1,
+			"R414 删卡奖励：卡组真的少了一张（R413 实测这里是 30 → 30 不变）")
+	check(str(RunState.pending_rewards[r351_idx].get("state", "")) == RunState.REWARD_CLAIMED,
+			"R414 删卡奖励：删完这一条当场置为已领")
+	check(RunState.pending_deck_edit == "",
+			"R414 删卡奖励：删完不留 pending_deck_edit（否则回地图会再跳一次选卡）")
+	check(not RunState.claim_deck_delete_reward(r351_idx, 0),
+			"R414 删卡奖励不能重复领取")
 	check(RunState.queue_deck_delete_reward(0) == -1,
 			"R351 queue_deck_delete_reward(0) = -1（不发空奖励）")
 	RunState.pending_rewards.clear()
 	RunState.pending_deck_edit = ""
+	RunState.deck_ids = r414_bak
+	RunState.deck_mods = r414_bak_mods
 	# ---- 源码守卫 ----
 	var r351_deck_src := FileAccess.get_file_as_string("res://scripts/deck_edit_scene.gd")
 	check_src(r351_deck_src.contains("func _is_remove_mode")
@@ -26994,6 +27021,27 @@ func _init() -> void:
 			"R356 阶段 3：移动速度变为 0")
 	check(r356_eff == [GameEngine.REVELATOR_CALL_ID],
 			"R356 阶段 3：效果区换成紧急呼叫 9203（实际 %s）" % str(r356_eff))
+
+	# ---- ④b R420（用户口径「3 阶段不继承二阶段的电磁护盾」）----
+	#   阶段 3 只挂「紧急呼叫」，**不再有电磁屏障反伤**。判据从 `boss_phase >= 2`
+	#   收成 `== 2` —— 与「减半 + 塞麻痹」同源（那两处本来就是 `== 2`）。
+	#   ⚠️ 进阶段 3 时上面那个攻击者已经被冲击波撕碎了，这里必须重新铺一只来测。
+	var r420_atk_u := r356_e.state.place(_card(99004, "阶段3测试兵", "盟友", 1, 4, 40, 1, 1),
+			Vector2i(1, 1), GameEngine.SIDE_SELF)
+	r356_e.attack(Vector2i(1, 1), GameEngine.REVELATOR_HOME, GameEngine.SIDE_SELF)
+	check(r420_atk_u.health == 40,
+			"R420 阶段 3：攻击启示者**不再**吃电磁屏障反伤（40 → %d，应仍是 40）"
+			% r420_atk_u.health)
+	# 阶段 3 打它也不能凭空多塞「麻痹」（塞牌与减半同挂在 `== 2` 上，这里一起兜住）。
+	var r420_disc := r356_e.state.discard.size()
+	r356_e._hit_unit(r356_boss, 10, "技能")
+	check(r356_e.state.discard.size() == r420_disc,
+			"R420 阶段 3：技能伤害不再塞「麻痹」（弃牌库 %d → %d）"
+			% [r420_disc, r356_e.state.discard.size()])
+	var r420_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r420_src.find("defender.boss_phase == 2:") >= 0
+			and r420_src.find("defender.boss_phase >= 2") < 0,
+			"R420 源码：电磁屏障反伤判据是 == 2（阶段 3 不许继承；不许回退成 >= 2）")
 
 	# ---- ⑤ 阶段 3「接通代受」：一半（去尾）转给接通友军，剩下的自己吃 ----
 	var r356_friend := r356_e.state.place(_card(99002, "接通友军", "盟友", 1, 3, 40, 1, 1),

@@ -172,6 +172,7 @@ const HAND_FAN_DROP := 4.0        # 扇弧两端相对扇心的下沉像素（�
 #   不要为了露出更多徽章而调大它（会盖住棋盘单位）。徽章此时约 92% 可见，数字读得全。
 const HAND_FAN_HOVER_LIFT := 28.0 # 悬停时抬手高度（纯显示，不影响命中判定）
 const HAND_SELECT_RAISE := 28.0   # 选中手牌时抬起的高度
+const HAND_SELECT_SCALE := 1.30   # 选中手牌时整张卡放大倍率（点击选中 / 拖拽均生效）
 const INFO_X := 8.0
 const INFO_W := 296.0   # 左栏（详细效果 / 对局记录）：宽一点，效果正文少折几行
                         # R391：272 → 296 —— 正文 10 → 13px 后要有对应的宽度，
@@ -186,16 +187,18 @@ const INFO_W := 296.0   # 左栏（详细效果 / 对局记录）：宽一点，
 ## 不进这套的（= 视觉上属于「卡面」的一部分）：`card_face.gd` 的 CARD_FS_*、
 ## 战场单位的状态徽标（`_draw_state_badge`）、效果卡的「×N / 剩 N」角标、
 ## 区域方块（卡组/弃牌/消耗 63×76）的区域名与张数徽章、以及**道具栏**。
-const UI_FS_MICRO := 13      ## 原 FS_MICRO 10（表头 / 计数 / 面板脚注）
-const UI_FS_CAPTION := 15    ## 原 FS_CAPTION 12（说明 / HP / 区域标题）
-const UI_FS_LABEL := 17      ## 原 FS_LABEL 14
-const UI_FS_BODY := 19       ## 原 FS_BODY 16
-const UI_FS_SUBHEAD := 24    ## 原 FS_SUBHEAD 20
-const UI_FS_HEADING := 30    ## 原 FS_HEADING 24（费用数字 / 大按钮 / 结算大字）
+const UI_FS_MICRO := 15      ## 原 FS_MICRO 10（表头 / 计数 / 面板脚注）
+const UI_FS_CAPTION := 18    ## 原 FS_CAPTION 12（说明 / HP / 区域标题）
+const UI_FS_LABEL := 20      ## 原 FS_LABEL 14
+const UI_FS_BODY := 22       ## 原 FS_BODY 16
+const UI_FS_SUBHEAD := 28    ## 原 FS_SUBHEAD 20
+const UI_FS_HEADING := 32    ## 原 FS_HEADING 24（费用数字 / 大按钮 / 结算大字）
 ## 顶栏血量条（`_draw_hp_strip` 自绘，原来写死 14）
-const HP_STRIP_FS := 17
+const HP_STRIP_FS := 19
 ## 左栏详情正文（`CardInfoBoxes` 的 size；框高 / 行高会按它同比放大）
-const INFO_BODY_FS := 13
+## R416：从 13 提到 19（约 +46%，呼应「明细字号放大约 50%」）；`k_of` 会把框高 /
+## 行高 / 内距 / 图标列同步放大，版面随之适应。
+const INFO_BODY_FS := 19
 
 # ------------------------------------------------------------ 颜色
 
@@ -342,6 +345,13 @@ var _hover_relic_tip := ""      # 道具悬停：完整说明走浮动折行面�
 var _mention_hits: Array = []
 var _hover_mention: Dictionary = {}   # 鼠标压在提及上 → 画真实卡面 / 道具说明
 var _mention_pin: Dictionary = {}     # 触屏（安卓）：点一下钉住，再点别处撤掉
+## R417：左栏明细**滚动**状态（替代旧「……」截断）。
+var _info_scroll := 0.0          # 当前滚动偏移（px，>=0）
+var _info_scroll_max_v := 0.0    # 本张卡可滚的最大距离（每帧由绘制重算）
+var _info_card_id := -1          # 当前明细卡 id（换卡归零滚动）
+var _info_drag_arm := false      # 在左栏按下、准备滚动拖拽
+var _info_drag_pos := Vector2.ZERO
+var _info_dragging := false      # 正在滚动拖拽中（松手不再当点击）
 var _demo_tip_text := ""       # --relictip 演示：每帧重设悬停提示（warp 的合成移动会清掉一次性设置）
 var _demo_hover_idx := -1      # --xtext 演示：每帧重设悬停手牌卡（合成鼠标移动会清掉一次性设置）
 var _demo_pick_sel := -1       # --reloadpick 演示：选卡页展开后预选第 N 张（一次性，出图看选中态）
@@ -640,9 +650,22 @@ var _net_wait := 0.0
 @onready var flee_btn: Button = $Toolbar/FleeBtn
 # R388：顶栏最左的「敌方动画倍速」按钮（×1 → ×1.5 → ×2 → ×1，状态永久保存）。
 @onready var speed_btn: Button = $Toolbar/SpeedBtn
+# R417：左栏明细滚动视口的裁剪子节点（clip_contents=true）。父节点每帧把要画的块
+# 与参数塞给它再 queue_redraw()，它负责把越界的块 / 文本像素级裁掉（Godot 4 无 draw_set_clip）。
+# 节点在 _ready 里 new 出来挂上（纯绘制裁剪辅助，不进 .tscn）。
+var info_clip: Control
 
 
 func _ready() -> void:
+	# R417：左栏明细的可滚动裁剪视口子节点。clip_contents=true 负责像素级裁掉越界块／文本；
+	# mouse_filter=IGNORE 让它不拦截父节点的左栏命中判定（仍走 _info_panel_rect().has_point）。
+	var _ic := Control.new()
+	_ic.name = "InfoClip"
+	_ic.set_script(load("res://scripts/info_clip.gd"))
+	_ic.clip_contents = true
+	_ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_ic)
+	info_clip = _ic
 	# R388：演出时钟先从真实毫秒起步（`_now()` 唯一来源）；倍速读玩家上次的选择。
 	_clock_ms = float(Time.get_ticks_msec())
 	GameSettings.ensure_loaded()
@@ -4276,8 +4299,14 @@ func _gui_input(event: InputEvent) -> void:
 					and _cell_in_view(event.position)
 			_grid_dragging = false
 			_grid_drag_pos = event.position
+			_info_drag_arm = false
 			if _press_idx < 0 and not _grid_drag_arm:
-				_on_left_click(event.position)
+				# R417：点在左栏明细区且内容可滚 → 先 arm 滚动拖拽；松手没拖动才当点击（钉提及）
+				if _info_panel_rect().has_point(event.position) and _info_scroll_max_v > 0.0:
+					_info_drag_arm = true
+					_info_drag_pos = event.position
+				else:
+					_on_left_click(event.position)
 		else:
 			# 松手：拖拽中 → 落点结算；否则按点击处理
 			if _drag_idx >= 0:
@@ -4286,8 +4315,12 @@ func _gui_input(event: InputEvent) -> void:
 				_on_left_click(event.position)
 			elif _grid_drag_arm and not _grid_dragging:
 				_on_left_click(event.position)   # 没拖动 → 还是原来那下点击
+			elif _info_drag_arm and not _info_dragging:
+				_on_left_click(event.position)   # 左栏轻点 = 钉提及（没拖动）
 			_grid_drag_arm = false
 			_grid_dragging = false
+			_info_drag_arm = false
+			_info_dragging = false
 			_press_idx = -1
 		queue_redraw()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE:
@@ -4317,6 +4350,13 @@ func _gui_input(event: InputEvent) -> void:
 			_relic_scroll += -34.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 34.0
 			queue_redraw()
 			return
+		# R417：左栏明细内容超高 → 滚轮上下滚动（触屏无滚轮，靠拖拽）
+		if _info_panel_rect().has_point(event.position) and _info_scroll_max_v > 0.0:
+			_info_scroll = clampf(_info_scroll
+					+ (-30.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP
+							else 30.0), 0.0, _info_scroll_max_v)
+			queue_redraw()
+			return
 		# R123：棋盘可视窗内容超高 → 滚轮上下滚动
 		if _grid_scrollable() and _cell_in_view(event.position):
 			_cam_cancel()   # R288：玩家要自己滚 → 交还镜头
@@ -4336,6 +4376,17 @@ func _gui_input(event: InputEvent) -> void:
 		queue_redraw()
 		return
 	elif event is InputEventMouseMotion:
+		# R417：左栏明细滚动拖拽（鼠标拖 / 触屏拖通用 —— 触屏经 emulate_mouse_from_touch 走这条）。
+		# 拖过阈值才进入滚动，轻点仍走 `_on_left_click`（钉提及）。
+		if _info_drag_arm:
+			if not _info_dragging and event.position.distance_to(_info_drag_pos) > DRAG_THRESHOLD:
+				_info_dragging = true
+			if _info_dragging:
+				_info_scroll = clampf(_info_scroll - (event.position.y - _info_drag_pos.y),
+						0.0, _info_scroll_max_v)
+				_info_drag_pos = event.position
+				queue_redraw()
+				return
 		# R123：棋盘拖动滚动（空格左键 / 中键，拖过阈值生效；向上拖 = 内容上移）
 		if _grid_drag_arm and _drag_idx < 0:
 			if not _grid_dragging and event.position.distance_to(_grid_drag_pos) > DRAG_THRESHOLD:
@@ -4488,6 +4539,11 @@ func _hand_pivot(i: int) -> Vector2:
 	## 手牌卡底正好落在窗口下沿，所以轴心几乎贴着屏幕边缘 → 扇形的圆心也在那里。
 	var r := _hand_rect(i)
 	return Vector2(r.position.x + HAND_CARD_W / 2, r.position.y + HAND_CARD_H)
+
+
+func _is_hand_selected(i: int) -> bool:
+	## 第 i 张手牌是否处于「选中」态（点击选中，或拖拽中）。R416 放大 / 置顶共用。
+	return selection != null and selection[0] == "hand" and selection[1] == i
 
 
 func _hand_hit(i: int, pos: Vector2) -> bool:
@@ -12687,8 +12743,12 @@ func _draw_hp_banner() -> void:
 ## 用户口径：「增加一个更大更明显的回合结束按钮放在道具栏上方」。
 ## 道具栏 = `_relic_zone_rect()` = (900, 402, 240, 172) → 按钮压在它正上方，
 ## 左边让开敌方效果区（右沿 882）、右边让开卡组列（DECK_X ≈ 1157）。
+## R417：`PANEL_LIFT` 把「回合结束按钮 + 道具栏」作为一组整体**上移**，
+## 让道具栏框底（原 574）远离「我方 HP」字样（约 y562-598）—— 否则道具一多、
+## 最后一行徽章会压到「我方 HP」。二者 16px 间隙保持不变。
+const PANEL_LIFT := 44.0
 func _end_turn_big_rect() -> Rect2:
-	return Rect2(898.0, 286.0, 244.0, 100.0)
+	return Rect2(898.0, 286.0 - PANEL_LIFT, 244.0, 100.0)
 
 
 func _end_turn_ready() -> bool:
@@ -12913,7 +12973,8 @@ const RELIC_P_LINE := 17.0        # 说明行高
 
 func _relic_zone_rect() -> Rect2:
 	## 右侧道具栏外框（棋盘右侧、卡组列左侧的空白带，避开我方 HP 文字）。
-	return Rect2(900.0, GRID_Y + 350.0, 240.0, 172.0)
+	## R417：随 `PANEL_LIFT` 整体上移，框底从 574 提到 530，彻底让开「我方 HP」（约 y562-598）。
+	return Rect2(900.0, GRID_Y + 350.0 - PANEL_LIFT, 240.0, 172.0)
 
 
 func _relic_rect(i: int) -> Rect2:
@@ -13395,13 +13456,18 @@ func _draw_hand() -> void:
 	_draw_string_box_center(_font_bold, UI_FS_MICRO, "手牌 %d/%d" % [n, FieldState.HAND_LIMIT],
 			Vector2(minf(WINDOW_W / 2 - 330, left - 56), label_y),
 			TXT_WARN if full else TXT_LIGHT)
-	# 悬停的那张抬起来、并压在最上层（重叠时才看得清）
+	# 悬停的那张抬起来、并压在最上层（重叠时才看得清）；被选中的卡（点击 / 拖拽）
+	# 也压到最上层，放大后才不会被相邻卡盖住（R416）。
 	var order: Array[int] = []
 	for i in n:
-		if i != _hover_hand:
-			order.append(i)
+		if i == _hover_hand or _is_hand_selected(i):
+			continue
+		order.append(i)
 	if _hover_hand >= 0 and _hover_hand < n:
 		order.append(_hover_hand)
+	for i in n:
+		if _is_hand_selected(i) and i != _hover_hand:
+			order.append(i)
 	for i in order:
 		if _hand_fly_in_slot(i):
 			continue  # R151 P0-1：这张还在从抽牌堆飞过来，由 _draw_hand_fly 画卡背
@@ -13424,7 +13490,10 @@ func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> voi
 		if st < 1.0:
 			r.position.x += sin(st * PI * 3.0) * 4.0 * (1.0 - st)
 	var pivot := Vector2(r.position.x + HAND_CARD_W / 2, r.position.y + HAND_CARD_H)
-	draw_set_transform(pivot, _hand_angle(i), Vector2.ONE)
+	# R416：选中（点击 / 拖拽）的手牌整张放大 —— 绕卡底中心缩放，向上 / 两侧长出，
+	# 不挪命中矩形（命中仍按 _hand_rect 原尺寸，见 _hand_hit）。
+	var scl := HAND_SELECT_SCALE if selected else 1.0
+	draw_set_transform(pivot, _hand_angle(i), Vector2(scl, scl))
 	# 「现在打出能吃到额外效果」→ 金色高亮框 + 顶部金星标（R65）。
 	# 判定走 engine.hand_bonus_ready（唯一口），条件不满足就不画。
 	var bonus := engine.hand_bonus_ready(card)
@@ -13833,7 +13902,11 @@ func _draw_drag() -> void:
 				Vector2(zone.position.x + zone.size.x / 2.0, zone.position.y - 8.0),
 				COL_DROP_ZONE)
 	# 跟着光标走的卡与手牌同尺寸（从手牌里"拿起来"不会突然变小）；
-	var rect := _drag_footprint(_drag_pos)
+	# R416：拖拽中的卡整张放大（与点击选中同倍率），围绕光标中心增长，
+	# 落点判定仍用未缩放的 `_drag_footprint`，不改动吸附 / 释放逻辑。
+	var base := _drag_footprint(_drag_pos)
+	var dscl := HAND_SELECT_SCALE
+	var rect := Rect2(base.position + base.size * (1.0 - dscl) * 0.5, base.size * dscl)
 	_draw_card_face(card, rect, card.health, true, false, engine.cost_of(card))
 	# 目标光圈：**只在松手真的会生效时画，并且画在真的会命中的那一格上**。
 	# 旧版无条件画「离光标最近的候选格」—— 光标已经在可释放区域之外（松手会取消）时，
@@ -13898,6 +13971,13 @@ func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
 	if not drawn_center:
 		_draw_dmg_preview(center, engine.preview_spell_damage(card, center))
 	# ② 自伤警告：红框按时间做呼吸（相位取 _now()，不额外开 Timer）
+	# R417：单体技能打在**我方后排**也会漏到我方 HP（直击空格 / 击破单位溢出）
+	# → 与 AOE 同样亮红框。`aoe_danger` 只覆盖 AOE，这里补上单体这一支。
+	# 守卫「会造成伤害」（`dmg > 0`）—— 森林守护 / 狂暴这类打己方的增益牌不算。
+	if info["kind"] == "" and engine != null:
+		if engine.spell_now(card).get("dmg", 0) > 0 \
+				and center.x == GameEngine.back_row(GameEngine.SIDE_SELF):
+			info["hp"] = true
 	var own := int(info["own"])
 	if own > 0 or bool(info["hp"]):
 		var pulse := 0.55 + 0.45 * absf(sin(float(_now()) * 0.004))
@@ -14036,7 +14116,12 @@ func _draw_info_panel() -> void:
 			if pl != null:
 				card = pl.card
 	if card == null:
+		_info_scroll_max_v = 0.0
 		return
+	# R417：换了一张卡 → 滚动量归零，从左上角重新看（否则上一张卡滚到底、这张还在底）
+	if card.id != _info_card_id:
+		_info_card_id = card.id
+		_info_scroll = 0.0
 	var top := GRID_Y
 	UiTheme.draw_panel_bg(self, Rect2(INFO_X, top, INFO_W, GRID_H))
 	draw_rect(Rect2(INFO_X, top, INFO_W, GRID_H), UiTheme.INK_300, false, 1.0)
@@ -14091,14 +14176,57 @@ func _draw_info_panel() -> void:
 	# R302：把「提及」的命中矩形交出去（悬停「素体」两个字才弹说明）。
 	# 用户口径：**不要**再把摘要固定列在详情底部 —— 那块地方还给效果框 / buff 框。
 	_mention_hits.clear()
-	CardInfoBoxes.draw_all(self, blocks, left, y, inner_w, INFO_BODY_FS,
-			top + GRID_H - 12.0, _mention_hits)
+	# R417：明细过长 → **滚动**而非截断「……」。视口 = 表头下方到面板底（留 26px 给提示）；
+	# 整串块按 `_info_scroll` 偏移，只画落在视口里的**行**（越出表头的行由
+	# `CardText.draw_wrapped_hits` 的 `min_y` 挡掉），底部画「▼ 下滑查看」。
+	# ⚠️ R420：Godot 4.3 **没有** CanvasItem 级的 draw 裁剪（无 `draw_set_clip`，
+	#    没有 scissor）—— 这里一律走「几何约束代替裁剪」，与 map_scene 的 §4.11 同口径。
+	var blocks_top := y
+	var vp_bottom := top + GRID_H - 26.0
+	var avail := vp_bottom - blocks_top
+	# 先量后画：max_scroll 必须在把块交给裁剪子节点**之前**算好（滚动量要跟着夹紧，
+	# 否则滚过头的量会一直留着，回滚时头一段空白）。
+	var content_h := CardInfoBoxes.measure(blocks, inner_w, INFO_BODY_FS)
+	_info_scroll_max_v = maxf(0.0, content_h - avail)
+	if _info_scroll > _info_scroll_max_v:
+		_info_scroll = _info_scroll_max_v
+	# 明细交给 `info_clip` 子节点画：它是唯一带 `clip_contents=true` 的节点，
+	# 由它把越出视口的块 / 行**逐像素**裁掉（Godot 4 没有 CanvasItem 级的 draw 裁剪，
+	# `draw_set_clip` 根本不存在 —— R420 把父节点上那句不存在的调用删了）。
+	if info_clip != null:
+		info_clip.position = Vector2(INFO_X, blocks_top)
+		info_clip.size = Vector2(INFO_W, avail)
+		info_clip.render(blocks, left, inner_w, INFO_BODY_FS, _info_scroll, avail,
+				_mention_hits, _info_scroll > 1.0)
+	if content_h > avail:
+		_draw_info_scroll_hint(top + GRID_H, false)   # 下面还有内容
 
 
 
 func _info_panel_rect() -> Rect2:
 	## 左栏（卡牌详情）的矩形 —— 绘制与「鼠标能不能停在上面」共用这一个口。
 	return Rect2(INFO_X, GRID_Y, INFO_W, GRID_H)
+
+
+func _draw_info_scroll_hint(y_anchor: float, top: bool) -> void:
+	## R417：明细可滚动时的「还有内容」提示。底部 = 「▼ 下滑查看」（视口下方还有内容）；
+	## 顶部 = 「▲ 上滑查看」（已经滚下去、上面还有内容）。画在裁剪区之外、面板最底边内侧，
+	## 用暗底亮字药丸，在安卓 / PC 都一眼能看见。
+	var cx := INFO_X + INFO_W / 2.0
+	var pw := 138.0
+	var ph := 20.0
+	var ypos := y_anchor - (ph + 5.0) if not top else y_anchor + 5.0
+	var r := Rect2(cx - pw / 2.0, ypos, pw, ph)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.09, 0.08, 0.10, 0.88)
+	sb.border_color = Color("caa24a")
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(10)
+	draw_style_box(sb, r)
+	var txt := "▼ 下滑查看" if not top else "▲ 上滑查看"
+	_draw_string_center(_font_bold, UI_FS_CAPTION, txt, r.get_center(),
+			Color("ffe6a8"))
+
 
 
 func _draw_mention_tip() -> void:

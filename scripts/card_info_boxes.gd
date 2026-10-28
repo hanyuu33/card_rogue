@@ -102,48 +102,102 @@ static func measure(blocks: Array, w: float, size: int = FS) -> float:
 # ------------------------------------------------------------ 绘制
 
 static func draw_all(cv: CanvasItem, blocks: Array, x: float, y: float, w: float,
-		size: int = FS, max_y := -1.0, hits_out: Array = []) -> float:
-	## 逐块画；**放不下就整块不画**（不做半块截断 —— 半块框比没有更难看），
-	## 并在原地画一行「……」告诉玩家下面还有内容。返回画完后的 y。
-	## `hits_out`（可选）：把各块里「提到的卡 / 道具」的命中矩形收进来 ——
-	## 调用方拿它做**悬浮窗**（R302：不再把摘要固定列在详情底部）。
+		size: int = FS, max_y := -1.0, hits_out: Array = [], scroll := 0.0,
+		vp_top := -1.0, vp_bottom := -1.0) -> Dictionary:
+	## 逐块画，两种模式：
+	##   * 传统截断（vp_bottom < 0）：内容超 `max_y` 就画「……」并停（框体流旧行为，保留兼容）。
+	##   * 滚动视口（vp_bottom >= 0）：整串块按 `scroll` 偏移，只画落在 [vp_top, vp_bottom]
+	##     视口内的块。**部分越界**的块照画，但框体与文字按 `clip_top` 逐行收窄 ——
+	##     Godot 4.3 没有 CanvasItem 级的 draw 裁剪（`draw_set_clip` 不存在、也没有 scissor），
+	##     只能走「几何约束代替裁剪」，与 map_scene 的 §4.11 同口径。
+	## 返回 {content_h, scroll, overflow}：调用方据此算 max_scroll、画「下滑查看」提示。
+	## `hits_out`（可选）：把各块里「提到的卡 / 道具」的命中矩形收进来（**屏幕坐标**）。
 	var font := UiTheme.font()
 	var font_bold := UiTheme.font_bold()
+	var yy := y
+	var content_h := measure(blocks, w, size)
+	var overflow := false
 	for b: Dictionary in blocks:
 		var h := box_h(b, w, size)
 		if h <= 0.0:
 			continue
-		if max_y >= 0.0 and y + h > max_y:
-			cv.draw_string(font, Vector2(x + PAD_X * k_of(size), y + font.get_ascent(size)),
-					"……", HORIZONTAL_ALIGNMENT_LEFT, -1, size, UiTheme.INK_600)
-			return y
-		if str(b.get("type", "text")) == "caption":
-			# 小标题：不画框（框只给「块」，标题只是分隔用），左侧不留竖条
-			cv.draw_string(font_bold, Vector2(x, y + float(font_bold.get_ascent(size))),
-					str(b.get("title", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, size,
-					b.get("col", UiTheme.INK_600))
-			y += h + GAP
+		# —— 传统截断模式（无视口）——
+		if vp_bottom < 0.0:
+			if max_y >= 0.0 and yy + h > max_y:
+				cv.draw_string(font, Vector2(x + PAD_X * k_of(size), yy + font.get_ascent(size)),
+						"……", HORIZONTAL_ALIGNMENT_LEFT, -1, size, UiTheme.INK_600)
+				return {"content_h": content_h, "scroll": 0.0, "overflow": true}
+			if str(b.get("type", "text")) == "caption":
+				cv.draw_string(font_bold, Vector2(x, yy + float(font_bold.get_ascent(size))),
+						str(b.get("title", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, size,
+						b.get("col", UiTheme.INK_600))
+				yy += h + GAP
+				continue
+			_draw_box(cv, font, font_bold, b, Rect2(x, yy, w, h), size, hits_out)
+			yy += h + GAP
 			continue
-		_draw_box(cv, font, font_bold, b, Rect2(x, y, w, h), size, hits_out)
-		y += h + GAP
-	return y
+		# —— 滚动视口模式 ——
+		var st := yy - scroll
+		var sb := st + h
+		if st >= vp_bottom:
+			overflow = true
+			break
+		if sb <= vp_top:
+			yy += h + GAP
+			continue
+		var ty := st
+		if str(b.get("type", "text")) == "caption":
+			# 标题行压在表头底下就不画（否则会糊到「词条：」那行上去）。
+			if st >= vp_top:
+				cv.draw_string(font_bold, Vector2(x, ty + float(font_bold.get_ascent(size))),
+						str(b.get("title", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, size,
+						b.get("col", UiTheme.INK_600))
+			yy += h + GAP
+			continue
+		var before := hits_out.size()
+		_draw_box(cv, font, font_bold, b, Rect2(x, ty, w, h), size, hits_out, vp_top)
+		# 顶部遮罩会盖住越过 vp_top 的部分，命中矩形不能漏到表头区
+		if vp_top >= 0.0:
+			for i in range(before, hits_out.size()):
+				var hh: Dictionary = hits_out[i]
+				var hr: Rect2 = hh["rect"]
+				if hr.position.y < vp_top:
+					var dy := vp_top - hr.position.y
+					hr.position.y = vp_top
+					hr.size.y -= dy
+					if hr.size.y < 0.0:
+						hr.size.y = 0.0
+					hits_out[i]["rect"] = hr
+		if sb > vp_bottom:
+			overflow = true
+		yy += h + GAP
+	return {"content_h": content_h, "scroll": scroll, "overflow": overflow}
 
 
 static func _draw_box(cv: CanvasItem, font: Font, font_bold: Font, b: Dictionary,
-		rect: Rect2, size: int, hits_out: Array = []) -> void:
+		rect: Rect2, size: int, hits_out: Array = [], clip_top := -1.0) -> void:
 	var k := k_of(size)
 	var col: Color = b.get("col", UiTheme.INK_600)
 	var bg: Color = b.get("bg", Color(1.0, 1.0, 1.0, 0.42))
-	cv.draw_rect(rect, bg, true)
-	cv.draw_rect(rect, Color(col.r, col.g, col.b, EDGE), false, 1.0)
+	# `clip_top`：滚动视口的顶边（<0 = 不裁）。框体连同图标 / 文字一起收进顶边之下，
+	# 否则滚到一半的块会把表头糊掉 —— Godot 4.3 没有 draw 级裁剪，这里是几何做法。
+	var r := rect
+	if clip_top >= 0.0 and r.position.y < clip_top:
+		var cut := clip_top - r.position.y
+		if cut >= r.size.y:
+			return   # 整块都在视口之上：不画
+		r.position.y = clip_top
+		r.size.y -= cut
+	cv.draw_rect(r, bg, true)
+	cv.draw_rect(r, Color(col.r, col.g, col.b, EDGE), false, 1.0)
 	# 左侧竖条：类别色。字段 / buff 一眼分得开（框都一样时很难扫读）。
-	cv.draw_rect(Rect2(rect.position, Vector2(2.0, rect.size.y)),
+	cv.draw_rect(Rect2(r.position, Vector2(2.0, r.size.y)),
 			Color(col.r, col.g, col.b, 0.8), true)
 	if str(b.get("type", "text")) == "stats":
-		_draw_stats(cv, font_bold, b, rect, size)
+		_draw_stats(cv, font_bold, b, r, size)
 		return
-	var cx := rect.position.x + (PAD_X + ICON * 0.5) * k
-	var cy := rect.position.y + (PAD_Y + LINE_H * 0.5) * k
+	var cx := r.position.x + (PAD_X + ICON * 0.5) * k
+	var cy := r.position.y + (PAD_Y + LINE_H * 0.5) * k
 	var tex: Variant = b.get("icon")
 	if tex is Texture2D:
 		var ir := ICON * k * 0.42
@@ -151,14 +205,16 @@ static func _draw_box(cv: CanvasItem, font: Font, font_bold: Font, b: Dictionary
 				Rect2(Vector2(cx - ir, cy - ir), Vector2(ir, ir) * 2.0), false)
 	elif str(b.get("glyph", "")) != "":
 		draw_glyph(cv, Vector2(cx, cy), ICON * k * 0.42, str(b["glyph"]), col)
-	var tx := rect.position.x + PAD_X * k + ((ICON + 3.0) * k if has_icon(b) else 0.0)
-	var tw := rect.size.x - (tx - rect.position.x) - PAD_X * k
-	var base := rect.position.y + PAD_Y * k + float(font.get_ascent(size))
+	var tx := r.position.x + PAD_X * k + ((ICON + 3.0) * k if has_icon(b) else 0.0)
+	var tw := r.size.x - (tx - r.position.x) - PAD_X * k
+	var base := r.position.y + PAD_Y * k + float(font.get_ascent(size))
 	# R302：用 `draw_wrapped_hits` 而不是 `draw_wrapped` —— 提及（「素体」这类名字）
 	# 既要换色，也要把**命中矩形**交出去给悬浮层。底色传羊皮纸：提及色按底色挑，
 	# 否则深蓝正文会被判成暗底、用亮金画在浅框上看不清（R206 的同一个坑）。
+	# `min_y = clip_top`：顶边之上的行不画但仍推进基线（`draw_wrapped_hits` 的既定语义），
+	# 这样滚动时是「一行一行从表头下沿钻出来」，不会整块突然消失。
 	var res := CardText.draw_wrapped_hits(cv, font, font_bold, b.get("segs", []), tx, base,
-			tw, size, LINE_H * k, UiTheme.INK_600, -1.0, -1.0, UiTheme.PANEL_PAPER_BG)
+			tw, size, LINE_H * k, UiTheme.INK_600, -1.0, clip_top, UiTheme.PANEL_PAPER_BG)
 	for h: Dictionary in res.get("hits", []):
 		hits_out.append(h)
 

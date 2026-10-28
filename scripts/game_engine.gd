@@ -14394,7 +14394,10 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	# 位置在「防守方结算完」之后、`_tap` 之前：攻击者若被电死，下面 `board.has(src)` 为假，
 	# 自然会跳过「行动完毕」的横置（它已经不在了）。
 	# 反伤走 `_hit_unit`（与技能同一口径：吃光环 / 护盾 / 减伤），击杀走 `_destroy_dead`。
-	if state.board.has(src) and defender.card.id == REVELATOR_ID and defender.boss_phase >= 2:
+	# ⚠️ R420（用户口径「3 阶段不继承二阶段的电磁护盾」）：判据必须是 `== 2`，**不许 `>= 2`**。
+	#    阶段 3 的效果卡已经换成「紧急呼叫 9203」，9200 的卡面文案里第三阶段也没有反伤；
+	#    与上面「减半 + 塞麻痹」的 `boss_phase == 2` 同源，别再出现「一半还挂着一半关掉」。
+	if state.board.has(src) and defender.card.id == REVELATOR_ID and defender.boss_phase == 2:
 		var eb:= _hit_unit(attacker, EM_SHIELD_REFLECT, "电磁屏障", false)
 		_log("电磁屏障：%s 攻击启示者 → 反受 %d 点伤害" % [attacker.card.card_name, eb])
 		action.emit("revelator_shield", {"cell": dst, "src": src, "amount": eb,
