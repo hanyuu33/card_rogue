@@ -381,14 +381,23 @@ const AI_ROLE_GENERIC:= "generic"        # 其它
 const AI_QUEUE_USE_OPTIMIZED:= true   # R160：false 切回原版行动顺序
 
 const TAUNT_TRAIT:= "嘲讽"
-## R425（用户口径：「熔岩巨人描述不对，改为不受技能伤害」）：trait 名从「法术免疫」
-## 改成「技能免疫」—— 本作没有「法术」这个种类（卡片只有 技能 / 效果 / 盟友 / 工事 /
-## 场地 / 诅咒），而详情面板「词条：」那一行直接印的就是这个串。
-## ⚠️ 口径 = **不受技能伤害**（卡面文案同此），**不是**「技能不能把它选为目标」——
-##    技能照样可以点它（龙息 / 弹跳这类会返回「免疫技能」），只是伤害进不去。
-const SPELL_IMMUNE_TRAIT:= "技能免疫"
+## R426（用户口径两次收口：先「不受技能伤害」→ 再提减半 → 最终定为**最多 3 点**）：
+## 「技能免疫」这一档**整体取消** —— trait 名改「技能抗性」，
+## 效果 = **受到的技能伤害最多 3 点**（封顶，不减半；用户 R426 二次口径）。
+## ⚠️ 三条硬约束（改这条机制前先读完）：
+##   ① 判据只有 `_unit_damage_taken()` 里那一条（`kind != "attack"` = 非攻击即技能，
+##      与量产型赫利俄斯 / 启示者阶段 2 同一条二分）—— **不要**再在具体技能里写早退，
+##      那样会出现「同一张卡被流星雨减半、被龙息整段吞掉」的两套口径；
+##   ② 只减**伤害**：技能附带的降攻 / 冰封 / 点燃这类非伤害效果照常生效（R426 起）。
+##      此前 16 处 `if traits.has(...) : return` 的早退会把整段效果一起吞掉；
+##   ③ 预览镜像 `preview_hit_damage()` 必须同步一条，否则格子上那个数字与实际扣血对不上
+##      （R384 的「预览 == 实际」断言会红）。
+const SPELL_RESIST_TRAIT:= "技能抗性"
+## R426：技能抗性的封顶值。**单次**技能伤害最多掉这么多（多段技能=每一段各算一次，
+## 所以龙息 5 口仍能打掉 15）—— 这是它与「减伤 / 免疫」的关键区别，别改成百分比。
+const SPELL_RESIST_CAP:= 3
 ## R277：「位移免疫」—— 击退 / 推移 / 换位置这类**改变格位**的效果对它一律无效。
-## 只认卡面 trait（与「技能免疫」同一套路，无数值字段）；判定口只有
+## 只认卡面 trait（与「技能抗性」同一套路，无数值字段）；判定口只有
 ## `_knockback()` 与 `_swap_two_units()` 两处 —— 所有位移效果都必须经过它们。
 const DISPLACE_IMMUNE_TRAIT:= "位移免疫"
 const ASH_DRAGON_ID:= 1013
@@ -1402,7 +1411,7 @@ const INSTINCT_ID:= 9176
 const INSTINCT_COUNT:= 3
 const INSTINCT_MAX_COST:= 1
 # ── R393：击杀成长（暗影刺客 / 森林精魄新卡）──
-# 猎杀 9205：3 费史诗技能 · 次元；基础伤害写在卡面 `value`（25），每击杀 +6 本局永久。
+# 猎杀 9205：3 费史诗技能 · 次元；基础伤害写在卡面 `value`（R426：22），每击杀 +4 本局永久。
 # 赏金猎人 9204 / 秃鹰 9206 的「每场首次击杀」数值走卡面字段
 # `first_kill_power / first_kill_health`，引擎按字段判，不为卡名写死分支。
 const SLAY_ID:= 9205     # ⚠️ 别并进上面的 HUNT_ID（那是 9107 暗影狩猎），两个 id 语义不同
@@ -3979,9 +3988,7 @@ func _dragon_breath_spell(side: String, target, card: CardData) -> String:
 	var p:= _target_placement(side, target)
 	if p == null or p.owner == side:
 		return "（需要指定一个敌方单位）"
-	if p.card.traits.has(SPELL_IMMUNE_TRAIT):
-		_log("%s 免疫技能，未受到伤害" % p.card.card_name)
-		return "%s 免疫技能" % p.card.card_name
+	# R426：带「技能抗性」的目标照样被喷，只是每一口封顶到 3 点（走 `_unit_damage_taken`）。
 	var hit:= _spell_dmg(side, DRAGON_BREATH_DMG, card)
 	var tname:= p.card.card_name
 	var total:= 0
@@ -4003,7 +4010,7 @@ func _meteor_shower(side: String, card: CardData) -> String:
 	## 流星雨（9083）：对随机敌人造成 METEOR_SHOWER_DMG 点伤害，重复 X 次
 	## （X = 施放时消耗的全部费用，见 use_spell）。每次**独立**随机选目标。
 	## 场上没有敌方单位时改为直击敌方 HP（与疾风之力同处理）；
-	## 命中带「技能免疫」的单位 → 那一颗被拦下（与龙息同一判据）。
+	## 带「技能抗性」的单位照样中点，只是那一颗的伤害封顶到 3 点（R426 起不再整颗拦下）。
 	var times:= maxi(0, _x_spell_value)
 	if times <= 0:
 		# R124：0 费用施放是**合法**的（X 记 0），不是出错 —— 文案据实描述即可。
@@ -4012,7 +4019,6 @@ func _meteor_shower(side: String, card: CardData) -> String:
 	var foe:= SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
 	var total:= 0
 	var falls:= 0
-	var blocked:= 0
 	for i in times:
 		var pool: Array[Vector2i] = []
 		for c: Vector2i in state.board:
@@ -4030,10 +4036,6 @@ func _meteor_shower(side: String, card: CardData) -> String:
 			continue
 		var t: Vector2i = pool[rng.randi() % pool.size()]
 		var q: Placement = state.unit_at(t)
-		if q.card.traits.has(SPELL_IMMUNE_TRAIT):
-			blocked += 1
-			_log("流星雨第 %d 颗：%s 免疫技能，这一颗被拦下" % [i + 1, q.card.card_name])
-			continue
 		var dealt:= _hit_unit(q, hit, "流星雨")
 		total += dealt
 		falls += 1
@@ -4043,8 +4045,6 @@ func _meteor_shower(side: String, card: CardData) -> String:
 		if q.health <= 0:
 			_destroy_dead()
 	var msg:= "流星雨落下 %d 颗，共造成 %d 点伤害" % [falls, total]
-	if blocked > 0:
-		msg += "（%d 颗被技能免疫拦下）" % blocked
 	_log(msg)
 	return msg
 
@@ -4074,17 +4074,12 @@ func _fire_wall_spell(side: String, target, card: CardData) -> String:
 	var map: Dictionary = rec["dealt"]
 	var hits:= 0
 	var total:= 0
-	var blocked:= 0
 	_begin_hp_once()
 	for col in FieldState.BOARD_COLS:
 		var c:= Vector2i(row, col)
 		var p: Placement = state.unit_at(c)
 		if p == null:
 			continue   # R247：不分敌我 —— 自己人站着一样烧
-		if p.card.traits.has(SPELL_IMMUNE_TRAIT):
-			blocked += 1
-			_log("火墙术：%s 免疫技能，未被点燃" % p.card.card_name)
-			continue
 		var dealt:= _hit_unit(p, dmg, "火墙")
 		map[p] = dealt
 		total += dealt
@@ -4098,10 +4093,7 @@ func _fire_wall_spell(side: String, target, card: CardData) -> String:
 	_end_hp_once()
 	_log("火墙术：第 %d 行燃起（%d 个单位共 -%d，不分敌我；经过者 -%d，同一单位上限 %d）" % [
 			row, hits, total, pass_dmg, cap])
-	var msg:= "第 %d 行火墙：%d 个单位 -%d（不分敌我）" % [row, hits, dmg]
-	if blocked > 0:
-		msg += "，%d 个免疫" % blocked
-	return msg
+	return "第 %d 行火墙：%d 个单位 -%d（不分敌我）" % [row, hits, dmg]
 
 
 func _fire_wall_pass(path: Array[Vector2i]) -> void :
@@ -4115,8 +4107,7 @@ func _fire_wall_pass(path: Array[Vector2i]) -> void :
 	var p: Placement = state.unit_at(path[path.size() - 1])
 	if p == null:
 		return
-	if p.card.traits.has(SPELL_IMMUNE_TRAIT):
-		return
+	# R426：带「技能抗性」的单位穿过火墙照样挨灼烧（封顶 3 由 `_unit_damage_taken` 处理）。
 	for rec in _fire_walls:
 		var row: int = int(rec["row"])
 		var crossed:= false
@@ -7621,7 +7612,7 @@ const SPELL_BASE_DMG := {
 	9189: 7,     # 独行（7 + 卡内累积；左栏刻意不报数，见 spell_now）
 	9169: 10,    # 烈火之剑
 	9172: 9,     # 激光扫射
-	9205: 25,    # 猎杀（R393，暗影刺客史诗技能；本局永久成长会抬高 value → 预览按 value 取）
+	9205: 22,    # 猎杀（R393，暗影刺客史诗技能；R426 25 → 22；本局永久成长会抬高 value → 预览按 value 取）
 }
 
 # 卡面**给不出确数**的伤害技能（数字随局势变）→ 即使一点加成都沒有也要报当前值。
@@ -8047,7 +8038,7 @@ func _whirl_blade(side: String, target, card: CardData) -> String:
 	_begin_hp_once()
 	for c2: Vector2i in cells:
 		var q := state.unit_at(c2)
-		if q == null or q.owner == side or q.card.traits.has(SPELL_IMMUNE_TRAIT):
+		if q == null or q.owner == side:
 			continue
 		_hit_unit(q, amount, "回旋斩")
 		hits += 1
@@ -8061,7 +8052,8 @@ func _whirl_blade(side: String, target, card: CardData) -> String:
 func _echo_spell(side: String, card: CardData) -> String:
 	## 回响（9102）：场上所有敌方单位各受 ECHO_DMG 点伤害，并让它们本回合力量 -ECHO_DEBUFF。
 	## 倍率与其它技能一致 —— 走 _spell_dmg（魔法塔 / 魔力核心 / 荧光草 都会加成）；
-	## 免疫技能的单位不受伤也不被削弱。场上没有敌方单位 → 空放（不直击对方 HP）。
+	## 带「技能抗性」的单位照样中点（伤害封顶 3 点）、也照样被降力量（R426 起）。
+	## 场上没有敌方单位 → 空放（不直击对方 HP）。
 	var foe:= SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
 	var dmg:= _spell_dmg(side, ECHO_DMG, card)
 	var cells: Array[Vector2i] = []
@@ -8071,15 +8063,10 @@ func _echo_spell(side: String, card: CardData) -> String:
 	cells.sort()
 	var hits:= 0
 	var debuffed:= 0
-	var blocked:= 0
 	var total:= 0
 	for c: Vector2i in cells:
 		var p: Placement = state.unit_at(c)
 		if p == null:
-			continue
-		if p.card.traits.has(SPELL_IMMUNE_TRAIT):
-			blocked += 1
-			_log("回响：%s 免疫技能（既不受伤也不被削弱）" % p.card.card_name)
 			continue
 		var dealt:= _hit_unit(p, dmg, "回响")
 		total += dealt
@@ -8098,8 +8085,6 @@ func _echo_spell(side: String, card: CardData) -> String:
 	var msg:= "命中 %d 个敌人（各 %d 伤）" % [hits, dmg]
 	if debuffed > 0:
 		msg += "，力量 -%d" % ECHO_DEBUFF
-	if blocked > 0:
-		msg += "，%d 个免疫" % blocked
 	return msg
 
 
@@ -9388,7 +9373,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			return str(_op_deal_damage(side, _spell_dmg(side, card.value, card), target))
 		SLAY_ID:
 			# 猎杀（9205，R393，暗影刺客史诗技能 · 次元）：
-			# 基础伤害 = card.value（卡面 25；本局永久成长会把它抬高）。
+			# 基础伤害 = card.value（卡面 22；本局永久成长会把它抬高）。
 			# 击杀判据必须在伤害结算**之前**抓目标格子：目标被破坏后拿不到 cell。
 			# 只在「目标原本是敌方单位，且结算后那个格子空了」时算击杀 ——
 			# 单纯打到 0 血但被「超负荷」留住的敌人不算。
@@ -9713,8 +9698,6 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			var fp:= _target_placement(side, target)
 			if fp == null:
 				return "（没有目标）"
-			if fp.card.traits.has(SPELL_IMMUNE_TRAIT):
-				return "%s 免疫技能" % fp.card.card_name
 			var dealt:= _hit_unit(fp, _spell_dmg(side, 3, card), "寒冰箭")
 			if fp.health <= 0:
 				_destroy_dead()
@@ -9790,8 +9773,6 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			var st_p := _target_placement(side, target)
 			if st_p == null:
 				return "（没有目标）"
-			if st_p.card.traits.has(SPELL_IMMUNE_TRAIT):
-				return "%s 免疫技能" % st_p.card.card_name
 			var st_d := _hit_unit(st_p, _spell_dmg(side, STUN_BLOW_DMG, card), "敲晕")
 			var st_s := "%s -%d" % [st_p.card.card_name, st_d]
 			if st_p.health > 0:
@@ -9811,8 +9792,6 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			var lw_p: Placement = _target_placement(side, target)
 			if lw_p == null:
 				return "（没有目标）"
-			if lw_p.card.traits.has(SPELL_IMMUNE_TRAIT):
-				return "%s 免疫技能" % lw_p.card.card_name
 			var lw_gone: CardData = _lone_walk_vanish(side)
 			if lw_gone != null:
 				# 生命 / 力量读的是**卡面当前值**（含改造 / 附魔烤进去的数值）——
@@ -10024,7 +10003,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 
 func _bounce_knife(side: String, target, card: CardData) -> String:
 	## 弹跳飞刀（9160，R263）：主目标吃 BOUNCE_KNIFE_DMG —— 走 `_op_deal_damage`，
-	## 与连刺 / 终结同一口径（免疫技能照常免疫；没点到单位就直击对方 HP）。
+	## 与连刺 / 终结同一口径（抗性目标只封顶、不落空；没点到单位就直击对方 HP）。
 	## 弹跳再从「其它敌方单位」里随机抽，最多 BOUNCE_KNIFE_BOUNCES 个，各吃 BOUNCE_KNIFE_SPLASH。
 	## 三条判据（漏一条就变成别的卡）：
 	##   ① **其他** = 排除主目标所在格 → 同一只不会既吃主刀又吃弹跳；
@@ -10047,17 +10026,12 @@ func _bounce_knife(side: String, target, card: CardData) -> String:
 	var bounces:= mini(BOUNCE_KNIFE_BOUNCES, pool.size())
 	var hits:= 0
 	var total:= 0
-	var blocked:= 0
 	for i in bounces:
 		var pick: int = rng.randi_range(0, pool.size() - 1)
 		var c: Vector2i = pool[pick]
 		pool.remove_at(pick)
 		var p: Placement = state.unit_at(c)
 		if p == null:
-			continue
-		if p.card.traits.has(SPELL_IMMUNE_TRAIT):
-			blocked += 1
-			_log("弹跳飞刀第 %d 跳：%s 免疫技能，这一跳被拦下" % [i + 1, p.card.card_name])
 			continue
 		var dealt:= _hit_unit(p, spl, "弹跳飞刀")
 		total += dealt
@@ -10068,11 +10042,8 @@ func _bounce_knife(side: String, target, card: CardData) -> String:
 		action.emit("meteor", {"cell": c, "dmg": dealt, "card": card})
 	if hits > 0:
 		_destroy_dead()
-	# 文案：全部被免疫时不要写成「弹跳 0 跳共 -0」，直接只报被拦下几跳
 	if hits > 0:
 		msg += "；弹跳 %d 跳共 -%d" % [hits, total]
-	if blocked > 0:
-		msg += "（%d 跳被技能免疫拦下）" % blocked
 	return msg
 
 
@@ -10164,8 +10135,6 @@ func _meteor(side: String, target, card: CardData) -> String:
 	_begin_hp_once()
 	for c2: Vector2i in cells:
 		var q:= state.unit_at(c2)
-		if q != null and q.card.traits.has(SPELL_IMMUNE_TRAIT):
-			continue
 		if damage_cell(c2, amount, "陨石") > 0:
 			hits += 1
 	_destroy_dead()
@@ -11014,6 +10983,17 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 			and p.boss_phase >= 3 and _revelator_has_escort(p):
 		_log("启示者（阶段 3）：场上还有随从 → 免疫这次非攻击伤害")
 		return 0
+	# ③d 技能抗性（熔岩巨人 1071，R426 用户口径「受到技能伤害最多为 3 点」）：
+	#     放在减伤链**最后一格**（启示者阶段 3 之后、道具之前）—— 「最多 3 点」说的是
+	#     **最终落地值**：先让各种减伤算完再封顶；顺序反了会把 10 伤算成 1（减 2 再封顶 3 之前的中间值）。
+	#     ⚠️ 多段技能是**每一段各封一次**（龙息 5 口 = 最多 15），不是整张卡合计 3。
+	#     ⚠️ 只封伤害：降攻 / 冰封 / 点燃这类附带效果在各自函数里照常结算 ——
+	#        R426 之前那 16 处 `if traits.has(...) : return` 的早退就是「效果整段消失」的根源。
+	if p != null and p.card != null and dmg > SPELL_RESIST_CAP and kind != "attack" \
+			and p.card.traits.has(SPELL_RESIST_TRAIT):
+		var cb:= dmg
+		dmg = SPELL_RESIST_CAP
+		_log("%s：技能抗性 → 技能伤害 %d 封顶到 %d" % [p.card.card_name, cb, dmg])
 	if p != null and p.owner == SIDE_SELF:
 		dmg = _relic_damage_taken(dmg)
 	# R162：护甲优先吸收伤害（只扣护甲、不扣生命；吸收不完的才扣 HP）。
@@ -11108,6 +11088,8 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 		dmg = maxi(1, (dmg + 1) / 2)
 	if dmg > 0 and not is_attack and p.boss_phase == 2:
 		dmg = maxi(1, dmg / 2)
+	if dmg > SPELL_RESIST_CAP and not is_attack and p.card.traits.has(SPELL_RESIST_TRAIT):
+		dmg = SPELL_RESIST_CAP    # R426：与 `_unit_damage_taken()` 的 ③d 同位置同理
 	if dmg > 0 and p.owner == SIDE_SELF:
 		dmg = _relic_damage_taken(dmg)
 	# ⑤ 护甲：**只算吸收掉多少**，绝不真的扣（`_unit_damage_taken` 里是会扣的）
@@ -11153,8 +11135,6 @@ func preview_spell_damage(card: CardData, dst: Vector2i, side:= SIDE_SELF) -> Di
 	var p:= state.unit_at(dst)
 	if p == null:
 		return {"dmg": PREVIEW_NO_DMG, "tag": ""}
-	if p.card != null and p.card.traits.has(SPELL_IMMUNE_TRAIT):
-		return {"dmg": 0, "tag": "免疫技能"}
 	# ⚠️ `spell_now()` 对「卡面值就是实际值」的固定卡**返回空**（R262 定的口径：不啰嗦）。
 	#    但目标格上的数字本来就是要给玩家看的 —— 没加成的火焰箭也该显示 17。
 	#    所以空结果回退到 `SPELL_BASE_DMG`（这张卡的基础值），而不是当成「不报」。
@@ -11680,8 +11660,6 @@ func _chain_lightning(amount: int) -> String:
 			var p:= state.unit_at(cell)
 			if p == null:
 				continue
-			if p.card.traits.has(SPELL_IMMUNE_TRAIT):
-				continue
 			_hit_unit(p, amount, "闪电")
 			hits += 1
 	_destroy_dead()
@@ -11701,8 +11679,6 @@ func _blast(amount: int, target, radius: int) -> String:
 	for cell: Vector2i in state.board.keys():
 		if manhattan(cell, center) <= radius:
 			if state.unit_at(cell) == null:
-				continue
-			if state.unit_at(cell).card.traits.has(SPELL_IMMUNE_TRAIT):
 				continue
 			if damage_cell(cell, amount, "火球") > 0:
 				hits += 1
@@ -12376,9 +12352,7 @@ func _op_heal(side: String, amount: int, target) -> String:
 func _op_deal_damage(side: String, amount: int, target) -> String:
 	var p:= _target_placement(side, target)
 	if p != null:
-		if p.card.traits.has(SPELL_IMMUNE_TRAIT):
-			_log("%s 免疫技能，未受到伤害" % p.card.card_name)
-			return "%s 免疫技能" % p.card.card_name
+		# R426：抗性目标不落空，封顶由 `_unit_damage_taken` 统一处理。
 		# R138：技能卡伤害也要吃「侦察塔」光环易伤 —— 与 `_hit_unit` 同一条口径
 		# （原先只挂在 `_hit_unit`，单目标技能走这里 → 光环被绕过）。
 		# R316 极速与侦察塔光环走同一处：单目标技能卡也必须吃到敌人易伤。
@@ -13537,7 +13511,7 @@ func _field_explode(center: Vector2i, card: CardData, bonus: int) -> void :
 	## 爆炸场地（8011）：十字范围造成 TRAP_DMG(+bonus) 点伤害，**不分敌我**。
 	## **中心格也算** —— 场地不是单位、没有占位，所以「踩上来的那个人」就站在中心，
 	## 他必然吃自己踩的那一下（这正是「移动到该格才触发」这个新语义的核心）。
-	## 只炸场上的单位，空格不直击 HP；非技能结算 → 不吃魔法塔加成 / 技能免疫
+	## 只炸场上的单位，空格不直击 HP；非技能结算 → 不吃魔法塔加成 / 技能抗性
 	## （与爆炎鸭亡语 _death_blast 同一规则），被炸死单位的后排溢出走 _destroy_dead 通用规则。
 	## 特效复用「blast」（爆炎鸭亡语同款）—— 同效果必须同特效。
 	var cells: Array[Vector2i] = [center]      # 中心格 = 刚踩上来的那个

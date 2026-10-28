@@ -306,17 +306,17 @@ func _init() -> void:
 	ms_empty.use_spell(0)
 	check(ms_empty.state.hp_opponent == 6,
 			"流星雨：场上没有敌人 → 每颗直击敌方 HP（3×8 = 24）")
-	# 目标带「技能免疫」→ 那一颗被拦下（不掉血，也不会改打 HP）
+	# 目标带「技能抗性」→ 那一颗照样落下，只是伤害减半（R426：不再整颗拦下）
 	var ms_im := _new_engine([], 30, 30)
 	var ms_im_p := ms_im.state.place(CardData.from_dict(repo.get_card(1071).to_dict()),
-			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)   # 熔岩巨人（技能免疫）
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)   # 熔岩巨人（技能抗性）
 	var ms_im_hp := ms_im_p.health
 	ms_im.state.hand.clear()
 	ms_im.state.hand.append(CardData.from_dict(ms_card.to_dict()))
 	ms_im.state.energy = 2
 	ms_im.use_spell(0)
-	check(ms_im_p.health == ms_im_hp and ms_im.state.hp_opponent == 30,
-			"流星雨：命中「技能免疫」的单位 → 这一颗被拦下（不掉血、也不改打 HP）")
+	check(ms_im_p.health == ms_im_hp - 6 and ms_im.state.hp_opponent == 30,
+			"流星雨：命中「技能抗性」的熔岩巨人 → 照样落下，2 颗 × 8 各封顶 3（共 -6）")
 
 	# ---- 火焰箭（9003）调费：3 费 → 2 费（2026-10-01）----
 	var nc_fa := repo.get_card(9003)
@@ -411,7 +411,7 @@ func _init() -> void:
 	check(fw_q.health == fw_q_hp,
 			"火墙术：熄灭后再穿过不掉血（%d→%d）" % [fw_q_hp, fw_q.health])
 
-	# 技能免疫：火墙点不着它
+	# 技能抗性：火墙照样点得着，只是伤害减半（R426）
 	var eng_fw3 := _new_engine([], 30, 30, -1, false)
 	eng_fw3.start_game(0)
 	eng_fw3.state.place(CardData.from_dict(repo.get_card(1071).to_dict()),
@@ -421,8 +421,8 @@ func _init() -> void:
 	eng_fw3.state.hand = [repo.get_card(9084)]
 	eng_fw3.state.energy = 5
 	var fw3_res := eng_fw3.use_spell(0, Vector2i(1, 0))
-	check(fw_im.health == fw_im_hp and fw3_res.contains("免疫"),
-			"火墙术：技能免疫的单位点不着（%s）" % fw3_res)
+	check(fw_im.health == fw_im_hp - 3,
+			"火墙术：技能抗性的单位照样被点燃，15 → 3（封顶，%s）" % fw3_res)
 
 	# R247：不分敌我 —— 施放即烧到该行**所有单位**（含施放方自己人）
 	var eng_fw4 := _new_engine([], 30, 30, -1, false)
@@ -1487,15 +1487,16 @@ func _init() -> void:
 	var lg_r2 := lg_e2.use_spell(0, Vector2i(1, 0))
 	check(lg_e2.state.unit_at(Vector2i(1, 0)) == null and lg_r2.contains("1 次"),
 			"龙息：目标中途死亡 → 后续次数落空（只结算 1 次，%s）" % lg_r2)
-	# 技能免疫单位完全免疫（熔岩巨人 1071）
+	# 技能抗性单位：每一口只有一半（R426：不再整段免疫）
 	var lg_e3 := _new_engine([], 20, 20, -1, false)
 	lg_e3.start_game(1)
 	lg_e3.state.place(repo.get_card(1071), Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
 	lg_e3.state.hand = [repo.get_card(9054)]
 	lg_e3.state.energy = 9
 	var lg_r3 := lg_e3.use_spell(0, Vector2i(1, 0))
-	check(lg_e3.state.unit_at(Vector2i(1, 0)).health == 60 and lg_r3.contains("免疫"),
-			"龙息：技能免疫单位完全免疫（%s）" % lg_r3)
+	check(lg_e3.state.unit_at(Vector2i(1, 0)).health == 45,
+			"龙息：技能抗性单位每一口封顶 3（5 口 → 共 15，60 → %d，%s）"
+			% [lg_e3.state.unit_at(Vector2i(1, 0)).health, lg_r3])
 	# 只打敌方：指定己方单位 / 空目标都被拒绝
 	var lg_e4 := _new_engine([], 20, 20, -1, false)
 	lg_e4.start_game(1)
@@ -5735,7 +5736,7 @@ func _init() -> void:
 			and mb_effs.size() == 1 and int(mb_effs[0]) == 9049,
 			"机械巨鸭：第二层 Boss 关（1 只机械巨鸭 + 敌方效果卡齿轮升腾）")
 	# ============================================================
-	# 旧版怪物（1011~1071）复用进第二层：数值 + 嘲讽 / 战吼 / 亡语 / 技能免疫
+	# 旧版怪物（1011~1071）复用进第二层：数值 + 嘲讽 / 战吼 / 亡语 / 技能抗性
 	# ============================================================
 	var om_repo := CardRepo.load_json()
 	var om_wall := om_repo.get_card(1011)      # 铁壁卫兵 3/40 嘲讽（R123：开局 -1 直接写进力量）
@@ -5745,15 +5746,17 @@ func _init() -> void:
 	check(om_ash != null and om_ash.power == 5 and om_ash.health == 45,
 			"灰烬龙 1013 → 5/45（R123 起始力量写在卡面，R175 下调）")
 	check(om_wall != null and om_wall.traits.has("嘲讽"), "铁壁卫兵带「嘲讽」trait")
-	var om_giant := om_repo.get_card(1071)     # 熔岩巨人 8/60 技能免疫（R175 由 9/70 下调）
+	var om_giant := om_repo.get_card(1071)     # 熔岩巨人 8/60 技能抗性（R175 由 9/70 下调）
 	check(om_giant != null and om_giant.power == 8 and om_giant.health == 60,
 			"熔岩巨人 1071 → 8/60（R123 起始力量写在卡面，R175 下调）")
-	check(om_giant != null and om_giant.traits.has("技能免疫"), "熔岩巨人带「技能免疫」trait")
-	# R425（用户口径）：卡面写的是「不受技能伤害」，**不是**「法术指定不了它」——
-	# 两个说法在 AOE / 随机目标技能上是相反的结论，所以把措辞钉住。
-	check(om_giant != null and om_giant.effect_text.contains("不受技能伤害")
+	check(om_giant != null and om_giant.traits.has(GameEngine.SPELL_RESIST_TRAIT),
+			"熔岩巨人带「技能抗性」trait")
+	# R426（用户口径）：从「不受技能伤害」改成「受到的技能伤害最多为 3 点」——
+	# 措辞钉住：不再出现「免疫」「法术」，且把「照样掉血」写进正文（括号会被 naturalize 剥掉）。
+	check(om_giant != null and om_giant.effect_text.contains("受到的技能伤害最多为 3 点")
+			and not om_giant.effect_text.contains("免疫")
 			and not om_giant.effect_text.contains("法术"),
-			"R425 熔岩巨人卡面口径 = 不受技能伤害（不再出现「法术」）")
+			"R426 熔岩巨人卡面口径 = 受到的技能伤害最多为 3 点（不再出现「免疫」「法术」）")
 	var om_cost_ok := true
 	for om_id in [1011, 1013, 1014, 1031, 1050, 1051, 1053, 1054, 1055, 1061, 1071]:
 		var om_cd := om_repo.get_card(om_id)
@@ -5863,17 +5866,17 @@ func _init() -> void:
 	check(om_me_a != null and om_me_a.health == om_me_hp - 8,
 			"爆裂机甲亡语：对全场单位造成 8 点伤害")
 
-	# ---- 技能免疫 ----
+	# ---- 技能抗性（R426：伤害减半，不再完全免疫）----
 	var om_im := _new_engine([], 20, 30, -1, false)
 	om_im.state.place(om_giant, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 	om_im.state.place(om_repo.get_card(9001), Vector2i(3, 1), GameEngine.SIDE_SELF)
 	var om_im_hp := om_im.state.unit_at(Vector2i(2, 1)).health
 	om_im._op_deal_damage(GameEngine.SIDE_SELF, 15, Vector2i(2, 1))
-	check(om_im.state.unit_at(Vector2i(2, 1)).health == om_im_hp,
-			"熔岩巨人免疫技能伤害（15 点法术打不动）")
+	check(om_im.state.unit_at(Vector2i(2, 1)).health == om_im_hp - 3,
+			"熔岩巨人技能伤害封顶（15 → 3）")
 	om_im.attack(Vector2i(3, 1), Vector2i(2, 1), GameEngine.SIDE_SELF)
 	check(om_im.state.unit_at(Vector2i(2, 1)).health < om_im_hp,
-			"熔岩巨人仍会被普通攻击打到（只免疫技能）")
+			"熔岩巨人仍会被普通攻击打到（技能抗性不碰攻击）")
 
 	# ---- 4 个新关卡都属于第二层 ----
 	for om_nm in ["寒冰防线", "亡灵军团", "龙族巢穴", "机甲巨兵"]:
@@ -8888,7 +8891,7 @@ func _init() -> void:
 	r48_cf.state.energy = 1
 	check(r48_cf.can_pay_card(r48_cf_card), "回响：1 点费用即可打")
 
-	# 回响：场上没有敌人不直击对方 HP；免疫技能的敌人不受伤也不被削弱
+	# 回响：场上没有敌人不直击对方 HP；技能抗性的敌人照样受伤（减半）也被降力量
 	var r48_e2 := _new_engine([], 30, 30)
 	r48_e2.state.hand.append(CardData.from_dict(r48_echo_c.to_dict()))
 	r48_e2.use_spell(0, null)
@@ -8896,13 +8899,13 @@ func _init() -> void:
 			"回响：敌方场上没单位 → 不直击对方 HP（仍 %d），卡照回手"
 			% r48_e2.state.hp_opponent)
 	var r48_e3 := _new_engine([], 30, 30)
-	var r48_im := r48_e3.state.place(_card(9026, "免疫怪", "盟友", 5, 5, 20, 1, 1),
+	var r48_im := r48_e3.state.place(_card(9026, "抗性怪", "盟友", 5, 5, 20, 1, 1),
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-	r48_im.card.traits = [GameEngine.SPELL_IMMUNE_TRAIT]
+	r48_im.card.traits = [GameEngine.SPELL_RESIST_TRAIT]
 	r48_e3.state.hand.append(CardData.from_dict(r48_echo_c.to_dict()))
 	r48_e3.use_spell(0, null)
-	check(r48_im.health == 20 and r48_im.effective_power() == 5,
-			"回响：免疫技能的敌人既不受伤也不被削弱（%d / %d）"
+	check(r48_im.health == 18 and r48_im.effective_power() == 4,
+			"回响：技能抗性的敌人照样受伤（2 未到封顶，全额 2）也被降力量（5 → 4）（%d / %d）"
 			% [r48_im.health, r48_im.effective_power()])
 
 	# 闪躲：直到下个回合开始，自己受到的伤害由随机盟友代受
@@ -9021,15 +9024,15 @@ func _init() -> void:
 	check(r49_foe3.health == 49,
 			"收尾：手卡 2 张时打出（手里还剩一张）→ 仍是 6 伤（55 → %d）" % r49_foe3.health)
 
-	# 免疫技能 / 场上没有敌方单位
+	# 技能抗性 / 场上没有敌方单位
 	var r49_e4 := _new_engine([], 30, 30)
-	var r49_im := r49_e4.state.place(_card(9026, "免疫怪", "盟友", 5, 5, 20, 1, 1),
+	var r49_im := r49_e4.state.place(_card(9026, "抗性怪", "盟友", 5, 5, 20, 1, 1),
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-	r49_im.card.traits = [GameEngine.SPELL_IMMUNE_TRAIT]
+	r49_im.card.traits = [GameEngine.SPELL_RESIST_TRAIT]
 	r49_e4.state.hand.append(CardData.from_dict(r49_c.to_dict()))
 	r49_e4.use_spell(0, Vector2i(2, 1))
-	check(r49_im.health == 20 and r49_e4.state.discard.size() == 1,
-			"收尾：免疫技能的目标不受伤（%d），卡照常消耗" % r49_im.health)
+	check(r49_im.health == 17 and r49_e4.state.discard.size() == 1,
+			"收尾：技能抗性的目标照样受伤（6 → 3，%d），卡照常消耗" % r49_im.health)
 	var r49_hp := _new_engine([], 30, 30)
 	r49_hp.state.hand.append(CardData.from_dict(r49_c.to_dict()))
 	r49_hp.use_spell(0, Vector2i(-1, -1))
@@ -20828,9 +20831,9 @@ func _init() -> void:
 	check(r263_g_main.health == 34 and r263_g_a.health == 36,
 			"R263 弹跳飞刀：荧光草 +1 同时作用于主刀与弹跳（%d / %d）"
 			% [r263_g_main.health, r263_g_a.health])
-	# ⑤ 弹跳目标免疫技能 → 这一跳被拦下，主刀不受影响
-	var r263_imm_card := _card(9001, "免疫者", "盟友", 1, 5, 40, 1, 2)
-	r263_imm_card.traits.append(GameEngine.SPELL_IMMUNE_TRAIT)
+	# ⑤ 弹跳目标带技能抗性 → 这一跳照样落，只是伤害减半（R426）
+	var r263_imm_card := _card(9001, "抗性者", "盟友", 1, 5, 40, 1, 2)
+	r263_imm_card.traits.append(GameEngine.SPELL_RESIST_TRAIT)
 	var r263_imm := _new_engine([], 30, 30)
 	r263_imm.rng.seed = 263
 	r263_imm.current_side = GameEngine.SIDE_SELF
@@ -20842,13 +20845,12 @@ func _init() -> void:
 	r263_imm.state.hand = [CardData.from_dict(r263_card.to_dict())]
 	r263_imm.state.energy = 5
 	var r263_imm_msg := r263_imm.use_spell(0, Vector2i(2, 1))
-	check(r263_imm_main.health == 35 and r263_imm_oth.health == 40
-			and r263_imm_msg.contains("拦下"),
-			"R263 弹跳飞刀：候补免疫技能 → 这一跳拦下、主刀照常 5（%d / %d）"
+	check(r263_imm_main.health == 35 and r263_imm_oth.health == 37,
+			"R263 弹跳飞刀：候补带技能抗性 → 主刀照常 5、这一跳 3 未到封顶全额 3（%d / %d）"
 			% [r263_imm_main.health, r263_imm_oth.health])
-	# ⑥ 主目标免疫技能 → 主刀落空，但弹跳**照样**挑其他敌人
-	var r263_imm2_card := _card(9001, "免疫者", "盟友", 1, 5, 40, 1, 2)
-	r263_imm2_card.traits.append(GameEngine.SPELL_IMMUNE_TRAIT)
+	# ⑥ 主目标带技能抗性 → 主刀只减半（不再落空），弹跳照样挑其他敌人
+	var r263_imm2_card := _card(9001, "抗性者", "盟友", 1, 5, 40, 1, 2)
+	r263_imm2_card.traits.append(GameEngine.SPELL_RESIST_TRAIT)
 	var r263_imm2 := _new_engine([], 30, 30)
 	r263_imm2.rng.seed = 263
 	r263_imm2.current_side = GameEngine.SIDE_SELF
@@ -20860,8 +20862,8 @@ func _init() -> void:
 	r263_imm2.state.hand = [CardData.from_dict(r263_card.to_dict())]
 	r263_imm2.state.energy = 5
 	r263_imm2.use_spell(0, Vector2i(2, 1))
-	check(r263_imm2_main.health == 40 and r263_imm2_oth.health == 37,
-			"R263 弹跳飞刀：主目标免疫 → 主刀落空、弹跳仍打其他敌人（%d / %d）"
+	check(r263_imm2_main.health == 37 and r263_imm2_oth.health == 37,
+			"R263 弹跳飞刀：主目标带技能抗性 → 主刀 5 封顶成 3、弹跳仍打其他敌人 3（%d / %d）"
 			% [r263_imm2_main.health, r263_imm2_oth.health])
 
 
@@ -29038,10 +29040,10 @@ func _init() -> void:
 			"R393 赏金猎人 9204：2 费稀有暗影刺客盟友 8/2 程2 速1 · 次元 · 首杀 +1 力 · 战后 +20 金")
 	check(r393_slay != null and r393_slay.card_name == "猎杀"
 			and r393_slay.is_spell() and r393_slay.cost == 3
-			and r393_slay.rarity == 2 and r393_slay.value == 25
-			and r393_slay.per_kill_damage == 6 and r393_slay.affixes.has("次元")
+			and r393_slay.rarity == 2 and r393_slay.value == 22
+			and r393_slay.per_kill_damage == 4 and r393_slay.affixes.has("次元")
 			and r393_slay.card_class == PlayerClass.ROGUE,
-			"R393 猎杀 9205：3 费史诗暗影刺客技能 25 伤 · 次元 · 每次击杀 +6 伤")
+			"R426 猎杀 9205：3 费史诗暗影刺客技能 22 伤 · 次元 · 每次击杀 +4 伤")
 	check(r393_vulture != null and r393_vulture.card_name == "秃鹰"
 			and r393_vulture.kind == "盟友" and r393_vulture.cost == 3
 			and r393_vulture.power == 8 and r393_vulture.health == 10
@@ -29054,7 +29056,7 @@ func _init() -> void:
 	# 「场上会变强、下一场又变回去」的假成长（最容易踩的坑）。
 	var r393_rt := CardData.from_dict(r393_vulture.to_dict())
 	check(r393_rt.first_kill_power == 3 and r393_rt.first_kill_health == 6
-			and CardData.from_dict(r393_slay.to_dict()).per_kill_damage == 6
+			and CardData.from_dict(r393_slay.to_dict()).per_kill_damage == 4
 			and CardData.from_dict(r393_hunter.to_dict()).battle_end_gold == 20,
 			"R393 数据：first_kill_power / first_kill_health / per_kill_damage / battle_end_gold 过 to_dict/from_dict")
 	# 奖励池归属：赏金猎人 / 猎杀只进暗影刺客池，秃鹰只进森林精魄池
@@ -29112,7 +29114,7 @@ func _init() -> void:
 	check(r393_v3.card.power == 11 and r393_v3.card.health == 16 and r393_v3.health == 16,
 			"R393 秃鹰：首杀 8/10 → %d/%d（站场血量同步）" % [r393_v3.card.power, r393_v3.health])
 
-	# ④ 猎杀：击杀 → 本卡伤害 +6（当场生效 + 记账）；没打死人就不涨
+	# ④ 猎杀：击杀 → 本卡伤害 +4（当场生效 + 记账）；没打死人就不涨
 	RunState.card_growth = {}
 	var r393_e4 := _new_engine([], 20, 20)
 	r393_e4.state.hand = [CardData.from_dict(r393_slay.to_dict())]
@@ -29120,10 +29122,10 @@ func _init() -> void:
 	r393_e4.state.place(_card(1053, "骷髅兵", "盟友", 1, 1, 5), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
 	var r393_hunt_card = r393_e4.state.hand[0]
 	r393_e4.use_spell(0, Vector2i(3, 1))
-	check(r393_e4.state.unit_at(Vector2i(3, 1)) == null and r393_hunt_card.value == 31,
-			"R393 猎杀：25 伤打死 5 血敌人 → 本卡伤害 25 → %d" % r393_hunt_card.value)
-	check(int(RunState.card_growth_of(9205).get("damage", 0)) == 6,
-			"R393 猎杀：击杀记进账本（+%d 伤）" % int(RunState.card_growth_of(9205).get("damage", 0)))
+	check(r393_e4.state.unit_at(Vector2i(3, 1)) == null and r393_hunt_card.value == 26,
+			"R426 猎杀：22 伤打死 5 血敌人 → 本卡伤害 22 → %d" % r393_hunt_card.value)
+	check(int(RunState.card_growth_of(9205).get("damage", 0)) == 4,
+			"R426 猎杀：击杀记进账本（+%d 伤）" % int(RunState.card_growth_of(9205).get("damage", 0)))
 	var r393_e5 := _new_engine([], 20, 20)
 	r393_e5.state.hand = [CardData.from_dict(r393_slay.to_dict())]
 	r393_e5.state.energy = 9
@@ -29131,11 +29133,11 @@ func _init() -> void:
 			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
 	var r393_hunt2 = r393_e5.state.hand[0]
 	r393_e5.use_spell(0, Vector2i(3, 1))
-	check(r393_tank.health == 74 and r393_hunt2.value == 25,
-			"R393 猎杀：没打死人就不涨伤害（敌人 99 → %d，本卡仍 %d）"
+	check(r393_tank.health == 77 and r393_hunt2.value == 22,
+			"R426 猎杀：没打死人就不涨伤害（敌人 99 → %d，本卡仍 %d）"
 			% [r393_tank.health, r393_hunt2.value])
-	check(int(RunState.card_growth_of(9205).get("damage", 0)) == 6,
-			"R393 猎杀：未击杀不追加成长（账本仍 +%d）"
+	check(int(RunState.card_growth_of(9205).get("damage", 0)) == 4,
+			"R426 猎杀：未击杀不追加成长（账本仍 +%d）"
 			% int(RunState.card_growth_of(9205).get("damage", 0)))
 
 	# ⑤ 战后金币：按卡组拥有结算，同名多张**不叠加**（取 20）
