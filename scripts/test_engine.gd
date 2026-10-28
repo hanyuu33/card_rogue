@@ -5235,7 +5235,7 @@ func _init() -> void:
 	check(str(GameLevels.boss_level()["name"]) == "远古虚骨龙",
 			"boss_level() 默认返回第一层 Boss 池的第一个（远古虚骨龙；同层多Boss 时实际由 RunState 摇定）")
 
-	# ---- 第一层新关卡「白魔法鸭护阵」：后排 1 白魔法鸭 + 中排 2 鸭子骑士（R164 降难度）----
+	# ---- 第一层新关卡「白魔法鸭护阵」：后排 1 白魔法鸭 + 后排 2 鸭子骑士（R164 降难度 / R428 骑士再退一行）----
 	var lvw: Dictionary = _level_named("白魔法鸭护阵")
 	var wm_units: Array = lvw["enemy_units"]
 	var wm_mage := 0
@@ -5260,8 +5260,16 @@ func _init() -> void:
 			"白魔法鸭护阵阵容：白魔法鸭×1 / 鸭子骑士×2（R164 删掉前排正中那只）")
 	check(wm_mage_row == GameEngine.back_row(GameEngine.SIDE_OPPONENT)
 			and wm_knight_rows.size() == 1
-			and wm_knight_rows.has(GameEngine.back_row(GameEngine.SIDE_OPPONENT) + 1),
-			"白魔法鸭护阵站位：白魔法鸭在后排（0 行）、2 骑士从**前排退到中排**（1 行）")
+			and wm_knight_rows.has(GameEngine.back_row(GameEngine.SIDE_OPPONENT)),
+			"白魔法鸭护阵站位：白魔法鸭与 2 骑士**全在后排**（0 行；R428 骑士由中排再退一行）")
+	# R428（用户口径「两个鸭子骑士也在后排」）：三只占满后排左中右，骑士护在白魔法鸭两侧。
+	var wm_cols: Array = []
+	for u in wm_units:
+		var wm_cell: Vector2i = u[6]
+		wm_cols.append(wm_cell.y)
+	wm_cols.sort()
+	check(wm_cols == [0, 1, 2],
+			"白魔法鸭护阵：后排左中右三列各一只（白魔法鸭居中、左右各一名骑士）")
 	var nc_mage := repo.get_card(9021)
 	check(nc_mage != null and nc_mage.card_name == "白魔法鸭"
 			and nc_mage.power == 0 and nc_mage.health == 30
