@@ -1453,6 +1453,11 @@ static func claim_deck_delete_reward(idx: int, deck_index: int) -> bool:
 		return false
 	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
 		return false
+	# R414：**带锁的卡（`no_remove`：月亮 9180 / 硬币 / 罐子）一概删不掉**。
+	# 以前这里直接调 `delete_deck_card()`，等于给了一条绕过口 —— 谁传个下标进来
+	# 就能把月亮删了（界面自己挡了，但数据层没挡，R340「唯一口」的纪律也就破了）。
+	if not deck_deletable(deck_index):
+		return false
 	# `delete_deck_card()` 里有 `pending_relic = -1`（那是失忆药水的待办口径）——
 	# 这里不是那条路，别把玩家还没领的即时道具待办顺手清掉。
 	var keep_pr := pending_relic
@@ -1475,6 +1480,15 @@ static func deck_deletable(index: int) -> bool:
 	return c != null and not c.no_remove
 
 
+static func has_deletable_deck_card() -> bool:
+	## R414：卡组里还有没有「能删」的卡（`deck_deletable` 的反向汇总）。
+	## 删卡奖励摊开卡组之前先问这一句 —— 一张都删不了时不该把人关进一个点什么都不动的页面。
+	for i in deck_ids.size():
+		if deck_deletable(i):
+			return true
+	return false
+
+
 static func claim_pending_reward(idx: int) -> bool:
 	## 领取第 idx 条：道具 → 进道具栏。成功后 state = claimed（悬浮窗里那条置灰）。
 	## ⚠️ 卡牌奖励**不走这里**：卡牌必须先在三选一里选一张（pick_pending_card），
@@ -1484,14 +1498,17 @@ static func claim_pending_reward(idx: int) -> bool:
 	var e: Dictionary = pending_rewards[idx]
 	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
 		return false
-	# R351：删卡奖励 —— 领下的效果是「给一次删卡待办」，真正删卡在 deck_edit 里进行。
-	# `pending_deck_edit` 是 deck_edit 的待办标记（遗忘之泉 / 鸭鸭工匠同一套），
-	# 由 `waiting_pick_scene()` 接住跳转；本批还有别的奖励时 `route_target_after_pick()`
-	# 会先把跳转按住，等玩家处理完再走。
+	# R414（用户报「领了删卡奖励没反应、卡组张数一点没变」）：删卡奖励**没有「空手领下」
+	# 这回事** —— 它的效果就是删掉一张卡，没挑卡就等于没效果。
+	# 旧版在这里把 state 置成 claimed、挂上 `pending_deck_edit = "delete"` 就 `return true`，
+	# 于是调用方（AI 桥 / 任何自动化）以为领成功了，实际卡组一张没少；而挂上的那个待办
+	# 要么被 R340「本批奖励没处理完不许跳场景」一路压到界面结束之后（就是 R398 用户报的
+	# 「效果生效了却迟迟不让选」），要么调用方根本不跳、待办直接烂在存档里。
+	# 现在一律**拒绝**：删卡只有一个口 `claim_deck_delete_reward(idx, deck_index)`，
+	# 「删掉卡组第 N 张」与「这条置为已领」在同一次调用里完成。界面走
+	# `RewardPanel._open_entry()` → 卡组视图（R398 的就地删卡）。
 	if str(e.get("kind", "")) == "deck_delete":
-		e["state"] = REWARD_CLAIMED
-		pending_deck_edit = "delete"
-		return true
+		return false
 	if str(e.get("kind", "")) != "relic":
 		return false
 	var rid := int(e.get("id", 0))

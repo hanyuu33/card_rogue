@@ -13115,18 +13115,21 @@ func _draw_cost_zone() -> void:
 	var e_max_txt := "/%d" % engine.max_energy()
 	var e_w := _font_bold.get_string_size(e_cur, HORIZONTAL_ALIGNMENT_LEFT, -1,
 			UI_FS_HEADING).x
-	var m_w := _font_bold.get_string_size(e_max_txt, HORIZONTAL_ALIGNMENT_LEFT, -1,
-			UI_FS_LABEL).x
-	var gem := 30.0
-	var pair_w := gem + 6.0 + e_w + m_w
-	var pair_x := mid_x - pair_w / 2.0
+	# R421：宝石图标左右留白收紧（原居中导致整体比面板宽 ~107px、左右各溢出 ~9px，数字被挤）；
+	# 改为左贴面板内边 + 缩宝石 + 减右间距，分母「/Y」字号降一档（更淡更小，R391 意图）给当前数字腾空间。
+	var m_fs := 16
+	var m_w := _font_bold.get_string_size(e_max_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, m_fs).x
+	var gem := 22.0
+	var gem_gap := 2.0
+	var pair_x := COST_X + 3.0
+	var e_cur_y := COST_Y + 66
 	if _energy_icon != null:
 		draw_texture_rect(_energy_icon,
-				Rect2(pair_x, COST_Y + 66 - gem / 2.0, gem, gem), false)
+				Rect2(pair_x, e_cur_y - gem / 2.0, gem, gem), false)
 	_draw_string_center(_font_bold, UI_FS_HEADING, e_cur,
-			Vector2(pair_x + gem + 6.0 + e_w / 2.0, COST_Y + 66), UiTheme.STAT_POWER)
-	_draw_string_center(_font_bold, UI_FS_LABEL, e_max_txt,
-			Vector2(pair_x + pair_w - m_w / 2.0, COST_Y + 71), UiTheme.INK_500)
+			Vector2(pair_x + gem + gem_gap + e_w / 2.0, e_cur_y), UiTheme.STAT_POWER)
+	_draw_string_center(_font_bold, m_fs, e_max_txt,
+			Vector2(pair_x + gem + gem_gap + e_w + m_w / 2.0, e_cur_y + 5), UiTheme.INK_500)
 	# 蓄力（9085）：待用层数（0 层不画）—— 下一张技能的结算次数 = 1 + 层数
 	# ⚠️ 面板只有 88 宽：原来那一长串「蓄力 ×N（下一张技能 ×N+1）」在 13px 下量到
 	#    ~156px，会横着糊到棋盘上 → 拆成两行（字要变大，但不能溢出面板）。
@@ -14760,3 +14763,4 @@ func _process(delta: float) -> void:
 	deck_btn.disabled = not has_any_deck and not _run_deck_visible
 	map_btn.disabled = not _mapview_available()
 	status_label.text = status_text
+

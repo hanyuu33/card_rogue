@@ -292,7 +292,10 @@ func act(d: Dictionary) -> Dictionary:
 				% [target, now_ms - _last_ms]}
 	_last_target = target
 	_last_ms = now_ms
-	if target.begins_with("rw"):
+	# R415：`rd<下标>` 也得走奖励口 —— `_reward_click()` 里早就写了 `rd` 分支，
+	# 但这里是**唯一入口**，只放 `rw` 进来，于是「卡组页列出 rd0..rd22、点上去
+	# 却回一句『认不出这个目标』」。targets 与 click 两套前缀必须在这里对齐。
+	if target.begins_with("rw") or target.begins_with("rd"):
 		res = _reward_click(target)
 		_last_action = "%s → %s" % [target, str(res.get("msg", ""))]
 		if bool(res.get("ok", false)):
@@ -766,6 +769,65 @@ func _battle_targets(s: Variant) -> Array:
 					"hint": "%s：取回「%s」（%d费）" % [rlbl, dc.card_name, dc.cost]})
 		return out
 
+	# ①a2 鲸鱼之怒（`whale_pending`）—— **单独一条口**。
+	# 它本该走 ①b 的全屏选卡页，但实测（R415，第 2 层「量产流水线」第 8 回合）
+	# `_ensure_pick_visible("whale")` 建不出 cfg：`_pick.is_picking()` 一直 false，
+	# 于是 `p*` / `pok` / `pcancel` 一条都列不出来，`_battle_targets` 返回**空数组**
+	# —— AI 那边看到「可点目标：」后面什么都没有，整局卡死（和 R413 那次一样，
+	# 只是那次是复活术走的小面板，这次是鲸鱼走的大面板）。
+	# 候选本来就在引擎里（`whale_options()` 把弃牌区全列出来），不必依赖面板：
+	# 直接按 `wp<弃牌下标>` 列出来，点击走 `engine.whale_pick()`。
+	if e.whale_pending:
+		var pk0: Variant = s._pick
+		# 空 cfg 的残留面板先关掉，免得挡着「结束回合」的 guard 又说不清
+		if pk0 != null and pk0.is_picking() and (pk0.opts() as Array).is_empty():
+			pk0.close()
+		for wi: int in e.whale_options():
+			if wi < 0 or wi >= st.discard.size():
+				continue
+			var wc: CardData = st.discard[wi]
+			out.append({"id": "wp%d" % wi,
+					"hint": "鲸鱼之怒：取回「%s」（%d费；还可取 %d 张）"
+							% [wc.card_name, wc.cost, int(e.whale_remaining)]})
+		out.append({"id": "pcancel", "hint": "不选了（结束取牌）"})
+		return out
+
+	# ①a3 新生（`rebirth_pending`，9148）—— 与 ①a2 同一个坑：面板建不出来就自己列。
+	# 实测（R416，第 3 层 Boss 第 6 回合）：效果区挂着「新生」，回合开始后界面提示
+	# 「新生：请先从手牌里选一张使其消失（不能不选）」，但 `可点目标：` 后面**空的**，
+	# 连 `end` 都不给 —— `_ensure_pick_visible("rebirth")` 没能把 cfg 建出来
+	# （`_pick` 不处于 is_picking），于是 ①b 整段跳过，AI 一步都走不了。
+	# 候选在引擎里现成（`rebirth_options()` = 全部手牌下标），不必依赖面板。
+	if e.rebirth_pending:
+		var pkR: Variant = s._pick
+		if pkR != null and pkR.is_picking() and (pkR.opts() as Array).is_empty():
+			pkR.close()
+		for rbi: int in e.rebirth_options():
+			if rbi < 0 or rbi >= st.hand.size():
+				continue
+			var rbc: CardData = st.hand[rbi]
+			out.append({"id": "rb%d" % rbi,
+					"hint": "新生：让手牌「%s」（%d费）消失（本层还要选 %d 张）"
+							% [rbc.card_name, rbc.cost, int(e.rebirth_remaining)]})
+		return out
+
+	# ①a4 乌鸦（`crow_pending`）—— 与 ①a2 / ①a3 同一类：全屏选卡页建不出来就自己列。
+	# 实测（R417，第 2 层「百眼动员」第 4 回合）：0 费的乌鸦下场后提示
+	# 「乌鸦：请先选择一张要回到手牌的盟友」，`可点目标：` 后面**空的**，`end` 又点不动
+	# （`_on_end_turn` 的 guard 挡住）→ AI 一步都走不了。
+	# 候选在引擎里现成（`crow_options()` = 弃牌堆里所有「盟友」的下标，乌鸦自己排除）。
+	if e.crow_pending:
+		var pkC: Variant = s._pick
+		if pkC != null and pkC.is_picking() and (pkC.opts() as Array).is_empty():
+			pkC.close()
+		for ci: int in e.crow_options():
+			if ci < 0 or ci >= st.discard.size():
+				continue
+			var cc: CardData = st.discard[ci]
+			out.append({"id": "cr%d" % ci,
+					"hint": "乌鸦：取回「%s」（%d费）" % [cc.card_name, cc.cost]})
+		return out
+
 	# ①b 全屏选卡页 → 只能选卡 / 确认 / 取消
 	# R413：**先主动把面板建出来**。引擎侧的取牌 pending（鲸鱼之怒 9084 / 乌鸦 /
 	# 复活术 / 无尽黑暗 / 新生 / 预判…）不是「点了就开」——`_sync_pick()` 要到**下一帧**
@@ -900,6 +962,51 @@ func _battle_click(target: String) -> Dictionary:
 		var rok: bool = bool(s._recall_discard_index(ri))
 		return {"ok": rok, "msg": "取回「%s」%s" % [rname, "" if rok else "（失败）"]}
 
+	# 鲸鱼之怒取牌（R415：见 `_battle_targets` ①a2）
+	if target.begins_with("wp") and target.substr(2).is_valid_int():
+		if not e.whale_pending:
+			return {"ok": false, "msg": "现在没有鲸鱼之怒取牌"}
+		var wi := int(target.substr(2))
+		if wi < 0 or wi >= st.discard.size():
+			return {"ok": false, "msg": "弃牌区没有第 %d 张" % wi}
+		var wn: String = str(st.discard[wi].card_name)
+		var wok: bool = e.whale_pick(wi)
+		var pk1: Variant = s._pick
+		if not e.whale_pending and pk1 != null and pk1.is_picking() \
+				and (pk1.opts() as Array).is_empty():
+			pk1.close()
+		return {"ok": wok, "msg": "鲸鱼之怒：取回「%s」%s" % [wn, "" if wok else "（失败）"]}
+
+	# 新生（R416：见 `_battle_targets` ①a3）
+	if target.begins_with("rb") and target.substr(2).is_valid_int():
+		if not e.rebirth_pending:
+			return {"ok": false, "msg": "现在没有新生结算"}
+		var rbi2 := int(target.substr(2))
+		if rbi2 < 0 or rbi2 >= st.hand.size():
+			return {"ok": false, "msg": "手牌里没有第 %d 张" % rbi2}
+		var rbn: String = str(st.hand[rbi2].card_name)
+		var rbok: bool = e.rebirth_pick(rbi2)
+		var pkR2: Variant = s._pick
+		if not e.rebirth_pending and pkR2 != null and pkR2.is_picking() \
+				and (pkR2.opts() as Array).is_empty():
+			pkR2.close()
+		return {"ok": rbok, "msg": "新生：%s %s" % [rbn, "消失" if rbok else "（失败）"]}
+
+	# 乌鸦取牌（R417：见 `_battle_targets` ①a4）
+	if target.begins_with("cr") and target.substr(2).is_valid_int():
+		if not e.crow_pending:
+			return {"ok": false, "msg": "现在没有乌鸦取牌"}
+		var ci2 := int(target.substr(2))
+		if ci2 < 0 or ci2 >= st.discard.size():
+			return {"ok": false, "msg": "弃牌区没有第 %d 张" % ci2}
+		var cn: String = str(st.discard[ci2].card_name)
+		var cok: bool = e.crow_recall(ci2)
+		var pkC2: Variant = s._pick
+		if not e.crow_pending and pkC2 != null and pkC2.is_picking() \
+				and (pkC2.opts() as Array).is_empty():
+			pkC2.close()
+		return {"ok": cok, "msg": "乌鸦：取回「%s」%s" % [cn, "" if cok else "（失败）"]}
+
 	# 选卡页
 	if target.begins_with("p"):
 		var pick: Variant = s._pick
@@ -992,15 +1099,28 @@ func _map_lines(s: Variant) -> Array[String]:
 			% [cur, _cell_type_cn(cells[cur]) if cur < cells.size() else "?"]))
 	out.append("")
 	out.append("可前往：")
-	var any := false
+	# R415（我自己踩的）：这里以前只判 `_map_reachable()` 就列出来，而 `_map_targets()`
+	# 还多一道「跳过已走过」的过滤 —— 于是同一屏上「可前往」列 12 个、可点目标只有 5 个，
+	# 差的那 7 个全是我**已经逛过**的房间（本局实测：n23 商店 / n29 鸭子窑精英 / n30 /
+	# n32 休息 / n31 起点…）。文字版看着「还能去商店」，实际走进去什么都不发生，
+	# 按它规划路线就是白扔层数。现在两边**同一口径**：先收「可达且未走」，
+	# 一个都没有（死路）才退化成「全部可达」，与 `_map_targets()` 的 fresh/all 一一对应。
+	var fresh_parts: Array[String] = []
+	var all_parts: Array[String] = []
 	for c: Dictionary in cells:
 		var cid := int(c.get("id", -1))
 		if cid < 0 or cid == cur:
 			continue
-		if _map_reachable(s, cid):
-			any = true
-			out.append("  [n%d] %s · 第%d行" % [cid, _cell_type_cn(c), int(c.get("row", 0))])
-	if not any:
+		if not _map_reachable(s, cid):
+			continue
+		var sline := "  [n%d] %s · 第%d行" % [cid, _cell_type_cn(c), int(c.get("row", 0))]
+		all_parts.append(sline)
+		if not RunState.cleared_ids.has(cid):
+			fresh_parts.append(sline)
+	var parts: Array[String] = fresh_parts if not fresh_parts.is_empty() else all_parts
+	for p2 in parts:
+		out.append(p2)
+	if parts.is_empty():
 		out.append("  （没有能去的房间 —— 可能得先处理完奖励）")
 	out.append("")
 	# 只列**还没走过**的房间：走过的对决策没有价值，全列出来会占掉半屏
@@ -1713,9 +1833,51 @@ func _reward_targets() -> Array:
 					i, RunState.relic_display_name(rid)]})
 			out.append({"id": "rws%d" % i, "hint": "奖励 %d：放弃这件道具" % i})
 		elif kind == "deck_delete":
-			out.append({"id": "rw%d" % i, "hint": "奖励 %d：接受「从卡组删一张卡」" % i})
+			# R414：删卡**没有「接受」这一步** —— 点它就是摊开卡组，点一张当场删掉。
+			# 以前这里只给一个 `rw%d`（转手走 `claim_pending_reward` 的「空手领下」），
+			# 点完卡组一张没少、待办还挂着，AI 却以为领到了（一局白丢一次删卡机会）。
+			var rpd: Variant = _scene().get("_reward_panel")
+			var opened: bool = rpd != null and rpd.is_deck_delete_open(i)
+			if opened:
+				for di in RunState.deck_ids.size():
+					if not RunState.deck_deletable(di):
+						continue          # 带锁的卡（月亮 / 硬币 / 罐子）不列，点了也没用
+					var dc: CardData = repo.get_card(int(RunState.deck_ids[di]))
+					var dnm := dc.card_name if dc != null else "?"
+					var dcost := dc.cost if dc != null else 0
+					out.append({"id": "rd%d" % di,
+							"hint": "删掉卡组第 %d 张「%s」（%d费）" % [di, dnm, dcost]})
+			else:
+				out.append({"id": "rw%d" % i, "hint": "奖励 %d：打开卡组挑一张删" % i})
 			out.append({"id": "rws%d" % i, "hint": "奖励 %d：不要删卡" % i})
 	return out
+
+
+func _reward_delete_card(di: int) -> Dictionary:
+	## R414：在摊开的卡组页上删掉第 di 张 —— `RunState.claim_deck_delete_reward()`
+	## 一个口同时完成「删卡」与「这条奖励置为已领」，所以删完立刻生效、不用等界面结束。
+	var s: Variant = _scene()
+	var rp: Variant = s.get("_reward_panel")
+	if rp == null or not rp.is_open():
+		return {"ok": false, "msg": "奖励窗没开着"}
+	if di < 0 or di >= RunState.deck_ids.size():
+		return {"ok": false, "msg": "卡组没有第 %d 张" % di}
+	if not RunState.deck_deletable(di):
+		return {"ok": false, "msg": "那一张带锁（月亮 / 硬币 / 罐子），删不掉"}
+	var dc: CardData = CardRepo.load_json().get_card(int(RunState.deck_ids[di]))
+	var nm := dc.card_name if dc != null else "?"
+	for i in RunState.pending_rewards.size():
+		var e: Dictionary = RunState.pending_rewards[i]
+		if str(e.get("kind", "")) != "deck_delete":
+			continue
+		if str(e.get("state", RunState.REWARD_PENDING)) != RunState.REWARD_PENDING:
+			continue
+		var before := RunState.deck_ids.size()
+		if RunState.claim_deck_delete_reward(i, di):
+			return {"ok": true, "msg": "删掉「%s」，卡组 %d → %d 张" % [
+					nm, before, RunState.deck_ids.size()]}
+		return {"ok": false, "msg": "删卡没成功（这条奖励可能已经被处理过）"}
+	return {"ok": false, "msg": "现在没有待领的删卡奖励"}
 
 
 func _reward_click(target: String) -> Dictionary:
@@ -1727,6 +1889,9 @@ func _reward_click(target: String) -> Dictionary:
 				rp.close()      # on_closed 会自己走「自动离场」
 			return {"ok": true, "msg": "关掉奖励窗"}
 		return {"ok": true, "msg": "没有奖励窗"}
+	# R414：`rd<卡组下标>` —— 在摊开的卡组页上点一张，当场删掉。
+	if target.begins_with("rd") and target.substr(2).is_valid_int():
+		return _reward_delete_card(int(target.substr(2)))
 	if target.begins_with("rws"):
 		var si := int(target.substr(3))
 		if RunState.skip_pending_reward(si):
@@ -1748,6 +1913,14 @@ func _reward_click(target: String) -> Dictionary:
 		return {"ok": false, "msg": "选卡失败（可能已处理过）"}
 	if body.is_valid_int():
 		var i2 := int(body)
+		# R414：删卡奖励点下去 = **摊开卡组**，不是「领下」。
+		if i2 >= 0 and i2 < RunState.pending_rewards.size() \
+				and str((RunState.pending_rewards[i2] as Dictionary).get("kind", "")) == "deck_delete":
+			var rp2: Variant = s.get("_reward_panel")
+			if rp2 == null or not rp2.is_open():
+				return {"ok": false, "msg": "奖励窗没开着，先用「打开待领奖励」把它弹出来"}
+			rp2._open_entry(i2)
+			return {"ok": true, "msg": "已摊开卡组，挑一张删（目标 rd<下标>）"}
 		if RunState.claim_pending_reward(i2):
 			return {"ok": true, "msg": "领取奖励 %d" % i2}
 		return {"ok": false, "msg": "奖励 %d 领取失败（可能已处理过）"}

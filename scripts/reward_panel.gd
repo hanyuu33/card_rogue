@@ -451,6 +451,13 @@ func _pick_card(i: int, card_id: int) -> void:
 	_root.queue_redraw()
 
 
+func is_deck_delete_open(i: int) -> bool:
+	## R414：第 i 条删卡奖励**此刻是不是已经摊开在卡组视图上** ——
+	## AI 桥 / 自动化判断「该列 `rw`（打开卡组）还是列 `rd`（点哪张删）」的唯一口。
+	## 外面不许去猜 `_view` 的数值，那等于把界面的枚举抄一遍。
+	return is_open() and _view == VIEW_DECK and _sel == i
+
+
 func _open_entry(i: int) -> void:
 	if i < 0 or i >= RunState.pending_rewards.size():
 		return
@@ -461,6 +468,11 @@ func _open_entry(i: int) -> void:
 	# 用户报「月亮的效果生效后没有立即进入选卡过程，而是在奖励界面结束后才选卡」）。
 	if k == "deck_delete":
 		if _settled(e):
+			return
+		# R414：卡组里**一张能删的都没有**（极端情况：全是带锁的卡）→ 别把人关进一个
+		# 点什么都不动的卡组页。直接按「放弃」处理，这条就干净地了结了。
+		if not RunState.has_deletable_deck_card():
+			_skip_entry(i)
 			return
 		_view = VIEW_DECK
 		_scroll = 0.0
