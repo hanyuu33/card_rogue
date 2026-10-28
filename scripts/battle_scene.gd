@@ -615,6 +615,7 @@ var _demo_story_notice := ""                 # R389 出图：--storyunlock 时�
 var _over_panel: PanelContainer
 var _over_title: Label
 var _over_hint: Label            # 结算面板副标题（难度档位信息等）
+var _over_gold: Label            # R423：结算面板的金币结算行（战斗 / 硬币 / 赏金猎人 分项）
 var _over_btn_restart: Button
 var _over_btn_level: Button
 var _over_btn_title: Button
@@ -7065,6 +7066,13 @@ func _build_over_panel() -> void:
 	hint.add_theme_color_override("font_color", UiTheme.INK_600)
 	box.add_child(hint)
 	_over_hint = hint
+	# R423：金币结算行（分项说清「这几十从哪来」，见 `_set_over_gold`）。
+	_over_gold = Label.new()
+	_over_gold.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_over_gold.add_theme_font_size_override("font_size", UI_FS_LABEL)
+	_over_gold.add_theme_color_override("font_color", UiTheme.ACCENT_GOLD)
+	_over_gold.visible = false
+	box.add_child(_over_gold)
 	_over_btn_restart = Button.new()
 	_over_btn_restart.text = "再来一局"
 	_over_btn_restart.custom_minimum_size = Vector2(220, 40)
@@ -7192,6 +7200,10 @@ func _show_over(win: bool) -> void:
 	_run_next_layer = 0
 	_over_hint.text = ""
 	_over_hint.add_theme_color_override("font_color", UiTheme.INK_600)
+	# R423：金币行先整行收掉 —— 败北 / 单关演示不发金币，别留着上一场的数字。
+	if _over_gold != null:
+		_over_gold.visible = false
+		_over_gold.text = ""
 	# 叠加态的鸭（6013）：本场消耗掉的复活概率写回 run（跨战斗永久保留）
 	RunState.duck_revive_chance = engine.duck_revive_chance
 	# 自愈（9065）：战斗结束后回复生命（写回 run 血量之前结算，才不会白回）
@@ -7223,14 +7235,22 @@ func _show_over(win: bool) -> void:
 				RunState.note_boss_kill(RunState.current_layer,
 						str(lvl.get("key", "")), str(lvl.get("name", "?")))
 			# R181：战斗胜利掉金币（按关卡分级：普通简单 20 / 普通困难 30 / 精英 50/65 / Boss 100）
+			# R423（用户口径「赏金猎人 / 硬币 加的金币不明显」）：三处来源逐笔记账，
+			# 结算面板要能说清「这些钱从哪来」，而不是只有一个闷声变大的数字。
+			var gold_parts: Array[String] = []
+			var gold_total := 0
 			var gold_gain := RunState.gold_for_tier(tier)
 			if gold_gain > 0:
 				RunState.gain_gold(gold_gain)
+				gold_total += gold_gain
+				gold_parts.append("战斗 %d" % gold_gain)
 			# R351：**效果卡**的战斗结束收益（月亮 9180 / 硬币 9181）。
 			# 只管入队 / 加钱 —— 队列后面交给结算面板的奖励悬浮窗，别在这里弹界面。
 			var fx := engine.battle_end_rewards()
 			if int(fx.get("coin", 0)) > 0:
 				RunState.gain_gold(int(fx["coin"]))
+				gold_total += int(fx["coin"])
+				gold_parts.append("硬币 %d" % int(fx["coin"]))
 			if bool(fx.get("moon", false)):
 				RunState.queue_deck_delete_reward(1)
 			# R393：卡组里的「赏金猎人」战斗结束给金币（同名多张不叠加，取 20）。
@@ -7238,6 +7258,9 @@ func _show_over(win: bool) -> void:
 			var deck_gold := RunState.battle_end_card_gold(repo)
 			if deck_gold > 0:
 				RunState.gain_gold(deck_gold)
+				gold_total += deck_gold
+				gold_parts.append("赏金猎人 %d" % deck_gold)
+			_set_over_gold(gold_total, gold_parts)
 			# R151 P1-18：Boss 击破与胜利 → 全屏黑白闪（≤40ms，绝不滥用 —— 只有这一处）
 			if win and _run_boss_win and not _shot_pending:
 				_screen_flash = {"start": _now(), "dur": 40}
@@ -14269,6 +14292,22 @@ func _draw_game_over() -> void:
 	draw_rect(Rect2(GRID_X + 12, cy - 58, GRID_W - 24, 116), col, false, 3.0)
 	_draw_string_center(_font_bold, UI_FS_HEADING, "胜  利" if win else "失  败", Vector2(cx, cy - 20), col)
 	_draw_string_center(_font, UI_FS_MICRO, engine.result_reason, Vector2(cx, cy + 28), UiTheme.INK_600)
+
+
+func _set_over_gold(total: int, parts: Array[String]) -> void:
+	## R423：结算面板的金币结算行。
+	## 形如「金币 ＋80（战斗 20 · 硬币 40 · 赏金猎人 20）　现有 245」——
+	## 玩家一眼能看出**赏金猎人 / 硬币**这几张卡到底给了多少，而不是只看到总数变大。
+	## 分项只列**实际发生过**的来源；`total <= 0` 整行不显示（败北 / 单关演示不发金币）。
+	if _over_gold == null:
+		return
+	if total <= 0:
+		_over_gold.text = ""
+		_over_gold.visible = false
+		return
+	_over_gold.text = "金币 ＋%d（%s）　现有 %d" % [total, " · ".join(parts),
+			RunState.gold]
+	_over_gold.visible = true
 
 
 func _draw_banner() -> void:

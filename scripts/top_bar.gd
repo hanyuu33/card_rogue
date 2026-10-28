@@ -107,7 +107,11 @@ func _process(_delta: float) -> void:
 		_last_scene_path = path
 		visible = need
 		if need:
-			_update(true)      # 刚露头只是同步，不播特效（否则每次切场景都闪一下）
+			# R423：只有**第一次**露头才静默同步。原来一律 silent —— 而战斗内本条是隐藏的
+			# （R391 防它压住战斗顶栏按钮），金币偏偏是战斗结束那一刻发的（战斗掉落 /
+			# 硬币 / 赏金猎人），等回到地图又被静默，`+N` 飘字永远放不出来
+			# （用户口径「赏金猎人或者硬币触发后 +金币 不明显」）。
+			_update(_last_gold == -999)
 	if need and (_last_hp != RunState.hp or _last_max != RunState.max_hp \
 			or _last_gold != RunState.gold):
 		_update(false)
