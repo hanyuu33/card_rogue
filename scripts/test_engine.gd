@@ -306,17 +306,17 @@ func _init() -> void:
 	ms_empty.use_spell(0)
 	check(ms_empty.state.hp_opponent == 6,
 			"流星雨：场上没有敌人 → 每颗直击敌方 HP（3×8 = 24）")
-	# 目标带「法术免疫」→ 那一颗被拦下（不掉血，也不会改打 HP）
+	# 目标带「技能免疫」→ 那一颗被拦下（不掉血，也不会改打 HP）
 	var ms_im := _new_engine([], 30, 30)
 	var ms_im_p := ms_im.state.place(CardData.from_dict(repo.get_card(1071).to_dict()),
-			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)   # 熔岩巨人（法术免疫）
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)   # 熔岩巨人（技能免疫）
 	var ms_im_hp := ms_im_p.health
 	ms_im.state.hand.clear()
 	ms_im.state.hand.append(CardData.from_dict(ms_card.to_dict()))
 	ms_im.state.energy = 2
 	ms_im.use_spell(0)
 	check(ms_im_p.health == ms_im_hp and ms_im.state.hp_opponent == 30,
-			"流星雨：命中「法术免疫」的单位 → 这一颗被拦下（不掉血、也不改打 HP）")
+			"流星雨：命中「技能免疫」的单位 → 这一颗被拦下（不掉血、也不改打 HP）")
 
 	# ---- 火焰箭（9003）调费：3 费 → 2 费（2026-10-01）----
 	var nc_fa := repo.get_card(9003)
@@ -411,7 +411,7 @@ func _init() -> void:
 	check(fw_q.health == fw_q_hp,
 			"火墙术：熄灭后再穿过不掉血（%d→%d）" % [fw_q_hp, fw_q.health])
 
-	# 法术免疫：火墙点不着它
+	# 技能免疫：火墙点不着它
 	var eng_fw3 := _new_engine([], 30, 30, -1, false)
 	eng_fw3.start_game(0)
 	eng_fw3.state.place(CardData.from_dict(repo.get_card(1071).to_dict()),
@@ -422,7 +422,7 @@ func _init() -> void:
 	eng_fw3.state.energy = 5
 	var fw3_res := eng_fw3.use_spell(0, Vector2i(1, 0))
 	check(fw_im.health == fw_im_hp and fw3_res.contains("免疫"),
-			"火墙术：法术免疫的单位点不着（%s）" % fw3_res)
+			"火墙术：技能免疫的单位点不着（%s）" % fw3_res)
 
 	# R247：不分敌我 —— 施放即烧到该行**所有单位**（含施放方自己人）
 	var eng_fw4 := _new_engine([], 30, 30, -1, false)
@@ -1487,7 +1487,7 @@ func _init() -> void:
 	var lg_r2 := lg_e2.use_spell(0, Vector2i(1, 0))
 	check(lg_e2.state.unit_at(Vector2i(1, 0)) == null and lg_r2.contains("1 次"),
 			"龙息：目标中途死亡 → 后续次数落空（只结算 1 次，%s）" % lg_r2)
-	# 法术免疫单位完全免疫（熔岩巨人 1071）
+	# 技能免疫单位完全免疫（熔岩巨人 1071）
 	var lg_e3 := _new_engine([], 20, 20, -1, false)
 	lg_e3.start_game(1)
 	lg_e3.state.place(repo.get_card(1071), Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
@@ -1495,7 +1495,7 @@ func _init() -> void:
 	lg_e3.state.energy = 9
 	var lg_r3 := lg_e3.use_spell(0, Vector2i(1, 0))
 	check(lg_e3.state.unit_at(Vector2i(1, 0)).health == 60 and lg_r3.contains("免疫"),
-			"龙息：法术免疫单位完全免疫（%s）" % lg_r3)
+			"龙息：技能免疫单位完全免疫（%s）" % lg_r3)
 	# 只打敌方：指定己方单位 / 空目标都被拒绝
 	var lg_e4 := _new_engine([], 20, 20, -1, false)
 	lg_e4.start_game(1)
@@ -5735,7 +5735,7 @@ func _init() -> void:
 			and mb_effs.size() == 1 and int(mb_effs[0]) == 9049,
 			"机械巨鸭：第二层 Boss 关（1 只机械巨鸭 + 敌方效果卡齿轮升腾）")
 	# ============================================================
-	# 旧版怪物（1011~1071）复用进第二层：数值 + 嘲讽 / 战吼 / 亡语 / 法术免疫
+	# 旧版怪物（1011~1071）复用进第二层：数值 + 嘲讽 / 战吼 / 亡语 / 技能免疫
 	# ============================================================
 	var om_repo := CardRepo.load_json()
 	var om_wall := om_repo.get_card(1011)      # 铁壁卫兵 3/40 嘲讽（R123：开局 -1 直接写进力量）
@@ -5745,10 +5745,15 @@ func _init() -> void:
 	check(om_ash != null and om_ash.power == 5 and om_ash.health == 45,
 			"灰烬龙 1013 → 5/45（R123 起始力量写在卡面，R175 下调）")
 	check(om_wall != null and om_wall.traits.has("嘲讽"), "铁壁卫兵带「嘲讽」trait")
-	var om_giant := om_repo.get_card(1071)     # 熔岩巨人 8/60 法术免疫（R175 由 9/70 下调）
+	var om_giant := om_repo.get_card(1071)     # 熔岩巨人 8/60 技能免疫（R175 由 9/70 下调）
 	check(om_giant != null and om_giant.power == 8 and om_giant.health == 60,
 			"熔岩巨人 1071 → 8/60（R123 起始力量写在卡面，R175 下调）")
-	check(om_giant != null and om_giant.traits.has("法术免疫"), "熔岩巨人带「法术免疫」trait")
+	check(om_giant != null and om_giant.traits.has("技能免疫"), "熔岩巨人带「技能免疫」trait")
+	# R425（用户口径）：卡面写的是「不受技能伤害」，**不是**「法术指定不了它」——
+	# 两个说法在 AOE / 随机目标技能上是相反的结论，所以把措辞钉住。
+	check(om_giant != null and om_giant.effect_text.contains("不受技能伤害")
+			and not om_giant.effect_text.contains("法术"),
+			"R425 熔岩巨人卡面口径 = 不受技能伤害（不再出现「法术」）")
 	var om_cost_ok := true
 	for om_id in [1011, 1013, 1014, 1031, 1050, 1051, 1053, 1054, 1055, 1061, 1071]:
 		var om_cd := om_repo.get_card(om_id)
@@ -5858,17 +5863,17 @@ func _init() -> void:
 	check(om_me_a != null and om_me_a.health == om_me_hp - 8,
 			"爆裂机甲亡语：对全场单位造成 8 点伤害")
 
-	# ---- 法术免疫 ----
+	# ---- 技能免疫 ----
 	var om_im := _new_engine([], 20, 30, -1, false)
 	om_im.state.place(om_giant, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 	om_im.state.place(om_repo.get_card(9001), Vector2i(3, 1), GameEngine.SIDE_SELF)
 	var om_im_hp := om_im.state.unit_at(Vector2i(2, 1)).health
 	om_im._op_deal_damage(GameEngine.SIDE_SELF, 15, Vector2i(2, 1))
 	check(om_im.state.unit_at(Vector2i(2, 1)).health == om_im_hp,
-			"熔岩巨人免疫法术伤害（15 点法术打不动）")
+			"熔岩巨人免疫技能伤害（15 点法术打不动）")
 	om_im.attack(Vector2i(3, 1), Vector2i(2, 1), GameEngine.SIDE_SELF)
 	check(om_im.state.unit_at(Vector2i(2, 1)).health < om_im_hp,
-			"熔岩巨人仍会被普通攻击打到（只免疫法术）")
+			"熔岩巨人仍会被普通攻击打到（只免疫技能）")
 
 	# ---- 4 个新关卡都属于第二层 ----
 	for om_nm in ["寒冰防线", "亡灵军团", "龙族巢穴", "机甲巨兵"]:
@@ -8883,7 +8888,7 @@ func _init() -> void:
 	r48_cf.state.energy = 1
 	check(r48_cf.can_pay_card(r48_cf_card), "回响：1 点费用即可打")
 
-	# 回响：场上没有敌人不直击对方 HP；免疫法术的敌人不受伤也不被削弱
+	# 回响：场上没有敌人不直击对方 HP；免疫技能的敌人不受伤也不被削弱
 	var r48_e2 := _new_engine([], 30, 30)
 	r48_e2.state.hand.append(CardData.from_dict(r48_echo_c.to_dict()))
 	r48_e2.use_spell(0, null)
@@ -8897,7 +8902,7 @@ func _init() -> void:
 	r48_e3.state.hand.append(CardData.from_dict(r48_echo_c.to_dict()))
 	r48_e3.use_spell(0, null)
 	check(r48_im.health == 20 and r48_im.effective_power() == 5,
-			"回响：免疫法术的敌人既不受伤也不被削弱（%d / %d）"
+			"回响：免疫技能的敌人既不受伤也不被削弱（%d / %d）"
 			% [r48_im.health, r48_im.effective_power()])
 
 	# 闪躲：直到下个回合开始，自己受到的伤害由随机盟友代受
@@ -9016,7 +9021,7 @@ func _init() -> void:
 	check(r49_foe3.health == 49,
 			"收尾：手卡 2 张时打出（手里还剩一张）→ 仍是 6 伤（55 → %d）" % r49_foe3.health)
 
-	# 免疫法术 / 场上没有敌方单位
+	# 免疫技能 / 场上没有敌方单位
 	var r49_e4 := _new_engine([], 30, 30)
 	var r49_im := r49_e4.state.place(_card(9026, "免疫怪", "盟友", 5, 5, 20, 1, 1),
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
@@ -9024,7 +9029,7 @@ func _init() -> void:
 	r49_e4.state.hand.append(CardData.from_dict(r49_c.to_dict()))
 	r49_e4.use_spell(0, Vector2i(2, 1))
 	check(r49_im.health == 20 and r49_e4.state.discard.size() == 1,
-			"收尾：免疫法术的目标不受伤（%d），卡照常消耗" % r49_im.health)
+			"收尾：免疫技能的目标不受伤（%d），卡照常消耗" % r49_im.health)
 	var r49_hp := _new_engine([], 30, 30)
 	r49_hp.state.hand.append(CardData.from_dict(r49_c.to_dict()))
 	r49_hp.use_spell(0, Vector2i(-1, -1))
@@ -20823,7 +20828,7 @@ func _init() -> void:
 	check(r263_g_main.health == 34 and r263_g_a.health == 36,
 			"R263 弹跳飞刀：荧光草 +1 同时作用于主刀与弹跳（%d / %d）"
 			% [r263_g_main.health, r263_g_a.health])
-	# ⑤ 弹跳目标免疫法术 → 这一跳被拦下，主刀不受影响
+	# ⑤ 弹跳目标免疫技能 → 这一跳被拦下，主刀不受影响
 	var r263_imm_card := _card(9001, "免疫者", "盟友", 1, 5, 40, 1, 2)
 	r263_imm_card.traits.append(GameEngine.SPELL_IMMUNE_TRAIT)
 	var r263_imm := _new_engine([], 30, 30)
@@ -20839,9 +20844,9 @@ func _init() -> void:
 	var r263_imm_msg := r263_imm.use_spell(0, Vector2i(2, 1))
 	check(r263_imm_main.health == 35 and r263_imm_oth.health == 40
 			and r263_imm_msg.contains("拦下"),
-			"R263 弹跳飞刀：候补免疫法术 → 这一跳拦下、主刀照常 5（%d / %d）"
+			"R263 弹跳飞刀：候补免疫技能 → 这一跳拦下、主刀照常 5（%d / %d）"
 			% [r263_imm_main.health, r263_imm_oth.health])
-	# ⑥ 主目标免疫法术 → 主刀落空，但弹跳**照样**挑其他敌人
+	# ⑥ 主目标免疫技能 → 主刀落空，但弹跳**照样**挑其他敌人
 	var r263_imm2_card := _card(9001, "免疫者", "盟友", 1, 5, 40, 1, 2)
 	r263_imm2_card.traits.append(GameEngine.SPELL_IMMUNE_TRAIT)
 	var r263_imm2 := _new_engine([], 30, 30)
