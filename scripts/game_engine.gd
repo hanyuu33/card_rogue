@@ -381,19 +381,19 @@ const AI_ROLE_GENERIC:= "generic"        # 其它
 const AI_QUEUE_USE_OPTIMIZED:= true   # R160：false 切回原版行动顺序
 
 const TAUNT_TRAIT:= "嘲讽"
-## R426（用户口径两次收口：先「不受技能伤害」→ 再提减半 → 最终定为**最多 3 点**）：
+## R427（用户口径两次收口：先「不受技能伤害」→ 再提减半 → 最终定为**最多 3 点**）：
 ## 「技能免疫」这一档**整体取消** —— trait 名改「技能抗性」，
-## 效果 = **受到的技能伤害最多 3 点**（封顶，不减半；用户 R426 二次口径）。
+## 效果 = **受到的技能伤害最多 3 点**（封顶，不减半；用户 R427 二次口径）。
 ## ⚠️ 三条硬约束（改这条机制前先读完）：
 ##   ① 判据只有 `_unit_damage_taken()` 里那一条（`kind != "attack"` = 非攻击即技能，
 ##      与量产型赫利俄斯 / 启示者阶段 2 同一条二分）—— **不要**再在具体技能里写早退，
 ##      那样会出现「同一张卡被流星雨减半、被龙息整段吞掉」的两套口径；
-##   ② 只减**伤害**：技能附带的降攻 / 冰封 / 点燃这类非伤害效果照常生效（R426 起）。
+##   ② 只减**伤害**：技能附带的降攻 / 冰封 / 点燃这类非伤害效果照常生效（R427 起）。
 ##      此前 16 处 `if traits.has(...) : return` 的早退会把整段效果一起吞掉；
 ##   ③ 预览镜像 `preview_hit_damage()` 必须同步一条，否则格子上那个数字与实际扣血对不上
 ##      （R384 的「预览 == 实际」断言会红）。
 const SPELL_RESIST_TRAIT:= "技能抗性"
-## R426：技能抗性的封顶值。**单次**技能伤害最多掉这么多（多段技能=每一段各算一次，
+## R427：技能抗性的封顶值。**单次**技能伤害最多掉这么多（多段技能=每一段各算一次，
 ## 所以龙息 5 口仍能打掉 15）—— 这是它与「减伤 / 免疫」的关键区别，别改成百分比。
 const SPELL_RESIST_CAP:= 3
 ## R277：「位移免疫」—— 击退 / 推移 / 换位置这类**改变格位**的效果对它一律无效。
@@ -1411,7 +1411,7 @@ const INSTINCT_ID:= 9176
 const INSTINCT_COUNT:= 3
 const INSTINCT_MAX_COST:= 1
 # ── R393：击杀成长（暗影刺客 / 森林精魄新卡）──
-# 猎杀 9205：3 费史诗技能 · 次元；基础伤害写在卡面 `value`（R426：22），每击杀 +4 本局永久。
+# 猎杀 9205：3 费史诗技能 · 次元；基础伤害写在卡面 `value`（R427：22），每击杀 +4 本局永久。
 # 赏金猎人 9204 / 秃鹰 9206 的「每场首次击杀」数值走卡面字段
 # `first_kill_power / first_kill_health`，引擎按字段判，不为卡名写死分支。
 const SLAY_ID:= 9205     # ⚠️ 别并进上面的 HUNT_ID（那是 9107 暗影狩猎），两个 id 语义不同
@@ -3988,7 +3988,7 @@ func _dragon_breath_spell(side: String, target, card: CardData) -> String:
 	var p:= _target_placement(side, target)
 	if p == null or p.owner == side:
 		return "（需要指定一个敌方单位）"
-	# R426：带「技能抗性」的目标照样被喷，只是每一口封顶到 3 点（走 `_unit_damage_taken`）。
+	# R427：带「技能抗性」的目标照样被喷，只是每一口封顶到 3 点（走 `_unit_damage_taken`）。
 	var hit:= _spell_dmg(side, DRAGON_BREATH_DMG, card)
 	var tname:= p.card.card_name
 	var total:= 0
@@ -4010,7 +4010,7 @@ func _meteor_shower(side: String, card: CardData) -> String:
 	## 流星雨（9083）：对随机敌人造成 METEOR_SHOWER_DMG 点伤害，重复 X 次
 	## （X = 施放时消耗的全部费用，见 use_spell）。每次**独立**随机选目标。
 	## 场上没有敌方单位时改为直击敌方 HP（与疾风之力同处理）；
-	## 带「技能抗性」的单位照样中点，只是那一颗的伤害封顶到 3 点（R426 起不再整颗拦下）。
+	## 带「技能抗性」的单位照样中点，只是那一颗的伤害封顶到 3 点（R427 起不再整颗拦下）。
 	var times:= maxi(0, _x_spell_value)
 	if times <= 0:
 		# R124：0 费用施放是**合法**的（X 记 0），不是出错 —— 文案据实描述即可。
@@ -4107,7 +4107,7 @@ func _fire_wall_pass(path: Array[Vector2i]) -> void :
 	var p: Placement = state.unit_at(path[path.size() - 1])
 	if p == null:
 		return
-	# R426：带「技能抗性」的单位穿过火墙照样挨灼烧（封顶 3 由 `_unit_damage_taken` 处理）。
+	# R427：带「技能抗性」的单位穿过火墙照样挨灼烧（封顶 3 由 `_unit_damage_taken` 处理）。
 	for rec in _fire_walls:
 		var row: int = int(rec["row"])
 		var crossed:= false
@@ -7612,7 +7612,7 @@ const SPELL_BASE_DMG := {
 	9189: 7,     # 独行（7 + 卡内累积；左栏刻意不报数，见 spell_now）
 	9169: 10,    # 烈火之剑
 	9172: 9,     # 激光扫射
-	9205: 22,    # 猎杀（R393，暗影刺客史诗技能；R426 25 → 22；本局永久成长会抬高 value → 预览按 value 取）
+	9205: 22,    # 猎杀（R393，暗影刺客史诗技能；R427 25 → 22；本局永久成长会抬高 value → 预览按 value 取）
 }
 
 # 卡面**给不出确数**的伤害技能（数字随局势变）→ 即使一点加成都沒有也要报当前值。
@@ -8052,7 +8052,7 @@ func _whirl_blade(side: String, target, card: CardData) -> String:
 func _echo_spell(side: String, card: CardData) -> String:
 	## 回响（9102）：场上所有敌方单位各受 ECHO_DMG 点伤害，并让它们本回合力量 -ECHO_DEBUFF。
 	## 倍率与其它技能一致 —— 走 _spell_dmg（魔法塔 / 魔力核心 / 荧光草 都会加成）；
-	## 带「技能抗性」的单位照样中点（伤害封顶 3 点）、也照样被降力量（R426 起）。
+	## 带「技能抗性」的单位照样中点（伤害封顶 3 点）、也照样被降力量（R427 起）。
 	## 场上没有敌方单位 → 空放（不直击对方 HP）。
 	var foe:= SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
 	var dmg:= _spell_dmg(side, ECHO_DMG, card)
@@ -10983,12 +10983,12 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 			and p.boss_phase >= 3 and _revelator_has_escort(p):
 		_log("启示者（阶段 3）：场上还有随从 → 免疫这次非攻击伤害")
 		return 0
-	# ③d 技能抗性（熔岩巨人 1071，R426 用户口径「受到技能伤害最多为 3 点」）：
+	# ③d 技能抗性（熔岩巨人 1071，R427 用户口径「受到技能伤害最多为 3 点」）：
 	#     放在减伤链**最后一格**（启示者阶段 3 之后、道具之前）—— 「最多 3 点」说的是
 	#     **最终落地值**：先让各种减伤算完再封顶；顺序反了会把 10 伤算成 1（减 2 再封顶 3 之前的中间值）。
 	#     ⚠️ 多段技能是**每一段各封一次**（龙息 5 口 = 最多 15），不是整张卡合计 3。
 	#     ⚠️ 只封伤害：降攻 / 冰封 / 点燃这类附带效果在各自函数里照常结算 ——
-	#        R426 之前那 16 处 `if traits.has(...) : return` 的早退就是「效果整段消失」的根源。
+	#        R427 之前那 16 处 `if traits.has(...) : return` 的早退就是「效果整段消失」的根源。
 	if p != null and p.card != null and dmg > SPELL_RESIST_CAP and kind != "attack" \
 			and p.card.traits.has(SPELL_RESIST_TRAIT):
 		var cb:= dmg
@@ -11089,7 +11089,7 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 	if dmg > 0 and not is_attack and p.boss_phase == 2:
 		dmg = maxi(1, dmg / 2)
 	if dmg > SPELL_RESIST_CAP and not is_attack and p.card.traits.has(SPELL_RESIST_TRAIT):
-		dmg = SPELL_RESIST_CAP    # R426：与 `_unit_damage_taken()` 的 ③d 同位置同理
+		dmg = SPELL_RESIST_CAP    # R427：与 `_unit_damage_taken()` 的 ③d 同位置同理
 	if dmg > 0 and p.owner == SIDE_SELF:
 		dmg = _relic_damage_taken(dmg)
 	# ⑤ 护甲：**只算吸收掉多少**，绝不真的扣（`_unit_damage_taken` 里是会扣的）
@@ -12352,7 +12352,7 @@ func _op_heal(side: String, amount: int, target) -> String:
 func _op_deal_damage(side: String, amount: int, target) -> String:
 	var p:= _target_placement(side, target)
 	if p != null:
-		# R426：抗性目标不落空，封顶由 `_unit_damage_taken` 统一处理。
+		# R427：抗性目标不落空，封顶由 `_unit_damage_taken` 统一处理。
 		# R138：技能卡伤害也要吃「侦察塔」光环易伤 —— 与 `_hit_unit` 同一条口径
 		# （原先只挂在 `_hit_unit`，单目标技能走这里 → 光环被绕过）。
 		# R316 极速与侦察塔光环走同一处：单目标技能卡也必须吃到敌人易伤。

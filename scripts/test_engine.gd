@@ -306,7 +306,7 @@ func _init() -> void:
 	ms_empty.use_spell(0)
 	check(ms_empty.state.hp_opponent == 6,
 			"流星雨：场上没有敌人 → 每颗直击敌方 HP（3×8 = 24）")
-	# 目标带「技能抗性」→ 那一颗照样落下，只是伤害减半（R426：不再整颗拦下）
+	# 目标带「技能抗性」→ 那一颗照样落下，只是封顶 3 点（R427：不再整颗拦下）
 	var ms_im := _new_engine([], 30, 30)
 	var ms_im_p := ms_im.state.place(CardData.from_dict(repo.get_card(1071).to_dict()),
 			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)   # 熔岩巨人（技能抗性）
@@ -411,7 +411,7 @@ func _init() -> void:
 	check(fw_q.health == fw_q_hp,
 			"火墙术：熄灭后再穿过不掉血（%d→%d）" % [fw_q_hp, fw_q.health])
 
-	# 技能抗性：火墙照样点得着，只是伤害减半（R426）
+	# 技能抗性：火墙照样点得着，只是封顶 3 点（R427）
 	var eng_fw3 := _new_engine([], 30, 30, -1, false)
 	eng_fw3.start_game(0)
 	eng_fw3.state.place(CardData.from_dict(repo.get_card(1071).to_dict()),
@@ -1487,7 +1487,7 @@ func _init() -> void:
 	var lg_r2 := lg_e2.use_spell(0, Vector2i(1, 0))
 	check(lg_e2.state.unit_at(Vector2i(1, 0)) == null and lg_r2.contains("1 次"),
 			"龙息：目标中途死亡 → 后续次数落空（只结算 1 次，%s）" % lg_r2)
-	# 技能抗性单位：每一口只有一半（R426：不再整段免疫）
+	# 技能抗性单位：每一口封顶 3 点（R427：不再整段免疫）
 	var lg_e3 := _new_engine([], 20, 20, -1, false)
 	lg_e3.start_game(1)
 	lg_e3.state.place(repo.get_card(1071), Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
@@ -5751,12 +5751,12 @@ func _init() -> void:
 			"熔岩巨人 1071 → 8/60（R123 起始力量写在卡面，R175 下调）")
 	check(om_giant != null and om_giant.traits.has(GameEngine.SPELL_RESIST_TRAIT),
 			"熔岩巨人带「技能抗性」trait")
-	# R426（用户口径）：从「不受技能伤害」改成「受到的技能伤害最多为 3 点」——
+	# R427（用户口径）：从「不受技能伤害」改成「受到的技能伤害最多为 3 点」——
 	# 措辞钉住：不再出现「免疫」「法术」，且把「照样掉血」写进正文（括号会被 naturalize 剥掉）。
 	check(om_giant != null and om_giant.effect_text.contains("受到的技能伤害最多为 3 点")
 			and not om_giant.effect_text.contains("免疫")
 			and not om_giant.effect_text.contains("法术"),
-			"R426 熔岩巨人卡面口径 = 受到的技能伤害最多为 3 点（不再出现「免疫」「法术」）")
+			"R427 熔岩巨人卡面口径 = 受到的技能伤害最多为 3 点（不再出现「免疫」「法术」）")
 	var om_cost_ok := true
 	for om_id in [1011, 1013, 1014, 1031, 1050, 1051, 1053, 1054, 1055, 1061, 1071]:
 		var om_cd := om_repo.get_card(om_id)
@@ -5866,7 +5866,7 @@ func _init() -> void:
 	check(om_me_a != null and om_me_a.health == om_me_hp - 8,
 			"爆裂机甲亡语：对全场单位造成 8 点伤害")
 
-	# ---- 技能抗性（R426：伤害减半，不再完全免疫）----
+	# ---- 技能抗性（R427：封顶 3 点，不再完全免疫）----
 	var om_im := _new_engine([], 20, 30, -1, false)
 	om_im.state.place(om_giant, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 	om_im.state.place(om_repo.get_card(9001), Vector2i(3, 1), GameEngine.SIDE_SELF)
@@ -20831,7 +20831,7 @@ func _init() -> void:
 	check(r263_g_main.health == 34 and r263_g_a.health == 36,
 			"R263 弹跳飞刀：荧光草 +1 同时作用于主刀与弹跳（%d / %d）"
 			% [r263_g_main.health, r263_g_a.health])
-	# ⑤ 弹跳目标带技能抗性 → 这一跳照样落，只是伤害减半（R426）
+	# ⑤ 弹跳目标带技能抗性 → 这一跳照样落，只是封顶 3 点（R427）
 	var r263_imm_card := _card(9001, "抗性者", "盟友", 1, 5, 40, 1, 2)
 	r263_imm_card.traits.append(GameEngine.SPELL_RESIST_TRAIT)
 	var r263_imm := _new_engine([], 30, 30)
@@ -29043,7 +29043,7 @@ func _init() -> void:
 			and r393_slay.rarity == 2 and r393_slay.value == 22
 			and r393_slay.per_kill_damage == 4 and r393_slay.affixes.has("次元")
 			and r393_slay.card_class == PlayerClass.ROGUE,
-			"R426 猎杀 9205：3 费史诗暗影刺客技能 22 伤 · 次元 · 每次击杀 +4 伤")
+			"R427 猎杀 9205：3 费史诗暗影刺客技能 22 伤 · 次元 · 每次击杀 +4 伤")
 	check(r393_vulture != null and r393_vulture.card_name == "秃鹰"
 			and r393_vulture.kind == "盟友" and r393_vulture.cost == 3
 			and r393_vulture.power == 8 and r393_vulture.health == 10
@@ -29123,9 +29123,9 @@ func _init() -> void:
 	var r393_hunt_card = r393_e4.state.hand[0]
 	r393_e4.use_spell(0, Vector2i(3, 1))
 	check(r393_e4.state.unit_at(Vector2i(3, 1)) == null and r393_hunt_card.value == 26,
-			"R426 猎杀：22 伤打死 5 血敌人 → 本卡伤害 22 → %d" % r393_hunt_card.value)
+			"R427 猎杀：22 伤打死 5 血敌人 → 本卡伤害 22 → %d" % r393_hunt_card.value)
 	check(int(RunState.card_growth_of(9205).get("damage", 0)) == 4,
-			"R426 猎杀：击杀记进账本（+%d 伤）" % int(RunState.card_growth_of(9205).get("damage", 0)))
+			"R427 猎杀：击杀记进账本（+%d 伤）" % int(RunState.card_growth_of(9205).get("damage", 0)))
 	var r393_e5 := _new_engine([], 20, 20)
 	r393_e5.state.hand = [CardData.from_dict(r393_slay.to_dict())]
 	r393_e5.state.energy = 9
@@ -29134,10 +29134,10 @@ func _init() -> void:
 	var r393_hunt2 = r393_e5.state.hand[0]
 	r393_e5.use_spell(0, Vector2i(3, 1))
 	check(r393_tank.health == 77 and r393_hunt2.value == 22,
-			"R426 猎杀：没打死人就不涨伤害（敌人 99 → %d，本卡仍 %d）"
+			"R427 猎杀：没打死人就不涨伤害（敌人 99 → %d，本卡仍 %d）"
 			% [r393_tank.health, r393_hunt2.value])
 	check(int(RunState.card_growth_of(9205).get("damage", 0)) == 4,
-			"R426 猎杀：未击杀不追加成长（账本仍 +%d）"
+			"R427 猎杀：未击杀不追加成长（账本仍 +%d）"
 			% int(RunState.card_growth_of(9205).get("damage", 0)))
 
 	# ⑤ 战后金币：按卡组拥有结算，同名多张**不叠加**（取 20）
