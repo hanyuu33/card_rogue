@@ -62,3 +62,11 @@ __pycache__/
 
 # 历史验证截图归档（.gdignore 已挡在 res:// 之外，这里再挡 git）
 art_src/_shots/
+
+# R413：AI 试玩桥的运行时产物（pid / 日志 / 存档备份），一律不入库
+/.ai_bridge.pid
+/.ai_bridge.log
+/.ai_test_backup/
+# 根目录一次性探针脚本
+/_r[0-9]*.py
+/_r[0-9]*.gd

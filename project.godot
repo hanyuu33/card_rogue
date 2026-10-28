@@ -21,6 +21,7 @@ window/stretch/aspect="expand"
 
 TopBar="*res://scripts/top_bar.gd"
 BackKey="*res://scripts/back_key.gd"
+AiBridge="*res://scripts/ai_bridge.gd"
 
 [rendering]
 
