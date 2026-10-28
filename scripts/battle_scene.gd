@@ -14120,6 +14120,13 @@ func _draw_info_panel() -> void:
 				card = pl.card
 	if card == null:
 		_info_scroll_max_v = 0.0
+		# R422（用户报告「鼠标移开还有残留」）：明细块是 `info_clip` 子节点画的，
+		# 父节点 early-return **不会**把它擦掉 —— 左栏底色 / 表头（父节点自绘）消失了，
+		# 子节点里那几块「数值 / 效果」框却一直留在屏上（半透明底，糊在背景图上）。
+		# 没有卡就显式隐藏；`_mention_hits` 也一起作废，否则旧卡的提及矩形还能悬停出说明。
+		if info_clip != null:
+			info_clip.visible = false
+		_mention_hits.clear()
 		return
 	# R417：换了一张卡 → 滚动量归零，从左上角重新看（否则上一张卡滚到底、这张还在底）
 	if card.id != _info_card_id:
@@ -14197,6 +14204,7 @@ func _draw_info_panel() -> void:
 	# 由它把越出视口的块 / 行**逐像素**裁掉（Godot 4 没有 CanvasItem 级的 draw 裁剪，
 	# `draw_set_clip` 根本不存在 —— R420 把父节点上那句不存在的调用删了）。
 	if info_clip != null:
+		info_clip.visible = true
 		info_clip.position = Vector2(INFO_X, blocks_top)
 		info_clip.size = Vector2(INFO_W, avail)
 		info_clip.render(blocks, left, inner_w, INFO_BODY_FS, _info_scroll, avail,
