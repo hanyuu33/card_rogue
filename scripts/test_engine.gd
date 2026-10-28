@@ -16615,10 +16615,13 @@ func _init() -> void:
 	var r149_steel: CardData = r149_repo.get_card(9134)
 	check(r149_oni != null and r149_hecate != null and r149_steel != null,
 			"R149 三张新卡都在卡库里（9132 俄倪厄 / 9133 量产型赫卡同克瑞斯 / 9134 钢铁要塞）")
-	check(r149_oni.kind == "盟友" and r149_oni.power == 10 and r149_oni.health == 50
+	var r149_mh: CardData = r149_repo.get_card(9137)
+	check(r149_mh != null and r149_mh.kind == "工事" and r149_mh.health == 30,
+			"R424 量产型赫利俄斯 9137 在卡库里（工事 6/30，减伤光环源）")
+	check(r149_oni.kind == "盟友" and r149_oni.power == 10 and r149_oni.health == 80
 			and r149_oni.attack_range == 1 and r149_oni.move_speed == 1
 			and r149_oni.actions == 2 and r149_oni.has_affix(GameEngine.AFFIX_SWIFT),
-			"R149 俄倪厄：盟友 10/50 程1 速1，自带双动（actions=2 +「疾行」字段）")
+			"R149 俄倪厄：盟友 10/80 程1 速1（R424 血 50→80），自带双动（actions=2 +「疾行」字段）")
 	check(r149_hecate.kind == "盟友" and r149_hecate.power == 3 and r149_hecate.health == 35
 			and r149_hecate.attack_range == 1 and r149_hecate.move_speed == 1
 			and r149_hecate.traits.has(GameEngine.FUSE_TRAIT),
@@ -16641,21 +16644,26 @@ func _init() -> void:
 	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).has(r149_lv),
 			"R149 钢铁要塞进第二层精英战斗池（地图会抽到）")
 	var r149_units: Array = r149_lv["enemy_units"]
-	check(r149_units.size() == 2
-			and int(r149_units[0][0]) == 9133 and r149_units[0][6] == Vector2i(0, 0)
-			and int(r149_units[1][0]) == 9132 and r149_units[1][6] == Vector2i(0, 2),
-			"R149 站位：赫卡同克瑞斯 (0,0) 后排左 / 俄倪厄 (0,2) 后排右")
+	# R424：俄倪厄顶到**前排中央**当肉盾，后排中央补一座量产型赫利俄斯（减伤光环源）。
+	check(r149_units.size() == 3
+			and int(r149_units[0][0]) == 9137 and r149_units[0][6] == Vector2i(0, 1)
+			and int(r149_units[1][0]) == 9133 and r149_units[1][6] == Vector2i(0, 0)
+			and int(r149_units[2][0]) == 9132 and r149_units[2][6] == Vector2i(2, 1),
+			"R424 站位：量产型赫利俄斯 (0,1) 后排中央 / 赫卡同克瑞斯 (0,0) 后排左 / 俄倪厄 (2,1) 前排中央")
 	# 元组只是**文档**：引擎读的是卡库那份 → 两者必须逐项一致，
-	# 否则会出现「界面上看到的和真打到的不是一回事」。
-	check(int(r149_units[0][2]) == r149_hecate.power
-			and int(r149_units[0][3]) == r149_hecate.health
-			and int(r149_units[0][4]) == r149_hecate.attack_range
-			and int(r149_units[0][5]) == r149_hecate.move_speed
-			and int(r149_units[1][2]) == r149_oni.power
-			and int(r149_units[1][3]) == r149_oni.health
-			and int(r149_units[1][4]) == r149_oni.attack_range
-			and int(r149_units[1][5]) == r149_oni.move_speed,
-			"R149 元组与卡面同源（力/生/程/速 逐项一致）")
+	# 否则会出现「界面上看到的和真打到的不是一回事」。（R424 起改成整表遍历，
+	# 新增单位不必再手抄一遍下标；第 4 项是**加成后**的程，比较时先减回基础值。）
+	var r149_tuple_ok := true
+	for r149_e: Array in r149_units:
+		var r149_c: CardData = r149_repo.get_card(int(r149_e[0]))
+		if r149_c == null:
+			r149_tuple_ok = false
+			continue
+		if int(r149_e[2]) != r149_c.power or int(r149_e[3]) != r149_c.health \
+				or int(r149_e[4]) - GameLevels.unit_range_bonus(r149_e) != r149_c.attack_range \
+				or int(r149_e[5]) != r149_c.move_speed:
+			r149_tuple_ok = false
+	check(r149_tuple_ok, "R149/R424 元组与卡面同源（力/生/程/速 逐项一致）")
 
 	# ① 上场挂表（`place()` 是唯一初始化口）
 	var r149_e := _new_engine([], 30, 30)

@@ -4622,7 +4622,7 @@
       "kind": "盟友",
       "cost": 5,
       "power": 10,
-      "health": 50,
+      "health": 80,
       "attack_range": 1,
       "move_speed": 1,
       "rarity": 4,
