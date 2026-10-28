@@ -98,7 +98,7 @@ func _run(b: Bgm) -> void:
 			"启示者不传 phase（默认 1 阶段）→ battle_revelator_p1（Soaring）")
 	check(Bgm.battle_slot(GameLevels.TIER_BOSS, "boss_revelator", 2) == "battle_revelator_p2"
 			and Bgm.battle_slot(GameLevels.TIER_BOSS, "boss_revelator", 3) == "battle_revelator_p3",
-			"启示者 2/3 阶段 → p2（Relentless）/ p3（Havoc）")
+			"启示者 2/3 阶段 → p2（Rapid4）/ p3（Havoc）")
 	check(Bgm.battle_slot(GameLevels.TIER_BOSS, "boss_revelator", 0) == "battle_revelator_p1"
 			and Bgm.battle_slot(GameLevels.TIER_BOSS, "boss_revelator", 9) == "battle_revelator_p3",
 			"phase 越界（0 / 9）夹到 1 / 3，不拼出不存在的槽位")

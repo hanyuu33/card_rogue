@@ -12,15 +12,15 @@
 > |---|---|---|
 > | 第三层地图 | `map3.ogg` | **Firmament3（Calm）** |
 > | 启示者 第 1 阶段 | `battle_revelator_p1.ogg` | **Soaring** |
-> | 启示者 第 2 阶段 | `battle_revelator_p2.ogg` | **Relentless** |
+> | 启示者 第 2 阶段 | `battle_revelator_p2.ogg` | **Rapid4**（R426 换；原 Relentless） |
 > | 启示者 第 3 阶段 | `battle_revelator_p3.ogg` | **Havoc** |
 >
 > - Boss 从「一个 `battle_boss_revelator`」改成**按阶段三槽位**：换卡面那一帧一起换曲，
 >   由 `Bgm.battle_slot(tier, key, phase)` 按引擎的 `Placement.boss_phase` 取。
 > - 四首都是 PeriTune 官方 **loop 版 `.ogg` 原文件**（未裁剪 / 未变调 / 未重编码）。
-> - ⚠️ **Relentless 是 2026-08 的新曲**，走 PeriTune 新规约：商用可以、署名任意，
->   但「同梱（打包进作品二次配布）**仅限非营利**」—— **本作一旦收费售卖，这首必须换掉**。
->   同期老曲 `Firmament3 Active` / `Rapid5` / `Augury` 都还是 CC BY 4.0，可直接替换。
+> - ✅ **R426（2026-10-28）已把 `battle_revelator_p2` 从 Relentless 换成 Rapid4**（2018 老曲，CC BY 4.0，商用与同梱均无限制）。Relentless 本身是 2026-08 新曲，走 PeriTune 新规约：商用可以、署名任意，
+>   但「同梱（打包进作品二次配布）**仅限非营利**」—— 所以收费售卖前必须换掉，现已完成替换。
+>   候选对照、三套搭配与还原步骤见同目录 `P2替换候选对照.md`；原曲留在 `loop/PeriTune_Relentless_loop.ogg`。
 
 ---
 

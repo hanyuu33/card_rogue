@@ -46,7 +46,7 @@
 | Boss 战斗 | `battle_boss.ogg` | Raid_FolkMetal | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-16 | https://peritune.com/blog/2019/08/26/raid_folkmetal/ |
 | 第三层地图 | `map3.ogg` | Firmament3（Calm） | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-24 | https://peritune.com/blog/2020/07/01/firmament3/ |
 | 启示者 第 1 阶段 | `battle_revelator_p1.ogg` | Soaring | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-24 | https://peritune.com/blog/2021/01/01/soaring/ |
-| 启示者 第 2 阶段 | `battle_revelator_p2.ogg` | Relentless | PeriTune | PeriTune | **独自规约（2026-03 起）** | 否 | 否 | 2026-10-24 | https://peritune.com/blog/2026/08/10/relentless/ |
+| 启示者 第 2 阶段 | `battle_revelator_p2.ogg` | Rapid4 | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-28 | https://peritune.com/blog/2018/11/27/rapid4/ |
 | 启示者 第 3 阶段 | `battle_revelator_p3.ogg` | Havoc | PeriTune | PeriTune | CC BY 4.0 | 是 | 否 | 2026-10-24 | https://peritune.com/blog/2018/08/01/havoc/ |
 
 > **R364（2026-10-24）新增四首的授权要点**
@@ -54,10 +54,12 @@
 > - `map3` / `battle_revelator_p1` / `battle_revelator_p3` 发布于 2020、2021、2018 年 ——
 >   仍适用 **CC BY 4.0**：商用、加密、打包都可以，**必须署名 PeriTune**
 >   （游戏内「音乐来源」页 + 商店页均需列出）。
-> - ⚠️ `battle_revelator_p2`（Relentless）发布于 **2026-08**，走 PeriTune 2026-03-01 起的**独自规约**：
->   商用与署名都宽松（署名任意），但**「数据同梱（二次配布）仅限非营利」**。
->   也就是说：**本作一旦收费售卖，这一首必须换掉**（要换的话，同期的老曲
->   `Firmament3 Active` / `Rapid5` / `Augury` 都还是 CC BY 4.0）。
+> - ✅ `battle_revelator_p2` 原用 **Relentless**（2026-08 新曲，走 PeriTune 2026-03-01 起的
+>   **独自规约**：商用与署名都宽松、署名任意，但**「数据同梱（二次配布）仅限非营利」**）。
+>   **R426（2026-10-28）已换成 `Rapid4`**（2018 年老曲，CC BY 4.0），商用与打包同梱均无障碍，
+>   「已修改」仍为 **否**（同为官方 loop 版 `.ogg` 原文件，未裁剪 / 未变调 / 未重编码）。
+>   原 Relentless 文件保留在 `_audition/r360/loop/PeriTune_Relentless_loop.ogg`，
+>   需要还原或另选时见 `_audition/r360/P2替换候选对照.md`。
 > - 四首全部为 PeriTune 官方 **loop 版 `.ogg` 原文件**（从官方 zip 里取出，未裁剪 / 未变调 / 未重编码），
 >   因此「已修改」一律为 **否**。
 

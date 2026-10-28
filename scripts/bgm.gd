@@ -22,7 +22,7 @@ extends Node
 ## | `battle_elite` | 精英战斗     | PerituneMaterial_EpicBattle |
 ## | `battle_boss`  | Boss 战斗    | PerituneMaterial_Raid_FolkMetal |
 ## | `battle_revelator_p1` | 启示者 第 1 阶段 | PerituneMaterial_Soaring |
-## | `battle_revelator_p2` | 启示者 第 2 阶段 | PeriTune_Relentless |
+## | `battle_revelator_p2` | 启示者 第 2 阶段 | PerituneMaterial_Rapid4 |
 ## | `battle_revelator_p3` | 启示者 第 3 阶段 | PerituneMaterial_Havoc |
 ##
 ## ⚠️ **为什么不用 autoload**（R176 踩过的坑，别改回去）：
@@ -49,8 +49,11 @@ const BGM_DIR := "res://assets/audio/bgm/"
 const BGM_VOLUME_DB := -12.0
 const FADE_SEC := 0.6
 const SILENT_DB := -60.0
-## R364：启示者三阶段各有一首（用户口径：一阶段 Soaring / 二阶段 Relentless /
+## R364：启示者三阶段各有一首（用户口径：一阶段 Soaring / 二阶段 Rapid4 /
 ## 三阶段 Havoc）。阶段号越界由 `battle_slot()` 夹在这个范围内。
+## R426：二阶段由 Relentless 换成 Rapid4 —— 前者是 PeriTune 2026-08 新曲，走 2026-03
+## 起的独自规约「数据同梱（二次配布）仅限非营利」，**收费售卖前必须换掉**。
+## 候选与替换步骤见 `assets/audio/_audition/r360/P2替换候选对照.md`。
 const REV_PHASES := 3
 ## R246：音量倍率（0.0~1.0 线性）。**100% 时目标音量仍是 BGM_VOLUME_DB** ——
 ## 换句话说「音量 100%」= 以前一直听到的那一档，不凭空变响。
@@ -67,7 +70,7 @@ const SLOT_TRACKS := {
 	"battle_elite": "PerituneMaterial_EpicBattle",
 	"battle_boss": "PerituneMaterial_Raid_FolkMetal",
 	"battle_revelator_p1": "PerituneMaterial_Soaring",
-	"battle_revelator_p2": "PeriTune_Relentless",
+	"battle_revelator_p2": "PerituneMaterial_Rapid4",
 	"battle_revelator_p3": "PerituneMaterial_Havoc",
 }
 
@@ -180,7 +183,7 @@ static func play_map(layer: int) -> void:
 ## 关卡分级 → 战斗槽位。**纯函数**（可单测）：精英 = TIER_ELITE_EASY/HARD，
 ## Boss = TIER_BOSS，其余（含未知 -1）= 一般战斗。
 ## R364：「启示者」按**阶段**换曲 —— key 为 `boss_revelator` 时取
-## `battle_revelator_p<phase>`（1 Soaring / 2 Relentless / 3 Havoc）；
+## `battle_revelator_p<phase>`（1 Soaring / 2 Rapid4 / 3 Havoc）；
 ## 其余 Boss 仍是 `battle_boss`（不传 key 时一律走旧槽位，缺参数不会静音）。
 static func battle_slot(tier: int, key := "", phase := 1) -> String:
 	if tier == GameLevels.TIER_BOSS:
