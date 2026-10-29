@@ -556,6 +556,15 @@ var _hp_pending: Dictionary = {} # 尚未在「命中演出」中体现的待扣
 								 #   单位卡面 / HP 横幅 把显示数字冻结在「实际值 + 未演出伤害之和」，
 								 #   等对应的 hit / hp_hit 定时特效触发时才移除这一笔，数字才往下掉。
 var _bursts: Array = []         # {pos, start, dur, col, big}                 打击爆点（扩散环+火花）
+## R430：流星雨（9083）逐颗坠落 —— 引擎一批同步发 N 条 `meteor`，节奏只能在演出侧排：
+## 按 `idx` 把落地时刻依次错开，每颗从屏幕上方飞 `METEOR_FLY_MS`，
+## **落地那一帧**才出爆点 / 飘字 / 掉血（`_apply_delayed` 的 `meteor_land`）。
+var _meteors: Array = []        # {start, land, from, to, sc, seed}           空中正在坠落的流星
+var _meteor_land_at := 0        # 本批上一颗的落地时刻（下一颗从它往后排）
+const METEOR_FLY_MS := 280      # 一颗的飞行时长（配合下面的起点：屏幕内能看清整段下坠）
+const METEOR_GAP_MIN := 110     # 颗间最小间隔（X 很大时压到这里为止）
+const METEOR_GAP_MAX := 260     # 颗间最大间隔（X = 2~3 时用这个）
+const METEOR_BATCH_MS := 1500   # 一整批的飞行预算：颗数越多间隔越紧，总量压在这附近
 # R288：通用效果演出队列 + 镜头跟随（唯一口）。一场演出 = 若干**镜头段**：
 # 发动者与受影者能同屏就一段演完；不能同屏就一段一个目标，**轮流**滚过去。
 var _cues: Array = []           # 待播 [{cells, rows, label, col, at}]
@@ -3540,6 +3549,26 @@ func _demo_tick() -> void:
 	if "--aiattack" in _demo_args and _demo_frame == 90:
 		_on_end_turn()          # 交给 AI：它会先推进、再攻击挡路的农民
 		_shot_t0 = _now()
+	if "--r430meteor" in _demo_args and _demo_frame == 200 and engine != null:
+		# R430 出图专用：流星雨（9083）**逐颗坠落**的验收镜头。
+		# 三个坑都在这儿避开：① 开局「我方回合」横幅正好压在敌人那一行（实测落点
+		# 像素 y≈233，横幅 205~260）→ 必须等它散掉，延到第 200 帧；
+		# ② 首帧渲染没完成时截图是白图 → `_shot_t0` 从这一帧起算，配合 --shotms 抓；
+		# ③ 默认 `_shot_frame = 150` 会先截一刀 → 出图要带 `--shotframe 9999`。
+		#   出图：`scenes/battle.tscn -- --screenshot --r430meteor --shotframe 9999 --shotms 200`
+		engine.state.hand.clear()
+		engine.state.hand.append(repo.get_card(GameEngine.METEOR_SHOWER_ID))
+		engine.state.energy = 5
+		engine.state.place(CardData.from_dict(repo.get_card(9001).to_dict()),
+				Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+		engine.state.place(CardData.from_dict(repo.get_card(1053).to_dict()),
+				Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
+		engine.use_spell(0)
+		status_text = "R430 演示：流星雨逐颗坠落 —— 每颗落地那一刻才出伤害"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--finisher" in _demo_args and _demo_frame == 80 and engine != null:
 		# 收尾演示的实际出牌（延到第 80 帧，避开开局「我方回合」横幅盖住飘字）。
 		engine.use_spell(0, Vector2i(2, 0))        # 手卡还剩一张 → 6 伤
@@ -8292,6 +8321,8 @@ func _draw() -> void:
 	_draw_grid_frame()
 	draw_set_transform(shake, 0.0, Vector2.ONE)   # 复位缩放，回到屏幕空间（只留震动）
 	_draw_grid_mask()
+	_draw_meteors()          # R430：流星画在遮罩**之后** —— 上方空间本来就窄，
+	                         # 放在棋盘变换里会被裁成「凭空冒爆点」
 	_draw_grid_caption()
 	_draw_speech_bubbles()   # R386：对话气泡 —— 压在卡牌之上、面板与手牌之下
 	_draw_floaters()
@@ -9872,6 +9903,7 @@ func _tick_anims() -> bool:
 	_dying = _dying.filter(func(x): return int(x.hide_at) > n)
 	_floaters = _floaters.filter(func(f): return n - int(f.start) < int(f.dur))
 	_bursts = _bursts.filter(func(b): return n - int(b.start) < int(b.dur))
+	_meteors = _meteors.filter(func(m): return n < int(m.land))   # R430：落地即交给爆点
 	_wake_rings = _wake_rings.filter(func(r): return n - int(r.start) < int(r.dur))
 	_impacts = _impacts.filter(func(f): return n - int(f.start) < int(f.dur))
 	_pow_fx = _pow_fx.filter(func(f): return n - int(f.start) < int(f.dur))
@@ -9891,6 +9923,7 @@ func _tick_anims() -> bool:
 		death_busy = _death_wait()
 	return any or death_busy or not _ghosts.is_empty() or not _floaters.is_empty() \
 			or not _bursts.is_empty() or not _dying.is_empty() \
+			or not _meteors.is_empty() \
 			or not _wake_rings.is_empty() \
 			or not _delayed.is_empty() or n < _shake_until \
 			or not _impacts.is_empty() or not _pow_fx.is_empty() \
@@ -11174,6 +11207,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var cell: Vector2i = data["cell"]
 			# 无论哪种死法，都让这张卡在原位多留一小会儿：
 			# 命中瞬间先闪红/掉血，稍后卡片才真正消失并播击破。
+			# R430：被流星砸死的单位 —— 等那一颗**落地**再演击破。
+			#（原来只认 `_attacks` 里的弹体，流星走自己的通道 →「星还在天上、卡先炸开」。）
+			var mw := _meteor_land_for(center)
+			if mw > 0:
+				delay_ms = maxi(delay_ms, mw - n)
 			var hide_at := n + delay_ms + DESTROY_HOLD_MS
 			_dying.append({"cell": cell, "card": data["card"],
 					"p": data.get("placement"), "hide_at": hide_at})
@@ -11360,16 +11398,58 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					str(data.get("name", "敌人")), int(data.get("amount", 0)),
 					int(data.get("power", 0))])
 		"meteor":
-			# 流星雨（9083）：每一颗的落点（引擎给 cell）—— 紫色爆点 + 伤害飘字
+			# R430：流星雨（9083）—— **逐颗落下**。引擎是同步把这 X 颗一次算完的，
+			# 所以节奏只能在这里排：按 idx 依次错开落地时刻，飞行段先画出来，
+			# 爆点 / 飘字 / 掉血一律等到**这颗落地那一帧**（见 `_apply_delayed` 的 meteor_land）。
 			var m_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			_fx_unqueue_hit(m_cell)   # R288b：本格已有专属落点爆点 → 撤掉通用那一次
-			var m_pos := _cell_center(m_cell) if m_cell.x >= 0 \
-					else Vector2(GRID_X + GRID_W / 2, GRID_Y - 36)
-			_bursts.append({"pos": m_pos, "sc": _grid_scroll, "start": n, "dur": 520,
-					"col": Color("9b59d0"), "big": false})
-			_floaters.append({"pos": m_pos + Vector2(0, -12), "sc": _grid_scroll,
-					"text": "-%d" % int(data.get("dmg", 0)),
-					"col": UiTheme.KIND_SKILL, "start": n, "dur": 1200})
+			var m_dmg := int(data.get("dmg", 0))
+			var m_idx := maxi(0, int(data.get("idx", 0)))
+			var m_total := maxi(1, int(data.get("total", 1)))
+			var m_to_hp := bool(data.get("to_hp", false))
+			var m_side := str(data.get("side", ""))
+			# 颗间间隔：X 越大排得越紧，一整批压在 METEOR_BATCH_MS 附近
+			var m_gap := METEOR_GAP_MAX
+			if m_total > 1:
+				m_gap = clampi(int(float(METEOR_BATCH_MS) / float(m_total - 1)),
+						METEOR_GAP_MIN, METEOR_GAP_MAX)
+			# 落地时刻：第一颗 = 现在 + 飞行时长；之后 = 上一颗落地 + 间隔
+			#（间隔短于飞行时长时空中会同时有 2~3 颗 —— X 大时正好读成「密集流星雨」）
+			var m_land := n + METEOR_FLY_MS
+			if m_idx > 0:
+				m_land = maxi(m_land, _meteor_land_at + m_gap)
+			_meteor_land_at = m_land
+			# 落点：直击 HP 时贴横幅那一行（引擎给的 cell 只是行中央的占位）
+			var m_to := Vector2(GRID_X + GRID_W / 2, GRID_Y - 36)
+			if m_to_hp:
+				m_to = Vector2(GRID_X + GRID_W / 2,
+						GRID_Y + 22.0 if m_side == GameEngine.SIDE_SELF
+						else GRID_Y + GRID_H - 20.0)
+			elif m_cell.x >= 0:
+				m_to = _cell_center(m_cell)
+			# 起点：画面正上方外（⭐ R430 实测两轮之后的口径）——
+			# 落点在最上排（y≈110），棋盘遮罩会把上方一切裁掉，所以流星**画在遮罩之上**
+			# （见 _draw 里的调用位置），起点也就直接放到屏幕外，整段落下来都看得见。
+			# 按颗序微移，避免一整批叠成同一条线。
+			# ⚠️ 起点别写太远：从 -300px 起算时，屏幕内那 140px 只占飞行的三成，
+			# 加上加速曲线 → 星几乎是在屏幕外走完、最后一瞬才露头（实测两轮都是这毛病）。
+			# 屏幕顶端上方一丁点（-30px）最稳：整段下坠都看得见，又不至于糊住顶栏太久。
+			var m_from := Vector2(maxf(m_to.x - 58.0 - float(m_idx % 3) * 12.0, GRID_X + 10.0),
+					-30.0 - float(m_idx % 2) * 16.0)
+			_meteors.append({"start": m_land - METEOR_FLY_MS, "land": m_land,
+					"from": m_from, "to": m_to, "sc": _grid_scroll, "seed": m_idx})
+			# 卡面 / 横幅数字冻结在这一颗落地之前（否则 X 颗一打出，血条一次掉完）
+			if m_dmg > 0:
+				if m_to_hp:
+					_freeze_hp("hp_opp" if m_side == GameEngine.SIDE_SELF else "hp_self", m_dmg)
+				else:
+					var m_pl: Variant = data.get("unit")
+					if m_pl != null and is_instance_valid(m_pl):
+						_freeze_hp(m_pl, m_dmg)
+			_delayed.append({"at": m_land, "kind": "meteor_land",
+					"data": {"cell": m_cell, "pos": m_to, "sc": _grid_scroll, "dmg": m_dmg,
+							"pl": data.get("unit"), "to_hp": m_to_hp, "side": m_side,
+							"idx": m_idx}})
 		"fire_wall":
 			# 火墙术（9084）：整行燃起 —— 三格同时起火 + 一行提示
 			sfx.play("spell")
@@ -11969,6 +12049,53 @@ func _draw_flashes() -> void:
 		draw_rect(rect, Color(col.r, col.g, col.b, 0.9 * (1.0 - t)), false, 2.5)
 
 
+func _draw_meteors() -> void:
+	## R430：流星雨（9083）的**坠落段** —— 一个亮核 + 一段渐隐尾迹，沿加速轨迹砸向落点。
+	## 只在 [start, land) 区间画；落地之后由 `_bursts`（`meteor_land` 排的那两圈）接手。
+	## 位置一律走 `_fx_pos`，棋盘滚动时星体跟着格子走（R171 口径）。
+	if _meteors.is_empty():
+		return
+	var n := _now()
+	for m: Dictionary in _meteors:
+		var st := int(m["start"])
+		var ld := int(m["land"])
+		if n < st:
+			continue
+		var t := clampf(float(n - st) / maxf(1.0, float(ld - st)), 0.0, 1.0)
+		# ⚠️ 不能走 `_fx_pos`：`_meteors` 里的键是 to/from（不是 pos），会当场 KeyError
+		var to: Vector2 = (m["to"] as Vector2) + _scroll_dy(float(m["sc"]))
+		# `from` 烘焙时也带着当时的滚动量，跟 `to` 同步补正（差值不变）
+		var from: Vector2 = (m["from"] as Vector2) + (to - (m["to"] as Vector2))
+		# 加速下坠：t^1.15 —— 有一点点「越落越快」，但不能陡到让星在屏幕外就走完
+		var head := from.lerp(to, pow(t, 1.15))
+		var dir := (to - from).normalized()
+		if dir.length() < 0.01:
+			dir = Vector2(0.2, 1).normalized()
+		# 尾迹：6 段递减的短线，越靠尾越淡越长（浅色背景上要压得住）
+		var fade := 0.35 + 0.65 * t
+		for i in 6:
+			var a0 := head - dir * (float(i) * 15.0)
+			var a1 := head - dir * (float(i + 1) * 15.0)
+			var ta := 0.92 * (1.0 - float(i) / 6.0) * fade
+			draw_line(a0, a1, Color(0.86, 0.52, 1.0, ta), 7.0 - float(i) * 0.6)
+		# 亮核（外晕 + 紫环 + 白心）
+		draw_circle(head, 16.0, Color(0.70, 0.32, 0.98, 0.34))
+		draw_circle(head, 10.0, Color(0.86, 0.55, 1.0, 0.85))
+		draw_circle(head, 6.0, Color(1.0, 0.96, 1.0, 1.0))
+
+
+func _meteor_land_for(pos: Vector2) -> int:
+	## R430：有没有一颗**还没落地**的流星砸在 `pos` 附近？返回它最晚的落地时刻（0 = 没有）。
+	## 给 destroy 用 —— 卡要等到砸中它那颗星落地之后才播击破。
+	var best := 0
+	for m: Dictionary in _meteors:
+		var mt: Vector2 = (m["to"] as Vector2) + _scroll_dy(float(m["sc"]))
+		if mt.distance_to(pos) > 6.0:
+			continue
+		best = maxi(best, int(m["land"]))
+	return best
+
+
 func _draw_bursts() -> void:
 	## 打击爆点：扩散环 + 放射火花线。
 	var n := _now()
@@ -12206,6 +12333,28 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 					"text": "-%d" % int(d.dmg), "col": UiTheme.SIDE_FOE,
 					"start": n, "dur": 1150})
 			_shake(5.0, 260)
+		"meteor_land":
+			# R430：一颗流星**落地**那一帧 —— 爆点 / 飘字 / 闪红 / 掉血全在这一刻，
+			# 和「飞下来的那颗」严丝合缝。这就是「伤害提示与动画相符」的唯一落点。
+			sfx.play("attack")
+			var ml_pos: Vector2 = (d.pos as Vector2) + _scroll_dy(float(d.get("sc", _grid_scroll)))
+			var ml_dmg := int(d.get("dmg", 0))
+			if bool(d.get("to_hp", false)):
+				_drop_hp("hp_opp" if str(d.get("side", "")) == GameEngine.SIDE_SELF else "hp_self")
+			else:
+				var ml_pl: Variant = d.get("pl")
+				if ml_pl != null and is_instance_valid(ml_pl):
+					_flashes[ml_pl] = {"col": Color(0.9, 0.15, 0.1), "start": n, "dur": 420}
+					_drop_hp(ml_pl)
+			_bursts.append({"pos": ml_pos, "sc": _grid_scroll, "start": n, "dur": 600,
+				"col": Color("9b59d0"), "big": true})
+			_bursts.append({"pos": ml_pos, "sc": _grid_scroll, "start": n + 70, "dur": 460,
+				"col": Color("d7b3ff"), "big": false})
+			if ml_dmg > 0:
+				_floaters.append({"pos": ml_pos + Vector2(0, -14), "sc": _grid_scroll,
+					"text": "-%d" % ml_dmg,
+					"col": UiTheme.KIND_SKILL, "start": n, "dur": 1200})
+			_shake(6.0, 240)
 		"absorb_fx":
 			# R393：代受演出到点（与攻击撞击同帧）。两头都画：
 			# src（受害格）报「接下 N」，dst（承受格）爆点 + 「-N」。

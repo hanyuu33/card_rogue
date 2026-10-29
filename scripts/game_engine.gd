@@ -4028,8 +4028,12 @@ func _meteor_shower(side: String, card: CardData) -> String:
 			total += hit
 			falls += 1
 			var hp_row:= 0 if foe == SIDE_OPPONENT else FieldState.BOARD_ROWS - 1
+			# R430：带上 `idx` / `total` / `side` / `to_hp` —— 演出侧要按「一批里的第几颗」
+			# 把落地时刻错开（引擎同步算完，节奏只能由演出侧排）；
+			# `to_hp` = 这一颗是直击 HP 横幅（落在横幅那一行中央，不是某个单位格）。
 			action.emit("meteor", {"cell": Vector2i(hp_row, FieldState.BOARD_COLS / 2),
-					"dmg": hit, "card": card})
+					"dmg": hit, "card": card, "side": side,
+					"idx": i, "total": times, "to_hp": true, "unit": null})
 			continue
 		var t: Vector2i = pool[rng.randi() % pool.size()]
 		var q: Placement = state.unit_at(t)
@@ -4038,7 +4042,10 @@ func _meteor_shower(side: String, card: CardData) -> String:
 		falls += 1
 		_log("流星雨第 %d 颗：命中 %s -%d（剩余 %d）" % [
 			i + 1, q.card.card_name, dealt, maxi(0, q.health)])
-		action.emit("meteor", {"cell": t, "dmg": dealt, "card": card})
+		# R430：`unit` 是这一颗砸中的 Placement —— 演出侧要拿它冻结卡面生命数字，
+		# 等这颗**真正落地**才让数字往下掉（否则 X 颗一打出，血条就是一次性掉完）。
+		action.emit("meteor", {"cell": t, "dmg": dealt, "card": card, "side": side,
+				"idx": i, "total": times, "to_hp": false, "unit": q})
 		if q.health <= 0:
 			_destroy_dead()
 	var msg:= "流星雨落下 %d 颗，共造成 %d 点伤害" % [falls, total]
