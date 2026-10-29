@@ -459,6 +459,15 @@ var _ai_timer: Timer
 var _bg_tex: Texture2D
 var _back_tex: Texture2D
 var _frame_tex: Texture2D      # R137：棋盘边框角花素材（assets/ui/grid_frame.png）
+## R433：战斗特效贴图（assets/fx/*.png，由 tools/gen_fx_textures.py 生成）。
+## 为什么改用贴图：`draw_circle` / `draw_line` 只有硬边，光晕没法做真正的柔和衰减，
+## 缩到 448 卡面就发薄发假。贴图把衰减、噪声、色阶一次烘焙好，绘制端只剩旋转与缩放。
+var _fx_meteor_tex: Texture2D = null   # 流星（亮核 + 火尾，头部在正中偏下）
+var _fx_beam_tex: Texture2D = null     # 激光柱横截面（红→橙→黄→白）
+var _fx_shine_tex: Texture2D = null    # 柱身流动亮带
+var _fx_knife_tex: Texture2D = null    # 飞刀（刀尖朝上）
+var _fx_glow_tex: Texture2D = null     # 通用柔光（落地亮斑 / 拖尾 / 预热点）
+var _shake_cur := Vector2.ZERO         # 本帧震屏偏移 —— 自绘贴图用完必须还原成它
 var _discard_tex: Texture2D    # R140：弃牌区图标（assets/ui/discard_icon.png）
 var _void_tex: Texture2D       # R140：消耗（消失）区次元图标（assets/ui/void_icon.png）
 var _hp_icon: Texture2D        # R156：双方血量图标（icon_health.png，与生命徽章同款血滴）
@@ -572,6 +581,13 @@ var _naval_beam: Dictionary = {}   # {col, land, end, bot_row}   正在打的这
 const NAVAL_BEAM_PRE_MS := 180     # 预热：一道细亮线从上垂到列底（伤害就落在这时）
 const NAVAL_BEAM_HOLD_MS := 420    # 主光柱全亮
 const NAVAL_BEAM_FADE_MS := 240    # 淡出
+## R433：弹跳飞刀（9160）—— 主刀 + 每一跳排成一条**飞行链**（刀从上一个目标飞向下一个）。
+## 引擎同步算完所有伤害，节奏只能在演出侧排；伤害数字与掉血由 `_fx_retime_hit`
+## 把那一格的通用受击推到刀落地那一刻（删掉会连生命冻结一起丢，数字就永远不动了）。
+var _knives: Array = []         # {start, land, from, to, sc, seed}
+var _knife_last_at := 0         # 本批上一刀的落地时刻
+const KNIFE_FLY_MS := 240       # 一刀的飞行时长
+const KNIFE_GAP_MS := 80        # 刀与刀之间的最小间隔
 ## R431：流星雨色阶 —— **由外到内 红 → 橙 → 黄 → 白**（用户口径）。
 ## 尾迹从尾到头走 红→橙，头部四层同心圆补上黄与白；落地爆点复用同一套色阶，
 ## 保证「天上飞的那颗」和「地上炸的那一圈」是同一个东西。
@@ -706,6 +722,11 @@ func _ready() -> void:
 	if _back_tex == null:
 		_back_tex = load("res://assets/cardback.png")
 	_frame_tex = load("res://assets/ui/grid_frame.png")
+	_fx_meteor_tex = load("res://assets/fx/fx_meteor.png")
+	_fx_beam_tex = load("res://assets/fx/fx_beam.png")
+	_fx_shine_tex = load("res://assets/fx/fx_shine.png")
+	_fx_knife_tex = load("res://assets/fx/fx_knife.png")
+	_fx_glow_tex = load("res://assets/fx/fx_glow.png")
 	_discard_tex = load("res://assets/ui/discard_icon.png")
 	_void_tex = load("res://assets/ui/void_icon.png")
 	_hp_icon = load("res://assets/ui/icon_health.png")
@@ -3564,6 +3585,23 @@ func _demo_tick() -> void:
 	if "--aiattack" in _demo_args and _demo_frame == 90:
 		_on_end_turn()          # 交给 AI：它会先推进、再攻击挡路的农民
 		_shot_t0 = _now()
+	if "--r433knife" in _demo_args and _demo_frame == 200 and engine != null:
+		# R433 出图专用：弹跳飞刀（9160）的验收镜头 —— 主刀 + 两跳的飞行链。
+		# 与 r430meteor / r431naval 同样的两个坑：等开局横幅散掉（第 200 帧）、
+		# 首帧渲染没完成时截图是白图（`_shot_t0` 从这一帧起算）。
+		#   出图：`scenes/battle.tscn -- --screenshot --r433knife --shotframe 9999 --shotms 180`
+		RunState.player_class = PlayerClass.ROGUE
+		engine.state.hand.clear()
+		engine.state.hand.append(
+				CardData.from_dict(repo.get_card(GameEngine.BOUNCE_KNIFE_ID).to_dict()))
+		engine.state.energy = 5
+		for kf_i in 3:
+			engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
+					Vector2i(1, kf_i), GameEngine.SIDE_OPPONENT)
+		engine.use_spell(0, Vector2i(1, 1))
+		status_text = "R433 演示：弹跳飞刀 —— 主刀 + 两跳，伤害跟着刀落地"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--r430meteor" in _demo_args and _demo_frame == 200 and engine != null:
 		# R430 出图专用：流星雨（9083）**逐颗坠落**的验收镜头。
 		# 三个坑都在这儿避开：① 开局「我方回合」横幅正好压在敌人那一行（实测落点
@@ -3575,11 +3613,11 @@ func _demo_tick() -> void:
 		engine.state.hand.append(repo.get_card(GameEngine.METEOR_SHOWER_ID))
 		engine.state.energy = 5
 		engine.state.place(CardData.from_dict(repo.get_card(9001).to_dict()),
-				Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+				Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
 		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
-				Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 		engine.state.place(CardData.from_dict(repo.get_card(1053).to_dict()),
-				Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
+				Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
 		engine.use_spell(0)
 		status_text = "R430 演示：流星雨逐颗坠落 —— 每颗落地那一刻才出伤害"
 		_shot_t0 = _now()
@@ -8335,6 +8373,7 @@ func _draw() -> void:
 	var shake := Vector2.ZERO
 	if _now() < _shake_until:
 		shake = _shake_offset()
+	_shake_cur = shake   # R433：自绘贴图要临时改 transform，用完必须还原成这个值
 	# ---- R146：棋盘区（唯一受开场缩放影响的段落）----
 	# 震动与缩放叠在**同一条 transform** 上。`draw_set_transform` 是 CanvasItem 的共享
 	# 状态 → 棋盘区画完必须复位，下面的遮罩 / 面板 / 手牌全在屏幕空间。
@@ -8358,6 +8397,7 @@ func _draw() -> void:
 	_draw_grid_mask()
 	_draw_meteors()          # R430：流星画在遮罩**之后** —— 上方空间本来就窄，
 	_draw_naval_beam()       # R431：舰炮竖直激光（同样要越过遮罩，从画面顶端下来）
+	_draw_knives()           # R433：飞刀（主刀 + 弹跳链）
 	                         # 放在棋盘变换里会被裁成「凭空冒爆点」
 	_draw_grid_caption()
 	_draw_speech_bubbles()   # R386：对话气泡 —— 压在卡牌之上、面板与手牌之下
@@ -9640,6 +9680,32 @@ func _fx_unqueue_hit(cell: Vector2i) -> void:
 			_delayed.remove_at(i)
 
 
+func _fx_retime_hit(cell: Vector2i, at_ms: int, col: Variant = null) -> void:
+	## R433：把**同一格**还排着的通用受击推到 `at_ms`（弹跳飞刀的刀还没飞到）。
+	## 与 `_fx_unqueue_hit` 的分工：
+	##   · 卸下（unqueue）= 「这一格我另有演出」→ 删掉，自己负责全部表现；
+	##   · 改期（retime）= 「同一套演出，只是晚一点」→ 保留，只把时刻往后推。
+	## 弹跳飞刀必须走后者：fx_hit 里存着 `_freeze_hp` 捕获的 Placement 和 `hold` 标记，
+	## 删掉就等于「血条数字永远停在扣血前」。
+	## `col` 给了就顺手换掉爆点色（刀是冷白火花，不是技能的紫）。
+	for ev: Dictionary in _delayed:
+		if str(ev.get("kind", "")) != "fx_hit":
+			continue
+		var d: Dictionary = ev.get("data", {})
+		if d.get("cell") != cell:
+			continue
+		ev["at"] = maxi(int(ev.get("at", 0)), at_ms)
+		if col != null:
+			d["col"] = col
+		# 原来没冻结的（`fi_seq` / 光柱都为假时 hold=false）→ 这里补冻，
+		# 否则数字会在**刀还没飞到时**先掉下去，白排这一趟。
+		var pl: Variant = d.get("pl")
+		if not bool(d.get("hold", false)) and pl != null and is_instance_valid(pl) \
+				and (pl as Placement).health > 0 and int(d.get("dmg", 0)) > 0:
+			_freeze_hp(pl, int(d.get("dmg", 0)))
+			d["hold"] = true
+
+
 func _impact_floor(n: int) -> int:
 	## R361：**画面上还没落地的那一击**会在什么时候撞上（取最近的一次，+60ms 余波）。
 	## 没有在播的攻击动画就返回 0（调用方自己兜 `n + 160`）。
@@ -9942,6 +10008,7 @@ func _tick_anims() -> bool:
 	_meteors = _meteors.filter(func(m): return n < int(m.land))   # R430：落地即交给爆点
 	if not _naval_beam.is_empty() and n > int(_naval_beam.get("end", 0)):
 		_naval_beam = {}   # R431：光柱淡出后收掉（留着会让 busy 永远为真、队列不走）
+	_knives = _knives.filter(func(k): return n < int(k.land))   # R433：落地即交给火花
 	_wake_rings = _wake_rings.filter(func(r): return n - int(r.start) < int(r.dur))
 	_impacts = _impacts.filter(func(f): return n - int(f.start) < int(f.dur))
 	_pow_fx = _pow_fx.filter(func(f): return n - int(f.start) < int(f.dur))
@@ -9963,6 +10030,7 @@ func _tick_anims() -> bool:
 			or not _bursts.is_empty() or not _dying.is_empty() \
 			or not _meteors.is_empty() \
 			or not _naval_beam.is_empty() \
+			or not _knives.is_empty() \
 			or not _wake_rings.is_empty() \
 			or not _delayed.is_empty() or n < _shake_until \
 			or not _impacts.is_empty() or not _pow_fx.is_empty() \
@@ -11262,6 +11330,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var bw := _naval_beam_land_for(cell)
 			if bw > 0:
 				delay_ms = maxi(delay_ms, bw - n)
+			# R433：被飞刀扎死的单位同理 —— 等那一刀落地再演击破
+			var kw := _knife_land_for(center)
+			if kw > 0:
+				delay_ms = maxi(delay_ms, kw - n)
 			var hide_at := n + delay_ms + DESTROY_HOLD_MS
 			_dying.append({"cell": cell, "card": data["card"],
 					"p": data.get("placement"), "hide_at": hide_at})
@@ -11447,6 +11519,30 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("❧ 幻影斗篷：本回合每用一张牌 → %s 力量 -%d（当前 %d）" % [
 					str(data.get("name", "敌人")), int(data.get("amount", 0)),
 					int(data.get("power", 0))])
+		"knife_fly":
+			# R433：弹跳飞刀（9160）—— 主刀 + 每一跳排成一条飞行链。
+			# 引擎同步算完所有伤害，这里只排「飞」的节奏；伤害数字 / 掉血 / 闪红由
+			# `_fx_retime_hit` 把那一格的通用受击**推迟到刀落地那一刻**。
+			# ⚠️ 不能像 `_fx_unqueue_hit` 那样删掉 —— 删了会连已冻结的生命数字
+			#    和捕获的 Placement 一起丢，血条就永远停在旧数字上。
+			var kf_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			if kf_cell.x >= 0:
+				var kf_to := _cell_center(kf_cell)
+				# 第一刀没有「上一个目标」→ 从手牌方向（棋盘下方）甩出去
+				var kf_from := Vector2(GRID_X + GRID_W * 0.5, GRID_Y + GRID_H + 26.0)
+				var kf_prev: Variant = data.get("prev")
+				if kf_prev is Vector2i and (kf_prev as Vector2i).x >= 0:
+					kf_from = _cell_center(kf_prev)
+				var kf_idx := maxi(0, int(data.get("idx", 0)))
+				var kf_land := n + KNIFE_FLY_MS
+				if kf_idx > 0:
+					kf_land = maxi(kf_land, _knife_last_at + KNIFE_GAP_MS)
+				_knife_last_at = kf_land
+				_knives.append({"start": kf_land - KNIFE_FLY_MS, "land": kf_land,
+						"from": kf_from, "to": kf_to, "sc": _grid_scroll, "seed": kf_idx})
+				_fx_retime_hit(kf_cell, kf_land)
+				_delayed.append({"at": kf_land, "kind": "knife_land",
+						"data": {"pos": kf_to, "sc": _grid_scroll, "idx": kf_idx}})
 		"meteor":
 			# R430：流星雨（9083）—— **逐颗落下**。引擎是同步把这 X 颗一次算完的，
 			# 所以节奏只能在这里排：按 idx 依次错开落地时刻，飞行段先画出来，
@@ -12119,9 +12215,11 @@ func _draw_flashes() -> void:
 
 
 func _draw_meteors() -> void:
-	## R430：流星雨（9083）的**坠落段** —— 一个亮核 + 一段渐隐尾迹，沿加速轨迹砸向落点。
+	## R430/R433：流星雨（9083）的**坠落段** —— 直接贴 `fx_meteor.png`
+	## （亮核 + 火尾一体烘焙），绘制端只做旋转与缩放。
+	## 为什么不再用 draw_circle 叠：同心圆只有硬边，光晕做不出柔和衰减，448 下必然发薄。
 	## 只在 [start, land) 区间画；落地之后由 `_bursts`（`meteor_land` 排的那两圈）接手。
-	## 位置一律走 `_fx_pos`，棋盘滚动时星体跟着格子走（R171 口径）。
+	## ⚠️ 位置只能走 `_scroll_dy` 补正 —— `_meteors` 里的键是 to/from，`_fx_pos` 会当场 KeyError。
 	if _meteors.is_empty():
 		return
 	var n := _now()
@@ -12131,35 +12229,99 @@ func _draw_meteors() -> void:
 		if n < st:
 			continue
 		var t := clampf(float(n - st) / maxf(1.0, float(ld - st)), 0.0, 1.0)
-		# ⚠️ 不能走 `_fx_pos`：`_meteors` 里的键是 to/from（不是 pos），会当场 KeyError
 		var to: Vector2 = (m["to"] as Vector2) + _scroll_dy(float(m["sc"]))
 		# `from` 烘焙时也带着当时的滚动量，跟 `to` 同步补正（差值不变）
 		var from: Vector2 = (m["from"] as Vector2) + (to - (m["to"] as Vector2))
 		# 加速下坠：t^1.15 —— 有一点点「越落越快」，但不能陡到让星在屏幕外就走完
 		var head := from.lerp(to, pow(t, 1.15))
-		var dir := (to - from).normalized()
+		var dir := to - from
 		if dir.length() < 0.01:
-			dir = Vector2(0.2, 1).normalized()
-		# 尾迹：6 段递减的短线，越靠尾越淡越长（浅色背景上要压得住）
-		# R431：色相按「由尾到头 = 红 → 橙 → 黄」推，头部才交给亮核的白。
-		var fade := 0.35 + 0.65 * t
-		for i in 6:
-			var a0 := head - dir * (float(i) * 15.0)
-			var a1 := head - dir * (float(i + 1) * 15.0)
-			var ta := 0.92 * (1.0 - float(i) / 6.0) * fade
-			var tc: Color = METEOR_C_TAIL.lerp(METEOR_C_MID, 1.0 - float(i) / 5.0)
-			draw_line(a0, a1, Color(tc.r, tc.g, tc.b, ta), 7.0 - float(i) * 0.6)
-		# 亮核：**由外到内 = 红 → 橙 → 黄 → 白**（R431 用户口径），同心圆一层层收进去
-		draw_circle(head, 19.0, METEOR_C_OUT)
-		draw_circle(head, 13.5, METEOR_C_TAIL)
-		draw_circle(head, 9.0, METEOR_C_MID)
-		draw_circle(head, 5.5, METEOR_C_CORE)
-		draw_circle(head, 3.0, METEOR_C_WHITE)
+			dir = Vector2(0.2, 1)
+		dir = dir.normalized()
+		if _fx_meteor_tex == null:
+			_draw_meteor_fallback(head, dir, t)
+			continue
+		# 精灵的尾巴朝 -Y，要转到「尾巴朝 -dir」：θ 满足 R(θ)(0,-1) = -dir
+		#   ⇒ sinθ = -dir.x，cosθ = dir.y  ⇒  θ = atan2(-dir.x, dir.y)
+		var ang := atan2(-dir.x, dir.y)
+		var sc := 0.68 + 0.20 * t      # 越接近落点略大一点，读作「逼近」
+		draw_set_transform(head, ang, Vector2(sc, sc))
+		# 贴图 160×256，头部中心在 (80,176) → 用 (-80,-176) 起画，头部正好落在原点
+		draw_texture_rect(_fx_meteor_tex, Rect2(-80, -176, 160, 256), false, Color.WHITE)
+		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+
+
+func _draw_meteor_fallback(head: Vector2, dir: Vector2, t: float) -> void:
+	## 贴图缺失时的兜底 = R431 那套硬边画法。宁可难看也不能「特效整段消失」，
+	## 万一出包时 assets/fx 没跟上，至少还能看出有东西在往下掉。
+	var fade := 0.35 + 0.65 * t
+	for i in 6:
+		var a0 := head - dir * (float(i) * 15.0)
+		var a1 := head - dir * (float(i + 1) * 15.0)
+		var ta := 0.92 * (1.0 - float(i) / 6.0) * fade
+		var tc: Color = METEOR_C_TAIL.lerp(METEOR_C_MID, 1.0 - float(i) / 5.0)
+		draw_line(a0, a1, Color(tc.r, tc.g, tc.b, ta), 7.0 - float(i) * 0.6)
+	draw_circle(head, 19.0, METEOR_C_OUT)
+	draw_circle(head, 13.5, METEOR_C_TAIL)
+	draw_circle(head, 9.0, METEOR_C_MID)
+	draw_circle(head, 5.5, METEOR_C_CORE)
+	draw_circle(head, 3.0, METEOR_C_WHITE)
+
+func _draw_knives() -> void:
+	## R433：飞刀（9160）—— 贴图旋转 + 三颗递减柔光做拖尾，刀尖始终朝着飞行方向。
+	## 只在 [start, land) 画；落地那一帧交给 `knife_land` 的白火花。
+	if _knives.is_empty():
+		return
+	var n := _now()
+	for k: Dictionary in _knives:
+		var st := int(k["start"])
+		var ld := int(k["land"])
+		if n < st:
+			continue
+		var t := clampf(float(n - st) / maxf(1.0, float(ld - st)), 0.0, 1.0)
+		var to: Vector2 = (k["to"] as Vector2) + _scroll_dy(float(k["sc"]))
+		var from: Vector2 = (k["from"] as Vector2) + (to - (k["to"] as Vector2))
+		# t^0.75：出手快、末段略收，读作「扎进去」而不是匀速平移
+		var pos := from.lerp(to, pow(t, 0.75))
+		var dir := to - from
+		if dir.length() < 0.01:
+			dir = Vector2(0.0, -1.0)
+		dir = dir.normalized()
+		# 拖尾：三颗柔光点，越靠后越淡（比 draw_line 的硬线柔和得多）
+		if _fx_glow_tex != null:
+			for i in 3:
+				var gp := pos - dir * (12.0 + float(i) * 15.0)
+				var ga := (0.30 - 0.09 * float(i)) * (1.0 - t * 0.5)
+				draw_texture_rect(_fx_glow_tex, Rect2(gp - Vector2(13, 13), Vector2(26, 26)),
+						false, Color(0.66, 0.42, 1.0, ga))
+		if _fx_knife_tex == null:
+			draw_circle(pos, 7.0, Color(1.0, 0.6, 0.15, 0.9))
+			continue
+		# 刀尖朝 -Y：R(θ)(0,-1) = dir ⇒ sinθ = dir.x，cosθ = -dir.y ⇒ θ = atan2(dir.x, -dir.y)
+		var ang := atan2(dir.x, -dir.y)
+		draw_set_transform(pos, ang, Vector2(0.62, 0.62))
+		# 贴图 96×160，刀身在 y≈4..94 → 取 (48,52) 作轴心，刀尖正好朝前、柄向后拖
+		draw_texture_rect(_fx_knife_tex, Rect2(-48, -52, 96, 160), false, Color.WHITE)
+		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+
+
+func _knife_land_for(pos: Vector2) -> int:
+	## R433：有没有一把**还没到**的飞刀正飞向 `pos`？返回它最晚的落地时刻（0 = 没有）。
+	## 给 destroy 用 —— 被刀扎死的单位要等刀落地再演击破。
+	var best := 0
+	for k: Dictionary in _knives:
+		var kt: Vector2 = (k["to"] as Vector2) + _scroll_dy(float(k["sc"]))
+		if kt.distance_to(pos) > 6.0:
+			continue
+		best = maxi(best, int(k["land"]))
+	return best
 
 
 func _draw_naval_beam() -> void:
-	## R431：舰炮（9201）的**竖直激光** —— 直接落在被打的那一列，不从启示者身上发出。
+	## R431/R433：舰炮（9201）的**竖直激光** —— 落在被打的那一列，不从启示者身上发出。
 	## 三拍：预热细线（从上划到列底）→ 主光柱张开 → 淡出。
+	## 光柱本体是 `fx_beam.png`：横向「红→橙→黄→白」的衰减已烘焙好，纵向拉伸即可
+	## （原来用五条 draw_line 叠，边缘是刀的，柱身没有质感）。
 	## 画在棋盘遮罩**之后**（屏幕空间）：光柱要从画面顶端一路下来，遮罩会把上半段裁掉。
 	if _naval_beam.is_empty():
 		return
@@ -12175,14 +12337,22 @@ func _draw_naval_beam() -> void:
 	var br := int(_naval_beam.get("bot_row", -1))
 	if br >= 0:
 		bot = GRID_Y + float(br + 1) * CELL - _grid_scroll + 6.0
-	# ① 预热：一条细亮线从上往下「划」到列底 —— 划到底那一刻就是伤害落地
+	var hgt := maxf(24.0, bot - top)
+	# ① 预热：一道细亮线从上往下「划」到列底 —— 划到底那一刻就是伤害落地
 	if n < ld:
 		var st0 := int(_naval_beam.get("start", n))
 		var pt := clampf(float(n - st0) / float(maxi(1, ld - st0)), 0.0, 1.0)
 		var tip := lerpf(top, bot, pt)
-		draw_line(Vector2(cx, top), Vector2(cx, tip), Color(1, 0.62, 0.22, 0.45), 11.0)
-		draw_line(Vector2(cx, top), Vector2(cx, tip), Color(1, 0.98, 0.92, 0.95), 2.5)
-		draw_circle(Vector2(cx, tip), 5.0, Color(1, 0.95, 0.75, 0.9))
+		if _fx_beam_tex != null:
+			# 同一条柱体贴图横向压窄 = 细线，边缘自然是柔的（不是一根硬棍）
+			draw_texture_rect(_fx_beam_tex, Rect2(cx - 9.0, top, 18.0, tip - top), false,
+					Color(1, 1, 1, 0.9))
+		else:
+			draw_line(Vector2(cx, top), Vector2(cx, tip), Color(1, 0.62, 0.22, 0.45), 11.0)
+			draw_line(Vector2(cx, top), Vector2(cx, tip), Color(1, 0.98, 0.92, 0.95), 2.5)
+		if _fx_glow_tex != null:
+			draw_texture_rect(_fx_glow_tex, Rect2(cx - 18, tip - 18, 36, 36), false,
+					Color(1.0, 0.92, 0.70, 0.95))
 		return
 	# ② 主光柱：宽度先张开（0 → 全宽 130ms），末段淡出
 	var fade := 1.0
@@ -12190,28 +12360,33 @@ func _draw_naval_beam() -> void:
 	if n > hold_end:
 		fade = 1.0 - clampf(float(n - hold_end) / float(NAVAL_BEAM_FADE_MS), 0.0, 1.0)
 	var grow := clampf(float(n - ld) / 130.0, 0.0, 1.0)
-	var w_out := 52.0 * grow
-	var w_mid := 31.0 * grow
-	var w_in := 14.0 * grow
-	var w_core := 4.0 * grow
-	# 由外到内 = 红 → 橙 → 黄 → 白（与流星同一套色阶）
-	draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1.0, 0.22, 0.10, 0.46 * fade), w_out * 2.0)
-	draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1.0, 0.36, 0.12, 0.66 * fade), w_mid * 2.0)
-	draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1.0, 0.72, 0.18, 0.88 * fade), w_in * 2.0)
-	draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1.0, 0.96, 0.58, 0.94 * fade), w_core * 2.0)
-	draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1, 1, 1, 0.98 * fade), 2.6)
-	# 柱身往上流的三道亮环（相位错开，读作「持续灌注」）
-	for k in 3:
-		var ph := fmod(float(n - ld) * 0.00085 + float(k) / 3.0, 1.0)
-		var yy := lerpf(bot, top, ph)
-		draw_line(Vector2(cx - w_in, yy), Vector2(cx + w_in, yy),
-			Color(1.0, 0.97, 0.86, 0.55 * fade * (1.0 - ph * 0.5)), 3.0)
-	# ③ 柱底亮斑 + 横向散光（打穿地面的那一下）
-	draw_circle(Vector2(cx, bot), 26.0 * grow, Color(1.0, 0.45, 0.14, 0.35 * fade))
-	draw_circle(Vector2(cx, bot), 13.0 * grow, Color(1.0, 0.95, 0.70, 0.75 * fade))
-	draw_line(Vector2(cx - 74.0 * grow, bot), Vector2(cx + 74.0 * grow, bot),
-		Color(1.0, 0.72, 0.24, 0.42 * fade), 5.0)
-
+	var w := 118.0 * grow
+	if _fx_beam_tex != null:
+		draw_texture_rect(_fx_beam_tex, Rect2(cx - w * 0.5, top, w, hgt), false,
+				Color(1, 1, 1, fade))
+	else:
+		draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1.0, 0.22, 0.10, 0.46 * fade), 104.0)
+		draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1.0, 0.36, 0.12, 0.66 * fade), 62.0)
+		draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1.0, 0.72, 0.18, 0.88 * fade), 28.0)
+		draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1.0, 0.96, 0.58, 0.94 * fade), 8.0)
+		draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1, 1, 1, 0.98 * fade), 2.6)
+	# 柱身往上流的三道亮带（相位错开，读作「持续灌注」）——
+	# 用柔光贴图而不是细线，横向才有衰减、不会像三根铁箍
+	if _fx_shine_tex != null:
+		for k in 3:
+			var ph := fmod(float(n - ld) * 0.00085 + float(k) / 3.0, 1.0)
+			var yy := lerpf(bot, top, ph)
+			var sw := w * 0.92
+			draw_texture_rect(_fx_shine_tex, Rect2(cx - sw * 0.5, yy - 8.0, sw, 16.0), false,
+					Color(1, 1, 1, 0.70 * fade * (1.0 - ph * 0.45)))
+	# ③ 柱底：柔光亮斑 + 横向散光（打穿地面的那一下）
+	if _fx_glow_tex != null:
+		draw_texture_rect(_fx_glow_tex, Rect2(cx - 64 * grow, bot - 42 * grow, 128 * grow, 84 * grow),
+				false, Color(1.0, 0.52, 0.18, 0.80 * fade))
+		draw_texture_rect(_fx_glow_tex, Rect2(cx - 26 * grow, bot - 26 * grow, 52 * grow, 52 * grow),
+				false, Color(1.0, 0.96, 0.74, 0.95 * fade))
+		draw_texture_rect(_fx_glow_tex, Rect2(cx - 100 * grow, bot - 9, 200 * grow, 18),
+				false, Color(1.0, 0.70, 0.26, 0.55 * fade))
 
 func _naval_beam_land_for(cell: Vector2i) -> int:
 	## R431：这一格所在列是不是正在挨舰炮的光柱？是 → 返回光柱**落地时刻**（0 = 没有）。
@@ -12472,6 +12647,14 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 					"text": "-%d" % int(d.dmg), "col": UiTheme.SIDE_FOE,
 					"start": n, "dur": 1150})
 			_shake(5.0, 260)
+		"knife_land":
+			# R433：刀尖扎中那一帧 —— 一簇白火花 + 轻震屏。
+			# 掉血 / 「-N」/ 闪红由被改期到同一刻的 `fx_hit` 负责（见 `_fx_retime_hit`）。
+			sfx.play("hit")
+			_shake(3.0, 140)
+			var kl_pos: Vector2 = (d.pos as Vector2) + _scroll_dy(float(d.get("sc", _grid_scroll)))
+			_bursts.append({"pos": kl_pos, "sc": _grid_scroll, "start": n, "dur": 360,
+					"col": Color(0.92, 0.94, 1.0), "big": false})
 		"naval_land":
 			# R431：舰炮（9201）的**光柱落到列底**那一帧 —— 冲击环 / 地面散光 / 震屏。
 			# 每个受击单位的闪红 + 掉血 + 伤害数字由 `fx_hit` 跟着同一刻到（那笔的 `at`

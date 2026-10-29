@@ -10023,6 +10023,7 @@ func _bounce_knife(side: String, target, card: CardData) -> String:
 	var bounces:= mini(BOUNCE_KNIFE_BOUNCES, pool.size())
 	var hits:= 0
 	var total:= 0
+	var hit_cells: Array[Vector2i] = []
 	for i in bounces:
 		var pick: int = rng.randi_range(0, pool.size() - 1)
 		var c: Vector2i = pool[pick]
@@ -10033,10 +10034,21 @@ func _bounce_knife(side: String, target, card: CardData) -> String:
 		var dealt:= _hit_unit(p, spl, "弹跳飞刀")
 		total += dealt
 		hits += 1
+		hit_cells.append(c)
 		_log("弹跳飞刀第 %d 跳：命中 %s -%d（剩余 %d）" % [
 			i + 1, p.card.card_name, dealt, maxi(0, p.health)])
-		# 复用流星雨的落点特效通道（紫色爆点 + 「-N」飘字，不新增 action 类型）
-		action.emit("meteor", {"cell": c, "dmg": dealt, "card": card})
+	# R433：视觉链 = 主刀 → 每一跳（刀从上一个目标飞向下一个）。
+	# ⚠️ **不再复用 `meteor` 通道**：R430 之后那条通道的语义是「流星从天上砸下来」，
+	#    弹跳沿用它就变成「每跳掉一颗陨石」，与刀毫无关系（用户报「弹跳飞刀也低质量」）。
+	#    这里只报「刀从哪飞到哪」；伤害数字由界面把同一格的通用受击推到落地那一刻
+	#    （`_fx_retime_hit`），所以引擎这边**不需要**再发额外特效事件。
+	var chain: Array[Vector2i] = []
+	if main_cell.x >= 0:
+		chain.append(main_cell)
+	chain.append_array(hit_cells)
+	for ci in chain.size():
+		var prev := Vector2i(-1, -1) if ci == 0 else chain[ci - 1]
+		action.emit("knife_fly", {"cell": chain[ci], "idx": ci, "prev": prev})
 	if hits > 0:
 		_destroy_dead()
 	if hits > 0:
