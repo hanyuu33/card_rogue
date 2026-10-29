@@ -30108,8 +30108,8 @@ func _init() -> void:
 	# ---- R435：贴纸卷边 + 右移 + 折扣金额转绿（口径修正）----
 	# 钉的是三件容易改回去的事：① 折角多边形顶点顺序（写反就自交 → 三角化失败 → 贴纸整块消失）；
 	# ② 贴纸不再是 draw_rect 矩形（规整矩形正是这轮要改掉的东西）；③ 只有价签转绿。
-	check_src(r432_shop.find("PackedVector2Array([fa, mid, fb, fc])") >= 0
-			and r432_shop.find("[fa, mid, fc, fb]") < 0,
+	check_src(r432_shop.find("PackedVector2Array([pa, pn, pb, fc])") >= 0
+			and r432_shop.find("[pa, pn, fc, pb]") < 0,
 			"R435 折角顶点顺序 = 沿折痕弧走完再走内角（反过来自交，三角化直接失败）")
 	check_src(r432_shop.find("draw_colored_polygon(body") >= 0
 			and r432_shop.find("draw_rect(box") < 0,
@@ -30119,8 +30119,13 @@ func _init() -> void:
 	check_src(r432_shop.find("Color(\"6fe07a\") if off else Color(\"ffd75a\")") >= 0,
 			"R435 打折卡价签金额转绿（未打折仍是金色）")
 	check_src(r432_shop.find("func _draw_off_tag(") >= 0
-			and r432_shop.find("var c := h * 0.46") >= 0,
-			"R435 卷角边长 c = 0.46h（太小在 720p 只有几个像素，读不出来）")
+			and r432_shop.find("var c := h * 0.36") >= 0,
+			"R435 卷角边长 c = 0.36h（太小在 720p 只有几个像素；0.46h 又像撕掉一角）")
+	# 返修口径：红底必须**真的缺角**。只盖一块米色三角 = 红框还是完整矩形（用户当场看出来过）。
+	check_src(r432_shop.find("body[2] 缺口起点") >= 0
+			and r432_shop.find("body[4] 缺口终点") >= 0
+			and r432_shop.find("pb,                                      # body[2] 缺口起点") >= 0,
+			"R435 纸面 body 在折痕处缺一块三角（缺口与折角共用 pa/pn/pb，不再盖在完整矩形上）")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

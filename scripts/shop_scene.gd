@@ -859,13 +859,26 @@ func _draw_off_tag(rr: Rect2) -> void:
 	draw_set_transform(center, deg_to_rad(-26.0), Vector2.ONE)
 	var w2 := w * 0.5
 	var h2 := h * 0.5
-	var c := h * 0.46                    # 卷角的两条直角边（≈ 12k）
-	# 纸面（非矩形，顺时针）：四角各错开一点点、上下边各插一个起伏点 ——
-	# 纸贴在卡上本来就压不平，直边会立刻读成「印刷标签」。
+	var c := h * 0.36                    # 卷角的两条直角边（≈ 9.4k，占贴纸高 36%）
+	# 别往大调：c = 0.46h 时缺口吃掉右上一大块，读起来像「被撕了一角」而不是「卷边」。
+	# 折痕的两个端点 + 中点（中点朝**外**凸 → 折痕是弧，不是硬折的一条直线）。
+	# 这两个点同时是红纸的缺口边缘 —— 折角必须和缺口共用同一条折痕，
+	# 否则「缺口」和「米色三角」对不上，看起来就是一块贴歪的纸。
+	var pa := Vector2(w2 + 0.15 * k, -h2 + c)        # 缺口终点（右边，往下 c）
+	var pb := Vector2(w2 - c, -h2 - 0.1 * k)         # 缺口起点（上边，往左 c）
+	var pn := (pa + pb) * 0.5 + Vector2(0.55, -0.55) * k
+	var fc := Vector2(pb.x, pa.y)                    # 翻折落点（纸背三角的内角）
+	# 纸面（非矩形，顺时针）：**右上角真的缺一块**。
+	# ⚠️ R435 返修：先在完整矩形上盖一块米色三角是错的 —— 红框还是个方方正正的矩形，
+	#    用户一眼就看出「卷边下面还是红色」。纸角翻了面，那个角就不在平面上了，
+	#    红底必须少掉 pa-pn-pb 这块三角，缺口里露出的是卡片本身。
+	# 四角另各错开一点点、上下边各插一个起伏点：纸贴在卡上本来就压不平。
 	var body := PackedVector2Array([
 		Vector2(-w2 + 0.5 * k, -h2 + 0.3 * k),
 		Vector2(-w2 * 0.35, -h2 - 0.35 * k),
-		Vector2(w2 - 0.4 * k, -h2 - 0.1 * k),
+		pb,                                      # body[2] 缺口起点
+		pn,                                      # body[3] 缺口弧（外凸）
+		pa,                                      # body[4] 缺口终点
 		Vector2(w2 + 0.15 * k, h2 - 0.2 * k),    # 右边略鼓
 		Vector2(w2 * 0.3, h2 + 0.5 * k),
 		Vector2(-w2 - 0.2 * k, h2 - 0.35 * k),
@@ -876,27 +889,23 @@ func _draw_off_tag(rr: Rect2) -> void:
 		shadow.append(p + Vector2(1.3, 1.5) * k)
 	draw_colored_polygon(shadow, Color(0.0, 0.0, 0.0, 0.42))
 	draw_colored_polygon(body, Color("b3221a"))                  # 贴纸纸底（暗红）
-	# 轮廓：`draw_rect` 画不了起伏边，只能闭合折线。
+	# 轮廓：`draw_rect` 画不了缺口与起伏边，只能闭合折线。
+	# 折痕那条边（pb→pn→pa）也在这条折线里 —— 它的粗细正是折角的暗影。
 	var outline := body.duplicate()
 	outline.append(body[0])
 	draw_polyline(outline, Color("3a0f0a"), 2.0 * k, true)
-	# 卷角：纸角折起后那块三角翻到正面 —— 看到的是**纸背**。
+	# 翻折的纸角：沿折痕镜像后落到的位置，看到的是**纸背**。
 	# ⚠️ 挑的是局部**右上角**：贴纸整体斜 -26°，右上角才是视觉上的「最上端」。
-	#    折在右下角（视觉最右端）会紧贴着「%」的字脚，而且那边是贴纸最窄的地方。
-	# 折起来的三角 = {(w2,-h2+c), (w2-c,-h2), (w2-c,-h2+c)}（沿折痕镜像后的落点），
-	# 折痕画成向外微凸的弧而不是直线，才读得出「卷」而不是「硬折」。
-	var fa := Vector2(w2 - 0.1 * k, -h2 + c)         # 折痕起点（右边往下 c）
-	var fb := Vector2(w2 - c, -h2 - 0.1 * k)         # 折痕终点（上边往左 c）
-	var fc := Vector2(fb.x, fa.y)                    # 折起后露出的纸背内角
-	var mid := (fa + fb) * 0.5 + Vector2(0.62, -0.62) * k   # 折痕中点外凸 → 弧
-	# ⚠️ 顶点顺序必须是「沿折痕弧走完 → 再走内角」，写成 fa→mid→fc→fb 会自交、
+	# 折在右下角（视觉最右端）会紧贴着「%」的字脚，而且那边是贴纸最窄的地方。
+	# ⚠️ 顶点顺序必须是「沿折痕弧走完 → 再走内角」，写成 pa→pn→fc→pb 会自交、
 	#    三角化直接失败（`Invalid polygon data, triangulation failed`），贴纸整块消失。
-	draw_colored_polygon(PackedVector2Array([fa, mid, fb, fc]), Color("f0dfba"))
-	draw_polyline(PackedVector2Array([fa, mid, fb]), Color("4a1208"), 1.5 * k, true)
-	# 折角内侧两条边压一道淡影：纸是有厚度的，不然折角像贴了块米色纸片。
-	draw_line(fc, fb, Color(0.35, 0.18, 0.12, 0.55), 1.1 * k, true)
-	draw_line(fa, fc, Color(0.35, 0.18, 0.12, 0.55), 1.1 * k, true)
-	draw_string(_font_bold, Vector2(-w2, -h2 + h * 0.78), "-50%",
+	var curl := PackedVector2Array([pa, pn, pb, fc])
+	draw_colored_polygon(curl, Color("f0dfba"))
+	# 纸背靠内角一侧压暗：翻起来的纸在根部是背光的，纸厚就是这么读出来的。
+	draw_line(fc, pb, Color(0.42, 0.24, 0.15, 0.5), 1.6 * k, true)
+	draw_line(fc, pa, Color(0.42, 0.24, 0.15, 0.5), 1.6 * k, true)
+	# 文字右移 1k：缺口在右上，红底的重心被削掉一块，纯按矩形居中会看着偏左。
+	draw_string(_font_bold, Vector2(-w2 + 1.0 * k, -h2 + h * 0.78), "-50%",
 			HORIZONTAL_ALIGNMENT_CENTER, w, int(round(13.5 * k)), Color("fff3cf"))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
