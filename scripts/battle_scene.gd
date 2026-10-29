@@ -468,6 +468,20 @@ var _fx_shine_tex: Texture2D = null    # 柱身流动亮带
 var _fx_knife_tex: Texture2D = null    # 飞刀（刀尖朝上）
 var _fx_glow_tex: Texture2D = null     # 通用柔光（落地亮斑 / 拖尾 / 预热点）
 var _shake_cur := Vector2.ZERO         # 本帧震屏偏移 —— 自绘贴图用完必须还原成它
+## R434：灰烬龙战吼 / 启示者清场的**火焰**，以及阶段 2 电磁屏障的**护盾球 + 电弧**。
+## 全部走 `assets/fx/*.png`（程序化生成，见 tools/gen_fx_textures.py），
+## 不再用 `draw_circle` 叠硬边圆 —— 448 下同心圆做不出柔和衰减，一眼「低质量」。
+var _fx_flame_tex: Texture2D = null    # 火焰（火球 + 3 条火舌，锚点在火球中心）
+var _fx_ember_tex: Texture2D = null    # 火星
+var _fx_shield_tex: Texture2D = null   # 电磁护盾球（六边形网格 + rim）
+var _fx_arc_tex: Texture2D = null      # 一截电弧
+var _fx_wave_tex: Texture2D = null     # 冲击波环（清场）
+var _flames: Array = []                # {pos, sc, start, dur, size, seed}   正在烧的火
+var _shield_fx: Dictionary = {}        # {cell, src, start, dur, land}      电磁屏障被击中
+var _purge_wave: Dictionary = {}       # {cell, start, dur}                 第三阶段清场冲击波
+const FLAME_RISE := 30.0               # 火苗在生命周期里往上窜的像素
+const SHIELD_ARC_MS := 240             # 护盾亮起 → 电弧打到攻击者的时长（伤害就在这一刻落地）
+const PURGE_WAVE_MS := 900             # 冲击波从启示者扫到全场边缘的时长（含尾段淡出）
 var _discard_tex: Texture2D    # R140：弃牌区图标（assets/ui/discard_icon.png）
 var _void_tex: Texture2D       # R140：消耗（消失）区次元图标（assets/ui/void_icon.png）
 var _hp_icon: Texture2D        # R156：双方血量图标（icon_health.png，与生命徽章同款血滴）
@@ -727,6 +741,11 @@ func _ready() -> void:
 	_fx_shine_tex = load("res://assets/fx/fx_shine.png")
 	_fx_knife_tex = load("res://assets/fx/fx_knife.png")
 	_fx_glow_tex = load("res://assets/fx/fx_glow.png")
+	_fx_flame_tex = load("res://assets/fx/fx_flame.png")
+	_fx_ember_tex = load("res://assets/fx/fx_ember.png")
+	_fx_shield_tex = load("res://assets/fx/fx_shield.png")
+	_fx_arc_tex = load("res://assets/fx/fx_arc.png")
+	_fx_wave_tex = load("res://assets/fx/fx_shockwave.png")
 	_discard_tex = load("res://assets/ui/discard_icon.png")
 	_void_tex = load("res://assets/ui/void_icon.png")
 	_hp_icon = load("res://assets/ui/icon_health.png")
@@ -3600,6 +3619,57 @@ func _demo_tick() -> void:
 					Vector2i(1, kf_i), GameEngine.SIDE_OPPONENT)
 		engine.use_spell(0, Vector2i(1, 1))
 		status_text = "R433 演示：弹跳飞刀 —— 主刀 + 两跳，伤害跟着刀落地"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r434flame" in _demo_args and _demo_frame == 200 and engine != null:
+		# R434 出图：灰烬龙战吼的**火焰**（贴图版）。
+		#   出图：`scenes/battle.tscn -- --screenshot --r434flame --shotframe 9999 --shotms 300`
+		engine.state.place(CardData.from_dict(repo.get_card(1013).to_dict()),
+				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(4, 0), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(repo.get_card(1053).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(repo.get_card(9001).to_dict()),
+				Vector2i(5, 2), GameEngine.SIDE_SELF)
+		var fd_p: Placement = engine.state.unit_at(Vector2i(2, 1))
+		if fd_p != null:
+			engine._battlecry_ash(Vector2i(2, 1), fd_p)
+		status_text = "R434 演示：灰烬龙战吼的火焰"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r434shield" in _demo_args and _demo_frame == 200 and engine != null:
+		# R434 出图：启示者阶段 2 电磁屏障被攻击（护盾球 + 电弧）。
+		#   出图：`scenes/battle.tscn -- --screenshot --r434shield --shotframe 9999 --shotms 180`
+		engine.state.place(CardData.from_dict(repo.get_card(GameEngine.REVELATOR_ID).to_dict()),
+				Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(2, 1), GameEngine.SIDE_SELF)
+		var sr_p: Placement = engine.state.unit_at(Vector2i(1, 1))
+		if sr_p != null:
+			sr_p.boss_phase = 2
+		engine.attack(Vector2i(2, 1), Vector2i(1, 1))
+		status_text = "R434 演示：电磁屏障 —— 护盾球亮起 + 电弧甩到攻击者"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r434purge" in _demo_args and _demo_frame == 200 and engine != null:
+		# R434 出图：启示者进入第三阶段的**清场冲击波**。
+		#   出图：`scenes/battle.tscn -- --screenshot --r434purge --shotframe 9999 --shotms 420`
+		engine.state.place(CardData.from_dict(repo.get_card(GameEngine.REVELATOR_ID).to_dict()),
+				Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+				Vector2i(3, 0), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(repo.get_card(1053).to_dict()),
+				Vector2i(3, 2), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(repo.get_card(9011).to_dict()),
+				Vector2i(5, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
+				Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+		var pg_p: Placement = engine.state.unit_at(Vector2i(0, 1))
+		if pg_p != null:
+			pg_p.boss_phase = 2
+			engine._revelator_enter_phase(pg_p, 3)
+		status_text = "R434 演示：第三阶段清场 —— 冲击波扫过全场，扫到哪格哪格起火"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r430meteor" in _demo_args and _demo_frame == 200 and engine != null:
@@ -8399,6 +8469,9 @@ func _draw() -> void:
 	_draw_naval_beam()       # R431：舰炮竖直激光（同样要越过遮罩，从画面顶端下来）
 	_draw_knives()           # R433：飞刀（主刀 + 弹跳链）
 	                         # 放在棋盘变换里会被裁成「凭空冒爆点」
+	_draw_purge_wave()       # R434：启示者清场冲击波（从它身上径向扫开，越过遮罩）
+	_draw_flames()           # R434：火焰（灰烬龙战吼 / 清场落点）
+	_draw_shield_fx()        # R434：电磁屏障被击中（护盾球 + 电弧）
 	_draw_grid_caption()
 	_draw_speech_bubbles()   # R386：对话气泡 —— 压在卡牌之上、面板与手牌之下
 	_draw_floaters()
@@ -10009,6 +10082,15 @@ func _tick_anims() -> bool:
 	if not _naval_beam.is_empty() and n > int(_naval_beam.get("end", 0)):
 		_naval_beam = {}   # R431：光柱淡出后收掉（留着会让 busy 永远为真、队列不走）
 	_knives = _knives.filter(func(k): return n < int(k.land))   # R433：落地即交给火花
+	# R434：火焰 / 护盾 / 冲击波按各自时长收掉。**要和 `_bursts` 一样计入 busy** ——
+	# 不给 busy 就不会逐帧重绘，动画会卡在中间一格。
+	_flames = _flames.filter(func(f): return n - int(f.get("start", 0)) < int(f.get("dur", 1)))
+	if not _shield_fx.is_empty() \
+			and n - int(_shield_fx.get("start", 0)) >= int(_shield_fx.get("dur", 1)):
+		_shield_fx = {}
+	if not _purge_wave.is_empty() \
+			and n - int(_purge_wave.get("start", 0)) >= int(_purge_wave.get("dur", 1)):
+		_purge_wave = {}
 	_wake_rings = _wake_rings.filter(func(r): return n - int(r.start) < int(r.dur))
 	_impacts = _impacts.filter(func(f): return n - int(f.start) < int(f.dur))
 	_pow_fx = _pow_fx.filter(func(f): return n - int(f.start) < int(f.dur))
@@ -10031,6 +10113,8 @@ func _tick_anims() -> bool:
 			or not _meteors.is_empty() \
 			or not _naval_beam.is_empty() \
 			or not _knives.is_empty() \
+			or not _flames.is_empty() or not _shield_fx.is_empty() \
+			or not _purge_wave.is_empty() \
 			or not _wake_rings.is_empty() \
 			or not _delayed.is_empty() or n < _shake_until \
 			or not _impacts.is_empty() or not _pow_fx.is_empty() \
@@ -10433,15 +10517,26 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				if bc_cell.x >= 0:
 					var bc_pos := _cell_center(bc_cell)
 					sfx.play("destroy")
-					# 灰烬环：橙红大爆点 + 一层金色余烬，贴在龙身上（不是打在目标身上）
-					_bursts.append({"pos": bc_pos, "sc": _grid_scroll, "start": n, "dur": 640,
+					# R434：用户口径「灰烬龙造成效果伤害要用火焰特效」，且要与流星 / 舰炮
+					# 同一套贴图口径 —— 原来这里是两个 `draw_circle` 硬边爆点。
+					# 现在：龙身上一团主火（火球 + 3 条火舌），周围四团小火错开起燃，
+					# 读作「整条龙烧起来了」；再往外才是那圈橙红冲击环，负责「波及全场」。
+					# 主火压在**卡的上沿**、而不是卡心：龙得看得见（第一版 size 136 居中，
+					# 整张卡被一团橙子糊住，出图才发现「谁在放战吼」反而认不出来）。
+					_flames.append({"pos": bc_pos + Vector2(0, -20), "sc": _grid_scroll,
+							"start": n, "dur": 1000, "size": 88, "seed": 1})
+					for fi in 4:
+						var fa: float = TAU * float(fi) / 4.0 + 0.6
+						_flames.append({"pos": bc_pos + Vector2(cos(fa), sin(fa) * 0.55) * 44.0
+								+ Vector2(0, 8), "sc": _grid_scroll,
+								"start": n + 70 + fi * 55,
+								"dur": 780 - fi * 40, "size": 46 + fi * 5, "seed": 10 + fi})
+					_bursts.append({"pos": bc_pos, "sc": _grid_scroll, "start": n, "dur": 700,
 							"col": Color("ff6a2b"), "big": true})
-					_bursts.append({"pos": bc_pos, "sc": _grid_scroll, "start": n + 130, "dur": 540,
-							"col": Color("ffcf7a"), "big": false})
-					_floaters.append({"pos": bc_pos + Vector2(0, -28), "sc": _grid_scroll,
+					_floaters.append({"pos": bc_pos + Vector2(0, -62), "sc": _grid_scroll,
 							"text": "战吼 · 全场 -%d" % int(data.get("amount", 0)),
 							"col": Color("d84a12"), "start": n, "dur": 1600, "size": 20})
-					_shake(6.0, 320)
+					_shake(7.5, 380)
 				_say("🔥 %s 战吼：%d 个单位各 -%d" % [bc_name,
 						int(data.get("hits", 0)), int(data.get("amount", 0))]
 						if int(data.get("hits", 0)) > 0
@@ -12095,14 +12190,31 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			queue_redraw()
 		"revelator_shield":
 			# R356 电磁屏障 9202（阶段 2）：电的是**攻击者**，不是启示者。
+			# R434：用户口径「给启示者电磁护盾受到攻击时制作特效」—— 原来只在攻击者身上
+			# 冒一个蓝点，读不出「它被一层盾罩着、是盾把这一下弹回去的」。现在三拍：
+			#   ① 启示者身上**护盾球亮起**（贴图 fx_shield，六边形网格）；
+			#   ② 从盾面甩一道**电弧**到攻击者；
+			#   ③ 电弧落地那一刻攻击者才闪红 / 掉血 / 出伤害数字。
+			# 所以攻击者那格的通用受击要**改期**到 `land`（`_fx_retime_hit`）——
+			# 不能删（删了连生命冻结一起丢，血条数字永远停住）。
 			var rs_c: Vector2i = data.get("src", Vector2i(0, 0))
+			var rs_home: Vector2i = data.get("cell", Vector2i(0, 0))
 			var rs_d := int(data.get("amount", 0))
+			# 起播时刻要和**攻击动画撞上那一帧**对齐（R361 的老账）：
+			# 引擎这侧是同步结算的，事件比动画早到 ~900ms，直接播就成了「盾先炸、人后撞」。
+			var rs_t0 := n
+			var rs_floor := _impact_floor(n)
+			if rs_floor > 0:
+				rs_t0 = maxi(n, rs_floor - 40)
+			var rs_land := rs_t0 + SHIELD_ARC_MS
 			sfx.play("hit")
-			_bursts.append({"pos": _cell_center(rs_c), "sc": _grid_scroll, "start": n,
-					"dur": 500, "col": Color("6fd2f0"), "big": false})
+			_shield_fx = {"cell": rs_home, "src": rs_c, "start": rs_t0,
+					"dur": SHIELD_ARC_MS + 520, "land": rs_land}
+			_fx_retime_hit(rs_c, rs_land, Color(0.62, 0.86, 1.0))
 			_floaters.append({"pos": _cell_center(rs_c) + Vector2(0, -22), "sc": _grid_scroll,
 					"text": "电磁屏障 -%d" % rs_d, "col": Color("6fd2f0"),
-					"start": n, "dur": 1500, "size": 15})
+					"start": rs_land, "dur": 1500, "size": 15})
+			_shake(4.0, 240)
 			_say("⚡ 电磁屏障：攻击启示者的单位受到 %d 点伤害" % rs_d)
 		"emergency_call":
 			# R356 紧急呼叫 9203（阶段 3）：量产型落位（力量 +10 已烤在引擎那份副本上）。
@@ -12148,17 +12260,26 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"revelator_purge":
 			# R371 启示者进入第三阶段：**破坏场上所有其他单位**（敌我双方）。
 			# 引擎那边是逐个 `_destroy` 瞬结，逐个 `destroy` 事件演出来像「陆续死掉」——
-			# 这里给一条**总括演出**：满屏橙色爆点 + 重震屏 + 一句播报，前后衔接 `boss_phase`
-			# 的横幅（横幅随后到，所以这句要先说清楚「发生了什么」）。
+			# 这里给一条**总括演出**：一圈冲击波从它身上扫过全场，波扫到哪一格，
+			# 那一格才起火 / 才碎（R434 换成贴图版冲击波 + 火焰，原来是每格一个橙点一起冒）。
 			var rp_ids: Array = data.get("cells", [])
 			var rp_n := int(data.get("count", rp_ids.size()))
+			var rp_home: Vector2i = data.get("cell", Vector2i(0, 0))
 			sfx.play("spell")
 			n = _now()
-			_shake(12.0, 560)
+			_shake(12.0, 620)
+			if not _shot_pending:
+				_screen_flash = {"start": n, "dur": 70}
+			_purge_wave = {"cell": rp_home, "start": n, "dur": PURGE_WAVE_MS}
+			var rp_max := 1.0
+			for rp_c0: Vector2i in rp_ids:
+				rp_max = maxf(rp_max, _purge_dist(rp_c0, rp_home))
 			for i in rp_ids.size():
 				var rp_c: Vector2i = rp_ids[i]
-				_bursts.append({"pos": _cell_center(rp_c), "sc": _grid_scroll,
-						"start": n, "dur": 560, "col": Color("e2703a"), "big": true})
+				var rp_at := n + 60 + int(float(_purge_dist(rp_c, rp_home)) / rp_max * 560.0)
+				_flames.append({"pos": _cell_center(rp_c) + Vector2(0, 6), "sc": _grid_scroll,
+						"start": rp_at, "dur": 880, "size": 96, "seed": 30 + i})
+			_purge_retime_deaths(rp_home, rp_max, n + 70)
 			_say("✦ 启示者进入第三阶段：冲击波撕碎场上 %d 个单位" % rp_n)
 		_:
 			# R288：兜底 —— 任何**还没有专属表现**的事件，只要带格子，就至少演一次
@@ -12315,6 +12436,198 @@ func _knife_land_for(pos: Vector2) -> int:
 			continue
 		best = maxi(best, int(k["land"]))
 	return best
+
+
+# ---------------------------------------------------------------- R434 火焰 / 护盾 / 冲击波
+
+func _purge_dist(cell: Vector2i, home: Vector2i) -> float:
+	## R434：清场冲击波的「波程」—— 按**像素**距离算，横竖格子比例不同也能对齐波前。
+	## 用格子曼哈顿距会让「左右两格」与「上下两格」同时到，波看起来是方的。
+	var dv := Vector2(float(cell.y - home.y) * CELL_W, float(cell.x - home.x) * CELL)
+	return maxf(1.0, dv.length())
+
+
+func _purge_retime_deaths(home: Vector2i, maxd: float, t0: int) -> void:
+	## R434：把清场里每一格的「击破演出」推到**冲击波扫到它**的那一刻。
+	## 引擎是先逐个 `_destroy` 再 emit `revelator_purge` —— 那些 destroy 事件早已排好队，
+	## 所以这里只能**往后推**、不能重排。三处必须一起推：
+	## `_dying`（卡面还在屏上多久）、`destroy_fx`（碎卡 + 爆点）、`death_effects`（亡语）。
+	## 只推其中一个，就会出现「卡先碎、火后到」或「火还没到、亡语先结算」。
+	var shift := {}
+	for d: Dictionary in _dying:
+		var c: Vector2i = d.get("cell", Vector2i(-1, -1))
+		var want: int = t0 + int(float(_purge_dist(c, home)) / maxd * 560.0) + 170
+		var cur: int = int(d.get("hide_at", 0))
+		if want > cur:
+			shift[c] = want - cur
+			d["hide_at"] = want
+	if shift.is_empty():
+		return
+	for ev: Dictionary in _delayed:
+		var dd: Dictionary = ev.get("data", {})
+		var c2 = dd.get("cell")
+		if c2 is Vector2i and shift.has(c2):
+			ev["at"] = int(ev.get("at", 0)) + int(shift[c2])
+
+
+func _draw_flames() -> void:
+	## R434：火焰（灰烬龙战吼 / 清场落点）。贴图 fx_flame.png 的锚点是**火球中心**
+	## （192×256 里的 (96,178)）→ 绘制时把原点对到火球中心，`size` 就是火球直径。
+	## 生命周期分两段：前 30% 迅速张开（火苗窜起来），之后慢慢收 + 淡出；
+	## 整体再往上飘 `FLAME_RISE` —— 否则读作「原地放大的一张图」，不是火。
+	if _flames.is_empty():
+		return
+	var n := _now()
+	for f: Dictionary in _flames:
+		var st := int(f.get("start", 0))
+		var du := int(f.get("dur", 600))
+		var t := float(n - st) / maxf(1.0, float(du))
+		if t < 0.0 or t >= 1.0:
+			continue
+		var pos: Vector2 = (f["pos"] as Vector2) + _scroll_dy(float(f.get("sc", _grid_scroll)))
+		pos.y -= FLAME_RISE * pow(t, 0.55)
+		var base: float = float(f.get("size", 96.0))
+		# `size` 的语义 = **火球直径**（贴图里火球是 122px）。原来这里漏乘 `base / 122`，
+		# 缩放恒在 0.55~1.06 → 改 size 完全没效果，火焰永远按 192×256 原尺寸糊上去。
+		var amp := base / 122.0
+		var k := 0.0
+		if t < 0.30:
+			k = amp * (0.55 + 0.51 * clampf(t / 0.30, 0.0, 1.0))
+		else:
+			k = amp * (1.06 - 0.14 * clampf((t - 0.30) / 0.70, 0.0, 1.0))
+		var sy := k * (1.0 + 0.30 * t)          # 纵向多拉一点 = 火往上窜
+		var a: float = pow(1.0 - t, 0.75) * 0.95
+		var seed := int(f.get("seed", 0))
+		# 火星：6 颗，全部由 seed 确定性算出来（不额外维护数组，回放不抖）
+		if _fx_ember_tex != null:
+			for i in 6:
+				var ph := _rev_hash(seed * 7 + i, 13, 5)
+				var et := clampf(t * 1.5 - ph * 0.55, 0.0, 1.0)
+				if et <= 0.0 or et >= 1.0:
+					continue
+				var ex: float = (ph - 0.5) * base * 0.95 + sin(et * 5.0 + ph * 9.0) * 5.0
+				var ey: float = -base * 0.10 - et * base * (0.55 + 0.45 * ph)
+				var es: float = 5.0 + 5.0 * ph
+				draw_texture_rect(_fx_ember_tex,
+						Rect2(pos + Vector2(ex, ey) - Vector2(es, es) * 0.5, Vector2(es, es)),
+						false, Color(1.0, 0.84, 0.52, a * 0.9))
+		if _fx_flame_tex == null:
+			_draw_flame_fallback(pos, base * 0.62, a)
+			continue
+		draw_set_transform(pos, 0.0, Vector2(k, sy))
+		draw_texture_rect(_fx_flame_tex, Rect2(-96, -178, 192, 256), false,
+				Color(1, 1, 1, a))
+		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+
+
+func _draw_flame_fallback(pos: Vector2, r: float, a: float) -> void:
+	## 贴图缺失时的兜底（硬边同心圆）。宁可难看也不能让火焰整段消失 ——
+	## 万一出包时 assets/fx 没跟上，至少还能看出「这里在烧」。
+	draw_circle(pos, r * 0.62, Color(1.0, 0.22, 0.10, 0.30 * a))
+	draw_circle(pos, r * 0.44, Color(1.0, 0.34, 0.12, 0.80 * a))
+	draw_circle(pos, r * 0.28, Color(1.0, 0.68, 0.16, 0.95 * a))
+	draw_circle(pos, r * 0.15, Color(1.0, 0.95, 0.55, a))
+
+
+func _draw_shield_fx() -> void:
+	## R434：电磁屏障被打中 —— 护盾球亮起（贴图）+ 一道电弧甩到攻击者身上。
+	## 三拍：0~20% 罩子涨起来，20~62% 保持（轻微脉动），62% 之后淡出。
+	## 攻击者的闪红 / 掉血 / 伤害数字由 `_fx_retime_hit` 挪到 `land` 那一刻
+	## —— 电弧到哪儿，伤就掉到哪儿。
+	if _shield_fx.is_empty():
+		return
+	var n := _now()
+	var st := int(_shield_fx.get("start", 0))
+	var du := int(_shield_fx.get("dur", 1))
+	var t := float(n - st) / maxf(1.0, float(du))
+	if t < 0.0 or t >= 1.0:
+		return
+	var cell: Vector2i = _shield_fx.get("cell", Vector2i(0, 0))
+	var src: Vector2i = _shield_fx.get("src", cell)
+	var land := int(_shield_fx.get("land", st + SHIELD_ARC_MS))
+	var center := _cell_center(cell)
+	var target := _cell_center(src)
+	var lit := 1.0
+	if t < 0.20:
+		lit = t / 0.20
+	elif t > 0.62:
+		lit = 1.0 - (t - 0.62) / 0.38
+	lit = clampf(lit, 0.0, 1.0)
+	if lit > 0.01:
+		var pulse := 1.0 + 0.05 * sin(float(n) / 55.0)
+		var k := (0.62 + 0.32 * minf(1.0, t / 0.20)) * pulse * 0.82
+		if _fx_shield_tex != null:
+			draw_set_transform(center, 0.0, Vector2(k, k))
+			draw_texture_rect(_fx_shield_tex, Rect2(-96, -96, 192, 192), false,
+					Color(1, 1, 1, lit))
+			draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+		else:
+			draw_arc(center, 46.0 * k, 0.0, TAU, 32,
+					Color(0.62, 0.92, 1.0, 0.85 * lit), 2.5)
+	# 电弧只在「打进去」那一段可见，之后交给攻击者身上的爆点接力
+	if n >= st + 50 and n <= land + 100:
+		var bolt_a: float = clampf(float(n - (st + 50)) / 90.0, 0.0, 1.0)
+		_draw_arc_bolt(center.lerp(target, 0.26), target, n, bolt_a)
+
+
+func _draw_arc_bolt(from: Vector2, to: Vector2, n: int, a: float) -> void:
+	## R434：一截贴图电弧沿两点连线铺开（每段旋转对齐 + 各自侧向抖动）。
+	## 段长按 128px 缩放、段数按距离算，抖动相位吃帧号 → 读起来是会跳的电。
+	var vec := to - from
+	var dist := vec.length()
+	if dist < 4.0:
+		return
+	var dir := vec / dist
+	var ang := dir.angle()
+	var segs := clampi(int(dist / 34.0) + 1, 1, 8)
+	var seg_len := dist / float(segs)
+	for i in segs:
+		var mid := from + dir * (seg_len * (float(i) + 0.5))
+		var wob := sin(float(n) / 42.0 + float(i) * 2.1) * 9.0
+		mid += Vector2(-dir.y, dir.x) * wob
+		draw_set_transform(mid, ang, Vector2(seg_len / 128.0 * 1.35, 1.0))
+		if _fx_arc_tex == null:
+			draw_line(Vector2(-seg_len * 0.5, 0), Vector2(seg_len * 0.5, 0),
+					Color(0.75, 0.90, 1.0, a), 2.0)
+		else:
+			draw_texture_rect(_fx_arc_tex, Rect2(-64, -32, 128, 64), false,
+					Color(1, 1, 1, a))
+		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+
+
+func _draw_purge_wave() -> void:
+	## R434：第三阶段清场的冲击波 —— 一圈贴图环从启示者身上**径向放大**到铺满全场。
+	## 主环 + 后面拖一圈暖色余波；火焰由各格 `_flames` 在波前扫到时点火。
+	if _purge_wave.is_empty():
+		return
+	var n := _now()
+	var st := int(_purge_wave.get("start", 0))
+	var du := int(_purge_wave.get("dur", PURGE_WAVE_MS))
+	var t := float(n - st) / maxf(1.0, float(du))
+	if t < 0.0 or t >= 1.0:
+		return
+	var pc: Vector2i = _purge_wave.get("cell", Vector2i(0, 0))
+	var center := _cell_center(pc)
+	# 前 72% 的时间扩到最大，之后只淡出不扩 —— 波要「一下子扫过去」，
+	# 按全程线性扩会读成「一圈慢慢长大的环」。
+	var tw := clampf(t / 0.72, 0.0, 1.0)
+	var rad: float = GRID_W * (0.16 + 1.05 * pow(tw, 0.55))
+	var a: float = pow(1.0 - t, 1.10)
+	if _fx_wave_tex == null:
+		draw_arc(center, rad, 0.0, TAU, 48, Color(1.0, 0.90, 0.72, a), 4.0)
+		draw_arc(center, rad * 0.82, 0.0, TAU, 48, Color(1.0, 0.58, 0.30, a * 0.5), 2.0)
+		return
+	var k := rad / 128.0
+	draw_set_transform(center, 0.0, Vector2(k, k * 0.82))
+	draw_texture_rect(_fx_wave_tex, Rect2(-128, -128, 256, 256), false,
+			Color(1, 1, 1, minf(1.0, a * 1.45)))
+	draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+	if t > 0.10:
+		var k2 := rad * 0.70 / 128.0
+		draw_set_transform(center, 0.0, Vector2(k2, k2 * 0.82))
+		draw_texture_rect(_fx_wave_tex, Rect2(-128, -128, 256, 256), false,
+				Color(1.0, 0.82, 0.52, minf(1.0, a * 0.75)))
+		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
 
 
 func _draw_naval_beam() -> void:

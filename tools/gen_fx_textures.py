@@ -297,6 +297,222 @@ def gen_knife():
     save(buf, w, h, "fx_knife.png")
 
 
+# ---------------------------------------------------------------- 火焰爆团（R434）
+def gen_flame():
+    """灰烬龙战吼 / 冲击波扫过每一格的**火焰**。
+
+    结构 = 底部一团圆钝火球 + 从球顶窜出去的 3 条火舌。
+    ⚠️ 第一版用「极坐标把上半圈半径拉长」做火舌 → 上半圈整个被拉成锥形，
+    还超出 192×256 画布被平切（出图一看就是一块橙色扇形）。现在拆成两段画：
+    球是球、舌是舌，各自有自己的轮廓与颜色走势，形状才立得住。
+    """
+    w, h = 192, 256
+    buf = [[0.0, 0.0, 0.0, 0.0] for _ in range(w * h)]
+
+    # ---------- ① 火球主体（椭圆径向衰减） ----------
+    cx, cy = 96.0, 178.0
+    rx, ry = 61.0, 64.0
+    stops = [
+        (0.00, (1.00, 1.00, 0.98), 1.00),
+        (0.15, (1.00, 0.97, 0.76), 1.00),
+        (0.33, (1.00, 0.84, 0.32), 0.97),
+        (0.54, (1.00, 0.55, 0.12), 0.86),
+        (0.76, (0.90, 0.25, 0.07), 0.50),
+        (1.00, (0.55, 0.11, 0.04), 0.00),
+    ]
+    for y in range(h):
+        for x in range(w):
+            d = math.hypot((x - cx) / rx, (y - cy) / ry)
+            if d >= 1.0:
+                continue
+            col, a = stops_eval(stops, d)
+            a *= 0.84 + 0.30 * hash2(x // 3, y // 3)   # 低频斑块：火团内部别是干净渐变
+            over(buf, y * w + x, col, clamp(a))
+
+    # ---------- ② 火舌（3 条，从球顶窜出去） ----------
+    # (底部 x, 顶 y, 底 y, 相位, 最大半宽)
+    tongues = [
+        (73.0, 44.0, 152.0, 0.0, 30.0),
+        (97.0, 22.0, 168.0, 1.9, 37.0),
+        (121.0, 50.0, 150.0, 3.4, 28.0),
+    ]
+    for x0, ytop, ybot, ph, hwmax in tongues:
+        for y in range(int(ytop), int(ybot) + 1):
+            t = (float(ybot) - y) / (float(ybot) - float(ytop))   # 0 = 底，1 = 尖
+            # 收窄分两段：中段几乎不收（火舌是「柱」不是「锥」），最后 35% 才收尖
+            body = 1.0 if t < 0.65 else ((1.0 - t) / 0.35) ** 0.85
+            wid = hwmax * (1.0 - 0.16 * t) * body
+            if wid < 0.8:
+                continue
+            xc = x0 + 8.5 * math.sin(t * 2.9 + ph) * (0.25 + 0.75 * t)
+            col = (lerp(1.00, 0.78, t), lerp(0.87, 0.21, t), lerp(0.38, 0.05, t))
+            for x in range(max(0, int(xc - wid - 2)), min(w, int(xc + wid + 2))):
+                u = abs(x - xc) / wid
+                if u >= 1.0:
+                    continue
+                # `1 - u²` 是个圆润的钟形：火舌两侧是「软」的，不是一刀切的三角边
+                a = (1.0 - u * u) ** 1.25
+                a *= 0.55 + 0.45 * (1.0 - t)          # 越往上越淡
+                a *= 0.72 + 0.28 * hash2(x // 4, y // 5)   # 边缘抖一点，别是规整轮廓
+                over(buf, y * w + x, col, clamp(a * 0.88))
+                # 舌心更亮的细芯（黄白）—— 火焰不是一条单色带
+                if u < 0.34:
+                    over(buf, y * w + x, (1.00, 0.97, 0.70),
+                         clamp((0.34 - u) / 0.34 * a * 0.60))
+
+    # ---------- ③ 底部暖光（火焰脚下的地面反光） ----------
+    for y in range(h):
+        for x in range(w):
+            d = math.hypot((x - 96.0) / 76.0, (y - 212.0) / 18.0)
+            if d < 1.0:
+                # 强度压到 0.16：0.30 时缩放到 ~90px 会在棋盘上留一块边界可见的橙斑
+                over(buf, y * w + x, (1.00, 0.46, 0.13), (1.0 - d) ** 2.3 * 0.16)
+
+    save(buf, w, h, "fx_flame.png")
+
+
+# ---------------------------------------------------------------- 火星（R434）
+def gen_ember():
+    """上升的火星粒子。小、亮、柔和 —— 缩放绘制时靠它补「火在烧」的动感。"""
+    w = h = 32
+    buf = [[0.0, 0.0, 0.0, 0.0] for _ in range(w * h)]
+    for y in range(h):
+        for x in range(w):
+            d = math.hypot(x - 15.5, y - 15.5) / 15.5
+            if d >= 1.0:
+                continue
+            over(buf, y * w + x, (1.00, 0.90, 0.52), (1.0 - d) ** 1.5)
+            if d < 0.34:
+                over(buf, y * w + x, (1.00, 1.00, 0.96), (0.34 - d) / 0.34)
+    save(buf, w, h, "fx_ember.png")
+
+
+# ---------------------------------------------------------------- 电磁护盾球（R434）
+def gen_shield():
+    """启示者阶段 2 的电磁屏障：一颗**带六边形网格的力场球**。
+
+    三层叠加：① 极淡的球体填充（中心透明、边缘略厚）；② 小六边形网格（越靠边越亮
+    —— 球面透视，中间正面看过去几乎是平的）；③ 外沿 rim 亮带。
+    颜色淡蓝偏紫，与 9202 卡面那套「电磁」配色一致。
+    """
+    w = h = 192
+    buf = [[0.0, 0.0, 0.0, 0.0] for _ in range(w * h)]
+    R = 90.0
+    hexr = 13.0                 # 六边形外接圆半径
+    hw = hexr * 1.7320508       # 水平间距
+    vh = hexr * 1.5             # 垂直间距
+    apothem = hexr * 0.8660254
+
+    for y in range(h):
+        ny = (y - 95.5) / R
+        for x in range(w):
+            nx = (x - 95.5) / R
+            r = math.hypot(nx, ny)
+            if r > 1.02:
+                continue
+            z = math.sqrt(max(0.0, 1.0 - min(1.0, r * r)))   # 球面法线的 z 分量
+
+            # ① 球体填充：中心 0.04、边缘 0.13（球面的「厚度感」）——
+            #    第一版边缘 0.20 + rim 0.80，出图读成「一个白色足球」，把卡面压住了
+            over(buf, y * w + x, (0.40, 0.70, 1.00), (1.0 - z) * 0.13 + 0.04 * z)
+
+            # ② 六边形网格：先把像素投到「最近六边形中心」的局部坐标，再算到边的距离
+            u, v = nx * R, ny * R
+            row = int(round(v / vh))
+            best = None
+            for dr in (-1, 0, 1):
+                rr = row + dr
+                off = (rr % 2) * hw * 0.5
+                col0 = int(round((u - off) / hw))
+                for dc in (-1, 0, 1):
+                    ccx = off + (col0 + dc) * hw
+                    ccy = rr * vh
+                    d2 = math.hypot(u - ccx, v - ccy)
+                    if best is None or d2 < best[0]:
+                        best = (d2, u - ccx, v - ccy)
+            lx, ly = best[1], best[2]
+            sd = -1e9
+            for k in range(6):
+                a = k * math.pi / 3.0
+                sd = max(sd, lx * math.cos(a) + ly * math.sin(a))
+            dist_edge = apothem - sd
+            line = math.exp(-(dist_edge / 1.15) ** 2)
+            if line > 0.02:
+                gcol = (lerp(0.68, 0.60, r), lerp(0.90, 0.58, r), 1.00)
+                over(buf, y * w + x, gcol, line * (0.18 + 0.58 * r) * 0.62)
+
+            # ③ 外沿 rim：球壳最亮的一圈
+            rim = math.exp(-(((r - 0.875) / 0.085) ** 2))
+            if rim > 0.01:
+                over(buf, y * w + x, (0.72, 0.94, 1.00), rim * 0.52)
+
+            # ④ 左上一片高光（读成「有光源打过球面」）
+            spec = math.exp(-(((r - 0.80) / 0.16) ** 2)
+                            - ((math.atan2(ny, nx) - (-2.42)) / 0.55) ** 2)
+            if spec > 0.01:
+                over(buf, y * w + x, (0.90, 0.98, 1.00), spec * 0.38)
+
+    save(buf, w, h, "fx_shield.png")
+
+
+# ---------------------------------------------------------------- 电弧（R434）
+def gen_arc():
+    """护盾 → 攻击者的一截**电弧**。
+
+    横向 128×64。中心线 = 一层缓正弦（整体弧度）+ 一层粗锯齿（hash 分段抖动）
+    + 一层细锯齿，三层叠起来才像「电」；只用纯正弦读出来是一根软面条。
+    两端 alpha 收到 0，拼接不留硬边。
+    """
+    w, h = 128, 64
+    buf = [[0.0, 0.0, 0.0, 0.0] for _ in range(w * h)]
+
+    def center(xp):
+        t = xp / float(w - 1)
+        env = math.sin(t * math.pi)                     # 两端回到中轴
+        return (32.0
+                + 6.0 * math.sin(t * 6.2 + 0.8) * env
+                + 13.0 * (hash2(xp // 9, 5) - 0.5) * env
+                + 6.0 * (hash2(xp // 3, 11) - 0.5) * env)
+
+    for x in range(w):
+        cyy = center(x)
+        win = min(1.0, x / 8.0) * min(1.0, (w - 1 - x) / 8.0)
+        for y in range(h):
+            d = abs(y - cyy)
+            glow = math.exp(-((d / 9.5) ** 2))
+            core = math.exp(-((d / 2.3) ** 2))
+            over(buf, y * w + x, (0.46, 0.52, 1.00), clamp(0.40 * glow * win))
+            over(buf, y * w + x, (0.68, 0.88, 1.00), clamp(0.72 * glow * win))
+            over(buf, y * w + x, (1.00, 1.00, 1.00), clamp(1.00 * core * win))
+
+    save(buf, w, h, "fx_arc.png")
+
+
+# ---------------------------------------------------------------- 冲击波环（R434）
+def gen_shockwave():
+    """启示者进入第三阶段「清场」的那一圈冲击波。
+
+    主环 + 内侧淡雾，白偏青。绘制侧只做**径向放大**（scale 从 0.2 长到铺满全场），
+    alpha 随时间收掉 —— 一张贴图就能当扩散波用。
+    """
+    w = h = 256
+    buf = [[0.0, 0.0, 0.0, 0.0] for _ in range(w * h)]
+    for y in range(h):
+        for x in range(w):
+            r = math.hypot(x - 127.5, y - 127.5) / 127.5
+            if r > 1.0:
+                continue
+            ring = math.exp(-(((r - 0.855) / 0.052) ** 2))
+            halo = math.exp(-(((r - 0.72) / 0.16) ** 2)) * 0.30
+            smoke = math.exp(-(((r - 0.52) / 0.30) ** 2)) * 0.10
+            a = clamp(ring * 0.95 + halo + smoke)
+            if a <= 0.004:
+                continue
+            gcol = (lerp(1.00, 0.72, r), lerp(0.99, 0.94, r), lerp(0.92, 1.00, r))
+            over(buf, y * w + x, gcol, a)
+    save(buf, w, h, "fx_shockwave.png")
+
+
 def main():
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
@@ -306,6 +522,11 @@ def main():
     gen_shine()
     gen_glow()
     gen_knife()
+    gen_flame()
+    gen_ember()
+    gen_shield()
+    gen_arc()
+    gen_shockwave()
     print("完成")
 
 
