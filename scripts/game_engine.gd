@@ -14361,7 +14361,10 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	# R225：践踏 → 击杀的溢出伤害不丢（沿击杀目标那一列继续传下去）；
 	# 非践踏保持原规则：只有被击穿的是对方**后排**单位，溢出才漏到 HP。
 	# R356：启示者阶段 2 起自带「践踏」（阶段效果，不烤进 CardData → 这里补一条判据）。
-	var trample: bool = attacker.card.traits.has(TRAMPLE_TRAIT) or attacker.boss_phase >= 2
+	# ⚠️ R439（用户口径「第三阶段去除践踏」）：判据必须是 `== 2`，**不许 `>= 2`** ——
+	#    卡面第三阶段没写践踏，`>= 2` 等于让阶段 3 白拿一条卡面没有的效果。
+	#    与电磁屏障那条（14407 行 `defender.boss_phase == 2`）同源，两条一起守住。
+	var trample: bool = attacker.card.traits.has(TRAMPLE_TRAIT) or attacker.boss_phase == 2
 	var overflow:= 0
 	if def_dmg > hp_before and (trample or dst.x == back_row(defender.owner)):
 		overflow = def_dmg - maxi(hp_before, 0)

@@ -27056,6 +27056,42 @@ func _init() -> void:
 			and r420_src.find("defender.boss_phase >= 2") < 0,
 			"R420 源码：电磁屏障反伤判据是 == 2（阶段 3 不许继承；不许回退成 >= 2）")
 
+	# ---- ④c R439（用户口径「第三阶段去除践踏，双动写进文本」）----
+	#   ① 阶段 3 不再践踏 —— `attack()` 的判据从 `>= 2` 收成 `== 2`（与电磁屏障同源）；
+	#   ② 双动**保留**到阶段 3，并且必须写进 9200 的卡面文案 —— 卡面没写的效果不许存在。
+	var r439_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r439_src.find("attacker.boss_phase == 2") >= 0
+			and r439_src.find("attacker.boss_phase >= 2") < 0,
+			"R439 源码：践踏判据是 == 2（阶段 3 去除践踏；不许回退成 >= 2）")
+	check(r356_e.state.unit_actions(r356_boss, GameEngine.SIDE_OPPONENT)
+			== GameEngine.REVELATOR_ACTIONS,
+			"R439 阶段 3 仍每回合行动两次（实际 %d）"
+			% r356_e.state.unit_actions(r356_boss, GameEngine.SIDE_OPPONENT))
+	var r439_txt: String = r356_boss_card.effect_text
+	var r439_hits := 0
+	var r439_at := r439_txt.find("每回合可行动两次")
+	while r439_at >= 0:
+		r439_hits += 1
+		r439_at = r439_txt.find("每回合可行动两次", r439_at + 1)
+	check(r439_hits == 2,
+			"R439 卡面：9200 第二、第三阶段都写了「每回合可行动两次」（实际 %d 处）" % r439_hits)
+	# 行为：阶段 3 一拳打死同列第一只 → 溢出**不再**沿列穿透第二只（阶段 2 会穿）。
+	var r439_e := _new_engine([], 20, 30)
+	r439_e.enemy_hp_infinite = true
+	r439_e.win_on_boss = GameEngine.REVELATOR_ID
+	var r439_boss := r439_e.state.place(CardData.from_dict(r356_boss_card.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r439_boss.boss_phase = 3
+	var r439_a := r439_e.state.place(_card(99005, "穿透A", "盟友", 1, 1, 1, 1, 1),
+			Vector2i(1, 1), GameEngine.SIDE_SELF)
+	var r439_b := r439_e.state.place(_card(99006, "穿透B", "盟友", 1, 1, 1, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_SELF)
+	r439_e.attack(Vector2i(0, 1), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	check(r439_a != null and not r439_e.state.board.values().has(r439_a),
+			"R439 阶段 3：第一只被一拳打死（力量 15 > 1 血）")
+	check(r439_b != null and r439_e.state.board.values().has(r439_b),
+			"R439 阶段 3：溢出不穿透同列第二只（践踏已去除）")
+
 	# ---- ⑤ 阶段 3「接通代受」：一半（去尾）转给接通友军，剩下的自己吃 ----
 	var r356_friend := r356_e.state.place(_card(99002, "接通友军", "盟友", 1, 3, 40, 1, 1),
 			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
