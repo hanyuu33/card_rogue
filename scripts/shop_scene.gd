@@ -37,6 +37,12 @@ const PRICE_DELETE := 50
 const PRICE_MAXHP := 50
 const PRICE_CHOCO := 80      # R295：120 → 80
 
+# R432（用户口径）：商店第一行的卡 **每张 20% 概率五折**。
+# 折后价 = 基础价 × OFF_PCT，**向上取整**（25 → 13 / 50 → 25 / 80 → 40）——
+# 取整方向写死在这里，绘制 / 提示 / 扣款都读 `_row1_price()`，别各算一份。
+const OFF_CHANCE := 0.20
+const OFF_PCT := 0.5
+
 # 附魔定义（id → 元数据）
 const ENCHANTS := [
 	# ⚠️ 这里的 `name` 只是**冗余副本**，绘制一律走 `_ench_name()`（真源 = `CardData.ENCHANT_DEFS`）；
@@ -235,6 +241,19 @@ func _ready() -> void:
 		for rid: int in [6035, 6036, 6015, 6001, 6003, 6005, 6010, 6041]:
 			RunState.gain_relic(rid)
 	_setup_shop()   # R390：见上面那条注释 —— 必须在所有「造 run / 改当前格」的演示参数之后
+	# R432 出图：`--off N` 把第一行第 N 张**强制设为五折** —— 五折本身是 20% 概率，
+	# 截图核验不能靠运气（跑十次九次截不到贴纸，等于没有核验手段）。
+	# 只改这一个标记，价格与贴纸全走正常渲染路径。
+	# 出图：`shop.tscn -- --screenshot --shop --off 0`
+	var of := args.find("--off")
+	if of >= 0 and of + 1 < args.size():
+		var oi := int(args[of + 1])
+		if oi >= 0 and oi < _row1.size():
+			_row1[oi]["off"] = true
+			# 同步进 `shop_states`：配合 `--revisit` 走一遍「存盘 → 重进恢复」，
+			# 才能证明折扣标记是**跟着货架存档走的**（而不是只在内存里活一帧）。
+			_sync_shop_state()
+			_ask_redraw()
 	# 演示参数（R214）：`--delpick` 打开「删除一张卡」的选卡页 —— 核验**选卡页大卡**
 	# （150×190，`CardFace.draw_pick()`）上也有附魔标记。顺带给卡组前两张塞附魔，
 	# 否则初始卡组是一张张素卡，出图看不出任何标记。
@@ -306,7 +325,12 @@ func _setup_shop() -> void:
 	var rolled := CardReward.roll(_repo, "boss", 6, RunState.run_rng)
 	_row1 = []
 	for c: CardData in rolled:
-		_row1.append({"card": c, "sold": false})
+		# R432：五折标记逐张独立摇，随机源走本局 `run_rng`。
+		# ⚠️ 对**抽到的 6 张全摇**（不只摇可见张数）：`_visible_row1_count()` 依赖窗口宽度，
+		#    按可见数摇会让「窗口尺寸不同 → 同一份存档消耗的随机数不同」，确定性当场破。
+		# ⚠️ 结果随 `_sync_shop_state()` 进 `shop_states`，重进商店**不重摇**。
+		var off: bool = RunState.run_rng.randf() < OFF_CHANCE
+		_row1.append({"card": c, "sold": false, "off": off})
 	# 第二行：从全部附魔里随机抽 3 种不重复（R370 起 6 种 → 抽 3）
 	var pool := ENCHANTS.duplicate()
 	RunState.shuffle_rng(pool)   # R241：`Array.shuffle()` 是全局随机源，这里不能直接用
@@ -375,7 +399,9 @@ func _restore_shop(st: Dictionary) -> bool:
 		var c := _repo.get_card(int(a[0]))
 		if c == null:
 			return false
-		o1.append({"card": c, "sold": int(a[1]) != 0})
+		# 第三列 = 五折标记。R432 之前的存档只有两列 → 兼容成「不打折」。
+		var off := (int(a[2]) != 0) if a.size() > 2 else false
+		o1.append({"card": c, "sold": int(a[1]) != 0, "off": off})
 	var o2: Array = []
 	for it2: Variant in r2:
 		if not (it2 is Array) or (it2 as Array).size() < 2:
@@ -411,7 +437,8 @@ func _sync_shop_state() -> void:
 	var r1: Array = []
 	for e: Dictionary in _row1:
 		var c: CardData = e["card"]
-		r1.append([int(c.id), 1 if bool(e["sold"]) else 0])
+		r1.append([int(c.id), 1 if bool(e["sold"]) else 0,
+				1 if bool(e.get("off", false)) else 0])
 	var r2: Array = []
 	for e2: Dictionary in _row2:
 		var ench: Dictionary = e2["ench"]
@@ -608,11 +635,22 @@ func _draw_shelves() -> void:
 
 
 func _card_price(card: CardData) -> int:
+	## 基础价（原价）。**不是成交价** —— 第一行要算五折，一律走 `_row1_price()`。
 	match card.rarity:
 		0: return 25
 		1: return 50
 		2: return 80
 	return 25
+
+
+func _row1_price(e: Dictionary) -> int:
+	## 第一行卡牌的**实际成交价**（R432 唯一口）：五折则半价、向上取整。
+	## 绘制价签 / 触摸「购买」按钮 / 购买提示 / 扣款全读这里 ——
+	## 漏一处就是「贴着 -50%，却按原价扣钱」。
+	var base := _card_price(e["card"])
+	if not bool(e.get("off", false)):
+		return base
+	return int(ceil(float(base) * OFF_PCT))
 
 
 func _draw_row1() -> void:
@@ -635,8 +673,11 @@ func _draw_row1() -> void:
 		var picked := not sold and _sel_row1 == i and _enchanting < 0
 		CardFace.draw(self, card, rr, card.health, hovered or picked, false, _font, _font_bold,
 				-1, false, false, true)
-		var price := _card_price(card)
-		_draw_price(rr, price, sold)
+		var off := bool(e.get("off", false))
+		var price := _row1_price(e)
+		_draw_price(rr, price, sold, off)
+		if off and not sold:
+			_draw_off_tag(rr)
 		if sold:
 			draw_rect(rr, Color(0, 0, 0, 0.55), true)
 			draw_string(_font_bold, rr.position + Vector2(0, rr.size.y / 2),
@@ -782,12 +823,36 @@ func _draw_sold_mask(rr: Rect2) -> void:
 			"已售罄", HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_SUBHEAD, Color("ff9a9a"))
 
 
-func _draw_price(rr: Rect2, price: int, sold: bool) -> void:
+func _draw_price(rr: Rect2, price: int, sold: bool, off := false) -> void:
+	## 第一行价签。`off = true` → 五折：底色转暗红、数字转暖橙，
+	## 与卡面右上角那张「-50%」贴纸同色系（视线一次就能把两者连起来）。
 	var chip := Rect2(rr.end.x - 40, rr.position.y - 12, 40, 26)
-	draw_rect(chip, Color("1a1c22"), true)
-	draw_rect(chip, Color("c8951c"), false, 1.5)
+	draw_rect(chip, Color("2a1210") if off else Color("1a1c22"), true)
+	draw_rect(chip, Color("e0634a") if off else Color("c8951c"), false, 1.5)
 	draw_string(_font_bold, chip.position + Vector2(0, 18), "%d" % price,
-			HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 12, Color("ffd75a"))
+			HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 12,
+			Color("ffc9a0") if off else Color("ffd75a"))
+
+
+func _draw_off_tag(rr: Rect2) -> void:
+	## R432：五折贴纸「-50%」—— 斜 26° 贴在卡面**右上角**。
+	## 位置特意压在稀有度缎带**下方**（缎带高 27k、从卡顶探出）：稀有度是卡面的
+	## 主信息通道，贴纸只许挡卡图，不许挡缎带。
+	## 全程 `draw_set_transform` 旋转绘制，不引入新素材 —— 贴纸随卡高等比缩放，
+	## 4 张 / 5 张货架与任意分辨率都不会失形（换成 png 就得管九宫格与导入）。
+	## ⚠️ 末尾**必须**复位 transform：`_draw_row1` 之后还要画售罄遮罩与「已售罄」字。
+	var k := rr.size.y / 181.0          # 181 = 150 宽卡的标准高（`_row_rects` 同口径）
+	var w: float = 58.0 * k
+	var h: float = 22.0 * k
+	var center := Vector2(rr.end.x - 42.0 * k, rr.position.y + 56.0 * k)
+	draw_set_transform(center, deg_to_rad(-26.0), Vector2.ONE)
+	var box := Rect2(-w * 0.5, -h * 0.5, w, h)
+	draw_rect(box, Color("b3221a"), true)                       # 贴纸纸底（暗红）
+	draw_rect(box, Color("3a0f0a"), false, 2.0 * k)             # 外描边（压住边缘的白）
+	draw_rect(box.grow(-2.0 * k), Color("ffd98a"), false, 1.0 * k)   # 内金线
+	draw_string(_font_bold, box.position + Vector2(0, h * 0.78), "-50%",
+			HORIZONTAL_ALIGNMENT_CENTER, w, int(round(13.0 * k)), Color("fff3cf"))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_leave() -> void:
@@ -1112,7 +1177,7 @@ func _paid_tag(price: int) -> String:
 func _buy_card(i: int) -> void:
 	var e: Dictionary = _row1[i]
 	var card: CardData = e["card"]
-	var price := _card_price(card)
+	var price := _row1_price(e)          # R432：五折走同一口，别再读基础价
 	if not _pay(price):
 		_set_hint("金币不足（需要 %d）" % price)
 		return
@@ -1385,7 +1450,7 @@ func _draw_buy_buttons() -> void:
 		if bool(e["sold"]):
 			continue
 		var rr := _buy_btn_rect(i)
-		var price := _card_price(e["card"])
+		var price := _row1_price(e)          # R432：触摸端按钮也要显示折后价
 		var can := _can_pay(price)
 		draw_rect(rr, Color("3f8a4f") if can else Color("34343a"), true)
 		draw_rect(rr, Color("c8f0a0") if can else Color("64646c"), false, 2.0)

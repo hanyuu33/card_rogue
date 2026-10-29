@@ -30082,6 +30082,29 @@ func _init() -> void:
 			and r411_fate.effect_text.find("手牌上限") >= 0,
 			"R411 拒绝命运：「按弃牌区顺序 / 填到手牌上限」写成正文（原先是括号补注）")
 
+	# ---- R432：商店第一行 20% 概率五折 + 「-50%」斜贴纸 ----
+	# 这几条全是**守卫**（源码字符串），因为 shop_scene 是场景、实例化会拉整套 _ready。
+	# 真正要钉住的是四件事：① 概率与随机源；② 成交价只有一个口；
+	# ③ 折扣跟着货架存档走（重进不重摇、读档不丢）；④ 贴纸画完要复位 transform。
+	var r432_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	check_src(r432_shop.find("const OFF_CHANCE := 0.20") >= 0,
+			"R432 五折概率 = 0.20（唯一常量 OFF_CHANCE）")
+	check_src(r432_shop.find("RunState.run_rng.randf() < OFF_CHANCE") >= 0,
+			"R432 五折逐张独立摇、随机源走本局 run_rng（不破坏同种子一致）")
+	check_src(r432_shop.find("_row1.append({\"card\": c, \"sold\": false, \"off\": off})") >= 0,
+			"R432 第一行每张卡都带 off 标记（货架数据结构的一部分）")
+	check_src(r432_shop.find("var price := _card_price(card)") < 0
+			and r432_shop.find("_row1_price(e)") >= 0,
+			"R432 成交价只走 _row1_price()，没有任何地方再直读基础价")
+	check_src(r432_shop.find("1 if bool(e.get(\"off\", false)) else 0]") >= 0,
+			"R432 五折标记随货架写进 shop_states（重进不重摇、读档不丢）")
+	check_src(r432_shop.find("(int(a[2]) != 0) if a.size() > 2 else false") >= 0,
+			"R432 恢复兼容 R432 之前的旧存档（只有两列 → 不打折）")
+	check_src(r432_shop.find("func _draw_off_tag(") >= 0
+			and r432_shop.find("deg_to_rad(-26.0)") >= 0,
+			"R432 「-50%」贴纸是旋转自绘（斜贴、无新素材、随卡高等比缩放）")
+	check_src(r432_shop.find("draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)") >= 0,
+			"R432 贴纸画完必须复位 transform（否则后续价签/售罄遮罩跟着转）")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 
