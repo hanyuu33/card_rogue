@@ -40,7 +40,7 @@ const PEAR_ID := 6019             # 鸭梨（鸭梨山大事件道具）
 const APPLE_ID := 6027            # 苹果（R244「苹果与医生」事件道具；原奖励道具）
 const PIPE_ID := 6055              # 烟斗（R446「雪豹出现」选项 1：首回合 +1 费 / 多抽 1 / 失去 1 HP）
 const ADVENTURER_NOTE_ID := 6056   # 冒险笔记（R447「冒险家的遗物」选项 1：随机未探索房 → 大宝箱）
-const ADVENTURER_FLINT_ID := 6057  # 燧石（R447「冒险家的遗物」选项 2：选一格走过的房 → 退成篝火）
+const ADVENTURER_FLINT_ID := 6057  # 燧石（R447「冒险家的遗物」选项 2；R448 起全图任选一格 → 退成篝火）
 const SNOW_LEOPARD_CARD_ID := 8081  # 雪豹（R446「雪豹出现」选项 2 的奖励卡）
 const HERO_CARD_ID := 9023        # 英雄（绝赞五换一的奖励卡）
 const HERO_TRADE_NEED := 5        # 绝赞五换一：要交出 5 张**不同名**的卡
@@ -1778,8 +1778,8 @@ func _on_alt() -> void:
 		_claim_reward(alt_btn)
 		_collapse_to_leave()
 		desc.text = ADVENTURER_FLINT_DESC
-		_adv_result = "「燧石」已收进道具栏——回到地图后挑一个走过的房间，" \
-				+ "把那盏火重新点起来。"
+		_adv_result = "「燧石」已收进道具栏——回到地图后任选一格，" \
+				+ "把那盏火点起来。"
 		result_label.text = _adv_result
 		result_label.add_theme_color_override("font_color", Color("d7a54a"))
 		_redraw()

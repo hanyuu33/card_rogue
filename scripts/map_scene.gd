@@ -134,9 +134,10 @@ var _hover_id := -1
 var _flash_id := -1
 var _flash_t := 0.0
 const FLASH_SECS := 14.0
-## 燧石：正在等玩家点一格「走过的」房间。
+## 燧石：正在等玩家点一格房间（R448 起全图任选）。
 var _flint_pick := false
 var _flint_ids: Array = []
+var _flint_blocked: Array = []   # R448：整张图里「点不着」的那几格（起点 / 商店 / 当前格 / 已有篝火）
 var _mouse := Vector2.ZERO
 var _records_visible := false
 var _records_scroll := 0.0
@@ -415,6 +416,9 @@ func _ready() -> void:
 	# 燧石：`gain_relic` 只置了 `pending_relic`（它要玩家自己挑格子）→ 一进地图就收尾。
 	if RunState.pending_relic == RunState.FLINT_RELIC_ID:
 		_start_flint_pick()
+		# 出图用：截图探针没有鼠标移动，手动钉一个悬停格，才看得到亮橙呼吸框
+		if "--flintdemo" in OS.get_cmdline_user_args() and not _flint_ids.is_empty():
+			_hover_id = int(_flint_ids[_flint_ids.size() / 2])
 	# 命令行 -- --screenshot：自动截图退出
 	#（`-- --enteranim --shotwait 1.0` 可以指定延迟，用来截过场的不同时刻）
 	if "--screenshot" in OS.get_cmdline_user_args():
@@ -1114,24 +1118,33 @@ func _fake_walked() -> void:
 
 
 func _start_flint_pick() -> void:
-	## R447 燧石（6057）：进入「选格模式」—— 只认走过的房间（当前格 / 起点除外）。
-	## 没有候选（理论上只有「一步都没走过」才会）→ 直接作废，别把玩家困在一张点不动的图上。
+	## R447 燧石（6057）：进入「选格模式」—— R448 起**全图任选一格**（走过的 / 没走过的都行）。
+	## 没有候选（理论上只有空地图才会）→ 直接作废，别把玩家困在一张点不动的图上。
 	_flint_ids = RunState.flint_candidates()
+	# R448：候选从「走过的几格」放开成「整张图」之后，逐格画框会把地图糊成一片橙色，
+	# 而雾又是白亮的、淡橙框几乎看不见（出图实测）。改成**反过来标禁区** ——
+	# 点得着的默认不画，只把点不着的那几格（通常 5~8 格）用暗色细框点出来。
+	_flint_blocked = []
+	for _bc: Dictionary in RunState.map_cells:
+		var _bid := int(_bc["id"])
+		if RogueMap.is_void(_bc) or _flint_ids.has(_bid):
+			continue
+		_flint_blocked.append(_bid)
 	if _flint_ids.is_empty():
 		RunState.pending_relic = -1
 		_flint_pick = false
-		_set_note("燧石没有用武之地：地图上还没有走过的房间")
+		_set_note("燧石没有用武之地：这张图上没有能点火的地方")
 		return
 	_flint_pick = true
 	queue_redraw()
 
 
 func _flint_click(pos: Vector2) -> void:
-	## R447 燧石：点候选格 → 退回未探索 + 变篝火；点别处只给一句提示，不退出选格模式。
+	## R447 燧石：点候选格 → 变成篝火（走过的退回未探索）；点别处只给一句提示，不退出选格模式。
 	var fc := _cell_at(pos)
 	var fid := int(fc.get("id", -1))
 	if fid < 0 or not _flint_ids.has(fid):
-		_set_note("燧石只能点在走过的房间上")
+		_set_note("这一格点不着（当前所站 / 起点 / 商店 / 已经是篝火 / 空地都不行）")
 		queue_redraw()
 		return
 	if not RunState.flint_rebuild_rest(fid):
@@ -1141,6 +1154,7 @@ func _flint_click(pos: Vector2) -> void:
 	sfx.play("click")
 	_flint_pick = false
 	_flint_ids = []
+	_flint_blocked = []
 	RunState.pending_relic = -1
 	var c: Dictionary = RunState.map_cells[fid]
 	_set_note("篝火点起来了（第 %d 列第 %d 行）—— 走过去就能休息" % [int(c["col"]) + 1, int(c["row"]) + 1])
@@ -1148,16 +1162,24 @@ func _flint_click(pos: Vector2) -> void:
 
 
 func _draw_flint_cells() -> void:
-	## R447 燧石：候选格的橙色呼吸框。
-	## 只在框里画、**不逐格写小字** —— 候选格底部的「起点 / 战斗」标签本来就贴在那儿，
-	## 再叠一行字会互相压住；横条里说一次就够（候选格全都可点，不需要逐格指认）。
+	## R447 燧石：选格模式下的框。R448 候选放开成**整张图**，所以画法反过来：
+	##   * 候选（默认全部）→ **不画**。29 格逐个描边在雾上根本看不清，还糊成一片；
+	##   * 禁区（起点 / 固定商店 / 当前所站 / 已有篝火 / Boss）→ 暗灰细框 + 一道斜杠，
+	##     数量就 5~8 格，一眼能认出「这几处不行」；
+	##   * 鼠标停住的那格 → 亮橙呼吸粗框（真正的手感反馈，触屏没悬停时靠点击）。
 	if not _flint_pick:
 		return
-	var p := 0.5 + 0.5 * sin(_t * 4.5)
-	for fid: int in _flint_ids:
-		var c: Dictionary = RunState.map_cells[fid]
-		var r := _cell_rect(c)
-		draw_rect(r.grow(2.0), Color(1.0, 0.62, 0.24, 0.48 + 0.42 * p), false, 3.0)
+	for bid: int in _flint_blocked:
+		var bc: Dictionary = RunState.map_cells[bid]
+		var br := _cell_rect(bc)
+		draw_rect(br.grow(1.0), Color(0.55, 0.50, 0.46, 0.55), false, 1.4)
+		draw_line(br.position + Vector2(6, 6), br.end - Vector2(6, 6),
+				Color(0.62, 0.54, 0.48, 0.45), 1.6)
+	if _flint_ids.has(_hover_id):
+		var hc2: Dictionary = RunState.map_cells[_hover_id]
+		var hr := _cell_rect(hc2)
+		var p := 0.5 + 0.5 * sin(_t * 4.5)
+		draw_rect(hr.grow(2.0), Color(1.0, 0.62, 0.24, 0.55 + 0.40 * p), false, 3.0)
 
 
 func _draw_flint_hint() -> void:
@@ -1173,7 +1195,7 @@ func _draw_flint_hint() -> void:
 	draw_rect(rect, Color(0.12, 0.09, 0.06, 0.96), true)
 	draw_rect(rect, Color(1.0, 0.70, 0.32, 0.60), false, 1.2)
 	draw_string(_font_bold, rect.position + Vector2(10, 17),
-			"燧石：选一个走过的房间，把它重新变回篝火",
+			"燧石：在地图上任选一格，点着成篝火（走过的会退回未探索）",
 			HORIZONTAL_ALIGNMENT_CENTER, w - 20, UiTheme.FS_CAPTION, Color("f0c98a"))
 
 

@@ -620,25 +620,36 @@ static func note_reveal_bigchest() -> int:
 
 
 static func flint_candidates() -> Array:
-	## R447 燧石（6057）：能点的格子 = **走过的、但不是当前所在格 / 起点**的房间。
-	## 第三层直道之外的空格（is_void）同样排除。
-	## ⚠️ 当前格必须排掉：站在上面把它变成「未探索」，`advance()` 对同格返回 ok=false，
-	##    玩家会被迫先走开再走回来 —— 平白多花一块巧克力，纯属坑人。
+	## R448 燧石（6057）：能点的格子 = **全地图任意一格**（走过的 / 没走过的都算）。
+	## 只排掉这几类「点了没有意义、或者会把地图弄坏」的格子：
+	##   * 当前所在格 —— 站在上面把它变成「未探索」，`advance()` 对同格返回 ok=false，
+	##     玩家得先走开再走回来，平白多花一块巧克力；
+	##   * 起点格（`type == "start"`）—— `start_cell()` 靠它认地图入口；
+	##   * 第三层的 Boss 格 —— 烧成篝火就永远打不到 Boss，直接卡死；
+	##   * 右上角固定商店 —— 「每层那间永远在」是地图设计约束；
+	##   * 已经是篝火的格 —— 再点一次纯属白烧；
+	##   * 第三层直道之外的空格（`is_void`）。
 	var out: Array = []
 	for c: Dictionary in map_cells:
 		var cid := int(c["id"])
 		if cid == current_node_id or RogueMap.is_void(c):
 			continue
-		if not cleared_ids.has(cid):
+		var ty := str(c.get("type", ""))
+		if ty == "start" or ty == "boss" or ty == "rest":
 			continue
-		if str(c.get("type", "")) == "start" or RogueMap.is_fixed_shop(cid):
-			continue      # 起点 / 右上角固定商店都不是「能被烧掉的普通房间」
+		if RogueMap.is_fixed_shop(cid):
+			continue
 		out.append(cid)
 	return out
 
 
 static func flint_rebuild_rest(node_id: int) -> bool:
-	## R447 燧石（6057）：把一个**走过的**房间退回未探索，并改成篝火。返回是否真的改了。
+	## R448 燧石（6057）：把地图上**任意一格**改成篝火。返回是否真的改了。
+	## 两类的处理不同（这是 R448 放开「走过的」限制之后必须分开的）：
+	##   * 原来走过 → **退回未探索**（从 `cleared_ids` 摘掉），并揭晓成看得见的篝火
+	##     —— 它就在你已经探过的区域里，藏起来只会让人找不到；
+	##   * 原来没走过 → 保持原来的迷雾状态（是「?」房就还是「?」），
+	##     走过去那一刻才发现「原来是篝火」。
 	## ⚠️ 必须从 `cleared_ids` 里摘掉：只改 type 不改探索状态的话，再走回去时
 	##    `advance()` 会判 `is_new = false` → 「什么都不会发生」，篝火永远点不着。
 	## ⚠️ 摘掉它之后，这一格不再是「零消耗穿行」的中转格 —— 穿过它的远路会临时断开，
@@ -648,10 +659,12 @@ static func flint_rebuild_rest(node_id: int) -> bool:
 	if not flint_candidates().has(node_id):
 		return false
 	var cell: Dictionary = map_cells[node_id]
+	var was_explored := cleared_ids.has(node_id)
 	cleared_ids.erase(node_id)
 	cell["type"] = "rest"
-	cell["hidden"] = false
-	cell["revealed"] = true
+	if was_explored:
+		cell["hidden"] = false
+		cell["revealed"] = true
 	cell["event_kind"] = ""
 	# 这一格若曾经是商店：货架状态与「可再进店」窗口都失效了，一并清掉，
 	# 免得窗口指着一个已经不是商店的格子（`shop_revisit_ok` 会拿它去比较）。

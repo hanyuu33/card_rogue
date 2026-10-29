@@ -20507,22 +20507,51 @@ func _init() -> void:
 	check(RunState.note_reveal_bigchest() == -1 and RunState.map_flash_id == -1,
 			"R447 冒险笔记：地图全走完时无处可改（返回 -1，状态位清空）")
 
-	# -- 燧石：候选 = 走过的房（当前格 / 起点除外）
+	# -- R448 燧石：候选 = **全地图任意一格**（当前格 / 起点 / Boss / 篝火 / 固定商店 / 虚空除外）
 	RunState.cleared_ids = [r447_start_id, r447_got]
 	RunState.current_node_id = r447_start_id
-	var r447_cands := RunState.flint_candidates()
-	check(r447_cands.has(r447_got) and not r447_cands.has(r447_start_id)
-			and r447_cands.size() == 1,
-			"R447 燧石：候选只含走过的房（不含当前格 / 起点），实际 %s" % str(r447_cands))
+	var r448_cands := RunState.flint_candidates()
+	var r448_expect := 0
+	for r448_c: Dictionary in r447_cells:
+		var r448_id := int(r448_c["id"])
+		var r448_ty := str(r448_c.get("type", ""))
+		if r448_id == r447_start_id or RogueMap.is_void(r448_c) \
+				or r448_ty == "start" or r448_ty == "boss" or r448_ty == "rest" \
+				or RogueMap.is_fixed_shop(r448_id):
+			continue
+		r448_expect += 1
+	check(r448_cands.size() == r448_expect and r448_cands.has(r447_got)
+			and not r448_cands.has(r447_start_id),
+			"R448 燧石：全图任选（%d 格可点，不含当前格 / 起点 / Boss / 篝火 / 固定商店 / 虚空，实际 %d）"
+					% [r448_expect, r448_cands.size()])
+	# 还没走过的房间也在候选里 —— 这是 R448 放开的口子
+	var r448_unexplored := -1
+	for r448_c2: Dictionary in r447_cells:
+		var r448_id2 := int(r448_c2["id"])
+		if not RunState.cleared_ids.has(r448_id2) and r448_cands.has(r448_id2):
+			r448_unexplored = r448_id2
+			break
+	check(r448_unexplored >= 0,
+			"R448 燧石：还没走过的房间也能点（id %d）" % r448_unexplored)
 	check(RunState.flint_rebuild_rest(r447_start_id) == false,
 			"R447 燧石：当前所在格点不动（否则要先走开再走回来）")
+	# 没走过的格 → 变成篝火但**保持原来的迷雾状态**（走过去才发现是篝火）
+	var r448_u_hidden := bool(r447_cells[r448_unexplored].get("hidden", false))
+	var r448_u_rev := bool(r447_cells[r448_unexplored].get("revealed", true))
+	check(RunState.flint_rebuild_rest(r448_unexplored)
+			and str(r447_cells[r448_unexplored]["type"]) == "rest"
+			and bool(r447_cells[r448_unexplored].get("hidden", false)) == r448_u_hidden
+			and bool(r447_cells[r448_unexplored].get("revealed", true)) == r448_u_rev
+			and not RunState.cleared_ids.has(r448_unexplored),
+			"R448 燧石：没走过的格改成篝火后仍是「未探索」（揭晓状态不变）")
+	# 走过的格 → 退回未探索 + 揭晓成看得见的篝火
 	check(RunState.flint_rebuild_rest(r447_got)
 			and str(r447_cells[r447_got]["type"]) == "rest"
 			and bool(r447_cells[r447_got]["revealed"])
 			and not RunState.cleared_ids.has(r447_got),
-			"R447 燧石：点过的房退回未探索 + 变成篝火")
+			"R447 燧石：走过的房退回未探索 + 变成篝火")
 	check(RunState.flint_rebuild_rest(r447_got) == false,
-			"R447 燧石：同一格不能点第二次（已经不在候选里）")
+			"R448 燧石：已经是篝火的格不再进候选（不能重复烧）")
 	# 燧石拿到时只挂 pending（要玩家在地图上选格，不能当场随便改一格）
 	RunState.relics = []
 	RunState.pending_relic = -1
