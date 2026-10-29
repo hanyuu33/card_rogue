@@ -60,6 +60,12 @@ __pycache__/
 # 这里只是「从哪来的」证据，可由 ../_grab_zip_member.py 重新抓。
 /assets/audio/_audition/*/loop/
 
+# R439：网上搜集的第三方参考图（版权素材）—— 只作内部风格参考，绝不入库、绝不进发布包。
+#   抓取脚本 tools/ref_fetch.py 可幂等重下；这里只留 README 记录「学什么/不学什么」。
+/art_src/_ref/*/
+!/art_src/_ref/README.md
+/art_src/_ref/_sheet_*.png
+
 # 历史验证截图归档（.gdignore 已挡在 res:// 之外，这里再挡 git）
 art_src/_shots/
 
