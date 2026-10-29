@@ -30105,6 +30105,22 @@ func _init() -> void:
 			"R432 「-50%」贴纸是旋转自绘（斜贴、无新素材、随卡高等比缩放）")
 	check_src(r432_shop.find("draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)") >= 0,
 			"R432 贴纸画完必须复位 transform（否则后续价签/售罄遮罩跟着转）")
+	# ---- R435：贴纸卷边 + 右移 + 折扣金额转绿（口径修正）----
+	# 钉的是三件容易改回去的事：① 折角多边形顶点顺序（写反就自交 → 三角化失败 → 贴纸整块消失）；
+	# ② 贴纸不再是 draw_rect 矩形（规整矩形正是这轮要改掉的东西）；③ 只有价签转绿。
+	check_src(r432_shop.find("PackedVector2Array([fa, mid, fb, fc])") >= 0
+			and r432_shop.find("[fa, mid, fc, fb]") < 0,
+			"R435 折角顶点顺序 = 沿折痕弧走完再走内角（反过来自交，三角化直接失败）")
+	check_src(r432_shop.find("draw_colored_polygon(body") >= 0
+			and r432_shop.find("draw_rect(box") < 0,
+			"R435 贴纸主体改多边形（四角错位 + 上下边起伏），不再是规整矩形")
+	check_src(r432_shop.find("rr.end.x - 37.0 * k") >= 0,
+			"R435 贴纸右移口径（-42k → -37k + 尺寸 62×26）")
+	check_src(r432_shop.find("Color(\"6fe07a\") if off else Color(\"ffd75a\")") >= 0,
+			"R435 打折卡价签金额转绿（未打折仍是金色）")
+	check_src(r432_shop.find("func _draw_off_tag(") >= 0
+			and r432_shop.find("var c := h * 0.46") >= 0,
+			"R435 卷角边长 c = 0.46h（太小在 720p 只有几个像素，读不出来）")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

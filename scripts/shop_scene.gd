@@ -824,34 +824,80 @@ func _draw_sold_mask(rr: Rect2) -> void:
 
 
 func _draw_price(rr: Rect2, price: int, sold: bool, off := false) -> void:
-	## 第一行价签。`off = true` → 五折：底色转暗红、数字转暖橙，
-	## 与卡面右上角那张「-50%」贴纸同色系（视线一次就能把两者连起来）。
+	## 第一行价签。`off = true` → 五折：底色转暗红（与卡面那张「-50%」贴纸同色系，
+	## 视线一次就能把两者连起来），**金额转绿色**（R435 用户口径：折扣价用绿色读）。
+	## ⚠️ 只有价签这一个口转绿。触摸端「购买 · N」按钮本来就是绿底，
+	##    金额再转绿会直接糊在底色里 —— 那边保持深绿字，别顺手一起改。
 	var chip := Rect2(rr.end.x - 40, rr.position.y - 12, 40, 26)
 	draw_rect(chip, Color("2a1210") if off else Color("1a1c22"), true)
 	draw_rect(chip, Color("e0634a") if off else Color("c8951c"), false, 1.5)
 	draw_string(_font_bold, chip.position + Vector2(0, 18), "%d" % price,
 			HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 12,
-			Color("ffc9a0") if off else Color("ffd75a"))
+			Color("6fe07a") if off else Color("ffd75a"))
 
 
 func _draw_off_tag(rr: Rect2) -> void:
-	## R432：五折贴纸「-50%」—— 斜 26° 贴在卡面**右上角**。
+	## R432/R435：五折贴纸「-50%」—— 斜 26° 贴在卡面**右上角**。
 	## 位置特意压在稀有度缎带**下方**（缎带高 27k、从卡顶探出）：稀有度是卡面的
 	## 主信息通道，贴纸只许挡卡图，不许挡缎带。
+	## R435 两处改口径：
+	##   ① 整体右移（-42k → -37k）。原来贴纸左端压到卡片中线，看着像贴在卡中间。
+	##   ② 不再是规整矩形 —— 四角各错开、上下边各插一个起伏点；视觉最上端那个角
+	##      **卷起来**（纸背朝外 + 弧形折痕 + 纸厚淡影 + 整块投影）。
+	##      直角矩形读起来是「印刷标签」，卷一下才像人随手按上去的。
 	## 全程 `draw_set_transform` 旋转绘制，不引入新素材 —— 贴纸随卡高等比缩放，
 	## 4 张 / 5 张货架与任意分辨率都不会失形（换成 png 就得管九宫格与导入）。
 	## ⚠️ 末尾**必须**复位 transform：`_draw_row1` 之后还要画售罄遮罩与「已售罄」字。
 	var k := rr.size.y / 181.0          # 181 = 150 宽卡的标准高（`_row_rects` 同口径）
-	var w: float = 58.0 * k
-	var h: float = 22.0 * k
-	var center := Vector2(rr.end.x - 42.0 * k, rr.position.y + 56.0 * k)
+	# R435：尺寸 58×22 → 62×26。不是为了「变大」，是因为 22k 高的贴纸上
+	# c≈7px 的折角在 720p 只有七八个像素，读不出来 —— 细节要有地方画。
+	var w: float = 62.0 * k
+	var h: float = 26.0 * k
+	# 60k 不是随便定的：贴纸斜 26° 后视觉最高点在右上角（再高 25.2k），
+	# 58k 时那个角会压到卡片顶边和稀有度缎带底 —— 60k 留出 8k 余量。
+	var center := Vector2(rr.end.x - 37.0 * k, rr.position.y + 60.0 * k)
 	draw_set_transform(center, deg_to_rad(-26.0), Vector2.ONE)
-	var box := Rect2(-w * 0.5, -h * 0.5, w, h)
-	draw_rect(box, Color("b3221a"), true)                       # 贴纸纸底（暗红）
-	draw_rect(box, Color("3a0f0a"), false, 2.0 * k)             # 外描边（压住边缘的白）
-	draw_rect(box.grow(-2.0 * k), Color("ffd98a"), false, 1.0 * k)   # 内金线
-	draw_string(_font_bold, box.position + Vector2(0, h * 0.78), "-50%",
-			HORIZONTAL_ALIGNMENT_CENTER, w, int(round(13.0 * k)), Color("fff3cf"))
+	var w2 := w * 0.5
+	var h2 := h * 0.5
+	var c := h * 0.46                    # 卷角的两条直角边（≈ 12k）
+	# 纸面（非矩形，顺时针）：四角各错开一点点、上下边各插一个起伏点 ——
+	# 纸贴在卡上本来就压不平，直边会立刻读成「印刷标签」。
+	var body := PackedVector2Array([
+		Vector2(-w2 + 0.5 * k, -h2 + 0.3 * k),
+		Vector2(-w2 * 0.35, -h2 - 0.35 * k),
+		Vector2(w2 - 0.4 * k, -h2 - 0.1 * k),
+		Vector2(w2 + 0.15 * k, h2 - 0.2 * k),    # 右边略鼓
+		Vector2(w2 * 0.3, h2 + 0.5 * k),
+		Vector2(-w2 - 0.2 * k, h2 - 0.35 * k),
+	])
+	# 投影：整块斜移一点点再压半透明黑。没有这一层，贴纸就只是「画在卡上的色块」。
+	var shadow := PackedVector2Array()
+	for p in body:
+		shadow.append(p + Vector2(1.3, 1.5) * k)
+	draw_colored_polygon(shadow, Color(0.0, 0.0, 0.0, 0.42))
+	draw_colored_polygon(body, Color("b3221a"))                  # 贴纸纸底（暗红）
+	# 轮廓：`draw_rect` 画不了起伏边，只能闭合折线。
+	var outline := body.duplicate()
+	outline.append(body[0])
+	draw_polyline(outline, Color("3a0f0a"), 2.0 * k, true)
+	# 卷角：纸角折起后那块三角翻到正面 —— 看到的是**纸背**。
+	# ⚠️ 挑的是局部**右上角**：贴纸整体斜 -26°，右上角才是视觉上的「最上端」。
+	#    折在右下角（视觉最右端）会紧贴着「%」的字脚，而且那边是贴纸最窄的地方。
+	# 折起来的三角 = {(w2,-h2+c), (w2-c,-h2), (w2-c,-h2+c)}（沿折痕镜像后的落点），
+	# 折痕画成向外微凸的弧而不是直线，才读得出「卷」而不是「硬折」。
+	var fa := Vector2(w2 - 0.1 * k, -h2 + c)         # 折痕起点（右边往下 c）
+	var fb := Vector2(w2 - c, -h2 - 0.1 * k)         # 折痕终点（上边往左 c）
+	var fc := Vector2(fb.x, fa.y)                    # 折起后露出的纸背内角
+	var mid := (fa + fb) * 0.5 + Vector2(0.62, -0.62) * k   # 折痕中点外凸 → 弧
+	# ⚠️ 顶点顺序必须是「沿折痕弧走完 → 再走内角」，写成 fa→mid→fc→fb 会自交、
+	#    三角化直接失败（`Invalid polygon data, triangulation failed`），贴纸整块消失。
+	draw_colored_polygon(PackedVector2Array([fa, mid, fb, fc]), Color("f0dfba"))
+	draw_polyline(PackedVector2Array([fa, mid, fb]), Color("4a1208"), 1.5 * k, true)
+	# 折角内侧两条边压一道淡影：纸是有厚度的，不然折角像贴了块米色纸片。
+	draw_line(fc, fb, Color(0.35, 0.18, 0.12, 0.55), 1.1 * k, true)
+	draw_line(fa, fc, Color(0.35, 0.18, 0.12, 0.55), 1.1 * k, true)
+	draw_string(_font_bold, Vector2(-w2, -h2 + h * 0.78), "-50%",
+			HORIZONTAL_ALIGNMENT_CENTER, w, int(round(13.5 * k)), Color("fff3cf"))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
