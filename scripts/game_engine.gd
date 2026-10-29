@@ -428,6 +428,16 @@ const ICECREAM_HP_COST:= 3
 const ICECREAM_ENERGY:= 2    # R340 下调：+4 → +2（抽牌仍是 3 张）
 const ICECREAM_DRAW:= 3
 const ICECREAM_LINE:= "你跑不过我你信吗"
+# R446 烟斗（6055，事件「雪豹出现」选项 1）—— 只给**一场战斗**的首回合。
+# 「点着 / 熄灭」的状态存在 `RunState.pipe_ready`（跨战斗、随存档）：用掉即熄灭，
+# 之后只有路过篝火（休息处）才会重新点着。
+const PIPE_RELIC_ID := 6055
+const PIPE_ENERGY := 1
+const PIPE_DRAW := 1
+const PIPE_HP_COST := 1
+# R446 雪豹（8081，事件「雪豹出现」选项 2）—— 攻击时随机一张手牌本回合 -1 费。
+const SNOW_LEOPARD_ID := 8081
+const SNOW_LEOPARD_DISCOUNT := 1
 const HEAVY_DUCK_RELIC_ID:= 6017
 const EGG_DUCK_RELIC_ID:= 6018
 # 鸭翼（6007）：第 3 回合的额外费用。R81 由 2 点加强到 3 点。
@@ -2055,6 +2065,26 @@ func _begin_turn(side: String) -> void :
 				%[ICECREAM_ENERGY, ICECREAM_DRAW])
 			action.emit("icecream", {"text": ICECREAM_LINE, 
 				"energy": ICECREAM_ENERGY, "draw": ICECREAM_DRAW})
+
+		# R446 烟斗（6055）：「下一场战斗的第一回合 +1 费 / 多抽 1 张 / 失去 1 点生命」。
+		# 「点着」状态跨战斗存在 `RunState.pipe_ready`，用掉即熄灭（`pipe_claim()` 取走），
+		# 之后只有路过篝火才重新点着 —— 所以这里**不能**只判 `turn_number == 1`。
+		# ⚠️ 嵌套而不是写成一长行：GDScript 的续行反斜杠落在 CRLF 上不稳，别用。
+		if self_relics.has(PIPE_RELIC_ID) and turn_number == 1:
+			if RunState.pipe_claim():
+				state.energy += PIPE_ENERGY
+				extra_draw += PIPE_DRAW
+				# 「失去 1 点生命」按项目惯例**至少留 1 点**（同「挣扎」的闸门），
+				# 不做成能在第一回合把自己开局送走的东西。
+				var pipe_cost:= 0
+				if state.hp_self > PIPE_HP_COST:
+					pipe_cost = PIPE_HP_COST
+					state.hp_self -= PIPE_HP_COST
+				_log("烟斗：第 1 回合费用 +%d、多抽 %d 张、失去 %d 点生命"
+						% [PIPE_ENERGY, PIPE_DRAW, pipe_cost])
+				action.emit("relic", {"id": PIPE_RELIC_ID,
+						"text": "烟斗：首回合费用 +%d / 多抽 %d 张 / 失去 %d 生命"
+								% [PIPE_ENERGY, PIPE_DRAW, pipe_cost]})
 
 
 		# 勇气徽章（6031，R245 / R372）：精英战与 Boss 战**都只在首回合**额外 +1 费用。
@@ -14423,8 +14453,31 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		# 放在 `_tap` 之前 —— 前进完再结束行动，落点才是最终位置。
 		_goose_lunge(attacker, dst)
 		_attack_gain_energy(side, attacker)   # 地狱咏唱者 8022 / 黑暗祭坛 8023：攻击时 +1 费
+		_snow_leopard_discount(attacker)   # 雪豹（8081，R446）：攻击时随机一张手牌本回合 -1 费
 		_tap(attacker, "行动完毕")
 	_check_game_over()
+
+
+func _snow_leopard_discount(p: Placement) -> void :
+	## R446 雪豹（8081，事件「雪豹出现」选项 2）：**攻击时**随机一张手牌**本回合**费用 -1。
+	## 减费走 `state.hand_cost_turn`（回合级临时表：`end_turn` 清空、离手自动恢复原价）
+	## —— 与「随心组装 9144」同一张表，别另造一套按卡记账。
+	## 候选只取「此刻费用 > 0」的卡：0 费卡减费没有意义，也会把「免费」的记账搅乱。
+	if p == null or p.owner != SIDE_SELF or p.card.id != SNOW_LEOPARD_ID:
+		return
+	var cand: Array[CardData] = []
+	for c: CardData in state.hand:
+		if cost_of(c) > 0:
+			cand.append(c)
+	if cand.is_empty():
+		_log("雪豹：手牌里没有可以减费的卡")
+		return
+	var pick: CardData = cand[rng.randi_range(0, cand.size() - 1)]
+	var now: int = int(state.hand_cost_turn.get(pick, 0)) + SNOW_LEOPARD_DISCOUNT
+	state.hand_cost_turn[pick] = now
+	_log("雪豹：随机手牌「%s」本回合费用 -%d" % [pick.card_name, SNOW_LEOPARD_DISCOUNT])
+	action.emit("snow_leopard", {"id": p.card.id, "name": pick.card_name,
+			"amount": SNOW_LEOPARD_DISCOUNT})
 
 
 func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :

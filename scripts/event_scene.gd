@@ -38,6 +38,8 @@ const WHISPER_ID := 6010
 const RICE_ID := 6012             # 一袋米抗几楼（鸭之凝视事件道具）
 const PEAR_ID := 6019             # 鸭梨（鸭梨山大事件道具）
 const APPLE_ID := 6027            # 苹果（R244「苹果与医生」事件道具；原奖励道具）
+const PIPE_ID := 6055              # 烟斗（R446「雪豹出现」选项 1：首回合 +1 费 / 多抽 1 / 失去 1 HP）
+const SNOW_LEOPARD_CARD_ID := 8081  # 雪豹（R446「雪豹出现」选项 2 的奖励卡）
 const HERO_CARD_ID := 9023        # 英雄（绝赞五换一的奖励卡）
 const HERO_TRADE_NEED := 5        # 绝赞五换一：要交出 5 张**不同名**的卡
 const STRUGGLE_CARD_ID := 9018    # 金属龙（事件卡牌，不可奖励获取）
@@ -82,6 +84,17 @@ const APPLE_DESC := """路边坐着一位医生，膝上摊着一本病历，抬
 
 const APPLE_TAKEN_DESC := """医生已经不在那儿了，连椅子都收走了。
 手里那颗苹果沉甸甸的，还带着体温。"""
+
+# R446 雪豹出现（第一层专属）：两个选项各给一样东西 —— 道具「烟斗」或卡「雪豹」。
+const SNOW_DESC := """雪坡上蹲着一只雪豹，尾巴慢慢地扫着雪面。
+它没走，也没让路——只是抬眼看你，像在等你说点什么。
+把它劝走：得到道具「烟斗」；或者把芝士丢过去，它会跟你走。"""
+
+const SNOW_CLOSED_DESC := """「闭嘴。」两个字压下去，雪豹喉咙里那声低吼就断了。
+它盯了你一会儿，把一样东西丢在雪里，转身窜上了坡。"""
+
+const SNOW_CHEESE_DESC := """芝士在它嘴边化开，雪豹低头吃完，
+起身抖了抖身上的雪，跟在了你后面。"""
 
 const BLUEFISH_DESC := """一条通体蓝色的大肥鱼搁浅在岸边，肚皮一起一伏，像还在做梦。
 它翻了个身，从嘴里吐出一枚亮晶晶的东西——
@@ -234,6 +247,7 @@ var _whisper_taken := false   # 鸭鸭低语：是否已收下道具
 var _gaze_taken := false      # 鸭之凝视：是否已收下道具
 var _pear_taken := false      # 鸭梨山大：是否已收下道具
 var _apple_taken := false     # 苹果与医生（R244）：本次是否已收下「苹果」
+var _snow_pick := ""           # 雪豹出现（R446）：本次拿走的是 "pipe" / "cat" / 空
 var _bluefish_taken := false  # 蓝色大肥鱼：是否已收下「鲸鱼之怒」
 ## R351 赏月：本次拿走的是 "moon"（花光金币换月亮）/ "coin"（直接拿硬币）/ ""（还没拿）。
 ## 两个选项**互斥**，拿了一个另一个就收起 —— 走 `_claim_reward()` 那条统一规则。
@@ -333,6 +347,12 @@ func _is_apple() -> bool:
 	return _is_event_node() and _pending_kind() == "apple_doctor"
 
 
+func _is_snow_leopard() -> bool:
+	## 雪豹出现（R446，第一层专属）：两个选项 —— 道具「烟斗」或卡「雪豹」。
+	## 两样都拿得到东西，所以没有「什么都不拿」（第三选项当「投喂芝士」用）。
+	return _is_event_node() and _pending_kind() == "snow_leopard"
+
+
 func _is_bluefish() -> bool:
 	## 蓝色大肥鱼（第二层专属事件）：可将一张「鲸鱼之怒」（9050）加入卡组。
 	return _is_event_node() and _pending_kind() == "bluefish"
@@ -406,7 +426,7 @@ func _is_treasure() -> bool:
 			and not _is_arcane() and not _is_oblivion() and not _is_smith() \
 			and not _is_delivery() and not _is_delivery_done() \
 			and not _is_card_merchant() and not _is_lake_lady() \
-			and not _is_divination() and not _is_moon()
+			and not _is_divination() and not _is_moon() and not _is_snow_leopard()
 
 
 func _kind() -> String:
@@ -421,6 +441,8 @@ func _kind() -> String:
 		return "pear"
 	if _is_apple():
 		return "apple_doctor"
+	if _is_snow_leopard():
+		return "snow_leopard"
 	if _is_hero():
 		return "hero"
 	if _is_arcane():
@@ -544,6 +566,10 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "apple_doctor"
+		if args[i] == "--snowleopard":  # 演示：伪装 run 雪豹出现事件（R446 截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "snow_leopard"
 		if args[i] == "--bluefish":  # 演示：伪装 run 蓝色大肥鱼事件（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -874,6 +900,27 @@ func _ready() -> void:
 		rest_btn.disabled = false
 		$Center/LeaveBtn.text = "空手离开"
 		result_label.text = ""
+	elif _is_snow_leopard():
+		event_name.text = "雪 豹 出 现"
+		desc.text = SNOW_CLOSED_DESC if _snow_pick == "pipe" \
+				else (SNOW_CHEESE_DESC if _snow_pick == "cat" else SNOW_DESC)
+		if _snow_pick != "":
+			_collapse_to_leave()
+			if _snow_pick == "pipe":
+				result_label.text = "「烟斗」已收进道具栏——下一场战斗的第一回合生效；" \
+						+ "之后每次路过篝火都会重新点着。"
+			else:
+				result_label.text = "「雪豹」已加入卡组——它攻击时会把一张手牌的费用压低一个回合。"
+			result_label.add_theme_color_override("font_color", Color("8fc0d8"))
+		else:
+			rest_btn.text = "雪豹闭嘴（获得道具「烟斗」）"
+			rest_btn.disabled = false
+			alt_btn.visible = true
+			alt_btn.text = "投喂芝士（获得卡片「雪豹」）"
+			alt_btn.disabled = false
+			# 两样都拿得到东西 → 没有「什么都不拿」这一项（同「赏月」的收法）。
+			leave_btn.visible = false
+			result_label.text = ""
 	elif _is_treasure():
 		event_name.text = "宝  箱"
 		# R372：统一免费开、内容恒为卡牌（不再扣生命、不再随机成道具）。
@@ -922,6 +969,10 @@ func _ready() -> void:
 					bandage_heal, RunState.hp, RunState.max_hp]
 			result_label.text = "止血绷带：回复 %d 点生命" % bandage_heal
 			result_label.add_theme_color_override("font_color", Color("c0504d"))
+		# R446 烟斗：**路过篝火**就重新点着 —— 不必「休息 / 烤肉」，进这间房就算路过。
+		# 只在「之前是灭的」时加那行提示，免得每次进休息处都多一段废话。
+		if RunState.pipe_relight():
+			desc.text += "\n\n【烟斗】火光一明一暗——烟斗重新点着了，下一场战斗的第一回合效果恢复。"
 	$Center/LeaveBtn.pressed.connect(func(): _ui_leave())
 	rest_btn.pressed.connect(func(): _ui_main())
 	bbq_btn.pressed.connect(func(): _ui_bbq())
@@ -992,6 +1043,22 @@ func _on_main() -> void:
 	## 主按钮：小宝箱 → 免费转交卡牌奖励（R372）；鸭鸭低语 / 鸭之凝视 → 收下事件道具；
 	## 宝箱层 → 开箱获得 1 个随机奖励道具。
 	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
+	sfx.play("click")
+	if _is_snow_leopard():
+		if _snow_pick != "":
+			_on_leave()
+			return
+		RunState.gain_relic(PIPE_ID)
+		RunState.pipe_relight()   # 刚拿到手就是点着的：下一场战斗首回合立刻生效
+		_snow_pick = "pipe"
+		_claim_reward(rest_btn)   # R147：一次访问只领一份
+		var rel_s := RelicRepo.load_json().get_relic(PIPE_ID)
+		_collapse_to_leave()
+		desc.text = SNOW_CLOSED_DESC
+		result_label.text = "「烟斗」已收进道具栏：%s" % (rel_s.desc if rel_s != null else "")
+		result_label.add_theme_color_override("font_color", Color("8fc0d8"))
+		_redraw()
+		return
 	sfx.play("click")
 	if _is_divination():
 		if _div_stage == 0:
@@ -1486,7 +1553,7 @@ func _refresh() -> void:
 			or _is_relic_chest() or _is_arcane() or _is_oblivion() \
 			or _is_smith() or _is_delivery() or _is_delivery_done() \
 			or _is_card_merchant() or _is_lake_lady() or _is_divination() \
-			or _is_moon():
+			or _is_moon() or _is_snow_leopard():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。
@@ -1616,6 +1683,21 @@ func _on_alt() -> void:
 		return
 	if _is_moon():
 		_claim_moon_coin()
+		return
+	if _is_snow_leopard():
+		if _snow_pick != "":
+			return
+		RunState.add_card(SNOW_LEOPARD_CARD_ID)
+		_snow_pick = "cat"
+		_claim_reward(alt_btn)
+		var s_card := CardRepo.load_json().get_card(SNOW_LEOPARD_CARD_ID)
+		_collapse_to_leave()
+		desc.text = SNOW_CHEESE_DESC
+		result_label.text = "「%s」已加入卡组：%s" % [
+				s_card.card_name if s_card != null else "雪豹",
+				CardText.naturalize(s_card.effect_text) if s_card != null else ""]
+		result_label.add_theme_color_override("font_color", UiTheme.RARITY_RARE)
+		_redraw()
 		return
 	if not _is_card_merchant() or _merchant_done:
 		return

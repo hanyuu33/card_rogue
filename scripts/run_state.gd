@@ -373,6 +373,13 @@ const SOURCE_POWER_HP_COST := 5   # 源数之力的代价：失去 5 点最大�
 # （与烤肉 / 黄桃罐头 / 自愈同属「道具·卡牌主动回血」，被动自动回血已全部移除）。
 const APPLE_RELIC_ID := 6027
 const APPLE_MAX_HP := 7
+# R446 烟斗（6055，事件「雪豹出现」选项 1）—— **一次只给一场战斗**的首回合加成。
+# 「点着 / 熄灭」只有一个状态位（`pipe_ready`），跨战斗、随存档：
+#   * 拿到道具时点着；战斗首回合结算完就熄灭；每次路过篝火（休息处）重新点着。
+# ⚠️ 引擎那边还要求 `self_relics.has(PIPE_RELIC_ID)` —— 状态位只表示「亮着」，
+#    没有道具时不生效（道具暂时没有被移除的机制，但别留这个口子）。
+const PIPE_RELIC_ID := 6055
+static var pipe_ready := false
 # R244 新道具：行囊（6030，初始道具池）—— 获得时 **+100 金币**，并把一张
 # 「木栅栏」（工事 2 费 0/6，8001）加入卡组。属于「即时」类，`gain_relic` 里当场结算。
 const PACK_RELIC_ID := 6030
@@ -546,6 +553,26 @@ static func lucky7_tick() -> bool:
 	##    于是「第 7、14、21 … 回合」必然生效，不会因为战斗切换而错位。
 	lucky7_turns += 1
 	return lucky7_turns % LUCKY7_EVERY == 0
+
+
+static func pipe_claim() -> bool:
+	## R446 烟斗（6055）：战斗首回合把「点着」的那一格用掉。
+	## 还亮着 → 返回 true 并熄灭；已经熄灭 → false（这一场不再给加成）。
+	if not pipe_ready:
+		return false
+	pipe_ready = false
+	return true
+
+
+static func pipe_relight() -> bool:
+	## R446 烟斗（6055）：路过篝火（休息处）→ 重新点着。
+	## 返回「这一次是不是真的从灭到亮」：休息界面据此决定要不要加那行提示。
+	## 故意不判「有没有这件道具」—— 没道具时置位无副作用（引擎侧还要再验一次），
+	## 「先点着、后拿到」与测试两条路都简单。
+	if pipe_ready:
+		return false
+	pipe_ready = true
+	return true
 
 
 static func lucky7_left() -> int:
@@ -784,6 +811,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	basin_charge = 0           # R311 不锈钢盆：新的一局没有盆（重拿时再灌满）
 	match_charge = 0           # R342 火柴：新的一局没有火柴（重拿时再灌满 3 次）
 	spent_relics.clear()       # R367：新的一局没有「已耗尽」的道具
+	pipe_ready = false          # R446：新的一局 → 烟斗从头（没拿到就是灭的）
 	boss_kills.clear()         # R367：新的一局重新记每层 Boss
 	reward_kinds = []
 	# 开局卡组 = 公共部分 + 2 张角色基础盟友（森林精魄 → 树人；暗影刺客 → 幽影）
@@ -842,6 +870,7 @@ static func end_run(clear_save: bool = true) -> void:
 	##     给「返回标题」这种「先离开一下、回头还能点『继续游戏』」的路径用。
 	## 记录与持久化文件照旧保留。
 	run_active = false
+	pipe_ready = false          # R446：一局结束 → 烟斗状态位复位
 	player_class = PlayerClass.default_id()
 	deck_ids = []
 	deck_mods = []                # R181：本局结束 → 附魔清掉

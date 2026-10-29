@@ -106,6 +106,7 @@ static func snapshot() -> Dictionary:
 		"statue_charge": RunState.statue_charge,
 		"basin_charge": RunState.basin_charge,   # R311 不锈钢盆：剩余点数（跨战斗累计）
 		"lucky7_turns": RunState.lucky7_turns,   # R314 lucky 7：跨战斗回合计数
+		"pipe_ready": RunState.pipe_ready,   # R446 烟斗：还亮着没有
 		"match_charge": RunState.match_charge,   # R342 火柴：剩余刷新次数（3 → 0）
 		"bandage_pending": RunState.bandage_pending,  # R339：止血绷带的本层累计（原先漏存 → 续档归零）
 		"boss_beaten": RunState.boss_beaten,          # R339：本层 Boss 已打（一层只开一次）
@@ -319,6 +320,7 @@ static func apply(d: Dictionary) -> bool:
 		RunState.basin_charge = RunState.BASIN_MAX
 	# R314 lucky 7：老存档没有这个字段 → 按 0（下次开始我方回合起重新累计）
 	RunState.lucky7_turns = int(d.get("lucky7_turns", 0))
+	RunState.pipe_ready = bool(d.get("pipe_ready", false))   # R446
 	# R342 火柴：存档里没有这个字段（旧档）→ 若身上有火柴就按满 3 次补齐，别让旧档带着 0 次。
 	var saved_match := int(d.get("match_charge", -1))
 	RunState.match_charge = (RunState.MATCH_CHARGES if saved_match < 0

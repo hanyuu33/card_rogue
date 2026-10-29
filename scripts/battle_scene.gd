@@ -10708,6 +10708,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# **实例**报上来，`_hand_sync()` 用 `_take_drawn_pending()` 补播。
 			if data.get("card") is CardData:
 				_drawn_pending.append(data["card"])
+		"snow_leopard":
+			# R446 雪豹（8081）：攻击时随机一张手牌本回合 -1 费 → 手牌区上沿飘一条。
+			sfx.play("click")
+			var sl_name := str(data.get("name", ""))
+			var sl_amt := int(data.get("amount", 1))
+			_say("✦ 雪豹：手牌「%s」本回合费用 -%d" % [sl_name, sl_amt])
+			_floaters.append({"pos": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 30),
+					"text": "雪豹 · 「%s」本回合 -%d 费" % [sl_name, sl_amt],
+					"col": Color("7fc8e8"), "size": 17, "start": n, "dur": 2100})
 		"hand_burn":
 			# R299：手牌满时抽到 / 获得的牌 → **直接进弃牌区**。
 			# 复用「飞向弃牌堆」那条动画（mode out_d：缩小 + 末段盖板 = 滑进牌堆），
