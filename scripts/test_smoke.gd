@@ -433,6 +433,16 @@ func _initialize() -> void:
 				RunState.pending_level = RunState.next_level({"type": "battle"})
 				RunRecord.begin_run("森林精魄"),
 			_check_r367_defeat_record],
+		# R444（用户口径）：卡牌奖励三选一与商店的卡面**只留卡名**，`次元 / 嘲讽`
+		#   这些字段没有解释可看 —— 把「字段名：解释」做成浮窗贴在卡的左右两侧。
+		#   这里守的是**几何**：一块浮窗对一个字段、单字段靠右 / 两字段一左一右、
+		#   左右两块都在卡外（不压卡面）、`bounds` 能把浮窗夹回屏内。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r444_affix_index],
 	]
 	print("SMOKE === 开始（%d 项场景用例）===" % _plan.size())
 	_next()
@@ -4915,4 +4925,62 @@ func _check_r367_defeat_record(scene: Node) -> void:
 		_smoke_fail("R367 失败记录：失败记录的生命应记 0（现在 %d）" % int(last.get("hp", -1)))
 		return
 	print("  [smoke] R367 失败记录：败北立刻留一条「失败」（幂等，不会写两条）")
-
+func _check_r444_affix_index(_scene: Variant) -> void:
+	## R444：字段索引浮窗的几何（`CardFace.affix_index_rects()`）。
+	## 断言只认四条硬规则，不测像素：①一块浮窗对一个字段；②单字段靠右
+	## （商店最左那张卡左边只剩 32px，靠左必然出屏）；③两字段一左一右且都在**卡外**；
+	## ④`bounds` 能把浮窗夹回屏内（最左那张卡不会把解释画到屏幕外）。
+	var font: Font = UiTheme.font()
+	var repo := CardRepo.load_json()
+	var two: CardData = repo.get_card(8055)      # 钢铁卫士：超负荷 + 嘲讽
+	var one: CardData = repo.get_card(9031)      # 白狼：疾行
+	if two == null or one == null:
+		_smoke_fail("R444 字段浮窗：卡库取不到 8055 / 9031")
+		return
+	if two.affixes.size() != 2 or one.affixes.size() != 1:
+		_smoke_fail("R444 字段浮窗：8055 / 9031 的字段数变了（%d / %d）"
+				% [two.affixes.size(), one.affixes.size()])
+		return
+	var card_rect := Rect2(500.0, 200.0, 216.0, 260.0)
+	var r1 := CardFace.affix_index_rects(one, card_rect, font)
+	if r1.size() != 1:
+		_smoke_fail("R444 字段浮窗：单字段应只有 1 块，实际 %d" % r1.size())
+		return
+	var rr1: Rect2 = r1[0]["rect"]
+	if int(r1[0]["side"]) != 1 or rr1.position.x < card_rect.end.x:
+		_smoke_fail("R444 字段浮窗：单字段必须靠右（side=%d x=%.1f 卡右=%.1f）"
+				% [int(r1[0]["side"]), rr1.position.x, card_rect.end.x])
+		return
+	var r2 := CardFace.affix_index_rects(two, card_rect, font)
+	if r2.size() != 2:
+		_smoke_fail("R444 字段浮窗：两字段应有 2 块，实际 %d" % r2.size())
+		return
+	var sides: Array = []
+	for r: Dictionary in r2:
+		var rr: Rect2 = r["rect"]
+		var side := int(r["side"])
+		sides.append(side)
+		if side > 0 and rr.position.x < card_rect.end.x:
+			_smoke_fail("R444 字段浮窗：右侧那块压住了卡（x=%.1f 卡右=%.1f）"
+					% [rr.position.x, card_rect.end.x])
+			return
+		if side < 0 and rr.end.x > card_rect.position.x:
+			_smoke_fail("R444 字段浮窗：左侧那块压住了卡（右沿=%.1f 卡左=%.1f）"
+					% [rr.end.x, card_rect.position.x])
+			return
+	if not (sides.has(1) and sides.has(-1)):
+		_smoke_fail("R444 字段浮窗：两字段应一左一右，实际 %s" % str(sides))
+		return
+	# bounds：卡贴着屏幕最左边时，左侧那块必须被夹回屏内（宁可压住自己的卡）
+	var r3 := CardFace.affix_index_rects(two, Rect2(2.0, 200.0, 216.0, 260.0), font,
+			172.0, Rect2(0, 0, 1280, 720))
+	if r3.size() != 2:
+		_smoke_fail("R444 字段浮窗：夹回屏内后块数变了（%d）" % r3.size())
+		return
+	for r: Dictionary in r3:
+		var rr3: Rect2 = r["rect"]
+		if rr3.position.x < 0.0 or rr3.end.x > 1280.0:
+			_smoke_fail("R444 字段浮窗：bounds 没把浮窗夹回屏内（%.1f ~ %.1f）"
+					% [rr3.position.x, rr3.end.x])
+			return
+	print("  [smoke] R444 字段浮窗：单字段靠右 / 两字段一左一右不压卡 / bounds 夹回屏内")

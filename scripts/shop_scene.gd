@@ -249,6 +249,19 @@ func _ready() -> void:
 		if not RunState.relics.has(RunState.DARK_POWER_RELIC_ID):
 			RunState.relics.append(RunState.DARK_POWER_RELIC_ID)
 	_setup_shop()   # R390：见上面那条注释 —— 必须在所有「造 run / 改当前格」的演示参数之后
+	# R444 出图：`--affixdemo` 把第一行头两张换成**带字段**的卡（钢铁卫士 = 超负荷 + 嘲讽、
+	# 白狼 = 疾行），并「选中查看」第一张 —— 字段是随卡池随机来的，
+	# 靠运气截图十次有九次截不到带字段的卡，等于没有核验手段。
+	# 只换卡不 `_sync_shop_state()`：演示卡不该被写进货架存档。
+	# 出图：`shop.tscn -- --screenshot --shop --affixdemo`
+	if "--affixdemo" in args:
+		var demo_ids := [8055, 9031]
+		for k4 in mini(demo_ids.size(), _row1.size()):
+			var dc: CardData = _repo.get_card(int(demo_ids[k4]))
+			if dc != null:
+				_row1[k4]["card"] = dc
+		_sel_row1 = 0
+		_ask_redraw()
 	# R432 出图：`--off N` 把第一行第 N 张**强制设为五折** —— 五折本身是 20% 概率，
 	# 截图核验不能靠运气（跑十次九次截不到贴纸，等于没有核验手段）。
 	# 只改这一个标记，价格与贴纸全走正常渲染路径。
@@ -590,6 +603,7 @@ func _draw() -> void:
 	_draw_pick_overlay()
 	_draw_leave()
 	_draw_desc_plate()   # R203：悬停/选中卡的描述板（卡面只留卡名后的详情入口）
+	_draw_affix_index()  # R444：字段解释浮窗（贴在这张卡左右两侧）
 	_draw_hint()
 	_draw_fly()          # R390：飞进卡组的卡（画在最上层，盖住一切）
 
@@ -979,6 +993,34 @@ func _hover_card() -> CardData:
 		if not e2["sold"]:
 			return e2["card"]
 	return null
+
+
+func _hover_card_rect() -> Rect2:
+	## `_hover_card()` 那张卡在屏幕上的矩形（尺寸 ≤ 0 = 没有卡）。两处取卡口径必须一一对应，
+	## 否则字段浮窗会挂在别的卡旁边。
+	## R444：字段索引用 —— 浮窗要贴住卡边，`_hover_card()` 只回 CardData，回不了位置。
+	if _hover_enchant_card >= 0 and _hover_enchant_card < _deck_cards.size():
+		return _pick_card_rect(_hover_enchant_card)
+	if _sel_row1 >= 0 and _sel_row1 < mini(_row1.size(), _visible_row1_count()):
+		if not _row1[_sel_row1]["sold"]:
+			return _row1_rect(_sel_row1)
+	if _hover >= _row1_base and _hover < _row1_base + mini(_row1.size(), _visible_row1_count()):
+		var i := _hover - _row1_base
+		if not _row1[i]["sold"]:
+			return _row1_rect(i)
+	return Rect2()
+
+
+func _draw_affix_index() -> void:
+	## R444：字段索引浮窗 —— 卡面（R203 起只留卡名）上「次元 / 嘲讽」没有解释可看。
+	## 贴在当前这张卡的左右两侧，压住邻卡是明确允许的（卡间距只有 32px，本来就放不下）。
+	## ⚠️ 必须画在 `_draw_pick_overlay()` **之后**：附魔 / 删除选卡页有一层 55% 黑罩，
+	##    画在罩子下面就等于没画。
+	var rr := _hover_card_rect()
+	if rr.size.x <= 0.0:
+		return
+	CardFace.draw_affix_index(self, _hover_card(), rr, _font, _font_bold, 172.0,
+			Rect2(Vector2.ZERO, _vs()))
 
 
 func _draw_desc_plate() -> void:

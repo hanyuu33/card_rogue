@@ -954,6 +954,9 @@ func _draw_cards() -> void:
 				_root.draw_rect(rr.grow(4.0), UiTheme.ACCENT_GOLD, false, 3.0)
 	# 悬停详情（卡面放不下效果文本）
 	_draw_card_detail(cands)
+	# R444：字段索引浮窗 —— 三选一的卡面只留卡名，`次元 / 嘲讽` 这些字**没有解释可看**。
+	# 贴在「当前正在看的那张」（悬停优先，其次已点选）的左右两侧，压住邻卡是明确允许的。
+	_draw_affix_index(cands, x0, vs)
 	_draw_btn(_btn_cards_back_rect(), "← 返回列表", false, false)
 	# R342 火柴：只在**持有**时出现（没有火柴就别放个永远点不动的按钮占位）。
 	# 次数用完 → 保留按钮但置灰，让玩家看得见「3 次真的用光了」。
@@ -972,6 +975,28 @@ func _draw_cards() -> void:
 		_root.draw_string(_font, Vector2(pr.position.x, pr.end.y - 66.0),
 				"这组已经处理过了",
 				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_CAPTION, UiTheme.INK_600)
+
+
+func _draw_affix_index(cands: Array, x0: float, vs: Vector2) -> void:
+	## R444：字段索引浮窗。卡面（`draw_pick`）只留卡名 → 「次元 / 嘲讽」这两个字
+	## 在奖励页**没有任何解释可看**。把「字段名：解释」贴在正在看的那张卡的左右两侧。
+	## 取卡口径与 `_draw_card_detail()` 完全一致（悬停优先，其次已点选），
+	## 保证「横条里读到的是哪张卡，浮窗就挂在哪张卡上」。
+	# ⚠️ 已领取（settled）时不再弹：那时卡上盖着 66% 白纱、点选已失效，
+	#    再浮一层深色窗只是平白压住「已领取」的视觉状态。
+	if _settled(RunState.pending_rewards[_sel]):
+		return
+	var idx := _hover_card if _hover_card >= 0 else _pick_sel
+	if idx < 0 or idx >= cands.size():
+		return
+	var card: CardData = _repo_cards.get_card(int(cands[idx]))
+	if card == null:
+		return
+	var rr := Rect2(x0 + idx * (CARD_W + CARD_GAP), _cards_y(), CARD_W, CARD_H)
+	# 160 宽：三选一的卡距屏边只有 160px（`(1056 - 736) / 2`），再宽左侧那块就会
+	# 压到羊皮卷的烧焦卷边上 —— 贴住卷边是极限，超出就不像「挂在这张卡上」了。
+	CardFace.draw_affix_index(_root, card, rr, _font, _font_bold, 160.0,
+			Rect2(Vector2.ZERO, vs))
 
 
 func _draw_card_detail(cands: Array) -> void:
@@ -1383,6 +1408,15 @@ func _demo_start() -> void:
 			var en: Dictionary = RunState.pending_rewards[i]
 			if str(en.get("kind", "")) == "cards":
 				en["candidates"] = [forced, forced, forced]
+	# R444 出图：`--r444` 把三选一固定成三张**带字段**的卡 —— 钢铁卫士（超负荷 + 嘲讽，
+	# 左 / 右两列都用到）、白狼（疾行，单字段）、魔像（嘲讽 + 次元）。
+	# 候选来自 boss 池随机，靠运气截图基本截不到带字段的卡，等于没有核验手段。
+	# 出图：`battle.tscn -- --screenshot --r119cards --r444 --shotframe 600`
+	if "--r444" in args:
+		for i in RunState.pending_rewards.size():
+			var en4: Dictionary = RunState.pending_rewards[i]
+			if str(en4.get("kind", "")) == "cards":
+				en4["candidates"] = [8055, 9031, 9080]
 	# R342 出图：`--r342relic` = 奖励列表里只放两件新道具
 	# （核验徽章色：采集刀传奇橙金 / 火柴一般黄；以及长描述在行内的换行）
 	# R398 出图：`--r119deck` = 月亮删卡视图（卡组摊开 + 一张带锁的月亮自己）

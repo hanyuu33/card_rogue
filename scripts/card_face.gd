@@ -1060,3 +1060,122 @@ static func _draw_center_outlined(canvas: CanvasItem, font: Font, size: int, tex
 	for d: Vector2 in [Vector2(-o, 0), Vector2(o, 0), Vector2(0, -o), Vector2(0, o)]:
 		_draw_center(canvas, font, size, text, center + d, UiTheme.BADGE_OUTLINE)
 	_draw_center(canvas, font, size, text, center, col)
+
+
+# ------------------------------------------------------------ 字段索引浮层（R444）
+#
+# **为什么要单独一版**：卡牌奖励三选一（`draw_pick`）与商店第一行（R203 起）的卡面
+# **只留卡名** ——「次元 / 嘲讽 / 超负荷」这几个字根本没有地方写，玩家只看得见字段的
+# 名字，看不见它什么意思（用户口径 R444：「这两个界面看不到字段解释」）。
+# 于是把「字段名：解释」做成小浮窗，贴在**这张卡的左右两侧**，明确允许压住邻卡：
+# 三选一的卡间距只有 44px、商店第一行只有 32px，浮窗本来就没有空位可躲。
+#
+# 归属靠一条**指向卡边的小三角**表达 —— 浮窗压着邻卡时，没有箭头就会认错它属于谁。
+
+## 浮窗宽度（解释在这个宽度里折行）。
+const AFFIX_INDEX_W := 172.0
+## 浮窗内侧边与卡边的水平间距。
+const AFFIX_INDEX_GAP := 10.0
+## 同一列里两块浮窗的竖直间距。
+const AFFIX_INDEX_VGAP := 6.0
+const AFFIX_INDEX_PAD := 8.0
+const AFFIX_INDEX_TITLE_FS := 11
+const AFFIX_INDEX_BODY_FS := 10
+const AFFIX_INDEX_LINE_H := 13.0
+
+
+static func affix_index_items(card: CardData, font: Font, box_w := AFFIX_INDEX_W) -> Array:
+	## 每个字段一条浮窗的内容与高度。绘制与测高共用这一口（与 `wrap_text` 同一折行器，
+	## 不会出现「量高一套、画字另一套」的字戳出框）。
+	var out: Array = []
+	if card == null:
+		return out
+	var body_w: float = box_w - AFFIX_INDEX_PAD * 2.0
+	for a: String in card.affixes:
+		var desc := CardData.affix_desc(a)
+		var lines: Array[String] = []
+		if desc != "":
+			lines = wrap_text(font, desc, body_w, AFFIX_INDEX_BODY_FS)
+		var h: float = AFFIX_INDEX_PAD * 2.0 + 18.0 + float(lines.size()) * AFFIX_INDEX_LINE_H
+		out.append({"affix": a, "label": CardData.affix_label(a), "lines": lines, "h": h})
+	return out
+
+
+static func affix_index_rects(card: CardData, card_rect: Rect2, font: Font,
+		box_w := AFFIX_INDEX_W, bounds := Rect2()) -> Array:
+	## 算出每块浮窗的位置（不画）。返回 [{rect, item, side}]，side = 1 右 / -1 左。
+	## 排布：**单字段一律靠右**（商店最左那张卡左边只剩 32px，靠左必然出屏）；
+	##       两个以上按「右 → 左 → 右 → 左」交替，左右各自成一列、列内垂直居中。
+	## `bounds` 非空时把每块的 x 夹回屏内（最左 / 最右那张卡不会把解释画到屏幕外）。
+	var out: Array = []
+	var items := affix_index_items(card, font, box_w)
+	if items.is_empty():
+		return out
+	var right_col: Array = []
+	var left_col: Array = []
+	for i in items.size():
+		if i % 2 == 0:
+			right_col.append(items[i])
+		else:
+			left_col.append(items[i])
+	for two in 2:
+		var col: Array = right_col if two == 0 else left_col
+		if col.is_empty():
+			continue
+		var side := 1 if two == 0 else -1
+		var total := 0.0
+		for it: Dictionary in col:
+			total += float(it["h"])
+		total += AFFIX_INDEX_VGAP * float(maxi(0, col.size() - 1))
+		var y: float = card_rect.position.y + (card_rect.size.y - total) / 2.0
+		if y < card_rect.position.y:
+			y = card_rect.position.y     # 字段比卡还高 → 从卡顶往下排（宁可压住卡下方）
+		for it: Dictionary in col:
+			var x: float = card_rect.end.x + AFFIX_INDEX_GAP
+			if side < 0:
+				x = card_rect.position.x - AFFIX_INDEX_GAP - box_w
+			if bounds.size.x > 0.0:
+				x = clampf(x, bounds.position.x + 2.0,
+						maxf(bounds.position.x + 2.0, bounds.end.x - box_w - 2.0))
+			out.append({"rect": Rect2(x, y, box_w, float(it["h"])), "item": it, "side": side})
+			y += float(it["h"]) + AFFIX_INDEX_VGAP
+	return out
+
+
+static func draw_affix_index(canvas: CanvasItem, card: CardData, card_rect: Rect2,
+		font: Font, font_bold: Font, box_w := AFFIX_INDEX_W,
+		bounds := Rect2()) -> void:
+	## 画字段索引浮窗。**必须在这张卡画完之后调**（它要压住卡与邻卡）。
+	## 没有字段 → 什么都不画（绝大多数卡是这种，调用方不用自己判）。
+	for r: Dictionary in affix_index_rects(card, card_rect, font, box_w, bounds):
+		_draw_affix_index_box(canvas, r["rect"], r["item"], int(r["side"]), font, font_bold)
+
+
+static func _draw_affix_index_box(canvas: CanvasItem, rect: Rect2, item: Dictionary,
+		side: int, font: Font, font_bold: Font) -> void:
+	var a := str(item.get("affix", ""))
+	var ac := CardData.affix_colors(a)
+	var accent: Color = ac[1]
+	# 深底 + 字段色描边：两张页面底色一深（商店）一浅（羊皮卷）—— 深底在两边都读得清，
+	# 也正好与战斗内那套「字段解释框」的印象对齐。
+	canvas.draw_rect(rect, Color(0.06, 0.065, 0.08, 0.94), true)
+	canvas.draw_rect(rect, accent, false, 1.4)
+	# 指向卡边的小三角（浮窗压着邻卡时靠它认归属）
+	var tip_x: float = rect.position.x - 6.0
+	var base_x: float = rect.position.x
+	if side < 0:
+		tip_x = rect.end.x + 6.0
+		base_x = rect.end.x
+	var my: float = rect.position.y + 16.0
+	canvas.draw_colored_polygon(PackedVector2Array([
+		Vector2(tip_x, my), Vector2(base_x, my - 5.0), Vector2(base_x, my + 5.0)]), accent)
+	var x: float = rect.position.x + AFFIX_INDEX_PAD
+	var w: float = rect.size.x - AFFIX_INDEX_PAD * 2.0
+	canvas.draw_string(font_bold, Vector2(x, rect.position.y + AFFIX_INDEX_PAD + 11.0),
+			str(item.get("label", "")), HORIZONTAL_ALIGNMENT_LEFT, w,
+			AFFIX_INDEX_TITLE_FS, accent)
+	var ly: float = rect.position.y + AFFIX_INDEX_PAD + 28.0
+	for t: String in item.get("lines", []):
+		canvas.draw_string(font, Vector2(x, ly), t, HORIZONTAL_ALIGNMENT_LEFT, w,
+				AFFIX_INDEX_BODY_FS, Color("e8e3d6"))
+		ly += AFFIX_INDEX_LINE_H
