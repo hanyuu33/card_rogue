@@ -135,7 +135,7 @@ func _init() -> void:
 	check(swift.is_effect() and swift.rarity == 1 and swift.cost == 2
 			and swift.value == 2 and swift.traits.has("减伤"),
 			"迅捷：效果卡 稀有 2 费 value=2（减伤，只护 HP；2026-09-30 由 3 费下调）")
-	check(repo.get_card(9006).rarity == 2, "闪电链：史诗")
+	check(repo.get_card(9006).rarity == 1, "闪电链：稀有（R429 由史诗降为稀有）")
 	check(repo.get_card(9007).rarity == 1, "火球术：稀有")
 	var ser := swift.to_dict()
 	check(CardData.from_dict(ser).value == 2 and CardData.from_dict(ser).is_effect(),
@@ -148,8 +148,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 282,
-			"图鉴 = 282 张（R393 +赏金猎人 9204 / 猎杀 9205 / 秃鹰 9206（本局永久击杀成长三卡）；R406 +独行 9189（暗影刺客 · 2 费普通技能）；R404 +涂装机器人 8080（机械之心 · 稀有盟友）；R397 +量产型赫尔墨斯 9188（敌方 · 装甲运输车）；R381 +漩涡 9186 / 鹅 9187（森林精魄剧情卡 · 默认锁定）；R373 +麻痹 9185（0 费诅咒 · 不能打出 · 回合结束仍在手牌即消失）；R370 +库存整理 9184（机械之心史诗技能）；R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
+	check(repo.all_cards().size() == 281,
+			"图鉴 = 281 张（R429 删魔法学徒 9081 −1；R393 +赏金猎人 9204 / 猎杀 9205 / 秃鹰 9206（本局永久击杀成长三卡）；R406 +独行 9189（暗影刺客 · 2 费普通技能）；R404 +涂装机器人 8080（机械之心 · 稀有盟友）；R397 +量产型赫尔墨斯 9188（敌方 · 装甲运输车）；R381 +漩涡 9186 / 鹅 9187（森林精魄剧情卡 · 默认锁定）；R373 +麻痹 9185（0 费诅咒 · 不能打出 · 回合结束仍在手牌即消失）；R370 +库存整理 9184（机械之心史诗技能）；R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -162,7 +162,7 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 223 and grp_enemy.size() == 59,
+	check(grp_player.size() == 222 and grp_enemy.size() == 59,
 			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 223 / 59；R393 +3 张玩家卡；R406 +1 张玩家卡（独行 9189）；R404 +1 张玩家卡（涂装机器人 8080）；R397 +1 张敌方卡（量产型赫尔墨斯 9188）；R381 +2 张玩家卡（漩涡 9186 / 鹅 9187）；R373 +1 张玩家卡（麻痹 9185 · 诅咒）；R370 +1 张玩家卡（库存整理 9184）；R356 +4 张敌方卡（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫）；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
@@ -193,8 +193,8 @@ func _init() -> void:
 			and repo.get_card(9013).is_enemy_card() and repo.get_card(9023).is_enemy_card() == false,
 			"图鉴分组：is_level_effect / is_enemy_card 判定正确（9013 是敌方关卡效果，9057 不是）")
 	var pool := repo.reward_pool()
-	check(pool.size() == 190,
-			"奖励池 190 张（R393 +赏金猎人 / 猎杀 / 秃鹰 三张进池；R406 +独行 9189（普通）进池；R404 +涂装机器人 8080（稀有）进池；R370 +库存整理 9184（史诗）进池；R332 +本能 9176（稀有，进池）；R331 +隐藏能源 / 惊喜运单（均稀有）+2；R329：删**紧急埋伏 9106**（稀有）−1、**嵌合暴君 8047** 由初始升史诗 +1，仍 181；R327 +送葬 9175（稀有，进池）；R317 +身法 / 淘汰；R316 +极速 / 激光扫射；R315 +应急电源 9170 进池；R300 激发（史诗）进池；R298 集束炮台（普通）· 合体（史诗）均进池；R291 辅助刃 / 复制术进池；R290 集中突破 / 冲击炮进池；R275 重组降为普通后进池；R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 R329 起为史诗 → 进池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；**R282 改装者 8076（普通，进池）**；实际 %d）"
+	check(pool.size() == 189,
+			"奖励池 189 张（R429 删魔法学徒 9081 −1；R393 +赏金猎人 / 猎杀 / 秃鹰 三张进池；R406 +独行 9189（普通）进池；R404 +涂装机器人 8080（稀有）进池；R370 +库存整理 9184（史诗）进池；R332 +本能 9176（稀有，进池）；R331 +隐藏能源 / 惊喜运单（均稀有）+2；R329：删**紧急埋伏 9106**（稀有）−1、**嵌合暴君 8047** 由初始升史诗 +1，仍 181；R327 +送葬 9175（稀有，进池）；R317 +身法 / 淘汰；R316 +极速 / 激光扫射；R315 +应急电源 9170 进池；R300 激发（史诗）进池；R298 集束炮台（普通）· 合体（史诗）均进池；R291 辅助刃 / 复制术进池；R290 集中突破 / 冲击炮进池；R275 重组降为普通后进池；R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 R329 起为史诗 → 进池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；**R282 改装者 8076（普通，进池）**；实际 %d）"
 			% pool.size())
 	var pool_ids := {}
 	for c in pool:
@@ -237,21 +237,16 @@ func _init() -> void:
 			and golem.rarity == 5 and golem.traits.has(GameEngine.TAUNT_TRAIT)
 			and golem.traits.has(FieldState.VANISH_TRAIT),
 			"魔像：token 3 费 3/10 程1 速1，嘲讽 + 离场消失")
-	var appr := repo.get_card(9081)
-	check(appr.kind == "盟友" and appr.cost == 2 and appr.power == 3 and appr.health == 6
-			and appr.attack_range == 1 and appr.move_speed == 1 and appr.rarity == 1,
-			"魔法学徒：稀有 2 费 3/6 程1 速1")
 	check(repo.get_card(9075).group == "player" and repo.get_card(9077).group == "player"
-			and repo.get_card(9078).group == "player" and repo.get_card(9080).group == "player"
-			and repo.get_card(9081).group == "player",
-			"第 37 轮新卡都归玩家图鉴（含 token 魔像 9080）")
+			and repo.get_card(9078).group == "player" and repo.get_card(9080).group == "player",
+			"第 37 轮新卡都归玩家图鉴（含 token 魔像 9080；R429 删魔法学徒 9081）")
 
 	# ---- 流星雨（9083，2026-10-01）：X 费技能 —— 消耗全部费用，对随机敌人打 8 伤 X 次 ----
 	var ms_card := repo.get_card(9083)
-	check(ms_card != null and ms_card.is_spell() and ms_card.rarity == 0
+	check(ms_card != null and ms_card.is_spell() and ms_card.rarity == 2
 			and ms_card.group == "player" and ms_card.x_cost and ms_card.cost == 0
 			and ms_card.target_mode == "none" and not ms_card.needs_target(),
-			"流星雨：普通技能，X 费标记，无需选目标，卡面基础费用 0")
+			"流星雨：史诗技能（R429 由普通上调），X 费标记，无需选目标，卡面基础费用 0")
 	check(pool_ids.has(9083) and CardData.from_dict(ms_card.to_dict()).x_cost,
 			"流星雨在奖励池内；x_cost 随 to_dict/from_dict 保留")
 	var ms_e := _new_engine([], 30, 30)
@@ -326,10 +321,10 @@ func _init() -> void:
 
 	# ---- 火墙术（9084，2026-10-01）：3 费普通技能，烧一条横行 ----
 	var nc_fw := repo.get_card(9084)
-	check(nc_fw.is_spell() and nc_fw.cost == 3 and nc_fw.rarity == 0
+	check(nc_fw.is_spell() and nc_fw.cost == 3 and nc_fw.rarity == 1
 			and nc_fw.needs_target() and nc_fw.target_mode == "cell"
 			and nc_fw.group == "player",
-			"火墙术：3 费普通技能、选格子目标、归玩家图鉴")
+			"火墙术：3 费稀有技能（R429 由普通上调）、选格子目标、归玩家图鉴")
 	# R264（用户口径）：**「下调火墙术延迟伤害：10-8（15点即时伤害不变）」**
 	check(GameEngine.FIRE_WALL_DMG == 15 and GameEngine.FIRE_WALL_PASS_DMG == 8
 			and GameEngine.FIRE_WALL_CAP == 15,
@@ -439,12 +434,12 @@ func _init() -> void:
 			"火墙术：不分敌我 —— 我方单位站着也 -15（%d→%d）" % [
 			fw4_own_hp, fw4_own.health])
 
-	# ---- 蓄力（9085，2026-10-01）：2 费史诗技能 —— 本方下一张技能生效 2 次 ----
+	# ---- 蓄力（9085，2026-10-01）：1 费史诗技能（R429 由 2 费下调）—— 本方下一张技能生效 2 次 ----
 	var nc_ch := repo.get_card(9085)
-	check(nc_ch != null and nc_ch.is_spell() and nc_ch.cost == 2 and nc_ch.rarity == 2
+	check(nc_ch != null and nc_ch.is_spell() and nc_ch.cost == 1 and nc_ch.rarity == 2
 			and nc_ch.rarity_name() == "史诗" and nc_ch.group == "player"
 			and nc_ch.target_mode == "none" and not nc_ch.needs_target(),
-			"蓄力：2 费史诗技能、无需选目标、归玩家图鉴")
+			"蓄力：1 费史诗技能（R429 由 2 费下调）、无需选目标、归玩家图鉴")
 	check(pool_ids.has(9085) and nc_ch.effect_text == "你使用的下一张技能会生效 2 次。",
 			"蓄力在奖励池内，卡面文案 =「你使用的下一张技能会生效 2 次。」")
 	# 基本用法：蓄力 → 火焰箭（17 伤）打两次 = 34
@@ -699,25 +694,6 @@ func _init() -> void:
 			== "（复活术：敌方 AI 不使用这张卡）",
 			"复活术：敌方侧不会触发选牌")
 
-	# 魔法学徒：从卡组取一张随机技能卡入手；本回合出牌费用 -1
-	var ap_e := _new_engine([], 20, 20)
-	ap_e.state.energy = 20
-	ap_e.state.hand.clear()
-	ap_e.state.deck.clear()
-	ap_e.state.deck.append(repo.get_card(8002))     # 攻击：技能
-	ap_e.state.deck.append(repo.get_card(8001))     # 木栅栏：工事，不该被取
-	ap_e.state.hand.append(repo.get_card(9081))
-	var ap_p := ap_e.play_from_hand(0, Vector2i(4, 0))
-	check(ap_p != null and ap_e.state.unit_at(Vector2i(4, 0)) != null
-			and ap_e.state.unit_at(Vector2i(4, 0)).card.id == 9081,
-			"魔法学徒：2 费 2/5 照常上场")
-	check(ap_e.state.self_cost_reduction == 0,
-			"R65 魔法学徒：不设全局出牌减费（只给自己取到的那张技能牌 -1）")
-	check(ap_e.state.hand.size() == 1 and ap_e.state.hand[0].id == 8002,
-			"魔法学徒：只从卡组取「技能卡」（取到攻击，工事不取）")
-	check(ap_e.state.deck.size() == 1 and ap_e.state.deck[0].id == 8001,
-			"魔法学徒：被取走的技能卡离开卡组")
-
 
 	# ---- 第 38 轮新卡（2026-10-01）：风元素 9082 ----
 	var vl := repo.get_card(9082)
@@ -892,25 +868,6 @@ func _init() -> void:
 	check(eng_fox.state.turn_card_discount.is_empty()
 			and eng_fox.cost_of(fox_got) == 1,
 			"R65 赤狐：减费不跨回合（清零后那张恢复 %d 费）" % eng_fox.cost_of(fox_got))
-	# 魔法学徒 9081：与赤狐同一套机制（一起改）
-	var r65_appr := repo.get_card(9081)
-	check(r65_appr.effect_text.contains("该卡本回合费用 -1")
-			and not r65_appr.effect_text.contains("本回合出牌费用"),
-			"R65 魔法学徒 9081：卡面同样改成「该卡本回合费用 -1」")
-	var eng_ap := _new_engine([], 20, 20, -1, false)
-	eng_ap.start_game(1)
-	eng_ap.state.hand = [appr]
-	eng_ap.state.deck = [_card(8002, "攻击", "技能", 1, 0, 0),
-			_card(8002, "攻击", "技能", 1, 0, 0)]
-	eng_ap.state.energy = 5
-	eng_ap.play_from_hand(0, Vector2i(4, 1))
-	var ap_got: CardData = null
-	for c3: CardData in eng_ap.state.hand:
-		ap_got = c3
-	check(eng_ap.state.self_cost_reduction == 0 and ap_got != null
-			and eng_ap.cost_of(ap_got) == 0,
-			"R65 魔法学徒：同赤狐 —— 不设全局减费，只给自己取到的那张 -1")
-
 	# ---- 协同攻击 / 野兽之心 / 森林守护（9035~9037，2026-09-30 新增） ----
 	var coord := repo.get_card(9035)
 	check(coord.is_spell() and coord.cost == 3 and coord.rarity == 0
@@ -921,9 +878,9 @@ func _init() -> void:
 				and beast.traits.has("野性") and beast.value == 2,
 			"野兽之心：史诗 1 费效果卡（trait 野性 / value 2）")
 	var guard_card := repo.get_card(9037)
-	check(guard_card.is_spell() and guard_card.cost == 0 and guard_card.rarity == 1
+	check(guard_card.is_spell() and guard_card.cost == 0 and guard_card.rarity == 0
 				and guard_card.needs_target() and guard_card.target_mode == "unit",
-			"森林守护：稀有 0 费技能，需选目标")
+			"森林守护：普通 0 费技能（R429 由稀有下调），需选目标")
 
 	# 协同攻击：我方场上每有一个盟友 → 实际费用 -1（实时；最低 0；只数我方）
 	var eng_coord := _new_engine([], 20, 20, -1, false)
@@ -1462,11 +1419,11 @@ func _init() -> void:
 			"坚韧：工事与敌方盟友不受影响（6 / 9）")
 	check(ten_ret.contains("2 个己方盟友"), "坚韧：结算文案含数量（%s）" % ten_ret)
 
-	# 龙息（9054）：史诗 3 费技能，对一个敌方单位造成 3 点伤害、重复 6 次
+	# 龙息（9054）：普通 3 费技能（R429 由史诗下调），对一个敌方单位造成伤害、重复 5 次
 	var lg_c := repo.get_card(9054)
 	check(lg_c.card_name == "龙息" and lg_c.is_spell() and lg_c.cost == 3
-			and lg_c.rarity == 2 and lg_c.target_mode == "unit" and lg_c.needs_target(),
-			"龙息：史诗 3 费技能，需要选单位目标")
+			and lg_c.rarity == 0 and lg_c.target_mode == "unit" and lg_c.needs_target(),
+			"龙息：普通 3 费技能（R429 由史诗下调），需要选单位目标")
 	var lg_e := _new_engine([], 20, 20, -1, false)
 	lg_e.start_game(1)
 	lg_e.state.place(_card(9398, "厚甲敌", "盟友", 5, 4, 40), Vector2i(1, 0),
@@ -1510,20 +1467,20 @@ func _init() -> void:
 	var lg_r5 := lg_e4.use_spell(0)
 	check(lg_r5.contains("敌方单位"), "龙息：空目标被拒绝（%s）" % lg_r5)
 
-	# ---- R227：生命循环（9150，森林精魄 · 稀有 · 0 费技能）----
+	# ---- R227：生命循环（9150，森林精魄 · 普通 · 0 费技能；R429 由稀有下调）----
 	# 选一个己方盟友 → 获得「次元」+「死亡」；被破坏时加一张随机盟友卡到手卡，
 	# 且带次元 → 进消耗区（不进弃牌区）；离场（重启）时那两个字段要还原掉。
 	var lc_c := repo.get_card(9150)
 	check(lc_c != null and lc_c.card_name == "生命循环" and lc_c.is_spell()
-			and lc_c.cost == 0 and lc_c.rarity == 1 and lc_c.card_class == "森林精魄"
+			and lc_c.cost == 0 and lc_c.rarity == 0 and lc_c.card_class == "森林精魄"
 			and lc_c.target_mode == "unit" and lc_c.needs_target(),
-			"R227 生命循环：森林精魄稀有 0 费技能，需要选单位目标")
+			"R227 生命循环：森林精魄普通 0 费技能（R429 由稀有下调），需要选单位目标")
 	var lc_pool := repo.reward_pool_for("森林精魄")
 	var lc_in_pool := false
 	for lc_pc: CardData in lc_pool:
 		if lc_pc.id == 9150:
 			lc_in_pool = true
-	check(lc_in_pool, "R227 生命循环：进森林精魄奖励池（稀有 rarity 1）")
+	check(lc_in_pool, "R227 生命循环：进森林精魄奖励池（普通 rarity 0）")
 
 	# ① 施放：目标拿到「次元」+「死亡」+ Placement 标记
 	var lc_e := _new_engine([], 20, 20, -1, false)
@@ -2955,9 +2912,9 @@ func _init() -> void:
 	var nc_rider := repo.get_card(9016)
 	check(nc_rider.card_name == "犀牛" and nc_rider.cost == 4 and nc_rider.power == 7
 			and nc_rider.health == 12 and nc_rider.attack_range == 1
-			and nc_rider.move_speed == 2 and nc_rider.rarity == 0
+			and nc_rider.move_speed == 2 and nc_rider.rarity == 1
 			and nc_rider.regen_per_turn == 2,
-			"犀牛（R125 改名；R233 加强每回合回 2）：普通 4 费 7/12 程1 速2")
+			"犀牛（R125 改名；R233 加强每回合回 2；R429 升稀有）：4 费 7/12 程1 速2")
 	var nc_archer := repo.get_card(9017)
 	check(nc_archer.card_name == "鸭子弓手" and nc_archer.power == 3
 			and nc_archer.health == 18 and nc_archer.attack_range == 2
@@ -7897,12 +7854,12 @@ func _init() -> void:
 	check(dr_cls_bad.is_empty() and dr_cls_enemy_bad.is_empty(),
 			"角色系统：非敌方卡 class 都在可选角色内（或留空 = 通用卡）、敌方卡 class 都是「敌人」（异常 %s / 敌方异常 %s）"
 			% [str(dr_cls_bad), str(dr_cls_enemy_bad)])
-	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 70
+	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 69
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 66
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 66
 			and int(dr_cls_count.get("敌人", 0)) == 59
 			and int(dr_cls_count.get("", 0)) == 21,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 70 / 66 / 66 / 59；R393 森林精魄 +1（秃鹰）/ 暗影刺客 +2（赏金猎人 / 猎杀）；R406 暗影刺客 +1（独行 9189）；R404 机械之心 +1（涂装机器人 8080）；R397 敌人 +1（量产型赫尔墨斯 9188）；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R370 机械之心 +1（库存整理 9184）；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 18；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 69 / 66 / 66 / 59；R429 森林精魄 -1 = 删魔法学徒 9081；R393 森林精魄 +1（秃鹰）/ 暗影刺客 +2（赏金猎人 / 猎杀）；R406 暗影刺客 +1（独行 9189）；R404 机械之心 +1（涂装机器人 8080）；R397 敌人 +1（量产型赫尔墨斯 9188）；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R370 机械之心 +1（库存整理 9184）；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 18；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -8205,7 +8162,7 @@ func _init() -> void:
 	# 潜伏 / 幽灵 / 连环戏法 / 准备 / 怒涛 / 潜影者 / 回旋斩 / 预判 / 拒绝命运 /
 	# 幽光·荧光草 / 潜入 / 不眠 ----
 	var r45_pool := repo.reward_pool()
-	check(int(r45_pool.size()) == 190, "R393 +赏金猎人 / 猎杀 / 秃鹰 = 190；R406 +独行 9189（普通，进池）= 187；R404 +涂装机器人 8080（稀有，进池）= 186；R370 +库存整理 9184（史诗，进池）= 185；R332 +本能 9176（稀有，进池）= 184；R331 +隐藏能源 / 惊喜运单（均稀有）+2 = 183；R329：删紧急埋伏 −1、嵌合暴君升史诗进池 +1；R327 送葬（稀有）进池 +1 = 181；R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，R282 改装者 8076（普通，进池）+1 = 167，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 189, "R429 删魔法学徒 9081 −1；R393 +赏金猎人 / 猎杀 / 秃鹰 = 190；R406 +独行 9189（普通，进池）= 187；R404 +涂装机器人 8080（稀有，进池）= 186；R370 +库存整理 9184（史诗，进池）= 185；R332 +本能 9176（稀有，进池）= 184；R331 +隐藏能源 / 惊喜运单（均稀有）+2 = 183；R329：删紧急埋伏 −1、嵌合暴君升史诗进池 +1；R327 送葬（稀有）进池 +1 = 181；R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，R282 改装者 8076（普通，进池）+1 = 167，实际 %d）" % r45_pool.size())
 
 	# 连刺（9087）：1 费 4 伤 + 卡组随机 0 费技能卡入手
 	var r45_gg := _new_engine([], 30, 30)
@@ -8466,7 +8423,7 @@ func _init() -> void:
 	check(r45_ft.state.void_count == 1,
 			"拒绝命运：本卡带「次元」→ 进消耗区（void %d）" % r45_ft.state.void_count)
 
-	# 潜入（9100）：0 费 → 盟友移动到任意空格 + 本回合力量 +3
+	# 潜入（9100）：0 费 → 盟友移动到任意空格 + 本回合力量 +4（R429 由 +3 上调）
 	var r45_if := _new_engine([], 30, 30)
 	r45_if.state.place(_card(9001, "鸭子骑士", "盟友", 6, 3, 30, 1, 2),
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
@@ -8477,8 +8434,8 @@ func _init() -> void:
 	r45_if.cast_infiltrate(0, Vector2i(4, 1), Vector2i(3, 2))
 	check(r45_if.state.unit_at(Vector2i(3, 2)) != null
 			and r45_if.state.unit_at(Vector2i(4, 1)) == null
-			and r45_if.state.unit_at(Vector2i(3, 2)).effective_power() == 6,
-			"潜入：骑士移到 (3,2)，力量 3+3=6（实际 %d）"
+			and r45_if.state.unit_at(Vector2i(3, 2)).effective_power() == 7,
+			"潜入：骑士移到 (3,2)，力量 3+4=7（R429 由 +3 上调；实际 %d）"
 			% r45_if.state.unit_at(Vector2i(3, 2)).effective_power())
 	r45_if.end_turn()
 	check(r45_if.state.unit_at(Vector2i(3, 2)).effective_power() == 3,
@@ -8518,9 +8475,9 @@ func _init() -> void:
 	var r45_cls_count := {}
 	for c in r45_cls:
 		r45_cls_count[c.card_class] = int(r45_cls_count.get(c.card_class, 0)) + 1
-	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 70
+	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 69
 			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 66,
-			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R328 森林精魄 -2 = 木栅栏/攻击改公用；R329 暗影刺客 -1 = 删紧急埋伏 9106）"
+			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R429 森林精魄 -1 = 删魔法学徒 9081；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R328 森林精魄 -2 = 木栅栏/攻击改公用；R329 暗影刺客 -1 = 删紧急埋伏 9106）"
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
 	check(int(r45_cls_count.get("", 0)) == 21,
@@ -8795,7 +8752,7 @@ func _init() -> void:
 			"奖励池过滤：森林精魄摇不到暗影刺客卡（连刺 / 幽光 / 不眠）")
 	check(not r47_rg_ids.has(9082) and not r47_rg_ids.has(9085) and not r47_rg_ids.has(9021),
 			"奖励池过滤：暗影刺客摇不到森林精魄卡（风元素 / 蓄力 / 白魔法鸭）")
-	check(r47_dr.size() == 64 and r47_rg.size() == 63
+	check(r47_dr.size() == 63 and r47_rg.size() == 63
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 			- repo.reward_pool_for(PlayerClass.MECH).size(),
 			"奖励池过滤（R393 后）：森林精魄 %d 张 / 暗影刺客 %d 张（两者之和 + 机械之心 %d = 完整池 %d）"
@@ -9595,9 +9552,9 @@ func _init() -> void:
 	var r54_alert := repo.get_card(GameEngine.ALERT_ID)
 	check(r54_fence_c.is_fort() and r54_fence_c.cost == 2 and r54_fence_c.power == 2
 			and r54_fence_c.health == 8 and r54_fence_c.attack_range == 1
-			and r54_fence_c.rarity == 1 and r54_fence_c.card_class == PlayerClass.DRUID
+			and r54_fence_c.rarity == 0 and r54_fence_c.card_class == PlayerClass.DRUID
 			and r54_fence_c.traits.has(GameEngine.FENCE_TRAIT),
-			"R54：活体栅栏 2 费稀有工事 2/8/1（森林精魄，属【栅栏】类可叠栅栏）")
+			"R54：活体栅栏 2 费普通工事 2/8/1（R429 由稀有下调；森林精魄，属【栅栏】类可叠栅栏）")
 	check(r54_alert.is_spell() and r54_alert.cost == 2 and r54_alert.rarity == 1
 			and r54_alert.card_class == PlayerClass.ROGUE and not r54_alert.needs_target(),
 			"R54：警觉 2 费稀有技能（不指定目标）")
@@ -9758,10 +9715,10 @@ func _init() -> void:
 			and r55_fort.rarity == 0 and r55_fort.card_class == PlayerClass.ROGUE,
 			"R243 鲜血堡垒 8020：0 费**普通**暗影刺客工事 0/1 程1（R56 起初始力量 0）")
 	check(r55_vit != null and r55_vit.card_name == "活力转移" and r55_vit.kind == "效果"
-			and r55_vit.cost == 2 and r55_vit.rarity == 2
+			and r55_vit.cost == 2 and r55_vit.rarity == 1
 			and r55_vit.traits.has(GameEngine.VITALITY_TRAIT)
 			and r55_vit.card_class == PlayerClass.ROGUE,
-			"R55 活力转移 9110：2 费史诗暗影刺客效果卡")
+			"R55 活力转移 9110：2 费稀有暗影刺客效果卡（R429 由史诗下调）")
 
 	# 地狱猫 / 鲜血堡垒：剩余费用 3 → +3 力 +6 生 / +3 力 +9 生（永久，不随回合结束清除）
 	var r55_a := _new_engine([], 30, 30)
@@ -9899,10 +9856,10 @@ func _init() -> void:
 	check(r56_lord != null and r56_lord.card_name == "黑暗领主"
 			and r56_lord.kind == "盟友" and r56_lord.cost == 4 and r56_lord.power == 6
 			and r56_lord.health == 11 and r56_lord.attack_range == 1
-			and r56_lord.move_speed == 1 and r56_lord.rarity == 2
+			and r56_lord.move_speed == 1 and r56_lord.rarity == 0
 			and r56_lord.traits.has(GameEngine.DARK_LORD_TRAIT)
 			and r56_lord.card_class == PlayerClass.ROGUE,
-			"R56 黑暗领主 8021：4 费史诗暗影刺客随从 6/11 程1 速1")
+			"R56 黑暗领主 8021：4 费普通暗影刺客随从 6/11 程1 速1（R429 由史诗下调）")
 	check(r56_chain != null and r56_chain.card_name == "暗影锁链"
 			and r56_chain.kind == "效果" and r56_chain.cost == 1
 			and r56_chain.rarity == 1
@@ -12633,9 +12590,9 @@ func _init() -> void:
 		"R87 能量屏障 8033：机械之心的 2 费**稀有**技能")
 	check(r87_fort != null and r87_fort.card_name == "堡垒" and r87_fort.kind == "工事"
 			and r87_fort.cost == 3 and r87_fort.power == 3 and r87_fort.health == 11
-			and r87_fort.attack_range == 1 and r87_fort.rarity == 1
+			and r87_fort.attack_range == 1 and r87_fort.rarity == 0
 			and r87_fort.card_class == PlayerClass.MECH,
-		"R87 堡垒 8034：机械之心的 3 费**稀有**工事，3 攻 / 11 血 / 攻程 1")
+		"R87 堡垒 8034：机械之心的 3 费**普通**工事，3 攻 / 11 血 / 攻程 1（R429 由稀有下调）")
 	check(r87_fort.traits.has(GameEngine.STACK_HP_TRAIT),
 		"R87 堡垒：带 trait「改造生命层」（与侦察塔的「改造层数」是两套，别混）")
 	check(r87_rep != null and r87_rep.card_name == "自我修复" and r87_rep.kind == "技能"
@@ -14797,9 +14754,9 @@ func _init() -> void:
 	# ---- 卡面定义校验 ----
 	var r108_strike := r108_repo.get_card(GameEngine.SHADOW_STRIKE_ID)
 	check(r108_strike != null and r108_strike.kind == "技能" and r108_strike.cost == 1
-			and r108_strike.rarity == 1 and r108_strike.card_class == "暗影刺客"
+			and r108_strike.rarity == 0 and r108_strike.card_class == "暗影刺客"
 			and r108_strike.target_mode == "unit" and r108_strike.needs_target(),
-		"R108 影袭 9120：1 费稀有技能，暗影刺客，需选单位目标（实际 %s）"
+		"R108 影袭 9120：1 费普通技能（R429 由稀有下调），暗影刺客，需选单位目标（实际 %s）"
 			% (r108_strike.card_name if r108_strike != null else "null"))
 	var r108_step := r108_repo.get_card(GameEngine.SHADOW_STEP_ID)
 	check(r108_step != null and r108_step.kind == "技能" and r108_step.cost == 2
@@ -14809,7 +14766,7 @@ func _init() -> void:
 			% (r108_step.card_name if r108_step != null else "null"))
 	check(r108_pool_ids.has(GameEngine.SHADOW_STRIKE_ID)
 			and r108_pool_ids.has(GameEngine.SHADOW_STEP_ID),
-		"R108：影袭 9120 与暗影步 9121 均进入奖励池（稀有 rarity=1）")
+		"R108：影袭 9120 与暗影步 9121 均进入奖励池（影袭 R429 降为普通，仍在池内）")
 
 	# ---- ① 影袭：基础 8 伤，未满 3 张不回费 ----
 	var r108_e1 := _new_engine([], 30, 30)
@@ -16182,9 +16139,9 @@ func _init() -> void:
 	check(r116_c != null and r116_c.card_name == "捕兽大师" and r116_c.kind == "盟友"
 			and r116_c.cost == 3 and r116_c.power == 3 and r116_c.health == 9
 			and r116_c.attack_range == 1 and r116_c.move_speed == 1
-			and r116_c.rarity == 2 and r116_c.group == "player"
+			and r116_c.rarity == 1 and r116_c.group == "player"
 			and r116_c.card_class == "暗影刺客",
-		"R116 捕兽大师 9126：3 费**史诗**盟友 3/9/1/1，暗影刺客（实际 %s %d费 %d/%d/%d/%d 稀有度%d）"
+		"R116 捕兽大师 9126：3 费**稀有**盟友 3/9/1/1（R429 由史诗下调），暗影刺客（实际 %s %d费 %d/%d/%d/%d 稀有度%d）"
 		% [r116_c.card_name, r116_c.cost, r116_c.power, r116_c.health,
 			r116_c.attack_range, r116_c.move_speed, r116_c.rarity])
 	check(r116_c != null and r116_c.traits.has("亡语") and r116_c.affixes.has("死亡"),
@@ -16459,8 +16416,8 @@ func _init() -> void:
 			and not r125_rhino.traits.has("骑兵")
 			and r125_rhino.cost == 4 and r125_rhino.power == 7 and r125_rhino.health == 12
 			and r125_rhino.attack_range == 1 and r125_rhino.move_speed == 2
-			and r125_rhino.rarity == 0 and r125_rhino.card_class == "森林精魄",
-			"R125 犀牛：4 费 7/12 程1 速2 森林精魄（词条由「骑兵」改为「犀牛」）")
+			and r125_rhino.rarity == 1 and r125_rhino.card_class == "森林精魄",
+			"R125 犀牛：稀有 4 费 7/12 程1 速2 森林精魄（R429 由普通上调；词条由「骑兵」改为「犀牛」）")
 	check(r125_rhino.effect_text.contains("伤害") and r125_rhino.effect_text.contains("1"),
 			"R125 犀牛：卡面写明受到伤害 -1（%s）" % r125_rhino.effect_text)
 	var r125_named := 0
@@ -19276,10 +19233,10 @@ func _init() -> void:
 			and r217_card.kind == "工事" and r217_card.cost == 2
 			and r217_card.power == 0 and r217_card.health == 6
 			and r217_card.attack_range == 0 and r217_card.move_speed == 0
-			and r217_card.rarity == 1 and r217_card.card_class == PlayerClass.ROGUE
+			and r217_card.rarity == 0 and r217_card.card_class == PlayerClass.ROGUE
 			and r217_card.traits.has("工事")
 			and r217_card.traits.has(GameEngine.SHADOW_SPLIT_TRAIT),
-			"R217 分裂之影 8067：2 费稀有**工事** 0/6/0、暗影刺客、带「分裂之影」trait")
+			"R217 分裂之影 8067：2 费普通**工事** 0/6/0（R429 由稀有下调）、暗影刺客、带「分裂之影」trait")
 	check(r217_repo.reward_pool().has(r217_card)
 			and r217_repo.reward_pool_for(PlayerClass.ROGUE).has(r217_card)
 			and not r217_repo.reward_pool_for(PlayerClass.DRUID).has(r217_card),
@@ -20622,10 +20579,10 @@ func _init() -> void:
 	check(r248_card != null and r248_card.card_name == "落石陷阱"
 		and r248_card.kind == "场地" and r248_card.is_field() and not r248_card.is_fort()
 		and r248_card.card_class == PlayerClass.ROGUE and r248_card.cost == 2
-		and r248_card.rarity == 2 and r248_card.health == 0
+		and r248_card.rarity == 1 and r248_card.health == 0
 		and r248_card.target_mode == "none"
 		and r248_card.traits.has(GameEngine.ROCKFALL_TRAP_TRAIT),
-		"R248 落石陷阱 9159：2 费（R278 由 3 费下调）史诗**场地卡**（暗影刺客），带「落石陷阱」词条、生命 0、不打目标格")
+		"R248 落石陷阱 9159：2 费（R278 由 3 费下调）稀有**场地卡**（R429 由史诗下调；暗影刺客），带「落石陷阱」词条、生命 0、不打目标格")
 	check(r248_card.effect_text.contains("29 点伤害") and r248_card.effect_text.contains("践踏")
 		and r248_card.effect_text.contains("移动经过"),
 		"R248 卡面：写「移动经过触发 + 29 伤害 + 践踏不漏溢出」")
@@ -22960,9 +22917,9 @@ func _init() -> void:
 			"R322 辅助刃：带「次元」字段（打出后消失，不进弃牌区）")
 	var r291_dup: CardData = repo.get_card(GameEngine.DUPLICATE_ID)
 	check(r291_dup != null and r291_dup.card_name == "复制术"
-			and r291_dup.kind == "技能" and r291_dup.cost == 5 and r291_dup.rarity == 2
+			and r291_dup.kind == "技能" and r291_dup.cost == 5 and r291_dup.rarity == 1
 			and r291_dup.card_class == "机械之心" and r291_dup.target_mode == "unit",
-			"R291 复制术：机械之心史诗技能 —— 5 费 / 需选一个目标")
+			"R291 复制术：机械之心稀有技能（R429 由史诗下调）—— 5 费 / 需选一个目标")
 
 	# ① 辅助刃：力量 +2 / 一层改造 / 挂「死亡」字段
 	var r291_e1 := _new_engine([], 20, 20, -1, false)
@@ -23743,9 +23700,9 @@ func _init() -> void:
 	var r296_merge: CardData = repo.get_card(GameEngine.MERGE_ID)
 	check(r296_merge != null and r296_merge.card_name == "合体"
 			and r296_merge.kind == "技能" and r296_merge.cost == 1
-			and r296_merge.rarity == 2 and r296_merge.card_class == "机械之心"
+			and r296_merge.rarity == 1 and r296_merge.card_class == "机械之心"
 			and r296_merge.target_mode == "unit" and r296_merge.needs_target(),
-			"R298 合体：机械之心史诗技能 —— 1 费 / 需选一个场上目标")
+			"R298 合体：机械之心稀有技能（R429 由史诗下调）—— 1 费 / 需选一个场上目标")
 
 	# ① 入场：卡组 +2 张聚能炮击，且是各自独立的副本（不共享卡库实例）
 	var r296_e1 := _new_engine([], 20, 20, -1, false)
@@ -26122,10 +26079,10 @@ func _init() -> void:
 			"R346 禁卡：同一张不能重复占名额")
 	check(ProfileData.toggle_ban_for(9010, r346_repo_cards, PlayerClass.DRUID),
 			"R346 禁卡：第二张（额度刚好用完）")
-	check(not ProfileData.can_ban_for(9011, r346_repo_cards, PlayerClass.DRUID),
-			"R346 禁卡：额度用完后第三张禁不了")
-	check(not ProfileData.can_ban_for(9006, r346_repo_cards, PlayerClass.DRUID),
-			"R346 禁卡：没有史诗名额时史诗禁不了")
+	check(not ProfileData.can_ban_for(9042, r346_repo_cards, PlayerClass.DRUID),
+			"R346 禁卡：额度用完后第三张禁不了（样本改 9042 撕咬 · 普通）")
+	check(not ProfileData.can_ban_for(9031, r346_repo_cards, PlayerClass.DRUID),
+			"R346 禁卡：没有史诗名额时史诗禁不了（样本改 9031 白狼 · 史诗）")
 	var r346_banned_in_pool := false
 	for c3: CardData in r346_repo_cards.reward_pool():
 		if c3.id == 9005 or c3.id == 9010:
@@ -26617,10 +26574,10 @@ func _init() -> void:
 	var r352_qs := ProfileData.ban_quota_for(r352_repo, PlayerClass.ROGUE)
 	check(int(r352_qs.get(2, 0)) == 1 and int(r352_qs.get(1, 0)) == 1,
 			"R352 禁卡：同一张公用卡给暗影刺客**也各** +1（公用卡 = 每个职业一个 ban 位）")
-	ProfileData.unlock_card(9006)      # 闪电链：森林精魄 · 史诗
-	check(int(ProfileData.ban_quota_for(r352_repo, PlayerClass.DRUID).get(2, 0)) == 2,
-			"R352 禁卡：解锁森林史诗卡 → 森林史诗档再 +1")
-	check(int(ProfileData.ban_quota_for(r352_repo, PlayerClass.ROGUE).get(2, 0)) == 1,
+	ProfileData.unlock_card(9006)      # 闪电链：森林精魄 · 稀有（R429 由史诗下调）
+	check(int(ProfileData.ban_quota_for(r352_repo, PlayerClass.DRUID).get(1, 0)) == 2,
+			"R352 禁卡：解锁森林稀有卡 → 森林稀有档再 +1")
+	check(int(ProfileData.ban_quota_for(r352_repo, PlayerClass.ROGUE).get(1, 0)) == 1,
 			"R352 禁卡：职业卡不给别的职业加名额")
 
 	var r352_epic_target := 0

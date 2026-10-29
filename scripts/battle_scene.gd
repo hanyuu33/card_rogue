@@ -1760,7 +1760,7 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--charge" in args and engine != null:
-		# 演示（2026-10-01）：蓄力（9085）—— 2 费史诗，本方使用的下一张技能生效 2 次。
+		# 演示（2026-10-01）：蓄力（9085）—— 1 费史诗（R429 由 2 费下调），本方使用的下一张技能生效 2 次。
 		# 亡灵领主 8/55 摆在 (1,1)，先蓄力再火焰箭（17 伤）→ 17×2 = 34 → 55→21。
 		engine.state.hand.clear()
 		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.CHARGE_SPELL_ID).to_dict()))
@@ -2988,11 +2988,12 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--newspells" in args and engine != null:
-		# 演示（2026-10-01，第 37 轮）：6 张新卡一起上手 ——
-		# 魔法塔 9075 / 魔力核心 9076 / 陨石术 9077 / 复活术 9078 / 魔像术 9079 / 魔法学徒 9081。
+		# 演示（2026-10-01，第 37 轮）：5 张新卡一起上手 ——
+		# 魔法塔 9075 / 魔力核心 9076 / 陨石术 9077 / 复活术 9078 / 魔像术 9079。
+		# （R429：魔法学徒 9081 已删卡，不再进演示手牌）
 		# 悬停最长的陨石术 → 左栏信息面板核验长文案折行；场上摆一座魔法塔 + 一个召唤出的魔像。
 		engine.state.hand.clear()
-		for _nid in [9075, 9076, 9077, 9078, 9079, 9081]:
+		for _nid in [9075, 9076, 9077, 9078, 9079]:
 			engine.state.hand.append(repo.get_card(_nid))
 		engine.state.energy = 9
 		engine.state.place(repo.get_card(9075), Vector2i(5, 0), GameEngine.SIDE_SELF)
@@ -11622,7 +11623,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("🌀 回旋斩：命中 %d 个敌方单位（各 %d 伤）" % [
 					int(data.get("hits", 0)), int(data.get("dmg", 0))])
 		"infiltrate":
-			# 潜入（9100）：移动 + 本回合力量 +3
+			# 潜入（9100）：移动 + 本回合力量 +4
 			_say("❧ 潜入：%s 移动 → 本回合力量 +%d（当前 %d）" % [
 					str(data.get("name", "盟友")), int(data.get("amount", 0)),
 					int(data.get("power", 0))])

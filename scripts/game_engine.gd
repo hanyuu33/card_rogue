@@ -564,7 +564,7 @@ const WHITE_WOLF_ID:= 9031
 const RABBIT_ID:= 9032
 const LYNX_ID:= 9033
 const FOX_ID:= 9034
-## 赤狐 9034 / 魔法学徒 9081（R65 改）：**只有它自己从卡组取到的那张技能牌**本回合费用 -1。
+## 赤狐 9034（R65 改）：**只有它自己从卡组取到的那张技能牌**本回合费用 -1。
 ## 原实现挂的是 state.self_cost_reduction（全局「本回合出牌费用 -N」）→ 手里所有牌都便宜，
 ## 远强于卡面描述。现在改成给那一张牌挂 state.turn_card_discount（本回合减费表，
 ## 回合结束随表清空；显示 = 判定 = 实扣都走 cost_of），语义与警觉 9109 / 影魔 8007 同源。
@@ -734,9 +734,6 @@ const OVERHAUL_HP:= 3
 const GOLEM_SPELL_ID:= 9079
 const GOLEM_ID:= 9080
 const GOLEM_TRAIT:= "魔像"
-# 魔法学徒（9081 盟友）：从卡组取一张随机技能卡入手；本回合出牌费用 -1。
-const APPRENTICE_ID:= 9081
-
 # ── 第 38 轮（2026-10-01）新卡 ──
 # 风元素（9082 盟友）：10 费 7/20 程2 速1。两条费用机制都挂在 cost_of 链上（显示=判定=实扣）。
 # ① 在场时：该方技能牌费用 -1（多张叠加 —— 按该方场上本卡张数算）。
@@ -927,7 +924,7 @@ const GLOWGRASS_SPELL_BONUS:= 1
 # 潜入（9100 技能）：0 费；选一个己方盟友移动到任意空格（对方后排仍禁入），它本回合力量 +3。
 # 两段操作：UI 先点盟友再点目的格 → engine.cast_infiltrate()；敌方 AI / 自动出牌走 use_spell 的自动落点。
 const INFILTRATE_ID:= 9100
-const INFILTRATE_ATK:= 3
+const INFILTRATE_ATK:= 4
 # 不眠（9101 效果）：自己的回合中每次结算收尾时手里没牌 → 抽 1 张；
 # 抽到的 0 费卡本回合费用 +1（turn_card_discount 记 -1，回合结束随表清空）。
 const SLEEPLESS_ID:= 9101
@@ -4584,8 +4581,6 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	if card.id == SPRITE_ID:
 		_sprite_trigger()
 
-	if card.id == APPRENTICE_ID:
-		_apprentice_fetch()
 
 
 
@@ -6965,14 +6960,9 @@ func _fox_trigger() -> void :
 	_fetch_skill_card("赤狐")
 
 
-func _apprentice_fetch() -> void :
-	## 魔法学徒（9081）：与赤狐 9034 同一套机制。
-	_fetch_skill_card("魔法学徒")
-
-
 func _fetch_skill_card(source: String) -> void :
 	## 「从卡组取一张随机技能牌进手，**且只有这一张**本回合费用 -1」——
-	## 赤狐 9034 与魔法学徒 9081 的**唯一入口**（两卡效果相同，别再各写一份）。
+	## 赤狐 9034 的**唯一入口**（别在别处再写一份同样的取牌逻辑）。
 	##
 	## R65 改：减费记在 state.turn_card_discount（按**实例**的本回合减费表），
 	## 不再挂 state.self_cost_reduction（全局「本回合出牌费用 -N」）——
@@ -7012,7 +7002,7 @@ func _overload_grant(side: String) -> String :
 	## 给它加上这个特性（**永久**改牌，之后每次抽到它上场都是双动）。
 	##
 	## 口径（已与用户确认）：
-	##   * 候选**只从 `state.deck`（抽牌堆）**里选 —— 与 `_fetch_skill_card`（赤狐 / 魔法学徒）
+	##   * 候选**只从 `state.deck`（抽牌堆）**里选 —— 与 `_fetch_skill_card`（赤狐）
 	##     「从卡组取一张技能牌」同口径。手牌 / 弃牌区里的盟友不参与。
 	##   * 选中后**原位替换**：不抽到手上、不改变牌库顺序 → 洗牌序列不变，同种子必然一致。
 	##   * 「一回合行动两次」判据 = `CardData.actions >= DOUBLE_ACTION`（**没有**对应 trait）。
