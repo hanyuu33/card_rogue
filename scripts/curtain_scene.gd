@@ -422,7 +422,9 @@ func _leave() -> void:
 	if not RunState.run_active:
 		SceneFx.goto("res://scenes/title.tscn")
 		return
-	if RunState.pending_relic > 0:
+	# ⚠️ 燧石（6057）不走这条：它要的是「地图上选一格」，由 map_scene 的选格模式收尾。
+	# 送去 deck_edit 的话那里没有对应分支（它只认 6002 / 6004 / 6024），会卡在空模式上。
+	if RunState.pending_relic > 0 and RunState.pending_relic != RunState.FLINT_RELIC_ID:
 		# 即时道具要再选一张卡（源数之力 / 失忆药水）→ 与旧版 relic_pick 同一出口
 		SceneFx.goto("res://scenes/deck_edit.tscn")
 		return

@@ -575,6 +575,94 @@ static func pipe_relight() -> bool:
 	return true
 
 
+# R447 冒险家的遗物（第一层新事件）产出的两件「即时」道具 —— 效果都落在**地图**上：
+#   冒险笔记（6056）：拾起时随机把一个**未探索**房间变成大宝箱，并在图上亮一圈金光；
+#   燧石（6057）：拾起时由玩家**选一个走过的房间**，退回未探索 + 变成篝火。
+# ⚠️ 两件都不进任何随机池（事件直接 `gain_relic`，不需要在 RelicRepo 的池子里登记）。
+const NOTE_RELIC_ID := 6056
+const FLINT_RELIC_ID := 6057
+## 「展示」用：冒险笔记改完的那一格 id。地图场景据此亮金光，亮完自己清掉。
+## 只活在当局内存里（不进存档：读档时玩家早就看过那圈光了）。
+static var map_flash_id := -1
+
+
+static func note_reveal_bigchest() -> int:
+	## R447 冒险笔记（6056）：随机挑一个**未探索**房间改成大宝箱，返回那一格的 id
+	## （没有可改的格子 → -1）。
+	## 候选判据：
+	##   * 未探索 = 不在 `cleared_ids` 里（走过的房间已经吃过内容，再改成宝箱是白送）；
+	##   * 排除当前所在格 / 起点 / 已经是 `bigchest` 的格（改了等于没改）；
+	##   * 排除第三层直道之外的空格（`is_void`，那一层也没有事件房，属于双保险）；
+	##   * 排除右上角的固定商店（「每层那间永远在」是地图设计约束，不能被一张笔记改动）。
+	## 随机源走 `run_rng` → 同种子必然改同一格（回放 / 测试可复现）。
+	var cands: Array = []
+	for c: Dictionary in map_cells:
+		var cid := int(c["id"])
+		if cid == current_node_id or RogueMap.is_void(c) or cleared_ids.has(cid):
+			continue
+		if RogueMap.is_fixed_shop(cid):
+			continue      # 右上角那间是「每层永远在」的固定商店，别改成宝箱
+		var ty := str(c.get("type", ""))
+		if ty == "start" or ty == "bigchest":
+			continue
+		cands.append(cid)
+	if cands.is_empty():
+		map_flash_id = -1
+		return -1
+	var pick: int = int(cands[run_rng.randi() % cands.size()])
+	var cell: Dictionary = map_cells[pick]
+	cell["type"] = "bigchest"
+	cell["hidden"] = false
+	cell["revealed"] = true
+	cell["event_kind"] = ""
+	map_flash_id = pick
+	return pick
+
+
+static func flint_candidates() -> Array:
+	## R447 燧石（6057）：能点的格子 = **走过的、但不是当前所在格 / 起点**的房间。
+	## 第三层直道之外的空格（is_void）同样排除。
+	## ⚠️ 当前格必须排掉：站在上面把它变成「未探索」，`advance()` 对同格返回 ok=false，
+	##    玩家会被迫先走开再走回来 —— 平白多花一块巧克力，纯属坑人。
+	var out: Array = []
+	for c: Dictionary in map_cells:
+		var cid := int(c["id"])
+		if cid == current_node_id or RogueMap.is_void(c):
+			continue
+		if not cleared_ids.has(cid):
+			continue
+		if str(c.get("type", "")) == "start" or RogueMap.is_fixed_shop(cid):
+			continue      # 起点 / 右上角固定商店都不是「能被烧掉的普通房间」
+		out.append(cid)
+	return out
+
+
+static func flint_rebuild_rest(node_id: int) -> bool:
+	## R447 燧石（6057）：把一个**走过的**房间退回未探索，并改成篝火。返回是否真的改了。
+	## ⚠️ 必须从 `cleared_ids` 里摘掉：只改 type 不改探索状态的话，再走回去时
+	##    `advance()` 会判 `is_new = false` → 「什么都不会发生」，篝火永远点不着。
+	## ⚠️ 摘掉它之后，这一格不再是「零消耗穿行」的中转格 —— 穿过它的远路会临时断开，
+	##    玩家再走一次这格就重新连上（本来就是这个道具的代价）。
+	if node_id < 0 or node_id >= map_cells.size():
+		return false
+	if not flint_candidates().has(node_id):
+		return false
+	var cell: Dictionary = map_cells[node_id]
+	cleared_ids.erase(node_id)
+	cell["type"] = "rest"
+	cell["hidden"] = false
+	cell["revealed"] = true
+	cell["event_kind"] = ""
+	# 这一格若曾经是商店：货架状态与「可再进店」窗口都失效了，一并清掉，
+	# 免得窗口指着一个已经不是商店的格子（`shop_revisit_ok` 会拿它去比较）。
+	shop_states.erase(str(node_id))
+	if shop_revisit_id == node_id:
+		shop_revisit_id = -1
+	if map_flash_id == node_id:
+		map_flash_id = -1
+	return true
+
+
 static func lucky7_left() -> int:
 	## 距下一次生效还有几个回合（刚生效过则返回 7；计数为 0 时返回 7）。
 	var r := lucky7_turns % LUCKY7_EVERY
@@ -840,6 +928,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	skipped_relics = []
 	pending_relic = -1
 	pending_relic_drop = -1
+	map_flash_id = -1
 	pending_rewards = []   # R119：开新 run 清空待领奖励
 	reset_shop_session()   # R390：新的一局没有旧货架，也没有可重进的店
 	duck_revive_chance = 100
@@ -914,6 +1003,7 @@ static func end_run(clear_save: bool = true) -> void:
 	skipped_relics = []
 	pending_relic = -1
 	pending_relic_drop = -1
+	map_flash_id = -1
 	match_charge = 0            # R342：本局结束 → 火柴次数复位
 	duck_revive_chance = 100
 	lucky7_turns = 0            # R314：本局结束 → lucky 7 计数复位
@@ -1089,6 +1179,10 @@ static func gain_relic(id: int) -> void:
 			match_charge = MATCH_CHARGES
 		DICE_RELIC_ID:   # 水晶骰子（R312）：**当前这张图**的非固定房间当场变「?」并重摇内容
 			reroll_map_as_unknown()
+		NOTE_RELIC_ID:   # 冒险笔记（R447）：随机一个未探索房间变成大宝箱 + 图上亮一圈金光
+			note_reveal_bigchest()
+		FLINT_RELIC_ID:  # 燧石（R447）：要玩家在地图上点一格走过的房间 → 回地图后进选格模式
+			pending_relic = relic.id
 
 
 static func _apply_pot() -> void:

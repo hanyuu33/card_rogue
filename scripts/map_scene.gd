@@ -128,6 +128,15 @@ var _t := 0.0
 var _pulse_redraw_at := 0     # R186：呼吸/脉冲节流重绘的下次许可时刻（ms）
 var _pulse_ms := 0            # R187：实际节流窗口（懒初始化；安卓 ×2，PC 45ms 不变）
 var _hover_id := -1
+
+# ── R447 冒险家的遗物：两件道具都要落在地图上 ──
+## 冒险笔记：改过的那一格亮金光（进地图才开始倒计时 → 玩家一定看得见）。
+var _flash_id := -1
+var _flash_t := 0.0
+const FLASH_SECS := 14.0
+## 燧石：正在等玩家点一格「走过的」房间。
+var _flint_pick := false
+var _flint_ids: Array = []
 var _mouse := Vector2.ZERO
 var _records_visible := false
 var _records_scroll := 0.0
@@ -389,6 +398,23 @@ func _ready() -> void:
 	if "--toastdemo" in OS.get_cmdline_user_args():
 		# ⚠️ _ready 期间 root 正忙（Parent busy），toast 的懒实例挂不上去 → 延迟一帧
 		(func(): UiToast.toast("回放开始")).call_deferred()
+	# ---- R447 出图开关（只影响截图，不进正式流程）----
+	#   --flintdemo：伪造「走了几格、刚拿到燧石」→ 直接进选格模式
+	#   --notedemo ：伪造「笔记刚把一格改成大宝箱」→ 看那圈金光
+	if "--flintdemo" in OS.get_cmdline_user_args():
+		RunState.pending_relic = RunState.FLINT_RELIC_ID
+		_fake_walked()
+	if "--notedemo" in OS.get_cmdline_user_args():
+		_fake_walked()
+		RunState.note_reveal_bigchest()
+	# ---- R447 冒险家的遗物（两件都作用在地图上）----
+	# 冒险笔记：改完那格的金光由地图来「展示」—— 倒计时**进地图才开始**，
+	# 所以「事件页点了按钮 → 回地图」这条路上玩家一定看得见。
+	_flash_id = RunState.map_flash_id
+	_flash_t = FLASH_SECS if _flash_id >= 0 else 0.0
+	# 燧石：`gain_relic` 只置了 `pending_relic`（它要玩家自己挑格子）→ 一进地图就收尾。
+	if RunState.pending_relic == RunState.FLINT_RELIC_ID:
+		_start_flint_pick()
 	# 命令行 -- --screenshot：自动截图退出
 	#（`-- --enteranim --shotwait 1.0` 可以指定延迟，用来截过场的不同时刻）
 	if "--screenshot" in OS.get_cmdline_user_args():
@@ -585,6 +611,10 @@ func _gui_input(event: InputEvent) -> void:
 		if _dragging:
 			_dragging = false
 			return
+		# R447 燧石：选格模式下这一下点击归道具所有（不进门、不消耗巧克力）
+		if _flint_pick:
+			_flint_click(event.position)
+			return
 		var cell := _cell_at(event.position)
 		if cell.is_empty() or not _is_available(cell):
 			return
@@ -720,6 +750,12 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	if _move_note_t > 0.0:
 		_move_note_t = maxf(0.0, _move_note_t - delta)
+	# R447 冒险笔记：金光亮够时间就自己熄掉（清掉状态位，回地图不再重播）
+	if _flash_t > 0.0:
+		_flash_t = maxf(0.0, _flash_t - delta)
+		if _flash_t <= 0.0:
+			_flash_id = -1
+			RunState.map_flash_id = -1
 	# 进场过场：走完才**真的进房间**（过场期间 RunState 一动不动）
 	if _slide_pin:
 		_anim_t = ENTER_SLIDE * 0.55   # R151 演示：把沿桥滑动钉在中段（出图核验）
@@ -805,6 +841,8 @@ func _draw() -> void:
 	_draw_cell_icons()
 	_draw_fog()          # R145：内容看不见的格子盖迷雾（**桥不盖** —— 通路要可见）
 	_draw_states()
+	_draw_map_flash()    # R447 冒险笔记：把那格「刚变成大宝箱」写成会呼吸的金光
+	_draw_flint_cells()  # R447 燧石：候选格的橙色呼吸框（选格模式）
 	_draw_marks()        # R177：玩家标记画在地图内容之上、HUD 之下
 	_draw_hud()
 	_draw_sidebar()
@@ -816,7 +854,10 @@ func _draw() -> void:
 		_draw_deck_panel()
 	if _records_visible:
 		_draw_records_panel()
-	_draw_move_note()
+	if _flint_pick:
+		_draw_flint_hint()     # R447：燧石选格时，这个位置留给常驻提示
+	else:
+		_draw_move_note()
 	if _boss_alert:
 		_draw_boss_alert()
 	if not _anim_cell.is_empty():
@@ -1032,12 +1073,12 @@ func _draw_states() -> void:
 				draw_string(_font_bold, Vector2(r.position.x, r.end.y - 9.0),
 						"可再进店", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 11,
 						Color(0.60, 0.92, 1.0))
-		elif _is_adjacent(cell):
+		elif _is_adjacent(cell) and not _flint_pick:
 			# 「下一步」：绿脉动框（原样，最醒目）
 			var pulse := 0.5 + 0.5 * sin(_t * 4.0)
 			draw_rect(r.grow(2.0),
 					Color(0.45, 0.90, 0.50, 0.42 + 0.42 * pulse), false, 2.6)
-		elif _is_available(cell):
+		elif _is_available(cell) and not _flint_pick:
 			# R322：隔着一间走过的空房也能去（或那格本身走过）→ **虚线**细框。
 			# 用虚线不是随手选的：实线框是「下一步」（上面那档、会呼吸），
 			# 虚线是「走得到但不是下一步」—— 形状上一眼可分，满图绿框也不会抢指向性。
@@ -1054,6 +1095,104 @@ func _draw_states() -> void:
 			var p2 := 0.5 + 0.5 * sin(_t * 6.0)
 			draw_rect(r.grow(4.0 + p2 * 3.0),
 					Color(0.72, 0.38, 0.95, 0.55 + 0.40 * p2), false, 3.0)
+
+
+func _fake_walked() -> void:
+	## R447 出图辅助：把起点和它的邻居当作「走过的」，让两件道具都有东西可操作。
+	if RunState.map_cells.is_empty():
+		return
+	var sc := RogueMap.start_cell(RunState.map_cells)
+	var sid := int(sc["id"])
+	RunState.cleared_ids = [sid]
+	for nb in RogueMap.neighbor_ids(sc):
+		RunState.cleared_ids.append(int(nb))
+	RunState.current_node_id = sid
+
+
+func _start_flint_pick() -> void:
+	## R447 燧石（6057）：进入「选格模式」—— 只认走过的房间（当前格 / 起点除外）。
+	## 没有候选（理论上只有「一步都没走过」才会）→ 直接作废，别把玩家困在一张点不动的图上。
+	_flint_ids = RunState.flint_candidates()
+	if _flint_ids.is_empty():
+		RunState.pending_relic = -1
+		_flint_pick = false
+		_set_note("燧石没有用武之地：地图上还没有走过的房间")
+		return
+	_flint_pick = true
+	queue_redraw()
+
+
+func _flint_click(pos: Vector2) -> void:
+	## R447 燧石：点候选格 → 退回未探索 + 变篝火；点别处只给一句提示，不退出选格模式。
+	var fc := _cell_at(pos)
+	var fid := int(fc.get("id", -1))
+	if fid < 0 or not _flint_ids.has(fid):
+		_set_note("燧石只能点在走过的房间上")
+		queue_redraw()
+		return
+	if not RunState.flint_rebuild_rest(fid):
+		_set_note("这一格点不着火")
+		queue_redraw()
+		return
+	sfx.play("click")
+	_flint_pick = false
+	_flint_ids = []
+	RunState.pending_relic = -1
+	var c: Dictionary = RunState.map_cells[fid]
+	_set_note("篝火点起来了（第 %d 列第 %d 行）—— 走过去就能休息" % [int(c["col"]) + 1, int(c["row"]) + 1])
+	queue_redraw()
+
+
+func _draw_flint_cells() -> void:
+	## R447 燧石：候选格的橙色呼吸框。
+	## 只在框里画、**不逐格写小字** —— 候选格底部的「起点 / 战斗」标签本来就贴在那儿，
+	## 再叠一行字会互相压住；横条里说一次就够（候选格全都可点，不需要逐格指认）。
+	if not _flint_pick:
+		return
+	var p := 0.5 + 0.5 * sin(_t * 4.5)
+	for fid: int in _flint_ids:
+		var c: Dictionary = RunState.map_cells[fid]
+		var r := _cell_rect(c)
+		draw_rect(r.grow(2.0), Color(1.0, 0.62, 0.24, 0.48 + 0.42 * p), false, 3.0)
+
+
+func _draw_flint_hint() -> void:
+	## R447 燧石：地图下方那条常驻提示。
+	## ⚠️ 必须画在 `_draw_hud()` **之后**（图例条就在这一带上），
+	##    跟着 `_draw_move_note()` 的位置走 —— 早画一步就被图例整条盖掉（R447 实测）。
+	if not _flint_pick:
+		return
+	## 位置：跟「本层 Boss」名牌同一行（y=60，高 26），居中 —— 那一条两边都空着，
+	## 不像地图下方会跟图例条抢位置（R447 第一版就撞在那儿）。
+	var w := 520.0
+	var rect := Rect2(size.x / 2 - w / 2, 60.0, w, 26.0)
+	draw_rect(rect, Color(0.12, 0.09, 0.06, 0.96), true)
+	draw_rect(rect, Color(1.0, 0.70, 0.32, 0.60), false, 1.2)
+	draw_string(_font_bold, rect.position + Vector2(10, 17),
+			"燧石：选一个走过的房间，把它重新变回篝火",
+			HORIZONTAL_ALIGNMENT_CENTER, w - 20, UiTheme.FS_CAPTION, Color("f0c98a"))
+
+
+func _draw_map_flash() -> void:
+	## R447 冒险笔记：「这里刚刚变成了大宝箱」—— 三圈由内向外扩散的金光 + 一行小字。
+	## 只画在**已知**格上（没揭开的格子还盖着迷雾，画在最上层会直接穿透迷雾）。
+	if _flash_id < 0 or _flash_t <= 0.0:
+		return
+	if _flash_id >= RunState.map_cells.size():
+		_flash_id = -1
+		return
+	var c: Dictionary = RunState.map_cells[_flash_id]
+	var r := _cell_rect(c)
+	var p := 0.5 + 0.5 * sin(_t * 3.4)
+	for i in 3:
+		var ph := fmod(_t * 0.85 + float(i) * 0.34, 1.0)
+		draw_rect(r.grow(5.0 + ph * 24.0),
+				Color(1.0, 0.84, 0.40, (1.0 - ph) * (0.55 + 0.40 * p)), false, 3.0)
+	# 这格多半还盖着迷雾（本来就是「没探索过」才会被选中）——
+	# 所以图标必须**自己画一遍**压在雾上，否则玩家只看见一圈光、看不见箱子里是什么。
+	_draw_anim_icon(c, r.grow(-16.0), 0.92)
+	draw_string(_font_bold, Vector2(r.position.x, r.end.y - 9.0),
+			"大宝箱", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 11, Color(1.0, 0.94, 0.68))
 
 
 func _draw_player_marker(r: Rect2) -> void:

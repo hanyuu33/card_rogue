@@ -39,6 +39,8 @@ const RICE_ID := 6012             # 一袋米抗几楼（鸭之凝视事件道�
 const PEAR_ID := 6019             # 鸭梨（鸭梨山大事件道具）
 const APPLE_ID := 6027            # 苹果（R244「苹果与医生」事件道具；原奖励道具）
 const PIPE_ID := 6055              # 烟斗（R446「雪豹出现」选项 1：首回合 +1 费 / 多抽 1 / 失去 1 HP）
+const ADVENTURER_NOTE_ID := 6056   # 冒险笔记（R447「冒险家的遗物」选项 1：随机未探索房 → 大宝箱）
+const ADVENTURER_FLINT_ID := 6057  # 燧石（R447「冒险家的遗物」选项 2：选一格走过的房 → 退成篝火）
 const SNOW_LEOPARD_CARD_ID := 8081  # 雪豹（R446「雪豹出现」选项 2 的奖励卡）
 const HERO_CARD_ID := 9023        # 英雄（绝赞五换一的奖励卡）
 const HERO_TRADE_NEED := 5        # 绝赞五换一：要交出 5 张**不同名**的卡
@@ -95,6 +97,19 @@ const SNOW_CLOSED_DESC := """「闭嘴。」两个字压下去，雪豹喉咙里
 
 const SNOW_CHEESE_DESC := """芝士在它嘴边化开，雪豹低头吃完，
 起身抖了抖身上的雪，跟在了你后面。"""
+
+# R447 冒险家的遗物（第一层专属）：两个选项各给一件「即时」道具，效果都落在地图上。
+const ADVENTURER_DESC := """石壁下靠着一具风干的行囊，主人早就离开了。
+笔记摊在膝上，页角被雨水粘在一起；燧石和火镰还扣在扣环里，
+看着像是刚放下不久。
+遗物不挑人，但一次只拿得走一样。"""
+
+const ADVENTURER_NOTE_DESC := """你把笔记从头翻到尾。
+最后一页画着一张潦草的图，某处被圈了起来——
+那个位置，好像真的多了一间你没去过的屋子。"""
+
+const ADVENTURER_FLINT_DESC := """燧石落进掌心，还带着一点凉。
+火镰擦过，火星跳起来，照亮了石壁上被烟熏黑的一片。"""
 
 const BLUEFISH_DESC := """一条通体蓝色的大肥鱼搁浅在岸边，肚皮一起一伏，像还在做梦。
 它翻了个身，从嘴里吐出一枚亮晶晶的东西——
@@ -248,6 +263,8 @@ var _gaze_taken := false      # 鸭之凝视：是否已收下道具
 var _pear_taken := false      # 鸭梨山大：是否已收下道具
 var _apple_taken := false     # 苹果与医生（R244）：本次是否已收下「苹果」
 var _snow_pick := ""           # 雪豹出现（R446）：本次拿走的是 "pipe" / "cat" / 空
+var _adv_pick := ""            # 冒险家的遗物（R447）：本次拿走的是 "note" / "flint" / 空
+var _adv_result := ""          # 冒险家的遗物（R447）：收尾态那行结果（读档重绘要能复现）
 var _bluefish_taken := false  # 蓝色大肥鱼：是否已收下「鲸鱼之怒」
 ## R351 赏月：本次拿走的是 "moon"（花光金币换月亮）/ "coin"（直接拿硬币）/ ""（还没拿）。
 ## 两个选项**互斥**，拿了一个另一个就收起 —— 走 `_claim_reward()` 那条统一规则。
@@ -353,6 +370,12 @@ func _is_snow_leopard() -> bool:
 	return _is_event_node() and _pending_kind() == "snow_leopard"
 
 
+func _is_adventurer() -> bool:
+	## 冒险家的遗物（R447，第一层专属）：两个选项 —— 道具「冒险笔记」或「燧石」。
+	## 两样都拿得到东西，所以没有「什么都不拿」（同「雪豹出现」的收法）。
+	return _is_event_node() and _pending_kind() == "adventurer"
+
+
 func _is_bluefish() -> bool:
 	## 蓝色大肥鱼（第二层专属事件）：可将一张「鲸鱼之怒」（9050）加入卡组。
 	return _is_event_node() and _pending_kind() == "bluefish"
@@ -426,7 +449,8 @@ func _is_treasure() -> bool:
 			and not _is_arcane() and not _is_oblivion() and not _is_smith() \
 			and not _is_delivery() and not _is_delivery_done() \
 			and not _is_card_merchant() and not _is_lake_lady() \
-			and not _is_divination() and not _is_moon() and not _is_snow_leopard()
+			and not _is_divination() and not _is_moon() and not _is_snow_leopard() \
+			and not _is_adventurer()
 
 
 func _kind() -> String:
@@ -443,6 +467,8 @@ func _kind() -> String:
 		return "apple_doctor"
 	if _is_snow_leopard():
 		return "snow_leopard"
+	if _is_adventurer():
+		return "adventurer"
 	if _is_hero():
 		return "hero"
 	if _is_arcane():
@@ -570,6 +596,10 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "snow_leopard"
+		if args[i] == "--adventurer":  # 演示：伪装 run 冒险家的遗物事件（R447 截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "adventurer"
 		if args[i] == "--bluefish":  # 演示：伪装 run 蓝色大肥鱼事件（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -921,6 +951,23 @@ func _ready() -> void:
 			# 两样都拿得到东西 → 没有「什么都不拿」这一项（同「赏月」的收法）。
 			leave_btn.visible = false
 			result_label.text = ""
+	elif _is_adventurer():
+		event_name.text = "冒 险 家 的 遗 物"
+		desc.text = ADVENTURER_NOTE_DESC if _adv_pick == "note" \
+				else (ADVENTURER_FLINT_DESC if _adv_pick == "flint" else ADVENTURER_DESC)
+		if _adv_pick != "":
+			_collapse_to_leave()
+			result_label.text = _adv_result
+			result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		else:
+			rest_btn.text = "查看笔记（获得道具「冒险笔记」）"
+			rest_btn.disabled = false
+			alt_btn.visible = true
+			alt_btn.text = "拿取工具（获得道具「燧石」）"
+			alt_btn.disabled = false
+			# 两样都拿得到东西 → 没有「什么都不拿」这一项（同「雪豹出现」/「赏月」）。
+			leave_btn.visible = false
+			result_label.text = ""
 	elif _is_treasure():
 		event_name.text = "宝  箱"
 		# R372：统一免费开、内容恒为卡牌（不再扣生命、不再随机成道具）。
@@ -1044,6 +1091,28 @@ func _on_main() -> void:
 	## 宝箱层 → 开箱获得 1 个随机奖励道具。
 	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
 	sfx.play("click")
+	if _is_adventurer():
+		if _adv_pick != "":
+			_on_leave()
+			return
+		# gain_relic 内部当场随机改一格（`RunState.note_reveal_bigchest()`），
+		# 改完把格 id 留在 `map_flash_id` 上 —— 地图场景据此亮那一圈金光。
+		RunState.gain_relic(ADVENTURER_NOTE_ID)
+		var note_id := RunState.map_flash_id
+		_adv_pick = "note"
+		_claim_reward(rest_btn)
+		_collapse_to_leave()
+		desc.text = ADVENTURER_NOTE_DESC
+		if note_id >= 0:
+			_adv_result = "「冒险笔记」已收进道具栏：地图上一间还没去过的房间变成了大宝箱" \
+					+ "——回到地图时会看见那格亮着金光。"
+		else:
+			_adv_result = "「冒险笔记」已收进道具栏——只是地图上已经没有没去过的房间了，" \
+					+ "纸上什么也没写。"
+		result_label.text = _adv_result
+		result_label.add_theme_color_override("font_color", Color("d7a54a"))
+		_redraw()
+		return
 	if _is_snow_leopard():
 		if _snow_pick != "":
 			_on_leave()
@@ -1697,6 +1766,22 @@ func _on_alt() -> void:
 				s_card.card_name if s_card != null else "雪豹",
 				CardText.naturalize(s_card.effect_text) if s_card != null else ""]
 		result_label.add_theme_color_override("font_color", UiTheme.RARITY_RARE)
+		_redraw()
+		return
+	if _is_adventurer():
+		if _adv_pick != "":
+			return
+		# 燧石要玩家**在地图上选一格**：`gain_relic` 只把 `pending_relic` 置上，
+		# 等这张事件页离开、回到地图时由 `map_scene` 进「选格模式」收尾。
+		RunState.gain_relic(ADVENTURER_FLINT_ID)
+		_adv_pick = "flint"
+		_claim_reward(alt_btn)
+		_collapse_to_leave()
+		desc.text = ADVENTURER_FLINT_DESC
+		_adv_result = "「燧石」已收进道具栏——回到地图后挑一个走过的房间，" \
+				+ "把那盏火重新点起来。"
+		result_label.text = _adv_result
+		result_label.add_theme_color_override("font_color", Color("d7a54a"))
 		_redraw()
 		return
 	if not _is_card_merchant() or _merchant_done:

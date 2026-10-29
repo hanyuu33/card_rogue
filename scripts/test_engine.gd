@@ -5934,13 +5934,14 @@ func _init() -> void:
 	# 「凝视 / 一袋米抗几楼」已挪到第二层；第一层换成「奥秘之泉」，
 	# 「遗忘之泉」是写进每一层事件表的全层通用事件。
 	var ev_kinds_layer := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
-	check(ev_kinds_layer.size() == 10 and not ev_kinds_layer.has("monster") \
+	check(ev_kinds_layer.size() == 11 and not ev_kinds_layer.has("monster") \
+			and ev_kinds_layer.has("adventurer") \
 			and ev_kinds_layer.has("treasure") and ev_kinds_layer.has("arcane") \
 			and ev_kinds_layer.has("smith") and ev_kinds_layer.has("delivery") \
 			and ev_kinds_layer.has("lake_lady") and ev_kinds_layer.has("divination") \
 			and ev_kinds_layer.has("snow_leopard") \
 			and not ev_kinds_layer.has("gaze"),
-			"第一层事件池：10 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/卡牌宝箱/湖中仙女/占卜室/R446 雪豹出现；无凝视、无怪物）")
+			"第一层事件池：11 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/卡牌宝箱/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物；无凝视、无怪物）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
 	check(l2_ev_kinds.size() == 10 and l2_ev_kinds.has("smith") \
 			and l2_ev_kinds.has("moon")
@@ -20438,6 +20439,115 @@ func _init() -> void:
 			in FileAccess.get_file_as_string("res://scripts/game_engine.gd"),
 			"R446 雪豹：攻击结算里真的接了这个钩子（不只是函数存在）")
 
+	# ==== R447：事件「冒险家的遗物」—— 冒险笔记 6056 / 燧石 6057 ====
+	var r447_repo := RelicRepo.load_json()
+	var r447_note := r447_repo.get_relic(RunState.NOTE_RELIC_ID)
+	var r447_flint := r447_repo.get_relic(RunState.FLINT_RELIC_ID)
+	check(r447_note != null and r447_note.relic_name == "冒险笔记"
+			and r447_note.kind == RelicData.KIND_INSTANT
+			and r447_note.source == RelicData.SRC_EVENT,
+			"R447 冒险笔记 6056：即时类事件道具，已登记")
+	check(r447_flint != null and r447_flint.relic_name == "燧石"
+			and r447_flint.kind == RelicData.KIND_INSTANT
+			and r447_flint.source == RelicData.SRC_EVENT,
+			"R447 燧石 6057：即时类事件道具，已登记")
+	check(not r447_repo.reward_ids().has(RunState.NOTE_RELIC_ID)
+			and not r447_repo.reward_ids().has(RunState.FLINT_RELIC_ID)
+			and not r447_repo.initial_ids().has(RunState.NOTE_RELIC_ID)
+			and not r447_repo.initial_ids().has(RunState.FLINT_RELIC_ID)
+			and not r447_repo.layer2_ids().has(RunState.NOTE_RELIC_ID)
+			and not r447_repo.layer2_ids().has(RunState.FLINT_RELIC_ID),
+			"R447 两件都只从事件拿（不进初始 / 奖励 / 二层起始池）")
+	var r447_l1 := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
+	check(r447_l1.size() == 11 and r447_l1.has("adventurer"),
+			"R447 第一层事件池 11 种（+冒险家的遗物，实际 %d）" % r447_l1.size())
+	check(not GameLayers.event_kinds(GameLayers.LAYER_TWO).has("adventurer"),
+			"R447 冒险家的遗物只在第一层（第二层不串层）")
+	check(GameLayers.event_name("adventurer") == "冒险家的遗物",
+			"R447 事件显示名已登记")
+
+	# -- 在地图状态上验两件道具（改完原样还原，不影响后面的用例）
+	var r447_sv_cells: Array = RunState.map_cells
+	var r447_sv_cleared: Array = RunState.cleared_ids.duplicate()
+	var r447_sv_cur := RunState.current_node_id
+	var r447_sv_flash := RunState.map_flash_id
+	var r447_sv_pending := RunState.pending_relic
+	var r447_sv_relics: Array = RunState.relics.duplicate()
+	var r447_mrng := RandomNumberGenerator.new()
+	r447_mrng.seed = 447001
+	var r447_cells: Array = RogueMap.generate(r447_mrng, GameLayers.LAYER_DEFAULT)
+	RunState.map_cells = r447_cells
+	var r447_start_id := int(RogueMap.start_cell(r447_cells)["id"])
+	RunState.current_node_id = r447_start_id
+	RunState.cleared_ids = [r447_start_id]
+	RunState.map_flash_id = -1
+	var r447_before := 0
+	for r447_c: Dictionary in r447_cells:
+		if str(r447_c["type"]) == "bigchest":
+			r447_before += 1
+	var r447_got := RunState.note_reveal_bigchest()
+	check(r447_got >= 0 and r447_got != r447_start_id
+			and not RunState.cleared_ids.has(r447_got),
+			"R447 冒险笔记：挑中的是未探索房间（id %d）" % r447_got)
+	var r447_after := 0
+	for r447_c2: Dictionary in r447_cells:
+		if str(r447_c2["type"]) == "bigchest":
+			r447_after += 1
+	check(r447_after == r447_before + 1
+			and str(r447_cells[r447_got]["type"]) == "bigchest"
+			and bool(r447_cells[r447_got]["revealed"])
+			and str(r447_cells[r447_got].get("event_kind", "")) == "",
+			"R447 冒险笔记：那一格变成大宝箱且已揭晓（%d → %d）" % [r447_before, r447_after])
+	check(RunState.map_flash_id == r447_got,
+			"R447 冒险笔记：改过的格 id 交给地图做金光展示")
+	# 全图都走过 → 无处可改（不能白给、也不能崩）
+	RunState.cleared_ids = []
+	for r447_c3: Dictionary in r447_cells:
+		RunState.cleared_ids.append(int(r447_c3["id"]))
+	check(RunState.note_reveal_bigchest() == -1 and RunState.map_flash_id == -1,
+			"R447 冒险笔记：地图全走完时无处可改（返回 -1，状态位清空）")
+
+	# -- 燧石：候选 = 走过的房（当前格 / 起点除外）
+	RunState.cleared_ids = [r447_start_id, r447_got]
+	RunState.current_node_id = r447_start_id
+	var r447_cands := RunState.flint_candidates()
+	check(r447_cands.has(r447_got) and not r447_cands.has(r447_start_id)
+			and r447_cands.size() == 1,
+			"R447 燧石：候选只含走过的房（不含当前格 / 起点），实际 %s" % str(r447_cands))
+	check(RunState.flint_rebuild_rest(r447_start_id) == false,
+			"R447 燧石：当前所在格点不动（否则要先走开再走回来）")
+	check(RunState.flint_rebuild_rest(r447_got)
+			and str(r447_cells[r447_got]["type"]) == "rest"
+			and bool(r447_cells[r447_got]["revealed"])
+			and not RunState.cleared_ids.has(r447_got),
+			"R447 燧石：点过的房退回未探索 + 变成篝火")
+	check(RunState.flint_rebuild_rest(r447_got) == false,
+			"R447 燧石：同一格不能点第二次（已经不在候选里）")
+	# 燧石拿到时只挂 pending（要玩家在地图上选格，不能当场随便改一格）
+	RunState.relics = []
+	RunState.pending_relic = -1
+	RunState.gain_relic(RunState.FLINT_RELIC_ID)
+	check(RunState.pending_relic == RunState.FLINT_RELIC_ID,
+			"R447 燧石：拿到时挂 pending_relic（回地图进选格模式）")
+	# 冒险笔记则相反：拿到当刻就把地图改了
+	RunState.relics = []
+	RunState.cleared_ids = [r447_start_id]
+	RunState.current_node_id = r447_start_id
+	RunState.map_flash_id = -1
+	RunState.gain_relic(RunState.NOTE_RELIC_ID)
+	check(RunState.relics.has(RunState.NOTE_RELIC_ID) and RunState.map_flash_id >= 0,
+			"R447 冒险笔记：gain_relic 当场就把地图改好了（不必等回地图）")
+	check_src("_flint_pick" in FileAccess.get_file_as_string("res://scripts/map_scene.gd"),
+			"R447 燧石：地图场景真的有选格模式（不只是 pending 挂上了）")
+	check_src("_is_adventurer()" in FileAccess.get_file_as_string("res://scripts/event_scene.gd"),
+			"R447 冒险家的遗物：事件场景接了分支")
+	# 还原
+	RunState.map_cells = r447_sv_cells
+	RunState.cleared_ids = r447_sv_cleared
+	RunState.current_node_id = r447_sv_cur
+	RunState.map_flash_id = r447_sv_flash
+	RunState.pending_relic = r447_sv_pending
+	RunState.relics = r447_sv_relics
 	# ==== R245：初始道具 勇气徽章 6031 / 陶罐 6032 + 诅咒「罐子」9157 / 召唤物 9158 ====
 	var r245_rrepo := RelicRepo.load_json()
 	var r245_crepo := CardRepo.load_json()
