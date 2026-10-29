@@ -565,6 +565,21 @@ const METEOR_FLY_MS := 280      # 一颗的飞行时长（配合下面的起点�
 const METEOR_GAP_MIN := 110     # 颗间最小间隔（X 很大时压到这里为止）
 const METEOR_GAP_MAX := 260     # 颗间最大间隔（X = 2~3 时用这个）
 const METEOR_BATCH_MS := 1500   # 一整批的飞行预算：颗数越多间隔越紧，总量压在这附近
+## R431：舰炮（9201，启示者阶段 1）的**竖直激光** —— 直接在被打的那一列从天而降，
+## **不从启示者身上发出**（用户口径：光柱落在「伤害那一列」）。一段三拍：
+## 预热细线（从上划到列底）→ 主光柱张开 → 淡出。
+var _naval_beam: Dictionary = {}   # {col, land, end, bot_row}   正在打的这道光柱
+const NAVAL_BEAM_PRE_MS := 180     # 预热：一道细亮线从上垂到列底（伤害就落在这时）
+const NAVAL_BEAM_HOLD_MS := 420    # 主光柱全亮
+const NAVAL_BEAM_FADE_MS := 240    # 淡出
+## R431：流星雨色阶 —— **由外到内 红 → 橙 → 黄 → 白**（用户口径）。
+## 尾迹从尾到头走 红→橙，头部四层同心圆补上黄与白；落地爆点复用同一套色阶，
+## 保证「天上飞的那颗」和「地上炸的那一圈」是同一个东西。
+const METEOR_C_OUT := Color(1.0, 0.22, 0.10, 0.30)     # 外层红晕（最外、最淡）
+const METEOR_C_TAIL := Color(1.0, 0.34, 0.12, 0.90)    # 红：尾迹末端 / 落地外圈
+const METEOR_C_MID := Color(1.0, 0.68, 0.16, 0.95)     # 橙：尾迹中段 / 落地中圈
+const METEOR_C_CORE := Color(1.0, 0.95, 0.55, 1.0)     # 黄：亮核中层 / 落地内圈
+const METEOR_C_WHITE := Color(1.0, 0.99, 0.96, 1.0)    # 白：最内芯
 # R288：通用效果演出队列 + 镜头跟随（唯一口）。一场演出 = 若干**镜头段**：
 # 发动者与受影者能同屏就一段演完；不能同屏就一段一个目标，**轮流**滚过去。
 var _cues: Array = []           # 待播 [{cells, rows, label, col, at}]
@@ -3567,6 +3582,26 @@ func _demo_tick() -> void:
 				Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
 		engine.use_spell(0)
 		status_text = "R430 演示：流星雨逐颗坠落 —— 每颗落地那一刻才出伤害"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r431naval" in _demo_args and _demo_frame == 200 and engine != null:
+		# R431 出图专用：舰炮（9201）竖直激光的验收镜头。
+		# 两个我方单位摆在中间列 —— 引擎只挑「有目标的列」，所以必打这一列；
+		# 再把舰炮挂进敌方效果区，直接调 `_naval_gun` 走完整链路（含 fx_impact 的延迟）。
+		#   出图：`scenes/battle.tscn -- --screenshot --r431naval --shotframe 9999 --shotms 260`
+		engine.state.hand.clear()
+		engine.state.place(CardData.from_dict(repo.get_card(1053).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(5, 1), GameEngine.SIDE_SELF)
+		var ng_have := false
+		for ng_e: CardData in engine.state.enemy_effects:
+			if int(ng_e.id) == 9201:
+				ng_have = true
+		if not ng_have:
+			engine.state.enemy_effects.append(CardData.from_dict(repo.get_card(9201).to_dict()))
+		engine._naval_gun(GameEngine.SIDE_OPPONENT)
+		status_text = "R431 演示：舰炮激光落在被打的那一列"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--finisher" in _demo_args and _demo_frame == 80 and engine != null:
@@ -8322,6 +8357,7 @@ func _draw() -> void:
 	draw_set_transform(shake, 0.0, Vector2.ONE)   # 复位缩放，回到屏幕空间（只留震动）
 	_draw_grid_mask()
 	_draw_meteors()          # R430：流星画在遮罩**之后** —— 上方空间本来就窄，
+	_draw_naval_beam()       # R431：舰炮竖直激光（同样要越过遮罩，从画面顶端下来）
 	                         # 放在棋盘变换里会被裁成「凭空冒爆点」
 	_draw_grid_caption()
 	_draw_speech_bubbles()   # R386：对话气泡 —— 压在卡牌之上、面板与手牌之下
@@ -9904,6 +9940,8 @@ func _tick_anims() -> bool:
 	_floaters = _floaters.filter(func(f): return n - int(f.start) < int(f.dur))
 	_bursts = _bursts.filter(func(b): return n - int(b.start) < int(b.dur))
 	_meteors = _meteors.filter(func(m): return n < int(m.land))   # R430：落地即交给爆点
+	if not _naval_beam.is_empty() and n > int(_naval_beam.get("end", 0)):
+		_naval_beam = {}   # R431：光柱淡出后收掉（留着会让 busy 永远为真、队列不走）
 	_wake_rings = _wake_rings.filter(func(r): return n - int(r.start) < int(r.dur))
 	_impacts = _impacts.filter(func(f): return n - int(f.start) < int(f.dur))
 	_pow_fx = _pow_fx.filter(func(f): return n - int(f.start) < int(f.dur))
@@ -9924,6 +9962,7 @@ func _tick_anims() -> bool:
 	return any or death_busy or not _ghosts.is_empty() or not _floaters.is_empty() \
 			or not _bursts.is_empty() or not _dying.is_empty() \
 			or not _meteors.is_empty() \
+			or not _naval_beam.is_empty() \
 			or not _wake_rings.is_empty() \
 			or not _delayed.is_empty() or n < _shake_until \
 			or not _impacts.is_empty() or not _pow_fx.is_empty() \
@@ -10362,13 +10401,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					# ⚠️ 只冻**还活着**的：被这一下打死的卡由击破演出接管（卡面显示 0）。
 					var fi_pl := engine.state.unit_at(fc)
 					var fi_dmg := int(data.get("amount", 0))
-					var fi_hold := fi_seq >= 0 and fi_pl != null and fi_pl.health > 0
+					# R431：舰炮（9201）的激光还没落到这一列 → 这笔受击跟着光柱一起落地。
+					# 否则「数字先冒出来、光柱后下来」，又是上一轮流星那个毛病。
+					var fi_beam := _naval_beam_land_for(fc)
+					if fi_beam > fi_at:
+						fi_at = fi_beam
+					var fi_hold := (fi_seq >= 0 or fi_beam > 0) and fi_pl != null and fi_pl.health > 0
 					if fi_hold:
 						_freeze_hp(fi_pl, fi_dmg)
 					_delayed.append({"at": fi_at, "kind": "fx_hit",
 							"data": {"cell": fc, "dmg": fi_dmg,
 							"source": str(data.get("source", "")),
-							"pl": fi_pl, "hold": fi_hold}})
+							"pl": fi_pl, "hold": fi_hold,
+							"col": METEOR_C_MID if fi_beam > 0 else Color("8f5ad0")}})
 					_push_cue([fc], "", Color("8f5ad0"))
 		"spell":
 			sfx.play("heal" if int(data["card"].id) in [2002, 7202] else "spell")
@@ -11212,6 +11257,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var mw := _meteor_land_for(center)
 			if mw > 0:
 				delay_ms = maxi(delay_ms, mw - n)
+			# R431：被舰炮光柱打死的单位同理 —— 等光柱落到这一列再演击破
+			#（它的伤害数字已经被拉到光柱落地那一刻，卡不能提前炸）。
+			var bw := _naval_beam_land_for(cell)
+			if bw > 0:
+				delay_ms = maxi(delay_ms, bw - n)
 			var hide_at := n + delay_ms + DESTROY_HOLD_MS
 			_dying.append({"cell": cell, "card": data["card"],
 					"p": data.get("placement"), "hide_at": hide_at})
@@ -11910,24 +11960,43 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("⚠ 启示者进入第 %d 阶段（生命 %d）" % [bp_ph, int(data.get("health", 0))])
 		"naval_gun":
 			# R356 舰炮 9201（阶段 1）：列号 -1 = 三列全空 → 改打 HP。
-			# 每个受击单位的伤害数字由 `_hit_unit` 自己的飘字出，这里只报「轰的是哪一列」。
+			# R431：原来只有一行飘字 + 几个小爆点，用户报「舰炮也没有特效」——
+			# 现在改成**竖直激光柱**：直接在被打的那一列从天而降，不从启示者身上发出。
 			var ng_d := int(data.get("damage", 0))
 			var ng_col := int(data.get("col", -1))
-			var ng_top := Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 32.0)
-			sfx.play("hit")
-			_shake(4.0, 240)
+			# 列号 -1 = 三列全空 → 改打 HP；光柱落在中间列（数字仍在 HP 横幅上）
+			var ng_lane := ng_col if ng_col >= 0 else FieldState.BOARD_COLS / 2
+			# 光柱打到这一列**最后一个有单位**的格子下沿；一个目标都没有就打到可视窗底
+			var ng_bot_row := -1
+			for ng_c: Vector2i in engine.state.board.keys():
+				if (ng_c as Vector2i).y == ng_lane:
+					ng_bot_row = maxi(ng_bot_row, (ng_c as Vector2i).x)
+			var ng_land := n + NAVAL_BEAM_PRE_MS
+			_naval_beam = {"col": ng_lane, "start": n, "land": ng_land,
+					"end": ng_land + NAVAL_BEAM_HOLD_MS + NAVAL_BEAM_FADE_MS,
+					"bot_row": ng_bot_row}
+			# 预热先来一声充能，冲击声留给 naval_land（落地那一刻）
+			sfx.play("spell")
+			_shake(2.0, 150)
 			if ng_col < 0:
-				_floaters.append({"pos": ng_top, "text": "舰炮 · 无目标 → 直击 HP -%d" % ng_d,
-						"col": Color("e2703a"), "size": 16, "start": n, "dur": 1700})
+				# HP 直击：横幅数字也等光柱落地才掉（否则「血先掉、光才下来」）
+				_freeze_hp("hp_opp" if str(data.get("side", "")) == GameEngine.SIDE_SELF else "hp_self", ng_d)
+				_delayed.append({"at": ng_land, "kind": "naval_land",
+						"data": {"col": ng_lane, "bot_row": ng_bot_row, "to_hp": true,
+								"side": str(data.get("side", "")), "dmg": ng_d}})
+				_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 32.0),
+						"text": "舰炮 · 无目标 → 直击 HP -%d" % ng_d,
+						"col": METEOR_C_MID, "size": 16, "start": ng_land, "dur": 1700})
 				_say("🜂 舰炮：整片战场没有目标 → 直击 HP %d" % ng_d)
 			else:
-				_floaters.append({"pos": ng_top, "text": "舰炮 · 第 %d 列 各 -%d" % [ng_col + 1, ng_d],
-						"col": Color("e2703a"), "size": 16, "start": n, "dur": 1700})
-				for ng_c: Vector2i in engine.state.board.keys():
-					if (ng_c as Vector2i).y == ng_col:
-						_bursts.append({"pos": _cell_center(ng_c), "sc": _grid_scroll,
-								"start": n + 90, "dur": 520, "col": Color("e2703a"), "big": false})
+				_delayed.append({"at": ng_land, "kind": "naval_land",
+						"data": {"col": ng_lane, "bot_row": ng_bot_row, "to_hp": false,
+								"side": str(data.get("side", "")), "dmg": ng_d}})
+				_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 32.0),
+						"text": "舰炮 · 第 %d 列 各 -%d" % [ng_col + 1, ng_d],
+						"col": METEOR_C_MID, "size": 16, "start": ng_land, "dur": 1700})
 				_say("🜂 舰炮：轰击第 %d 列，每个目标 -%d" % [ng_col + 1, ng_d])
+			queue_redraw()
 		"revelator_shield":
 			# R356 电磁屏障 9202（阶段 2）：电的是**攻击者**，不是启示者。
 			var rs_c: Vector2i = data.get("src", Vector2i(0, 0))
@@ -12072,17 +12141,87 @@ func _draw_meteors() -> void:
 		if dir.length() < 0.01:
 			dir = Vector2(0.2, 1).normalized()
 		# 尾迹：6 段递减的短线，越靠尾越淡越长（浅色背景上要压得住）
+		# R431：色相按「由尾到头 = 红 → 橙 → 黄」推，头部才交给亮核的白。
 		var fade := 0.35 + 0.65 * t
 		for i in 6:
 			var a0 := head - dir * (float(i) * 15.0)
 			var a1 := head - dir * (float(i + 1) * 15.0)
 			var ta := 0.92 * (1.0 - float(i) / 6.0) * fade
-			draw_line(a0, a1, Color(0.86, 0.52, 1.0, ta), 7.0 - float(i) * 0.6)
-		# 亮核（外晕 + 紫环 + 白心）
-		draw_circle(head, 16.0, Color(0.70, 0.32, 0.98, 0.34))
-		draw_circle(head, 10.0, Color(0.86, 0.55, 1.0, 0.85))
-		draw_circle(head, 6.0, Color(1.0, 0.96, 1.0, 1.0))
+			var tc: Color = METEOR_C_TAIL.lerp(METEOR_C_MID, 1.0 - float(i) / 5.0)
+			draw_line(a0, a1, Color(tc.r, tc.g, tc.b, ta), 7.0 - float(i) * 0.6)
+		# 亮核：**由外到内 = 红 → 橙 → 黄 → 白**（R431 用户口径），同心圆一层层收进去
+		draw_circle(head, 19.0, METEOR_C_OUT)
+		draw_circle(head, 13.5, METEOR_C_TAIL)
+		draw_circle(head, 9.0, METEOR_C_MID)
+		draw_circle(head, 5.5, METEOR_C_CORE)
+		draw_circle(head, 3.0, METEOR_C_WHITE)
 
+
+func _draw_naval_beam() -> void:
+	## R431：舰炮（9201）的**竖直激光** —— 直接落在被打的那一列，不从启示者身上发出。
+	## 三拍：预热细线（从上划到列底）→ 主光柱张开 → 淡出。
+	## 画在棋盘遮罩**之后**（屏幕空间）：光柱要从画面顶端一路下来，遮罩会把上半段裁掉。
+	if _naval_beam.is_empty():
+		return
+	var n := _now()
+	var ld := int(_naval_beam.get("land", 0))
+	var ed := int(_naval_beam.get("end", 0))
+	if n > ed:
+		return
+	var cx := GRID_X + float(int(_naval_beam.get("col", 0))) * CELL_W + CELL_W / 2.0
+	var top := -14.0
+	# 列底：这一列最后一个有单位的格子下沿（没有目标 → 可视窗底）
+	var bot := GRID_Y + GRID_H
+	var br := int(_naval_beam.get("bot_row", -1))
+	if br >= 0:
+		bot = GRID_Y + float(br + 1) * CELL - _grid_scroll + 6.0
+	# ① 预热：一条细亮线从上往下「划」到列底 —— 划到底那一刻就是伤害落地
+	if n < ld:
+		var st0 := int(_naval_beam.get("start", n))
+		var pt := clampf(float(n - st0) / float(maxi(1, ld - st0)), 0.0, 1.0)
+		var tip := lerpf(top, bot, pt)
+		draw_line(Vector2(cx, top), Vector2(cx, tip), Color(1, 0.62, 0.22, 0.45), 11.0)
+		draw_line(Vector2(cx, top), Vector2(cx, tip), Color(1, 0.98, 0.92, 0.95), 2.5)
+		draw_circle(Vector2(cx, tip), 5.0, Color(1, 0.95, 0.75, 0.9))
+		return
+	# ② 主光柱：宽度先张开（0 → 全宽 130ms），末段淡出
+	var fade := 1.0
+	var hold_end := ld + NAVAL_BEAM_HOLD_MS
+	if n > hold_end:
+		fade = 1.0 - clampf(float(n - hold_end) / float(NAVAL_BEAM_FADE_MS), 0.0, 1.0)
+	var grow := clampf(float(n - ld) / 130.0, 0.0, 1.0)
+	var w_out := 52.0 * grow
+	var w_mid := 31.0 * grow
+	var w_in := 14.0 * grow
+	var w_core := 4.0 * grow
+	# 由外到内 = 红 → 橙 → 黄 → 白（与流星同一套色阶）
+	draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1.0, 0.22, 0.10, 0.46 * fade), w_out * 2.0)
+	draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1.0, 0.36, 0.12, 0.66 * fade), w_mid * 2.0)
+	draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1.0, 0.72, 0.18, 0.88 * fade), w_in * 2.0)
+	draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1.0, 0.96, 0.58, 0.94 * fade), w_core * 2.0)
+	draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1, 1, 1, 0.98 * fade), 2.6)
+	# 柱身往上流的三道亮环（相位错开，读作「持续灌注」）
+	for k in 3:
+		var ph := fmod(float(n - ld) * 0.00085 + float(k) / 3.0, 1.0)
+		var yy := lerpf(bot, top, ph)
+		draw_line(Vector2(cx - w_in, yy), Vector2(cx + w_in, yy),
+			Color(1.0, 0.97, 0.86, 0.55 * fade * (1.0 - ph * 0.5)), 3.0)
+	# ③ 柱底亮斑 + 横向散光（打穿地面的那一下）
+	draw_circle(Vector2(cx, bot), 26.0 * grow, Color(1.0, 0.45, 0.14, 0.35 * fade))
+	draw_circle(Vector2(cx, bot), 13.0 * grow, Color(1.0, 0.95, 0.70, 0.75 * fade))
+	draw_line(Vector2(cx - 74.0 * grow, bot), Vector2(cx + 74.0 * grow, bot),
+		Color(1.0, 0.72, 0.24, 0.42 * fade), 5.0)
+
+
+func _naval_beam_land_for(cell: Vector2i) -> int:
+	## R431：这一格所在列是不是正在挨舰炮的光柱？是 → 返回光柱**落地时刻**（0 = 没有）。
+	## 给 `fx_impact` 用 —— 伤害数字 / 掉血要等光柱落到这一列，不能先冒出来。
+	if _naval_beam.is_empty():
+		return 0
+	if cell.y != int(_naval_beam.get("col", -1)):
+		return 0
+	var ld := int(_naval_beam.get("land", 0))
+	return ld if ld > _now() else 0
 
 func _meteor_land_for(pos: Vector2) -> int:
 	## R430：有没有一颗**还没落地**的流星砸在 `pos` 附近？返回它最晚的落地时刻（0 = 没有）。
@@ -12333,6 +12472,23 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 					"text": "-%d" % int(d.dmg), "col": UiTheme.SIDE_FOE,
 					"start": n, "dur": 1150})
 			_shake(5.0, 260)
+		"naval_land":
+			# R431：舰炮（9201）的**光柱落到列底**那一帧 —— 冲击环 / 地面散光 / 震屏。
+			# 每个受击单位的闪红 + 掉血 + 伤害数字由 `fx_hit` 跟着同一刻到（那笔的 `at`
+			# 已被 `_naval_beam_land_for` 拉到这个时刻）。
+			sfx.play("attack")
+			_shake(7.5, 320)
+			var nl_cx := GRID_X + float(int(d.get("col", 0))) * CELL_W + CELL_W / 2.0
+			var nl_bot := GRID_Y + GRID_H
+			if int(d.get("bot_row", -1)) >= 0:
+				nl_bot = GRID_Y + float(int(d["bot_row"]) + 1) * CELL - _grid_scroll + 6.0
+			# 列底冲击：外圈红 + 内圈黄（与流星同一套色阶 —— 一眼是同一个火力体系）
+			_bursts.append({"pos": Vector2(nl_cx, nl_bot), "start": n, "dur": 560,
+				"col": Color("ff4a1e"), "big": true})
+			_bursts.append({"pos": Vector2(nl_cx, nl_bot), "start": n + 60, "dur": 440,
+				"col": Color("ffd95e"), "big": false})
+			if bool(d.get("to_hp", false)):
+				_drop_hp("hp_opp" if str(d.get("side", "")) == GameEngine.SIDE_SELF else "hp_self")
 		"meteor_land":
 			# R430：一颗流星**落地**那一帧 —— 爆点 / 飘字 / 闪红 / 掉血全在这一刻，
 			# 和「飞下来的那颗」严丝合缝。这就是「伤害提示与动画相符」的唯一落点。
@@ -12346,10 +12502,13 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 				if ml_pl != null and is_instance_valid(ml_pl):
 					_flashes[ml_pl] = {"col": Color(0.9, 0.15, 0.1), "start": n, "dur": 420}
 					_drop_hp(ml_pl)
-			_bursts.append({"pos": ml_pos, "sc": _grid_scroll, "start": n, "dur": 600,
-				"col": Color("9b59d0"), "big": true})
-			_bursts.append({"pos": ml_pos, "sc": _grid_scroll, "start": n + 70, "dur": 460,
-				"col": Color("d7b3ff"), "big": false})
+			# R431：落地也走同一套色阶 —— 外圈红最大最慢，往里一圈比一圈小、快、亮
+			_bursts.append({"pos": ml_pos, "sc": _grid_scroll, "start": n, "dur": 640,
+				"col": METEOR_C_TAIL, "big": true})
+			_bursts.append({"pos": ml_pos, "sc": _grid_scroll, "start": n + 60, "dur": 520,
+				"col": METEOR_C_MID, "big": false})
+			_bursts.append({"pos": ml_pos, "sc": _grid_scroll, "start": n + 120, "dur": 400,
+				"col": METEOR_C_CORE, "big": false})
 			if ml_dmg > 0:
 				_floaters.append({"pos": ml_pos + Vector2(0, -14), "sc": _grid_scroll,
 					"text": "-%d" % ml_dmg,
@@ -12386,7 +12545,7 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 			if fc2.x >= 0:
 				var fpos: Vector2 = _cell_center(fc2)
 				_bursts.append({"pos": fpos, "sc": _grid_scroll, "start": n, "dur": 520,
-						"col": Color("8f5ad0"), "big": false})
+						"col": d.get("col", Color("8f5ad0")), "big": false})
 				_floaters.append({"pos": fpos + Vector2(0, -10), "sc": _grid_scroll,
 						"text": "-%d" % int(d.get("dmg", 0)), "col": UiTheme.SIDE_FOE,
 						"start": n, "dur": 1150})
