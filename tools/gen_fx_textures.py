@@ -456,12 +456,19 @@ def gen_shield():
 
 
 # ---------------------------------------------------------------- 电弧（R434）
-def gen_arc():
-    """护盾 → 攻击者的一截**电弧**。
+def gen_arc(name="fx_arc.png", glow_col=(0.46, 0.52, 1.00),
+            mid_col=(0.68, 0.88, 1.00), core_col=(1.00, 1.00, 1.00)):
+    """一截**电弧**（128×64）。
 
-    横向 128×64。中心线 = 一层缓正弦（整体弧度）+ 一层粗锯齿（hash 分段抖动）
+    中心线 = 一层缓正弦（整体弧度）+ 一层粗锯齿（hash 分段抖动）
     + 一层细锯齿，三层叠起来才像「电」；只用纯正弦读出来是一根软面条。
     两端 alpha 收到 0，拼接不留硬边。
+
+    配色靠参数分出两套（R436）：
+      · `fx_arc.png` 蓝白 —— 电磁屏障把伤害弹回攻击者；
+      · `fx_arc_elec.png` 金黄 —— 麻痹诅咒塞进弃牌区时的「卡组被电了一下」。
+    ⚠️ 别想着用 `modulate` 把蓝白那张乘成黄色：蓝分量 (0.52,0.60,1.00) 乘暖黄
+    → 读出来是脏橄榄绿，不是电。必须重出一张底色就暖的。
     """
     w, h = 128, 64
     buf = [[0.0, 0.0, 0.0, 0.0] for _ in range(w * h)]
@@ -481,11 +488,11 @@ def gen_arc():
             d = abs(y - cyy)
             glow = math.exp(-((d / 9.5) ** 2))
             core = math.exp(-((d / 2.3) ** 2))
-            over(buf, y * w + x, (0.46, 0.52, 1.00), clamp(0.40 * glow * win))
-            over(buf, y * w + x, (0.68, 0.88, 1.00), clamp(0.72 * glow * win))
-            over(buf, y * w + x, (1.00, 1.00, 1.00), clamp(1.00 * core * win))
+            over(buf, y * w + x, glow_col, clamp(0.40 * glow * win))
+            over(buf, y * w + x, mid_col, clamp(0.72 * glow * win))
+            over(buf, y * w + x, core_col, clamp(1.00 * core * win))
 
-    save(buf, w, h, "fx_arc.png")
+    save(buf, w, h, name)
 
 
 # ---------------------------------------------------------------- 冲击波环（R434）
@@ -526,6 +533,7 @@ def main():
     gen_ember()
     gen_shield()
     gen_arc()
+    gen_arc("fx_arc_elec.png", (0.62, 0.44, 0.05), (1.00, 0.83, 0.24), (1.00, 0.99, 0.76))
     gen_shockwave()
     print("完成")
 

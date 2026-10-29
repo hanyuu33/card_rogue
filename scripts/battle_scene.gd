@@ -482,6 +482,17 @@ var _purge_wave: Dictionary = {}       # {cell, start, dur}                 第�
 const FLAME_RISE := 30.0               # 火苗在生命周期里往上窜的像素
 const SHIELD_ARC_MS := 240             # 护盾亮起 → 电弧打到攻击者的时长（伤害就在这一刻落地）
 const PURGE_WAVE_MS := 900             # 冲击波从启示者扫到全场边缘的时长（含尾段淡出）
+## R436：诅咒「麻痹」（9185）塞进**弃牌库**的演出 —— 一张小卡从启示者飞到弃牌区，
+## 落地那一刻弃牌区被一圈**黄色电流**缠住（用户口径「塞入动画后在卡组上播放黄色电流特效」）。
+## ⚠️ 麻痹实际入的是 `state.discard`（弃牌库），所以电流打在**弃牌区**上，不是卡组：
+##    打在卡组上会读成「抽牌池被污染了」，和「本回合抽牌顺序不变、要等洗回才生效」正好相反。
+var _fx_arc_elec_tex: Texture2D = null   # 黄色电弧（与蓝色那张同一套锯齿，只换配色）
+var _paralyze_fly: Array = []            # {from, to, start, dur, count}  飞向弃牌区的小卡
+var _paralyze_fx: Dictionary = {}        # {start, dur, power}           弃牌区上正在流的电
+var _paralyze_last := -99999             # 上一次塞牌的时刻（连塞合并用）
+const PARALYZE_FLY_MS := 380             # 小卡从启示者飞到弃牌区的时长
+const PARALYZE_FX_MS := 620              # 落地后电流缠住弃牌区的时长
+const PARALYZE_MERGE_MS := 340           # 这个窗口内的后续张数并进同一次演出（不重新起飞）
 var _discard_tex: Texture2D    # R140：弃牌区图标（assets/ui/discard_icon.png）
 var _void_tex: Texture2D       # R140：消耗（消失）区次元图标（assets/ui/void_icon.png）
 var _hp_icon: Texture2D        # R156：双方血量图标（icon_health.png，与生命徽章同款血滴）
@@ -746,6 +757,7 @@ func _ready() -> void:
 	_fx_shield_tex = load("res://assets/fx/fx_shield.png")
 	_fx_arc_tex = load("res://assets/fx/fx_arc.png")
 	_fx_wave_tex = load("res://assets/fx/fx_shockwave.png")
+	_fx_arc_elec_tex = load("res://assets/fx/fx_arc_elec.png")
 	_discard_tex = load("res://assets/ui/discard_icon.png")
 	_void_tex = load("res://assets/ui/void_icon.png")
 	_hp_icon = load("res://assets/ui/icon_health.png")
@@ -3619,6 +3631,17 @@ func _demo_tick() -> void:
 					Vector2i(1, kf_i), GameEngine.SIDE_OPPONENT)
 		engine.use_spell(0, Vector2i(1, 1))
 		status_text = "R433 演示：弹跳飞刀 —— 主刀 + 两跳，伤害跟着刀落地"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r436paralyze" in _demo_args and _demo_frame == 200 and engine != null:
+		# R436 出图：麻痹塞牌（9185）—— 小卡从启示者飞进弃牌区，落地后弃牌区被黄色电流缠住。
+		#   `--shotms 240` 卡还在空中；`--shotms 560` 电流正亮（落地 = 380ms）。
+		#   出图：`scenes/battle.tscn -- --screenshot --r436paralyze --shotframe 9999 --shotms 560`
+		for pd_i in 3:
+			engine.state.discard.append(CardData.from_dict(repo.get_card(1053).to_dict()))
+		engine.action.emit("paralysis_added", {"cell": Vector2i(1, 2), "discard": 4,
+				"card": CardData.from_dict(repo.get_card(1053).to_dict())})
+		status_text = "R436 演示：麻痹塞牌 —— 小卡飞入弃牌区 + 落地黄色电流"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r434flame" in _demo_args and _demo_frame == 200 and engine != null:
@@ -8496,6 +8519,11 @@ func _draw() -> void:
 	_draw_reject_fx()
 	_draw_screen_flash()
 	_draw_curse_show()     # R362：诅咒展示（暗幕 + 卡面）—— 盖在手牌与面板之上
+	# R436：麻痹塞牌（小卡飞向弃牌区 + 落地后的黄色电流）。
+	# ⚠️ 必须画在**这之后**：飞卡要从棋盘横穿到右栏，路上正好压着大号「回合结束」
+	#    按钮，插在 `_draw_deck_and_discard()` 后面会整段被那个面板盖掉 —— 出图
+	#    只看得见电流、看不见「有一张牌飞进去了」。
+	_draw_paralyze_fx()
 	_draw_drag()
 	_draw_info_panel()
 	_draw_mention_tip()
@@ -10091,6 +10119,22 @@ func _tick_anims() -> bool:
 	if not _purge_wave.is_empty() \
 			and n - int(_purge_wave.get("start", 0)) >= int(_purge_wave.get("dur", 1)):
 		_purge_wave = {}
+	# R436：麻痹小卡**落地**的那一刻才把电流挂到弃牌区上 —— 先落袋、再通电，
+	# 顺序反了就是「牌还没进去，弃牌区已经开始电了」。连塞的张数早并进同一个 count。
+	if not _paralyze_fly.is_empty():
+		var pf_keep: Array = []
+		for pf in _paralyze_fly:
+			if n < int(pf.get("start", 0)) + int(pf.get("dur", 1)):
+				pf_keep.append(pf)
+				continue
+			_paralyze_fx = {"start": n, "dur": PARALYZE_FX_MS,
+					"power": 1.0 + 0.22 * float(int(pf.get("count", 1)) - 1)}
+			sfx.play("hit")
+			_shake(4.0, 200)
+		_paralyze_fly = pf_keep
+	if not _paralyze_fx.is_empty() \
+			and n - int(_paralyze_fx.get("start", 0)) >= int(_paralyze_fx.get("dur", 1)):
+		_paralyze_fx = {}
 	_wake_rings = _wake_rings.filter(func(r): return n - int(r.start) < int(r.dur))
 	_impacts = _impacts.filter(func(f): return n - int(f.start) < int(f.dur))
 	_pow_fx = _pow_fx.filter(func(f): return n - int(f.start) < int(f.dur))
@@ -10115,6 +10159,7 @@ func _tick_anims() -> bool:
 			or not _knives.is_empty() \
 			or not _flames.is_empty() or not _shield_fx.is_empty() \
 			or not _purge_wave.is_empty() \
+			or not _paralyze_fly.is_empty() or not _paralyze_fx.is_empty() \
 			or not _wake_rings.is_empty() \
 			or not _delayed.is_empty() or n < _shake_until \
 			or not _impacts.is_empty() or not _pow_fx.is_empty() \
@@ -10348,12 +10393,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# R373：启示者阶段 2 每吃一次技能伤害 → 一张「麻痹」进玩家**弃牌库**。
 			# 一次多段技能可能连塞好几张，所以这里**不排队播卡面**（会卡住出牌节奏），
 			# 只播一句 + 弃牌区闪一下；张数直接报给玩家，免得「怎么突然多了几张牌」。
+			# R436：用户口径「塞入动画后在卡组上播放黄色电流特效」→ 走 `_paralyze_drop`。
+			# ⚠️ 这里**不再按 `_shot_pending` 关掉演出**：R373 那套分支是为了不挡住
+			#    出图画面，但小飞卡 + 620ms 电流并不会糊屏，关掉反而没法验收。
 			var pa_n := int(data.get("discard", 0))
+			_paralyze_drop(data, n)
 			if _shot_pending:
 				_say("⚡ 麻痹：一张「麻痹」进了弃牌区（共 %d 张）" % pa_n)
 			else:
-				sfx.play("draw")
-				_shake(4.0, 220)
 				_say("⚡ 电磁屏障：一张「麻痹」进入你的弃牌区（%d 张）" % pa_n)
 		"paralysis_gone":
 			# R373：回合结束仍在手卡 → 消失（引擎侧已经进消耗区，这里只播报）。
@@ -12570,9 +12617,145 @@ func _draw_shield_fx() -> void:
 		_draw_arc_bolt(center.lerp(target, 0.26), target, n, bolt_a)
 
 
-func _draw_arc_bolt(from: Vector2, to: Vector2, n: int, a: float) -> void:
+func _paralyze_drop(data: Dictionary, n: int) -> void:
+	## R436：麻痹塞牌的入袋演出 —— 一张小卡从启示者飞进弃牌区，落地那一刻弃牌区被电住。
+	## · 连塞合并：`PARALYZE_MERGE_MS` 内的后续张数并进正在飞的那一张（角标 ×N），
+	##   不重新起飞 —— 五段技能连塞 5 张若逐张飞，读起来像弃牌区在抽搐。
+	## · 已经落地（`_paralyze_fx` 正在播）就只加强电流，不重放飞卡。
+	## · 起点取启示者卡面上沿（它才是施法者）；从屏幕外飞进来会读成「凭空冒出一张牌」。
+	var dst := _zone_rect("discard").get_center()
+	if n - _paralyze_last < PARALYZE_MERGE_MS:
+		_paralyze_last = n
+		if not _paralyze_fly.is_empty():
+			var cur: Dictionary = _paralyze_fly[_paralyze_fly.size() - 1]
+			cur["count"] = int(cur.get("count", 1)) + 1
+		elif not _paralyze_fx.is_empty():
+			_paralyze_fx["power"] = minf(1.8, float(_paralyze_fx.get("power", 1.0)) + 0.35)
+		return
+	_paralyze_last = n
+	var from := dst + Vector2(-300.0, -210.0)
+	var src_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+	if src_cell.x >= 0 and src_cell.y >= 0:
+		from = _cell_center(src_cell) + Vector2(0, -CELL * 0.34)
+	from.y = clampf(from.y, 96.0, dst.y - 60.0)
+	_paralyze_fly.append({"from": from, "to": dst, "start": n,
+			"dur": PARALYZE_FLY_MS, "count": 1})
+	sfx.play("draw")
+
+
+func _draw_paralyze_fx() -> void:
+	## R436：麻痹塞牌 —— ① 小卡飞向弃牌区；② 落地后弃牌区被一圈黄色电流缠住。
+	## 画在最上层 UI（`_draw_curse_show()` 之后），此时本帧的震屏变换已经复位，
+	## 所以自绘贴图要还原成**零偏移**而不是 `_shake_cur` —— 临时换掉，退出时还原。
+	var keep_shake := _shake_cur
+	_shake_cur = Vector2.ZERO
+	var n := _now()
+	for f in _paralyze_fly:
+		var t := clampf(float(n - int(f.get("start", 0))) / maxf(1.0, float(f.get("dur", 1))),
+				0.0, 1.0)
+		if t >= 1.0:
+			continue
+		var e := t * t * (3.0 - 2.0 * t)               # smoothstep：匀速飞像 UI 位移
+		var fp: Vector2 = f.get("from", Vector2.ZERO)
+		var tp: Vector2 = f.get("to", Vector2.ZERO)
+		var p := fp.lerp(tp, e)
+		p.y -= sin(t * PI) * 30.0                     # 抛物线：直线飞像 UI 位移，不像「扔牌」
+		_draw_paralyze_mini(p, lerpf(1.0, 0.72, e), clampf(t / 0.10, 0.0, 1.0),
+				int(f.get("count", 1)), lerpf(-0.16, 0.0, e))
+	if _paralyze_fx.is_empty():
+		return
+	var st := int(_paralyze_fx.get("start", 0))
+	var du := int(_paralyze_fx.get("dur", 1))
+	var tt := float(n - st) / maxf(1.0, float(du))
+	if tt < 0.0 or tt >= 1.0:
+		return
+	var rect := _zone_rect("discard")
+	var ctr := rect.get_center()
+	var power := float(_paralyze_fx.get("power", 1.0))
+	var lit := 1.0
+	if tt < 0.10:
+		lit = tt / 0.10
+	elif tt > 0.55:
+		lit = 1.0 - (tt - 0.55) / 0.45
+	lit = clampf(lit, 0.0, 1.0) * minf(1.25, power)
+	if lit <= 0.01:
+		return
+	# ① 底光：一圈暖黄光晕把这一格点亮（缺贴图就跳过 —— 不用 draw_circle 凑硬边）
+	if _fx_glow_tex != null:
+		var gk := rect.size.x / 128.0 * 2.10
+		draw_set_transform(ctr, 0.0, Vector2(gk, gk))
+		draw_texture_rect(_fx_glow_tex, Rect2(-64, -64, 128, 128), false,
+				Color(1.00, 0.80, 0.22, 0.55 * lit))
+		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+	# ② 黄色描边：电缠住的是**这一格**，不是整块右栏。亮度吃帧号才像通电，
+	#    恒定亮度会读成「这个方块被选中了」。
+	var flick := 0.60 + 0.32 * sin(float(n) / 58.0)
+	draw_rect(rect.grow(2.5), Color(1.00, 0.86, 0.32, flick * lit), false, 2.0)
+	# ③ 电弧：从方块外沿各个方向甩进来，相位吃帧号 —— 静止的电弧读成一根发光管子
+	# 4~6 条：第一版 3+power*2（最多 7 条）叠在一起是一团乱线，方块上的图标和
+	# 「弃牌」两个字全被盖住，反而看不出被电的是哪一格；3 条又只在左右两撇。
+	var bolts := clampi(3 + int(round(power * 1.5)), 4, 6)
+	for i in bolts:
+		var ph := float(n) / 70.0 + float(i) * 2.37
+		# 起始相位偏 0.52 rad：不偏的话 4 条里正好有两条是正上/正下，
+		# 顺方块竖边拉成一条，读起来像电流从上个方块「穿」下来的。
+		var ang := TAU * float(i) / float(bolts) + 0.52 + 0.34 * sin(ph * 0.9 + float(i))
+		# ⚠️ 方块是**矩形**（ZONE_W 80 × ZONE_H 96），别拿宽度当统一半径：
+		#    第一版 `rect.size.x * 0.78` 在竖直方向整整多出 14px，出图就是一条电流
+		#    从「消耗」直穿「弃牌」落到「卡组」。按 x/y 各自算才是贴边的椭圆。
+		# x 往外多给一点（左右是空地，电花喷出去才读得出「在放电」），
+		# y 收到 0.48 刚好贴边 —— 上下紧挨着「消耗」和「卡组」，一喷就穿到人家身上。
+		var outer := ctr + Vector2(cos(ang) * rect.size.x * 0.62,
+				sin(ang) * rect.size.y * 0.48)
+		var inner := ctr + Vector2(cos(ang) * rect.size.x * 0.36,
+				sin(ang) * rect.size.y * 0.34)
+		_draw_arc_bolt(outer, inner, n + i * 53, lit * 0.92, _fx_arc_elec_tex, 0.36)
+	# ④ 火星：从方块上沿往上窜 —— 接着 R434「火焰有火星」的同一套语汇
+	if _fx_ember_tex != null:
+		for i in 5:
+			var life := fmod(float(n) / 520.0 + float(i) * 0.37, 1.0)
+			var ex := ctr.x + (float(i) - 2.0) * (rect.size.x * 0.26) \
+					+ sin(life * 7.0 + float(i)) * 5.0
+			var ey := ctr.y - rect.size.y * 0.30 - life * 46.0
+			draw_texture_rect(_fx_ember_tex, Rect2(ex - 7, ey - 7, 14, 14), false,
+					Color(1.00, 0.86, 0.34, (1.0 - life) * 0.85 * lit))
+	_shake_cur = keep_shake
+
+
+func _draw_paralyze_mini(pos: Vector2, k: float, a: float, count: int, rot: float) -> void:
+	## R436：飞向弃牌区的那张「麻痹」小卡 —— 黄框深底 + 两个字（缩到 0.34 还认得出）。
+	## 不画完整卡面：这个尺寸下卡面细节全糊成一团，反而读不出「进去的是哪张」。
+	## ⚠️ 尺寸别再往小改：42×52 + 落点 0.46 缩放在 720p 下只有 24px 宽，
+	##    「麻痹」两字糊成一坨黄斑 —— 第一版就是这样，放大到 60×74 / 落点 0.72 才认得出。
+	var r := Rect2(-30, -37, 60, 74)
+	# 飞行中歪着、落袋才摆正：不转的话读成「一个 UI 元素在位移」，不像被扔过去
+	draw_set_transform(pos, rot, Vector2(k, k))
+	if _fx_glow_tex != null:                     # 黄光托底：空中一眼能追到它在飞
+		draw_texture_rect(_fx_glow_tex, Rect2(-54, -54, 108, 108), false,
+				Color(1.00, 0.82, 0.24, 0.58 * a))
+	# 硬边外描边两层：柔光叠在浅色草地上几乎看不出（0.34 的黄 + 浅绿 ≈ 没变化），
+	# 得靠边缘对比才立得住 —— 「贴图给形状、描边给对比」。
+	draw_rect(r.grow(7.0), Color(1.00, 0.84, 0.30, 0.20 * a), false, 3.0)
+	draw_rect(r.grow(3.0), Color(1.00, 0.88, 0.42, 0.42 * a), false, 2.0)
+	draw_rect(r.grow(2.5), Color(0.06, 0.05, 0.03, 0.55 * a), true)
+	draw_rect(r, Color(0.15, 0.12, 0.06, 0.96 * a), true)
+	draw_rect(r, Color(1.00, 0.84, 0.28, a), false, 1.8)
+	_draw_string_center(_font_bold, 16, "麻痹", Vector2(0, 6), Color(1.00, 0.91, 0.55, a))
+	if count > 1:
+		_draw_string_center(_font_bold, 13, "×%d" % count, Vector2(0, -22),
+				Color(1.00, 0.96, 0.80, a))
+	draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+
+
+func _draw_arc_bolt(from: Vector2, to: Vector2, n: int, a: float,
+		tex: Texture2D = null, thick := 1.0) -> void:
 	## R434：一截贴图电弧沿两点连线铺开（每段旋转对齐 + 各自侧向抖动）。
 	## 段长按 128px 缩放、段数按距离算，抖动相位吃帧号 → 读起来是会跳的电。
+	## R436：`tex` 可换（默认蓝白 `fx_arc.png`）—— 麻痹塞牌走黄色的 `fx_arc_elec.png`。
+	## `thick` = 贴图的**纵向**比例。贴图固定 64px 高，段长短的时候（麻痹那个环只有
+	## 22px 一段）不压扁就会变成一根竖长条 —— 第一版出图是两条竖线从「消耗」直穿到
+	## 「卡组」。护盾那条段长 30px 以上，用默认 1.0 保持 R434 的形状。
+	var bolt_tex: Texture2D = _fx_arc_tex if tex == null else tex
 	var vec := to - from
 	var dist := vec.length()
 	if dist < 4.0:
@@ -12583,14 +12766,14 @@ func _draw_arc_bolt(from: Vector2, to: Vector2, n: int, a: float) -> void:
 	var seg_len := dist / float(segs)
 	for i in segs:
 		var mid := from + dir * (seg_len * (float(i) + 0.5))
-		var wob := sin(float(n) / 42.0 + float(i) * 2.1) * 9.0
+		var wob := sin(float(n) / 42.0 + float(i) * 2.1) * 9.0 * thick
 		mid += Vector2(-dir.y, dir.x) * wob
-		draw_set_transform(mid, ang, Vector2(seg_len / 128.0 * 1.35, 1.0))
-		if _fx_arc_tex == null:
+		draw_set_transform(mid, ang, Vector2(seg_len / 128.0 * 1.35, thick))
+		if bolt_tex == null:
 			draw_line(Vector2(-seg_len * 0.5, 0), Vector2(seg_len * 0.5, 0),
-					Color(0.75, 0.90, 1.0, a), 2.0)
+					Color(1.0, 0.86, 0.40, a), 2.0)
 		else:
-			draw_texture_rect(_fx_arc_tex, Rect2(-64, -32, 128, 64), false,
+			draw_texture_rect(bolt_tex, Rect2(-64, -32, 128, 64), false,
 					Color(1, 1, 1, a))
 		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
 
