@@ -3687,13 +3687,14 @@ func _init() -> void:
 			"道具来源标签：source_label() = 事件道具")
 
 	# ---- R289 奖励道具二级分档：一般 / 传奇 ----
-	# R342 起 20 件 = 16 一般 + 4 传奇；R391（用户口径「鸭嘴改为传说道具」）→ 15 + 5。
+	# R342 起 20 件 = 16 一般 + 4 传奇；R391（用户口径「鸭嘴改为传说道具」）→ 15 + 5；
+	# R440 新增传奇「暗动力」6054 → 21 件 = 15 + 6。
 	var r289_repo := RelicRepo.load_json()
 	var r289_all := r289_repo.reward_ids()
 	var r289_nor := r289_repo.normal_reward_ids()
 	var r289_leg := r289_repo.legendary_reward_ids()
-	check(r289_all.size() == 20 and r289_nor.size() == 15 and r289_leg.size() == 5,
-			"奖励分档：奖励池 20 件 = 一般 15 + 传奇 5（实际 %d / %d / %d）"
+	check(r289_all.size() == 21 and r289_nor.size() == 15 and r289_leg.size() == 6,
+			"奖励分档：奖励池 21 件 = 一般 15 + 传奇 6（实际 %d / %d / %d）"
 			% [r289_all.size(), r289_nor.size(), r289_leg.size()])
 	var r289_tier_ok := true
 	for r289_id in r289_nor:
@@ -8064,16 +8065,20 @@ func _init() -> void:
 			"R262 终结：实际扣 5 血 == 预览 5（60→%d）" % r259_foe.health)
 	var r259_combo := _card(9093, "连环戏法", "技能", 0, 0, 0, 0, 0)
 	var r259_c := _new_engine([], 30, 30)
+	# R442：档位一律按「其他卡」算 —— 抽卡档 2 张、强化档 4 张，两者独立。
 	r259_c.state.self_card_plays = 1
-	check(int(r259_c.spell_now(r259_combo).get("dmg", -1)) == 5,
-			"R262 连环戏法：本回合第 2 张 → 预览 5 伤")
+	check(int(r259_c.spell_now(r259_combo).get("dmg", -1)) == 4,
+			"R442 连环戏法：只 1 张其他卡 → 预览 4 伤（两档都没到）")
 	r259_c.state.self_card_plays = 2
+	check(int(r259_c.spell_now(r259_combo).get("dmg", -1)) == 4,
+			"R442 连环戏法：2 张其他卡 → 预览仍是 4 伤（只够抽卡档）")
+	r259_c.state.self_card_plays = 4
 	check(int(r259_c.spell_now(r259_combo).get("dmg", -1)) == 10,
-			"R262 连环戏法：含本卡第 3 张 → 预览 10 伤")
+			"R442 连环戏法：4 张其他卡 → 预览 10 伤")
 	var r259_sneak := _card(9090, "偷袭", "技能", 0, 0, 0, 0, 0)
 	var r259_s := _new_engine([], 30, 30)
-	check(int(r259_s.spell_now(r259_sneak).get("dmg", -1)) == 6,
-			"R262 偷袭：目标未定 → 预览 6 伤")
+	check(int(r259_s.spell_now(r259_sneak).get("dmg", -1)) == 5,
+			"R442 偷袭：目标未定 → 预览 5 伤")
 	check(str(r259_s.spell_now(r259_sneak).get("note", "")).contains("12"),
 			"R262 偷袭：小字里写明满血目标为 12 伤")
 	var r259_meteor := _card(9083, "流星雨", "技能", 4, 0, 0, 0, 0)
@@ -8233,7 +8238,7 @@ func _init() -> void:
 	check(r45_sd.cost_of(r45_sd_spell) == 1,
 			"影魔：手卡 2 费技能牌本回合 1 费（实际 %d）" % r45_sd.cost_of(r45_sd_spell))
 
-	# 偷袭（9090）：满血 12 / 非满血 6
+	# 偷袭（9090）：满血 12 / 非满血 5（R442：基础 6 → 5）
 	var r45_sn := _new_engine([], 30, 30)
 	var r45_sn_foe := r45_sn.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
@@ -8242,7 +8247,7 @@ func _init() -> void:
 	check(r45_sn_foe.health == 43, "偷袭：满血目标 12 伤（55 → %d）" % r45_sn_foe.health)
 	r45_sn.state.hand.append(repo.get_card(GameEngine.SNEAK_ID))
 	r45_sn.use_spell(0, Vector2i(2, 1))
-	check(r45_sn_foe.health == 37, "偷袭：非满血目标 6 伤（43 → %d）" % r45_sn_foe.health)
+	check(r45_sn_foe.health == 38, "偷袭：非满血目标 5 伤（43 → %d）" % r45_sn_foe.health)
 
 	# 疾风（9091 效果）：每使用一张卡 → 随机敌人 2 伤（自己打出时不触发）
 	var r45_ga := _new_engine([], 30, 30)
@@ -8297,24 +8302,39 @@ func _init() -> void:
 	check(r45_gh_gone and r45_gh_got,
 			"幽灵：回合开始自行破坏，亡语把卡组技能卡塞进手卡")
 
-	# 连环戏法（9093）：含此卡第 3 张 → 10 伤 + 抽 1 张
+	# 连环戏法（9093，R442）：4 伤；已用 ≥2 张**其他卡** → 抽 1；已用 ≥4 张其他卡 → 改为 10 伤。
+	# 三档都按「其他卡」口径，所以 self_card_plays 直接就是判据（结算前不含本卡）。
 	var r45_ct := _new_engine([], 30, 30)
 	var r45_ct_foe := r45_ct.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-	r45_ct.state.self_card_plays = 2
+	r45_ct.state.self_card_plays = 4
 	r45_ct.state.deck.append(_card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0))
 	r45_ct.state.hand.append(repo.get_card(GameEngine.COMBO_TRICK_ID))
 	r45_ct.use_spell(0, Vector2i(2, 1))
 	check(r45_ct_foe.health == 45 and r45_ct.state.hand.size() == 1,
-			"连环戏法：含此卡第 3 张 → 10 伤 + 抽 1（55 → %d，手 %d）"
+			"连环戏法：已用 4 张其他卡 → 10 伤 + 抽 1（55 → %d，手 %d）"
 			% [r45_ct_foe.health, r45_ct.state.hand.size()])
+	# 2 张其他卡：只抽卡，伤害仍是基础 4
+	var r45_ct1 := _new_engine([], 30, 30)
+	var r45_ct1_foe := r45_ct1.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r45_ct1.state.self_card_plays = 2
+	r45_ct1.state.deck.append(_card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0))
+	r45_ct1.state.hand.append(repo.get_card(GameEngine.COMBO_TRICK_ID))
+	r45_ct1.use_spell(0, Vector2i(2, 1))
+	check(r45_ct1_foe.health == 51 and r45_ct1.state.hand.size() == 1,
+			"连环戏法：已用 2 张其他卡 → 4 伤 + 抽 1（55 → %d，手 %d）"
+			% [r45_ct1_foe.health, r45_ct1.state.hand.size()])
+	# 1 张其他卡：既不满抽卡档，也不满强化档
 	var r45_ct2 := _new_engine([], 30, 30)
 	var r45_ct2_foe := r45_ct2.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r45_ct2.state.self_card_plays = 1
+	r45_ct2.state.deck.append(_card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0))
 	r45_ct2.state.hand.append(repo.get_card(GameEngine.COMBO_TRICK_ID))
 	r45_ct2.use_spell(0, Vector2i(2, 1))
-	check(r45_ct2_foe.health == 50 and r45_ct2.state.hand.is_empty(),
-			"连环戏法：只第 1 张 → 5 伤不抽（55 → %d）" % r45_ct2_foe.health)
+	check(r45_ct2_foe.health == 51 and r45_ct2.state.hand.is_empty(),
+			"连环戏法：只 1 张其他卡 → 4 伤不抽（55 → %d）" % r45_ct2_foe.health)
 
 	# 准备（9094）：抽 2，其中有 0 费 → 再抽 1（只多这一次）
 	var r45_pp := _new_engine([], 30, 30)
@@ -20707,9 +20727,9 @@ func _init() -> void:
 			and r263_card.rarity == 0 and r263_card.card_class == "暗影刺客"
 			and r263_card.target_mode == "unit" and r263_card.traits.is_empty(),
 			"R263 弹跳飞刀：暗影刺客 1 费普通技能，选一个单位施放")
-	check(r263_card.effect_text.contains("5") and r263_card.effect_text.contains("3")
-			and r263_card.effect_text.contains("随机") and r263_card.effect_text.contains("其他"),
-			"R263 弹跳飞刀：卡面写明 5 / 3 / 随机 / 其他 —— %s" % r263_card.effect_text)
+	check(r263_card.effect_text.contains("5") and r263_card.effect_text.contains("弹跳两次")
+			and r263_card.effect_text.contains("随机") and r263_card.effect_text.contains("减 1"),
+			"R442 弹跳飞刀：卡面写明 5 / 弹跳两次 / 随机 / 每次 -1 —— %s" % r263_card.effect_text)
 	check(repo.reward_pool_for(PlayerClass.ROGUE).any(func(c): return c.id == 9160)
 			and not repo.reward_pool_for(PlayerClass.DRUID).any(func(c): return c.id == 9160),
 			"R263 弹跳飞刀：进暗影刺客奖励池，森林精魄摇不到")
@@ -20741,10 +20761,14 @@ func _init() -> void:
 		if (r263_p as Placement).health < 40:
 			r263_hit_others += 1
 			r263_splash_total += 40 - (r263_p as Placement).health
+	# R442：每跳递减 1 —— 两跳合计 = 5-1 + 5-2 = 7（旧的「各 3」= 6）
+	var r263_want := 0
+	for r263_i in GameEngine.BOUNCE_KNIFE_BOUNCES:
+		r263_want += GameEngine.BOUNCE_KNIFE_DMG - (r263_i + 1) * GameEngine.BOUNCE_KNIFE_FALLOFF
 	check(r263_hit_others == GameEngine.BOUNCE_KNIFE_BOUNCES
-			and r263_splash_total == GameEngine.BOUNCE_KNIFE_SPLASH * GameEngine.BOUNCE_KNIFE_BOUNCES,
-			"R263 弹跳飞刀：3 个候选里只弹 %d 个、各 %d 伤（实际 %d 个共 -%d）"
-			% [GameEngine.BOUNCE_KNIFE_BOUNCES, GameEngine.BOUNCE_KNIFE_SPLASH,
+			and r263_splash_total == r263_want,
+			"R263 弹跳飞刀：3 个候选里只弹 %d 个、逐跳递减共 %d 伤（实际 %d 个共 -%d）"
+			% [GameEngine.BOUNCE_KNIFE_BOUNCES, r263_want,
 				r263_hit_others, r263_splash_total])
 	check(r263_e.state.energy == 4 and r263_e.state.discard.size() == 1
 			and r263_e.state.discard[0].id == 9160,
@@ -20775,8 +20799,8 @@ func _init() -> void:
 	r263_one.state.hand = [CardData.from_dict(r263_card.to_dict())]
 	r263_one.state.energy = 5
 	r263_one.use_spell(0, Vector2i(2, 1))
-	check(r263_one_main.health == 35 and r263_one_oth.health == 37,
-			"R263 弹跳飞刀：只有 1 个候补 → 只弹 1 个（%d / %d）"
+	check(r263_one_main.health == 35 and r263_one_oth.health == 36,
+			"R442 弹跳飞刀：只有 1 个候补 → 只弹 1 个、第 1 跳吃 4（%d / %d）"
 			% [r263_one_main.health, r263_one_oth.health])
 	# ④ 两段伤害都吃 _spell_dmg：荧光草 +1 → 主刀 6、弹跳各 4
 	var r263_g := _new_engine([], 30, 30)
@@ -20793,8 +20817,8 @@ func _init() -> void:
 	r263_g.state.hand = [CardData.from_dict(r263_card.to_dict())]
 	r263_g.state.energy = 5
 	r263_g.use_spell(0, Vector2i(2, 1))
-	check(r263_g_main.health == 34 and r263_g_a.health == 36,
-			"R263 弹跳飞刀：荧光草 +1 同时作用于主刀与弹跳（%d / %d）"
+	check(r263_g_main.health == 34 and r263_g_a.health == 35,
+			"R442 弹跳飞刀：荧光草 +1 同时作用于主刀与弹跳（6 / 5）（%d / %d）"
 			% [r263_g_main.health, r263_g_a.health])
 	# ⑤ 弹跳目标带技能抗性 → 这一跳照样落，只是封顶 3 点（R427）
 	var r263_imm_card := _card(9001, "抗性者", "盟友", 1, 5, 40, 1, 2)
@@ -20827,8 +20851,8 @@ func _init() -> void:
 	r263_imm2.state.hand = [CardData.from_dict(r263_card.to_dict())]
 	r263_imm2.state.energy = 5
 	r263_imm2.use_spell(0, Vector2i(2, 1))
-	check(r263_imm2_main.health == 37 and r263_imm2_oth.health == 37,
-			"R263 弹跳飞刀：主目标带技能抗性 → 主刀 5 封顶成 3、弹跳仍打其他敌人 3（%d / %d）"
+	check(r263_imm2_main.health == 37 and r263_imm2_oth.health == 36,
+			"R442 弹跳飞刀：主目标带技能抗性 → 主刀 5 封顶成 3、弹跳第 1 跳仍打 4（%d / %d）"
 			% [r263_imm2_main.health, r263_imm2_oth.health])
 
 
@@ -23646,6 +23670,15 @@ func _init() -> void:
 	check(r288b_hits.size() == 3,
 			"R288b 弹跳飞刀：主刀 + 两跳 = 3 条受击事件，能并成一条演出（实际 %d 条）"
 			% r288b_hits.size())
+	# R442：两跳必须**递减**（5 → 4 → 3），不是同一个数打两遍。
+	var r442_amounts: Array[int] = []
+	for h2 in r288b_hits:
+		r442_amounts.append(int((h2 as Dictionary).get("amount", 0)))
+	r442_amounts.sort()
+	check(r442_amounts.size() == 3 and r442_amounts[0] == GameEngine.BOUNCE_KNIFE_DMG - 2
+			and r442_amounts[1] == GameEngine.BOUNCE_KNIFE_DMG - 1
+			and r442_amounts[2] == GameEngine.BOUNCE_KNIFE_DMG,
+			"R442 弹跳飞刀：三刀伤害 5 / 4 / 3 递减（实际 %s）" % str(r442_amounts))
 
 	# ⑦ 源码锁：`_op_deal_damage` 里必须发 fx_impact —— 它是 19 张单目标技能的扣血口，
 	# 以后谁把 emit 删了，这 19 张会一起变回「血条变了画面不动」。
@@ -30126,6 +30159,139 @@ func _init() -> void:
 			and r432_shop.find("body[4] 缺口终点") >= 0
 			and r432_shop.find("pb,                                      # body[2] 缺口起点") >= 0,
 			"R435 纸面 body 在折痕处缺一块三角（缺口与折角共用 pa/pn/pb，不再盖在完整矩形上）")
+	# ================= R440：暗动力 6054（传奇奖励道具 · 三条效果） =================
+	# 用户口径：「你无法再跳过卡牌奖励（不可放弃，必须拿取一张卡才能关闭奖励界面）
+	#   或在商店删除卡牌。每回合开始时多抽一张牌。」
+	var r440_repo := RelicRepo.load_json()
+	var r440_data: RelicData = r440_repo.get_relic(6054)
+	check(r440_data != null and r440_data.relic_name == "暗动力"
+			and r440_data.kind == "持续" and r440_data.tier == "传奇"
+			and r440_data.source == "奖励" and not r440_data.locked,
+			"R440 道具：暗动力 6054 = 持续类 · 传奇档 · 奖励来源 · 不锁剧情")
+	check(r440_data != null and r440_data.desc.contains("跳过卡牌奖励")
+			and r440_data.desc.contains("商店") and r440_data.desc.contains("多抽一张"),
+			"R440 暗动力文案：三条效果都写进 desc")
+	check(r440_repo.reward_ids().has(6054) and r440_repo.legendary_reward_ids().has(6054)
+			and not r440_repo.normal_reward_ids().has(6054),
+			"R440 奖励池：暗动力进「传奇」档、不在一般档（传奇 %d 件）"
+				% r440_repo.legendary_reward_ids().size())
+	check(not r440_repo.initial_ids().has(6054) and not r440_repo.layer2_ids().has(6054)
+			and not r440_repo.event_ids().has(6054) and not r440_repo.class_ids().has(6054),
+			"R440 暗动力不在初始 / 二层 / 事件 / 角色池（只能从奖励里摇到）")
+
+	# ---- ① 每回合开始多抽 1 张 ----
+	# ⚠️ 牌库要有足够多的牌：`_new_engine([], ...)` 抽不出来，断言会变成 0 → 0；
+	#    第二个回合还要再抽一轮，所以给到 20 张（弃手回库后仍够抽）。
+	var r440_deck: Array[CardData] = []
+	for _i in 20:
+		r440_deck.append(_card(1013, "树人", "盟友", 2, 3, 8))
+	var r440_e := _new_engine(r440_deck, 20, 20)
+	r440_e.self_relics = [GameEngine.DARK_POWER_RELIC_ID]
+	r440_e.start_game()
+	check(r440_e.state.hand.size() == FieldState.HAND_DRAW_PER_TURN + 1,
+			"R440 暗动力：首个我方回合就多抽 1 张（手牌 %d）"
+				% r440_e.state.hand.size())
+	var r440_hand1: int = r440_e.state.hand.size()
+	r440_e.end_turn()
+	r440_e._begin_turn(GameEngine.SIDE_SELF)
+	check(r440_e.state.hand.size() == FieldState.HAND_DRAW_PER_TURN + 1,
+			"R440 暗动力：第二个我方回合仍是标准 +1 张（%d，上回合手牌 %d）"
+				% [r440_e.state.hand.size(), r440_hand1])
+	var r440_deck2: Array[CardData] = []
+	for _i in 20:
+		r440_deck2.append(_card(1013, "树人", "盟友", 2, 3, 8))
+	var r440_e2 := _new_engine(r440_deck2, 20, 20)
+	r440_e2.start_game()
+	check(r440_e2.state.hand.size() == FieldState.HAND_DRAW_PER_TURN,
+			"R440 对照：没这件道具 → 只抽标准的 %d 张（%d）"
+				% [FieldState.HAND_DRAW_PER_TURN, r440_e2.state.hand.size()])
+
+	# ---- ② 卡牌奖励不能放弃 ----
+	RunState.run_active = false
+	RunState.relics = []
+	RunState.pending_rewards = []
+	RunState.pending_relic_drop = -1
+	RunState.skipped_relics = []
+	var r440_ci0 := RunState.queue_card_reward("normal")
+	check(r440_ci0 >= 0 and not RunState.must_take_card_reward(),
+			"R440 对照：没这件道具 → 不拦着关界面（%d）" % r440_ci0)
+	check(RunState.skip_pending_reward(r440_ci0),
+			"R440 对照：没这件道具 → 卡牌奖励照旧可以放弃")
+	RunState.pending_rewards = []
+	RunState.relics = [6054]
+	var r440_ci := RunState.queue_card_reward("normal")
+	check(r440_ci >= 0 and RunState.must_take_card_reward(),
+			"R440 暗动力：有待领的卡牌奖励 → must_take_card_reward() 为真（%d）" % r440_ci)
+	check(not RunState.skip_pending_reward(r440_ci),
+			"R440 暗动力：卡牌奖励放弃不掉（skip_pending_reward 直接拒绝）")
+	var r440_state := str((RunState.pending_rewards[r440_ci] as Dictionary).get("state", ""))
+	check(r440_state == RunState.REWARD_PENDING,
+			"R440 暗动力：被拒绝后那条仍是「待领」（没有被偷偷置灰，" + r440_state + "）")
+	var r440_cand := int(((RunState.pending_rewards[r440_ci] as Dictionary)["candidates"] as Array)[0])
+	check(RunState.pick_pending_card(r440_ci, r440_cand),
+			"R440 暗动力：唯一的出路是拿一张卡")
+	check(not RunState.must_take_card_reward(),
+			"R440 暗动力：拿完就不再拦着关界面")
+	# 道具奖励 / 月亮的删卡奖励不在管辖范围（卡面只写了「卡牌奖励」）
+	RunState.pending_rewards = []
+	RunState.pending_relic_drop = -1
+	RunState.queue_relic_reward(6005)
+	check(RunState.skip_pending_reward(0),
+			"R440 暗动力：道具奖励照样可以放弃（只管卡牌奖励）")
+	RunState.pending_rewards = []
+	RunState.queue_deck_delete_reward(1)
+	check(RunState.skip_pending_reward(0),
+			"R440 暗动力：月亮的删卡奖励（奖励里的卡组操作）不受影响")
+
+	# R442：本局**真的收尾**（通关 / 失败）时不再强制 —— 那时 deck_ids 已被 end_run 清空，
+	# 再逼玩家「拿一张卡」只会往空卡组里塞牌。
+	RunState.pending_rewards = []
+	RunState.relics = [6054]
+	RunState.queue_card_reward("normal")
+	RunState.run_finished = true
+	check(not RunState.must_take_card_reward(),
+			"R442 暗动力：本局已收尾（run_finished）→ 不再拦任何离开按钮")
+	RunState.run_finished = false
+	check(RunState.must_take_card_reward(),
+			"R442 暗动力：局还在进行 → 判据恢复为真（不是被永久关掉）")
+	RunState.pending_rewards = []
+
+	# ---- ③ 商店不能删卡 ----
+	check(not RunState.shop_delete_allowed(),
+			"R440 暗动力：持有它 → 商店「删除一张卡」不可买")
+	RunState.relics = []
+	check(RunState.shop_delete_allowed(),
+			"R440 对照：没这件道具 → 商店照常能删卡")
+
+	# ---- ④ 源码守卫：三条效果各自接到「唯一判据口」（打包环境自动跳过）----
+	var r440_rs := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	check_src(r440_rs.find("static func must_take_card_reward") >= 0
+			and r440_rs.find("static func shop_delete_allowed") >= 0
+			and r440_rs.find("const DARK_POWER_RELIC_ID := 6054") >= 0,
+			"R440 源码：拒跳 / 商店封禁两个判据口都在 RunState")
+	check_src(r440_rs.find('str(e.get("kind", "")) == "cards" and relics.has(DARK_POWER_RELIC_ID)') >= 0,
+			"R440 源码：skip_pending_reward 里唯一那道「卡牌奖励不可放弃」的闸门")
+	var r440_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	check_src(r440_rp.count("RunState.must_take_card_reward()") >= 4,
+			"R440 界面：列表 / 卡牌视图的绘制与点击四处都问同一判据（实际 %d）"
+				% r440_rp.count("RunState.must_take_card_reward()"))
+	check_src(r440_rp.find('"不可放弃" if must_pick else "放弃这组"') >= 0,
+			"R440 界面：「放弃这组」在持有暗动力时换成「不可放弃」并置灰")
+	var r440_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	check_src(r440_shop.count("RunState.shop_delete_allowed()") >= 2
+			and r440_shop.find("func _draw_block_mask") >= 0,
+			"R440 商店：绘制与购买都问 shop_delete_allowed()，被封的货位画「暗动力」遮罩")
+	var r440_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r440_ge.find("const DARK_POWER_RELIC_ID:= 6054") >= 0
+			and r440_ge.find("if self_relics.has(DARK_POWER_RELIC_ID):") >= 0,
+			"R440 引擎：多抽 1 张走 extra_draw（与鸭蹼 / 冰淇淋同一口径）")
+
+	# 收尾：别把这套状态漏给后面的用例
+	RunState.relics = []
+	RunState.pending_rewards = []
+	RunState.pending_relic_drop = -1
+	RunState.skipped_relics = []
+	RunState.run_active = false
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

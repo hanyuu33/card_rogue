@@ -414,3 +414,62 @@ func status_badges() -> Array[Dictionary]:
 	if boss_phase > 0:
 		out.append({"text": "阶段 %d" % boss_phase, "col": Color("c0392b")})
 	return out
+
+
+# ============================================================ R439 战斗存档
+## 战斗检查点要序列化「场上单位」—— 它是战斗局面里最容易漏的一块：
+## 单位上场后一堆加成只记在 Placement 上（不烤进 CardData），漏一个字段，
+## 续档回来那张卡的数字就静默变回卡面值。
+## ⚠️ **新增 Placement 字段时必须同步加进 _SAVE_FIELDS**，否则该字段续档归零。
+##    `card` 走 CardData.to_dict（与复制 / 离场还原 / 联机同一条通道）。
+const _SAVE_FIELDS: Array[String] = [
+	"tapped", "moved", "did_move", "health", "owner",
+	"atk_debuff", "debuff_stage", "frozen", "atk_buff", "atk_growth",
+	"acts_left", "battlecry_done", "ability_used", "guarding", "last_hit_by",
+	"atk_buff_turn", "ramp_atk", "rooted", "poison_left", "poison_dmg",
+	"trap_trig_turn", "end_atk", "fence_bonus_hp", "upgrade_atk", "upgrade_hp",
+	"upgrade_stacks", "stack_hp_applied", "upgrade_range", "upgrade_speed",
+	"dmg_reduce", "first_hit_shield", "armor", "regen", "upgrade_feed_turn",
+	"mass_mnemo_turn", "sleep_left", "stun_left", "harp_atk", "sword_atk",
+	"fuse_left", "forge_period", "forge_idle", "forge_range", "dark_lord_atk",
+	"mnemo_down", "dark_lord_speed", "hecaton_atk", "action_growth_extra",
+	"action_growth_turns", "summon_haste", "night_owl_weak", "boss_phase",
+]
+
+
+static func _str_array(v: Variant) -> Array[String]:
+	## var_to_str/str_to_var 往返之后类型化数组会退化成普通 Array → 这里转回来。
+	var out: Array[String] = []
+	if v is Array:
+		for x: Variant in v:
+			out.append(str(x))
+	return out
+
+
+func to_save() -> Dictionary:
+	var d: Dictionary = {"card": card.to_dict() if card != null else {}}
+	for f: String in _SAVE_FIELDS:
+		d[f] = get(f)
+	d["fence_bonus_traits"] = Array(fence_bonus_traits)
+	d["life_cycle_added"] = Array(life_cycle_added)
+	d["blade_added"] = Array(blade_added)
+	d["hidden_energy_added"] = Array(hidden_energy_added)
+	d["life_cycle"] = life_cycle
+	d["blade_gift"] = blade_gift
+	d["hidden_energy"] = hidden_energy
+	return d
+
+
+func apply_save(d: Dictionary) -> void:
+	if d.has("card") and d["card"] is Dictionary and not (d["card"] as Dictionary).is_empty():
+		card = CardData.from_dict(d["card"])
+	for f: String in _SAVE_FIELDS:
+		if d.has(f):
+			set(f, d[f])
+	fence_bonus_traits = _str_array(d.get("fence_bonus_traits", []))
+	life_cycle_added = _str_array(d.get("life_cycle_added", []))
+	blade_added = _str_array(d.get("blade_added", []))
+	hidden_energy_added = _str_array(d.get("hidden_energy_added", []))
+	life_cycle = bool(d.get("life_cycle", false))
+	blade_gift = bool(d.get("blade_gift", false))
+	hidden_energy = bool(d.get("hidden_energy", false))

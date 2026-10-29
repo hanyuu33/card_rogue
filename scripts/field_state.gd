@@ -518,3 +518,140 @@ func iter_board() -> Array:
 		pairs.append([cell, board[cell]])
 	pairs.sort_custom(func(a, b): return a[0] < b[0])
 	return pairs
+
+
+# ============================================================ R439 战斗存档
+## 把整场局面写成可落盘的字典。**只在「我方回合开始」这一刻调用** ——
+## 此刻回合级临时表（turn_free / hand_cost_turn / turn_keep / 各种 pending）
+## 都已被开局流程清空，所以它们**故意不存**：存了反而会在续档时复活一批过期状态。
+## 要存的是「跨回合仍然成立」的东西：牌堆、场面、双方血量、费用、消耗区计数。
+func save_dict() -> Dictionary:
+	var d: Dictionary = {
+		"energy": energy,
+		"opp_energy": opp_energy,
+		"hp_self": hp_self,
+		"hp_opponent": hp_opponent,
+		"max_hp_self": max_hp_self,
+		"max_hp_opponent": max_hp_opponent,
+		"self_turn_no": self_turn_no,
+		"opp_turn_no": opp_turn_no,
+		"void_count": void_count,
+		"self_cannon_plays": self_cannon_plays,
+		"self_card_changes": self_card_changes,
+		"self_hp_damage_taken": self_hp_damage_taken,
+		"wild_form_used": wild_form_used,
+		"void_dmg_spells": void_dmg_spells,
+		"opp_hand_count": opp_hand_count,
+		"turn_limit": turn_limit,
+		"clear_win": clear_win,
+		"level_name": level_name,
+		"self_next_energy": self_next_energy,
+		"self_next_draw": self_next_draw,
+		"opp_next_energy": opp_next_energy,
+		"void_cards": _cards_save(void_cards),
+		"deck": _cards_save(deck),
+		"discard": _cards_save(discard),
+		"hand": _cards_save(hand),
+		"effects": _cards_save(effects),
+		"enemy_effects": _cards_save(enemy_effects),
+		"board": _board_save(),
+		"fields": _fields_save(),
+	}
+	if rng != null:
+		d["rng_seed"] = rng.seed
+		d["rng_state"] = rng.state
+	return d
+
+
+func apply_dict(d: Dictionary) -> void:
+	if d.is_empty():
+		return
+	energy = int(d.get("energy", energy))
+	opp_energy = int(d.get("opp_energy", opp_energy))
+	hp_self = int(d.get("hp_self", hp_self))
+	hp_opponent = int(d.get("hp_opponent", hp_opponent))
+	max_hp_self = int(d.get("max_hp_self", max_hp_self))
+	max_hp_opponent = int(d.get("max_hp_opponent", max_hp_opponent))
+	self_turn_no = int(d.get("self_turn_no", self_turn_no))
+	opp_turn_no = int(d.get("opp_turn_no", opp_turn_no))
+	void_count = int(d.get("void_count", void_count))
+	self_cannon_plays = int(d.get("self_cannon_plays", self_cannon_plays))
+	self_card_changes = int(d.get("self_card_changes", self_card_changes))
+	self_hp_damage_taken = int(d.get("self_hp_damage_taken", self_hp_damage_taken))
+	wild_form_used = bool(d.get("wild_form_used", wild_form_used))
+	void_dmg_spells = int(d.get("void_dmg_spells", void_dmg_spells))
+	opp_hand_count = int(d.get("opp_hand_count", opp_hand_count))
+	turn_limit = int(d.get("turn_limit", turn_limit))
+	clear_win = bool(d.get("clear_win", clear_win))
+	level_name = str(d.get("level_name", level_name))
+	self_next_energy = int(d.get("self_next_energy", self_next_energy))
+	self_next_draw = int(d.get("self_next_draw", self_next_draw))
+	opp_next_energy = int(d.get("opp_next_energy", opp_next_energy))
+	void_cards = _cards_load(d.get("void_cards", []))
+	deck = _cards_load(d.get("deck", []))
+	discard = _cards_load(d.get("discard", []))
+	hand = _cards_load(d.get("hand", []))
+	effects = _cards_load(d.get("effects", []))
+	enemy_effects = _cards_load(d.get("enemy_effects", []))
+	board.clear()
+	var bl: Variant = d.get("board", [])
+	if bl is Array:
+		for item: Variant in bl:
+			if not (item is Dictionary):
+				continue
+			var cell := Vector2i(int(item["r"]), int(item["c"]))
+			var p := Placement.new()
+			p.apply_save(item["p"])
+			board[cell] = p
+	field_effects.clear()
+	field_owner.clear()
+	var fl: Variant = d.get("fields", [])
+	if fl is Array:
+		for item2: Variant in fl:
+			if not (item2 is Dictionary):
+				continue
+			var cell2 := Vector2i(int(item2["r"]), int(item2["c"]))
+			field_effects[cell2] = CardData.from_dict(item2["card"])
+			field_owner[cell2] = str(item2.get("owner", "self"))
+	# 洗牌随机源：续档后继续抽牌 / 触发的随机必须接着同一条链（否则续档 = 换牌序）
+	if d.has("rng_seed") and rng != null:
+		rng.seed = int(d["rng_seed"])
+		rng.state = int(d["rng_state"])
+
+
+static func _cards_save(arr: Array) -> Array:
+	var out: Array = []
+	for c: Variant in arr:
+		if c is CardData:
+			out.append((c as CardData).to_dict())
+	return out
+
+
+static func _cards_load(arr: Variant) -> Array[CardData]:
+	var out: Array[CardData] = []
+	if arr is Array:
+		for x: Variant in arr:
+			if x is Dictionary:
+				out.append(CardData.from_dict(x))
+	return out
+
+
+func _board_save() -> Array:
+	var out: Array = []
+	for cell: Vector2i in board:
+		var p: Placement = board[cell]
+		if p == null:
+			continue
+		out.append({"r": cell.x, "c": cell.y, "p": p.to_save()})
+	return out
+
+
+func _fields_save() -> Array:
+	var out: Array = []
+	for cell: Vector2i in field_effects:
+		var c: CardData = field_effects[cell]
+		if c == null:
+			continue
+		out.append({"r": cell.x, "c": cell.y, "card": c.to_dict(),
+				"owner": str(field_owner.get(cell, "self"))})
+	return out

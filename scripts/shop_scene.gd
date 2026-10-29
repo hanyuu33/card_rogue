@@ -240,6 +240,14 @@ func _ready() -> void:
 		RunState.relics = []
 		for rid: int in [6035, 6036, 6015, 6001, 6003, 6005, 6010, 6041]:
 			RunState.gain_relic(rid)
+	# R440 出图：`--r440` 塞「暗动力」6054 —— 核验商店「删除一张卡」被封成「暗动力」遮罩。
+	# 出图：`shop.tscn -- --screenshot --r440`
+	if "--r440" in args:
+		if not RunState.run_active:
+			RunState.run_active = true
+			RunState.start_run([], GameLayers.LAYER_DEFAULT)
+		if not RunState.relics.has(RunState.DARK_POWER_RELIC_ID):
+			RunState.relics.append(RunState.DARK_POWER_RELIC_ID)
 	_setup_shop()   # R390：见上面那条注释 —— 必须在所有「造 run / 改当前格」的演示参数之后
 	# R432 出图：`--off N` 把第一行第 N 张**强制设为五折** —— 五折本身是 20% 概率，
 	# 截图核验不能靠运气（跑十次九次截不到贴纸，等于没有核验手段）。
@@ -718,10 +726,14 @@ func _draw_row3() -> void:
 	for i in n:
 		var e: Dictionary = _row3[i]
 		var sold: bool = e["sold"]
+		# R440 暗动力（6054）：商店的「删除一张卡」被封掉 → 画封禁遮罩（与售罄两套文案）。
+		var blocked := str(e["key"]) == "delete" and not RunState.shop_delete_allowed()
 		var rr := Rect2(x0 + i * (bw + gap), y, bw, bh)
 		_draw_goods_box(rr, str(e["icon"]), str(e["name"]), str(e["desc"]),
 				int(e["price"]), sold, _hover == _row3_base + i, false, "service")
-		if sold:
+		if blocked:
+			_draw_block_mask(rr, "暗动力")
+		elif sold:
 			_draw_sold_mask(rr)
 
 
@@ -821,6 +833,14 @@ func _draw_sold_mask(rr: Rect2) -> void:
 	draw_rect(rr, Color(0, 0, 0, 0.55), true)
 	draw_string(_font_bold, rr.position + Vector2(0, rr.size.y / 2),
 			"已售罄", HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_SUBHEAD, Color("ff9a9a"))
+
+
+func _draw_block_mask(rr: Rect2, why: String) -> void:
+	## R440：被道具封掉的货位（暗动力 6054 → 商店不能删卡）。与「已售罄」同一层遮罩，
+	## 只是文案换成封禁原因；点下去仍然会有一句 `_set_hint` 的解释。
+	draw_rect(rr, Color(0, 0, 0, 0.55), true)
+	draw_string(_font_bold, rr.position + Vector2(0, rr.size.y / 2),
+			why, HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_SUBHEAD, Color("c9a6f0"))
 
 
 func _draw_price(rr: Rect2, price: int, sold: bool, off := false) -> void:
@@ -1289,6 +1309,10 @@ func _buy_row3(i: int) -> void:
 	var price: int = e["price"]
 	var key: String = e["key"]
 	if key == "delete":
+		# R440 暗动力（6054）：持有它就不能在商店删卡 —— 判据只问 RunState。
+		if not RunState.shop_delete_allowed():
+			_set_hint("暗动力：无法在商店删除卡牌")
+			return
 		if RunState.deck_ids.is_empty():
 			_set_hint("卡组里没有卡可删")
 			return

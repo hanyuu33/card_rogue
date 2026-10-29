@@ -499,6 +499,9 @@ const STUN_BOX_TRAIT:= "惊奇盒子"
 const STUN_TURNS:= 1
 const CAVE_ROPE_RELIC_ID:= 6048
 const DEER_TROPHY_RELIC_ID:= 6049
+# R440 暗动力（6054，传奇奖励道具）：「每回合开始时多抽一张牌」。
+# 另两条（不能跳过卡牌奖励 / 商店不能删卡）在 RunState 与界面，引擎不掺和。
+const DARK_POWER_RELIC_ID:= 6054
 # R315 应急电源（9170，机械之心 0 费史诗技能 · 次元）：+1 费 + 抽 1 + 全体友方回 2。
 const EMERGENCY_POWER_ID:= 9170
 const EMERGENCY_POWER_ENERGY:= 1
@@ -857,9 +860,9 @@ const SHADOW_CAT_NEED:= 3
 # 影魔（8007 盟友）：打出时，手卡所有技能牌本回合 -1 费；每张 0 费技能卡 → +3 生命。
 const SHADOW_DEMON_ID:= 8007
 const SHADOW_DEMON_HP_PER:= 3
-# 偷袭（9090 技能）：0 费；6 伤，目标满血 → 12 伤。
+# 偷袭（9090 技能）：0 费；5 伤，目标满血 → 12 伤。
 const SNEAK_ID:= 9090
-const SNEAK_DMG:= 6
+const SNEAK_DMG:= 5
 const SNEAK_FULL_DMG:= 12
 # 疾风（9091 效果）：每使用一张卡 → 随机对一个敌人 2 伤（没有敌方单位 → 直击对方 HP）。
 const GALE_ID:= 9091
@@ -868,11 +871,14 @@ const GALE_DMG:= 2
 const LATENT_ID:= 9092
 # 幽灵（8008 盟友）：自己回合开始时自行破坏；破坏时卡组随机技能卡入手（走 _deathrattle）。
 const GHOST_ID:= 8008
-# 连环戏法（9093 技能）：0 费；5 伤，含此卡本回合已用 ≥3 张 → 10 伤 + 抽 1 张。
+# 连环戏法（9093 技能）：0 费；4 伤。R442 起两档**各自独立**、都按「其他卡」（不含本卡）算：
+#   已用 ≥COMBO_TRICK_DRAW_NEED 张其他卡 → 抽 1 张；
+#   已用 ≥COMBO_TRICK_NEED 张其他卡 → 伤害**改为** 10（此时两档同时生效，抽 1 + 10 伤）。
 const COMBO_TRICK_ID:= 9093
-const COMBO_TRICK_DMG:= 5
+const COMBO_TRICK_DMG:= 4
 const COMBO_TRICK_FULL_DMG:= 10
-const COMBO_TRICK_NEED:= 3
+const COMBO_TRICK_NEED:= 4
+const COMBO_TRICK_DRAW_NEED:= 2
 # 准备（9094 技能）：1 费；抽 2 张，其中有 0 费 → 再抽 1 张（只多这一次）。
 const PREPARE_ID:= 9094
 # 怒涛（9095 技能）：2 费；10 伤；弃牌区所有 0 费卡回手。
@@ -900,12 +906,13 @@ const CHARGE_UP_ID:= 9156
 const CHARGE_UP_PER_ENERGY:= 3
 # ── 暗影刺客扩展（R263，2026-10-19）──
 # 弹跳飞刀（9160 技能，暗影刺客普通）：1 费；主目标 BOUNCE_KNIFE_DMG 伤，
-#   之后从**其它**敌方单位里随机抽最多 BOUNCE_KNIFE_BOUNCES 个，各吃 BOUNCE_KNIFE_SPLASH。
-#   文案口径「随机最多两个**其他**敌人」——「其他」= 排除主目标（同一只不会既吃主刀又吃弹跳），
-#   「最多」= 场上不够就少弹（只剩主目标 → 一刀 5 伤，不弹）。
+#   之后从**其它**敌方单位里随机抽最多 BOUNCE_KNIFE_BOUNCES 个，第 i 跳（i 从 1 数）吃
+#   BOUNCE_KNIFE_DMG - i × BOUNCE_KNIFE_FALLOFF，即 5 → 4 → 3（R442 增强）。
+#   文案口径「在不同敌人间随机弹跳两次，每次伤害 -1」——「不同」= 每跳换一只（抽走即从池里删，
+#   且排除主目标），「最多」= 场上不够就少弹（只剩主目标 → 一刀 5 伤，不弹）。
 const BOUNCE_KNIFE_ID:= 9160
 const BOUNCE_KNIFE_DMG:= 5
-const BOUNCE_KNIFE_SPLASH:= 3
+const BOUNCE_KNIFE_FALLOFF:= 1
 const BOUNCE_KNIFE_BOUNCES:= 2
 # 预判（9097 技能）：0 费史诗；二选一：①弃牌区选一张 0 费技能卡（之后本卡消失）
 # ②卡组随机非 0 费技能卡入手。面板走 foresight_* 状态机。
@@ -1612,7 +1619,7 @@ const OPENING_MOVE_DRAW:= 1      # 结算后抽几张
 # 影袭（9120 技能，暗影刺客·稀有）：1 费；对目标造成 8 点伤害，
 #   若**含本卡**本回合已使用 3 张卡，回复 1 点费用。
 # 判定读 `state.self_card_plays + 1`（self_card_plays 在 _note_card_played 里已含本卡，
-#   但结算伤害发生在记卡之前，所以这里 +1 才是「含本卡」的最终张数）—— 与连环戏法 9093 同源。
+#   但结算伤害发生在记卡之前，所以这里 +1 才是「含本卡」的最终张数）。
 # 伤害走 _spell_dmg()（吃荧光草 / 魔法塔 / 魔力核心等既有加成）；回费走 state.energy += 1
 #   （与活力转移 9110 / 契约签订者 / 奥秘精通同口径：不污染 self_energy_spent，允许当回合超额）。
 const SHADOW_STRIKE_ID:= 9120
@@ -2011,6 +2018,10 @@ func _begin_turn(side: String) -> void :
 					% [RunState.lucky7_turns, LUCKY7_DMG])
 			action.emit("lucky7", {"turns": RunState.lucky7_turns, "dmg": LUCKY7_DMG})
 		var extra_draw:= 0
+		# R440 暗动力（6054）：每个我方回合开始**恒**多抽 1 张 —— 不设回合上限，
+		# 与鸭蹼 / 冰淇淋 / 爆米花共用同一条 extra_draw（唯一抽牌口 `_draw_many`）。
+		if self_relics.has(DARK_POWER_RELIC_ID):
+			extra_draw += 1
 		if self_relics.has(6005) and turn_number <= 2:
 			extra_draw = 1
 			_log("鸭蹼：第 %d 回合开始，额外抽 1 张" % turn_number)
@@ -7591,8 +7602,8 @@ const SPELL_BASE_DMG := {
 	9086: 2,     # 终结（2 + 本回合已用张数）
 	9087: 4,     # 连刺
 	9088: 3,     # 敲晕
-	9090: 6,     # 偷袭（目标满血 12）
-	9093: 5,     # 连环戏法（本回合第 3 张 → 10）
+	9090: 5,     # 偷袭（目标满血 12）
+	9093: 4,     # 连环戏法（已用 4 张其他卡 → 10）
 	9095: 10,    # 怒涛
 	9096: 17,    # 回旋斩
 	9102: 2,     # 回响
@@ -7603,7 +7614,7 @@ const SPELL_BASE_DMG := {
 	9121: 8,     # 暗影步
 	9145: 9,     # 聚能炮击（8075 在场 → +7）
 	9156: 0,     # 蓄势（吃 card.value，卡面自己会写）
-	9160: 5,     # 弹跳飞刀（另有最多 2 个目标各 3）
+	9160: 5,     # 弹跳飞刀（另有最多 2 个目标，5 → 4 → 3）
 	9162: 10,    # 集中突破（+4 × 场上改造层数）
 	9163: 10,    # 冲击炮（R369：8 → 10）
 	9189: 7,     # 独行（7 + 卡内累积；左栏刻意不报数，见 spell_now）
@@ -7626,7 +7637,7 @@ const SPELL_DYNAMIC_IDS: Array[int] = [9083, 9086, 9090, 9093, 9104, 9107, 9162]
 # R384：**不给「目标格数字」**的伤害技能 —— `spell_now().dmg` 对它们不是「这一格掉多少」。
 #   * 9083 流星雨：随机目标、打 X 颗，dmg 是**总量**；
 #   * 9054 龙息：4 点 × 5 次打同一批，每下**分别过减伤链**，总量 ≠ 5 × 单下；
-#   * 9160 弹跳飞刀：主目标 5、最多 2 个次目标各 3，同一张卡对不同格数字不同。
+#   * 9160 弹跳飞刀：主目标 5、弹跳 4 / 3，同一张卡对不同格数字不同。
 # 这些卡仍享受 AOE 覆盖 / 自伤警告预览，只是不报数字（宁可不说，也不许说错）。
 const SPELL_NO_CELL_PREVIEW: Array[int] = [DRAGON_BREATH_ID, METEOR_SHOWER_ID, 9160]
 
@@ -7688,15 +7699,16 @@ func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 					"anchor": "%d+X" % RAID_BASE_DMG,
 					"note": "%d + 本回合已用 %d 张" % [RAID_BASE_DMG, plays]}
 		if card.id == COMBO_TRICK_ID:
-			var n: int = plays + 1
-			if n >= COMBO_TRICK_NEED:
+			# R442：档位一律按**其他卡**算（`plays` 是结算前的已用张数，天然不含本卡）。
+			if plays >= COMBO_TRICK_NEED:
 				# 条件档位型：正文「…则改为造成 10 点伤害」已经写清了，只把 10 染色。
 				return {"dmg": _spell_dmg(side, COMBO_TRICK_FULL_DMG, card),
 						"base": COMBO_TRICK_DMG, "expr": "", "anchor": "",
-						"note": "含本卡本回合第 %d 张 → 强化" % n}
+						"note": "已用 %d 张其他卡 → 改为 %d" % [plays, COMBO_TRICK_FULL_DMG]}
 			return {"dmg": _spell_dmg(side, COMBO_TRICK_DMG, card),
 					"base": COMBO_TRICK_DMG, "expr": "", "anchor": "",
-					"note": "本回合第 %d 张（满 %d 张强化）" % [n, COMBO_TRICK_NEED]}
+					"note": "已用 %d 张其他卡（满 %d 张 → %d）" % [plays, COMBO_TRICK_NEED,
+							COMBO_TRICK_FULL_DMG]}
 		if card.id == SNEAK_ID:
 			# 目标未定时按**未受伤目标**报 6，满血值写进 note（提前知道「这一下能翻倍」）
 			# 档位型：正文「若目标处于满血状态则改为造成 12 点伤害」→ 预览时目标未定，
@@ -9841,12 +9853,16 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 				_log("偷袭：%s 处于满血 → 改为 %d 点伤害" % [sn_p.card.card_name, SNEAK_FULL_DMG])
 			return str(_op_deal_damage(side, _spell_dmg(side, sn_base, card), target))
 		COMBO_TRICK_ID:
+			# R442：两档都按**其他卡**（`_note_card_played` 在结算之后记卡，此刻天然不含本卡）。
+			#   两档独立：4 张其他卡时「抽 1」与「改为 10 伤」同时生效。
 			var ct_plays := state.self_card_plays if side == SIDE_SELF else state.opp_card_plays
-			var ct_full := ct_plays + 1 >= COMBO_TRICK_NEED
+			var ct_full := ct_plays >= COMBO_TRICK_NEED
 			var ct_base := COMBO_TRICK_FULL_DMG if ct_full else COMBO_TRICK_DMG
 			var ct_s := str(_op_deal_damage(side, _spell_dmg(side, ct_base, card), target))
 			if ct_full:
-				_log("连环戏法：含此卡本回合第 %d 张 → 改为 %d 点伤害" % [ct_plays + 1, COMBO_TRICK_FULL_DMG])
+				_log("连环戏法：已用 %d 张其他卡 → 改为 %d 点伤害" % [ct_plays, COMBO_TRICK_FULL_DMG])
+			if ct_plays >= COMBO_TRICK_DRAW_NEED:
+				_log("连环戏法：已用 %d 张其他卡 → 抽 1 张" % ct_plays)
 				if side == SIDE_SELF and state.draw() != null:
 					ct_s += "；抽 1 张"
 			return ct_s
@@ -9863,7 +9879,8 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 		SHADOW_STRIKE_ID:
 			# 影袭 9120（R108）：1 费稀有；对目标 8 伤 → 若**含本卡**本回合已用满 3 张，回 1 费。
 			# self_card_plays 在 _note_card_played 里累加，但**结算发生在记卡之前**，
-			# 所以这里 +1 才是「含本卡」的最终张数（与连环戏法 9093 同源口径）。
+			# 所以这里 +1 才是「含本卡」的最终张数。
+			# ⚠️ R442 起连环戏法 9093 **不用**这个口径：它按「其他卡」（不含本卡）算，判据就是 plays 本身。
 			var ss_plays := state.self_card_plays if side == SIDE_SELF else state.opp_card_plays
 			var ss_cards := ss_plays + 1
 			var ss_s := str(_op_deal_damage(side, _spell_dmg(side, SHADOW_STRIKE_DMG, card), target))
@@ -10001,7 +10018,8 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 func _bounce_knife(side: String, target, card: CardData) -> String:
 	## 弹跳飞刀（9160，R263）：主目标吃 BOUNCE_KNIFE_DMG —— 走 `_op_deal_damage`，
 	## 与连刺 / 终结同一口径（抗性目标只封顶、不落空；没点到单位就直击对方 HP）。
-	## 弹跳再从「其它敌方单位」里随机抽，最多 BOUNCE_KNIFE_BOUNCES 个，各吃 BOUNCE_KNIFE_SPLASH。
+	## 弹跳再从「其它敌方单位」里随机抽，最多 BOUNCE_KNIFE_BOUNCES 个，
+	## 第 i 跳吃 BOUNCE_KNIFE_DMG - i × BOUNCE_KNIFE_FALLOFF（5 → 4 → 3，R442）。
 	## 三条判据（漏一条就变成别的卡）：
 	##   ① **其他** = 排除主目标所在格 → 同一只不会既吃主刀又吃弹跳；
 	##   ② 抽走即从池里删 → 两个弹跳一定落在**不同**单位上（不会对同一只重复）；
@@ -10019,7 +10037,6 @@ func _bounce_knife(side: String, target, card: CardData) -> String:
 			continue
 		pool.append(cell)
 	pool.sort()
-	var spl:= _spell_dmg(side, BOUNCE_KNIFE_SPLASH, card)
 	var bounces:= mini(BOUNCE_KNIFE_BOUNCES, pool.size())
 	var hits:= 0
 	var total:= 0
@@ -10031,6 +10048,8 @@ func _bounce_knife(side: String, target, card: CardData) -> String:
 		var p: Placement = state.unit_at(c)
 		if p == null:
 			continue
+		# R442：每跳递减 —— 第 i 跳（i 从 0 起）吃 DMG - (i+1) × FALLOFF，即 5 → 4 → 3。
+		var spl:= _spell_dmg(side, BOUNCE_KNIFE_DMG - (i + 1) * BOUNCE_KNIFE_FALLOFF, card)
 		var dealt:= _hit_unit(p, spl, "弹跳飞刀")
 		total += dealt
 		hits += 1
@@ -15449,3 +15468,64 @@ func _assassin_summon(side: String, initial:= false) -> void :
 	_on_ally_entered(summoned, side)
 	_refresh_dark_lord(side)
 	_refresh_hecaton(side)
+
+
+# ============================================================ R439 战斗存档
+## 战斗检查点：引擎层的跨回合字段 + 整份 FieldState。
+## ⚠️ `current_side` 不存 —— 存档点固定是「我方回合开始」，续档一律摆回我方回合。
+func save_battle() -> Dictionary:
+	return {
+		"turn_number": turn_number,
+		"turn_total": turn_total,
+		"opp_turns": opp_turns,
+		"ai_enabled": ai_enabled,
+		"battle_kind": battle_kind,
+		"win_on_boss": win_on_boss,
+		"enemy_hp_infinite": enemy_hp_infinite,
+		"duck_revive_chance": duck_revive_chance,
+		"turn_dmg_bonus": turn_dmg_bonus,
+		"turn_spell_bonus": turn_spell_bonus,
+		"deer_bonus": deer_bonus,
+		"basin_charge": basin_charge,
+		"self_relics": Array(self_relics),
+		"state": state.save_dict(),
+		"rng_seed": rng.seed,
+		"rng_state": rng.state,
+	}
+
+
+func apply_battle(d: Dictionary) -> bool:
+	## 用检查点覆盖当前局面。返回 False = 这份快照不能用（调用方保留新开局）。
+	if d.is_empty() or state == null:
+		return false
+	var st: Variant = d.get("state", {})
+	if not (st is Dictionary) or (st as Dictionary).is_empty():
+		return false
+	turn_number = int(d.get("turn_number", turn_number))
+	turn_total = int(d.get("turn_total", turn_total))
+	opp_turns = int(d.get("opp_turns", opp_turns))
+	ai_enabled = bool(d.get("ai_enabled", ai_enabled))
+	battle_kind = str(d.get("battle_kind", battle_kind))
+	win_on_boss = int(d.get("win_on_boss", win_on_boss))
+	enemy_hp_infinite = bool(d.get("enemy_hp_infinite", enemy_hp_infinite))
+	duck_revive_chance = int(d.get("duck_revive_chance", duck_revive_chance))
+	turn_dmg_bonus = int(d.get("turn_dmg_bonus", turn_dmg_bonus))
+	turn_spell_bonus = int(d.get("turn_spell_bonus", turn_spell_bonus))
+	deer_bonus = int(d.get("deer_bonus", deer_bonus))
+	basin_charge = int(d.get("basin_charge", basin_charge))
+	var rl: Array[int] = []
+	var rel: Variant = d.get("self_relics", [])
+	if rel is Array:
+		for x: Variant in rel:
+			rl.append(int(x))
+	self_relics = rl
+	if d.has("rng_seed"):
+		rng.seed = int(d["rng_seed"])
+		rng.state = int(d["rng_state"])
+	state.apply_dict(st)
+	current_side = SIDE_SELF
+	over = false
+	result = ""
+	result_reason = ""
+	log.clear()
+	return true

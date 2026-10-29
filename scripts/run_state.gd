@@ -418,6 +418,15 @@ const HARVEST_KNIFE_EXTRA := 1
 const MATCH_RELIC_ID := 6051
 const MATCH_CHARGES := 3
 static var match_charge := 0
+# R440 暗动力（6054，**传奇**奖励池）：用户口径 ——「你无法再跳过卡牌奖励（不可放弃，
+# 必须拿取一张卡才能关闭奖励界面）或在商店删除卡牌。每回合开始时多抽一张牌。」
+# 三个效果的落点，一个判据口各管一条：
+#   ① 多抽 1 张 → 引擎 `_begin_turn()` 的 `extra_draw`（与鸭蹼 / 冰淇淋同一套口径）；
+#   ② 不能放弃卡牌奖励 → `skip_pending_reward()` 拒绝 kind=="cards"，界面只是照此置灰；
+#   ③ 商店不能删卡 → `shop_delete_allowed()`，商店的「删除一张卡」问它。
+# ⚠️ 月亮的删卡奖励（kind=="deck_delete"）**不在**管辖范围 —— 那是战斗奖励里的卡组操作，
+#    不是商店服务，卡面也没写它。
+const DARK_POWER_RELIC_ID := 6054
 
 
 static func reset(new_max := 50) -> void:
@@ -1528,6 +1537,11 @@ static func skip_pending_reward(idx: int) -> bool:
 	var e: Dictionary = pending_rewards[idx]
 	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
 		return false
+	# R440 暗动力（6054）：**卡牌奖励一律不许放弃** —— 这里是「不可放弃」的唯一闸门，
+	# 奖励窗的「放弃这组 / 完成」置灰都只是同一判据的显示。
+	# 道具奖励与月亮的删卡奖励照旧可放弃（卡面只写了「卡牌奖励」）。
+	if str(e.get("kind", "")) == "cards" and relics.has(DARK_POWER_RELIC_ID):
+		return false
 	if str(e.get("kind", "")) == "deck_delete":
 		e["state"] = REWARD_SKIPPED
 		return true
@@ -1539,6 +1553,31 @@ static func skip_pending_reward(idx: int) -> bool:
 			skipped_relics.append(rid)
 	e["state"] = REWARD_SKIPPED
 	return true
+
+
+static func must_take_card_reward() -> bool:
+	## R440 暗动力（6054）：手里还有**待领的卡牌奖励**时返回 true ——
+	## 奖励窗据此把「放弃这组」置灰、并拦住「完成」（必须拿一张卡才能关掉界面）。
+	## 判据只看「有没有 pending 的 cards 条目」，道具 / 删卡奖励不算。
+	## R442（用户口径「暗动力应该强制领取卡牌，不应该有可以待领的情况 —— 这是代价」）：
+	## 这条判据现在也是**跨场景闸门** —— 结算面板的出口、地图 `_ready` 都读它，
+	## 所以持有时不可能靠「关窗 → 走人 → 以后再领」把代价推迟。
+	## ⚠️ 本局**真的收尾**（通关 / 失败，`run_finished`）时一律放行：那时 `deck_ids`
+	##    已被 `end_run()` 清空，再逼玩家「拿一张卡」只会往空卡组里塞牌。
+	if run_finished or not relics.has(DARK_POWER_RELIC_ID):
+		return false
+	for e: Dictionary in pending_rewards:
+		if str(e.get("kind", "")) != "cards":
+			continue
+		if str(e.get("state", REWARD_PENDING)) == REWARD_PENDING:
+			return true
+	return false
+
+
+static func shop_delete_allowed() -> bool:
+	## R440 暗动力（6054）：商店的「删除一张卡」还能不能买（唯一判据口）。
+	## 商店的绘制 / 点击 / 实际成交都问这一句，别在界面里自己判 id。
+	return not relics.has(DARK_POWER_RELIC_ID)
 
 
 static func pick_pending_card(idx: int, card_id: int) -> bool:

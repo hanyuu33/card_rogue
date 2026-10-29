@@ -2203,7 +2203,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "造成 6 点伤害，若目标处于满血状态则改为造成 12 点伤害。",
+      "effect_text": "造成 5 点伤害，若目标处于满血状态则改为造成 12 点伤害。",
       "target_mode": "unit",
       "color": "紫",
       "image": ""
@@ -2275,7 +2275,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "对目标造成 5 点伤害，如果包含这张卡本回合已使用的卡达到 3 张，则改为造成 10 点伤害并抽 1 张卡。",
+      "effect_text": "对目标造成 4 点伤害。若这回合已经使用过 2 张其他卡，抽 1 张卡；若这回合已经使用过 4 张其他卡，则改为造成 10 点伤害。",
       "target_mode": "unit",
       "color": "紫",
       "image": ""
@@ -4974,7 +4974,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "对一个敌人造成 5 点伤害，再对随机最多两个**其他**敌人各造成 3 点伤害。",
+      "effect_text": "对一个敌人造成 5 点伤害，在不同敌人间随机弹跳两次，每次伤害减 1。",
       "target_mode": "unit",
       "color": "紫",
       "image": ""

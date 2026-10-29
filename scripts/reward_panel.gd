@@ -552,8 +552,24 @@ func _draw_list() -> void:
 		if str(e.get("kind", "")) == "relic" and not _settled(e):
 			any_relic = true
 			break
+	# R440 暗动力（6054）：卡牌奖励还没拿 → 不许关界面（「完成」同时置灰）。
+	var must_pick := RunState.must_take_card_reward()
 	if any_relic:
 		_draw_btn(all, "领取全部道具", true, false)
+	if must_pick:
+		# 这一句优先级最高 —— 它解释「完成」为什么是灰的。
+		# ⚠️ 必须**加粗 + 深红 + 垫一层浅底**：卷轴下沿是烧焦的深色渐变，
+		#    普通字重的暗红压在上面几乎读不出来（出图实测过一版淡红，直接糊掉）。
+		var warn := "暗动力：必须当场拿取一张卡，不能留到以后领"
+		var warn_w := _font_bold.get_string_size(warn, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				UiTheme.FS_CAPTION).x
+		var wchip := Rect2(Vector2(r.position.x + PAD - 8, done.position.y + 1),
+				Vector2(warn_w + 16.0, 22.0))
+		_root.draw_rect(wchip, Color("f6e6e0"), true)
+		_root.draw_rect(wchip, Color("b03a2e"), false, 1.0)
+		_root.draw_string(_font_bold, Vector2(r.position.x + PAD, done.position.y + 16),
+				warn, HORIZONTAL_ALIGNMENT_LEFT, 620, UiTheme.FS_CAPTION, Color("8c1a10"))
+	elif any_relic:
 		_root.draw_string(_font, Vector2(r.position.x + PAD, done.position.y + 12),
 				"「领取全部道具」不碰卡牌奖励 —— 卡牌要自己挑一张",
 				HORIZONTAL_ALIGNMENT_LEFT, 560, UiTheme.FS_CAPTION, UiTheme.INK_500)
@@ -561,7 +577,7 @@ func _draw_list() -> void:
 		_root.draw_string(_font, Vector2(r.position.x + PAD, done.position.y + 12),
 				"卡牌奖励 / 删卡奖励要点进去处理（不能一键领取）" if pend > 0 else "全部奖励都已处理，可以点「完成」",
 				HORIZONTAL_ALIGNMENT_LEFT, 620, UiTheme.FS_CAPTION, UiTheme.INK_500)
-	_draw_btn(done, "完成", false, false)
+	_draw_btn(done, "完成", false, must_pick)
 
 
 func _rows_per_page() -> int:
@@ -892,9 +908,17 @@ func _draw_cards() -> void:
 	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
 			"卡牌奖励 —— 点一张看说明，再确认加入卡组（%s）" % _entry_tag(e),
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_HEADING, Color("2f2a20"))
+	# R440 暗动力（6054）：这组卡不能放弃 —— 副标题说清楚，别让玩家去试那个灰按钮。
+	var must_pick := RunState.must_take_card_reward()
+	var sub := "看完随时可以点下面「返回列表」"
+	if settled:
+		sub = "已领取：选了其中一张"
+	elif must_pick:
+		sub = "暗动力：这组必须当场拿一张，不能留到以后领"
 	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 76),
-			"「%s」" % ("已领取：选了其中一张" if settled else "看完随时可以点下面「返回列表」"),
-			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
+			"「%s」" % sub,
+			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY,
+			Color("b03a2e") if (must_pick and not settled) else UiTheme.INK_600)
 	for i in cands.size():
 		var card: CardData = _repo_cards.get_card(int(cands[i]))
 		if card == null:
@@ -938,7 +962,9 @@ func _draw_cards() -> void:
 		var left := maxi(0, RunState.match_charge)
 		var rtxt := "刷新 · 剩 %d" % left if rb.size.x >= 132.0 else "刷新 %d" % left
 		_draw_btn(rb, rtxt, false, settled or left <= 0)
-	_draw_btn(_btn_cards_skip_rect(), "放弃这组", false, settled)
+	# R440 暗动力（6054）：持有它 → 卡牌奖励不可放弃，按钮换文案并置灰。
+	_draw_btn(_btn_cards_skip_rect(), "不可放弃" if must_pick else "放弃这组", false,
+			settled or must_pick)
 	# R167：确认按钮（触屏必需 —— 没有悬停就得靠它「先看后拿」）
 	var can_pick := (not settled) and _pick_sel >= 0 and _pick_sel < cands.size()
 	_draw_btn(_btn_confirm_rect(), "确认选择这张", true, not can_pick)
@@ -1210,6 +1236,9 @@ func _on_click(pos: Vector2) -> void:
 				_back_to_list()
 				return
 			if _btn_cards_skip_rect().has_point(pos):
+				# R440 暗动力：按钮已置灰 —— 点它不生效（不消耗、不改任何状态）。
+				if RunState.must_take_card_reward():
+					return
 				_skip_entry(_sel)
 				return
 			var e: Dictionary = RunState.pending_rewards[_sel]
@@ -1242,6 +1271,9 @@ func _on_click(pos: Vector2) -> void:
 					return
 		_:
 			if _btn_done_rect().has_point(pos):
+				# R440 暗动力：还有卡牌奖励没拿 → 不许关（「完成」同时是灰的）。
+				if RunState.must_take_card_reward():
+					return
 				close()
 				return
 			var any_relic := false
@@ -1339,6 +1371,12 @@ func _demo_start() -> void:
 	RunState.queue_relic_reward(6013)   # 叠加态的鸭（描述最长的一件，专治「介绍太长」）
 	RunState.queue_card_reward("boss")
 	RunState.queue_relic_reward(6005)
+	# R440 出图：`--r440` 追加「暗动力」6054 —— 核验两处灰态：
+	#   卡牌视图的「不可放弃」+ 副标题、列表视图「完成」置灰 + 红色提示。
+	# 出图：`battle.tscn -- --screenshot --r119cards --r440 --shotframe 600`
+	#       `battle.tscn -- --screenshot --r119 --r440 --shotframe 600`
+	if "--r440" in args:
+		RunState.relics.append(RunState.DARK_POWER_RELIC_ID)
 	if forced > 0:
 		# --r119card <id>：候选固定成同一张卡的三份 —— 复现「长描述 + 提及块」的排版
 		for i in RunState.pending_rewards.size():

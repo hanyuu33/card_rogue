@@ -352,6 +352,11 @@ func _ready() -> void:
 		"sub": "冒险地图",
 	})
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
+	# R442：暗动力（6054）的代价 —— 卡牌奖励必须当场领掉，**不许**靠「关窗 → 上地图 →
+	# 待领入口」把它推迟。只要还有待领的卡牌奖励，进地图就把它顶出来。
+	# 判据只有 `RunState.must_take_card_reward()` 一个口（本局已收尾时它自己放行）。
+	if RunState.must_take_card_reward():
+		_reward_panel.open()
 	# 道具「鸭之低语」（6010）：玩家失去选择权 → 系统随机挑路并自动前进。
 	# ⚠️ R194：这里只负责**接手**（`_start_whisper` 挑出第一间），真正一步步往下走
 	#    由 `_process` → `_tick_whisper` 持续驱动 —— 原来只在 `_ready` 挑一次、

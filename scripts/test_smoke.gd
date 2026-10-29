@@ -633,6 +633,126 @@ func _check_duck_blood_instant(scene: Variant) -> void:
 	p.on_before_pick = Callable()
 	RunState.pending_relic = -1
 	RunState.pending_rewards = []
+	# R441（用户问「打完 boss 先拿道具会不会导致奖励结束」）：真实 boss 奖励顺序是
+	# 「道具第 0 条 → boss 档三选一 → 必史诗组」（`battle_scene._show_over` 里
+	# `offer_relic_drop` 先入队，两组卡牌排在后面）。照这个顺序铺队列，再走**真实点击**
+	# （列表点第 0 行 → 道具详情 → 「领取」），验四件事：面板不关 / 两组卡牌仍待领 /
+	# 不调宿主收尾 / 不跳任何场景 —— 领道具这一下不许把本批奖励“结束”掉。
+	RunState.relics.erase(6005)
+	RunState.pending_relic = -1
+	RunState.pending_relic_drop = -1
+	RunState.pending_rewards = []
+	RunState.queue_relic_reward(6005)
+	var r441_boss := RunState.queue_card_reward("boss")
+	var r441_epic := RunState.queue_card_reward("epic")
+	var r441_bad := ""
+	if RunState.pending_rewards.size() != 3 or r441_boss < 0 or r441_epic < 0:
+		r441_bad = "用例前提不成立（队列 %d 条，boss=%d / epic=%d）" \
+				% [RunState.pending_rewards.size(), r441_boss, r441_epic]
+	else:
+		routed.clear()
+		hooked[0] = false
+		p.route_fn = func(target: String): routed.append(target)
+		p.on_before_pick = func(): hooked[0] = true
+		p.open()
+		# ① 列表点第 0 行（boss 掉落的那件道具）→ 进道具详情
+		p._on_click(p._row_rect(0).get_center())
+		if int(p._view) != RewardPanel.VIEW_RELIC:
+			r441_bad = "点列表第 0 行没进道具详情（view=%d）" % int(p._view)
+		else:
+			# ② 点「领取」—— 这一下就是用户问的那个动作
+			p._on_click(p._btn_claim_rect().get_center())
+			if not p.is_open():
+				r441_bad = "领完道具面板被关掉了（两组卡牌奖励还没拿）"
+			elif not RunState.has_relic(6005):
+				r441_bad = "道具没真进袋子"
+			elif RunState.pending_reward_count() != 2:
+				r441_bad = "两组卡牌应仍在待领，实际 %d" % RunState.pending_reward_count()
+			elif not routed.is_empty():
+				r441_bad = "领道具就跳场景了（%s）" % str(routed)
+			elif bool(hooked[0]):
+				r441_bad = "不该调宿主收尾（会在卡牌奖励之前抢先换层）"
+			elif int(p._view) != RewardPanel.VIEW_LIST:
+				r441_bad = "领完之后应回列表视图，实际 %d" % int(p._view)
+	if r441_bad != "":
+		_smoke_fail("R441 Boss 奖励先领道具：%s" % r441_bad)
+	else:
+		print("SMOKE OK R441 Boss 奖励：先领道具不结束本批（两组卡牌仍待领 · 面板不关 · 不跳场景）")
+	# 收尾：此刻还有 2 条待领 → close() 的自动离开判据必然为假，不会误跳
+	if p.is_open():
+		p.close()
+	p.route_fn = Callable()
+	p.on_before_pick = Callable()
+	RunState.pending_rewards = []
+	RunState.pending_relic = -1
+	RunState.pending_relic_drop = -1
+	# R442（用户口径「暗动力应该强制领取卡牌，不应该有可以待领的情况 —— 这是代价」）：
+	# 持 6054 时卡牌奖励必须**当场**领掉。四步全过才算：
+	#   ① 列表「完成」点不动；② 卡牌视图「放弃这组」点不动；
+	#   ③ 选掉第一组后「完成」仍被拦（第二组还在）；④ 两组都选完才放行。
+	var r442_fin := RunState.run_finished
+	var r442_deck: Array = RunState.deck_ids.duplicate()
+	RunState.run_finished = false
+	RunState.relics.erase(6054)
+	RunState.pending_relic = -1
+	RunState.pending_relic_drop = -1
+	RunState.pending_rewards = []
+	RunState.queue_relic_reward(6005)
+	var r442_c1 := RunState.queue_card_reward("boss")
+	var r442_c2 := RunState.queue_card_reward("epic")
+	RunState.relics.append(6054)
+	var r442_bad := ""
+	if RunState.pending_rewards.size() != 3 or r442_c1 < 0 or r442_c2 < 0:
+		r442_bad = "用例前提不成立（队列 %d 条）" % RunState.pending_rewards.size()
+	else:
+		p.open()
+		# ① 「完成」必须点不动 —— 一点就把卡牌奖励变成「待领」了
+		p._on_click(p._btn_done_rect().get_center())
+		if not p.is_open():
+			r442_bad = "持暗动力时「完成」把关掉了（卡牌奖励变成了待领）"
+		else:
+			# ② 卡牌视图的「放弃这组」也必须点不动
+			p._open_entry(r442_c1)
+			p._on_click(p._btn_cards_skip_rect().get_center())
+			var r442_st := str((RunState.pending_rewards[r442_c1] as Dictionary).get("state", ""))
+			if r442_st != RunState.REWARD_PENDING:
+				r442_bad = "持暗动力时卡牌奖励被放弃了（state=%s）" % r442_st
+			else:
+				# ③ 选掉第一组 → 第二组还在，仍然不许关
+				var r442_p1 := int(((RunState.pending_rewards[r442_c1] as Dictionary)["candidates"] as Array)[0])
+				RunState.pick_pending_card(r442_c1, r442_p1)
+				p._back_to_list()
+				p._on_click(p._btn_done_rect().get_center())
+				if not p.is_open():
+					r442_bad = "只选了一组就放行（另一组卡牌变成待领了）"
+				else:
+					# ④ 两组都选完 → 判据解除、「完成」才真的能关
+					var r442_p2 := int(((RunState.pending_rewards[r442_c2] as Dictionary)["candidates"] as Array)[0])
+					RunState.pick_pending_card(r442_c2, r442_p2)
+					if RunState.must_take_card_reward():
+						r442_bad = "两组都选完了，判据却没解除"
+					elif RunState.pending_reward_count() != 1:
+						# 队列里那件道具**不受管辖**（卡面只写「卡牌奖励」）—— 它留着待领是对的
+						r442_bad = "两组卡牌选完后应只剩道具那一条待领（%d）" % RunState.pending_reward_count()
+					else:
+						# 卡牌都领掉之后「完成」必须真的能关（这时道具还能留到以后领）
+						p._on_click(p._btn_done_rect().get_center())
+						if p.is_open():
+							r442_bad = "卡牌领完后「完成」点不动了"
+	if r442_bad != "":
+		_smoke_fail("R442 暗动力强制领取：%s" % r442_bad)
+	else:
+		print("SMOKE OK R442 暗动力：完成点不动 / 放弃被拒 / 选一组仍关不掉 / 两组选完才放行")
+	# 收尾：把本用例动过的账全部还原
+	if p.is_open():
+		p.close()
+	RunState.deck_ids.assign(r442_deck)
+	RunState.pending_rewards = []
+	RunState.relics.erase(6054)
+	RunState.pending_relic = -1
+	RunState.pending_relic_drop = -1
+	RunState.run_finished = r442_fin
+
 
 
 func _check_record_list(scene: Variant) -> void:
