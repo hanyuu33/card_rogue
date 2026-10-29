@@ -855,7 +855,11 @@ func _draw() -> void:
 	if _records_visible:
 		_draw_records_panel()
 	if _flint_pick:
-		_draw_flint_hint()     # R447：燧石选格时，这个位置留给常驻提示
+		# 点错时的即时提示优先（`_set_note` 那 2.4 秒），过后回常驻提示条
+		if _move_note_t > 0.0 and _move_note != "":
+			_draw_move_note()
+		else:
+			_draw_flint_hint()
 	else:
 		_draw_move_note()
 	if _boss_alert:
