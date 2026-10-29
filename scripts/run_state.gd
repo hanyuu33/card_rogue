@@ -367,11 +367,12 @@ static var delivery_done := false
 const SOURCE_POWER_ID := 6002     # 源数之力（改造卡组中的一张卡）
 const SOURCE_POWER_HP_COST := 5   # 源数之力的代价：失去 5 点最大生命
 
-# R224 新道具：苹果（6027，奖励池）—— 获得时**立即 +14 最大生命并回复满生命值**。
+# R224 新道具：苹果（6027，奖励池）—— 获得时**立即 +7 最大生命并回复满生命值**。
+# R445（用户口径）：14 → 7，占卜室 / 苹果与医生两条来源共用这一个常量。
 # 全局 HP 规则「除到达新的一层外不能回复 HP」下，它是主动道具口径的回血手段
 # （与烤肉 / 黄桃罐头 / 自愈同属「道具·卡牌主动回血」，被动自动回血已全部移除）。
 const APPLE_RELIC_ID := 6027
-const APPLE_MAX_HP := 14
+const APPLE_MAX_HP := 7
 # R244 新道具：行囊（6030，初始道具池）—— 获得时 **+100 金币**，并把一张
 # 「木栅栏」（工事 2 费 0/6，8001）加入卡组。属于「即时」类，`gain_relic` 里当场结算。
 const PACK_RELIC_ID := 6030
@@ -1041,7 +1042,7 @@ static func gain_relic(id: int) -> void:
 		6017:   # 重鸭（二层起始）：拾起时最大生命 +6（当前生命同 +6）
 			max_hp += 6
 			hp += 6
-		APPLE_RELIC_ID:   # 苹果（R224/244）：立即 +14 最大生命，并**回复满**生命值
+		APPLE_RELIC_ID:   # 苹果（R224/244/445）：立即 +7 最大生命，并**回复满**生命值
 			gain_max_hp(APPLE_MAX_HP)
 			hp = max_hp
 		PACK_RELIC_ID:   # 行囊（R244）：+100 金币 + 一张「木栅栏」进卡组

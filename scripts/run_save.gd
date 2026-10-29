@@ -262,6 +262,18 @@ static func apply(d: Dictionary) -> bool:
 	if eku_raw is Dictionary:
 		for eku_k: Variant in (eku_raw as Dictionary).keys():
 			RunState.event_kinds_used[str(eku_k)] = true
+	# R445（用户口径「这一局不会再出现占卜室」）：字段是 R374 才加的 —— **老存档没有**，
+	# 光靠上面那行会得到一个空账本，换层重生成地图时就会把第一层出过的占卜室再抽一遍
+	# （「读档后又撞见同一个事件」的真实成因）。这里按当前地图把已出现的事件补登记，
+	# 与 `start_run()` 预生成地图那条分支同一套口径。
+	# ⚠️ 只在账本为空时补：账本非空说明存档本身是 R374 之后的，别拿地图去覆盖它
+	#    （地图上可能还有 `?` 房没揭晓，覆盖会把「已出过但图上没有的」记录抹掉）。
+	if RunState.event_kinds_used.is_empty() and RunState.map_cells.size() > 0:
+		for mc: Dictionary in RunState.map_cells:
+			if str(mc.get("type", "")) == "event":
+				var mck := str(mc.get("event_kind", ""))
+				if mck != "":
+					RunState.event_kinds_used[mck] = true
 	RunState.chocolate = int(d.get("chocolate", 0))
 	# R358：老存档没有这个字段 → -1（等同「本层还没发过」），下面 sync 按旧口径补一次
 	RunState.fatigue_granted_layer = int(d.get("fatigue_granted_layer", -1))

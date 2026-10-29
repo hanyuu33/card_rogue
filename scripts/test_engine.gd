@@ -6465,6 +6465,9 @@ func _init() -> void:
 			% ("无" if r374_cross_ok else r374_dup))
 
 	# ② 池子用尽 → 那一格降级成一般战斗（不是空事件格、也不是消失的格子）
+	#    R445 复核（用户口径「这一局不会再出现占卜事件」）：这条**保持不变** ——
+	#    试过「清空账本重开一轮」，被下面的断言当场打回：第一轮的记录作废之后，
+	#    同一张图后半段 / 换层又会抽到第一层出过的事件（账本 3 种 / 图上 15 种）。
 	var r374_starve_bank := {}
 	for r374_k_all in GameLayers.event_kinds(GameLayers.LAYER_DEFAULT):
 		r374_starve_bank[r374_k_all] = true
@@ -6483,6 +6486,21 @@ func _init() -> void:
 	check(r374_left == 0 and r374_bad_cell == "",
 			"R374 池子先用光 → 整张图不再出现事件房，且没有残留 event_kind（%s）"
 			% ("无" if r374_bad_cell == "" else r374_bad_cell))
+
+	# ②-b R445（用户口径）：占卜室跟其它事件走**同一本账** —— 已经出过就整层不再出现。
+	#    （一局之内因此绝不会撞见第二次占卜：用尽时那格降级成一般战斗，不会重开。）
+	var r445_div_bank := {"divination": true}
+	var r445_divrng := RandomNumberGenerator.new()
+	r445_divrng.seed = 550001
+	var r445_divmap: Array = RogueMap.generate(r445_divrng, GameLayers.LAYER_DEFAULT,
+			null, r445_div_bank)
+	var r445_div_hit := ""
+	for r445_dc: Dictionary in r445_divmap:
+		if str(r445_dc.get("event_kind", "")) == "divination":
+			r445_div_hit = "第 %d 格" % int(r445_dc.get("id", -1))
+	check(r445_div_hit == "",
+			"R445 占卜室进了事件账本：一局只出一次，未用尽前整层不再出现（违例 %s）"
+			% ("无" if r445_div_hit == "" else r445_div_hit))
 
 	# ③ 续档：账本要跟着存档走，否则读档后同一局又能抽到旧事件
 	RunState.end_run()
@@ -6508,6 +6526,23 @@ func _init() -> void:
 	RunState.start_run(r374_pre, GameLayers.LAYER_DEFAULT)
 	check(r374_pre_first != "" and RunState.event_kinds_used.has(r374_pre_first),
 			"R374 预生成地图：start_run 把图上已有事件登记进本局账本（%s）" % r374_pre_first)
+	RunState.end_run()
+
+	# ⑤ R445（用户口径「这一局不会再出现占卜室」）：**R374 之前的老存档没有账本字段**，
+	#    读档必须从当前地图补登记 —— 否则换层重生成会把第一层出过的占卜室再抽一遍
+	#    （用户报的「读档后又撞见」就是这条）。
+	RunState.start_run([], GameLayers.LAYER_DEFAULT)
+	RunState.map_cells = [{"id": 0, "col": 0, "row": 0, "type": "event",
+			"hidden": false, "revealed": true, "doors": [], "layer": 1,
+			"event_kind": "divination"}]
+	RunState.event_kinds_used = {"divination": true}
+	var r445_snap2: Dictionary = RunSave.snapshot()
+	r445_snap2.erase("event_kinds_used")       # 模拟老存档：字段根本不存在
+	RunState.event_kinds_used = {}
+	RunSave.apply(r445_snap2)
+	check(RunState.event_kinds_used.has("divination"),
+			"R445 老档补账本：读档从地图补登记已出过的事件（当前 %s）"
+			% str(RunState.event_kinds_used))
 	RunState.end_run()
 
 	# ---- run 流程：开局 / 走节点 / 卡组增长 / 战斗记录持久化 ----
@@ -8624,14 +8659,14 @@ func _init() -> void:
 			and RunState.rest_heal_amount() > 0,
 			"R237：战斗胜利仍不回血（R224 保留）；篝火回血已恢复（rest_pct %.2f）"
 			% RunState.rest_pct())
-	# ② 苹果：立即 +14 最大生命并回复满
+	# ② 苹果：立即 +7 最大生命并回复满（R445：14 → 7）
 	RunState.set_difficulty(0)
 	RunState.reset(50)
 	RunState.take_damage(30)              # 残血 20/50
 	check(RunState.hp == 20 and RunState.max_hp == 50, "苹果前置：残血 20/50")
 	RunState.gain_relic(RunState.APPLE_RELIC_ID)
-	check(RunState.max_hp == 64 and RunState.hp == 64,
-			"苹果：最大生命 50 → 64（+14）并回复满（%d/%d）" % [RunState.hp, RunState.max_hp])
+	check(RunState.max_hp == 57 and RunState.hp == 57,
+			"苹果：最大生命 50 → 57（+7）并回复满（%d/%d）" % [RunState.hp, RunState.max_hp])
 	check(RunState.has_relic(RunState.APPLE_RELIC_ID), "苹果：登记进道具栏")
 	# ③ 牛奶：随机两种附魔落到「合规且未附魔」的卡上，卡组本身不动
 	#    （start_run 走 randi() 播种 → 这里只断言**种子无关**的不变式）
@@ -20332,12 +20367,12 @@ func _init() -> void:
 	check(RunState.deck_mods.size() == RunState.deck_ids.size(),
 			"R244 行囊：附魔槽位与卡组等长（不会错位）")
 	check(RunState.has_relic(6030), "R244 行囊：登记进道具栏")
-	# 苹果仍是「主动道具回血」口径：+14 上限并回满（与 R224 一致，只是来源变了）
+	# 苹果仍是「主动道具回血」口径：+7 上限并回满（R445 削弱，来源同 R244）
 	RunState.take_damage(20)
 	var r244_hp0 := RunState.hp
 	RunState.gain_relic(RunState.APPLE_RELIC_ID)
 	check(RunState.hp == RunState.max_hp and r244_hp0 < RunState.hp,
-			"R244 苹果：+14 最大生命并回满（%d → %d/%d）"
+			"R444/445 苹果：+7 最大生命并回满（%d → %d/%d）"
 			% [r244_hp0, RunState.hp, RunState.max_hp])
 
 	# ==== R245：初始道具 勇气徽章 6031 / 陶罐 6032 + 诅咒「罐子」9157 / 召唤物 9158 ====

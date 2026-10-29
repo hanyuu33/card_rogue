@@ -730,8 +730,9 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 		}
 		if type == "event":
 			# R374（用户口径）：**一个事件在一局里只被抽出一次** —— `used_events` 是整局账本
-			# （`RunState.event_kinds_used`，跨层共用），抽空了不重开。
-			# 用尽时 `roll_event_kind` 返回空串 → **这一格降级成一般战斗**。
+			# （`RunState.event_kinds_used`，跨层共用），抽空了**不重开**。
+			# R445 复核（用户口径「这一局不会再出现占卜事件」）：占卜也走这本账，
+			# 用尽时 `roll_event_kind` 返回空串 → **这一格降级成一般战斗**（于是不会再撞见）。
 			# 「?」房对玩家本来就是未知的，走进去打一场，看不出「少了一个事件」。
 			# ⚠️ 事件格数量（实测均值 7.3 / 峰值 13）本来就可能大于单层事件池（9~10 种），
 			#    所以「用尽」是正常路径，不是异常 —— 别当成错误去 push_error。
