@@ -75,7 +75,7 @@ static func level_names() -> Array[String]:
 
 static func builtin_levels() -> Array:
 	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×8（第一层 4 + 第二层 4）→
-	## 精英简单×5（第一层 2 + 第二层 3）→ 精英困难×5（第一层 2 + 第二层 3）→
+	## 精英简单×5（第一层 3 + 第二层 2；R449 哈气骑士团下调一层）→ 精英困难×5（第一层 2 + 第二层 3）→
 	## Boss×6（第一层 3 + 第二层 2 + 第三层 1）。合计 33 关（R174 百眼动员进第二层普通简单；
 	## R340 永夜鸭群进第一层精英困难；**R356 启示者进第三层**）。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
@@ -593,7 +593,7 @@ static func _boss_revelator() -> Dictionary:
 
 
 static func _scrapyard() -> Dictionary:
-	## 第二层·普通敌人-困难（R228「废料场」）：后排两只拾荒者（9151，4/50 程1 速1）
+	## 第二层·普通敌人-困难（R228「废料场」）：后排两只拾荒者（9151，4/35 程1 速1；R449 各 −15 血）
 	## + 前排三只废弃机器人（9152，5/40 程1 速1）。
 	##   * 拾荒者：**己方回合开始时**，各给一个「拾荒者以外」的己方单位一次改造
 	##     （+3 攻 / +5 血，挂 `_scavenger_tick`）；
@@ -601,7 +601,7 @@ static func _scrapyard() -> Dictionary:
 	##     （挂 `_on_unit_upgraded`，所以拾荒者改它一次就响一次）。
 	## 题面：拾荒者越改越肥，且多半改到机器人 → 每回合额外 1~2 次全体 1 伤；
 	##   先点拾荒者断掉成长链，还是先拆机器人止住群伤，是这关的核心取舍。
-	##   （机器人 5/40 顶在前排，拾荒者 4/50 躲在后排 —— 想拆拾荒者得先撬开前排。）
+	##   （机器人 5/40 顶在前排，拾荒者 4/35 躲在后排 —— 想拆拾荒者得先撬开前排。）
 	## ⚠️ 站位按 `Vector2i(行, 列)`（board key 语义，敌方占 row 0~2，row 0 = 最后排）。
 	## ⚠️ 数组顺序：拾荒者写在**最前**（成长源先上场，回合开始扫描时一定在场）。
 	return {
@@ -618,8 +618,8 @@ static func _scrapyard() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9151, "拾荒者", 4, 50, 1, 1, Vector2i(0, 0)],
-			[9151, "拾荒者", 4, 50, 1, 1, Vector2i(0, 2)],
+			[9151, "拾荒者", 4, 35, 1, 1, Vector2i(0, 0)],
+			[9151, "拾荒者", 4, 35, 1, 1, Vector2i(0, 2)],
 			[9152, "废弃机器人", 5, 40, 1, 1, Vector2i(2, 0)],
 			[9152, "废弃机器人", 5, 40, 1, 1, Vector2i(2, 1)],
 			[9152, "废弃机器人", 5, 40, 1, 1, Vector2i(2, 2)],
@@ -721,7 +721,7 @@ static func _captain_wizard() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9012, "鸭子队长", 7, 50, 1, 1, Vector2i(0, 1)],
+			[9012, "鸭子队长", 6, 55, 1, 1, Vector2i(0, 1)],
 			[9008, "鸭子巫师", 8, 50, 2, 1, Vector2i(1, 1)],
 			[9009, "使魔鸭子", 4, 15, 1, 1, Vector2i(2, 1)],
 		],
@@ -865,14 +865,14 @@ static func _eternal_night() -> Dictionary:
 
 
 static func _breath_charge() -> Dictionary:
-	## 第二层·精英敌人-简单：前排三名鸭子骑士一字排开，后排两翼各一名鸭子弓手
+	## 第一层·精英敌人-简单（R449 由第二层下调）：前排三名鸭子骑士一字排开，后排两翼各一名鸭子弓手
 	## （程 2 远程压制），敌方开局启用效果卡「哈气」——**敌方**单位从第 3 个回合起一回合可以行动两次
 	## （移动 + 攻击重来一遍；骑士速 2 → 一回合最多推进 4 格；前 2 回合仍是单动）。
 	return {
 		"name": "哈气骑士团",
 		"key": "breath_charge",
 		"tier": TIER_ELITE_EASY,
-		"layer": GameLayers.LAYER_TWO,
+		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
 		"intro": "我要闹了",   # 关卡开场台词（大字横幅，比回合横幅停留更久）
 		"player_hp": 20,
@@ -1222,7 +1222,7 @@ static func _steel_fortress() -> Dictionary:
 
 
 static func _captain() -> Dictionary:
-	## 精英敌人-简单：后排中间鸭子队长（8/50，一回合行动两次），
+	## 精英敌人-简单：后排中间鸭子队长（6/55，一回合行动两次；R175 8→7 攻、R449 7→6 攻 / 50→55 血），
 	## 中排左右各一只鸭子骑士护航，AI 推进。
 	return {
 		"name": "鸭子队长登场",
@@ -1237,7 +1237,7 @@ static func _captain() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9012, "鸭子队长", 7, 50, 1, 1, Vector2i(0, 1)],
+			[9012, "鸭子队长", 6, 55, 1, 1, Vector2i(0, 1)],
 			[9001, "鸭子骑士", 3, 30, 1, 2, Vector2i(1, 0)],
 			[9001, "鸭子骑士", 3, 30, 1, 2, Vector2i(1, 2)],
 		],

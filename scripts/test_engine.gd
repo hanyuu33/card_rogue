@@ -1555,9 +1555,9 @@ func _init() -> void:
 	var r228_sc := r228_repo.get_card(9151)
 	var r228_bot := r228_repo.get_card(9152)
 	check(r228_sc != null and r228_sc.card_name == "拾荒者" and r228_sc.kind == "盟友"
-			and r228_sc.power == 4 and r228_sc.health == 50
+			and r228_sc.power == 4 and r228_sc.health == 35
 			and r228_sc.traits.has(GameEngine.SCAVENGER_TRAIT) and r228_sc.group == "enemy",
-			"R228 拾荒者：盟友 4/50，带「拾荒」trait（敌方卡）")
+			"R228 拾荒者：盟友 4/35（R449 后排两只各 −15 血），带「拾荒」trait（敌方卡）")
 	check(r228_bot != null and r228_bot.card_name == "废弃机器人" and r228_bot.kind == "盟友"
 			and r228_bot.power == 5 and r228_bot.health == 40
 			and r228_bot.traits.has(GameEngine.WASTE_BOT_TRAIT) and r228_bot.group == "enemy",
@@ -4896,12 +4896,12 @@ func _init() -> void:
 	var wiz3 := eng_dw2.state.unit_at(Vector2i(1, 1))
 	check(wiz3 != null and not wiz3.tapped, "召唤失败时巫师不横置")
 
-	# ---- 鸭子队长：7/50 程1 速1，一回合行动两次（R175 由 8 攻下调） ----
+	# ---- 鸭子队长：6/55 程1 速1，一回合行动两次（R175 8→7 攻；R449 7→6 攻 / 50→55 血） ----
 	var cap := repo.get_card(9012)
-	check(cap != null and cap.card_name == "鸭子队长" and cap.power == 7
-			and cap.health == 50 and cap.attack_range == 1 and cap.move_speed == 1
+	check(cap != null and cap.card_name == "鸭子队长" and cap.power == 6
+			and cap.health == 55 and cap.attack_range == 1 and cap.move_speed == 1
 			and cap.actions == 2 and cap.rarity == 4,
-			"鸭子队长：怪物 7/50 程1 速1 行动2次")
+			"鸭子队长：怪物 6/55 程1 速1 行动2次（R449 攻 −1 / 血 +5）")
 	var lvl3: Dictionary = _level_named("鸭子队长登场")
 	var eus: Array = lvl3["enemy_units"]
 	check(str(lvl3["name"]) == "鸭子队长登场"
@@ -5188,8 +5188,8 @@ func _init() -> void:
 			"队长与巫师：精英困难（队长+巫师+使魔）")
 	check(GameLevels.normal_pool().size() == 8,
 			"第一层普通池 8 关（普简×4 + 普难×4：R158 白魔法鸭护阵 / 夜鸭阵 上调进第一层普通困难）")
-	check(GameLevels.elite_pool().size() == 5,
-			"第一层精英池 5 关（精简×2 + 精难×3：R158 鸭子窑上调进第一层精英简单；R340 永夜鸭群）")
+	check(GameLevels.elite_pool().size() == 6,
+			"第一层精英池 6 关（精简×3 + 精难×3：R158 鸭子窑上调进第一层精英简单；R449 哈气骑士团下调到第一层；R340 永夜鸭群）")
 	check(str(GameLevels.boss_level()["name"]) == "远古虚骨龙",
 			"boss_level() 默认返回第一层 Boss 池的第一个（远古虚骨龙；同层多Boss 时实际由 RunState 摇定）")
 
@@ -5251,7 +5251,7 @@ func _init() -> void:
 	check(lvw not in GameLevels.normal_pool(GameLayers.LAYER_TWO),
 			"R158 白魔法鸭护阵已离开第二层普通池（不串层）")
 
-	# ---- 第二层新关卡「哈气骑士团」+ 效果卡「哈气」（所属阵营单位从第 3 个回合起一回合行动两次）----
+	# ---- 「哈气骑士团」（R449 由第二层下调到第一层）+ 效果卡「哈气」（所属阵营单位从第 3 个回合起一回合行动两次）----
 	var hc := repo.get_card(9024)
 	check(hc != null and hc.card_name == "哈气" and hc.kind == "效果"
 			and hc.traits.has("哈气") and hc.value == 2 and hc.rarity == 4
@@ -5274,9 +5274,9 @@ func _init() -> void:
 				h_archer_rows[hcell.x] = true
 	check(str(lvh["name"]) == "哈气骑士团"
 			and int(lvh["tier"]) == GameLevels.TIER_ELITE_EASY
-			and GameLevels.layer_of(lvh) == GameLayers.LAYER_TWO
+			and GameLevels.layer_of(lvh) == GameLayers.LAYER_DEFAULT
 			and h_units.size() == 5,
-			"哈气骑士团：第二层·精英敌人-简单，5 个单位")
+			"哈气骑士团：**第一层**·精英敌人-简单（R449 由第二层下调），5 个单位")
 	check(h_knight == 3 and h_archer == 2,
 			"哈气骑士团阵容：鸭子骑士×3 / 鸭子弓手×2")
 	check(h_knight_rows.size() == 1
@@ -5286,9 +5286,9 @@ func _init() -> void:
 			"哈气骑士团站位：3 骑士前排（2 行）、2 弓手后排（0 行）")
 	check((lvh["enemy_effects"] as Array) == [9024],
 			"哈气骑士团：敌方开局启用效果卡「哈气」")
-	check(lvh in GameLevels.elite_pool(GameLayers.LAYER_TWO)
-			and lvh not in GameLevels.elite_pool(GameLayers.LAYER_DEFAULT),
-			"哈气骑士团只在第二层精英池（第一层精英池不含它，不串层）")
+	check(lvh in GameLevels.elite_pool(GameLayers.LAYER_DEFAULT)
+			and lvh not in GameLevels.elite_pool(GameLayers.LAYER_TWO),
+			"哈气骑士团只在一层精英池（R449 由第二层下调；第二层精英池已不含它，不串层）")
 
 	# 哈气机制：只增益所属阵营 / **第 3 个回合起才生效** / 已在场单位补发 / 与卡自带双动不叠加
 	var eng_hs := _new_engine([], 20, 40)
@@ -5659,8 +5659,8 @@ func _init() -> void:
 			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关、第三层那 %d 关）" % [lv_rest,
 				GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
 				GameLevels.levels_of_layer(GameLayers.LAYER_THREE).size()])
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 17,
-			"第二层自带 17 关（R228 废料场 +1；太阳熔炉 / 哈气骑士团 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法鸭护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层）")
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 16,
+			"第二层自带 16 关（R228 废料场 +1；太阳熔炉 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法鸭护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层；R449 哈气骑士团下调到第一层）")
 	# R356：第三层只有 1 关（启示者），且它就是这一层的专属 Boss
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_THREE).size() == 1
 			and GameLevels.boss_pool(GameLayers.LAYER_THREE).size() == 1
@@ -5675,8 +5675,8 @@ func _init() -> void:
 	check(GameLayers.content_layers(9).is_empty(), "未配置的层：内容池为空（拿不到任何内容）")
 	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 9,
 			"第二层普通池 9 关（专属：普通简单 4 + 普通困难 5；R135 太阳熔炉 / R158 量产流水线·量产铁砧·双机炮阵 / R174 百眼动员 / R228 废料场）")
-	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 6,
-			"第二层精英池 6 关（专属：精英简单 3 + 精英困难 3；R149 钢铁要塞 / R161 赫尔墨斯的试炼 / R162 阿斯克勒庇厄斯的试炼）")
+	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 5,
+			"第二层精英池 5 关（专属：精英简单 2 + 精英困难 3；R149 钢铁要塞 / R161 赫尔墨斯的试炼 / R162 阿斯克勒庇厄斯的试炼；R449 哈气骑士团已下调到第一层）")
 	var l2_battle_pool: Array[Dictionary] = []
 	l2_battle_pool.append_array(GameLevels.normal_pool(GameLayers.LAYER_TWO))
 	l2_battle_pool.append_array(GameLevels.elite_pool(GameLayers.LAYER_TWO))
@@ -29940,10 +29940,10 @@ func _init() -> void:
 			and RunState.used_levels.has("阿斯克勒庇厄斯的试炼"),
 		"R398 换层**不清** used_levels（三层还记得第二层打过谁）")
 
-	# ③ 三层精英池 = 第二层 6 关；挑关优先避开本局打过的
+	# ③ 三层精英池 = 第二层 5 关；挑关优先避开本局打过的
 	var r398_pool: Array[Dictionary] = GameLevels.elite_pool(GameLayers.LAYER_THREE)
-	check(r398_pool.size() == 6,
-		"R398 三层精英池 = 第二层 6 关（content_layers [2, 3]；实际 %d）" % r398_pool.size())
+	check(r398_pool.size() == 5,
+		"R398 三层精英池 = 第二层 5 关（content_layers [2, 3]；R449 哈气骑士团下调后 −1；实际 %d）" % r398_pool.size())
 	# 只剩最后一个没用过 → **必然**挑它（这就是「优先避免重复」）
 	RunState.used_levels = []
 	for r398_i in r398_pool.size() - 1:
