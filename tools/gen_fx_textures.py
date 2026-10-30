@@ -7,6 +7,7 @@
 产物（RGBA8）：
   fx_meteor.png   192×192  流星（亮核在正中，尾迹朝上）
   fx_beam.png     128×256  激光柱横截面（由外到内 红→橙→黄→白）
+  fx_laser.png    128×256  冷色激光柱（蓝→青→冰白，芯更硬/边更窄，R449 充能巨炮）
   fx_shine.png     96×24   柱身流动亮带
   fx_knife.png     96×160  飞刀（刀尖朝上）
   fx_glow.png     128×128  通用柔光（落地亮斑 / 拖尾 / 枪口光）
@@ -173,6 +174,50 @@ def gen_beam():
             idx = y * w + x
             buf[idx][3] *= clamp(win) * fy
     save(buf, w, h, "fx_beam.png")
+
+
+# ---------------------------------------------------------------- 冷色激光柱（R449）
+def gen_laser():
+    """充能巨炮（9139）的激光柱 —— 冷色（蓝 → 青 → 冰白）。
+
+    和 `fx_beam` 的区别不是换个色就完事：舰炮那根是**火焰**柱（外晕宽、色温暖、
+    衰减拖得很长），这边的读图诉求是**激光**——外晕窄一半、芯压到 5.5px、
+    再插三道机械感的细丝，缩到 448 卡面才不像一团橙色雾气。
+    """
+    w, h = 128, 256
+    buf = [[0.0, 0.0, 0.0, 0.0] for _ in range(w * h)]
+    for y in range(h):
+        # 纵向脉冲：不是匀速色带，读作「电容放电」
+        vmod = 1.0 + 0.10 * math.sin(y * 0.16) + 0.05 * (hash2(11, y) - 0.5)
+        for x in range(w):
+            u = (x - 63.5) / 64.0
+            layers = [
+                (0.50, 0.42, (0.20, 0.42, 1.00)),   # 外晕：深蓝
+                (0.30, 0.70, (0.32, 0.78, 1.00)),   # 中层：青蓝
+                (0.135, 0.95, (0.78, 0.97, 1.00)),  # 内层：冰白
+                (0.055, 1.00, (1.00, 1.00, 1.00)),  # 芯：纯白
+            ]
+            idx = y * w + x
+            for sig, amp, col in layers:
+                a = math.exp(-(u / sig) ** 2) * amp * vmod
+                over(buf, idx, col, clamp(a))
+            # 三道细丝：机械感（火焰柱没有这种东西）
+            for fu in (0.19, 0.34, 0.52):
+                over(buf, idx, (0.86, 0.99, 1.00),
+                     clamp(math.exp(-((abs(u) - fu) / 0.028) ** 2) * 0.16))
+
+    # 收边：同 gen_beam —— 外晕高斯在 u=±1 处还剩 alpha，不压就是一个看得见的矩形框
+    for y in range(h):
+        fy = 1.0
+        if y > h * 0.95:
+            fy = clamp((h - 1 - y) / (h * 0.05))
+        elif y < h * 0.05:
+            fy = clamp(y / (h * 0.05))
+        for x in range(w):
+            u = abs((x - 63.5) / 64.0)
+            win = 1.0 - clamp((u - 0.40) / 0.60) ** 2.0
+            buf[y * w + x][3] *= clamp(win) * fy
+    save(buf, w, h, "fx_laser.png")
 
 
 # ---------------------------------------------------------------- 柱身流动亮带
@@ -526,6 +571,7 @@ def main():
     print("生成特效贴图 ->", OUT)
     gen_meteor()
     gen_beam()
+    gen_laser()
     gen_shine()
     gen_glow()
     gen_knife()

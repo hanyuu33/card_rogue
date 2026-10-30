@@ -467,6 +467,7 @@ var _fx_beam_tex: Texture2D = null     # 激光柱横截面（红→橙→黄→
 var _fx_shine_tex: Texture2D = null    # 柱身流动亮带
 var _fx_knife_tex: Texture2D = null    # 飞刀（刀尖朝上）
 var _fx_glow_tex: Texture2D = null     # 通用柔光（落地亮斑 / 拖尾 / 预热点）
+var _fx_laser_tex: Texture2D = null    # R449：充能巨炮的激光柱（冷色 蓝→青→冰白）
 var _shake_cur := Vector2.ZERO         # 本帧震屏偏移 —— 自绘贴图用完必须还原成它
 ## R434：灰烬龙战吼 / 启示者清场的**火焰**，以及阶段 2 电磁屏障的**护盾球 + 电弧**。
 ## 全部走 `assets/fx/*.png`（程序化生成，见 tools/gen_fx_textures.py），
@@ -606,6 +607,16 @@ var _naval_beam: Dictionary = {}   # {col, land, end, bot_row}   正在打的这
 const NAVAL_BEAM_PRE_MS := 180     # 预热：一道细亮线从上垂到列底（伤害就落在这时）
 const NAVAL_BEAM_HOLD_MS := 420    # 主光柱全亮
 const NAVAL_BEAM_FADE_MS := 240    # 淡出
+## R449：充能巨炮（9139，第二层「双机炮阵」）的**竖直炮击** —— 用户口径「炮为纵向，
+## 从敌人 HP 后方发射」。炮口钉在画面顶端（敌方 HP 行之上、被顶栏挡住 → 读作「从 HP
+## 后方打出来」），光柱沿这一列**只落被点名的那一格**。与舰炮 9201 的区分：舰炮是整列
+## 覆盖的暖色火柱，这边是点穴式冷色激光（蓝→青→冰白）。三拍：蓄能 → 主光柱 → 淡出。
+var _cannon_beams: Array = []       # {cell, start, land, end}   正在落的炮击
+const CANNON_BEAM_CHARGE_MS := 260  # 蓄能：细光丝从顶端划到目标格（伤害就落在这时）
+const CANNON_BEAM_HOLD_MS := 420    # 主光柱全亮（比舰炮短，但要够看清「炮打下来」这一下）
+const CANNON_BEAM_FADE_MS := 220    # 淡出
+const CANNON_MUZZLE_Y := -14.0      # 炮口在画面顶端之外（被顶栏 / 敌方 HP 行挡住）
+const CANNON_BEAM_W := 168.0        # 主光柱全宽（比舰炮 118 更宽：激光是「点穴但很粗」的一击）
 ## R433：弹跳飞刀（9160）—— 主刀 + 每一跳排成一条**飞行链**（刀从上一个目标飞向下一个）。
 ## 引擎同步算完所有伤害，节奏只能在演出侧排；伤害数字与掉血由 `_fx_retime_hit`
 ## 把那一格的通用受击推到刀落地那一刻（删掉会连生命冻结一起丢，数字就永远不动了）。
@@ -754,6 +765,7 @@ func _ready() -> void:
 	_fx_shine_tex = load("res://assets/fx/fx_shine.png")
 	_fx_knife_tex = load("res://assets/fx/fx_knife.png")
 	_fx_glow_tex = load("res://assets/fx/fx_glow.png")
+	_fx_laser_tex = load("res://assets/fx/fx_laser.png")
 	_fx_flame_tex = load("res://assets/fx/fx_flame.png")
 	_fx_ember_tex = load("res://assets/fx/fx_ember.png")
 	_fx_shield_tex = load("res://assets/fx/fx_shield.png")
@@ -3644,6 +3656,18 @@ func _demo_tick() -> void:
 		engine.action.emit("paralysis_added", {"cell": Vector2i(1, 2), "discard": 4,
 				"card": CardData.from_dict(repo.get_card(1053).to_dict())})
 		status_text = "R436 演示：麻痹塞牌 —— 小卡飞入弃牌区 + 落地黄色电流"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--r449cannon" in _demo_args and _demo_frame == 200 and engine != null:
+		# R449 出图：充能巨炮的**竖直激光炮击**（炮口在画面顶端 = 敌方 HP 后方）。
+		#   出图：`scenes/battle.tscn -- --screenshot --r449cannon --shotframe 9999 --shotms 320`
+		engine.enable_enemy_effects([CardData.from_dict(repo.get_card(9139).to_dict())])
+		engine.state.place(CardData.from_dict(repo.get_card(1053).to_dict()),
+				Vector2i(3, 1), GameEngine.SIDE_SELF)   # 只放一只 → 巨炮必定点它
+		engine.state.place(CardData.from_dict(repo.get_card(9013).to_dict()),
+				Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+		engine._cannon_fire(GameEngine.SIDE_OPPONENT)
+		status_text = "R449 演示：充能巨炮 —— 竖直激光从敌方 HP 后方落下"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r434flame" in _demo_args and _demo_frame == 200 and engine != null:
@@ -8553,6 +8577,7 @@ func _draw() -> void:
 	_draw_grid_mask()
 	_draw_meteors()          # R430：流星画在遮罩**之后** —— 上方空间本来就窄，
 	_draw_naval_beam()       # R431：舰炮竖直激光（同样要越过遮罩，从画面顶端下来）
+	_draw_cannon_beams()     # R449：充能巨炮的竖直炮击（炮口在顶端，落一格）
 	_draw_knives()           # R433：飞刀（主刀 + 弹跳链）
 	                         # 放在棋盘变换里会被裁成「凭空冒爆点」
 	_draw_purge_wave()       # R434：启示者清场冲击波（从它身上径向扫开，越过遮罩）
@@ -10172,6 +10197,8 @@ func _tick_anims() -> bool:
 	_meteors = _meteors.filter(func(m): return n < int(m.land))   # R430：落地即交给爆点
 	if not _naval_beam.is_empty() and n > int(_naval_beam.get("end", 0)):
 		_naval_beam = {}   # R431：光柱淡出后收掉（留着会让 busy 永远为真、队列不走）
+	# R449：炮击同理 —— 必须自己收掉并计入 busy，否则不逐帧重绘、动画卡在中间一格
+	_cannon_beams = _cannon_beams.filter(func(cb): return n <= int(cb.get("end", 0)))
 	_knives = _knives.filter(func(k): return n < int(k.land))   # R433：落地即交给火花
 	# R434：火焰 / 护盾 / 冲击波按各自时长收掉。**要和 `_bursts` 一样计入 busy** ——
 	# 不给 busy 就不会逐帧重绘，动画会卡在中间一格。
@@ -10219,6 +10246,7 @@ func _tick_anims() -> bool:
 			or not _bursts.is_empty() or not _dying.is_empty() \
 			or not _meteors.is_empty() \
 			or not _naval_beam.is_empty() \
+			or not _cannon_beams.is_empty() \
 			or not _knives.is_empty() \
 			or not _flames.is_empty() or not _shield_fx.is_empty() \
 			or not _purge_wave.is_empty() \
@@ -11544,6 +11572,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var bw := _naval_beam_land_for(cell)
 			if bw > 0:
 				delay_ms = maxi(delay_ms, bw - n)
+			# R449：被充能巨炮点名的单位同理 —— 等激光落到这一格再演击破
+			var cw := _cannon_beam_land_for(cell)
+			if cw > 0:
+				delay_ms = maxi(delay_ms, cw - n)
 			# R433：被飞刀扎死的单位同理 —— 等那一刀落地再演击破
 			var kw := _knife_land_for(center)
 			if kw > 0:
@@ -12268,6 +12300,26 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# ④ 重弹敌方效果排到「特效播完 + 换好卡面」之后，不盖住演出。
 			_ee_popup_at = n + REV_RETURN_MS - 60 + REV_FX_MS + REV_FACE_GAP_MS
 			_say("⚠ 启示者进入第 %d 阶段（生命 %d）" % [bp_ph, int(data.get("health", 0))])
+		"cannon_fire":
+			# R449：充能巨炮（9139，双机炮阵）原来只有一行日志 + 目标卡直接消失，用户报
+			# 「没有特效」。现在给一发竖直炮击：炮口在画面顶端，光柱落到被点名的这一格。
+			# ⚠️ 引擎在 `_cannon_fire` 里先 emit 本动作、**再** `_destroy(t)` ——
+			#    所以这里落地时刻一定早于 destroy，`_cannon_beam_land_for` 才拉得住
+			#    「卡先炸开、激光才下来」的时序倒错。
+			var cf_cell: Vector2i = data.get("cell", Vector2i(0, 0))
+			var cf_land := n + CANNON_BEAM_CHARGE_MS
+			_cannon_beams.append({"cell": cf_cell, "start": n, "land": cf_land,
+					"end": cf_land + CANNON_BEAM_HOLD_MS + CANNON_BEAM_FADE_MS})
+			_delayed.append({"at": cf_land, "kind": "cannon_land",
+					"data": {"cell": cf_cell}})
+			sfx.play("spell")
+			_shake(2.0, 160)
+			var cf_name := "未知单位"
+			if data.get("card") is CardData:
+				cf_name = (data["card"] as CardData).card_name
+			status_text = "充能巨炮：锁定 %s → 竖直炮击" % cf_name
+			_say("🜂 充能巨炮：瞄准 %s" % cf_name)
+			queue_redraw()
 		"naval_gun":
 			# R356 舰炮 9201（阶段 1）：列号 -1 = 三列全空 → 改打 HP。
 			# R431：原来只有一行飘字 + 几个小爆点，用户报「舰炮也没有特效」——
@@ -12966,6 +13018,105 @@ func _naval_beam_land_for(cell: Vector2i) -> int:
 	var ld := int(_naval_beam.get("land", 0))
 	return ld if ld > _now() else 0
 
+func _draw_cannon_beams() -> void:
+	## R449：充能巨炮（9139，第二层「双机炮阵」）的**竖直激光炮击**。
+	## 用户口径：「炮为纵向，从敌人 HP 后方发射」—— 炮口固定在画面顶端（敌方 HP 行之上、
+	## 被顶栏挡住 = 读作「从 HP 后方打出来」），光柱沿这一列笔直落到**被点名的那一格**。
+	## 三拍：蓄能（炮口聚光 + 细光丝划到目标格）→ 主光柱张开 → 淡出。
+	## 与舰炮（9201）分工 —— 舰炮是整列覆盖的暖色火柱，这边是点穴式冷色激光。
+	## 必须画在棋盘遮罩**之后**（屏幕空间）：光柱要从画面顶端一路下来，遮罩会把上半段裁掉。
+	if _cannon_beams.is_empty():
+		return
+	var n := _now()
+	for b: Dictionary in _cannon_beams:
+		var st := int(b.get("start", n))
+		var ld := int(b.get("land", n))
+		var ed := int(b.get("end", n))
+		if n > ed:
+			continue
+		var ctr := _cell_center(b.get("cell", Vector2i(0, 0)))
+		var cx := ctr.x
+		var bot := ctr.y + CELL / 2.0
+		var top := CANNON_MUZZLE_Y
+		var hgt := maxf(24.0, bot - top)
+		var chg := clampf(float(n - st) / float(maxi(1, ld - st)), 0.0, 1.0)
+		# ① 蓄能：细光丝从上「画」到目标格 —— 划到底那一刻就是伤害落地
+		if n < ld:
+			var tip := lerpf(top, bot, chg)
+			if _fx_laser_tex != null:
+				# 同一条柱体横向压窄 = 光丝，边缘自然是柔的（不是一根硬棍）
+				draw_texture_rect(_fx_laser_tex, Rect2(cx - 7.0, top, 14.0, tip - top), false,
+						Color(1, 1, 1, 0.30 + 0.55 * chg))
+			else:
+				draw_line(Vector2(cx, top), Vector2(cx, tip), Color(0.40, 0.76, 1.0, 0.45), 9.0)
+				draw_line(Vector2(cx, top), Vector2(cx, tip), Color(0.92, 0.99, 1.0, 0.90), 2.0)
+			if _fx_glow_tex != null:
+				# 炮口那一团蓝白光（越蓄越亮）；目标格给个渐渐亮起来的准星光斑
+				draw_texture_rect(_fx_glow_tex, Rect2(cx - 30, top - 6, 60, 34), false,
+						Color(0.55, 0.85, 1.0, 0.35 + 0.45 * chg))
+				draw_texture_rect(_fx_glow_tex, Rect2(cx - 26, bot - 26, 52, 52), false,
+						Color(0.62, 0.90, 1.0, 0.35 + 0.55 * chg))
+			continue
+		# ② 主光柱：宽度 0 → 全宽（110ms 张开），末段淡出
+		var fade := 1.0
+		var hold_end := ld + CANNON_BEAM_HOLD_MS
+		if n > hold_end:
+			fade = 1.0 - clampf(float(n - hold_end) / float(CANNON_BEAM_FADE_MS), 0.0, 1.0)
+		var grow := clampf(float(n - ld) / 110.0, 0.0, 1.0)
+		var w := CANNON_BEAM_W * grow
+		if _fx_laser_tex != null:
+			# 外泛光：比本体宽近一倍、低透明度 —— 贴着卡面的窄柱容易读成「一根线」，
+			# 加这层才有「光束打在空气里」的体积感（舰炮靠整列铺开，这边只能靠加宽）。
+			draw_texture_rect(_fx_laser_tex, Rect2(cx - w * 0.95, top, w * 1.9, hgt), false,
+					Color(0.42, 0.70, 1.0, 0.30 * fade))
+			draw_texture_rect(_fx_laser_tex, Rect2(cx - w * 0.5, top, w, hgt), false,
+					Color(1, 1, 1, fade))
+			# 白芯加压：贴图芯只有 5.5px，拉宽后容易发糊 → 叠一条窄柱提锐
+			draw_texture_rect(_fx_laser_tex, Rect2(cx - w * 0.16, top, w * 0.32, hgt), false,
+					Color(1, 1, 1, 0.55 * fade))
+		else:
+			draw_line(Vector2(cx, top), Vector2(cx, bot), Color(0.22, 0.45, 1.0, 0.42 * fade), w)
+			draw_line(Vector2(cx, top), Vector2(cx, bot), Color(0.50, 0.88, 1.0, 0.72 * fade), w * 0.5)
+			draw_line(Vector2(cx, top), Vector2(cx, bot), Color(1, 1, 1, 0.95 * fade), 3.0)
+		# 柱身沿着**下落方向**流的两道亮带（相位错开 → 持续灌注；染成冷色，别抢激光的芯）
+		if _fx_shine_tex != null:
+			for k in 2:
+				var ph := fmod(float(n - ld) * 0.0011 + float(k) / 2.0, 1.0)
+				var yy := lerpf(top, bot, ph)
+				var sw := w * 0.86
+				draw_texture_rect(_fx_shine_tex, Rect2(cx - sw * 0.5, yy - 7.0, sw, 14.0), false,
+						Color(0.66, 0.93, 1.0, 0.60 * fade * (0.4 + 0.6 * (1.0 - ph))))
+		# ③ 炮口反冲：一炮打出去，顶端那团光最亮
+		# ④ 落点：青晕 + 白心 + 横向散光（激光打穿目标的那一下）
+		if _fx_glow_tex != null:
+			draw_texture_rect(_fx_glow_tex, Rect2(cx - 74, top - 12, 148, 62), false,
+					Color(0.70, 0.92, 1.0, 0.80 * fade))
+			# ① 大范围蓝晕 ② 卡面上那团白芯（竖直拉长 = 光束在这里被「顶住」）
+			draw_texture_rect(_fx_glow_tex,
+					Rect2(cx - 96 * grow, bot - 62 * grow, 192 * grow, 124 * grow), false,
+					Color(0.34, 0.66, 1.0, 0.70 * fade))
+			draw_texture_rect(_fx_glow_tex,
+					Rect2(cx - 30 * grow, bot - 64 * grow, 60 * grow, 128 * grow), false,
+					Color(0.82, 0.96, 1.0, 0.80 * fade))
+			draw_texture_rect(_fx_glow_tex,
+					Rect2(cx - 22 * grow, bot - 26 * grow, 44 * grow, 52 * grow), false,
+					Color(1, 1, 1, 0.95 * fade))
+			# ③ 横向散光：激光把目标「打穿」的那一下
+			draw_texture_rect(_fx_glow_tex, Rect2(cx - 132 * grow, bot - 10, 264 * grow, 20), false,
+					Color(0.52, 0.86, 1.0, 0.55 * fade))
+
+func _cannon_beam_land_for(cell: Vector2i) -> int:
+	## R449：这一格是不是正挨充能巨炮的激光？是 → 返回激光**落地时刻**（0 = 没有）。
+	## 给 `destroy` 用 —— 被点名的单位要等激光落下来才演击破，不能卡先炸开。
+	var hit := 0
+	for b: Dictionary in _cannon_beams:
+		if (b.get("cell", Vector2i(-1, -1)) as Vector2i) != cell:
+			continue
+		var ld := int(b.get("land", 0))
+		if ld > _now():
+			hit = maxi(hit, ld)
+	return hit
+
 func _meteor_land_for(pos: Vector2) -> int:
 	## R430：有没有一颗**还没落地**的流星砸在 `pos` 附近？返回它最晚的落地时刻（0 = 没有）。
 	## 给 destroy 用 —— 卡要等到砸中它那颗星落地之后才播击破。
@@ -13223,6 +13374,18 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 			var kl_pos: Vector2 = (d.pos as Vector2) + _scroll_dy(float(d.get("sc", _grid_scroll)))
 			_bursts.append({"pos": kl_pos, "sc": _grid_scroll, "start": n, "dur": 360,
 					"col": Color(0.92, 0.94, 1.0), "big": false})
+		"cannon_land":
+			# R449：激光落到目标格那一帧 —— 白光爆点 + 横向散光 + 震屏（冷色阶，与舰炮的
+			# 暖色一眼分得开）。被点中的单位由 `destroy` 分支延到这一刻才演击破。
+			sfx.play("attack")
+			_shake(8.0, 300)
+			var cl_c := _cell_center(d.get("cell", Vector2i(0, 0)))
+			_bursts.append({"pos": cl_c, "start": n, "dur": 540,
+					"col": Color("2f7bff"), "big": true})
+			_bursts.append({"pos": cl_c, "start": n + 55, "dur": 420,
+					"col": Color("9fe6ff"), "big": false})
+			_bursts.append({"pos": cl_c, "start": n + 110, "dur": 320,
+					"col": Color("ffffff"), "big": false})
 		"naval_land":
 			# R431：舰炮（9201）的**光柱落到列底**那一帧 —— 冲击环 / 地面散光 / 震屏。
 			# 每个受击单位的闪红 + 掉血 + 伤害数字由 `fx_hit` 跟着同一刻到（那笔的 `at`

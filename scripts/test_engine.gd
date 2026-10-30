@@ -17211,6 +17211,12 @@ func _init() -> void:
 			Vector2i(3, 2), GameEngine.SIDE_SELF)
 	r158_ce.enable_enemy_effects([CardData.from_dict(r158_cn.to_dict())])
 	r158_ce.start_game()
+	# R449：破坏**之前**先广播 cannon_fire —— 战斗表现层就靠这个动作起竖直炮击特效
+	# （炮口在画面顶端、落被点名的那一格）。漏了这条，引擎照打，画面又变回「卡凭空消失」。
+	var r158_fire_ev: Array = []
+	r158_ce.action.connect(func(k: String, d: Dictionary) -> void:
+		if k == "cannon_fire":
+			r158_fire_ev.append(d))
 	var r158_s0 := 0
 	for r158_cc: Vector2i in r158_ce.state.board:
 		if r158_ce.state.board[r158_cc].owner == GameEngine.SIDE_SELF:
@@ -17223,6 +17229,11 @@ func _init() -> void:
 			r158_s1 += 1
 	check(r158_s1 == r158_s0 - 1,
 			"R158 充能巨炮：敌方回合开始随机破坏一个我方单位（%d → %d）" % [r158_s0, r158_s1])
+	check(r158_fire_ev.size() == 1
+			and (r158_fire_ev[0].get("cell", Vector2i(-1, -1)) as Vector2i) != Vector2i(-1, -1)
+			and r158_fire_ev[0].get("card") is CardData
+			and str(r158_fire_ev[0].get("side", "")) == GameEngine.SIDE_SELF,
+			"R449 充能巨炮：破坏前广播 cannon_fire（cell / card / side 齐全），炮击特效的挂点")
 	# 反面：我方场上没有单位 → 空响，**不**转而伤害我方 HP
 	var r158_ce2 := _new_engine([], 30, 30)
 	r158_ce2.enable_enemy_effects([CardData.from_dict(r158_cn.to_dict())])
