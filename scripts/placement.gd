@@ -39,7 +39,7 @@ var fence_bonus_traits: Array[String] = []   # 同上，叠加时**新加进**�
 # ---- 改造（升级 8027，R82）：机械之心的「+2 攻 / +8 血」----
 # 同样是**只在场上有效**的加固：离场时由 _card_leaving_field 还原（不烤进 CardData，
 # 否则被击破后那张加过血的卡会永久留在弃牌区、再抽到仍是强化版）。
-# ⚠️ 加攻**不能**复用 atk_buff —— 那个被 GROW_CAP 封顶 5，且语义是「成长光环」；
+# ⚠️ 加攻**不能**复用 atk_buff —— 那个被 GROW_CAP 封顶 4，且语义是「成长光环」；
 # 改造要能无限叠（+2/+2/+2…），所以单开这个字段并直接进 effective_power。
 var upgrade_atk: int = 0      # 改造累计加攻（无上限）
 var upgrade_hp: int = 0       # 改造累计加血（含「素体被改造时额外 +1」那部分）

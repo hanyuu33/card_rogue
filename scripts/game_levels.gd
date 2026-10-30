@@ -632,7 +632,7 @@ static func _scrapyard() -> Dictionary:
 
 static func _legion() -> Dictionary:
 	## 精英敌人-困难：鸭子骑士×6（后排 3 + 前排 3），敌方开局启用效果卡
-	## 「鸭子之力」——所有友方每回合力量 +1，最多累计 +5。
+	## 「鸭子之力」——所有友方每回合力量 +1，最多累计 +4。
 	return {
 		"name": "骑士军团",
 		"key": "legion",

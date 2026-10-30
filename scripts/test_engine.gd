@@ -4987,8 +4987,8 @@ func _init() -> void:
 		eng_g.end_turn()
 		eng_g.end_turn()
 	var gk2 := eng_g.state.unit_at(Vector2i(2, 1))
-	check(gk2 != null and gk2.atk_buff == 5 and gk2.effective_power() == 10,
-			"成长上限：累计 +5 后不再增长（力量 5+5=10）")
+	check(gk2 != null and gk2.atk_buff == 4 and gk2.effective_power() == 9,
+			"成长上限：累计 +4 后不再增长（力量 5+4=9）")
 	check(eng_g.state.enemy_effects.size() == 1
 			and eng_g.state.enemy_effects[0].id == 9013,
 			"敌方效果区：鸭子之力持续生效中")
@@ -10446,7 +10446,7 @@ func _init() -> void:
 	for i in 6:
 		r63_f._hit_unit(r63_f_p, 10, "测试")
 	check(r63_f_p.end_atk == 7 and r63_f_p.effective_power() == 5 + 7,
-			"恶魔鸭：连续受伤 → 力量累加到 %d（不受 GROW_CAP=5 封顶）"
+			"恶魔鸭：连续受伤 → 力量累加到 %d（不受 GROW_CAP=4 封顶）"
 			% r63_f_p.effective_power())
 	# 打死就不再触发受伤反应（不该在尸体上加攻）
 	var r63_f_hp := r63_f_p.health

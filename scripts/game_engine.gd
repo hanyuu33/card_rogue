@@ -8,7 +8,7 @@ signal action(kind: String, data: Dictionary)
 const SIDE_SELF:= "self"
 const SIDE_OPPONENT:= "opponent"
 
-const GROW_CAP:= 5
+const GROW_CAP:= 4
 
 var state: FieldState
 var current_side:= SIDE_SELF
@@ -6323,7 +6323,7 @@ func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	##
 	## 加成**记在 Placement 上、绝不烤进 CardData**（与栅栏修复术 R67 同一条纪律）：
 	## 加攻进 `upgrade_atk`（直接进 effective_power，**不复用 atk_buff** ——
-	## 那个被 GROW_CAP=5 封顶且语义是「成长光环」，改造必须能无限叠）；
+	## 那个被 GROW_CAP=4 封顶且语义是「成长光环」，改造必须能无限叠）；
 	## 加血进 `upgrade_hp` 并同时抬 `p.card.health` 的**场上副本**与 `p.health`，
 	## 离场时由 `_card_leaving_field` 统一减回去。
 	##
