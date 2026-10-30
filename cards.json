@@ -5857,6 +5857,77 @@
       "target_mode": "none",
       "color": "白",
       "image": ""
+    },
+
+    {
+      "id": 9207,
+      "name": "量产型阿斯克勒庇厄斯",
+      "kind": "盟友",
+      "cost": 6,
+      "power": 7,
+      "health": 50,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "机械",
+        "量产护甲"
+      ],
+      "affixes": [],
+      "effect_text": "每回合获得 10 护甲。获得前若已有护甲，则力量 +1。",
+      "target_mode": "none",
+      "value": 10,
+      "color": "金",
+      "image": ""
+    },
+
+    {
+      "id": 9208,
+      "name": "母舰",
+      "kind": "盟友",
+      "cost": 8,
+      "power": 0,
+      "health": 60,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "机械",
+        "母舰"
+      ],
+      "affixes": [],
+      "effect_text": "免疫所有伤害。场上每个友方单位被破坏时，在此卡旁边召唤一个相同单位，并使此卡生命 -10。此卡被破坏时，对手胜利。",
+      "target_mode": "none",
+      "value": 10,
+      "color": "金",
+      "image": ""
+    },
+
+    {
+      "id": 9209,
+      "name": "空袭",
+      "kind": "效果",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "空袭"
+      ],
+      "affixes": [],
+      "effect_text": "玩家回合开始时随机标记 5 个格子。敌方行动前，标记格上的玩家单位受到 10 点伤害，每回合此伤害 +2。",
+      "target_mode": "none",
+      "value": 10,
+      "color": "红",
+      "image": ""
     }
   ]
 }

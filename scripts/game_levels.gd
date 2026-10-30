@@ -74,16 +74,17 @@ static func level_names() -> Array[String]:
 
 
 static func builtin_levels() -> Array:
-	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×8（第一层 4 + 第二层 4）→
-	## 精英简单×5（第一层 3 + 第二层 2；R449 哈气骑士团下调一层）→ 精英困难×5（第一层 2 + 第二层 3）→
-	## Boss×6（第一层 3 + 第二层 2 + 第三层 1）。合计 33 关（R174 百眼动员进第二层普通简单；
-	## R340 永夜鸭群进第一层精英困难；**R356 启示者进第三层**）。
+	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×9（第一层 4 + 第二层 5）→
+	## 精英简单×6（第一层 3 + 第二层 3；R449 哈气骑士团下调一层）→ 精英困难×6（第一层 3 + 第二层 3）→
+	## Boss×6（第一层 3 + 第二层 2 + 第三层 1）。合计 35 关（R174 百眼动员进第二层普通简单；
+	## R340 永夜鸭群进第一层精英困难；**R356 启示者进第三层**；**R451 母舰空袭进第二层精英简单**）。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_frost_line(), _assembly_line(), _mass_anvil(), _argos_mobilize(),
 		_knight_charge(), _wizard(), _white_mage_guard(), _night_ducks(),
 			_sun_forge(), _hecaton(), _undead_legion(), _twin_cannon(),
 		_captain(), _duck_kiln(), _breath_charge(), _hermes(), _dragon_nest(),
+			_mothership_air_raid(),
 		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(), _asclepius(),
 		_boss_dragon(), _boss_demon_duck(), _boss_duck_darkside(),
 			_mech_duck_boss(), _hephaestus(), _scrapyard(), _eternal_night(),
@@ -919,6 +920,49 @@ static func _hermes() -> Dictionary:
 		],
 		"tutorial": [],
 	}
+
+static func _mothership_air_raid() -> Dictionary:
+	## 第二层·精英敌人-简单（R451「母舰空袭」）：空袭效果卡 + 前排两只量产型阿斯克勒庇厄斯
+	## + 中排中央一只量产型阿尔戈斯 + 后排中央一条母舰。
+	##   * 空袭 9209（效果卡）：**玩家回合开始**随机标记 5 格 → **敌方行动前**（敌方回合开始）
+	##     标记格上的玩家单位各吃 10 点，每结算一轮 +2（10 / 12 / 14…）。
+	##     标记格上没有单位就**空响**，不转打玩家 HP。
+	##   * 量产型阿斯克勒庇厄斯 9207（7/50 程1 速1）×2 顶前排：每回合 +10 护甲；
+	##     获得前**已有护甲**则力量 +1 —— 从第 2 个敌方回合起就是「护甲越屯越厚 + 攻击每回合 +1」，
+	##     不速拆就越拖越硬（护甲只记 Placement，不写回卡面）。
+	##   * 量产型阿尔戈斯 9142（7/35 程2 速2）坐中排中央：攻击命中单位时在后排召唤一只
+	##     移速 +1 的量产型俄倪厄（每个阿尔戈斯每场一次）。
+	##   * 母舰 9208（0/60 速0 程0）坐后排中央：**免疫所有伤害**，掉血只有一条路 ——
+	##     场上每个友方单位被破坏时，在它旁边补一份同款复制并自身生命 -10。
+	##     60 ÷ 10 = 玩家要凑够 **6 次击破**；而每击破一只就补一只，所以「清场速度」就是这关的题面。
+	##     **母舰被破坏 = 玩家立刻胜利**（`win_on_boss`），所以敌方 HP 设 ∞（不能靠直击 HP 绕过去）。
+	## ⚠️ 站位的键是 `Vector2i(行, 列)`：敌方占 row 0~2，row 0 = 最后排、row 2 = 最前排。
+	## ⚠️ 数组顺序：母舰写在最前（复制品要往它旁边落，先上场省得缺格判空）。
+	return {
+		"name": "母舰空袭",
+		"key": "air_raid",
+		"tier": TIER_ELITE_EASY,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"intro": "……警报响了。抬头。",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"enemy_hp_infinite": true,
+		"win_on_boss": 9208,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9208, "母舰", 0, 60, 0, 0, Vector2i(0, 1)],
+			[9142, "量产型阿尔戈斯", 7, 35, 2, 2, Vector2i(1, 1)],
+			[9207, "量产型阿斯克勒庇厄斯", 7, 50, 1, 1, Vector2i(2, 0)],
+			[9207, "量产型阿斯克勒庇厄斯", 7, 50, 1, 1, Vector2i(2, 2)],
+		],
+		"enemy_effects": [9209],
+		"tutorial": [],
+	}
+
 
 static func _asclepius() -> Dictionary:
 	## 第二层·精英敌人-困难（R162）：后排中央一只阿斯克勒庇厄斯

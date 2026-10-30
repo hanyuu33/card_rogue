@@ -8567,6 +8567,7 @@ func _draw() -> void:
 	_draw_dying()
 	_draw_flashes()
 	_draw_ghosts()
+	_draw_air_raid_marks()   # R451：空袭标记格（红色准星）—— 在可点高亮之下
 	_draw_highlights()
 	_draw_bursts()
 	_draw_cues()          # R288：通用效果演出（脉冲 / 光带 / 卡名）—— 压在卡牌之上才看得见
@@ -8848,6 +8849,53 @@ func _board_has_pulsing_field() -> bool:
 		if not GameEngine.is_persistent_field(engine.state.field_at(c)):
 			return true
 	return false
+
+
+func _draw_air_raid_marks() -> void:
+	## R451：空袭（9209，敌方效果卡）的**标记格** —— 玩家回合开始时引擎随机点 5 格，
+	## 敌方行动前逐一砸落。
+	## 画法刻意与「场地（陷阱）」区分开：陷阱是斜纹底 + 名字角标，空袭是**红色准星**
+	## （四角括号 + 中心十字）+ 呼吸描边 —— 读成「这一格被点名了」，而不是「这格埋了东西」。
+	## 判据只读 `engine.state.air_raid_cells`（引擎是唯一数据源）；伤害数字读
+	## `engine.air_raid_damage()` —— 界面**绝不**自己算 10 + 2n，两处口径分叉就会变成
+	## 「角标写 12、实际掉 10」。
+	if engine == null:
+		return
+	var cells: Array[Vector2i] = engine.state.air_raid_cells
+	if cells.is_empty():
+		return
+	var t := float(_now()) / 1000.0
+	var pulse := (sin(t * 3.4) + 1.0) * 0.5
+	var col := Color(1.0, 0.34, 0.26, 0.55 + pulse * 0.40)
+	var cross_col := Color(1.0, 0.42, 0.32, 0.70 + pulse * 0.30)
+	var arm := 11.0
+	var inset := 5.0
+	for cell: Vector2i in cells:
+		var rect := _cell_rect(cell)
+		var a := rect.position + Vector2(inset, inset)
+		var b := rect.position + rect.size - Vector2(inset, inset)
+		# 四角括号
+		draw_line(a, a + Vector2(arm, 0), col, 2.5)
+		draw_line(a, a + Vector2(0, arm), col, 2.5)
+		draw_line(Vector2(b.x, a.y), Vector2(b.x - arm, a.y), col, 2.5)
+		draw_line(Vector2(b.x, a.y), Vector2(b.x, a.y + arm), col, 2.5)
+		draw_line(Vector2(a.x, b.y), Vector2(a.x + arm, b.y), col, 2.5)
+		draw_line(Vector2(a.x, b.y), Vector2(a.x, b.y - arm), col, 2.5)
+		draw_line(b, b - Vector2(arm, 0), col, 2.5)
+		draw_line(b, b - Vector2(0, arm), col, 2.5)
+		# 中心十字：只画四段短线，别拉满整格 —— 拉满会把卡面糊掉
+		var c := rect.position + rect.size * 0.5
+		for d in [Vector2(1.0, 0.0), Vector2(0.0, 1.0)]:
+			draw_line(c - d * 10.0, c - d * 4.0, cross_col, 2.0)
+			draw_line(c + d * 4.0, c + d * 10.0, cross_col, 2.0)
+	# 角标只写一次：挂在这批标记格**外接框的上沿居中**（夹在棋盘可视范围内），
+	# 写「空袭 -N」—— N 是这一轮真正会落下来的伤害（含每回合 +2）。
+	# ⚠️ 原来塞在第一个格子的右下角：9px 红字压在卡面描边和数值徽章上，实机基本读不出来。
+	var tag := "空袭 -%d" % engine.air_raid_damage()
+	var bbox := _cells_bbox(cells)
+	var tag_pos := Vector2(bbox.position.x + bbox.size.x * 0.5,
+			maxf(GRID_Y + 13.0, bbox.position.y - 3.0))
+	_draw_string_box_center(_font_bold, UI_FS_LABEL, tag, tag_pos, Color(1.0, 0.88, 0.82))
 
 
 func _draw_field_markers() -> void:

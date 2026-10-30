@@ -366,6 +366,30 @@ const ASCLEPIUS_TRAIT:= "护甲积攒"
 const ASCLEPIUS_ARMOR:= 16
 const ASCLEPIUS_GROWTH_ATK:= 1
 
+# ---- R451：第二层·精英简单「母舰空袭」（9207 / 9208 / 9209）----
+# 三件新东西，各挂一个唯一口：
+#   ① 量产型阿斯克勒庇厄斯 9207（盟友 7/50 程1 速1）：**该方回合开始**时若已有护甲则力量 +1，
+#      然后获得 10 护甲。与本体 9141「护甲积攒」**不是同一条**（本体把护甲清零换成一发爆发），
+#      所以判据按 id 分派，别合并成一个函数。
+#   ② 母舰 9208（盟友 0/60 速0 程0）：**免疫所有伤害**（`_unit_damage_taken()` 与预览镜像
+#      `preview_hit_damage()` 各一条）；**场上每个友方单位被破坏**时在它旁边补一份同款复制
+#      并自身生命 -10（**直接扣健康**，不走伤害通道 —— 否则被自己的免疫挡掉）；
+#      生命归零被破坏 → 关卡 `win_on_boss` 判「玩家胜利」。
+#   ③ 空袭 9209（效果卡）：**玩家回合开始**随机标记 5 格；**敌方行动前**（= 敌方回合开始）
+#      对标记格上的**玩家单位**各 10 点伤害，每结算一轮 +2。只打玩家单位；
+#      标记格空了就**空响、不转打玩家 HP**（与舰炮 9201 的口径正好相反）。
+const MASS_ASCLEPIUS_ID:= 9207
+const MASS_ASCLEPIUS_ARMOR:= 10        # 兜底值：正常取卡面 value（同值 10）
+const MOTHERSHIP_ID:= 9208
+const MOTHERSHIP_TRAIT:= "母舰"         # 免疫伤害只认这个 trait（不认 id，便于以后复用）
+const MOTHERSHIP_LOSS:= 10             # 每个友方被破坏，自身生命 -N（卡面 value 同值）
+const AIR_RAID_CARD_ID:= 9209
+const AIR_RAID_TRAIT:= "空袭"
+const AIR_RAID_MARKS:= 5               # 每轮标记格数
+const AIR_RAID_DMG:= 10                # 基础伤害（卡面 value 同值）
+const AIR_RAID_STEP:= 2                # 每结算一轮递增
+
+
 # ---- R159：AI 角色分类（按卡面能力，不走复杂收益计算）----
 # 分类只读 card/traits/kind/value，不依赖 Placement 状态；结果用于目标优先级与移动倾向。
 const AI_ROLE_TANK:= "tank"               # 嘲讽 / 工事 / 血厚低速：优先抗线，最后才打
@@ -1920,7 +1944,13 @@ func _check_game_over() -> bool:
 	# R356：击破启示者即通关。**排在「清场」之前** —— 三阶段打完场上还剩一堆量产型，
 	# 用清场判等于要求玩家把它们也扫干净，那不是这张关卡的题面。
 	if win_on_boss > 0 and _cell_of_unit(win_on_boss) == Vector2i(-1, -1):
-		_finish("胜利", "击破启示者")
+		# R451：文案改成按 id 取卡名 —— 原来写死「击破启示者」，母舰空袭（win_on_boss =
+		# 母舰 9208）通关时会报成击破启示者。取不到卡名时退回泛称，不影响胜负判定。
+		var boss_name := "敌方首脑"
+		var boss_card: CardData = CardRepo.load_json().get_card(win_on_boss)
+		if boss_card != null:
+			boss_name = boss_card.card_name
+		_finish("胜利", "击破%s" % boss_name)
 		return true
 	if state.clear_win and _side_cells(SIDE_OPPONENT).is_empty():
 		_finish("胜利", "敌方场上单位全灭")
@@ -2171,6 +2201,7 @@ func _begin_turn(side: String) -> void :
 		_familiar_growth(SIDE_SELF)   # 使魔之力 9115：回合开始使魔鸭子 +1
 		_apply_mech_growth(SIDE_SELF)
 		_asclepius_armor_tick(SIDE_SELF)   # R162：护甲积攒结算
+		_mass_asclepius_tick(SIDE_SELF)   # R451 量产型阿斯克勒庇厄斯 9207：已有护甲则 +1 攻，再 +10 护甲
 		# ── ② R122：**召唤**排在成长之后 ──
 		# 「回合开始成长」算的是**这一刻已在场**的单位；刚召唤出来的单位这一回合才上场，
 		# 成长结算时它还不存在 → 它不该吃到本回合的这一口（用户：召唤的使魔
@@ -2179,6 +2210,7 @@ func _begin_turn(side: String) -> void :
 		_effect_summons(SIDE_SELF)
 		_assembly_tick(SIDE_SELF)     # 流水线装配 9147（R219，对称保留）
 		_emergency_call()             # R356 紧急呼叫 9203：**玩家**回合开始 → 启示者身边召唤量产型
+		_air_raid_mark(SIDE_SELF)     # R451 空袭 9209：玩家回合开始随机标记 5 格
 		_demon_summon(SIDE_SELF)      # 恶魔使魔 9117：每 2 回合随机空格召唤使魔鸭子
 		_auto_upgrade(SIDE_SELF)          # 自主升级 8045（R95）：回合开始随机改造抽牌堆 1 张
 		_breach_tick(SIDE_SELF)           # R231 破绽：己方俄倪厄往对方卡组塞诅咒（对称保留）
@@ -2241,6 +2273,7 @@ func _begin_turn(side: String) -> void :
 		_familiar_growth(SIDE_OPPONENT)   # 使魔之力 9115：回合开始使魔鸭子 +1
 		_apply_mech_growth(SIDE_OPPONENT)
 		_asclepius_armor_tick(SIDE_OPPONENT)   # R162：护甲积攒结算
+		_mass_asclepius_tick(SIDE_OPPONENT)   # R451 量产型阿斯克勒庇厄斯 9207
 		# ── ② R122：召唤排在成长之后（同我方）──
 		_summon_familiars(SIDE_OPPONENT)
 		_effect_summons(SIDE_OPPONENT)
@@ -2262,6 +2295,7 @@ func _begin_turn(side: String) -> void :
 		_assassin_summon(SIDE_OPPONENT)
 		_cannon_fire(SIDE_OPPONENT)   # R158 充能巨炮 9139：己方回合开始随机破坏一个我方单位
 		_naval_gun(SIDE_OPPONENT)     # R356 舰炮 9201：阶段 1，每回合随机轰击一列
+		_air_raid_fire(SIDE_OPPONENT)   # R451 空袭 9209：敌方行动前砸标记格（只打玩家单位）
 		_revelator_phase_tick(SIDE_OPPONENT)   # R356 阶段 1「自身效果」：每个回合力量 +1
 		_refresh_dark_lord(SIDE_OPPONENT)
 		_refresh_hecaton(SIDE_OPPONENT)
@@ -2888,6 +2922,142 @@ func _asclepius_armor_tick(side: String) -> void:
 		_log("护甲积攒：%s 获得 %d 护甲（现 %d）" % [p.card.card_name, ASCLEPIUS_ARMOR, p.armor])
 		action.emit("armor_gain", {"cell": cell, "card": p.card, "side": side,
 				"armor": p.armor, "gained": ASCLEPIUS_ARMOR})
+
+
+func air_raid_damage() -> int:
+	## R451：空袭这一轮的**落地值** = 卡面 value + 已结算轮数 × AIR_RAID_STEP（10 → 12 → 14…）。
+	## 界面（battle_scene 的标记角标）读它 —— 别在界面里自己算，两处口径一定会分叉。
+	## 效果区里没有空袭卡 → 返回基础值（调用方都会先判 `_zone_has`，这里只是不给 0 添麻烦）。
+	var base := AIR_RAID_DMG
+	for c: CardData in state.enemy_effects:
+		if c.traits.has(AIR_RAID_TRAIT) and c.value > 0:
+			base = c.value
+			break
+	return base + state.air_raid_turns * AIR_RAID_STEP
+
+
+func _air_raid_mark(side: String) -> void:
+	## R451：空袭 9209 —— **玩家回合开始**随机标记 AIR_RAID_MARKS 个格子。
+	## 标记从**整块棋盘**（6×3 = 18 格）里无放回地抽，**不按阵营筛**：题面就是「随机标记」，
+	## 落在敌方格上等于浪费一个标记（结算时只认玩家单位）。
+	## 随机走引擎 `rng` → 回放同种子可复现（与舰炮 9201 / 巨炮 9139 同一口径）。
+	## ⚠️ 只认**对方**效果区里的空袭卡（我方正常拿不到这张卡）。
+	if side != SIDE_SELF:
+		return
+	if not _zone_has(state.enemy_effects, AIR_RAID_TRAIT):
+		return
+	var pool: Array[Vector2i] = []
+	for r: int in FieldState.BOARD_ROWS:
+		for c: int in FieldState.BOARD_COLS:
+			pool.append(Vector2i(r, c))
+	state.air_raid_cells.clear()
+	var n: int = mini(AIR_RAID_MARKS, pool.size())
+	for i: int in n:
+		var idx: int = rng.randi_range(0, pool.size() - 1)
+		state.air_raid_cells.append(pool[idx])
+		pool.remove_at(idx)
+	_log("空袭：随机标记 %d 个格子（下一轮落地 %d 点）" % [
+			state.air_raid_cells.size(), air_raid_damage()])
+	action.emit("air_raid_mark", {"cells": state.air_raid_cells.duplicate(),
+			"damage": air_raid_damage(), "side": side})
+
+
+func _air_raid_fire(side: String) -> void:
+	## R451：空袭结算 —— 挂**敌方回合开始**（AI 还没动 = 题面的「敌人行动前」）。
+	## 口径（2026-10-30 用户确认）：
+	##   ① 只打标记格上的**玩家单位**，敌方单位一个都不伤（敌方效果不自伤）；
+	##   ② 标记格上没有单位 → **空响**，**绝不转打玩家 HP**（舰炮 9201 是「整列没目标改打 HP」，
+	##      这条正好相反，别照抄那段）；
+	##   ③ 每结算一轮，下一轮伤害 +AIR_RAID_STEP（记 `state.air_raid_turns`）。
+	## 结算完清空标记 → 玩家回合开始再重新抽 5 格。
+	if side != SIDE_OPPONENT:
+		return
+	if not _zone_has(state.enemy_effects, AIR_RAID_TRAIT):
+		return
+	if state.air_raid_cells.is_empty():
+		_log("空袭：本回合没有标记格（空响）")
+		return
+	var dmg := air_raid_damage()
+	var hits: Array[Vector2i] = []
+	for cell: Vector2i in state.air_raid_cells:
+		var q: Placement = state.unit_at(cell)
+		if q == null or q.owner != SIDE_SELF:
+			continue
+		hits.append(cell)
+	action.emit("air_raid_hit", {"cells": state.air_raid_cells.duplicate(),
+			"hits": hits.duplicate(), "damage": dmg, "side": side})
+	if hits.is_empty():
+		_log("空袭：%d 个标记格上没有我方单位 → 空响（不转打 HP）" % state.air_raid_cells.size())
+	else:
+		_log("空袭：%d 个标记格命中，各 %d 点" % [hits.size(), dmg])
+		var seq := 0
+		for cell2: Vector2i in hits:
+			var q2: Placement = state.unit_at(cell2)
+			if q2 == null or q2.owner != SIDE_SELF:
+				continue
+			_hit_unit(q2, dmg, "空袭", true, false, seq)
+			seq += 1
+		_destroy_dead()
+	state.air_raid_cells.clear()
+	state.air_raid_turns += 1
+
+
+func _mass_asclepius_tick(side: String) -> void:
+	## R451：量产型阿斯克勒庇厄斯（9207）——该方**回合开始**时：
+	##   ① 先判「获得前有没有护甲」：有 → 力量 +1（`Placement.atk_buff`，本场有效、
+	##      离场随单位消失，不写回 CardData）；② 然后 +10 护甲。
+	## 与本体 9141「护甲积攒」**不是同一条**：本体把护甲清零换成一发爆发伤害，
+	## 量产型只屯不爆 —— 判据各按自己的 id 分派，别合并成一个函数。
+	## 护甲本身仍是 `Placement.armor`，受击时由 `_unit_damage_taken()` 优先吸收（共用唯一口）。
+	for cell: Vector2i in state.board:
+		var p: Placement = state.board[cell]
+		if p.owner != side or p.card == null or p.card.id != MASS_ASCLEPIUS_ID:
+			continue
+		if p.armor > 0:
+			p.atk_buff += 1
+			_log("量产护甲：%s 已有护甲 → 力量 +1（现 %d）" % [
+					p.card.card_name, p.effective_power()])
+		var gain: int = p.card.value if p.card.value > 0 else MASS_ASCLEPIUS_ARMOR
+		p.armor += gain
+		_log("量产护甲：%s 获得 %d 护甲（现 %d）" % [p.card.card_name, gain, p.armor])
+		action.emit("armor_gain", {"cell": cell, "card": p.card, "side": side,
+				"armor": p.armor, "gained": gain})
+
+
+func _mothership_on_ally_death(victim: Placement) -> void:
+	## R451：母舰 9208 —— 场上每个**友方单位**被破坏时：在它旁边补一份同款复制，并自身生命 -10。
+	## ⚠️ 三条纪律（改这条机制前先读完）：
+	##   ① 「-10」是**直接扣 `Placement.health`**，不走 `_hit_unit()` —— 它免疫所有伤害，
+	##      走伤害通道会被自己的免疫挡掉，永远掉不了血。这是整关的核心判据，别「顺手统一」；
+	##   ② 母舰**自己**不算「友方」：判据先排掉 victim 就是母舰（否则它会不停地照着自己召）；
+	##   ③ 复制品再被破坏会再触发一次 —— 这是题面（60 ÷ 10 = 玩家要清掉 6 个单位），不是递归 bug。
+	## 落点走 `_free_cell_near()`（先四邻，再退到己方半场任意空格）；半场全满 → 这次补造失败，
+	## 但**照样** -10（题面是「每个友方被破坏就掉 10」，不以是否召出为前提）。
+	if victim == null or victim.card == null:
+		return
+	if victim.owner != SIDE_OPPONENT or victim.card.id == MOTHERSHIP_ID:
+		return
+	var mcell := _cell_of_unit(MOTHERSHIP_ID)
+	if mcell == Vector2i(-1, -1):
+		return
+	var ship: Placement = state.unit_at(mcell)
+	if ship == null:
+		return
+	var spot := _free_cell_near(mcell, SIDE_OPPONENT)
+	if spot != Vector2i(-1, -1):
+		var spawned: Placement = state.place(victim.card, spot, SIDE_OPPONENT, true)
+		_log("母舰：为 %s 补造一份复制（%s）" % [victim.card.card_name, spot])
+		action.emit("place", {"cell": spot, "card": victim.card, "side": SIDE_OPPONENT})
+		_on_ally_entered(spawned, SIDE_OPPONENT)
+	else:
+		_log("母舰：己方半场没有空格，这次补造失败")
+	ship.health -= MOTHERSHIP_LOSS
+	_log("母舰：友方被破坏 → 自身生命 -%d（%d/%d）" % [
+			MOTHERSHIP_LOSS, maxi(0, ship.health), ship.card.health])
+	action.emit("mothership_loss", {"cell": mcell, "card": ship.card,
+			"health": ship.health, "loss": MOTHERSHIP_LOSS})
+	if ship.health <= 0:
+		_destroy(mcell)
 
 
 func _max_buff(side: String) -> int:
@@ -10985,6 +11155,12 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 	##   → ③ 量产型赫利俄斯光环（仅技能，R152）→ ④ 道具减伤（护心 6006，仅己方）。
 	## ⚠️ 只有 `amount > 0` 才减：否则 `maxi(1, 0 - 1)` 会把「0 伤害」**加成 1 点**。
 	var dmg:= amount
+	# ⓪ R451 母舰（9208）：**免疫所有伤害** —— 排在减伤链**最前面**：连减伤 / 护甲都不该被它
+	#   触发（它掉血只有一条路：友方被破坏时引擎**直接扣** `Placement.health`，
+	#   见 `_mothership_on_ally_death()`）。放在护甲那一步之后会被护甲先吃掉一层，属于错口径。
+	if p != null and p.card != null and dmg > 0 and p.card.traits.has(MOTHERSHIP_TRAIT):
+		_log("%s：免疫所有伤害（挡下 %d 点）" % [p.card.card_name, dmg])
+		return 0
 	if p != null and p.card != null and dmg > 0 and p.card.traits.has(RHINO_TRAIT):
 		var before:= dmg
 		dmg = maxi(1, dmg - RHINO_DAMAGE_REDUCE)
@@ -11118,6 +11294,10 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 		return {"dmg": 0, "tag": ""}
 	# ② 一次性防御：`_hit_unit` 与 `_op_deal_damage` 对它们处理不同（单目标技能卡**不**消耗
 	#    能量屏障、**不**被护盾生成器转发）→ 预览不去猜走的是哪条路，一律不报数字。
+	# ⓪b R451 母舰：免疫所有伤害 → 预览直接 0（与 `_unit_damage_taken()` 同一条判据，
+	#     顺序也一致：都在减伤链之前）。
+	if p.card.traits.has(MOTHERSHIP_TRAIT):
+		return {"dmg": 0, "tag": "免疫所有伤害"}
 	if p.first_hit_shield:
 		return {"dmg": PREVIEW_NO_DMG, "tag": "免疫下一次伤害"}
 	if _shield_gen_for(p) != null:
@@ -13049,6 +13229,9 @@ func _settle_death(cell: Vector2i, p: Placement, rec_ok: bool, rec_power: int,
 	if p.card.id == BLAZE_DUCK_ID:
 		_death_blast(cell, BLAZE_DUCK_DAMAGE, p.card)
 	_deathrattle(cell, p)
+	# R451 母舰 9208：场上每个友方单位被破坏 → 旁边补一份复制 + 自身生命 -10。
+	# 挂在 `_settle_death()` 里（= 亡语那一批），所以「击破演出演完才结算」的口径一致。
+	_mothership_on_ally_death(p)
 	_check_game_over()
 	# R96：零件回收者 —— 被销毁的是己方「素体以外」盟友/工事时，连通块内的回收者回收其力量 + 手牌加素体。
 	if rec_ok:

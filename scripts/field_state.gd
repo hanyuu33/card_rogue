@@ -77,6 +77,13 @@ var field_effects := {}
 # 每个场地是**谁放的**（SIDE_SELF / SIDE_OPPONENT）。归属判据（场地精通加成按主人的
 # 效果区算、界面按主人配色）都读它，不能按「谁踩上去」取 —— 否则敌方踩我方场地会替我结算。
 var field_owner := {}
+	## R451：空袭（9209，敌方效果卡）——**玩家回合开始**随机标记的格子。
+	## 只记坐标、不记卡：标记只是「这些格子下回合要挨炸」的临时指令，与 `field_effects`
+	## （那格真的挂着一张场地卡）是两回事，别混成一张表。
+var air_raid_cells: Array[Vector2i] = []
+	## R451：空袭已经结算过几轮 → 落地值 = 卡面 value + 本值 × GameEngine.AIR_RAID_STEP。
+var air_raid_turns := 0
+
 var hp_self := 20
 var hp_opponent := 20
 ## R234 止血绷带（6029）：本场战斗中我方 HP **实际**受到的伤害合计（每场 FieldState 新建即清零）。
@@ -556,6 +563,8 @@ func save_dict() -> Dictionary:
 		"enemy_effects": _cards_save(enemy_effects),
 		"board": _board_save(),
 		"fields": _fields_save(),
+		"air_raid_cells": _air_raid_save(),
+		"air_raid_turns": air_raid_turns,
 	}
 	if rng != null:
 		d["rng_seed"] = rng.seed
@@ -613,6 +622,13 @@ func apply_dict(d: Dictionary) -> void:
 			var cell2 := Vector2i(int(item2["r"]), int(item2["c"]))
 			field_effects[cell2] = CardData.from_dict(item2["card"])
 			field_owner[cell2] = str(item2.get("owner", "self"))
+	air_raid_cells.clear()
+	var ar: Variant = d.get("air_raid_cells", [])
+	if ar is Array:
+		for item3: Variant in ar:
+			if item3 is Dictionary:
+				air_raid_cells.append(Vector2i(int(item3["r"]), int(item3["c"])))
+	air_raid_turns = int(d.get("air_raid_turns", air_raid_turns))
 	# 洗牌随机源：续档后继续抽牌 / 触发的随机必须接着同一条链（否则续档 = 换牌序）
 	if d.has("rng_seed") and rng != null:
 		rng.seed = int(d["rng_seed"])
@@ -643,6 +659,14 @@ func _board_save() -> Array:
 		if p == null:
 			continue
 		out.append({"r": cell.x, "c": cell.y, "p": p.to_save()})
+	return out
+
+
+func _air_raid_save() -> Array:
+	## R451：空袭标记格的存档形态（与 `_board_save` 同款 {"r","c"}）。
+	var out: Array = []
+	for cell: Vector2i in air_raid_cells:
+		out.append({"r": cell.x, "c": cell.y})
 	return out
 
 

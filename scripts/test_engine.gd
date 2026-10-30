@@ -148,8 +148,8 @@ func _init() -> void:
 	check(int(counts.get(8001, 0)) == 5 and int(counts.get(8002, 0)) == 5
 			and int(counts.get(8003, 0)) == 2 and int(counts.get(8004, 0)) == 1,
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
-	check(repo.all_cards().size() == 282,
-			"图鉴 = 282 张（R446 +雪豹 8081（第一层事件「雪豹出现」选项 2）；R429 删魔法学徒 9081 −1；R393 +赏金猎人 9204 / 猎杀 9205 / 秃鹰 9206（本局永久击杀成长三卡）；R406 +独行 9189（暗影刺客 · 2 费普通技能）；R404 +涂装机器人 8080（机械之心 · 稀有盟友）；R397 +量产型赫尔墨斯 9188（敌方 · 装甲运输车）；R381 +漩涡 9186 / 鹅 9187（森林精魄剧情卡 · 默认锁定）；R373 +麻痹 9185（0 费诅咒 · 不能打出 · 回合结束仍在手牌即消失）；R370 +库存整理 9184（机械之心史诗技能）；R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
+	check(repo.all_cards().size() == 285,
+			"图鉴 = 285 张（R451 +量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209（第二层精英简单「母舰空袭」）；R446 +雪豹 8081（第一层事件「雪豹出现」选项 2）；R429 删魔法学徒 9081 −1；R393 +赏金猎人 9204 / 猎杀 9205 / 秃鹰 9206（本局永久击杀成长三卡）；R406 +独行 9189（暗影刺客 · 2 费普通技能）；R404 +涂装机器人 8080（机械之心 · 稀有盟友）；R397 +量产型赫尔墨斯 9188（敌方 · 装甲运输车）；R381 +漩涡 9186 / 鹅 9187（森林精魄剧情卡 · 默认锁定）；R373 +麻痹 9185（0 费诅咒 · 不能打出 · 回合结束仍在手牌即消失）；R370 +库存整理 9184（机械之心史诗技能）；R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
 			% repo.all_cards().size())
 	# ---- 图鉴分组（R36）：玩家卡牌图鉴 / 敌人图鉴（含敌方关卡效果）----
 	# 分组写在 cards.json 的 group 字段（player / enemy），CardRepo.by_group 读取。
@@ -162,8 +162,8 @@ func _init() -> void:
 			"图鉴分组：%d 张卡都有合法 group（player/enemy），异常 %s" % [grp_all.size(), str(grp_bad)])
 	var grp_player := repo.player_cards()
 	var grp_enemy := repo.enemy_cards()
-	check(grp_player.size() == 223 and grp_enemy.size() == 59,
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 223 / 59；R393 +3 张玩家卡；R406 +1 张玩家卡（独行 9189）；R404 +1 张玩家卡（涂装机器人 8080）；R397 +1 张敌方卡（量产型赫尔墨斯 9188）；R381 +2 张玩家卡（漩涡 9186 / 鹅 9187）；R373 +1 张玩家卡（麻痹 9185 · 诅咒）；R370 +1 张玩家卡（库存整理 9184）；R356 +4 张敌方卡（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫）；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
+	check(grp_player.size() == 223 and grp_enemy.size() == 62,
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 223 / 62；R451 +3 张敌方卡（量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209）；R393 +3 张玩家卡；R406 +1 张玩家卡（独行 9189）；R404 +1 张玩家卡（涂装机器人 8080）；R397 +1 张敌方卡（量产型赫尔墨斯 9188）；R381 +2 张玩家卡（漩涡 9186 / 鹅 9187）；R373 +1 张玩家卡（麻痹 9185 · 诅咒）；R370 +1 张玩家卡（库存整理 9184）；R356 +4 张敌方卡（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫）；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
 			% [grp_player.size(), grp_enemy.size()])
 	check(grp_player.size() + grp_enemy.size() == grp_all.size(),
 			"图鉴分组：两组之和 = 全部 %d 张（不重不漏）" % grp_all.size())
@@ -176,12 +176,13 @@ func _init() -> void:
 	for c: CardData in grp_enemy:
 		if c.is_level_effect():
 			enemy_eff.append(c.id)
-	check(enemy_eff.size() == 13 and enemy_eff.has(9013) and enemy_eff.has(9015)
+	check(enemy_eff.size() == 14 and enemy_eff.has(9013) and enemy_eff.has(9015)
 			and enemy_eff.has(9024) and enemy_eff.has(9049) and enemy_eff.has(9115)
 			and enemy_eff.has(9117) and enemy_eff.has(9125) and enemy_eff.has(9139)
 			and enemy_eff.has(9147) and enemy_eff.has(9178)
-			and enemy_eff.has(9201) and enemy_eff.has(9202) and enemy_eff.has(9203),
-			"图鉴分组：敌人图鉴含 13 张敌方关卡效果 9013/9015/9024/9049/9115/9117/9125/**9139 充能巨炮 R158**/**9147 流水线装配 R219**/**9178 永夜 R340**/**9201 舰炮 · 9202 电磁屏障 · 9203 紧急呼叫（R356 启示者三阶段）**（实际 %s）" % str(enemy_eff))
+			and enemy_eff.has(9201) and enemy_eff.has(9202) and enemy_eff.has(9203)
+			and enemy_eff.has(9209),
+			"图鉴分组：敌人图鉴含 14 张敌方关卡效果 9013/9015/9024/9049/9115/9117/9125/**9139 充能巨炮 R158**/**9147 流水线装配 R219**/**9178 永夜 R340**/**9201 舰炮 · 9202 电磁屏障 · 9203 紧急呼叫（R356 启示者三阶段）**/**9209 空袭（R451 母舰空袭）**（实际 %s）" % str(enemy_eff))
 	check(repo.get_card(9022).group == "player" and repo.get_card(9044).group == "player"
 			and repo.get_card(9072).group == "player" and repo.get_card(9018).group == "player"
 			and repo.get_card(9023).group == "player" and repo.get_card(9050).group == "player",
@@ -5168,7 +5169,7 @@ func _init() -> void:
 
 	# ---- 新关卡：使魔鸭群 / 骑士冲锋 / 队长与巫师 / 爆炎鸭阵 / 白魔法鸭护阵 ----
 	var lvls := GameLevels.builtin_levels()
-	check(lvls.size() == 34, "内置关卡共 34 关（8 普简 + 9 普难 + 5 精英简单 + 6 精英困难 + 6 Boss；R356 第三层启示者进 Boss；R340 永夜鸭群进第一层精英困难；"
+	check(lvls.size() == 35, "内置关卡共 35 关（8 普简 + 9 普难 + 6 精英简单 + 6 精英困难 + 6 Boss；R451 母舰空袭进第二层精英简单；R356 第三层启示者进 Boss；R340 永夜鸭群进第一层精英困难；"
 			+ "R135 太阳熔炉进第二层普通困难 / R149 钢铁要塞·R162 阿斯克勒庇厄斯进第二层精英困难 / R150 赫菲斯托斯工坊进第二层 Boss"
 			+ " / R158 量产流水线·量产铁砧进第二层普通简单、双机炮阵进第二层普通困难 / R228 废料场进第二层普通困难）")
 	var lva: Dictionary = _level_named("使魔鸭群")
@@ -5659,8 +5660,8 @@ func _init() -> void:
 			"第一层自带关卡 = %d 关（全部关卡里除第二层那 %d 关、第三层那 %d 关）" % [lv_rest,
 				GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size(),
 				GameLevels.levels_of_layer(GameLayers.LAYER_THREE).size()])
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 16,
-			"第二层自带 16 关（R228 废料场 +1；太阳熔炉 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法鸭护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层；R449 哈气骑士团下调到第一层）")
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 17,
+			"第二层自带 17 关（R451 母舰空袭 +1；R228 废料场 +1；太阳熔炉 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法鸭护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层；R449 哈气骑士团下调到第一层）")
 	# R356：第三层只有 1 关（启示者），且它就是这一层的专属 Boss
 	check(GameLevels.levels_of_layer(GameLayers.LAYER_THREE).size() == 1
 			and GameLevels.boss_pool(GameLayers.LAYER_THREE).size() == 1
@@ -5675,8 +5676,8 @@ func _init() -> void:
 	check(GameLayers.content_layers(9).is_empty(), "未配置的层：内容池为空（拿不到任何内容）")
 	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 9,
 			"第二层普通池 9 关（专属：普通简单 4 + 普通困难 5；R135 太阳熔炉 / R158 量产流水线·量产铁砧·双机炮阵 / R174 百眼动员 / R228 废料场）")
-	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 5,
-			"第二层精英池 5 关（专属：精英简单 2 + 精英困难 3；R149 钢铁要塞 / R161 赫尔墨斯的试炼 / R162 阿斯克勒庇厄斯的试炼；R449 哈气骑士团已下调到第一层）")
+	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 6,
+			"第二层精英池 6 关（专属：精英简单 3 + 精英困难 3；**R451 母舰空袭（精英简单）**；R149 钢铁要塞 / R161 赫尔墨斯的试炼 / R162 阿斯克勒庇厄斯的试炼；R449 哈气骑士团已下调到第一层）")
 	var l2_battle_pool: Array[Dictionary] = []
 	l2_battle_pool.append_array(GameLevels.normal_pool(GameLayers.LAYER_TWO))
 	l2_battle_pool.append_array(GameLevels.elite_pool(GameLayers.LAYER_TWO))
@@ -5901,7 +5902,7 @@ func _init() -> void:
 			elif om_ecard.group != "enemy" or not om_ecard.is_level_effect():
 				om_drift += " %s/关卡效果%d" % [om_lvl2["name"], int(om_e)]
 	check(om_drift == "", "关卡 enemy_units 的 力/生/程/速 与 cards.json 同源（漂移:%s）" % om_drift)
-	check(om_lv_eff == 12, "关卡共挂 12 个敌方关卡效果（+ R356 启示者挂舰炮 9201 一张，阶段 2/3 由引擎换卡）（4 + 使魔之力 9115 挂 2 个巫师关卡 + 恶魔使魔 9117 + 暗影召唤 9125 各挂 1 个 Boss 关卡 + **充能巨炮 9139 挂双机炮阵 R158** + **流水线装配 9147 挂量产流水线 R219** + **永夜 9178 挂永夜鸭群 R340**），且都属敌人图鉴（实际 %d）" % om_lv_eff)
+	check(om_lv_eff == 13, "关卡共挂 13 个敌方关卡效果（+ R356 启示者挂舰炮 9201 一张，阶段 2/3 由引擎换卡）（4 + 使魔之力 9115 挂 2 个巫师关卡 + 恶魔使魔 9117 + 暗影召唤 9125 各挂 1 个 Boss 关卡 + **充能巨炮 9139 挂双机炮阵 R158** + **流水线装配 9147 挂量产流水线 R219** + **永夜 9178 挂永夜鸭群 R340** + **空袭 9209 挂母舰空袭 R451**），且都属敌人图鉴（实际 %d）" % om_lv_eff)
 
 	# ---- 二层强力怪物：一回合行动两次（2026-09-30 新增）----
 	# 挑选三只「巨兽 / 领主」级单位赋予双动：后排也能一回合绕开前排再出手。
@@ -7895,9 +7896,9 @@ func _init() -> void:
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 69
 			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 66
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 66
-			and int(dr_cls_count.get("敌人", 0)) == 59
+			and int(dr_cls_count.get("敌人", 0)) == 62
 			and int(dr_cls_count.get("", 0)) == 22,
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 69 / 66 / 66 / 59；R429 森林精魄 -1 = 删魔法学徒 9081；R393 森林精魄 +1（秃鹰）/ 暗影刺客 +2（赏金猎人 / 猎杀）；R406 暗影刺客 +1（独行 9189）；R404 机械之心 +1（涂装机器人 8080）；R397 敌人 +1（量产型赫尔墨斯 9188）；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R370 机械之心 +1（库存整理 9184）；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 19（R446 +雪豹 8081）；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 69 / 66 / 66 / 62；R451 敌人 +3（量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209）；R429 森林精魄 -1 = 删魔法学徒 9081；R393 森林精魄 +1（秃鹰）/ 暗影刺客 +2（赏金猎人 / 猎杀）；R406 暗影刺客 +1（独行 9189）；R404 机械之心 +1（涂装机器人 8080）；R397 敌人 +1（量产型赫尔墨斯 9188）；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R370 机械之心 +1（库存整理 9184）；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 19（R446 +雪豹 8081）；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 				int(dr_cls_count.get(PlayerClass.ROGUE, 0)),
 				int(dr_cls_count.get(PlayerClass.MECH, 0)),
@@ -29951,10 +29952,10 @@ func _init() -> void:
 			and RunState.used_levels.has("阿斯克勒庇厄斯的试炼"),
 		"R398 换层**不清** used_levels（三层还记得第二层打过谁）")
 
-	# ③ 三层精英池 = 第二层 5 关；挑关优先避开本局打过的
+	# ③ 三层精英池 = 第二层 6 关；挑关优先避开本局打过的
 	var r398_pool: Array[Dictionary] = GameLevels.elite_pool(GameLayers.LAYER_THREE)
-	check(r398_pool.size() == 5,
-		"R398 三层精英池 = 第二层 5 关（content_layers [2, 3]；R449 哈气骑士团下调后 −1；实际 %d）" % r398_pool.size())
+	check(r398_pool.size() == 6,
+		"R398 三层精英池 = 第二层 6 关（content_layers [2, 3]；R449 哈气骑士团下调后 −1、R451 母舰空袭 +1；实际 %d）" % r398_pool.size())
 	# 只剩最后一个没用过 → **必然**挑它（这就是「优先避免重复」）
 	RunState.used_levels = []
 	for r398_i in r398_pool.size() - 1:
@@ -30569,6 +30570,189 @@ func _init() -> void:
 	check_src(r440_ge.find("const DARK_POWER_RELIC_ID:= 6054") >= 0
 			and r440_ge.find("if self_relics.has(DARK_POWER_RELIC_ID):") >= 0,
 			"R440 引擎：多抽 1 张走 extra_draw（与鸭蹼 / 冰淇淋同一口径）")
+
+	# ============================================================
+	#  R451：第二层·精英简单「母舰空袭」—— 空袭 9209 / 量产型阿斯克勒庇厄斯 9207 / 母舰 9208
+	# ============================================================
+	var r451_repo := CardRepo.load_json()
+	var r451_pool_ids := {}
+	for r451_pc: CardData in r451_repo.reward_pool():
+		r451_pool_ids[r451_pc.id] = true
+	# ---- ① 三张卡的卡面 ----
+	var r451_ms: CardData = r451_repo.get_card(9207)
+	check(r451_ms != null and r451_ms.card_name == "量产型阿斯克勒庇厄斯"
+			and r451_ms.kind == "盟友" and r451_ms.power == 7 and r451_ms.health == 50
+			and r451_ms.attack_range == 1 and r451_ms.move_speed == 1
+			and r451_ms.traits.has("量产护甲") and r451_ms.value == 10
+			and r451_ms.group == "enemy",
+			"R451 量产型阿斯克勒庇厄斯 9207：盟友 7/50 程1 速1，trait「量产护甲」，value=10（护甲值）")
+	var r451_ship_c: CardData = r451_repo.get_card(9208)
+	check(r451_ship_c != null and r451_ship_c.card_name == "母舰"
+			and r451_ship_c.kind == "盟友" and r451_ship_c.power == 0
+			and r451_ship_c.health == 60 and r451_ship_c.attack_range == 0
+			and r451_ship_c.move_speed == 0
+			and r451_ship_c.traits.has(GameEngine.MOTHERSHIP_TRAIT)
+			and r451_ship_c.value == GameEngine.MOTHERSHIP_LOSS,
+			"R451 母舰 9208：盟友 0/60 程0 速0，trait「母舰」，value=10（每死一个友方掉 10）")
+	var r451_air: CardData = r451_repo.get_card(9209)
+	check(r451_air != null and r451_air.card_name == "空袭"
+			and r451_air.kind == "效果" and r451_air.traits.has(GameEngine.AIR_RAID_TRAIT)
+			and r451_air.value == GameEngine.AIR_RAID_DMG
+			and r451_air.is_level_effect(),
+			"R451 空袭 9209：效果卡，trait「空袭」，value=10（基础伤害），识别为敌方关卡效果")
+	check(not r451_pool_ids.has(9207) and not r451_pool_ids.has(9208)
+			and not r451_pool_ids.has(9209),
+			"R451 三张新卡都是敌方卡 → 不进奖励池")
+
+	# ---- ② 关卡数据：第二层·精英简单 / 敌方 HP ∞ / 击破母舰即胜 ----
+	var r451_lv: Dictionary = _level_named("母舰空袭")
+	check(str(r451_lv.get("name", "")) == "母舰空袭"
+			and str(r451_lv.get("key", "")) == "air_raid"
+			and int(r451_lv.get("tier", -1)) == GameLevels.TIER_ELITE_EASY
+			and GameLevels.layer_of(r451_lv) == GameLayers.LAYER_TWO
+			and bool(r451_lv.get("enemy_hp_infinite", false))
+			and int(r451_lv.get("win_on_boss", 0)) == GameEngine.MOTHERSHIP_ID,
+			"R451 母舰空袭：第二层·精英简单，敌方 HP ∞，胜利条件 = 击破母舰 9208")
+	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).has(r451_lv),
+			"R451 母舰空袭进第二层精英池（地图能抽到）")
+	check((r451_lv.get("enemy_effects", []) as Array) == [9209],
+			"R451 母舰空袭：开局只挂空袭 9209 一张效果卡")
+
+	# ---- ③ 编成与站位：母舰后排中央 / 阿尔戈斯中排中央 / 两只量产型阿斯克勒庇厄斯顶前排 ----
+	var r451_units: Array = r451_lv.get("enemy_units", [])
+	var r451_ship_n := 0
+	var r451_ms_n := 0
+	var r451_arg_n := 0
+	var r451_src_ok := true
+	for r451_u: Array in r451_units:
+		var r451_uid := int(r451_u[0])
+		var r451_uc: CardData = r451_repo.get_card(r451_uid)
+		if r451_uc == null:
+			r451_src_ok = false
+			continue
+		# 元组与卡库逐项同源（力 / 生 / 程 / 速）
+		if r451_uc.power != int(r451_u[2]) or r451_uc.health != int(r451_u[3]) \
+				or r451_uc.attack_range != int(r451_u[4]) \
+				or r451_uc.move_speed != int(r451_u[5]):
+			r451_src_ok = false
+		var r451_cell: Vector2i = r451_u[6]
+		if r451_uid == GameEngine.MOTHERSHIP_ID:
+			r451_ship_n += 1
+			if r451_cell != Vector2i(0, 1):
+				r451_src_ok = false
+		elif r451_uid == GameEngine.MASS_ASCLEPIUS_ID:
+			r451_ms_n += 1
+			if r451_cell.x != 2 or (r451_cell.y != 0 and r451_cell.y != 2):
+				r451_src_ok = false
+		elif r451_uid == GameEngine.ARGOS_ID:
+			r451_arg_n += 1
+			if r451_cell != Vector2i(1, 1):
+				r451_src_ok = false
+	check(r451_units.size() == 4 and r451_ship_n == 1 and r451_ms_n == 2 and r451_arg_n == 1
+			and r451_src_ok,
+			"R451 编成：母舰 (0,1) + 量产型阿尔戈斯 (1,1) + 量产型阿斯克勒庇厄斯 (2,0)/(2,2)，元组与卡库逐项同源")
+
+	# ---- ④ 空袭：标记 5 格（不重复、都在棋盘内）----
+	var r451_mk := _new_engine([], 20, 30)
+	r451_mk.enable_enemy_effects([r451_repo.get_card(9209)])
+	r451_mk._begin_turn(GameEngine.SIDE_SELF)
+	var r451_marks: Array[Vector2i] = r451_mk.state.air_raid_cells
+	var r451_uniq := {}
+	var r451_in_board := true
+	for r451_c: Vector2i in r451_marks:
+		r451_uniq[r451_c] = true
+		if r451_c.x < 0 or r451_c.x >= FieldState.BOARD_ROWS \
+				or r451_c.y < 0 or r451_c.y >= FieldState.BOARD_COLS:
+			r451_in_board = false
+	check(r451_marks.size() == GameEngine.AIR_RAID_MARKS and r451_uniq.size() == r451_marks.size()
+			and r451_in_board,
+			"R451 空袭：玩家回合开始随机标记 5 个不重复的格子（都在棋盘内）")
+
+	# ---- ⑤ 空袭结算：只打标记格上的玩家单位；敌方单位不受伤 ----
+	var r451_hit := _new_engine([], 20, 30)
+	r451_hit.enable_enemy_effects([r451_repo.get_card(9209)])
+	var r451_ally: Placement = r451_hit.state.place(
+			_card(8001, "木栅栏", "工事", 0, 0, 40), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r451_foe: Placement = r451_hit.state.place(
+			r451_repo.get_card(GameEngine.MASS_ASCLEPIUS_ID), Vector2i(1, 1),
+			GameEngine.SIDE_OPPONENT)
+	var r451_mark_set: Array[Vector2i] = []
+	r451_mark_set.append(Vector2i(4, 1))
+	r451_mark_set.append(Vector2i(1, 1))
+	r451_hit.state.air_raid_cells = r451_mark_set
+	r451_hit._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(r451_ally.health == 30,
+			"R451 空袭：标记格上的我方单位吃 10 点（40 → 30，实际 %d）" % r451_ally.health)
+	check(r451_foe.health == 50,
+			"R451 空袭：标记格上的**敌方**单位不受伤（只打玩家单位，实际 %d）" % r451_foe.health)
+	check(r451_hit.state.air_raid_cells.is_empty() and r451_hit.state.air_raid_turns == 1,
+			"R451 空袭：结算后清空标记、计数 +1（下轮 12 点）")
+	# 第二轮：同一格再吃一次 → 12 点（每回合 +2）
+	var r451_mark_set2: Array[Vector2i] = []
+	r451_mark_set2.append(Vector2i(4, 1))
+	r451_hit.state.air_raid_cells = r451_mark_set2
+	check(r451_hit.air_raid_damage() == 12,
+			"R451 空袭：第二轮落地值 12（10 + 2，实际 %d）" % r451_hit.air_raid_damage())
+	r451_hit._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(r451_ally.health == 18,
+			"R451 空袭：第二轮再吃 12 点（30 → 18，实际 %d）" % r451_ally.health)
+
+	# ---- ⑥ 空袭空响：标记格上没有单位 → 不转打玩家 HP ----
+	var r451_miss := _new_engine([], 20, 30)
+	r451_miss.enable_enemy_effects([r451_repo.get_card(9209)])
+	var r451_mark_empty: Array[Vector2i] = []
+	r451_mark_empty.append(Vector2i(0, 0))
+	r451_miss.state.air_raid_cells = r451_mark_empty
+	var r451_hp0: int = r451_miss.state.hp_self
+	r451_miss._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(r451_miss.state.hp_self == r451_hp0,
+			"R451 空袭空响：标记格没单位 → 玩家 HP 一点不掉（%d，别照抄舰炮直击 HP）"
+			% r451_miss.state.hp_self)
+
+	# ---- ⑦ 量产护甲：第 1 回合 +10 护甲 / 第 2 回合已有护甲 → 力量 +1 ----
+	var r451_arm := _new_engine([], 20, 30)
+	var r451_arm_p: Placement = r451_arm.state.place(
+			r451_repo.get_card(GameEngine.MASS_ASCLEPIUS_ID), Vector2i(1, 1),
+			GameEngine.SIDE_OPPONENT)
+	r451_arm._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(r451_arm_p.armor == 10 and r451_arm_p.effective_power() == 7,
+			"R451 量产护甲：第 1 回合 +10 护甲（实际 %d），力量仍 7" % r451_arm_p.armor)
+	r451_arm._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(r451_arm_p.armor == 20 and r451_arm_p.effective_power() == 8,
+			"R451 量产护甲：第 2 回合「获得前已有护甲」→ 力量 +1（8），护甲叠到 20（实际 %d / %d）"
+			% [r451_arm_p.armor, r451_arm_p.effective_power()])
+
+	# ---- ⑧ 母舰：免疫所有伤害（实战 + 预览镜像）+ 友方被破坏 → 补复制并自身 -10 ----
+	var r451_ship := _new_engine([], 20, 30)
+	var r451_ship_p: Placement = r451_ship.state.place(
+			r451_repo.get_card(GameEngine.MOTHERSHIP_ID), Vector2i(0, 1),
+			GameEngine.SIDE_OPPONENT)
+	var r451_ship_ally: Placement = r451_ship.state.place(
+			r451_repo.get_card(GameEngine.ARGOS_ID), Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	# 免疫：任何伤害都不掉血（走唯一口 `_hit_unit`）
+	var r451_dealt: int = r451_ship._hit_unit(r451_ship_p, 40, "测试")
+	check(r451_dealt == 0 and r451_ship_p.health == 60,
+			"R451 母舰：免疫所有伤害（40 点打不掉血，剩余 %d）" % r451_ship_p.health)
+	check(int(r451_ship.preview_hit_damage(r451_ship_p, 10).get("dmg", -2)) == 0,
+			"R451 母舰：伤害预览镜像同样报 0（预览 == 实际）")
+	# 友方被破坏 → 自身 -10 + 旁边补一份同款复制
+	var r451_n0: int = r451_ship.state.board.size()
+	r451_ship._destroy(Vector2i(1, 0))
+	check(r451_ship_p.health == 50,
+			"R451 母舰：友方被破坏 → 自身生命 -10（60 → %d）" % r451_ship_p.health)
+	check(r451_ship.state.board.size() == r451_n0
+			and r451_ship.state.unit_at(Vector2i(0, 0)) != null
+			and r451_ship.state.unit_at(Vector2i(0, 0)).card.id == GameEngine.ARGOS_ID,
+			"R451 母舰：在它旁边补造一份同款复制（(0,0) 还是阿尔戈斯，场上单位数不变）")
+	# 母舰被破坏 = 玩家胜利（win_on_boss 判定）
+	r451_ship.enemy_hp_infinite = true
+	r451_ship.win_on_boss = GameEngine.MOTHERSHIP_ID
+	r451_ship._destroy(Vector2i(0, 1))
+	check(r451_ship.over and str(r451_ship.result) == "胜利",
+			"R451 母舰被破坏 → 玩家直接胜利（%s / %s）"
+			% [r451_ship.result, r451_ship.result_reason])
+	check(str(r451_ship.result_reason).contains("母舰"),
+			"R451 胜利文案按 id 取卡名（实际「%s」，不再写死击破启示者）" % r451_ship.result_reason)
 
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
