@@ -239,6 +239,13 @@ const LAKE_DESC := """雾从水面浮起来，一只戴着水草冠的手从雾�
 
 const LAKE_DONE_DESC := """水面合拢，雾气散得干干净净。手心里那点温度还留着。"""
 
+## R454：熔炉的描述必须**压到 2 行**——它最多铺 3 个选项 + 1 个「离开」，
+## 比别的事件多一个按钮；描述一长，`_fit_center()` 收紧间距也救不回来，
+## 最后一个按钮会被屏幕下沿切掉（实测 5 行描述就切了）。
+const FURNACE_DESC := """炉膛里的火没有颜色，只有形状——东西投进去，会变成别的东西出来。
+投一件道具进去，炉子还你一件随机道具；投的是传奇档，就还你两件。"""
+const FURNACE_DONE_DESC := """炉火暗下去一瞬，又慢慢亮起来。石台边缘还留着一点余温——这次交易已经做完了。"""
+
 
 func _rest_desc() -> String:
 	## 休息处文案（R237：恢复篝火回血 —— 休息与烤肉二选一）。
@@ -265,6 +272,9 @@ var _apple_taken := false     # 苹果与医生（R244）：本次是否已收�
 var _snow_pick := ""           # 雪豹出现（R446）：本次拿走的是 "pipe" / "cat" / 空
 var _adv_pick := ""            # 冒险家的遗物（R447）：本次拿走的是 "note" / "flint" / 空
 var _adv_result := ""          # 冒险家的遗物（R447）：收尾态那行结果（读档重绘要能复现）
+var _furnace_opts: Array[int] = []   # 熔炉（R454）：本次铺出来的可投入道具（_ready 里摇一次）
+var _furnace_invested := -1          # 熔炉（R454）：本次投进去的那件（-1 = 还没投）
+var _furnace_result := ""            # 熔炉（R454）：收尾态那行结果（重绘要能复现）
 var _bluefish_taken := false  # 蓝色大肥鱼：是否已收下「鲸鱼之怒」
 ## R351 赏月：本次拿走的是 "moon"（花光金币换月亮）/ "coin"（直接拿硬币）/ ""（还没拿）。
 ## 两个选项**互斥**，拿了一个另一个就收起 —— 走 `_claim_reward()` 那条统一规则。
@@ -441,6 +451,12 @@ func _is_relic_chest() -> bool:
 			or (_is_event_node() and _pending_kind() == "relic_chest")
 
 
+func _is_furnace() -> bool:
+	## R454 熔炉（第二层专属）：投一件身上的道具 → 换回随机道具（传奇档换两件）。
+	## 选项是**动态数量**（0~3 个），不像别的事件那样固定两个。
+	return _is_event_node() and _pending_kind() == "furnace"
+
+
 func _is_treasure() -> bool:
 	## 小宝箱（R372：**免费**开箱，内容恒为一组卡牌奖励）：事件节点中未被其它子类型认领的情况。
 	return _is_event_node() and not _is_whisper() and not _is_struggle() \
@@ -450,7 +466,7 @@ func _is_treasure() -> bool:
 			and not _is_delivery() and not _is_delivery_done() \
 			and not _is_card_merchant() and not _is_lake_lady() \
 			and not _is_divination() and not _is_moon() and not _is_snow_leopard() \
-			and not _is_adventurer()
+			and not _is_adventurer() and not _is_furnace()
 
 
 func _kind() -> String:
@@ -469,6 +485,8 @@ func _kind() -> String:
 		return "snow_leopard"
 	if _is_adventurer():
 		return "adventurer"
+	if _is_furnace():
+		return "furnace"
 	if _is_hero():
 		return "hero"
 	if _is_arcane():
@@ -614,6 +632,30 @@ func _ready() -> void:
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "moon"
 			RunState.gold = 0
+		if args[i] == "--furnace":  # 演示：熔炉（R454 第二层专属）——身上 3 件奖励道具（含传奇）
+			RunState.run_active = true
+			RunState.current_layer = GameLayers.LAYER_TWO
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "furnace"
+			RunState.relics = [6006, 6050, 6029]
+		if args[i] == "--furnacelow":  # 演示：熔炉 —— 只有 1 件可投（选项只剩一个）
+			RunState.run_active = true
+			RunState.current_layer = GameLayers.LAYER_TWO
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "furnace"
+			RunState.relics = [6029]
+		if args[i] == "--furnaceleg":  # 演示：熔炉 —— 只带 1 件传奇档（鸭嘴 6006），验「换回 2 件」
+			RunState.run_active = true
+			RunState.current_layer = GameLayers.LAYER_TWO
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "furnace"
+			RunState.relics = [6006]
+		if args[i] == "--furnaceempty":  # 演示：熔炉 —— 道具栏全空（只剩「离开」）
+			RunState.run_active = true
+			RunState.current_layer = GameLayers.LAYER_TWO
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "furnace"
+			RunState.relics = []
 		if args[i] == "--hero":  # 演示：伪装 run 绝赞五换一（卡组 6 种不同名，可交易）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -787,6 +829,10 @@ func _ready() -> void:
 			# 而领走任一样之后 `_collapse_to_leave()` 会把唯一的「离开」还回来。
 			leave_btn.visible = false
 			result_label.text = ""
+	elif _is_furnace():
+		event_name.text = "熔  炉"
+		_furnace_opts = RunState.furnace_options()
+		_setup_furnace()
 	elif _is_hero():
 		event_name.text = "绝赞五换一"
 		desc.text = HERO_DESC
@@ -1042,6 +1088,8 @@ func _ready() -> void:
 			_reward_panel.close()   # 演示：关掉奖励窗，露出「两个选项都锁死」的界面
 	elif "--mooncoin" in args:      # R365：赏月「已拿走硬币」的收尾态（配 --moon 用）
 		_ui_alt()
+	elif "--furnacetake" in args:   # R454：熔炉「已投入」的收尾态（配 --furnace 用）
+		_on_main()
 	# 命令行 -- --screenshot：打开后自动截图退出（视觉验证用）
 	if "--screenshot" in args:
 		var t := Timer.new()
@@ -1091,6 +1139,9 @@ func _on_main() -> void:
 	## 宝箱层 → 开箱获得 1 个随机奖励道具。
 	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
 	sfx.play("click")
+	if _is_furnace():
+		_furnace_take(0, rest_btn)
+		return
 	if _is_adventurer():
 		if _adv_pick != "":
 			_on_leave()
@@ -1457,6 +1508,79 @@ func _on_main() -> void:
 	return
 
 
+func _setup_furnace() -> void:
+	## R454 熔炉：按「本次可投入的道具」铺 0~3 个「投入 XXXX」选项。
+	## 3 件 → 主 / 次 / 第三；2 件 → 主 / 次；1 件 → 只用主按钮；
+	## **0 件 → 三个全收起来，只剩「离开」**（别留一个点不动的死按钮）。
+	var repo := RelicRepo.load_json()
+	if _furnace_invested >= 0:
+		desc.text = FURNACE_DONE_DESC
+		_collapse_to_leave()
+		result_label.text = _furnace_result
+		result_label.add_theme_color_override("font_color", Color("e8933a"))
+		return
+	desc.text = FURNACE_DESC
+	if _furnace_opts.is_empty():
+		rest_btn.visible = false
+		leave_btn.text = "离开（道具栏里没有可投入的东西）"
+		result_label.text = "炉子盯着你空空的双手，什么也没说。"
+		result_label.add_theme_color_override("font_color", Color("9a968c"))
+		return
+	var btns: Array[Button] = [rest_btn, bbq_btn, alt_btn]
+	for i in _furnace_opts.size():
+		var b: Button = btns[i]
+		var rel := repo.get_relic(_furnace_opts[i])
+		var rname: String = rel.relic_name if rel != null else str(_furnace_opts[i])
+		b.visible = true
+		b.disabled = false
+		# 「」标记 = 这个名字可以悬浮看详情（Mention 只认带标记的名字）
+		b.text = "投入「%s」" % rname
+		if rel != null and rel.is_legendary():
+			b.text += "（传奇 · 换回 2 件）"
+	leave_btn.text = "离开（不投入）"
+	result_label.text = ""
+
+
+func _furnace_take(slot: int, btn: Button) -> void:
+	## R454 熔炉：把第 `slot` 个选项对应的道具投进炉子。
+	## 结算全在 `RunState.furnace_invest()`（判据唯一口），这里只做文案与奖励悬浮窗。
+	if _furnace_invested >= 0 or slot < 0 or slot >= _furnace_opts.size():
+		return
+	var rid: int = _furnace_opts[slot]
+	var rel := RelicRepo.load_json().get_relic(rid)
+	var rname: String = rel.relic_name if rel != null else str(rid)
+	var res := RunState.furnace_invest(rid)
+	if not bool(res.get("ok", false)):
+		# 极端情况：选项是进房时摇的，期间道具被别的路径消耗掉了 → 只报一句，不崩
+		result_label.text = "「%s」已经不在道具栏里了。" % rname
+		result_label.add_theme_color_override("font_color", Color("c86a5a"))
+		_redraw()
+		return
+	_furnace_invested = rid
+	_claim_reward(btn)
+	# 结算当刻就把节点标记完成：否则回标题 → 继续游戏会重进这间房，
+	# 拿剩下的道具再投一轮（投入消耗的是道具，光靠道具栏拦不住重复刷）。
+	if RunState.run_active:
+		RunState.complete_current()
+	_collapse_to_leave()
+	desc.text = FURNACE_DONE_DESC
+	var got: Array[int] = res.get("rewards", [])
+	var names: Array[String] = []
+	for gid: int in got:
+		names.append("「%s」" % RunState.relic_display_name(gid))
+	if names.is_empty():
+		_furnace_result = "「%s」投进炉里，炉子只吐出一口热气——没有能给你的道具了。" % rname
+	else:
+		_furnace_result = "「%s」投进炉里，炉子吐出 %d 件道具：%s。请在奖励悬浮窗里收下。" % [
+				rname, names.size(), "、".join(names)]
+	result_label.text = _furnace_result
+	result_label.add_theme_color_override("font_color",
+			Color("e8933a") if bool(res.get("legendary", false)) else Color("c8a86a"))
+	if _reward_panel != null and RunState.pending_reward_count() > 0:
+		_reward_panel.open()
+	_redraw()
+
+
 func _on_delivery_confirmed(selected: Array) -> void:
 	## R200：运送委托确认 —— 选了几张就入卡组几张（货物 8065）。
 	if _pick != null:
@@ -1622,7 +1746,7 @@ func _refresh() -> void:
 			or _is_relic_chest() or _is_arcane() or _is_oblivion() \
 			or _is_smith() or _is_delivery() or _is_delivery_done() \
 			or _is_card_merchant() or _is_lake_lady() or _is_divination() \
-			or _is_moon() or _is_snow_leopard():
+			or _is_moon() or _is_snow_leopard() or _is_furnace():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。
@@ -1747,6 +1871,9 @@ func _on_alt() -> void:
 	## R305 卡片商人 · **随机折价**（第三选项）：随机失去一张非诅咒卡，换 100 金币。
 	## R351 赏月也用它当「拿硬币」的按钮。
 	sfx.play("click")
+	if _is_furnace():
+		_furnace_take(2, alt_btn)
+		return
 	if _is_rest():
 		_claim_rest_firewood()
 		return
@@ -1806,6 +1933,9 @@ func _on_bbq() -> void:
 	## 休息处「烤肉」：获得事件道具「烤肉」（进入 Boss 战时自动消耗 → 回复 25% 生命）。
 	## 奥秘之泉：这一路是「选择2 · 喝下泉水」→ 去卡牌奖励界面（限定效果 / 技能）。
 	sfx.play("click")
+	if _is_furnace():
+		_furnace_take(1, bbq_btn)
+		return
 	if _is_divination():
 		if _div_stage == 1:
 			_resolve_divination(false)

@@ -5944,10 +5944,10 @@ func _init() -> void:
 			and not ev_kinds_layer.has("gaze"),
 			"第一层事件池：11 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/卡牌宝箱/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物；无凝视、无怪物）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
-	check(l2_ev_kinds.size() == 10 and l2_ev_kinds.has("smith") \
-			and l2_ev_kinds.has("moon")
+	check(l2_ev_kinds.size() == 11 and l2_ev_kinds.has("smith") \
+			and l2_ev_kinds.has("moon") and l2_ev_kinds.has("furnace")
 			and l2_ev_kinds.has("card_merchant") and l2_ev_kinds.has("divination"),
-			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 = 10 种子类型")
+			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 = 11 种子类型")
 	var pear_ev_kinds := l2_ev_kinds        # 旧用例里沿用的变量名（保持后文读到本地变量）
 	check(l2_ev_kinds.has("gaze") and not ev_kinds_layer.has("gaze"),
 			"鸭之凝视已改为第二层事件（第一层不再出 gaze）")
@@ -30753,6 +30753,80 @@ func _init() -> void:
 			% [r451_ship.result, r451_ship.result_reason])
 	check(str(r451_ship.result_reason).contains("母舰"),
 			"R451 胜利文案按 id 取卡名（实际「%s」，不再写死击破启示者）" % r451_ship.result_reason)
+
+	# ---- R454 第二层事件「熔炉」：投一件身上的道具，换回随机道具（传奇档换两件）----
+	check(GameLayers.event_kinds(GameLayers.LAYER_TWO).has("furnace")
+			and int(GameLayers.event_weights(GameLayers.LAYER_TWO).get("furnace", 0)) > 0
+			and GameLayers.event_name("furnace") == "熔炉"
+			and not GameLayers.event_kinds(GameLayers.LAYER_DEFAULT).has("furnace"),
+			"R454 熔炉：登记在第二层事件池（权重 > 0、显示名「熔炉」），第一层不出")
+	RunState.relics = []
+	RunState.spent_relics = []
+	RunState.skipped_relics = []
+	RunState.pending_rewards = []
+	check(RunState.furnace_options().is_empty(),
+			"R454 熔炉：身上一件道具都没有 → 0 个选项（界面只剩「离开」）")
+	# 2 件 → 2 个选项，互不重复
+	RunState.relics = [6005, 6029]
+	var r454_two: Array[int] = RunState.furnace_options()
+	check(r454_two.size() == 2 and r454_two[0] != r454_two[1]
+			and r454_two.has(6005) and r454_two.has(6029),
+			"R454 熔炉：身上 2 件道具 → 铺 2 个选项（实际 %s）" % str(r454_two))
+	# 4 件奖励 + 1 件事件 → 只铺 3 个，且全是「奖励」来源（优先口径）
+	RunState.relics = [6005, 6007, 6008, 6013, 6055]
+	var r454_pref: Array[int] = RunState.furnace_options()
+	var r454_pref_ok: bool = r454_pref.size() == 3
+	var r454_pref_seen := {}
+	for r454_pid: int in r454_pref:
+		r454_pref_seen[r454_pid] = true
+		var r454_pr := RelicRepo.load_json().get_relic(r454_pid)
+		if r454_pr == null or r454_pr.source != RelicData.SRC_REWARD:
+			r454_pref_ok = false
+	check(r454_pref_ok and r454_pref_seen.size() == 3 and not r454_pref.has(6055),
+			"R454 熔炉：奖励道具够 3 件时优先全从奖励里取（不掺事件道具，实际 %s）"
+			% str(r454_pref))
+	# 已经耗尽的（灰）不能投
+	RunState.relics = [6005, 6007]
+	RunState.spent_relics = [6007]
+	var r454_sp: Array[int] = RunState.furnace_options()
+	check(r454_sp.size() == 1 and r454_sp[0] == 6005,
+			"R454 熔炉：已耗尽的道具不进选项（实际 %s）" % str(r454_sp))
+	# 投入普通道具 → 失去它、换回 1 件，且不会原样摇回
+	RunState.relics = [6005]
+	RunState.spent_relics = []
+	RunState.pending_rewards = []
+	var r454_norm := RunState.furnace_invest(6005)
+	var r454_norm_got: Array = r454_norm.get("rewards", [])
+	check(bool(r454_norm.get("ok", false)) and not bool(r454_norm.get("legendary", false))
+			and r454_norm_got.size() == 1,
+			"R454 熔炉：投入普通道具 → 换回 1 件（实际 %d 件）" % r454_norm_got.size())
+	check(not RunState.has_relic(6005) and not RunState.relics.has(6005),
+			"R454 熔炉：投入的那件已经离开道具栏")
+	check(not r454_norm_got.has(6005), "R454 熔炉：投出去的那件不会原样摇回来")
+	check(RunState.pending_reward_count() == 1,
+			"R454 熔炉：换回的 1 件进待领队列（实际待领 %d）" % RunState.pending_reward_count())
+	# 投入传奇档 → 换回 2 件，互不相同、都不是投出去的那件
+	RunState.relics = [6006]
+	RunState.spent_relics = []
+	RunState.pending_rewards = []
+	var r454_leg := RunState.furnace_invest(6006)
+	var r454_leg_got: Array = r454_leg.get("rewards", [])
+	check(bool(r454_leg.get("ok", false)) and bool(r454_leg.get("legendary", false))
+			and r454_leg_got.size() == 2 and r454_leg_got[0] != r454_leg_got[1]
+			and not r454_leg_got.has(6006),
+			"R454 熔炉：投入传奇档（鸭嘴 6006）→ 换回 2 件互不相同的道具（实际 %s）"
+			% str(r454_leg_got))
+	check(RunState.pending_reward_count() == 2,
+			"R454 熔炉：两件都进待领队列（实际待领 %d）" % RunState.pending_reward_count())
+	# 已耗尽 / 不在栏里的投入请求一律拒绝
+	RunState.relics = [6007]
+	RunState.spent_relics = [6007]
+	check(not bool(RunState.furnace_invest(6007).get("ok", true))
+			and not bool(RunState.furnace_invest(123456).get("ok", true)),
+			"R454 熔炉：已耗尽 / 不在道具栏里的东西投不进去")
+	RunState.relics = []
+	RunState.spent_relics = []
+	RunState.pending_rewards = []
 
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []

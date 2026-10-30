@@ -1457,6 +1457,71 @@ static func queue_relic_reward(id: int) -> void:
 	pending_rewards.append({"kind": "relic", "id": id, "state": REWARD_PENDING})
 
 
+# ------------------------------------------------------------ R454 熔炉（furnace 事件）
+## 熔炉：把身上一件道具投进炉子，换回随机道具 —— 投的是**传奇档**就换回两件。
+## 判据全部收在这里（可投池 / 投入结算），事件页只负责铺按钮与文案。
+const FURNACE_OPTIONS := 3          # 最多铺几个「投入 XXXX」选项
+const FURNACE_LEGEND_REWARDS := 2   # 投入传奇档道具 → 换回几件
+
+
+static func _pick_random_ids(src: Array[int], n: int) -> Array[int]:
+	## 从 src 里随机取 n 个**不重复**的（走 run_rng；src 本身不被打乱）。
+	var pool: Array[int] = src.duplicate()
+	var out: Array[int] = []
+	while out.size() < n and not pool.is_empty():
+		var i: int = run_rng.randi() % pool.size()
+		out.append(pool[i])
+		pool.remove_at(i)
+	return out
+
+
+static func furnace_options() -> Array[int]:
+	## 熔炉本次铺出来的可投入道具（最多 3 件、互不重复）。
+	## **优先「奖励」来源**（用户口径）：先尽量从奖励道具里取，凑不满 3 件再拿其它来源补。
+	## 已经耗尽的（灰在栏里）**不算** —— 投一件已经没效的东西换奖励不合道理。
+	var reward: Array[int] = []
+	var other: Array[int] = []
+	var repo := RelicRepo.load_json()
+	for id: int in relics:
+		if spent_relics.has(id):
+			continue
+		var r := repo.get_relic(id)
+		if r != null and r.source == RelicData.SRC_REWARD:
+			reward.append(id)
+		else:
+			other.append(id)
+	var out: Array[int] = _pick_random_ids(reward, FURNACE_OPTIONS)
+	if out.size() < FURNACE_OPTIONS:
+		for id: int in _pick_random_ids(other, FURNACE_OPTIONS - out.size()):
+			out.append(id)
+	return out
+
+
+static func furnace_invest(id: int) -> Dictionary:
+	## 投入一件道具 → 失去它，换回随机奖励道具并入**待领队列**。
+	## 返回 {"ok": bool, "legendary": bool, "rewards": Array[int]}。
+	## ⚠️ 投出去的那件从候选池里排除（用户口径「不会再摇回来」）；
+	##    两件奖励之间也要互斥 —— 入队**不等于**已拥有，不显式排除会摇出同一件。
+	## ⚠️ 只认 `has_relic()`（已耗尽的不能投），别用 `relics.has()`。
+	if not has_relic(id):
+		return {"ok": false, "legendary": false, "rewards": []}
+	var rel := RelicRepo.load_json().get_relic(id)
+	var legendary: bool = rel != null and rel.is_legendary()
+	if not lose_relic(id):
+		return {"ok": false, "legendary": false, "rewards": []}
+	var want: int = FURNACE_LEGEND_REWARDS if legendary else 1
+	var exclude: Array = [id]
+	var got: Array[int] = []
+	for _i in want:
+		var rid: int = roll_reward_relic(false, exclude)
+		if rid <= 0:
+			break
+		exclude.append(rid)
+		got.append(rid)
+		queue_relic_reward(rid)
+	return {"ok": true, "legendary": legendary, "rewards": got}
+
+
 static func queue_card_reward(reward_type: String = "normal",
 		kinds: Array[String] = []) -> int:
 	## 一组卡牌奖励（三选一）入队。**候选在这一刻**用 run_rng 摇定 ——

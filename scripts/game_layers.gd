@@ -75,6 +75,8 @@ const LAYERS := {
 			"divination": 12,
 			# R351 赏月（第二层专属）：失去全部金币换「月亮」，或直接拿「硬币」。
 			"moon": 20,
+			# R454 熔炉（第二层专属）：投一件身上的道具进炉子 → 换回随机道具（传奇换两件）。
+			"furnace": 18,
 		},
 	},
 	3: {
@@ -114,6 +116,7 @@ const EVENT_NAMES := {
 	"lake_lady": "湖中仙女",
 	"divination": "占卜室",
 	"moon": "赏月",
+	"furnace": "熔炉",
 	"snow_leopard": "雪豹出现",
 	"adventurer": "冒险家的遗物",
 	"delivery": "运送委托",
