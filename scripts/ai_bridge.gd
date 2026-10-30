@@ -963,6 +963,10 @@ func _battle_targets(s: Variant) -> Array:
 			out.append({"id": "r%dc%d" % [cell2.x, cell2.y],
 					"hint": "选中我方单位「%s」" % p2.card.card_name})
 		out.append({"id": "end", "hint": "结束回合"})
+		# R453：洞窟绳（6048）—— 判据只用 `RunState.can_use_cave_rope()` 那一处，
+		# 与 `battle_scene._refresh_flee_btn()` 的按钮显隐同源；这里不列就说明按钮也不该出现。
+		if RunState.can_use_cave_rope(e.battle_kind):
+			out.append({"id": "flee", "hint": "用洞窟绳逃跑（放弃本场，不拿奖励，道具用掉）"})
 	else:
 		out.append({"id": "wait", "hint": "敌方回合，等它打完（读一次 /state 看进度）"})
 	return out
@@ -989,6 +993,13 @@ func _battle_click(target: String) -> Dictionary:
 		return {"ok": true, "msg": "结算离场"}
 	if target == "wait":
 		return {"ok": false, "msg": "敌方回合，先等一拍再读 /state"}
+
+	# R453：洞窟绳（6048）逃跑 —— 与按钮同一个判据、同一个结算口。
+	if target == "flee":
+		if not RunState.can_use_cave_rope(e.battle_kind):
+			return {"ok": false, "msg": "这场不能逃跑（没有洞窟绳 / 这是 Boss 战）"}
+		s._on_flee()
+		return {"ok": true, "msg": "洞窟绳：放弃本场，回地图"}
 
 	# 复活术 / 返修 / 暗影步：从弃牌区取一张（`rc<弃牌下标>`）
 	if target.begins_with("rc") and target.substr(2).is_valid_int():
