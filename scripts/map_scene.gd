@@ -2051,7 +2051,7 @@ func _draw_deck_panel() -> void:
 			var stat_txt := "费用 %d · %s" % [c.cost, CardFace.stats_line(c)]
 			var stat_col := Color("9a968c")
 			if c.has_enchant():
-				stat_txt = "附魔「%s」· %s" % [CardData.enchant_name(c.enchant), stat_txt]
+				stat_txt = "附魔「%s」· %s" % [CardData.enchant_title(c), stat_txt]
 				stat_col = CardData.enchant_color(c.enchant)
 			draw_string(_font, r.position + Vector2(68, 45), stat_txt,
 					HORIZONTAL_ALIGNMENT_LEFT, 372, UiTheme.FS_CAPTION, stat_col)

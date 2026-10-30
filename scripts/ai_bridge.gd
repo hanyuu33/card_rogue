@@ -1920,6 +1920,24 @@ func _reward_targets() -> Array:
 			else:
 				out.append({"id": "rw%d" % i, "hint": "奖励 %d：打开卡组挑一张删" % i})
 			out.append({"id": "rws%d" % i, "hint": "奖励 %d：不要删卡" % i})
+		elif kind == "core":
+			# R458：核心要**两段**选卡（先献祭、再选接收者），而且选的是「卡组第几张」——
+			# 摊开之后把当前这一段的可选卡全列出来，目标形如 `rc<卡组下标>`。
+			# 没摊开时只给一个 `rw<i>`（打开），与删卡奖励同一套节奏。
+			var rpc: Variant = _scene().get("_reward_panel")
+			var cg: Array = rpc.core_grid() if rpc != null else []
+			if cg.is_empty():
+				out.append({"id": "rw%d" % i,
+						"hint": "奖励 %d：打开「核心」（献祭一张伤害技能牌）" % i})
+			else:
+				for dv in cg:
+					var di := int(dv)
+					var cc: CardData = repo.get_card(int(RunState.deck_ids[di]))
+					var cnm := cc.card_name if cc != null else "?"
+					var ccost := cc.cost if cc != null else 0
+					out.append({"id": "rc%d" % di,
+							"hint": "核心：献祭 / 附到卡组第 %d 张「%s」（%d费）" % [di, cnm, ccost]})
+			out.append({"id": "rws%d" % i, "hint": "奖励 %d：放弃这次核心兑换" % i})
 	return out
 
 
@@ -1962,6 +1980,12 @@ func _reward_click(target: String) -> Dictionary:
 	# R414：`rd<卡组下标>` —— 在摊开的卡组页上点一张，当场删掉。
 	if target.begins_with("rd") and target.substr(2).is_valid_int():
 		return _reward_delete_card(int(target.substr(2)))
+	# R458：`rc<卡组下标>` —— 核心兑换页上点一张（第一段选祭品，第二段落账）
+	if target.begins_with("rc") and target.substr(2).is_valid_int():
+		var rpc2: Variant = s.get("_reward_panel")
+		if rpc2 == null or not rpc2.is_open():
+			return {"ok": false, "msg": "奖励窗没开着"}
+		return rpc2.core_pick_deck(int(target.substr(2)))
 	if target.begins_with("rws"):
 		var si := int(target.substr(3))
 		if RunState.skip_pending_reward(si):
@@ -1991,7 +2015,16 @@ func _reward_click(target: String) -> Dictionary:
 				return {"ok": false, "msg": "奖励窗没开着，先用「打开待领奖励」把它弹出来"}
 			rp2._open_entry(i2)
 			return {"ok": true, "msg": "已摊开卡组，挑一张删（目标 rd<下标>）"}
+		# R458：核心同理 —— 点下去是**摊开兑换页**，不是「领下」。claim_pending_reward()
+		# 只认 relic，直接给它只会返回 false，AI 会误以为奖励处理不了而卡住。
+		if i2 >= 0 and i2 < RunState.pending_rewards.size() \
+				and str((RunState.pending_rewards[i2] as Dictionary).get("kind", "")) == "core":
+			var rp3: Variant = s.get("_reward_panel")
+			if rp3 == null or not rp3.is_open():
+				return {"ok": false, "msg": "奖励窗没开着，先用「打开待领奖励」把它弹出来"}
+			rp3._open_entry(i2)
+			return {"ok": true, "msg": "已摊开核心，先挑祭品（目标 rc<卡组下标>）"}
 		if RunState.claim_pending_reward(i2):
 			return {"ok": true, "msg": "领取奖励 %d" % i2}
 		return {"ok": false, "msg": "奖励 %d 领取失败（可能已处理过）"}
-	return {"ok": false, "msg": "奖励目标形如 rw0c1 / rw0 / rws0 / rwdone"}
+	return {"ok": false, "msg": "奖励目标形如 rw0c1 / rw0 / rws0 / rc3 / rwdone"}

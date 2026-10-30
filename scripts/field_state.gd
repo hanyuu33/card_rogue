@@ -124,6 +124,12 @@ var self_cannon_plays := 0
 var self_card_changes := 0
 var turn_card_discount := {}    # CardData -> int：本回合这张**手卡**费用 -N（魔像术 9079；回合结束清空）
 var turn_card_raise := 0         # 本回合**手卡全体**费用 +N（契约签订者 8024；回合结束清空）
+## R458 咒缚（6058）：本场战斗「第一张卡免费」的额度还没用掉（用掉即 false）。
+## 与 `turn_*` 那批**不同**：它跨回合保留（整场只有一次），因此不在回合结束清空。
+var curse_free := false
+## R458 咒缚（6058）：CardData -> int。被免费打出的那张卡在本场战斗里的**涨价**
+##（再次上手才吃；战斗结束随 FieldState 一起丢）。
+var curse_raise := {}
 var turn_keep: Array[CardData] = []  # 回转 9089 抽到的牌：本回合结束不弃（discard_hand 跳过；回合结束清空）
 ## 夜行（9155，R232）：本回合**我方所有卡费用为 0**（cost_of 最前判定；回合结束清空）。
 var turn_all_free := false

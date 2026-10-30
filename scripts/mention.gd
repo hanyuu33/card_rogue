@@ -308,7 +308,7 @@ static func _card_tip_blocks(card: CardData) -> Array:
 					"col": ac[1] as Color, "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 4.0})
 	if card.has_enchant():
 		out.append({"segs": [
-				{"text": "附魔 · " + CardData.enchant_name(card.enchant), "bold": true},
+				{"text": "附魔 · " + CardData.enchant_title(card), "bold": true},
 				{"text": "：" + CardData.enchant_desc(card.enchant)}],
 				"col": CardData.enchant_color(card.enchant), "size": UiTheme.FS_CAPTION,
 				"line": 17.0, "gap": 8.0})

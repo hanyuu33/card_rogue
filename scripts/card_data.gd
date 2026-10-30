@@ -93,6 +93,12 @@ const ENCHANT_DEFS: Dictionary = {
 	#    （smoke 逐条比对，分叉即红）。
 	"draw": {"label": "抽牌 +1", "icon": "shop_icon_draw", "col": "5fd8c8",
 			"desc": "打出这张卡后抽一张卡。"},
+	# R458「契约的核心」：把一张伤害技能卡的**第一段伤害**献祭过来，加到另一张上。
+	# 与「伤害 +10」共用同一套消费点（`GameEngine._spell_dmg()` 把 `card.power`
+	# 并进每一段），区别只在**数值不固定** —— 所以标签不写死在这里，
+	# 由 `enchant_label` 逐卡携带、经 `enchant_title()` 读（见下）。
+	"core": {"label": "契约核心", "icon": "shop_icon_damage", "col": "d06be0",
+			"desc": "这张技能卡的伤害提高，数值等于被献祭的那张技能卡的第一段伤害。"},
 }
 
 var id: int = 0
@@ -175,6 +181,10 @@ var affixes: Array[String] = []
 ## 卡面费用正下方的附魔标记、战斗左栏、商店/牌库/地图的卡面都读它。
 ## 必须随 `to_dict` 走（复制 / 离场还原 / 联机都是同一条通道），否则标记会静默消失。
 var enchant: String = ""
+## R458 契约核心：**可变数值**附魔的逐卡显示名（"" = 用 `ENCHANT_DEFS` 的固定名）。
+## 「伤害 +10」那种数值写死的附魔用不到它；契约核心的 +N 每张卡都可能不同，
+## 所以名字跟着卡走 —— 显示口统一走 `enchant_title()`，别各处直接读 `enchant_name`。
+var enchant_label: String = ""
 ## **本场战斗内的衍生物**（R82：野兔 9032 复制出来的那些）—— 不进牌库也不进弃牌区。
 ## 为什么要单独一个字段而不是只靠 trait「自我复制」：
 ## **卡库里的原卡也带同一个 trait**（否则引擎认不出该给谁发复制），
@@ -288,6 +298,8 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.diff_health = int(d.get("diff_health", 0))
 	# R214：附魔 id 随序列化走（烤数值之后它是「这张卡被附魔过」的唯一凭据）
 	c.enchant = str(d.get("enchant", ""))
+	# R458：契约核心的可变显示名也要随序列化走（复制 / 离场还原是同一条通道）。
+	c.enchant_label = str(d.get("enchant_label", ""))
 	# ⚠️ 数组字段**必须逐个 append**（不能直接接字典里那个 Array）：
 	# `from_dict` 只接引用的话，赋给场上那张副本后引擎往里 append 字段会
 	# **连带改到卡库**（MEMORY 里「from_dict 只复制壳」那个老坑）。
@@ -344,6 +356,8 @@ func to_dict() -> Dictionary:
 		# R214：附魔 id **必须**在这里 —— 复制 / 离场还原 / 联机共用这条通道，
 		# 漏了它 = 卡一进战场附魔标记就没了（数值还在，看不出是附魔来的）。
 		"enchant": enchant,
+		# R458：可变附魔名（契约核心「伤害 +N」）—— 漏了它，复制出来的卡会退回固定名。
+		"enchant_label": enchant_label,
 		# ⚠️ `affixes` 同样**必须**在这里 —— 漏了字段会静默清空
 		#（「这张卡被别的卡赋了疾行/幻影/护盾」的强化就没了）。
 		"affixes": affixes.duplicate(),
@@ -524,6 +538,32 @@ static func enchant_icon_name(id: String) -> String:
 ## 这张卡带附魔吗（卡面标记 / 左栏 / 商店的唯一判据 —— 别各处写 `enchant != ""`）。
 func has_enchant() -> bool:
 	return enchant != "" and ENCHANT_DEFS.has(enchant)
+
+
+## 附魔的**显示名**（R458）：逐卡可变名优先，没有就退回 `ENCHANT_DEFS` 的固定名。
+## 所有「手里有一张卡」的显示点都该走这一口（卡面标记 / 战斗左栏 / 提及浮窗 /
+## 地图卡组 / 奖励详情）—— 只认 id 的地方（记录页 / 商店商品名）退回固定名即可。
+static func enchant_title(c: CardData) -> String:
+	if c == null:
+		return ""
+	if c.enchant_label != "":
+		return c.enchant_label
+	return enchant_name(c.enchant)
+
+
+## 能被**随机**摇到的附魔（牛奶 6028 / 附魔大师 6034 的唯一来源，R458）。
+## ⚠️ 契约核心（`core`）**不在**里面：它的数值来自「被献祭的那张技能卡」，
+##    随机给出来的只会是 +0 —— 那就成了一张空附魔，所以随机池必须把它排除。
+const ENCHANT_RANDOM_EXCLUDE := ["core"]
+
+
+static func random_enchant_ids() -> Array[String]:
+	var out: Array[String] = []
+	for id: String in ENCHANT_DEFS.keys():
+		if ENCHANT_RANDOM_EXCLUDE.has(id):
+			continue
+		out.append(id)
+	return out
 
 
 ## 卡面上要追加的那一行字段提示（引擎在卡被赋予新字段后会自动补上 ——

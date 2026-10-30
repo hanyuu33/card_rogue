@@ -107,6 +107,14 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r398_deck_delete],
+		# R458（用户口径）：「核心」做成道具 —— 战斗中累计失去 15 点生命后成形，
+		# 这一场结束的**奖励页**里兑换一次，用掉即失效。奖励页要能上下滚动（防条目满屏）。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r458_core_reward],
 		# R339：战斗检查点必须写「进战斗之前」的局状态 —— lucky 7 的跨战斗计数在开局
 		# 第 1 个我方回合就 +1，若检查点写「当下」，续档重打这一场就会越续越多（用户报）。
 		["res://scenes/battle.tscn", func():
@@ -2019,6 +2027,142 @@ func _check_r398_deck_delete(scene) -> void:
 	RunState.pending_rewards.clear()
 	RunState.deck_ids.remove_at(RunState.deck_ids.size() - 1)   # 清掉演示塞的月亮
 	print("SMOKE OK R398 月亮删卡：点奖励立刻进删卡视图 / 锁卡点不动 / 点一张当场删掉并回列表")
+
+
+func _check_r458_core_reward(scene) -> void:
+	## R458（用户口径）：「核心」做成道具，战斗中累计失去 15 点生命后成形，战斗结束的
+	## **奖励页**里兑换一次，用掉即失效。这里钉四件事：
+	##   ① 点那一条 → 进核心视图，摊开的第一段候选 = 可献祭的伤害技能牌；
+	##   ② 第一段只**选**不删（「重选祭品」退回第一段），第二段确认才落账；
+	##   ③ 兑换完：祭品从卡组消失、道具变灰、条目置灰并写出结果；
+	##   ④ 奖励页能滚（滚轮 / 按住拖动同一套），且拖动抬手**不许**当点按打开条目。
+	var rp: Variant = scene.get("_reward_panel")
+	if rp == null:
+		_smoke_fail("R458：战斗场景没有奖励面板")
+		return
+	var ids_sv: Array = RunState.deck_ids.duplicate()
+	var mods_sv: Array = RunState.deck_mods.duplicate()
+	var relics_sv: Array = RunState.relics.duplicate()
+	var spent_sv: Array = RunState.spent_relics.duplicate()
+	RunState.pending_rewards.clear()
+	var core_deck: Array[int] = [9003, 9006]     # 火焰箭（第一段 17）/ 闪电链
+	RunState.deck_ids = core_deck
+	RunState.deck_mods = []
+	RunState.ensure_deck_mods()
+	RunState.relics = [RunState.CORE_RELIC_ID]
+	RunState.spent_relics = []
+	RunState.core_lost = RunState.CORE_LOSS_NEED
+	RunState.core_armed = true
+	var idx: int = RunState.queue_core_reward()
+	if idx < 0:
+		_smoke_fail("R458：核心成形了却没排进奖励页")
+		return
+	rp.open()
+	rp._open_entry(idx)
+	if int(rp._view) != RewardPanel.VIEW_CORE:
+		_smoke_fail("R458：点核心奖励没进核心视图（view=%d）" % int(rp._view))
+		return
+	var want: Array = []
+	for si: int in RunState.core_contract_sources(CardRepo.load_json()):
+		want.append(si)
+	if str(rp.core_grid()) != str(want):
+		_smoke_fail("R458：核心第一段的候选不是「可献祭的伤害技能牌」（%s vs %s）"
+				% [str(rp.core_grid()), str(want)])
+		return
+	# ② 第一段选祭品：**不删卡**
+	var n0: int = RunState.deck_ids.size()
+	rp._on_click(rp.core_card_rect(0).get_center())
+	if RunState.deck_ids.size() != n0:
+		_smoke_fail("R458：第一段选祭品就把卡删了（中途反悔会白丢一张）")
+		return
+	if int(rp._core_stage) != 1:
+		_smoke_fail("R458：选了祭品没进第二段（stage=%d）" % int(rp._core_stage))
+		return
+	# 「重选祭品」退回第一段，一张都不扣
+	rp._on_click(rp._btn_deck_back_rect().get_center())
+	if int(rp._core_stage) != 0 or RunState.deck_ids.size() != n0:
+		_smoke_fail("R458：「重选祭品」没退回第一段（stage=%d / 卡组 %d 张）"
+				% [int(rp._core_stage), RunState.deck_ids.size()])
+		return
+	# ③ 两段走完 → 落账
+	rp._on_click(rp.core_card_rect(0).get_center())
+	rp._on_click(rp.core_card_rect(0).get_center())
+	if RunState.deck_ids.size() != n0 - 1:
+		_smoke_fail("R458：兑换完卡组没减少（%d → %d）"
+				% [n0, RunState.deck_ids.size()])
+		return
+	if str(RunState.pending_rewards[idx].get("state", "")) != RunState.REWARD_CLAIMED:
+		_smoke_fail("R458：兑换完这条奖励没置为已领")
+		return
+	if int(RunState.pending_rewards[idx].get("dmg", 0)) != 17:
+		_smoke_fail("R458：条目上没记下附魔数值（dmg=%d）"
+				% int(RunState.pending_rewards[idx].get("dmg", -1)))
+		return
+	if not RunState.is_relic_spent(RunState.CORE_RELIC_ID):
+		_smoke_fail("R458：兑换完「核心」没失效（道具还能再触发一次）")
+		return
+	if int(rp._view) != RewardPanel.VIEW_LIST:
+		_smoke_fail("R458：兑换完没回列表（view=%d）" % int(rp._view))
+		return
+	# ④ 滚动：6 条装不下 → 按住拖动要能滚，抬手不许当点按
+	RunState.pending_rewards.clear()
+	for _i in 6:
+		RunState.pending_rewards.append({"kind": "relic", "id": 6001,
+				"state": RunState.REWARD_PENDING})
+	rp.open()
+	if float(rp._max_scroll()) <= 0.0:
+		_smoke_fail("R458：6 条奖励应该超出可视区（max_scroll=%.1f）"
+				% float(rp._max_scroll()))
+		return
+	var p0: Vector2 = rp._row_rect(0).get_center()
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = p0
+	rp._on_input(press)
+	var mv := InputEventMouseMotion.new()
+	mv.position = p0 - Vector2(0, 96)
+	mv.relative = Vector2(0, -96)
+	mv.button_mask = MOUSE_BUTTON_MASK_LEFT
+	rp._on_input(mv)
+	var rel := InputEventMouseButton.new()
+	rel.button_index = MOUSE_BUTTON_LEFT
+	rel.pressed = false
+	rel.position = p0 - Vector2(0, 96)
+	rp._on_input(rel)
+	if float(rp._scroll) <= 0.0:
+		_smoke_fail("R458：按住拖动没滚动奖励列表（_scroll=%.1f）"
+				% float(rp._scroll))
+		return
+	if int(rp._view) != RewardPanel.VIEW_LIST:
+		_smoke_fail("R458：拖动抬手被当成了点按（view=%d）" % int(rp._view))
+		return
+	# 纯点按（按下 → 原地抬手）仍然要能打开条目 —— 别把点击一起打死
+	rp._scroll = 0.0
+	var p1: Vector2 = rp._row_rect(0).get_center()
+	var p2 := InputEventMouseButton.new()
+	p2.button_index = MOUSE_BUTTON_LEFT
+	p2.pressed = true
+	p2.position = p1
+	rp._on_input(p2)
+	var r2 := InputEventMouseButton.new()
+	r2.button_index = MOUSE_BUTTON_LEFT
+	r2.pressed = false
+	r2.position = p1
+	rp._on_input(r2)
+	if int(rp._view) != RewardPanel.VIEW_RELIC:
+		_smoke_fail("R458：原地点按没打开道具详情（view=%d）" % int(rp._view))
+		return
+	rp.close()
+	RunState.pending_rewards.clear()
+	RunState.deck_ids = ids_sv
+	RunState.deck_mods = mods_sv
+	RunState.relics = relics_sv
+	RunState.spent_relics = spent_sv
+	RunState.core_lost = 0
+	RunState.core_armed = false
+	print("SMOKE OK R458 核心：成形 → 奖励页两段兑换 → 道具失效；奖励页可拖动滚动，"
+			+ "拖动不误开条目、原地点按照常打开")
 
 
 func _check_r396_same_id_flyin(scene) -> void:

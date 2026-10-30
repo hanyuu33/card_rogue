@@ -913,6 +913,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	match_charge = 0           # R342 火柴：新的一局没有火柴（重拿时再灌满 3 次）
 	spent_relics.clear()       # R367：新的一局没有「已耗尽」的道具
 	pipe_ready = false          # R446：新的一局 → 烟斗从头（没拿到就是灭的）
+	core_lost = 0               # R458：核心的累计受伤 / 触发位在新的一局归零
+	core_armed = false
 	boss_kills.clear()         # R367：新的一局重新记每层 Boss
 	reward_kinds = []
 	# 开局卡组 = 公共部分 + 2 张角色基础盟友（森林精魄 → 树人；暗影刺客 → 幽影）
@@ -973,6 +975,8 @@ static func end_run(clear_save: bool = true) -> void:
 	## 记录与持久化文件照旧保留。
 	run_active = false
 	pipe_ready = false          # R446：一局结束 → 烟斗状态位复位
+	core_lost = 0               # R458：核心的累计与触发位同样复位
+	core_armed = false
 	player_class = PlayerClass.default_id()
 	deck_ids = []
 	deck_mods = []                # R181：本局结束 → 附魔清掉
@@ -1229,7 +1233,7 @@ static func enchant_master_on_rest() -> Dictionary:
 	if not relics.has(ENCHANT_MASTER_RELIC_ID):
 		return {"ok": false}
 	var pool: Array[String] = []
-	for eid: String in CardData.ENCHANT_DEFS.keys():
+	for eid: String in CardData.random_enchant_ids():
 		if not _milk_targets(eid).is_empty():
 			pool.append(eid)
 	if pool.is_empty():
@@ -1641,7 +1645,10 @@ static func waiting_pick_scene() -> String:
 	## ⚠️ 只有 run 进行中才算：局已经结束（`end_run`）之后道具仍可能被领，但那时不该再跳。
 	if not run_active:
 		return ""
-	if pending_relic > 0 or pending_deck_edit != "":
+	# 燧石（6057）**不选卡**：它要的是「在地图上选一格」，由 `map_scene._start_flint_pick()` 收尾。
+	# 漏判会原地死循环：地图 `_ready` 判出 deck_edit → 那个场景没有 6057 分支（只剩「自由浏览」）
+	# → `leave` 回地图 → 再判一次 → 又送回去。`curtain_scene._leave()` 早就排除了它，这里是「唯一判据口」，口径必须一致。
+	if pending_deck_edit != "" or (pending_relic > 0 and pending_relic != FLINT_RELIC_ID):
 		return "res://scenes/deck_edit.tscn"
 	return ""
 
@@ -2799,6 +2806,11 @@ static func enchant_ok(ench_id: String, c: CardData, deck_idx: int) -> bool:
 			# `power`，由 `GameEngine._spell_dmg()` 消费 → 这张技能卡造成的伤害 +10。
 			# 以前判 `power > 0`（= 只给盟友 / 工事），技能卡永远选不中、单位却能白拿 10 攻。
 			return c.is_damage_spell()
+		"core":
+			# R458 契约核心：只给**能取到第一段伤害**的伤害技能卡。数值由献祭方给，
+			# 所以资格只看「自己是不是一张拿得出段伤的伤害技能卡」。
+			# ⚠️ 随机池（牛奶 / 附魔大师）不会摇到它，见 `CardData.random_enchant_ids()`。
+			return c.is_damage_spell() and GameEngine.spell_first_hit(c) > 0
 		"dimension":
 			return (c.kind == "盟友" or c.is_fort()) and not c.has_affix("次元") \
 					and not c.is_effect()
@@ -2874,6 +2886,8 @@ static func _apply_mod(c: CardData, mod: Dictionary) -> void:
 		c.add_affix(affix)
 	# R214：记下附魔种类（烤完数值就看不出来了 —— 卡面标记 / 左栏 / 商店全靠它）
 	c.enchant = enchant_id_of(mod)
+	# R458：可变数值附魔（契约核心「伤害 +N」）的**逐卡显示名** —— 空串 = 用固定名。
+	c.enchant_label = str(mod.get("label", ""))
 	# R210：技能卡的具体伤害是写在 `effect_text` 里的死文字（「造成 17 点伤害」），
 	# 「伤害 +10」附魔改的是**结算值** → 卡面文字会跟实际伤害对不上。补一行标注，
 	# 详情条 / 图鉴 / 牌库都读 `effect_text`，玩家一眼能看到这张卡被附魔过。
@@ -2901,6 +2915,162 @@ static func enchant_deck_card(index: int, mod: Dictionary) -> bool:
 	return true
 
 
+# ── R458「契约的核心」（第二层事件）：可变的伤害附魔 ──────────────────
+## 契约核心 = +N 伤害，N 取自被献祭那张技能卡的**第一段伤害**
+## （`GameEngine.spell_first_hit()` 唯一口）。消费点与商店的「伤害 +10」完全同源
+## （`_spell_dmg()` 把 `card.power` 并进每一段），区别只在这个数不固定 ——
+## 所以名字也逐卡携带（`CardData.enchant_title()`），不能用固定标签。
+const CORE_ENCHANT_ID := "core"
+## 核心（6059，「契约的核心」选项 2）：**不是当场兑现**——
+## 战斗中累计失去 `CORE_LOSS_NEED` 点生命值后，这一场战斗结束时的奖励页里
+## 才会多出一条「核心」；在那里献祭一张伤害技能牌、把它的第一段伤害变成附魔。
+## 用掉即失效（`spend_relic` → 道具栏里变灰），累计与「已触发」一起清零。
+const CORE_RELIC_ID := 6059
+const CORE_LOSS_NEED := 15
+## 持有「核心」以来累计失去的生命（**只算战斗内 HP 伤害**，战斗结束结算）。
+static var core_lost := 0
+## 已经够 15 点了（这一场开始每场胜利都给一次机会，直到用掉为止）。
+static var core_armed := false
+
+
+static func core_enchant_mod(value: int) -> Dictionary:
+	## 契约核心附魔的数值定义（`_apply_mod` 按它烤进目标卡）。
+	## `label` 是**可变**显示名（「伤害 +17」）：卡面 / 左栏 / 提及浮窗读它；
+	## 只认 id 的地方（记录页等）退回 `ENCHANT_DEFS["core"]` 的固定名「契约核心」。
+	var v: int = maxi(0, value)
+	return {"power": v, "note": "伤害 +%d" % v,
+			"label": "伤害 +%d" % v, "id": CORE_ENCHANT_ID}
+
+
+static func core_contract_sources(repo: CardRepo) -> Array[int]:
+	## 契约的核心 · 选项 2 第一段：**可以献祭**的卡（= **卡组下标**，同名卡各占一项）。
+	## 判据：伤害技能卡 + 第一段伤害取得到 + 不是不可删除的卡（月亮 9180 / 硬币 9181 /
+	## 罐子 9157 这些 `no_remove`）。
+	## ⚠️ 祭品**不需要**「没附过魔」—— 它整张都会离开卡组，附魔跟着一起走。
+	ensure_deck_mods()
+	var out: Array[int] = []
+	for i in deck_ids.size():
+		var c := repo.get_card(int(deck_ids[i]))
+		if c == null or c.no_remove:
+			continue
+		if not c.is_damage_spell():
+			continue
+		if GameEngine.spell_first_hit(c) <= 0:
+			continue
+		out.append(i)
+	return out
+
+
+static func core_contract_targets(repo: CardRepo, src_idx: int) -> Array[int]:
+	## 契约的核心 · 选项 2 第二段：**可以接收**附魔的卡（= 卡组下标）。
+	## 判据 = 伤害技能卡 + 还没附魔（每张卡只能一个附魔）+ 不是刚挑中的祭品自己。
+	## 资格口径与商店附魔同源（`enchant_ok()` 的 `core` 分支），不另写一套。
+	ensure_deck_mods()
+	var out: Array[int] = []
+	for i in deck_ids.size():
+		if i == src_idx:
+			continue
+		var c := repo.get_card(int(deck_ids[i]))
+		if c == null:
+			continue
+		if not enchant_ok(CORE_ENCHANT_ID, c, i):
+			continue
+		out.append(i)
+	return out
+
+
+static func core_contract_apply(repo: CardRepo, src_idx: int, dst_idx: int) -> Dictionary:
+	## 契约的核心 · 选项 2 结算：献祭 `src_idx`（**从卡组永久删除**），把它的第一段伤害
+	## 作为附魔烤到 `dst_idx` 上。返回 {ok, dmg, src_name, dst_name, reason}。
+	## ⚠️ 顺序：**先附魔、再删卡** —— 删卡会让后面的下标前移（`delete_deck_card` 会同步
+	##    `deck_mods`），先附魔就不必算偏移。两步的资格都已在候选里过滤过；万一删卡那步
+	##    失败，后果只是「附魔生效、祭品还在」—— 不会留下坏数据。
+	if src_idx < 0 or src_idx >= deck_ids.size() \
+			or dst_idx < 0 or dst_idx >= deck_ids.size():
+		return {"ok": false, "reason": "no_card"}
+	if src_idx == dst_idx:
+		return {"ok": false, "reason": "same_card"}
+	var src := repo.get_card(int(deck_ids[src_idx]))
+	var dst := repo.get_card(int(deck_ids[dst_idx]))
+	if src == null or dst == null:
+		return {"ok": false, "reason": "no_card"}
+	var dmg: int = GameEngine.spell_first_hit(src)
+	if dmg <= 0:
+		return {"ok": false, "reason": "no_damage"}
+	if not enchant_ok(CORE_ENCHANT_ID, dst, dst_idx):
+		return {"ok": false, "reason": "bad_target"}
+	if not enchant_deck_card(dst_idx, core_enchant_mod(dmg)):
+		return {"ok": false, "reason": "enchant_failed"}
+	if not delete_deck_card(src_idx):
+		return {"ok": false, "reason": "delete_failed"}
+	return {"ok": true, "dmg": dmg,
+			"src_name": src.card_name, "dst_name": dst.card_name}
+
+
+static func core_note_battle_loss(lost: int) -> void:
+	## R458：战斗**胜利**时把这一场我方 HP 受伤合计交给这里（`self_hp_damage_taken`）。
+	## ⚠️ 只给**持有核心且还没失效**的局记账：没这件道具时连数都不存
+	##    （免得中途拿到核心时被「以前的伤」白送一次机会）。
+	## ⚠️ 已触发后**继续累加也没意义**（阈值只判一次），直接留着 `core_armed`。
+	if not has_relic(CORE_RELIC_ID) or core_armed:
+		return
+	core_lost += maxi(0, lost)
+	if core_lost >= CORE_LOSS_NEED:
+		core_armed = true
+
+
+static func core_ready_to_use() -> bool:
+	## 「核心」此刻能不能真的用：已触发 + 卡组里至少一対「祭品 → 接收者」。
+	## 凑不出一对时**不入队** —— 否则奖励页里会冒出一条点开是空的条目。
+	if not core_armed or not has_relic(CORE_RELIC_ID):
+		return false
+	var repo := CardRepo.load_json()
+	for i: int in core_contract_sources(repo):
+		if not core_contract_targets(repo, i).is_empty():
+			return true
+	return false
+
+
+static func queue_core_reward() -> int:
+	## 把「核心」摆进待领奖励队列（战斗结束时的奖励页）。返回队列下标（-1 = 没入队）。
+	## 走的是**同一条** `pending_rewards` 通道 —— R340「一批没处理完不许换场景」
+	## 对它同样生效；`_drop_settled_batch()` 保证它只活在当前这一批里。
+	if not core_ready_to_use():
+		return -1
+	for e: Dictionary in pending_rewards:
+		if str(e.get("kind", "")) == "core" \
+				and str(e.get("state", REWARD_PENDING)) == REWARD_PENDING:
+			return -1        # 同一批里已经有一条了（重进结算面板 / 读档续战不重复塞）
+	_drop_settled_batch()
+	pending_rewards.append({"kind": "core", "state": REWARD_PENDING})
+	return pending_rewards.size() - 1
+
+
+static func claim_core_reward(idx: int, src_idx: int, dst_idx: int) -> Dictionary:
+	## R458：奖励页**就地**结算「核心」—— 献祭 `src_idx`（永久删除）、把它的第一段伤害
+	## 附到 `dst_idx` 上，并把这条奖励置为已领。返回 `core_contract_apply()` 的结果。
+	## 用掉之后：累计清零、`core_armed` 归位、道具变灰（`spend_relic`）。
+	if idx < 0 or idx >= pending_rewards.size():
+		return {"ok": false, "reason": "no_entry"}
+	var e: Dictionary = pending_rewards[idx]
+	if str(e.get("kind", "")) != "core":
+		return {"ok": false, "reason": "not_core"}
+	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
+		return {"ok": false, "reason": "settled"}
+	var res := core_contract_apply(CardRepo.load_json(), src_idx, dst_idx)
+	if not bool(res.get("ok", false)):
+		return res
+	e["state"] = REWARD_CLAIMED
+	e["dmg"] = int(res.get("dmg", 0))
+	# 结果留在这条奖励上（置灰之后列表仍要能读出「献祭了谁、附到什么上」）
+	e["src_name"] = str(res.get("src_name", ""))
+	e["dst_name"] = str(res.get("dst_name", ""))
+	core_lost = 0
+	core_armed = false
+	spend_relic(CORE_RELIC_ID)
+	return res
+
+
 static func _milk_targets(ench_id: String) -> Array[int]:
 	## 卡组里「能吃这个附魔、且尚未附魔」的卡下标（牛奶随机附魔用）。
 	var repo := CardRepo.load_json()
@@ -2922,7 +3092,7 @@ static func _apply_milk() -> void:
 	# R323：每次结算重写演示数据（界面读走即清，不会串到下一次）
 	milk_anim = []
 	var pool: Array[String] = []
-	for eid: String in CardData.ENCHANT_DEFS.keys():
+	for eid: String in CardData.random_enchant_ids():
 		if not _milk_targets(eid).is_empty():
 			pool.append(eid)
 	if pool.is_empty():

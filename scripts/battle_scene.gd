@@ -7564,6 +7564,12 @@ func _show_over(win: bool) -> void:
 			# R342：战斗胜利的卡牌奖励**只走这一个口** —— 持有「采集刀」6050 时
 			# 它内部会多入队一组（各自独立三选一）。别在这里直接调 queue_card_reward。
 			RunState.queue_battle_card_rewards(RunState.reward_type)
+			# R458 核心（6059）：**战斗中累计失去 15 点生命值**后，这一场胜利的奖励页里
+			# 会多出一条「核心」——献祭一张伤害技能牌，把它的第一段伤害变成另一张的附魔。
+			# 累计与「已触发」都在 RunState（唯一口），这里只把本场受伤合计交过去；
+			# `core_ready_to_use()` 顺带把「卡组凑不出一对」的情况挡在入队之前。
+			RunState.core_note_battle_loss(engine.state.self_hp_damage_taken)
+			RunState.queue_core_reward()
 			# R390（用户口径）：**精英战**额外给一次删卡 —— 和月亮（9180）走同一条
 			# `deck_delete` 通道，所以它同样进奖励列表、同样受 R340「一批没处理完
 			# 不许换场景」约束。放在卡牌组之后：同一批里它排在卡牌下面，
@@ -15424,8 +15430,8 @@ static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 			"type": "line", "kind": "enchant",
 			"icon": UiAssets.enchant_icon(card.enchant),
 			"col": CardData.enchant_color(card.enchant).darkened(0.12),
-			"title": CardData.enchant_name(card.enchant),
-			"segs": [{"text": "附魔 · " + CardData.enchant_name(card.enchant), "bold": true},
+			"title": CardData.enchant_title(card),
+			"segs": [{"text": "附魔 · " + CardData.enchant_title(card), "bold": true},
 					{"text": "：" + CardData.enchant_desc(card.enchant)}],
 		})
 	if pl != null:

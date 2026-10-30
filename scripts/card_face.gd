@@ -478,7 +478,7 @@ static func _draw_enchant_mark(canvas: CanvasItem, card: CardData, rect: Rect2,
 	else:
 		var fs: int = maxi(6, roundi(10.0 * ui_scale_of(rect)))
 		_draw_center_outlined(canvas, font_bold, fs,
-				CardData.enchant_name(card.enchant).substr(0, 1), c, col)
+				CardData.enchant_title(card).substr(0, 1), c, col)
 
 
 static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,

@@ -5944,10 +5944,11 @@ func _init() -> void:
 			and not ev_kinds_layer.has("gaze"),
 			"第一层事件池：11 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/卡牌宝箱/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物；无凝视、无怪物）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
-	check(l2_ev_kinds.size() == 11 and l2_ev_kinds.has("smith") \
+	check(l2_ev_kinds.size() == 12 and l2_ev_kinds.has("smith") \
 			and l2_ev_kinds.has("moon") and l2_ev_kinds.has("furnace")
+			and l2_ev_kinds.has("core_contract")
 			and l2_ev_kinds.has("card_merchant") and l2_ev_kinds.has("divination"),
-			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 = 11 种子类型")
+			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 + R458 契约的核心 = 12 种子类型")
 	var pear_ev_kinds := l2_ev_kinds        # 旧用例里沿用的变量名（保持后文读到本地变量）
 	check(l2_ev_kinds.has("gaze") and not ev_kinds_layer.has("gaze"),
 			"鸭之凝视已改为第二层事件（第一层不再出 gaze）")
@@ -18359,7 +18360,8 @@ func _init() -> void:
 	check(r214_built.size() == 4 and r214_got == ["damage", "dimension", "", "save"],
 		"R214 附魔：build_deck 给每张附魔卡写上种类 id（实际 %s）" % str(r214_got))
 	# ---- R229「起手」附魔：必定第 1 回合抽到 + 一张卡只能一个附魔 ----
-	check(CardData.ENCHANT_DEFS.size() == 6
+	# R458：附魔表 6 → 7（+契约核心 core）
+	check(CardData.ENCHANT_DEFS.size() == 7
 			and CardData.enchant_name("opening") == "起手"
 			and CardData.enchant_icon_name("opening") == "shop_icon_opening"
 			and CardData.enchant_color("opening").is_equal_approx(Color("f0c860")),
@@ -19286,6 +19288,13 @@ func _init() -> void:
 	check(RunState.waiting_pick_scene() == "res://scenes/deck_edit.tscn",
 			"R216 事件删卡：pending_deck_edit 也算待办")
 	RunState.pending_deck_edit = ""
+	# 燧石（6057）例外：它**不选卡**，要的是「在地图上选一格」（`map_scene._start_flint_pick`）。
+	# 实测踩过：漏判 → 地图 `_ready` 判出 deck_edit → 那场景没有 6057 分支（只剩「自由浏览」）
+	# → leave 回地图 → 再判一次 → 无限来回，整局卡在改卡界面出不来。
+	RunState.pending_relic = RunState.FLINT_RELIC_ID
+	check(RunState.waiting_pick_scene() == "",
+			"燧石：不算「选卡待办」（它在地图上选格，误判会卡在改卡界面出不来）")
+	RunState.pending_relic = -1
 	# 局已结束（结算面板上仍可能领到道具）→ 不再把人送进选卡页
 	RunState.pending_relic = RunState.DUCK_BLOOD_RELIC_ID
 	RunState.run_active = false
@@ -30868,6 +30877,233 @@ func _init() -> void:
 			"R455 源码锁：run_state.gd（战斗外）没有一处写 random_born = true")
 	check_src(r455_rsrc.contains("cc.random_born = false"),
 			"R455 源码锁：build_deck 里保留「进战斗清零」那一行")
+
+	# ==== R458 第二层事件「契约的核心」：道具「咒缚」+ 可变伤害附魔「契约核心」 ====
+	var r458_repo := CardRepo.load_json()
+	var r458_relics := RelicRepo.load_json()
+	# ① 事件登记：只在第二层，权重 > 0，显示名已登记
+	check(GameLayers.event_kinds(GameLayers.LAYER_TWO).has("core_contract")
+			and int(GameLayers.event_weights(GameLayers.LAYER_TWO).get("core_contract", 0)) > 0
+			and GameLayers.event_name("core_contract") == "契约的核心"
+			and not GameLayers.event_kinds(GameLayers.LAYER_DEFAULT).has("core_contract"),
+			"R458 契约的核心：登记在第二层事件池（权重 > 0、显示名「契约的核心」），第一层不出")
+	# ② 道具「咒缚」：战斗类 / 事件来源 / 只从事件拿
+	var r458_curse := r458_relics.get_relic(GameEngine.CURSE_BIND_RELIC_ID)
+	check(r458_curse != null and r458_curse.relic_name == "咒缚"
+			and r458_curse.kind == RelicData.KIND_BATTLE
+			and r458_curse.source == RelicData.SRC_EVENT,
+			"R458 咒缚 6058：战斗类事件道具，已登记")
+	check(not r458_relics.reward_ids().has(GameEngine.CURSE_BIND_RELIC_ID)
+			and not r458_relics.initial_ids().has(GameEngine.CURSE_BIND_RELIC_ID)
+			and not r458_relics.layer2_ids().has(GameEngine.CURSE_BIND_RELIC_ID),
+			"R458 咒缚只从事件拿（不进初始 / 奖励 / 二层起始池）")
+	# ③ 第一段伤害：`SPELL_BASE_DMG` 全表都能取到，且与表里那个数逐张相等
+	var r458_bad: Array = []
+	for r458_cid: int in GameEngine.SPELL_BASE_DMG.keys():
+		var r458_c := r458_repo.get_card(r458_cid)
+		if r458_c == null or r458_c.kind != "技能":
+			r458_bad.append(r458_cid)
+			continue
+		if GameEngine.spell_first_hit(r458_c) != int(GameEngine.SPELL_BASE_DMG[r458_cid]):
+			r458_bad.append(r458_cid)
+	check(r458_bad.is_empty(),
+			"R458 第一段伤害：%d 张伤害技能牌逐张取到（异常 %s）"
+			% [GameEngine.SPELL_BASE_DMG.size(), str(r458_bad)])
+	check(GameEngine.spell_first_hit(r458_repo.get_card(8001)) == 0
+			and GameEngine.spell_first_hit(null) == 0,
+			"R458 第一段伤害：非技能卡 / 空卡一律 0（工事 8001 的 power 是攻击力，不是段伤）")
+	check(GameEngine.spell_first_hit(r458_repo.get_card(9086)) == 2
+			and GameEngine.spell_first_hit(r458_repo.get_card(9162)) == 10
+			and GameEngine.spell_first_hit(r458_repo.get_card(9083)) == 8,
+			"R458 第一段伤害：`2+X`（终结）/ 加粗 `**10**`（集中突破）/「重复 X 次」（流星雨）都取第一段")
+	# ④ 附魔「契约核心」：已登记、有解释、**不进随机池**
+	check(CardData.ENCHANT_DEFS.has("core")
+			and CardData.enchant_name("core") == "契约核心"
+			and CardData.enchant_desc("core") != "",
+			"R458 附魔「契约核心」：已登记且带解释（左栏 buff 框要读它）")
+	check(not CardData.random_enchant_ids().has("core")
+			and CardData.random_enchant_ids().has("damage")
+			and not CardData.random_enchant_ids().is_empty(),
+			"R458 契约核心不进随机附魔池（牛奶 / 附魔大师不能摇出 +0 的空附魔）")
+	# ⑤ 结算：献祭 9003 火焰箭（第一段 17）→ 烤到 9006 闪电链上
+	var r458_sv_ids: Array = RunState.deck_ids.duplicate()
+	var r458_sv_mods: Array = RunState.deck_mods.duplicate()
+	var r458_ids: Array[int] = [9003, 9006, 8001]
+	RunState.deck_ids = r458_ids
+	RunState.deck_mods = []
+	RunState.ensure_deck_mods()
+	var r458_srcs := RunState.core_contract_sources(r458_repo)
+	check(r458_srcs == [0, 1],
+			"R458 候选：只有伤害技能牌能当祭品（工事 8001 不在，实际 %s）" % str(r458_srcs))
+	check(RunState.core_contract_targets(r458_repo, 0) == [1],
+			"R458 候选：祭品自己不能当接收者（实际 %s）"
+			% str(RunState.core_contract_targets(r458_repo, 0)))
+	var r458_ap := RunState.core_contract_apply(r458_repo, 0, 1)
+	check(bool(r458_ap.get("ok", false)) and int(r458_ap.get("dmg", 0)) == 17
+			and str(r458_ap.get("src_name", "")) == "火焰箭"
+			and str(r458_ap.get("dst_name", "")) == "闪电链",
+			"R458 结算：献祭火焰箭 → 第一段 17 点（%s）" % str(r458_ap))
+	check(RunState.deck_ids.size() == 2 and not RunState.deck_ids.has(9003)
+			and RunState.deck_mods.size() == 2,
+			"R458 结算：祭品从卡组永久删除，附魔槽位同步（%s）" % str(RunState.deck_ids))
+	var r458_dst := RunState.card_with_mod(r458_repo, 0)
+	check(r458_dst != null and r458_dst.id == 9006 and r458_dst.power == 17
+			and r458_dst.enchant == "core" and r458_dst.enchant_label == "伤害 +17"
+			and r458_dst.effect_text.contains("伤害 +17"),
+			"R458 结算：接收卡 +17 伤害（power %d / 标记 %s / 名 %s）"
+			% [r458_dst.power if r458_dst != null else -1,
+			r458_dst.enchant if r458_dst != null else "?",
+			r458_dst.enchant_label if r458_dst != null else "?"])
+	check(CardData.enchant_title(r458_dst) == "伤害 +17"
+			and CardData.enchant_title(r458_repo.get_card(9006)) == "",
+			"R458 显示名：可变名跟着**这张卡**走，卡库里的原卡没有它")
+	check(not RunState.enchant_ok("core", r458_dst, 0),
+			"R458 资格：已经附过魔的卡不能再吃第二个附魔")
+	# 数值真的进伤害结算（`_spell_dmg` 是「伤害 +10」与契约核心共用的消费点）
+	var r458_dmg_e := _new_engine([], 20, 20)
+	check(r458_dmg_e._spell_dmg(GameEngine.SIDE_SELF, 11, r458_dst) == 28,
+			"R458 结算：闪电链 11 + 附魔 17 = %d（附魔进了技能伤害）"
+			% r458_dmg_e._spell_dmg(GameEngine.SIDE_SELF, 11, r458_dst))
+	RunState.deck_ids = r458_sv_ids
+	RunState.deck_mods = r458_sv_mods
+	# ⑥ 咒缚：本场第一张卡免费，那张卡在本场 +1 费
+	var r458_cdeck: Array[CardData] = []
+	r458_cdeck.append(_card(8003, "农民", "盟友", 3, 3, 8))
+	r458_cdeck.append(_card(8003, "农民", "盟友", 3, 3, 8))
+	var r458_e := _new_engine(r458_cdeck, 30, 30, -1, false)
+	r458_e.self_relics = [GameEngine.CURSE_BIND_RELIC_ID]
+	r458_e.start_game()
+	check(r458_e.state.curse_free,
+			"R458 咒缚：开局就挂上「本场第一张卡免费」的额度")
+	var r458_h0: CardData = r458_e.state.hand[0]
+	check(r458_e.cost_of(r458_h0) == 0,
+			"R458 咒缚：手里的第一张卡费用归 0（原 %d）" % r458_h0.cost)
+	r458_e.play_from_hand(0, Vector2i(4, 1))
+	check(not r458_e.state.curse_free,
+			"R458 咒缚：免费额度用掉即失效（整场只有一次）")
+	check(r458_e.state.energy == FieldState.ENERGY_PER_TURN,
+			"R458 咒缚：真的没扣费（费用仍 %d）" % r458_e.state.energy)
+	check(r458_e.cost_of(r458_h0) == r458_h0.cost + GameEngine.CURSE_RAISE,
+			"R458 咒缚：被免费打出的那张卡本场 +%d 费（%d → %d）"
+			% [GameEngine.CURSE_RAISE, r458_h0.cost, r458_e.cost_of(r458_h0)])
+	# X 费卡不吃免费额度（费用 = 全部剩余费用，抹成 0 等于让它打 0 段）
+	r458_e.state.curse_free = true
+	var r458_x: CardData = CardData.from_dict(r458_repo.get_card(9083).to_dict())
+	r458_e._note_card_played(GameEngine.SIDE_SELF, r458_x)
+	check(r458_e.state.curse_free and not r458_e.state.curse_raise.has(r458_x),
+			"R458 咒缚：X 费卡（流星雨）不消耗免费额度，额度留给下一张普通卡")
+	# 没这件道具 → 一点免费都不给
+	var r458_e2 := _new_engine(r458_cdeck, 30, 30, -1, false)
+	r458_e2.start_game()
+	check(not r458_e2.state.curse_free
+			and r458_e2.cost_of(r458_e2.state.hand[0]) == r458_e2.state.hand[0].cost,
+			"R458 咒缚：没有这件道具时费用照原价（%d）"
+			% r458_e2.cost_of(r458_e2.state.hand[0]))
+	# ⑦ 源码锁：事件只**收道具**，选卡与落账都在奖励页
+	check_src(FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+			.contains("RunState.gain_relic(RunState.CORE_RELIC_ID)"),
+			"R458 源码锁：事件选项 2 只收道具「核心」（不在事件里当场选卡）")
+	check_src(not FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+			.contains("core_contract_apply(repo, _core_src"),
+			"R458 源码锁：事件场景已经不再调用 core_contract_apply（兑现挪到奖励页）")
+	check_src(FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+			.contains("RunState.claim_core_reward("),
+			"R458 源码锁：核心的落账唯一口 = 奖励页里的 RunState.claim_core_reward")
+	check_src(FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+			.contains("RunState.queue_core_reward()"),
+			"R458 源码锁：战后由 battle_scene 把核心摆进奖励页（queue_core_reward）")
+
+	# ==== R458 二期：核心的**触发条件** ====
+	# 用户口径：「忘记给核心添加触发条件了：累计失去 15 点以上的生命值后，在战斗结束后
+	# 有一次机会……之后失效，加入奖励页面。」→ 核心是一件**道具**（6059），
+	# 战斗内累计失去 `CORE_LOSS_NEED` 点生命后成形；成形后这一场结束的奖励页里多出
+	# 一条可兑换的「核心」；兑换完（献祭一张伤害技能牌）道具即失效 —— 一局只给一次。
+	var r458b_relic := r458_relics.get_relic(RunState.CORE_RELIC_ID)
+	check(r458b_relic != null and r458b_relic.relic_name == "核心"
+			and r458b_relic.kind == RelicData.KIND_BATTLE
+			and r458b_relic.source == RelicData.SRC_EVENT,
+			"R458 核心 6059：战斗类事件道具，已登记")
+	check(not r458_relics.reward_ids().has(RunState.CORE_RELIC_ID)
+			and not r458_relics.initial_ids().has(RunState.CORE_RELIC_ID)
+			and not r458_relics.layer2_ids().has(RunState.CORE_RELIC_ID),
+			"R458 核心只从事件拿（不进初始 / 奖励 / 二层起始池）")
+	# ① 记账只认「持有且还没成形」
+	var r458b_ids_sv: Array = RunState.deck_ids.duplicate()
+	var r458b_mods_sv: Array = RunState.deck_mods.duplicate()
+	var r458b_relics_sv: Array = RunState.relics.duplicate()
+	var r458b_spent_sv: Array = RunState.spent_relics.duplicate()
+	var r458b_pend_sv: Array = RunState.pending_rewards.duplicate()
+	RunState.relics = []
+	RunState.spent_relics = []
+	RunState.core_lost = 0
+	RunState.core_armed = false
+	RunState.core_note_battle_loss(20)
+	check(RunState.core_lost == 0 and not RunState.core_armed,
+			"R458 核心触发：没有这件道具时不记账（挨过的打不能换算成机会）")
+	RunState.gain_relic(RunState.CORE_RELIC_ID)
+	RunState.core_note_battle_loss(14)
+	check(RunState.core_lost == 14 and not RunState.core_armed,
+			"R458 核心触发：累计 14 点还没到线（%d < %d）"
+			% [RunState.core_lost, RunState.CORE_LOSS_NEED])
+	check(int(RunSave.snapshot().get("core_lost", -1)) == 14
+			and not bool(RunSave.snapshot().get("core_armed", true)),
+			"R458 核心：累计值 / 触发位都写进了续档（读档后不会白丢这次机会）")
+	RunState.core_note_battle_loss(1)
+	check(RunState.core_armed and int(RunSave.snapshot().get("core_lost", 0)) == 15,
+			"R458 核心触发：累计满 %d 点成形（第 15 点那一刻）" % RunState.CORE_LOSS_NEED)
+	# ② 成形 → 战后入队（同一批只有一条）
+	var r458b_ids: Array[int] = [9003, 9006]
+	RunState.deck_ids = r458b_ids
+	RunState.deck_mods = []
+	RunState.ensure_deck_mods()
+	RunState.pending_rewards = []
+	check(RunState.core_ready_to_use(),
+			"R458 核心入队：成形 + 卡组里有一对「可献祭 → 可接收」→ 可以兑换")
+	var r458b_first := RunState.queue_core_reward()
+	check(r458b_first >= 0
+			and str(RunState.pending_rewards[r458b_first].get("kind", "")) == "core"
+			and str(RunState.pending_rewards[r458b_first].get("state", "")) == RunState.REWARD_PENDING,
+			"R458 核心入队：奖励页里多出一条待兑换的「core」（下标 %d）" % r458b_first)
+	check(RunState.queue_core_reward() == -1 and RunState.pending_reward_count() == 1,
+			"R458 核心入队：同一批只入一条（重进结算面板 / 读档续战不重复塞）")
+	# ③ 兑换：献祭 + 附魔 + 道具失效 + 状态归零
+	var r458b_res := RunState.claim_core_reward(r458b_first, 0, 1)
+	check(bool(r458b_res.get("ok", false)) and int(r458b_res.get("dmg", 0)) == 17
+			and str(r458b_res.get("dst_name", "")) == "闪电链",
+			"R458 核心兑换：献祭火焰箭 → 闪电链 +17（%s）" % str(r458b_res))
+	check(str(RunState.pending_rewards[r458b_first].get("state", "")) == RunState.REWARD_CLAIMED
+			and int(RunState.pending_rewards[r458b_first].get("dmg", 0)) == 17
+			and str(RunState.pending_rewards[r458b_first].get("src_name", "")) == "火焰箭"
+			and str(RunState.pending_rewards[r458b_first].get("dst_name", "")) == "闪电链",
+			"R458 核心兑换：这条置为已领，结果（祭品名 / 接收者名 / 数值）留在条目上")
+	check(RunState.deck_ids.size() == 1 and not RunState.deck_ids.has(9003),
+			"R458 核心兑换：祭品从卡组永久删除（%s）" % str(RunState.deck_ids))
+	check(RunState.is_relic_spent(RunState.CORE_RELIC_ID)
+			and not RunState.has_relic(RunState.CORE_RELIC_ID),
+			"R458 核心兑换：用掉即失效（道具栏里变灰，不再算持有）")
+	check(RunState.core_lost == 0 and not RunState.core_armed
+			and not RunState.core_ready_to_use(),
+			"R458 核心兑换：累计与触发位一起归零")
+	RunState.core_note_battle_loss(30)
+	check(not RunState.core_armed and RunState.queue_core_reward() == -1,
+			"R458 核心兑换：失效之后再挨打也不再触发（这件道具只有一次）")
+	# ④ 凑不出一对时**不入队**（奖励页不许冒一条点开是空的条目）
+	RunState.relics = [RunState.CORE_RELIC_ID]
+	RunState.spent_relics = []
+	RunState.core_armed = true
+	var r458b_only: Array[int] = [9003]
+	RunState.deck_ids = r458b_only
+	RunState.deck_mods = []
+	RunState.ensure_deck_mods()
+	check(not RunState.core_ready_to_use() and RunState.queue_core_reward() == -1,
+			"R458 核心入队：卡组凑不出一对时不入队（不会出现空兑换条目）")
+	RunState.core_lost = 0
+	RunState.core_armed = false
+	RunState.deck_ids = r458b_ids_sv
+	RunState.deck_mods = r458b_mods_sv
+	RunState.relics = r458b_relics_sv
+	RunState.spent_relics = r458b_spent_sv
+	RunState.pending_rewards = r458b_pend_sv
 
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []

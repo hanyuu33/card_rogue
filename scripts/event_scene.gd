@@ -246,6 +246,21 @@ const FURNACE_DESC := """炉膛里的火没有颜色，只有形状——东西�
 投一件道具进去，炉子还你一件随机道具；投的是传奇档，就还你两件。"""
 const FURNACE_DONE_DESC := """炉火暗下去一瞬，又慢慢亮起来。石台边缘还留着一点余温——这次交易已经做完了。"""
 
+## R458「契约的核心」（第二层专属）：两个选项各给一件**事件道具**，都不当场兑现 ——
+##   选项 1 订立契约 → 道具「咒缚」（每场战斗第一张卡免费 / 那张卡本场 +1 费）
+##   选项 2 获取核心 → 道具「核心」（战斗中累计失去 15 点生命后成形，
+##                          这一场结束的**奖励页**里可以兑换一次：献祭一张伤害技能牌，
+##                          把它的第一段伤害变成另一张的附魔；用掉即失效）
+## ⚠️ 选项 2 **不在事件里选卡**（用户口径：「忘记给核心添加触发条件了」）——
+##    选卡与落账都挪到 `RewardPanel` 的 VIEW_CORE（那次兑换才是它的兑现口）。
+## 描述同样压到 2 行：它铺满「选项 1 / 选项 2 / 离开」三个按钮，一长就把最后一个
+## 挤出屏幕（与熔炉同一条教训，见 `_fit_center()`）。
+const CORE_CURSE_ID := 6058       # 咒缚（选项 1 的事件道具）
+const CORE_DESC := """石台正中嵌着一枚还在轻轻跳动的核心，四周绕着几根细链。
+左侧摊着一份没落款的契约，纸面干净，笔就压在边上。"""
+const CORE_CONTRACT_DESC := """链子松开了一圈。纸面上多了一行字，是你的名字。"""
+const CORE_TAKEN_DESC := """石台上只剩一圈浅浅的凹痕，核心已经不在了。"""
+
 
 func _rest_desc() -> String:
 	## 休息处文案（R237：恢复篝火回血 —— 休息与烤肉二选一）。
@@ -275,6 +290,8 @@ var _adv_result := ""          # 冒险家的遗物（R447）：收尾态那行�
 var _furnace_opts: Array[int] = []   # 熔炉（R454）：本次铺出来的可投入道具（_ready 里摇一次）
 var _furnace_invested := -1          # 熔炉（R454）：本次投进去的那件（-1 = 还没投）
 var _furnace_result := ""            # 熔炉（R454）：收尾态那行结果（重绘要能复现）
+var _core_pick := ""                 # 契约的核心（R458）：拿走的是 "contract" / "core" / ""
+var _core_result := ""               # 契约的核心（R458）：收尾态那行结果（重绘要能复现）
 var _bluefish_taken := false  # 蓝色大肥鱼：是否已收下「鲸鱼之怒」
 ## R351 赏月：本次拿走的是 "moon"（花光金币换月亮）/ "coin"（直接拿硬币）/ ""（还没拿）。
 ## 两个选项**互斥**，拿了一个另一个就收起 —— 走 `_claim_reward()` 那条统一规则。
@@ -457,6 +474,11 @@ func _is_furnace() -> bool:
 	return _is_event_node() and _pending_kind() == "furnace"
 
 
+func _is_core_contract() -> bool:
+	## R458 契约的核心（第二层专属）：签契约换道具「咒缚」/ 取核心献祭一张伤害技能牌。
+	return _is_event_node() and _pending_kind() == "core_contract"
+
+
 func _is_treasure() -> bool:
 	## 小宝箱（R372：**免费**开箱，内容恒为一组卡牌奖励）：事件节点中未被其它子类型认领的情况。
 	return _is_event_node() and not _is_whisper() and not _is_struggle() \
@@ -466,7 +488,7 @@ func _is_treasure() -> bool:
 			and not _is_delivery() and not _is_delivery_done() \
 			and not _is_card_merchant() and not _is_lake_lady() \
 			and not _is_divination() and not _is_moon() and not _is_snow_leopard() \
-			and not _is_adventurer() and not _is_furnace()
+			and not _is_adventurer() and not _is_furnace() and not _is_core_contract()
 
 
 func _kind() -> String:
@@ -487,6 +509,8 @@ func _kind() -> String:
 		return "adventurer"
 	if _is_furnace():
 		return "furnace"
+	if _is_core_contract():
+		return "core_contract"
 	if _is_hero():
 		return "hero"
 	if _is_arcane():
@@ -732,6 +756,14 @@ func _ready() -> void:
 		if args[i] == "--bbq":  # 演示：已在休息处烤好肉（截图验证取走后的状态）
 			RunState.gain_relic(RunState.BARBECUE_RELIC_ID)
 			_bbq_taken = true
+		if args[i] == "--corecontract":  # 演示：契约的核心（R458 第二层专属）
+			RunState.run_active = true
+			RunState.current_layer = GameLayers.LAYER_TWO
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "core_contract"
+			# 卡组里放三张伤害技能牌（火焰箭 17 / 闪电链 11 / 寒冰箭 3）+ 两张普通牌，
+			# 两段选卡都有货：祭品三选一、接收者二选一（祭品自己不在候选里）。
+			RunState.deck_ids = [8001, 8002, 8003, 9003, 9006, 9011, 9011]
 		if args[i] == "--tip" and i + 1 < args.size():
 			_tip_demo = args[i + 1]   # 演示：锁住某个名字的悬浮提示（截图核验用）
 	bbq_btn.visible = false   # 「烤肉」只在休息处出现，事件节点隐藏
@@ -833,6 +865,8 @@ func _ready() -> void:
 		event_name.text = "熔  炉"
 		_furnace_opts = RunState.furnace_options()
 		_setup_furnace()
+	elif _is_core_contract():
+		_setup_core_contract()
 	elif _is_hero():
 		event_name.text = "绝赞五换一"
 		desc.text = HERO_DESC
@@ -1139,6 +1173,9 @@ func _on_main() -> void:
 	## 宝箱层 → 开箱获得 1 个随机奖励道具。
 	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
 	sfx.play("click")
+	if _is_core_contract():
+		_core_take_contract()
+		return
 	if _is_furnace():
 		_furnace_take(0, rest_btn)
 		return
@@ -1735,6 +1772,109 @@ func _setup_arcane() -> void:
 		result_label.text = ""
 
 
+func _core_pair_available(repo: CardRepo) -> bool:
+	## 「获取核心」能不能做：至少存在一对「祭品 → 接收者」，且接收者**还没附魔**。
+	## 判据全在 RunState 的两个候选口里，场景不自己筛（口径唯一）。
+	for i: int in RunState.core_contract_sources(repo):
+		if not RunState.core_contract_targets(repo, i).is_empty():
+			return true
+	return false
+
+
+func _setup_core_contract() -> void:
+	## R458「契约的核心」（第二层专属）的选项铺排。
+	##   · 选项 1 订立契约 → 道具「咒缚」；
+	##   · 选项 2 获取核心 → **两段选卡**（先挑祭品、再挑接收者）；
+	##   · 离开（什么都不做）。
+	## ⚠️ 两段都在本场景用 `PickOverlay` 完成（不跳卡组编辑场景）：第一段只**记下**祭品
+	##    下标（`_core_src`），真正落账发生在第二段确认时 —— 中途反悔一张都不扣。
+	## ⚠️ 收尾态走 `_core_pick` 的两个分支直接收起：`_refresh()` 会重铺这三种事件，
+	##    不这么写会把已经写完的结果行清掉。
+	event_name.text = "契 约 的 核 心"
+	rest_btn.visible = true
+	alt_btn.visible = true
+	leave_btn.visible = true
+	leave_btn.disabled = false
+	leave_btn.text = "什么都不碰（离开）"
+	if _core_pick == "contract":
+		desc.text = CORE_CONTRACT_DESC
+		_collapse_to_leave()
+		result_label.text = _core_result
+		result_label.add_theme_color_override("font_color", Color("b06be0"))
+		return
+	if _core_pick == "core":
+		desc.text = CORE_TAKEN_DESC
+		_collapse_to_leave()
+		result_label.text = _core_result
+		result_label.add_theme_color_override("font_color", Color("b06be0"))
+		return
+	desc.text = CORE_DESC
+	result_label.text = ""
+	if RunState.has_relic(CORE_CURSE_ID):
+		rest_btn.text = "契约已经签过了"
+		rest_btn.disabled = true
+	else:
+		rest_btn.text = "订立契约（获得道具「咒缚」）"
+		rest_btn.disabled = false
+	# R458 修正：选项 2 只**收下道具**，兑现挪到「战斗中累计失去 15 点生命 →
+	# 战斗结束的奖励页」。所以这里没有「当场选卡」，只按三态给文案：
+	#   未持有 → 可拿；持有未成形 → 显示进度；已成形 → 提示去奖励页兑换。
+	if RunState.has_relic(RunState.CORE_RELIC_ID):
+		alt_btn.disabled = true
+		if RunState.core_armed:
+			alt_btn.text = "核心已经成形（战斗结束时在奖励页兑换）"
+		else:
+			alt_btn.text = "核心还在酝酿（累计失去 %d / %d 点生命）" % [
+					RunState.core_lost, RunState.CORE_LOSS_NEED]
+	elif _core_pair_available(CardRepo.load_json()):
+		alt_btn.text = "获取核心（收下道具「核心」）"
+		alt_btn.disabled = false
+	else:
+		alt_btn.text = "卡组里凑不出两张伤害技能牌"
+		alt_btn.disabled = true
+	_redraw()
+
+
+func _core_take_contract() -> void:
+	## 选项 1：收下道具「咒缚」（与「雪豹出现」拿烟斗同一条路：
+	## `gain_relic` → 收起按钮 → 写结果行）。
+	if _core_pick != "":
+		_on_leave()
+		return
+	RunState.gain_relic(CORE_CURSE_ID)
+	var rel := RelicRepo.load_json().get_relic(CORE_CURSE_ID)
+	_core_pick = "contract"
+	_claim_reward(rest_btn)
+	desc.text = CORE_CONTRACT_DESC
+	_core_result = "「咒缚」已收进道具栏：%s" % (rel.desc if rel != null else "")
+	_collapse_to_leave()
+	result_label.text = _core_result
+	result_label.add_theme_color_override("font_color", Color("b06be0"))
+	_redraw()
+
+
+func _core_take_core() -> void:
+	## 选项 2：收下道具「核心」（6059）。
+	## ⚠️ 它**不是当场兑现**：战斗中累计失去 `RunState.CORE_LOSS_NEED` 点生命才成形，
+	##    成形后由**这一场战斗结束时的奖励页**提供一次兑换（`RunState.queue_core_reward()`）。
+	##    这里只把道具收进栏里，并把「怎么触发」写进结果行 —— 不写的话玩家会以为它没反应。
+	if _core_pick != "":
+		_on_leave()
+		return
+	if RunState.has_relic(RunState.CORE_RELIC_ID):
+		alt_btn.disabled = true
+		return
+	RunState.gain_relic(RunState.CORE_RELIC_ID)
+	_core_pick = "core"
+	_claim_reward(alt_btn)
+	desc.text = CORE_TAKEN_DESC
+	_core_result = "「核心」收进了道具栏：战斗中累计失去 %d 点生命后成形，这一场结束时的奖励页里会多出一次兑换 —— 献祭一张伤害技能牌，把它第一段伤害附到另一张技能牌上。用掉之后失效。" % RunState.CORE_LOSS_NEED
+	_collapse_to_leave()
+	result_label.text = _core_result
+	result_label.add_theme_color_override("font_color", Color("b06be0"))
+	_redraw()
+
+
 func _refresh() -> void:
 	# R178：本次访问的奖励已领完 → 任何刷新都保持「只有一个离开」的收尾态
 	#（_on_main 的休息分支等地方会再调 _refresh，不收住会把按钮文案改回去）。
@@ -1746,7 +1886,8 @@ func _refresh() -> void:
 			or _is_relic_chest() or _is_arcane() or _is_oblivion() \
 			or _is_smith() or _is_delivery() or _is_delivery_done() \
 			or _is_card_merchant() or _is_lake_lady() or _is_divination() \
-			or _is_moon() or _is_snow_leopard() or _is_furnace():
+			or _is_moon() or _is_snow_leopard() or _is_furnace() \
+			or _is_core_contract():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。
@@ -1871,6 +2012,9 @@ func _on_alt() -> void:
 	## R305 卡片商人 · **随机折价**（第三选项）：随机失去一张非诅咒卡，换 100 金币。
 	## R351 赏月也用它当「拿硬币」的按钮。
 	sfx.play("click")
+	if _is_core_contract():
+		_core_take_core()
+		return
 	if _is_furnace():
 		_furnace_take(2, alt_btn)
 		return

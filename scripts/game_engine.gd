@@ -459,6 +459,10 @@ const PIPE_RELIC_ID := 6055
 const PIPE_ENERGY := 1
 const PIPE_DRAW := 1
 const PIPE_HP_COST := 1
+# R458 咒缚（6058，「契约的核心」选项 1）：每场战斗**第一张卡免费**，
+# 但那张卡在本场战斗里费用 +CURSE_RAISE。
+const CURSE_BIND_RELIC_ID := 6058
+const CURSE_RAISE := 1
 # R446 雪豹（8081，事件「雪豹出现」选项 2）—— 攻击时随机一张手牌本回合 -1 费。
 const SNOW_LEOPARD_ID := 8081
 const SNOW_LEOPARD_DISCOUNT := 1
@@ -2116,6 +2120,14 @@ func _begin_turn(side: String) -> void :
 						"text": "烟斗：首回合费用 +%d / 多抽 %d 张 / 失去 %d 生命"
 								% [PIPE_ENERGY, PIPE_DRAW, pipe_cost]})
 
+
+		# R458 咒缚（6058）：**每场战斗的第一张卡免费** —— 每个我方回合开始刷一次「本场」
+		# 判据（`turn_number == 1` 才是这一场的第一回合）。用掉后由 `_note_card_played`
+		# 置 false，所以免费额度**跨回合保留**（第一回合没出牌，第二回合仍然是「第一张」）。
+		# ⚠️ 与烟斗 6055 别混：烟斗是「首回合限定的 +1 费」，咒缚是「首张牌免费 + 那卡涨价」。
+		if self_relics.has(CURSE_BIND_RELIC_ID) and turn_number == 1:
+			state.curse_free = true
+			_log("咒缚：本场战斗的第一张卡免费（那张卡之后费用 +%d）" % CURSE_RAISE)
 
 		# 勇气徽章（6031，R245 / R372）：精英战与 Boss 战**都只在首回合**额外 +1 费用。
 		# 「哪一场算精英 / Boss」由 battle_scene 写入 `battle_kind`，引擎只看这个字段。
@@ -3943,6 +3955,15 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 	# 放在**最后**（压得住契约签订者的涨价，因为卡面写的就是「为 0」）；回合结束清空。
 	if side == SIDE_SELF and state.turn_cannon_free and card != null \
 			and card.id == ENERGY_CANNON_ID and state.hand.has(card):
+		c = 0
+	# R458 咒缚（6058）的另一半：被免费打出的那张卡，**本场战斗**费用 +N。
+	# 它是「涨价」，所以排在所有减费之后（与契约签订者 8024 同一个位置口径）。
+	if side == SIDE_SELF and card != null:
+		c += int(state.curse_raise.get(card, 0))
+	# R458 咒缚（6058）：**本场战斗的第一张卡免费** —— 放在最后一步，压得住上面所有涨价
+	# （与夜行 / 代达罗斯「为 0」同一条路）。判据带 `state.hand.has(card)`：只对**此刻
+	# 还在手里**的卡生效（打出 / 弃掉后自动恢复原价，不必在离手口逐个清标记）。
+	if side == SIDE_SELF and state.curse_free and card != null and state.hand.has(card):
 		c = 0
 	return _cost_floor(card, maxi(0, c))
 
@@ -7713,6 +7734,17 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 	if side == SIDE_SELF and played != null and played.enchant == ENCHANT_DRAW:
 		var ed_n := _draw_many(1)
 		_log("附魔「抽牌 +1」：打出 %s 后抽 %d 张" % [played.card_name, ed_n])
+	# R458 咒缚（6058）：「第一张卡免费」在这里**兑现成账** —— 额度用掉，并给这一张
+	# 记一笔本场战斗 +N 费（再次上手时按涨价后的费用结算）。
+	# ⚠️ 只看 `state.curse_free`，**不判** `turn_number == 1`：额度跨回合有效，
+	#    这正是与烟斗（首回合限定）的区别。
+	# ⚠️ X 费卡（流星雨 9083）不吃免费额度：它的费用 = 全部剩余费用，把它抹成 0 等于
+	#    让它打 0 段。`cost_of` 里同样的排除 → 额度留给下一张普通卡，两边口径一致。
+	if side == SIDE_SELF and played != null and state.curse_free and not played.x_cost:
+		state.curse_free = false
+		state.curse_raise[played] = int(state.curse_raise.get(played, 0)) + CURSE_RAISE
+		_log("咒缚：第一张卡「%s」免费打出 —— 它在本场战斗的费用 +%d"
+				% [played.card_name, CURSE_RAISE])
 
 
 func _raid_dmg(side: String) -> int:
@@ -7869,6 +7901,29 @@ static func dmg_expr_text(base: int, dmg: int) -> String:
 	if dmg > base:
 		return "%d＋%d" % [base, dmg - base]
 	return "%d－%d" % [base, base - dmg]
+
+
+static func spell_first_hit(card: CardData) -> int:
+	## R458（用户口径）：「**这张伤害技能卡的第一段伤害**」—— 契约核心的献祭数值唯一口。
+	## 为什么必须集中一口：
+	##   · `SPELL_BASE_DMG` 的登记口径就是「effect_text 里**第一个**「N 点伤害」的 N」
+	##     （R348 逐条断言），所以它就是「第一段」的权威表；
+	##   · 但少数卡的伤害是**实例值**（蓄势 9156 的 `card.value` / 猎杀 9205 的本局成长），
+	##     表里只有初始值 —— 必须读卡本身；
+	##   · 另有一批卡的第一段带后缀（集中突破 9162 / 冲击炮 9163 的 `**10**` 加粗、
+	##     终结 9086 的 `2+X`、流星雨 9083 的「重复 X 次」、弹跳飞刀 9160 的「每次减 1」），
+	##     表里记的同样是第一段 —— 从文本正则抠数会把这些全抠错，所以只认表。
+	## ⚠️ 只认**技能**卡：盟友 / 工事 / 场地 / 效果的 `power` 是攻击力，不是「段伤」。
+	## ⚠️ **不含任何加成**（附魔 / 魔法塔 / 荧光草 / 回合加成…）：献祭搬的是「这张卡
+	##    自己写着的那个数」，搬一个带加成的瞬时值没有意义。
+	## ⚠️ 本函数**只读**。
+	if card == null or card.kind != "技能":
+		return 0
+	if not SPELL_BASE_DMG.has(card.id):
+		return 0
+	if card.id == CHARGE_UP_ID or card.id == SLAY_ID:
+		return maxi(0, card.value)   # 实例值（卡面由 _charge_up_text / 成长写出）
+	return maxi(0, int(SPELL_BASE_DMG[card.id]))
 
 
 func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:

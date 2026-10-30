@@ -77,6 +77,9 @@ const LAYERS := {
 			"moon": 20,
 			# R454 熔炉（第二层专属）：投一件身上的道具进炉子 → 换回随机道具（传奇换两件）。
 			"furnace": 18,
+			# R458 契约的核心（第二层专属）：订立契约得道具「咒缚」/
+			# 取走核心 → 献祭一张伤害技能牌，把它的第一段伤害变成附魔。
+			"core_contract": 16,
 		},
 	},
 	3: {
@@ -117,6 +120,7 @@ const EVENT_NAMES := {
 	"divination": "占卜室",
 	"moon": "赏月",
 	"furnace": "熔炉",
+	"core_contract": "契约的核心",
 	"snow_leopard": "雪豹出现",
 	"adventurer": "冒险家的遗物",
 	"delivery": "运送委托",
