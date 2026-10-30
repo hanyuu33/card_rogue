@@ -11,6 +11,7 @@
   fx_shine.png     96×24   柱身流动亮带
   fx_knife.png     96×160  飞刀（刀尖朝上）
   fx_glow.png     128×128  通用柔光（落地亮斑 / 拖尾 / 枪口光）
+  fx_hit_burst.png 192×192 命中爆点（白核 + 放射光刺 + 细冲击环，R449 充能巨炮）
 
 用法：python tools/gen_fx_textures.py
 """
@@ -565,6 +566,58 @@ def gen_shockwave():
     save(buf, w, h, "fx_shockwave.png")
 
 
+# ---------------------------------------------------------------- 命中爆点
+def gen_hit_burst():
+    """充能巨炮的**命中爆点**（R449）。用户口径：「需要额外添加命中处特效」。
+
+    为什么值得单独一张：命中那一下要同时读出三件事 —— 白核（打中了）、
+    放射光刺（被打穿、东西被崩开）、细冲击环（气浪被推开）。用 `fx_glow`
+    叠三层只能读到「一团亮」，叠到第三层就糊成白饼；而且柔光没有方向感，
+    看不出是被「自上而下打穿」的。
+    """
+    S = 192
+    c = (S - 1) / 2.0
+    buf = [[0.0, 0.0, 0.0, 0.0] for _ in range(S * S)]
+    spikes = 12
+    tau = math.pi * 2.0
+    for y in range(S):
+        dy = (y - c) / (S / 2.0)
+        for x in range(S):
+            dx = (x - c) / (S / 2.0)
+            r = math.hypot(dx, dy)
+            if r > 1.0:
+                continue
+            th = math.atan2(dy, dx)
+            idx = y * S + x
+            # ⚠️ 叠色顺序 = 由外到内，**白核最后画**。反过来写的话，内热区 / 光刺的
+            #    alpha 会把白盖成浅青（实测中心只剩 (188,234,255)），整张图就没有
+            #    「最亮的接触点」了。
+            # ⑤ 极淡外晕：只是防边缘硬切，不能有存在感
+            over(buf, idx, (0.28, 0.58, 1.00),
+                 clamp(math.exp(-(r / 0.95) ** 2) * 0.10))
+            # ③ 放射光刺：11 根，长度 / 角度都按序号取定值（确定性，回放不抖）
+            for k in range(spikes):
+                base = tau * k / spikes
+                jit = (hash2(k, 3) - 0.5) * 0.22
+                d = abs(((th - base - jit + math.pi) % tau) - math.pi)
+                ln = 0.52 + 0.45 * hash2(k, 7)
+                if r > ln:
+                    continue
+                # 指数 1.7 → 1.15：尖刺要「一整根都看得见」，衰减太快只剩根部一小撮
+                fall = (1.0 - r / ln) ** 1.15
+                over(buf, idx, (0.80, 0.96, 1.00),
+                     clamp(math.exp(-(d / 0.13) ** 2) * fall))
+            # ④ 细冲击环：气浪被推开的那一圈（窄、亮、别糊成光晕）
+            ring = math.exp(-((r - 0.62) / 0.050) ** 2) * 0.78
+            over(buf, idx, (0.46, 0.84, 1.00), clamp(ring * (1.0 - 0.35 * r)))
+            # ② 内热区：冰青
+            over(buf, idx, (0.72, 0.94, 1.00),
+                 clamp(math.exp(-(r / 0.15) ** 2) * 0.90))
+            # ① 白核：极紧 —— 够亮但不铺开，否则整块糊成白球
+            over(buf, idx, (1.00, 1.00, 1.00), clamp(math.exp(-(r / 0.085) ** 2)))
+    save(buf, S, S, "fx_hit_burst.png")
+
+
 def main():
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
@@ -581,6 +634,7 @@ def main():
     gen_arc()
     gen_arc("fx_arc_elec.png", (0.62, 0.44, 0.05), (1.00, 0.83, 0.24), (1.00, 0.99, 0.76))
     gen_shockwave()
+    gen_hit_burst()
     print("完成")
 
 

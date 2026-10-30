@@ -468,6 +468,7 @@ var _fx_shine_tex: Texture2D = null    # 柱身流动亮带
 var _fx_knife_tex: Texture2D = null    # 飞刀（刀尖朝上）
 var _fx_glow_tex: Texture2D = null     # 通用柔光（落地亮斑 / 拖尾 / 预热点）
 var _fx_laser_tex: Texture2D = null    # R449：充能巨炮的激光柱（冷色 蓝→青→冰白）
+var _fx_hit_burst_tex: Texture2D = null   # R449：命中爆点（白核 + 光刺 + 冲击环）
 var _shake_cur := Vector2.ZERO         # 本帧震屏偏移 —— 自绘贴图用完必须还原成它
 ## R434：灰烬龙战吼 / 启示者清场的**火焰**，以及阶段 2 电磁屏障的**护盾球 + 电弧**。
 ## 全部走 `assets/fx/*.png`（程序化生成，见 tools/gen_fx_textures.py），
@@ -615,6 +616,7 @@ var _cannon_beams: Array = []       # {cell, start, land, end}   正在落的炮
 const CANNON_BEAM_CHARGE_MS := 260  # 蓄能：细光丝从顶端划到目标格（伤害就落在这时）
 const CANNON_BEAM_HOLD_MS := 420    # 主光柱全亮（比舰炮短，但要够看清「炮打下来」这一下）
 const CANNON_BEAM_FADE_MS := 220    # 淡出
+const CANNON_HIT_RING_MS := 520     # R449 命中处冲击环扩散时长（锚在卡牌中心）
 const CANNON_MUZZLE_Y := -14.0      # 炮口在画面顶端之外（被顶栏 / 敌方 HP 行挡住）
 const CANNON_BEAM_W := 168.0        # 主光柱全宽（比舰炮 118 更宽：激光是「点穴但很粗」的一击）
 ## R433：弹跳飞刀（9160）—— 主刀 + 每一跳排成一条**飞行链**（刀从上一个目标飞向下一个）。
@@ -766,6 +768,7 @@ func _ready() -> void:
 	_fx_knife_tex = load("res://assets/fx/fx_knife.png")
 	_fx_glow_tex = load("res://assets/fx/fx_glow.png")
 	_fx_laser_tex = load("res://assets/fx/fx_laser.png")
+	_fx_hit_burst_tex = load("res://assets/fx/fx_hit_burst.png")
 	_fx_flame_tex = load("res://assets/fx/fx_flame.png")
 	_fx_ember_tex = load("res://assets/fx/fx_ember.png")
 	_fx_shield_tex = load("res://assets/fx/fx_shield.png")
@@ -13036,7 +13039,11 @@ func _draw_cannon_beams() -> void:
 			continue
 		var ctr := _cell_center(b.get("cell", Vector2i(0, 0)))
 		var cx := ctr.x
-		var bot := ctr.y + CELL / 2.0
+		# R449 修正：命中点 = **卡牌中心**。原来取 `ctr.y + CELL / 2`（格子底部），
+		# 光柱越过整张卡一直戳到卡脚，读起来像「光打在卡的下面」。现在光柱末端与
+		# 所有落点特效统一以卡心 `hit_y` 为锚。
+		var hit_y := ctr.y
+		var bot := hit_y
 		var top := CANNON_MUZZLE_Y
 		var hgt := maxf(24.0, bot - top)
 		var chg := clampf(float(n - st) / float(maxi(1, ld - st)), 0.0, 1.0)
@@ -13087,23 +13094,64 @@ func _draw_cannon_beams() -> void:
 				draw_texture_rect(_fx_shine_tex, Rect2(cx - sw * 0.5, yy - 7.0, sw, 14.0), false,
 						Color(0.66, 0.93, 1.0, 0.60 * fade * (0.4 + 0.6 * (1.0 - ph))))
 		# ③ 炮口反冲：一炮打出去，顶端那团光最亮
-		# ④ 落点：青晕 + 白心 + 横向散光（激光打穿目标的那一下）
 		if _fx_glow_tex != null:
 			draw_texture_rect(_fx_glow_tex, Rect2(cx - 74, top - 12, 148, 62), false,
 					Color(0.70, 0.92, 1.0, 0.80 * fade))
-			# ① 大范围蓝晕 ② 卡面上那团白芯（竖直拉长 = 光束在这里被「顶住」）
+		# ④ 命中光（**打底**）：大范围蓝晕 → 卡心白芯（竖直拉长 = 光束被「顶住」）→ 横向散光
+		#    ⚠️ 绘制顺序必须是 光晕 → 冲击环 → 爆点 → 碎屑。第一版把光晕排在爆点**之后**，
+		#    44×52 的白点配 0.95 alpha 直接把爆点的光刺盖成一块白饼（340ms 截图里只剩
+		#    「一团白」）。爆点是这套特效里唯一有细结构的东西，必须压在最上层。
+		if _fx_glow_tex != null:
 			draw_texture_rect(_fx_glow_tex,
-					Rect2(cx - 96 * grow, bot - 62 * grow, 192 * grow, 124 * grow), false,
+					Rect2(cx - 96 * grow, hit_y - 62 * grow, 192 * grow, 124 * grow), false,
 					Color(0.34, 0.66, 1.0, 0.70 * fade))
 			draw_texture_rect(_fx_glow_tex,
-					Rect2(cx - 30 * grow, bot - 64 * grow, 60 * grow, 128 * grow), false,
+					Rect2(cx - 30 * grow, hit_y - 64 * grow, 60 * grow, 128 * grow), false,
 					Color(0.82, 0.96, 1.0, 0.80 * fade))
+			# 卡心白点缩到 32×38：它只负责「接触点亮一下」，最亮的那一点交给爆点白核
 			draw_texture_rect(_fx_glow_tex,
-					Rect2(cx - 22 * grow, bot - 26 * grow, 44 * grow, 52 * grow), false,
-					Color(1, 1, 1, 0.95 * fade))
-			# ③ 横向散光：激光把目标「打穿」的那一下
-			draw_texture_rect(_fx_glow_tex, Rect2(cx - 132 * grow, bot - 10, 264 * grow, 20), false,
+					Rect2(cx - 16 * grow, hit_y - 19 * grow, 32 * grow, 38 * grow), false,
+					Color(1, 1, 1, 0.72 * fade))
+			draw_texture_rect(_fx_glow_tex,
+					Rect2(cx - 132 * grow, hit_y - 10, 264 * grow, 20), false,
 					Color(0.52, 0.86, 1.0, 0.55 * fade))
+		# ⑤ 冲击环：两圈错峰的圆环（炸开），全部锚在卡牌中心
+		if n >= ld and _fx_wave_tex != null:
+			for k in 2:
+				var rk := clampf(float(n - ld - k * 95) / CANNON_HIT_RING_MS, 0.0, 1.0)
+				if rk <= 0.0 or rk >= 1.0:
+					continue
+				# 第二圈小一点、慢一档 = 冲击波有厚度，不是单层圆圈
+				var rr := lerpf(30.0 - 7.0 * k, 112.0 - 22.0 * k, rk) * (0.62 + 0.38 * grow)
+				draw_texture_rect(_fx_wave_tex,
+						Rect2(cx - rr, hit_y - rr, rr * 2.0, rr * 2.0), false,
+						Color(0.62, 0.92, 1.0, pow(1.0 - rk, 1.6) * 0.85))
+		# ⑥ 爆点：白核 + 放射光刺 + 细环（R449 新贴图 `fx_hit_burst.png`）。
+		#    用户口径「需要额外添加命中处特效」—— 光柱原来只是「穿过去」，这一层才是
+		#    「打中」的那一下。炸开后缓慢放大 + 淡出，比单纯闪现更像被崩开的东西。
+		if n >= ld and _fx_hit_burst_tex != null:
+			var bt := clampf(float(n - ld) / CANNON_HIT_RING_MS, 0.0, 1.0)
+			var bs := lerpf(0.55, 1.35, pow(bt, 0.45)) * (0.72 + 0.28 * grow)
+			var ba: float = pow(1.0 - bt, 1.5)
+			draw_texture_rect(_fx_hit_burst_tex,
+					Rect2(cx - 96.0 * bs, hit_y - 96.0 * bs, 192.0 * bs, 192.0 * bs), false,
+					Color(1, 1, 1, ba))
+		# ⑦ 碎屑：自上而下打穿 → 往外迸并往下掉（`et*et` 那项就是重力）
+		if n >= ld and _fx_ember_tex != null:
+			for i in 8:
+				var ph := _rev_hash(4491 + i, 17, 5)
+				var et := clampf(float(n - ld) / 430.0 - ph * 0.20, 0.0, 1.0)
+				if et <= 0.0 or et >= 1.0:
+					continue
+				var ang := TAU * float(i) / 8.0 + (ph - 0.5) * 0.8
+				var spd: float = 1.0 - pow(1.0 - et, 2.0)
+				var dist := (20.0 + 52.0 * ph) * spd
+				var ex := cx + cos(ang) * dist
+				var ey := hit_y + sin(ang) * dist * 0.70 + et * et * 52.0
+				var es := 6.0 + 7.0 * ph
+				draw_texture_rect(_fx_ember_tex,
+						Rect2(ex - es * 0.5, ey - es * 0.5, es, es), false,
+						Color(0.74, 0.94, 1.0, pow(1.0 - et, 1.3) * 0.95))
 
 func _cannon_beam_land_for(cell: Vector2i) -> int:
 	## R449：这一格是不是正挨充能巨炮的激光？是 → 返回激光**落地时刻**（0 = 没有）。
