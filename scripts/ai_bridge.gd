@@ -828,6 +828,29 @@ func _battle_targets(s: Variant) -> Array:
 					"hint": "乌鸦：取回「%s」（%d费）" % [cc.card_name, cc.cost]})
 		return out
 
+	# ①a5 专注（9122）/ 负重减轻（8066）—— 与 ①a2~a4 同一类「面板一开、targets 就空」。
+	# 根因不同：这两张卡的选卡页 `opts` 存的是**卡 id**（`_build_pick_cfg("focus")`
+	# 走 `_merged_deck()` 合并视图，元素是 `CardData.id` 而不是 `CardData`），而下面
+	# ①b 通用分支写的是 `var c: CardData = opts[i]` —— 对 int 赋值类型不匹配，
+	# GDScript 在**运行时**抛错、整个 `_battle_targets` 中断，targets 就成了空数组
+	# （R442 实测：第 2 层「量产铁砧」第 2 回合打出专注后 AI 完全动不了）。
+	# 候选本来就在引擎里（`focus_options()` = 抽牌库全部下标），不必依赖面板：
+	# 直接按 `fk<抽牌库下标>` 列，点击走 `engine.focus_pick()`。
+	if e.focus_pending:
+		var pkF: Variant = s._pick
+		if pkF != null and pkF.is_picking() and (pkF.opts() as Array).is_empty():
+			pkF.close()
+		var flbl: String = str(e.focus_label)
+		for fi: int in e.focus_options():
+			if fi < 0 or fi >= st.deck.size():
+				continue
+			var fc: CardData = st.deck[fi]
+			out.append({"id": "fk%d" % fi,
+					"hint": "%s：移除「%s」（%d费；还要移除 %d 张）"
+							% [flbl, fc.card_name, fc.cost, int(e.focus_remaining)]})
+		out.append({"id": "fkcancel", "hint": "不选了（已移除的不回收）"})
+		return out
+
 	# ①b 全屏选卡页 → 只能选卡 / 确认 / 取消
 	# R413：**先主动把面板建出来**。引擎侧的取牌 pending（鲸鱼之怒 9084 / 乌鸦 /
 	# 复活术 / 无尽黑暗 / 新生 / 预判…）不是「点了就开」——`_sync_pick()` 要到**下一帧**
@@ -842,9 +865,17 @@ func _battle_targets(s: Variant) -> Array:
 	if pick != null and pick.is_picking():
 		var opts: Array = pick.opts()
 		for i in opts.size():
-			var c: CardData = opts[i]
+			# ⚠️ 不是所有选卡页的 opts 都是 CardData：专注 / 负重减轻存的是卡 id，
+			#    淘汰 / 惊喜运单存的是卡组下标。以前这里硬转 CardData 会运行时抛错，
+			#    把整个 targets 打空（R442）。非 CardData 一律退化成「第 N 项」。
+			var ov: Variant = opts[i]
+			var pnm := "第 %d 项" % i
+			var pcst := 0
+			if ov is CardData:
+				pnm = (ov as CardData).card_name
+				pcst = (ov as CardData).cost
 			out.append({"id": "p%d" % i,
-					"hint": "选卡页：%s（%d费）" % [c.card_name, c.cost]})
+					"hint": "选卡页：%s（%d费）" % [pnm, pcst]})
 		out.append({"id": "pok", "hint": "确认当前选择（已选 %d 张）" % pick.selected_count()})
 		out.append({"id": "pcancel", "hint": "取消 / 关闭选卡页"})
 		return out
@@ -1007,6 +1038,24 @@ func _battle_click(target: String) -> Dictionary:
 			pkC2.close()
 		return {"ok": cok, "msg": "乌鸦：取回「%s」%s" % [cn, "" if cok else "（失败）"]}
 
+	# 专注 / 负重减轻（R442：见 `_battle_targets` ①a5）
+	if target == "fkcancel":
+		if not e.focus_pending:
+			return {"ok": false, "msg": "现在没有专注 / 负重减轻在等选卡"}
+		var flc: String = str(e.focus_label)
+		e.focus_cancel()
+		return {"ok": true, "msg": "%s：已取消剩余的移除（已移除的不回收）" % flc}
+	if target.begins_with("fk") and target.substr(2).is_valid_int():
+		if not e.focus_pending:
+			return {"ok": false, "msg": "现在没有专注 / 负重减轻在等选卡"}
+		var fi2 := int(target.substr(2))
+		if fi2 < 0 or fi2 >= st.deck.size():
+			return {"ok": false, "msg": "抽牌库没有第 %d 张" % fi2}
+		var fnm: String = str(st.deck[fi2].card_name)
+		var flab: String = str(e.focus_label)
+		var fok: bool = e.focus_pick(fi2)
+		return {"ok": fok, "msg": "%s：移除「%s」%s" % [flab, fnm, "" if fok else "（失败）"]}
+
 	# 选卡页
 	if target.begins_with("p"):
 		var pick: Variant = s._pick
@@ -1029,8 +1078,12 @@ func _battle_click(target: String) -> Dictionary:
 			pick.reopen()
 		# 走真实点击路径（`_tap` 内部按上限 toggle 选中）
 		pick._tap(pick._card_rect(pi).get_center())
+		var piov: Variant = opts[pi]
+		var pnml := "第 %d 项" % pi
+		if piov is CardData:
+			pnml = (piov as CardData).card_name
 		return {"ok": true, "msg": "选卡页点了第 %d 张：%s（已选 %d）"
-				% [pi, (opts[pi] as CardData).card_name, pick.selected_count()]}
+				% [pi, pnml, pick.selected_count()]}
 
 	# 手牌
 	if target.begins_with("h") and target.substr(1).is_valid_int():
