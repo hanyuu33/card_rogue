@@ -1862,6 +1862,9 @@ static func transform_deck_card(repo: CardRepo, index: int, same_class := false)
 	## 源数之力 / 卡片商人「旧换新」：把卡组中第 index 张卡变成一张随机奖励卡。
 	## `same_class = true` 时**只出本职业（或本局职业）的奖励卡**（R305 卡片商人的口径）。
 	## 返回 {ok, old_id, new_id}（供界面/日志展示）。
+	## ⚠️ R455：这是**战斗外**的卡组变化 → **不是**「随机变化」：不写 `random_born`、
+	## 不计入引擎的「变化 N 张」，也不触发发明专家 9143 回费。卡面写的「以随机变化的
+	## 方式加入手卡」只认**战斗内**（随心组装 9144 / 创意 8070 / 惊喜运单 8079）。
 	if index < 0 or index >= deck_ids.size():
 		return {"ok": false, "old_id": 0, "new_id": 0}
 	var old_id: int = deck_ids[index]
@@ -2662,6 +2665,14 @@ static func build_deck(repo: CardRepo) -> Array[CardData]:
 		var cc := card_with_mod(repo, i)
 		if cc == null:
 			continue
+		# R455：「随机变化」是**战斗内**的一次性事实（8072 / 8074 的入手收益），
+		# 卡组这一层永远不携带它 —— 战斗外的随机换卡（源数之力 6002 / 卡片商人·旧换新 /
+		# 鸭鸭工匠…）只换 id，不打标记、也不进引擎的「变化 N 张」（`self_card_changes`）。
+		# 这里兜最后一道：万一脏数据带了标记，进战斗即清零。
+		# ⚠️ **先复制再清零**：没附魔的卡是卡库共享实例，直接改就等于污染整局卡库。
+		if cc.random_born:
+			cc = CardData.from_dict(cc.to_dict())
+			cc.random_born = false
 		cards.append(cc)
 	return cards
 

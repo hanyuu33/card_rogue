@@ -5268,6 +5268,9 @@ func _apply_random_born(card: CardData) -> void :
 	##   * 谟涅摩叙涅 8072 → 手卡内费用 -2（`hand_cost_delta`，离手自动失效）；
 	##   * 量产型代达罗斯 8074 → +2 攻 +2 血（直接烤进副本的数值）。
 	## 其它卡只留 `random_born` 标记 —— 以后再加「随机变化有收益」的卡，只改这里。
+	## R455：标记**只在战斗内**产生（`_transform_hand_card(random_born=true)` / 惊喜运单
+	##   `surprise_pick()`）；战斗外把卡组里的卡随机换掉（源数之力 6002 / 卡片商人·旧换新 /
+	##   鸭鸭工匠…）**不算**「随机变化」，`RunState.build_deck()` 进战斗时也会把残留清零。
 	if card == null or not card.random_born:
 		return
 	if card.id == MNEMOSYNE_ID:

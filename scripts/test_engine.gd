@@ -30828,6 +30828,47 @@ func _init() -> void:
 	RunState.spent_relics = []
 	RunState.pending_rewards = []
 
+	# ── R455：「随机变化」只在战斗内成立（战斗外的卡组变化不算）────────────────────
+	# 用户口径（2026-10-30）：卡面「以随机变化的方式加入手卡」这个效果 **不含战斗外的
+	# 卡组变化**（源数之力 6002 / 卡片商人·旧换新 / 鸭鸭工匠…），只认战斗内把一张卡
+	# 变成另一张卡（随心组装 9144 / 创意 8070 / 惊喜运单 8079）。
+	# 起因：另一个 AI 实战任务声称「用源数之力拿到量产型代达罗斯 → 触发了 +2/+2」。
+	var r455_repo := CardRepo.load_json()
+	# ① 卡面写明边界（AI 与玩家读的都是这一行，措辞含糊就会被读成「换卡就算」）
+	check(r455_repo.get_card(8072).effect_text.contains("战斗内"),
+			"R455 卡面：谟涅摩叙涅 8072 写明「**战斗内**被**随机变化**出来」才 -2")
+	check(r455_repo.get_card(8074).effect_text.contains("战斗内"),
+			"R455 卡面：量产型代达罗斯 8074 同样写明「战斗内」")
+	# ② 战斗外换卡（源数之力 / 卡片商人「旧换新」口径）不带标记
+	var r455_ids: Array[int] = [8074]
+	RunState.deck_ids = r455_ids.duplicate()
+	var r455_tr := RunState.transform_deck_card(r455_repo, 0)
+	var r455_new_id := int(r455_tr.get("new_id", 0))
+	var r455_new_card: CardData = r455_repo.get_card(r455_new_id)
+	check(bool(r455_tr.get("ok", false)) and r455_new_card != null \
+			and not r455_new_card.random_born,
+			"R455 战斗外换卡不产生 random_born 标记（换出 %d）" % r455_new_id)
+	# ③ 进战斗（build_deck）把卡组那侧残留清零，且**不污染卡库共享实例**
+	var r455_dirty: CardData = r455_repo.get_card(8072)
+	var r455_was := r455_dirty.random_born
+	r455_dirty.random_born = true          # 模拟脏存档 / 老数据
+	var r455_ids2: Array[int] = [8072]
+	RunState.deck_ids = r455_ids2.duplicate()
+	var r455_bd := RunState.build_deck(r455_repo)
+	check(r455_bd.size() == 1 and not r455_bd[0].random_born,
+			"R455 进战斗（build_deck）把卡组里残留的 random_born 清零")
+	check(r455_dirty.random_born,
+			"R455 清零走的是副本 —— 卡库共享实例没被改（否则整局都会串台）")
+	r455_dirty.random_born = r455_was          # 还原，别漏给后面的用例
+	var r455_empty: Array[int] = []
+	RunState.deck_ids = r455_empty.duplicate()
+	# ④ 源码锁：战斗外（run_state）没有任何一处把标记置真
+	var r455_rsrc := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	check_src(r455_rsrc.count("random_born = true") == 0,
+			"R455 源码锁：run_state.gd（战斗外）没有一处写 random_born = true")
+	check_src(r455_rsrc.contains("cc.random_born = false"),
+			"R455 源码锁：build_deck 里保留「进战斗清零」那一行")
+
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
 	RunState.pending_rewards = []
