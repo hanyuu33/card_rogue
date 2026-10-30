@@ -76,3 +76,6 @@ art_src/_shots/
 # 根目录一次性探针脚本
 /_r[0-9]*.py
 /_r[0-9]*.gd
+
+# AI 试玩：连续 Bash 连击计数（每次运行自增，不入库）
+tools/ai_play/.aicli_calls
