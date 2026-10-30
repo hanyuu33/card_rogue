@@ -638,9 +638,11 @@ func _board_grid(st: FieldState) -> Array[String]:
 
 
 func _unit_line(p: Placement) -> String:
+	## R452：数值一律走 effective_* —— 与 _battle_json 同口径。
+	## 卡面原值不含改造 / 光环 / 成长 / 削弱 / 惧光，AI 拿它判断会系统性低估己方战力。
 	var c: CardData = p.card
-	return "%s %d攻/%d血 射%d 移%d" % [c.card_name, c.power, p.health,
-			c.attack_range, c.move_speed]
+	return "%s %d攻/%d血 射%d 移%d" % [c.card_name, p.effective_power(), p.health,
+			p.effective_range(), p.effective_speed()]
 
 
 func _state_tags(p: Placement) -> String:
@@ -713,8 +715,12 @@ func _battle_json(s: Variant) -> Dictionary:
 		var p: Placement = pair[1]
 		board.append({"cell": [cell.x, cell.y], "owner": str(p.owner),
 				"name": p.card.card_name, "id": p.card.id,
-				"power": p.card.power, "hp": p.health,
-				"range": p.card.attack_range, "speed": p.card.move_speed,
+				# 显示必须走 effective_*：场上加成（改造 upgrade_atk / 光环 atk_buff /
+				# 成长 / 削弱 atk_debuff / 惧光 / 启示者阶段减速）全在 Placement 上，
+				# 读 p.card.power 会把这些全漏掉，AI 会拿卡面原值做判断（R452 实测：
+				# 素体改造后实际 3 攻、视图显示 1 攻）。
+				"power": p.effective_power(), "hp": p.health,
+				"range": p.effective_range(), "speed": p.effective_speed(),
 				"tapped": p.tapped, "moved": p.moved, "acts_left": p.acts_left})
 	var hand: Array = []
 	for i in st.hand.size():
