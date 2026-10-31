@@ -426,7 +426,6 @@ const SPELL_RESIST_CAP:= 3
 const DISPLACE_IMMUNE_TRAIT:= "位移免疫"
 const ASH_DRAGON_ID:= 1013
 const ASH_DRAGON_AOE:= 4
-const FROST_MAGE_ID:= 1031
 const WYVERN_ID:= 1014
 const WYVERN_TOKEN_ID:= 9028
 const GHOUL_ID:= 1050
@@ -1839,6 +1838,13 @@ const DARK_LORD_SPEED_PER_ASSASSIN:= 1  # 每个存活暗杀者 +1 速
 const PHASE_TRAIT:= "穿行"              # 移动无视单位阻挡
 const ASSASSIN_SUMMON_TRAIT:= "暗杀召唤"
 
+# ---- R461：寒霜结界（9210，寒冰防线的敌方效果卡）----
+# 原来「冰封一个我方单位」是**冰冻术士 1031 的战吼** —— 玩家只看到自己的单位忽然冻住，
+# 敌方效果区里没有任何东西说明来源（用户口径「寒冰防线这一关的敌人效果应该做成效果卡」）。
+# 现在搬到关卡级效果卡：**战斗开始时**冰封一个敌方单位，术士本人变回普通法师。
+# 选谁 = 生命最低的那个（与旧战吼同一口径；**不摇骰子** —— 回放与测试不该因为这张卡多消耗随机数）。
+const FROST_WARD_TRAIT:= "寒霜"
+
 # ---- R327：送葬（9175，森林精魄 2 费稀有·效果）----
 # 「场上每有一个单位被破坏，抽 1 张卡。」挂在己方效果区，在**全局唯一破坏口**
 # `_destroy` 尾部结算（所以亡语、溢出、超负荷真死、思想钢印救回都算）。
@@ -2332,6 +2338,7 @@ func enable_enemy_effects(cards: Array[CardData]) -> void :
 	state.apply_extra_actions(SIDE_OPPONENT)
 	# R111 暗影召唤：「战斗开始时」那一半的召唤（另一半点在敌方回合开始里）。
 	_assassin_summon(SIDE_OPPONENT, true)
+	_frost_ward(SIDE_OPPONENT)         # R461 寒霜结界：战斗开始时冰封一个我方单位
 	_refresh_dark_lord(SIDE_OPPONENT)
 	_refresh_hecaton(SIDE_OPPONENT)
 	_refresh_mnemosyne()               # R271 谟涅摩叙涅：开局先算一次
@@ -4398,9 +4405,11 @@ func _frenzy(side: String, target) -> String:
 	var p:= _target_placement(side, target)
 	if p == null or p.owner != side or p.card.kind != "盟友":
 		return "（需要指定一个己方盟友）"
-	if p.card.actions >= FRENZY_ACTIONS or p.acts_left >= FRENZY_ACTIONS:
+	if p.card.actions >= FRENZY_ACTIONS or p.acts_total >= FRENZY_ACTIONS:
 		return "%s 已拥有同类效果（不可重复获得）" % p.card.card_name
-	p.acts_left = FRENZY_ACTIONS
+	# R462：改走 `grant_actions` —— 直接写 `acts_left` 会把「已经行动的这张卡」的
+	# 行动账本抹掉（横置还在、`acts_left` 却变成 2），于是打完一箭就再也动不了。
+	state.grant_actions(p, FRENZY_ACTIONS)
 	_log("狂暴：%s 本回合可以攻击两次" % p.card.card_name)
 	return "%s 本回合可以攻击两次" % p.card.card_name
 
@@ -4783,6 +4792,9 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	if card.id == PAINT_BOT_ID:
 		_paint_bot_enter(p)         # R404 涂装机器人：选场上其他一个友方单位 → 随机机械之心单位
 	_refresh_mnemosyne()            # R271：刚落地 / 刚被换上场的那只可能是谟涅摩叙涅
+	# R462：刚落地的这张牌可能**改变别人**的行动额度（赫利俄斯 9130 → 量产型俄倪厄双动、
+	# 效果区的哈气…）→ 按差额补一次，中途落地的加成当场生效，不必等到下个回合。
+	state.apply_extra_actions(SIDE_SELF)
 
 	if card.id == FOX_ID:
 		_fox_trigger()
@@ -12016,8 +12028,6 @@ func _battlecry(cell: Vector2i, p: Placement) -> void :
 	match p.card.id:
 		ASH_DRAGON_ID:
 			_battlecry_ash(cell, p)
-		FROST_MAGE_ID:
-			_battlecry_frost(cell, p)
 		_:
 			pass
 
@@ -12054,25 +12064,6 @@ func _battlecry_ash(cell: Vector2i, p: Placement) -> void :
 		_destroy_dead()
 	_end_hp_once()
 	_log("%s 战吼：对 %d 个敌方单位造成 %d 点伤害" % [p.card.card_name, hits, ASH_DRAGON_AOE])
-
-
-func _battlecry_frost(cell: Vector2i, p: Placement) -> void :
-	var foe:= SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
-	var best:= Vector2i(-1, -1)
-	var best_hp:= 999999
-	for c: Vector2i in state.board:
-		var q:= state.unit_at(c)
-		if q == null or q.owner != foe:
-			continue
-		if q.health < best_hp:
-			best_hp = q.health
-			best = c
-	if best == Vector2i(-1, -1):
-		_log("%s 战吼：场上没有敌方单位可冻结" % p.card.card_name)
-		return
-	var q: Placement = state.board[best]
-	_apply_frozen(q, "%s 战吼" % p.card.card_name)
-	action.emit("battlecry", {"cell": cell, "card": p.card, "kind": "frost", "target": best})
 
 
 func _deathrattle(cell: Vector2i, p: Placement) -> void :
@@ -13497,9 +13488,10 @@ func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void
 		_log("%s 被禁足，本回合不能移动" % p.card.card_name)
 		return
 	if p.moved:
-
-
-
+		# R462：**界面不再走这条路** —— 移动完之后只剩「攻击 / 结束这一轮」两件事，
+		# 想再走一格得先结束这一轮（点其他地方 / 右键），新一轮再走。
+		# 这条留给 AI 的侧移连招，语义与「结束这一轮再走」等价：都是让掉这一轮的
+		# 攻击权、换一次移动。
 		if p.acts_left > 1 and not p.card.is_fort() and p.effective_speed() > 0:
 			p.acts_left -= 1
 			p.tapped = false
@@ -15765,6 +15757,35 @@ func _assassin_summon(side: String, initial:= false) -> void :
 	_on_ally_entered(summoned, side)
 	_refresh_dark_lord(side)
 	_refresh_hecaton(side)
+
+
+func _frost_ward(side: String) -> void :
+	## 寒霜结界（9210，R461）：「战斗开始时」冰封**一个**敌方单位。
+	## 只认效果区里的「寒霜」trait（与「暗杀召唤」同一套路），没有就什么都不做。
+	## 施加本身走 `_apply_frozen()` 唯一口 —— 爆点 / 「冰封」飘字 / 播报都由它发出的
+	## `frozen` 事件驱动，这里不另写一套演出。
+	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
+	var src:= ""
+	for c: CardData in zone:
+		if c.traits.has(FROST_WARD_TRAIT):
+			src = c.card_name
+			break
+	if src == "":
+		return
+	var foe:= SIDE_SELF if side == SIDE_OPPONENT else SIDE_OPPONENT
+	var best:= Vector2i(-1, -1)
+	var best_hp:= 999999
+	for c2: Vector2i in state.board:
+		var q: Placement = state.unit_at(c2)
+		if q == null or q.owner != foe or q.health <= 0:
+			continue
+		if q.health < best_hp:
+			best_hp = q.health
+			best = c2
+	if best == Vector2i(-1, -1):
+		_log("%s：场上没有敌方单位可以冰封" % src)
+		return
+	_apply_frozen(state.board[best], "%s（战斗开始时）" % src)
 
 
 # ============================================================ R439 战斗存档

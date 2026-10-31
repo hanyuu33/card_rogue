@@ -89,10 +89,9 @@
       "group": "enemy",
       "class": "敌人",
       "traits": [
-        "法师",
-        "战吼"
+        "法师"
       ],
-      "effect_text": "登场后首个回合开始时：冰封一个敌方单位，使其下回合无法行动。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
+      "effect_text": "关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "蓝",
       "image": ""
@@ -5927,6 +5926,29 @@
       "target_mode": "none",
       "value": 10,
       "color": "红",
+      "image": ""
+    },
+
+    {
+      "id": 9210,
+      "name": "寒霜结界",
+      "kind": "效果",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "寒霜"
+      ],
+      "affixes": [],
+      "effect_text": "战斗**开始时**，冰封一个敌方单位（下回合无法行动）。",
+      "target_mode": "none",
+      "value": 1,
+      "color": "蓝",
       "image": ""
     }
   ]

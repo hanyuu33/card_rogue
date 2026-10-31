@@ -4449,13 +4449,15 @@ func _select_board(cell: Vector2i) -> void:
 	selection = ["board", cell]
 	var p := engine.state.unit_at(cell)
 	if p != null and p.moved and not p.tapped:
+		# R462（用户口径）：**移动之后只剩「攻击」和「结束这一轮」两条路**。
+		# 以前多动单位会把绿格一直留着（点一下 = 消耗一次行动接着走）—— 玩家读成
+		# 「必须马上再走一格」，而且那一走会把**本轮的这记攻击**悄悄作废，顺序全乱。
+		# 现在要再走就先把这一轮结束，新一轮再走：一步一件事，账算得清。
+		move_targets = []
 		if p.acts_left > 1:
-			# 多动单位：还能再消耗一次行动接着走（横着挪位后再压上去）
-			move_targets = engine._reachable(cell, GameEngine.SIDE_SELF)
-			status_text = ("%s：已移动。红色=攻击；点绿色再走一格 = 消耗一次行动（放弃这次攻击）"
-					% p.card.card_name)
+			status_text = ("%s：已移动。红色/深红=攻击；点其他地方 = 结束这一轮（还剩 %d 次行动）"
+					% [p.card.card_name, p.acts_left])
 		else:
-			move_targets = []  # 已移动过：不能再走，只能攻击或放弃（横置）
 			status_text = ("%s：已移动。点红色/深红目标攻击，点其他地方 = 放弃攻击（横置）"
 					% p.card.card_name)
 	else:
@@ -4472,8 +4474,11 @@ func _select_board(cell: Vector2i) -> void:
 		hp_targets_arr = engine.hp_targets(cell)
 
 
-func _pass_moved_pending() -> void:
-	## 选中的单位若已移动未攻击：任何非攻击操作 = 放弃攻击（横置）。
+func _pass_moved_pending() -> int:
+	## 选中的单位若已移动未攻击：任何非攻击操作 = 放弃攻击（结束这一轮）。
+	## R462：返回这一轮结束之后还剩什么 —— 0 = 本来就没这回事 /
+	##       1 = 就地横置（本回合到此为止）/ 2 = 多动单位，**新一轮立刻可动**。
+	## 界面拿它决定提示语（「还能再行动一次」），引擎侧的规则一条都没多。
 	if selection != null and selection[0] == "board":
 		var src: Vector2i = selection[1]
 		var p := engine.state.unit_at(src)
@@ -4482,6 +4487,8 @@ func _pass_moved_pending() -> void:
 			if _net_mode:
 				_net_send({"type": "action", "act": "pass",
 						"args": [[src.x, src.y]]})
+			return 2 if not p.tapped else 1
+	return 0
 
 
 # ------------------------------------------------------------ 输入
@@ -6800,9 +6807,18 @@ func _on_board_click(cell: Vector2i) -> void:
 		# 再点一次空位才真的取消。右键 / Esc 仍是一步取消。
 		if _cancel_armed:
 			_cancel_armed = false
-			_pass_moved_pending()
+			var pend := _pass_moved_pending()
+			var pend_name := ""
+			if pend > 0 and sel_p != null:
+				pend_name = sel_p.card.card_name
 			_clear_selection()
 			status_text = "已取消选择"
+			# R462：多动单位结束这一轮 ≠ 打完收工 —— 明确告诉玩家「还能再来一轮」，
+			# 否则会以为这一取消把整回合的行动都作废了。
+			if pend == 2:
+				status_text = "%s 结束这一轮，还能再行动一次（重新点它继续）" % pend_name
+			elif pend == 1:
+				status_text = "%s 放弃攻击，本回合横置" % pend_name
 			return
 		_cancel_armed = true
 		# ⚠️ 消息长度受顶栏 StatusLabel 限制（310px，超了会省略尾部）：

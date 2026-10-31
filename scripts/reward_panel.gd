@@ -43,6 +43,7 @@ const VIEW_DECK := 4
 ## R458：第二层事件「契约的核心」的兑换页 —— 与删卡视图共用网格几何，
 ## 但要走**两段**（先挑祭品、再挑接收者），而且落账口是 `RunState.claim_core_reward()`。
 const VIEW_CORE := 5
+const VIEW_VIEWER := 6         # R463：只看卡组（不结算任何奖励）
 const DECK_COLS := 6            # 一行 6 张
 const DECK_CARD_W := 112.0
 const DECK_CARD_H := 135.0
@@ -100,6 +101,7 @@ var _core_grid: Array[int] = []
 var _core_stage := 0          # 0 = 挑祭品（献祭），1 = 挑接收者
 var _core_src_idx := -1       # 已选定的祭品（卡组下标，-1 = 还没选）
 var _core_hover := -1         # 网格里鼠标压中的格子下标（-1 = 没有）
+var _viewer_back := VIEW_LIST  # R463：「只看卡组」是从哪一页进来的（返回时回原处）
 ## R458：点按改到「抬起」才判 —— 支持拖动滚动之后，按下即点击会先把手指下面那条打开。
 var _press_pos := Vector2.ZERO
 var _press_view := -1         # 按下时所在的视图（拖动期间视图变了就不算点按）
@@ -569,6 +571,8 @@ func _on_draw() -> void:
 			_draw_deck()
 		VIEW_CORE:
 			_draw_core()
+		VIEW_VIEWER:
+			_draw_deck_viewer()
 		_:
 			_draw_list()
 	_draw_mention_tip()   # R168：悬浮件画在最后（压在所有内容之上）
@@ -634,6 +638,8 @@ func _draw_list() -> void:
 				"卡牌 / 删卡 / 核心奖励要点进去处理（不能一键领取）" if pend > 0 else "全部奖励都已处理，可以点「完成」",
 				HORIZONTAL_ALIGNMENT_LEFT, 620, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	_draw_btn(done, "完成", false, must_pick)
+	# R463：右上角「卡组」—— 领奖励之前先看一眼这局攒了什么（选卡时最常想翻）
+	_draw_btn(_btn_view_deck_rect(r), "卡组", false, false)
 
 
 func _rows_per_page() -> int:
@@ -958,6 +964,83 @@ func _draw_deck() -> void:
 	_draw_btn(_btn_deck_skip_rect(), "放弃这次删卡", false, settled)
 
 
+# ------------------------------------------------------------ R463 只看卡组
+
+func _open_deck_viewer() -> void:
+	## R463（用户口径「奖励页面 / 卡牌奖励领取页面应该可以查看卡组」）：
+	## 从列表页 / 卡牌三选一页进「只看卡组」。记住来路，返回时回到原视图 ——
+	## 尤其在选卡页：看完卡组回来还能接着挑，不用重新找到那一条奖励。
+	if _view != VIEW_LIST and _view != VIEW_CARDS:
+		return
+	_viewer_back = _view
+	_view = VIEW_VIEWER
+	_scroll = 0.0
+	_deck_hover = -1
+	_root.queue_redraw()
+
+
+func _close_deck_viewer() -> void:
+	_view = _viewer_back
+	_scroll = 0.0
+	_deck_hover = -1
+	_root.queue_redraw()
+
+
+func _btn_view_deck_rect(pr: Rect2) -> Rect2:
+	## 「卡组」入口：贴面板右上角（列表页 / 卡牌三选一页用同一个几何）。
+	## 两页的标题都是居中或左对齐的短句，右上角这一小块是空的 —— 不抢按钮带。
+	return Rect2(pr.end.x - 30.0 - 104.0, pr.position.y + 14.0, 104.0, 32.0)
+
+
+func _btn_view_deck_cards_rect() -> Rect2:
+	## R463：卡牌三选一页的「卡组」入口 —— **不能放右上角**：那一页的标题是长句，
+	## 居中排版一路顶到右边（出图实测压字）。改放底部「确认选择这张」右侧的空档。
+	var c := _btn_confirm_rect()
+	return Rect2(c.end.x + 16.0, c.position.y, 104.0, 38.0)
+
+
+func _btn_viewer_back_rect() -> Rect2:
+	var pr := _deck_panel_rect()
+	return Rect2(pr.position.x + pr.size.x / 2.0 - 120.0, pr.end.y - 48.0, 240.0, 36.0)
+
+
+func _draw_deck_viewer() -> void:
+	## 纯查看的卡组视图：与删卡视图同一套面板 / 网格（`_deck_panel_rect` /
+	## `_deck_card_rect`），但**不结算任何奖励** —— 点卡不删、不扣，只有悬停高亮。
+	## ⚠️ 千万不能复用 `_draw_deck()`：那一版读 `pending_rewards[_sel]` 并落删卡结算。
+	var vs := _vs()
+	_root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.045, 0.08, 0.86), true)
+	var pr := _deck_panel_rect()
+	UiTheme.draw_scroll_bg(_root, pr)
+	var n := RunState.deck_ids.size()
+	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
+			"卡组（%d 张）" % n, HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
+			UiTheme.FS_HEADING, Color("2f2a20"))
+	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 78),
+			"这一局的整副卡组 —— 滚轮 / 按住拖动查看；这里只是看，不会改动任何一张",
+			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
+	var c := _deck_clip_rect()
+	if n <= 0:
+		_root.draw_string(_font, c.position + Vector2(0, 40), "卡组里还没有卡",
+				HORIZONTAL_ALIGNMENT_CENTER, c.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
+	for i in n:
+		var rr := _deck_card_rect(i)
+		# 滚出可视区的整张卡不画（纯自绘，没有 clip 容器）
+		if rr.end.y < c.position.y - 2.0 or rr.position.y > c.end.y + 2.0:
+			continue
+		var card: CardData = _repo_cards.get_card(int(RunState.deck_ids[i]))
+		if card == null:
+			continue
+		if i == _deck_hover:
+			_root.draw_rect(rr.grow(6.0), Color(1, 1, 1, 0.75), true)
+		CardFace.draw_pick(_root, card, rr, _font, _font_bold, false)
+	if _max_scroll() > 0.0:
+		_root.draw_string(_font, Vector2(c.position.x, c.end.y - 2.0),
+				"滚轮查看更多（%d 张）" % n, HORIZONTAL_ALIGNMENT_RIGHT, c.size.x,
+				UiTheme.FS_CAPTION, UiTheme.INK_600)
+	_draw_btn(_btn_viewer_back_rect(), "← 返回", false, false)
+
+
 # ------------------------------------------------------------ R458 核心视图
 
 ## 「核心」的兑换页：一副卡组摊开、两段选 —— 先挑**祭品**、再挑**接收者**。
@@ -1156,6 +1239,8 @@ func _draw_cards() -> void:
 	# R444：字段索引浮窗 —— 三选一的卡面只留卡名，`次元 / 嘲讽` 这些字**没有解释可看**。
 	# 贴在「当前正在看的那张」（悬停优先，其次已点选）的左右两侧，压住邻卡是明确允许的。
 	_draw_affix_index(cands, x0, vs)
+	# R463：「卡组」—— 挑卡挑不定的时候最想看的就是现在这副卡组（底部右侧空档）
+	_draw_btn(_btn_view_deck_cards_rect(), "卡组", false, false)
 	_draw_btn(_btn_cards_back_rect(), "← 返回列表", false, false)
 	# R342 火柴：只在**持有**时出现（没有火柴就别放个永远点不动的按钮占位）。
 	# 次数用完 → 保留按钮但置灰，让玩家看得见「3 次真的用光了」。
@@ -1394,7 +1479,9 @@ func _on_input(event: InputEvent) -> void:
 			_press_view = _view
 			_drag_moved = false
 		elif mb.button_index == MOUSE_BUTTON_RIGHT:
-			if _view != VIEW_LIST:
+			if _view == VIEW_VIEWER:
+				_close_deck_viewer()   # R463：只看卡组 → 回它来的那一页，不直接回列表
+			elif _view != VIEW_LIST:
 				_back_to_list()
 
 
@@ -1429,6 +1516,8 @@ func _on_motion(pos: Vector2) -> void:
 					_hover_card = i
 					break
 		VIEW_DECK:
+			_deck_hover = _deck_index_at(pos)
+		VIEW_VIEWER:
 			_deck_hover = _deck_index_at(pos)
 		VIEW_CORE:
 			_core_hover = _core_index_at(pos)
@@ -1501,7 +1590,14 @@ func _on_click(pos: Vector2) -> void:
 				return
 			core_pick_deck(int(_core_grid[cgi]))
 			return
+		VIEW_VIEWER:
+			if _btn_viewer_back_rect().has_point(pos):
+				_close_deck_viewer()
+			return
 		VIEW_CARDS:
+			if _btn_view_deck_cards_rect().has_point(pos):
+				_open_deck_viewer()
+				return
 			if _btn_cards_back_rect().has_point(pos):
 				_back_to_list()
 				return
@@ -1540,6 +1636,9 @@ func _on_click(pos: Vector2) -> void:
 					_root.queue_redraw()
 					return
 		_:
+			if _btn_view_deck_rect(_panel_rect()).has_point(pos):
+				_open_deck_viewer()
+				return
 			if _btn_done_rect().has_point(pos):
 				# R440 暗动力：还有卡牌奖励没拿 → 不许关（「完成」同时是灰的）。
 				if RunState.must_take_card_reward():
@@ -1581,7 +1680,7 @@ func _draw_mention_tip() -> void:
 
 
 func _max_scroll() -> float:
-	if _view == VIEW_DECK:
+	if _view == VIEW_DECK or _view == VIEW_VIEWER:
 		return maxf(0.0, _deck_content_h() - _deck_clip_rect().size.y)
 	if _view == VIEW_CORE:
 		return maxf(0.0, _grid_content_h(_core_grid.size()) - _deck_clip_rect().size.y)
@@ -1745,6 +1844,16 @@ func _demo_start() -> void:
 					_hover_card = -1
 					_pick_sel = 0
 					break
+		# R463 出图：--r463view 再切到「只看卡组」—— 与 --r119 / --r119cards 叠加，
+		# 分别核验「返回 = 列表」与「返回 = 选卡页」两条来路。
+		if "--r463view" in args:
+			# 出图专用：`--r119` 那套演示不铺卡组，补一副（真局里卡组一定是满的）
+			if RunState.deck_ids.is_empty():
+				var demo_deck: Array[int] = [9003, 9006, 9086, 9162, 8001, 9007, 9010, 9001]
+				RunState.deck_ids = demo_deck
+				RunState.deck_mods = []
+				RunState.ensure_deck_mods()
+			_open_deck_viewer()
 		_root.queue_redraw())
 	add_child(t)
 	t.start()

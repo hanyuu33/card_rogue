@@ -390,14 +390,42 @@ func unit_actions(p: Placement, side: String) -> int:
 
 
 func apply_extra_actions(side: String) -> void:
-	## 场上有新单位落地 / 效果区发生变动后，给该阵营**已经在场**的单位补上额外行动轮数。
-	## 原本只有「哈气」一个来源（关卡开局是先摆单位、再启用效果卡，所以必须补这一次）；
-	## R135 起来源多了「场上的赫利俄斯」—— 它的上场顺序**不由效果区决定**，
-	## 所以判据统一收敛到 `unit_actions`，不再只看效果区（那条 `extra <= 0 → return`
-	## 的短路也必须去掉，否则「没有哈气」的关卡整段被跳过）。
+	## 场上有新单位落地 / 效果区发生变动后，给该阵营**已经在场**的单位按 `unit_actions`
+	## 补行动轮数。来源：哈气（效果区）、场上的赫利俄斯（太阳熔炉）、R462 起任何
+	## 「回合中途才落地」的加成（工事 / 盟友上场后立刻重算一遍）。
+	## ⚠️ 一律走 `grant_actions` 的差额补发，**不能**再写 `acts_left = maxi(...)`：
+	##    那样「已经打完两轮的疾行单位」在每张效果卡打出时都会被重新灌满。
 	for p: Placement in board.values():
 		if p.owner == side:
-			p.acts_left = maxi(p.acts_left, unit_actions(p, side))
+			grant_actions(p, unit_actions(p, side))
+
+
+func grant_actions(p: Placement, want: int) -> bool:
+	## R462：给场上单位**补行动轮数**的唯一口（疾行 / 哈气 / 赫利俄斯 / 狂暴 9026 都走它）。
+	## 语义（用户口径）：
+	##   * `want <= acts_total` → 这回合已经发过这么多轮了，**一个也不补**（不是「补满」）；
+	##   * 多出来的部分按差额补：还在行动中 → 直接加进 `acts_left`；
+	##   * **已经把手上几轮走完**（横置）→ 撤掉横置，差额变成「新的一轮」——
+	##     这就是「攻击后才被赋予疾行、本回合还能再动一次」的那条路。
+	## ⚠️ 横置 ≠ 行动用尽：冰封 / 眩晕 / 沉睡的横置是「不能行动」，绝不能借补行动解开。
+	##    这三条与 `reset_units` 的判据同源，改一处必须改另一处。
+	if p == null:
+		return false
+	if want <= p.acts_total:
+		return false
+	var add := want - p.acts_total
+	p.acts_total = want
+	if p.frozen or p.stun_left > 0 or p.sleep_left > 0:
+		p.acts_left = want       # 记上额度，但这回合照样动不了（下回合 reset_units 重发）
+		return false
+	if p.tapped:
+		p.tapped = false
+		p.moved = false
+		p.did_move = false
+		p.acts_left = add
+		return true
+	p.acts_left = mini(p.acts_left + add, want)
+	return true
 
 
 func place(card: CardData, cell: Vector2i, owner := "self",
@@ -449,6 +477,7 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	#    用户口径：「当回合仍然可以行动，只是回合计数要正确，召唤的回合行动 2 格肯定是有问题的」。
 	#    玩家主动出牌（play_from_hand）照旧吃哈气 —— 那是「他自己花费用打出来的」。
 	p.acts_left = 1 if summon else unit_actions(p, owner)
+	p.acts_total = p.acts_left      # R462：发了几轮就记几轮（之后补行动只按差额算）
 	# 沉睡（恶魔鸭 9116）：带「沉睡」trait 的单位一上场就开始睡（SLEEP_TURNS 点）。
 	# 放在 place 里 = 唯一初始化口，关卡摆位 / 效果卡召唤出来的都算。
 	if card.traits.has(SLEEP_TRAIT):
@@ -522,6 +551,7 @@ func reset_units(side: String) -> void:
 			# 哈气 / 太阳熔炉：回合开始时刷新成「行动两次」
 			# （未到生效回合 / 原本就双动 → 不叠加，取最大）
 			p.acts_left = unit_actions(p, side)
+			p.acts_total = p.acts_left   # R462：新回合重发额度，账本一并归位
 
 
 func iter_board() -> Array:
