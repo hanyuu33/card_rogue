@@ -31874,6 +31874,31 @@ func _init() -> void:
 			and r473_src.contains("queue_delayed_card(MARTIAL_PUNCH_ID, MARTIAL_PUNCH_BATTLES, true)"),
 			"R473 武术大师：飞踢认「任何战斗」、冲拳只认精英 / Boss（两处挂单判据都在）")
 
+	# ══ R474：卡牌入组演出（到账不能只弹一句提示）══
+	# 用户口径：「进卡组不能只弹一条提示，最好有一个动画。」
+	# 演出层 `ui_card_grant.gd` 挂 root 下（CanvasLayer）：胜利时奖励悬浮窗压在结算面板之上，
+	# 画进场景里等于没做。这里守四件事 —— 接口在、headless 不崩、时间轴自洽、battle_scene 真接线。
+	var r474_g := preload("res://scripts/ui_card_grant.gd")
+	check(r474_g is GDScript, "R474 入组演出：ui_card_grant.gd 能 preload")
+	r474_g.set_demo_pin(500)
+	r474_g.set_demo_pin(-1)
+	check(true, "R474 入组演出：钉帧口可写可复位（静态口直接调不炸）")
+	# 无渲染 / 无场景树时静默丢弃 —— 连调两次不能炸（回归套件就是这么跑起来的）
+	r474_g.grant(GameEngine.FLYING_KICK_ID, Vector2(100.0, 100.0), 0)
+	r474_g.grant(GameEngine.RUSH_PUNCH_ID, Vector2(100.0, 100.0), 320)
+	check(true, "R474 入组演出：同一场连调两次（排队）不崩")
+	var r474_timing: bool = r474_g.RISE_MS > 0 and r474_g.FLY_MS > 0
+	r474_timing = r474_timing and r474_g.FLASH_MS > 0
+	r474_timing = r474_timing and r474_g.HOLD_MS > r474_g.HOLD_FAST_MS
+	check(r474_timing, "R474 入组演出：四段时间轴自洽（排队时停留段压到 HOLD_FAST_MS）")
+	var r474_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r474_bs.contains("UiCardGrant.grant(int(lc.get(\"id\", -1))"),
+			"R474 入组演出：延迟发卡到账走卡面演出（逐张播，不再只播第一张）")
+	check_src(r474_bs.contains("func _deck_pile_center()"),
+			"R474 入组演出：落点由 battle_scene 给（卡组堆中心，演出层不硬编码坐标）")
+	check_src(not r474_bs.contains("已加入卡组\" % str(lc.get(\"name\""),
+			"R474 入组演出：到账那句纯文字提示已撤掉（动画接管）")
+
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
 	RunState.pending_rewards = []

@@ -84,3 +84,7 @@ tools/ai_play/.aicli_calls
 tools/ai_play/.cannon_seen.json
 tools/ai_play/.picked.json
 tools/ai_play/.runs.jsonl
+
+# AI 试玩：根目录漫游 / 运行日志（本地产物，不入库）
+/.roam*.log
+/.runs.jsonl

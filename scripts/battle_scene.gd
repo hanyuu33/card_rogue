@@ -16,6 +16,9 @@ const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiRoll = preload("res://scripts/ui_roll.gd")
 const UiPop = preload("res://scripts/ui_pop.gd")
+## R474：卡牌入组演出（浮起 → 停住 → 收进卡组堆）。**故意没有 class_name** ——
+## 同 ui_theme.gd：全局类缓存只能由编辑器重建，headless 回归读不到它。
+const UiCardGrant = preload("res://scripts/ui_card_grant.gd")
 const UiDrag = preload("res://scripts/ui_drag.gd")   # R405：滚轮 / 触屏拖动 的唯一口
 const CardInfoBoxes = preload("res://scripts/card_info_boxes.gd")
 ## R386：战场对话气泡（自绘，见该文件头部的设计与时间轴说明）
@@ -1045,6 +1048,17 @@ func _ready() -> void:
 	if "--foresightdemo" in args and engine != null:
 		# R472 出图：直接摊开预判的二选一面板，核验选项文字不越框。
 		engine.foresight_mode = true
+	if "--grantpin" in args:
+		# R474 出图：把卡牌入组演出的时间轴**钉死**在指定毫秒，与帧率无关
+		#（渲染帧率一抖，按 `--shotframe` 抓帧就会落在不同段落上）。
+		# 200 = 浮起中 / 500 = 停住展示 / 900 = 收向卡组途中。
+		var gpi := args.find("--grantpin")
+		if gpi + 1 < args.size():
+			UiCardGrant.set_demo_pin(maxi(int(args[gpi + 1]), 0))
+			if "--grantdemo" in args:
+				# R474 出图：强制播一次「卡牌入组」演出。**必须排在钉帧之后** ——
+				# `grant()` 会按 `demo_pin_ms` 决定时间基准，先播再钉等于白钉。
+				UiCardGrant.grant(GameEngine.FLYING_KICK_ID, _deck_pile_center(), 0)
 	if "--over" in args:
 		# 演示：直接进入结算（验证结算覆盖层 / 彩带 / 胜利音效）
 		engine._finish("胜利", "演示：结算界面")
@@ -7309,6 +7323,12 @@ func _build_level_menu() -> void:
 
 # ------------------------------------------------------------ 结算覆盖层 / 横幅 / 彩带 / 记录面板
 
+func _deck_pile_center() -> Vector2:
+	## R474：右下角卡组堆的中心 —— 卡牌入组演出的落点（`UiCardGrant.grant` 的 `to_pos`）。
+	## 别在演出一侧硬编码坐标：卡组堆位置只有这里说了算。
+	return Vector2(DECK_X + CARD_W / 2.0, DECK_Y + CARD_H / 2.0)
+
+
 func _build_over_panel() -> void:
 	## 胜负结算覆盖层：弹出「再来一局 / 选关 / 回到标题」。
 	_over_panel = PanelContainer.new()
@@ -7647,8 +7667,13 @@ func _show_over(win: bool) -> void:
 			# 到账的卡直接进卡组，用轻提示报一句 —— 结算面板的副标题留给剧情解锁。
 			var late_cards := RunState.bump_delayed_cards(
 					node_type == "elite" or _run_boss_win)
+			# R474：到账的卡走**卡面演出**（浮起 → 停住 → 收进右下角卡组堆 + 落点「+1」），
+			# 不再只弹一句 toast —— 卡「凭空」进卡组的话，玩家会怀疑到底有没有拿到。
+			# lead 320ms：结算面板的 UiPop 是 160ms，等它进完场卡再浮起来，两层别一起动。
+			# 同一场到账两张时由 `UiCardGrant` 自己排队（后一张的停留段自动压短）。
 			for lc: Dictionary in late_cards:
-				UiToast.toast("【%s】已加入卡组" % str(lc.get("name", "")), 2800)
+				UiCardGrant.grant(int(lc.get("id", -1)), _deck_pile_center(), 320)
+				sfx.play("draw")
 			# R390（用户口径）：**精英战**额外给一次删卡 —— 和月亮（9180）走同一条
 			# `deck_delete` 通道，所以它同样进奖励列表、同样受 R340「一批没处理完
 			# 不许换场景」约束。放在卡牌组之后：同一批里它排在卡牌下面，
