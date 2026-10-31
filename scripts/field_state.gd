@@ -69,6 +69,9 @@ var opp_next_energy := 0       # 同上，敌方（对称保留）
 var self_energy_spent := 0     # 本回合**已花掉**的费用（暗影之刃 9111 的 X；回合开始清零）
 var opp_energy_spent := 0      # 同上，敌方（对称保留）
 var board := {}  # Vector2i -> Placement
+## R464：本场战斗已经**发放**到第几号入场序号（见 `Placement.entry_seq`）。
+## 只增不减 —— 单位死掉再召唤回来算「新入场」，序号往后排。
+var entry_counter: int = 0
 # 场地效果（R74）：Vector2i -> CardData。**与board 完全分开**——场地不是单位，
 # 不能被攻击、不挡路、也不参与碰撞；它只是「这个格子上挂着一个一次性效果」。
 # **每个格子最多 1 个**（这正是「每个格子只能存在一个效果」的数据保证：
@@ -433,6 +436,10 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	var p := Placement.new()
 	p.card = card
 	p.owner = owner
+	# R464：入场序号 —— **唯一发放口就在这里**（关卡摆位 / 手牌打出 / 召唤 / 亡语召唤
+	# 全走 place）。放在 place 里而不是各调用点，才不会漏掉某条路径。
+	entry_counter += 1
+	p.entry_seq = entry_counter
 	p.health = card.health
 	# R209：把**随身携带**的改造层数接到场上。手牌 / 牌库里的改造（系统升级 / 批量改造 /
 	# 批量传输 / 自主升级 / 生产订单 / 回收 / 返修）烤进的就是这张卡，层数记在
@@ -577,6 +584,7 @@ func save_dict() -> Dictionary:
 		"max_hp_self": max_hp_self,
 		"max_hp_opponent": max_hp_opponent,
 		"self_turn_no": self_turn_no,
+		"entry_counter": entry_counter,
 		"opp_turn_no": opp_turn_no,
 		"void_count": void_count,
 		"self_cannon_plays": self_cannon_plays,
@@ -639,6 +647,7 @@ func apply_dict(d: Dictionary) -> void:
 	effects = _cards_load(d.get("effects", []))
 	enemy_effects = _cards_load(d.get("enemy_effects", []))
 	board.clear()
+	entry_counter = int(d.get("entry_counter", 0))
 	var bl: Variant = d.get("board", [])
 	if bl is Array:
 		for item: Variant in bl:
@@ -648,6 +657,8 @@ func apply_dict(d: Dictionary) -> void:
 			var p := Placement.new()
 			p.apply_save(item["p"])
 			board[cell] = p
+			# R464：老档没有 entry_counter → 以场上已发的最大序号兜底，避免重号
+			entry_counter = maxi(entry_counter, p.entry_seq)
 	field_effects.clear()
 	field_owner.clear()
 	var fl: Variant = d.get("fields", [])

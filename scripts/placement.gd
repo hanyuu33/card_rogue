@@ -16,6 +16,11 @@ var moved: bool = false       # 本回合已移动（移动后未攻击仍保留
 var did_move: bool = false
 var health: int = 0           # 当前生命
 var owner: String = "self"    # "self" / "opponent"（按卡算，不按行算）
+## R464：**入场序号**（本场战斗第几个落到台上，由 `FieldState.entry_counter` 递增发放）。
+## 冰冻术士 1031 的战吼要「冰封敌方本场战斗第一个入场的单位」—— 「第一个」不能靠
+## 棋盘字典的迭代顺序（Dictionary 顺序不可依赖，回放 / 续档都不稳），必须有个显式序号。
+## 判据：**仍在场**的最小 `entry_seq` = 最早入场且还活着的那个。
+var entry_seq: int = 0
 # ---- 回合级状态效果（削弱/寒冰箭）----
 var atk_debuff: int = 0       # 攻击力减值（正数 = 减多少）
 var debuff_stage: int = 0     # 0 = 未生效（下回合才生效） 1 = 生效中（回合结束清除）
@@ -427,7 +432,7 @@ func status_badges() -> Array[Dictionary]:
 ## ⚠️ **新增 Placement 字段时必须同步加进 _SAVE_FIELDS**，否则该字段续档归零。
 ##    `card` 走 CardData.to_dict（与复制 / 离场还原 / 联机同一条通道）。
 const _SAVE_FIELDS: Array[String] = [
-	"tapped", "moved", "did_move", "health", "owner",
+	"tapped", "moved", "did_move", "health", "owner", "entry_seq",
 	"atk_debuff", "debuff_stage", "frozen", "atk_buff", "atk_growth",
 	"acts_left", "acts_total", "battlecry_done", "ability_used", "guarding", "last_hit_by",
 	"atk_buff_turn", "ramp_atk", "rooted", "poison_left", "poison_dmg",

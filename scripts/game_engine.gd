@@ -426,6 +426,7 @@ const SPELL_RESIST_CAP:= 3
 const DISPLACE_IMMUNE_TRAIT:= "位移免疫"
 const ASH_DRAGON_ID:= 1013
 const ASH_DRAGON_AOE:= 4
+const FROST_MAGE_ID:= 1031      # R464：冰冻术士（战吼 = 冰封敌方本场第一个入场的单位）
 const WYVERN_ID:= 1014
 const WYVERN_TOKEN_ID:= 9028
 const GHOUL_ID:= 1050
@@ -1838,11 +1839,14 @@ const DARK_LORD_SPEED_PER_ASSASSIN:= 1  # 每个存活暗杀者 +1 速
 const PHASE_TRAIT:= "穿行"              # 移动无视单位阻挡
 const ASSASSIN_SUMMON_TRAIT:= "暗杀召唤"
 
-# ---- R461：寒霜结界（9210，寒冰防线的敌方效果卡）----
-# 原来「冰封一个我方单位」是**冰冻术士 1031 的战吼** —— 玩家只看到自己的单位忽然冻住，
-# 敌方效果区里没有任何东西说明来源（用户口径「寒冰防线这一关的敌人效果应该做成效果卡」）。
-# 现在搬到关卡级效果卡：**战斗开始时**冰封一个敌方单位，术士本人变回普通法师。
-# 选谁 = 生命最低的那个（与旧战吼同一口径；**不摇骰子** —— 回放与测试不该因为这张卡多消耗随机数）。
+# ---- R464：寒霜结界（9210，寒冰防线的敌方效果卡）----
+# 这张卡挂的是**全场的力量成长**：每 2 个回合，敌方所有单位力量 +1，最多累计 +4。
+# 这条曲线本来就在跑 —— 关卡的 `enemy_growth`（`configure_growth` → `_sync_enemy_growth`）
+# 是唯一实现口，效果卡的职责是把**来源**写到玩家看得见的地方（以前那句「关卡成长」印在
+# 冰冻术士的卡面上，等于把**全场**的加成说成它一只的，用户口径「全场的＋力量要补到效果卡」）。
+# ⚠️ R461 一度把「冰封」也搬到这张卡上，R464 收回：冰冻是**冰冻术士自己的战吼**，
+#    而且目标从「生命最低」改成「敌方本场战斗**第一个入场**的单位」（`Placement.entry_seq`）。
+# 所以这里只留一个 trait 名做自检用（挂了卡却没配成长 = 卡在台上不出活，留条日志好查）。
 const FROST_WARD_TRAIT:= "寒霜"
 
 # ---- R327：送葬（9175，森林精魄 2 费稀有·效果）----
@@ -2338,7 +2342,7 @@ func enable_enemy_effects(cards: Array[CardData]) -> void :
 	state.apply_extra_actions(SIDE_OPPONENT)
 	# R111 暗影召唤：「战斗开始时」那一半的召唤（另一半点在敌方回合开始里）。
 	_assassin_summon(SIDE_OPPONENT, true)
-	_frost_ward(SIDE_OPPONENT)         # R461 寒霜结界：战斗开始时冰封一个我方单位
+	_frost_ward_check(SIDE_OPPONENT)   # R464 寒霜结界：只是力量成长的「可见说明」，这里只做自检
 	_refresh_dark_lord(SIDE_OPPONENT)
 	_refresh_hecaton(SIDE_OPPONENT)
 	_refresh_mnemosyne()               # R271 谟涅摩叙涅：开局先算一次
@@ -12028,6 +12032,8 @@ func _battlecry(cell: Vector2i, p: Placement) -> void :
 	match p.card.id:
 		ASH_DRAGON_ID:
 			_battlecry_ash(cell, p)
+		FROST_MAGE_ID:
+			_battlecry_frost(cell, p)
 		_:
 			pass
 
@@ -15759,33 +15765,48 @@ func _assassin_summon(side: String, initial:= false) -> void :
 	_refresh_hecaton(side)
 
 
-func _frost_ward(side: String) -> void :
-	## 寒霜结界（9210，R461）：「战斗开始时」冰封**一个**敌方单位。
-	## 只认效果区里的「寒霜」trait（与「暗杀召唤」同一套路），没有就什么都不做。
-	## 施加本身走 `_apply_frozen()` 唯一口 —— 爆点 / 「冰封」飘字 / 播报都由它发出的
-	## `frozen` 事件驱动，这里不另写一套演出。
+func _frost_ward_check(side: String) -> void :
+	## R464：寒霜结界（9210）的自检 —— 它**不施加任何东西**。
+	## 那张效果卡描述的是「每 2 个回合，所有友方单位力量 +1（最多累计 +4）」，
+	## 真正在跑的是关卡的 `enemy_growth`：`configure_growth()` 记配置，`_sync_enemy_growth()`
+	## 把层数写进每个敌方单位的 `atk_growth` —— 这是**全场**，与卡面写的「所有友方单位」一致。
+	## 这里只查一件事：效果区挂了「寒霜」但这一关没配成长曲线 → 卡在台上不出活。
+	## （静默失效最难查，宁可留一条日志；正常关卡不会走到这一条。）
 	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
 	var src:= ""
 	for c: CardData in zone:
 		if c.traits.has(FROST_WARD_TRAIT):
 			src = c.card_name
 			break
-	if src == "":
-		return
-	var foe:= SIDE_SELF if side == SIDE_OPPONENT else SIDE_OPPONENT
+	if src != "" and growth_cfg.is_empty():
+		_log("⚠️ %s 已启用，但这一关没有配 enemy_growth —— 卡面写的力量成长不会发生" % src)
+
+
+func _battlecry_frost(cell: Vector2i, p: Placement) -> void :
+	## 冰冻术士（1031）战吼（R464 用户口径）：冰封敌方**本场战斗第一个入场**的单位。
+	## 与 R461 之前的差别：不再挑「生命最低」的那个 —— 目标只由**入场顺序**决定，
+	## 于是玩家能预判（谁先下场谁挨冻），也不会因为中途掉血忽然换人。
+	## 「第一个」的判据 = 敌方**仍在场**的最小 `entry_seq`：
+	##   * 序号由 `FieldState.place()` 唯一发放（关卡摆位 / 手牌打出 / 召唤全走它）；
+	##   * 不靠 `state.board` 的字典迭代顺序 —— Dictionary 顺序不可依赖，回放 / 续档会漂。
+	## 第一个入场的那个已经阵亡时，顺位取**下一个入场的存活单位**（否则这次战吼白费）。
+	## 施加本身走 `_apply_frozen()` 唯一口 —— 爆点 / 「冰封」飘字 / 播报都由它发出的
+	## `frozen` 事件驱动，这里不另写一套演出。
+	var foe:= SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
 	var best:= Vector2i(-1, -1)
-	var best_hp:= 999999
-	for c2: Vector2i in state.board:
-		var q: Placement = state.unit_at(c2)
+	var best_seq:= 0
+	for c: Vector2i in state.board:
+		var q: Placement = state.unit_at(c)
 		if q == null or q.owner != foe or q.health <= 0:
 			continue
-		if q.health < best_hp:
-			best_hp = q.health
-			best = c2
+		if best == Vector2i(-1, -1) or q.entry_seq < best_seq:
+			best_seq = q.entry_seq
+			best = c
 	if best == Vector2i(-1, -1):
-		_log("%s：场上没有敌方单位可以冰封" % src)
+		_log("%s 战吼：场上没有敌方单位可冻结" % p.card.card_name)
 		return
-	_apply_frozen(state.board[best], "%s（战斗开始时）" % src)
+	_apply_frozen(state.board[best], "%s 战吼" % p.card.card_name)
+	action.emit("battlecry", {"cell": cell, "card": p.card, "kind": "frost", "target": best})
 
 
 # ============================================================ R439 战斗存档

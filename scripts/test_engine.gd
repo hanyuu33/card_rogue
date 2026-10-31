@@ -2832,7 +2832,7 @@ func _init() -> void:
 			and int((gl_frost["enemy_growth"] as Dictionary).get("cap", 0)) == 4,
 			"二层关卡带 enemy_growth 成长配置（cap=4）")
 	check((gl_frost.get("enemy_effects", []) as Array).has(9210),
-			"R461 寒冰防线挂上「寒霜结界」9210（冰封不再是冰冻术士的战吼）")
+			"R464 寒冰防线挂上「寒霜结界」9210（全场力量成长的可见来源；冰冻归术士战吼）")
 	var gl_boss := _level_named("机械巨鸭")
 	check(not gl_boss.has("enemy_growth"),
 			"二层 Boss（机械巨鸭）自带齿轮升腾，不叠加关卡成长")
@@ -5799,23 +5799,43 @@ func _init() -> void:
 	om_bc._begin_turn(GameEngine.SIDE_OPPONENT)
 	var om_bc2 := om_bc.state.unit_at(Vector2i(3, 1))
 	check(om_bc2 == null or om_bc2.health == om_bc_hp - 4, "战吼只触发一次")
-	# R461：冰封从「冰冻术士的战吼」搬到关卡效果卡「寒霜结界」——
-	# 战吼要等**该方第一个回合开始**，效果卡则是**战斗开始时**（`enable_enemy_effects`）。
+	# R464（用户口径）：冰冻归**冰冻术士 1031 自己的战吼**，目标改成「敌方本场战斗
+	# **第一个入场**的单位」；寒霜结界 9210 只剩全场的力量成长，不再冰封任何人。
+	# 先入场的反而是**血更多**的那只 —— 这样「按入场顺序」与「按生命最低」会给出不同答案。
 	var om_fr := _new_engine([], 20, 30, -1, false)
 	om_fr.state.place(om_repo.get_card(1031), Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
-	om_fr.state.place(om_repo.get_card(1054), Vector2i(3, 1), GameEngine.SIDE_SELF)   # 14 血
-	om_fr.state.place(om_repo.get_card(1053), Vector2i(3, 2), GameEngine.SIDE_SELF)   # 10 血
+	var om_fr_first := om_fr.state.place(om_repo.get_card(1054), Vector2i(3, 1),
+			GameEngine.SIDE_SELF)   # 14 血 · 先入场
+	var om_fr_second := om_fr.state.place(om_repo.get_card(1053), Vector2i(3, 2),
+			GameEngine.SIDE_SELF)   # 10 血 · 后入场（血更少）
+	check(om_fr_first.entry_seq > 0 and om_fr_second.entry_seq == om_fr_first.entry_seq + 1,
+			"R464 入场序号：place 逐次发放（%d → %d）"
+			% [om_fr_first.entry_seq, om_fr_second.entry_seq])
 	om_fr.enable_enemy_effects([om_repo.get_card(9210)])
-	var om_fr_low := om_fr.state.unit_at(Vector2i(3, 2))
-	var om_fr_high := om_fr.state.unit_at(Vector2i(3, 1))
-	check(om_fr_low != null and om_fr_low.frozen,
-			"寒霜结界：战斗开始时冰封我方生命最低的单位（下回合不重置、不能行动）")
-	check(om_fr_high != null and not om_fr_high.frozen,
-			"寒霜结界：只冰封**一个**（另一个我方单位不受影响）")
+	# 效果卡不再冰封 —— 战斗开始时我方一个都不该被冻
+	check(not om_fr_first.frozen and not om_fr_second.frozen,
+			"R464 寒霜结界：战斗开始时**不再**冰封（冰冻是术士自己的战吼）")
 	om_fr._begin_turn(GameEngine.SIDE_OPPONENT)
-	var om_fr_high2 := om_fr.state.unit_at(Vector2i(3, 1))
-	check(om_fr_high2 != null and not om_fr_high2.frozen,
-			"冰冻术士不再自带战吼：敌方第一个回合开始不会再冻一个")
+	check(om_fr_first.frozen,
+			"R464 冰冻术士战吼：冰封**第一个入场**的单位（哪怕它血最多）")
+	check(not om_fr_second.frozen,
+			"R464 冰冻术士战吼：只冰封**一个**（后入场的那个不受影响）")
+	# 第一个入场的已经阵亡 → 顺位落在下一个仍在场的最早入场者身上（否则这次战吼白费）
+	var om_fr2 := _new_engine([], 20, 30, -1, false)
+	om_fr2.state.place(om_repo.get_card(1031), Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var om_fr2_gone := om_fr2.state.place(om_repo.get_card(1053), Vector2i(3, 0),
+			GameEngine.SIDE_SELF)
+	om_fr2.state.place(om_repo.get_card(1050), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	var om_fr2_alive := om_fr2.state.place(om_repo.get_card(1054), Vector2i(3, 2),
+			GameEngine.SIDE_SELF)
+	om_fr2.state.board.erase(Vector2i(3, 0))     # 第一个入场者离场
+	om_fr2._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(om_fr2_alive.frozen,
+			"R464 冰冻术士战吼：第一个入场的已阵亡 → 冻结剩下的最早入场者（%d 号）"
+			% om_fr2_alive.entry_seq)
+	check(om_fr2_gone.entry_seq < om_fr2_alive.entry_seq,
+			"R464 入场序号：先入场的序号更小（%d < %d）"
+			% [om_fr2_gone.entry_seq, om_fr2_alive.entry_seq])
 
 	# ---- 亡语 ----
 	var om_wy := _new_engine([], 20, 30, -1, false)
@@ -7445,8 +7465,10 @@ func _init() -> void:
 	check(not L2G.has("mod_strong") and not L2G.has("mod_weak"),
 			"R123：成长脚本不再带开局削减（mod_strong / mod_weak 已删除）")
 	var dc_repo := CardRepo.load_json()
-	# 这 11 张 = 二层四关（带 enemy_growth）的全部敌方单位（R123：力量 = 起始攻击力）
-	for gid in [1011, 1013, 1014, 1031, 1050, 1051, 1053, 1054, 1055, 1061, 1071]:
+	# 这 10 张 = 二层四关（带 enemy_growth）的敌方单位（R123：力量 = 起始攻击力）
+	# R464：1031 冰冻术士从这份名单里摘出去了 —— 它卡面那句「关卡成长」搬到了寒冰防线的
+	# 效果卡「寒霜结界 9210」（全场的加成不该印在某一只怪身上），见下面那条单独断言。
+	for gid in [1011, 1013, 1014, 1050, 1051, 1053, 1054, 1055, 1061, 1071]:
 		var gc: CardData = dc_repo.get_card(gid)
 		if gc == null:
 			check(false, "缺少二层怪物卡 id=%d" % gid)
@@ -7455,6 +7477,13 @@ func _init() -> void:
 				and gc.effect_text.contains("最多累计 +%d" % int(L2G.get("cap", 0))),
 				"R123 卡面不再写开局削减、保留成长参数：%s（力量 %d）"
 						% [gc.card_name, gc.power])
+	# R464：冰封与成长在寒冰防线各归各位 —— 术士卡面只写自己的战吼（入场顺序），
+	# 全场的力量成长交给效果卡；卡面再写一遍「最多累计 +4」等于把全场算成它一只的。
+	var dc_frost: CardData = dc_repo.get_card(1031)
+	check(dc_frost != null and not dc_frost.effect_text.contains("最多累计")
+			and not dc_frost.effect_text.contains("关卡成长")
+			and dc_frost.effect_text.contains("第一个入场"),
+			"R464：冰冻术士卡面不再重复写全场成长（成长参数归寒霜结界 9210）")
 	# 召唤 token 会被同一条成长脚本改攻击力 → 召唤文案不再写死它的数值
 	var fledgling: CardData = dc_repo.get_card(1014)
 	check(fledgling.effect_text.contains("龙裔") and not fledgling.effect_text.contains("4/12"),
@@ -23635,13 +23664,21 @@ func _init() -> void:
 	check(r363_ash != null and not r363_ash.effect_text.begins_with("登场："),
 			"R363 文案：灰烬龙不再写「登场：」（与引擎触发时机不一致）")
 	var r363_frost: CardData = r363_repo.get_card(1031)
-	check(r363_frost != null and not r363_frost.traits.has("战吼")
-			and not r363_frost.effect_text.contains("冰封"),
-			"R461 文案：冰冻术士收回战吼（「冰封」那半句搬到了寒霜结界）")
-	var r461_ward: CardData = r363_repo.get_card(9210)
-	check(r461_ward != null and r461_ward.traits.has(GameEngine.FROST_WARD_TRAIT)
-			and r461_ward.effect_text.begins_with("战斗"),
-			"R461 文案：寒霜结界是「战斗开始时」结算的敌方效果卡")
+	check(r363_frost != null and r363_frost.traits.has("战吼")
+			and r363_frost.effect_text.begins_with("登场后首个回合开始时")
+			and r363_frost.effect_text.contains("第一个入场"),
+			"R464 文案：冰冻术士带战吼，目标写清「敌方本场战斗第一个入场」的单位（实际 %s）"
+			% ("?" if r363_frost == null else r363_frost.effect_text))
+	check(r363_frost != null and not r363_frost.effect_text.contains("关卡成长"),
+			"R464 文案：术士卡面不再写「关卡成长」（那是全场的力量成长，归到效果卡）")
+	var r464_ward: CardData = r363_repo.get_card(9210)
+	check(r464_ward != null and r464_ward.traits.has(GameEngine.FROST_WARD_TRAIT)
+			and r464_ward.effect_text.begins_with("每 2 个回合")
+			and r464_ward.effect_text.contains("所有友方单位力量 +1"),
+			"R464 文案：寒霜结界写的是全场的力量成长（实际 %s）"
+			% ("?" if r464_ward == null else r464_ward.effect_text))
+	check(r464_ward != null and not r464_ward.effect_text.contains("冰封"),
+			"R464 文案：寒霜结界不再写「冰封」（冰冻是术士自己的战吼）")
 
 	# ② 真实效果：我方**全部单位（含工事）**各 4；己方大营不动；我方 HP 不动
 	var r363_e := _new_engine([], 20, 30, -1, false)
