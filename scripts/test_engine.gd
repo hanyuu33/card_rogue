@@ -31652,6 +31652,42 @@ func _init() -> void:
 			and r470_cs.contains('SceneFx.goto("res://scenes/map.tscn", true)'),
 		"R470 三层开场：curtain_scene 对第三层直接转地图（不再自愈出三选一）")
 
+	# ══ R471：通关时「要选卡」的即时道具不再被当场清掉 ══
+	# 旧路径在结算面板一出场就 `end_run()` → `run_active` 变假 → `waiting_pick_scene()`
+	# 恒返回空串 → 通关那一路领到的鸭血永远弹不出选卡界面（R470 那条坑的**下游**）。
+	# 现在 `mark_run_won()` 只落章 `run_finished`（+ 删续档），内存里的待办留着。
+	RunState.run_active = true
+	RunState.run_finished = false
+	RunState.deck_ids = [8001, 8002]
+	RunState.relics = []
+	RunState.pending_relic = -1
+	RunState.pending_rewards = []
+	RunState.mark_run_won()
+	check(RunState.run_finished and RunState.run_active,
+		"R471 通关：`mark_run_won()` 只落章收尾标记，**不动内存局**（run_active 仍真）")
+	check(not RunSave.has_save(),
+		"R471 通关：续档当场删掉（不然标题页还会冒出「继续游戏」进一个已结束的局）")
+	RunState.gain_relic(RunState.DUCK_BLOOD_RELIC_ID)
+	check(RunState.waiting_pick_scene() == "res://scenes/deck_edit.tscn",
+		"R471 通关：领到鸭血后仍然判得出「该去选卡页」（旧路径这里恒空 = 道具白拿）")
+	check(RewardPanel.route_target_after_pick() == "res://scenes/deck_edit.tscn",
+		"R471 通关：奖励面板的跳转判据同样认这条待办")
+	# 真的离开时才清干净
+	RunState.end_run()
+	check(not RunState.run_active and RunState.pending_relic == -1
+			and RunState.deck_ids.is_empty(),
+		"R471 通关：`end_run()` 之后才清卡组 / 待办（收尾时机整体后移）")
+	# 源码守卫：三个落点都得在，漏一个就退化成「通关后卡在已结束的局里」
+	var r471_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r471_de := FileAccess.get_file_as_string("res://scripts/deck_edit_scene.gd")
+	check_src(r471_bs.contains("RunState.mark_run_won()")
+			and r471_bs.contains("RewardPanel.route_target_after_pick()"),
+		"R471 通关：battle_scene 用迟到收尾 + 结算出口先过待办闸")
+	check_src(r471_de.contains("if RunState.run_finished:")
+			and r471_de.contains('SceneFx.goto("res://scenes/title.tscn")'),
+		"R471 通关：选卡页办完直接回标题（不再走地图诈尸）")
+	RunState.pending_rewards = []
+
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
 	RunState.pending_rewards = []

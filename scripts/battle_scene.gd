@@ -7485,6 +7485,17 @@ func _on_over_restart() -> void:
 		RunState.complete_current()
 		_goto_scene("res://scenes/map.tscn")
 	else:
+		# R471：通关时可能还欠着「要选卡」的待办（鸭血 / 源数 / 失忆）——
+		# `RunState.run_active` 这时候还得是真的，`waiting_pick_scene()` 才认；
+		# 判据走 `route_target_after_pick()` 而不是裸问 `waiting_pick_scene()`：
+		# 本批奖励没处理完时它返回空串（R340 那条规矩不能在这里破）。
+		if RunState.run_finished:
+			var _tgt: String = RewardPanel.route_target_after_pick()
+			if _tgt != "":
+				_goto_scene(_tgt)
+				return     # 办完待办由那个场景自己收尾（deck_edit → 标题）
+		if RunState.run_finished:
+			RunState.end_run()     # 通关真的收尾清干净（续档已在 `mark_run_won()` 删掉）
 		_goto_scene("res://scenes/title.tscn")
 
 
@@ -7663,7 +7674,11 @@ func _show_over(win: bool) -> void:
 					% [RunState.player_class, RunState.difficulty])
 				ProfileData.bump(ProfileData.K_RUN_WIN)
 				RunRecord.finish("win")   # 通关：整局结果记一行
-				RunState.end_run()
+				# R471：**不再当场 `end_run()`**。结算面板弹出来的这一刻奖励面板往往还没
+				# 处理完，而 `end_run()` 会把 `pending_relic` / 卡组 / 道具一起清掉 —— 于是
+				# 通关时领到的鸭血们「选了也没地方去」（`run_active` 假 → `waiting_pick_scene()`
+				# 恒空）。改成只落章 `run_finished`，等玩家真离开再清（见 `_on_over_restart`）。
+				RunState.mark_run_won()
 		else:
 			# R367：正常路径下这里已经是第二次（`engine.over` 首帧就记过了）——
 			# `_record_defeat()` 自带幂等，不会写出两条「失败」。

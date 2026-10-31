@@ -558,7 +558,11 @@ func _toggle_sound() -> void:
 
 func _on_back_to_title() -> void:
 	## R167：回标题 = **保留本局**（只复位内存状态，续档留着）。
-	if RunState.run_active:
+	## R471：通关后的那条路没有「本局」可留了（续档在 `mark_run_won()` 已删）——
+	## 用 `end_run(false)` 会把 `run_finished` 反写成假，留下一局「已清空却说没结束」的幽灵状态。
+	if RunState.run_finished:
+		RunState.end_run()
+	elif RunState.run_active:
 		RunState.end_run(false)
 	SceneFx.goto("res://scenes/title.tscn")
 
@@ -870,6 +874,13 @@ func _go_back() -> void:
 	# 事件「遗忘之泉」的删卡待办：无论如何离开都清掉，免得地图反复把人送回来
 	if RunState.pending_deck_edit != "":
 		RunState.pending_deck_edit = ""
+	# R471：**通关之后**被叫来选卡（最后一层 Boss 掉的鸭血 / 源数 / 失忆）——
+	# 这一局已经没有地图可回了（`run_finished` 为真，地图只会把人再踢回标题），
+	# 所以在这里就地把整局收干净、直接回标题。
+	if RunState.run_finished:
+		RunState.end_run()
+		SceneFx.goto("res://scenes/title.tscn")
+		return
 	SceneFx.goto("res://scenes/map.tscn")
 
 

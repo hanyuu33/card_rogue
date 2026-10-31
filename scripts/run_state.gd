@@ -968,6 +968,21 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	reveal_known()                # R207：开局视野（起点 + 邻居 + 地标）立刻记进 seen
 
 
+## R471：通关（最后一层 Boss 击破、没有下一层）时的**迟到收尾**。
+## 旧路径在结算面板一出现就 `end_run()` —— 那一刻整局被清空，而奖励面板往往还没处理完：
+## 鸭血 6024 / 源数之力 6002 / 失忆药水 6004 这类「要玩家选卡」的即时道具领到手里时
+## `run_active` 已经变假，`waiting_pick_scene()` 一律返回空串 → 选卡界面永远出不来，
+## 道具白拿。这是 R470 那条坑的**下游**（上游是 `gain_relic` 的 once_pick）。
+## 现在分两步：先只落章「本局不再继续」（`run_finished` + 删续档，地图据此不再兜底开新局），
+## 内存里的卡组 / 道具 / `pending_relic` 全部留着；等玩家真的离开（结算按钮关掉结算面板、
+## 或选卡页办完出来）再走 `end_run()` 清干净。
+static func mark_run_won() -> void:
+	if run_finished:
+		return
+	run_finished = true
+	RunSave.clear_save("run_won")
+
+
 static func end_run(clear_save: bool = true) -> void:
 	## run 结束（通关 / 失败）：
 	##   * clear_save = true（默认）：连**续档**一起清掉 —— 这一局真的结束了；
