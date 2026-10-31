@@ -9504,6 +9504,23 @@ func _attack_impact_at(cell: Vector2i) -> int:
 	return imp if imp >= _now() else 0
 
 
+func _slide_floor_at(cell: Vector2i) -> int:
+	## R460：**这一格上的单位**当前还在播的滑行什么时候走完（没有就 0）。
+	## 移动踏入场地 / 被冰封 / 被眩晕 / 走到一半被打死 —— 这些「跟着移动一起结算」
+	## 的附带演出都得等主体滑行落地，否则卡面血在**出发格**先掉、人再滑过去，
+	## 读起来就是「扣血快过移动」（用户口径）。
+	## 与 `_attack_impact_at()` 互补：那个管「打出去的一拳」，这个管「走的那几步」。
+	## ⚠️ 演示钉帧用的超长 slide（`--handfly` / `--gridscroll` 的 180000ms）不算 ——
+	##    那不是真实移动，拿来当基准会把后面所有特效挂到三分钟后。
+	var p: Placement = engine.state.unit_at(cell)
+	if p == null or not _slides.has(p):
+		return 0
+	var s: Dictionary = _slides[p]
+	if int(s.get("dur", 0)) > 5000:
+		return 0
+	return int(s.start) + int(s.dur)
+
+
 func _freeze_hp(key: Variant, dmg: int) -> void:
 	## 记录一笔「尚未在命中演出中体现」的伤害：卡面 / HP 横幅数字冻结在扣血前，
 	## 等对应的 hit / hp_hit 定时特效触发才移除这一笔，数字才往下掉。
@@ -10793,7 +10810,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					var fi_beam := _naval_beam_land_for(fc)
 					if fi_beam > fi_at:
 						fi_at = fi_beam
-					var fi_hold := (fi_seq >= 0 or fi_beam > 0) and fi_pl != null and fi_pl.health > 0
+					# R460：这一格正在滑行（移动触发的效果伤害）→ 跟着那几步一起落地
+					var fi_mv := _slide_floor_at(fc)
+					if fi_mv > fi_at:
+						fi_at = fi_mv
+					var fi_hold := (fi_seq >= 0 or fi_beam > 0 or fi_mv > 0) \
+							and fi_pl != null and fi_pl.health > 0
 					if fi_hold:
 						_freeze_hp(fi_pl, fi_dmg)
 					_delayed.append({"at": fi_at, "kind": "fx_hit",
@@ -11668,6 +11690,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var kw := _knife_land_for(center)
 			if kw > 0:
 				delay_ms = maxi(delay_ms, kw - n)
+			# R460：被移动触发的伤害打死（踩场地 / 撞冰面）→ 等那几步滑完再击破。
+			# ⚠️ 这里不能读 `unit_at(cell)`：引擎已经 `board.erase(cell)` 了，
+			#    要拿 emit 里带的 `placement` 才查得到 `_slides`。
+			var dd_pl = data.get("placement")
+			if dd_pl != null and _slides.has(dd_pl):
+				var dd_s: Dictionary = _slides[dd_pl]
+				if int(dd_s.get("dur", 0)) <= 5000:
+					delay_ms = maxi(delay_ms,
+							int(dd_s.start) + int(dd_s.dur) - n)
 			var hide_at := n + delay_ms + DESTROY_HOLD_MS
 			_dying.append({"cell": cell, "card": data["card"],
 					"p": data.get("placement"), "hide_at": hide_at})
@@ -11704,32 +11735,52 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					str(data["card"].card_name), int(data.get("amount", 0))])
 		"trap_hit":
 			# 冰霜 / 冻结陷阱（R51）：攻击者踩陷阱吃直伤 —— 蓝白火花 + 飘字（同源同特效）
-			sfx.play("destroy")
-			var th_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": th_pos, "sc": _grid_scroll, "start": n, "dur": 520,
+			# R460：这个事件**只由「移动踏入」触发**（`_field_trigger` 是唯一口），
+			# 所以整段演出必须等那几步滑完。原来挂 `_now()`：人还站在出发格，
+			# 蓝火花和「-N」已经在那格炸开，然后才滑进陷阱里 —— 顺序反了。
+			var th_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var th_at := n
+			if th_cell.x >= 0:
+				th_at = maxi(n, _slide_floor_at(th_cell))
+			var th_pos := _cell_center(th_cell)
+			if th_at <= n:
+				sfx.play("destroy")   # 没有滑行要等（旁路调用）→ 照旧当场响
+			_bursts.append({"pos": th_pos, "sc": _grid_scroll, "start": th_at, "dur": 520,
 					"col": Color("7ec8ff"), "big": false})
 			_floaters.append({"pos": th_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "%s -%d" % [str(data.get("kind", "陷阱")), int(data.get("amount", 0))],
-					"col": Color("2b6fb3"), "start": n, "dur": 1400, "size": 18})
+					"col": Color("2b6fb3"), "start": th_at, "dur": 1400, "size": 18})
+			# ⚠️ 卡面血**不在这里冻**：引擎是先 `_hit_unit()`（→ `fx_impact`）再发
+			# `trap_hit`，那一条已经带着滑行时刻冻结过这一笔了（见 `fx_impact` 的
+			# `fi_mv` / `fi_hold`）。这里再冻一次，`_show_hp()` 的「实际值 + 待扣总和」
+			# 就会把同一笔伤害算两遍 —— 血条反而比扣血前更高。
+			# 分工：时刻由这里定（爆点 / 飘字），掉血由 `fx_hit` 到点放行。
 		"frozen":
 			# 冰封（R68）：寒冰箭 9011 / 冰冻术士战吼 / 冻结陷阱 8013 的**唯一**施加特效。
 			# 判据与常驻光环同源（引擎的 Placement.frozen），这里只演「施加的那一下」。
-			var fz_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": fz_pos, "sc": _grid_scroll, "start": n, "dur": 620,
+			# R460：施加源可能是「走进冰面 / 冰霜陷阱」→ 等滑行落地再冻结
+			#（技能施加时该单位没在滑，`_slide_floor_at` 返回 0，行为不变）。
+			var fz_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var fz_at := maxi(n, _slide_floor_at(fz_cell)) if fz_cell.x >= 0 else n
+			var fz_pos := _cell_center(fz_cell)
+			_bursts.append({"pos": fz_pos, "sc": _grid_scroll, "start": fz_at, "dur": 620,
 					"col": Color("9ad8ff"), "big": false})
-			_bursts.append({"pos": fz_pos, "sc": _grid_scroll, "start": n + 90, "dur": 520,
+			_bursts.append({"pos": fz_pos, "sc": _grid_scroll, "start": fz_at + 90, "dur": 520,
 					"col": Color("e8f6ff"), "big": false})
 			_floaters.append({"pos": fz_pos + Vector2(0, -14), "sc": _grid_scroll, "text": "冰封",
-					"col": Color("2b6fb3"), "start": n, "dur": 1500, "size": 20})
+					"col": Color("2b6fb3"), "start": fz_at, "dur": 1500, "size": 20})
 			_say("❄ %s 被冰封：下回合不能行动" % str(data.get("name", "")))
 		"stun":
 			# R341 惊奇盒子（9179）：攻击者被眩晕 —— 金黄爆点 + 「眩晕」飘字。
 			# 常驻状态本身由 Placement.stun_left 画（状态栏 / 徽标），这里只演「施加的那一下」。
-			var st_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": st_pos, "sc": _grid_scroll, "start": n, "dur": 560,
+			# R460：同上 —— 眩晕也可能由「撞上场地」产生，等滑行落地
+			var st_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var st_at := maxi(n, _slide_floor_at(st_cell)) if st_cell.x >= 0 else n
+			var st_pos := _cell_center(st_cell)
+			_bursts.append({"pos": st_pos, "sc": _grid_scroll, "start": st_at, "dur": 560,
 					"col": Color("f0c040"), "big": false})
 			_floaters.append({"pos": st_pos + Vector2(0, -14), "sc": _grid_scroll,
-					"text": "眩晕", "col": Color("8a6d1f"), "start": n, "dur": 1500, "size": 20})
+					"text": "眩晕", "col": Color("8a6d1f"), "start": st_at, "dur": 1500, "size": 20})
 			_say("💫 %s 被眩晕：下回合不能行动" % str(data.get("name", "")))
 		"poison":
 			# 剧毒陷阱（R51）：挂毒（apply）与回合开始的毒跳 —— 绿泡 + 飘字

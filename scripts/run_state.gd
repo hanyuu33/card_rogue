@@ -1056,6 +1056,13 @@ static func advance_layer(layer: int) -> int:
 	reset_shop_session()          # R390：换层 = 新地图 → 上一层的店全部作废
 	cleared_ids = []
 	seen_ids = []                 # R207：换层 = 新地图 → 上一层记得的格子全部作废
+	# R460（用户口径「地图上如果绘制了标记，进入下一层应该全部清除」）：
+	# 标记是按**旧地图**的格位存的（笔画记屏幕坐标点、小旗记格 id），新一层格子全换过 ——
+	# 留着不只对不上位置，还会让人误以为「这格我已经查过了」。
+	# 与 `start_run()` / `end_run()` 两处清空同一口径，换层是第三条路，之前漏了。
+	map_strokes = []
+	map_flags = []
+	map_flash_id = -1             # R460：上一层的「冒险笔记」金光也不要落到新地图上
 	pending_level = {}
 	pending_node = {}
 	pending_event = ""

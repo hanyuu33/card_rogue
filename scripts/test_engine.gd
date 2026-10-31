@@ -7066,6 +7066,10 @@ func _init() -> void:
 	check(RunState.hp < RunState.max_hp,
 			"接层前先把自己打残（%d/%d）" % [RunState.hp, RunState.max_hp])
 	var deck_before_layer := RunState.deck_ids.size()
+	# R460（用户口径）：换层后上一层的玩家标记要全部清掉 —— 先铺一笔 + 一小旗
+	RunState.map_strokes = [{"pts": PackedVector2Array([Vector2(10, 20), Vector2(30, 40)]),
+			"col": Color(1, 0, 0, 1)}]
+	RunState.map_flags = [{"pos": Vector2(50, 60), "col": Color(0, 1, 0, 1)}]
 	var l2_start := RunState.advance_layer(GameLayers.LAYER_TWO)
 	check(RunState.current_layer == GameLayers.LAYER_TWO
 			and RunState.hp == RunState.max_hp and RunState.max_hp > 0,
@@ -7084,6 +7088,11 @@ func _init() -> void:
 			l2_seen_ok = false
 	check(l2_seen_ok, "R207 迷雾：换层后迷雾记忆按新地图重建（%d 格，旧地图的 id 不带过来）"
 			% RunState.seen_ids.size())
+	check((RunState.map_strokes as Array).is_empty()
+			and (RunState.map_flags as Array).is_empty(),
+			"R460 玩家标记：换层后上一层的笔画 / 小旗全部清除（剩 %d / %d）" % [
+					(RunState.map_strokes as Array).size(),
+					(RunState.map_flags as Array).size()])
 	check(RunState.relic_choice.size() == 3, "第二层起始：重新掷出道具三选一")
 	var c2_from_pool := 0
 	for rid2 in RunState.relic_choice:
