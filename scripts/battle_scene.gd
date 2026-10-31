@@ -248,6 +248,11 @@ const ATK_WINDUP_T := 0.10      # 开始后仰蓄力
 const ATK_LAUNCH_T := 0.30      # 弹体发射
 const ATK_IMPACT_T := 0.62      # 弹体命中目标
 const DESTROY_HOLD_MS := 140    # 命中后卡牌「留一帧」再消失：先看得见伤害，再击破
+# R459：击杀类增益（鸭子骑士「每击杀一个敌人 +2 攻」）要排在**破坏之后**才飘。
+# 原来它挂 `_now()` 立刻播 —— 引擎是先发 `attack`、再在 `_destroy` 里发 `knight_grow`，
+# 而攻击演出 930ms 才撞上、破灭还要 `DESTROY_HOLD_MS`，于是演出倒着走：
+# 「+2 攻 → 拳头落地 → 卡碎掉」。这个常量 = 破灭之后再留的呼吸。
+const GROW_AFTER_BREAK_MS := 120
 ## R363：**一次效果打多个目标**（灰烬龙战吼 / 全场 AOE）时，每一格之间的落地间隔。
 ## 原来所有格子同帧起爆 —— 一排「-4」同时冒出来，看不出是谁打的、也读不出扫过去的感觉。
 const FX_MULTI_HIT_GAP_MS := 90
@@ -9484,6 +9489,21 @@ func _pending_impact_ms() -> int:
 	return best if best >= 0 else now_ms
 
 
+func _attack_impact_at(cell: Vector2i) -> int:
+	## R459：**这一格上的单位**正在播的那一次攻击，什么时候撞到目标（没有就 0）。
+	## 与 `_pending_impact_ms()` 的分工：那个取「全屏最早的一下还没撞到的一击」，
+	## 用于代替承受 / 闪躲这类「同一批里紧接着发」的附带事件；这里是「**自己这一拳**」，
+	## 击杀记功只该等打出去的那一下，不该被别的单位的攻击拖后。
+	## ⚠️ 不能拿 `_cell_center()` 比对 `src`：那个返回值里烘了 `_grid_scroll`，
+	##    动画入库时的滚动量和现在不同就永远对不上 → 直接按 Placement 查单槽。
+	var p: Placement = engine.state.unit_at(cell)
+	if p == null or not _attacks.has(p):
+		return 0
+	var a: Dictionary = _attacks[p]
+	var imp := int(a.get("start", 0)) + int(ATK_IMPACT_T * int(a.get("dur", ATK_DUR_MS)))
+	return imp if imp >= _now() else 0
+
+
 func _freeze_hp(key: Variant, dmg: int) -> void:
 	## 记录一笔「尚未在命中演出中体现」的伤害：卡面 / HP 横幅数字冻结在扣血前，
 	## 等对应的 hit / hp_hit 定时特效触发才移除这一笔，数字才往下掉。
@@ -10337,6 +10357,15 @@ func _reject_fx(idx: int, reason := "", target = null) -> void:
 func _on_engine_action(kind: String, data: Dictionary) -> void:
 	## 引擎动作 → 动画 + 音效。
 	var n := _now()
+	# R459：击杀记功（鸭子骑士）的增益演出时刻。引擎的顺序是 `attack` → `_destroy`
+	# → `knight_grow`，也就是「拳头已经挥出去、目标已经判死」才轮到增益 —— 但播出的
+	# 时刻不能是当下：那一下还在飞（ATK_IMPACT_T × 1500 ≈ 930ms），破坏还要再等等。
+	# 所以推到「命中 + 破灭留帧 + 呼吸」；没有在播的攻击（纯效果击杀）就当场播。
+	var grow_at := n
+	if kind == "knight_grow" and data.get("cell") is Vector2i and not _shot_pending:
+		var ga_imp := _attack_impact_at(data["cell"] as Vector2i)
+		if ga_imp > 0:
+			grow_at = ga_imp + DESTROY_HOLD_MS + GROW_AFTER_BREAK_MS
 	if _r363_trace and kind in ["place", "destroy", "deathrattle", "battlecry"]:
 		var tc := "-"
 		if data.has("cell"):
@@ -10362,7 +10391,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			"revelator_grow"]:
 		var pg_cell = data.get("cell")
 		if pg_cell is Vector2i and (pg_cell as Vector2i).x >= 0 and not _shot_pending:
-			_pow_fx.append({"cell": pg_cell, "start": n, "dur": 300})
+			_pow_fx.append({"cell": pg_cell, "start": grow_at, "dur": 300})
 	# R151 P2-14：格上治疗事件族 → 上升光点（与伤害的扩散爆点对称）
 	if kind in ["heal", "regen", "charge_heal", "self_repair", "night_erosion"]:
 		var hl_cell = data.get("cell")
@@ -11520,9 +11549,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				kg_name = (data["card"] as CardData).card_name
 			var kg_center := _cell_center(data["cell"]) if data.has("cell") \
 					else Vector2(WINDOW_W / 2, OWN_HAND_Y - 30)
+			# R459：`start` 走 `grow_at`（= 命中 + 破灭留帧 + 呼吸），不再是 `_now()`。
+			# 否则这条「+2 攻」比自己的拳头还早 900 多毫秒冒出来，看起来像先加工再打人。
 			_floaters.append({"pos": kg_center + Vector2(0, -24), "sc": _grid_scroll,
 					"text": "+%d 攻" % int(data.get("amount", 0)),
-					"col": UiTheme.STATE_TAUNT, "start": _now(), "dur": 1500, "size": 20})
+					"col": UiTheme.STATE_TAUNT, "start": grow_at, "dur": 1500, "size": 20})
 			_say("%s 击杀敌人 → 攻击力 +%d（当前 %d）" % [
 					kg_name, int(data.get("amount", 0)), int(data.get("power", 0))])
 		"knight_sword":
@@ -14874,7 +14905,13 @@ func _draw_pow_fx() -> void:
 	## R151 P2-13：力量成长 —— 力量徽章跳动（1→1.35→1）+ 一圈扩散环（金，力量语义）。
 	var n := _now()
 	for f in _pow_fx:
-		var t := clampf(float(n - int(f.start)) / int(f.dur), 0.0, 1.0)
+		# R459：`start` 允许排在**未来**（击杀增益等目标破灭之后才亮）。
+		# 以前直接 clamp 到 0..1 —— 未来的环会以 t=0 画出来：徽章原大小 + 一圈
+		# 0.75 不透明度的满弧停在原地，看起来像「先加工再打人」的元凶之一。
+		var ft := float(n - int(f.start)) / int(f.dur)
+		if ft <= 0.0:
+			continue   # 延迟启动：还没到点，什么都不画
+		var t := clampf(ft, 0.0, 1.0)
 		var p: Placement = engine.state.unit_at(f["cell"])
 		if p == null:
 			continue
