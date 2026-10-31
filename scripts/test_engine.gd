@@ -11718,6 +11718,21 @@ func _init() -> void:
 		"R470 常驻道具：第一次 +10 最大生命、第二次重复获得被忽略（一次性那条没带歪语义）")
 	RunState.max_hp = r81_hp_a
 	RunState.hp = mini(RunState.hp, RunState.max_hp)
+	# R470 追加：燧石（6057）与鸭血**完全同构** —— 效果活在 `pending_relic` 上（回地图点一格），
+	# 点完只清 `pending_relic`、徽章永久留在 `relics` 里，从不进 `spent_relics`。
+	# 不放行的话第二块燧石连选格模式都进不去（`relics.has` 直接 return）＝ 和鸭血同一个病。
+	RunState.pending_relic = -1
+	var r470_fl_n: int = RunState.relics.size()
+	RunState.gain_relic(RunState.FLINT_RELIC_ID)
+	check(RunState.pending_relic == RunState.FLINT_RELIC_ID
+			and RunState.relics.size() == r470_fl_n + 1,
+		"R470 燧石：首次获得登记道具栏 + 挂上地图选格待办（pending_relic = 6057）")
+	RunState.pending_relic = -1          # 假装玩家已经点完一格
+	RunState.gain_relic(RunState.FLINT_RELIC_ID)
+	check(RunState.pending_relic == RunState.FLINT_RELIC_ID
+			and RunState.relics.size() == r470_fl_n + 1,
+		"R470 燧石：第二块不重复登记，但**重新进入选格待办**（旧代码在这里静默丢弃）")
+	RunState.pending_relic = -1
 	RunState.pending_relic = -1
 
 	RunState.relics = r81_saved_relics

@@ -1167,7 +1167,11 @@ static func gain_relic(id: int) -> void:
 		# 道具栏里那枚徽章只是「领过」的凭证，用完不会进 `spent_relics` ——
 		# 于是第二次拿到时会被上面那条「还活着 = 真重复」拦掉，**既不弹选卡也不提示**，
 		# 玩家白拿一次。它们的一次性语义就是「每拿一次生效一次」，不参与重复持有判定。
-		var once_pick := id == DUCK_BLOOD_RELIC_ID or id == SOURCE_POWER_ID 				or id == FORGET_POTION_ID
+		# R470 追加：燧石 6057 同构 —— 效果活在 `pending_relic` 上（回地图点一格），
+		# 点完只清 pending、徽章永久留在 `relics` 里 → 不放行的话第二块燧石
+		# 连选格模式都进不去，和鸭血是完全一样的病。
+		var once_pick := id == DUCK_BLOOD_RELIC_ID or id == SOURCE_POWER_ID \
+				or id == FORGET_POTION_ID or id == FLINT_RELIC_ID
 		if not once_pick and not spent_relics.has(id):
 			return
 		spent_relics.erase(id)
