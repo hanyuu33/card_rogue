@@ -9537,6 +9537,49 @@ func _slide_floor_at(cell: Vector2i) -> int:
 	return int(s.start) + int(s.dur)
 
 
+func _max_slide_floor() -> int:
+	## R465：**全场**还在跑的滑行里最晚的那一个走完时刻（没有就 0）。
+	## 与 `_slide_floor_at(cell)` 的分工：那个问「这一格」，这个问「画面上还有谁在走」——
+	## 代受 / 闪躲这类事件只知道「承受方在哪」，不知道是谁打过来的，
+	## 而移动 + 攻击打包成一步时，滑行是这批演出里最早的一段。
+	## ⚠️ 演示钉帧的超长 slide（180000ms）不算，与 `_slide_floor_at` 同一条过滤。
+	var now_ms := _now()
+	var best := 0
+	for s0: Dictionary in _slides.values():
+		var dur0 := int(s0.get("dur", 0))
+		if dur0 > 5000:
+			continue
+		var end0 := int(s0.get("start", 0)) + dur0
+		if end0 > now_ms and end0 > best:
+			best = end0
+	return best
+
+
+func _absorb_cue_at() -> int:
+	## R465：代受 / 闪躲演出的落地时刻 = `max(还没撞到的那一拳, 还在走的那几步)`。
+	## 为什么延后到下一帧算（而不是事件入队时算）：引擎 `attack_hp()` 是
+	## 「先代受、后发 hp」——事件到达时攻击动画尚未入队，当场算只会得到「现在」。
+	## 等到这批事件全部落完（下一帧 `_tick_anims`）再问，就一定能看见那一拳。
+	var at := _pending_impact_ms()
+	var mv := _max_slide_floor()
+	return maxi(at, mv)
+
+
+func _freeze_hp_exclusive(p: Placement, dmg: int) -> void:
+	## R465：代受一笔伤害时，**先把这一格还挂着的待扣清空**，再冻这一笔。
+	## 为什么不能直接 `_freeze_hp`：`_hit_unit()` 会先发 `fx_impact`，那一笔在
+	## 命中 `fi_hold`（正在滑行 / 舰炮光柱盖着）时**已经冻结过一次**；
+	## 代受再冻一次就有两笔待扣，而 `absorb_fx` 到点只 `_drop_hp` 一笔 →
+	## 卡面数字永远停在扣血前（比多飘一个字难查得多，属于「静默错」）。
+	## 认领（`_fx_claim`）只卸得掉排队的那条 `fx_hit`，卸不掉已经记下的待扣，所以在这里清。
+	if p == null:
+		return
+	while _hp_pending.has(p):
+		_drop_hp(p)
+	_hp_pending.erase(p)
+	_freeze_hp(p, dmg)
+
+
 func _freeze_hp(key: Variant, dmg: int) -> void:
 	## 记录一笔「尚未在命中演出中体现」的伤害：卡面 / HP 横幅数字冻结在扣血前，
 	## 等对应的 hit / hp_hit 定时特效触发才移除这一笔，数字才往下掉。
@@ -10282,6 +10325,11 @@ func _tick_anims() -> bool:
 			_attacks.erase(key2)
 		else:
 			any = true
+	# R465：`at = -1` = 「时刻待定」（代受 / 闪躲）—— 在这一帧统一定时。
+	# 必须排在下面「到点触发」之前：-1 ≤ now 会被当成已到点，当场就播掉了。
+	for evd: Dictionary in _delayed:
+		if int(evd.get("at", 0)) < 0:
+			evd["at"] = _absorb_cue_at()
 	# 延时特效：到点触发（命中 / 击破）
 	while true:
 		var due := -1
@@ -11128,14 +11176,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"shield_redirect":
 			# 护盾生成器（8042，R92）：接通的我方单位受伤 → 伤害**改由它承受**，溢出不再结算。
 			# 演出分两头：受害格「接下 N」+ 生成器格爆点「-N」，让玩家看清伤害到底去了哪里。
-			# R393：**不许当场播** —— 排队到攻击撞到那一帧（见 `_pending_impact_ms()`）。
+			# R393：**不许当场播** —— 排队到攻击撞到那一帧（见 `_absorb_cue_at()`）。
+			# R465：这条也有同一个坑 —— `_hit_unit()` 在 `action.emit("attack")` **之前**
+			# 就转发到这里，此刻攻击动画还没入队，当场算只会得到「现在」。
+			# 三条代受路径（护盾生成器 / 守护·栅栏 / 闪躲）统一挂 `at = -1` 延后定时。
 			var sr_src := data.get("cell", Vector2i(-1, -1)) as Vector2i
 			var sr_dst := data.get("to", Vector2i(-1, -1)) as Vector2i
 			var sr_n: int = int(data.get("amount", 0))
 			var sr_gen := engine.state.unit_at(sr_dst) if sr_dst.x >= 0 else null
 			if sr_gen != null:
-				_freeze_hp(sr_gen, sr_n)      # 生成器的血量数字等撞击那一刻再掉
-			_delayed.append({"at": _pending_impact_ms(), "kind": "absorb_fx",
+				_freeze_hp_exclusive(sr_gen, sr_n)   # R465：同上；数字等撞击那一刻再掉
+			if sr_dst.x >= 0:
+				_fx_claim(sr_dst)             # R465：同上，卸掉抢跑的通用受击
+			_delayed.append({"at": -1, "kind": "absorb_fx",
 					"data": {"src": sr_src, "dst": sr_dst, "amount": sr_n,
 					"say": "◈ %s 受到的 %d 点伤害被护盾生成器接下（溢出不再结算）"
 							% [str((data.get("card", null) as CardData).card_name), sr_n]}})
@@ -11496,10 +11549,22 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var ga_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
 			var ga_n: int = int(data.get("amount", 0))
 			# R393：与护盾生成器同一处理 —— 等攻击撞击帧，别抢在动画前面
+			# ⚠️ R465（用户报「铁栅栏代受的演出依然抢在移动 / 攻击之前」）：
+			#    **时刻不能在这里算**。引擎 `attack_hp()` 是「先 `_absorb_by_guard()`
+			#    发 guard_absorb → 再 emit `hp`」，这个事件到达时那一下直击 HP 的
+			#    攻击动画还没入队 → `_pending_impact_ms()` 只能退回「现在」，
+			#    特效于是比滑行（它连滑行都没看）和挥拳都早。
+			#    先挂 `at = -1` 排队，由 `_tick_anims()` 在下一帧（这批事件到齐后）定时。
 			var ga_pl := engine.state.unit_at(ga_cell) if ga_cell.x >= 0 else null
 			if ga_pl != null:
-				_freeze_hp(ga_pl, ga_n)
-			_delayed.append({"at": _pending_impact_ms(), "kind": "absorb_fx",
+				_freeze_hp_exclusive(ga_pl, ga_n)   # R465：独占，避免同一笔冻两次
+			# R465：这一格的「-N / 爆点」由下面那条 absorb_fx 统一负责 ——
+			# `_hit_unit()` 先发过 `fx_impact`，160ms 就会在**承受格**上炸一次，
+			# 于是同一笔伤害飘两次、而且那一次抢在移动 / 挥拳之前。
+			# 认领 = 卸掉还排着的通用受击（`_fx_unqueue_hit` 的唯一调用口）。
+			if ga_cell.x >= 0:
+				_fx_claim(ga_cell)
+			_delayed.append({"at": -1, "kind": "absorb_fx",
 					"data": {"src": Vector2i(-1, -1), "dst": ga_cell, "amount": ga_n,
 					"say": "%s：%s 替我方 HP 承受 %d 点伤害" % [
 							str(data.get("how", "守护")), ga_name, ga_n]}})
@@ -11532,10 +11597,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var da_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
 			var da_n: int = int(data.get("absorbed", 0))
 			# R393：闪躲也是代受 —— 同样等攻击撞击帧，否则「闪躲 -N」比拳头先到
+			# R465：时刻同样留到下一帧再算（理由见上面 guard_absorb 那段）。
 			var da_pl := engine.state.unit_at(da_cell) if da_cell.x >= 0 else null
 			if da_pl != null:
-				_freeze_hp(da_pl, da_n)
-			_delayed.append({"at": _pending_impact_ms(), "kind": "absorb_fx",
+				_freeze_hp_exclusive(da_pl, da_n)   # R465：同上
+			if da_cell.x >= 0:
+				_fx_claim(da_cell)   # R465：同守护代受，避免 160ms 那条通用受击抢跑
+			_delayed.append({"at": -1, "kind": "absorb_fx",
 					"data": {"src": Vector2i(-1, -1), "dst": da_cell, "amount": da_n,
 					"say": "闪躲：%s 替我方 HP 承受 %d 点伤害%s" % [
 							da_name, da_n,
@@ -12317,6 +12385,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						"text": "激发 ×%d 轮 · 每轮随机 %d 个 -%d" % [
 								in_n, int(data.get("targets", 1)), in_d],
 						"col": Color("a05ad0"), "size": 15, "start": n, "dur": 1600})
+		"refract_shot":
+			# R465 折射炮 9211：主目标之外的那一发流弹。
+			# 伤害数字由 `fx_impact`(seq=1) 的通用受击照常画 —— 这里**绝不再补一个
+			# 「-N」**，否则同一格会飘两次（R325 那条「一次攻击飘两个数字」的老坑）。
+			# 只补一句因果播报：玩家要能看出这一下是「折射出来的」，不是凭空掉血。
+			sfx.play("attack")
+			var rs_amt := int(data.get("amount", 0))
+			_say("⌁ 折射炮：流弹折射向 %s（-%d）" % [str(data.get("name", "?")), rs_amt])
 		"reflex":
 			# R317 身法 9173：抽 5 张，但本回合不能再用盟友 / 工事卡。
 			_say("◇ 身法：抽 %d 张 —— 本回合不能再使用盟友和工事卡"

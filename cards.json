@@ -5951,6 +5951,30 @@
       "value": 1,
       "color": "蓝",
       "image": ""
+    },
+
+    {
+      "id": 9211,
+      "name": "折射炮",
+      "kind": "效果",
+      "cost": 3,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "折射"
+      ],
+      "affixes": [],
+      "effect_text": "打出时：将一张「聚能炮击」加入手卡。此后你使用「聚能炮击」时，除主目标外，额外对一个随机其他敌方单位造成等量伤害。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "紫",
+      "image": ""
     }
   ]
 }

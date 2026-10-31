@@ -1137,6 +1137,19 @@ const ASSEMBLE_ID:= 9144
 # 「聚能炮击」（9145，1 费普通技能）：造成 9 点伤害并抽 1 张。
 const ENERGY_CANNON_ID:= 9145
 const ENERGY_CANNON_DMG:= 9
+# 「折射炮」9211（R465，机械之心 3 费**史诗效果卡**）：
+#   ① 打出时：把一张「聚能炮击」9145 加入手卡（走 `_grant_to_hand` 唯一口）；
+#   ② 此后每一发「聚能炮击」，**除主目标外**再对一个随机其他敌方单位造成**等量**伤害。
+# 落地细节（都在 `_refract_extra_shot()` 里）：
+#   * 额外那一发走 `_hit_unit`（护盾 / 减伤 / 抗性 / 侦察塔光环照常生效），
+#     seq=1 → 界面按 R363 的多目标节奏逐格错开落地，不会和主目标那一下叠在一起；
+#   * 目标池 = **除主目标外仍在场的敌方单位** —— 不打自己人、不直击 HP；
+#     场上只剩一只敌人时落空（卡面写的是「其他」）；
+#   * 伤害口径 = 这一发的总量（含 8075 谟涅摩叙涅 +7 等 `_spell_dmg` 加成），
+#     不是卡面那个 9 —— 否则「同一发炮击打出两个数」会被玩家读成 bug；
+#   * **不叠加**：效果区多张也只多打一发（与发明专家 9143 的「不可叠加」同口径）。
+const REFRACT_CANNON_ID:= 9211
+const REFRACT_TRAIT:= "折射"
 # 「填充」（9146，0 费普通技能）：将手牌里一张卡变成聚能炮击。两段式入口 `cast_reload`。
 const RELOAD_ID:= 9146
 # ── R290：机械之心两张伤害技能（集中突破 9162 / 冲击炮 9163）──
@@ -5906,6 +5919,73 @@ func _cluster_turret_reload(p: Placement) -> void :
 	action.emit("cluster_reload", {"cell": _cell_of(p), "card": c, "side": p.owner})
 
 
+# ================= R465：折射炮 9211 =================
+
+
+func _refract_grant_cannon() -> void:
+	## 「折射炮」9211 的**打出时**效果：把一张「聚能炮击」9145 加入手卡。
+	## * `from_dict` 复制成独立实例 —— 卡库是共享实例，直接塞进手牌会让这张炮击
+	##   被改造 / 被附魔之后泄漏回图鉴与下一局（与生产订单 8048 / 集束炮台 9166 同口径）；
+	## * 走 `_grant_to_hand()` 唯一口 —— 手牌满时它进弃牌区并 emit `hand_burn`，
+	##   不会凭空蒸发（R299 用户规则）；那张卡之后还能被洗回牌库。
+	var repo := CardRepo.load_json()
+	var proto: CardData = repo.get_card(ENERGY_CANNON_ID) if repo != null else null
+	if proto == null:
+		_log("折射炮：卡库缺少「聚能炮击」(9145)，未能加入手卡")
+		return
+	var c := CardData.from_dict(proto.to_dict())
+	c.traits = (c.traits as Array).duplicate()
+	var landed := _grant_to_hand(c, "折射炮")
+	_log("折射炮：%s「聚能炮击」（手牌 %d 张）" % [
+			"加入手卡" if landed else "手牌已满 → 进弃牌区", state.hand.size()])
+
+
+func _refract_extra_shot(side: String, main_cell: Vector2i, amount: int) -> String:
+	## 「折射炮」9211 的**第二半**：这一发「聚能炮击」除主目标外，再对一个随机
+	## **其他敌方单位**造成等量伤害。返回给播报用的后缀（没触发就给空串）。
+	##
+	## 三条纪律：
+	##  ① **不叠加**：效果区几张折射炮都只多打一发 —— 效果卡多张是常见的，若按张数
+	##     叠加，三张 9211 就能让一发 9 伤炮击变成 36 伤，数值失控；
+	##  ② 目标池**先排序再抽**：`state.board` 是 Dictionary，迭代顺序随移动变化，
+	##     不排序会让回放 / 续档在同种子下抽到不同的人；
+	##  ③ 抽人走 `rng`（不是 `RunState` 那套），与激发 8077 / 闪躲的口径一致。
+	if side != SIDE_SELF or amount <= 0:
+		return ""
+	if not _refract_active():
+		return ""
+	var pool: Array[Vector2i] = []
+	for cell: Vector2i in _side_cells(SIDE_OPPONENT):
+		var q: Placement = state.unit_at(cell)
+		if q != null and q.health > 0 and cell != main_cell:
+			pool.append(cell)
+	if pool.is_empty():
+		_log("折射炮：除主目标外没有其他敌方单位 → 这一发没有折射")
+		return ""
+	pool.sort()
+	var pick: Vector2i = pool[rng.randi_range(0, pool.size() - 1)]
+	var q2: Placement = state.unit_at(pick)
+	if q2 == null:
+		return ""
+	var qname:= q2.card.card_name
+	# seq=1：主目标按无序号那一发（+160ms）先落地，流弹再晚一个 `FX_MULTI_HIT_GAP_MS`。
+	var dealt:= _hit_unit(q2, amount, "折射", true, false, 1)
+	_log("折射炮：流弹折射向 %s（-%d，这一发总量 %d）" % [qname, dealt, amount])
+	action.emit("refract_shot", {"cell": pick, "amount": dealt, "name": qname,
+			"main": main_cell})
+	if dealt > 0 and q2.health <= 0:
+		_destroy_dead()
+	return "；折射 %s -%d" % [qname, dealt]
+
+
+func _refract_active() -> bool:
+	## 效果区里有没有「折射炮」（只判我方效果区：敌方没有真实效果卡列表）。
+	for c: CardData in state.effects:
+		if c != null and c.id == REFRACT_CANNON_ID:
+			return true
+	return false
+
+
 # ================= R300：激发 8077 =================
 
 
@@ -7661,6 +7741,10 @@ func use_effect(hand_index: int) -> String:
 
 	if card.traits.has(DUCK_NEST_TRAIT):
 		_egg_to_hand("鸭窝")
+
+	# R465 折射炮 9211：打出时把一张「聚能炮击」加入手卡（此后每发炮击都会折射）。
+	if card.id == REFRACT_CANNON_ID:
+		_refract_grant_cannon()
 	_log("启用效果卡 %s（效果区持续生效）" % card.card_name)
 
 	state.apply_extra_actions(SIDE_SELF)
@@ -9879,7 +9963,13 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			# R341 量产型谟涅摩叙涅 8075：**每回合一次** → 这一发伤害 +MASS_MNEMOSYNE_DMG。
 			# 顺序：**先判额度（顺带把额度用掉）→ 再算伤害 → 再抽牌**。额度只在这里扣一次。
 			var ec_bonus:= _mass_mnemosyne_cannon_bonus(side)
-			var ec_dmg:= _op_deal_damage(side, _spell_dmg(side, ENERGY_CANNON_DMG + ec_bonus, card), target)
+			var ec_total:= _spell_dmg(side, ENERGY_CANNON_DMG + ec_bonus, card)
+			# R465 折射炮 9211：主目标那一格必须在**扣血之前**记下来 ——
+			# `_op_deal_damage` 打完就会 `_destroy_dead()`，事后再问「主目标是谁」只剩空格。
+			var ec_main_cell:= _cell_of(_target_placement(side, target))
+			var ec_dmg:= _op_deal_damage(side, ec_total, target)
+			# 折射：除主目标外，额外对一个随机其他敌方单位造成**等量**伤害（没折射炮 → 空串）。
+			var ec_refr:= _refract_extra_shot(side, ec_main_cell, ec_total)
 			# R271 量产型谟涅摩叙涅 8075：**因这张卡自身效果抽到的那张卡**费用 -1。
 			# 抽牌后手牌末尾就是刚抽到的那张（手牌满时 _draw_many 不抽，长度不变 → 不结算）。
 			# R341：减费与伤害加成共用额度 → 只认 `ec_bonus > 0` 的那一发。
@@ -9887,7 +9977,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			var ec_draw:= _draw_many(1)
 			if ec_bonus > 0 and state.hand.size() > ec_before:
 				_cannon_draw_discount(side, state.hand[state.hand.size() - 1])
-			return "%s；抽 %d 张" % [ec_dmg, ec_draw]
+			return "%s%s；抽 %d 张" % [ec_dmg, ec_refr, ec_draw]
 		BREAKTHROUGH_ID:
 			# 集中突破 9162（R290，机械之心）：造成 BREAKTHROUGH_DMG 点伤害，
 			# 场上己方单位每有 1 层改造，伤害 +BREAKTHROUGH_PER_STACK。

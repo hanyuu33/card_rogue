@@ -2362,10 +2362,18 @@ func _check_r393_absorb_timing(scene) -> void:
 		_smoke_fail("R393：护盾代受没有排进延迟队列（会当场播 → 快过攻击动画）")
 		return
 	var at := int(found.get("at", 0))
-	if at != imp:
-		_smoke_fail("R393：代受演出排在 %d，应当是撞击帧 %d" % [at, imp])
+	# R465（用户报「铁栅栏代受的演出依然抢在移动 / 攻击之前」）：代受**不在入队时**算时刻 ——
+	# 引擎 `attack_hp()` 是「先代受、后发 hp」，此刻攻击动画还没入队；护盾生成器同样在
+	# `action.emit("attack")` 之前发 `shield_redirect`。所以入队一律 `at = -1`（时刻待定），
+	# 由 `_tick_anims()` 里的 `_absorb_cue_at()` 在下一帧统一定时。
+	if at != -1:
+		_smoke_fail("R465：代受演出应当挂「时刻待定」(-1)，实际 %d" % at)
 		return
-	print("SMOKE OK R393 代受演出与撞击同帧：now=%d → 撞击 %d（+%dms，1 倍速）"
+	var cue: int = scene._absorb_cue_at()
+	if cue != imp:
+		_smoke_fail("R465：代受定时落在 %d，应当是撞击帧 %d" % [cue, imp])
+		return
+	print("SMOKE OK R393/R465 代受演出与撞击同帧：now=%d → 撞击 %d（+%dms，1 倍速）"
 			% [now0, imp, imp - now0])
 
 
