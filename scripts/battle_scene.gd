@@ -7467,9 +7467,18 @@ func _on_over_restart() -> void:
 		UiToast.toast("暗动力：卡牌奖励必须领取", 2200)
 		return
 	if RunState.run_active and _run_next_layer > 0:
-		RunState.advance_layer(_run_next_layer)
+		var next_lay: int = _run_next_layer
+		RunState.advance_layer(next_lay)
 		# R310：进新层的起点 = 卷卷的对话事件（原「起始道具三选一」面板）
-		_goto_scene("res://scenes/curtain.tscn")
+		# R470（用户口径「进入第三层时依然会触发第一层的起始事件」）：
+		# 第三层是直道，起点**只回血、没有任何开场事件** —— 这里按层直接去地图。
+		# 旧写法无条件走卷卷，而 `curtain_scene` 有「候选为空就自己摇一组」的自愈，
+		# 于是三层照样演一遍「卷卷 + 三选一」，而且摇的是**第一层**初始池
+		# （`start_ids_for_layer(3)` 落到 `initial_ids()`）。
+		if next_lay == GameLayers.LAYER_THREE:
+			_goto_scene("res://scenes/map.tscn")
+		else:
+			_goto_scene("res://scenes/curtain.tscn")
 	elif RunState.run_active and not _run_boss_win:
 		# R119：卡牌奖励已由奖励悬浮窗处理（没收的会留在「待领奖励」入口里），
 		# 这里只把节点标记完成、回地图 —— 不再切到独立的卡牌奖励场景。

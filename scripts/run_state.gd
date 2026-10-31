@@ -365,6 +365,7 @@ static var delivery_done := false
 
 # 即时道具
 const SOURCE_POWER_ID := 6002     # 源数之力（改造卡组中的一张卡）
+const FORGET_POTION_ID := 6004    # 失忆药水（删掉卡组里的一张卡）
 const SOURCE_POWER_HP_COST := 5   # 源数之力的代价：失去 5 点最大生命
 
 # R224 新道具：苹果（6027，奖励池）—— 获得时**立即 +7 最大生命并回复满生命值**。
@@ -1160,7 +1161,14 @@ static func gain_relic(id: int) -> void:
 	if relics.has(id):
 		# R367：之前**耗尽**过的（盆碎过 / 绳子用掉过）不算重复持有 —— 拿回来就重新
 		# 生效、从灰里复活；只有「还活着的那件」才是真的重复（直接 return）。
-		if not spent_relics.has(id):
+		#
+		# R470（用户报「鸭血获取后没有可以选择复制卡」）：**一次性选卡类即时道具**
+		# （鸭血 6024 / 源数之力 6002 / 失忆药水 6004）的效果活在 `pending_relic` 上，
+		# 道具栏里那枚徽章只是「领过」的凭证，用完不会进 `spent_relics` ——
+		# 于是第二次拿到时会被上面那条「还活着 = 真重复」拦掉，**既不弹选卡也不提示**，
+		# 玩家白拿一次。它们的一次性语义就是「每拿一次生效一次」，不参与重复持有判定。
+		var once_pick := id == DUCK_BLOOD_RELIC_ID or id == SOURCE_POWER_ID 				or id == FORGET_POTION_ID
+		if not once_pick and not spent_relics.has(id):
 			return
 		spent_relics.erase(id)
 	else:

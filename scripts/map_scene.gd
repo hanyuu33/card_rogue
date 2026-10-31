@@ -246,6 +246,13 @@ func _ready() -> void:
 	if "--relics" in OS.get_cmdline_user_args():
 		RunState.relics = [6001, 6005, 6010]
 		RunState.relic_choice = []
+	# -- --relicmany：R470 出图 —— 塞二十件道具，核验「一行排满换下一行、无限堆叠、
+	# 让开固定 UI（卡组按钮 / 巧克力 / 本层 Boss / 标题 / 标记按钮）」。
+	# 出图：`map.tscn -- --screenshot --relicmany --shotwait 0.8`
+	if "--relicmany" in OS.get_cmdline_user_args():
+		RunState.relics = [6001, 6002, 6003, 6004, 6005, 6006, 6007, 6008, 6009, 6010,
+				6011, 6012, 6013, 6014, 6015, 6016, 6017, 6018, 6019, 6020]
+		RunState.relic_choice = []
 	# -- --relictip：出图用 —— 把 `_mouse` 钉在第一个道具徽章上，让说明浮窗真的画出来
 	#（核验「卡组按钮已让开、不压说明」）。出图：
 	#  `map.tscn -- --screenshot --relics --relictip --shotwait 0.8`
@@ -584,11 +591,13 @@ func _gui_input(event: InputEvent) -> void:
 		if _relics_visible or _records_visible or _deck_visible:
 			_panel_dragged = false
 			return
-		if _relic_bar_overflowed() and _relic_rect(_relic_shown()).has_point(event.position):
-			_relics_visible = true
-			_relic_scroll = 0.0
-			queue_redraw()
-			return
+		# R470：没有「+N」了 —— 点任意一枚徽章就地打开道具一览（完整列表 + 详情）。
+		for _ri in RunState.relics.size():
+			if _relic_rect(_ri).has_point(event.position):
+				_relics_visible = true
+				_relic_scroll = 0.0
+				queue_redraw()
+				return
 		_drag_press_pos = event.position
 		_press_active = true
 		_dragging = false
@@ -1715,12 +1724,17 @@ func _ellipsis(text: String, max_w: float, px: int) -> String:
 
 # ------------------------------------------------------------ 道具栏
 
-const RELIC_BADGE_W := 106.0
-const RELIC_BADGE_Y := 14.0    # R407：道具徽章行的顶沿（卡组按钮据此对齐）
-## R407：道具那一行最右端还坐着「卡组」按钮（`_deck_btn_rect()`）——
-## 76 + 8 的占位比一个徽章（106）窄、但比半个宽，所以直显数 7 → 6。
-## 总占宽 84 + 6×106 = 720 < 原来的 7×106 = 742，最左徽章反而更远离标题。
-const RELIC_BADGE_MAX := 6
+## R470（用户口径「道具太多显示不下」）：**一行排满就换下一行，无限堆叠** ——
+## 不再有「+N」折叠，也不再限制显示数量。
+## 徽章要**绕开固定 UI**（卡组按钮 / 巧克力 / 本层 Boss 名牌 / 标题 / 图例条 /
+## 左侧三个标记按钮），但**允许压在地图上**（用户明确「不要害怕遮盖地图」）。
+const RELIC_BADGE_W := 98.0
+const RELIC_BADGE_H := 26.0
+const RELIC_STEP_X := 104.0    # 徽章宽 98 + 6 间隙
+const RELIC_STEP_Y := 30.0     # 徽章高 26 + 4 间隙
+const RELIC_EDGE_R := 24.0     # 右侧内边距（与「卡组」按钮同一条竖线）
+const RELIC_EDGE_L := 8.0
+const RELIC_BADGE_Y := 14.0    # R407：道具徽章首行的顶沿（卡组按钮据此对齐）
 const RELIC_P_W := 900.0
 const RELIC_P_NAME := 17
 const RELIC_P_TAG := 13
@@ -1743,20 +1757,68 @@ func _deck_btn_rect() -> Rect2:
 	## 底沿 42 < `RELIC_TIP_TOP`(46) —— 悬停道具时不再压住说明。
 	return Rect2(size.x - 24.0 - DECK_BTN_W, RELIC_BADGE_Y - 2.0, DECK_BTN_W, DECK_BTN_H)
 
+var _relic_slots: Array[Rect2] = []
+var _relic_slots_key := ""
+
+
+func _relic_reserved() -> Array[Rect2]:
+	## R470：徽章**必须让开**的固定 UI 矩形（都 `grow` 出一点余量，避免贴边）。
+	## 地图棋盘**不在**这个列表里 —— 道具栏压在图上是有意为之。
+	var out: Array[Rect2] = []
+	out.append(_deck_btn_rect().grow(3.0))                     # 右上「卡组」按钮
+	out.append(Rect2(14.0, 60.0, 320.0, 26.0).grow(3.0))       # 本层 Boss 名牌
+	if RunState.current_layer != GameLayers.LAYER_THREE:
+		out.append(_choco_panel_rect().grow(3.0))              # 巧克力计数（三层没有）
+	out.append(Rect2(size.x / 2.0 - 178.0, 4.0, 356.0, 56.0))  # 「冒险地图」标题 + 生命/卡组行
+	out.append(Rect2(8.0, 86.0, 120.0, 3.0 * 40.0 + 6.0))      # 左侧三个标记按钮 + 中文标签
+	var bar_y := MAP_Y0 + MAP_H + 2.0                          # 底部图例带
+	out.append(Rect2(0.0, bar_y, size.x, maxf(0.0, size.y - bar_y)))
+	return out
+
+
+func _relic_slot_list() -> Array[Rect2]:
+	## 把整屏切成「徽章槽位」：行优先、每行从右往左；与固定 UI 相交的槽**直接跳过**
+	## （不是挤走它 —— 挤走会让第一行最右端出现一道莫名其妙的空洞）。
+	## 结果按 (size, 层) 缓存：只有尺寸或层变了才重算，每帧绘制零分配。
+	var key := "%d|%d|%d" % [int(size.x), int(size.y), RunState.current_layer]
+	if key == _relic_slots_key and not _relic_slots.is_empty():
+		return _relic_slots
+	var res := _relic_reserved()
+	var out: Array[Rect2] = []
+	var x0 := size.x - RELIC_EDGE_R - RELIC_BADGE_W
+	var y := RELIC_BADGE_Y
+	var guard := 0
+	while y + RELIC_BADGE_H <= size.y and guard < 600:
+		var x := x0
+		while x >= RELIC_EDGE_L and guard < 600:
+			guard += 1
+			var r := Rect2(x, y, RELIC_BADGE_W, RELIC_BADGE_H)
+			var blocked := false
+			for b: Rect2 in res:
+				if b.intersects(r):
+					blocked = true
+					break
+			if not blocked:
+				out.append(r)
+			x -= RELIC_STEP_X
+		y += RELIC_STEP_Y
+	_relic_slots = out
+	_relic_slots_key = key
+	return _relic_slots
+
+
 func _relic_rect(i: int) -> Rect2:
-	## 道具徽章从右往左排；最右那一格留给「卡组」按钮（`_deck_btn_rect()`）。
-	## ⚠️ 别把卡组按钮搬回巧克力面板左边（旧位置 y≈54）：那正好压在说明浮窗上。
-	return Rect2(size.x - 24.0 - DECK_BTN_W - DECK_BTN_GAP - (i + 1) * RELIC_BADGE_W,
-			RELIC_BADGE_Y, 98.0, 26.0)
-
-
-func _relic_bar_overflowed() -> bool:
-	return RunState.relics.size() > RELIC_BADGE_MAX
-
-
-func _relic_shown() -> int:
-	var n := RunState.relics.size()
-	return (RELIC_BADGE_MAX - 1) if _relic_bar_overflowed() else n
+	## 第 i 枚道具徽章的矩形。槽位用完（极端：道具多到铺满整屏）时**叠在最后一槽**，
+	## 不越界、不报错 —— 宁可重叠也不要画到屏幕外。
+	var slots := _relic_slot_list()
+	if slots.is_empty():
+		return Rect2(size.x - RELIC_EDGE_R - RELIC_BADGE_W, RELIC_BADGE_Y,
+				RELIC_BADGE_W, RELIC_BADGE_H)
+	if i < 0:
+		i = 0
+	if i >= slots.size():
+		i = slots.size() - 1
+	return slots[i]
 
 
 func _draw_relics() -> void:
@@ -1767,8 +1829,7 @@ func _draw_relics() -> void:
 			and (_reward_panel == null or not _reward_panel.is_open())
 	var repo := RelicRepo.load_json()
 	var hovered := -1
-	var shown := _relic_shown()
-	for i in shown:
+	for i in RunState.relics.size():
 		var rel := repo.get_relic(RunState.relics[i])
 		if rel == null:
 			continue
@@ -1787,43 +1848,10 @@ func _draw_relics() -> void:
 				Color("8d8577") if spent else rel.name_color(Color("eee6c8")))
 		if hover_ok and rect.has_point(_mouse):
 			hovered = i
-	if _relic_bar_overflowed():
-		var more := _relic_rect(shown)
-		draw_rect(more, Color(0.96, 0.95, 0.88, 0.92), true)
-		draw_rect(more, Color("9a8f70"), false, 1.2)
-		draw_string(_font_bold, more.position + Vector2(0, 18),
-				"+%d" % (RunState.relics.size() - shown),
-				HORIZONTAL_ALIGNMENT_CENTER, more.size.x, UiTheme.FS_BODY, Color("6a6040"))
-		if hover_ok and more.has_point(_mouse):
-			hovered = -2
 	if hovered >= 0:
 		var rel2 := repo.get_relic(RunState.relics[hovered])
 		if rel2 != null:
 			_draw_relic_tip(repo, rel2, RunState.relic_state_note(RunState.relics[hovered]))
-	elif hovered == -2:
-		var miss := RunState.relics.size() - shown
-		var w2 := 420.0
-		var lines2 := CardFace.wrap_text(_font,
-				"还有 %d 件未列出：%s。点击这枚「+N」看完整详情（字号更大）。"
-				% [miss, _relic_names_tail(shown)], w2 - 20.0, 13)
-		var tx2: float = clampf(_mouse.x - w2 / 2, 8, size.x - w2 - 8)
-		var panel2 := Rect2(tx2, RELIC_TIP_TOP, w2, 12.0 + lines2.size() * 18.0)
-		draw_rect(panel2, Color(0.10, 0.11, 0.15, 0.95), true)
-		draw_rect(panel2, UiTheme.ACCENT_GOLD, false, 1.2)
-		for i in lines2.size():
-			draw_string(_font, panel2.position + Vector2(10, 22 + i * 18), lines2[i],
-					HORIZONTAL_ALIGNMENT_LEFT, w2 - 20, UiTheme.FS_LABEL, Color("eee6c8"))
-
-
-func _relic_names_tail(from_i: int) -> String:
-	var names: Array[String] = []
-	for i in range(from_i, RunState.relics.size()):
-		var rel := RelicRepo.load_json().get_relic(RunState.relics[i])
-		names.append(rel.relic_name if rel != null else str(RunState.relics[i]))
-		if names.size() >= 6:
-			names.append("等")
-			break
-	return "、".join(names)
 
 
 func _draw_relic_tip(repo: RelicRepo, rel: RelicData, note: String) -> void:

@@ -11696,11 +11696,29 @@ func _init() -> void:
 		"R81 鸭血 边界：卡组只 +2（%d → %d）"
 			% [r81_fixture.size(), RunState.deck_ids.size()])
 
-	# 重复获得不叠加（沿用所有道具的统一语义）
+	# R470（用户报「鸭血获取后没有可以选择复制卡」）：**一次性选卡类即时道具**
+	# （鸭血 6024 / 源数之力 6002 / 失忆药水 6004）每拿一次就要生效一次 ——
+	# 道具栏不许重复登记（列表长度不变），但 `pending_relic` 必须重新置上。
+	# 旧口径「还活着的那件 = 真重复，直接 return」只对**常驻道具**成立，
+	# 套到一次性道具上就是「第二次拿到的鸭血被静默丢弃」。
 	var r81_n0: int = RunState.relics.size()
+	RunState.pending_relic = -1
 	RunState.gain_relic(RunState.DUCK_BLOOD_RELIC_ID)
-	check(RunState.relics.size() == r81_n0 and RunState.pending_relic == -1,
-		"R81 鸭血：已持有时重复获得被忽略（不会二次复制）")
+	check(RunState.relics.size() == r81_n0
+			and RunState.pending_relic == RunState.DUCK_BLOOD_RELIC_ID,
+		"R470 鸭血：重复获得不重复登记道具栏，但**重新进入选卡待办**（pending_relic = 6024）")
+	# 常驻道具不受影响：类固醇（6001）已拥有时重复获得仍然什么都不发生
+	RunState.pending_relic = -1
+	var r81_hp_a: int = RunState.max_hp
+	RunState.gain_relic(6001)
+	var r81_hp_b: int = RunState.max_hp
+	RunState.gain_relic(6001)
+	check(RunState.max_hp == r81_hp_b and r81_hp_b == r81_hp_a + 10
+			and RunState.pending_relic == -1,
+		"R470 常驻道具：第一次 +10 最大生命、第二次重复获得被忽略（一次性那条没带歪语义）")
+	RunState.max_hp = r81_hp_a
+	RunState.hp = mini(RunState.hp, RunState.max_hp)
+	RunState.pending_relic = -1
 
 	RunState.relics = r81_saved_relics
 	RunState.deck_ids = r81_saved_deck
@@ -31569,6 +31587,55 @@ func _init() -> void:
 	check(r468_pool > r467_owl_data.health,
 			"R468 洞穴血池：敌方总血条 %d > 枭熊血量 %d（血条先空 = 能绕过硬仗）"
 			% [r468_pool, r467_owl_data.health])
+
+	# ══ R470：AOE 打 HP 行只结算一次 ══
+	# 用户口径：「HP 三个格子被 AOE 打中时，只结算受到伤害最高的格子的伤害」。
+	# 旧代码靠每个 AOE 自己包 `_begin_hp_once()`，谁忘了包就是三格各扣一次
+	#（实测 3×20 打 200 血 → 掉 60）；现在收进 `damage_cells()` 一个口。
+	var r470_e := _new_engine([], 20, 200)
+	r470_e.state.hp_opponent = 200
+	var r470_cells: Array[Vector2i] = []
+	for r470_col in FieldState.BOARD_COLS:
+		r470_cells.append(Vector2i(GameEngine.back_row(GameEngine.SIDE_OPPONENT), r470_col))
+	var r470_h0: int = r470_e.state.hp_opponent
+	var r470_hits := r470_e.damage_cells(r470_cells, 20, "测试 AOE")
+	check(r470_h0 - r470_e.state.hp_opponent == 20,
+		"R470 AOE：三个 HP 格各 20 点只结算**一次**（%d → %d，掉 %d；裸循环会掉 60）"
+			% [r470_h0, r470_e.state.hp_opponent, r470_h0 - r470_e.state.hp_opponent])
+	check(r470_hits >= 1,
+		"R470 AOE：命中计数不为 0（三格都算命中，实际 %d）" % r470_hits)
+	# 真卡路径：火球术（9007 的 `_blast`）打在敌方后排正中，半径 1 覆盖三个 HP 格
+	var r470_f := _new_engine([], 20, 200)
+	r470_f.state.hp_opponent = 200
+	var r470_fh: int = r470_f.state.hp_opponent
+	var r470_msg := str(r470_f._blast(20,
+			Vector2i(GameEngine.back_row(GameEngine.SIDE_OPPONENT), 1), 1))
+	check(r470_fh - r470_f.state.hp_opponent == 20,
+		"R470 火球术：三个 HP 格全在半径内也只掉 20（%d → %d；%s）"
+			% [r470_fh, r470_f.state.hp_opponent, r470_msg])
+	# 取最高：先落一记小伤害，再落一记更大的 → 只补差额，不重复扣
+	var r470_g := _new_engine([], 20, 200)
+	r470_g.state.hp_opponent = 200
+	r470_g._begin_hp_once()
+	r470_g.damage_cell(Vector2i(GameEngine.back_row(GameEngine.SIDE_OPPONENT), 0), 8, "小")
+	r470_g.damage_cell(Vector2i(GameEngine.back_row(GameEngine.SIDE_OPPONENT), 1), 20, "大")
+	r470_g._end_hp_once()
+	check(r470_g.state.hp_opponent == 200 - 20,
+		"R470 AOE 取最高：窗口内先 8 后 20 → 按 20 结算（剩 %d，期望 180）"
+			% r470_g.state.hp_opponent)
+
+	# ══ R470：第三层开场没有任何事件（用户口径「只回血，直接进地图」）══
+	# 源码守卫：`battle_scene` 换层到三层要直接去地图；`curtain_scene` 也要有兜底，
+	# 否则它「候选为空就自己摇一组」会把**第一层初始池**塞给三层——
+	# 这正是用户看到的「进三层触发了第一层的起始事件」。
+	var r470_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r470_cs := FileAccess.get_file_as_string("res://scripts/curtain_scene.gd")
+	check_src(r470_bs.contains("if next_lay == GameLayers.LAYER_THREE:")
+			and r470_bs.contains('_goto_scene("res://scenes/map.tscn")'),
+		"R470 三层开场：battle_scene 换层到第三层时直接去地图（不走卷卷）")
+	check_src(r470_cs.contains("if _layer == GameLayers.LAYER_THREE")
+			and r470_cs.contains('SceneFx.goto("res://scenes/map.tscn", true)'),
+		"R470 三层开场：curtain_scene 对第三层直接转地图（不再自愈出三选一）")
 
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []

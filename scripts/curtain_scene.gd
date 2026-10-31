@@ -74,6 +74,13 @@ func _ready() -> void:
 	if _cls == "":
 		_cls = PlayerClass.default_id()
 	_apply_demo_args()
+	# R470（用户口径「进入第三层时依然会触发第一层的起始事件」）：第三层没有开场事件 ——
+	# 万一路径上仍被送到这里（旧存档 / 别处跳转），**直接转去地图**，不要再演一遍
+	# 「卷卷 + 三选一」（下面那段自愈会给它摇到第一层的初始池，正是用户看到的现象）。
+	# ⚠️ 出图模式放行，否则 `-- --screenshot --curtain3` 什么都截不到。
+	if _layer == GameLayers.LAYER_THREE and "--screenshot" not in OS.get_cmdline_user_args():
+		SceneFx.goto("res://scenes/map.tscn", true)
+		return
 	_build_nodes()
 	# 候选兜底：直接打开场景（调试 / 出图）时给一组（本层起始道具池前 3 个）
 	if RunState.relic_choice.is_empty():

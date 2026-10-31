@@ -1797,54 +1797,62 @@ func _check_relic_bar(scene: Variant) -> void:
 		_smoke_fail("R407 卡组按钮：实际位置 %s 与唯一口 %s 不一致"
 				% [str((dbb as Button).position), str(dbr.position)])
 		return
-	var n_max: int = scene.RELIC_BADGE_MAX
-	# 徽章行整体不能压到标题（最左一个徽章的左沿要在标题右侧）
-	var left: float = scene._relic_rect(n_max - 1).position.x
-	if left < 470.0:
-		_smoke_fail("道具徽章：一行 %d 个时最左徽章左沿 %.1f，压到标题区"
-				% [n_max, left])
-		return
+	# R470（用户口径「道具太多显示不下」）：**不再有 +N 折叠** —— 一行排满就换下一行、
+	# 无限堆叠，并且**绕开固定 UI**（卡组按钮 / 巧克力 / 本层 Boss / 标题 / 图例条 / 标记按钮）。
+	# 这里一屏塞 20 件，逐条钉：全部有槽位、互不重叠、都不压住保留矩形。
 	var saved: Array = RunState.relics.duplicate()
-	# 少：装得下 → 不该有 +N，也就不该给点击入口
-	RunState.relics = [6001, 6003, 6005]
-	if scene._relic_bar_overflowed():
-		_smoke_fail("道具徽章：3 件（上限 %d）却判定为溢出" % n_max)
+	var many: Array[int] = [6001, 6003, 6005, 6006, 6007, 6008, 6009, 6010, 6011, 6012,
+			6013, 6014, 6015, 6016, 6017, 6018, 6019, 6020, 6021, 6026]
+	RunState.relics = many.duplicate()
+	var rects: Array = []
+	for i in RunState.relics.size():
+		rects.append(scene._relic_rect(i))
+	if rects.size() != many.size():
+		_smoke_fail("R470 道具徽章：20 件应各占一格，实际 %d" % rects.size())
+		RunState.relics = saved
 		return
-	if scene._relic_shown() != 3:
-		_smoke_fail("道具徽章：装得下时只应列出全部 3 件，实际 %d" % scene._relic_shown())
+	for i in rects.size():
+		var rr: Rect2 = rects[i]
+		if rr.position.y < 0.0 or rr.end.y > scene.size.y or rr.end.x > scene.size.x 				or rr.position.x < 0.0:
+			_smoke_fail("R470 道具徽章：第 %d 枚越出屏幕（%s / 视口 %s）"
+					% [i, str(rr), str(scene.size)])
+			RunState.relics = saved
+			return
+	for i in rects.size():
+		for j in range(i + 1, rects.size()):
+			if (rects[i] as Rect2).intersects(rects[j]):
+				_smoke_fail("R470 道具徽章：第 %d 枚与第 %d 枚重叠（%s / %s）"
+						% [i, j, str(rects[i]), str(rects[j])])
+				RunState.relics = saved
+				return
+	var reserve: Array = scene._relic_reserved()
+	for i in rects.size():
+		for b: Rect2 in reserve:
+			if b.intersects(rects[i]):
+				_smoke_fail("R470 道具徽章：第 %d 枚压住固定 UI（%s 撞 %s）"
+						% [i, str(rects[i]), str(b)])
+				RunState.relics = saved
+				return
+	# 真的换行了：第 0 枚与最后一枚不在同一行
+	if absf((rects[0] as Rect2).position.y - (rects[rects.size() - 1] as Rect2).position.y) < 1.0:
+		_smoke_fail("R470 道具徽章：20 件仍挤在一行（y = %.1f）" % (rects[0] as Rect2).position.y)
+		RunState.relics = saved
 		return
-	# 多：装不下 → 恰好留一个 +N，且 +N 落在允许点击的位置
-	RunState.relics = [6001, 6002, 6003, 6005, 6006, 6007, 6008, 6009, 6013, 6015]
-	if not scene._relic_bar_overflowed():
-		_smoke_fail("道具徽章：10 件（上限 %d）却判定为装得下" % n_max)
-		return
-	var shown: int = scene._relic_shown()
-	if shown != n_max - 1:
-		_smoke_fail("道具徽章：溢出时应留 1 个 +N 位（列 %d 个），实际 %d" % [n_max - 1, shown])
-		return
-	var more: Rect2 = scene._relic_rect(shown)
-	if more.size.x <= 0.0 or more.position.y < 0.0 or more.end.y > 44.0:
-		_smoke_fail("道具徽章：+N 摘要块不在顶部徽章行内（%s）" % str(more))
-		return
-	if not more.has_point(more.get_center()):
-		_smoke_fail("道具徽章：+N 摘要块自身中心不在块内（%s）" % str(more))
-		return
-	# 详情面板：能列出全部 10 件，且说明字号 > 悬浮提示字号
+	# 详情面板：能列出全部 20 件，且说明字号 > 悬浮提示字号
 	var rows: Array = scene._relic_panel_rows()
 	if rows.size() != RunState.relics.size():
 		_smoke_fail("道具详情面板：应列出全部 %d 件，实际 %d"
 				% [RunState.relics.size(), rows.size()])
+		RunState.relics = saved
 		return
 	if int(scene.RELIC_P_NAME) <= 14 or int(scene.RELIC_P_DESC) <= 12:
 		_smoke_fail("道具详情面板：字号没放大（名称 %d / 说明 %d，悬浮是 14 / 12）"
 				% [int(scene.RELIC_P_NAME), int(scene.RELIC_P_DESC)])
-		return
-	if scene.RELIC_P_DESC <= 12:
-		_smoke_fail("道具详情面板：说明字号 %d 未大于悬浮提示的 12" % int(scene.RELIC_P_DESC))
+		RunState.relics = saved
 		return
 	RunState.relics = saved
-	print("SMOKE OK 道具查看：地图徽章上限 %d 个 / 3 件不溢出无 +N / 10 件留 1 个 +N 可点 / 详情 %d 件全列且字号 %d>%d"
-			% [n_max, rows.size(), int(scene.RELIC_P_NAME), int(scene.RELIC_P_DESC)])
+	print("SMOKE OK R470 道具栏：20 件全部有槽位 / 互不重叠 / 绕开 %d 处固定 UI / 已换行 / 详情 %d 件全列"
+			% [reserve.size(), rows.size()])
 
 
 func _check_r467_cave(scene) -> void:

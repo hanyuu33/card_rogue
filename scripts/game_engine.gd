@@ -10554,15 +10554,9 @@ func _meteor(side: String, target, card: CardData) -> String:
 			continue
 		cells.append(c)
 	var amount:= _spell_dmg(side, METEOR_DMG, card)
-	var hits:= 0
-	# R123：HP 去重上收到统一窗口（空格直击 + 后排溢出，同一方只算一次）。
-	_begin_hp_once()
-	for c2: Vector2i in cells:
-		var q:= state.unit_at(c2)
-		if damage_cell(c2, amount, "陨石") > 0:
-			hits += 1
-	_destroy_dead()
-	_end_hp_once()
+	# R470：多格伤害统一走 `damage_cells()` —— HP 去重窗口与收尾击杀都在里面，
+	# 调用方不再各自记着 `_begin_hp_once()` / `_destroy_dead()`（漏一个就三格各扣一次）。
+	var hits := damage_cells(cells, amount, "陨石")
 	_log("陨石术：十字 %d 格各受 %d 点伤害（不分敌我），命中 %d 个目标" % [
 		cells.size(), amount, hits])
 	return "十字 %d 格各 %d 伤（命中 %d）" % [cells.size(), amount, hits]
@@ -11758,6 +11752,27 @@ func damage_cell(cell: Vector2i, amount: int, source:= "效果") -> int:
 	return amount
 
 
+func damage_cells(cells: Array, amount: int, src := "效果") -> int:
+	## R470（用户口径「HP 三个格子被 AOE 打中时，只结算受到伤害最高的格子的伤害」）：
+	## **多格 AOE 的唯一口**。它替调用方做三件容易漏的事：
+	##   ① 包一层 `_begin_hp_once()` / `_end_hp_once()` —— 同一方 HP 在这次结算里只吃一次；
+	##   ② 循环结束后统一 `_destroy_dead()`（击杀 / 溢出都在窗口内收尾）；
+	##   ③ 返回命中数（空格打 HP 也算一次命中，与旧 `damage_cell` 的返回口径一致）。
+	## ⚠️ 别再写「for 循环里裸调 damage_cell」—— 漏了窗口就是三格各扣一次
+	##（实测：三格各 20 点的 AOE 打 200 血，裸循环掉 60）。源码守卫盯着这条。
+	if cells.is_empty() or amount <= 0:
+		return 0
+	_begin_hp_once()
+	var hits := 0
+	for c: Vector2i in cells:
+		if damage_cell(c, amount, src) > 0:
+			hits += 1
+	if hits > 0:
+		_destroy_dead()
+	_end_hp_once()
+	return hits
+
+
 func _relic_damage_taken(dmg: int) -> int:
 	## 鸭嘴（6006）：**每满 5 点伤害减 2 点**，最少受 1 点（R399 用户口径加强）。
 	##   5 → 3、9 → 7、10 → 6、15 → 9、20 → 12；不足 5 点的部分不折算（4 点照掉 4）。
@@ -12125,16 +12140,13 @@ func _blast(amount: int, target, radius: int) -> String:
 	if not (target is Vector2i):
 		return "（需要一个目标格子）"
 	var center: Vector2i = target
-	var hits:= 0
-	_begin_hp_once()
+	var cells: Array[Vector2i] = []
 	for cell: Vector2i in state.board.keys():
-		if manhattan(cell, center) <= radius:
-			if state.unit_at(cell) == null:
-				continue
-			if damage_cell(cell, amount, "火球") > 0:
-				hits += 1
-
-
+		if manhattan(cell, center) <= radius and state.unit_at(cell) != null:
+			cells.append(cell)
+	# R470：HP 行每方**只取一格**（半径内离中心最近的那个空格）。三个 HP 格是同一个
+	# 血量池的入口，打哪一格都是同一笔伤害；`damage_cells()` 里还有一层
+	# 「同一方 HP 只结算一次」兜底，所以这里取几格都不会重复扣。
 	for row: int in [back_row(SIDE_OPPONENT), back_row(SIDE_SELF)]:
 		var best_c:= Vector2i(-1, -1)
 		var best_d:= 999
@@ -12146,10 +12158,9 @@ func _blast(amount: int, target, radius: int) -> String:
 			if dc <= radius and dc < best_d:
 				best_d = dc
 				best_c = c
-		if best_c != Vector2i(-1, -1) and damage_cell(best_c, amount, "火球") > 0:
-			hits += 1
-	_destroy_dead()
-	_end_hp_once()
+		if best_c != Vector2i(-1, -1):
+			cells.append(best_c)
+	var hits := damage_cells(cells, amount, "火球")
 	return "火球命中 %d 个目标" % hits
 
 
@@ -12513,11 +12524,8 @@ func _death_blast(center: Vector2i, amount: int, card: CardData) -> void :
 		cells.append(c)
 	_log("%s 死亡爆炸：周围 %d 格各受到 %d 点伤害" % [card.card_name, cells.size(), amount])
 
-	_begin_hp_once()
-	for c2: Vector2i in cells:
-		damage_cell(c2, amount, "爆炎")
-	_destroy_dead()
-	_end_hp_once()
+	# R470：同上 —— 多格伤害只从 `damage_cells()` 走。
+	damage_cells(cells, amount, "爆炎")
 	action.emit("blast", {"center": center, "cells": cells, "amount": amount, "card": card})
 
 
@@ -12866,16 +12874,25 @@ func _end_hp_once() -> void :
 		_hp_once_sides.clear()
 
 func _damage_player(side: String, amount: int, source:= "") -> int:
-	## R123：多格窗口内，同一方 HP 已经在这次结算里吃过一次 → 这笔直接跳过。
-	if _hp_once_depth > 0 and _hp_once_sides.has(side):
-		_last_hp_damage = 0        # 这笔没落地（同一次结算里已经吃过）
-		if side == SIDE_SELF:
-			_log("（同一次多格结算：我方 HP 已吃过一次，这笔 %d 点不再重复）" % amount)
-			return state.hp_self
-		_log("（同一次多格结算：敌方 HP 已吃过一次，这笔 %d 点不再重复）" % amount)
-		return state.hp_opponent
+	## R123：多格窗口内，同一方 HP 只结算**一次**。
+	## R470（用户口径「只结算受到伤害最高的格子的伤害」）：旧写法是「先到先算」——
+	## 哪一格排在前面就按那一格结算，后面的一律丢弃；现在改成**取最高**：
+	## 记录本窗口内该方已结算的**纸面伤害**，更大的一笔只补差额，相同 / 更小的直接跳过。
+	##   * AOE 各格伤害相同 → 永远只落地一次（这就是用户要的口径）；
+	##   * 「直击 HP + 破后排溢出」混在一起 → 取大的那笔，不再被先来的小额吞掉。
 	if _hp_once_depth > 0:
-		_hp_once_sides[side] = true
+		var prev: int = int(_hp_once_sides.get(side, -1))
+		if prev >= 0:
+			var who := "我方" if side == SIDE_SELF else "敌方"
+			if amount <= prev:
+				_last_hp_damage = 0
+				_log("（同一次多格结算：%s HP 已按 %d 点结算过，这笔 %d 点不再重复）" % [
+						who, prev, amount])
+				return state.hp_self if side == SIDE_SELF else state.hp_opponent
+			_log("（同一次多格结算：%s HP 这笔 %d 点高于已结算的 %d，只补差额 %d）" % [
+					who, amount, prev, amount - prev])
+			amount -= prev
+		_hp_once_sides[side] = amount + maxi(0, prev)
 	if side == SIDE_SELF:
 		# 闪躲（9103）：窗口期内先让随机盟友代受（不足的部分才落到自己的 HP 上）。
 		if _dodge_active and amount > 0:
