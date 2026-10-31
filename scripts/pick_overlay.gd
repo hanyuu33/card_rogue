@@ -272,8 +272,16 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL, Color("f5ead2"))
 	# 标题（顶栏居中）
 	var title_fs := UiTheme.FS_SUBHEAD
+	# R472（用户报「预判这张卡选项文本太长溢出框了」）：标题栏是**定宽**的，
+	# 而预判①那条标题是全游戏最长的一句。这里逐级降字号直到放得下（最低 12），
+	# 与 battle_scene 的 `_draw_string_center_fit()` 同一口径 —— 别让文字顶出边框。
+	var title_txt := String(_cfg.get("title", ""))
+	var title_avail := w - 32.0
+	while title_fs > 12 and _font_bold.get_string_size(title_txt,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, title_fs).x > title_avail:
+		title_fs -= 1
 	draw_string(_font_bold, Vector2(0, TOP_H / 2.0 + title_fs * 0.35),
-			String(_cfg.get("title", "")), HORIZONTAL_ALIGNMENT_CENTER, w,
+			title_txt, HORIZONTAL_ALIGNMENT_CENTER, w,
 			title_fs, Color("f2ead8"))
 	# 顶栏右侧：选卡模式 = 已选计数；浏览模式 = 共几张
 	var max_sel := int(_cfg.get("max_sel", 1))

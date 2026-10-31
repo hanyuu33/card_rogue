@@ -1743,11 +1743,9 @@ static func claim_deck_delete_reward(idx: int, deck_index: int) -> bool:
 static func deck_deletable(index: int) -> bool:
 	## R398：卡组第 index 张能不能删 —— 奖励面板的就地删卡与 `deck_edit_scene` 同一判据
 	## （只认 `CardData.no_remove`，**不许**在界面里按 id 硬编码）。
-	if index < 0 or index >= deck_ids.size():
-		return false
-	var repo := CardRepo.load_json()
-	var c: CardData = repo.get_card(int(deck_ids[index]))
-	return c != null and not c.no_remove
+	## R472：**只是 `remove_block_reason()` 的布尔外壳** —— 判据只留一处，
+	## 别再在这里写第二套规则（商店 / 月亮 / 药水 / 选卡页全都汇到那个函数）。
+	return remove_block_reason(index) == ""
 
 
 static func has_deletable_deck_card() -> bool:
@@ -1907,9 +1905,28 @@ static func consume_barbecue() -> int:
 	return heal(ceili(max_hp * 0.25))
 
 
-static func delete_deck_card(index: int) -> bool:
-	## 失忆药水：删除卡组中第 index 张卡。成功返回 true。
+static func remove_block_reason(index: int) -> String:
+	## R472：这张卡**现在能不能从卡组删掉**？"" = 能删，否则返回一句给玩家看的原因。
+	## 唯一判据口 —— 商店「删除一张卡」/ 月亮 9180 / 失忆药水 6004 / 遗忘之泉 /
+	## 选卡页全都读它，界面只负责提前告知与灰化。
+	## 带锁的卡只有三张：月亮 9180 / 硬币 9181 / 罐子 9157（`no_remove`）。
 	if index < 0 or index >= deck_ids.size():
+		return "卡组里没有这一张"
+	var c := CardRepo.load_json().get_card(int(deck_ids[index]))
+	if c != null and c.no_remove:
+		return "「%s」带锁，不能从卡组删除" % c.card_name
+	return ""
+
+
+static func delete_deck_card(index: int) -> bool:
+	## 删掉卡组里第 index 张卡 —— **全游戏唯一的删卡口**。
+	## R472（用户报「月亮可以在商店被删掉」）：带 `no_remove` 的卡在这里一票否决。
+	## 原来只有卡组编辑页的**界面层**挡了它（`deck_edit_scene._has_no_remove_card()`），
+	## 商店的「删除一张卡」是直接调本函数的 —— 于是月亮 / 硬币 / 罐子能绕过界面锁被删掉，
+	## 同一件事出现了两条路、两套规则。现在判据只留这一处。
+	if index < 0 or index >= deck_ids.size():
+		return false
+	if remove_block_reason(index) != "":
 		return false
 	deck_ids.remove_at(index)
 	_sync_mods_remove(index)     # R181：附魔下标同步前移

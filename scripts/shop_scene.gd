@@ -1118,7 +1118,11 @@ func _build_deck_cards() -> void:
 		if c == null:
 			continue
 		var ok := true
-		if not _deleting:
+		if _deleting:
+			# R472：带锁的卡（月亮 9180 / 硬币 9181 / 罐子 9157）灰化 —— 判据只在
+			# `RunState.remove_block_reason()` 一处，和卡组编辑页 / 月亮删卡同一套规则。
+			ok = RunState.remove_block_reason(i) == ""
+		else:
 			var ench: Dictionary = _row2[_enchanting]["ench"]
 			ok = _enchant_ok(str(ench["id"]), c, i)
 		_deck_cards.append({"id": c.id, "card": c, "ok": ok, "idx": i})
@@ -1404,6 +1408,10 @@ func _on_pick_click(pos: Vector2) -> void:
 	var ci := _enchant_card_at(pos)
 	if ci < 0:
 		var any_i := _pick_card_any_at(pos)
+		if any_i >= 0 and _deleting:
+			# R472：删除模式点到带锁的灰卡 → 说清原因（旧行为是静默，玩家以为卡死）
+			_set_hint(RunState.remove_block_reason(int(_deck_cards[any_i]["idx"])))
+			return
 		if any_i >= 0 and not _deleting:
 			# 点到「不符合这张附魔条件」的灰卡 → 明确说一句，别让玩家以为死机
 			_set_hint("这张卡不能吃「%s」（已附魔或类型不符）"
@@ -1434,6 +1442,13 @@ func _on_pick_click(pos: Vector2) -> void:
 		if idx < RunState.deck_ids.size():
 			del_card = _repo.get_card(RunState.deck_ids[idx])
 		var del_name: String = del_card.card_name if del_card != null else str(idx)
+		# R472：带锁的卡在这里就拦下，别等到「先删卡、再扣钱」那一步才报一个笼统的失败。
+		var del_block := RunState.remove_block_reason(idx)
+		if del_block != "":
+			_set_hint(del_block)
+			_deleting = false
+			_ask_redraw()
+			return
 		# 先删卡、再扣钱（R204）：删失败绝不白扣。
 		if not RunState.delete_deck_card(idx):
 			_set_hint("删除失败")

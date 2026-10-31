@@ -30,6 +30,11 @@ var defer_death_effects:= false
 ## 用格子当键、而不是一条全局队列：同一帧死两个单位时，各自的亡语要等**自己那张卡的**
 ## 击破演出到点才结算，不会因为先播完的那个把后面的一起跑掉。
 var _death_effects:= {}
+## R472（用户口径「有死亡召唤单位的敌人死亡会直接结算游戏」）：排队中的**加卡型**
+## 死亡效果还有几个没结算。> 0 时胜利判定一律延后 —— 先让召唤 / 加卡把场上的卡
+## 补回来，再看「清场没清场」。伤害类死亡效果（食尸鬼扣血 / 机械群伤）**不进这个
+## 计数**：它们不改变「场上还有没有卡」，晚一点结算不影响胜负，也就不该拖慢结算。
+var _death_card_pending:= 0
 ## R245：本场战斗的节点类型（"battle" / "elite" / "boss"）。
 ## 由 battle_scene 按**关卡 tier** 写入一次；引擎不自己读 RunState.pending_node ——
 ## 单关演示 / 单元测试都能显式指定，判据只有一处（`_courage_active()` 的消费方）。
@@ -1958,6 +1963,10 @@ static func hp_row_owner(row: int) -> String:
 
 
 func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
+	# R472：同一场重开 / 续档重进时把死亡效果队列与「加卡待结算」计数归零 ——
+	# 计数一旦泄漏成 > 0，`_check_game_over()` 就再也不会宣布胜利（整局卡在活着的状态）。
+	_death_effects.clear()
+	_death_card_pending = 0
 	wish_pending = false
 	_steel_stamp_used = false   # R307：思想钢印每场战斗一次
 	_first_kill_growth_done.clear()   # R393：击杀成长每场战斗各卡一次
@@ -1981,7 +1990,8 @@ func _check_game_over() -> bool:
 	## 胜负改由「击破指定 Boss」（`win_on_boss`）与「我方 HP 归零」两条决定。
 	if over:
 		return true
-	if not enemy_hp_infinite and state.hp_opponent <= 0:
+	# R472：还有「会加卡」的死亡效果没跑 → 先别急着宣布胜利（见 `_death_card_pending`）。
+	if not enemy_hp_infinite and state.hp_opponent <= 0 and _death_card_pending == 0:
 		_finish("胜利", "敌方 HP 归零")
 		return true
 	if state.hp_self <= 0:
@@ -1991,7 +2001,8 @@ func _check_game_over() -> bool:
 		return true
 	# R356：击破启示者即通关。**排在「清场」之前** —— 三阶段打完场上还剩一堆量产型，
 	# 用清场判等于要求玩家把它们也扫干净，那不是这张关卡的题面。
-	if win_on_boss > 0 and _cell_of_unit(win_on_boss) == Vector2i(-1, -1):
+	if win_on_boss > 0 and _cell_of_unit(win_on_boss) == Vector2i(-1, -1) \
+			and _death_card_pending == 0:
 		# R451：文案改成按 id 取卡名 —— 原来写死「击破启示者」，母舰空袭（win_on_boss =
 		# 母舰 9208）通关时会报成击破启示者。取不到卡名时退回泛称，不影响胜负判定。
 		var boss_name := "敌方首脑"
@@ -2000,7 +2011,8 @@ func _check_game_over() -> bool:
 			boss_name = boss_card.card_name
 		_finish("胜利", "击破%s" % boss_name)
 		return true
-	if state.clear_win and _side_cells(SIDE_OPPONENT).is_empty():
+	if state.clear_win and _side_cells(SIDE_OPPONENT).is_empty() \
+			and _death_card_pending == 0:
 		_finish("胜利", "敌方场上单位全灭")
 		return true
 	return false
@@ -13335,15 +13347,25 @@ func has_pending_death_effects() -> bool:
 	return not _death_effects.is_empty()
 
 
-func _queue_death_effect(cell: Vector2i, fn: Callable) -> void:
+func pending_card_effects() -> int:
+	## R472：还有几个「会加卡」的死亡效果没结算（0 = 胜负判定可以照常进行）。
+	## 界面 / 测试都读这一个口，别去碰 `_death_card_pending`。
+	return _death_card_pending
+
+
+func _queue_death_effect(cell: Vector2i, fn: Callable, adds_cards := false) -> void:
 	## R360：死亡效果入队。`defer_death_effects == false` 时等同于「立刻执行」——
 	## 单元测试与回放走的都是这条，断言时序一点没变。
+	## R472：`adds_cards = true` 的效果（召唤 / 加手卡 / 埋陷阱）会**推迟胜利判定**，
+	## 见 `_death_card_pending` 与 `_check_game_over()`。
 	if not defer_death_effects:
 		fn.call()
 		return
+	if adds_cards:
+		_death_card_pending += 1
 	if not _death_effects.has(cell):
 		_death_effects[cell] = []
-	(_death_effects[cell] as Array).append(fn)
+	(_death_effects[cell] as Array).append({"fn": fn, "adds": adds_cards})
 
 
 func flush_death_effects(cell: Vector2i) -> void :
@@ -13353,8 +13375,14 @@ func flush_death_effects(cell: Vector2i) -> void :
 		return
 	var queue: Array = _death_effects[cell]
 	_death_effects.erase(cell)
-	for fn: Callable in queue:
-		fn.call()
+	# R472：**先**把「还在等着的加卡效果」计数放掉，再跑队列 ——
+	# 这样召唤失败（周围没空位、半场满了）时，这一格跑完的 `_check_game_over()`
+	# 会立刻照常宣布胜利，不会因为计数没放而卡住一局。
+	for e: Dictionary in queue:
+		if bool(e.get("adds", false)):
+			_death_card_pending = maxi(0, _death_card_pending - 1)
+	for e: Dictionary in queue:
+		(e["fn"] as Callable).call()
 
 
 func flush_all_death_effects() -> void :
@@ -13458,7 +13486,27 @@ func _destroy(cell: Vector2i) -> void :
 	# 现在统一入队，由 battle_scene 在那张卡的击破演出到点时调 `flush_death_effects(cell)`。
 	# ⚠️ 入队顺序 = 原来的执行顺序；`defer_death_effects == false`（测试 / 回放）立即执行。
 	_queue_death_effect(cell,
-			_settle_death.bind(cell, p, _rec_victim_ok, _rec_power, _rec_list))
+			_settle_death.bind(cell, p, _rec_victim_ok, _rec_power, _rec_list),
+			_death_adds_cards(p))
+
+
+func _death_adds_cards(p: Placement) -> bool:
+	## R472：这张卡死掉之后，会不会**往场上 / 手卡里加东西**？
+	## 只有这一类要抢在胜利判定之前结算 —— 因为它们可能把「清场」这个条件重新弄成不成立
+	##（骷髅 / 龙裔 / 罐子召唤、母舰补造、捕兽大师埋陷阱、幽灵与生命循环加手卡）。
+	## 伤害类亡语（食尸鬼 9036 扣 HP、机械 9131 群伤、爆炎鸭爆炸）**故意不算**：
+	## 它们不改场上张数，早结算晚结算都不影响胜负，没必要为它们推迟结算。
+	if p == null or p.card == null:
+		return false
+	if p.life_cycle or p.blade_gift:      # 生命循环 / 辅助刃：加一张手卡
+		return true
+	match p.card.id:
+		WYVERN_ID, LICH_ID, SKELETON_SUMMON_ID, JAR_TOKEN_ID, GHOST_ID, TRAPPER_ID:
+			return true
+	# 母舰 9208：敌方友方被破坏 → 旁边补造一份复制（`_mothership_on_ally_death`）。
+	if p.owner == SIDE_OPPONENT and p.card.id != MOTHERSHIP_ID 			and _cell_of_unit(MOTHERSHIP_ID) != Vector2i(-1, -1):
+		return true
+	return false
 
 
 func _settle_death(cell: Vector2i, p: Placement, rec_ok: bool, rec_power: int,

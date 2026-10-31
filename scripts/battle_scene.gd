@@ -1042,6 +1042,9 @@ func _ready() -> void:
 				break
 		status_text = "R214 演示：卡组前 4 张带附魔（费用正下方标记 / 左栏「附魔：」行 / 牌库面板）"
 		queue_redraw()
+	if "--foresightdemo" in args and engine != null:
+		# R472 出图：直接摊开预判的二选一面板，核验选项文字不越框。
+		engine.foresight_mode = true
 	if "--over" in args:
 		# 演示：直接进入结算（验证结算覆盖层 / 彩带 / 胜利音效）
 		engine._finish("胜利", "演示：结算界面")
@@ -5696,8 +5699,10 @@ func _draw_foresight_mode() -> void:
 	for k in 2:
 		draw_rect(rs[k], Color("e8e2f4") if k == 0 else Color("e2ecf4"))
 		draw_rect(rs[k], Color("7a5ea8") if k == 0 else Color("4a7ea8"), false, 1.5)
-		_draw_string_center(_font, UI_FS_CAPTION, labels[k],
-				rs[k].position + rs[k].size / 2.0, Color("222222"))
+		# R472：定宽框里必须用 fit 版，否则「① 从弃牌区选一张费用为 0 的技能卡加入手卡
+		#（之后本卡消失）」这种长句会左右探出底色块。
+		_draw_string_center_fit(_font, UI_FS_CAPTION, labels[k],
+				rs[k].position + rs[k].size / 2.0, rs[k].size.x - 16.0, Color("222222"))
 
 
 func _on_foresight_mode_click(pos: Vector2) -> void:
@@ -7642,6 +7647,16 @@ func _show_over(win: bool) -> void:
 			# **各自独立**的三选一 —— 玩家可以各选一张，也可以只选一组。
 			if _run_boss_win:
 				RunState.queue_card_reward("epic")
+			# R472（用户口径「打完 3 层 boss 游戏都胜利了，不需要结算奖励了，直接提示胜利」）：
+			# 最后一层 Boss 打完 = 整局结束，卡组 / 道具 / 金币都不会再被下一局用到 ——
+			# 还弹一个「共 N 件，待领 N 件」的奖励页纯属多此一举。这里把这一批直接清掉，
+			# 结算面板接上「胜利」提示（奖励窗的打开判据是 `pending_reward_count() > 0`，
+			# 清空之后它自己就不会弹了）。
+			# ⚠️ 金币 / boss 记账 / 击杀统计都在上面已经结算完，别一起清。
+			if _run_boss_win and GameLayers.next_layer(RunState.current_layer) <= 0:
+				RunState.pending_rewards = []
+				RunState.pending_relic_drop = -1
+				RunState.relic_choice = []
 			if _run_boss_win:
 				# R339：Boss 已击破 → 记账（`boss_beaten` + 清 `boss_pending`）。
 				# ⚠️ 放在算 `_run_next_layer` **之前**：advance_layer 会清这个标记，
@@ -8840,6 +8855,34 @@ func _text_bg_plate(rect: Rect2, bg: Color) -> void:
 	draw_rect(rect, bg, true)
 	draw_rect(rect.grow(0.5), Color(TEXT_BG_EDGE.r, TEXT_BG_EDGE.g, TEXT_BG_EDGE.b,
 			TEXT_BG_EDGE.a * (bg.a / maxf(0.001, TEXT_BG.a))), false, 1.0)
+
+
+func _draw_string_center_fit(font: Font, px: int, text: String, center: Vector2,
+		max_w: float, col: Color) -> void:
+	## R472（用户报「预判这张卡选项文本太长溢出框了」）：**定宽居中**画一行字。
+	## 与 `_draw_string_center()` 的唯一区别 —— 它保证文字不超出 `max_w`：
+	##   ① 逐级降字号直到放得下（最低 FIT_MIN_PX）；
+	##   ② 降到最低还放不下，就按宽度截断、末尾补省略号。
+	## 定宽框（预判①②选项、选卡页标题）一律用它 —— 裸的 `_draw_string_center`
+	## 是按文字宽度算起点的，文字一长就往两边一起探出框外。
+	const FIT_MIN_PX := 9
+	var size: int = px
+	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	while w > max_w and size > FIT_MIN_PX:
+		size -= 1
+		w = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var shown := text
+	if w > max_w:
+		# 截断循环必须有硬上限：绘制代码里不留「只靠条件终将成立」的死循环。
+		var cut: int = text.length()
+		var guard := 0
+		while cut > 1 and guard < 256:
+			cut -= 1
+			shown = text.substr(0, cut) + "…"
+			if font.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= max_w:
+				break
+			guard += 1
+	_draw_string_center(font, size, shown, center, col)
 
 
 func _draw_string_center(font: Font, px: int, text: String, center: Vector2, col: Color,

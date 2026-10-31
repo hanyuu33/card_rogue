@@ -347,9 +347,9 @@ func _refresh_title() -> void:
 
 func _has_no_remove_card() -> bool:
 	## 卡组里是否存在不可删除的卡（决定提示行要不要补那句话）。
-	for cid: int in _cards:
-		var c := repo.get_card(cid)
-		if c != null and c.no_remove:
+	## R472：同样走唯一判据口 —— 界面不再自己读 `no_remove`。
+	for i in _cards.size():
+		if not RunState.deck_deletable(i):
 			return true
 	return false
 
@@ -765,11 +765,12 @@ func _apply_duplicate() -> void:
 
 func _apply(pick: int) -> void:
 	var id0: int = _cards[pick] if pick >= 0 and pick < _cards.size() else 0
-	var guard := repo.get_card(id0)
 	# R351 兜底：选卡阶段已经拦过，这里再判一次 —— `_sel` 可能在模式切换后留下旧下标。
-	if guard != null and guard.no_remove and _is_remove_mode():
+	# R472：判据统一走 `RunState.deck_deletable()`（= `remove_block_reason()` 的布尔壳），
+	# 不在界面里再抄一遍 `no_remove` —— 商店那边的漏就是这么漏出来的。
+	if _is_remove_mode() and not RunState.deck_deletable(pick):
 		sfx.play("click")
-		_result = "「%s」不可以从卡组删除" % guard.card_name
+		_result = RunState.remove_block_reason(pick)
 		_go_back_soon()
 		return
 	_done = true

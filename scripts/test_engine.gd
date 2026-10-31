@@ -31688,6 +31688,77 @@ func _init() -> void:
 		"R471 通关：选卡页办完直接回标题（不再走地图诈尸）")
 	RunState.pending_rewards = []
 
+	# ══ R472：加卡型死亡效果抢在胜利判定之前结算 ══
+	# 用户口径：「有死亡召唤单位的敌人死亡会直接结算游戏」—— 旧行为是清场即判胜，
+	# 骷髅召唤者临死召出来的骷髅永远没机会上场。
+	var r472_a := _new_engine([], 20, 200, -1, false)
+	r472_a.defer_death_effects = true
+	r472_a.state.clear_win = true
+	r472_a.state.hp_opponent = 200
+	r472_a.state.place(_card(GameEngine.SKELETON_SUMMON_ID, "骷髅召唤者", "盟友", 1, 2, 10),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r472_a._destroy(Vector2i(1, 1))
+	check(r472_a.pending_card_effects() == 1,
+		"R472 死亡召唤：加卡型亡语在队列里，计数 = 1（实际 %d）"
+			% r472_a.pending_card_effects())
+	check(not r472_a._check_game_over() and not r472_a.over,
+		"R472 死亡召唤：场上已空但亡语还没跑 → **不判胜**（旧代码这里直接结算整局）")
+	r472_a.flush_death_effects(Vector2i(1, 1))
+	check(not r472_a._side_cells(GameEngine.SIDE_OPPONENT).is_empty() and not r472_a.over,
+		"R472 死亡召唤：亡语结算出 1 个骷髅 → 继续打（场上 %d 个敌方单位）"
+			% r472_a._side_cells(GameEngine.SIDE_OPPONENT).size())
+	check(r472_a.pending_card_effects() == 0,
+		"R472 死亡召唤：结算完计数归零（不会把之后的胜负判定一直冻住）")
+	# 反证：伤害类亡语（食尸鬼只扣 HP、不往场上加卡）**不**推迟 —— 场上空了就该立刻赢
+	var r472_b := _new_engine([], 20, 200, -1, false)
+	r472_b.defer_death_effects = true
+	r472_b.state.clear_win = true
+	r472_b.state.hp_opponent = 200
+	r472_b.state.place(_card(GameEngine.GHOUL_ID, "食尸鬼", "盟友", 1, 2, 10),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r472_b._destroy(Vector2i(1, 1))
+	check(r472_b.pending_card_effects() == 0 and r472_b._check_game_over() and r472_b.over,
+		"R472 反证：食尸鬼（只扣 HP）不推迟胜利 —— 场上空即判胜")
+	# 源码守卫：入队要带标记、三处胜利分支都要认这个计数
+	var r472_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r472_src.contains("_death_adds_cards(p)")
+			and r472_src.count("_death_card_pending == 0") == 3,
+		"R472：`_destroy` 入队带加卡标记 + 三处胜利判定全挂闸门")
+
+	# ══ R472：删卡只有一条路（商店 / 月亮 / 药水 / 选卡页同一判据）══
+	# 用户报「月亮可以在商店被删掉」：`no_remove` 原来只在卡组编辑页的**界面层**挡，
+	# 商店的「删除一张卡」直接调 `delete_deck_card()`，于是月亮 / 硬币 / 罐子能绕过锁。
+	var r472_deck_bak: Array[int] = RunState.deck_ids.duplicate()
+	RunState.deck_ids = [9180, 8001]          # 月亮（带锁）+ 一张普通卡
+	check(RunState.remove_block_reason(0) != "" and RunState.remove_block_reason(1) == "",
+		"R472 删卡锁：月亮 9180 给出带锁原因、普通卡返回空串（唯一判据口）")
+	check(not RunState.delete_deck_card(0) and RunState.deck_ids.size() == 2,
+		"R472 删卡锁：`delete_deck_card()` 直接拒绝带锁卡 —— 商店那条路也走它")
+	check(not RunState.deck_deletable(0) and RunState.deck_deletable(1),
+		"R472 删卡锁：`deck_deletable()` 只是同一判据口的布尔壳（奖励删卡页读它）")
+	check(RunState.delete_deck_card(1) and RunState.deck_ids == [9180],
+		"R472 删卡锁：不带锁的卡照常删得掉（锁没有连带把正常路径堵死）")
+	RunState.deck_ids = r472_deck_bak
+	var r472_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	check_src(r472_shop.contains("RunState.remove_block_reason(i)")
+			and not r472_shop.contains("c.no_remove"),
+		"R472 删卡锁：商店删卡列表读唯一判据口（带锁卡灰化，不再自己抄 no_remove）")
+
+	# ══ R472：通关（最后一层 Boss）不再结算奖励，直接提示胜利 ══
+	var r472_bs2 := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r472_bs2.contains("GameLayers.next_layer(RunState.current_layer) <= 0")
+			and r472_bs2.contains("RunState.pending_rewards = []\n")
+			or r472_bs2.contains("RunState.pending_rewards = []\r\n"),
+		"R472 通关：最后一层 Boss 胜利后清空奖励队列 —— 奖励窗按 count 判据自己就不弹了")
+
+	# ══ R472：预判选项文字定宽自适应（不再左右探出框）══
+	check_src(r472_bs2.contains("func _draw_string_center_fit(")
+			and r472_bs2.contains("_draw_string_center_fit(_font, UI_FS_CAPTION, labels[k]"),
+		"R472 预判：①②选项走定宽口（先降字号、再截断，保证不越框）")
+	var r472_po := FileAccess.get_file_as_string("res://scripts/pick_overlay.gd")
+	check_src(r472_po.contains("title_avail"),
+		"R472 预判：选卡页标题也按可用宽度降字号（预判①的标题是最长的一条）")
+
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
 	RunState.pending_rewards = []
