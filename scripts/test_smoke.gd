@@ -83,6 +83,15 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r393_absorb_timing],
+		# R466（用户口径）：「再批量排查一下战斗动画顺序有没有问题」。
+		# 移动途中才结算的附带演出（中毒 / 黑暗陷阱 / 爆炸场地 / 火墙灼烧）必须等滑行落地，
+		# 否则「人还在半路、字先飘在原位」。只有真场景（真滑行动画）能验。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r466_anim_cue],
 		# R395（用户报）：继续游戏进战斗后用「填充」，选卡页弹出来**没有待选卡**，
 		# 选不了、回合也结束不了。规则：候选空 → 不许开空网格；选卡页开着 → 不给结束回合。
 		["res://scenes/battle.tscn", func():
@@ -2375,6 +2384,123 @@ func _check_r393_absorb_timing(scene) -> void:
 		return
 	print("SMOKE OK R393/R465 代受演出与撞击同帧：now=%d → 撞击 %d（+%dms，1 倍速）"
 			% [now0, imp, imp - now0])
+
+
+func _check_r466_anim_cue(scene) -> void:
+	## R466（用户口径）：「再批量排查一下战斗动画顺序有没有问题」。
+	## 规则：凡是「等移动 / 等这一拳」才该出现的附带演出，都必须落到对应帧 ——
+	## 走 `_hit_cue_at(cell)`（= max(全屏最早未落地的一击, 这一格的滑行落地)），
+	## 与 `trap_hit` / `frozen` / `stun` / 代受 同一条口径。
+	## 判据用「真的滑行动画 + 真的引擎事件」，不做源码字符串断言：
+	## 滑行时长 460ms，事件到达时若按 `_now()` 播，`start` 必然早于滑行落地。
+	if not scene.has_method("_hit_cue_at"):
+		_smoke_fail("R466：战斗场景没有 _hit_cue_at 唯一口")
+		return
+	var eng: Variant = scene.engine
+	if eng == null:
+		_smoke_fail("R466：场景里没有引擎，验不了移动时序")
+		return
+	var walk_cell := Vector2i(1, 1)
+	var walk_card: CardData = scene.repo.get_card(1053)      # 骷髅兵：只为当个「踩陷阱的人」
+	if walk_card == null:
+		_smoke_fail("R466：取不到演示用的卡（1053）")
+		return
+	eng.state.place(walk_card, walk_cell, GameEngine.SIDE_OPPONENT)
+	var pl: Placement = eng.state.unit_at(walk_cell)
+	if pl == null:
+		_smoke_fail("R466：演示单位没放上去")
+		return
+	# 排一段真的滑行（460ms）＝「刚走完这一步、人还在半路」
+	var now0: int = scene._now()
+	scene._slides[pl] = {"start": now0, "dur": 460}
+	var floor_at: int = scene._slide_floor_at(walk_cell)
+	if floor_at <= now0:
+		_smoke_fail("R466：滑行没被识别（_slide_floor_at 返回 %d）" % floor_at)
+		return
+	# ① 剧毒陷阱（移动踩上）→ 绿泡 /「中毒」等滑行落地
+	scene._floaters.clear()
+	scene._on_engine_action("poison", {"cell": walk_cell, "amount": 0, "dmg": 3,
+			"name": "骷髅兵", "left": 3, "apply": true})
+	var po_at := -1
+	for f: Dictionary in scene._floaters:
+		if str(f.get("text", "")).begins_with("中毒"):
+			po_at = int(f.get("start", 0))
+	if po_at < 0:
+		_smoke_fail("R466：剧毒陷阱没有排出「中毒」飘字")
+		return
+	if po_at < floor_at:
+		_smoke_fail("R466：中毒飘字落在 %d，早于滑行落地 %d（先中毒、后走到）"
+				% [po_at, floor_at])
+		return
+	# ② 黑暗陷阱（移动踩上）→ 暗紫爆点 /「黑暗 力量 -N」等滑行落地
+	scene._floaters.clear()
+	scene._bursts.clear()
+	scene._on_engine_action("dark_trap", {"cell": walk_cell, "amount": 1, "power": 2,
+			"name": "骷髅兵"})
+	var dt_at := -1
+	for f2: Dictionary in scene._floaters:
+		if str(f2.get("text", "")).begins_with("黑暗"):
+			dt_at = int(f2.get("start", 0))
+	if dt_at < 0:
+		_smoke_fail("R466：黑暗陷阱没有排出飘字")
+		return
+	if dt_at < floor_at:
+		_smoke_fail("R466：黑暗陷阱飘字落在 %d，早于滑行落地 %d" % [dt_at, floor_at])
+		return
+	# ③ 爆炸场地（走进来踩响）→ 火焰不能先于滑行炸开
+	scene._bursts.clear()
+	scene._on_engine_action("blast", {"center": walk_cell, "cells": [walk_cell],
+			"amount": 9, "card": walk_card})
+	if scene._bursts.is_empty():
+		_smoke_fail("R466：爆炸场地没有排出火焰")
+		return
+	var bl_at: int = int((scene._bursts[0] as Dictionary).get("start", 0))
+	if bl_at < floor_at:
+		_smoke_fail("R466：爆炸火焰落在 %d，早于滑行落地 %d" % [bl_at, floor_at])
+		return
+	# ④ 火墙灼烧（走过去的）→ 等滑行落地
+	scene._floaters.clear()
+	scene._on_engine_action("fire_wall_pass", {"cell": walk_cell, "dmg": 4, "card": walk_card})
+	var fw_at := -1
+	for f3: Dictionary in scene._floaters:
+		if str(f3.get("text", "")).begins_with("火墙"):
+			fw_at = int(f3.get("start", 0))
+	if fw_at < 0:
+		_smoke_fail("R466：火墙经过没有排出飘字")
+		return
+	if fw_at < floor_at:
+		_smoke_fail("R466：火墙飘字落在 %d，早于滑行落地 %d" % [fw_at, floor_at])
+		return
+	# ⑤ 受击反馈族（护盾挡下）→ 等**这一拳**撞到，不是「事件到达那一刻」
+	# 攻击者另占一格，攻击动画入库后 `_pending_impact_ms()` 才会给出未来的撞击帧。
+	var atk_cell := Vector2i(0, 1)
+	eng.state.place(walk_card, atk_cell, GameEngine.SIDE_OPPONENT)
+	if eng.state.unit_at(atk_cell) == null:
+		_smoke_fail("R466：攻击者没放上去")
+		return
+	scene._slides.erase(pl)
+	scene._on_engine_action("attack", {"src": atk_cell, "dst": walk_cell, "damage": 3,
+			"atk_name": "骷髅兵", "def_name": "骷髅兵"})
+	var imp_at: int = scene._pending_impact_ms()
+	if imp_at <= scene._now():
+		_smoke_fail("R466：攻击排上了，撞击帧却没到未来（%d）" % imp_at)
+		return
+	scene._bursts.clear()
+	scene._on_engine_action("barrier", {"cell": walk_cell, "blocked": 3, "card": walk_card})
+	if scene._bursts.is_empty():
+		_smoke_fail("R466：护盾挡下没有排出爆点")
+		return
+	var bs_at: int = int((scene._bursts[0] as Dictionary).get("start", 0))
+	if bs_at < imp_at:
+		_smoke_fail("R466：护盾碎在 %d，早于撞击帧 %d（护盾先碎、拳头后到）"
+				% [bs_at, imp_at])
+		return
+	# 收尾：撤掉演示单位与滑行，别把后面的用例拖脏
+	scene._slides.erase(pl)
+	eng.state.board.erase(walk_cell)
+	eng.state.board.erase(atk_cell)
+	print("SMOKE OK R466 附带演出跟着主体演出落地：滑行加 %dms / 撞击 %dms"
+			% [floor_at - now0, imp_at - now0])
 
 
 func _check_r391_end_turn_btn(scene) -> void:

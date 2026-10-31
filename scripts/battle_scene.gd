@@ -9555,6 +9555,22 @@ func _max_slide_floor() -> int:
 	return best
 
 
+func _hit_cue_at(cell: Vector2i = Vector2i(-1, -1)) -> int:
+	## R466：**这一格马上要挨的那一下**什么时候落地（cell = -1 就只问「全屏最早未落地的一击」）。
+	## 受击反馈类事件（石肤 / 荒野形态 / 恶魔鸭暴怒·复仇 / 不锈钢盆 / 剧毒·黑暗陷阱 /
+	## 爆炸场地 / 火墙灼烧）都是引擎在「伤害算完那一刻」紧跟发出来的，而画面上的拳头
+	## （≈930ms）或脚步还在路上 —— 这些反馈必须落到撞上的那一帧，否则读起来就是
+	## 「字先出、人后挨打」。移动触发的那些再叠一层滑行落地（`_slide_floor_at`）。
+	## 与 `_absorb_cue_at()` 的分工：那个是「代受」，取全屏最早未落地的一击 + 全场最晚滑行；
+	## 这个按格取，且允许没有 cell（道具类反馈不绑格子）。
+	var at := _pending_impact_ms()
+	if cell.x >= 0:
+		var mv := _slide_floor_at(cell)
+		if mv > at:
+			at = mv
+	return at
+
+
 func _absorb_cue_at() -> int:
 	## R465：代受 / 闪躲演出的落地时刻 = `max(还没撞到的那一拳, 还在走的那几步)`。
 	## 为什么延后到下一帧算（而不是事件入队时算）：引擎 `attack_hp()` 是
@@ -10605,6 +10621,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				a_start = maxi(n, _anim_end_for(atk_pl))
 				_set_attack_anim(atk_pl, {"kind": "unit", "dir": adir, "src": src_c,
 						"dst": dst_c, "sc": _grid_scroll,
+						# R466：记下「打的是哪一格」—— `dst` 是像素中心，里面烘了入库那一刻的
+						# 滚动量；棋盘滚过之后 `_cell_center()` 算出来的中心就对不上了，
+						# `destroy` 按像素比中心会找不到这一拳 → 卡先炸、数字后到。
+						"dst_cell": data["dst"],
 						"start": a_start, "dur": ATK_DUR_MS, "dmg": int(data["damage"])})
 			# 弹体命中时刻 = ATK_IMPACT_T × 总时长：爆点/闪红/伤害数字那时才出现
 			_delayed.append({"at": a_start + int(ATK_IMPACT_T * ATK_DUR_MS), "kind": "hit",
@@ -10635,7 +10655,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				var hd := _cell_center(data["dst"])
 				var hdir: Vector2 = (hd - hs).normalized()
 				_set_attack_anim(hp_atk, {"kind": "hp", "dir": hdir, "src": hs, "dst": hd,
-						"sc": _grid_scroll,
+						"sc": _grid_scroll, "dst_cell": data["dst"],
 						"start": h_start, "dur": ATK_DUR_MS, "dmg": hp_dmg})
 			if hp_dmg > 0:
 				# 撞击时刻才出爆点/飘字/震屏，与单位动作对齐
@@ -10998,18 +11018,20 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("4a7fd8"), "start": n, "dur": 2100})
 		"aether_hit":
 			# 以太屏障吸收了一次伤害
+			# R466：这是「这一下打中时才压成 1」→ 飘字跟撞击帧（与石肤同一条口径）
 			sfx.play("heal")
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 66),
 					"text": "以太屏障 · 伤害 %d → 1（还剩 %d 次）" % [
 							int(data.get("amount", 0)), int(data.get("left", 0))],
-					"col": Color("4a7fd8"), "size": 15, "start": n, "dur": 2000})
+					"col": Color("4a7fd8"), "size": 15, "start": _hit_cue_at(), "dur": 2000})
 		"rice":
 			# 道具「一袋米抗几楼」（R123）：我方 HP 首次受伤 → 抽 1 张卡 + 技能伤害 +1
 			sfx.play("heal")
 			_say("✦ 一袋米抗几楼：我方 HP 受伤 → 抽 1 张卡，本回合技能伤害 +1")
+			# R466：触发点是「我方 HP 首次受伤」→ 等那一下撞到再飘
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 30),
 					"text": "一袋米抗几楼 · 抽 1 张 / 技能 +1", "col": Color("d7a54a"),
-					"start": n, "dur": 2100})
+					"start": _hit_cue_at(), "dur": 2100})
 		"revive":
 			# 道具「叠加态的鸭」：HP 归零 → 复活（回复 1 点生命，概率永久 -25%）
 			sfx.play("heal")
@@ -11077,9 +11099,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if engine != null:
 				engine.basin_charge = ba_left
 			_say("✧ 不锈钢盆承受 %d 点伤害（剩余 %d 点）" % [ba_take, ba_left])
+			# R466：盆是「替自己挨下这一下」→ 提示等撞击帧
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 60.0),
 					"text": "不锈钢盆 -%d（剩 %d）" % [ba_take, ba_left],
-					"col": Color("b8c4cc"), "size": 16, "start": n, "dur": 1800})
+					"col": Color("b8c4cc"), "size": 16, "start": _hit_cue_at(), "dur": 1800})
 		"basin_break":
 			# R311 不锈钢盆：计数归零 → **失去此道具**（局状态与引擎两侧都得清）。
 			# `engine.self_relics` 与 `RunState.relics` 是同一个数组，但这里仍显式重挂一次 ——
@@ -11093,7 +11116,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("✧ 不锈钢盆计数归零 —— 已耗尽")
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 60.0),
 					"text": "不锈钢盆 碎了", "col": Color("8a949c"),
-					"size": 17, "start": n, "dur": 2200})
+					"size": 17, "start": _hit_cue_at(), "dur": 2200})
 		"pear":			# 道具「鸭梨」：我方 HP 受伤 → 最大生命 +1（只提高上限，不回复生命）
 			sfx.play("heal")
 			_say("✦ 鸭梨：受到伤害 → 最大生命 +1（当前 %d/%d）"
@@ -11148,12 +11171,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				ba_name = (data["card"] as CardData).card_name
 			_say("🛡 %s 的能量屏障挡住了 %d 点伤害（护盾消失）"
 					% [ba_name, int(data.get("blocked", 0))])
+			# R466：护盾是在**挨打那一刻**碎的 —— 与代受 / 闪躲同一条口径，
+			# 等这一拳撞到再演（否则「护盾已碎、拳头还在路上」）。
 			if ba_cell.x >= 0:
-				_bursts.append({"pos": _cell_center(ba_cell), "sc": _grid_scroll, "start": n,
+				var ba_at := _hit_cue_at(ba_cell)
+				_bursts.append({"pos": _cell_center(ba_cell), "sc": _grid_scroll, "start": ba_at,
 						"dur": 520, "col": Color("7fd6f0"), "big": true})
 				_floaters.append({"pos": _cell_center(ba_cell) + Vector2(0, -14), "sc": _grid_scroll,
 						"text": "护盾 · 0 伤", "col": Color("7fd6f0"),
-						"start": n, "dur": 1600, "size": 17})
+						"start": ba_at, "dur": 1600, "size": 17})
 		"self_repair":
 			# 自我修复 8035（R87）：改造一个己方盟友 → +2 最大生命 + 每回合回 4。
 			sfx.play("heal")
@@ -11537,9 +11563,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					int(data.get("add", 0)), int(data.get("left", 0))])
 		"stoneskin_hit":
 			var sk_left := int(data.get("left", 0))
+			# R466：石肤是「这一下打中时才压成 1」→ 飘字跟着撞击帧（否则比拳头早 ≈930ms）
 			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
 					"text": "石肤 → 1", "col": Color("6a6a6a"),
-					"start": n, "dur": 1600, "size": 18})
+					"start": _hit_cue_at(), "dur": 1600, "size": 18})
 			_say("石肤：这次伤害变为 1（原本 %d，还剩 %d 次）" % [
 					int(data.get("amount", 0)), sk_left])
 		"guard_absorb":
@@ -11745,15 +11772,22 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("%s：战斗结束回复 %d 点生命（剩余 %d）" % [
 					_src, _sh, int(data.get("hp", 0))])
 		"destroy":
-			var center := _cell_center(data["cell"])
+			var cell: Vector2i = data["cell"]
+			var center := _cell_center(cell)
 			# 若这是一次攻击动画的目标：等弹体命中后再演出击破，
 			# 否则会出现「卡牌先消失、伤害数字后出现」的时序倒错。
+			# R466：优先按**格**匹配（`dst_cell`）—— 像素中心里烘了入库时的滚动量，
+			# 棋盘滚过之后 `(a["dst"] == center)` 永远不成立，等于没有这道保护。
 			var delay_ms := 0
 			for a: Dictionary in _attacks.values():
-				if (a["dst"] as Vector2) == center:
+				var a_hit := false
+				if a.has("dst_cell"):
+					a_hit = (a["dst_cell"] as Vector2i) == cell
+				else:
+					a_hit = (a["dst"] as Vector2) == center
+				if a_hit:
 					delay_ms = maxi(delay_ms,
 							int(a["start"]) + int(ATK_IMPACT_T * int(a["dur"])) - n)
-			var cell: Vector2i = data["cell"]
 			# 无论哪种死法，都让这张卡在原位多留一小会儿：
 			# 命中瞬间先闪红/掉血，稍后卡片才真正消失并播击破。
 			# R430：被流星砸死的单位 —— 等那一颗**落地**再演击破。
@@ -11806,7 +11840,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 爆炎鸭亡语 / 爆炸陷阱（R50）：尸体周围四格炸出的火焰（不分敌我）—— 同特效同源。
 			# 起播稍微延后一点，读起来就是「先倒下 → 再爆开」。
 			sfx.play("destroy")
-			var bwhen := n + 120
+			# R466：爆炸场地是「走进来」踩响的 —— 火焰等那几步滑完再炸。
+			# 爆炎鸭亡语同样走这里，那时没有滑行 → `maxi` 取回原来的 n + 120。
+			var bwhen := maxi(n + 120, _hit_cue_at(data.get("center", Vector2i(-1, -1)) as Vector2i))
 			for c2 in data.get("cells", []):
 				_bursts.append({"pos": _cell_center(c2 as Vector2i), "sc": _grid_scroll, "start": bwhen,
 						"dur": 620, "col": Color("ff8a3d"), "big": true})
@@ -11868,19 +11904,23 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("💫 %s 被眩晕：下回合不能行动" % str(data.get("name", "")))
 		"poison":
 			# 剧毒陷阱（R51）：挂毒（apply）与回合开始的毒跳 —— 绿泡 + 飘字
-			var po_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": po_pos, "sc": _grid_scroll, "start": n, "dur": 520,
+			# R466：挂毒是「移动踩上来」触发的（`_field_trigger` 唯一口）→ 等那几步滑完；
+			# 回合开始的毒跳没有滑行，`_hit_cue_at` 自然退化成「现在」。
+			var po_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var po_at := _hit_cue_at(po_cell)
+			var po_pos := _cell_center(po_cell)
+			_bursts.append({"pos": po_pos, "sc": _grid_scroll, "start": po_at, "dur": 520,
 					"col": Color("79c26a"), "big": false})
 			if bool(data.get("apply", false)):
 				_floaters.append({"pos": po_pos + Vector2(0, -12), "sc": _grid_scroll, "text": "中毒",
-						"col": Color("3e8a2f"), "start": n, "dur": 1400, "size": 18})
+						"col": Color("3e8a2f"), "start": po_at, "dur": 1400, "size": 18})
 				_say("☠ %s 中毒：每回合 %d 点伤害，持续 %d 回合" % [
 						str(data.get("name", "")), int(data.get("dmg", 0)),
 						int(data.get("left", 0))])
 			else:
 				_floaters.append({"pos": po_pos + Vector2(0, -12), "sc": _grid_scroll,
 						"text": "中毒 -%d" % int(data.get("amount", 0)),
-						"col": Color("3e8a2f"), "start": n, "dur": 1400, "size": 18})
+						"col": Color("3e8a2f"), "start": po_at, "dur": 1400, "size": 18})
 		"hunt":
 			# 暗影狩猎（9107，R52）：紫色爆点 —— 基础 16 伤；目标上回合触发过场地 → 30（金紫大字）
 			sfx.play("spell")
@@ -11965,15 +12005,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"wild_form_guard":
 			# 荒野形态（6022，R60 重做）：每场第一次我方 HP 被普通攻击打中 →
 			# 这次伤害 -4（最少 1）+ 对攻击者反伤 4。
-			var wg_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": wg_pos, "sc": _grid_scroll, "start": n, "dur": 560,
+			# R466：减伤 / 反伤都是「这一下打中时」才发生的 → 等撞击帧（cell 传的是**攻击者**
+			# 那一格，滑行中的话再叠滑行落地）。
+			var wg_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var wg_at := _hit_cue_at(wg_cell)
+			var wg_pos := _cell_center(wg_cell)
+			_bursts.append({"pos": wg_pos, "sc": _grid_scroll, "start": wg_at, "dur": 560,
 					"col": Color("4caf50"), "big": true})
 			_floaters.append({"pos": wg_pos + Vector2(0, -30), "sc": _grid_scroll,
 					"text": "荒野形态 减伤 %d" % int(data.get("reduced", 0)),
-					"col": Color("7fd18a"), "start": n, "dur": 1500, "size": 17})
+					"col": Color("7fd18a"), "start": wg_at, "dur": 1500, "size": 17})
 			_floaters.append({"pos": wg_pos + Vector2(0, -8), "sc": _grid_scroll,
 					"text": "反伤 %d" % int(data.get("amount", 0)),
-					"col": Color("e07a6a"), "start": n, "dur": 1500, "size": 19})
+					"col": Color("e07a6a"), "start": wg_at, "dur": 1500, "size": 19})
 			_say("❦ 荒野形态（每场第一次）：我方伤害 -%d，并对 %s 造成 %d 点伤害" % [
 					int(data.get("reduced", 0)), str(data.get("name", "敌人")),
 					int(data.get("amount", 0))])
@@ -12092,12 +12136,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("d84a12"), "start": n, "dur": 1200})
 		"fire_wall_pass":
 			# 穿过燃烧横行的单位被灼烧（不分敌我）
-			var fp_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": fp_pos, "sc": _grid_scroll, "start": n, "dur": 560,
+			# R466：这一下只在**走过**火墙时才发（`_fire_wall_pass(path)`，cell = 路径终点）
+			# → 等那几步滑完才冒火，否则「人还在半路，火先烧在原位」。
+			var fwp_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var fwp_at := _hit_cue_at(fwp_cell)
+			var fp_pos := _cell_center(fwp_cell)
+			_bursts.append({"pos": fp_pos, "sc": _grid_scroll, "start": fwp_at, "dur": 560,
 					"col": Color("ff8a3d"), "big": false})
 			_floaters.append({"pos": fp_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "火墙 -%d" % int(data.get("dmg", 0)),
-					"col": Color("d84a12"), "start": n, "dur": 1300, "size": 18})
+					"col": Color("d84a12"), "start": fwp_at, "dur": 1300, "size": 18})
 		"stun_blow":
 			# 敲晕（9088）：目标力量 -3（金色爆点 + 飘字）
 			var sb_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
@@ -12108,12 +12156,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": UiTheme.STAT_POWER, "start": n, "dur": 1300, "size": 16})
 		"dark_trap":
 			# 黑暗陷阱（8063，R105）：踩中者本回合攻击时力量 -1（暗紫爆点 + 飘字）
-			var dt_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": dt_pos, "sc": _grid_scroll, "start": n, "dur": 480,
+			# R466：同剧毒 —— 这是「走进来」才触发的，等滑行落地（与 trap_hit 一条口径）。
+			var dt_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var dt_at := _hit_cue_at(dt_cell)
+			var dt_pos := _cell_center(dt_cell)
+			_bursts.append({"pos": dt_pos, "sc": _grid_scroll, "start": dt_at, "dur": 480,
 					"col": Color("9b6bd6"), "big": false})
 			_floaters.append({"pos": dt_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "黑暗 力量 -%d" % int(data.get("amount", 0)),
-					"col": Color("6a3fa0"), "start": n, "dur": 1300, "size": 16})
+					"col": Color("6a3fa0"), "start": dt_at, "dur": 1300, "size": 16})
 		"gale":
 			# 疾风（9091）：随机敌人吃 2 伤
 			var ga_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
@@ -12284,24 +12335,27 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			sfx.play("attack")
 		"demon_rage":
 			# 恶魔鸭（9116）：醒着受伤 → 永久 +1 力量
+			# R466：这只鸭子是**被打中**才暴怒 → 力量飘字等那一拳落地
 			var dr_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			_floaters.append({"pos": _cell_center(dr_cell) + Vector2(0, -18), "sc": _grid_scroll,
 				"text": "恶魔鸭 力量 +%d（%d）" % [int(data.get("amount", 0)),
 					int(data.get("power", 0))],
-				"col": Color("c0392b"), "start": n, "dur": 1600, "size": 16})
+				"col": Color("c0392b"), "start": _hit_cue_at(dr_cell), "dur": 1600, "size": 16})
 			sfx.play("attack")
 		"demon_revenge":
 			# 恶魔鸭（复仇）9118：每次受伤 → **本回合**力量 +1（可叠加）。
 			# 与 9116 的 `demon_rage`（永久 +1）刻意区分：这里飘的是**累计值**
 			#（"本回合 +3"），让玩家一眼看到"我打得多，它就疼得多"，
 			# 从而意识到「这一回合得收手了」——这是这只 Boss 的核心决策点。
+			# R466：同暴怒 —— 受伤那一刻的反馈，等这一拳落地
 			var rv_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var rv_at := _hit_cue_at(rv_cell)
 			var rv_pos := _cell_center(rv_cell)
 			_floaters.append({"pos": rv_pos + Vector2(0, -18), "sc": _grid_scroll,
 				"text": "复仇 本回合 +%d（力量 %d）" % [int(data.get("stacked", 0)),
 					int(data.get("power", 0))],
-				"col": Color("ff5722"), "start": n, "dur": 1500, "size": 16})
-			_bursts.append({"pos": rv_pos, "sc": _grid_scroll, "start": n, "dur": 460,
+				"col": Color("ff5722"), "start": rv_at, "dur": 1500, "size": 16})
+			_bursts.append({"pos": rv_pos, "sc": _grid_scroll, "start": rv_at, "dur": 460,
 				"col": Color("ff8a3d"), "big": false})
 			sfx.play("attack")
 		"demon_summon":
