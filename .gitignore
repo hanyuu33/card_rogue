@@ -82,3 +82,5 @@ tools/ai_play/.aicli_calls
 
 # AI 试玩：聚能炮击「已握有」记忆（本局临时态，不入库）
 tools/ai_play/.cannon_seen.json
+tools/ai_play/.picked.json
+tools/ai_play/.runs.jsonl

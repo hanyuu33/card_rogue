@@ -5202,6 +5202,13 @@ func _use_hand_card(i: int) -> void:
 			elif card.id == GameEngine.IMPACT_CANNON_ID:
 				target_hint = "**一个敌人**（%d 伤，并击退 %d 格）" % [
 						GameEngine.IMPACT_CANNON_DMG, GameEngine.IMPACT_CANNON_STEPS]
+			# R473 武术大师的两张定向技能：提示写清「只打一个」还是「附带其余」。
+			elif card.id == GameEngine.FLYING_KICK_ID:
+				target_hint = "**一个敌人**（%d 伤；击杀时溢出的伤害沿同一列继续）" % GameEngine.FLYING_KICK_DMG
+			elif card.id == GameEngine.RUSH_PUNCH_ID:
+				target_hint = "**一个敌人**（%d 伤 + 击退 %d 格；其余敌人各 %d 伤）" % [
+						GameEngine.RUSH_PUNCH_DMG, GameEngine.RUSH_PUNCH_STEPS,
+						GameEngine.RUSH_PUNCH_SPLASH]
 			elif card.id == GameEngine.WHIRL_BLADE_ID:
 				target_hint = "十字中心格"
 			status_text = "%s：点击%s（右键取消）" % [card.card_name, target_hint]
@@ -7634,6 +7641,14 @@ func _show_over(win: bool) -> void:
 			# `core_ready_to_use()` 顺带把「卡组凑不出一对」的情况挡在入队之前。
 			RunState.core_note_battle_loss(engine.state.self_hp_damage_taken)
 			RunState.queue_core_reward()
+			# R473 武术大师的延迟发卡：**这一场胜利**推进挂单。
+			# 「2 场战斗」与「2 场精英 / Boss」是两张不同的单，谁该推进由 `RunState` 自己分；
+			# 这里只负责把「是不是精英 / Boss」告诉它（Boss 也算，别只认 node_type）。
+			# 到账的卡直接进卡组，用轻提示报一句 —— 结算面板的副标题留给剧情解锁。
+			var late_cards := RunState.bump_delayed_cards(
+					node_type == "elite" or _run_boss_win)
+			for lc: Dictionary in late_cards:
+				UiToast.toast("【%s】已加入卡组" % str(lc.get("name", "")), 2800)
 			# R390（用户口径）：**精英战**额外给一次删卡 —— 和月亮（9180）走同一条
 			# `deck_delete` 通道，所以它同样进奖励列表、同样受 R340「一批没处理完
 			# 不许换场景」约束。放在卡牌组之后：同一批里它排在卡牌下面，

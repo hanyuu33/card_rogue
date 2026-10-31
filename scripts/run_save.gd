@@ -117,6 +117,10 @@ static func snapshot() -> Dictionary:
 		"map_strokes": RunState.map_strokes,            # R339：玩家在地图上画的线（原先漏存）
 		"map_flags": RunState.map_flags,                # R339：玩家在地图上插的旗
 		"pending_event": RunState.pending_event,
+		# R473：延迟发卡的挂单（武术大师「2 场后给」）—— 跨战斗存活，必须存
+		"delayed_cards": RunState.delayed_cards,
+		# R473：圣餐结算过的那一间休息处（漏存 → 续档重进同一间还能再回一次 50%）
+		"sacrament_node": RunState.sacrament_node,
 		"reward_type": RunState.reward_type,
 		"reward_context": RunState.reward_context,
 		"difficulty": RunState.difficulty,
@@ -312,6 +316,18 @@ static func apply(d: Dictionary) -> bool:
 	RunState.shop_states = ss if ss is Dictionary else {}
 	RunState.shop_revisit_id = int(d.get("shop_revisit_id", -1))
 	RunState.relic_choice = _int_array(d.get("relic_choice", []))
+	# R473：延迟发卡挂单。JSON 读回来的数值是 float，这里逐个收成 int；
+	# 结构不对的条目直接丢（宁可少挂一张，也不要留一条永远减不到 0 的幽灵单）。
+	var dc_raw: Variant = d.get("delayed_cards", [])
+	RunState.delayed_cards = []
+	RunState.sacrament_node = int(d.get("sacrament_node", -1))
+	if dc_raw is Array:
+		for e: Variant in dc_raw:
+			if e is Dictionary and (e as Dictionary).has("id"):
+				RunState.delayed_cards.append({
+					"id": int(e["id"]),
+					"need": int(e.get("need", 0)),
+					"elite": bool(e.get("elite", false))})
 	RunState.pending_relic = int(d.get("pending_relic", -1))
 	RunState.pending_relic_drop = int(d.get("pending_relic_drop", -1))
 	RunState.pending_deck_edit = str(d.get("pending_deck_edit", ""))

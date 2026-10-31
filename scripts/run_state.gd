@@ -77,6 +77,16 @@ static var boss_beaten := false
 ## R339：`end_run()` 置位 —— 本局已经收尾。地图场景的「兜底开新局」据此收手：
 ## 通关那一场若因奖励面板转去选卡、再回地图，不该在地图上**诈尸**出一个新局。
 static var run_finished := false
+## ── R473：延迟发卡的挂单（武术大师「学点真本事 / 要学就学绝技」）──
+## 每条 = `{"id": 卡 id, "need": 还要几场, "elite": 是否只认精英 / Boss}`。
+## 战斗胜利后由 `bump_delayed_cards()` 推进；need 减到 0 的卡**当场加入卡组**，
+## 卡名交回调用方（结算面板要播一行「飞踢已加入卡组」）。
+## ⚠️ 必须续档：挂单跨战斗、跨层存活，漏存就会在退出重进时凭空消失（道具白拿）。
+static var delayed_cards: Array = []
+## R473：圣餐已经在**哪一间**休息处结算过（`current_node_id`）。
+## ⚠️ 必须有它：`_ui_main()` 每次重绘都会走休息分支，没有这个标记就会反复回血，
+##    退出重进同一间还能无限刷。`-1` = 这一局还没结算过。
+static var sacrament_node: int = -1
 ## R234 止血绷带（6029）：本层累计的「下次休息额外回血」点数。换层 / 开新局 / 结束局清零。
 static var bandage_pending := 0
 static var pending_level: Dictionary = {}    # 即将进入的战斗关卡（地图 → 战斗）
@@ -94,6 +104,9 @@ static var reward_kinds: Array[String] = []  # 本次卡牌奖励的卡类限制
 static var statue_charge := 0
 const RELIC_STATUE_ID := 6039
 const RELIC_SACRAMENT_ID := 6038
+## R473（用户口径）：圣餐现在按「**到达**篝火处回复 50% 最大生命」结算 —— 见
+## `sacrament_arrive()`，不再挂在「休息」按钮上（休息仍按档位百分比回血）。
+const SACRAMENT_ARRIVE_PCT := 0.5
 const STATUE_EVERY := 10
 
 ## R311 不锈钢盆（6041）：剩余计数（0 = 没有 / 已归零）。
@@ -516,11 +529,23 @@ static func rest_heal_amount() -> int:
 
 
 static func rest() -> int:
-	## 「休息」事件：回复 `rest_heal_amount()` 点生命。
-	## R307 圣餐（6038）：持有它 → **直接回满**（不按百分比算）。
-	if has_relic(RELIC_SACRAMENT_ID):
-		return heal(max_hp - hp)
+	## 「休息」事件：回复 `rest_heal_amount()` 点生命（按难度档位的百分比）。
+	## R473（用户口径）：圣餐（6038）**不再**在这里回满 —— 它改成「到达篝火处回复
+	## 50% 最大生命」，进房当场由 `sacrament_arrive()` 结算；休息本身回到档位口径。
 	return heal(rest_heal_amount())
+
+
+static func sacrament_arrive() -> int:
+	## R473 圣餐（6038）：**到达**篝火处回复 50% 最大生命，返回实际回复量。
+	## 0 = 没持有 / 这一间已经结算过 / 本来就是满血。
+	## ⚠️ 用 `sacrament_node` 记住结算过的那一间（`current_node_id`）—— 事件页会反复
+	##    重绘，退出去重进也能再进同一条分支，没有这个标记就能无限刷血。
+	if not has_relic(RELIC_SACRAMENT_ID):
+		return 0
+	if sacrament_node == current_node_id:
+		return 0
+	sacrament_node = current_node_id
+	return heal(ceili(max_hp * SACRAMENT_ARRIVE_PCT))
 
 
 static func relic_display_name(id: int, plays := -1) -> String:
@@ -1024,6 +1049,8 @@ static func end_run(clear_save: bool = true) -> void:
 	reward_type = "normal"
 	battle_wins = 0
 	elite_wins = 0
+	delayed_cards = []          # R473：延迟发卡的挂单不跨局（一局结束就作废）
+	sacrament_node = -1         # R473：圣餐的「已结算房间」跟着一局走
 	used_levels = []
 	map_strokes = []              # R177：本局结束 → 标记随之清掉
 	map_flags = []
@@ -2674,6 +2701,58 @@ static func _pick_level(pool: Array[Dictionary]) -> Dictionary:
 
 
 # ---- 卡组 ----
+
+## ── R473：延迟发卡（武术大师）──
+static func queue_delayed_card(id: int, battles: int, elite_only := false) -> void:
+	## 挂一张「再打 N 场就给」的卡。
+	## `elite_only = true` → 只有**精英 / Boss** 胜利才推进（普通战斗不计数）。
+	## battles <= 0 时当场给 —— 事件表以后想改成「立刻给」不用再动这里。
+	if battles <= 0:
+		add_card(id)
+		return
+	delayed_cards.append({"id": id, "need": battles, "elite": elite_only})
+
+
+static func bump_delayed_cards(is_elite := false) -> Array:
+	## 一场战斗胜利后推进所有挂单，返回**这一场到账的卡**：`[{"id":..,"name":..}]`。
+	## * 普通战斗（is_elite = false）**不推进**只认精英的挂单 —— 它们原地等着；
+	## * need 减到 0 → 当场 `add_card()` 进卡组，并从挂单里摘掉；
+	## * 顺序按挂单顺序结算（同一场同时到账两张时，日志 / 提示的顺序是稳定的）。
+	var gained: Array = []
+	if delayed_cards.is_empty():
+		return gained
+	var keep: Array = []
+	for e: Dictionary in delayed_cards:
+		var elite_only := bool(e.get("elite", false))
+		if elite_only and not is_elite:
+			keep.append(e)
+			continue
+		var need := int(e.get("need", 1)) - 1
+		var cid := int(e.get("id", -1))
+		if need > 0:
+			keep.append({"id": cid, "need": need, "elite": elite_only})
+			continue
+		if cid <= 0:
+			continue
+		add_card(cid)
+		var c := CardRepo.load_json().get_card(cid)
+		gained.append({"id": cid, "name": c.card_name if c != null else str(cid)})
+	delayed_cards = keep
+	return gained
+
+
+static func delayed_cards_text() -> String:
+	## 挂单的可读描述（「飞踢（1 场战斗）」，空串 = 没有挂单）。
+	## 事件收尾提示 / 地图道具栏 / 测试都读这一个口。
+	var parts: Array[String] = []
+	for e: Dictionary in delayed_cards:
+		var cid := int(e.get("id", -1))
+		var c := CardRepo.load_json().get_card(cid)
+		var nm: String = c.card_name if c != null else str(cid)
+		var cond := "场精英 / Boss" if bool(e.get("elite", false)) else "场战斗"
+		parts.append("%s（还差 %d %s）" % [nm, int(e.get("need", 0)), cond])
+	return "、".join(parts)
+
 
 static func add_card(id: int) -> void:
 	## 卡牌奖励收下的卡加入卡组。

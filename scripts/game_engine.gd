@@ -1192,6 +1192,19 @@ const BREAKTHROUGH_PER_STACK:= 4
 const IMPACT_CANNON_ID:= 9163
 const IMPACT_CANNON_DMG:= 10        # R369：8 → 10（用户口径）
 const IMPACT_CANNON_STEPS:= 1       # R369：2 → 1 格（用户口径）
+
+
+# ── R473 武术大师（第一、二层事件）：三张事件专属技能卡 ──
+# 三张都是 2 费、rarity 5 + traits「事件」，不会出现在奖励池里，只能从这个事件拿到。
+const BRAWL_ID:= 9215                 # 乱打：随机 2 个敌人各 10 伤
+const BRAWL_DMG:= 10
+const BRAWL_TARGETS:= 2
+const FLYING_KICK_ID:= 9216           # 飞踢：22 伤 + 击杀时溢出不丢弃（践踏）
+const FLYING_KICK_DMG:= 22
+const RUSH_PUNCH_ID:= 9217            # 冲拳：16 伤 + 击退 1 格 + 其余各 8 伤
+const RUSH_PUNCH_DMG:= 16
+const RUSH_PUNCH_SPLASH:= 8
+const RUSH_PUNCH_STEPS:= 1
 # ── R291：机械之心两张技能（辅助刃 9164 / 复制术 9165）──
 # 「辅助刃」（9164，0 费**普通**技能，目标 = 己方盟友）：
 #   * 一次改造 = **+BLADE_ATK 力量**，走 `_field_upgrade_grant()` 唯一口 —— 于是层数
@@ -8000,6 +8013,10 @@ const SPELL_BASE_DMG := {
 	9169: 10,    # 烈火之剑
 	9172: 9,     # 激光扫射
 	9205: 22,    # 猎杀（R393，暗影刺客史诗技能；R427 25 → 22；本局永久成长会抬高 value → 预览按 value 取）
+	# R473 武术大师事件的三张技能（事件专属，不进奖励池；进表才能被左栏认成伤害卡）
+	9215: 10,    # 乱打（随机 2 个敌人各 10）
+	9216: 22,    # 飞踢（击杀时溢出沿同列传递）
+	9217: 16,    # 冲拳（另有其余敌人各 8，不并进这个数）
 }
 
 # 卡面**给不出确数**的伤害技能（数字随局势变）→ 即使一点加成都沒有也要报当前值。
@@ -10046,6 +10063,19 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 				return "%s；目标被击破" % ic_msg
 			_log("冲击炮：%s，随后击退 %d 格" % [ic_msg, IMPACT_CANNON_STEPS])
 			return "%s；%s" % [ic_msg, _knockback(side, target, IMPACT_CANNON_STEPS)]
+		BRAWL_ID:
+			# 乱打 9215（R473，武术大师「学点简单的」）：对**随机 2 个敌人**各造成
+			# BRAWL_DMG 点伤害；敌人不足 2 个时有多少打多少，一个都没有就落空。
+			return _brawl(side, card)
+		FLYING_KICK_ID:
+			# 飞踢 9216（R473，武术大师「学点真本事」，2 场战斗后到手）：
+			# FLYING_KICK_DMG 点伤害；**击杀则溢出不丢弃**，沿同一列继续传递（践踏）。
+			return _flying_kick(side, target, card)
+		RUSH_PUNCH_ID:
+			# 冲拳 9217（R473，武术大师「要学就学绝技」，2 场精英 / Boss 后到手）：
+			# 主目标 RUSH_PUNCH_DMG 点 + 击退 RUSH_PUNCH_STEPS 格；
+			# 其余每个敌方单位各吃 RUSH_PUNCH_SPLASH 点。
+			return _rush_punch(side, target, card)
 		BLADE_GIFT_ID:
 			# 辅助刃 9164（R291，机械之心）：己方盟友获得改造（力 +2）+「死亡」亡语回收自己。
 			return _blade_gift(target, side)
@@ -14294,6 +14324,113 @@ func _rockfall_trap(cell: Vector2i, mover: Placement, bonus: int) -> void :
 			_damage_player(mover.owner, overflow, "落石践踏")
 			action.emit("trample", {"side": mover.owner, "amount": _last_hp_damage,
 				"dst": cell, "atk_name": "落石陷阱", "def_name": pierced_name})
+
+func _brawl(side: String, card: CardData) -> String:
+	## R473 乱打 9215：对**随机 BRAWL_TARGETS 个敌人**各造成 BRAWL_DMG 点伤害。
+	## 三条落地细节（与激发 8077 的「随机两个」同口径）：
+	##   * 抽取走 `rng`（回放必须一致）；同一轮内**不重复**抽同一个目标；
+	##   * 伤害走 `_op_deal_damage()`：护盾 / 减伤 / 光环 / 技能加成与其它单目标技能同源；
+	##   * 只打**场上的敌方单位**，不直击敌方 HP（没有单位时落空）。
+	var foe: String = SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	var pool: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var u: Placement = state.board[cell]
+		if u != null and u.owner == foe and u.health > 0:
+			pool.append(cell)
+	if pool.is_empty():
+		_log("乱打：场上没有敌方单位，效果落空")
+		return "场上没有敌人，乱打落空"
+	pool.sort()   # 固定顺序：同种子 / 回放一致
+	var dmg:= _spell_dmg(side, BRAWL_DMG, card)
+	var n:= mini(BRAWL_TARGETS, pool.size())
+	var hits:= 0
+	for _i in n:
+		var idx:= rng.randi_range(0, pool.size() - 1)
+		var cell: Vector2i = pool[idx]
+		pool.remove_at(idx)
+		var u2: Placement = state.board.get(cell, null)
+		if u2 == null or u2.health <= 0:
+			continue
+		_op_deal_damage(side, dmg, cell)
+		hits += 1
+	_log("乱打：随机 %d 个敌人各受 %d 点伤害" % [hits, dmg])
+	return "乱打：%d 个敌人各受 %d 点伤害" % [hits, dmg]
+
+
+func _flying_kick(side: String, target, card: CardData) -> String:
+	## R473 飞踢 9216：单目标技能 + 践踏。
+	## 「践踏」在这里的定义与 R225 攻击践踏 / R248 落石践踏完全同源：
+	## **击杀时溢出的伤害不丢弃**，沿同一列朝目标方后排继续传递
+	## —— 直接复用 `_rockfall_overflow()`，不另写一条溢出链。
+	## ⚠️ 溢出量按**纸面伤害 - 目标剩余生命**算：`_op_deal_damage()` 返回的是描述串，
+	##    拿不到实扣值；有减伤（石肤等）时这一笔会比严格值略大，与 R225「溢出不丢弃」
+	##    的口径一致，不留另一套算法。
+	var p: Placement = _target_placement(side, target)
+	if p == null:
+		_log("飞踢：没有目标")
+		return "（没有目标）"
+	var foe: String = SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	var cell:= _cell_of(p)
+	var hp_before:= p.health
+	var total:= _spell_dmg(side, FLYING_KICK_DMG, card)
+	var msg:= _op_deal_damage(side, total, target)
+	# 没打死 → 践踏不触发（它就是「击杀时」的效果）
+	if _target_placement(side, target) != null:
+		return msg
+	if cell.x < 0:
+		return "%s；目标被击破" % msg
+	var carry:= maxi(0, total - maxi(hp_before, 0))
+	if carry <= 0:
+		_log("飞踢：%s，没有溢出（目标剩余生命 >= 伤害）" % msg)
+		return "%s；目标被击破" % msg
+	_log("飞踢：%s，溢出 %d 点沿同列传递" % [msg, carry])
+	var res: Array = _rockfall_overflow(cell, foe, carry, "飞踢")
+	var left:= int(res[0])
+	if left > 0:
+		var pierced:= str(res[1])
+		if pierced == "":
+			pierced = "空列"
+		_log("飞踢践踏：%d 点打穿整列 → 漏到 %s HP" % [
+				left, "敌方" if foe == SIDE_OPPONENT else "我方"])
+		_damage_player(foe, left, "飞踢践踏")
+		action.emit("trample", {"side": foe, "amount": _last_hp_damage,
+				"dst": cell, "atk_name": "飞踢", "def_name": pierced})
+	_destroy_dead()
+	return "%s；溢出的 %d 点沿同列继续" % [msg, carry]
+
+
+func _rush_punch(side: String, target, card: CardData) -> String:
+	## R473 冲拳 9217：主目标 16 伤 + 击退 1 格，**其余每个敌方单位**各受 8 伤。
+	## ⚠️ 溅射名单在**击退之前**收好：击退会改变主目标的坐标，事后再遍历容易把它算进去；
+	##    名单里存的是格子，逐个结算前再看一眼「这一格还有没有活着的敌人」。
+	## 击退走唯一口 `_knockback()`（位移免疫 / 被挡住 / 朝目标方后排 —— 与冲击炮同源）。
+	var p: Placement = _target_placement(side, target)
+	if p == null:
+		_log("冲拳：没有目标")
+		return "（没有目标）"
+	var foe: String = SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	var main_cell:= _cell_of(p)
+	var others: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var u: Placement = state.board[cell]
+		if u != null and u.owner == foe and u.health > 0 and cell != main_cell:
+			others.append(cell)
+	others.sort()
+	var msg:= _op_deal_damage(side, _spell_dmg(side, RUSH_PUNCH_DMG, card), target)
+	var kb:= "目标被击破"
+	if _target_placement(side, target) != null:
+		kb = _knockback(side, target, RUSH_PUNCH_STEPS)
+	var splash:= _spell_dmg(side, RUSH_PUNCH_SPLASH, card)
+	var hits:= 0
+	for cell: Vector2i in others:
+		var u2: Placement = state.board.get(cell, null)
+		if u2 == null or u2.health <= 0:
+			continue
+		_op_deal_damage(side, splash, cell)
+		hits += 1
+	_log("冲拳：%s；%s；其余 %d 个敌人各受 %d 点伤害" % [msg, kb, hits, splash])
+	return "%s；%s；其余 %d 个敌人各受 %d 点伤害" % [msg, kb, hits, splash]
+
 
 func _rockfall_overflow(from_cell: Vector2i, side: String, remaining: int,
 		src_name := "落石陷阱", killer := Vector2i(-1, -1)) -> Array:

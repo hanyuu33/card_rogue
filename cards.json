@@ -6041,6 +6041,66 @@
       "target_mode": "none",
       "color": "白",
       "image": ""
+    },
+    {
+      "id": 9215,
+      "name": "乱打",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "事件"
+      ],
+      "effect_text": "对随机 2 个敌人各造成 10 点伤害（敌人不足 2 个时有多少打多少）。",
+      "target_mode": "none",
+      "color": "红",
+      "image": ""
+    },
+    {
+      "id": 9216,
+      "name": "飞踢",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "事件"
+      ],
+      "effect_text": "对一个敌人造成 22 点伤害；若将其击杀，溢出的伤害沿同一列继续传递（践踏）。",
+      "target_mode": "unit",
+      "color": "红",
+      "image": ""
+    },
+    {
+      "id": 9217,
+      "name": "冲拳",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "事件"
+      ],
+      "effect_text": "对一个敌人造成 16 点伤害并将其击退 1 格；同时对其他所有敌人各造成 8 点伤害。",
+      "target_mode": "unit",
+      "color": "红",
+      "image": ""
     }
   ]
 }

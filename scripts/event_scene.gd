@@ -111,6 +111,35 @@ const ADVENTURER_NOTE_DESC := """你把笔记从头翻到尾。
 const ADVENTURER_FLINT_DESC := """燧石落进掌心，还带着一点凉。
 火镰擦过，火星跳起来，照亮了石壁上被烟熏黑的一片。"""
 
+# R473 武术大师（第一、二层共用）：三个选项分别给三张**事件专属技能卡**（都不会进奖励池）。
+#   ① 乱打 9215 —— 当场给：2 费，对随机 2 个敌人各 10 伤
+#   ② 飞踢 9216 —— **2 场战斗后**自动到手：2 费，22 伤 + 击杀时溢出沿同列传递（践踏）
+#   ③ 冲拳 9217 —— **2 场精英 / Boss 后**自动到手：2 费，16 伤 + 击退 1 格 + 其余各 8 伤
+# ②③ 走 `RunState.queue_delayed_card()`（挂单跨战斗存活，进存档），到账时战斗结算弹 Toast。
+const MARTIAL_BRAWL_ID := 9215
+const MARTIAL_KICK_ID := 9216
+const MARTIAL_PUNCH_ID := 9217
+const MARTIAL_KICK_BATTLES := 2
+const MARTIAL_PUNCH_BATTLES := 2
+
+## ⚠️ 这里最多铺 3 个选项 + 1 个「离开」，描述**必须压到 2 行**
+##（与熔炉 R454 同一条教训：描写一长，`_fit_center()` 收紧间距也救不回来，末按钮会被切）。
+const MARTIAL_DESC := """树底下坐着一位老人，木棍横在膝上，衣襟落满了叶子。
+「学点东西再走吧——简单的现在带走，真本事得拿胜利来换。」"""
+
+const MARTIAL_BRAWL_DESC := """老人把木棍往地上一顿：「乱打不难，难的是不要停下来。」
+他替你摆了两下手腕，你就记住了——
+「乱打」：2 费，对随机 2 个敌人各造成 10 点伤害。"""
+
+const MARTIAL_KICK_DESC := """「腿比手长，也比你诚实。」
+老人示范了一记，鞋跟落地，尘土正正好好地散开——
+「去打两场。回来我把后半段教给你。」
+「飞踢」（2 场战斗后到手）：2 费，22 伤；击杀时溢出的伤害沿同一列继续。"""
+
+const MARTIAL_PUNCH_DESC := """老人往石头上捶了一下，石头裂了，他的手没有。
+「这一拳不难学，难的是你配不配。去打两场硬的——精英，或者守着关底的那种。」
+「冲拳」（2 场精英 / Boss 后到手）：2 费，16 伤 + 击退 1 格，其余敌人各 8 伤。"""
+
 const BLUEFISH_DESC := """一条通体蓝色的大肥鱼搁浅在岸边，肚皮一起一伏，像还在做梦。
 它翻了个身，从嘴里吐出一枚亮晶晶的东西——
 「鲸鱼之怒」：1 费技能，造成 11 点伤害，
@@ -270,11 +299,12 @@ func _rest_desc() -> String:
 	## 休息处文案（R237：恢复篝火回血 —— 休息与烤肉二选一）。
 	## R307 圣餐（6038）：持有它时休息直接回满，文案要跟着改（不然按钮说回 5 实际回满）。
 	if RunState.has_relic(RunState.RELIC_SACRAMENT_ID):
+		# R473（用户口径）：圣餐改成「到达篝火处回复 50% 最大生命」，进房就结算掉了。
 		return """篝火旁摆着一份还没凉透的圣餐。
-在篝火旁休息，生命直接回满；
+你在坐下之前就把它分掉了——到达篝火处回复 50% 最大生命（已结算）；
 也可以烤一块肉带在身上，留到 Boss 战前享用；
 还可以往火里添一根柴，让火替你烧掉卡组里的一张牌。
-（三样只能挑一样——选完这一处就到头了。）"""
+（剩下两样只能挑一样——选完这一处就到头了。）"""
 	return """前路的战斗还在等着你。
 在篝火旁休息，恢复 %d%% 最大生命；
 也可以烤一块肉带在身上，留到 Boss 战前享用；
@@ -291,6 +321,8 @@ var _apple_taken := false     # 苹果与医生（R244）：本次是否已收�
 var _snow_pick := ""           # 雪豹出现（R446）：本次拿走的是 "pipe" / "cat" / 空
 var _adv_pick := ""            # 冒险家的遗物（R447）：本次拿走的是 "note" / "flint" / 空
 var _adv_result := ""          # 冒险家的遗物（R447）：收尾态那行结果（读档重绘要能复现）
+var _martial_pick := ""         # 武术大师（R473）：本次选的是 "brawl" / "kick" / "punch" / ""
+var _martial_result := ""       # 武术大师（R473）：收尾态那行结果（重绘要能复现）
 var _furnace_opts: Array[int] = []   # 熔炉（R454）：本次铺出来的可投入道具（_ready 里摇一次）
 var _furnace_invested := -1          # 熔炉（R454）：本次投进去的那件（-1 = 还没投）
 var _furnace_result := ""            # 熔炉（R454）：收尾态那行结果（重绘要能复现）
@@ -306,6 +338,7 @@ var _struggled := false       # 挣扎：是否已接受（失去生命换金属
 var _hero_traded := false     # 绝赞五换一：是否已交易（删 5 张换英雄）
 var _hero_removed: Array = [] # 绝赞五换一：本次被换走的卡（[{id,name}]）
 var _bbq_taken := false       # 烤肉：本次是否已在休息处烤好（获得道具）
+var _sacrament_note := -1    # R473 圣餐：本次进休息处回了多少（-1 = 还没试过）
 var _arcane_charm_taken := false  # 奥秘之泉：**本次访问**是否取走了道具「奥秘护符」
                               #   （≠「本来就戴着」—— 后者只是不重复给，不影响喝泉水，见 R71 / R147）
 var _arcane_drunk := false    # 奥秘之泉：是否已选择「喝下泉水」（选卡去了卡牌奖励界面）
@@ -405,6 +438,12 @@ func _is_adventurer() -> bool:
 	## 冒险家的遗物（R447，第一层专属）：两个选项 —— 道具「冒险笔记」或「燧石」。
 	## 两样都拿得到东西，所以没有「什么都不拿」（同「雪豹出现」的收法）。
 	return _is_event_node() and _pending_kind() == "adventurer"
+
+
+func _is_martial() -> bool:
+	## 武术大师（R473，第一 / 二层共用）：三选一 —— 乱打（当场）/ 飞踢（2 场战斗后）/
+	## 冲拳（2 场精英或者 Boss 后）。后两张是**挂单**，不占道具栏，到账时自动进卡组。
+	return _is_event_node() and _pending_kind() == "martial"
 
 
 func _is_cave() -> bool:
@@ -655,6 +694,10 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "adventurer"
+		if args[i] == "--martial":  # 演示：伪装 run 武术大师事件（R473 截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "martial"
 		if args[i] == "--cave":  # 演示：伪装 run 洞穴事件（R467 截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -1065,6 +1108,30 @@ func _ready() -> void:
 			# 两样都拿得到东西 → 没有「什么都不拿」这一项（同「雪豹出现」/「赏月」）。
 			leave_btn.visible = false
 			result_label.text = ""
+	elif _is_martial():
+		event_name.text = "武 术 大 师"
+		desc.text = MARTIAL_BRAWL_DESC if _martial_pick == "brawl" \
+				else (MARTIAL_KICK_DESC if _martial_pick == "kick" \
+				else (MARTIAL_PUNCH_DESC if _martial_pick == "punch" else MARTIAL_DESC))
+		if _martial_pick != "":
+			_collapse_to_leave()
+			result_label.text = _martial_result
+			result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		else:
+			# 三个选项都要显式恢复可见 —— `_ui_main()` 是全量重绘，别的分支可能留过 false。
+			rest_btn.visible = true
+			rest_btn.text = "学点简单的（获得「乱打」）"
+			rest_btn.disabled = false
+			bbq_btn.visible = true
+			bbq_btn.text = "学点真本事（2 场战斗后获得「飞踢」）"
+			bbq_btn.disabled = false
+			alt_btn.visible = true
+			alt_btn.text = "要学就学绝技（2 场精英 / Boss 后获得「冲拳」）"
+			alt_btn.disabled = false
+			leave_btn.visible = true
+			leave_btn.text = "离开（什么都不学）"
+			leave_btn.disabled = false
+			result_label.text = ""
 	elif _is_cave():
 		event_name.text = "洞 穴"
 		desc.text = CAVE_DESC
@@ -1104,13 +1171,17 @@ func _ready() -> void:
 		rest_btn.visible = true
 		event_name.text = "休息处"
 		desc.text = _rest_desc()
+		# R473（用户口径）：圣餐（6038）= **到达篝火处**回复 50% 最大生命，进房当场结算一次。
+		# `_sacrament_note` 记住本次回了多少（-1 = 还没试过）—— `_ui_main()` 会反复重绘，
+		# 真正的防重复在 `RunState.sacrament_arrive()` 里按房间记账。
+		if _sacrament_note < 0:
+			_sacrament_note = RunState.sacrament_arrive()
+		if _sacrament_note > 0:
+			desc.text += "\n\n【圣餐】回复了 %d 点生命（现 %d / %d）。" % [
+					_sacrament_note, RunState.hp, RunState.max_hp]
 		var rest_gain := mini(RunState.rest_heal_amount(), RunState.max_hp - RunState.hp)
-		if RunState.has_relic(RunState.RELIC_SACRAMENT_ID):
-			# R307 圣餐：休息直接回满 —— 按钮上写明，不然和实际结算对不上。
-			rest_gain = RunState.max_hp - RunState.hp
-			rest_btn.text = "在这里休息（生命回满 · 圣餐）"
-		else:
-			rest_btn.text = "在这里休息（回复 %d 生命）" % rest_gain
+		# R473：圣餐的回复已经挪到「到达时」，休息本身回到档位口径，不再给它开特例。
+		rest_btn.text = "在这里休息（回复 %d 生命）" % rest_gain
 		rest_btn.disabled = rest_gain <= 0   # 满血 → 休息没意义，置灰
 		# R390（用户口径）：第三个收益选项「添加柴火」（删一张卡）—— 挂在这条链上唯一
 		# 空着的 AltBtn。与「休息 / 烤肉」构成三选一：任一选项结算后
@@ -1211,6 +1282,19 @@ func _on_main() -> void:
 		return
 	if _is_furnace():
 		_furnace_take(0, rest_btn)
+		return
+	if _is_martial():
+		if _martial_pick != "":
+			return
+		RunState.add_card(MARTIAL_BRAWL_ID)
+		_martial_pick = "brawl"
+		_claim_reward(rest_btn)
+		_collapse_to_leave()
+		desc.text = MARTIAL_BRAWL_DESC
+		_martial_result = "「乱打」已加入卡组：2 费，对随机 2 个敌人各造成 10 点伤害。"
+		result_label.text = _martial_result
+		result_label.add_theme_color_override("font_color", Color("c86a5a"))
+		_redraw()
 		return
 	if _is_adventurer():
 		if _adv_pick != "":
@@ -2057,6 +2141,21 @@ func _on_alt() -> void:
 	if _is_moon():
 		_claim_moon_coin()
 		return
+	if _is_martial():
+		if _martial_pick != "":
+			return
+		# 挂单：只认**精英 / Boss** 的胜利（普通战斗原地不动）。
+		RunState.queue_delayed_card(MARTIAL_PUNCH_ID, MARTIAL_PUNCH_BATTLES, true)
+		_martial_pick = "punch"
+		_claim_reward(alt_btn)
+		_collapse_to_leave()
+		desc.text = MARTIAL_PUNCH_DESC
+		_martial_result = "「冲拳」已经挂在单上：再打赢 %d 场精英 / Boss 战斗就自动加入卡组。" \
+				% MARTIAL_PUNCH_BATTLES
+		result_label.text = _martial_result
+		result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		_redraw()
+		return
 	if _is_snow_leopard():
 		if _snow_pick != "":
 			return
@@ -2110,6 +2209,21 @@ func _on_bbq() -> void:
 	## 休息处「烤肉」：获得事件道具「烤肉」（进入 Boss 战时自动消耗 → 回复 25% 生命）。
 	## 奥秘之泉：这一路是「选择2 · 喝下泉水」→ 去卡牌奖励界面（限定效果 / 技能）。
 	sfx.play("click")
+	if _is_martial():
+		if _martial_pick != "":
+			return
+		# 挂单：2 场战斗（普通 / 精英 / Boss 都算）后自动进卡组。
+		RunState.queue_delayed_card(MARTIAL_KICK_ID, MARTIAL_KICK_BATTLES, false)
+		_martial_pick = "kick"
+		_claim_reward(bbq_btn)
+		_collapse_to_leave()
+		desc.text = MARTIAL_KICK_DESC
+		_martial_result = "「飞踢」已经挂在单上：再打赢 %d 场战斗就自动加入卡组。" \
+				% MARTIAL_KICK_BATTLES
+		result_label.text = _martial_result
+		result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		_redraw()
+		return
 	if _is_furnace():
 		_furnace_take(1, bbq_btn)
 		return
