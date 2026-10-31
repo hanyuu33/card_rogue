@@ -1553,6 +1553,24 @@ static func queue_card_reward(reward_type: String = "normal",
 	return pending_rewards.size() - 1
 
 
+static func queue_fixed_card_reward(card_id: int, legendary := false) -> int:
+	## R467：**指定卡**的卡牌奖励（洞穴的传说卡「枭熊」9213）。返回队列下标（-1 = 无效）。
+	##
+	## 与 `queue_card_reward()` 的分工：那个按稀有度权重摇三张候选，这个把 `card_id`
+	## 直接摆成**唯一候选**。相同的地方：
+	##   * 只是「入队」—— 玩家仍要在奖励页点「确认选择这张」，`pick_pending_card()` 才真进卡组；
+	##   * 走同一条 `pending_rewards` 通道 → R340「一批没处理完不许换场景」照样管得住它。
+	## 不同的地方：**不消耗 `run_rng`**（不摇候选），所以回放的种子序列不受这张固定奖励影响。
+	## `legendary = true` → 奖励页播一次揭示动画（`RewardPanel` 读这个标记，不动抽卡逻辑）。
+	if card_id <= 0:
+		return -1
+	_drop_settled_batch()
+	pending_rewards.append({"kind": "cards", "type": "legendary", "kinds": [],
+			"candidates": [card_id], "picked": -1,
+			"state": REWARD_PENDING, "legendary": legendary})
+	return pending_rewards.size() - 1
+
+
 static func queue_battle_card_rewards(reward_type: String = "normal") -> int:
 	## 战斗胜利后的卡牌奖励**唯一入队口**（battle_scene 只调这里，别直接调
 	## `queue_card_reward`）。持有采集刀 6050（传奇）→ 额外再来一组。

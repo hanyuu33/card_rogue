@@ -5975,6 +5975,72 @@
       "value": 0,
       "color": "紫",
       "image": ""
+    },
+    {
+      "id": 9212,
+      "name": "枭熊之怒",
+      "kind": "效果",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "枭熊本能"
+      ],
+      "affixes": [],
+      "effect_text": "枭熊的生命在一半以上时，它受到的伤害 -1；生命降到一半或以下时获得「践踏」——它造成的伤害击杀单位时，溢出的伤害沿同列继续传下去，没有攻击到单位时不触发。",
+      "target_mode": "none",
+      "value": 1,
+      "color": "金",
+      "image": ""
+    },
+    {
+      "id": 9213,
+      "name": "枭熊",
+      "kind": "盟友",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 1,
+      "rarity": 2,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "枭熊",
+        "跳跃"
+      ],
+      "event_only": true,
+      "effect_text": "X 费，打出时消耗全部费用。落地时力量记为 X、生命记为 9X，本场战斗不再变化；X 为 0 时它一落地就倒下。行动时跳跃到一个空格子，对周围距离 1 的敌方单位各造成等同于力量的伤害。不能进行常规攻击。",
+      "target_mode": "none",
+      "x_cost": true,
+      "color": "紫",
+      "image": ""
+    },
+    {
+      "id": 9214,
+      "name": "枭熊",
+      "kind": "盟友",
+      "cost": 10,
+      "power": 10,
+      "health": 100,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "枭熊",
+        "跳跃"
+      ],
+      "effect_text": "不能进行常规攻击。行动时跳跃到一个空格子，对周围距离 1 的敌方单位各造成等同于力量的伤害。",
+      "target_mode": "none",
+      "color": "白",
+      "image": ""
     }
   ]
 }

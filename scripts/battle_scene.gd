@@ -214,6 +214,9 @@ const COL_MOVE := Color(0.184, 0.682, 0.306, 0.55)
 const COL_ATTACK := Color(0.831, 0.227, 0.184, 0.55)
 const COL_HP := Color(0.545, 0.102, 0.102, 0.75)
 const COL_SPELL := Color(0.416, 0.290, 0.839, 0.55)
+## R467：枭熊「落地重击」覆盖到的格子（琥珀）—— 与移动绿 / 攻击红刻意分开：
+## 那些是「点下去就发生」，这一层只是**预告**（真正落点是玩家悬停的那个绿格）。
+const COL_SLAM := Color(0.851, 0.608, 0.235, 0.60)
 const COL_FENCE_MERGE := Color(0.851, 0.545, 0.098, 0.60)   # 叠栅栏（栅栏修复术）：目标格 = 已有栅栏
 ## R102：两段式技能「已选中第一个单位」的标记 —— 金黄粗描边 + 角标「已选」。
 ## 与 COL_SPELL（候选目标）刻意区分开：那个是"还能点"，这个是"已经点过了"。
@@ -4472,6 +4475,11 @@ func _select_board(cell: Vector2i) -> void:
 		hp_targets_arr = []
 	else:
 		hp_targets_arr = engine.hp_targets(cell)
+	# R467 枭熊「跳跃」：绿格 = 落点（**含自己脚下那一格 = 原地起跳**）；
+	# 红 / 深红恒空 —— 卡面程 0，它本来就不能进行常规攻击。
+	if p != null and engine.is_leaper(p):
+		status_text = ("%s：绿色 = 跳跃落点（点到它自己那格 = 原地起跳）；"
+				+ "落地对四邻的敌方单位各造成 %d 伤害") % [p.card.card_name, p.effective_power()]
 
 
 func _pass_moved_pending() -> int:
@@ -7584,7 +7592,14 @@ func _show_over(win: bool) -> void:
 				RunState.queue_relic_reward(dropped)
 			# R342：战斗胜利的卡牌奖励**只走这一个口** —— 持有「采集刀」6050 时
 			# 它内部会多入队一组（各自独立三选一）。别在这里直接调 queue_card_reward。
-			RunState.queue_battle_card_rewards(RunState.reward_type)
+			# R467：关卡若点名了 `reward_cards`（洞穴 → 传说卡「枭熊」），这一场的卡牌奖励
+			# 就**只有那一张**，不再摇三选一（采集刀也不叠加 —— 不然洞穴会给两张传说卡）。
+			var fixed_cards: Array = lvl.get("reward_cards", [])
+			if fixed_cards.is_empty():
+				RunState.queue_battle_card_rewards(RunState.reward_type)
+			else:
+				for fc in fixed_cards:
+					RunState.queue_fixed_card_reward(int(fc), true)
 			# R458 核心（6059）：**战斗中累计失去 15 点生命值**后，这一场胜利的奖励页里
 			# 会多出一条「核心」——献祭一张伤害技能牌，把它的第一段伤害变成另一张的附魔。
 			# 累计与「已触发」都在 RunState（唯一口），这里只把本场受伤合计交过去；
@@ -10598,10 +10613,44 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					mv_pts = [_cell_center(data["src"]),
 							_cell_center(data["dst"])]
 				var mv_steps := mv_pts.size() - 1
+				# R467：枭熊跃击画成**抛物线**，而且**不按路程算时长** ——
+				# 全场横跳若按 260ms/格，最远那一跳要 1.7 秒，读起来是慢动作。
+				# 原地起跳（src == dst）同样走这条：上抛再落回原地，一眼能看出它「跳了一下」。
+				# ⚠️ 折线插值是逐段 ease-out（`_display_center`），所以段数给足才圆。
+				if engine.is_leaper(pl2) and mv_pts.size() >= 2:
+					var l0 := mv_pts[0]
+					var l1 := mv_pts[mv_pts.size() - 1]
+					var lift := 58.0 + l0.distance_to(l1) * 0.10
+					var arc: Array[Vector2] = []
+					for k in 7:
+						var tt := float(k) / 6.0
+						arc.append(l0.lerp(l1, tt) + Vector2(0.0, -lift * 4.0 * tt * (1.0 - tt)))
+					mv_pts = arc
+					mv_steps = 1
 				_slides[pl2] = {"from": mv_pts[0], "to": mv_pts[mv_steps],
 						"pts": mv_pts, "sc": _grid_scroll,
 						"start": maxi(n, _anim_end_for(pl2)),
 						"dur": MOVE_SLIDE_BASE_MS + MOVE_SLIDE_PER_STEP_MS * mv_steps}
+		"owlbear_slam":
+			# R467：枭熊落地重击 —— 冲击环 / 播报一律排到**落地那一帧**
+			# （跳跃是滑行动画，`_slide_floor_at` 给的就是它落地的时刻）。
+			var sl_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var sl_at := maxi(n, _slide_floor_at(sl_cell))
+			_delayed.append({"at": sl_at, "kind": "slam_fx",
+					"data": {"pos": _cell_center(sl_cell), "sc": _grid_scroll,
+						"cells": data.get("cells", []),
+						"amount": int(data.get("amount", 0)),
+						"side": str(data.get("side", "opponent")),
+						"name": str(data["card"].card_name) if data.get("card") != null else "枭熊"}})
+		"owlbear_enter":
+			# R467：传说卡「枭熊」落地 —— X 快照那一刻报一句（力量 X / 生命 9X）。
+			var oe_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
+			_bursts.append({"pos": oe_pos, "sc": _grid_scroll, "start": n, "dur": 520,
+					"col": Color("a855d8"), "big": true})
+			_floaters.append({"pos": oe_pos + Vector2(0, -34), "sc": _grid_scroll,
+					"text": "枭熊 X=%d → %d 攻 / %d 血" % [int(data.get("x", 0)),
+						int(data.get("power", 0)), int(data.get("health", 0))],
+					"col": Color("b06fd8"), "start": n, "dur": 1700, "size": 17})
 		"attack":
 			var src_c := _cell_center(data["src"])
 			var dst_c := _cell_center(data["dst"])
@@ -10898,7 +10947,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					var fi_mv := _slide_floor_at(fc)
 					if fi_mv > fi_at:
 						fi_at = fi_mv
-					var fi_hold := (fi_seq >= 0 or fi_beam > 0 or fi_mv > 0) \
+					# R467 枭熊跃击：这笔伤害是「落地那一刻」砸出来的 —— 受击格自己没在滑，
+					# 等的是**落地点**的滑行（引擎在 `fx_impact` 里带了 `land`）。
+					var fi_land := 0
+					if data.get("land") is Vector2i:
+						fi_land = _slide_floor_at(data["land"] as Vector2i)
+						if fi_land > fi_at:
+							fi_at = fi_land
+					var fi_hold := (fi_seq >= 0 or fi_beam > 0 or fi_mv > 0 or fi_land > 0) \
 							and fi_pl != null and fi_pl.health > 0
 					if fi_hold:
 						_freeze_hp(fi_pl, fi_dmg)
@@ -13680,6 +13736,22 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 			# （_play_destroy_fx 内部的特效以当前滚动重新打标）。
 			_play_destroy_fx((d.center as Vector2) + _scroll_dy(float(d.get("sc", _grid_scroll))),
 					d.card as CardData)
+		"slam_fx":
+			# R467：落地重击 —— 落点一个大琥珀爆点 + 被砸的每一格小爆点 + 震屏 + 播报。
+			sfx.play("hit")
+			_shake(6.0, 240)
+			var sf_pos := (d.pos as Vector2) + _scroll_dy(float(d.get("sc", _grid_scroll)))
+			_bursts.append({"pos": sf_pos, "sc": _grid_scroll, "start": n, "dur": 700,
+					"col": Color("d79a3a"), "big": true})
+			for sf_c in (d.get("cells", []) as Array):
+				_bursts.append({"pos": _cell_center(sf_c as Vector2i), "sc": _grid_scroll,
+						"start": n, "dur": 480, "col": Color("c9772a"), "big": false})
+			var sf_n := (d.get("cells", []) as Array).size()
+			if sf_n > 0:
+				_say("💥 %s 落地重击：周围 %d 格各 %d 点伤害" % [
+						str(d.get("name", "枭熊")), sf_n, int(d.get("amount", 0))])
+			else:
+				_say("💥 %s 落地重击：周围没有敌方单位" % str(d.get("name", "枭熊")))
 		"hit":
 			sfx.play("attack")
 			if d.has("say"):
@@ -14025,6 +14097,17 @@ func _draw_highlights() -> void:
 			atk_src = selection[1]
 	for cell in move_targets:
 		_hl(cell, COL_MOVE)
+	# R467 枭熊：悬停一个绿格 → 把**它落地会砸到的那几格**标成琥珀并报伤害。
+	# 与技能卡的悬停预告同一套路（触屏没有 hover，靠选中时那行提示文字兜底）。
+	if atk_src.x >= 0 and engine != null:
+		var lsel: Placement = engine.state.unit_at(atk_src)
+		if lsel != null and engine.is_leaper(lsel):
+			var lhov: Variant = _cell_at(get_local_mouse_position())
+			if lhov != null and move_targets.has(lhov):
+				for sc2: Vector2i in engine._slam_cells(lhov as Vector2i, GameEngine.SIDE_SELF):
+					_hl(sc2, COL_SLAM)
+					_draw_dmg_preview(sc2, engine.preview_hit_damage(
+							engine.state.unit_at(sc2), lsel.effective_power(), true, false))
 	for cell in attack_targets_arr:
 		_hl(cell, COL_ATTACK)
 		if atk_src.x >= 0:

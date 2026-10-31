@@ -64,6 +64,8 @@ const ENCH_BADGE_K := 1.9       # 演示里徽章放大倍数（比卡面大，�
 ## R121：本面板是「满屏 + 接管鼠标」的覆盖层 → 打开/关闭时在 UiGate 登记/撤销，
 ## 让下层的道具悬停（RelicViewer 速览浮层等）自动让位。
 const GATE_ID := "reward_panel"
+## R467：传说卡揭示动画时长（光芒张开 → 金环收拢）。播完自动停（不再是时间基动画）。
+const LEGEND_FX_MS := 1100
 
 const PANEL_W := 1020.0
 const PANEL_H := 584.0
@@ -94,6 +96,8 @@ var _mention_hits: Array = []   # R168：本帧「提到的卡牌 / 道具」的
 var _hover_mention := {}        # R168：当前鼠标压中的那一个（{} = 没有）
 var _mention_pin := {}          # R302：触屏点一下钉住的那份说明（再点别处收起）
 var _pick_sel := -1           # R167：卡牌三选一里「已点选、待确认」的那张（触屏没有悬停）
+## R467：传说卡揭示动画的起点（ms；-1 = 没在播）。只影响绘制，不参与任何结算。
+var _legend_t := -1
 var _deck_hover := -1         # R398：删卡视图里鼠标压中的卡组下标（-1 = 没有）
 ## R458 核心视图：`_core_grid` 是**卡组下标**的列表（不是第几张卡），
 ## 网格位置 → 卡组下标的换算只在这一层，点击 / 绘制 / AI 桥都读同一份。
@@ -227,6 +231,12 @@ func _exit_tree() -> void:
 func _process(_delta: float) -> void:
 	if _cached_n != RunState.pending_reward_count():
 		_refresh_btn()
+	# R467：传说卡揭示动画是时间基的 —— 播完之前逐帧重绘，播完就收（不再空转）。
+	if _legend_t >= 0 and _root != null and _root.visible:
+		if Time.get_ticks_msec() - _legend_t < LEGEND_FX_MS:
+			_root.queue_redraw()
+		else:
+			_legend_t = -1
 	# R323：附魔演示是**时间基**动画 —— 只有这一种视图需要逐帧重绘
 	if _view == VIEW_ENCHANT and _root != null and _root.visible:
 		_root.queue_redraw()
@@ -287,6 +297,14 @@ func _entry_name(e: Dictionary) -> String:
 		return "删除卡组中的一张卡"
 	if k == "core":
 		return "核心"
+	# R467：传说卡是**固定单张**，列表里别写成「三选一」
+	if k == "cards" and bool(e.get("legendary", false)):
+		var lc: Array = e.get("candidates", [])
+		if not lc.is_empty():
+			var lcard: CardData = _repo_cards.get_card(int(lc[0]))
+			if lcard != null:
+				return "传说卡「%s」" % lcard.card_name
+		return "传说卡"
 	return "卡牌奖励（三选一）"
 
 
@@ -530,6 +548,9 @@ func _open_entry(i: int) -> void:
 		_view = VIEW_RELIC
 	else:
 		_view = VIEW_CARDS
+		# R467：传说卡（洞穴的「枭熊」）进来时播一次揭示动画 —— 这里只记起点，
+		# 逐帧重绘由 `_process` 按住（播完就停，不长占 CPU）。
+		_legend_t = Time.get_ticks_msec() if bool(e.get("legendary", false)) else -1
 	_scroll = 0.0
 	_hover_card = -1
 	_pick_sel = -1
@@ -1187,6 +1208,9 @@ func _draw_cards() -> void:
 	var total := 3 * CARD_W + 2 * CARD_GAP
 	var x0 := pr.position.x + (pr.size.x - total) / 2.0
 	var cands: Array = e.get("candidates", [])
+	# R467：候选不恒为 3 张（传说卡只有 1 张）→ 在同一条 3 列基线上居中，卡位宽度不变。
+	# `_card_rect_in()` 用的是同一段算式（点选命中不会和画面对不上）。
+	x0 += (3 - clampi(cands.size(), 1, 3)) * (CARD_W + CARD_GAP) / 2.0
 	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
 			"卡牌奖励 —— 点一张看说明，再确认加入卡组（%s）" % _entry_tag(e),
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_HEADING, Color("2f2a20"))
@@ -1201,6 +1225,11 @@ func _draw_cards() -> void:
 			"「%s」" % sub,
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY,
 			Color("b03a2e") if (must_pick and not settled) else UiTheme.INK_600)
+	# R467：传说卡揭示的第一段 —— 光芒画在卡**背后**（所以先画，卡再压上去）
+	var legend_ms := -1
+	if bool(e.get("legendary", false)) and not settled and _legend_t >= 0:
+		legend_ms = Time.get_ticks_msec() - _legend_t
+		_draw_legend_rays(_card_rect_in(e, 0), legend_ms)
 	for i in cands.size():
 		var card: CardData = _repo_cards.get_card(int(cands[i]))
 		if card == null:
@@ -1234,6 +1263,9 @@ func _draw_cards() -> void:
 				_root.draw_rect(rr, Color(1, 1, 1, 0.66), true)
 			else:
 				_root.draw_rect(rr.grow(4.0), UiTheme.ACCENT_GOLD, false, 3.0)
+	# R467：传说卡揭示的第二段 —— 金环从卡外收进卡框（画在卡**上面**）
+	if legend_ms >= 0:
+		_draw_legend_ring(_card_rect_in(e, 0), legend_ms)
 	# 悬停详情（卡面放不下效果文本）
 	_draw_card_detail(cands)
 	# R444：字段索引浮窗 —— 三选一的卡面只留卡名，`次元 / 嘲讽` 这些字**没有解释可看**。
@@ -1429,7 +1461,41 @@ func _card_rect_in(e: Dictionary, i: int) -> Rect2:
 	var pr := _cards_panel_rect()
 	var total := 3 * CARD_W + 2 * CARD_GAP
 	var x0 := pr.position.x + (pr.size.x - total) / 2.0
+	# R467：候选少于 3 张时居中（与 `_draw_cards` 里那段 x0 必须同步 —— 两处一起改）
+	x0 += (3 - clampi((e.get("candidates", []) as Array).size(), 1, 3)) * (CARD_W + CARD_GAP) / 2.0
 	return Rect2(x0 + i * (CARD_W + CARD_GAP), _cards_y(), CARD_W, CARD_H)
+
+
+func _draw_legend_rays(rr: Rect2, ms: int) -> void:
+	## R467：传说卡的「光芒」—— 卡背后一圈暖金底光 + 十二条放射光带，随时间张开、淡出。
+	## 只画在卡**背后**：卡面本身一动不改（缩放会把字糊掉，得不偿失）。
+	var c := rr.get_center()
+	var k := clampf(float(ms) / float(LEGEND_FX_MS), 0.0, 1.0)
+	var grow := 0.55 + 0.45 * (1.0 - pow(1.0 - k, 2.0))
+	var a := 0.55 * (1.0 - k)
+	_root.draw_circle(c, rr.size.y * 0.80 * grow, Color(1.0, 0.82, 0.36, 0.10 * (1.0 - k)))
+	var rays := 12
+	for i in rays:
+		var ang := TAU * float(i) / float(rays) + k * 0.5
+		var dir := Vector2(cos(ang), sin(ang))
+		var r0 := rr.size.y * 0.30
+		var r1 := rr.size.y * 1.05 * grow
+		var p1 := c + dir.rotated(-0.055) * r0
+		var p2 := c + dir.rotated(0.055) * r0
+		var p3 := c + dir * r1
+		_root.draw_colored_polygon(PackedVector2Array([p1, p2, p3]),
+				Color(1.0, 0.86, 0.45, a * 0.8))
+
+
+func _draw_legend_ring(rr: Rect2, ms: int) -> void:
+	## R467：传说卡的「收拢」—— 一圈金边从卡外收进卡框，同时一圈淡金脉动描边压住卡沿
+	## （脉动让「这张卡不一样」在动画结束后仍然读得出来）。
+	var k := clampf(float(ms) / float(LEGEND_FX_MS), 0.0, 1.0)
+	var e := 1.0 - pow(1.0 - k, 3.0)
+	_root.draw_rect(rr.grow(lerpf(46.0, 5.0, e)),
+			Color(1.0, 0.83, 0.38, 0.85 * (1.0 - k)), false, 3.0)
+	var pulse := 0.30 + 0.14 * sin(float(ms) / 240.0)
+	_root.draw_rect(rr.grow(4.0), Color(1.0, 0.84, 0.40, pulse), false, 2.0)
 
 
 # ------------------------------------------------------------ 输入

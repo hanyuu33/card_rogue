@@ -81,6 +81,9 @@ func reward_pool() -> Array[CardData]:
 	for c: CardData in obtainable_cards():
 		if RunState.is_card_banned(c.id):
 			continue
+		# R467：`event_only` = 只该从事件 / 关卡奖励拿到的卡（洞穴的枭熊 9213）→ 不进随机池。
+		if c.event_only:
+			continue
 		out.append(c)
 	return out
 

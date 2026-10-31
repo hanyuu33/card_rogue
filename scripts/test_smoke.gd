@@ -92,6 +92,14 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r466_anim_cue],
+		# R467 洞穴 · 枭熊（用户口径）：枭熊「不能（常规）攻击」，行动 = 跳到任意空格并砸四邻。
+		#   真场景验三件事：程 0 无普攻目标 / 界面绿格与落点同口 / 跃击两段演出（抛物线 + 落地重击）。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = GameLevels.cave_level(),
+			_check_r467_cave],
 		# R395（用户报）：继续游戏进战斗后用「填充」，选卡页弹出来**没有待选卡**，
 		# 选不了、回合也结束不了。规则：候选空 → 不许开空网格；选卡页开着 → 不给结束回合。
 		["res://scenes/battle.tscn", func():
@@ -1838,6 +1846,66 @@ func _check_relic_bar(scene: Variant) -> void:
 	print("SMOKE OK 道具查看：地图徽章上限 %d 个 / 3 件不溢出无 +N / 10 件留 1 个 +N 可点 / 详情 %d 件全列且字号 %d>%d"
 			% [n_max, rows.size(), int(scene.RELIC_P_NAME), int(scene.RELIC_P_DESC)])
 
+
+func _check_r467_cave(scene) -> void:
+	## R467 洞穴 · 枭熊：在**真场景**里验三件事 ——
+	##   ① 程 0 = 不能常规攻击（普攻 / 直击 HP 都没有目标）；
+	##   ② 界面绿格与引擎落点同一个口（`_reachable` 直接给 `leap_cells`）；
+	##   ③ 跃击是**两段**演出：抛物线位移（7 点弧）+ 落地重击排在落地那一帧之后。
+	## 判据全用「真的调了一次引擎、真的排了演出」，不做源码字符串断言。
+	var eng: Variant = scene.engine
+	if eng == null:
+		_smoke_fail("R467：场景里没有引擎，验不了洞穴关卡")
+		return
+	var owl: CardData = scene.repo.get_card(9214)
+	var meat: CardData = scene.repo.get_card(1053)      # 骷髅兵：当个挨砸的
+	if owl == null or meat == null:
+		_smoke_fail("R467：取不到枭熊 9214 / 演示卡 1053")
+		return
+	var src := Vector2i(1, 1)
+	var dst := Vector2i(2, 0)
+	eng.state.place(CardData.from_dict(owl.to_dict()), src, GameEngine.SIDE_OPPONENT)
+	eng.state.place(CardData.from_dict(meat.to_dict()), Vector2i(2, 1), GameEngine.SIDE_SELF)
+	var p: Placement = eng.state.unit_at(src)
+	if p == null:
+		_smoke_fail("R467：枭熊没放上场")
+		return
+	# ① 不能常规攻击
+	if (not eng.attack_targets(src, GameEngine.SIDE_OPPONENT).is_empty()
+		or not eng.hp_targets(src, GameEngine.SIDE_OPPONENT).is_empty()):
+		_smoke_fail("R467：枭熊程 0 却还有常规攻击 / 直击目标")
+		return
+	# ② 落点 = 界面绿格（同一个口）
+	var leap: Array = eng.leap_cells(src, GameEngine.SIDE_OPPONENT)
+	if not leap.has(src) or not leap.has(dst) or leap.has(Vector2i(2, 1)):
+		_smoke_fail("R467：跳跃格不对（原地 %s / 空格 %s / 有人的格 %s）" % [
+			str(leap.has(src)), str(leap.has(dst)), str(leap.has(Vector2i(2, 1)))])
+		return
+	if eng._reachable(src, GameEngine.SIDE_OPPONENT).size() != leap.size():
+		_smoke_fail("R467：界面绿格与引擎落点不同口（%d vs %d）" % [
+			eng._reachable(src, GameEngine.SIDE_OPPONENT).size(), leap.size()])
+		return
+	# ③ 跃过去 —— 走真引擎，看演出排队
+	scene._delayed.clear()
+	scene._slides.clear()
+	eng._leap(src, dst, GameEngine.SIDE_OPPONENT)
+	var sld: Dictionary = scene._slides.get(eng.state.unit_at(dst), {})
+	if (sld.get("pts", []) as Array).size() != 7:
+		_smoke_fail("R467：跃击没画成抛物线（%d 点）" % (sld.get("pts", []) as Array).size())
+		return
+	var sl_at := -1
+	for dz: Dictionary in scene._delayed:
+		if str(dz.get("kind", "")) == "slam_fx":
+			sl_at = int(dz.get("at", -1))
+	if sl_at < 0:
+		_smoke_fail("R467：落地重击没排队（没有 slam_fx）")
+		return
+	var land_at: int = scene._slide_floor_at(dst)
+	if sl_at < land_at:
+		_smoke_fail("R467：落地重击排在 %d，早于落地 %d（字先飘、人才到）" % [sl_at, land_at])
+		return
+	print("SMOKE OK R467 洞穴：枭熊程 0 无普攻 / 跳跃格 %d 个（含原地）/ 抛物线 7 点 / 落地重击排在落地帧 %d"
+			% [leap.size(), sl_at])
 
 func _next() -> void:
 	if _cur != null:

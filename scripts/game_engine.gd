@@ -49,6 +49,9 @@ var dice_energy_turns:= 0
 ## R311 不锈钢盆（6041）：剩余点数（0 = 没有盆）。
 ## battle_scene 从 `RunState.basin_charge` 灌入；承伤时递减，`basin` 动作回写界面。
 var basin_charge:= 0
+## R467：这一次伤害的「落地点」（枭熊跃击）。非 -1 时 `_hit_unit` 会把它塞进
+## `fx_impact` → 界面把伤害数字排到**落地那一帧**（否则又是「字比人先到」）。
+var _hit_land:= Vector2i(-1, -1)
 ## R313：**技能卡结算作用域**（深度计数）。快速符文的百分比只认技能伤害 ——
 ## 效果卡 / 陷阱 / 反伤打出来的伤害不享受。
 ## ⚠️ 用深度而不是布尔：回响会嵌套重放同一张技能卡，布尔会在内层退出时提前关掉。
@@ -1150,6 +1153,24 @@ const ENERGY_CANNON_DMG:= 9
 #   * **不叠加**：效果区多张也只多打一发（与发明专家 9143 的「不可叠加」同口径）。
 const REFRACT_CANNON_ID:= 9211
 const REFRACT_TRAIT:= "折射"
+
+# ── R467：洞穴 · 枭熊（9212 关卡效果卡 / 9213 玩家传说卡 / 9214 敌方本体）──
+# 枭熊的**行动**只有一种：跳到任意空格（也可以原地起跳），落地时对周围**距离 1** 的
+# 敌方单位各造成一次「等同于它力量」的伤害。它**不能进行常规攻击** —— 卡面程 0，
+# `attack_targets` / `hp_targets` 自然恒空，不需要额外闸门（这是本作既有的「程 0」语义）。
+# 判定口：
+#   * `is_leaper()` —— 能不能跳（带「跳跃」trait）
+#   * `leap_cells()` —— 能跳到哪（唯一口：`_reachable` 的绿格、AI、引擎的落点校验全读它）
+#   * `_leap()` —— 跳跃本身（位移 → 场地/火墙 → 落地重击 → 横置），**唯一入口**
+# ⚠️ 「不能跳到敌方后排 HP 格子」不是枭熊专属规则 —— `unit_slot_allowed()` 本来就拦
+#    「对方后排行」，闪现（鸭子暗杀者）/ 召唤 / 位移全走那一条，这里不要再写一遍。
+const OWLBEAR_TRAIT:= "枭熊"
+const OWLBEAR_LEAP_TRAIT:= "跳跃"        # 行动 = 跳跃（唯一判据 trait）
+const OWLBEAR_INSTINCT_TRAIT:= "枭熊本能"  # 关卡效果卡 9212 的 trait（挂在敌方效果区）
+const OWLBEAR_GUARD:= 1                  # 半血以上：受到的伤害 -1
+const OWLBEAR_HP_PER_X:= 9               # 传说卡：生命 = 9X
+const OWLBEAR_CARD_ID:= 9213
+const OWLBEAR_FOE_ID:= 9214
 # 「填充」（9146，0 费普通技能）：将手牌里一张卡变成聚能炮击。两段式入口 `cast_reload`。
 const RELOAD_ID:= 9146
 # ── R290：机械之心两张伤害技能（集中突破 9162 / 冲击炮 9163）──
@@ -4728,6 +4749,12 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	if (card.kind == "盟友" or card.is_fort()) and not hand_place_allowed(cell, SIDE_SELF):
 		_log("%s 只能放在自己半场（下 3 行）" % card.card_name)
 		return null
+	# R467：**X 费单位**（传说卡「枭熊」9213）—— 费用要先记下来。
+	# `_pay()` 会把费用清空，落地时再读就恒为 0；`cost_of()` 对 x_cost 卡本来就返回
+	# 「该方剩余的全部费用」，所以这里读到的 X 与真正扣掉的完全同源。
+	var x_unit:= -1
+	if card.x_cost and card.traits.has(OWLBEAR_TRAIT):
+		x_unit = maxi(0, state.energy_of(SIDE_SELF))
 	var paid:= _pay(card)
 	# 栅栏修复术（6021）：把栅栏打到已有栅栏的格子上 → 合并（不新建单位）
 	var stack_onto: Placement = state.unit_at(cell)
@@ -4787,6 +4814,8 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 
 	var p:= state.place(card, cell, SIDE_SELF)
 	state.hand.remove_at(hand_index)
+	if x_unit >= 0:
+		_owlbear_enter(p, x_unit)      # R467：X 费单位落地快照（力量 X / 生命 9X）
 
 	if card.id == DAEDALUS_ID:
 		_daedalus_enter(p)          # R271 重做：入场 +3×聚能炮击生命 + 本回合炮击 0 费
@@ -4882,6 +4911,9 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	action.emit("place", {"cell": cell, "card": card, "side": SIDE_SELF})
 	_on_ally_entered(p, SIDE_SELF)
 	_note_card_played(SIDE_SELF, card)
+	# R467：X 为 0 的枭熊一落地就倒 —— 放在**所有入场钩子之后**再销毁（理由见 `_owlbear_enter`）。
+	if x_unit >= 0 and p.health <= 0 and state.board.has(cell):
+		_destroy(cell)
 	return p
 
 
@@ -11345,6 +11377,16 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		dmg = maxi(1, dmg - p.dmg_reduce)
 		if dmg != ab:
 			_log("%s：加厚装甲减伤 %d → 受到的伤害 %d → %d" % [p.card.card_name, p.dmg_reduce, ab, dmg])
+	# ①d 关卡效果卡「枭熊之怒」（9212，R467）：**半血以上**受到的伤害 -1（至少仍受 1 点）。
+	#    判据用「扣血之前」的生命 —— 这一下把枭熊从半血以上打进半血以下时，它吃的是
+	#    「半血以上」那一档；下一刀起才换成践踏。效果卡不在敌方效果区就不生效（卡面是关卡效果）。
+	if p != null and p.card != null and dmg > 0 and p.card.traits.has(OWLBEAR_TRAIT) \
+			and p.health * 2 > p.card.health \
+			and _zone_has(state.enemy_effects, OWLBEAR_INSTINCT_TRAIT):
+		var ob:= dmg
+		dmg = maxi(1, dmg - OWLBEAR_GUARD)
+		if dmg != ob:
+			_log("%s（半血以上）：受到的伤害 %d → %d" % [p.card.card_name, ob, dmg])
 	# ② 赫卡同克瑞斯（9136，R152）：孤军成立（hecaton_atk > 0）时受到的**攻击**伤害减半。
 	#    向下取整（int 除法）但至少 1 点 —— 与犀牛口径一致，1 点攻击不会被减成 0。
 	if p != null and p.card != null and dmg > 0 and kind == "attack" and p.hecaton_atk > 0:
@@ -11483,6 +11525,10 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 		dmg = maxi(1, dmg - p.upgrade_stacks * HEAVY_TANK_REDUCE_PER_STACK)
 	if dmg > 0 and p.dmg_reduce > 0:
 		dmg = maxi(1, dmg - p.dmg_reduce)
+	# R467 枭熊之怒（9212）：与 `_unit_damage_taken()` 的 ①d 同位置同理
+	if dmg > 0 and p.card.traits.has(OWLBEAR_TRAIT) and p.health * 2 > p.card.health \
+			and _zone_has(state.enemy_effects, OWLBEAR_INSTINCT_TRAIT):
+		dmg = maxi(1, dmg - OWLBEAR_GUARD)
 	if dmg > 0 and is_attack and p.hecaton_atk > 0:
 		dmg = maxi(1, dmg / 2)
 	if dmg > 0 and not is_attack and p.card.id != MASS_HELIOS_ID \
@@ -11660,6 +11706,8 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 				"source": source, "side": p.owner}
 		if seq >= 0:
 			fi["seq"] = seq     # R363：多目标效果 → 界面按序号逐格错开落地
+		if _hit_land.x >= 0:
+			fi["land"] = _hit_land   # R467 枭熊跃击：数字等落地那一帧（R466 同一口径）
 		action.emit("fx_impact", fi)
 	return dmg
 
@@ -13474,6 +13522,11 @@ func move_path(src: Vector2i, dst: Vector2i, side: String) -> Array[Vector2i]:
 
 
 func _reachable(cell: Vector2i, side: String) -> Array[Vector2i]:
+	# R467 枭熊（带「跳跃」trait）：**全图任意空格 + 原地**都是落点 —— 不看移动速度、
+	# 不看阻挡（与闪现同一个语义，只是落点还包含自己那一格 = 原地起跳）。
+	var leaper:= state.unit_at(cell)
+	if leaper != null and is_leaper(leaper) and leaper.owner == side:
+		return leap_cells(cell, side)
 	var result: Array[Vector2i] = []
 	for c: Vector2i in _move_bfs(cell, side).keys():
 		# 穿行会把「路过的被占格」也记进来 —— 那不是合法落点，要剔除。
@@ -13573,6 +13626,12 @@ func hp_targets(cell: Vector2i, side:= SIDE_SELF, card: CardData = null) -> Arra
 
 
 func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void :
+	var lp:= state.unit_at(src)
+	# R467：枭熊的「移动」一律是跳跃 —— 走 `_leap()` 那条唯一的门，界面上点绿格、
+	# AI 推进、联机回放全都自动同口径（落点含原地，`dst == src` 就是原地起跳）。
+	if lp != null and lp.owner == side and is_leaper(lp):
+		_leap(src, dst, side)
+		return
 	var p:= state.unit_at(src)
 	if p == null or p.owner != side:
 		_log("%s 上没有我方卡" % src)
@@ -13661,6 +13720,186 @@ func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void
 	if attack_targets(dst, side, p.card).is_empty()\
 	and hp_targets(dst, side, p.card).is_empty():
 		_tap(p, "移动后无攻击目标，放弃攻击")
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  R467：枭熊 —— 跳跃 / 落地重击
+# ══════════════════════════════════════════════════════════════════════
+
+func is_leaper(p: Placement) -> bool:
+	## 能不能「跳」（唯一判据）。带「跳跃」trait 的单位，行动方式被整条替换掉。
+	return p != null and p.card != null and p.card.traits.has(OWLBEAR_LEAP_TRAIT)
+
+
+func leap_cells(cell: Vector2i, side: String) -> Array[Vector2i]:
+	## 跳跃落点（唯一口）：**原地 + 全图任意空格**，只排除「对方后排行」——
+	## 那一行是直击 HP 的落点行，单位站上去等于拿对方血条当垫脚石（`unit_slot_allowed`）。
+	## 顺序固定为「原地 → 行优先 → 列优先」，AI 的平手判定与回放都靠它保持确定性。
+	var out: Array[Vector2i] = [cell]
+	for r in FieldState.BOARD_ROWS:
+		for c in FieldState.BOARD_COLS:
+			var t:= Vector2i(r, c)
+			if t == cell:
+				continue
+			if state.board.has(t):
+				continue
+			if not unit_slot_allowed(t, side):
+				continue
+			out.append(t)
+	return out
+
+
+func _slam_cells(dst: Vector2i, side: String) -> Array[Vector2i]:
+	## 落地重击覆盖到的格子 = 落点**上下左右**四格里的**敌方**单位。
+	## 「距离 1」按引擎自己的距离尺（`manhattan`，程 1 就是正交邻格）——
+	## 与本作「射程 1 = 四邻」一致，不另立一套切比雪夫尺。
+	var out: Array[Vector2i] = []
+	for d: Vector2i in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
+		var c:= dst + d
+		if c.x < 0 or c.x >= FieldState.BOARD_ROWS:
+			continue
+		if c.y < 0 or c.y >= FieldState.BOARD_COLS:
+			continue
+		var q:= state.unit_at(c)
+		if q == null or q.owner == side:
+			continue
+		out.append(c)
+	return out
+
+
+func _has_trample(p: Placement) -> bool:
+	## 「践踏」判定口（跃击专用）：自带「践踏」trait，或 —— 关卡效果卡 9212 在场时，
+	## 枭熊**掉到一半生命或以下**就获得践踏（卡面原话「半血以下」）。
+	## 半血以上那一条（受伤 -1）在 `_unit_damage_taken()` / `preview_hit_damage()`，
+	## 这里只管「溢出伤害传不传」。
+	if p == null or p.card == null:
+		return false
+	if p.card.traits.has(TRAMPLE_TRAIT):
+		return true
+	if p.card.traits.has(OWLBEAR_TRAIT) \
+			and _zone_has(state.enemy_effects, OWLBEAR_INSTINCT_TRAIT) \
+			and p.health * 2 <= p.card.health:
+		return true
+	return false
+
+
+func _leap(src: Vector2i, dst: Vector2i, side: String) -> void:
+	## 跳跃（枭熊的唯一行动）：
+	##   ① 落点校验（原地 / 任意空格，后排 HP 行由 `unit_slot_allowed` 拦）；
+	##   ② dst != src 才真的位移（场地卡 / 火墙照旧按「移动经过」结算 —— 跃过它们也算经过）；
+	##   ③ 落地重击（`_owlbear_slam`）；
+	##   ④ 横置（跃击就是这一轮的全部行动，不能接着普攻 —— 卡面「不能进行常规攻击」）。
+	var p:= state.unit_at(src)
+	if p == null or p.owner != side:
+		_log("%s 上没有我方卡" % src)
+		return
+	if p.tapped:
+		_log("%s 已横置，本回合不能跳跃" % p.card.card_name)
+		return
+	if p.rooted > 0:
+		_log("%s 被禁足，本回合不能跳跃" % p.card.card_name)
+		return
+	if p.moved:
+		_log("%s 本回合已经行动过一轮" % p.card.card_name)
+		return
+	if not unit_slot_allowed(dst, side):
+		_log("不能跳到对方后排")
+		return
+	if dst != src and state.board.has(dst):
+		_log("跳跃落点 %s 已有单位" % dst)
+		return
+	var path: Array[Vector2i] = [src, dst]
+	if dst != src:
+		state.move_unit(src, dst)
+		p.moved = true
+		p.did_move = true
+	action.emit("move", {"src": src, "dst": dst, "card": p.card,
+			"side": side, "path": path})
+	if dst == src:
+		_log("%s 原地起跳（落地重击）" % p.card.card_name)
+	else:
+		_log("%s 跃向 %s" % [p.card.card_name, dst])
+		_field_trigger(dst, p)
+		if p.health <= 0:
+			return
+		_fire_wall_pass(path)
+		if p.health <= 0:
+			return
+	_owlbear_slam(p, dst)
+	if p.health <= 0 or over:
+		return
+	if not p.tapped:
+		_tap(p, "跳跃落地")
+
+
+func _owlbear_slam(p: Placement, dst: Vector2i) -> void:
+	## 落地重击：落点四邻的敌方单位各吃一次「等同于它力量」的伤害。
+	## 口径与普通攻击一致（`effective_power + 回合/光环加成`，且**按攻击类**结算 ——
+	## 卡面写的就是「等同于力量的伤害」，不该被「技能伤害减半 / 技能抗性」白吃一层）。
+	## 践踏（半血以下，见 `_has_trample`）：砸死的那个单位，溢出伤害沿**同列**继续传，
+	## 与落石陷阱同一条路（`_rockfall_overflow`）—— 陷阱没有攻击者，而这里**有**
+	## （击杀记功要记给枭熊，鸭子骑士那类「击杀成长」才认得出是谁干的）。
+	var power:= p.effective_power() + _turn_dmg_bonus(p.owner) + _ally_dmg_bonus(p.card, p.owner)
+	var cells:= _slam_cells(dst, p.owner)
+	action.emit("owlbear_slam", {"cell": dst, "cells": cells, "amount": power,
+			"card": p.card, "side": p.owner})
+	if cells.is_empty():
+		_log("%s 落地重击：周围没有敌方单位（践踏不触发）" % p.card.card_name)
+		return
+	var trample:= _has_trample(p)
+	_hit_land = dst
+	var seq:= 0
+	for c: Vector2i in cells:
+		var q:= state.unit_at(c)
+		if q == null:
+			continue
+		var hp_before:= q.health
+		q.last_hit_by = dst
+		var dmg:= _hit_unit(q, power, "跃击", true, true, seq)
+		seq += 1
+		_log("%s 落地重击 %s：-%d 生命（剩 %d）" % [
+				p.card.card_name, q.card.card_name, dmg, q.health])
+		if q.health > 0:
+			continue
+		_destroy(c)
+		if not trample:
+			continue
+		var overflow:= dmg - maxi(hp_before, 0)
+		if overflow <= 0:
+			continue
+		var res: Array = _rockfall_overflow(c, q.owner, overflow, "践踏", dst)
+		var left:= int(res[0])
+		if left <= 0:
+			continue
+		var pierced:= str(res[1])
+		if pierced == "":
+			pierced = q.card.card_name
+		_log("枭熊践踏：%d 点打穿整列 → 漏到 %s HP" % [
+				left, "敌方" if q.owner == SIDE_OPPONENT else "我方"])
+		_damage_player(q.owner, left, "践踏")
+		action.emit("trample", {"side": q.owner, "amount": _last_hp_damage,
+				"dst": c, "atk_name": p.card.card_name, "def_name": pierced})
+	_hit_land = Vector2i(-1, -1)
+	_destroy_dead()
+
+
+func _owlbear_enter(p: Placement, x: int) -> void:
+	## 传说卡「枭熊」9213：**X 费单位**（与流星雨的 X 费技能不同，这是第一张 X 费盟友）。
+	## 费用在 `play_from_hand` 里已经按「全部剩余费用」扣掉 → 这里把 X **快照**成力量 / 生命，
+	## 之后本场战斗不再变化（卡面「落地时记录，本场不再变化」）。
+	## X 为 0（空手打出）：力量 0、生命 0 → 一落地就倒（用户口径「0 费打出立即死亡」）。
+	var hp:= x * OWLBEAR_HP_PER_X
+	p.card.power = x
+	p.card.health = hp
+	p.health = hp
+	_log("枭熊落地：X=%d → 力量 %d / 生命 %d" % [x, x, hp])
+	action.emit("owlbear_enter", {"cell": _cell_of(p), "card": p.card,
+			"x": x, "power": x, "health": hp})
+	if x <= 0:
+		# ⚠️ 这里**只记日志**，不 `_destroy` —— 销毁放在 `play_from_hand` 的收尾：
+		# 入场钩子（疾风之力 / 道具加成 / 印记）拿到的应该是一个「刚落地」的单位，
+		# 提前销毁会让它们对着一个已经不在 board 上的 Placement 干活（`_cell_of` = -1）。
+		_log("枭熊：X 为 0，一落地就倒下了")
 
 
 func can_activate(cell: Vector2i, side:= SIDE_SELF) -> bool:
@@ -13957,7 +14196,8 @@ func _rockfall_trap(cell: Vector2i, mover: Placement, bonus: int) -> void :
 			action.emit("trample", {"side": mover.owner, "amount": _last_hp_damage,
 				"dst": cell, "atk_name": "落石陷阱", "def_name": pierced_name})
 
-func _rockfall_overflow(from_cell: Vector2i, side: String, remaining: int) -> Array:
+func _rockfall_overflow(from_cell: Vector2i, side: String, remaining: int,
+		src_name := "落石陷阱", killer := Vector2i(-1, -1)) -> Array:
 		## 落石陷阱的践踏链（R248）—— `_trample_chain` 的**陷阱版**：同列、同侧、逐个击穿。
 		## 与攻击践踏只有两处差异：方向取「踩雷者所在方的**后排**」（不是远离攻击者），
 		## 伤害来源记「落石陷阱」（is_attack = false，效果伤害而非普通攻击）。
@@ -13978,12 +14218,14 @@ func _rockfall_overflow(from_cell: Vector2i, side: String, remaining: int) -> Ar
 			if next == null or next.owner != side:
 				continue               # 空格 / 同列的对方单位 → 继续往深处找
 			var hp_before: int = next.health
-			next.last_hit_by = Vector2i(-1, -1)   # 同上：落石击杀不记功给单位
-			var dmg: int = _hit_unit(next, remaining, "落石陷阱")
-			_log("落石践踏：%d 点沿同列传给 %s（造成 %d 点伤害）" % [
-				remaining, next.card.card_name, dmg])
+			# R467：`killer` 默认 -1（落石没有攻击者，不记功）；枭熊跃击会把**落点**传进来，
+			# 于是「砸死的也算它杀的」（击杀成长那族才认得出是谁干的）。
+			next.last_hit_by = killer
+			var dmg: int = _hit_unit(next, remaining, src_name)
+			_log("%s：%d 点沿同列传给 %s（造成 %d 点伤害）" % [
+				src_name, remaining, next.card.card_name, dmg])
 			action.emit("trample_hit", {"cell": cell, "side": next.owner, "amount": dmg,
-				"name": next.card.card_name, "from": from_cell, "atk_name": "落石陷阱"})
+				"name": next.card.card_name, "from": from_cell, "atk_name": src_name})
 			pierced = next.card.card_name
 			if next.health > 0:
 				return [0, pierced]    # 没打死 → 溢出到此为止（它吃满）
@@ -15576,6 +15818,11 @@ func _ai_act(cell: Vector2i, p: Placement) -> void :
 	if _assassin_passive(p):
 		_assassin_act(cell, p)
 		return
+	# R467 枭熊：整条行动被「跳跃」替换（程 0 → 本来也没有可打的目标，
+	# 走通用流程只会「原地待命」白站一回合）。
+	if is_leaper(p):
+		_owlbear_act(cell, p)
+		return
 
 
 
@@ -15644,6 +15891,49 @@ func _ai_act(cell: Vector2i, p: Placement) -> void :
 
 		attack(dst, _ai_pick_card_target(atk_targets, moved), SIDE_OPPONENT)
 	return
+
+# ================= R467：枭熊专属 AI =================
+
+func _owlbear_key(src: Vector2i, dst: Vector2i, p: Placement) -> Array:
+	## 落点排序键（字典序，越小越好）：① 砸不到人 → 差（1 优于 0）；
+	## ② 能砸死几只（多者优先）；③ 总伤害（高者优先）；④ 末位按格位定序（确定性）。
+	## 跳跃是全场任意格，所以**不按距离给分** —— 挪得近不积累任何优势（与暗杀者同一条理由）。
+	var power:= p.effective_power() + _turn_dmg_bonus(p.owner) + _ally_dmg_bonus(p.card, p.owner)
+	var cells:= _slam_cells(dst, p.owner)
+	var kills:= 0
+	var total:= 0
+	for c: Vector2i in cells:
+		var q:= state.unit_at(c)
+		if q == null:
+			continue
+		var d:= int(preview_hit_damage(q, power, true, false).get("dmg", 0))
+		if d < 0:
+			d = power
+		if d >= q.health:
+			kills += 1
+		total += d
+	return [0 if not cells.is_empty() else 1, -kills, -total, dst.x, dst.y]
+
+
+func _owlbear_act(cell: Vector2i, p: Placement) -> void :
+	## 枭熊 AI：把「原地 + 全图空格」全排一遍，挑最能砸的那个落点；一个都砸不到就原地待命
+	## （不乱跳 —— 跳跃没有距离概念，白挪一次只是浪费自己的行动）。
+	## 平手时**不优先原地**：能砸到同样多人的落点里，坐标序小的先胜 —— 与暗杀者
+	## 「原手优先」不同，因为枭熊原地多半只能砸到 1 只，而换一格常常能砸 2 只。
+	var best: Vector2i = cell
+	var best_key:= _owlbear_key(cell, cell, p)
+	for dst in leap_cells(cell, p.owner):
+		if dst == cell:
+			continue
+		var k:= _owlbear_key(cell, dst, p)
+		if k < best_key:
+			best_key = k
+			best = dst
+	if best == cell and _slam_cells(cell, p.owner).is_empty():
+		_tap(p, "AI：跳过去也砸不到人")
+		return
+	_leap(cell, best, p.owner)
+
 
 # ================= R111：鸭子暗杀者专属 AI =================
 

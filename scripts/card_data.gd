@@ -213,6 +213,10 @@ var is_ephemeral: bool = false
 var locked: bool = false
 ## R351：不可从卡组删除（事件专属卡 / 陶罐诅咒）。删卡界面据此拦住，**删不掉**。
 var no_remove: bool = false
+## R467：**只从事件 / 关卡奖励得到**的卡（洞穴的传说卡「枭熊」9213）——
+## 不进随机奖励池（`CardRepo.reward_pool()` 唯一判据），免得「专属奖励」变成随处可见的史诗。
+## 与 `locked` 的区别：那个是「还没解锁」，这个是「本来就不该随机出现」（永远不进池）。
+var event_only: bool = false
 ## R373：**这张卡不能打出**（诅咒「麻痹」9185）。
 ## 判据只认本字段 —— 界面置灰 / 引擎三个出牌入口（play_from_hand / use_spell /
 ## use_curse）全部读它，不许按 id 硬编码。
@@ -277,6 +281,7 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.random_born = bool(d.get("random_born", false))
 	# R346：剧情解锁标记（缺省 false = 老数据不用改，一直在池子里）
 	c.locked = bool(d.get("locked", false))
+	c.event_only = bool(d.get("event_only", false))
 	# R351：**这张卡不能从卡组删除**（月亮 9180 / 硬币 9181 / 罐子 9157）。
 	# 缺省 false → 老数据一行都不用改；判据只认本字段，界面里不许按 id 硬编码。
 	c.no_remove = bool(d.get("no_remove", false))
@@ -338,6 +343,7 @@ func to_dict() -> Dictionary:
 		"random_born": random_born,
 		# R346：剧情解锁标记随复制通道走（复制出来的卡不该突然变成「已解锁」的普通卡）。
 		"locked": locked,
+		"event_only": event_only,
 		# R351：不可删除标记同样随复制通道走（复制出来的月亮 / 硬币也不许删）。
 		"no_remove": no_remove,
 		"unplayable": unplayable,

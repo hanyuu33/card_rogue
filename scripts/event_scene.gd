@@ -197,6 +197,10 @@ const DELIVERY_DONE_DESC := """第二层的第一个事件房里，货主早就�
 还有藏得最深的大奖——一块巧克力（概率 10%%）。
 交付完成后货物全部收走（从卡组里删除）。"""
 
+const CAVE_DESC := """山壁上裂着一道口子，风从深处吹出来，带着兽类的臊味。
+
+地上有什么很沉的东西压出的爪印，一直通向黑暗里。"""
+const CAVE_TAKEN_DESC := """洞口的爪子印被新的压住了——里面那只醒了。"""
 const MERCHANT_DESC := """「旧牌换新牌，五费换宝箱，贱卖也收。」
 摊主把三张牌在桌面上翻来翻去，帽檐下只看得见半张笑。
 
@@ -403,6 +407,13 @@ func _is_adventurer() -> bool:
 	return _is_event_node() and _pending_kind() == "adventurer"
 
 
+func _is_cave() -> bool:
+	## R467 洞穴（第二层专属）：两个选项 —— 探索（打一场，赢了拿传说卡）／离开。
+	## ⚠️ 这是**唯一一个会进战斗的事件房**（R128 之后事件房本来不再遭遇战斗）：
+	##    选项 1 直接把本页换成「洞穴」这一关（`GameLevels.cave_level()`）。
+	return _is_event_node() and _pending_kind() == "cave"
+
+
 func _is_bluefish() -> bool:
 	## 蓝色大肥鱼（第二层专属事件）：可将一张「鲸鱼之怒」（9050）加入卡组。
 	return _is_event_node() and _pending_kind() == "bluefish"
@@ -507,6 +518,8 @@ func _kind() -> String:
 		return "snow_leopard"
 	if _is_adventurer():
 		return "adventurer"
+	if _is_cave():
+		return "cave"
 	if _is_furnace():
 		return "furnace"
 	if _is_core_contract():
@@ -642,6 +655,10 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "adventurer"
+		if args[i] == "--cave":  # 演示：伪装 run 洞穴事件（R467 截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "cave"
 		if args[i] == "--bluefish":  # 演示：伪装 run 蓝色大肥鱼事件（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -1048,6 +1065,19 @@ func _ready() -> void:
 			# 两样都拿得到东西 → 没有「什么都不拿」这一项（同「雪豹出现」/「赏月」）。
 			leave_btn.visible = false
 			result_label.text = ""
+	elif _is_cave():
+		event_name.text = "洞 穴"
+		desc.text = CAVE_DESC
+		# 只有两个选项：探索（战斗 + 传说卡）／离开。没有第二选项按钮。
+		rest_btn.visible = true
+		rest_btn.text = "探索（与枭熊交手，胜利后获得传说卡「枭熊」）"
+		rest_btn.disabled = false
+		bbq_btn.visible = false
+		alt_btn.visible = false
+		leave_btn.visible = true
+		leave_btn.text = "离开"
+		leave_btn.disabled = false
+		result_label.text = ""
 	elif _is_treasure():
 		event_name.text = "宝  箱"
 		# R372：统一免费开、内容恒为卡牌（不再扣生命、不再随机成道具）。
@@ -1173,6 +1203,9 @@ func _on_main() -> void:
 	## 宝箱层 → 开箱获得 1 个随机奖励道具。
 	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
 	sfx.play("click")
+	if _is_cave():
+		_cave_explore()
+		return
 	if _is_core_contract():
 		_core_take_contract()
 		return
@@ -2160,6 +2193,16 @@ func _settle_before_pick() -> void:
 	## R216：奖励界面要跳去选卡页之前，先把本次事件节点标记完成 —— 否则回地图还能再进一次。
 	if RunState.run_active:
 		RunState.complete_current()
+
+
+func _cave_explore() -> void:
+	## R467 洞穴 · 选项 1「探索」：本页直接换成洞穴战斗。
+	## `pending_node` **保持事件房那一份**（type = "event"）—— 战斗结算就会按事件房处理
+	## （不按精英发删卡 / 不掉精英道具），而关卡本身由 `pending_level` 指定。
+	## 房间标记先做掉（`complete_current` 幂等，战斗胜利时 battle_scene 会再调一次）。
+	RunState.pending_level = GameLevels.cave_level()
+	RunState.complete_current()
+	SceneFx.goto("res://scenes/battle.tscn")
 
 
 func _on_leave() -> void:

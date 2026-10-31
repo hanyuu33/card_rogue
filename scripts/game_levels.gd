@@ -91,6 +91,40 @@ static func builtin_levels() -> Array:
 			_boss_revelator()]
 
 
+static func cave_level() -> Dictionary:
+	## R467：洞穴 —— **事件专属关卡**（第 36 关，但**不进 `builtin_levels()`**）。
+	## 只有「洞穴」事件选「探索」才进这一关，地图的普通 / 精英 / Boss 池永远摇不到它，
+	## 所以关卡统计、`all_keys()`、按层内容池的既有口径一字不动。
+	##
+	## 枭熊（9214）：10 攻 / 100 血 / 程 0 / 速 0。
+	##   * **程 0 = 不能进行常规攻击** —— 卡面射程 0 时 `attack_targets` / `hp_targets`
+	##     本来就是空的，不需要再加闸门（这是本作既有的「程 0」语义）；
+	##   * 它的全部威胁来自「跳跃 + 落地重击」（引擎 `_leap`）：跳到任意空格（含原地），
+	##     对落点四邻的**敌方**单位各造成等同于力量的伤害；
+	##   * 关卡效果卡「枭熊之怒」9212：半血以上受伤 -1，半血及以下获得践踏。
+	## 奖励：传说卡「枭熊」9213（`reward_cards` → 胜利后的奖励页**固定**只给这一张）。
+	return {
+		"name": "洞穴",
+		"key": "cave_owlbear",
+		"tier": TIER_ELITE_EASY,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9214, "枭熊", 10, 100, 0, 0, Vector2i(1, 1)],
+		],
+		"enemy_effects": [9212],
+		"reward_cards": [9213],
+		"event_only": true,
+		"tutorial": [],
+	}
+
+
 static func layer_of(level: Dictionary) -> int:
 	## 关卡所属层（未标 layer 的关卡按第一层处理）。
 	return int(level.get("layer", GameLayers.LAYER_DEFAULT))

@@ -756,9 +756,13 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	if base_health != null:
 		base_health = int(base_health) + card.diff_health
 	var shown_power: int = power_override if power_override >= 0 else card.power
+	# R467：**X 费单位**（传说卡「枭熊」9213）—— 力 / 生都要等落地才有值，卡面写 X / 9X，
+	# 否则手牌里永远是「0 攻 0 血」，读起来像张废卡。
+	# ⚠️ 9X 的倍数与 `GameEngine.OWLBEAR_HP_PER_X` 是同一个数（那边改，这里也要改）。
+	var x_unit := card.x_cost and card.kind == "盟友"
 	draw_badge(canvas, font_bold, Vector2(power_x, bar_y), r, fs, "power",
-			str(shown_power), UiTheme.BADGE_POWER,
-			_delta_col(shown_power, base_power))
+			"X" if x_unit else str(shown_power), UiTheme.BADGE_POWER,
+			UiTheme.BADGE_VALUE if x_unit else _delta_col(shown_power, base_power))
 	var shown_range: int = badge_shown(card.attack_range, range_override)
 	draw_badge(canvas, font_bold, Vector2(range_x, bar_y), r, fs, "range",
 			str(shown_range), UiTheme.BADGE_RANGE,
@@ -774,8 +778,8 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 				str(shown_speed), UiTheme.BADGE_SPEED,
 				_delta_col(shown_speed, bv.get("speed")))
 	draw_badge(canvas, font_bold, Vector2(health_x, bar_y), r, fs, "health",
-			str(hp), UiTheme.BADGE_HEALTH,
-			_health_col(card, hp, base_health))
+			"9X" if x_unit else str(hp), UiTheme.BADGE_HEALTH,
+			UiTheme.BADGE_VALUE if x_unit else _health_col(card, hp, base_health))
 
 
 static func badge_shown(cur: int, override: int) -> int:
