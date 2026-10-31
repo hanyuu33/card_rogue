@@ -47,6 +47,13 @@ var desc := ""
 ## ⚠️ 只影响**奖励池**（`RelicRepo.reward_ids()`）：初始池 / 二层池 / 事件池 / 角色赠品
 ##    是显式 id 列表，不走随机，锁定标记对它们没有意义。
 var locked := false
+## R476（用户报「初始事件惊奇盒子不能关联到卡片惊奇盒子」）：
+## **这件道具会往卡组里加的那张卡**的 id（-1 = 不加卡）。
+## 以前这层关系只活在 `RunState.gain_relic()` 的 match 分支里 + desc 的一句中文，
+## 数据上没有引用 → 界面（起点浮窗 / 道具浮窗）没法把「道具」和「卡牌」连起来给玩家看。
+## 现在以 relics.json 的 `card` 字段为准，`RunState` 发卡也读它（见 `_grant_linked_card`）。
+## 消费方 = 起点事件浮窗 / 提及浮窗（`Mention.draw_tip`）/ 引擎回归断言。
+var card_id := -1
 
 
 static func normalize_tier(raw: String) -> String:
@@ -64,7 +71,16 @@ static func from_dict(d: Dictionary) -> RelicData:
 	r.desc = str(d.get("desc", ""))
 	# R346：剧情解锁标记（缺省 false = 老数据不用改，一直在奖励池里）
 	r.locked = bool(d.get("locked", false))
+	# R476：关联卡牌（缺省 -1 = 这件道具不加卡）。字段缺失一律回落，旧数据安全。
+	r.card_id = int(d.get("card", -1))
 	return r
+
+
+func granted_card() -> int:
+	## R476：这件道具会加进卡组的那张卡（-1 = 不加卡）。
+	## ⚠️ 唯一口 —— 界面要展示「获得卡牌」、`RunState` 要真发卡，都走这里；
+	##    不要再在别处按道具 id 硬写一遍映射（那是本次缺陷的成因）。
+	return card_id if card_id > 0 else -1
 
 
 func needs_pick() -> bool:

@@ -1244,11 +1244,14 @@ static func gain_relic(id: int) -> void:
 			hp = max_hp
 		PACK_RELIC_ID:   # 行囊（R244）：+100 金币 + 一张「木栅栏」进卡组
 			gold += PACK_GOLD
-			add_card(PACK_CARD_ID)   # 内部会 ensure_deck_mods()，附魔槽位不会错位
+			_grant_linked_card(relic, PACK_CARD_ID)   # 内部会 ensure_deck_mods()
 		POT_RELIC_ID:   # 陶罐（R245）：随机 2 件奖励道具 + 一张「罐子」诅咒进卡组
-			_apply_pot()
+			_apply_pot(relic)
 		BOX_RELIC_ID:   # 惊奇盒子（R341）：把一张「惊奇盒子」加进卡组
-			add_card(BOX_CARD_ID)
+			# R476：**读 relics.json 的 `card` 字段**（6047 → 9179）。之前这条写死
+			# `add_card(BOX_CARD_ID)`，而界面完全不知道这件道具对应哪张卡 ——
+			# 用户在起点事件里点开「惊奇盒子」只能读到一句中文描述，看不到卡片本身。
+			_grant_linked_card(relic, BOX_CARD_ID)
 		MILK_RELIC_ID:   # 牛奶（R224）：随机两种附魔，附给能附魔的卡
 			_apply_milk()
 		BASIN_RELIC_ID:   # 不锈钢盆（R311）：拿到就满 10 点计数
@@ -1263,7 +1266,23 @@ static func gain_relic(id: int) -> void:
 			pending_relic = relic.id
 
 
-static func _apply_pot() -> void:
+static func _grant_linked_card(rel: RelicData, fallback := -1) -> void:
+	## R476：「这件道具往卡组加哪张卡」的唯一发卡口。
+	## 以 relics.json 的 `card` 字段为准（`RelicData.granted_card()`）；
+	## 数据漏字段时回落 `fallback`（调用方传的老常量），**绝不静默少发一张卡**。
+	## ⚠️ 别在这里写 `if id == 6047` 这类分支 —— 数据驱动就是为了让界面和逻辑同源。
+	if rel == null:
+		if fallback > 0:
+			add_card(fallback)
+		return
+	var cid := rel.granted_card()
+	if cid <= 0:
+		cid = fallback
+	if cid > 0:
+		add_card(cid)
+
+
+static func _apply_pot(rel: RelicData = null) -> void:
 	## 陶罐（6032，R245）：随机拿 **2 件奖励道具**（不与已拥有的 / 本局跳过过的重复），
 	## 再塞一张「罐子」（9157）诅咒进卡组。
 	## 随机源走 `run_rng` → 同一种子必然同样的两件；抽中的即时道具（牛奶等）照常递归结算。
@@ -1277,7 +1296,8 @@ static func _apply_pot() -> void:
 			break
 		got.append(pick)
 		gain_relic(pick)
-	add_card(JAR_CURSE_ID)
+	# R476：罐子也走 `card` 字段（6032 → 9157），漏字段回落常量。
+	_grant_linked_card(rel, JAR_CURSE_ID)
 
 
 static func all_class_rewards() -> bool:

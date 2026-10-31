@@ -35,6 +35,9 @@ const OPT_H := 52.0
 const OPT_GAP := 28.0
 const OPT_BOTTOM_PAD := 20.0     # 选项行距对话框下沿
 const TIP_W := 470.0
+# R476：道具浮窗底部「获得卡牌」块的几何 —— 高度预算与绘制**共用**这两个数。
+const LINKED_HEAD_H := 34.0      # 分隔线 + 「获得卡牌」标题行占位
+const LINKED_CARD_H := 96.0      # 关联卡面缩略高度（宽按卡面比例 63:76 收）
 const TYPE_CPS := 26.0           # 流式输出速度（字 / 秒）
 
 var _font: Font
@@ -134,6 +137,10 @@ func _apply_demo_args() -> void:
 				_layer = GameLayers.LAYER_TWO
 			"--typedone":
 				_instant = true
+			"--curtainbox":
+				# R476 出图：把三选一固定成「会加卡」的三件道具（惊奇盒子 / 行囊 / 陶罐），
+				# 好核验浮窗底部那块「获得卡牌」—— 默认候选是池子前三件，都不加卡。
+				RunState.relic_choice.assign([6047, 6030, 6032])
 			"--screenshot":
 				_instant = true   # 出图要完整台词，不能截到半句话
 			"--curtaincls":
@@ -498,6 +505,11 @@ func _tip_metrics() -> Dictionary:
 	var lines: Array[String] = TextWrap.wrap_plain(_font, rel.desc, TIP_W - 32.0,
 			UiTheme.FS_LABEL)
 	var h: float = 30.0 + 22.0 + 12.0 + lines.size() * 23.0 + 16.0
+	# R476：会往卡组加卡的道具（惊奇盒子 6047 / 行囊 6030 / 陶罐 6032…）
+	# 在说明下面再多挂一块「获得卡牌」—— 玩家不必猜「加入卡组」到底是哪张卡。
+	var linked := _linked_card(rel)
+	if linked != null:
+		h += LINKED_HEAD_H + LINKED_CARD_H + 20.0
 	var r := _box_rect()
 	# 靠左摆：中间偏右是卷卷的脸，浮窗压上去会让人看不清她（用户口径：悬停只看道具效果）
 	var x: float = r.position.x + 30.0
@@ -505,7 +517,8 @@ func _tip_metrics() -> Dictionary:
 	var y: float = r.position.y - h - 48.0
 	if y < 60.0:
 		y = 60.0
-	return {"rect": Rect2(x, y, TIP_W, h), "lines": lines, "relic": rel}
+	return {"rect": Rect2(x, y, TIP_W, h), "lines": lines, "relic": rel,
+			"linked": linked}
 
 
 func _draw_tip() -> void:
@@ -530,6 +543,58 @@ func _draw_tip() -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 32.0, UiTheme.FS_LABEL,
 				Color("cfcabb"))
 		y += 23.0
+	# R476：关联卡牌（有就画，没有就什么都不多出来）
+	if m.get("linked") != null:
+		_draw_linked_card(m["linked"], rect, y)
+
+
+func _linked_card(rel: RelicData) -> CardData:
+	## R476：这件道具会加进卡组的那张卡（没有就 null）。
+	## 关系**只**从 relics.json 的 `card` 字段来（`RelicData.granted_card()`）——
+	## 界面上不许再按道具 id 硬写一遍映射，那正是本缺陷的成因。
+	var cid := rel.granted_card()
+	if cid <= 0:
+		return null
+	return CardRepo.load_json().get_card(cid)
+
+
+func _draw_linked_card(card: CardData, rect: Rect2, y0: float) -> void:
+	## R476：浮窗底部那块「获得卡牌」—— 左卡面缩略，右卡名 / 数值 / 效果。
+	## `y0` = 说明正文最后一行的基线（调用方刚 `y += 23` 之后的值）。
+	## ⚠️ 高度全部取自 `LINKED_HEAD_H` / `LINKED_CARD_H`，与 `_tip_metrics()` 同源。
+	var ix := rect.position.x + 16.0
+	var iw := rect.size.x - 32.0
+	# ⚠️ `y0` 是**相对浮窗顶边**的偏移（调用方画正文用的是 `rect.position + Vector2(16, y)`），
+	# 这里必须先补上 `rect.position.y` 再往下推 —— 直接拿 y0 当绝对坐标，
+	# 整块会飘到浮窗上方、和名字行叠成一团（R476 首图就是这么错的）。
+	var base_y := rect.position.y + y0
+	var head_base := base_y + LINKED_HEAD_H - 6.0
+	_tip.draw_line(Vector2(ix, head_base - 16.0), Vector2(ix + iw, head_base - 16.0),
+			Color(1, 1, 1, 0.12), 1.0)
+	_tip.draw_string(_font, Vector2(ix, head_base), "获得卡牌",
+			HORIZONTAL_ALIGNMENT_LEFT, iw, UiTheme.FS_CAPTION, UiTheme.ACCENT_GOLD)
+	var cw: float = LINKED_CARD_H * 63.0 / 76.0
+	# +14（不是 +8）：卡面的费用 / 血量徽章会**外溢**卡框，贴太近会压到上面那行标题。
+	var cpos := Vector2(ix, head_base + 18.0)
+	CardFace.draw(_tip, card, Rect2(cpos, Vector2(cw, LINKED_CARD_H)), card.health,
+			false, false, _font, _font_bold, -1, false, false, true)
+	var tx: float = cpos.x + cw + 14.0
+	var tw: float = iw - cw - 14.0
+	var ty: float = cpos.y + 16.0
+	_tip.draw_string(_font_bold, Vector2(tx, ty), card.card_name,
+			HORIZONTAL_ALIGNMENT_LEFT, tw, UiTheme.FS_BODY, Color("f2e6c8"))
+	ty += 22.0
+	_tip.draw_string(_font, Vector2(tx, ty), "%s · %d 费 · %s" % [card.kind,
+			card.cost, CardFace.stats_line(card)], HORIZONTAL_ALIGNMENT_LEFT, tw,
+			UiTheme.FS_CAPTION, Color("c9c3b4"))
+	ty += 19.0
+	var bottom: float = cpos.y + LINKED_CARD_H - 2.0
+	for ln: String in TextWrap.wrap_plain(_font, card.effect_text, tw, UiTheme.FS_CAPTION):
+		if ty > bottom:
+			break
+		_tip.draw_string(_font, Vector2(tx, ty), ln, HORIZONTAL_ALIGNMENT_LEFT, tw,
+				UiTheme.FS_CAPTION, Color("cfcabb"))
+		ty += 18.0
 
 
 # ──────────────────────────────────────────────────────── 菜单

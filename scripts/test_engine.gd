@@ -26166,6 +26166,46 @@ func _init() -> void:
 			"R341 惊奇盒子道具：获得时把一张 9179 加进卡组（卡组 %d → %d）"
 			% [r337_deck0, RunState.deck_ids.size()])
 
+	# ---- R476：道具 ↔ 卡牌的关联（用户报「初始事件惊奇盒子不能关联到卡片惊奇盒子」）----
+	# 关系落在 relics.json 的 `card` 字段：界面（起点浮窗 / 提及浮窗）与发卡共用同一个口，
+	# 不再一边写在 match 分支里、一边靠 desc 的一句中文让人猜。
+	var r475_repo := RelicRepo.load_json()
+	var r475_box := r475_repo.get_relic(RunState.BOX_RELIC_ID)
+	var r475_pack := r475_repo.get_relic(RunState.PACK_RELIC_ID)
+	var r475_pot := r475_repo.get_relic(RunState.POT_RELIC_ID)
+	check(r475_box != null and r475_box.granted_card() == GameEngine.STUN_BOX_ID,
+			"R476 惊奇盒子 6047 → 卡片 9179（relics.json 的 card 字段，实际 %d）"
+			% (r475_box.granted_card() if r475_box != null else -1))
+	check(r475_pack != null and r475_pack.granted_card() == RunState.PACK_CARD_ID
+			and r475_pot != null and r475_pot.granted_card() == RunState.JAR_CURSE_ID,
+			"R476 行囊 6030 → 8001 木栅栏 / 陶罐 6032 → 9157 罐子：会加卡的道具都有 card 字段")
+	check(r475_repo.get_relic(6001).granted_card() == -1,
+			"R476 不加卡的道具：card 缺省 -1（类固醇 6001）")
+	var r475_bad: Array = []
+	for r475_r: RelicData in r475_repo.all_relics():
+		var r475_cid := r475_r.granted_card()
+		if r475_cid > 0 and r337_repo.get_card(r475_cid) == null:
+			r475_bad.append("%d→%d" % [r475_r.id, r475_cid])
+	check(r475_bad.is_empty(),
+			"R476 所有 card 字段都指向真实卡牌（坏引用 %s）" % str(r475_bad))
+	# 发卡读的就是同一个口：gain_relic 加进来的**必须**是 granted_card()
+	var r475_deck0 := RunState.deck_ids.size()
+	RunState.relics.erase(RunState.BOX_RELIC_ID)
+	RunState.gain_relic(RunState.BOX_RELIC_ID)
+	check(RunState.deck_ids.size() == r475_deck0 + 1
+			and RunState.deck_ids.back() == r475_box.granted_card(),
+			"R476 惊奇盒子发卡走 granted_card()（卡组末尾 = %d）"
+			% (RunState.deck_ids.back() if not RunState.deck_ids.is_empty() else -1))
+	# 界面面：起点事件（卷卷）与共享悬浮件都要真把关联卡画出来
+	var r475_curtain := FileAccess.get_file_as_string("res://scripts/curtain_scene.gd")
+	var r475_mention := FileAccess.get_file_as_string("res://scripts/mention.gd")
+	check_src(r475_curtain.contains("func _draw_linked_card(")
+			and r475_curtain.contains("_draw_linked_card(m[\"linked\"], rect, y)"),
+			"R476 起点事件浮窗：会加卡的道具下面真画了「获得卡牌」块")
+	check_src(r475_mention.contains("func _draw_relic_card(")
+			and r475_mention.contains("rel.granted_card()"),
+			"R476 共享悬浮件（Mention）：道具浮窗同样认 card 字段")
+
 	# ③ 惊奇盒子卡片：被攻击 → 攻击者下回合眩晕（1 血，必被打掉，所以不判存活）
 	var r337_e := _new_engine([], 30, 30)
 	var r337_boxp: Placement = r337_e.state.place(

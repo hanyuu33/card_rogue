@@ -33,6 +33,10 @@ const TIP_CARD_H := 128.0    # 浮窗里那张卡面的高度（宽按卡面比�
 const TIP_INFO_GAP := 20.0   # 卡面与文字区之间（留出数值徽章外溢的余量）
 const RELIC_W := 352.0       # 道具浮窗宽度
 const RELIC_PAD := 14.0
+## R476：道具浮窗底部「获得卡牌」块（关联卡 = relics.json 的 `card` 字段）。
+## 尺寸与 `tip_size()` / `draw_tip()` 共用 —— 量法与画法不许各写一套。
+const RELIC_CARD_HEAD_H := 26.0   # 分隔线 + 标题行占位
+const RELIC_CARD_H := 84.0        # 卡面缩略高度（宽按卡面比例 63:76 收）
 const BLOCK_HEAD := "这条文案里提到的"   # 附带块标题
 const BLOCK_MAX_LINES := 3               # 每个被提及项最多列几行摘要
 ## R206：附带块行距**唯一口** —— `draw_reference_block()` 与 `block_height()` 共用，
@@ -214,10 +218,14 @@ static func tip_size(font: Font, ref: Dictionary) -> Vector2:
 	var rel := relic_of(int(ref.get("id", -1)))
 	var w := RELIC_W
 	var lines: Array[String] = []
+	var extra := 0.0
 	if rel != null:
 		lines = CardFace.wrap_text(font, rel.desc, w - RELIC_PAD * 2.0, UiTheme.FS_LABEL)
+		# R476：会加卡的道具多留一块「获得卡牌」
+		if rel.granted_card() > 0:
+			extra = RELIC_CARD_HEAD_H + RELIC_CARD_H + 20.0
 	var m := relic_tip_metrics(font, UiTheme.font_bold(), lines.size())
-	return Vector2(w, float(m["h"]))
+	return Vector2(w, float(m["h"]) + extra)
 
 
 static func block_height(font: Font, font_bold: Font, text: String, w: float,
@@ -281,6 +289,8 @@ static func draw_tip(canvas: CanvasItem, font: Font, font_bold: Font,
 		canvas.draw_string(font, Vector2(frame.position.x + p, y), t,
 				HORIZONTAL_ALIGNMENT_LEFT, inner, UiTheme.FS_LABEL, Color("f0ead8"))
 		y += float(m["line"])
+	# R476：这件道具会加进卡组的那张卡（没有就什么都不多出来）
+	_draw_relic_card(canvas, font, font_bold, rel, frame, y)
 	return _draw_tip_block(canvas, font, font_bold, frame, sz, extra_bottom, block_text)
 
 
@@ -341,6 +351,50 @@ static func _draw_card_tip_body(canvas: CanvasItem, font: Font, font_bold: Font,
 				w, size, float(b["line"]), b["col"], -1.0, -1.0, Color("1a1c22"))
 		y = float(res.get("y", y + asc)) - asc
 	return y
+
+
+static func _draw_relic_card(canvas: CanvasItem, font: Font, font_bold: Font,
+		rel: RelicData, frame: Rect2, y0: float) -> void:
+	## R476：道具浮窗底部「获得卡牌」—— 左卡面缩略、右卡名 / 数值 / 效果。
+	## `y0` = 说明正文最后一行之后的基线（调用方刚 `y += line` 的位置）。
+	## 关系唯一来源 = `RelicData.granted_card()`（relics.json 的 `card` 字段）。
+	var cid := rel.granted_card()
+	if cid <= 0:
+		return
+	var card := card_of(cid)
+	if card == null:
+		return
+	var p := RELIC_PAD
+	var ix := frame.position.x + p
+	var iw := RELIC_W - p * 2.0
+	var head_base := y0 + RELIC_CARD_HEAD_H - 8.0
+	canvas.draw_line(Vector2(ix, head_base - 15.0), Vector2(ix + iw, head_base - 15.0),
+			Color(1, 1, 1, 0.12), 1.0)
+	canvas.draw_string(font, Vector2(ix, head_base), "获得卡牌",
+			HORIZONTAL_ALIGNMENT_LEFT, iw, UiTheme.FS_CAPTION, UiTheme.ACCENT_GOLD)
+	var cw: float = RELIC_CARD_H * 63.0 / 76.0
+	# +10（不是 +6）：数值徽章会外溢卡框，贴太近会压到上面那行标题。
+	var cpos := Vector2(ix, head_base + 18.0)
+	CardFace.draw(canvas, card, Rect2(cpos, Vector2(cw, RELIC_CARD_H)), card.health,
+			false, false, font, font_bold, -1, false, false, true)
+	var tx: float = cpos.x + cw + 12.0
+	var tw: float = iw - cw - 12.0
+	var ty: float = cpos.y + 14.0
+	canvas.draw_string(font_bold, Vector2(tx, ty), card.card_name,
+			HORIZONTAL_ALIGNMENT_LEFT, tw, UiTheme.FS_LABEL, Color("f2e6c8"))
+	ty += 19.0
+	canvas.draw_string(font, Vector2(tx, ty), "%s · %d 费 · %s" % [card.kind,
+			card.cost, CardFace.stats_line(card)], HORIZONTAL_ALIGNMENT_LEFT, tw,
+			UiTheme.FS_CAPTION, Color("c9c3b4"))
+	ty += 17.0
+	var bottom: float = cpos.y + RELIC_CARD_H - 2.0
+	for ln: String in CardFace.wrap_text(font, card.effect_text, tw, UiTheme.FS_CAPTION):
+		if ty > bottom:
+			break
+		canvas.draw_string(font, Vector2(tx, ty), ln, HORIZONTAL_ALIGNMENT_LEFT, tw,
+				UiTheme.FS_CAPTION, Color("cfcabb"))
+		# 行距走 `BLOCK_LINE_H`：mention.gd 里不许再出现行距字面量（R206 的守卫会报）。
+		ty += BLOCK_LINE_H
 
 
 static func _draw_tip_block(canvas: CanvasItem, font: Font, font_bold: Font,
