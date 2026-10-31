@@ -14490,6 +14490,82 @@ func _init() -> void:
 	check(r98_e3.state.unit_at(Vector2i(4, 2)).health > 0,
 		"R98 超负荷：存活单位生命保持正数 %d" % r98_e3.state.unit_at(Vector2i(4, 2)).health)
 
+	# ---- ④ R469：普攻 / 践踏链这些「就地算溢出」的路径也必须守超负荷 ----
+	# 背景（用户实测）：城墙 8052 放到**我方 HP 行**（第 5 行）被打穿 → 当回合就消失，
+	# 还漏了 9 点溢出到玩家 HP。根因是这些路径走 `_destroy()` 直杀，没走 `_destroy_dead()`
+	# 里那条超负荷分支。R98 的三条断言全走 `_hit_unit` + 手动 `_destroy_dead()`，正好绕开。
+	var r469_repo := CardRepo.load_json()
+	var r469_e := _new_engine([], 40, 40, -1, false)
+	r469_e.start_game()
+	var r469_wall: Placement = r469_e.state.place(
+		CardData.from_dict(r469_repo.get_card(8052).to_dict()), Vector2i(5, 1),
+		GameEngine.SIDE_SELF)
+	var r469_foe := CardData.new()
+	r469_foe.id = 98952
+	r469_foe.card_name = "R469 试刀"
+	r469_foe.kind = "盟友"
+	r469_foe.cost = 0
+	r469_foe.power = 20
+	r469_foe.health = 30
+	r469_foe.attack_range = 1
+	r469_foe.move_speed = 1
+	r469_e.state.place(r469_foe, Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	var r469_hp0: int = r469_e.state.hp_self
+	r469_e.attack(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(r469_e.state.unit_at(Vector2i(5, 1)) == r469_wall and r469_wall.health < 0,
+			"R469 超负荷①：城墙站**我方 HP 行**被普攻打穿 → 负数存活（剩 %d），不当场消失"
+			% r469_wall.health)
+	check(r469_e.state.hp_self == r469_hp0,
+			"R469 超负荷②：HP 行上被打穿**不漏溢出**（卡面「伤害不会溢出」，玩家 HP 仍 %d）"
+			% r469_e.state.hp_self)
+	r469_e.end_turn()
+	check(r469_e.state.unit_at(Vector2i(5, 1)) == null,
+			"R469 超负荷③：己方回合结束才真正死亡（负数没有赖在场上）")
+
+	# 践踏链：同列第二个单位是超负荷 → 溢出必须断在它身上
+	var r469_e2 := _new_engine([], 40, 40, -1, false)
+	r469_e2.start_game()
+	var r469_atk := CardData.new()
+	r469_atk.id = 98953
+	r469_atk.card_name = "R469 践踏者"
+	r469_atk.kind = "盟友"
+	r469_atk.cost = 0
+	r469_atk.power = 30
+	r469_atk.health = 30
+	r469_atk.attack_range = 1
+	r469_atk.move_speed = 1
+	r469_atk.traits.append(GameEngine.TRAMPLE_TRAIT)
+	var r469_att: Placement = r469_e2.state.place(r469_atk, Vector2i(0, 1),
+		GameEngine.SIDE_OPPONENT)
+	var r469_mid: Placement = r469_e2.state.place(
+		CardData.from_dict(r469_repo.get_card(8003).to_dict()), Vector2i(4, 1),
+		GameEngine.SIDE_SELF)
+	var r469_back: Placement = r469_e2.state.place(
+		CardData.from_dict(r469_repo.get_card(8052).to_dict()), Vector2i(5, 1),
+		GameEngine.SIDE_SELF)
+	var r469_tr: Array = r469_e2._trample_chain(r469_att, GameEngine.SIDE_SELF,
+		Vector2i(4, 1), 40, Vector2i(0, 1))
+	check(r469_e2.state.unit_at(Vector2i(5, 1)) == r469_back and r469_back.health < 0,
+			"R469 超负荷④：践踏链穿到城墙 → 负数存活（剩 %d），不续穿"
+			% r469_back.health)
+	check(int(r469_tr[0]) == 0,
+			"R469 超负荷⑤：溢出断在超负荷单位身上（链剩余 %d 点，应为 0）" % int(r469_tr[0]))
+
+	# 源码守卫：别退回「普攻直接 `_destroy`」的老写法
+	var r469_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r469_src.find("func _reap(cell: Vector2i) -> bool:") >= 0,
+			"R469 源码：`_reap()` 是「血降到 0 以下」的唯一收尾口")
+	check_src(r469_src.find("if defender.health <= 0:\n\t\t_destroy(dst)") < 0,
+			"R469 源码：普攻不再直接 `_destroy(dst)`（超负荷会被当场抹掉）")
+
+	# R469 附魔可见性：奖励面板的卡组视图（月亮 / 精英删卡、只看卡组、核心两段）
+	# 原来直接取卡库原卡，附魔标记与数值全丢 → 与商店删卡页不一致。
+	var r469_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	check_src(r469_rp.find("_repo_cards.get_card(int(RunState.deck_ids") < 0,
+			"R469 附魔：奖励面板的卡组视图一律走 card_with_mod()")
+	check_src(r469_rp.find("RunState.card_with_mod(_repo_cards, i)") >= 0,
+			"R469 附魔：删卡 / 只看卡组按下标取实际卡（带附魔的副本）")
+
 	# ══════════════════════════════════════════════════════════════
 	# R99 测试：重组 8051 / 城墙 8052 / 超越极限 8053
 	# ══════════════════════════════════════════════════════════════
@@ -30218,8 +30294,10 @@ func _init() -> void:
 	var r403_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 	check_src(r403_src.find("var absorbed:= amount") >= 0,
 			"R403 源码：闪躲代受直接吃满全额（不再 `mini(伤害, 剩余生命)`）")
-	check_src(r403_src.find("_destroy(gen_cell)") >= 0,
-			"R403 源码：护盾生成器被打死就地在代受处销毁（不吃后排溢出）")
+	# R469：这条路径改走 `_reap()`（「血降到 0」的收尾统一收口）。生成器本身不带超负荷，
+	# 行为一字未动 —— 只是不再留第二条销毁路径。
+	check_src(r403_src.find("_reap(gen_cell)") >= 0,
+			"R403/R469 源码：护盾生成器被打死就地在代受处收尾（不吃后排溢出）")
 	check_src(r403_src.find("mini(amount, maxi(0, g.health))") < 0,
 			"R403 源码：旧的「闪躲只吃剩余血」算法已删除")
 

@@ -11093,9 +11093,8 @@ func _absorb_by_guard(amount: int) -> bool:
 	# 攻击动画」），没有格子的话场景只能干看着，不知道怎么冻结那个单位的血条数字。
 	action.emit("guard_absorb", {"card": g.card, "how": how, "amount": dealt,
 			"cell": cell})
-	if g.health <= 0:
-
-		_destroy(cell)
+	# R469：走 `_reap()` —— 代受单位若是超负荷卡，打穿后应负数存活到己方回合结束。
+	_reap(cell)
 	return true
 
 
@@ -11126,8 +11125,9 @@ func _dodge_absorb(amount: int) -> int:
 			g.card.card_name, absorbed])
 	action.emit("dodge_absorb", {"card": g.card, "cell": cell2,
 			"absorbed": absorbed, "rest": 0})
-	if g.health <= 0:
-		_destroy(cell2)   # R403：直接销毁、不经 `_destroy_dead` → 站后排也不会漏溢出
+	# R403：不走 `_destroy_dead` → 站后排也不会漏溢出（伤害全吃、不再回传）。
+	# R469：改走 `_reap()` —— 超负荷单位负数存活，同样不漏溢出。
+	_reap(cell2)
 	return 0
 
 
@@ -11678,8 +11678,9 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 			# 它站后排（x=5）时 `_destroy_dead` 会把 `-health` 当「后排溢出」漏给玩家 HP，
 			# 站前排却不会 —— 同一张卡两种结果。走 `_destroy()` 与森林守护 / 铁栅栏完全
 			# 同形（亡语、击杀记功照常，只是不吃那条溢出）。
-			if gen_cell != Vector2i(-1, -1) and gen.health <= 0:
-				_destroy(gen_cell)
+			# R469：统一走 `_reap()`（生成器本身不带超负荷，行为不变，但不留另一条销毁路径）。
+			if gen_cell != Vector2i(-1, -1):
+				_reap(gen_cell)
 			return 0
 	var dmg:= _unit_damage_taken(p, amount, "attack" if is_attack else "spell")
 	p.health -= dmg
@@ -12715,6 +12716,39 @@ func _fuse_tick() -> void :
 			_on_ally_entered(built, side)
 
 
+func _overload_keep(p: Placement, cell: Vector2i) -> void :
+	## 超负荷单位血已 ≤ 0：**原地保留**（负数血量继续存活），等**己方回合结束**
+	## 由 `_overload_tick()` 真正杀死。
+	## R469：这段原来只写在 `_destroy_dead()` 里 —— 于是只有「走 `_destroy_dead` 的伤害」
+	## 才享受超负荷；普攻 / 践踏链 / 枭熊落地重击 / 代受 / 闪躲都是**直接 `_destroy()`**
+	## （它们要就地算溢出，不能等全扫），超负荷在那几条路上形同虚设。
+	## 用户实测：城墙（8052）放到我方 HP 行，被打穿后当回合就没了，还漏了 9 点溢出。
+	action.emit("overload_neg", {"cell": cell, "card": p.card,
+		"health": p.health, "side": p.owner})
+	_log("超负荷：%s 生命降至 %d，暂不死亡（己方回合结束若仍为 0 或更低则死亡）"
+		% [p.card.card_name, p.health])
+
+
+func _reap(cell: Vector2i) -> bool:
+	## **「血降到 0 以下」的唯一收尾口**（R469）。
+	##
+	## 与 `_destroy()` 的分工：
+	##   * `_destroy()` = 「这张卡离开战场」的实现，**不区分原因**（效果直接消灭 / 被打死）；
+	##   * `_reap()`  = 只处理「因为生命值耗尽」这一种 —— 超负荷在这里被拦下（负数存活）。
+	##
+	## 凡是「`_hit_unit()` 之后血量 ≤ 0」的地方都必须走这里；效果主动消灭仍走 `_destroy()`。
+	## 返回 true = 真的销毁了 —— 调用方据此决定要不要算溢出 / 继续践踏
+	##（超负荷卡面写着「伤害不会溢出」，所以它被击穿时溢出链必须断在它身上）。
+	var p: Placement = state.unit_at(cell)
+	if p == null or p.health > 0:
+		return false
+	if p.card.has_affix(AFFIX_OVERLOAD):
+		_overload_keep(p, cell)
+		return false
+	_destroy(cell)
+	return true
+
+
 func _destroy_dead() -> void :
 
 
@@ -12726,10 +12760,8 @@ func _destroy_dead() -> void :
 			if _pu.card.has_affix(AFFIX_OVERLOAD):
 				# 超负荷（旧式机兵 8050，R98）：死亡推迟到己方回合结束，
 				# 现在以负数血量继续存活，且不触发「溢出伤害」漏给玩家 HP。
-				action.emit("overload_neg", {"cell": cell, "card": _pu.card,
-					"health": _pu.health, "side": _pu.owner})
-				_log("超负荷：%s 生命降至 %d，暂不死亡（己方回合结束若仍为 0 或更低则死亡）"
-					% [_pu.card.card_name, _pu.health])
+				# R469：演出与日志收进 `_overload_keep()`，与 `_reap()` 同一套。
+				_overload_keep(_pu, cell)
 				continue
 			dead.append(cell)
 	for cell: Vector2i in dead:
@@ -13861,7 +13893,9 @@ func _owlbear_slam(p: Placement, dst: Vector2i) -> void:
 				p.card.card_name, q.card.card_name, dmg, q.health])
 		if q.health > 0:
 			continue
-		_destroy(c)
+		# R469：超负荷单位负数存活 → 不践踏（它没死，脚下没被砸开）。
+		if not _reap(c):
+			continue
 		if not trample:
 			continue
 		var overflow:= dmg - maxi(hp_before, 0)
@@ -14229,8 +14263,10 @@ func _rockfall_overflow(from_cell: Vector2i, side: String, remaining: int,
 			pierced = next.card.card_name
 			if next.health > 0:
 				return [0, pierced]    # 没打死 → 溢出到此为止（它吃满）
+			# R469：超负荷 → 负数存活、溢出到此为止（与 `_trample_chain()` 同一口径）。
+			if not _reap(cell):
+				return [0, pierced]
 			var carry: int = dmg - maxi(hp_before, 0)
-			_destroy(cell)
 			remaining = carry
 		return [maxi(remaining, 0), pierced]
 
@@ -14924,8 +14960,10 @@ func _trample_chain(attacker: Placement, foe_side: String, from_cell: Vector2i,
 		pierced = next.card.card_name
 		if next.health > 0:
 			return [0, pierced]    # 没打死 → 溢出到此为止（它吃满）
+		# R469：超负荷被击穿不算死 → 负数存活，溢出就到此为止（卡面「伤害不会溢出」）。
+		if not _reap(cell):
+			return [0, pierced]
 		var over: int = dmg - maxi(hp_before, 0)
-		_destroy(cell)
 		remaining = over
 	return [remaining if remaining > 0 else 0, pierced]
 
@@ -14974,8 +15012,10 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	action.emit("attack", {"src": src, "dst": dst, "damage": def_dmg, 
 		"side": side, "overflow": overflow, 
 		"atk_name": attacker.card.card_name, "def_name": defender.card.card_name})
-	if defender.health <= 0:
-		_destroy(dst)
+	# R469：走 `_reap()` 而不是 `_destroy()` —— 超负荷单位被打穿不算死（负数存活），
+	# 且「伤害不会溢出」。以前这里直接 `_destroy(dst)`，于是战场上一刀就没了、
+	# 溢出还照常漏到玩家 HP（城墙站我方 HP 行被打穿 = 当场消失 + 漏 9 点）。
+	if defender.health <= 0 and _reap(dst):
 		# R225：践踏 —— 先把溢出伤沿同列逐个击穿，打穿整列后剩下的才轮到 HP。
 		var pierced_name: String = defender.card.card_name
 		if overflow > 0 and trample:
@@ -14991,7 +15031,9 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 			action.emit("trample", {"side": foe, "amount": _last_hp_damage, "src": src,
 				"dst": dst, "atk_name": attacker.card.card_name,
 				"def_name": pierced_name})
-	if defender.health <= 0 and defender.card.traits.has(WORKSHOP_TRAIT) and state.board.has(src):
+	# R469：加 `not state.board.has(dst)` —— 超负荷单位负数存活时它还在场，不能算「被破坏」。
+	if defender.health <= 0 and not state.board.has(dst) \
+			and defender.card.traits.has(WORKSHOP_TRAIT) and state.board.has(src):
 		# 机关工坊（8015；R74 由「陷阱工坊」改名，仍是工事）：被敌人的攻击**破坏** → 对破坏它的敌人造成 8 伤。
 		# 攻击者若已先倒下（如踩了别的反伤）则不再追伤；同样记「触发过工事」供暗影狩猎判定。
 		var w_dmg:= _hit_unit(attacker, WORKSHOP_DMG + _field_mastery(defender.owner, defender.card),

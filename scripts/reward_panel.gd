@@ -967,7 +967,8 @@ func _draw_deck() -> void:
 		# 滚出可视区的**整张卡**不画（reward_panel 是纯自绘，没有 clip 容器）
 		if rr.end.y < c.position.y - 2.0 or rr.position.y > c.end.y + 2.0:
 			continue
-		var card: CardData = _repo_cards.get_card(int(RunState.deck_ids[i]))
+		# R469：走 `card_with_mod()` —— 原来直接取卡库原卡，**附魔标记与附魔数值一起丢掉**，于是月亮 / 精英战的删卡页看不到附魔（商店的删卡页因为走 `deck_edit_scene` 反而看得到）。
+		var card: CardData = RunState.card_with_mod(_repo_cards, i)
 		if card == null:
 			continue
 		var can := RunState.deck_deletable(i) and not settled
@@ -1049,7 +1050,8 @@ func _draw_deck_viewer() -> void:
 		# 滚出可视区的整张卡不画（纯自绘，没有 clip 容器）
 		if rr.end.y < c.position.y - 2.0 or rr.position.y > c.end.y + 2.0:
 			continue
-		var card: CardData = _repo_cards.get_card(int(RunState.deck_ids[i]))
+		# R469：走 `card_with_mod()` —— 原来直接取卡库原卡，**附魔标记与附魔数值一起丢掉**，于是月亮 / 精英战的删卡页看不到附魔（商店的删卡页因为走 `deck_edit_scene` 反而看得到）。
+		var card: CardData = RunState.card_with_mod(_repo_cards, i)
 		if card == null:
 			continue
 		if i == _deck_hover:
@@ -1122,7 +1124,8 @@ func core_pick_deck(di: int) -> Dictionary:
 	if not _core_grid.has(di):
 		return {"ok": false, "msg": "卡组第 %d 张不在候选里" % di}
 	if _core_stage == 0:
-		var src: CardData = _repo_cards.get_card(int(RunState.deck_ids[di]))
+		# R469：同样走 `card_with_mod()`，与下面 `_draw_core()` 的绘制口径保持一致。
+		var src: CardData = RunState.card_with_mod(_repo_cards, di)
 		_core_src_idx = di
 		if not _core_open_stage(1):
 			_core_open_stage(0)      # 没有能接住的卡 → 退回第一段，什么都不扣
@@ -1161,7 +1164,8 @@ func _draw_core() -> void:
 	if _core_stage == 1:
 		var src: CardData = null
 		if _core_src_idx >= 0 and _core_src_idx < RunState.deck_ids.size():
-			src = _repo_cards.get_card(int(RunState.deck_ids[_core_src_idx]))
+			# R469：祭品若带「伤害 +N」附魔，`spell_first_hit()` 必须读**实际卡**，否则这里显示的伤害会比真正结算的少。
+			src = RunState.card_with_mod(_repo_cards, _core_src_idx)
 		var dmg: int = GameEngine.spell_first_hit(src) if src != null else 0
 		sub = "「%s」的第一段伤害 %d 点 → 变成这张卡的附魔「伤害 +%d」（已有附魔的卡不能选）" % [
 				src.card_name if src != null else "那张卡", dmg, dmg]
@@ -1800,6 +1804,28 @@ func _demo_start() -> void:
 					core_pick_deck(int(_core_grid[0])))
 		add_child(tmc)
 		tmc.start()
+		return
+	# R469 出图：月亮 9180 / 精英战的删卡页 —— 卡组里前几张预先贴好附魔，
+	# 核验「附魔标记与附魔数值都在」。两种不同附魔（颜色不同）才看得出确实是附魔。
+	#   `-- --screenshot --deletedemo`
+	if "--deletedemo" in args:
+		RunState.run_active = true
+		RunState.deck_ids = [8003, 8002, 8052, 9003, 9162, 8001]
+		RunState.deck_mods = []
+		RunState.ensure_deck_mods()
+		RunState.enchant_deck_card(0, RunState.enchant_mod("damage"))
+		RunState.enchant_deck_card(2, RunState.enchant_mod("costdown"))
+		RunState.pending_rewards = []
+		var didx := RunState.queue_deck_delete_reward(1)
+		var tmd := Timer.new()
+		tmd.wait_time = 0.25
+		tmd.one_shot = true
+		tmd.timeout.connect(func():
+			open()
+			if didx >= 0:
+				_open_entry(didx))
+		add_child(tmd)
+		tmd.start()
 		return
 	# R323 出图：牛奶附魔演示 —— 不碰卡组，直接造两份演示数据。
 	#   `-- --screenshot --milkdemo`            整段动画（约 1.2s 后落定）
