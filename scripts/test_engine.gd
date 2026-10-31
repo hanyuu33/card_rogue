@@ -31480,6 +31480,18 @@ func _init() -> void:
 			"R467 奖励②：点「确认选择」才真的进卡组（入队 ≠ 发放）")
 	RunState.pending_rewards = []
 
+	# ══ R468：洞穴摆位与敌方血池（用户口径「枭熊放到敌人区域正中央 (1,1)」）══
+	var r468_cell: Vector2i = r467_lvl["enemy_units"][0][6]
+	check(r468_cell == Vector2i(1, 1),
+			"R468 洞穴摆位：枭熊在 (1,1) —— 敌方区是 3 行×3 列，正中即 (1,1)（实际 %s）"
+			% str(r468_cell))
+	# 敌方总血条用 `enemy_hp_of()`；**打场上的单位不扣它**，只有直击后排 HP 才扣。
+	# 血条 <= 枭熊血量 → 玩家能靠直击后排 HP 绕过这场硬仗、枭熊还站着就判胜。
+	var r468_pool := GameLevels.enemy_hp_of(r467_lvl)
+	check(r468_pool > r467_owl_data.health,
+			"R468 洞穴血池：敌方总血条 %d > 枭熊血量 %d（血条先空 = 能绕过硬仗）"
+			% [r468_pool, r467_owl_data.health])
+
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
 	RunState.pending_rewards = []

@@ -110,7 +110,11 @@ static func cave_level() -> Dictionary:
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
 		"player_hp": 20,
-		"enemy_hp": 30,
+		# R468：敌方总血条走 `enemy_hp_of()` = (base + 精英 10) × 2，写 30 只有 80 ——
+		# 比枭熊自己的 100 血还少。**打场上的单位不扣这条血条**（只有直击后排 HP 才扣），
+		# 所以 80 会让玩家靠攻程 3 直击后排 HP绕过这场硬仗、枭熊还站着就判胜。
+		# 50 → (50+10)×2 = 120 > 100：两条路都得真打满 100 点才通关。
+		"enemy_hp": 50,
 		"turn_limit": -1,
 		"shuffle": true,
 		"enemy_ai": true,
