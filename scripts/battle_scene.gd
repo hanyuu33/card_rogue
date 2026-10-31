@@ -857,6 +857,9 @@ func _ready() -> void:
 			var levels := GameLevels.builtin_levels()
 			if li >= 0 and li < levels.size():
 				load_level(levels[li])  # 截图验证用：--level 0
+		if args[i] == "--cave":
+			# R467 出图：事件专属关卡「洞穴」（不在 builtin_levels 里，--level 索引不到）
+			load_level(GameLevels.cave_level())
 		if args[i] == "--shotframe" and i + 1 < args.size():
 			_shot_frame = maxi(int(args[i + 1]), 10)  # 截图时机（帧），捕弹体/爆点用
 		if args[i] == "--r363col" and i + 1 < args.size():
