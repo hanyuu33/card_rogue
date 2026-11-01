@@ -32099,6 +32099,59 @@ func _init() -> void:
 	check_src(r477_save_src.contains("erase(\"battle\")"),
 			"R477 源码：读档把老的 battle 快照摘掉（旧档也统一）")
 
+	# ================= R484：效果卡不许变成场上单位（引擎兜底 + 界面两处）=================
+	var r484_repo := CardRepo.load_json()
+	var r484_eff: CardData = r484_repo.get_card(9059)
+	check(r484_eff != null and r484_eff.is_effect() and not r484_eff.is_spell(),
+			"R484 前提：9059 智慧喷涌是效果卡（不是技能）")
+	var r484_e := _new_engine([], 40, 40, -1, false)
+	r484_e.start_game()
+	r484_e.state.energy = 30
+	r484_e.state.board.clear()
+	r484_e.state.hand.clear()
+	r484_e.state.hand.append(CardData.from_dict(r484_eff.to_dict()))
+	var r484_before: int = r484_e.state.energy
+	var r484_placed: Placement = r484_e.play_from_hand(0, Vector2i(4, 1))
+	check(r484_placed == null and not r484_e.state.board.has(Vector2i(4, 1)) \
+			and r484_e.state.energy == r484_before \
+			and r484_e.state.hand.size() == 1,
+			"R484 效果卡：play_from_hand 拒绝上场（不扣费 %d→%d、卡还在手 %d 张、场上无单位）" % [
+				r484_before, r484_e.state.energy, r484_e.state.hand.size()])
+	r484_e.play_from_hand(0, Vector2i(1, 1))
+	check(r484_e.state.board.is_empty() and r484_e.state.hand.size() == 1,
+			"R484 效果卡：敌方半场（含敌方后排 row 0 那排打 HP 的格）同样进不去")
+	r484_e.use_effect(0)
+	check(r484_e.state.board.is_empty() and r484_e.state.effects.size() == 1,
+			"R484 效果卡：正规入口 use_effect 仍进效果区、场上依旧空")
+	# 技能卡同样不是单位（同一道闸门覆盖）
+	var r484_skill: CardData = r484_repo.get_card(8002)
+	var r484_e2 := _new_engine([], 40, 40, -1, false)
+	r484_e2.start_game()
+	r484_e2.state.energy = 30
+	r484_e2.state.board.clear()
+	r484_e2.state.hand.clear()
+	r484_e2.state.hand.append(CardData.from_dict(r484_skill.to_dict()))
+	r484_e2.play_from_hand(0, Vector2i(4, 1))
+	check(r484_e2.state.board.is_empty() and r484_e2.state.hand.size() == 1,
+			"R484 技能卡：play_from_hand 也拒绝（不是单位）")
+	var r484_e3 := _new_engine([], 40, 40, -1, false)
+	r484_e3.start_game()
+	r484_e3.state.board.clear()
+	r484_e3.remote_play(CardData.from_dict(r484_eff.to_dict()), Vector2i(1, 1))
+	check(r484_e3.state.board.is_empty(),
+			"R484 效果卡：联机同步路径 remote_play 也拒绝（对面不会长出 0 血实体）")
+	# 源码锁：界面两处 + 引擎一处，防止将来又被简化掉
+	var r484_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r484_bs.contains("是效果卡：拖到左侧效果区或自己半场启用（已取消选中）"),
+			"R484 源码：点格子路径先分流效果卡（不再掉进放置分支）")
+	check_src(r484_bs.contains("是效果卡：拖到左侧效果区或自己半场启用"),
+			"R484 源码：拖拽落点在敌方半场时给提示而不是启用")
+	check_src(r484_bs.contains("func _self_half_rect"),
+			"R484 源码：拖拽区域框只框自己半场（效果卡）")
+	var r484_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r484_ge.contains("不是单位，不能作为单位上场"),
+			"R484 源码：引擎侧拦非单位卡进场（效果卡走效果区）")
+
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
 	RunState.pending_rewards = []

@@ -4767,6 +4767,15 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 		# R373：不能打出的诅咒（麻痹 9185）—— 引擎侧兜底，联机 / 回放 / 自动出牌都挡在这里。
 		_log("%s：这张卡不能打出" % card.card_name)
 		return null
+	# R484：**非单位卡不许进场**（引擎侧兜底，与 R285 的落点闸门成对）。
+	# 效果卡进效果区（use_effect）、技能走 use_spell、诅咒走 use_curse —— 三者都没有
+	# 场上实体。原来这里只看「是不是盟友 / 工事」来决定**落点**限制，其它种类一律
+	# 当随从摆上 board：界面上点一下效果卡再点格子（`_on_board_click`）就真的放上去了，
+	# 那张卡会带着 0 血、卡面标着「效果」，还能被选中（用户实测）。
+	# 放在 `_pay` 之前：拒绝不扣费、不掉牌。
+	if not (card.kind == "盟友" or card.is_fort() or card.is_field()):
+		_log("%s 不是单位，不能作为单位上场（效果卡走效果区）" % card.card_name)
+		return null
 	if _no_unit_play_this_turn and (card.kind == "盟友" or card.is_fort()):
 		_log("身法：本回合不能使用盟友和工事卡（%s 未打出）" % card.card_name)
 		return null
@@ -9704,6 +9713,13 @@ func remote_play(card: CardData, cell: Vector2i) -> Placement:
 		_log("对方放置场地：%s 于 %s" % [card.card_name, cell])
 		action.emit("field_place", {"cell": cell, "card": card, "side": SIDE_OPPONENT,
 			"replaced": false})
+		_note_card_played(SIDE_OPPONENT, card)
+		return null
+	# R484：对称兜底 —— 非单位卡不能作为单位落到对方场上（与 play_from_hand 同一判据）。
+	# 联机时若对面客户端把一张效果卡 / 技能卡当随从发过来，这里直接拒绝，
+	# 而不是让它在 board 里长出一个 0 血的「效果」实体。
+	if not (card.kind == "盟友" or card.is_fort() or card.is_field()):
+		_log("对方放弃放置：%s 不是单位" % card.card_name)
 		_note_card_played(SIDE_OPPONENT, card)
 		return null
 	# R285：敌方同样不许站进我方后排（对称闸门）。费用在函数开头已付、没有退款，

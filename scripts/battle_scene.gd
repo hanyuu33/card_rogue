@@ -5321,7 +5321,7 @@ func _start_drag(i: int, pos: Vector2) -> void:
 	# R106：效果卡除了拖到棋盘，还能**直接拖到左侧效果区**上松手启用（那是它的「家」）。
 	_drag_to_effects = card.is_effect()
 	if card.is_effect():
-		status_text = "%s：拖到左侧效果区（或棋盘任意处）启用" % card.card_name
+		status_text = "%s：拖到左侧效果区（或自己半场）启用" % card.card_name
 	elif not _drag_spell_cells.is_empty():
 		status_text = "%s：拖到高亮目标上释放" % card.card_name
 	else:
@@ -5573,13 +5573,19 @@ func _finish_drag(pos: Vector2) -> void:
 			return
 		_say("%s：拖到棋盘上释放（已取消）" % card.card_name)
 		return
-	# 效果卡：拖到棋盘 = 启用
-	if cell != null:
+	# 效果卡（R484）：**只在自己半场**启用。
+	# ⚠️ 原来这里接受任意格（`cell != null`）—— 效果卡没有目标，拖到敌方后排那排
+	# 「打 HP」的格子上松手也照样生效，看起来就像「效果打到了敌人的 HP 上」（用户实测）。
+	# 现在与 `_drag_zone_rect` 同源：外框只框自己半场，落点也只认自己半场。
+	if cell != null and FieldState.cell_owner(cell.x) == "self":
 		if not engine.can_pay_card(card):
 			_energy_fail(card, i)   # R151 P2-15
 			return
 		engine.use_effect(i)
 		_net_send({"type": "action", "act": "effect", "card": card.to_dict()})
+		return
+	if cell != null:
+		_say("%s 是效果卡：拖到左侧效果区或自己半场启用（已取消）" % card.card_name)
 		return
 	_say("%s：拖到棋盘上启用（已取消）" % card.card_name)
 
@@ -6868,6 +6874,26 @@ func _on_board_click(cell: Vector2i) -> void:
 	if selection != null and selection[0] == "hand":
 		var i: int = selection[1]
 		var card := engine.state.hand[i]
+		# R484：**效果卡不是单位**，点格子不能把它摆上场。
+		# 原来这里没有这一条 → 直接掉进下面 `if not card.is_spell()` 的放置分支，
+		# `play_from_hand` 把 kind="效果" 的卡当随从放进 board（用户实测：场上多出
+		# 一张「智慧喷涌」，还带着未横置的就绪光环、卡面标着「效果」）。
+		# 口径与拖拽一致：**自己半场**点一下 = 启用（等于「拖到棋盘任意处启用」）；
+		# 敌方半场（含敌方后排那排「打 HP」的格）点一下 = 提示 + 取消选中。
+		if card.is_effect():
+			if FieldState.cell_owner(cell.x) != "self":
+				_say("%s 是效果卡：拖到左侧效果区或自己半场启用（已取消选中）" % card.card_name)
+				_clear_selection()
+			elif not engine.can_pay_card(card):
+				_energy_fail(card, i)   # R151 P2-15
+				_clear_selection()
+			else:
+				engine.use_effect(i)
+				_net_send({"type": "action", "act": "effect", "card": card.to_dict()})
+				_clear_selection()
+				status_text = "%s：已放入效果区，持续生效" % card.card_name
+				queue_redraw()
+			return
 		if card.is_field():
 			# R277（安卓触屏）：场地卡**允许落在已有单位 / 已有场地的格子**上 ——
 			# 场地不是单位，两套数据互不影响（引擎 set_field 顶掉同格旧场地）。
@@ -15046,6 +15072,16 @@ func _drag_hit_cell() -> Variant:
 	return _drop_cell(_drag_pos, cells)
 
 
+func _self_half_rect() -> Rect2:
+	## 自己半场（下 3 行）格子的外接矩形 —— 效果卡的「松手即启用」区域（R484）。
+	## 与 `_own_place_cells` 不同：这里只管**区域框**，不涉及单位落点。
+	var cells: Array[Vector2i] = []
+	for x in range(FieldState.OPPONENT_ROWS, FieldState.BOARD_ROWS):
+		for y in FieldState.BOARD_COLS:
+			cells.append(Vector2i(x, y))
+	return _cells_bbox(cells)
+
+
 func _cells_bbox(cells: Array) -> Rect2:
 	## 一组格子的外接矩形（画「可释放区域」外框用）。空集合返回零矩形。
 	if cells.is_empty():
@@ -15062,6 +15098,12 @@ func _drag_zone_rect() -> Rect2:
 	if _drag_idx < 0 or engine == null or _drag_idx >= engine.state.hand.size():
 		return Rect2()
 	if _drag_to_effects:
+		# R484：效果卡除了左栏效果区，**自己半场**也能松手启用 —— 敌方半场不算。
+		# 原来这里直接返回左栏整条：屏幕上完全看不出「棋盘上哪儿能松手」，
+		# 而松手判定又接受整盘（含敌方 HP 格）。现在两处同源。
+		# 左栏那块绿框仍由 `_draw_drag` 单独画 —— 它兼「这张卡之后会落在哪」的说明。
+		if engine.state.hand[_drag_idx].is_effect():
+			return _self_half_rect()
 		return _effect_drop_rect()
 	if _drag_place:
 		return _cells_bbox(_drag_place_cells)
