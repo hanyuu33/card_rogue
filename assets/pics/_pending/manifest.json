@@ -1,0 +1,687 @@
+{
+ "note": "AI 生成、尚未人工确认的卡图。放在 assets/pics/_pending/<id>.png；游戏内会自动回退读取，并在卡面右下角打黄色三角标记。确认后跑 python tools/cardart.py approve <id> 移入 assets/pics/。原图（未裁剪）留在 raw/ 下备查。",
+ "updated": "2026-11-01",
+ "shared_recipe": "统一构图公式：低角度仰拍 + 巨物/渺小参照物对比 + 逆光轮廓 + 能量粒子；日式动画赛璐璐上色，日式西幻；原图 1536x1024 居中裁到 448x403（裁窗口 199~1337），右下角平台水印随之裁掉。\n\n【R478 机械/改造批·风格锚（2026-11-01）】机械题材极易被拉成欧美写实 3D 概念图。中文的「日式动画赛璐璐」不足以拉住它，必须把**英文风格头放在 prompt 第一句**并显式否定：【风格头·必须放第一句】アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art, NOT octane render, NOT metallic texture rendering。 另需在主体描述里写 cartoony / simplified / oversized rivets / single glowing eye 这类简化设计词。批次内先出一张验证风格，对了再批量。\n\n【成色硬约束（2026-11-02 用户明确要求）】所有单位/机械卡图**一律全新出厂，禁止任何做旧**：NO rust, NO corrosion, NO weathering, NO dirt, NO grime, NO stains, NO scratches, NO chipped paint, NO battle damage, NO soot, NO aged patina, NO distressed texture。\n注意：赛璐璐的**块状阴影**不算做旧，可以保留；做旧指的是锈蚀/污渍/磨损/掉漆/烟熏这些『使用痕迹』。\n中文 prompt 里也要写一句「全新出厂、表面洁净无锈无磨损」，不能只在英文头里否定。\n\n【暗影题材风格锚（2026-11-02）】暗影系极易滑向写实暗黑CG/恐怖渲染。配方：\n① 英文风格头照旧（cel / flat / bold outlines + NOT 3D/CGI/photorealistic/dark realistic concept art/gritty texture）；\n② 追加一句定调：`Palette deep midnight blue and violet, BUT colors stay bright, saturated and anime-clean — a vivid night, NOT a murky realistic dark painting.`\n③ 效果涉及**数量**（三张卡/两格/两只鸭子）必须在 prompt 里写死数字，并显式否定常见替代画法\n   （如「不要画残影/分身」）；涉及**位移/方向**用「地面刻度 + 反向箭头 + 拖痕」，别用残影（残影会被画成第二个实体）。\n④ 暗影系配色底：黑紫 + 硬边描光，能量/费用用青蓝，强化主体用琥珀。\n\n【卡牌不入画（2026-11-02 用户硬要求，适用于所有后续卡图）】\n任何卡图里**都不许画卡牌**：不画长方形纸片、不画卡面、不画牌堆、不画发光卡、不画手中捧着的卡。\n原因：卡图本身就是卡面，画里再出现卡牌就是「画中画」，缩到 448x403 后更糊，且与 UI 上的手牌互相干扰。\n- 抽卡 / 取回 / 弃牌 / 弃牌堆这类语义，改用**抽象能量载体**表达：光核、光符、光丝、影池、数据块。\n- prompt 末尾固定加：`NO playing card, NO trading card, NO rectangular paper object, NO card face, NO deck of cards`；\n  中文描述里也要写一句「不画卡牌」。\n- 同理禁用的「符号化标记」：地面箭头、格线、指向符号、UI 图标——它们会被读成界面元素而不是画面内容。\n\n【卡面裁切安全区（2026-11-02 踩坑后定）】\n卡图在卡面上不是整张可见：图区 = 卡高的 `CARD_ART_RATIO`(0.662)，260×312 的卡算出来是 260×206，比例 1.26；\n而卡图规格 448×403 的比例是 1.11 → `cover_region()` 会**上下各裁掉约 6%**。\n- 生成时：头冠、尖角、旗标、头顶特效一律不要贴原图上下边缘，垂直方向留 8% 以上余量。\n- 事后补救（不重画）：纵向压缩 0.93 + 底对齐 + 顶部用第一行像素模糊拉伸补满 → 再按 448×403 居中裁。\n- 左右不用担心：448 宽在 260 宽里是等比缩放，横向不裁（近似的 1.26 比 1.11 更高，横向反而是满的）。\n",
+ "items": {
+  "9014": {
+   "name": "远古虚骨龙",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "ref": "游戏王卡图/召唤演出的视觉语言：低角度仰拍、巨物与渺小参照物对比、逆光轮廓、能量漩涡背景",
+   "prompt": "巨大远古虚骨龙：龙骨骨架、破败翼膜、眼窝燃幽蓝魂火，从沙尘中直起身，前爪压碎岩层。左下角渺小持剑冒险者作体型参照。逆光轮廓、墨蓝夜色、金色闪电、骨屑与幽蓝火光粒子。",
+   "note": "已裁 448x403；原图 raw/9014_dragon.png",
+   "approved": "2026-11-01"
+  },
+  "9214": {
+   "name": "枭熊",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "ref": "owlbear 原型（猫头鹰头 + 棕熊身）+ 日式动画扑击构图",
+   "prompt": "枭熊：猫头鹰头（圆形面盘、钩喙、角状耳羽）+ 巨大棕熊躯体，腾空跃下扑击，前肢张开利爪前伸压向镜头。仰角、逆光轮廓、墨蓝深夜森林、飞舞落叶与尘土。",
+   "note": "已裁 448x403；原图 raw/9214_owlbear.png",
+   "approved": "2026-11-01"
+  },
+  "9213": {
+   "name": "枭熊（堕地形态）",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "ref": "同为 owlbear 原型；9214 是「跃下」姿态，9213 取「砸地落地」瞬间以作区分",
+   "prompt": "枭熊从高空俯冲砸落地面的瞬间：猫头鹰头（面盘、钩喙、角状耳羽）+ 掠熊躯体，双爪前张；落点地面放射状裂痕与尘土环，木屑石块外飞，逆光烟尘包裹。墨绿与暖棕配色。",
+   "note": "已裁 448x403；原图 raw/9213_owlbear_slam.png。与 9214 同物种但配色略不同，如需统一可重出",
+   "approved": "2026-11-01"
+  },
+  "9142": {
+   "raw": "9142_mass_argos_drone.png",
+   "ref": "四旋翼工业无人机 + 机身下多镜头吊舱（一排圆形镜头），主体必须原样保留",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art. + 同上参考图重绘：四旋翼大桨、下挂多镜头吊舱，同一仰视角度",
+   "note": "已裁 448x403；原图 raw/9142_argus.png。\n⚠️ v1 画成了「站立的百眼机械巨人」，与用户口径（无人机、螺旋桨升空）不符，已废弃 → raw/_old/9142_argus_v1_巨人版.png。；旧图是早期批次画的写实 3D/CG，与现行日系动画口径不统一；本次**参考图重绘**：image1=本卡旧图（保主体/姿势/构图），image2=9138 新定版（供风格），input_fidelity=high。主体设计一字未改，只换画法。旧图留档 → assets/pics/_legacy3d/<id>__old3dcg.png。**确认后 approve 才会覆盖主目录**。",
+   "created": "2026-11-01",
+   "name": "量产型阿尔戈斯",
+   "tier": "S",
+   "status": "approved",
+   "approved": "2026-11-01"
+  },
+  "9207": {
+   "raw": "9207_asklepios_mass.png",
+   "ref": "医神阿斯克勒庇俄斯 → **拖吊救援车**（用户指定：「做成拖车，可以拖吊其他机械的」）。效果「每回合获得 10 护甲；获得前若已有护甲则力量 +1」→ 语义 = 每回合往车上搬装甲板、车斗里甲叠得越多劲越大。**不得偏人形**，也去掉原来的人形蛇杖形象。",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art, NOT metallic texture rendering. —— 单主体特写：重型装甲**拖吊救援车**（纯机械，无人类面孔、无手臂），前部低矮驾驶室+宽装甲观察缝，六只厚齿大轮，后部长平板车斗；铜+奶白装甲、超大铆钉、车侧一道暖绿饰条，驾驶室门上绘绿色「蛇缠杖」医疗徽记（仅平涂符号）。驾驶室后方升起重型旋转吊臂（厚转台+伸缩臂+绞盘钢缆），末端宽垫抱夹正把一台**破损的小型四足支援机械**吊离地面、往车斗方向摆——被吊的机械明显是小配角。车斗里整齐码放备用装甲板与一座发柔绿光的维修托架。背景平涂浅蓝天空。",
+   "note": "用户否决原图「人形 + 蛇杖」形象（量产型系列不该偏人形），指定改成拖车 → 旧图留档 assets/pics/_legacy3d/9207__old_humanoid.png；新图为拖吊救援车：吊臂吊起破损四足机、车斗备件 + 绿色维修托架，绿色蛇缠杖徽记保留医疗语义。遗留：车斗里的「装甲板堆」被画成货箱，若要更贴「+10 护甲」可再迭代。",
+   "created": "2026-11-02",
+   "name": "量产型阿斯克勒庇厄斯",
+   "tier": "S",
+   "status": "approved",
+   "approved": "2026-11-02"
+  },
+  "9018": {
+   "name": "金属龙",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "ref": "D&D 金属龙（Metallic Dragon）体系：钢/黄铜鳞片、金属箔翼膜、宝库栖居",
+   "prompt": "金属龙：抛光钢与黄铜质感鳞片、边缘冷银高光、半透明金属箔翼膜、向后延展的金属角与脊刺。从堆满金币与残破王座的洞窟深处探身，前爪压住倾倒石柱，鳞片反射洞顶裂缝的金色光束。钢银 + 暗金。",
+   "note": "已裁 448x403；原图 raw/9018_metal_dragon.png。本批里完成度最高的一张",
+   "approved": "2026-11-01"
+  },
+  "9134": {
+   "name": "钢铁要塞",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "ref": "「嘲讽」机制的视觉化：把所有攻击都吸到自己身上 → 仰拍 + 箭矢全钉在钢墙上 + 渺小士兵仰攻",
+   "prompt": "超低角度仰拍。巨大钢铁要塞工事：层叠钢板与铆钉、正面钉满被击碎的箭矢与断剑、瞭望塔顶橙红指挥灯。下方渺小敌军仰头冲锋，箭雨与魔法光束全被钢墙挡下四散成火花。黄昏尘土、金属反光。",
+   "note": "已裁 448x403；原图 raw/9134_fortress.png",
+   "approved": "2026-11-01"
+  },
+  "1051": {
+   "name": "亡灵领主",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "ref": "经典巫妖/Lich 形象 + 「亡语召唤两只骷髅」直接画进画面（身后两具骷髅兵）",
+   "prompt": "巨型亡灵领主：锈蚀开裂王冠、破烂腐朽长斗篷如破旗翻卷、胸腔敞开可见幽绿磷光肋骨与心脏、枯骨手攥骨制长杖。身后站着两具刚从地面爬起的骷髅兵。墓园浓雾、幽绿灵魂火、骨屑、鸦群。墨蓝 + 幽绿。",
+   "note": "已裁 448x403；原图 raw/1051_lich.png",
+   "approved": "2026-11-01"
+  },
+  "9208": {
+   "name": "母舰",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "ref": "「免疫伤害 / 被破坏即败北」的视觉化：遮天蔽日的母舰 + 牵引光束正在重新铸造单位",
+   "prompt": "极低角度仰拍。遮天蔽日的巨型机械母舰悬停战场上空：模块化舱段船体，下腹密布投放舱门与牵引光束，若干刚成型的机械单位正从光束中被重新铸造。下方渺小部队与硝烟地面，母舰阴影压住整片战场。灰蓝 + 暗金。",
+   "note": "已裁 448x403；原图 raw/9208_mothership.png",
+   "approved": "2026-11-01"
+  },
+  "8062": {
+   "name": "夜蚀",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "ref": "无现实原型，概念具象化：夜色被蚀出一个洞，正在吞光",
+   "prompt": "刚凝成实体的夜色生物：轮廓像被撕开的墨迹，边缘向空气扩散丝状黑烟，体内深处一颗缓慢搏动的暗紫核心。悬浮中央，周围的光被吸进去——近处石壁褪成灰白，远处火把仍亮。墨黑 + 暗紫。",
+   "note": "已裁 448x403；原图 raw/8062_nightwane.png。⚠️ 当前偏「场景/漩涡」而非「单位」，主体略偏右；若要更像生物需重出",
+   "approved": "2026-11-01"
+  },
+  "8046": {
+   "name": "零件回收者",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "ref": "拾荒机器人原型：不对称跛脚、背驮零件堆、磁吸吊钩；「拆残骸」对应技能里回收素体与力量成长",
+   "prompt": "破旧机械拾荒者：涂装斑驳掉漆、一高一低不对称腿部、背上驮着回收零件捆成的巨大背包，挂满链条齿轮与磁吸吊钩；一只机械臂伸向机械残骸拆出一块还亮灯的零件。废弃工厂尘埃、散落螺丝。锈红 + 暖黄。",
+   "note": "已裁 448x403；原图 raw/8046_scavenger.png",
+   "approved": "2026-11-01"
+  },
+  "8043": {
+   "name": "模仿者",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "ref": "「模仿改造」机制具象化：一半原形一半镜面拟态；「接通」机制画成电弧链",
+   "prompt": "机械拟态体：左半身裸露骨架与电缆，右半身正以镜面金属板快速生长出另一台机械的外形，表面像液态金属流动、反射扭曲影像；胸前闪电状蓝色能量链向四周延伸。头部未完全成形，只留一只光学镜头。银灰 + 电蓝。",
+   "note": "已裁 448x403；原图 raw/8043_mimic.png。观感偏「正面立绘」，动态弱于同批其他卡",
+   "approved": "2026-11-01"
+  },
+  "8030": {
+   "name": "过载",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "8030_overload.png",
+   "ref": "「过载」的直喻：驱动核心被内部能量撑裂，金属边缘融化滴落",
+   "prompt": "机械过载的驱动核心：齿轮与活塞被橙红能量撑得膨胀变形，边缘融化滴落火花，裂缝涌出高压电弧。符号化中心构图，冷蓝灰机械暗底 + 橙红唯一高亮。",
+   "approved": "2026-11-01"
+  },
+  "8064": {
+   "name": "回收",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "8064_recover.png",
+   "ref": "素体 = 白色无面机械躯壳（项目既有设定）；改造 = 零件沿光缎重新装上",
+   "prompt": "未成形的白色机械素体（人形轮廓、无面无缝、关节裸露）被两只机械臂从两侧托住，四周零件沿光缎重新拼装上去，接触处泛暖金焊接火花。",
+   "approved": "2026-11-01"
+  },
+  "8066": {
+   "name": "负重减轻",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "8066_unburden.png",
+   "ref": "对角线构图：下沉的重物 vs 上升的轻盈",
+   "prompt": "画面沿对角线切开：左下黑铁铠片与锁链碎裂下沉化为黑尘，右上白色发光羽毛与光粒上升，中间一道青白能量断裂带。",
+   "approved": "2026-11-01"
+  },
+  "8070": {
+   "name": "创意",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "8070_creativity.png",
+   "ref": "空白卡牌自己长出构型线 + 虚影卡牌",
+   "prompt": "空白卡牌悬浮中央，卡面内部溢出金色构型线自己绘制新图案，周围分裂出三四个图案各异的半透明虚影卡牌。深蓝紫虚空 + 暖金高亮。",
+   "approved": "2026-11-01"
+  },
+  "8077": {
+   "name": "激发",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "8077_inspire.png",
+   "ref": "搏动核心 + 两道电弧分别命中两个目标（对应「对随机 2 个敌人」）",
+   "prompt": "暗蓝机械腔体内的蓝色能量核心搏动，周围多圈符文环，每次搏动炸出两道分叉电弧射向左右两个红色爆点。",
+   "approved": "2026-11-01"
+  },
+  "9036": {
+   "name": "野兽之心",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "9036_beast_heart.png",
+   "ref": "萨满/德鲁伊图腾杖：木杖 + 杖头雕虎头（野性部族的法器）。效果是「我方盟友伤害+1 / 上场盟友+2 生命」→ 用权杖而不是器官来表达",
+   "prompt": "整块木头雕成的萨满图腾长杖斜立：全杖同一种深褐硬木、木纹年轮贯穿；杖头为木雕虎头——无一根真毛，虎颜条纹由平行雕凿刀痕构成，保留凿击棱面、裂纹与毛边，獠牙同为木雕；眼窝镶粗糙琥珀粗石透暖光；杖身缠褪色兽筋、骨珠、暗红羽毛；四周盘旋半透明的琥珀色兽形虚影（仅轮廓）。深墨绿森林夜色、琥珀 + 深褐木色。",
+   "note": "v1=真实搏动兽心（器官感）；v2=虎头写实长毛（像活虎挂在木棍上）。v3 才是「整块木雕器物」。废弃版：raw/_old/9036_beast_heart_v1_真心版.png / _v2_写实虎毛版.png",
+   "approved": "2026-11-01"
+  },
+  "9045": {
+   "name": "疾风之力",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "9045_gale.png",
+   "ref": "垂直风刃龙卷 + 落点放射气流环 + 远处目标爆点",
+   "prompt": "从高空垂直劈下的青白风刃龙卷，涡流清晰带叶片碎屑；落地炸开放射状气流环，环外一个目标位置爆开白光焦点。",
+   "approved": "2026-11-01"
+  },
+  "9060": {
+   "name": "风暴屏障",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "9060_storm_barrier.png",
+   "ref": "旋转风暴球壳 + 长矛被气流削偏减速（= 前 X 次伤害压成 1）；卡名由「以太屏障」改为「风暴屏障」，traits 同步 以太→风暴",
+   "prompt": "完整球形风暴屏障罩住球心一名渺小持盾披甲战士（半蹲护头），球内空间安静柔和明亮；球壳为高速旋转风暴——多层青白气流反向套叠，夹水珠石子碎箭；壳外数支箭与长矛撞上即被削偏减速、箭杆打转，只溅零星火花；外围阴云雷雨与电光。球内静 / 球外狂的强反差。青白 + 冷蓝。",
+   "note": "v1=六边盾版（旧名时期）；v2=球形但内部空无一物（无保护对象）。v3 补上被护对象 + 内外反差。废弃版：raw/_old/9060_aether_barrier_v1_六边盾版.png / 9060_storm_barrier_v1_空壳版.png",
+   "approved": "2026-11-01"
+  },
+  "9085": {
+   "name": "蓄力",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "9085_charge.png",
+   "ref": "压缩能量球 + 反向双光环 + 两侧卡牌一虚一实重叠（= 生效两次）",
+   "prompt": "被压缩到极致的球形能量体悬浮中央，外层两道反向旋转光环，两侧各有一对一虚一实的重叠卡牌。金橙 + 白。",
+   "approved": "2026-11-01"
+  },
+  "9095": {
+   "name": "怒涛",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "9095_surge.png",
+   "ref": "掀起的巨浪 + 浪中漂浮卡牌 + 下方被水墙围住的靶心",
+   "prompt": "从深处掀起的巨浪，浪脊翻卷漂浮的卡牌碎影与发光水珠，浪头朝下方被水墙包围的靶心砸落。深蓝 + 青白。",
+   "approved": "2026-11-01"
+  },
+  "9098": {
+   "name": "拒绝命运",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "9098_defy_fate.png",
+   "ref": "旧卡碎裂成光尘 → 光尘凝成新卡叠 + 命运之轮弧线",
+   "prompt": "一堆旧卡被抛向空中、上升中碎裂成金色光尘，光尘在下方重新汇聚凝成一叠整齐发亮的新卡；背景深紫虚空与命运之轮弧线。",
+   "approved": "2026-11-01"
+  },
+  "9099": {
+   "name": "幽光",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "9099_glimmer.png",
+   "ref": "洞窟荧光草 + 上方凝聚中的光球（= 即将加入手卡的荧光草）",
+   "prompt": "幽暗洞窟深处一株青白荧光的草，叶尖光点持续上升，上方正凝聚成一颗尚未成形的小光球；潮湿岩壁、垂苔、水滴。",
+   "approved": "2026-11-01"
+  },
+  "9144": {
+   "name": "随心组装",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "9144_assemble.png",
+   "ref": "零件与空白卡牌在漩涡中重组成多个不同虚影",
+   "prompt": "机械零件与空白卡牌在旋转能量漩涡里被重新组装，正拼成各种不同形状的半透明虚影，碎片沿螺旋线旋转。橙金与青蓝交错。",
+   "approved": "2026-11-01"
+  },
+  "9165": {
+   "name": "复制术",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "9165_clone.png",
+   "ref": "六棱水晶 + 两侧生成完全相同的复制体",
+   "prompt": "半透明六棱水晶悬浮中央，正前方一台轮廓清晰、机械细节可见的灰白机械单位，两侧各生成完全相同的复制体，三个单位呈三角对称；复制体表面带淡青虚影过渡，边缘粒子凝实。",
+   "note": "⚠️ v1 复制体糊成一团、主体不可辨，已废弃 → raw/_old/9165_clone_v1_模糊版.png。v2 明确要求「轮廓清晰不可模糊」。",
+   "approved": "2026-11-01"
+  },
+  "9174": {
+   "name": "淘汰",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "9174_eliminate.png",
+   "ref": "横向分解流水线：卡牌射入 → 四张新卡射出 → 素体外壳坠入废弃槽",
+   "prompt": "横向机械淘汰流水线：左侧发光卡牌被传送光带送入分解装置、外壳被剥离；右侧同时射出四张全新发光卡牌呈扇形飞散；被淘汰的那张只剩空白白色素体外壳沿废弃槽坠落。冷白 + 暗蓝 + 橙金传送光带。",
+   "note": "⚠️ v1 与 8064「回收」撞图（都是居中托举白色素体），已废弃 → raw/_old/9174_eliminate_v1_撞回收.png。v2 改横向流水线以拉开区别。",
+   "approved": "2026-11-01"
+  },
+  "9211": {
+   "name": "折射炮",
+   "tier": "S",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "9211_refract.png",
+   "ref": "主炮光束 + 棱镜分光 + 第二道折射线命中第二目标",
+   "prompt": "橙红主炮光束从左下射出击中标靶后被悬浮透明棱镜分光，折射出第二道青色光束命中另一侧目标，两处爆开环状爆点。",
+   "approved": "2026-11-01"
+  },
+  "9137": {
+   "raw": "9137_mass_helios.png",
+   "ref": "巨型日轮反射盘 + 粗锥形塔身 + 阶梯环廊 + 脚下小人比例尺（工业塔形态，与 9130 人形赫利俄斯构成「简化体 vs 完整体」对照）",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art. + 同上参考图重绘：圆盘占上半、塔身向下、低角度仰视、纪念碑式轮廓",
+   "note": "旧图是早期批次画的写实 3D/CG，与现行日系动画口径不统一；本次**参考图重绘**：image1=本卡旧图（保主体/姿势/构图），image2=9138 新定版（供风格），input_fidelity=high。主体设计一字未改，只换画法。旧图留档 → assets/pics/_legacy3d/<id>__old3dcg.png。**确认后 approve 才会覆盖主目录**。",
+   "created": "2026-11-01",
+   "name": "量产型赫利俄斯",
+   "tier": "S",
+   "status": "approved",
+   "approved": "2026-11-01"
+  },
+  "9138": {
+   "name": "量产型赫菲斯托斯",
+   "tier": "A",
+   "kind": "unit",
+   "created": "2026-11-01",
+   "status": "approved",
+   "raw": "9138_hephaestus_mass.png",
+   "ref": "希腊锻神赫菲斯托斯 → **车间/生产线上的组装机器本体**（不是锻炉，也不是「被组装的东西」）：龙门架 + 多关节臂 + 三指机械爪（夹爪/吸盘/钻头/焊枪可换）。效果「量产锻造：击杀后在空格凭空造出单位」→ 画面语义 = 这台机器在造东西，半成品只配当配角",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art. —— 主体是**装配机器本身**的肖像：低角度仰拍的巨型多关节装配臂撑满画面（液压杆、外露铜齿轮与铆钉、钢与奶白装甲），末端是三指机械爪夹着一片曲面装甲壳；旁边挂一只小臂持焊枪、火花四溅。画面最下沿只露半台半成品机体的上半身，明确次要。背景仅一道龙门梁 + 平涂浅蓝灰墙 + 蓝天。",
+   "note": "v1 锻炉+液压巨锤砸砧台（画成锻造）废弃 → raw/_old/9138_hephaestus_mass_v1_锻炉版.png；v2 车间多机械臂、写实3D/CG 风废弃 → raw/_old/9138_hephaestus_mass_v2_写实3D版.png；v3 二维了但偏「动画背景美术」、机械臂七八只、视野散废弃 → raw/_old/9138_hephaestus_mass_v3_背景美术版.png；v4 主体画成「被组装的机体」、装配臂只从边上伸一只进来（主次颠倒，用户指出）废弃 → raw/_old/9138_hephaestus_mass_v4_被组装机体为主体.png；v5 定版：三指机械爪 + 多关节装配臂为画面最大主体，半成品只在下沿露上半身。遗留：「被夹住的曲面装甲壳」偏像一根法棍，若要更准可再迭代",
+   "approved": "2026-11-01"
+  },
+  "9130": {
+   "name": "赫利俄斯",
+   "tier": "A",
+   "kind": "unit",
+   "created": "2026-11-01",
+   "status": "pending",
+   "raw": "9130_helios.png",
+   "ref": "希腊太阳神赫利俄斯（金发、日轮、驾日车者）→ 日系「仿生人」设定：等身大人形、外观与人类无异。设定依据：非量产型全部是人形机器人",
+   "prompt": "等身大人形机器人赫利俄斯：仿真肤色、白色暗金仪式军装长外套（布料质感）、金发后梳、琥珀金瞳内有一圈刻度光圈；颈侧下颌一道极细同色接缝、手背皮下透出淡金回路；单手抬掌心向外、指间散金色光尘（下合）；背后多层同心金属日轮环 + 全息虚线干涉纹；脚下金属平台、四周巨型量产机械单位仰视。无裸露骨架电缆。",
+   "note": "v1=神殿塔（误读为工事建筑，且 0攻0移≠塔）；v2=装甲机体版（颈部整段裸机械骨架、机械手，超出「外观与人类无异」）。v3 才定：像人但不像【完全】是人。废弃版 raw/_old/9130_helios_v1_神殿塔版.png / _v2_装甲机体版.png"
+  },
+  "9025": {
+   "name": "鸭子窑",
+   "tier": "A",
+   "kind": "unit",
+   "created": "2026-11-01",
+   "status": "pending",
+   "raw": "9025_duck_kiln.png",
+   "ref": "窑 = 砖砌环形窑体 + 铁箍；「孵化陶瓷鸭」→ 窑口排队的白瓷鸭（釉光、开片、粗糙鸭脸）",
+   "prompt": "砖砌陶窑工事：窑壁裂缝透橙红火光、窑口冒烟；圆胖白瓷陶瓷鸭排队从火光中走出、有的已站在窑前石地。暖橙与冷灰砖墙、带诡异幽默。"
+  },
+  "8022": {
+   "name": "地狱咏唱者",
+   "tier": "A",
+   "kind": "unit",
+   "created": "2026-11-01",
+   "status": "pending",
+   "raw": "8022_hell_chanter.png",
+   "ref": "咏唱者 = 兜帽遮脸、双手施术；效果「攻击时回复 1 点费用」→ 悬空的硬币状符文被吸入掌心",
+   "prompt": "瘦削暗影咏唱者：破损深紫黑斗篷遮脸、十指张开拉出暗紫光丝；周围悬着硬币状符文正碎裂又被吸回掌心；脚下影子延成触须。暗紫与暗红。"
+  },
+  "8080": {
+   "name": "涂装机器人",
+   "tier": "A",
+   "kind": "unit",
+   "created": "2026-11-01",
+   "status": "pending",
+   "raw": "8080_paint_robot.png",
+   "ref": "效果「把一个友方单位变成随机机械之心单位」→ 喷枪把另一台机械体从脚到头刷成统一灰蓝涂装，交界处漆雾过渡",
+   "prompt": "挂油漆桶的矮壮涂装机器人：手持工业喷枪喷另一台机械体，对方膝盖以下已是完整机械壳、胸口以上还是原样，交界处漆雾渐变。暖黄工作灯与冷灰车间。"
+  },
+  "8013": {
+   "name": "冻结陷阱",
+   "tier": "A",
+   "kind": "symbol",
+   "created": "2026-11-01",
+   "status": "pending",
+   "raw": "8013_freeze_trap.png",
+   "ref": "场地卡：敌人**路过即触发**并**立即停止移动** + 冰冻。画「踩上的那只脚被冻在原地」而不是画陷阱本体",
+   "prompt": "俯视地面局部：金属边框陷阱格里深蓝晶簇炸开，把踩上来的机械脚从脚踝冻进坚冰，含定格气泡与裂纹；石板霜花放射蔓延、空气飘冰晶。"
+  },
+  "8017": {
+   "name": "巨物陷阱",
+   "tier": "A",
+   "kind": "symbol",
+   "created": "2026-11-01",
+   "status": "pending",
+   "raw": "8017_giant_trap.png",
+   "ref": "场地卡：造成 10 + 目标攻击力×2 伤害 → 伤害随目标变大而变大，所以画面主体是「巨大的东西被夹住」",
+   "prompt": "低角度仰拍：石板下升起的巨型带齿铁颚夹钳猛地合拢，咬住踏上来的一头巨型兽类前肢，尖齿入内、金属扭曲；石板顶裂碎石崩飞、铰链爆火花。"
+  },
+  "9043": {
+   "name": "冰墙术",
+   "tier": "A",
+   "kind": "symbol",
+   "created": "2026-11-01",
+   "status": "pending",
+   "raw": "9043_icewall.png",
+   "ref": "技能：一条横行生成**三面**冰墙，我方回合开始时融化。数量是机制的一部分，必须能数清三面且都实心",
+   "prompt": "正面平视：三面完全相同的实心冰墙等距并列（无门洞/拱门/镂空），内部放射状结晶与竖向气泡、边缘长满冰锥，墙根冻裂石板满布霜花；背景模糊城墙与烧焦旗杆。空无一人。"
+  },
+  "9093": {
+   "name": "连环戏法",
+   "tier": "A",
+   "kind": "symbol",
+   "created": "2026-11-01",
+   "status": "pending",
+   "raw": "9093_chain_trick.png",
+   "ref": "技能：4 点伤害；本回合用过 2 张其他卡→抽 1 张；用过 4 张→改为 10 点。递进关系必须画进构图",
+   "prompt": "符号化：三张发光卡牌沿弧线依次飞出，每飞出一张轨迹上多切一道刃痕，第一道短、第二道拉长、第三道成巨大交叉斩，刃痕间以电弧细光连成递进连锁。深紫黑底、冷白与紫高亮。"
+  },
+  "9122": {
+   "name": "专注",
+   "tier": "A",
+   "kind": "symbol",
+   "created": "2026-11-01",
+   "status": "pending",
+   "raw": "9122_focus.png",
+   "ref": "技能：从抽牌库选 2 张，本次对战**消失**（不进手牌也不进弃牌区）。语义是「被彻底抹掉」，不是「被摧毁」——所以不用火不用爆炸",
+   "prompt": "符号化：由无数卡牌堆成的深色牌库向深处延伸；一束极细白色聚光照亮中间两张卡，那两张正从边缘无声溃散成白色光尘、卡面已缺一块，其余卡牌完好。深灰蓝黑底、冷白聚光。"
+  },
+  "9163": {
+   "name": "冲击炮",
+   "tier": "A",
+   "kind": "symbol",
+   "created": "2026-11-01",
+   "status": "pending",
+   "raw": "9163_shock_cannon.png",
+   "ref": "技能：10 点伤害 + 击退 1 格。击退要有明确方向感——把目标打得双脚离地向后退",
+   "prompt": "侧面低角度：粗短机械炮刚击发，炮口喷橙白火药焰与环状冲击波、炮架后座；炮弹光柱命中敌方单位胸前，对方双脚离地向后滑退、铠片四散、地面拖出刮痕。方向感从右向左。"
+  },
+  "8033": {
+   "raw": "8033_energy_barrier.png",
+   "ref": "「初次受伤变 0」= 一层只抵挡第一下的镀膜，撞上就碎成粉而那层只凹一下；「抽 3 张」= 卡牌背后扇形涌出三张",
+   "prompt": "一张发光卡牌悬浮正中，外包半透明果冻质感能量镀膜（流动光纹、可透见卡面）；粗糙铁质尖刺撞上镀膜，接触点即碎成粉末四散，镀膜只凹陷一小块并回弹、无裂纹；卡牌背后正抽出三张半透明卡牌呈扇形刚冒头。暗灰蓝底、琥珀金 + 青白双高亮。",
+   "note": "「屏障」不能画成球壳（9060 风暴屏障已占），改成贴附在卡面上的镀膜，才不撞",
+   "created": "2026-11-01",
+   "name": "能量屏障",
+   "tier": "A",
+   "status": "pending"
+  },
+  "8049": {
+   "raw": "8049_dismantle.png",
+   "ref": "拆解 = 逆向装配。用工程学「爆炸图 / exploded view」语言，与 8064 回收（装配）、9174 淘汰（流水线）三者互不撞",
+   "prompt": "俯视爆炸图：一台灰白机械单位沿接缝张开外壳，螺栓/齿轮/液压杆/装甲板/光学镜头分层悬浮在位、每件周围有虚线引出槽位；胸部核心被单独取出悬浮最上方发光；下方躺着一张空白白色素体卡，旁边靠一张发光小芯片（被改造过才额外给升级）。深蓝灰技术底、冷白 + 暖金。",
+   "note": "与 8064/9174 的区别在构图语言：那两张是「机械臂作业」，这张是「解剖图」",
+   "created": "2026-11-01",
+   "name": "拆解",
+   "tier": "A",
+   "status": "pending"
+  },
+  "9013": {
+   "raw": "9013_duck_power.png",
+   "ref": "「每回合全体+1、每个单位最多累计+4」= 正后方金橙光环内四层同心套叠、逐层放大的鸭形剪影（可数出四层，非并列分身）；鸭子形象沿用队内既有体系（鸭子骑士 9001 / 鸭子队长 9012：拟人站立、圆胖白绒毛、橙扁喙、蹼足、粗黑倒八字眉），且必须「翼即手」——全身上下只有一对羽翼 + 一双蹼足共四条肢体",
+   "prompt": "低角度仰拍全身像：拟人直立的圆胖白鸭，粗黑倒八字怒眉，胸脯前挺、身体上拔，双翼向两侧斜上方展开撑满画面。肢体硬约束：仅两条腿 + 一对羽翼，翼即手，禁止另画手臂/人手/袖口/手套/护腕。背景硬约束：正后方金橙能量光晕内四层同心鸭首剪影逐层放大，禁止左右并列三只分身。脚下石板踏出放射裂纹、碎石浮起，强逆光与战场扬尘，暖金+乳白。日式动画赛璐璐，日式西幻。",
+   "note": "v1 写实塘鸭（无眉/非拟人/趴姿）废弃 → raw/_old/9013_duck_power_v1_写实鸭版.png；v2 翼下另生一对手臂（四上肢）废弃 → raw/_old/9013_duck_power_v2_四上肢版.png；v3 肢体正确但虚影为左右+背后三只并列分身（层数不符 +4），留作备选 → raw/_alt/9013_duck_power_v3_三虚影版.png；v4 定版：四条肢体正确 + 四层同心套叠可数 + 翼展撑满有压迫感",
+   "created": "2026-11-01",
+   "name": "鸭子之力",
+   "tier": "A",
+   "status": "pending"
+  },
+  "9024": {
+   "raw": "9024_hiss.png",
+   "ref": "「第3回合起己方单位每回合行动两次」：鸭子是应激炸毛发怒（不是吐气），气势靠漫画集中线 + 冲击波纹，友军靠半步内的运动残像表达「动了两次」",
+   "prompt": "侧面平视：拟人站立圆胖白鸭应激爆怒——全身绒毛炸起膨胀、双翼张开、颈前伸、扁喙大张作哈气口型；粗黑倒八字怒眉拧起、眼眶泛红、眸中一簇火、额侧青筋怒标记；四周粗黑漫画集中线 + 脚下放射裂纹 + 身后震动冲击波纹；嘴前与背景不得有任何白雾/气流/气体；侧后方两台己方机械各拖半步内的半透明运动残像。战场废墟、暖橙 + 冷灰。",
+   "note": "v1 残像偏移过大（读成旁边还有一台隐形单位）；v2 画成写实塘鸭 + 实体气流（两处都不符）；v3 定版：拟人鸭 + 炸毛 + 纯漫画符号气势。「哈气」是应激发怒的姿态，不是真的喷气。废弃版 raw/_old/9024_hiss_v1_残像过远.png / _v2_写实鸭版.png",
+   "created": "2026-11-01",
+   "name": "哈气",
+   "tier": "A",
+   "status": "pending"
+  },
+  "9107": {
+   "raw": "9107_shadow_hunt.png",
+   "ref": "伤害 16→30 的条件是「上回合触发过场地」：所以画面必须同时有「阵已被踩亮」与「矛已落下」两件事",
+   "prompt": "俯视战场地面局部、不画人：圆形符文阵边缘已点亮成灼热紫红、阵心爆亮，周围有被踩乱的尘土与拖痕；一支凝实黑影长矛从正上方垂直钉入阵心，刺入处炸开尖锐紫色爆环与飞散碎块，矛周空气扭成暗紫丝状。暗紫 + 烬红、极暗边缘。",
+   "note": "「阵已亮」是机制证据，不能省；省了就只是普通的落地攻击",
+   "created": "2026-11-01",
+   "name": "暗影狩猎",
+   "tier": "A",
+   "status": "pending"
+  },
+  "9062": {
+   "raw": "9062_familiar_night.png",
+   "ref": "「每用一张效果卡，就把一张乌鸦加入手卡」= 从书页里涌出乌鸦、每只喙里衔着一张卡",
+   "prompt": "仰视夜空、不画人：深紫夜里一本翻开的厚书悬浮半空、书页翻飞，页缝溢出墨黑与青蓝光；一群乌鸦从头页之间成群涌出四散，每只喙里衔着一张发光小卡牌；真实鸟类体型羽色（纯黑带蓝紫反光）不拟人化；背景墨蓝夜空星点 + 书外一圈细小发光符文环。",
+   "note": "乌鸦必须衔卡，否则只是一张「魔法书」插画，读不出「加到手里」",
+   "created": "2026-11-01",
+   "name": "使魔之夜",
+   "tier": "A",
+   "status": "pending"
+  },
+  "8035": {
+   "raw": "8035_self_repair.png",
+   "ref": "改造场上一个己方盟友，+2 最大生命并每回合结束回 4 —— 画“机械体正在被修补”，不是“已修好”：裂口要同时存在「破」与「合」两种状态",
+   "prompt": "【风格头·必须放第一句】アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art, NOT octane render, NOT metallic texture rendering。 铜色装甲的机械构装体半跪，一手撑地、一手抬到面前看自己的手掌；左肩肋部装甲裂开，数十条橙金纳米光带像缝合线钻入裂口把装甲一格格粘合，边缘冒金色火花与白色蒸汽团，胸口齿轮重新咬合亮起。明亮工坊废墟+青蓝天光。艺术总监追加：缝合光带不要画成绳网/绑绳",
+   "note": "v1 写实3D概念图（不是赛璐璐）废弃 → raw/_old/8035_self_repair_v1_写实3D版.png；v2 加了中文赛璐璐要求仍是半写实 → raw/_old/8035_self_repair_v2_半写实版.png；v3 定版（英文风格头+cartoony simplified 起效）。遗留：缝合线偏“捆绳”感，若要更准可再迭代",
+   "created": "2026-11-01",
+   "name": "自我修复",
+   "tier": "A",
+   "status": "pending"
+  },
+  "8039": {
+   "raw": "8039_system_upgrade.png",
+   "ref": "手牌里的一张盟友/工事被施加改造：费用+1、力量+3、生命+6 —— 卡牌本体被“重铸加厚”，读数用图形箭头表达，不写数字文字",
+   "prompt": "【风格头·必须放第一句】アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art, NOT octane render, NOT metallic texture rendering。 一张盟友卡悬空微仰，卡面上是简化的卡通机械战士（铜甲、大圆关节、单眼发光）；青蓝光束自下射入把装甲逐层重铸、银甲自边缘长出；四周浮起平涂全息环、数据条、齿轮图标与向上箭头（禁止任何文字）。明亮机库、暖橙灯与悬吊线缆",
+   "note": "v1 写实3D霓虹赛博、卡面实为西幻骑士（与机械改造不符）废弃 → raw/_old/8039_system_upgrade_v1_写实3D版.png；v2 半写实废弃 → raw/_old/8039_system_upgrade_v2_半写实版.png；v3 定版",
+   "created": "2026-11-01",
+   "name": "系统升级",
+   "tier": "A",
+   "status": "pending"
+  },
+  "8040": {
+   "raw": "8040_batch_transfer.png",
+   "ref": "手牌“所有”盟友和工事同时获得改造 —— 数量即构图：一排卡必须数得清（6 张），且被同一条扫描带一次性贯穿",
+   "prompt": "【风格头·必须放第一句】アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art, NOT octane render, NOT metallic texture rendering。 明亮装配车间，传送带上并列 6 张盟友卡整齐排开、全部朝前，一条横向琥珀金扫描光带一次贯穿全部；每张卡框亮青蓝边、卡面上的卡通机械装甲同时升起一层；多关节机械臂自右侧推入、扫描头对准卡组，背景层叠传送带与吊挂线缆。俯视微仰角，秩序感与量产感",
+   "note": "v1 写实3D赛博废弃 → raw/_old/8040_batch_transfer_v1_写实3D版.png；v2 半写实废弃 → raw/_old/8040_batch_transfer_v2_半写实版.png；v3 定版（6 张卡可数）。遗留：扫描带不够明显，被画成每张卡的黄框",
+   "created": "2026-11-01",
+   "name": "批量传输",
+   "tier": "A",
+   "status": "pending"
+  },
+  "8053": {
+   "raw": "8053_beyond_limits.png",
+   "ref": "0 费·维度·打出后消失，赋予盟友改造：超负荷 —— 画面要有「这张卡下一秒就不存在」的不稳定感",
+   "prompt": "【风格头·必须放第一句】アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art, NOT octane render, NOT metallic texture rendering。 一张卡被一道纵向次元裂缝从中间撕开，裂口是紫黑色虚空几何碎面；过量金色能量自裂口喷出把卡边撑得鼓胀变形、碎片与电弧从边框崩落；卡面覆着红黑过载警示条纹，周围空气被推成同心冲击环。禁止任何文字。戏剧性低角度",
+   "note": "一次成型。卡面为紫黑虚空面（无图案），与“维度/超负荷”语义相符",
+   "created": "2026-11-01",
+   "name": "超越极限",
+   "tier": "A",
+   "status": "pending"
+  },
+  "8061": {
+   "raw": "8061_dual_teleport.png",
+   "ref": "交换战场上两个单位的位置 —— 必须一眼看出「换了」，只给两个单位各套一个传送环是不够的",
+   "prompt": "【风格头·必须放第一句】アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art, NOT octane render, NOT metallic texture rendering。 草地格状战场并立两扇竖椭圆青色传送门，铜色机械构装体自左门向右跨出、暗钢重甲士兵自右门向左跨出，各自半身穿门；地面两道反向弧形光轨（青：左→右；紫：右→左）把“互换”钉死。稍高视角",
+   "note": "v1 两单位各套一个传送环站着、交换不可读 → raw/_old/8061_dual_teleport_v1_交换不可读.png；v2 定版（双向门 + 反向箭头）",
+   "created": "2026-11-01",
+   "name": "双向传送",
+   "tier": "A",
+   "status": "pending"
+  },
+  "9127": {
+   "raw": "9127_rework.png",
+   "ref": "从弃牌区取回一张盟友/工事并获得永久改造：生命+3 —— 方向必须是「从废料堆回到手里」，卡要处于“正在被修好”的过程",
+   "prompt": "【风格头·必须放第一句】アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art, NOT octane render, NOT metallic texture rendering。 画面下方是废弃机械残骸堆（碎甲板、断臂、大齿轮），多关节机械吊臂用夹爪夹住一张残破盟友卡向上吊起；卡在上升途中被琥珀金焊光一格一格补上裂缝、断裂边缘长出新的银色装甲边；背景是彩色回收车间、悬吊链条与卡通蒸汽。仰视，明确向上的方向感",
+   "note": "一次成型",
+   "created": "2026-11-01",
+   "name": "返修",
+   "tier": "A",
+   "status": "pending"
+  },
+  "9131": {
+   "raw": "9131_mass_erinyes.png",
+   "ref": "四足机械兽（装甲四足、单条青色目视条、趾行爪足、层叠肩背甲），主体必须原样保留",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art. + Redraw the EXACT SAME SUBJECT as image1 in the art style of image2 —— 四足机械兽，同一姿势同一 3/4 角度，只换渲染方式为平涂线稿",
+   "note": "旧图是早期批次画的写实 3D/CG，与现行日系动画口径不统一；本次**参考图重绘**：image1=本卡旧图（保主体/姿势/构图），image2=9138 新定版（供风格），input_fidelity=high。主体设计一字未改，只换画法。旧图留档 → assets/pics/_legacy3d/<id>__old3dcg.png。**确认后 approve 才会覆盖主目录**。",
+   "created": "2026-11-01",
+   "name": "量产型俄倪厄",
+   "tier": "S",
+   "status": "approved",
+   "approved": "2026-11-01"
+  },
+  "9133": {
+   "raw": "9133_mass_hecato.png",
+   "ref": "攻城装甲堡垒车（龟壳状层叠装甲、顶部圆舱盖、正面绿色感应缝、短履带），主体必须原样保留",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art. + 同上参考图重绘：矮宽厚重的龟壳堡垒，同一 3/4 正面角度",
+   "note": "旧图是早期批次画的写实 3D/CG，与现行日系动画口径不统一；本次**参考图重绘**：image1=本卡旧图（保主体/姿势/构图），image2=9138 新定版（供风格），input_fidelity=high。主体设计一字未改，只换画法。旧图留档 → assets/pics/_legacy3d/<id>__old3dcg.png。**确认后 approve 才会覆盖主目录**。",
+   "created": "2026-11-01",
+   "name": "量产型赫卡同克瑞斯",
+   "tier": "S",
+   "status": "approved",
+   "approved": "2026-11-01"
+  },
+  "9188": {
+   "raw": "9188_mass_hermes.png",
+   "ref": "重装甲运兵车（长车身斜首上装甲、侧向大直径负重轮、车顶遥控武器站、下裙黄黑警示条），主体必须原样保留",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art. + 同上参考图重绘：同一 3/4 前视角、同一厚重站姿",
+   "note": "旧图是早期批次画的写实 3D/CG，与现行日系动画口径不统一；本次**参考图重绘**：image1=本卡旧图（保主体/姿势/构图），image2=9138 新定版（供风格），input_fidelity=high。主体设计一字未改，只换画法。旧图留档 → assets/pics/_legacy3d/<id>__old3dcg.png。**确认后 approve 才会覆盖主目录**。",
+   "created": "2026-11-01",
+   "name": "量产型赫尔墨斯",
+   "tier": "S",
+   "status": "approved",
+   "approved": "2026-11-01"
+  },
+  "8074": {
+   "raw": "8074_daedalus_mass.png",
+   "ref": "匠神代达罗斯 → 把东西改造成兵器的机械，但**画面不画卡**（用户否决「卡变炮弹」的直白表达）。效果「入场时选一张手卡变成『聚能炮击』」→ 只需他是「聚能炮」本体。**量产型不得偏人形**：纯载具/装置，无头无臂无腿。",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art, NOT metallic texture rendering. —— 单主体特写：低矮宽大的**履带式自行攻城炮**（无躯干/无头/无面/无手臂/无腿），宽履带+大负重轮+侧裙，铜与奶白装甲、超大铆钉、外露齿轮；车顶一门粗炮管斜指上前方，炮尾缠三道粗铜感应线圈、烧成琥珀亮橙，炮口正凝聚一颗压缩能量球、细电弧沿炮管倒流回线圈；车体两侧是平板桁架式散热片（机械散热板，不是生物翅膀、不是手臂）。**画面里不得出现任何卡片/纸牌/纸片矩形**。背景平涂浅蓝灰车间。",
+   "note": "v1 双足人形自走炮台、爪臂举卡送向炮膛（用户否决两点：①「卡变炮弹」多余 ②太偏人形）→ raw/_old/8074_daedalus_mass_v1_持卡人形版.png；v2 定版：履带式自行炮车，单炮管+三感应线圈+炮口凝聚能量球，全图无卡片、无人形结构。副作用：3/4 仰角下炮管向画面右上延伸，卡面裁切后炮口贴近右上边缘，仍在框内。",
+   "created": "2026-11-01",
+   "name": "量产型代达罗斯",
+   "tier": "S",
+   "status": "pending"
+  },
+  "8075": {
+   "raw": "8075_mnemosyne_mass.png",
+   "ref": "记忆女神谟涅摩叙涅 → **数据存储 + 算力提供**的机械单位（用户指定）。效果「每回合一次：使用聚能炮击时伤害 +7，且因此抽到的卡费用 -1」→ 语义 = 它把记忆存住、把算力吐出去。量产型系列：纯机械装置，非人形。",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art, NOT metallic texture rendering. 【成色硬约束·所有单位/机械一律适用】BRAND NEW, factory-fresh, immaculately clean surfaces. NO rust, NO corrosion, NO weathering, NO dirt, NO grime, NO stains, NO scratches, NO chipped paint, NO battle damage, NO soot, NO aged patina, NO distressed texture. Every plate is flawless and freshly finished. —— 单主体特写：石台上矗立一座工业数据机柜塔（铜+奶白装甲、超大铆钉、外露齿轮），无人形结构。下三分之二 = **数据存储**：正面密排矩形存储抽屉、层层成行如巨型机架，每格有横向细缝与一排小圆指示灯（琥珀/青/少数暗），几格半抽开露出叠放记忆盘、透淡青光；重复与秩序感必须一眼可读。上三分之一 = **算力核心**：铜框内嵌一片大面积多面处理器晶片，几何电路沟槽烧成熔琥珀色（全图最亮），两侧各一台大圆盘厚叶散热风扇转动、带白色速度弧。输出：粗束青色数据线缆自核心向上升起并向右弯出，沿线漂浮实心几何数据块（立方与八面体、平涂青光）；另有一道明亮琥珀算力光束自核心射向画面右侧、束内带几枚平涂青色立方符号。严禁喇叭/锥形口/炮管/喷嘴/管状物；不得出现卡片或纸片矩形。背景平涂浅蓝灰机房。",
+   "note": "v1 顶部黄铜增幅号角，被指像炮管 → raw/_old/8075_mnemosyne_mass_v1_号角版.png；v2 改为三片平板圆形水晶透镜串成放大光路 → raw/_old/8075_mnemosyne_mass_v2_透镜版.png；v3 定版：按用户指定重做语义为**数据存储 + 算力提供**——下半密排存储抽屉阵列（指示灯+半抽开的记忆盘），上半处理器晶片核心 + 双散热风扇 + 青色数据线缆与几何数据块 + 一道琥珀算力光束。全图无人形、无管状物、无卡片，成色全新无做旧。",
+   "created": "2026-11-02",
+   "name": "量产型谟涅摩叙涅",
+   "tier": "A",
+   "status": "approved",
+   "approved": "2026-11-02"
+  },
+  "9111": {
+   "raw": "9111_shadow_blade.png",
+   "ref": "回合结束时对随机敌人造成 X 伤，X=本回合已使用费用数 → 变量必须是**可数的刻度**：刃身一排菱形嵌槽，已充能的几格发亮",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT dark realistic concept art, NOT gritty texture rendering. Palette deep midnight blue and violet, BUT colors stay bright, saturated and anime-clean — a vivid night, NOT a murky realistic dark painting. —— 单主体特写：一把悬浮暗影长刃（无持刀者、无手），黑曜石刃身、紫白硬边描光；刃身沿柄到尖一排六枚菱形嵌槽，靠尖的几枚亮琥珀、靠柄的仍暗（如充能条）；四周菱形晶片被吸入、拖紫色细光尾；背景同心冲击环、地面紫色涟漪环。",
+   "note": "一次成型。充能刻度清晰可数（约六格、靠尖五格亮），与「花费越多伤越重」对应。",
+   "created": "2026-11-02",
+   "name": "暗影之刃",
+   "tier": "A",
+   "status": "pending"
+  },
+  "9112": {
+   "raw": "9112_shadow_chain_v3.png",
+   "ref": "回合结束，剩余费用每 3 点把一个随机敌人**向后**击退 2 格 → 必须给出方向证据：锁链绷直 + 身体后仰 + 拖痕 + 两格标记与反向箭头",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT dark realistic concept art, NOT gritty texture rendering. Palette deep midnight blue and violet, BUT colors stay bright, saturated and anime-clean — a vivid night, NOT a murky realistic dark painting. —— 画面里只有一个角色：一名重甲士兵正被一条极粗的暗紫色铁环锁链从画面左下方向后方猛拽，上半身被扯得后仰成弓形、双手张开空抓、表情惊恐、双靴离地向前打滑。锁链由近及远铁环尺寸递减、绷成一条笔直对角线贯穿画面，近端（画面左下角外）自地面裂隙喷涌而出，末端是张开的金属三爪钩死扣在他的肩甲与胸甲之间，环扣之间迸出紫色火星与飞散碎石。地面是深色石砖，两道平行的摩擦拖痕从他打滑的靴底一直延伸到画面左下边缘之外。低角度仰拍、逆光紫色轮廓光、能量粒子。NO arrow, NO arrow symbol painted on the floor, NO directional sign, NO floor grid markers, NO playing card, NO trading card, NO rectangular paper object.",
+   "note": "v3（2026-11-02 用户返修）：删掉地面上那道紫色箭头——用户指出『地板的箭头不知所谓』；击退语义改由三件事承担：锁链绷成笔直对角线且在近端粗到出画、士兵上半身后弓且双靴离地、靴底两道平行拖痕一直延伸到画面左下边缘之外。旧准则『位移用地面刻度+箭头』作废：箭头会被读成 UI 符号，卡图里不要出现任何符号化标记。\n【v3 后处理】原图头盔顶贴到 y≈20/1024，而卡面图区比例是 CARD_ART_RATIO 0.662（260×312 的卡 → 260×206），cover 显示会上下各裁掉约 6%，头冠直接被切。修法：纵向压缩 0.93 + 底对齐 + 顶部补 72px 边缘模糊拉伸，主体整体下移后再按 448×403 居中裁。新准则见 shared_recipe『卡面裁切安全区』。",
+   "created": "2026-11-02",
+   "name": "暗影锁链",
+   "tier": "A",
+   "status": "pending",
+   "updated": "2026-11-02"
+  },
+  "9114": {
+   "raw": "9114_endless_dark_v2.png",
+   "ref": "抽牌后**强制**弃 1 张，然后得 2 费 → 三个要素同框：被抓走的卡（正在消散）、手里还剩的卡、右下亮起的两枚费用水晶",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT dark realistic concept art, NOT gritty texture rendering. Palette deep midnight blue and violet, BUT colors stay bright, saturated and anime-clean — a vivid night, NOT a murky realistic dark painting. —— 单主体、巨物感：一只巨大的暗影之手自画面上方向下压来，五指张开攫住一团悬浮的青蓝色光团——光团由几十粒发光颗粒聚成，被攫住的部分已被抓散、自指缝间漏出光粒，未被抓到的更多光粒向后散开上升；手心与指尖的接触点爆出青白色电光；手背与手腕是纯黑的剪影，边缘描一圈紫蓝轮廓光；背景是深紫近黑的虚空与下沉的暗色雾。画面右下浮着两枚青蓝色的菱形光晶，晶体有棱面高光、微微上浮。低角度仰拍、能量粒子。NO playing card, NO card, NO rectangular paper, NO deck, NO card face, NO book.",
+   "note": "v2（2026-11-02 用户新规「卡牌不入画」）：v1 画的是『三张发光卡 + 黑手捏走中间那张 + 两枚水晶』，卡牌是画面主体，违反新规。v2 改抽象表达：巨手自上方压下攫住一团青蓝光粒（=手牌/刚抽到的东西），指缝漏光粒表示被夺走，右下浮着两枚青蓝菱形光晶（= 获得的 2 点费用）。旧图 raw/_old/9114_endless_dark_v1_三卡版.png。",
+   "created": "2026-11-02",
+   "name": "无尽黑暗",
+   "tier": "A",
+   "status": "pending",
+   "updated": "2026-11-02"
+  },
+  "8063": {
+   "raw": "8063_dark_trap.png",
+   "ref": "场地陷阱：敌人**路过即触发**并**立即停止移动** + 本回合力量 -1 → 陷阱在**地面**且从上方看得清；急停要有对比（前倾 vs 身后速度残影）",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT dark realistic concept art, NOT gritty texture rendering. Palette deep midnight blue and violet, BUT colors stay bright, saturated and anime-clean — a vivid night, NOT a murky realistic dark painting. —— 略俯视地砖战场：地面平铺紫黑圆形陷阱符文环（环缘刻棱角符纹、内部是纯黑影池），数条粗影触须自池中暴起缠住奔跑中重甲士兵的脚踝与小腿；士兵上身前扑、双臂前伸、后脚仍悬空，身后留半透明奔跑残影；其头顶浮一枚折断变灰的扁平箭头符号（攻击力衰减）。",
+   "note": "一次成型。场地卡的「地面陷阱 + 路过者被缠停」读得很正；头顶断箭头承担 -1 力量。",
+   "created": "2026-11-02",
+   "name": "黑暗陷阱",
+   "tier": "A",
+   "status": "pending"
+  },
+  "9120": {
+   "raw": "9120_shadow_raid_v2.png",
+   "ref": "8 伤；若**含本卡**本回合已用 3 张卡则回 1 费 → 连击数 3 要可视：一排三张卡剪影，前两张暗、第三张亮金",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT dark realistic concept art, NOT gritty texture rendering. Palette deep midnight blue and violet, BUT colors stay bright, saturated and anime-clean — a vivid night, NOT a murky realistic dark painting. —— 单主体、高速动作：一名暗影刺客自画面左下低身跃起，双手握一柄细长的紫色能量刀，自左下向右上斩出一道极宽的紫色刀光斜贯整幅；刀光切中右上的重甲敌兵，命中处爆开锥形紫白光刺、甲片与碎石向外飞散，敌兵被斩得上身后仰、双脚离地。刺客是纯黑剪影、边缘描紫蓝轮廓光，刀光边缘有速度线与能量火星。左上区域有三枚暗紫色菱形光符自左向右依次变淡、正在消散（数量正好三枚，代表已经打出的三张）。深紫夜空、能量粒子、强透视。NO playing card, NO trading card, NO rectangular paper object, NO card face, NO deck of cards, NO rectangular card-shaped panels.",
+   "note": "v2（2026-11-02 用户新规「卡牌不入画」）：v1 顶端横排三张卡（第三张亮金）表达『本回合已用 3 张卡』，卡牌入画违反新规。v2 换成三枚暗紫菱形光符自左向右依次变淡消散（数量仍是 3，不用卡形），主体改为一道横贯整幅的紫色刀光斩中重甲敌兵。旧图 raw/_old/9120_shadow_raid_v1_三卡版.png。",
+   "created": "2026-11-02",
+   "name": "影袭",
+   "tier": "A",
+   "status": "pending",
+   "updated": "2026-11-02"
+  },
+  "9121": {
+   "raw": "9121_shadow_step_v2.png",
+   "ref": "8 伤 + 从**弃牌区任选一张**返回手牌 → 左右两段动作：背后刺杀 / 影手从下沉的弃牌堆里把一张卡**向上捞起**",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT dark realistic concept art, NOT gritty texture rendering. Palette deep midnight blue and violet, BUT colors stay bright, saturated and anime-clean — a vivid night, NOT a murky realistic dark painting. —— ONLY ONE scene, full frame, no split screen, no vertical divider. 一名重甲士兵站在深色石砖地面上，他脚下的影子被拉成一片漆黑的影池；一名无面孔的暗影刺客正从这片影池中升起，上半身已经完全脱出影面，影池表面与他的腰腹之间还连着被拉长的紫色能量丝。刺客一手前刺，紫水晶短刃从背后贯入士兵的肩背甲，命中点爆开锥形紫色光刺、甲片与铆钉向外飞散，士兵上身后仰、手中长剑脱手飞出、双脚在地上蹭出两道浅痕。低角度仰拍、紫青色逆光轮廓、能量粒子。NO playing card, NO card, NO rectangular paper, NO discard pile, NO second panel, NO split screen, NO vertical light divider.",
+   "note": "v2（2026-11-02 用户返修）：v1 用一道竖直紫光把画面劈成两半，左半是『影手从弃牌堆捞卡』、右半是『背刺』——用户判定『没必要做两个部分，只需要右边』。v2 取消分割，只保留背刺一场：刺客自士兵脚下的影池里升起、紫晶短刃贯入背甲、长剑脱手飞出。『从弃牌区取回一张卡』这半段语义不上画面（卡牌不入画），靠『从影子里浮现』本身表达暗影步的位移感。",
+   "created": "2026-11-02",
+   "name": "暗影步",
+   "tier": "A",
+   "status": "pending",
+   "updated": "2026-11-02"
+  },
+  "8067": {
+   "raw": "8067_splitting_shadow_v2.png",
+   "ref": "工事：回合开始时抽一张卡 → 主体必须是**石碑/门**这类装置，不是怪物；分裂 + 递交一张卡",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT dark realistic concept art, NOT gritty texture rendering. Palette deep midnight blue and violet, BUT colors stay bright, saturated and anime-clean — a vivid night, NOT a murky realistic dark painting. —— 单一主体、完全非人形的暗影工事（构筑物）：一座黑曜石般的多面体尖棱核心悬浮在方形石砖台基正上方，表面抛光漆黑、棱边描着紫色能量光，核心内部透出一点青蓝色光核。它以自身为源头，正分裂出三个同形的影核：左侧一个已完全成形并漂浮脱离，右侧一个成形一半、表面仍连着拉丝状的紫色能量，后方一个正从本体表面被挤出来、只露出半截。三个分身尺寸逐级变小、透明度逐级变淡，都与本体保持同一种几何形状。台基表面刻有暗影纹与向外扩散的紫色能量环。低角度仰拍、巨物感、紫青逆光轮廓、能量粒子。NO humanoid figure, NO person, NO man, NO silhouette of a human body, NO head, NO face, NO arms, NO hands, NO legs, NO stone stele, NO monolith, NO tombstone, NO playing card, NO rectangular paper object.",
+   "note": "v2（2026-11-02 用户返修）：v1『黑曜石碑纵裂 + 影从裂口走出递卡』用户判定奇怪——既把工事画成了人形剪影，又把卡牌画进了卡图。v2 换思路：工事本体是**非人形的多面体影核**，『分裂』直接由『同形分身从本体剥离』表达（左一已成形漂浮、右一半成形仍连能量丝、后一刚被挤出半截、右下更小一枚），语义不靠人形也不靠道具。裁切时原图左右分身被切边，改用『背景虚化铺底 + 主体缩至 0.85 居中羽化』重新构图，五个元素全部落在窗口内。",
+   "created": "2026-11-02",
+   "name": "分裂之影",
+   "tier": "A",
+   "status": "pending",
+   "updated": "2026-11-02"
+  },
+  "9125": {
+   "raw": "9125_shadow_summon.png",
+   "ref": "战斗开始时及每 3 回合召唤一只**鸭子暗杀者** → 形象必须沿用 9123：黄绒毛拟人胖鸭、紫兜帽、灰黑斗篷、紫围巾、皮甲插飞刀、翼即手；数量=2（一只实体 + 一只正从影中升起）",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT dark realistic concept art, NOT gritty texture rendering. Palette deep midnight blue and violet, BUT colors stay bright, saturated and anime-clean — a vivid night, NOT a murky realistic dark painting. —— 地面紫符文召唤阵上并列两只鸭子暗杀者（**正好两只**）：一只完整实体蹲伏持匕首，另一只上半身已实体、下半身仍在黑影中溶解升起；黄绒毛、橙扁喙、橙蹼足、粗黑怒眉、紫兜帽与灰斗篷；四条肢体（2 腿 + 1 对翼手），禁止额外人手臂。",
+   "note": "一次成型。两只可数、一实一升明确表达「召唤」。肢体复核：每只 2 前肢 + 2 蹼足，合规。形象与 9123 一致（黄鸭/紫兜帽/匕首）。",
+   "created": "2026-11-02",
+   "name": "暗影召唤",
+   "tier": "S",
+   "status": "pending"
+  },
+  "9178": {
+   "raw": "9178_eternal_night.png",
+   "ref": "夜鸭不再虚弱、不受惧光影响（奇数回合也不降射程/移速/力量）→ 日蚀吞日 + 鸭子满状态，两者同框即语义",
+   "prompt": "アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT dark realistic concept art, NOT gritty texture rendering. Palette deep midnight blue and violet, BUT colors stay bright, saturated and anime-clean — a vivid night, NOT a murky realistic dark painting. —— 低角度英雄构图：白羽拟人鸭战士（长颈、黄橙扁喙、白羽、深色皮胸带金属扣、翼手握弯刀，沿用 9027 夜鸭形象）挺胸张翼、头抬起、羽毛炸开、紫光环与暗影焰绕体；天上一轮黑盘遮日、只余燃烧冕环，几道强光射下在紫光环外溃散成黑色碎片。",
+   "note": "一次成型。日蚀 + 满状态鸭子很清楚。翼手与羽翼合计 2 上肢、2 腿，合规。与 9027 夜鸭形象一致。",
+   "created": "2026-11-02",
+   "name": "永夜",
+   "tier": "S",
+   "status": "pending"
+  }
+ },
+ "skill_recipe": "技能/效果卡画法（与单位卡区分）：**不画人物**，中心一个强符号 + 能量场；暗底 + 单一高亮色（按牌组属性取色：机械橙红/钢蓝、野性深绿、疾风青白、以太紫白）；像咒术卡主视觉。裁切规格与单位卡一致（448x403，居中裁掉平台水印）。"
+}
