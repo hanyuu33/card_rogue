@@ -47,6 +47,12 @@ _LAST_UNIT = [None]
 _BAD_TGT = set()
 # 最后一次真正出过的卡 id：pending 被清空后仍能反查是哪张卡打不出去。
 _LAST_CID = [None]
+# 本场是否「撤退」而非打完。⚠️ 撤退走的是 `return snapshot()`，进战前后 hp 取到
+# 同一份状态 → 记出来是「掉 0 血」，和「零伤通关」在数据里长得一模一样。
+# 而这两件事的策略含义正相反（一个说明打不动、一个说明打得很干净）。
+FLED = [False]
+# 本场锁定的集火目标（格子 id）。见 _focus_pick()。
+FOCUS = [None]
 
 ALLY_ONLY = {9164}       # 辅助刃：只认「己方盟友」，给工事/场地一律「没有可指定的目标」
 
@@ -61,6 +67,33 @@ SPAWN_PUNISH = {9138, 9142, 9135}
 # 减伤塔：在场时「其他」敌方单位受到的**技能伤害减半**（9137 量产型赫利俄斯）。
 # 不拆它，所有技能卡都只有一半伤害；塔本身不减免，所以技能卡打塔是全额。
 DAMAGE_TOWER = {9137}
+
+
+def _focus_pick(snap, ranked):
+    """在已排好序的候选目标里挑最终那一个 —— 普通敌人一律集火同一个。
+
+    ⚠️ 实测「鸭子骑士来袭」（两只 30 血 / 3 攻 / **速 2**）：每回合按
+    「血最少」重选，两只血量交替变最低 → 一整场在两个目标之间横跳，
+    谁都没打死，全程吃两份伤害（单场 43 血，是全局最贵的税源）。
+    速 2 的敌人少一只就少一半输出，「打死一只再换」严格优于均摊。
+    治疗 / 召唤窑 / 减伤塔是特例，仍然按排序优先，不被集火锁住。
+    """
+    if not ranked:
+        return None
+    best = ranked[0]
+
+    def _k(c):
+        return (support_first(snap, c), kiln_first(snap, c), tower_first(snap, c))
+
+    kb = _k(best)
+    # kb[0] >= 2 → 不是窑也不是治疗辅助；kb[2] >= 1 → 不是减伤塔。
+    # 只有「普通目标」才允许被集火锁住。
+    plain = kb[0] >= 2 and kb[2] >= 1
+    f = FOCUS[0]
+    if plain and f and f in ranked and _k(f) == kb:
+        best = f
+    FOCUS[0] = best
+    return best
 
 
 def spawn_punish(snap):
@@ -513,11 +546,16 @@ def card_value(cid):
     v += 8 if c <= 2 else (3 if c == 3 else (-5 if c >= 5 else 0))
     r = _RARITY.get(cid, 0)
     v += 6 if r >= 4 else (4 if r == 3 else 0)
-    # 体系协同（只加分）
+    # 体系协同
+    # ⚠️ 放大器**没有源的时候不能给正分**。实测 2026-11-01：一局拿了 2 张
+    # 「谟涅摩叙涅」（炮击每张 +7）却全程没有一张炮击源 —— 它 0/10 身材，
+    # 占着手牌什么都不产出，等于把牌库往差的方向拉。原口径「没 ready 也 +6」
+    # 让这类空转件永远有正分，几局下来牌库里全是配合件、没有一个引擎。
+    _src, _amp = cannon_stock()
     if cid in CANNON_SRC:
-        v += 16
+        v += 26 if _src == 0 else 16      # 一张源都没有时，源本身最值钱
     if cid in CANNON_AMP:
-        v += 12 if cannon_ready() else 6
+        v += 12 if cannon_ready() else (6 if _src >= 1 else -16)
     for nm, sc in ENGINE_CHAIN.items():
         if nm in name:
             v += sc
@@ -650,7 +688,8 @@ def choose(snap, pending, lay):
                                      tower_first(snap, k),
                                      ap.unit_on(snap, k).get("hp", 999),
                                      -ap.unit_on(snap, k).get("power", 0)))
-            return foes[0], "打 %s" % d[foes[0]][:16], pending
+            hit = _focus_pick(snap, foes)
+            return hit, "打 %s" % d[hit][:16], pending
         if pending == FACTORY:
             # 场地铺在最靠前、最靠中的我方格，后面好往上站人
             cells = sorted(tgt, key=lambda k: (abs(int(k[1]) - 3), abs(int(k[3:]) - 1)))
@@ -740,7 +779,9 @@ def choose(snap, pending, lay):
                                 tower_first(snap, k),
                                 (ap.unit_on(snap, k) or {}).get("hp", 999),
                                 -(ap.unit_on(snap, k) or {}).get("power", 0)))
-        return atk[0], "攻击 %s" % atk[0], pending
+        # 单位攻击同样走集火：否则四只单位各打各的，两只速 2 骑士谁也死不掉。
+        _a = _focus_pick(snap, [k for k in atk if "直击敌方 HP" not in d[k]]) or atk[0]
+        return _a, "攻击 %s" % _a, pending
     mv = [k for k in d if "移动到这里" in d[k]]
     if mv:
         # 只有当「我方每个单位的射程都够不着任何敌人」时才推进一格。
@@ -800,6 +841,9 @@ def cannot_finish(snap):
 
 
 def run(max_turns=80, verbose=True):
+    FLED[0] = False
+    FOCUS[0] = None
+    _idle = 0        # 连续「轮不到我方」的次数，用来抓卡死
     for _ in range(max_turns):
         snap = ai_cli.snapshot()
         d = ap.hints(snap)
@@ -812,6 +856,7 @@ def run(max_turns=80, verbose=True):
                 print("  ⚑ 打不完，撤退（%s 血 / 对面血池 %d，%d 只）" % (
                     (snap.get("battle") or {}).get("hp_self"), pool,
                     len(ap.foe_units(snap))))
+            FLED[0] = True
             ai_cli.act("flee")
             time.sleep(1.2)
             return ai_cli.snapshot()
@@ -820,9 +865,26 @@ def run(max_turns=80, verbose=True):
             return snap
         b = snap.get("battle") or {}
         if b.get("side") != "self":
+            # ⚠️ 回合在对面时也会走这里，但**待选类弹窗**同样会把 side 变成非 self：
+            # 涂装机器人 8080 入场是「选一个其他己方单位变掉」（engine:5171），
+            # 这时界面在等我们点单位，光 wait 就是空转到 max_turns。
+            # 实测一场从第 2 回合起完全不动，roam 重入 8 次、整局报废。
+            _hd = ap.hints(snap)
+            _pick = [k for k in _hd
+                     if re.fullmatch(r"r\d+c\d+", k) and "选中我方单位" in str(_hd[k])]
+            if _pick:
+                ap._click(_pick[0], "待选弹窗：选 %s" % _pick[0], verbose)
+                _idle = 0
+                continue
+            _idle += 1
+            if _idle >= 40:
+                if verbose:
+                    print("  ⚑ 连续 %d 次轮不到我方且无事可做 → 判定卡死，退出这场" % _idle)
+                return snap
             ai_cli.wait()
             time.sleep(0.2)
             continue
+        _idle = 0
         lay = layers()
         acted = 0
         pending = None
@@ -856,7 +918,12 @@ def run(max_turns=80, verbose=True):
                 ai_cli.act("end")
                 ended = True
                 if verbose:
-                    print("  → 结束回合（层数 %d）" % lay)
+                    # 血量曲线：下一行与此行的差 = 敌方这一轮打掉多少。
+                    # 「一场掉 54 血」到底是某一回合爆发还是十回合磨，只能看这个。
+                    _b = snap.get("battle") or {}
+                    _pool = sum((u.get("hp") or 0) for u in ap.foe_units(snap))
+                    print("  → 结束回合（层数 %d）｜我方 %s/%s 对面血池 %d ｜回合 %s" % (
+                        lay, _b.get("hp_self"), snap.get("max_hp"), _pool, _b.get("turn")))
                 time.sleep(0.5)
                 ai_cli.wait()
                 time.sleep(0.2)
@@ -905,12 +972,25 @@ def run(max_turns=80, verbose=True):
                     # 「为什么这张牌出不去」（2026-11-01 自我修复/重启/合体 全军覆没时就是瞎猜）。
                     print("    hints: %s" % " | ".join(
                         "%s=%s" % (k, str(v).replace("\n", " ")[:26]) for k, v in d.items()))
-                if "cancel" in d:
+                    # hints 只说「桥认为可出」，不说「引擎为什么拒」。
+                    # 引擎的拒绝理由（费用不足 / 没有可放置的位置 / 没有合法目标）
+                    # 只写在 state() 的「── 日志 ──」段里；不打出来只能瞎猜。
                     try:
-                        ai_cli.act("cancel")
-                    except Exception:
+                        _tail = ai_cli.state().split("── 日志 ──")[-1]
+                        _ls = [ln.strip() for ln in _tail.splitlines() if ln.strip()]
+                        print("    引擎: %s" % " / ".join(_ls[-4:])[:150])
+                    except Exception:  # noqa: BLE001
                         pass
-                    time.sleep(0.25)
+                # ⚠️ 不能只认 hints 里有 cancel 才发：实测界面提示写着
+                # 「攻击：点击一个目标（右键取消）」，可 hints 里一个 rNcM 目标格
+                # 都没有、连 cancel 键也没有 —— 这一刻点任何手牌都会被当成
+                # 「点了一个目标」而吞掉，同一张牌一路点到硬闸，整回合 0 出牌。
+                # cancel 是全局动作（引擎自己写在提示里），无条件发一次把状态清掉。
+                try:
+                    ai_cli.act("cancel")
+                except Exception:  # noqa: BLE001
+                    pass
+                time.sleep(0.25)
                 pending = None
                 dead = dead + 1
                 # 只有「连着 4 张牌都打不出去」才是真的没牌可打；单张失败只跳过它。

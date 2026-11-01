@@ -53,7 +53,28 @@ BUY_SERVICES = ["最大生命 +", "删除一张卡"]
 OPEN_RELICS = ["洞窟绳", "类固醇", "行囊", "勇气徽章", "惊奇盒子"]
 
 # ── 事件：这些选项一律不碰（实测直接毁局或白送资源） ───────────────────────
-EVENT_AVOID = ["鸭之低语", "源数之力", "失去 5 点最大生命", "锻造"]
+EVENT_AVOID = ["鸭之低语", "源数之力", "失去 5 点最大生命", "锻造",
+               "诅咒", "献祭", "牺牲", "坠落"]
+
+
+def _hp_cost(text):
+    """选项文本里的生命代价（「失去 12 点生命」→ 12）。"""
+    m = re.search(r"失去\s*(\d+)\s*点?\s*(?:最大)?生命", text or "")
+    return int(m.group(1)) if m else 0
+
+
+def _costly(text):
+    """这个选项要不要付代价（血 / 诅咒 / 献祭）。
+
+    实测 2026-11-01：一局血从 53% 掉到 21%，中间的四个事件没打一场架，
+    32 血全是选项代价换来的。血池 66~76、单场战斗就要交 30+，
+    5 点血换一张普通卡是纯亏 —— 血是这套牌最紧的资源，先保命再看收益。
+    只写「失去 X 点生命 / HP」才算代价：单纯「失去金币」照拿，钱不值钱。
+    """
+    t = text or ""
+    if any(b in t for b in EVENT_AVOID):
+        return True
+    return "失去" in t and ("生命" in t or "HP" in t)
 # 这些看着划算
 EVENT_LIKE = ["护符", "烟斗", "最大生命", "回复", "宝箱", "挑 1 张", "选 1 张",
               "获得道具", "获得卡片", "加入卡组", "抽"]
@@ -207,6 +228,9 @@ def do_battle(snap):
     # ⚠️ 战斗内我方 HP 在 `battle.hp_self`，`snap["hp"]` 是局外 RunState.hp，
     # 只在战斗**胜利**时被写回；打输那场它原地不动，用它记账会得到「掉血 0」。
     hp0 = (snap.get("battle") or {}).get("hp_self") or snap.get("hp")
+    # 局外真值，单独留一份：战斗内 hp_self 与 RunState.hp 是不是一回事，
+    # 只能靠这两个数并排看才知道（第一场就可能分叉）。
+    ohp0 = snap.get("hp")
     # 记下这场的身份（关卡名 / 敌方血池 / 限时等）—— 复盘时「哪类关在爆血」
     # 只能靠这个，光有掉血数字看不出原因。
     meta = {k: v for k, v in (snap.get("battle") or {}).items()
@@ -231,13 +255,20 @@ def do_battle(snap):
     except Exception:  # noqa: BLE001
         pass
     hp1 = 0 if fail else s.get("hp")
+    fled = bool(getattr(mp, "FLED", [False])[0])
     try:
         _BATTLES.append({"n": s.get("node"), "hp0": hp0, "hp1": hp1,
                          "lost": max(0, (hp0 or 0) - (hp1 or 0)),
-                         "fail": fail,
+                         "fail": fail, "fled": fled,
+                         "ohp0": ohp0, "ohp1": s.get("hp"),
                          "meta": meta, "deck": s.get("deck")})
     except Exception:  # noqa: BLE001
         pass
+    if VERB:
+        print("  ⚑ 本场账：局外 %s→%s ｜ 战内 %s→%s ｜ %s%s" % (
+            ohp0, s.get("hp"), hp0, hp1,
+            str((meta.get("level") or "")).strip()[:12] or "?",
+            " ｜撤退" if fled else (" ｜失败" if fail else "")))
     d = ap.hints(s)
     if "leave" in d:
         # 诊断：把引擎的「对局结束：胜利/失败（原因）」打出来。
@@ -440,17 +471,19 @@ def do_event(snap):
         return
     leave = next((k for k, v in btns if "离开" in v or "放弃" in v or "不" in v), None)
     tried = _TRIED.get("事件", set())
-    good = [k for k, v in btns if k not in tried and not any(b in v for b in EVENT_AVOID)
+    good = [k for k, v in btns if k not in tried and not _costly(v)
             and any(w in v for w in EVENT_LIKE)]
-    safe = [k for k, v in btns if k not in tried and not any(b in v for b in EVENT_AVOID)]
+    safe = [k for k, v in btns if k not in tried and not _costly(v)]
     if good:
-        act(good[0], "好选项")
+        act(good[0], "好选项 %s" % str(d[good[0]])[:16])
     elif safe:
-        act(safe[0], "安全选项")
+        act(safe[0], "安全选项 %s" % str(d[safe[0]])[:16])
     elif leave:
-        act(leave, "避开坑，离开")
+        act(leave, "全是代价，离开")
     else:
-        act(btns[0][0], "默认")
+        # 每个选项都要付代价（有些事件没有退路）→ 挑掉血最少的那一个。
+        cheap = min(btns, key=lambda kv: _hp_cost(kv[1]))
+        act(cheap[0], "只能付代价，挑最轻的 %s" % str(d[cheap[0]])[:16])
 
 
 # ── 开场 ────────────────────────────────────────────────────────────────
