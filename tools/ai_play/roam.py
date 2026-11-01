@@ -81,6 +81,9 @@ EVENT_LIKE = ["护符", "烟斗", "最大生命", "回复", "宝箱", "挑 1 张
 
 # ── 删卡优先级（越靠前越是垃圾） ──────────────────────────────────────────
 JUNK = ["木栅栏", "攻击", "素体", "构装体", "升级"]
+# 删卡只删真废牌：木栅栏（2 费 0/6 墙）> 攻击（1 费 4 伤）。
+# 素体 / 构装体是 0 费小件、升级是体系件，都不进删除优先序。
+DELETE_ORDER = ["木栅栏", "攻击"]
 
 
 # 桥里 `scene` 是**场景文件名**（title / curtain / battle / map / shop / event /
@@ -313,7 +316,7 @@ def do_deck_edit(snap):
     except Exception:  # noqa: BLE001
         pass
     target = None
-    for junk in JUNK:
+    for junk in DELETE_ORDER + JUNK:
         for cid, nm in names.items():
             if nm == junk:
                 target = cid
@@ -350,7 +353,7 @@ def do_card_pick(snap):
                 return True
         return False
     target = None
-    for junk in JUNK:
+    for junk in DELETE_ORDER + JUNK:
         for pid, nm in names.items():
             if nm == junk:
                 target = pid
@@ -375,10 +378,22 @@ def do_shop(snap, budget=4):
         time.sleep(0.8)
         return
     bought = 0
+    deleted = False
     for _ in range(budget + 2):
         snap = ai_cli.snapshot()
         d = ap.hints(snap)
         gold = snap.get("gold") or 0
+        deck_ids = snap.get("deck") or []
+        _cnt = {}
+        for _cid in deck_ids:
+            _cnt[_cid] = _cnt.get(_cid, 0) + 1
+        # 还剩几张真废牌（攻击留 2 张当保底伤害，其余都算废）
+        junk_left = _cnt.get(8001, 0) + max(0, _cnt.get(8002, 0) - 2)
+        # 诊断：商店每次快照到底看得见哪些货位。删卡一直不触发时，缺了这行只能猜
+        # （是服务行没画出来、还是 key 前缀不对、还是 gold 不够）。
+        print("  · 商店快照 gold=%d 废牌=%d ｜ %s" % (
+            gold, junk_left,
+            " / ".join("%s=%s" % (k, str(v)[:18]) for k, v in d.items())))
         # 0) 血少先保命：「最大生命 +」既回血又扩池，比任何一张卡都值。
         #    实测栽过一次：14/66 血进商店买了两张卡，下一场直接被打死 —— 卡还没捂热。
         if hp_pct(snap) < 0.40:
@@ -394,6 +409,23 @@ def do_shop(snap, budget=4):
                         break
                     continue
         pick, why = None, ""
+        # 0.5) 删废牌优先于买卡。一局每场都抽到它，删一张等于后续每场都涨伤害；
+        #      而第 4 张新卡只是把牌库再稀释一点。每店最多删 2 张（服务也限量）。
+        if junk_left > 0 and not deleted:
+            for k, v in d.items():
+                if not k.startswith("s3") or "删除一张卡" not in v:
+                    continue
+                m = _PRICE.search(v)
+                price = int(m.group(1)) if m else 50
+                if price <= gold:
+                    act(k, "删废牌 %s（%d 金 · 牌库还有 %d 张废牌）"
+                        % (DELETE_ORDER[0] if _cnt.get(8001, 0) else DELETE_ORDER[1],
+                           price, junk_left))
+                    deleted = True
+                    bought += 1
+                    break
+            if deleted:
+                continue
         # 1) 卡：货架上每张都过 card_value，谁分高买谁（同分买便宜的）
         cands = []
         for k, v in d.items():
@@ -408,7 +440,12 @@ def do_shop(snap, budget=4):
                 continue
             ids = mp._NAME2IDS.get(m.group(1)) or []
             sc = max([mp.card_value(i) for i in ids], default=0)
-            if sc < BUY_MIN_SCORE:
+            # 牌库越厚，再加一张的边际价值越低（抽到它的概率被摊薄，
+            # 而每回合只有 5 费）。23 张时门槛 62 → 76。
+            min_score = BUY_MIN_SCORE + 2 * max(0, len(deck_ids) - 16)
+            if min_score > 90:
+                min_score = 90
+            if sc < min_score:
                 continue
             cands.append((sc - price * 0.15, k, "买 %s（%d 金 · %d 分）" % (m.group(1), price, sc)))
         if cands:

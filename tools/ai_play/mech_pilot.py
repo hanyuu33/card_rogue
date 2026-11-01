@@ -45,6 +45,7 @@ _LAST_UNIT = [None]
 # （如「自我修复」只认受伤单位）的候选目标格点上去一律无效，而失败时
 # pending 已被清成 None → 无对象可拉黑，同一格被连点 6 次、整回合输出全废。
 _BAD_TGT = set()
+_SWITCHES = {}   # 本回合每张牌「换目标格」用了几次（限次防死循环）
 # 最后一次真正出过的卡 id：pending 被清空后仍能反查是哪张卡打不出去。
 _LAST_CID = [None]
 # 本场是否「撤退」而非打完。⚠️ 撤退走的是 `return snapshot()`，进战前后 hp 取到
@@ -894,9 +895,15 @@ def run(max_turns=80, verbose=True):
         _prev_t, _prev_sig, _stuck = None, None, 0
         _clicks = {}
         _BAD_TGT.clear()
+        _SWITCHES.clear()
         ended = False
         dead = 0     # 本回合「连点 3 次都打不出去」的牌数（≥4 才认定没牌可打）
+        _guard = 0
         while acted < 40:
+            _guard += 1
+            if _guard > 300:
+                print("  ! 回合内空转 300 次 → 强制结束回合")
+                break
             snap = ai_cli.snapshot()
             d = ap.hints(snap)
             if "leave" in d:
@@ -949,6 +956,23 @@ def run(max_turns=80, verbose=True):
                         i = int(m.group(1))
                         if 0 <= i < len(hb):
                             cid_hit = hb[i].get("id")
+                # 目标格点不动 ≠ 这张牌打不出去：聚能炮击一次暴露 6 个目标格，
+                # 只因点中的那一格没反应就禁掉整张核心牌，等于自废武功。
+                # 还有没试过的格子 → 只封这一格，牌留着下一轮换格再点。
+                _other_tgt = [k for k in d
+                              if re.fullmatch(r"r\d+c\d+", k)
+                              and k not in _BAD_TGT and k != t]
+                # ⚠️ 这条 continue 不增加 acted，必须限次：实测「放置木栅栏」失败时
+                # 换格分支会把同一格再选出来，一次都不增 acted → 整个 while 死循环。
+                _sw = _SWITCHES.get(cid_hit, 0)
+                if cid_hit and _other_tgt and _sw < 3:
+                    _SWITCHES[cid_hit] = _sw + 1
+                    _BAD_TGT.add(t)
+                    if verbose:
+                        print("  . %s 点不动 → 换目标格（还有 %d 个可试），不禁选 %s" % (
+                            t, len(_other_tgt), ap.card_info(cid_hit)[0]))
+                    pending = cid_hit
+                    continue
                 if cid_hit:
                     _BANNED.add(cid_hit)
                 if re.fullmatch(r"h\d+", t):
@@ -1013,7 +1037,18 @@ def run(max_turns=80, verbose=True):
             else:
                 _stuck = 0
             _prev_t, _prev_sig = t, _sig
-            if _stuck >= 2 and pending:
+            if _stuck == 1 and pending:
+                # `✓` = 服务端接受了点击，但 hints 一个字都没变 → 多半是演出/动画
+                # 还没落地，点进去被吞了。多等一拍再点，别立刻判死。
+                if verbose:
+                    print("  . %s 点了没变化 → 等演出 0.6s 重试" % t)
+                # ⚠️ 重试这一次**没有真的点**，不能算进连点次数。否则 1 次真点击 + 2 次
+                # 等待就会被判成「连点 3 次」→ 素体 / 构装体整张牌被禁一回合
+                # （实测 y1 局：一次放置失败就把 0 费单位卡废掉，整回合少 2~3 张牌）。
+                _clicks[t] = max(0, _clicks.get(t, 1) - 1)
+                time.sleep(0.6)
+                continue
+            if _stuck >= 3 and pending:
                 _BANNED.add(pending)
                 if verbose:
                     print("  ! 连点无效，本回合禁选 %s" % ap.card_info(pending)[0])
