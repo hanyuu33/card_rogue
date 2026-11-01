@@ -594,10 +594,14 @@ func _kind() -> String:
 
 func _apply_ui_assets() -> void:
 	## 插图 / 背景：assets/ui/event_<kind>.png 与 bg_<kind>.png，缺图则回退内置绘制。
-	## 内置篝火在所有事件界面都显示（与旧版一致）；有自定义插图时才隐藏。
+	##
+	## R478 口径变更：
+	##   1. 缺图不再只是「深灰底 + 篝火」——缺图时铺一层统一默认底（`_draw_fallback_bg`）。
+	##   2. **篝火只留给休息处**。原来 24 种事件全都烧一堆篝火，「卡牌商人」「占卜」
+	##      「遗忘之泉」里都有篝火，玩家一眼就看出是占位。篝火的本义是「可以休息」。
 	var kind := _kind()
 	var campfire: Control = $Campfire
-	campfire.visible = true
+	campfire.visible = (kind == "rest")
 	var pic := UiAssets.event_pic(kind)
 	if pic != null:
 		campfire.visible = false   # 有自定义插图时不再叠内置篝火
@@ -631,6 +635,97 @@ func _apply_ui_assets() -> void:
 		add_child(trb)
 		move_child(trb, 0)                              # 压到最底层
 		($BG as ColorRect).color = Color(0, 0, 0, 0)    # 让位给自定义背景
+	else:
+		_add_fallback_bg(kind)
+
+
+## R478：缺图时的统一默认底。目标不是「给每种事件画一张图」，而是让「没有图」
+## 本身看起来像一套设计：墨蓝夜色渐变 + 按类别着色的光晕 + 金线纹章水印 + 四周暗角。
+## 想退回旧的「纯深灰底」观感：把这里改成 false（篝火可见性仍按 _apply_ui_assets 走）。
+const EVENT_FALLBACK_BG := true
+
+var _fb_layer: Control = null
+var _fb_tint := Color("c8951c")
+
+
+func _add_fallback_bg(kind: String) -> void:
+	if not EVENT_FALLBACK_BG:
+		return
+	if _fb_layer != null:
+		_fb_tint = _kind_tint(kind)
+		_fb_layer.queue_redraw()
+		return
+	_fb_tint = _kind_tint(kind)
+	_fb_layer = Control.new()
+	_fb_layer.name = "EventFallbackBG"
+	_fb_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fb_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fb_layer.draw.connect(_on_fallback_draw)
+	_fb_layer.resized.connect(_fb_layer.queue_redraw)
+	add_child(_fb_layer)
+	move_child(_fb_layer, 1)   # $BG 之上、篝火与内容之下
+
+
+func _kind_tint(kind: String) -> Color:
+	## 六类事件的主题色：危险 / 交易 / 神秘 / 自然 / 收获 / 休息。
+	## 只改光晕和纹章的颜色，暗底不变 —— 保证 24 种事件「同一套里各有区别」。
+	match kind:
+		"struggle", "gaze", "oblivion", "furnace", "core_contract":
+			return Color("b5484a")   # 危险：暗红
+		"smith", "card_merchant", "lake_lady", "apple_doctor", "delivery", "delivery_done":
+			return Color("c8951c")   # 交易 / 匠人：金
+		"whisper", "divination", "moon", "arcane", "bluefish", "hero":
+			return Color("8a7fd4")   # 神秘 / 预兆：紫
+		"pear", "snow_leopard", "adventurer", "cave":
+			return Color("6faa62")   # 自然 / 探索：绿
+		"treasure", "relic_chest":
+			return Color("d99b3f")   # 收获：橙金
+	return Color("ff9a3c")           # rest / 兜底：暖橙（与篝火同调）
+
+
+func _on_fallback_draw() -> void:
+	var sz := _fb_layer.size
+	if sz.x < 2.0 or sz.y < 2.0:
+		return
+	var tint := _fb_tint
+	var gold := UiTheme.ACCENT_GOLD
+	# 1) 纵向渐变：上方偏暖（像有光），下方沉下去
+	var top := Color("262b3c")
+	var bot := Color("0f1117")
+	var bands := 48
+	var bh := sz.y / float(bands)
+	for i in bands:
+		var c := top.lerp(bot, float(i) / float(bands - 1))
+		_fb_layer.draw_rect(Rect2(0.0, bh * float(i), sz.x, bh + 1.5), c)
+	# 2) 类别光晕：以篝火位置（y=168）为中心向内叠加，中心最亮
+	var ctr := Vector2(sz.x * 0.5, 168.0)
+	var rmax := maxf(sz.x, sz.y) * 0.55
+	for i in 24:
+		var t := float(i + 1) / 24.0
+		_fb_layer.draw_circle(ctr, rmax * (1.0 - t * 0.72), Color(tint.r, tint.g, tint.b, 0.011))
+	# 3) 中心纹章水印：同心环 + 菱形，很淡 —— 只负责「不空」，不抢文字
+	var rr := 135.0
+	_fb_layer.draw_arc(ctr, rr, 0.0, TAU, 96, Color(gold.r, gold.g, gold.b, 0.15), 1.5, true)
+	_fb_layer.draw_arc(ctr, rr * 0.90, 0.0, TAU, 96, Color(gold.r, gold.g, gold.b, 0.07), 1.0, true)
+	var d := rr * 0.66
+	_fb_layer.draw_polyline(PackedVector2Array([
+			ctr + Vector2(0, -d), ctr + Vector2(d, 0), ctr + Vector2(0, d),
+			ctr + Vector2(-d, 0), ctr + Vector2(0, -d)]),
+			Color(gold.r, gold.g, gold.b, 0.11), 1.2, true)
+	# 4) 四周暗角：越靠边越黑，把视线压回中间
+	var vig := 190.0
+	var steps := 20
+	var step_h := vig / float(steps)
+	for i in steps:
+		var t := float(i) / float(steps)
+		var a := 0.50 * pow(1.0 - t, 1.7)
+		var off := step_h * float(i)
+		_fb_layer.draw_rect(Rect2(0.0, off, sz.x, step_h + 1.0), Color(0, 0, 0, a))
+		_fb_layer.draw_rect(Rect2(0.0, sz.y - off - step_h - 1.0, sz.x, step_h + 1.0), Color(0, 0, 0, a * 0.80))
+		_fb_layer.draw_rect(Rect2(off, 0.0, step_h + 1.0, sz.y), Color(0, 0, 0, a * 0.75))
+		_fb_layer.draw_rect(Rect2(sz.x - off - step_h - 1.0, 0.0, step_h + 1.0, sz.y), Color(0, 0, 0, a * 0.75))
+	# 5) 顶部金线：只在标题栏下沿做分隔。底部不再画线 —— 720 高下按钮会压到它。
+	_fb_layer.draw_line(Vector2(0.0, 45.0), Vector2(sz.x, 45.0), Color(gold.r, gold.g, gold.b, 0.22), 1.0)
 
 
 func _ready() -> void:
@@ -1253,10 +1348,14 @@ func _redraw() -> void:
 func _fit_center() -> void:
 	## 中间一列按内容实际高度排布：默认位置不变；放不下时先收紧间距、藏起空的结果行，
 	## 再整体上移（上不越过插图下沿约 356），保证「离开 / 继续前进」这类末位选项永远完整可见。
+	##
+	## R478：`top_floor` 原来写死 360（守插图下沿）。但**缺图时插图根本不存在**，
+	## 守这 360 会让 720 高度下的长文案事件（休息处 435px）底边冲到 795，
+	## 末位按钮被切在屏幕外。缺图时放开到 150，让 _fit_center 能真正把它抬上来。
 	var c: VBoxContainer = $Center
 	var vh: float = get_viewport_rect().size.y
 	result_label.visible = result_label.text != ""
-	var top_floor := 360.0
+	var top_floor := 360.0 if UiAssets.event_pic(_kind()) != null else 150.0
 	var bottom := vh - 10.0
 	var h := 0.0
 	for sep in [12, 8, 5]:

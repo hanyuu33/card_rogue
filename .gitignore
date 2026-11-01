@@ -88,3 +88,17 @@ tools/ai_play/.runs.jsonl
 # AI 试玩：根目录漫游 / 运行日志（本地产物，不入库）
 /.roam*.log
 /.runs.jsonl
+
+# R478：未确认卡图的原始出图（1536x1024 带平台水印，可由 manifest 里的 prompt 重跑再生）。
+#   只保留裁剪后的 assets/pics/_pending/<id>.png 入库。
+/assets/pics/_pending/raw/
+
+# R479：根目录一次性探针 / 审计脚本与日志（跑完即可扔，随时可重建）。
+#   卡图探针（_probe_*.gd）承担「改了图必须截图验收」的职责，留在本地即可。
+/_probe_*.gd
+/_probe_*.png
+/_probe_*.log
+/_verify.log
+/_art_audit.*
+/_p[0-9]*.py
+/_r[0-9]*_missing.*

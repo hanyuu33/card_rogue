@@ -1,8 +1,9 @@
 extends Control
 ## 篝火简笔（事件界面的内置装饰层）：暖色光晕 + 火焰 + 柴堆。
-## 所有事件类别默认都会显示；若该事件在 assets/ui/ 提供了 event_<事件>.png，
-## 则由 event_scene 隐藏本节点，改用自定义插图。
-## 独立子节点绘制，避免被背景 ColorRect 盖住。
+## R478：**只在休息处（kind == "rest"）显示**。此前 24 种事件全都烧一堆篝火，
+## 「卡牌商人」「占卜」里也有火，一眼就是没做完的占位；篝火的本义是「可以休息」。
+## 其余事件改由 event_scene `_draw_fallback_bg` 的类别光晕 + 纹章水印兜底。
+## 若某事件在 assets/ui/ 提供了 event_<事件>.png，仍由 event_scene 隐藏本节点。
 
 var _t := 0.0
 
@@ -13,7 +14,7 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var c := Vector2(size.x / 2.0, 236.0)
+	var c := Vector2(size.x / 2.0, 168.0)
 	var flick := 1.0 + 0.08 * sin(_t * 6.0)
 	draw_circle(c + Vector2(0, 10), 90.0 * flick, Color(1.0, 0.72, 0.35, 0.18))
 	draw_circle(c + Vector2(0, 10), 56.0 * flick, Color(1.0, 0.6, 0.25, 0.22))

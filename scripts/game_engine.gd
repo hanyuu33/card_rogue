@@ -379,23 +379,27 @@ const ASCLEPIUS_GROWTH_ATK:= 1
 #   ① 量产型阿斯克勒庇厄斯 9207（盟友 7/50 程1 速1）：**该方回合开始**时若已有护甲则力量 +1，
 #      然后获得 10 护甲。与本体 9141「护甲积攒」**不是同一条**（本体把护甲清零换成一发爆发），
 #      所以判据按 id 分派，别合并成一个函数。
-#   ② 母舰 9208（盟友 0/60 速0 程0）：**免疫所有伤害**（`_unit_damage_taken()` 与预览镜像
+#   ② 母舰 9208（盟友 0/40 速0 程0）：**免疫所有伤害**（`_unit_damage_taken()` 与预览镜像
 #      `preview_hit_damage()` 各一条）；**场上每个友方单位被破坏**时在它旁边补一份同款复制
 #      并自身生命 -10（**直接扣健康**，不走伤害通道 —— 否则被自己的免疫挡掉）；
 #      生命归零被破坏 → 关卡 `win_on_boss` 判「玩家胜利」。
 #   ③ 空袭 9209（效果卡）：**玩家回合开始**随机标记 5 格；**敌方行动前**（= 敌方回合开始）
-#      对标记格上的**玩家单位**各 10 点伤害，每结算一轮 +2。只打玩家单位；
+#      对标记格上的**玩家单位**各 5 点伤害，每结算一轮 +1。只打玩家单位；
 #      标记格空了就**空响、不转打玩家 HP**（与舰炮 9201 的口径正好相反）。
 const MASS_ASCLEPIUS_ID:= 9207
 const MASS_ASCLEPIUS_ARMOR:= 10        # 兜底值：正常取卡面 value（同值 10）
 const MOTHERSHIP_ID:= 9208
 const MOTHERSHIP_TRAIT:= "母舰"         # 免疫伤害只认这个 trait（不认 id，便于以后复用）
 const MOTHERSHIP_LOSS:= 10             # 每个友方被破坏，自身生命 -N（卡面 value 同值）
+# R483：母舰生命 **锁定 40** —— 卡库（`cards.json` 9208 health）与关卡元组（`game_levels`
+#       `_mothership_air_raid()` 的 40）两处都写死；引擎**不按难度档缩放敌人生命**
+#       （`RunState.difficulty` 只改玩家 debuff），所以 40 在任何难度下都一样。
+#       40 ÷ 10 = 玩家凑 **4 次击破** 即可（旧值 60 需要 6 次）。
 const AIR_RAID_CARD_ID:= 9209
 const AIR_RAID_TRAIT:= "空袭"
 const AIR_RAID_MARKS:= 5               # 每轮标记格数
-const AIR_RAID_DMG:= 10                # 基础伤害（卡面 value 同值）
-const AIR_RAID_STEP:= 2                # 每结算一轮递增
+const AIR_RAID_DMG:= 5                 # 基础伤害（卡面 value 同值；R483 由 10 下调）
+const AIR_RAID_STEP:= 1                # 每结算一轮递增（R483 由 +2 下调为 +1）
 
 
 # ---- R159：AI 角色分类（按卡面能力，不走复杂收益计算）----
@@ -712,7 +716,7 @@ const ARCANE_CHARM_DISCOUNT:= 1
 const WISDOM_SURGE_ID:= 9059
 const WISDOM_TRAIT:= "智慧"
 const AETHER_BARRIER_ID:= 9060
-const AETHER_TRAIT:= "以太"
+const AETHER_TRAIT:= "风暴"
 const ENDLESS_BLESSING_ID:= 9061
 const BLESSING_TRAIT:= "加护"
 const FAMILIAR_NIGHT_ID:= 9062
@@ -2272,6 +2276,7 @@ func _begin_turn(side: String) -> void :
 		_wisdom_surge()
 		_endless_blessing()
 		_action_growth_tick(SIDE_SELF)   # R161：先推进成长计数，再刷新 acts_left
+		_haste_pick_tick(SIDE_SELF)      # R479 哈气：第 3/5/7 回合挑一个单位永久双动（必须在 reset 之前）
 		state.reset_units(SIDE_SELF)
 		_poison_tick(SIDE_SELF)   # 剧毒陷阱：我方回合开始结算中毒
 		_arm_debuffs(SIDE_SELF)
@@ -2344,6 +2349,7 @@ func _begin_turn(side: String) -> void :
 		_melt_ice_walls(SIDE_OPPONENT)
 		_clear_fire_walls(SIDE_OPPONENT)
 		_action_growth_tick(SIDE_OPPONENT)   # R161：先推进成长计数，再刷新 acts_left
+		_haste_pick_tick(SIDE_OPPONENT)      # R479 哈气：第 3/5/7 回合挑一个单位永久双动（必须在 reset 之前）
 		state.reset_units(SIDE_OPPONENT)
 		_poison_tick(SIDE_OPPONENT)   # 剧毒陷阱：对方回合开始结算中毒
 		_arm_debuffs(SIDE_OPPONENT)
@@ -4483,13 +4489,13 @@ func _aether_barrier(side: String) -> String:
 
 
 	if side != SIDE_SELF:
-		return "（以太屏障：敌方 AI 不使用这张卡）"
+		return "（风暴屏障：敌方 AI 不使用这张卡）"
 	if _aether_used:
-		_log("以太屏障：本回合已有屏障生效，这张不产生效果")
-		return "本回合已有一张以太屏障生效（这张无效）"
+		_log("风暴屏障：本回合已有屏障生效，这张不产生效果")
+		return "本回合已有一张风暴屏障生效（这张无效）"
 	_aether_used = true
 	_aether_left = maxi(0, state.self_effect_plays)
-	_log("以太屏障：本回合前 %d 次受到的伤害变为 1" % _aether_left)
+	_log("风暴屏障：本回合前 %d 次受到的伤害变为 1" % _aether_left)
 	action.emit("aether", {"left": _aether_left, "plays": state.self_effect_plays})
 	return "本回合前 %d 次受到的伤害变为 1" % _aether_left
 
@@ -11318,6 +11324,9 @@ func _whale_wrath(side: String, target, card: CardData) -> String:
 	whale_pending = true
 	# 叠加记账：蓄力让这张卡生效 2 次 → 可取 4 张（不是把 2 覆盖成 2）
 	whale_remaining += WHALE_PICK_COUNT
+	# R479：按弃牌堆实际张数收口 —— 池里只有 1 张时就是「可取 1 张」，
+	# 不许面板写着「还可取 2 张」却只摆得出一张卡。
+	whale_remaining = mini(whale_remaining, state.discard.size())
 	_log("鲸鱼之怒：从弃牌堆选择 %d 张卡加入手卡（可少选 / 跳过）" % whale_remaining)
 	return "%s；从弃牌堆取 %d 张" % [detail, whale_remaining]
 
@@ -11347,7 +11356,9 @@ func whale_pick(discard_index: int) -> bool:
 	whale_remaining -= 1
 	_log("鲸鱼之怒：%s 从弃牌堆回到手牌" % c.card_name)
 	action.emit("whale_pick", {"card": c})
-	if whale_remaining <= 0:
+	# R479：池子取空就结束 —— 只有一张可选时，取走它就算办完，
+	# 不该让玩家再点一次「不选了」。
+	if whale_remaining <= 0 or state.discard.is_empty():
 		whale_pending = false
 		whale_remaining = 0
 	return true
@@ -11828,7 +11839,7 @@ func _relic_damage_taken(dmg: int) -> int:
 
 
 func _hp_damage_taken(amount: int) -> int:
-	## 玩家 HP 伤害的**统一入口**：以太屏障 / 石肤（都把这次伤害压成 1）→
+	## 玩家 HP 伤害的**统一入口**：风暴屏障 / 石肤（都把这次伤害压成 1）→
 	## 效果牌减伤（_effect_damage_reduction）→ 道具减伤（_relic_damage_taken）。
 	## 注意：荒野形态 6022 的「第一次受击 -4」不在这里判（它只认普通攻击直击 HP，
 	## 挂在 attack_hp 里单独判），否则法术 / 效果伤害也会被算进去。
@@ -11839,7 +11850,7 @@ func _hp_damage_taken(amount: int) -> int:
 		return 0
 	if _aether_left > 0:
 		_aether_left -= 1
-		_log("以太屏障：这次伤害变为 1（原本 %d，本回合还剩 %d 次）" % [amount, _aether_left])
+		_log("风暴屏障：这次伤害变为 1（原本 %d，本回合还剩 %d 次）" % [amount, _aether_left])
 		action.emit("aether_hit", {"left": _aether_left, "amount": amount})
 		return 1
 
@@ -11863,7 +11874,7 @@ func _wild_form_first_hit(attacker: Placement, raw: int) -> int:
 	## 纯减伤 + 反伤，不再有「打熊 / 打 HP 的敌人受 3 伤」那套。
 	## 返回实际 HP 伤害（调用方拿去扣血）；反伤在内部结算完毕。
 	## state.wild_form_used 保证每场只触发一次（战斗重置时随 state 一起清零）。
-	## ⚠️ R144：减完 4 点**继续交给 `_hp_damage_taken`**（石肤 / 以太屏障 / 效果减伤 /
+	## ⚠️ R144：减完 4 点**继续交给 `_hp_damage_taken`**（石肤 / 风暴屏障 / 效果减伤 /
 	## 道具减伤照常生效）。旧写法直接 `return _relic_damage_taken(dmg)` 等于**短路**掉
 	## 整条链 —— 持有荒野形态时第一次受击反而绕过石肤，与 R138 的「光环只挂一个扣血口」
 	## 同源：减伤 / 触发类机制必须挂在同一条链上。
@@ -13226,6 +13237,32 @@ func _action_growth_tick(side: String) -> void:
 			_log("行动力成长：%s 的「%s」行动次数 +1（现每回合 %d 次）" % [
 					_zone_label(side), p.card.card_name, p.card.actions + p.action_growth_extra])
 			action.emit("action_growth", {"cell": cell, "side": side, "extra": p.action_growth_extra})
+
+
+func _haste_pick_tick(side: String) -> void:
+	## R479 哈气（9024）：该方第 3 / 5 / 7 个回合开始时，把双动**永久**授予
+	## 「现存（还在场上）生命最高、且还没有双动」的那一个己方单位。
+	## 原口径（R449）是「第 3 回合起**整方**每回合行动两次」；R479 收成单点授予：
+	## 三个回合各挑一个 → 压力是一层层压上来的，而不是全体一起翻倍。
+	## ⚠️ 必须在 `reset_units` **之前**调用 —— 那边按 `unit_actions` 重发行动轮数，
+	##    晚一步就要等下一个回合才生效（用户口径是「这个回合就该双动」）。
+	## ⚠️ 选人逻辑全在 `FieldState.haste_pick`（唯一口）。这里只管
+	##    「有没有这张效果卡 / 是不是触发回合 / 打日志」，别在这里再写一遍排序。
+	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
+	if not _zone_has(zone, FieldState.HASTE_TRAIT):
+		return
+	if not state.haste_turn(side):
+		return
+	var turn_no := state.self_turn_no if side == SIDE_SELF else state.opp_turn_no
+	var who := "我方" if side == SIDE_SELF else "敌方"
+	var picked := state.haste_pick(side)
+	if picked == null:
+		_log("哈气：%s第 %d 回合没有可授予的单位（空场 / 全都已经双动 / 本回合已挑过），这次落空"
+				% [who, turn_no])
+		return
+	_log("哈气：%s第 %d 回合 ——「%s」（生命 %d）获得双动，此后每回合行动两次" % [
+			who, turn_no, picked.card.card_name, picked.health])
+	action.emit("haste_pick", {"side": side, "name": picked.card.card_name})
 
 
 func _recycler_trigger(r: Placement, victim_power: int) -> void :

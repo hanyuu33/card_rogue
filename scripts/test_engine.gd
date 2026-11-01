@@ -1359,6 +1359,21 @@ func _init() -> void:
 		wh_got += 1
 	check(wh_got == 2 and not eng_wh2.whale_pending,
 			"鲸鱼之怒：取满 2 张后自动结束待选（实际取 %d 张）" % wh_got)
+
+	# R479：弃牌堆只剩 1 张 —— 取走那一张就该结束，不该停在「还可取 1 张」等玩家点不选了
+	var eng_wh3 := _new_engine([], 20, 20, -1, false)
+	eng_wh3.start_game(1)
+	eng_wh3.state.deck = [_card(8002, "攻击", "技能", 1, 0, 0)]
+	eng_wh3.state.discard = [_card(8001, "木栅栏", "工事", 2, 0, 6)]
+	eng_wh3.state.hand = [repo.get_card(9050)]
+	eng_wh3.state.energy = 5
+	eng_wh3.use_spell(0, Vector2i(1, 1))
+	check(eng_wh3.whale_pending and eng_wh3.whale_remaining == 1,
+			"鲸鱼之怒：弃牌堆只有 1 张 → 可取数收敛为 1（不是写死的 2）")
+	check(eng_wh3.whale_options().size() == 1, "鲸鱼之怒：此时面板只有 1 个可选")
+	eng_wh3.whale_pick(0)
+	check(not eng_wh3.whale_pending and eng_wh3.whale_remaining == 0,
+			"鲸鱼之怒：取走唯一一张后自动结束待选（不用再点「不选了」）")
 	var wh_self_in_disc := false
 	for wh_dc: CardData in eng_wh2.state.discard:
 		if wh_dc.id == 9050:
@@ -2038,7 +2053,7 @@ func _init() -> void:
 	check(arc_e3.state.energy == 10, "奥秘精通：两张叠加 → 回 2 费（10 - 2 + 2 = 10）")
 
 	# ============================================================
-	# 奥秘之泉一批（2026-09-30）：智慧喷涌 9059 / 以太屏障 9060 / 无尽加护 9061 /
+	# 奥秘之泉一批（2026-09-30）：智慧喷涌 9059 / 风暴屏障 9060 / 无尽加护 9061 /
 	#                            使魔之夜 9062 / 道具「奥秘护符」6020
 	# ============================================================
 
@@ -2080,11 +2095,11 @@ func _init() -> void:
 	check(not wis_d2.is_effect() and wis_e2.cost_of(wis_d2) == 1,
 			"智慧喷涌：抽到非效果卡 → 不减费（攻击仍 1 费）")
 
-	# ---- 以太屏障（9060）：0 费史诗技能；本回合前 X 次伤害变为 1（X = 本回合已用效果牌数）----
+	# ---- 风暴屏障（9060）：0 费史诗技能；本回合前 X 次伤害变为 1（X = 本回合已用效果牌数）----
 	var nc_bar := repo.get_card(9060)
-	check(nc_bar.card_name == "以太屏障" and nc_bar.is_spell() and nc_bar.cost == 0
-			and nc_bar.rarity == 2 and nc_bar.traits.has("以太"),
-			"以太屏障：史诗 0 费技能卡，trait 以太")
+	check(nc_bar.card_name == "风暴屏障" and nc_bar.is_spell() and nc_bar.cost == 0
+			and nc_bar.rarity == 2 and nc_bar.traits.has("风暴"),
+			"风暴屏障：史诗 0 费技能卡，trait 风暴")
 	var bar_e := _new_engine([], 30, 20, -1, false)
 	bar_e.start_game(0)
 	bar_e.state.hand = [repo.get_card(9060)]
@@ -2092,45 +2107,45 @@ func _init() -> void:
 	bar_e.state.self_effect_plays = 2        # 假设本回合已用过 2 张效果牌
 	var bar_ret := bar_e.use_spell(0)
 	check(bar_e._aether_left == 2 and bar_ret.contains("2"),
-			"以太屏障：X = 本回合已用效果牌数 2（%s）" % bar_ret)
-	check(bar_e.state.energy == 5, "以太屏障：0 费，费用不减")
+			"风暴屏障：X = 本回合已用效果牌数 2（%s）" % bar_ret)
+	check(bar_e.state.energy == 5, "风暴屏障：0 费，费用不减")
 	var bar_hp0 := bar_e.state.hp_self
 	bar_e._damage_player(GameEngine.SIDE_SELF, 9, "测试")
 	check(bar_e.state.hp_self == bar_hp0 - 1 and bar_e._aether_left == 1,
-			"以太屏障：第一次伤害 9 → 1（HP %d，剩 %d 次）" % [
+			"风暴屏障：第一次伤害 9 → 1（HP %d，剩 %d 次）" % [
 					bar_e.state.hp_self, bar_e._aether_left])
 	bar_e._damage_player(GameEngine.SIDE_SELF, 9, "测试")
 	check(bar_e.state.hp_self == bar_hp0 - 2 and bar_e._aether_left == 0,
-			"以太屏障：第二次伤害同样变为 1")
+			"风暴屏障：第二次伤害同样变为 1")
 	bar_e._damage_player(GameEngine.SIDE_SELF, 9, "测试")
 	check(bar_e.state.hp_self == bar_hp0 - 11,
-			"以太屏障：次数用完后恢复原伤害（第三次 -9）")
+			"风暴屏障：次数用完后恢复原伤害（第三次 -9）")
 	# 一回合只有第一张生效
 	bar_e.state.hand = [repo.get_card(9060)]
 	bar_e.state.self_effect_plays = 3
 	var bar_ret2 := bar_e.use_spell(0)
 	check(bar_ret2.contains("已有一张") and bar_e._aether_left == 0,
-			"以太屏障：本回合第二张无效（%s）" % bar_ret2)
+			"风暴屏障：本回合第二张无效（%s）" % bar_ret2)
 	# X = 0（本回合没用过效果牌）→ 屏障不吸收
 	var bar_e2 := _new_engine([], 30, 20, -1, false)
 	bar_e2.start_game(0)
 	bar_e2.state.hand = [repo.get_card(9060)]
 	bar_e2.state.energy = 5
 	bar_e2.use_spell(0)
-	check(bar_e2._aether_left == 0, "以太屏障：本回合没用过效果牌 → X = 0")
+	check(bar_e2._aether_left == 0, "风暴屏障：本回合没用过效果牌 → X = 0")
 	var bar_hp2 := bar_e2.state.hp_self
 	bar_e2._damage_player(GameEngine.SIDE_SELF, 5, "测试")
-	check(bar_e2.state.hp_self == bar_hp2 - 5, "以太屏障：X = 0 时伤害照常结算")
+	check(bar_e2.state.hp_self == bar_hp2 - 5, "风暴屏障：X = 0 时伤害照常结算")
 	# 新回合 → 屏障窗口重置，可以再次生效
 	bar_e2.state.hand = [repo.get_card(9060)]
 	bar_e2.state.self_effect_plays = 1
 	bar_e2._begin_turn(GameEngine.SIDE_SELF)
 	check(not bar_e2._aether_used and bar_e2._aether_left == 0,
-			"以太屏障：新回合开始 → 「本回合是否已生效」标记重置")
+			"风暴屏障：新回合开始 → 「本回合是否已生效」标记重置")
 	bar_e2.state.self_effect_plays = 1
 	bar_e2.state.hand = [repo.get_card(9060)]
 	bar_e2.use_spell(0)
-	check(bar_e2._aether_left == 1, "以太屏障：新回合可以再次发动（X = 1）")
+	check(bar_e2._aether_left == 1, "风暴屏障：新回合可以再次发动（X = 1）")
 
 	# ---- 无尽加护（9061）：2 费普通效果；回合开始随机将一张效果卡加入手卡 ----
 	var nc_bless := repo.get_card(9061)
@@ -2218,7 +2233,7 @@ func _init() -> void:
 	var nc_roar := repo.get_card(9063)
 	check(nc_roar.card_name == "以太咆哮" and nc_roar.is_effect() and nc_roar.cost == 1
 			and nc_roar.rarity == 0 and nc_roar.traits.has("以太咆哮") and nc_roar.value == 4,
-			"以太咆哮：普通 1 费效果卡，trait 以太咆哮 value=4")
+			"以太咆哮：普通 1 费效果卡，trait 风暴咆哮 value=4")
 	check(nc_roar.effect_text.contains("使用效果卡") and not nc_roar.effect_text.contains("技能卡"),
 			"以太咆哮（R268）：文案只说效果卡，不再提技能卡")
 	var roar_e := _new_engine([], 20, 20, -1, false)
@@ -2369,7 +2384,7 @@ func _init() -> void:
 
 	# ---- R144：荒野形态**先结算**，石肤看的是减完之后的数值 ----
 	# 旧写法在荒野形态触发时直接 `return _relic_damage_taken(dmg)` → **短路**掉
-	# 石肤 / 以太屏障 / 效果减伤（持有荒野形态反而「免疫」石肤）。
+	# 石肤 / 风暴屏障 / 效果减伤（持有荒野形态反而「免疫」石肤）。
 	var sk_wf := _new_engine([], 30, 30)
 	sk_wf.self_relics = [GameEngine.WILD_FORM_RELIC_ID]
 	sk_wf.state.effects.append(repo.get_card(9066))
@@ -4911,9 +4926,9 @@ func _init() -> void:
 			and int(lvl3["tier"]) == GameLevels.TIER_ELITE_EASY
 			and eus.size() == 3
 			and int(eus[0][0]) == 9012 and eus[0][6] == Vector2i(0, 1)
-			and int(eus[1][0]) == 9001 and eus[1][6] == Vector2i(1, 0)
-			and int(eus[2][0]) == 9001 and eus[2][6] == Vector2i(1, 2),
-			"精英简单关：后排中间队长 + 中排左右各一只骑士（2026-10-01 由前排挪到中排）")
+			and int(eus[1][0]) == 9001 and eus[1][6] == Vector2i(0, 0)
+			and int(eus[2][0]) == 9001 and eus[2][6] == Vector2i(0, 2),
+			"精英简单关：后排一整排 —— 队长居中 + 左右各一只骑士（R480 骑士由中排退到后排）")
 	var eng_c := _new_engine([], 20, 40)
 	var capc := _card(9012, "鸭子队长", "盟友", 8, 10, 50, 1, 1)
 	capc.actions = 2
@@ -5259,7 +5274,7 @@ func _init() -> void:
 	check(hc != null and hc.card_name == "哈气" and hc.kind == "效果"
 			and hc.traits.has("哈气") and hc.value == 2 and hc.rarity == 4
 			and not repo.reward_pool().has(hc),
-			"哈气：效果卡（强度 2 = 第 3 个回合起每回合行动两次，不在奖励池）")
+			"哈气：效果卡（强度 2 = 每回合行动两次；第 3/5/7 回合各挑一个单位授予，不在奖励池）")
 	var lvh: Dictionary = _level_named("哈气骑士团")
 	var h_units: Array = lvh["enemy_units"]
 	var h_knight := 0
@@ -5293,59 +5308,115 @@ func _init() -> void:
 			and lvh not in GameLevels.elite_pool(GameLayers.LAYER_TWO),
 			"哈气骑士团只在一层精英池（R449 由第二层下调；第二层精英池已不含它，不串层）")
 
-	# 哈气机制：只增益所属阵营 / **第 3 个回合起才生效** / 已在场单位补发 / 与卡自带双动不叠加
+	# R479 哈气改口径：**第 3 / 5 / 7 个回合**各挑一个「现存生命最高、且还没双动」的
+	# 己方单位，**永久**双动（旧口径是「第 3 回合起整方双动」）
 	var eng_hs := _new_engine([], 20, 40)
-	var hk_p := eng_hs.state.place(repo.get_card(9001), Vector2i(2, 1),
-			GameEngine.SIDE_OPPONENT)
+	var hk_a := eng_hs.state.place(_card(9001, "鸭子骑士A", "盟友", 3, 6, 12),
+			Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+	var hk_b := eng_hs.state.place(_card(9001, "鸭子骑士B", "盟友", 3, 6, 25),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var hk_c := eng_hs.state.place(_card(9001, "鸭子骑士C", "盟友", 3, 6, 18),
+			Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
 	var hf_p := eng_hs.state.place(_card(8003, "农民", "盟友", 3, 3, 8),
 			Vector2i(3, 1), GameEngine.SIDE_SELF)
-	check(hk_p.acts_left == 1 and hf_p.acts_left == 1,
+	check(hk_a.acts_left == 1 and hf_p.acts_left == 1,
 			"没有哈气时：敌我单位都是每回合 1 次行动")
 	eng_hs.enable_enemy_effects([repo.get_card(9024)])
-	check(hk_p.acts_left == 1 and hf_p.acts_left == 1,
-			"哈气有前置：开局启用（第 0 回合）不生效，已在场的敌方单位仍是 1 次行动")
-	var hk_e := eng_hs.state.place(repo.get_card(9001), Vector2i(2, 0),
-			GameEngine.SIDE_OPPONENT)
-	check(hk_e.acts_left == 1, "哈气未到生效回合：新上场的敌方单位也是 1 次行动")
-	eng_hs.state.opp_turn_no = 2
-	eng_hs.state.reset_units(GameEngine.SIDE_OPPONENT)
-	check(hk_p.acts_left == 1, "哈气：敌方第 2 回合仍未生效（1 次行动）")
+	check(hk_b.acts_left == 1 and not hk_b.haste_double,
+			"哈气：开局启用（第 0 回合）不选人，已在场的敌方单位仍是 1 次行动")
+	for hs_tn: int in [1, 2]:
+		eng_hs.state.opp_turn_no = hs_tn
+		eng_hs._haste_pick_tick(GameEngine.SIDE_OPPONENT)
+		eng_hs.state.reset_units(GameEngine.SIDE_OPPONENT)
+	check(hk_a.acts_left == 1 and hk_b.acts_left == 1 and hk_c.acts_left == 1,
+			"哈气：第 1 / 2 回合不触发（只有第 3、5、7 回合）")
+	# 第 3 回合：生命最高（25）的 B 单点双动
 	eng_hs.state.opp_turn_no = 3
+	eng_hs._haste_pick_tick(GameEngine.SIDE_OPPONENT)
 	eng_hs.state.reset_units(GameEngine.SIDE_OPPONENT)
-	check(hk_p.acts_left == 2 and hk_e.acts_left == 2 and hf_p.acts_left == 1,
-			"哈气：敌方第 3 回合起生效 → 已在场敌方单位补到 2 次行动，我方单位不受影响")
-	var hk2_p := eng_hs.state.place(repo.get_card(9001), Vector2i(2, 2),
-			GameEngine.SIDE_OPPONENT)
-	check(hk2_p.acts_left == 2, "哈气生效后新上场的敌方单位也是 2 次行动")
-	var hcap_c := _card(9012, "鸭子队长", "盟友", 8, 10, 50, 1, 1)
-	hcap_c.actions = 2
-	var hcap_p := eng_hs.state.place(hcap_c, Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
-	check(hcap_p.acts_left == 2, "哈气不叠加：队长仍是 2 次行动（不是 4 次）")
-	eng_hs.current_side = GameEngine.SIDE_OPPONENT
-	eng_hs.attack(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
-	check(hf_p.health == 5 and not hk_p.tapped and hk_p.acts_left == 1,
-			"哈气：敌方单位第一轮行动后不横置，还剩 1 轮")
-	eng_hs.attack(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
-	check(hf_p.health == 2 and hk_p.tapped and hk_p.acts_left == 1,
-			"哈气：第二轮行动后才正常横置")
+	check(hk_b.haste_double and hk_b.acts_left == 2
+			and hk_a.acts_left == 1 and hk_c.acts_left == 1,
+			"哈气第 3 回合：只给**生命最高**的那一个（25 血）双动，另外两个仍 1 次")
+	check(hf_p.acts_left == 1 and not hf_p.haste_double,
+			"哈气只增益所属阵营：我方单位不受影响")
+	eng_hs._haste_pick_tick(GameEngine.SIDE_OPPONENT)
+	check(hk_a.acts_left == 1 and hk_c.acts_left == 1,
+			"哈气：同一回合只挑一个（重复结算不会给第二个）")
+	# 第 4 回合不是触发回合，但 B 的双动**永久**保留
+	eng_hs.state.opp_turn_no = 4
+	eng_hs._haste_pick_tick(GameEngine.SIDE_OPPONENT)
+	eng_hs.state.reset_units(GameEngine.SIDE_OPPONENT)
+	check(hk_b.acts_left == 2 and hk_a.acts_left == 1,
+			"哈气：双动是**永久**的（第 4 回合 B 仍 2 次，且没有新的人被选）")
+	# 第 5 回合：已有双动的 B 被排除 → 选剩下里生命最高的 C（18）
+	eng_hs.state.opp_turn_no = 5
+	eng_hs._haste_pick_tick(GameEngine.SIDE_OPPONENT)
+	eng_hs.state.reset_units(GameEngine.SIDE_OPPONENT)
+	check(hk_c.haste_double and hk_c.acts_left == 2 and hk_a.acts_left == 1,
+			"哈气第 5 回合：「已有双动」的 B 被排除，选剩下生命最高的 C")
+	# 第 7 回合：只剩 A（12）
+	eng_hs.state.opp_turn_no = 7
+	eng_hs._haste_pick_tick(GameEngine.SIDE_OPPONENT)
+	eng_hs.state.reset_units(GameEngine.SIDE_OPPONENT)
+	check(hk_a.haste_double and hk_a.acts_left == 2 and hk_b.acts_left == 2
+			and hk_c.acts_left == 2,
+			"哈气第 7 回合：第三个也拿下双动（三个骑士全双动）")
+	# 第 9 回合起不再触发，但已选中的永久保留
+	eng_hs.state.opp_turn_no = 9
+	eng_hs._haste_pick_tick(GameEngine.SIDE_OPPONENT)
+	eng_hs.state.reset_units(GameEngine.SIDE_OPPONENT)
+	check(hk_a.acts_left == 2 and hk_b.acts_left == 2,
+			"哈气：第 7 回合之后不再选人，已选中的双动永久保留")
 
-	# 哈气前置的端到端验证：真实回合推进（我方1 → 敌方1 → 我方2 → 敌方2 → 我方3 → 敌方3）
+	# 「原本就能行动两次」的单位不会被选中（生命再高也跳过）
+	var eng_hcap := _new_engine([], 20, 40)
+	eng_hcap.enable_enemy_effects([repo.get_card(9024)])
+	var hcap_c2 := _card(9012, "鸭子队长", "盟友", 3, 8, 50, 1, 1)
+	hcap_c2.actions = 2
+	var hcap_p := eng_hcap.state.place(hcap_c2, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var hcap_slow := eng_hcap.state.place(_card(9001, "鸭子骑士", "盟友", 3, 6, 10),
+			Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+	eng_hcap.state.opp_turn_no = 3
+	eng_hcap._haste_pick_tick(GameEngine.SIDE_OPPONENT)
+	check(not hcap_p.haste_double and hcap_slow.haste_double,
+			"哈气：「原本就能行动两次」的队长不会被选中（生命再高也跳过）")
+	check(hcap_p.acts_left == 2,
+			"哈气不叠加：队长仍是 2 次行动（不是 4 次）")
+
+	# 空场 → 选不到人，这一次落空（不报错、不崩）
+	var eng_hempty := _new_engine([], 20, 40)
+	eng_hempty.enable_enemy_effects([repo.get_card(9024)])
+	eng_hempty.state.opp_turn_no = 3
+	check(eng_hempty.state.haste_pick(GameEngine.SIDE_OPPONENT) == null,
+			"哈气：空场时选不到人（这次机会落空）")
+
+	# 端到端：真实回合推进（我方1 → 敌方1 → … → 敌方5），验证 3 / 5 回合各挑一个
 	var eng_ht := _new_engine([], 20, 40)
-	var ht_p := eng_ht.state.place(repo.get_card(9001), Vector2i(2, 1),
-			GameEngine.SIDE_OPPONENT)
+	var ht_hi := eng_ht.state.place(_card(9001, "高血骑士", "盟友", 3, 6, 25),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var ht_lo := eng_ht.state.place(_card(9001, "低血骑士", "盟友", 3, 6, 12),
+			Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
 	eng_ht.enable_enemy_effects([repo.get_card(9024)])
 	eng_ht.start_game(0)
 	eng_ht.end_turn()
-	check(eng_ht.opp_turns == 1 and ht_p.acts_left == 1,
+	check(eng_ht.opp_turns == 1 and ht_hi.acts_left == 1,
 			"哈气（端到端）：敌方第 1 回合只有 1 次行动")
 	eng_ht.end_turn()
 	eng_ht.end_turn()
-	check(eng_ht.opp_turns == 2 and ht_p.acts_left == 1,
+	check(eng_ht.opp_turns == 2 and ht_hi.acts_left == 1,
 			"哈气（端到端）：敌方第 2 回合仍是 1 次行动")
 	eng_ht.end_turn()
 	eng_ht.end_turn()
-	check(eng_ht.opp_turns == 3 and ht_p.acts_left == 2,
-			"哈气（端到端）：敌方第 3 回合起才是 2 次行动")
+	check(eng_ht.opp_turns == 3 and ht_hi.acts_left == 2 and ht_lo.acts_left == 1,
+			"哈气（端到端）：敌方第 3 回合只让生命最高的那个双动")
+	eng_ht.end_turn()
+	eng_ht.end_turn()
+	check(eng_ht.opp_turns == 4 and ht_hi.acts_left == 2,
+			"哈气（端到端）：第 4 回合双动跨回合保留")
+	eng_ht.end_turn()
+	eng_ht.end_turn()
+	check(eng_ht.opp_turns == 5 and ht_lo.acts_left == 2 and ht_hi.acts_left == 2,
+			"哈气（端到端）：敌方第 5 回合把第二个也补上双动")
 
 	# 多动单位：可以连续消耗两次行动移动（横着挪位后仍保留最后一次的攻击权）
 	var eng_mv2 := _new_engine([], 20, 40)
@@ -5397,7 +5468,7 @@ func _init() -> void:
 	var eng_full := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 40)), 20, 40)
 	eng_full.ai_enabled = true
 	eng_full.start_game(1)
-	eng_full.enable_enemy_effects([repo.get_card(9024)])   # 哈气：敌方第 3 个回合起行动两次
+	eng_full.enable_enemy_effects([repo.get_card(9024)])   # 哈气：敌方第 3/5/7 回合各挑一个单位双动（R479）
 	eng_full.state.place(repo.get_card(9001), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 	eng_full.state.place(repo.get_card(9001), Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
 	eng_full.current_side = GameEngine.SIDE_OPPONENT
@@ -10620,16 +10691,17 @@ func _init() -> void:
 	# 多跑一轮」。两个口分别由 ②③ 与 ① 守住。
 	# ① 召唤落场 = **固定 1 轮**（不吃哈气 / 双动的额外轮）；从手里正常落场才拿 card.actions
 	var r122_hq := _new_engine([], 30, 30)
-	r122_hq.state.self_turn_no = FieldState.HASTE_START_TURN
-	r122_hq.state.effects.append(CardData.from_dict(repo.get_card(9024).to_dict()))   # 哈气
-	var r122_norm := r122_hq.state.place(_card(7903, "正常落场", "盟友", 2, 3, 10, 1, 1),
-			Vector2i(4, 2), GameEngine.SIDE_SELF)
-	var r122_hq_summ := r122_hq.state.place(_card(7904, "被召唤的", "盟友", 2, 3, 10, 1, 1),
+	# R479 起「哈气」不再是整方光环（改成逐单位 `haste_double`），这里用**卡面双动**
+	# 代表「有额外轮数」的来源 —— 它和哈气打在 place 的同一行分支上。
+	var r122_dbl := _card(7903, "双动单位", "盟友", 2, 3, 10, 1, 1)
+	r122_dbl.actions = 2
+	var r122_norm := r122_hq.state.place(r122_dbl, Vector2i(4, 2), GameEngine.SIDE_SELF)
+	var r122_hq_summ := r122_hq.state.place(CardData.from_dict(r122_dbl.to_dict()),
 			Vector2i(4, 3), GameEngine.SIDE_SELF, true)
 	check(r122_norm.acts_left == 2,
-			"R122-E 正常落场吃哈气双动：acts_left=%d" % r122_norm.acts_left)
+			"R122-E 正常落场拿到双动：acts_left=%d" % r122_norm.acts_left)
 	check(r122_hq_summ.acts_left == 1,
-			"R122-E 召唤落场固定 1 轮：acts_left=%d（不吃哈气双动）" % r122_hq_summ.acts_left)
+			"R122-E 召唤落场固定 1 轮：acts_left=%d（不吃双动的额外轮）" % r122_hq_summ.acts_left)
 
 	# ② 回合开始**已在场**的使魔照常吃「使魔之力」+1（成长口没被搬走）
 	var r122_ga := _new_engine([], 30, 30)
@@ -14379,14 +14451,14 @@ func _init() -> void:
 		"R96 生产订单：**没污染卡库**（卡库素体仍 %d 攻 / %d 血）"
 			% [r96_proto_pow, r96_proto_hp])
 
-	# ─────────── R97：拆解 8049（机械之心 稀有技能）───────────
+	# ─────────── R97：拆解 8049（机械之心 史诗技能；R483 由稀有上调）───────────
 	var r97_repo := CardRepo.load_json()
 	var r97_def: CardData = r97_repo.get_card(GameEngine.DEMOLISH_ID)
 	check(r97_def != null and r97_def.kind == "技能" and r97_def.cost == 1
-			and r97_def.rarity == 1 and r97_def.card_class == PlayerClass.MECH
+			and r97_def.rarity == 2 and r97_def.card_class == PlayerClass.MECH
 			and r97_def.target_mode == "unit"
 			and r97_def.traits.has("机械") and r97_def.traits.has("改造"),
-		"R97 拆解：技能 / 1 费 / **稀有** / 机械之心 / 需选单位 / trait 机械+改造")
+		"R97 拆解：技能 / 1 费 / **史诗**（R483 由稀有上调） / 机械之心 / 需选单位 / trait 机械+改造")
 
 	# ---- ① 拆解未改造己方盟友：破坏 + 回 3 费 + 手牌+素体，无额外升级 ----
 	var r97_e1 := _new_engine([], 40, 40, -1, false)
@@ -19369,7 +19441,9 @@ func _init() -> void:
 			"R241 中断记录：update_pending 把快照与种子写进 pending")
 	# ⑦ 确定性源码守卫：商店商品 / 附魔池必须走本局随机链
 	var r241_ssrc := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
-	check_src(r241_ssrc.find("CardReward.roll(_repo, \"boss\", 6, RunState.run_rng)") >= 0
+	# R481：第一行张数改成常量 `ROW1_MAX`（固定 5 张），守卫跟着改 —— 关键是那串
+	# 随机源参数 `RunState.run_rng` 还在，不是「换个常量名就放过」。
+	check_src(r241_ssrc.find("CardReward.roll(_repo, \"boss\", ROW1_MAX, RunState.run_rng)") >= 0
 			and r241_ssrc.find("RunState.shuffle_rng(pool)") >= 0
 			and r241_ssrc.find("pool.shuffle()") < 0,
 			"R241 确定性：商店商品 / 附魔池都走 run_rng（不许全局 roll / Array.shuffle）")
@@ -30198,6 +30272,8 @@ func _init() -> void:
 	check(not r397_carrier.traits.has(GameEngine.ACTION_GROWTH_TRAIT)
 			and not r397_carrier.has_affix("疾行") and r397_carrier.actions <= 1,
 		"R397 量产型赫尔墨斯不成长也不疾行（越拖越强只属于本体 9140）")
+	check(r397_carrier.effect_text == "",
+		"R483 量产型赫尔墨斯没有效果 → 卡面不写效果文字（effect_text 为空；卡面绘制 `eff != \"\"` 才起笔）")
 	check(CardFace.art_for(9188) != null,
 		"R397 量产型赫尔墨斯有卡图（assets/pics/9188.png）")
 
@@ -30761,6 +30837,34 @@ func _init() -> void:
 			"R432 「-50%」贴纸是旋转自绘（斜贴、无新素材、随卡高等比缩放）")
 	check_src(r432_shop.find("draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)") >= 0,
 			"R432 贴纸画完必须复位 transform（否则后续价签/售罄遮罩跟着转）")
+
+	# ---- R481：第一行固定 5 张（窄窗缩卡面）+ 商店不再自己画金币 ----
+	# 用户口径：「窗口模式用小窗口会少显示一张」「头像框已经显示金币了，商店不要再摆一份」。
+	# 全是源码守卫 —— shop_scene 实例化会跑整套 _ready（拉卡库 / 造 run），不适合进 engine 套件。
+	var r481_shop := r432_shop
+	check_src(r481_shop.find("const ROW1_MAX := 5") >= 0,
+			"R481 第一行固定张数 = 5（唯一常量 ROW1_MAX，抽卡数也用它）")
+	var r481_vc := r481_shop.find("func _visible_row1_count() -> int:")
+	var r481_cw := r481_shop.find("func _row1_card_w() -> float:")
+	check_src(r481_vc >= 0 and r481_cw > r481_vc
+			and r481_shop.substr(r481_vc, r481_cw - r481_vc).find("_goods_w") < 0,
+			"R481 张数不再按货架宽算（_visible_row1_count 里不许再出现 _goods_w）")
+	check_src(r481_vc >= 0 and r481_cw > r481_vc
+			and r481_shop.substr(r481_vc, r481_cw - r481_vc).find(
+					"mini(_row1.size(), ROW1_MAX)") >= 0,
+			"R481 张数 = min(实际张数, ROW1_MAX)：抽卡池意外不足也不留空位")
+	check_src(r481_shop.find("ROW1_GAP / ROW1_CARD_W") >= 0,
+			"R481 卡宽按 150:32 的固定比例等比缩（比例一变卡面就变形）")
+	# `_row1_geom()` 应出现 3 次：定义 + `_draw_row1` + `_row1_rect`。少一处就是有人又自己算了一遍。
+	check_src(r481_shop.count("_row1_geom()") >= 3,
+			"R481 绘制与命中共用 _row1_geom()（各算一份就会看得到点不中）")
+	var r481_hd := r481_shop.find("func _draw_header() -> void:")
+	var r481_sh := r481_shop.find("func _draw_shelves() -> void:")
+	# ⚠️ 判据是那行**绘制调用**（`"金币 %d"` 字面量），不是「这段里有没有『金币』两个字」——
+	#    函数注释里本来就要写明「为什么不再画金币」，按关键字判会把自己的解释也扫进去。
+	check_src(r481_hd >= 0 and r481_sh > r481_hd
+			and r481_shop.substr(r481_hd, r481_sh - r481_hd).find("\"金币 %d\"") < 0,
+			"R481 商店顶栏不再画金币（金币只在头像框 HUD 显示一份）")
 	# ---- R435：贴纸卷边 + 右移 + 折扣金额转绿（口径修正）----
 	# 钉的是三件容易改回去的事：① 折角多边形顶点顺序（写反就自交 → 三角化失败 → 贴纸整块消失）；
 	# ② 贴纸不再是 draw_rect 矩形（规整矩形正是这轮要改掉的东西）；③ 只有价签转绿。
@@ -30927,17 +31031,17 @@ func _init() -> void:
 	var r451_ship_c: CardData = r451_repo.get_card(9208)
 	check(r451_ship_c != null and r451_ship_c.card_name == "母舰"
 			and r451_ship_c.kind == "盟友" and r451_ship_c.power == 0
-			and r451_ship_c.health == 60 and r451_ship_c.attack_range == 0
+			and r451_ship_c.health == 40 and r451_ship_c.attack_range == 0
 			and r451_ship_c.move_speed == 0
 			and r451_ship_c.traits.has(GameEngine.MOTHERSHIP_TRAIT)
 			and r451_ship_c.value == GameEngine.MOTHERSHIP_LOSS,
-			"R451 母舰 9208：盟友 0/60 程0 速0，trait「母舰」，value=10（每死一个友方掉 10）")
+			"R483 母舰 9208：盟友 0/40 程0 速0（生命锁定 40），trait「母舰」，value=10（每死一个友方掉 10）")
 	var r451_air: CardData = r451_repo.get_card(9209)
 	check(r451_air != null and r451_air.card_name == "空袭"
 			and r451_air.kind == "效果" and r451_air.traits.has(GameEngine.AIR_RAID_TRAIT)
 			and r451_air.value == GameEngine.AIR_RAID_DMG
 			and r451_air.is_level_effect(),
-			"R451 空袭 9209：效果卡，trait「空袭」，value=10（基础伤害），识别为敌方关卡效果")
+			"R483 空袭 9209：效果卡，trait「空袭」，value=5（基础伤害），识别为敌方关卡效果")
 	check(not r451_pool_ids.has(9207) and not r451_pool_ids.has(9208)
 			and not r451_pool_ids.has(9209),
 			"R451 三张新卡都是敌方卡 → 不进奖励池")
@@ -30951,6 +31055,23 @@ func _init() -> void:
 			and bool(r451_lv.get("enemy_hp_infinite", false))
 			and int(r451_lv.get("win_on_boss", 0)) == GameEngine.MOTHERSHIP_ID,
 			"R451 母舰空袭：第二层·精英简单，敌方 HP ∞，胜利条件 = 击破母舰 9208")
+	# R483：母舰生命 **40 锁定** —— 关卡实例（enemy_units 元组）与卡库两处都验，
+	#      并逐个难度档确认：引擎不按难度缩放敌人生命（`RunState.difficulty` 只改玩家 debuff）。
+	var r483_lock_ok := true
+	var r483_prev_diff: int = RunState.difficulty
+	for _r483_d in range(RunState.DIFFICULTY_COUNT):
+		RunState.set_difficulty(_r483_d)
+		var r483_lv: Dictionary = _level_named("母舰空袭")
+		var r483_ship_hp := -1
+		for r483_u: Array in (r483_lv.get("enemy_units", []) as Array):
+			if int(r483_u[0]) == GameEngine.MOTHERSHIP_ID:
+				r483_ship_hp = int(r483_u[3])
+		if r483_ship_hp != 40 or r451_repo.get_card(GameEngine.MOTHERSHIP_ID).health != 40:
+			r483_lock_ok = false
+	RunState.set_difficulty(r483_prev_diff)
+	check(r483_lock_ok,
+			"R483 母舰生命锁定 40：关卡元组与卡库都是 40，%d 个难度档逐个验过都不变" % RunState.DIFFICULTY_COUNT)
+
 	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).has(r451_lv),
 			"R451 母舰空袭进第二层精英池（地图能抽到）")
 	check((r451_lv.get("enemy_effects", []) as Array) == [9209],
@@ -30960,7 +31081,7 @@ func _init() -> void:
 	var r451_units: Array = r451_lv.get("enemy_units", [])
 	var r451_ship_n := 0
 	var r451_ms_n := 0
-	var r451_arg_n := 0
+	var r451_carrier_n := 0
 	var r451_src_ok := true
 	for r451_u: Array in r451_units:
 		var r451_uid := int(r451_u[0])
@@ -30982,13 +31103,13 @@ func _init() -> void:
 			r451_ms_n += 1
 			if r451_cell.x != 2 or (r451_cell.y != 0 and r451_cell.y != 2):
 				r451_src_ok = false
-		elif r451_uid == GameEngine.ARGOS_ID:
-			r451_arg_n += 1
+		elif r451_uid == 9188:   # R483：中排中央由量产型赫尔墨斯顶上（原量产型阿尔戈斯 9142）
+			r451_carrier_n += 1
 			if r451_cell != Vector2i(1, 1):
 				r451_src_ok = false
-	check(r451_units.size() == 4 and r451_ship_n == 1 and r451_ms_n == 2 and r451_arg_n == 1
+	check(r451_units.size() == 4 and r451_ship_n == 1 and r451_ms_n == 2 and r451_carrier_n == 1
 			and r451_src_ok,
-			"R451 编成：母舰 (0,1) + 量产型阿尔戈斯 (1,1) + 量产型阿斯克勒庇厄斯 (2,0)/(2,2)，元组与卡库逐项同源")
+			"R483 编成：母舰 (0,1) + 量产型赫尔墨斯 (1,1) + 量产型阿斯克勒庇厄斯 (2,0)/(2,2)，元组与卡库逐项同源")
 
 	# ---- ④ 空袭：标记 5 格（不重复、都在棋盘内）----
 	var r451_mk := _new_engine([], 20, 30)
@@ -31019,21 +31140,21 @@ func _init() -> void:
 	r451_mark_set.append(Vector2i(1, 1))
 	r451_hit.state.air_raid_cells = r451_mark_set
 	r451_hit._begin_turn(GameEngine.SIDE_OPPONENT)
-	check(r451_ally.health == 30,
-			"R451 空袭：标记格上的我方单位吃 10 点（40 → 30，实际 %d）" % r451_ally.health)
+	check(r451_ally.health == 35,
+			"R483 空袭：标记格上的我方单位吃 5 点（40 → 35，实际 %d）" % r451_ally.health)
 	check(r451_foe.health == 50,
 			"R451 空袭：标记格上的**敌方**单位不受伤（只打玩家单位，实际 %d）" % r451_foe.health)
 	check(r451_hit.state.air_raid_cells.is_empty() and r451_hit.state.air_raid_turns == 1,
-			"R451 空袭：结算后清空标记、计数 +1（下轮 12 点）")
-	# 第二轮：同一格再吃一次 → 12 点（每回合 +2）
+			"R483 空袭：结算后清空标记、计数 +1（下轮 6 点）")
+	# 第二轮：同一格再吃一次 → 6 点（每回合 +1）
 	var r451_mark_set2: Array[Vector2i] = []
 	r451_mark_set2.append(Vector2i(4, 1))
 	r451_hit.state.air_raid_cells = r451_mark_set2
-	check(r451_hit.air_raid_damage() == 12,
-			"R451 空袭：第二轮落地值 12（10 + 2，实际 %d）" % r451_hit.air_raid_damage())
+	check(r451_hit.air_raid_damage() == 6,
+			"R483 空袭：第二轮落地值 6（5 + 1，实际 %d）" % r451_hit.air_raid_damage())
 	r451_hit._begin_turn(GameEngine.SIDE_OPPONENT)
-	check(r451_ally.health == 18,
-			"R451 空袭：第二轮再吃 12 点（30 → 18，实际 %d）" % r451_ally.health)
+	check(r451_ally.health == 29,
+			"R483 空袭：第二轮再吃 6 点（35 → 29，实际 %d）" % r451_ally.health)
 
 	# ---- ⑥ 空袭空响：标记格上没有单位 → 不转打玩家 HP ----
 	var r451_miss := _new_engine([], 20, 30)
@@ -31069,15 +31190,15 @@ func _init() -> void:
 			r451_repo.get_card(GameEngine.ARGOS_ID), Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
 	# 免疫：任何伤害都不掉血（走唯一口 `_hit_unit`）
 	var r451_dealt: int = r451_ship._hit_unit(r451_ship_p, 40, "测试")
-	check(r451_dealt == 0 and r451_ship_p.health == 60,
-			"R451 母舰：免疫所有伤害（40 点打不掉血，剩余 %d）" % r451_ship_p.health)
+	check(r451_dealt == 0 and r451_ship_p.health == 40,
+			"R483 母舰：免疫所有伤害（40 点打不掉血，剩余 %d）" % r451_ship_p.health)
 	check(int(r451_ship.preview_hit_damage(r451_ship_p, 10).get("dmg", -2)) == 0,
 			"R451 母舰：伤害预览镜像同样报 0（预览 == 实际）")
 	# 友方被破坏 → 自身 -10 + 旁边补一份同款复制
 	var r451_n0: int = r451_ship.state.board.size()
 	r451_ship._destroy(Vector2i(1, 0))
-	check(r451_ship_p.health == 50,
-			"R451 母舰：友方被破坏 → 自身生命 -10（60 → %d）" % r451_ship_p.health)
+	check(r451_ship_p.health == 30,
+			"R483 母舰：友方被破坏 → 自身生命 -10（40 → %d）" % r451_ship_p.health)
 	check(r451_ship.state.board.size() == r451_n0
 			and r451_ship.state.unit_at(Vector2i(0, 0)) != null
 			and r451_ship.state.unit_at(Vector2i(0, 0)).card.id == GameEngine.ARGOS_ID,

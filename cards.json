@@ -867,7 +867,7 @@
       "traits": [
         "哈气"
       ],
-      "effect_text": "己方的第 3 个回合起，己方单位每回合可以行动两次（原本就能行动两次的单位不会叠加）。",
+      "effect_text": "己方第 3、5、7 个回合开始时，使一个现存生命最高且没有双动的己方单位获得双动（永久；原本就能行动两次的单位不会被选中）。",
       "target_mode": "none",
       "value": 2,
       "color": "金",
@@ -1566,7 +1566,7 @@
     },
     {
       "id": 9060,
-      "name": "以太屏障",
+      "name": "风暴屏障",
       "kind": "技能",
       "cost": 0,
       "power": 0,
@@ -1577,7 +1577,7 @@
       "group": "player",
       "class": "森林精魄",
       "traits": [
-        "以太"
+        "风暴"
       ],
       "effect_text": "本回合受到的前 X 次伤害变为 1，X 为这张卡发动前你本回合使用过的效果卡数量。每回合只有第一张生效。",
       "target_mode": "none",
@@ -3552,7 +3552,7 @@
       "name": "拆解",
       "kind": "技能",
       "cost": 1,
-      "rarity": 1,
+      "rarity": 2,
       "group": "player",
       "class": "机械之心",
       "traits": [
@@ -5739,7 +5739,7 @@
         "机械"
       ],
       "affixes": [],
-      "effect_text": "装甲运输车：量产型号，没有「行动力成长」，不会越拖越强。",
+      "effect_text": "",
       "target_mode": "none",
       "color": "灰",
       "image": ""
@@ -5889,7 +5889,7 @@
       "kind": "盟友",
       "cost": 8,
       "power": 0,
-      "health": 60,
+      "health": 40,
       "attack_range": 0,
       "move_speed": 0,
       "rarity": 4,
@@ -5923,9 +5923,9 @@
         "空袭"
       ],
       "affixes": [],
-      "effect_text": "玩家回合开始时随机标记 5 个格子。敌方行动前，标记格上的玩家单位受到 10 点伤害，每回合此伤害 +2。",
+      "effect_text": "玩家回合开始时随机标记 5 个格子。敌方行动前，标记格上的玩家单位受到 5 点伤害，每回合此伤害 +1。",
       "target_mode": "none",
-      "value": 10,
+      "value": 5,
       "color": "红",
       "image": ""
     },

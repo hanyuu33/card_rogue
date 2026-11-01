@@ -4950,14 +4950,14 @@ func _on_left_click(pos: Vector2) -> void:
 		queue_redraw()
 		return
 	# R189：全屏选卡页接管 8 套旧面板。展开时点击被子节点吃掉、根本到不了这里；
-	# 收起态（返回看战场）点「继续选择」浮条回来，点其他地方只提示 —— pending
+	# 收起态（看战场）点「查看待选牌」浮条回来，点其他地方只提示 —— pending
 	# 还在引擎里，不能让玩家绕过选择直接打牌。
 	if _pick != null and _pick.is_picking():
 		if not _pick.visible and _pick_banner_rect().has_point(pos):
 			_pick.reopen()
 			queue_redraw()
 		elif not _pick.visible:
-			_say("选择进行中：点顶部「继续选择」回到选卡页")
+			_say("选择进行中：点顶部「查看待选牌」回到选卡页")
 		return
 	# 预判（9097）：二选一面板（选的是模式不是卡，不进选卡页）
 	if engine.foresight_mode:
@@ -6420,7 +6420,7 @@ func _on_pick_cancelled() -> void:
 
 
 func _pick_banner_rect() -> Rect2:
-	## 选卡页收起态的「继续选择」浮条（顶部中央；绘制与点击判定共用）。
+	## 选卡页收起态的「查看待选牌」浮条（顶部中央；绘制与点击判定共用）。
 	return Rect2(WINDOW_W / 2.0 - 240.0, 74.0, 480.0, 40.0)
 
 
@@ -6429,8 +6429,9 @@ func _draw_pick_banner() -> void:
 	var r := _pick_banner_rect()
 	draw_rect(r, Color(0.14, 0.12, 0.20, 0.95))
 	draw_rect(r, Color("ffd27d"), false, 2.0)
+	# R479：与选卡页左上角的「看战场」按钮成对 —— 一个收、一个回。
 	_draw_string_center(_font_bold, UI_FS_LABEL,
-			"选择进行中：%s —— 点击继续" % String(_pick.cfg_short()),
+			"查看待选牌：%s（点击继续）" % String(_pick.cfg_short()),
 			r.get_center(), Color("ffd27d"))
 func _close_zone_panels() -> void:
 	## 关掉所有区域浏览面板（专注选完 / 取消后收干净）。
@@ -8998,7 +8999,7 @@ func _draw_air_raid_marks() -> void:
 			draw_line(c - d * 10.0, c - d * 4.0, cross_col, 2.0)
 			draw_line(c + d * 4.0, c + d * 10.0, cross_col, 2.0)
 	# 角标只写一次：挂在这批标记格**外接框的上沿居中**（夹在棋盘可视范围内），
-	# 写「空袭 -N」—— N 是这一轮真正会落下来的伤害（含每回合 +2）。
+	# 写「空袭 -N」—— N 是这一轮真正会落下来的伤害（含每回合 +1，R483）。
 	# ⚠️ 原来塞在第一个格子的右下角：9px 红字压在卡面描边和数值徽章上，实机基本读不出来。
 	var tag := "空袭 -%d" % engine.air_raid_damage()
 	var bbox := _cells_bbox(cells)
@@ -10565,6 +10566,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 	elif kind == "swap" and data.get("old") is CardData:
 		# 交换：原单位从场上顶回手牌（不是抽的）→ 不播「从抽牌堆飞入」
 		_flyin_skip.append((data["old"] as CardData).id)
+	# R479 哈气：第 3/5/7 回合挑中的那个单位获得**永久**双动 → 顶部状态条提示一次
+	# （徽标那边不用另写：`acts_left > 1` 的「行动 N」标记本来就会跟着出现）
+	if kind == "haste_pick":
+		_say("✦ 哈气：%s 获得双动（此后每回合行动两次）" % str(data.get("name", "")))
 	# R151 P2-13：力量成长事件族（升级 / 骑士 / 锻造 / 夜行 / 精进 / 使魔）→ 卡面数字跳动 + 扩散环
 	if kind in ["upgrade", "knight_grow", "heph_grow", "night_grow", "mage_grow", "familiar_grow",
 			"revelator_grow"]:
@@ -11133,18 +11138,18 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"text": "使魔之夜 · 乌鸦 +1（本回合 0 费）", "col": Color("6a6a9a"), "size": 17,
 					"start": n, "dur": 2100})
 		"aether":
-			# 以太屏障（9060）：本回合前 X 次受到的伤害变为 1
+			# 风暴屏障（9060）：本回合前 X 次受到的伤害变为 1
 			sfx.play("heal")
-			_say("✦ 以太屏障：本回合前 %d 次受到的伤害变为 1" % int(data.get("left", 0)))
+			_say("✦ 风暴屏障：本回合前 %d 次受到的伤害变为 1" % int(data.get("left", 0)))
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 30),
-					"text": "以太屏障 · 前 %d 次伤害→1" % int(data.get("left", 0)),
+					"text": "风暴屏障 · 前 %d 次伤害→1" % int(data.get("left", 0)),
 					"col": Color("4a7fd8"), "start": n, "dur": 2100})
 		"aether_hit":
-			# 以太屏障吸收了一次伤害
+			# 风暴屏障吸收了一次伤害
 			# R466：这是「这一下打中时才压成 1」→ 飘字跟撞击帧（与石肤同一条口径）
 			sfx.play("heal")
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 66),
-					"text": "以太屏障 · 伤害 %d → 1（还剩 %d 次）" % [
+					"text": "风暴屏障 · 伤害 %d → 1（还剩 %d 次）" % [
 							int(data.get("amount", 0)), int(data.get("left", 0))],
 					"col": Color("4a7fd8"), "size": 15, "start": _hit_cue_at(), "dur": 2000})
 		"rice":

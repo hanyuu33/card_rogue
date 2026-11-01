@@ -43,6 +43,15 @@ const PRICE_CHOCO := 80      # R295：120 → 80
 const OFF_CHANCE := 0.20
 const OFF_PCT := 0.5
 
+# R481（用户口径「窗口模式用小窗口会少显示一张」）：第一行**固定摆 5 张**，窗口窄了
+# 就缩卡面，而不是少摆几张。原来 `_visible_row1_count()` 按货架宽算「能塞 4 还是 5 张」——
+# 1280 基准窗口只有 836 宽，算出来正好 4 张，玩家以为货架缺货。
+# 现在张数恒定，卡宽 / 间距等比缩（比例仍是 150:32），任何窗口都摆满同一批商品。
+const ROW1_MAX := 5            # 第一行固定张数（抽卡数也是它，不再多抽留着截断）
+const ROW1_CARD_W := 150.0     # 卡面基准宽（货架够宽时用这个）
+const ROW1_GAP := 32.0         # 卡面基准间距
+const ROW1_MIN_W := 100.0      # 卡面最小宽（再窄宁可轻微溢出，也不让卡面糊成一片）
+
 # 附魔定义（id → 元数据）
 const ENCHANTS := [
 	# ⚠️ 这里的 `name` 只是**冗余副本**，绘制一律走 `_ench_name()`（真源 = `CardData.ENCHANT_DEFS`）；
@@ -339,16 +348,18 @@ func _setup_shop() -> void:
 	var saved := RunState.shop_state_of(_shop_node)
 	if not saved.is_empty() and _restore_shop(saved):
 		return
-	# 第一行：随机本职业奖励卡（数量自适应，先按最多 6 张抽，绘制时按货架宽截断）。
+	# 第一行：随机本职业奖励卡 —— R481 起**正好抽 `ROW1_MAX`（5）张**。
+	# 原来抽 6 张、绘制时按货架宽截断成 4~5 张：第 6 张永远见不到（纯废抽），
+	# 窄窗口还会只剩 4 张。现在「抽几张 = 摆几张」。
 	# 走 Boss 档概率（普通 35% / 稀有 45% / 史诗 20%）。
 	# R241：必须走本局随机链 —— 原来没传 rng（= 全局随机源），同一份存档读两次
 	# 会看到不同的商品，破坏「同一种子必然一致」。
-	var rolled := CardReward.roll(_repo, "boss", 6, RunState.run_rng)
+	var rolled := CardReward.roll(_repo, "boss", ROW1_MAX, RunState.run_rng)
 	_row1 = []
 	for c: CardData in rolled:
 		# R432：五折标记逐张独立摇，随机源走本局 `run_rng`。
-		# ⚠️ 对**抽到的 6 张全摇**（不只摇可见张数）：`_visible_row1_count()` 依赖窗口宽度，
-		#    按可见数摇会让「窗口尺寸不同 → 同一份存档消耗的随机数不同」，确定性当场破。
+		# ⚠️ 对**抽到的每一张都摇**：R481 起张数恒定（不再随窗口宽变化），这条更稳；
+		#    但别改回「按可见数摇」—— 那会让「窗口尺寸不同 → 同一份存档消耗的随机数不同」。
 		# ⚠️ 结果随 `_sync_shop_state()` 进 `shop_states`，重进商店**不重摇**。
 		var off: bool = RunState.run_rng.randf() < OFF_CHANCE
 		_row1.append({"card": c, "sold": false, "off": off})
@@ -522,7 +533,7 @@ func _goods_w() -> float:
 
 
 func _top_h() -> float:
-	## 顶部标题 + 金币条高度。
+	## 顶部标题带高度（R481 起不再含金币行 —— 金币交给头像框 HUD，别在这里再画一份）。
 	return 64.0
 
 
@@ -539,8 +550,7 @@ func _row_rects() -> Array:
 	var area_h := _vs().y - top - bottom
 	var shelf_h := 30.0          # 每层货架木板高
 	var gap_v := 14.0            # 行与行之间的垂直留白
-	var card_w := 150.0
-	var card_h := card_w * 70.0 / 58.0          # 卡牌标准比例 → 高约 181
+	var card_h := _row1_card_h()   # R481：随卡宽等比（58:70）；窄窗卡面缩了，货架也跟着降
 	var row1_h := card_h + shelf_h
 	var row23_h := (area_h - row1_h - gap_v * 2.0) / 2.0
 	row23_h = maxf(row23_h, 96.0 + shelf_h)     # 兜底：商品框至少 96 高
@@ -569,12 +579,43 @@ func _row_rects() -> Array:
 
 
 func _visible_row1_count() -> int:
-	## 第一行货架能放下几张卡（卡宽 150 + 间距 32，4~5 张；卡更宽、之间有留白）。
+	## 第一行摆几张（R481：**固定 `ROW1_MAX` 张，不再随窗口宽减张数**）。
+	## 用户报「小窗口只出现 4 张」—— 老实现是 `int((货架宽+32)/182)` 再夹到 4~5，
+	## 1280 基准窗口算出来正好 4 张。现在张数恒定，塞不下就缩卡面（见 `_row1_card_w`）。
+	## `_row1.size()` 兜底：抽卡池意外不足时按实际张数画，不多画空位。
+	return mini(_row1.size(), ROW1_MAX)
+
+
+func _row1_card_w() -> float:
+	## R481：第一行卡面宽度 —— 按货架宽**等比缩**，保证 `_visible_row1_count()` 张一定塞得下。
+	## 比例固定 150:32（卡宽:间距），所以整行总宽 = n*cw + (n-1)*gap，
+	## 解出 cw = 货架宽 / (n + 32/150*(n-1))。基准 1280 窗口 → 约 143（原来是 150 但只有 4 张）。
+	## ⚠️ 这里只依赖 `_goods_w()` / `_visible_row1_count()`，**不碰 `_row_rects()`** ——
+	##    `_row_rects()` 反过来要用 `_row1_card_h()`，互相调就成环。
 	var w := _goods_w()
-	var card_w := 150.0
-	var gap := 32.0
-	var n := int((w + gap) / (card_w + gap))
-	return clampi(n, 4, mini(5, _row1.size()))
+	var n: int = maxi(1, _visible_row1_count())
+	if n == 1:
+		return ROW1_CARD_W
+	var cw := w / (float(n) + ROW1_GAP / ROW1_CARD_W * float(n - 1))
+	return clampf(cw, ROW1_MIN_W, ROW1_CARD_W)
+
+
+func _row1_card_h() -> float:
+	## 卡面高度 —— 始终守 58:70 标准比例，随 `_row1_card_w()` 一起缩，绝不单独拉伸。
+	return _row1_card_w() * 70.0 / 58.0
+
+
+func _row1_geom() -> Dictionary:
+	## 第一行的几何**唯一口**（R481）：`w` 卡宽 / `h` 卡高 / `gap` 间距 / `x0` 起始 x。
+	## 绘制（`_draw_row1`）与命中（`_row1_rect`，连带 `_buy_btn_rect`）都只从这里取 ——
+	## 两处各算一份就会出现「看得到、点不中」（R204 踩过同款）。
+	## 整行居中：`_goods_w()` 是货架宽，缩完的卡团比它窄时左右平分剩余。
+	var cw := _row1_card_w()
+	var n: int = maxi(1, _visible_row1_count())
+	var gap := ROW1_GAP * (cw / ROW1_CARD_W)
+	var total := float(n) * cw + float(n - 1) * gap
+	return {"w": cw, "h": cw * 70.0 / 58.0, "gap": gap,
+			"x0": _goods_x0() + (_goods_w() - total) / 2.0}
 
 
 # ------------------------------------------------------------ 绘制
@@ -623,15 +664,12 @@ func _fit_cover(tex: Texture2D, box: Rect2) -> Rect2:
 
 
 func _draw_header() -> void:
-	draw_string(_font_bold, Vector2(0, 30), "神 秘 商 店",
+	## R481（用户口径）：商店**不再自己画金币** —— 头像框那条 HUD 已经常驻显示金币，
+	## 这里再摆一份纯属重复。标题带（64 高）只剩标题，基线随之下移居中（字高 24 → 41）。
+	## ⚠️ 顶部留白别急着砍：`DeckViewer` / `RelicViewer` 两个悬浮按钮挂在右上角 (1150,6)/(1044,6)，
+	##    标题带压到 40 以下就会贴到它们。
+	draw_string(_font_bold, Vector2(0, 41), "神 秘 商 店",
 			HORIZONTAL_ALIGNMENT_CENTER, _vs().x, UiTheme.FS_HEADING, Color("ffd75a"))
-	var icon: Texture2D = UiAssets.get_tex("icon_gold")
-	var x := _goods_x0()
-	if icon != null:
-		draw_texture_rect(icon, Rect2(x, 40, 26, 26), false)
-		x += 32
-	draw_string(_font_bold, Vector2(x, 60), "金币 %d" % RunState.gold,
-			HORIZONTAL_ALIGNMENT_LEFT, 180, UiTheme.FS_SUBHEAD, Color("ffd75a"))
 
 
 
@@ -679,12 +717,12 @@ func _draw_row1() -> void:
 	var rects := _row_rects()
 	var row: Rect2 = rects[0]["row"]
 	var n := _visible_row1_count()
-	var gap := 32.0
-	var cw := 150.0
-	var total_w := n * cw + (n - 1) * gap
-	var x0 := row.position.x + (row.size.x - total_w) / 2.0
+	var g := _row1_geom()
+	var cw: float = g["w"]
+	var gap: float = g["gap"]
+	var x0: float = g["x0"]
 	var y := row.position.y
-	var ch := row.size.y
+	var ch: float = g["h"]
 	for i in n:
 		var e: Dictionary = _row1[i]
 		var card: CardData = e["card"]
@@ -956,8 +994,8 @@ func _draw_leave() -> void:
 func _draw_hint() -> void:
 	# R311 不锈钢盆：**常驻**一行（不是 2.4 秒就消失的 hint）—— 玩家得事先知道
 	# 「这单不花金币」，而不是买完才从提示里发现盆没了。
-	# ⚠️ 位置特意放**底部提示条上方**：顶栏（金币那行）会被第一排商品的价签压住，
-	#    实测「不锈钢盆 10」会被价签的水晶盖掉一半。
+	# ⚠️ 位置特意放**底部提示条上方**：顶部只剩 64 高的标题带，第一排商品的价签会压到它的下沿，
+	#    实测「不锈钢盆 10」放那儿会被价签的水晶盖掉一半。
 	if RunState.has_basin():
 		draw_string(_font, Vector2(0, _vs().y - 48),
 				"不锈钢盆 %d 点 · 本次购买优先抵账（不花金币）" % RunState.basin_charge,
@@ -1509,14 +1547,12 @@ func _leave() -> void:
 # ------------------------------------------------------------ 命中区
 
 func _row1_rect(i: int) -> Rect2:
-	var rects := _row_rects()
-	var row: Rect2 = rects[0]["row"]
-	var n := _visible_row1_count()
-	var gap := 32.0
-	var cw := 150.0
-	var total_w := n * cw + (n - 1) * gap
-	var x0 := row.position.x + (row.size.x - total_w) / 2.0
-	return Rect2(x0 + i * (cw + gap), row.position.y, cw, row.size.y)
+	## 第一行第 i 张卡的矩形 —— 与 `_draw_row1` 共用 `_row1_geom()`（R481）。
+	var row: Rect2 = (_row_rects() as Array)[0]["row"]
+	var g := _row1_geom()
+	var cw: float = g["w"]
+	var gap: float = g["gap"]
+	return Rect2(float(g["x0"]) + i * (cw + gap), row.position.y, cw, float(g["h"]))
 
 
 func _row2_rect(i: int) -> Rect2:

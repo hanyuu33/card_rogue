@@ -191,6 +191,13 @@ var hidden_energy_added: Array[String] = []
 ##      * 阶段 3 → 移速 0（`effective_speed()`）+ 接通的友方单位代它承受一半伤害（`_hit_unit`）。
 ##    卡面上的「自身效果」也要跟着阶段变，所以信息栏 / 徽标都读这里。
 var boss_phase: int = 0
+## 「哈气」（效果卡 9024，R479）：这个单位被哈气选中过 → **永久**每回合行动两次。
+## 原口径（R449）是「该方第 3 个回合起**整方**双动」的纯光环；R479 改成
+## 「第 3 / 5 / 7 个回合各挑**一个**生命最高且还没双动的单位」，所以必须逐单位记。
+## ⚠️ 同暗影领主：只记 Placement、**绝不烤进 CardData**（敌方关卡单位是卡库共享实例，
+##    写 `card.actions` 会跨局泄漏）。于是「原本就能行动两次的单位不会被选中」这条
+##    只能靠 `FieldState.unit_actions` 读本字段来判断。
+var haste_double: bool = false
 
 func effective_power() -> int:
 	## 实际攻击力：卡面力量 + 生效中的增益 + 关卡成长修正 - 生效中的削弱，最低 0。
@@ -443,6 +450,7 @@ const _SAVE_FIELDS: Array[String] = [
 	"fuse_left", "forge_period", "forge_idle", "forge_range", "dark_lord_atk",
 	"mnemo_down", "dark_lord_speed", "hecaton_atk", "action_growth_extra",
 	"action_growth_turns", "summon_haste", "night_owl_weak", "boss_phase",
+	"haste_double",
 ]
 
 

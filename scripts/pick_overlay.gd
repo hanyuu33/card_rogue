@@ -215,7 +215,7 @@ func _clamp_scroll() -> void:
 
 
 func _back_rect() -> Rect2:
-	return Rect2(16, 12, 104, 40)
+	return Rect2(16, 12, 128, 40)   # R479：装得下「看战场」三个字
 
 
 func _confirm_rect() -> Rect2:
@@ -268,7 +268,10 @@ func _draw() -> void:
 		# 缺图回退：程序画「←」
 		draw_string(_font_bold, br.position + Vector2(10, 27), "←",
 				HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL, Color("f5ead2"))
-	draw_string(_font_bold, br.position + Vector2(42, 27), "返回",
+	# R479（用户口径）：这个按钮是「战场 ↔ 待选牌」的开关，不该叫「返回」——
+	# 玩家会以为点了等于放弃选择。浏览模式没有待办，点它就是关窗，仍写「关闭」。
+	draw_string(_font_bold, br.position + Vector2(40, 27),
+			"关闭" if is_view() else "看战场",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL, Color("f5ead2"))
 	# 标题（顶栏居中）
 	var title_fs := UiTheme.FS_SUBHEAD
