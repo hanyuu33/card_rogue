@@ -142,6 +142,19 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r335_pre_battle_snap],
+		# R477（用户口径）：继续游戏**一律回到这一场开打之前** —— 老档里挂着
+		# 「恢复到第 N 回合」的战斗快照，进战斗后必须还是第 1 回合。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle", "id": 3}
+				RunState.pending_level = RunState.next_level({"type": "battle"})
+				RunState.resume_battle = {
+					"node": {"type": "battle", "id": 3},
+					"level": RunState.pending_level,
+					"battle": {"turn_number": 9, "state": {"hp_self": 1}},
+				},
+			_check_r477_battle_start],
 		# R341 洞窟绳（6048）：Boss 以外的战斗顶栏多一个「逃跑」；Boss 战没有。
 		["res://scenes/battle.tscn", func():
 				_reset()
@@ -3158,6 +3171,20 @@ func _check_r335_pre_battle_snap(scene: Variant) -> void:
 		_smoke_fail("R339 检查点：开局第 1 个我方回合应把计数推到 11，实际 %d" % live)
 	else:
 		print("SMOKE OK R339 检查点：快照存开打前的 10 / 实时已 +1 到 11")
+
+
+func _check_r477_battle_start(scene: Variant) -> void:
+	## R477（用户口径）：战斗中「继续游戏」有时回到开打前、有时回到战斗中间。
+	## 现在只有「进战斗那一刻」一处检查点 → 续档一定是第 1 回合（血量按进场时）。
+	var eng: Variant = scene.get("engine")
+	if eng == null:
+		_smoke_fail("R477 继续游戏：战斗没开局（engine 为空）")
+		return
+	var turn := int(eng.turn_number)
+	if turn != 1:
+		_smoke_fail("R477 继续游戏：老档的战斗快照不该再生效（应是第 1 回合，实际 %d）" % turn)
+	else:
+		print("SMOKE OK R477 继续游戏：一律回到开打之前（第 1 回合）")
 
 
 func _check_r337_flee_btn(scene: Variant) -> void:

@@ -16434,8 +16434,9 @@ func _battlecry_frost(cell: Vector2i, p: Placement) -> void :
 
 
 # ============================================================ R439 战斗存档
-## 战斗检查点：引擎层的跨回合字段 + 整份 FieldState。
-## ⚠️ `current_side` 不存 —— 存档点固定是「我方回合开始」，续档一律摆回我方回合。
+## 引擎层的跨回合字段 + 整份 FieldState 的序列化（调试 / 回放 / 工具用）。
+## ⚠️ R477（用户口径）：**战斗存档不再用它** —— 续档一律回到这一场开打之前，
+##    所以别把这个当「存档口」调；要改续档行为看 `battle_scene._mark_battle_checkpoint()`。
 func save_battle() -> Dictionary:
 	return {
 		"turn_number": turn_number,

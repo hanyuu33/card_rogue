@@ -31939,6 +31939,45 @@ func _init() -> void:
 	check_src(not r474_bs.contains("已加入卡组\" % str(lc.get(\"name\""),
 			"R474 入组演出：到账那句纯文字提示已撤掉（动画接管）")
 
+	# ---- R477（用户口径）：继续游戏**一律回到这一场战斗开打之前** ----
+	# 用户报「战斗中继续游戏，有时回到开打前、有时回到战斗中间」。
+	# 根因：上一轮在我方回合开始时把整份局面（`engine.save_battle()`）挂进
+	# `resume_battle.battle` → 续档覆盖回第 N 回合；可写盘又要等第 1 个我方回合**演完**，
+	# 在那之前继续游戏拿到的还是进战斗时那份 —— 同一个操作两种结果。
+	# 现在取消回合级检查点，只留「进战斗那一刻」的 pre-battle 快照。
+	RunState.set_difficulty(0)
+	RunSave.clear_save()
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	RunState.pending_node = {"type": "battle", "id": 3}
+	var r477_lvl: Dictionary = RunState.next_level({"type": "battle"})
+	RunState.pending_level = r477_lvl
+	var r477_d: Dictionary = RunSave.snapshot()
+	r477_d["resume_battle"] = {
+		"node": {"type": "battle", "id": 3},
+		"level": r477_lvl,
+		"battle": {"turn_number": 7, "state": {"hp_self": 9}},
+	}
+	check(RunSave.save_snapshot(r477_d), "R477 能写一份带战斗快照的老档")
+	check(RunSave.load_run(), "R477 带战斗快照的老档能读回来")
+	check(not RunState.resume_battle.has("battle"),
+			"R477 读档即丢弃战斗快照（不再恢复到战斗中局面）")
+	var r477_node: Dictionary = RunState.resume_battle.get("node", {})
+	check(int(r477_node.get("id", -1)) == 3,
+			"R477 仍然记得「正在打哪一场」（续档回那一场的开打前）")
+	check(not RunState.pending_level.is_empty(),
+			"R477 关卡照旧塞回 pending_level（续档进的是同一关）")
+	var r477_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(not r477_bs.contains("_save_battle_checkpoint"),
+			"R477 源码：我方回合开始不再落盘（只剩进战斗那一刻的检查点）")
+	check_src(not r477_bs.contains("_try_resume_battle_state")
+			and not r477_bs.contains("engine.save_battle()"),
+			"R477 源码：进战斗不再用战斗快照覆盖局面（从第 1 回合重新开局）")
+	check_src(r477_bs.contains("func _mark_battle_checkpoint"),
+			"R477 源码：进战斗那一刻的检查点保留（否则回标题就丢这一场）")
+	var r477_save_src := FileAccess.get_file_as_string("res://scripts/run_save.gd")
+	check_src(r477_save_src.contains("erase(\"battle\")"),
+			"R477 源码：读档把老的 battle 快照摘掉（旧档也统一）")
+
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
 	RunState.pending_rewards = []

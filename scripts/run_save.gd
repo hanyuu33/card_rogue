@@ -368,6 +368,11 @@ static func apply(d: Dictionary) -> bool:
 	# 战斗场景的 `_load_entry_level()` 就是读 `pending_level` 开局的。
 	var rb: Variant = d.get("resume_battle", {})
 	RunState.resume_battle = rb if rb is Dictionary else {}
+	# R477（用户口径）：继续游戏**一律回到这一场战斗开打之前**。老档里可能还挂着
+	# `battle`（当年「恢复到第 N 回合」的快照）—— 读进来的第一件事就是把它摘掉，
+	# 只留 node / level，让战斗场景从第 1 回合重新开局。
+	if RunState.resume_battle.has("battle"):
+		RunState.resume_battle.erase("battle")
 	if not RunState.resume_battle.is_empty():
 		RunState.pending_level = RunState.resume_battle.get("level", {})
 		RunState.pending_node = RunState.resume_battle.get("node", {})

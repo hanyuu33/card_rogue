@@ -719,8 +719,6 @@ var _run_next_layer := 0        # Boss 通关后要进入的下一层（0 = 没�
 ## 「继续游戏」重打这一场就等于从「已 +1」的计数起步 → 每续一次多算一格（用户报的计数错乱）。
 ## 顺带把开场就改动的其它局状态（烤肉消耗 / 回血 / 随机源步进）一起回滚成开打前的样子。
 var _pre_battle_snap: Dictionary = {}
-# R439：战斗检查点已经存到第几回合（-1 = 本场还没存过）—— 每回合只落一次盘。
-var _cp_turn := -1
 var _reward_panel: RewardPanel = null   # R119：奖励悬浮窗（掉落道具 / 卡牌奖励都在这里处理）
 
 # 联机模式（NetSession.active 时启用）：镜像引擎 + 动作收发回放
@@ -4050,11 +4048,8 @@ func _load_entry_level() -> void:
 			var lvl := RunState.pending_level
 			RunState.pending_level = {}
 			load_level(lvl)
-			# R439：同一关有战斗检查点 → 覆盖回那一回合（而不是从第 1 回合重打）
-			_try_resume_battle_state()
 		else:
 			load_level(GameLevels.builtin_levels()[0])
-			_try_resume_battle_state()
 		return
 	load_level(GameLevels.builtin_levels()[0])  # 默认：怪物遭遇战
 
@@ -7398,67 +7393,29 @@ func _mark_battle_checkpoint() -> void:
 	## ⚠️ 只在真实游玩时写：出图 / headless 探针不落盘。
 	if not RunState.run_active or _shot_pending or _net_mode:
 		return
+	# R477：但 AI 对局（`--ai-bridge`，本来就无窗口跑）必须写 —— 那个进程被系统回收过
+	# 两次，没档就是整局白打。出图 / 回归探针没有这个参数，照旧不落盘。
 	if DisplayServer.get_name() == "headless":
-		return
+		var _ai_on := false
+		for _a: String in OS.get_cmdline_user_args():
+			if _a == "--ai-bridge" or _a.begins_with("--ai-bridge="):
+				_ai_on = true
+				break
+		if not _ai_on:
+			return
 	if _cur_level.is_empty():
 		return
 	RunState.resume_battle = {"node": RunState.pending_node, "level": _cur_level}
 	# R339：写「进战斗之前」那份快照（不是当前状态）—— 见 `_pre_battle_snap` 的说明。
 	# 快照为空（例如老路径 / 非 run）时退回写当下状态，行为与 R323 一致。
+	# R477：这也是**唯一**一处战斗检查点 —— 续档永远回到这一场开打之前
+	# （原来的「回合级检查点」已删，见 `_process` 里那段说明）。
 	if _pre_battle_snap.is_empty():
 		RunSave.save_run()
 		return
 	var d: Dictionary = _pre_battle_snap.duplicate(true)
 	d["resume_battle"] = RunState.resume_battle
 	RunSave.save_snapshot(d)
-
-
-## R439：把「当前这一回合的局面」写进存档。
-## 存档点 = 我方回合开始（`_process` 里按 turn_number 只触发一次）：
-##   ① run 级字段用 `_pre_battle_snap`（进战斗**之前**那份）——
-##      战斗内的血量 / 牌序属于这一场，不该倒灌进 run 状态（结算时才回写）；
-##   ② `resume_battle` 除 node / level 之外再挂一份 `battle` 快照。
-##      `RunSave.load_run()` 会把 level 塞回 pending_level，于是续档仍然进同一关。
-func _save_battle_checkpoint() -> void:
-	if not RunState.run_active or engine == null or engine.over:
-		return
-	# R439：headless（无窗口跑）**也要落盘** —— AI / 脚本对局没有窗口，正是最需要续档的场景；
-	# 回归套件那份档已被 RunSave 隔离成 run_save_test.sav（R378），不会污染玩家存档。
-	if _shot_pending or _net_mode:
-		return
-	if _cur_level.is_empty():
-		return
-	var rb: Dictionary = RunState.resume_battle.duplicate(true)
-	if rb.is_empty():
-		rb = {"node": RunState.pending_node, "level": _cur_level}
-	rb["battle"] = engine.save_battle()
-	RunState.resume_battle = rb
-	var d: Dictionary = _pre_battle_snap.duplicate(true) if not _pre_battle_snap.is_empty() \
-			else RunSave.snapshot()
-	d["resume_battle"] = rb
-	RunSave.save_snapshot(d)
-
-
-## R439：进战斗后若有 `battle` 快照 → 直接覆盖成那一回合的局面。
-## 调用点必须在 `load_level()` **之后**（要先把牌堆 / 场面 / 关卡建出来再盖）。
-func _try_resume_battle_state() -> void:
-	if engine == null or _net_mode:
-		return
-	var snap: Variant = RunState.resume_battle.get("battle", {})
-	if not (snap is Dictionary) or (snap as Dictionary).is_empty():
-		return
-	if not engine.apply_battle(snap):
-		push_warning("R439：战斗检查点不可用，按新开局继续")
-		return
-	RunState.hp = engine.state.hp_self
-	_cp_turn = engine.turn_number
-	_clear_selection()
-	_foe_phase = false
-	status_text = "第 %d 回合：从存档继续（我方血量 %d/%d）" % [engine.turn_number,
-			engine.state.hp_self, engine.state.max_hp_self]
-	_show_banner("我方回合 · 第 %d 回合（存档继续）" % engine.turn_number,
-			UiTheme.SIDE_SELF_TEXT)
-	queue_redraw()
 
 
 func _clear_battle_checkpoint() -> void:
@@ -16480,12 +16437,9 @@ func _process(delta: float) -> void:
 	if _foe_phase and _ai_timer.is_stopped() and not anim_busy and _delayed.is_empty() \
 			and (engine == null or engine.over or engine.current_side == GameEngine.SIDE_SELF):
 		_foe_phase = false
-	# R439：我方回合开始（演出收尾、没有待播动画）→ 落一次战斗检查点。
-	# 判据用 turn_number 而不是 current_side：同一回合里反复「我方」不该重复写盘。
-	if engine != null and not engine.over and engine.current_side == GameEngine.SIDE_SELF \
-			and not anim_busy and _delayed.is_empty() and _cp_turn != engine.turn_number:
-		_cp_turn = engine.turn_number
-		_save_battle_checkpoint()
+	# R477（用户口径）：**不再按回合落盘**。以前这里每到一个我方回合就把整份局面
+	# 写进存档，于是「继续游戏」有时回到开打前（第一回合还没演完）、有时回到战斗中
+	# 间（已演完的那一刻），同一个操作两种结果。现在续档一律回到这一场开打之前。
 	if _tick_cues(delta):
 		queue_redraw()   # R288：通用演出 / 镜头补间进行中
 	_hand_sync()          # R151 P0-1/2：手牌差异 → 抽牌飞入 / 弃牌·消耗飞出
