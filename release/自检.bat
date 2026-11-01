@@ -3,13 +3,24 @@ rem Card Rogue (DuckCardsRogue) - built-in self test
 rem Runs the test suites that ship inside this build.
 chcp 65001 >nul
 pushd "%~dp0"
+rem R477: dist only keeps versioned packs (DuckCardsRogue_R<round>.exe).
+rem Try the plain name first, then fall back to the highest DuckCardsRogue_R*.exe
+rem (sort by NAME, not by mtime -- a freshly copied old pack would win on mtime).
 set "GAME=%~dp0DuckCardsRogue.exe"
+set "PICK="
 if not exist "%GAME%" (
-  echo [ERROR] DuckCardsRogue.exe not found next to this script.
+  for /f "delims=" %%F in ('dir /b /o-n "%~dp0DuckCardsRogue_R*.exe" 2^>nul') do (
+    if not defined PICK set "PICK=%%F"
+  )
+)
+if defined PICK set "GAME=%~dp0%PICK%"
+if not exist "%GAME%" (
+  echo [ERROR] DuckCardsRogue.exe / DuckCardsRogue_R*.exe not found next to this script.
   pause
   popd
   exit /b 1
 )
+echo [run] %GAME%
 
 echo ============================================================
 echo  1/4  engine + rules suite
