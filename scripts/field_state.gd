@@ -466,6 +466,29 @@ func grant_actions(p: Placement, want: int) -> bool:
 
 func place(card: CardData, cell: Vector2i, owner := "self",
 		summon := false) -> Placement:
+	# ── R485：**成为场上实体的最后一道闸门** ──────────────────────────────
+	# 前端已经有四条出牌路径各自分流，但只要有一条漏了，卡就会在这里变成
+	# 0 血的「效果」「技能」实体（用户实报：场上多出一张「智慧喷涌」，
+	# 还带着未横置的就绪光环）。所以这里**不信任调用方**，按两条唯一判据重判：
+	#   1. 类型：技能 / 效果 / 场地 / 诅咒 这四种**没有场上实体**
+	#      （`GameEngine.card_may_enter_board` 按排除法判）—— 效果去效果区、
+	#      场地走 `set_field`、技能结算完进弃牌区、诅咒用 `use_curse`。
+	#   2. 落点：单位不能站在**对方后排**（`forbidden_row_for`）—— 那一行是
+	#      「直击 HP」的目标行，站上去等于把对方的血条当落脚点（R285 历史缺陷，
+	#      用户这次的原话：「任何形式都不应该到达敌方 HP」）。
+	#      ⚠️ 这里刻意**不**复用 `unit_slot_allowed`（它还判越界）：关卡摆位与
+	#      测试会用列 3/4 这类越界格当「远处的格子」参与距离计算，越界格在界面上
+	#      根本点不到（`_cell_at` 自己就卡边界），拦它只会误伤、不会多拦一条真路径。
+	# 拒绝时**不写 board**、返回 null：宁可这一张不出场，也不留一个看不出错的空壳。
+	if not GameEngine.card_may_enter_board(card):
+		push_error("FieldState.place 拒绝：%s（kind=%s）不是场上单位" % [
+				card.card_name if card != null else "<null>",
+				card.kind if card != null else "?"])
+		return null
+	if cell.x == GameEngine.forbidden_row_for(owner):
+		push_error("FieldState.place 拒绝：%s 不能站在 %s（owner=%s 的 HP 行）" % [
+				card.card_name, cell, owner])
+		return null
 	var p := Placement.new()
 	p.card = card
 	p.owner = owner
@@ -695,6 +718,13 @@ func apply_dict(d: Dictionary) -> void:
 			var cell := Vector2i(int(item["r"]), int(item["c"]))
 			var p := Placement.new()
 			p.apply_save(item["p"])
+			# R485：**读档清洗** —— 老存档里可能躺着 R484 之前塞进去的残留：
+			# 效果卡 / 技能卡当单位站在格子上的「0 血空壳」，或者单位被挪到了
+			# 对方后排（打 HP 的那一行）。直接跳过，不让 bug 跟着存档活到下一局。
+			if not GameEngine.card_may_enter_board(p.card):
+				continue
+			if cell.x == GameEngine.forbidden_row_for(p.owner):
+				continue
 			board[cell] = p
 			# R464：老档没有 entry_counter → 以场上已发的最大序号兜底，避免重号
 			entry_counter = maxi(entry_counter, p.entry_seq)

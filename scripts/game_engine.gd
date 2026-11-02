@@ -1928,6 +1928,32 @@ static func back_row(side: String) -> int:
 	return 0 if side == SIDE_OPPONENT else FieldState.BOARD_ROWS - 1
 
 
+static func card_may_enter_board(card: CardData) -> bool:
+	## **这张卡能不能成为场上实体**（R485，唯一判据）。
+	##
+	## 只有「盟友」和「工事」有场上实体 —— 盟友是随从，工事是站着挡路的建筑。
+	## 其余四种各有归宿，**都不该在 board 里长出 0 血的空壳**：
+	##   * 技能 → 结算完进弃牌区（`use_spell` / `cast_infiltrate` / `cast_swap_units`）；
+	##   * 效果 → 效果区持续生效（`use_effect`），不占格子；
+	##   * 场地 → 格子上的标记（`state.set_field`），不是单位、不能被打；
+	##   * 诅咒 → 打出无效果（`use_curse`）。
+	##
+	## 为什么收成唯一口：出牌路径已经有四条（点击棋盘 / 拖拽 / 鸭语耳环自动出牌 /
+	## 联机远端 remote_play），每加一条都要再记一次「排掉效果卡」，R484 就是漏在
+	## 点击那条上（用户实测：场上多出一张「智慧喷涌」）。
+	## `FieldState.place()` 也用它兜底 —— **任何**绕过前端的路径最后都过这一关。
+	##
+	## ⚠️ 判据写成「排除四种非实体」而不是「白名单盟友/工事」：`kind` 在关卡与测试里
+	## 还会出现「怪物」这类单位（cards.json 目前只有六种，但构造路径不止一条）。
+	## 白名单会把它们静默拒掉；相反「技能 / 效果 / 场地 / 诅咒」是封闭的四类，
+	## 多一个都不是场上实体 —— 只排除它们，既拦得死又不会误伤未来的单位种类。
+	if card == null:
+		return false
+	if card.is_spell() or card.is_effect() or card.is_field() or card.is_curse():
+		return false
+	return true
+
+
 static func forbidden_row_for(side: String) -> int:
 
 	return back_row(SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF)
@@ -4773,7 +4799,7 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	# 当随从摆上 board：界面上点一下效果卡再点格子（`_on_board_click`）就真的放上去了，
 	# 那张卡会带着 0 血、卡面标着「效果」，还能被选中（用户实测）。
 	# 放在 `_pay` 之前：拒绝不扣费、不掉牌。
-	if not (card.kind == "盟友" or card.is_fort() or card.is_field()):
+	if not (card_may_enter_board(card) or card.is_field()):
 		_log("%s 不是单位，不能作为单位上场（效果卡走效果区）" % card.card_name)
 		return null
 	if _no_unit_play_this_turn and (card.kind == "盟友" or card.is_fort()):
@@ -9718,7 +9744,7 @@ func remote_play(card: CardData, cell: Vector2i) -> Placement:
 	# R484：对称兜底 —— 非单位卡不能作为单位落到对方场上（与 play_from_hand 同一判据）。
 	# 联机时若对面客户端把一张效果卡 / 技能卡当随从发过来，这里直接拒绝，
 	# 而不是让它在 board 里长出一个 0 血的「效果」实体。
-	if not (card.kind == "盟友" or card.is_fort() or card.is_field()):
+	if not card_may_enter_board(card):
 		_log("对方放弃放置：%s 不是单位" % card.card_name)
 		_note_card_played(SIDE_OPPONENT, card)
 		return null

@@ -5501,8 +5501,10 @@ func _init() -> void:
 
 	# 孵化机制：**自己回合开始时**（含首回合）在四邻空格烧出陶瓷鸭；越界/占用跳过
 	var eng_kiln := _new_engine([], 20, 40)
-	# 对手在 (0,1) 放一座鸭子窑（模拟关卡后排中央）；(0,0) 预先被己方占掉
-	eng_kiln.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(0, 0), GameEngine.SIDE_SELF)
+	# 对手在 (0,1) 放一座鸭子窑（模拟关卡后排中央）；(0,0) 预先被一个**敌方**单位占掉。
+	# ⚠️ R485：占位者必须是敌方 —— (0,0) 是敌方后排，也就是我方「直击 HP」的那一行，
+	#    己方单位站上去本来就不合法。这条用例以前能过，只是因为那时 `place()` 不校验落点。
+	eng_kiln.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
 	eng_kiln.state.place(kiln_c, Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
 	eng_kiln._kiln_hatch(GameEngine.SIDE_OPPONENT)
 	var ceramic_count := 0
@@ -10696,8 +10698,10 @@ func _init() -> void:
 	var r122_dbl := _card(7903, "双动单位", "盟友", 2, 3, 10, 1, 1)
 	r122_dbl.actions = 2
 	var r122_norm := r122_hq.state.place(r122_dbl, Vector2i(4, 2), GameEngine.SIDE_SELF)
+	# ⚠️ R485：(4,3) 是越界列（BOARD_COLS=3，列只有 0..2），原来 place 不校验才一直"能放"。
+	# 换成自己半场的合法空格 (5,0)，测试意图（召唤落场固定 1 轮）完全不变。
 	var r122_hq_summ := r122_hq.state.place(CardData.from_dict(r122_dbl.to_dict()),
-			Vector2i(4, 3), GameEngine.SIDE_SELF, true)
+			Vector2i(5, 0), GameEngine.SIDE_SELF, true)
 	check(r122_norm.acts_left == 2,
 			"R122-E 正常落场拿到双动：acts_left=%d" % r122_norm.acts_left)
 	check(r122_hq_summ.acts_left == 1,
@@ -11045,7 +11049,9 @@ func _init() -> void:
 		if spot.x == r63_i_back:
 			r63_i_ok = false
 		if not r63_i.state.board.has(spot):
-			r63_i.state.place(_card(7999, "占位", "盟友", 1, 1, 1), spot, GameEngine.SIDE_SELF)
+			# R485：占位者用**敌方** —— spot 多半落在敌方半场，己方单位放上去
+			# 本来就不合法（`place()` 落点闸门会拒），测试意图只是「这格被占」。
+			r63_i.state.place(_card(7999, "占位", "盟友", 1, 1, 1), spot, GameEngine.SIDE_OPPONENT)
 	check(r63_i_ok and r63_i_samples.size() > 0,
 			"恶魔使魔：随机空格召唤 %d 次都不落玩家后排行（样例 %s）"
 			% [r63_i_samples.size(), str(r63_i_samples.slice(0, 4))])
@@ -11055,8 +11061,9 @@ func _init() -> void:
 			continue
 		for col in FieldState.BOARD_COLS:
 			if not r63_i.state.board.has(Vector2i(r, col)):
+				var r63_owner := GameEngine.SIDE_SELF if r >= FieldState.OPPONENT_ROWS 						else GameEngine.SIDE_OPPONENT
 				r63_i.state.place(_card(7999, "占位", "盟友", 1, 1, 1),
-						Vector2i(r, col), GameEngine.SIDE_SELF)
+						Vector2i(r, col), r63_owner)
 	check(r63_i._random_free_board_cell(GameEngine.SIDE_OPPONENT) == Vector2i(-1, -1),
 			"恶魔使魔：可用空格用尽 → 返回空位（本回合不召唤），玩家后排永远不被征用")
 	# 我方召唤对称：跳过的是**敌方**后排
@@ -13834,14 +13841,17 @@ func _init() -> void:
 		"R91 充电装置：「接通」按**连通块**算（隔着敌方骷髅 (3,1) 也算接通，5 → %d）"
 			% r91_far.health)
 	# 真正孤立的一格：完全不与装置所在连通块相邻 → 不回血
+	# ⚠️ R485：孤立点从 (0,0) 挪到 (1,0) —— (0,0) 是敌方后排（我方打 HP 的禁行行），
+	# `place()` 现在会拒己方单位站上去；(1,0) 与既有连通块（(2,1)/(3,1)/(4,x)）不四邻，
+	# 「孤立」的语义完全不变。
 	var r91_iso: Placement = r91_e3.state.place(
-		CardData.from_dict(r91_repo.get_card(8003).to_dict()), Vector2i(0, 0),
+		CardData.from_dict(r91_repo.get_card(8003).to_dict()), Vector2i(1, 0),
 		GameEngine.SIDE_SELF)
 	r91_iso.health = 5
 	r91_e3.end_turn()
 	r91_e3.end_turn()
 	check(r91_iso.health == 5,
-		"R91 充电装置：孤立的 (0,0) **不接通**，不回复（仍 %d）" % r91_iso.health)
+		"R91 充电装置：孤立的 (1,0) **不接通**，不回复（仍 %d）" % r91_iso.health)
 
 	# ---- ⑦ 「只算我方」：敌方回合结束时敌方单位不因它回血 ----
 	var r91_e4 := _new_engine([], 40, 40, -1, false)
@@ -13938,8 +13948,8 @@ func _init() -> void:
 	var r92_foe2: Placement = r92_e2.state.place(
 		CardData.from_dict(r92_foe_def.to_dict()), Vector2i(3, 1),
 		GameEngine.SIDE_OPPONENT)
-	var r92_iso: Placement = r92_e2.state.place(
-		CardData.from_dict(r92_repo.get_card(8003).to_dict()), Vector2i(0, 0),
+	var r92_iso: Placement = r92_e2.state.place(   # R485：(0,0) → (1,0)，敌方后排不许站己方
+		CardData.from_dict(r92_repo.get_card(8003).to_dict()), Vector2i(1, 0),
 		GameEngine.SIDE_SELF)
 	var r92_foe_hp0: int = r92_foe2.health
 	var r92_iso_hp0: int = r92_iso.health
@@ -14008,11 +14018,11 @@ func _init() -> void:
 	var r92_src4: Placement = r92_e4.state.place(
 		CardData.from_dict(r92_repo.get_card(8003).to_dict()), Vector2i(4, 0),
 		GameEngine.SIDE_SELF)
-	var r92_far_mim: Placement = r92_e4.state.place(
-		CardData.from_dict(r92_mim_def.to_dict()), Vector2i(0, 0), GameEngine.SIDE_SELF)
+	var r92_far_mim: Placement = r92_e4.state.place(   # R485：(0,0) → (1,0)
+		CardData.from_dict(r92_mim_def.to_dict()), Vector2i(1, 0), GameEngine.SIDE_SELF)
 	r92_e4._upgrade_unit(Vector2i(4, 0), GameEngine.SIDE_SELF)
 	check(r92_far_mim.upgrade_atk == 0 and r92_far_mim.upgrade_hp == 0,
-		"R92 模仿者：孤立的 (0,0) **不接通** → 不复制改造（仍 0 攻加成 / 血量 %d）"
+		"R92 模仿者：孤立的 (1,0) **不接通** → 不复制改造（仍 0 攻加成 / 血量 %d）"
 			% r92_far_mim.health)
 
 	# ---- ⑤ **不连锁**：X—A—B 链里 B 只拿自己那一份，不会「再 Copy 一次」 ----
@@ -14289,13 +14299,13 @@ func _init() -> void:
 	r96_e2.start_game()
 	var r96_rec2: Placement = r96_e2.state.place(
 		CardData.from_dict(r96_rec_def.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
-	var r96_iso2: Placement = r96_e2.state.place(
-		CardData.from_dict(r96_repo.get_card(8003).to_dict()), Vector2i(0, 0),
+	var r96_iso2: Placement = r96_e2.state.place(   # R485：(0,0) → (1,0)
+		CardData.from_dict(r96_repo.get_card(8003).to_dict()), Vector2i(1, 0),
 		GameEngine.SIDE_SELF)
 	var r96_hand2: int = r96_e2.state.hand.size()
-	r96_e2._destroy(Vector2i(0, 0))
+	r96_e2._destroy(Vector2i(1, 0))
 	check(r96_rec2.upgrade_atk == 0 and r96_e2.state.hand.size() == r96_hand2,
-		"R96 零件回收者：孤立的 (0,0) 不接通 → 不回收、不加素体（仍 %d 攻 / 手牌 %d）"
+		"R96 零件回收者：孤立的 (1,0) 不接通 → 不回收、不加素体（仍 %d 攻 / 手牌 %d）"
 			% [r96_rec2.upgrade_atk, r96_e2.state.hand.size()])
 
 	# ---- ③ 零件回收者：**只回收己方**销毁（相邻敌方被销毁不触发）----
@@ -16299,8 +16309,10 @@ func _init() -> void:
 
 	# ③ 场上一个玩家单位都没有 → 也不许朝玩家后排「压上去」
 	var r379_b := _new_engine([], 20, 20)
+	# R485：Boss 桩从 (5,2) 挪到 (3,0) —— (5,2) 是我方后排（玩家的 HP 行），
+	# 敌方单位本来就不该站上去。用例只关心「暗杀者闪不出去」，桩的位置无关。
 	r379_b.state.place(CardData.from_dict(r379_knight.to_dict()),
-			Vector2i(5, 2), GameEngine.SIDE_OPPONENT)
+			Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
 	var r379_bb := r379_b.state.place(CardData.from_dict(r379_assi.to_dict()),
 			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
 	check(r379_b._assassin_step(Vector2i(0, 0), r379_bb) == null,
@@ -16355,7 +16367,7 @@ func _init() -> void:
 	# ① 被禁足 → 闪不了，但**必须**完成行动
 	var r400_a := _new_engine([], 20, 20)
 	r400_a.state.place(CardData.from_dict(r400_repo.get_card(9124).to_dict()),
-			Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+			Vector2i(3, 0), GameEngine.SIDE_OPPONENT)   # R485：原来站我方后排 (5,1)
 	var r400_aa := r400_a.state.place(CardData.from_dict(r400_repo.get_card(9123).to_dict()),
 			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
 	r400_a.state.place(_card(8003, "农民", "盟友", 3, 3, 8, 1, 1),
@@ -16374,7 +16386,7 @@ func _init() -> void:
 	# ② 本回合已移动过（moved 且 acts_left = 1）→ move() 同样会拒，也必须横置
 	var r400_b := _new_engine([], 20, 20)
 	r400_b.state.place(CardData.from_dict(r400_repo.get_card(9124).to_dict()),
-			Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+			Vector2i(3, 0), GameEngine.SIDE_OPPONENT)   # R485：原来站我方后排 (5,1)
 	var r400_bb := r400_b.state.place(CardData.from_dict(r400_repo.get_card(9123).to_dict()),
 			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
 	r400_b.state.place(_card(8003, "农民", "盟友", 3, 3, 8, 1, 1),
@@ -16390,7 +16402,7 @@ func _init() -> void:
 	# ③ 对照组：正常局面照样能闪能打（别把修复做成「一律不许动」）
 	var r400_c := _new_engine([], 20, 20)
 	r400_c.state.place(CardData.from_dict(r400_repo.get_card(9124).to_dict()),
-			Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+			Vector2i(3, 0), GameEngine.SIDE_OPPONENT)   # R485：原来站我方后排 (5,1)
 	var r400_cc := r400_c.state.place(CardData.from_dict(r400_repo.get_card(9123).to_dict()),
 			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
 	var r400_ct := r400_c.state.place(_card(8003, "农民", "盟友", 3, 3, 8, 1, 1),
@@ -27751,7 +27763,7 @@ func _init() -> void:
 			% [r356_left, r356_friend.health])
 	# 旁边贴着的**我方**单位不算「友方」→ 不该被挑去代受
 	var r356_self_near := r356_e.state.place(_card(99003, "贴脸我方", "盟友", 1, 3, 40, 1, 1),
-			Vector2i(0, 2), GameEngine.SIDE_SELF)
+			Vector2i(1, 2), GameEngine.SIDE_SELF)   # R485：敌方后排 (0,2) 站不了己方单位
 	var r356_left2 := r356_e._revelator_split(r356_boss, 9, "测试")
 	check(r356_left2 == 5 and r356_self_near.health == 40 and r356_friend.health == 31,
 			"R356 接通代受：只认敌方自己人（贴着的我方单位一点没扣；9 → 友军 4 / 自留 5，实际 %d / %d / %d）"
@@ -32151,6 +32163,87 @@ func _init() -> void:
 	var r484_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 	check_src(r484_ge.contains("不是单位，不能作为单位上场"),
 			"R484 源码：引擎侧拦非单位卡进场（效果卡走效果区）")
+
+	# ========= R485：卡类型 × 落点 —— 前端 / 引擎 / 读档 三面同一判据 =========
+	# 用户口径：「不止是手牌，**任何形式**都不应该到达敌方 HP，或者把错误的卡
+	# 放到场上错误的区域」。所以闸门不再挂在某一条出牌路径上，而是下沉到
+	# `FieldState.place()`（唯一写 board 的口）+ `GameEngine.card_may_enter_board()`。
+	var r485_repo := CardRepo.load_json()
+	var r485_ally: CardData = r485_repo.get_card(8003)
+	var r485_fort: CardData = r485_repo.get_card(8001)
+	var r485_field: CardData = r485_repo.get_card(8011)   # 爆炸陷阱：场地卡样本
+	var r485_curse: CardData = r485_repo.get_card(9149)
+	check(r485_field != null and r485_field.is_field() and r485_curse != null and r485_curse.is_curse(),
+			"R485 前提：陷阱卡是场地、9149 是诅咒（类型矩阵样本齐全）")
+	check(GameEngine.card_may_enter_board(r485_ally) \
+			and GameEngine.card_may_enter_board(r485_fort),
+			"R485 类型判据：盟友 / 工事 = 有场上实体")
+	check(not GameEngine.card_may_enter_board(r484_eff) \
+			and not GameEngine.card_may_enter_board(r484_skill) \
+			and not GameEngine.card_may_enter_board(r485_field) \
+			and not GameEngine.card_may_enter_board(r485_curse) \
+			and not GameEngine.card_may_enter_board(null),
+			"R485 类型判据：效果 / 技能 / 场地 / 诅咒 / null 一律不算场上实体")
+	check(GameEngine.card_may_enter_board(_card(1053, "骷髅兵", "怪物", 3, 2, 1)),
+			"R485 类型判据：kind=怪物（关卡里的敌方单位）照样能进场（没被白名单误伤）")
+	# ── place 硬闸门：绕过所有前端直接往 board 里塞 ──
+	var r485_e := _new_engine([], 40, 40, -1, false)
+	r485_e.state.board.clear()
+	var r485_rej_eff: Placement = r485_e.state.place(
+			CardData.from_dict(r484_eff.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r485_rej_eff == null and r485_e.state.board.is_empty(),
+			"R485 place 闸门：效果卡直接 place 也被拒（board 不长 0 血空壳）")
+	var r485_rej_sp: Placement = r485_e.state.place(
+			CardData.from_dict(r484_skill.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r485_rej_sp == null and r485_e.state.board.is_empty(),
+			"R485 place 闸门：技能卡直接 place 也被拒")
+	var r485_rej_fd: Placement = r485_e.state.place(
+			CardData.from_dict(r485_field.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r485_rej_fd == null and r485_e.state.board.is_empty(),
+			"R485 place 闸门：场地卡不能当单位进场（它走 set_field）")
+	var r485_ok: Placement = r485_e.state.place(
+			CardData.from_dict(r485_ally.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r485_ok != null and r485_e.state.board.has(Vector2i(4, 1)),
+			"R485 place 闸门：盟友放自己半场照常上场（正常路径没被误伤）")
+	# ── 落点闸门：对方后排 = 打 HP 的那一行 ──
+	var r485_rej_hp: Placement = r485_e.state.place(
+			CardData.from_dict(r485_ally.to_dict()), Vector2i(0, 2), GameEngine.SIDE_SELF)
+	check(r485_rej_hp == null and not r485_e.state.board.has(Vector2i(0, 2)),
+			"R485 落点闸门：己方单位不能站进敌方后排（row 0 = 打 HP 那排）")
+	var r485_rej_my: Placement = r485_e.state.place(
+			CardData.from_dict(r485_ally.to_dict()), Vector2i(5, 0), GameEngine.SIDE_OPPONENT)
+	check(r485_rej_my == null and not r485_e.state.board.has(Vector2i(5, 0)),
+			"R485 落点闸门：敌方单位也不能站进我方后排（row 5，对称）")
+	var r485_into: Placement = r485_e.state.place(
+			CardData.from_dict(r485_ally.to_dict()), Vector2i(2, 2), GameEngine.SIDE_SELF)
+	check(r485_into != null and r485_e.state.board.has(Vector2i(2, 2)),
+			"R485 落点闸门：己方单位仍可站到敌方前排（潜入口径没被误伤）")
+	# ── 读档清洗：旧档里的残留不许复活 ──
+	var r485_dirty := r485_e.state.save_dict()
+	r485_dirty["board"] = [
+		{"r": 4, "c": 0, "p": {"card": r484_eff.to_dict(), "owner": "self", "health": 0}},
+		{"r": 0, "c": 0, "p": {"card": r485_ally.to_dict(), "owner": "self"}},
+		{"r": 1, "c": 0, "p": {"card": r485_ally.to_dict(), "owner": "opponent"}},
+	]
+	var r485_loaded := FieldState.new([], 20, 20, -1, "测试", false)
+	r485_loaded.apply_dict(r485_dirty)
+	check(not r485_loaded.board.has(Vector2i(4, 0)),
+			"R485 读档清洗：旧档里躺着的那张效果卡不会被恢复到场")
+	check(not r485_loaded.board.has(Vector2i(0, 0)),
+			"R485 读档清洗：旧档里站在敌方后排的己方单位也不恢复")
+	check(r485_loaded.board.has(Vector2i(1, 0)),
+			"R485 读档清洗：合法的敌方单位照常读回（清洗只剔非法项）")
+	# ── 源码锁：判据不许再散回各路径 ──
+	var r485_fs := FileAccess.get_file_as_string("res://scripts/field_state.gd")
+	check_src(r485_fs.contains("GameEngine.card_may_enter_board(card)"),
+			"R485 源码：place 用唯一判据拦非单位卡")
+	check_src(r485_fs.contains("cell.x == GameEngine.forbidden_row_for(owner)"),
+			"R485 源码：place 用唯一判据拦后排（HP 行）落点")
+	check_src(r485_fs.contains("读档清洗"), "R485 源码：读档清洗留着（旧档不复活脏数据）")
+	check_src(r484_bs.contains("是诅咒：拖到棋盘上即可打出"),
+			"R485 源码：点格子时诅咒卡给准确提示（不再指向效果区）")
+	check_src(r484_ge.contains("func card_may_enter_board"),
+			"R485 源码：类型判据收在引擎唯一口")
 
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
