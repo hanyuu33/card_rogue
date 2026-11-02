@@ -1255,7 +1255,7 @@ func _init() -> void:
 	check(eng_wf2.state.hp_opponent == 16,
 			"疾风之力：场上无敌人 → 直击敌方 HP 4 点（20 → %d）" % eng_wf2.state.hp_opponent)
 
-	# 巨鼠（9046）：使用后从卡组随机抽一张「1 费盟友」加入手卡
+	# R492（用户口径）：巨鼠（9046）—— 使用后从**抽牌库**把一张**费用最低的盟友**加入手卡
 	var nc_rat := repo.get_card(9046)
 	check(nc_rat.kind == "盟友" and nc_rat.cost == 1 and nc_rat.power == 1
 			and nc_rat.health == 1 and nc_rat.attack_range == 1
@@ -1272,17 +1272,43 @@ func _init() -> void:
 	for rat_c: CardData in eng_rat.state.hand:
 		if rat_c.id == 9099:
 			rat_ok = true
-	check(rat_ok, "巨鼠：使用后从卡组抽到 1 费盟友（野兔）入手中")
+	check(rat_ok, "R492 巨鼠：取到的是费用最低的盟友（野兔 1 费）入手中")
 	check(eng_rat.state.deck.size() == 1 and eng_rat.state.deck[0].id == 9100,
-			"巨鼠：只抽 1 费盟友（4 费大熊留在卡组）")
+			"R492 巨鼠：只取费用最低的那张（4 费大熊留在抽牌库）")
+	# ② 抽牌库只剩 4 费盟友 → 照样取（不再限「1 费」）
 	var eng_rat2 := _new_engine([], 20, 20, -1, false)
 	eng_rat2.start_game(1)
 	eng_rat2.state.deck = [_card(9100, "大熊", "盟友", 4, 5, 9)]
 	eng_rat2.state.hand = [repo.get_card(9046)]
 	eng_rat2.state.energy = 5
 	eng_rat2.play_from_hand(0, Vector2i(4, 0))
-	check(eng_rat2.state.hand.is_empty(),
-			"巨鼠：卡组没有 1 费盟友 → 落空（手牌不增加）")
+	check(eng_rat2.state.hand.size() == 1 and eng_rat2.state.hand[0].id == 9100
+			and eng_rat2.state.deck.is_empty(),
+			"R492 巨鼠：抽牌库只有 4 费盟友也能取（不限 1 费）")
+	# ③ 并列最低 → 取 1 费其中一张，绝不跳到 4 费
+	var eng_rat3 := _new_engine([], 20, 20, -1, false)
+	eng_rat3.start_game(1)
+	eng_rat3.state.deck = [_card(9100, "大熊", "盟友", 4, 5, 9),
+			_card(9099, "野兔", "盟友", 1, 1, 2),
+			_card(9102, "小鹿", "盟友", 1, 2, 2)]
+	eng_rat3.state.hand = [repo.get_card(9046)]
+	eng_rat3.state.energy = 5
+	eng_rat3.play_from_hand(0, Vector2i(4, 0))
+	var rat_tie := -1
+	for rat_c2: CardData in eng_rat3.state.hand:
+		if rat_c2.id != 9046:
+			rat_tie = rat_c2.id
+	check(rat_tie == 9099 or rat_tie == 9102,
+			"R492 巨鼠：并列最低时取 1 费的其中一张（实际 %d）" % rat_tie)
+	# ④ 抽牌库里没有盟友 → 落空（手牌不增加）
+	var eng_rat4 := _new_engine([], 20, 20, -1, false)
+	eng_rat4.start_game(1)
+	eng_rat4.state.deck = [_card(9103, "火球", "技能", 1, 0, 0)]
+	eng_rat4.state.hand = [repo.get_card(9046)]
+	eng_rat4.state.energy = 5
+	eng_rat4.play_from_hand(0, Vector2i(4, 0))
+	check(eng_rat4.state.hand.is_empty() and eng_rat4.state.deck.size() == 1,
+			"R492 巨鼠：抽牌库里没有盟友 → 落空（手牌不增加）")
 
 	# 机械巨鸭（9047）/ 发条鸭（9048）/ 齿轮升腾（9049）：第二层 Boss 与召唤循环
 	var nc_md := repo.get_card(9047)
@@ -2531,13 +2557,13 @@ func _init() -> void:
 			"R145 显示：没有减伤时 `_last_hp_damage` = 账面伤害（%d）"
 			% hp_t2._last_hp_damage)
 
-	# ---- 大树守卫（9067）：1 费稀有盟友 1/1/1/1；替我方 HP 承伤 ----
+	# ---- 大树守卫（9067）：1 费普通盟友 1/1/1/1；替我方 HP 承伤 ----
 	var nc_ag := repo.get_card(9067)
 	check(nc_ag.card_name == "大树守卫" and nc_ag.kind == "盟友" and nc_ag.cost == 1
-			and nc_ag.rarity == 1 and nc_ag.power == 1 and nc_ag.health == 1
+			and nc_ag.rarity == 0 and nc_ag.power == 1 and nc_ag.health == 1
 			and nc_ag.attack_range == 1 and nc_ag.move_speed == 1
 			and nc_ag.traits.has("大树守卫"),
-			"大树守卫：稀有 1 费 1/1 程1 速1，trait 大树守卫")
+			"大树守卫：普通 1 费 1/1 程1 速1，trait 大树守卫")
 	var ag_e := _new_engine([], 20, 20, -1, false)
 	ag_e.start_game(0)
 	ag_e.state.effects.append(repo.get_card(9002))
@@ -2567,13 +2593,13 @@ func _init() -> void:
 	check(ag_e2.state.unit_at(Vector2i(4, 1)) == null,
 			"大树守卫：1 血替 HP 承受 5 点后被击破离场")
 
-	# ---- 水元素（9068）：6 费史诗盟友 5/20/1/1 ----
+	# ---- 水元素（9068）：6 费史诗盟友 5/15/1/1 ----
 	var nc_dm := repo.get_card(9068)
 	check(nc_dm.card_name == "水元素" and nc_dm.kind == "盟友" and nc_dm.cost == 6
-			and nc_dm.rarity == 2 and nc_dm.power == 5 and nc_dm.health == 20
+			and nc_dm.rarity == 2 and nc_dm.power == 5 and nc_dm.health == 15
 			and nc_dm.attack_range == 1 and nc_dm.move_speed == 1
 			and nc_dm.traits.has("水元素"),
-			"水元素：史诗 6 费 5/20 程1 速1，trait 水元素")
+			"水元素：史诗 6 费 5/15 程1 速1，trait 水元素")
 	var dm_e := _new_engine([], 20, 20, -1, false)
 	dm_e.start_game(0)
 	check(dm_e.cost_of(repo.get_card(9068)) == 6, "水元素：效果区为空 → 原价 6 费")

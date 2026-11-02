@@ -1297,7 +1297,7 @@
       "traits": [
         "鼠"
       ],
-      "effect_text": "使用后从卡组随机抽取一张 1 费盟友加入手卡。",
+      "effect_text": "使用后从抽牌库将一张费用最低的盟友加入手卡。",
       "target_mode": "none",
       "color": "灰",
       "image": ""
@@ -1720,7 +1720,7 @@
       "health": 1,
       "attack_range": 1,
       "move_speed": 1,
-      "rarity": 1,
+      "rarity": 0,
       "group": "player",
       "class": "森林精魄",
       "traits": [
@@ -1738,7 +1738,7 @@
       "kind": "盟友",
       "cost": 6,
       "power": 5,
-      "health": 20,
+      "health": 15,
       "attack_range": 1,
       "move_speed": 1,
       "rarity": 2,

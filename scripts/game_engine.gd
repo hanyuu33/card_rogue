@@ -11110,22 +11110,31 @@ func _hidden_energy_death(p: Placement, cell: Vector2i) -> void :
 
 
 func _rat_trigger() -> void :
+	## R492（用户口径）：候选不再限「1 费」，改成**抽牌库（state.deck）里费用最低的盟友**。
+	## 并列最低时随机取一张 —— 不按位置偏袒靠前的牌。抽牌库里没有盟友才落空。
 
 
 	var cand: Array[int] = []
+	var min_cost := -1
 	for i in state.deck.size():
 		var dc: CardData = state.deck[i]
-		if dc.kind == "盟友" and dc.cost == 1:
+		if dc.kind != "盟友":
+			continue
+		if min_cost < 0 or dc.cost < min_cost:
+			min_cost = dc.cost
+			cand.clear()
+			cand.append(i)
+		elif dc.cost == min_cost:
 			cand.append(i)
 	if cand.is_empty():
-		_log("巨鼠：卡组里没有 1 费盟友")
+		_log("巨鼠：抽牌库里没有盟友")
 		return
 	var pick:= cand[rng.randi() % cand.size()]
 	var chosen: CardData = state.deck[pick]
 	state.deck.remove_at(pick)
-	# R299：手牌满 → 那只 1 费盟友直接进弃牌区
+	# R299：手牌满 → 那张费用最低的盟友直接进弃牌区
 	_grant_to_hand(chosen, "巨鼠")
-	_log("巨鼠：从卡组取到 1 费盟友 %s" % chosen.card_name)
+	_log("巨鼠：从抽牌库取到 %d 费盟友 %s" % [min_cost, chosen.card_name])
 
 
 func _forest_guard(side: String, target) -> String:
