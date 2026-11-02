@@ -96,6 +96,31 @@ static func protects_save() -> bool:
 	return _blocked_stamp != "" and _stamp_of(SAVE_PATH) == _blocked_stamp
 
 
+static func probe_newer_save() -> void:
+	## R486：**开机先问一句**，不等玩家点「继续游戏」。
+	## 场景（正是双机同步的日常）：另一台机器存的那份档 `data_ver` 比这台高 →
+	## `has_save()` 会返回假、「继续游戏」按钮直接消失；可玩家一次都没点过按钮，
+	## 屏幕上也没有任何说明 —— 表现就是「我的进度凭空没了，游戏还让我重开」。
+	## 这里只在**标题页加载时**跑一次：读盘 → 体检 → 若判成 `version_new` 就记下
+	## 原因与指纹（`protects_save()` 随之为真，标题页据此画常驻说明）。
+	## ⚠️ 只读：**不改文件、不写 RunState**；隔离 / 清洗仍然只发生在 `load_run()` 里。
+	if protects_save():
+		return          # 同一进程里已经判过（点过继续游戏 / 已探过）
+	if not FileAccess.file_exists(SAVE_PATH):
+		return
+	if not _readable(SAVE_PATH):
+		return          # 损坏档留给 `load_run()` 说；这里只认「版本比本作新」
+	var root: Variant = str_to_var(FileAccess.get_file_as_string(SAVE_PATH))
+	var d: Variant = (root as Dictionary).get("d", {})
+	var v: Dictionary = validate(d if d is Dictionary else {})
+	if str(v.get("kind", "")) != "version_new":
+		return
+	last_error_kind = "version_new"
+	last_error = str(v.get("msg", "存档来自更新的版本，本版本不能使用"))
+	_blocked_stamp = _stamp_of(SAVE_PATH)
+	_trace("PROBE-BLOCK(version_new) 标题页先发现：%s" % last_error)
+
+
 # ------------------------------------------------------------ 写入
 
 static func snapshot() -> Dictionary:

@@ -26756,6 +26756,30 @@ func _init() -> void:
 	check(RunSave.protects_save() and not RunSave.has_save(),
 			"R486 保留但不给按：继续游戏按钮隐藏（不会骗人白点）")
 
+	# ①-b R486b：**开机就说明白**。上面的状态是「点过继续游戏之后」才有的；玩家刚开游戏
+	# 时一个按钮都没按过，`_blocked_stamp` 是空的 → 按钮消失得无声无息（双机同步的日常：
+	# 新机存的那份档版本更高）。`probe_newer_save()` 就是补这一步：只读盘、只记原因。
+	RunSave.clear_save()          # 清掉上一段留下的内存状态（按钮 / 指纹 / 原因）
+	check(RunSave.last_error == "" and not RunSave.protects_save(),
+			"R486b clear_save 复位了失败原因与指纹")
+	RunSave.probe_newer_save()
+	check(RunSave.last_error == "",
+			"R486b 盘上没档时探测不吵人（不编一条失败原因出来）")
+	check(RunSave.save_snapshot(r486_future), "R486b 重新落一份「更新版本」的档")
+	RunSave.probe_newer_save()
+	check(RunSave.last_error_kind == "version_new"
+			and RunSave.last_error.contains("更新的版本"),
+			"R486b 开机探测就认出「来自更新版本」：" + RunSave.last_error)
+	check(RunSave.protects_save() and not RunSave.has_save(),
+			"R486b 探测之后按钮就不再亮（不用等玩家白点一次）")
+	check(FileAccess.file_exists(RunSave.SAVE_PATH),
+			"R486b 探测**不动文件**（只读；真正的隔离仍归 load_run）")
+	var r486_title := FileAccess.get_file_as_string("res://scripts/title_scene.gd")
+	check_src(r486_title.contains("RunSave.probe_newer_save()"),
+			"R486b 源码：标题页加载时先探一次盘")
+	check_src(r486_title.contains("RunSave.protects_save()"),
+			"R486b 源码：标题页对这类档画**常驻**说明（不是 6 秒 toast）")
+
 	# ② 卡组里有**已下架的卡**（旧版本的档）：这才是最常见的「版本问题」
 	RunSave.clear_save()
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
