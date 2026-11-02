@@ -157,6 +157,8 @@ var _space_fires:= 0
 # 风元素（9082）：技能结算窗口 —— 窗口内只要有伤害落在敌方身上就记一次（见 _mark_spell_enemy_hit）
 var _spell_active:= false
 var _spell_hit_enemy:= false
+# R490 陨石术（9077）：窗口内**落地一段实际伤害**记一笔（不分敌我，见 _mark_spell_damage）
+var _spell_dmg_hits:= 0
 # 流星雨（9083）：本次施放消耗的费用（X）—— 在 _pay 之前抓取（见 use_spell / remote_spell）
 var _x_spell_value:= 0
 # 火墙术（9084）：正在燃烧的横行。每项 {side, row, pass_dmg, dealt}；
@@ -4230,6 +4232,19 @@ func _mark_spell_enemy_hit() -> void :
 		_spell_hit_enemy = true
 
 
+func _mark_spell_damage() -> void :
+	## R490 陨石术（9077）减费计数：技能结算窗口内**每落地一段实际伤害**记一笔 —— **不分敌我**。
+	## 「一段」= 一次真正扣掉血的下沉：
+	##   * `_hit_unit`           打单位（技能打自家单位也算）；
+	##   * `_op_deal_damage`     单目标技能（龙息 / 弹跳飞刀这类不走 _hit_unit 的）；
+	##   * `_damage_player`      两条分支都算（敌方 HP、以及陨石术砸到**己方** HP 行）。
+	## ⚠️ 与 `_mark_spell_enemy_hit` 并列而**不合并**：风元素 9082 的卡面是「造成伤害」按
+	##    **技能次数**算（一个 bool），陨石术是「每次造成伤害」按**段数**算（一个计数）。
+	## ⚠️ 只在 `_spell_active` 窗口内累加：普通攻击 / 陷阱 / 回合结束侵蚀都打不进来。
+	if _spell_active:
+		_spell_dmg_hits += 1
+
+
 func _arcane_charm_discount(card: CardData, side:= SIDE_SELF) -> int:
 
 
@@ -7702,6 +7717,7 @@ func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 	# 风元素（9082）：技能结算窗口 —— 窗口内对敌方造成过伤害就记一笔（手卡里本卡 -2 费）
 	_spell_active = true
 	_spell_hit_enemy = false
+	_spell_dmg_hits = 0
 	# R315 爆米花（6046）：记「本回合有没有以敌人 / 敌人所在的格子为目标使用技能」。
 	# 放在**结算之前**、蓄力循环之外：蓄力重放同一张卡不会改变「目标是不是敌人」这件事。
 	# ⚠️ 只认 `use_spell`（我方的技能卡）—— `remote_spell` 是敌方，与这件道具无关。
@@ -7889,12 +7905,20 @@ func use_curse(hand_index: int) -> String:
 func _spell_play_tick() -> void:
 
 
-	## 用过一张技能卡之后，给手牌里「按张记账」的卡记一笔：
-	## 陨石术（留手）永久 -1（本局一直累加）；魔像术（魔像）本回合 -1（回合结束清空）。
+	## 一次技能结算完之后，给手牌里「按张记账」的卡记账：
+	##   * 陨石术 9077：本次结算**每落地一段伤害**永久 -1（本局一直累加）。
+	##     多段技能按**段数**算（龙息 4×5 → 5 段、流星雨 X 颗 → X 段、弹跳飞刀 → 3 段）；
+	##     蓄力让同一张技能生效 2 次，两轮的段数一起累加；**不分敌我**（砸到自家单位 /
+	##     己方 HP 行照样算）。一段伤害都没有的技能（蓄力 / 魔像术这种纯召唤）不减费。
+	##   * 魔像术 9079：每用一张技能卡本回合 -1（回合结束清空）—— 与伤害段数**无关**，
+	##     它自己召唤不造成伤害，也照样 -1。
+	## ⚠️ 陨石术按 **id** 认，不按「留手」字段：素体 8025 也是留手（回合结束不弃），
+	##    但它的卡面没有任何减费条款 —— 按字段认会让它每用一张技能白拿 1 费减免。
+	var hits:= _spell_dmg_hits
 	for c: CardData in state.hand:
-		if c.traits.has(FieldState.KEEP_HAND_TRAIT):
-			state.card_discount[c] = int(state.card_discount.get(c, 0)) + 1
-		if c.traits.has(GOLEM_TRAIT):
+		if c.id == METEOR_ID and hits > 0:
+			state.card_discount[c] = int(state.card_discount.get(c, 0)) + hits
+		if c.id == GOLEM_SPELL_ID:
 			state.turn_card_discount[c] = int(state.turn_card_discount.get(c, 0)) + 1
 
 
@@ -11792,6 +11816,9 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	# 死了就不再触发（沉睡了也没意义），所以只在活着的分支调。
 	if p.health > 0:
 		_demon_duck_hurt(p, _cell_of(p))
+	# R490：陨石术减费按**落地段数**记账 —— 这里**不分敌我**，自己的单位挨技能打也算一段。
+	if dmg > 0:
+		_mark_spell_damage()
 	if p.owner != SIDE_SELF:
 		_mark_spell_enemy_hit()
 	# R123：己方**单位**受伤不再触发「一袋米抗几楼」—— 它只认我方 HP 受伤
@@ -12940,6 +12967,9 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 		p.health -= amount2
 		if p.boss_phase > 0:
 			_revelator_check_phase(p)
+		# R490：单目标技能（龙息 / 弹跳飞刀这类不走 _hit_unit）同样按落地段数记一笔。
+		if amount2 > 0:
+			_mark_spell_damage()
 		if p.owner == SIDE_OPPONENT and amount2 > 0:
 			_mark_spell_enemy_hit()
 		if amount2 > 0:
@@ -13041,6 +13071,7 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 			_log("减伤（迅捷/鸭嘴）：伤害 %d → %d" % [amount, dmg])
 		_log("我方 HP -%d（%s），剩余 %d" % [dmg, source, state.hp_self])
 		if dmg > 0:
+			_mark_spell_damage()   # R490：不分敌我 —— 技能砸到自己这边的 HP 行也算一段
 			_on_self_damaged()
 			_on_self_hp_damaged()
 		_check_game_over()
@@ -13052,6 +13083,9 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 		_last_hp_damage = 0
 		_log("敌方 HP 为 ∞：%d 点伤害未计（%s）" % [amount, source])
 		return state.hp_opponent
+	if amount > 0:
+		# R490：真扣掉敌方 HP 才算一段 —— ∞ 血那条已经 return 了，不记。
+		_mark_spell_damage()
 	state.hp_opponent = maxi(0, state.hp_opponent - amount)
 	_last_hp_damage = amount      # R145：敌方 HP 没有减伤链，实际 = 账面
 	var left2:= state.hp_opponent

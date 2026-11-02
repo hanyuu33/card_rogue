@@ -597,22 +597,61 @@ func _init() -> void:
 			and me_e.state.unit_at(Vector2i(2, 2)) == null,
 			"陨石术：十字四邻都在范围里（空格的落点不产生伤害）")
 	check(me_e.state.self_skill_plays == 1, "陨石术：使用后本回合技能计数 =1")
+	# R490（用户口径）：减费**按技能实际落地的伤害段数**算，不分敌我 ——
+	# 一张多段技能牌（龙息 4×5）一次结算减 5 费，不再是「一张卡固定 -1」。
 	var keep_e := _new_engine([], 20, 20)
 	keep_e.state.energy = 30
 	keep_e.state.hand.clear()
 	keep_e.state.hand.append(CardData.from_dict(meteor.to_dict()))
-	keep_e.state.hand.append(repo.get_card(8002))
+	keep_e.state.hand.append(repo.get_card(8002))          # 攻击：4 伤 · 1 段
+	keep_e.state.place(_card(8003, "木桩", "盟友", 3, 3, 60, 1, 1), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
 	check(keep_e.cost_of(keep_e.state.hand[0]) == 10, "陨石术：手卡起始 10 费")
-	keep_e.use_spell(1, null)
+	keep_e.use_spell(1, Vector2i(2, 1))
 	check(keep_e.cost_of(keep_e.state.hand[0]) == 9,
-			"陨石术：每使用一张技能卡，手卡的这张永久 -1（10 → %d）"
+			"陨石术：技能落地 1 段伤害 → 手卡的这张永久 -1（10 → %d）"
 			% keep_e.cost_of(keep_e.state.hand[0]))
-	keep_e.state.hand.append(repo.get_card(8002))
-	keep_e.use_spell(1, null)
-	check(keep_e.cost_of(keep_e.state.hand[0]) == 8, "陨石术：再用一张技能 → 8 费（永久累加）")
+	# 龙息 9054：4 伤 × 5 段（同一个 60 血木桩，5 段全部落地）→ 一次结算 -5
+	keep_e.state.hand.append(repo.get_card(9054))
+	keep_e.state.energy = 30
+	keep_e.use_spell(1, Vector2i(2, 1))
+	check(keep_e.cost_of(keep_e.state.hand[0]) == 4,
+			"陨石术：龙息 4×5 打满 5 段 → 一次结算减 5 费（9 → %d）"
+			% keep_e.cost_of(keep_e.state.hand[0]))
 	check(keep_e.state.card_discount.size() == 1
-			and int(keep_e.state.card_discount[keep_e.state.hand[0]]) == 2,
-			"陨石术：减费记在「永久实例减费」表（累加 2 次）")
+			and int(keep_e.state.card_discount[keep_e.state.hand[0]]) == 6,
+			"陨石术：减费记在「永久实例减费」表（1 + 5 段累加）")
+	# 不分敌我：火墙术 9084 烧一整行 15 伤，敌我各站一个 → 2 段
+	keep_e.state.place(_card(8003, "我方木桩", "盟友", 3, 3, 60, 1, 1), Vector2i(2, 2),
+			GameEngine.SIDE_SELF)
+	keep_e.state.hand.append(repo.get_card(9084))
+	keep_e.state.energy = 30
+	keep_e.use_spell(1, Vector2i(2, 1))
+	check(keep_e.cost_of(keep_e.state.hand[0]) == 2,
+			"陨石术：不分敌我 —— 火墙同时烧到我方单位和敌方单位（2 段）也减 2 费（4 → %d）"
+			% keep_e.cost_of(keep_e.state.hand[0]))
+	# 一段伤害都没有的技能不再白送减费（旧口径「用一张技能就 -1」）
+	keep_e.state.hand.append(repo.get_card(9085))          # 蓄力：无伤害
+	keep_e.state.energy = 30
+	var keep_before := keep_e.cost_of(keep_e.state.hand[0])
+	keep_e.use_spell(1, null)
+	check(keep_e.cost_of(keep_e.state.hand[0]) == keep_before,
+			"陨石术：没造成任何伤害的技能（蓄力）不减费（%d → %d）"
+			% [keep_before, keep_e.cost_of(keep_e.state.hand[0])])
+	# 蓄力：同一张技能生效 2 次 → 段数翻倍（龙息 4×5 打两轮 = 10 段）
+	var r490_chg_e := _new_engine([], 20, 20)
+	r490_chg_e.state.energy = 30
+	r490_chg_e.state.hand.clear()
+	r490_chg_e.state.hand.append(CardData.from_dict(meteor.to_dict()))
+	r490_chg_e.state.hand.append(repo.get_card(9085))            # 蓄力 1 费
+	r490_chg_e.state.hand.append(repo.get_card(9054))            # 龙息 3 费
+	r490_chg_e.state.place(_card(8003, "木桩", "盟友", 3, 3, 60, 1, 1), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
+	r490_chg_e.use_spell(1, null)                                 # 蓄力本身无伤害 → 减 0
+	r490_chg_e.use_spell(1, Vector2i(2, 1))                       # 龙息 ×2 → 10 段
+	check(r490_chg_e.cost_of(r490_chg_e.state.hand[0]) == 0,
+			"陨石术：蓄力 + 龙息（生效 2 次 = 10 段）→ 一次结算减 10 费（10 → %d）"
+			% r490_chg_e.cost_of(r490_chg_e.state.hand[0]))
 	var keep2 := _new_engine([], 20, 20)
 	keep2.state.hand.clear()
 	keep2.state.hand.append(CardData.from_dict(meteor.to_dict()))
@@ -4035,10 +4074,12 @@ func _init() -> void:
 	var r123_km: CardData = r123_km_e.state.draw()
 	check(r123_km != null and r123_km.own_copy,
 			"R123：陨石术第一次抽到换成独立副本（own_copy）")
+	r123_km_e.state.place(_card(8003, "木桩", "盟友", 3, 3, 60, 1, 1), Vector2i(2, 1),
+			GameEngine.SIDE_OPPONENT)
 	r123_km_e.state.hand.append(repo.get_card(8002))
 	r123_km_e.state.energy = 30
-	r123_km_e.use_spell(1, null)
-	check(r123_km_e.cost_of(r123_km) == 9, "陨石术：用一张技能 → 9 费")
+	r123_km_e.use_spell(1, Vector2i(2, 1))
+	check(r123_km_e.cost_of(r123_km) == 9, "陨石术：用一张技能打中一个目标（1 段）→ 9 费")
 	r123_km_e.use_spell(0, Vector2i(2, 1))   # 打出陨石术本身 → 进弃牌区
 	check(r123_km_e.state.discard.has(r123_km), "陨石术：打出后进弃牌区")
 	r123_km_e.state.deck = r123_km_e.state.discard.duplicate()
@@ -4050,7 +4091,7 @@ func _init() -> void:
 			"R123 陨石术：离开手卡再抽回来，减费不重置（仍 9，旧口径会回到 10）")
 	r123_km_e.state.hand.append(repo.get_card(8002))
 	r123_km_e.state.energy = 30
-	r123_km_e.use_spell(1, null)
+	r123_km_e.use_spell(1, Vector2i(2, 1))
 	check(r123_km_e.cost_of(r123_km2) == 8,
 			"R123 陨石术：永久减费继续累加（9 → 8）")
 
