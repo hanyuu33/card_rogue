@@ -33026,9 +33026,11 @@ func _init() -> void:
 	check(CardFace.art_frame_kind(null) == "",
 			"R498 边框：空卡返回空键（不画边框，也不报错）")
 	# 五张素材到位（缺图会回退成同色细线框，但素材本身必须在）
+	# R499：判据走资源系统 —— 导出包里原 png 被 ctex 取代，FileAccess 查不到它，
+	#   只有 ResourceLoader.exists() 才两种环境都成立（源码直读 / 包内走 .import 重定向）。
 	for r498_k: String in ["forest", "shadow", "mech", "common", "enemy"]:
-		check(FileAccess.file_exists("res://assets/ui/art_frame_%s.png" % r498_k),
-				"R498 素材：art_frame_%s.png 存在" % r498_k)
+		check(ResourceLoader.exists("res://assets/ui/art_frame_%s.png" % r498_k),
+				"R499 素材：art_frame_%s.png 可加载" % r498_k)
 	# 源码锁：边框必须画在待确认角标**之前**（角标要压在最上层）
 	var r498_cf := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 	check_src(r498_cf.find("_draw_art_frame(canvas, card, box, k)") > 0
