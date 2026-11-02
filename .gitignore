@@ -28,6 +28,14 @@ screenshot*.import
 /_*.png
 /_*.png.import
 
+# 根目录跑回归 / 出图留下的日志、消息与存档备份（随时可重建）
+/_*.log
+/_*_msg.txt
+/_bk_*/
+
+# 背景图生成原件的工作目录（裁切前的 1536x1024 出图，已归档进 art_src/，不入库）
+/assets/ui/_bgnew/
+
 # Python
 __pycache__/
 *.pyc
