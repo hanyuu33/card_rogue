@@ -1539,6 +1539,77 @@ func _init() -> void:
 			and r494_f.state.deck.size() == 1,
 			"R494 阵地保卫者：超负荷的**工事**死亡不回填（只认盟友）")
 
+	# ④a（R495 用户口径修正）：阵地保卫者**自己**带超负荷死掉 → 不回填自己。
+	#    判据是「确定破坏的那一刻它在场上」，不是「排除自身」——R494 在 `_destroy` 之后
+	#    扫弃牌区，会扫到刚被推进去的自己，于是自己把自己拉回来（前后不一致）。
+	var r495_a := _new_engine([], 20, 20, -1, false)
+	r495_a.start_game(1)
+	r495_a.state.place(_card(9340, "敌靶", "盟友", 3, 2, 30), Vector2i(1, 0),
+			GameEngine.SIDE_OPPONENT)
+	var r495_ga := CardData.from_dict(repo.get_card(9220).to_dict())
+	r495_ga.affixes = ["超负荷"]
+	var r495_gap: Placement = r495_a.state.place(r495_ga, Vector2i(4, 0),
+			GameEngine.SIDE_SELF)
+	r495_gap.health = -1
+	r495_a.state.deck = []
+	r495_a.state.hand = []
+	r495_a.state.discard = []
+	r495_a._overload_tick(GameEngine.SIDE_SELF)
+	check(r495_a.state.unit_at(Vector2i(4, 0)) == null,
+			"R495 阵地保卫者：自己超负荷死 → 不回填自己（破坏那一刻它在场上）")
+	check(r495_a.state.discard.size() == 1 and r495_a.state.discard[0] == r495_ga,
+			"R495 阵地保卫者：自己那张只是进了弃牌区，没参与回填")
+
+	# ④b：弃牌区**那一刻**确实躺着一张（不是刚死的那张）→ 照样补位。
+	#     这条反证「不是排除自身 id / 实例」。
+	var r495_b := _new_engine([], 20, 20, -1, false)
+	r495_b.start_game(1)
+	r495_b.state.place(_card(9341, "敌靶", "盟友", 3, 2, 30), Vector2i(1, 0),
+			GameEngine.SIDE_OPPONENT)
+	var r495_gb := CardData.from_dict(repo.get_card(9220).to_dict())
+	r495_gb.affixes = ["超负荷"]
+	var r495_gbp: Placement = r495_b.state.place(r495_gb, Vector2i(4, 0),
+			GameEngine.SIDE_SELF)
+	r495_gbp.health = -1
+	r495_b.state.deck = []
+	r495_b.state.hand = []
+	var r495_pre := CardData.from_dict(repo.get_card(9220).to_dict())
+	r495_b.state.discard = [r495_pre]
+	r495_b._overload_tick(GameEngine.SIDE_SELF)
+	var r495_bp: Placement = r495_b.state.unit_at(Vector2i(4, 0))
+	check(r495_bp != null and r495_bp.card == r495_pre,
+			"R495 阵地保卫者：弃牌区那一刻已有的一张 → 照样补位（不是排除自身 id）")
+	check(r495_b.state.discard.size() == 1 and r495_b.state.discard[0] == r495_gb,
+			"R495 阵地保卫者：补位后弃牌区只剩刚死的那张")
+
+	# ④c：同一回合两连死 —— 先死的阵地保卫者不拉自己；后死的那次把「那一刻已在
+	#     弃牌区」的它拉回来。顺序按 board 插入顺序（先 (4,0) 后 (4,1)）。
+	var r495_c := _new_engine([], 20, 20, -1, false)
+	r495_c.start_game(1)
+	r495_c.state.place(_card(9342, "敌靶", "盟友", 3, 2, 30), Vector2i(1, 0),
+			GameEngine.SIDE_OPPONENT)
+	var r495_gc := CardData.from_dict(repo.get_card(9220).to_dict())
+	r495_gc.affixes = ["超负荷"]
+	var r495_gcp: Placement = r495_c.state.place(r495_gc, Vector2i(4, 0),
+			GameEngine.SIDE_SELF)
+	r495_gcp.health = -1
+	var r495_oc := _card(9343, "旧式机兵", "盟友", 3, 4, 13)
+	r495_oc.affixes = ["超负荷"]
+	var r495_ocp: Placement = r495_c.state.place(r495_oc, Vector2i(4, 1),
+			GameEngine.SIDE_SELF)
+	r495_ocp.health = -2
+	r495_c.state.deck = []
+	r495_c.state.hand = []
+	r495_c.state.discard = []
+	r495_c._overload_tick(GameEngine.SIDE_SELF)
+	check(r495_c.state.unit_at(Vector2i(4, 0)) == null,
+			"R495 两连死：先死的阵地保卫者不给自己补位（原位空）")
+	var r495_moved: Placement = r495_c.state.unit_at(Vector2i(4, 1))
+	check(r495_moved != null and r495_moved.card == r495_gc,
+			"R495 两连死：后死的盟友把「那一刻已在弃牌区」的阵地保卫者拉回原位")
+	check(r495_c.state.discard.size() == 1 and r495_c.state.discard[0] == r495_oc,
+			"R495 两连死：弃牌区只剩旧式机兵")
+
 	# ⑤ 结合者：落在己方单位格 → 破坏它，吸收**卡面上**的力量与生命
 	var r494_c := _new_engine([], 20, 20, -1, false)
 	r494_c.start_game(1)
@@ -1616,6 +1687,12 @@ func _init() -> void:
 			"R494 源码：结合者的吞并收在 play_from_hand 单段分支")
 	check_src(r494_scene_src.contains("card.id == GameEngine.BINDER_ID"),
 			"R494 源码：界面落点白名单认得结合者")
+	# R495：取源时序锁 —— `_guardian_take()` 必须出现在 `_overload_tick` 的 `_destroy(cell)` 之前。
+	var r495_tick_i := r494_src.find("func _overload_tick")
+	var r495_take_i := r494_src.find("pick = _guardian_take()", r495_tick_i)
+	var r495_des_i := r494_src.find("_destroy(cell)", r495_take_i)
+	check_src(r495_take_i > 0 and r495_des_i > r495_take_i,
+			"R495 源码：阵地在破坏**之前**取源（先判那一刻它在哪，再 _destroy）")
 
 	# 机械巨鸭（9047）/ 发条鸭（9048）/ 齿轮升腾（9049）：第二层 Boss 与召唤循环
 	var nc_md := repo.get_card(9047)

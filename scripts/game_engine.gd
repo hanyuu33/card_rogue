@@ -826,7 +826,10 @@ const PRESSURE_MINE_ID:= 9219
 # ── R494：阵地保卫者（9220） / 结合者（9221）──
 # 阵地保卫者（机械之心 · 史诗盟友）：2 费 3/6 程1 速1。己方带「超负荷」的盟友
 #   **因超负荷自身效果**被破坏时（唯一入口 `_overload_tick`），从抽牌库 → 手牌 → 弃牌区
-#   依次找一张「阵地保卫者」放到那张卡**原本的格子**（见 `_guardian_backfill`）。
+#   依次找一张「阵地保卫者」放到那张卡**原本的格子**（见 `_guardian_take` / `_guardian_backfill`）。
+#   ⚠️ R495：**「确定破坏的那一刻」先找源，再破坏**（`_guardian_take` 在 `_destroy` 之前调用）。
+#   破坏把那张卡推进弃牌区是**后果**，不算「那一刻」的区域状态 —— 所以阵地保卫者自己
+#   超负荷死时不会把自己拉回来。判据是「那一刻它在哪」，不是「排除自身」。
 #   判据是 `id`（卡库仅 9220 是这张）：不认 trait —— trait 可以被「合体」「涂装」改出来。
 # 结合者（机械之心 · 史诗盟友）：2 费 1/11 程1 速1，带「超负荷」。可以放在**己方单位**
 #   的格子上：破坏那个单位，此卡获得它**卡面上的**力量与生命（见 `play_from_hand` 分支）。
@@ -12823,21 +12826,48 @@ func _overload_tick(side: String) -> void :
 		_log("超负荷：%s 生命仍是 %d，己方回合结束死亡" % [p.card.card_name, p.health])
 		action.emit("overload_die", {"cell": cell, "card": p.card,
 			"health": p.health, "side": side})
-		_destroy(cell)
-		# R494 阵地保卫者：**己方盟友**因超负荷死掉 → 从牌堆/手牌/弃牌区拉一张补位。
-		# 放在 `_destroy` 之后（格子已空出来）。两条例外：
-		#   ① 只认己方 —— 敌方没有这套体系；
-		#   ② 只认 `kind == "盟友"` —— 卡面写的是「己方带超负荷的**盟友**」，
-		#      城墙 8052 是带超负荷的**工事**，死了不回填（与「土元素光环只给盟友」同口径）。
+		# R495（用户口径修正）：**「确定破坏的那一刻」就在这三处里找**，然后才破坏。
+		#   破坏会把这张卡推进弃牌区 —— 那是破坏的**后果**，不是「那一刻」的区域状态。
+		#   判据是「那一刻它在哪」，不是「排除自身」：同一回合两连死时，先死的那张
+		#   确实已经躺在弃牌区，后死的那次照样能把它拉回来（这才是对的）。
+		#   两条例外不变：① 只认己方；② 只认 kind == "盟友"（城墙 8052 是工事）。
+		var pick: Array = []
 		if side == SIDE_SELF and p.card.kind == "盟友":
-			_guardian_backfill(cell)
+			pick = _guardian_take()
+		_destroy(cell)
+		if not pick.is_empty():
+			_guardian_backfill(cell, pick[0], pick[1])
 
 
-func _guardian_backfill(cell: Vector2i) -> void :
-	## 「阵地保卫者」（9220，R494，机械之心史诗盟友 2 费 3/6 程1 速1）：
-	## 己方带「超负荷」的盟友**因超负荷自身效果**被破坏时（唯一入口 = `_overload_tick`），
-	## 从**抽牌库 → 手牌 → 弃牌区**依次找一张「阵地保卫者」，放到那张卡**原本的位置**。
-	## * 搜索顺序按卡面写法（抽牌堆 / 手牌 / 弃牌区）；三处都没有 → 效果落空（不报错）。
+func _guardian_take() -> Array :
+	## 「阵地保卫者」（9220，R494）——**破坏发生之前**取源。R495 起时序是语义的一部分。
+	## 顺序按卡面：抽牌堆 → 手牌 → 弃牌区；返回 `[CardData, "区域名"]`，三处都没有 = `[]`。
+	## ⚠️ 调用点在 `_overload_tick` 的 `_destroy` **之前**：被破坏的那张卡此刻还在场上，
+	##   它进弃牌区是 `_destroy` 的后果，不属于「那一刻」的区域状态。
+	##   R494 原来放在 `_destroy` 之后，弃牌区会扫到刚死的自己 → 阵地保卫者自己超负荷死
+	##   时会把自己拉回来，与卡面「破坏那一刻这张卡在这三处里」前后不一致。
+	## ⚠️ 修法是「提前判」，不是「排除自身」：同一回合两连死时，先死的那张确实已经在
+	##   弃牌区里，后死的那次照样应该把它拉回来。
+	for i in range(state.deck.size()):
+		if state.deck[i] != null and state.deck[i].id == GUARDIAN_ID:
+			var cd: CardData = state.deck[i]
+			state.deck.remove_at(i)
+			return [cd, "抽牌堆"]
+	for i in range(state.hand.size()):
+		if state.hand[i] != null and state.hand[i].id == GUARDIAN_ID:
+			var ch: CardData = state.hand[i]
+			state.hand.remove_at(i)
+			return [ch, "手牌"]
+	for i in range(state.discard.size()):
+		if state.discard[i] != null and state.discard[i].id == GUARDIAN_ID:
+			var cg: CardData = state.discard[i]
+			state.discard.remove_at(i)
+			return [cg, "弃牌区"]
+	return []
+
+
+func _guardian_backfill(cell: Vector2i, got: CardData, where: String) -> void :
+	## 接 `_guardian_take` 取出的那张卡，放到死亡单位**原本的格子**（`_destroy` 之后调用）。
 	## * 搬的是**那张实例**（附魔 / 永久成长 / 减费都跟着走）—— 与「交换」8056 的顶回手同口径。
 	##   ⚠️ 别在这里 `from_dict(to_dict())` 复制：弃牌区那份是真身，复制会让同一张卡变两张
 	##   （手牌里还有一张同名，于是能凭空多刷一张）。
@@ -12845,33 +12875,12 @@ func _guardian_backfill(cell: Vector2i) -> void :
 	##   这些入场钩子与手牌打出**完全同一条路**，不另开分支。
 	## * ⚠️ 被拉回来的那张若自己也被挂了超负荷（超越极限 8053），下次超负荷死亡还会再拉一张；
 	##   卡面没写例外，按字面不挡 —— 每次都要真死一张，不存在「同名无限循环」。
-	## * ⚠️ 格子已被别的东西占了（同回合多张超负荷卡 + 亡语召唤）→ 不抢位，效果落空。
-	if state.board.has(cell):
+	## * ⚠️ 格子已被别的东西占了（同回合多张超负荷卡 + 亡语召唤）→ 不抢位，卡退回弃牌区。
+	if got == null:
 		return
-	var got: CardData = null
-	var where:= ""
-	for i in range(state.deck.size()):
-		if state.deck[i] != null and state.deck[i].id == GUARDIAN_ID:
-			got = state.deck[i]
-			state.deck.remove_at(i)
-			where = "抽牌堆"
-			break
-	if got == null:
-		for i in range(state.hand.size()):
-			if state.hand[i] != null and state.hand[i].id == GUARDIAN_ID:
-				got = state.hand[i]
-				state.hand.remove_at(i)
-				where = "手牌"
-				break
-	if got == null:
-		for i in range(state.discard.size()):
-			if state.discard[i] != null and state.discard[i].id == GUARDIAN_ID:
-				got = state.discard[i]
-				state.discard.remove_at(i)
-				where = "弃牌区"
-				break
-	if got == null:
-		_log("阵地保卫者：抽牌堆 / 手牌 / 弃牌区都没有这张卡，效果落空")
+	if state.board.has(cell):
+		state.discard.append(got)
+		_log("阵地保卫者：%s 想回到 %s，但格子已被占用 → 退回弃牌区" % [got.card_name, cell])
 		return
 	var p: Placement = state.place(got, cell, SIDE_SELF)
 	if p == null:
