@@ -223,6 +223,10 @@ func _ready() -> void:
 		if (not _shot and not RunState.run_active
 				and RunState.map_cells.is_empty() and RunSave.has_save()):
 			_resumed = RunSave.load_run()
+			# R486：读档失败**必须说出来**（版本 / 卡池 / 地图坏了）。这条路未必有标题页
+			# 在屏幕上（直接开 map.tscn / 被别处拉回来），所以走通用轻提示，文案与标题页同一句。
+			if not _resumed and RunSave.last_error_kind != "missing":
+				UiToast.toast(RunSave.last_error, 5200)
 			if _resumed and not RunState.resume_battle.is_empty():
 				# 档停在「一场没打完的战斗」里 → 回那一场（与标题页「继续游戏」同口径）
 				SceneFx.goto("res://scenes/battle.tscn", true)

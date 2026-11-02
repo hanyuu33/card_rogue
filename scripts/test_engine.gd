@@ -26723,6 +26723,98 @@ func _init() -> void:
 		if FileAccess.file_exists(r377_p3):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(r377_p3))
 
+	# ---- R486：不合理的存档要**说清是版本问题、不能使用** ----
+	# 用户口径：「遇到不合理的存档，需要能提示版本问题该存档不能使用」。
+	# R485 遇到非法数据是**静默清洗**（跳过那一条）—— 玩家会以为「我的卡组怎么少了一张」。
+	# 现在：读档前先体检（`RunSave.validate()`），不通过就**拒绝继续**并给出原因；
+	# 标题页 / 地图兜底 / AI 桥接读的是同一句 `RunSave.last_error`（提示同步，不各编各的）。
+	RunState.set_difficulty(0)
+	for r486_suf0: String in ["", ".tmp", ".prev", ".bad"]:
+		var r486_p0: String = RunSave.SAVE_PATH + r486_suf0
+		if FileAccess.file_exists(r486_p0):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(r486_p0))
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	var r486_ok := RunSave.snapshot()
+	check(int(r486_ok.get("data_ver", -1)) == RunSave.CONTENT_VERSION,
+			"R486 快照自带内容版本号（v%d）—— 没有它，两台机器同步来的档只能靠猜" % RunSave.CONTENT_VERSION)
+	check(bool(RunSave.validate(r486_ok).get("ok", false)),
+			"R486 体检：正常局的快照通过（卡组 %d 张）" % (r486_ok["deck_ids"] as Array).size())
+	check(RunSave.save_snapshot(r486_ok) and RunSave.load_run(),
+			"R486 正常档照旧能读（体检不误伤）")
+	check(RunSave.last_error == "" and RunSave.last_error_kind == "",
+			"R486 读档成功后不残留上一次的失败原因")
+
+	# ① 来自**更新版本**的档：读不懂 → 拒绝，但**原样留着**（换回新版游戏还能接着打）
+	var r486_future := RunSave.snapshot()
+	r486_future["data_ver"] = RunSave.CONTENT_VERSION + 1
+	check(RunSave.save_snapshot(r486_future), "R486 能造一份「更新版本」的档")
+	check(not RunSave.load_run(), "R486 来自更新版本的档拒绝继续")
+	check(RunSave.last_error_kind == "version_new" and RunSave.last_error.contains("更新的版本"),
+			"R486 提示说清是版本问题：" + RunSave.last_error)
+	check(FileAccess.file_exists(RunSave.SAVE_PATH),
+			"R486 更新版本的档保留原样（不隔离、不删 —— 那是玩家更新的进度）")
+	check(RunSave.protects_save() and not RunSave.has_save(),
+			"R486 保留但不给按：继续游戏按钮隐藏（不会骗人白点）")
+
+	# ② 卡组里有**已下架的卡**（旧版本的档）：这才是最常见的「版本问题」
+	RunSave.clear_save()
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+	var r486_retired := RunSave.snapshot()
+	var r486_deck: Array = (r486_retired["deck_ids"] as Array).duplicate()
+	r486_deck.append(999999)   # 一个一定不存在的卡 id
+	r486_retired["deck_ids"] = r486_deck
+	check(RunSave.save_snapshot(r486_retired), "R486 能造一份「卡组里有已下架卡」的档")
+	check(not RunSave.load_run(), "R486 卡组含已下架卡的档拒绝继续")
+	check(RunSave.last_error_kind == "version_old" and RunSave.last_error.contains("已下架"),
+			"R486 提示点名「已下架的卡」：" + RunSave.last_error)
+	check(FileAccess.file_exists(RunSave.SAVE_PATH + ".bad"),
+			"R486 旧版本的档隔离成 .bad（证据不丢）")
+	check(not RunSave.has_save(), "R486 隔离后「继续游戏」按钮随之消失")
+
+	# ③ 结构不合理：没卡组 / 没地图 / 层数越界 / 停在图上不存在的格子
+	var r486_no_deck := RunSave.snapshot()
+	r486_no_deck["deck_ids"] = []
+	RunSave.save_snapshot(r486_no_deck)
+	check(not RunSave.load_run() and RunSave.last_error_kind == "content"
+			and RunSave.last_error.contains("没有卡组"),
+			"R486 空卡组的档拒绝继续：" + RunSave.last_error)
+	var r486_no_map := RunSave.snapshot()
+	r486_no_map["map_cells"] = []
+	RunSave.save_snapshot(r486_no_map)
+	check(not RunSave.load_run() and RunSave.last_error_kind == "content"
+			and RunSave.last_error.contains("没有地图"),
+			"R486 空地图的档拒绝继续：" + RunSave.last_error)
+	var r486_bad_layer := RunSave.snapshot()
+	r486_bad_layer["current_layer"] = 9
+	RunSave.save_snapshot(r486_bad_layer)
+	check(not RunSave.load_run() and RunSave.last_error_kind == "content"
+			and RunSave.last_error.contains("第 9 层"),
+			"R486 层数越界的档拒绝继续：" + RunSave.last_error)
+	var r486_bad_node := RunSave.snapshot()
+	r486_bad_node["current_node_id"] = 9999
+	RunSave.save_snapshot(r486_bad_node)
+	check(not RunSave.load_run() and RunSave.last_error_kind == "content"
+			and RunSave.last_error.contains("不存在的格子"),
+			"R486 停在图上不存在格子的档拒绝继续：" + RunSave.last_error)
+
+	# ④ 源码守卫：版本号真的写进档、体检是唯一口、三个入口读同一句提示
+	var r486_src := FileAccess.get_file_as_string("res://scripts/run_save.gd")
+	check_src(r486_src.find("\"data_ver\": CONTENT_VERSION") >= 0
+			and r486_src.find("static func validate(") >= 0,
+			"R486 源码：存档自带版本号，读档前先过 validate 体检")
+	check_src(r486_src.find("static var last_error") >= 0
+			and r486_src.find("_blocked_stamp") >= 0,
+			"R486 源码：失败原因统一出口 + 「更新版本」的档只用指纹挡住、不动文件")
+	for r486_p: String in ["scripts/title_scene.gd", "scripts/map_scene.gd", "scripts/ai_bridge.gd"]:
+		check_src(FileAccess.get_file_as_string("res://" + r486_p).find("RunSave.last_error") >= 0,
+				"R486 源码：" + r486_p + " 读同一句提示（三个入口不各编各的）")
+
+	# 收尾：别把假档留给后面的用例
+	for r486_suf9: String in ["", ".tmp", ".prev", ".bad"]:
+		var r486_p9: String = RunSave.SAVE_PATH + r486_suf9
+		if FileAccess.file_exists(r486_p9):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(r486_p9))
+
 	# ---- ④ 奖励池两道闸：剧情锁定 / 玩家禁卡 ----
 	ProfileData.clear_memory()
 	var r346_repo_cards := CardRepo.load_json()

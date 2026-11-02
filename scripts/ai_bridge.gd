@@ -263,9 +263,13 @@ func _route(c: Dictionary, method: String, path: String, body: String) -> void:
 		var ok_ld := RunSave.load_run()
 		if ok_ld:
 			SceneFx.goto("res://scenes/map.tscn", true)
+		# R486：把「为什么不能用」原样带出来（AI 对局排障时这句话最省事）
+		var ld_msg := "已从存档续上，正在进地图"
+		if not ok_ld:
+			ld_msg = RunSave.last_error if RunSave.last_error != "" else "续档失败（没有档 / 档坏了）"
 		_send(c, 200, "application/json; charset=utf-8", JSON.stringify({
 			"ok": ok_ld,
-			"msg": "已从存档续上，正在进地图" if ok_ld else "续档失败（没有档 / 档坏了）",
+			"msg": ld_msg,
 			"layer": RunState.current_layer, "node": RunState.current_node_id,
 			"hp": RunState.hp, "seed": RunState.seed_text() if RunState.run_active else "",
 		}))

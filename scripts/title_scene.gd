@@ -214,12 +214,19 @@ func _on_continue() -> void:
 	if not RunSave.load_run():
 		# R359：**不能静默留在标题** —— 玩家点了没反应 = 以为按钮坏了。
 		# R377：不再 `clear_save()` —— `load_run()` 已经把出问题的档**隔离**成
-		# `run_save.sav.bad`（那是唯一能事后查证的现场，删了就永远不知道当时档里是什么），
-		# 这里只负责把原因说清楚。
-		push_warning("RunSave：继续游戏读档失败，问题档已隔离为 run_save.sav.bad")
+		# `run_save.sav.bad`（那是唯一能事后查证的现场，删了就永远不知道当时档里是什么）。
+		# R486：文案不再是「读取失败」四个字 —— **为什么不能用**由 `RunSave.last_error`
+		# 统一给出（版本太新 / 太旧 / 卡组里有已下架的卡 / 地图坏了），三个读档入口同一句。
+		push_warning("RunSave：继续游戏读档失败 —— " + RunSave.last_error)
 		_refresh_continue()
 		_toast = "存档读取失败（已备份为 run_save.sav.bad）"
-		_toast_t = 4.0
+		if RunSave.last_error != "":
+			_toast = RunSave.last_error
+			# 「来自更新版本」的档**没有**被隔离（要留给新版游戏），别骗玩家说备份了
+			if RunSave.last_error_kind != "version_new":
+				_toast += "（原件已备份为 .bad）"
+		# 4 秒太短：玩家常在这几秒里还在找按钮，回过神来字已经没了。
+		_toast_t = 6.0
 		return
 	RunRecord.resume()   # 这一局接着打 → 保证有开始时间（对战记录收尾时才写得出来）
 	# R323：存档若停在**一场没打完的战斗**里 → 直接回那一场；
