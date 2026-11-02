@@ -6148,6 +6148,52 @@
       "target_mode": "none",
       "color": "橙",
       "image": ""
+    },
+    {
+      "id": 9220,
+      "name": "阵地保卫者",
+      "kind": "盟友",
+      "cost": 2,
+      "power": 3,
+      "health": 6,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 2,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "阵地保卫者"
+      ],
+      "affixes": [],
+      "effect_text": "己方带「超负荷」的盟友因超负荷死亡时，将抽牌堆、手牌或弃牌区里的一张此卡放到它原本的位置。",
+      "target_mode": "none",
+      "color": "橙",
+      "image": ""
+    },
+    {
+      "id": 9221,
+      "name": "结合者",
+      "kind": "盟友",
+      "cost": 2,
+      "power": 1,
+      "health": 11,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 2,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "结合者"
+      ],
+      "affixes": [
+        "超负荷"
+      ],
+      "effect_text": "**超负荷**。可以放在己方单位上：破坏该单位，此卡获得它卡面上的力量与生命。",
+      "target_mode": "none",
+      "color": "橙",
+      "image": ""
     }
   ]
 }

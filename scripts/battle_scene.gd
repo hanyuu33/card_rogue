@@ -5344,6 +5344,8 @@ func _own_place_cells(card: CardData) -> Array[Vector2i]:
 	## （持「栅栏修复术」且手里是栅栏卡时，栅栏可以打在已有栅栏上）。
 	## 带「交换」字段的卡（R101，救援构装体）：还能打在**已有己方单位**的格子上
 	## （原单位被顶回手、新卡占据该格；引擎 play_from_hand 里的交换分支负责顶回手）。
+	## R494 结合者（9221）：同样能打在**已有己方单位**的格子上 —— 差别是原单位被
+	## **破坏**（不走回手），新卡吸收它的卡面力量与生命（引擎 play_from_hand 的结合分支）。
 	var out: Array[Vector2i] = []
 	# R286：手牌放置读引擎唯一口 `hand_place_allowed`（自己半场）—— 界面上
 	# 「能放哪」与引擎「实际放不放」同一个真相；R285 曾误放宽成只禁对方后排。
@@ -5357,6 +5359,9 @@ func _own_place_cells(card: CardData) -> Array[Vector2i]:
 			elif engine.fence_merge_target(c, card):
 				out.append(c)
 			elif card.has_affix(GameEngine.AFFIX_SWAP) \
+					and engine.state.board[c].owner == GameEngine.SIDE_SELF:
+				out.append(c)
+			elif card.id == GameEngine.BINDER_ID \
 					and engine.state.board[c].owner == GameEngine.SIDE_SELF:
 				out.append(c)
 	return out
@@ -6920,9 +6925,12 @@ func _on_board_click(cell: Vector2i) -> void:
 				_try_play_hand_card(i, cell)
 			return
 		if not card.is_spell():
-			# 带「交换」字段的卡（R101）可以落在己方已有单位上 → 顶回手；其余占用格拒绝
+			# 带「交换」字段的卡（R101）可以落在己方已有单位上 → 顶回手；R494 结合者
+			# （9221）也能落 → 破坏原单位并吸收；其余占用格拒绝
 			if p != null and not engine.fence_merge_target(cell, card) \
 					and not (card.has_affix(GameEngine.AFFIX_SWAP) \
+					and p.owner == GameEngine.SIDE_SELF) \
+					and not (card.id == GameEngine.BINDER_ID \
 					and p.owner == GameEngine.SIDE_SELF):
 				_say("那格已有 %s（已取消选中）" % p.card.card_name)
 				_clear_selection()
@@ -11419,6 +11427,31 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						_floaters.append({"pos": _cell_center(ch_cell) + Vector2(0, 30),
 								"sc": _grid_scroll, "text": "+%d 费" % ch_refund,
 								"col": TXT_POWER, "start": n + 120, "dur": 1600, "size": 15})
+		"binder_fuse":
+			# 结合者（9221，R494）：吞掉己方单位后吸收其卡面力量与生命。
+			# 数值交给卡面染色（与嵌合暴君 R301 同口径），飘字只写「结合」二字，避免与卡面数字打架。
+			var bf_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
+			var bf_atk: int = int(data.get("atk", 0))
+			var bf_hp: int = int(data.get("hp", 0))
+			if bf_cell.x >= 0:
+				sfx.play("attack")
+				_say("结合者：获得 +%d 攻 / +%d 血（卡面上的初始值）" % [bf_atk, bf_hp])
+				_bursts.append({"pos": _cell_center(bf_cell), "sc": _grid_scroll, "start": n,
+						"dur": 420, "col": COL_SPELL, "big": false})
+				_floaters.append({"pos": _cell_center(bf_cell), "sc": _grid_scroll,
+						"text": "结合", "col": Color("caa6ff"), "start": n, "dur": 1900, "size": 16})
+		"guardian_backfill":
+			# 阵地保卫者（9220，R494）：超负荷盟友回合末死亡 → 从牌堆/手牌/弃牌区拉一张补位。
+			var gb_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
+			var gb_from: String = str(data.get("from", ""))
+			if gb_cell.x >= 0:
+				sfx.play("place")
+				_say("阵地保卫者：从%s补位！" % gb_from)
+				_bursts.append({"pos": _cell_center(gb_cell), "sc": _grid_scroll, "start": n,
+						"dur": 420, "col": Color("7fd2ff"), "big": false})
+				_floaters.append({"pos": _cell_center(gb_cell), "sc": _grid_scroll,
+						"text": "阵地接管", "col": Color("7fd2ff"), "start": n,
+						"dur": 1900, "size": 16})
 		"recycler":
 			# 零件回收者（8046，R96）：接通的己方「素体以外」卡被销毁 → 回收其力量 + 手牌加素体。
 			# ⚠️ R221：被销毁的是「素体」→ 引擎根本不发这条 action（不触发即无动画）。

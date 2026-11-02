@@ -823,6 +823,16 @@ const EARTH_AURA_ATK:= 3
 const EARTH_AURA_REDUCE:= 1
 const PRESSURE_MINE_ID:= 9219
 
+# ── R494：阵地保卫者（9220） / 结合者（9221）──
+# 阵地保卫者（机械之心 · 史诗盟友）：2 费 3/6 程1 速1。己方带「超负荷」的盟友
+#   **因超负荷自身效果**被破坏时（唯一入口 `_overload_tick`），从抽牌库 → 手牌 → 弃牌区
+#   依次找一张「阵地保卫者」放到那张卡**原本的格子**（见 `_guardian_backfill`）。
+#   判据是 `id`（卡库仅 9220 是这张）：不认 trait —— trait 可以被「合体」「涂装」改出来。
+# 结合者（机械之心 · 史诗盟友）：2 费 1/11 程1 速1，带「超负荷」。可以放在**己方单位**
+#   的格子上：破坏那个单位，此卡获得它**卡面上的**力量与生命（见 `play_from_hand` 分支）。
+const GUARDIAN_ID:= 9220
+const BINDER_ID:= 9221
+
 # ── 流星雨（9083 技能，2026-10-01）──
 # X 费卡：施放瞬间 X = 该方剩余的全部费用，一次性全部消耗（类杀戮尖塔）。
 # 对随机敌人造成 METEOR_SHOWER_DMG 点伤害、重复 X 次，每次独立随机选目标；
@@ -4927,7 +4937,42 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 				_log("交换：%s 返回手卡，%s 占据 %s" % [occ.card.card_name, card.card_name, cell])
 			action.emit("swap", {"cell": cell, "old": occ.card, "new": card})
 
+	# R494 结合者（9221，机械之心史诗盟友 2 费 1/11 程1 速1，带「超负荷」）：
+	# 放在**己方单位**的格子上 → 那个单位被**破坏**，此卡获得它**卡面上的**力量与生命。
+	# * 「卡面上的」读**卡库原型**（`CardRepo.get_card(id)` 的 power / health）：
+	#   场上副本的 `card.health` 可能已被「升级」`_upgrade_unit` 抬过，拿它就变成
+	#   「含场上改造」，与卡面印的数字对不上（用户口径：初始 = 卡面上的）。
+	#   卡库取不到时退回副本字段，绝不静默变成 0。
+	# * 破坏走唯一口 `_destroy` → 亡语 / 零件回收者 / 送葬 / 爆炎鸭 / 压感地雷全部照常，
+	#   与「拆解」8049 同一条纪律（别自己 erase）。
+	# * 加成落 `upgrade_atk` / `upgrade_hp` + 抬 `card.health` / `p.health`（与 `_upgrade_unit`
+	#   同口径：离场由 `_card_leaving_field` 一并减回，弃牌区那张仍是 1/11）。
+	# * ⚠️ 改 `card.health` 前必须换**独立副本**：手牌里那张可能是卡库共享实例，
+	#   直接改会连卡库一起改（下一局抽到的结合者天生就是加血版）。
+	var binder_atk:= 0
+	var binder_hp:= 0
+	if card.id == BINDER_ID:
+		var bocc := state.unit_at(cell)
+		if bocc != null and bocc.owner == SIDE_SELF:
+			var bproto: CardData = CardRepo.load_json().get_card(bocc.card.id)
+			binder_atk = bproto.power if bproto != null else bocc.card.power
+			binder_hp = bproto.health if bproto != null else bocc.card.health
+			_log("结合者：与 %s 结合 —— 破坏它，吸收卡面上的 %d 攻 / %d 血" % [
+					bocc.card.card_name, binder_atk, binder_hp])
+			_destroy(cell)
+
 	var p:= state.place(card, cell, SIDE_SELF)
+	if binder_atk > 0 or binder_hp > 0:
+		p.card = CardData.from_dict(p.card.to_dict())
+		p.card.traits = (p.card.traits as Array).duplicate()
+		p.card.affixes = (p.card.affixes as Array).duplicate()
+		p.upgrade_atk += binder_atk
+		p.upgrade_hp += binder_hp
+		p.card.health += binder_hp
+		p.health += binder_hp
+		_log("结合者：结合完成 → %d 攻 / %d 血" % [p.effective_power(), p.health])
+		action.emit("binder_fuse", {"cell": cell, "card": p.card,
+			"atk": binder_atk, "hp": binder_hp, "side": SIDE_SELF})
 	state.hand.remove_at(hand_index)
 	if x_unit >= 0:
 		_owlbear_enter(p, x_unit)      # R467：X 费单位落地快照（力量 X / 生命 9X）
@@ -12779,6 +12824,66 @@ func _overload_tick(side: String) -> void :
 		action.emit("overload_die", {"cell": cell, "card": p.card,
 			"health": p.health, "side": side})
 		_destroy(cell)
+		# R494 阵地保卫者：**己方盟友**因超负荷死掉 → 从牌堆/手牌/弃牌区拉一张补位。
+		# 放在 `_destroy` 之后（格子已空出来）。两条例外：
+		#   ① 只认己方 —— 敌方没有这套体系；
+		#   ② 只认 `kind == "盟友"` —— 卡面写的是「己方带超负荷的**盟友**」，
+		#      城墙 8052 是带超负荷的**工事**，死了不回填（与「土元素光环只给盟友」同口径）。
+		if side == SIDE_SELF and p.card.kind == "盟友":
+			_guardian_backfill(cell)
+
+
+func _guardian_backfill(cell: Vector2i) -> void :
+	## 「阵地保卫者」（9220，R494，机械之心史诗盟友 2 费 3/6 程1 速1）：
+	## 己方带「超负荷」的盟友**因超负荷自身效果**被破坏时（唯一入口 = `_overload_tick`），
+	## 从**抽牌库 → 手牌 → 弃牌区**依次找一张「阵地保卫者」，放到那张卡**原本的位置**。
+	## * 搜索顺序按卡面写法（抽牌堆 / 手牌 / 弃牌区）；三处都没有 → 效果落空（不报错）。
+	## * 搬的是**那张实例**（附魔 / 永久成长 / 减费都跟着走）—— 与「交换」8056 的顶回手同口径。
+	##   ⚠️ 别在这里 `from_dict(to_dict())` 复制：弃牌区那份是真身，复制会让同一张卡变两张
+	##   （手牌里还有一张同名，于是能凭空多刷一张）。
+	## * 入场走 `state.place` + `_on_ally_entered` —— 土元素光环 / 隐藏能源 / 疾风之力
+	##   这些入场钩子与手牌打出**完全同一条路**，不另开分支。
+	## * ⚠️ 被拉回来的那张若自己也被挂了超负荷（超越极限 8053），下次超负荷死亡还会再拉一张；
+	##   卡面没写例外，按字面不挡 —— 每次都要真死一张，不存在「同名无限循环」。
+	## * ⚠️ 格子已被别的东西占了（同回合多张超负荷卡 + 亡语召唤）→ 不抢位，效果落空。
+	if state.board.has(cell):
+		return
+	var got: CardData = null
+	var where:= ""
+	for i in range(state.deck.size()):
+		if state.deck[i] != null and state.deck[i].id == GUARDIAN_ID:
+			got = state.deck[i]
+			state.deck.remove_at(i)
+			where = "抽牌堆"
+			break
+	if got == null:
+		for i in range(state.hand.size()):
+			if state.hand[i] != null and state.hand[i].id == GUARDIAN_ID:
+				got = state.hand[i]
+				state.hand.remove_at(i)
+				where = "手牌"
+				break
+	if got == null:
+		for i in range(state.discard.size()):
+			if state.discard[i] != null and state.discard[i].id == GUARDIAN_ID:
+				got = state.discard[i]
+				state.discard.remove_at(i)
+				where = "弃牌区"
+				break
+	if got == null:
+		_log("阵地保卫者：抽牌堆 / 手牌 / 弃牌区都没有这张卡，效果落空")
+		return
+	var p: Placement = state.place(got, cell, SIDE_SELF)
+	if p == null:
+		# 放置被拒（理论上不会：格子已空、己方半场）→ 原路塞回弃牌区，别把这张卡弄丢。
+		state.discard.append(got)
+		_log("阵地保卫者：%s 置入 %s 被拒 → 进弃牌区" % [got.card_name, cell])
+		return
+	_on_ally_entered(p, SIDE_SELF)
+	_log("阵地保卫者：从%s拉出一张补位 → %s（%d 攻 / %d 血）" % [
+			where, cell, p.effective_power(), p.health])
+	action.emit("guardian_backfill", {"cell": cell, "card": got,
+			"from": where, "side": SIDE_SELF})
 
 
 func _forge_tick() -> void :
