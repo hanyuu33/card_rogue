@@ -405,6 +405,16 @@ const AI_ROLE_GENERIC:= "generic"        # 其它
 const AI_QUEUE_USE_OPTIMIZED:= true   # R160：false 切回原版行动顺序
 
 const TAUNT_TRAIT:= "嘲讽"
+## R487：嘲讽的**唯一判据** —— 嘲讽既可能写在 `traits`，也可能只写在 `affixes`。
+## ⚠️ 只读 traits 会让「城墙 8052 / 钢铁卫士 8055 / 重甲战车 8058 / 代达罗斯 8060」整组失效：
+##    这四张的嘲讽**只在 affixes**里，而 `_taunt_targets` 只读 `card.traits` → 嘲讽一次没生效过（实测第 2 层 Boss）。
+##    `AFFIX_TAUNT` 之前声明了但全局没人用 —— 就是这个漏子。
+## ⚠️ 新增嘲讽卡 / 改嘲讽到底开判据时，只改这里；界面的检查也走它（`GameEngine.card_has_taunt`）。
+static func card_has_taunt(card: CardData) -> bool:
+	if card == null:
+		return false
+	return card.traits.has(TAUNT_TRAIT) or card.has_affix(AFFIX_TAUNT)
+
 ## R427（用户口径两次收口：先「不受技能伤害」→ 再提减半 → 最终定为**最多 3 点**）：
 ## 「技能免疫」这一档**整体取消** —— trait 名改「技能抗性」，
 ## 效果 = **受到的技能伤害最多 3 点**（封顶，不减半；用户 R427 二次口径）。
@@ -14956,7 +14966,7 @@ func _taunt_targets(cell: Vector2i, side: String, card: CardData) -> Array[Vecto
 	var out: Array[Vector2i] = []
 	for t in attack_targets(cell, side, card):
 		var q:= state.unit_at(t)
-		if q != null and q.card.traits.has(TAUNT_TRAIT):
+		if q != null and card_has_taunt(q.card):
 			out.append(t)
 	return out
 

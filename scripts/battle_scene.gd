@@ -8996,7 +8996,7 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 		# 替己方 HP 承伤的统一表现（森林守护 9037 / 大树守卫 9067 / 铁栅栏 9072）：
 		# 判定直接问引擎 absorbs_for_hp()，保证「同一机制 = 同一特效」，不再各写各的。
 		draw_arc(center, Vector2(w, h).length() * 0.5, 0, TAU, 30, COL_GUARD, 2.5)
-	if p.card.traits.has(GameEngine.TAUNT_TRAIT):
+	if GameEngine.card_has_taunt(p.card):
 		# 嘲讽（铁壁卫兵 1011 / 骷髅兵 1055）：脉冲橙环 + 「嘲讽」徽标，
 		# 让「射程内有它就必须打它」这件事在战场上一眼可见。
 		_draw_taunt_aura(center, w, h, 0)
@@ -9269,7 +9269,7 @@ func _board_has_actable() -> bool:
 func _board_has_taunt() -> bool:
 	## 棋盘上是否有带「嘲讽」的单位（有 → _process 需要逐帧重绘来驱动脉冲）。
 	for cell: Vector2i in engine.state.board:
-		if engine.state.board[cell].card.traits.has(GameEngine.TAUNT_TRAIT):
+		if GameEngine.card_has_taunt(engine.state.board[cell].card):
 			return true
 	return false
 
