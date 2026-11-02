@@ -619,6 +619,23 @@ const BTN_GREEN_LIT := Color("8fd694")      ## 顶部高光
 const BTN_PAPER := Color("e8e0cd")          ## 次按钮米白
 const BTN_PAPER_LINE := Color("cfc3a8")
 
+## R501：素材改从图生图里切（`art_src/2026-11-02_奖励页UI/process.py` 生成）。
+## 卡片 / 按钮走 StyleBoxTexture 九宫格，纹章 = 来源色盾形底 + 金边框架。
+const TEX_CARD := preload("res://assets/ui/reward_card.png")
+const TEX_BTN_GREEN := preload("res://assets/ui/reward_btn_green.png")
+const TEX_BTN_DISABLED := preload("res://assets/ui/reward_btn_disabled.png")
+const TEX_SHIELD := preload("res://assets/ui/reward_shield_frame.png")
+var _sb_card: StyleBoxTexture
+var _sb_btn: StyleBoxTexture
+var _sb_btn_dis: StyleBoxTexture
+
+
+func _tex_sb(tex: Texture2D, margin: float) -> StyleBoxTexture:
+	var sb := StyleBoxTexture.new()
+	sb.texture = tex
+	sb.set_texture_margin_all(margin)
+	return sb
+
 
 func _round_box(r: Rect2, radius: float, bg: Color, line: Color,
 		shadow := true) -> void:
@@ -637,73 +654,29 @@ func _round_box(r: Rect2, radius: float, bg: Color, line: Color,
 
 
 func _green_btn(r: Rect2, text: String, disabled := false, lit := false) -> void:
-	## 绿色主按钮：右上角斜切 + 顶部一条高光（参考图的识别特征）。
-	## 已处理 / 不可用 = 同一形状换灰，位置不跳，玩家不用重新找按钮。
-	var cut := minf(13.0, r.size.y * 0.36)
-	var pts := PackedVector2Array([
-		r.position,
-		Vector2(r.end.x - cut, r.position.y),
-		Vector2(r.end.x, r.position.y + cut),
-		r.end,
-		Vector2(r.position.x, r.end.y)])
-	var base := Color("c9c2b2") if disabled else BTN_GREEN
-	if lit and not disabled:
-		base = base.lightened(0.10)
-	# 压底一层深色，当做厚度（斜切按钮没有投影也能立起来）
-	var under := PackedVector2Array()
-	for p in pts:
-		under.append(p + Vector2(0, 2))
-	_root.draw_colored_polygon(under, Color(0.24, 0.19, 0.10, 0.28)
-			if not disabled else Color(0.24, 0.19, 0.10, 0.14))
-	_root.draw_colored_polygon(pts, base)
-	if not disabled:
-		# 顶部高光带（斜切边跟着一起收，别越出轮廓）
-		var hi := PackedVector2Array([
-			r.position + Vector2(2, 1.5),
-			Vector2(r.end.x - cut, r.position.y + 1.5),
-			Vector2(r.end.x - cut, r.position.y + 3.5),
-			r.position + Vector2(2, 3.5)])
-		_root.draw_colored_polygon(hi, BTN_GREEN_LIT)
-		# 外沿描一圈深绿，形状才收得住
-		pts.append(pts[0])
-		_root.draw_polyline(pts, BTN_GREEN_DARK, 1.0, true)
+	## R501：绿色斜切按钮贴图。**整张拉伸，不用九宫格** —— 行内按钮只有 36px 高，
+	## 九宫格上下边距加起来就超过它，角块被压成梯形（出图实测）；斜切角与高光
+	## 横跨整个角块，也没法靠缩小边距救。禁用 = 同形的去饱和版，位置不跳。
+	_root.draw_texture_rect(TEX_BTN_DISABLED if disabled else TEX_BTN_GREEN, r, false)
 	_root.draw_string(_font_bold,
 			r.position + Vector2(0, r.size.y / 2.0 + 6.0), text,
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_BODY,
-			Color("7d7666") if disabled else Color("ffffff"))
+			Color("5f5a4e") if disabled else Color("ffffff"))
 
 
-func _row_badge(center: Vector2, col: Color, mark: String) -> void:
-	## 来源纹章：盾形外框 + 来源色 + 一个类别字（道具/卡牌/删卡/核心）。
-	## 参考图这里是纹章图案，本项目没有对应素材，用类别字承担同样的「一眼分类」。
-	var w := 25.0
-	var h := 29.0
-	var pts := PackedVector2Array([
-		center + Vector2(-w, -h + 7),
-		center + Vector2(0, -h),
-		center + Vector2(w, -h + 7),
-		center + Vector2(w, 6),
-		center + Vector2(0, h),
-		center + Vector2(-w, 6)])
-	_root.draw_colored_polygon(pts, col.darkened(0.30))
-	var inner := PackedVector2Array()
-	for p in pts:
-		inner.append(center + (p - center) * 0.86)
-	_root.draw_colored_polygon(inner, col)
-	_root.draw_string(_font_bold, center + Vector2(-w, 8), mark,
-			HORIZONTAL_ALIGNMENT_CENTER, w * 2.0, UiTheme.FS_SUBHEAD,
-			Color("fff8e6"))
-
-
-func _entry_mark(e: Dictionary) -> String:
-	match str(e.get("kind", "")):
-		"relic":
-			return "具"
-		"deck_delete":
-			return "删"
-		"core":
-			return "核"
-	return "卡"
+func _row_badge(center: Vector2, col: Color) -> void:
+	## R501：来源纹章 = 来源色盾形底 + 金边框架贴图。
+	## 金边是素材里抠出来的（内部掏空），底色仍走 `_entry_color` 唯一口，
+	## 所以道具稀有度色、核心紫、删卡蓝这些区分全都保留。
+	var fw := 58.0
+	var fh := fw * 190.0 / 146.0
+	var fr := Rect2(center - Vector2(fw * 0.5, fh * 0.5), Vector2(fw, fh))
+	var pts := PackedVector2Array()
+	for p in [Vector2(0.13, 0.18), Vector2(0.5, 0.10), Vector2(0.87, 0.18),
+			Vector2(0.84, 0.60), Vector2(0.5, 0.92), Vector2(0.16, 0.60)]:
+		pts.append(fr.position + Vector2(p.x * fw, p.y * fh))
+	_root.draw_colored_polygon(pts, col.darkened(0.22))
+	_root.draw_texture_rect(TEX_SHIELD, fr, false)
 
 
 func _draw_list() -> void:
@@ -789,12 +762,12 @@ func _draw_row(i: int, rr: Rect2) -> void:
 	var e: Dictionary = RunState.pending_rewards[i]
 	var settled := _settled(e)
 	var hovered := i == _hover_row
-	# R500：白色圆角卡片（带一点投影），替掉原来的平涂矩形 + 来源色条
-	_round_box(rr, 12.0,
-			ROW_CARD_BG_HOT if hovered else ROW_CARD_BG, ROW_CARD_LINE)
+	# R501：卡片底换贴图（R500 是程序圆角矩形，质感不够）
+	if _sb_card == null:
+		_sb_card = _tex_sb(TEX_CARD, 30.0)
+	_root.draw_style_box(_sb_card, rr)
 	# 左侧来源纹章（色仍由 `_entry_color` 给，档位色唯一口不变）
-	_row_badge(rr.position + Vector2(46.0, ROW_H * 0.5), _entry_color(e),
-			_entry_mark(e))
+	_row_badge(rr.position + Vector2(46.0, ROW_H * 0.5), _entry_color(e))
 	# 名称 + 标签：文字右边界让开右侧按钮，别压上去
 	var chip := Rect2(rr.end.x - 124.0, rr.position.y + (ROW_H - 36.0) * 0.5,
 			108.0, 36.0)
