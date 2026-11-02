@@ -11,6 +11,8 @@ class_name UiAssets
 ##                    battle_bg.png（全局）—— 三级回退，见 battle_bg_name()
 ##   卡面纸底       card_paper.png
 ##   稀有度边框     frame_<0..5>.png  下标同 CardData.RARITY_COLORS
+##   卡图区边框     art_frame_<归属>.png  归属 = forest / shadow / mech / common / enemy
+##                  （R498：卡图窗上的窄边框，按卡牌归属分色）
 ##   稀有度缎带     ribbon_<0..5>.png 下标同上（R170：稀有度的**主通道**，挂在卡面右上角）
 ##   面板羊皮纸     panel_parchment.png（R170：白底面板的统一底，平铺自适应任意大小）
 ##   羊皮卷面板底   scroll_parchment.png（R191：奖励面板的卷轴底，九宫格自适应、无边框）
@@ -75,6 +77,15 @@ static func card_frame(rarity: int) -> Texture2D:
 	## 稀有度边框（R113）。下标与 `CardData.RARITY_COLORS` 对齐：
 	##   0 普通 / 1 稀有 / 2 史诗 / 3 初始 / 4 怪物 / 5 事件 / 6 诅咒（R223）。
 	return get_tex("frame_%d" % clampi(rarity, 0, 6))
+
+
+static func art_frame(kind: String) -> Texture2D:
+	## 卡图区窄边框（R498）。`kind` = 卡牌归属，见 `CardFace.art_frame_kind()`：
+	##   forest 森林精魄 / shadow 暗影刺客 / mech 机械之心 / common 公用 / enemy 敌人。
+	## 源图 **200×160**（= 卡图窗宽高比 1.25），代码里**整张拉伸**贴合卡图区（不是九宫格）。
+	## 中心全透明、最外 1px 不透明 —— 直接盖在卡图之上即可，既不遮图也不在纸底上露缝。
+	## 缺图返回 null，`CardFace` 回退成同色细线框（不空白、不报错）。
+	return get_tex("art_frame_" + kind)
 
 
 static func rarity_ribbon(rarity: int) -> Texture2D:

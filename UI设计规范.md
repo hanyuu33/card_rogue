@@ -168,6 +168,7 @@ UiTheme.<颜色|字号|间距令牌>            # 其余
 |---|---|---|---|---|
 | 卡面插图 | `assets/pics/<卡id>.png` | 348 × 420 | 0.829 | 空（当前即如此，覆盖率 8%） |
 | 卡面纸底 v2 | `assets/ui/card_paper.png` | 640 × 772 | 0.829 | 纯白 `SURFACE` |
+| 卡图区窄边框 ×5（R498） | `assets/ui/art_frame_<归属>.png`<br>归属 = forest / shadow / mech / common / enemy | 200 × 160 | 1.25 | 同色细线框 |
 | ~~稀有度边框 ×6~~（R153 弃用，卡面边框改程序描边+小旗） | `assets/ui/frame_0..5.png`（留库待清理） | 348 × 420 | 0.829 | 稀有度色描边 |
 | 卡面数值徽章图标 ×5 | `assets/ui/icon_<键>.png`<br>键 = cost/power/range/health/speed | 32 × 32 | 1:1 | 该数值的语义色圆盘 + 数字 |
 | 房间图标 ×8 | `assets/ui/map_<类型>.png` | 64 × 64 | 1:1 | 格子中央的汉字（起/战/英/息/事/箱/大/?） |

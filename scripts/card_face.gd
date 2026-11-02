@@ -562,9 +562,6 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 	if tex != null:
 		# 覆盖式铺满（cover）：卡图出血到卡边、不留白（R165 开放式卡图）。
 		canvas.draw_texture_rect_region(tex, box, cover_region(tex.get_size(), box), Color.WHITE)
-		# R478：未确认卡图打角标（AI 生成、待人工确认）。
-		if is_pending_art(card.id):
-			_draw_pending_mark(canvas, box, k)
 	else:
 		# 无图回退（R165）：卡种/职业色的**淡彩竖向渐变横幅**代替「粗暴纯色块」——
 		# 自然、按卡分色（职业优先，中立回落卡种）。
@@ -574,6 +571,58 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 		glyph.a = 0.40
 		_draw_center(canvas, font_bold, int(minf(box.size.x, box.size.y) * 0.9),
 				card.card_name.substr(0, 1), box.get_center(), glyph)
+	# R498：卡图区窄边框（按归属分色）—— 卡图之后、待确认角标之前（角标要压在最上层）。
+	# 有图无图都画：无图回退的渐变横幅同样需要一圈边框，否则那一档卡看起来「没做完」。
+	_draw_art_frame(canvas, card, box, k)
+	# R478：未确认卡图打角标（AI 生成、待人工确认）。
+	if tex != null and is_pending_art(card.id):
+		_draw_pending_mark(canvas, box, k)
+
+
+static func art_frame_kind(card: CardData) -> String:
+	## R498：卡图区窄边框的归属键（素材槽 `art_frame_<kind>.png` 的后缀）。
+	## 判定顺序写死：**敌人 → 三个职业 → 公用**。
+	## ⚠️ 敌人优先：敌人卡也有 `class`（森林精魄 / 机械之心…），一律红框才读得出来。
+	## ⚠️ 用 `card.card_class`（卡面原始职业），**不跟** `PlayerClass.skin_class()` ——
+	##    公用初始卡要永远保持白框，跟着当前职业变色的话「公用」这一档就永远看不见了。
+	if card == null:
+		return ""
+	if card.is_enemy_card():
+		return "enemy"
+	match card.card_class:
+		"森林精魄":
+			return "forest"
+		"暗影刺客":
+			return "shadow"
+		"机械之心":
+			return "mech"
+	return "common"
+
+
+static func _draw_art_frame(canvas: CanvasItem, card: CardData, box: Rect2, k: float) -> void:
+	## 卡图区的窄边框（R498）：素材整张**拉伸**贴合卡图区（200×160 → box，比例 1.25 恒定，
+	## 所以不会变形，也因此**不需要九宫格**）。
+	## 缺图回退 = 同色细线框：宽度按 `k` 缩放，视觉厚度接近素材的主环（8/160 ≈ 5%）。
+	var kind := art_frame_kind(card)
+	if kind == "":
+		return
+	var tex: Texture2D = UiAssets.art_frame(kind)
+	if tex != null:
+		canvas.draw_texture_rect(tex, box, false)
+		return
+	var col := Color("6b7280")
+	match kind:
+		"forest":
+			col = Color("2c5233")
+		"shadow":
+			col = Color("14121c")
+		"mech":
+			col = Color("7a5c33")
+		"common":
+			col = Color("f6f9fc")
+		"enemy":
+			col = Color("8a1c1c")
+	canvas.draw_rect(box.grow(-maxf(0.5, 1.0 * k)), col, false, maxf(1.0, 2.0 * k))
 
 
 static func _draw_rarity_ribbon(canvas: CanvasItem, card: CardData, rect: Rect2,

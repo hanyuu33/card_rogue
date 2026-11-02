@@ -32994,6 +32994,50 @@ func _init() -> void:
 	check_src(r484_ge.contains("func card_may_enter_board"),
 			"R485 源码：类型判据收在引擎唯一口")
 
+	# ==== R498 卡图区窄边框（按归属分色）====
+	# 判据只读 `card_class` 与 `is_enemy_card()`，所以这里构造 5 张卡就够，不用查库。
+	var r498_forest := _card(8003, "树人", "盟友", 3, 3, 8)
+	r498_forest.card_class = "森林精魄"
+	var r498_shadow := _card(8005, "幽影", "盟友", 3, 2, 5)
+	r498_shadow.card_class = "暗影刺客"
+	var r498_mech := _card(8025, "素体", "盟友", 0, 1, 3)
+	r498_mech.card_class = "机械之心"
+	var r498_common := _card(8001, "木栅栏", "工事", 1, 0, 5)
+	r498_common.card_class = ""
+	var r498_enemy := _card(1011, "铁壁卫兵", "盟友", 3, 2, 9)
+	r498_enemy.card_class = "森林精魄"
+	r498_enemy.group = "enemy"
+	check(CardFace.art_frame_kind(r498_forest) == "forest",
+			"R498 边框：森林精魄 → forest（藤蔓与绿叶）")
+	check(CardFace.art_frame_kind(r498_shadow) == "shadow",
+			"R498 边框：暗影刺客 → shadow（黑影）")
+	check(CardFace.art_frame_kind(r498_mech) == "mech",
+			"R498 边框：机械之心 → mech（齿轮）")
+	check(CardFace.art_frame_kind(r498_common) == "common",
+			"R498 边框：没有职业的公用卡 → common（白框）")
+	check(CardFace.art_frame_kind(r498_enemy) == "enemy",
+			"R498 边框：敌人优先于职业 —— 敌人卡也写着「森林精魄」，取到的仍是红框")
+	# 公用卡的白框**不能**跟着当前职业走：跟了的话「公用」这一档永远看不见
+	var r498_prev_cls := RunState.player_class
+	RunState.player_class = PlayerClass.MECH
+	check(CardFace.art_frame_kind(r498_common) == "common",
+			"R498 边框：公用卡不看当前职业（切成 %s 仍是白框）" % RunState.player_class)
+	RunState.player_class = r498_prev_cls
+	check(CardFace.art_frame_kind(null) == "",
+			"R498 边框：空卡返回空键（不画边框，也不报错）")
+	# 五张素材到位（缺图会回退成同色细线框，但素材本身必须在）
+	for r498_k: String in ["forest", "shadow", "mech", "common", "enemy"]:
+		check(FileAccess.file_exists("res://assets/ui/art_frame_%s.png" % r498_k),
+				"R498 素材：art_frame_%s.png 存在" % r498_k)
+	# 源码锁：边框必须画在待确认角标**之前**（角标要压在最上层）
+	var r498_cf := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+	check_src(r498_cf.find("_draw_art_frame(canvas, card, box, k)") > 0
+			and r498_cf.find("_draw_art_frame(canvas, card, box, k)")
+					< r498_cf.find("_draw_pending_mark(canvas, box, k)"),
+			"R498 源码：卡图边框在卡图之后、待确认角标之前")
+	check_src(r498_cf.contains("if card.is_enemy_card():\n\t\treturn \"enemy\""),
+			"R498 源码：敌人优先判在归属键的最前面")
+
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
 	RunState.pending_rewards = []
