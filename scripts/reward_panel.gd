@@ -665,6 +665,54 @@ func _paper_panel(r: Rect2) -> void:
 	## R502：参考稿的主框不是烧焦卷轴，而是奶油纸面 + 细金边 + 内白边。
 	_round_box(r, 26.0, REWARD_PAPER, REWARD_GOLD_LINE, true)
 	_round_box(r.grow(-6.0), 21.0, Color(1, 1, 1, 0), REWARD_INNER_LINE, false)
+	# R503：纸面加一层**极淡的纹样**（细金斜纹 + 四角淡花叶），让底子不显得死板，
+	# 但透明度压到 0.05~0.12，绝不抢卡片和文字的主体。仅装饰，无信息。
+	_draw_paper_motif(r)
+
+
+func _draw_paper_motif(r: Rect2) -> void:
+	## R503：面板纸面上的淡纹样。① 斜向细线阵列（模拟纸纤维 / 织物），
+	## ② 四角淡花叶（呼应宫廷花边但不压主体）。全部用金线色低透明度。
+	var ink := REWARD_GOLD_LINE
+	var inner := r.grow(-30.0)
+	# ① 斜向细纹：左上→右下，间距 26px，只画在面板内侧，避开边缘金边。
+	var step := 26.0
+	var a := ink
+	a = Color(ink.r, ink.g, ink.b, 0.09)
+	var diag := inner.size.x + inner.size.y
+	var n: int = int(diag / step) + 1
+	for i in n:
+		var off := i * step
+		var p0 := inner.position + Vector2(off, 0)
+		var p1 := inner.position + Vector2(0, off)
+		# 只保留落在 inner 内的线段（斜线穿面板对角）
+		if off <= inner.size.y:
+			_root.draw_line(p0, inner.position + Vector2(0, off), a, 1.0, true)
+		if off <= inner.size.x and off > 0:
+			_root.draw_line(inner.position + Vector2(off, 0),
+					inner.position + Vector2(off, inner.size.y), a, 1.0, true)
+	# ② 四角淡花叶：小号，只做角落点缀。
+	var b := Color(ink.r, ink.g, ink.b, 0.20)
+	for cx: float in [inner.position.x + 46.0, inner.end.x - 46.0]:
+		for cy: float in [inner.position.y + 40.0, inner.end.y - 40.0]:
+			var dx := 1.0 if cx < r.get_center().x else -1.0
+			var dy := 1.0 if cy < r.get_center().y else -1.0
+			_draw_corner_sprig(Vector2(cx, cy), dx, dy, b)
+
+
+func _draw_corner_sprig(c: Vector2, dx: float, dy: float, col: Color) -> void:
+	## R503：角落的单支淡花叶（三片小叶 + 一短茎），尺寸小、透明度低，只作点缀。
+	var stem := PackedVector2Array([
+		c, c + Vector2(dx * 10, dy * -6), c + Vector2(dx * 20, dy * -10)])
+	_root.draw_polyline(stem, col, 1.0, true)
+	for j in 3:
+		var p := c + Vector2(dx * (6.0 + j * 6.0), dy * (-3.0 - j * 2.0))
+		var leaf := PackedVector2Array([
+			p + Vector2(-dx * 2, 0),
+			p + Vector2(dx * 3, dy * -7),
+			p + Vector2(dx * 7, dy * -3),
+			p + Vector2(dx * 3, dy * 1)])
+		_root.draw_colored_polygon(leaf, col)
 
 
 func _draw_ornament(center: Vector2, flip := 1.0) -> void:
