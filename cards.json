@@ -6194,6 +6194,31 @@
       "target_mode": "none",
       "color": "橙",
       "image": ""
+    },
+    {
+      "id": 9222,
+      "name": "忒修斯奇械",
+      "kind": "盟友",
+      "cost": 2,
+      "power": 2,
+      "health": 8,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "忒修斯奇械"
+      ],
+      "affixes": [
+        "超负荷",
+        "次元"
+      ],
+      "effect_text": "**超负荷**。每次此卡的生命降到 0 或更低，将一张「聚能炮击」加入手卡。字段「次元」：离场即消失，不进弃牌区。",
+      "target_mode": "none",
+      "color": "橙",
+      "image": ""
     }
   ]
 }

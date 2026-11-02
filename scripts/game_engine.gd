@@ -836,6 +836,15 @@ const PRESSURE_MINE_ID:= 9219
 const GUARDIAN_ID:= 9220
 const BINDER_ID:= 9221
 
+# ── R496：忒修斯奇械（9222）──
+# 机械之心 · 稀有盟友 2 费 2/8 程1 速1，带「超负荷」+「次元」。
+#   「每次此卡的生命降到 0 或更低」→ 将一张「聚能炮击」9145 加入手卡。
+#   ⚠️ 判据是**跨越**（扣血前 > 0 且扣血后 <= 0），不是「处于 0 以下」——
+#      超负荷让它负血留在场上，若按「处于」判，之后每挨一下都会再送一张。
+#   ⚠️ 挂钩点必须两个：`_hit_unit` 与 `_op_deal_damage`（单目标技能自己扣血）。
+#   「次元」= 离场即消失（`_destroy` 认字段 → 进消耗区，不进弃牌区），无需另写。
+const THESEUS_ID:= 9222
+
 # ── 流星雨（9083 技能，2026-10-01）──
 # X 费卡：施放瞬间 X = 该方剩余的全部费用，一次性全部消耗（类杀戮尖塔）。
 # 对随机敌人造成 METEOR_SHOWER_DMG 点伤害、重复 X 次，每次独立随机选目标；
@@ -11911,8 +11920,10 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 			if gen_cell != Vector2i(-1, -1):
 				_reap(gen_cell)
 			return 0
+	var hp_before_theseus:= p.health   # R496 忒修斯奇械：先记扣血前的值判「跨越」
 	var dmg:= _unit_damage_taken(p, amount, "attack" if is_attack else "spell")
 	p.health -= dmg
+	_theseus_on_blood(p, hp_before_theseus)
 	# R356：扣血之后立刻判阶段 —— 启示者掉到 200 / 100 就在**这一下**里转阶段，
 	# 不等回合计。别的单位 boss_phase == 0，这里只是一个布尔判断。
 	if p.boss_phase > 0:
@@ -12895,6 +12906,34 @@ func _guardian_backfill(cell: Vector2i, got: CardData, where: String) -> void :
 			"from": where, "side": SIDE_SELF})
 
 
+
+func _theseus_on_blood(p: Placement, hp_before: int) -> void :
+	## 「忒修斯奇械」（9222，R496）：「每次这张卡的生命降到 0 或更低」→
+	## 将一张「聚能炮击」9145 加入手卡。
+	## 判据 = **跨越**：本次扣血前 > 0、扣血后 <= 0 —— 「降到」是跨越动作，不是「处于」。
+	##   已经是负数再挨打不重复触发；被治疗回正后再次跌破，算新的一次。
+	## ⚠️ 两个扣血口都要调：`_hit_unit`（普攻 / 多目标技能 / 效果 / 反伤）与
+	##   `_op_deal_damage`（**单目标技能自己扣血**，不走 `_hit_unit`）。
+	##   `Placement.health` 另有一处直接赋值（母舰 9208 自损），是敌方 Boss 专属，与此卡无关。
+	## 加卡走 `_grant_to_hand()` 唯一口：手牌满 → 进弃牌区 + `hand_burn` 演出（R299 规则）。
+	## 卡带「次元」→ 被破坏时由 `_destroy` 判字段直接进消耗区，不进弃牌区。
+	if p == null or p.card == null or p.card.id != THESEUS_ID:
+		return
+	if hp_before <= 0 or p.health > 0:
+		return
+	var repo := CardRepo.load_json()
+	var proto: CardData = repo.get_card(ENERGY_CANNON_ID) if repo != null else null
+	if proto == null:
+		_log("忒修斯奇械：卡库缺少「聚能炮击」(9145)，未能加入手卡")
+		return
+	var c := CardData.from_dict(proto.to_dict())
+	c.traits = (c.traits as Array).duplicate()
+	var landed := _grant_to_hand(c, "忒修斯奇械")
+	_log("忒修斯奇械：生命降到 %d → %s「聚能炮击」（手牌 %d 张）" % [
+			p.health, "加入手卡" if landed else "手牌已满 → 进弃牌区",
+			state.hand.size()])
+
+
 func _forge_tick() -> void :
 	## 赫菲斯托斯（9135，R150）的「锻造」：**我方回合结束**时清点 —— 这一个回合它还是
 	## 没亲手击杀过敌人 → 空转 +1；满 FORGE_PERIOD → 力量 +1、攻击距离 +1，计数清零。
@@ -13174,9 +13213,11 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 		# R356：启示者阶段 3 的「接通代受」对**单目标技能**同样成立 ——
 		# 这条伤害不走 `_hit_unit`（自己扣血），所以要在减伤之前单独调一次。
 		amount = _revelator_split(p, amount, "技能")
+		var hp_before_theseus:= p.health   # R496 忒修斯奇械：单目标技能这条也要判
 		var amount2:= _unit_damage_taken(p, _apply_rapid_marks(p,
 				_apply_scout_aura(p, amount)), "spell")
 		p.health -= amount2
+		_theseus_on_blood(p, hp_before_theseus)
 		if p.boss_phase > 0:
 			_revelator_check_phase(p)
 		# R490：单目标技能（龙息 / 弹跳飞刀这类不走 _hit_unit）同样按落地段数记一笔。
