@@ -55,6 +55,9 @@ func _ready() -> void:
 	cont_btn.text = "继续游戏"
 	$Buttons.add_child(cont_btn)
 	cont_btn.pressed.connect(_on_continue)
+	# R486b：先探一次盘 —— 「来自更新版本的档」会让按钮消失，玩家没点过任何东西，
+	# 不给说明就成了「进度凭空不见」。探测只读不写（见 `RunSave.probe_newer_save`）。
+	RunSave.probe_newer_save()
 	cont_btn.visible = RunSave.has_save()
 	_cont_btn = cont_btn
 	# 顺序固定：开始 / 继续 / 图鉴 / 记录 / 故事 / 设置 / 退出
@@ -166,8 +169,27 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	draw_string(_font, Vector2(14, size.y - 16), "Godot 4.3 自包含副本",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
-	# R359：读档失败的提示（只在失败后 3 秒内出现）—— 浅底面板上 outline = -1
-	if _toast != "" and _toast_t > 0.0:
+	# R486b：**常驻**说明（不是 6 秒 toast）。这类档文件还在、只是本版本读不懂，
+	# 玩家需要知道「进度没丢、升级游戏能接着打」；只把按钮藏掉 = 进度凭空蒸发。
+	# ⚠️ 必须带自己的底板：第一版直接写在 size.y-76，正好糊在「退出」按钮上（出图当场看见）。
+	# 底板落在按钮列下沿与底部版本号之间的空白带，左右两个角标（左下 / 右下）都不碰。
+	if RunSave.protects_save():
+		var note := RunSave.last_error
+		if note == "":
+			note = "存档来自更新的版本，本版本不能使用"
+		note += "（文件已保留，升级后可继续）"
+		var fs := UiTheme.FS_LABEL
+		var nw := _font.get_string_size(note, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var panel := Rect2(Vector2((size.x - nw) * 0.5 - 18.0, size.y - 58.0),
+				Vector2(nw + 36.0, 30.0))
+		draw_rect(panel, Color(1.0, 1.0, 1.0, 0.84))
+		draw_rect(panel, Color(0.69, 0.23, 0.23, 0.5), false, 1.0)
+		draw_string(_font, panel.position + Vector2(18.0, 21.0), note,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("b03a3a"))
+	# R359：读档失败的提示（只在失败后 6 秒内出现）—— 浅底面板上 outline = -1
+	# R486b：这条和上面的常驻说明抢同一块地方，而「来自更新版本」时按钮是藏起来的、
+	# 根本点不出 toast —— 两者同时为真的情况下让常驻说明优先。
+	if _toast != "" and _toast_t > 0.0 and not RunSave.protects_save():
 		var tw := _font.get_string_size(_toast, HORIZONTAL_ALIGNMENT_LEFT, -1,
 				UiTheme.FS_LABEL).x
 		draw_string(_font, Vector2((size.x - tw) * 0.5, size.y - 52), _toast,
@@ -214,12 +236,19 @@ func _on_continue() -> void:
 	if not RunSave.load_run():
 		# R359：**不能静默留在标题** —— 玩家点了没反应 = 以为按钮坏了。
 		# R377：不再 `clear_save()` —— `load_run()` 已经把出问题的档**隔离**成
-		# `run_save.sav.bad`（那是唯一能事后查证的现场，删了就永远不知道当时档里是什么），
-		# 这里只负责把原因说清楚。
-		push_warning("RunSave：继续游戏读档失败，问题档已隔离为 run_save.sav.bad")
+		# `run_save.sav.bad`（那是唯一能事后查证的现场，删了就永远不知道当时档里是什么）。
+		# R486：文案不再是「读取失败」四个字 —— **为什么不能用**由 `RunSave.last_error`
+		# 统一给出（版本太新 / 太旧 / 卡组里有已下架的卡 / 地图坏了），三个读档入口同一句。
+		push_warning("RunSave：继续游戏读档失败 —— " + RunSave.last_error)
 		_refresh_continue()
 		_toast = "存档读取失败（已备份为 run_save.sav.bad）"
-		_toast_t = 4.0
+		if RunSave.last_error != "":
+			_toast = RunSave.last_error
+			# 「来自更新版本」的档**没有**被隔离（要留给新版游戏），别骗玩家说备份了
+			if RunSave.last_error_kind != "version_new":
+				_toast += "（原件已备份为 .bad）"
+		# 4 秒太短：玩家常在这几秒里还在找按钮，回过神来字已经没了。
+		_toast_t = 6.0
 		return
 	RunRecord.resume()   # 这一局接着打 → 保证有开始时间（对战记录收尾时才写得出来）
 	# R323：存档若停在**一场没打完的战斗**里 → 直接回那一场；

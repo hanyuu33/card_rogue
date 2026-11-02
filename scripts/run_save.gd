@@ -32,6 +32,34 @@ const TEST_TRACE_PATH := "user://save_trace_test.log"
 static var TRACE_FILE := TRACE_PATH
 const TRACE_KEEP := 200
 
+## R486：**存档内容版本**（与上面的 `FORMAT` 分工不同，别混）：
+##   * `FORMAT` = 外层包装能不能解开（root 里的 `__runsave__`）。不匹配 → `_readable()` 直接否。
+##   * `CONTENT_VERSION` = 包装里**内容口径**的版本：字段结构 / 卡池 / 摆位规则变了就 +1。
+##     包装能解开、但内容可能已经没法继续 —— 这就得靠版本号 + 体检来判断。
+## ⚠️ 这个数字**必须真的写进存档**（`snapshot()` 的 `data_ver`）。没有它，两台机器之间
+##    同步来的档就永远分不清「旧档」还是「新档」，只能靠猜；而猜错的代价是玩家的进度。
+const CONTENT_VERSION := 1
+## 低于它的档一律不能读（改结构时把它抬到「还认的老结构」那一档）。
+## 0 = 目前还认所有 R486 之前（没有 data_ver 字段）的档。
+const MIN_CONTENT_VERSION := 0
+
+## R486：最近一次读档失败的原因 —— **给界面看的整句话**，空 = 上一次没失败。
+## 为什么要有它：`load_run()` 只返回 bool，标题页 / 地图兜底 / AI 桥接就只能各自编文案，
+## 于是「为什么不能继续」永远说不清（玩家看到的是「读取失败」四个字）。
+## 现在三个入口读同一份 `last_error`，提示天然同步。
+static var last_error := ""
+## 失败类别（界面据此决定要不要说「已备份」）：
+##   "missing"      盘上没档
+##   "corrupt"      解不开 / 半截档
+##   "finished"     这一局已经收尾
+##   "version_new"  存档比本作新（**不隔离、不删**，换回新版游戏还能接着打）
+##   "version_old"  存档太旧 / 里面有已下架的卡或道具
+##   "content"      结构不合理（没卡组 / 没地图 / 层数越界 / 停在图上不存在的格子）
+static var last_error_kind := ""
+## 「来自更新版本」那份档的指纹（长度:修改时间）。`has_save()` 靠它把按钮藏起来，
+## 但**文件一个字节都不动** —— 档被同步 / 重写（指纹变了）就自动解封，不用重启游戏。
+static var _blocked_stamp := ""
+
 
 static func set_test_mode() -> void:
 	## R378（用户二次上报「你测试的时候可能没有问题，可是我玩的时候就是会有」的真正原因）：
@@ -51,7 +79,46 @@ static func has_save() -> bool:
 	# （关窗口 / 切后台 / 被杀 / 文件被杀软短暂占用），盘上只剩一份完整的 .tmp ——
 	# 它内容就是新档，直接提升回来。不然按钮白白消失，玩家以为「档没了」。
 	_recover_tmp()
-	return FileAccess.file_exists(SAVE_PATH)
+	if not FileAccess.file_exists(SAVE_PATH):
+		return false
+	# R486：判过「来自更新版本」的那份档**留着但不给按** —— 它多半是从另一台机器
+	# 同步过来的新进度，删掉等于把玩家的未来进度抹了。指纹变了（档被重写 / 换回来）
+	# 自动解封，所以切回新版游戏、或同步覆盖之后都不用重启。
+	if protects_save():
+		return false
+	return true
+
+
+static func protects_save() -> bool:
+	## R486：盘上那份档我们**读不懂、但故意不删**（判过「来自更新版本」）—— 真值表示
+	## 「继续游戏」不该亮、写新档前必须先把它留成 `.bad`。指纹变了（档被同步 / 重写）
+	## 就自动为假，不用重启游戏。
+	return _blocked_stamp != "" and _stamp_of(SAVE_PATH) == _blocked_stamp
+
+
+static func probe_newer_save() -> void:
+	## R486：**开机先问一句**，不等玩家点「继续游戏」。
+	## 场景（正是双机同步的日常）：另一台机器存的那份档 `data_ver` 比这台高 →
+	## `has_save()` 会返回假、「继续游戏」按钮直接消失；可玩家一次都没点过按钮，
+	## 屏幕上也没有任何说明 —— 表现就是「我的进度凭空没了，游戏还让我重开」。
+	## 这里只在**标题页加载时**跑一次：读盘 → 体检 → 若判成 `version_new` 就记下
+	## 原因与指纹（`protects_save()` 随之为真，标题页据此画常驻说明）。
+	## ⚠️ 只读：**不改文件、不写 RunState**；隔离 / 清洗仍然只发生在 `load_run()` 里。
+	if protects_save():
+		return          # 同一进程里已经判过（点过继续游戏 / 已探过）
+	if not FileAccess.file_exists(SAVE_PATH):
+		return
+	if not _readable(SAVE_PATH):
+		return          # 损坏档留给 `load_run()` 说；这里只认「版本比本作新」
+	var root: Variant = str_to_var(FileAccess.get_file_as_string(SAVE_PATH))
+	var d: Variant = (root as Dictionary).get("d", {})
+	var v: Dictionary = validate(d if d is Dictionary else {})
+	if str(v.get("kind", "")) != "version_new":
+		return
+	last_error_kind = "version_new"
+	last_error = str(v.get("msg", "存档来自更新的版本，本版本不能使用"))
+	_blocked_stamp = _stamp_of(SAVE_PATH)
+	_trace("PROBE-BLOCK(version_new) 标题页先发现：%s" % last_error)
 
 
 # ------------------------------------------------------------ 写入
@@ -64,6 +131,9 @@ static func snapshot() -> Dictionary:
 	## 全部从这条链派生，续上这两个数 = 续上整条链。
 	var rng: RandomNumberGenerator = RunState.run_rng
 	return {
+		# R486：这份档是**哪个内容口径**写的。缺了它（R486 之前的档）= 0，照样读，
+		# 但一旦哪天结构变了，`validate()` 就没有依据把「旧档」挡在门外。
+		"data_ver": CONTENT_VERSION,
 		"max_hp": RunState.max_hp,
 		"hp": RunState.hp,
 		"deck_ids": RunState.deck_ids,
@@ -107,6 +177,8 @@ static func snapshot() -> Dictionary:
 		"basin_charge": RunState.basin_charge,   # R311 不锈钢盆：剩余点数（跨战斗累计）
 		"lucky7_turns": RunState.lucky7_turns,   # R314 lucky 7：跨战斗回合计数
 		"pipe_ready": RunState.pipe_ready,   # R446 烟斗：还亮着没有
+		"core_lost": RunState.core_lost,      # R458 核心：累计失去的生命值
+		"core_armed": RunState.core_armed,     # R458 核心：够 15 点没有
 		"match_charge": RunState.match_charge,   # R342 火柴：剩余刷新次数（3 → 0）
 		"bandage_pending": RunState.bandage_pending,  # R339：止血绷带的本层累计（原先漏存 → 续档归零）
 		"boss_beaten": RunState.boss_beaten,          # R339：本层 Boss 已打（一层只开一次）
@@ -115,6 +187,10 @@ static func snapshot() -> Dictionary:
 		"map_strokes": RunState.map_strokes,            # R339：玩家在地图上画的线（原先漏存）
 		"map_flags": RunState.map_flags,                # R339：玩家在地图上插的旗
 		"pending_event": RunState.pending_event,
+		# R473：延迟发卡的挂单（武术大师「2 场后给」）—— 跨战斗存活，必须存
+		"delayed_cards": RunState.delayed_cards,
+		# R473：圣餐结算过的那一间休息处（漏存 → 续档重进同一间还能再回一次 50%）
+		"sacrament_node": RunState.sacrament_node,
 		"reward_type": RunState.reward_type,
 		"reward_context": RunState.reward_context,
 		"difficulty": RunState.difficulty,
@@ -165,6 +241,16 @@ static func save_snapshot(d: Dictionary) -> bool:
 		push_warning("RunSave：打不开 user://，存档没替换成功")
 		_trace("SAVE-FAIL 打不开 user://")
 		return false
+	# R486：盘上那份我们**读不懂**（更新版本的档 / 损坏档）→ 先留一份 `.bad` 再写新的。
+	# 不能只靠下面的 `.prev` 流程：`.prev` 在最后会被删掉，等于把玩家的旧进度抹了；
+	# 而「读不懂」的档恰恰是最需要留着的那种（换回新版游戏 / 事后人工捞回来）。
+	if FileAccess.file_exists(SAVE_PATH) and _looks_unreadable(SAVE_PATH):
+		var bad_path := SAVE_PATH + ".bad"
+		if FileAccess.file_exists(bad_path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(bad_path))
+		DirAccess.rename_absolute(ProjectSettings.globalize_path(SAVE_PATH),
+				ProjectSettings.globalize_path(bad_path))
+		_trace("SAVE-PRESERVE 盘上旧档读不懂，先存成 .bad 再写新档")
 	if FileAccess.file_exists(prev_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(prev_path))
 	if FileAccess.file_exists(SAVE_PATH):
@@ -195,13 +281,19 @@ static func save_snapshot(d: Dictionary) -> bool:
 
 static func load_run() -> bool:
 	## 从本地存档恢复 run（写入 RunState 静态字段）。成功返回 true。
+	## R486：失败时**一定**留下 `last_error` / `last_error_kind`（给界面说清原因），
+	## 并且按类别决定「隔离」还是「原样留着」—— 见 `validate()` 的注释。
+	last_error = ""
+	last_error_kind = ""
+	_blocked_stamp = ""
 	_recover_tmp()
 	if not FileAccess.file_exists(SAVE_PATH):
+		_fail("missing", "没有可继续的存档", false)
 		_trace("LOAD-FAIL 盘上没有档")
 		return false
 	if not _readable(SAVE_PATH):
 		push_warning("RunSave：存档格式不兼容或已损坏")
-		_quarantine("格式损坏")
+		_fail("corrupt", "存档已损坏，不能使用", true, "格式损坏")
 		return false
 	var txt := FileAccess.get_file_as_string(SAVE_PATH)
 	var root: Variant = str_to_var(txt)
@@ -215,7 +307,24 @@ static func load_run() -> bool:
 	# 玩家那份档就真的没了，连事后人工捞回来的机会都没有。
 	if bool(d.get("run_finished", false)):
 		push_warning("RunSave：存档是已收尾的一局，隔离不继续")
-		_quarantine("已收尾")
+		_fail("finished", "这一局已经结束，不能继续", true, "已收尾")
+		return false
+	# R486：**体检**。`_readable()` 只证明「包能解开」，解出来的东西可以荒谬到根本没法继续
+	# （卡组全是已下架的卡 / 地图是空的 / 停在第九层）。以前这种档会被 `apply()` 硬读进来，
+	# 然后在战斗里炸，或者表现成「卡组凭空少牌」—— 玩家完全不知道是档的问题。
+	var v := validate(d)
+	if not bool(v.get("ok", false)):
+		var kind := str(v.get("kind", "content"))
+		var msg := str(v.get("msg", "存档内容不合理，不能使用"))
+		push_warning("RunSave：存档体检不通过（%s）—— %s" % [kind, msg])
+		# 来自更新版本的档**不隔离**：它可能是另一台机器同步过来的新进度，
+		# 删掉 / 改名等于替玩家做了「这份进度不要了」的决定。
+		var keep_file := kind == "version_new"
+		_fail(kind, msg, not keep_file,
+				"体检不通过：%s" % kind)
+		if keep_file:
+			_blocked_stamp = _stamp_of(SAVE_PATH)
+			_trace("LOAD-BLOCK(%s) 存档留着但不给继续：%s" % [kind, msg])
 		return false
 	var ok := apply(d)
 	_trace("LOAD %s deck=%d map=%d layer=%d" % ["ok" if ok else "FAIL",
@@ -310,6 +419,18 @@ static func apply(d: Dictionary) -> bool:
 	RunState.shop_states = ss if ss is Dictionary else {}
 	RunState.shop_revisit_id = int(d.get("shop_revisit_id", -1))
 	RunState.relic_choice = _int_array(d.get("relic_choice", []))
+	# R473：延迟发卡挂单。JSON 读回来的数值是 float，这里逐个收成 int；
+	# 结构不对的条目直接丢（宁可少挂一张，也不要留一条永远减不到 0 的幽灵单）。
+	var dc_raw: Variant = d.get("delayed_cards", [])
+	RunState.delayed_cards = []
+	RunState.sacrament_node = int(d.get("sacrament_node", -1))
+	if dc_raw is Array:
+		for e: Variant in dc_raw:
+			if e is Dictionary and (e as Dictionary).has("id"):
+				RunState.delayed_cards.append({
+					"id": int(e["id"]),
+					"need": int(e.get("need", 0)),
+					"elite": bool(e.get("elite", false))})
 	RunState.pending_relic = int(d.get("pending_relic", -1))
 	RunState.pending_relic_drop = int(d.get("pending_relic_drop", -1))
 	RunState.pending_deck_edit = str(d.get("pending_deck_edit", ""))
@@ -321,6 +442,9 @@ static func apply(d: Dictionary) -> bool:
 	# R314 lucky 7：老存档没有这个字段 → 按 0（下次开始我方回合起重新累计）
 	RunState.lucky7_turns = int(d.get("lucky7_turns", 0))
 	RunState.pipe_ready = bool(d.get("pipe_ready", false))   # R446
+	# R458 核心：老档没有这两个字段 → 默认 0 / false（等于「还没受过伤」）
+	RunState.core_lost = int(d.get("core_lost", 0))
+	RunState.core_armed = bool(d.get("core_armed", false))
 	# R342 火柴：存档里没有这个字段（旧档）→ 若身上有火柴就按满 3 次补齐，别让旧档带着 0 次。
 	var saved_match := int(d.get("match_charge", -1))
 	RunState.match_charge = (RunState.MATCH_CHARGES if saved_match < 0
@@ -347,6 +471,11 @@ static func apply(d: Dictionary) -> bool:
 	# 战斗场景的 `_load_entry_level()` 就是读 `pending_level` 开局的。
 	var rb: Variant = d.get("resume_battle", {})
 	RunState.resume_battle = rb if rb is Dictionary else {}
+	# R477（用户口径）：继续游戏**一律回到这一场战斗开打之前**。老档里可能还挂着
+	# `battle`（当年「恢复到第 N 回合」的快照）—— 读进来的第一件事就是把它摘掉，
+	# 只留 node / level，让战斗场景从第 1 回合重新开局。
+	if RunState.resume_battle.has("battle"):
+		RunState.resume_battle.erase("battle")
 	if not RunState.resume_battle.is_empty():
 		RunState.pending_level = RunState.resume_battle.get("level", {})
 		RunState.pending_node = RunState.resume_battle.get("node", {})
@@ -359,6 +488,157 @@ static func apply(d: Dictionary) -> bool:
 	return true
 
 
+# ------------------------------------------------------------ R486 存档体检
+
+static func validate(d: Dictionary) -> Dictionary:
+	## R486：读档前的**合理性体检（唯一口）**。返回 `{ok, kind, msg}`。
+	## 只判「这份档还能不能安全继续」，**不修数据、不写 RunState** —— 通过之后才 `apply()`
+	## （apply 里那些「老档缺字段就补默认值」的兼容逻辑照旧，两者分工不重叠）。
+	##
+	## 判据分三档，越前面的越硬：
+	##   ① **版本**：`data_ver` 比本作新 → 读不懂（`version_new`，档留着）；
+	##      比 `MIN_CONTENT_VERSION` 旧 → 太老读不了（`version_old`）。
+	##   ② **已下架内容**：卡组 / 待领奖励 / 延迟发卡里引用了**当前卡库没有的卡**，
+	##      或道具栏里引用了当前道具库没有的道具 → 这就是「旧版本的档」（`version_old`）。
+	##      ⚠️ 这条最容易漏：卡被删 / 改了 id 之后，老档读进来会得到一个 `null` 卡，
+	##      战斗里第一张牌就炸；而它看起来只是「我的卡组少了一张」。
+	##   ③ **结构**：没有卡组 / 没有地图 / 格子缺字段 / 层数越界 / 停在图上不存在的格子。
+	if d.is_empty():
+		return _verdict(false, "content", "存档内容是空的，不能使用")
+	var ver := int(d.get("data_ver", 0))
+	if ver > CONTENT_VERSION:
+		return _verdict(false, "version_new",
+				"存档来自更新的版本（存档 v%d / 本作 v%d），本版本不能使用该存档" % [ver, CONTENT_VERSION])
+	if ver < MIN_CONTENT_VERSION:
+		return _verdict(false, "version_old",
+				"存档版本过旧（存档 v%d / 本作 v%d），不能使用" % [ver, CONTENT_VERSION])
+	# ② 卡组
+	var deck: Variant = d.get("deck_ids", [])
+	if not (deck is Array) or (deck as Array).is_empty():
+		return _verdict(false, "content", "存档里没有卡组，不能使用")
+	var gone := _missing_card_ids(deck as Array)
+	if not gone.is_empty():
+		return _verdict(false, "version_old",
+				"存档里有 %d 张已下架的卡（%s），属于旧版本，不能使用" % [
+						gone.size(), _ids_text(gone)])
+	# ② 待领奖励 / 延迟发卡的候选（这里引用了不存在的卡 → 奖励页一点就炸）
+	var pend: Array = []
+	var pr: Variant = d.get("pending_rewards", [])
+	if pr is Array:
+		for e: Variant in pr:
+			if e is Dictionary and (e as Dictionary).get("candidates", null) is Array:
+				pend.append_array((e as Dictionary)["candidates"])
+	var dc: Variant = d.get("delayed_cards", [])
+	if dc is Array:
+		for e2: Variant in dc:
+			if e2 is Dictionary and (e2 as Dictionary).has("id"):
+				pend.append((e2 as Dictionary)["id"])
+	var gone_p := _missing_card_ids(pend)
+	if not gone_p.is_empty():
+		return _verdict(false, "version_old",
+				"存档的待领奖励里有 %d 张已下架的卡（%s），属于旧版本，不能使用" % [
+						gone_p.size(), _ids_text(gone_p)])
+	# ② 道具
+	var rel: Variant = d.get("relics", [])
+	var gone_r := _missing_relic_ids(rel if rel is Array else [])
+	if not gone_r.is_empty():
+		return _verdict(false, "version_old",
+				"存档里有 %d 件已下架的道具（%s），属于旧版本，不能使用" % [
+						gone_r.size(), _ids_text(gone_r)])
+	# ③ 结构
+	if int(d.get("max_hp", 0)) <= 0:
+		return _verdict(false, "content", "存档的血量上限异常（%d），不能使用" % int(d.get("max_hp", 0)))
+	var cells: Variant = d.get("map_cells", [])
+	if not (cells is Array) or (cells as Array).is_empty():
+		return _verdict(false, "content", "存档里没有地图，不能使用")
+	var ids := {}
+	for mc: Variant in cells:
+		if not (mc is Dictionary) or not (mc as Dictionary).has("id") \
+				or not (mc as Dictionary).has("type"):
+			return _verdict(false, "content", "存档的地图格子结构损坏，不能使用")
+		ids[int((mc as Dictionary)["id"])] = true
+	var layer := int(d.get("current_layer", 0))
+	if not GameLayers.exists(layer):
+		return _verdict(false, "content", "存档停在不存在的第 %d 层，不能使用" % layer)
+	# current_node_id = -1 是合法的「还没落在地图格上」（开局那一刻就是这样）
+	var node := int(d.get("current_node_id", -1))
+	if node >= 0 and not ids.has(node):
+		return _verdict(false, "content", "存档停在地图上不存在的格子（%d），不能使用" % node)
+	return _verdict(true, "", "")
+
+
+static func _verdict(ok: bool, kind: String, msg: String) -> Dictionary:
+	return {"ok": ok, "kind": kind, "msg": msg}
+
+
+static func _missing_card_ids(ids: Array) -> Array[int]:
+	## 这些 id 里，**当前卡库没有**的有哪些（去重、保序）。空数组 = 全都在。
+	var out: Array[int] = []
+	if ids.is_empty():
+		return out
+	var repo := CardRepo.load_json()
+	var seen := {}
+	for v: Variant in ids:
+		var cid := int(v)
+		if cid <= 0 or seen.has(cid):
+			continue
+		seen[cid] = true
+		if repo.get_card(cid) == null:
+			out.append(cid)
+	return out
+
+
+static func _missing_relic_ids(ids: Array) -> Array[int]:
+	var out: Array[int] = []
+	if ids.is_empty():
+		return out
+	var repo := RelicRepo.load_json()
+	var seen := {}
+	for v: Variant in ids:
+		var rid := int(v)
+		if rid <= 0 or seen.has(rid):
+			continue
+		seen[rid] = true
+		if repo.get_relic(rid) == null:
+			out.append(rid)
+	return out
+
+
+static func _ids_text(ids: Array[int]) -> String:
+	## 提示里最多列 5 个 id（别让一句话长到把界面顶出去）。
+	var parts: PackedStringArray = PackedStringArray()
+	for i in mini(ids.size(), 5):
+		parts.append(str(ids[i]))
+	if ids.size() > 5:
+		parts.append("…")
+	return "、".join(parts)
+
+
+static func _fail(kind: String, msg: String, quarantine := false, reason := "") -> void:
+	## R486：一次失败的统一出口 —— 记原因（给界面）+ 按需隔离（留证据）。
+	last_error_kind = kind
+	last_error = msg
+	if quarantine:
+		_quarantine(reason if reason != "" else kind)
+
+
+static func _looks_unreadable(path: String) -> bool:
+	## 「这份档我们自己读不懂」—— 要么包都解不开，要么是判过「来自更新版本」的那一份。
+	## ⚠️ 只用于**写档前**决定要不要先留 `.bad`，不要拿它当读档判据（读档走 `validate()`）。
+	if not _readable(path):
+		return true
+	return protects_save()
+
+
+static func _stamp_of(path: String) -> String:
+	## 文件指纹（长度 + 修改时间）。用来认「还是不是刚才那份档」——
+	## 存档被同步 / 重写之后指纹就变了，`has_save()` 自动解封。
+	if not FileAccess.file_exists(path):
+		return ""
+	return "%d:%d" % [FileAccess.get_file_as_string(path).length(),
+			FileAccess.get_modified_time(path)]
+
+
 # ------------------------------------------------------------ 删除
 
 static func clear_save(src := "") -> void:
@@ -366,6 +646,11 @@ static func clear_save(src := "") -> void:
 	## 「谁把玩家的档删了」这个问题光靠读代码猜不出来，必须留证据。
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	# R486：删档 = 连「这份档被判不可用」的记忆一起清掉，否则下一次同步来的档
+	# 可能刚好指纹相同（同长度同秒）而被继续挡住 —— 概率低，但没理由留这个坑。
+	_blocked_stamp = ""
+	last_error = ""
+	last_error_kind = ""
 	if src != "":
 		_trace("CLEAR by %s" % src)
 	# 顺手把伴侣文件也收干净，别留下让 `_recover_tmp()` 误判的孤儿

@@ -37,8 +37,9 @@ LAYER_MAP = {'GameLayers.LAYER_DEFAULT': '第一层', 'GameLayers.LAYER_TWO': '�
 RARITY_NAMES = {0: '普通', 1: '稀有', 2: '史诗', 3: '初始', 4: '怪物', 5: '事件'}
 
 levels = {}
-for ch in re.split(r'\n(?=static func _)', src):
-    fm = re.match(r'static func _(\w+)\(\) -> Dictionary:', ch)
+for ch in re.split(r'\n(?=static func _?\w+\(\) -> Dictionary:)', src):
+    # R467：事件专属关卡用 `static func cave_level()`（无下划线前缀）也要能抽到。
+    fm = re.match(r'static func _?(\w+)\(\) -> Dictionary:', ch)
     if not fm:
         continue
     key = fm.group(1)
@@ -69,8 +70,10 @@ for ch in re.split(r'\n(?=static func _)', src):
                     # R366：编成元组第 8 项 = 本关专属加成（目前只有 range_bonus）
                     'bonus': int(mm.group(9)) if mm.group(9) else 0,
                 })
+    # R467：事件专属关卡用 `cave_level()`（无下划线前缀），函数名要照原样写
+    _fn = ('_' if ch.startswith('static func _') else '') + key
     levels[key] = {
-        'func': '_' + key, 'name': g('name'), 'key': g('key'),
+        'func': _fn, 'name': g('name'), 'key': g('key'),
         'tier': TIER_MAP.get((g('tier') or '').strip(), 0),
         'layer': LAYER_MAP.get((g('layer') or '').strip(), '第一层'),
         'deck_key': g('deck_key'), 'player_hp': g('player_hp'),
@@ -101,6 +104,16 @@ for lv in builtin:
     for u in lv['units']:
         appear.setdefault(u['id'], {})
         appear[u['id']][lv['name']] = appear[u['id']].get(lv['name'], 0) + 1
+
+# R467：事件专属关卡（不进 builtin_levels）的敌人也在「登场关卡」列里点名。
+_EVENT_LEVELS = {'cave_level': '洞穴（事件专属）'}
+for _ek, _elabel in _EVENT_LEVELS.items():
+    _elv = levels.get(_ek)
+    if not _elv:
+        continue
+    for _eu in _elv['units']:
+        appear.setdefault(_eu['id'], {})
+        appear[_eu['id']][_elabel] = appear[_eu['id']].get(_elabel, 0) + 1
 
 out = io.StringIO()
 w = out.write
@@ -309,6 +322,29 @@ if rv:
             w('| %d | %s | %d | %d | %d | %d | (%d,%d) |\n'
               % (u['id'], u['name'], u['power'], u['health'], u['range'], u['speed'], u['row'], u['col']))
         w('\n')
+
+# 事件专属关卡（不进 builtin_levels —— 由事件直接塞 `pending_level`）
+_sec4_n = len([l1, l2, l3]) + (2 if rv else 1)
+for _ck, _clabel in _EVENT_LEVELS.items():
+    _clv = levels.get(_ck)
+    if not _clv:
+        continue
+    w('### 4.%d 事件专属关卡（刻意不在 builtin_levels）\n\n' % _sec4_n)
+    w('#### %s · %s\n\n' % (_clv['name'], TIER_NAMES[_clv['tier']]))
+    w('- **key**：`%s`　|　**函数**：`GameLevels.%s()`　|　**%s**\n'
+      % (_clv['key'], _clv['func'], _clv['layer']))
+    w('- **生命**：我方 %s / 敌方 %s　|　**卡组**：`%s`\n'
+      % (_clv['player_hp'], _clv['enemy_hp'], _clv['deck_key']))
+    w('- ⚠️ 不进 `builtin_levels` 的理由：它**只从事件进入**（洞穴 → 探索），'
+      '进 builtin 会污染关卡总数 / `all_keys()` / 地图关卡池 的口径。\n')
+    if _clv['units']:
+        w('\n| 卡 id | 名称 | 攻 | 血 | 程 | 速 | 位置(行,列) |\n|---|---|---|---|---|---|---|\n')
+        for _cu in _clv['units']:
+            w('| %d | %s | %d | %d | %d | %d | (%d,%d) |\n'
+              % (_cu['id'], _cu['name'], _cu['power'], _cu['health'],
+                 _cu['range'], _cu['speed'], _cu['row'], _cu['col']))
+    w('\n')
+    _sec4_n += 1
 
 # ---------- 7. 敌方卡图鉴 ----------
 w('## 五、敌方卡图鉴\n\n')

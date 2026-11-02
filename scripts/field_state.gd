@@ -13,8 +13,9 @@ const OPPONENT_ROWS := 3
 const ENERGY_PER_TURN := 5
 const HAND_DRAW_PER_TURN := 5
 const HAND_LIMIT := 10           # 手牌上限：达到后**抽到的牌直接进弃牌区**（R299，不再留在牌库）
-const HASTE_TRAIT := "哈气"      # 效果卡「哈气」（9024）：所属阵营单位每回合行动 value 次
-const HASTE_START_TURN := 3     # 哈气前置：该方第 3 个回合起才生效（前两回合仍是每回合行动 1 次）
+const HASTE_TRAIT := "哈气"      # 效果卡「哈气」（9024）：该方第 3 / 5 / 7 回合各给**一个**单位永久双动
+const HASTE_TRIGGER_TURNS: Array[int] = [3, 5, 7]   # 哈气只在**该方**第 3、5、7 个回合开始时触发
+const HASTE_ACTIONS := 2         # 哈气授予的每回合行动轮数
 const VANISH_TRAIT := "离场消失"  # 鸭蛋 9022 / 魔像 9080：离场即消失，不进弃牌区、不再洗回牌库
 const KEEP_HAND_TRAIT := "留手"   # 陨石术 9077：回合结束时留在手卡里，不弃
 # 「自我复制」（R82：野兔 9032）：这张卡是**场上/手牌里的临时衍生物**，
@@ -69,6 +70,9 @@ var opp_next_energy := 0       # 同上，敌方（对称保留）
 var self_energy_spent := 0     # 本回合**已花掉**的费用（暗影之刃 9111 的 X；回合开始清零）
 var opp_energy_spent := 0      # 同上，敌方（对称保留）
 var board := {}  # Vector2i -> Placement
+## R464：本场战斗已经**发放**到第几号入场序号（见 `Placement.entry_seq`）。
+## 只增不减 —— 单位死掉再召唤回来算「新入场」，序号往后排。
+var entry_counter: int = 0
 # 场地效果（R74）：Vector2i -> CardData。**与board 完全分开**——场地不是单位，
 # 不能被攻击、不挡路、也不参与碰撞；它只是「这个格子上挂着一个一次性效果」。
 # **每个格子最多 1 个**（这正是「每个格子只能存在一个效果」的数据保证：
@@ -92,8 +96,14 @@ var max_hp_self := 20
 var max_hp_opponent := 20
 var opp_hand_count := 5
 var opp_deck_count := 0
-var self_turn_no := 0          # 我方已开始的回合数（哈气前置判定；引擎在回合开始时同步）
+var self_turn_no := 0          # 我方已开始的回合数（哈气触发回合判定；引擎在回合开始时同步）
 var opp_turn_no := 0           # 对方已开始的回合数（同上）
+## 哈气（9024，R479）：该方**最近一次成功挑人**的回合号，`haste_pick` 靠它做幂等。
+## 引擎 `_haste_pick_tick` 每回合只调一次，但续档 / 演示 / 将来新增的调用点一旦
+## 在同一回合重复结算，就会白送第二个双动 —— 一个触发回合本该只给**一个**单位。
+## 0 = 还没挑过（回合号从 1 起算，不会误判）。
+var haste_pick_turn_self := 0
+var haste_pick_turn_opp := 0
 var card_discount := {}         # CardData -> int：实例级减费（智慧喷涌抽到的那一张效果卡费用 -N）
 var turn_free := {}             # CardData -> true：本回合费用为 0（使魔之夜的乌鸦；回合结束清空）
 ## CardData -> true：**在手牌里期间**费用为 0（无限装甲 8038 供能的改造牌）。
@@ -124,6 +134,12 @@ var self_cannon_plays := 0
 var self_card_changes := 0
 var turn_card_discount := {}    # CardData -> int：本回合这张**手卡**费用 -N（魔像术 9079；回合结束清空）
 var turn_card_raise := 0         # 本回合**手卡全体**费用 +N（契约签订者 8024；回合结束清空）
+## R458 咒缚（6058）：本场战斗「第一张卡免费」的额度还没用掉（用掉即 false）。
+## 与 `turn_*` 那批**不同**：它跨回合保留（整场只有一次），因此不在回合结束清空。
+var curse_free := false
+## R458 咒缚（6058）：CardData -> int。被免费打出的那张卡在本场战斗里的**涨价**
+##（再次上手才吃；战斗结束随 FieldState 一起丢）。
+var curse_raise := {}
 var turn_keep: Array[CardData] = []  # 回转 9089 抽到的牌：本回合结束不弃（discard_hand 跳过；回合结束清空）
 ## 夜行（9155，R232）：本回合**我方所有卡费用为 0**（cost_of 最前判定；回合结束清空）。
 var turn_all_free := false
@@ -323,21 +339,45 @@ func clear_field(cell: Vector2i) -> CardData:
 	return old
 
 
-func extra_actions(side: String) -> int:
-	## 该阵营效果区里「哈气」提供的**每回合行动次数**（多张取最大，不叠加）。
-	## 0 = 没有哈气 / 还没到生效回合（正常每回合行动一次）。传 "self" / "opponent"。
-	## 哈气有前置：该方第 HASTE_START_TURN 个回合起才生效（前两回合照常单动）。
-	## 判定点只有这一处 —— place / reset_units / apply_extra_actions 全部经它。
-	var zone: Array[CardData] = effects if side == "self" else enemy_effects
-	var best := 0
-	for c: CardData in zone:
-		if c.traits.has(HASTE_TRAIT):
-			best = maxi(best, c.value)
-	if best <= 0:
-		return 0
+func haste_turn(side: String) -> bool:
+	## R479：哈气（9024）是不是**该方本回合**的触发回合（第 3 / 5 / 7 个回合）。
+	## 与旧口径的区别：效果卡不再整方生效，只在这三个回合各挑**一个**单位（见 `haste_pick`）。
 	var turn_no := self_turn_no if side == "self" else opp_turn_no
-	if turn_no < HASTE_START_TURN:
-		return 0
+	return HASTE_TRIGGER_TURNS.has(turn_no)
+
+
+func haste_pick(side: String) -> Placement:
+	## R479 哈气（9024）的选人**唯一口**：该方第 3 / 5 / 7 个回合开始时，从**现存**
+	## （还在场上、血 > 0）的该方单位里挑「当前生命最高、且还没有双动」的那一个，
+	## **永久**赋予双动（`Placement.haste_double`；单位离场字段随之消失 = 只在本场有效）。
+	## 返回被选中的单位；没有候选（空场 / 全都已经双动）→ null，这一次机会落空。
+	## ⚠️ 「还没有双动」用 `unit_actions` 判，**不只看** `card.actions` —— 卡面自带双动的
+	##    队长、被哈气选过的、被赫利俄斯光环覆盖的都算「已有」，选了也只是白给一次机会。
+	## ⚠️ 生命相同按 `entry_seq` 取**先上场**的那个：同一局面重放结果必须一致
+	##    （回放日志 / AI 试玩都吃这条确定性）。
+	var turn_no := self_turn_no if side == "self" else opp_turn_no
+	var picked_turn := haste_pick_turn_self if side == "self" else haste_pick_turn_opp
+	if picked_turn == turn_no:
+		return null                     # 这个回合已经挑过了（幂等，一个回合只给一个）
+	var best: Placement = null
+	for p: Placement in board.values():
+		if p.owner != side or p.health <= 0:
+			continue
+		if unit_actions(p, side) >= HASTE_ACTIONS:
+			continue
+		if best != null:
+			if p.health < best.health:
+				continue
+			if p.health == best.health and p.entry_seq > best.entry_seq:
+				continue
+		best = p
+	if best == null:
+		return null
+	best.haste_double = true
+	if side == "self":
+		haste_pick_turn_self = turn_no
+	else:
+		haste_pick_turn_opp = turn_no
 	return best
 
 
@@ -367,12 +407,14 @@ func has_sun_forge(side: String) -> bool:
 func unit_actions(p: Placement, side: String) -> int:
 	## 单位本回合的**行动轮数**（唯一口）。四个来源取最大：
 	##   ① 卡面自带 `actions`（疾行，如鸭子队长）；
-	##   ② 效果区「哈气」9024 给的 `extra_actions`（整方生效）；
+	##   ② 「哈气」9024 选中过它（`haste_double`）—— R479 起是**单点永久**，不再是整方光环；
 	##   ③ 太阳熔炉：本方场上有赫利俄斯 → 量产型俄倪厄（9131）额外行动一次；
 	##   ④ 行动力成长（R161 赫尔墨斯 9140）：每过 3 回合额外 +1 行动轮数。
 	## ⚠️ 所有写 `acts_left` 的地方（place / reset_units / apply_extra_actions）
 	##   都必须走这个口 —— 漏一处就会出现「上场那回合不动、下回合才双动」的错位。
-	var n := maxi(p.card.actions, extra_actions(side))
+	var n := p.card.actions
+	if p.haste_double:
+		n = maxi(n, HASTE_ACTIONS)
 	n = maxi(n, p.action_growth_extra)
 	# R371：启示者阶段 2 起「每回合可行动两次」—— 与卡面 `actions` / 哈气 同一条
 	# 「取最大」通道，于是 place / reset_units / apply_extra_actions 三处自动一致。
@@ -384,21 +426,76 @@ func unit_actions(p: Placement, side: String) -> int:
 
 
 func apply_extra_actions(side: String) -> void:
-	## 场上有新单位落地 / 效果区发生变动后，给该阵营**已经在场**的单位补上额外行动轮数。
-	## 原本只有「哈气」一个来源（关卡开局是先摆单位、再启用效果卡，所以必须补这一次）；
-	## R135 起来源多了「场上的赫利俄斯」—— 它的上场顺序**不由效果区决定**，
-	## 所以判据统一收敛到 `unit_actions`，不再只看效果区（那条 `extra <= 0 → return`
-	## 的短路也必须去掉，否则「没有哈气」的关卡整段被跳过）。
+	## 场上有新单位落地 / 效果区发生变动后，给该阵营**已经在场**的单位按 `unit_actions`
+	## 补行动轮数。来源：哈气（效果区）、场上的赫利俄斯（太阳熔炉）、R462 起任何
+	## 「回合中途才落地」的加成（工事 / 盟友上场后立刻重算一遍）。
+	## ⚠️ 一律走 `grant_actions` 的差额补发，**不能**再写 `acts_left = maxi(...)`：
+	##    那样「已经打完两轮的疾行单位」在每张效果卡打出时都会被重新灌满。
 	for p: Placement in board.values():
 		if p.owner == side:
-			p.acts_left = maxi(p.acts_left, unit_actions(p, side))
+			grant_actions(p, unit_actions(p, side))
+
+
+func grant_actions(p: Placement, want: int) -> bool:
+	## R462：给场上单位**补行动轮数**的唯一口（疾行 / 哈气 / 赫利俄斯 / 狂暴 9026 都走它）。
+	## 语义（用户口径）：
+	##   * `want <= acts_total` → 这回合已经发过这么多轮了，**一个也不补**（不是「补满」）；
+	##   * 多出来的部分按差额补：还在行动中 → 直接加进 `acts_left`；
+	##   * **已经把手上几轮走完**（横置）→ 撤掉横置，差额变成「新的一轮」——
+	##     这就是「攻击后才被赋予疾行、本回合还能再动一次」的那条路。
+	## ⚠️ 横置 ≠ 行动用尽：冰封 / 眩晕 / 沉睡的横置是「不能行动」，绝不能借补行动解开。
+	##    这三条与 `reset_units` 的判据同源，改一处必须改另一处。
+	if p == null:
+		return false
+	if want <= p.acts_total:
+		return false
+	var add := want - p.acts_total
+	p.acts_total = want
+	if p.frozen or p.stun_left > 0 or p.sleep_left > 0:
+		p.acts_left = want       # 记上额度，但这回合照样动不了（下回合 reset_units 重发）
+		return false
+	if p.tapped:
+		p.tapped = false
+		p.moved = false
+		p.did_move = false
+		p.acts_left = add
+		return true
+	p.acts_left = mini(p.acts_left + add, want)
+	return true
 
 
 func place(card: CardData, cell: Vector2i, owner := "self",
 		summon := false) -> Placement:
+	# ── R485：**成为场上实体的最后一道闸门** ──────────────────────────────
+	# 前端已经有四条出牌路径各自分流，但只要有一条漏了，卡就会在这里变成
+	# 0 血的「效果」「技能」实体（用户实报：场上多出一张「智慧喷涌」，
+	# 还带着未横置的就绪光环）。所以这里**不信任调用方**，按两条唯一判据重判：
+	#   1. 类型：技能 / 效果 / 场地 / 诅咒 这四种**没有场上实体**
+	#      （`GameEngine.card_may_enter_board` 按排除法判）—— 效果去效果区、
+	#      场地走 `set_field`、技能结算完进弃牌区、诅咒用 `use_curse`。
+	#   2. 落点：单位不能站在**对方后排**（`forbidden_row_for`）—— 那一行是
+	#      「直击 HP」的目标行，站上去等于把对方的血条当落脚点（R285 历史缺陷，
+	#      用户这次的原话：「任何形式都不应该到达敌方 HP」）。
+	#      ⚠️ 这里刻意**不**复用 `unit_slot_allowed`（它还判越界）：关卡摆位与
+	#      测试会用列 3/4 这类越界格当「远处的格子」参与距离计算，越界格在界面上
+	#      根本点不到（`_cell_at` 自己就卡边界），拦它只会误伤、不会多拦一条真路径。
+	# 拒绝时**不写 board**、返回 null：宁可这一张不出场，也不留一个看不出错的空壳。
+	if not GameEngine.card_may_enter_board(card):
+		push_error("FieldState.place 拒绝：%s（kind=%s）不是场上单位" % [
+				card.card_name if card != null else "<null>",
+				card.kind if card != null else "?"])
+		return null
+	if cell.x == GameEngine.forbidden_row_for(owner):
+		push_error("FieldState.place 拒绝：%s 不能站在 %s（owner=%s 的 HP 行）" % [
+				card.card_name, cell, owner])
+		return null
 	var p := Placement.new()
 	p.card = card
 	p.owner = owner
+	# R464：入场序号 —— **唯一发放口就在这里**（关卡摆位 / 手牌打出 / 召唤 / 亡语召唤
+	# 全走 place）。放在 place 里而不是各调用点，才不会漏掉某条路径。
+	entry_counter += 1
+	p.entry_seq = entry_counter
 	p.health = card.health
 	# R209：把**随身携带**的改造层数接到场上。手牌 / 牌库里的改造（系统升级 / 批量改造 /
 	# 批量传输 / 自主升级 / 生产订单 / 回收 / 返修）烤进的就是这张卡，层数记在
@@ -437,12 +534,15 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 			p.upgrade_speed += spd_bonus
 			p.card.attack_range += rng_bonus
 			p.card.move_speed += spd_bonus
-	# 哈气：已到生效回合且效果区有哈气时，上场即可行动 extra 次（与卡自带的 actions 取大者）。
+	# 行动轮数：R479 起「哈气」是**单点永久**标记（`haste_double`），被选中的单位带着它上场、
+	# 之后每回合都双动 —— 所以这里读 `unit_actions` 就够，不必再判回合数。
+	# 反过来说：刚上场的单位**不会**凭空吃到哈气（选人只在回合开始那一刻），这条没变。
 	# ⚠️ R122：`summon = true`（**被召唤**出来的，不是玩家从手牌打出来的）固定 **1 轮** ——
 	#    召唤物当回合**恰好行动一次**，不继承哈气 / 双动字段。
 	#    用户口径：「当回合仍然可以行动，只是回合计数要正确，召唤的回合行动 2 格肯定是有问题的」。
 	#    玩家主动出牌（play_from_hand）照旧吃哈气 —— 那是「他自己花费用打出来的」。
 	p.acts_left = 1 if summon else unit_actions(p, owner)
+	p.acts_total = p.acts_left      # R462：发了几轮就记几轮（之后补行动只按差额算）
 	# 沉睡（恶魔鸭 9116）：带「沉睡」trait 的单位一上场就开始睡（SLEEP_TURNS 点）。
 	# 放在 place 里 = 唯一初始化口，关卡摆位 / 效果卡召唤出来的都算。
 	if card.traits.has(SLEEP_TRAIT):
@@ -514,8 +614,9 @@ func reset_units(side: String) -> void:
 			# 与上面的 moved 分开记（moved 会被禁足置 true，不能拿来判「原地不动」）。
 			p.did_move = false
 			# 哈气 / 太阳熔炉：回合开始时刷新成「行动两次」
-			# （未到生效回合 / 原本就双动 → 不叠加，取最大）
+			# （R479 哈气是单点永久标记；原本就双动 → 不叠加，取最大）
 			p.acts_left = unit_actions(p, side)
+			p.acts_total = p.acts_left   # R462：新回合重发额度，账本一并归位
 
 
 func iter_board() -> Array:
@@ -541,6 +642,9 @@ func save_dict() -> Dictionary:
 		"max_hp_self": max_hp_self,
 		"max_hp_opponent": max_hp_opponent,
 		"self_turn_no": self_turn_no,
+		"haste_pick_turn_self": haste_pick_turn_self,
+		"haste_pick_turn_opp": haste_pick_turn_opp,
+		"entry_counter": entry_counter,
 		"opp_turn_no": opp_turn_no,
 		"void_count": void_count,
 		"self_cannon_plays": self_cannon_plays,
@@ -583,6 +687,8 @@ func apply_dict(d: Dictionary) -> void:
 	max_hp_opponent = int(d.get("max_hp_opponent", max_hp_opponent))
 	self_turn_no = int(d.get("self_turn_no", self_turn_no))
 	opp_turn_no = int(d.get("opp_turn_no", opp_turn_no))
+	haste_pick_turn_self = int(d.get("haste_pick_turn_self", haste_pick_turn_self))
+	haste_pick_turn_opp = int(d.get("haste_pick_turn_opp", haste_pick_turn_opp))
 	void_count = int(d.get("void_count", void_count))
 	self_cannon_plays = int(d.get("self_cannon_plays", self_cannon_plays))
 	self_card_changes = int(d.get("self_card_changes", self_card_changes))
@@ -603,6 +709,7 @@ func apply_dict(d: Dictionary) -> void:
 	effects = _cards_load(d.get("effects", []))
 	enemy_effects = _cards_load(d.get("enemy_effects", []))
 	board.clear()
+	entry_counter = int(d.get("entry_counter", 0))
 	var bl: Variant = d.get("board", [])
 	if bl is Array:
 		for item: Variant in bl:
@@ -611,7 +718,16 @@ func apply_dict(d: Dictionary) -> void:
 			var cell := Vector2i(int(item["r"]), int(item["c"]))
 			var p := Placement.new()
 			p.apply_save(item["p"])
+			# R485：**读档清洗** —— 老存档里可能躺着 R484 之前塞进去的残留：
+			# 效果卡 / 技能卡当单位站在格子上的「0 血空壳」，或者单位被挪到了
+			# 对方后排（打 HP 的那一行）。直接跳过，不让 bug 跟着存档活到下一局。
+			if not GameEngine.card_may_enter_board(p.card):
+				continue
+			if cell.x == GameEngine.forbidden_row_for(p.owner):
+				continue
 			board[cell] = p
+			# R464：老档没有 entry_counter → 以场上已发的最大序号兜底，避免重号
+			entry_counter = maxi(entry_counter, p.entry_seq)
 	field_effects.clear()
 	field_owner.clear()
 	var fl: Variant = d.get("fields", [])

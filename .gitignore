@@ -28,6 +28,14 @@ screenshot*.import
 /_*.png
 /_*.png.import
 
+# 根目录跑回归 / 出图留下的日志、消息与存档备份（随时可重建）
+/_*.log
+/_*_msg.txt
+/_bk_*/
+
+# 背景图生成原件的工作目录（裁切前的 1536x1024 出图，已归档进 art_src/，不入库）
+/assets/ui/_bgnew/
+
 # Python
 __pycache__/
 *.pyc
@@ -76,3 +84,29 @@ art_src/_shots/
 # 根目录一次性探针脚本
 /_r[0-9]*.py
 /_r[0-9]*.gd
+
+# AI 试玩：连续 Bash 连击计数（每次运行自增，不入库）
+tools/ai_play/.aicli_calls
+
+# AI 试玩：聚能炮击「已握有」记忆（本局临时态，不入库）
+tools/ai_play/.cannon_seen.json
+tools/ai_play/.picked.json
+tools/ai_play/.runs.jsonl
+
+# AI 试玩：根目录漫游 / 运行日志（本地产物，不入库）
+/.roam*.log
+/.runs.jsonl
+
+# R478：未确认卡图的原始出图（1536x1024 带平台水印，可由 manifest 里的 prompt 重跑再生）。
+#   只保留裁剪后的 assets/pics/_pending/<id>.png 入库。
+/assets/pics/_pending/raw/
+
+# R479：根目录一次性探针 / 审计脚本与日志（跑完即可扔，随时可重建）。
+#   卡图探针（_probe_*.gd）承担「改了图必须截图验收」的职责，留在本地即可。
+/_probe_*.gd
+/_probe_*.png
+/_probe_*.log
+/_verify.log
+/_art_audit.*
+/_p[0-9]*.py
+/_r[0-9]*_missing.*

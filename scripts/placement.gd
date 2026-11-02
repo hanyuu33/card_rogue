@@ -16,6 +16,11 @@ var moved: bool = false       # 本回合已移动（移动后未攻击仍保留
 var did_move: bool = false
 var health: int = 0           # 当前生命
 var owner: String = "self"    # "self" / "opponent"（按卡算，不按行算）
+## R464：**入场序号**（本场战斗第几个落到台上，由 `FieldState.entry_counter` 递增发放）。
+## 冰冻术士 1031 的战吼要「冰封敌方本场战斗第一个入场的单位」—— 「第一个」不能靠
+## 棋盘字典的迭代顺序（Dictionary 顺序不可依赖，回放 / 续档都不稳），必须有个显式序号。
+## 判据：**仍在场**的最小 `entry_seq` = 最早入场且还活着的那个。
+var entry_seq: int = 0
 # ---- 回合级状态效果（削弱/寒冰箭）----
 var atk_debuff: int = 0       # 攻击力减值（正数 = 减多少）
 var debuff_stage: int = 0     # 0 = 未生效（下回合才生效） 1 = 生效中（回合结束清除）
@@ -23,6 +28,10 @@ var frozen: bool = false      # 寒冰箭：下回合开始时不重置（横置
 var atk_buff: int = 0         # 攻击力增益（鸭子之力等成长光环累计值，有上限）
 var atk_growth: int = 0       # 关卡成长曲线修正（二层「低开高走」：可为负，随回合回升）
 var acts_left: int = 1        # 本回合剩余行动轮数（鸭子队长 = 2：第一轮结束后立即新一轮）
+## R462：**本回合已经发出去几轮行动**（疾行账本）。`acts_left` 只记「还剩几轮」，
+## 中途被赋予疾行 / 哈气 / 狂暴时没法判断「这轮是白补的还是已经补过」——
+## 有了这个账本，补行动一律按 `want - acts_total` 差额补，绝不重复发放。
+var acts_total: int = 1       # R462：本回合已发放的行动轮数（唯一口 FieldState.grant_actions）
 var battlecry_done: bool = false  # 战吼：是否已在「首个回合开始」结算过（每个单位只触发一次）
 var ability_used: bool = false    # 主动发动（熊 8004「回春」）：在场只能发动一次（离场再上场算新单位）
 var guarding: bool = false    # 森林守护：我方 HP 受伤时由它代为承受（同一单位不可重复获得）
@@ -39,7 +48,7 @@ var fence_bonus_traits: Array[String] = []   # 同上，叠加时**新加进**�
 # ---- 改造（升级 8027，R82）：机械之心的「+2 攻 / +8 血」----
 # 同样是**只在场上有效**的加固：离场时由 _card_leaving_field 还原（不烤进 CardData，
 # 否则被击破后那张加过血的卡会永久留在弃牌区、再抽到仍是强化版）。
-# ⚠️ 加攻**不能**复用 atk_buff —— 那个被 GROW_CAP 封顶 5，且语义是「成长光环」；
+# ⚠️ 加攻**不能**复用 atk_buff —— 那个被 GROW_CAP 封顶 4，且语义是「成长光环」；
 # 改造要能无限叠（+2/+2/+2…），所以单开这个字段并直接进 effective_power。
 var upgrade_atk: int = 0      # 改造累计加攻（无上限）
 var upgrade_hp: int = 0       # 改造累计加血（含「素体被改造时额外 +1」那部分）
@@ -182,6 +191,13 @@ var hidden_energy_added: Array[String] = []
 ##      * 阶段 3 → 移速 0（`effective_speed()`）+ 接通的友方单位代它承受一半伤害（`_hit_unit`）。
 ##    卡面上的「自身效果」也要跟着阶段变，所以信息栏 / 徽标都读这里。
 var boss_phase: int = 0
+## 「哈气」（效果卡 9024，R479）：这个单位被哈气选中过 → **永久**每回合行动两次。
+## 原口径（R449）是「该方第 3 个回合起**整方**双动」的纯光环；R479 改成
+## 「第 3 / 5 / 7 个回合各挑**一个**生命最高且还没双动的单位」，所以必须逐单位记。
+## ⚠️ 同暗影领主：只记 Placement、**绝不烤进 CardData**（敌方关卡单位是卡库共享实例，
+##    写 `card.actions` 会跨局泄漏）。于是「原本就能行动两次的单位不会被选中」这条
+##    只能靠 `FieldState.unit_actions` 读本字段来判断。
+var haste_double: bool = false
 
 func effective_power() -> int:
 	## 实际攻击力：卡面力量 + 生效中的增益 + 关卡成长修正 - 生效中的削弱，最低 0。
@@ -423,9 +439,9 @@ func status_badges() -> Array[Dictionary]:
 ## ⚠️ **新增 Placement 字段时必须同步加进 _SAVE_FIELDS**，否则该字段续档归零。
 ##    `card` 走 CardData.to_dict（与复制 / 离场还原 / 联机同一条通道）。
 const _SAVE_FIELDS: Array[String] = [
-	"tapped", "moved", "did_move", "health", "owner",
+	"tapped", "moved", "did_move", "health", "owner", "entry_seq",
 	"atk_debuff", "debuff_stage", "frozen", "atk_buff", "atk_growth",
-	"acts_left", "battlecry_done", "ability_used", "guarding", "last_hit_by",
+	"acts_left", "acts_total", "battlecry_done", "ability_used", "guarding", "last_hit_by",
 	"atk_buff_turn", "ramp_atk", "rooted", "poison_left", "poison_dmg",
 	"trap_trig_turn", "end_atk", "fence_bonus_hp", "upgrade_atk", "upgrade_hp",
 	"upgrade_stacks", "stack_hp_applied", "upgrade_range", "upgrade_speed",
@@ -434,6 +450,7 @@ const _SAVE_FIELDS: Array[String] = [
 	"fuse_left", "forge_period", "forge_idle", "forge_range", "dark_lord_atk",
 	"mnemo_down", "dark_lord_speed", "hecaton_atk", "action_growth_extra",
 	"action_growth_turns", "summon_haste", "night_owl_weak", "boss_phase",
+	"haste_double",
 ]
 
 

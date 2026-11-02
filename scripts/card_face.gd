@@ -232,8 +232,38 @@ static func art_for(id: int, sleeping := false, phase := 0) -> Texture2D:
 				if _pic_exists(pp):
 					path = pp
 					break
+		# R478：未确认卡图 —— 主目录没有、`_pending/` 里有，就先拿来用（卡面带角标）。
+		# 只回退基础图 + 职业变体；阶段图（_p2/_p3）和沉睡图不放 pending，避免误判。
+		if not _pic_exists(path):
+			var pend := PENDING_DIR + "%d%s.png" % [id, suffix]
+			if _pic_exists(pend):
+				path = pend
 		_art_cache[key] = load(path) if _pic_exists(path) else null
 	return _art_cache[key]
+
+
+## R478：未确认卡图的暂存目录。AI 生成、还没人工确认的图放这里，
+## 主目录（assets/pics/）缺图时回退读取，卡面左上角打一枚黄色三角 —— 一眼看出「没定稿」。
+## 确认动作：python _cardart.py approve <id>（移入主目录，角标自动消失）。
+const PENDING_DIR := "res://assets/pics/_pending/"
+
+
+static func is_pending_art(id: int) -> bool:
+	## 当前这张卡用的是不是「未确认图」= 主目录没有 + pending 目录有。
+	if _pic_exists("res://assets/pics/%d.png" % id):
+		return false
+	return _pic_exists(PENDING_DIR + "%d.png" % id)
+
+
+static func _draw_pending_mark(canvas: CanvasItem, box: Rect2, k: float) -> void:
+	## 未确认角标：卡图**右下角**一枚黄色三角。
+	## 为什么不放左上角：那里是费用徽章的圆心（压在框线上），三角会被圆盖住一半，
+	## 看起来像徽章的一部分。右下角在卡图区内、四枚数值徽章都在卡片底部，不冲突。
+	var d: float = maxf(6.0, 8.5 * k)
+	var o := box.position + box.size
+	canvas.draw_colored_polygon(PackedVector2Array([
+			o + Vector2(0, 0), o + Vector2(-d, 0), o + Vector2(0, -d)]),
+			Color(0.98, 0.80, 0.25, 0.92))
 
 
 ## R190：导出包（安卓 / Windows 独立版）里图片只有 `.import` + `.ctex`、**没有源文件**，
@@ -478,7 +508,7 @@ static func _draw_enchant_mark(canvas: CanvasItem, card: CardData, rect: Rect2,
 	else:
 		var fs: int = maxi(6, roundi(10.0 * ui_scale_of(rect)))
 		_draw_center_outlined(canvas, font_bold, fs,
-				CardData.enchant_name(card.enchant).substr(0, 1), c, col)
+				CardData.enchant_title(card).substr(0, 1), c, col)
 
 
 static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,
@@ -532,6 +562,9 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 	if tex != null:
 		# 覆盖式铺满（cover）：卡图出血到卡边、不留白（R165 开放式卡图）。
 		canvas.draw_texture_rect_region(tex, box, cover_region(tex.get_size(), box), Color.WHITE)
+		# R478：未确认卡图打角标（AI 生成、待人工确认）。
+		if is_pending_art(card.id):
+			_draw_pending_mark(canvas, box, k)
 	else:
 		# 无图回退（R165）：卡种/职业色的**淡彩竖向渐变横幅**代替「粗暴纯色块」——
 		# 自然、按卡分色（职业优先，中立回落卡种）。
@@ -756,9 +789,13 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	if base_health != null:
 		base_health = int(base_health) + card.diff_health
 	var shown_power: int = power_override if power_override >= 0 else card.power
+	# R467：**X 费单位**（传说卡「枭熊」9213）—— 力 / 生都要等落地才有值，卡面写 X / 9X，
+	# 否则手牌里永远是「0 攻 0 血」，读起来像张废卡。
+	# ⚠️ 9X 的倍数与 `GameEngine.OWLBEAR_HP_PER_X` 是同一个数（那边改，这里也要改）。
+	var x_unit := card.x_cost and card.kind == "盟友"
 	draw_badge(canvas, font_bold, Vector2(power_x, bar_y), r, fs, "power",
-			str(shown_power), UiTheme.BADGE_POWER,
-			_delta_col(shown_power, base_power))
+			"X" if x_unit else str(shown_power), UiTheme.BADGE_POWER,
+			UiTheme.BADGE_VALUE if x_unit else _delta_col(shown_power, base_power))
 	var shown_range: int = badge_shown(card.attack_range, range_override)
 	draw_badge(canvas, font_bold, Vector2(range_x, bar_y), r, fs, "range",
 			str(shown_range), UiTheme.BADGE_RANGE,
@@ -774,8 +811,8 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 				str(shown_speed), UiTheme.BADGE_SPEED,
 				_delta_col(shown_speed, bv.get("speed")))
 	draw_badge(canvas, font_bold, Vector2(health_x, bar_y), r, fs, "health",
-			str(hp), UiTheme.BADGE_HEALTH,
-			_health_col(card, hp, base_health))
+			"9X" if x_unit else str(hp), UiTheme.BADGE_HEALTH,
+			UiTheme.BADGE_VALUE if x_unit else _health_col(card, hp, base_health))
 
 
 static func badge_shown(cur: int, override: int) -> int:

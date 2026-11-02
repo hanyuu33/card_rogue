@@ -6,6 +6,7 @@
 输出同时落盘 _e.txt / _r.txt / _rp.txt / _b.txt / _s.txt 便于事后检查。
 """
 import os
+import re
 import subprocess
 import sys
 
@@ -73,7 +74,15 @@ def main():
             rc = subprocess.call([GODOT] + args, cwd=ROOT, stdout=f,
                                  stderr=subprocess.STDOUT)
         d = open(out, "rb").read().decode("utf-8", "replace")
-        good, bad = d.count(OK), d.count(BAD)
+        # ⚠️ 统计口径：engine/reward/bgm 逐条打 ✓/✗，但 **smoke 只在结尾打一行
+        #    「SMOKE === 结束：64 通过 / 1 失败 ===」**，正文里没有符号。
+        #    早先这里只数符号，于是 smoke 永远显示 `0✓ / 0✗`，看着像没跑（实际跑了 64 条）。
+        #    所以优先认中文汇总行，认不到再退回符号计数。
+        _cn = re.search(r"(\d+)\s*通过\s*/\s*(\d+)\s*失败", d)
+        if _cn:
+            good, bad = int(_cn.group(1)), int(_cn.group(2))
+        else:
+            good, bad = d.count(OK), d.count(BAD)
         lines = d.strip().splitlines()
         # ⚠️ 退出噪音：headless 下**播过音**（bgm 套件、smoke 实例化场景）再退出时，
         #    引擎会打这两行「ObjectDB instances leaked / N resources still in use」。

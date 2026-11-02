@@ -215,7 +215,7 @@ func _clamp_scroll() -> void:
 
 
 func _back_rect() -> Rect2:
-	return Rect2(16, 12, 104, 40)
+	return Rect2(16, 12, 128, 40)   # R479：装得下「看战场」三个字
 
 
 func _confirm_rect() -> Rect2:
@@ -268,12 +268,23 @@ func _draw() -> void:
 		# 缺图回退：程序画「←」
 		draw_string(_font_bold, br.position + Vector2(10, 27), "←",
 				HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL, Color("f5ead2"))
-	draw_string(_font_bold, br.position + Vector2(42, 27), "返回",
+	# R479（用户口径）：这个按钮是「战场 ↔ 待选牌」的开关，不该叫「返回」——
+	# 玩家会以为点了等于放弃选择。浏览模式没有待办，点它就是关窗，仍写「关闭」。
+	draw_string(_font_bold, br.position + Vector2(40, 27),
+			"关闭" if is_view() else "看战场",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL, Color("f5ead2"))
 	# 标题（顶栏居中）
 	var title_fs := UiTheme.FS_SUBHEAD
+	# R472（用户报「预判这张卡选项文本太长溢出框了」）：标题栏是**定宽**的，
+	# 而预判①那条标题是全游戏最长的一句。这里逐级降字号直到放得下（最低 12），
+	# 与 battle_scene 的 `_draw_string_center_fit()` 同一口径 —— 别让文字顶出边框。
+	var title_txt := String(_cfg.get("title", ""))
+	var title_avail := w - 32.0
+	while title_fs > 12 and _font_bold.get_string_size(title_txt,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, title_fs).x > title_avail:
+		title_fs -= 1
 	draw_string(_font_bold, Vector2(0, TOP_H / 2.0 + title_fs * 0.35),
-			String(_cfg.get("title", "")), HORIZONTAL_ALIGNMENT_CENTER, w,
+			title_txt, HORIZONTAL_ALIGNMENT_CENTER, w,
 			title_fs, Color("f2ead8"))
 	# 顶栏右侧：选卡模式 = 已选计数；浏览模式 = 共几张
 	var max_sel := int(_cfg.get("max_sel", 1))

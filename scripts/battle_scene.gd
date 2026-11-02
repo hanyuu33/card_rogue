@@ -16,6 +16,9 @@ const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiRoll = preload("res://scripts/ui_roll.gd")
 const UiPop = preload("res://scripts/ui_pop.gd")
+## R474：卡牌入组演出（浮起 → 停住 → 收进卡组堆）。**故意没有 class_name** ——
+## 同 ui_theme.gd：全局类缓存只能由编辑器重建，headless 回归读不到它。
+const UiCardGrant = preload("res://scripts/ui_card_grant.gd")
 const UiDrag = preload("res://scripts/ui_drag.gd")   # R405：滚轮 / 触屏拖动 的唯一口
 const CardInfoBoxes = preload("res://scripts/card_info_boxes.gd")
 ## R386：战场对话气泡（自绘，见该文件头部的设计与时间轴说明）
@@ -214,6 +217,9 @@ const COL_MOVE := Color(0.184, 0.682, 0.306, 0.55)
 const COL_ATTACK := Color(0.831, 0.227, 0.184, 0.55)
 const COL_HP := Color(0.545, 0.102, 0.102, 0.75)
 const COL_SPELL := Color(0.416, 0.290, 0.839, 0.55)
+## R467：枭熊「落地重击」覆盖到的格子（琥珀）—— 与移动绿 / 攻击红刻意分开：
+## 那些是「点下去就发生」，这一层只是**预告**（真正落点是玩家悬停的那个绿格）。
+const COL_SLAM := Color(0.851, 0.608, 0.235, 0.60)
 const COL_FENCE_MERGE := Color(0.851, 0.545, 0.098, 0.60)   # 叠栅栏（栅栏修复术）：目标格 = 已有栅栏
 ## R102：两段式技能「已选中第一个单位」的标记 —— 金黄粗描边 + 角标「已选」。
 ## 与 COL_SPELL（候选目标）刻意区分开：那个是"还能点"，这个是"已经点过了"。
@@ -248,6 +254,11 @@ const ATK_WINDUP_T := 0.10      # 开始后仰蓄力
 const ATK_LAUNCH_T := 0.30      # 弹体发射
 const ATK_IMPACT_T := 0.62      # 弹体命中目标
 const DESTROY_HOLD_MS := 140    # 命中后卡牌「留一帧」再消失：先看得见伤害，再击破
+# R459：击杀类增益（鸭子骑士「每击杀一个敌人 +2 攻」）要排在**破坏之后**才飘。
+# 原来它挂 `_now()` 立刻播 —— 引擎是先发 `attack`、再在 `_destroy` 里发 `knight_grow`，
+# 而攻击演出 930ms 才撞上、破灭还要 `DESTROY_HOLD_MS`，于是演出倒着走：
+# 「+2 攻 → 拳头落地 → 卡碎掉」。这个常量 = 破灭之后再留的呼吸。
+const GROW_AFTER_BREAK_MS := 120
 ## R363：**一次效果打多个目标**（灰烬龙战吼 / 全场 AOE）时，每一格之间的落地间隔。
 ## 原来所有格子同帧起爆 —— 一排「-4」同时冒出来，看不出是谁打的、也读不出扫过去的感觉。
 const FX_MULTI_HIT_GAP_MS := 90
@@ -708,8 +719,6 @@ var _run_next_layer := 0        # Boss 通关后要进入的下一层（0 = 没�
 ## 「继续游戏」重打这一场就等于从「已 +1」的计数起步 → 每续一次多算一格（用户报的计数错乱）。
 ## 顺带把开场就改动的其它局状态（烤肉消耗 / 回血 / 随机源步进）一起回滚成开打前的样子。
 var _pre_battle_snap: Dictionary = {}
-# R439：战斗检查点已经存到第几回合（-1 = 本场还没存过）—— 每回合只落一次盘。
-var _cp_turn := -1
 var _reward_panel: RewardPanel = null   # R119：奖励悬浮窗（掉落道具 / 卡牌奖励都在这里处理）
 
 # 联机模式（NetSession.active 时启用）：镜像引擎 + 动作收发回放
@@ -849,6 +858,9 @@ func _ready() -> void:
 			var levels := GameLevels.builtin_levels()
 			if li >= 0 and li < levels.size():
 				load_level(levels[li])  # 截图验证用：--level 0
+		if args[i] == "--cave":
+			# R467 出图：事件专属关卡「洞穴」（不在 builtin_levels 里，--level 索引不到）
+			load_level(GameLevels.cave_level())
 		if args[i] == "--shotframe" and i + 1 < args.size():
 			_shot_frame = maxi(int(args[i + 1]), 10)  # 截图时机（帧），捕弹体/爆点用
 		if args[i] == "--r363col" and i + 1 < args.size():
@@ -1031,6 +1043,20 @@ func _ready() -> void:
 				break
 		status_text = "R214 演示：卡组前 4 张带附魔（费用正下方标记 / 左栏「附魔：」行 / 牌库面板）"
 		queue_redraw()
+	if "--foresightdemo" in args and engine != null:
+		# R472 出图：直接摊开预判的二选一面板，核验选项文字不越框。
+		engine.foresight_mode = true
+	if "--grantpin" in args:
+		# R474 出图：把卡牌入组演出的时间轴**钉死**在指定毫秒，与帧率无关
+		#（渲染帧率一抖，按 `--shotframe` 抓帧就会落在不同段落上）。
+		# 200 = 浮起中 / 500 = 停住展示 / 900 = 收向卡组途中。
+		var gpi := args.find("--grantpin")
+		if gpi + 1 < args.size():
+			UiCardGrant.set_demo_pin(maxi(int(args[gpi + 1]), 0))
+			if "--grantdemo" in args:
+				# R474 出图：强制播一次「卡牌入组」演出。**必须排在钉帧之后** ——
+				# `grant()` 会按 `demo_pin_ms` 决定时间基准，先播再钉等于白钉。
+				UiCardGrant.grant(GameEngine.FLYING_KICK_ID, _deck_pile_center(), 0)
 	if "--over" in args:
 		# 演示：直接进入结算（验证结算覆盖层 / 彩带 / 胜利音效）
 		engine._finish("胜利", "演示：结算界面")
@@ -4022,11 +4048,8 @@ func _load_entry_level() -> void:
 			var lvl := RunState.pending_level
 			RunState.pending_level = {}
 			load_level(lvl)
-			# R439：同一关有战斗检查点 → 覆盖回那一回合（而不是从第 1 回合重打）
-			_try_resume_battle_state()
 		else:
 			load_level(GameLevels.builtin_levels()[0])
-			_try_resume_battle_state()
 		return
 	load_level(GameLevels.builtin_levels()[0])  # 默认：怪物遭遇战
 
@@ -4444,13 +4467,15 @@ func _select_board(cell: Vector2i) -> void:
 	selection = ["board", cell]
 	var p := engine.state.unit_at(cell)
 	if p != null and p.moved and not p.tapped:
+		# R462（用户口径）：**移动之后只剩「攻击」和「结束这一轮」两条路**。
+		# 以前多动单位会把绿格一直留着（点一下 = 消耗一次行动接着走）—— 玩家读成
+		# 「必须马上再走一格」，而且那一走会把**本轮的这记攻击**悄悄作废，顺序全乱。
+		# 现在要再走就先把这一轮结束，新一轮再走：一步一件事，账算得清。
+		move_targets = []
 		if p.acts_left > 1:
-			# 多动单位：还能再消耗一次行动接着走（横着挪位后再压上去）
-			move_targets = engine._reachable(cell, GameEngine.SIDE_SELF)
-			status_text = ("%s：已移动。红色=攻击；点绿色再走一格 = 消耗一次行动（放弃这次攻击）"
-					% p.card.card_name)
+			status_text = ("%s：已移动。红色/深红=攻击；点其他地方 = 结束这一轮（还剩 %d 次行动）"
+					% [p.card.card_name, p.acts_left])
 		else:
-			move_targets = []  # 已移动过：不能再走，只能攻击或放弃（横置）
 			status_text = ("%s：已移动。点红色/深红目标攻击，点其他地方 = 放弃攻击（横置）"
 					% p.card.card_name)
 	else:
@@ -4465,10 +4490,18 @@ func _select_board(cell: Vector2i) -> void:
 		hp_targets_arr = []
 	else:
 		hp_targets_arr = engine.hp_targets(cell)
+	# R467 枭熊「跳跃」：绿格 = 落点（**含自己脚下那一格 = 原地起跳**）；
+	# 红 / 深红恒空 —— 卡面程 0，它本来就不能进行常规攻击。
+	if p != null and engine.is_leaper(p):
+		status_text = ("%s：绿色 = 跳跃落点（点到它自己那格 = 原地起跳）；"
+				+ "落地对四邻的敌方单位各造成 %d 伤害") % [p.card.card_name, p.effective_power()]
 
 
-func _pass_moved_pending() -> void:
-	## 选中的单位若已移动未攻击：任何非攻击操作 = 放弃攻击（横置）。
+func _pass_moved_pending() -> int:
+	## 选中的单位若已移动未攻击：任何非攻击操作 = 放弃攻击（结束这一轮）。
+	## R462：返回这一轮结束之后还剩什么 —— 0 = 本来就没这回事 /
+	##       1 = 就地横置（本回合到此为止）/ 2 = 多动单位，**新一轮立刻可动**。
+	## 界面拿它决定提示语（「还能再行动一次」），引擎侧的规则一条都没多。
 	if selection != null and selection[0] == "board":
 		var src: Vector2i = selection[1]
 		var p := engine.state.unit_at(src)
@@ -4477,6 +4510,8 @@ func _pass_moved_pending() -> void:
 			if _net_mode:
 				_net_send({"type": "action", "act": "pass",
 						"args": [[src.x, src.y]]})
+			return 2 if not p.tapped else 1
+	return 0
 
 
 # ------------------------------------------------------------ 输入
@@ -4915,14 +4950,14 @@ func _on_left_click(pos: Vector2) -> void:
 		queue_redraw()
 		return
 	# R189：全屏选卡页接管 8 套旧面板。展开时点击被子节点吃掉、根本到不了这里；
-	# 收起态（返回看战场）点「继续选择」浮条回来，点其他地方只提示 —— pending
+	# 收起态（看战场）点「查看待选牌」浮条回来，点其他地方只提示 —— pending
 	# 还在引擎里，不能让玩家绕过选择直接打牌。
 	if _pick != null and _pick.is_picking():
 		if not _pick.visible and _pick_banner_rect().has_point(pos):
 			_pick.reopen()
 			queue_redraw()
 		elif not _pick.visible:
-			_say("选择进行中：点顶部「继续选择」回到选卡页")
+			_say("选择进行中：点顶部「查看待选牌」回到选卡页")
 		return
 	# 预判（9097）：二选一面板（选的是模式不是卡，不进选卡页）
 	if engine.foresight_mode:
@@ -5176,6 +5211,13 @@ func _use_hand_card(i: int) -> void:
 			elif card.id == GameEngine.IMPACT_CANNON_ID:
 				target_hint = "**一个敌人**（%d 伤，并击退 %d 格）" % [
 						GameEngine.IMPACT_CANNON_DMG, GameEngine.IMPACT_CANNON_STEPS]
+			# R473 武术大师的两张定向技能：提示写清「只打一个」还是「附带其余」。
+			elif card.id == GameEngine.FLYING_KICK_ID:
+				target_hint = "**一个敌人**（%d 伤；击杀时溢出的伤害沿同一列继续）" % GameEngine.FLYING_KICK_DMG
+			elif card.id == GameEngine.RUSH_PUNCH_ID:
+				target_hint = "**一个敌人**（%d 伤 + 击退 %d 格；其余敌人各 %d 伤）" % [
+						GameEngine.RUSH_PUNCH_DMG, GameEngine.RUSH_PUNCH_STEPS,
+						GameEngine.RUSH_PUNCH_SPLASH]
 			elif card.id == GameEngine.WHIRL_BLADE_ID:
 				target_hint = "十字中心格"
 			status_text = "%s：点击%s（右键取消）" % [card.card_name, target_hint]
@@ -5279,7 +5321,7 @@ func _start_drag(i: int, pos: Vector2) -> void:
 	# R106：效果卡除了拖到棋盘，还能**直接拖到左侧效果区**上松手启用（那是它的「家」）。
 	_drag_to_effects = card.is_effect()
 	if card.is_effect():
-		status_text = "%s：拖到左侧效果区（或棋盘任意处）启用" % card.card_name
+		status_text = "%s：拖到左侧效果区（或自己半场）启用" % card.card_name
 	elif not _drag_spell_cells.is_empty():
 		status_text = "%s：拖到高亮目标上释放" % card.card_name
 	else:
@@ -5531,13 +5573,19 @@ func _finish_drag(pos: Vector2) -> void:
 			return
 		_say("%s：拖到棋盘上释放（已取消）" % card.card_name)
 		return
-	# 效果卡：拖到棋盘 = 启用
-	if cell != null:
+	# 效果卡（R484）：**只在自己半场**启用。
+	# ⚠️ 原来这里接受任意格（`cell != null`）—— 效果卡没有目标，拖到敌方后排那排
+	# 「打 HP」的格子上松手也照样生效，看起来就像「效果打到了敌人的 HP 上」（用户实测）。
+	# 现在与 `_drag_zone_rect` 同源：外框只框自己半场，落点也只认自己半场。
+	if cell != null and FieldState.cell_owner(cell.x) == "self":
 		if not engine.can_pay_card(card):
 			_energy_fail(card, i)   # R151 P2-15
 			return
 		engine.use_effect(i)
 		_net_send({"type": "action", "act": "effect", "card": card.to_dict()})
+		return
+	if cell != null:
+		_say("%s 是效果卡：拖到左侧效果区或自己半场启用（已取消）" % card.card_name)
 		return
 	_say("%s：拖到棋盘上启用（已取消）" % card.card_name)
 
@@ -5673,8 +5721,10 @@ func _draw_foresight_mode() -> void:
 	for k in 2:
 		draw_rect(rs[k], Color("e8e2f4") if k == 0 else Color("e2ecf4"))
 		draw_rect(rs[k], Color("7a5ea8") if k == 0 else Color("4a7ea8"), false, 1.5)
-		_draw_string_center(_font, UI_FS_CAPTION, labels[k],
-				rs[k].position + rs[k].size / 2.0, Color("222222"))
+		# R472：定宽框里必须用 fit 版，否则「① 从弃牌区选一张费用为 0 的技能卡加入手卡
+		#（之后本卡消失）」这种长句会左右探出底色块。
+		_draw_string_center_fit(_font, UI_FS_CAPTION, labels[k],
+				rs[k].position + rs[k].size / 2.0, rs[k].size.x - 16.0, Color("222222"))
 
 
 func _on_foresight_mode_click(pos: Vector2) -> void:
@@ -6376,7 +6426,7 @@ func _on_pick_cancelled() -> void:
 
 
 func _pick_banner_rect() -> Rect2:
-	## 选卡页收起态的「继续选择」浮条（顶部中央；绘制与点击判定共用）。
+	## 选卡页收起态的「查看待选牌」浮条（顶部中央；绘制与点击判定共用）。
 	return Rect2(WINDOW_W / 2.0 - 240.0, 74.0, 480.0, 40.0)
 
 
@@ -6385,8 +6435,9 @@ func _draw_pick_banner() -> void:
 	var r := _pick_banner_rect()
 	draw_rect(r, Color(0.14, 0.12, 0.20, 0.95))
 	draw_rect(r, Color("ffd27d"), false, 2.0)
+	# R479：与选卡页左上角的「看战场」按钮成对 —— 一个收、一个回。
 	_draw_string_center(_font_bold, UI_FS_LABEL,
-			"选择进行中：%s —— 点击继续" % String(_pick.cfg_short()),
+			"查看待选牌：%s（点击继续）" % String(_pick.cfg_short()),
 			r.get_center(), Color("ffd27d"))
 func _close_zone_panels() -> void:
 	## 关掉所有区域浏览面板（专注选完 / 取消后收干净）。
@@ -6795,9 +6846,18 @@ func _on_board_click(cell: Vector2i) -> void:
 		# 再点一次空位才真的取消。右键 / Esc 仍是一步取消。
 		if _cancel_armed:
 			_cancel_armed = false
-			_pass_moved_pending()
+			var pend := _pass_moved_pending()
+			var pend_name := ""
+			if pend > 0 and sel_p != null:
+				pend_name = sel_p.card.card_name
 			_clear_selection()
 			status_text = "已取消选择"
+			# R462：多动单位结束这一轮 ≠ 打完收工 —— 明确告诉玩家「还能再来一轮」，
+			# 否则会以为这一取消把整回合的行动都作废了。
+			if pend == 2:
+				status_text = "%s 结束这一轮，还能再行动一次（重新点它继续）" % pend_name
+			elif pend == 1:
+				status_text = "%s 放弃攻击，本回合横置" % pend_name
 			return
 		_cancel_armed = true
 		# ⚠️ 消息长度受顶栏 StatusLabel 限制（310px，超了会省略尾部）：
@@ -6814,6 +6874,34 @@ func _on_board_click(cell: Vector2i) -> void:
 	if selection != null and selection[0] == "hand":
 		var i: int = selection[1]
 		var card := engine.state.hand[i]
+		# R484：**效果卡不是单位**，点格子不能把它摆上场。
+		# 原来这里没有这一条 → 直接掉进下面 `if not card.is_spell()` 的放置分支，
+		# `play_from_hand` 把 kind="效果" 的卡当随从放进 board（用户实测：场上多出
+		# 一张「智慧喷涌」，还带着未横置的就绪光环、卡面标着「效果」）。
+		# 口径与拖拽一致：**自己半场**点一下 = 启用（等于「拖到棋盘任意处启用」）；
+		# 敌方半场（含敌方后排那排「打 HP」的格）点一下 = 提示 + 取消选中。
+		if card.is_curse():
+			# R485：诅咒卡（疲惫 9149 / 麻痹 9185）**没有场上实体**，点格子不是放置。
+			# 原来这里没有分支 → 掉进随从分支，被引擎 R484 闸门拒掉，提示却是
+			# 「不是单位，不能作为单位上场（效果卡走效果区）」—— 文案把人指到错的地方。
+			# 口径与拖拽一致：诅咒拖到棋盘上 = 打出（无效果）。
+			_say("%s 是诅咒：拖到棋盘上即可打出（已取消选中）" % card.card_name)
+			_clear_selection()
+			return
+		if card.is_effect():
+			if FieldState.cell_owner(cell.x) != "self":
+				_say("%s 是效果卡：拖到左侧效果区或自己半场启用（已取消选中）" % card.card_name)
+				_clear_selection()
+			elif not engine.can_pay_card(card):
+				_energy_fail(card, i)   # R151 P2-15
+				_clear_selection()
+			else:
+				engine.use_effect(i)
+				_net_send({"type": "action", "act": "effect", "card": card.to_dict()})
+				_clear_selection()
+				status_text = "%s：已放入效果区，持续生效" % card.card_name
+				queue_redraw()
+			return
 		if card.is_field():
 			# R277（安卓触屏）：场地卡**允许落在已有单位 / 已有场地的格子**上 ——
 			# 场地不是单位，两套数据互不影响（引擎 set_field 顶掉同格旧场地）。
@@ -7265,6 +7353,12 @@ func _build_level_menu() -> void:
 
 # ------------------------------------------------------------ 结算覆盖层 / 横幅 / 彩带 / 记录面板
 
+func _deck_pile_center() -> Vector2:
+	## R474：右下角卡组堆的中心 —— 卡牌入组演出的落点（`UiCardGrant.grant` 的 `to_pos`）。
+	## 别在演出一侧硬编码坐标：卡组堆位置只有这里说了算。
+	return Vector2(DECK_X + CARD_W / 2.0, DECK_Y + CARD_H / 2.0)
+
+
 func _build_over_panel() -> void:
 	## 胜负结算覆盖层：弹出「再来一局 / 选关 / 回到标题」。
 	_over_panel = PanelContainer.new()
@@ -7334,67 +7428,29 @@ func _mark_battle_checkpoint() -> void:
 	## ⚠️ 只在真实游玩时写：出图 / headless 探针不落盘。
 	if not RunState.run_active or _shot_pending or _net_mode:
 		return
+	# R477：但 AI 对局（`--ai-bridge`，本来就无窗口跑）必须写 —— 那个进程被系统回收过
+	# 两次，没档就是整局白打。出图 / 回归探针没有这个参数，照旧不落盘。
 	if DisplayServer.get_name() == "headless":
-		return
+		var _ai_on := false
+		for _a: String in OS.get_cmdline_user_args():
+			if _a == "--ai-bridge" or _a.begins_with("--ai-bridge="):
+				_ai_on = true
+				break
+		if not _ai_on:
+			return
 	if _cur_level.is_empty():
 		return
 	RunState.resume_battle = {"node": RunState.pending_node, "level": _cur_level}
 	# R339：写「进战斗之前」那份快照（不是当前状态）—— 见 `_pre_battle_snap` 的说明。
 	# 快照为空（例如老路径 / 非 run）时退回写当下状态，行为与 R323 一致。
+	# R477：这也是**唯一**一处战斗检查点 —— 续档永远回到这一场开打之前
+	# （原来的「回合级检查点」已删，见 `_process` 里那段说明）。
 	if _pre_battle_snap.is_empty():
 		RunSave.save_run()
 		return
 	var d: Dictionary = _pre_battle_snap.duplicate(true)
 	d["resume_battle"] = RunState.resume_battle
 	RunSave.save_snapshot(d)
-
-
-## R439：把「当前这一回合的局面」写进存档。
-## 存档点 = 我方回合开始（`_process` 里按 turn_number 只触发一次）：
-##   ① run 级字段用 `_pre_battle_snap`（进战斗**之前**那份）——
-##      战斗内的血量 / 牌序属于这一场，不该倒灌进 run 状态（结算时才回写）；
-##   ② `resume_battle` 除 node / level 之外再挂一份 `battle` 快照。
-##      `RunSave.load_run()` 会把 level 塞回 pending_level，于是续档仍然进同一关。
-func _save_battle_checkpoint() -> void:
-	if not RunState.run_active or engine == null or engine.over:
-		return
-	# R439：headless（无窗口跑）**也要落盘** —— AI / 脚本对局没有窗口，正是最需要续档的场景；
-	# 回归套件那份档已被 RunSave 隔离成 run_save_test.sav（R378），不会污染玩家存档。
-	if _shot_pending or _net_mode:
-		return
-	if _cur_level.is_empty():
-		return
-	var rb: Dictionary = RunState.resume_battle.duplicate(true)
-	if rb.is_empty():
-		rb = {"node": RunState.pending_node, "level": _cur_level}
-	rb["battle"] = engine.save_battle()
-	RunState.resume_battle = rb
-	var d: Dictionary = _pre_battle_snap.duplicate(true) if not _pre_battle_snap.is_empty() \
-			else RunSave.snapshot()
-	d["resume_battle"] = rb
-	RunSave.save_snapshot(d)
-
-
-## R439：进战斗后若有 `battle` 快照 → 直接覆盖成那一回合的局面。
-## 调用点必须在 `load_level()` **之后**（要先把牌堆 / 场面 / 关卡建出来再盖）。
-func _try_resume_battle_state() -> void:
-	if engine == null or _net_mode:
-		return
-	var snap: Variant = RunState.resume_battle.get("battle", {})
-	if not (snap is Dictionary) or (snap as Dictionary).is_empty():
-		return
-	if not engine.apply_battle(snap):
-		push_warning("R439：战斗检查点不可用，按新开局继续")
-		return
-	RunState.hp = engine.state.hp_self
-	_cp_turn = engine.turn_number
-	_clear_selection()
-	_foe_phase = false
-	status_text = "第 %d 回合：从存档继续（我方血量 %d/%d）" % [engine.turn_number,
-			engine.state.hp_self, engine.state.max_hp_self]
-	_show_banner("我方回合 · 第 %d 回合（存档继续）" % engine.turn_number,
-			UiTheme.SIDE_SELF_TEXT)
-	queue_redraw()
 
 
 func _clear_battle_checkpoint() -> void:
@@ -7435,15 +7491,35 @@ func _on_over_restart() -> void:
 		UiToast.toast("暗动力：卡牌奖励必须领取", 2200)
 		return
 	if RunState.run_active and _run_next_layer > 0:
-		RunState.advance_layer(_run_next_layer)
+		var next_lay: int = _run_next_layer
+		RunState.advance_layer(next_lay)
 		# R310：进新层的起点 = 卷卷的对话事件（原「起始道具三选一」面板）
-		_goto_scene("res://scenes/curtain.tscn")
+		# R470（用户口径「进入第三层时依然会触发第一层的起始事件」）：
+		# 第三层是直道，起点**只回血、没有任何开场事件** —— 这里按层直接去地图。
+		# 旧写法无条件走卷卷，而 `curtain_scene` 有「候选为空就自己摇一组」的自愈，
+		# 于是三层照样演一遍「卷卷 + 三选一」，而且摇的是**第一层**初始池
+		# （`start_ids_for_layer(3)` 落到 `initial_ids()`）。
+		if next_lay == GameLayers.LAYER_THREE:
+			_goto_scene("res://scenes/map.tscn")
+		else:
+			_goto_scene("res://scenes/curtain.tscn")
 	elif RunState.run_active and not _run_boss_win:
 		# R119：卡牌奖励已由奖励悬浮窗处理（没收的会留在「待领奖励」入口里），
 		# 这里只把节点标记完成、回地图 —— 不再切到独立的卡牌奖励场景。
 		RunState.complete_current()
 		_goto_scene("res://scenes/map.tscn")
 	else:
+		# R471：通关时可能还欠着「要选卡」的待办（鸭血 / 源数 / 失忆）——
+		# `RunState.run_active` 这时候还得是真的，`waiting_pick_scene()` 才认；
+		# 判据走 `route_target_after_pick()` 而不是裸问 `waiting_pick_scene()`：
+		# 本批奖励没处理完时它返回空串（R340 那条规矩不能在这里破）。
+		if RunState.run_finished:
+			var _tgt: String = RewardPanel.route_target_after_pick()
+			if _tgt != "":
+				_goto_scene(_tgt)
+				return     # 办完待办由那个场景自己收尾（deck_edit → 标题）
+		if RunState.run_finished:
+			RunState.end_run()     # 通关真的收尾清干净（续档已在 `mark_run_won()` 删掉）
 		_goto_scene("res://scenes/title.tscn")
 
 
@@ -7563,7 +7639,33 @@ func _show_over(win: bool) -> void:
 				RunState.queue_relic_reward(dropped)
 			# R342：战斗胜利的卡牌奖励**只走这一个口** —— 持有「采集刀」6050 时
 			# 它内部会多入队一组（各自独立三选一）。别在这里直接调 queue_card_reward。
-			RunState.queue_battle_card_rewards(RunState.reward_type)
+			# R467：关卡若点名了 `reward_cards`（洞穴 → 传说卡「枭熊」），这一场的卡牌奖励
+			# 就**只有那一张**，不再摇三选一（采集刀也不叠加 —— 不然洞穴会给两张传说卡）。
+			var fixed_cards: Array = lvl.get("reward_cards", [])
+			if fixed_cards.is_empty():
+				RunState.queue_battle_card_rewards(RunState.reward_type)
+			else:
+				for fc in fixed_cards:
+					RunState.queue_fixed_card_reward(int(fc), true)
+			# R458 核心（6059）：**战斗中累计失去 15 点生命值**后，这一场胜利的奖励页里
+			# 会多出一条「核心」——献祭一张伤害技能牌，把它的第一段伤害变成另一张的附魔。
+			# 累计与「已触发」都在 RunState（唯一口），这里只把本场受伤合计交过去；
+			# `core_ready_to_use()` 顺带把「卡组凑不出一对」的情况挡在入队之前。
+			RunState.core_note_battle_loss(engine.state.self_hp_damage_taken)
+			RunState.queue_core_reward()
+			# R473 武术大师的延迟发卡：**这一场胜利**推进挂单。
+			# 「2 场战斗」与「2 场精英 / Boss」是两张不同的单，谁该推进由 `RunState` 自己分；
+			# 这里只负责把「是不是精英 / Boss」告诉它（Boss 也算，别只认 node_type）。
+			# 到账的卡直接进卡组，用轻提示报一句 —— 结算面板的副标题留给剧情解锁。
+			var late_cards := RunState.bump_delayed_cards(
+					node_type == "elite" or _run_boss_win)
+			# R474：到账的卡走**卡面演出**（浮起 → 停住 → 收进右下角卡组堆 + 落点「+1」），
+			# 不再只弹一句 toast —— 卡「凭空」进卡组的话，玩家会怀疑到底有没有拿到。
+			# lead 320ms：结算面板的 UiPop 是 160ms，等它进完场卡再浮起来，两层别一起动。
+			# 同一场到账两张时由 `UiCardGrant` 自己排队（后一张的停留段自动压短）。
+			for lc: Dictionary in late_cards:
+				UiCardGrant.grant(int(lc.get("id", -1)), _deck_pile_center(), 320)
+				sfx.play("draw")
 			# R390（用户口径）：**精英战**额外给一次删卡 —— 和月亮（9180）走同一条
 			# `deck_delete` 通道，所以它同样进奖励列表、同样受 R340「一批没处理完
 			# 不许换场景」约束。放在卡牌组之后：同一批里它排在卡牌下面，
@@ -7577,6 +7679,16 @@ func _show_over(win: bool) -> void:
 			# **各自独立**的三选一 —— 玩家可以各选一张，也可以只选一组。
 			if _run_boss_win:
 				RunState.queue_card_reward("epic")
+			# R472（用户口径「打完 3 层 boss 游戏都胜利了，不需要结算奖励了，直接提示胜利」）：
+			# 最后一层 Boss 打完 = 整局结束，卡组 / 道具 / 金币都不会再被下一局用到 ——
+			# 还弹一个「共 N 件，待领 N 件」的奖励页纯属多此一举。这里把这一批直接清掉，
+			# 结算面板接上「胜利」提示（奖励窗的打开判据是 `pending_reward_count() > 0`，
+			# 清空之后它自己就不会弹了）。
+			# ⚠️ 金币 / boss 记账 / 击杀统计都在上面已经结算完，别一起清。
+			if _run_boss_win and GameLayers.next_layer(RunState.current_layer) <= 0:
+				RunState.pending_rewards = []
+				RunState.pending_relic_drop = -1
+				RunState.relic_choice = []
 			if _run_boss_win:
 				# R339：Boss 已击破 → 记账（`boss_beaten` + 清 `boss_pending`）。
 				# ⚠️ 放在算 `_run_next_layer` **之前**：advance_layer 会清这个标记，
@@ -7609,7 +7721,11 @@ func _show_over(win: bool) -> void:
 					% [RunState.player_class, RunState.difficulty])
 				ProfileData.bump(ProfileData.K_RUN_WIN)
 				RunRecord.finish("win")   # 通关：整局结果记一行
-				RunState.end_run()
+				# R471：**不再当场 `end_run()`**。结算面板弹出来的这一刻奖励面板往往还没
+				# 处理完，而 `end_run()` 会把 `pending_relic` / 卡组 / 道具一起清掉 —— 于是
+				# 通关时领到的鸭血们「选了也没地方去」（`run_active` 假 → `waiting_pick_scene()`
+				# 恒空）。改成只落章 `run_finished`，等玩家真离开再清（见 `_on_over_restart`）。
+				RunState.mark_run_won()
 		else:
 			# R367：正常路径下这里已经是第二次（`engine.over` 首帧就记过了）——
 			# `_record_defeat()` 自带幂等，不会写出两条「失败」。
@@ -8773,6 +8889,34 @@ func _text_bg_plate(rect: Rect2, bg: Color) -> void:
 			TEXT_BG_EDGE.a * (bg.a / maxf(0.001, TEXT_BG.a))), false, 1.0)
 
 
+func _draw_string_center_fit(font: Font, px: int, text: String, center: Vector2,
+		max_w: float, col: Color) -> void:
+	## R472（用户报「预判这张卡选项文本太长溢出框了」）：**定宽居中**画一行字。
+	## 与 `_draw_string_center()` 的唯一区别 —— 它保证文字不超出 `max_w`：
+	##   ① 逐级降字号直到放得下（最低 FIT_MIN_PX）；
+	##   ② 降到最低还放不下，就按宽度截断、末尾补省略号。
+	## 定宽框（预判①②选项、选卡页标题）一律用它 —— 裸的 `_draw_string_center`
+	## 是按文字宽度算起点的，文字一长就往两边一起探出框外。
+	const FIT_MIN_PX := 9
+	var size: int = px
+	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	while w > max_w and size > FIT_MIN_PX:
+		size -= 1
+		w = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var shown := text
+	if w > max_w:
+		# 截断循环必须有硬上限：绘制代码里不留「只靠条件终将成立」的死循环。
+		var cut: int = text.length()
+		var guard := 0
+		while cut > 1 and guard < 256:
+			cut -= 1
+			shown = text.substr(0, cut) + "…"
+			if font.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= max_w:
+				break
+			guard += 1
+	_draw_string_center(font, size, shown, center, col)
+
+
 func _draw_string_center(font: Font, px: int, text: String, center: Vector2, col: Color,
 		outline := 0, outline_col := UiTheme.SURFACE) -> void:
 	if px < 7:
@@ -8889,7 +9033,7 @@ func _draw_air_raid_marks() -> void:
 			draw_line(c - d * 10.0, c - d * 4.0, cross_col, 2.0)
 			draw_line(c + d * 4.0, c + d * 10.0, cross_col, 2.0)
 	# 角标只写一次：挂在这批标记格**外接框的上沿居中**（夹在棋盘可视范围内），
-	# 写「空袭 -N」—— N 是这一轮真正会落下来的伤害（含每回合 +2）。
+	# 写「空袭 -N」—— N 是这一轮真正会落下来的伤害（含每回合 +1，R483）。
 	# ⚠️ 原来塞在第一个格子的右下角：9px 红字压在卡面描边和数值徽章上，实机基本读不出来。
 	var tag := "空袭 -%d" % engine.air_raid_damage()
 	var bbox := _cells_bbox(cells)
@@ -9476,6 +9620,97 @@ func _pending_impact_ms() -> int:
 		if best < 0 or imp < best:
 			best = imp
 	return best if best >= 0 else now_ms
+
+
+func _attack_impact_at(cell: Vector2i) -> int:
+	## R459：**这一格上的单位**正在播的那一次攻击，什么时候撞到目标（没有就 0）。
+	## 与 `_pending_impact_ms()` 的分工：那个取「全屏最早的一下还没撞到的一击」，
+	## 用于代替承受 / 闪躲这类「同一批里紧接着发」的附带事件；这里是「**自己这一拳**」，
+	## 击杀记功只该等打出去的那一下，不该被别的单位的攻击拖后。
+	## ⚠️ 不能拿 `_cell_center()` 比对 `src`：那个返回值里烘了 `_grid_scroll`，
+	##    动画入库时的滚动量和现在不同就永远对不上 → 直接按 Placement 查单槽。
+	var p: Placement = engine.state.unit_at(cell)
+	if p == null or not _attacks.has(p):
+		return 0
+	var a: Dictionary = _attacks[p]
+	var imp := int(a.get("start", 0)) + int(ATK_IMPACT_T * int(a.get("dur", ATK_DUR_MS)))
+	return imp if imp >= _now() else 0
+
+
+func _slide_floor_at(cell: Vector2i) -> int:
+	## R460：**这一格上的单位**当前还在播的滑行什么时候走完（没有就 0）。
+	## 移动踏入场地 / 被冰封 / 被眩晕 / 走到一半被打死 —— 这些「跟着移动一起结算」
+	## 的附带演出都得等主体滑行落地，否则卡面血在**出发格**先掉、人再滑过去，
+	## 读起来就是「扣血快过移动」（用户口径）。
+	## 与 `_attack_impact_at()` 互补：那个管「打出去的一拳」，这个管「走的那几步」。
+	## ⚠️ 演示钉帧用的超长 slide（`--handfly` / `--gridscroll` 的 180000ms）不算 ——
+	##    那不是真实移动，拿来当基准会把后面所有特效挂到三分钟后。
+	var p: Placement = engine.state.unit_at(cell)
+	if p == null or not _slides.has(p):
+		return 0
+	var s: Dictionary = _slides[p]
+	if int(s.get("dur", 0)) > 5000:
+		return 0
+	return int(s.start) + int(s.dur)
+
+
+func _max_slide_floor() -> int:
+	## R465：**全场**还在跑的滑行里最晚的那一个走完时刻（没有就 0）。
+	## 与 `_slide_floor_at(cell)` 的分工：那个问「这一格」，这个问「画面上还有谁在走」——
+	## 代受 / 闪躲这类事件只知道「承受方在哪」，不知道是谁打过来的，
+	## 而移动 + 攻击打包成一步时，滑行是这批演出里最早的一段。
+	## ⚠️ 演示钉帧的超长 slide（180000ms）不算，与 `_slide_floor_at` 同一条过滤。
+	var now_ms := _now()
+	var best := 0
+	for s0: Dictionary in _slides.values():
+		var dur0 := int(s0.get("dur", 0))
+		if dur0 > 5000:
+			continue
+		var end0 := int(s0.get("start", 0)) + dur0
+		if end0 > now_ms and end0 > best:
+			best = end0
+	return best
+
+
+func _hit_cue_at(cell: Vector2i = Vector2i(-1, -1)) -> int:
+	## R466：**这一格马上要挨的那一下**什么时候落地（cell = -1 就只问「全屏最早未落地的一击」）。
+	## 受击反馈类事件（石肤 / 荒野形态 / 恶魔鸭暴怒·复仇 / 不锈钢盆 / 剧毒·黑暗陷阱 /
+	## 爆炸场地 / 火墙灼烧）都是引擎在「伤害算完那一刻」紧跟发出来的，而画面上的拳头
+	## （≈930ms）或脚步还在路上 —— 这些反馈必须落到撞上的那一帧，否则读起来就是
+	## 「字先出、人后挨打」。移动触发的那些再叠一层滑行落地（`_slide_floor_at`）。
+	## 与 `_absorb_cue_at()` 的分工：那个是「代受」，取全屏最早未落地的一击 + 全场最晚滑行；
+	## 这个按格取，且允许没有 cell（道具类反馈不绑格子）。
+	var at := _pending_impact_ms()
+	if cell.x >= 0:
+		var mv := _slide_floor_at(cell)
+		if mv > at:
+			at = mv
+	return at
+
+
+func _absorb_cue_at() -> int:
+	## R465：代受 / 闪躲演出的落地时刻 = `max(还没撞到的那一拳, 还在走的那几步)`。
+	## 为什么延后到下一帧算（而不是事件入队时算）：引擎 `attack_hp()` 是
+	## 「先代受、后发 hp」——事件到达时攻击动画尚未入队，当场算只会得到「现在」。
+	## 等到这批事件全部落完（下一帧 `_tick_anims`）再问，就一定能看见那一拳。
+	var at := _pending_impact_ms()
+	var mv := _max_slide_floor()
+	return maxi(at, mv)
+
+
+func _freeze_hp_exclusive(p: Placement, dmg: int) -> void:
+	## R465：代受一笔伤害时，**先把这一格还挂着的待扣清空**，再冻这一笔。
+	## 为什么不能直接 `_freeze_hp`：`_hit_unit()` 会先发 `fx_impact`，那一笔在
+	## 命中 `fi_hold`（正在滑行 / 舰炮光柱盖着）时**已经冻结过一次**；
+	## 代受再冻一次就有两笔待扣，而 `absorb_fx` 到点只 `_drop_hp` 一笔 →
+	## 卡面数字永远停在扣血前（比多飘一个字难查得多，属于「静默错」）。
+	## 认领（`_fx_claim`）只卸得掉排队的那条 `fx_hit`，卸不掉已经记下的待扣，所以在这里清。
+	if p == null:
+		return
+	while _hp_pending.has(p):
+		_drop_hp(p)
+	_hp_pending.erase(p)
+	_freeze_hp(p, dmg)
 
 
 func _freeze_hp(key: Variant, dmg: int) -> void:
@@ -10223,6 +10458,11 @@ func _tick_anims() -> bool:
 			_attacks.erase(key2)
 		else:
 			any = true
+	# R465：`at = -1` = 「时刻待定」（代受 / 闪躲）—— 在这一帧统一定时。
+	# 必须排在下面「到点触发」之前：-1 ≤ now 会被当成已到点，当场就播掉了。
+	for evd: Dictionary in _delayed:
+		if int(evd.get("at", 0)) < 0:
+			evd["at"] = _absorb_cue_at()
 	# 延时特效：到点触发（命中 / 击破）
 	while true:
 		var due := -1
@@ -10331,6 +10571,15 @@ func _reject_fx(idx: int, reason := "", target = null) -> void:
 func _on_engine_action(kind: String, data: Dictionary) -> void:
 	## 引擎动作 → 动画 + 音效。
 	var n := _now()
+	# R459：击杀记功（鸭子骑士）的增益演出时刻。引擎的顺序是 `attack` → `_destroy`
+	# → `knight_grow`，也就是「拳头已经挥出去、目标已经判死」才轮到增益 —— 但播出的
+	# 时刻不能是当下：那一下还在飞（ATK_IMPACT_T × 1500 ≈ 930ms），破坏还要再等等。
+	# 所以推到「命中 + 破灭留帧 + 呼吸」；没有在播的攻击（纯效果击杀）就当场播。
+	var grow_at := n
+	if kind == "knight_grow" and data.get("cell") is Vector2i and not _shot_pending:
+		var ga_imp := _attack_impact_at(data["cell"] as Vector2i)
+		if ga_imp > 0:
+			grow_at = ga_imp + DESTROY_HOLD_MS + GROW_AFTER_BREAK_MS
 	if _r363_trace and kind in ["place", "destroy", "deathrattle", "battlecry"]:
 		var tc := "-"
 		if data.has("cell"):
@@ -10351,12 +10600,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 	elif kind == "swap" and data.get("old") is CardData:
 		# 交换：原单位从场上顶回手牌（不是抽的）→ 不播「从抽牌堆飞入」
 		_flyin_skip.append((data["old"] as CardData).id)
+	# R479 哈气：第 3/5/7 回合挑中的那个单位获得**永久**双动 → 顶部状态条提示一次
+	# （徽标那边不用另写：`acts_left > 1` 的「行动 N」标记本来就会跟着出现）
+	if kind == "haste_pick":
+		_say("✦ 哈气：%s 获得双动（此后每回合行动两次）" % str(data.get("name", "")))
 	# R151 P2-13：力量成长事件族（升级 / 骑士 / 锻造 / 夜行 / 精进 / 使魔）→ 卡面数字跳动 + 扩散环
 	if kind in ["upgrade", "knight_grow", "heph_grow", "night_grow", "mage_grow", "familiar_grow",
 			"revelator_grow"]:
 		var pg_cell = data.get("cell")
 		if pg_cell is Vector2i and (pg_cell as Vector2i).x >= 0 and not _shot_pending:
-			_pow_fx.append({"cell": pg_cell, "start": n, "dur": 300})
+			_pow_fx.append({"cell": pg_cell, "start": grow_at, "dur": 300})
 	# R151 P2-14：格上治疗事件族 → 上升光点（与伤害的扩散爆点对称）
 	if kind in ["heal", "regen", "charge_heal", "self_repair", "night_erosion"]:
 		var hl_cell = data.get("cell")
@@ -10466,10 +10719,44 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					mv_pts = [_cell_center(data["src"]),
 							_cell_center(data["dst"])]
 				var mv_steps := mv_pts.size() - 1
+				# R467：枭熊跃击画成**抛物线**，而且**不按路程算时长** ——
+				# 全场横跳若按 260ms/格，最远那一跳要 1.7 秒，读起来是慢动作。
+				# 原地起跳（src == dst）同样走这条：上抛再落回原地，一眼能看出它「跳了一下」。
+				# ⚠️ 折线插值是逐段 ease-out（`_display_center`），所以段数给足才圆。
+				if engine.is_leaper(pl2) and mv_pts.size() >= 2:
+					var l0 := mv_pts[0]
+					var l1 := mv_pts[mv_pts.size() - 1]
+					var lift := 58.0 + l0.distance_to(l1) * 0.10
+					var arc: Array[Vector2] = []
+					for k in 7:
+						var tt := float(k) / 6.0
+						arc.append(l0.lerp(l1, tt) + Vector2(0.0, -lift * 4.0 * tt * (1.0 - tt)))
+					mv_pts = arc
+					mv_steps = 1
 				_slides[pl2] = {"from": mv_pts[0], "to": mv_pts[mv_steps],
 						"pts": mv_pts, "sc": _grid_scroll,
 						"start": maxi(n, _anim_end_for(pl2)),
 						"dur": MOVE_SLIDE_BASE_MS + MOVE_SLIDE_PER_STEP_MS * mv_steps}
+		"owlbear_slam":
+			# R467：枭熊落地重击 —— 冲击环 / 播报一律排到**落地那一帧**
+			# （跳跃是滑行动画，`_slide_floor_at` 给的就是它落地的时刻）。
+			var sl_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var sl_at := maxi(n, _slide_floor_at(sl_cell))
+			_delayed.append({"at": sl_at, "kind": "slam_fx",
+					"data": {"pos": _cell_center(sl_cell), "sc": _grid_scroll,
+						"cells": data.get("cells", []),
+						"amount": int(data.get("amount", 0)),
+						"side": str(data.get("side", "opponent")),
+						"name": str(data["card"].card_name) if data.get("card") != null else "枭熊"}})
+		"owlbear_enter":
+			# R467：传说卡「枭熊」落地 —— X 快照那一刻报一句（力量 X / 生命 9X）。
+			var oe_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
+			_bursts.append({"pos": oe_pos, "sc": _grid_scroll, "start": n, "dur": 520,
+					"col": Color("a855d8"), "big": true})
+			_floaters.append({"pos": oe_pos + Vector2(0, -34), "sc": _grid_scroll,
+					"text": "枭熊 X=%d → %d 攻 / %d 血" % [int(data.get("x", 0)),
+						int(data.get("power", 0)), int(data.get("health", 0))],
+					"col": Color("b06fd8"), "start": n, "dur": 1700, "size": 17})
 		"attack":
 			var src_c := _cell_center(data["src"])
 			var dst_c := _cell_center(data["dst"])
@@ -10489,6 +10776,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				a_start = maxi(n, _anim_end_for(atk_pl))
 				_set_attack_anim(atk_pl, {"kind": "unit", "dir": adir, "src": src_c,
 						"dst": dst_c, "sc": _grid_scroll,
+						# R466：记下「打的是哪一格」—— `dst` 是像素中心，里面烘了入库那一刻的
+						# 滚动量；棋盘滚过之后 `_cell_center()` 算出来的中心就对不上了，
+						# `destroy` 按像素比中心会找不到这一拳 → 卡先炸、数字后到。
+						"dst_cell": data["dst"],
 						"start": a_start, "dur": ATK_DUR_MS, "dmg": int(data["damage"])})
 			# 弹体命中时刻 = ATK_IMPACT_T × 总时长：爆点/闪红/伤害数字那时才出现
 			_delayed.append({"at": a_start + int(ATK_IMPACT_T * ATK_DUR_MS), "kind": "hit",
@@ -10519,7 +10810,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				var hd := _cell_center(data["dst"])
 				var hdir: Vector2 = (hd - hs).normalized()
 				_set_attack_anim(hp_atk, {"kind": "hp", "dir": hdir, "src": hs, "dst": hd,
-						"sc": _grid_scroll,
+						"sc": _grid_scroll, "dst_cell": data["dst"],
 						"start": h_start, "dur": ATK_DUR_MS, "dmg": hp_dmg})
 			if hp_dmg > 0:
 				# 撞击时刻才出爆点/飘字/震屏，与单位动作对齐
@@ -10758,7 +11049,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					var fi_beam := _naval_beam_land_for(fc)
 					if fi_beam > fi_at:
 						fi_at = fi_beam
-					var fi_hold := (fi_seq >= 0 or fi_beam > 0) and fi_pl != null and fi_pl.health > 0
+					# R460：这一格正在滑行（移动触发的效果伤害）→ 跟着那几步一起落地
+					var fi_mv := _slide_floor_at(fc)
+					if fi_mv > fi_at:
+						fi_at = fi_mv
+					# R467 枭熊跃击：这笔伤害是「落地那一刻」砸出来的 —— 受击格自己没在滑，
+					# 等的是**落地点**的滑行（引擎在 `fx_impact` 里带了 `land`）。
+					var fi_land := 0
+					if data.get("land") is Vector2i:
+						fi_land = _slide_floor_at(data["land"] as Vector2i)
+						if fi_land > fi_at:
+							fi_at = fi_land
+					var fi_hold := (fi_seq >= 0 or fi_beam > 0 or fi_mv > 0 or fi_land > 0) \
+							and fi_pl != null and fi_pl.health > 0
 					if fi_hold:
 						_freeze_hp(fi_pl, fi_dmg)
 					_delayed.append({"at": fi_at, "kind": "fx_hit",
@@ -10869,26 +11172,28 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"text": "使魔之夜 · 乌鸦 +1（本回合 0 费）", "col": Color("6a6a9a"), "size": 17,
 					"start": n, "dur": 2100})
 		"aether":
-			# 以太屏障（9060）：本回合前 X 次受到的伤害变为 1
+			# 风暴屏障（9060）：本回合前 X 次受到的伤害变为 1
 			sfx.play("heal")
-			_say("✦ 以太屏障：本回合前 %d 次受到的伤害变为 1" % int(data.get("left", 0)))
+			_say("✦ 风暴屏障：本回合前 %d 次受到的伤害变为 1" % int(data.get("left", 0)))
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 30),
-					"text": "以太屏障 · 前 %d 次伤害→1" % int(data.get("left", 0)),
+					"text": "风暴屏障 · 前 %d 次伤害→1" % int(data.get("left", 0)),
 					"col": Color("4a7fd8"), "start": n, "dur": 2100})
 		"aether_hit":
-			# 以太屏障吸收了一次伤害
+			# 风暴屏障吸收了一次伤害
+			# R466：这是「这一下打中时才压成 1」→ 飘字跟撞击帧（与石肤同一条口径）
 			sfx.play("heal")
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 66),
-					"text": "以太屏障 · 伤害 %d → 1（还剩 %d 次）" % [
+					"text": "风暴屏障 · 伤害 %d → 1（还剩 %d 次）" % [
 							int(data.get("amount", 0)), int(data.get("left", 0))],
-					"col": Color("4a7fd8"), "size": 15, "start": n, "dur": 2000})
+					"col": Color("4a7fd8"), "size": 15, "start": _hit_cue_at(), "dur": 2000})
 		"rice":
 			# 道具「一袋米抗几楼」（R123）：我方 HP 首次受伤 → 抽 1 张卡 + 技能伤害 +1
 			sfx.play("heal")
 			_say("✦ 一袋米抗几楼：我方 HP 受伤 → 抽 1 张卡，本回合技能伤害 +1")
+			# R466：触发点是「我方 HP 首次受伤」→ 等那一下撞到再飘
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 30),
 					"text": "一袋米抗几楼 · 抽 1 张 / 技能 +1", "col": Color("d7a54a"),
-					"start": n, "dur": 2100})
+					"start": _hit_cue_at(), "dur": 2100})
 		"revive":
 			# 道具「叠加态的鸭」：HP 归零 → 复活（回复 1 点生命，概率永久 -25%）
 			sfx.play("heal")
@@ -10956,9 +11261,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if engine != null:
 				engine.basin_charge = ba_left
 			_say("✧ 不锈钢盆承受 %d 点伤害（剩余 %d 点）" % [ba_take, ba_left])
+			# R466：盆是「替自己挨下这一下」→ 提示等撞击帧
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 60.0),
 					"text": "不锈钢盆 -%d（剩 %d）" % [ba_take, ba_left],
-					"col": Color("b8c4cc"), "size": 16, "start": n, "dur": 1800})
+					"col": Color("b8c4cc"), "size": 16, "start": _hit_cue_at(), "dur": 1800})
 		"basin_break":
 			# R311 不锈钢盆：计数归零 → **失去此道具**（局状态与引擎两侧都得清）。
 			# `engine.self_relics` 与 `RunState.relics` 是同一个数组，但这里仍显式重挂一次 ——
@@ -10972,7 +11278,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("✧ 不锈钢盆计数归零 —— 已耗尽")
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 60.0),
 					"text": "不锈钢盆 碎了", "col": Color("8a949c"),
-					"size": 17, "start": n, "dur": 2200})
+					"size": 17, "start": _hit_cue_at(), "dur": 2200})
 		"pear":			# 道具「鸭梨」：我方 HP 受伤 → 最大生命 +1（只提高上限，不回复生命）
 			sfx.play("heal")
 			_say("✦ 鸭梨：受到伤害 → 最大生命 +1（当前 %d/%d）"
@@ -11027,12 +11333,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				ba_name = (data["card"] as CardData).card_name
 			_say("🛡 %s 的能量屏障挡住了 %d 点伤害（护盾消失）"
 					% [ba_name, int(data.get("blocked", 0))])
+			# R466：护盾是在**挨打那一刻**碎的 —— 与代受 / 闪躲同一条口径，
+			# 等这一拳撞到再演（否则「护盾已碎、拳头还在路上」）。
 			if ba_cell.x >= 0:
-				_bursts.append({"pos": _cell_center(ba_cell), "sc": _grid_scroll, "start": n,
+				var ba_at := _hit_cue_at(ba_cell)
+				_bursts.append({"pos": _cell_center(ba_cell), "sc": _grid_scroll, "start": ba_at,
 						"dur": 520, "col": Color("7fd6f0"), "big": true})
 				_floaters.append({"pos": _cell_center(ba_cell) + Vector2(0, -14), "sc": _grid_scroll,
 						"text": "护盾 · 0 伤", "col": Color("7fd6f0"),
-						"start": n, "dur": 1600, "size": 17})
+						"start": ba_at, "dur": 1600, "size": 17})
 		"self_repair":
 			# 自我修复 8035（R87）：改造一个己方盟友 → +2 最大生命 + 每回合回 4。
 			sfx.play("heal")
@@ -11055,14 +11364,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"shield_redirect":
 			# 护盾生成器（8042，R92）：接通的我方单位受伤 → 伤害**改由它承受**，溢出不再结算。
 			# 演出分两头：受害格「接下 N」+ 生成器格爆点「-N」，让玩家看清伤害到底去了哪里。
-			# R393：**不许当场播** —— 排队到攻击撞到那一帧（见 `_pending_impact_ms()`）。
+			# R393：**不许当场播** —— 排队到攻击撞到那一帧（见 `_absorb_cue_at()`）。
+			# R465：这条也有同一个坑 —— `_hit_unit()` 在 `action.emit("attack")` **之前**
+			# 就转发到这里，此刻攻击动画还没入队，当场算只会得到「现在」。
+			# 三条代受路径（护盾生成器 / 守护·栅栏 / 闪躲）统一挂 `at = -1` 延后定时。
 			var sr_src := data.get("cell", Vector2i(-1, -1)) as Vector2i
 			var sr_dst := data.get("to", Vector2i(-1, -1)) as Vector2i
 			var sr_n: int = int(data.get("amount", 0))
 			var sr_gen := engine.state.unit_at(sr_dst) if sr_dst.x >= 0 else null
 			if sr_gen != null:
-				_freeze_hp(sr_gen, sr_n)      # 生成器的血量数字等撞击那一刻再掉
-			_delayed.append({"at": _pending_impact_ms(), "kind": "absorb_fx",
+				_freeze_hp_exclusive(sr_gen, sr_n)   # R465：同上；数字等撞击那一刻再掉
+			if sr_dst.x >= 0:
+				_fx_claim(sr_dst)             # R465：同上，卸掉抢跑的通用受击
+			_delayed.append({"at": -1, "kind": "absorb_fx",
 					"data": {"src": sr_src, "dst": sr_dst, "amount": sr_n,
 					"say": "◈ %s 受到的 %d 点伤害被护盾生成器接下（溢出不再结算）"
 							% [str((data.get("card", null) as CardData).card_name), sr_n]}})
@@ -11411,9 +11725,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					int(data.get("add", 0)), int(data.get("left", 0))])
 		"stoneskin_hit":
 			var sk_left := int(data.get("left", 0))
+			# R466：石肤是「这一下打中时才压成 1」→ 飘字跟着撞击帧（否则比拳头早 ≈930ms）
 			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
 					"text": "石肤 → 1", "col": Color("6a6a6a"),
-					"start": n, "dur": 1600, "size": 18})
+					"start": _hit_cue_at(), "dur": 1600, "size": 18})
 			_say("石肤：这次伤害变为 1（原本 %d，还剩 %d 次）" % [
 					int(data.get("amount", 0)), sk_left])
 		"guard_absorb":
@@ -11423,10 +11738,22 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var ga_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
 			var ga_n: int = int(data.get("amount", 0))
 			# R393：与护盾生成器同一处理 —— 等攻击撞击帧，别抢在动画前面
+			# ⚠️ R465（用户报「铁栅栏代受的演出依然抢在移动 / 攻击之前」）：
+			#    **时刻不能在这里算**。引擎 `attack_hp()` 是「先 `_absorb_by_guard()`
+			#    发 guard_absorb → 再 emit `hp`」，这个事件到达时那一下直击 HP 的
+			#    攻击动画还没入队 → `_pending_impact_ms()` 只能退回「现在」，
+			#    特效于是比滑行（它连滑行都没看）和挥拳都早。
+			#    先挂 `at = -1` 排队，由 `_tick_anims()` 在下一帧（这批事件到齐后）定时。
 			var ga_pl := engine.state.unit_at(ga_cell) if ga_cell.x >= 0 else null
 			if ga_pl != null:
-				_freeze_hp(ga_pl, ga_n)
-			_delayed.append({"at": _pending_impact_ms(), "kind": "absorb_fx",
+				_freeze_hp_exclusive(ga_pl, ga_n)   # R465：独占，避免同一笔冻两次
+			# R465：这一格的「-N / 爆点」由下面那条 absorb_fx 统一负责 ——
+			# `_hit_unit()` 先发过 `fx_impact`，160ms 就会在**承受格**上炸一次，
+			# 于是同一笔伤害飘两次、而且那一次抢在移动 / 挥拳之前。
+			# 认领 = 卸掉还排着的通用受击（`_fx_unqueue_hit` 的唯一调用口）。
+			if ga_cell.x >= 0:
+				_fx_claim(ga_cell)
+			_delayed.append({"at": -1, "kind": "absorb_fx",
 					"data": {"src": Vector2i(-1, -1), "dst": ga_cell, "amount": ga_n,
 					"say": "%s：%s 替我方 HP 承受 %d 点伤害" % [
 							str(data.get("how", "守护")), ga_name, ga_n]}})
@@ -11459,10 +11786,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var da_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
 			var da_n: int = int(data.get("absorbed", 0))
 			# R393：闪躲也是代受 —— 同样等攻击撞击帧，否则「闪躲 -N」比拳头先到
+			# R465：时刻同样留到下一帧再算（理由见上面 guard_absorb 那段）。
 			var da_pl := engine.state.unit_at(da_cell) if da_cell.x >= 0 else null
 			if da_pl != null:
-				_freeze_hp(da_pl, da_n)
-			_delayed.append({"at": _pending_impact_ms(), "kind": "absorb_fx",
+				_freeze_hp_exclusive(da_pl, da_n)   # R465：同上
+			if da_cell.x >= 0:
+				_fx_claim(da_cell)   # R465：同守护代受，避免 160ms 那条通用受击抢跑
+			_delayed.append({"at": -1, "kind": "absorb_fx",
 					"data": {"src": Vector2i(-1, -1), "dst": da_cell, "amount": da_n,
 					"say": "闪躲：%s 替我方 HP 承受 %d 点伤害%s" % [
 							da_name, da_n,
@@ -11514,9 +11844,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				kg_name = (data["card"] as CardData).card_name
 			var kg_center := _cell_center(data["cell"]) if data.has("cell") \
 					else Vector2(WINDOW_W / 2, OWN_HAND_Y - 30)
+			# R459：`start` 走 `grow_at`（= 命中 + 破灭留帧 + 呼吸），不再是 `_now()`。
+			# 否则这条「+2 攻」比自己的拳头还早 900 多毫秒冒出来，看起来像先加工再打人。
 			_floaters.append({"pos": kg_center + Vector2(0, -24), "sc": _grid_scroll,
 					"text": "+%d 攻" % int(data.get("amount", 0)),
-					"col": UiTheme.STATE_TAUNT, "start": _now(), "dur": 1500, "size": 20})
+					"col": UiTheme.STATE_TAUNT, "start": grow_at, "dur": 1500, "size": 20})
 			_say("%s 击杀敌人 → 攻击力 +%d（当前 %d）" % [
 					kg_name, int(data.get("amount", 0)), int(data.get("power", 0))])
 		"knight_sword":
@@ -11602,15 +11934,22 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("%s：战斗结束回复 %d 点生命（剩余 %d）" % [
 					_src, _sh, int(data.get("hp", 0))])
 		"destroy":
-			var center := _cell_center(data["cell"])
+			var cell: Vector2i = data["cell"]
+			var center := _cell_center(cell)
 			# 若这是一次攻击动画的目标：等弹体命中后再演出击破，
 			# 否则会出现「卡牌先消失、伤害数字后出现」的时序倒错。
+			# R466：优先按**格**匹配（`dst_cell`）—— 像素中心里烘了入库时的滚动量，
+			# 棋盘滚过之后 `(a["dst"] == center)` 永远不成立，等于没有这道保护。
 			var delay_ms := 0
 			for a: Dictionary in _attacks.values():
-				if (a["dst"] as Vector2) == center:
+				var a_hit := false
+				if a.has("dst_cell"):
+					a_hit = (a["dst_cell"] as Vector2i) == cell
+				else:
+					a_hit = (a["dst"] as Vector2) == center
+				if a_hit:
 					delay_ms = maxi(delay_ms,
 							int(a["start"]) + int(ATK_IMPACT_T * int(a["dur"])) - n)
-			var cell: Vector2i = data["cell"]
 			# 无论哪种死法，都让这张卡在原位多留一小会儿：
 			# 命中瞬间先闪红/掉血，稍后卡片才真正消失并播击破。
 			# R430：被流星砸死的单位 —— 等那一颗**落地**再演击破。
@@ -11631,6 +11970,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var kw := _knife_land_for(center)
 			if kw > 0:
 				delay_ms = maxi(delay_ms, kw - n)
+			# R460：被移动触发的伤害打死（踩场地 / 撞冰面）→ 等那几步滑完再击破。
+			# ⚠️ 这里不能读 `unit_at(cell)`：引擎已经 `board.erase(cell)` 了，
+			#    要拿 emit 里带的 `placement` 才查得到 `_slides`。
+			var dd_pl = data.get("placement")
+			if dd_pl != null and _slides.has(dd_pl):
+				var dd_s: Dictionary = _slides[dd_pl]
+				if int(dd_s.get("dur", 0)) <= 5000:
+					delay_ms = maxi(delay_ms,
+							int(dd_s.start) + int(dd_s.dur) - n)
 			var hide_at := n + delay_ms + DESTROY_HOLD_MS
 			_dying.append({"cell": cell, "card": data["card"],
 					"p": data.get("placement"), "hide_at": hide_at})
@@ -11654,7 +12002,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 爆炎鸭亡语 / 爆炸陷阱（R50）：尸体周围四格炸出的火焰（不分敌我）—— 同特效同源。
 			# 起播稍微延后一点，读起来就是「先倒下 → 再爆开」。
 			sfx.play("destroy")
-			var bwhen := n + 120
+			# R466：爆炸场地是「走进来」踩响的 —— 火焰等那几步滑完再炸。
+			# 爆炎鸭亡语同样走这里，那时没有滑行 → `maxi` 取回原来的 n + 120。
+			var bwhen := maxi(n + 120, _hit_cue_at(data.get("center", Vector2i(-1, -1)) as Vector2i))
 			for c2 in data.get("cells", []):
 				_bursts.append({"pos": _cell_center(c2 as Vector2i), "sc": _grid_scroll, "start": bwhen,
 						"dur": 620, "col": Color("ff8a3d"), "big": true})
@@ -11667,48 +12017,72 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					str(data["card"].card_name), int(data.get("amount", 0))])
 		"trap_hit":
 			# 冰霜 / 冻结陷阱（R51）：攻击者踩陷阱吃直伤 —— 蓝白火花 + 飘字（同源同特效）
-			sfx.play("destroy")
-			var th_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": th_pos, "sc": _grid_scroll, "start": n, "dur": 520,
+			# R460：这个事件**只由「移动踏入」触发**（`_field_trigger` 是唯一口），
+			# 所以整段演出必须等那几步滑完。原来挂 `_now()`：人还站在出发格，
+			# 蓝火花和「-N」已经在那格炸开，然后才滑进陷阱里 —— 顺序反了。
+			var th_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var th_at := n
+			if th_cell.x >= 0:
+				th_at = maxi(n, _slide_floor_at(th_cell))
+			var th_pos := _cell_center(th_cell)
+			if th_at <= n:
+				sfx.play("destroy")   # 没有滑行要等（旁路调用）→ 照旧当场响
+			_bursts.append({"pos": th_pos, "sc": _grid_scroll, "start": th_at, "dur": 520,
 					"col": Color("7ec8ff"), "big": false})
 			_floaters.append({"pos": th_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "%s -%d" % [str(data.get("kind", "陷阱")), int(data.get("amount", 0))],
-					"col": Color("2b6fb3"), "start": n, "dur": 1400, "size": 18})
+					"col": Color("2b6fb3"), "start": th_at, "dur": 1400, "size": 18})
+			# ⚠️ 卡面血**不在这里冻**：引擎是先 `_hit_unit()`（→ `fx_impact`）再发
+			# `trap_hit`，那一条已经带着滑行时刻冻结过这一笔了（见 `fx_impact` 的
+			# `fi_mv` / `fi_hold`）。这里再冻一次，`_show_hp()` 的「实际值 + 待扣总和」
+			# 就会把同一笔伤害算两遍 —— 血条反而比扣血前更高。
+			# 分工：时刻由这里定（爆点 / 飘字），掉血由 `fx_hit` 到点放行。
 		"frozen":
 			# 冰封（R68）：寒冰箭 9011 / 冰冻术士战吼 / 冻结陷阱 8013 的**唯一**施加特效。
 			# 判据与常驻光环同源（引擎的 Placement.frozen），这里只演「施加的那一下」。
-			var fz_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": fz_pos, "sc": _grid_scroll, "start": n, "dur": 620,
+			# R460：施加源可能是「走进冰面 / 冰霜陷阱」→ 等滑行落地再冻结
+			#（技能施加时该单位没在滑，`_slide_floor_at` 返回 0，行为不变）。
+			var fz_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var fz_at := maxi(n, _slide_floor_at(fz_cell)) if fz_cell.x >= 0 else n
+			var fz_pos := _cell_center(fz_cell)
+			_bursts.append({"pos": fz_pos, "sc": _grid_scroll, "start": fz_at, "dur": 620,
 					"col": Color("9ad8ff"), "big": false})
-			_bursts.append({"pos": fz_pos, "sc": _grid_scroll, "start": n + 90, "dur": 520,
+			_bursts.append({"pos": fz_pos, "sc": _grid_scroll, "start": fz_at + 90, "dur": 520,
 					"col": Color("e8f6ff"), "big": false})
 			_floaters.append({"pos": fz_pos + Vector2(0, -14), "sc": _grid_scroll, "text": "冰封",
-					"col": Color("2b6fb3"), "start": n, "dur": 1500, "size": 20})
+					"col": Color("2b6fb3"), "start": fz_at, "dur": 1500, "size": 20})
 			_say("❄ %s 被冰封：下回合不能行动" % str(data.get("name", "")))
 		"stun":
 			# R341 惊奇盒子（9179）：攻击者被眩晕 —— 金黄爆点 + 「眩晕」飘字。
 			# 常驻状态本身由 Placement.stun_left 画（状态栏 / 徽标），这里只演「施加的那一下」。
-			var st_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": st_pos, "sc": _grid_scroll, "start": n, "dur": 560,
+			# R460：同上 —— 眩晕也可能由「撞上场地」产生，等滑行落地
+			var st_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var st_at := maxi(n, _slide_floor_at(st_cell)) if st_cell.x >= 0 else n
+			var st_pos := _cell_center(st_cell)
+			_bursts.append({"pos": st_pos, "sc": _grid_scroll, "start": st_at, "dur": 560,
 					"col": Color("f0c040"), "big": false})
 			_floaters.append({"pos": st_pos + Vector2(0, -14), "sc": _grid_scroll,
-					"text": "眩晕", "col": Color("8a6d1f"), "start": n, "dur": 1500, "size": 20})
+					"text": "眩晕", "col": Color("8a6d1f"), "start": st_at, "dur": 1500, "size": 20})
 			_say("💫 %s 被眩晕：下回合不能行动" % str(data.get("name", "")))
 		"poison":
 			# 剧毒陷阱（R51）：挂毒（apply）与回合开始的毒跳 —— 绿泡 + 飘字
-			var po_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": po_pos, "sc": _grid_scroll, "start": n, "dur": 520,
+			# R466：挂毒是「移动踩上来」触发的（`_field_trigger` 唯一口）→ 等那几步滑完；
+			# 回合开始的毒跳没有滑行，`_hit_cue_at` 自然退化成「现在」。
+			var po_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var po_at := _hit_cue_at(po_cell)
+			var po_pos := _cell_center(po_cell)
+			_bursts.append({"pos": po_pos, "sc": _grid_scroll, "start": po_at, "dur": 520,
 					"col": Color("79c26a"), "big": false})
 			if bool(data.get("apply", false)):
 				_floaters.append({"pos": po_pos + Vector2(0, -12), "sc": _grid_scroll, "text": "中毒",
-						"col": Color("3e8a2f"), "start": n, "dur": 1400, "size": 18})
+						"col": Color("3e8a2f"), "start": po_at, "dur": 1400, "size": 18})
 				_say("☠ %s 中毒：每回合 %d 点伤害，持续 %d 回合" % [
 						str(data.get("name", "")), int(data.get("dmg", 0)),
 						int(data.get("left", 0))])
 			else:
 				_floaters.append({"pos": po_pos + Vector2(0, -12), "sc": _grid_scroll,
 						"text": "中毒 -%d" % int(data.get("amount", 0)),
-						"col": Color("3e8a2f"), "start": n, "dur": 1400, "size": 18})
+						"col": Color("3e8a2f"), "start": po_at, "dur": 1400, "size": 18})
 		"hunt":
 			# 暗影狩猎（9107，R52）：紫色爆点 —— 基础 16 伤；目标上回合触发过场地 → 30（金紫大字）
 			sfx.play("spell")
@@ -11793,15 +12167,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"wild_form_guard":
 			# 荒野形态（6022，R60 重做）：每场第一次我方 HP 被普通攻击打中 →
 			# 这次伤害 -4（最少 1）+ 对攻击者反伤 4。
-			var wg_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": wg_pos, "sc": _grid_scroll, "start": n, "dur": 560,
+			# R466：减伤 / 反伤都是「这一下打中时」才发生的 → 等撞击帧（cell 传的是**攻击者**
+			# 那一格，滑行中的话再叠滑行落地）。
+			var wg_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var wg_at := _hit_cue_at(wg_cell)
+			var wg_pos := _cell_center(wg_cell)
+			_bursts.append({"pos": wg_pos, "sc": _grid_scroll, "start": wg_at, "dur": 560,
 					"col": Color("4caf50"), "big": true})
 			_floaters.append({"pos": wg_pos + Vector2(0, -30), "sc": _grid_scroll,
 					"text": "荒野形态 减伤 %d" % int(data.get("reduced", 0)),
-					"col": Color("7fd18a"), "start": n, "dur": 1500, "size": 17})
+					"col": Color("7fd18a"), "start": wg_at, "dur": 1500, "size": 17})
 			_floaters.append({"pos": wg_pos + Vector2(0, -8), "sc": _grid_scroll,
 					"text": "反伤 %d" % int(data.get("amount", 0)),
-					"col": Color("e07a6a"), "start": n, "dur": 1500, "size": 19})
+					"col": Color("e07a6a"), "start": wg_at, "dur": 1500, "size": 19})
 			_say("❦ 荒野形态（每场第一次）：我方伤害 -%d，并对 %s 造成 %d 点伤害" % [
 					int(data.get("reduced", 0)), str(data.get("name", "敌人")),
 					int(data.get("amount", 0))])
@@ -11920,12 +12298,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("d84a12"), "start": n, "dur": 1200})
 		"fire_wall_pass":
 			# 穿过燃烧横行的单位被灼烧（不分敌我）
-			var fp_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": fp_pos, "sc": _grid_scroll, "start": n, "dur": 560,
+			# R466：这一下只在**走过**火墙时才发（`_fire_wall_pass(path)`，cell = 路径终点）
+			# → 等那几步滑完才冒火，否则「人还在半路，火先烧在原位」。
+			var fwp_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var fwp_at := _hit_cue_at(fwp_cell)
+			var fp_pos := _cell_center(fwp_cell)
+			_bursts.append({"pos": fp_pos, "sc": _grid_scroll, "start": fwp_at, "dur": 560,
 					"col": Color("ff8a3d"), "big": false})
 			_floaters.append({"pos": fp_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "火墙 -%d" % int(data.get("dmg", 0)),
-					"col": Color("d84a12"), "start": n, "dur": 1300, "size": 18})
+					"col": Color("d84a12"), "start": fwp_at, "dur": 1300, "size": 18})
 		"stun_blow":
 			# 敲晕（9088）：目标力量 -3（金色爆点 + 飘字）
 			var sb_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
@@ -11936,12 +12318,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": UiTheme.STAT_POWER, "start": n, "dur": 1300, "size": 16})
 		"dark_trap":
 			# 黑暗陷阱（8063，R105）：踩中者本回合攻击时力量 -1（暗紫爆点 + 飘字）
-			var dt_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": dt_pos, "sc": _grid_scroll, "start": n, "dur": 480,
+			# R466：同剧毒 —— 这是「走进来」才触发的，等滑行落地（与 trap_hit 一条口径）。
+			var dt_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var dt_at := _hit_cue_at(dt_cell)
+			var dt_pos := _cell_center(dt_cell)
+			_bursts.append({"pos": dt_pos, "sc": _grid_scroll, "start": dt_at, "dur": 480,
 					"col": Color("9b6bd6"), "big": false})
 			_floaters.append({"pos": dt_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "黑暗 力量 -%d" % int(data.get("amount", 0)),
-					"col": Color("6a3fa0"), "start": n, "dur": 1300, "size": 16})
+					"col": Color("6a3fa0"), "start": dt_at, "dur": 1300, "size": 16})
 		"gale":
 			# 疾风（9091）：随机敌人吃 2 伤
 			var ga_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
@@ -12112,24 +12497,27 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			sfx.play("attack")
 		"demon_rage":
 			# 恶魔鸭（9116）：醒着受伤 → 永久 +1 力量
+			# R466：这只鸭子是**被打中**才暴怒 → 力量飘字等那一拳落地
 			var dr_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			_floaters.append({"pos": _cell_center(dr_cell) + Vector2(0, -18), "sc": _grid_scroll,
 				"text": "恶魔鸭 力量 +%d（%d）" % [int(data.get("amount", 0)),
 					int(data.get("power", 0))],
-				"col": Color("c0392b"), "start": n, "dur": 1600, "size": 16})
+				"col": Color("c0392b"), "start": _hit_cue_at(dr_cell), "dur": 1600, "size": 16})
 			sfx.play("attack")
 		"demon_revenge":
 			# 恶魔鸭（复仇）9118：每次受伤 → **本回合**力量 +1（可叠加）。
 			# 与 9116 的 `demon_rage`（永久 +1）刻意区分：这里飘的是**累计值**
 			#（"本回合 +3"），让玩家一眼看到"我打得多，它就疼得多"，
 			# 从而意识到「这一回合得收手了」——这是这只 Boss 的核心决策点。
+			# R466：同暴怒 —— 受伤那一刻的反馈，等这一拳落地
 			var rv_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var rv_at := _hit_cue_at(rv_cell)
 			var rv_pos := _cell_center(rv_cell)
 			_floaters.append({"pos": rv_pos + Vector2(0, -18), "sc": _grid_scroll,
 				"text": "复仇 本回合 +%d（力量 %d）" % [int(data.get("stacked", 0)),
 					int(data.get("power", 0))],
-				"col": Color("ff5722"), "start": n, "dur": 1500, "size": 16})
-			_bursts.append({"pos": rv_pos, "sc": _grid_scroll, "start": n, "dur": 460,
+				"col": Color("ff5722"), "start": rv_at, "dur": 1500, "size": 16})
+			_bursts.append({"pos": rv_pos, "sc": _grid_scroll, "start": rv_at, "dur": 460,
 				"col": Color("ff8a3d"), "big": false})
 			sfx.play("attack")
 		"demon_summon":
@@ -12213,6 +12601,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						"text": "激发 ×%d 轮 · 每轮随机 %d 个 -%d" % [
 								in_n, int(data.get("targets", 1)), in_d],
 						"col": Color("a05ad0"), "size": 15, "start": n, "dur": 1600})
+		"refract_shot":
+			# R465 折射炮 9211：主目标之外的那一发流弹。
+			# 伤害数字由 `fx_impact`(seq=1) 的通用受击照常画 —— 这里**绝不再补一个
+			# 「-N」**，否则同一格会飘两次（R325 那条「一次攻击飘两个数字」的老坑）。
+			# 只补一句因果播报：玩家要能看出这一下是「折射出来的」，不是凭空掉血。
+			sfx.play("attack")
+			var rs_amt := int(data.get("amount", 0))
+			_say("⌁ 折射炮：流弹折射向 %s（-%d）" % [str(data.get("name", "?")), rs_amt])
 		"reflex":
 			# R317 身法 9173：抽 5 张，但本回合不能再用盟友 / 工事卡。
 			_say("◇ 身法：抽 %d 张 —— 本回合不能再使用盟友和工事卡"
@@ -13446,6 +13842,22 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 			# （_play_destroy_fx 内部的特效以当前滚动重新打标）。
 			_play_destroy_fx((d.center as Vector2) + _scroll_dy(float(d.get("sc", _grid_scroll))),
 					d.card as CardData)
+		"slam_fx":
+			# R467：落地重击 —— 落点一个大琥珀爆点 + 被砸的每一格小爆点 + 震屏 + 播报。
+			sfx.play("hit")
+			_shake(6.0, 240)
+			var sf_pos := (d.pos as Vector2) + _scroll_dy(float(d.get("sc", _grid_scroll)))
+			_bursts.append({"pos": sf_pos, "sc": _grid_scroll, "start": n, "dur": 700,
+					"col": Color("d79a3a"), "big": true})
+			for sf_c in (d.get("cells", []) as Array):
+				_bursts.append({"pos": _cell_center(sf_c as Vector2i), "sc": _grid_scroll,
+						"start": n, "dur": 480, "col": Color("c9772a"), "big": false})
+			var sf_n := (d.get("cells", []) as Array).size()
+			if sf_n > 0:
+				_say("💥 %s 落地重击：周围 %d 格各 %d 点伤害" % [
+						str(d.get("name", "枭熊")), sf_n, int(d.get("amount", 0))])
+			else:
+				_say("💥 %s 落地重击：周围没有敌方单位" % str(d.get("name", "枭熊")))
 		"hit":
 			sfx.play("attack")
 			if d.has("say"):
@@ -13791,6 +14203,17 @@ func _draw_highlights() -> void:
 			atk_src = selection[1]
 	for cell in move_targets:
 		_hl(cell, COL_MOVE)
+	# R467 枭熊：悬停一个绿格 → 把**它落地会砸到的那几格**标成琥珀并报伤害。
+	# 与技能卡的悬停预告同一套路（触屏没有 hover，靠选中时那行提示文字兜底）。
+	if atk_src.x >= 0 and engine != null:
+		var lsel: Placement = engine.state.unit_at(atk_src)
+		if lsel != null and engine.is_leaper(lsel):
+			var lhov: Variant = _cell_at(get_local_mouse_position())
+			if lhov != null and move_targets.has(lhov):
+				for sc2: Vector2i in engine._slam_cells(lhov as Vector2i, GameEngine.SIDE_SELF):
+					_hl(sc2, COL_SLAM)
+					_draw_dmg_preview(sc2, engine.preview_hit_damage(
+							engine.state.unit_at(sc2), lsel.effective_power(), true, false))
 	for cell in attack_targets_arr:
 		_hl(cell, COL_ATTACK)
 		if atk_src.x >= 0:
@@ -14657,6 +15080,16 @@ func _drag_hit_cell() -> Variant:
 	return _drop_cell(_drag_pos, cells)
 
 
+func _self_half_rect() -> Rect2:
+	## 自己半场（下 3 行）格子的外接矩形 —— 效果卡的「松手即启用」区域（R484）。
+	## 与 `_own_place_cells` 不同：这里只管**区域框**，不涉及单位落点。
+	var cells: Array[Vector2i] = []
+	for x in range(FieldState.OPPONENT_ROWS, FieldState.BOARD_ROWS):
+		for y in FieldState.BOARD_COLS:
+			cells.append(Vector2i(x, y))
+	return _cells_bbox(cells)
+
+
 func _cells_bbox(cells: Array) -> Rect2:
 	## 一组格子的外接矩形（画「可释放区域」外框用）。空集合返回零矩形。
 	if cells.is_empty():
@@ -14673,6 +15106,12 @@ func _drag_zone_rect() -> Rect2:
 	if _drag_idx < 0 or engine == null or _drag_idx >= engine.state.hand.size():
 		return Rect2()
 	if _drag_to_effects:
+		# R484：效果卡除了左栏效果区，**自己半场**也能松手启用 —— 敌方半场不算。
+		# 原来这里直接返回左栏整条：屏幕上完全看不出「棋盘上哪儿能松手」，
+		# 而松手判定又接受整盘（含敌方 HP 格）。现在两处同源。
+		# 左栏那块绿框仍由 `_draw_drag` 单独画 —— 它兼「这张卡之后会落在哪」的说明。
+		if engine.state.hand[_drag_idx].is_effect():
+			return _self_half_rect()
 		return _effect_drop_rect()
 	if _drag_place:
 		return _cells_bbox(_drag_place_cells)
@@ -14868,7 +15307,13 @@ func _draw_pow_fx() -> void:
 	## R151 P2-13：力量成长 —— 力量徽章跳动（1→1.35→1）+ 一圈扩散环（金，力量语义）。
 	var n := _now()
 	for f in _pow_fx:
-		var t := clampf(float(n - int(f.start)) / int(f.dur), 0.0, 1.0)
+		# R459：`start` 允许排在**未来**（击杀增益等目标破灭之后才亮）。
+		# 以前直接 clamp 到 0..1 —— 未来的环会以 t=0 画出来：徽章原大小 + 一圈
+		# 0.75 不透明度的满弧停在原地，看起来像「先加工再打人」的元凶之一。
+		var ft := float(n - int(f.start)) / int(f.dur)
+		if ft <= 0.0:
+			continue   # 延迟启动：还没到点，什么都不画
+		var t := clampf(ft, 0.0, 1.0)
 		var p: Placement = engine.state.unit_at(f["cell"])
 		if p == null:
 			continue
@@ -15424,8 +15869,8 @@ static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 			"type": "line", "kind": "enchant",
 			"icon": UiAssets.enchant_icon(card.enchant),
 			"col": CardData.enchant_color(card.enchant).darkened(0.12),
-			"title": CardData.enchant_name(card.enchant),
-			"segs": [{"text": "附魔 · " + CardData.enchant_name(card.enchant), "bold": true},
+			"title": CardData.enchant_title(card),
+			"segs": [{"text": "附魔 · " + CardData.enchant_title(card), "bold": true},
 					{"text": "：" + CardData.enchant_desc(card.enchant)}],
 		})
 	if pl != null:
@@ -16047,12 +16492,9 @@ func _process(delta: float) -> void:
 	if _foe_phase and _ai_timer.is_stopped() and not anim_busy and _delayed.is_empty() \
 			and (engine == null or engine.over or engine.current_side == GameEngine.SIDE_SELF):
 		_foe_phase = false
-	# R439：我方回合开始（演出收尾、没有待播动画）→ 落一次战斗检查点。
-	# 判据用 turn_number 而不是 current_side：同一回合里反复「我方」不该重复写盘。
-	if engine != null and not engine.over and engine.current_side == GameEngine.SIDE_SELF \
-			and not anim_busy and _delayed.is_empty() and _cp_turn != engine.turn_number:
-		_cp_turn = engine.turn_number
-		_save_battle_checkpoint()
+	# R477（用户口径）：**不再按回合落盘**。以前这里每到一个我方回合就把整份局面
+	# 写进存档，于是「继续游戏」有时回到开打前（第一回合还没演完）、有时回到战斗中
+	# 间（已演完的那一刻），同一个操作两种结果。现在续档一律回到这一场开打之前。
 	if _tick_cues(delta):
 		queue_redraw()   # R288：通用演出 / 镜头补间进行中
 	_hand_sync()          # R151 P0-1/2：手牌差异 → 抽牌飞入 / 弃牌·消耗飞出

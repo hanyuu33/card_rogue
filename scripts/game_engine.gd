@@ -8,7 +8,7 @@ signal action(kind: String, data: Dictionary)
 const SIDE_SELF:= "self"
 const SIDE_OPPONENT:= "opponent"
 
-const GROW_CAP:= 5
+const GROW_CAP:= 4
 
 var state: FieldState
 var current_side:= SIDE_SELF
@@ -30,6 +30,11 @@ var defer_death_effects:= false
 ## 用格子当键、而不是一条全局队列：同一帧死两个单位时，各自的亡语要等**自己那张卡的**
 ## 击破演出到点才结算，不会因为先播完的那个把后面的一起跑掉。
 var _death_effects:= {}
+## R472（用户口径「有死亡召唤单位的敌人死亡会直接结算游戏」）：排队中的**加卡型**
+## 死亡效果还有几个没结算。> 0 时胜利判定一律延后 —— 先让召唤 / 加卡把场上的卡
+## 补回来，再看「清场没清场」。伤害类死亡效果（食尸鬼扣血 / 机械群伤）**不进这个
+## 计数**：它们不改变「场上还有没有卡」，晚一点结算不影响胜负，也就不该拖慢结算。
+var _death_card_pending:= 0
 ## R245：本场战斗的节点类型（"battle" / "elite" / "boss"）。
 ## 由 battle_scene 按**关卡 tier** 写入一次；引擎不自己读 RunState.pending_node ——
 ## 单关演示 / 单元测试都能显式指定，判据只有一处（`_courage_active()` 的消费方）。
@@ -49,6 +54,9 @@ var dice_energy_turns:= 0
 ## R311 不锈钢盆（6041）：剩余点数（0 = 没有盆）。
 ## battle_scene 从 `RunState.basin_charge` 灌入；承伤时递减，`basin` 动作回写界面。
 var basin_charge:= 0
+## R467：这一次伤害的「落地点」（枭熊跃击）。非 -1 时 `_hit_unit` 会把它塞进
+## `fx_impact` → 界面把伤害数字排到**落地那一帧**（否则又是「字比人先到」）。
+var _hit_land:= Vector2i(-1, -1)
 ## R313：**技能卡结算作用域**（深度计数）。快速符文的百分比只认技能伤害 ——
 ## 效果卡 / 陷阱 / 反伤打出来的伤害不享受。
 ## ⚠️ 用深度而不是布尔：回响会嵌套重放同一张技能卡，布尔会在内层退出时提前关掉。
@@ -371,23 +379,27 @@ const ASCLEPIUS_GROWTH_ATK:= 1
 #   ① 量产型阿斯克勒庇厄斯 9207（盟友 7/50 程1 速1）：**该方回合开始**时若已有护甲则力量 +1，
 #      然后获得 10 护甲。与本体 9141「护甲积攒」**不是同一条**（本体把护甲清零换成一发爆发），
 #      所以判据按 id 分派，别合并成一个函数。
-#   ② 母舰 9208（盟友 0/60 速0 程0）：**免疫所有伤害**（`_unit_damage_taken()` 与预览镜像
+#   ② 母舰 9208（盟友 0/40 速0 程0）：**免疫所有伤害**（`_unit_damage_taken()` 与预览镜像
 #      `preview_hit_damage()` 各一条）；**场上每个友方单位被破坏**时在它旁边补一份同款复制
 #      并自身生命 -10（**直接扣健康**，不走伤害通道 —— 否则被自己的免疫挡掉）；
 #      生命归零被破坏 → 关卡 `win_on_boss` 判「玩家胜利」。
 #   ③ 空袭 9209（效果卡）：**玩家回合开始**随机标记 5 格；**敌方行动前**（= 敌方回合开始）
-#      对标记格上的**玩家单位**各 10 点伤害，每结算一轮 +2。只打玩家单位；
+#      对标记格上的**玩家单位**各 5 点伤害，每结算一轮 +1。只打玩家单位；
 #      标记格空了就**空响、不转打玩家 HP**（与舰炮 9201 的口径正好相反）。
 const MASS_ASCLEPIUS_ID:= 9207
 const MASS_ASCLEPIUS_ARMOR:= 10        # 兜底值：正常取卡面 value（同值 10）
 const MOTHERSHIP_ID:= 9208
 const MOTHERSHIP_TRAIT:= "母舰"         # 免疫伤害只认这个 trait（不认 id，便于以后复用）
 const MOTHERSHIP_LOSS:= 10             # 每个友方被破坏，自身生命 -N（卡面 value 同值）
+# R483：母舰生命 **锁定 40** —— 卡库（`cards.json` 9208 health）与关卡元组（`game_levels`
+#       `_mothership_air_raid()` 的 40）两处都写死；引擎**不按难度档缩放敌人生命**
+#       （`RunState.difficulty` 只改玩家 debuff），所以 40 在任何难度下都一样。
+#       40 ÷ 10 = 玩家凑 **4 次击破** 即可（旧值 60 需要 6 次）。
 const AIR_RAID_CARD_ID:= 9209
 const AIR_RAID_TRAIT:= "空袭"
 const AIR_RAID_MARKS:= 5               # 每轮标记格数
-const AIR_RAID_DMG:= 10                # 基础伤害（卡面 value 同值）
-const AIR_RAID_STEP:= 2                # 每结算一轮递增
+const AIR_RAID_DMG:= 5                 # 基础伤害（卡面 value 同值；R483 由 10 下调）
+const AIR_RAID_STEP:= 1                # 每结算一轮递增（R483 由 +2 下调为 +1）
 
 
 # ---- R159：AI 角色分类（按卡面能力，不走复杂收益计算）----
@@ -436,7 +448,7 @@ const SPELL_RESIST_CAP:= 3
 const DISPLACE_IMMUNE_TRAIT:= "位移免疫"
 const ASH_DRAGON_ID:= 1013
 const ASH_DRAGON_AOE:= 4
-const FROST_MAGE_ID:= 1031
+const FROST_MAGE_ID:= 1031      # R464：冰冻术士（战吼 = 冰封敌方本场第一个入场的单位）
 const WYVERN_ID:= 1014
 const WYVERN_TOKEN_ID:= 9028
 const GHOUL_ID:= 1050
@@ -469,6 +481,10 @@ const PIPE_RELIC_ID := 6055
 const PIPE_ENERGY := 1
 const PIPE_DRAW := 1
 const PIPE_HP_COST := 1
+# R458 咒缚（6058，「契约的核心」选项 1）：每场战斗**第一张卡免费**，
+# 但那张卡在本场战斗里费用 +CURSE_RAISE。
+const CURSE_BIND_RELIC_ID := 6058
+const CURSE_RAISE := 1
 # R446 雪豹（8081，事件「雪豹出现」选项 2）—— 攻击时随机一张手牌本回合 -1 费。
 const SNOW_LEOPARD_ID := 8081
 const SNOW_LEOPARD_DISCOUNT := 1
@@ -710,7 +726,7 @@ const ARCANE_CHARM_DISCOUNT:= 1
 const WISDOM_SURGE_ID:= 9059
 const WISDOM_TRAIT:= "智慧"
 const AETHER_BARRIER_ID:= 9060
-const AETHER_TRAIT:= "以太"
+const AETHER_TRAIT:= "风暴"
 const ENDLESS_BLESSING_ID:= 9061
 const BLESSING_TRAIT:= "加护"
 const FAMILIAR_NIGHT_ID:= 9062
@@ -1143,6 +1159,37 @@ const ASSEMBLE_ID:= 9144
 # 「聚能炮击」（9145，1 费普通技能）：造成 9 点伤害并抽 1 张。
 const ENERGY_CANNON_ID:= 9145
 const ENERGY_CANNON_DMG:= 9
+# 「折射炮」9211（R465，机械之心 3 费**史诗效果卡**）：
+#   ① 打出时：把一张「聚能炮击」9145 加入手卡（走 `_grant_to_hand` 唯一口）；
+#   ② 此后每一发「聚能炮击」，**除主目标外**再对一个随机其他敌方单位造成**等量**伤害。
+# 落地细节（都在 `_refract_extra_shot()` 里）：
+#   * 额外那一发走 `_hit_unit`（护盾 / 减伤 / 抗性 / 侦察塔光环照常生效），
+#     seq=1 → 界面按 R363 的多目标节奏逐格错开落地，不会和主目标那一下叠在一起；
+#   * 目标池 = **除主目标外仍在场的敌方单位** —— 不打自己人、不直击 HP；
+#     场上只剩一只敌人时落空（卡面写的是「其他」）；
+#   * 伤害口径 = 这一发的总量（含 8075 谟涅摩叙涅 +7 等 `_spell_dmg` 加成），
+#     不是卡面那个 9 —— 否则「同一发炮击打出两个数」会被玩家读成 bug；
+#   * **不叠加**：效果区多张也只多打一发（与发明专家 9143 的「不可叠加」同口径）。
+const REFRACT_CANNON_ID:= 9211
+const REFRACT_TRAIT:= "折射"
+
+# ── R467：洞穴 · 枭熊（9212 关卡效果卡 / 9213 玩家传说卡 / 9214 敌方本体）──
+# 枭熊的**行动**只有一种：跳到任意空格（也可以原地起跳），落地时对周围**距离 1** 的
+# 敌方单位各造成一次「等同于它力量」的伤害。它**不能进行常规攻击** —— 卡面程 0，
+# `attack_targets` / `hp_targets` 自然恒空，不需要额外闸门（这是本作既有的「程 0」语义）。
+# 判定口：
+#   * `is_leaper()` —— 能不能跳（带「跳跃」trait）
+#   * `leap_cells()` —— 能跳到哪（唯一口：`_reachable` 的绿格、AI、引擎的落点校验全读它）
+#   * `_leap()` —— 跳跃本身（位移 → 场地/火墙 → 落地重击 → 横置），**唯一入口**
+# ⚠️ 「不能跳到敌方后排 HP 格子」不是枭熊专属规则 —— `unit_slot_allowed()` 本来就拦
+#    「对方后排行」，闪现（鸭子暗杀者）/ 召唤 / 位移全走那一条，这里不要再写一遍。
+const OWLBEAR_TRAIT:= "枭熊"
+const OWLBEAR_LEAP_TRAIT:= "跳跃"        # 行动 = 跳跃（唯一判据 trait）
+const OWLBEAR_INSTINCT_TRAIT:= "枭熊本能"  # 关卡效果卡 9212 的 trait（挂在敌方效果区）
+const OWLBEAR_GUARD:= 1                  # 半血以上：受到的伤害 -1
+const OWLBEAR_HP_PER_X:= 9               # 传说卡：生命 = 9X
+const OWLBEAR_CARD_ID:= 9213
+const OWLBEAR_FOE_ID:= 9214
 # 「填充」（9146，0 费普通技能）：将手牌里一张卡变成聚能炮击。两段式入口 `cast_reload`。
 const RELOAD_ID:= 9146
 # ── R290：机械之心两张伤害技能（集中突破 9162 / 冲击炮 9163）──
@@ -1159,6 +1206,19 @@ const BREAKTHROUGH_PER_STACK:= 4
 const IMPACT_CANNON_ID:= 9163
 const IMPACT_CANNON_DMG:= 10        # R369：8 → 10（用户口径）
 const IMPACT_CANNON_STEPS:= 1       # R369：2 → 1 格（用户口径）
+
+
+# ── R473 武术大师（第一、二层事件）：三张事件专属技能卡 ──
+# 三张都是 2 费、rarity 5 + traits「事件」，不会出现在奖励池里，只能从这个事件拿到。
+const BRAWL_ID:= 9215                 # 乱打：随机 2 个敌人各 10 伤
+const BRAWL_DMG:= 10
+const BRAWL_TARGETS:= 2
+const FLYING_KICK_ID:= 9216           # 飞踢：22 伤 + 击杀时溢出不丢弃（践踏）
+const FLYING_KICK_DMG:= 22
+const RUSH_PUNCH_ID:= 9217            # 冲拳：16 伤 + 击退 1 格 + 其余各 8 伤
+const RUSH_PUNCH_DMG:= 16
+const RUSH_PUNCH_SPLASH:= 8
+const RUSH_PUNCH_STEPS:= 1
 # ── R291：机械之心两张技能（辅助刃 9164 / 复制术 9165）──
 # 「辅助刃」（9164，0 费**普通**技能，目标 = 己方盟友）：
 #   * 一次改造 = **+BLADE_ATK 力量**，走 `_field_upgrade_grant()` 唯一口 —— 于是层数
@@ -1845,6 +1905,16 @@ const DARK_LORD_SPEED_PER_ASSASSIN:= 1  # 每个存活暗杀者 +1 速
 const PHASE_TRAIT:= "穿行"              # 移动无视单位阻挡
 const ASSASSIN_SUMMON_TRAIT:= "暗杀召唤"
 
+# ---- R464：寒霜结界（9210，寒冰防线的敌方效果卡）----
+# 这张卡挂的是**全场的力量成长**：每 2 个回合，敌方所有单位力量 +1，最多累计 +4。
+# 这条曲线本来就在跑 —— 关卡的 `enemy_growth`（`configure_growth` → `_sync_enemy_growth`）
+# 是唯一实现口，效果卡的职责是把**来源**写到玩家看得见的地方（以前那句「关卡成长」印在
+# 冰冻术士的卡面上，等于把**全场**的加成说成它一只的，用户口径「全场的＋力量要补到效果卡」）。
+# ⚠️ R461 一度把「冰封」也搬到这张卡上，R464 收回：冰冻是**冰冻术士自己的战吼**，
+#    而且目标从「生命最低」改成「敌方本场战斗**第一个入场**的单位」（`Placement.entry_seq`）。
+# 所以这里只留一个 trait 名做自检用（挂了卡却没配成长 = 卡在台上不出活，留条日志好查）。
+const FROST_WARD_TRAIT:= "寒霜"
+
 # ---- R327：送葬（9175，森林精魄 2 费稀有·效果）----
 # 「场上每有一个单位被破坏，抽 1 张卡。」挂在己方效果区，在**全局唯一破坏口**
 # `_destroy` 尾部结算（所以亡语、溢出、超负荷真死、思想钢印救回都算）。
@@ -1866,6 +1936,32 @@ static func manhattan(a: Vector2i, b: Vector2i) -> int:
 
 static func back_row(side: String) -> int:
 	return 0 if side == SIDE_OPPONENT else FieldState.BOARD_ROWS - 1
+
+
+static func card_may_enter_board(card: CardData) -> bool:
+	## **这张卡能不能成为场上实体**（R485，唯一判据）。
+	##
+	## 只有「盟友」和「工事」有场上实体 —— 盟友是随从，工事是站着挡路的建筑。
+	## 其余四种各有归宿，**都不该在 board 里长出 0 血的空壳**：
+	##   * 技能 → 结算完进弃牌区（`use_spell` / `cast_infiltrate` / `cast_swap_units`）；
+	##   * 效果 → 效果区持续生效（`use_effect`），不占格子；
+	##   * 场地 → 格子上的标记（`state.set_field`），不是单位、不能被打；
+	##   * 诅咒 → 打出无效果（`use_curse`）。
+	##
+	## 为什么收成唯一口：出牌路径已经有四条（点击棋盘 / 拖拽 / 鸭语耳环自动出牌 /
+	## 联机远端 remote_play），每加一条都要再记一次「排掉效果卡」，R484 就是漏在
+	## 点击那条上（用户实测：场上多出一张「智慧喷涌」）。
+	## `FieldState.place()` 也用它兜底 —— **任何**绕过前端的路径最后都过这一关。
+	##
+	## ⚠️ 判据写成「排除四种非实体」而不是「白名单盟友/工事」：`kind` 在关卡与测试里
+	## 还会出现「怪物」这类单位（cards.json 目前只有六种，但构造路径不止一条）。
+	## 白名单会把它们静默拒掉；相反「技能 / 效果 / 场地 / 诅咒」是封闭的四类，
+	## 多一个都不是场上实体 —— 只排除它们，既拦得死又不会误伤未来的单位种类。
+	if card == null:
+		return false
+	if card.is_spell() or card.is_effect() or card.is_field() or card.is_curse():
+		return false
+	return true
 
 
 static func forbidden_row_for(side: String) -> int:
@@ -1920,6 +2016,10 @@ static func hp_row_owner(row: int) -> String:
 
 
 func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
+	# R472：同一场重开 / 续档重进时把死亡效果队列与「加卡待结算」计数归零 ——
+	# 计数一旦泄漏成 > 0，`_check_game_over()` 就再也不会宣布胜利（整局卡在活着的状态）。
+	_death_effects.clear()
+	_death_card_pending = 0
 	wish_pending = false
 	_steel_stamp_used = false   # R307：思想钢印每场战斗一次
 	_first_kill_growth_done.clear()   # R393：击杀成长每场战斗各卡一次
@@ -1943,7 +2043,8 @@ func _check_game_over() -> bool:
 	## 胜负改由「击破指定 Boss」（`win_on_boss`）与「我方 HP 归零」两条决定。
 	if over:
 		return true
-	if not enemy_hp_infinite and state.hp_opponent <= 0:
+	# R472：还有「会加卡」的死亡效果没跑 → 先别急着宣布胜利（见 `_death_card_pending`）。
+	if not enemy_hp_infinite and state.hp_opponent <= 0 and _death_card_pending == 0:
 		_finish("胜利", "敌方 HP 归零")
 		return true
 	if state.hp_self <= 0:
@@ -1953,7 +2054,8 @@ func _check_game_over() -> bool:
 		return true
 	# R356：击破启示者即通关。**排在「清场」之前** —— 三阶段打完场上还剩一堆量产型，
 	# 用清场判等于要求玩家把它们也扫干净，那不是这张关卡的题面。
-	if win_on_boss > 0 and _cell_of_unit(win_on_boss) == Vector2i(-1, -1):
+	if win_on_boss > 0 and _cell_of_unit(win_on_boss) == Vector2i(-1, -1) \
+			and _death_card_pending == 0:
 		# R451：文案改成按 id 取卡名 —— 原来写死「击破启示者」，母舰空袭（win_on_boss =
 		# 母舰 9208）通关时会报成击破启示者。取不到卡名时退回泛称，不影响胜负判定。
 		var boss_name := "敌方首脑"
@@ -1962,7 +2064,8 @@ func _check_game_over() -> bool:
 			boss_name = boss_card.card_name
 		_finish("胜利", "击破%s" % boss_name)
 		return true
-	if state.clear_win and _side_cells(SIDE_OPPONENT).is_empty():
+	if state.clear_win and _side_cells(SIDE_OPPONENT).is_empty() \
+			and _death_card_pending == 0:
 		_finish("胜利", "敌方场上单位全灭")
 		return true
 	return false
@@ -2127,6 +2230,14 @@ func _begin_turn(side: String) -> void :
 								% [PIPE_ENERGY, PIPE_DRAW, pipe_cost]})
 
 
+		# R458 咒缚（6058）：**每场战斗的第一张卡免费** —— 每个我方回合开始刷一次「本场」
+		# 判据（`turn_number == 1` 才是这一场的第一回合）。用掉后由 `_note_card_played`
+		# 置 false，所以免费额度**跨回合保留**（第一回合没出牌，第二回合仍然是「第一张」）。
+		# ⚠️ 与烟斗 6055 别混：烟斗是「首回合限定的 +1 费」，咒缚是「首张牌免费 + 那卡涨价」。
+		if self_relics.has(CURSE_BIND_RELIC_ID) and turn_number == 1:
+			state.curse_free = true
+			_log("咒缚：本场战斗的第一张卡免费（那张卡之后费用 +%d）" % CURSE_RAISE)
+
 		# 勇气徽章（6031，R245 / R372）：精英战与 Boss 战**都只在首回合**额外 +1 费用。
 		# 「哪一场算精英 / Boss」由 battle_scene 写入 `battle_kind`，引擎只看这个字段。
 		if self_relics.has(COURAGE_RELIC_ID):
@@ -2201,6 +2312,7 @@ func _begin_turn(side: String) -> void :
 		_wisdom_surge()
 		_endless_blessing()
 		_action_growth_tick(SIDE_SELF)   # R161：先推进成长计数，再刷新 acts_left
+		_haste_pick_tick(SIDE_SELF)      # R479 哈气：第 3/5/7 回合挑一个单位永久双动（必须在 reset 之前）
 		state.reset_units(SIDE_SELF)
 		_poison_tick(SIDE_SELF)   # 剧毒陷阱：我方回合开始结算中毒
 		_arm_debuffs(SIDE_SELF)
@@ -2273,6 +2385,7 @@ func _begin_turn(side: String) -> void :
 		_melt_ice_walls(SIDE_OPPONENT)
 		_clear_fire_walls(SIDE_OPPONENT)
 		_action_growth_tick(SIDE_OPPONENT)   # R161：先推进成长计数，再刷新 acts_left
+		_haste_pick_tick(SIDE_OPPONENT)      # R479 哈气：第 3/5/7 回合挑一个单位永久双动（必须在 reset 之前）
 		state.reset_units(SIDE_OPPONENT)
 		_poison_tick(SIDE_OPPONENT)   # 剧毒陷阱：对方回合开始结算中毒
 		_arm_debuffs(SIDE_OPPONENT)
@@ -2330,6 +2443,7 @@ func enable_enemy_effects(cards: Array[CardData]) -> void :
 	state.apply_extra_actions(SIDE_OPPONENT)
 	# R111 暗影召唤：「战斗开始时」那一半的召唤（另一半点在敌方回合开始里）。
 	_assassin_summon(SIDE_OPPONENT, true)
+	_frost_ward_check(SIDE_OPPONENT)   # R464 寒霜结界：只是力量成长的「可见说明」，这里只做自检
 	_refresh_dark_lord(SIDE_OPPONENT)
 	_refresh_hecaton(SIDE_OPPONENT)
 	_refresh_mnemosyne()               # R271 谟涅摩叙涅：开局先算一次
@@ -3954,6 +4068,15 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 	if side == SIDE_SELF and state.turn_cannon_free and card != null \
 			and card.id == ENERGY_CANNON_ID and state.hand.has(card):
 		c = 0
+	# R458 咒缚（6058）的另一半：被免费打出的那张卡，**本场战斗**费用 +N。
+	# 它是「涨价」，所以排在所有减费之后（与契约签订者 8024 同一个位置口径）。
+	if side == SIDE_SELF and card != null:
+		c += int(state.curse_raise.get(card, 0))
+	# R458 咒缚（6058）：**本场战斗的第一张卡免费** —— 放在最后一步，压得住上面所有涨价
+	# （与夜行 / 代达罗斯「为 0」同一条路）。判据带 `state.hand.has(card)`：只对**此刻
+	# 还在手里**的卡生效（打出 / 弃掉后自动恢复原价，不必在离手口逐个清标记）。
+	if side == SIDE_SELF and state.curse_free and card != null and state.hand.has(card):
+		c = 0
 	return _cost_floor(card, maxi(0, c))
 
 
@@ -4387,9 +4510,11 @@ func _frenzy(side: String, target) -> String:
 	var p:= _target_placement(side, target)
 	if p == null or p.owner != side or p.card.kind != "盟友":
 		return "（需要指定一个己方盟友）"
-	if p.card.actions >= FRENZY_ACTIONS or p.acts_left >= FRENZY_ACTIONS:
+	if p.card.actions >= FRENZY_ACTIONS or p.acts_total >= FRENZY_ACTIONS:
 		return "%s 已拥有同类效果（不可重复获得）" % p.card.card_name
-	p.acts_left = FRENZY_ACTIONS
+	# R462：改走 `grant_actions` —— 直接写 `acts_left` 会把「已经行动的这张卡」的
+	# 行动账本抹掉（横置还在、`acts_left` 却变成 2），于是打完一箭就再也动不了。
+	state.grant_actions(p, FRENZY_ACTIONS)
 	_log("狂暴：%s 本回合可以攻击两次" % p.card.card_name)
 	return "%s 本回合可以攻击两次" % p.card.card_name
 
@@ -4400,13 +4525,13 @@ func _aether_barrier(side: String) -> String:
 
 
 	if side != SIDE_SELF:
-		return "（以太屏障：敌方 AI 不使用这张卡）"
+		return "（风暴屏障：敌方 AI 不使用这张卡）"
 	if _aether_used:
-		_log("以太屏障：本回合已有屏障生效，这张不产生效果")
-		return "本回合已有一张以太屏障生效（这张无效）"
+		_log("风暴屏障：本回合已有屏障生效，这张不产生效果")
+		return "本回合已有一张风暴屏障生效（这张无效）"
 	_aether_used = true
 	_aether_left = maxi(0, state.self_effect_plays)
-	_log("以太屏障：本回合前 %d 次受到的伤害变为 1" % _aether_left)
+	_log("风暴屏障：本回合前 %d 次受到的伤害变为 1" % _aether_left)
 	action.emit("aether", {"left": _aether_left, "plays": state.self_effect_plays})
 	return "本回合前 %d 次受到的伤害变为 1" % _aether_left
 
@@ -4678,6 +4803,15 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 		# R373：不能打出的诅咒（麻痹 9185）—— 引擎侧兜底，联机 / 回放 / 自动出牌都挡在这里。
 		_log("%s：这张卡不能打出" % card.card_name)
 		return null
+	# R484：**非单位卡不许进场**（引擎侧兜底，与 R285 的落点闸门成对）。
+	# 效果卡进效果区（use_effect）、技能走 use_spell、诅咒走 use_curse —— 三者都没有
+	# 场上实体。原来这里只看「是不是盟友 / 工事」来决定**落点**限制，其它种类一律
+	# 当随从摆上 board：界面上点一下效果卡再点格子（`_on_board_click`）就真的放上去了，
+	# 那张卡会带着 0 血、卡面标着「效果」，还能被选中（用户实测）。
+	# 放在 `_pay` 之前：拒绝不扣费、不掉牌。
+	if not (card_may_enter_board(card) or card.is_field()):
+		_log("%s 不是单位，不能作为单位上场（效果卡走效果区）" % card.card_name)
+		return null
 	if _no_unit_play_this_turn and (card.kind == "盟友" or card.is_fort()):
 		_log("身法：本回合不能使用盟友和工事卡（%s 未打出）" % card.card_name)
 		return null
@@ -4691,6 +4825,12 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	if (card.kind == "盟友" or card.is_fort()) and not hand_place_allowed(cell, SIDE_SELF):
 		_log("%s 只能放在自己半场（下 3 行）" % card.card_name)
 		return null
+	# R467：**X 费单位**（传说卡「枭熊」9213）—— 费用要先记下来。
+	# `_pay()` 会把费用清空，落地时再读就恒为 0；`cost_of()` 对 x_cost 卡本来就返回
+	# 「该方剩余的全部费用」，所以这里读到的 X 与真正扣掉的完全同源。
+	var x_unit:= -1
+	if card.x_cost and card.traits.has(OWLBEAR_TRAIT):
+		x_unit = maxi(0, state.energy_of(SIDE_SELF))
 	var paid:= _pay(card)
 	# 栅栏修复术（6021）：把栅栏打到已有栅栏的格子上 → 合并（不新建单位）
 	var stack_onto: Placement = state.unit_at(cell)
@@ -4750,6 +4890,8 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 
 	var p:= state.place(card, cell, SIDE_SELF)
 	state.hand.remove_at(hand_index)
+	if x_unit >= 0:
+		_owlbear_enter(p, x_unit)      # R467：X 费单位落地快照（力量 X / 生命 9X）
 
 	if card.id == DAEDALUS_ID:
 		_daedalus_enter(p)          # R271 重做：入场 +3×聚能炮击生命 + 本回合炮击 0 费
@@ -4772,6 +4914,9 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	if card.id == PAINT_BOT_ID:
 		_paint_bot_enter(p)         # R404 涂装机器人：选场上其他一个友方单位 → 随机机械之心单位
 	_refresh_mnemosyne()            # R271：刚落地 / 刚被换上场的那只可能是谟涅摩叙涅
+	# R462：刚落地的这张牌可能**改变别人**的行动额度（赫利俄斯 9130 → 量产型俄倪厄双动、
+	# 效果区的哈气…）→ 按差额补一次，中途落地的加成当场生效，不必等到下个回合。
+	state.apply_extra_actions(SIDE_SELF)
 
 	if card.id == FOX_ID:
 		_fox_trigger()
@@ -4842,6 +4987,9 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	action.emit("place", {"cell": cell, "card": card, "side": SIDE_SELF})
 	_on_ally_entered(p, SIDE_SELF)
 	_note_card_played(SIDE_SELF, card)
+	# R467：X 为 0 的枭熊一落地就倒 —— 放在**所有入场钩子之后**再销毁（理由见 `_owlbear_enter`）。
+	if x_unit >= 0 and p.health <= 0 and state.board.has(cell):
+		_destroy(cell)
 	return p
 
 
@@ -5879,6 +6027,73 @@ func _cluster_turret_reload(p: Placement) -> void :
 	action.emit("cluster_reload", {"cell": _cell_of(p), "card": c, "side": p.owner})
 
 
+# ================= R465：折射炮 9211 =================
+
+
+func _refract_grant_cannon() -> void:
+	## 「折射炮」9211 的**打出时**效果：把一张「聚能炮击」9145 加入手卡。
+	## * `from_dict` 复制成独立实例 —— 卡库是共享实例，直接塞进手牌会让这张炮击
+	##   被改造 / 被附魔之后泄漏回图鉴与下一局（与生产订单 8048 / 集束炮台 9166 同口径）；
+	## * 走 `_grant_to_hand()` 唯一口 —— 手牌满时它进弃牌区并 emit `hand_burn`，
+	##   不会凭空蒸发（R299 用户规则）；那张卡之后还能被洗回牌库。
+	var repo := CardRepo.load_json()
+	var proto: CardData = repo.get_card(ENERGY_CANNON_ID) if repo != null else null
+	if proto == null:
+		_log("折射炮：卡库缺少「聚能炮击」(9145)，未能加入手卡")
+		return
+	var c := CardData.from_dict(proto.to_dict())
+	c.traits = (c.traits as Array).duplicate()
+	var landed := _grant_to_hand(c, "折射炮")
+	_log("折射炮：%s「聚能炮击」（手牌 %d 张）" % [
+			"加入手卡" if landed else "手牌已满 → 进弃牌区", state.hand.size()])
+
+
+func _refract_extra_shot(side: String, main_cell: Vector2i, amount: int) -> String:
+	## 「折射炮」9211 的**第二半**：这一发「聚能炮击」除主目标外，再对一个随机
+	## **其他敌方单位**造成等量伤害。返回给播报用的后缀（没触发就给空串）。
+	##
+	## 三条纪律：
+	##  ① **不叠加**：效果区几张折射炮都只多打一发 —— 效果卡多张是常见的，若按张数
+	##     叠加，三张 9211 就能让一发 9 伤炮击变成 36 伤，数值失控；
+	##  ② 目标池**先排序再抽**：`state.board` 是 Dictionary，迭代顺序随移动变化，
+	##     不排序会让回放 / 续档在同种子下抽到不同的人；
+	##  ③ 抽人走 `rng`（不是 `RunState` 那套），与激发 8077 / 闪躲的口径一致。
+	if side != SIDE_SELF or amount <= 0:
+		return ""
+	if not _refract_active():
+		return ""
+	var pool: Array[Vector2i] = []
+	for cell: Vector2i in _side_cells(SIDE_OPPONENT):
+		var q: Placement = state.unit_at(cell)
+		if q != null and q.health > 0 and cell != main_cell:
+			pool.append(cell)
+	if pool.is_empty():
+		_log("折射炮：除主目标外没有其他敌方单位 → 这一发没有折射")
+		return ""
+	pool.sort()
+	var pick: Vector2i = pool[rng.randi_range(0, pool.size() - 1)]
+	var q2: Placement = state.unit_at(pick)
+	if q2 == null:
+		return ""
+	var qname:= q2.card.card_name
+	# seq=1：主目标按无序号那一发（+160ms）先落地，流弹再晚一个 `FX_MULTI_HIT_GAP_MS`。
+	var dealt:= _hit_unit(q2, amount, "折射", true, false, 1)
+	_log("折射炮：流弹折射向 %s（-%d，这一发总量 %d）" % [qname, dealt, amount])
+	action.emit("refract_shot", {"cell": pick, "amount": dealt, "name": qname,
+			"main": main_cell})
+	if dealt > 0 and q2.health <= 0:
+		_destroy_dead()
+	return "；折射 %s -%d" % [qname, dealt]
+
+
+func _refract_active() -> bool:
+	## 效果区里有没有「折射炮」（只判我方效果区：敌方没有真实效果卡列表）。
+	for c: CardData in state.effects:
+		if c != null and c.id == REFRACT_CANNON_ID:
+			return true
+	return false
+
+
 # ================= R300：激发 8077 =================
 
 
@@ -6333,7 +6548,7 @@ func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	##
 	## 加成**记在 Placement 上、绝不烤进 CardData**（与栅栏修复术 R67 同一条纪律）：
 	## 加攻进 `upgrade_atk`（直接进 effective_power，**不复用 atk_buff** ——
-	## 那个被 GROW_CAP=5 封顶且语义是「成长光环」，改造必须能无限叠）；
+	## 那个被 GROW_CAP=4 封顶且语义是「成长光环」，改造必须能无限叠）；
 	## 加血进 `upgrade_hp` 并同时抬 `p.card.health` 的**场上副本**与 `p.health`，
 	## 离场时由 `_card_leaving_field` 统一减回去。
 	##
@@ -7634,6 +7849,10 @@ func use_effect(hand_index: int) -> String:
 
 	if card.traits.has(DUCK_NEST_TRAIT):
 		_egg_to_hand("鸭窝")
+
+	# R465 折射炮 9211：打出时把一张「聚能炮击」加入手卡（此后每发炮击都会折射）。
+	if card.id == REFRACT_CANNON_ID:
+		_refract_grant_cannon()
 	_log("启用效果卡 %s（效果区持续生效）" % card.card_name)
 
 	state.apply_extra_actions(SIDE_SELF)
@@ -7723,6 +7942,17 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 	if side == SIDE_SELF and played != null and played.enchant == ENCHANT_DRAW:
 		var ed_n := _draw_many(1)
 		_log("附魔「抽牌 +1」：打出 %s 后抽 %d 张" % [played.card_name, ed_n])
+	# R458 咒缚（6058）：「第一张卡免费」在这里**兑现成账** —— 额度用掉，并给这一张
+	# 记一笔本场战斗 +N 费（再次上手时按涨价后的费用结算）。
+	# ⚠️ 只看 `state.curse_free`，**不判** `turn_number == 1`：额度跨回合有效，
+	#    这正是与烟斗（首回合限定）的区别。
+	# ⚠️ X 费卡（流星雨 9083）不吃免费额度：它的费用 = 全部剩余费用，把它抹成 0 等于
+	#    让它打 0 段。`cost_of` 里同样的排除 → 额度留给下一张普通卡，两边口径一致。
+	if side == SIDE_SELF and played != null and state.curse_free and not played.x_cost:
+		state.curse_free = false
+		state.curse_raise[played] = int(state.curse_raise.get(played, 0)) + CURSE_RAISE
+		_log("咒缚：第一张卡「%s」免费打出 —— 它在本场战斗的费用 +%d"
+				% [played.card_name, CURSE_RAISE])
 
 
 func _raid_dmg(side: String) -> int:
@@ -7834,6 +8064,10 @@ const SPELL_BASE_DMG := {
 	9169: 10,    # 烈火之剑
 	9172: 9,     # 激光扫射
 	9205: 22,    # 猎杀（R393，暗影刺客史诗技能；R427 25 → 22；本局永久成长会抬高 value → 预览按 value 取）
+	# R473 武术大师事件的三张技能（事件专属，不进奖励池；进表才能被左栏认成伤害卡）
+	9215: 10,    # 乱打（随机 2 个敌人各 10）
+	9216: 22,    # 飞踢（击杀时溢出沿同列传递）
+	9217: 16,    # 冲拳（另有其余敌人各 8，不并进这个数）
 }
 
 # 卡面**给不出确数**的伤害技能（数字随局势变）→ 即使一点加成都沒有也要报当前值。
@@ -7879,6 +8113,29 @@ static func dmg_expr_text(base: int, dmg: int) -> String:
 	if dmg > base:
 		return "%d＋%d" % [base, dmg - base]
 	return "%d－%d" % [base, base - dmg]
+
+
+static func spell_first_hit(card: CardData) -> int:
+	## R458（用户口径）：「**这张伤害技能卡的第一段伤害**」—— 契约核心的献祭数值唯一口。
+	## 为什么必须集中一口：
+	##   · `SPELL_BASE_DMG` 的登记口径就是「effect_text 里**第一个**「N 点伤害」的 N」
+	##     （R348 逐条断言），所以它就是「第一段」的权威表；
+	##   · 但少数卡的伤害是**实例值**（蓄势 9156 的 `card.value` / 猎杀 9205 的本局成长），
+	##     表里只有初始值 —— 必须读卡本身；
+	##   · 另有一批卡的第一段带后缀（集中突破 9162 / 冲击炮 9163 的 `**10**` 加粗、
+	##     终结 9086 的 `2+X`、流星雨 9083 的「重复 X 次」、弹跳飞刀 9160 的「每次减 1」），
+	##     表里记的同样是第一段 —— 从文本正则抠数会把这些全抠错，所以只认表。
+	## ⚠️ 只认**技能**卡：盟友 / 工事 / 场地 / 效果的 `power` 是攻击力，不是「段伤」。
+	## ⚠️ **不含任何加成**（附魔 / 魔法塔 / 荧光草 / 回合加成…）：献祭搬的是「这张卡
+	##    自己写着的那个数」，搬一个带加成的瞬时值没有意义。
+	## ⚠️ 本函数**只读**。
+	if card == null or card.kind != "技能":
+		return 0
+	if not SPELL_BASE_DMG.has(card.id):
+		return 0
+	if card.id == CHARGE_UP_ID or card.id == SLAY_ID:
+		return maxi(0, card.value)   # 实例值（卡面由 _charge_up_text / 成长写出）
+	return maxi(0, int(SPELL_BASE_DMG[card.id]))
 
 
 func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
@@ -9494,6 +9751,13 @@ func remote_play(card: CardData, cell: Vector2i) -> Placement:
 			"replaced": false})
 		_note_card_played(SIDE_OPPONENT, card)
 		return null
+	# R484：对称兜底 —— 非单位卡不能作为单位落到对方场上（与 play_from_hand 同一判据）。
+	# 联机时若对面客户端把一张效果卡 / 技能卡当随从发过来，这里直接拒绝，
+	# 而不是让它在 board 里长出一个 0 血的「效果」实体。
+	if not card_may_enter_board(card):
+		_log("对方放弃放置：%s 不是单位" % card.card_name)
+		_note_card_played(SIDE_OPPONENT, card)
+		return null
 	# R285：敌方同样不许站进我方后排（对称闸门）。费用在函数开头已付、没有退款，
 	# 所以这里与「场地拒放」同口径：只记日志 + 记一次出牌，不做别的结算。
 	if (card.kind == "盟友" or card.is_fort()) and not hand_place_allowed(cell, SIDE_OPPONENT):
@@ -9818,7 +10082,13 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			# R341 量产型谟涅摩叙涅 8075：**每回合一次** → 这一发伤害 +MASS_MNEMOSYNE_DMG。
 			# 顺序：**先判额度（顺带把额度用掉）→ 再算伤害 → 再抽牌**。额度只在这里扣一次。
 			var ec_bonus:= _mass_mnemosyne_cannon_bonus(side)
-			var ec_dmg:= _op_deal_damage(side, _spell_dmg(side, ENERGY_CANNON_DMG + ec_bonus, card), target)
+			var ec_total:= _spell_dmg(side, ENERGY_CANNON_DMG + ec_bonus, card)
+			# R465 折射炮 9211：主目标那一格必须在**扣血之前**记下来 ——
+			# `_op_deal_damage` 打完就会 `_destroy_dead()`，事后再问「主目标是谁」只剩空格。
+			var ec_main_cell:= _cell_of(_target_placement(side, target))
+			var ec_dmg:= _op_deal_damage(side, ec_total, target)
+			# 折射：除主目标外，额外对一个随机其他敌方单位造成**等量**伤害（没折射炮 → 空串）。
+			var ec_refr:= _refract_extra_shot(side, ec_main_cell, ec_total)
 			# R271 量产型谟涅摩叙涅 8075：**因这张卡自身效果抽到的那张卡**费用 -1。
 			# 抽牌后手牌末尾就是刚抽到的那张（手牌满时 _draw_many 不抽，长度不变 → 不结算）。
 			# R341：减费与伤害加成共用额度 → 只认 `ec_bonus > 0` 的那一发。
@@ -9826,7 +10096,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			var ec_draw:= _draw_many(1)
 			if ec_bonus > 0 and state.hand.size() > ec_before:
 				_cannon_draw_discount(side, state.hand[state.hand.size() - 1])
-			return "%s；抽 %d 张" % [ec_dmg, ec_draw]
+			return "%s%s；抽 %d 张" % [ec_dmg, ec_refr, ec_draw]
 		BREAKTHROUGH_ID:
 			# 集中突破 9162（R290，机械之心）：造成 BREAKTHROUGH_DMG 点伤害，
 			# 场上己方单位每有 1 层改造，伤害 +BREAKTHROUGH_PER_STACK。
@@ -9851,6 +10121,19 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 				return "%s；目标被击破" % ic_msg
 			_log("冲击炮：%s，随后击退 %d 格" % [ic_msg, IMPACT_CANNON_STEPS])
 			return "%s；%s" % [ic_msg, _knockback(side, target, IMPACT_CANNON_STEPS)]
+		BRAWL_ID:
+			# 乱打 9215（R473，武术大师「学点简单的」）：对**随机 2 个敌人**各造成
+			# BRAWL_DMG 点伤害；敌人不足 2 个时有多少打多少，一个都没有就落空。
+			return _brawl(side, card)
+		FLYING_KICK_ID:
+			# 飞踢 9216（R473，武术大师「学点真本事」，2 场战斗后到手）：
+			# FLYING_KICK_DMG 点伤害；**击杀则溢出不丢弃**，沿同一列继续传递（践踏）。
+			return _flying_kick(side, target, card)
+		RUSH_PUNCH_ID:
+			# 冲拳 9217（R473，武术大师「要学就学绝技」，2 场精英 / Boss 后到手）：
+			# 主目标 RUSH_PUNCH_DMG 点 + 击退 RUSH_PUNCH_STEPS 格；
+			# 其余每个敌方单位各吃 RUSH_PUNCH_SPLASH 点。
+			return _rush_punch(side, target, card)
 		BLADE_GIFT_ID:
 			# 辅助刃 9164（R291，机械之心）：己方盟友获得改造（力 +2）+「死亡」亡语回收自己。
 			return _blade_gift(target, side)
@@ -10371,15 +10654,9 @@ func _meteor(side: String, target, card: CardData) -> String:
 			continue
 		cells.append(c)
 	var amount:= _spell_dmg(side, METEOR_DMG, card)
-	var hits:= 0
-	# R123：HP 去重上收到统一窗口（空格直击 + 后排溢出，同一方只算一次）。
-	_begin_hp_once()
-	for c2: Vector2i in cells:
-		var q:= state.unit_at(c2)
-		if damage_cell(c2, amount, "陨石") > 0:
-			hits += 1
-	_destroy_dead()
-	_end_hp_once()
+	# R470：多格伤害统一走 `damage_cells()` —— HP 去重窗口与收尾击杀都在里面，
+	# 调用方不再各自记着 `_begin_hp_once()` / `_destroy_dead()`（漏一个就三格各扣一次）。
+	var hits := damage_cells(cells, amount, "陨石")
 	_log("陨石术：十字 %d 格各受 %d 点伤害（不分敌我），命中 %d 个目标" % [
 		cells.size(), amount, hits])
 	return "十字 %d 格各 %d 伤（命中 %d）" % [cells.size(), amount, hits]
@@ -10910,9 +11187,8 @@ func _absorb_by_guard(amount: int) -> bool:
 	# 攻击动画」），没有格子的话场景只能干看着，不知道怎么冻结那个单位的血条数字。
 	action.emit("guard_absorb", {"card": g.card, "how": how, "amount": dealt,
 			"cell": cell})
-	if g.health <= 0:
-
-		_destroy(cell)
+	# R469：走 `_reap()` —— 代受单位若是超负荷卡，打穿后应负数存活到己方回合结束。
+	_reap(cell)
 	return true
 
 
@@ -10943,8 +11219,9 @@ func _dodge_absorb(amount: int) -> int:
 			g.card.card_name, absorbed])
 	action.emit("dodge_absorb", {"card": g.card, "cell": cell2,
 			"absorbed": absorbed, "rest": 0})
-	if g.health <= 0:
-		_destroy(cell2)   # R403：直接销毁、不经 `_destroy_dead` → 站后排也不会漏溢出
+	# R403：不走 `_destroy_dead` → 站后排也不会漏溢出（伤害全吃、不再回传）。
+	# R469：改走 `_reap()` —— 超负荷单位负数存活，同样不漏溢出。
+	_reap(cell2)
 	return 0
 
 
@@ -11099,6 +11376,9 @@ func _whale_wrath(side: String, target, card: CardData) -> String:
 	whale_pending = true
 	# 叠加记账：蓄力让这张卡生效 2 次 → 可取 4 张（不是把 2 覆盖成 2）
 	whale_remaining += WHALE_PICK_COUNT
+	# R479：按弃牌堆实际张数收口 —— 池里只有 1 张时就是「可取 1 张」，
+	# 不许面板写着「还可取 2 张」却只摆得出一张卡。
+	whale_remaining = mini(whale_remaining, state.discard.size())
 	_log("鲸鱼之怒：从弃牌堆选择 %d 张卡加入手卡（可少选 / 跳过）" % whale_remaining)
 	return "%s；从弃牌堆取 %d 张" % [detail, whale_remaining]
 
@@ -11128,7 +11408,9 @@ func whale_pick(discard_index: int) -> bool:
 	whale_remaining -= 1
 	_log("鲸鱼之怒：%s 从弃牌堆回到手牌" % c.card_name)
 	action.emit("whale_pick", {"card": c})
-	if whale_remaining <= 0:
+	# R479：池子取空就结束 —— 只有一张可选时，取走它就算办完，
+	# 不该让玩家再点一次「不选了」。
+	if whale_remaining <= 0 or state.discard.is_empty():
 		whale_pending = false
 		whale_remaining = 0
 	return true
@@ -11194,6 +11476,16 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		dmg = maxi(1, dmg - p.dmg_reduce)
 		if dmg != ab:
 			_log("%s：加厚装甲减伤 %d → 受到的伤害 %d → %d" % [p.card.card_name, p.dmg_reduce, ab, dmg])
+	# ①d 关卡效果卡「枭熊之怒」（9212，R467）：**半血以上**受到的伤害 -1（至少仍受 1 点）。
+	#    判据用「扣血之前」的生命 —— 这一下把枭熊从半血以上打进半血以下时，它吃的是
+	#    「半血以上」那一档；下一刀起才换成践踏。效果卡不在敌方效果区就不生效（卡面是关卡效果）。
+	if p != null and p.card != null and dmg > 0 and p.card.traits.has(OWLBEAR_TRAIT) \
+			and p.health * 2 > p.card.health \
+			and _zone_has(state.enemy_effects, OWLBEAR_INSTINCT_TRAIT):
+		var ob:= dmg
+		dmg = maxi(1, dmg - OWLBEAR_GUARD)
+		if dmg != ob:
+			_log("%s（半血以上）：受到的伤害 %d → %d" % [p.card.card_name, ob, dmg])
 	# ② 赫卡同克瑞斯（9136，R152）：孤军成立（hecaton_atk > 0）时受到的**攻击**伤害减半。
 	#    向下取整（int 除法）但至少 1 点 —— 与犀牛口径一致，1 点攻击不会被减成 0。
 	if p != null and p.card != null and dmg > 0 and kind == "attack" and p.hecaton_atk > 0:
@@ -11332,6 +11624,10 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 		dmg = maxi(1, dmg - p.upgrade_stacks * HEAVY_TANK_REDUCE_PER_STACK)
 	if dmg > 0 and p.dmg_reduce > 0:
 		dmg = maxi(1, dmg - p.dmg_reduce)
+	# R467 枭熊之怒（9212）：与 `_unit_damage_taken()` 的 ①d 同位置同理
+	if dmg > 0 and p.card.traits.has(OWLBEAR_TRAIT) and p.health * 2 > p.card.health \
+			and _zone_has(state.enemy_effects, OWLBEAR_INSTINCT_TRAIT):
+		dmg = maxi(1, dmg - OWLBEAR_GUARD)
 	if dmg > 0 and is_attack and p.hecaton_atk > 0:
 		dmg = maxi(1, dmg / 2)
 	if dmg > 0 and not is_attack and p.card.id != MASS_HELIOS_ID \
@@ -11481,8 +11777,9 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 			# 它站后排（x=5）时 `_destroy_dead` 会把 `-health` 当「后排溢出」漏给玩家 HP，
 			# 站前排却不会 —— 同一张卡两种结果。走 `_destroy()` 与森林守护 / 铁栅栏完全
 			# 同形（亡语、击杀记功照常，只是不吃那条溢出）。
-			if gen_cell != Vector2i(-1, -1) and gen.health <= 0:
-				_destroy(gen_cell)
+			# R469：统一走 `_reap()`（生成器本身不带超负荷，行为不变，但不留另一条销毁路径）。
+			if gen_cell != Vector2i(-1, -1):
+				_reap(gen_cell)
 			return 0
 	var dmg:= _unit_damage_taken(p, amount, "attack" if is_attack else "spell")
 	p.health -= dmg
@@ -11509,6 +11806,8 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 				"source": source, "side": p.owner}
 		if seq >= 0:
 			fi["seq"] = seq     # R363：多目标效果 → 界面按序号逐格错开落地
+		if _hit_land.x >= 0:
+			fi["land"] = _hit_land   # R467 枭熊跃击：数字等落地那一帧（R466 同一口径）
 		action.emit("fx_impact", fi)
 	return dmg
 
@@ -11558,6 +11857,27 @@ func damage_cell(cell: Vector2i, amount: int, source:= "效果") -> int:
 	return amount
 
 
+func damage_cells(cells: Array, amount: int, src := "效果") -> int:
+	## R470（用户口径「HP 三个格子被 AOE 打中时，只结算受到伤害最高的格子的伤害」）：
+	## **多格 AOE 的唯一口**。它替调用方做三件容易漏的事：
+	##   ① 包一层 `_begin_hp_once()` / `_end_hp_once()` —— 同一方 HP 在这次结算里只吃一次；
+	##   ② 循环结束后统一 `_destroy_dead()`（击杀 / 溢出都在窗口内收尾）；
+	##   ③ 返回命中数（空格打 HP 也算一次命中，与旧 `damage_cell` 的返回口径一致）。
+	## ⚠️ 别再写「for 循环里裸调 damage_cell」—— 漏了窗口就是三格各扣一次
+	##（实测：三格各 20 点的 AOE 打 200 血，裸循环掉 60）。源码守卫盯着这条。
+	if cells.is_empty() or amount <= 0:
+		return 0
+	_begin_hp_once()
+	var hits := 0
+	for c: Vector2i in cells:
+		if damage_cell(c, amount, src) > 0:
+			hits += 1
+	if hits > 0:
+		_destroy_dead()
+	_end_hp_once()
+	return hits
+
+
 func _relic_damage_taken(dmg: int) -> int:
 	## 鸭嘴（6006）：**每满 5 点伤害减 2 点**，最少受 1 点（R399 用户口径加强）。
 	##   5 → 3、9 → 7、10 → 6、15 → 9、20 → 12；不足 5 点的部分不折算（4 点照掉 4）。
@@ -11571,7 +11891,7 @@ func _relic_damage_taken(dmg: int) -> int:
 
 
 func _hp_damage_taken(amount: int) -> int:
-	## 玩家 HP 伤害的**统一入口**：以太屏障 / 石肤（都把这次伤害压成 1）→
+	## 玩家 HP 伤害的**统一入口**：风暴屏障 / 石肤（都把这次伤害压成 1）→
 	## 效果牌减伤（_effect_damage_reduction）→ 道具减伤（_relic_damage_taken）。
 	## 注意：荒野形态 6022 的「第一次受击 -4」不在这里判（它只认普通攻击直击 HP，
 	## 挂在 attack_hp 里单独判），否则法术 / 效果伤害也会被算进去。
@@ -11582,7 +11902,7 @@ func _hp_damage_taken(amount: int) -> int:
 		return 0
 	if _aether_left > 0:
 		_aether_left -= 1
-		_log("以太屏障：这次伤害变为 1（原本 %d，本回合还剩 %d 次）" % [amount, _aether_left])
+		_log("风暴屏障：这次伤害变为 1（原本 %d，本回合还剩 %d 次）" % [amount, _aether_left])
 		action.emit("aether_hit", {"left": _aether_left, "amount": amount})
 		return 1
 
@@ -11606,7 +11926,7 @@ func _wild_form_first_hit(attacker: Placement, raw: int) -> int:
 	## 纯减伤 + 反伤，不再有「打熊 / 打 HP 的敌人受 3 伤」那套。
 	## 返回实际 HP 伤害（调用方拿去扣血）；反伤在内部结算完毕。
 	## state.wild_form_used 保证每场只触发一次（战斗重置时随 state 一起清零）。
-	## ⚠️ R144：减完 4 点**继续交给 `_hp_damage_taken`**（石肤 / 以太屏障 / 效果减伤 /
+	## ⚠️ R144：减完 4 点**继续交给 `_hp_damage_taken`**（石肤 / 风暴屏障 / 效果减伤 /
 	## 道具减伤照常生效）。旧写法直接 `return _relic_damage_taken(dmg)` 等于**短路**掉
 	## 整条链 —— 持有荒野形态时第一次受击反而绕过石肤，与 R138 的「光环只挂一个扣血口」
 	## 同源：减伤 / 触发类机制必须挂在同一条链上。
@@ -11925,16 +12245,13 @@ func _blast(amount: int, target, radius: int) -> String:
 	if not (target is Vector2i):
 		return "（需要一个目标格子）"
 	var center: Vector2i = target
-	var hits:= 0
-	_begin_hp_once()
+	var cells: Array[Vector2i] = []
 	for cell: Vector2i in state.board.keys():
-		if manhattan(cell, center) <= radius:
-			if state.unit_at(cell) == null:
-				continue
-			if damage_cell(cell, amount, "火球") > 0:
-				hits += 1
-
-
+		if manhattan(cell, center) <= radius and state.unit_at(cell) != null:
+			cells.append(cell)
+	# R470：HP 行每方**只取一格**（半径内离中心最近的那个空格）。三个 HP 格是同一个
+	# 血量池的入口，打哪一格都是同一笔伤害；`damage_cells()` 里还有一层
+	# 「同一方 HP 只结算一次」兜底，所以这里取几格都不会重复扣。
 	for row: int in [back_row(SIDE_OPPONENT), back_row(SIDE_SELF)]:
 		var best_c:= Vector2i(-1, -1)
 		var best_d:= 999
@@ -11946,10 +12263,9 @@ func _blast(amount: int, target, radius: int) -> String:
 			if dc <= radius and dc < best_d:
 				best_d = dc
 				best_c = c
-		if best_c != Vector2i(-1, -1) and damage_cell(best_c, amount, "火球") > 0:
-			hits += 1
-	_destroy_dead()
-	_end_hp_once()
+		if best_c != Vector2i(-1, -1):
+			cells.append(best_c)
+	var hits := damage_cells(cells, amount, "火球")
 	return "火球命中 %d 个目标" % hits
 
 
@@ -12009,25 +12325,6 @@ func _battlecry_ash(cell: Vector2i, p: Placement) -> void :
 		_destroy_dead()
 	_end_hp_once()
 	_log("%s 战吼：对 %d 个敌方单位造成 %d 点伤害" % [p.card.card_name, hits, ASH_DRAGON_AOE])
-
-
-func _battlecry_frost(cell: Vector2i, p: Placement) -> void :
-	var foe:= SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
-	var best:= Vector2i(-1, -1)
-	var best_hp:= 999999
-	for c: Vector2i in state.board:
-		var q:= state.unit_at(c)
-		if q == null or q.owner != foe:
-			continue
-		if q.health < best_hp:
-			best_hp = q.health
-			best = c
-	if best == Vector2i(-1, -1):
-		_log("%s 战吼：场上没有敌方单位可冻结" % p.card.card_name)
-		return
-	var q: Placement = state.board[best]
-	_apply_frozen(q, "%s 战吼" % p.card.card_name)
-	action.emit("battlecry", {"cell": cell, "card": p.card, "kind": "frost", "target": best})
 
 
 func _deathrattle(cell: Vector2i, p: Placement) -> void :
@@ -12332,11 +12629,8 @@ func _death_blast(center: Vector2i, amount: int, card: CardData) -> void :
 		cells.append(c)
 	_log("%s 死亡爆炸：周围 %d 格各受到 %d 点伤害" % [card.card_name, cells.size(), amount])
 
-	_begin_hp_once()
-	for c2: Vector2i in cells:
-		damage_cell(c2, amount, "爆炎")
-	_destroy_dead()
-	_end_hp_once()
+	# R470：同上 —— 多格伤害只从 `damage_cells()` 走。
+	damage_cells(cells, amount, "爆炎")
 	action.emit("blast", {"center": center, "cells": cells, "amount": amount, "card": card})
 
 
@@ -12535,6 +12829,39 @@ func _fuse_tick() -> void :
 			_on_ally_entered(built, side)
 
 
+func _overload_keep(p: Placement, cell: Vector2i) -> void :
+	## 超负荷单位血已 ≤ 0：**原地保留**（负数血量继续存活），等**己方回合结束**
+	## 由 `_overload_tick()` 真正杀死。
+	## R469：这段原来只写在 `_destroy_dead()` 里 —— 于是只有「走 `_destroy_dead` 的伤害」
+	## 才享受超负荷；普攻 / 践踏链 / 枭熊落地重击 / 代受 / 闪躲都是**直接 `_destroy()`**
+	## （它们要就地算溢出，不能等全扫），超负荷在那几条路上形同虚设。
+	## 用户实测：城墙（8052）放到我方 HP 行，被打穿后当回合就没了，还漏了 9 点溢出。
+	action.emit("overload_neg", {"cell": cell, "card": p.card,
+		"health": p.health, "side": p.owner})
+	_log("超负荷：%s 生命降至 %d，暂不死亡（己方回合结束若仍为 0 或更低则死亡）"
+		% [p.card.card_name, p.health])
+
+
+func _reap(cell: Vector2i) -> bool:
+	## **「血降到 0 以下」的唯一收尾口**（R469）。
+	##
+	## 与 `_destroy()` 的分工：
+	##   * `_destroy()` = 「这张卡离开战场」的实现，**不区分原因**（效果直接消灭 / 被打死）；
+	##   * `_reap()`  = 只处理「因为生命值耗尽」这一种 —— 超负荷在这里被拦下（负数存活）。
+	##
+	## 凡是「`_hit_unit()` 之后血量 ≤ 0」的地方都必须走这里；效果主动消灭仍走 `_destroy()`。
+	## 返回 true = 真的销毁了 —— 调用方据此决定要不要算溢出 / 继续践踏
+	##（超负荷卡面写着「伤害不会溢出」，所以它被击穿时溢出链必须断在它身上）。
+	var p: Placement = state.unit_at(cell)
+	if p == null or p.health > 0:
+		return false
+	if p.card.has_affix(AFFIX_OVERLOAD):
+		_overload_keep(p, cell)
+		return false
+	_destroy(cell)
+	return true
+
+
 func _destroy_dead() -> void :
 
 
@@ -12546,10 +12873,8 @@ func _destroy_dead() -> void :
 			if _pu.card.has_affix(AFFIX_OVERLOAD):
 				# 超负荷（旧式机兵 8050，R98）：死亡推迟到己方回合结束，
 				# 现在以负数血量继续存活，且不触发「溢出伤害」漏给玩家 HP。
-				action.emit("overload_neg", {"cell": cell, "card": _pu.card,
-					"health": _pu.health, "side": _pu.owner})
-				_log("超负荷：%s 生命降至 %d，暂不死亡（己方回合结束若仍为 0 或更低则死亡）"
-					% [_pu.card.card_name, _pu.health])
+				# R469：演出与日志收进 `_overload_keep()`，与 `_reap()` 同一套。
+				_overload_keep(_pu, cell)
 				continue
 			dead.append(cell)
 	for cell: Vector2i in dead:
@@ -12654,16 +12979,25 @@ func _end_hp_once() -> void :
 		_hp_once_sides.clear()
 
 func _damage_player(side: String, amount: int, source:= "") -> int:
-	## R123：多格窗口内，同一方 HP 已经在这次结算里吃过一次 → 这笔直接跳过。
-	if _hp_once_depth > 0 and _hp_once_sides.has(side):
-		_last_hp_damage = 0        # 这笔没落地（同一次结算里已经吃过）
-		if side == SIDE_SELF:
-			_log("（同一次多格结算：我方 HP 已吃过一次，这笔 %d 点不再重复）" % amount)
-			return state.hp_self
-		_log("（同一次多格结算：敌方 HP 已吃过一次，这笔 %d 点不再重复）" % amount)
-		return state.hp_opponent
+	## R123：多格窗口内，同一方 HP 只结算**一次**。
+	## R470（用户口径「只结算受到伤害最高的格子的伤害」）：旧写法是「先到先算」——
+	## 哪一格排在前面就按那一格结算，后面的一律丢弃；现在改成**取最高**：
+	## 记录本窗口内该方已结算的**纸面伤害**，更大的一笔只补差额，相同 / 更小的直接跳过。
+	##   * AOE 各格伤害相同 → 永远只落地一次（这就是用户要的口径）；
+	##   * 「直击 HP + 破后排溢出」混在一起 → 取大的那笔，不再被先来的小额吞掉。
 	if _hp_once_depth > 0:
-		_hp_once_sides[side] = true
+		var prev: int = int(_hp_once_sides.get(side, -1))
+		if prev >= 0:
+			var who := "我方" if side == SIDE_SELF else "敌方"
+			if amount <= prev:
+				_last_hp_damage = 0
+				_log("（同一次多格结算：%s HP 已按 %d 点结算过，这笔 %d 点不再重复）" % [
+						who, prev, amount])
+				return state.hp_self if side == SIDE_SELF else state.hp_opponent
+			_log("（同一次多格结算：%s HP 这笔 %d 点高于已结算的 %d，只补差额 %d）" % [
+					who, amount, prev, amount - prev])
+			amount -= prev
+		_hp_once_sides[side] = amount + maxi(0, prev)
 	if side == SIDE_SELF:
 		# 闪躲（9103）：窗口期内先让随机盟友代受（不足的部分才落到自己的 HP 上）。
 		if _dodge_active and amount > 0:
@@ -12957,6 +13291,32 @@ func _action_growth_tick(side: String) -> void:
 			action.emit("action_growth", {"cell": cell, "side": side, "extra": p.action_growth_extra})
 
 
+func _haste_pick_tick(side: String) -> void:
+	## R479 哈气（9024）：该方第 3 / 5 / 7 个回合开始时，把双动**永久**授予
+	## 「现存（还在场上）生命最高、且还没有双动」的那一个己方单位。
+	## 原口径（R449）是「第 3 回合起**整方**每回合行动两次」；R479 收成单点授予：
+	## 三个回合各挑一个 → 压力是一层层压上来的，而不是全体一起翻倍。
+	## ⚠️ 必须在 `reset_units` **之前**调用 —— 那边按 `unit_actions` 重发行动轮数，
+	##    晚一步就要等下一个回合才生效（用户口径是「这个回合就该双动」）。
+	## ⚠️ 选人逻辑全在 `FieldState.haste_pick`（唯一口）。这里只管
+	##    「有没有这张效果卡 / 是不是触发回合 / 打日志」，别在这里再写一遍排序。
+	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
+	if not _zone_has(zone, FieldState.HASTE_TRAIT):
+		return
+	if not state.haste_turn(side):
+		return
+	var turn_no := state.self_turn_no if side == SIDE_SELF else state.opp_turn_no
+	var who := "我方" if side == SIDE_SELF else "敌方"
+	var picked := state.haste_pick(side)
+	if picked == null:
+		_log("哈气：%s第 %d 回合没有可授予的单位（空场 / 全都已经双动 / 本回合已挑过），这次落空"
+				% [who, turn_no])
+		return
+	_log("哈气：%s第 %d 回合 ——「%s」（生命 %d）获得双动，此后每回合行动两次" % [
+			who, turn_no, picked.card.card_name, picked.health])
+	action.emit("haste_pick", {"side": side, "name": picked.card.card_name})
+
+
 func _recycler_trigger(r: Placement, victim_power: int) -> void :
 	## 「零件回收者」（8046，R96）的唯一结算口，由 `_destroy` 在 erase 之后调用。
 	## R221：被销毁的卡必须是「素体以外」（`_destroy` 里已按 PROTO_ID 过滤），本口不再复核。
@@ -13106,15 +13466,25 @@ func has_pending_death_effects() -> bool:
 	return not _death_effects.is_empty()
 
 
-func _queue_death_effect(cell: Vector2i, fn: Callable) -> void:
+func pending_card_effects() -> int:
+	## R472：还有几个「会加卡」的死亡效果没结算（0 = 胜负判定可以照常进行）。
+	## 界面 / 测试都读这一个口，别去碰 `_death_card_pending`。
+	return _death_card_pending
+
+
+func _queue_death_effect(cell: Vector2i, fn: Callable, adds_cards := false) -> void:
 	## R360：死亡效果入队。`defer_death_effects == false` 时等同于「立刻执行」——
 	## 单元测试与回放走的都是这条，断言时序一点没变。
+	## R472：`adds_cards = true` 的效果（召唤 / 加手卡 / 埋陷阱）会**推迟胜利判定**，
+	## 见 `_death_card_pending` 与 `_check_game_over()`。
 	if not defer_death_effects:
 		fn.call()
 		return
+	if adds_cards:
+		_death_card_pending += 1
 	if not _death_effects.has(cell):
 		_death_effects[cell] = []
-	(_death_effects[cell] as Array).append(fn)
+	(_death_effects[cell] as Array).append({"fn": fn, "adds": adds_cards})
 
 
 func flush_death_effects(cell: Vector2i) -> void :
@@ -13124,8 +13494,14 @@ func flush_death_effects(cell: Vector2i) -> void :
 		return
 	var queue: Array = _death_effects[cell]
 	_death_effects.erase(cell)
-	for fn: Callable in queue:
-		fn.call()
+	# R472：**先**把「还在等着的加卡效果」计数放掉，再跑队列 ——
+	# 这样召唤失败（周围没空位、半场满了）时，这一格跑完的 `_check_game_over()`
+	# 会立刻照常宣布胜利，不会因为计数没放而卡住一局。
+	for e: Dictionary in queue:
+		if bool(e.get("adds", false)):
+			_death_card_pending = maxi(0, _death_card_pending - 1)
+	for e: Dictionary in queue:
+		(e["fn"] as Callable).call()
 
 
 func flush_all_death_effects() -> void :
@@ -13229,7 +13605,27 @@ func _destroy(cell: Vector2i) -> void :
 	# 现在统一入队，由 battle_scene 在那张卡的击破演出到点时调 `flush_death_effects(cell)`。
 	# ⚠️ 入队顺序 = 原来的执行顺序；`defer_death_effects == false`（测试 / 回放）立即执行。
 	_queue_death_effect(cell,
-			_settle_death.bind(cell, p, _rec_victim_ok, _rec_power, _rec_list))
+			_settle_death.bind(cell, p, _rec_victim_ok, _rec_power, _rec_list),
+			_death_adds_cards(p))
+
+
+func _death_adds_cards(p: Placement) -> bool:
+	## R472：这张卡死掉之后，会不会**往场上 / 手卡里加东西**？
+	## 只有这一类要抢在胜利判定之前结算 —— 因为它们可能把「清场」这个条件重新弄成不成立
+	##（骷髅 / 龙裔 / 罐子召唤、母舰补造、捕兽大师埋陷阱、幽灵与生命循环加手卡）。
+	## 伤害类亡语（食尸鬼 9036 扣 HP、机械 9131 群伤、爆炎鸭爆炸）**故意不算**：
+	## 它们不改场上张数，早结算晚结算都不影响胜负，没必要为它们推迟结算。
+	if p == null or p.card == null:
+		return false
+	if p.life_cycle or p.blade_gift:      # 生命循环 / 辅助刃：加一张手卡
+		return true
+	match p.card.id:
+		WYVERN_ID, LICH_ID, SKELETON_SUMMON_ID, JAR_TOKEN_ID, GHOST_ID, TRAPPER_ID:
+			return true
+	# 母舰 9208：敌方友方被破坏 → 旁边补造一份复制（`_mothership_on_ally_death`）。
+	if p.owner == SIDE_OPPONENT and p.card.id != MOTHERSHIP_ID 			and _cell_of_unit(MOTHERSHIP_ID) != Vector2i(-1, -1):
+		return true
+	return false
 
 
 func _settle_death(cell: Vector2i, p: Placement, rec_ok: bool, rec_power: int,
@@ -13342,6 +13738,11 @@ func move_path(src: Vector2i, dst: Vector2i, side: String) -> Array[Vector2i]:
 
 
 func _reachable(cell: Vector2i, side: String) -> Array[Vector2i]:
+	# R467 枭熊（带「跳跃」trait）：**全图任意空格 + 原地**都是落点 —— 不看移动速度、
+	# 不看阻挡（与闪现同一个语义，只是落点还包含自己那一格 = 原地起跳）。
+	var leaper:= state.unit_at(cell)
+	if leaper != null and is_leaper(leaper) and leaper.owner == side:
+		return leap_cells(cell, side)
 	var result: Array[Vector2i] = []
 	for c: Vector2i in _move_bfs(cell, side).keys():
 		# 穿行会把「路过的被占格」也记进来 —— 那不是合法落点，要剔除。
@@ -13441,6 +13842,12 @@ func hp_targets(cell: Vector2i, side:= SIDE_SELF, card: CardData = null) -> Arra
 
 
 func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void :
+	var lp:= state.unit_at(src)
+	# R467：枭熊的「移动」一律是跳跃 —— 走 `_leap()` 那条唯一的门，界面上点绿格、
+	# AI 推进、联机回放全都自动同口径（落点含原地，`dst == src` 就是原地起跳）。
+	if lp != null and lp.owner == side and is_leaper(lp):
+		_leap(src, dst, side)
+		return
 	var p:= state.unit_at(src)
 	if p == null or p.owner != side:
 		_log("%s 上没有我方卡" % src)
@@ -13452,9 +13859,10 @@ func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void
 		_log("%s 被禁足，本回合不能移动" % p.card.card_name)
 		return
 	if p.moved:
-
-
-
+		# R462：**界面不再走这条路** —— 移动完之后只剩「攻击 / 结束这一轮」两件事，
+		# 想再走一格得先结束这一轮（点其他地方 / 右键），新一轮再走。
+		# 这条留给 AI 的侧移连招，语义与「结束这一轮再走」等价：都是让掉这一轮的
+		# 攻击权、换一次移动。
 		if p.acts_left > 1 and not p.card.is_fort() and p.effective_speed() > 0:
 			p.acts_left -= 1
 			p.tapped = false
@@ -13528,6 +13936,188 @@ func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void
 	if attack_targets(dst, side, p.card).is_empty()\
 	and hp_targets(dst, side, p.card).is_empty():
 		_tap(p, "移动后无攻击目标，放弃攻击")
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  R467：枭熊 —— 跳跃 / 落地重击
+# ══════════════════════════════════════════════════════════════════════
+
+func is_leaper(p: Placement) -> bool:
+	## 能不能「跳」（唯一判据）。带「跳跃」trait 的单位，行动方式被整条替换掉。
+	return p != null and p.card != null and p.card.traits.has(OWLBEAR_LEAP_TRAIT)
+
+
+func leap_cells(cell: Vector2i, side: String) -> Array[Vector2i]:
+	## 跳跃落点（唯一口）：**原地 + 全图任意空格**，只排除「对方后排行」——
+	## 那一行是直击 HP 的落点行，单位站上去等于拿对方血条当垫脚石（`unit_slot_allowed`）。
+	## 顺序固定为「原地 → 行优先 → 列优先」，AI 的平手判定与回放都靠它保持确定性。
+	var out: Array[Vector2i] = [cell]
+	for r in FieldState.BOARD_ROWS:
+		for c in FieldState.BOARD_COLS:
+			var t:= Vector2i(r, c)
+			if t == cell:
+				continue
+			if state.board.has(t):
+				continue
+			if not unit_slot_allowed(t, side):
+				continue
+			out.append(t)
+	return out
+
+
+func _slam_cells(dst: Vector2i, side: String) -> Array[Vector2i]:
+	## 落地重击覆盖到的格子 = 落点**上下左右**四格里的**敌方**单位。
+	## 「距离 1」按引擎自己的距离尺（`manhattan`，程 1 就是正交邻格）——
+	## 与本作「射程 1 = 四邻」一致，不另立一套切比雪夫尺。
+	var out: Array[Vector2i] = []
+	for d: Vector2i in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
+		var c:= dst + d
+		if c.x < 0 or c.x >= FieldState.BOARD_ROWS:
+			continue
+		if c.y < 0 or c.y >= FieldState.BOARD_COLS:
+			continue
+		var q:= state.unit_at(c)
+		if q == null or q.owner == side:
+			continue
+		out.append(c)
+	return out
+
+
+func _has_trample(p: Placement) -> bool:
+	## 「践踏」判定口（跃击专用）：自带「践踏」trait，或 —— 关卡效果卡 9212 在场时，
+	## 枭熊**掉到一半生命或以下**就获得践踏（卡面原话「半血以下」）。
+	## 半血以上那一条（受伤 -1）在 `_unit_damage_taken()` / `preview_hit_damage()`，
+	## 这里只管「溢出伤害传不传」。
+	if p == null or p.card == null:
+		return false
+	if p.card.traits.has(TRAMPLE_TRAIT):
+		return true
+	if p.card.traits.has(OWLBEAR_TRAIT) \
+			and _zone_has(state.enemy_effects, OWLBEAR_INSTINCT_TRAIT) \
+			and p.health * 2 <= p.card.health:
+		return true
+	return false
+
+
+func _leap(src: Vector2i, dst: Vector2i, side: String) -> void:
+	## 跳跃（枭熊的唯一行动）：
+	##   ① 落点校验（原地 / 任意空格，后排 HP 行由 `unit_slot_allowed` 拦）；
+	##   ② dst != src 才真的位移（场地卡 / 火墙照旧按「移动经过」结算 —— 跃过它们也算经过）；
+	##   ③ 落地重击（`_owlbear_slam`）；
+	##   ④ 横置（跃击就是这一轮的全部行动，不能接着普攻 —— 卡面「不能进行常规攻击」）。
+	var p:= state.unit_at(src)
+	if p == null or p.owner != side:
+		_log("%s 上没有我方卡" % src)
+		return
+	if p.tapped:
+		_log("%s 已横置，本回合不能跳跃" % p.card.card_name)
+		return
+	if p.rooted > 0:
+		_log("%s 被禁足，本回合不能跳跃" % p.card.card_name)
+		return
+	if p.moved:
+		_log("%s 本回合已经行动过一轮" % p.card.card_name)
+		return
+	if not unit_slot_allowed(dst, side):
+		_log("不能跳到对方后排")
+		return
+	if dst != src and state.board.has(dst):
+		_log("跳跃落点 %s 已有单位" % dst)
+		return
+	var path: Array[Vector2i] = [src, dst]
+	if dst != src:
+		state.move_unit(src, dst)
+		p.moved = true
+		p.did_move = true
+	action.emit("move", {"src": src, "dst": dst, "card": p.card,
+			"side": side, "path": path})
+	if dst == src:
+		_log("%s 原地起跳（落地重击）" % p.card.card_name)
+	else:
+		_log("%s 跃向 %s" % [p.card.card_name, dst])
+		_field_trigger(dst, p)
+		if p.health <= 0:
+			return
+		_fire_wall_pass(path)
+		if p.health <= 0:
+			return
+	_owlbear_slam(p, dst)
+	if p.health <= 0 or over:
+		return
+	if not p.tapped:
+		_tap(p, "跳跃落地")
+
+
+func _owlbear_slam(p: Placement, dst: Vector2i) -> void:
+	## 落地重击：落点四邻的敌方单位各吃一次「等同于它力量」的伤害。
+	## 口径与普通攻击一致（`effective_power + 回合/光环加成`，且**按攻击类**结算 ——
+	## 卡面写的就是「等同于力量的伤害」，不该被「技能伤害减半 / 技能抗性」白吃一层）。
+	## 践踏（半血以下，见 `_has_trample`）：砸死的那个单位，溢出伤害沿**同列**继续传，
+	## 与落石陷阱同一条路（`_rockfall_overflow`）—— 陷阱没有攻击者，而这里**有**
+	## （击杀记功要记给枭熊，鸭子骑士那类「击杀成长」才认得出是谁干的）。
+	var power:= p.effective_power() + _turn_dmg_bonus(p.owner) + _ally_dmg_bonus(p.card, p.owner)
+	var cells:= _slam_cells(dst, p.owner)
+	action.emit("owlbear_slam", {"cell": dst, "cells": cells, "amount": power,
+			"card": p.card, "side": p.owner})
+	if cells.is_empty():
+		_log("%s 落地重击：周围没有敌方单位（践踏不触发）" % p.card.card_name)
+		return
+	var trample:= _has_trample(p)
+	_hit_land = dst
+	var seq:= 0
+	for c: Vector2i in cells:
+		var q:= state.unit_at(c)
+		if q == null:
+			continue
+		var hp_before:= q.health
+		q.last_hit_by = dst
+		var dmg:= _hit_unit(q, power, "跃击", true, true, seq)
+		seq += 1
+		_log("%s 落地重击 %s：-%d 生命（剩 %d）" % [
+				p.card.card_name, q.card.card_name, dmg, q.health])
+		if q.health > 0:
+			continue
+		# R469：超负荷单位负数存活 → 不践踏（它没死，脚下没被砸开）。
+		if not _reap(c):
+			continue
+		if not trample:
+			continue
+		var overflow:= dmg - maxi(hp_before, 0)
+		if overflow <= 0:
+			continue
+		var res: Array = _rockfall_overflow(c, q.owner, overflow, "践踏", dst)
+		var left:= int(res[0])
+		if left <= 0:
+			continue
+		var pierced:= str(res[1])
+		if pierced == "":
+			pierced = q.card.card_name
+		_log("枭熊践踏：%d 点打穿整列 → 漏到 %s HP" % [
+				left, "敌方" if q.owner == SIDE_OPPONENT else "我方"])
+		_damage_player(q.owner, left, "践踏")
+		action.emit("trample", {"side": q.owner, "amount": _last_hp_damage,
+				"dst": c, "atk_name": p.card.card_name, "def_name": pierced})
+	_hit_land = Vector2i(-1, -1)
+	_destroy_dead()
+
+
+func _owlbear_enter(p: Placement, x: int) -> void:
+	## 传说卡「枭熊」9213：**X 费单位**（与流星雨的 X 费技能不同，这是第一张 X 费盟友）。
+	## 费用在 `play_from_hand` 里已经按「全部剩余费用」扣掉 → 这里把 X **快照**成力量 / 生命，
+	## 之后本场战斗不再变化（卡面「落地时记录，本场不再变化」）。
+	## X 为 0（空手打出）：力量 0、生命 0 → 一落地就倒（用户口径「0 费打出立即死亡」）。
+	var hp:= x * OWLBEAR_HP_PER_X
+	p.card.power = x
+	p.card.health = hp
+	p.health = hp
+	_log("枭熊落地：X=%d → 力量 %d / 生命 %d" % [x, x, hp])
+	action.emit("owlbear_enter", {"cell": _cell_of(p), "card": p.card,
+			"x": x, "power": x, "health": hp})
+	if x <= 0:
+		# ⚠️ 这里**只记日志**，不 `_destroy` —— 销毁放在 `play_from_hand` 的收尾：
+		# 入场钩子（疾风之力 / 道具加成 / 印记）拿到的应该是一个「刚落地」的单位，
+		# 提前销毁会让它们对着一个已经不在 board 上的 Placement 干活（`_cell_of` = -1）。
+		_log("枭熊：X 为 0，一落地就倒下了")
 
 
 func can_activate(cell: Vector2i, side:= SIDE_SELF) -> bool:
@@ -13824,7 +14414,115 @@ func _rockfall_trap(cell: Vector2i, mover: Placement, bonus: int) -> void :
 			action.emit("trample", {"side": mover.owner, "amount": _last_hp_damage,
 				"dst": cell, "atk_name": "落石陷阱", "def_name": pierced_name})
 
-func _rockfall_overflow(from_cell: Vector2i, side: String, remaining: int) -> Array:
+func _brawl(side: String, card: CardData) -> String:
+	## R473 乱打 9215：对**随机 BRAWL_TARGETS 个敌人**各造成 BRAWL_DMG 点伤害。
+	## 三条落地细节（与激发 8077 的「随机两个」同口径）：
+	##   * 抽取走 `rng`（回放必须一致）；同一轮内**不重复**抽同一个目标；
+	##   * 伤害走 `_op_deal_damage()`：护盾 / 减伤 / 光环 / 技能加成与其它单目标技能同源；
+	##   * 只打**场上的敌方单位**，不直击敌方 HP（没有单位时落空）。
+	var foe: String = SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	var pool: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var u: Placement = state.board[cell]
+		if u != null and u.owner == foe and u.health > 0:
+			pool.append(cell)
+	if pool.is_empty():
+		_log("乱打：场上没有敌方单位，效果落空")
+		return "场上没有敌人，乱打落空"
+	pool.sort()   # 固定顺序：同种子 / 回放一致
+	var dmg:= _spell_dmg(side, BRAWL_DMG, card)
+	var n:= mini(BRAWL_TARGETS, pool.size())
+	var hits:= 0
+	for _i in n:
+		var idx:= rng.randi_range(0, pool.size() - 1)
+		var cell: Vector2i = pool[idx]
+		pool.remove_at(idx)
+		var u2: Placement = state.board.get(cell, null)
+		if u2 == null or u2.health <= 0:
+			continue
+		_op_deal_damage(side, dmg, cell)
+		hits += 1
+	_log("乱打：随机 %d 个敌人各受 %d 点伤害" % [hits, dmg])
+	return "乱打：%d 个敌人各受 %d 点伤害" % [hits, dmg]
+
+
+func _flying_kick(side: String, target, card: CardData) -> String:
+	## R473 飞踢 9216：单目标技能 + 践踏。
+	## 「践踏」在这里的定义与 R225 攻击践踏 / R248 落石践踏完全同源：
+	## **击杀时溢出的伤害不丢弃**，沿同一列朝目标方后排继续传递
+	## —— 直接复用 `_rockfall_overflow()`，不另写一条溢出链。
+	## ⚠️ 溢出量按**纸面伤害 - 目标剩余生命**算：`_op_deal_damage()` 返回的是描述串，
+	##    拿不到实扣值；有减伤（石肤等）时这一笔会比严格值略大，与 R225「溢出不丢弃」
+	##    的口径一致，不留另一套算法。
+	var p: Placement = _target_placement(side, target)
+	if p == null:
+		_log("飞踢：没有目标")
+		return "（没有目标）"
+	var foe: String = SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	var cell:= _cell_of(p)
+	var hp_before:= p.health
+	var total:= _spell_dmg(side, FLYING_KICK_DMG, card)
+	var msg:= _op_deal_damage(side, total, target)
+	# 没打死 → 践踏不触发（它就是「击杀时」的效果）
+	if _target_placement(side, target) != null:
+		return msg
+	if cell.x < 0:
+		return "%s；目标被击破" % msg
+	var carry:= maxi(0, total - maxi(hp_before, 0))
+	if carry <= 0:
+		_log("飞踢：%s，没有溢出（目标剩余生命 >= 伤害）" % msg)
+		return "%s；目标被击破" % msg
+	_log("飞踢：%s，溢出 %d 点沿同列传递" % [msg, carry])
+	var res: Array = _rockfall_overflow(cell, foe, carry, "飞踢")
+	var left:= int(res[0])
+	if left > 0:
+		var pierced:= str(res[1])
+		if pierced == "":
+			pierced = "空列"
+		_log("飞踢践踏：%d 点打穿整列 → 漏到 %s HP" % [
+				left, "敌方" if foe == SIDE_OPPONENT else "我方"])
+		_damage_player(foe, left, "飞踢践踏")
+		action.emit("trample", {"side": foe, "amount": _last_hp_damage,
+				"dst": cell, "atk_name": "飞踢", "def_name": pierced})
+	_destroy_dead()
+	return "%s；溢出的 %d 点沿同列继续" % [msg, carry]
+
+
+func _rush_punch(side: String, target, card: CardData) -> String:
+	## R473 冲拳 9217：主目标 16 伤 + 击退 1 格，**其余每个敌方单位**各受 8 伤。
+	## ⚠️ 溅射名单在**击退之前**收好：击退会改变主目标的坐标，事后再遍历容易把它算进去；
+	##    名单里存的是格子，逐个结算前再看一眼「这一格还有没有活着的敌人」。
+	## 击退走唯一口 `_knockback()`（位移免疫 / 被挡住 / 朝目标方后排 —— 与冲击炮同源）。
+	var p: Placement = _target_placement(side, target)
+	if p == null:
+		_log("冲拳：没有目标")
+		return "（没有目标）"
+	var foe: String = SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	var main_cell:= _cell_of(p)
+	var others: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var u: Placement = state.board[cell]
+		if u != null and u.owner == foe and u.health > 0 and cell != main_cell:
+			others.append(cell)
+	others.sort()
+	var msg:= _op_deal_damage(side, _spell_dmg(side, RUSH_PUNCH_DMG, card), target)
+	var kb:= "目标被击破"
+	if _target_placement(side, target) != null:
+		kb = _knockback(side, target, RUSH_PUNCH_STEPS)
+	var splash:= _spell_dmg(side, RUSH_PUNCH_SPLASH, card)
+	var hits:= 0
+	for cell: Vector2i in others:
+		var u2: Placement = state.board.get(cell, null)
+		if u2 == null or u2.health <= 0:
+			continue
+		_op_deal_damage(side, splash, cell)
+		hits += 1
+	_log("冲拳：%s；%s；其余 %d 个敌人各受 %d 点伤害" % [msg, kb, hits, splash])
+	return "%s；%s；其余 %d 个敌人各受 %d 点伤害" % [msg, kb, hits, splash]
+
+
+func _rockfall_overflow(from_cell: Vector2i, side: String, remaining: int,
+		src_name := "落石陷阱", killer := Vector2i(-1, -1)) -> Array:
 		## 落石陷阱的践踏链（R248）—— `_trample_chain` 的**陷阱版**：同列、同侧、逐个击穿。
 		## 与攻击践踏只有两处差异：方向取「踩雷者所在方的**后排**」（不是远离攻击者），
 		## 伤害来源记「落石陷阱」（is_attack = false，效果伤害而非普通攻击）。
@@ -13845,17 +14543,21 @@ func _rockfall_overflow(from_cell: Vector2i, side: String, remaining: int) -> Ar
 			if next == null or next.owner != side:
 				continue               # 空格 / 同列的对方单位 → 继续往深处找
 			var hp_before: int = next.health
-			next.last_hit_by = Vector2i(-1, -1)   # 同上：落石击杀不记功给单位
-			var dmg: int = _hit_unit(next, remaining, "落石陷阱")
-			_log("落石践踏：%d 点沿同列传给 %s（造成 %d 点伤害）" % [
-				remaining, next.card.card_name, dmg])
+			# R467：`killer` 默认 -1（落石没有攻击者，不记功）；枭熊跃击会把**落点**传进来，
+			# 于是「砸死的也算它杀的」（击杀成长那族才认得出是谁干的）。
+			next.last_hit_by = killer
+			var dmg: int = _hit_unit(next, remaining, src_name)
+			_log("%s：%d 点沿同列传给 %s（造成 %d 点伤害）" % [
+				src_name, remaining, next.card.card_name, dmg])
 			action.emit("trample_hit", {"cell": cell, "side": next.owner, "amount": dmg,
-				"name": next.card.card_name, "from": from_cell, "atk_name": "落石陷阱"})
+				"name": next.card.card_name, "from": from_cell, "atk_name": src_name})
 			pierced = next.card.card_name
 			if next.health > 0:
 				return [0, pierced]    # 没打死 → 溢出到此为止（它吃满）
+			# R469：超负荷 → 负数存活、溢出到此为止（与 `_trample_chain()` 同一口径）。
+			if not _reap(cell):
+				return [0, pierced]
 			var carry: int = dmg - maxi(hp_before, 0)
-			_destroy(cell)
 			remaining = carry
 		return [maxi(remaining, 0), pierced]
 
@@ -14549,8 +15251,10 @@ func _trample_chain(attacker: Placement, foe_side: String, from_cell: Vector2i,
 		pierced = next.card.card_name
 		if next.health > 0:
 			return [0, pierced]    # 没打死 → 溢出到此为止（它吃满）
+		# R469：超负荷被击穿不算死 → 负数存活，溢出就到此为止（卡面「伤害不会溢出」）。
+		if not _reap(cell):
+			return [0, pierced]
 		var over: int = dmg - maxi(hp_before, 0)
-		_destroy(cell)
 		remaining = over
 	return [remaining if remaining > 0 else 0, pierced]
 
@@ -14599,8 +15303,10 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	action.emit("attack", {"src": src, "dst": dst, "damage": def_dmg, 
 		"side": side, "overflow": overflow, 
 		"atk_name": attacker.card.card_name, "def_name": defender.card.card_name})
-	if defender.health <= 0:
-		_destroy(dst)
+	# R469：走 `_reap()` 而不是 `_destroy()` —— 超负荷单位被打穿不算死（负数存活），
+	# 且「伤害不会溢出」。以前这里直接 `_destroy(dst)`，于是战场上一刀就没了、
+	# 溢出还照常漏到玩家 HP（城墙站我方 HP 行被打穿 = 当场消失 + 漏 9 点）。
+	if defender.health <= 0 and _reap(dst):
 		# R225：践踏 —— 先把溢出伤沿同列逐个击穿，打穿整列后剩下的才轮到 HP。
 		var pierced_name: String = defender.card.card_name
 		if overflow > 0 and trample:
@@ -14616,7 +15322,9 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 			action.emit("trample", {"side": foe, "amount": _last_hp_damage, "src": src,
 				"dst": dst, "atk_name": attacker.card.card_name,
 				"def_name": pierced_name})
-	if defender.health <= 0 and defender.card.traits.has(WORKSHOP_TRAIT) and state.board.has(src):
+	# R469：加 `not state.board.has(dst)` —— 超负荷单位负数存活时它还在场，不能算「被破坏」。
+	if defender.health <= 0 and not state.board.has(dst) \
+			and defender.card.traits.has(WORKSHOP_TRAIT) and state.board.has(src):
 		# 机关工坊（8015；R74 由「陷阱工坊」改名，仍是工事）：被敌人的攻击**破坏** → 对破坏它的敌人造成 8 伤。
 		# 攻击者若已先倒下（如踩了别的反伤）则不再追伤；同样记「触发过工事」供暗影狩猎判定。
 		var w_dmg:= _hit_unit(attacker, WORKSHOP_DMG + _field_mastery(defender.owner, defender.card),
@@ -15443,6 +16151,11 @@ func _ai_act(cell: Vector2i, p: Placement) -> void :
 	if _assassin_passive(p):
 		_assassin_act(cell, p)
 		return
+	# R467 枭熊：整条行动被「跳跃」替换（程 0 → 本来也没有可打的目标，
+	# 走通用流程只会「原地待命」白站一回合）。
+	if is_leaper(p):
+		_owlbear_act(cell, p)
+		return
 
 
 
@@ -15511,6 +16224,49 @@ func _ai_act(cell: Vector2i, p: Placement) -> void :
 
 		attack(dst, _ai_pick_card_target(atk_targets, moved), SIDE_OPPONENT)
 	return
+
+# ================= R467：枭熊专属 AI =================
+
+func _owlbear_key(src: Vector2i, dst: Vector2i, p: Placement) -> Array:
+	## 落点排序键（字典序，越小越好）：① 砸不到人 → 差（1 优于 0）；
+	## ② 能砸死几只（多者优先）；③ 总伤害（高者优先）；④ 末位按格位定序（确定性）。
+	## 跳跃是全场任意格，所以**不按距离给分** —— 挪得近不积累任何优势（与暗杀者同一条理由）。
+	var power:= p.effective_power() + _turn_dmg_bonus(p.owner) + _ally_dmg_bonus(p.card, p.owner)
+	var cells:= _slam_cells(dst, p.owner)
+	var kills:= 0
+	var total:= 0
+	for c: Vector2i in cells:
+		var q:= state.unit_at(c)
+		if q == null:
+			continue
+		var d:= int(preview_hit_damage(q, power, true, false).get("dmg", 0))
+		if d < 0:
+			d = power
+		if d >= q.health:
+			kills += 1
+		total += d
+	return [0 if not cells.is_empty() else 1, -kills, -total, dst.x, dst.y]
+
+
+func _owlbear_act(cell: Vector2i, p: Placement) -> void :
+	## 枭熊 AI：把「原地 + 全图空格」全排一遍，挑最能砸的那个落点；一个都砸不到就原地待命
+	## （不乱跳 —— 跳跃没有距离概念，白挪一次只是浪费自己的行动）。
+	## 平手时**不优先原地**：能砸到同样多人的落点里，坐标序小的先胜 —— 与暗杀者
+	## 「原手优先」不同，因为枭熊原地多半只能砸到 1 只，而换一格常常能砸 2 只。
+	var best: Vector2i = cell
+	var best_key:= _owlbear_key(cell, cell, p)
+	for dst in leap_cells(cell, p.owner):
+		if dst == cell:
+			continue
+		var k:= _owlbear_key(cell, dst, p)
+		if k < best_key:
+			best_key = k
+			best = dst
+	if best == cell and _slam_cells(cell, p.owner).is_empty():
+		_tap(p, "AI：跳过去也砸不到人")
+		return
+	_leap(cell, best, p.owner)
+
 
 # ================= R111：鸭子暗杀者专属 AI =================
 
@@ -15722,9 +16478,54 @@ func _assassin_summon(side: String, initial:= false) -> void :
 	_refresh_hecaton(side)
 
 
+func _frost_ward_check(side: String) -> void :
+	## R464：寒霜结界（9210）的自检 —— 它**不施加任何东西**。
+	## 那张效果卡描述的是「每 2 个回合，所有友方单位力量 +1（最多累计 +4）」，
+	## 真正在跑的是关卡的 `enemy_growth`：`configure_growth()` 记配置，`_sync_enemy_growth()`
+	## 把层数写进每个敌方单位的 `atk_growth` —— 这是**全场**，与卡面写的「所有友方单位」一致。
+	## 这里只查一件事：效果区挂了「寒霜」但这一关没配成长曲线 → 卡在台上不出活。
+	## （静默失效最难查，宁可留一条日志；正常关卡不会走到这一条。）
+	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
+	var src:= ""
+	for c: CardData in zone:
+		if c.traits.has(FROST_WARD_TRAIT):
+			src = c.card_name
+			break
+	if src != "" and growth_cfg.is_empty():
+		_log("⚠️ %s 已启用，但这一关没有配 enemy_growth —— 卡面写的力量成长不会发生" % src)
+
+
+func _battlecry_frost(cell: Vector2i, p: Placement) -> void :
+	## 冰冻术士（1031）战吼（R464 用户口径）：冰封敌方**本场战斗第一个入场**的单位。
+	## 与 R461 之前的差别：不再挑「生命最低」的那个 —— 目标只由**入场顺序**决定，
+	## 于是玩家能预判（谁先下场谁挨冻），也不会因为中途掉血忽然换人。
+	## 「第一个」的判据 = 敌方**仍在场**的最小 `entry_seq`：
+	##   * 序号由 `FieldState.place()` 唯一发放（关卡摆位 / 手牌打出 / 召唤全走它）；
+	##   * 不靠 `state.board` 的字典迭代顺序 —— Dictionary 顺序不可依赖，回放 / 续档会漂。
+	## 第一个入场的那个已经阵亡时，顺位取**下一个入场的存活单位**（否则这次战吼白费）。
+	## 施加本身走 `_apply_frozen()` 唯一口 —— 爆点 / 「冰封」飘字 / 播报都由它发出的
+	## `frozen` 事件驱动，这里不另写一套演出。
+	var foe:= SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
+	var best:= Vector2i(-1, -1)
+	var best_seq:= 0
+	for c: Vector2i in state.board:
+		var q: Placement = state.unit_at(c)
+		if q == null or q.owner != foe or q.health <= 0:
+			continue
+		if best == Vector2i(-1, -1) or q.entry_seq < best_seq:
+			best_seq = q.entry_seq
+			best = c
+	if best == Vector2i(-1, -1):
+		_log("%s 战吼：场上没有敌方单位可冻结" % p.card.card_name)
+		return
+	_apply_frozen(state.board[best], "%s 战吼" % p.card.card_name)
+	action.emit("battlecry", {"cell": cell, "card": p.card, "kind": "frost", "target": best})
+
+
 # ============================================================ R439 战斗存档
-## 战斗检查点：引擎层的跨回合字段 + 整份 FieldState。
-## ⚠️ `current_side` 不存 —— 存档点固定是「我方回合开始」，续档一律摆回我方回合。
+## 引擎层的跨回合字段 + 整份 FieldState 的序列化（调试 / 回放 / 工具用）。
+## ⚠️ R477（用户口径）：**战斗存档不再用它** —— 续档一律回到这一场开打之前，
+##    所以别把这个当「存档口」调；要改续档行为看 `battle_scene._mark_battle_checkpoint()`。
 func save_battle() -> Dictionary:
 	return {
 		"turn_number": turn_number,

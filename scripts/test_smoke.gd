@@ -83,6 +83,23 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r393_absorb_timing],
+		# R466（用户口径）：「再批量排查一下战斗动画顺序有没有问题」。
+		# 移动途中才结算的附带演出（中毒 / 黑暗陷阱 / 爆炸场地 / 火墙灼烧）必须等滑行落地，
+		# 否则「人还在半路、字先飘在原位」。只有真场景（真滑行动画）能验。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r466_anim_cue],
+		# R467 洞穴 · 枭熊（用户口径）：枭熊「不能（常规）攻击」，行动 = 跳到任意空格并砸四邻。
+		#   真场景验三件事：程 0 无普攻目标 / 界面绿格与落点同口 / 跃击两段演出（抛物线 + 落地重击）。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = GameLevels.cave_level(),
+			_check_r467_cave],
 		# R395（用户报）：继续游戏进战斗后用「填充」，选卡页弹出来**没有待选卡**，
 		# 选不了、回合也结束不了。规则：候选空 → 不许开空网格；选卡页开着 → 不给结束回合。
 		["res://scenes/battle.tscn", func():
@@ -107,6 +124,14 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r398_deck_delete],
+		# R458（用户口径）：「核心」做成道具 —— 战斗中累计失去 15 点生命后成形，
+		# 这一场结束的**奖励页**里兑换一次，用掉即失效。奖励页要能上下滚动（防条目满屏）。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r458_core_reward],
 		# R339：战斗检查点必须写「进战斗之前」的局状态 —— lucky 7 的跨战斗计数在开局
 		# 第 1 个我方回合就 +1，若检查点写「当下」，续档重打这一场就会越续越多（用户报）。
 		["res://scenes/battle.tscn", func():
@@ -117,6 +142,19 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r335_pre_battle_snap],
+		# R477（用户口径）：继续游戏**一律回到这一场开打之前** —— 老档里挂着
+		# 「恢复到第 N 回合」的战斗快照，进战斗后必须还是第 1 回合。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle", "id": 3}
+				RunState.pending_level = RunState.next_level({"type": "battle"})
+				RunState.resume_battle = {
+					"node": {"type": "battle", "id": 3},
+					"level": RunState.pending_level,
+					"battle": {"turn_number": 9, "state": {"hp_self": 1}},
+				},
+			_check_r477_battle_start],
 		# R341 洞窟绳（6048）：Boss 以外的战斗顶栏多一个「逃跑」；Boss 战没有。
 		["res://scenes/battle.tscn", func():
 				_reset()
@@ -1772,55 +1810,123 @@ func _check_relic_bar(scene: Variant) -> void:
 		_smoke_fail("R407 卡组按钮：实际位置 %s 与唯一口 %s 不一致"
 				% [str((dbb as Button).position), str(dbr.position)])
 		return
-	var n_max: int = scene.RELIC_BADGE_MAX
-	# 徽章行整体不能压到标题（最左一个徽章的左沿要在标题右侧）
-	var left: float = scene._relic_rect(n_max - 1).position.x
-	if left < 470.0:
-		_smoke_fail("道具徽章：一行 %d 个时最左徽章左沿 %.1f，压到标题区"
-				% [n_max, left])
-		return
+	# R470（用户口径「道具太多显示不下」）：**不再有 +N 折叠** —— 一行排满就换下一行、
+	# 无限堆叠，并且**绕开固定 UI**（卡组按钮 / 巧克力 / 本层 Boss / 标题 / 图例条 / 标记按钮）。
+	# 这里一屏塞 20 件，逐条钉：全部有槽位、互不重叠、都不压住保留矩形。
 	var saved: Array = RunState.relics.duplicate()
-	# 少：装得下 → 不该有 +N，也就不该给点击入口
-	RunState.relics = [6001, 6003, 6005]
-	if scene._relic_bar_overflowed():
-		_smoke_fail("道具徽章：3 件（上限 %d）却判定为溢出" % n_max)
+	var many: Array[int] = [6001, 6003, 6005, 6006, 6007, 6008, 6009, 6010, 6011, 6012,
+			6013, 6014, 6015, 6016, 6017, 6018, 6019, 6020, 6021, 6026]
+	RunState.relics = many.duplicate()
+	var rects: Array = []
+	for i in RunState.relics.size():
+		rects.append(scene._relic_rect(i))
+	if rects.size() != many.size():
+		_smoke_fail("R470 道具徽章：20 件应各占一格，实际 %d" % rects.size())
+		RunState.relics = saved
 		return
-	if scene._relic_shown() != 3:
-		_smoke_fail("道具徽章：装得下时只应列出全部 3 件，实际 %d" % scene._relic_shown())
+	for i in rects.size():
+		var rr: Rect2 = rects[i]
+		if rr.position.y < 0.0 or rr.end.y > scene.size.y or rr.end.x > scene.size.x 				or rr.position.x < 0.0:
+			_smoke_fail("R470 道具徽章：第 %d 枚越出屏幕（%s / 视口 %s）"
+					% [i, str(rr), str(scene.size)])
+			RunState.relics = saved
+			return
+	for i in rects.size():
+		for j in range(i + 1, rects.size()):
+			if (rects[i] as Rect2).intersects(rects[j]):
+				_smoke_fail("R470 道具徽章：第 %d 枚与第 %d 枚重叠（%s / %s）"
+						% [i, j, str(rects[i]), str(rects[j])])
+				RunState.relics = saved
+				return
+	var reserve: Array = scene._relic_reserved()
+	for i in rects.size():
+		for b: Rect2 in reserve:
+			if b.intersects(rects[i]):
+				_smoke_fail("R470 道具徽章：第 %d 枚压住固定 UI（%s 撞 %s）"
+						% [i, str(rects[i]), str(b)])
+				RunState.relics = saved
+				return
+	# 真的换行了：第 0 枚与最后一枚不在同一行
+	if absf((rects[0] as Rect2).position.y - (rects[rects.size() - 1] as Rect2).position.y) < 1.0:
+		_smoke_fail("R470 道具徽章：20 件仍挤在一行（y = %.1f）" % (rects[0] as Rect2).position.y)
+		RunState.relics = saved
 		return
-	# 多：装不下 → 恰好留一个 +N，且 +N 落在允许点击的位置
-	RunState.relics = [6001, 6002, 6003, 6005, 6006, 6007, 6008, 6009, 6013, 6015]
-	if not scene._relic_bar_overflowed():
-		_smoke_fail("道具徽章：10 件（上限 %d）却判定为装得下" % n_max)
-		return
-	var shown: int = scene._relic_shown()
-	if shown != n_max - 1:
-		_smoke_fail("道具徽章：溢出时应留 1 个 +N 位（列 %d 个），实际 %d" % [n_max - 1, shown])
-		return
-	var more: Rect2 = scene._relic_rect(shown)
-	if more.size.x <= 0.0 or more.position.y < 0.0 or more.end.y > 44.0:
-		_smoke_fail("道具徽章：+N 摘要块不在顶部徽章行内（%s）" % str(more))
-		return
-	if not more.has_point(more.get_center()):
-		_smoke_fail("道具徽章：+N 摘要块自身中心不在块内（%s）" % str(more))
-		return
-	# 详情面板：能列出全部 10 件，且说明字号 > 悬浮提示字号
+	# 详情面板：能列出全部 20 件，且说明字号 > 悬浮提示字号
 	var rows: Array = scene._relic_panel_rows()
 	if rows.size() != RunState.relics.size():
 		_smoke_fail("道具详情面板：应列出全部 %d 件，实际 %d"
 				% [RunState.relics.size(), rows.size()])
+		RunState.relics = saved
 		return
 	if int(scene.RELIC_P_NAME) <= 14 or int(scene.RELIC_P_DESC) <= 12:
 		_smoke_fail("道具详情面板：字号没放大（名称 %d / 说明 %d，悬浮是 14 / 12）"
 				% [int(scene.RELIC_P_NAME), int(scene.RELIC_P_DESC)])
-		return
-	if scene.RELIC_P_DESC <= 12:
-		_smoke_fail("道具详情面板：说明字号 %d 未大于悬浮提示的 12" % int(scene.RELIC_P_DESC))
+		RunState.relics = saved
 		return
 	RunState.relics = saved
-	print("SMOKE OK 道具查看：地图徽章上限 %d 个 / 3 件不溢出无 +N / 10 件留 1 个 +N 可点 / 详情 %d 件全列且字号 %d>%d"
-			% [n_max, rows.size(), int(scene.RELIC_P_NAME), int(scene.RELIC_P_DESC)])
+	print("SMOKE OK R470 道具栏：20 件全部有槽位 / 互不重叠 / 绕开 %d 处固定 UI / 已换行 / 详情 %d 件全列"
+			% [reserve.size(), rows.size()])
 
+
+func _check_r467_cave(scene) -> void:
+	## R467 洞穴 · 枭熊：在**真场景**里验三件事 ——
+	##   ① 程 0 = 不能常规攻击（普攻 / 直击 HP 都没有目标）；
+	##   ② 界面绿格与引擎落点同一个口（`_reachable` 直接给 `leap_cells`）；
+	##   ③ 跃击是**两段**演出：抛物线位移（7 点弧）+ 落地重击排在落地那一帧之后。
+	## 判据全用「真的调了一次引擎、真的排了演出」，不做源码字符串断言。
+	var eng: Variant = scene.engine
+	if eng == null:
+		_smoke_fail("R467：场景里没有引擎，验不了洞穴关卡")
+		return
+	var owl: CardData = scene.repo.get_card(9214)
+	var meat: CardData = scene.repo.get_card(1053)      # 骷髅兵：当个挨砸的
+	if owl == null or meat == null:
+		_smoke_fail("R467：取不到枭熊 9214 / 演示卡 1053")
+		return
+	var src := Vector2i(1, 1)
+	var dst := Vector2i(2, 0)
+	eng.state.place(CardData.from_dict(owl.to_dict()), src, GameEngine.SIDE_OPPONENT)
+	eng.state.place(CardData.from_dict(meat.to_dict()), Vector2i(2, 1), GameEngine.SIDE_SELF)
+	var p: Placement = eng.state.unit_at(src)
+	if p == null:
+		_smoke_fail("R467：枭熊没放上场")
+		return
+	# ① 不能常规攻击
+	if (not eng.attack_targets(src, GameEngine.SIDE_OPPONENT).is_empty()
+		or not eng.hp_targets(src, GameEngine.SIDE_OPPONENT).is_empty()):
+		_smoke_fail("R467：枭熊程 0 却还有常规攻击 / 直击目标")
+		return
+	# ② 落点 = 界面绿格（同一个口）
+	var leap: Array = eng.leap_cells(src, GameEngine.SIDE_OPPONENT)
+	if not leap.has(src) or not leap.has(dst) or leap.has(Vector2i(2, 1)):
+		_smoke_fail("R467：跳跃格不对（原地 %s / 空格 %s / 有人的格 %s）" % [
+			str(leap.has(src)), str(leap.has(dst)), str(leap.has(Vector2i(2, 1)))])
+		return
+	if eng._reachable(src, GameEngine.SIDE_OPPONENT).size() != leap.size():
+		_smoke_fail("R467：界面绿格与引擎落点不同口（%d vs %d）" % [
+			eng._reachable(src, GameEngine.SIDE_OPPONENT).size(), leap.size()])
+		return
+	# ③ 跃过去 —— 走真引擎，看演出排队
+	scene._delayed.clear()
+	scene._slides.clear()
+	eng._leap(src, dst, GameEngine.SIDE_OPPONENT)
+	var sld: Dictionary = scene._slides.get(eng.state.unit_at(dst), {})
+	if (sld.get("pts", []) as Array).size() != 7:
+		_smoke_fail("R467：跃击没画成抛物线（%d 点）" % (sld.get("pts", []) as Array).size())
+		return
+	var sl_at := -1
+	for dz: Dictionary in scene._delayed:
+		if str(dz.get("kind", "")) == "slam_fx":
+			sl_at = int(dz.get("at", -1))
+	if sl_at < 0:
+		_smoke_fail("R467：落地重击没排队（没有 slam_fx）")
+		return
+	var land_at: int = scene._slide_floor_at(dst)
+	if sl_at < land_at:
+		_smoke_fail("R467：落地重击排在 %d，早于落地 %d（字先飘、人才到）" % [sl_at, land_at])
+		return
+	print("SMOKE OK R467 洞穴：枭熊程 0 无普攻 / 跳跃格 %d 个（含原地）/ 抛物线 7 点 / 落地重击排在落地帧 %d"
+			% [leap.size(), sl_at])
 
 func _next() -> void:
 	if _cur != null:
@@ -2021,6 +2127,142 @@ func _check_r398_deck_delete(scene) -> void:
 	print("SMOKE OK R398 月亮删卡：点奖励立刻进删卡视图 / 锁卡点不动 / 点一张当场删掉并回列表")
 
 
+func _check_r458_core_reward(scene) -> void:
+	## R458（用户口径）：「核心」做成道具，战斗中累计失去 15 点生命后成形，战斗结束的
+	## **奖励页**里兑换一次，用掉即失效。这里钉四件事：
+	##   ① 点那一条 → 进核心视图，摊开的第一段候选 = 可献祭的伤害技能牌；
+	##   ② 第一段只**选**不删（「重选祭品」退回第一段），第二段确认才落账；
+	##   ③ 兑换完：祭品从卡组消失、道具变灰、条目置灰并写出结果；
+	##   ④ 奖励页能滚（滚轮 / 按住拖动同一套），且拖动抬手**不许**当点按打开条目。
+	var rp: Variant = scene.get("_reward_panel")
+	if rp == null:
+		_smoke_fail("R458：战斗场景没有奖励面板")
+		return
+	var ids_sv: Array = RunState.deck_ids.duplicate()
+	var mods_sv: Array = RunState.deck_mods.duplicate()
+	var relics_sv: Array = RunState.relics.duplicate()
+	var spent_sv: Array = RunState.spent_relics.duplicate()
+	RunState.pending_rewards.clear()
+	var core_deck: Array[int] = [9003, 9006]     # 火焰箭（第一段 17）/ 闪电链
+	RunState.deck_ids = core_deck
+	RunState.deck_mods = []
+	RunState.ensure_deck_mods()
+	RunState.relics = [RunState.CORE_RELIC_ID]
+	RunState.spent_relics = []
+	RunState.core_lost = RunState.CORE_LOSS_NEED
+	RunState.core_armed = true
+	var idx: int = RunState.queue_core_reward()
+	if idx < 0:
+		_smoke_fail("R458：核心成形了却没排进奖励页")
+		return
+	rp.open()
+	rp._open_entry(idx)
+	if int(rp._view) != RewardPanel.VIEW_CORE:
+		_smoke_fail("R458：点核心奖励没进核心视图（view=%d）" % int(rp._view))
+		return
+	var want: Array = []
+	for si: int in RunState.core_contract_sources(CardRepo.load_json()):
+		want.append(si)
+	if str(rp.core_grid()) != str(want):
+		_smoke_fail("R458：核心第一段的候选不是「可献祭的伤害技能牌」（%s vs %s）"
+				% [str(rp.core_grid()), str(want)])
+		return
+	# ② 第一段选祭品：**不删卡**
+	var n0: int = RunState.deck_ids.size()
+	rp._on_click(rp.core_card_rect(0).get_center())
+	if RunState.deck_ids.size() != n0:
+		_smoke_fail("R458：第一段选祭品就把卡删了（中途反悔会白丢一张）")
+		return
+	if int(rp._core_stage) != 1:
+		_smoke_fail("R458：选了祭品没进第二段（stage=%d）" % int(rp._core_stage))
+		return
+	# 「重选祭品」退回第一段，一张都不扣
+	rp._on_click(rp._btn_deck_back_rect().get_center())
+	if int(rp._core_stage) != 0 or RunState.deck_ids.size() != n0:
+		_smoke_fail("R458：「重选祭品」没退回第一段（stage=%d / 卡组 %d 张）"
+				% [int(rp._core_stage), RunState.deck_ids.size()])
+		return
+	# ③ 两段走完 → 落账
+	rp._on_click(rp.core_card_rect(0).get_center())
+	rp._on_click(rp.core_card_rect(0).get_center())
+	if RunState.deck_ids.size() != n0 - 1:
+		_smoke_fail("R458：兑换完卡组没减少（%d → %d）"
+				% [n0, RunState.deck_ids.size()])
+		return
+	if str(RunState.pending_rewards[idx].get("state", "")) != RunState.REWARD_CLAIMED:
+		_smoke_fail("R458：兑换完这条奖励没置为已领")
+		return
+	if int(RunState.pending_rewards[idx].get("dmg", 0)) != 17:
+		_smoke_fail("R458：条目上没记下附魔数值（dmg=%d）"
+				% int(RunState.pending_rewards[idx].get("dmg", -1)))
+		return
+	if not RunState.is_relic_spent(RunState.CORE_RELIC_ID):
+		_smoke_fail("R458：兑换完「核心」没失效（道具还能再触发一次）")
+		return
+	if int(rp._view) != RewardPanel.VIEW_LIST:
+		_smoke_fail("R458：兑换完没回列表（view=%d）" % int(rp._view))
+		return
+	# ④ 滚动：6 条装不下 → 按住拖动要能滚，抬手不许当点按
+	RunState.pending_rewards.clear()
+	for _i in 6:
+		RunState.pending_rewards.append({"kind": "relic", "id": 6001,
+				"state": RunState.REWARD_PENDING})
+	rp.open()
+	if float(rp._max_scroll()) <= 0.0:
+		_smoke_fail("R458：6 条奖励应该超出可视区（max_scroll=%.1f）"
+				% float(rp._max_scroll()))
+		return
+	var p0: Vector2 = rp._row_rect(0).get_center()
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = p0
+	rp._on_input(press)
+	var mv := InputEventMouseMotion.new()
+	mv.position = p0 - Vector2(0, 96)
+	mv.relative = Vector2(0, -96)
+	mv.button_mask = MOUSE_BUTTON_MASK_LEFT
+	rp._on_input(mv)
+	var rel := InputEventMouseButton.new()
+	rel.button_index = MOUSE_BUTTON_LEFT
+	rel.pressed = false
+	rel.position = p0 - Vector2(0, 96)
+	rp._on_input(rel)
+	if float(rp._scroll) <= 0.0:
+		_smoke_fail("R458：按住拖动没滚动奖励列表（_scroll=%.1f）"
+				% float(rp._scroll))
+		return
+	if int(rp._view) != RewardPanel.VIEW_LIST:
+		_smoke_fail("R458：拖动抬手被当成了点按（view=%d）" % int(rp._view))
+		return
+	# 纯点按（按下 → 原地抬手）仍然要能打开条目 —— 别把点击一起打死
+	rp._scroll = 0.0
+	var p1: Vector2 = rp._row_rect(0).get_center()
+	var p2 := InputEventMouseButton.new()
+	p2.button_index = MOUSE_BUTTON_LEFT
+	p2.pressed = true
+	p2.position = p1
+	rp._on_input(p2)
+	var r2 := InputEventMouseButton.new()
+	r2.button_index = MOUSE_BUTTON_LEFT
+	r2.pressed = false
+	r2.position = p1
+	rp._on_input(r2)
+	if int(rp._view) != RewardPanel.VIEW_RELIC:
+		_smoke_fail("R458：原地点按没打开道具详情（view=%d）" % int(rp._view))
+		return
+	rp.close()
+	RunState.pending_rewards.clear()
+	RunState.deck_ids = ids_sv
+	RunState.deck_mods = mods_sv
+	RunState.relics = relics_sv
+	RunState.spent_relics = spent_sv
+	RunState.core_lost = 0
+	RunState.core_armed = false
+	print("SMOKE OK R458 核心：成形 → 奖励页两段兑换 → 道具失效；奖励页可拖动滚动，"
+			+ "拖动不误开条目、原地点按照常打开")
+
+
 func _check_r396_same_id_flyin(scene) -> void:
 	## R396（用户口径）：「聚能炮击的抽卡动画有可能被吞（如果抽到的是另一张聚能炮击）」
 	## 根因：`_hand_sync()` 判断「谁新进手牌」靠手牌 **id 序列** diff —— 打出一张 9145
@@ -2218,11 +2460,136 @@ func _check_r393_absorb_timing(scene) -> void:
 		_smoke_fail("R393：护盾代受没有排进延迟队列（会当场播 → 快过攻击动画）")
 		return
 	var at := int(found.get("at", 0))
-	if at != imp:
-		_smoke_fail("R393：代受演出排在 %d，应当是撞击帧 %d" % [at, imp])
+	# R465（用户报「铁栅栏代受的演出依然抢在移动 / 攻击之前」）：代受**不在入队时**算时刻 ——
+	# 引擎 `attack_hp()` 是「先代受、后发 hp」，此刻攻击动画还没入队；护盾生成器同样在
+	# `action.emit("attack")` 之前发 `shield_redirect`。所以入队一律 `at = -1`（时刻待定），
+	# 由 `_tick_anims()` 里的 `_absorb_cue_at()` 在下一帧统一定时。
+	if at != -1:
+		_smoke_fail("R465：代受演出应当挂「时刻待定」(-1)，实际 %d" % at)
 		return
-	print("SMOKE OK R393 代受演出与撞击同帧：now=%d → 撞击 %d（+%dms，1 倍速）"
+	var cue: int = scene._absorb_cue_at()
+	if cue != imp:
+		_smoke_fail("R465：代受定时落在 %d，应当是撞击帧 %d" % [cue, imp])
+		return
+	print("SMOKE OK R393/R465 代受演出与撞击同帧：now=%d → 撞击 %d（+%dms，1 倍速）"
 			% [now0, imp, imp - now0])
+
+
+func _check_r466_anim_cue(scene) -> void:
+	## R466（用户口径）：「再批量排查一下战斗动画顺序有没有问题」。
+	## 规则：凡是「等移动 / 等这一拳」才该出现的附带演出，都必须落到对应帧 ——
+	## 走 `_hit_cue_at(cell)`（= max(全屏最早未落地的一击, 这一格的滑行落地)），
+	## 与 `trap_hit` / `frozen` / `stun` / 代受 同一条口径。
+	## 判据用「真的滑行动画 + 真的引擎事件」，不做源码字符串断言：
+	## 滑行时长 460ms，事件到达时若按 `_now()` 播，`start` 必然早于滑行落地。
+	if not scene.has_method("_hit_cue_at"):
+		_smoke_fail("R466：战斗场景没有 _hit_cue_at 唯一口")
+		return
+	var eng: Variant = scene.engine
+	if eng == null:
+		_smoke_fail("R466：场景里没有引擎，验不了移动时序")
+		return
+	var walk_cell := Vector2i(1, 1)
+	var walk_card: CardData = scene.repo.get_card(1053)      # 骷髅兵：只为当个「踩陷阱的人」
+	if walk_card == null:
+		_smoke_fail("R466：取不到演示用的卡（1053）")
+		return
+	eng.state.place(walk_card, walk_cell, GameEngine.SIDE_OPPONENT)
+	var pl: Placement = eng.state.unit_at(walk_cell)
+	if pl == null:
+		_smoke_fail("R466：演示单位没放上去")
+		return
+	# 排一段真的滑行（460ms）＝「刚走完这一步、人还在半路」
+	var now0: int = scene._now()
+	scene._slides[pl] = {"start": now0, "dur": 460}
+	var floor_at: int = scene._slide_floor_at(walk_cell)
+	if floor_at <= now0:
+		_smoke_fail("R466：滑行没被识别（_slide_floor_at 返回 %d）" % floor_at)
+		return
+	# ① 剧毒陷阱（移动踩上）→ 绿泡 /「中毒」等滑行落地
+	scene._floaters.clear()
+	scene._on_engine_action("poison", {"cell": walk_cell, "amount": 0, "dmg": 3,
+			"name": "骷髅兵", "left": 3, "apply": true})
+	var po_at := -1
+	for f: Dictionary in scene._floaters:
+		if str(f.get("text", "")).begins_with("中毒"):
+			po_at = int(f.get("start", 0))
+	if po_at < 0:
+		_smoke_fail("R466：剧毒陷阱没有排出「中毒」飘字")
+		return
+	if po_at < floor_at:
+		_smoke_fail("R466：中毒飘字落在 %d，早于滑行落地 %d（先中毒、后走到）"
+				% [po_at, floor_at])
+		return
+	# ② 黑暗陷阱（移动踩上）→ 暗紫爆点 /「黑暗 力量 -N」等滑行落地
+	scene._floaters.clear()
+	scene._bursts.clear()
+	scene._on_engine_action("dark_trap", {"cell": walk_cell, "amount": 1, "power": 2,
+			"name": "骷髅兵"})
+	var dt_at := -1
+	for f2: Dictionary in scene._floaters:
+		if str(f2.get("text", "")).begins_with("黑暗"):
+			dt_at = int(f2.get("start", 0))
+	if dt_at < 0:
+		_smoke_fail("R466：黑暗陷阱没有排出飘字")
+		return
+	if dt_at < floor_at:
+		_smoke_fail("R466：黑暗陷阱飘字落在 %d，早于滑行落地 %d" % [dt_at, floor_at])
+		return
+	# ③ 爆炸场地（走进来踩响）→ 火焰不能先于滑行炸开
+	scene._bursts.clear()
+	scene._on_engine_action("blast", {"center": walk_cell, "cells": [walk_cell],
+			"amount": 9, "card": walk_card})
+	if scene._bursts.is_empty():
+		_smoke_fail("R466：爆炸场地没有排出火焰")
+		return
+	var bl_at: int = int((scene._bursts[0] as Dictionary).get("start", 0))
+	if bl_at < floor_at:
+		_smoke_fail("R466：爆炸火焰落在 %d，早于滑行落地 %d" % [bl_at, floor_at])
+		return
+	# ④ 火墙灼烧（走过去的）→ 等滑行落地
+	scene._floaters.clear()
+	scene._on_engine_action("fire_wall_pass", {"cell": walk_cell, "dmg": 4, "card": walk_card})
+	var fw_at := -1
+	for f3: Dictionary in scene._floaters:
+		if str(f3.get("text", "")).begins_with("火墙"):
+			fw_at = int(f3.get("start", 0))
+	if fw_at < 0:
+		_smoke_fail("R466：火墙经过没有排出飘字")
+		return
+	if fw_at < floor_at:
+		_smoke_fail("R466：火墙飘字落在 %d，早于滑行落地 %d" % [fw_at, floor_at])
+		return
+	# ⑤ 受击反馈族（护盾挡下）→ 等**这一拳**撞到，不是「事件到达那一刻」
+	# 攻击者另占一格，攻击动画入库后 `_pending_impact_ms()` 才会给出未来的撞击帧。
+	var atk_cell := Vector2i(0, 1)
+	eng.state.place(walk_card, atk_cell, GameEngine.SIDE_OPPONENT)
+	if eng.state.unit_at(atk_cell) == null:
+		_smoke_fail("R466：攻击者没放上去")
+		return
+	scene._slides.erase(pl)
+	scene._on_engine_action("attack", {"src": atk_cell, "dst": walk_cell, "damage": 3,
+			"atk_name": "骷髅兵", "def_name": "骷髅兵"})
+	var imp_at: int = scene._pending_impact_ms()
+	if imp_at <= scene._now():
+		_smoke_fail("R466：攻击排上了，撞击帧却没到未来（%d）" % imp_at)
+		return
+	scene._bursts.clear()
+	scene._on_engine_action("barrier", {"cell": walk_cell, "blocked": 3, "card": walk_card})
+	if scene._bursts.is_empty():
+		_smoke_fail("R466：护盾挡下没有排出爆点")
+		return
+	var bs_at: int = int((scene._bursts[0] as Dictionary).get("start", 0))
+	if bs_at < imp_at:
+		_smoke_fail("R466：护盾碎在 %d，早于撞击帧 %d（护盾先碎、拳头后到）"
+				% [bs_at, imp_at])
+		return
+	# 收尾：撤掉演示单位与滑行，别把后面的用例拖脏
+	scene._slides.erase(pl)
+	eng.state.board.erase(walk_cell)
+	eng.state.board.erase(atk_cell)
+	print("SMOKE OK R466 附带演出跟着主体演出落地：滑行加 %dms / 撞击 %dms"
+			% [floor_at - now0, imp_at - now0])
 
 
 func _check_r391_end_turn_btn(scene) -> void:
@@ -2804,6 +3171,20 @@ func _check_r335_pre_battle_snap(scene: Variant) -> void:
 		_smoke_fail("R339 检查点：开局第 1 个我方回合应把计数推到 11，实际 %d" % live)
 	else:
 		print("SMOKE OK R339 检查点：快照存开打前的 10 / 实时已 +1 到 11")
+
+
+func _check_r477_battle_start(scene: Variant) -> void:
+	## R477（用户口径）：战斗中「继续游戏」有时回到开打前、有时回到战斗中间。
+	## 现在只有「进战斗那一刻」一处检查点 → 续档一定是第 1 回合（血量按进场时）。
+	var eng: Variant = scene.get("engine")
+	if eng == null:
+		_smoke_fail("R477 继续游戏：战斗没开局（engine 为空）")
+		return
+	var turn := int(eng.turn_number)
+	if turn != 1:
+		_smoke_fail("R477 继续游戏：老档的战斗快照不该再生效（应是第 1 回合，实际 %d）" % turn)
+	else:
+		print("SMOKE OK R477 继续游戏：一律回到开打之前（第 1 回合）")
 
 
 func _check_r337_flee_btn(scene: Variant) -> void:

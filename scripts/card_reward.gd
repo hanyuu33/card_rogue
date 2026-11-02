@@ -10,7 +10,10 @@ extends RefCounted
 
 const TYPES: Array[String] = ["normal", "boss", "epic"]
 const TYPE_LABELS := {"normal": "普通过关奖励", "boss": "Boss过关奖励",
-		"epic": "史诗卡牌奖励"}
+		"epic": "史诗卡牌奖励",
+	# R467：洞穴传说卡（`queue_fixed_card_reward` 的固定单张）。只借这张表出名，
+	# **不进 `TYPES` / `TYPE_WEIGHTS`** —— 它不经过权重抽，`roll()` 永远用不到这个 key。
+	"legendary": "传说卡牌"}
 ## 每种奖励类型 → [普通, 稀有, 史诗] 概率权重（总和不必为 1，内部归一化）
 const TYPE_WEIGHTS := {
 	"normal": [0.68, 0.27, 0.05],

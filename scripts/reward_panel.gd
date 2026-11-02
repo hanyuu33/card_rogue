@@ -29,6 +29,8 @@ const UiAssets = preload("res://scripts/ui_assets.gd")
 ## 命令行 -- --r119：演示（造一批奖励并直接弹窗，截图验证用）。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+## R458：滚动（滚轮 / 按住拖动 / 触屏拖）唯一口 —— 用户口径「奖励页面需要可以上下滚动以防满」。
+const UiDrag = preload("res://scripts/ui_drag.gd")
 
 const VIEW_LIST := 0
 const VIEW_RELIC := 1
@@ -38,6 +40,10 @@ const VIEW_ENCHANT := 3
 ## R398（用户报「月亮的效果生效后没有立即进入选卡，而是等奖励界面结束才选」）：
 ## 月亮的删卡奖励改成**在面板里就地选卡** —— 新增一个卡组网格视图。
 const VIEW_DECK := 4
+## R458：第二层事件「契约的核心」的兑换页 —— 与删卡视图共用网格几何，
+## 但要走**两段**（先挑祭品、再挑接收者），而且落账口是 `RunState.claim_core_reward()`。
+const VIEW_CORE := 5
+const VIEW_VIEWER := 6         # R463：只看卡组（不结算任何奖励）
 const DECK_COLS := 6            # 一行 6 张
 const DECK_CARD_W := 112.0
 const DECK_CARD_H := 135.0
@@ -45,7 +51,9 @@ const DECK_CARD_H := 135.0
 ## 左右各外扩 ~12px、上下各 ~10px）。16/14 会让相邻两张的徽章互相撞上（出图实测）。
 const DECK_CARD_GAP := 34.0
 const DECK_ROW_GAP := 24.0
-const DECK_HEAD_H := 96.0       # 标题 + 一行说明
+const DECK_HEAD_H := 106.0      # 标题 + 一行说明
+## ⚠️ R458 加到 106：卡面外侧的**费用徽章有 ~14px 骑在卡框上沿之外**，
+##    96 时网格第一排的徽章正好压在副标题（y+78）的字脚上（出图实测）。
 const DECK_FOOT_H := 58.0       # 底部按钮带
 const ENCH_CARD_IN := 220       # 两张卡淡入用时（ms）
 const ENCH_STEP := 620          # 第一张开始贴 → 第二张开始贴，间隔
@@ -56,6 +64,8 @@ const ENCH_BADGE_K := 1.9       # 演示里徽章放大倍数（比卡面大，�
 ## R121：本面板是「满屏 + 接管鼠标」的覆盖层 → 打开/关闭时在 UiGate 登记/撤销，
 ## 让下层的道具悬停（RelicViewer 速览浮层等）自动让位。
 const GATE_ID := "reward_panel"
+## R467：传说卡揭示动画时长（光芒张开 → 金环收拢）。播完自动停（不再是时间基动画）。
+const LEGEND_FX_MS := 1100
 
 const PANEL_W := 1020.0
 const PANEL_H := 584.0
@@ -86,7 +96,20 @@ var _mention_hits: Array = []   # R168：本帧「提到的卡牌 / 道具」的
 var _hover_mention := {}        # R168：当前鼠标压中的那一个（{} = 没有）
 var _mention_pin := {}          # R302：触屏点一下钉住的那份说明（再点别处收起）
 var _pick_sel := -1           # R167：卡牌三选一里「已点选、待确认」的那张（触屏没有悬停）
+## R467：传说卡揭示动画的起点（ms；-1 = 没在播）。只影响绘制，不参与任何结算。
+var _legend_t := -1
 var _deck_hover := -1         # R398：删卡视图里鼠标压中的卡组下标（-1 = 没有）
+## R458 核心视图：`_core_grid` 是**卡组下标**的列表（不是第几张卡），
+## 网格位置 → 卡组下标的换算只在这一层，点击 / 绘制 / AI 桥都读同一份。
+var _core_grid: Array[int] = []
+var _core_stage := 0          # 0 = 挑祭品（献祭），1 = 挑接收者
+var _core_src_idx := -1       # 已选定的祭品（卡组下标，-1 = 还没选）
+var _core_hover := -1         # 网格里鼠标压中的格子下标（-1 = 没有）
+var _viewer_back := VIEW_LIST  # R463：「只看卡组」是从哪一页进来的（返回时回原处）
+## R458：点按改到「抬起」才判 —— 支持拖动滚动之后，按下即点击会先把手指下面那条打开。
+var _press_pos := Vector2.ZERO
+var _press_view := -1         # 按下时所在的视图（拖动期间视图变了就不算点按）
+var _drag_moved := false      # 本次手势已超过 `UiDrag.SLOP` = 拖动，不再当点按
 var _scroll := 0.0
 var _cached_n := -1
 var _ench_t0 := 0                # R323：附魔演示的起点（毫秒）
@@ -180,6 +203,7 @@ func open() -> void:
 	_hover_card = -1
 	_pick_sel = -1
 	_ench_t0 = 0
+	_reset_core()
 	_refresh_btn()
 	_root.queue_redraw()
 
@@ -192,6 +216,7 @@ func close() -> void:
 	_scroll = 0.0
 	_pick_sel = -1
 	_ench_t0 = 0
+	_reset_core()
 	_refresh_btn()
 	if not _closing_to_route and on_closed.is_valid():
 		on_closed.call()
@@ -206,6 +231,12 @@ func _exit_tree() -> void:
 func _process(_delta: float) -> void:
 	if _cached_n != RunState.pending_reward_count():
 		_refresh_btn()
+	# R467：传说卡揭示动画是时间基的 —— 播完之前逐帧重绘，播完就收（不再空转）。
+	if _legend_t >= 0 and _root != null and _root.visible:
+		if Time.get_ticks_msec() - _legend_t < LEGEND_FX_MS:
+			_root.queue_redraw()
+		else:
+			_legend_t = -1
 	# R323：附魔演示是**时间基**动画 —— 只有这一种视图需要逐帧重绘
 	if _view == VIEW_ENCHANT and _root != null and _root.visible:
 		_root.queue_redraw()
@@ -264,6 +295,16 @@ func _entry_name(e: Dictionary) -> String:
 	# R351 月亮（9180）：这条不是「挑一张卡」，是「给一次删卡机会」。
 	if k == "deck_delete":
 		return "删除卡组中的一张卡"
+	if k == "core":
+		return "核心"
+	# R467：传说卡是**固定单张**，列表里别写成「三选一」
+	if k == "cards" and bool(e.get("legendary", false)):
+		var lc: Array = e.get("candidates", [])
+		if not lc.is_empty():
+			var lcard: CardData = _repo_cards.get_card(int(lc[0]))
+			if lcard != null:
+				return "传说卡「%s」" % lcard.card_name
+		return "传说卡"
 	return "卡牌奖励（三选一）"
 
 
@@ -276,6 +317,13 @@ func _entry_tag(e: Dictionary) -> String:
 		return r.tag_line()
 	if k == "deck_delete":
 		return "卡组操作 · 点它领下，随后挑一张永久删除"
+	if k == "core":
+		var d := int(e.get("dmg", 0))
+		if d > 0:
+			# 兑换完之后这条要能读出「献祭了谁、附到什么上」，不然置灰得莫名其妙
+			return "已献祭「%s」→「%s」伤害 +%d" % [
+					str(e.get("src_name", "")), str(e.get("dst_name", "")), d]
+		return "献祭一张伤害技能牌 · 把它的第一段伤害变成另一张的附魔（用掉即失效）"
 	return "卡牌奖励 · %s" % CardReward.type_label(str(e.get("type", "normal")))
 
 
@@ -287,6 +335,8 @@ func _entry_color(e: Dictionary) -> Color:
 			return r.badge_color()
 	if k == "deck_delete":
 		return Color("6f86b8")     # 月亮的凉色，和卡牌/道具两条都区分得开
+	if k == "core":
+		return Color("d06be0")     # 与「契约核心」附魔同一个紫（CORE_ENCHANT_ID 的 col）
 	return UiTheme.ACCENT_GOLD
 
 
@@ -300,7 +350,11 @@ func _entry_name_color(e: Dictionary, base: Color) -> Color:
 
 
 func _state_label(e: Dictionary) -> String:
-	match str(e.get("state", RunState.REWARD_PENDING)):
+	var st := str(e.get("state", RunState.REWARD_PENDING))
+	# 核心不是「领下就进栏」，它要进去选两张卡 —— 「待领」会让人以为点一下就完事
+	if st == RunState.REWARD_PENDING and str(e.get("kind", "")) == "core":
+		return "待兑换"
+	match st:
 		RunState.REWARD_CLAIMED:
 			return "已领取"
 		RunState.REWARD_SKIPPED:
@@ -479,14 +533,36 @@ func _open_entry(i: int) -> void:
 		_deck_hover = -1
 		_root.queue_redraw()
 		return
+	if k == "core":
+		if _settled(e):
+			return
+		# 卡组中途变了（读档 / 别的来源删过卡）→ 凑不出一对时别把人关进空页面，
+		# 直接按「放弃」了结这一条（道具还在，下一场战斗后还能再触发）。
+		if not _core_open_stage(0):
+			_skip_entry(i)
+			return
+		_view = VIEW_CORE
+		_root.queue_redraw()
+		return
 	if k == "relic":
 		_view = VIEW_RELIC
 	else:
 		_view = VIEW_CARDS
+		# R467：传说卡（洞穴的「枭熊」）进来时播一次揭示动画 —— 这里只记起点，
+		# 逐帧重绘由 `_process` 按住（播完就停，不长占 CPU）。
+		_legend_t = Time.get_ticks_msec() if bool(e.get("legendary", false)) else -1
 	_scroll = 0.0
 	_hover_card = -1
 	_pick_sel = -1
 	_root.queue_redraw()
+
+
+func _reset_core() -> void:
+	## R458：核心视图的状态一次性收干净（换条 / 关窗 / 结算完都要走这里）。
+	_core_grid = []
+	_core_stage = 0
+	_core_src_idx = -1
+	_core_hover = -1
 
 
 func _back_to_list() -> void:
@@ -494,6 +570,7 @@ func _back_to_list() -> void:
 	_scroll = 0.0
 	_hover_card = -1
 	_pick_sel = -1
+	_reset_core()
 	_root.queue_redraw()
 
 
@@ -513,6 +590,10 @@ func _on_draw() -> void:
 			_draw_enchant()
 		VIEW_DECK:
 			_draw_deck()
+		VIEW_CORE:
+			_draw_core()
+		VIEW_VIEWER:
+			_draw_deck_viewer()
 		_:
 			_draw_list()
 	_draw_mention_tip()   # R168：悬浮件画在最后（压在所有内容之上）
@@ -575,9 +656,11 @@ func _draw_list() -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, 560, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	else:
 		_root.draw_string(_font, Vector2(r.position.x + PAD, done.position.y + 12),
-				"卡牌奖励 / 删卡奖励要点进去处理（不能一键领取）" if pend > 0 else "全部奖励都已处理，可以点「完成」",
+				"卡牌 / 删卡 / 核心奖励要点进去处理（不能一键领取）" if pend > 0 else "全部奖励都已处理，可以点「完成」",
 				HORIZONTAL_ALIGNMENT_LEFT, 620, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	_draw_btn(done, "完成", false, must_pick)
+	# R463：右上角「卡组」—— 领奖励之前先看一眼这局攒了什么（选卡时最常想翻）
+	_draw_btn(_btn_view_deck_rect(r), "卡组", false, false)
 
 
 func _rows_per_page() -> int:
@@ -801,27 +884,38 @@ func _deck_clip_rect() -> Rect2:
 			pr.size.x - 56.0, pr.size.y - DECK_HEAD_H - DECK_FOOT_H)
 
 
-func _deck_grid_w() -> float:
-	return DECK_COLS * DECK_CARD_W + (DECK_COLS - 1) * DECK_CARD_GAP
+func _grid_w(n: int) -> float:
+	## n 张卡排出来的网格宽。**按实际张数算列数**（不足一行也居中）——
+	## 固定按 6 列算会让「只有 3~4 张」的网格整体偏左（核心的第二段经常只有几张）。
+	var cols := clampi(n, 1, DECK_COLS)
+	return cols * DECK_CARD_W + (cols - 1) * DECK_CARD_GAP
 
 
-func _deck_content_h() -> float:
-	var n := RunState.deck_ids.size()
+func _grid_content_h(n: int) -> float:
+	## n 个格子排成 DECK_COLS 列的网格有多高（删卡视图 / 核心视图共用）。
 	if n <= 0:
 		return 0.0
 	var rows := int(ceil(float(n) / float(DECK_COLS)))
 	return rows * DECK_CARD_H + (rows - 1) * DECK_ROW_GAP
 
 
-func _deck_card_rect(i: int) -> Rect2:
-	## 第 i 张卡在屏幕上的矩形（**已含滚动偏移**）—— 绘制与点击命中共用这一个口。
+func _deck_content_h() -> float:
+	return _grid_content_h(RunState.deck_ids.size())
+
+
+func _grid_card_rect(i: int, n: int) -> Rect2:
+	## 网格里第 i 张卡在屏幕上的矩形（**已含滚动偏移**）。删卡视图与核心视图共用一个口。
 	var c := _deck_clip_rect()
-	var x0 := c.position.x + (c.size.x - _deck_grid_w()) / 2.0
+	var x0 := c.position.x + (c.size.x - _grid_w(n)) / 2.0
 	var col := i % DECK_COLS
 	var row := i / DECK_COLS
 	return Rect2(x0 + col * (DECK_CARD_W + DECK_CARD_GAP),
 			c.position.y - _scroll + row * (DECK_CARD_H + DECK_ROW_GAP),
 			DECK_CARD_W, DECK_CARD_H)
+
+
+func _deck_card_rect(i: int) -> Rect2:
+	return _grid_card_rect(i, RunState.deck_ids.size())
 
 
 func _deck_index_at(pos: Vector2) -> int:
@@ -873,7 +967,8 @@ func _draw_deck() -> void:
 		# 滚出可视区的**整张卡**不画（reward_panel 是纯自绘，没有 clip 容器）
 		if rr.end.y < c.position.y - 2.0 or rr.position.y > c.end.y + 2.0:
 			continue
-		var card: CardData = _repo_cards.get_card(int(RunState.deck_ids[i]))
+		# R469：走 `card_with_mod()` —— 原来直接取卡库原卡，**附魔标记与附魔数值一起丢掉**，于是月亮 / 精英战的删卡页看不到附魔（商店的删卡页因为走 `deck_edit_scene` 反而看得到）。
+		var card: CardData = RunState.card_with_mod(_repo_cards, i)
 		if card == null:
 			continue
 		var can := RunState.deck_deletable(i) and not settled
@@ -891,6 +986,218 @@ func _draw_deck() -> void:
 	_draw_btn(_btn_deck_skip_rect(), "放弃这次删卡", false, settled)
 
 
+# ------------------------------------------------------------ R463 只看卡组
+
+func _open_deck_viewer() -> void:
+	## R463（用户口径「奖励页面 / 卡牌奖励领取页面应该可以查看卡组」）：
+	## 从列表页 / 卡牌三选一页进「只看卡组」。记住来路，返回时回到原视图 ——
+	## 尤其在选卡页：看完卡组回来还能接着挑，不用重新找到那一条奖励。
+	if _view != VIEW_LIST and _view != VIEW_CARDS:
+		return
+	_viewer_back = _view
+	_view = VIEW_VIEWER
+	_scroll = 0.0
+	_deck_hover = -1
+	_root.queue_redraw()
+
+
+func _close_deck_viewer() -> void:
+	_view = _viewer_back
+	_scroll = 0.0
+	_deck_hover = -1
+	_root.queue_redraw()
+
+
+func _btn_view_deck_rect(pr: Rect2) -> Rect2:
+	## 「卡组」入口：贴面板右上角（列表页 / 卡牌三选一页用同一个几何）。
+	## 两页的标题都是居中或左对齐的短句，右上角这一小块是空的 —— 不抢按钮带。
+	return Rect2(pr.end.x - 30.0 - 104.0, pr.position.y + 14.0, 104.0, 32.0)
+
+
+func _btn_view_deck_cards_rect() -> Rect2:
+	## R463：卡牌三选一页的「卡组」入口 —— **不能放右上角**：那一页的标题是长句，
+	## 居中排版一路顶到右边（出图实测压字）。改放底部「确认选择这张」右侧的空档。
+	var c := _btn_confirm_rect()
+	return Rect2(c.end.x + 16.0, c.position.y, 104.0, 38.0)
+
+
+func _btn_viewer_back_rect() -> Rect2:
+	var pr := _deck_panel_rect()
+	return Rect2(pr.position.x + pr.size.x / 2.0 - 120.0, pr.end.y - 48.0, 240.0, 36.0)
+
+
+func _draw_deck_viewer() -> void:
+	## 纯查看的卡组视图：与删卡视图同一套面板 / 网格（`_deck_panel_rect` /
+	## `_deck_card_rect`），但**不结算任何奖励** —— 点卡不删、不扣，只有悬停高亮。
+	## ⚠️ 千万不能复用 `_draw_deck()`：那一版读 `pending_rewards[_sel]` 并落删卡结算。
+	var vs := _vs()
+	_root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.045, 0.08, 0.86), true)
+	var pr := _deck_panel_rect()
+	UiTheme.draw_scroll_bg(_root, pr)
+	var n := RunState.deck_ids.size()
+	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
+			"卡组（%d 张）" % n, HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
+			UiTheme.FS_HEADING, Color("2f2a20"))
+	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 78),
+			"这一局的整副卡组 —— 滚轮 / 按住拖动查看；这里只是看，不会改动任何一张",
+			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
+	var c := _deck_clip_rect()
+	if n <= 0:
+		_root.draw_string(_font, c.position + Vector2(0, 40), "卡组里还没有卡",
+				HORIZONTAL_ALIGNMENT_CENTER, c.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
+	for i in n:
+		var rr := _deck_card_rect(i)
+		# 滚出可视区的整张卡不画（纯自绘，没有 clip 容器）
+		if rr.end.y < c.position.y - 2.0 or rr.position.y > c.end.y + 2.0:
+			continue
+		# R469：走 `card_with_mod()` —— 原来直接取卡库原卡，**附魔标记与附魔数值一起丢掉**，于是月亮 / 精英战的删卡页看不到附魔（商店的删卡页因为走 `deck_edit_scene` 反而看得到）。
+		var card: CardData = RunState.card_with_mod(_repo_cards, i)
+		if card == null:
+			continue
+		if i == _deck_hover:
+			_root.draw_rect(rr.grow(6.0), Color(1, 1, 1, 0.75), true)
+		CardFace.draw_pick(_root, card, rr, _font, _font_bold, false)
+	if _max_scroll() > 0.0:
+		_root.draw_string(_font, Vector2(c.position.x, c.end.y - 2.0),
+				"滚轮查看更多（%d 张）" % n, HORIZONTAL_ALIGNMENT_RIGHT, c.size.x,
+				UiTheme.FS_CAPTION, UiTheme.INK_600)
+	_draw_btn(_btn_viewer_back_rect(), "← 返回", false, false)
+
+
+# ------------------------------------------------------------ R458 核心视图
+
+## 「核心」的兑换页：一副卡组摊开、两段选 —— 先挑**祭品**、再挑**接收者**。
+## 几何与删卡视图完全一致（同一个面板、同一套 `_deck_card_rect`），
+## 所以这里直接复用 `_deck_panel_rect / _deck_clip_rect / _btn_deck_*_rect`。
+## ⚠️ 第一段选中的祭品**只记下标**（`_core_src_idx`），第二段确认时才真正删卡 ——
+##    中途点「重选祭品」或右键返回，一张都不会扣。
+
+func _core_index_at(pos: Vector2) -> int:
+	## 命中的是 `_core_grid` 的第几个格子（-1 = 没命中）。
+	var c := _deck_clip_rect()
+	if not c.has_point(pos):
+		return -1
+	for i in _core_grid.size():
+		if _grid_card_rect(i, _core_grid.size()).grow(4.0).has_point(pos):
+			return i
+	return -1
+
+
+func core_grid() -> Array:
+	## R458：界面上此刻摊着的候选（**卡组下标**）。没在核心视图上时返回空 ——
+	## AI 桥 / 自动化据此列目标，外面不许去猜 `_view` 的数值。
+	if not is_open() or _view != VIEW_CORE:
+		return []
+	return _core_grid
+
+
+func core_card_rect(k: int) -> Rect2:
+	## R458：核心视图里第 k 个格子的矩形。**外面（烟测 / AI 桥）点它，不许自己算几何** ——
+	## 网格宽度是按**当前候选张数**居中的，拿删卡视图那套下标算出来的位置点不中。
+	if _view != VIEW_CORE or k < 0 or k >= _core_grid.size():
+		return Rect2()
+	return _grid_card_rect(k, _core_grid.size())
+
+
+func _core_open_stage(stage: int) -> bool:
+	## 把核心视图切到第 stage 段并重铺网格。返回 false = 这一段一个候选都没有。
+	_core_stage = stage
+	_core_hover = -1
+	_scroll = 0.0
+	if stage == 0:
+		_core_src_idx = -1
+		_core_grid = RunState.core_contract_sources(_repo_cards)
+	else:
+		_core_grid = RunState.core_contract_targets(_repo_cards, _core_src_idx)
+	return not _core_grid.is_empty()
+
+
+func core_pick_deck(di: int) -> Dictionary:
+	## 选中卡组第 di 张。界面点击与 AI 桥都走这一个口。
+	## 第一段 → 记下祭品并进第二段；第二段 → `RunState.claim_core_reward()` 落账。
+	if not is_open() or _view != VIEW_CORE:
+		return {"ok": false, "msg": "核心页没摊开"}
+	if _sel < 0 or _sel >= RunState.pending_rewards.size():
+		return {"ok": false, "msg": "没有这一条奖励"}
+	if _settled(RunState.pending_rewards[_sel]):
+		return {"ok": false, "msg": "这条已经处理过了"}
+	if not _core_grid.has(di):
+		return {"ok": false, "msg": "卡组第 %d 张不在候选里" % di}
+	if _core_stage == 0:
+		# R469：同样走 `card_with_mod()`，与下面 `_draw_core()` 的绘制口径保持一致。
+		var src: CardData = RunState.card_with_mod(_repo_cards, di)
+		_core_src_idx = di
+		if not _core_open_stage(1):
+			_core_open_stage(0)      # 没有能接住的卡 → 退回第一段，什么都不扣
+			_root.queue_redraw()
+			return {"ok": false, "msg": "没有别的伤害技能牌能接住这段伤害"}
+		_root.queue_redraw()
+		return {"ok": true, "msg": "献祭「%s」，接着挑接收者"
+				% (src.card_name if src != null else "?")}
+	var res: Dictionary = RunState.claim_core_reward(_sel, _core_src_idx, di)
+	if not bool(res.get("ok", false)):
+		return {"ok": false, "msg": "核心没有成形（%s）" % str(res.get("reason", ""))}
+	_core_grid = []
+	_back_to_list()
+	return {"ok": true, "msg": "「%s」被献祭：第一段 %d 点伤害 → 「%s」得到「伤害 +%d」" % [
+			str(res.get("src_name", "")), int(res.get("dmg", 0)),
+			str(res.get("dst_name", "")), int(res.get("dmg", 0))]}
+
+
+func _draw_core() -> void:
+	if _sel >= RunState.pending_rewards.size():
+		_back_to_list()
+		return
+	var e: Dictionary = RunState.pending_rewards[_sel]
+	var settled := _settled(e)
+	var vs := _vs()
+	_root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.045, 0.08, 0.86), true)
+	var pr := _deck_panel_rect()
+	UiTheme.draw_scroll_bg(_root, pr)
+	var title := "核心 —— 献祭一张伤害技能牌"
+	if _core_stage == 1:
+		title = "核心 —— 选一张接住这段伤害的技能牌"
+	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
+			title, HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
+			UiTheme.FS_HEADING, Color("2f2a20"))
+	var sub := "这张卡会从卡组里永久删除，它的第一段伤害成为附魔贴到下一张上"
+	if _core_stage == 1:
+		var src: CardData = null
+		if _core_src_idx >= 0 and _core_src_idx < RunState.deck_ids.size():
+			# R469：祭品若带「伤害 +N」附魔，`spell_first_hit()` 必须读**实际卡**，否则这里显示的伤害会比真正结算的少。
+			src = RunState.card_with_mod(_repo_cards, _core_src_idx)
+		var dmg: int = GameEngine.spell_first_hit(src) if src != null else 0
+		sub = "「%s」的第一段伤害 %d 点 → 变成这张卡的附魔「伤害 +%d」（已有附魔的卡不能选）" % [
+				src.card_name if src != null else "那张卡", dmg, dmg]
+	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 78),
+			sub, HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
+	var c := _deck_clip_rect()
+	var n := _core_grid.size()
+	if n <= 0:
+		_root.draw_string(_font, c.position + Vector2(0, 40), "没有可以选的卡",
+				HORIZONTAL_ALIGNMENT_CENTER, c.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
+	for i in n:
+		var rr := _grid_card_rect(i, n)
+		# 滚出可视区的整张卡不画（纯自绘，没有 clip 容器）
+		if rr.end.y < c.position.y - 2.0 or rr.position.y > c.end.y + 2.0:
+			continue
+		var card: CardData = RunState.card_with_mod(_repo_cards, int(_core_grid[i]))
+		if card == null:
+			continue
+		if i == _core_hover and not settled:
+			_root.draw_rect(rr.grow(6.0), Color(1, 1, 1, 0.75), true)
+		CardFace.draw_pick(_root, card, rr, _font, _font_bold, false)
+		if settled:
+			_root.draw_rect(rr, Color(0.06, 0.06, 0.08, 0.42), true)
+	if _max_scroll() > 0.0:
+		_root.draw_string(_font, Vector2(c.position.x, c.end.y - 2.0),
+				"滚轮 / 按住拖动查看更多（%d 张）" % n, HORIZONTAL_ALIGNMENT_RIGHT, c.size.x,
+				UiTheme.FS_CAPTION, UiTheme.INK_600)
+	_draw_btn(_btn_deck_back_rect(), "← 返回列表" if _core_stage == 0 else "← 重选祭品",
+			false, false)
+	_draw_btn(_btn_deck_skip_rect(), "放弃这次兑换", false, settled)
+
+
 func _draw_cards() -> void:
 	if _sel >= RunState.pending_rewards.size():
 		_back_to_list()
@@ -905,6 +1212,9 @@ func _draw_cards() -> void:
 	var total := 3 * CARD_W + 2 * CARD_GAP
 	var x0 := pr.position.x + (pr.size.x - total) / 2.0
 	var cands: Array = e.get("candidates", [])
+	# R467：候选不恒为 3 张（传说卡只有 1 张）→ 在同一条 3 列基线上居中，卡位宽度不变。
+	# `_card_rect_in()` 用的是同一段算式（点选命中不会和画面对不上）。
+	x0 += (3 - clampi(cands.size(), 1, 3)) * (CARD_W + CARD_GAP) / 2.0
 	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
 			"卡牌奖励 —— 点一张看说明，再确认加入卡组（%s）" % _entry_tag(e),
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_HEADING, Color("2f2a20"))
@@ -919,6 +1229,11 @@ func _draw_cards() -> void:
 			"「%s」" % sub,
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY,
 			Color("b03a2e") if (must_pick and not settled) else UiTheme.INK_600)
+	# R467：传说卡揭示的第一段 —— 光芒画在卡**背后**（所以先画，卡再压上去）
+	var legend_ms := -1
+	if bool(e.get("legendary", false)) and not settled and _legend_t >= 0:
+		legend_ms = Time.get_ticks_msec() - _legend_t
+		_draw_legend_rays(_card_rect_in(e, 0), legend_ms)
 	for i in cands.size():
 		var card: CardData = _repo_cards.get_card(int(cands[i]))
 		if card == null:
@@ -952,11 +1267,16 @@ func _draw_cards() -> void:
 				_root.draw_rect(rr, Color(1, 1, 1, 0.66), true)
 			else:
 				_root.draw_rect(rr.grow(4.0), UiTheme.ACCENT_GOLD, false, 3.0)
+	# R467：传说卡揭示的第二段 —— 金环从卡外收进卡框（画在卡**上面**）
+	if legend_ms >= 0:
+		_draw_legend_ring(_card_rect_in(e, 0), legend_ms)
 	# 悬停详情（卡面放不下效果文本）
 	_draw_card_detail(cands)
 	# R444：字段索引浮窗 —— 三选一的卡面只留卡名，`次元 / 嘲讽` 这些字**没有解释可看**。
 	# 贴在「当前正在看的那张」（悬停优先，其次已点选）的左右两侧，压住邻卡是明确允许的。
 	_draw_affix_index(cands, x0, vs)
+	# R463：「卡组」—— 挑卡挑不定的时候最想看的就是现在这副卡组（底部右侧空档）
+	_draw_btn(_btn_view_deck_cards_rect(), "卡组", false, false)
 	_draw_btn(_btn_cards_back_rect(), "← 返回列表", false, false)
 	# R342 火柴：只在**持有**时出现（没有火柴就别放个永远点不动的按钮占位）。
 	# 次数用完 → 保留按钮但置灰，让玩家看得见「3 次真的用光了」。
@@ -1145,7 +1465,41 @@ func _card_rect_in(e: Dictionary, i: int) -> Rect2:
 	var pr := _cards_panel_rect()
 	var total := 3 * CARD_W + 2 * CARD_GAP
 	var x0 := pr.position.x + (pr.size.x - total) / 2.0
+	# R467：候选少于 3 张时居中（与 `_draw_cards` 里那段 x0 必须同步 —— 两处一起改）
+	x0 += (3 - clampi((e.get("candidates", []) as Array).size(), 1, 3)) * (CARD_W + CARD_GAP) / 2.0
 	return Rect2(x0 + i * (CARD_W + CARD_GAP), _cards_y(), CARD_W, CARD_H)
+
+
+func _draw_legend_rays(rr: Rect2, ms: int) -> void:
+	## R467：传说卡的「光芒」—— 卡背后一圈暖金底光 + 十二条放射光带，随时间张开、淡出。
+	## 只画在卡**背后**：卡面本身一动不改（缩放会把字糊掉，得不偿失）。
+	var c := rr.get_center()
+	var k := clampf(float(ms) / float(LEGEND_FX_MS), 0.0, 1.0)
+	var grow := 0.55 + 0.45 * (1.0 - pow(1.0 - k, 2.0))
+	var a := 0.55 * (1.0 - k)
+	_root.draw_circle(c, rr.size.y * 0.80 * grow, Color(1.0, 0.82, 0.36, 0.10 * (1.0 - k)))
+	var rays := 12
+	for i in rays:
+		var ang := TAU * float(i) / float(rays) + k * 0.5
+		var dir := Vector2(cos(ang), sin(ang))
+		var r0 := rr.size.y * 0.30
+		var r1 := rr.size.y * 1.05 * grow
+		var p1 := c + dir.rotated(-0.055) * r0
+		var p2 := c + dir.rotated(0.055) * r0
+		var p3 := c + dir * r1
+		_root.draw_colored_polygon(PackedVector2Array([p1, p2, p3]),
+				Color(1.0, 0.86, 0.45, a * 0.8))
+
+
+func _draw_legend_ring(rr: Rect2, ms: int) -> void:
+	## R467：传说卡的「收拢」—— 一圈金边从卡外收进卡框，同时一圈淡金脉动描边压住卡沿
+	## （脉动让「这张卡不一样」在动画结束后仍然读得出来）。
+	var k := clampf(float(ms) / float(LEGEND_FX_MS), 0.0, 1.0)
+	var e := 1.0 - pow(1.0 - k, 3.0)
+	_root.draw_rect(rr.grow(lerpf(46.0, 5.0, e)),
+			Color(1.0, 0.83, 0.38, 0.85 * (1.0 - k)), false, 3.0)
+	var pulse := 0.30 + 0.14 * sin(float(ms) / 240.0)
+	_root.draw_rect(rr.grow(4.0), Color(1.0, 0.84, 0.40, pulse), false, 2.0)
 
 
 # ------------------------------------------------------------ 输入
@@ -1160,30 +1514,55 @@ func _on_input(event: InputEvent) -> void:
 				or event.button_index == MOUSE_BUTTON_RIGHT):
 			_close_enchant_view()
 		return
+	# R458（用户口径「奖励页面需要可以上下滚动以防满」）：滚动走 `UiDrag` 唯一口 ——
+	# 滚轮与「按住拖动 / 触屏拖」同一套手感，安卓没有滚轮也能翻到底。
+	# ⚠️ 正因为支持拖动，**点按要等抬起再判**：按下即判点击的话，想拖的那一刻
+	#    会先把手指下面那一条打开（拖一下翻页变成误开奖励，是最烦的一种错）。
 	if event is InputEventMouseMotion:
-		_on_motion(event.position)
+		var mm := event as InputEventMouseMotion
+		var d := UiDrag.scroll_delta(mm, 40.0)
+		if d != 0.0 and _press_view == _view:
+			_scroll = clampf(_scroll + d, 0.0, _max_scroll())
+			_root.queue_redraw()
+		if (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0 and _press_view == _view \
+				and UiDrag.drag_moved(_press_pos, mm.position):
+			_drag_moved = true
+		_on_motion(mm.position)
 		return
-	if event is InputEventMouseButton and event.pressed:
-		match event.button_index:
-			MOUSE_BUTTON_WHEEL_UP:
-				_scroll = maxf(0.0, _scroll - 40.0)
-				_root.queue_redraw()
-			MOUSE_BUTTON_WHEEL_DOWN:
-				_scroll = minf(_max_scroll(), _scroll + 40.0)
-				_root.queue_redraw()
-			MOUSE_BUTTON_LEFT:
-				_on_click(event.position)
-			MOUSE_BUTTON_RIGHT:
-				if _view != VIEW_LIST:
-					_back_to_list()
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if not mb.pressed:
+			if mb.button_index == MOUSE_BUTTON_LEFT:
+				var clicked := (not _drag_moved) and _press_view == _view
+				_drag_moved = false
+				_press_view = -1
+				if clicked:
+					_on_click(mb.position)
+			return
+		var wd := UiDrag.scroll_delta(mb, 40.0)
+		if wd != 0.0:
+			_scroll = clampf(_scroll + wd, 0.0, _max_scroll())
+			_root.queue_redraw()
+			return
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			_press_pos = mb.position
+			_press_view = _view
+			_drag_moved = false
+		elif mb.button_index == MOUSE_BUTTON_RIGHT:
+			if _view == VIEW_VIEWER:
+				_close_deck_viewer()   # R463：只看卡组 → 回它来的那一页，不直接回列表
+			elif _view != VIEW_LIST:
+				_back_to_list()
 
 
 func _on_motion(pos: Vector2) -> void:
 	var old_row := _hover_row
 	var old_card := _hover_card
+	var old_core := _core_hover
 	var old_men := _hover_mention
 	_hover_row = -1
 	_hover_card = -1
+	_core_hover = -1
 	_hover_mention = {}
 	for h: Dictionary in _mention_hits:
 		if (h["rect"] as Rect2).has_point(pos):
@@ -1208,7 +1587,11 @@ func _on_motion(pos: Vector2) -> void:
 					break
 		VIEW_DECK:
 			_deck_hover = _deck_index_at(pos)
-	if old_row != _hover_row or old_card != _hover_card \
+		VIEW_VIEWER:
+			_deck_hover = _deck_index_at(pos)
+		VIEW_CORE:
+			_core_hover = _core_index_at(pos)
+	if old_row != _hover_row or old_card != _hover_card or old_core != _core_hover \
 			or not Mention.same(old_men, _hover_mention):
 		_root.queue_redraw()
 
@@ -1256,7 +1639,35 @@ func _on_click(pos: Vector2) -> void:
 				_deck_hover = -1
 				_back_to_list()
 			return
+		VIEW_CORE:
+			if _btn_deck_back_rect().has_point(pos):
+				# 第二段可以「重选祭品」—— 祭品只是记了个下标，退回第一段什么都不扣
+				if _core_stage == 1 and _core_open_stage(0):
+					_root.queue_redraw()
+					return
+				_back_to_list()
+				return
+			if _btn_deck_skip_rect().has_point(pos):
+				_core_grid = []
+				_core_src_idx = -1
+				_skip_entry(_sel)
+				return
+			if _sel < RunState.pending_rewards.size() \
+					and _settled(RunState.pending_rewards[_sel]):
+				return
+			var cgi := _core_index_at(pos)
+			if cgi < 0:
+				return
+			core_pick_deck(int(_core_grid[cgi]))
+			return
+		VIEW_VIEWER:
+			if _btn_viewer_back_rect().has_point(pos):
+				_close_deck_viewer()
+			return
 		VIEW_CARDS:
+			if _btn_view_deck_cards_rect().has_point(pos):
+				_open_deck_viewer()
+				return
 			if _btn_cards_back_rect().has_point(pos):
 				_back_to_list()
 				return
@@ -1295,6 +1706,9 @@ func _on_click(pos: Vector2) -> void:
 					_root.queue_redraw()
 					return
 		_:
+			if _btn_view_deck_rect(_panel_rect()).has_point(pos):
+				_open_deck_viewer()
+				return
 			if _btn_done_rect().has_point(pos):
 				# R440 暗动力：还有卡牌奖励没拿 → 不许关（「完成」同时是灰的）。
 				if RunState.must_take_card_reward():
@@ -1336,8 +1750,10 @@ func _draw_mention_tip() -> void:
 
 
 func _max_scroll() -> float:
-	if _view == VIEW_DECK:
+	if _view == VIEW_DECK or _view == VIEW_VIEWER:
 		return maxf(0.0, _deck_content_h() - _deck_clip_rect().size.y)
+	if _view == VIEW_CORE:
+		return maxf(0.0, _grid_content_h(_core_grid.size()) - _deck_clip_rect().size.y)
 	var n := RunState.pending_rewards.size()
 	var content := n * (ROW_H + ROW_GAP) - ROW_GAP
 	var view := PANEL_H - HEAD_H - FOOT_H
@@ -1359,6 +1775,58 @@ func _demo_start() -> void:
 		if a.begins_with("--r119") or a.begins_with("--r342"):
 			mode = a
 			break
+	# R458 出图：核心的兑换页（两段选卡）。奖励页同时铺 4 条道具，顺带核验滚动。
+	#   `-- --screenshot --coredemo`      第一段：挑祭品
+	#   `-- --screenshot --coredemo2`     第二段：挑接收者（已选好祭品）
+	if "--coredemo" in args or "--coredemo2" in args:
+		RunState.run_active = true
+		var core_demo: Array[int] = [9003, 9006, 9086, 9162, 8001]
+		RunState.deck_ids = core_demo
+		RunState.deck_mods = []
+		RunState.ensure_deck_mods()
+		RunState.relics = [RunState.CORE_RELIC_ID]
+		RunState.spent_relics = []
+		RunState.core_lost = RunState.CORE_LOSS_NEED
+		RunState.core_armed = true
+		RunState.pending_rewards = []
+		for _k in 4:
+			RunState.pending_rewards.append({"kind": "relic", "id": 6001,
+					"state": RunState.REWARD_PENDING})
+		var cidx := RunState.queue_core_reward()
+		var tmc := Timer.new()
+		tmc.wait_time = 0.25
+		tmc.one_shot = true
+		tmc.timeout.connect(func():
+			open()
+			if cidx >= 0:
+				_open_entry(cidx)
+				if "--coredemo2" in args and not _core_grid.is_empty():
+					core_pick_deck(int(_core_grid[0])))
+		add_child(tmc)
+		tmc.start()
+		return
+	# R469 出图：月亮 9180 / 精英战的删卡页 —— 卡组里前几张预先贴好附魔，
+	# 核验「附魔标记与附魔数值都在」。两种不同附魔（颜色不同）才看得出确实是附魔。
+	#   `-- --screenshot --deletedemo`
+	if "--deletedemo" in args:
+		RunState.run_active = true
+		RunState.deck_ids = [8003, 8002, 8052, 9003, 9162, 8001]
+		RunState.deck_mods = []
+		RunState.ensure_deck_mods()
+		RunState.enchant_deck_card(0, RunState.enchant_mod("damage"))
+		RunState.enchant_deck_card(2, RunState.enchant_mod("costdown"))
+		RunState.pending_rewards = []
+		var didx := RunState.queue_deck_delete_reward(1)
+		var tmd := Timer.new()
+		tmd.wait_time = 0.25
+		tmd.one_shot = true
+		tmd.timeout.connect(func():
+			open()
+			if didx >= 0:
+				_open_entry(didx))
+		add_child(tmd)
+		tmd.start()
+		return
 	# R323 出图：牛奶附魔演示 —— 不碰卡组，直接造两份演示数据。
 	#   `-- --screenshot --milkdemo`            整段动画（约 1.2s 后落定）
 	#   `-- --screenshot --milkdemo --milkpin 900` 把进度钉在 900ms（一张已贴、一张在下落）
@@ -1468,6 +1936,16 @@ func _demo_start() -> void:
 					_hover_card = -1
 					_pick_sel = 0
 					break
+		# R463 出图：--r463view 再切到「只看卡组」—— 与 --r119 / --r119cards 叠加，
+		# 分别核验「返回 = 列表」与「返回 = 选卡页」两条来路。
+		if "--r463view" in args:
+			# 出图专用：`--r119` 那套演示不铺卡组，补一副（真局里卡组一定是满的）
+			if RunState.deck_ids.is_empty():
+				var demo_deck: Array[int] = [9003, 9006, 9086, 9162, 8001, 9007, 9010, 9001]
+				RunState.deck_ids = demo_deck
+				RunState.deck_mods = []
+				RunState.ensure_deck_mods()
+			_open_deck_viewer()
 		_root.queue_redraw())
 	add_child(t)
 	t.start()

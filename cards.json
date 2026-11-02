@@ -92,7 +92,7 @@
         "法师",
         "战吼"
       ],
-      "effect_text": "登场后首个回合开始时：冰封一个敌方单位，使其下回合无法行动。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
+      "effect_text": "登场后首个回合开始时：冰封敌方**本场战斗第一个入场**的单位，使其下回合无法行动。",
       "target_mode": "none",
       "color": "蓝",
       "image": ""
@@ -630,7 +630,7 @@
       "traits": [
         "成长"
       ],
-      "effect_text": "每回合开始时，所有友方单位力量 +1（每个单位最多累计 +5）。",
+      "effect_text": "每回合开始时，所有友方单位力量 +1（每个单位最多累计 +4）。",
       "target_mode": "none",
       "value": 1,
       "color": "金",
@@ -867,7 +867,7 @@
       "traits": [
         "哈气"
       ],
-      "effect_text": "己方的第 3 个回合起，己方单位每回合可以行动两次（原本就能行动两次的单位不会叠加）。",
+      "effect_text": "己方第 3、5、7 个回合开始时，使一个现存生命最高且没有双动的己方单位获得双动（永久；原本就能行动两次的单位不会被选中）。",
       "target_mode": "none",
       "value": 2,
       "color": "金",
@@ -1566,7 +1566,7 @@
     },
     {
       "id": 9060,
-      "name": "以太屏障",
+      "name": "风暴屏障",
       "kind": "技能",
       "cost": 0,
       "power": 0,
@@ -1577,7 +1577,7 @@
       "group": "player",
       "class": "森林精魄",
       "traits": [
-        "以太"
+        "风暴"
       ],
       "effect_text": "本回合受到的前 X 次伤害变为 1，X 为这张卡发动前你本回合使用过的效果卡数量。每回合只有第一张生效。",
       "target_mode": "none",
@@ -3552,7 +3552,7 @@
       "name": "拆解",
       "kind": "技能",
       "cost": 1,
-      "rarity": 1,
+      "rarity": 2,
       "group": "player",
       "class": "机械之心",
       "traits": [
@@ -5739,7 +5739,7 @@
         "机械"
       ],
       "affixes": [],
-      "effect_text": "装甲运输车：量产型号，没有「行动力成长」，不会越拖越强。",
+      "effect_text": "",
       "target_mode": "none",
       "color": "灰",
       "image": ""
@@ -5889,7 +5889,7 @@
       "kind": "盟友",
       "cost": 8,
       "power": 0,
-      "health": 60,
+      "health": 40,
       "attack_range": 0,
       "move_speed": 0,
       "rarity": 4,
@@ -5923,9 +5923,182 @@
         "空袭"
       ],
       "affixes": [],
-      "effect_text": "玩家回合开始时随机标记 5 个格子。敌方行动前，标记格上的玩家单位受到 10 点伤害，每回合此伤害 +2。",
+      "effect_text": "玩家回合开始时随机标记 5 个格子。敌方行动前，标记格上的玩家单位受到 5 点伤害，每回合此伤害 +1。",
       "target_mode": "none",
-      "value": 10,
+      "value": 5,
+      "color": "红",
+      "image": ""
+    },
+
+    {
+      "id": 9210,
+      "name": "寒霜结界",
+      "kind": "效果",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "寒霜"
+      ],
+      "affixes": [],
+      "effect_text": "每 2 个回合开始时，所有友方单位力量 +1，每个单位最多累计 +4。",
+      "target_mode": "none",
+      "value": 1,
+      "color": "蓝",
+      "image": ""
+    },
+
+    {
+      "id": 9211,
+      "name": "折射炮",
+      "kind": "效果",
+      "cost": 3,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "机械",
+        "折射"
+      ],
+      "affixes": [],
+      "effect_text": "打出时：将一张「聚能炮击」加入手卡。此后你使用「聚能炮击」时，除主目标外，额外对一个随机其他敌方单位造成等量伤害。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "紫",
+      "image": ""
+    },
+    {
+      "id": 9212,
+      "name": "枭熊之怒",
+      "kind": "效果",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "枭熊本能"
+      ],
+      "affixes": [],
+      "effect_text": "枭熊的生命在一半以上时，它受到的伤害 -1；生命降到一半或以下时获得「践踏」——它造成的伤害击杀单位时，溢出的伤害沿同列继续传下去，没有攻击到单位时不触发。",
+      "target_mode": "none",
+      "value": 1,
+      "color": "金",
+      "image": ""
+    },
+    {
+      "id": 9213,
+      "name": "枭熊",
+      "kind": "盟友",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 1,
+      "rarity": 2,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "枭熊",
+        "跳跃"
+      ],
+      "event_only": true,
+      "effect_text": "X 费，打出时消耗全部费用。落地时力量记为 X、生命记为 9X，本场战斗不再变化；X 为 0 时它一落地就倒下。行动时跳跃到一个空格子，对周围距离 1 的敌方单位各造成等同于力量的伤害。不能进行常规攻击。",
+      "target_mode": "none",
+      "x_cost": true,
+      "color": "紫",
+      "image": ""
+    },
+    {
+      "id": 9214,
+      "name": "枭熊",
+      "kind": "盟友",
+      "cost": 10,
+      "power": 10,
+      "health": 100,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "枭熊",
+        "跳跃"
+      ],
+      "effect_text": "不能进行常规攻击。行动时跳跃到一个空格子，对周围距离 1 的敌方单位各造成等同于力量的伤害。",
+      "target_mode": "none",
+      "color": "白",
+      "image": ""
+    },
+    {
+      "id": 9215,
+      "name": "乱打",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "事件"
+      ],
+      "effect_text": "对随机 2 个敌人各造成 10 点伤害（敌人不足 2 个时有多少打多少）。",
+      "target_mode": "none",
+      "color": "红",
+      "image": ""
+    },
+    {
+      "id": 9216,
+      "name": "飞踢",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "事件"
+      ],
+      "effect_text": "对一个敌人造成 22 点伤害；若将其击杀，溢出的伤害沿同一列继续传递（践踏）。",
+      "target_mode": "unit",
+      "color": "红",
+      "image": ""
+    },
+    {
+      "id": 9217,
+      "name": "冲拳",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "事件"
+      ],
+      "effect_text": "对一个敌人造成 16 点伤害并将其击退 1 格；同时对其他所有敌人各造成 8 点伤害。",
+      "target_mode": "unit",
       "color": "红",
       "image": ""
     }

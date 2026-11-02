@@ -38,6 +38,15 @@ var _stage := 0
 func _process(_delta: float) -> bool:
 	_stage += 1
 	if _stage == 1:
+		# ⚠️ 测试隔离（R478）：`Bgm._ready()` 会 `enabled = GameSettings.music_on`，
+		# 而 `switch_to()` 第一行就是 `if not enabled: return` —— 于是本机
+		# `settings.cfg` 里只要 `music=false`（玩家把音乐关了），下面**所有**
+		# 播放语义断言都会假失败（实测 13 条：current 不更新、没有交叉淡入…）。
+		# 测试不该跟着玩家存档走：先调 `ensure_loaded()` 让幂等标志置位（挡住
+		# `_ready()` 再读盘），再在**内存里**强制开启 —— 不写回 player 存档。
+		GameSettings.ensure_loaded()
+		GameSettings.music_on = true
+		GameSettings.music_volume = 1.0
 		Bgm.instance()                     # 触发惰性创建（deferred 挂到 root）
 		return false                       # 先让消息队列把它真的挂上去
 	var b := Bgm.instance()

@@ -111,6 +111,35 @@ const ADVENTURER_NOTE_DESC := """你把笔记从头翻到尾。
 const ADVENTURER_FLINT_DESC := """燧石落进掌心，还带着一点凉。
 火镰擦过，火星跳起来，照亮了石壁上被烟熏黑的一片。"""
 
+# R473 武术大师（第一、二层共用）：三个选项分别给三张**事件专属技能卡**（都不会进奖励池）。
+#   ① 乱打 9215 —— 当场给：2 费，对随机 2 个敌人各 10 伤
+#   ② 飞踢 9216 —— **2 场战斗后**自动到手：2 费，22 伤 + 击杀时溢出沿同列传递（践踏）
+#   ③ 冲拳 9217 —— **2 场精英 / Boss 后**自动到手：2 费，16 伤 + 击退 1 格 + 其余各 8 伤
+# ②③ 走 `RunState.queue_delayed_card()`（挂单跨战斗存活，进存档），到账时战斗结算弹 Toast。
+const MARTIAL_BRAWL_ID := 9215
+const MARTIAL_KICK_ID := 9216
+const MARTIAL_PUNCH_ID := 9217
+const MARTIAL_KICK_BATTLES := 2
+const MARTIAL_PUNCH_BATTLES := 2
+
+## ⚠️ 这里最多铺 3 个选项 + 1 个「离开」，描述**必须压到 2 行**
+##（与熔炉 R454 同一条教训：描写一长，`_fit_center()` 收紧间距也救不回来，末按钮会被切）。
+const MARTIAL_DESC := """树底下坐着一位老人，木棍横在膝上，衣襟落满了叶子。
+「学点东西再走吧——简单的现在带走，真本事得拿胜利来换。」"""
+
+const MARTIAL_BRAWL_DESC := """老人把木棍往地上一顿：「乱打不难，难的是不要停下来。」
+他替你摆了两下手腕，你就记住了——
+「乱打」：2 费，对随机 2 个敌人各造成 10 点伤害。"""
+
+const MARTIAL_KICK_DESC := """「腿比手长，也比你诚实。」
+老人示范了一记，鞋跟落地，尘土正正好好地散开——
+「去打两场。回来我把后半段教给你。」
+「飞踢」（2 场战斗后到手）：2 费，22 伤；击杀时溢出的伤害沿同一列继续。"""
+
+const MARTIAL_PUNCH_DESC := """老人往石头上捶了一下，石头裂了，他的手没有。
+「这一拳不难学，难的是你配不配。去打两场硬的——精英，或者守着关底的那种。」
+「冲拳」（2 场精英 / Boss 后到手）：2 费，16 伤 + 击退 1 格，其余敌人各 8 伤。"""
+
 const BLUEFISH_DESC := """一条通体蓝色的大肥鱼搁浅在岸边，肚皮一起一伏，像还在做梦。
 它翻了个身，从嘴里吐出一枚亮晶晶的东西——
 「鲸鱼之怒」：1 费技能，造成 11 点伤害，
@@ -197,6 +226,10 @@ const DELIVERY_DONE_DESC := """第二层的第一个事件房里，货主早就�
 还有藏得最深的大奖——一块巧克力（概率 10%%）。
 交付完成后货物全部收走（从卡组里删除）。"""
 
+const CAVE_DESC := """山壁上裂着一道口子，风从深处吹出来，带着兽类的臊味。
+
+地上有什么很沉的东西压出的爪印，一直通向黑暗里。"""
+const CAVE_TAKEN_DESC := """洞口的爪子印被新的压住了——里面那只醒了。"""
 const MERCHANT_DESC := """「旧牌换新牌，五费换宝箱，贱卖也收。」
 摊主把三张牌在桌面上翻来翻去，帽檐下只看得见半张笑。
 
@@ -246,16 +279,32 @@ const FURNACE_DESC := """炉膛里的火没有颜色，只有形状——东西�
 投一件道具进去，炉子还你一件随机道具；投的是传奇档，就还你两件。"""
 const FURNACE_DONE_DESC := """炉火暗下去一瞬，又慢慢亮起来。石台边缘还留着一点余温——这次交易已经做完了。"""
 
+## R458「契约的核心」（第二层专属）：两个选项各给一件**事件道具**，都不当场兑现 ——
+##   选项 1 订立契约 → 道具「咒缚」（每场战斗第一张卡免费 / 那张卡本场 +1 费）
+##   选项 2 获取核心 → 道具「核心」（战斗中累计失去 15 点生命后成形，
+##                          这一场结束的**奖励页**里可以兑换一次：献祭一张伤害技能牌，
+##                          把它的第一段伤害变成另一张的附魔；用掉即失效）
+## ⚠️ 选项 2 **不在事件里选卡**（用户口径：「忘记给核心添加触发条件了」）——
+##    选卡与落账都挪到 `RewardPanel` 的 VIEW_CORE（那次兑换才是它的兑现口）。
+## 描述同样压到 2 行：它铺满「选项 1 / 选项 2 / 离开」三个按钮，一长就把最后一个
+## 挤出屏幕（与熔炉同一条教训，见 `_fit_center()`）。
+const CORE_CURSE_ID := 6058       # 咒缚（选项 1 的事件道具）
+const CORE_DESC := """石台正中嵌着一枚还在轻轻跳动的核心，四周绕着几根细链。
+左侧摊着一份没落款的契约，纸面干净，笔就压在边上。"""
+const CORE_CONTRACT_DESC := """链子松开了一圈。纸面上多了一行字，是你的名字。"""
+const CORE_TAKEN_DESC := """石台上只剩一圈浅浅的凹痕，核心已经不在了。"""
+
 
 func _rest_desc() -> String:
 	## 休息处文案（R237：恢复篝火回血 —— 休息与烤肉二选一）。
 	## R307 圣餐（6038）：持有它时休息直接回满，文案要跟着改（不然按钮说回 5 实际回满）。
 	if RunState.has_relic(RunState.RELIC_SACRAMENT_ID):
+		# R473（用户口径）：圣餐改成「到达篝火处回复 50% 最大生命」，进房就结算掉了。
 		return """篝火旁摆着一份还没凉透的圣餐。
-在篝火旁休息，生命直接回满；
+你在坐下之前就把它分掉了——到达篝火处回复 50% 最大生命（已结算）；
 也可以烤一块肉带在身上，留到 Boss 战前享用；
 还可以往火里添一根柴，让火替你烧掉卡组里的一张牌。
-（三样只能挑一样——选完这一处就到头了。）"""
+（剩下两样只能挑一样——选完这一处就到头了。）"""
 	return """前路的战斗还在等着你。
 在篝火旁休息，恢复 %d%% 最大生命；
 也可以烤一块肉带在身上，留到 Boss 战前享用；
@@ -272,9 +321,13 @@ var _apple_taken := false     # 苹果与医生（R244）：本次是否已收�
 var _snow_pick := ""           # 雪豹出现（R446）：本次拿走的是 "pipe" / "cat" / 空
 var _adv_pick := ""            # 冒险家的遗物（R447）：本次拿走的是 "note" / "flint" / 空
 var _adv_result := ""          # 冒险家的遗物（R447）：收尾态那行结果（读档重绘要能复现）
+var _martial_pick := ""         # 武术大师（R473）：本次选的是 "brawl" / "kick" / "punch" / ""
+var _martial_result := ""       # 武术大师（R473）：收尾态那行结果（重绘要能复现）
 var _furnace_opts: Array[int] = []   # 熔炉（R454）：本次铺出来的可投入道具（_ready 里摇一次）
 var _furnace_invested := -1          # 熔炉（R454）：本次投进去的那件（-1 = 还没投）
 var _furnace_result := ""            # 熔炉（R454）：收尾态那行结果（重绘要能复现）
+var _core_pick := ""                 # 契约的核心（R458）：拿走的是 "contract" / "core" / ""
+var _core_result := ""               # 契约的核心（R458）：收尾态那行结果（重绘要能复现）
 var _bluefish_taken := false  # 蓝色大肥鱼：是否已收下「鲸鱼之怒」
 ## R351 赏月：本次拿走的是 "moon"（花光金币换月亮）/ "coin"（直接拿硬币）/ ""（还没拿）。
 ## 两个选项**互斥**，拿了一个另一个就收起 —— 走 `_claim_reward()` 那条统一规则。
@@ -285,6 +338,7 @@ var _struggled := false       # 挣扎：是否已接受（失去生命换金属
 var _hero_traded := false     # 绝赞五换一：是否已交易（删 5 张换英雄）
 var _hero_removed: Array = [] # 绝赞五换一：本次被换走的卡（[{id,name}]）
 var _bbq_taken := false       # 烤肉：本次是否已在休息处烤好（获得道具）
+var _sacrament_note := -1    # R473 圣餐：本次进休息处回了多少（-1 = 还没试过）
 var _arcane_charm_taken := false  # 奥秘之泉：**本次访问**是否取走了道具「奥秘护符」
                               #   （≠「本来就戴着」—— 后者只是不重复给，不影响喝泉水，见 R71 / R147）
 var _arcane_drunk := false    # 奥秘之泉：是否已选择「喝下泉水」（选卡去了卡牌奖励界面）
@@ -386,6 +440,19 @@ func _is_adventurer() -> bool:
 	return _is_event_node() and _pending_kind() == "adventurer"
 
 
+func _is_martial() -> bool:
+	## 武术大师（R473，第一 / 二层共用）：三选一 —— 乱打（当场）/ 飞踢（2 场战斗后）/
+	## 冲拳（2 场精英或者 Boss 后）。后两张是**挂单**，不占道具栏，到账时自动进卡组。
+	return _is_event_node() and _pending_kind() == "martial"
+
+
+func _is_cave() -> bool:
+	## R467 洞穴（第二层专属）：两个选项 —— 探索（打一场，赢了拿传说卡）／离开。
+	## ⚠️ 这是**唯一一个会进战斗的事件房**（R128 之后事件房本来不再遭遇战斗）：
+	##    选项 1 直接把本页换成「洞穴」这一关（`GameLevels.cave_level()`）。
+	return _is_event_node() and _pending_kind() == "cave"
+
+
 func _is_bluefish() -> bool:
 	## 蓝色大肥鱼（第二层专属事件）：可将一张「鲸鱼之怒」（9050）加入卡组。
 	return _is_event_node() and _pending_kind() == "bluefish"
@@ -457,6 +524,11 @@ func _is_furnace() -> bool:
 	return _is_event_node() and _pending_kind() == "furnace"
 
 
+func _is_core_contract() -> bool:
+	## R458 契约的核心（第二层专属）：签契约换道具「咒缚」/ 取核心献祭一张伤害技能牌。
+	return _is_event_node() and _pending_kind() == "core_contract"
+
+
 func _is_treasure() -> bool:
 	## 小宝箱（R372：**免费**开箱，内容恒为一组卡牌奖励）：事件节点中未被其它子类型认领的情况。
 	return _is_event_node() and not _is_whisper() and not _is_struggle() \
@@ -466,7 +538,7 @@ func _is_treasure() -> bool:
 			and not _is_delivery() and not _is_delivery_done() \
 			and not _is_card_merchant() and not _is_lake_lady() \
 			and not _is_divination() and not _is_moon() and not _is_snow_leopard() \
-			and not _is_adventurer() and not _is_furnace()
+			and not _is_adventurer() and not _is_furnace() and not _is_core_contract()
 
 
 func _kind() -> String:
@@ -485,8 +557,12 @@ func _kind() -> String:
 		return "snow_leopard"
 	if _is_adventurer():
 		return "adventurer"
+	if _is_cave():
+		return "cave"
 	if _is_furnace():
 		return "furnace"
+	if _is_core_contract():
+		return "core_contract"
 	if _is_hero():
 		return "hero"
 	if _is_arcane():
@@ -518,10 +594,14 @@ func _kind() -> String:
 
 func _apply_ui_assets() -> void:
 	## 插图 / 背景：assets/ui/event_<kind>.png 与 bg_<kind>.png，缺图则回退内置绘制。
-	## 内置篝火在所有事件界面都显示（与旧版一致）；有自定义插图时才隐藏。
+	##
+	## R478 口径变更：
+	##   1. 缺图不再只是「深灰底 + 篝火」——缺图时铺一层统一默认底（`_draw_fallback_bg`）。
+	##   2. **篝火只留给休息处**。原来 24 种事件全都烧一堆篝火，「卡牌商人」「占卜」
+	##      「遗忘之泉」里都有篝火，玩家一眼就看出是占位。篝火的本义是「可以休息」。
 	var kind := _kind()
 	var campfire: Control = $Campfire
-	campfire.visible = true
+	campfire.visible = (kind == "rest")
 	var pic := UiAssets.event_pic(kind)
 	if pic != null:
 		campfire.visible = false   # 有自定义插图时不再叠内置篝火
@@ -555,6 +635,97 @@ func _apply_ui_assets() -> void:
 		add_child(trb)
 		move_child(trb, 0)                              # 压到最底层
 		($BG as ColorRect).color = Color(0, 0, 0, 0)    # 让位给自定义背景
+	else:
+		_add_fallback_bg(kind)
+
+
+## R478：缺图时的统一默认底。目标不是「给每种事件画一张图」，而是让「没有图」
+## 本身看起来像一套设计：墨蓝夜色渐变 + 按类别着色的光晕 + 金线纹章水印 + 四周暗角。
+## 想退回旧的「纯深灰底」观感：把这里改成 false（篝火可见性仍按 _apply_ui_assets 走）。
+const EVENT_FALLBACK_BG := true
+
+var _fb_layer: Control = null
+var _fb_tint := Color("c8951c")
+
+
+func _add_fallback_bg(kind: String) -> void:
+	if not EVENT_FALLBACK_BG:
+		return
+	if _fb_layer != null:
+		_fb_tint = _kind_tint(kind)
+		_fb_layer.queue_redraw()
+		return
+	_fb_tint = _kind_tint(kind)
+	_fb_layer = Control.new()
+	_fb_layer.name = "EventFallbackBG"
+	_fb_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fb_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fb_layer.draw.connect(_on_fallback_draw)
+	_fb_layer.resized.connect(_fb_layer.queue_redraw)
+	add_child(_fb_layer)
+	move_child(_fb_layer, 1)   # $BG 之上、篝火与内容之下
+
+
+func _kind_tint(kind: String) -> Color:
+	## 六类事件的主题色：危险 / 交易 / 神秘 / 自然 / 收获 / 休息。
+	## 只改光晕和纹章的颜色，暗底不变 —— 保证 24 种事件「同一套里各有区别」。
+	match kind:
+		"struggle", "gaze", "oblivion", "furnace", "core_contract":
+			return Color("b5484a")   # 危险：暗红
+		"smith", "card_merchant", "lake_lady", "apple_doctor", "delivery", "delivery_done":
+			return Color("c8951c")   # 交易 / 匠人：金
+		"whisper", "divination", "moon", "arcane", "bluefish", "hero":
+			return Color("8a7fd4")   # 神秘 / 预兆：紫
+		"pear", "snow_leopard", "adventurer", "cave":
+			return Color("6faa62")   # 自然 / 探索：绿
+		"treasure", "relic_chest":
+			return Color("d99b3f")   # 收获：橙金
+	return Color("ff9a3c")           # rest / 兜底：暖橙（与篝火同调）
+
+
+func _on_fallback_draw() -> void:
+	var sz := _fb_layer.size
+	if sz.x < 2.0 or sz.y < 2.0:
+		return
+	var tint := _fb_tint
+	var gold := UiTheme.ACCENT_GOLD
+	# 1) 纵向渐变：上方偏暖（像有光），下方沉下去
+	var top := Color("262b3c")
+	var bot := Color("0f1117")
+	var bands := 48
+	var bh := sz.y / float(bands)
+	for i in bands:
+		var c := top.lerp(bot, float(i) / float(bands - 1))
+		_fb_layer.draw_rect(Rect2(0.0, bh * float(i), sz.x, bh + 1.5), c)
+	# 2) 类别光晕：以篝火位置（y=168）为中心向内叠加，中心最亮
+	var ctr := Vector2(sz.x * 0.5, 168.0)
+	var rmax := maxf(sz.x, sz.y) * 0.55
+	for i in 24:
+		var t := float(i + 1) / 24.0
+		_fb_layer.draw_circle(ctr, rmax * (1.0 - t * 0.72), Color(tint.r, tint.g, tint.b, 0.011))
+	# 3) 中心纹章水印：同心环 + 菱形，很淡 —— 只负责「不空」，不抢文字
+	var rr := 135.0
+	_fb_layer.draw_arc(ctr, rr, 0.0, TAU, 96, Color(gold.r, gold.g, gold.b, 0.15), 1.5, true)
+	_fb_layer.draw_arc(ctr, rr * 0.90, 0.0, TAU, 96, Color(gold.r, gold.g, gold.b, 0.07), 1.0, true)
+	var d := rr * 0.66
+	_fb_layer.draw_polyline(PackedVector2Array([
+			ctr + Vector2(0, -d), ctr + Vector2(d, 0), ctr + Vector2(0, d),
+			ctr + Vector2(-d, 0), ctr + Vector2(0, -d)]),
+			Color(gold.r, gold.g, gold.b, 0.11), 1.2, true)
+	# 4) 四周暗角：越靠边越黑，把视线压回中间
+	var vig := 190.0
+	var steps := 20
+	var step_h := vig / float(steps)
+	for i in steps:
+		var t := float(i) / float(steps)
+		var a := 0.50 * pow(1.0 - t, 1.7)
+		var off := step_h * float(i)
+		_fb_layer.draw_rect(Rect2(0.0, off, sz.x, step_h + 1.0), Color(0, 0, 0, a))
+		_fb_layer.draw_rect(Rect2(0.0, sz.y - off - step_h - 1.0, sz.x, step_h + 1.0), Color(0, 0, 0, a * 0.80))
+		_fb_layer.draw_rect(Rect2(off, 0.0, step_h + 1.0, sz.y), Color(0, 0, 0, a * 0.75))
+		_fb_layer.draw_rect(Rect2(sz.x - off - step_h - 1.0, 0.0, step_h + 1.0, sz.y), Color(0, 0, 0, a * 0.75))
+	# 5) 顶部金线：只在标题栏下沿做分隔。底部不再画线 —— 720 高下按钮会压到它。
+	_fb_layer.draw_line(Vector2(0.0, 45.0), Vector2(sz.x, 45.0), Color(gold.r, gold.g, gold.b, 0.22), 1.0)
 
 
 func _ready() -> void:
@@ -618,6 +789,14 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "adventurer"
+		if args[i] == "--martial":  # 演示：伪装 run 武术大师事件（R473 截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "martial"
+		if args[i] == "--cave":  # 演示：伪装 run 洞穴事件（R467 截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "cave"
 		if args[i] == "--bluefish":  # 演示：伪装 run 蓝色大肥鱼事件（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -732,6 +911,14 @@ func _ready() -> void:
 		if args[i] == "--bbq":  # 演示：已在休息处烤好肉（截图验证取走后的状态）
 			RunState.gain_relic(RunState.BARBECUE_RELIC_ID)
 			_bbq_taken = true
+		if args[i] == "--corecontract":  # 演示：契约的核心（R458 第二层专属）
+			RunState.run_active = true
+			RunState.current_layer = GameLayers.LAYER_TWO
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "core_contract"
+			# 卡组里放三张伤害技能牌（火焰箭 17 / 闪电链 11 / 寒冰箭 3）+ 两张普通牌，
+			# 两段选卡都有货：祭品三选一、接收者二选一（祭品自己不在候选里）。
+			RunState.deck_ids = [8001, 8002, 8003, 9003, 9006, 9011, 9011]
 		if args[i] == "--tip" and i + 1 < args.size():
 			_tip_demo = args[i + 1]   # 演示：锁住某个名字的悬浮提示（截图核验用）
 	bbq_btn.visible = false   # 「烤肉」只在休息处出现，事件节点隐藏
@@ -833,6 +1020,8 @@ func _ready() -> void:
 		event_name.text = "熔  炉"
 		_furnace_opts = RunState.furnace_options()
 		_setup_furnace()
+	elif _is_core_contract():
+		_setup_core_contract()
 	elif _is_hero():
 		event_name.text = "绝赞五换一"
 		desc.text = HERO_DESC
@@ -1014,6 +1203,43 @@ func _ready() -> void:
 			# 两样都拿得到东西 → 没有「什么都不拿」这一项（同「雪豹出现」/「赏月」）。
 			leave_btn.visible = false
 			result_label.text = ""
+	elif _is_martial():
+		event_name.text = "武 术 大 师"
+		desc.text = MARTIAL_BRAWL_DESC if _martial_pick == "brawl" \
+				else (MARTIAL_KICK_DESC if _martial_pick == "kick" \
+				else (MARTIAL_PUNCH_DESC if _martial_pick == "punch" else MARTIAL_DESC))
+		if _martial_pick != "":
+			_collapse_to_leave()
+			result_label.text = _martial_result
+			result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		else:
+			# 三个选项都要显式恢复可见 —— `_ui_main()` 是全量重绘，别的分支可能留过 false。
+			rest_btn.visible = true
+			rest_btn.text = "学点简单的（获得「乱打」）"
+			rest_btn.disabled = false
+			bbq_btn.visible = true
+			bbq_btn.text = "学点真本事（2 场战斗后获得「飞踢」）"
+			bbq_btn.disabled = false
+			alt_btn.visible = true
+			alt_btn.text = "要学就学绝技（2 场精英 / Boss 后获得「冲拳」）"
+			alt_btn.disabled = false
+			leave_btn.visible = true
+			leave_btn.text = "离开（什么都不学）"
+			leave_btn.disabled = false
+			result_label.text = ""
+	elif _is_cave():
+		event_name.text = "洞 穴"
+		desc.text = CAVE_DESC
+		# 只有两个选项：探索（战斗 + 传说卡）／离开。没有第二选项按钮。
+		rest_btn.visible = true
+		rest_btn.text = "探索（与枭熊交手，胜利后获得传说卡「枭熊」）"
+		rest_btn.disabled = false
+		bbq_btn.visible = false
+		alt_btn.visible = false
+		leave_btn.visible = true
+		leave_btn.text = "离开"
+		leave_btn.disabled = false
+		result_label.text = ""
 	elif _is_treasure():
 		event_name.text = "宝  箱"
 		# R372：统一免费开、内容恒为卡牌（不再扣生命、不再随机成道具）。
@@ -1040,13 +1266,17 @@ func _ready() -> void:
 		rest_btn.visible = true
 		event_name.text = "休息处"
 		desc.text = _rest_desc()
+		# R473（用户口径）：圣餐（6038）= **到达篝火处**回复 50% 最大生命，进房当场结算一次。
+		# `_sacrament_note` 记住本次回了多少（-1 = 还没试过）—— `_ui_main()` 会反复重绘，
+		# 真正的防重复在 `RunState.sacrament_arrive()` 里按房间记账。
+		if _sacrament_note < 0:
+			_sacrament_note = RunState.sacrament_arrive()
+		if _sacrament_note > 0:
+			desc.text += "\n\n【圣餐】回复了 %d 点生命（现 %d / %d）。" % [
+					_sacrament_note, RunState.hp, RunState.max_hp]
 		var rest_gain := mini(RunState.rest_heal_amount(), RunState.max_hp - RunState.hp)
-		if RunState.has_relic(RunState.RELIC_SACRAMENT_ID):
-			# R307 圣餐：休息直接回满 —— 按钮上写明，不然和实际结算对不上。
-			rest_gain = RunState.max_hp - RunState.hp
-			rest_btn.text = "在这里休息（生命回满 · 圣餐）"
-		else:
-			rest_btn.text = "在这里休息（回复 %d 生命）" % rest_gain
+		# R473：圣餐的回复已经挪到「到达时」，休息本身回到档位口径，不再给它开特例。
+		rest_btn.text = "在这里休息（回复 %d 生命）" % rest_gain
 		rest_btn.disabled = rest_gain <= 0   # 满血 → 休息没意义，置灰
 		# R390（用户口径）：第三个收益选项「添加柴火」（删一张卡）—— 挂在这条链上唯一
 		# 空着的 AltBtn。与「休息 / 烤肉」构成三选一：任一选项结算后
@@ -1118,10 +1348,14 @@ func _redraw() -> void:
 func _fit_center() -> void:
 	## 中间一列按内容实际高度排布：默认位置不变；放不下时先收紧间距、藏起空的结果行，
 	## 再整体上移（上不越过插图下沿约 356），保证「离开 / 继续前进」这类末位选项永远完整可见。
+	##
+	## R478：`top_floor` 原来写死 360（守插图下沿）。但**缺图时插图根本不存在**，
+	## 守这 360 会让 720 高度下的长文案事件（休息处 435px）底边冲到 795，
+	## 末位按钮被切在屏幕外。缺图时放开到 150，让 _fit_center 能真正把它抬上来。
 	var c: VBoxContainer = $Center
 	var vh: float = get_viewport_rect().size.y
 	result_label.visible = result_label.text != ""
-	var top_floor := 360.0
+	var top_floor := 360.0 if UiAssets.event_pic(_kind()) != null else 150.0
 	var bottom := vh - 10.0
 	var h := 0.0
 	for sep in [12, 8, 5]:
@@ -1139,8 +1373,27 @@ func _on_main() -> void:
 	## 宝箱层 → 开箱获得 1 个随机奖励道具。
 	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
 	sfx.play("click")
+	if _is_cave():
+		_cave_explore()
+		return
+	if _is_core_contract():
+		_core_take_contract()
+		return
 	if _is_furnace():
 		_furnace_take(0, rest_btn)
+		return
+	if _is_martial():
+		if _martial_pick != "":
+			return
+		RunState.add_card(MARTIAL_BRAWL_ID)
+		_martial_pick = "brawl"
+		_claim_reward(rest_btn)
+		_collapse_to_leave()
+		desc.text = MARTIAL_BRAWL_DESC
+		_martial_result = "「乱打」已加入卡组：2 费，对随机 2 个敌人各造成 10 点伤害。"
+		result_label.text = _martial_result
+		result_label.add_theme_color_override("font_color", Color("c86a5a"))
+		_redraw()
 		return
 	if _is_adventurer():
 		if _adv_pick != "":
@@ -1735,6 +1988,109 @@ func _setup_arcane() -> void:
 		result_label.text = ""
 
 
+func _core_pair_available(repo: CardRepo) -> bool:
+	## 「获取核心」能不能做：至少存在一对「祭品 → 接收者」，且接收者**还没附魔**。
+	## 判据全在 RunState 的两个候选口里，场景不自己筛（口径唯一）。
+	for i: int in RunState.core_contract_sources(repo):
+		if not RunState.core_contract_targets(repo, i).is_empty():
+			return true
+	return false
+
+
+func _setup_core_contract() -> void:
+	## R458「契约的核心」（第二层专属）的选项铺排。
+	##   · 选项 1 订立契约 → 道具「咒缚」；
+	##   · 选项 2 获取核心 → **两段选卡**（先挑祭品、再挑接收者）；
+	##   · 离开（什么都不做）。
+	## ⚠️ 两段都在本场景用 `PickOverlay` 完成（不跳卡组编辑场景）：第一段只**记下**祭品
+	##    下标（`_core_src`），真正落账发生在第二段确认时 —— 中途反悔一张都不扣。
+	## ⚠️ 收尾态走 `_core_pick` 的两个分支直接收起：`_refresh()` 会重铺这三种事件，
+	##    不这么写会把已经写完的结果行清掉。
+	event_name.text = "契 约 的 核 心"
+	rest_btn.visible = true
+	alt_btn.visible = true
+	leave_btn.visible = true
+	leave_btn.disabled = false
+	leave_btn.text = "什么都不碰（离开）"
+	if _core_pick == "contract":
+		desc.text = CORE_CONTRACT_DESC
+		_collapse_to_leave()
+		result_label.text = _core_result
+		result_label.add_theme_color_override("font_color", Color("b06be0"))
+		return
+	if _core_pick == "core":
+		desc.text = CORE_TAKEN_DESC
+		_collapse_to_leave()
+		result_label.text = _core_result
+		result_label.add_theme_color_override("font_color", Color("b06be0"))
+		return
+	desc.text = CORE_DESC
+	result_label.text = ""
+	if RunState.has_relic(CORE_CURSE_ID):
+		rest_btn.text = "契约已经签过了"
+		rest_btn.disabled = true
+	else:
+		rest_btn.text = "订立契约（获得道具「咒缚」）"
+		rest_btn.disabled = false
+	# R458 修正：选项 2 只**收下道具**，兑现挪到「战斗中累计失去 15 点生命 →
+	# 战斗结束的奖励页」。所以这里没有「当场选卡」，只按三态给文案：
+	#   未持有 → 可拿；持有未成形 → 显示进度；已成形 → 提示去奖励页兑换。
+	if RunState.has_relic(RunState.CORE_RELIC_ID):
+		alt_btn.disabled = true
+		if RunState.core_armed:
+			alt_btn.text = "核心已经成形（战斗结束时在奖励页兑换）"
+		else:
+			alt_btn.text = "核心还在酝酿（累计失去 %d / %d 点生命）" % [
+					RunState.core_lost, RunState.CORE_LOSS_NEED]
+	elif _core_pair_available(CardRepo.load_json()):
+		alt_btn.text = "获取核心（收下道具「核心」）"
+		alt_btn.disabled = false
+	else:
+		alt_btn.text = "卡组里凑不出两张伤害技能牌"
+		alt_btn.disabled = true
+	_redraw()
+
+
+func _core_take_contract() -> void:
+	## 选项 1：收下道具「咒缚」（与「雪豹出现」拿烟斗同一条路：
+	## `gain_relic` → 收起按钮 → 写结果行）。
+	if _core_pick != "":
+		_on_leave()
+		return
+	RunState.gain_relic(CORE_CURSE_ID)
+	var rel := RelicRepo.load_json().get_relic(CORE_CURSE_ID)
+	_core_pick = "contract"
+	_claim_reward(rest_btn)
+	desc.text = CORE_CONTRACT_DESC
+	_core_result = "「咒缚」已收进道具栏：%s" % (rel.desc if rel != null else "")
+	_collapse_to_leave()
+	result_label.text = _core_result
+	result_label.add_theme_color_override("font_color", Color("b06be0"))
+	_redraw()
+
+
+func _core_take_core() -> void:
+	## 选项 2：收下道具「核心」（6059）。
+	## ⚠️ 它**不是当场兑现**：战斗中累计失去 `RunState.CORE_LOSS_NEED` 点生命才成形，
+	##    成形后由**这一场战斗结束时的奖励页**提供一次兑换（`RunState.queue_core_reward()`）。
+	##    这里只把道具收进栏里，并把「怎么触发」写进结果行 —— 不写的话玩家会以为它没反应。
+	if _core_pick != "":
+		_on_leave()
+		return
+	if RunState.has_relic(RunState.CORE_RELIC_ID):
+		alt_btn.disabled = true
+		return
+	RunState.gain_relic(RunState.CORE_RELIC_ID)
+	_core_pick = "core"
+	_claim_reward(alt_btn)
+	desc.text = CORE_TAKEN_DESC
+	_core_result = "「核心」收进了道具栏：战斗中累计失去 %d 点生命后成形，这一场结束时的奖励页里会多出一次兑换 —— 献祭一张伤害技能牌，把它第一段伤害附到另一张技能牌上。用掉之后失效。" % RunState.CORE_LOSS_NEED
+	_collapse_to_leave()
+	result_label.text = _core_result
+	result_label.add_theme_color_override("font_color", Color("b06be0"))
+	_redraw()
+
+
 func _refresh() -> void:
 	# R178：本次访问的奖励已领完 → 任何刷新都保持「只有一个离开」的收尾态
 	#（_on_main 的休息分支等地方会再调 _refresh，不收住会把按钮文案改回去）。
@@ -1746,7 +2102,8 @@ func _refresh() -> void:
 			or _is_relic_chest() or _is_arcane() or _is_oblivion() \
 			or _is_smith() or _is_delivery() or _is_delivery_done() \
 			or _is_card_merchant() or _is_lake_lady() or _is_divination() \
-			or _is_moon() or _is_snow_leopard() or _is_furnace():
+			or _is_moon() or _is_snow_leopard() or _is_furnace() \
+			or _is_core_contract():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。
@@ -1871,6 +2228,9 @@ func _on_alt() -> void:
 	## R305 卡片商人 · **随机折价**（第三选项）：随机失去一张非诅咒卡，换 100 金币。
 	## R351 赏月也用它当「拿硬币」的按钮。
 	sfx.play("click")
+	if _is_core_contract():
+		_core_take_core()
+		return
 	if _is_furnace():
 		_furnace_take(2, alt_btn)
 		return
@@ -1879,6 +2239,21 @@ func _on_alt() -> void:
 		return
 	if _is_moon():
 		_claim_moon_coin()
+		return
+	if _is_martial():
+		if _martial_pick != "":
+			return
+		# 挂单：只认**精英 / Boss** 的胜利（普通战斗原地不动）。
+		RunState.queue_delayed_card(MARTIAL_PUNCH_ID, MARTIAL_PUNCH_BATTLES, true)
+		_martial_pick = "punch"
+		_claim_reward(alt_btn)
+		_collapse_to_leave()
+		desc.text = MARTIAL_PUNCH_DESC
+		_martial_result = "「冲拳」已经挂在单上：再打赢 %d 场精英 / Boss 战斗就自动加入卡组。" \
+				% MARTIAL_PUNCH_BATTLES
+		result_label.text = _martial_result
+		result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		_redraw()
 		return
 	if _is_snow_leopard():
 		if _snow_pick != "":
@@ -1933,6 +2308,21 @@ func _on_bbq() -> void:
 	## 休息处「烤肉」：获得事件道具「烤肉」（进入 Boss 战时自动消耗 → 回复 25% 生命）。
 	## 奥秘之泉：这一路是「选择2 · 喝下泉水」→ 去卡牌奖励界面（限定效果 / 技能）。
 	sfx.play("click")
+	if _is_martial():
+		if _martial_pick != "":
+			return
+		# 挂单：2 场战斗（普通 / 精英 / Boss 都算）后自动进卡组。
+		RunState.queue_delayed_card(MARTIAL_KICK_ID, MARTIAL_KICK_BATTLES, false)
+		_martial_pick = "kick"
+		_claim_reward(bbq_btn)
+		_collapse_to_leave()
+		desc.text = MARTIAL_KICK_DESC
+		_martial_result = "「飞踢」已经挂在单上：再打赢 %d 场战斗就自动加入卡组。" \
+				% MARTIAL_KICK_BATTLES
+		result_label.text = _martial_result
+		result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		_redraw()
+		return
 	if _is_furnace():
 		_furnace_take(1, bbq_btn)
 		return
@@ -2016,6 +2406,16 @@ func _settle_before_pick() -> void:
 	## R216：奖励界面要跳去选卡页之前，先把本次事件节点标记完成 —— 否则回地图还能再进一次。
 	if RunState.run_active:
 		RunState.complete_current()
+
+
+func _cave_explore() -> void:
+	## R467 洞穴 · 选项 1「探索」：本页直接换成洞穴战斗。
+	## `pending_node` **保持事件房那一份**（type = "event"）—— 战斗结算就会按事件房处理
+	## （不按精英发删卡 / 不掉精英道具），而关卡本身由 `pending_level` 指定。
+	## 房间标记先做掉（`complete_current` 幂等，战斗胜利时 battle_scene 会再调一次）。
+	RunState.pending_level = GameLevels.cave_level()
+	RunState.complete_current()
+	SceneFx.goto("res://scenes/battle.tscn")
 
 
 func _on_leave() -> void:

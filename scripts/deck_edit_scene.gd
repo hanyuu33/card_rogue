@@ -347,9 +347,9 @@ func _refresh_title() -> void:
 
 func _has_no_remove_card() -> bool:
 	## 卡组里是否存在不可删除的卡（决定提示行要不要补那句话）。
-	for cid: int in _cards:
-		var c := repo.get_card(cid)
-		if c != null and c.no_remove:
+	## R472：同样走唯一判据口 —— 界面不再自己读 `no_remove`。
+	for i in _cards.size():
+		if not RunState.deck_deletable(i):
 			return true
 	return false
 
@@ -558,7 +558,11 @@ func _toggle_sound() -> void:
 
 func _on_back_to_title() -> void:
 	## R167：回标题 = **保留本局**（只复位内存状态，续档留着）。
-	if RunState.run_active:
+	## R471：通关后的那条路没有「本局」可留了（续档在 `mark_run_won()` 已删）——
+	## 用 `end_run(false)` 会把 `run_finished` 反写成假，留下一局「已清空却说没结束」的幽灵状态。
+	if RunState.run_finished:
+		RunState.end_run()
+	elif RunState.run_active:
 		RunState.end_run(false)
 	SceneFx.goto("res://scenes/title.tscn")
 
@@ -761,11 +765,12 @@ func _apply_duplicate() -> void:
 
 func _apply(pick: int) -> void:
 	var id0: int = _cards[pick] if pick >= 0 and pick < _cards.size() else 0
-	var guard := repo.get_card(id0)
 	# R351 兜底：选卡阶段已经拦过，这里再判一次 —— `_sel` 可能在模式切换后留下旧下标。
-	if guard != null and guard.no_remove and _is_remove_mode():
+	# R472：判据统一走 `RunState.deck_deletable()`（= `remove_block_reason()` 的布尔壳），
+	# 不在界面里再抄一遍 `no_remove` —— 商店那边的漏就是这么漏出来的。
+	if _is_remove_mode() and not RunState.deck_deletable(pick):
 		sfx.play("click")
-		_result = "「%s」不可以从卡组删除" % guard.card_name
+		_result = RunState.remove_block_reason(pick)
 		_go_back_soon()
 		return
 	_done = true
@@ -870,6 +875,13 @@ func _go_back() -> void:
 	# 事件「遗忘之泉」的删卡待办：无论如何离开都清掉，免得地图反复把人送回来
 	if RunState.pending_deck_edit != "":
 		RunState.pending_deck_edit = ""
+	# R471：**通关之后**被叫来选卡（最后一层 Boss 掉的鸭血 / 源数 / 失忆）——
+	# 这一局已经没有地图可回了（`run_finished` 为真，地图只会把人再踢回标题），
+	# 所以在这里就地把整局收干净、直接回标题。
+	if RunState.run_finished:
+		RunState.end_run()
+		SceneFx.goto("res://scenes/title.tscn")
+		return
 	SceneFx.goto("res://scenes/map.tscn")
 
 
