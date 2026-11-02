@@ -737,10 +737,10 @@ func _init() -> void:
 
 	# ---- 第 38 轮新卡（2026-10-01）：风元素 9082 ----
 	var vl := repo.get_card(9082)
-	check(vl.kind == "盟友" and vl.cost == 10 and vl.power == 7 and vl.health == 20
+	check(vl.kind == "盟友" and vl.cost == 8 and vl.power == 7 and vl.health == 20
 			and vl.attack_range == 2 and vl.move_speed == 1 and vl.rarity == 2
 			and vl.group == "player" and vl.traits.has(GameEngine.VOID_LORD_TRAIT),
-			"风元素：史诗 10 费盟友 7/20 程2 速1，归玩家图鉴")
+			"风元素：史诗 8 费盟友 7/20 程2 速1，归玩家图鉴")
 
 	# ① 这张卡在场时，该方的技能牌费用 -1（多张叠加；只减技能；只按该方场上的张数算）
 	var vo_e := _new_engine([], 20, 20)
@@ -777,43 +777,43 @@ func _init() -> void:
 	var vp_p := vp_e.play_from_hand(0, Vector2i(5, 0))
 	check(vp_p != null and vp_e.state.unit_at(Vector2i(5, 0)) != null
 			and vp_e.state.unit_at(Vector2i(5, 0)).card.id == 9082,
-			"风元素：10 费 7/20 照常上场")
+			"风元素：8 费 7/20 照常上场")
 	check(vp_e.cost_of(vp_e.state.hand[0]) == 9,
 			"风元素：本体上场后手卡里的陨石术立刻 9 费")
 	vp_e._destroy(Vector2i(5, 0))
 	check(vp_e.cost_of(vp_e.state.hand[0]) == 10,
 			"风元素：本体离场后技能牌恢复原价（10 费）")
 
-	# ② 本次对战中每用技能牌对敌方造成一次伤害 → 手卡里的本卡费用 -2
+	# ② 本次对战中每用技能牌对敌方造成一次伤害 → 手卡里的本卡费用 -1
 	var vd_e := _new_engine([], 20, 20)
 	vd_e.state.energy = 30
 	vd_e.state.hand.clear()
 	var vd_lord := CardData.from_dict(vl.to_dict())
 	vd_e.state.hand.append(vd_lord)                                             # [0]
 	vd_e.state.hand.append(CardData.from_dict(repo.get_card(9007).to_dict()))  # [1] 火球术
-	check(vd_e.state.void_dmg_spells == 0 and vd_e.cost_of(vd_lord) == 10,
-			"风元素：开局手卡 10 费、伤害计数 0")
+	check(vd_e.state.void_dmg_spells == 0 and vd_e.cost_of(vd_lord) == 8,
+			"风元素：开局手卡 8 费、伤害计数 0")
 	# 只打到自己人（寒冰箭 9011 点我方农民）→ 不算「对敌人造成伤害」
 	vd_e.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
 			Vector2i(4, 0), GameEngine.SIDE_SELF)
 	vd_e.state.hand.append(CardData.from_dict(repo.get_card(9011).to_dict()))  # [2] 寒冰箭
 	vd_e.use_spell(2, Vector2i(4, 0))
-	check(vd_e.state.void_dmg_spells == 0 and vd_e.cost_of(vd_lord) == 10,
-			"风元素：技能只打到自己人 → 不计数（仍 10 费）")
+	check(vd_e.state.void_dmg_spells == 0 and vd_e.cost_of(vd_lord) == 8,
+			"风元素：技能只打到自己人 → 不计数（仍 8 费）")
 	# 火球术打到敌方单位 → 记 1 次
 	vd_e.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
 			Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
 	vd_e.state.hand.append(CardData.from_dict(repo.get_card(9007).to_dict()))  # [2]
 	vd_e.use_spell(2, Vector2i(3, 0))
-	check(vd_e.state.void_dmg_spells == 1 and vd_e.cost_of(vd_lord) == 8,
-			"风元素：技能对敌造成伤害 → 计数 1，手卡 10 - 2 = 8 费")
+	check(vd_e.state.void_dmg_spells == 1 and vd_e.cost_of(vd_lord) == 7,
+			"风元素：技能对敌造成伤害 → 计数 1，手卡 8 - 1 = 7 费")
 	# 一次技能打中 2 个敌人：仍然只记 1 次（按「使用技能牌」计数，不按命中数）
 	vd_e.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
 			Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
 	vd_e.state.hand.append(CardData.from_dict(repo.get_card(9007).to_dict()))  # [2]
 	vd_e.use_spell(2, Vector2i(3, 0))
 	check(vd_e.state.void_dmg_spells == 2 and vd_e.cost_of(vd_lord) == 6,
-			"风元素：一次技能打中 2 个敌人也只记 1 次（10 - 4 = 6 费）")
+			"风元素：一次技能打中 2 个敌人也只记 1 次（8 - 2 = 6 费）")
 	# 不造成伤害的技能（复活术 9078）不计
 	vd_e.state.hand.append(CardData.from_dict(repo.get_card(9078).to_dict()))  # [2]
 	vd_e.use_spell(2)
@@ -2567,13 +2567,13 @@ func _init() -> void:
 	check(ag_e2.state.unit_at(Vector2i(4, 1)) == null,
 			"大树守卫：1 血替 HP 承受 5 点后被击破离场")
 
-	# ---- 水元素（9068）：6 费史诗盟友 5/10/1/1 ----
+	# ---- 水元素（9068）：6 费史诗盟友 5/20/1/1 ----
 	var nc_dm := repo.get_card(9068)
 	check(nc_dm.card_name == "水元素" and nc_dm.kind == "盟友" and nc_dm.cost == 6
-			and nc_dm.rarity == 2 and nc_dm.power == 5 and nc_dm.health == 10
+			and nc_dm.rarity == 2 and nc_dm.power == 5 and nc_dm.health == 20
 			and nc_dm.attack_range == 1 and nc_dm.move_speed == 1
 			and nc_dm.traits.has("水元素"),
-			"水元素：史诗 6 费 5/10 程1 速1，trait 水元素")
+			"水元素：史诗 6 费 5/20 程1 速1，trait 水元素")
 	var dm_e := _new_engine([], 20, 20, -1, false)
 	dm_e.start_game(0)
 	check(dm_e.cost_of(repo.get_card(9068)) == 6, "水元素：效果区为空 → 原价 6 费")

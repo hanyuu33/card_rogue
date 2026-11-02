@@ -3123,7 +3123,7 @@ func _ready() -> void:
 		queue_redraw()
 	if "--voidlord" in args and engine != null:
 		# 演示（2026-10-01，第 38 轮）：风元素（9082）——
-		# 手卡里的本卡：本次对战已用技能对敌造成 3 次伤害 → 10 - 6 = 4 费；
+		# 手卡里的本卡：本次对战已用技能对敌造成 3 次伤害 → 8 - 3 = 5 费；
 		# 场上已有一座 → 手卡里的技能牌费用 -1（陨石术 10 → 9、魔像术 4 → 3）。
 		engine.state.hand.clear()
 		engine.state.energy = 30
@@ -3135,7 +3135,7 @@ func _ready() -> void:
 				Vector2i(5, 0), GameEngine.SIDE_SELF)
 		_hover_card = engine.state.hand[0]
 		_hover_hand = 0   # 让左栏信息面板走 cost_of（显示当前实际费用，低于卡面标绿）
-		status_text = "风元素：场上 1 张 → 技能牌 -1 费；已对敌伤害 3 次 → 本卡 10-6 = 4 费"
+		status_text = "风元素：场上 1 张 → 技能牌 -1 费；已对敌伤害 3 次 → 本卡 8-3 = 5 费"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--revive" in args and engine != null:
@@ -10704,10 +10704,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("▣ 栅栏修复术：两张栅栏合并 → %s 生命 %d" % [fm_name,
 					int(data.get("health", 0))])
 		"void_lord":
-			# 风元素（9082）：本次对战中每用技能牌对敌方造成一次伤害 → 手卡里的本卡费用 -2
+			# 风元素（9082）：本次对战中每用技能牌对敌方造成一次伤害 → 手卡里的本卡费用 -1
 			_say("◈ 风元素：第 %d 次技能对敌造成伤害 → 本卡费用 -%d（现 %d 费）" % [
 					int(data.get("count", 0)), int(data.get("discount", 0)),
-					10 - int(data.get("discount", 0))])
+					8 - int(data.get("discount", 0))])   # 8 = 9082 卡面基础费
 		"move":
 			var pl2 := engine.state.unit_at(data["dst"])
 			if pl2 != null:

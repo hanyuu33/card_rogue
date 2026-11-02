@@ -800,15 +800,15 @@ const GOLEM_SPELL_ID:= 9079
 const GOLEM_ID:= 9080
 const GOLEM_TRAIT:= "魔像"
 # ── 第 38 轮（2026-10-01）新卡 ──
-# 风元素（9082 盟友）：10 费 7/20 程2 速1。两条费用机制都挂在 cost_of 链上（显示=判定=实扣）。
+# 风元素（9082 盟友）：8 费 7/20 程2 速1。两条费用机制都挂在 cost_of 链上（显示=判定=实扣）。
 # ① 在场时：该方技能牌费用 -1（多张叠加 —— 按该方场上本卡张数算）。
-# ② 本次对战中每用技能牌对敌方造成一次伤害：手卡里的本卡费用 -2（本场战斗内累计，不跨战斗）。
+# ② 本次对战中每用技能牌对敌方造成一次伤害：手卡里的本卡费用 -1（本场战斗内累计，不跨战斗）。
 # R407 易名：虚空主宰 → **风元素**（标识符保留 VOID_LORD_*；`void_dmg_spells` 这个名字
 # 也是「虚空」来的，一并留着 —— 它记的是机制，不是卡名）。
 const VOID_LORD_ID:= 9082
 const VOID_LORD_TRAIT:= "风元素"
 const VOID_LORD_PRESENCE_DISCOUNT:= 1
-const VOID_LORD_DMG_DISCOUNT:= 2
+const VOID_LORD_DMG_DISCOUNT:= 1
 
 # ── 流星雨（9083 技能，2026-10-01）──
 # X 费卡：施放瞬间 X = 该方剩余的全部费用，一次性全部消耗（类杀戮尖塔）。
@@ -4216,7 +4216,7 @@ func _void_lord_owned(side:= SIDE_SELF) -> bool:
 func _void_lord_discount(card: CardData, side:= SIDE_SELF) -> int:
 	## 风元素（9082）的两条费用机制：
 	## ① 只要这张卡在场，该方的技能牌费用 -1（多张叠加：按场上本卡张数算）；
-	## ② 本次对战中每用技能牌对敌方造成一次伤害，手卡里的本卡费用 -2（战斗内累计）。
+	## ② 本次对战中每用技能牌对敌方造成一次伤害，手卡里的本卡费用 -1（战斗内累计）。
 	var d:= 0
 	if card.is_spell():
 		d += _void_lord_presence(side) * VOID_LORD_PRESENCE_DISCOUNT
@@ -7714,7 +7714,7 @@ func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 	state.hand.remove_at(hand_index)
 	# 蓄力（9085）：先取走待用层数再结算 —— 蓄力是结算时才上层的，不会把自己翻倍
 	var times:= _charge_take(SIDE_SELF)
-	# 风元素（9082）：技能结算窗口 —— 窗口内对敌方造成过伤害就记一笔（手卡里本卡 -2 费）
+	# 风元素（9082）：技能结算窗口 —— 窗口内对敌方造成过伤害就记一笔（手卡里本卡 -1 费）
 	_spell_active = true
 	_spell_hit_enemy = false
 	_spell_dmg_hits = 0
