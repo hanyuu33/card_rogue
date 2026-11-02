@@ -604,6 +604,108 @@ func _draw_panel_box(r: Rect2) -> void:
 	UiTheme.draw_scroll_bg(_root, r)
 
 
+# ------------------------------------------------------------ R500 卡片化列表
+## 参考风格（店长给的公会列表截图）：奶油底上的**白色圆角卡片**、
+## 左侧来源色纹章、右侧**绿色主按钮**。几何一律不动（`_row_rect` /
+## 各 `_btn_*_rect` 仍是命中唯一口），只换皮。
+const ROW_CARD_BG := Color("faf7ef")        ## 卡片底（奶油白）
+const ROW_CARD_BG_HOT := Color("fffdf6")    ## 悬停时再亮一档
+const ROW_CARD_LINE := Color("ddd3bd")      ## 卡片细边（暖灰金）
+const ROW_TITLE := Color("4a3b28")          ## 条目名（深棕）
+const ROW_TAG := Color("8a7b62")            ## 条目说明（棕灰）
+const BTN_GREEN := Color("4c9a52")          ## 主按钮绿
+const BTN_GREEN_DARK := Color("357a3c")     ## 描边 / 压底
+const BTN_GREEN_LIT := Color("8fd694")      ## 顶部高光
+const BTN_PAPER := Color("e8e0cd")          ## 次按钮米白
+const BTN_PAPER_LINE := Color("cfc3a8")
+
+
+func _round_box(r: Rect2, radius: float, bg: Color, line: Color,
+		shadow := true) -> void:
+	## 圆角卡片底。StyleBoxFlat 走引擎自己的九宫格，圆角与投影都比手画多边形干净。
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_corner_radius_all(int(radius))
+	if line.a > 0.0:
+		sb.set_border_width_all(1)
+		sb.border_color = line
+	if shadow:
+		sb.shadow_color = Color(0.18, 0.13, 0.05, 0.18)
+		sb.shadow_size = 5
+		sb.shadow_offset = Vector2(0, 2)
+	_root.draw_style_box(sb, r)
+
+
+func _green_btn(r: Rect2, text: String, disabled := false, lit := false) -> void:
+	## 绿色主按钮：右上角斜切 + 顶部一条高光（参考图的识别特征）。
+	## 已处理 / 不可用 = 同一形状换灰，位置不跳，玩家不用重新找按钮。
+	var cut := minf(13.0, r.size.y * 0.36)
+	var pts := PackedVector2Array([
+		r.position,
+		Vector2(r.end.x - cut, r.position.y),
+		Vector2(r.end.x, r.position.y + cut),
+		r.end,
+		Vector2(r.position.x, r.end.y)])
+	var base := Color("c9c2b2") if disabled else BTN_GREEN
+	if lit and not disabled:
+		base = base.lightened(0.10)
+	# 压底一层深色，当做厚度（斜切按钮没有投影也能立起来）
+	var under := PackedVector2Array()
+	for p in pts:
+		under.append(p + Vector2(0, 2))
+	_root.draw_colored_polygon(under, Color(0.24, 0.19, 0.10, 0.28)
+			if not disabled else Color(0.24, 0.19, 0.10, 0.14))
+	_root.draw_colored_polygon(pts, base)
+	if not disabled:
+		# 顶部高光带（斜切边跟着一起收，别越出轮廓）
+		var hi := PackedVector2Array([
+			r.position + Vector2(2, 1.5),
+			Vector2(r.end.x - cut, r.position.y + 1.5),
+			Vector2(r.end.x - cut, r.position.y + 3.5),
+			r.position + Vector2(2, 3.5)])
+		_root.draw_colored_polygon(hi, BTN_GREEN_LIT)
+		# 外沿描一圈深绿，形状才收得住
+		pts.append(pts[0])
+		_root.draw_polyline(pts, BTN_GREEN_DARK, 1.0, true)
+	_root.draw_string(_font_bold,
+			r.position + Vector2(0, r.size.y / 2.0 + 6.0), text,
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_BODY,
+			Color("7d7666") if disabled else Color("ffffff"))
+
+
+func _row_badge(center: Vector2, col: Color, mark: String) -> void:
+	## 来源纹章：盾形外框 + 来源色 + 一个类别字（道具/卡牌/删卡/核心）。
+	## 参考图这里是纹章图案，本项目没有对应素材，用类别字承担同样的「一眼分类」。
+	var w := 25.0
+	var h := 29.0
+	var pts := PackedVector2Array([
+		center + Vector2(-w, -h + 7),
+		center + Vector2(0, -h),
+		center + Vector2(w, -h + 7),
+		center + Vector2(w, 6),
+		center + Vector2(0, h),
+		center + Vector2(-w, 6)])
+	_root.draw_colored_polygon(pts, col.darkened(0.30))
+	var inner := PackedVector2Array()
+	for p in pts:
+		inner.append(center + (p - center) * 0.86)
+	_root.draw_colored_polygon(inner, col)
+	_root.draw_string(_font_bold, center + Vector2(-w, 8), mark,
+			HORIZONTAL_ALIGNMENT_CENTER, w * 2.0, UiTheme.FS_SUBHEAD,
+			Color("fff8e6"))
+
+
+func _entry_mark(e: Dictionary) -> String:
+	match str(e.get("kind", "")):
+		"relic":
+			return "具"
+		"deck_delete":
+			return "删"
+		"core":
+			return "核"
+	return "卡"
+
+
 func _draw_list() -> void:
 	var r := _panel_rect()
 	_draw_panel_box(r)
@@ -651,16 +753,25 @@ func _draw_list() -> void:
 		_root.draw_string(_font_bold, Vector2(r.position.x + PAD, done.position.y + 16),
 				warn, HORIZONTAL_ALIGNMENT_LEFT, 620, UiTheme.FS_CAPTION, Color("8c1a10"))
 	elif any_relic:
-		_root.draw_string(_font, Vector2(r.position.x + PAD, done.position.y + 12),
-				"「领取全部道具」不碰卡牌奖励 —— 卡牌要自己挑一张",
-				HORIZONTAL_ALIGNMENT_LEFT, 560, UiTheme.FS_CAPTION, UiTheme.INK_500)
+		_foot_note(r, done.position.y, "「领取全部道具」不碰卡牌奖励 —— 卡牌要自己挑一张")
 	else:
-		_root.draw_string(_font, Vector2(r.position.x + PAD, done.position.y + 12),
-				"卡牌 / 删卡 / 核心奖励要点进去处理（不能一键领取）" if pend > 0 else "全部奖励都已处理，可以点「完成」",
-				HORIZONTAL_ALIGNMENT_LEFT, 620, UiTheme.FS_CAPTION, UiTheme.INK_500)
+		_foot_note(r, done.position.y,
+				"卡牌 / 删卡 / 核心奖励要点进去处理（不能一键领取）" if pend > 0 else "全部奖励都已处理，可以点「完成」")
 	_draw_btn(done, "完成", false, must_pick)
 	# R463：右上角「卡组」—— 领奖励之前先看一眼这局攒了什么（选卡时最常想翻）
 	_draw_btn(_btn_view_deck_rect(r), "卡组", false, false)
+
+
+func _foot_note(r: Rect2, y: float, text: String) -> void:
+	## R500：底部说明垫一层浅底 —— 羊皮卷下沿是烧焦的深色渐变，
+	## 直接写字（尤其 INK_500 这种弱化色）会糊在焦边上读不出来。
+	var w := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			UiTheme.FS_CAPTION).x
+	var chip := Rect2(Vector2(r.position.x + PAD - 8.0, y + 1.0),
+			Vector2(w + 16.0, 22.0))
+	_round_box(chip, 6.0, Color("f7f0df"), Color(0, 0, 0, 0), false)
+	_root.draw_string(_font, chip.position + Vector2(8.0, 16.0), text,
+			HORIZONTAL_ALIGNMENT_LEFT, w + 8.0, UiTheme.FS_CAPTION, Color("6a5a40"))
 
 
 func _rows_per_page() -> int:
@@ -678,29 +789,28 @@ func _draw_row(i: int, rr: Rect2) -> void:
 	var e: Dictionary = RunState.pending_rewards[i]
 	var settled := _settled(e)
 	var hovered := i == _hover_row
-	var bg := Color("efece4") if not hovered else Color("e6e1d4")
-	_root.draw_rect(rr, bg, true)
-	_root.draw_rect(rr, UiTheme.INK_300, false, 1.0)
-	# 左侧来源色条
-	_root.draw_rect(Rect2(rr.position.x, rr.position.y + 8, 8, ROW_H - 16),
-			_entry_color(e), true)
-	# 名称 + 标签
-	_root.draw_string(_font_bold, Vector2(rr.position.x + 24, rr.position.y + 34),
-			"「%s」" % _entry_name(e), HORIZONTAL_ALIGNMENT_LEFT, 560,
-			UiTheme.FS_SUBHEAD, _entry_name_color(e, UiTheme.INK_900))
-	_root.draw_string(_font, Vector2(rr.position.x + 24, rr.position.y + 60),
-			_entry_tag(e), HORIZONTAL_ALIGNMENT_LEFT, 560,
-			UiTheme.FS_CAPTION, UiTheme.INK_600)
-	# 右侧状态徽标
-	var chip := Rect2(rr.end.x - 118, rr.position.y + 28, 100, 28)
-	_root.draw_rect(chip, Color("cfc7b2") if not settled else Color("ddd8cc"), true)
-	_root.draw_rect(chip, UiTheme.INK_300, false, 1.0)
-	_root.draw_string(_font_bold, chip.position + Vector2(0, 19),
-			_state_label(e), HORIZONTAL_ALIGNMENT_CENTER, chip.size.x,
-			UiTheme.FS_CAPTION, UiTheme.INK_600 if settled else Color("7a5a10"))
+	# R500：白色圆角卡片（带一点投影），替掉原来的平涂矩形 + 来源色条
+	_round_box(rr, 12.0,
+			ROW_CARD_BG_HOT if hovered else ROW_CARD_BG, ROW_CARD_LINE)
+	# 左侧来源纹章（色仍由 `_entry_color` 给，档位色唯一口不变）
+	_row_badge(rr.position + Vector2(46.0, ROW_H * 0.5), _entry_color(e),
+			_entry_mark(e))
+	# 名称 + 标签：文字右边界让开右侧按钮，别压上去
+	var chip := Rect2(rr.end.x - 124.0, rr.position.y + (ROW_H - 36.0) * 0.5,
+			108.0, 36.0)
+	var tx := rr.position.x + 86.0
+	var tw := chip.position.x - tx - 16.0
+	_root.draw_string(_font_bold, Vector2(tx, rr.position.y + 34),
+			"「%s」" % _entry_name(e), HORIZONTAL_ALIGNMENT_LEFT, tw,
+			UiTheme.FS_SUBHEAD, _entry_name_color(e, ROW_TITLE))
+	_root.draw_string(_font, Vector2(tx, rr.position.y + 60),
+			_entry_tag(e), HORIZONTAL_ALIGNMENT_LEFT, tw,
+			UiTheme.FS_CAPTION, ROW_TAG)
+	# 右侧状态按钮：待领 = 绿（看着就像能点），已处理 = 灰
+	_green_btn(chip, _state_label(e), settled, hovered and not settled)
 	# 已处理 → 整条蒙一层白（置灰）
 	if settled:
-		_root.draw_rect(rr, Color(1, 1, 1, 0.62), true)
+		_round_box(rr, 12.0, Color(1, 1, 1, 0.58), Color(0, 0, 0, 0), false)
 
 
 func _enchant_panel_rect() -> Rect2:
@@ -848,13 +958,11 @@ func _draw_relic() -> void:
 	var claim := _btn_claim_rect()
 	var skip := _btn_skip_rect()
 	if settled:
-		_root.draw_string(_font, Vector2(r.position.x + PAD, claim.position.y + 12),
-				"这条已经%s了（不可再操作）" % ("领取" if _state_label(e) == "已领取" else "放弃"),
-				HORIZONTAL_ALIGNMENT_LEFT, 420, UiTheme.FS_BODY, UiTheme.INK_500)
+		_foot_note(r, claim.position.y,
+				"这条已经%s了（不可再操作）" % ("领取" if _state_label(e) == "已领取" else "放弃"))
 	else:
-		_root.draw_string(_font, Vector2(r.position.x + PAD, claim.position.y + 12),
-				"「返回列表」不会丢掉它 —— 可以随时再点进来看、再领取。",
-				HORIZONTAL_ALIGNMENT_LEFT, 480, UiTheme.FS_CAPTION, UiTheme.INK_500)
+		_foot_note(r, claim.position.y,
+				"「返回列表」不会丢掉它 —— 可以随时再点进来看、再领取。")
 	_draw_btn(skip, "放弃这件", false, settled)
 	_draw_btn(claim, "领取" if not settled else "已处理", true, settled)
 
@@ -1387,13 +1495,16 @@ func _draw_card_detail(cands: Array) -> void:
 
 
 func _draw_btn(r: Rect2, text: String, primary: bool, disabled: bool) -> void:
-	var bg := UiTheme.ACCENT_GOLD if primary else Color("dcd6c8")
-	var fg := Color("3a2c08") if primary else UiTheme.INK_800
+	# R500：主按钮换绿色斜切（与列表行的「待领」同一套语言），次按钮 = 米白圆角
+	if primary:
+		_green_btn(r, text, disabled)
+		return
+	var bg := BTN_PAPER
+	var fg := ROW_TITLE
 	if disabled:
 		bg = Color("e2ddd2")
 		fg = Color("9a958a")
-	_root.draw_rect(r, bg, true)
-	_root.draw_rect(r, UiTheme.INK_300, false, 1.0)
+	_round_box(r, 10.0, bg, BTN_PAPER_LINE, false)
 	_root.draw_string(_font_bold, r.position + Vector2(0, r.size.y / 2.0 + 7.0), text,
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_BODY, fg)
 
