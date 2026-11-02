@@ -618,6 +618,14 @@ const BTN_GREEN_DARK := Color("357a3c")     ## 描边 / 压底
 const BTN_GREEN_LIT := Color("8fd694")      ## 顶部高光
 const BTN_PAPER := Color("e8e0cd")          ## 次按钮米白
 const BTN_PAPER_LINE := Color("cfc3a8")
+# R502：店长指定的 GPT 参考稿 —— 奶油金边主框、棕色题签、青色效果标签、胶囊按钮。
+const REWARD_PAPER := Color("f3eee2")
+const REWARD_DETAIL := Color("faf7ef")
+const REWARD_GOLD_LINE := Color("cbb47e")
+const REWARD_INNER_LINE := Color("fffaf0")
+const REWARD_RIBBON := Color("b29a63")
+const REWARD_TEAL := Color("65aaa3")
+const REWARD_TEXT := Color("514735")
 
 ## R501：素材改从图生图里切（`art_src/2026-11-02_奖励页UI/process.py` 生成）。
 ## 卡片 / 按钮走 StyleBoxTexture 九宫格，纹章 = 来源色盾形底 + 金边框架。
@@ -651,6 +659,69 @@ func _round_box(r: Rect2, radius: float, bg: Color, line: Color,
 		sb.shadow_size = 5
 		sb.shadow_offset = Vector2(0, 2)
 	_root.draw_style_box(sb, r)
+
+
+func _paper_panel(r: Rect2) -> void:
+	## R502：参考稿的主框不是烧焦卷轴，而是奶油纸面 + 细金边 + 内白边。
+	_round_box(r, 26.0, REWARD_PAPER, REWARD_GOLD_LINE, true)
+	_round_box(r.grow(-6.0), 21.0, Color(1, 1, 1, 0), REWARD_INNER_LINE, false)
+
+
+func _draw_ornament(center: Vector2, flip := 1.0) -> void:
+	## 参考稿顶部 / 边角的金色花叶。只作装饰，不占用任何信息通道。
+	var col := Color(REWARD_GOLD_LINE.r, REWARD_GOLD_LINE.g, REWARD_GOLD_LINE.b, 0.78)
+	for side: float in [-1.0, 1.0]:
+		var stem := PackedVector2Array([
+				center + Vector2(0, 8) * flip,
+				center + Vector2(side * 13, -4) * flip,
+				center + Vector2(side * 29, -10) * flip,
+				center + Vector2(side * 45, -8) * flip])
+		_root.draw_polyline(stem, col, 1.2, true)
+		for j in 3:
+			var p := center + Vector2(side * (13.0 + j * 12.0), -4.0 - j * 2.0) * flip
+			var leaf := PackedVector2Array([
+					p + Vector2(-side * 2, 0) * flip,
+					p + Vector2(side * 3, -8) * flip,
+					p + Vector2(side * 8, -4) * flip,
+					p + Vector2(side * 3, 1) * flip])
+			_root.draw_colored_polygon(leaf, Color(col.r, col.g, col.b, 0.40))
+	var diamond := PackedVector2Array([
+			center + Vector2(0, -15) * flip, center + Vector2(6, -6) * flip,
+			center + Vector2(0, 3) * flip, center + Vector2(-6, -6) * flip])
+	_root.draw_colored_polygon(diamond, Color(col.r, col.g, col.b, 0.52))
+
+
+func _deck_icon(center: Vector2, s := 1.0) -> void:
+	## 两张叠放的小卡牌，替代依赖字体字库的符号图标。
+	var back := Rect2(center + Vector2(-10, -12) * s, Vector2(15, 22) * s)
+	var front := Rect2(center + Vector2(-2, -10) * s, Vector2(15, 22) * s)
+	_round_box(back, 2.0 * s, Color("85775d"), Color("6e6049"), false)
+	_round_box(front, 2.0 * s, Color("f8f3e7"), Color("8c7c5d"), false)
+	_root.draw_line(front.position + Vector2(4, 5) * s,
+			front.position + Vector2(11, 5) * s, REWARD_GOLD_LINE, maxf(1.0, s), true)
+
+
+func _capsule_btn(r: Rect2, text: String, primary: bool, disabled: bool) -> void:
+	## R502：底部按钮统一为参考稿的圆头胶囊；主按钮只用绿色表达「确认」。
+	var bg := Color("5bb873") if primary else Color("faf8f1")
+	var line := Color("48985b") if primary else Color("d4cbb8")
+	var fg := Color("ffffff") if primary else REWARD_TEXT
+	if disabled:
+		bg = Color("e2e0d8")
+		line = Color("ccc8bc")
+		fg = Color("969288")
+	_round_box(r, r.size.y * 0.5, bg, line, true)
+	if primary and not disabled:
+		_root.draw_line(r.position + Vector2(r.size.y * 0.48, 3.0),
+				Vector2(r.end.x - r.size.y * 0.48, r.position.y + 3.0),
+				Color(1, 1, 1, 0.30), 1.2, true)
+	var fs := UiTheme.FS_SUBHEAD if primary and r.size.x >= 220.0 else UiTheme.FS_BODY
+	var shift := 0.0
+	if text == "卡组" and r.size.x >= 160.0:
+		shift = 12.0
+		_deck_icon(r.get_center() + Vector2(-42, 0), 0.86)
+	_root.draw_string(_font_bold, r.position + Vector2(shift, r.size.y / 2.0 + fs * 0.36),
+			text, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, fs, fg)
 
 
 func _green_btn(r: Rect2, text: String, disabled := false, lit := false) -> void:
@@ -941,10 +1012,10 @@ func _draw_relic() -> void:
 
 
 func _cards_panel_rect() -> Rect2:
-	## 卡牌三选一的羊皮卷面板（R191）：屏幕居中，留边适配各种屏幕。
+	## R502：参考稿的大奶油主框。顶部另留一条「卡牌奖励」场景标题，主框不再顶满屏幕。
 	var vs := _vs()
-	var pw := minf(vs.x - 72.0, 1056.0)
-	var ph := minf(vs.y - 56.0, 668.0)
+	var pw := minf(vs.x - 56.0, 1120.0)
+	var ph := minf(vs.y - 66.0, 654.0)
 	return Rect2(Vector2((vs.x - pw) / 2.0, (vs.y - ph) / 2.0), Vector2(pw, ph))
 
 
@@ -1096,10 +1167,8 @@ func _btn_view_deck_rect(pr: Rect2) -> Rect2:
 
 
 func _btn_view_deck_cards_rect() -> Rect2:
-	## R463：卡牌三选一页的「卡组」入口 —— **不能放右上角**：那一页的标题是长句，
-	## 居中排版一路顶到右边（出图实测压字）。改放底部「确认选择这张」右侧的空档。
-	var c := _btn_confirm_rect()
-	return Rect2(c.end.x + 16.0, c.position.y, 104.0, 38.0)
+	## R463 / R502：底部最右的宽胶囊，与返回、放弃、确认共用同一组几何。
+	return (_cards_button_rects()["deck"] as Rect2)
 
 
 func _btn_viewer_back_rect() -> Rect2:
@@ -1286,19 +1355,38 @@ func _draw_cards() -> void:
 	var e: Dictionary = RunState.pending_rewards[_sel]
 	var settled := _settled(e)
 	var vs := _vs()
-	# R191：整屏米白底 → **暗化罩 + 中央羊皮卷面板**（不透明，下层战场不会糊进来）。
-	_root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.045, 0.08, 0.86), true)
+	# R502：参考稿的完整框架 —— 顶部场景题签、斜金线、奶油主框与顶饰。
+	_root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.045, 0.08, 0.84), true)
+	_root.draw_line(Vector2(0, 58), Vector2(vs.x, 14), REWARD_GOLD_LINE, 3.0, true)
+	_root.draw_line(Vector2(0, 63), Vector2(vs.x, 19), REWARD_INNER_LINE, 1.0, true)
+	_deck_icon(Vector2(66, 17), 1.05)
+	_root.draw_string(_font_bold, Vector2(104, 28), "卡牌奖励",
+			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_HEADING, Color("fff9ec"))
 	var pr := _cards_panel_rect()
-	UiTheme.draw_scroll_bg(_root, pr)
+	_paper_panel(pr)
+	_draw_ornament(Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 6), 1.0)
 	var total := 3 * CARD_W + 2 * CARD_GAP
 	var x0 := pr.position.x + (pr.size.x - total) / 2.0
 	var cands: Array = e.get("candidates", [])
 	# R467：候选不恒为 3 张（传说卡只有 1 张）→ 在同一条 3 列基线上居中，卡位宽度不变。
 	# `_card_rect_in()` 用的是同一段算式（点选命中不会和画面对不上）。
 	x0 += (3 - clampi(cands.size(), 1, 3)) * (CARD_W + CARD_GAP) / 2.0
-	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
-			"卡牌奖励 —— 点一张看说明，再确认加入卡组（%s）" % _entry_tag(e),
-			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_HEADING, Color("2f2a20"))
+	var title := "卡牌奖励 —— 点一张看说明，再确认加入卡组（%s）" % _entry_tag(e)
+	var title_y := pr.position.y + 50.0
+	_root.draw_string(_font_bold, Vector2(pr.position.x, title_y), title,
+			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_HEADING, REWARD_TEXT)
+	# 标题两侧的细金线与小菱形，线条长度随实测标题宽度收放。
+	var title_w := _font_bold.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			UiTheme.FS_HEADING).x
+	var line_y := title_y - 8.0
+	var left_end := pr.position.x + (pr.size.x - title_w) * 0.5 - 22.0
+	var right_start := pr.position.x + (pr.size.x + title_w) * 0.5 + 22.0
+	_root.draw_line(Vector2(pr.position.x + 84, line_y), Vector2(left_end, line_y),
+			REWARD_GOLD_LINE, 1.0, true)
+	_root.draw_line(Vector2(right_start, line_y), Vector2(pr.end.x - 84, line_y),
+			REWARD_GOLD_LINE, 1.0, true)
+	_root.draw_circle(Vector2(left_end - 8, line_y), 2.4, REWARD_GOLD_LINE)
+	_root.draw_circle(Vector2(right_start + 8, line_y), 2.4, REWARD_GOLD_LINE)
 	# R440 暗动力（6054）：这组卡不能放弃 —— 副标题说清楚，别让玩家去试那个灰按钮。
 	var must_pick := RunState.must_take_card_reward()
 	var sub := "看完随时可以点下面「返回列表」"
@@ -1323,10 +1411,11 @@ func _draw_cards() -> void:
 		var is_pick := i == _pick_sel and not settled
 		var hov := (i == _hover_card or is_pick) and not settled
 		if hov:
-			_root.draw_rect(rr.grow(6.0), Color(1, 1, 1, 0.75), true)   # R155：亮边与点选判定同圈（原来大 4px）
+			# R502：参考稿的卡片白托 + 圆角金边；点选仍然使用外发光，不占稀有度色。
+			_round_box(rr.grow(6.0), 12.0, Color(1, 1, 1, 0.88),
+					REWARD_GOLD_LINE if is_pick else REWARD_INNER_LINE, true)
 			if is_pick:
-				# R167：已点选（待确认）那张补一圈金边 —— 触屏没有悬停，得让「我选了哪张」看得见
-				_root.draw_rect(rr.grow(9.0), UiTheme.ACCENT_GOLD, false, 3.0)
+				_round_box(rr.grow(9.0), 14.0, Color(1, 1, 1, 0), UiTheme.ACCENT_GOLD, false)
 		CardFace.draw_pick(_root, card, rr, _font, _font_bold, false)   # R191：只留卡名
 		# R155：稀有度铭牌 —— 宽度按文字实测（旧版写死 90px，和 216 宽的卡面对不上），
 		# 压在**这张卡自己的中轴**正下方。
@@ -1336,12 +1425,13 @@ func _draw_cards() -> void:
 		#    糊成一片。只有反色才成立 —— 浅底 + 深字，稀有度色挪到一圈描边上，
 		#    「普通 / 史诗 / 怪物」的区分一点没丢。**别再把底色改回深色。**
 		var rn := card.rarity_name()
-		var lw := _font_bold.get_string_size(rn, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_BODY).x + 18.0
+		var lw := _font_bold.get_string_size(rn, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_BODY).x + 34.0
 		var plate := Rect2(rr.position.x + CARD_W / 2.0 - lw / 2.0, rr.position.y + CARD_H + 8.0, lw, 24.0)
-		_root.draw_rect(plate, Color(1.0, 0.99, 0.95, 0.82), true)
-		_root.draw_rect(plate, card.rarity_color(), false, 1.2)
-		_root.draw_string(_font_bold, plate.position + Vector2(9, 17), rn,
-				HORIZONTAL_ALIGNMENT_LEFT, lw - 18.0, UiTheme.FS_BODY, card.rarity_color())
+		_round_box(plate, 12.0, Color(1.0, 0.99, 0.95, 0.92), card.rarity_color(), false)
+		_root.draw_circle(plate.position + Vector2(9, 12), 1.8, card.rarity_color())
+		_root.draw_circle(Vector2(plate.end.x - 9, plate.position.y + 12), 1.8, card.rarity_color())
+		_root.draw_string(_font_bold, plate.position + Vector2(0, 17), rn,
+				HORIZONTAL_ALIGNMENT_CENTER, lw, UiTheme.FS_BODY, card.rarity_color())
 		if settled:
 			var picked := int(e.get("picked", -1))
 			if card.id != picked:
@@ -1375,7 +1465,9 @@ func _draw_cards() -> void:
 	if settled:
 		_root.draw_string(_font, Vector2(pr.position.x, pr.end.y - 66.0),
 				"这组已经处理过了",
-				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_CAPTION, UiTheme.INK_600)
+				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_CAPTION, REWARD_TEXT)
+	# 右下角的淡金花叶与主框顶饰呼应，透明度低，不碰按钮文字。
+	_draw_ornament(Vector2(pr.end.x - 66, pr.end.y - 12), -1.0)
 
 
 func _draw_affix_index(cands: Array, x0: float, vs: Vector2) -> void:
@@ -1401,13 +1493,9 @@ func _draw_affix_index(cands: Array, x0: float, vs: Vector2) -> void:
 
 
 func _draw_card_detail(cands: Array) -> void:
-	## R155：详情从「钉在屏幕最右边缘」改成**三张卡正下方的横条**（与卡组同一左右边界）。
-	# R167：鼠标悬停优先；**触屏**没有悬停 → 用「已点选」的那张（点一下就能读到说明）。
-	# R206：排版重做 —— ①左栏只放「卡名 / 编号·种类·费用·稀有度 / 数值」，②右栏放
-	#   「效果 + 提及块」，两栏各有自己的 x 起点与栏宽（旧版把提及块**从右栏正文底部
-	#   接到左栏 x** 起画 → 标题压着左栏数值行、摘要横跨两栏 → 用户口径「排版乱」）；
-	#   ③提及强调色按**真实底色**挑（羊皮纸浅底 → 琥珀棕，不再是奶油色上看不清的亮金）；
-	#   ④横条高度随内容自适应（下限 96 / 上限 DETAIL_STRIP_H），不再一律撑满留一大片空白。
+	## R502：按店长的 GPT 参考稿重排 —— 奶油圆角详情盒、左侧棕色卡名题签、
+	## 右侧青色「效果」胶囊。信息口径不变：编号 / 种类 / 费用 / 稀有度 / 数值 /
+	## 完整效果与提及命中全部保留；悬停优先，触屏读已点选。
 	var idx := _hover_card if _hover_card >= 0 else _pick_sel
 	if idx < 0 or idx >= cands.size():
 		return
@@ -1417,38 +1505,41 @@ func _draw_card_detail(cands: Array) -> void:
 	var pr2 := _cards_panel_rect()
 	var bx := pr2.position.x + 36.0
 	var bw := pr2.size.x - 72.0
-	var top := _cards_y() + CARD_H + 40.0       # 卡下沿还挂着稀有度铭牌（+8~+32）
-	var pad := 15.0
-	var col_w := 232.0
-	var ex := bx + pad + col_w + 24.0           # 右栏起点（= 分隔线 + 13）
-	var ew := bx + bw - pad - ex                # 右栏宽度
-	var bg := Color(0.99, 0.97, 0.90)           # 横条底色（半透明铺在羊皮卷上）
-	var ink := Color("2a5a8a")                  # 效果正文色（沿用原口径）
+	var top := _cards_y() + CARD_H + 40.0       # 让开卡下的稀有度胶囊
+	var pad := 12.0
+	var col_w := 240.0
+	var ex := bx + pad + col_w + 28.0
+	var ew := bx + bw - pad - ex
+	var bg := REWARD_DETAIL
+	var ink := Color("465a54")
 	var stats := CardFace.stats_line(card)
 	var segs := CardText.parse(card.effect_text)
 	var stat_lines := 0
 	if stats != "":
 		stat_lines = CardFace.wrap_text(_font, stats, col_w, UiTheme.FS_CAPTION).size()
 	var eff_lines: int = CardText.wrap_segments(_font, _font_bold, segs, ew, 13).size()
-	var blk_h := Mention.block_height(_font, _font_bold, card.effect_text, ew,
-			Mention.BLOCK_HEAD_H)
-	var right_h := 22.0 + float(eff_lines) * 19.0 + (8.0 + blk_h if blk_h > 0.0 else 0.0)
-	var left_h := 24.0 + 22.0 + float(stat_lines) * 17.0
-	var avail := pr2.end.y - top - 76.0         # 下面还留着「返回列表 / 放弃 / 确认」那一排
-	var box_h := clampf(maxf(left_h, right_h) + pad * 2.0, 96.0, minf(DETAIL_STRIP_H, avail))
+	var right_h := 48.0 + float(eff_lines) * 19.0
+	var left_h := 64.0 + float(stat_lines) * 17.0
+	var avail := pr2.end.y - top - 82.0         # 下方胶囊按钮与留白
+	var box_h := clampf(maxf(left_h, right_h) + pad, 104.0, minf(DETAIL_STRIP_H, avail))
 	var box := Rect2(bx, top, bw, box_h)
-	# R191：羊皮卷面板**内**的详情条 —— 淡色半透明底（透出羊皮卷纹理），无边框。
-	_root.draw_rect(box, Color(bg.r, bg.g, bg.b, 0.55), true)
-	# 左右分栏的细分隔线：让「这张卡是什么」与「它做什么」各成一块
-	var sx := bx + pad + col_w + 11.0
-	_root.draw_line(Vector2(sx, box.position.y + pad * 0.7),
-			Vector2(sx, box.end.y - pad * 0.7), Color(0.35, 0.30, 0.20, 0.16), 1.0)
-	# ── 左栏：卡名 / 元信息 / 数值 ─────────────────────────────
+	_round_box(box, 14.0, bg, Color("d7c9ab"), true)
+	var sx := bx + pad + col_w + 12.0
+	_root.draw_line(Vector2(sx, box.position.y + 14.0),
+			Vector2(sx, box.end.y - 14.0), Color(0.35, 0.30, 0.20, 0.22), 1.0, true)
+	# 左栏：棕色斜切题签 + 元信息 + 数值。
 	var lx := bx + pad
-	var ly := box.position.y + pad + 19.0
-	_root.draw_string(_font_bold, Vector2(lx, ly), card.card_name,
-			HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_SUBHEAD, Color.BLACK)
-	ly += 22.0
+	var name_w := clampf(_font_bold.get_string_size(card.card_name,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_SUBHEAD).x + 42.0, 126.0, col_w)
+	var ny := box.position.y + 10.0
+	var ribbon := PackedVector2Array([
+			Vector2(lx, ny), Vector2(lx + name_w - 18.0, ny),
+			Vector2(lx + name_w, ny + 15.0), Vector2(lx + name_w - 18.0, ny + 30.0),
+			Vector2(lx, ny + 30.0)])
+	_root.draw_colored_polygon(ribbon, REWARD_RIBBON)
+	_root.draw_string(_font_bold, Vector2(lx, ny + 22.0), card.card_name,
+			HORIZONTAL_ALIGNMENT_CENTER, name_w - 12.0, UiTheme.FS_SUBHEAD, Color("fffdf5"))
+	var ly := ny + 44.0
 	_root.draw_string(_font, Vector2(lx, ly),
 			"#%d  %s · %d 费 · %s" % [card.id, card.kind, card.cost, card.rarity_name()],
 			HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
@@ -1458,28 +1549,19 @@ func _draw_card_detail(cands: Array) -> void:
 			_root.draw_string(_font, Vector2(lx, ly), t,
 					HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
 			ly += 17.0
-	# ── 右栏：效果全文（折行，提及自动上色）+ 提及块 ───────────
-	_root.draw_string(_font_bold, Vector2(ex, box.position.y + pad + 15.0), "效果",
-			HORIZONTAL_ALIGNMENT_LEFT, ew, UiTheme.FS_CAPTION, ink)
+	# 右栏：青色标签 + 效果全文（提及仍由 CardText 统一上色与命中）。
+	_round_box(Rect2(ex, box.position.y + 11.0, 64.0, 22.0), 11.0,
+			REWARD_TEAL, Color(0, 0, 0, 0), false)
+	_root.draw_string(_font_bold, Vector2(ex, box.position.y + 27.0), "效果",
+			HORIZONTAL_ALIGNMENT_CENTER, 64.0, UiTheme.FS_CAPTION, Color("ffffff"))
 	var res := CardText.draw_wrapped_hits(_root, _font, _font_bold, segs, ex,
-			box.position.y + pad + 34.0, ew, 13, 19.0, ink, box.end.y - pad, -1.0, bg)
-	# R302：同上 —— 提及只做「悬停弹窗」，不再固定列在详情底部。
+			box.position.y + 51.0, ew, 13, 19.0, ink, box.end.y - pad, -1.0, bg)
 	_mention_hits = res["hits"]
 
 
 func _draw_btn(r: Rect2, text: String, primary: bool, disabled: bool) -> void:
-	# R500：主按钮换绿色斜切（与列表行的「待领」同一套语言），次按钮 = 米白圆角
-	if primary:
-		_green_btn(r, text, disabled)
-		return
-	var bg := BTN_PAPER
-	var fg := ROW_TITLE
-	if disabled:
-		bg = Color("e2ddd2")
-		fg = Color("9a958a")
-	_round_box(r, 10.0, bg, BTN_PAPER_LINE, false)
-	_root.draw_string(_font_bold, r.position + Vector2(0, r.size.y / 2.0 + 7.0), text,
-			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_BODY, fg)
+	# R502：所有操作按钮统一为参考稿的胶囊语言；列表行内的小状态钮仍走 `_green_btn`。
+	_capsule_btn(r, text, primary, disabled)
 
 
 # ------------------------------------------------------------ 命中区（绘制与输入共用）
@@ -1510,39 +1592,51 @@ func _btn_skip_rect() -> Rect2:
 
 
 func _cards_y() -> float:
-	## 三张卡的顶边（面板内，R191）。
-	return _cards_panel_rect().position.y + 104.0
+	## 三张卡的顶边：标题与副标题之下，位置对应参考稿的卡片区。
+	return _cards_panel_rect().position.y + 124.0
+
+
+func _cards_button_rects() -> Dictionary:
+	## R502：返回 / 放弃 / 确认 / 卡组按参考稿铺满底部；持有火柴时插入「刷新」，
+	## 五枚按钮重新均分，绝不为了像参考图而丢掉已有功能。绘制与命中都读这里。
+	var pr := _cards_panel_rect()
+	var x := pr.position.x + 34.0
+	var w := pr.size.x - 68.0
+	var y := pr.end.y - 56.0
+	if RunState.has_relic(RunState.MATCH_RELIC_ID):
+		var widths := [170.0, 140.0, 160.0, 240.0, 170.0]
+		var total := 944.0
+		var xx := x + maxf(0.0, (w - total) * 0.5)
+		var out := {}
+		for k: String in ["back", "reroll", "skip", "confirm", "deck"]:
+			var bw: float = widths[["back", "reroll", "skip", "confirm", "deck"].find(k)]
+			out[k] = Rect2(xx, y, bw, 44.0)
+			xx += bw + 16.0
+		return out
+	return {
+		"back": Rect2(x, y, w * 0.206, 44.0),
+		# 没持火柴时不画；仍给测试与外部探针一个确定的几何值。
+		"reroll": Rect2(x + w * 0.215, y, w * 0.04, 44.0),
+		"skip": Rect2(x + w * 0.264, y, w * 0.206, 44.0),
+		"confirm": Rect2(x + w * 0.484, y, w * 0.276, 44.0),
+		"deck": Rect2(x + w * 0.781, y, w * 0.219, 44.0),
+	}
 
 
 func _btn_cards_back_rect() -> Rect2:
-	## 卡牌三选一的「← 返回列表」（R191：挪到羊皮卷面板左下；列表/道具视图的
-	## `_btn_back_rect` 在面板**顶部**，两者位置不同不能共用）。
-	var pr := _cards_panel_rect()
-	return Rect2(pr.position.x + 36.0, pr.end.y - 56.0, 130.0, 38.0)
+	return (_cards_button_rects()["back"] as Rect2)
 
 
 func _btn_cards_reroll_rect() -> Rect2:
-	## R342 火柴：「刷新」按钮（塞在「← 返回列表」与「放弃这组」之间）。
-	## 面板宽度随屏幕变（`_cards_panel_rect` 有 min），所以宽度按**可用间隙**收缩 ——
-	## 小窗口下宁可字少一点，也不要压到隔壁按钮。
-	var back := _btn_cards_back_rect()
-	var skip := _btn_cards_skip_rect()
-	var gap := skip.position.x - back.end.x - 28.0
-	var w := clampf(gap, 96.0, 150.0)
-	var x := back.end.x + 14.0 + maxf(0.0, (gap - w) / 2.0)
-	x = minf(x, skip.position.x - 8.0 - w)
-	return Rect2(x, back.position.y, w, back.size.y)
+	return (_cards_button_rects()["reroll"] as Rect2)
 
 
 func _btn_cards_skip_rect() -> Rect2:
-	var pr := _cards_panel_rect()
-	return Rect2(pr.position.x + pr.size.x / 2.0 - 160.0, pr.end.y - 56.0, 140.0, 38.0)
+	return (_cards_button_rects()["skip"] as Rect2)
 
 
 func _btn_confirm_rect() -> Rect2:
-	## R167：卡牌三选一的「确认选择这张」（放在「放弃这组」右侧）。
-	var pr := _cards_panel_rect()
-	return Rect2(pr.position.x + pr.size.x / 2.0 + 20.0, pr.end.y - 56.0, 190.0, 38.0)
+	return (_cards_button_rects()["confirm"] as Rect2)
 
 
 func _card_rect_in(e: Dictionary, i: int) -> Rect2:

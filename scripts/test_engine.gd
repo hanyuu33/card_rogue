@@ -11398,11 +11398,11 @@ func _init() -> void:
 	# 底色是浅的、旧深色条不许回来、稀有度色仍留在描边上（色相编码不丢）。
 	if r122_in_dev:
 		var r401_src := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
-		check(r401_src.find("draw_rect(plate, Color(1.0, 0.99, 0.95, 0.82), true)") >= 0,
+		check(r401_src.find("_round_box(plate, 12.0, Color(1.0, 0.99, 0.95, 0.92), card.rarity_color(), false)") >= 0,
 				"R401 稀有度铭牌底 = 半透明白（深底彩色字读不清，用户实测）")
 		check(r401_src.find("Color(0.13, 0.14, 0.18, 0.88)") < 0,
 				"R401 稀有度铭牌不再用深色底条")
-		check(r401_src.find("draw_rect(plate, card.rarity_color(), false, 1.2)") >= 0,
+		check(r401_src.find("card.rarity_color(), false)") >= 0,
 				"R401 稀有度色保留在铭牌描边上（色相编码不丢）")
 
 	# ---- R122-G：事件文案「卡名 / 道具名」悬浮 —— 解析层 ----
