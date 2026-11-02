@@ -1740,14 +1740,14 @@ func _ready() -> void:
 			queue_redraw()
 	if "--xtext" in args and engine != null:
 		# 演示（2026-10-01）：长描述效果卡。
-		# 悬停最长的那张（空间守护 9064）→ 左栏信息面板用于像素级核验「长描述不溢出」。
+		# 悬停最长的那张（和风守护 9064）→ 左栏信息面板用于像素级核验「长描述不溢出」。
 		# 镜像 9056 自 R35 起不再是「每回合第 X 次」组，但仍是长描述卡 → 留在演示里。
 		engine.state.hand.clear()
 		for _tid in [9057, 9056, 9063, 9064, 9069]:
 			engine.state.hand.append(repo.get_card(_tid))
 		engine.state.energy = 9
 		_demo_hover_idx = 3
-		status_text = "长描述改版：威慑 / 镜像 / 以太咆哮 / 空间守护 / 鸭窝"
+		status_text = "长描述改版：威慑 / 镜像 / 飓风咆哮 / 和风守护 / 鸭窝"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r333card" in args and engine != null:
@@ -11703,23 +11703,23 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				ap_name = (data["card"] as CardData).card_name
 			_say("魔法学徒：本回合出牌费用 -1；从卡组取到「%s」" % ap_name)
 		"aether_roar":
-			# 以太咆哮（9063）：全体敌方 -N
+			# 飓风咆哮（9063）：全体敌方 -N
 			sfx.play("spell")
 			var ar_dmg := int(data.get("dmg", 0))
 			var ar_hits := int(data.get("hits", 0))
 			_shake(6.0, 300)
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 30),
-					"text": "以太咆哮 -%d" % ar_dmg,
+					"text": "飓风咆哮 -%d" % ar_dmg,
 					"col": Color("7a3fd0"), "start": n, "dur": 1600, "size": 20})
-			_say("以太咆哮：%d 个敌人各 -%d" % [ar_hits, ar_dmg] if ar_hits > 0
-					else "以太咆哮：场上没有敌人 → 直击敌方 HP -%d" % ar_dmg)
+			_say("飓风咆哮：%d 个敌人各 -%d" % [ar_hits, ar_dmg] if ar_hits > 0
+					else "飓风咆哮：场上没有敌人 → 直击敌方 HP -%d" % ar_dmg)
 		"space_guard":
-			# 空间守护（9064）：离己方 HP 最近的敌人被推回去
+			# 和风守护（9064）：离己方 HP 最近的敌人被推回去
 			sfx.play("spell")
 			var sg_name := "?"
 			if data.get("card") is CardData:
 				sg_name = (data["card"] as CardData).card_name
-			_say("空间守护：%s 后退 %d 格" % [sg_name, int(data.get("steps", 2))])
+			_say("和风守护：%s 后退 %d 格" % [sg_name, int(data.get("steps", 2))])
 		"stoneskin":
 			_say("石肤：己方 HP 接下来 %d 次伤害变为 1（累计剩余 %d 次）" % [
 					int(data.get("add", 0)), int(data.get("left", 0))])
