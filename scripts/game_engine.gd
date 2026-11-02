@@ -736,7 +736,7 @@ const FAMILIAR_NIGHT_TRAIT:= "使魔之夜"
 const AETHER_ROAR_ID:= 9063
 const AETHER_ROAR_TRAIT:= "飓风咆哮"
 const SPACE_GUARD_ID:= 9064
-const SPACE_GUARD_TRAIT:= "空间守护"
+const SPACE_GUARD_TRAIT:= "和风守护"
 const SELF_HEAL_ID:= 9065
 const SELF_HEAL_TRAIT:= "自愈"
 const STONESKIN_ID:= 9066
@@ -9530,7 +9530,7 @@ func _on_turn_first_play(side: String, played: CardData) -> void :
 		return
 	# R489：「使用此卡本身不会触发」只否掉**它自己那一条**，不能连带否掉同族的另一张。
 	# 此前这里是 `if played.id == 9063 or played.id == 9064: return` —— 后果是
-	# **打出空间守护（9064）时飓风咆哮（9063）不触发**。卡面从没写过「A 不触发 B」，
+	# **打出和风守护（9064）时飓风咆哮（9063）不触发**。卡面从没写过「A 不触发 B」，
 	# 每张只写了自己那条不触发；玩家看到的就是「有些效果卡不一定触发」（用户实测反馈）。
 	var skip_roar := played.id == AETHER_ROAR_ID
 	var skip_guard := played.id == SPACE_GUARD_ID
@@ -9594,12 +9594,12 @@ func _space_guard(c: CardData) -> void :
 		elif cell.x == best_row:
 			near.append(cell)
 	if near.is_empty():
-		_log("空间守护：没有可被位移的敌方单位，未生效")
+		_log("和风守护：没有可被位移的敌方单位，未生效")
 		return
 	var t: Vector2i = near[rng.randi() % near.size()]
 	var p: Placement = state.unit_at(t)
 	var msg:= _knockback(SIDE_SELF, t, steps)
-	_log("空间守护：%s" % msg)
+	_log("和风守护：%s" % msg)
 	action.emit("space_guard", {"steps": steps, "card": p.card})
 
 
@@ -12072,7 +12072,7 @@ func _displace_immune(p: Placement) -> bool:
 	## 「位置移动效果对它无效」的**唯一判据口**（R277 起，R371 纳入启示者）。
 	##   * R277：赫菲斯托斯 9135 带「位移免疫」trait；
 	##   * R371：启示者 9200 **全阶段**免疫 —— 用户口径「加强启示者：全阶段免疫位置移动效果」。
-	## ⚠️ 只认这**一个**口：`_knockback`（击退 / 清退 / 空间守护 / 暗影锁链）与
+	## ⚠️ 只认这**一个**口：`_knockback`（击退 / 清退 / 和风守护 / 暗影锁链）与
 	##    `_swap_two_units`（双向传送，含付费前预判）都必须调它，别再各处直接判 trait ——
 	##    那样每加一个免疫来源就要改三遍，漏一处就是「某张卡能把 Boss 推走」。
 	if p == null or p.card == null:
@@ -12089,7 +12089,7 @@ func _knockback(side: String, target, steps: int) -> String:
 	if p == null:
 		return "（没有目标）"
 	# R277：位移免疫（赫菲斯托斯 9135）—— 判据放在这个**唯一口**，
-	# 清退陷阱 / 击退 9004 / 空间守护 9064 / 暗影锁链 9112 就全都自动生效。
+	# 清退陷阱 / 击退 9004 / 和风守护 9064 / 暗影锁链 9112 就全都自动生效。
 	# R371：启示者（9200）同样走这里 → 全阶段免疫位置移动效果。
 	if _displace_immune(p):
 		_log("%s 免疫位移：没有被击退" % p.card.card_name)

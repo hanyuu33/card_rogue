@@ -2224,7 +2224,7 @@ func _init() -> void:
 	check(ch_e.cost_of(repo.get_card(9002)) == 2, "未持有奥秘护符 → 原价 2 费")
 
 	# ============================================================
-	# 飓风 / 守护一批（2026-09-30）：飓风咆哮 9063 / 空间守护 9064 / 自愈 9065 /
+	# 飓风 / 守护一批（2026-09-30）：飓风咆哮 9063 / 和风守护 9064 / 自愈 9065 /
 	#                              石肤 9066 / 大树守卫 9067 / 水元素 9068 / 鸭窝 9069
 	# ============================================================
 
@@ -2281,13 +2281,13 @@ func _init() -> void:
 	check(roar_e2.state.hp_opponent == 16,
 			"飓风咆哮：效果卡触发；场上没有敌人 → 直击敌方 HP -4（20→16）")
 
-	# ---- 空间守护（9064）：1 费普通效果；每回合前 X 次用**技能卡**（X=张数）→ 最近敌人退后 2 格 ----
+	# ---- 和风守护（9064）：1 费普通效果；每回合前 X 次用**技能卡**（X=张数）→ 最近敌人退后 2 格 ----
 	var nc_sg := repo.get_card(9064)
-	check(nc_sg.card_name == "空间守护" and nc_sg.is_effect() and nc_sg.cost == 1
-			and nc_sg.rarity == 0 and nc_sg.traits.has("空间守护") and nc_sg.value == 2,
-			"空间守护：普通 1 费效果卡，trait 空间守护 value=2")
+	check(nc_sg.card_name == "和风守护" and nc_sg.is_effect() and nc_sg.cost == 1
+			and nc_sg.rarity == 0 and nc_sg.traits.has("和风守护") and nc_sg.value == 2,
+			"和风守护：普通 1 费效果卡，trait 和风守护 value=2")
 	check(nc_sg.effect_text.contains("使用效果卡") and not nc_sg.effect_text.contains("技能卡"),
-			"空间守护（R268）：文案只说效果卡，不再提技能卡")
+			"和风守护（R268）：文案只说效果卡，不再提技能卡")
 	var sg_e := _new_engine([], 20, 20, -1, false)
 	sg_e.start_game(0)
 	sg_e.state.effects.append(repo.get_card(9064))
@@ -2299,14 +2299,14 @@ func _init() -> void:
 	sg_e.state.energy = 9
 	sg_e.use_spell(0)
 	check(sg_e.state.unit_at(Vector2i(2, 1)) != null,
-			"空间守护：使用技能卡不触发（R268 只认效果卡）")
+			"和风守护：使用技能卡不触发（R268 只认效果卡）")
 	sg_e.state.hand = [repo.get_card(9002)]
 	sg_e.state.energy = 9
 	sg_e.use_effect(0)
 	check(sg_e.state.unit_at(Vector2i(2, 1)) == null
 			and sg_e.state.unit_at(Vector2i(0, 1)) != null
 			and sg_e.state.unit_at(Vector2i(0, 0)) != null,
-			"空间守护：使用效果卡触发 → 离己方 HP 最近的敌人（第 2 行）被推回 2 格到第 0 行")
+			"和风守护：使用效果卡触发 → 离己方 HP 最近的敌人（第 2 行）被推回 2 格到第 0 行")
 
 	# ---- R489：「使用此卡本身不会触发」只否掉它自己那一条，不连带否掉同族的另一张 ----
 	# 用户实测「这张卡发动一些效果卡不一定触发」：打 9064 时飓风咆哮被一起 return 挡掉了。
@@ -2316,12 +2316,12 @@ func _init() -> void:
 	x_e.state.effects.append(repo.get_card(9063))          # 飓风咆哮已在效果区
 	x_e.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(2, 1),
 			GameEngine.SIDE_OPPONENT)
-	x_e.state.hand = [repo.get_card(9064)]                  # 手里打出空间守护
+	x_e.state.hand = [repo.get_card(9064)]                  # 手里打出和风守护
 	x_e.state.energy = 9
 	x_e.use_effect(0)
 	check(x_e.state.unit_at(Vector2i(2, 1)) != null
 			and x_e.state.unit_at(Vector2i(2, 1)).health == 4,
-			"R489：打出空间守护 → 飓风咆哮照常触发（8-4=4）；它自己不触发，所以敌人留在原地")
+			"R489：打出和风守护 → 飓风咆哮照常触发（8-4=4）；它自己不触发，所以敌人留在原地")
 
 	var x2_e := _new_engine([], 20, 20, -1, false)
 	x2_e.start_game(0)
@@ -2338,7 +2338,7 @@ func _init() -> void:
 
 	var x3_e := _new_engine([], 20, 20, -1, false)
 	x3_e.start_game(0)
-	x3_e.state.effects.append(repo.get_card(9064))          # 效果区只有空间守护
+	x3_e.state.effects.append(repo.get_card(9064))          # 效果区只有和风守护
 	x3_e.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(2, 1),
 			GameEngine.SIDE_OPPONENT)
 	x3_e.state.hand = [repo.get_card(9063)]                 # 打出飓风咆哮本身
@@ -2346,7 +2346,7 @@ func _init() -> void:
 	x3_e.use_effect(0)
 	check(x3_e.state.unit_at(Vector2i(0, 1)) != null
 			and x3_e.state.unit_at(Vector2i(0, 1)).health == 8,
-			"R489：打出飓风咆哮本身 → 不触发它自己，但仍会触发效果区里的空间守护（敌人满血但被退后）")
+			"R489：打出飓风咆哮本身 → 不触发它自己，但仍会触发效果区里的和风守护（敌人满血但被退后）")
 
 	# ---- 自愈（9065）：2 费稀有效果；战斗结束后回复 8 点生命 ----
 	var nc_sh := repo.get_card(9065)
