@@ -6101,6 +6101,53 @@
       "target_mode": "unit",
       "color": "红",
       "image": ""
+    },
+    {
+      "id": 9218,
+      "name": "土元素",
+      "kind": "盟友",
+      "cost": 10,
+      "power": 2,
+      "health": 23,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 2,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [
+        "土元素"
+      ],
+      "affixes": [],
+      "effect_text": "本次对战中，你每使用一张盟友卡，此卡费用 -2。场上所有己方盟友力量 +3，受到的伤害 -1。",
+      "target_mode": "none",
+      "color": "棕",
+      "image": ""
+    },
+    {
+      "id": 9219,
+      "name": "压感地雷",
+      "kind": "工事",
+      "cost": 1,
+      "power": 1,
+      "health": 1,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "工事",
+        "机械",
+        "压感地雷"
+      ],
+      "affixes": [
+        "超负荷",
+        "死亡"
+      ],
+      "effect_text": "**超负荷**。死亡：若此卡生命为负数，对敌方所有单位造成等同于负血量的伤害。",
+      "target_mode": "none",
+      "color": "橙",
+      "image": ""
     }
   ]
 }

@@ -12015,6 +12015,23 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_shake(8.0, 360)
 			_say("💥 %s 死亡爆炸：周围四格各 -%d" % [
 					str(data["card"].card_name), int(data.get("amount", 0))])
+		"mine_blast":
+			# R493 压感地雷（9219 / 机械之心 · 普通工事）：生命为负时死亡 →
+			# **敌方所有单位**各吃「低于 0 的那部分」伤害。特效与爆炎鸭同源，
+			# 只有文案 / 范围不同（不是「周围四格」）。
+			sfx.play("destroy")
+			var mb_when := maxi(n + 120,
+					_hit_cue_at(data.get("center", Vector2i(-1, -1)) as Vector2i))
+			for mb_c in data.get("cells", []):
+				_bursts.append({"pos": _cell_center(mb_c as Vector2i), "sc": _grid_scroll,
+						"start": mb_when, "dur": 620, "col": Color("ffb03a"), "big": true})
+			_floaters.append({"pos": _cell_center(data["center"]) + Vector2(0, -18),
+					"sc": _grid_scroll,
+					"text": "%s -%d" % [str(data["card"].card_name), int(data.get("amount", 0))],
+					"col": Color("d84a12"), "start": mb_when, "dur": 1400, "size": 20})
+			_shake(8.0, 360)
+			_say("💥 %s：引爆，敌方所有单位各 -%d" % [
+					str(data["card"].card_name), int(data.get("amount", 0))])
 		"trap_hit":
 			# 冰霜 / 冻结陷阱（R51）：攻击者踩陷阱吃直伤 —— 蓝白火花 + 飘字（同源同特效）
 			# R460：这个事件**只由「移动踏入」触发**（`_field_trigger` 是唯一口），

@@ -810,6 +810,19 @@ const VOID_LORD_TRAIT:= "风元素"
 const VOID_LORD_PRESENCE_DISCOUNT:= 1
 const VOID_LORD_DMG_DISCOUNT:= 1
 
+# ── R493：土元素（9218） / 压感地雷（9219）──
+# 土元素（森林精魄 · 史诗盟友）：10 费 2/23 程1 速1。两条机制：
+#   ① 本次对战中我方**每使用一张盟友卡**，这张卡费用 -2（本场累计，走 cost_of 唯一口）；
+#   ② 在场时，场上**所有己方盟友**力量 +3、受到的伤害 -1（光环，见 _refresh_earth_aura）。
+# 压感地雷（机械之心 · 普通工事）：1 费 1/1 程0，带「超负荷」；死亡时若生命为负数，
+#   对**敌方所有单位**造成等同于负血量的伤害（负血越深炸得越狠）。
+const EARTH_ELEMENTAL_ID:= 9218
+const EARTH_ELEMENTAL_TRAIT:= "土元素"
+const EARTH_ELEMENTAL_COST_DOWN:= 2
+const EARTH_AURA_ATK:= 3
+const EARTH_AURA_REDUCE:= 1
+const PRESSURE_MINE_ID:= 9219
+
 # ── 流星雨（9083 技能，2026-10-01）──
 # X 费卡：施放瞬间 X = 该方剩余的全部费用，一次性全部消耗（类杀戮尖塔）。
 # 对随机敌人造成 METEOR_SHOWER_DMG 点伤害、重复 X 次，每次独立随机选目标；
@@ -4048,6 +4061,7 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 	c -= _turn_instance_discount(card, side)
 	c -= _magic_core_discount(card, side)
 	c -= _void_lord_discount(card, side)
+	c -= _earth_elemental_discount(card, side)
 	# R271：**手卡内减费**（谟涅摩叙涅「随机变化入手 -2」）——
 	# 判据 = 这张卡此刻还在手牌里，离手即自动恢复原价（与 hand_free 同一条路）。
 	if card != null and state.hand_cost_delta.has(card) and state.hand.has(card):
@@ -4223,6 +4237,16 @@ func _void_lord_discount(card: CardData, side:= SIDE_SELF) -> int:
 	if card.id == VOID_LORD_ID:
 		d += state.void_dmg_spells * VOID_LORD_DMG_DISCOUNT
 	return d
+
+
+func _earth_elemental_discount(card: CardData, side:= SIDE_SELF) -> int:
+	## 土元素（9218，R493）：**本次对战中我方每使用过一张盟友卡，这张卡费用 -2**。
+	## 计数 `state.self_ally_plays` 只在本场战斗内累计（累加口 `_note_card_played`）。
+	## 与风元素 9082 的第二条同范式：读「本场累计数」而不是逐张扣费 —— 好处是
+	## 土元素**还在牌库 / 弃牌区**时也算得对，抽到手就是降价后的费用。
+	if side != SIDE_SELF or card == null or card.id != EARTH_ELEMENTAL_ID:
+		return 0
+	return state.self_ally_plays * EARTH_ELEMENTAL_COST_DOWN
 
 
 func _mark_spell_enemy_hit() -> void :
@@ -7932,6 +7956,11 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 	##   5) 不眠（9101 效果）：结算收尾时手里没牌 → 抽 1 张（0 费卡本回合 +1 费）。
 	if side == SIDE_SELF:
 		state.self_card_plays += 1
+		# R493 土元素（9218）：「本次对战中每使用一张盟友卡费用 -2」的计数。
+		# 只认**盟友卡**（工事 / 技能 / 效果都不算）；累加口就这一处，风元素那条留在
+		# `_mark_spell_enemy_hit` 的伤害计数里，两者互不干扰。
+		if played != null and played.kind == "盟友":
+			state.self_ally_plays += 1
 		# R346 成就统计：累计「用过多少张牌」—— 按卡 id 与卡类各记一份。
 		# 记在这里是因为 `_note_card_played` 是**唯一**出牌收尾口（play_from_hand /
 		# use_spell / use_effect / remote_* 全都会走到），别在这四处各写一遍。
@@ -11025,6 +11054,9 @@ func _wind_force_dmg(side: String) -> int:
 
 
 func _on_ally_entered(p: Placement, side: String) -> void :
+	# R493：先刷土元素光环 —— 这一格刚刚多了一个盟友，全体的 +3 要立刻到位
+	#（放在 `kind != 盟友` 的早退之前：土元素自己也可能就是刚上场的那张）。
+	_refresh_earth_aura(side)
 
 
 
@@ -11514,6 +11546,15 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		dmg = maxi(1, dmg - p.dmg_reduce)
 		if dmg != ab:
 			_log("%s：加厚装甲减伤 %d → 受到的伤害 %d → %d" % [p.card.card_name, p.dmg_reduce, ab, dmg])
+	# ①e 土元素（9218，R493）：场上有土元素 → **己方盟友**受到的伤害 -1（至少仍受 1 点）。
+	#    「己方盟友」= 光环只照顾盟友，工事 / 场地不吃（卡面写的就是「所有己方盟友」）；
+	#    判定读场面（`has_earth_elemental`），土元素**自己也算盟友**（卡面没写「其他」）。
+	if p != null and p.card != null and dmg > 0 and p.card.kind == "盟友" \
+			and state.has_earth_elemental(p.owner):
+		var eb:= dmg
+		dmg = maxi(1, dmg - EARTH_AURA_REDUCE)
+		if dmg != eb:
+			_log("土元素光环：%s 受到的伤害 %d → %d" % [p.card.card_name, eb, dmg])
 	# ①d 关卡效果卡「枭熊之怒」（9212，R467）：**半血以上**受到的伤害 -1（至少仍受 1 点）。
 	#    判据用「扣血之前」的生命 —— 这一下把枭熊从半血以上打进半血以下时，它吃的是
 	#    「半血以上」那一档；下一刀起才换成践踏。效果卡不在敌方效果区就不生效（卡面是关卡效果）。
@@ -11662,6 +11703,9 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 		dmg = maxi(1, dmg - p.upgrade_stacks * HEAVY_TANK_REDUCE_PER_STACK)
 	if dmg > 0 and p.dmg_reduce > 0:
 		dmg = maxi(1, dmg - p.dmg_reduce)
+	# R493 土元素（9218）：与 `_unit_damage_taken()` 的 ①e 同位置同理
+	if dmg > 0 and p.card.kind == "盟友" and state.has_earth_elemental(p.owner):
+		dmg = maxi(1, dmg - EARTH_AURA_REDUCE)
 	# R467 枭熊之怒（9212）：与 `_unit_damage_taken()` 的 ①d 同位置同理
 	if dmg > 0 and p.card.traits.has(OWLBEAR_TRAIT) and p.health * 2 > p.card.health \
 			and _zone_has(state.enemy_effects, OWLBEAR_INSTINCT_TRAIT):
@@ -12381,6 +12425,9 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 	if p.hidden_energy:
 		_hidden_energy_death(p, cell)
 	match p.card.id:
+		PRESSURE_MINE_ID:
+			# 压感地雷（9219，R493）：负血死亡 → 把「低于 0 的那部分」炸向敌方全体
+			_pressure_mine_blast(cell, p)
 		WYVERN_ID:
 			_summon_token(WYVERN_TOKEN_ID, cell, p.owner, 1)
 		GHOUL_ID:
@@ -12656,6 +12703,43 @@ func _death_wipe(center: Vector2i, amount: int, card: CardData) -> void :
 	_destroy_dead()
 	_end_hp_once()
 	action.emit("blast", {"center": center, "cells": cells, "amount": amount, "card": card})
+
+
+func _pressure_mine_blast(cell: Vector2i, p: Placement) -> void :
+	## 压感地雷（9219，R493）的亡语：**若此卡生命为负数**，对**敌方所有单位**
+	## 造成等同于负血量绝对值的伤害（「低于 0 的部分」）。
+	## ⚠️ 只有 `health < 0` 才炸：恰好 0 血（1 伤打死）负血部分 = 0，等于没炸 ——
+	##    这是卡面写死的口径，不是漏判。
+	## ⚠️ 伤害逐格走 `_hit_unit()`（护盾 / 减伤 / 侦察塔光环 / 土元素光环照常生效），
+	##    致死统一交 `_destroy_dead()`，不自己 erase。
+	## ⚠️ 卡已离场（`_destroy` 已 erase），这里只用 `cell`（演出锚点）与 `p.owner` / `p.health`，
+	##    不要回头读 `_cell_of(p)`。
+	## ⚠️ 场上没有敌方单位时**不溢出到对方 HP**（与隐藏能源 8078 同口径：卡面写的是「敌人」）。
+	if p == null or p.card == null or p.health >= 0:
+		return
+	var amount:= -p.health
+	var foe:= SIDE_OPPONENT if p.owner == SIDE_SELF else SIDE_SELF
+	var cells: Array[Vector2i] = []
+	for c: Vector2i in state.board.keys():
+		var q: Placement = state.unit_at(c)
+		if q != null and q.owner == foe:
+			cells.append(c)
+	cells.sort()   # 顺序稳定 → 同种子回放可复现
+	if cells.is_empty():
+		_log("压感地雷：生命 %d（负血 %d），但场上没有敌方单位 → 不结算" % [p.health, amount])
+		return
+	_log("压感地雷：生命 %d → 对 %d 个敌方单位各造成 %d 点伤害" % [p.health, cells.size(), amount])
+	for c2: Vector2i in cells:
+		var q2: Placement = state.unit_at(c2)
+		if q2 == null:
+			continue
+		var dealt:= _hit_unit(q2, amount, "压感地雷")
+		_log("压感地雷：%s -%d（剩余 %d）" % [q2.card.card_name, dealt, q2.health])
+	# 演出事件：battle_scene 的 "mine_blast" 分支（爆炸 + 飘字 + 台词）。
+	# ⚠️ **不复用 "blast"** —— 那条的台词写死「周围四格」，这里打的是敌方全体。
+	action.emit("mine_blast", {"center": cell, "cells": cells,
+			"amount": amount, "card": p.card})
+	_destroy_dead()
 
 
 func _death_blast(center: Vector2i, amount: int, card: CardData) -> void :
@@ -16443,6 +16527,9 @@ func _refresh_dark_lord(side: String) -> void :
 # ================= R152：赫卡同克瑞斯孤军 =================
 
 func _refresh_hecaton(side: String) -> void:
+	# R493：土元素光环与孤军同性质 —— 只在「场上单位构成变了」时才需要重算，
+	# 所以共用这一批调用点（开局 / 双方回合开始 / 击破 / 召唤），少一处就会静默失效。
+	_refresh_earth_aura(side)
 	## 赫卡同克瑞斯（9136）：场上**只有它一个**己方单位时，孤军 buff 成立
 	## → `hecaton_atk = HECATON_ATK_BUFF`（+2 力），否则归 0。
 	## 与 `_refresh_dark_lord` 完全同范式：只写 Placement 字段、不碰 card，
@@ -16463,6 +16550,28 @@ func _refresh_hecaton(side: String) -> void:
 			_log("赫卡同克瑞斯孤军：%s（场上己方单位数 %d）" % [
 					"力 +%d、攻击伤害减半" % HECATON_ATK_BUFF if p.hecaton_atk > 0 else "失效",
 					n])
+
+
+# ================= R493：土元素光环 =================
+
+func _refresh_earth_aura(side: String) -> void:
+	## 土元素（9218，R493）的力量光环：**该方场上有土元素** → 该方所有盟友
+	## `earth_aura_atk = EARTH_AURA_ATK`，否则归 0。
+	## 与 `_refresh_hecaton` / `_refresh_dark_lord` 完全同范式：只写 Placement 字段、
+	## **绝不烤进 CardData**（敌方单位用的是卡库共享实例，写 card 会跨局泄漏）。
+	## ⚠️「所有己方盟友」**包含土元素自己**（卡面没写「其他」），但不含工事 / 场地。
+	## ⚠️ 多张土元素**不叠加**（与太阳熔炉 / 量产型赫利俄斯同口径：光环只判「在不在」）。
+	## 调用点 = `_refresh_hecaton()` 开头（共用那批「场上单位构成变了」的时机）
+	##        + `_on_ally_entered()`（入场立刻生效，不用等到下个回合）。
+	var want:= EARTH_AURA_ATK if state.has_earth_elemental(side) else 0
+	for c: Vector2i in state.board:
+		var p: Placement = state.board[c]
+		if p.owner != side or p.card == null or p.card.kind != "盟友":
+			continue
+		if p.earth_aura_atk == want:
+			continue
+		p.earth_aura_atk = want
+		_log("土元素光环：%s 力量 %+d（当前 %d）" % [p.card.card_name, want, p.effective_power()])
 
 
 # ================= R270：夜鸭「惧光」 =================

@@ -56,6 +56,9 @@ var opp_card_plays := 0         # 同上，敌方（对称保留：敌方若拿�
 var wild_form_used := false     # 荒野形态 6022（R60）：本场战斗中是否已触发过「第一次受击减伤+反伤」
 var void_dmg_spells := 0       # 风元素 9082：本次对战中「用技能牌对敌方造成伤害」的次数
 #                              （每发生一次，手卡里的风元素费用 -1；只在本场战斗内累计）
+## R493 土元素（9218）：**本次对战中我方使用过的盟友卡张数** —— 土元素每用一张就 -2 费。
+## 只在本场战斗内累计（每场战斗新建 FieldState 即归零），累加口 `GameEngine._note_card_played`。
+var self_ally_plays := 0
 ## R140：本局「消失」的卡数（消耗区计数）—— 离场消失 / 用后消失 / 从抽牌库抹除，
 ## 共同点 = **不进弃牌区、也不回手牌**，等于从本场牌组里抹掉。累加口见各处
 ## `void_count += 1`（FieldState.discard_hand / GameEngine 的 use_spell·_destroy·
@@ -390,6 +393,19 @@ func has_mass_helios(side: String) -> bool:
 	##    `_unit_damage_taken` 里用 `p.card.id != MASS_HELIOS_ID` 补。
 	for p: Placement in board.values():
 		if p.owner == side and p.card.id == GameEngine.MASS_HELIOS_ID:
+			return true
+	return false
+
+
+func has_earth_elemental(side: String) -> bool:
+	## 「土元素」（9218，R493）是否在**该方场上**。
+	## 它是「场上所有己方盟友力量 +3、受到的伤害 -1」这条光环的唯一开关：
+	## 力量那一半由 `GameEngine._refresh_earth_aura()` 写进 `Placement.earth_aura_atk`，
+	## 减伤那一半在 `_unit_damage_taken` / `preview_hit_damage` 实时判这里。
+	## 与 `has_mass_helios` / `has_sun_forge` 同范式：实时扫场面、绝不烤进 CardData ——
+	## 「土元素被打掉 → 光环立刻断」是免费的。
+	for p: Placement in board.values():
+		if p.owner == side and p.card != null and p.card.traits.has(GameEngine.EARTH_ELEMENTAL_TRAIT):
 			return true
 	return false
 
