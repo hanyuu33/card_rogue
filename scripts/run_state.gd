@@ -363,9 +363,16 @@ const FENCE_CARD_ID := 9072
 const MERCHANT_MIN_COST := 5      # 卡片商人「以卡易物」收的卡：**5 费及以上**
 const BIGCHEST_GOLD := 80         # 大宝箱里的金币（与地图上的大宝箱房同一个数）
 const VENDOR_GOLD := 100          # 卡片商人「随机折价」给的金币
-const LAKE_INITIAL_RARITY := 3    # 湖中仙女「谎言」删的卡：稀有度 3 = 初始
+const LAKE_INITIAL_RARITY := 3    # 旧口径「谎言只删初始卡」：R488 起谎言改成删任意非诅咒卡，常量留给旧断言
 const LAKE_EPIC_RARITY := 2       # 湖中仙女「诚实」给的卡：稀有度 2 = 史诗
-const CURSE_RARITY := 6           # 稀有度 6 = 诅咒（「随机折价」不碰这些）
+const CURSE_RARITY := 6           # 稀有度 6 = 诅咒（「折价」与「谎言」都不碰这些）
+## R488（用户口径）：湖中仙女「谎言」= **卡组里随机一张牌**（排除诅咒），
+## 并且**进门就摇定**、把卡名写进按钮 —— 所以摇定结果要记下来。
+## 为什么存**卡组下标**而不是卡 id：同名卡在卡组里可能一张带附魔一张没有，
+## 按 id 随机等于「删掉随便哪一张同名的」，界面写「失去『铁栅栏』」而实际删的是另一张。
+## 存下标 = 锁到**具体那一个实例**（`card_with_mod()` 能把它连附魔一起拿出来展示）。
+## 随存档（run_save）：回标题 → 继续 → 重进本房，显示的必须还是同一张。
+static var lake_victim := -1
 
 # 事件「运送委托」（R200）的货物卡（cards.json）：3 费工事 0/6/0/0（R280 由 1 费上调），
 # **被破坏时从卡组中删除**（引擎 `_destroy` 的货物分支是唯一口）。
@@ -947,6 +954,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# + 角色专属卡（森林精魄 → 熊 8004；暗影刺客 → 突袭 9086）。见 PlayerClass.start_deck_ids。
 	deck_ids = PlayerClass.start_deck_ids(player_class)
 	deck_mods = []                # R181：新开一局 → 附魔清空
+	lake_victim = -1              # R488：新开一局 → 湖中仙女没摇过「要失去的那张」
 	card_growth = {}             # R393：新开一局 → 击杀成长清零
 	milk_anim = []                # R323：牛奶的演示数据也清掉
 	resume_battle = {}            # R323：清掉「正在打的这场」（下面按需重写）
@@ -2097,18 +2105,38 @@ static func vendor_discard_random() -> Dictionary:
 	return {"ok": true, "lost_id": lost_id, "lost_name": nm, "gold": VENDOR_GOLD}
 
 
+static func lake_lady_peek() -> Dictionary:
+	## 湖中仙女 · 谎言（R488）：**进门就摇定**要失去的那一张，按钮上才能写死卡名。
+	## 候选 = 卡组里所有**非诅咒卡**（用户口径：别让「谎言」顺手帮玩家清掉诅咒）。
+	## 幂等：已摇定且下标仍在候选池里 → 直接复用，**别每帧重摇**（否则按钮卡名会跳）。
+	## 返回 {ok, index, card_id, name, enchanted}；池空 → ok = false（按钮该禁用）。
+	var repo := CardRepo.load_json()
+	var pool := deck_indices_not_curse()
+	if pool.is_empty():
+		lake_victim = -1
+		return {"ok": false}
+	if lake_victim < 0 or not pool.has(lake_victim):
+		lake_victim = random_deck_index(pool)   # 只走 run_rng：同种子必然同一张
+	var c := card_with_mod(repo, lake_victim)   # 带附魔 / 本局成长的那一张
+	var nm := c.card_name if c != null else str(deck_ids[lake_victim])
+	return {"ok": true, "index": lake_victim, "card_id": int(deck_ids[lake_victim]),
+			"name": nm, "enchanted": c != null and c.has_enchant()}
+
+
 static func lake_lady_lie() -> Dictionary:
-	## 湖中仙女 · 谎言：**随机删掉一张初始卡**（稀有度 3）。
-	## 返回 {ok, lost_id, lost_name}（卡组里没有初始卡 → ok = false，按钮该是禁用的）。
-	var pool := deck_indices_of_rarity(LAKE_INITIAL_RARITY)
-	var idx := random_deck_index(pool)
-	if idx < 0:
+	## 湖中仙女 · 谎言（R488）：删掉**摇定的那一个下标** —— 界面上写的是哪张就删哪张。
+	## 返回 {ok, index, lost_id, lost_name}（卡组里只剩诅咒卡 → ok = false）。
+	var peek := lake_lady_peek()
+	if not bool(peek.get("ok", false)):
+		return {"ok": false}
+	var idx := int(peek["index"])
+	if idx < 0 or idx >= deck_ids.size():
 		return {"ok": false}
 	var lost_id := int(deck_ids[idx])
-	var c := CardRepo.load_json().get_card(lost_id)
-	var nm := c.card_name if c != null else str(lost_id)
-	delete_deck_card(idx)
-	return {"ok": true, "lost_id": lost_id, "lost_name": nm}
+	var nm := str(peek.get("name", str(lost_id)))
+	delete_deck_card(idx)     # ⚠️ 删完后面的下标全部前移 → 摇定立刻作废（别留着骗下一次 peek）
+	lake_victim = -1
+	return {"ok": true, "index": idx, "lost_id": lost_id, "lost_name": nm}
 
 
 static func lake_lady_truth() -> Dictionary:

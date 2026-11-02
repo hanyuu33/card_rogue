@@ -350,6 +350,9 @@ var _div_rolled := 0          # R308 占卜室：本次占卜出的是第几种�
 var _div_result := ""         # R308 占卜室：解读后的结果行（收尾态复用）
 var _merchant_done := false   # R305 卡片商人：是否已经做过一笔交易
 var _lake_done := false       # R305 湖中仙女：是否已经许过愿
+## R488：湖中仙女 · 谎言**进门就摇定**的那一张（`RunState.lake_lady_peek()` 的结果）。
+## 存在场景变量里只是为了按钮铺排与悬浮绑实例；真身是 `RunState.lake_victim`（随存档）。
+var _lake_pick := {}
 var _treasure_taken := false  # 宝箱（支付生命换卡牌奖励）：是否已开
 var _delivery_taken := false  # R200 运送委托：本次是否已接取（选过货物）
 var _delivery_count := 0      # R200 运送委托：本次接了几张
@@ -894,6 +897,12 @@ func _ready() -> void:
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "lake_lady"
 			RunState.deck_ids = [8001, 8002, 8003, 8004, 9018]
+			RunState.ensure_deck_mods()
+			# R488：固定摇定第 4 张（9018 金属龙）并给它挂一条「费用 -1」附魔 ——
+			# 截图可复现，而且能验证悬浮里画的是**这一张实例**（4 费 + 附魔标记），
+			# 不是卡库原卡（5 费、无附魔）。配合 `--tip 金属龙` 出图。
+			RunState.deck_mods[4] = RunState.enchant_mod("costdown")
+			RunState.lake_victim = 4
 		if args[i] == "--delivery":  # 演示：伪装 run 运送委托事件（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -1096,11 +1105,14 @@ func _ready() -> void:
 			result_label.text = "水面已经平静了。"
 			result_label.add_theme_color_override("font_color", Color("8a9ad8"))
 		else:
-			var has_initial := not RunState.deck_indices_of_rarity(
-					RunState.LAKE_INITIAL_RARITY).is_empty()
-			rest_btn.text = "谎言：随机扔掉一张初始卡" if has_initial \
-					else "谎言：（卡组里没有初始卡了）"
-			rest_btn.disabled = not has_initial
+			# R488（用户口径）：进门就摇定「要失去的那一张」，按钮直接把卡名写死 ——
+			# 悬浮这个名字看到的是**卡组里那一张实例**（连附魔 / 本局成长一起），
+			# 不是卡库原卡。候选 = 全部非诅咒卡。
+			_lake_pick = RunState.lake_lady_peek()
+			var has_pick := bool(_lake_pick.get("ok", false))
+			rest_btn.text = ("谎言：失去「%s」" % str(_lake_pick.get("name", ""))) \
+					if has_pick else "谎言：（卡组里没有能失去的卡）"
+			rest_btn.disabled = not has_pick
 			bbq_btn.visible = true
 			bbq_btn.text = "诚实：获得一张随机史诗卡"
 			bbq_btn.disabled = false
@@ -1320,6 +1332,8 @@ func _ready() -> void:
 		_ui_alt()
 	elif "--furnacetake" in args:   # R454：熔炉「已投入」的收尾态（配 --furnace 用）
 		_on_main()
+	elif "--lakeladylie" in args:   # R488：湖中仙女「谎言已应验」的收尾态（配 --lakelady 用）
+		_on_main()
 	# 命令行 -- --screenshot：打开后自动截图退出（视觉验证用）
 	if "--screenshot" in args:
 		var t := Timer.new()
@@ -1455,7 +1469,11 @@ func _on_main() -> void:
 		if not bool(lie.get("ok", false)):
 			return
 		_lake_done = true
+		_lake_pick = {}          # R488：那张卡已经没了，悬浮绑定必须立刻失效
 		_claim_reward(rest_btn)
+		# R488：删卡是**不可逆消耗** —— 结算当刻就标完成。否则「回标题 → 继续 → 重进本房」
+		# 会重新摇一张再删一次（R454 熔炉同一条纪律）。
+		RunState.complete_current()
 		_collapse_to_leave()
 		desc.text = LAKE_DONE_DESC
 		result_label.text = "谎言应验：「%s」从卡组里消失了。" % str(lie.get("lost_name", ""))
@@ -2338,6 +2356,8 @@ func _on_bbq() -> void:
 			return
 		_lake_done = true
 		_claim_reward(bbq_btn)
+		# R488：拿到卡同样是**一次访问一次性**（重进本房不该再领一次史诗卡）。
+		RunState.complete_current()
 		_collapse_to_leave()
 		desc.text = LAKE_DONE_DESC
 		result_label.text = "实话换来的礼物：「%s」已加入卡组。" % str(truth.get("name", ""))
@@ -2481,6 +2501,14 @@ func _process(_delta: float) -> void:
 			if h["ref"]["name"] == _tip_demo:
 				_tip_anchor = h["rect"].end + Vector2(0, 6)
 				break
+		# R488：选项按钮里的提及也要能锁 ——「谎言：失去『X』」的卡名只出现在按钮文本里
+		# （不锁住的话 headless 出图永远看不到那张实例卡的悬浮件）。
+		if ref.is_empty():
+			for hb: Dictionary in _ref_btn_hits:
+				if str(hb["ref"].get("name", "")) == _tip_demo:
+					ref = hb["ref"]
+					_tip_anchor = (hb["rect"] as Rect2).position + Vector2(0, 24)
+					break
 	elif not UiGate.blocked():
 		# UiGate：奖励悬浮窗 / 牌库面板盖着时一律让位（R121 的既有约定）
 		var mp := get_viewport().get_mouse_position()
@@ -2505,7 +2533,8 @@ static func _same_ref(a: Dictionary, b: Dictionary) -> bool:
 		return false
 	if a.is_empty():
 		return true
-	return str(a["kind"]) == str(b["kind"]) and int(a["id"]) == int(b["id"])
+	return str(a["kind"]) == str(b["kind"]) and int(a["id"]) == int(b["id"]) \
+			and int(a.get("deck_index", -1)) == int(b.get("deck_index", -1))
 
 
 static func _ref_index() -> Dictionary:
@@ -2624,9 +2653,15 @@ func _ref_button_hits() -> void:
 			cr = maxi((nsb as StyleBoxFlat).corner_radius_top_left,
 					(nsb as StyleBoxFlat).corner_radius_bottom_left)
 		for m: Dictionary in Mention.scan(b.text):
+			var bref := {"name": m["name"], "kind": m["kind"], "id": m["id"]}
+			# R488：湖中仙女的谎言按钮绑的是**卡组里那一个实例**（含附魔 / 本局成长），
+			# 不是卡库原卡 —— 悬浮要看到「真会被删掉的那张」，同名卡才分得清。
+			if b == rest_btn and _is_lake_lady() and not _lake_done \
+					and bool(_lake_pick.get("ok", false)) \
+					and int(m["id"]) == int(_lake_pick.get("card_id", -1)):
+				bref["deck_index"] = int(_lake_pick.get("index", -1))
 			_ref_btn_hits.append({"rect": b.get_global_rect(), "ring": ring,
-					"corner": cr,
-					"ref": {"name": m["name"], "kind": m["kind"], "id": m["id"]}})
+					"corner": cr, "ref": bref})
 
 
 func _on_tip_draw() -> void:
@@ -2699,7 +2734,9 @@ func _draw_card_tip() -> void:
 	## 卡牌 → **真实卡面**（与图鉴 / 战场同一套 CardFace，所见即所得）。
 	## R168：改用共享的 `Mention.draw_tip()`（全工程同一套悬浮件），并把这**张卡的文案里
 	## 提到的其它卡 / 道具**的摘要一并附在卡面下方 —— 看一张卡就能顺带看到它提到的卡。
-	var card: CardData = CardRepo.load_json().get_card(int(_hover_ref["id"]))
+	## R488：取卡走 `Mention.card_for()` —— 引用里绑了 `deck_index` 时给的是**卡组里那张实例**
+	## （附魔 / 本局成长都在），否则退回卡库原卡。下面算摘要高度与画浮窗必须用同一张。
+	var card: CardData = Mention.card_for(_hover_ref)
 	if card == null:
 		return
 	var sz := Mention.tip_size(_font, _hover_ref)

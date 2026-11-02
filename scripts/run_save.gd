@@ -38,7 +38,9 @@ const TRACE_KEEP := 200
 ##     包装能解开、但内容可能已经没法继续 —— 这就得靠版本号 + 体检来判断。
 ## ⚠️ 这个数字**必须真的写进存档**（`snapshot()` 的 `data_ver`）。没有它，两台机器之间
 ##    同步来的档就永远分不清「旧档」还是「新档」，只能靠猜；而猜错的代价是玩家的进度。
-const CONTENT_VERSION := 1
+## R488：v2 —— 新增 `lake_victim`（湖中仙女「谎言」摇定的卡组下标）。缺这个键的旧档照样读
+## （默认 -1 = 进房重摇），所以 `MIN_CONTENT_VERSION` 保持在 0。
+const CONTENT_VERSION := 2
 ## 低于它的档一律不能读（改结构时把它抬到「还认的老结构」那一档）。
 ## 0 = 目前还认所有 R486 之前（没有 data_ver 字段）的档。
 const MIN_CONTENT_VERSION := 0
@@ -138,6 +140,9 @@ static func snapshot() -> Dictionary:
 		"hp": RunState.hp,
 		"deck_ids": RunState.deck_ids,
 		"deck_mods": RunState.deck_mods,
+		# R488：湖中仙女「谎言」摇定的那一张（卡组下标）—— 不存的话
+		# 「回标题 → 继续 → 重进本房」会换一张，按钮上写的卡名与实际删掉的不是同一张。
+		"lake_victim": RunState.lake_victim,
 		"card_growth": RunState.card_growth,   # R393：本局永久击杀成长
 		"gold": RunState.gold,
 		"map_cells": RunState.map_cells,
@@ -341,6 +346,10 @@ static func apply(d: Dictionary) -> bool:
 	RunState.deck_ids = _int_array(d.get("deck_ids", []))
 	RunState.deck_mods = d.get("deck_mods", []) if d.get("deck_mods", []) is Array else []
 	RunState.ensure_deck_mods()   # R204：老存档没有 deck_mods → 补齐成与 deck_ids 等长
+	# R488：湖中仙女「谎言」摇定的那一张（卡组下标）。老存档没这个键 → -1（进房时重摇）；
+	# 下标越界也回 -1（卡组被改短过的话，旧下标已经没有意义，不能拿去删卡）。
+	var lv := int(d.get("lake_victim", -1))
+	RunState.lake_victim = lv if lv >= 0 and lv < RunState.deck_ids.size() else -1
 	# R393：本局永久击杀成长。老存档没有这个键 → 空账（卡面回到基础数值）。
 	RunState.card_growth = {}
 	var cg_raw: Variant = d.get("card_growth", {})

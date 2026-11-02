@@ -19131,13 +19131,47 @@ func _init() -> void:
 	RunState.ensure_deck_mods()
 	check(not bool(RunState.vendor_discard_random().get("ok", false)),
 			"R305 卡片商人：卡组只剩诅咒卡时折价不可用")
-	# ④ 湖中仙女：谎言只删初始卡；诚实给一张史诗并入组
+	# ④ 湖中仙女（R488）：谎言进门摇定一张非诅咒卡，删的必须正是摇定那张；诚实给一张史诗并入组
 	RunState.deck_ids = [8001, 8002, 9018]
 	RunState.ensure_deck_mods()
-	var r305_l := RunState.lake_lady_lie()
-	check(bool(r305_l.get("ok", false)) and RunState.deck_ids.size() == 2
-			and RunState.deck_ids.has(9018),
-			"R305 湖中仙女：谎言只删初始卡（5 费的金属龙留着）")
+	RunState.lake_victim = -1
+	var r488_peek := RunState.lake_lady_peek()
+	var r488_idx := int(r488_peek.get("index", -1))
+	check(bool(r488_peek.get("ok", false)) and r488_idx >= 0 and r488_idx < 3
+			and str(r488_peek.get("name", "")) != ""
+			and RunState.lake_victim == r488_idx,
+			"R488 湖中仙女：进门摇定一张要失去的卡并记进 lake_victim（第 %d 张「%s」）"
+			% [r488_idx, str(r488_peek.get("name", ""))])
+	check(int(RunState.lake_lady_peek().get("index", -2)) == r488_idx,
+			"R488 湖中仙女：同一次访问重复 peek 不重摇（按钮卡名不跳）")
+	var r488_rest := RunState.deck_ids.duplicate()
+	r488_rest.remove_at(r488_idx)
+	var r488_l := RunState.lake_lady_lie()
+	check(bool(r488_l.get("ok", false)) and RunState.deck_ids == r488_rest
+			and RunState.lake_victim == -1,
+			"R488 湖中仙女：删掉的就是摇定那一张（不是按 id 撞运气）")
+	# 候选不再限初始卡：卡组只剩一张 5 费卡时照样抽得中
+	RunState.deck_ids = [9018]
+	RunState.ensure_deck_mods()
+	RunState.lake_victim = -1
+	var r488_any := RunState.lake_lady_peek()
+	check(bool(r488_any.get("ok", false)) and int(r488_any.get("card_id", 0)) == 9018,
+			"R488 湖中仙女：非初始卡也会被谎言抽中（范围 = 全部非诅咒卡）")
+	# 只剩诅咒卡 → 不可用（删诅咒等于帮玩家清场，不算惩罚）
+	RunState.deck_ids = [9154]
+	RunState.ensure_deck_mods()
+	RunState.lake_victim = -1
+	check(not bool(RunState.lake_lady_peek().get("ok", true))
+			and not bool(RunState.lake_lady_lie().get("ok", true)),
+			"R488 湖中仙女：卡组只剩诅咒卡时谎言不可用（不帮玩家清诅咒）")
+	# 下标越界（卡组被改短过）→ 重摇到合法下标
+	RunState.deck_ids = [8001, 9018]
+	RunState.ensure_deck_mods()
+	RunState.lake_victim = 99
+	check(int(RunState.lake_lady_peek().get("index", -1)) < 2,
+			"R488 湖中仙女：lake_victim 越界时重摇到合法下标")
+	RunState.deck_ids = [8001, 8002]
+	RunState.ensure_deck_mods()
 	var r305_t := RunState.lake_lady_truth()
 	var r305_c := r305_repo.get_card(int(r305_t.get("card_id", 0)))
 	check(bool(r305_t.get("ok", false)) and r305_c != null and r305_c.rarity == 2

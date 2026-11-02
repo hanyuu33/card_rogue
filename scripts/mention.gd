@@ -96,6 +96,20 @@ static func card_of(id: int) -> CardData:
 	return _cards.get(id)
 
 
+static func card_for(ref: Dictionary) -> CardData:
+	## R488：引用可以**绑到卡组里的某一张实例**（可选键 `deck_index`）。
+	## 为什么需要：同名卡在卡组里可能一张带附魔 / 本局成长、另一张是白板，
+	## 只按 id 取到的是**卡库原卡**（附魔与成长全丢）——「湖中仙女 · 谎言」要显示的
+	## 正是「即将失去的那一张」，必须原样带出来。越界 / 无实例 → 退回卡库原卡。
+	if ref.has("deck_index"):
+		var di := int(ref["deck_index"])
+		if di >= 0:
+			var inst := RunState.card_with_mod(CardRepo.load_json(), di)
+			if inst != null:
+				return inst
+	return card_of(int(ref.get("id", -1)))
+
+
 static func relic_of(id: int) -> RelicData:
 	index()
 	return _relics.get(id)
@@ -209,7 +223,7 @@ static func relic_tip_metrics(font: Font, font_bold: Font, n_lines: int) -> Dict
 static func tip_size(font: Font, ref: Dictionary) -> Vector2:
 	## 悬浮件尺寸（不含位置）。
 	if str(ref.get("kind", "")) == "card":
-		var card := card_of(int(ref.get("id", -1)))
+		var card := card_for(ref)
 		if card == null:
 			return Vector2(TIP_W, TIP_PAD * 2.0)
 		var h := TIP_PAD * 2.0 + TIP_CARD_H + TIP_INFO_GAP \
@@ -256,7 +270,7 @@ static func draw_tip(canvas: CanvasItem, font: Font, font_bold: Font,
 	canvas.draw_rect(frame, Color(0.10, 0.11, 0.15, 0.96), true)
 	canvas.draw_rect(frame, UiTheme.ACCENT_GOLD, false, 1.4)
 	if str(ref.get("kind", "")) == "card":
-		var card := card_of(int(ref.get("id", -1)))
+		var card := card_for(ref)
 		if card == null:
 			return 0.0
 		# 卡面居中、只画卡名与数值徽章（效果写在下半，不挤在一张小卡上）
@@ -413,7 +427,7 @@ static func summary_lines(font: Font, ref: Dictionary, max_w: float, max_lines :
 	var out: Array = []
 	var body := ""
 	if str(ref.get("kind", "")) == "card":
-		var c := card_of(int(ref.get("id", -1)))
+		var c := card_for(ref)
 		if c == null:
 			return out
 		var stats := CardFace.stats_line(c)
