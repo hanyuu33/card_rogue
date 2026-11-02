@@ -2308,7 +2308,7 @@ func _init() -> void:
 			and sg_e.state.unit_at(Vector2i(0, 0)) != null,
 			"空间守护：使用效果卡触发 → 离己方 HP 最近的敌人（第 2 行）被推回 2 格到第 0 行")
 
-	# ---- R488：「使用此卡本身不会触发」只否掉它自己那一条，不连带否掉同族的另一张 ----
+	# ---- R489：「使用此卡本身不会触发」只否掉它自己那一条，不连带否掉同族的另一张 ----
 	# 用户实测「这张卡发动一些效果卡不一定触发」：打 9064 时飓风咆哮被一起 return 挡掉了。
 	# 卡面每张只写了自己那条不触发，从没写过「A 卡不触发 B 卡」。
 	var x_e := _new_engine([], 20, 20, -1, false)
@@ -2321,7 +2321,7 @@ func _init() -> void:
 	x_e.use_effect(0)
 	check(x_e.state.unit_at(Vector2i(2, 1)) != null
 			and x_e.state.unit_at(Vector2i(2, 1)).health == 4,
-			"R488：打出空间守护 → 飓风咆哮照常触发（8-4=4）；它自己不触发，所以敌人留在原地")
+			"R489：打出空间守护 → 飓风咆哮照常触发（8-4=4）；它自己不触发，所以敌人留在原地")
 
 	var x2_e := _new_engine([], 20, 20, -1, false)
 	x2_e.start_game(0)
@@ -2334,7 +2334,7 @@ func _init() -> void:
 	x2_e.use_effect(0)
 	check(x2_e.state.unit_at(Vector2i(0, 1)) != null
 			and x2_e.state.unit_at(Vector2i(0, 1)).health == 4,
-			"R488：两张同族都在效果区时，一张效果卡会把两条都触发（咆哮 4 伤 + 退 2 格）")
+			"R489：两张同族都在效果区时，一张效果卡会把两条都触发（咆哮 4 伤 + 退 2 格）")
 
 	var x3_e := _new_engine([], 20, 20, -1, false)
 	x3_e.start_game(0)
@@ -2346,7 +2346,7 @@ func _init() -> void:
 	x3_e.use_effect(0)
 	check(x3_e.state.unit_at(Vector2i(0, 1)) != null
 			and x3_e.state.unit_at(Vector2i(0, 1)).health == 8,
-			"R488：打出飓风咆哮本身 → 不触发它自己，但仍会触发效果区里的空间守护（敌人满血但被退后）")
+			"R489：打出飓风咆哮本身 → 不触发它自己，但仍会触发效果区里的空间守护（敌人满血但被退后）")
 
 	# ---- 自愈（9065）：2 费稀有效果；战斗结束后回复 8 点生命 ----
 	var nc_sh := repo.get_card(9065)
