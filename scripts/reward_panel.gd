@@ -626,13 +626,6 @@ const REWARD_INNER_LINE := Color("fffaf0")
 const REWARD_RIBBON := Color("b29a63")
 const REWARD_TEAL := Color("65aaa3")
 const REWARD_TEXT := Color("514735")
-# R504：背景分区配色 —— 参考稿顶部是「深棕红 / 暗紫的插画带」，斜线下方才是米黄纸纹。
-const BG_BAND_TOP := Color("2c1a24")       # 顶部深紫红
-const BG_BAND_MID := Color("47242a")       # 中部红棕
-const BG_BAND_BOT := Color("5a3330")       # 底部暗红棕
-const BG_BAND_SILH := Color("1f1118")      # 远景剪影（更深的紫黑）
-const BG_PAPER := Color("efe7d4")          # 斜线下方的米黄纸纹底
-const MOTIF_GOLD := Color("a8894f")        # 纹样用暗金（米白底上才看得清）
 
 ## R501：素材改从图生图里切（`art_src/2026-11-02_奖励页UI/process.py` 生成）。
 ## 卡片 / 按钮走 StyleBoxTexture 九宫格，纹章 = 来源色盾形底 + 金边框架。
@@ -640,6 +633,8 @@ const TEX_CARD := preload("res://assets/ui/reward_card.png")
 const TEX_BTN_GREEN := preload("res://assets/ui/reward_btn_green.png")
 const TEX_BTN_DISABLED := preload("res://assets/ui/reward_btn_disabled.png")
 const TEX_SHIELD := preload("res://assets/ui/reward_shield_frame.png")
+## R505：顶部红棕紫渐变横幅带（图生图生成，下缘斜切），贴满画面顶部。
+const TEX_BANNER_TOP := preload("res://assets/ui/reward_banner_top.png")
 var _sb_card: StyleBoxTexture
 var _sb_btn: StyleBoxTexture
 var _sb_btn_dis: StyleBoxTexture
@@ -677,33 +672,50 @@ func _paper_panel(r: Rect2) -> void:
 	_draw_paper_motif(r)
 
 
+func _draw_vignette(vs: Vector2) -> void:
+	## R505：整屏羊皮纸上的一圈极淡暗角（参考图边缘偏深、中心偏亮的旧纸感）。
+	## 用四边各 3 层递减透明的细带逼近柔和渐变，透明度很低，不压任何文字。
+	var base := Color(0.55, 0.42, 0.26)
+	var bw := vs.x * 0.20
+	var bh := vs.y * 0.18
+	for k in 3:
+		var col := Color(base.r, base.g, base.b, 0.06 * (1.0 - k * 0.28))
+		var w := bw * (1.0 - k * 0.30)
+		var h := bh * (1.0 - k * 0.30)
+		_root.draw_rect(Rect2(0, 0, vs.x, h), col, true)
+		_root.draw_rect(Rect2(0, vs.y - h, vs.x, h), col, true)
+		_root.draw_rect(Rect2(0, 0, w, vs.y), col, true)
+		_root.draw_rect(Rect2(vs.x - w, 0, w, vs.y), col, true)
+
+
 func _draw_paper_motif(r: Rect2) -> void:
-	## R504：面板纸面纹样 = 斜向细纹（纸纤维）+ 四角月桂叶卷草 + 左右内缘青绿涡卷。
+	## R503：面板纸面上的淡纹样。① 斜向细线阵列（模拟纸纤维 / 织物），
+	## ② 四角淡花叶（呼应宫廷花边但不压主体）。全部用金线色低透明度。
 	var ink := REWARD_GOLD_LINE
-	var inner := r.grow(-26.0)
-	# ① 斜向细纹：左上→右下，间距 26px，模拟纸纤维。
+	var inner := r.grow(-30.0)
+	# ① 斜向细纹：左上→右下，间距 26px，只画在面板内侧，避开边缘金边。
 	var step := 26.0
-	var a := Color(ink.r, ink.g, ink.b, 0.09)
+	var a := ink
+	a = Color(ink.r, ink.g, ink.b, 0.09)
 	var diag := inner.size.x + inner.size.y
 	var n: int = int(diag / step) + 1
 	for i in n:
 		var off := i * step
+		var p0 := inner.position + Vector2(off, 0)
+		var p1 := inner.position + Vector2(0, off)
+		# 只保留落在 inner 内的线段（斜线穿面板对角）
 		if off <= inner.size.y:
-			_root.draw_line(inner.position + Vector2(off, 0),
-					inner.position + Vector2(0, off), a, 1.0, true)
+			_root.draw_line(p0, inner.position + Vector2(0, off), a, 1.0, true)
 		if off <= inner.size.x and off > 0:
 			_root.draw_line(inner.position + Vector2(off, 0),
 					inner.position + Vector2(off, inner.size.y), a, 1.0, true)
-	# ② 四角月桂叶卷草：紧贴圆角边框内侧，朝面板中心收拢。
-	var b := Color(MOTIF_GOLD.r, MOTIF_GOLD.g, MOTIF_GOLD.b, 0.66)
-	for cx: float in [r.position.x + 24.0, r.end.x - 24.0]:
-		for cy: float in [r.position.y + 24.0, r.end.y - 24.0]:
+	# ② 四角淡花叶：小号，只做角落点缀。
+	var b := Color(ink.r, ink.g, ink.b, 0.20)
+	for cx: float in [inner.position.x + 46.0, inner.end.x - 46.0]:
+		for cy: float in [inner.position.y + 40.0, inner.end.y - 40.0]:
 			var dx := 1.0 if cx < r.get_center().x else -1.0
 			var dy := 1.0 if cy < r.get_center().y else -1.0
-			_draw_laurel(Vector2(cx, cy), dx, dy, b)
-	# ③ 左右内缘青绿波浪涡卷：卡片两侧空白区。
-	_draw_teal_swirl(Vector2(inner.position.x + 28.0, r.position.y + r.size.y * 0.56), 1.0, 0.42)
-	_draw_teal_swirl(Vector2(inner.end.x - 28.0, r.position.y + r.size.y * 0.44), -1.0, 0.30)
+			_draw_corner_sprig(Vector2(cx, cy), dx, dy, b)
 
 
 func _draw_corner_sprig(c: Vector2, dx: float, dy: float, col: Color) -> void:
@@ -719,116 +731,6 @@ func _draw_corner_sprig(c: Vector2, dx: float, dy: float, col: Color) -> void:
 			p + Vector2(dx * 7, dy * -3),
 			p + Vector2(dx * 3, dy * 1)])
 		_root.draw_colored_polygon(leaf, col)
-
-
-func _draw_cards_backdrop(vs: Vector2) -> void:
-	## R504：参考稿背景 = 顶部深红棕插画带 + 斜切金边 + 下方米黄纸纹。
-	## 斜线左低右高，切线上有一条金色缎带描边。
-	_root.draw_rect(Rect2(Vector2.ZERO, vs), BG_PAPER, true)
-	# 纸纹底上的极淡斜向纤维。
-	var fib := Color(0.60, 0.50, 0.34, 0.05)
-	var fstep := 34.0
-	var fn: int = int((vs.x + vs.y) / fstep) + 1
-	for i in fn:
-		var off := i * fstep
-		if off <= vs.y:
-			_root.draw_line(Vector2(off, 0), Vector2(0, off), fib, 1.0, true)
-	# 背景水波水印（参考图右上角那类淡水波）。
-	_draw_watermark(Vector2(vs.x * 0.86, vs.y * 0.34), 0.06)
-	_draw_watermark(Vector2(vs.x * 0.12, vs.y * 0.46), 0.05)
-	_draw_watermark(Vector2(vs.x * 0.70, vs.y * 0.92), 0.05)
-	# 顶部深红棕插画带：左低右高斜切 + 远山/宫殿剪影。
-	var band_h := 112.0
-	var rise := 58.0
-	_root.draw_colored_polygon(PackedVector2Array([
-		Vector2(0, 0), Vector2(vs.x, 0),
-		Vector2(vs.x, band_h - rise), Vector2(0, band_h)]), BG_BAND_MID)
-	_root.draw_colored_polygon(PackedVector2Array([
-		Vector2(0, 0), Vector2(vs.x, 0),
-		Vector2(vs.x, band_h * 0.55 - rise * 0.4), Vector2(0, band_h * 0.55)]), BG_BAND_TOP)
-	var sil := BG_BAND_SILH
-	_root.draw_colored_polygon(PackedVector2Array([
-		Vector2(vs.x * 0.06, band_h), Vector2(vs.x * 0.10, band_h - 30 - rise * 0.1),
-		Vector2(vs.x * 0.16, band_h - 18 - rise * 0.2), Vector2(vs.x * 0.24, band_h)]), sil)
-	_root.draw_colored_polygon(PackedVector2Array([
-		Vector2(vs.x * 0.30, band_h), Vector2(vs.x * 0.34, band_h - 44 - rise * 0.35),
-		Vector2(vs.x * 0.38, band_h - 40 - rise * 0.4), Vector2(vs.x * 0.42, band_h - 22 - rise * 0.45),
-		Vector2(vs.x * 0.48, band_h)]), sil)
-	_root.draw_colored_polygon(PackedVector2Array([
-		Vector2(vs.x * 0.60, band_h), Vector2(vs.x * 0.62, band_h - 50 - rise * 0.6),
-		Vector2(vs.x * 0.645, band_h - 66 - rise * 0.62),
-		Vector2(vs.x * 0.67, band_h - 50 - rise * 0.6), Vector2(vs.x * 0.69, band_h)]), sil)
-	_root.draw_colored_polygon(PackedVector2Array([
-		Vector2(vs.x * 0.80, band_h), Vector2(vs.x * 0.84, band_h - 34 - rise * 0.8),
-		Vector2(vs.x * 0.90, band_h - 16 - rise * 0.9), Vector2(vs.x * 0.96, band_h)]), sil)
-	# 斜切金边（缎带）。
-	var lb := band_h + 1.0
-	var rb := band_h - rise + 1.0
-	_root.draw_line(Vector2(0, lb - 3), Vector2(vs.x, rb - 3), REWARD_RIBBON, 3.0, true)
-	_root.draw_line(Vector2(0, lb), Vector2(vs.x, rb), REWARD_GOLD_LINE, 2.0, true)
-	_root.draw_line(Vector2(0, lb + 2), Vector2(vs.x, rb + 2),
-			Color(REWARD_INNER_LINE.r, REWARD_INNER_LINE.g, REWARD_INNER_LINE.b, 0.7), 1.0, true)
-
-
-func _draw_diamond(c: Vector2, s: float, col: Color) -> void:
-	## 金色菱形分隔符。
-	_root.draw_colored_polygon(PackedVector2Array([
-		c + Vector2(0, -s), c + Vector2(s * 0.62, 0),
-		c + Vector2(0, s), c + Vector2(-s * 0.62, 0)]), col)
-
-
-func _draw_laurel(c: Vector2, dx: float, dy: float, col: Color) -> void:
-	## 角落的对称月桂叶卷草：dx/dy 指向面板中心，弧茎沿此延伸，两侧成对三角叶。
-	var tip := c + Vector2(dx * 56.0, dy * 36.0)
-	_root.draw_polyline(PackedVector2Array([
-		c, c + Vector2(dx * 28.0, dy * 20.0), tip]), col, 1.6, true)
-	for j in 4:
-		var t := j / 3.0
-		var p := c.lerp(tip, t)
-		for s: float in [-1.0, 1.0]:
-			# 叶片 = 一个朝外展开的实心三角（三顶点，一定是有效多边形）。
-			var base := p + Vector2(s * dx * -10.0, s * dy * 10.0)
-			var out := base + Vector2(s * dx * -12.0, s * dy * 12.0)
-			var fwd := p + Vector2(dx * 10.0, dy * 7.0)
-			_root.draw_colored_polygon(PackedVector2Array([base, out, fwd]), col)
-
-
-func _draw_teal_swirl(c: Vector2, flip: float, alpha: float) -> void:
-	## 青绿波浪涡卷：上下两条边夹出的流动水波带 + 端头卷心。
-	var col := Color(REWARD_TEAL.r, REWARD_TEAL.g, REWARD_TEAL.b, alpha)
-	var base := c + Vector2(0, 12)
-	var seg := 8
-	var top := PackedVector2Array()
-	var bot := PackedVector2Array()
-	for i in seg + 1:
-		var t := i / float(seg)
-		var x := flip * t * 46.0
-		top.append(base + Vector2(x, -sin(t * PI) * 12.0 - 4.0))
-		bot.append(base + Vector2(x, -sin(t * PI) * 12.0 + 4.0))
-	var band := PackedVector2Array()
-	for p in top:
-		band.append(p)
-	for j in range(bot.size() - 1, -1, -1):
-		band.append(bot[j])
-	_root.draw_colored_polygon(band, col)
-	var col2 := Color(REWARD_TEAL.r, REWARD_TEAL.g, REWARD_TEAL.b, alpha * 0.55)
-	var band2 := PackedVector2Array()
-	for i in seg + 1:
-		var t := i / float(seg)
-		var x := flip * t * 46.0
-		band2.append(base + Vector2(x, -sin(t * PI) * 6.0 - 2.5))
-	for j in range(seg, -1, -1):
-		var t := j / float(seg)
-		band2.append(base + Vector2(flip * t * 46.0, -sin(t * PI) * 6.0 + 2.5))
-	_root.draw_colored_polygon(band2, col2)
-	_root.draw_circle(base + Vector2(flip * 46.0, 0), 4.5, col)
-
-
-func _draw_watermark(c: Vector2, alpha: float) -> void:
-	## 淡色水波水印：几道同心弧，半透明，与纸纹融合。
-	var col := Color(REWARD_GOLD_LINE.r, REWARD_GOLD_LINE.g, REWARD_GOLD_LINE.b, alpha)
-	for k in 5:
-		_root.draw_arc(c, 16.0 + k * 11.0, -0.6, PI + 0.6, 12, col, 1.4, true)
 
 
 func _draw_ornament(center: Vector2, flip := 1.0) -> void:
@@ -1176,10 +1078,9 @@ func _draw_relic() -> void:
 
 
 func _cards_panel_rect() -> Rect2:
-	## R504：参考稿顶部有一段深红棕插画带（斜切金边），主框从带下缘往下铺。
-	## 顶部留 108px 给插画带 + 标题，面板整体下移、略收窄高度，避免底部越界。
+	## R505：顶部横幅带（红棕紫渐变，下缘斜切）占 `vs.y*0.20`，主框从其下缘往下铺。
 	var vs := _vs()
-	var top := 108.0
+	var top := vs.y * 0.20 + 10.0
 	var pw := minf(vs.x - 56.0, 1120.0)
 	var ph := minf(vs.y - top - 24.0, 600.0)
 	return Rect2(Vector2((vs.x - pw) / 2.0, top), Vector2(pw, ph))
@@ -1521,11 +1422,18 @@ func _draw_cards() -> void:
 	var e: Dictionary = RunState.pending_rewards[_sel]
 	var settled := _settled(e)
 	var vs := _vs()
-	# R504：参考稿的完整框架 —— 顶部深红棕插画带 + 斜切金边 + 米黄纸纹底。
-	_draw_cards_backdrop(vs)
+	# R505：参考图是**整屏暖米色羊皮纸**（不是深黑遮罩上浮一个面板）。
+	# 用游戏统一的羊皮纸底纹铺满，再叠一圈极淡的四周暗角，压出「纸」的纵深。
+	UiTheme.draw_panel_bg(_root, Rect2(Vector2.ZERO, vs))
+	_draw_vignette(vs)
+	# 顶部红棕紫渐变横幅带（图生图生成，下缘斜切）：贴满画面顶边，斜线下方自然露出羊皮纸。
+	var banner_h := vs.y * 0.20
+	_root.draw_texture_rect(TEX_BANNER_TOP,
+			Rect2(Vector2.ZERO, Vector2(vs.x, banner_h)), false)
+	# 顶部标题行：落在深色横幅上，亮金文字。
 	_deck_icon(Vector2(66, 17), 1.05)
 	_root.draw_string(_font_bold, Vector2(104, 28), "卡牌奖励",
-			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_HEADING, Color("fff9ec"))
+			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_HEADING, Color("f2d98c"))
 	var pr := _cards_panel_rect()
 	_paper_panel(pr)
 	_draw_ornament(Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 6), 1.0)
@@ -1549,8 +1457,8 @@ func _draw_cards() -> void:
 			REWARD_GOLD_LINE, 1.0, true)
 	_root.draw_line(Vector2(right_start, line_y), Vector2(pr.end.x - 84, line_y),
 			REWARD_GOLD_LINE, 1.0, true)
-	_draw_diamond(Vector2(left_end - 8, line_y), 6.0, MOTIF_GOLD)
-	_draw_diamond(Vector2(right_start + 8, line_y), 6.0, MOTIF_GOLD)
+	_root.draw_circle(Vector2(left_end - 8, line_y), 2.4, REWARD_GOLD_LINE)
+	_root.draw_circle(Vector2(right_start + 8, line_y), 2.4, REWARD_GOLD_LINE)
 	# R440 暗动力（6054）：这组卡不能放弃 —— 副标题说清楚，别让玩家去试那个灰按钮。
 	var must_pick := RunState.must_take_card_reward()
 	var sub := "看完随时可以点下面「返回列表」"
