@@ -1747,7 +1747,7 @@ func _ready() -> void:
 			engine.state.hand.append(repo.get_card(_tid))
 		engine.state.energy = 9
 		_demo_hover_idx = 3
-		status_text = "长描述改版：威慑 / 镜像 / 以太咆哮 / 空间守护 / 鸭窝"
+		status_text = "长描述改版：威慑 / 镜像 / 飓风咆哮 / 空间守护 / 鸭窝"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r333card" in args and engine != null:
@@ -11703,16 +11703,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				ap_name = (data["card"] as CardData).card_name
 			_say("魔法学徒：本回合出牌费用 -1；从卡组取到「%s」" % ap_name)
 		"aether_roar":
-			# 以太咆哮（9063）：全体敌方 -N
+			# 飓风咆哮（9063）：全体敌方 -N
 			sfx.play("spell")
 			var ar_dmg := int(data.get("dmg", 0))
 			var ar_hits := int(data.get("hits", 0))
 			_shake(6.0, 300)
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 30),
-					"text": "以太咆哮 -%d" % ar_dmg,
+					"text": "飓风咆哮 -%d" % ar_dmg,
 					"col": Color("7a3fd0"), "start": n, "dur": 1600, "size": 20})
-			_say("以太咆哮：%d 个敌人各 -%d" % [ar_hits, ar_dmg] if ar_hits > 0
-					else "以太咆哮：场上没有敌人 → 直击敌方 HP -%d" % ar_dmg)
+			_say("飓风咆哮：%d 个敌人各 -%d" % [ar_hits, ar_dmg] if ar_hits > 0
+					else "飓风咆哮：场上没有敌人 → 直击敌方 HP -%d" % ar_dmg)
 		"space_guard":
 			# 空间守护（9064）：离己方 HP 最近的敌人被推回去
 			sfx.play("spell")

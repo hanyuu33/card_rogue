@@ -734,7 +734,7 @@ const FAMILIAR_NIGHT_TRAIT:= "使魔之夜"
 
 # R268：9063 / 9064 的触发条件 = **只认效果卡**（技能卡不再触发）。
 const AETHER_ROAR_ID:= 9063
-const AETHER_ROAR_TRAIT:= "以太咆哮"
+const AETHER_ROAR_TRAIT:= "飓风咆哮"
 const SPACE_GUARD_ID:= 9064
 const SPACE_GUARD_TRAIT:= "空间守护"
 const SELF_HEAL_ID:= 9065
@@ -9526,24 +9526,29 @@ func _on_turn_first_play(side: String, played: CardData) -> void :
 		return
 	# R268（用户口径「只由效果卡触发」）：触发源 = **只认效果卡**，技能卡不再触发。
 	# 与同一族的「威慑 / 镜像 / 鸭窝」对齐——它们的「每回合前 X 次」也都是效果牌驱动。
-	# 这两张自身也是效果卡，所以必须先把「打出本卡本身」挡掉（否则落地即自触发）。
-	if played.id == AETHER_ROAR_ID or played.id == SPACE_GUARD_ID:
-		return
 	if not played.is_effect():
 		return
+	# R488：「使用此卡本身不会触发」只否掉**它自己那一条**，不能连带否掉同族的另一张。
+	# 此前这里是 `if played.id == 9063 or played.id == 9064: return` —— 后果是
+	# **打出空间守护（9064）时飓风咆哮（9063）不触发**。卡面从没写过「A 不触发 B」，
+	# 每张只写了自己那条不触发；玩家看到的就是「有些效果卡不一定触发」（用户实测反馈）。
+	var skip_roar := played.id == AETHER_ROAR_ID
+	var skip_guard := played.id == SPACE_GUARD_ID
 	# 「每回合第 X 次」：X = 效果区里该类卡的张数（单张时 X=1 → 就是原来的「每回合首次」）。
-	var roar_n:= _trait_copies(state.effects, AETHER_ROAR_TRAIT)
-	if roar_n > 0 and _roar_fires < roar_n:
-		_roar_fires += 1
-		var roar_c:= _first_with_trait(state.effects, AETHER_ROAR_TRAIT)
-		if roar_c != null:
-			_aether_roar(roar_c)
-	var sg_n:= _trait_copies(state.effects, SPACE_GUARD_TRAIT)
-	if sg_n > 0 and _space_fires < sg_n:
-		_space_fires += 1
-		var sg_c:= _first_with_trait(state.effects, SPACE_GUARD_TRAIT)
-		if sg_c != null:
-			_space_guard(sg_c)
+	if not skip_roar:
+		var roar_n:= _trait_copies(state.effects, AETHER_ROAR_TRAIT)
+		if roar_n > 0 and _roar_fires < roar_n:
+			_roar_fires += 1
+			var roar_c:= _first_with_trait(state.effects, AETHER_ROAR_TRAIT)
+			if roar_c != null:
+				_aether_roar(roar_c)
+	if not skip_guard:
+		var sg_n:= _trait_copies(state.effects, SPACE_GUARD_TRAIT)
+		if sg_n > 0 and _space_fires < sg_n:
+			_space_fires += 1
+			var sg_c:= _first_with_trait(state.effects, SPACE_GUARD_TRAIT)
+			if sg_c != null:
+				_space_guard(sg_c)
 
 
 func _aether_roar(c: CardData) -> void :
@@ -9555,8 +9560,8 @@ func _aether_roar(c: CardData) -> void :
 			cells.append(cell)
 	cells.sort()
 	if cells.is_empty():
-		_log("以太咆哮：场上没有敌方单位 → 直击敌方 HP %d 点" % dmg)
-		_damage_player(foe, dmg, "以太咆哮")
+		_log("飓风咆哮：场上没有敌方单位 → 直击敌方 HP %d 点" % dmg)
+		_damage_player(foe, dmg, "飓风咆哮")
 		action.emit("aether_roar", {"dmg": dmg, "hits": 0, "hp": dmg})
 		return
 	var n:= 0
@@ -9564,9 +9569,9 @@ func _aether_roar(c: CardData) -> void :
 		var q: Placement = state.unit_at(cell)
 		if q == null:
 			continue
-		_hit_unit(q, dmg, "以太咆哮")
+		_hit_unit(q, dmg, "飓风咆哮")
 		n += 1
-	_log("以太咆哮：%d 个敌人各受到 %d 点伤害" % [n, dmg])
+	_log("飓风咆哮：%d 个敌人各受到 %d 点伤害" % [n, dmg])
 	_destroy_dead()
 	action.emit("aether_roar", {"dmg": dmg, "hits": n})
 
