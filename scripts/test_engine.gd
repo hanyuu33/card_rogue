@@ -32165,32 +32165,44 @@ func _init() -> void:
 			% r458_dmg_e._spell_dmg(GameEngine.SIDE_SELF, 11, r458_dst))
 	RunState.deck_ids = r458_sv_ids
 	RunState.deck_mods = r458_sv_mods
-	# ⑥ 咒缚：本场第一张卡免费，那张卡在本场 +1 费
+	# ⑥ 咒缚（R497：第一张卡「-3 费」，不再是「归 0」），那张卡在本场 +1 费
 	var r458_cdeck: Array[CardData] = []
-	r458_cdeck.append(_card(8003, "农民", "盟友", 3, 3, 8))
-	r458_cdeck.append(_card(8003, "农民", "盟友", 3, 3, 8))
+	r458_cdeck.append(_card(8003, "农民", "盟友", 5, 3, 8))
+	r458_cdeck.append(_card(8003, "农民", "盟友", 5, 3, 8))
 	var r458_e := _new_engine(r458_cdeck, 30, 30, -1, false)
 	r458_e.self_relics = [GameEngine.CURSE_BIND_RELIC_ID]
 	r458_e.start_game()
 	check(r458_e.state.curse_free,
-			"R458 咒缚：开局就挂上「本场第一张卡免费」的额度")
+			"R497 咒缚：开局就挂上「本场第一张卡 -3 费」的额度")
 	var r458_h0: CardData = r458_e.state.hand[0]
-	check(r458_e.cost_of(r458_h0) == 0,
-			"R458 咒缚：手里的第一张卡费用归 0（原 %d）" % r458_h0.cost)
+	check(r458_e.cost_of(r458_h0) == r458_h0.cost - GameEngine.CURSE_DISCOUNT,
+			"R497 咒缚：手里的第一张卡费用 -%d（%d → %d）"
+			% [GameEngine.CURSE_DISCOUNT, r458_h0.cost, r458_e.cost_of(r458_h0)])
 	r458_e.play_from_hand(0, Vector2i(4, 1))
 	check(not r458_e.state.curse_free,
-			"R458 咒缚：免费额度用掉即失效（整场只有一次）")
-	check(r458_e.state.energy == FieldState.ENERGY_PER_TURN,
-			"R458 咒缚：真的没扣费（费用仍 %d）" % r458_e.state.energy)
+			"R497 咒缚：减费额度用掉即失效（整场只有一次）")
+	check(r458_e.state.energy == FieldState.ENERGY_PER_TURN - 2,
+			"R497 咒缚：只减 3 费，实际扣 2 点（剩余 %d）" % r458_e.state.energy)
 	check(r458_e.cost_of(r458_h0) == r458_h0.cost + GameEngine.CURSE_RAISE,
-			"R458 咒缚：被免费打出的那张卡本场 +%d 费（%d → %d）"
+			"R497 咒缚：同一张卡之后按原价 +%d 结算（%d → %d），不叠那 -3"
 			% [GameEngine.CURSE_RAISE, r458_h0.cost, r458_e.cost_of(r458_h0)])
+	# 下限：不足 3 费的卡减到 0，不会为负
+	var r458_lo: Array[CardData] = []
+	r458_lo.append(_card(8003, "农民", "盟友", 1, 3, 8))
+	var r458_el := _new_engine(r458_lo, 30, 30, -1, false)
+	r458_el.self_relics = [GameEngine.CURSE_BIND_RELIC_ID]
+	r458_el.start_game()
+	check(r458_el.cost_of(r458_el.state.hand[0]) == 0,
+			"R497 咒缚：1 费卡减 3 → 0（费用不会为负）")
+	check_src(FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+			.contains("c -= CURSE_DISCOUNT"),
+			"R497 源码锁：咒缚在 cost_of 里是「减 3」，不是「归 0」")
 	# X 费卡不吃免费额度（费用 = 全部剩余费用，抹成 0 等于让它打 0 段）
 	r458_e.state.curse_free = true
 	var r458_x: CardData = CardData.from_dict(r458_repo.get_card(9083).to_dict())
 	r458_e._note_card_played(GameEngine.SIDE_SELF, r458_x)
 	check(r458_e.state.curse_free and not r458_e.state.curse_raise.has(r458_x),
-			"R458 咒缚：X 费卡（流星雨）不消耗免费额度，额度留给下一张普通卡")
+			"R497 咒缚：X 费卡（流星雨）不消耗减费额度，额度留给下一张普通卡")
 	# 没这件道具 → 一点免费都不给
 	var r458_e2 := _new_engine(r458_cdeck, 30, 30, -1, false)
 	r458_e2.start_game()
