@@ -5826,6 +5826,20 @@ func _init() -> void:
 	om_hp_e.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
 	check(om_hp_e.state.hp_self == om_hp0, "嘲讽：射程内有嘲讽单位 → 不能直击我方 HP")
 
+	# ---- R487：嘲讽只写在 affixes 里（城墙 8052 等 4 张）也必须生效 ----
+	var om_aff := _new_engine([], 20, 30, -1, false)
+	var om_aff_wall := om_repo.get_card(8052)   # 城墙：嘲讽只在 affixes，traits 里没有
+	om_aff.state.place(om_aff_wall, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	om_aff.state.place(om_repo.get_card(1031), Vector2i(3, 1), GameEngine.SIDE_SELF)
+	check(om_aff_wall != null and not om_aff_wall.traits.has("嘲讽") \
+			and om_aff_wall.has_affix(GameEngine.AFFIX_TAUNT),
+			"R487 城墙 8052：嘲讽只写在 affixes，traits 里确实没有（前提校验）")
+	check(GameEngine.card_has_taunt(om_aff_wall),
+			"R487 card_has_taunt() 认 affixes 里的嘲讽")
+	var om_aff_legal := om_aff.legal_attack_targets(Vector2i(3, 1))
+	check(om_aff_legal.size() == 1 and om_aff_legal[0] == Vector2i(2, 1),
+			"R487 嘲讽写在 affixes 也必须收窄普攻目标（只留嘲讽墙）")
+
 	# ---- 嘲讽只收窄「普攻」高亮；技能选目标不受影响 ----
 	var om_ui := _new_engine([], 20, 30, -1, false)
 	om_ui.state.place(om_wall, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)               # 嘲讽
