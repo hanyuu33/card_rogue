@@ -29,3 +29,46 @@ _backups/ 在本会话开始前就存在，不属于本轮成果；作为本机�
 
 ## 用户纠正：CG 起始事件
 起始道具三选一正式路由一直为 map -> curtain（有CG），未改成 relic_pick。之前将旧 relic_pick 纳入截图展示与样式修改不当，现恢复其原始脚本；curtain 的对话框额外覆盖也已移除，只继承共用按钮新样式。后续不得拿旧页面当正式流程。
+
+## 待办交接（2026-11-03 20:12 本机记录，均未开工）
+
+用户口述的下一批 UI 修整，**只记录、不动手**，按下列顺序做：
+
+### 1. 关卡提示去掉字体描边
+战斗里所有居中/左上文字默认都吃自动描边：`battle_scene.gd::_auto_outline(px)`（约 8865 行）
+= `clampi(int(round(px / 4.0)), 2, 5)`，由 `_draw_string_center()` / `_draw_string_nw()` 在
+`outline == 0` 时自动套用（`_draw_string_box_center` 也走 `_draw_string_center`）。
+「明确不描边」的既有口径（R309）是 **outline 传负数** → 函数内归 0。
+做法：只在关卡提示那几处调用点传 `-1`，**不要**把 `_auto_outline` 全局改成 0 ——
+卡牌名、飘字、单位徽标还靠这圈描边压在花背景上，一改全糊。
+
+### 2. 回合切换提示要重做
+现实现 `battle_scene.gd::_draw_banner()`（约 16077 行）：300×60 白底 0.72 透明矩形 + 2px 彩色描边
++ `UI_FS_HEADING` 大字，alpha 淡入 → 停留 → 上浮 18px 淡出；数据在 `_banner = {text, col, start, dur}`。
+用户口径是「目前不好看」，需要重新设计（建议往新亮色 UI 靠：素材带 / 图形化 / 少描边），
+不是调颜色。注意：`_banner = {}` 在十几处出图分支里被手动清场（1403 / 3043 / 3070 / 3474 /
+3493 / 3518 / 3553 / 3579 / 3913 …），重构结构时别把这些清场点漏掉。
+
+### 3. 故事界面「×」关闭按钮要素材
+`story_scene.gd::_draw_detail()` 里用 `draw_string(_font_bold, …, "×")` 画（约 490~493 行），
+命中区是 `_detail_close_rect()`（约 194 行）。需要一张自己的关闭按钮素材（圆形 / 盾形，
+与新亮色 UI 同色系），接入后 `_detail_close_rect()` 必须仍然是唯一命中矩形，
+`_draw()` 与 `_input` 两处都读它，别另起一套坐标。
+
+## 本机未完成 / 已知问题（接手前先看）
+
+- **战斗法力面板（R507，本机已提交 `2475e14`）**：`scripts/battle_energy_hud.gd` 把费用数字 / 蓄力层数 /
+  闪躲提示从 `battle_scene.gd::_draw_cost_zone()` 抽成独立自绘 HUD，底图是
+  `assets/ui/adventure_shared/battle_mana_meter.png`；`battle_scene` 只负责传
+  `_roll("energy", state.energy)` 与 `engine.max_energy()`。已用 `tools/verify_battle_mana.gd`
+  跑过 0 / 5 / 125 三档 + 蓄力 + 闪躲，真实战斗场景截图在 `art_src/2026-11-03_battle_mana/`
+  （`mana_verify.log` = `MANA HUD PASS`，errors 日志为空）。**尚未完成的四件事**：
+  1. `tools/verify_battle_mana.gd` 是独立 SceneTree 脚本，**没接进 `_verify.py`**，四套门禁跑不到它；
+  2. 只有一条源码锁（X/Y 分母来源，`test_engine.gd` 的 R507 那条），没有 smoke 级断言；
+  3. `README` / `玩法说明.txt` / `图片命名说明.txt` 都还没登记 `battle_mana_meter.png`；
+  4. 125 是脚本里强塞的极端值，真实上限 5~7；多位数排版只在 15px 小字下压测过，不够细。
+- `record_list_scene.gd` / `story_scene.gd` 剩下的硬编码色改 `UiTheme`（`PAGE_MUTED` /
+  `ADVENTURE_INPUT` / `draw_panel_bg`）：功能无风险，但**没有为这两处单独补截图**。
+- 老卡卡图缺失：`协同攻击`、`快速出击`、`自愈`(9102) 等，卡图区显示半透明绿占位
+  （R506 出图时发现，一直没处理）。
+- 烟测里的 `Drawing is only allowed` 诊断、title 截图退出时资源未释放提示 —— 上一批就留着，仍未定位。
