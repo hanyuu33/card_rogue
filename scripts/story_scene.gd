@@ -384,8 +384,7 @@ func _draw() -> void:
 	# 返回
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
-	draw_rect(back, UiTheme.PAGE_PAPER if hov_back else UiTheme.PAGE_PAPER, true)
-	draw_rect(back, Color(0, 0, 0, 0.35), false, 2.0)
+	UiTheme.draw_action(self, back, false, false, hov_back)
 	draw_string(_font_bold, back.position + Vector2(0, 22), "← 返回标题",
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	if _episodes.is_empty():
@@ -429,17 +428,17 @@ func _draw_row(idx: int, ep: Dictionary) -> void:
 	if hov:
 		bg = bg.lightened(0.08)
 	draw_rect(r, bg, true)
-	draw_rect(r, Color("6a768c") if hov else Color("444a58"), false, 1.6)
+	draw_rect(r, UiTheme.ADVENTURE_BRASS if hov else Color("444a58"), false, 1.6)
 	# 左沿状态色条（与右侧图标同源；压暗一档免得抢标题）
 	draw_rect(Rect2(r.position.x, r.position.y, 5.0, r.size.y),
 			_state_color(st).darkened(0.34), true)
 	# 章节小标
 	var chap := str(ep.get("chapter", "?"))
 	draw_string(_font, r.position + Vector2(20, 26), chap,
-			HORIZONTAL_ALIGNMENT_LEFT, 120, UiTheme.FS_CAPTION, Color("7d8590"))
+			HORIZONTAL_ALIGNMENT_LEFT, 120, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 	# 标题（锁着就是 ？？？）
 	var title := _repo.episode_label(ep)
-	var tcol := Color("6f7684") if locked else Color("f2ead0")
+	var tcol := Color("6f7684") if locked else UiTheme.PAGE_INK
 	draw_string(_font_bold, r.position + Vector2(20, 52), title,
 			HORIZONTAL_ALIGNMENT_LEFT, 480, UiTheme.FS_SUBHEAD, tcol)
 	# 右侧状态：**只画图标**（R347 用户口径：「不要用文字，用一个小图标表示」）
@@ -477,7 +476,7 @@ func _draw_detail() -> void:
 	var r := _detail_rect()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.58), true)
 	draw_rect(r, Color("1e2129"), true)
-	draw_rect(r, Color("6a768c"), false, 2.0)
+	draw_rect(r, UiTheme.ADVENTURE_BRASS, false, 2.0)
 	var ep: Dictionary = _episodes[_sel]
 	var eid := str(ep.get("id", ""))
 	var st := _repo.episode_state(eid)
@@ -535,7 +534,7 @@ func _draw_detail() -> void:
 	if can and hov:
 		bcol = Color("e0b23c")
 	draw_rect(br, bcol, true)
-	draw_rect(br, Color("f2c14e") if can else Color("4a4e58"), false, 2.0)
+	draw_rect(br, Color("f2c14e") if can else UiTheme.ADVENTURE_BRASS, false, 2.0)
 	var btxt := "收下这一段"
 	if st == StoryRepo.STATE_READ:
 		btxt = "已经看过"
@@ -543,7 +542,7 @@ func _draw_detail() -> void:
 		btxt = "条件未达成"
 	draw_string(_font_bold, br.position + Vector2(0, 27), btxt,
 			HORIZONTAL_ALIGNMENT_CENTER, br.size.x, UiTheme.FS_BODY,
-			Color("1a1c22") if can else Color("7d8590"))
+			Color("1a1c22") if can else UiTheme.PAGE_MUTED)
 
 
 func _wrapped_body(eid: String, w: float) -> Array[String]:

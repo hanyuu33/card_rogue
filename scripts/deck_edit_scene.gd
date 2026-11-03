@@ -73,6 +73,7 @@ var _back_delay := 1.4     # 结算后回地图的等待（演出要占掉 1.3s 
 
 
 func _ready() -> void:
+	hint_label.add_theme_color_override("font_color", UiTheme.PAGE_MUTED)
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	# R113：本页底色 #252A35 = 暗底 → 用暗底主按钮（金底墨字；深墨蓝在暗底上会沉下去）
@@ -377,7 +378,7 @@ func _layout() -> void:
 	if _clip == null:
 		return
 	var area_w: float = maxf(200.0, size.x - MARGIN * 2.0)
-	_cw = minf((area_w - GAP * (COLS - 1)) / float(COLS), CARD_MAX_H * RATIO)
+	_cw = minf((area_w - 40.0 - GAP * (COLS - 1)) / float(COLS), CARD_MAX_H * RATIO)
 	_ch = _cw / RATIO
 	_clip.position = Vector2(MARGIN, TOP_Y)
 	_clip.size = Vector2(area_w, maxf(60.0, size.y - TOP_Y - BOTTOM_RESERVE))
@@ -455,25 +456,24 @@ func _draw() -> void:
 		if dc != null:
 			var dr := Rect2(MARGIN, size.y - BOTTOM_RESERVE + 6.0,
 					size.x - MARGIN * 2.0, DESC_H)
-			draw_rect(dr, Color(0.08, 0.07, 0.12, 0.88))
-			draw_rect(dr, Color("ffd27d"), false, 1.2)
+			UiTheme.draw_info_card(self, dr)
 			draw_string(_font_bold, dr.position + Vector2(14, 26), dc.card_name,
-					HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_BODY, Color("ffd27d"))
+					HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 			draw_string(_font, dr.position + Vector2(14, 48),
 					"%s · %d 费 · %s" % [dc.kind, dc.cost, dc.rarity_name()],
-					HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_CAPTION, Color("9a94a8"))
+					HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 			# R393b：本局永久成长写在种类行下面 —— 删卡 / 锻造 / 改造前必须看得见，
 			# 否则玩家会把长到 +6 的猎杀当成普通卡送出去。
 			var grow_line := CardFace.growth_text(dc)
 			if grow_line != "":
 				draw_string(_font_bold, dr.position + Vector2(14, 68),
 						"本局永久成长 %s（跨战斗保留）" % grow_line,
-						HORIZONTAL_ALIGNMENT_LEFT, 180.0, UiTheme.FS_CAPTION, Color("8ce6a8"))
+						HORIZONTAL_ALIGNMENT_LEFT, 180.0, UiTheme.FS_CAPTION, UiTheme.PAGE_GREEN)
 			var lines := CardFace.wrap_text(_font, CardText.naturalize(dc.effect_text),
 					dr.size.x - 210.0, UiTheme.FS_BODY)
 			for li in mini(lines.size(), 3):
 				draw_string(_font, dr.position + Vector2(196, 24 + li * 20), lines[li],
-						HORIZONTAL_ALIGNMENT_LEFT, dr.size.x - 210.0, UiTheme.FS_BODY, Color("e8e2d4"))
+						HORIZONTAL_ALIGNMENT_LEFT, dr.size.x - 210.0, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	if _result != "":
 		draw_string(_font_bold, Vector2(0, size.y - 72), _result,
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, Color("c8e6a0"))

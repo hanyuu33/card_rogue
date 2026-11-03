@@ -11398,12 +11398,17 @@ func _init() -> void:
 	# 底色是浅的、旧深色条不许回来、稀有度色仍留在描边上（色相编码不丢）。
 	if r122_in_dev:
 		var r401_src := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
-		check(r401_src.find("_round_box(plate, 12.0, Color(1.0, 0.99, 0.95, 0.92), card.rarity_color(), false)") >= 0,
-				"R401 稀有度铭牌底 = 半透明白（深底彩色字读不清，用户实测）")
-		check(r401_src.find("Color(0.13, 0.14, 0.18, 0.88)") < 0,
-				"R401 稀有度铭牌不再用深色底条")
-		check(r401_src.find("card.rarity_color(), false)") >= 0,
-				"R401 稀有度色保留在铭牌描边上（色相编码不丢）")
+		# The visual moved from a hand-drawn box to layered paper assets.
+		# Check real pixels rather than locking the removed drawing implementation.
+		for r401_key in ["09", "10"]:
+			var r401_tex := UiAssets.get_tex("reward_layered/" + r401_key)
+			var r401_img: Image = r401_tex.get_image() if r401_tex != null else null
+			var r401_light := false
+			if r401_img != null:
+				var r401_c := r401_img.get_pixel(r401_img.get_width() / 2, r401_img.get_height() / 2)
+				r401_light = r401_c.get_luminance() > 0.65 and r401_c.a > 0.8
+			check(r401_light, "奖励品质标签 %s：真实素材中心浅色不透明，保证文字可读" % r401_key)
+
 
 	# ---- R122-G：事件文案「卡名 / 道具名」悬浮 —— 解析层 ----
 	# 用户口径：「事件中提到道具或卡片时，应该可以在悬浮到卡名的时候显示那个道具 /
@@ -30846,7 +30851,7 @@ func _init() -> void:
 			and r391_bs.find("_draw_end_turn_big()     # R391") >= 0,
 			"R391 源码：道具栏上方的大号「回合结束」已接进 _draw()")
 	# ⚠️ battle_scene 是 **CRLF**：跨行 find 要写 `\r\n`，只写 `\n` 永远找不到（R391 踩过）
-	check_src(r391_bs.find("if _end_turn_big_rect().has_point(pos):\r\n\t\t_on_end_turn()") >= 0,
+	check_src(r391_bs.replace("\r\n", "\n").find("if _end_turn_big_rect().has_point(pos):\n\t\t_on_end_turn()") >= 0,
 			"R391 源码：点大按钮走 _on_end_turn()（与顶栏小按钮同一条路）")
 
 
@@ -33039,15 +33044,19 @@ func _init() -> void:
 			"R498 源码：卡图边框在卡图之后、待确认角标之前")
 	check_src(r498_cf.contains("if card.is_enemy_card():\n\t\treturn \"enemy\""),
 			"R498 源码：敌人优先判在归属键的最前面")
-	# R506：奖励页主框必须**整屏**垂直居中。R505 是「横幅下缘→屏底」这段居中，
-	#   整体偏下、下沿快贴到屏幕边，框内可用高度也不够铺（用户看图指出）。
-	var r506_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
-	check_src(r506_rp.contains("Rect2(Vector2((vs.x - pw) / 2.0, (vs.y - ph) / 2.0), Vector2(pw, ph))"),
-			"R506 源码：卡牌奖励主框在整屏里垂直居中")
-	check_src(r506_rp.contains("_root.draw_texture_rect_region(TEX_BANNER_TOP"),
-			"R506 源码：顶部横幅带改走 region 取图，下缘才是水平的正边")
-	check(r506_rp.find("draw_texture_rect(TEX_BANNER_TOP") < 0,
-			"R506 源码：横幅带不再整张贴（整张会把素材自带的斜切铺成斜边）")
+	# Independent heading now occupies the top strip. Validate actual hit/draw geometry.
+	for reward_viewport: Vector2 in [Vector2(1280, 720), Vector2(1600, 900)]:
+		var reward_layout := RewardPanel.cards_layout_for_viewport(reward_viewport)
+		var reward_rect: Rect2 = reward_layout["panel"]
+		var reward_card_y: float = reward_layout["cards_y"]
+		var reward_button_y: float = reward_layout["buttons_y"]
+		check(reward_rect.position.y >= 60.0 and reward_rect.end.y <= reward_viewport.y,
+				"奖励主框为独立标题留出空间，底部不出屏 %s" % reward_viewport)
+		check(reward_card_y > reward_rect.position.y + 40.0,
+				"奖励卡牌位于独立标题下方 %s" % reward_viewport)
+		check(reward_button_y >= reward_card_y + RewardPanel.CARD_H + 40.0 + 128.0
+				and reward_button_y + 44.0 <= reward_rect.end.y - 40.0,
+				"奖励效果至少保留128px，按钮下有安全余量 %s" % reward_viewport)
 
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []

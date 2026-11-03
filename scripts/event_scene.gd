@@ -621,6 +621,8 @@ func _apply_ui_assets() -> void:
 		tr.offset_bottom = 356.0
 		add_child(tr)
 	var bg := UiAssets.event_bg(kind)
+	if kind == "rest" and bg != null:
+		campfire.visible = false
 	if bg != null:
 		var trb := TextureRect.new()
 		trb.name = "EventBG"
@@ -693,8 +695,8 @@ func _on_fallback_draw() -> void:
 	var tint := _fb_tint
 	var gold := UiTheme.ACCENT_GOLD
 	# 1) 纵向渐变：上方偏暖（像有光），下方沉下去
-	var top := Color("262b3c")
-	var bot := Color("0f1117")
+	var top := Color("dce3cf")
+	var bot := Color("f0e6d4")
 	var bands := 48
 	var bh := sz.y / float(bands)
 	for i in bands:
@@ -721,7 +723,7 @@ func _on_fallback_draw() -> void:
 	var step_h := vig / float(steps)
 	for i in steps:
 		var t := float(i) / float(steps)
-		var a := 0.50 * pow(1.0 - t, 1.7)
+		var a := 0.10 * pow(1.0 - t, 1.7)
 		var off := step_h * float(i)
 		_fb_layer.draw_rect(Rect2(0.0, off, sz.x, step_h + 1.0), Color(0, 0, 0, a))
 		_fb_layer.draw_rect(Rect2(0.0, sz.y - off - step_h - 1.0, sz.x, step_h + 1.0), Color(0, 0, 0, a * 0.80))
@@ -732,6 +734,9 @@ func _on_fallback_draw() -> void:
 
 
 func _ready() -> void:
+	$Center.draw.connect(func(): UiTheme.draw_info_card($Center, Rect2(Vector2(-22, -16), $Center.size + Vector2(44, 32))))
+	event_name.add_theme_color_override("font_color", UiTheme.PAGE_INK)
+	desc.add_theme_color_override("font_color", UiTheme.PAGE_INK)
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	# R113：事件底色 #252A34 = 暗底 → on_dark = true。
@@ -1370,7 +1375,7 @@ func _fit_center() -> void:
 	var vh: float = get_viewport_rect().size.y
 	result_label.visible = result_label.text != ""
 	var top_floor := 360.0 if UiAssets.event_pic(_kind()) != null else 150.0
-	var bottom := vh - 10.0
+	var bottom := vh - 30.0
 	var h := 0.0
 	for sep in [12, 8, 5]:
 		c.add_theme_constant_override("separation", sep)

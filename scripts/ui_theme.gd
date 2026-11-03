@@ -733,7 +733,7 @@ static func adventure_button_style(primary: bool, state := "normal", px := BTN_P
 static func adventure_panel_style(padding := 24.0, dark := false) -> StyleBox:
 	if dark:
 		return _btn_box(ADVENTURE_FOREST, ADVENTURE_BRASS, 1, RADIUS_SM, int(padding), int(padding))
-	var tex: Texture2D = UiAssets.get_tex("adventure_shared/panel_journal")
+	var tex: Texture2D = UiAssets.get_tex("adventure_shared/panel_journal_light")
 	if tex == null:
 		return _btn_box(PAGE_PAPER, ADVENTURE_BRASS, 1, RADIUS_MD, int(padding), int(padding))
 	var sb := StyleBoxTexture.new()
@@ -790,3 +790,20 @@ static func control_theme() -> Theme:
 	t.set_color("font_color", "TooltipLabel", ADVENTURE_LIGHT)
 	_adventure_controls = t
 	return t
+
+
+static func draw_action(canvas: CanvasItem, rect: Rect2, primary := false, disabled := false, hovered := false) -> void:
+	var state := "disabled" if disabled else ("hover" if hovered else "normal")
+	if rect.size.x < 110.0 or rect.size.y < 36.0:
+		var bg := ADVENTURE_FOREST if primary else ADVENTURE_INPUT
+		canvas.draw_style_box(_chip_box(bg, ADVENTURE_BRASS, 1, 8, 3), rect)
+	else:
+		canvas.draw_style_box(adventure_button_style(primary, state, 10, 4), rect)
+
+
+static func draw_info_card(canvas: CanvasItem, rect: Rect2, hovered := false) -> void:
+	var sb := _btn_box(ADVENTURE_INPUT if hovered else PAGE_PAPER, ADVENTURE_BRASS, 1, RADIUS_MD, 12, 12)
+	sb.shadow_color = Color(0.18, 0.14, 0.08, 0.12)
+	sb.shadow_size = 3
+	sb.shadow_offset = Vector2(0, 2)
+	canvas.draw_style_box(sb, rect)

@@ -209,8 +209,7 @@ func _draw() -> void:
 	# 左上返回 / 右上清空
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
-	draw_rect(back, UiTheme.PAGE_PAPER if hov_back else UiTheme.PAGE_PAPER, true)
-	draw_rect(back, Color(0, 0, 0, 0.35), false, 2.0)
+	UiTheme.draw_action(self, back, false, false, hov_back)
 	draw_string(_font_bold, back.position + Vector2(0, 22), "← 返回标题",
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	var cl := _clear_rect()
@@ -322,7 +321,7 @@ func _draw_detail() -> void:
 	# 遮罩 + 面板
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.55), true)
 	draw_rect(r, Color("1e2129"), true)
-	draw_rect(r, Color("6a768c"), false, 2.0)
+	draw_rect(r, UiTheme.ADVENTURE_BRASS, false, 2.0)
 	var rec: Dictionary = _rows[_sel]
 	var res := str(rec.get("result", ""))
 	var x0 := r.position.x + 24.0
@@ -353,7 +352,7 @@ func _draw_detail() -> void:
 	if has_snap:
 		var hp := int(rec.get("hp", 0))
 		var mhp := int(rec.get("max_hp", 0))
-		var hp_col := Color("e07a6a") if (res == "lose" or hp <= 0) else Color("9fd7a5")
+		var hp_col := Color("e07a6a") if (res == "lose" or hp <= 0) else UiTheme.PAGE_GREEN
 		draw_string(_font_bold, Vector2(x0, r.position.y + 82.0),
 				"生命 %d / %d" % [hp, mhp],
 				HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_BODY, hp_col)
@@ -380,7 +379,7 @@ func _draw_detail() -> void:
 	if not has_snap:
 		draw_string(_font, Vector2(r.position.x, body_y + 30.0),
 				"这条记录是旧版本留下的，没有存最终道具 / 卡组（只记了结果与用时）。",
-				HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_BODY, Color("9a968c"))
+				HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 		return
 	# ---- 左列：最终道具 ----
 	var mid := r.position.x + 456.0
@@ -394,7 +393,7 @@ func _draw_detail() -> void:
 	var max_rel := maxi(1, int((r.end.y - 16.0 - ly) / 22.0))
 	if relics.is_empty():
 		draw_string(_font, Vector2(x0, ly + 14.0), "（这一局没有获得道具）",
-				HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_LABEL, Color("7d8590"))
+				HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 	else:
 		for i in mini(relics.size(), max_rel):
 			var e: Dictionary = relics[i]
@@ -406,7 +405,7 @@ func _draw_detail() -> void:
 		if relics.size() > max_rel:
 			draw_string(_font, Vector2(x0 + 18.0, ly + 14.0),
 					"…还有 %d 件" % (relics.size() - max_rel),
-					HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_CAPTION, Color("7d8590"))
+					HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 	# ---- 右列：最终卡组（可滚轮） ----
 	var deck := _deck_entries(rec)
 	var total_cards := 0
@@ -438,14 +437,14 @@ func _draw_detail() -> void:
 		draw_string(_font, Vector2(mid, r.end.y - 16.0),
 				"卡组 第 %d–%d 行 / 共 %d 行"
 				% [_deck_scroll + 1, mini(_deck_scroll + max_deck, deck.size()), deck.size()],
-				HORIZONTAL_ALIGNMENT_LEFT, 460, UiTheme.FS_CAPTION, Color("7d8590"))
+				HORIZONTAL_ALIGNMENT_LEFT, 460, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 
 
 func _draw_row(idx: int, rec: Dictionary) -> void:
 	var r := _row_rect(idx)
 	var hov := idx == _hover
-	draw_rect(r, Color("3a4152") if hov else UiTheme.PAGE_PAPER, true)
-	draw_rect(r, Color("6a768c") if hov else Color("4a4e58"), false, 1.6)
+	draw_rect(r, UiTheme.ADVENTURE_INPUT if hov else UiTheme.PAGE_PAPER, true)
+	draw_rect(r, UiTheme.ADVENTURE_BRASS if hov else UiTheme.ADVENTURE_BRASS, false, 1.6)
 	var res := str(rec.get("result", ""))
 	# 结果色条（左沿）：一眼分辨通关 / 失败 / 中断
 	draw_rect(Rect2(r.position.x, r.position.y, 5.0, r.size.y),
@@ -455,7 +454,7 @@ func _draw_row(idx: int, rec: Dictionary) -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	draw_string(_font_bold, r.position + Vector2(246, 24),
 			"角色：%s" % PlayerClass.legacy_id(str(rec.get("class", "?"))),
-			HORIZONTAL_ALIGNMENT_LEFT, 190, UiTheme.FS_BODY, Color("9fd7a5"))
+			HORIZONTAL_ALIGNMENT_LEFT, 190, UiTheme.FS_BODY, UiTheme.PAGE_GREEN)
 	draw_string(_font_bold, r.position + Vector2(446, 24), RunRecord.result_label(res),
 			HORIZONTAL_ALIGNMENT_LEFT, 140, UiTheme.FS_BODY, RunRecord.result_color(res))
 	draw_string(_font, r.position + Vector2(596, 24),
@@ -464,7 +463,7 @@ func _draw_row(idx: int, rec: Dictionary) -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, 280, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	draw_string(_font, r.position + Vector2(18, 43),
 			"结束于 %s" % RunRecord.fmt_time(str(rec.get("end", ""))),
-			HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_CAPTION, Color("7d8590"))
+			HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 	# R261：种子码也列在列表行上（不用点进详情就能抄下来复现）
 	var row_seed := int(rec.get("seed", 0))
 	draw_string(_font, r.position + Vector2(430, 43),

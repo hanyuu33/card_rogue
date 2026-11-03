@@ -163,16 +163,16 @@ func _build_seed_edit() -> void:
 	_seed_edit.max_length = RunState.SEED_LEN
 	_seed_edit.text = GameSettings.next_seed_code
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color("1b1d24")
-	sb.border_color = Color("4a4e58")
+	sb.bg_color = UiTheme.ADVENTURE_INPUT
+	sb.border_color = UiTheme.ADVENTURE_BRASS
 	sb.set_border_width_all(1)
 	sb.set_corner_radius_all(4)
 	sb.content_margin_left = 8.0
 	sb.content_margin_right = 8.0
 	_seed_edit.add_theme_stylebox_override("normal", sb)
 	var sbf := StyleBoxFlat.new()
-	sbf.bg_color = Color("23262f")
-	sbf.border_color = Color("8f9ab4")
+	sbf.bg_color = UiTheme.PAGE_PAPER
+	sbf.border_color = UiTheme.ADVENTURE_BRASS_LIT
 	sbf.set_border_width_all(1)
 	sbf.set_corner_radius_all(4)
 	sbf.content_margin_left = 8.0
@@ -180,7 +180,7 @@ func _build_seed_edit() -> void:
 	_seed_edit.add_theme_stylebox_override("focus", sbf)
 	_seed_edit.add_theme_font_override("font", _font)
 	_seed_edit.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
-	_seed_edit.add_theme_color_override("font_color", Color("ece7db"))
+	_seed_edit.add_theme_color_override("font_color", UiTheme.PAGE_INK)
 	_seed_edit.add_theme_color_override("caret_color", UiTheme.SAND)
 	_seed_edit.add_theme_color_override("placeholder_color", Color("7d8590"))
 	_seed_edit.text_changed.connect(_on_seed_changed)
@@ -198,10 +198,10 @@ func _draw_ban_button() -> void:
 	var used: int = ProfileData.ban_total_used_all()
 	var hov := r.has_point(get_local_mouse_position())
 	var bg := Color(0.10, 0.11, 0.15, 0.86) if not hov else Color(0.16, 0.18, 0.24, 0.92)
-	draw_rect(r, bg, true)
-	draw_rect(r, Color("8f9ab4") if hov else Color(1, 1, 1, 0.22), false, 1.4)
+	UiTheme.draw_action(self, r, false, false, hov)
+	draw_rect(r, UiTheme.ADVENTURE_BRASS_LIT if hov else Color(1, 1, 1, 0.22), false, 1.4)
 	var label := "禁卡表 · 已禁 %d / 名额 %d" % [used, quota]
-	var col := Color("e0b23c") if quota > 0 else Color("9a968c")
+	var col := UiTheme.PAGE_INK if quota > 0 else Color("9a968c")
 	draw_string(_font_bold, Vector2(r.position.x, r.position.y + 24.0), label,
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, col)
 
@@ -235,10 +235,10 @@ func _on_seed_changed(txt: String) -> void:
 func _draw_seed_panel() -> void:
 	_draw_ban_button()
 	var p := _seed_panel_rect()
-	draw_rect(p, Color(0.04, 0.05, 0.08, 0.78), true)
+	UiTheme.draw_info_card(self, p)
 	draw_rect(p, Color("b4523f") if _seed_bad else Color(1, 1, 1, 0.22), false, 1.6)
 	draw_string(_font_bold, p.position + Vector2(18, 26), "随机种子",
-			HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_BODY, Color("e0b23c"))
+			HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	draw_string(_font, p.position + Vector2(18, 96), "留空 = 每局随机",
 			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 36.0, UiTheme.FS_CAPTION, Color("9a968c"))
 	var hint2 := "或填 10 位（A-Z / 0-9）复现同一局"
@@ -255,18 +255,18 @@ func _draw_seed_panel() -> void:
 func _draw() -> void:
 	var full := Rect2(Vector2.ZERO, size)
 	if _selected < 0:
-		draw_rect(full, UiTheme.SCREEN_BG)
+		UiTheme.draw_page(self, full)
 		draw_string(_font, Vector2(0, 288), "选择与你同行的精灵……",
-				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_TITLE, UiTheme.INK_300)
+				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_TITLE, UiTheme.PAGE_INK)
 		draw_string(_font, Vector2(0, 330), "点头像查看该角色，再选难度、确认进入",
-				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_ON_DARK)
+				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 	else:
 		var cid := PlayerClass.ids()[_selected]
 		var cg := UiAssets.class_cg(cid)
 		if cg != null:
 			draw_texture_rect_region(cg, full, CardFace.cover_region(cg.get_size(), full), Color.WHITE)
 		else:
-			draw_rect(full, UiTheme.SCREEN_BG)
+			UiTheme.draw_page(self, full)
 		_draw_panel(cid)
 		_draw_seed_panel()
 	for i in PlayerClass.ids().size():
@@ -278,7 +278,7 @@ func _draw_avatar(i: int) -> void:
 	var r := _av_rect(i)
 	var sel := i == _selected
 	var cc: Color = UiTheme.class_color(cid)
-	draw_rect(r, Color(0.04, 0.05, 0.08, 0.55), true)
+	UiTheme.draw_info_card(self, r)
 	var tex := UiAssets.class_avatar(cid)
 	if tex != null:
 		var fr := CardFace.fit_rect(tex.get_size(), r.grow(-6.0))
@@ -291,8 +291,9 @@ func _draw_avatar(i: int) -> void:
 	draw_rect(r, cc if sel else Color(1, 1, 1, 0.25), false, 4.0 if sel else 2.0)
 	if i == _hover and not sel:
 		draw_rect(r.grow(3.0), Color(1, 1, 1, 0.55), false, 2.0)
+	UiTheme.draw_info_card(self, Rect2(r.position.x - 4, r.end.y + 4, r.size.x + 8, 48))
 	draw_string(_font_bold, Vector2(r.position.x, r.end.y + 24.0), PlayerClass.name_of(cid),
-			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, Color("f2ead0"))
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	# 初始最大生命（R182：选职业界面明示，便于对比）
 	var hp_txt := "生命 %d" % PlayerClass.base_hp_of(cid)
 	draw_string(_font, Vector2(r.position.x, r.end.y + 44.0), hp_txt,
@@ -302,36 +303,35 @@ func _draw_avatar(i: int) -> void:
 
 func _draw_panel(cid: String) -> void:
 	var p := _panel_rect()
-	draw_rect(p, Color(0.05, 0.06, 0.09, 0.80), true)
-	draw_rect(p, UiTheme.class_color(cid), false, 2.5)
-	var x := p.position.x + 20.0
-	var w := PANEL_W - 40.0
+	UiTheme.draw_panel_bg(self, p)
+	var x := p.position.x + 34.0
+	var w := PANEL_W - 68.0
 	var y := p.position.y + 46.0
 	draw_string(_font_bold, Vector2(x, y), PlayerClass.name_of(cid),
-			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, Color("f2ead0"))
+			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, UiTheme.PAGE_INK)
 	y += 30.0
 	draw_string(_font, Vector2(x, y), PlayerClass.subtitle_of(cid),
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL,
-			UiTheme.class_color(cid).lightened(0.5))
+			UiTheme.class_color(cid).darkened(0.15))
 	y += 30.0
 	# 初始最大生命（R182：按职业不同，选职业界面明示）
 	y += 2.0
 	draw_string(_font, Vector2(x, y), "初始最大生命",
-			HORIZONTAL_ALIGNMENT_LEFT, w * 0.5, UiTheme.FS_LABEL, Color("cfcabb"))
+			HORIZONTAL_ALIGNMENT_LEFT, w * 0.5, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	draw_string(_font_bold, Vector2(x + w * 0.5, y), "%d" % PlayerClass.base_hp_of(cid),
 			HORIZONTAL_ALIGNMENT_RIGHT, w * 0.5, UiTheme.FS_HEADING,
-			UiTheme.class_color(cid).lightened(0.4))
+			UiTheme.class_color(cid).darkened(0.15))
 	y += 26.0
 	# 角色介绍（R223：字号降到 FS_CAPTION / 行距 17，给下面的难度档位块腾垂直空间）
 	for para: String in PlayerClass.desc_of(cid).split("\n"):
 		for line: String in _wrap_text(para, w, UiTheme.FS_CAPTION):
 			draw_string(_font, Vector2(x, y), line, HORIZONTAL_ALIGNMENT_LEFT, w,
-					UiTheme.FS_CAPTION, Color("cfcabb"))
+					UiTheme.FS_CAPTION, UiTheme.PAGE_INK)
 			y += 17.0
 		y += 4.0
 	# 难度档位（R223：左箭头 / 档位盒 / 右箭头，0~10 共 11 档，钳制不循环）
 	draw_string(_font_bold, Vector2(x, _diff_row_rect().position.y - 13.0), "难度档位",
-			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, Color("e0b23c"))
+			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	var d := clampi(RunState.difficulty, 0, RunState.DIFFICULTY_COUNT - 1)
 	var lr := _diff_left_rect()
 	var rr := _diff_right_rect()
@@ -339,7 +339,7 @@ func _draw_panel(cid: String) -> void:
 	draw_rect(lr, Color(1, 1, 1, 0.30), false, 2.0)
 	draw_rect(rr, Color(1, 1, 1, 0.10), true)
 	draw_rect(rr, Color(1, 1, 1, 0.30), false, 2.0)
-	var arrow_on := Color("f2ead0")
+	var arrow_on := UiTheme.PAGE_INK
 	var arrow_off := Color("6b675f")
 	draw_string(_font_bold, Vector2(lr.position.x, lr.position.y + 26.0), "<",
 			HORIZONTAL_ALIGNMENT_CENTER, lr.size.x, UiTheme.FS_HEADING,
@@ -348,8 +348,7 @@ func _draw_panel(cid: String) -> void:
 			HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_HEADING,
 			arrow_on if d < RunState.DIFFICULTY_COUNT - 1 else arrow_off)
 	var br := _diff_box_rect()
-	draw_rect(br, Color(0.96, 0.78, 0.30, 0.94), true)
-	draw_rect(br, UiTheme.ACCENT_GOLD, false, 2.0)
+	UiTheme.draw_info_card(self, br, true)
 	draw_string(_font_bold, Vector2(br.position.x, br.position.y + 26.0),
 			"%d  %s" % [d, RunState.DIFFICULTY_NAMES[d]], HORIZONTAL_ALIGNMENT_CENTER, br.size.x,
 			UiTheme.FS_HEADING, Color("1a1c22"))
@@ -358,20 +357,19 @@ func _draw_panel(cid: String) -> void:
 	var ny := _note_rect().position.y + 11.0
 	for line: String in _wrap_text(RunState.difficulty_note(), w, UiTheme.FS_CAPTION):
 		draw_string(_font, Vector2(x, ny), line, HORIZONTAL_ALIGNMENT_LEFT, w,
-				UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
+				UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 		ny += NOTE_LH
 	# 数值摘要（金钱 / 巧克力恒定显示，其余只在生效时列出）
 	var sy := _summary_rect().position.y + 10.0
 	for line: String in _wrap_text(RunState.difficulty_summary(), w, UiTheme.FS_MICRO):
 		draw_string(_font, Vector2(x, sy), line, HORIZONTAL_ALIGNMENT_LEFT, w,
-				UiTheme.FS_MICRO, UiTheme.INK_ON_DARK)
+				UiTheme.FS_MICRO, UiTheme.PAGE_MUTED)
 		sy += SUM_LH
 	# 确认进入
 	var cr := _confirm_rect()
-	draw_rect(cr, Color("c8951c"), true)
-	draw_rect(cr, Color("f2c14e"), false, 2.0)
+	UiTheme.draw_action(self, cr, true)
 	draw_string(_font_bold, Vector2(cr.position.x, cr.position.y + 37.0), "确认进入",
-			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_HEADING, Color("1a1c22"))
+			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_HEADING, UiTheme.ADVENTURE_LIGHT)
 
 
 func _wrap_text(t: String, max_w: float, px: int) -> Array[String]:

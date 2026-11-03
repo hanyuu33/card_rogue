@@ -668,8 +668,9 @@ func _draw_header() -> void:
 	## 这里再摆一份纯属重复。标题带（64 高）只剩标题，基线随之下移居中（字高 24 → 41）。
 	## ⚠️ 顶部留白别急着砍：`DeckViewer` / `RelicViewer` 两个悬浮按钮挂在右上角 (1150,6)/(1044,6)，
 	##    标题带压到 40 以下就会贴到它们。
+	UiTheme.draw_info_card(self, Rect2(_vs().x * 0.5 - 150, 10, 300, 48))
 	draw_string(_font_bold, Vector2(0, 41), "神 秘 商 店",
-			HORIZONTAL_ALIGNMENT_CENTER, _vs().x, UiTheme.FS_HEADING, Color("ffd75a"))
+			HORIZONTAL_ALIGNMENT_CENTER, _vs().x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 
 
 
@@ -812,73 +813,15 @@ func _draw_goods_box(rr: Rect2, icon_name: String, name: String, desc: String,
 		draw_texture_rect(icon, Rect2(rr.position + Vector2(12, 34), Vector2(44, 44)), false)
 	var tx := rr.position.x + 66.0
 	draw_string(_font_bold, Vector2(tx, rr.position.y + 42), name,
-			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 120, UiTheme.FS_SUBHEAD, Color("ece7db"))
+			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 120, UiTheme.FS_SUBHEAD, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(tx, rr.position.y + 66), desc,
-			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 76, 11, Color("b8b2a6"))
+			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 76, 11, UiTheme.PAGE_MUTED)
 	draw_string(_font_bold, Vector2(rr.end.x - 52, rr.position.y + 42),
-			"%d" % price, HORIZONTAL_ALIGNMENT_CENTER, 42, UiTheme.FS_SUBHEAD, Color("ffd75a"))
+			"%d" % price, HORIZONTAL_ALIGNMENT_CENTER, 42, UiTheme.FS_SUBHEAD, UiTheme.PAGE_INK)
 
 
-func _draw_plate(rr: Rect2, wood: bool, lit: bool) -> void:
-	## 程序化画一块「木板 / 石板」商品底板：**固定角度**的斜角板（不再随机抖动），
-	## 四边留固定的小缺口（透明、不 fill 背景），再叠加木纹 / 石纹 + 边缘描边。
-	## `lit`（悬停/激活）时板子「轻度向前倾斜」—— 顶边内缩、底边外扩成上窄下宽梯形。
-	var w := rr.size.x
-	var h := rr.size.y
-	var x0 := rr.position.x
-	var y0 := rr.position.y
-	# 固定角度轮廓（不再随机抖动）：四角用固定的斜切量，形成规则的斜角板。
-	# 顶部 / 底部各留一个固定的小缺口（透明），让板子边缘有「破损」感但角度恒定。
-	var cut_top := 8.0     # 顶部左右各内缩（斜切量）
-	var cut_bot := 10.0    # 底部左右各内缩
-	var cut_edge := 6.0    # 上下边缘的浅缺口（模拟磨损，固定）
-	# 悬停 / 激活时「轻度向前倾斜」：顶边再内缩、底边外扩，形成上窄下宽的梯形透视。
-	var tilt := 6.0 if lit else 0.0
-	var pts := PackedVector2Array([
-		Vector2(x0 + cut_top + tilt, y0 + cut_edge),                    # 左上
-		Vector2(x0 + w - cut_top - tilt, y0 + cut_edge),                # 右上
-		Vector2(x0 + w - cut_bot + tilt, y0 + h - cut_edge),            # 右下
-		Vector2(x0 + cut_bot - tilt, y0 + h - cut_edge),                # 左下
-	])
-	# 底板颜色
-	var base: Color
-	var edge: Color
-	if wood:
-		base = Color("6b4a2c") if not lit else Color("7d5836")     # 木板棕
-		edge = Color("4a3018")
-	else:
-		base = Color("5a5a5e") if not lit else Color("6a6a6f")     # 石板灰
-		edge = Color("3c3c40")
-	# 底部阴影（向下偏移一点，让板子有立体感）
-	var shadow := PackedVector2Array()
-	for p in pts:
-		shadow.append(p + Vector2(0, 3))
-	draw_colored_polygon(shadow, Color(0, 0, 0, 0.35))
-	# 板子主体
-	draw_colored_polygon(pts, base)
-	# 边缘描边（沿多边形，用细线多边形近似描边）
-	draw_polyline(PackedVector2Array([pts[0], pts[1], pts[2], pts[3], pts[0]]),
-			Color(edge.r, edge.g, edge.b, 0.9) if not lit else Color("d9b56a"), 2.0)
-	# 纹理：木板横纹 / 石板裂纹
-	if wood:
-		# 横向木纹线（几根贯穿的淡/深线，固定位置，被斜角自然截断）
-		var stripes := 3
-		for k in stripes:
-			var yy := y0 + h * (0.28 + 0.22 * k)
-			draw_line(Vector2(x0 + cut_top, yy), Vector2(x0 + w - cut_top, yy),
-					Color(0, 0, 0, 0.18), 1.5)
-			draw_line(Vector2(x0 + cut_top, yy + 1.5), Vector2(x0 + w - cut_top, yy + 1.5),
-					Color(1.0, 0.95, 0.8, 0.10), 1.0)
-		# 木节
-		draw_circle(Vector2(x0 + w * 0.78, y0 + h * 0.32), 3.0, Color(0, 0, 0, 0.16))
-	else:
-		# 石板裂纹（细折线）+ 斑点
-		draw_line(Vector2(x0 + w * 0.2, y0 + h * 0.35), Vector2(x0 + w * 0.42, y0 + h * 0.55),
-				Color(0, 0, 0, 0.14), 1.5)
-		draw_line(Vector2(x0 + w * 0.42, y0 + h * 0.55), Vector2(x0 + w * 0.34, y0 + h * 0.78),
-				Color(0, 0, 0, 0.12), 1.5)
-		draw_circle(Vector2(x0 + w * 0.75, y0 + h * 0.6), 2.5, Color(1, 1, 1, 0.10))
-		draw_circle(Vector2(x0 + w * 0.6, y0 + h * 0.24), 2.0, Color(0, 0, 0, 0.12))
+func _draw_plate(rr: Rect2, _wood: bool, lit: bool) -> void:
+	UiTheme.draw_info_card(self, rr, lit)
 
 
 func _draw_sold_mask(rr: Rect2) -> void:
@@ -985,8 +928,7 @@ func _draw_off_tag(rr: Rect2) -> void:
 func _draw_leave() -> void:
 	var rr := _leave_rect()
 	var hovered := _hover == 100
-	draw_rect(rr, Color("c8951c") if hovered else Color("8a6d1f"), true)
-	draw_rect(rr, Color("ffd75a"), false, 2.0)
+	UiTheme.draw_action(self, rr, false, false, hovered)
 	draw_string(_font_bold, rr.position + Vector2(0, 29), "离开商店",
 			HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_BODY, Color("1a1c22"))
 
@@ -1069,18 +1011,17 @@ func _draw_desc_plate() -> void:
 		return
 	var vs := _vs()
 	var rr := Rect2(_goods_x0(), vs.y - 58.0, _goods_w(), 40.0)
-	draw_rect(rr, Color(0.06, 0.07, 0.09, 0.88), true)
-	draw_rect(rr, Color("c8951c"), false, 1.5)
+	UiTheme.draw_info_card(self, rr)
 	var affix: String = card.affix_line()
 	var meta: String = card.kind + ((" · " + affix) if affix != "" else "")
 	draw_string(_font_bold, rr.position + Vector2(10, 17),
 			"%s   %s" % [card.card_name, meta],
-			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 20.0, 12, Color("ffd75a"))
+			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 20.0, 12, UiTheme.PAGE_INK)
 	var eff: String = CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
 	if eff != "":
 		draw_string(_font, rr.position + Vector2(10, 33),
 				CardFace._ellipsize(_font, eff, rr.size.x - 20.0, 10),
-				HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 20.0, 10, Color("ece7db"))
+				HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 20.0, 10, UiTheme.PAGE_INK)
 
 
 # ------------------------------------------------------------ 附魔选卡覆盖层
@@ -1099,7 +1040,7 @@ func _draw_pick_overlay() -> void:
 	else:
 		var ench: Dictionary = _row2[_enchanting]["ench"]
 		draw_string(_font_bold, Vector2(0, 60), "选择要附魔的卡 —— %s" % _ench_name(ench),
-				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, Color("ffd75a"))
+				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 		draw_string(_font, Vector2(0, 92), "给选中的卡附加「%s」。" % _ench_name(ench),
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, Color("ece7db"))
 	# ⚠️ 这里**绝对不能**调 `_build_deck_cards()`（R204 修卡死）：

@@ -131,7 +131,11 @@ var route_fn: Callable = Callable()
 
 static func attach(host: Node, btn_pos := Vector2(12, 40)) -> RewardPanel:
 	## 挂到任意界面：返回新建的悬浮层实例。
-	var p := RewardPanel.new()
+	var p: RewardPanel
+	if "--legacy-rewards" in OS.get_cmdline_user_args():
+		p = RewardPanel.new()
+	else:
+		p = load("res://scripts/reward_panel_adventure_v2.gd").new()
 	p._btn_pos = btn_pos
 	host.add_child(p)
 	return p
@@ -1077,15 +1081,16 @@ func _draw_relic() -> void:
 	_draw_btn(claim, "领取" if not settled else "已处理", true, settled)
 
 
-func _cards_panel_rect() -> Rect2:
-	## R506：主框在**整个界面**里垂直居中（R505 是「横幅下缘→屏底」这一段的居中，
-	##   结果整体偏下、下沿快贴到屏幕边，框内可用高度也不够铺）。
-	##   现在横幅带退回纯背景层：面板压住它中段，只从顶部一条边与左右两侧露出。
-	var vs := _vs()
+static func cards_layout_for_viewport(vs: Vector2) -> Dictionary:
 	var pw := minf(vs.x - 56.0, 1120.0)
 	var top := 76.0
 	var ph := minf(vs.y - top - 24.0, 632.0)
-	return Rect2(Vector2((vs.x - pw) / 2.0, top), Vector2(pw, ph))
+	var panel := Rect2(Vector2((vs.x - pw) / 2.0, top), Vector2(pw, ph))
+	return {"panel": panel, "cards_y": top + 56.0, "buttons_y": panel.end.y - 100.0}
+
+
+func _cards_panel_rect() -> Rect2:
+	return cards_layout_for_viewport(_vs())["panel"]
 
 
 # ------------------------------------------------------------ R398 删卡视图
@@ -1637,7 +1642,7 @@ func _btn_skip_rect() -> Rect2:
 
 func _cards_y() -> float:
 	## 独立标题下直接摆卡，为效果说明和底部操作留出空间。
-	return _cards_panel_rect().position.y + 56.0
+	return cards_layout_for_viewport(_vs())["cards_y"]
 
 
 func _cards_button_rects() -> Dictionary:
@@ -1646,7 +1651,7 @@ func _cards_button_rects() -> Dictionary:
 	var pr := _cards_panel_rect()
 	var x := pr.position.x + 34.0
 	var w := pr.size.x - 68.0
-	var y := pr.end.y - 100.0
+	var y: float = cards_layout_for_viewport(_vs())["buttons_y"]
 	if RunState.has_relic(RunState.MATCH_RELIC_ID):
 		var widths := [170.0, 140.0, 160.0, 240.0, 170.0]
 		var total := 944.0

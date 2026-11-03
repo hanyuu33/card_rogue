@@ -59,15 +59,15 @@ var _mark_flag_press := Vector2(-1, -1)                    # 旗子按下位置�
 var _boss_hold := 0.0              # R179：入夜触发倒计时（> 0 时即使 boss_pending 也不播）
 
 # ---- 视觉常量（只服务本文件；跨文件的房间类型色在 UiTheme.MAP_NODE_COLORS）----
-const COL_CELL_FILL := Color(0.06, 0.08, 0.12, 0.40)        # 未走过的格子底（半透明，露出背景图）
-const COL_CELL_FILL_DONE := Color(0.14, 0.17, 0.22, 0.46)   # 走过的格子底（稍实一点）
+const COL_CELL_FILL := Color(0.94, 0.91, 0.80, 0.48)        # 未走过的格子底（半透明，露出背景图）
+const COL_CELL_FILL_DONE := Color(0.64, 0.73, 0.55, 0.40)   # 走过的格子底（稍实一点）
 const COL_CELL_LINE := Color(1, 1, 1, 0.14)                 # 格子分隔线
 const COL_CELL_LINE_DONE := Color(0.94, 0.88, 0.72, 0.30)   # 走过的格子边（暖白）
                                                             # ⚠️ R130 起**不再是金**：
                                                             # 旧版金色格边与金色通路撞色 →
                                                             # 连接根本看不出来
 # 通路（小桥）的画法与染色统一在 scripts/map_bridge.gd + UiTheme.MAP_BRIDGE_*。
-const COL_PANEL := Color(0.08, 0.09, 0.13, 0.74)            # HUD 小面板底
+const COL_PANEL := Color(0.18, 0.24, 0.18, 0.92)            # HUD 小面板底
 const COL_PANEL_LINE := Color(1, 1, 1, 0.12)
 const COL_CHOCO_FALLBACK := Color("6b3f24")                 # 巧克力缺图时的兜底「整块」底
 const COL_CHOCO_SEG := Color("8c5a2e")                      # 兜底：小方格填充
@@ -892,7 +892,7 @@ func _draw_background() -> void:
 	if tex != null:
 		draw_texture_rect(tex, Rect2(0, 0, size.x, size.y), false)
 		# 压一层很淡的暗罩：保证格子上的文字在任何背景上都读得清。
-		draw_rect(Rect2(0, 0, size.x, size.y), Color(0.02, 0.03, 0.05, 0.42), true)
+		draw_rect(Rect2(0, 0, size.x, size.y), Color(0.14, 0.18, 0.12, 0.14), true)
 		return
 	var top := Color("1c1f28")
 	var bottom := Color("303443")
@@ -1270,7 +1270,7 @@ func _draw_boss_chip() -> void:
 	var w := 320.0
 	var h := 26.0
 	var rect := Rect2(14, 60, w, h)
-	draw_rect(rect, COL_PANEL, true)
+	draw_style_box(UiTheme.adventure_panel_style(8.0, true), rect)
 	draw_rect(rect, UiTheme.ACCENT_LIT, false, 1.3)
 	draw_string(_font_bold, rect.position + Vector2(10, 18), _ellipsis(text, w - 20.0,
 			UiTheme.FS_LABEL), HORIZONTAL_ALIGNMENT_LEFT, w - 20, UiTheme.FS_LABEL,
@@ -1316,7 +1316,7 @@ func _draw_chocolate() -> void:
 	## 变化量反馈已有 R131 的「-1 小牌」过场，这里只补滚动。
 	var n := _choco_shown()
 	var rect := _choco_panel_rect()
-	draw_rect(rect, COL_PANEL, true)
+	draw_style_box(UiTheme.adventure_panel_style(8.0, true), rect)
 	draw_rect(rect, COL_PANEL_LINE, false, 1.2)
 	_draw_choco_icon(Rect2(rect.position.x + 5.0, rect.position.y + 3.0,
 			CHOCO_ICON_W, CHOCO_ICON_H))

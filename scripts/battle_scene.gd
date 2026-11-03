@@ -14463,14 +14463,14 @@ func _draw_level_plate() -> void:
 	var ph := 34.0
 	var rect := Rect2(WINDOW_W - 18.0 - (tw + pad_x * 2.0), 50.0, tw + pad_x * 2.0, ph)
 	draw_rect(rect.grow(2.0), Color(0, 0, 0, 0.22), true)          # 投影：把铭牌从底图上托出来
-	draw_rect(rect, Color(0.09, 0.075, 0.05, 0.78), true)          # 深色铭牌底
+	UiTheme.draw_info_card(self, rect)          # 深色铭牌底
 	draw_rect(rect, UiTheme.ACCENT_GOLD, false, 1.5)               # 金边
 	var dm := rect.position + Vector2(pad_x * 0.42, ph * 0.5)       # 左侧小菱形（与角花呼应）
 	draw_colored_polygon(PackedVector2Array([dm + Vector2(0, -5), dm + Vector2(5, 0),
 			dm + Vector2(0, 5), dm + Vector2(-5, 0)]), UiTheme.ACCENT_GOLD)
 	_draw_string_center(_font_bold, px, txt,
 			rect.position + Vector2(rect.size.x / 2.0 + 6.0, ph * 0.5),
-			Color("f6e6bc"), 3, Color(0.04, 0.03, 0.02, 0.92))
+			UiTheme.PAGE_INK, 0, Color.TRANSPARENT)
 
 
 func _draw_grid_frame() -> void:
@@ -14601,14 +14601,7 @@ func _draw_end_turn_big() -> void:
 			var g := r.grow(2.0 + float(i) * 5.0)
 			var a := (0.20 - float(i) * 0.045) * (0.45 + 0.55 * ph)
 			draw_rect(g, Color(1.0, 0.80, 0.30, maxf(a, 0.0)), true)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.11, 0.09, 0.06, 0.94) if ready else Color(0.18, 0.18, 0.20, 0.88)
-	sb.border_color = UiTheme.ACCENT_LIT if ready else Color(0.55, 0.55, 0.58)
-	sb.set_border_width_all(3 if ready else 2)
-	sb.set_corner_radius_all(14)
-	draw_style_box(sb, r)
-	# 内圈细线：让边框看起来是「双线」，比单线厚一档
-	draw_rect(r.grow(-7.0), Color(1.0, 0.86, 0.55, 0.32 if ready else 0.12), false, 1.0)
+	UiTheme.draw_action(self, r, true, not ready, hover)
 	# 左侧「推进」图标：两枚三角（字体里的 ▶ 不保证有字形 → 一律程序画）
 	var icon_c := Vector2(r.position.x + 42.0, r.get_center().y - 9.0)
 	var icon_col := Color(1.0, 0.85, 0.45) if ready else Color(0.55, 0.55, 0.58)

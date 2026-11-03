@@ -282,7 +282,7 @@ func _draw() -> void:
 		draw_string(_font_bold, tr.position + Vector2(0, 24),
 				"%s  %d / %d" % [ids[ti], use, tot],
 				HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, UiTheme.FS_LABEL,
-				Color("f2ead0") if cur else Color("9aa0ad"))
+				UiTheme.PAGE_INK if cur else Color("9aa0ad"))
 	var quota := ProfileData.ban_total_quota_for(_repo, _cls)
 	var summary := ProfileData.ban_summary_for(_repo, _cls)
 	draw_string(_font_bold, Vector2(0, 172), summary,
@@ -295,8 +295,7 @@ func _draw() -> void:
 	# 返回
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
-	draw_rect(back, UiTheme.PAGE_PAPER if hov_back else UiTheme.PAGE_PAPER, true)
-	draw_rect(back, Color(0, 0, 0, 0.35), false, 2.0)
+	UiTheme.draw_action(self, back, false, false, hov_back)
 	draw_string(_font_bold, back.position + Vector2(0, 22), "← 返回角色选择",
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	if _cards.is_empty():
@@ -333,7 +332,7 @@ func _draw_row(idx: int, c: CardData) -> void:
 	elif hov:
 		bg = UiTheme.PAGE_PAPER
 	draw_rect(r, bg, true)
-	draw_rect(r, Color("6a768c") if hov else Color("444a58"), false, 1.4)
+	draw_rect(r, UiTheme.ADVENTURE_BRASS if hov else Color("444a58"), false, 1.4)
 	# 稀有度色条
 	draw_rect(Rect2(r.position.x, r.position.y, 5.0, r.size.y),
 			CardData.RARITY_COLORS[clampi(c.rarity, 0, 6)], true)

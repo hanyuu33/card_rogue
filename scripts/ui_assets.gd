@@ -64,6 +64,10 @@ static func event_pic(kind: String) -> Texture2D:
 
 
 static func event_bg(kind: String) -> Texture2D:
+	if kind == "rest":
+		var clearing := get_tex("adventure_shared/rest_clearing")
+		if clearing != null:
+			return clearing
 	return get_tex("bg_" + kind)
 
 
