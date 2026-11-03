@@ -5716,7 +5716,7 @@ func _draw_foresight_mode() -> void:
 	UiTheme.draw_panel_bg(self, box)
 	draw_rect(box, UiTheme.INK_600, false, 2.0)
 	_draw_string_center(_font_bold, UI_FS_LABEL, "预判：选择一个效果",
-			Vector2(WINDOW_W / 2, rs[0].position.y - 28), UiTheme.INK_800)
+			Vector2(WINDOW_W / 2, rs[0].position.y - 28), UiTheme.INK_800, -1)
 	var labels := [
 		"① 从弃牌区选一张费用为 0 的技能卡加入手卡（之后本卡消失）",
 		"② 从卡组将一张随机费用不为 0 的技能卡加入手卡",
@@ -6441,7 +6441,7 @@ func _draw_pick_banner() -> void:
 	# R479：与选卡页左上角的「看战场」按钮成对 —— 一个收、一个回。
 	_draw_string_center(_font_bold, UI_FS_LABEL,
 			"查看待选牌：%s（点击继续）" % String(_pick.cfg_short()),
-			r.get_center(), Color("ffd27d"))
+			r.get_center(), Color("ffd27d"), -1)
 func _close_zone_panels() -> void:
 	## 关掉所有区域浏览面板（专注选完 / 取消后收干净）。
 	_effects_visible = false
@@ -8039,7 +8039,7 @@ func _draw_map_panel() -> void:
 	draw_rect(pr, Color("1b1c22"))
 	draw_rect(pr, Color("6a6f7d"), false, 2.0)
 	_draw_string_center(_font_bold, UI_FS_BODY, "冒 险 地 图（战斗中查看）",
-			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 26.0), UiTheme.SAND)
+			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 26.0), UiTheme.SAND, -1)
 	# R357：第三层没有步数机制 → 这一行里不再出现「巧克力 ×N」（否则永远显示满格的
 	# 12，玩家会以为「还有 12 步可以走」）。
 	var mv_info := "%s    已探索 %d / %d 间    生命 %d/%d    卡组 %d 张" % [
@@ -8053,11 +8053,11 @@ func _draw_map_panel() -> void:
 				RunState.chocolate, RunState.hp, RunState.max_hp,
 				RunState.deck_ids.size()]
 	_draw_string_center(_font, UI_FS_CAPTION, mv_info,
-			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 48.0), UiTheme.INK_300)
+			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 48.0), UiTheme.INK_300, -1)
 	_draw_string_center(_font, UI_FS_CAPTION,
 			"本层 Boss：%s　·　战斗中不能改路线"
 			% str(RunState.boss_level().get("name", "")),
-			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 68.0), Color("8f8b80"))
+			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 68.0), Color("8f8b80"), -1)
 	# ⚠️ 顺序不可换：格子底 → 通路（小桥） → 图标（与冒险地图同一套）。
 	_draw_map_tiles()
 	_draw_map_bridges()
@@ -8877,7 +8877,7 @@ func _draw_string_box_center(font: Font, px: int, text: String, center: Vector2,
 			center.y - block_h * 0.5 - TEXT_BG_PAD_Y,
 			sz.x + TEXT_BG_PAD_X * 2.0, block_h + TEXT_BG_PAD_Y * 2.0)
 	_text_bg_plate(rect, bg)
-	_draw_string_center(font, px, text, center, col)
+	_draw_string_center(font, px, text, center, col, -1)
 
 
 func _draw_string_box_nw(font: Font, px: int, text: String, pos: Vector2,
@@ -8890,7 +8890,7 @@ func _draw_string_box_nw(font: Font, px: int, text: String, pos: Vector2,
 	var rect := Rect2(pos.x - TEXT_BG_PAD_X, pos.y - font.get_ascent(px) - TEXT_BG_PAD_Y,
 			sz.x + TEXT_BG_PAD_X * 2.0, block_h + TEXT_BG_PAD_Y * 2.0)
 	_text_bg_plate(rect, bg)
-	_draw_string_nw(font, px, text, pos, col)
+	_draw_string_nw(font, px, text, pos, col, -1)
 
 
 func _text_bg_plate(rect: Rect2, bg: Color) -> void:
@@ -13364,10 +13364,10 @@ func _draw_paralyze_mini(pos: Vector2, k: float, a: float, count: int, rot: floa
 	draw_rect(r.grow(2.5), Color(0.06, 0.05, 0.03, 0.55 * a), true)
 	draw_rect(r, Color(0.15, 0.12, 0.06, 0.96 * a), true)
 	draw_rect(r, Color(1.00, 0.84, 0.28, a), false, 1.8)
-	_draw_string_center(_font_bold, 16, "麻痹", Vector2(0, 6), Color(1.00, 0.91, 0.55, a))
+	_draw_string_center(_font_bold, 16, "麻痹", Vector2(0, 6), Color(1.00, 0.91, 0.55, a), -1)
 	if count > 1:
 		_draw_string_center(_font_bold, 13, "×%d" % count, Vector2(0, -22),
-				Color(1.00, 0.96, 0.80, a))
+				Color(1.00, 0.96, 0.80, a), -1)
 	draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
 
 
@@ -14135,7 +14135,7 @@ func _draw_ghosts() -> void:
 		draw_rect(rect, Color(1, 1, 1, 0.85 * alpha))
 		draw_rect(rect, Color(0.6, 0.6, 0.6, alpha), false, 1.5)
 		_draw_string_center(_font, UI_FS_MICRO, str(g.name), center + Vector2(0, 4),
-				Color(0.3, 0.3, 0.3, alpha))
+				Color(0.3, 0.3, 0.3, alpha), -1)
 
 
 func _draw_speech_bubbles() -> void:
@@ -14331,7 +14331,7 @@ func _draw_picked_marker() -> void:
 	var tag := Rect2(r.position.x + r.size.x - 34.0, r.position.y + 1.0, 33.0, 14.0)
 	draw_rect(tag, COL_PICKED)
 	_draw_string_center(_font_bold, UI_FS_MICRO, "已选",
-			tag.position + tag.size / 2.0, Color.BLACK)
+			tag.position + tag.size / 2.0, Color.BLACK, -1)
 
 
 func _draw_cancel_armed_marker() -> void:
@@ -14360,7 +14360,7 @@ func _draw_cancel_armed_marker() -> void:
 	var tag := Rect2(r.position.x + r.size.x - 45.0, r.position.y + 2.0, 44.0, 15.0)
 	draw_rect(tag, COL_CANCEL_ARMED)
 	_draw_string_center(_font_bold, UI_FS_MICRO, "取消?",
-			tag.position + tag.size / 2.0, Color(0.10, 0.07, 0.02))
+			tag.position + tag.size / 2.0, Color(0.10, 0.07, 0.02), -1)
 
 
 func _cell_center(cell: Vector2i) -> Vector2:
@@ -14473,7 +14473,7 @@ func _draw_level_plate() -> void:
 			dm + Vector2(0, 5), dm + Vector2(-5, 0)]), UiTheme.ACCENT_GOLD)
 	_draw_string_center(_font_bold, px, txt,
 			rect.position + Vector2(rect.size.x / 2.0 + 6.0, ph * 0.5),
-			UiTheme.PAGE_INK, 0, Color.TRANSPARENT)
+			UiTheme.PAGE_INK, -1)
 
 
 func _draw_grid_frame() -> void:
@@ -14623,7 +14623,7 @@ func _draw_end_turn_big() -> void:
 		sub = "▶ 结束我方回合"
 	_draw_string_center(_font, UI_FS_CAPTION, sub,
 			Vector2(text_cx, r.position.y + 74.0),
-			Color(1.0, 0.92, 0.72, 0.95) if ready else Color(0.62, 0.62, 0.66))
+			Color(1.0, 0.92, 0.72, 0.95) if ready else Color(0.62, 0.62, 0.66), -1)
 
 
 func _enemy_zone_rect() -> Rect2:
@@ -14707,26 +14707,26 @@ func _draw_enemy_effect_popup() -> void:
 	var merged := _merged_effects(engine.state.enemy_effects)
 	var max_w := EE_TEXT_HW * 2.0 - 28.0
 	_draw_string_center(_font_bold, UI_FS_SUBHEAD, "敌方效果",
-			c + Vector2(0.0, -EE_TEXT_HH + 26.0), Color.WHITE)
+			c + Vector2(0.0, -EE_TEXT_HH + 26.0), Color.WHITE, -1)
 	var y := c.y - EE_TEXT_HH + 62.0
 	var bottom := c.y + EE_TEXT_HH - 30.0
 	for m in merged:
 		if y > bottom - 24.0:
 			_draw_string_center(_font, UI_FS_CAPTION,
 					"……共 %d 张，点右侧「敌方效果」区查看全部" % merged.size(),
-					Vector2(c.x, bottom), Color(0.72, 0.72, 0.78))
+					Vector2(c.x, bottom), Color(0.72, 0.72, 0.78), -1)
 			break
 		var card: CardData = m["card"]
 		var nm: String = card.card_name
 		if int(m["count"]) > 1:
 			nm += " ×%d" % int(m["count"])
 		_draw_string_center(_font_bold, UI_FS_BODY, nm,
-				Vector2(c.x, y), Color.WHITE)
+				Vector2(c.x, y), Color.WHITE, -1)
 		y += 24.0
 		var desc := CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
 		for ln in _wrap_lines(_font, UI_FS_CAPTION, desc, max_w):
 			_draw_string_center(_font, UI_FS_CAPTION, ln,
-					Vector2(c.x, y), Color(0.93, 0.93, 0.97))
+					Vector2(c.x, y), Color(0.93, 0.93, 0.97), -1)
 			y += 17.0
 		y += 12.0
 	var left := maxi(0, int(ceil(ee_popup_left_sec(_ee_popup_t0, _now()))))
@@ -14735,7 +14735,7 @@ func _draw_enemy_effect_popup() -> void:
 	draw_rect(ee_btn, Color(0.30, 0.40, 0.26, 0.95), true)
 	draw_rect(ee_btn, Color("c8f0a0"), false, 1.5)
 	_draw_string_center(_font_bold, UI_FS_CAPTION, "继续（%d 秒）" % left,
-			ee_btn.get_center() + Vector2(0, 1), Color("0e2010"))
+			ee_btn.get_center() + Vector2(0, 1), Color("0e2010"), -1)
 
 
 func _draw_enemy_effects() -> void:
@@ -14745,7 +14745,7 @@ func _draw_enemy_effects() -> void:
 	draw_rect(z, Color(0.88, 0.72, 0.72, 0.30), true)
 	draw_rect(z, Color("a87a7a"), false, 1.0)
 	_draw_string_center(_font_bold, UI_FS_MICRO, "敌方效果 %d" % state.enemy_effects.size(),
-			Vector2(z.position.x + z.size.x / 2, z.position.y + 22.0), Color("7a3a3a"))
+			Vector2(z.position.x + z.size.x / 2, z.position.y + 22.0), Color("7a3a3a"), -1)
 	# 同名合并显示（左下角 ×N 角标）
 	var merged_e := _merged_effects(state.enemy_effects)
 	var n_ee := merged_e.size()
@@ -14836,7 +14836,7 @@ func _draw_relic_bar() -> void:
 	draw_rect(z, Color(1.0, 0.96, 0.82, 0.30), true)
 	draw_rect(z, Color("b09a5a"), false, 1.0)
 	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "道具 %d" % ids.size(),
-			Vector2(z.position.x + z.size.x / 2, z.position.y + 16.0), Color("7a6230"))
+			Vector2(z.position.x + z.size.x / 2, z.position.y + 16.0), Color("7a6230"), -1)
 	var repo := RelicRepo.load_json()
 	var n_rel := ids.size()
 	var cap_r := _relic_max_slots()
@@ -14915,7 +14915,7 @@ func _draw_cost_zone() -> void:
 	draw_rect(zone, Color(0.72, 0.86, 0.72, 0.30), true)
 	draw_rect(zone, Color("7aa87a"), false, 1.0)
 	_draw_string_center(_font_bold, UI_FS_MICRO, "效果区 %d" % state.effects.size(),
-			Vector2(mid_x, COST_Y + ENERGY_H + 22.0), Color("4a6a4a"))
+			Vector2(mid_x, COST_Y + ENERGY_H + 22.0), Color("4a6a4a"), -1)
 	# 效果卡：同名合并显示（左下角 ×N 角标），栏高固定、最多画满可见槽位；
 	# 装不下的用一张「+N」摘要卡兜底（点区域看全部）
 	var merged := _merged_effects(state.effects)
@@ -14964,7 +14964,7 @@ func _draw_count_badge(rect: Rect2, count: int) -> void:
 	draw_rect(badge, Color(0.15, 0.18, 0.15, 0.88), true)
 	draw_rect(badge, Color("a8d8a8"), false, 1.0)
 	_draw_string_center(_font_bold, UI_FS_MICRO, "×%d" % count,
-			Vector2(badge.position.x + bw / 2, badge.position.y + 15.5), Color("d8f0d8"))
+			Vector2(badge.position.x + bw / 2, badge.position.y + 15.5), Color("d8f0d8"), -1)
 
 
 func _draw_counter_badge(c: CardData, rect: Rect2) -> void:
@@ -14983,7 +14983,7 @@ func _draw_counter_badge(c: CardData, rect: Rect2) -> void:
 	draw_rect(badge, Color(0.15, 0.15, 0.18, 0.88), true)
 	draw_rect(badge, Color("d8cfa8"), false, 1.0)
 	_draw_string_center(_font_bold, UI_FS_MICRO, "剩 %d" % left,
-			Vector2(badge.position.x + bw / 2, badge.position.y + 15.5), Color("f0e6c8"))
+			Vector2(badge.position.x + bw / 2, badge.position.y + 15.5), Color("f0e6c8"), -1)
 
 
 func _effect_zone_max_slots() -> int:
@@ -15001,13 +15001,13 @@ func _draw_more_tile(rect: Rect2, label: String, sub: String) -> void:
 	draw_rect(rect, Color("9a8f70"), false, 1.0)
 	if rect.size.y >= 40.0:
 		_draw_string_center(_font_bold, UI_FS_LABEL, label,
-				Vector2(cx, rect.position.y + rect.size.y * (0.50 if sub == "" else 0.40)), Color("6a6040"))
+				Vector2(cx, rect.position.y + rect.size.y * (0.50 if sub == "" else 0.40)), Color("6a6040"), -1)
 		if sub != "":
 			_draw_string_center(_font, UI_FS_MICRO, sub,
-					Vector2(cx, rect.position.y + rect.size.y * 0.72), Color("7a7050"))
+					Vector2(cx, rect.position.y + rect.size.y * 0.72), Color("7a7050"), -1)
 	else:
 		_draw_string_center(_font_bold, UI_FS_MICRO, label if sub == "" else "%s %s" % [label, sub],
-				Vector2(cx, rect.position.y + rect.size.y * 0.5 + 3.0), Color("6a6040"))
+				Vector2(cx, rect.position.y + rect.size.y * 0.5 + 3.0), Color("6a6040"), -1)
 
 
 func _effect_rect(i: int) -> Rect2:
@@ -15197,7 +15197,7 @@ func _draw_zone_name(rect: Rect2, label: String) -> void:
 	var strip := Rect2(plate.position.x, plate.end.y - ZONE_NAME_H, plate.size.x, ZONE_NAME_H)
 	draw_rect(strip, Color(0.04, 0.035, 0.03, 0.82), true)
 	_draw_string_center(_font_bold, UI_FS_MICRO, label,
-			strip.get_center(), Color("e8dcc0"))
+			strip.get_center(), Color("e8dcc0"), -1)
 
 
 func _draw_zone_count(rect: Rect2, count: int) -> void:
@@ -15213,7 +15213,7 @@ func _draw_zone_count(rect: Rect2, count: int) -> void:
 	draw_rect(r.grow(1.5), Color(0, 0, 0, 0.45), true)
 	draw_rect(r, Color(0.12, 0.10, 0.07, 0.94), true)
 	draw_rect(r, UiTheme.ACCENT_GOLD, false, 1.5)
-	_draw_string_center(_font_bold, px, txt, r.get_center(), Color("f6e6bc"))
+	_draw_string_center(_font_bold, px, txt, r.get_center(), Color("f6e6bc"), -1)
 
 
 func _draw_hand_base() -> void:
@@ -15637,7 +15637,7 @@ func _draw_hand_bonus_mark(r: Rect2) -> void:
 	var star := r.position + Vector2(r.size.x - 9.0 * k, 11.0 * k)
 	draw_circle(star, 7.0 * k, Color(0.10, 0.09, 0.12, 0.92))
 	draw_arc(star, 7.0 * k, 0, TAU, 20, col, 1.6 * k, true)
-	_draw_string_center(_font_bold, int(10 * k), "★", star, col)
+	_draw_string_center(_font_bold, int(10 * k), "★", star, col, -1)
 
 
 func _draw_drag() -> void:
@@ -16023,7 +16023,7 @@ func _draw_info_scroll_hint(y_anchor: float, top: bool) -> void:
 	draw_style_box(sb, r)
 	var txt := "▼ 下滑查看" if not top else "▲ 上滑查看"
 	_draw_string_center(_font_bold, UI_FS_CAPTION, txt, r.get_center(),
-			Color("ffe6a8"))
+			Color("ffe6a8"), -1)
 
 
 
@@ -16054,8 +16054,8 @@ func _draw_game_over() -> void:
 	var col := COL_WIN if win else COL_LOSE
 	UiTheme.draw_panel_bg(self, Rect2(GRID_X + 12, cy - 58, GRID_W - 24, 116))
 	draw_rect(Rect2(GRID_X + 12, cy - 58, GRID_W - 24, 116), col, false, 3.0)
-	_draw_string_center(_font_bold, UI_FS_HEADING, "胜  利" if win else "失  败", Vector2(cx, cy - 20), col)
-	_draw_string_center(_font, UI_FS_MICRO, engine.result_reason, Vector2(cx, cy + 28), UiTheme.INK_600)
+	_draw_string_center(_font_bold, UI_FS_HEADING, "胜  利" if win else "失  败", Vector2(cx, cy - 20), col, -1)
+	_draw_string_center(_font, UI_FS_MICRO, engine.result_reason, Vector2(cx, cy + 28), UiTheme.INK_600, -1)
 
 
 func _set_over_gold(total: int, parts: Array[String]) -> void:
@@ -16086,7 +16086,7 @@ func _draw_banner() -> void:
 	var cy := GRID_Y + GRID_H * 0.42 - 18.0 * p
 	draw_rect(Rect2(cx - 150, cy - 30, 300, 60), Color(1, 1, 1, 0.72 * alpha))
 	draw_rect(Rect2(cx - 150, cy - 30, 300, 60), Color(col.r, col.g, col.b, alpha), false, 2.0)
-	_draw_string_center(_font_bold, UI_FS_HEADING, str(_banner.text), Vector2(cx, cy + 8), col)
+	_draw_string_center(_font_bold, UI_FS_HEADING, str(_banner.text), Vector2(cx, cy + 8), col, -1)
 
 
 func _draw_confetti() -> void:
@@ -16245,21 +16245,21 @@ func _draw_zone_panel(title: String, cards: Array, counts: Array = []) -> void:
 	UiTheme.draw_panel_bg(self, Rect2(px, py, pw, ph))
 	draw_rect(Rect2(px, py, pw, ph), UiTheme.ACCENT_GOLD, false, 2.0)
 	_draw_string_center(_font_bold, UI_FS_LABEL, title,
-			Vector2(WINDOW_W / 2, py + 26), UiTheme.INK_800)
+			Vector2(WINDOW_W / 2, py + 26), UiTheme.INK_800, -1)
 	if pages > 1:
 		_draw_string_center(_font, UI_FS_CAPTION, "第 %d/%d 页" % [_zone_page + 1, pages],
-				Vector2(WINDOW_W / 2, py + ph - 15), UiTheme.INK_500)
+				Vector2(WINDOW_W / 2, py + ph - 15), UiTheme.INK_500, -1)
 		_draw_string_center(_font_bold, UI_FS_HEADING, "<",
 				_zone_prev_page_rect().get_center() + Vector2(0, 1),
-				UiTheme.INK_600 if _zone_page > 0 else UiTheme.INK_300)
+				UiTheme.INK_600 if _zone_page > 0 else UiTheme.INK_300, -1)
 		_draw_string_center(_font_bold, UI_FS_HEADING, ">",
 				_zone_next_page_rect().get_center() + Vector2(0, 1),
-				UiTheme.INK_600 if _zone_page < pages - 1 else UiTheme.INK_300)
+				UiTheme.INK_600 if _zone_page < pages - 1 else UiTheme.INK_300, -1)
 	# 右上「×」
 	draw_rect(_zone_close_rect(), Color("c9bfa6"), true)
 	draw_rect(_zone_close_rect(), UiTheme.INK_300, false, 1.0)
 	_draw_string_center(_font_bold, UI_FS_LABEL, "×",
-			_zone_close_rect().get_center() + Vector2(0, 1), UiTheme.INK_800)
+			_zone_close_rect().get_center() + Vector2(0, 1), UiTheme.INK_800, -1)
 	if n == 0:
 		return
 	var page_rows: int = L["page_rows"]
@@ -16406,7 +16406,7 @@ func _draw_log_panel() -> void:
 	draw_rect(rect, Color("2b2b2b"))
 	draw_rect(rect, UiTheme.INK_300, false, 1.0)
 	_draw_string_nw(_font_bold, UI_FS_CAPTION, "对局记录（L 关闭）",
-			Vector2(INFO_X + 10, GRID_Y + 18), Color("f0f0f0"))
+			Vector2(INFO_X + 10, GRID_Y + 18), Color("f0f0f0"), -1)
 	var lines := engine.log
 	var lpx: int = UI_FS_MICRO
 	var max_w := INFO_W - 20.0
@@ -16421,7 +16421,7 @@ func _draw_log_panel() -> void:
 					HORIZONTAL_ALIGNMENT_LEFT, -1, lpx).x > max_w:
 				t = t.substr(0, t.length() - 1)
 			t += "…"
-		_draw_string_nw(_font, UI_FS_MICRO, t, Vector2(INFO_X + 8, y), Color("d8d8d8"))
+		_draw_string_nw(_font, UI_FS_MICRO, t, Vector2(INFO_X + 8, y), Color("d8d8d8"), -1)
 		y += 21.0
 
 
