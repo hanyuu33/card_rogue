@@ -6,11 +6,11 @@ extends CanvasLayer
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
-const SIZE := Vector2(234, 40)      # R181：加宽以容纳金币（血量右边）
+const SIZE := Vector2(266, 52)      # R181：加宽以容纳金币（血量右边）
 const BG := Color("1a1c22")
 const BORDER := Color("d4a84b")
-const TEXT := Color("ece7db")
-const GOLD_TEXT := Color("ffd75a")  # R181：金币数字（金色）
+const TEXT := UiTheme.ADVENTURE_LIGHT
+const GOLD_TEXT := UiTheme.ADVENTURE_BRASS_LIT  # R181：金币数字（金色）
 
 var _last_scene_path := ""
 var _last_hp := -999
@@ -28,38 +28,26 @@ var _sfx: Sfx
 
 
 func _ready() -> void:
+	get_tree().root.theme = UiTheme.control_theme()
 	layer = 90
 	var panel := Panel.new()
 	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	panel.position = Vector2(8, 8)
 	panel.size = SIZE
-	var style := StyleBoxFlat.new()
-	style.bg_color = BG
-	style.border_color = BORDER
-	style.border_width_left = 2
-	style.border_width_top = 2
-	style.border_width_right = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = 6
-	style.corner_radius_top_right = 6
-	style.corner_radius_bottom_right = 6
-	style.corner_radius_bottom_left = 6
-	panel.add_theme_stylebox_override("panel", style)
+	panel.add_theme_stylebox_override("panel", UiTheme.adventure_panel_style(8.0, true))
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(panel)
 
-	var avatar := TextureRect.new()
+	var avatar := preload("res://scripts/ui_avatar_frame.gd").new()
 	avatar.name = "Avatar"
-	avatar.position = Vector2(6, 6)
-	avatar.size = Vector2(28, 28)
-	avatar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	avatar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	avatar.position = Vector2(6, 4)
+	avatar.size = Vector2(44, 44)
 	avatar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(avatar)
 
 	var hp := Label.new()
 	hp.name = "HpLabel"
-	hp.position = Vector2(40, 9)
+	hp.position = Vector2(60, 15)
 	hp.size = Vector2(100, 22)
 	hp.add_theme_font_override("font", UiTheme.font())
 	hp.add_theme_font_size_override("font_size", 16)
@@ -71,7 +59,7 @@ func _ready() -> void:
 	# R181：金币图标 + 数字，放在血量右边（同一个状态条框内）。
 	var gold_icon := TextureRect.new()
 	gold_icon.name = "GoldIcon"
-	gold_icon.position = Vector2(146, 9)
+	gold_icon.position = Vector2(172, 15)
 	gold_icon.size = Vector2(22, 22)
 	gold_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	gold_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -80,7 +68,7 @@ func _ready() -> void:
 
 	var gold := Label.new()
 	gold.name = "GoldLabel"
-	gold.position = Vector2(170, 9)
+	gold.position = Vector2(198, 15)
 	gold.size = Vector2(58, 22)
 	gold.add_theme_font_override("font", UiTheme.font())
 	gold.add_theme_font_size_override("font_size", 16)
@@ -137,7 +125,7 @@ func _update(silent := false) -> void:
 	var panel := get_child(0) as Panel
 	if panel == null:
 		return
-	var avatar: TextureRect = panel.get_node("Avatar")
+	var avatar = panel.get_node("Avatar")
 	avatar.texture = UiAssets.class_avatar(RunState.player_class)
 	var hp: Label = panel.get_node("HpLabel")
 	hp.text = "生命 %d / %d" % [RunState.hp, RunState.max_hp]

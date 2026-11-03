@@ -221,14 +221,8 @@ func _click() -> void:
 		_sfx.play("click")
 
 
-func _panel_style() -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.07, 0.08, 0.11, 0.97)
-	sb.border_color = UiTheme.ACCENT_GOLD
-	sb.set_border_width_all(3)
-	sb.set_corner_radius_all(UiTheme.RADIUS_LG)
-	sb.set_content_margin_all(PANEL_PAD)
-	return sb
+func _panel_style() -> StyleBox:
+	return UiTheme.adventure_panel_style(PANEL_PAD)
 
 
 func _draw_backdrop() -> void:
@@ -258,9 +252,9 @@ func _rebuild() -> void:
 	for c in _box.get_children():
 		_box.remove_child(c)
 		c.queue_free()
-	_box.add_child(_mk_label("菜单", UiTheme.FS_HEADING, Color("f2e7cd"), true))
+	_box.add_child(_mk_label("菜单", UiTheme.FS_HEADING, UiTheme.PAGE_INK, true))
 	if _sub_text != "":
-		_box.add_child(_mk_label(_sub_text, UiTheme.FS_CAPTION, Color("9a958a"), false))
+		_box.add_child(_mk_label(_sub_text, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED, false))
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 6)
 	_box.add_child(gap)
@@ -289,7 +283,7 @@ func _rebuild() -> void:
 		sp.custom_minimum_size = Vector2(0, 4)
 		_box.add_child(sp)
 		_box.add_child(_mk_label("种子：%s" % RunState.seed_text(),
-				UiTheme.FS_CAPTION, Color("a89a6e"), false))
+				UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED, false))
 
 
 func _mk_label(text: String, fs: int, col: Color, bold: bool) -> Label:

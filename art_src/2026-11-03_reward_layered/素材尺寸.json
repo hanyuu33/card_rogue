@@ -1,0 +1,210 @@
+[
+  {
+    "file": "01_标题栏_无字.png",
+    "pixel_size": [
+      602,
+      152
+    ],
+    "suggested_display_size": [
+      301,
+      76
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "02_主按钮_无字.png",
+    "pixel_size": [
+      394,
+      92
+    ],
+    "suggested_display_size": [
+      197,
+      46
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "03_浅色按钮_无字.png",
+    "pixel_size": [
+      338,
+      96
+    ],
+    "suggested_display_size": [
+      169,
+      48
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "04_禁用按钮_无字.png",
+    "pixel_size": [
+      430,
+      92
+    ],
+    "suggested_display_size": [
+      215,
+      46
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "05_卡框_普通_无字.png",
+    "pixel_size": [
+      476,
+      570
+    ],
+    "suggested_display_size": [
+      238,
+      285
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "06_卡框_选中_无字.png",
+    "pixel_size": [
+      476,
+      570
+    ],
+    "suggested_display_size": [
+      238,
+      285
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "07_名称条_无字.png",
+    "pixel_size": [
+      446,
+      174
+    ],
+    "suggested_display_size": [
+      223,
+      87
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "08_说明框_无字.png",
+    "pixel_size": [
+      2060,
+      256
+    ],
+    "suggested_display_size": [
+      1030,
+      128
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "09_品质标签_普通_无字.png",
+    "pixel_size": [
+      200,
+      58
+    ],
+    "suggested_display_size": [
+      100,
+      29
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "10_品质标签_史诗_无字.png",
+    "pixel_size": [
+      200,
+      58
+    ],
+    "suggested_display_size": [
+      100,
+      29
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "11_菱形徽标_蓝_无字.png",
+    "pixel_size": [
+      112,
+      112
+    ],
+    "suggested_display_size": [
+      56,
+      56
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "12_菱形徽标_金_无字.png",
+    "pixel_size": [
+      98,
+      98
+    ],
+    "suggested_display_size": [
+      49,
+      49
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "13_缎带_金.png",
+    "pixel_size": [
+      68,
+      178
+    ],
+    "suggested_display_size": [
+      34,
+      89
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "14_缎带_紫.png",
+    "pixel_size": [
+      72,
+      212
+    ],
+    "suggested_display_size": [
+      36,
+      106
+    ],
+    "method": "AI局部重绘及去字"
+  },
+  {
+    "file": "15_帮助图标.png",
+    "pixel_size": [
+      84,
+      82
+    ],
+    "suggested_display_size": [
+      42,
+      41
+    ],
+    "method": "原图图标及平滑透明边缘"
+  },
+  {
+    "file": "16_关闭图标.png",
+    "pixel_size": [
+      96,
+      98
+    ],
+    "suggested_display_size": [
+      48,
+      49
+    ],
+    "method": "原图图标及平滑透明边缘"
+  },
+  {
+    "file": "17_分隔装饰.png",
+    "pixel_size": [
+      43,
+      27
+    ],
+    "method": "上一版无字素材"
+  },
+  {
+    "file": "18_窗口底板_无字.png",
+    "pixel_size": [
+      1613,
+      975
+    ],
+    "method": "上一版无字素材"
+  }
+]

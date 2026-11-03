@@ -259,26 +259,21 @@ func _back() -> void:
 # ------------------------------------------------------------ 绘制
 
 func _draw() -> void:
-	var top := Color("191b23")
-	var bottom := Color("2d3140")
-	for i in 36:
-		var t := float(i) / 35.0
-		draw_rect(Rect2(0, size.y * float(i) / 36.0, size.x, size.y / 36.0 + 1.0),
-				top.lerp(bottom, t), true)
+	UiTheme.draw_page(self, Rect2(Vector2.ZERO, size))
 	draw_string(_font_bold, Vector2(0, 62), "禁 卡 表", HORIZONTAL_ALIGNMENT_CENTER,
-			size.x, UiTheme.FS_HEADING, UiTheme.SAND)
+			size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(0, 92),
 			"禁卡表按职业分别记账：解锁一张职业卡 → 该职业 +1 名额；解锁一张公用卡 → 三个职业各 +1",
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 	# R352：三个职业页签
 	var ids := PlayerClass.ids()
 	for ti in ids.size():
 		var tr := _tab_rect(ti)
 		var cur := ids[ti] == _cls
 		var hov := tr.has_point(get_local_mouse_position())
-		var bg := Color("3d4762") if cur else (Color("2b3040") if hov else Color("22242c"))
+		var bg := UiTheme.PAGE_PAPER if cur else (UiTheme.PAGE_PAPER if hov else UiTheme.PAGE_PAPER)
 		draw_rect(tr, bg, true)
-		draw_rect(tr, Color("f0c860") if cur else Color("444a58"), false, 2.0 if cur else 1.4)
+		draw_rect(tr, UiTheme.PAGE_INK if cur else Color("444a58"), false, 2.0 if cur else 1.4)
 		var tot := ProfileData.ban_total_quota_for(_repo, ids[ti])
 		var use := 0
 		var br := ProfileData.banned_by_rarity_for(_repo, ids[ti])
@@ -292,7 +287,7 @@ func _draw() -> void:
 	var summary := ProfileData.ban_summary_for(_repo, _cls)
 	draw_string(_font_bold, Vector2(0, 172), summary,
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY,
-			Color("f0c860") if quota > 0 else Color("8a8f9c"))
+			UiTheme.PAGE_INK if quota > 0 else Color("8a8f9c"))
 	if quota == 0:
 		draw_string(_font, Vector2(0, 190),
 				"没有任何这个职业能用的禁卡名额 —— 剧情里解锁卡牌后才有（故事界面看完剧情才会有）",
@@ -300,13 +295,13 @@ func _draw() -> void:
 	# 返回
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
-	draw_rect(back, Color("414860") if hov_back else Color("343947"), true)
+	draw_rect(back, UiTheme.PAGE_PAPER if hov_back else UiTheme.PAGE_PAPER, true)
 	draw_rect(back, Color(0, 0, 0, 0.35), false, 2.0)
 	draw_string(_font_bold, back.position + Vector2(0, 22), "← 返回角色选择",
-			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, Color("e6e2d8"))
+			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	if _cards.is_empty():
 		draw_string(_font, Vector2(0, LIST_Y + 40), "奖励池是空的。",
-				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_ON_DARK)
+				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 		return
 	for i in _max_rows():
 		var idx := _scroll + i
@@ -318,7 +313,7 @@ func _draw() -> void:
 				"第 %d–%d 张 / 共 %d 张"
 				% [_scroll + 1, mini(_scroll + _max_rows(), _cards.size()), _cards.size()],
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
-				UiTheme.INK_ON_DARK)
+				UiTheme.PAGE_MUTED)
 	if _toast != "":
 		var tw := minf(size.x - 80.0, 760.0)
 		var tr := Rect2((size.x - tw) / 2.0, size.y - 60.0, tw, 32.0)
@@ -332,11 +327,11 @@ func _draw_row(idx: int, c: CardData) -> void:
 	var r := _row_rect(idx)
 	var banned: bool = ProfileData.is_banned_for(c.id, _cls)
 	var hov := idx == _hover
-	var bg := Color("22242c")
+	var bg := UiTheme.PAGE_PAPER
 	if banned:
 		bg = Color("3a2430")
 	elif hov:
-		bg = Color("2b3040")
+		bg = UiTheme.PAGE_PAPER
 	draw_rect(r, bg, true)
 	draw_rect(r, Color("6a768c") if hov else Color("444a58"), false, 1.4)
 	# 稀有度色条
@@ -347,7 +342,7 @@ func _draw_row(idx: int, c: CardData) -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, 60, UiTheme.FS_CAPTION,
 			CardData.RARITY_COLORS[clampi(c.rarity, 0, 6)].lightened(0.45))
 	draw_string(_font_bold, r.position + Vector2(84, 24), c.card_name,
-			HORIZONTAL_ALIGNMENT_LEFT, 420, UiTheme.FS_BODY, Color("e8e4da"))
+			HORIZONTAL_ALIGNMENT_LEFT, 420, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	draw_string(_font, r.position + Vector2(520, 24), c.kind,
 			HORIZONTAL_ALIGNMENT_LEFT, 120, UiTheme.FS_CAPTION, Color("9aa0ad"))
 	draw_string(_font, r.position + Vector2(640, 24), "费用 %d" % c.cost,

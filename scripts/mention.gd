@@ -267,8 +267,7 @@ static func draw_tip(canvas: CanvasItem, font: Font, font_bold: Font,
 	## 道具 → 名称 + 「类型 · 来源」+ 完整说明（按面板宽折行）。
 	var sz := tip_size(font, ref)
 	var frame := Rect2(top_left, Vector2(sz.x, sz.y + extra_bottom))
-	canvas.draw_rect(frame, Color(0.10, 0.11, 0.15, 0.96), true)
-	canvas.draw_rect(frame, UiTheme.ACCENT_GOLD, false, 1.4)
+	canvas.draw_style_box(UiTheme.adventure_panel_style(12.0, true), frame)
 	if str(ref.get("kind", "")) == "card":
 		var card := card_for(ref)
 		if card == null:

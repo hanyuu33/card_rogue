@@ -67,12 +67,12 @@ func _card_rect(i: int) -> Rect2:
 
 func _draw() -> void:
 	# 背景（根节点自绘在子节点之下，BG 色块会盖住 _draw，故在这里画）
-	draw_rect(Rect2(Vector2.ZERO, size), UiTheme.SCREEN_BG)   # R154：墨蓝夜色锚点（清单 §2.6）
+	UiTheme.draw_page(self, Rect2(Vector2.ZERO, size))   # R154：墨蓝夜色锚点（清单 §2.6）
 	if _picked:
 		return
 	var repo := RelicRepo.load_json()
 	draw_string(_font, Vector2(0, 120), "起点处的一位行商愿意送你一件随身之物……",
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_300)
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	for i in RunState.relic_choice.size():
 		var rel := repo.get_relic(RunState.relic_choice[i])
 		if rel == null:
@@ -81,7 +81,7 @@ func _draw() -> void:
 		if i == _hover:
 			draw_rect(rect.grow(10.0), Color(1, 1, 1, 0.10), true)
 		# 面板：深色底 + 来源色边框（初始白/奖励黄/事件紫）
-		draw_rect(rect, UiTheme.PANEL_DARK, true)   # R154：暗底锚点
+		UiTheme.draw_panel_bg(self, rect)   # R154：暗底锚点
 		draw_rect(rect, rel.badge_color(), false, 2.5)
 		# 顶部来源色带 + 类别名
 		var band := Rect2(rect.position, Vector2(rect.size.x, 34))

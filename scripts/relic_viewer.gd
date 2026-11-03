@@ -329,10 +329,7 @@ func _on_layer_draw() -> void:
 		var spent := bool(e.get("spent", false))
 		var hot := (i == _hover_chip)
 		var r := rs[i]
-		_hover_layer.draw_rect(r.grow(1.0), Color(0, 0, 0, 0.42), true)
-		_hover_layer.draw_rect(r, Color("fff6df") if hot else UiTheme.PAPER, true)
-		_hover_layer.draw_rect(r, UiTheme.ACCENT_GOLD if hot else UiTheme.INK_300, false,
-				2.0 if hot else 1.0)
+		_hover_layer.draw_style_box(UiTheme._chip_box(UiTheme.ADVENTURE_INPUT if hot else UiTheme.PAGE_PAPER, UiTheme.ADVENTURE_BRASS, 1, 8, 4), r)
 		# 左侧来源色块（初始白 / 奖励黄 / 事件紫 / 二层青 / 角色绿），已耗尽的压灰
 		_hover_layer.draw_rect(Rect2(r.position.x + 5.0, r.position.y + 6.0, 5.0,
 				r.size.y - 12.0), Color("6a7078") if spent else rel.badge_color(), true)

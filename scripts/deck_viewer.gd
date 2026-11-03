@@ -225,8 +225,7 @@ func _on_panel_draw() -> void:
 	var pw: float = L["pw"]
 	var ph: float = L["ph"]
 	# 面板不压暗背景（用户要求：点开面板时后面区域不要变暗）
-	_panel.draw_rect(Rect2(px, py, pw, ph), UiTheme.PAPER)
-	_panel.draw_rect(Rect2(px, py, pw, ph), UiTheme.INK_600, false, 2.0)
+	UiTheme.draw_panel_bg(_panel, Rect2(px, py, pw, ph))
 	# R393b：详情页
 	if n == 0:
 		_detail = -1

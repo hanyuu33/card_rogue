@@ -8,11 +8,13 @@ extends CanvasLayer
 ## class_name + 懒实例（同 SceneFx：`--headless --script` 烟测没有 autoload，懒实例自建）。
 ## layer = 99：SceneFx(100) 之下、各界面覆盖层之上 —— **跨场景切换它还在**（转场不遮提示）。
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 const DUR_MS := 1600
 const FADE_MS := 180.0
-const PILL_BG := Color(0.05, 0.045, 0.04, 0.92)
-const PILL_LINE := Color(1.0, 0.95, 0.80, 0.22)
-const PILL_TXT := Color("f2ecdd")
+const PILL_BG := UiTheme.ADVENTURE_FOREST
+const PILL_LINE := UiTheme.ADVENTURE_BRASS
+const PILL_TXT := UiTheme.ADVENTURE_LIGHT
 
 static var _inst: UiToast = null
 

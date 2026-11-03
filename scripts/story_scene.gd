@@ -318,7 +318,7 @@ func _state_color(st: String) -> Color:
 	## 三态配色唯一口：左沿色条 / 顶部图例 / 列表图标 / 正文面板标题前全读它。
 	## 想改「可查看是金、已读是绿」只改这里一处。
 	if st == StoryRepo.STATE_READY:
-		return Color("f0c860")     # 金：有东西可看，等你点开
+		return UiTheme.PAGE_INK     # 金：有东西可看，等你点开
 	if st == StoryRepo.STATE_READ:
 		return Color("8fd7a5")     # 绿：看过了，东西已经发下来
 	return Color("6f7684")         # 灰：条件还没达成
@@ -371,14 +371,9 @@ func _draw_legend(center: Vector2, counts: Dictionary) -> void:
 # ------------------------------------------------------------ 绘制
 
 func _draw() -> void:
-	var top := Color("171a22")
-	var bottom := Color("2b3040")
-	for i in 36:
-		var t := float(i) / 35.0
-		draw_rect(Rect2(0, size.y * float(i) / 36.0, size.x, size.y / 36.0 + 1.0),
-				top.lerp(bottom, t), true)
+	UiTheme.draw_page(self, Rect2(Vector2.ZERO, size))
 	draw_string(_font_bold, Vector2(0, 62), "故 事", HORIZONTAL_ALIGNMENT_CENTER,
-			size.x, UiTheme.FS_HEADING, UiTheme.SAND)
+			size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	# 顶部总览：三态**只给图标 + 数量**（R347 用户口径），不写「已解锁 / 已读」这类状态词。
 	var counts := {StoryRepo.STATE_LOCKED: 0, StoryRepo.STATE_READY: 0,
 			StoryRepo.STATE_READ: 0}
@@ -389,14 +384,14 @@ func _draw() -> void:
 	# 返回
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
-	draw_rect(back, Color("414860") if hov_back else Color("343947"), true)
+	draw_rect(back, UiTheme.PAGE_PAPER if hov_back else UiTheme.PAGE_PAPER, true)
 	draw_rect(back, Color(0, 0, 0, 0.35), false, 2.0)
 	draw_string(_font_bold, back.position + Vector2(0, 22), "← 返回标题",
-			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, Color("e6e2d8"))
+			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	if _episodes.is_empty():
 		draw_string(_font, Vector2(0, LIST_Y + 40),
 				"还没有任何剧情段（stories.json 是空的）。",
-				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_ON_DARK)
+				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 		return
 	for i in _max_rows():
 		var idx := _scroll + i
@@ -408,7 +403,7 @@ func _draw() -> void:
 				"第 %d–%d 段 / 共 %d 段"
 				% [_scroll + 1, mini(_scroll + _max_rows(), _episodes.size()), _episodes.size()],
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
-				UiTheme.INK_ON_DARK)
+				UiTheme.PAGE_MUTED)
 	if _toast != "":
 		var tw := minf(size.x - 80.0, 720.0)
 		var tr := Rect2((size.x - tw) / 2.0, size.y - 62.0, tw, 34.0)
@@ -428,7 +423,7 @@ func _draw_row(idx: int, ep: Dictionary) -> void:
 	var st := _repo.episode_state(eid)
 	var hov := idx == _hover
 	var locked := st == StoryRepo.STATE_LOCKED
-	var bg := Color("22242c")
+	var bg := UiTheme.PAGE_PAPER
 	if not locked:
 		bg = Color("2a3040")
 	if hov:
@@ -492,13 +487,13 @@ func _draw_detail() -> void:
 	# 标题前也放同一个小图标（列表里认什么、打开还是什么，不用再读文字判断）
 	_draw_state_icon(Vector2(x0 + 11.0, r.position.y + 30.0), st, 0.95)
 	draw_string(_font_bold, Vector2(x0 + 34.0, r.position.y + 38.0), _repo.episode_label(ep),
-			HORIZONTAL_ALIGNMENT_LEFT, w - 94.0, UiTheme.FS_HEADING, UiTheme.SAND)
+			HORIZONTAL_ALIGNMENT_LEFT, w - 94.0, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	# 关闭
 	var cr := _detail_close_rect()
 	draw_rect(cr, Color("4a2c2c") if cr.has_point(get_local_mouse_position())
-			else Color("343947"), true)
+			else UiTheme.PAGE_PAPER, true)
 	draw_string(_font_bold, cr.position + Vector2(0, 22), "×",
-			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_BODY, Color("e6e2d8"))
+			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	draw_line(Vector2(x0, r.position.y + 54.0), Vector2(x1, r.position.y + 54.0),
 			Color("3d424e"), 1.0)
 	# 正文
@@ -614,7 +609,7 @@ func _draw_reveal() -> void:
 	draw_rect(r, Color("1c1f27"), true)
 	draw_rect(r, Color("c8951c"), false, 2.0)
 	draw_string(_font_bold, Vector2(r.position.x, r.position.y + 44), "解 锁",
-			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_HEADING, UiTheme.SAND)
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(r.position.x, r.position.y + 70),
 			"以下内容已加入奖励池",
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, Color("9aa0ad"))
@@ -623,7 +618,7 @@ func _draw_reveal() -> void:
 		if a <= 0.0:
 			continue
 		var item: Dictionary = _reveal[i]
-		var col: Color = item.get("col", Color("e8e4da"))
+		var col: Color = item.get("col", UiTheme.PAGE_INK)
 		var y := r.position.y + 92.0 + i * REVEAL_ROW_H + (1.0 - a) * 16.0
 		var row := Rect2(r.position.x + 36.0, y, r.size.x - 72.0, REVEAL_ROW_H - 14.0)
 		draw_rect(row, Color(0.13, 0.145, 0.19, 0.92 * a), true)

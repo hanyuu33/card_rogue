@@ -434,16 +434,16 @@ func _card_rect(i: int) -> Rect2:
 
 func _draw() -> void:
 	# 背景（根节点自绘在子节点之下，BG 色块会盖住 _draw，故在这里画）
-	draw_rect(Rect2(Vector2.ZERO, size), UiTheme.SCREEN_BG)   # R154：墨蓝夜色锚点（清单 §2.6）
+	UiTheme.draw_page(self, Rect2(Vector2.ZERO, size))   # R154：墨蓝夜色锚点（清单 §2.6）
 	if _cards.is_empty():
 		draw_string(_font, Vector2(0, size.y / 2), "卡组是空的……",
-				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_ON_DARK)
+				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 		# R353：「继续」画成按钮 —— 可交互性靠 UI 表达，不写「（点击继续）」。
 		var btn := Rect2(size.x / 2.0 - 80.0, size.y / 2.0 + 24.0, 160.0, 36.0)
-		draw_rect(btn, Color("414860"), true)
+		UiTheme.draw_panel_bg(self, btn)
 		draw_rect(btn, Color("8a93ad"), false, 1.5)
 		draw_string(_font_bold, btn.position + Vector2(0, 24), "继 续",
-				HORIZONTAL_ALIGNMENT_CENTER, btn.size.x, UiTheme.FS_BODY, UiTheme.SAND)
+				HORIZONTAL_ALIGNMENT_CENTER, btn.size.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 		return
 	_layout()
 	# R191 描述条：卡面只留卡名 → 点选/悬停的卡在这里读描述（画在网格区之下、按钮之上）

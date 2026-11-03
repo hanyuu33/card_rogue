@@ -97,7 +97,7 @@ func _build_seed_edit() -> void:
 	_seed_edit.max_length = RunState.SEED_LEN
 	_seed_edit.text = GameSettings.next_seed_code
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color("1b1d24")
+	sb.bg_color = UiTheme.PAGE_PAPER
 	sb.border_color = Color("4a4e58")
 	sb.set_border_width_all(1)
 	sb.set_corner_radius_all(4)
@@ -114,8 +114,8 @@ func _build_seed_edit() -> void:
 	_seed_edit.add_theme_stylebox_override("focus", sbf)
 	_seed_edit.add_theme_font_override("font", _font)
 	_seed_edit.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
-	_seed_edit.add_theme_color_override("font_color", Color("ece7db"))
-	_seed_edit.add_theme_color_override("caret_color", UiTheme.SAND)
+	_seed_edit.add_theme_color_override("font_color", UiTheme.PAGE_INK)
+	_seed_edit.add_theme_color_override("caret_color", UiTheme.PAGE_INK)
 	_seed_edit.add_theme_color_override("placeholder_color", Color("7d8590"))
 	_seed_edit.text_changed.connect(_on_seed_changed)
 	add_child(_seed_edit)
@@ -315,38 +315,33 @@ func _row(i: int) -> Dictionary:
 
 
 func _draw() -> void:
-	var top := Color("1c1f28")
-	var bottom := Color("303443")
-	for i in 36:
-		var t := float(i) / 35.0
-		draw_rect(Rect2(0, size.y * float(i) / 36.0, size.x, size.y / 36.0 + 1.0),
-				top.lerp(bottom, t), true)
+	UiTheme.draw_page(self, Rect2(Vector2.ZERO, size))
 	draw_string(_font_bold, Vector2(0, 78), "设 置",
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_HEADING, UiTheme.SAND)
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(0, 110), "所有设置自动保存",
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
-	draw_rect(back, Color("414860") if hov_back else Color("343947"), true)
+	draw_rect(back, UiTheme.PAGE_PAPER if hov_back else UiTheme.PAGE_PAPER, true)
 	draw_rect(back, Color(0, 0, 0, 0.35), false, 2.0)
 	draw_string(_font_bold, back.position + Vector2(0, 22), "← 返回标题",
-			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, Color("e6e2d8"))
+			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	for i in ROW_COUNT:
 		_draw_row(i, _row(i))
 	_draw_seed_panel()
 	draw_string(_font, Vector2(0, size.y - 28),
 			"提示：种子决定整局的地图 / 掉落 / 摇卡；同一种子新开一局可复现同一局。",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
-			UiTheme.INK_ON_DARK)
+			UiTheme.PAGE_MUTED)
 
 
 func _draw_seed_panel() -> void:
 	## R241：种子面板 —— ① 本局种子（只读，继续游戏会沿用它）② 下一局种子（可填）。
 	var p := _seed_panel_rect()
-	draw_rect(p, Color("22242c"), true)
+	UiTheme.draw_panel_bg(self, p)
 	draw_rect(p, Color("4a4e58"), false, 1.6)
 	draw_string(_font_bold, p.position + Vector2(20, 26), "随机种子",
-			HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_BODY, UiTheme.SAND)
+			HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	var cur := "本局种子：%s" % RunState.seed_text()
 	if not RunState.run_active:
 		cur = "本局种子：—（当前没有进行中的对局）"
@@ -354,12 +349,12 @@ func _draw_seed_panel() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 40.0, UiTheme.FS_LABEL,
 			Color("9fd7a5") if RunState.run_active else Color("9a968c"))
 	draw_string(_font_bold, p.position + Vector2(20, 84), "下一局种子",
-			HORIZONTAL_ALIGNMENT_LEFT, 120, UiTheme.FS_LABEL, Color("ece7db"))
+			HORIZONTAL_ALIGNMENT_LEFT, 120, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	var next_code := GameSettings.next_seed_code
 	var tail := "当前：随机" if next_code == "" else "当前：%s" % next_code
 	draw_string(_font, p.position + Vector2(356, 84), tail,
 			HORIZONTAL_ALIGNMENT_LEFT, 150, UiTheme.FS_CAPTION,
-			Color("9a968c") if next_code == "" else Color("f0c860"))
+			Color("9a968c") if next_code == "" else UiTheme.PAGE_INK)
 	draw_string(_font, p.position + Vector2(20, 120),
 			"留空 = 每局随机；填入 10 位大写字母 / 数字 → 下一局用同一种子（用一次自动清空）",
 			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 40.0, UiTheme.FS_CAPTION, Color("7d8590"))
@@ -368,7 +363,7 @@ func _draw_seed_panel() -> void:
 	var cr := _seed_copy_rect()
 	var can_copy := _seed_copy_text() != ""
 	var hov := _seed_hover and can_copy
-	draw_rect(cr, Color("414860") if hov else Color("2b2e38"), true)
+	draw_rect(cr, UiTheme.PAGE_PAPER if hov else Color("2b2e38"), true)
 	draw_rect(cr, Color("8a93a6") if hov else Color("4a4e58"), false, 1.4)
 	draw_string(_font_bold, cr.position + Vector2(0, 18), "复制",
 			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_CAPTION,
@@ -378,10 +373,10 @@ func _draw_seed_panel() -> void:
 func _draw_row(i: int, d: Dictionary) -> void:
 	var r := _row_rect(i)
 	var hov := i == _hover
-	draw_rect(r, Color("3a4152") if hov else Color("22242c"), true)
+	draw_rect(r, Color("3a4152") if hov else UiTheme.PAGE_PAPER, true)
 	draw_rect(r, Color("6a768c") if hov else Color("4a4e58"), false, 1.6)
 	draw_string(_font_bold, r.position + Vector2(20, 24), str(d["title"]),
-			HORIZONTAL_ALIGNMENT_LEFT, 160, UiTheme.FS_BODY, UiTheme.SAND)
+			HORIZONTAL_ALIGNMENT_LEFT, 160, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	var is_vol := str(d.get("kind", "toggle")) == "volume"
 	draw_string(_font, r.position + Vector2(20, 43), str(d["desc"]),
 			HORIZONTAL_ALIGNMENT_LEFT, 190.0 if is_vol else 360, UiTheme.FS_CAPTION,
@@ -410,15 +405,15 @@ func _draw_volume_row(r: Rect2, val: float) -> void:
 	for k in [0, 2]:
 		var b: Rect2 = vr[k]
 		var hb := b.has_point(mp)
-		draw_rect(b, Color("4a5164") if hb else Color("343947"), true)
+		draw_rect(b, UiTheme.PAGE_PAPER if hb else UiTheme.PAGE_PAPER, true)
 		draw_rect(b, Color("7d8aa4") if hb else Color("4a4e58"), false, 1.4)
 		draw_string(_font_bold, b.position + Vector2(0, 22), "−" if k == 0 else "+",
-				HORIZONTAL_ALIGNMENT_CENTER, b.size.x, UiTheme.FS_BODY, Color("e6e2d8"))
+				HORIZONTAL_ALIGNMENT_CENTER, b.size.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	var bar: Rect2 = vr[1]
-	draw_rect(bar, Color("1b1d24"), true)
+	UiTheme.draw_panel_bg(self, bar)
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(val, 0.0, 1.0), bar.size.y)),
-			UiTheme.SAND, true)
+			UiTheme.PAGE_INK, true)
 	draw_rect(bar, Color("4a4e58"), false, 1.2)
 	draw_string(_font_bold, Vector2(r.position.x + r.size.x - 92.0, bar.position.y + 13.0),
 			"%d%%" % int(roundf(val * 100.0)), HORIZONTAL_ALIGNMENT_LEFT, 76,
-			UiTheme.FS_LABEL, Color("f0c860") if val > 0.0 else Color("8b8f98"))
+			UiTheme.FS_LABEL, UiTheme.PAGE_INK if val > 0.0 else Color("8b8f98"))

@@ -522,11 +522,11 @@ const BTN_PAD_X := 18   ## 按钮左右内距
 const BTN_PAD_Y := 9    ## 按钮上下内距
 
 # ── 主按钮（一屏**最多**一个；选择类界面可以全是次按钮）──
-const BTN_PRIMARY_BG := Color("22304a")        ## 深墨蓝（日式西幻的夜色）
-const BTN_PRIMARY_BG_HOVER := Color("2c3f61")
-const BTN_PRIMARY_BG_PRESS := Color("1a2438")
-const BTN_PRIMARY_LINE := Color("c8951c")      ## 金线
-const BTN_PRIMARY_LINE_FOCUS := Color("f2c14e") ## 焦点环（更亮，键盘可达性）
+const BTN_PRIMARY_BG := Color("283c2d")        ## 深墨蓝（日式西幻的夜色）
+const BTN_PRIMARY_BG_HOVER := Color("3b543c")
+const BTN_PRIMARY_BG_PRESS := Color("1f3025")
+const BTN_PRIMARY_LINE := Color("a58c58")      ## 金线
+const BTN_PRIMARY_LINE_FOCUS := Color("dbc58d") ## 焦点环（更亮，键盘可达性）
 const BTN_PRIMARY_TEXT := Color("f5efe0")
 
 ## 暗底上的主按钮：深墨蓝在暗底上会「沉下去」，所以换金底 + 墨色字。
@@ -542,7 +542,7 @@ const BTN_SECONDARY_BG_HOVER := Color(1, 1, 1, 0.72)
 const BTN_SECONDARY_BG_PRESS := Color(1, 1, 1, 0.28)
 const BTN_SECONDARY_LINE := Color("b8b4aa")
 const BTN_SECONDARY_LINE_FOCUS := Color("8a5f00")
-const BTN_SECONDARY_TEXT := Color("1a1c22")
+const BTN_SECONDARY_TEXT := Color("514735")
 
 ## 暗底上的次按钮：半透明白 + 亮字（亮底那套的深字在暗底上根本读不出来）。
 const BTN_SECONDARY_DARK_BG := Color(1, 1, 1, 0.10)
@@ -559,18 +559,18 @@ const BTN_DISABLED_TEXT := Color("7a7a78")
 const CHIP_BG := Color(1, 1, 1, 0.34)
 const CHIP_BG_HOVER := Color(1, 1, 1, 0.62)
 const CHIP_LINE := Color("b8b4aa")
-const CHIP_TEXT := Color("1a1c22")
+const CHIP_TEXT := Color("514735")
 const CHIP_PAD_X := 12
 const CHIP_PAD_Y := 5
 
 ## 实心档（solid）：实心暗蓝灰 + 亮字 —— 顶部工具条 / HUD，要从背景里跳出来。
 ## 取值沿用 `map_scene` 原本手写的样式，所以地图页观感**不变**，只是收进唯一口、并补回焦点环
 ## （原来那里把 focus 设成了 `StyleBoxEmpty`，键盘可达性直接没了）。
-const CHIP_SOLID_BG := Color("343947")
-const CHIP_SOLID_BG_HOVER := Color("414860")
-const CHIP_SOLID_BG_PRESS := Color("272b37")
+const CHIP_SOLID_BG := Color("2d3c30")
+const CHIP_SOLID_BG_HOVER := Color("40503b")
+const CHIP_SOLID_BG_PRESS := Color("233025")
 const CHIP_SOLID_LINE := Color(0, 0, 0, 0.35)
-const CHIP_SOLID_TEXT := Color("e6e2d8")
+const CHIP_SOLID_TEXT := Color("f3ead8")
 const CHIP_SOLID_TEXT_HOVER := Color("ffffff")
 const CHIP_SOLID_TEXT_PRESS := Color("cfcabb")
 ## compact：更小的内距，给**固定高度**的工具条用（battle 顶栏按钮只有 28px 高）。
@@ -629,203 +629,164 @@ static func _chip_box(bg: Color, line: Color, width: int, px: int, py: int,
 const UiPressFx = preload("res://scripts/ui_press_fx.gd")
 
 
-static func apply_button(btn: Button, primary := false, on_dark := false) -> void:
-	## 给按钮套上统一规格（**唯一口**）。新界面写按钮就调这一行，别自己画 StyleBox。
-	##   primary = 主行动。**一屏最多一个**；选择类界面（多个等价选项）可以全是次按钮。
-	##   on_dark = 按钮坐在**暗底**上。除标题页外，本作其余界面底色都是暗的，
-	##             **暗底上必须传 true**，否则深字压暗底读不出来。
+static func apply_button(btn: Button, primary := false, _on_dark := false) -> void:
 	if btn == null:
 		return
-	var r := RADIUS_MD
-	var bg := BTN_SECONDARY_BG
-	var bg_h := BTN_SECONDARY_BG_HOVER
-	var bg_p := BTN_SECONDARY_BG_PRESS
-	var line := BTN_SECONDARY_LINE
-	var line_focus := BTN_SECONDARY_LINE_FOCUS
-	var txt := BTN_SECONDARY_TEXT
-	var txt_h := Color("1a1c22")
-	var font_size := FS_SUBHEAD
-	var use_bold := false
-	if primary:
-		font_size = FS_HEADING
-		use_bold = true
-		line_focus = BTN_PRIMARY_LINE_FOCUS
-		txt_h = Color("ffffff")
-		if on_dark:
-			bg = BTN_PRIMARY_DARK_BG
-			bg_h = BTN_PRIMARY_DARK_BG_HOVER
-			bg_p = BTN_PRIMARY_DARK_BG_PRESS
-			line = BTN_PRIMARY_DARK_LINE
-			txt = BTN_PRIMARY_DARK_TEXT
-		else:
-			bg = BTN_PRIMARY_BG
-			bg_h = BTN_PRIMARY_BG_HOVER
-			bg_p = BTN_PRIMARY_BG_PRESS
-			line = BTN_PRIMARY_LINE
-			txt = BTN_PRIMARY_TEXT
-	elif on_dark:
-		bg = BTN_SECONDARY_DARK_BG
-		bg_h = BTN_SECONDARY_DARK_BG_HOVER
-		bg_p = BTN_SECONDARY_DARK_BG_PRESS
-		line = BTN_SECONDARY_DARK_LINE
-		txt = BTN_SECONDARY_DARK_TEXT
-		txt_h = Color("ffffff")
-		line_focus = BTN_PRIMARY_LINE_FOCUS
-	var w := 2 if primary else 1
-	# R154：有素材画素材（墨蓝金线胶囊 / 羊皮纸胶囊），缺图回退程序 StyleBoxFlat。
-	var tex: Texture2D = UiAssets.btn_primary() if primary else UiAssets.btn_plain()
-	if tex != null:
-		btn.add_theme_stylebox_override("normal", _btn_tex_box(tex))
-		btn.add_theme_stylebox_override("hover", _btn_tex_box(tex))
-		btn.add_theme_stylebox_override("pressed", _btn_tex_box(tex))
-		# ⚠️ 素材底**自带明暗**（主 = 墨蓝 / 次 = 奶油），字色必须跟着素材走、
-		# 不再看 on_dark：奶油胶囊上压浅色字 = 直接隐身（事件页实测翻车）。
-		txt = Color("ffffff") if primary else Color("1a1c22")
-		txt_h = txt
-	else:
-		btn.add_theme_stylebox_override("normal", _btn_box(bg, line, w, r))
-		btn.add_theme_stylebox_override("hover", _btn_box(bg_h, line, w, r))
-		btn.add_theme_stylebox_override("pressed", _btn_box(bg_p, line, w, r))
-	btn.add_theme_stylebox_override("disabled", _btn_box(bg, BTN_DISABLED_LINE, w, r))
-	btn.add_theme_stylebox_override("focus", _btn_box(Color(0, 0, 0, 0), line_focus, 3, r))
-	btn.add_theme_color_override("font_color", txt)
-	btn.add_theme_color_override("font_hover_color", txt_h)
-	btn.add_theme_color_override("font_pressed_color", txt)
-	btn.add_theme_color_override("font_focus_color", txt)
-	btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
-	btn.add_theme_font_override("font", font_bold() if use_bold else font())
-	btn.add_theme_font_size_override("font_size", font_size)
-	UiPressFx.attach(btn)   # R151 P1-8：按下 scale 0.96 / 100ms（样式唯一口统一挂）
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		btn.add_theme_stylebox_override(state, adventure_button_style(primary, state))
+	btn.add_theme_stylebox_override("focus", _btn_box(Color.TRANSPARENT, ADVENTURE_BRASS_LIT, 2, RADIUS_SM))
+	var ink := ADVENTURE_LIGHT if primary else PAGE_INK
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
+		btn.add_theme_color_override(state, ink)
+	btn.add_theme_color_override("font_disabled_color", PAGE_MUTED)
+	btn.add_theme_font_override("font", font_bold() if primary else font())
+	btn.add_theme_font_size_override("font_size", FS_HEADING if primary else FS_SUBHEAD)
+	UiPressFx.attach(btn)
 
 
 static func apply_paper_panel(panel: Panel) -> void:
-	## 羊皮纸面板（**唯一口**，R154）：图鉴左 / 右栏这类亮底界面上的面板。
-	## R170 起有 `panel_parchment` 素材就用**平铺底纹**（任意大小自适应、无边框），
-	## 缺图回退 奶油纸底 + 细金边 + 圆角 —— 换掉 Godot 默认的冷灰 Panel。
-	if panel == null:
-		return
-	var tex: Texture2D = UiAssets.panel_parchment()
-	if tex != null:
-		var st := StyleBoxTexture.new()
-		st.texture = tex
-		st.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
-		st.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
-		st.set_content_margin_all(12.0)
-		panel.add_theme_stylebox_override("panel", st)
-		return
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = PANEL_PAPER_BG
-	sb.border_color = PANEL_PAPER_LINE
-	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(10)
-	sb.set_content_margin_all(12.0)
-	panel.add_theme_stylebox_override("panel", sb)
+	if panel != null:
+		panel.add_theme_stylebox_override("panel", _btn_box(PAGE_PAPER, ADVENTURE_BRASS, 1, RADIUS_MD, 12, 12))
 
 
 static func draw_panel_bg(canvas: CanvasItem, rect: Rect2) -> void:
-	## 面板统一底（R170，**唯一口**）：羊皮纸底纹**平铺**（无边框、任意大小自适应）。
-	## 战斗内的选卡 / 结算 / 道具这类 `_draw()` 手画面板一律走这里，
-	## 别再 `draw_rect(..., Color.WHITE)`。缺图回退 `PANEL_PAPER_BG` 纯色 —— 不空白。
-	var tex: Texture2D = UiAssets.panel_parchment()
-	if tex != null:
-		canvas.draw_texture_rect(tex, rect, true)
+	canvas.draw_style_box(adventure_panel_style(12.0) if rect.size.y >= 180.0 else _btn_box(PAGE_PAPER, ADVENTURE_BRASS, 1, RADIUS_SM, 12, 12), rect)
+
+
+const PAGE_PAPER := Color("f3eee2")
+const PAGE_INK := Color("514735")
+const PAGE_MUTED := Color("887b65")
+const PAGE_GOLD := Color("cbb47e")
+const PAGE_GREEN := Color("4c9a52")
+
+static func draw_page(canvas: CanvasItem, rect: Rect2) -> void:
+	var paper: Texture2D = UiAssets.panel_parchment()
+	if paper != null:
+		canvas.draw_texture_rect(paper, rect, true)
 	else:
-		canvas.draw_rect(rect, PANEL_PAPER_BG)
+		canvas.draw_rect(rect, PAGE_PAPER)
+	draw_panel_bg(canvas, rect.grow(-16.0))
 
 
 const SCROLL_EDGE := 0.16   # 羊皮卷九宫格：角块取源图宽/高的 16%
 
 
 static func draw_scroll_bg(canvas: CanvasItem, rect: Rect2) -> void:
-	## 羊皮卷面板底（R191，**唯一口**）：整张卷轴九宫格 —— 四角原样、四边单向拉伸、
-	## 中心双向拉伸，任意面板尺寸自适应且破损边不变形。**没有边框**（用户口径：
-	## 羊皮卷的边就是边界）。缺图回退 `draw_panel_bg` 平铺羊皮纸。
-	var tex: Texture2D = UiAssets.scroll_parchment()
-	if tex == null:
-		draw_panel_bg(canvas, rect)
-		return
-	var ts := tex.get_size()
-	var sx := ts.x * SCROLL_EDGE
-	var sy := ts.y * SCROLL_EDGE
-	var dx := minf(sx, rect.size.x / 2.0)
-	var dy := minf(sy, rect.size.y / 2.0)
-	# 角块按面板比例缩放（小面板上角块跟着缩，边仍然完整）
-	var corners := [
-		[Rect2(0, 0, sx, sy), Rect2(rect.position, Vector2(dx, dy))],
-		[Rect2(ts.x - sx, 0, sx, sy), Rect2(rect.end.x - dx, rect.position.y, dx, dy)],
-		[Rect2(0, ts.y - sy, sx, sy), Rect2(rect.position.x, rect.end.y - dy, dx, dy)],
-		[Rect2(ts.x - sx, ts.y - sy, sx, sy), Rect2(rect.end - Vector2(dx, dy), Vector2(dx, dy))],
-	]
-	for pair in corners:
-		canvas.draw_texture_rect_region(tex, pair[1], pair[0])
-	# 四边（单向拉伸）
-	canvas.draw_texture_rect_region(tex,
-			Rect2(rect.position.x + dx, rect.position.y, rect.size.x - dx * 2.0, dy),
-			Rect2(sx, 0, ts.x - sx * 2.0, sy))
-	canvas.draw_texture_rect_region(tex,
-			Rect2(rect.position.x + dx, rect.end.y - dy, rect.size.x - dx * 2.0, dy),
-			Rect2(sx, ts.y - sy, ts.x - sx * 2.0, sy))
-	canvas.draw_texture_rect_region(tex,
-			Rect2(rect.position.x, rect.position.y + dy, dx, rect.size.y - dy * 2.0),
-			Rect2(0, sy, sx, ts.y - sy * 2.0))
-	canvas.draw_texture_rect_region(tex,
-			Rect2(rect.end.x - dx, rect.position.y + dy, dx, rect.size.y - dy * 2.0),
-			Rect2(ts.x - sx, sy, sx, ts.y - sy * 2.0))
-	# 中心（双向拉伸）
-	canvas.draw_texture_rect_region(tex,
-			Rect2(rect.position + Vector2(dx, dy), rect.size - Vector2(dx, dy) * 2.0),
-			Rect2(sx, sy, ts.x - sx * 2.0, ts.y - sy * 2.0))
+	# Shared journal frame replaces the old burnt scroll across common dialogs.
+	draw_panel_bg(canvas, rect)
 
 
 static func apply_chip(btn: Button, solid := false, compact := false) -> void:
-	## 小按钮规格（**唯一口**）：顶部工具条 / HUD、难度档位、筛选、多选标签。
-	##   solid   = 实心暗蓝灰 + 亮字（**工具条 / HUD**，要从背景里跳出来）
-	##   compact = 更小的内距（给固定高度的工具条用，如 battle 顶栏按钮只有 28px 高）
-	##
-	## 切换按钮（`toggle_mode = true`）的**选中态由 `button_pressed` 驱动** —— Godot 在按下态
-	## 画 "pressed" 样式，所以**不需要**每次刷新重设样式。
 	if btn == null:
 		return
 	var px: int = CHIP_COMPACT_PAD_X if compact else CHIP_PAD_X
 	var py: int = CHIP_COMPACT_PAD_Y if compact else CHIP_PAD_Y
-	if solid:
-		# 常态：只留底边；选中 / 按下：**整圈金线 + 更亮的底**（明确「已打开」）
-		btn.add_theme_stylebox_override("normal",
-				_chip_box(CHIP_SOLID_BG, CHIP_SOLID_LINE, 2, px, py, true))
-		btn.add_theme_stylebox_override("hover",
-				_chip_box(CHIP_SOLID_BG_HOVER, CHIP_SOLID_LINE, 2, px, py, true))
-		btn.add_theme_stylebox_override("pressed",
-				_chip_box(CHIP_SOLID_BG_HOVER, BTN_PRIMARY_LINE, 2, px, py))
-		btn.add_theme_stylebox_override("hover_pressed",
-				_chip_box(CHIP_SOLID_BG_HOVER, BTN_PRIMARY_LINE_FOCUS, 2, px, py))
-		btn.add_theme_stylebox_override("disabled",
-				_chip_box(CHIP_SOLID_BG, BTN_DISABLED_LINE, 2, px, py, true))
-		btn.add_theme_stylebox_override("focus",
-				_chip_box(Color(0, 0, 0, 0), BTN_PRIMARY_LINE_FOCUS, 3, px, py))
-		btn.add_theme_color_override("font_color", CHIP_SOLID_TEXT)
-		btn.add_theme_color_override("font_hover_color", CHIP_SOLID_TEXT_HOVER)
-		btn.add_theme_color_override("font_pressed_color", BTN_PRIMARY_TEXT)
-		btn.add_theme_color_override("font_hover_pressed_color", Color("ffffff"))
-		btn.add_theme_color_override("font_focus_color", CHIP_SOLID_TEXT)
-		btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
-	else:
-		# 选中 / 按下 = 深墨蓝 + 金线（与主按钮同族，但体量更小）
-		btn.add_theme_stylebox_override("normal", _chip_box(CHIP_BG, CHIP_LINE, 1, px, py))
-		btn.add_theme_stylebox_override("hover", _chip_box(CHIP_BG_HOVER, CHIP_LINE, 1, px, py))
-		btn.add_theme_stylebox_override("pressed",
-				_chip_box(BTN_PRIMARY_BG, BTN_PRIMARY_LINE, 1, px, py))
-		btn.add_theme_stylebox_override("hover_pressed",
-				_chip_box(BTN_PRIMARY_BG_HOVER, BTN_PRIMARY_LINE, 1, px, py))
-		btn.add_theme_stylebox_override("disabled",
-				_chip_box(Color(1, 1, 1, 0.16), BTN_DISABLED_LINE, 1, px, py))
-		btn.add_theme_stylebox_override("focus",
-				_chip_box(Color(0, 0, 0, 0), BTN_SECONDARY_LINE_FOCUS, 3, px, py))
-		btn.add_theme_color_override("font_color", CHIP_TEXT)
-		btn.add_theme_color_override("font_hover_color", Color("1a1c22"))
-		btn.add_theme_color_override("font_pressed_color", BTN_PRIMARY_TEXT)
-		btn.add_theme_color_override("font_hover_pressed_color", Color("ffffff"))
-		btn.add_theme_color_override("font_focus_color", CHIP_TEXT)
-		btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var selected: bool = state == "pressed" or state == "hover_pressed"
+		var dark: bool = solid or selected
+		var bg := ADVENTURE_FOREST if dark else ADVENTURE_INPUT
+		if state == "hover" or state == "hover_pressed":
+			bg = bg.lightened(0.08)
+		if state == "disabled":
+			bg = PAGE_PAPER
+		btn.add_theme_stylebox_override(state, _chip_box(bg, ADVENTURE_BRASS, 1, px, py))
+	btn.add_theme_stylebox_override("focus", _chip_box(Color.TRANSPARENT, ADVENTURE_BRASS_LIT, 2, px, py))
+	btn.add_theme_color_override("font_color", ADVENTURE_LIGHT if solid else PAGE_INK)
+	btn.add_theme_color_override("font_hover_color", ADVENTURE_LIGHT if solid else PAGE_INK)
+	btn.add_theme_color_override("font_pressed_color", ADVENTURE_LIGHT)
+	btn.add_theme_color_override("font_hover_pressed_color", ADVENTURE_LIGHT)
+	btn.add_theme_color_override("font_focus_color", ADVENTURE_LIGHT if solid else PAGE_INK)
+	btn.add_theme_color_override("font_disabled_color", PAGE_MUTED)
 	btn.add_theme_font_override("font", font())
 	btn.add_theme_font_size_override("font_size", FS_LABEL)
-	UiPressFx.attach(btn)   # R151 P1-8：与 apply_button 同一反馈
+	UiPressFx.attach(btn)
+
+
+const ADVENTURE_FOREST := Color("2d3c30")
+const ADVENTURE_LIGHT := Color("f4ecda")
+const ADVENTURE_BRASS := Color("a58c58")
+const ADVENTURE_BRASS_LIT := Color("dbc58d")
+const ADVENTURE_INPUT := Color("eee5d2")
+
+static func adventure_button_style(primary: bool, state := "normal", px := BTN_PAD_X, py := BTN_PAD_Y) -> StyleBox:
+	var key := "button_disabled" if state == "disabled" else ("button_forest" if primary else "button_paper")
+	var tex: Texture2D = UiAssets.get_tex("adventure_shared/" + key)
+	if tex == null:
+		return _btn_box(ADVENTURE_FOREST if primary else PAGE_PAPER, ADVENTURE_BRASS, 1, RADIUS_SM, px, py)
+	var sb := StyleBoxTexture.new()
+	sb.texture = tex
+	sb.texture_margin_left = 28
+	sb.texture_margin_right = 28
+	sb.texture_margin_top = 12
+	sb.texture_margin_bottom = 12
+	sb.set_content_margin(SIDE_LEFT, px)
+	sb.set_content_margin(SIDE_RIGHT, px)
+	sb.set_content_margin(SIDE_TOP, py)
+	sb.set_content_margin(SIDE_BOTTOM, py)
+	if state == "hover" or state == "hover_pressed":
+		sb.modulate_color = Color(1.12, 1.12, 1.08)
+	elif state == "pressed":
+		sb.modulate_color = Color(0.82, 0.84, 0.78)
+	return sb
+
+
+static func adventure_panel_style(padding := 24.0, dark := false) -> StyleBox:
+	if dark:
+		return _btn_box(ADVENTURE_FOREST, ADVENTURE_BRASS, 1, RADIUS_SM, int(padding), int(padding))
+	var tex: Texture2D = UiAssets.get_tex("adventure_shared/panel_journal")
+	if tex == null:
+		return _btn_box(PAGE_PAPER, ADVENTURE_BRASS, 1, RADIUS_MD, int(padding), int(padding))
+	var sb := StyleBoxTexture.new()
+	sb.texture = tex
+	sb.set_texture_margin_all(34.0)
+	sb.set_content_margin_all(padding)
+	return sb
+
+
+static var _adventure_controls: Theme
+
+static func control_theme() -> Theme:
+	if _adventure_controls != null:
+		return _adventure_controls
+	var t := Theme.new()
+	t.default_font = font()
+	t.default_font_size = FS_LABEL
+	for kind in ["Button", "OptionButton", "MenuButton"]:
+		for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+			t.set_stylebox(state, kind, adventure_button_style(false, state, 12, 6))
+		t.set_stylebox("focus", kind, _btn_box(Color.TRANSPARENT, ADVENTURE_BRASS_LIT, 2, RADIUS_SM))
+		for role in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+			t.set_color(role, kind, PAGE_INK)
+		t.set_color("font_disabled_color", kind, PAGE_MUTED)
+	for kind in ["OptionButton", "MenuButton"]:
+		for state in ["normal", "hover", "pressed", "disabled"]:
+			var bg := ADVENTURE_INPUT if state != "hover" else PAGE_PAPER
+			t.set_stylebox(state, kind, _btn_box(bg, ADVENTURE_BRASS, 1, RADIUS_SM, 12, 6))
+	for kind in ["Panel", "PanelContainer", "PopupPanel", "AcceptDialog", "ConfirmationDialog"]:
+		t.set_stylebox("panel", kind, adventure_panel_style(18.0, kind == "Panel"))
+	for kind in ["LineEdit", "TextEdit"]:
+		t.set_stylebox("normal", kind, _btn_box(ADVENTURE_INPUT, ADVENTURE_BRASS, 1, RADIUS_SM, 10, 6))
+		t.set_stylebox("focus", kind, _btn_box(Color.TRANSPARENT, ADVENTURE_BRASS_LIT, 2, RADIUS_SM, 10, 6))
+		t.set_stylebox("read_only", kind, _btn_box(PAGE_PAPER, PAGE_GOLD, 1, RADIUS_SM, 10, 6))
+		t.set_color("font_color", kind, PAGE_INK)
+		t.set_color("font_placeholder_color", kind, PAGE_MUTED)
+		t.set_color("caret_color", kind, ADVENTURE_FOREST)
+		t.set_color("selection_color", kind, ADVENTURE_FOREST)
+		t.set_color("font_selected_color", kind, ADVENTURE_LIGHT)
+	t.set_stylebox("panel", "PopupMenu", adventure_panel_style(12.0))
+	t.set_stylebox("hover", "PopupMenu", _btn_box(ADVENTURE_INPUT, ADVENTURE_BRASS, 1, RADIUS_SM))
+	t.set_color("font_color", "PopupMenu", PAGE_INK)
+	t.set_color("font_hover_color", "PopupMenu", PAGE_INK)
+	t.set_color("font_disabled_color", "PopupMenu", PAGE_MUTED)
+	for kind in ["HScrollBar", "VScrollBar", "HSlider", "VSlider"]:
+		t.set_stylebox("scroll", kind, _btn_box(ADVENTURE_INPUT, PAGE_GOLD, 1, RADIUS_SM, 3, 3))
+		for state in ["grabber", "grabber_highlight", "grabber_pressed"]:
+			t.set_stylebox(state, kind, _btn_box(ADVENTURE_FOREST, ADVENTURE_BRASS, 1, RADIUS_SM, 3, 3))
+		t.set_stylebox("slider", kind, _btn_box(ADVENTURE_INPUT, PAGE_GOLD, 1, RADIUS_SM, 3, 3))
+		t.set_stylebox("grabber_area", kind, _btn_box(ADVENTURE_FOREST, ADVENTURE_BRASS, 1, RADIUS_SM, 3, 3))
+	t.set_stylebox("background", "ProgressBar", _btn_box(ADVENTURE_INPUT, ADVENTURE_BRASS, 1, RADIUS_SM, 4, 3))
+	t.set_stylebox("fill", "ProgressBar", _btn_box(ADVENTURE_FOREST, ADVENTURE_BRASS, 1, RADIUS_SM, 4, 3))
+	t.set_stylebox("panel", "TooltipPanel", adventure_panel_style(12.0, true))
+	t.set_color("font_color", "TooltipLabel", ADVENTURE_LIGHT)
+	_adventure_controls = t
+	return t

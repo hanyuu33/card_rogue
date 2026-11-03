@@ -1,0 +1,851 @@
+extends RefCounted
+## card_rogue 界面规范（R113）—— 界面**颜色 / 字号 / 字体 / 间距**的唯一来源。
+##
+## ## ⚠️ 为什么这个文件**故意不写 `class_name`**
+## 全工程其它类（CardData / CardFace / RunState …）都用 `class_name`，这个文件是**例外**，
+## 原因是 R113 实测出来的：新增 `class_name` 后，headless 的 `--script` / `_verify.py`
+## 会报 `Identifier "UiTheme" not declared in the current scope` —— 因为全局类名存在
+## `.godot/global_script_class_cache.cfg` 里，而那份缓存**只能由编辑器扫描重建**：
+##   · `--headless --editor --quit-after 40` → 输出 `WARNING: Scan thread aborted...`，
+##     即退出得比扫描线程早，缓存根本没更新（这也是「别用 `--quit`」那条老坑的成因）；
+##   · 手工改 `.godot/` 又是机器本地、不可随 git 传递。
+## 所以本文件改用 **`preload`**：消费方写一行
+##     `const UiTheme = preload("res://scripts/ui_theme.gd")`
+## 就完全不依赖类缓存，`git pull` 到另一台机器也能立刻跑门禁。
+##
+## 代价：不能写 `var t: UiTheme` 这类类型标注（本文件只提供静态方法与常量，用不到）。
+##
+## ## 为什么要有这个文件
+## R112 界面体检实测：界面层有 **590 处 `Color()` 字面量**（去重 280 种，其中 111 种属 44 个
+## 「近重复簇」）、**19 档字号**（215 处设置点，20% 小于 11px）、字体族声明**复制了 14 份**、
+## 而 `_font_bold` 其实是**伪粗体**（从未设 `font_weight`，与 `_font` 完全同款）。
+## 这些不是「不好看」，是**没有系统** —— 后果是层级失效、改一处要翻几十处、必然漏。
+##
+## ## 规矩（新增或修改界面代码时必须遵守）
+## 1. **字体**：一律 `UiTheme.font()` / `UiTheme.font_bold()`。
+##    **不准**再出现 `SystemFont.new()`。
+## 2. **颜色**：界面里**不准**再写裸 `Color("xxxxxx")` / `Color(r,g,b)`。
+##    需要新颜色 → **先在这里加令牌**，再引用。（白/黑/`Color(1,1,1,0.5)` 这类
+##    纯中性色与一次性调试色除外。）
+## 3. **字号**：只用下面 7 档 `FS_*`。想要别的尺寸 → 先归到最近的档；
+##    确实需要新档，就在本文件加一行并注明用途，别在调用点写数字。
+##    **卡面例外**：卡面字号随卡牌尺寸缩放（战场 k=1 / 手牌 k=1.7 / 图鉴更大），
+##    用 `CARD_FS_*` 子阶 + `roundi()`，**不要用 `int()`**（`int(7.5*k)` 在 k=1 会被截成 7）。
+## 4. **间距**：用 `SP_*`（4px 基准）。
+## 5. **语义唯一**：一个颜色只表达一件事。
+##    · 「生命/伤害」= `STAT_HEALTH`；「敌方标记」= `SIDE_FOE`；「胜利」= `SIDE_SELF_TEXT`。
+##    · **选中态不准占用边框颜色** —— 边框色是稀有度的通道，选中用描边/外发光表达。
+##    · 同一色相允许多个**角色档**（文字档 / 标记档），但必须在注释里写清角色，例如
+##      `SIDE_SELF`（框/标记）与 `SIDE_SELF_TEXT`（文字，对比度更高）。
+##
+## ## 迁移状态（存量分批收口，别一次性重写）
+## * ✅ 字体：13 个场景已全部改走 `font()` / `font_bold()`。
+## * ✅ `card_face.gd`：已全部令牌化。
+## * ⏳ `battle_scene.gd`（356 处字面量）/ `map_scene.gd`（83 处）：**批 3 迁移**。
+##   在此之前它们保留各自的 `COL_*`，**不要**顺手改（会污染 diff 与回归）。
+##
+## * 卡面的**效果文字**只在排得下完整一行时才画，所以小卡（58×70）上只有卡名与种类。
+##   要让它在小卡上也出现，只能改「字号不随卡片线性缩放」这条 —— 属于玩法信息密度问题，
+##   不是排版问题，先记在这里。
+##
+## ## 未决
+## * ~~`font_bold()` 依赖系统提供 Bold 字面~~ **R180 已解决**：内嵌思源黑体
+##   （`assets/fonts/SourceHanSansCN-Regular/Bold.otf`，OFL 授权可商用），`font()` /
+##   `font_bold()` 改走 `FontFile` —— 同时根治安卓乱码（微软雅黑是 Windows 字体，
+##   安卓上 SystemFont 回退默认字体 → 中文豆腐块），跨平台字形/字宽一致，粗体是真 Bold。
+
+# ══════════════════════════════════════════════════════════════════════
+# 字体
+# ══════════════════════════════════════════════════════════════════════
+
+## ⚠️ 必须是**数组字面量**：`const X := PackedStringArray([...])` 不是常量表达式，会解析失败。
+## R180：字体从 `SystemFont`（微软雅黑系列）改为**内嵌思源黑体 FontFile** —— 微软雅黑是
+## Windows 专属字体，安卓上 `SystemFont` 找不到会回退到不含中文的默认字体 → 中文全变豆腐块。
+## 内嵌后跨平台字形一致、安卓不再乱码（含生僻字）。`FONT_NAMES` 降级为 `FontFile` 加载失败时
+## 的 SystemFont 兜底族名（几乎不会走到）。
+const FONT_NAMES := ["Microsoft YaHei UI", "Microsoft YaHei", "SimHei"]
+
+## 内嵌思源黑体（Source Han Sans CN，OFL 授权可商用）—— Regular 正文 / Bold 强调。
+const FONT_PATH_REGULAR := "res://assets/fonts/SourceHanSansCN-Regular.otf"
+const FONT_PATH_BOLD := "res://assets/fonts/SourceHanSansCN-Bold.otf"
+
+static var _font: FontFile = null
+static var _font_bold: FontFile = null
+
+
+static func font() -> FontFile:
+	## 正文/常规字体。全工程共用一个实例。
+	if _font == null:
+		_font = _load_font_file(FONT_PATH_REGULAR)
+	return _font
+
+
+static func font_bold() -> FontFile:
+	## 强调字体。R180 起直接用**真粗体字面**（思源黑体 Bold），不再是 SystemFont 伪粗体。
+	if _font_bold == null:
+		_font_bold = _load_font_file(FONT_PATH_BOLD)
+	return _font_bold
+
+
+static func _load_font_file(path: String) -> FontFile:
+	## 加载内嵌 OTF；失败则回退到 SystemFont（微软雅黑系列）。FontFile 覆盖全部中文字形
+	## （含生僻字），安卓不再乱码。返回 FontFile 但内部兜底，调用方无需感知。
+	## ⚠️ 必须先走 `load()`：导出包（pck）里原始 .otf 被 import 成 `.fontdata` 并写进
+	## `.remap`，`load_dynamic_font()` 是**直读磁盘原文**，在发布包里必然失败 →
+	## 静默回落到 SystemFont（微软雅黑），字形与字宽都和开发时看到的不一样。
+	## `load()` 认 remap，编辑器与导出包拿到的是同一份导入产物。
+	var res: Resource = load(path)
+	if res is FontFile:
+		return res as FontFile
+	# 万不得已（资源未导入 / 路径写错）仍按原文直读一次。
+	var ff := FontFile.new()
+	if ff.load_dynamic_font(path) == OK:
+		return ff
+	# 加载失败（资源缺失等）→ 兜底 SystemFont，保证永不空字。
+	var sf := SystemFont.new()
+	sf.font_names = PackedStringArray(FONT_NAMES)
+	# 把 SystemFont 挂到空 FontFile 的 fallback，仍返回 FontFile 类型（调用方类型不破）。
+	var fb := FontFile.new()
+	fb.fallbacks = [sf]
+	return fb
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 字号阶（9 档）
+# ══════════════════════════════════════════════════════════════════════
+#
+# 体检时是 19 档（8~64px）：17/18/19/22/26/30/34 全是只出现一两次的孤值，
+# 15 与 16、17 与 18 肉眼几乎分不出 —— 它们只把层级搅浑。
+#
+# ⚠️ 为什么是 **9 档而不是 7 档**：R113 实测全工程 213 处设置点，其中 8~14px 段占了
+#   绝大多数（8/9/10/11/12/13/14 共 149 处）。这是一块 1280×720 的**信息密集**策略界面，
+#   底部确实需要一档「微型字」（棋盘表头、费用、卡组计数…）。若硬压成 7 档，
+#   这些 9px 文字会被顶到 12px（+33%），在紧凑区块里直接溢出。
+#   所以补 `FS_MICRO`（微型）与 `FS_HERO`（游戏主标题）—— 最大变动幅度因此从 +50% 降到 +25%。
+
+const FS_MICRO := 10    ## 微型：棋盘表头、计数徽章、悬停面板脚注（信息密集区专用）
+const FS_CAPTION := 12  ## 说明文字、次要信息
+const FS_LABEL := 14    ## 标签、次要正文
+const FS_BODY := 16     ## 正文、按钮
+const FS_SUBHEAD := 20  ## 小标题、重要数字
+const FS_HEADING := 24  ## 区块标题、主按钮
+const FS_TITLE := 32    ## 大面板标题、结算大字
+const FS_DISPLAY := 48  ## 分层/结算的大号标题
+const FS_HERO := 64     ## 仅用于标题页游戏名
+
+## 全部合法字号。新增界面字号**必须**落在这 9 个值上。
+## ⚠️ 用**数组字面量**（`Array[int]` 类型标注的常量不可靠）。
+const FS_STEPS := [FS_MICRO, FS_CAPTION, FS_LABEL, FS_BODY, FS_SUBHEAD,
+		FS_HEADING, FS_TITLE, FS_DISPLAY, FS_HERO]
+
+## 旧值 → 新档的**吸附表**（迁移用；已全部落地的对照见 UI设计规范.md）。
+## 19 档 → 9 档，最大变动 ±25%（仅 8→10 与 64 保留）。
+const FS_SNAP_MAP := {
+	8: FS_MICRO, 9: FS_MICRO, 10: FS_MICRO,
+	11: FS_CAPTION, 12: FS_CAPTION, 13: FS_LABEL, 14: FS_LABEL,
+	15: FS_BODY, 16: FS_BODY, 17: FS_BODY,
+	18: FS_SUBHEAD, 19: FS_SUBHEAD, 20: FS_SUBHEAD,
+	22: FS_HEADING, 24: FS_HEADING, 26: FS_HEADING,
+	30: FS_TITLE, 34: FS_TITLE,
+	64: FS_HERO,
+}
+
+
+static func nearest_font(px: int) -> int:
+	## 把任意字号吸附到最近的合法档位（迁移存量用；**不要**用在卡面尺寸上）。
+	if FS_SNAP_MAP.has(px):
+		return FS_SNAP_MAP[px]
+	var best: int = FS_STEPS[0]
+	var best_d: int = absi(px - best)
+	for s in FS_STEPS:
+		var d: int = absi(px - int(s))
+		if d < best_d:
+			best_d = d
+			best = int(s)
+	return best
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 卡面字号子阶（随缩放比 k 派生，保持比例）
+# ══════════════════════════════════════════════════════════════════════
+#
+# 基阶从 6 档（7 / 7.5 / 8 / 9 / 10 / 12）收到 **2 档**。原计划 3 档，实现时发现
+# 「卡名」与「附属信息」都落在 9.0 —— 两个同值令牌是纯冗余，合并为 `CARD_FS_TEXT`。
+#
+# 卡面从 58×70（战场）缩到手上也就 119×143，塞不下字号层级；所以**卡面靠字重与颜色
+# 拉层级**（卡名=粗+墨色、种类=卡种色、力量=金、生命=红），不靠字号。
+#
+# 取值用 float 保留比例，调用点必须 `roundi(CARD_FS_* * k)`，**不要 `int()`** ——
+# `int(7.5 * k)` 在 k=1 会被截成 7，比低一档还小。
+
+const CARD_FS_TEXT := 9.0    ## 卡名 / 种类 / 字段 / 效果文字
+## 数值徽章上的数字。R117 从 9 提到 12（用户口径「战场上的数字太小，加大占比」）。
+## 战场卡 k ≈ 76/70 ≈ 1.086 → 实到 `roundi(12 × 1.086) = 13px`，占 20px 圆盘的 65%
+## （R116 是 9px / 17px ≈ 53%）。两位数是这套参数的上限：sz=13 时量宽「30」= 17px
+## ≤ 自动缩号阈值 r×1.75 ≈ 17.5，所以**两位数的力量/生命不会再被悄悄缩小**。
+const CARD_FS_BADGE := 12.0
+
+
+# ══════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════
+# 卡面版式（R115）：上半卡图 / 下半文字 / 数值「挂在框上」
+# ══════════════════════════════════════════════════════════════════════
+#
+#    ┌───────────────────────┐  ① 费用     = 卡框**左上角**
+#    │ ①      ← 卡图 →       │  ② 力量     = 卡框**左下角**（与 ① 同一条竖线）
+#    ├───────────────────────┤  ③ 攻击距离 = ② 右侧
+#    │         卡名           │  ④ 移动距离 = ⑤ 左侧
+#    │       种类 · 字段       │  ⑤ 生命     = 卡框**右下角**（与 ① 左右反向）
+#    │    效果文字（可折行）…  │
+#    └───────────────────────┘
+#     ②力 ③程         ④速 ⑤
+#
+# ⚠️ 力量与生命因此**分别向左右探出卡框**（R115 用户口径「攻击力和生命都可以
+#   左右方向超出卡片范围」）。这不是装饰偏好：它把「四个数值都得挤进卡宽」
+#   松成「只有中间两个受卡宽限制」，图标于是能画得更大（R 7 → 8.5），
+#   同时卡片内部依然完整让给卡图与文字。代价是容器必须让出 `CARD_BLEED`。
+#
+# 所有尺寸都是**基准值 × 卡片缩放比 k**（k = 卡高 / 70；战场小卡 k=1、手牌 1.7、
+# 奖励大卡 3.7）。数值图标走 `assets/ui/icon_*.png`（剑/弓/鞋/血/水晶），
+# **缺图回退语义色圆盘**，所以这份版式在零素材时也成立。
+
+
+## 卡图占卡片高度的比例 —— **上半卡图 / 下半文字，对半分**（就是需求原话）。
+## ⚠️ 这个值不是「好看就行」：下半要同时装下**卡名 + 种类·字段 + 效果文字**三样。
+## 数值不占内部空间（它们骑在卡框上，见 `CARD_BLEED`），所以 0.50 是安全的；
+## 但 R114 实测 0.52 时 k=1.7 的手牌上「种类」会被挤掉 —— 想调大先按最坏情况算一遍。
+const CARD_ART_RATIO := 0.662  ## R193：对齐 card_paper.png v4 底图的卡图/姓名牌分隔金条
+const CARD_NAMEPLATE_TOP := 0.745    ## 姓名牌内框上沿（归一化）
+const CARD_NAMEPLATE_BOTTOM := 0.94  ## 姓名牌内框下沿
+const CARD_NAMEPLATE_X0 := 0.06      ## 姓名牌内框左沿
+const CARD_NAMEPLATE_X1 := 0.94      ## 姓名牌内框右沿
+const CARD_PAD := 3.0             ## 卡面内距（基准）
+## 数值图标半径（基准）。R117 从 8.5 提到 9.2 —— 战场卡 k ≈ 1.086
+## → 实到 10.0（**直径 20**，正是用户口径「徽章直径 17 → 约 20」）。
+## ⚠️ 上限仍由**底部一排**决定：力量/生命挪到卡框左右两角之后，约束是
+## 「中间两张 + 左右各一个半径 = 6R + 2×GAP ≤ 卡宽」。R117 卡宽 58 → 63，
+## 于是上限从 `58/6 ≈ 9.67` 松到 `63/6 = 10.5`，9.2 仍有 7.8px 余量。
+const CARD_BADGE_R := 9.2
+## 同排两个数值的间距（基准）。**0 = 相邻两个直接相接**（用户明确接受）。
+const CARD_BADGE_GAP := 0.0
+## **卡片四周至少要留出的「外溢边」**（基准单位，实际尺寸 = 本值 × 卡片缩放比 k）。
+## 数值的**圆心落在卡框上** → 一半露在框外（炉石那种「挂在框上」），而且 R115 起
+## 力量/生命分别向左右探出，所以**上下左右四条边都要让**。容器必须留出来，
+## 否则会骑到邻卡身上：
+##   · 网格类（卡尺寸固定）：单元格 ≥ 卡尺寸 + 2 × `CARD_BLEED` × k
+##     （例：图鉴 CELL 101×117 @ k=1.314、牌库间距 24）
+##   · 列表类：行距 ≥ 卡高 + 2 × `CARD_BLEED` × k（例：卡组行 89 = 70 + 2×9.2）
+##   · ⚠️ 卡高**可变**的网格（卡组编辑）：间距要由卡高反算，写死常数两头都错
+## ⚠️ R117 订正：此前这里写着「棋盘 `CELL` / `GRID_X` / `GRID_Y` 是引擎约束、
+##   不许改」——**实测不成立**：全工程只有 `battle_scene.gd` 与 `test_smoke.gd`
+##   引用这三个常量，引擎 / 回放 / 录像一律以**格坐标** `Vector2i` 为准。
+##   R117 正是据此把棋盘放大（并拆出 `CELL_W`）——棋盘那一格现在**也装得下**了，
+##   R115 写的「只保证贴边不重叠」不再适用。
+## ⚠️ 唯一的例外是牌库面板：它的间距被**列数**反卡住（`int(1080/(76+GAP))`），
+##   GAP 从 22 抬到 24 会让列数从 11 掉到 10 —— 所以那里靠**加宽面板**
+##   （1120 → 1150）把这一格吃回来，而不是压缩间距。
+const CARD_BLEED := 9.2
+
+## ⚠️ **两个不同的缩放上限**（R114 实测的结论，别合并成一个）：
+##   · 徽章用 `CARD_BADGE_SCALE_CAP` —— 大卡上徽章若跟着 k 线性长，会变成几个巨球抢戏。
+##   · 文字用 `CARD_TEXT_SCALE_CAP` —— 卡片越大，每个字应当**更小**才装得下更多字：
+##     能排的字数 ≈ 区域面积 / 字号²，而面积 ∝ k²、字号 ∝ min(k,cap)²，
+##     所以 cap 越小能装的字越多。奖励卡（216×260）实测：cap=2.0 只排得下约 30 字，
+##     cap=1.6 排得下约 70 字 —— 而卡面存在的意义就是让玩家读得到说明。
+const CARD_BADGE_SCALE_CAP := 2.2
+const CARD_TEXT_SCALE_CAP := 1.6
+
+## R170 卡面底部框线：**中性深胡桃木色**。此前框线涂稀有度色（「颜色条」），
+## 稀有度的主通道已改为右上角的**缎带素材**（`UiAssets.rarity_ribbon`）——
+## 用户口径「稀有度不要粗暴的颜色块/颜色条，做成 banner 图片素材」。
+const CARD_FRAME := Color("574433")
+
+## 徽章圆盘色：**缺图标素材时的回退底衬**，同时充当图例（一个通道一个含义）。
+const BADGE_COST := Color("2255aa")    ## 费用（水晶）
+const BADGE_POWER := Color("8a5f00")   ## 力量（剑）
+const BADGE_RANGE := Color("1f6b6b")   ## 攻击距离（弓）
+const BADGE_HEALTH := Color("c1121f")  ## 生命（血）
+const BADGE_SPEED := Color("4f4a8a")   ## 移动距离（鞋）
+const BADGE_OUTLINE := Color(0.05, 0.05, 0.07, 0.94)  ## 压在图标上的数字描边
+const BADGE_VALUE := Color("ffffff")   ## 徽章数字
+## R301：卡面数值相对**卡库原型**的涨跌染色（高 = 绿 / 低 = 红）。
+## 只染**数字**、不动图标底色 —— 图标是「这是哪种数值」的语义色，数字是「变没变」。
+## 手卡 / 场上 / 弃牌区 / 图鉴全部共用（染色在 `CardFace.draw()` 里，调用方不用管）。
+const BADGE_UP := Color("2fd968")     ## 比原型高（改造 / 附魔加成）
+const BADGE_DOWN := Color("ff5757")   ## 比原型低（被削弱 / 减益）
+## R301：生命徽章的两条专用态（用户口径 —— 生命不能只按「比原本高/低」一个维度染）
+##   · BADGE_HURT  当前生命 < 最大生命 → 受伤（**优先级最高**，压过涨跌）
+##   · BADGE_WARN  满血但最大生命 < 原本 → 上限被削（是警示，不是损失）
+## 受伤红比 BADGE_DOWN 略亮一档：它要压在**深红酒滴图标**上（icon_health），
+## 纯正红 #ff5757 在那上面只有 4.5:1，提亮后到 5.0:1，小号数字更扎实。
+const BADGE_HURT := Color("ff6b6b")   ## 受伤（当前生命低于最大生命）
+const BADGE_WARN := Color("ffd23f")   ## 满血但生命上限被削
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 间距（4px 基准）
+# ══════════════════════════════════════════════════════════════════════
+
+const SP_1 := 4
+const SP_2 := 8
+const SP_3 := 12
+const SP_4 := 16
+const SP_5 := 24
+const SP_6 := 32
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 色彩令牌
+# ══════════════════════════════════════════════════════════════════════
+
+# ── 中性 / 文字 ──
+const INK_900 := Color("1a1c22")      ## 主文字
+const INK_800 := Color("333333")      ## 次强文字（弹窗标题、亮底上的正文）
+const INK_600 := Color("555555")      ## 次要文字（替代散落的 #444444 / #666666）
+const INK_500 := Color("6b6b6b")      ## 弱化文字（5.33:1；原 #777777 只有 4.48:1，未过 AA）
+const INK_ON_DARK := Color("8a867c")  ## 暗底上的提示文字
+const INK_300 := Color("b8b4aa")      ## 分割线 / 描边
+
+# ── 底 ──
+const SURFACE := Color("ffffff")      ## 卡面 / 面板底
+const PAPER := Color("f7f5f0")        ## 纸面底
+const SAND := Color("e8e4da")         ## 卡片槽底
+const BOARD_BG := Color("e9e7e2")     ## 棋盘底
+## R154 暗底锚点（清单 §2.6）：全屏界面的暗底**只许读这两个**，别再散落 Color("252a35")。
+## 冷灰（252a35）与羊皮纸/墨蓝的美术方向不一致 → 统一锚到墨蓝夜色。
+const SCREEN_BG := Color("1a1c22")      ## 全屏界面暗底（选角 / 道具 / 卡组编辑 / 事件）
+const PANEL_DARK := Color("222630")      ## 暗底上的卡片 / 面板底（略亮于 SCREEN_BG 一档）
+## R154 羊皮纸面板（清单 §2.5）：图鉴左右栏这类「纸面上的面板」。
+const PANEL_PAPER_BG := Color("f1e9d5")  ## 羊皮纸奶油底
+const PANEL_PAPER_LINE := Color(0.78, 0.68, 0.45, 0.60)   ## 纸面细金边
+## 棋盘格线。原为 `#9a9a9a`，在 `BOARD_BG` 上只有 **2.28:1** —— 对非文字元素低于 WCAG 的 3:1，
+## 玩家分不清格子边界。`#7d7b74` 是 **3.43:1**，既能看清又不抢单位的视觉重量。
+const BOARD_GRID_LINE := Color("7d7b74")
+
+# ── 阵营 ──
+const SIDE_SELF := Color("2e7d32")       ## 我方：框 / 标记
+const SIDE_SELF_TEXT := Color("1b5e20")  ## 我方：文字（对比度 7.85:1）
+const SIDE_FOE := Color("c62828")        ## 敌方：框 / 标记
+
+# ── 数值 / 危险 ──
+const STAT_POWER := Color("8a5f00")   ## 力量（5.64:1；原 #b8860b 只有 3.25:1，未过 AA）
+const STAT_HEALTH := Color("c1121f")  ## 生命 / 伤害（6.22:1）
+
+## R349（用户口径）：伤害数**内联在效果正文里**染色，不再单开一行「现在打出」。
+## 两个色各管一件事 —— 总值要最跳，算式要能读但不抢。
+const DMG_NOW := Color("c1121f")       ## 当前总伤害（与生命同色系，浅底上最醒目）
+const DMG_CALC := Color("8a6a45")      ## 算式（10＋8）：暖褐，和红色明显分开
+
+# ── 卡种（`card_face.gd` 的种类着色）──
+const KIND_ALLY := Color("2a7a2a")    ## 盟友
+const KIND_SKILL := Color("7a2a7a")   ## 技能
+const KIND_EFFECT := Color("1d7a4f")  ## 效果
+const KIND_FORT := Color("7a5a2a")    ## 工事
+const KIND_CURSE := Color("4e4560")   ## 诅咒（R223「疲惫」）
+const KIND_FALLBACK := Color("808080")  ## 未知种类
+
+## R165 卡面横幅：无图回退 / 卡名条用**卡种（或职业）色的淡彩渐变**代替「粗暴纯色块」。
+## 两个值是「向白混合」的比例（越大越淡越自然）：上端更淡、下端略深形成渐变。
+const KIND_BANNER_TOP := 0.80   ## 横幅渐变上端混合比（更淡）
+const KIND_BANNER_BOT := 0.50   ## 横幅渐变下端混合比（略深，仍有彩）
+
+## 卡面说明文字里的「关键字」高亮（如数值、费用）。4.74:1。
+const CODE_TEXT := Color("a8621f")
+
+## 「文本里提到的卡牌 / 道具名」（R168 · 规范 §4.38）：**可悬浮看详情**，
+## 所以要用与正文不同的强调色。浅底 / 暗底各一枚，由 `Mention.text_color(底色)` 二选一 ——
+## 保证两种底色上都比正文醒目、而且读得清（用户口径：这些名字本身要有颜色）。
+const MENTION_ON_LIGHT := Color("8a5f00")   ## 浅底（羊皮纸 / 卡面）：琥珀棕
+const MENTION_ON_DARK := Color("f2c14e")    ## 暗底（悬浮面板）：亮金（= ACCENT_LIT）
+
+# ── 卡面 ──
+const COST_BG := Color("2255aa")     ## 费用圆底色
+const SELECT_RING := Color("c1121f") ## 选中描边色（批 2 会改成「外发光」，令牌保留）
+
+# ── 标题页背景 ──
+const OVERLAY_TITLE := Color(1, 1, 1, 0.30)  ## 标题页白罩（原 0.55）
+
+## 标题页的「幽灵卡」母題（R113）：不用 cardback.png 贴图。
+## 原因：卡背是**深海军蓝**，而标题页底色是**浅米黄** —— 任何低透明度都会把深蓝
+## 兑成中灰，菱形花纹的对比度被同比例压缩，最后只剩一个「灰色占位块」。
+## 改成「浅色卡 + 描边」的幽灵卡，才是这块纸面上的合理存在。
+const GHOST_CARD_FILL := Color(0.91, 0.89, 0.84, 0.62)   ## 卡面
+const GHOST_CARD_LINE := Color(0.72, 0.71, 0.67, 0.55)   ## 外描边
+const GHOST_CARD_INNER := Color(0.78, 0.76, 0.70, 0.30)  ## 内嵌描边（卡面的一圈留白）
+## 幽灵卡的横向活动区间（占窗口宽度比例）：只出现在左右留白区，**永不压住标题与按钮**。
+const GHOST_CARD_MARGIN := 0.23
+
+# ── 稀有度（对映 CardData.RARITY_COLORS / RARITY_NAMES 的下标）──
+const RARITY_COMMON := Color("2c2c2a")   ## 0 普通
+const RARITY_RARE := Color("1f5fbf")     ## 1 稀有
+const RARITY_EPIC := Color("8a30b8")     ## 2 史诗
+const RARITY_STARTER := Color("1d7a4f")  ## 3 初始
+const RARITY_MONSTER := Color("7a1f1f")  ## 4 怪物
+const RARITY_EVENT := Color("a44ad0")    ## 5 事件
+const RARITY_CURSE := Color("4e4560")    ## 6 诅咒（R223「疲惫」）
+
+# ── 职业色（CardData.card_class → 卡面左侧竖条，R153）──
+const CLASS_DRUID := Color("3a7d44")   ## 森林精魄 自然绿
+const CLASS_ROGUE := Color("5b3a8e")   ## 暗影刺客 幽紫
+const CLASS_MECH := Color("b8860b")    ## 机械之心 黄铜
+const CLASS_ENEMY := Color("7a1f1f")   ## 敌人 暗红
+## R277：**公用卡**（cards.json 里 class 留空 = 不属于任何职业的事件 / 道具产出卡）
+## 的中性灰 —— 与「无归属」的语义一致：不站任何一边，但也确实是卡库里的正式成员。
+const CLASS_NONE := Color("6f6f6f")    ## 公用卡 中性灰
+
+# ── 强调 / 状态 ──
+const ACCENT_GOLD := Color("c8951c")  ## 装饰 / 描边
+const ACCENT_LIT := Color("f2c14e")   ## 高亮 / 奖励
+const STATE_GUARD := Color("1d9e4f")  ## 护盾
+const STATE_TAUNT := Color("ff8f00")  ## 嘲讽
+const STATE_FROZEN := Color("6ec6ff") ## 冰冻
+const STATE_SLEEP := Color("b07bff")  ## 沉睡
+const STATE_FUSE := Color("ff7043")  ## 铸造倒计时（R149）：橙红，刻意与嘲讽的 ff8f00 拉开
+
+# ── 滚动提示（R126）──
+## 地图「还能上下滚」的半透明双箭头。第一枚亮、第二枚更淡 → 形成层次，
+## 读起来就是「双箭头」（= 还有更多），而不是两个孤立的三角。
+## ⚠️ 地图上会与节点重叠（地图节点是亮橙/亮绿）→ 箭头的**下沿再垫一道更粗的暗色折线**
+## （与卡面数字描边同一手法），否则浅色箭头会被亮节点淹没。
+## R147：原来是**白色**（0.52 / 0.26）—— 压在棋盘石色 / 地图彩绘底上「太浅了」，
+##   用户口径改成**更明显的浅蓝**并提高不透明度；垫底描边同时加深，压在亮色块上仍可辨。
+const HINT_CHEVRON := Color(0.55, 0.88, 1.0, 0.95)      ## 第一枚（离内容更近的那枚）
+const HINT_CHEVRON_DIM := Color(0.45, 0.78, 1.0, 0.62)  ## 第二枚（更淡，但仍读得出是同一组）
+const HINT_CHEVRON_HALO := Color(0.03, 0.07, 0.14, 0.78)  ## 垫底的暗色描边
+
+# ── 地图通路（R130）──
+## 唯一消费方：scripts/map_bridge.gd（冒险地图页与战斗内地图总览共用）。
+## 通路 = 两格之间的墙上盖一枚**小桥图标**；这三个是**染色**（modulate，会与原图相乘）。
+## ⚠️ 桥素材必须画成**浅色**：deep 色的图乘上冷色会变成一团脏色。
+## ⚠️ 别再改回「画一块色块 / 门洞」—— R130 第一版那样做过，量感过重且彼此不相连，
+##    鹰哨全揭示时像散落的按钮。通路要是「一个能被认出来的物件」。
+const MAP_BRIDGE_DARK := Color(0.03, 0.04, 0.06, 0.72)   ## 缺图兜底横条的暗描边
+const MAP_BRIDGE_DONE := Color(1.0, 0.90, 0.68)          ## 走过的房 → 已确认的相邻房（暖白）
+const MAP_BRIDGE_LIT := Color(0.40, 0.86, 1.0)           ## 当前房 → 可走的相邻房（亮青，会呼吸）
+## ⚠️ 这档要**够饱和**：桥素材本身是浅米色，染色是相乘 —— 太淡的青色乘出来
+##    和「暖白」几乎分不开（出图验证过）。
+const MAP_BRIDGE_UNSEEN := Color(0.68, 0.73, 0.82, 0.90) ## 鹰哨揭示、还没走过（灰蓝、更小）
+## ⚠️ 这档别压太暗：出图验证过，alpha 0.8 + 更深的灰在深色背景上几乎看不见 ——
+##    而「鹰哨全揭示」恰恰是最需要看清通路的时候。
+
+
+## R148：齿轮图标（「设置 / 菜单」按钮用）。
+## ⚠️ 必须**程序绘制**：字体里的 ⚙（U+2699）在微软雅黑 / SimHei 上不保证有，
+##    缺字时按钮上会变成一个方框。齿形用「内圈-外圈-外圈-内圈」四点一齿拼成多边形，
+##    中心再挖一个底色圆当轴孔（`hole` 传按钮底色 —— hover 时底色变了要跟着传新的）。
+static func draw_gear(cv: CanvasItem, center: Vector2, r_out: float,
+		col: Color, hole: Color, teeth := 8) -> void:
+	var n := maxi(teeth, 3)
+	var r_in := r_out * 0.74
+	var step := TAU / float(n)
+	var pts := PackedVector2Array()
+	for i in n:
+		var a := float(i) * step
+		pts.append(center + Vector2.from_angle(a - step * 0.36) * r_in)
+		pts.append(center + Vector2.from_angle(a - step * 0.22) * r_out)
+		pts.append(center + Vector2.from_angle(a + step * 0.22) * r_out)
+		pts.append(center + Vector2.from_angle(a + step * 0.36) * r_in)
+	cv.draw_colored_polygon(pts, col)
+	cv.draw_circle(center, r_out * 0.36, hole)
+
+
+static func class_color(card_class: String) -> Color:
+	## 卡牌**归属** → 颜色。**唯一口**（R153）：左侧竖条与卡底面填色（`CardFace.paper_tint`）
+	## 都读这里，别在别处再写一份字典。
+	## R277 用户口径：颜色绑的是「这张卡属于谁」，不是「哪个角色能用它」——
+	##   森林精魄 = 自然绿 / 暗影刺客 = 幽紫 / 机械之心 = 黄铜 / 敌人 = 暗红 /
+	##   **class 留空 = 公用卡 → 中性灰**（此前留空返回透明，卡面与竖条都当作“没有归属”）。
+	## 返回 alpha 0 仍然表示「不需要上色」（目前只有 card == null 这类兜底会走到）。
+	if card_class == "":
+		return CLASS_NONE
+	match card_class:
+		"森林精魄":
+			return CLASS_DRUID
+		"暗影刺客":
+			return CLASS_ROGUE
+		"机械之心":
+			return CLASS_MECH
+		"敌人":
+			return CLASS_ENEMY
+	return Color(0, 0, 0, 0)
+
+
+static func kind_color(kind: String) -> Color:
+	## 卡种 → 颜色。**唯一口**：卡面与悬停面板都读这里，避免两处各写一份字典。
+	match kind:
+		"盟友":
+			return KIND_ALLY
+		"技能":
+			return KIND_SKILL
+		"效果":
+			return KIND_EFFECT
+		"工事":
+			return KIND_FORT
+		"诅咒":
+			return KIND_CURSE
+	return KIND_FALLBACK
+
+
+## 地图节点配色（**唯一出处**）。此前 `battle_scene.gd` 的 `MAPVIEW_TYPE_COLORS` 与
+## `map_scene.gd` 的 `TYPE_COLORS` 各存一份一模一样的表，两边的注释里都写着「改这里时
+## 两边要一起改」—— 那就说明它本来就该只有一份。
+##
+## ⚠️ 必须是 `static var` 而不是 `const`：**const 字典里不能放 `Color()`**（也不是
+## `UiTheme.X` 这种跨脚本常量引用），否则整份文件 `Parse Error`。
+## ⚠️ 只读使用；不要往这个字典里写（static 是共享对象）。
+static var MAP_NODE_COLORS := {
+	"start": Color("7a94b8"),   # 起点 蓝灰
+	"battle": Color("c6503c"),  # 普通战斗 红
+	"elite": RARITY_EPIC,       # 精英 紫
+	"rest": Color("3f9b5f"),    # 休息 绿
+	"event": Color("d1a12a"),   # 事件 金
+	"chest": Color("e0912a"),   # 宝箱 橙金（与事件金区分）
+	"bigchest": Color("f5c84c"),  # 大宝箱（R128）：更亮的金 —— 全图只有两格，要跳出来
+	"unknown": Color("6f7a8c"),   # 「?」房（R128）：灰蓝，走进才揭晓
+	"boss": Color("33323b"),    # Boss 黑
+}
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 圆角与组件规格
+# ══════════════════════════════════════════════════════════════════════
+#
+# ⚠️ 这一节是给「以后会有许多其他界面」准备的：**任何新界面都不该自己画按钮**，
+#    一律 `UiTheme.apply_button(btn, primary)`。这样主次、圆角、内距、焦点环
+#    永远只有一处定义，新界面不可能跟旧界面长得不一样。
+
+const RADIUS_SM := 6
+const RADIUS_MD := 8
+const RADIUS_LG := 12
+
+const BTN_PAD_X := 18   ## 按钮左右内距
+const BTN_PAD_Y := 9    ## 按钮上下内距
+
+# ── 主按钮（一屏**最多**一个；选择类界面可以全是次按钮）──
+const BTN_PRIMARY_BG := Color("22304a")        ## 深墨蓝（日式西幻的夜色）
+const BTN_PRIMARY_BG_HOVER := Color("2c3f61")
+const BTN_PRIMARY_BG_PRESS := Color("1a2438")
+const BTN_PRIMARY_LINE := Color("c8951c")      ## 金线
+const BTN_PRIMARY_LINE_FOCUS := Color("f2c14e") ## 焦点环（更亮，键盘可达性）
+const BTN_PRIMARY_TEXT := Color("f5efe0")
+
+## 暗底上的主按钮：深墨蓝在暗底上会「沉下去」，所以换金底 + 墨色字。
+const BTN_PRIMARY_DARK_BG := Color("c8951c")
+const BTN_PRIMARY_DARK_BG_HOVER := Color("d9a52c")
+const BTN_PRIMARY_DARK_BG_PRESS := Color("a87a12")
+const BTN_PRIMARY_DARK_LINE := Color("f2c14e")
+const BTN_PRIMARY_DARK_TEXT := Color("1a1c22")
+
+# ── 次按钮 ──
+const BTN_SECONDARY_BG := Color(1, 1, 1, 0.42)
+const BTN_SECONDARY_BG_HOVER := Color(1, 1, 1, 0.72)
+const BTN_SECONDARY_BG_PRESS := Color(1, 1, 1, 0.28)
+const BTN_SECONDARY_LINE := Color("b8b4aa")
+const BTN_SECONDARY_LINE_FOCUS := Color("8a5f00")
+const BTN_SECONDARY_TEXT := Color("1a1c22")
+
+## 暗底上的次按钮：半透明白 + 亮字（亮底那套的深字在暗底上根本读不出来）。
+const BTN_SECONDARY_DARK_BG := Color(1, 1, 1, 0.10)
+const BTN_SECONDARY_DARK_BG_HOVER := Color(1, 1, 1, 0.22)
+const BTN_SECONDARY_DARK_BG_PRESS := Color(1, 1, 1, 0.06)
+const BTN_SECONDARY_DARK_LINE := Color(1, 1, 1, 0.30)
+const BTN_SECONDARY_DARK_TEXT := Color("e6e2d8")
+
+const BTN_DISABLED_LINE := Color("b8b4aa")
+const BTN_DISABLED_TEXT := Color("7a7a78")
+
+# ── 小按钮（chip）：顶部工具条 / HUD、难度档位、筛选、多选标签 ──
+## 浅底档（默认）：半透明白 + 深字 —— 成组出现于**亮底**（如标题页的难度档位）。
+const CHIP_BG := Color(1, 1, 1, 0.34)
+const CHIP_BG_HOVER := Color(1, 1, 1, 0.62)
+const CHIP_LINE := Color("b8b4aa")
+const CHIP_TEXT := Color("1a1c22")
+const CHIP_PAD_X := 12
+const CHIP_PAD_Y := 5
+
+## 实心档（solid）：实心暗蓝灰 + 亮字 —— 顶部工具条 / HUD，要从背景里跳出来。
+## 取值沿用 `map_scene` 原本手写的样式，所以地图页观感**不变**，只是收进唯一口、并补回焦点环
+## （原来那里把 focus 设成了 `StyleBoxEmpty`，键盘可达性直接没了）。
+const CHIP_SOLID_BG := Color("343947")
+const CHIP_SOLID_BG_HOVER := Color("414860")
+const CHIP_SOLID_BG_PRESS := Color("272b37")
+const CHIP_SOLID_LINE := Color(0, 0, 0, 0.35)
+const CHIP_SOLID_TEXT := Color("e6e2d8")
+const CHIP_SOLID_TEXT_HOVER := Color("ffffff")
+const CHIP_SOLID_TEXT_PRESS := Color("cfcabb")
+## compact：更小的内距，给**固定高度**的工具条用（battle 顶栏按钮只有 28px 高）。
+const CHIP_COMPACT_PAD_X := 10
+const CHIP_COMPACT_PAD_Y := 3
+
+
+static func _btn_box(bg: Color, line: Color, width: int, radius: int,
+		px := BTN_PAD_X, py := BTN_PAD_Y) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = line
+	sb.set_border_width_all(width)
+	sb.set_corner_radius_all(radius)
+	sb.content_margin_left = px
+	sb.content_margin_right = px
+	sb.content_margin_top = py
+	sb.content_margin_bottom = py
+	return sb
+
+
+static func _btn_tex_box(tex: Texture2D, px := BTN_PAD_X, py := BTN_PAD_Y) -> StyleBoxTexture:
+	## R154：素材按钮底（btn_primary / btn_plain）。胶囊两端 40px 不拉伸（保金线圆弧），
+	## 纵向上下各留 6px、中段自由拉伸 —— 按钮比素材矮时圆弧略扁，可接受。
+	## hover / pressed 的反馈由**字色变化 + UiPressFx 缩放**承担（素材只有常态一张）。
+	var sb := StyleBoxTexture.new()
+	sb.texture = tex
+	sb.texture_margin_left = 40.0
+	sb.texture_margin_right = 40.0
+	sb.texture_margin_top = 6.0
+	sb.texture_margin_bottom = 6.0
+	sb.content_margin_left = px
+	sb.content_margin_right = px
+	sb.content_margin_top = py
+	sb.content_margin_bottom = py
+	return sb
+
+
+static func _chip_box(bg: Color, line: Color, width: int, px: int, py: int,
+		bottom_only := false) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = line
+	if bottom_only:
+		sb.border_width_bottom = width      # 只留底边 → 胶囊的「落地感」
+	else:
+		sb.set_border_width_all(width)
+	sb.set_corner_radius_all(RADIUS_SM)
+	sb.content_margin_left = px
+	sb.content_margin_right = px
+	sb.content_margin_top = py
+	sb.content_margin_bottom = py
+	return sb
+
+
+const UiPressFx = preload("res://scripts/ui_press_fx.gd")
+
+
+static func apply_button(btn: Button, primary := false, on_dark := false) -> void:
+	## 给按钮套上统一规格（**唯一口**）。新界面写按钮就调这一行，别自己画 StyleBox。
+	##   primary = 主行动。**一屏最多一个**；选择类界面（多个等价选项）可以全是次按钮。
+	##   on_dark = 按钮坐在**暗底**上。除标题页外，本作其余界面底色都是暗的，
+	##             **暗底上必须传 true**，否则深字压暗底读不出来。
+	if btn == null:
+		return
+	var r := RADIUS_MD
+	var bg := BTN_SECONDARY_BG
+	var bg_h := BTN_SECONDARY_BG_HOVER
+	var bg_p := BTN_SECONDARY_BG_PRESS
+	var line := BTN_SECONDARY_LINE
+	var line_focus := BTN_SECONDARY_LINE_FOCUS
+	var txt := BTN_SECONDARY_TEXT
+	var txt_h := Color("1a1c22")
+	var font_size := FS_SUBHEAD
+	var use_bold := false
+	if primary:
+		font_size = FS_HEADING
+		use_bold = true
+		line_focus = BTN_PRIMARY_LINE_FOCUS
+		txt_h = Color("ffffff")
+		if on_dark:
+			bg = BTN_PRIMARY_DARK_BG
+			bg_h = BTN_PRIMARY_DARK_BG_HOVER
+			bg_p = BTN_PRIMARY_DARK_BG_PRESS
+			line = BTN_PRIMARY_DARK_LINE
+			txt = BTN_PRIMARY_DARK_TEXT
+		else:
+			bg = BTN_PRIMARY_BG
+			bg_h = BTN_PRIMARY_BG_HOVER
+			bg_p = BTN_PRIMARY_BG_PRESS
+			line = BTN_PRIMARY_LINE
+			txt = BTN_PRIMARY_TEXT
+	elif on_dark:
+		bg = BTN_SECONDARY_DARK_BG
+		bg_h = BTN_SECONDARY_DARK_BG_HOVER
+		bg_p = BTN_SECONDARY_DARK_BG_PRESS
+		line = BTN_SECONDARY_DARK_LINE
+		txt = BTN_SECONDARY_DARK_TEXT
+		txt_h = Color("ffffff")
+		line_focus = BTN_PRIMARY_LINE_FOCUS
+	var w := 2 if primary else 1
+	# R154：有素材画素材（墨蓝金线胶囊 / 羊皮纸胶囊），缺图回退程序 StyleBoxFlat。
+	var tex: Texture2D = UiAssets.get_tex("reward_btn_green") if primary else UiAssets.btn_plain()
+	if tex != null:
+		btn.add_theme_stylebox_override("normal", _btn_tex_box(tex))
+		btn.add_theme_stylebox_override("hover", _btn_tex_box(tex))
+		btn.add_theme_stylebox_override("pressed", _btn_tex_box(tex))
+		# ⚠️ 素材底**自带明暗**（主 = 墨蓝 / 次 = 奶油），字色必须跟着素材走、
+		# 不再看 on_dark：奶油胶囊上压浅色字 = 直接隐身（事件页实测翻车）。
+		txt = Color("ffffff") if primary else Color("1a1c22")
+		txt_h = txt
+	else:
+		btn.add_theme_stylebox_override("normal", _btn_box(bg, line, w, r))
+		btn.add_theme_stylebox_override("hover", _btn_box(bg_h, line, w, r))
+		btn.add_theme_stylebox_override("pressed", _btn_box(bg_p, line, w, r))
+	btn.add_theme_stylebox_override("disabled", _btn_box(bg, BTN_DISABLED_LINE, w, r))
+	btn.add_theme_stylebox_override("focus", _btn_box(Color(0, 0, 0, 0), line_focus, 3, r))
+	btn.add_theme_color_override("font_color", txt)
+	btn.add_theme_color_override("font_hover_color", txt_h)
+	btn.add_theme_color_override("font_pressed_color", txt)
+	btn.add_theme_color_override("font_focus_color", txt)
+	btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
+	btn.add_theme_font_override("font", font_bold() if use_bold else font())
+	btn.add_theme_font_size_override("font_size", font_size)
+	UiPressFx.attach(btn)   # R151 P1-8：按下 scale 0.96 / 100ms（样式唯一口统一挂）
+
+
+static func apply_paper_panel(panel: Panel) -> void:
+	## 羊皮纸面板（**唯一口**，R154）：图鉴左 / 右栏这类亮底界面上的面板。
+	## R170 起有 `panel_parchment` 素材就用**平铺底纹**（任意大小自适应、无边框），
+	## 缺图回退 奶油纸底 + 细金边 + 圆角 —— 换掉 Godot 默认的冷灰 Panel。
+	if panel == null:
+		return
+	var tex: Texture2D = UiAssets.panel_parchment()
+	if tex != null:
+		var st := StyleBoxTexture.new()
+		st.texture = tex
+		st.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+		st.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+		st.set_content_margin_all(12.0)
+		panel.add_theme_stylebox_override("panel", st)
+		return
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = PANEL_PAPER_BG
+	sb.border_color = PANEL_PAPER_LINE
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(10)
+	sb.set_content_margin_all(12.0)
+	panel.add_theme_stylebox_override("panel", sb)
+
+
+static func draw_panel_bg(canvas: CanvasItem, rect: Rect2) -> void:
+	var tex: Texture2D = UiAssets.get_tex("reward_card")
+	if tex != null:
+		var box := StyleBoxTexture.new()
+		box.texture = tex
+		box.set_texture_margin_all(18.0)
+		canvas.draw_style_box(box, rect)
+	else:
+		canvas.draw_rect(rect, PANEL_PAPER_BG)
+
+
+const PAGE_PAPER := Color("f3eee2")
+const PAGE_INK := Color("514735")
+const PAGE_MUTED := Color("887b65")
+const PAGE_GOLD := Color("cbb47e")
+const PAGE_GREEN := Color("4c9a52")
+
+static func draw_page(canvas: CanvasItem, rect: Rect2) -> void:
+	var paper: Texture2D = UiAssets.panel_parchment()
+	if paper != null:
+		canvas.draw_texture_rect(paper, rect, true)
+	else:
+		canvas.draw_rect(rect, PAGE_PAPER)
+	var panel := rect.grow(-16.0)
+	draw_panel_bg(canvas, panel)
+	var banner: Texture2D = UiAssets.get_tex("reward_banner_top")
+	if banner != null:
+		canvas.draw_texture_rect_region(banner, Rect2(rect.position, Vector2(rect.size.x, 18)), Rect2(0, 0, banner.get_width(), 80))
+	canvas.draw_line(Vector2(64, 124), Vector2(rect.end.x - 64, 124), PAGE_GOLD, 1.0, true)
+
+
+const SCROLL_EDGE := 0.16   # 羊皮卷九宫格：角块取源图宽/高的 16%
+
+
+static func draw_scroll_bg(canvas: CanvasItem, rect: Rect2) -> void:
+	## 羊皮卷面板底（R191，**唯一口**）：整张卷轴九宫格 —— 四角原样、四边单向拉伸、
+	## 中心双向拉伸，任意面板尺寸自适应且破损边不变形。**没有边框**（用户口径：
+	## 羊皮卷的边就是边界）。缺图回退 `draw_panel_bg` 平铺羊皮纸。
+	var tex: Texture2D = UiAssets.scroll_parchment()
+	if tex == null:
+		draw_panel_bg(canvas, rect)
+		return
+	var ts := tex.get_size()
+	var sx := ts.x * SCROLL_EDGE
+	var sy := ts.y * SCROLL_EDGE
+	var dx := minf(sx, rect.size.x / 2.0)
+	var dy := minf(sy, rect.size.y / 2.0)
+	# 角块按面板比例缩放（小面板上角块跟着缩，边仍然完整）
+	var corners := [
+		[Rect2(0, 0, sx, sy), Rect2(rect.position, Vector2(dx, dy))],
+		[Rect2(ts.x - sx, 0, sx, sy), Rect2(rect.end.x - dx, rect.position.y, dx, dy)],
+		[Rect2(0, ts.y - sy, sx, sy), Rect2(rect.position.x, rect.end.y - dy, dx, dy)],
+		[Rect2(ts.x - sx, ts.y - sy, sx, sy), Rect2(rect.end - Vector2(dx, dy), Vector2(dx, dy))],
+	]
+	for pair in corners:
+		canvas.draw_texture_rect_region(tex, pair[1], pair[0])
+	# 四边（单向拉伸）
+	canvas.draw_texture_rect_region(tex,
+			Rect2(rect.position.x + dx, rect.position.y, rect.size.x - dx * 2.0, dy),
+			Rect2(sx, 0, ts.x - sx * 2.0, sy))
+	canvas.draw_texture_rect_region(tex,
+			Rect2(rect.position.x + dx, rect.end.y - dy, rect.size.x - dx * 2.0, dy),
+			Rect2(sx, ts.y - sy, ts.x - sx * 2.0, sy))
+	canvas.draw_texture_rect_region(tex,
+			Rect2(rect.position.x, rect.position.y + dy, dx, rect.size.y - dy * 2.0),
+			Rect2(0, sy, sx, ts.y - sy * 2.0))
+	canvas.draw_texture_rect_region(tex,
+			Rect2(rect.end.x - dx, rect.position.y + dy, dx, rect.size.y - dy * 2.0),
+			Rect2(ts.x - sx, sy, sx, ts.y - sy * 2.0))
+	# 中心（双向拉伸）
+	canvas.draw_texture_rect_region(tex,
+			Rect2(rect.position + Vector2(dx, dy), rect.size - Vector2(dx, dy) * 2.0),
+			Rect2(sx, sy, ts.x - sx * 2.0, ts.y - sy * 2.0))
+
+
+static func apply_chip(btn: Button, solid := false, compact := false) -> void:
+	## 小按钮规格（**唯一口**）：顶部工具条 / HUD、难度档位、筛选、多选标签。
+	##   solid   = 实心暗蓝灰 + 亮字（**工具条 / HUD**，要从背景里跳出来）
+	##   compact = 更小的内距（给固定高度的工具条用，如 battle 顶栏按钮只有 28px 高）
+	##
+	## 切换按钮（`toggle_mode = true`）的**选中态由 `button_pressed` 驱动** —— Godot 在按下态
+	## 画 "pressed" 样式，所以**不需要**每次刷新重设样式。
+	if btn == null:
+		return
+	var px: int = CHIP_COMPACT_PAD_X if compact else CHIP_PAD_X
+	var py: int = CHIP_COMPACT_PAD_Y if compact else CHIP_PAD_Y
+	if solid:
+		# 常态：只留底边；选中 / 按下：**整圈金线 + 更亮的底**（明确「已打开」）
+		btn.add_theme_stylebox_override("normal",
+				_chip_box(CHIP_SOLID_BG, CHIP_SOLID_LINE, 2, px, py, true))
+		btn.add_theme_stylebox_override("hover",
+				_chip_box(CHIP_SOLID_BG_HOVER, CHIP_SOLID_LINE, 2, px, py, true))
+		btn.add_theme_stylebox_override("pressed",
+				_chip_box(CHIP_SOLID_BG_HOVER, BTN_PRIMARY_LINE, 2, px, py))
+		btn.add_theme_stylebox_override("hover_pressed",
+				_chip_box(CHIP_SOLID_BG_HOVER, BTN_PRIMARY_LINE_FOCUS, 2, px, py))
+		btn.add_theme_stylebox_override("disabled",
+				_chip_box(CHIP_SOLID_BG, BTN_DISABLED_LINE, 2, px, py, true))
+		btn.add_theme_stylebox_override("focus",
+				_chip_box(Color(0, 0, 0, 0), BTN_PRIMARY_LINE_FOCUS, 3, px, py))
+		btn.add_theme_color_override("font_color", CHIP_SOLID_TEXT)
+		btn.add_theme_color_override("font_hover_color", CHIP_SOLID_TEXT_HOVER)
+		btn.add_theme_color_override("font_pressed_color", BTN_PRIMARY_TEXT)
+		btn.add_theme_color_override("font_hover_pressed_color", Color("ffffff"))
+		btn.add_theme_color_override("font_focus_color", CHIP_SOLID_TEXT)
+		btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
+	else:
+		# 选中 / 按下 = 深墨蓝 + 金线（与主按钮同族，但体量更小）
+		btn.add_theme_stylebox_override("normal", _chip_box(CHIP_BG, CHIP_LINE, 1, px, py))
+		btn.add_theme_stylebox_override("hover", _chip_box(CHIP_BG_HOVER, CHIP_LINE, 1, px, py))
+		btn.add_theme_stylebox_override("pressed",
+				_chip_box(BTN_PRIMARY_BG, BTN_PRIMARY_LINE, 1, px, py))
+		btn.add_theme_stylebox_override("hover_pressed",
+				_chip_box(BTN_PRIMARY_BG_HOVER, BTN_PRIMARY_LINE, 1, px, py))
+		btn.add_theme_stylebox_override("disabled",
+				_chip_box(Color(1, 1, 1, 0.16), BTN_DISABLED_LINE, 1, px, py))
+		btn.add_theme_stylebox_override("focus",
+				_chip_box(Color(0, 0, 0, 0), BTN_SECONDARY_LINE_FOCUS, 3, px, py))
+		btn.add_theme_color_override("font_color", CHIP_TEXT)
+		btn.add_theme_color_override("font_hover_color", Color("1a1c22"))
+		btn.add_theme_color_override("font_pressed_color", BTN_PRIMARY_TEXT)
+		btn.add_theme_color_override("font_hover_pressed_color", Color("ffffff"))
+		btn.add_theme_color_override("font_focus_color", CHIP_TEXT)
+		btn.add_theme_color_override("font_disabled_color", BTN_DISABLED_TEXT)
+	btn.add_theme_font_override("font", font())
+	btn.add_theme_font_size_override("font_size", FS_LABEL)
+	UiPressFx.attach(btn)   # R151 P1-8：与 apply_button 同一反馈
