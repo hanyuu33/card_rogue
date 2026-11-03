@@ -424,7 +424,7 @@ func _draw_row(idx: int, ep: Dictionary) -> void:
 	var locked := st == StoryRepo.STATE_LOCKED
 	var bg := UiTheme.PAGE_PAPER
 	if not locked:
-		bg = Color("2a3040")
+		bg = UiTheme.ADVENTURE_INPUT
 	if hov:
 		bg = bg.lightened(0.08)
 	draw_rect(r, bg, true)
@@ -453,7 +453,7 @@ func _draw_row(idx: int, ep: Dictionary) -> void:
 		sub = _grants_summary(eid)
 	if sub != "":
 		draw_string(_font, r.position + Vector2(r.size.x - 470, 58), sub,
-				HORIZONTAL_ALIGNMENT_RIGHT, 372, UiTheme.FS_CAPTION, Color("9aa0ad"))
+				HORIZONTAL_ALIGNMENT_RIGHT, 372, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 
 
 func _grants_summary(eid: String) -> String:
@@ -475,8 +475,7 @@ func _grants_summary(eid: String) -> String:
 func _draw_detail() -> void:
 	var r := _detail_rect()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.58), true)
-	draw_rect(r, Color("1e2129"), true)
-	draw_rect(r, UiTheme.ADVENTURE_BRASS, false, 2.0)
+	UiTheme.draw_panel_bg(self, r)
 	var ep: Dictionary = _episodes[_sel]
 	var eid := str(ep.get("id", ""))
 	var st := _repo.episode_state(eid)
@@ -499,12 +498,12 @@ func _draw_detail() -> void:
 	var y := r.position.y + 82.0
 	if st == StoryRepo.STATE_LOCKED:
 		draw_string(_font_bold, Vector2(x0, y), "这一段还没有解锁",
-				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, Color("c8a8a8"))
+				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 		y += 28.0
 		for line: String in TextWrap.wrap_plain(_font, _repo.requirement_text(eid),
 				w, UiTheme.FS_LABEL):
 			draw_string(_font, Vector2(x0, y), line, HORIZONTAL_ALIGNMENT_LEFT, w,
-					UiTheme.FS_LABEL, Color("9aa0ad"))
+					UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 			y += 22.0
 	else:
 		for line2: String in _wrapped_body(eid, w):
@@ -513,7 +512,7 @@ func _draw_detail() -> void:
 						UiTheme.FS_BODY, Color("6f7684"))
 				break
 			draw_string(_font, Vector2(x0, y), line2, HORIZONTAL_ALIGNMENT_LEFT, w,
-					UiTheme.FS_BODY, Color("dcd8cd"))
+					UiTheme.FS_BODY, UiTheme.PAGE_INK)
 			y += 26.0
 	# 奖励预览（这一段的 grants）
 	var g := _repo.episode_grants(eid)
@@ -605,13 +604,12 @@ func _draw_reveal() -> void:
 	var panel_h := 156.0 + REVEAL_ROW_H * n
 	var r := Rect2((size.x - 620.0) / 2.0, (size.y - panel_h) / 2.0, 620.0, panel_h)
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.76), true)
-	draw_rect(r, Color("1c1f27"), true)
-	draw_rect(r, Color("c8951c"), false, 2.0)
+	UiTheme.draw_panel_bg(self, r)
 	draw_string(_font_bold, Vector2(r.position.x, r.position.y + 44), "解 锁",
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(r.position.x, r.position.y + 70),
 			"以下内容已加入奖励池",
-			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, Color("9aa0ad"))
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 	for i in n:
 		var a := clampf((_reveal_t - i * REVEAL_INTERVAL) / REVEAL_FADE, 0.0, 1.0)
 		if a <= 0.0:
@@ -620,16 +618,16 @@ func _draw_reveal() -> void:
 		var col: Color = item.get("col", UiTheme.PAGE_INK)
 		var y := r.position.y + 92.0 + i * REVEAL_ROW_H + (1.0 - a) * 16.0
 		var row := Rect2(r.position.x + 36.0, y, r.size.x - 72.0, REVEAL_ROW_H - 14.0)
-		draw_rect(row, Color(0.13, 0.145, 0.19, 0.92 * a), true)
+		draw_rect(row, Color(UiTheme.PAGE_PAPER, a), true)
 		draw_rect(row, Color(col.r, col.g, col.b, 0.88 * a), false, 1.6)
 		draw_rect(Rect2(row.position.x, row.position.y, 5.0, row.size.y),
 				Color(col.r, col.g, col.b, a), true)
 		draw_string(_font_bold, row.position + Vector2(22, 32),
 				str(item.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT,
-				row.size.x - 44, UiTheme.FS_SUBHEAD, Color(0.96, 0.93, 0.86, a))
+				row.size.x - 44, UiTheme.FS_SUBHEAD, Color(UiTheme.PAGE_INK, a))
 		draw_string(_font, row.position + Vector2(22, 58),
 				str(item.get("sub", "")), HORIZONTAL_ALIGNMENT_LEFT,
-				row.size.x - 44, UiTheme.FS_CAPTION, Color(0.66, 0.69, 0.75, a))
+				row.size.x - 44, UiTheme.FS_CAPTION, Color(UiTheme.PAGE_MUTED, a))
 	if _reveal_finished():
 		# R353：「继续」画成按钮 —— 可交互性靠 UI 表达，不写「点击任意处继续」。
 		var btn := Rect2(r.position.x + r.size.x / 2.0 - 70.0, r.end.y - 34.0, 140.0, 28.0)

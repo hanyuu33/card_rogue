@@ -509,7 +509,6 @@ const PARALYZE_MERGE_MS := 340           # 这个窗口内的后续张数并进�
 var _discard_tex: Texture2D    # R140：弃牌区图标（assets/ui/discard_icon.png）
 var _void_tex: Texture2D       # R140：消耗（消失）区次元图标（assets/ui/void_icon.png）
 var _hp_icon: Texture2D        # R156：双方血量图标（icon_health.png，与生命徽章同款血滴）
-var _energy_icon: Texture2D    # R156：费用图标（icon_cost.png，与费用徽章同款水晶）
 var _font: FontFile
 var _font_bold: FontFile
 
@@ -787,7 +786,6 @@ func _ready() -> void:
 	_discard_tex = load("res://assets/ui/discard_icon.png")
 	_void_tex = load("res://assets/ui/void_icon.png")
 	_hp_icon = load("res://assets/ui/icon_health.png")
-	_energy_icon = load("res://assets/ui/icon_cost.png")
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
@@ -7195,6 +7193,11 @@ func _on_hover(pos: Vector2) -> void:
 		if energy_rect.has_point(pos):
 			tip = "费用 %d/%d：每回合回到 %d 点（不累积），出牌消耗" % [
 					engine.state.energy, engine.max_energy(), engine.max_energy()]
+			var charge := engine.charge_count(GameEngine.SIDE_SELF)
+			if charge > 0:
+				tip += "；蓄力 %d：下一张技能结算 %d 次" % [charge, charge + 1]
+			if engine.dodge_active(GameEngine.SIDE_SELF):
+				tip += "；闪躲：盟友代受"
 	if _hover_card == null:
 		var merged_eff := _merged_effects(engine.state.effects)
 		for i in merged_eff.size():
@@ -14903,56 +14906,10 @@ func _draw_cost_zone() -> void:
 	var state := engine.state
 	var mid_x := COST_X + (TAP_W + 12) / 2
 	var bottom := GRID_Y + GRID_H
-	# ⚠️ R391 起**不再画「费用」小标题**：顶栏长到 44px 之后，那条 `COST_Y - 12`
-	#    （= 40）整条落在顶栏底边里（顶栏是子节点、画在本层之上）→ 一个字都看不见。
-	#    面板里已经有「角色」+ 水晶图标 +「X/Y」，标题纯属冗余。
 	var epanel := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
-	draw_rect(epanel, Color(1, 1, 1, 0.55), true)
-	draw_rect(epanel, UiTheme.INK_300, false, 1.0)
-	# 角色（左栏常驻）：本局选定的角色 —— 面板第一行
-	# ⚠️ 只写职业名，不带「角色：」前缀：面板只有 88 宽，15px 下「角色：森林精魄」
-	#    量到 105px，会左右各戳出面板 8px（实测出图里字压在棋盘边上）。
-	_draw_string_center(_font_bold, UI_FS_CAPTION, RunState.player_class,
-			Vector2(mid_x, COST_Y + 18), UiTheme.KIND_EFFECT)
-	# R391（用户口径）：费用显示成 **X / Y** —— X = 当前可用（滚动数字），
-	# Y = **满费上限** `GameEngine.max_energy()`（只算「每个回合都会给」的那部分）。
-	# 原来面板底下那行写死的「回合重置 N 点」删掉：一旦有耳环 / 兼修 / 无尽黑暗，
-	# 那个 N 就是错的。分母比分子小一档、颜色更淡 —— 「当前」是第一眼的数字，
-	# 「上限」只是参照物。
-	var e_cur := str(_roll("energy", state.energy))
-	var e_max_txt := "/%d" % engine.max_energy()
-	var e_w := _font_bold.get_string_size(e_cur, HORIZONTAL_ALIGNMENT_LEFT, -1,
-			UI_FS_HEADING).x
-	# R421：宝石图标左右留白收紧（原居中导致整体比面板宽 ~107px、左右各溢出 ~9px，数字被挤）；
-	# 改为左贴面板内边 + 缩宝石 + 减右间距，分母「/Y」字号降一档（更淡更小，R391 意图）给当前数字腾空间。
-	var m_fs := 16
-	var m_w := _font_bold.get_string_size(e_max_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, m_fs).x
-	var gem := 22.0
-	var gem_gap := 2.0
-	var pair_x := COST_X + 3.0
-	var e_cur_y := COST_Y + 66
-	if _energy_icon != null:
-		draw_texture_rect(_energy_icon,
-				Rect2(pair_x, e_cur_y - gem / 2.0, gem, gem), false)
-	_draw_string_center(_font_bold, UI_FS_HEADING, e_cur,
-			Vector2(pair_x + gem + gem_gap + e_w / 2.0, e_cur_y), UiTheme.STAT_POWER)
-	_draw_string_center(_font_bold, m_fs, e_max_txt,
-			Vector2(pair_x + gem + gem_gap + e_w + m_w / 2.0, e_cur_y + 5), UiTheme.INK_500)
-	# 蓄力（9085）：待用层数（0 层不画）—— 下一张技能的结算次数 = 1 + 层数
-	# ⚠️ 面板只有 88 宽：原来那一长串「蓄力 ×N（下一张技能 ×N+1）」在 13px 下量到
-	#    ~156px，会横着糊到棋盘上 → 拆成两行（字要变大，但不能溢出面板）。
-	var chg := engine.charge_count(GameEngine.SIDE_SELF)
-	var status_y := COST_Y + 98.0
-	if chg > 0:
-		_draw_string_center(_font_bold, UI_FS_MICRO, "蓄力 ×%d" % chg,
-				Vector2(mid_x, status_y), UiTheme.STAT_POWER)
-		_draw_string_center(_font, UI_FS_MICRO, "技能 ×%d" % (chg + 1),
-				Vector2(mid_x, status_y + 16.0), UiTheme.STAT_POWER)
-		status_y += 32.0
-	# 闪躲（9103）：盟友代受窗口（未开启不画）
-	if engine.dodge_active(GameEngine.SIDE_SELF):
-		_draw_string_box_center(_font_bold, UI_FS_MICRO, "闪躲：盟友代受",
-				Vector2(mid_x, status_y + 6.0), TXT_WARN)
+	preload("res://scripts/battle_energy_hud.gd").draw(self, _font_bold,
+			_roll("energy", state.energy), engine.max_energy(), epanel,
+			engine.charge_count(GameEngine.SIDE_SELF), engine.dodge_active(GameEngine.SIDE_SELF))
 	# 效果区
 	var zone := Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, bottom - COST_Y - ENERGY_H)
 	draw_rect(zone, Color(0.72, 0.86, 0.72, 0.30), true)

@@ -30839,8 +30839,12 @@ func _init() -> void:
 	var r391_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 	check_src(r391_bs.find("每回合重置为") < 0,
 			"R391 源码：面板里不再硬编码「每回合重置为 N」（分母只有一个来源）")
-	check_src(r391_bs.find("var e_max_txt := \"/%d\" % engine.max_energy()") >= 0,
-			"R391 源码：费用按「X / max_energy()」渲染（分母只有一个来源）")
+	# R507：费用面板抽到 battle_energy_hud.gd，「X / Y」的拼法搬到那边；
+	#       分母仍然只有 max_energy() 一个来源 —— battle_scene 传进去，HUD 只负责排版。
+	var r507_hud := FileAccess.get_file_as_string("res://scripts/battle_energy_hud.gd")
+	check_src(r507_hud.find("\"/%d\" % maximum") >= 0
+			and r391_bs.find("engine.max_energy(), epanel") >= 0,
+			"R507 源码：费用按「X / max_energy()」渲染（分母只有一个来源，排版在 HUD）")
 	check_src(r391_bs.find("费用重置为 %d，抽 5 张") >= 0,
 			"R391 源码：回合开始的提示文字也读 max_energy()（不再写死 5）")
 	# 顶栏加高 + 大按钮：不硬编码数字，只锁「接线还在」

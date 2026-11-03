@@ -220,7 +220,7 @@ func _draw() -> void:
 	draw_string(_font_bold, cl.position + Vector2(0, 22),
 			"确认清空？" if _clear_armed else "清空记录",
 			HORIZONTAL_ALIGNMENT_CENTER, cl.size.x, UiTheme.FS_LABEL,
-			Color("ffd8d8") if _clear_armed else Color("c8a8a8"))
+			Color("ffd8d8") if _clear_armed else UiTheme.PAGE_MUTED)
 	if _rows.is_empty():
 		draw_string(_font, Vector2(0, LIST_Y + 40),
 				"还没有记录 —— 从标题「开始对战」打一局，结束后这里会有一行结果。",
@@ -320,8 +320,7 @@ func _draw_detail() -> void:
 	var r := _detail_rect()
 	# 遮罩 + 面板
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.55), true)
-	draw_rect(r, Color("1e2129"), true)
-	draw_rect(r, UiTheme.ADVENTURE_BRASS, false, 2.0)
+	UiTheme.draw_panel_bg(self, r)
 	var rec: Dictionary = _rows[_sel]
 	var res := str(rec.get("result", ""))
 	var x0 := r.position.x + 24.0
