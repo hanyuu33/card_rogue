@@ -1078,12 +1078,13 @@ func _draw_relic() -> void:
 
 
 func _cards_panel_rect() -> Rect2:
-	## R505：顶部横幅带（红棕紫渐变，下缘斜切）占 `vs.y*0.20`，主框从其下缘往下铺。
+	## R506：主框在**整个界面**里垂直居中（R505 是「横幅下缘→屏底」这一段的居中，
+	##   结果整体偏下、下沿快贴到屏幕边，框内可用高度也不够铺）。
+	##   现在横幅带退回纯背景层：面板压住它中段，只从顶部一条边与左右两侧露出。
 	var vs := _vs()
-	var top := vs.y * 0.20 + 10.0
 	var pw := minf(vs.x - 56.0, 1120.0)
-	var ph := minf(vs.y - top - 24.0, 600.0)
-	return Rect2(Vector2((vs.x - pw) / 2.0, top), Vector2(pw, ph))
+	var ph := minf(vs.y - 44.0, 632.0)
+	return Rect2(Vector2((vs.x - pw) / 2.0, (vs.y - ph) / 2.0), Vector2(pw, ph))
 
 
 # ------------------------------------------------------------ R398 删卡视图
@@ -1427,13 +1428,19 @@ func _draw_cards() -> void:
 	UiTheme.draw_panel_bg(_root, Rect2(Vector2.ZERO, vs))
 	_draw_vignette(vs)
 	# 顶部红棕紫渐变横幅带（图生图生成，下缘斜切）：贴满画面顶边，斜线下方自然露出羊皮纸。
-	var banner_h := vs.y * 0.20
-	_root.draw_texture_rect(TEX_BANNER_TOP,
-			Rect2(Vector2.ZERO, Vector2(vs.x, banner_h)), false)
-	# 顶部标题行：落在深色横幅上，亮金文字。
-	_deck_icon(Vector2(66, 17), 1.05)
-	_root.draw_string(_font_bold, Vector2(104, 28), "卡牌奖励",
-			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_HEADING, Color("f2d98c"))
+	# R506：主框整屏居中后只压住横幅上半，原 0.20 会在面板两侧留下两条长红边，
+	#   收到 0.12 —— 露出的一条边刚好当顶部装饰，两侧只余很短一段。
+	var banner_h := vs.y * 0.12
+	# R506：素材（1280×125）下缘是**斜切**（左列到 124、右列只到 105），整张贴到顶边
+	#   就成了一条斜边。改成只取斜切最高点以上的那一段再拉伸 —— 下缘就是水平的「正边」；
+	#   切掉的是花纹之外的三角，不损失内容。实测 106/125≈0.848，再留 2px 余量取 0.832。
+	_root.draw_texture_rect_region(TEX_BANNER_TOP,
+			Rect2(Vector2.ZERO, Vector2(vs.x, banner_h)),
+			Rect2(Vector2.ZERO, Vector2(TEX_BANNER_TOP.get_width(),
+					floorf(TEX_BANNER_TOP.get_height() * 0.832))))
+	# R506：主框整屏居中后，面板会压到横幅中段 —— 原先落在横幅上的「卡牌奖励」
+	#   小标签会被盖住（亮金字落到浅色纸上还会糊）。面板内已有居中的大标题
+	#   「卡牌奖励 —— 点一张看说明…」，这组标签撤掉，不重复也不糊。
 	var pr := _cards_panel_rect()
 	_paper_panel(pr)
 	_draw_ornament(Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 6), 1.0)

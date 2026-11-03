@@ -33039,6 +33039,15 @@ func _init() -> void:
 			"R498 源码：卡图边框在卡图之后、待确认角标之前")
 	check_src(r498_cf.contains("if card.is_enemy_card():\n\t\treturn \"enemy\""),
 			"R498 源码：敌人优先判在归属键的最前面")
+	# R506：奖励页主框必须**整屏**垂直居中。R505 是「横幅下缘→屏底」这段居中，
+	#   整体偏下、下沿快贴到屏幕边，框内可用高度也不够铺（用户看图指出）。
+	var r506_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	check_src(r506_rp.contains("Rect2(Vector2((vs.x - pw) / 2.0, (vs.y - ph) / 2.0), Vector2(pw, ph))"),
+			"R506 源码：卡牌奖励主框在整屏里垂直居中")
+	check_src(r506_rp.contains("_root.draw_texture_rect_region(TEX_BANNER_TOP"),
+			"R506 源码：顶部横幅带改走 region 取图，下缘才是水平的正边")
+	check(r506_rp.find("draw_texture_rect(TEX_BANNER_TOP") < 0,
+			"R506 源码：横幅带不再整张贴（整张会把素材自带的斜切铺成斜边）")
 
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
