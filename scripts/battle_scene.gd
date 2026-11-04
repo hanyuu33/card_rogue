@@ -14624,7 +14624,7 @@ func _enemy_zone_rect() -> Rect2:
 
 func _enemy_effect_rect(i: int) -> Rect2:
 	var z := _enemy_zone_rect()
-	return Rect2(z.position.x + 14, z.position.y + 32 + i * 58, 60, 52)
+	return Rect2(z.position.x + 6, z.position.y + 32 + i * 58, 76, 52)
 
 
 func _enemy_effect_popup_rect() -> Rect2:
@@ -14722,13 +14722,11 @@ func _draw_enemy_effects() -> void:
 	if n_ee <= cap_e:
 		for i in n_ee:
 			var m: Dictionary = merged_e[i]
-			_draw_effect_thumbnail(m["card"], _enemy_effect_rect(i))
-			_draw_count_badge(_enemy_effect_rect(i), m["count"])
+			_draw_effect_thumbnail(m["card"], _enemy_effect_rect(i), m["count"])
 	else:
 		for i in cap_e - 1:
 			var m2: Dictionary = merged_e[i]
-			_draw_effect_thumbnail(m2["card"], _enemy_effect_rect(i))
-			_draw_count_badge(_enemy_effect_rect(i), m2["count"])
+			_draw_effect_thumbnail(m2["card"], _enemy_effect_rect(i), m2["count"])
 		_draw_more_tile(_enemy_effect_rect(cap_e - 1), "+%d" % (n_ee - (cap_e - 1)),
 				"")
 	_draw_relic_bar()
@@ -14879,15 +14877,11 @@ func _draw_cost_zone() -> void:
 	if n_eff <= cap:
 		for i in n_eff:
 			var m: Dictionary = merged[i]
-			_draw_effect_thumbnail(m["card"], _effect_rect(i))
-			_draw_counter_badge(m["card"], _effect_rect(i))
-			_draw_count_badge(_effect_rect(i), m["count"])
+			_draw_effect_thumbnail(m["card"], _effect_rect(i), m["count"], true)
 	else:
 		for i in cap - 1:
 			var m2: Dictionary = merged[i]
-			_draw_effect_thumbnail(m2["card"], _effect_rect(i))
-			_draw_counter_badge(m2["card"], _effect_rect(i))
-			_draw_count_badge(_effect_rect(i), m2["count"])
+			_draw_effect_thumbnail(m2["card"], _effect_rect(i), m2["count"], true)
 		_draw_more_tile(_effect_rect(cap - 1), "+%d" % (n_eff - (cap - 1)), "")
 
 
@@ -14961,7 +14955,7 @@ func _draw_more_tile(rect: Rect2, label: String, sub: String) -> void:
 
 
 func _effect_rect(i: int) -> Rect2:
-	return Rect2(COST_X + 14, COST_Y + ENERGY_H + 32 + i * 58, 60, 52)
+	return Rect2(COST_X + 6, COST_Y + ENERGY_H + 32 + i * 58, 76, 52)
 
 
 func _own_effect_zone_rect() -> Rect2:
@@ -16523,12 +16517,34 @@ func _process(delta: float) -> void:
 	status_label.text = status_text
 
 
-func _draw_effect_thumbnail(card: CardData, rect: Rect2) -> void:
-	UiTheme.draw_panel_bg(self, rect.grow(2))
+func _draw_effect_thumbnail(card: CardData, rect: Rect2, count := 1, show_counter := false) -> void:
+	# A compact framed portrait and a separate, unbacked numeric column.
+	var frame := Rect2(rect.position + Vector2(0, 4), Vector2(44, 44))
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("e8dfc9")
+	sb.border_color = Color("68755c")
+	sb.set_border_width_all(4)
+	sb.set_corner_radius_all(5)
+	draw_style_box(sb, frame)
+	draw_rect(frame.grow(-4), Color("bda575"), false, 1)
+	var picture := frame.grow(-5)
 	var art := CardFace.art_for(card.id)
 	if art != null:
 		var ts := art.get_size()
 		var side := minf(ts.x, ts.y)
-		draw_texture_rect_region(art, rect.grow(-3), Rect2((ts - Vector2.ONE * side) / 2, Vector2.ONE * side))
+		draw_texture_rect_region(art, picture, Rect2((ts - Vector2.ONE * side) / 2, Vector2.ONE * side))
 	else:
-		_draw_string_center(_font_bold, 13, card.card_name.left(4), rect.get_center(), Color("52634c"), -1)
+		for line in 2:
+			_draw_string_center(_font_bold, 12, card.card_name.substr(line * 2, 2), picture.get_center() + Vector2(0, -7 + line * 14), Color("52634c"), -1)
+	var left := engine.effect_counter(card) if show_counter else -1
+	var labels: Array[String] = []
+	if count > 1:
+		labels.append("×%d" % count)
+	if left >= 0:
+		labels.append("余%d" % left)
+	for i in labels.size():
+		var px := 14
+		while px > 9 and _font_bold.get_string_size(labels[i], HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > 29:
+			px -= 1
+		var y := 26.0 if labels.size() == 1 else 17.0 + i * 20.0
+		_draw_string_center(_font_bold, px, labels[i], rect.position + Vector2(61, y), Color("4d5943"), -1)
