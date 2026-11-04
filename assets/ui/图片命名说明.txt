@@ -329,3 +329,5 @@ curtain_plate.png         名称牌（聊谁是说话人）            建议 52
 · 名称牌左端留给藤蔓 / 音符，**名字框偏右**（代码里按 `pw*0.20` 起画）。
 · 背景图**等比完整显示（不拉伸、不裁切）**：窗口不是 16:9 时宁可留暗边。
 · 素材源图与提示词：`art_src/2026-10-22_卷卷对话框/`、`art_src/2026-10-22_豚鼠吟游诗人CG/`。
+
+2026-11-04 战斗地形：adventure_shared/battlefield_1.png / battlefield_2.png / battlefield_3.png；900×1350，三列各300，上下后排各225。源图与裁切说明见 art_src/2026-11-04_battle_ui/README.md。
