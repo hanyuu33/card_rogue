@@ -2382,6 +2382,9 @@ static func known_node(id: int) -> bool:
 	##    只想问「按老规则此刻看不看得见」用它下面的 `_memory_visible()`。
 	if id < 0 or id >= map_cells.size():
 		return false
+	# Third-layer straight route is fully revealed, independently of exploration memory.
+	if current_layer == GameLayers.LAYER_THREE:
+		return not RogueMap.is_void(map_cells[id])
 	if has_relic(EAGLE_WHISTLE_RELIC_ID):
 		return true
 	if seen_ids.has(id):

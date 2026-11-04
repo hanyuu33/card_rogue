@@ -1,0 +1,293 @@
+Godot Engine v4.3.stable.official.77dcf97d8 - https://godotengine.org
+
+SMOKE === 开始（64 项场景用例）===
+SMOKE OK res://scenes/title.tscn  [用例 1/64]
+SMOKE OK res://scenes/story.tscn  [用例 2/64]
+SMOKE OK res://scenes/ban.tscn  [用例 3/64]
+SMOKE OK res://scenes/class_pick.tscn  [用例 4/64]
+SMOKE OK 道具查看：ClassPick 牌库 1 个 / 道具 1 个（两个查看器成对）
+SMOKE OK res://scenes/class_pick.tscn  [用例 5/64]
+SMOKE OK res://scenes/map.tscn  [用例 6/64]
+SMOKE OK 地图场景：5×7 = 35 格相接正方形 / 起点 (3,4) / 左上大宝箱 + 右上商店 / 巧克力 ×12 / 可走 2 间
+SMOKE OK R470 道具栏：20 件全部有槽位 / 互不重叠 / 绕开 4 处固定 UI / 已换行 / 详情 20 件全列
+SMOKE OK 地图标记（R184）：关态点按钮可激活 / 拖笔入栈 / 单点放旗 / 再点收起 / 橡皮删旗删笔
+SMOKE OK res://scenes/battle.tscn  [用例 7/64]
+SMOKE OK 扇形手牌：满手 10 张，99×119（战场卡 63×76 的 1.56 倍，卡底沉出下沿 18，露出 97） / 倾角 左 -12.0° 右 12.0° / 横向 389~891（不越界）
+SMOKE OK 多格移动走真实路径：途经点 3 个 / 时长 680ms / 最大偏离 0.00 像素（直线插值会偏 52）
+SMOKE OK 溢出兜底：效果区 6 槽 / 敌方效果 3 槽 / 道具 12 槽（末位均不越界，超出改画 +N 摘要）
+SMOKE OK 战斗内地图：格子总览可开关 / 只读（可走 2 间）/ 35 个格子全部完整落在面板内 / 保持打开供后续帧渲染
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:657)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:657)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:657)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:657)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:650)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+SMOKE OK 冰封特效：frozen 事件 + 常驻寒霜光环 + 与嘲讽徽标错开，三者同源于 Placement.frozen
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:657)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:657)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:657)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:657)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:657)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:657)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:703)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:911)
+ERROR: Drawing is only allowed inside this node's `_draw()`, functions connected to its `draw` signal, or when it receives NOTIFICATION_DRAW.
+   at: (scene/main/canvas_item.cpp:895)
+SMOKE OK 沉睡特效：常驻紫环 + 「沉睡 N」徽标（3 行互不重叠）+ 苏醒挣脱环，同源于 Placement.sleep_left；R122 起回合口与受伤口并存（都在减）
+SMOKE OK 回合门禁：敌方回合点棋盘/点目标格/拖牌都动不了我方单位；我方回合正常可操作
+SMOKE OK 道具查看：战斗道具栏容量 12 个 / 装满点不开 / 14 件可点开 / 详情全列且字号 16>13
+SMOKE OK R106：效果卡拖入效果区即启用（0→1）/ 悬停单位列出 4 条状态 + 2 个徽标
+SMOKE OK R118 误点空位：① 第一次点只上膛（选区/目标全保留、不横置） ② 上膛后点目标照常打（30→26 血） ③ 第二次点空位才真取消（单位横置）
+SMOKE OK R148 主菜单：打开暂停 + UiGate 让位 → 关闭恢复；战斗菜单项 ["返回战斗", "音效：开", "返回标题"]
+SMOKE OK 公用初始卡职业变体：木栅栏/攻击各按职业取图，缺图回退通用图
+SMOKE OK 触屏长按=右键：按下计时 / 超位移取消 / 到时触发一次并摘掉左键按下
+SMOKE OK BackKey：autoload 在位 / quit_on_go_back=false / 返回键→Esc 翻译在位
+SMOKE OK 性能缓存：wrap_text 副本隔离 / 脉冲节流窗口生效（_pulse_ms=45）
+SMOKE OK 选卡页：crow 自动打开 / 点选不结算 / 确认才结算 / 返回收起往返 / 放弃按钮 / 滚动钳制
+SMOKE OK 敌方效果开场弹窗：素材在库 / 打断不弹 / 播完弹 / 点击关 / 不重弹
+SMOKE OK 回收选卡页：弹页（候选 1）/ 确认 → 素体 1/10 + 一层改造（扣 2 费）/ 取消不扣费
+SMOKE OK 负重减轻：打出开面板 / 确认消失 1 张并记账 / 放弃不记账
+SMOKE OK 填充选卡页：点填充 → 弹页（候选 2）/ 确认 → 聚能炮击（0 费）/ 用后进消耗区（次元）/ 拖到棋盘松手同样弹页 / 取消不扣费
+SMOKE OK 系统升级选卡页：弹页（候选只列盟友/工事）/ 确认 → +1 费 +3 力 +6 血 +1 层 / 取消不扣费
+SMOKE OK 随心组装：随心组装：变化了 2 张手牌（0 张盟友本回合 -1 费），剩余手牌 0 张均来自奖励池
+SMOKE OK 卡组：顶栏=完整卡组（4 张/附魔单列）/ 右下=剩余牌堆（1 张）/ 互斥开关
+SMOKE OK R208：零件回收者史诗 / 力量 0 不飘 +0 攻 / 卡面不再铺底衬
+SMOKE OK R214 附魔标记：费用正下方（同 x / 间距 2R，三种尺寸）/ 种类表唯一口 / 牌库面板不并按
+SMOKE OK R277 场地卡点选：放在有己方单位的格子上成功（(3, 0)，单位仍在场）
+SMOKE OK R386 气泡：说/排队/上限 3/锚点在卡顶/尾巴按阵营/可清空（绘制由 ERROR 门禁判）
+SMOKE OK R388 倍速按钮：1× → 1.5× → 2× → 1×，落盘；只快敌方演出
+SMOKE OK res://scenes/battle.tscn  [用例 8/64]
+SMOKE OK R389 领完奖励：关窗即回地图 / 没领完不动 / 转场不重复跳
+SMOKE OK res://scenes/battle.tscn  [用例 9/64]
+SMOKE OK R391 回合结束大按钮：338×100 @ (794,244)，道具栏正上方，点击真的过回合
+SMOKE OK res://scenes/battle.tscn  [用例 10/64]
+SMOKE OK R393/R465 代受演出与撞击同帧：now=4938 → 撞击 5868（+930ms，1 倍速）
+SMOKE OK res://scenes/battle.tscn  [用例 11/64]
+SMOKE OK R466 附带演出跟着主体演出落地：滑行加 460ms / 撞击 930ms
+SMOKE OK res://scenes/battle.tscn  [用例 12/64]
+SMOKE OK R467 洞穴：枭熊程 0 无普攻 / 跳跃格 14 个（含原地）/ 抛物线 7 点 / 落地重击排在落地帧 5789
+SMOKE OK res://scenes/battle.tscn  [用例 13/64]
+SMOKE OK R395 空候选不开空网格 / 选卡中结束回合被拦（大按钮与顶栏同源）
+SMOKE OK res://scenes/battle.tscn  [用例 14/64]
+SMOKE OK R396 同 id 抽卡：card_gained 接得住 / id 序列不变也播飞入 / 不与 diff 重复 / 真打一发也播
+SMOKE OK res://scenes/battle.tscn  [用例 15/64]
+SMOKE OK R398 月亮删卡：点奖励立刻进删卡视图 / 锁卡点不动 / 点一张当场删掉并回列表
+SMOKE OK res://scenes/battle.tscn  [用例 16/64]
+SMOKE OK R458 核心：成形 → 奖励页两段兑换 → 道具失效；奖励页可拖动滚动，拖动不误开条目、原地点按照常打开
+SMOKE OK res://scenes/battle.tscn  [用例 17/64]
+SMOKE OK R339 检查点：快照存开打前的 10 / 实时已 +1 到 11
+SMOKE OK res://scenes/battle.tscn  [用例 18/64]
+SMOKE OK R477 继续游戏：一律回到开打之前（第 1 回合）
+SMOKE OK res://scenes/battle.tscn  [用例 19/64]
+SMOKE OK R341 逃跑按钮：普通战显示 / Boss 战隐藏
+SMOKE OK res://scenes/battle.tscn  [用例 20/64]
+SMOKE OK res://scenes/battle.tscn  [用例 21/64]
+SMOKE OK res://scenes/battle.tscn  [用例 22/64]
+SMOKE OK res://scenes/battle.tscn  [用例 23/64]
+SMOKE OK res://scenes/event.tscn  [用例 24/64]
+SMOKE OK 道具查看：EventScene 牌库 1 个 / 道具 1 个（两个查看器成对）
+SMOKE OK res://scenes/event.tscn  [用例 25/64]
+SMOKE OK R119 奖励悬浮窗：列表 视图渲染（3 条待领，宿主 EventScene）
+SMOKE OK res://scenes/event.tscn  [用例 26/64]
+SMOKE OK R119 奖励悬浮窗：道具详情 视图渲染（3 条待领，宿主 EventScene）
+SMOKE OK res://scenes/event.tscn  [用例 27/64]
+SMOKE OK R119 奖励悬浮窗：卡牌三选一 视图渲染（3 条待领，宿主 EventScene）
+SMOKE OK res://scenes/relic_pick.tscn  [用例 28/64]
+SMOKE OK 道具查看：RelicPick 牌库 1 个 / 道具 1 个（两个查看器成对）
+SMOKE OK res://scenes/curtain.tscn  [用例 29/64]
+SMOKE OK res://scenes/curtain.tscn  [用例 30/64]
+  [smoke] curtain 回答态：名称牌=true 台词=true 收尾可离开=True
+SMOKE OK res://scenes/battle.tscn  [用例 31/64]
+  [smoke] 牛奶附魔演示：2 张卡 / 点一下收起
+SMOKE OK res://scenes/deck_edit.tscn  [用例 32/64]
+SMOKE OK res://scenes/deck_edit.tscn  [用例 33/64]
+SMOKE OK 鸭血卡组编辑：多选上限 2 / 选 3 张保留最新 2 张 / 确定后卡组 13 → 15
+SMOKE OK res://scenes/shop.tscn  [用例 34/64]
+SMOKE OK 道具查看：ShopScene 牌库 1 个 / 道具 1 个（两个查看器成对）
+SMOKE OK 商店附魔：首击选中 / 再击成交（卡 0 落附魔，金币 500 → 440）；打开附魔/删除选卡页均请求重绘，点灰卡有反馈
+SMOKE OK res://scenes/shop.tscn  [用例 35/64]
+SMOKE OK R390 商店重进：买过的那张仍是售罄 / 走出去就关门
+SMOKE OK res://scenes/event.tscn  [用例 36/64]
+SMOKE OK R206 详情条：提及块在右栏 / 浅底琥珀棕 / 预算高度 63 == 公式（1 个提及）
+SMOKE OK res://scenes/map.tscn  [用例 37/64]
+SMOKE OK R194 低语：接管 → 抽中走过的房间仍继续往前走（32 → 31，接着挑 24）
+SMOKE OK R194 低语：一连代走 3 步到没走过的房间（旧实现走 1 步就停；路过步不扣巧克力）
+SMOKE OK res://scenes/gallery.tscn  [用例 38/64]
+SMOKE OK res://scenes/map.tscn  [用例 39/64]
+SMOKE OK R216 鸭血即时结算：领取当刻关界面并转卡组选择页（钩子先收尾）
+SMOKE OK R340 奖励批次：本批没处理完不跳走，处理完才转卡组选择页
+SMOKE OK R441 Boss 奖励：先领道具不结束本批（两组卡牌仍待领 · 面板不关 · 不跳场景）
+SMOKE OK R442 暗动力：完成点不动 / 放弃被拒 / 选一组仍关不掉 / 两组选完才放行
+SMOKE OK res://scenes/record_list.tscn  [用例 40/64]
+SMOKE OK 道具查看：RecordList 牌库 1 个 / 道具 1 个（两个查看器成对）
+SMOKE OK R215 记录页：2 行（中断 / 通关）· 新在前 · 文案正确
+SMOKE OK res://scenes/settings.tscn  [用例 41/64]
+SMOKE OK res://scenes/event.tscn  [用例 42/64]
+SMOKE OK res://scenes/event.tscn  [用例 43/64]
+SMOKE OK R372 宝箱：免费开 → 只有卡牌奖励（不扣生命、不再随机成道具）
+SMOKE OK res://scenes/event.tscn  [用例 44/64]
+SMOKE OK R142 事件子类型：只给 event_kind 也能认出遗忘之泉（不再一律变成卡牌宝箱）
+SMOKE OK res://scenes/event.tscn  [用例 45/64]
+SMOKE OK res://scenes/event.tscn  [用例 46/64]
+SMOKE OK res://scenes/event.tscn  [用例 47/64]
+SMOKE OK res://scenes/event.tscn  [用例 48/64]
+SMOKE OK 奥秘之泉：已有护符时「喝下泉水」仍可选 → 卡牌奖励入队（限定 效果/技能）并弹出奖励悬浮窗
+SMOKE OK res://scenes/event.tscn  [用例 49/64]
+SMOKE OK R147 奥秘之泉：一次访问只领一份（护符 ↔ 泉水双向锁死，硬点也不发奖励）
+SMOKE OK res://scenes/event.tscn  [用例 50/64]
+SMOKE OK R147/R237/R390 休息处：篝火回血（+12）+ 添加柴火第三选项；休息后只留离开
+SMOKE OK res://scenes/event.tscn  [用例 51/64]
+SMOKE OK res://scenes/deck_edit.tscn  [用例 52/64]
+SMOKE OK res://scenes/event.tscn  [用例 53/64]
+SMOKE OK res://scenes/event.tscn  [用例 54/64]
+SMOKE OK R121 覆盖层让位：奖励悬浮窗开/关 → 道具速览浮层正确让位/恢复（R353 起不再挂 tooltip）
+SMOKE OK res://scenes/shop.tscn  [用例 55/64]
+SMOKE OK R394 道具胶囊行：悬停只认按钮 / 点击展开收起 / 8 件从右往左排
+SMOKE OK res://scenes/battle.tscn  [用例 56/64]
+SMOKE OK R121 覆盖层让位：战斗道具栏说明在奖励悬浮窗 / 道具浏览面板下正确让位
+SMOKE OK res://scenes/event.tscn  [用例 57/64]
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1448)
+SMOKE OK 运送委托：平铺选卡页 1~6 / 取消不接 / 确认 2 张入卡组
+SMOKE OK res://scenes/event.tscn  [用例 58/64]
+SMOKE OK 委托完成：3 张货物各抽一次 / 总量=3 / 一次性 / 货物已移出卡组 / 结算后只剩离开
+SMOKE OK res://scenes/event.tscn  [用例 59/64]
+  [smoke] R365 赏月：硬币 +1（0 → 1），领完只留「离开」
+SMOKE OK res://scenes/event.tscn  [用例 60/64]
+  [smoke] R365 卡片商人：折价成交（金币 0 → 100，卡 4 → 3）
+SMOKE OK res://scenes/battle.tscn  [用例 61/64]
+  [smoke] R366 百臂工场：(0,1) 大哥 + (2,0)/(2,2) 塔，塔程 2，卡库仍 1
+SMOKE OK res://scenes/battle.tscn  [用例 62/64]
+  [smoke] R367 道具栏：用完的盆灰着留在栏里（栏里 1 件 / 引擎 0 件）
+SMOKE OK res://scenes/battle.tscn  [用例 63/64]
+  [smoke] R367 失败记录：败北立刻留一条「失败」（幂等，不会写两条）
+SMOKE OK res://scenes/battle.tscn  [用例 64/64]
+  [smoke] R444 字段浮窗：单字段靠右 / 两字段一左一右不压卡 / bounds 夹回屏内
+SMOKE === 结束：64 通过 / 0 失败 ===
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+     at: cleanup (core/object/object.cpp:2284)
+ERROR: 2 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:604)

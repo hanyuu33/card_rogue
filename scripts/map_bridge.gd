@@ -29,9 +29,9 @@ const UNSEEN := 2
 ## ⚠️ 素材长宽比与这个盒子越接近越好：`draw_bridge` 用 `fit_rect` **等比**缩放，
 ##   素材太瘦就会被「fit」成一根线（俯视图第一版 1:6.3 就是这么废掉的，
 ##   后来重生成成「短而宽」的 1:2.3 才落地）。
-const ALONG := 0.72        ## 沿通行方向的长度（占格边长）：两端会掖到房间图标底下
-const CROSS := 0.26        ## 垂直于通行方向的宽度（占格边长）
-const SHRINK_UNSEEN := 0.82
+const ALONG := 0.40        ## 沿通行方向的长度（占格边长）：两端会掖到房间图标底下
+const CROSS := 0.23        ## 垂直于通行方向的宽度（占格边长）
+const SHRINK_UNSEEN := 1.0
 const FALLBACK_W := 0.34   ## 缺图兜底：横条沿墙的宽度（占格边长）
 
 
@@ -73,8 +73,8 @@ static func tint_of(kind: int) -> Color:
 		LIT:
 			return UiTheme.MAP_BRIDGE_LIT
 		UNSEEN:
-			return UiTheme.MAP_BRIDGE_UNSEEN
-	return UiTheme.MAP_BRIDGE_DONE
+			return Color("eee8d5")
+	return Color("efc976")
 
 
 static func draw_bridge(ci: CanvasItem, ctr_a: Vector2, ctr_b: Vector2, kind: int,
@@ -89,7 +89,9 @@ static func draw_bridge(ci: CanvasItem, ctr_a: Vector2, ctr_b: Vector2, kind: in
 	var col := tint_of(kind)
 	if kind == LIT:
 		col = col.lerp(Color.WHITE, 0.35 * clampf(pulse, 0.0, 1.0))
-	var tex := UiAssets.bridge_icon()
+	var tex := UiAssets.get_tex("adventure_shared/map_bridge_clear")
+	if tex == null:
+		tex = UiAssets.bridge_icon()
 	if tex == null:
 		_fallback(ci, box, vertical, kind, col)
 		return

@@ -23,6 +23,8 @@ extends Control
 ## 界面：每层一张背景图（缺图回退渐变）+ **半透明格子**（尽量不把背景图挡死）。
 ## 地图整体（826 × 590）能完整放进视口 —— 所以旧版的滚动 / 滚动提示 / 滚动条已全部移除。
 
+const MapVisual = preload("res://scripts/map_visual.gd")
+const MapMaterial = preload("res://scripts/battle_hud_material.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const UiDrag = preload("res://scripts/ui_drag.gd")   # R405：滚轮 / 触屏拖动 的唯一口
 const MapBridge = preload("res://scripts/map_bridge.gd")
@@ -31,7 +33,7 @@ const UiRoll = preload("res://scripts/ui_roll.gd")
 const CELL := 118.0                  # 格子边长（正方形，相邻格共享边）
 const MAP_W := 826.0                 # 7 × 118
 const MAP_H := 590.0                 # 5 × 118
-const MAP_X0 := 227.0                # (1280 - 826) / 2，水平居中
+const MAP_X0 := 150.0                # (1280 - 826) / 2，水平居中
 const MAP_Y0 := 94.0                 # 标题行 + 信息行之下
 
 const VIEW_H := 720.0
@@ -350,8 +352,8 @@ func _ready() -> void:
 	# R148：上栏原来挂着「回到标题 / 战斗记录 / 查看卡组」三个 chip —— 全部收进
 	# Esc 菜单（点齿轮或按 Esc 打开），上栏只留**一个齿轮**。
 	_menu_btn = Button.new()
-	_menu_btn.position = Vector2(14, 14)
-	_menu_btn.size = Vector2(44, 28)
+	_menu_btn.position = Vector2(size.x - 64, 12)
+	_menu_btn.size = Vector2(40, 30)
 	_menu_btn.pressed.connect(_open_menu)
 	_menu_btn.draw.connect(_draw_menu_gear)
 	UiTheme.apply_chip(_menu_btn, true)
@@ -359,7 +361,7 @@ func _ready() -> void:
 	# R155：右上「卡组」按钮；R407 挪到**右上角最右端**（道具那一行的第一格）——
 	# 旧位置贴在巧克力面板左边（y≈54），正好压住悬停道具时从 46 起展开的描述浮窗。
 	_deck_btn = Button.new()
-	_deck_btn.text = "卡组"
+	_deck_btn.text = "完整卡组"
 	var dbr := _deck_btn_rect()
 	_deck_btn.position = dbr.position
 	_deck_btn.size = dbr.size
@@ -545,6 +547,14 @@ func _is_current(cell: Dictionary) -> bool:
 # ------------------------------------------------------------ 输入
 
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and not (_relics_visible or _records_visible or _deck_visible) and _anim_cell.is_empty():
+		var strip := Rect2(size.x - 232, RELIC_BADGE_Y, 216, size.y - RELIC_BADGE_Y - 34)
+		if strip.has_point(event.position) and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			_relic_scroll_row += 1 if event.button_index == MOUSE_BUTTON_WHEEL_DOWN else -1
+			_relic_slot_list()
+			queue_redraw()
+			accept_event()
+			return
 	# 进场过场播放中：屏蔽一切输入（这 1.5 秒地图不接受操作，免得点穿）
 	if not _anim_cell.is_empty():
 		return
@@ -854,9 +864,9 @@ func _draw() -> void:
 	# ⚠️ 顺序不可换：格子底 → **通路（小桥）** → 图标。
 	#    桥夹在中间，两端才会被房间图标盖住（可见部分正好是「两间房之间那一段」）。
 	_draw_cell_tiles()
-	_draw_bridges()
 	_draw_cell_icons()
 	_draw_fog()          # R145：内容看不见的格子盖迷雾（**桥不盖** —— 通路要可见）
+	_draw_bridges() # Always above mist; only real doors are drawn.
 	_draw_states()
 	_draw_map_flash()    # R447 冒险笔记：把那格「刚变成大宝箱」写成会呼吸的金光
 	_draw_flint_cells()  # R447 燧石：候选格的橙色呼吸框（选格模式）
@@ -888,11 +898,13 @@ func _draw() -> void:
 func _draw_background() -> void:
 	## 本层背景图铺满整屏（保持比例裁切）；缺图时回退成纵向渐变 —— 不空白也不报错。
 	var lay := _bg_layer if _bg_layer > 0 else RunState.current_layer
-	var tex := UiAssets.map_bg(lay)
+	var tex := UiAssets.get_tex("adventure_shared/map_forest") if lay == 1 else UiAssets.map_bg(lay)
+	if tex == null:
+		tex = UiAssets.map_bg(lay)
 	if tex != null:
 		draw_texture_rect(tex, Rect2(0, 0, size.x, size.y), false)
 		# 压一层很淡的暗罩：保证格子上的文字在任何背景上都读得清。
-		draw_rect(Rect2(0, 0, size.x, size.y), Color(0.14, 0.18, 0.12, 0.14), true)
+		draw_rect(Rect2(0, 0, size.x, size.y), Color(0.14, 0.18, 0.12, 0.06), true)
 		return
 	var top := Color("1c1f28")
 	var bottom := Color("303443")
@@ -904,27 +916,9 @@ func _draw_background() -> void:
 
 
 func _draw_cell_tiles() -> void:
-	## 半透明格子底 + 类型染色 + 分隔线。**格子底刻意做得很淡**，让背景图透出来。
-	## ⚠️ 与图标分两趟画：中间要夹一层「通路（小桥）」—— 桥必须压在格子底之上、
-	##    房间图标之下。
-	## R145：内容看不见的格子走**中性底** —— 按类型染色等于把「里面是什么」漏出去。
 	for cell: Dictionary in RunState.map_cells:
-		if RogueMap.is_void(cell):
-			continue          # R356：直道之外没有地面，一个像素都不画
-		var r := _cell_rect(cell)
-		var done := _visited(cell)
-		if not RunState.known_node(int(cell["id"])):
-			draw_rect(r, COL_CELL_FOG_FILL, true)
-			draw_rect(r, COL_CELL_LINE, false, 1.4)
-			continue
-		var dtype := RogueMap.display_type(cell)
-		var base: Color = UiTheme.MAP_NODE_COLORS.get(dtype, UiTheme.INK_500)
-		# 底：未走过的更淡（还没探索），走过的稍实
-		draw_rect(r, COL_CELL_FILL_DONE if done else COL_CELL_FILL, true)
-		# 类型色只做**极淡的染色**，不铺满（否则背景图被挡死）
-		draw_rect(r, Color(base.r, base.g, base.b, 0.14 if done else 0.09), true)
-		# 分隔线（走过的偏暖白，一眼看出探索范围）
-		draw_rect(r, COL_CELL_LINE_DONE if done else COL_CELL_LINE, false, 1.4)
+		if not RogueMap.is_void(cell):
+			MapVisual.draw_room(self, _cell_rect(cell), RunState.known_node(int(cell["id"])), _visited(cell))
 
 
 func _draw_cell_icons() -> void:
@@ -979,57 +973,8 @@ func _fog_rand(id: int, i: int, salt: int) -> float:
 	return v - floor(v)
 
 
-func _draw_fog_cell(r: Rect2, id: int) -> void:
-	## 一格的云雾：青灰底 + 云。**R154 起优先用 `map_fog.png`**（柔和蓝白云雾素材，
-	## 替换深蓝程序云块 —— 清单 §2.3：旧云块与森林背景断裂）；缺图回退程序云团。
-	## 云的位置 / 大小 / 明暗都由 `_fog_rand` 从格子 id 推出来 —— 同格稳定、格与格不同。
-	## 整体只做极慢的呼吸，读起来是「雾」，不是「贴了块灰纸」。
-	## ⚠️ 云团必须**整团留在本格内**：素材四周已做渐隐（透明边），所以即使贴边画，
-	##    可见部分也不会溢到隔壁**看得见**的格子；程序云团走老的几何约束（`m`）。
-	##    Godot 4.3 没有 `draw_set_clip_rect`（§4.11），只能用几何约束代替裁剪。
-	var breathe := 0.90 + 0.10 * sin(_t * 0.9 + float(id) * 1.7)
-	var inner := r.grow(-2.0)
-	draw_rect(inner, Color(COL_FOG_BASE.r, COL_FOG_BASE.g, COL_FOG_BASE.b,
-			COL_FOG_BASE.a * breathe), true)
-	var fog_tex := UiAssets.map_fog()
-	if fog_tex != null:
-		# 主云：盖满整格（素材透明边 ≈15%，可见云体仍在格内）；位置按 id 轻抖。
-		var jx := (_fog_rand(id, 0, 1) - 0.5) * 0.10
-		var jy := (_fog_rand(id, 0, 2) - 0.5) * 0.10
-		var grow := 1.02 + 0.10 * _fog_rand(id, 0, 3)
-		var sz: Vector2 = inner.size * grow
-		var ctr := inner.get_center() + Vector2(inner.size.x * jx, inner.size.y * jy)
-		var tint := 0.82 + 0.18 * breathe
-		# 半数格子水平镜像（按 id 定死）—— 相邻格不都是「同一张贴纸」。
-		if _fog_rand(id, 2, 5) > 0.5:
-			draw_set_transform(ctr, 0.0, Vector2(-1, 1))
-			draw_texture_rect(fog_tex, Rect2(-sz * 0.5, sz), false,
-					Color(0.92, 0.96, 1.0, tint))
-			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		else:
-			draw_texture_rect(fog_tex, Rect2(ctr - sz * 0.5, sz), false,
-					Color(0.92, 0.96, 1.0, tint))
-		# 碎云：小一号、错位，让相邻格不重复（仍靠 _fog_rand 定死）。
-		var sz2: Vector2 = inner.size * (0.42 + 0.14 * _fog_rand(id, 1, 3))
-		var ctr2 := inner.get_center() + Vector2(
-				inner.size.x * (0.20 - 0.40 * _fog_rand(id, 1, 1)),
-				inner.size.y * (0.20 - 0.40 * _fog_rand(id, 1, 2)))
-		draw_texture_rect(fog_tex, Rect2(ctr2 - sz2 * 0.5, sz2), false,
-				Color(0.88, 0.94, 1.0, 0.55 * breathe))
-		draw_rect(inner, Color(1, 1, 1, 0.05), false, 1.0)
-		return
-	for i in FOG_PUFFS:
-		var rad := inner.size.x * (0.15 + 0.13 * _fog_rand(id, i, 3))
-		var m := rad / inner.size.x            # 中心离边至少一个半径 → 整团不越界
-		var span := maxf(0.0, 1.0 - 2.0 * m)
-		var fx := m + span * _fog_rand(id, i, 1)
-		var fy := m + span * _fog_rand(id, i, 2)
-		var ctr := Vector2(inner.position.x + inner.size.x * fx,
-				inner.position.y + inner.size.y * fy)
-		var light := _fog_rand(id, i, 4) > 0.42
-		var src := COL_FOG_HI if light else COL_FOG_LO
-		draw_circle(ctr, rad, Color(src.r, src.g, src.b, src.a * breathe))
-	draw_rect(inner, Color(1, 1, 1, 0.05), false, 1.0)
+func _draw_fog_cell(r: Rect2, _id: int) -> void:
+	MapVisual.draw_fog(self, r)
 
 
 func _bridge_kind(cell: Dictionary, nb: Dictionary) -> int:
@@ -1249,38 +1194,23 @@ func _draw_player_marker(r: Rect2) -> void:
 
 
 func _draw_hud() -> void:
-	# 标题行
-	draw_string(_font_bold, Vector2(size.x / 2 - 90, 30), "冒 险 地 图",
-			HORIZONTAL_ALIGNMENT_CENTER, 180, UiTheme.FS_HEADING, UiTheme.SAND)
-	var hp_txt := "%s    生命 %d/%d    卡组 %d 张" % [
-			GameLayers.layer_name(RunState.current_layer),
-			RunState.hp, RunState.max_hp, RunState.deck_ids.size()]
-	draw_string(_font, Vector2(size.x / 2 - 140, 52), hp_txt,
-			HORIZONTAL_ALIGNMENT_CENTER, 280, UiTheme.FS_LABEL, UiTheme.INK_300)
-	# 信息行：左边 Boss 名牌（玩家要能提前知道打谁），右边巧克力计数。
-	# R357：第三层没有步数机制 → 计数面板整块不画（它旁边的悬浮「-1」也在
-	# `_draw_chocolate()` 里，一并消失；不然会有一块空面板 + 一个永远不动的 12）。
+	var title := Rect2(MAP_X0 + MAP_W / 2 - 150, 8, 300, 54)
+	MapMaterial.draw(self, title)
+	draw_string(_font_bold, title.position + Vector2(0, 33), "冒险地图", HORIZONTAL_ALIGNMENT_CENTER, title.size.x, 26, UiTheme.PAGE_INK)
+	draw_string(_font, Vector2(title.position.x, 80), GameLayers.layer_name(RunState.current_layer), HORIZONTAL_ALIGNMENT_CENTER, title.size.x, 15, Color("f6edcf"))
 	_draw_boss_chip()
 	if RunState.current_layer != GameLayers.LAYER_THREE:
 		_draw_chocolate()
 
 
 func _draw_boss_chip() -> void:
-	var text := "本层 Boss：%s" % _boss_label()
-	var w := 320.0
-	var h := 26.0
-	var rect := Rect2(14, 60, w, h)
-	draw_style_box(UiTheme.adventure_panel_style(8.0, true), rect)
-	draw_rect(rect, UiTheme.ACCENT_LIT, false, 1.3)
-	draw_string(_font_bold, rect.position + Vector2(10, 18), _ellipsis(text, w - 20.0,
-			UiTheme.FS_LABEL), HORIZONTAL_ALIGNMENT_LEFT, w - 20, UiTheme.FS_LABEL,
-			Color("f7e6b0"))
+	var r := Rect2(14, 62, 320, 28)
+	MapMaterial.draw(self, r)
+	draw_string(_font_bold, r.position + Vector2(10, 19), _ellipsis("本层首领：%s" % _boss_label(), 300, 14), HORIZONTAL_ALIGNMENT_LEFT, 300, 14, UiTheme.PAGE_INK)
 
 
 func _choco_panel_rect() -> Rect2:
-	## 巧克力计数面板（HUD 右上角）。过场里的「-1」小牌贴它的左边。
-	return Rect2(size.x - 24.0 - CHOCO_PANEL_W, CHOCO_PANEL_Y,
-			CHOCO_PANEL_W, CHOCO_PANEL_H)
+	return Rect2(size.x - 302, 12, CHOCO_PANEL_W, CHOCO_PANEL_H)
 
 
 func _draw_choco_icon(box: Rect2, alpha: float = 1.0) -> void:
@@ -1500,7 +1430,7 @@ func _mark_color() -> Color:
 func _mark_btn_rect(i: int) -> Rect2:
 	## 三个模式按钮：左上角纵排。y 从 92 起 —— TopBar（0~40）与「本层 Boss」条
 	## （约 50~80）之下，按钮和右侧中文标签都不与它们重叠；x 在地图区左侧空白。
-	return Rect2(14.0, 92.0 + i * 40.0, 34.0, 34.0)
+	return Rect2(14.0, 96.0 + i * 46.0, 112.0, 38.0)
 
 
 func _mark_btn_at(pos: Vector2) -> int:
@@ -1634,10 +1564,8 @@ func _draw_mark_buttons() -> void:
 	for i in 3:
 		var r := _mark_btn_rect(i)
 		var on := _mark_mode == i
-		draw_rect(r, Color(0.07, 0.08, 0.12, 0.85), true)
-		draw_rect(r, UiTheme.ACCENT_GOLD if on else Color(1, 1, 1, 0.16),
-				false, 2.0 if on else 1.0)
-		var c := r.get_center()
+		UiTheme.draw_action(self, r, true, false, on)
+		var c := r.position + Vector2(22, r.size.y / 2)
 		match i:
 			MARK_PEN:
 				_draw_mark_icon_pen(c, on)
@@ -1646,8 +1574,8 @@ func _draw_mark_buttons() -> void:
 			MARK_ERASE:
 				_draw_mark_icon_erase(c, on)
 		var label: String = ["画图", "标记", "擦除"][i]
-		draw_string(_font, Vector2(r.end.x + 8.0, c.y + 4.0), label,
-				HORIZONTAL_ALIGNMENT_LEFT, 48.0, UiTheme.FS_CAPTION,
+		draw_string(_font, Vector2(r.position.x + 42.0, c.y + 5.0), label,
+				HORIZONTAL_ALIGNMENT_LEFT, 48.0, UiTheme.FS_LABEL,
 				UiTheme.ACCENT_LIT if on else UiTheme.INK_300)
 
 
@@ -1738,7 +1666,7 @@ const RELIC_STEP_X := 104.0    # 徽章宽 98 + 6 间隙
 const RELIC_STEP_Y := 30.0     # 徽章高 26 + 4 间隙
 const RELIC_EDGE_R := 24.0     # 右侧内边距（与「卡组」按钮同一条竖线）
 const RELIC_EDGE_L := 8.0
-const RELIC_BADGE_Y := 14.0    # R407：道具徽章首行的顶沿（卡组按钮据此对齐）
+const RELIC_BADGE_Y := 56.0    # R407：道具徽章首行的顶沿（卡组按钮据此对齐）
 const RELIC_P_W := 900.0
 const RELIC_P_NAME := 17
 const RELIC_P_TAG := 13
@@ -1747,7 +1675,7 @@ const RELIC_P_ROWH := 24.0
 const RELIC_P_LINE := 17.0
 
 
-const DECK_BTN_W := 76.0
+const DECK_BTN_W := 104.0
 const DECK_BTN_H := 30.0
 const DECK_BTN_GAP := 8.0     # 与最右一枚道具徽章之间留的空
 ## 道具说明浮窗从这一条线往下展开（`_draw_relic_tip()` / `+N` 浮窗共用）。
@@ -1755,60 +1683,29 @@ const DECK_BTN_GAP := 8.0     # 与最右一枚道具徽章之间留的空
 const RELIC_TIP_TOP := 46.0
 
 func _deck_btn_rect() -> Rect2:
-	## R407（用户口径）：「卡组」按钮**固定**在右上角、道具那一行的最右端
-	##（= 第一件道具的前一格，道具仍从右往左排）。
-	## 高 30 夹在 12~42，重心与 14~40 的徽章同一条线；
-	## 底沿 42 < `RELIC_TIP_TOP`(46) —— 悬停道具时不再压住说明。
-	return Rect2(size.x - 24.0 - DECK_BTN_W, RELIC_BADGE_Y - 2.0, DECK_BTN_W, DECK_BTN_H)
+	return Rect2(size.x - 174, 12, DECK_BTN_W, DECK_BTN_H)
 
-var _relic_slots: Array[Rect2] = []
-var _relic_slots_key := ""
+
+var _relic_scroll_row := 0
 
 
 func _relic_reserved() -> Array[Rect2]:
-	## R470：徽章**必须让开**的固定 UI 矩形（都 `grow` 出一点余量，避免贴边）。
-	## 地图棋盘**不在**这个列表里 —— 道具栏压在图上是有意为之。
-	var out: Array[Rect2] = []
-	out.append(_deck_btn_rect().grow(3.0))                     # 右上「卡组」按钮
-	out.append(Rect2(14.0, 60.0, 320.0, 26.0).grow(3.0))       # 本层 Boss 名牌
-	if RunState.current_layer != GameLayers.LAYER_THREE:
-		out.append(_choco_panel_rect().grow(3.0))              # 巧克力计数（三层没有）
-	out.append(Rect2(size.x / 2.0 - 178.0, 4.0, 356.0, 56.0))  # 「冒险地图」标题 + 生命/卡组行
-	out.append(Rect2(8.0, 86.0, 120.0, 3.0 * 40.0 + 6.0))      # 左侧三个标记按钮 + 中文标签
-	var bar_y := MAP_Y0 + MAP_H + 2.0                          # 底部图例带
-	out.append(Rect2(0.0, bar_y, size.x, maxf(0.0, size.y - bar_y)))
-	return out
+	return [_deck_btn_rect().grow(2), _choco_panel_rect().grow(2), Rect2(size.x - 64, 12, 40, 30), Rect2(MAP_X0, MAP_Y0, MAP_W, MAP_H)]
 
 
 func _relic_slot_list() -> Array[Rect2]:
-	## 把整屏切成「徽章槽位」：行优先、每行从右往左；与固定 UI 相交的槽**直接跳过**
-	## （不是挤走它 —— 挤走会让第一行最右端出现一道莫名其妙的空洞）。
-	## 结果按 (size, 层) 缓存：只有尺寸或层变了才重算，每帧绘制零分配。
-	var key := "%d|%d|%d" % [int(size.x), int(size.y), RunState.current_layer]
-	if key == _relic_slots_key and not _relic_slots.is_empty():
-		return _relic_slots
-	var res := _relic_reserved()
+	var visible_rows := maxi(1, int((size.y - 34 - RELIC_BADGE_Y) / RELIC_STEP_Y))
+	var rows := maxi(visible_rows, ceili(RunState.relics.size() / 2.0))
+	_relic_scroll_row = clampi(_relic_scroll_row, 0, rows - visible_rows)
 	var out: Array[Rect2] = []
-	var x0 := size.x - RELIC_EDGE_R - RELIC_BADGE_W
-	var y := RELIC_BADGE_Y
-	var guard := 0
-	while y + RELIC_BADGE_H <= size.y and guard < 600:
-		var x := x0
-		while x >= RELIC_EDGE_L and guard < 600:
-			guard += 1
-			var r := Rect2(x, y, RELIC_BADGE_W, RELIC_BADGE_H)
-			var blocked := false
-			for b: Rect2 in res:
-				if b.intersects(r):
-					blocked = true
-					break
-			if not blocked:
-				out.append(r)
-			x -= RELIC_STEP_X
-		y += RELIC_STEP_Y
-	_relic_slots = out
-	_relic_slots_key = key
-	return _relic_slots
+	for i in maxi(rows * 2, RunState.relics.size()):
+		var row := i % rows - _relic_scroll_row
+		if row < 0 or row >= visible_rows:
+			out.append(Rect2(-1000, -1000, 0, 0))
+		else:
+			out.append(Rect2(size.x - RELIC_EDGE_R - RELIC_BADGE_W - int(i / rows) * RELIC_STEP_X,
+					RELIC_BADGE_Y + row * RELIC_STEP_Y, RELIC_BADGE_W, RELIC_BADGE_H))
+	return out
 
 
 func _relic_rect(i: int) -> Rect2:
@@ -1831,6 +1728,8 @@ func _draw_relics() -> void:
 	var hover_ok := not (_deck_visible or _records_visible or _relics_visible) \
 			and not UiGate.blocked() \
 			and (_reward_panel == null or not _reward_panel.is_open())
+	if RunState.relics.size() > int((size.y - 34 - RELIC_BADGE_Y) / RELIC_STEP_Y) * 2:
+		draw_string(_font, Vector2(size.x - 230, size.y - 12), "滚轮浏览道具", HORIZONTAL_ALIGNMENT_CENTER, 208, 12, UiTheme.PAGE_INK)
 	var repo := RelicRepo.load_json()
 	var hovered := -1
 	for i in RunState.relics.size():
@@ -1838,10 +1737,12 @@ func _draw_relics() -> void:
 		if rel == null:
 			continue
 		var rect := _relic_rect(i)
+		if rect.size == Vector2.ZERO:
+			continue
 		# R367：已耗尽的画灰（边框 / 色块 / 名称一起压暗），一眼能看出「这件用完了」。
 		var spent := RunState.is_relic_spent(int(RunState.relics[i]))
 		var scol := Color("6a7078") if spent else rel.badge_color()
-		draw_rect(rect, Color(scol, 0.10 if spent else 0.18), true)
+		MapMaterial.draw(self, rect)
 		draw_rect(rect, scol, false, 1.4)
 		var chip := Rect2(rect.position + Vector2(5, 5), Vector2(7, rect.size.y - 10))
 		draw_rect(chip, scol, true)
@@ -1849,7 +1750,7 @@ func _draw_relics() -> void:
 		# R343：传奇道具名走亮金（底是来源色 18% 覆在地图上，属深底）。
 		draw_string(_font_bold, rect.position + Vector2(14, 18), rel.relic_name,
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 18, UiTheme.FS_LABEL,
-				Color("8d8577") if spent else rel.name_color(Color("eee6c8")))
+				Color("8d8577") if spent else rel.name_color(UiTheme.PAGE_INK))
 		if hover_ok and rect.has_point(_mouse):
 			hovered = i
 	if hovered >= 0:

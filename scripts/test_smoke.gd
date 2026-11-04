@@ -1801,8 +1801,8 @@ func _check_relic_bar(scene: Variant) -> void:
 		_smoke_fail("R407 卡组按钮：底沿 %.1f 越过道具描述浮窗起点 %.1f（会挡住说明）"
 				% [dbr.end.y, scene.RELIC_TIP_TOP])
 		return
-	if dbr.position.x < r0.end.x or dbr.intersects(r0):
-		_smoke_fail("R407 卡组按钮：没排在第一个道具前面（按钮 %s / 首个道具 %s）"
+	if dbr.end.y >= r0.position.y or dbr.intersects(r0):
+		_smoke_fail("R407 卡组按钮：没有位于第二行道具上方（按钮 %s / 首个道具 %s）"
 				% [str(dbr), str(r0)])
 		return
 	var dbb: Variant = scene._deck_btn

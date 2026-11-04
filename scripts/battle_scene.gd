@@ -8075,8 +8075,8 @@ func _draw_map_panel() -> void:
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 68.0), Color("8f8b80"), -1)
 	# ⚠️ 顺序不可换：格子底 → 通路（小桥） → 图标（与冒险地图同一套）。
 	_draw_map_tiles()
-	_draw_map_bridges()
-	_draw_map_fog()          # R145：内容看不见的格子盖迷雾（桥不盖）
+	_draw_map_fog()
+	_draw_map_bridges()      # R145：内容看不见的格子盖迷雾（桥不盖）
 	_draw_map_nodes()
 	_draw_mapview_marks()    # R177：玩家标记（与冒险地图同一份数据，只读）
 	_draw_map_legend(pr)
@@ -8158,36 +8158,8 @@ func _draw_map_fog() -> void:
 		_draw_map_fog_cell(_mapview_cell_rect(cell), id)
 
 
-func _draw_map_fog_cell(r: Rect2, id: int) -> void:
-	var inner := r.grow(-1.5)
-	var phase := float(id) * 2.399
-	draw_rect(inner, Color(0.11, 0.13, 0.19, 0.90), true)
-	# R154：与冒险地图同一张云雾素材（清单 §2.3）；缺图回退下面的程序云团。
-	var fog_tex := UiAssets.map_fog()
-	if fog_tex != null:
-		var jx := sin(phase) * 0.06
-		var jy := cos(phase * 1.3) * 0.06
-		var sz: Vector2 = inner.size * 1.05
-		var ctr := inner.get_center() + Vector2(inner.size.x * jx, inner.size.y * jy)
-		if sin(phase * 2.7) > 0.0:
-			draw_set_transform(ctr, 0.0, Vector2(-1, 1))
-			draw_texture_rect(fog_tex, Rect2(-sz * 0.5, sz), false,
-					Color(0.92, 0.96, 1.0, 0.92))
-			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		else:
-			draw_texture_rect(fog_tex, Rect2(ctr - sz * 0.5, sz), false,
-					Color(0.92, 0.96, 1.0, 0.92))
-		draw_rect(inner, Color(1, 1, 1, 0.05), false, 1.0)
-		return
-	for i in 5:
-		var fx := 0.28 + 0.44 * float((id * 7 + i * 3) % 5) / 4.0
-		var fy := 0.26 + 0.48 * float((id * 5 + i * 2) % 4) / 3.0
-		var ctr := Vector2(inner.position.x + inner.size.x * fx,
-				inner.position.y + inner.size.y * fy)
-		var rad := inner.size.x * (0.20 + 0.05 * sin(phase + float(i) * 0.9))
-		draw_circle(ctr, rad, Color(0.34, 0.40, 0.52, 0.22))
-		draw_circle(ctr + Vector2(0.0, rad * 0.42), rad * 0.7, Color(0.03, 0.04, 0.07, 0.30))
-	draw_rect(inner, Color(1, 1, 1, 0.05), false, 1.0)
+func _draw_map_fog_cell(r: Rect2, _id: int) -> void:
+	preload("res://scripts/map_visual.gd").draw_fog(self, r)
 
 
 func _draw_map_tiles() -> void:
