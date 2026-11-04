@@ -3,6 +3,21 @@ extends RefCounted
 const UiAssets = preload("res://scripts/ui_assets.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
 static var _style: StyleBoxTexture
+static var _frame: StyleBoxTexture
+static var _small_frame: StyleBoxTexture
+
+static func draw_frame(canvas: CanvasItem, rect: Rect2, small := false) -> void:
+	var style := _small_frame if small else _frame
+	if style == null:
+		style = StyleBoxTexture.new()
+		style.texture = UiAssets.get_tex("adventure_shared/battle_card_trim" if small else "adventure_shared/battle_instrument_panel")
+		style.draw_center = false
+		style.set_texture_margin_all(5 if small else 12)
+		if small:
+			_small_frame = style
+		else:
+			_frame = style
+	canvas.draw_style_box(style, rect)
 
 static func draw(canvas: CanvasItem, rect: Rect2) -> void:
 	if _style == null:

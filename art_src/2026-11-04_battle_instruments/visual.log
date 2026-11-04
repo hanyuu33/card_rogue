@@ -1,4 +1,5 @@
 Godot Engine v4.3.stable.official.77dcf97d8 - https://godotengine.org
 OpenGL API 3.3.0 NVIDIA 610.78 - Compatibility - Using Device: NVIDIA - NVIDIA GeForce RTX 4050 Laptop GPU
 
+DECK ENTRIES PASS: toolbar signal opens full 4-card deck; pile click opens remaining 1-card draw pile
 BATTLE INSTRUMENTS PASS: 3-column wrap, 12 nonoverlapping slots, overflow, separated controls

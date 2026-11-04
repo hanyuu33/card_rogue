@@ -222,7 +222,7 @@ const COL_BG := UiTheme.BOARD_BG
 ## R133：战斗背景改成「当层的地图底图」后，画面比原来那张平涂米黄**亮得多、也花得多**
 ## （实测平均亮度 165→180、标准差 14→33）→ 压一层暗罩，棋盘格线与右栏白字才读得清。
 ## 与地图页同一手法，只是**更淡**（战斗界面密得多，罩太厚会把底图闷死）。
-const COL_BG_SCRIM := Color(0.03, 0.04, 0.07, 0.34)
+const COL_BG_SCRIM := Color(0.03, 0.04, 0.07, 0.16)
 const COL_CELL_LINE := UiTheme.BOARD_GRID_LINE
 const COL_OWN_FRAME := UiTheme.SIDE_SELF
 const COL_ENEMY_FRAME := UiTheme.SIDE_FOE
@@ -810,6 +810,8 @@ func _ready() -> void:
 	# R155：顶栏操作按钮 —— 记录（偏左）/ 卡组·地图（右侧）。不再只藏在 Esc 菜单里。
 	log_btn.pressed.connect(_toggle_log)
 	deck_btn.pressed.connect(_toggle_deck_panel)
+	deck_btn.text = "完整卡组"
+	deck_btn.tooltip_text = "查看本局完整卡组（包括已抽到、弃牌和消耗的构筑卡）"
 	map_btn.pressed.connect(_toggle_map)
 	hp_strip.draw.connect(_draw_hp_strip)
 	# 齿轮图标**自绘**（字体里的 ⚙ 不保证有，缺字会变成一个方框）—— 见 UiTheme.draw_gear
@@ -8825,7 +8827,7 @@ func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_ta
 	## name_only = true（战斗内一律）→ 卡面**只画卡名**，不画种类·字段与效果文 ——
 	##   效果详情由悬停/点选的描述面板提供（左侧信息栏「悬停优先，其次选中的卡」）。
 	CardFace.draw(self, card, rect, hp, selected, is_tapped, _font, _font_bold, power_override,
-			on_board, sleeping, true, phase, speed_override, range_override)
+			on_board, sleeping, true, phase, speed_override, range_override, true)
 	if not card.x_cost and cost_override >= 0 and cost_override != card.cost:
 		# ⚠️ R122：**必须走 CardFace.draw_badge()**（同一个槽位的唯一绘制口）。
 		# 这里原来自己 `draw_circle` 盖一个纯色圆盘 —— R115 把费用徽章换成
@@ -14482,50 +14484,11 @@ func _draw_level_plate() -> void:
 
 
 func _draw_grid_frame() -> void:
-	## R139：棋盘边框 —— 锚在 **3×6 战场本体**上（R137 那版围的是可视窗，固定不动）。
-	## 现在它跟着 `_grid_scroll` 一起上下走：拖动 / 滚轮滚棋盘时边框跟着动，
-	## 滚到两头能看全顶带与底带、以及四只角花。
-	## ⚠️ 纵向溢出靠**后画的** `_draw_grid_mask()`（不透明背景纹理）裁掉 ——
-	##    所以 _draw() 里这个函数必须排在遮罩**前面**，顺序反了边框会糊到工具栏上。
-	var top := GRID_Y - _grid_scroll          # 内容区上沿（屏幕坐标）
-	var outer := Rect2(GRID_X - GRID_FRAME_BAND_L, top - GRID_FRAME_BAND_T,
-			GRID_W + GRID_FRAME_BAND_L + GRID_FRAME_BAND_R,
-			GRID_CONTENT_H + GRID_FRAME_BAND_T + GRID_FRAME_BAND_B)
-	# 外圈柔和投影：把边框从地图底图上托出来
-	draw_rect(outer.grow(2.0), Color(0, 0, 0, 0.30), false, 3.0)
-	# 暗石底带（四条，全部落在内容区之外）
-	draw_rect(Rect2(outer.position.x, outer.position.y, outer.size.x, GRID_FRAME_BAND_T),
-			COL_FRAME_STONE)
-	draw_rect(Rect2(outer.position.x, outer.end.y - GRID_FRAME_BAND_B, outer.size.x,
-			GRID_FRAME_BAND_B), COL_FRAME_STONE)
-	draw_rect(Rect2(outer.position.x, top, GRID_FRAME_BAND_L, GRID_CONTENT_H), COL_FRAME_STONE)
-	draw_rect(Rect2(GRID_X + GRID_W, top, GRID_FRAME_BAND_R, GRID_CONTENT_H), COL_FRAME_STONE)
-	# 双金线：外沿金线 + 外沿内侧暗金细线；内沿亮金收边压住内容区边界
-	draw_rect(outer, COL_FRAME_GOLD, false, 1.5)
-	draw_rect(outer.grow(-3.0), COL_FRAME_GOLD_DIM, false, 1.0)
-	draw_rect(Rect2(GRID_X, top, GRID_W, GRID_CONTENT_H).grow(1.0), COL_FRAME_GOLD_IN, false, 1.5)
-	# 四只角花（素材角块与这里的逻辑块一一对应）
-	if _frame_tex != null:
-		var pr := GRID_FRAME_PROTRUDE
-		var tw := float(_frame_tex.get_width())
-		var th := float(_frame_tex.get_height())
-		_draw_frame_corner(Rect2(0, 0,
-				(GRID_FRAME_BAND_L + pr) * 2.0, (GRID_FRAME_BAND_T + pr) * 2.0),
-				Vector2(outer.position.x, outer.position.y),
-				Vector2(GRID_FRAME_BAND_L + pr, GRID_FRAME_BAND_T + pr))
-		_draw_frame_corner(Rect2(tw - (GRID_FRAME_BAND_R + pr) * 2.0, 0,
-				(GRID_FRAME_BAND_R + pr) * 2.0, (GRID_FRAME_BAND_T + pr) * 2.0),
-				Vector2(outer.end.x - GRID_FRAME_BAND_R - pr, outer.position.y),
-				Vector2(GRID_FRAME_BAND_R + pr, GRID_FRAME_BAND_T + pr))
-		_draw_frame_corner(Rect2(0, th - (GRID_FRAME_BAND_B + pr) * 2.0,
-				(GRID_FRAME_BAND_L + pr) * 2.0, (GRID_FRAME_BAND_B + pr) * 2.0),
-				Vector2(outer.position.x, outer.end.y - GRID_FRAME_BAND_B - pr),
-				Vector2(GRID_FRAME_BAND_L + pr, GRID_FRAME_BAND_B + pr))
-		_draw_frame_corner(Rect2(tw - (GRID_FRAME_BAND_R + pr) * 2.0,
-				th - (GRID_FRAME_BAND_B + pr) * 2.0,
-				(GRID_FRAME_BAND_R + pr) * 2.0, (GRID_FRAME_BAND_B + pr) * 2.0),
-				Vector2(outer.end.x - GRID_FRAME_BAND_R - pr, outer.end.y - GRID_FRAME_BAND_B - pr),
-				Vector2(GRID_FRAME_BAND_R + pr, GRID_FRAME_BAND_B + pr))
+	# Painted leather/brass rim follows the content, without covering terrain.
+	BattleHudMaterial.draw_frame(self, Rect2(GRID_X - 8, GRID_Y - _grid_scroll - 8,
+			GRID_W + 16, GRID_CONTENT_H + 16))
+
+
 func _draw_grid_caption() -> void:
 	## R139：边框会滚了，「战场」标题就**不能再挂在边框上**（否则跟着飘走）——
 	## 改成固定在可视窗正上方的栏目标题（深棕字 + 浅金描边，压得住金饰带）。
@@ -14556,7 +14519,7 @@ func _draw_hp_banner() -> void:
 
 
 func _end_turn_big_rect() -> Rect2:
-	return Rect2(794, 248, 338, 88)
+	return Rect2(794, 244, 338, 100)
 
 
 func _end_turn_ready() -> bool:
@@ -14596,7 +14559,7 @@ func _draw_end_turn_big() -> void:
 			draw_rect(g, Color(1.0, 0.80, 0.30, maxf(a, 0.0)), true)
 	UiTheme.draw_action(self, r, true, not ready, hover)
 	# 左侧「推进」图标：两枚三角（字体里的 ▶ 不保证有字形 → 一律程序画）
-	var icon_c := Vector2(r.position.x + 42.0, r.get_center().y - 9.0)
+	var icon_c := Vector2(r.position.x + 42.0, r.get_center().y)
 	var icon_col := Color(1.0, 0.85, 0.45) if ready else Color(0.55, 0.55, 0.58)
 	for k in 2:
 		var ox := float(k) * 15.0
@@ -14606,14 +14569,9 @@ func _draw_end_turn_big() -> void:
 	# 主文案 + 副文案
 	var text_cx := r.position.x + r.size.x * 0.5 + 16.0
 	_draw_string_center(_font_bold, UI_FS_HEADING, "回合结束",
-			Vector2(text_cx, r.position.y + 32.0),
+			Vector2(text_cx, r.get_center().y),
 			Color("fff2cf") if ready else Color("a8a8ac"), 2, Color(0, 0, 0, 0.55))
-	var sub := "点击结束我方回合" if ready else "对手行动中…"
-	if hover:
-		sub = "▶ 结束我方回合"
-	_draw_string_center(_font, UI_FS_CAPTION, sub,
-			Vector2(text_cx, r.position.y + 62.0),
-			Color(1.0, 0.92, 0.72, 0.95) if ready else Color(0.62, 0.62, 0.66), -1)
+
 
 
 func _enemy_zone_rect() -> Rect2:
@@ -15103,7 +15061,7 @@ func _draw_deck_and_discard() -> void:
 		draw_rect(drect, UiTheme.INK_300, false, 1.0)
 	else:
 		_draw_card_back(drect)
-	_draw_zone_name(drect, "卡组")
+	_draw_zone_name(drect, "抽牌库")
 	_draw_zone_count(drect, state.deck.size())
 	# ---- 弃牌区：图标 + 张数（不再显示卡面）----
 	var crect := _zone_rect("discard")

@@ -2733,7 +2733,7 @@ func _check_hand_fan(scene: Variant) -> void:
 	var rz: Rect2 = scene._relic_zone_rect()
 	var er: Vector2 = _hand_card_extent(scene, n - 1)
 	var el: Vector2 = _hand_card_extent(scene, 0)
-	if er.y > rz.position.x - 2.0:
+	if er.y > rz.position.x - 2.0 and scene.OWN_HAND_Y - scene.HAND_FAN_HOVER_LIFT < rz.end.y + 2.0:
 		_smoke_fail("手牌越界：满手时最右一张到 %.1f，压到右侧道具栏（%.1f 起）"
 				% [er.y, rz.position.x])
 	if el.x < scene.INFO_X + scene.INFO_W + 4.0:

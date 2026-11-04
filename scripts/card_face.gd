@@ -355,7 +355,7 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		selected: bool, is_tapped: bool, font: Font, font_bold: Font,
 		power_override := -1, on_board := false, sleeping := false,
 		name_only := false, phase := 0,
-		speed_override := -1, range_override := -1) -> void:
+		speed_override := -1, range_override := -1, adventure_frame := false) -> void:
 	## 卡面一律按 rect **完整排版**，与图鉴/战场小卡同一套比例，没有「按可见高度重锚」
 	## 之类的特例 —— 手牌卡底沉出窗口下沿时，被挡住的那截就让它挡住
 	## （作者口径：卡片是一个整体，排版要与正常状态完全一致，别为了躲裁剪挪数值）。
@@ -366,7 +366,9 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	# ① 卡面纸底：素材槽 assets/ui/card_paper.png 优先，缺图回退纯色（R113 起可换皮）
 	var paper: Texture2D = UiAssets.card_paper()
 	var tint := paper_tint(card)   # R267：职业色只涂在纸底上，卡图本身不动
-	if paper != null:
+	if adventure_frame:
+		preload("res://scripts/battle_hud_material.gd").draw(canvas, rect)
+	elif paper != null:
 		canvas.draw_texture_rect(paper, rect, false, tint)
 	else:
 		canvas.draw_rect(rect, tint if tint != Color.WHITE else UiTheme.SURFACE)
@@ -386,6 +388,10 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 				rect.size.x - bw, rect.end.y - frame_top - bw), UiTheme.CARD_FRAME, false, bw)
 	# ④ 卡图区（上半）
 	_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold, sleeping, phase)
+	if adventure_frame:
+		preload("res://scripts/battle_hud_material.gd").draw_frame(canvas, rect, true)
+		var name_plate := Rect2(rect.position + Vector2(2, rect.size.y * UiTheme.CARD_ART_RATIO), Vector2(rect.size.x - 4, rect.size.y * (1.0 - UiTheme.CARD_ART_RATIO)))
+		preload("res://scripts/battle_hud_material.gd").draw(canvas, name_plate)
 	# ④b 稀有度缎带（R170）：挂在**右上角**、压在卡图之上。
 	#     （旧色块小旗画在卡图**之前**，被开放式卡图整个盖住 —— 等于没画。）
 	_draw_rarity_ribbon(canvas, card, rect, k, pad)

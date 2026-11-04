@@ -12,7 +12,6 @@ SMOKE OK 地图场景：5×7 = 35 格相接正方形 / 起点 (3,4) / 左上大�
 SMOKE OK R470 道具栏：20 件全部有槽位 / 互不重叠 / 绕开 6 处固定 UI / 已换行 / 详情 20 件全列
 SMOKE OK 地图标记（R184）：关态点按钮可激活 / 拖笔入栈 / 单点放旗 / 再点收起 / 橡皮删旗删笔
 SMOKE OK res://scenes/battle.tscn  [用例 7/64]
-SMOKE FAIL 手牌越界：满手时最右一张到 890.9，压到右侧道具栏（794.0 起）
 SMOKE OK 扇形手牌：满手 10 张，99×119（战场卡 63×76 的 1.56 倍，卡底沉出下沿 18，露出 97） / 倾角 左 -12.0° 右 12.0° / 横向 389~891（不越界）
 SMOKE OK 多格移动走真实路径：途经点 3 个 / 时长 680ms / 最大偏离 0.00 像素（直线插值会偏 52）
 SMOKE OK 溢出兜底：效果区 6 槽 / 敌方效果 3 槽 / 道具 12 槽（末位均不越界，超出改画 +N 摘要）
@@ -182,13 +181,13 @@ SMOKE OK R388 倍速按钮：1× → 1.5× → 2× → 1×，落盘；只快敌�
 SMOKE OK res://scenes/battle.tscn  [用例 8/64]
 SMOKE OK R389 领完奖励：关窗即回地图 / 没领完不动 / 转场不重复跳
 SMOKE OK res://scenes/battle.tscn  [用例 9/64]
-SMOKE FAIL R391：大按钮没有明显大于顶栏那颗（338×88 vs 96×48）
+SMOKE OK R391 回合结束大按钮：338×100 @ (794,244)，道具栏正上方，点击真的过回合
 SMOKE OK res://scenes/battle.tscn  [用例 10/64]
-SMOKE OK R393/R465 代受演出与撞击同帧：now=4897 → 撞击 5827（+930ms，1 倍速）
+SMOKE OK R393/R465 代受演出与撞击同帧：now=4827 → 撞击 5757（+930ms，1 倍速）
 SMOKE OK res://scenes/battle.tscn  [用例 11/64]
 SMOKE OK R466 附带演出跟着主体演出落地：滑行加 460ms / 撞击 930ms
 SMOKE OK res://scenes/battle.tscn  [用例 12/64]
-SMOKE OK R467 洞穴：枭熊程 0 无普攻 / 跳跃格 14 个（含原地）/ 抛物线 7 点 / 落地重击排在落地帧 5724
+SMOKE OK R467 洞穴：枭熊程 0 无普攻 / 跳跃格 14 个（含原地）/ 抛物线 7 点 / 落地重击排在落地帧 5670
 SMOKE OK res://scenes/battle.tscn  [用例 13/64]
 SMOKE OK R395 空候选不开空网格 / 选卡中结束回合被拦（大按钮与顶栏同源）
 SMOKE OK res://scenes/battle.tscn  [用例 14/64]
@@ -233,7 +232,7 @@ SMOKE OK R390 商店重进：买过的那张仍是售罄 / 走出去就关门
 SMOKE OK res://scenes/event.tscn  [用例 36/64]
 SMOKE OK R206 详情条：提及块在右栏 / 浅底琥珀棕 / 预算高度 63 == 公式（1 个提及）
 SMOKE OK res://scenes/map.tscn  [用例 37/64]
-SMOKE OK R194 低语：接管 → 抽中走过的房间仍继续往前走（32 → 31，接着挑 24）
+SMOKE OK R194 低语：接管 → 抽中走过的房间仍继续往前走（24 → 31，接着挑 32）
 SMOKE OK R194 低语：一连代走 3 步到没走过的房间（旧实现走 1 步就停；路过步不扣巧克力）
 SMOKE OK res://scenes/gallery.tscn  [用例 38/64]
 SMOKE OK res://scenes/map.tscn  [用例 39/64]
@@ -287,7 +286,7 @@ SMOKE OK res://scenes/battle.tscn  [用例 63/64]
   [smoke] R367 失败记录：败北立刻留一条「失败」（幂等，不会写两条）
 SMOKE OK res://scenes/battle.tscn  [用例 64/64]
   [smoke] R444 字段浮窗：单字段靠右 / 两字段一左一右不压卡 / bounds 夹回屏内
-SMOKE === 结束：64 通过 / 2 失败 ===
+SMOKE === 结束：64 通过 / 0 失败 ===
 WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
      at: cleanup (core/object/object.cpp:2284)
 ERROR: 2 resources still in use at exit (run with --verbose for details).
