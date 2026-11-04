@@ -5276,8 +5276,11 @@ func _check_r367_defeat_record(scene: Node) -> void:
 			if FileAccess.file_exists(RunRecord.PATH) else ""
 	var bak_bat := FileAccess.get_file_as_string(RunState.RECORDS_PATH) \
 			if FileAccess.file_exists(RunState.RECORDS_PATH) else ""
-	var before := RunRecord.list_records().size()
+	var before := RunRecord.list_records()
+	var bak_pending := FileAccess.get_file_as_string(RunRecord.PENDING_PATH) \
+			if FileAccess.file_exists(RunRecord.PENDING_PATH) else ""
 	scene._record_defeat()
+	var first := RunRecord.list_records()
 	scene._record_defeat()          # 幂等：不该再写一条
 	var after := RunRecord.list_records()
 	# 还原盘上文件（这条用例不该污染玩家的历史记录）
@@ -5294,8 +5297,22 @@ func _check_r367_defeat_record(scene: Node) -> void:
 		var f2 := FileAccess.open(RunState.RECORDS_PATH, FileAccess.WRITE)
 		f2.store_string(bak_bat)
 		f2 = null
-	if after.size() != before + 1:
-		_smoke_fail("R367 失败记录：调两次写了 %d 条（应为 1）" % (after.size() - before))
+	if bak_pending == "":
+		RunRecord._delete_pending()
+	else:
+		var fp := FileAccess.open(RunRecord.PENDING_PATH, FileAccess.WRITE)
+		fp.store_string(bak_pending)
+		fp = null
+	# 满 KEEP 条时新增会淘汰最旧项，不能用总数增量判断写入。
+	if first.size() != mini(before.size() + 1, RunRecord.KEEP):
+		_smoke_fail("R367 失败记录：首次写入后的数量不符合保留上限")
+		return
+	if after != first:
+		_smoke_fail("R367 失败记录：重复调用改变了记录（应幂等）")
+		return
+	var retained := before.slice(maxi(0, before.size() + 1 - RunRecord.KEEP))
+	if after.slice(0, after.size() - 1) != retained:
+		_smoke_fail("R367 失败记录：旧记录保留顺序不正确")
 		return
 	var last: Dictionary = after[after.size() - 1]
 	if str(last.get("result", "")) != "lose":

@@ -1,3 +1,8 @@
+## 2026-11-04 R367 烟测失败已修复
+- 根因：本机 run_records 已达 KEEP=100，新增会淘汰旧记录；旧断言要求数量 +1，产生误报，游戏写入逻辑无需修改。
+- scripts/test_smoke.gd：检查保留上限、旧记录顺序、新败北内容与两次调用的完整结果一致；补充 pending 文件备份恢复。
+- 验证：python -X utf8 _verify.py：engine 5298 / reward 26 / bgm 39 / smoke 64，5427 全通过；git diff --check 通过。
+- 本轮本地提交，未推送；原有未跟踪奖励页素材未修改。地图其他人工验收待办仍保留。
 ## 2026-11-04 换机接手验证（E:/work）
 - 已重建 Godot 4.3 素材导入缓存，重跑 verify_map_concept.gd，MAP UI PASS。
 - 已更新 map/relic_scroll/layer3 截图；目视确认第三层五个房间全明、无探索雾、无巧克力控件。
