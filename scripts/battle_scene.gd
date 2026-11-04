@@ -58,6 +58,7 @@ const RELIC_P_DESC := 13          # 说明字号（悬浮提示是 12）
 const RELIC_P_ROWH := 24.0        # 名称行高
 const RELIC_P_LINE := 17.0        # 说明行高
 
+const BattleHudMaterial = preload("res://scripts/battle_hud_material.gd")
 const GRID_X := 404.0
 const GRID_Y := 52.0
 const GRID_W := 3.0 * CELL_W
@@ -14545,19 +14546,17 @@ func _draw_hp_banner() -> void:
 	var x := GRID_X + GRID_W + 18
 	for own in [false, true]:
 		var r := Rect2(x, GRID_Y + GRID_H - 48 if own else GRID_Y + 40, 338, 48)
-		UiTheme.draw_panel_bg(self, r)
+		BattleHudMaterial.draw(self, r)
 		var col := Color("416449") if own else Color("8a4b49")
 		if _hp_icon != null:
 			draw_texture_rect(_hp_icon, Rect2(r.position + Vector2(10, 9), Vector2(28, 28)), false)
 		var value := "%d/%d" % [_roll("hp_self", _show_hp("hp_self", engine.state.hp_self)), engine.state.max_hp_self] if own else ("∞" if engine.enemy_hp_infinite else str(_roll("hp_opp", _show_hp("hp_opp", engine.state.hp_opponent))))
-		_draw_string_nw(_font_bold, 14, "我方生命" if own else "敌方生命", r.position + Vector2(46, 19), col, -1)
-		_draw_string_nw(_font_bold, 22, value, r.position + Vector2(46, 42), col, -1)
-		var count := engine.state.hand.size() if own else engine.state.opp_hand_count
-		_draw_string_center(_font_bold, 15, "手牌 %d" % count, r.position + Vector2(273, 25), Color("5b5141"), -1)
+		_draw_string_nw(_font_bold, 14, "我方生命" if own else "敌方生命", r.position + Vector2(46, 29), col, -1)
+		_draw_string_center(_font_bold, 24, value, r.position + Vector2(258, 25), col, -1)
 
 
 func _end_turn_big_rect() -> Rect2:
-	return Rect2(898.0, 286.0 - PANEL_LIFT, 244.0, 100.0)
+	return Rect2(794, 248, 338, 88)
 
 
 func _end_turn_ready() -> bool:
@@ -14607,24 +14606,23 @@ func _draw_end_turn_big() -> void:
 	# 主文案 + 副文案
 	var text_cx := r.position.x + r.size.x * 0.5 + 16.0
 	_draw_string_center(_font_bold, UI_FS_HEADING, "回合结束",
-			Vector2(text_cx, r.position.y + 38.0),
+			Vector2(text_cx, r.position.y + 32.0),
 			Color("fff2cf") if ready else Color("a8a8ac"), 2, Color(0, 0, 0, 0.55))
 	var sub := "点击结束我方回合" if ready else "对手行动中…"
 	if hover:
 		sub = "▶ 结束我方回合"
 	_draw_string_center(_font, UI_FS_CAPTION, sub,
-			Vector2(text_cx, r.position.y + 74.0),
+			Vector2(text_cx, r.position.y + 62.0),
 			Color(1.0, 0.92, 0.72, 0.95) if ready else Color(0.62, 0.62, 0.66), -1)
 
 
 func _enemy_zone_rect() -> Rect2:
-	## 右栏敌方效果区外框（敌方 HP/费用文本下方）。
-	return Rect2(GRID_X + GRID_W + 18, GRID_Y + 88, TAP_W + 12, 3 * (TAP_H + 10) + 44)
+	return Rect2(794, 144, 338, 96)
 
 
 func _enemy_effect_rect(i: int) -> Rect2:
 	var z := _enemy_zone_rect()
-	return Rect2(z.position.x + 6, z.position.y + 32 + i * 58, 76, 52)
+	return Rect2(z.position + Vector2(12 + i * 104, 32), Vector2(76, 52))
 
 
 func _enemy_effect_popup_rect() -> Rect2:
@@ -14712,12 +14710,14 @@ func _draw_enemy_effects() -> void:
 	## 右栏：敌方效果区（红色调，开局启用的效果卡正面朝上持续生效）。
 	var state := engine.state
 	var z := _enemy_zone_rect()
-	UiTheme.draw_info_card(self, Rect2(z.position, Vector2(z.size.x, minf(z.size.y, 38 + 58 * maxi(1, _merged_effects(state.enemy_effects).size())))))
+	BattleHudMaterial.draw(self, z)
 	_draw_string_center(_font_bold, UI_FS_MICRO, "敌方效果 %d" % state.enemy_effects.size(),
 			Vector2(z.position.x + z.size.x / 2, z.position.y + 22.0), Color("7a3a3a"), -1)
 	# 同名合并显示（左下角 ×N 角标）
 	var merged_e := _merged_effects(state.enemy_effects)
 	var n_ee := merged_e.size()
+	if n_ee == 1:
+		_draw_string_nw(_font_bold, 17, (merged_e[0]["card"] as CardData).card_name, z.position + Vector2(108, 63), UiTheme.PAGE_INK, -1)
 	var cap_e := _enemy_effect_zone_max_slots()
 	if n_ee <= cap_e:
 		for i in n_ee:
@@ -14733,19 +14733,16 @@ func _draw_enemy_effects() -> void:
 
 
 func _enemy_effect_zone_max_slots() -> int:
-	return maxi(1, int((_enemy_zone_rect().size.y - 32) / 58))
+	return 3
 
 
 func _relic_zone_rect() -> Rect2:
-	## 右侧道具栏外框（棋盘右侧、卡组列左侧的空白带，避开我方 HP 文字）。
-	## R417：随 `PANEL_LIFT` 整体上移，框底从 574 提到 530，彻底让开「我方 HP」（约 y562-598）。
-	return Rect2(900.0, GRID_Y + 350.0 - PANEL_LIFT, 240.0, 172.0)
+	return Rect2(794, 348, 338, 176)
 
 
 func _relic_rect(i: int) -> Rect2:
-	## 道具栏第 i 个徽章矩形（与 _draw_relic_bar 一致）。
 	var z := _relic_zone_rect()
-	return Rect2(z.position.x + 4, z.position.y + 24.0 + i * 24.0, z.size.x - 8, 22.0)
+	return Rect2(z.position + Vector2(14 + (i % 3) * 104, 34 + int(i / 3) * 32), Vector2(98, 26))
 
 
 func _relic_bar_ids() -> Array:
@@ -14760,10 +14757,7 @@ func _relic_bar_ids() -> Array:
 
 
 func _relic_max_slots() -> int:
-	## 道具栏在不越界的前提下能放几个徽章（每个高 22、步进 24，从 +24 起）。
-	var z := _relic_zone_rect()
-	var top := z.position.y + 24.0
-	return maxi(1, int((z.position.y + z.size.y - top) / 24.0))
+	return 12
 
 
 func _relic_bar_overflowed() -> bool:
@@ -14787,9 +14781,8 @@ func _draw_relic_bar() -> void:
 	## 右栏道具栏：本局获得的道具（来源色块 = 初始白 / 奖励黄 / 事件紫）。
 	var ids := _relic_bar_ids()
 	var z := _relic_zone_rect()
-	draw_rect(z, Color(1.0, 0.96, 0.82, 0.30), true)
-	draw_rect(z, Color("b09a5a"), false, 1.0)
-	_draw_string_center(_font_bold, UiTheme.FS_MICRO, "道具 %d" % ids.size(),
+	BattleHudMaterial.draw(self, z)
+	_draw_string_center(_font_bold, 14, "道具 %d" % ids.size(),
 			Vector2(z.position.x + z.size.x / 2, z.position.y + 16.0), Color("7a6230"), -1)
 	var repo := RelicRepo.load_json()
 	var n_rel := ids.size()
@@ -14836,8 +14829,12 @@ func _draw_relic_bar() -> void:
 		# 「雕像（3）」这种带括号的名字尤其看不清。
 		# R343：传奇道具名走**暗金**（底是来源色向白混 62% 的浅实色 → 亮金会糊），
 		# 普通道具仍是原来的深棕。判据在 `RelicData.name_color()`，这里不写特例。
-		_draw_string_center(_font_bold, UiTheme.FS_MICRO,
-				RunState.relic_display_name(ids[i], engine.state.self_card_plays),
+		var label := RunState.relic_display_name(ids[i], engine.state.self_card_plays)
+		var label_size := 13
+		while label_size > 9 and _font_bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, label_size).x > rect.size.x - 18:
+			label_size -= 1
+		_draw_string_center(_font_bold, label_size,
+				label,
 				Vector2(rect.position.x + 12.0 + (rect.size.x - 12.0) / 2,
 						rect.position.y + 14.0),
 				Color("9a9488") if rspent else rel.name_color(Color("4a3c14")), -1)
@@ -14866,7 +14863,7 @@ func _draw_cost_zone() -> void:
 			engine.charge_count(GameEngine.SIDE_SELF), engine.dodge_active(GameEngine.SIDE_SELF))
 	# 效果区
 	var zone := Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, bottom - COST_Y - ENERGY_H)
-	UiTheme.draw_info_card(self, Rect2(zone.position, Vector2(zone.size.x, minf(zone.size.y, 38 + 58 * maxi(1, _merged_effects(state.effects).size())))))
+	BattleHudMaterial.draw(self, Rect2(zone.position, Vector2(zone.size.x, minf(zone.size.y, 46 + 58 * maxi(1, _merged_effects(state.effects).size())))))
 	_draw_string_center(_font_bold, UI_FS_MICRO, "效果区 %d" % state.effects.size(),
 			Vector2(mid_x, COST_Y + ENERGY_H + 22.0), Color("4a6a4a"), -1)
 	# 效果卡：同名合并显示（左下角 ×N 角标），栏高固定、最多画满可见槽位；
@@ -15177,7 +15174,7 @@ func _draw_hand() -> void:
 	var n := engine.state.hand.size()
 	var full: bool = engine.state.hand_full()
 	var hand_badge := Rect2(300, 628, 110, 42)
-	UiTheme.draw_panel_bg(self, hand_badge)
+	BattleHudMaterial.draw(self, hand_badge)
 	_draw_string_center(_font_bold, 15, "手牌 %d/%d" % [n, FieldState.HAND_LIMIT], hand_badge.get_center(), Color("9a493e") if full else Color("45654e"), -1)
 	# 悬停的那张抬起来、并压在最上层（重叠时才看得清）；被选中的卡（点击 / 拖拽）
 	# 也压到最上层，放大后才不会被相邻卡盖住（R416）。
