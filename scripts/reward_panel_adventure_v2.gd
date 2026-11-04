@@ -83,3 +83,14 @@ func _draw_card_detail(cands: Array) -> void:
 	_mention_hits = res["hits"]
 
 
+
+
+func _draw_entry_icon(e: Dictionary, center: Vector2) -> void:
+	var key := str(e.get("kind", "cards"))
+	if key == "cards" and bool(e.get("legendary", false)):
+		key = "legendary"
+	var tex := UiAssets.get_tex("reward_icons/" + key)
+	if tex == null:
+		super._draw_entry_icon(e, center)
+		return
+	_root.draw_texture_rect(tex, Rect2(center - Vector2(32, 32), Vector2(64, 64)), false)

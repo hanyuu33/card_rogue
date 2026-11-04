@@ -333,3 +333,5 @@ curtain_plate.png         名称牌（聊谁是说话人）            建议 52
 2026-11-04 战斗地形：adventure_shared/battlefield_1.png / battlefield_2.png / battlefield_3.png；900×1350，三列各300，上下后排各225。源图与裁切说明见 art_src/2026-11-04_battle_ui/README.md。
 
 战斗卡框：adventure_shared/battle_card_trim.png，64×64，由battle_instrument_panel同源缩放，九宫格边缘5px；只在战斗CardFace adventure_frame开启时使用。
+
+reward_icons/{cards,legendary,relic,deck_delete,core}.png：奖励列表类型图标，透明 PNG，内置 imagegen 生成；不替换卡牌数值徽章。

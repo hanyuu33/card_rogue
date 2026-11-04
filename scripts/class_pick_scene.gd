@@ -335,10 +335,8 @@ func _draw_panel(cid: String) -> void:
 	var d := clampi(RunState.difficulty, 0, RunState.DIFFICULTY_COUNT - 1)
 	var lr := _diff_left_rect()
 	var rr := _diff_right_rect()
-	draw_rect(lr, Color(1, 1, 1, 0.10), true)
-	draw_rect(lr, Color(1, 1, 1, 0.30), false, 2.0)
-	draw_rect(rr, Color(1, 1, 1, 0.10), true)
-	draw_rect(rr, Color(1, 1, 1, 0.30), false, 2.0)
+	UiTheme.draw_action(self, lr, false, d == 0)
+	UiTheme.draw_action(self, rr, false, d == RunState.DIFFICULTY_COUNT - 1)
 	var arrow_on := UiTheme.PAGE_INK
 	var arrow_off := Color("6b675f")
 	draw_string(_font_bold, Vector2(lr.position.x, lr.position.y + 26.0), "<",
@@ -349,9 +347,14 @@ func _draw_panel(cid: String) -> void:
 			arrow_on if d < RunState.DIFFICULTY_COUNT - 1 else arrow_off)
 	var br := _diff_box_rect()
 	UiTheme.draw_info_card(self, br, true)
-	draw_string(_font_bold, Vector2(br.position.x, br.position.y + 26.0),
-			"%d  %s" % [d, RunState.DIFFICULTY_NAMES[d]], HORIZONTAL_ALIGNMENT_CENTER, br.size.x,
-			UiTheme.FS_HEADING, Color("1a1c22"))
+	var number_box := Rect2(br.position + Vector2(4, 3), Vector2(42, br.size.y - 6))
+	UiTheme.draw_action(self, number_box, true)
+	draw_string(_font_bold, Vector2(number_box.position.x, br.position.y + 26.0),
+			str(d), HORIZONTAL_ALIGNMENT_CENTER, number_box.size.x,
+			UiTheme.FS_HEADING, Color("fff3d5"))
+	draw_string(_font_bold, Vector2(br.position.x + 52, br.position.y + 26.0),
+			RunState.DIFFICULTY_NAMES[d], HORIZONTAL_ALIGNMENT_CENTER, br.size.x - 58,
+			UiTheme.FS_SUBHEAD, UiTheme.PAGE_INK)
 	# 当前档新增 debuff 文本（R224：只写当前档这一条；高档继承的低档 debuff
 	# 由下面那行数值摘要体现 —— 摘要列的都是「实际生效」的数值）
 	var ny := _note_rect().position.y + 11.0

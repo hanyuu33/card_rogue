@@ -908,7 +908,7 @@ func _draw_row(i: int, rr: Rect2) -> void:
 		_sb_card = _tex_sb(TEX_CARD, 30.0)
 	_root.draw_style_box(_sb_card, rr)
 	# 左侧来源纹章（色仍由 `_entry_color` 给，档位色唯一口不变）
-	_row_badge(rr.position + Vector2(46.0, ROW_H * 0.5), _entry_color(e))
+	_draw_entry_icon(e, rr.position + Vector2(46.0, ROW_H * 0.5))
 	# 名称 + 标签：文字右边界让开右侧按钮，别压上去
 	var chip := Rect2(rr.end.x - 124.0, rr.position.y + (ROW_H - 36.0) * 0.5,
 			108.0, 36.0)
@@ -2176,3 +2176,7 @@ func _demo_start() -> void:
 		_root.queue_redraw())
 	add_child(t)
 	t.start()
+
+
+func _draw_entry_icon(e: Dictionary, center: Vector2) -> void:
+	_row_badge(center, _entry_color(e))
