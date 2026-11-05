@@ -55,7 +55,25 @@ static func get_tex(name: String) -> Texture2D:
 	return _cache[name]
 
 
+static func small_icon(name: String, edge := 128) -> Texture2D:
+	# Cache a filtered thumbnail; avoid sparse sampling of large source art.
+	var key := "%s@%d" % [name, edge]
+	if not _cache.has(key):
+		var source := get_tex(name)
+		if source == null:
+			return null
+		var img := source.get_image()
+		var scale := minf(1.0, float(edge) / maxf(img.get_width(), img.get_height()))
+		img.resize(maxi(1, roundi(img.get_width() * scale)), maxi(1, roundi(img.get_height() * scale)), Image.INTERPOLATE_LANCZOS)
+		img.fix_alpha_edges()
+		_cache[key] = ImageTexture.create_from_image(img)
+	return _cache[key]
+
+
 static func node_icon(type: String) -> Texture2D:
+	var name := "map_icons/" + type
+	if ResourceLoader.exists(path_for(name)):
+		return small_icon(name)
 	return get_tex("map_" + type)
 
 

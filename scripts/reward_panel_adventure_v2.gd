@@ -89,7 +89,7 @@ func _draw_entry_icon(e: Dictionary, center: Vector2) -> void:
 	var key := str(e.get("kind", "cards"))
 	if key == "cards" and bool(e.get("legendary", false)):
 		key = "legendary"
-	var tex := UiAssets.get_tex("reward_icons/" + key)
+	var tex := UiAssets.small_icon("reward_icons/" + key, 64)
 	if tex == null:
 		super._draw_entry_icon(e, center)
 		return

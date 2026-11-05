@@ -1,0 +1,29 @@
+scissors
+Game UI icon specifically designed for readability at 48 to 72 pixels. A single open pair of short sturdy medieval brass scissors, two large finger loops and two clean silver blades. ONLY scissors, no card, no paper. Japanese Western medieval fantasy adventure style matching cream paper, forest green and aged brass. Bold compact silhouette, thick dark contour, only 3 to 5 broad color regions with simple soft shading. NO fine filigree, tiny decoration, leather grain, scratches, small sparks, thin lines, complex texture, or enclosing badge. Centered isolated complete object occupies 85 percent of square canvas, true transparent background.
+
+map_start
+Game UI icon specifically designed for readability at 48 to 72 pixels. A single forest-green triangular pennant flag on a short brass pole. Japanese Western medieval fantasy adventure style matching cream paper, forest green and aged brass. Bold compact silhouette, thick dark contour, only 3 to 5 broad color regions with simple soft shading. NO fine filigree, tiny decoration, leather grain, scratches, small sparks, thin lines, complex texture, or enclosing badge. Centered isolated complete object occupies 85 percent of square canvas, true transparent background.
+
+map_battle
+Game UI icon specifically designed for readability at 48 to 72 pixels. Two broad crossed steel swords with forest green grips. Japanese Western medieval fantasy adventure style matching cream paper, forest green and aged brass. Bold compact silhouette, thick dark contour, only 3 to 5 broad color regions with simple soft shading. NO fine filigree, tiny decoration, leather grain, scratches, small sparks, thin lines, complex texture, or enclosing badge. Centered isolated complete object occupies 85 percent of square canvas, true transparent background.
+
+map_elite
+Game UI icon specifically designed for readability at 48 to 72 pixels. Two crossed steel swords underneath a small amber diamond, elite battle symbol. Japanese Western medieval fantasy adventure style matching cream paper, forest green and aged brass. Bold compact silhouette, thick dark contour, only 3 to 5 broad color regions with simple soft shading. NO fine filigree, tiny decoration, leather grain, scratches, small sparks, thin lines, complex texture, or enclosing badge. Centered isolated complete object occupies 85 percent of square canvas, true transparent background.
+
+map_rest
+Game UI icon specifically designed for readability at 48 to 72 pixels. A simple warm orange campfire over three broad wooden logs. Japanese Western medieval fantasy adventure style matching cream paper, forest green and aged brass. Bold compact silhouette, thick dark contour, only 3 to 5 broad color regions with simple soft shading. NO fine filigree, tiny decoration, leather grain, scratches, small sparks, thin lines, complex texture, or enclosing badge. Centered isolated complete object occupies 85 percent of square canvas, true transparent background.
+
+map_event
+Game UI icon specifically designed for readability at 48 to 72 pixels. A rolled ivory parchment scroll with one large dark green question mark. Japanese Western medieval fantasy adventure style matching cream paper, forest green and aged brass. Bold compact silhouette, thick dark contour, only 3 to 5 broad color regions with simple soft shading. NO fine filigree, tiny decoration, leather grain, scratches, small sparks, thin lines, complex texture, or enclosing badge. Centered isolated complete object occupies 85 percent of square canvas, true transparent background.
+
+map_shop
+Game UI icon specifically designed for readability at 48 to 72 pixels. A tiny merchant stall with a forest-green and cream striped awning, simple wooden counter. Japanese Western medieval fantasy adventure style matching cream paper, forest green and aged brass. Bold compact silhouette, thick dark contour, only 3 to 5 broad color regions with simple soft shading. NO fine filigree, tiny decoration, leather grain, scratches, small sparks, thin lines, complex texture, or enclosing badge. Centered isolated complete object occupies 85 percent of square canvas, true transparent background.
+
+map_chest
+Game UI icon specifically designed for readability at 48 to 72 pixels. A closed wooden treasure chest with a broad brass latch. Japanese Western medieval fantasy adventure style matching cream paper, forest green and aged brass. Bold compact silhouette, thick dark contour, only 3 to 5 broad color regions with simple soft shading. NO fine filigree, tiny decoration, leather grain, scratches, small sparks, thin lines, complex texture, or enclosing badge. Centered isolated complete object occupies 85 percent of square canvas, true transparent background.
+
+map_bigchest
+Game UI icon specifically designed for readability at 48 to 72 pixels. A large open brass treasure chest with three large amber gems. Japanese Western medieval fantasy adventure style matching cream paper, forest green and aged brass. Bold compact silhouette, thick dark contour, only 3 to 5 broad color regions with simple soft shading. NO fine filigree, tiny decoration, leather grain, scratches, small sparks, thin lines, complex texture, or enclosing badge. Centered isolated complete object occupies 85 percent of square canvas, true transparent background.
+
+map_unknown
+Game UI icon specifically designed for readability at 48 to 72 pixels. A single large ivory question mark with dark green outline. Japanese Western medieval fantasy adventure style matching cream paper, forest green and aged brass. Bold compact silhouette, thick dark contour, only 3 to 5 broad color regions with simple soft shading. NO fine filigree, tiny decoration, leather grain, scratches, small sparks, thin lines, complex texture, or enclosing badge. Centered isolated complete object occupies 85 percent of square canvas, true transparent background.
