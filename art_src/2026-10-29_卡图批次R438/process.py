@@ -23,6 +23,7 @@ W, H = 448, 403
 RATIO = W / H
 WATERMARK_CUT = 0.11   # 底部按比例切掉
 NO_WM_CUT = set()      # 本批无水印需手工修补的图
+RIGHT_CROP = {"8072": 0.20}   # 去水印后、cover 前，先右裁比例（人物偏左，裁右让人回中）
 
 # 采用稿（被弃的版本不在这里，留在 raw/ 存档）
 ADOPT = {
@@ -32,8 +33,8 @@ ADOPT = {
     "8024": "8024_契约签订者_v1_候选.png",      # 兜帽掮客 + 空白长卷轴 + 费用光点
     "8015": "8015_机关工坊_v1_候选.png",        # 工坊场景，画面无人物
     "8050": "8050_旧式机兵_v1_候选.png",        # 锈甲掉板 + 暗红炉栅 + 膝部接线
-    "8060": "8060_代达罗斯_v1_候选.png",        # 双塔盾交叠 + 肩炮 + 青核（8074 量产型复用）
-    "8072": "8072_谟涅摩叙涅_v1_候选.png",      # 半张无面罩板 + 齿轮光环（8075 量产型复用）
+    "8060": "8060_代达罗斯_v12_机库背景.png",     # ikemen 男工匠 + 四臂电磁护盾发生器 + 机库背景（8074 量产型复用）
+    "8072": "8072_谟涅摩叙涅_v9_机械大厅.png",    # 少女 + 雾蓝紫长发 + 机械大厅背景（8075 量产型复用）
 }
 
 
@@ -63,6 +64,9 @@ def main() -> None:
         w, h = im.size
         cut = 0 if cid in NO_WM_CUT else int(round(h * WATERMARK_CUT))
         im = im.crop((0, 0, w, h - cut))    # ① 去水印
+        if cid in RIGHT_CROP:               # ①b 右裁（人物偏左回中）
+            w, h = im.size
+            im = im.crop((0, 0, w - int(round(w * RIGHT_CROP[cid])), h))
         im = cover(im, RATIO)               # ② cover
         im = im.resize((W, H), Image.LANCZOS)   # ③ 定稿尺寸
         dst = os.path.join(OUT, cid + ".png")
