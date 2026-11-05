@@ -4787,10 +4787,10 @@ func _check_frozen_aura(scene: Variant) -> void:
 	if not scene._board_has_frozen():
 		_smoke_fail("冰封特效：场上有 frozen 单位时 _board_has_frozen() 应为真")
 		return
-	# 常驻光环：直接调（内部只读 frozen，不改状态）——真渲染在后面的帧里发生
+	# 常驻光环：只在 draw 信号中绘制；headless 验证状态，真实渲染验证像素
 	var c2: Vector2 = scene._display_center(pl, cell)
-	scene._draw_frozen_aura(c2, 40.0, 56.0, 0)
-	scene._draw_frozen_aura(c2, 40.0, 56.0, 1)   # 徽标在第 2 行（上方留给嘲讽）
+	scene.draw.connect(scene._draw_frozen_aura.bind(c2, 40.0, 56.0, 0), CONNECT_ONE_SHOT)
+	scene.draw.connect(scene._draw_frozen_aura.bind(c2, 40.0, 56.0, 1), CONNECT_ONE_SHOT)   # 徽标在第 2 行（上方留给嘲讽）
 	if not scene._board_has_taunt():
 		pass   # 本用例没放嘲讽单位，这里只是确认函数可共存调用
 	# frozen 事件：引擎唯一入口会 emit，界面据此演飘字
@@ -4850,7 +4850,7 @@ func _check_sleep_aura(scene: Variant) -> void:
 	# 徽标行号 0/1/2 都画一遍 → 三个状态同时成立时也不该有绘制错误/重叠
 	var cs: Vector2 = scene._display_center(sp, cell)
 	for row in 3:
-		scene._draw_sleep_aura(cs, 40.0, 56.0, 2, row)
+		scene.draw.connect(scene._draw_sleep_aura.bind(cs, 40.0, 56.0, 2, row), CONNECT_ONE_SHOT)
 	# 徽标宽度随文案长度自适应（「沉睡 2」比「冰封」长，写死宽度会被截断）
 	var bw2 := maxf(40.0, 14.0 + float("沉睡 2".length()) * 11.0)
 	if bw2 <= 40.0:
@@ -4900,7 +4900,7 @@ func _check_sleep_aura(scene: Variant) -> void:
 		eng.state.board.erase(cell)
 		return
 	scene._wake_rings.clear()
-	scene._draw_wake_rings()   # 真渲染空/非空两种状态都不出错
+	scene.queue_redraw()   # 由正式 _draw 绘制，不在测试函数里直接调用绘制 API
 	if ours and eng.state.unit_at(cell) == sp:
 		eng.state.board.erase(cell)   # 清场：别把 dummy 留给后续用例
 	print("SMOKE OK 沉睡特效：常驻紫环 + 「沉睡 N」徽标（3 行互不重叠）+ 苏醒挣脱环，同源于 Placement.sleep_left；R122 起回合口与受伤口并存（都在减）")

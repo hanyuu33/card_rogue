@@ -1656,10 +1656,7 @@ func _ellipsis(text: String, max_w: float, px: int) -> String:
 
 # ------------------------------------------------------------ 道具栏
 
-## R470（用户口径「道具太多显示不下」）：**一行排满就换下一行，无限堆叠** ——
-## 不再有「+N」折叠，也不再限制显示数量。
-## 徽章要**绕开固定 UI**（卡组按钮 / 巧克力 / 本层 Boss 名牌 / 标题 / 图例条 /
-## 左侧三个标记按钮），但**允许压在地图上**（用户明确「不要害怕遮盖地图」）。
+## 右侧两列：从右列向下排，再排左列；超过容量在两列内滚动，不遮地图。
 const RELIC_BADGE_W := 98.0
 const RELIC_BADGE_H := 26.0
 const RELIC_STEP_X := 104.0    # 徽章宽 98 + 6 间隙
@@ -1709,8 +1706,7 @@ func _relic_slot_list() -> Array[Rect2]:
 
 
 func _relic_rect(i: int) -> Rect2:
-	## 第 i 枚道具徽章的矩形。槽位用完（极端：道具多到铺满整屏）时**叠在最后一槽**，
-	## 不越界、不报错 —— 宁可重叠也不要画到屏幕外。
+	## 与绘制共用槽位；滚出可视范围的条目返回屏外零尺寸矩形。
 	var slots := _relic_slot_list()
 	if slots.is_empty():
 		return Rect2(size.x - RELIC_EDGE_R - RELIC_BADGE_W, RELIC_BADGE_Y,

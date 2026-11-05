@@ -15941,6 +15941,8 @@ func _set_over_gold(total: int, parts: Array[String]) -> void:
 
 
 func _draw_banner() -> void:
+	if _map_visible:
+		return
 	## 回合切换大字横幅：淡入 → 停留 → 上浮淡出。
 	if _banner.is_empty():
 		return

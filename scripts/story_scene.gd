@@ -488,10 +488,11 @@ func _draw_detail() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, w - 94.0, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	# 关闭
 	var cr := _detail_close_rect()
-	draw_rect(cr, Color("4a2c2c") if cr.has_point(get_local_mouse_position())
-			else UiTheme.PAGE_PAPER, true)
-	draw_string(_font_bold, cr.position + Vector2(0, 22), "×",
-			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
+	var close_tex := UiAssets.small_icon("adventure_shared/close_forest", 64)
+	if close_tex != null:
+		var icon_rect := Rect2(cr.get_center() - Vector2(15, 15), Vector2(30, 30))
+		draw_texture_rect(close_tex, icon_rect, false,
+				Color(1.2, 1.2, 1.2) if cr.has_point(get_local_mouse_position()) else Color.WHITE)
 	draw_line(Vector2(x0, r.position.y + 54.0), Vector2(x1, r.position.y + 54.0),
 			Color("3d424e"), 1.0)
 	# 正文

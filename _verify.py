@@ -44,6 +44,7 @@ OK = "\u2713"
 BAD = "\u2717"
 
 SUITES = [
+    ("mana", ["--headless", "--path", ROOT, "--script", "res://tools/verify_battle_mana.gd"], "art_src/2026-11-05_handoff_completion/mana_headless.log"),
     ("engine", ["--headless", "--path", ROOT, "--script", "res://scripts/test_engine.gd"], "_e.txt"),
     ("reward", ["--headless", "--path", ROOT, "--script", "res://scripts/test_reward.gd"], "_r.txt"),
     # R176：BGM 套件 —— 7 槽位素材/loop、分级·分层映射、播放语义（不重启/交叉淡入）、
@@ -108,7 +109,7 @@ def main():
         if broken:
             for pl in parse_lines[:5]:
                 print("        !! " + pl[:120])
-        if rc != 0 or bad > 0 or broken or not smoke_ok:
+        if rc != 0 or bad > 0 or broken or not smoke_ok or (name == "mana" and "MANA HUD PASS" not in d):
             fail = True
     print("== _verify：%s ==" % ("有失败" if fail else "全部通过"))
     sys.exit(1 if fail else 0)

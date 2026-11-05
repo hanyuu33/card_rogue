@@ -337,3 +337,5 @@ curtain_plate.png         名称牌（聊谁是说话人）            建议 52
 reward_icons/{cards,legendary,relic,deck_delete,core}.png：奖励列表类型图标，透明 PNG，内置 imagegen 生成；不替换卡牌数值徽章。
 
 map_icons/{start,battle,elite,rest,event,shop,chest,bigchest,unknown}.png：简化轮廓地图图标，通过 UiAssets.node_icon 共用，原 map_*.png 保留回退。reward_icons/deck_delete.png 已改为单独剪刀。
+
+2026-11-05：adventure_shared/battle_mana_meter.png 战斗费用/蓄力/闪躲仪表；close_forest.png 故事详情关闭素材。
