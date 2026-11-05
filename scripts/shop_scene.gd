@@ -18,6 +18,7 @@ extends Control
 ## 金币不足 / 无可选卡时给出提示，不扣钱。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const TextWrap = preload("res://scripts/text_wrap.gd")
 
 # 选卡覆盖层的卡片网格几何（绘制 + 命中**共用**，唯一口 `_pick_card_rect`）
 const PICK_COLS := 5
@@ -51,6 +52,8 @@ const ROW1_MAX := 5            # 第一行固定张数（抽卡数也是它，�
 const ROW1_CARD_W := 150.0     # 卡面基准宽（货架够宽时用这个）
 const ROW1_GAP := 32.0         # 卡面基准间距
 const ROW1_MIN_W := 100.0      # 卡面最小宽（再窄宁可轻微溢出，也不让卡面糊成一片）
+const ROW2_ITEM_MAX_W := 330.0 # 附魔商品不再横向拉满货架
+const ROW3_ITEM_MAX_W := 250.0 # 服务商品收窄，说明改到底部整宽折行
 
 # 附魔定义（id → 元数据）
 const ENCHANTS := [
@@ -84,6 +87,7 @@ var _row3: Array = []          # [{key: "delete"/"maxhp"/"choco", sold: bool}]
 # 附魔购买流程状态
 var _enchanting := -1          # 第二行正在附魔的商品下标（-1 = 无）
 var _deleting := false         # 第三行「删除一张卡」的选卡覆盖层（true = 弹卡组选一张删）
+var _sel_goods := -1
 var _hover := -1               # 悬停的商品下标（按全局编号）
 var _hover_enchant_card := -1  # 附魔/删除选卡时悬停的卡下标
 var _sel_row1 := -1            # 「选中查看」的第一行卡下标（R203：两段式购买首击）
@@ -680,18 +684,19 @@ func _draw_shelves() -> void:
 	var shelf_tex: Texture2D = UiAssets.get_tex("shelf")
 	for i in 3:
 		var shelf: Rect2 = rects[i]["shelf"]
+		var visual := shelf.grow_individual(12.0, 0.0, 12.0, 0.0)
 		if shelf_tex != null:
-			# 货架素材横向拉伸（木板横条形态，横向拉伸不破坏观感）
-			draw_texture_rect(shelf_tex, Rect2(shelf.position.x, shelf.position.y - 40.0,
-					shelf.size.x, shelf.size.y + 40.0), false)
+			# 货架素材横向拉伸；左右各多 12px，商品组留在木板内。
+			draw_texture_rect(shelf_tex, Rect2(visual.position.x, visual.position.y - 40.0,
+					visual.size.x, visual.size.y + 40.0), false)
 		else:
 			# 程序化木板：深棕横条 + 上沿高光 + 两端竖撑
-			draw_rect(shelf, Color("5a3d22"), true)
-			draw_rect(Rect2(shelf.position.x, shelf.position.y, shelf.size.x, 4.0),
+			draw_rect(visual, Color("5a3d22"), true)
+			draw_rect(Rect2(visual.position.x, visual.position.y, visual.size.x, 4.0),
 					Color("8a6138"), true)
-			draw_rect(Rect2(shelf.position.x, shelf.position.y, 8.0, shelf.size.y),
+			draw_rect(Rect2(visual.position.x, visual.position.y, 8.0, visual.size.y),
 					Color("3a2815"), true)
-			draw_rect(Rect2(shelf.end.x - 8.0, shelf.position.y, 8.0, shelf.size.y),
+			draw_rect(Rect2(visual.end.x - 8.0, visual.position.y, 8.0, visual.size.y),
 					Color("3a2815"), true)
 
 
@@ -746,44 +751,42 @@ func _draw_row1() -> void:
 					Color("ff9a9a"))
 
 
-func _draw_row2() -> void:
-	var rects := _row_rects()
-	var row: Rect2 = rects[1]["row"]
+func _row23_item_rect(row_index: int, i: int) -> Rect2:
+	## 第二/三行商品几何唯一口：限宽后整组居中，绘制与点击必须都走这里。
+	var row: Rect2 = _row_rects()[row_index]["row"]
+	var n := _row2.size() if row_index == 1 else _row3.size()
 	var gap := 18.0
+	var max_w := ROW2_ITEM_MAX_W if row_index == 1 else ROW3_ITEM_MAX_W
+	var bw := minf((row.size.x - maxi(0, n - 1) * gap) / maxi(1, n), max_w)
+	var total := n * bw + maxi(0, n - 1) * gap
+	var x0 := row.position.x + (row.size.x - total) * 0.5
+	return Rect2(x0 + i * (bw + gap), row.position.y, bw, row.size.y)
+
+
+func _draw_row2() -> void:
 	var n := _row2.size()
-	var bw := (row.size.x - (n - 1) * gap) / n
-	var x0 := row.position.x
-	var y := row.position.y
-	var bh := row.size.y
 	for i in n:
 		var e: Dictionary = _row2[i]
 		var ench: Dictionary = e["ench"]
 		var sold: bool = e["sold"]
-		var rr := Rect2(x0 + i * (bw + gap), y, bw, bh)
+		var rr := _row23_item_rect(1, i)
 		_draw_goods_box(rr, str(ench["icon"]), _ench_name(ench), str(ench["desc"]),
-				int(ench["price"]), sold, _hover == _row2_base + i, _enchanting == i and not sold,
+				int(ench["price"]), sold, (_sel_goods if _is_touch() else _hover) == _row2_base + i, _enchanting == i and not sold,
 				"enchant")
 		if sold:
 			_draw_sold_mask(rr)
 
 
 func _draw_row3() -> void:
-	var rects := _row_rects()
-	var row: Rect2 = rects[2]["row"]
-	var gap := 18.0
 	var n := _row3.size()
-	var bw := (row.size.x - (n - 1) * gap) / n
-	var x0 := row.position.x
-	var y := row.position.y
-	var bh := row.size.y
 	for i in n:
 		var e: Dictionary = _row3[i]
 		var sold: bool = e["sold"]
 		# R440 暗动力（6054）：商店的「删除一张卡」被封掉 → 画封禁遮罩（与售罄两套文案）。
 		var blocked := str(e["key"]) == "delete" and not RunState.shop_delete_allowed()
-		var rr := Rect2(x0 + i * (bw + gap), y, bw, bh)
+		var rr := _row23_item_rect(2, i)
 		_draw_goods_box(rr, str(e["icon"]), str(e["name"]), str(e["desc"]),
-				int(e["price"]), sold, _hover == _row3_base + i, false, "service")
+				int(e["price"]), sold, (_sel_goods if _is_touch() else _hover) == _row3_base + i, false, "service")
 		if blocked:
 			_draw_block_mask(rr, "暗动力")
 		elif sold:
@@ -792,30 +795,34 @@ func _draw_row3() -> void:
 
 func _draw_goods_box(rr: Rect2, icon_name: String, name: String, desc: String,
 		price: int, sold: bool, hovered: bool, active: bool, category: String = "service") -> void:
-	## 第二行（附魔 "enchant"）商品背景是**木板**、第三行（常驻 "service"）是**石板** ——
-	## 每件商品是一块独立的板子，四边带不规则缺口（缺口处透明），不再用纯黑底。
-	## 两行仍用「附魔紫 / 服务金」角标 + 悬停描边区分类别语义。
-	var is_ench := category == "enchant"
-	var accent := Color("9b6bd8") if is_ench else Color("c8951c")          # 悬停/激活描边
-	var accent_dim := Color("5a4a78") if is_ench else Color("6b5a3a")      # 常态描边
-	var tag_col := Color("c9a6f0") if is_ench else Color("e0c070")         # 角标文字色
-	var tag_bg := Color("2a1f3a") if is_ench else Color("2a2413")          # 角标底
-	# 木板 / 石板底（带缺口 + 木纹/石纹）
-	_draw_plate(rr, is_ench, hovered or active)
-	# 左上角类别角标（附魔 / 服务）
-	var tag_text := "附魔" if is_ench else "服务"
-	var tag_rect := Rect2(rr.position + Vector2(0, 10), Vector2(38, 18))
-	draw_rect(tag_rect, tag_bg, true)
-	draw_string(_font, tag_rect.position + Vector2(0, 13), tag_text,
-			HORIZONTAL_ALIGNMENT_CENTER, tag_rect.size.x, 10, tag_col)
+	var side := minf(80.0, rr.size.y - 12)
+	var box := Rect2(Vector2(rr.get_center().x - side / 2, rr.end.y - side), Vector2(side, side))
+	if hovered or active:
+		draw_circle(box.get_center(), side * 0.58, Color(1, 0.85, 0.4, 0.25))
+		draw_arc(box.get_center(), side * 0.58, 0, TAU, 48, Color("e4bd62"), 3, true)
 	var icon: Texture2D = UiAssets.shop_icon(icon_name)
 	if icon != null:
-		draw_texture_rect(icon, Rect2(rr.position + Vector2(12, 34), Vector2(44, 44)), false)
+		draw_texture_rect(icon, box, false)
+	if not hovered and not active:
+		return
+	rr = Rect2(_goods_x0(), _vs().y - 148, _goods_w(), 130)
+	_draw_plate(rr, false, true)
 	var tx := rr.position.x + 66.0
 	draw_string(_font_bold, Vector2(tx, rr.position.y + 42), name,
 			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 120, UiTheme.FS_SUBHEAD, UiTheme.PAGE_INK)
-	draw_string(_font, Vector2(tx, rr.position.y + 66), desc,
-			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 76, 11, UiTheme.PAGE_MUTED)
+	var desc_x := rr.position.x + 12.0
+	var desc_w := rr.size.x - 24.0
+	var lines := TextWrap.wrap_plain(_font, desc, desc_w, 11)
+	var max_lines := maxi(1, int((rr.size.y - 96.0) / 14.0) + 1)
+	if lines.size() > max_lines:
+		lines = lines.slice(0, max_lines)
+		var last := lines[max_lines - 1]
+		while last.length() > 0 and _font.get_string_size(last + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x > desc_w - 2.0:
+			last = last.left(last.length() - 1)
+		lines[max_lines - 1] = last + "…"
+	for li in lines.size():
+		draw_string(_font, Vector2(desc_x, rr.position.y + 70.0 + li * 14.0), lines[li],
+				HORIZONTAL_ALIGNMENT_LEFT, desc_w, 11, UiTheme.PAGE_MUTED)
 	draw_string(_font_bold, Vector2(rr.end.x - 52, rr.position.y + 42),
 			"%d" % price, HORIZONTAL_ALIGNMENT_CENTER, 42, UiTheme.FS_SUBHEAD, UiTheme.PAGE_INK)
 
@@ -1223,6 +1230,17 @@ func _on_click(pos: Vector2) -> void:
 		_buy_card(bi)
 		return
 	var hit := _hit_at(pos)
+	if _is_touch() and hit >= _row2_base:
+		if _sel_goods != hit:
+			_sel_goods = hit
+			_sel_row1 = -1
+			_set_hint("再次点击选中商品购买")
+			return
+		_sel_goods = -1
+	elif _is_touch():
+		_sel_goods = -1
+		_ask_redraw()
+
 	if hit < 0:
 		if _sel_row1 >= 0:            # 点空白 → 取消「选中查看」
 			_sel_row1 = -1
@@ -1497,21 +1515,11 @@ func _row1_rect(i: int) -> Rect2:
 
 
 func _row2_rect(i: int) -> Rect2:
-	var rects := _row_rects()
-	var row: Rect2 = rects[1]["row"]
-	var gap := 18.0
-	var n := _row2.size()
-	var bw := (row.size.x - (n - 1) * gap) / n
-	return Rect2(row.position.x + i * (bw + gap), row.position.y, bw, row.size.y)
+	return _row23_item_rect(1, i)
 
 
 func _row3_rect(i: int) -> Rect2:
-	var rects := _row_rects()
-	var row: Rect2 = rects[2]["row"]
-	var gap := 18.0
-	var n := _row3.size()
-	var bw := (row.size.x - (n - 1) * gap) / n
-	return Rect2(row.position.x + i * (bw + gap), row.position.y, bw, row.size.y)
+	return _row23_item_rect(2, i)
 
 
 func _leave_rect() -> Rect2:
