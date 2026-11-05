@@ -285,7 +285,8 @@ assets/cardback.png        卡牌背面 / 窗口图标
 ------------------------------------------------------------------------
 bg_shop.png              商店背景                     1280 × 720（神秘猫商人店铺内部；缺图回退深色 #1a1c22）
 shop_keeper.png          商店老板立绘（神秘猫商人）    透明底（站柜台后招手；右侧显示；缺图不显示）
-shelf.png                货架木板横条                 横向拉伸（木板横条形态，横向拉伸不破坏观感；三层货架背景；缺图回退程序画木板）
+shelf_board.png          货架层板                     1070 × 32（十字拉伸；横向拉满货架宽，竖向按 30px 层板 1:1 用；缺图回退程序画板面 + 上沿高光 + 下沿厚度阴影）
+shelf_back.png           货架后挡板                   512 × 176（整张拉伸到任意宽高，不走九宫格；竖木纹深棕背板，左右 10px alpha 渐隐；缺图回退半透明深木色块）
 map_shop.png             地图商店节点图标             64 × 64 透明（缺图回退汉字「商」）
 icon_gold.png            金币图标                     64 × 64 透明（状态条 / 商店共用；缺图回退程序金币）
 shop_icon_card.png       商品图标·卡牌                 64 × 64 透明（第一行卡牌商品）
@@ -340,3 +341,4 @@ map_icons/{start,battle,elite,rest,event,shop,chest,bigchest,unknown}.png：简�
 
 2026-11-05：adventure_shared/battle_mana_meter.png 战斗费用/蓄力/闪躲仪表；close_forest.png 故事与记录详情关闭素材。
 2026-11-05：adventure_shared/panel_journal_light_hd.png 高清浅纸面板（九宫格拉伸，角部34px）；service_vitality.png 商店最大生命服务与对应附魔图标。
+2026-11-05（R508）：shelf.png 整张三层货架图**已停用**，源图归档到 art_src/2026-11-05_商店货架/source_shelf.png（游戏不再引用，避免整张图进发布包）；商店货架改由 shelf_back.png + shelf_board.png 两个槽位拼出，可用 tools/gen_shelf_textures.py 复现。

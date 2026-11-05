@@ -93,7 +93,9 @@ static func shop_icon(name: String) -> Texture2D:
 		"shop_icon_costdown": "icon_cost", "shop_icon_damage": "map_icons/battle",
 		"shop_icon_dimension": "reward_icons/core", "shop_icon_save": "map_icons/chest",
 		"shop_icon_opening": "map_icons/start", "shop_icon_maxhp": "adventure_shared/service_vitality"}
-	return small_icon(str(replacements.get(name, name)), 64)
+	# R508：64 → 96。商店里图标实际画到 84~120px（`shop_scene._goods_icon_box` 随行高自适应），
+	# 64px 纹理是被**放大**在用，边缘发虚；96 起才是缩小采样。
+	return small_icon(str(replacements.get(name, name)), 96)
 
 static func node_icon(type: String) -> Texture2D:
 	var name := "map_icons/" + type

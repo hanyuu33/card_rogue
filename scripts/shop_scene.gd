@@ -10,7 +10,8 @@ extends Control
 ##   * 保存（回合结束手牌不丢弃，做成字段）价 60
 ## 第三行：固定 3 项：删一张卡 50 / +5 最大生命（并回血）50 / 买一块巧克力 80（R295：120 → 80）。
 ##
-## 三行商品背后各有一层**货架**（shelf.png 素材，缺图回退程序画木板横条），
+## 三行商品背后各有一层**货架**（R508）：「后挡板 shelf_back.png」+ 「层板 shelf_board.png」，
+## 都没有护栏/立柱 —— 商品（图标 / 卡牌）直接立在层板上，缺图时回退程序画纯色板与背板。
 ## 货架宽度 = 商品区宽度，随屏幕比例自适应。
 ##
 ## 附魔购买流程：选附魔 → 选卡（高亮可选卡）→ 成功入卡组，无候选卡则提示。
@@ -538,7 +539,11 @@ func _goods_w() -> float:
 
 func _top_h() -> float:
 	## 顶部标题带高度（R481 起不再含金币行 —— 金币交给头像框 HUD，别在这里再画一份）。
-	return 64.0
+	## R508：124 → 100。124 是上一轮为了躲开标题框临时顶上去的，代价是三行整体下压、
+	## 第三行几乎贴到「离开商店」。100 的实测余量：标题框底 = 58（`_draw_header`），
+	## 第一行卡顶 = 100，卡顶价签最高点 = 100 - 12 = 88，稀有度缎带探出约 20 → 80。
+	## 三者都还在 58 以下留 20px 以上，任何窗口比例下都不会压到标题框。
+	return 100.0
 
 
 func _bottom_h() -> float:
@@ -551,33 +556,45 @@ func _row_rects() -> Array:
 	## 第二、三行（附魔 / 固定项）均分剩余高度 —— 卡牌不再被拉伸失真。
 	var top := _top_h()
 	var bottom := _bottom_h()
-	var area_h := _vs().y - top - bottom
-	var shelf_h := 30.0          # 每层货架木板高
-	var gap_v := 14.0            # 行与行之间的垂直留白
+	var bottom_pad := 16.0       # R508：第三行层板与「离开商店」按钮之间的呼吸位
+	var area_h := _vs().y - top - bottom - bottom_pad
+	var shelf_h := 30.0          # R508：层板厚 = `shelf_board.png` 的原始高度，不再垂直缩放
+	var gap_v := 8.0             # R508：10 → 8（用户口径「降低 1-2、2-3 行的间距」）
 	var card_h := _row1_card_h()   # R481：随卡宽等比（58:70）；窄窗卡面缩了，货架也跟着降
 	var row1_h := card_h + shelf_h
 	var row23_h := (area_h - row1_h - gap_v * 2.0) / 2.0
-	row23_h = maxf(row23_h, 96.0 + shelf_h)     # 兜底：商品框至少 96 高
+	# R508：**只保下限、不设上限**。原来卡 140 上限，1024×768 这类窄高窗口会把三行
+	# 全挤在屏幕上半、底下空出 120px（实测）。现在商品区均分到底，多出来的竖向空间
+	# 落在背板上 —— 货架本来就该有「上层还空着」的余地，比整块留白好看。
+	row23_h = maxf(row23_h, 96.0 + shelf_h)
 	var x0 := _goods_x0()
 	var w := _goods_w()
 	var y := top
 	var out: Array = []
+	# 每一行的三块几何（R508）：
+	#   row   —— 商品摆放区（卡面 / 图标底盘），绘制与命中共用
+	#   shelf —— 底部**层板**（`shelf_board.png`，比 row 宽 12px 表示板子出头）
+	#   back  —— **后挡板**（`shelf_back.png`）：从商品区顶上方 10px 一直铺到层板下沿，
+	#            左右各外扩 14px 暗示柜体侧板。画在商品**之前**，商品因此像"摆进架子里"。
 	# 第一行（卡牌）
 	out.append({
 		"row": Rect2(x0, y, w, card_h),
 		"shelf": Rect2(x0, y + card_h, w, shelf_h),
+		"back": Rect2(x0 - 10.0, y, w + 20.0, card_h + shelf_h),
 	})
 	y += row1_h + gap_v
 	# 第二行
 	out.append({
 		"row": Rect2(x0, y, w, row23_h - shelf_h),
 		"shelf": Rect2(x0, y + row23_h - shelf_h, w, shelf_h),
+		"back": Rect2(x0 - 10.0, y, w + 20.0, row23_h),
 	})
 	y += row23_h + gap_v
 	# 第三行
 	out.append({
 		"row": Rect2(x0, y, w, row23_h - shelf_h),
 		"shelf": Rect2(x0, y + row23_h - shelf_h, w, shelf_h),
+		"back": Rect2(x0 - 10.0, y, w + 20.0, row23_h),
 	})
 	return out
 
@@ -639,12 +656,13 @@ func _draw() -> void:
 		draw_texture_rect(keeper, _fit_cover(keeper, kr), false)
 	# 顶部标题 + 金币
 	_draw_header()
-	# 三层货架 + 三行商品
-	_draw_shelves()
+	# 三层货架 + 三行商品（R508：背板 → 商品 → 层板 → 购买按钮，四段顺序不能换）
+	_draw_shelf_backs()   # 后挡板在商品后面
 	_draw_row1()
-	_draw_buy_buttons()   # R390：安卓专用（桌面端单击卡面即成交，不画按钮）
 	_draw_row2()
 	_draw_row3()
+	_draw_shelf_boards()  # 层板压在商品底部
+	_draw_buy_buttons()   # R390：安卓专用（桌面端单击卡面即成交，不画按钮）—— 骑在层板上
 	_draw_goods_popup()
 	_draw_pick_overlay()
 	_draw_leave()
@@ -679,26 +697,49 @@ func _draw_header() -> void:
 
 
 
-func _draw_shelves() -> void:
-	## 三层货架背景（放在商品背后）：有 shelf.png 则铺货架区，缺图回退程序画木板横条。
+func _draw_shelf_backs() -> void:
+	## R508 货架**后挡板**：画在三行商品之前，让商品是"摆进架子里"而不是浮在背景墙上。
+	## 素材 `shelf_back.png`（512×176 竖木纹）整张拉伸 —— 不走九宫格：这块板本来就没有
+	## 需要保形的描边/角花，拉伸只影响木纹疏密，看不出来。
+	## ⚠️ 缺图回退：铺一层半透明深木色。背板的意义是"商品背后有东西"，这一层就够，
+	##    不必再程序化画木纹（那是旧 `_draw_shelves` 的做法，也正是用户说的"护栏"观感来源）。
 	var rects := _row_rects()
-	var shelf_tex: Texture2D = UiAssets.get_tex("shelf")
+	var back_tex: Texture2D = UiAssets.get_tex("shelf_back")
+	for i in 3:
+		var back: Rect2 = rects[i]["back"]
+		if back_tex != null:
+			draw_texture_rect(back_tex, back, false)
+		else:
+			draw_rect(back, Color(0.19, 0.13, 0.09, 0.94), true)
+
+
+func _draw_shelf_boards() -> void:
+	## R508 货架**层板**：画在三行商品之后 —— 图标/卡面底部压在板上，才有"立在架子上"的
+	## 重量感。素材 `shelf_board.png`（1070×32，从原 shelf.png 裁的真实横板）横向拉伸，
+	## 竖向按 1:1 用（32 → 30 只差 2px，肉眼不可见）。
+	## ⚠️ 不再有旧实现两端那两根 8px 竖撑 —— 那是"护栏"，正是本轮要拆掉的东西。
+	var rects := _row_rects()
+	var board_tex: Texture2D = UiAssets.get_tex("shelf_board")
 	for i in 3:
 		var shelf: Rect2 = rects[i]["shelf"]
-		var visual := shelf.grow_individual(12.0, 0.0, 12.0, 0.0)
-		if shelf_tex != null:
-			# 货架素材横向拉伸；左右各多 12px，商品组留在木板内。
-			draw_texture_rect(shelf_tex, Rect2(visual.position.x, visual.position.y - 40.0,
-					visual.size.x, visual.size.y + 40.0), false)
+		# 层板比背板左右各多 6px（16 vs 10）：板子伸出柜体，才看得出"层"。
+		var visual := shelf.grow_individual(16.0, 0.0, 16.0, 0.0)
+		if board_tex != null:
+			draw_texture_rect(board_tex, visual, false)
 		else:
-			# 程序化木板：深棕横条 + 上沿高光 + 两端竖撑
+			# 程序化层板：板面 + 上沿高光 + 下沿厚度阴影（仍是"一块板"，不是栏杆）
 			draw_rect(visual, Color("5a3d22"), true)
-			draw_rect(Rect2(visual.position.x, visual.position.y, visual.size.x, 4.0),
-					Color("8a6138"), true)
-			draw_rect(Rect2(visual.position.x, visual.position.y, 8.0, visual.size.y),
-					Color("3a2815"), true)
-			draw_rect(Rect2(visual.end.x - 8.0, visual.position.y, 8.0, visual.size.y),
-					Color("3a2815"), true)
+			draw_rect(Rect2(visual.position.x, visual.position.y, visual.size.x, 5.0),
+					Color("9a6f42"), true)
+			draw_rect(Rect2(visual.position.x, visual.end.y - 4.0, visual.size.x, 4.0),
+					Color("2f2114"), true)
+		# R508：板下投影。没有这一层，层板就只是"贴在背板上的木纹条"；
+		# 叠 7 条 2px 渐暗横带（Godot 2D 没有现成的线性渐变填充），
+		# 板底立刻"伸"到背板前面，三行也就是三层架子而不是一面木墙。
+		for j in 9:
+			var a := 0.46 * pow(1.0 - float(j) / 9.0, 1.5)
+			draw_rect(Rect2(visual.position.x, visual.end.y + float(j) * 2.0,
+					visual.size.x, 2.0), Color(0.0, 0.0, 0.0, a), true)
 
 
 func _card_price(card: CardData) -> int:
@@ -794,10 +835,31 @@ func _draw_row3() -> void:
 			_draw_sold_mask(rr)
 
 
+func _goods_icon_box(rr: Rect2) -> Rect2:
+	## 第二/三行商品图标的方框 —— **唯一几何口**（R508）。
+	## 原来 `_draw_goods_box` 与 `_draw_goods_popup` 各算一份（84 vs 80、下压 6% vs 不压），
+	## 图标一改大详情板就会压住图标顶。两处都必须走这里。
+	## 下压 6% 的理由：图标素材四周自带透明边距，正对着层板顶画会凭空悬空 30px 左右。
+	# 84 → 随行高自适应（84~120）：4:3 窗口（逻辑 1280×960）里商品格高 246，
+	# 固定 84 会让三件商品缩在格子底部、上面空一大片，不像陈列。
+	var side := clampf(rr.size.y * 0.64, 84.0, 120.0)
+	return Rect2(Vector2(rr.get_center().x - side / 2.0,
+			rr.end.y - side + side * 0.06), Vector2(side, side))
+
+
 func _draw_goods_box(rr: Rect2, icon_name: String, name: String, desc: String,
 		price: int, sold: bool, hovered: bool, active: bool, category: String = "service") -> void:
-	var side := minf(80.0, rr.size.y - 12)
-	var box := Rect2(Vector2(rr.get_center().x - side / 2, rr.end.y - side), Vector2(side, side))
+	var box := _goods_icon_box(rr)
+	var side := box.size.x
+	# R508：商品像"摆"在层板上，靠两件事 ——
+	#   ① 图标框整体下压 6%（见 `_goods_icon_box`）；
+	#   ② 底部一枚扁椭圆落影：贴着层板，影子只有上半截露在板外面。
+	# ⚠️ 影子必须画在图标**之前**，且层板在 `_draw_row2/_draw_row3` 之后才画
+	#    （见 `_draw()` 的四段顺序），影子下半截才会被板自然盖掉 —— 这才叫"立"。
+	draw_set_transform(Vector2(box.get_center().x, rr.end.y - side * 0.02),
+			0.0, Vector2(1.0, 0.30))
+	draw_circle(Vector2.ZERO, side * 0.38, Color(0.0, 0.0, 0.0, 0.30))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if hovered or active:
 		draw_circle(box.get_center(), side * 0.58, Color(1, 0.85, 0.4, 0.25))
 		draw_arc(box.get_center(), side * 0.58, 0, TAU, 48, Color("e4bd62"), 3, true)
@@ -826,7 +888,7 @@ func _draw_goods_popup() -> void:
 	var width := minf(320.0, _vs().x - 24.0)
 	var lines := TextWrap.wrap_plain(_font, str(entry["desc"]), width - 32, 18)
 	var height := 78.0 + lines.size() * 25.0
-	var icon_top := anchor.end.y - minf(80.0, anchor.size.y - 12.0)
+	var icon_top := _goods_icon_box(anchor).position.y
 	var x := clampf(anchor.get_center().x - width * 0.5, 12.0, _vs().x - width - 12.0)
 	var y := maxf(12.0, icon_top - height - 16.0)
 	var rr := Rect2(x, y, width, height)
@@ -1549,7 +1611,9 @@ func _buy_btn_rect(i: int) -> Rect2:
 	## 安卓「购买」按钮的矩形 —— 压在卡牌正下方的**货架条**上（高 30，
 	## 按钮占 26 正好一条）。与 `_row1_rect` 同宽同起点：改卡宽只需改那一处。
 	var rr := _row1_rect(i)
-	return Rect2(rr.position.x + 8.0, rr.position.y + rr.size.y + 2.0, rr.size.x - 16.0, 26.0)
+	# R508：层板高 30，按钮原来 26 高、距卡底 2px —— 等于把整条板盖住，第一行只剩一排绿按钮。
+	# 收成 24 高、上下各留 3px，板的上沿高光和下沿厚度都还在。
+	return Rect2(rr.position.x + 8.0, rr.position.y + rr.size.y + 3.0, rr.size.x - 16.0, 24.0)
 
 
 func _buy_btn_at(pos: Vector2) -> int:

@@ -1,3 +1,22 @@
+## 2026-11-05 商店货架重做（R508 · 当前最新）
+- 用户报的四件事全部落地：①「神秘商店」标题框不再被卡牌压住 ②左上角生命条不再压卡牌
+  ③第一行整行收到 y=100、行距 10→8 ④货架素材重做，去掉护栏、加后挡板。
+- 「上一轮只做了一半」的根因：`_draw_shelves()` 改成读 `UiAssets.get_tex("shelf_open")`，
+  而 `shelf_open.png` **从来没有生成过** → 一路走缺图回退，画出「深棕横条 + 两端 8px 竖撑」，
+  这就是用户口中的"护栏"。现在拆成 `_draw_shelf_backs()`（后挡板，画在商品之前）+
+  `_draw_shelf_boards()`（层板，画在商品之后，板下 9 条渐隐横带当投影）。
+- 新素材 `shelf_board.png`（1070×32，从旧 shelf.png 裁真实横板，两端 alpha 淡出）+
+  `shelf_back.png`（512×176 程序化竖木纹背板，左右 10px alpha 渐隐）。
+  旧 `assets/ui/shelf.png` 已归档为 `art_src/2026-11-05_商店货架/source_shelf.png` 并从
+  assets/ui 删除（游戏代码不再引用，留着只是多 1.6MB 包体）。复现：`python tools/gen_shelf_textures.py`。
+- 顺带修掉的两处：`_goods_icon_box()` 收成图标几何唯一口（绘制 / 悬浮详情共用）；商店图标纹理
+  64 → 96px（实际画到 84~120px，64 是被放大在用）。
+- 新门禁 `tools/verify_shop_shelf.gd`（三分辨率布局断言 + 截图，输出 `SHOP SHELF PASS`，
+  **断言读 `scene.size` 逻辑尺寸，不是 root.size 物理窗口**）；`verify_shop_popup.gd` 仍 PASS。
+- `_verify.py` 全通过：mana / engine **5298** / reward **26** / bgm **39** / smoke **64**。
+  engine 的 R481 源码锁下界从 `func _draw_shelves()` 改为 `func _draw_shelf_backs()`。
+- 细节、截图清单与边界见 `art_src/2026-11-05_商店货架/README.md`。
+
 ## 2026-11-05 UI polish 接手收尾（当前最新）
 - 另一 agent 留下的未提交 UI 统一批次已完成验收并收尾：高清浅纸面板九宫格、卡面/徽章 Lanczos 分桶缓存、商店与附魔图标统一、 compact 按钮自适应、战斗地图总览浅纸化、记录/故事关闭按钮共用、设置开关与列表边框统一。
 - 新增素材 `panel_journal_light_hd.png` 与 `service_vitality.png` 已登记；附魔图标实际映射已同步 `UI设计规范.md`。实现、三种分辨率截图与验证说明见 `art_src/2026-11-05_ui_polish/README.md`。

@@ -31617,7 +31617,9 @@ func _init() -> void:
 	check_src(r481_shop.count("_row1_geom()") >= 3,
 			"R481 绘制与命中共用 _row1_geom()（各算一份就会看得到点不中）")
 	var r481_hd := r481_shop.find("func _draw_header() -> void:")
-	var r481_sh := r481_shop.find("func _draw_shelves() -> void:")
+	# R508：货架绘制拆成 `_draw_shelf_backs`（后挡板）+ `_draw_shelf_boards`（层板），
+	# 这里只借它当「_draw_header 函数体结束」的下界，取排在最前面的那一个。
+	var r481_sh := r481_shop.find("func _draw_shelf_backs() -> void:")
 	# ⚠️ 判据是那行**绘制调用**（`"金币 %d"` 字面量），不是「这段里有没有『金币』两个字」——
 	#    函数注释里本来就要写明「为什么不再画金币」，按关键字判会把自己的解释也扫进去。
 	check_src(r481_hd >= 0 and r481_sh > r481_hd
