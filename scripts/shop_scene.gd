@@ -645,6 +645,7 @@ func _draw() -> void:
 	_draw_buy_buttons()   # R390：安卓专用（桌面端单击卡面即成交，不画按钮）
 	_draw_row2()
 	_draw_row3()
+	_draw_goods_popup()
 	_draw_pick_overlay()
 	_draw_leave()
 	_draw_desc_plate()   # R203：悬停/选中卡的描述板（卡面只留卡名后的详情入口）
@@ -803,28 +804,40 @@ func _draw_goods_box(rr: Rect2, icon_name: String, name: String, desc: String,
 	var icon: Texture2D = UiAssets.shop_icon(icon_name)
 	if icon != null:
 		draw_texture_rect(icon, box, false)
-	if not hovered and not active:
+
+
+func _draw_goods_popup() -> void:
+	if _enchanting >= 0 or _deleting:
 		return
-	rr = Rect2(_goods_x0(), _vs().y - 148, _goods_w(), 130)
+	var hit := _sel_goods if _is_touch() else _hover
+	var entry: Dictionary
+	var anchor: Rect2
+	var title: String
+	if hit >= _row2_base and hit < _row3_base:
+		entry = _row2[hit - _row2_base]["ench"]
+		anchor = _row2_rect(hit - _row2_base)
+		title = _ench_name(entry)
+	elif hit >= _row3_base and hit < _row3_base + _row3.size():
+		entry = _row3[hit - _row3_base]
+		anchor = _row3_rect(hit - _row3_base)
+		title = str(entry["name"])
+	else:
+		return
+	var width := minf(320.0, _vs().x - 24.0)
+	var lines := TextWrap.wrap_plain(_font, str(entry["desc"]), width - 32, 18)
+	var height := 78.0 + lines.size() * 25.0
+	var icon_top := anchor.end.y - minf(80.0, anchor.size.y - 12.0)
+	var x := clampf(anchor.get_center().x - width * 0.5, 12.0, _vs().x - width - 12.0)
+	var y := maxf(12.0, icon_top - height - 16.0)
+	var rr := Rect2(x, y, width, height)
 	_draw_plate(rr, false, true)
-	var tx := rr.position.x + 66.0
-	draw_string(_font_bold, Vector2(tx, rr.position.y + 42), name,
-			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 120, UiTheme.FS_SUBHEAD, UiTheme.PAGE_INK)
-	var desc_x := rr.position.x + 12.0
-	var desc_w := rr.size.x - 24.0
-	var lines := TextWrap.wrap_plain(_font, desc, desc_w, 11)
-	var max_lines := maxi(1, int((rr.size.y - 96.0) / 14.0) + 1)
-	if lines.size() > max_lines:
-		lines = lines.slice(0, max_lines)
-		var last := lines[max_lines - 1]
-		while last.length() > 0 and _font.get_string_size(last + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x > desc_w - 2.0:
-			last = last.left(last.length() - 1)
-		lines[max_lines - 1] = last + "…"
-	for li in lines.size():
-		draw_string(_font, Vector2(desc_x, rr.position.y + 70.0 + li * 14.0), lines[li],
-				HORIZONTAL_ALIGNMENT_LEFT, desc_w, 11, UiTheme.PAGE_MUTED)
-	draw_string(_font_bold, Vector2(rr.end.x - 52, rr.position.y + 42),
-			"%d" % price, HORIZONTAL_ALIGNMENT_CENTER, 42, UiTheme.FS_SUBHEAD, UiTheme.PAGE_INK)
+	draw_string(_font_bold, rr.position + Vector2(16, 29), title,
+			HORIZONTAL_ALIGNMENT_LEFT, width - 32, 22, UiTheme.PAGE_INK)
+	for i in lines.size():
+		draw_string(_font, rr.position + Vector2(16, 57 + i * 25), lines[i],
+				HORIZONTAL_ALIGNMENT_LEFT, width - 32, 18, UiTheme.PAGE_INK)
+	draw_string(_font_bold, Vector2(x + 16, rr.end.y - 15), "%d 金币" % int(entry["price"]),
+			HORIZONTAL_ALIGNMENT_LEFT, width - 32, 18, UiTheme.PAGE_INK)
 
 
 func _draw_plate(rr: Rect2, _wood: bool, lit: bool) -> void:
