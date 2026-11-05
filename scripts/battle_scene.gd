@@ -8053,7 +8053,7 @@ func _draw_map_panel() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.55))
 	UiTheme.draw_panel_bg(self, pr)
 	_draw_string_center(_font_bold, UI_FS_BODY, "冒 险 地 图（战斗中查看）",
-			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 26.0), UiTheme.PAGE_INK, -1)
+			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 40.0), UiTheme.PAGE_INK, -1)
 	# R357：第三层没有步数机制 → 这一行里不再出现「巧克力 ×N」（否则永远显示满格的
 	# 12，玩家会以为「还有 12 步可以走」）。
 	var mv_info := "%s    已探索 %d / %d 间    生命 %d/%d    卡组 %d 张" % [
@@ -8067,11 +8067,11 @@ func _draw_map_panel() -> void:
 				RunState.chocolate, RunState.hp, RunState.max_hp,
 				RunState.deck_ids.size()]
 	_draw_string_center(_font, UI_FS_CAPTION, mv_info,
-			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 48.0), UiTheme.PAGE_MUTED, -1)
+			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 62.0), UiTheme.PAGE_MUTED, -1)
 	_draw_string_center(_font, UI_FS_CAPTION,
 			"本层 Boss：%s　·　战斗中不能改路线"
 			% str(RunState.boss_level().get("name", "")),
-			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 68.0), Color("8f8b80"), -1)
+			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 82.0), Color("8f8b80"), -1)
 	# ⚠️ 顺序不可换：格子底 → 通路（小桥） → 图标（与冒险地图同一套）。
 	_draw_map_tiles()
 	_draw_map_fog()
@@ -8210,7 +8210,7 @@ func _draw_map_nodes() -> void:
 
 func _draw_map_legend(pr: Rect2) -> void:
 	## 底部图例：八种房间类型各一格 + 两条状态说明。
-	var y := pr.position.y + pr.size.y - MAPVIEW_BOT + 20.0
+	var y := pr.position.y + pr.size.y - MAPVIEW_BOT + 8.0
 	var x := pr.position.x + 28.0
 	for type in ["start", "battle", "elite", "rest", "event", "chest", "bigchest", "unknown"]:
 		var base: Color = UiTheme.MAP_NODE_COLORS.get(type, UiTheme.INK_500)

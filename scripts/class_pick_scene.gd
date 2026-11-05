@@ -18,6 +18,7 @@ const PANEL_W := 416.0
 const DIFF_ARROW_W := 44.0     # 箭头按钮宽
 const DIFF_ROW_H := 38.0       # 档位行高
 const DIFF_GAP := 8.0          # 箭头与档位盒的间距
+const DIFF_ROW_W := 272.0      # 整组收窄并居中，箭头不压面板边框
 const NOTE_LINES := 3          # 当前档新增 debuff 文本行数预算（FS_CAPTION 12px / 行距 14）
 const NOTE_LH := 14.0
 const SUM_LINES := 2           # 数值摘要行数预算（FS_MICRO 10px / 行距 12）
@@ -102,7 +103,8 @@ func _panel_rect() -> Rect2:
 # 从面板底边往上排：确认钮(54) -8- 摘要(SUM) -2- 累计文本(NOTE) -6- 档位行(38)。
 func _diff_row_rect() -> Rect2:
 	var p := _panel_rect()
-	return Rect2(p.position.x + 20.0, p.end.y - 154.0 - DIFF_ROW_H, PANEL_W - 40.0, DIFF_ROW_H)
+	return Rect2(p.get_center().x - DIFF_ROW_W * 0.5, p.end.y - 154.0 - DIFF_ROW_H,
+			DIFF_ROW_W, DIFF_ROW_H)
 
 
 func _diff_left_rect() -> Rect2:
