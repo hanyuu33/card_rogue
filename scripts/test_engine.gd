@@ -32543,6 +32543,18 @@ func _init() -> void:
 			"R467 奖励②：点「确认选择」才真的进卡组（入队 ≠ 发放）")
 	RunState.pending_rewards = []
 
+	# ── event_only 不泄进任何可获得池（R509c 修 bug：枭熊曾被当成公用卡进森林精魄卡池 + 可 ban）──
+	var r467_in_pool := false
+	for r467_pc: CardData in r467_repo.reward_pool():
+		if r467_pc.id == 9213:
+			r467_in_pool = true
+	check(not r467_in_pool, "R467 枭熊池①：event_only 卡不进随机奖励池（reward_pool）")
+	var r467_in_obtain := false
+	for r467_oc: CardData in r467_repo.obtainable_cards():
+		if r467_oc.id == 9213:
+			r467_in_obtain = true
+	check(not r467_in_obtain, "R467 枭熊池②：event_only 卡不进可获得池（禁卡表列表，不能再被 ban）")
+
 	# ══ R468：洞穴摆位与敌方血池（用户口径「枭熊放到敌人区域正中央 (1,1)」）══
 	var r468_cell: Vector2i = r467_lvl["enemy_units"][0][6]
 	check(r468_cell == Vector2i(1, 1),

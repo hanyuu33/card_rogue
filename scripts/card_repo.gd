@@ -64,6 +64,10 @@ func obtainable_cards() -> Array[CardData]:
 			continue
 		if c.locked and not ProfileData.is_card_unlocked(c.id):
 			continue
+		# R509c：event_only（事件/关卡专属，如洞穴枭熊 9213）不该进可获得池——
+		# 不进随机奖励池（reward_pool 已拦），更不该出现在禁卡表里可被 ban。
+		if c.event_only:
+			continue
 		out.append(c)
 	out.sort_custom(func(a: CardData, b: CardData): return a.id < b.id)
 	return out
