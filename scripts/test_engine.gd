@@ -20078,7 +20078,7 @@ func _init() -> void:
 			and int((r241_p as Dictionary).get("seed", 0)) == 8888,
 			"R241 中断记录：update_pending 把快照与种子写进 pending")
 	# ⑦ 确定性源码守卫：商店商品 / 附魔池必须走本局随机链
-	var r241_ssrc := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	var r241_ssrc := FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
 	# R481：第一行张数改成常量 `ROW1_MAX`（固定 5 张），守卫跟着改 —— 关键是那串
 	# 随机源参数 `RunState.run_rng` 还在，不是「换个常量名就放过」。
 	check_src(r241_ssrc.find("CardReward.roll(_repo, \"boss\", ROW1_MAX, RunState.run_rng)") >= 0
@@ -24887,7 +24887,7 @@ func _init() -> void:
 	check(int(r295_map.get("PRICE_DELETE", -1)) == 50 \
 			and int(r295_map.get("PRICE_MAXHP", -1)) == 50,
 			"R295 商店：删卡 / +5 最大生命仍是 50（只动巧克力）")
-	var r295_src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	var r295_src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
 	check_src(r295_src.find("\"price\": PRICE_CHOCO") >= 0 \
 			and r295_src.find("\"price\": PRICE_MAXHP") >= 0 \
 			and r295_src.find("\"price\": PRICE_DELETE") >= 0 \
@@ -28181,11 +28181,11 @@ func _init() -> void:
 			check_src(r353_src.find(r353_bad) < 0,
 					"R353 交互教学文字黑名单：%s.gd 不得出现「%s」" % [r353_f, r353_bad])
 	# 正向钉三件替代物：商店删除的「确定」按钮、EE 弹窗与故事解锁动画的「继续」按钮。
-	var r353_shop_src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	var r353_shop_src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
 	check_src(r353_shop_src.find("R353 起附魔与删除模式都显示") >= 0,
 			"R353 源码：商店删除模式也配「确定」按钮（不再只靠双击成交）")
 	var r353_story_src2 := FileAccess.get_file_as_string("res://scripts/story_scene.gd")
-	check_src(r353_story_src2.find("继 续") >= 0,
+	check_src(r353_story_src2.find("继续") >= 0,
 			"R353 源码：故事解锁动画末尾画「继续」按钮")
 
 	# ============================================================
@@ -30760,7 +30760,7 @@ func _init() -> void:
 	check_src(r390_rs.find("static func shop_revisit_ok(") >= 0
 			and r390_rs.find("static func store_shop_state(") >= 0,
 			"R390 源码：判定与存储都有唯一口")
-	var r390_ss := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	var r390_ss := FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
 	check_src(r390_ss.find("RunState.shop_mark_revisit(_shop_node)") >= 0,
 			"R390 源码：离开商店时登记重进窗口")
 	check_src(r390_ss.find("var saved := RunState.shop_state_of(_shop_node)") >= 0
@@ -31166,7 +31166,7 @@ func _init() -> void:
 		"R399 巧克力层判定之后恢复了当前层（不留副作用）")
 	var r399_shop := ""
 	if ResourceLoader.exists("res://scripts/shop_scene.gd"):
-		r399_shop = FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+		r399_shop = FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
 	check_src(r399_shop.find("if RunState.current_layer != GameLayers.LAYER_THREE:") >= 0,
 		"R399 源码：第三层的商店货架不摆巧克力")
 
@@ -31576,7 +31576,7 @@ func _init() -> void:
 	# 这几条全是**守卫**（源码字符串），因为 shop_scene 是场景、实例化会拉整套 _ready。
 	# 真正要钉住的是四件事：① 概率与随机源；② 成交价只有一个口；
 	# ③ 折扣跟着货架存档走（重进不重摇、读档不丢）；④ 贴纸画完要复位 transform。
-	var r432_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	var r432_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
 	check_src(r432_shop.find("const OFF_CHANCE := 0.20") >= 0,
 			"R432 五折概率 = 0.20（唯一常量 OFF_CHANCE）")
 	check_src(r432_shop.find("RunState.run_rng.randf() < OFF_CHANCE") >= 0,
@@ -31634,8 +31634,8 @@ func _init() -> void:
 			"R435 贴纸主体改多边形（四角错位 + 上下边起伏），不再是规整矩形")
 	check_src(r432_shop.find("rr.end.x - 37.0 * k") >= 0,
 			"R435 贴纸右移口径（-42k → -37k + 尺寸 62×26）")
-	check_src(r432_shop.find("Color(\"6fe07a\") if off else Color(\"ffd75a\")") >= 0,
-			"R435 打折卡价签金额转绿（未打折仍是金色）")
+	check_src(r432_shop.find("UiTheme.ADVENTURE_FOREST if off else UiTheme.PAGE_INK") >= 0,
+			"R435 打折卡价签金额转绿（未打折为纸面深色）")
 	check_src(r432_shop.find("func _draw_off_tag(") >= 0
 			and r432_shop.find("var c := h * 0.36") >= 0,
 			"R435 卷角边长 c = 0.36h（太小在 720p 只有几个像素；0.46h 又像撕掉一角）")
@@ -31762,7 +31762,7 @@ func _init() -> void:
 				% r440_rp.count("RunState.must_take_card_reward()"))
 	check_src(r440_rp.find('"不可放弃" if must_pick else "放弃这组"') >= 0,
 			"R440 界面：「放弃这组」在持有暗动力时换成「不可放弃」并置灰")
-	var r440_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	var r440_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
 	check_src(r440_shop.count("RunState.shop_delete_allowed()") >= 2
 			and r440_shop.find("func _draw_block_mask") >= 0,
 			"R440 商店：绘制与购买都问 shop_delete_allowed()，被封的货位画「暗动力」遮罩")
@@ -32689,7 +32689,7 @@ func _init() -> void:
 	check(RunState.delete_deck_card(1) and RunState.deck_ids == [9180],
 		"R472 删卡锁：不带锁的卡照常删得掉（锁没有连带把正常路径堵死）")
 	RunState.deck_ids = r472_deck_bak
-	var r472_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	var r472_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
 	check_src(r472_shop.contains("RunState.remove_block_reason(i)")
 			and not r472_shop.contains("c.no_remove"),
 		"R472 删卡锁：商店删卡列表读唯一判据口（带锁卡灰化，不再自己抄 no_remove）")

@@ -267,7 +267,7 @@ static func draw_tip(canvas: CanvasItem, font: Font, font_bold: Font,
 	## 道具 → 名称 + 「类型 · 来源」+ 完整说明（按面板宽折行）。
 	var sz := tip_size(font, ref)
 	var frame := Rect2(top_left, Vector2(sz.x, sz.y + extra_bottom))
-	canvas.draw_style_box(UiTheme.adventure_panel_style(12.0, true), frame)
+	UiTheme.draw_info_card(canvas, frame)
 	if str(ref.get("kind", "")) == "card":
 		var card := card_for(ref)
 		if card == null:
@@ -292,15 +292,15 @@ static func draw_tip(canvas: CanvasItem, font: Font, font_bold: Font,
 	canvas.draw_string(font_bold, Vector2(frame.position.x + p,
 			frame.position.y + float(m["name_base"])),
 			rel.relic_name, HORIZONTAL_ALIGNMENT_LEFT, inner,
-			UiTheme.FS_SUBHEAD, rel.name_color(rel.badge_color()))
+			UiTheme.FS_SUBHEAD, UiTheme.PAGE_INK)
 	canvas.draw_string(font, Vector2(frame.position.x + p,
 			frame.position.y + float(m["tag_base"])),
 			rel.tag_line(), HORIZONTAL_ALIGNMENT_LEFT,
-			inner, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
+			inner, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 	var y := frame.position.y + float(m["desc_base"])
 	for t: String in lines:
 		canvas.draw_string(font, Vector2(frame.position.x + p, y), t,
-				HORIZONTAL_ALIGNMENT_LEFT, inner, UiTheme.FS_LABEL, Color("f0ead8"))
+				HORIZONTAL_ALIGNMENT_LEFT, inner, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 		y += float(m["line"])
 	# R476：这件道具会加进卡组的那张卡（没有就什么都不多出来）
 	_draw_relic_card(canvas, font, font_bold, rel, frame, y)
@@ -313,27 +313,26 @@ static func _card_tip_blocks(card: CardData) -> Array:
 	var out: Array = []
 	out.append({"segs": [{"text": "%s · %d 费 · %s" % [card.kind, card.cost,
 			card.rarity_name()]}],
-			"col": Color("c9c3b4"), "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 0.0})
+			"col": UiTheme.PAGE_MUTED, "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 0.0})
 	if card.kind == "盟友" or card.kind == "工事":
 		out.append({"segs": [{"text": CardFace.stats_line(card)}],
-				"col": Color("c9c3b4"), "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 2.0})
-	out.append({"segs": [{"text": "效果", "bold": true}], "col": UiTheme.ACCENT_GOLD,
+				"col": UiTheme.PAGE_MUTED, "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 2.0})
+	out.append({"segs": [{"text": "效果", "bold": true}], "col": UiTheme.ADVENTURE_FOREST,
 			"size": UiTheme.FS_CAPTION, "line": 16.0, "gap": 9.0})
-	out.append({"segs": CardText.parse(card.effect_text), "col": Color("f0ead8"),
+	out.append({"segs": CardText.parse(card.effect_text), "col": UiTheme.PAGE_INK,
 			"size": UiTheme.FS_LABEL, "line": 19.0, "gap": 3.0})
 	if not card.affixes.is_empty():
-		out.append({"segs": [{"text": "字段", "bold": true}], "col": UiTheme.ACCENT_GOLD,
+		out.append({"segs": [{"text": "字段", "bold": true}], "col": UiTheme.ADVENTURE_FOREST,
 				"size": UiTheme.FS_CAPTION, "line": 16.0, "gap": 10.0})
 		for a: String in card.affixes:
-			var ac := CardData.affix_colors(a)
 			out.append({"segs": [{"text": CardData.affix_label(a), "bold": true},
 					{"text": "：" + CardData.affix_desc(a)}],
-					"col": ac[1] as Color, "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 4.0})
+					"col": UiTheme.PAGE_INK, "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 4.0})
 	if card.has_enchant():
 		out.append({"segs": [
 				{"text": "附魔 · " + CardData.enchant_title(card), "bold": true},
 				{"text": "：" + CardData.enchant_desc(card.enchant)}],
-				"col": CardData.enchant_color(card.enchant), "size": UiTheme.FS_CAPTION,
+				"col": UiTheme.ADVENTURE_FOREST, "size": UiTheme.FS_CAPTION,
 				"line": 17.0, "gap": 8.0})
 	return out
 
@@ -361,7 +360,7 @@ static func _draw_card_tip_body(canvas: CanvasItem, font: Font, font_bold: Font,
 		y += float(b["gap"])
 		var asc := float(font.get_ascent(size))
 		var res := CardText.draw_wrapped_hits(canvas, font, font_bold, b["segs"], x, y + asc,
-				w, size, float(b["line"]), b["col"], -1.0, -1.0, Color("1a1c22"))
+				w, size, float(b["line"]), b["col"], -1.0, -1.0, UiTheme.PAGE_PAPER)
 		y = float(res.get("y", y + asc)) - asc
 	return y
 
@@ -382,9 +381,9 @@ static func _draw_relic_card(canvas: CanvasItem, font: Font, font_bold: Font,
 	var iw := RELIC_W - p * 2.0
 	var head_base := y0 + RELIC_CARD_HEAD_H - 8.0
 	canvas.draw_line(Vector2(ix, head_base - 15.0), Vector2(ix + iw, head_base - 15.0),
-			Color(1, 1, 1, 0.12), 1.0)
+			UiTheme.ADVENTURE_BRASS, 1.0)
 	canvas.draw_string(font, Vector2(ix, head_base), "获得卡牌",
-			HORIZONTAL_ALIGNMENT_LEFT, iw, UiTheme.FS_CAPTION, UiTheme.ACCENT_GOLD)
+			HORIZONTAL_ALIGNMENT_LEFT, iw, UiTheme.FS_CAPTION, UiTheme.ADVENTURE_FOREST)
 	var cw: float = RELIC_CARD_H * 63.0 / 76.0
 	# +10（不是 +6）：数值徽章会外溢卡框，贴太近会压到上面那行标题。
 	var cpos := Vector2(ix, head_base + 18.0)
@@ -394,18 +393,18 @@ static func _draw_relic_card(canvas: CanvasItem, font: Font, font_bold: Font,
 	var tw: float = iw - cw - 12.0
 	var ty: float = cpos.y + 14.0
 	canvas.draw_string(font_bold, Vector2(tx, ty), card.card_name,
-			HORIZONTAL_ALIGNMENT_LEFT, tw, UiTheme.FS_LABEL, Color("f2e6c8"))
+			HORIZONTAL_ALIGNMENT_LEFT, tw, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	ty += 19.0
 	canvas.draw_string(font, Vector2(tx, ty), "%s · %d 费 · %s" % [card.kind,
 			card.cost, CardFace.stats_line(card)], HORIZONTAL_ALIGNMENT_LEFT, tw,
-			UiTheme.FS_CAPTION, Color("c9c3b4"))
+			UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 	ty += 17.0
 	var bottom: float = cpos.y + RELIC_CARD_H - 2.0
 	for ln: String in CardFace.wrap_text(font, card.effect_text, tw, UiTheme.FS_CAPTION):
 		if ty > bottom:
 			break
 		canvas.draw_string(font, Vector2(tx, ty), ln, HORIZONTAL_ALIGNMENT_LEFT, tw,
-				UiTheme.FS_CAPTION, Color("cfcabb"))
+				UiTheme.FS_CAPTION, UiTheme.PAGE_INK)
 		# 行距走 `BLOCK_LINE_H`：mention.gd 里不许再出现行距字面量（R206 的守卫会报）。
 		ty += BLOCK_LINE_H
 
@@ -417,7 +416,7 @@ static func _draw_tip_block(canvas: CanvasItem, font: Font, font_bold: Font,
 		return 0.0
 	var blk := draw_reference_block(canvas, font, font_bold, block_text,
 			frame.position.x + PAD, frame.position.y + sz.y + 16.0,
-			sz.x - PAD * 2.0, Color("f0ead8"))
+			sz.x - PAD * 2.0, UiTheme.PAGE_INK)
 	return float(blk["y"])
 
 

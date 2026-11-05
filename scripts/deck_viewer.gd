@@ -261,10 +261,10 @@ func _on_panel_draw() -> void:
 			# R114：右上角。卡片底部已归数值徽章（左下力/程、右下生/速）。
 			var badge := Rect2(rect.position + Vector2(rect.size.x - 28, 2),
 					Vector2(26, 16))
-			_panel.draw_rect(badge, Color(0.15, 0.18, 0.15, 0.88))
-			_panel.draw_rect(badge, Color("a8d8a8"), false, 1.0)
+			_panel.draw_rect(badge, UiTheme.ADVENTURE_FOREST)
+			_panel.draw_rect(badge, UiTheme.ADVENTURE_BRASS, false, 1.0)
 			_panel.draw_string(_font_bold, badge.position + Vector2(0, 12),
-					"×%d" % cnt, HORIZONTAL_ALIGNMENT_CENTER, 26, UiTheme.FS_CAPTION, Color("d8f0d8"))
+					"×%d" % cnt, HORIZONTAL_ALIGNMENT_CENTER, 26, UiTheme.FS_CAPTION, UiTheme.ADVENTURE_LIGHT)
 	# 滚动提示
 	if max_scroll > 0:
 		_panel.draw_string(_font, Vector2(px + pw - 300, py + ph - 12),

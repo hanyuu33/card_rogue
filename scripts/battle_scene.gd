@@ -15880,14 +15880,14 @@ func _draw_info_scroll_hint(y_anchor: float, top: bool) -> void:
 	var ypos := y_anchor - (ph + 5.0) if not top else y_anchor + 5.0
 	var r := Rect2(cx - pw / 2.0, ypos, pw, ph)
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.09, 0.08, 0.10, 0.88)
-	sb.border_color = Color("caa24a")
+	sb.bg_color = UiTheme.PAGE_PAPER
+	sb.border_color = UiTheme.ADVENTURE_BRASS
 	sb.set_border_width_all(1)
 	sb.set_corner_radius_all(10)
 	draw_style_box(sb, r)
 	var txt := "▼ 下滑查看" if not top else "▲ 上滑查看"
 	_draw_string_center(_font_bold, UI_FS_CAPTION, txt, r.get_center(),
-			Color("ffe6a8"), -1)
+			UiTheme.ADVENTURE_FOREST, -1)
 
 
 

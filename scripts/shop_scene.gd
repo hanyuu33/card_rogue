@@ -749,7 +749,7 @@ func _draw_row1() -> void:
 			draw_rect(rr, Color(0, 0, 0, 0.55), true)
 			draw_string(_font_bold, rr.position + Vector2(0, rr.size.y / 2),
 					"已售罄", HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_SUBHEAD,
-					Color("ff9a9a"))
+					UiTheme.PAGE_INK)
 
 
 func _row23_item_rect(row_index: int, i: int) -> Rect2:
@@ -847,7 +847,7 @@ func _draw_plate(rr: Rect2, _wood: bool, lit: bool) -> void:
 func _draw_sold_mask(rr: Rect2) -> void:
 	draw_rect(rr, Color(0, 0, 0, 0.55), true)
 	draw_string(_font_bold, rr.position + Vector2(0, rr.size.y / 2),
-			"已售罄", HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_SUBHEAD, Color("ff9a9a"))
+			"已售罄", HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_SUBHEAD, UiTheme.PAGE_INK)
 
 
 func _draw_block_mask(rr: Rect2, why: String) -> void:
@@ -864,11 +864,11 @@ func _draw_price(rr: Rect2, price: int, sold: bool, off := false) -> void:
 	## ⚠️ 只有价签这一个口转绿。触摸端「购买 · N」按钮本来就是绿底，
 	##    金额再转绿会直接糊在底色里 —— 那边保持深绿字，别顺手一起改。
 	var chip := Rect2(rr.end.x - 40, rr.position.y - 12, 40, 26)
-	draw_rect(chip, Color("2a1210") if off else Color("1a1c22"), true)
+	draw_rect(chip, UiTheme.ADVENTURE_INPUT if off else UiTheme.PAGE_PAPER, true)
 	draw_rect(chip, Color("e0634a") if off else Color("c8951c"), false, 1.5)
 	draw_string(_font_bold, chip.position + Vector2(0, 18), "%d" % price,
 			HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 12,
-			Color("6fe07a") if off else Color("ffd75a"))
+			UiTheme.ADVENTURE_FOREST if off else UiTheme.PAGE_INK)
 
 
 func _draw_off_tag(rr: Rect2) -> void:
@@ -961,11 +961,11 @@ func _draw_hint() -> void:
 	if RunState.has_basin():
 		draw_string(_font, Vector2(0, _vs().y - 48),
 				"不锈钢盆 %d 点 · 本次购买优先抵账（不花金币）" % RunState.basin_charge,
-				HORIZONTAL_ALIGNMENT_CENTER, _vs().x, UiTheme.FS_CAPTION, Color("b8c4cc"))
+				HORIZONTAL_ALIGNMENT_CENTER, _vs().x, UiTheme.FS_CAPTION, UiTheme.ADVENTURE_LIGHT)
 	if _hint_t <= 0.0 or _hint == "":
 		return
 	draw_string(_font, Vector2(0, _vs().y - 26), _hint,
-			HORIZONTAL_ALIGNMENT_CENTER, _vs().x, UiTheme.FS_BODY, Color("ffb0b0"))
+			HORIZONTAL_ALIGNMENT_CENTER, _vs().x, UiTheme.FS_BODY, UiTheme.ADVENTURE_LIGHT)
 
 
 func _set_hint(text: String) -> void:
@@ -1052,17 +1052,18 @@ func _draw_pick_overlay() -> void:
 		return
 	var vs := _vs()
 	draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, 0.55), true)
+	UiTheme.draw_info_card(self, Rect2(vs.x * 0.5 - 290, 24, 580, 80))
 	if _deleting:
 		draw_string(_font_bold, Vector2(0, 60), "选择要删除的卡",
-				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, Color("ff9a9a"))
+				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 		draw_string(_font, Vector2(0, 92), "选中的卡会被永久删除。",
-				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, Color("ece7db"))
+				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	else:
 		var ench: Dictionary = _row2[_enchanting]["ench"]
 		draw_string(_font_bold, Vector2(0, 60), "选择要附魔的卡 —— %s" % _ench_name(ench),
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 		draw_string(_font, Vector2(0, 92), "给选中的卡附加「%s」。" % _ench_name(ench),
-				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, Color("ece7db"))
+				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	# ⚠️ 这里**绝对不能**调 `_build_deck_cards()`（R204 修卡死）：
 	# 它会把 `_sel_pick` 重置成 -1，而 `_draw()` 在每次 `queue_redraw()` 之后都会跑 →
 	# 「首击选中查看」刚设好的下标当场被抹掉 → 第二次点同一张永远走不到成交分支
@@ -1087,21 +1088,14 @@ func _draw_pick_overlay() -> void:
 	if not any_ok:
 		draw_string(_font, Vector2(0, 300),
 				"没有符合这张附魔条件的卡" if not _deleting else "卡组里没有卡可删",
-				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_SUBHEAD, Color("ffb0b0"))
+				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_SUBHEAD, UiTheme.ADVENTURE_LIGHT)
 	# R235 + R353：「确定」按钮（选中卡后点它成交）—— 附魔与删除**都有**。
 	# 原来删除只有「取消」，成交只能靠「再点一次同一张」，交互没有 UI 表达。
 	var confirm := _pick_confirm_rect()
 	var ready := _sel_pick >= 0
-	draw_rect(confirm, Color("3f8a4f") if ready else Color("2a3a2e"), true)
-	draw_rect(confirm, Color("c8f0a0") if ready else Color("5a6a5e"), false, 2.0)
-	draw_string(_font_bold, confirm.position + Vector2(0, 29), "确定",
-			HORIZONTAL_ALIGNMENT_CENTER, confirm.size.x, UiTheme.FS_BODY,
-			Color("0e2010") if ready else Color("8c9a90"))
+	UiTheme.draw_secondary_btn(self, confirm, "确定", false, not ready, true)
 	var cancel := _pick_cancel_rect()
-	draw_rect(cancel, Color("8a6d1f"), true)
-	draw_rect(cancel, Color("ffd75a"), false, 2.0)
-	draw_string(_font_bold, cancel.position + Vector2(0, 29), "取消",
-			HORIZONTAL_ALIGNMENT_CENTER, cancel.size.x, UiTheme.FS_BODY, Color("1a1c22"))
+	UiTheme.draw_secondary_btn(self, cancel, "取消", false)
 
 
 func _build_deck_cards() -> void:
@@ -1586,11 +1580,7 @@ func _draw_buy_buttons() -> void:
 		var rr := _buy_btn_rect(i)
 		var price := _row1_price(e)          # R432：触摸端按钮也要显示折后价
 		var can := _can_pay(price)
-		draw_rect(rr, Color("3f8a4f") if can else Color("34343a"), true)
-		draw_rect(rr, Color("c8f0a0") if can else Color("64646c"), false, 2.0)
-		draw_string(_font_bold, rr.position + Vector2(0, 18), "购买 · %d" % price,
-				HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_CAPTION,
-				Color("0e2010") if can else Color("9a9aa2"))
+		UiTheme.draw_secondary_btn(self, rr, "购买 · %d" % price, false, not can, true)
 
 
 # ------------------------------------------------------------ R390：卡飞进卡组

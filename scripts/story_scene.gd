@@ -526,19 +526,12 @@ func _draw_detail() -> void:
 	var br := _claim_rect()
 	var can := st == StoryRepo.STATE_READY
 	var hov := br.has_point(get_local_mouse_position())
-	var bcol := Color("c8951c") if can else Color("3a3e48")
-	if can and hov:
-		bcol = Color("e0b23c")
-	draw_rect(br, bcol, true)
-	draw_rect(br, Color("f2c14e") if can else UiTheme.ADVENTURE_BRASS, false, 2.0)
 	var btxt := "收下这一段"
 	if st == StoryRepo.STATE_READ:
 		btxt = "已经看过"
 	elif not can:
 		btxt = "条件未达成"
-	draw_string(_font_bold, br.position + Vector2(0, 27), btxt,
-			HORIZONTAL_ALIGNMENT_CENTER, br.size.x, UiTheme.FS_BODY,
-			Color("1a1c22") if can else UiTheme.PAGE_MUTED)
+	UiTheme.draw_secondary_btn(self, br, btxt, hov, not can, true)
 
 
 func _wrapped_body(eid: String, w: float) -> Array[String]:
@@ -628,7 +621,4 @@ func _draw_reveal() -> void:
 	if _reveal_finished():
 		# R353：「继续」画成按钮 —— 可交互性靠 UI 表达，不写「点击任意处继续」。
 		var btn := Rect2(r.position.x + r.size.x / 2.0 - 70.0, r.end.y - 34.0, 140.0, 28.0)
-		draw_rect(btn, Color(0.30, 0.40, 0.26, 0.95), true)
-		draw_rect(btn, Color("c8f0a0"), false, 1.5)
-		draw_string(_font_bold, btn.position + Vector2(0, 19), "继 续",
-				HORIZONTAL_ALIGNMENT_CENTER, btn.size.x, UiTheme.FS_CAPTION, Color("0e2010"))
+		UiTheme.draw_secondary_btn(self, btn, "继续", false, false, true)

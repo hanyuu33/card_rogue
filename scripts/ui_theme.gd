@@ -849,3 +849,12 @@ static func draw_info_card(canvas: CanvasItem, rect: Rect2, hovered := false) ->
 	sb.shadow_size = 3
 	sb.shadow_offset = Vector2(0, 2)
 	canvas.draw_style_box(sb, rect)
+
+static func draw_secondary_btn(canvas: CanvasItem, rect: Rect2, text: String, hovered := false, disabled := false, primary := false) -> void:
+	draw_action(canvas, rect, primary and not disabled, disabled, hovered)
+	var fs := mini(FS_BODY, int(rect.size.y * 0.48))
+	while fs > 10 and font_bold().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > rect.size.x - 16:
+		fs -= 1
+	var ink := PAGE_MUTED if disabled else (ADVENTURE_LIGHT if primary else PAGE_INK)
+	var baseline := rect.get_center().y + (font_bold().get_ascent(fs) - font_bold().get_descent(fs)) * 0.5
+	canvas.draw_string(font_bold(), Vector2(rect.position.x, baseline), text, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, fs, ink)
