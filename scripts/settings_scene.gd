@@ -11,7 +11,7 @@ const ROW_W := 520.0
 const ROW_H := 54.0        # R246：5 行（3 开关 + 2 音量）要塞进原来 3 行的位置
 const ROW_GAP := 10.0
 const ROW_COUNT := 5
-const LIST_Y := 190.0
+const LIST_Y := 166.0
 const SEED_H := 138.0     # R241：种子面板高度
 const VOL_STEP := 0.1      # R246：音量一档 10%
 const VOL_NUM := 20
@@ -328,7 +328,7 @@ func _draw() -> void:
 	for i in ROW_COUNT:
 		_draw_row(i, _row(i))
 	_draw_seed_panel()
-	draw_string(_font, Vector2(0, size.y - 28),
+	draw_string(_font, Vector2(0, size.y - 44),
 			"提示：种子决定整局的地图 / 掉落 / 摇卡；同一种子新开一局可复现同一局。",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
 			UiTheme.PAGE_MUTED)
@@ -386,14 +386,26 @@ func _draw_row(i: int, d: Dictionary) -> void:
 	# 右侧开关：药丸底 + 圆点（开 = 绿 / 关 = 灰），文字跟着走
 	var sw := Rect2(r.position.x + r.size.x - 96.0, r.position.y + r.size.y / 2.0 - 15.0,
 			76.0, 30.0)
-	draw_rect(sw, Color("2f6b3a") if on else Color("3a3d46"), true)
-	draw_rect(sw, Color("5aa06a") if on else Color("555a66"), false, 1.4)
-	var knob_x := sw.position.x + (sw.size.x - 24.0 if on else 4.0)
-	draw_circle(Vector2(knob_x + 10.0, sw.position.y + 15.0), 11.0,
-			Color("d8f0dc") if on else Color("8b8f98"))
+	var track := StyleBoxFlat.new()
+	track.bg_color = UiTheme.ADVENTURE_FOREST if on else UiTheme.ADVENTURE_INPUT
+	track.border_color = UiTheme.ADVENTURE_BRASS
+	track.set_border_width_all(1)
+	track.set_corner_radius_all(15)
+	track.corner_detail = 12
+	track.anti_aliasing = true
+	draw_style_box(track, sw)
+	var knob := StyleBoxFlat.new()
+	knob.bg_color = UiTheme.PAGE_PAPER
+	knob.border_color = UiTheme.ADVENTURE_BRASS
+	knob.set_border_width_all(1)
+	knob.set_corner_radius_all(11)
+	knob.corner_detail = 12
+	knob.anti_aliasing = true
+	var knob_x := sw.position.x + (sw.size.x - 26.0 if on else 4.0)
+	draw_style_box(knob, Rect2(knob_x, sw.position.y + 4, 22, 22))
 	draw_string(_font_bold, Vector2(sw.position.x - 46.0, sw.position.y + 21.0),
 			"开" if on else "关", HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL,
-			UiTheme.PAGE_GREEN if on else Color("8b8f98"))
+			UiTheme.PAGE_GREEN if on else UiTheme.PAGE_MUTED)
 
 
 func _draw_volume_row(r: Rect2, val: float) -> void:

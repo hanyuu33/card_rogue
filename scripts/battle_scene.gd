@@ -8051,10 +8051,9 @@ func _draw_map_panel() -> void:
 	## 本层 Boss 是谁。战斗进行中不能在这里改路线，所以不可点房间。
 	var pr := _mapview_panel_rect()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.55))
-	draw_rect(pr, Color("1b1c22"))
-	draw_rect(pr, Color("6a6f7d"), false, 2.0)
+	UiTheme.draw_panel_bg(self, pr)
 	_draw_string_center(_font_bold, UI_FS_BODY, "冒 险 地 图（战斗中查看）",
-			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 26.0), UiTheme.SAND, -1)
+			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 26.0), UiTheme.PAGE_INK, -1)
 	# R357：第三层没有步数机制 → 这一行里不再出现「巧克力 ×N」（否则永远显示满格的
 	# 12，玩家会以为「还有 12 步可以走」）。
 	var mv_info := "%s    已探索 %d / %d 间    生命 %d/%d    卡组 %d 张" % [
@@ -8068,7 +8067,7 @@ func _draw_map_panel() -> void:
 				RunState.chocolate, RunState.hp, RunState.max_hp,
 				RunState.deck_ids.size()]
 	_draw_string_center(_font, UI_FS_CAPTION, mv_info,
-			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 48.0), UiTheme.INK_300, -1)
+			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 48.0), UiTheme.PAGE_MUTED, -1)
 	_draw_string_center(_font, UI_FS_CAPTION,
 			"本层 Boss：%s　·　战斗中不能改路线"
 			% str(RunState.boss_level().get("name", "")),
@@ -8170,13 +8169,12 @@ func _draw_map_tiles() -> void:
 			continue          # R356：第三层直道之外没有地面
 		var r := _mapview_cell_rect(cell)
 		if not RunState.known_node(int(cell["id"])):
-			draw_rect(r, Color(0.10, 0.12, 0.17, 0.62), true)
-			draw_rect(r, Color(1, 1, 1, 0.10), false, 1.2)
+			preload("res://scripts/map_visual.gd").draw_room(self, r, false, false)
 			continue
 		var dtype := RogueMap.display_type(cell)
 		var done: bool = RunState.cleared_ids.has(int(cell["id"]))
 		var base: Color = UiTheme.MAP_NODE_COLORS.get(dtype, UiTheme.INK_500)
-		draw_rect(r, Color(base.r, base.g, base.b, 0.22 if done else 0.13), true)
+		preload("res://scripts/map_visual.gd").draw_room(self, r, RunState.known_node(int(cell["id"])), done)
 		draw_rect(r, Color(base.r, base.g, base.b, 0.85), false, 1.4)
 
 
@@ -8202,7 +8200,7 @@ func _draw_map_nodes() -> void:
 		elif known:
 			draw_string(_font_bold, Vector2(r.position.x, r.position.y + 44.0),
 					RogueMap.type_mark(dtype), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
-					UI_FS_SUBHEAD, Color(1, 1, 1, 0.45) if done else UiTheme.PAPER)
+					UI_FS_SUBHEAD, UiTheme.PAGE_MUTED if done else UiTheme.PAGE_INK)
 		if _mapview_is_current(cell):
 			draw_rect(r.grow(2.5), UiTheme.ACCENT_LIT, false, 2.2)
 		elif _mapview_is_next(cell):
@@ -8213,16 +8211,16 @@ func _draw_map_nodes() -> void:
 func _draw_map_legend(pr: Rect2) -> void:
 	## 底部图例：八种房间类型各一格 + 两条状态说明。
 	var y := pr.position.y + pr.size.y - MAPVIEW_BOT + 20.0
-	var x := pr.position.x + 12.0
+	var x := pr.position.x + 28.0
 	for type in ["start", "battle", "elite", "rest", "event", "chest", "bigchest", "unknown"]:
 		var base: Color = UiTheme.MAP_NODE_COLORS.get(type, UiTheme.INK_500)
 		draw_rect(Rect2(x, y - 10.0, 12.0, 12.0), base, true)
 		draw_string(_font, Vector2(x + 16.0, y), RogueMap.type_label(type),
-				HORIZONTAL_ALIGNMENT_LEFT, 58, UI_FS_CAPTION, Color("cfd3da"))
-		x += 73.0
-	draw_string(_font, Vector2(pr.position.x + 12.0, y + 24.0),
-			"金框＝当前房间　绿框＝可以走过去　小桥＝通路（全图可见）　迷雾＝还看不清里面是什么",
-			HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 24.0, UI_FS_CAPTION, Color("9aa0aa"))
+				HORIZONTAL_ALIGNMENT_LEFT, 58, UI_FS_CAPTION, UiTheme.PAGE_INK)
+		x += 70.0
+	draw_string(_font, Vector2(pr.position.x + 28.0, y + 24.0),
+			"金框：当前房间　绿框：可前往　小桥：通路　云：未探索",
+			HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 24.0, UI_FS_CAPTION, UiTheme.PAGE_MUTED)
 
 
 func _toggle_sound() -> void:

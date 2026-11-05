@@ -428,7 +428,7 @@ func _draw_row(idx: int, ep: Dictionary) -> void:
 	if hov:
 		bg = bg.lightened(0.08)
 	draw_rect(r, bg, true)
-	draw_rect(r, UiTheme.ADVENTURE_BRASS if hov else Color("444a58"), false, 1.6)
+	draw_rect(r, UiTheme.ADVENTURE_BRASS, false, 1.6)
 	# 左沿状态色条（与右侧图标同源；压暗一档免得抢标题）
 	draw_rect(Rect2(r.position.x, r.position.y, 5.0, r.size.y),
 			_state_color(st).darkened(0.34), true)
@@ -488,11 +488,7 @@ func _draw_detail() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, w - 94.0, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	# 关闭
 	var cr := _detail_close_rect()
-	var close_tex := UiAssets.small_icon("adventure_shared/close_forest", 64)
-	if close_tex != null:
-		var icon_rect := Rect2(cr.get_center() - Vector2(15, 15), Vector2(30, 30))
-		draw_texture_rect(close_tex, icon_rect, false,
-				Color(1.2, 1.2, 1.2) if cr.has_point(get_local_mouse_position()) else Color.WHITE)
+	UiTheme.draw_close(self, cr, cr.has_point(get_local_mouse_position()))
 	draw_line(Vector2(x0, r.position.y + 54.0), Vector2(x1, r.position.y + 54.0),
 			Color("3d424e"), 1.0)
 	# 正文

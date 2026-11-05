@@ -369,7 +369,7 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	if adventure_frame:
 		preload("res://scripts/battle_hud_material.gd").draw(canvas, rect)
 	elif paper != null:
-		canvas.draw_texture_rect(paper, rect, false, tint)
+		canvas.draw_texture_rect(UiAssets.filtered(paper, ceili(maxf(rect.size.x, rect.size.y) * maxf(1.5, canvas.get_viewport_transform().get_scale().x))), rect, false, tint)
 	else:
 		canvas.draw_rect(rect, tint if tint != Color.WHITE else UiTheme.SURFACE)
 	# ② 选中态：**外发光**，不占用任何语义色（缎带是稀有度的通道，见 UI设计规范 §规则 5）
@@ -423,7 +423,7 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 	var paper: Texture2D = UiAssets.card_paper()
 	var tint := paper_tint(card)   # R267：职业色只涂在纸底上，卡图本身不动
 	if paper != null:
-		canvas.draw_texture_rect(paper, rect, false, tint)
+		canvas.draw_texture_rect(UiAssets.filtered(paper, ceili(maxf(rect.size.x, rect.size.y) * maxf(1.5, canvas.get_viewport_transform().get_scale().x))), rect, false, tint)
 	else:
 		canvas.draw_rect(rect, tint if tint != Color.WHITE else UiTheme.SURFACE)
 	if selected:
@@ -567,6 +567,7 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 	var tex := art_for(card.id, sleeping, phase)
 	if tex != null:
 		# 覆盖式铺满（cover）：卡图出血到卡边、不留白（R165 开放式卡图）。
+		tex = UiAssets.filtered(tex, ceili(maxf(box.size.x, box.size.y) * 1.5))
 		canvas.draw_texture_rect_region(tex, box, cover_region(tex.get_size(), box), Color.WHITE)
 	else:
 		# 无图回退（R165）：卡种/职业色的**淡彩竖向渐变横幅**代替「粗暴纯色块」——
@@ -614,7 +615,7 @@ static func _draw_art_frame(canvas: CanvasItem, card: CardData, box: Rect2, k: f
 		return
 	var tex: Texture2D = UiAssets.art_frame(kind)
 	if tex != null:
-		canvas.draw_texture_rect(tex, box, false)
+		canvas.draw_texture_rect(UiAssets.filtered(tex, ceili(maxf(box.size.x, box.size.y) * maxf(1.5, canvas.get_viewport_transform().get_scale().x))), box, false)
 		return
 	var col := Color("6b7280")
 	match kind:
@@ -990,7 +991,7 @@ static func draw_badge(canvas: CanvasItem, font_bold: Font, center: Vector2, r: 
 	##   在 20px 的战场徽章上正好卡在阈值内（sz=13 →「30」量宽 17 ≤ r×1.75 ≈ 17.5），
 	##   不会再被悄悄缩小；三位数（如 150 血）仍会缩到 9px，属预期。
 	## （宁可略宽也不缩成看不出来的小点）。
-	var icon: Texture2D = UiAssets.badge_icon(key)
+	var icon: Texture2D = UiAssets.filtered(UiAssets.badge_icon(key), ceili(r * 2.0 * maxf(1.5, canvas.get_viewport_transform().get_scale().x)))
 	if icon != null:
 		canvas.draw_texture_rect(icon, Rect2(center - Vector2(r, r), Vector2(r, r) * 2.0), false)
 	else:

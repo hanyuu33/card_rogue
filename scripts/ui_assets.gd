@@ -70,6 +70,31 @@ static func small_icon(name: String, edge := 128) -> Texture2D:
 	return _cache[key]
 
 
+static func filtered(tex: Texture2D, edge: int) -> Texture2D:
+	if tex == null:
+		return null
+	# Bucket sizes limit cache growth during animated scaling; retain source for large cards.
+	var target := maxi(16, ceili(edge / 16.0) * 16)
+	if maxi(tex.get_width(), tex.get_height()) <= target:
+		return tex
+	var key := "filtered:%d:%d" % [tex.get_instance_id(), target]
+	if not _cache.has(key):
+		var img := tex.get_image()
+		var ratio := float(target) / maxf(img.get_width(), img.get_height())
+		img.resize(maxi(1, roundi(img.get_width() * ratio)), maxi(1, roundi(img.get_height() * ratio)), Image.INTERPOLATE_LANCZOS)
+		img.fix_alpha_edges()
+		_cache[key] = ImageTexture.create_from_image(img)
+	return _cache[key]
+
+static func shop_icon(name: String) -> Texture2D:
+	var replacements := {
+		"shop_icon_remove": "reward_icons/deck_delete",
+		"shop_icon_card": "reward_icons/cards", "shop_icon_draw": "reward_icons/cards",
+		"shop_icon_costdown": "icon_cost", "shop_icon_damage": "map_icons/battle",
+		"shop_icon_dimension": "reward_icons/core", "shop_icon_save": "map_icons/chest",
+		"shop_icon_opening": "map_icons/start", "shop_icon_maxhp": "adventure_shared/service_vitality"}
+	return small_icon(str(replacements.get(name, name)), 64)
+
 static func node_icon(type: String) -> Texture2D:
 	var name := "map_icons/" + type
 	if ResourceLoader.exists(path_for(name)):
@@ -159,7 +184,7 @@ static func enchant_icon(ench_id: String) -> Texture2D:
 	var nm := CardData.enchant_icon_name(ench_id)
 	if nm == "":
 		return null
-	return get_tex(nm)
+	return shop_icon(nm)
 
 
 static func map_bg(layer: int) -> Texture2D:
@@ -283,7 +308,7 @@ static func class_avatar(cls: String) -> Texture2D:
 	## 职业头像（R166）：**只有头部**的小图（透明底），用于选人界面的头像行
 	## 与地图「当前格」的角色标记。缺图返回 null，调用方回退 `class_badge` 圆徽。
 	var k := class_key(cls)
-	return get_tex("class_avatar_" + k) if k != "" else null
+	return small_icon("class_avatar_" + k, 160) if k != "" else null
 
 
 static func clear_cache() -> void:

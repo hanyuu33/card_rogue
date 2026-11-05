@@ -304,8 +304,8 @@ func _draw_avatar(i: int) -> void:
 func _draw_panel(cid: String) -> void:
 	var p := _panel_rect()
 	UiTheme.draw_panel_bg(self, p)
-	var x := p.position.x + 34.0
-	var w := PANEL_W - 68.0
+	var x := p.position.x + 48.0
+	var w := PANEL_W - 88.0
 	var y := p.position.y + 46.0
 	draw_string(_font_bold, Vector2(x, y), PlayerClass.name_of(cid),
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, UiTheme.PAGE_INK)

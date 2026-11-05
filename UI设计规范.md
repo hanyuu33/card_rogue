@@ -1808,8 +1808,8 @@ cost / power / health / affixes，烤完之后这张卡与「原生就长这样�
 
 **外观（唯一口 `CardFace._draw_enchant_mark()`）**：
 - 深色圆盘（**该附魔的种类色** `darkened(0.74)`、α 0.92）+ 同色描边环 + **附魔图标**；
-- 图标就是 `assets/ui/shop_icon_<id>.png` —— 商店第二行那件商品的**同一张素材**，
-  所以标记天然「与附魔种类相同」（四种靠「图 + 环色/底色」双通道区分）；
+- 图标元数据仍写作 `shop_icon_<id>`，实际纹理由 `UiAssets.shop_icon()` 统一映射并缓存缩图，
+  商店商品与卡面附魔标记共用同一入口，所以同种附魔不会再出现两套图形；
 - 缺图标 → 回退附魔名首字（费 / 伤 / 次 / 保），不空白也不报错；
 - ⚠️ 必须垫深底：附魔素材是浅色扁平插画（白描边），直接压在本就花哨的卡图上会糊成一片。
 
@@ -1817,10 +1817,10 @@ cost / power / health / affixes，烤完之后这张卡与「原生就长这样�
 
 | id | 显示名 | 图标（`assets/ui/`） | 种类色 |
 | --- | --- | --- | --- |
-| `costdown` | 费用 -1 | `shop_icon_costdown` | `#6db2f0` |
-| `damage` | 伤害 +10 | `shop_icon_damage` | `#f08a5a` |
-| `dimension` | 次元 | `shop_icon_dimension` | `#c08cf0` |
-| `save` | 保存 | `shop_icon_save` | `#8fdc9f` |
+| `costdown` | 费用 -1 | `shop_icon_costdown` → `icon_cost` | `#6db2f0` |
+| `damage` | 伤害 +10 | `shop_icon_damage` → `map_icons/battle` | `#f08a5a` |
+| `dimension` | 次元 | `shop_icon_dimension` → `reward_icons/core` | `#c08cf0` |
+| `save` | 保存 | `shop_icon_save` → `map_icons/chest` | `#8fdc9f` |
 
 **「任何地方」怎么保证**：标记画在 `CardFace.draw()` 与 `CardFace.draw_pick()` 的**末尾**
 （后者 = 选卡页 / 奖励三选一 / 卡组编辑），所以凡是画卡面的地方都自动带上；剩下只要保证

@@ -629,6 +629,23 @@ static func _chip_box(bg: Color, line: Color, width: int, px: int, py: int,
 const UiPressFx = preload("res://scripts/ui_press_fx.gd")
 
 
+static func _fit_action_button(btn: Button, primary: bool) -> void:
+	if btn.size.y <= 0:
+		return
+	var compact := btn.size.y <= 44 or btn.size.x < 200
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var bg := ADVENTURE_FOREST if primary else ADVENTURE_INPUT
+		if state == "hover":
+			bg = bg.lightened(0.08)
+		elif state == "pressed":
+			bg = bg.darkened(0.08)
+		btn.add_theme_stylebox_override(state, _chip_box(bg, ADVENTURE_BRASS, 1, 10, 4) if compact else adventure_button_style(primary, state))
+	var fs := FS_LABEL if compact else (FS_HEADING if primary else FS_SUBHEAD)
+	var face := font_bold() if primary else font()
+	while fs > FS_CAPTION and face.get_string_size(btn.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > btn.size.x - (20 if compact else 68):
+		fs -= 1
+	btn.add_theme_font_size_override("font_size", fs)
+
 static func apply_button(btn: Button, primary := false, _on_dark := false) -> void:
 	if btn == null:
 		return
@@ -641,6 +658,10 @@ static func apply_button(btn: Button, primary := false, _on_dark := false) -> vo
 	btn.add_theme_color_override("font_disabled_color", PAGE_MUTED)
 	btn.add_theme_font_override("font", font_bold() if primary else font())
 	btn.add_theme_font_size_override("font_size", FS_HEADING if primary else FS_SUBHEAD)
+	var fit := _fit_action_button.bind(btn, primary)
+	if not btn.resized.is_connected(fit):
+		btn.resized.connect(fit)
+	fit.call_deferred()
 	UiPressFx.attach(btn)
 
 
@@ -650,7 +671,19 @@ static func apply_paper_panel(panel: Panel) -> void:
 
 
 static func draw_panel_bg(canvas: CanvasItem, rect: Rect2) -> void:
-	canvas.draw_style_box(adventure_panel_style(12.0) if rect.size.y >= 180.0 else _btn_box(PAGE_PAPER, ADVENTURE_BRASS, 1, RADIUS_SM, 12, 12), rect)
+	var tex := UiAssets.get_tex("adventure_shared/panel_journal_light_hd")
+	if rect.size.y < 180 or tex == null:
+		canvas.draw_style_box(_btn_box(PAGE_PAPER, ADVENTURE_BRASS, 1, RADIUS_SM, 12, 12), rect)
+		return
+	# High-resolution source, independent 34px destination corners preserve existing content insets.
+	var source_x := [0.0, 68.0, tex.get_width() - 68.0, float(tex.get_width())]
+	var source_y := [0.0, 68.0, tex.get_height() - 68.0, float(tex.get_height())]
+	var xs := [rect.position.x, rect.position.x + 34, rect.end.x - 34, rect.end.x]
+	var ys := [rect.position.y, rect.position.y + 34, rect.end.y - 34, rect.end.y]
+	for y in 3:
+		for x in 3:
+			canvas.draw_texture_rect_region(tex, Rect2(xs[x], ys[y], xs[x+1]-xs[x], ys[y+1]-ys[y]),
+					Rect2(source_x[x], source_y[y], source_x[x+1]-source_x[x], source_y[y+1]-source_y[y]))
 
 
 const PAGE_PAPER := Color("f3eee2")
@@ -719,8 +752,8 @@ static func adventure_button_style(primary: bool, state := "normal", px := BTN_P
 	sb.texture_margin_right = 28
 	sb.texture_margin_top = 12
 	sb.texture_margin_bottom = 12
-	sb.set_content_margin(SIDE_LEFT, px)
-	sb.set_content_margin(SIDE_RIGHT, px)
+	sb.set_content_margin(SIDE_LEFT, maxi(px, 34))
+	sb.set_content_margin(SIDE_RIGHT, maxi(px, 34))
 	sb.set_content_margin(SIDE_TOP, py)
 	sb.set_content_margin(SIDE_BOTTOM, py)
 	if state == "hover" or state == "hover_pressed":
@@ -739,6 +772,8 @@ static func adventure_panel_style(padding := 24.0, dark := false) -> StyleBox:
 	var sb := StyleBoxTexture.new()
 	sb.texture = tex
 	sb.set_texture_margin_all(34.0)
+	sb.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	sb.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
 	sb.set_content_margin_all(padding)
 	return sb
 
@@ -794,12 +829,19 @@ static func control_theme() -> Theme:
 
 static func draw_action(canvas: CanvasItem, rect: Rect2, primary := false, disabled := false, hovered := false) -> void:
 	var state := "disabled" if disabled else ("hover" if hovered else "normal")
-	if rect.size.x < 110.0 or rect.size.y < 36.0:
+	if rect.size.x < 200.0 or rect.size.y <= 44.0:
 		var bg := ADVENTURE_FOREST if primary else ADVENTURE_INPUT
 		canvas.draw_style_box(_chip_box(bg, ADVENTURE_BRASS, 1, 8, 3), rect)
 	else:
 		canvas.draw_style_box(adventure_button_style(primary, state, 10, 4), rect)
 
+
+static func draw_close(canvas: CanvasItem, rect: Rect2, hovered: bool) -> void:
+	var tex := UiAssets.small_icon("adventure_shared/close_forest", 64)
+	if tex != null:
+		var edge := minf(rect.size.x, rect.size.y)
+		canvas.draw_texture_rect(tex, Rect2(rect.get_center() - Vector2.ONE * edge / 2, Vector2.ONE * edge), false,
+				Color(1.15, 1.15, 1.15) if hovered else Color.WHITE)
 
 static func draw_info_card(canvas: CanvasItem, rect: Rect2, hovered := false) -> void:
 	var sb := _btn_box(ADVENTURE_INPUT if hovered else PAGE_PAPER, ADVENTURE_BRASS, 1, RADIUS_MD, 12, 12)

@@ -284,7 +284,7 @@ func _relic_entries(rec: Dictionary) -> Array:
 		# R343：名字另配一色（传奇金橙）—— `col` 仍是左侧圆点的徽章色。
 		out.append({"name": rel.relic_name + ("（已耗尽）" if spent else ""),
 				"col": Color("6a7078") if spent else rel.badge_color(),
-				"ncol": Color("8d857a") if spent else rel.name_color(Color("d8d3c6"))})
+				"ncol": Color("8d857a") if spent else rel.name_color(UiTheme.PAGE_INK)})
 	return out
 
 
@@ -323,20 +323,17 @@ func _draw_detail() -> void:
 	UiTheme.draw_panel_bg(self, r)
 	var rec: Dictionary = _rows[_sel]
 	var res := str(rec.get("result", ""))
-	var x0 := r.position.x + 24.0
-	var x1 := r.end.x - 24.0
+	var x0 := r.position.x + 48.0
+	var x1 := r.end.x - 32.0
 	# 标题：时间 + 结果
 	draw_string(_font_bold, Vector2(x0, r.position.y + 32.0),
 			"%s · %s" % [RunRecord.fmt_time(str(rec.get("time", "?"))),
 			RunRecord.result_label(res)],
 			HORIZONTAL_ALIGNMENT_LEFT, 520, UiTheme.FS_HEADING,
-			RunRecord.result_color(res))
+			UiTheme.PAGE_INK)
 	# 关闭
 	var cr := _detail_close_rect()
-	draw_rect(cr, Color("4a2c2c") if cr.has_point(get_local_mouse_position())
-			else UiTheme.PAGE_PAPER, true)
-	draw_string(_font_bold, cr.position + Vector2(0, 22),
-			"×", HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
+	UiTheme.draw_close(self, cr, cr.has_point(get_local_mouse_position()))
 	# 概览两行
 	var seed_v := int(rec.get("seed", 0))
 	draw_string(_font_bold, Vector2(x0, r.position.y + 58.0),
@@ -399,7 +396,7 @@ func _draw_detail() -> void:
 			draw_circle(Vector2(x0 + 5.0, ly + 8.0), 4.0, e["col"])
 			draw_string(_font, Vector2(x0 + 18.0, ly + 14.0), str(e["name"]),
 					HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_LABEL,
-					e.get("ncol", Color("d8d3c6")))
+					UiTheme.PAGE_INK)
 			ly += 22.0
 		if relics.size() > max_rel:
 			draw_string(_font, Vector2(x0 + 18.0, ly + 14.0),
@@ -424,7 +421,7 @@ func _draw_detail() -> void:
 		var line := "%s ×%d" % [str(d["name"]), int(d["n"])] if int(d["n"]) > 1 \
 				else str(d["name"])
 		draw_string(_font, Vector2(mid, dy + 14.0), line,
-				HORIZONTAL_ALIGNMENT_LEFT, 320, UiTheme.FS_LABEL, Color("d8d3c6"))
+				HORIZONTAL_ALIGNMENT_LEFT, 320, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 		var eid := str(d["ench"])
 		if eid != "":
 			draw_string(_font, Vector2(mid + 300.0, dy + 14.0),
@@ -455,7 +452,7 @@ func _draw_row(idx: int, rec: Dictionary) -> void:
 			"角色：%s" % PlayerClass.legacy_id(str(rec.get("class", "?"))),
 			HORIZONTAL_ALIGNMENT_LEFT, 190, UiTheme.FS_BODY, UiTheme.PAGE_GREEN)
 	draw_string(_font_bold, r.position + Vector2(446, 24), RunRecord.result_label(res),
-			HORIZONTAL_ALIGNMENT_LEFT, 140, UiTheme.FS_BODY, RunRecord.result_color(res))
+			HORIZONTAL_ALIGNMENT_LEFT, 140, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	draw_string(_font, r.position + Vector2(596, 24),
 			"难度 %d · 用时 %s" % [int(rec.get("difficulty", 2)),
 			RunRecord.fmt_secs(int(rec.get("secs", 0)))],

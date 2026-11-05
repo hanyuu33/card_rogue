@@ -808,7 +808,7 @@ func _draw_goods_box(rr: Rect2, icon_name: String, name: String, desc: String,
 	draw_rect(tag_rect, tag_bg, true)
 	draw_string(_font, tag_rect.position + Vector2(0, 13), tag_text,
 			HORIZONTAL_ALIGNMENT_CENTER, tag_rect.size.x, 10, tag_col)
-	var icon: Texture2D = UiAssets.get_tex(icon_name)
+	var icon: Texture2D = UiAssets.shop_icon(icon_name)
 	if icon != null:
 		draw_texture_rect(icon, Rect2(rr.position + Vector2(12, 34), Vector2(44, 44)), false)
 	var tx := rr.position.x + 66.0

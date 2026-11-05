@@ -273,7 +273,7 @@ func _draw() -> void:
 		var hov := tr.has_point(get_local_mouse_position())
 		var bg := UiTheme.PAGE_PAPER if cur else (UiTheme.PAGE_PAPER if hov else UiTheme.PAGE_PAPER)
 		draw_rect(tr, bg, true)
-		draw_rect(tr, UiTheme.PAGE_INK if cur else Color("444a58"), false, 2.0 if cur else 1.4)
+		draw_rect(tr, UiTheme.PAGE_INK if cur else UiTheme.ADVENTURE_BRASS, false, 2.0 if cur else 1.4)
 		var tot := ProfileData.ban_total_quota_for(_repo, ids[ti])
 		var use := 0
 		var br := ProfileData.banned_by_rarity_for(_repo, ids[ti])
@@ -328,11 +328,11 @@ func _draw_row(idx: int, c: CardData) -> void:
 	var hov := idx == _hover
 	var bg := UiTheme.PAGE_PAPER
 	if banned:
-		bg = Color("3a2430")
+		bg = UiTheme.ADVENTURE_INPUT
 	elif hov:
 		bg = UiTheme.PAGE_PAPER
 	draw_rect(r, bg, true)
-	draw_rect(r, UiTheme.ADVENTURE_BRASS if hov else Color("444a58"), false, 1.4)
+	draw_rect(r, UiTheme.ADVENTURE_BRASS, false, 1.4)
 	# 稀有度色条
 	draw_rect(Rect2(r.position.x, r.position.y, 5.0, r.size.y),
 			CardData.RARITY_COLORS[clampi(c.rarity, 0, 6)], true)
