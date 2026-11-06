@@ -70,17 +70,17 @@ map_bridge.png      小桥的**俯视图**（桥身在画面上**竖着**）  16
   event_snow_leopard.png  雪豹出现          （R514：画面**不出现烟斗**，烟斗玩法保留）
   event_adventurer.png    冒险家的遗物
   event_martial.png       武术大师          （R514：人物是**人类老者**，不是鸭；R512 前会落进 rest 显示篝火，已修）
-  event_arcane.png        奥秘之泉
+  event_arcane.png        奥秘之泉          ★R515 已提供（石泉池 + 悬挂护符）
   event_oblivion.png      遗忘之泉
   event_smith.png         鸭鸭工匠
   event_card_merchant.png 卡片商人
-  event_lake_lady.png     湖中仙女
+  event_lake_lady.png     湖中仙女          ★R515 已提供（湖面伸出的手 + 水下倒影）
   event_divination.png    占卜室
   event_moon.png          赏月
   event_furnace.png       熔炉
   event_core_contract.png 契约的核心
   event_cave.png          洞穴
-  event_delivery.png      运送委托
+  event_delivery.png      运送委托          ★R515 已提供（木箱麻袋手推车）
   event_delivery_done.png 委托完成          （可与 delivery 共用一张）
   event_treasure.png      卡牌宝箱          （R512 已从事件池移除，只有旧存档 / --treasure 演示可达）
   event_relic_chest.png   宝箱层（大宝箱房）

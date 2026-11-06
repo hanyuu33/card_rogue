@@ -1,4 +1,30 @@
-## 2026-11-06 R514 鸭鸭低语并入二层起点三选一 + 事件池收敛（当前最新）
+## 2026-11-07 R515 事件插图第二批（delivery / arcane / lake_lady）（当前最新）
+
+- 用户口径：从「第一层权重前六」里挑了 `delivery` / `arcane` / `lake_lady` 三张先做。
+  `whisper` 已在 R514 并入二层起点池、`struggle` 暂不生成 → 这两张不做。
+- 产出（3 张插图，无背景）：`assets/ui/event_delivery.png` / `event_arcane.png` /
+  `event_lake_lady.png`，**640 × 480（4:3，2× 素材）**，与 `event_gaze` 同规格。
+- 画面：`delivery` = 苔石台上一排木箱／麻袋／卷包 + 半截手推车，暖午后、无人物；
+  `arcane` = 林中石砌泉池、泉眼泛青光 + 枝上悬挂蓝宝石护符；
+  `lake_lady` = 蓝调黄昏湖面伸出一只手、同心涟漪、水下模糊人影倒影、芦苇与浮花。
+- 只做插图**不做整屏背景**：三张在默认纸底上实测不吃字、不抢按钮（截图见
+  `art_src/2026-11-07_事件插图R515/_review/`）。
+- 流水线（`art_src/2026-11-07_事件插图R515/tools/`）：
+  - `process_r515.py`：后端默认水印「AI生成 WORKBUDDY」固定在右下 y≈728~760 →
+    **统一保留到 y=706**（不逐张检测：`lake_lady` 的白色花瓣会把检测顶到 673，多切 39px），
+    再居中裁 4:3 → resize 640×480（LANCZOS）→ UnsharpMask(1.2/55/2) 补锐度。
+  - 提示词沿用 `art_src/_style_prompts.md` A 套（日式动漫赛璐璐），显式写死
+    `NO border / NO frame / NO letterbox / NO black bars`——AI 仍会在底部塞纯色带（R512 的坑）。
+  - `shoot_r515.py`：`res://scenes/event.tscn -- <kind> --screenshot`，三张 4~5 秒出图。
+- 顺带：新图跑过一次 `godot --headless --import`，三张 `.import` 已入版本库
+  （`UiAssets` 虽有「导入失败就直读原始 PNG」的兜底，但项目里其余素材都带 `.import`，保持一致）。
+- 文档：`assets/ui/图片命名说明.txt` 三行标 ★R515；`UI设计规范.md` 插图节改写为
+  「已提供插图 4 张」+ R515 出图口径。
+- **待出图（剩 8 种）**：一层 `martial`(人类老者/无烟斗限制不适用) / `oblivion` / `snow_leopard`(不画烟斗) /
+  `adventurer` / `smith`；二层 `apple_doctor`；特殊 `relic_chest`（大宝箱房必现）/ `delivery_done`（可与 delivery 共用）。
+  R512 暂缓仍挂着的：`pear` / `hero` / `bluefish`。
+
+## 2026-11-06 R514 鸭鸭低语并入二层起点三选一 + 事件池收敛
 
 - 用户口径（逐条）：`struggle`（挣扎）**标记暂不生成**；`whisper`（鸭鸭低语）**改为第二层初始事件
   （起点「卷卷三选一」）的一个选项，不再单独作为事件**；`martial`（武术大师）**是人类**，不是鸭；
