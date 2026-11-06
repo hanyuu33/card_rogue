@@ -627,7 +627,7 @@ func _init() -> void:
 	check(keep_e.state.card_discount.size() == 1
 			and int(keep_e.state.card_discount[keep_e.state.hand[0]]) == 6,
 			"陨石术：减费记在「永久实例减费」表（1 + 5 段累加）")
-	# 不分敌我：火墙术 9084 烧一整行 15 伤，敌我各站一个 → 2 段
+	# 不分敌我：火墙术 9084 烧一整行 14 伤，敌我各站一个 → 2 段
 	keep_e.state.place(_card(8003, "我方木桩", "盟友", 3, 3, 60, 1, 1), Vector2i(2, 2),
 			GameEngine.SIDE_SELF)
 	keep_e.state.hand.append(repo.get_card(9084))
@@ -20062,7 +20062,7 @@ func _init() -> void:
 	var r242_d_whirl: Dictionary = r242_bs.aoe_danger(r242_e.state, r242_whirl, Vector2i(4, 1))
 	check(int(r242_d_whirl["own"]) == 0 and not bool(r242_d_whirl["hp"]),
 			"R242 自伤：回旋斩只打敌方 → 不报「波及自己人」")
-	# 火墙（R247 起不分敌我）：自己人在这行 burn 报警（站着就 -15；不打空格 → 不报掉 HP）
+	# 火墙（R247 起不分敌我）：自己人在这行 burn 报警（站着就 -14；不打空格 → 不报掉 HP）
 	var r242_d_wall: Dictionary = r242_bs.aoe_danger(r242_e.state, r242_wall, Vector2i(4, 1))
 	check(bool(r242_d_wall["burn"]) and not bool(r242_d_wall["hp"])
 			and (r242_d_wall["cells"] as Array).size() == FieldState.BOARD_COLS,
