@@ -6128,6 +6128,25 @@
       "target_mode": "none",
       "color": "黑",
       "image": ""
+    },
+    {
+      "id": 9234,
+      "name": "恐惧收割",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "对目标造成 15 点伤害。同一回合内，你对被标记的目标造成第 3 次伤害后（本卡自己造成的不算），从抽牌库或弃牌区将一张「恐惧收割」加入手卡，费用 -1；离开手卡后恢复原费用。",
+      "target_mode": "unit",
+      "color": "紫",
+      "image": ""
     }
   ]
 }

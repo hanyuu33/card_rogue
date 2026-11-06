@@ -88,6 +88,10 @@ var field_owner := {}
 # 存在性由 `mark_cell()` 扫 field_effects 判定（唯一权威），这里只存**数值**：
 # 存进卡面会污染卡库共享实例（set_field 复制的是 CardData，不是附加状态）。
 var mark_bonus: int = 0
+# R505 恐惧收割（9234）：**本回合**已经对被标记的目标造成过几次伤害（我方回合开始清零）。
+# 与 `mark_bonus` 一样只存数值 —— 「有没有标记」仍由 `mark_cell()` 扫 field_effects 判定，
+# 这张表只回答「凑够 3 次没有」。存档带上，读档后计数不会平白归零。
+var harvest_hits: int = 0
 	## R451：空袭（9209，敌方效果卡）——**玩家回合开始**随机标记的格子。
 	## 只记坐标、不记卡：标记只是「这些格子下回合要挨炸」的临时指令，与 `field_effects`
 	## （那格真的挂着一张场地卡）是两回事，别混成一张表。
@@ -720,6 +724,7 @@ func save_dict() -> Dictionary:
 		"air_raid_cells": _air_raid_save(),
 		"air_raid_turns": air_raid_turns,
 		"mark_bonus": mark_bonus,
+		"harvest_hits": harvest_hits,
 	}
 	if rng != null:
 		d["rng_seed"] = rng.seed
@@ -797,6 +802,7 @@ func apply_dict(d: Dictionary) -> void:
 				air_raid_cells.append(Vector2i(int(item3["r"]), int(item3["c"])))
 	air_raid_turns = int(d.get("air_raid_turns", air_raid_turns))
 	mark_bonus = int(d.get("mark_bonus", mark_bonus))
+	harvest_hits = int(d.get("harvest_hits", harvest_hits))
 	# 洗牌随机源：续档后继续抽牌 / 触发的随机必须接着同一条链（否则续档 = 换牌序）
 	if d.has("rng_seed") and rng != null:
 		rng.seed = int(d["rng_seed"])

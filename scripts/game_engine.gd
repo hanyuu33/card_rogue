@@ -15,6 +15,9 @@ var current_side:= SIDE_SELF
 var turn_number:= 0
 var turn_total:= 0   # 全局半回合计数（双方回合各 +1；暗影狩猎「上回合触发过工事」的判定基准）
 var opp_turns:= 0
+## R505 恐惧收割（9234）：这张卡**自己**造成的那一下不计入「本回合打中被标记目标 3 次」。
+## 单目标技能走 `_op_deal_damage`，结算前置 true、结算完置回 —— 只有那一下被跳过。
+var _harvest_off:= false
 var over:= false
 var result:= ""
 var result_reason:= ""
@@ -1561,6 +1564,20 @@ const DOOM_HERALD_ID:= 9232       # 厄运的使者：3 费稀有盟友 2/15/程
 const DOOM_HERALD_HEAL:= 3        # 攻击**被标记的**敌人 → 自己回复 3
 const SOUL_REAPER_ID:= 9233       # 灵魂收割者：8 费史诗盟友 6/20/程1/速1
 const SOUL_REAPER_DISCOUNT:= 1    # 每次打中被标记的敌人 → 此卡费用永久 -1
+
+# ---- R505（2026-11-06）恐惧收割 9234（暗影刺客 · 2 费稀有技能）----
+# 用户口径：「造成 15 点伤害。在一个回合内对被标记的目标造成 3 次伤害后（恐惧收割除外），
+#   此卡一张从抽牌库或弃牌区加入手卡，费用 -1（离开手卡重置）。」
+# 三个判据：
+#   ① **同一回合内累计**：计数存 `state.harvest_hits`，每个**我方**回合开始清零；
+#   ② **本卡除外**：它自己那一下由 `_harvest_off` 拦掉（见成员变量注释）；
+#   ③ **只在这一回合的第 3 次给一张**：判据是 `==`（不是 `>=`），第 4、5 次不再重复发。
+# 入手减费复用 `state.hand_cost_delta` —— 与谟涅摩叙涅 8072 同一条路：
+#   `cost_of()` 里验 `hand.has(card)`，所以**打出 / 弃掉即恢复原价**，不必在十处离手口挂钩。
+const FEAR_HARVEST_ID:= 9234
+const FEAR_HARVEST_DMG:= 15
+const FEAR_HARVEST_NEED:= 3
+const FEAR_HARVEST_HAND_DISCOUNT:= 1
 const UPGRADE_RANGE_TRAIT:= "改造攻程"
 ## R275：重甲战车 8058 移除本 trait（改为「每层改造受到的伤害 -1」）——
 ## 当前**没有任何卡**带「改造移速」，分支保留给未来的卡用。
@@ -2312,6 +2329,7 @@ func _begin_turn(side: String) -> void :
 		_haste_pick_tick(SIDE_SELF)      # R479 哈气：第 3/5/7 回合挑一个单位永久双动（必须在 reset 之前）
 		state.reset_units(SIDE_SELF)
 		_mark_tick(SIDE_SELF)   # R503 标记：每个我方回合 +1
+		state.harvest_hits = 0   # R505 恐惧收割：计数只活在「一个回合内」
 		_arm_debuffs(SIDE_SELF)
 		# ── ① 回合开始的**成长**先结算 ──
 		_apply_growth(SIDE_SELF)
@@ -8139,6 +8157,7 @@ const SPELL_BASE_DMG := {
 	9225: 6,     # 死亡预告（先标记再打，实际会多吃标记的加伤）
 	9227: 14,    # 死神降临（目标被标记 → 20 + 抽 2 张）
 	9229: 8,     # 恐惧投射（目标已被标记时才打这 8 点）
+	9234: 15,    # 恐惧收割
 	9189: 7,     # 独行（7 + 卡内累积；左栏刻意不报数，见 spell_now）
 	9169: 10,    # 烈火之剑
 	9172: 9,     # 激光扫射
@@ -10599,6 +10618,19 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 					fp_p.card.card_name, FEAR_PROJECTION_DEBUFF]
 			return str(_op_deal_damage(side, _spell_dmg(side, FEAR_PROJECTION_DMG, card),
 					_cell_of(fp_p)))
+		FEAR_HARVEST_ID:
+			# 恐惧收割 9234（R505）：2 费稀有；15 伤。
+			# ⚠️ 它**自己**这一下不计入「打中被标记目标」的计数（用户口径「恐惧收割除外」），
+			#    所以结算期间把 `_harvest_off` 置 true —— 只有这一下被跳过，别的伤害照常计。
+			var fh_p := _target_placement(side, target)
+			var fh_cell: Variant = target
+			if fh_p != null:
+				fh_cell = _cell_of(fh_p)
+			_harvest_off = true
+			var fh_s := str(_op_deal_damage(side, _spell_dmg(side, FEAR_HARVEST_DMG, card),
+					fh_cell))
+			_harvest_off = false
+			return fh_s
 		FINISHER_ID:
 			# 收尾：基础伤害按「是不是手卡里最后一张」在结算时定死，再吃 _spell_dmg 加成。
 			var fi_last := _finisher_is_last(side)
@@ -11952,6 +11984,9 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	# R504 恐惧化身（9230）：打到被标记的敌人身上 → 它本回合力量 -1（可叠加）。
 	# 挂在这两个「扣血落地口」上（这里 + `_op_deal_damage`），与侦察塔光环同一条纪律。
 	_fear_incarnate_tick(p, dmg)
+	# R505 恐惧收割（9234）：同一条纪律 —— 「打中被标记的目标」也要两个口都数，
+	# 只挂一处的话，法术流永远凑不满 3 次。
+	_fear_harvest_tick(p, dmg)
 	# R356：扣血之后立刻判阶段 —— 启示者掉到 200 / 100 就在**这一下**里转阶段，
 	# 不等回合计。别的单位 boss_phase == 0，这里只是一个布尔判断。
 	if p.boss_phase > 0:
@@ -13223,6 +13258,7 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 		p.health -= amount2
 		_theseus_on_blood(p, hp_before_theseus)
 		_fear_incarnate_tick(p, amount2)   # R504 恐惧化身：单目标技能这条落地口也要过
+		_fear_harvest_tick(p, amount2)     # R505 恐惧收割：单目标技能这条也要计
 		if p.boss_phase > 0:
 			_revelator_check_phase(p)
 		# R490：单目标技能（龙息 / 弹跳飞刀这类不走 _hit_unit）同样按落地段数记一笔。
@@ -14542,6 +14578,74 @@ func _omen_tick(side: String) -> void :
 	var total := OMEN_DMG * n
 	_log("噩兆：%s 站在标记格上，受到 %d 点伤害" % [p.card.card_name, total])
 	_hit_unit(p, total, "噩兆")
+
+
+func _fear_harvest_tick(p: Placement, dmg: int) -> void :
+	## 恐惧收割（9234，R505）：**同一我方回合内**，对被标记的目标累计到第 `FEAR_HARVEST_NEED`
+	## 次伤害后，从抽牌库 / 弃牌区把一张「恐惧收割」加入手卡（费用 -1，离手恢复原价）。
+	## ⚠️ 三条硬口径：
+	##   ① 只认 `SIDE_SELF` 的回合（与恐惧化身 / 噩兆同源）—— 敌方用自己的 AOE 砸到自己人
+	##      不算「你打的」；
+	##   ② `_harvest_off` 期间不计数 = 这张卡**自己**那一下除外；
+	##   ③ 只在这一回合**第 3 次**给一张（`==`）：后面第 4、5 次不再重复发，
+	##      否则一次 AOE 连打就能把手卡塞满。
+	## 打死了也算（击杀那一下仍然是「造成伤害」）—— 所以这里**不判 `p.health > 0`。
+	if current_side != SIDE_SELF or _harvest_off or dmg <= 0 or p == null:
+		return
+	if not _is_marked_enemy(p):
+		return
+	state.harvest_hits += 1
+	_log("恐惧收割：本回合第 %d/%d 次打中被标记的目标（%s）" % [
+		state.harvest_hits, FEAR_HARVEST_NEED, p.card.card_name])
+	action.emit("harvest_hit", {"cell": _cell_of(p), "card": p.card,
+		"count": state.harvest_hits, "need": FEAR_HARVEST_NEED})
+	if state.harvest_hits == FEAR_HARVEST_NEED:
+		_grant_fear_harvest()
+
+
+func _grant_fear_harvest() -> void :
+	## 恐惧收割（9234，R505）的**唯一发牌口**：抽牌库优先、弃牌区兜底，各取**最上面**一张。
+	##   * 「抽牌库或弃牌区」→ 先扫 `state.deck`（从尾往前 = 与 `draw()` 的 `pop_back` 同向），
+	##     抽牌库里没有才动 `state.discard`；
+	##   * 手牌满 → **什么都不做**（牌留在原处）。不能像抽牌那样烧进弃牌区 ——
+	##     那等于把玩家攒的这张卡白白扔掉；
+	##   * 两处都没有 → 只记日志（这张卡可能已经全在手里 / 已打出）。
+	## 减费走 `state.hand_cost_delta`（手卡内 -1，打出 / 弃掉自动恢复原价）。
+	if state.hand_full():
+		_log("恐惧收割：手牌已满 → 这一张先留在原处")
+		return
+	var got: CardData = null
+	var from := ""
+	for i in range(state.deck.size() - 1, -1, -1):
+		var d: CardData = state.deck[i]
+		if d != null and d.id == FEAR_HARVEST_ID:
+			got = d
+			state.deck.remove_at(i)
+			from = "抽牌库"
+			break
+	if got == null:
+		for i in range(state.discard.size() - 1, -1, -1):
+			var d2: CardData = state.discard[i]
+			if d2 != null and d2.id == FEAR_HARVEST_ID:
+				got = d2
+				state.discard.remove_at(i)
+				from = "弃牌区"
+				break
+	if got == null:
+		_log("恐惧收割：抽牌库与弃牌区都没有这张卡了")
+		return
+	# 实例纪律：牌库 / 弃牌区里可能是共享库实例，进手卡必须是独立副本
+	# （与 `draw()` 的 `own_copy` 判据一致，否则减费会串到别的同名卡上）。
+	if not got.own_copy:
+		got = CardData.from_dict(got.to_dict())
+		got.own_copy = true
+	state.hand.append(got)
+	state.hand_cost_delta[got] = int(state.hand_cost_delta.get(got, 0)) \
+			+ FEAR_HARVEST_HAND_DISCOUNT
+	_log("恐惧收割：本回合第 %d 次 → 从%s取一张加入手卡，手卡内费用 -%d（当前 %d）" % [
+		FEAR_HARVEST_NEED, from, FEAR_HARVEST_HAND_DISCOUNT, cost_of(got)])
+	action.emit("harvest_ready", {"card": got, "from": from,
+		"cost": cost_of(got), "hand": state.hand.size()})
 
 
 func _auto_mark_if_none(why: String) -> void :
