@@ -70,17 +70,17 @@ map_bridge.png      小桥的**俯视图**（桥身在画面上**竖着**）  16
   event_snow_leopard.png  雪豹出现          （R514：画面**不出现烟斗**，烟斗玩法保留）
   event_adventurer.png    冒险家的遗物
   event_martial.png       武术大师          （R514：人物是**人类老者**，不是鸭；R512 前会落进 rest 显示篝火，已修）
-  event_arcane.png        奥秘之泉          ★R515 已提供（石泉池 + 悬挂护符）
+  event_arcane.png        奥秘之泉          （R515b：改用**整屏背景** bg_arcane，不做插图）
   event_oblivion.png      遗忘之泉
   event_smith.png         鸭鸭工匠
   event_card_merchant.png 卡片商人
-  event_lake_lady.png     湖中仙女          ★R515 已提供（湖面伸出的手 + 水下倒影）
+  event_lake_lady.png     湖中仙女          ★R515 已提供（湖面上方悬浮银卡与金卡）
   event_divination.png    占卜室
   event_moon.png          赏月
   event_furnace.png       熔炉
   event_core_contract.png 契约的核心
   event_cave.png          洞穴
-  event_delivery.png      运送委托          ★R515 已提供（木箱麻袋手推车）
+  event_delivery.png      运送委托          （R515b：改用**整屏背景** bg_delivery，不做插图）
   event_delivery_done.png 委托完成          （可与 delivery 共用一张）
   event_treasure.png      卡牌宝箱          （R512 已从事件池移除，只有旧存档 / --treasure 演示可达）
   event_relic_chest.png   宝箱层（大宝箱房）
@@ -103,6 +103,8 @@ map_bridge.png      小桥的**俯视图**（桥身在画面上**竖着**）  16
                           ⚠️ 石台中央是**空凹槽**：核心标志由代码叠
                              `reward_icons/core.png`（统一走 `UiAssets.core_icon()`），
                              不要另画一个符号，否则取走核心后还留在石台上。
+  bg_delivery.png         运送委托          ★R515 已提供（木棚货台 + 木箱麻袋卷包 + 手推车）
+  bg_arcane.png           奥秘之泉          ★R515 已提供（地涌泉眼，**不是井**：无井栏/辘轳/水桶）
   bg_gaze.png             鸭之凝视          （走插图，不做背景）
   bg_rest.png             休息处            （实际读 adventure_shared/rest_clearing.png）
   bg_whisper.png          鸭鸭低语          （R514：不再是独立事件 → 不做图）

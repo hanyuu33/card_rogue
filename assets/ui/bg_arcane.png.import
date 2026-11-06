@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://mfe12jqo76hf"
-path="res://.godot/imported/event_delivery.png-09ffc2020d84bfd97cc2f0d6d675d6fe.ctex"
+uid="uid://bwivun1u33e88"
+path="res://.godot/imported/bg_arcane.png-e611b9f029490e9c2811d7d253d320f7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/event_delivery.png"
-dest_files=["res://.godot/imported/event_delivery.png-09ffc2020d84bfd97cc2f0d6d675d6fe.ctex"]
+source_file="res://assets/ui/bg_arcane.png"
+dest_files=["res://.godot/imported/bg_arcane.png-e611b9f029490e9c2811d7d253d320f7.ctex"]
 
 [params]
 

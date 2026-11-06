@@ -178,9 +178,10 @@ UiTheme.<颜色|字号|间距令牌>            # 其余
 | 事件插图 ×25 | `assets/ui/event_<kind>.png` | **320 × 240**（4:3，素材可出 2×640×480） | 1.33 | 程序化渐变底 + 主题色纹章 |
 | 事件背景 ×25 | `assets/ui/bg_<kind>.png` | 1280 × 720 | 1.78 | 程序化渐变底 + 主题色纹章 |
 | 契约核心标志（R512） | `assets/ui/reward_icons/core.png`（与道具同一张） | 200 × 200 叠在石台凹槽 | 1:1 | 不叠，凹槽留空 |
-· 已提供的事件背景：`bg_divination`（R511）/ `bg_moon` / `bg_furnace` / `bg_cave` / `bg_card_merchant` / `bg_core_contract`（R512）；`rest` 走 `adventure_shared/rest_clearing.png`。
-· 已提供的事件插图（4 张）：`event_gaze`（R512）/ `event_delivery` / `event_arcane` / `event_lake_lady`（R515）。R515 这三张**只做插图、不做整屏背景** —— 页面走默认纸底，实测三张都不吃字、不抢按钮；其余 kind 仍走程序化兜底。
-· R515 出图口径：`delivery` = 木箱／麻袋／卷包／手推车，暖午后，无人；`arcane` = 林中石砌泉池（泉眼泛青光）+ 枝上悬挂的蓝宝石护符；`lake_lady` = 蓝调黄昏湖面伸出的手 + 水下模糊人影倒影。
+· 已提供的事件背景：`bg_divination`（R511）/ `bg_moon` / `bg_furnace` / `bg_cave` / `bg_card_merchant` / `bg_core_contract`（R512）/ `bg_delivery` / `bg_arcane`（R515b）；`rest` 走 `adventure_shared/rest_clearing.png`。
+· 已提供的事件插图（2 张）：`event_gaze`（R512）/ `event_lake_lady`（R515）。其余 kind 仍走程序化兜底。
+· 插图 / 整屏背景二选一的判据（R515b 口径）：**场景要占满屏、想让人"站进去"的走 bg_**（delivery / arcane 已从插图改成整屏 CG）；**只需要一个符号性画面、不想压掉纸底质感的走 event_**（lake_lady）。两者同时存在时，插图会叠在 CG 上重复表达，**不要都给**。
+· R515 出图口径：`delivery` = 木棚货台上的木箱／麻袋／卷包 + 左右两侧手推车与马车，暖午后、无人物，**关键物件全在上半部，下三分之留空给卡片**；`arcane` = **地涌的天然泉眼（不是井）**，无井栏／辘轳／水桶，泉水泛青光 + 枝上悬挂蓝宝石护符；`lake_lady` = 蓝调黄昏湖面**上方悬浮一银一金两张卡牌**（对应"说谎／说实话"两选），卡面无文字只用纹章。
 · R514 口径（出图前必读）：`whisper`（鸭鸭低语）**不再是独立事件**（改为第二层起点「卷卷三选一」的一个候选）→ `event_/bg_whisper` **不做图**；`struggle` **暂不生成**；`martial` 的武术大师是**人类老者**（不是鸭）；`snow_leopard` 出图**不出现烟斗**（道具 6055 与选项玩法照旧保留）。
 | 占卜球内幻象 ×4（R511） | `assets/ui/div_vision_<1..4>.png` | 256 × 256（圆形、边缘羽化） | 1:1 | 不叠，球里保持底图星云 |
 | 占卜球玻璃壳（R511） | `assets/ui/div_orb_glass.png` | 256 × 256（只留亮部，ADD 混合） | 1:1 | 不叠高光，幻象照常显示 |
