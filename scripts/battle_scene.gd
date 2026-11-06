@@ -11918,28 +11918,6 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_shake(8.0, 360)
 			_say("💥 %s：引爆，敌方所有单位各 -%d" % [
 					str(data["card"].card_name), int(data.get("amount", 0))])
-		"trap_hit":
-			# 冰霜 / 冻结陷阱（R51）：攻击者踩陷阱吃直伤 —— 蓝白火花 + 飘字（同源同特效）
-			# R460：这个事件**只由「移动踏入」触发**（`_field_trigger` 是唯一口），
-			# 所以整段演出必须等那几步滑完。原来挂 `_now()`：人还站在出发格，
-			# 蓝火花和「-N」已经在那格炸开，然后才滑进陷阱里 —— 顺序反了。
-			var th_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
-			var th_at := n
-			if th_cell.x >= 0:
-				th_at = maxi(n, _slide_floor_at(th_cell))
-			var th_pos := _cell_center(th_cell)
-			if th_at <= n:
-				sfx.play("destroy")   # 没有滑行要等（旁路调用）→ 照旧当场响
-			_bursts.append({"pos": th_pos, "sc": _grid_scroll, "start": th_at, "dur": 520,
-					"col": Color("7ec8ff"), "big": false})
-			_floaters.append({"pos": th_pos + Vector2(0, -12), "sc": _grid_scroll,
-					"text": "%s -%d" % [str(data.get("kind", "陷阱")), int(data.get("amount", 0))],
-					"col": Color("2b6fb3"), "start": th_at, "dur": 1400, "size": 18})
-			# ⚠️ 卡面血**不在这里冻**：引擎是先 `_hit_unit()`（→ `fx_impact`）再发
-			# `trap_hit`，那一条已经带着滑行时刻冻结过这一笔了（见 `fx_impact` 的
-			# `fi_mv` / `fi_hold`）。这里再冻一次，`_show_hp()` 的「实际值 + 待扣总和」
-			# 就会把同一笔伤害算两遍 —— 血条反而比扣血前更高。
-			# 分工：时刻由这里定（爆点 / 飘字），掉血由 `fx_hit` 到点放行。
 		"frozen":
 			# 冰封（R68）：寒冰箭 9011 / 冰冻术士战吼 / 冻结陷阱 8013 的**唯一**施加特效。
 			# 判据与常驻光环同源（引擎的 Placement.frozen），这里只演「施加的那一下」。
@@ -11967,37 +11945,6 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": st_pos + Vector2(0, -14), "sc": _grid_scroll,
 					"text": "眩晕", "col": Color("8a6d1f"), "start": st_at, "dur": 1500, "size": 20})
 			_say("💫 %s 被眩晕：下回合不能行动" % str(data.get("name", "")))
-		"poison":
-			# 剧毒陷阱（R51）：挂毒（apply）与回合开始的毒跳 —— 绿泡 + 飘字
-			# R466：挂毒是「移动踩上来」触发的（`_field_trigger` 唯一口）→ 等那几步滑完；
-			# 回合开始的毒跳没有滑行，`_hit_cue_at` 自然退化成「现在」。
-			var po_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
-			var po_at := _hit_cue_at(po_cell)
-			var po_pos := _cell_center(po_cell)
-			_bursts.append({"pos": po_pos, "sc": _grid_scroll, "start": po_at, "dur": 520,
-					"col": Color("79c26a"), "big": false})
-			if bool(data.get("apply", false)):
-				_floaters.append({"pos": po_pos + Vector2(0, -12), "sc": _grid_scroll, "text": "中毒",
-						"col": Color("3e8a2f"), "start": po_at, "dur": 1400, "size": 18})
-				_say("☠ %s 中毒：每回合 %d 点伤害，持续 %d 回合" % [
-						str(data.get("name", "")), int(data.get("dmg", 0)),
-						int(data.get("left", 0))])
-			else:
-				_floaters.append({"pos": po_pos + Vector2(0, -12), "sc": _grid_scroll,
-						"text": "中毒 -%d" % int(data.get("amount", 0)),
-						"col": Color("3e8a2f"), "start": po_at, "dur": 1400, "size": 18})
-		"hunt":
-			# 暗影狩猎（9107，R52）：紫色爆点 —— 基础 16 伤；目标上回合触发过场地 → 30（金紫大字）
-			sfx.play("spell")
-			var hu_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			var hu_big := bool(data.get("big", false))
-			_bursts.append({"pos": hu_pos, "sc": _grid_scroll, "start": n, "dur": 560,
-					"col": UiTheme.RARITY_EPIC, "big": hu_big})
-			_floaters.append({"pos": hu_pos + Vector2(0, -12), "sc": _grid_scroll,
-					"text": ("狩猎翻倍！-%d" if hu_big else "暗影狩猎 -%d")
-							% int(data.get("dmg", 0)),
-					"col": UiTheme.RARITY_EPIC, "start": n, "dur": 1400,
-					"size": 22 if hu_big else 18})
 		"field_place":
 			# 场地卡（R74）放置：斜纹格亮一下 + 提示挂在哪一格
 			var fp_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
@@ -12007,11 +11954,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var fp_col := COL_FIELD_PERSIST if fp_persist else (
 					COL_FIELD_SELF if str(data.get("side", GameEngine.SIDE_SELF)) == GameEngine.SIDE_SELF
 					else COL_FIELD_FOE)
-			# R116：亡语落下的陷阱（捕兽大师 9126）飘字区分一下 —— 否则玩家会以为
-			# 是自己什么时候放的。同一个 `field_place` 事件，靠 `deathrattle` 标记分流。
 			var fp_text := "持续生效" if fp_persist else "场地就位"
-			if bool(data.get("deathrattle", false)):
-				fp_text = "亡语 · 陷阱就位"
 			_floaters.append({"pos": fp_pos + Vector2(0, -6), "sc": _grid_scroll,
 					"text": fp_text,
 					"col": fp_col, "start": n, "dur": 1200, "size": 15})
@@ -12042,11 +11985,6 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var fo_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
 			_floaters.append({"pos": fo_pos, "sc": _grid_scroll, "text": "+%d" % int(data.get("amount", 0)),
 					"col": COL_FIELD_PERSIST, "start": n, "dur": 1400, "size": 18})
-		"field_trigger":
-			# 场地触发（R74；R80 扩为「经过即触发」）：敌人移动路上撞到 → 一次性结算
-			_say("⚡ 场地触发：%s 踩到了 %s（移动已停止）" % [str(data.get("name", "")),
-				str((data.get("card", null) as CardData).card_name)])
-			sfx.play("destroy")
 		"charge":
 			# 蓄力（9085）：攒一层 —— 下一张技能生效 N+1 次（金色提示，压在技能结算飘字上方）
 			sfx.play("spell")
@@ -12219,17 +12157,6 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": sb_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "敲晕 力量 -%d" % int(data.get("amount", 0)),
 					"col": UiTheme.STAT_POWER, "start": n, "dur": 1300, "size": 16})
-		"dark_trap":
-			# 黑暗陷阱（8063，R105）：踩中者本回合攻击时力量 -1（暗紫爆点 + 飘字）
-			# R466：同剧毒 —— 这是「走进来」才触发的，等滑行落地（与 trap_hit 一条口径）。
-			var dt_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
-			var dt_at := _hit_cue_at(dt_cell)
-			var dt_pos := _cell_center(dt_cell)
-			_bursts.append({"pos": dt_pos, "sc": _grid_scroll, "start": dt_at, "dur": 480,
-					"col": Color("9b6bd6"), "big": false})
-			_floaters.append({"pos": dt_pos + Vector2(0, -12), "sc": _grid_scroll,
-					"text": "黑暗 力量 -%d" % int(data.get("amount", 0)),
-					"col": Color("6a3fa0"), "start": dt_at, "dur": 1300, "size": 16})
 		"gale":
 			# 疾风（9091）：随机敌人吃 2 伤
 			var ga_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
@@ -12491,15 +12418,6 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						int(data.get("discarded", 0)), ft_n])
 			else:
 				_say("🃏 拒绝命运：丢 %d 张，弃牌区没有 0/1 费卡" % int(data.get("discarded", 0)))
-		"alert":
-			# 警觉（9109，R54）：随机工事进手，那张卡费用 -2
-			var al_c = data.get("card")
-			var al_name: String = al_c.card_name if al_c != null else "?"
-			var al_disc := int(data.get("discount", 0))
-			_floaters.append({"pos": Vector2(WINDOW_W / 2, GRID_Y + GRID_H - 60),
-					"text": "警觉 · %s -%d 费" % [al_name, al_disc],
-					"col": UiTheme.KIND_SKILL, "start": n, "dur": 1800, "size": 18})
-			_say("🃏 警觉：随机工事「%s」进入手卡（费用 -%d）" % [al_name, al_disc])
 		"inspire":
 			# R300 激发 8077：一张卡被改造 → 敌人掉血（可叠加）。
 			# R362（用户口径「改成对随机两个敌人造成 3 点」+「激发打出时不应该造成伤害」）：

@@ -84,7 +84,7 @@ var _unit_played_this_turn:= false
 var turn_dmg_bonus:= 0
 var duck_revive_chance:= 100
 var turn_spell_bonus:= 0
-## R341 鹿首标本（6049）：本场战斗累计的「技能与陷阱 / 场地伤害 +N」层数。
+## R341 鹿首标本（6049）：本场战斗累计的「技能与场地伤害 +N」层数。
 ## 每个我方回合开始 +1（`_begin_turn`）。**只在战斗内累计** —— 引擎一场一个实例，
 ## 换场自然归零，不需要额外复位（道具本身跨战斗保留，层数不保留）。
 var deer_bonus:= 0
@@ -2155,7 +2155,7 @@ func _begin_turn(side: String) -> void :
 		# ⚠️ 第一个我方回合也 +1 —— 卡面写的是「每回合开始时」，开局那一回合同样算。
 		if self_relics.has(DEER_TROPHY_RELIC_ID):
 			deer_bonus += 1
-			_log("鹿首标本：技能与陷阱 / 场地伤害 +%d（本场累计）" % deer_bonus)
+			_log("鹿首标本：技能与场地伤害 +%d（本场累计）" % deer_bonus)
 		# R314 lucky 7（6045）：**每个我方回合开始**推一格跨战斗计数；满 7 的倍数 → 本轮回生效。
 		# ⚠️ 复位放在这里（而不是回合结束）：置位后要覆盖「我方回合 + 紧接着的敌方回合」，
 		#    下个我方回合开始时才清 —— 敌方回合才是真正会掉血的时段。
@@ -3189,7 +3189,7 @@ func _max_buff(side: String) -> int:
 ## 把「已记录但还没生效」的力量减益转成生效（debuff_stage 0 → 1）。
 ##
 ## ⚠️ R143 起这是**兜底**：所有力量减益的施加口（威慑 / 敲晕 / 幻影斗篷 / 回响 /
-## 黑暗陷阱 / 削弱）都**当场**置 1，不再有「下回合才生效」的延迟 —— 正常不会触发。
+## 削弱）都**当场**置 1，不再有「下回合才生效」的延迟 —— 正常不会触发。
 ## 保留它是为了防止将来某张新卡「只加了 atk_debuff、忘了置 stage」时减值永远不生效
 ## （那种情况下至少会在目标方下个回合开始补上，而不是静默丢失）。
 func _arm_debuffs(side: String) -> void :
@@ -3856,7 +3856,7 @@ func end_turn() -> void :
 				p.debuff_stage = 0
 			p.atk_buff_turn = 0
 			if p.rooted == 2:
-				p.rooted = 0   # 禁足（冰霜陷阱）：生效回合结束解除
+				p.rooted = 0   # 禁足：生效回合结束解除（R503 起无施加者，只有旧档会非 0）
 	# 沉睡（恶魔鸭 9116）：**回合递减口** —— 本方回合结束时，本方还在睡的单位
 	# sleep_left -1；减到 0 就此醒来（下一回合可行动）。
 	# R122 用户口径：沉睡**随着回合减少**（与「受伤也 -1」并存，见 _demon_duck_hurt）。
@@ -4651,12 +4651,13 @@ func _pay_refund(amount: int) -> void :
 
 ## 场地卡的**生效对象**（R78）—— 决定「这张场地需要谁能走到那一格」。
 ## 这是场地放置规则的**唯一依据**：能放 ≠ 想放，得看这张场地等的是谁。
-##   * FIELD_AIM_ENEMY（陷阱类，等敌人踩）：我方后排永远等不到敌人 → 不能放。
+##   * FIELD_AIM_ENEMY（等敌人踩的那一类）：我方后排永远等不到敌人 → 不能放。
 ##   * FIELD_AIM_ALLY（只对己方生效，如己方增幅阵地）：我方永远进不了敌方后排
 ##     → 敌方后排不能放（放那儿我方自己人踩不到，等于白给）。
 ##   * FIELD_AIM_BOTH（对双方都生效，如不分敌我的领域）：任何一侧都进得去
 ##     → **没有任何行限制**，全场皆可放。
-## 未标注生效对象的老场地卡一律按 FIELD_AIM_ENEMY 处理（现有 6 张全是陷阱）。
+## 未标注生效对象的老场地卡一律按 FIELD_AIM_ENEMY 处理。
+## ⚠️ R503 起现存 5 张场地卡全是「双」或「友」，这条缺省已没有实际使用者（兜底仍在）。
 const FIELD_AIM_ENEMY:= "敌"
 const FIELD_AIM_ALLY:= "友"
 const FIELD_AIM_BOTH:= "双"
@@ -4668,8 +4669,8 @@ static func field_place_allowed(cell: Vector2i, aim := FIELD_AIM_ENEMY) -> bool:
 	## **判据 = 「这张场地等的那一方，能不能走到这一格」**。理由：场地是钉在格子上的
 	## 一次性效果，放下去如果目标方永远到不了，这张牌就白打了 —— 该禁的是「够不着」，
 	## 不是「后排」这个位置本身。所以三种生效对象各有各的限制（R78 修正 R77 的粗暴做法）：
-	##   * FIELD_AIM_ENEMY（陷阱：等敌人踩）：敌方的移动禁区是我方后排（row 5）
-	##     → **我方后排禁放**。敌方半场 0..4 全允许，那正是陷阱最该埋的地方。
+	##   * FIELD_AIM_ENEMY（等敌人踩的那一类）：敌方的移动禁区是我方后排（row 5）
+	##     → **我方后排禁放**。敌方半场 0..4 全允许，那正是这一类最该铺的地方。
 	##   * FIELD_AIM_ALLY（只对己方生效）：我方的移动禁区是敌方后排（row 0）
 	##     → **敌方后排禁放**（我方自己进不去，铺给谁看？）。
 	##   * FIELD_AIM_BOTH（对双方生效）：两边都进得去 → **无任何行限制**。
@@ -4689,7 +4690,7 @@ static func field_place_allowed(cell: Vector2i, aim := FIELD_AIM_ENEMY) -> bool:
 
 
 static func field_aim(card: CardData) -> String:
-	## 这张场地卡的生效对象（R78）：读 trait「场地生效·敌/友/双」，缺省按「敌」（陷阱）。
+	## 这张场地卡的生效对象（R78）：读 trait「场地生效·敌/友/双」，缺省按「敌」。
 	## 卡面数据在 cards.json 的 traits 里 —— 加新场地卡时写这个 trait 就能自动获得正确限制，
 	## 不用改引擎。
 	if card == null:
@@ -10194,7 +10195,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			# 顺序 = 先伤害再击退：目标被这一发打死后 `_target_placement()` 已经是 null，
 			# 自然跳过击退（不会对着空格推）。
 			# 击退走唯一口 `_knockback()`：位移免疫（赫菲斯托斯）/ 被己方单位挡住 /
-			# 朝目标所属方后排 —— 三条规则与清退陷阱 / 暗影锁链完全同源。
+			# 朝目标所属方后排 —— 三条规则与击退 / 暗影锁链完全同源。
 			var ic_msg:= _op_deal_damage(side, _spell_dmg(side, IMPACT_CANNON_DMG, card), target)
 			if _target_placement(side, target) == null:
 				return "%s；目标被击破" % ic_msg
@@ -10271,7 +10272,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			if wp == null:
 				return "（没有目标）"
 			wp.atk_debuff += 9
-			# R143：与威慑 / 敲晕 / 幻影斗篷 / 回响 / 黑暗陷阱同源 —— **当场生效**（stage=1）。
+			# R143：与威慑 / 敲晕 / 幻影斗篷 / 回响同源 —— **当场生效**（stage=1）。
 			# 卡面 / 详情面板立刻显示削弱后的力量，持续到该单位所属方的回合结束
 			# （= 我下个回合开始之前恢复）。此前这里留空 debuff_stage、交给
 			# `_arm_debuffs` 在**对方回合开始**才置 1 → 玩家「这回合用了当场看不见」。
@@ -11985,7 +11986,7 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 
 
 func _apply_frozen(p: Placement, source: String) -> void:
-	## **施加冰封的唯一入口**（R68）—— 寒冰箭 9011 / 冰冻术郎战吼 / 冻结陷阱 8013
+	## **施加冰封的唯一入口**（R68）—— 寒冰箭 9011 / 冰冻术士战吼
 	## 都走这里，避免三处各写一遍而特效 / 表现漂移。
 	## 机制本身不变：`Placement.frozen` → 下回合 `reset_units` 不重置（横置保持 = 不能行动）。
 	## `source` 只进日志；界面特效由 `action.emit("frozen", …)` 驱动（战场表现唯一来源）。
@@ -12256,7 +12257,7 @@ func _knockback(side: String, target, steps: int) -> String:
 	if p == null:
 		return "（没有目标）"
 	# R277：位移免疫（赫菲斯托斯 9135）—— 判据放在这个**唯一口**，
-	# 清退陷阱 / 击退 9004 / 和风守护 9064 / 暗影锁链 9112 就全都自动生效。
+	# 击退 9004 / 和风守护 9064 / 暗影锁链 9112 就全都自动生效。
 	# R371：启示者（9200）同样走这里 → 全阶段免疫位置移动效果。
 	if _displace_immune(p):
 		_log("%s 免疫位移：没有被击退" % p.card.card_name)
@@ -13771,7 +13772,7 @@ func pending_card_effects() -> int:
 func _queue_death_effect(cell: Vector2i, fn: Callable, adds_cards := false) -> void:
 	## R360：死亡效果入队。`defer_death_effects == false` 时等同于「立刻执行」——
 	## 单元测试与回放走的都是这条，断言时序一点没变。
-	## R472：`adds_cards = true` 的效果（召唤 / 加手卡 / 埋陷阱）会**推迟胜利判定**，
+	## R472：`adds_cards = true` 的效果（召唤 / 加手卡）会**推迟胜利判定**，
 	## 见 `_death_card_pending` 与 `_check_game_over()`。
 	if not defer_death_effects:
 		fn.call()
@@ -13908,7 +13909,7 @@ func _destroy(cell: Vector2i) -> void :
 func _death_adds_cards(p: Placement) -> bool:
 	## R472：这张卡死掉之后，会不会**往场上 / 手卡里加东西**？
 	## 只有这一类要抢在胜利判定之前结算 —— 因为它们可能把「清场」这个条件重新弄成不成立
-	##（骷髅 / 龙裔 / 罐子召唤、母舰补造、捕兽大师埋陷阱、幽灵与生命循环加手卡）。
+	##（骷髅 / 龙裔 / 罐子召唤、母舰补造、幽灵与生命循环加手卡）。
 	## 伤害类亡语（食尸鬼 9036 扣 HP、机械 9131 群伤、爆炎鸭爆炸）**故意不算**：
 	## 它们不改场上张数，早结算晚结算都不影响胜负，没必要为它们推迟结算。
 	if p == null or p.card == null:
@@ -14325,7 +14326,7 @@ func _owlbear_slam(p: Placement, dst: Vector2i) -> void:
 	## 口径与普通攻击一致（`effective_power + 回合/光环加成`，且**按攻击类**结算 ——
 	## 卡面写的就是「等同于力量的伤害」，不该被「技能伤害减半 / 技能抗性」白吃一层）。
 	## 践踏（半血以下，见 `_has_trample`）：砸死的那个单位，溢出伤害沿**同列**继续传，
-	## 与落石陷阱同一条路（`_rockfall_overflow`）—— 陷阱没有攻击者，而这里**有**
+	## 与践踏溢出同一条路（`_rockfall_overflow`）—— 那条链原本没有攻击者，而这里**有**
 	## （击杀记功要记给枭熊，鸭子骑士那类「击杀成长」才认得出是谁干的）。
 	var power:= p.effective_power() + _turn_dmg_bonus(p.owner) + _ally_dmg_bonus(p.card, p.owner)
 	var cells:= _slam_cells(dst, p.owner)
@@ -14672,10 +14673,11 @@ func _rush_punch(side: String, target, card: CardData) -> String:
 
 
 func _rockfall_overflow(from_cell: Vector2i, side: String, remaining: int,
-		src_name := "落石陷阱", killer := Vector2i(-1, -1)) -> Array:
-		## 落石陷阱的践踏链（R248）—— `_trample_chain` 的**陷阱版**：同列、同侧、逐个击穿。
-		## 与攻击践踏只有两处差异：方向取「踩雷者所在方的**后排**」（不是远离攻击者），
-		## 伤害来源记「落石陷阱」（is_attack = false，效果伤害而非普通攻击）。
+		src_name := "溢出", killer := Vector2i(-1, -1)) -> Array:
+		## 溢出践踏链（R248，原为落石陷阱所写）—— `_trample_chain` 的同列贯穿版：逐个击穿。
+		## ⚠️ R503 起落石陷阱卡已删，只剩两个调用方：攻击践踏（传「践踏」）与飞踢（传「飞踢」）。
+		## 与攻击践踏只有两处差异：方向取「溢出方所在方的**后排**」（不是远离攻击者），
+		## 伤害来源记 `src_name`（is_attack = false，效果伤害而非普通攻击）。
 		## 返回 [剩余伤害, 最后被击穿的单位名]：没穿到人 → 名字空串；打穿整列 → 调用方漏 HP。
 		## ⚠️ 坐标是 `Vector2i(行, 列)` —— 同列 = 同一个 `y`，行号朝 `back_row(side)` 推；
 		##    踩雷者已在本方后排（没有更深的同侧格）时公式自然给出反方向（朝对方半场推）。
@@ -16342,11 +16344,11 @@ func _ai_act(cell: Vector2i, p: Placement) -> void :
 		else:
 			attack(dst, choice2[1], SIDE_OPPONENT)
 		return
-	# R61 修复：移动后「挑剔」逻辑落空时的兜底 —— 射程内有非陷阱敌人就打。
+	# R61 修复：移动后「挑剔」逻辑落空时的兜底 —— 射程内有敌人就打。
 	# 根因：_ai_target_choice 只打嘲讽/穿透/挡路目标，路已通（wall_depth<=0）时
 	# 对旁边的敌人视而不见返回 null → 单位移动后既不攻击也不横置，白白放弃攻击权
 	# （横向移动 / 穿越双方场地后空站）。原地未动的单位早有 _ai_attack_if_any 兜底，
-	# 唯独移动后这条分支漏了。只剩陷阱可打 → 放弃（撞陷阱吃惩罚不值）。
+	# 唯独移动后这条分支漏了。（R503 起「只剩陷阱可打就放弃」那条豁免已随陷阱卡删除。）
 	# 注意只在「刚移动、待攻击」状态（moved 仍为 true）才兜底：若引擎在 move() 里
 	# 已按「无目标」消耗掉一次行动（多动单位的 moved 会被 _tap 重置成 false），
 	# 说明它进入新一轮行动、还有后续轮次可走，这里不能抢。
@@ -16497,10 +16499,10 @@ func _assassin_act(cell: Vector2i, p: Placement) -> void :
 		if moved == null:
 			# R400（用户报「敌人 AI 卡死」）：闪现**没落地**也必须横置。
 			# 不 tap 的话 `ai_action_queue()` 下一拍又把它排回队首 → 敌方回合永远不结束。
-			# 已知三种起因：被禁足（`rooted > 0`，冰霜陷阱）、本回合已移动过
+			# 已知三种起因：被禁足（`rooted > 0`；R503 起已无施加者，只剩旧档）、本回合已移动过
 			# （`moved` 且 `acts_left <= 1`）、落点被占。
 			# ⚠️ 普通 AI 那条早有 `_tap(p, "AI：推进失败")` 兜底，暗杀者这条 R111 漏了。
-			# ⚠️ 还要先确认它仍在场上：闪现途中被陷阱当场打死时 `_cell_of()` 是 (-1,-1)，
+			# ⚠️ 还要先确认它仍在场上：闪现途中被打死时 `_cell_of()` 是 (-1,-1)，
 			#    对一个已离场的对象调 `_tap()` 会 emit 一个不存在的格子。
 			if _cell_of(p) != Vector2i(-1, -1):
 				_tap(p, "AI：暗杀者闪现未落地（禁足 / 已移动 / 落点被占）")

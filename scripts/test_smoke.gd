@@ -84,7 +84,7 @@ func _initialize() -> void:
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r393_absorb_timing],
 		# R466（用户口径）：「再批量排查一下战斗动画顺序有没有问题」。
-		# 移动途中才结算的附带演出（中毒 / 黑暗陷阱 / 爆炸场地 / 火墙灼烧）必须等滑行落地，
+		# 移动途中才结算的附带演出（爆炸场地 / 火墙灼烧 / 受击反馈）必须等滑行落地，
 		# 否则「人还在半路、字先飘在原位」。只有真场景（真滑行动画）能验。
 		["res://scenes/battle.tscn", func():
 				_reset()
@@ -2479,7 +2479,7 @@ func _check_r466_anim_cue(scene) -> void:
 	## R466（用户口径）：「再批量排查一下战斗动画顺序有没有问题」。
 	## 规则：凡是「等移动 / 等这一拳」才该出现的附带演出，都必须落到对应帧 ——
 	## 走 `_hit_cue_at(cell)`（= max(全屏最早未落地的一击, 这一格的滑行落地)），
-	## 与 `trap_hit` / `frozen` / `stun` / 代受 同一条口径。
+	## 与 `frozen` / `stun` / 代受 同一条口径。
 	## 判据用「真的滑行动画 + 真的引擎事件」，不做源码字符串断言：
 	## 滑行时长 460ms，事件到达时若按 `_now()` 播，`start` 必然早于滑行落地。
 	if not scene.has_method("_hit_cue_at"):
@@ -2490,7 +2490,7 @@ func _check_r466_anim_cue(scene) -> void:
 		_smoke_fail("R466：场景里没有引擎，验不了移动时序")
 		return
 	var walk_cell := Vector2i(1, 1)
-	var walk_card: CardData = scene.repo.get_card(1053)      # 骷髅兵：只为当个「踩陷阱的人」
+	var walk_card: CardData = scene.repo.get_card(1053)      # 骷髅兵：只为当个「走过去的人」
 	if walk_card == null:
 		_smoke_fail("R466：取不到演示用的卡（1053）")
 		return
@@ -2506,37 +2506,9 @@ func _check_r466_anim_cue(scene) -> void:
 	if floor_at <= now0:
 		_smoke_fail("R466：滑行没被识别（_slide_floor_at 返回 %d）" % floor_at)
 		return
-	# ① 剧毒陷阱（移动踩上）→ 绿泡 /「中毒」等滑行落地
-	scene._floaters.clear()
-	scene._on_engine_action("poison", {"cell": walk_cell, "amount": 0, "dmg": 3,
-			"name": "骷髅兵", "left": 3, "apply": true})
-	var po_at := -1
-	for f: Dictionary in scene._floaters:
-		if str(f.get("text", "")).begins_with("中毒"):
-			po_at = int(f.get("start", 0))
-	if po_at < 0:
-		_smoke_fail("R466：剧毒陷阱没有排出「中毒」飘字")
-		return
-	if po_at < floor_at:
-		_smoke_fail("R466：中毒飘字落在 %d，早于滑行落地 %d（先中毒、后走到）"
-				% [po_at, floor_at])
-		return
-	# ② 黑暗陷阱（移动踩上）→ 暗紫爆点 /「黑暗 力量 -N」等滑行落地
-	scene._floaters.clear()
-	scene._bursts.clear()
-	scene._on_engine_action("dark_trap", {"cell": walk_cell, "amount": 1, "power": 2,
-			"name": "骷髅兵"})
-	var dt_at := -1
-	for f2: Dictionary in scene._floaters:
-		if str(f2.get("text", "")).begins_with("黑暗"):
-			dt_at = int(f2.get("start", 0))
-	if dt_at < 0:
-		_smoke_fail("R466：黑暗陷阱没有排出飘字")
-		return
-	if dt_at < floor_at:
-		_smoke_fail("R466：黑暗陷阱飘字落在 %d，早于滑行落地 %d" % [dt_at, floor_at])
-		return
-	# ③ 爆炸场地（走进来踩响）→ 火焰不能先于滑行炸开
+	# ① 爆炸场地（走进来踩响）→ 火焰不能先于滑行炸开
+	# ⚠️ R503：原来的「中毒 / 黑暗陷阱」两段已删 —— 那两个事件随陷阱卡一起移除，引擎不再发。
+	# 本条口径（附带演出必须等滑行落地）继续由爆炸场地 / 火墙 / 受击反馈三段守。
 	scene._bursts.clear()
 	scene._on_engine_action("blast", {"center": walk_cell, "cells": [walk_cell],
 			"amount": 9, "card": walk_card})
@@ -2547,7 +2519,7 @@ func _check_r466_anim_cue(scene) -> void:
 	if bl_at < floor_at:
 		_smoke_fail("R466：爆炸火焰落在 %d，早于滑行落地 %d" % [bl_at, floor_at])
 		return
-	# ④ 火墙灼烧（走过去的）→ 等滑行落地
+	# ② 火墙灼烧（走过去的）→ 等滑行落地
 	scene._floaters.clear()
 	scene._on_engine_action("fire_wall_pass", {"cell": walk_cell, "dmg": 4, "card": walk_card})
 	var fw_at := -1
@@ -2560,7 +2532,7 @@ func _check_r466_anim_cue(scene) -> void:
 	if fw_at < floor_at:
 		_smoke_fail("R466：火墙飘字落在 %d，早于滑行落地 %d" % [fw_at, floor_at])
 		return
-	# ⑤ 受击反馈族（护盾挡下）→ 等**这一拳**撞到，不是「事件到达那一刻」
+	# ③ 受击反馈族（护盾挡下）→ 等**这一拳**撞到，不是「事件到达那一刻」
 	# 攻击者另占一格，攻击动画入库后 `_pending_impact_ms()` 才会给出未来的撞击帧。
 	var atk_cell := Vector2i(0, 1)
 	eng.state.place(walk_card, atk_cell, GameEngine.SIDE_OPPONENT)
