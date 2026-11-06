@@ -14418,13 +14418,19 @@ func activate(cell: Vector2i, side:= SIDE_SELF) -> bool:
 
 func _place_mark(cell: Vector2i, side: String, why := "") -> void :
 	## 标记的**唯一写入口**（R503）。
-	##   * 旧的标记不管在哪一格，先摘掉（全场只留一个）；
-	##   * **同一格**再标一次 → 数值**保留**（卡面只写「换格子才重置」）；
-	##   * **换格子**（含从无到有） → 数值回到 MARK_BASE_BONUS。
+	##   * **同一格**再标一次 → **不刷新**（用户口径）：数值原样保留，场地也不摘掉重放，直接返回；
+	##   * **换格子**（含从无到有） → 先摘旧格的、再放新的，数值回到 MARK_BASE_BONUS。
 	## ⚠️ 别在别处直接 `state.set_field(标记卡)`：那样数值不会重置、也不会摘掉旧标记。
 	var tag := why if why != "" else "标记"
 	var old_cell := state.mark_cell()
-	var keep_bonus := old_cell != Vector2i(-1, -1) and old_cell == cell
+	if old_cell == cell:
+		# 同一格再标一次 = 不刷新：数值不动，场地也不摘了重放（免得中间空一帧、还多一次飘字）
+		if state.mark_bonus <= 0:
+			state.mark_bonus = MARK_BASE_BONUS  # 兜底：异常态别留一个 +0 的空标记
+		_log("%s：%s 原本就有标记，数值保持 +%d 不重置" % [tag, cell, state.mark_bonus])
+		action.emit("mark", {"cell": cell, "side": side, "bonus": state.mark_bonus,
+			"moved": false, "from": old_cell, "refreshed": false})
+		return
 	if old_cell != Vector2i(-1, -1):
 		state.clear_field(old_cell)
 	var proto: CardData = CardRepo.load_json().get_card(MARK_ID)
@@ -14432,8 +14438,7 @@ func _place_mark(cell: Vector2i, side: String, why := "") -> void :
 		push_error("标记卡 9224 不在卡库里")
 		return
 	state.set_field(proto, cell, side)
-	if not keep_bonus:
-		state.mark_bonus = MARK_BASE_BONUS
+	state.mark_bonus = MARK_BASE_BONUS
 	_log("%s：标记落在 %s（此格上的敌人受到伤害 +%d）" % [tag, cell, state.mark_bonus])
 	action.emit("mark", {"cell": cell, "side": side, "bonus": state.mark_bonus,
 		"moved": old_cell != Vector2i(-1, -1) and old_cell != cell, "from": old_cell})

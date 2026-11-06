@@ -31873,6 +31873,34 @@ func _init() -> void:
 		"R503 恐惧投射：字段「次元」→ 用后进消耗区（void_count = %d）"
 			% r503_c.state.void_count)
 
+	# ④b 同一格再标一次 = **不刷新**（用户口径 R503b）：数值不回到 1，场地也不摘掉重放
+	var r503_nr := _new_engine([], 30, 30, -1, false)
+	r503_nr.start_game(1)
+	var r503_nr_a: Placement = r503_nr.state.place(
+			CardData.from_dict(r503_repo.get_card(1051).to_dict()), Vector2i(3, 1),
+			GameEngine.SIDE_OPPONENT)
+	r503_nr_a.health = 60
+	r503_nr.state.energy = 9
+	r503_nr.state.hand.append(CardData.from_dict(r503_omen.to_dict()))
+	r503_nr.use_spell(0, Vector2i(3, 1))
+	r503_nr.end_turn()
+	r503_nr.end_turn()
+	check(r503_nr.state.mark_bonus == 2,
+		"R503 标记不刷新：重标前数值已涨到 2（实际 %d）" % r503_nr.state.mark_bonus)
+	var r503_nr_field: CardData = r503_nr.state.field_at(Vector2i(3, 1))
+	var r503_nr_hp := r503_nr_a.health
+	r503_nr.state.energy = 9
+	r503_nr.state.hand.append(CardData.from_dict(r503_omen.to_dict()))
+	r503_nr.use_spell(r503_nr.state.hand.size() - 1, Vector2i(3, 1))
+	check(r503_nr.state.mark_cell() == Vector2i(3, 1) and r503_nr.state.mark_bonus == 2,
+		"R503 标记不刷新：同格再标 → 标记仍在 (3,1)、数值仍为 2（实际 %s / +%d）"
+			% [r503_nr.state.mark_cell(), r503_nr.state.mark_bonus])
+	check(r503_nr.state.field_at(Vector2i(3, 1)) == r503_nr_field,
+		"R503 标记不刷新：场地实例没有被摘掉重放（还是同一个对象）")
+	check(r503_nr_hp - r503_nr_a.health == GameEngine.DEATH_OMEN_DMG + 2,
+		"R503 标记不刷新：这一下按现值算 → 6 + 2 = 8（实际掉 %d 血）"
+			% (r503_nr_hp - r503_nr_a.health))
+
 	# ⑤ 恐惧投射：标记 + 本回合力量 -11；**本来就被标记**才补那 8 伤
 	check(r503_c_b.atk_debuff == GameEngine.FEAR_PROJECTION_DEBUFF
 			and r503_c_b.debuff_stage == 1,
