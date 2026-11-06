@@ -265,14 +265,6 @@ const WASTE_BOT_TRAIT:= "废铁"      # 只做标记（与「锻造 / 铸造」�
 const WASTE_BOT_DMG:= 1            # 每次被改造：对所有敌方单位 1 点伤害
 
 # ---- R230：清退（9153，暗影刺客 · 稀有效果卡）----
-# 效果区里有本卡时：**把陷阱（= 等敌人踩的场地卡，`field_aim == FIELD_AIM_ENEMY`）
-# 放在有敌人的格子上** → 把那个敌人朝**敌方后排**方向击退 CLEAR_OUT_STEPS 格
-# （被单位或边界挡住就停下，与「击退 9004」同一个口 `_knockback`）。
-# ⚠️ 挂点 = `play_from_hand` 的场地分支（玩家侧唯一场地放置口）。
-# ⚠️ 只认「陷阱」：清泉 / 维修间 / 改造工厂这类对己方或双向生效的场地不算（不是陷阱）。
-const CLEAR_OUT_ID:= 9153
-const CLEAR_OUT_TRAIT:= "清退"      # 只做标记（与「锻造 / 废铁」同套路）
-const CLEAR_OUT_STEPS:= 1          # 击退格数（R278：2 → 1）
 
 # ---- R231：破绽（俄倪厄 9132 / 量产型俄倪厄 9131）----
 # 带「破绽」trait 的单位在**自己这一方的回合开始时**，往**对方卡组**塞一张诅咒
@@ -557,7 +549,7 @@ const POPCORN_DRAW:= 1
 # 洞窟绳（6048，第一层初始池）：Boss 以外的战斗能「逃跑」，用掉即失去 —— 不含引擎逻辑
 #   （按钮与收尾都在 battle_scene，判据口 `RunState.can_use_cave_rope()`）。
 # 鹿首标本（6049，第二层起始池）：每个我方回合开始 +1 层，本场战斗**永久累计**；
-#   技能伤害在 `_spell_dmg()` 吃，陷阱 / 场地伤害在 `_field_trigger()` 吃 —— 两个口都要加。
+#   只有技能伤害在 `_spell_dmg()` 吃（R503 起陷阱 / 场地伤害已随陷阱卡一起移除）。
 const STUN_BOX_ID:= 9179
 const STUN_BOX_TRAIT:= "惊奇盒子"
 const STUN_TURNS:= 1
@@ -1059,58 +1051,27 @@ const FINISHER_ID:= 9104
 const FINISHER_DMG:= 6
 const FINISHER_LAST_DMG:= 22
 
-# ================= 场地卡（R74）=================
-# 「名字含陷阱」的那 5 张（8011 爆炸 / 8012冰霜 / 8013 冻结 / 8014 剧毒 / 8016 穿刺）
-# 从「工事」彻底改成**新卡种「场地」**（CardData.is_field()）：
-#   * **不是单位** —— 不占位、不能被攻击、不挡路、不进AI 行动队列、不参与嘲讽/反伤/溢出；
-#   * 钉在**一个格子**上（FieldState.field_effects，唯一写入口 set_field，每格最多1 个）；
-#   * **敌人「移动经过」此格时触发一次，并立刻停止这次移动**（R80：不再是「走到这里
-#     才触发」—— 只要**路径上经过**就炸，落在哪一格就停在哪一格）；
-#   * 原本就站在该格上的敌人**不触发**（src 不在 path 里，只有「走进这段路」才触发）。
-#触发口唯一 = _field_trigger（挂在 move() 里），不再挂在 attack() 上。
-# 「经过就触发 + 立刻停止」的落点计算唯一口 = _field_block_index（只看 path，不看终点）。
-const TRAP_ID:= 8011
-const TRAP_TRAIT:= "爆炸陷阱"
-const TRAP_DMG:= 18
-
-const FROST_TRAP_ID:= 8012
-const FROST_TRAP_TRAIT:= "冰霜陷阱"
-const FROST_TRAP_DMG:= 9        # R278：4 → 9（用户口径「原本 1 费的冰陷阱 +5 伤害」）
-const FREEZE_TRAP_ID:= 8013
-const FREEZE_TRAP_TRAIT:= "冻结陷阱"
-const FREEZE_TRAP_DMG:= 3
-const POISON_TRAP_ID:= 8014
-const POISON_TRAP_TRAIT:= "剧毒陷阱"
-const POISON_DMG:= 6
-const POISON_TURNS:= 4
-const TRAP_MASTERY_ID:= 9105
-const TRAP_MASTERY_TRAIT:= "场地精通"   # 9105 陷阱精通 R74 改名：口径从「工事」改成「场地」
-## R329（用户口径）：加成 2X → 3X（X = 该场地卡的原本费用）。
-## ⚠️ 这里是**唯一倍数口** —— 卡面文案（cards.json 的 9105 effect_text）必须与它一致，
-##    引擎所有场地伤害都经 `_field_mastery()` 取这个值，别在别处再写死倍数。
-const TRAP_MASTERY_MULT:= 3
-
-# 机关工坊（8015 工事，R52 起；R74 改名「陷阱工坊」→「机关工坊」）：
-#   **它仍然是「工事」，不属于场地卡**（卡名去掉「陷阱」只是文案去混淆）。
-#   回合开始随机把一张本角色奖励池的工事加入手卡；被敌人的普通攻击**破坏**时对攻击者
-#   造成 WORKSHOP_DMG 点伤害。注意它吃的是**场地精通**加成（原「陷阱精通」口径）。
-const WORKSHOP_ID:= 8015
-const WORKSHOP_TRAIT:= "机关工坊"
-const WORKSHOP_DMG:= 8
-const HUNT_ID:= 9107     # 暗影狩猎（9107 技能）：目标上回合触发过**场地** → 16 伤改 30 伤
-const HUNT_DMG:= 16      # R329（用户口径）：12 → 16
-const HUNT_BIG_DMG:= 30  # R329（用户口径）：24 → 30
-
-const PIERCE_TRAP_ID:= 8016
-const PIERCE_TRAP_TRAIT:= "穿刺陷阱"
-const PIERCE_TRAP_DMG:= 18
+# ================= 场地卡 =================
+# 场地卡（CardData.is_field()）**不是单位** —— 不占位、不能被攻击、不挡路、不进 AI 行动队列。
+# 它钉在**一个格子**上（FieldState.field_effects，唯一写入口 set_field，每格最多 1 个）。
+# 现存场地只有两族：
+#   * **持续型**（trait「持续场地」）：不因任何经过而触发、也不会消失，按自己的时机结算 ——
+#     清泉 8028 / 维修间 8036 / 改造工厂 8037 走 `_field_aura_tick`，漩涡 9186 走 `_vortex_push`；
+#   * **标记**（R503，9224）：暗影刺客的伤害增幅场，同样不触发、不消失，
+#     判据读 `FieldState.mark_cell()`，**同一时刻只存在一个标记**。
+# ⚠️ R503（用户口径「移除暗影刺客所有陷阱 / 场地相关的卡」）：原本那 8 张一次性陷阱
+#    （爆炸 8011 / 冰霜 8012 / 冻结 8013 / 剧毒 8014 / 穿刺 8016 / 巨物 8017 / 黑暗 8063 /
+#    落石 9159）连同「移动经过即触发并停止移动」「场地精通加成」「毒 / 禁足 / 冰冻挂毒」
+#    整套机制**卡与引擎分支一起删干净了**（`_field_trigger` / `_field_block_index` /
+#    `_trap_still_tick` / `_field_mastery` / `_workshop_supply` / `_poison_tick` 全部不存在）。
+#    现在单位踩到场地**不会发生任何事** —— 别再往回加这套链子。
 
 # ── R83：清泉（8028）—— 场地卡的**第二个机制类别：持续型** ──
 # 现有 6 张场地（8011~8017）全是「**一次性触发**」：敌人移动经过 → 结算 → 该格消失。
 # 清泉反过来：**不因任何经过而触发、不会消失**，只是「站在这格的单位在自己回合结束时 +2 血」。
 # 于是它**必须被排除出陷阱那条链**（否则敌人一走过就被白白消耗掉，这张牌等于废）：
-#   * `_field_block_index` 跳过它 → 敌人正常走过、不被拦停；
-#   * `_field_trigger` 早退 → 不会被摘掉，也不会记「暗影狩猎」的触发标记；
+#   * 它没有任何「踩上去就结算」的效果 → 单位站上去照常行动；
+#   * 它不会被任何经过「吃掉」，只有玩家再放一块场地才会被顶掉。
 # 判据是 **trait「持续场地」**（R83 新增），走 cards.json —— 加新的持续型场地只要写这个 trait。
 const FOUNTAIN_ID:= 8028
 const PERSISTENT_FIELD_TRAIT:= "持续场地"
@@ -1561,7 +1522,30 @@ const INSTINCT_MAX_COST:= 1
 # 猎杀 9205：3 费史诗技能 · 次元；基础伤害写在卡面 `value`（R427：22），每击杀 +4 本局永久。
 # 赏金猎人 9204 / 秃鹰 9206 的「每场首次击杀」数值走卡面字段
 # `first_kill_power / first_kill_health`，引擎按字段判，不为卡名写死分支。
-const SLAY_ID:= 9205     # ⚠️ 别并进上面的 HUNT_ID（那是 9107 暗影狩猎），两个 id 语义不同
+const SLAY_ID:= 9205     # 猎杀：3 费史诗技能 · 次元；击杀后伤害本局永久 +4
+
+# ---- R503（2026-11-06）标记（9224）+ 五张围绕它的卡 ----
+# 用户口径：「标记：0 费场地。处于此位置的敌人受到伤害 +1，此效果每回合 +1，
+#   直到此场地移动后重置（标记场地唯一，同时只能存在一个）」。
+# 落地：存在性 / 数值的唯一口都在 FieldState（`mark_cell()` / `mark_bonus`），
+#   写入只走 `_place_mark()`，加伤挂在 `_unit_damage_taken()` 与只读镜像 `preview_hit_damage()`。
+const MARK_ID:= 9224
+const MARK_BASE_BONUS:= 1     # 刚落下的标记：此格上的敌人受到伤害 +1
+const MARK_GROWTH:= 1         # 每个**我方**回合开始 +1（敌方回合不长，玩家感觉不到差别）
+const DEATH_OMEN_ID:= 9225    # 死亡预告：1 费普通技能 · 标记目标所在格 + 6 伤
+const DEATH_OMEN_DMG:= 6
+const FATAL_ID:= 9226         # 致命：3 费**史诗效果** · 被标记的敌人受到额外 50% 伤害
+const FATAL_TRAIT:= "致命"
+const FATAL_NUM:= 3           # 额外 50% = ×3/2（向上取整，见 _unit_damage_taken 的 ①f）
+const FATAL_DEN:= 2
+const DEATH_DESCENT_ID:= 9227     # 死神降临：2 费稀有技能
+const DEATH_DESCENT_DMG:= 14
+const DEATH_DESCENT_MARKED_DMG:= 20
+const DEATH_DESCENT_DRAW:= 2
+const FEAR_SHADOW_ID:= 9228       # 恐惧之影：3 费稀有盟友 3/14/程1/速1
+const FEAR_PROJECTION_ID:= 9229   # 恐惧投射：2 费普通技能 · 次元
+const FEAR_PROJECTION_DEBUFF:= 11
+const FEAR_PROJECTION_DMG:= 8
 const UPGRADE_RANGE_TRAIT:= "改造攻程"
 ## R275：重甲战车 8058 移除本 trait（改为「每层改造受到的伤害 -1」）——
 ## 当前**没有任何卡**带「改造移速」，分支保留给未来的卡用。
@@ -1575,19 +1559,6 @@ const SWAP_UNITS_ID:= 8061
 ## 玩家在任何地方都看不到「它有护盾」。
 const FIELD_BARRIER:= "护盾"
 
-# 巨物陷阱（8017，R54 起是「巨物捕获」工事；**R76 改成场地卡并改名**）：1 费稀有（R278 由 2 费下调）。
-#   口径跟其它场地卡一致：不是单位、钉在一个格子上、**敌人移动经过此格**时触发一次
-#   （R80：路过即中，不必停留）**并立刻停止这次移动**，之后该格场地消失
-#   （每格最多 1 个，按场地生效·敌不能放自己后排），吃场地精通加成。
-#   原来那套「被打中没破坏就回手 / 破坏就反伤 2×攻击力」是工事专属机制，
-#   场地卡不会被攻击（也不在 board 里），所以那两个分支已全部删除。
-const MASS_TRAP_ID:= 8017
-const MASS_TRAP_TRAIT:= "巨物陷阱"
-## R217（2026-10-18）用户口径：伤害 = **10 + 踩上来的那个单位当前攻击力 × 2**。
-## 「当前攻击力」读 `Placement.effective_power()`（含增减益 / 成长 / 改造 / 改造加攻），
-## **不是卡面 power** —— 卡面 0 攻的单位踩上来就只有 10 点。
-const MASS_TRAP_DMG:= 10
-const MASS_TRAP_ATK_MUL:= 2
 
 # ---- R217（2026-10-18）分裂之影 8067 ----
 # 分裂之影（8067 工事，暗影刺客·**稀有**）：2 费 0/5/0。
@@ -1599,57 +1570,14 @@ const MASS_TRAP_ATK_MUL:= 2
 const SHADOW_SPLIT_ID:= 8067
 const SHADOW_SPLIT_TRAIT:= "分裂之影"
 
-# ---- R105（2026-10-08）黑暗陷阱 8063 ----
-# 黑暗陷阱（8063 场地，暗影刺客·普通）：**0 费**；敌人**移动经过**此格时立刻触发
-#   （R80 口径：路过即中，不必停留）并**立即停止这次移动** →
-#   **那个敌人本回合攻击时力量 -1**。
-# 与冰霜陷阱（8012 禁足）/ 冻结陷阱（8013 冰冻）同族：都不造成伤害，只给**状态**。
-# 降力量复用「威慑 / 敲晕 / 幻影斗篷 / 回响」那套 `atk_debuff + debuff_stage = 1`：
-#   debuff_stage=1 = **立即生效**，在**该单位所属方的回合结束时**清除 ——
-#   陷阱是敌方移动时踩的（= 敌方回合内），所以正好覆盖「它本回合剩下的攻击」。
-# ⚠️ 0 费 → 场地精通（9105）加成是 3×0 = 0；这张本来就不造成伤害，加成无意义。
-const DARK_TRAP_ID:= 8063
-const DARK_TRAP_TRAIT:= "黑暗陷阱"
-const DARK_TRAP_DEBUFF:= 1      # 本回合攻击时力量 -1
 
-# ---- R248（2026-10-19）落石陷阱 9159 ----
-# 落石陷阱（9159 场地，暗影刺客·**史诗**）：**2 费**（R278 由 3 费下调）；敌人**移动经过**此格时立刻触发
-#   （R80 口径：路过即中，不必停留）并**立即停止这次移动** → 对踩上来的那个单位造成
-#   ROCKFALL_TRAP_DMG 点伤害；**这一下若将其击杀，溢出的伤害不丢弃**（用户口径「践踏」）。
-# * 践踏语义与 R225 攻击践踏（`_trample_chain`）一致：溢出不丢弃、沿**同一列**逐个
-#   击穿踩雷者**同侧**的单位，打穿整列后剩余伤害漏到该方 HP。
-# * 方向差异：攻击践踏是「远离攻击者、冲向 defender 后排」，陷阱**没有攻击者**，
-#   方向固定取「踩雷者所在方的后排」—— 于是「原地不动踩响」（R238 `_trap_still_tick`）
-#   同样享受践踏，不需要移动方向信息（`_field_trigger` 两个调用点都覆盖）。
-# * 每一段都走 `_hit_unit`（单位扣血唯一口）→ 侦察塔光环 / 石肤 / 护盾转发照常生效；
-#   is_attack 保持默认 false —— 这是**效果/陷阱伤害**，不是普通攻击。
-# * 特效复用「trample_hit / trample」（R225 攻击践踏同款）—— 同效果必须同特效。
-# * 击杀不记功给任何单位（last_hit_by 置 -1）：陷阱格上没有「攻击者」，不置的话
-#   会误记给本回合早先打过它的单位（鸭子骑士白拿 buff）。
-const ROCKFALL_TRAP_ID:= 9159
-const ROCKFALL_TRAP_TRAIT:= "落石陷阱"
-const ROCKFALL_TRAP_DMG:= 29
 
-# ---- R116（2026-10-09）捕兽大师 9126 ----
-# 捕兽大师（9126 盟友，暗影刺客·**史诗**）：3 费 2/8 程1 速1。
-#   **亡语：在原地留下一张随机陷阱。**
-# * 「随机陷阱」= 本角色奖励池里的**一次性场地**（唯一口 `_trap_card_pool`）；
-#   与机关工坊 8015 / 警觉 9109 同一来源（唯一口 `_field_card_pool`）。判据**不写死卡名 / id** ——
-#   往后加新陷阱、或给别的角色加陷阱，这里一行都不用改。
-# * 原地已有场地效果时**不覆盖**（那张多半是玩家自己埋的）→ 见 `_deathrattle_place_trap`。
-const TRAPPER_ID:= 9126
 # 活体栅栏（8018 工事，R54）：2 费稀有；2/8/1。可攻击的【栅栏】类工事（带 FENCE_TRAIT，
 #   可参与「叠栅栏」）。
 # R319（用户口径）：效果与文案统一成「**入场时抽一张卡**」—— 挂点是 `play_from_hand`
 #   里其它 `_xxx_enter(p)` 那一排，走 `_draw_many` 统一口。
 const LIVING_FENCE_ID:= 8018
 const LIVING_FENCE_DRAW:= 1   # 入场时抽几张
-# 警觉（9109 技能，R54）：2 费稀有。**第 1 回合必定抽到**（开局把牌库里那张挪到牌库顶）；
-#   使用时把一张随机工事（本角色奖励池）加入手卡，那张卡**本回合内**费用 -ALERT_DISCOUNT
-#   （R60 改：用 state.turn_card_discount 本回合减费表，回合结束清空 → 不跨回合；
-#   显示 = 判定 = 实扣都走 cost_of）。技能卡本身用完照常进弃牌区。
-const ALERT_ID:= 9109
-const ALERT_DISCOUNT:= 2
 
 # ---- R55「回合结束 · 剩余费用」系列（2026-10-03）----
 # 三张卡共用**一个结算入口** _end_turn_surplus()：自己回合结束、费用清零**之前**调用，
@@ -2345,7 +2273,6 @@ func _begin_turn(side: String) -> void :
 			_log("负重减轻：本回合多抽 %d 张卡" % lighten_draw)
 			action.emit("lighten_draw", {"draw": lighten_draw, "side": SIDE_SELF})
 		if turn_number == 1:
-			_ensure_opening_card(ALERT_ID)   # 警觉（9109）：第 1 回合必定抽到
 			_ensure_opening_enchanted()      # R229「起手」附魔：同样第 1 回合必定抽到
 		var drawn := _draw_many(FieldState.HAND_DRAW_PER_TURN + extra_draw)
 		var earring_autoplayed := 0
@@ -2369,7 +2296,7 @@ func _begin_turn(side: String) -> void :
 		_action_growth_tick(SIDE_SELF)   # R161：先推进成长计数，再刷新 acts_left
 		_haste_pick_tick(SIDE_SELF)      # R479 哈气：第 3/5/7 回合挑一个单位永久双动（必须在 reset 之前）
 		state.reset_units(SIDE_SELF)
-		_poison_tick(SIDE_SELF)   # 剧毒陷阱：我方回合开始结算中毒
+		_mark_tick(SIDE_SELF)   # R503 标记：每个我方回合 +1
 		_arm_debuffs(SIDE_SELF)
 		# ── ① 回合开始的**成长**先结算 ──
 		_apply_growth(SIDE_SELF)
@@ -2394,7 +2321,6 @@ func _begin_turn(side: String) -> void :
 		_dragon_breath(SIDE_SELF)
 		_heal_aura(SIDE_SELF)
 		_kiln_hatch(SIDE_SELF)
-		_workshop_supply(SIDE_SELF)   # 机关工坊（R74 改名）：我方回合开始随机工事进手
 		_clockwork_summon(SIDE_SELF)
 		_latent_turn_draw(SIDE_SELF)
 		_shadow_split_draw(SIDE_SELF)   # 分裂之影 8067（R217）
@@ -2442,7 +2368,6 @@ func _begin_turn(side: String) -> void :
 		_action_growth_tick(SIDE_OPPONENT)   # R161：先推进成长计数，再刷新 acts_left
 		_haste_pick_tick(SIDE_OPPONENT)      # R479 哈气：第 3/5/7 回合挑一个单位永久双动（必须在 reset 之前）
 		state.reset_units(SIDE_OPPONENT)
-		_poison_tick(SIDE_OPPONENT)   # 剧毒陷阱：对方回合开始结算中毒
 		_arm_debuffs(SIDE_OPPONENT)
 		# ── ① 成长先结算 ──
 		_apply_growth(SIDE_OPPONENT)
@@ -2463,7 +2388,6 @@ func _begin_turn(side: String) -> void :
 		_dragon_breath(SIDE_OPPONENT)
 		_heal_aura(SIDE_OPPONENT)
 		_kiln_hatch(SIDE_OPPONENT)
-		_workshop_supply(SIDE_OPPONENT)   # 陷阱工坊（对称保留；敌方正常拿不到该卡）
 		_clockwork_summon(SIDE_OPPONENT)
 		_latent_turn_draw(SIDE_OPPONENT)
 		_shadow_split_draw(SIDE_OPPONENT)   # 分裂之影 8067（R217，对称保留）
@@ -3918,11 +3842,6 @@ func end_turn() -> void :
 			p.atk_buff_turn = 0
 			if p.rooted == 2:
 				p.rooted = 0   # 禁足（冰霜陷阱）：生效回合结束解除
-	# 陷阱加强（R238）：**本回合一步没挪**的敌方单位，回合结束时踩响脚下的陷阱。
-	# ⚠️ 必须排在上面那段「清本回合 debuff / 解禁足」**之后**：黑暗陷阱给的是
-	#    「本回合攻击 -1」（debuff_stage = 1），排在前面会被紧接着这个循环当场擦掉，
-	#    等于白触发。排在后面 → 它生效到对方的下一个回合结束，正是「踩响了」的手感。
-	_trap_still_tick(current_side)
 	# 沉睡（恶魔鸭 9116）：**回合递减口** —— 本方回合结束时，本方还在睡的单位
 	# sleep_left -1；减到 0 就此醒来（下一回合可行动）。
 	# R122 用户口径：沉睡**随着回合减少**（与「受伤也 -1」并存，见 _demon_duck_hurt）。
@@ -4772,7 +4691,7 @@ static func is_persistent_field(card: CardData) -> bool:
 	## **持续型场地**判定（R83）—— 读 trait「持续场地」。
 	##
 	## 场地卡分两族，走**完全不同的链**：
-	##   * **一次性**（现有 6 张陷阱）：`_field_block_index` 拦人 → `_field_trigger` 结算 → 消失；
+	##   * **标记 / 持续型**：都不参与「一次性消耗」，被顶掉才算消失；
 	##   * **持续型**（清泉 8028）：永不触发、永不消失，只在某一方回合结束时结算一次效果。
 	## 所以凡是「按场地一次性结算」的地方（拦路 / 触发）都要先问一句这个，
 	## 否则持续型场地会被当成一次性用掉 —— **清泉会被敌人走一次就白费**。
@@ -4937,20 +4856,17 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 				% [card.card_name, f_aim, cell])
 			return null
 		state.hand.remove_at(hand_index)
+		if card.id == MARK_ID:
+			# R503：标记**有自己的写入口**（全场唯一 + 换格子重置数值），不走裸 set_field。
+			_place_mark(cell, SIDE_SELF, "手牌")
+			_note_card_played(SIDE_SELF, card)
+			return null
 		var old_field := state.set_field(card, cell, SIDE_SELF)
 		if old_field != null:
 			_log("场地覆盖：%s 被新的 %s 顶掉" % [old_field.card_name, card.card_name])
-		_log("场地生效：%s 放在 %s（敌人移动经过时触发并停止移动）" % [card.card_name, cell])
+		_log("场地生效：%s 放在 %s" % [card.card_name, cell])
 		action.emit("field_place", {"cell": cell, "card": card,
 			"replaced": old_field != null})
-		# R230「清退」：陷阱落在**有敌人的格子**上 → 把那个敌人击退 2 格（朝敌方后排）。
-		# 只认陷阱（aim = ENEMY）；清泉 / 维修间这类对己方或双向生效的场地不触发。
-		if f_aim == FIELD_AIM_ENEMY and _zone_has(state.effects, CLEAR_OUT_TRAIT):
-			var co_occ: Placement = state.unit_at(cell)
-			if co_occ != null and co_occ.owner == SIDE_OPPONENT:
-				_log("清退：陷阱落在敌人 %s 的格子上 → 击退 %d 格" % [
-						co_occ.card.card_name, CLEAR_OUT_STEPS])
-				_knockback(SIDE_SELF, cell, CLEAR_OUT_STEPS)
 		_note_card_played(SIDE_SELF, card)
 		return null
 	# 交换（R101）：放在已有己方单位的格子上 → 原单位回手，新卡占据该格
@@ -7967,6 +7883,9 @@ func use_effect(hand_index: int) -> String:
 	if card.traits.has(DUCK_NEST_TRAIT):
 		_egg_to_hand("鸭窝")
 
+	# R503 致命 9226：打出时若场上没有标记，随机标记一个敌人所在的格子
+	if card.id == FATAL_ID:
+		_fatal_enter()
 	# R465 折射炮 9211：打出时把一张「聚能炮击」加入手卡（此后每发炮击都会折射）。
 	if card.id == REFRACT_CANNON_ID:
 		_refract_grant_cannon()
@@ -8181,7 +8100,6 @@ const SPELL_BASE_DMG := {
 	9096: 17,    # 回旋斩
 	9102: 2,     # 回响
 	9104: 6,     # 收尾（手牌仅剩它 → 22）
-	9107: 16,    # 暗影狩猎（目标上回合触发过场地 → 30）
 	9119: 4,     # 起手式
 	9120: 8,     # 影袭
 	9121: 8,     # 暗影步
@@ -8190,6 +8108,9 @@ const SPELL_BASE_DMG := {
 	9160: 5,     # 弹跳飞刀（另有最多 2 个目标，5 → 4 → 3）
 	9162: 10,    # 集中突破（+4 × 场上改造层数）
 	9163: 10,    # 冲击炮（R369：8 → 10）
+	9225: 6,     # 死亡预告（先标记再打，实际会多吃标记的加伤）
+	9227: 14,    # 死神降临（目标被标记 → 20 + 抽 2 张）
+	9229: 8,     # 恐惧投射（目标已被标记时才打这 8 点）
 	9189: 7,     # 独行（7 + 卡内累积；左栏刻意不报数，见 spell_now）
 	9169: 10,    # 烈火之剑
 	9172: 9,     # 激光扫射
@@ -8209,7 +8130,7 @@ const SPELL_BASE_DMG := {
 #    `_spell_dmg()`（是 8075 的专门每回合额度），所以 `spell_now()` 里给它单列了分支。
 # ⚠️ 蓄势 9156 也不在名单里：卡面由 `_charge_up_text(card.value)` 实时写出当前伤害，
 #    本来就说清楚了；只有附魔这类额外加成才会让它偏离卡面。
-const SPELL_DYNAMIC_IDS: Array[int] = [9083, 9086, 9090, 9093, 9104, 9107, 9162]
+const SPELL_DYNAMIC_IDS: Array[int] = [9083, 9086, 9090, 9093, 9104, 9162]
 
 # R384：**不给「目标格数字」**的伤害技能 —— `spell_now().dmg` 对它们不是「这一格掉多少」。
 #   * 9083 流星雨：随机目标、打 X 颗，dmg 是**总量**；
@@ -8329,10 +8250,6 @@ func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 			return {"dmg": _spell_dmg(side, FINISHER_DMG, card),
 					"base": FINISHER_DMG, "expr": "", "anchor": "",
 					"note": "手牌仅剩它时 %d" % _spell_dmg(side, FINISHER_LAST_DMG, card)}
-		if card.id == HUNT_ID:
-			return {"dmg": _spell_dmg(side, HUNT_DMG, card), "base": HUNT_DMG,
-					"expr": "", "anchor": "",
-					"note": "目标上回合触发过场地 → %d" % _spell_dmg(side, HUNT_BIG_DMG, card)}
 		if card.id == BREAKTHROUGH_ID:
 			var st: int = _side_upgrade_stacks(side)
 			# 加成型：正文 `造成**10**点伤害` → 界面显示 `造成 18（10＋8）点伤害`
@@ -10612,25 +10529,48 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			return _echo_spell(side, card)
 		DODGE_ID:
 			return _dodge_spell(side)
-		ALERT_ID:
-			return _alertness(side)
-		HUNT_ID:
-			# 暗影狩猎（9107；R74 口径改为「场地」）：16 伤；目标「上回合触发过场地」→ 30 伤。
-			# 判据仍是 trap_trig_turn 与当前全局半回合号差 1（隔回合失效）；
-			# 场地触发与机关工坊被破坏都会记这个号，所以两者都吃这 30 伤。
-			var hu_p := _target_placement(side, target)
-			if hu_p == null:
-				return "（暗影狩猎：需要指定一个目标）"
-			if hu_p.owner == side:
-				return "（暗影狩猎：只能指定敌人）"
-			var hunt_big := hu_p.trap_trig_turn >= 0 and turn_total - hu_p.trap_trig_turn == 1
-			var hu_dmg := _spell_dmg(side, HUNT_BIG_DMG if hunt_big else HUNT_DMG, card)
-			var hu_s := str(_op_deal_damage(side, hu_dmg, target))
-			if hunt_big:
-				_log("暗影狩猎：%s 上回合触发过场地 → 伤害 16 → %d" % [hu_p.card.card_name, hu_dmg])
-			action.emit("hunt", {"cell": _cell_of(hu_p), "dmg": hu_dmg, "big": hunt_big,
-					"name": hu_p.card.card_name})
-			return hu_s
+		DEATH_OMEN_ID:
+			# 死亡预告 9225（R503）：1 费普通；**先标记目标所在格、再打 6 伤**。
+			# 顺序是有意的：这一下本身就吃标记的加伤（新标记 +1 → 落地 7）。
+			var dom_p := _target_placement(side, target)
+			if dom_p == null:
+				return "（死亡预告：需要指定一个目标）"
+			_place_mark(_cell_of(dom_p), side, "死亡预告")
+			return str(_op_deal_damage(side, _spell_dmg(side, DEATH_OMEN_DMG, card),
+					_cell_of(dom_p)))
+		DEATH_DESCENT_ID:
+			# 死神降临 9227（R503）：2 费稀有；14 伤；目标**被标记 → 改为** 20 伤 + 抽 2 张。
+			var dds_p := _target_placement(side, target)
+			var dds_marked := _on_mark(dds_p)
+			var dds_dmg := DEATH_DESCENT_MARKED_DMG if dds_marked else DEATH_DESCENT_DMG
+			var dds_s := str(_op_deal_damage(side, _spell_dmg(side, dds_dmg, card),
+					_cell_of(dds_p) if dds_p != null else target))
+			if not dds_marked:
+				return dds_s
+			_log("死神降临：目标被标记 → 伤害改为 %d" % dds_dmg)
+			if side != SIDE_SELF:
+				return dds_s          # 抽牌是玩家侧收益（与起手式 9119 同口径）
+			var dds_got := _draw_many(DEATH_DESCENT_DRAW)
+			return dds_s + "；抽 %d 张" % dds_got
+		FEAR_PROJECTION_ID:
+			# 恐惧投射 9229（R503）：2 费普通 · 次元；标记目标所在格 + 本回合力量 -11；
+			# 若目标**本来就被标记**（判在这张卡自己的标记之前）→ 再打 8 伤。
+			var fp_p := _target_placement(side, target)
+			if fp_p == null:
+				return "（恐惧投射：需要指定一个目标）"
+			var fp_was := _on_mark(fp_p)
+			_place_mark(_cell_of(fp_p), side, "恐惧投射")
+			fp_p.atk_debuff += FEAR_PROJECTION_DEBUFF
+			fp_p.debuff_stage = 1
+			_log("恐惧投射：%s 本回合力量 -%d（当前 %d）" % [
+				fp_p.card.card_name, FEAR_PROJECTION_DEBUFF, fp_p.effective_power()])
+			action.emit("fear_projection", {"cell": _cell_of(fp_p), "card": fp_p.card,
+				"debuff": FEAR_PROJECTION_DEBUFF, "power": fp_p.effective_power()})
+			if not fp_was:
+				return "标记了 %s（本回合力量 -%d）" % [
+					fp_p.card.card_name, FEAR_PROJECTION_DEBUFF]
+			return str(_op_deal_damage(side, _spell_dmg(side, FEAR_PROJECTION_DMG, card),
+					_cell_of(fp_p)))
 		FINISHER_ID:
 			# 收尾：基础伤害按「是不是手卡里最后一张」在结算时定死，再吃 _spell_dmg 加成。
 			var fi_last := _finisher_is_last(side)
@@ -11642,6 +11582,20 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		dmg = maxi(1, dmg - OWLBEAR_GUARD)
 		if dmg != ob:
 			_log("%s（半血以上）：受到的伤害 %d → %d" % [p.card.card_name, ob, dmg])
+	# ①f 标记（9224，R503）：**站在标记格上的敌人**受到的伤害 +`mark_bonus`；
+	#    效果区有「致命」（9226）时**改为**额外 50%（向上取整）—— 卡面写的是「改为」，
+	#    所以两者是替代关系，不叠加。位置在 flat 减伤之后、各类减半之前：
+	#    「先加成、再减半」才符合玩家直觉（10 伤 +3 → 13，被减半 → 6）。
+	if p != null and dmg > 0 and _is_marked_enemy(p):
+		var mk_before:= dmg
+		if _zone_has(state.effects, FATAL_TRAIT):
+			dmg = (dmg * FATAL_NUM + FATAL_DEN - 1) / FATAL_DEN
+			_log("致命（标记）：%s 受到的伤害 %d → %d（+50%%）" % [
+				p.card.card_name, mk_before, dmg])
+		else:
+			dmg += state.mark_bonus
+			_log("标记：%s 受到的伤害 %d → %d（+%d）" % [
+				p.card.card_name, mk_before, dmg, state.mark_bonus])
 	# ② 赫卡同克瑞斯（9136，R152）：孤军成立（hecaton_atk > 0）时受到的**攻击**伤害减半。
 	#    向下取整（int 除法）但至少 1 点 —— 与犀牛口径一致，1 点攻击不会被减成 0。
 	if p != null and p.card != null and dmg > 0 and kind == "attack" and p.hecaton_atk > 0:
@@ -11798,6 +11752,12 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 	if dmg > 0 and p.card.traits.has(OWLBEAR_TRAIT) and p.health * 2 > p.card.health \
 			and _zone_has(state.enemy_effects, OWLBEAR_INSTINCT_TRAIT):
 		dmg = maxi(1, dmg - OWLBEAR_GUARD)
+	# R503 标记（9224）：与 `_unit_damage_taken()` 的 ①f 同判据、同位置
+	if dmg > 0 and _is_marked_enemy(p):
+		if _zone_has(state.effects, FATAL_TRAIT):
+			dmg = (dmg * FATAL_NUM + FATAL_DEN - 1) / FATAL_DEN
+		else:
+			dmg += state.mark_bonus
 	if dmg > 0 and is_attack and p.hecaton_atk > 0:
 		dmg = maxi(1, dmg / 2)
 	# R502 执法者（9223）：与 `_unit_damage_taken()` 的 ②b 同判据、同位置（不分攻击/技能）
@@ -11826,6 +11786,9 @@ func preview_attack_damage(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> Di
 		return {"dmg": PREVIEW_NO_DMG, "tag": ""}
 	var power:= attacker.effective_power() + _turn_dmg_bonus(side) \
 			+ _ally_dmg_bonus(attacker.card, side)
+	# R503 恐惧之影（9228）：与普攻那一段同判据（预览也要报减半后的数）
+	if defender.card.id == FEAR_SHADOW_ID and _on_mark(attacker):
+		power = maxi(1, power / 2)
 	return preview_hit_damage(defender, power, true, false)
 
 
@@ -12546,9 +12509,6 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 			action.emit("deathrattle", {"cell": cell, "card": p.card, "kind": "summon"})
 		MECH_ID:
 			_death_wipe(cell, MECH_DMG, p.card)
-		TRAPPER_ID:
-			# R116 捕兽大师：在原地留下一张随机陷阱（唯一口见该函数）
-			_deathrattle_place_trap(cell, p)
 		JAR_TOKEN_ID:
 			# R245 罐子（工事 0/1/0）：死亡 → 召唤一个本层非 Boss 的随机敌人
 			_summon_jar_enemy("罐子亡语")
@@ -12757,28 +12717,6 @@ func _jar_enemy_card(layer: int) -> CardData:
 	return CardRepo.load_json().get_card(ids[rng.randi_range(0, ids.size() - 1)])
 
 
-func _deathrattle_place_trap(cell: Vector2i, p: Placement) -> void :
-	## 捕兽大师（9126，R116）亡语：**在原地**留下一张随机陷阱。
-	## 来源与机关工坊 8015 / 警觉 9109 同一个池（唯一口 `_trap_card_pool`）；
-	## 随机走引擎 rng → 回放同种子可复现。
-	## ⚠️ 原地**已有场地效果就不覆盖** —— 那张很可能是玩家自己精心埋的陷阱，
-	##    覆盖掉等于把「亡语」打成了负收益。卡面已写明这一条。
-	## ⚠️ 刻意**不查 `field_place_allowed`**：口径是「**在原地**」，哪怕它死在我方后排
-	##    （row 5 —— 敌人永远走不到，这张陷阱够不着）也照放。挪一格会让玩家困惑
-	##    「我的陷阱怎么跑那边去了」；而「把捕兽大师停在后排」是玩家自己的选择。
-	if state.field_at(cell) != null:
-		_log("捕兽大师亡语：原地已有场地「%s」，不再覆盖"
-				% str(state.field_at(cell).card_name))
-		return
-	var pool := _trap_card_pool(p.owner)
-	if pool.is_empty():
-		_log("捕兽大师亡语：奖励池里没有陷阱可放")
-		return
-	var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
-	state.set_field(pick, cell, p.owner)
-	_log("捕兽大师亡语：在原地留下陷阱「%s」（%s）" % [pick.card_name, cell])
-	action.emit("field_place", {"cell": cell, "card": pick, "side": p.owner,
-			"replaced": false, "deathrattle": true})
 
 
 func _death_wipe(center: Vector2i, amount: int, card: CardData) -> void :
@@ -13947,7 +13885,7 @@ func _death_adds_cards(p: Placement) -> bool:
 	if p.life_cycle or p.blade_gift:      # 生命循环 / 辅助刃：加一张手卡
 		return true
 	match p.card.id:
-		WYVERN_ID, LICH_ID, SKELETON_SUMMON_ID, JAR_TOKEN_ID, GHOST_ID, TRAPPER_ID:
+		WYVERN_ID, LICH_ID, SKELETON_SUMMON_ID, JAR_TOKEN_ID, GHOST_ID:
 			return true
 	# 母舰 9208：敌方友方被破坏 → 旁边补造一份复制（`_mothership_on_ally_death`）。
 	if p.owner == SIDE_OPPONENT and p.card.id != MOTHERSHIP_ID 			and _cell_of_unit(MOTHERSHIP_ID) != Vector2i(-1, -1):
@@ -14224,35 +14162,12 @@ func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void
 		if path.is_empty():
 			_log("不能移动到 %s（超出移动速度或被阻挡）" % dst)
 			return
-	# 场地卡（R80）：**移动经过**路径上任何一格就触发，并**立刻停在这一格**。
-	# 落点计算唯一口 = _field_block_index：只看「走过的这几格」，不看终点 ——
-	# 于是「路过」和「停在上面」是同一个口径，玩家不需要区分。
-	# ⚠️ move_path 的 path[0] 是**起点本身**，所以「本来就站在场地上的单位」不会被
-	# 自己脚下的场地炸到（跳过起点的判断在 _field_block_index 里）。
-	var stop_i:= _field_block_index(path)
-	if stop_i >= 0:
-		var stop_cell: Vector2i = path[stop_i]
-		# 截断路径：动画 / 火墙都只演到被拦停的那一格，不许「先停后瞬移」。
-		# 手动重建而不是 path.slice()：slice 返回无类型 Array，塞不回 Array[Vector2i]。
-		var cut: Array[Vector2i] = []
-		for k in stop_i + 1:
-			cut.append(path[k])
-		path = cut
-		dst = stop_cell
 	state.move_unit(src, dst)
 	p.moved = true
-	p.did_move = true   # 陷阱加强（R238）：物理上挪过格子 → 回合结束不再补踩脚下的陷阱
-	if stop_i >= 0:
-		_log("%s 移动 %s → %s（路上触发场地，移动停止）" % [
-			p.card.card_name, src, dst])
-	else:
-		_log("%s 移动 %s → %s" % [p.card.card_name, src, dst])
+	p.did_move = true
+	_log("%s 移动 %s → %s" % [p.card.card_name, src, dst])
 	action.emit("move", {"src": src, "dst": dst, "card": p.card,
 		"side": side, "path": path})
-	# 场地卡（R74）：**移动进入**某格 → 该格场地效果立刻触发一次并消失。
-	# 唯一触发点。挂在这里（移动成功之后）而不是 attack：场地不是单位、不能被打，
-	# 也不该因为「有人在旁边打它」而触发。原本就在此格的敌人不触发（没移动就不会走到这里）。
-	_field_trigger(dst, p)
 	if p.health <= 0:
 		return
 	# 火墙术（9084）：移动路径上「进入过」燃烧的横行 → 被灼烧（不分敌我）
@@ -14362,7 +14277,6 @@ func _leap(src: Vector2i, dst: Vector2i, side: String) -> void:
 		_log("%s 原地起跳（落地重击）" % p.card.card_name)
 	else:
 		_log("%s 跃向 %s" % [p.card.card_name, dst])
-		_field_trigger(dst, p)
 		if p.health <= 0:
 			return
 		_fire_wall_pass(path)
@@ -14474,272 +14388,103 @@ func activate(cell: Vector2i, side:= SIDE_SELF) -> bool:
 	return true
 
 
-func _field_kind(c: CardData) -> String:
-	## 场地词条识别（R74）：返回 "" 表示不是场地效果。
-	## 判据是 **kind == 场地**（新卡种）而不是具体词条 —— 「是不是场地卡」是
-	## 一次性判定的数据属性，不该靠"有几个词条要挨个试"。
-	if not c.is_field():
-		return ""
-	for t: String in [TRAP_TRAIT, FROST_TRAP_TRAIT, FREEZE_TRAP_TRAIT, POISON_TRAP_TRAIT,
-			PIERCE_TRAP_TRAIT, MASS_TRAP_TRAIT, DARK_TRAP_TRAIT, ROCKFALL_TRAP_TRAIT]:
-		if c.traits.has(t):
-			return t
-	return ""
 
 
-func _field_mastery(field_side: String, field_card: CardData) -> int:
-	## 场地精通（9105，R74 由「陷阱精通」改名）：持有方效果区有它 →
-	## 该方**场地**效果造成的伤害 +`TRAP_MASTERY_MULT`× 该场地卡的**原本费用**（R329：2× → 3×）。
-	## 多张不叠加（与哈气同取一张）；按卡面原费算，不吃任何减费。
-	var zone: Array[CardData] = state.effects if field_side == SIDE_SELF else state.enemy_effects
-	for c: CardData in zone:
-		if c.traits.has(TRAP_MASTERY_TRAIT):
-			return TRAP_MASTERY_MULT * field_card.cost
-	return 0
 
 
-func _field_card_pool(side: String) -> Array[CardData]:
-	## **「本角色奖励池里的场地卡」的唯一口**（R116 抽出）。
-	## 原先有多处各抄了一份同样的三行（机关工坊 8015 供牌 / 警觉 9109 取场地 /
-	## 捕兽大师 9126 亡语）—— 加新角色或改池子口径时极易漏改。
-	## `side == SIDE_SELF` 取**当前角色**；敌方侧退化为**完整奖励池**
-	## （敌方正常拿不到这些卡，这是既有口径）。
-	## ⚠️ 返回的是**卡库共享实例** —— 进手前必须 `CardData.from_dict(...)` 复制；
-	##    落格子那条路安全（`FieldState.set_field` 内部已复制）。
-	var pool: Array[CardData] = []
-	var cid := RunState.player_class if side == SIDE_SELF else ""
-	for c: CardData in CardRepo.load_json().reward_pool_for(cid):
-		if c.is_field():
-			pool.append(c)
-	return pool
 
 
-func _trap_card_pool(side: String) -> Array[CardData]:
-	## `_field_card_pool` 里**只留一次性触发的陷阱**（R116，捕兽大师 9126 用）。
-	## 判据 = `_field_kind(c) != ""` —— 「是不是陷阱」这件事**只有 `_field_kind` 说了算**
-	## （它列出的那 8 个 trait 就是引擎认的 8 张陷阱），持续型场地（清泉 / 维修间 /
-	## 改造工厂）自然落空。**别再按卡名 / kind 自己判一遍**（两处判据迟早会分叉）。
-	var out: Array[CardData] = []
-	for c: CardData in _field_card_pool(side):
-		if _field_kind(c) != "":
-			out.append(c)
-	return out
 
 
-func _field_block_index(path: Array[Vector2i]) -> int:
-	## **场地「经过即触发 + 立刻停止」的落点计算唯一口**（R80）。
-	## 沿移动路径逐格找**第一个**挂着场地效果的格子，返回它在 path 里的下标；
-	## 一路都没有场地则返回 -1（= 走完全程）。
-	## 为什么按「路径」而不是按「终点」：用户口径是「敌人移动**经过**此格时触发」——
-	## 只要路过就得算，所以 3 格移动撞上第 2 格的陷阱时，那一格才是真正的落点。
-	## ⚠️ **path[0] 是起点本身**（`move_path` 的既有约定：返回「起点→终点」全链，
-	## 动画与 `_fire_wall_pass` 都靠这个约定，见其 `range(1, path.size())`）。
-	## 所以这里**从 1 开始扫**：站在场地上不代表「经过」它，动一下不该被自己脚下的
-	## 场地炸到 —— 起点格必须跳过。
-	## ⚠️ **持续型场地（清泉 8028）必须跳过**（R83）：它没有「踩上去就炸」的效果，
-	## 敌人经过只该照常走过去。若不跳过，清泉会被白白触发掉 —— 这张牌等于废。
-	for i in range(1, path.size()):
-		var f: CardData = state.field_at(path[i])
-		if f != null and not is_persistent_field(f):
-			return i
-	return -1
 
 
-func _trap_still_tick(side: String) -> void :
-	## **陷阱加强的唯一口（R238）：「原地不动」也会踩响脚下的陷阱。**
-	## 用户口径：「如果敌人本回合原地不动，则会触发当前格子上的陷阱」。
-	##
-	## 与既有「移动经过即触发」互补 —— 那条挂在 `move()` 里（`_field_block_index`
-	## 截断 + `_field_trigger` 结算），只管**动过**的单位：
-	##   * 动过 → 走老路（走过哪格就炸哪格）；
-	##   * 一步没挪 → 本方回合结束时，**脚下这一格**的陷阱立刻结算。
-	##
-	## 判据与边界（三条都不许省）：
-	##   1. **只认陷阱** —— `_field_kind(card) != ""`（与 `_trap_card_pool` 同一判据）。
-	##      清泉 / 维修间 / 改造工厂是持续型场地，有自己的 `_field_aura_tick`，
-	##      在这里触发等于把它们白白消耗掉（等于废牌）。
-	##   2. **只炸「别人埋的」** —— `field_owner` 与本方不同才算踩雷；自己埋的陷阱
-	##      自己人站着不动不会自爆（陷阱是对敌的，用户口径也是「敌人」）。
-	##   3. 「原地不动」看 `Placement.did_move`（**物理上没挪过格子**），**不看 `moved`**
-	##      —— 后者是「移动权已用掉」，禁足 / 冰封的单位也会是 true，用它会漏掉
-	##      「被禁足原地罚站的敌人」这一类最该踩雷的。
-	##
-	## 结算一律走**唯一口 `_field_trigger`**：伤害数值 / 控制 / 摘牌 / 场地精通 /
-	## 暗影狩猎记号全部复用，这里只负责回答「**谁来踩、什么时候踩**」。
+
+
+
+
+
+
+
+# ══════════════════════════════════════════════════════════════════════════
+#  R503：标记（9224）—— 暗影刺客的伤害增幅场地
+# ══════════════════════════════════════════════════════════════════════════
+# 用户口径：0 费场地，**全场同时只存在一个**；此格上的敌人**受到伤害 +1**，
+#   该数值**每回合 +1**，**换格子后重置**；「致命」把它**改为** +50%。
+# 三条实现决定：
+#   ① 存在性只认 `FieldState.mark_cell()`（扫 field_effects 找 9224），不另存坐标表；
+#   ② 数值存在 `FieldState.mark_bonus`，写入只走 `_place_mark()`（先摘旧、再放新）；
+#   ③ 加伤挂在 `_unit_damage_taken()`（受击唯一口）+ `preview_hit_damage()`（只读镜像），
+#      于是普攻 / 技能 / 多格 / 亡语 / 反伤全都吃，拖牌预览与实打永远一致。
+
+func _place_mark(cell: Vector2i, side: String, why := "") -> void :
+	## 标记的**唯一写入口**（R503）。
+	##   * 旧的标记不管在哪一格，先摘掉（全场只留一个）；
+	##   * **同一格**再标一次 → 数值**保留**（卡面只写「换格子才重置」）；
+	##   * **换格子**（含从无到有） → 数值回到 MARK_BASE_BONUS。
+	## ⚠️ 别在别处直接 `state.set_field(标记卡)`：那样数值不会重置、也不会摘掉旧标记。
+	var tag := why if why != "" else "标记"
+	var old_cell := state.mark_cell()
+	var keep_bonus := old_cell != Vector2i(-1, -1) and old_cell == cell
+	if old_cell != Vector2i(-1, -1):
+		state.clear_field(old_cell)
+	var proto: CardData = CardRepo.load_json().get_card(MARK_ID)
+	if proto == null:
+		push_error("标记卡 9224 不在卡库里")
+		return
+	state.set_field(proto, cell, side)
+	if not keep_bonus:
+		state.mark_bonus = MARK_BASE_BONUS
+	_log("%s：标记落在 %s（此格上的敌人受到伤害 +%d）" % [tag, cell, state.mark_bonus])
+	action.emit("mark", {"cell": cell, "side": side, "bonus": state.mark_bonus,
+		"moved": old_cell != Vector2i(-1, -1) and old_cell != cell, "from": old_cell})
+
+
+func _on_mark(p: Placement) -> bool:
+	## 这个单位是不是**站在标记格上**（R503）。不看敌我 —— 敌我判断在 `_is_marked_enemy()`。
+	if p == null or not state.has_mark():
+		return false
+	return _cell_of(p) == state.mark_cell()
+
+
+func _is_marked_enemy(p: Placement) -> bool:
+	## 站在标记格上的**敌人**（相对标记的主人）。自己人站在自家标记上不吃这份加伤。
+	if not _on_mark(p):
+		return false
+	var owner_side := str(state.field_owner.get(state.mark_cell(), SIDE_SELF))
+	return p.owner != owner_side
+
+
+func _mark_tick(side: String) -> void :
+	## 标记的**成长唯一口**（R503）：每个**我方**回合开始时 +MARK_GROWTH。
+	## 只涨不消 —— 直到标记被顶掉 / 换了格子才重置（`_place_mark` 负责重置）。
+	if side != SIDE_SELF or not state.has_mark():
+		return
+	var before := state.mark_bonus
+	state.mark_bonus += MARK_GROWTH
+	_log("标记：数值 %d → %d（此格上的敌人受到伤害 +%d）" % [
+		before, state.mark_bonus, state.mark_bonus])
+	action.emit("mark_growth", {"cell": state.mark_cell(), "bonus": state.mark_bonus})
+
+
+func _fatal_enter() -> void :
+	## 致命（9226，R503）：打出时**若场上没有标记**，随机标记一个敌人所在的格子。
+	## 空场（一个敌人都没有）→ 什么都不做：卡面写的是「随机标记一个**敌人**的格子」，
+	## 没敌人就没得标，别偷偷标个空格让玩家白赚回合。
+	if state.has_mark():
+		_log("致命：场上已有标记，不再随机标记")
+		return
 	var cells: Array[Vector2i] = []
 	for cell: Vector2i in state.board:
-		var p: Placement = state.unit_at(cell)
-		if p == null or p.owner != side or p.did_move:
-			continue
-		var f: CardData = state.field_at(cell)
-		if f == null or _field_kind(f) == "":
-			continue
-		if str(state.field_owner.get(cell, p.owner)) == side:
-			continue   # 自己埋的陷阱不炸自己人
-		cells.append(cell)
-	cells.sort()   # 结算顺序稳定（回放 / 测试可复现）；与 _breach_tick 同一手法
-	for c2: Vector2i in cells:
-		if over:
-			return
-		var q: Placement = state.unit_at(c2)
-		if q == null or q.owner != side or q.did_move:
-			continue
-		var f2: CardData = state.field_at(c2)
-		if f2 == null:
-			continue   # 前面的格子结算时把它顶掉 / 摘掉了（同一回合多格时才会遇到）
-		_log("%s 本回合原地不动 → 踩响脚下的 %s" % [q.card.card_name, f2.card_name])
-		_field_trigger(c2, q)
-
-
-func _field_trigger(cell: Vector2i, mover: Placement) -> void :
-	## **场地卡触发的唯一口**（R74；R80 扩为「经过即触发」）：挂在 `move()` 里
-	## 「移动成功之后」，而落点已由 `_field_block_index` 截断到被触发的那一格。
-	## 语义（用户口径）：
-	##   * **移动路径上经过**此格即触发（不再要求「终点停在这里」，见 R80）；
-	##     原本就站在该格上的敌人**不触发**（不在这段 path 里）；
-	##   * 触发一次后**该格场地消失**（一次性）。**先摘牌再结算** ——
-	##     场地效果里若再触发别的场地效果，也不会重复触发同一格；
-	##   * 场地不是单位 → 伤害/控制**打给移动进来的那个单位**（敌方踩自己的场地= 自己吃）；
-	##   * 场地精通加成照旧吃。
-	if mover == null or state.field_at(cell) == null:
+		var q: Placement = state.unit_at(cell)
+		if q != null and q.owner == SIDE_OPPONENT and q.health > 0:
+			cells.append(cell)
+	if cells.is_empty():
+		_log("致命：场上没有敌人 → 不标记")
 		return
-	# 持续型场地（清泉 8028，R83）**永不触发**：它在「自己回合结束时」结算，不在这里。
-	# 这道防御是必需的 —— 落点截断已经跳过它了，但 `_field_trigger` 还会被 `remote_move`
-	# 等旁路调用到，漏一道就等于给清泉开了个「随时被消耗」的口子。
-	if is_persistent_field(state.field_at(cell)):
-		return
-	# 场地精通看的是**场地主人的**效果区（敌人踩了我方场地，加成按我方的算）——
-	# 所以**先读 owner 再 clear_field**（clear 会把 field_owner 一起擦掉）。
-	var owner_side := str(state.field_owner.get(cell, mover.owner))
-	var card := state.clear_field(cell)
-	# 暗影狩猎（R74 口径）：踩场地 = 「触发场地」→ 记全局半回合号供上回合判定
-	mover.trap_trig_turn = turn_total
-	# R341 鹿首标本（6049）：**我方**的陷阱 / 场地伤害同样按层 +N。
-	# 判据看场地主人（`owner_side`）—— 敌人踩响我方的场地，加成按我方的算（与场地精通同口径）。
-	var bonus:= _field_mastery(owner_side, card)\
-			+ (deer_bonus if owner_side == SIDE_SELF else 0)
-	action.emit("field_trigger", {"cell": cell, "card": card,
-		"name": mover.card.card_name, "side": mover.owner})
-	if card.traits.has(TRAP_TRAIT):
-		_field_explode(cell, card, bonus)
-	elif mover.health > 0:
-		# 其余几种都是「打给踩上来的那一个单位」；他若已被别的东西打死就不追伤
-		if card.traits.has(MASS_TRAP_TRAIT):
-			# 巨物陷阱（8017，R217 改数值）：10 + 踩上来的那个单位**当前攻击力×2**，
-			# 打给那一个（不分敌我）。读 effective_power() → 增减益/成长/改造一起算进去。
-			var g_atk:= mover.effective_power()
-			var g_dmg:= _hit_unit(mover, MASS_TRAP_DMG + g_atk * MASS_TRAP_ATK_MUL + bonus,
-					"巨物陷阱")
-			action.emit("trap_hit", {"cell": _cell_of(mover), "amount": g_dmg,
-					"kind": "巨物", "name": mover.card.card_name, "atk": g_atk})
-			_log("%s 踩到巨物陷阱：受到 %d 点伤害（%d + %d×%d%s，剩余 %d）" % [
-				mover.card.card_name, g_dmg, MASS_TRAP_DMG, g_atk, MASS_TRAP_ATK_MUL,
-				"（+场地精通 %d）" % bonus if bonus > 0 else "", mover.health])
-		elif card.traits.has(FROST_TRAP_TRAIT):
-			var f_dmg:= _hit_unit(mover, FROST_TRAP_DMG + bonus, "冰霜陷阱")
-			action.emit("trap_hit", {"cell": _cell_of(mover), "amount": f_dmg,
-					"kind": "冰霜", "name": mover.card.card_name})
-			if mover.health > 0:
-				mover.rooted = 1   # 下回合生效（reset_units 1→2），生效回合结束解除
-				_log("%s 踩到冰霜场地：下回合不能移动（仍可攻击）" % mover.card.card_name)
-		elif card.traits.has(FREEZE_TRAP_TRAIT):
-			var z_dmg:= _hit_unit(mover, FREEZE_TRAP_DMG + bonus, "冻结陷阱")
-			action.emit("trap_hit", {"cell": _cell_of(mover), "amount": z_dmg,
-				"kind": "冻结", "name": mover.card.card_name})
-			if mover.health > 0:
-				# 复用寒冰箭既有机制：下回合开始横置不重置（不能行动）
-				_apply_frozen(mover, "冻结场地")
-		elif card.traits.has(POISON_TRAP_TRAIT):
-			mover.poison_left = POISON_TURNS
-			mover.poison_dmg = POISON_DMG + bonus
-			_log("%s 踩到剧毒场地：每回合 %d 点伤害，持续 %d 回合" % [
-				mover.card.card_name, mover.poison_dmg, POISON_TURNS])
-			action.emit("poison", {"cell": _cell_of(mover), "amount": 0,
-				"dmg": mover.poison_dmg, "name": mover.card.card_name,
-				"left": POISON_TURNS, "apply": true})
-		elif card.traits.has(PIERCE_TRAP_TRAIT):
-			var pr_dmg:= _hit_unit(mover, PIERCE_TRAP_DMG + bonus, "穿刺陷阱")
-			_log("穿刺场地：%s 受到 %d 点伤害" % [mover.card.card_name, pr_dmg])
-			action.emit("trap_hit", {"cell": _cell_of(mover), "amount": pr_dmg,
-				"kind": "穿刺", "name": mover.card.card_name})
-		elif card.traits.has(ROCKFALL_TRAP_TRAIT):
-			# 落石陷阱（9159，R248）：29 伤 + 击杀后溢出不丢弃（「践踏」）
-			_rockfall_trap(cell, mover, bonus)
-		elif card.traits.has(DARK_TRAP_TRAIT):
-			# 黑暗陷阱（8063，R105）：**不造成伤害**，只让踩上来的那个敌人
-			# **本回合攻击时力量 -1**（atk_debuff + debuff_stage=1，与敲晕同源）。
-			mover.atk_debuff += DARK_TRAP_DEBUFF
-			mover.debuff_stage = 1
-			_log("黑暗场地：%s 力量 -%d（当前 %d），本回合内有效" % [
-					mover.card.card_name, DARK_TRAP_DEBUFF, mover.effective_power()])
-			action.emit("dark_trap", {"cell": _cell_of(mover),
-				"amount": DARK_TRAP_DEBUFF, "power": mover.effective_power(),
-				"name": mover.card.card_name})
-	_destroy_dead()
+	cells.sort()   # 固定顺序：同种子 / 回放一致
+	var pick: Vector2i = cells[rng.randi_range(0, cells.size() - 1)]
+	_place_mark(pick, SIDE_SELF, "致命")
 
-
-func _field_explode(center: Vector2i, card: CardData, bonus: int) -> void :
-	## 爆炸场地（8011）：十字范围造成 TRAP_DMG(+bonus) 点伤害，**不分敌我**。
-	## **中心格也算** —— 场地不是单位、没有占位，所以「踩上来的那个人」就站在中心，
-	## 他必然吃自己踩的那一下（这正是「移动到该格才触发」这个新语义的核心）。
-	## 只炸场上的单位，空格不直击 HP；非技能结算 → 不吃魔法塔加成 / 技能抗性
-	## （与爆炎鸭亡语 _death_blast 同一规则），被炸死单位的后排溢出走 _destroy_dead 通用规则。
-	## 特效复用「blast」（爆炎鸭亡语同款）—— 同效果必须同特效。
-	var cells: Array[Vector2i] = [center]      # 中心格 = 刚踩上来的那个
-	for d: Vector2i in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
-		var c: Vector2i = center + d
-		if c.x < 0 or c.x >= FieldState.BOARD_ROWS or c.y < 0 or c.y >= FieldState.BOARD_COLS:
-			continue
-		cells.append(c)
-	var hits:= 0
-	for c2: Vector2i in cells:
-		var q:= state.unit_at(c2)
-		if q == null:
-			continue
-		_hit_unit(q, TRAP_DMG + bonus, "爆炸场地")
-		hits += 1
-	_destroy_dead()
-	_log("爆炸场地：十字 %d 格各 %d 点伤害，命中 %d 个单位（不分敌我）"
-		% [cells.size(), TRAP_DMG + bonus, hits])
-	action.emit("blast", {"center": center, "cells": cells, "amount": TRAP_DMG + bonus,
-			"card": card})
-
-
-func _rockfall_trap(cell: Vector2i, mover: Placement, bonus: int) -> void :
-		## 落石陷阱（9159，R248）：对踩上来的那个单位造成 ROCKFALL_TRAP_DMG(+bonus) 点伤害；
-		## **这一下若将其击杀，溢出的伤害不丢弃**（用户口径「践踏」）—— 沿同列继续碾压
-		## 踩雷者**同侧**的单位，打穿整列后剩余伤害漏到该方 HP。
-		## 方向 = 踩雷者所在方的**后排**（与 R225 攻击践踏「冲向 defender 后排」同口径），
-		## 两个 `_field_trigger` 调用点（移动经过 / 原地不动）都走这里，语义一致。
-		var dmg:= ROCKFALL_TRAP_DMG + bonus
-		var hp_before:= mover.health
-		var dealt:= _hit_unit(mover, dmg, "落石陷阱")
-		action.emit("trap_hit", {"cell": cell, "amount": dealt,
-				"kind": "落石", "name": mover.card.card_name})
-		if mover.health > 0:
-			_log("落石陷阱：%s 受到 %d 点伤害（剩余 %d）" % [
-				mover.card.card_name, dealt, mover.health])
-			return
-		_log("落石陷阱：%s 被落石砸毙（%d 点伤害，生命 %d）" % [
-				mover.card.card_name, dealt, hp_before])
-		# 击杀不记功：陷阱格上没有「攻击者」→ 置 -1（否则可能误记给本回合早先打过它的单位）
-		mover.last_hit_by = Vector2i(-1, -1)
-		_destroy(cell)
-		var overflow:= dealt - maxi(hp_before, 0)
-		if overflow <= 0:
-			return
-		var res: Array = _rockfall_overflow(cell, mover.owner, overflow)
-		overflow = int(res[0])
-		if overflow > 0:
-			var pierced_name: String = str(res[1])
-			if pierced_name == "":
-				pierced_name = mover.card.card_name
-			_log("落石践踏：%d 点打穿整列 → 漏到 %s HP" % [
-				overflow, "敌方" if mover.owner == SIDE_OPPONENT else "我方"])
-			# R145 口径：先结算、再播出（amount 报实际掉血）
-			_damage_player(mover.owner, overflow, "落石践踏")
-			action.emit("trample", {"side": mover.owner, "amount": _last_hp_damage,
-				"dst": cell, "atk_name": "落石陷阱", "def_name": pierced_name})
 
 func _brawl(side: String, card: CardData) -> String:
 	## R473 乱打 9215：对**随机 BRAWL_TARGETS 个敌人**各造成 BRAWL_DMG 点伤害。
@@ -14888,23 +14633,6 @@ func _rockfall_overflow(from_cell: Vector2i, side: String, remaining: int,
 			remaining = carry
 		return [maxi(remaining, 0), pierced]
 
-func _poison_tick(side: String) -> void :
-	## 中毒（剧毒陷阱，R51）：在受害者所属方的回合开始结算一次 —— 每跳 poison_dmg
-	## （挂毒瞬间锁定，含陷阱精通加成），次数扣到 0 为止。
-	## 毒死的单位走 _destroy_dead 通用收尸（后排溢出同样生效）；无随机 → 不影响回放复现。
-	var ticked:= 0
-	for cell: Vector2i in state.board:
-		var p: Placement = state.unit_at(cell)
-		if p == null or p.owner != side or p.poison_left <= 0:
-			continue
-		p.poison_left -= 1
-		var dmg:= _hit_unit(p, p.poison_dmg, "中毒")
-		ticked += 1
-		_log("%s 中毒结算：-%d（还剩 %d 次）" % [p.card.card_name, dmg, p.poison_left])
-		action.emit("poison", {"cell": cell, "amount": dmg,
-				"name": p.card.card_name, "left": p.poison_left, "apply": false})
-	if ticked > 0:
-		_destroy_dead()
 
 
 func _field_aura_tick(side: String) -> void :
@@ -15092,30 +14820,6 @@ func _enforcer_watch(p: Placement, cell: Vector2i) -> void :
 				"stacked": q.atk_buff_turn, "power": q.effective_power()})
 
 
-func _workshop_supply(side: String) -> void :
-	## 机关工坊（8015，R52 起是「陷阱工坊」；R76 供给口径由工事改为**场地**）：
-	## 回合开始时，每座本方的机关工坊随机把一张
-	## **本角色奖励池**（敌方侧退化为完整奖励池）里的**场地卡**加入手卡；手满则不加入。
-	## 随机走引擎 rng；库内共享实例 → 必须复制后再进手。
-	var workshops:= 0
-	for p: Placement in state.board.values():
-		if p.owner == side and p.card.traits.has(WORKSHOP_TRAIT):
-			workshops += 1
-	if workshops <= 0:
-		return
-	# R76：供给口径从「工事」改成「场地」（机关工坊本身仍是工事，只是它造的是场地）。
-	# R116：池子构造抽成唯一口 `_field_card_pool`（原先 4 处各抄一份）。
-	var pool := _field_card_pool(side)
-	if pool.is_empty():
-		_log("机关工坊：奖励池中没有场地卡")
-		return
-	for i in workshops:
-		var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
-		var copy:= CardData.from_dict(pick.to_dict())
-		# R299：手牌满 → 直接进弃牌区（不再「本次不加入」白丢）
-		_grant_to_hand(copy, "陷阱工坊")
-		_log("机关工坊：随机一张场地「%s」进入手卡" % copy.card_name)
-		action.emit("blessing", {"count": 1})
 
 
 func _end_turn_surplus(side: String) -> void :
@@ -15529,30 +15233,6 @@ func _ensure_opening_enchanted() -> void :
 		_log("起手附魔：%d 张卡置于牌库顶（第 1 回合必定抽到）" % moved)
 
 
-func _alertness(side: String) -> String:
-	## 警觉（9109，R54；R60 改；**R77 供给口径由「工事」改为「场地**」）：
-	## 把一张随机**场地卡**（本角色奖励池，敌方侧退化为完整奖励池）加入手卡，
-	## 那张卡**本回合内**费用 -ALERT_DISCOUNT（turn_card_discount = 本回合减费，
-	## 回合结束随表清空 → 不跨回合；显示 = 判定 = 实扣都走 cost_of）。**用后警觉自身消失。**
-	## 随机走引擎 rng（回放同种子可复现）；库内共享实例 → 复制后再进手。
-
-	# R77：取「场地」而不是「工事」；R116：池子构造走唯一口 `_field_card_pool`
-	var pool := _field_card_pool(side)
-	if pool.is_empty():
-		return "（警觉：奖励池中没有场地卡）"
-	var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
-	var copy:= CardData.from_dict(pick.to_dict())
-	# R299：手牌满 → 直接进弃牌区（减费标记照旧挂着，本回合有效）
-	_grant_to_hand(copy, "警觉")
-	if side == SIDE_SELF:
-		# 本回合减费（不是 card_discount 那个永久实例减费）——回合结束自动失效
-		state.turn_card_discount[copy] = int(state.turn_card_discount.get(copy, 0)) \
-				+ ALERT_DISCOUNT
-		_log("警觉：随机一张场地「%s」进入手卡（本回合费用 -%d）"
-				% [copy.card_name, ALERT_DISCOUNT])
-		action.emit("alert", {"card": copy, "discount": ALERT_DISCOUNT, "side": side})
-		return "警觉：%s 进入手卡（本回合费用 -%d）" % [copy.card_name, ALERT_DISCOUNT]
-	return "警觉：%s 进入手卡" % copy.card_name
 
 
 func pass_attack(cell: Vector2i, side:= SIDE_SELF) -> void :
@@ -15631,14 +15311,21 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	+ _ally_dmg_bonus(attacker.card, side)
 	var hp_before:= defender.health
 	defender.last_hit_by = src          # 击杀记功：鸭子骑士靠它结算「每击杀一个敌人 +2 攻击力」
+	# R503 恐惧之影（9228）：**被标记的敌人**对这张卡造成的伤害减半（去尾、至少 1）。
+	# 挂在这里（普攻结算前）而不是 `_unit_damage_taken()`：那条通道没有「谁打的」这个信息。
+	if defender.card.id == FEAR_SHADOW_ID and _on_mark(attacker):
+		var fs_before := atk_power
+		atk_power = maxi(1, atk_power / 2)
+		_log("恐惧之影：标记单位 %s 的攻击 %d → %d（减半）" % [
+			attacker.card.card_name, fs_before, atk_power])
 	var def_dmg:= _hit_unit(defender, atk_power, "战斗", true, true)
 	# R341 惊奇盒子（9179）：**被攻击时**给攻击者挂「眩晕」（下个自己回合不能行动）。
 	# ⚠️ 不判「盒子还活着」：它只有 1 血，任何攻击都会把它打掉 —— 判存活等于这条效果永不触发。
 	# ⚠️ 放在 `_destroy` 之前：盒子被打死后就没有「被攻击时」这个时机了。
 	if defender.card.traits.has(STUN_BOX_TRAIT):
 		_apply_stun(attacker, "惊奇盒子")
-	# R74：场地卡**不是单位**（不在 board 里），所以打不到、也不会被「攻击即死」——
-	# 它的触发点唯一在 _field_trigger（挂在 move 上）。这里不再有任何陷阱即死分支。
+	# 场地卡**不是单位**（不在 board 里），所以打不到、也不会被「攻击即死」；
+	# R503 起踩场地也不再有任何结算（陷阱机制整套移除），这里自然没有分支。
 	# R225：践踏 → 击杀的溢出伤害不丢（沿击杀目标那一列继续传下去）；
 	# 非践踏保持原规则：只有被击穿的是对方**后排**单位，溢出才漏到 HP。
 	# R356：启示者阶段 2 起自带「践踏」（阶段效果，不烤进 CardData → 这里补一条判据）。
@@ -15673,18 +15360,6 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 			action.emit("trample", {"side": foe, "amount": _last_hp_damage, "src": src,
 				"dst": dst, "atk_name": attacker.card.card_name,
 				"def_name": pierced_name})
-	# R469：加 `not state.board.has(dst)` —— 超负荷单位负数存活时它还在场，不能算「被破坏」。
-	if defender.health <= 0 and not state.board.has(dst) \
-			and defender.card.traits.has(WORKSHOP_TRAIT) and state.board.has(src):
-		# 机关工坊（8015；R74 由「陷阱工坊」改名，仍是工事）：被敌人的攻击**破坏** → 对破坏它的敌人造成 8 伤。
-		# 攻击者若已先倒下（如踩了别的反伤）则不再追伤；同样记「触发过工事」供暗影狩猎判定。
-		var w_dmg:= _hit_unit(attacker, WORKSHOP_DMG + _field_mastery(defender.owner, defender.card),
-				"机关工坊")
-		attacker.trap_trig_turn = turn_total
-		_log("机关工坊被破坏：%s 反受 %d 点伤害" % [attacker.card.card_name, w_dmg])
-		action.emit("trap_hit", {"cell": src, "amount": w_dmg, "kind": "工坊",
-				"name": attacker.card.card_name})
-		_destroy_dead()
 	# 启示者阶段 2「电磁屏障」（R356）：**攻击它的单位受到 5 伤**。
 	# 位置在「防守方结算完」之后、`_tap` 之前：攻击者若被电死，下面 `board.has(src)` 为假，
 	# 自然会跳过「行动完毕」的横置（它已经不在了）。

@@ -84,6 +84,10 @@ var field_effects := {}
 # 每个场地是**谁放的**（SIDE_SELF / SIDE_OPPONENT）。归属判据（场地精通加成按主人的
 # 效果区算、界面按主人配色）都读它，不能按「谁踩上去」取 —— 否则敌方踩我方场地会替我结算。
 var field_owner := {}
+# R503 标记（9224）：**同时只存在一个**，且带一档「每回合 +1」的伤害加成。
+# 存在性由 `mark_cell()` 扫 field_effects 判定（唯一权威），这里只存**数值**：
+# 存进卡面会污染卡库共享实例（set_field 复制的是 CardData，不是附加状态）。
+var mark_bonus: int = 0
 	## R451：空袭（9209，敌方效果卡）——**玩家回合开始**随机标记的格子。
 	## 只记坐标、不记卡：标记只是「这些格子下回合要挨炸」的临时指令，与 `field_effects`
 	## （那格真的挂着一张场地卡）是两回事，别混成一张表。
@@ -333,6 +337,22 @@ func set_field(card: CardData, cell: Vector2i, owner_side := "self") -> CardData
 	field_effects[cell] = CardData.from_dict(card.to_dict())
 	field_owner[cell] = owner_side
 	return old
+
+
+func mark_cell() -> Vector2i:
+	## 「标记」（9224）所在的格子 —— **唯一读取口**（R503）。没有标记 → Vector2i(-1, -1)。
+	## ⚠️ 判据走 `field_effects` 里**那张卡是不是 9224**，不另存一份坐标表：
+	##    两处存「标记在哪」迟早分叉（被别的场地顶掉、读档清洗都会只改一边）。
+	for cell: Vector2i in field_effects:
+		var c: CardData = field_effects[cell]
+		if c != null and c.id == GameEngine.MARK_ID:
+			return cell
+	return Vector2i(-1, -1)
+
+
+func has_mark() -> bool:
+	## 场上有没有标记（R503）。`mark_cell()` 的布尔糖。
+	return mark_cell() != Vector2i(-1, -1)
 
 
 func clear_field(cell: Vector2i) -> CardData:
@@ -698,6 +718,7 @@ func save_dict() -> Dictionary:
 		"fields": _fields_save(),
 		"air_raid_cells": _air_raid_save(),
 		"air_raid_turns": air_raid_turns,
+		"mark_bonus": mark_bonus,
 	}
 	if rng != null:
 		d["rng_seed"] = rng.seed
@@ -774,6 +795,7 @@ func apply_dict(d: Dictionary) -> void:
 			if item3 is Dictionary:
 				air_raid_cells.append(Vector2i(int(item3["r"]), int(item3["c"])))
 	air_raid_turns = int(d.get("air_raid_turns", air_raid_turns))
+	mark_bonus = int(d.get("mark_bonus", mark_bonus))
 	# 洗牌随机源：续档后继续抽牌 / 触发的随机必须接着同一条链（否则续档 = 换牌序）
 	if d.has("rng_seed") and rng != null:
 		rng.seed = int(d["rng_seed"])

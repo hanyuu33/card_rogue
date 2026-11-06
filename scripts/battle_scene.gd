@@ -1531,22 +1531,6 @@ func _ready() -> void:
 				engine.state.self_card_changes, engine.fort_casts.size(), r288_names]
 		_shot_t0 = _now()
 		queue_redraw()
-	if "--trapper" in args and engine != null:
-		# 演示（R116）：捕兽大师 9126 的**亡语** —— 先上场、再当场打死它 →
-		# 它倒下的那一格变成一张**随机陷阱**（斜纹格 + 角标）。
-		# ⚠️ 必须先把角色设成暗影刺客：陷阱池按 `RunState.player_class` 取
-		#    （捕兽大师本身就是暗影刺客卡，实战里天然成立；裸跑战斗演示时要显式设）。
-		RunState.player_class = "暗影刺客"
-		engine.state.hand.clear()
-		engine.state.hand.append(repo.get_card(GameEngine.TRAPPER_ID))
-		engine.state.energy = 5
-		engine.state.place(repo.get_card(GameEngine.TRAPPER_ID), Vector2i(4, 1), GameEngine.SIDE_SELF)
-		engine._destroy(Vector2i(4, 1))
-		_hover_hand = 0
-		_hover_card = engine.state.hand[0]
-		status_text = "R116：捕兽大师亡语 → 在原地留下一张随机陷阱（斜纹格；原地已有场地则不覆盖）"
-		_shot_t0 = _now()
-		queue_redraw()
 	if "--r118" in args and engine != null:
 		# 演示（R118）—— 一屏同时看两件事：
 		#   ① 救援构装体 8056 同时放**手牌**与**战场**：手牌卡面写「盟友 · 交换」，
@@ -2111,144 +2095,30 @@ func _ready() -> void:
 				Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
 		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
 				Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
-	if "--trap" in args and engine != null:
-		# 演示（R80 更新口径）：爆炸陷阱（8011）—— **敌人移动经过即触发**（不必停留），
-		#   十字（含中心）各 18 伤，不分敌我。亡灵领主速 2，(3,0) → (3,1) → (3,2)
-		#   的路上撞上 (3,1) 的陷阱 → 触发 + **立刻停在 (3,1)**，走不到 (3,2)。
-		RunState.player_class = PlayerClass.ROGUE
+	if "--markdemo" in args and engine != null:
+		# 演示（R503）：标记（9224）—— 0 费场地，**全场同时只存在一个**，
+		#   此格上的敌人受到伤害 +1，且**每个我方回合 +1**（换格子则重置）。
+		#   ① 死亡预告（9225）先把标记钉在 (3,0)、再打 6 伤 → 这一下已经吃到新标记的 +1（共 7）；
+		#   ② 死神降临（9227）打同一个目标：**被标记 → 改为 20 伤 + 抽 2 张**；
+		#   ③ 恐惧投射（9229）标住 (3,2) —— 旧标记被摘掉（全场唯一），数值回到 1。
+		RunState.player_class = "暗影刺客"
 		engine.state.hand.clear()
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.TRAP_ID).to_dict()))
-		engine.state.energy = 5
-		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
-				Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
-		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
-				Vector2i(4, 0), GameEngine.SIDE_SELF)
-		engine.play_from_hand(0, Vector2i(3, 1))   # 爆炸陷阱落在 (3,1) —— 敌人**路过**的那一格
-		engine.move(Vector2i(3, 0), Vector2i(3, 2), GameEngine.SIDE_OPPONENT)   # 经过 → 触发 + 停在 (3,1)
-		_demo_hover_idx = 0
-		_hover_hand = 0
-		status_text = "爆炸陷阱：敌人**移动经过** (3,1) 就触发（不必停留）并**立刻停止移动** —— 停在 (3,1)、走不到 (3,2)，十字各 18 伤不分敌我"
-		_shot_t0 = _now()
-		queue_redraw()
-	if "--traps" in args and engine != null:
-		# 演示（2026-10-03，R51）：陷阱精通（9105）+ 冻结 / 剧毒陷阱。
-		#   先拍陷阱精通（R329：加成 2X → 3X；这三张场地都是 1 费 → 各 +3）→ 亡灵领主分别踩
-		#   冻结陷阱（3+3=6 伤 + 冰冻）和剧毒陷阱（每跳 6+3=9）。冰霜陷阱（9+3=12 伤 + 禁足）见回归测试。
-		RunState.player_class = PlayerClass.ROGUE
-		engine.state.hand.clear()
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.TRAP_MASTERY_ID).to_dict()))
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.FREEZE_TRAP_ID).to_dict()))
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.POISON_TRAP_ID).to_dict()))
+		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.DEATH_OMEN_ID).to_dict()))
+		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.DEATH_DESCENT_ID).to_dict()))
+		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.FEAR_PROJECTION_ID).to_dict()))
 		engine.state.energy = 9
-		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
-				Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
-		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
+		var r503_a := engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
 				Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
-		engine.use_effect(0)                       # 陷阱精通进效果区
-		engine.play_from_hand(0, Vector2i(4, 1))   # 冻结陷阱 (4,1)
-		engine.play_from_hand(0, Vector2i(4, 0))   # 剧毒陷阱 (4,0)
-		engine.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)   # 经过冻结陷阱
-		engine.move(Vector2i(3, 0), Vector2i(4, 0), GameEngine.SIDE_OPPONENT)   # 经过剧毒陷阱
+		r503_a.health = 80
+		var r503_b := engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
+				Vector2i(3, 2), GameEngine.SIDE_OPPONENT)
+		r503_b.health = 80
+		engine.use_spell(0, Vector2i(3, 0))      # 死亡预告：标记 (3,0) + 6 伤（吃 +1 → 7）
+		engine.use_spell(0, Vector2i(3, 0))      # 死神降临：被标记 → 20 伤 + 抽 2 张
+		engine.use_spell(0, Vector2i(3, 2))      # 恐惧投射：标记挪到 (3,2) + 力量 -11
 		_demo_hover_idx = 0
 		_hover_hand = 0
-		status_text = "陷阱精通 3×原费：冻结 6 伤 / 剧毒 9"
-		_shot_t0 = _now()
-		queue_redraw()
-	if "--hunt" in args and engine != null:
-		# 演示（2026-10-03 R52 起 / R329 更新）：陷阱工坊 + 暗影狩猎。
-		#   （R329 删除 9106 紧急埋伏后，这里不再演示「工事进手 + 费用 -1」那一步。）
-		#   ① 亡灵领主两击打死陷阱工坊（10 血）→ 工坊被破坏：攻击者反受 8 伤并记「触发过场地」；
-		#   ② 暗影狩猎打它 —— 本回合刚触发还不翻倍（16 伤）；「上回合触发 → 30」由回归测试验证。
-		RunState.player_class = PlayerClass.ROGUE
-		engine.state.hand.clear()
-		engine.state.energy = 9
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.HUNT_ID).to_dict()))
-		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
-				Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
-		var r52_foe := engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
-				Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
-		r52_foe.health = 60
-		engine.state.place(CardData.from_dict(repo.get_card(GameEngine.WORKSHOP_ID).to_dict()),
-				Vector2i(4, 1), GameEngine.SIDE_SELF)
-		engine.attack(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)   # 8 伤 → 工坊剩 2
-		r52_foe.tapped = false
-		engine.attack(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)   # 破坏 → 反受 8
-		r52_foe.tapped = false
-		engine.use_spell(0, Vector2i(3, 1))       # 暗影狩猎：16（触发记在本回合，下回合才翻倍）
-		_demo_hover_idx = 0
-		_hover_hand = 0
-		status_text = "工坊被破坏 → 反伤 8；暗影狩猎 16"
-		_shot_t0 = _now()
-		queue_redraw()
-	if "--pierce" in args and engine != null:
-		# 演示（R164 由 --double 改名收窄）：穿刺陷阱（8016，场地卡）。
-		#   亡灵领主踩上去 → 吃 14 伤（纯直伤、无附加状态），场地当场消失。
-		#   （原来的「给场地附魔 → 触发后同格补随机场地」随 9108 一起下线。）
-		RunState.player_class = PlayerClass.ROGUE
-		engine.state.hand.clear()
-		engine.state.energy = 9
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.PIERCE_TRAP_ID).to_dict()))
-		engine.state.place(CardData.from_dict(repo.get_card(GameEngine.PIERCE_TRAP_ID).to_dict()),
-				Vector2i(4, 0), GameEngine.SIDE_SELF)
-		var r53_foe2 := engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
-				Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
-		r53_foe2.health = 60
-		engine.attack(Vector2i(3, 0), Vector2i(4, 0), GameEngine.SIDE_OPPONENT)   # 踩穿刺陷阱 → 14 伤
-		_demo_hover_idx = 0
-		_hover_hand = 0
-		status_text = "穿刺陷阱：敌人移动进入吃 14 伤（并立刻停止移动），场地消失"
-		_shot_t0 = _now()
-		queue_redraw()
-	if "--capture" in args and engine != null:
-		# 演示（R54 起是「巨物捕获」工事；**R76 改成场地卡「巨物陷阱」**）+ 活体栅栏 + 警觉。
-		#   ① 巨物陷阱（场地）落在 (4,1)，敌人移动进入 → 吃 **10 + 攻击力×2 = 14** 伤（不分敌我）、场地消失；
-		#   ② 活体栅栏（8018 工事）正常在场 —— 证明「工事」与「场地」是两套独立数据；
-		#   ③ 警觉：随机一张工事进手（费用 -2，绿色圆标注）。
-		RunState.player_class = PlayerClass.ROGUE
-		engine.state.hand.clear()
-		engine.state.energy = 20
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.MASS_TRAP_ID).to_dict()))
-		engine.state.place(CardData.from_dict(repo.get_card(GameEngine.LIVING_FENCE_ID).to_dict()),
-				Vector2i(4, 2), GameEngine.SIDE_SELF)
-		var r54_weak := CardData.from_dict(repo.get_card(1051).to_dict())
-		r54_weak.power = 2
-		var r54_foe := engine.state.place(r54_weak, Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
-		r54_foe.health = 60
-		engine.play_from_hand(0, Vector2i(4, 1))                 # 巨物陷阱落到 (4,1)
-		engine.move(Vector2i(3, 1), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)   # 踩上去 → 10+2×2=14 伤 + 场地消失
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.ALERT_ID).to_dict()))
-		engine.use_spell(0)                                      # 警觉：随机工事 -2 费进手
-		_demo_hover_idx = 0
-		_hover_hand = 0
-		_hover_card = engine.state.hand[0]                       # 警觉摇到的工事 → 绿色费用圆
-		status_text = "巨物陷阱（场地）：敌人**移动经过**即吃 10+攻击力×2 伤（示例 14）并停止移动、场地消失；活体栅栏仍是工事；警觉：随机工事进手（-2 费）"
-		_shot_t0 = _now()
-		queue_redraw()
-	if "--r80" in args and engine != null:
-		# 演示（R80）：① 场地「移动经过即触发 + 立刻停止移动」——
-		#   敌方速 2 的白狼从 (2,0) 出发，(2,1) 上有穿刺陷阱：它**路过**就吃 18 伤，
-		#   并且**停在 (2,1)**，走不到原定的 (2,2)；
-		#   ② 「行动两次」文字徽标 —— 白狼（卡面自带双动）与被哈气覆盖的树人各挂一个绿标。
-		RunState.player_class = PlayerClass.ROGUE
-		engine.state.hand.clear()
-		engine.state.energy = 5
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.PIERCE_TRAP_ID).to_dict()))
-		# 白狼（actions=2，自带双动）+ 一只速 2 的普通敌人 + 两只我方树人
-		engine.state.place(CardData.from_dict(repo.get_card(9031).to_dict()),
-				Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
-		var r80_foe2 := CardData.from_dict(repo.get_card(8003).to_dict())
-		r80_foe2.move_speed = 2
-		engine.state.place(r80_foe2, Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
-		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
-				Vector2i(0, 2), GameEngine.SIDE_SELF)
-		engine.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
-				Vector2i(2, 2), GameEngine.SIDE_SELF)
-		engine.play_from_hand(0, Vector2i(2, 1))            # 穿刺陷阱落在 (2,1) —— 路过的那一格
-		engine.move(Vector2i(2, 0), Vector2i(2, 2), GameEngine.SIDE_OPPONENT)   # 经过 → 触发 + 停在 (2,1)
-		engine.current_side = GameEngine.SIDE_SELF
-		engine.state.reset_units(GameEngine.SIDE_SELF)       # 让我方树人进入可行动状态
-		_demo_hover_idx = -1
-		status_text = "R80：白狼从 (2,0) 走向 (2,2)，**路过 (2,1) 的穿刺陷阱** → 吃 18 伤并**立刻停在 (2,1)**（绿色「行动两次」徽标 = 本回合还剩 2 轮行动）"
+		status_text = "标记：死亡预告标住 (3,0) → 6 伤吃 +1；死神降临打被标记目标 → 20 伤 + 抽 2；恐惧投射把标记挪到 (3,2)（全场唯一，数值重置为 1）"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--fountain" in args and engine != null:
@@ -9056,7 +8926,10 @@ func _draw_field_markers() -> void:
 					rect.position + Vector2(0, off), Color(col.r, col.g, col.b, 0.30), 2.0)
 		draw_rect(rect, col, false, 2.0)
 		# 右下角小标签（场地名，缩到能塞进角里）
+		# R503：标记是「会涨的」场地 → 角标直接写当前加伤数值，别让玩家自己记
 		var tag := card.card_name
+		if card.id == GameEngine.MARK_ID:
+			tag = "标记 +%d" % engine.state.mark_bonus
 		var px := 10
 		while px > 7 and _font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > CELL_W - 10.0:
 			px -= 1

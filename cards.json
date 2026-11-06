@@ -2004,7 +2004,6 @@
       "color": "灰",
       "image": ""
     },
-
     {
       "id": 9082,
       "name": "风元素",
@@ -2526,202 +2525,6 @@
       "image": ""
     },
     {
-      "id": 8011,
-      "name": "爆炸陷阱",
-      "kind": "场地",
-      "cost": 2,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 0,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "工事",
-        "爆炸陷阱",
-        "场地生效·敌"
-      ],
-      "effect_text": "场地效果。敌人**移动经过**此格时立刻触发（不必停留，路过即中），并**立即停止这次移动**：对十字形范围造成 18 点伤害，不分敌我。",
-      "target_mode": "none",
-      "color": "红",
-      "image": "",
-      "trigger": "范围伤害"
-    },
-    {
-      "id": 8012,
-      "name": "冰霜陷阱",
-      "kind": "场地",
-      "cost": 1,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 0,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "工事",
-        "冰霜陷阱",
-        "场地生效·敌"
-      ],
-      "effect_text": "场地效果。敌人**移动经过**此格时立刻触发（不必停留，路过即中），并**立即停止这次移动**：对其造成 9 点伤害并使其禁足（下回合不能移动）。",
-      "target_mode": "none",
-      "color": "蓝",
-      "image": "",
-      "trigger": "伤害·禁足"
-    },
-    {
-      "id": 8013,
-      "name": "冻结陷阱",
-      "kind": "场地",
-      "cost": 1,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 1,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "工事",
-        "冻结陷阱",
-        "场地生效·敌"
-      ],
-      "effect_text": "场地效果。敌人**移动经过**此格时立刻触发（不必停留，路过即中），并**立即停止这次移动**：对其造成 3 点伤害并使其冰冻（下回合不能行动）。",
-      "target_mode": "none",
-      "color": "蓝",
-      "image": "",
-      "trigger": "伤害·冰封"
-    },
-    {
-      "id": 8014,
-      "name": "剧毒陷阱",
-      "kind": "场地",
-      "cost": 1,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 0,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "工事",
-        "剧毒陷阱",
-        "场地生效·敌"
-      ],
-      "effect_text": "场地效果。敌人**移动经过**此格时立刻触发（不必停留，路过即中），并**立即停止这次移动**：其获得「中毒」—— 每回合受到 6 点伤害，持续 4 回合。",
-      "target_mode": "none",
-      "color": "绿",
-      "image": "",
-      "trigger": "中毒"
-    },
-    {
-      "id": 9105,
-      "name": "陷阱精通",
-      "kind": "效果",
-      "cost": 2,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 1,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "场地精通"
-      ],
-      "effect_text": "你的场地效果造成的伤害提升 3X 点，X 为那张场地卡的原本费用。",
-      "target_mode": "none",
-      "color": "紫",
-      "image": ""
-    },
-    {
-      "id": 8015,
-      "name": "机关工坊",
-      "kind": "工事",
-      "cost": 3,
-      "power": 0,
-      "health": 11,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 2,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "工事",
-        "机关工坊"
-      ],
-      "effect_text": "回合开始时，随机将一张奖励卡池中的场地卡加入手卡。被敌人的攻击破坏时，对破坏它的敌人造成 8 点伤害。",
-      "target_mode": "none",
-      "color": "蓝",
-      "image": ""
-    },
-    {
-      "id": 9107,
-      "name": "暗影狩猎",
-      "kind": "技能",
-      "cost": 2,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 1,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [],
-      "effect_text": "对一个敌人造成 16 点伤害；若该目标上回合触发过场地，则改为 30 点伤害。（触发 = 它移动进入某个场地并使该场地的效果发动。）",
-      "target_mode": "unit",
-      "color": "紫",
-      "image": ""
-    },
-    {
-      "id": 8016,
-      "name": "穿刺陷阱",
-      "kind": "场地",
-      "cost": 1,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 0,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "工事",
-        "穿刺陷阱",
-        "场地生效·敌"
-      ],
-      "effect_text": "场地效果。敌人**移动经过**此格时立刻触发（不必停留，路过即中），并**立即停止这次移动**：对其造成 18 点伤害。",
-      "target_mode": "none",
-      "color": "红",
-      "image": "",
-      "trigger": "单体伤害"
-    },
-    {
-      "id": 8017,
-      "name": "巨物陷阱",
-      "kind": "场地",
-      "cost": 1,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 1,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "巨物陷阱",
-        "场地生效·敌"
-      ],
-      "effect_text": "场地效果。敌人**移动经过**此格时立刻触发（不必停留，路过即中），并**立即停止这次移动**：造成 **10 点 + 该单位当前攻击力×2** 的伤害（不分敌我）。",
-      "target_mode": "none",
-      "color": "蓝",
-      "image": "",
-      "trigger": "单体伤害"
-    },
-    {
       "id": 8018,
       "name": "活体栅栏",
       "kind": "工事",
@@ -2740,27 +2543,6 @@
       "effect_text": "入场时抽一张卡。",
       "target_mode": "none",
       "color": "蓝",
-      "image": ""
-    },
-    {
-      "id": 9109,
-      "affixes": [
-        "次元"
-      ],
-      "name": "警觉",
-      "kind": "技能",
-      "cost": 2,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 1,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [],
-      "effect_text": "第一个回合必定抽到这张卡。将一张随机场地卡加入手卡，本回合内该卡费用 -2。字段「次元」：打出后消失，不进弃牌区。",
-      "target_mode": "none",
-      "color": "紫",
       "image": ""
     },
     {
@@ -4264,28 +4046,6 @@
       "image": ""
     },
     {
-      "id": 9153,
-      "name": "清退",
-      "kind": "效果",
-      "cost": 1,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 1,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "清退"
-      ],
-      "affixes": [],
-      "effect_text": "在有敌人的格子放置陷阱时，将其击退 1 格（朝敌方后排方向，被单位或边界挡住就停下）。",
-      "target_mode": "none",
-      "value": 0,
-      "color": "紫",
-      "image": ""
-    },
-    {
       "id": 9154,
       "name": "破绽",
       "kind": "诅咒",
@@ -4367,29 +4127,6 @@
       "affixes": [],
       "effect_text": "对目标造成 4 点伤害，然后抽 1 张卡。",
       "target_mode": "unit",
-      "color": "紫",
-      "image": ""
-    },
-    {
-      "id": 8063,
-      "name": "黑暗陷阱",
-      "kind": "场地",
-      "cost": 0,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 0,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "工事",
-        "黑暗陷阱",
-        "场地生效·敌"
-      ],
-      "affixes": [],
-      "effect_text": "场地效果。敌人**移动经过**此格时立刻触发（不必停留，路过即中），并**立即停止这次移动**：其本回合攻击时力量 -1。",
-      "target_mode": "none",
       "color": "紫",
       "image": ""
     },
@@ -4514,29 +4251,6 @@
       "effect_text": "战斗**开始时**以及**每 3 个回合**，召唤一只鸭子暗杀者。",
       "target_mode": "none",
       "value": 3,
-      "color": "黑",
-      "image": ""
-    },
-    {
-      "id": 9126,
-      "name": "捕兽大师",
-      "kind": "盟友",
-      "cost": 3,
-      "power": 3,
-      "health": 9,
-      "attack_range": 1,
-      "move_speed": 1,
-      "rarity": 1,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "亡语"
-      ],
-      "affixes": [
-        "死亡"
-      ],
-      "effect_text": "亡语：在原地留下一个**随机陷阱**（该格已有场地效果时不覆盖）。",
-      "target_mode": "none",
       "color": "黑",
       "image": ""
     },
@@ -4937,29 +4651,6 @@
       "value": 0,
       "color": "灰",
       "image": ""
-    },
-    {
-      "id": 9159,
-      "name": "落石陷阱",
-      "kind": "场地",
-      "cost": 2,
-      "power": 0,
-      "health": 0,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 1,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "工事",
-        "落石陷阱",
-        "场地生效·敌"
-      ],
-      "effect_text": "场地效果。敌人**移动经过**此格时立刻触发（不必停留，路过即中），并**立即停止这次移动**：对其造成 29 点伤害。这一下若将其击杀，**溢出的伤害不丢弃** —— 沿同列继续碾压其后方的单位（「践踏」），打穿整列后，剩下的伤害打在对面玩家身上。",
-      "target_mode": "none",
-      "color": "红",
-      "image": "",
-      "trigger": "单体伤害"
     },
     {
       "id": 9160,
@@ -5858,7 +5549,6 @@
       "color": "白",
       "image": ""
     },
-
     {
       "id": 9207,
       "name": "量产型阿斯克勒庇厄斯",
@@ -5882,7 +5572,6 @@
       "color": "金",
       "image": ""
     },
-
     {
       "id": 9208,
       "name": "母舰",
@@ -5906,7 +5595,6 @@
       "color": "金",
       "image": ""
     },
-
     {
       "id": 9209,
       "name": "空袭",
@@ -5929,7 +5617,6 @@
       "color": "红",
       "image": ""
     },
-
     {
       "id": 9210,
       "name": "寒霜结界",
@@ -5952,7 +5639,6 @@
       "color": "蓝",
       "image": ""
     },
-
     {
       "id": 9211,
       "name": "折射炮",
@@ -6219,8 +5905,7 @@
       "target_mode": "none",
       "color": "橙",
       "image": ""
-    }
-,
+    },
     {
       "id": 9223,
       "name": "执法者",
@@ -6242,6 +5927,127 @@
       "target_mode": "none",
       "color": "金",
       "image": ""
-    }
+    },
+  {
+    "id": 9224,
+    "name": "标记",
+    "kind": "场地",
+    "cost": 0,
+    "power": 0,
+    "health": 0,
+    "attack_range": 0,
+    "move_speed": 0,
+    "rarity": 0,
+    "group": "player",
+    "class": "暗影刺客",
+    "traits": [
+      "持续场地",
+      "场地生效·双"
+    ],
+    "affixes": [],
+    "effect_text": "场地效果（全场同时只存在一个标记）。处于这一格的敌人受到的伤害 +1；每个我方回合开始时该数值 +1。换一个格子放标记会把旧的顶掉，数值重置为 1。",
+    "target_mode": "none",
+    "color": "紫",
+    "image": ""
+  },
+  {
+    "id": 9225,
+    "name": "死亡预告",
+    "kind": "技能",
+    "cost": 1,
+    "power": 0,
+    "health": 0,
+    "attack_range": 0,
+    "move_speed": 0,
+    "rarity": 0,
+    "group": "player",
+    "class": "暗影刺客",
+    "traits": [],
+    "affixes": [],
+    "effect_text": "标记目标所在的格子，然后对目标造成 6 点伤害。",
+    "target_mode": "unit",
+    "color": "紫",
+    "image": ""
+  },
+  {
+    "id": 9226,
+    "name": "致命",
+    "kind": "效果",
+    "cost": 3,
+    "power": 0,
+    "health": 0,
+    "attack_range": 0,
+    "move_speed": 0,
+    "rarity": 2,
+    "group": "player",
+    "class": "暗影刺客",
+    "traits": [
+      "致命"
+    ],
+    "affixes": [],
+    "effect_text": "被标记的敌人受到的所有伤害提升 50%（替代标记本身的加伤）。打出时若场上没有标记，随机标记一个敌人所在的格子。",
+    "target_mode": "none",
+    "color": "紫",
+    "image": ""
+  },
+  {
+    "id": 9227,
+    "name": "死神降临",
+    "kind": "技能",
+    "cost": 2,
+    "power": 0,
+    "health": 0,
+    "attack_range": 0,
+    "move_speed": 0,
+    "rarity": 1,
+    "group": "player",
+    "class": "暗影刺客",
+    "traits": [],
+    "affixes": [],
+    "effect_text": "对目标造成 14 点伤害；若目标被标记，改为造成 20 点伤害并抽 2 张卡。",
+    "target_mode": "unit",
+    "color": "紫",
+    "image": ""
+  },
+  {
+    "id": 9228,
+    "name": "恐惧之影",
+    "kind": "盟友",
+    "cost": 3,
+    "power": 3,
+    "health": 14,
+    "attack_range": 1,
+    "move_speed": 1,
+    "rarity": 1,
+    "group": "player",
+    "class": "暗影刺客",
+    "traits": [],
+    "affixes": [],
+    "effect_text": "被标记的敌人对这张卡造成的伤害减半。",
+    "target_mode": "none",
+    "color": "黑",
+    "image": ""
+  },
+  {
+    "id": 9229,
+    "name": "恐惧投射",
+    "kind": "技能",
+    "cost": 2,
+    "power": 0,
+    "health": 0,
+    "attack_range": 0,
+    "move_speed": 0,
+    "rarity": 0,
+    "group": "player",
+    "class": "暗影刺客",
+    "traits": [],
+    "affixes": [
+      "次元"
+    ],
+    "effect_text": "标记目标所在的格子，并使目标本回合力量 -11。若目标已被标记，则改为对其造成 8 点伤害。字段「次元」：打出后消失，不进弃牌区。",
+    "target_mode": "unit",
+    "color": "紫",
+    "image": ""
+  }
   ]
 }
