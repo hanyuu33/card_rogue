@@ -609,6 +609,8 @@ func _apply_ui_assets() -> void:
 	##   2. **篝火只留给休息处**。原来 24 种事件全都烧一堆篝火，「卡牌商人」「占卜」
 	##      「遗忘之泉」里都有篝火，玩家一眼就看出是占位。篝火的本义是「可以休息」。
 	var kind := _kind()
+	_dark_page = _is_dark_page(kind)
+	_apply_page_ink()
 	var campfire: Control = $Campfire
 	campfire.visible = (kind == "rest")
 	var pic := UiAssets.event_pic(kind)
@@ -798,15 +800,50 @@ const EVENT_FALLBACK_BG := true
 var _fb_layer: Control = null
 var _fb_tint := Color("c8951c")
 
+## R513：暗页事件 —— 整页按「黑暗」呈现：背景近黑、信息卡深墨、文字浅色。
+## 判据只看 `_kind()`，与有没有素材无关：以后就算给这些事件配了整屏底图，
+## 字色 / 卡片仍走暗色方案，不会出现「黑字压黑底」。
+const DARK_PAGE_KINDS := ["gaze"]
+
+var _dark_page := false
+var _fb_dark := false
+
+
+func _is_dark_page(kind: String) -> bool:
+	return DARK_PAGE_KINDS.has(kind)
+
+
+func _apply_page_ink() -> void:
+	## 暗页：标题柠檬金（与眼睛的琥珀呼应）+ 正文米白；浅页仍是墨褐。
+	if _dark_page:
+		event_name.add_theme_color_override("font_color", UiTheme.ACCENT_LIT)
+		desc.add_theme_color_override("font_color", Color("c2bcae"))
+	else:
+		event_name.add_theme_color_override("font_color", UiTheme.PAGE_INK)
+		desc.add_theme_color_override("font_color", UiTheme.PAGE_INK)
+
+
+func _result_color_on_dark() -> void:
+	## 结果行有几十处分支各自写死「浅底墨色」（#8a6a3a / #2f7fa8 / #c0504d…），
+	## 放进暗页会糊进黑里。这里按亮度兜底提亮，只在真暗时动一次
+	## （提亮后线性亮度已越过阈值，重复调用不会继续叠亮）。
+	if not _dark_page:
+		return
+	var c := result_label.get_theme_color("font_color")
+	if c.get_luminance() < 0.22:
+		result_label.add_theme_color_override("font_color", c.lightened(0.55))
+
 
 func _add_fallback_bg(kind: String) -> void:
 	if not EVENT_FALLBACK_BG:
 		return
 	if _fb_layer != null:
 		_fb_tint = _kind_tint(kind)
+		_fb_dark = _dark_page
 		_fb_layer.queue_redraw()
 		return
 	_fb_tint = _kind_tint(kind)
+	_fb_dark = _dark_page
 	_fb_layer = Control.new()
 	_fb_layer.name = "EventFallbackBG"
 	_fb_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -840,6 +877,28 @@ func _on_fallback_draw() -> void:
 		return
 	var tint := _fb_tint
 	var gold := UiTheme.ACCENT_GOLD
+	# R513：暗页 —— 底压到近黑，只在眼睛那一行铺一层极淡的暗红雾。
+	# 插图自带椭圆暗场，底够黑时那块暗场才真正化进背景，不留一块贴纸黑斑。
+	# 也不画纹章水印与四周暗角：黑底上它们不是「不空」，而是「脏」。
+	if _fb_dark:
+		var bands_d := 56
+		var bh_d := sz.y / float(bands_d)
+		var dtop := Color("030406")
+		var dbot := Color("0b0909")
+		for i in bands_d:
+			var cd := dtop.lerp(dbot, float(i) / float(bands_d - 1))
+			_fb_layer.draw_rect(Rect2(0.0, bh_d * float(i), sz.x, bh_d + 1.5), cd)
+		# 雾要「铺得开、几乎看不见」：半径接近全屏、层数少、单层极低 alpha。
+		# 半径小 + 层数多会叠成一个能看出边界的圆形光斑，那就成了探照灯。
+		var ctr_d := Vector2(sz.x * 0.5, 176.0)
+		var rmax_d := maxf(sz.x, sz.y) * 0.95
+		for i in 14:
+			var td := float(i + 1) / 14.0
+			_fb_layer.draw_circle(ctr_d, rmax_d * (1.02 - td * 0.90),
+					Color(tint.r, tint.g, tint.b, 0.0055))
+		_fb_layer.draw_line(Vector2(0.0, 45.0), Vector2(sz.x, 45.0),
+				Color(gold.r, gold.g, gold.b, 0.20), 1.0)
+		return
 	# 1) 纵向渐变：上方偏暖（像有光），下方沉下去
 	var top := Color("dce3cf")
 	var bot := Color("f0e6d4")
@@ -880,9 +939,9 @@ func _on_fallback_draw() -> void:
 
 
 func _ready() -> void:
-	$Center.draw.connect(func(): UiTheme.draw_info_card($Center, Rect2(Vector2(-22, -16), $Center.size + Vector2(44, 32))))
-	event_name.add_theme_color_override("font_color", UiTheme.PAGE_INK)
-	desc.add_theme_color_override("font_color", UiTheme.PAGE_INK)
+	# R513：信息卡底色分「浅纸 / 深墨」两档；此回调在 _apply_ui_assets 之后才绘制，读 _dark_page 安全。
+	$Center.draw.connect(func(): UiTheme.draw_info_card($Center, Rect2(Vector2(-22, -16), $Center.size + Vector2(44, 32)), false, _dark_page))
+	# 字色不在这里定死 —— 见 `_apply_page_ink()`（暗页要浅字，且此刻 _kind() 可能还没就位）
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	# R113：事件底色 #252A34 = 暗底 → on_dark = true。
@@ -1506,6 +1565,7 @@ func _ready() -> void:
 
 func _redraw() -> void:
 	## 文案变化后的统一出口：先重排中间一列，再重绘。
+	_result_color_on_dark()
 	_fit_center()
 	queue_redraw()
 

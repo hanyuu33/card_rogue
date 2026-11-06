@@ -843,7 +843,17 @@ static func draw_close(canvas: CanvasItem, rect: Rect2, hovered: bool) -> void:
 		canvas.draw_texture_rect(tex, Rect2(rect.get_center() - Vector2.ONE * edge / 2, Vector2.ONE * edge), false,
 				Color(1.15, 1.15, 1.15) if hovered else Color.WHITE)
 
-static func draw_info_card(canvas: CanvasItem, rect: Rect2, hovered := false) -> void:
+static func draw_info_card(canvas: CanvasItem, rect: Rect2, hovered := false, dark := false) -> void:
+	## dark（R513）：暗页事件（鸭之凝视）上的信息卡 —— 深墨底 + 金线。
+	## 浅底上的 #f3eee2 纸卡放进近黑背景会变成一块发亮的便利贴；
+	## 背景、卡片、文字三处的明暗关系必须一起翻过来才成立。
+	if dark:
+		var sbd := _btn_box(Color("241b1c") if hovered else Color("1b1517"), ADVENTURE_BRASS, 1, RADIUS_MD, 12, 12)
+		sbd.shadow_color = Color(0, 0, 0, 0.55)
+		sbd.shadow_size = 10
+		sbd.shadow_offset = Vector2(0, 3)
+		canvas.draw_style_box(sbd, rect)
+		return
 	var sb := _btn_box(ADVENTURE_INPUT if hovered else PAGE_PAPER, ADVENTURE_BRASS, 1, RADIUS_MD, 12, 12)
 	sb.shadow_color = Color(0.18, 0.14, 0.08, 0.12)
 	sb.shadow_size = 3

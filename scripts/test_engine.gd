@@ -8422,6 +8422,24 @@ func _init() -> void:
 			"R512 事件插图必须 EXPAND_IGNORE_SIZE（否则 2× 素材把 320×240 的框顶掉）")
 	check_src(r512_src.contains("move_child(tr, 1)"),
 			"R512 事件插图压在正文之下（add_child 是最上层，会挡文案与按钮）")
+	# ---- R513 暗页（鸭之凝视）：背景 / 卡片 / 字色三处必须同时翻面 ----
+	# 只改背景 → 深墨字压黑底；只改字色 → 浅纸卡变成黑夜里的发光便利贴。
+	var r513_src := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	var r513_theme := FileAccess.get_file_as_string("res://scripts/ui_theme.gd")
+	check_src(r513_src.contains('const DARK_PAGE_KINDS := ["gaze"]'),
+			"R513 暗页清单只有鸭之凝视（其余事件仍走浅底，不连带改）")
+	check_src(r513_src.contains("if _fb_dark:"),
+			"R513 缺图兜底有暗档（近黑渐变 + 暗红雾；黑底上不画纹章与暗角）")
+	check_src(r513_src.contains("_dark_page = _is_dark_page(kind)"),
+			"R513 暗页判据在 _apply_ui_assets 里按 _kind() 现算")
+	check_src(r513_src.contains("_apply_page_ink()"),
+			"R513 字色走 _apply_page_ink（暗页浅字 / 浅页墨褐）")
+	check_src(r513_src.contains("false, _dark_page)"),
+			"R513 信息卡把 _dark_page 传给 draw_info_card")
+	check_src(r513_src.contains("_result_color_on_dark()"),
+			"R513 结果行在 _redraw 里按暗底提亮（各分支写死的墨色不再糊进黑）")
+	check_src(r513_theme.contains("hovered := false, dark := false)"),
+			"R513 draw_info_card 支持 dark 档（默认 false，旧调用方不变）")
 	# ---- 战斗背景的三级回退（R133）----
 	# ① 每个关卡都要有**稳定的 ASCII key** —— 「按关卡替换素材」全靠它；
 	#    空 / 重名 / 带中文都会让槽位名对不上（关卡改名不该影响素材名）。
