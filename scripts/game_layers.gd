@@ -45,7 +45,9 @@ const LAYERS := {
 			"arcane": 18,     # 奥秘之泉（第一层专属）：奥秘护符 / 随机效果或技能牌三选一
 			"oblivion": 14,   # 遗忘之泉（全层通用）：可从卡组删一张卡，或离开
 			"smith": 12,       # 鸭鸭工匠（R110，全层通用）：把卡组里一张卡变成「2 费铁栅栏」
-			"treasure": 31,   # 宝箱（卡牌奖励）
+			# R512（用户口径）：`treasure`「卡牌宝箱」已从事件池移除 ——
+			# 事件房不再发卡牌奖励（奖励页已经有卡牌奖励，事件房重复）。
+			# `event_scene` 的 treasure 分支保留，只为旧存档 / `--treasure` 演示。
 			"delivery": 20,  # 运送委托（R200，第一层专属）：选 1~6 张「货物」入卡组
 			"lake_lady": 16,  # 湖中仙女（R305，第一层专属）：谎言删一张初始卡 / 诚实得随机史诗卡
 			"divination": 14,  # 占卜室（R308）：占卜后随机 4 种幻象，每种两个解读（卡 / 道具）
@@ -229,7 +231,8 @@ static func roll_event_kind(layer: int, rng: RandomNumberGenerator,
 	## 不传 `used`（默认空表）= 纯按权重抽、允许重复（测试 / 工具用）。
 	var w := event_weights(layer)
 	if w.is_empty():
-		return "treasure"
+		# R512：没有事件池就不再硬塞一张卡牌宝箱，交回空串由调用方降级
+		return ""
 	# 本轮候选 = 池子里权重 > 0 且还没被 used 占掉的
 	var cand := {}
 	for k in w:
@@ -250,11 +253,11 @@ static func roll_event_kind(layer: int, rng: RandomNumberGenerator,
 	for k in cand:
 		total += int(cand[k])
 	if total <= 0:
-		return "treasure"
+		return ""
 	var roll := rng.randi_range(1, total)
 	for k in cand:
 		roll -= int(cand[k])
 		if roll <= 0:
 			used[str(k)] = true
 			return str(k)
-	return "treasure"
+	return ""

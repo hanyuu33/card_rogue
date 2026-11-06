@@ -1,3 +1,33 @@
+## 2026-11-06 R512 事件素材第一批 + 宝箱事件退场（当前最新）
+
+- 用户口径（逐条）：`hero` / `struggle` / `pear` / `bluefish` **暂缓不做**；**宝箱从事件中移除**；
+  赏月 = 月夜天空下画架上的月夜写生；鸭之凝视 = 黑暗中恶魔鸭两只眼盯着你 + 分层明暗；
+  熔炉 = 机械里红热的炉子；洞穴 / 卡片商人按前案；契约的核心 = **契约文刻在石台上**，
+  且**核心的标志已有素材**（不重画，复用 `reward_icons/core.png`）；其余事件本轮不生成。
+- **宝箱退场**：`game_layers.LAYERS[1].events` 删 `"treasure": 31`，`roll_event_kind()` 的三处
+  兜底 `return "treasure"` 改 `return ""`（调用方 `_make_cells` 本就把空串降级成普通战斗）。
+  `event_scene` 的 treasure 分支保留，只服务旧存档 / `--treasure` 演示。
+  第一层事件池 12 → **11 种**（第二层本来就是 14 种，不含 treasure）。
+- **顺手修 bug**：`martial`（武术大师 R473）**一直没进 `_kind()`**，落到末尾 `return "rest"`
+  → 房间里点亮休息处的篝火 + 铺休息处空地背景 + 暖橙主题色。现在补 `_kind()` 分支、
+  主题色归「交易 / 匠人」金。
+- **6 张素材**（详细过程见 `art_src/2026-11-06_事件插图R512/README.md`）：
+  `bg_moon` / `bg_furnace` / `bg_cave` / `bg_card_merchant` / `bg_core_contract`（1280×720）
+  + `event_gaze`（640×480，2× 基准 320×240，四边羽化）。
+- **契约的核心**：底图的石台中央**故意留成空凹槽**（圆心 648,406，外沿 363×118 透视椭圆），
+  核心本体由 `event_scene._make_core_icon()` 叠 `reward_icons/core.png`
+  （常量 `CORE_ICON_CX/CY/SIZE = 648/350/200`，与占卜球同一套 KEEP_ASPECT_COVERED 重算）；
+  取走核心（`_core_pick == "core"` 或已有道具）后隐掉 —— 对应文案「只剩一圈浅浅的凹痕」。
+- **两个潜伏坑（`event_*.png` 一张都没有时一直是死代码，本轮首爆）**：
+  ① `TextureRect` 默认 `EXPAND_KEEP_SIZE` 会把 320×240 的框顶成贴图原生 640×480 → 图位移 + 溢出；
+  ② `add_child` 是「加到最上层」→ 插图盖住文案与按钮。修法 `EXPAND_IGNORE_SIZE` + `move_child(tr, 1)`，
+  两条都进了 `check_src` 断言。
+- 回归 `_verify.py` 全通过：mana PASS / engine **5228**（+12 条 R512 断言）/ reward 26 / bgm 39 / smoke 64。
+- 六态截图已核验（`--moon` / `--furnace` / `--cave` / `--cardmerchant` / `--corecontract` / `--gaze`）。
+- **下一步（等用户口径）**：暂缓的 hero / struggle / pear / bluefish；仍未出图的
+  whisper / arcane / oblivion / smith / lake_lady / snow_leopard / adventurer / martial /
+  delivery / treasure / relic_chest / rest / divination(插图)。
+
 ## 2026-11-06 R510 削弱火墙术 + APK 出包（当前最新）
 - 用户口径：「削弱火墙术：基础伤害和基础单体伤害上限都调整到 14 点，延迟伤害下调到 7 点。之后打包 APK」
 - 落地：`FIRE_WALL_DMG 15→14`、`FIRE_WALL_CAP 15→14`、`FIRE_WALL_PASS_DMG 8→7`；`SPELL_BASE_DMG[9084] 15→14`（R348「表 == 卡面首个 N 点伤害」口径）；cards.json 卡面文案同步 14 / 7 / 14。

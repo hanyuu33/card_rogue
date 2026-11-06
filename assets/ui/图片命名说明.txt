@@ -50,37 +50,78 @@ map_bridge.png      小桥的**俯视图**（桥身在画面上**竖着**）  16
 · 「当前位置金框 / 可走房间绿框 / 边界上的门」都由程序画，**不要画进素材**。
 
 ------------------------------------------------------------------------
- 二、事件插图（8 个）—— 事件界面标题下方的那张图
+ 二、事件插图 event_<kind>.png —— 事件界面标题下方的那张图
 ------------------------------------------------------------------------
-event_rest.png          休息处
-event_treasure.png      宝箱（支付 5 生命换卡牌）
-event_whisper.png       鸭鸭低语
-event_struggle.png      挣扎
-event_gaze.png          鸭之凝视
-event_pear.png          鸭梨山大（第二层事件）
-event_hero.png          绝赞五换一（第二层事件，换「英雄」）
-event_relic_chest.png   宝箱层（开箱得道具）
+· kind 的唯一出处是 `event_scene._kind()`（25 个分支），这张表按它列全。
+· 建议尺寸 **320 × 240（横向 4:3）**，等比缩放居中显示
+  （代码 `STRETCH_KEEP_ASPECT_CENTERED`；旧文写「300 × 240 / 5:4」是错的）。
+· 显示位置：窗口水平居中、顶部标题条下方（y 约 116 ~ 356）。
+· 不提供时铺 `_add_fallback_bg()` 的程序化渐变（六类主题色纹章）。
+  ⚠️ **篝火只属于休息处**（R478）—— 旧文「所有事件都会显示篝火」已作废。
+· 「暂缓」= R512 用户口径明确这一轮不做，别自作主张补。
 
-· 建议尺寸 300 × 240（横向 5:4），等比缩放居中显示。
-· 显示位置：窗口水平居中、位于顶部标题条下方（y 约 116 ~ 356）。
-· 不提供时：显示内置的篝火动画（所有事件类别都会显示，与旧版一致）；
-  某个事件提供了 event_<事件>.png 时，该事件界面的内置篝火会隐藏，避免图形重叠。
+  event_gaze.png          鸭之凝视          ★R512 已提供
+  event_whisper.png       鸭鸭低语
+  event_struggle.png      挣扎              （R512 暂缓）
+  event_pear.png          鸭梨山大          （R512 暂缓）
+  event_hero.png          绝赞五换一        （R512 暂缓）
+  event_bluefish.png      蓝色大肥鱼        （R512 暂缓）
+  event_apple_doctor.png  苹果与医生
+  event_snow_leopard.png  雪豹出现
+  event_adventurer.png    冒险家的遗物
+  event_martial.png       武术大师          （R512 前会落进 rest 显示篝火，已修）
+  event_arcane.png        奥秘之泉
+  event_oblivion.png      遗忘之泉
+  event_smith.png         鸭鸭工匠
+  event_card_merchant.png 卡片商人
+  event_lake_lady.png     湖中仙女
+  event_divination.png    占卜室
+  event_moon.png          赏月
+  event_furnace.png       熔炉
+  event_core_contract.png 契约的核心
+  event_cave.png          洞穴
+  event_delivery.png      运送委托
+  event_delivery_done.png 委托完成          （可与 delivery 共用一张）
+  event_treasure.png      卡牌宝箱          （R512 已从事件池移除，只有旧存档 / --treasure 演示可达）
+  event_relic_chest.png   宝箱层（大宝箱房）
+  event_rest.png          休息处            （有内置篝火，一般不需要插图）
 
 ------------------------------------------------------------------------
- 三、事件背景（8 个）—— 事件界面整屏底图
+ 三、事件背景 bg_<kind>.png —— 事件界面整屏底图
 ------------------------------------------------------------------------
-bg_rest.png             休息处
-bg_treasure.png         宝箱（卡牌）
-bg_whisper.png          鸭鸭低语
-bg_struggle.png         挣扎
-bg_gaze.png             鸭之凝视
-bg_pear.png             鸭梨山大（第二层事件）
-bg_hero.png             绝赞五换一（第二层事件，换「英雄」）
-bg_relic_chest.png      宝箱层
-
 · 文件名与上面「事件插图」一一对应，只是前缀换成 bg_ 。
 · 建议尺寸 1280 × 720（与游戏窗口同尺寸），会铺满整屏（保持比例裁切）。
-· 不提供时使用内置的深灰单色背景。
+  ⚠️ 主体放在**上半部**（y 约 100~400）：下面要压文案与选项。
+· 不提供时用 `_add_fallback_bg()` 的程序化渐变（同 二）。
+
+  bg_divination.png       占卜室            ★R511 已提供（球内幻象见 三·补）
+  bg_moon.png             赏月              ★R512 已提供
+  bg_furnace.png          熔炉              ★R512 已提供
+  bg_cave.png             洞穴              ★R512 已提供
+  bg_card_merchant.png    卡片商人          ★R512 已提供
+  bg_core_contract.png    契约的核心        ★R512 已提供
+                          ⚠️ 石台中央是**空凹槽**：核心标志由代码叠
+                             `reward_icons/core.png`（统一走 `UiAssets.core_icon()`），
+                             不要另画一个符号，否则取走核心后还留在石台上。
+  bg_gaze.png             鸭之凝视          （走插图，不做背景）
+  bg_rest.png             休息处            （实际读 adventure_shared/rest_clearing.png）
+  bg_whisper.png          鸭鸭低语
+  bg_struggle.png         挣扎              （R512 暂缓）
+  bg_pear.png             鸭梨山大          （R512 暂缓）
+  bg_hero.png             绝赞五换一        （R512 暂缓）
+  bg_bluefish.png         蓝色大肥鱼        （R512 暂缓）
+  bg_apple_doctor.png     苹果与医生
+  bg_snow_leopard.png     雪豹出现
+  bg_adventurer.png       冒险家的遗物
+  bg_martial.png          武术大师
+  bg_arcane.png           奥秘之泉
+  bg_oblivion.png         遗忘之泉
+  bg_smith.png            鸭鸭工匠
+  bg_lake_lady.png        湖中仙女
+  bg_delivery.png         运送委托
+  bg_delivery_done.png    委托完成
+  bg_treasure.png         卡牌宝箱          （R512 已从事件池移除）
+  bg_relic_chest.png      宝箱层
 
 ------------------------------------------------------------------------
  三·补、占卜球内幻象（R511，5 张）—— 占卜室水晶球里换的内容

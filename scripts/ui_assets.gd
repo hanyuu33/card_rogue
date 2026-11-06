@@ -125,6 +125,15 @@ static func div_vision(n: int) -> Texture2D:
 	return get_tex("div_vision_%d" % n)
 
 
+static func core_relic_icon() -> Texture2D:
+	## 道具「核心」（6059）的标志：`reward_icons/core.png`。
+	## R512「契约的核心」事件把底图石台中央**故意留成空凹槽**（标志画死在背景里，
+	## 取走核心后它还会留在石台上，和文案「只剩一圈浅浅的凹痕」打架），
+	## 由事件场景把这张图叠进凹槽。**要换标志只换这张**，别在背景里另画一个。
+	## 缺图返回 null（事件照常可玩，只是石台上没有核心）。
+	return get_tex("reward_icons/core")
+
+
 static func div_orb_glass() -> Texture2D:
 	## 水晶球玻璃壳（R511）：从 `bg_divination.png` 原图剥离的高光/内壁/边缘，
 	## 只保留亮部（暗部近乎全黑）。代码侧用 **ADD 混合**盖在幻象之上，

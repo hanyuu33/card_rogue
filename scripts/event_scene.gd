@@ -592,6 +592,10 @@ func _kind() -> String:
 		return "delivery_done"
 	if _is_struggle():
 		return "struggle"
+	# R512 修 bug：R473 加「武术大师」时漏了这里 —— 落进末尾 return "rest"，
+	# 于是武术大师的房间会点亮休息处的篝火、铺休息处的空地背景。
+	if _is_martial():
+		return "martial"
 	if _is_treasure():
 		return "treasure"
 	return "rest"
@@ -614,6 +618,9 @@ func _apply_ui_assets() -> void:
 		tr.name = "EventPic"
 		tr.texture = pic
 		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		# R512 修：默认 EXPAND_KEEP_SIZE 会把 size 改回贴图原生尺寸（素材是 2×，
+		# 于是 320×240 的框被 640×480 顶掉 → 图位移且溢出），必须 IGNORE_SIZE。
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		tr.anchor_left = 0.5
 		tr.anchor_right = 0.5
@@ -622,6 +629,9 @@ func _apply_ui_assets() -> void:
 		tr.offset_top = 116.0
 		tr.offset_bottom = 356.0
 		add_child(tr)
+		# R512 修：add_child 是「加到最上层」—— 插图会盖住文案与选项按钮。
+		# 和缺图兜底同一层（$BG 之上、篝火与正文之下）。
+		move_child(tr, 1)
 	var bg := UiAssets.event_bg(kind)
 	if kind == "rest" and bg != null:
 		campfire.visible = false
@@ -645,6 +655,9 @@ func _apply_ui_assets() -> void:
 		# R511：占卜室 —— 球内景象单独一层（只换球里的内容，不换整张底图）
 		if kind == "divination":
 			_make_orb_layers(trb)
+		# R512：契约的核心 —— 底图只画了石台与刻文，中央凹槽空着，核心另行叠
+		if kind == "core_contract":
+			_make_core_icon(trb)
 	else:
 		_add_fallback_bg(kind)
 
@@ -712,6 +725,58 @@ func _layout_orb_layers() -> void:
 		_orb_glass.size = _orb_vision.size
 
 
+## ---- R512 契约的核心：石台凹槽里的核心 -----------------------------------
+## 底图 `bg_core_contract.png`（1280×720 基准）的石台中央是**空凹槽**：
+## 圆心 (648, 406)、外沿半径约 181×59（透视压扁的椭圆）。契约文刻在石台面上，
+## 核心本体不画进底图 —— 取走核心后要能收掉（文案：只剩一圈浅浅的凹痕）。
+## 叠的是道具同一张图 `reward_icons/core.png`，所以标志永远和道具栏里一致。
+const CORE_ICON_CX := 648.0
+const CORE_ICON_CY := 350.0
+const CORE_ICON_SIZE := 200.0
+
+var _core_icon: TextureRect = null
+
+
+func _make_core_icon(bg_rect: TextureRect) -> void:
+	var tex := UiAssets.core_relic_icon()
+	if tex == null:
+		return
+	var zi := bg_rect.get_index() + 1
+	_core_icon = TextureRect.new()
+	_core_icon.name = "CoreIcon"
+	_core_icon.texture = tex
+	_core_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_core_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_core_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	add_child(_core_icon)
+	move_child(_core_icon, zi)
+	if not resized.is_connected(_layout_core_icon):
+		resized.connect(_layout_core_icon)
+	_layout_core_icon()
+	_update_core_icon()
+
+
+func _layout_core_icon() -> void:
+	## 与占卜球同一套变换（复现 EventBG 的 KEEP_ASPECT_COVERED），换窗口不会错位。
+	if _core_icon == null:
+		return
+	var vs := get_viewport_rect().size
+	var s := maxf(vs.x / ORB_BASE_W, vs.y / ORB_BASE_H)
+	var off := (vs - Vector2(ORB_BASE_W, ORB_BASE_H) * s) * 0.5
+	var c := off + Vector2(CORE_ICON_CX, CORE_ICON_CY) * s
+	var d := CORE_ICON_SIZE * s
+	_core_icon.position = c - Vector2(d, d) * 0.5
+	_core_icon.size = Vector2(d, d)
+
+
+func _update_core_icon() -> void:
+	## 已经取走核心（本页选过「获取核心」，或道具栏里已经有「核心」）→ 石台上没有它。
+	if _core_icon == null:
+		return
+	_core_icon.visible = _core_pick != "core" \
+			and not RunState.has_relic(RunState.CORE_RELIC_ID)
+
+
 func _update_orb_vision() -> void:
 	## 幻象只在「已占卜、还没解读」这一态出现；解读完球里重新蒙雾（文案也是这么写的）。
 	if _orb_vision == null:
@@ -758,7 +823,7 @@ func _kind_tint(kind: String) -> Color:
 	match kind:
 		"struggle", "gaze", "oblivion", "furnace", "core_contract":
 			return Color("b5484a")   # 危险：暗红
-		"smith", "card_merchant", "lake_lady", "apple_doctor", "delivery", "delivery_done":
+		"smith", "card_merchant", "lake_lady", "apple_doctor", "delivery", "delivery_done", "martial":
 			return Color("c8951c")   # 交易 / 匠人：金
 		"whisper", "divination", "moon", "arcane", "bluefish", "hero":
 			return Color("8a7fd4")   # 神秘 / 预兆：紫
@@ -2111,6 +2176,7 @@ func _setup_core_contract() -> void:
 	##    下标（`_core_src`），真正落账发生在第二段确认时 —— 中途反悔一张都不扣。
 	## ⚠️ 收尾态走 `_core_pick` 的两个分支直接收起：`_refresh()` 会重铺这三种事件，
 	##    不这么写会把已经写完的结果行清掉。
+	_update_core_icon()
 	event_name.text = "契 约 的 核 心"
 	rest_btn.visible = true
 	alt_btn.visible = true
@@ -2189,6 +2255,7 @@ func _core_take_core() -> void:
 	_core_pick = "core"
 	_claim_reward(alt_btn)
 	desc.text = CORE_TAKEN_DESC
+	_update_core_icon()
 	_core_result = "「核心」收进了道具栏：战斗中累计失去 %d 点生命后成形，这一场结束时的奖励页里会多出一次兑换 —— 献祭一张伤害技能牌，把它第一段伤害附到另一张技能牌上。用掉之后失效。" % RunState.CORE_LOSS_NEED
 	_collapse_to_leave()
 	result_label.text = _core_result

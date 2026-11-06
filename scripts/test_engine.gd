@@ -4346,8 +4346,10 @@ func _init() -> void:
 				kind_ok = false
 	check(kind_ok, "事件节点：event_kind 全部取自本层事件池（不会串到别的层）")
 	check(ev_layer_ok, "地图节点都带着本图所属的层（第一层）")
-	check(seen_kinds.has("treasure") and seen_kinds.has("whisper"),
-			"多次生成：宝箱与鸭鸭低语两种事件都会出现")
+	check(seen_kinds.has("whisper") and seen_kinds.has("delivery"),
+			"多次生成：鸭鸭低语 / 运送委托两种事件都会出现")
+	check(not seen_kinds.has("treasure"),
+			"R512：卡牌宝箱已从事件池移除，第一层地图不再生成 treasure 事件")
 	check(seen_kinds.has("struggle"), "多次生成：挣扎事件会出现")
 	check(seen_kinds.has("arcane") or seen_kinds.has("oblivion"),
 			"多次生成：第一层新事件（奥秘之泉 / 遗忘之泉）会出现")
@@ -6542,15 +6544,15 @@ func _init() -> void:
 	# 「凝视 / 一袋米抗几楼」已挪到第二层；第一层换成「奥秘之泉」，
 	# 「遗忘之泉」是写进每一层事件表的全层通用事件。
 	var ev_kinds_layer := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
-	check(ev_kinds_layer.size() == 12 and not ev_kinds_layer.has("monster") \
+	check(ev_kinds_layer.size() == 11 and not ev_kinds_layer.has("monster") \
 			and ev_kinds_layer.has("adventurer") \
 			and ev_kinds_layer.has("martial") \
-			and ev_kinds_layer.has("treasure") and ev_kinds_layer.has("arcane") \
+			and not ev_kinds_layer.has("treasure") and ev_kinds_layer.has("arcane") \
 			and ev_kinds_layer.has("smith") and ev_kinds_layer.has("delivery") \
 			and ev_kinds_layer.has("lake_lady") and ev_kinds_layer.has("divination") \
 			and ev_kinds_layer.has("snow_leopard") \
 			and not ev_kinds_layer.has("gaze"),
-			"第一层事件池：12 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/卡牌宝箱/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物/R473 武术大师；无凝视、无怪物）")
+			"第一层事件池：11 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物/R473 武术大师；R512 移除卡牌宝箱；无凝视、无怪物）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
 	check(l2_ev_kinds.size() == 14 and l2_ev_kinds.has("smith") \
 			and l2_ev_kinds.has("martial") \
@@ -6880,8 +6882,8 @@ func _init() -> void:
 				q_tr_n += 1
 		if q_tr_bad != "":
 			break
-	check(q_tr_bad == "" and q_tr_n > 0,
-			"R372 地图：事件房不再带 treasure_relic 旗标（120 张里卡牌宝箱 %d 个，%s）"
+	check(q_tr_bad == "" and q_tr_n == 0,
+			"R372/R512 地图：事件房不带 treasure_relic 旗标，且 120 张里没有卡牌宝箱（实到 %d 个，%s）"
 			% [q_tr_n, "符合" if q_tr_bad == "" else q_tr_bad])
 
 	# ---- 第二层地图：layer 标记 + 事件不串层 ----
@@ -8360,15 +8362,15 @@ func _init() -> void:
 	# ---- UI 图片命名约定（assets/ui/ 可替换，文件名即契约）----
 	var map_types := ["start", "battle", "elite", "rest", "event", "chest", "boss"]
 	var ev_kinds := ["rest", "treasure", "whisper", "struggle", "gaze", "pear", "hero",
-			"relic_chest"]
+			"relic_chest", "martial"]
 	var names := {}
 	for t in map_types:
 		names[UiAssets.node_icon_path(t).get_file()] = true
 	for k in ev_kinds:
 		names[UiAssets.event_pic_path(k).get_file()] = true
 		names[UiAssets.event_bg_path(k).get_file()] = true
-	check(names.size() == 23,
-			"UI 图片共 23 个文件名且互不重复（7 地图图标 + 8 事件插图 + 8 事件背景），实际 %d"
+	check(names.size() == 25,
+			"UI 图片共 25 个文件名且互不重复（7 地图图标 + 9 事件插图 + 9 事件背景，R512 加 martial），实际 %d"
 			% names.size())
 	check(UiAssets.node_icon_path("boss") == "res://assets/ui/map_boss.png",
 			"地图图标命名：map_<类型>.png（map_boss.png）")
@@ -8396,6 +8398,30 @@ func _init() -> void:
 			"R511 水晶球几何与底图实测绑定（球心 639,188 / 内容区半径 89）")
 	check_src(r511_src.contains("EXPAND_IGNORE_SIZE"),
 			"R511 幻象层必须 EXPAND_IGNORE_SIZE —— 否则 size 被贴图原生 256 顶掉、幻象溢出球外")
+	# ---- R512 事件素材：五张背景 + 凝视插图 + 核心标志叠加 ----
+	for r512_k in ["moon", "furnace", "cave", "card_merchant", "core_contract"]:
+		check(UiAssets.event_bg(r512_k) != null,
+				"R512 事件背景 bg_%s.png 能在 assets/ui/ 取到" % r512_k)
+	check(UiAssets.event_pic("gaze") != null,
+			"R512 鸭之凝视插图 event_gaze.png 能在 assets/ui/ 取到")
+	check(UiAssets.core_relic_icon() != null
+			and UiAssets.path_for("reward_icons/core") == "res://assets/ui/reward_icons/core.png",
+			"R512 核心标志复用道具图标 reward_icons/core.png（不在背景里另画符号）")
+	var r512_src := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	check_src(r512_src.contains("const CORE_ICON_CX := 648.0") \
+			and r512_src.contains("const CORE_ICON_CY := 350.0") \
+			and r512_src.contains("const CORE_ICON_SIZE := 200.0"),
+			"R512 核心叠图几何与底图凹槽绑定（648,350 / 边长 200）")
+	check_src(r512_src.contains("_core_pick != \"core\"") \
+			and r512_src.contains("CORE_RELIC_ID"),
+			"R512 取走核心后石台上不再显示核心（凹槽留空 = 文案「只剩一圈浅浅的凹痕」）")
+	# EventPic 的两个坑（R512 首次真正有 event_*.png 才暴露）：
+	# ① 不设 EXPAND_IGNORE_SIZE → size 被贴图原生尺寸顶掉、图位移并溢出；
+	# ② 直接 add_child 会盖在文案面板之上 → 必须 move_child 到正文之下。
+	check_src(r512_src.contains("tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE"),
+			"R512 事件插图必须 EXPAND_IGNORE_SIZE（否则 2× 素材把 320×240 的框顶掉）")
+	check_src(r512_src.contains("move_child(tr, 1)"),
+			"R512 事件插图压在正文之下（add_child 是最上层，会挡文案与按钮）")
 	# ---- 战斗背景的三级回退（R133）----
 	# ① 每个关卡都要有**稳定的 ASCII key** —— 「按关卡替换素材」全靠它；
 	#    空 / 重名 / 带中文都会让槽位名对不上（关卡改名不该影响素材名）。
@@ -20255,8 +20281,8 @@ func _init() -> void:
 			and not r447_repo.layer2_ids().has(RunState.FLINT_RELIC_ID),
 			"R447 两件都只从事件拿（不进初始 / 奖励 / 二层起始池）")
 	var r447_l1 := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
-	check(r447_l1.size() == 12 and r447_l1.has("adventurer"),
-			"R447 第一层事件池 12 种（+冒险家的遗物；R473 再 +武术大师，实际 %d）" % r447_l1.size())
+	check(r447_l1.size() == 11 and r447_l1.has("adventurer"),
+			"R447 第一层事件池 11 种（+冒险家的遗物；R473 +武术大师；R512 移除卡牌宝箱，实际 %d）" % r447_l1.size())
 	check(not GameLayers.event_kinds(GameLayers.LAYER_TWO).has("adventurer"),
 			"R447 冒险家的遗物只在第一层（第二层不串层）")
 	check(GameLayers.event_name("adventurer") == "冒险家的遗物",
