@@ -75,19 +75,20 @@ static func level_names() -> Array[String]:
 
 static func builtin_levels() -> Array:
 	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×9（第一层 4 + 第二层 5）→
-	## 精英简单×7（第一层 3 + 第二层 4；R449 哈气骑士团下调一层；R502 执法者的审判进二层）→
-	## 精英困难×6（第一层 3 + 第二层 3）→
+	## 精英简单×7（第一层 3 + 第二层 4；R449 哈气骑士团下调一层；R502 执法者的审判进二层；
+	##   R506 阿斯克勒庇厄斯的试炼由精英困难下调到精英简单）→
+	## 精英困难×6（第一层 3 + 第二层 3；R506 母舰空袭由精英简单上调到精英困难）→
 	## Boss×6（第一层 3 + 第二层 2 + 第三层 1）。合计 36 关（R174 百眼动员进第二层普通简单；
-	## R340 永夜鸭群进第一层精英困难；**R356 启示者进第三层**；**R451 母舰空袭进第二层精英简单**；
-	## **R502 执法者的审判进第二层精英简单**）。
+	## R340 永夜鸭群进第一层精英困难；**R356 启示者进第三层**；R451 母舰空袭进第二层精英池；
+	## **R502 执法者的审判进第二层精英简单**；**R506 母舰空袭 ↔ 阿斯克勒庇厄斯的试炼互换档位**）。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_frost_line(), _assembly_line(), _mass_anvil(), _argos_mobilize(),
 		_knight_charge(), _wizard(), _white_mage_guard(), _night_ducks(),
 			_sun_forge(), _hecaton(), _undead_legion(), _twin_cannon(),
 		_captain(), _duck_kiln(), _breath_charge(), _hermes(), _dragon_nest(),
-			_mothership_air_raid(), _enforcer_judgement(),
-		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(), _asclepius(),
+			_enforcer_judgement(), _asclepius(),
+		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(), _mothership_air_raid(),
 		_boss_dragon(), _boss_demon_duck(), _boss_duck_darkside(),
 			_mech_duck_boss(), _hephaestus(), _scrapyard(), _eternal_night(),
 			_boss_revelator()]
@@ -971,7 +972,9 @@ static func _hermes() -> Dictionary:
 	}
 
 static func _mothership_air_raid() -> Dictionary:
-	## 第二层·精英敌人-简单（R451「母舰空袭」）：空袭效果卡 + 前排两只量产型阿斯克勒庇厄斯
+	## 第二层·精英敌人-困难（R451 进池「母舰空袭」；**R506 由精英简单上调** —— 机制量比同档
+	## 另三关重一层：HP ∞ 不能直击后排绕过、环境伤害每轮递增、护甲叠力量、还要 4 次击破）：
+	## 空袭效果卡 + 前排两只量产型阿斯克勒庇厄斯
 	## + 中排中央一只量产型赫尔墨斯（R483 由量产型阿尔戈斯换下）+ 后排中央一条母舰。
 	##   * 空袭 9209（效果卡）：**玩家回合开始**随机标记 5 格 → **敌方行动前**（敌方回合开始）
 	##     标记格上的玩家单位各吃 5 点，每结算一轮 +1（5 / 6 / 7…；R483 由 10/+2 下调）。
@@ -992,7 +995,7 @@ static func _mothership_air_raid() -> Dictionary:
 	return {
 		"name": "母舰空袭",
 		"key": "air_raid",
-		"tier": TIER_ELITE_EASY,
+		"tier": TIER_ELITE_HARD,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
 		"intro": "……警报响了。抬头。",
@@ -1053,14 +1056,18 @@ static func _enforcer_judgement() -> Dictionary:
 
 
 static func _asclepius() -> Dictionary:
-	## 第二层·精英敌人-困难（R162）：后排中央一只阿斯克勒庇厄斯
-	## （9141，12/80 程1 速1，带「护甲积攒」）。
-	## 每回合开始时获得 16 护甲；若获得前已有护甲，则清零护甲并对随机敌方单位
+	## 第二层·精英敌人-简单（R162 进池；**R506 与母舰空袭互换档位，下调到精英简单**）：
+	## 后排中央一只阿斯克勒庇厄斯（9141，12/80 **程2 速2**，带「护甲积攒」）。
+	## 每回合开始时获得 **20** 护甲；若获得前已有护甲，则清零护甲并对随机敌方单位
 	## 造成等量伤害，之后力量 +1。越拖攻击力越高，且护甲会不断「存爆」。
+	##
+	## R506 数值调整（用户口径「攻击距离和移动速度加到 2，护甲提升到 20；2 层已经不是早期了」）：
+	## 程 1 → 2 / 速 1 → 2 / 护甲 16 → 20。**改档位不是弱化它** —— 它现在第 1 场精英就可能登场，
+	## 但二层整体强度已经上台阶，单只单位必须真能压住场面（速 2 也让它追得上玩家单位）。
 	return {
 		"name": "阿斯克勒庇厄斯的试炼",
 		"key": "asclepius",
-		"tier": TIER_ELITE_HARD,
+		"tier": TIER_ELITE_EASY,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
 		"player_hp": 20,
@@ -1071,7 +1078,7 @@ static func _asclepius() -> Dictionary:
 		"enemy_growth": LAYER2_GROWTH,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9141, "阿斯克勒庇厄斯", 12, 80, 1, 1, Vector2i(0, 1)],
+			[9141, "阿斯克勒庇厄斯", 12, 80, 2, 2, Vector2i(0, 1)],
 		],
 		"tutorial": [],
 	}

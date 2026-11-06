@@ -160,7 +160,7 @@ static var map_strokes: Array = []
 static var map_flags: Array = []
 static var player_class: String = "森林精魄"   # 本局所选角色（PlayerClass.ids() 之一）
 static var battle_wins := 0                   # 本局已胜利的普通战斗数（前 2 场简单）
-static var elite_wins := 0                   # 本局已胜利的精英战斗数（前 2 场简单）
+static var elite_wins := 0                   # 本局已胜利的精英战斗数（第 1 场简单，第 2 场起困难）
 static var used_levels: Array = []           # 本局已进入的关卡名（尽量不重复）
 static var boss_pick: Dictionary = {}       # 本局摇定的本层 Boss 关卡（R63：同层可能有多个 Boss；
 									# 开局摇一次，地图名牌与实际进入读同一份）
@@ -2704,7 +2704,8 @@ static func next_level(node: Dictionary) -> Dictionary:
 	## 进入战斗节点时决定具体关卡 —— 只从「该节点所属层」的关卡池里抽
 	## （第一层的关卡不会跑到别的层，别的层的关卡也不会出现在第一层）：
 	## 前 2 场普通战斗 = 普通敌人-简单，之后 = 普通敌人-困难；
-	## 前 2 场精英 = 精英敌人-简单，之后 = 精英敌人-困难；Boss 固定。
+	## 第 1 场精英 = 精英敌人-简单，之后 = 精英敌人-困难（R506：从「前 2 场」提前到第 2 场起重）；
+	## Boss 固定。
 	## 同一分级池内尽量不重复（本局用完一轮后允许循环复用）。
 	var layer := node_layer(node)
 	match str(node["type"]):
@@ -2715,7 +2716,7 @@ static func next_level(node: Dictionary) -> Dictionary:
 					else GameLevels.TIER_NORMAL_HARD
 			return _pick_level(_layer_tier_pool([tier], layer))
 		"elite":
-			var tier2: int = GameLevels.TIER_ELITE_EASY if elite_wins < 2 \
+			var tier2: int = GameLevels.TIER_ELITE_EASY if elite_wins < 1 \
 					else GameLevels.TIER_ELITE_HARD
 			return _pick_level(_layer_tier_pool([tier2], layer))
 		"boss":
