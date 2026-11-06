@@ -182,6 +182,16 @@ static func elite_pool(layer := GameLayers.LAYER_DEFAULT) -> Array[Dictionary]:
 	return levels_of_tier([TIER_ELITE_EASY, TIER_ELITE_HARD], layer)
 
 
+static func third_elite_pool() -> Array[Dictionary]:
+	## R506b：第三层（5 格直道）的精英节点**只从第二层·精英困难池**抽。
+	## 三层没有自己的精英关（本层唯一的关卡是 Boss 启示者），直道第 2 格就是
+	## 「进 Boss 前的最后一场硬仗」—— 只该是最硬那档，不该摇到二层的精英简单。
+	## 与 `elite_pool(LAYER_THREE)` 的区别：后者按 `content_layers [2, 3]` 摊开第二层
+	## **全部** 7 关（简单 4 + 困难 3）；这里收窄到困难 3 关
+	## （机甲巨兵 / 钢铁要塞 / 母舰空袭），且不随 `elite_wins` 变化。
+	return levels_of_tier([TIER_ELITE_HARD], GameLayers.LAYER_TWO)
+
+
 static func boss_level(layer := GameLayers.LAYER_DEFAULT) -> Dictionary:
 	## 该层 Boss 关：**优先本层专属 Boss**（layer 与关卡自身 layer 匹配），
 	## 没有才用内容池里的 Boss（内容池已按层隔离，正常不会抽到别的层的 Boss），

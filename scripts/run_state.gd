@@ -2716,6 +2716,11 @@ static func next_level(node: Dictionary) -> Dictionary:
 					else GameLevels.TIER_NORMAL_HARD
 			return _pick_level(_layer_tier_pool([tier], layer))
 		"elite":
+			# R506b：第三层固定抽第二层「精英困难」池（3 关）—— 直道那一格是 Boss 前的
+			# 最后一战，不参与 elite_wins 的简单/困难切换。
+			if layer == GameLayers.LAYER_THREE:
+				return _pick_level(GameLevels.third_elite_pool())
+			# R506：第 1 场精英 = 简单，第 2 场起困难（原来是前 2 场简单）。
 			var tier2: int = GameLevels.TIER_ELITE_EASY if elite_wins < 1 \
 					else GameLevels.TIER_ELITE_HARD
 			return _pick_level(_layer_tier_pool([tier2], layer))

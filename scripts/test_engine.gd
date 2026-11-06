@@ -29731,7 +29731,7 @@ func _init() -> void:
 	# ③ 三层精英池 = 第二层 6 关；挑关优先避开本局打过的
 	var r398_pool: Array[Dictionary] = GameLevels.elite_pool(GameLayers.LAYER_THREE)
 	check(r398_pool.size() == 7,
-		"R398 三层精英池 = 第二层 7 关（content_layers [2, 3]；R449 哈气骑士团下调后 −1、R451 母舰空袭 +1、R502 执法者的审判 +1；实际 %d）" % r398_pool.size())
+		"R398 三层精英池 = 第二层 7 关（content_layers [2, 3]；R449 哈气骑士团下调后 −1、R451 母舰空袭 +1、R502 执法者的审判 +1；实际 %d。**实际抽关只取困难档，见 R506b**）" % r398_pool.size())
 	# 只剩最后一个没用过 → **必然**挑它（这就是「优先避免重复」）
 	RunState.used_levels = []
 	for r398_i in r398_pool.size() - 1:
@@ -29747,6 +29747,25 @@ func _init() -> void:
 	var r398_pick2: Dictionary = RunState._pick_level(r398_pool)
 	check(not r398_pick2.is_empty(),
 		"R398 三层精英：池子全用过时允许复用（不会返回空关卡）")
+
+	# ---- R506b：三层精英**实际抽关**只走第二层「精英困难」池（3 关） ----
+	var r506b_pool: Array[Dictionary] = GameLevels.third_elite_pool()
+	check(r506b_pool.size() == 3,
+		"R506b 三层精英抽关池 = 第二层精英困难 3 关（实际 %d）" % r506b_pool.size())
+	var r506b_ok := true
+	for r506b_lv: Dictionary in r506b_pool:
+		if int(r506b_lv["tier"]) != GameLevels.TIER_ELITE_HARD \
+				or GameLevels.layer_of(r506b_lv) != GameLayers.LAYER_TWO:
+			r506b_ok = false
+	check(r506b_ok,
+		"R506b 三层精英池每关都是「第二层 + 精英困难」（机甲巨兵 / 钢铁要塞 / 母舰空袭）")
+	RunState.used_levels = []
+	var r506b_pick: Dictionary = RunState.next_level(
+			{"type": "elite", "layer": GameLayers.LAYER_THREE})
+	check(int(r506b_pick.get("tier", -1)) == GameLevels.TIER_ELITE_HARD
+			and GameLevels.layer_of(r506b_pick) == GameLayers.LAYER_TWO,
+			"R506b 第三层精英节点实际抽关：抽到第二层精英困难关（%s）"
+				% str(r506b_pick.get("name", "?")))
 
 	var r398_map := ""
 	if ResourceLoader.exists("res://scripts/map_scene.gd"):
