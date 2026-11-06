@@ -326,17 +326,18 @@ func _init() -> void:
 			and nc_fw.needs_target() and nc_fw.target_mode == "cell"
 			and nc_fw.group == "player",
 			"火墙术：3 费稀有技能（R429 由普通上调）、选格子目标、归玩家图鉴")
-	# R264（用户口径）：**「下调火墙术延迟伤害：10-8（15点即时伤害不变）」**
-	check(GameEngine.FIRE_WALL_DMG == 15 and GameEngine.FIRE_WALL_PASS_DMG == 8
-			and GameEngine.FIRE_WALL_CAP == 15,
-			"R264 火墙术：即时 %d / 经过 %d / 单位上限 %d（即时与上限不变，只降经过灼烧）"
+	# R510（用户口径）：**「基础伤害和基础单体伤害上限都调整到 14 点，延迟伤害下调到 7 点」**
+	check(GameEngine.FIRE_WALL_DMG == 14 and GameEngine.FIRE_WALL_PASS_DMG == 7
+			and GameEngine.FIRE_WALL_CAP == 14,
+			"R510 火墙术：即时 %d / 经过 %d / 单位上限 %d（三项都已下调）"
 			% [GameEngine.FIRE_WALL_DMG, GameEngine.FIRE_WALL_PASS_DMG,
 					GameEngine.FIRE_WALL_CAP])
-	check(nc_fw.effect_text.contains("15 点伤害")
-			and nc_fw.effect_text.contains("8 点伤害")
-			and not nc_fw.effect_text.contains("10 点伤害")
+	check(nc_fw.effect_text.contains("14 点伤害")
+			and nc_fw.effect_text.contains("7 点伤害")
+			and not nc_fw.effect_text.contains("15 点伤害")
+			and not nc_fw.effect_text.contains("8 点伤害")
 			and nc_fw.effect_text.contains("所有单位"),
-			"R264 火墙术：卡面文案同步（经过 8 点 / 即时 15 / 不分敌我）：%s"
+			"R510 火墙术：卡面文案同步（即时 14 / 经过 7 / 上限 14 / 不分敌我）：%s"
 			% nc_fw.effect_text)
 	var eng_fw := _new_engine([], 30, 30, -1, false)
 	eng_fw.start_game(0)
@@ -353,16 +354,18 @@ func _init() -> void:
 	eng_fw.use_spell(0, Vector2i(1, 2))
 	check(fw_a.health == fw_a_hp - GameEngine.FIRE_WALL_DMG
 			and fw_b.health == fw_b_hp - GameEngine.FIRE_WALL_DMG,
-			"火墙术：一横行的敌人各 -15（%d→%d、%d→%d）" % [
+			"火墙术：一横行的敌人各 -%d（%d→%d、%d→%d）" % [
+			GameEngine.FIRE_WALL_DMG,
 			fw_a_hp, fw_a.health, fw_b_hp, fw_b.health])
 	check(eng_fw.fire_wall_rows().has(1),
 			"火墙术：第 1 行进入燃烧状态（fire_wall_rows = %s）" % str(eng_fw.fire_wall_rows()))
-	# 已吃满 15 的敌人再在火线里挪一步 → 不再受伤（全卡合计上限）
+	# 已吃满上限的敌人再在火线里挪一步 → 不再受伤（全卡合计上限）
 	eng_fw.move(Vector2i(1, 1), Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
 	check(fw_b.health == fw_b_hp - GameEngine.FIRE_WALL_DMG,
-			"火墙术：同一单位上限 15 → 已吃满的单位穿过不再受伤（%d）" % fw_b.health)
+			"火墙术：同一单位上限 %d → 已吃满的单位穿过不再受伤（%d）"
+			% [GameEngine.FIRE_WALL_CAP, fw_b.health])
 
-	# 不分敌我 + 逐次递减到上限 15：我方单位两次穿过同一条火线
+	# 不分敌我 + 逐次递减到上限 14：我方单位两次穿过同一条火线
 	var eng_fw2 := _new_engine([], 30, 30, -1, false)
 	eng_fw2.start_game(0)
 	eng_fw2.state.hand = [repo.get_card(9084)]
@@ -376,7 +379,7 @@ func _init() -> void:
 	var fw_p_hp := fw_p.health
 	eng_fw2.move(Vector2i(2, 2), Vector2i(1, 2), GameEngine.SIDE_SELF)
 	check(fw_p.health == fw_p_hp - GameEngine.FIRE_WALL_PASS_DMG
-			and fw_p_hp - fw_p.health == 8,
+			and fw_p_hp - fw_p.health == GameEngine.FIRE_WALL_PASS_DMG,
 			"火墙术：不分敌我 —— 我方单位穿过火线 -%d（%d→%d）" % [
 			GameEngine.FIRE_WALL_PASS_DMG, fw_p_hp, fw_p.health])
 	fw_p.moved = false
@@ -388,8 +391,9 @@ func _init() -> void:
 	fw_p.tapped = false
 	eng_fw2.move(Vector2i(2, 2), Vector2i(1, 2), GameEngine.SIDE_SELF)
 	check(fw_p.health == fw_p_hp - GameEngine.FIRE_WALL_CAP,
-			"火墙术：第二次穿过只补到上限 %d（8+%d → 共 -%d）" % [
+			"火墙术：第二次穿过只补到上限 %d（%d+%d → 共 -%d）" % [
 			GameEngine.FIRE_WALL_CAP,
+			GameEngine.FIRE_WALL_PASS_DMG,
 			GameEngine.FIRE_WALL_CAP - GameEngine.FIRE_WALL_PASS_DMG,
 			fw_p_hp - fw_p.health])
 	# 下次自己回合开始 → 火线熄灭
@@ -418,7 +422,8 @@ func _init() -> void:
 	eng_fw3.state.energy = 5
 	var fw3_res := eng_fw3.use_spell(0, Vector2i(1, 0))
 	check(fw_im.health == fw_im_hp - 3,
-			"火墙术：技能抗性的单位照样被点燃，15 → 3（封顶，%s）" % fw3_res)
+			"火墙术：技能抗性的单位照样被点燃，%d → 3（封顶，%s）"
+			% [GameEngine.FIRE_WALL_DMG, fw3_res])
 
 	# R247：不分敌我 —— 施放即烧到该行**所有单位**（含施放方自己人）
 	var eng_fw4 := _new_engine([], 30, 30, -1, false)
@@ -432,7 +437,8 @@ func _init() -> void:
 	var fw4_res := eng_fw4.use_spell(0, Vector2i(1, 0))
 	check(fw4_own.health == fw4_own_hp - GameEngine.FIRE_WALL_DMG
 			and fw4_res.contains("1 个单位"),
-			"火墙术：不分敌我 —— 我方单位站着也 -15（%d→%d）" % [
+			"火墙术：不分敌我 —— 我方单位站着也 -%d（%d→%d）" % [
+			GameEngine.FIRE_WALL_DMG,
 			fw4_own_hp, fw4_own.health])
 
 	# ---- 蓄力（9085，2026-10-01）：1 费史诗技能（R429 由 2 费下调）—— 本方下一张技能生效 2 次 ----
@@ -28772,7 +28778,7 @@ func _init() -> void:
 	check(CardFace.badge_shown(r387_boss.card.move_speed, r387_boss.effective_speed()) == 0,
 			"R387 启示者阶段 3：鞋子上写 0（实际 %d）" % r387_boss.effective_speed())
 
-	# ---- ③ 火墙术：单位上限跟着纸面伤害走（附魔 +10 → 即时 25 / 经过 18 / 上限 25）----
+	# ---- ③ 火墙术：单位上限跟着纸面伤害走（R510 后附魔 +10 → 即时 24 / 经过 17 / 上限 24）----
 	var r387_fw := _new_engine([], 30, 30, -1, false)
 	r387_fw.start_game(0)
 	var r387_tank := r387_fw.state.place(
@@ -28784,27 +28790,27 @@ func _init() -> void:
 	var r387_tank_hp: int = r387_tank.health
 	var r387_walk_hp: int = r387_walk.health
 	var r387_spell := CardData.from_dict(repo.get_card(9084).to_dict())
-	r387_spell.power = 10   # 商店附魔「技能伤害 +10」：纸面 15 → 25
+	r387_spell.power = 10   # 商店附魔「技能伤害 +10」：纸面 14 → 24
 	r387_fw.state.hand = [r387_spell]
 	r387_fw.state.energy = 6
 	r387_fw.use_spell(0, Vector2i(1, 2))
-	check(r387_tank.health == r387_tank_hp - 25,
-			"R387 火墙术：附魔 +10 → 即时 25（%d→%d）" % [r387_tank_hp, r387_tank.health])
+	check(r387_tank.health == r387_tank_hp - 24,
+			"R387 火墙术：附魔 +10 → 即时 24（%d→%d）" % [r387_tank_hp, r387_tank.health])
 	check(r387_walk.health == r387_walk_hp,
 			"R387 火墙术：不在这一行的单位不被点燃（%d）" % r387_walk.health)
 	r387_walk.moved = false
 	r387_walk.tapped = false
 	r387_fw.move(Vector2i(2, 0), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
-	check(r387_walk.health == r387_walk_hp - 18,
-			"R387 火墙术：附魔 +10 → 经过灼烧 18（%d→%d）" % [r387_walk_hp, r387_walk.health])
+	check(r387_walk.health == r387_walk_hp - 17,
+			"R387 火墙术：附魔 +10 → 经过灼烧 17（%d→%d）" % [r387_walk_hp, r387_walk.health])
 	r387_walk.moved = false
 	r387_walk.tapped = false
 	r387_fw.move(Vector2i(1, 1), Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 	r387_walk.moved = false
 	r387_walk.tapped = false
 	r387_fw.move(Vector2i(2, 1), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
-	check(r387_walk.health == r387_walk_hp - 25,
-			"R387 火墙术：上限 25（15+10）→ 第二次只补 7，合计 -%d（旧版会卡在 15）"
+	check(r387_walk.health == r387_walk_hp - 24,
+			"R387 火墙术：上限 24（14+10）→ 第二次只补 7，合计 -%d（旧版会卡在 14）"
 			% [r387_walk_hp - r387_walk.health])
 
 	# ================= R388：战斗内「敌方动画倍速」按钮（1× / 1.5× / 2×，永久保存） =================

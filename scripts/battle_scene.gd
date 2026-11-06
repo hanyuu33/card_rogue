@@ -1860,9 +1860,9 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--fire" in args and engine != null:
-		# 演示（2026-10-01，R247 起不分敌我）：火墙术（9084）—— 3 费，对一横行的所有单位造成 15 点伤害；
-		# 该行燃烧到下次自己回合开始，期间任何单位（不分敌我）经过 → 再受 10 点。
-		# 沿用默认关卡的两只鸭子骑士（1,0)/(1,2)，烧中间那条行；再让白魔法师穿过 → 100→90。
+		# 演示（2026-10-01，R247 起不分敌我）：火墙术（9084）—— 3 费，对一横行的所有单位造成 FIRE_WALL_DMG 点伤害；
+		# 该行燃烧到下次自己回合开始，期间任何单位（不分敌我）经过 → 再受 FIRE_WALL_PASS_DMG 点。
+		# 沿用默认关卡的两只鸭子骑士（1,0)/(1,2)，烧中间那条行；再让白魔法师穿过（吃经过灼烧）。
 		engine.state.hand.clear()
 		engine.state.hand.append(repo.get_card(GameEngine.FIRE_WALL_SPELL_ID))
 		engine.state.energy = 5
@@ -1872,7 +1872,7 @@ func _ready() -> void:
 		engine.move(Vector2i(2, 1), Vector2i(1, 1))
 		engine.state.hand.append(repo.get_card(GameEngine.FIRE_WALL_SPELL_ID))
 		_demo_hover_idx = 0
-		status_text = "火墙术：第 1 行所有单位 -15（不分敌我），穿过的单位再 -10"
+		status_text = "火墙术：第 1 行所有单位 -%d（不分敌我），穿过的单位再 -%d" % [GameEngine.FIRE_WALL_DMG, GameEngine.FIRE_WALL_PASS_DMG]
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--charge" in args and engine != null:
