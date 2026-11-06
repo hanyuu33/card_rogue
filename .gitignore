@@ -110,3 +110,10 @@ tools/ai_play/.runs.jsonl
 /_art_audit.*
 /_p[0-9]*.py
 /_r[0-9]*_missing.*
+
+# R501：换图前的手工备份（.bak_<时间戳> / .bak2_ / .bak_v8）——
+#   只在替换美术时留底对照，随时可弃，不入库（正式图本身照常入库）。
+/assets/**/*.png.bak*
+
+# R501：美术验收对照图（PIL 拼的新旧对比图，一次性产物）
+/_review/
