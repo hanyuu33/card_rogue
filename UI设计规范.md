@@ -179,6 +179,7 @@ UiTheme.<颜色|字号|间距令牌>            # 其余
 | 事件背景 ×25 | `assets/ui/bg_<kind>.png` | 1280 × 720 | 1.78 | 程序化渐变底 + 主题色纹章 |
 | 契约核心标志（R512） | `assets/ui/reward_icons/core.png`（与道具同一张） | 200 × 200 叠在石台凹槽 | 1:1 | 不叠，凹槽留空 |
 · R512 已提供的事件背景：`bg_divination`（R511）/ `bg_moon` / `bg_furnace` / `bg_cave` / `bg_card_merchant` / `bg_core_contract`；`rest` 走 `adventure_shared/rest_clearing.png`；已提供的事件插图只有 `event_gaze`。其余 kind 仍走程序化兜底。
+· R514 口径（出图前必读）：`whisper`（鸭鸭低语）**不再是独立事件**（改为第二层起点「卷卷三选一」的一个候选）→ `event_/bg_whisper` **不做图**；`struggle` **暂不生成**；`martial` 的武术大师是**人类老者**（不是鸭）；`snow_leopard` 出图**不出现烟斗**（道具 6055 与选项玩法照旧保留）。
 | 占卜球内幻象 ×4（R511） | `assets/ui/div_vision_<1..4>.png` | 256 × 256（圆形、边缘羽化） | 1:1 | 不叠，球里保持底图星云 |
 | 占卜球玻璃壳（R511） | `assets/ui/div_orb_glass.png` | 256 × 256（只留亮部，ADD 混合） | 1:1 | 不叠高光，幻象照常显示 |
 | 战斗背景（**三级回退**） | `assets/ui/battle_bg_<关卡key>.png`（每关专属）→<br>`assets/ui/map_bg_<层号>.png`（当层）→<br>`assets/battle_bg.png`（全局兜底） | 1280 × 720 | 1.78 | 当层底图 → 米黄渐变 |

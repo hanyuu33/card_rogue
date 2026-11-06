@@ -1,4 +1,25 @@
-## 2026-11-06 R512 事件素材第一批 + 宝箱事件退场（当前最新）
+## 2026-11-06 R514 鸭鸭低语并入二层起点三选一 + 事件池收敛（当前最新）
+
+- 用户口径（逐条）：`struggle`（挣扎）**标记暂不生成**；`whisper`（鸭鸭低语）**改为第二层初始事件
+  （起点「卷卷三选一」）的一个选项，不再单独作为事件**；`martial`（武术大师）**是人类**，不是鸭；
+  `snow_leopard`（雪豹出现）出图**不需要烟斗**。
+- 落地（代码两处）：
+  - `game_layers.LAYERS[1].events` 删 `"whisper": 27` → 第一层事件池 **11 → 10 种**。
+    `event_scene` 的 whisper 分支**保留**，只服务旧存档 / `--whisper` 演示（与 R512 的 treasure 同口径）。
+  - `RelicRepo.layer2_ids()` 加 `6010` → 二层起始池 **7 → 8 件**。`RunState._roll_relic_choice()`
+    本来就是「从池里随机抽 3 件不重复」，所以**仍是三选一**，鸭之低语每局约 3/8 概率出现、不是必出
+    （用户口径「随机池新增一件，仍然三选一」）。
+  - `6010` 是**双池特例**：它同时留在 `event_ids()` 里（事件道具分类、旧存档、图鉴都不变），
+    所以 `test_engine` 的「二层起始池不与初始/奖励/事件池重叠」断言为它开了显式例外。
+- `martial` 无需改代码：文案本来就是「树底下坐着一位老人」，只是把「人类」写进出口径文档。
+- 断言同步（4 处）：第一层池 6549 / 20310 两处 `11 → 10`（20310 由「11 种」改「10 种」）；
+  二层起始池 7646 `7 → 8`（新增 6010）、20598 `7 → 8`；`seen_kinds` 里 whisper 由「必须出现」
+  改成「必须不出现」；重叠判定跳过 6010。
+- 文档：`assets/ui/图片命名说明.txt`（whisper 不做图 / struggle 暂不生成 / martial 人类 / 雪豹无烟斗，
+  插图与背景两段都标）、`UI设计规范.md` 事件插图节加「R514 口径（出图前必读）」。
+- 回归：`_verify.py` 全通过 —— mana PASS / engine **5236** / reward 26 / bgm 39 / smoke 64。
+
+## 2026-11-06 R512 事件素材第一批 + 宝箱事件退场
 
 - 用户口径（逐条）：`hero` / `struggle` / `pear` / `bluefish` **暂缓不做**；**宝箱从事件中移除**；
   赏月 = 月夜天空下画架上的月夜写生；鸭之凝视 = 黑暗中恶魔鸭两只眼盯着你 + 分层明暗；
@@ -24,9 +45,11 @@
   两条都进了 `check_src` 断言。
 - 回归 `_verify.py` 全通过：mana PASS / engine **5228**（+12 条 R512 断言）/ reward 26 / bgm 39 / smoke 64。
 - 六态截图已核验（`--moon` / `--furnace` / `--cave` / `--cardmerchant` / `--corecontract` / `--gaze`）。
-- **下一步（等用户口径）**：暂缓的 hero / struggle / pear / bluefish；仍未出图的
-  whisper / arcane / oblivion / smith / lake_lady / snow_leopard / adventurer / martial /
-  delivery / treasure / relic_chest / rest / divination(插图)。
+- **下一步（R514 起）**：剔除项 = `whisper`（已不是独立事件）/ `struggle`（暂不生成）/
+  `treasure`（已下线）/ `rest`（内置篝火）；`hero` / `pear` / `bluefish` 仍是 R512 暂缓。
+  第一层待出图：`delivery` / `arcane` / `martial`（**人类老者**）/ `lake_lady` / `oblivion` /
+  `snow_leopard`（**不画烟斗**）/ `adventurer` / `smith`；第二层待出图：`apple_doctor`；
+  特殊：`relic_chest`（大宝箱房必现）、`delivery_done`（可与 delivery 共用）。
 
 ## 2026-11-06 R510 削弱火墙术 + APK 出包（当前最新）
 - 用户口径：「削弱火墙术：基础伤害和基础单体伤害上限都调整到 14 点，延迟伤害下调到 7 点。之后打包 APK」

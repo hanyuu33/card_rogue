@@ -4346,8 +4346,10 @@ func _init() -> void:
 				kind_ok = false
 	check(kind_ok, "事件节点：event_kind 全部取自本层事件池（不会串到别的层）")
 	check(ev_layer_ok, "地图节点都带着本图所属的层（第一层）")
-	check(seen_kinds.has("whisper") and seen_kinds.has("delivery"),
-			"多次生成：鸭鸭低语 / 运送委托两种事件都会出现")
+	check(seen_kinds.has("delivery"),
+			"多次生成：运送委托事件会出现")
+	check(not seen_kinds.has("whisper"),
+			"R514：鸭鸭低语不再是独立事件（改为第二层起点三选一候选），第一层地图不再生成 whisper")
 	check(not seen_kinds.has("treasure"),
 			"R512：卡牌宝箱已从事件池移除，第一层地图不再生成 treasure 事件")
 	check(seen_kinds.has("struggle"), "多次生成：挣扎事件会出现")
@@ -6544,15 +6546,16 @@ func _init() -> void:
 	# 「凝视 / 一袋米抗几楼」已挪到第二层；第一层换成「奥秘之泉」，
 	# 「遗忘之泉」是写进每一层事件表的全层通用事件。
 	var ev_kinds_layer := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
-	check(ev_kinds_layer.size() == 11 and not ev_kinds_layer.has("monster") \
+	check(ev_kinds_layer.size() == 10 and not ev_kinds_layer.has("monster") \
 			and ev_kinds_layer.has("adventurer") \
 			and ev_kinds_layer.has("martial") \
 			and not ev_kinds_layer.has("treasure") and ev_kinds_layer.has("arcane") \
 			and ev_kinds_layer.has("smith") and ev_kinds_layer.has("delivery") \
 			and ev_kinds_layer.has("lake_lady") and ev_kinds_layer.has("divination") \
 			and ev_kinds_layer.has("snow_leopard") \
-			and not ev_kinds_layer.has("gaze"),
-			"第一层事件池：11 种子类型（低语/挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物/R473 武术大师；R512 移除卡牌宝箱；无凝视、无怪物）")
+			and not ev_kinds_layer.has("gaze") \
+			and not ev_kinds_layer.has("whisper"),
+			"第一层事件池：10 种子类型（挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物/R473 武术大师；R512 移除卡牌宝箱；R514 移除鸭鸭低语→改二层起点三选一；无凝视、无怪物）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
 	check(l2_ev_kinds.size() == 14 and l2_ev_kinds.has("smith") \
 			and l2_ev_kinds.has("martial") \
@@ -7641,22 +7644,27 @@ func _init() -> void:
 	# ---- 第二层：起始道具池 / 满血接层 / 层推进 ----
 	var l2repo := RelicRepo.load_json()
 	var l2ids := l2repo.layer2_ids()
-	check(l2ids.size() == 7 and l2ids.has(6014) and l2ids.has(6015)
+	check(l2ids.size() == 8 and l2ids.has(6014) and l2ids.has(6015)
 			and l2ids.has(6016) and l2ids.has(6017) and l2ids.has(6018)
-			and l2ids.has(6033) and l2ids.has(6049),
-			"第二层起始道具池 7 件（黄桃罐头/鸭语耳环/冰淇淋与汽水/重鸭/生蛋鸭 + R246 兼修 6033 + R341 鹿首标本 6049）")
+			and l2ids.has(6033) and l2ids.has(6049) and l2ids.has(6010),
+			"第二层起始道具池 8 件（黄桃罐头/鸭语耳环/冰淇淋与汽水/重鸭/生蛋鸭 + R246 兼修 6033 + R341 鹿首标本 6049 + R514 鸭之低语 6010）")
 	# R375（用户口径）：附魔大师 6034 移出二层起始池 —— 数据还在（旧存档 / 图鉴照样能读），
 	# 但任何池子都不再发它（奖励池 / 事件池 / 初始池本来就没有）。
 	check(not l2ids.has(6034) and l2repo.get_relic(6034) != null
 			and not l2repo.initial_ids().has(6034) and not l2repo.reward_ids().has(6034)
 			and not l2repo.event_ids().has(6034),
 			"R375 附魔大师 6034 移出二层起始池（定义仍在，四个池子都不发）")
+	# R514：6010「鸭之低语」是**双池特例** —— 它本来就是事件道具（`event_ids()` 里仍有它，
+	# 旧存档 / `--whisper` 演示照旧能发），R514 起又借给二层起始池。规则的本意是
+	# 「二层专属道具有没有漏进事件池」，方向相反，所以这里把 6010 排除在重叠判定外。
 	var l2_overlap := false
 	for rid in l2ids:
+		if rid == RunState.WHISPER_RELIC_ID:
+			continue
 		if l2repo.initial_ids().has(rid) or l2repo.reward_ids().has(rid) \
 				or l2repo.event_ids().has(rid):
 			l2_overlap = true
-	check(not l2_overlap, "第二层起始道具不进初始池 / 奖励池 / 事件池")
+	check(not l2_overlap, "第二层起始道具不进初始池 / 奖励池 / 事件池（R514：6010 鸭之低语双池除外）")
 	check(l2repo.get_relic(6016).source == RelicData.SRC_LAYER2
 			and l2repo.get_relic(6016).source_label() == "二层道具",
 			"第二层道具来源标记 = 二层（徽章色与其它池区分）")
@@ -20299,8 +20307,8 @@ func _init() -> void:
 			and not r447_repo.layer2_ids().has(RunState.FLINT_RELIC_ID),
 			"R447 两件都只从事件拿（不进初始 / 奖励 / 二层起始池）")
 	var r447_l1 := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
-	check(r447_l1.size() == 11 and r447_l1.has("adventurer"),
-			"R447 第一层事件池 11 种（+冒险家的遗物；R473 +武术大师；R512 移除卡牌宝箱，实际 %d）" % r447_l1.size())
+	check(r447_l1.size() == 10 and r447_l1.has("adventurer"),
+			"R447 第一层事件池 10 种（+冒险家的遗物；R473 +武术大师；R512 移除卡牌宝箱；R514 移除鸭鸭低语，实际 %d）" % r447_l1.size())
 	check(not GameLayers.event_kinds(GameLayers.LAYER_TWO).has("adventurer"),
 			"R447 冒险家的遗物只在第一层（第二层不串层）")
 	check(GameLayers.event_name("adventurer") == "冒险家的遗物",
@@ -20587,8 +20595,8 @@ func _init() -> void:
 	var r246_rrepo := RelicRepo.load_json()
 	var r246_l2 := r246_rrepo.layer2_ids()
 	# R375 起附魔大师 6034 被移出（`not r246_l2.has(6034)`）—— 道具数据本身不动。
-	check(r246_l2.size() == 7 and r246_l2.has(6033) and not r246_l2.has(6034),
-			"R246 二层起始道具池：兼修 6033 在池里 / 附魔大师 6034 已移出（%d 件）" % r246_l2.size())
+	check(r246_l2.size() == 8 and r246_l2.has(6033) and not r246_l2.has(6034),
+			"R246 二层起始道具池：兼修 6033 在池里 / 附魔大师 6034 已移出 / R514 +鸭之低语 6010（%d 件）" % r246_l2.size())
 	check(r246_rrepo.get_relic(6033) != null
 			and r246_rrepo.get_relic(6033).source == RelicData.SRC_LAYER2
 			and r246_rrepo.get_relic(6033).kind == "战斗"

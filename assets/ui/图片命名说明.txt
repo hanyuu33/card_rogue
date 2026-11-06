@@ -61,15 +61,15 @@ map_bridge.png      小桥的**俯视图**（桥身在画面上**竖着**）  16
 · 「暂缓」= R512 用户口径明确这一轮不做，别自作主张补。
 
   event_gaze.png          鸭之凝视          ★R512 已提供
-  event_whisper.png       鸭鸭低语
-  event_struggle.png      挣扎              （R512 暂缓）
+  event_whisper.png       鸭鸭低语          （R514：不再是独立事件 → 不做事件图）
+  event_struggle.png      挣扎              （暂不生成）
   event_pear.png          鸭梨山大          （R512 暂缓）
   event_hero.png          绝赞五换一        （R512 暂缓）
   event_bluefish.png      蓝色大肥鱼        （R512 暂缓）
   event_apple_doctor.png  苹果与医生
-  event_snow_leopard.png  雪豹出现
+  event_snow_leopard.png  雪豹出现          （R514：画面**不出现烟斗**，烟斗玩法保留）
   event_adventurer.png    冒险家的遗物
-  event_martial.png       武术大师          （R512 前会落进 rest 显示篝火，已修）
+  event_martial.png       武术大师          （R514：人物是**人类老者**，不是鸭；R512 前会落进 rest 显示篝火，已修）
   event_arcane.png        奥秘之泉
   event_oblivion.png      遗忘之泉
   event_smith.png         鸭鸭工匠
@@ -105,15 +105,15 @@ map_bridge.png      小桥的**俯视图**（桥身在画面上**竖着**）  16
                              不要另画一个符号，否则取走核心后还留在石台上。
   bg_gaze.png             鸭之凝视          （走插图，不做背景）
   bg_rest.png             休息处            （实际读 adventure_shared/rest_clearing.png）
-  bg_whisper.png          鸭鸭低语
-  bg_struggle.png         挣扎              （R512 暂缓）
+  bg_whisper.png          鸭鸭低语          （R514：不再是独立事件 → 不做图）
+  bg_struggle.png         挣扎              （暂不生成）
   bg_pear.png             鸭梨山大          （R512 暂缓）
   bg_hero.png             绝赞五换一        （R512 暂缓）
   bg_bluefish.png         蓝色大肥鱼        （R512 暂缓）
   bg_apple_doctor.png     苹果与医生
-  bg_snow_leopard.png     雪豹出现
+  bg_snow_leopard.png     雪豹出现          （R514：画面**不出现烟斗**）
   bg_adventurer.png       冒险家的遗物
-  bg_martial.png          武术大师
+  bg_martial.png          武术大师          （R514：人物是**人类老者**，不是鸭）
   bg_arcane.png           奥秘之泉
   bg_oblivion.png         遗忘之泉
   bg_smith.png            鸭鸭工匠
