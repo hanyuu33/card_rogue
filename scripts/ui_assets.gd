@@ -116,6 +116,23 @@ static func event_bg(kind: String) -> Texture2D:
 	return get_tex("bg_" + kind)
 
 
+static func div_vision(n: int) -> Texture2D:
+	## 占卜室球内幻象（R511）：1 鲸鱼 / 2 液体 / 3 荆棘 / 4 宴席。
+	## 256×256、**圆外全透明、边缘羽化** —— 调用方按球的可见直径直接贴，不需要再裁。
+	## 与 `bg_divination.png` 里的球同径，缺图返回 null（球里保持原图的星云，不空白不报错）。
+	if n < 1 or n > 4:
+		return null
+	return get_tex("div_vision_%d" % n)
+
+
+static func div_orb_glass() -> Texture2D:
+	## 水晶球玻璃壳（R511）：从 `bg_divination.png` 原图剥离的高光/内壁/边缘，
+	## 只保留亮部（暗部近乎全黑）。代码侧用 **ADD 混合**盖在幻象之上，
+	## 于是幻象看起来是「装在这个球里」的，而不是贴上去的一张图。
+	## 缺图返回 null，幻象照常显示（只是少了玻璃反光）。
+	return get_tex("div_orb_glass")
+
+
 static func card_paper() -> Texture2D:
 	## 卡面纸底（R113）。设计基准 58 × 70（与 CARD_W:CARD_H 同比）。
 	## 卡面宽高比恒定，只是整体缩放，所以**不需要九宫格**，直接拉伸即可。

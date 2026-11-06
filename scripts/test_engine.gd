@@ -8378,6 +8378,24 @@ func _init() -> void:
 			"事件背景命名：bg_<事件>.png（bg_rest.png）")
 	check(UiAssets.get_tex("__no_such_image__") == null,
 			"UI 图片缺失时返回 null（调用方回退内置程序化绘制）")
+	# ---- R511 占卜室：球内幻象（只换球里的景象，不换整张底图）----
+	for r511_di in range(1, 5):
+		check(UiAssets.div_vision(r511_di) != null,
+				"R511 占卜幻象 div_vision_%d.png 能在 assets/ui/ 取到（鲸鱼/液体/荆棘/宴席）"
+				% r511_di)
+	check(UiAssets.div_vision(0) == null and UiAssets.div_vision(5) == null,
+			"R511 占卜幻象下标越界返回 null（只认 1~4，调用方据此不叠图、球里保持原样）")
+	check(UiAssets.div_orb_glass() != null,
+			"R511 占卜玻璃壳 div_orb_glass.png 能在 assets/ui/ 取到（ADD 混合盖在幻象上）")
+	# 球心/半径是**和底图绑定的契约**：换 bg_divination.png 必须同步这三个常量，
+	# 否则幻象会偏出球外或缩在球心 —— 这类错在截图里才看得出来，所以在这儿锁住。
+	var r511_src := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	check_src(r511_src.contains("const ORB_CX := 639.0") \
+			and r511_src.contains("const ORB_CY := 188.0") \
+			and r511_src.contains("const ORB_R := 89.0"),
+			"R511 水晶球几何与底图实测绑定（球心 639,188 / 内容区半径 89）")
+	check_src(r511_src.contains("EXPAND_IGNORE_SIZE"),
+			"R511 幻象层必须 EXPAND_IGNORE_SIZE —— 否则 size 被贴图原生 256 顶掉、幻象溢出球外")
 	# ---- 战斗背景的三级回退（R133）----
 	# ① 每个关卡都要有**稳定的 ASCII key** —— 「按关卡替换素材」全靠它；
 	#    空 / 重名 / 带中文都会让槽位名对不上（关卡改名不该影响素材名）。

@@ -348,6 +348,8 @@ var _smith_done := false      # 鸭鸭工匠：是否已经锻造过（或已选
 var _div_stage := 0           # R308 占卜室：0 = 还没占卜 / 1 = 已占卜待解读 / 2 = 已解读完
 var _div_rolled := 0          # R308 占卜室：本次占卜出的是第几种幻象（1~4）
 var _div_result := ""         # R308 占卜室：解读后的结果行（收尾态复用）
+var _orb_vision: TextureRect = null   # R511 占卜室：球内幻象层
+var _orb_glass: TextureRect = null    # R511 占卜室：球壳高光层（ADD 混合）
 var _merchant_done := false   # R305 卡片商人：是否已经做过一笔交易
 var _lake_done := false       # R305 湖中仙女：是否已经许过愿
 ## R488：湖中仙女 · 谎言**进门就摇定**的那一张（`RunState.lake_lady_peek()` 的结果）。
@@ -640,8 +642,87 @@ func _apply_ui_assets() -> void:
 		add_child(trb)
 		move_child(trb, 0)                              # 压到最底层
 		($BG as ColorRect).color = Color(0, 0, 0, 0)    # 让位给自定义背景
+		# R511：占卜室 —— 球内景象单独一层（只换球里的内容，不换整张底图）
+		if kind == "divination":
+			_make_orb_layers(trb)
 	else:
 		_add_fallback_bg(kind)
+
+
+## ---- R511 占卜室：球内幻象 --------------------------------------------------
+## 底图 `bg_divination.png` 在 1280×720 基准下，水晶球的球心 (639,188)、可见半径 89
+## （由原图亮度剖面拟合，圆外发光不算在内）。玩法上球里要换四种画面
+## （鲸鱼 / 液体 / 荆棘 / 宴席），但**不重画整张底图**：
+##   · `div_vision_<1..4>.png`  球内景象，256×256 圆形羽化；
+##   · `div_orb_glass.png`      球壳高光（从底图剥离），**ADD 混合**盖在幻象之上。
+## 两层都套用 EventBG 的「等比铺满 + 居中裁切」同一套变换 → 换窗口尺寸不会错位。
+## 未占卜（stage 0）与解读完（stage 2）都不叠 —— 球里回到原图的星云 / 雾。
+const ORB_CX := 639.0
+const ORB_CY := 188.0
+const ORB_R := 89.0
+const ORB_BASE_W := 1280.0
+const ORB_BASE_H := 720.0
+
+
+func _make_orb_layers(bg_rect: TextureRect) -> void:
+	## 插在 EventBG 之后、其余 UI 之前：既压在底图上，又不会盖住中间一列按钮。
+	var zi := bg_rect.get_index() + 1
+	_orb_vision = TextureRect.new()
+	_orb_vision.name = "OrbVision"
+	_orb_vision.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_orb_vision.stretch_mode = TextureRect.STRETCH_SCALE
+	_orb_vision.expand_mode = TextureRect.EXPAND_IGNORE_SIZE   # 否则 size 被贴图原生 256 顶掉
+	_orb_vision.visible = false
+	add_child(_orb_vision)
+	move_child(_orb_vision, zi)
+
+	_orb_glass = TextureRect.new()
+	_orb_glass.name = "OrbGlass"
+	_orb_glass.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_orb_glass.stretch_mode = TextureRect.STRETCH_SCALE
+	_orb_glass.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_orb_glass.material = mat
+	_orb_glass.texture = UiAssets.div_orb_glass()
+	_orb_glass.visible = false
+	add_child(_orb_glass)
+	move_child(_orb_glass, zi + 1)
+
+	if not resized.is_connected(_layout_orb_layers):
+		resized.connect(_layout_orb_layers)
+	_layout_orb_layers()
+	_update_orb_vision()
+
+
+func _layout_orb_layers() -> void:
+	## 复现 `STRETCH_KEEP_ASPECT_COVERED`：scale = max(w/1280, h/720)，居中后裁切。
+	## 底图若是被换成别的尺寸，这里也要跟着改 —— 两个常量就是那份契约。
+	if _orb_vision == null:
+		return
+	var vs := get_viewport_rect().size
+	var s := maxf(vs.x / ORB_BASE_W, vs.y / ORB_BASE_H)
+	var off := (vs - Vector2(ORB_BASE_W, ORB_BASE_H) * s) * 0.5
+	var c := off + Vector2(ORB_CX, ORB_CY) * s
+	var d := ORB_R * 2.0 * s
+	_orb_vision.position = c - Vector2(d, d) * 0.5
+	_orb_vision.size = Vector2(d, d)
+	if _orb_glass != null:
+		_orb_glass.position = _orb_vision.position
+		_orb_glass.size = _orb_vision.size
+
+
+func _update_orb_vision() -> void:
+	## 幻象只在「已占卜、还没解读」这一态出现；解读完球里重新蒙雾（文案也是这么写的）。
+	if _orb_vision == null:
+		return
+	var tex: Texture2D = null
+	if _div_stage == 1 and _div_rolled >= 1:
+		tex = UiAssets.div_vision(_div_rolled)
+	_orb_vision.texture = tex
+	_orb_vision.visible = tex != null
+	if _orb_glass != null:
+		_orb_glass.visible = tex != null
 
 
 ## R478：缺图时的统一默认底。目标不是「给每种事件画一张图」，而是让「没有图」
@@ -1458,6 +1539,7 @@ func _on_main() -> void:
 			_div_rolled = RunState.run_rng.randi_range(1, DIVINATION_KINDS)
 			_div_stage = 1
 			_apply_divination_text()
+			_update_orb_vision()
 			sfx.play("click")
 			_redraw()
 			return
@@ -2210,6 +2292,7 @@ func _resolve_divination(first: bool) -> void:
 	else:
 		return
 	_div_stage = 2
+	_update_orb_vision()   # R511：解读完球里重新蒙雾
 	_claim_reward(rest_btn if first else bbq_btn)
 	_collapse_to_leave()
 	desc.text = DIVINATION_DONE_DESC

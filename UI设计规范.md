@@ -177,6 +177,8 @@ UiTheme.<颜色|字号|间距令牌>            # 其余
 | 通路小桥 ×2 | `assets/ui/map_bridge_<h｜v>.png` | 384 × 96 / 167 × 384 | 4 / 0.43 | 程序画的一小段横条 |
 | 事件插图 ×8 | `assets/ui/event_<事件>.png` | 300 × 240 | 1.25 | 内置篝火动画 |
 | 事件背景 ×8 | `assets/ui/bg_<事件>.png` | 1280 × 720 | 1.78 | 深灰单色 |
+| 占卜球内幻象 ×4（R511） | `assets/ui/div_vision_<1..4>.png` | 256 × 256（圆形、边缘羽化） | 1:1 | 不叠，球里保持底图星云 |
+| 占卜球玻璃壳（R511） | `assets/ui/div_orb_glass.png` | 256 × 256（只留亮部，ADD 混合） | 1:1 | 不叠高光，幻象照常显示 |
 | 战斗背景（**三级回退**） | `assets/ui/battle_bg_<关卡key>.png`（每关专属）→<br>`assets/ui/map_bg_<层号>.png`（当层）→<br>`assets/battle_bg.png`（全局兜底） | 1280 × 720 | 1.78 | 当层底图 → 米黄渐变 |
 | 卡背 / 窗口图标 | `assets/cardback.png` | 120 × 160 | 0.75 | — |
 | 标题页背景 | `assets/ui/title_bg.png` | 1280 × 720 | 1.78 | 战斗背景 → 纯色（R154 已挂接） |
