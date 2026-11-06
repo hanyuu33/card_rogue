@@ -75,16 +75,18 @@ static func level_names() -> Array[String]:
 
 static func builtin_levels() -> Array:
 	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×9（第一层 4 + 第二层 5）→
-	## 精英简单×6（第一层 3 + 第二层 3；R449 哈气骑士团下调一层）→ 精英困难×6（第一层 3 + 第二层 3）→
-	## Boss×6（第一层 3 + 第二层 2 + 第三层 1）。合计 35 关（R174 百眼动员进第二层普通简单；
-	## R340 永夜鸭群进第一层精英困难；**R356 启示者进第三层**；**R451 母舰空袭进第二层精英简单**）。
+	## 精英简单×7（第一层 3 + 第二层 4；R449 哈气骑士团下调一层；R502 执法者的审判进二层）→
+	## 精英困难×6（第一层 3 + 第二层 3）→
+	## Boss×6（第一层 3 + 第二层 2 + 第三层 1）。合计 36 关（R174 百眼动员进第二层普通简单；
+	## R340 永夜鸭群进第一层精英困难；**R356 启示者进第三层**；**R451 母舰空袭进第二层精英简单**；
+	## **R502 执法者的审判进第二层精英简单**）。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_frost_line(), _assembly_line(), _mass_anvil(), _argos_mobilize(),
 		_knight_charge(), _wizard(), _white_mage_guard(), _night_ducks(),
 			_sun_forge(), _hecaton(), _undead_legion(), _twin_cannon(),
 		_captain(), _duck_kiln(), _breath_charge(), _hermes(), _dragon_nest(),
-			_mothership_air_raid(),
+			_mothership_air_raid(), _enforcer_judgement(),
 		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(), _asclepius(),
 		_boss_dragon(), _boss_demon_duck(), _boss_duck_darkside(),
 			_mech_duck_boss(), _hephaestus(), _scrapyard(), _eternal_night(),
@@ -92,7 +94,7 @@ static func builtin_levels() -> Array:
 
 
 static func cave_level() -> Dictionary:
-	## R467：洞穴 —— **事件专属关卡**（第 36 关，但**不进 `builtin_levels()`**）。
+	## R467：洞穴 —— **事件专属关卡**（第 37 关，但**不进 `builtin_levels()`**）。
 	## 只有「洞穴」事件选「探索」才进这一关，地图的普通 / 精英 / Boss 池永远摇不到它，
 	## 所以关卡统计、`all_keys()`、按层内容池的既有口径一字不动。
 	##
@@ -1009,6 +1011,43 @@ static func _mothership_air_raid() -> Dictionary:
 			[9207, "量产型阿斯克勒庇厄斯", 7, 50, 1, 1, Vector2i(2, 2)],
 		],
 		"enemy_effects": [9209],
+		"tutorial": [],
+	}
+
+
+static func _enforcer_judgement() -> Dictionary:
+	## 第二层·精英敌人-简单（R502）：后排中央**执法者**（9223，10 攻 / 80 血 / 程 2 / 速 1）
+	## + 前排两翼各一只**量产型俄倪厄**（9131，5/45 程1 速1）。
+	##   * 执法者 ①：自己场上有量产型俄倪厄时，**自身受到的伤害减半**（去尾、至少 1）。
+	##     所以「绕开前排直接掏后排」行不通：两只 45 血的盾没清掉之前，它只吃一半伤害，
+	##     10 攻程 2 的远程压制会一直挂在那里。
+	##   * 执法者 ②：自己场上的量产型俄倪厄**受到伤害**时，本回合力量 +1（可叠加）。
+	##     于是「先磨前排」也不是白磨 —— 每打一下俄倪厄，下个敌方回合那只执法者就更疼一下。
+	##     两条合起来的正确解法是**攒够伤害一回合内打死一只俄倪厄**（只喂一次），
+	##     而不是来回磨血把它的力量喂到 14。
+	##   * 量产型俄倪厄自带「破绽」（9131）：自己回合开始往玩家卡组塞一张 2 费诅咒 ——
+	##     拖时间等于给自己加废牌，这关逼的是速攻而不是对耗。
+	## ⚠️ 故意**不带 `LAYER2_GROWTH`**：这关的成长轴已经是「打小弟 → 喂力量」，
+	##    再叠加关卡级攻击成长会双倍膨胀（执法者会从 10 攻滚到 14 攻 + 叠加 buff）。
+	##    R161 赫尔墨斯 / R483 母舰空袭 同样不带关卡成长，是这一档的既有先例。
+	return {
+		"name": "执法者的审判",
+		"key": "enforcer_judgement",
+		"tier": TIER_ELITE_EASY,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"intro": "站住。这条路不通行。",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9223, "执法者", 10, 80, 2, 1, Vector2i(0, 1)],
+			[9131, "量产型俄倪厄", 5, 45, 1, 1, Vector2i(2, 0)],
+			[9131, "量产型俄倪厄", 5, 45, 1, 1, Vector2i(2, 2)],
+		],
 		"tutorial": [],
 	}
 

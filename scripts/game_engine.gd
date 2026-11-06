@@ -1927,6 +1927,21 @@ const REVENGE_END_ATK_PER_HIT:= 1  # R77：同时保留恶魔鸭（9116）原本
 const DEMON_SUMMON_TRAIT:= "恶魔召唤"
 const DEMON_SUMMON_EVERY:= 2       # 召唤间隔（回合）：turn_number % 2 == 0 时召唤
 
+# ---- R502：执法者（9223 敌方盟友 10/80 程2 速1，二层精英「审判庭」）----
+#   ① **有小弟在场就硬**：自己方场上存在「量产型俄倪厄」（9131）时，自身受到的**任何**伤害
+#      减半（去尾、至少 1）。判据实时扫场面（`FieldState.has_enforcer_minion`）——
+#      小弟被打光后减伤立刻失效，所以这关的题面是「先清前排两只盾，才打得动后排这只 10 攻」。
+#   ② **打小弟 = 喂它攻击力**：自己方场上的量产型俄倪厄**受到伤害**时，每只执法者
+#      `atk_buff_turn += 1`（本回合力量 +1，可叠加）。走的是「复仇」（9118）那条现成通路，
+#      回合结束由 `end_turn` 的清零分支自然清掉 —— 于是玩家在自己回合多打一下俄倪厄，
+#      下个敌方回合那只 10 攻的执法者就更疼一下。
+#   ⚠️ 用户口径 R502：「本回合内力 +1」= **本回合力量 +1**（本作没有「内力」这个资源：
+#      界面上的资源叫「费用」、单位的攻击力叫「力量」；敌方攒费用没有任何出口，
+#      已与用户确认按力量落地）。
+const ENFORCER_ID:= 9223
+const ENFORCER_MINION_ID:= 9131    # 量产型俄倪厄（与太阳熔炉的 SUN_FORGE_FURY_ID 同一张）
+const ENFORCER_RAGE_PER_HIT:= 1    # 小弟每次受伤，执法者本回合力量 +1（可叠加）
+
 # ---- R111：鸭子暗杀者 / 鸭之暗面 / 暗影召唤 ----
 # 鸭子暗杀者 9123（trait「暗杀」）：只要**己方场上还有「暗杀」以外的单位**，就进入特殊模式 ——
 #   ① **不能攻击对方 HP**（`hp_targets` 直接返回空 → UI 与 AI 同时被拦）；
@@ -11634,6 +11649,17 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		dmg = maxi(1, dmg / 2)
 		if dmg != hb:
 			_log("%s 孤军：攻击伤害 %d → %d（减半）" % [p.card.card_name, hb, dmg])
+	# ②b 执法者（9223，R502）：自己场上有「量产型俄倪厄」时，**自身受到的伤害减半**
+	#     （去尾、至少 1）。**不分攻击 / 技能** —— 卡面写的是「受到的伤害」，没限定来源，
+	#     所以这条不吃 `kind` 分流（与 ② 孤军只挡攻击不同，别照抄）。
+	#     档位排在 ③ 量产型赫利俄斯光环**之前**：光环照顾的是「除自己以外的己方单位」，
+	#     两者作用对象互不重叠，顺序不影响数值，但离 ② 近一点更好读。
+	if p != null and p.card != null and dmg > 0 and p.card.id == ENFORCER_ID \
+			and state.has_enforcer_minion(p.owner):
+		var fb:= dmg
+		dmg = maxi(1, dmg / 2)
+		if dmg != fb:
+			_log("执法者（有小弟在场）：受到的伤害 %d → %d（减半）" % [fb, dmg])
 	# ③ 量产型赫利俄斯（9137，R152）光环：除自己以外的己方单位，**技能**伤害减半
 	#    （向上取整 —— 用户口径）。实时扫场面：塔被打掉 → 光环立刻失效。
 	if p != null and p.card != null and dmg > 0 and kind != "attack" \
@@ -11773,6 +11799,9 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 			and _zone_has(state.enemy_effects, OWLBEAR_INSTINCT_TRAIT):
 		dmg = maxi(1, dmg - OWLBEAR_GUARD)
 	if dmg > 0 and is_attack and p.hecaton_atk > 0:
+		dmg = maxi(1, dmg / 2)
+	# R502 执法者（9223）：与 `_unit_damage_taken()` 的 ②b 同判据、同位置（不分攻击/技能）
+	if dmg > 0 and p.card.id == ENFORCER_ID and state.has_enforcer_minion(p.owner):
 		dmg = maxi(1, dmg / 2)
 	if dmg > 0 and not is_attack and p.card.id != MASS_HELIOS_ID \
 			and state.has_mass_helios(p.owner):
@@ -11938,6 +11967,7 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	# 死了就不再触发（沉睡了也没意义），所以只在活着的分支调。
 	if p.health > 0:
 		_demon_duck_hurt(p, _cell_of(p))
+		_enforcer_watch(p, _cell_of(p))   # R502 执法者：小弟挨打 → 本回合力量 +1
 	# R490：陨石术减费按**落地段数**记账 —— 这里**不分敌我**，自己的单位挨技能打也算一段。
 	if dmg > 0:
 		_mark_spell_damage()
@@ -13238,6 +13268,11 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 			action.emit("fx_impact", {"cell": _cell_of(p), "amount": amount2,
 					"source": "技能", "side": p.owner})
 		_log("%s 受到 %d 点效果伤害（剩余 %d）" % [p.card.card_name, amount2, p.health])
+		# R502：单目标技能**不走 `_hit_unit`**（自己扣血），执法者的「小弟挨打 → 力量 +1」
+		# 要在这里补一次，否则玩家用龙息 / 弹跳飞刀打俄倪厄时那条联动整段不触发。
+		# 必须在 `_destroy_dead()` 之前：单位还在场上，`_cell_of()` 才拿得到格子。
+		if p.health > 0:
+			_enforcer_watch(p, _cell_of(p))
 		if p.health <= 0:
 			_destroy_dead()
 		return "%s -%d" % [p.card.card_name, amount2]
@@ -15031,6 +15066,30 @@ func _revenge_hurt(p: Placement, cell: Vector2i) -> void :
 	action.emit("demon_revenge", {"cell": cell, "card": p.card,
 		"amount": REVENGE_ATK_PER_HIT, "end_amount": REVENGE_END_ATK_PER_HIT,
 		"stacked": p.atk_buff_turn, "power": total})
+
+
+func _enforcer_watch(p: Placement, cell: Vector2i) -> void :
+	## 执法者（9223，R502）的「小弟挨打 → 自己变强」。
+	## 挨打的单位本身必须是**量产型俄倪厄**（9131）；同侧有几只执法者就各 +1
+	## （卡面写的是「自己场上的…受到伤害时」，没有「其他」二字，所以不做互斥）。
+	## 加的是 `atk_buff_turn` —— **本回合**力量，与「复仇」9118 走同一条通路，
+	## 回合结束由 `end_turn` 的清零分支自然抹掉（不需要另写清除逻辑）。
+	## ⚠️ 故意**不塞进 `_demon_duck_hurt`**：那条是按 trait 分派且中途 `return` 的，
+	##    塞进去会被「不带复仇 / 沉睡 trait 就早退」吃掉。
+	## ⚠️ 只在**活着**的时候调（`_hit_unit` / `_op_deal_damage` 都判了 `health > 0`）：
+	##    致命一击算「打死了」，不再给对面白送力量。
+	if p == null or p.card == null or p.card.id != ENFORCER_MINION_ID:
+		return
+	for q: Placement in state.board.values():
+		if q.owner != p.owner or q.card == null or q.card.id != ENFORCER_ID:
+			continue
+		q.atk_buff_turn += ENFORCER_RAGE_PER_HIT
+		_log("%s 看到 %s 挨打：本回合力量 +%d（累计 +%d，当前 %d）" % [
+				q.card.card_name, p.card.card_name, ENFORCER_RAGE_PER_HIT,
+				q.atk_buff_turn, q.effective_power()])
+		action.emit("enforcer_rage", {"cell": _cell_of(q), "card": q.card,
+				"side": q.owner, "from": cell, "amount": ENFORCER_RAGE_PER_HIT,
+				"stacked": q.atk_buff_turn, "power": q.effective_power()})
 
 
 func _workshop_supply(side: String) -> void :

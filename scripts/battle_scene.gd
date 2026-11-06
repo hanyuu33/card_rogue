@@ -12550,6 +12550,22 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_bursts.append({"pos": rv_pos, "sc": _grid_scroll, "start": rv_at, "dur": 460,
 				"col": Color("ff8a3d"), "big": false})
 			sfx.play("attack")
+		"enforcer_rage":
+			# 执法者（9223，R502）：自己场上的量产型俄倪厄受伤 → 执法者**本回合**力量 +1（可叠加）。
+			# 与「复仇」9118 同口径：飘**累计值**，让玩家一眼看出「我磨它小弟一下、
+			# 它下个回合就更疼一下」—— 这关的正确解法是「一回合打死一只」而不是来回磨血。
+			# R466 同口径：受伤那一刻的反馈，等这一拳落地（`from` = 挨打的俄倪厄那格）。
+			var en_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var en_from: Vector2i = data.get("from", en_cell)
+			var en_at := _hit_cue_at(en_from)
+			var en_pos := _cell_center(en_cell)
+			_floaters.append({"pos": en_pos + Vector2(0, -18), "sc": _grid_scroll,
+				"text": "执法 本回合 +%d（力量 %d）" % [int(data.get("stacked", 0)),
+					int(data.get("power", 0))],
+				"col": Color("1f8ad6"), "start": en_at, "dur": 1500, "size": 16})
+			_bursts.append({"pos": en_pos, "sc": _grid_scroll, "start": en_at, "dur": 440,
+				"col": Color("4fb3e8"), "big": false})
+			sfx.play("attack")
 		"demon_summon":
 			# 恶魔使魔（9117）：每回合开始随机空格召唤使魔鸭子
 			var dm_cell: Vector2i = data.get("cell", Vector2i(-1, -1))

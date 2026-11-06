@@ -398,6 +398,18 @@ func has_mass_helios(side: String) -> bool:
 	return false
 
 
+func has_enforcer_minion(side: String) -> bool:
+	## 「量产型俄倪厄」（9131）是否在**该方场上**。
+	## 它是执法者 9223「自身受到的伤害减半」这条自保效果的**唯一开关**
+	## （R502），与 `has_mass_helios` / `has_sun_forge` 同范式：实时扫场面、
+	## 绝不烤进 CardData —— 「小弟被打光 → 减伤立刻失效」是免费的。
+	## ⚠️ 只数俄倪厄、不数执法者自己：卡面写的是「自己场上有量产型俄倪厄时」。
+	for p: Placement in board.values():
+		if p.owner == side and p.card != null and p.card.id == GameEngine.ENFORCER_MINION_ID:
+			return true
+	return false
+
+
 func has_earth_elemental(side: String) -> bool:
 	## 「土元素」（9218，R493）是否在**该方场上**。
 	## 它是「场上所有己方盟友力量 +3、受到的伤害 -1」这条光环的唯一开关：
