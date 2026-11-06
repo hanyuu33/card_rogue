@@ -1546,6 +1546,21 @@ const FEAR_SHADOW_ID:= 9228       # 恐惧之影：3 费稀有盟友 3/14/程1/�
 const FEAR_PROJECTION_ID:= 9229   # 恐惧投射：2 费普通技能 · 次元
 const FEAR_PROJECTION_DEBUFF:= 11
 const FEAR_PROJECTION_DMG:= 8
+
+# ---- R504（2026-11-06）标记第二批：恐惧化身 / 噩兆 / 厄运的使者 / 灵魂收割者 ----
+# 用户口径：「恐惧化身：对被标记的敌人造成伤害时，使其本回合力量 -1（可叠加。致命需要设置为不可叠加）」。
+#   「可叠加」= 效果区有几张就 -几条 → 走 `_zone_count()`；
+#   反例 = 致命 9226：**只认有没有**，两张也只 ×1.5（`_zone_has()`，重复打出不入区）。
+const FEAR_INCARNATE_ID:= 9230
+const FEAR_INCARNATE_TRAIT:= "恐惧化身"
+const FEAR_INCARNATE_DEBUFF:= 1   # 每命中一次 -1 × 效果区张数
+const OMEN_ID:= 9231
+const OMEN_TRAIT:= "噩兆"
+const OMEN_DMG:= 4                # 每个**我方**回合结束，标记格上的敌人吃 4 点（每张各一份）
+const DOOM_HERALD_ID:= 9232       # 厄运的使者：3 费稀有盟友 2/15/程1/速1
+const DOOM_HERALD_HEAL:= 3        # 攻击**被标记的**敌人 → 自己回复 3
+const SOUL_REAPER_ID:= 9233       # 灵魂收割者：8 费史诗盟友 6/20/程1/速1
+const SOUL_REAPER_DISCOUNT:= 1    # 每次打中被标记的敌人 → 此卡费用永久 -1
 const UPGRADE_RANGE_TRAIT:= "改造攻程"
 ## R275：重甲战车 8058 移除本 trait（改为「每层改造受到的伤害 -1」）——
 ## 当前**没有任何卡**带「改造移速」，分支保留给未来的卡用。
@@ -3855,6 +3870,8 @@ func end_turn() -> void :
 	# 充电装置（8041，R91）：被「接通」的**己方**单位每回合结束回 2 点生命。
 	# 放在 `_regen_tick` 之后：两者都是「自己回合结束的回血」，叠在相邻格里会一起回。
 	_charge_tick(current_side)
+	# 噩兆（9231，R504）：自己回合结束时，标记格上的敌人受 4 点伤害（每张各一份）。
+	_omen_tick(current_side)
 	# 超负荷（旧式机兵 8050，R98）：己方回合结束时，生命仍为负数的超负荷单位死亡。
 	_overload_tick(current_side)
 	# 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：**我方回合结束** -1（用户口径）。
@@ -7871,6 +7888,13 @@ func use_effect(hand_index: int) -> String:
 	state.self_effect_plays += 1
 	_on_effect_card_played(SIDE_SELF, card)
 	_on_turn_first_play(SIDE_SELF, card)
+	# R504：致命**不可叠加**（用户口径）—— 效果区已经有一张时，第二张不再入区。
+	# 与恐惧化身 9230 的「可叠加」正好相对：那张用 `_zone_count()` 按张数叠，这张用 `_zone_has()` 只认有没有。
+	# ⚠️ 判在 `append` **之前**：进去了就成两张，界面也会画两张。
+	if card.id == FATAL_ID and _zone_has(state.effects, FATAL_TRAIT):
+		_log("致命：效果区已经有这一条了，不叠加")
+		action.emit("effect_no_stack", {"card": card, "trait": FATAL_TRAIT})
+		return "致命（已经生效，不叠加）"
 	state.effects.append(card)
 	_note_card_played(SIDE_SELF, card)
 
@@ -7883,9 +7907,12 @@ func use_effect(hand_index: int) -> String:
 	if card.traits.has(DUCK_NEST_TRAIT):
 		_egg_to_hand("鸭窝")
 
-	# R503 致命 9226：打出时若场上没有标记，随机标记一个敌人所在的格子
+	# R503 致命 9226 / R504 恐惧化身 9230：打出时若场上没有标记，随机标记一个敌人所在的格子
 	if card.id == FATAL_ID:
-		_fatal_enter()
+		_auto_mark_if_none("致命")
+	if card.id == FEAR_INCARNATE_ID:
+		# 恐惧化身本身没有「打出时」的加成（效果常驻效果区），只处理这一条。
+		_auto_mark_if_none("恐惧化身")
 	# R465 折射炮 9211：打出时把一张「聚能炮击」加入手卡（此后每发炮击都会折射）。
 	if card.id == REFRACT_CANNON_ID:
 		_refract_grant_cannon()
@@ -11921,6 +11948,9 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	var dmg:= _unit_damage_taken(p, amount, "attack" if is_attack else "spell")
 	p.health -= dmg
 	_theseus_on_blood(p, hp_before_theseus)
+	# R504 恐惧化身（9230）：打到被标记的敌人身上 → 它本回合力量 -1（可叠加）。
+	# 挂在这两个「扣血落地口」上（这里 + `_op_deal_damage`），与侦察塔光环同一条纪律。
+	_fear_incarnate_tick(p, dmg)
 	# R356：扣血之后立刻判阶段 —— 启示者掉到 200 / 100 就在**这一下**里转阶段，
 	# 不等回合计。别的单位 boss_phase == 0，这里只是一个布尔判断。
 	if p.boss_phase > 0:
@@ -13191,6 +13221,7 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 				_apply_scout_aura(p, amount)), "spell")
 		p.health -= amount2
 		_theseus_on_blood(p, hp_before_theseus)
+		_fear_incarnate_tick(p, amount2)   # R504 恐惧化身：单目标技能这条落地口也要过
 		if p.boss_phase > 0:
 			_revelator_check_phase(p)
 		# R490：单目标技能（龙息 / 弹跳飞刀这类不走 _hit_unit）同样按落地段数记一笔。
@@ -14471,12 +14502,54 @@ func _mark_tick(side: String) -> void :
 	action.emit("mark_growth", {"cell": state.mark_cell(), "bonus": state.mark_bonus})
 
 
-func _fatal_enter() -> void :
-	## 致命（9226，R503）：打出时**若场上没有标记**，随机标记一个敌人所在的格子。
+func _fear_incarnate_tick(p: Placement, dmg: int) -> void :
+	## 恐惧化身（9230，R504）：**对被标记的敌人造成伤害时**，该敌人本回合力量 -1。
+	## 「可叠加」= 效果区几张就 -几（`_zone_count()`），与致命 9226 的 `_zone_has()` 相对。
+	## 调用点 = 两个扣血落地口（`_hit_unit` 的 `p.health -= dmg` / `_op_deal_damage` 的
+	## `p.health -= amount2`）—— 与侦察塔光环同一条纪律：漏一处就等于少一半伤害来源。
+	## ⚠️ 只认**我方回合**里落地的伤害：敌方拿自己的 AOE 砸到被标记的自己人时不算「你打的」。
+	if current_side != SIDE_SELF or dmg <= 0 or p == null or p.health <= 0:
+		return
+	if not _is_marked_enemy(p):
+		return
+	var n := _zone_count(state.effects, FEAR_INCARNATE_TRAIT)
+	if n <= 0:
+		return
+	var add := FEAR_INCARNATE_DEBUFF * n
+	p.atk_debuff += add
+	p.debuff_stage = 1     # 立即生效（与威慑 / 敲晕同源：所属方回合结束时清除）
+	_log("恐惧化身：%s 本回合力量 -%d（效果区 %d 张，当前 %d）" % [
+		p.card.card_name, add, n, p.effective_power()])
+	action.emit("fear_incarnate", {"cell": _cell_of(p), "card": p.card,
+		"debuff": add, "stacks": n, "power": p.effective_power()})
+
+
+func _omen_tick(side: String) -> void :
+	## 噩兆（9231，R504）：**自己回合结束时**，处于标记格的敌人受到 4 点伤害（每张各一份）。
+	## 只在 `SIDE_SELF` 的回合结束结算 —— 卡面写的是「自己回合」，敌方回合不该再疼一次。
+	if side != SIDE_SELF:
+		return
+	var n := _zone_count(state.effects, OMEN_TRAIT)
+	if n <= 0:
+		return
+	var cell := state.mark_cell()
+	if cell == Vector2i(-1, -1):
+		return
+	var p := state.unit_at(cell)
+	if p == null or p.owner == SIDE_SELF or p.health <= 0:
+		return          # 标记格上没有敌人（或是自家单位）→ 这一回合空过
+	var total := OMEN_DMG * n
+	_log("噩兆：%s 站在标记格上，受到 %d 点伤害" % [p.card.card_name, total])
+	_hit_unit(p, total, "噩兆")
+
+
+func _auto_mark_if_none(why: String) -> void :
+	## 「若场上没有标记，随机标记一个敌人所在的格子」—— 致命 9226 / 恐惧化身 9230 共用
+	## （R504 从 `_fatal_enter()` 下放，判据一字未改）。
 	## 空场（一个敌人都没有）→ 什么都不做：卡面写的是「随机标记一个**敌人**的格子」，
 	## 没敌人就没得标，别偷偷标个空格让玩家白赚回合。
 	if state.has_mark():
-		_log("致命：场上已有标记，不再随机标记")
+		_log("%s：场上已有标记，不再随机标记" % why)
 		return
 	var cells: Array[Vector2i] = []
 	for cell: Vector2i in state.board:
@@ -14484,11 +14557,11 @@ func _fatal_enter() -> void :
 		if q != null and q.owner == SIDE_OPPONENT and q.health > 0:
 			cells.append(cell)
 	if cells.is_empty():
-		_log("致命：场上没有敌人 → 不标记")
+		_log("%s：场上没有敌人 → 不标记" % why)
 		return
 	cells.sort()   # 固定顺序：同种子 / 回放一致
 	var pick: Vector2i = cells[rng.randi_range(0, cells.size() - 1)]
-	_place_mark(pick, SIDE_SELF, "致命")
+	_place_mark(pick, SIDE_SELF, why)
 
 
 func _brawl(side: String, card: CardData) -> String:
@@ -15144,6 +15217,17 @@ func _zone_has(zone: Array[CardData], tname: String) -> bool :
 	return false
 
 
+func _zone_count(zone: Array[CardData], tname: String) -> int :
+	## 效果区里有**几张**该词条的效果卡（R504 恐惧化身 / 噩兆）。
+	## 与 `_zone_has()` 并列而不合并：大多数效果卡的语义是「有没有」（不可叠加），
+	## 只有卡面明确写了叠加的才该来这里数张数。
+	var n := 0
+	for c: CardData in zone:
+		if c.traits.has(tname):
+			n += 1
+	return n
+
+
 func _dark_lord_energy(side: String) -> void :
 	## 黑暗领主（8021，R56）：本回合结束时，场上本方每一个黑暗领主给自己 +5 费用。
 	## 这是整个「回合结束」结算的**第一步**（优先结算）—— 加上的 5 点会被随后
@@ -15324,6 +15408,24 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		_log("恐惧之影：标记单位 %s 的攻击 %d → %d（减半）" % [
 			attacker.card.card_name, fs_before, atk_power])
 	var def_dmg:= _hit_unit(defender, atk_power, "战斗", true, true)
+	# R504 厄运的使者（9232）：攻击**被标记的**敌人 → 自己回复 3 点生命。
+	# 判据取在扣血之后、`_reap` 之前：单位一被销毁 `_cell_of()` 就不可靠了（标记本身还在那格）。
+	if attacker.card.id == DOOM_HERALD_ID and _on_mark(defender):
+		var dh_before := attacker.health
+		attacker.health = mini(attacker.card.health, attacker.health + DOOM_HERALD_HEAL)
+		if attacker.health != dh_before:
+			_log("厄运的使者：打在标记上 → 回复 %d 点生命（%d → %d）" % [
+				attacker.health - dh_before, dh_before, attacker.health])
+			action.emit("doom_herald_heal", {"cell": src, "card": attacker.card,
+				"amount": attacker.health - dh_before, "health": attacker.health})
+	# R504 灵魂收割者（9233）：每次打中被标记的敌人 → 此卡费用**永久** -1（本局一直累加）。
+	# 存 `state.card_discount`（与陨石术 9077 同一张表）：键是**这一张卡的实例**，
+	# 所以单位被打回手卡之后（思想钢印 6036 那类）价格仍然是降过的。
+	if attacker.card.id == SOUL_REAPER_ID and _on_mark(defender):
+		var sr_was := int(state.card_discount.get(attacker.card, 0))
+		state.card_discount[attacker.card] = sr_was + SOUL_REAPER_DISCOUNT
+		_log("灵魂收割者：打在标记上 → 此卡费用永久 -%d（累计 -%d）" % [
+			SOUL_REAPER_DISCOUNT, sr_was + SOUL_REAPER_DISCOUNT])
 	# R341 惊奇盒子（9179）：**被攻击时**给攻击者挂「眩晕」（下个自己回合不能行动）。
 	# ⚠️ 不判「盒子还活着」：它只有 1 血，任何攻击都会把它打掉 —— 判存活等于这条效果永不触发。
 	# ⚠️ 放在 `_destroy` 之前：盒子被打死后就没有「被攻击时」这个时机了。
@@ -15350,6 +15452,13 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	# 且「伤害不会溢出」。以前这里直接 `_destroy(dst)`，于是战场上一刀就没了、
 	# 溢出还照常漏到玩家 HP（城墙站我方 HP 行被打穿 = 当场消失 + 漏 9 点）。
 	if defender.health <= 0 and _reap(dst):
+		# R504 灵魂收割者（9233）：**击杀单位时回满生命**（不要求被击杀者带标记）。
+		if attacker.card.id == SOUL_REAPER_ID:
+			attacker.health = attacker.card.health
+			_log("灵魂收割者：击杀 %s → 生命回满（%d）" % [
+				defender.card.card_name, attacker.health])
+			action.emit("soul_harvest", {"cell": src, "card": attacker.card,
+				"health": attacker.health})
 		# R225：践踏 —— 先把溢出伤沿同列逐个击穿，打穿整列后剩下的才轮到 HP。
 		var pierced_name: String = defender.card.card_name
 		if overflow > 0 and trample:
