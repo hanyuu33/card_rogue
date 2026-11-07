@@ -2197,6 +2197,90 @@ python tools/audit_event_bgs.py --strict   # 有缺返回非 0
 框与图同比 → cover 不再裁切，多出来的高度落到屏幕下方之外，观感即「顶部对齐」。
 `1280×720` 时该值为 0 → **16:9 下与改前逐像素一致**（已用 ImageChops 核对差异框为 None）。
 
+---
+
+### 4.54 事件整屏背景的画风：**卡通赛璐璐**，不是写实厚涂（R519e）
+
+用户口径：「这些事件图的风格太写实了。注意生成时契合游戏风格，你可以参考占卜那种风格」。
+
+#### 定性：错在提示词，不在模型
+
+R519d 那六张的 raw 文件名是 `Semi_realistic_painted_fantasy` —— 提示词第一句就写的是
+「半写实厚涂奇幻」，模型交回来的就是交付要求的。**不是画风跑偏，是我按错误的规格下的单。**
+
+而 `art_src/2026-11-02_占卜室事件图/` 里躺着 `废弃_v1_写实厚涂.png` —— 同一课
+两个月前就踩过并判过死刑，只是结论没写进 `_style_prompts.md`，于是又犯了一次。
+**教训：一次判废要落成速查表的一行，否则等于没判。**
+
+#### 唯一参照：`bg_divination.png`
+
+它是本项目**唯一**验证过「和 UI 是一套东西」的整屏背景。特征可量化：
+
+| 维度 | 占卜室（对） | R519d（错） |
+|---|---|---|
+| 渲染 | 2D cel-shaded 手绘 | semi-realistic painted render |
+| 描边 | **粗黑描边包住每个形体** | 无描边，靠明暗过渡交界 |
+| 上色 | **平涂色块 + 2 级明暗**，色区内无渐变 | 厚涂渐变、罩染 |
+| 石/木/铁 | 概括成方块 + 一道亮边 | 照片级纹理、苔藓、铁锈 |
+| 烟雾 | 一条硬边曲线 | 体积雾、扩散 |
+| 调色 | 低饱和冷灰蓝 + 单一暖点 | 暗黄泥浆 |
+| 缩到 1280 | 剪影干净，一眼可读 | 糊成暗块 |
+
+#### 风格底（新增到 `art_src/_style_prompts.md` §一·C，出图必贴）
+
+```
+2D ANIME GAME BACKGROUND for a light-fantasy mobile trading-card game,
+hand-drawn cel-shaded cartoon illustration, NOT a render.
+THICK CLEAN BLACK OUTLINE around every shape and every object.
+Flat colour blocks, exactly TWO shading steps per object, hard-edged shadow shapes.
+Limited low-saturation palette: cool charcoal blue-grey, muted purple, one warm accent.
+
+NO photorealistic texture, NO photographic stone / metal / wood grain, NO rust, NO moss,
+NO volumetric fog, NO god rays, NO depth-of-field, NO film grain, NO noise,
+NO 3D render, NO muddy brown palette, NO cross-hatching, NO airbrush.
+```
+
+配 `image1 = bg_divination.png` + `input_fidelity: low`（§四·用法一「只借画风」），
+比纯文生图稳得多 —— 六张一次过，只有两张栽在**明度**上（见下）。
+
+#### 明度也必须锁（返工过的坑）
+
+光有「暗」不够。第一批里 `snow_leopard` 通篇发白、`struggle` 天空是粉紫粉彩，
+另外四张是暗调 —— 摆在一起前两张明显是「另一个游戏」。
+
+于是**明度要写成显式约束，不能靠词里的 `dark` 碰运气**：
+
+- `snow_leopard`：加 `a NIGHT scene, snow is NOT white but muted blue-grey, must not read
+  as bright / pastel / washed out` + 一轮月亮当唯一亮点 → 过。
+- `struggle`：加 `sky is dark storm-grey, NOT pastel, NOT pink, NOT lavender, NOT magenta`
+  → 过。
+
+判据：**六张摆在一张拼图里，有没有哪张一眼跳出来**。跳出来的就是明度没锁住。
+
+#### 验收清单（缩到 1280×720 后逐条过）
+
+1. 有没有黑描边 —— 没有直接废。
+2. 缩图后剪影一眼可读，没糊成暗块。
+3. 石块/木头是否还长着照片纹理。
+4. 六张拼一张，明度是否在同一档。
+5. 下三分之一留空够暗，正文卡片压上去不打架。
+6. 和 `bg_divination.png` 并排看，像不像同一个世界。
+
+#### ⚠️ 流程坑：换图后 Godot 不会自动重导入
+
+`godot --path . res://scenes/event.tscn` **直接跑项目不会重导入贴图**，
+屏幕上是 `.godot/imported/` 里旧的 `.ctex`。本轮第一次截图六张全是旧图，
+差点误判成「新图没生效」。
+
+改完 `assets/ui/*.png` 之后，截图前必须补一步：
+
+```
+godot --headless --path . --import     # 或开一次编辑器
+```
+
+判据：`ls -la .godot/imported/bg_<kind>.png-*.ctex` 的 mtime 应该晚于 `assets/ui/` 里那张。
+
+
 ⚠️ 连带改动：`_layout_orb_layers` / `_layout_core_icon` 里复现 cover 的
 `off = (vs - base×s) * 0.5` 必须同步改成 `Vector2((vs.x - base_w×s) * 0.5, 0.0)` —— 
 纵向不再对半分，否则占卜球和核心会跟着错位。

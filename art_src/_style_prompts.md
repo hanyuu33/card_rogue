@@ -29,6 +29,46 @@ NO neon explosion, NO full-screen glow, NO fluorescent hair, NO muddy brown pale
 NO dark western comic style, NO Marvel/DC cover look, NO heavy cross-hatching.
 ```
 
+### C. **场景整屏背景（事件 CG）风格底** —— 出背景**只用这个**
+
+> ⚠️ R519e 的血泪：R519d 那批背景提示词写了 `semi_realistic_painted_fantasy`，
+> 出来的六张厚涂写实、和 UI 完全不是一个游戏，整批返工。
+> **唯一验证过的参照是 `assets/ui/bg_divination.png`（占卜室）**，照着它写，别自由发挥。
+
+```
+2D ANIME GAME BACKGROUND for a light-fantasy mobile trading-card game,
+hand-drawn cel-shaded cartoon illustration, NOT a render.
+THICK CLEAN BLACK OUTLINE around every shape and every object.
+Flat colour blocks, exactly TWO shading steps per object, hard-edged shadow shapes,
+no soft gradient inside a colour area.
+Limited low-saturation palette: cool charcoal blue-grey, muted purple, one warm accent.
+Simple readable shapes, clear silhouette, drawn detail only where the eye lands.
+
+NO photorealistic texture, NO photographic stone / metal / wood grain, NO rust, NO moss, NO grime,
+NO volumetric fog, NO god rays, NO depth-of-field, NO film grain, NO noise,
+NO 3D render, NO sculpted PBR material, NO muddy brown palette, NO dark western comic style,
+NO cross-hatching, NO airbrush.
+```
+
+配图生图：`image1 = assets/ui/bg_divination.png`，`input_fidelity: low`，
+prompt 首句贴 §四·用法一「只借画风」。
+
+**明度另写一条，不要指望 `dark` 这个词碰运气**（R519e 有两张栽在这）：
+
+```
+IMPORTANT MOOD: DARK and low-key, same darkness level as a candle-lit stone room.
+Keep saturation LOW. The image must NOT read as bright, pastel or washed out.
+Sky is dark / deep desaturated, NOT pastel, NOT pink, NOT lavender, NOT magenta.
+```
+
+**构图契约**（事件页正文卡片从 y≈47% 盖下来）：
+
+```
+All detail lives in the UPPER TWO THIRDS of the frame.
+The BOTTOM THIRD is calm empty ground fading to near-black, keep it clean and simple.
+```
+
+
 ---
 
 ## 二、画风硬约束（按题材挂）
@@ -103,3 +143,9 @@ EXACT SAME CHARACTER as the reference image (face, hair, outfit, colours).
 4. **姿态类改动别用 img2img**（会顺手改肢体），改颜色/换部件才用 img2img。
 5. **加东西 → img2img；删结构 → 摘参照图纯文生图重画**。
 6. **暗黑题材不是画暗的理由**：主体暗、环境亮，卡面在 448 下才立得住。
+7. **整屏背景别自由发挥**：只认 `bg_divination.png` 的画法（§一·C）。写实厚涂一律返工 —— R519d 六张整批废。
+8. **背景的明度要单独锁**：`dark` 一个词不够。六张拼一张图看，跳出来的那张就是没锁住。
+9. **换图后必须重导入**：`godot --path .` 直接跑项目**不会**重导入贴图，
+   屏幕上还是 `.godot/imported/` 的旧 `.ctex`。截图前先 `godot --headless --path . --import`。
+   判据：`.ctex` 的 mtime 晚于 `assets/ui/` 里那张。
+

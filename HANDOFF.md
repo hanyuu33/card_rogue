@@ -474,3 +474,39 @@ oblivion / smith / martial / struggle / snow_leopard / adventurer，1280×720 �
 `gaze` / `lake_lady` 有插图、按约定不需要整屏背景。
 验证：`_verify.py` 全通过（mana / engine 5236 / reward 26 / bgm 39 / smoke 64）；
 出图 `art_src/2026-11-07_事件背景R519d/_review/`（六张 1280、martial/struggle/divination 的 1920 版）。
+
+## 2026-11-07 R519e 事件背景画风返工：写实厚涂 → 卡通赛璐璐
+
+用户口径：「这些事件图的风格太写实了。注意生成时契合游戏风格，你可以参考占卜那种风格」。
+
+**定性**：R519d 不是模型跑偏，是**提示词写的就是写实厚涂** —— 六张 raw 的文件名
+`semi_realistic_painted_fantasy` 就是当初下的单。而 `art_src/2026-11-02_占卜室事件图/`
+里本来就躺着 `废弃_v1_写实厚涂.png`，同一课两个月前判过死刑，只是结论没进速查表，于是又犯一次。
+
+**参照锁定 `bg_divination.png`**：粗黑描边包住每个形体、平涂色块 + 2 级明暗（色区内无渐变）、
+石块概括成方块 + 一道亮边、烟雾是一条硬边曲线、低饱和冷灰蓝 + 单一暖点。
+R519d 那批反过来：无描边、厚涂渐变、照片级石木纹理、体积雾、暗黄泥浆，缩到 1280 糊成暗块。
+
+**做法**：`image1 = bg_divination.png` + `input_fidelity: low` + 「只借画风」声明，
+后面接新写的风格底（已作为 `art_src/_style_prompts.md` **§一·C「场景整屏背景」**固化）。
+构图契约、水印裁切口径、`EventBG` 顶部对齐实现全部沿用 —— 那些没问题，别一起动。
+
+**返工两张（明度没锁住）**：
+- `snow_leopard` 原写「雪坡 + 淡紫黄昏」→ 发白粉彩，混在四张暗调里像贴错图。
+  改 `NIGHT scene`，明写 `snow is NOT white, muted blue-grey in shadow`、
+  `must NOT read as bright / pastel / washed out`，加一轮月亮当唯一亮点。
+- `struggle` 原天空成了粉紫粉彩。改 `dark storm-grey, NOT pastel / pink / lavender / magenta`，
+  龙改成「画面里最亮的东西」。
+判据：**六张拼一张，一眼跳出来的那张就是明度没锁住**。光写 `dark` 不够，明度得单独一条显式约束。
+
+**⚠️ 流程坑（差点误判）**：改完 `assets/ui/*.png` 直接 `godot --path . res://scenes/event.tscn`
+截图，屏幕上是 `.godot/imported/` 里的旧 `.ctex` —— 第一次六张截图全是 R519d 的旧图。
+换贴图后截图前必须 `godot --headless --path . --import`。
+判据：`.ctex` 的 mtime 晚于 `assets/ui/` 里那张。
+
+验证：`_verify.py` 全通过（mana PASS / engine 5236 / reward 26 / bgm 39 / smoke 64）。
+验收图：`art_src/2026-11-07_事件背景R519e/_review/{r519e_sheet,ingame_sheet}.png`；
+脚本 `tools/{process_r519e,shoot_r519e}.py`；提示词存档同目录 `prompts.md`。
+
+**遗留（下一批，等确认）**：第二层还缺 `pear` / `hero` / `bluefish` / `apple_doctor` 四张，
+按新的 §一·C 风格底出，别再走写实。
