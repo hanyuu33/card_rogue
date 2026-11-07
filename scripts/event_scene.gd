@@ -1346,10 +1346,8 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "rest"}
 			RunState.pending_event = ""
-		if args[i] == "--lake_lady":  # 演示：左右布局版式对照（R519h）
-			RunState.run_active = true
-			RunState.pending_node = {"type": "event"}
-			RunState.pending_event = "lake_lady"
+		# ⚠️ 湖中仙女用已有的 `--lakelady`（无下划线，见下）：它还带 deck_ids 与
+		# `lake_victim = 4`，悬浮提示才有牌可锁。R519h 曾误加一个 `--lake_lady`，已撤。
 		if args[i] == "--cave":  # 演示：伪装 run 洞穴事件（R467 截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}

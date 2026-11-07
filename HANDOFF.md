@@ -628,3 +628,29 @@ R519d 那批反过来：无描边、厚涂渐变、照片级石木纹理、体�
 验证：`_verify.py` 全通过（mana PASS / engine 5236 / reward 26 / bgm 39 / smoke 64）。
 截图 `_review/martial_side.png`（1280 重截）、`rest_after.png`（1280）、`rest_1920.png`（1920×720）。
 规范新增 §4.56。
+
+## 2026-11-07 R519i 金属龙卡图重出（不是缺图，是画风统一）
+
+用户口径：「既然挣扎已经有图了，那么可以给金属龙也加上卡图了」。
+
+**先澄清**：`assets/pics/9018.png` 本来就有（2026-11-01 批、manifest approved），
+游戏里正常显示。它是**写实厚涂**，与 R519e 的卡通赛璐璐不符 → 本轮是**重出**。
+旧图归档 `assets/pics/_legacy3d/9018__old_realistic.png`。
+
+**两个参照各管一件事**（这个拆法以后照用）：
+- 画风 → `assets/pics/9207.png`（已验收的赛璐璐卡图），作 `image1` + `input_fidelity: low`。
+- 形象 → `bg_struggle.png` 里那只金属板龙，但**不把背景图当 image 喂进去**，
+  改用文字写死「大块板甲 + 铆钉 / 钢银躯干 + 黄铜胸腹 / 平涂黄铜箔翼 / 三分之四展翅」。
+  背景图里龙只是远景剪影，喂进去只会带偏构图。
+一次过，无返工。
+
+裁切 1024×1024 → (0,20,1024,941) → 448×403，水印随裁切出界，不用修补。
+脚本 `art_src/2026-11-07_金属龙卡图R519i/tools/process_9018.py`（自动归档旧图）。
+manifest 的 9018 条目已更新 ref / prompt / note。
+
+**演示参数重名坑**：湖中仙女是 `--lakelady`（**无下划线**），且带 `deck_ids` +
+`lake_victim = 4` —— 悬浮提示要有牌可锁才出得来。R519h 误加的 `--lake_lady` 是空参数，
+截不出悬浮卡，已撤。截卡面用：
+`--lakelady --tip 金属龙 --screenshot`。
+
+验证：`_verify.py` 全通过；`_review/card_tip.png` 显示新图、4 费附魔、6 力 21 血、无未确认角标。
