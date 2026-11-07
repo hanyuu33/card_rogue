@@ -9,13 +9,16 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
-const AV := 96.0                       # 头像边长（小，别占太多面积）
-const AV_GAP := 30.0
+const AV := 88.0                       # 头像边长（小，别占太多面积）
+const AV_GAP := 16.0
 # R519b（用户口径「选人物界面新增一个随机」）：头像行右端一枚「随机」，点一下换一个职业。
 # ⚠️ 只**选中**不直接开局 —— 玩家还得看一眼 CG 和难度档位；连点会一直换人，不会卡住不动。
-const RAND_W := 84.0
-const RAND_H := 38.0
-const RAND_GAP := 22.0
+# R519c（用户口径「随机不能只做按钮，再生成一个黑底的"？"图标」）：从横条改成
+# **与头像同构的方块**（边长 = AV + 黑底问号图标 + 同名牌），一眼就知道是「换人」而不是某项设置。
+const RAND_W := 88.0
+const RAND_H := 88.0
+const RAND_GAP := 10.0
+const ROW_PAD := 20.0          # 头像行与左右两栏之间的最小间隙
 const PANEL_W := 416.0
 # R223：难度档位从「三个固定按钮」改成「左箭头 / 档位盒 / 右箭头」一行（0~10 共 11 档，
 # 钳制不循环）。下面那条 debuff 文本随之变宽变高。
@@ -100,15 +103,30 @@ func _av_row_w() -> float:
 	return n * AV + maxi(0, n - 1) * AV_GAP + RAND_GAP + RAND_W
 
 
+func _av_row_x0() -> float:
+	## R519c：头像行**不能按窗口居中**。
+	## 加「随机」之后整组变宽、居中点左移 53px，第一枚头像连同名牌就压进了左侧详情面板
+	## （实测重叠 43×66，用户报的「人物图标重叠在左侧详情上」就是这个）。
+	## 改成在「详情面板右缘 → 右列（禁卡表 / 随机种子）左缘」这段**空档**里居中 ——
+	## 空档是按面板矩形算出来的，将来面板变宽变窄也不会再撞。
+	var l := _panel_rect().end.x + ROW_PAD
+	var r := _seed_panel_rect().position.x - ROW_PAD
+	var w := _av_row_w()
+	if r - l <= w:
+		# 空档塞不下（更窄的屏 / 将来加职业）→ 贴左界，宁可右侧紧一点也不压面板
+		return l
+	return l + (r - l - w) * 0.5
+
+
 func _av_rect(i: int) -> Rect2:
-	var x0 := (size.x - _av_row_w()) / 2.0
+	var x0 := _av_row_x0()
 	return Rect2(x0 + i * (AV + AV_GAP), size.y - AV - 64.0, AV, AV)
 
 
 func _rand_rect() -> Rect2:
-	## R519b：紧跟在最后一个头像右边、与头像行**垂直居中**。
+	## R519c：紧跟在最后一个头像右边，**与头像同一水平线**（等高，做成同构方块）。
 	var last := _av_rect(PlayerClass.ids().size() - 1)
-	return Rect2(last.end.x + RAND_GAP, last.get_center().y - RAND_H * 0.5, RAND_W, RAND_H)
+	return Rect2(last.end.x + RAND_GAP, last.position.y, RAND_W, RAND_H)
 
 
 func _panel_rect() -> Rect2:
@@ -302,15 +320,36 @@ func _draw_rand_button() -> void:
 	## R519b（用户口径：「选人物界面新增一个随机」）。
 	## 只把 `_selected` 换成别人，**不**直接开局 —— 随机到谁还得让人看一眼 CG 和难度；
 	## 想开局仍然是「确认进入」那一下，行为上没有第二条路径。
+	## R519c（用户口径：「随机不能只做按钮，再生成一个黑底的"？"图标」）：
+	## 外观做成**与头像同构** —— 同样大小的方块（黑底问号图标）+ 同样式的下方名牌。
+	## 这样「随机」不再是一枚光秃秃的按钮，而是头像行里的第四个「选项」。
 	var r := _rand_rect()
-	# ⚠️ 用**实底**（`draw_info_card` 的纸面）而不是 `draw_action` 的半透明 chip：
-	#    这一枚压在职业 CG 上，角色衣服是白是黑全看选了谁 —— 半透明底会时深时浅，
-	#    深色那段连字都读不出来。实底与头像下面那排名牌同一套，永远读得清。
+	var hov := _rand_hover
 	UiTheme.draw_info_card(self, r)
-	draw_rect(r, UiTheme.ADVENTURE_BRASS_LIT if _rand_hover else Color(1, 1, 1, 0.25),
-			false, 2.0 if _rand_hover else 1.0)
-	draw_string(_font_bold, Vector2(r.position.x, r.position.y + 26.0), "随 机",
-			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
+	var tex := UiAssets.get_tex("icon_random")
+	if tex != null:
+		# 图标自带黑底 + 金边，内缩 4px 让纸面卡框露出来一圈
+		draw_texture_rect(tex, r.grow(-4.0), false)
+	else:
+		# 缺图回退：代码画同款黑底方块 + 居中问号（不空白、不报错）
+		var body := r.grow(-4.0)
+		draw_rect(body, Color("0d0d10"), true)
+		draw_rect(body, UiTheme.ADVENTURE_BRASS, false, 1.5)
+		draw_string(_font_bold, Vector2(body.position.x, body.position.y + body.size.y * 0.5 + 26.0),
+				"?", HORIZONTAL_ALIGNMENT_CENTER, body.size.x, UiTheme.FS_TITLE,
+				UiTheme.ADVENTURE_LIGHT)
+	# ⚠️ 外框用黄铜色而不是「当前职业色」：_selected 可能还是 -1（未选），
+	#    取 class_color(ids()[-1]) 会越界。这枚本来也不属于任何职业。
+	draw_rect(r, UiTheme.ADVENTURE_BRASS_LIT if hov else Color(1, 1, 1, 0.25), false, 2.0)
+	if hov:
+		draw_rect(r.grow(3.0), Color(1, 1, 1, 0.55), false, 2.0)
+	# 名牌：与头像下方那套同一尺寸 / 同一字体，读起来是一行东西
+	var np := Rect2(r.position.x - 4.0, r.end.y + 4.0, r.size.x + 8.0, 48.0)
+	UiTheme.draw_info_card(self, np)
+	draw_string(_font_bold, Vector2(np.position.x, np.position.y + 22.0), "随机",
+			HORIZONTAL_ALIGNMENT_CENTER, np.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
+	draw_string(_font, Vector2(np.position.x, np.position.y + 41.0), "换一个",
+			HORIZONTAL_ALIGNMENT_CENTER, np.size.x, UiTheme.FS_CAPTION, Color("9a968c"))
 
 
 func _roll_random() -> void:
