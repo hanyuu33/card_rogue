@@ -25,7 +25,9 @@ JOBS = [
     ("bg_arcane", "JAPANESE_ANIME_trading_card_ga_2026-11-06T23-51-08.png", (1280, 720), "16:9"),
     ("event_lake_lady", "JAPANESE_ANIME_trading_card_il_2026-11-06T23-51-39.png", (640, 480), "4:3"),
     # R516：左右布局的左栏竖图。1:1 出图，缩到 742×742 由 KEEP_ASPECT_COVERED 铺满左侧全高。
-    ("side_lake_lady", "JAPANESE_ANIME_trading_card_il_2026-11-07T00-36-04.png", (742, 742), "none"),
+    # R517 换稿：00-36-04 那版卡牌背后有一大圈向外扩散的白柔光，右侧一路亮到边界，
+    # 任何渐变都只能把它压成一条灰雾带 → 重出「无光晕、右三分之一留暗水面」的版本。
+    ("side_lake_lady", "JAPANESE_ANIME_trading_card_il_2026-11-07T00-53-42.png", (742, 742), "none"),
 ]
 
 RATIOS = {"16:9": (16, 9), "4:3": (4, 3)}

@@ -633,10 +633,15 @@ static func _fit_action_button(btn: Button, primary: bool, night := false) -> vo
 	if btn.size.y <= 0:
 		return
 	var compact := btn.size.y <= 44 or btn.size.x < 200
+	if night:
+		# R517：事件页的按钮**不分档**。原先按 size 判 compact，而场景里四个按钮的
+		# custom_minimum_size 是 46 / 42 / 38 / 38 —— 46 走大档、其余走小档，
+		# 于是「第二行更矮、字更小」。同一页里的同类按钮必须同高一档。
+		compact = false
 	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
 		if night:
 			# R516：暗紫肤 —— 这里原本会把 stylebox 整个换成浅色贴图，
-			# 把 apply_night_button 设好的深色胶囊冲掉（按钮变回奶油色）。
+			# 把 apply_night_button 设好的深色缎带冲掉（按钮变回奶油色）。
 			btn.add_theme_stylebox_override(state, night_button_style(state))
 			continue
 		var bg := ADVENTURE_FOREST if primary else ADVENTURE_INPUT
@@ -764,18 +769,47 @@ const NIGHT_LINE := Color("6c5a86")        ## 分隔线（暗紫）
 
 
 static func night_button_style(state := "normal") -> StyleBox:
-	## R516：事件页的深色按钮。**形状完全沿用 adventure_button_style 的胶囊**，
-	## 只把底换成暗紫、描边仍用黄铜（悬浮时提亮一档）。
-	var bg := NIGHT_BTN
-	var border := ADVENTURE_BRASS
+	## R517：事件页的深色按钮 —— **形状与质感全部沿用 adventure_shared 的缎带素材**
+	## （两端尖角 + 黄铜金线 + 纸面纹理 + 两侧四角星），只把它们换成暗紫肤。
+	##
+	## R516 的教训：这里本来用 `_btn_box` 画了个纯色小圆角矩形，底色对了，
+	## 但尖角、金线、纹理全丢 → 用户一眼看出「风格没保留」。
+	## 素材不是运行时调色做出来的，而是 `art_src/2026-11-07_暗紫按钮` 里
+	## 按「暖度」把纸面与金线分开重映射、离线生成的四张 PNG（见该目录 README）。
+	## 所以别在这里加 modulate_color：乘色会把本来就比纸暗的金线压成暗红、直接消失。
+	var key := "button_night"
 	if state == "hover" or state == "hover_pressed":
-		bg = NIGHT_BTN_HOVER
-		border = ADVENTURE_BRASS_LIT
+		key = "button_night_hover"
 	elif state == "pressed":
-		bg = NIGHT_BTN_PRESSED
+		key = "button_night_pressed"
 	elif state == "disabled":
-		bg = NIGHT_BTN_DISABLED
-	return _btn_box(bg, border, 1, RADIUS_SM, BTN_PAD_X, BTN_PAD_Y)
+		key = "button_night_disabled"
+	var tex: Texture2D = UiAssets.get_tex("adventure_shared/" + key)
+	if tex == null:
+		# 素材缺失时的纯色兜底：形状仍跟着 adventure 按钮走（小圆角 + 黄铜细边）
+		var bg := NIGHT_BTN
+		var border := ADVENTURE_BRASS
+		if state == "hover" or state == "hover_pressed":
+			bg = NIGHT_BTN_HOVER
+			border = ADVENTURE_BRASS_LIT
+		elif state == "pressed":
+			bg = NIGHT_BTN_PRESSED
+		elif state == "disabled":
+			bg = NIGHT_BTN_DISABLED
+		return _btn_box(bg, border, 1, RADIUS_SM, BTN_PAD_X, BTN_PAD_Y)
+	var sb := StyleBoxTexture.new()
+	sb.texture = tex
+	# 两端 46px 保形（尖角 + 四角星），中段自由拉伸；素材 400×92 → 按钮 46 高时
+	# 纵向中段被压扁，金线相应变细，与浅色按钮在同一页上时厚度一致。
+	sb.texture_margin_left = 46
+	sb.texture_margin_right = 46
+	sb.texture_margin_top = 16
+	sb.texture_margin_bottom = 16
+	sb.set_content_margin(SIDE_LEFT, maxi(BTN_PAD_X, 34))
+	sb.set_content_margin(SIDE_RIGHT, maxi(BTN_PAD_X, 34))
+	sb.set_content_margin(SIDE_TOP, BTN_PAD_Y)
+	sb.set_content_margin(SIDE_BOTTOM, BTN_PAD_Y)
+	return sb
 
 
 static func apply_night_button(btn: Button, primary := false) -> void:

@@ -604,11 +604,12 @@ func _kind() -> String:
 
 ## ---- R516：左右布局 ----------------------------------------------------------
 ## 图片占满整个左侧（全高），文字与按钮落在右侧、**不套信息卡框**。
-## 图片右缘不做硬切：用内联 shader 按 UV.x 把 alpha 渐隐到背景，
+## 图片右缘不做硬切：用内联 shader 按 UV.x 把颜色推向页面底色、再收 alpha，
 ## 所以**渐变不依赖图片本身** —— 换一张同尺寸的图不用重做边、也不用把渐变烘进 PNG。
 const SIDE_LAYOUT_KINDS := ["lake_lady"]
 const SIDE_SPLIT := 0.58        ## 左侧图片占屏宽的比例（1280 → 742）
-const SIDE_FADE_FROM := 0.66    ## 图片层内从这一列开始渐隐（相对图片层宽，不是屏宽）
+const SIDE_FADE_RGB := 0.62     ## 从这一列开始把**颜色**推向背景色（压掉亮块）
+const SIDE_FADE_ALPHA := 0.74   ## 从这一列开始收 alpha（颜色已一致，只求边界绝对无缝）
 
 var _side_layout := false
 
@@ -618,19 +619,33 @@ func _side_fade_material() -> ShaderMaterial:
 	sh.code = """
 shader_type canvas_item;
 
-// 右缘渐隐：UV.x 越过 fade_from 之后 alpha 线性落到 0。
-// 只动 alpha、不动 RGB —— 图片本身的明暗与饱和度原样保留。
-uniform float fade_from : hint_range(0.0, 1.0) = 0.66;
+// R517：右缘过渡 = **颜色**先向背景色收敛，最后才收 alpha。
+//
+// R516 只淡 alpha、不动 RGB，结果图里那块亮色（AI 出图时顺手加的白柔光）
+// 一路亮到边界才突然消失 —— 看上去就是「强行糊了一层白」。
+// 先把 RGB 拉向页面底色（上冷下暖的那两道暗紫），亮块在中途就被吃掉；
+// alpha 只在最后四分之一收尾，保证接缝绝对无缝。
+// 底气色按 UV.y 与页面纵向渐变对齐 —— 所以渐变依旧不依赖图片本身，
+// 换一张同尺寸的图进来，边会重新按这条曲线羽化。
+uniform float fade_rgb_from : hint_range(0.0, 1.0) = 0.62;
+uniform float fade_alpha_from : hint_range(0.0, 1.0) = 0.74;
+uniform vec4 bg_top : source_color = vec4(0.078, 0.063, 0.125, 1.0);
+uniform vec4 bg_bot : source_color = vec4(0.114, 0.086, 0.157, 1.0);
 
 void fragment() {
 	vec4 c = texture(TEXTURE, UV);
-	float cut = smoothstep(fade_from, 1.0, UV.x);
-	COLOR = vec4(c.rgb, c.a * (1.0 - cut));
+	float tr = smoothstep(fade_rgb_from, 1.0, UV.x);
+	float ta = smoothstep(fade_alpha_from, 1.0, UV.x);
+	vec3 bg = mix(bg_top.rgb, bg_bot.rgb, UV.y);
+	COLOR = vec4(mix(c.rgb, bg, tr), c.a * (1.0 - ta));
 }
 """
 	var mat := ShaderMaterial.new()
 	mat.shader = sh
-	mat.set_shader_parameter("fade_from", SIDE_FADE_FROM)
+	mat.set_shader_parameter("fade_rgb_from", SIDE_FADE_RGB)
+	mat.set_shader_parameter("fade_alpha_from", SIDE_FADE_ALPHA)
+	mat.set_shader_parameter("bg_top", UiTheme.NIGHT_BG_TOP)
+	mat.set_shader_parameter("bg_bot", UiTheme.NIGHT_BG_BOT)
 	return mat
 
 

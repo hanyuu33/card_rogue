@@ -417,3 +417,9 @@ map_icons/{start,battle,elite,rest,event,shop,chest,bigchest,unknown}.png：简�
 2026-11-05：adventure_shared/battle_mana_meter.png 战斗费用/蓄力/闪躲仪表；close_forest.png 故事与记录详情关闭素材。
 2026-11-05：adventure_shared/panel_journal_light_hd.png 高清浅纸面板（九宫格拉伸，角部34px）；service_vitality.png 商店最大生命服务与对应附魔图标。
 2026-11-05（R508）：shelf.png 整张三层货架图**已停用**，源图归档到 art_src/2026-11-05_商店货架/source_shelf.png（游戏不再引用，避免整张图进发布包）；商店货架改由 shelf_back.png + shelf_board.png 两个槽位拼出，可用 tools/gen_shelf_textures.py 复现。
+
+2026-11-07（R517）：adventure_shared/button_night{,_hover,_pressed,_disabled}.png —— 事件页的**暗紫肤缎带按钮**，400×92，与 button_paper.png 同一套形状（两端尖角 + 黄铜金线 + 纸纹 + 两侧四角星），只把配色换成暗紫。
+                          · 由 art_src/2026-11-07_暗紫按钮/tools/make_night_buttons.py 离线生成，可随时按新目标色重跑。
+                          · ⚠️ 不要用 modulate_color 调色：乘色会把本就比纸暗的金线压成暗红、直接消失。
+                          · 九宫格边距 左右 46 / 上下 16（46 用来保住尖角与四角星，别改小）。
+2026-11-07（R517）：side_lake_lady.png 换成**无光晕版**（1024² → 742²）。旧版卡牌背后有一大圈向外扩散的白柔光，右侧一路亮到边界，任何渐变都只能压成灰雾带。
