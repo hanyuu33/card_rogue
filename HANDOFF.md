@@ -1,4 +1,34 @@
-## 2026-11-07 R515b 事件素材修正：delivery / arcane 改整屏 CG + 湖中仙女改稿（当前最新）
+## 2026-11-07 R516 事件页统一暗紫肤 + 新增左右布局（当前最新）
+
+- 用户口径（逐条）：事件页里「文字部分大块白色底 + 接近白的背景」观感不好 →
+  **全部换成深色底（暗紫）+ 米色字 + 深色按键（风格不变）**，`gaze` 也一样；
+  **新增左右布局**：`lake_lady` 用它并重新出图，图片占满整个左边、文字与按键在右边
+  （**不再需要专门的框**），图片加**渐变边**，且渐变**不依赖图片本身**（换图不用重做）。
+- 配色（`ui_theme.gd` 新增 `NIGHT_*` 常量，只作用于事件页）：
+  底 `#141020→#1d1628`、信息卡 `#241a2e`（悬浮 `#2e2239`）、
+  按钮 `#2b2135`（悬浮 `#3a2c48` / 按下 `#221a2b`）、正文米色 `#e8dfc8`、次要 `#a99c86`。
+  标题仍用 `ACCENT_LIT` 金；按钮**造型不变**（同胶囊圆角 + 1px 黄铜边 + 原内距）。
+- `event_scene._is_dark_page()` 改为**恒 true**（`DARK_PAGE_KINDS` 留作历史记录）；
+  `_apply_page_ink()` 正文改用 `NIGHT_INK`；`_on_fallback_draw()` 的暗分支底色由近黑抬成暗紫。
+- 左右布局（`SIDE_LAYOUT_KINDS = ["lake_lady"]`，左栏 58%）：
+  - 左图 `assets/ui/side_lake_lady.png`（742×742，重新出图：**银卡 + 金卡悬浮于湖面**）；
+  - 右缘渐隐用**内联 shader** 按 `UV.x` 淡出（`SIDE_FADE_FROM = 0.66`），**不烘进图**；
+  - 右侧**不画信息卡框**，标题与正文左对齐。
+- 三个踩过的坑（都已写进 `UI设计规范.md`）：
+  1. Control 绘制顺序＝子节点顺序，**后者在上** → 左栏图必须 `move_child` 到兜底渐变层 index+1，
+     否则图加载成功却一点看不见（被渐变整块盖住）；
+  2. `anchor_bottom` 必须留 0，否则算出的绝对 y 会被再加一个屏高（容器被撑到 1038 高）；
+  3. `get_combined_minimum_size()` 在 VBox 里偏大（664 vs 实际 ~250），
+     居中要按**子节点实际 rect 范围**算。
+- 顺手修：`UiTheme._fit_action_button` 在 resize 时会重设 stylebox，把深色胶囊换回浅色贴图
+  → 加 `night` 参数（`apply_night_button` 传 true）。
+- 文案（图改了要跟上）：`LAKE_DESC` 由「一只戴着水草冠的手从雾里伸出来」改为
+  「两张卡牌悬在雾的上方——一张泛着银光，一张泛着金光」；`LAKE_DONE_DESC` 的
+  「手心里那点温度」改「牌角上」。另修 `DELIVERY_DESC` 里裸露的 `**` 星号（Label 没有 bbcode）。
+- 截图验收：`art_src/2026-11-07_事件插图R515/_review/r516_{arcane,lake_lady,gaze,delivery}.png`。
+- 回归：`_verify.py` 全通过 —— mana PASS / engine **5236** / reward 26 / bgm 39 / smoke 64。
+
+## 2026-11-07 R515b 事件素材修正：delivery / arcane 改整屏 CG + 湖中仙女改稿
 
 - 用户口径（逐条）：`delivery` / `arcane` **还是采用大图整张 CG**；`arcane` 的**泉不是井**；
   `lake_lady` 改成**湖面上方悬浮一银一金两张卡牌**。

@@ -108,6 +108,13 @@ static func event_pic(kind: String) -> Texture2D:
 	return get_tex("event_" + kind)
 
 
+static func event_side_pic(kind: String) -> Texture2D:
+	## R516：左右布局专用的**竖版**图 —— 占满事件页左侧全高（1280×720 下约 742×720）。
+	## 与 `event_pic`（320×240 居中插图）分开命名：尺寸与用途都不同，
+	## 混用会让「插图标准尺寸 320×240」的规范失效。
+	return get_tex("side_" + kind)
+
+
 static func event_bg(kind: String) -> Texture2D:
 	if kind == "rest":
 		var clearing := get_tex("adventure_shared/rest_clearing")

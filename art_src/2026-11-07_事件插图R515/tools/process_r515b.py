@@ -20,11 +20,15 @@ PROC = os.path.join(ROOT, "art_src", "2026-11-07_事件插图R515", "processed")
 UI = os.path.join(ROOT, "assets", "ui")
 
 JOBS = [
-    # (输出名, raw 文件, 目标尺寸, 是否裁 16:9)
-    ("bg_delivery", "JAPANESE_ANIME_trading_card_ga_2026-11-06T23-50-48.png", (1280, 720), True),
-    ("bg_arcane", "JAPANESE_ANIME_trading_card_ga_2026-11-06T23-51-08.png", (1280, 720), True),
-    ("event_lake_lady", "JAPANESE_ANIME_trading_card_il_2026-11-06T23-51-39.png", (640, 480), False),
+    # (输出名, raw 文件, 目标尺寸, 裁切比例 "16:9" / "4:3" / "none")
+    ("bg_delivery", "JAPANESE_ANIME_trading_card_ga_2026-11-06T23-50-48.png", (1280, 720), "16:9"),
+    ("bg_arcane", "JAPANESE_ANIME_trading_card_ga_2026-11-06T23-51-08.png", (1280, 720), "16:9"),
+    ("event_lake_lady", "JAPANESE_ANIME_trading_card_il_2026-11-06T23-51-39.png", (640, 480), "4:3"),
+    # R516：左右布局的左栏竖图。1:1 出图，缩到 742×742 由 KEEP_ASPECT_COVERED 铺满左侧全高。
+    ("side_lake_lady", "JAPANESE_ANIME_trading_card_il_2026-11-07T00-36-04.png", (742, 742), "none"),
 ]
+
+RATIOS = {"16:9": (16, 9), "4:3": (4, 3)}
 
 
 def find_wm(im):
@@ -76,18 +80,19 @@ def main():
     write = "--write" in sys.argv
     if write:
         os.makedirs(PROC, exist_ok=True)
-    for name, fname, target, wide in JOBS:
+    for name, fname, target, mode in JOBS:
         src = os.path.join(RAW, fname)
         im = Image.open(src).convert("RGB")
         bx, n = find_wm(im)
-        print("[%s] %s  水印候选 %s（命中 %d 像素）" % (name, im.size, bx, n))
+        print("[%s] %s  水印框 %s" % (name, im.size, bx))
         if not write:
             continue
         if bx is not None:
             patch_wm(im, bx)
-        im2 = to_ratio(im, (16, 9) if wide else (4, 3))
-        out = im2.resize(target, Image.LANCZOS)
-        if not wide:
+        if mode in RATIOS:
+            im = to_ratio(im, RATIOS[mode])
+        out = im.resize(target, Image.LANCZOS)
+        if target[0] <= 800:
             out = out.filter(ImageFilter.UnsharpMask(radius=1.2, percent=55, threshold=2))
         out.save(os.path.join(PROC, name + ".png"), "PNG", optimize=True)
         out.save(os.path.join(UI, name + ".png"), "PNG", optimize=True)

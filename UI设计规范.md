@@ -177,7 +177,23 @@ UiTheme.<颜色|字号|间距令牌>            # 其余
 | 通路小桥 ×2 | `assets/ui/map_bridge_<h｜v>.png` | 384 × 96 / 167 × 384 | 4 / 0.43 | 程序画的一小段横条 |
 | 事件插图 ×25 | `assets/ui/event_<kind>.png` | **320 × 240**（4:3，素材可出 2×640×480） | 1.33 | 程序化渐变底 + 主题色纹章 |
 | 事件背景 ×25 | `assets/ui/bg_<kind>.png` | 1280 × 720 | 1.78 | 程序化渐变底 + 主题色纹章 |
+| 左右布局左栏图（R516） | `assets/ui/side_<kind>.png` | **742 × 742**（1:1，铺满左侧全高，KEEP_ASPECT_COVERED） | 1:1 | 左侧留空，只有右侧文字 |
 | 契约核心标志（R512） | `assets/ui/reward_icons/core.png`（与道具同一张） | 200 × 200 叠在石台凹槽 | 1:1 | 不叠，凹槽留空 |
+· R516 事件页配色（**当前唯一方案**）：全部事件统一**暗紫底 + 米色字 + 深色按钮**，不再有浅纸页。
+  - 底 `#141020 → #1d1628`（纵向渐变）、信息卡 `#241a2e`（悬浮 `#2e2239`）、
+    按钮 `#2b2135`（悬浮 `#3a2c48` / 按下 `#221a2b`）、正文米色 `#e8dfc8`、次要 `#a99c86`。
+  - 按钮**造型不变**：仍是 `RADIUS_SM` 胶囊 + 1px 黄铜细边 + 原内距，只换底色与字色
+    （`UiTheme.apply_night_button`）。悬浮只提亮底色与描边，不加新形状。
+  - ⚠️ `UiTheme._fit_action_button` 会在按钮 resize 时**重设 stylebox**，
+    所以它必须带 `night` 参数，否则深色胶囊会被浅色贴图冲掉（R516 踩过）。
+· R516 左右布局（`side_lake_lady` 首个用例）：图片占满左侧 58% 全高，文字与按钮在右侧，
+  **不套信息卡框**，标题与正文左对齐。
+  - 图片右缘的渐隐由**内联 shader** 按 `UV.x` 做（`SIDE_FADE_FROM = 0.66`），
+    **不依赖图片本身** —— 换图不用重做渐变边，也不必把过渡烘进 PNG。
+  - 三个必须记住的坑：① Control 的绘制顺序＝子节点顺序，**后者在上**，左栏图必须紧贴
+    兜底渐变层之上（`move_child` 到渐变层 index+1），否则会被整块盖住；
+    ② `anchor_bottom` 必须留 0，否则算出来的绝对 y 会被再加一个屏高；
+    ③ `get_combined_minimum_size()` 在 VBox 里偏大，居中要按**子节点实际 rect 范围**算。
 · 已提供的事件背景：`bg_divination`（R511）/ `bg_moon` / `bg_furnace` / `bg_cave` / `bg_card_merchant` / `bg_core_contract`（R512）/ `bg_delivery` / `bg_arcane`（R515b）；`rest` 走 `adventure_shared/rest_clearing.png`。
 · 已提供的事件插图（2 张）：`event_gaze`（R512）/ `event_lake_lady`（R515）。其余 kind 仍走程序化兜底。
 · 插图 / 整屏背景二选一的判据（R515b 口径）：**场景要占满屏、想让人"站进去"的走 bg_**（delivery / arcane 已从插图改成整屏 CG）；**只需要一个符号性画面、不想压掉纸底质感的走 event_**（lake_lady）。两者同时存在时，插图会叠在 CG 上重复表达，**不要都给**。

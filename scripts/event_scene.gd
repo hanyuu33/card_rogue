@@ -212,7 +212,7 @@ const STRUGGLE_TAKEN_DESC := """「这就是为了胜利我的挣扎。」
 
 const DELIVERY_DESC := """驿站门口堆着一批贴了封条的货箱，脚夫收了钱就不见了人影。
 选择承运：平铺挑 1~6 张「货物」加入卡组（3 费工事，0 攻 / 6 血，替你承受伤害）；
-货物**被破坏时会从卡组中删除**——毁了就真的毁了。
+货物被破坏时会从卡组中删除——毁了就真的毁了。
 带着货物走进第二层，第一个事件房的货主会按张兑付报酬，接得越多兑得越多；
 兑付完成后这些货物会被货主收走（同样从卡组里删掉）。
 也可以不接，转身离开。"""
@@ -265,12 +265,13 @@ const DIV_FEAST_DESC := """球里摆开一桌佳肴，热气还在往上飘，�
 
 const DIVINATION_KINDS := 4
 
-const LAKE_DESC := """雾从水面浮起来，一只戴着水草冠的手从雾里伸出来，掌心朝上。
+const LAKE_DESC := """雾从水面浮起来，两张卡牌悬在雾的上方——
+一张泛着银光，一张泛着金光，慢慢转过来，像在等你挑。
 
 「说个谎吧，我替你扔掉一件旧东西。
 或者说句实话，我送你一件礼物。」"""
 
-const LAKE_DONE_DESC := """水面合拢，雾气散得干干净净。手心里那点温度还留着。"""
+const LAKE_DONE_DESC := """水面合拢，雾气散得干干净净。牌角上那点温度还留着。"""
 
 ## R454：熔炉的描述必须**压到 2 行**——它最多铺 3 个选项 + 1 个「离开」，
 ## 比别的事件多一个按钮；描述一长，`_fit_center()` 收紧间距也救不回来，
@@ -601,6 +602,121 @@ func _kind() -> String:
 	return "rest"
 
 
+## ---- R516：左右布局 ----------------------------------------------------------
+## 图片占满整个左侧（全高），文字与按钮落在右侧、**不套信息卡框**。
+## 图片右缘不做硬切：用内联 shader 按 UV.x 把 alpha 渐隐到背景，
+## 所以**渐变不依赖图片本身** —— 换一张同尺寸的图不用重做边、也不用把渐变烘进 PNG。
+const SIDE_LAYOUT_KINDS := ["lake_lady"]
+const SIDE_SPLIT := 0.58        ## 左侧图片占屏宽的比例（1280 → 742）
+const SIDE_FADE_FROM := 0.66    ## 图片层内从这一列开始渐隐（相对图片层宽，不是屏宽）
+
+var _side_layout := false
+
+
+func _side_fade_material() -> ShaderMaterial:
+	var sh := Shader.new()
+	sh.code = """
+shader_type canvas_item;
+
+// 右缘渐隐：UV.x 越过 fade_from 之后 alpha 线性落到 0。
+// 只动 alpha、不动 RGB —— 图片本身的明暗与饱和度原样保留。
+uniform float fade_from : hint_range(0.0, 1.0) = 0.66;
+
+void fragment() {
+	vec4 c = texture(TEXTURE, UV);
+	float cut = smoothstep(fade_from, 1.0, UV.x);
+	COLOR = vec4(c.rgb, c.a * (1.0 - cut));
+}
+"""
+	var mat := ShaderMaterial.new()
+	mat.shader = sh
+	mat.set_shader_parameter("fade_from", SIDE_FADE_FROM)
+	return mat
+
+
+func _apply_side_layout(kind: String) -> void:
+	## 左右布局：左图右文。背景走暗紫渐变（没有整屏 CG —— 左图本身就是"背景"）。
+	($Campfire as Control).visible = false
+	_add_fallback_bg(kind)
+	($BG as ColorRect).color = Color(0, 0, 0, 0)
+	var pic := UiAssets.event_side_pic(kind)
+	if pic != null:
+		var tr := TextureRect.new()
+		tr.name = "EventSidePic"
+		tr.texture = pic
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE   # R512 的坑：不改会把 320×240 顶回原生尺寸
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tr.anchor_left = 0.0
+		tr.anchor_top = 0.0
+		tr.anchor_right = SIDE_SPLIT
+		tr.anchor_bottom = 1.0
+		tr.offset_left = 0.0
+		tr.offset_top = 0.0
+		tr.offset_right = 0.0
+		tr.offset_bottom = 0.0
+		tr.material = _side_fade_material()
+		add_child(tr)
+		# ⚠️ Control 的绘制顺序＝子节点顺序，**后面的画在上面**。
+		# `_add_fallback_bg()` 把渐变层放在 index 1，所以图片必须紧贴它之上（index 2），
+		# 否则那张暗紫渐变会整块盖住图（R516 踩过一次：图加载成功却一点都看不见）。
+		var idx := 1
+		if _fb_layer != null:
+			idx = _fb_layer.get_index() + 1
+		move_child(tr, idx)
+	# 文字区搬到右侧：整块从 SIDE_SPLIT 到右边缘，垂直居中
+	var c := $Center as VBoxContainer
+	c.anchor_left = SIDE_SPLIT
+	c.anchor_top = 0.0
+	c.anchor_right = 1.0
+	# ⚠️ 垂直锚点必须留 0：anchor_bottom=1.0 时 offset_bottom 是「相对底边的偏移」，
+	# 下面按内容高度算出来的绝对 y 会被再加一个屏高（R516 踩过：容器被撑到 1038 高）。
+	c.anchor_bottom = 0.0
+	c.offset_left = 44.0
+	c.offset_top = 0.0
+	c.offset_right = -52.0
+	c.offset_bottom = 0.0
+	c.alignment = BoxContainer.ALIGNMENT_CENTER   # 内容在右侧块里垂直居中
+	# 不套框 → 标题与正文都左对齐，靠字号与颜色分层
+	(event_name as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	(desc as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	# ⚠️ VBoxContainer.alignment 在这里不稳（内容高度由文案行数决定，容器先被撑满），
+	# 改成布局结束后按**内容实际高度**把整块摆正中间。
+	call_deferred("_recenter_side_text")
+
+
+func _recenter_side_text() -> void:
+	## 把右侧文字块按**实际渲染出来的子节点范围**摆到垂直正中。
+	## 不能用 `get_combined_minimum_size()` —— 那个值在容器里偏大（R516 实测 664 vs 实际 ~250），
+	## 算出来的 top 会被 `maxf` 下限吃掉，整块贴到顶栏底下。
+	if not _side_layout:
+		return
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	var c := $Center as VBoxContainer
+	if c == null:
+		return
+	var lo := INF
+	var hi := -INF
+	for n in c.get_children():
+		var ctl := n as Control
+		if ctl == null or not ctl.visible:
+			continue
+		var r := ctl.get_rect()
+		if r.size.y <= 0.0:
+			continue
+		lo = minf(lo, r.position.y)
+		hi = maxf(hi, r.end.y)
+	if hi <= lo:
+		return
+	var block := hi - lo
+	var delta := (size.y - block) * 0.5 - (c.position.y + lo)
+	c.offset_top += delta
+	c.offset_bottom += delta
+
+
 func _apply_ui_assets() -> void:
 	## 插图 / 背景：assets/ui/event_<kind>.png 与 bg_<kind>.png，缺图则回退内置绘制。
 	##
@@ -611,6 +727,11 @@ func _apply_ui_assets() -> void:
 	var kind := _kind()
 	_dark_page = _is_dark_page(kind)
 	_apply_page_ink()
+	# R516：左右布局自己管图与排版，不再走「居中插图 / 整屏背景」这套。
+	_side_layout = SIDE_LAYOUT_KINDS.has(kind)
+	if _side_layout:
+		_apply_side_layout(kind)
+		return
 	var campfire: Control = $Campfire
 	campfire.visible = (kind == "rest")
 	var pic := UiAssets.event_pic(kind)
@@ -801,23 +922,26 @@ var _fb_layer: Control = null
 var _fb_tint := Color("c8951c")
 
 ## R513：暗页事件 —— 整页按「黑暗」呈现：背景近黑、信息卡深墨、文字浅色。
-## 判据只看 `_kind()`，与有没有素材无关：以后就算给这些事件配了整屏底图，
-## 字色 / 卡片仍走暗色方案，不会出现「黑字压黑底」。
-const DARK_PAGE_KINDS := ["gaze"]
+## R516（用户口径）：**全部事件统一暗紫肤** —— 浅纸底 + 白色信息卡观感不好。
+## 于是这个判据不再按 kind 分支：所有事件都走暗色方案（保留函数与常量是为了
+## 以后要恢复「个别事件亮底」时有落点，别把 `DARK_PAGE_KINDS` 当死代码删掉）。
+const DARK_PAGE_KINDS := ["gaze"]   # R513 的原始名单，仅作历史记录
 
 var _dark_page := false
 var _fb_dark := false
 
 
-func _is_dark_page(kind: String) -> bool:
-	return DARK_PAGE_KINDS.has(kind)
+func _is_dark_page(_kind: String) -> bool:
+	## R516：全事件暗紫肤。
+	return true
 
 
 func _apply_page_ink() -> void:
-	## 暗页：标题柠檬金（与眼睛的琥珀呼应）+ 正文米白；浅页仍是墨褐。
+	## R516：暗紫肤 —— 标题柠檬金，正文米色（`NIGHT_INK`），次要信息暗一档。
 	if _dark_page:
 		event_name.add_theme_color_override("font_color", UiTheme.ACCENT_LIT)
-		desc.add_theme_color_override("font_color", Color("c2bcae"))
+		desc.add_theme_color_override("font_color", UiTheme.NIGHT_INK)
+		result_label.add_theme_color_override("font_color", UiTheme.NIGHT_INK_DIM)
 	else:
 		event_name.add_theme_color_override("font_color", UiTheme.PAGE_INK)
 		desc.add_theme_color_override("font_color", UiTheme.PAGE_INK)
@@ -883,8 +1007,9 @@ func _on_fallback_draw() -> void:
 	if _fb_dark:
 		var bands_d := 56
 		var bh_d := sz.y / float(bands_d)
-		var dtop := Color("030406")
-		var dbot := Color("0b0909")
+		# R516：底色由「近黑」抬成**暗紫**（上冷下暖一点点），雾仍极淡。
+		var dtop := UiTheme.NIGHT_BG_TOP
+		var dbot := UiTheme.NIGHT_BG_BOT
 		for i in bands_d:
 			var cd := dtop.lerp(dbot, float(i) / float(bands_d - 1))
 			_fb_layer.draw_rect(Rect2(0.0, bh_d * float(i), sz.x, bh_d + 1.5), cd)
@@ -940,14 +1065,17 @@ func _on_fallback_draw() -> void:
 
 func _ready() -> void:
 	# R513：信息卡底色分「浅纸 / 深墨」两档；此回调在 _apply_ui_assets 之后才绘制，读 _dark_page 安全。
-	$Center.draw.connect(func(): UiTheme.draw_info_card($Center, Rect2(Vector2(-22, -16), $Center.size + Vector2(44, 32)), false, _dark_page))
+	# R516：左右布局（`lake_lady`）**不要框** —— 文字直接压在背景上，只靠排版与字色区分。
+	$Center.draw.connect(func():
+		if _side_layout:
+			return
+		UiTheme.draw_info_card($Center, Rect2(Vector2(-22, -16), $Center.size + Vector2(44, 32)), false, _dark_page))
 	# 字色不在这里定死 —— 见 `_apply_page_ink()`（暗页要浅字，且此刻 _kind() 可能还没就位）
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
-	# R113：事件底色 #252A34 = 暗底 → on_dark = true。
-	# 事件是**选择类界面**：三个选项等价，所以全部是次按钮（「一屏最多一个主按钮」的例外）。
+	# R516：全部事件改暗紫肤 —— 选项是**深色胶囊 + 米色字**（造型沿用原来的圆角与黄铜细边）。
 	for _b: Button in [rest_btn, bbq_btn, alt_btn, leave_btn]:
-		UiTheme.apply_button(_b, false, true)
+		UiTheme.apply_night_button(_b, false)
 	sfx = Sfx.new()
 	add_child(sfx)
 	# 牌库任何时候都可以查看（无论在哪个界面）

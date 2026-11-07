@@ -629,11 +629,16 @@ static func _chip_box(bg: Color, line: Color, width: int, px: int, py: int,
 const UiPressFx = preload("res://scripts/ui_press_fx.gd")
 
 
-static func _fit_action_button(btn: Button, primary: bool) -> void:
+static func _fit_action_button(btn: Button, primary: bool, night := false) -> void:
 	if btn.size.y <= 0:
 		return
 	var compact := btn.size.y <= 44 or btn.size.x < 200
 	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		if night:
+			# R516：暗紫肤 —— 这里原本会把 stylebox 整个换成浅色贴图，
+			# 把 apply_night_button 设好的深色胶囊冲掉（按钮变回奶油色）。
+			btn.add_theme_stylebox_override(state, night_button_style(state))
+			continue
 		var bg := ADVENTURE_FOREST if primary else ADVENTURE_INPUT
 		if state == "hover":
 			bg = bg.lightened(0.08)
@@ -741,6 +746,57 @@ const ADVENTURE_BRASS := Color("a58c58")
 const ADVENTURE_BRASS_LIT := Color("dbc58d")
 const ADVENTURE_INPUT := Color("eee5d2")
 
+## ---- R516：事件页统一暗紫肤 --------------------------------------------------
+## 用户口径：事件里「大块白底 + 接近白的背景」观感不好 → 全部换成暗紫底 + 米色字，
+## 按钮**造型不变**（同样的胶囊圆角、同样的黄铜细边、同样的内距），只把底色压深。
+## 只服务事件页（`event_scene`）；标题页 / 战斗 / 卡组编辑等仍各用各的，不受影响。
+const NIGHT_BG_TOP := Color("141020")      ## 页面底：上（更冷更暗）
+const NIGHT_BG_BOT := Color("1d1628")      ## 页面底：下
+const NIGHT_CARD := Color("241a2e")        ## 信息卡底
+const NIGHT_CARD_HOVER := Color("2e2239")  ## 信息卡底（悬浮）
+const NIGHT_BTN := Color("2b2135")         ## 按钮底
+const NIGHT_BTN_HOVER := Color("3a2c48")   ## 按钮底（悬浮）
+const NIGHT_BTN_PRESSED := Color("221a2b") ## 按钮底（按下）
+const NIGHT_BTN_DISABLED := Color("1b1622")
+const NIGHT_INK := Color("e8dfc8")         ## 正文：米色
+const NIGHT_INK_DIM := Color("a99c86")     ## 次要文字
+const NIGHT_LINE := Color("6c5a86")        ## 分隔线（暗紫）
+
+
+static func night_button_style(state := "normal") -> StyleBox:
+	## R516：事件页的深色按钮。**形状完全沿用 adventure_button_style 的胶囊**，
+	## 只把底换成暗紫、描边仍用黄铜（悬浮时提亮一档）。
+	var bg := NIGHT_BTN
+	var border := ADVENTURE_BRASS
+	if state == "hover" or state == "hover_pressed":
+		bg = NIGHT_BTN_HOVER
+		border = ADVENTURE_BRASS_LIT
+	elif state == "pressed":
+		bg = NIGHT_BTN_PRESSED
+	elif state == "disabled":
+		bg = NIGHT_BTN_DISABLED
+	return _btn_box(bg, border, 1, RADIUS_SM, BTN_PAD_X, BTN_PAD_Y)
+
+
+static func apply_night_button(btn: Button, primary := false) -> void:
+	## 事件页专用按钮：暗紫胶囊 + 米色字。与 `apply_button` 的区别只有配色，
+	## 内距 / 字体 / 自适应字号 / 按压反馈全部复用同一套。
+	if btn == null:
+		return
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		btn.add_theme_stylebox_override(state, night_button_style(state))
+	btn.add_theme_stylebox_override("focus", _btn_box(Color.TRANSPARENT, ADVENTURE_BRASS_LIT, 2, RADIUS_SM))
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
+		btn.add_theme_color_override(state, NIGHT_INK)
+	btn.add_theme_color_override("font_disabled_color", NIGHT_INK_DIM.darkened(0.25))
+	btn.add_theme_font_override("font", font_bold() if primary else font())
+	btn.add_theme_font_size_override("font_size", FS_HEADING if primary else FS_SUBHEAD)
+	var fit := _fit_action_button.bind(btn, primary, true)
+	if not btn.resized.is_connected(fit):
+		btn.resized.connect(fit)
+	fit.call_deferred()
+	UiPressFx.attach(btn)
+
 static func adventure_button_style(primary: bool, state := "normal", px := BTN_PAD_X, py := BTN_PAD_Y) -> StyleBox:
 	var key := "button_disabled" if state == "disabled" else ("button_forest" if primary else "button_paper")
 	var tex: Texture2D = UiAssets.get_tex("adventure_shared/" + key)
@@ -844,11 +900,11 @@ static func draw_close(canvas: CanvasItem, rect: Rect2, hovered: bool) -> void:
 				Color(1.15, 1.15, 1.15) if hovered else Color.WHITE)
 
 static func draw_info_card(canvas: CanvasItem, rect: Rect2, hovered := false, dark := false) -> void:
-	## dark（R513）：暗页事件（鸭之凝视）上的信息卡 —— 深墨底 + 金线。
-	## 浅底上的 #f3eee2 纸卡放进近黑背景会变成一块发亮的便利贴；
+	## dark（R513 起为全部事件）：暗页上的信息卡 —— 暗紫底 + 黄铜细线。
+	## 浅底上的 #f3eee2 纸卡放进深色背景会变成一块发亮的便利贴；
 	## 背景、卡片、文字三处的明暗关系必须一起翻过来才成立。
 	if dark:
-		var sbd := _btn_box(Color("241b1c") if hovered else Color("1b1517"), ADVENTURE_BRASS, 1, RADIUS_MD, 12, 12)
+		var sbd := _btn_box(NIGHT_CARD_HOVER if hovered else NIGHT_CARD, ADVENTURE_BRASS, 1, RADIUS_MD, 12, 12)
 		sbd.shadow_color = Color(0, 0, 0, 0.55)
 		sbd.shadow_size = 10
 		sbd.shadow_offset = Vector2(0, 3)
