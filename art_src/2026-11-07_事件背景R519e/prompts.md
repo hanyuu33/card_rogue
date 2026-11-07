@@ -166,3 +166,24 @@ darker toward the right edge, NEVER a solid rectangle, NEVER a hard edge.
 ```
 
 夜景暗调、火焰是唯一暖点。水印在方图内 → `patch_wm()` 修补（不能像 martial 那样裁掉）。
+
+---
+
+# R519j 苹果与医生（追加）
+
+只生成 `apple_doctor`，其他待补事件不动。`size = 1024x1024`，画风参考仍为
+`style_ref/bg_divination.png`，首轮 `input_fidelity: low`。
+
+主题核心：
+
+```
+SUBJECT: ONE single fresh red apple resting directly on a wooden dining table.
+The apple is the clear focal point, slightly LEFT of centre, fully visible with its stem.
+The wooden dining table has a broad tabletop, simple plank seams, a sturdy front edge,
+and simplified hand-drawn wood grain made from a few bold curved lines.
+NO people, NO doctor, NO plate, NO cutlery, NO extra objects.
+```
+
+第一版在 x≈75% 处出现竖缝，右侧四分之一像独立暗板，废。第二版以第一版为输入、
+`input_fidelity: high`，只要求去掉竖缝与矩形暗板，保留苹果、木桌、镜头和画风。
+最终原图 `raw/side_apple_doctor.png`；首版留档 `raw/side_apple_doctor_v1_seam.png`。

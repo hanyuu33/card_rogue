@@ -614,7 +614,8 @@ func _kind() -> String:
 ## R519g：`martial` 加入 —— 它的主体（盘坐的老人）只能在地面中段，
 ## 而居中卡片正好压在那里，无论怎么调背景都会被盖住。改成左右布局后
 ## 老人独占左栏、完整可见，文案走右栏。
-const SIDE_LAYOUT_KINDS := ["lake_lady", "martial", "rest"]
+## R519j：`apple_doctor` 加入 —— 木桌上的苹果独占左栏，事件描述与选项走右栏。
+const SIDE_LAYOUT_KINDS := ["lake_lady", "martial", "rest", "apple_doctor"]
 const SIDE_SPLIT_MIN := 0.40      ## 图片最窄占比（文案再长也给图留这么多）
 const SIDE_SPLIT_MAX := 0.62      ## 图片最宽占比（文案很短时图也别宽到没边）
 const SIDE_TEXT_MIN_W := 300.0    ## 右栏最小宽度

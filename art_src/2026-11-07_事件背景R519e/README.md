@@ -194,3 +194,23 @@ NEVER a solid rectangle of one colour, NEVER a hard edge, NEVER a wall.
 - `_review/rest_1920.png` —— 1920×720
 - `_review/martial_side.png` —— **重截**的 1280 武术大师（R519g 那张是撤渐变之前的旧图）
 - `_review/_rest_wm_check.png` —— 水印修补区放大
+
+---
+
+# R519j 追加：苹果与医生（只补这一张）
+
+用户口径：「木制的餐桌上放着一个苹果。左右构图。其他暂不生成」。
+
+| 项 | 值 |
+|---|---|
+| 产物 | `assets/ui/side_apple_doctor.png` **742×742** |
+| 代码 | `SIDE_LAYOUT_KINDS` 只新增 `"apple_doctor"`；其余三个待补事件不动 |
+| 画面 | 一只完整的红苹果直接放在木制餐桌上；无医生、人物、餐具或多余道具 |
+| 出图 | 原生 1024×1024 方图；占卜背景仅作画风参考，`input_fidelity: low` |
+| 返工 | 第一版右侧出现硬边竖向暗带；第二版只修接缝，保留苹果与木桌构图 |
+| 水印 | 方图右下角，`patch_wm()` 修补后缩 742 |
+| 脚本 | `tools/process_side_apple_doctor.py` |
+
+验收：`_review/apple_doctor_1280.png` 与 `_review/apple_doctor_1920.png`。
+两种宽度均为左图右文，苹果完整，标题、正文、两个选项无遮挡，右缘过渡自然。
+审计后事件背景 16 个，待补只剩 `pear` / `hero` / `bluefish`。
