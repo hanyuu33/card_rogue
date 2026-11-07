@@ -28,6 +28,7 @@ var _seed_hover := false          # R325：「复制」按钮的悬停态（自�
 
 
 func _ready() -> void:
+	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	GameSettings.ensure_loaded()
@@ -315,7 +316,7 @@ func _row(i: int) -> Dictionary:
 
 
 func _draw() -> void:
-	UiTheme.draw_page(self, Rect2(Vector2.ZERO, size))
+	UiTheme.draw_page(self, UiTheme.bleed_rect(self))   # R519：铺满窗口
 	draw_string(_font_bold, Vector2(0, 78), "设 置",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(0, 110), "所有设置自动保存",

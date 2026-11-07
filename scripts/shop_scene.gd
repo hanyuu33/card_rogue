@@ -128,6 +128,7 @@ var _row3_base := 0
 
 
 func _ready() -> void:
+	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	_repo = CardRepo.load_json()
@@ -642,12 +643,12 @@ func _row1_geom() -> Dictionary:
 # ------------------------------------------------------------ 绘制
 
 func _draw() -> void:
-	# 背景
+	# 背景（R519：铺满整个窗口，宽屏下舞台两侧不留白）
 	var bg: Texture2D = UiAssets.get_tex("bg_shop")
 	if bg != null:
-		draw_texture_rect(bg, Rect2(Vector2.ZERO, _vs()), false)
+		draw_texture_rect(bg, UiTheme.bleed_rect(self), false)
 	else:
-		draw_rect(Rect2(Vector2.ZERO, _vs()), Color("1a1c22"))
+		draw_rect(UiTheme.bleed_rect(self), Color("1a1c22"))
 	# 老板立绘（右侧）
 	var keeper: Texture2D = UiAssets.get_tex("shop_keeper")
 	if keeper != null:

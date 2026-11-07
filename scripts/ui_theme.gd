@@ -749,6 +749,99 @@ const PAGE_MUTED := Color("887b65")
 const PAGE_GOLD := Color("cbb47e")
 const PAGE_GREEN := Color("4c9a52")
 
+
+## ---- R519：舞台（16:9 内容区）-------------------------------------------------
+## 所有界面都是按 1280×720 排的。`window/stretch/aspect` 是 expand —— 屏幕一宽
+## （手机 20:9、带鱼屏），逻辑视口就被拉宽成 1920×720，坐标却还是 0..1280，
+## 于是内容全挤在左边、右侧空一大片。
+##
+## 这里把**内容**固定成 1280×720 的舞台并居中；背景不跟着缩，用 `bleed_rect()`
+## 铺满整个窗口。好处是：坐标一行都不用改、内容永远居中、两侧是背景图自然延伸
+## （不是黑边，也不是留白）。
+const STAGE_W := 1280.0
+const STAGE_H := 720.0
+
+
+static func stage_origin(vp: Vector2) -> Vector2:
+	## 舞台左上角在**视口坐标**里的位置。CanvasLayer 上的东西（`TopBar` 这类 autoload
+	## HUD）不继承场景根的 1280 舞台，要自己按这个原点贴上去，否则会贴在屏幕最左缘、
+	## 和居中的内容脱开。
+	return Vector2(maxf(0.0, (vp.x - STAGE_W) * 0.5), maxf(0.0, (vp.y - STAGE_H) * 0.5))
+
+
+static func fit_stage(c: Control) -> void:
+	## 把 c 摆成「居中的 16:9 舞台」。视口比舞台大就居中，小就贴满（不会出现负偏移）。
+	if c == null or not c.is_inside_tree():
+		return
+	var vp := c.get_viewport_rect().size
+	var w := minf(STAGE_W, vp.x)
+	var h := minf(STAGE_H, vp.y)
+	c.anchor_left = 0.0
+	c.anchor_top = 0.0
+	c.anchor_right = 0.0
+	c.anchor_bottom = 0.0
+	c.size = Vector2(w, h)
+	c.position = Vector2((vp.x - w) * 0.5, (vp.y - h) * 0.5)
+
+
+static func bleed_rect(c: Control) -> Rect2:
+	## 背景要铺满**整个窗口**：用舞台本地坐标表示 = 左上角取 -position、尺寸取视口。
+	if c == null:
+		return Rect2(Vector2.ZERO, Vector2(STAGE_W, STAGE_H))
+	return Rect2(-c.position, c.get_viewport_rect().size)
+
+
+static func attach_stage(c: Control) -> void:
+	## 一行接入：设好舞台 + 跟随窗口尺寸变化重新居中（每个实例只接一次）。
+	fit_stage(c)
+	if c == null or c.has_meta("_stage_attached"):
+		return
+	c.set_meta("_stage_attached", true)
+	var vp := c.get_viewport()
+	if vp == null:
+		return
+	# ⚠️ 必须弱引用：lambda 直接捕获 c 会把场景根钉住，节点释放后 viewport 再发
+	#    size_changed 就是「调已释放对象」。`queue_redraw` 也走弱引用同一个回调。
+	var wr: WeakRef = weakref(c)
+	vp.size_changed.connect(func() -> void:
+		var cc = wr.get_ref()
+		if cc != null:
+			fit_stage(cc)
+			cc.queue_redraw())
+
+
+static func bleed_child(c: Control) -> void:
+	## 让某个子节点铺满**整个窗口**（父节点是舞台，所以用负偏移溢出去）。
+	## 用于「不该跟着内容一起缩」的层：纯色底、整屏底图。
+	## ⚠️ 只在父节点是舞台（`attach_stage` 已生效）时才有意义。
+	if c == null:
+		return
+	var p := c.get_parent() as Control
+	if p == null:
+		return
+	c.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	var r := bleed_rect(p)
+	c.position = r.position
+	c.size = r.size
+	if c.has_meta("_bleed_attached"):
+		return
+	c.set_meta("_bleed_attached", true)
+	var vp := c.get_viewport()
+	if vp == null:
+		return
+	var wr: WeakRef = weakref(c)
+	vp.size_changed.connect(func() -> void:
+		var cc = wr.get_ref()
+		if cc == null:
+			return
+		var pp := cc.get_parent() as Control
+		if pp == null:
+			return
+		var rr := bleed_rect(pp)
+		cc.position = rr.position
+		cc.size = rr.size)
+
+
 static func draw_page(canvas: CanvasItem, rect: Rect2) -> void:
 	var paper: Texture2D = UiAssets.panel_parchment()
 	if paper != null:

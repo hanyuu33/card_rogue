@@ -759,6 +759,10 @@ var info_clip: Control
 
 
 func _ready() -> void:
+	# R519：宽屏适配 —— 内容固定 1280×720 舞台居中，两侧交给背景铺满（bleed）。
+	# 不做这步的话，`stretch/aspect = expand` 会把逻辑视口拉成 1920×720，而坐标还写死在
+	# 0..1280，于是整块 UI 贴左、右侧空一大片（顶栏右侧按钮最明显）。
+	UiTheme.attach_stage(self)
 	# R417：左栏明细的可滚动裁剪视口子节点。clip_contents=true 负责像素级裁掉越界块／文本；
 	# mouse_filter=IGNORE 让它不拦截父节点的左栏命中判定（仍走 _info_panel_rect().has_point）。
 	var _ic := Control.new()
@@ -7920,7 +7924,7 @@ func _draw_map_panel() -> void:
 	## 战斗内地图总览：**只读**的全局地图 —— 看清走过哪些房间、还剩几块巧克力、
 	## 本层 Boss 是谁。战斗进行中不能在这里改路线，所以不可点房间。
 	var pr := _mapview_panel_rect()
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.55))
+	draw_rect(UiTheme.bleed_rect(self), Color(0, 0, 0, 0.55))
 	UiTheme.draw_panel_bg(self, pr)
 	_draw_string_center(_font_bold, UI_FS_BODY, "冒 险 地 图（战斗中查看）",
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 40.0), UiTheme.PAGE_INK, -1)
@@ -8528,12 +8532,14 @@ func _ai_step() -> void:
 func _draw() -> void:
 	if engine == null:
 		return
-	# 背景：铺满整个控件（R133 起是**当层的地图底图**，见 _refresh_bg_texture）
+	# 背景：铺满整个窗口（R133 起是**当层的地图底图**，见 _refresh_bg_texture）
+	# R519：宽屏下舞台只有 1280 宽，背景要往外溢出去覆盖两侧留白。
+	var bleed := UiTheme.bleed_rect(self)
 	if _bg_tex != null:
-		draw_texture_rect(_bg_tex, Rect2(Vector2.ZERO, size), false)
-		draw_rect(Rect2(Vector2.ZERO, size), COL_BG_SCRIM, true)
+		draw_texture_rect(_bg_tex, bleed, false)
+		draw_rect(bleed, COL_BG_SCRIM, true)
 	else:
-		draw_rect(Rect2(Vector2.ZERO, size), COL_BG)
+		draw_rect(bleed, COL_BG)
 	# 屏幕震动：棋盘相关绘制整体偏移（面板/结算不受影响）
 	var shake := Vector2.ZERO
 	if _now() < _shake_until:
@@ -15065,7 +15071,7 @@ func _draw_screen_flash() -> void:
 		return
 	var n := _now()
 	var t := clampf(float(n - int(_screen_flash.start)) / int(_screen_flash.dur), 0.0, 1.0)
-	draw_rect(Rect2(Vector2.ZERO, size),
+	draw_rect(UiTheme.bleed_rect(self),
 			Color(1, 1, 1, 0.92) if t < 0.5 else Color(0, 0, 0, 0.92), true)
 
 

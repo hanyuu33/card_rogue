@@ -28,6 +28,7 @@ var _last_mp := Vector2.INF
 
 
 func _ready() -> void:
+	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
@@ -196,7 +197,7 @@ func _back_to_title() -> void:
 # ------------------------------------------------------------ 绘制
 
 func _draw() -> void:
-	UiTheme.draw_page(self, Rect2(Vector2.ZERO, size))
+	UiTheme.draw_page(self, UiTheme.bleed_rect(self))   # R519：铺满窗口
 	draw_string(_font_bold, Vector2(0, 62), "对 战 记 录",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	var wins := 0
@@ -319,7 +320,7 @@ func _draw_detail() -> void:
 	## 详情面板：上面概览（含种子 / 生命 / 最大生命），下面左道具右卡组。
 	var r := _detail_rect()
 	# 遮罩 + 面板
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.55), true)
+	draw_rect(UiTheme.bleed_rect(self), Color(0, 0, 0, 0.55), true)
 	UiTheme.draw_panel_bg(self, r)
 	var rec: Dictionary = _rows[_sel]
 	var res := str(rec.get("result", ""))

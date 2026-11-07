@@ -2008,6 +2008,70 @@ cost / power / health / affixes，烤完之后这张卡与「原生就长这样�
 
 ---
 
+### 4.50 舞台（16:9）居中 + 背景溢出：宽屏不再「左边一坨、右边一片」（R519）
+
+用户口径：「目前对于不同屏幕比例适配有点差，尽可能不要因为屏幕比例宽就在右边留下大量空区域。」
+「暗影刺客和机械之心CG裁剪怎么还是把上面头部裁剪掉了一部分？找到原图，尽可能裁剪不动头部。」
+
+**根因**：`project.godot` 是 `stretch/mode = canvas_items` + `aspect = expand`。屏幕一比 16:9 宽，
+**逻辑视口就被拉宽**（1920×720），而所有坐标仍写死 0..1280 —— 整块 UI 贴左，右侧空出
+「视口宽 − 1280」（1920 下是 640px）。战斗顶栏最刺眼：右侧按钮 `offset_left` 写死 1026..1268，
+右边 650px 全是空的。
+
+**三条纪律**：
+
+1. **内容固定 1280×720 舞台居中，不重排坐标。**
+   `UiTheme.attach_stage(self)` 放每个场景 `_ready()` 第一行：把根节点压成 1280×720 并居中，
+   子节点全部照旧（它们锚在根上，自然跟着缩）。⚠️ 别想靠「按比例重排」解决 ——
+   battle 八千多行、几十处写死坐标，重排是重写。
+2. **背景必须溢出到窗口，不是溢出到舞台。**
+   任何「铺满屏幕」的绘制改用 `UiTheme.bleed_rect(self)`：舞台本地坐标下覆盖整个窗口的矩形
+   （左上角取 `-position`、尺寸取视口），所以宽屏下两侧是**背景图自然延伸**，不是黑边也不是留白。
+3. **CanvasLayer 上的 HUD 要自己对原点。**
+   `TopBar` 是 autoload、挂在 CanvasLayer 上，**不继承**场景根的舞台变换 → 宽屏下会贴在
+   屏幕最左缘、和居中的内容脱开。它每帧读 `UiTheme.stage_origin(视口尺寸)` 自己贴过去。
+
+**接入清单**（`_ready` 首行 + 全屏绘制换 `bleed_rect`）：
+
+| 场景 | 背景怎么铺 |
+|---|---|
+| battle | `_draw` 里 `_bg_tex` / scrim / 地图浮层遮罩 / 全屏闪 → `bleed_rect` |
+| map | `_draw_background()`（贴图 + 暗罩 + 缺图渐变三路）+ 进场遮罩 |
+| shop | `_draw()` 顶部的 `bg_shop` |
+| title | `_draw()` 的底图 + `OVERLAY_TITLE` |
+| deck_edit / record_list / story / settings / ban / relic_pick | `draw_page(self, bleed_rect(self))`；各自的模态遮罩同理 |
+| gallery | 纯节点场景，底色是 `BG` ColorRect → `UiTheme.bleed_child($BG)` |
+| class_pick | UI（面板/头像/种子）进舞台，**CG 铺 bleed** |
+| **event** | **不接舞台**（见下） |
+
+⚠️ **event 页故意不接**：它的排版从 R518 起就按 `get_viewport_rect()` 自适应，底图 `EventBG`
+是整屏 `STRETCH_KEEP_ASPECT_COVERED`。套上 1280 舞台反而会把底图裁成中间一块、两侧露底色。
+
+**CG 裁切：立绘一律「顶部对齐」的 cover。**
+`CardFace.cover_region` 永远**居中**裁 —— 屏越宽，纵向能留的高度越少，先被削掉的就是头顶。
+新增 `cover_region_top(src, box)`（= `cover_region_anchored(src, box, 0.0)`，`ay` 是纵向裁切锚点），
+立绘 / 插图走它：**宁可裁脚，不裁头**。
+两张职业 CG 的「头部被裁」就是这条：素材本身头顶只剩 ~12px 余量，居中裁必中。
+
+**暗影刺客重裁**（`art_src/2026-11-07_职业CG裁切/tools/process_r519.py`）：
+原图 `A_highly_detailed_anime_style__2026-11-05T16-11-30.png`（1536×1024）左上角压着
+HUD 三枚图标（`0..412 × 0..82`）。上一版为了躲它从 `y=80` 起裁 —— 削掉兜帽的就是这一步。
+本轮改从 `y=0` 起裁 `(0, 0, 1536, 864)` → 1280×720，HUD 用**原地重度模糊**
+（`GaussianBlur(40)` → `(20)`，mask 羽化 24）抹平，另用按列线性插值抹掉 `y=5..11` 那条
+贯穿全幅的顶边亮线；笑嘴从旧图羽化贴回（整体对齐偏移 `dy=66`）。
+⚠️ 试过三种更「还原」的补救（下方取样翻转贴回 / 逐列色带重建 / 逐列亮度+镜像细节）都会
+留下接缝或矩形痕迹 —— 一块**没有结构含义**的区域，模糊比伪造结构更像原图。
+
+⚠️ `attach_stage` 的 `size_changed` 回调必须 `weakref`：lambda 直接捕获场景根会把它钉住，
+节点释放后 viewport 再发信号就是「调已释放对象」。
+
+**出图**：`shoot_wide.gd`（`--tag=` 前缀 / `--only=` 单页 / `--cls=` 选职业页第几位），
+`--resolution 1920x720` 与 `1280x720` 各跑一遍对比。产物在
+`art_src/2026-11-07_职业CG裁切/_review/`：`after_*` = 舞台版，`n16_*` = 16:9 基线（应与改前逐像素一致），
+`mech_wide` / `mech16` = 机械之心两种比例下的头顶余量。
+
+---
+
 ## 5. 无障碍底线
 
 - 文字对比度：正文 ≥ **4.5:1**，大字（≥18px 或 ≥14px 粗体）≥ **3:1**。

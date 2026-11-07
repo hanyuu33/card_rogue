@@ -22,6 +22,7 @@ var _picked := false
 
 
 func _ready() -> void:
+	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
@@ -67,7 +68,7 @@ func _card_rect(i: int) -> Rect2:
 
 func _draw() -> void:
 	# 背景（根节点自绘在子节点之下，BG 色块会盖住 _draw，故在这里画）
-	draw_rect(Rect2(Vector2.ZERO, size), UiTheme.SCREEN_BG)   # R154：墨蓝夜色锚点（清单 §2.6）
+	draw_rect(UiTheme.bleed_rect(self), UiTheme.SCREEN_BG)   # R154：墨蓝夜色锚点（清单 §2.6）；R519 铺满窗口
 	if _picked:
 		return
 	var repo := RelicRepo.load_json()

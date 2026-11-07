@@ -375,3 +375,30 @@ _backups/ 在本会话开始前就存在，不属于本轮成果；作为本机�
 ## 2026-11-05 UI遗留逐项同步
 商店选卡/触屏按钮、价格与提示、故事领取与继续按钮、Mention浅纸浮窗、战斗滚动提示、牌库徽标已同步。新增共用自绘文字按钮，按宽高缩字并保留内边距；AGENTS登记文字禁止压边纪律。选卡标题增加独立浅纸底避免背景标题干扰。
 验证：_verify.py全通过（mana、engine5298、reward26、bgm39、smoke64）；verify_ui_followup.gd在1280x720及1024x768出图，检查商店及故事文字留白；sync_mention为正式场景上的组件受控展示，不等同于真实悬停流程验收。截图sync_*.png。已有战斗地图/职业选择修改及旧截图保留，不混入本提交。未推送。
+
+## 2026-11-07 R519 宽屏适配（1280 舞台 + 背景溢出）+ 两张职业 CG 重裁
+
+用户口径两条：「暗影刺客和机械之心CG裁剪怎么还是把上面头部裁剪掉了一部分？找到原图，尽可能裁剪不动头部。」
+「目前对于不同屏幕比例适配有点差，尽可能不要因为屏幕比例宽就在右边留下大量空区域。」
+
+**宽屏**：`aspect=expand` 会把逻辑视口拉宽成 1920×720，而坐标全是 0..1280 → UI 贴左、右侧空 640px。
+做法是**舞台化**：`UiTheme.attach_stage(self)` 把场景根压成居中的 1280×720，全屏背景改
+`UiTheme.bleed_rect(self)` 溢到窗口外。已接 battle / map / shop / title / gallery / class_pick /
+deck_edit / record_list / story / settings / ban / relic_pick；`TopBar`（CanvasLayer autoload）
+用 `stage_origin()` 自己对原点。**event 页故意不接**（R518 起已按视口自适应，底图是整屏 cover）。
+细节与清单见 `UI设计规范.md` §4.50。
+
+**CG 头部**：`CardFace.cover_region` 居中裁，屏越宽纵向越少、先削头顶 → 新增
+`cover_region_top()`（顶部对齐），class_pick 的 CG 铺 bleed 时走它。
+暗影刺客按原图 `(0,0,1536,864)` 重裁（上一版从 `y=80` 起裁是为了躲原图左上角的 HUD，
+结果削了兜帽）；HUD 用原地重度模糊 + 抹顶边亮线解决，笑嘴从旧图羽化贴回。
+脚本：`art_src/2026-11-07_职业CG裁切/tools/process_r519.py`（`--write` 才落盘，先写 `.bak_r519`）。
+
+**验证**：`_verify.py` 全通过 —— mana / engine **5236** / reward 26 / bgm 39 / smoke 64。
+出图（`tools/shoot_wide.gd`，支持 `--tag=` / `--only=` / `--cls=`）在
+`art_src/2026-11-07_职业CG裁切/_review/`：`after_*` = 1920×720 舞台版、`n16_*` = 16:9 基线、
+`mech_wide` / `mech16` = 机械之心头顶余量对照。
+
+**遗留**：① 舞台化的前提是「所有界面都按 1280×720 排」，将来若新增按视口自适应的页面，
+要单独确认它该不该接舞台（event 就是反例）。② 背景在宽屏下是**拉伸**铺满（沿用改前行为），
+不是 cover 裁切 —— 观感上更接近原设计，但 21:9 会略微横向拉长，若日后觉得别扭再换 cover。

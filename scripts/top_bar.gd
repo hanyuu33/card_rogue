@@ -25,6 +25,7 @@ const COL_GOLD_UP := Color("ffd75a")
 const COL_GOLD_DOWN := Color("e0a48a")
 const FX_FLOAT_SEC := 0.9
 var _sfx: Sfx
+var _panel: Panel   # R519：要跟着 1280 舞台一起居中
 
 
 func _ready() -> void:
@@ -32,11 +33,12 @@ func _ready() -> void:
 	layer = 90
 	var panel := Panel.new()
 	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	panel.position = Vector2(8, 8)
+	panel.position = UiTheme.stage_origin(get_viewport().get_visible_rect().size) + Vector2(8, 8)
 	panel.size = SIZE
 	panel.add_theme_stylebox_override("panel", UiTheme.adventure_panel_style(8.0, true))
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(panel)
+	_panel = panel
 
 	var avatar := preload("res://scripts/ui_avatar_frame.gd").new()
 	avatar.name = "Avatar"
@@ -84,6 +86,11 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	# R519：宽屏下内容居中在 1280 舞台里，这条 HUD 也得跟着挪，别贴在屏幕最左缘。
+	if _panel != null:
+		var _o := UiTheme.stage_origin(get_viewport().get_visible_rect().size) + Vector2(8, 8)
+		if _panel.position != _o:
+			_panel.position = _o
 	var tree := get_tree()
 	if tree == null:
 		return

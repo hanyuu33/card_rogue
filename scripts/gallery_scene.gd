@@ -62,6 +62,8 @@ var _font_bold: Font
 
 
 func _ready() -> void:
+	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
+	UiTheme.bleed_child($BG)     # 底色整屏铺满（不跟着舞台缩，否则两侧露黑）
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	# R325：**字体统一换成工程内嵌的思源黑体**。

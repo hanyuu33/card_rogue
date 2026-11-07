@@ -179,6 +179,7 @@ var _bg_layer := 0
 
 
 func _ready() -> void:
+	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	_shot = "--screenshot" in OS.get_cmdline_user_args()
@@ -897,22 +898,24 @@ func _draw() -> void:
 
 func _draw_background() -> void:
 	## 本层背景图铺满整屏（保持比例裁切）；缺图时回退成纵向渐变 —— 不空白也不报错。
+	## R519：铺的是**整个窗口**（bleed），不是舞台 —— 宽屏下两侧才不会露底色。
+	var bleed := UiTheme.bleed_rect(self)
 	var lay := _bg_layer if _bg_layer > 0 else RunState.current_layer
 	var tex := UiAssets.get_tex("adventure_shared/map_forest") if lay == 1 else UiAssets.map_bg(lay)
 	if tex == null:
 		tex = UiAssets.map_bg(lay)
 	if tex != null:
-		draw_texture_rect(tex, Rect2(0, 0, size.x, size.y), false)
+		draw_texture_rect(tex, bleed, false)
 		# 压一层很淡的暗罩：保证格子上的文字在任何背景上都读得清。
-		draw_rect(Rect2(0, 0, size.x, size.y), Color(0.14, 0.18, 0.12, 0.06), true)
+		draw_rect(bleed, Color(0.14, 0.18, 0.12, 0.06), true)
 		return
 	var top := Color("1c1f28")
 	var bottom := Color("303443")
 	var bands := 36
 	for i in bands:
 		var t := float(i) / float(bands - 1)
-		draw_rect(Rect2(0, size.y * float(i) / bands, size.x, size.y / bands + 1.0),
-				top.lerp(bottom, t), true)
+		draw_rect(Rect2(bleed.position.x, bleed.position.y + bleed.size.y * float(i) / bands,
+				bleed.size.x, bleed.size.y / bands + 1.0), top.lerp(bottom, t), true)
 
 
 func _draw_cell_tiles() -> void:
@@ -1318,7 +1321,7 @@ func _draw_enter_anim() -> void:
 	if _anim_t < ENTER_SLIDE:
 		_draw_bridge_slide()   # R151 P1-10：先沿桥滑 300ms，过场各段全部顺移
 	var dim := _ramp(p, 0.0, 0.18)
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.03, 0.05, 0.66 * dim), true)
+	draw_rect(UiTheme.bleed_rect(self), Color(0.02, 0.03, 0.05, 0.66 * dim), true)
 	# 图标：先快后慢地飞到屏幕中心（略微上移，给文字留位置），同时放大
 	var fly := 1.0 - pow(1.0 - _ramp(p, 0.0, 0.62), 3.0)
 	var to := Vector2(size.x * 0.5, size.y * 0.44)

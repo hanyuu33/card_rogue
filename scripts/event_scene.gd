@@ -1215,6 +1215,9 @@ func _on_fallback_draw() -> void:
 
 
 func _ready() -> void:
+	## ⚠️ R519：事件页**不接** `UiTheme.attach_stage()` —— 它的排版从 R518 起就按
+	## `get_viewport_rect()` 自适应，背景 `EventBG` 又是整屏 cover 铺满；套上 1280 舞台
+	## 反而会把底图裁成中间一块、两侧露底色。保持现有全窗口布局。
 	# R513：信息卡底色分「浅纸 / 深墨」两档；此回调在 _apply_ui_assets 之后才绘制，读 _dark_page 安全。
 	# R516：左右布局（`lake_lady`）**不要框** —— 文字直接压在背景上，只靠排版与字色区分。
 	$Center.draw.connect(func():

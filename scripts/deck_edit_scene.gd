@@ -73,6 +73,7 @@ var _back_delay := 1.4     # 结算后回地图的等待（演出要占掉 1.3s 
 
 
 func _ready() -> void:
+	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
 	hint_label.add_theme_color_override("font_color", UiTheme.PAGE_MUTED)
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
@@ -435,7 +436,7 @@ func _card_rect(i: int) -> Rect2:
 
 func _draw() -> void:
 	# 背景（根节点自绘在子节点之下，BG 色块会盖住 _draw，故在这里画）
-	UiTheme.draw_page(self, Rect2(Vector2.ZERO, size))   # R154：墨蓝夜色锚点（清单 §2.6）
+	UiTheme.draw_page(self, UiTheme.bleed_rect(self))   # R154：墨蓝夜色锚点（清单 §2.6）；R519 铺满窗口
 	if _cards.is_empty():
 		draw_string(_font, Vector2(0, size.y / 2), "卡组是空的……",
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)

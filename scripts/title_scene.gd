@@ -16,6 +16,7 @@ var _toast_t := 0.0
 
 
 func _ready() -> void:
+	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
 	# 窗口标题固定为游戏名：开发用的引擎是 debug 构建，默认会在标题后加
 	# 「(DEBUG)」（打包成独立版后同样如此），这里显式覆盖掉。headless 下跳过。
 	if DisplayServer.get_name() != "headless":
@@ -134,12 +135,14 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	# R519：背景与罩层都铺**整个窗口**（bleed），宽屏下舞台两侧才不是空底
+	var bleed := UiTheme.bleed_rect(self)
 	if _bg_tex != null:
-		draw_texture_rect(_bg_tex, Rect2(Vector2.ZERO, size), false)
+		draw_texture_rect(_bg_tex, bleed, false)
 		# 半透明白色罩层，让按钮和标题更清晰
-		draw_rect(Rect2(Vector2.ZERO, size), UiTheme.OVERLAY_TITLE)
+		draw_rect(bleed, UiTheme.OVERLAY_TITLE)
 	else:
-		draw_rect(Rect2(Vector2.ZERO, size), UiTheme.BOARD_BG)
+		draw_rect(bleed, UiTheme.BOARD_BG)
 	# R154：飘落花瓣（两瓣错开的扁椭圆）+ 光尘（四点小星、明灭）。低透明度，可全屏飘。
 	for f: Dictionary in _petals:
 		var pos := Vector2(float(f.x) + sin(_t * 0.8 + float(f.ph)) * 16.0, float(f.y))

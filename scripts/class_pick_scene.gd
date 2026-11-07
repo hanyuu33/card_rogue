@@ -40,6 +40,7 @@ static var last_selected := 0
 
 
 func _ready() -> void:
+	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
@@ -255,9 +256,12 @@ func _draw_seed_panel() -> void:
 # ──────────────────────────────────────────────────────────────
 
 func _draw() -> void:
+	# R519：UI（面板/头像/种子）留在居中的 1280 舞台里；**CG 铺满整个窗口**
+	# 并用「顶部优先」的 cover —— 屏一宽，纵向能留的高度就少，居中裁会先削掉头顶。
+	var bleed := UiTheme.bleed_rect(self)
 	var full := Rect2(Vector2.ZERO, size)
 	if _selected < 0:
-		UiTheme.draw_page(self, full)
+		UiTheme.draw_page(self, bleed)
 		draw_string(_font, Vector2(0, 288), "选择与你同行的精灵……",
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_TITLE, UiTheme.PAGE_INK)
 		draw_string(_font, Vector2(0, 330), "点头像查看该角色，再选难度、确认进入",
@@ -266,9 +270,10 @@ func _draw() -> void:
 		var cid := PlayerClass.ids()[_selected]
 		var cg := UiAssets.class_cg(cid)
 		if cg != null:
-			draw_texture_rect_region(cg, full, CardFace.cover_region(cg.get_size(), full), Color.WHITE)
+			draw_texture_rect_region(cg, bleed,
+					CardFace.cover_region_top(cg.get_size(), bleed), Color.WHITE)
 		else:
-			UiTheme.draw_page(self, full)
+			UiTheme.draw_page(self, bleed)
 		_draw_panel(cid)
 		_draw_seed_panel()
 	for i in PlayerClass.ids().size():

@@ -287,6 +287,19 @@ static func cover_region(src: Vector2, box: Rect2) -> Rect2:
 	## 「铺满」（cover）：按 box 的宽高比，从 src 里裁出一块**等比**区域 ——
 	## 配合 `draw_texture_rect_region` 画出来正好填满 box：不拉伸、不留白。
 	## 横置卡面（76×63，横向）上的卡图用它铺满整张卡（R122 用户口径）。
+	return cover_region_anchored(src, box, 0.5)
+
+
+static func cover_region_top(src: Vector2, box: Rect2) -> Rect2:
+	## 同 `cover_region`，但**纵向从顶边开始裁**（宁可裁脚，不裁头）。
+	## R519 用户口径：职业 CG 里角色头顶基本贴着画面上沿，居中裁会把兜帽/发梢削掉
+	## —— 屏越宽（20:9、21:9）纵向能留的越少，削得越明显。立绘/插图一律走这个。
+	return cover_region_anchored(src, box, 0.0)
+
+
+static func cover_region_anchored(src: Vector2, box: Rect2, ay: float) -> Rect2:
+	## `ay`：纵向裁切的锚点。0.0 = 顶端对齐，0.5 = 居中，1.0 = 底端对齐。
+	## 横向永远居中（角色基本在画面中部，左右对称裁最不容易切到主体）。
 	if src.x <= 0.0 or src.y <= 0.0 or box.size.x <= 0.0 or box.size.y <= 0.0:
 		return Rect2(Vector2.ZERO, src)
 	var src_r: float = src.x / src.y
@@ -295,9 +308,9 @@ static func cover_region(src: Vector2, box: Rect2) -> Rect2:
 		# 源更宽 → 左右各裁掉一点
 		var cw: float = src.y * box_r
 		return Rect2((src.x - cw) / 2.0, 0.0, cw, src.y)
-	# 源更高 → 上下各裁掉一点
+	# 源更高 → 上下裁掉一部分（裁多少由 ay 决定留上还是留下）
 	var ch: float = src.x / box_r
-	return Rect2(0.0, (src.y - ch) / 2.0, src.x, ch)
+	return Rect2(0.0, (src.y - ch) * clampf(ay, 0.0, 1.0), src.x, ch)
 
 
 # ──────────────────────────────────────────────────────────────────────

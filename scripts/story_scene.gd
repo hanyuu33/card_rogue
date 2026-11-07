@@ -60,6 +60,7 @@ var _reveal_t := 0.0
 
 
 func _ready() -> void:
+	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
@@ -371,7 +372,7 @@ func _draw_legend(center: Vector2, counts: Dictionary) -> void:
 # ------------------------------------------------------------ 绘制
 
 func _draw() -> void:
-	UiTheme.draw_page(self, Rect2(Vector2.ZERO, size))
+	UiTheme.draw_page(self, UiTheme.bleed_rect(self))   # R519：铺满窗口
 	draw_string(_font_bold, Vector2(0, 62), "故 事", HORIZONTAL_ALIGNMENT_CENTER,
 			size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	# 顶部总览：三态**只给图标 + 数量**（R347 用户口径），不写「已解锁 / 已读」这类状态词。
@@ -474,7 +475,7 @@ func _grants_summary(eid: String) -> String:
 
 func _draw_detail() -> void:
 	var r := _detail_rect()
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.58), true)
+	draw_rect(UiTheme.bleed_rect(self), Color(0, 0, 0, 0.58), true)
 	UiTheme.draw_panel_bg(self, r)
 	var ep: Dictionary = _episodes[_sel]
 	var eid := str(ep.get("id", ""))
@@ -593,7 +594,7 @@ func _draw_reveal() -> void:
 	var n := _reveal.size()
 	var panel_h := 156.0 + REVEAL_ROW_H * n
 	var r := Rect2((size.x - 620.0) / 2.0, (size.y - panel_h) / 2.0, 620.0, panel_h)
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.76), true)
+	draw_rect(UiTheme.bleed_rect(self), Color(0, 0, 0, 0.76), true)
 	UiTheme.draw_panel_bg(self, r)
 	draw_string(_font_bold, Vector2(r.position.x, r.position.y + 44), "解 锁",
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)

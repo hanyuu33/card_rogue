@@ -43,6 +43,7 @@ var _last_mp := Vector2.INF
 
 
 func _ready() -> void:
+	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
@@ -259,7 +260,7 @@ func _back() -> void:
 # ------------------------------------------------------------ 绘制
 
 func _draw() -> void:
-	UiTheme.draw_page(self, Rect2(Vector2.ZERO, size))
+	UiTheme.draw_page(self, UiTheme.bleed_rect(self))   # R519：铺满窗口
 	draw_string(_font_bold, Vector2(0, 62), "禁 卡 表", HORIZONTAL_ALIGNMENT_CENTER,
 			size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(0, 92),
