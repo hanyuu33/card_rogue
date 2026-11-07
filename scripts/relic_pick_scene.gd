@@ -23,6 +23,7 @@ var _picked := false
 
 func _ready() -> void:
 	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
+	UiTheme.stretch_topbar($TopBar)   # R519b：顶栏通屏宽，右侧按钮组贴窗口右缘
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()

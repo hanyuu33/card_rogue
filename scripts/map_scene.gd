@@ -353,7 +353,7 @@ func _ready() -> void:
 	# R148：上栏原来挂着「回到标题 / 战斗记录 / 查看卡组」三个 chip —— 全部收进
 	# Esc 菜单（点齿轮或按 Esc 打开），上栏只留**一个齿轮**。
 	_menu_btn = Button.new()
-	_menu_btn.position = Vector2(size.x - 64, 12)
+	_menu_btn.position = Vector2(size.x - 64 + UiTheme.win_dx(self), 12)
 	_menu_btn.size = Vector2(40, 30)
 	_menu_btn.pressed.connect(_open_menu)
 	_menu_btn.draw.connect(_draw_menu_gear)
@@ -371,6 +371,14 @@ func _ready() -> void:
 	_deck_btn.pressed.connect(func(): sfx.play("click"))
 	UiTheme.apply_chip(_deck_btn, true)
 	add_child(_deck_btn)
+	# R519b：窗口一变宽，右上那一排（巧克力 / 完整卡组 / 齿轮）要跟着贴到**新的**右缘。
+	# 节点位置是算一次就固定的，所以这里挂一个回调；绘制部分（`_choco_panel_rect` 等）
+	# 每次 `_draw` 现算，不用管。
+	var _wr: WeakRef = weakref(self)
+	get_viewport().size_changed.connect(func() -> void:
+		var s = _wr.get_ref()
+		if s != null:
+			s._relayout_topright())
 	_menu = UiMenu.attach(self, _menu_items, {
 		"back": "返回地图",
 		"sub": "冒险地图",
@@ -1213,7 +1221,8 @@ func _draw_boss_chip() -> void:
 
 
 func _choco_panel_rect() -> Rect2:
-	return Rect2(size.x - 302, 12, CHOCO_PANEL_W, CHOCO_PANEL_H)
+	# R519b：贴**窗口**右缘 —— 顶栏通屏后，舞台右缘已经不是屏幕右缘了
+	return Rect2(size.x - 302 + UiTheme.win_dx(self), 12, CHOCO_PANEL_W, CHOCO_PANEL_H)
 
 
 func _draw_choco_icon(box: Rect2, alpha: float = 1.0) -> void:
@@ -1683,14 +1692,25 @@ const DECK_BTN_GAP := 8.0     # 与最右一枚道具徽章之间留的空
 const RELIC_TIP_TOP := 46.0
 
 func _deck_btn_rect() -> Rect2:
-	return Rect2(size.x - 174, 12, DECK_BTN_W, DECK_BTN_H)
+	return Rect2(size.x - 174 + UiTheme.win_dx(self), 12, DECK_BTN_W, DECK_BTN_H)
+
+
+func _relayout_topright() -> void:
+	## R519b：把右上那排节点重新贴到当前窗口右缘（窗口变宽时由 size_changed 驱动）。
+	if _menu_btn != null:
+		_menu_btn.position = Vector2(size.x - 64 + UiTheme.win_dx(self), 12)
+	if _deck_btn != null:
+		var r := _deck_btn_rect()
+		_deck_btn.position = r.position
+		_deck_btn.size = r.size
+	queue_redraw()
 
 
 var _relic_scroll_row := 0
 
 
 func _relic_reserved() -> Array[Rect2]:
-	return [_deck_btn_rect().grow(2), _choco_panel_rect().grow(2), Rect2(size.x - 64, 12, 40, 30), Rect2(MAP_X0, MAP_Y0, MAP_W, MAP_H)]
+	return [_deck_btn_rect().grow(2), _choco_panel_rect().grow(2), Rect2(size.x - 64 + UiTheme.win_dx(self), 12, 40, 30), Rect2(MAP_X0, MAP_Y0, MAP_W, MAP_H)]
 
 
 func _relic_slot_list() -> Array[Rect2]:

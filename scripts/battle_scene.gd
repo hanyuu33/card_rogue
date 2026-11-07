@@ -763,6 +763,7 @@ func _ready() -> void:
 	# 不做这步的话，`stretch/aspect = expand` 会把逻辑视口拉成 1920×720，而坐标还写死在
 	# 0..1280，于是整块 UI 贴左、右侧空一大片（顶栏右侧按钮最明显）。
 	UiTheme.attach_stage(self)
+	UiTheme.stretch_topbar($Toolbar)   # R519b：顶栏通屏宽，右侧按钮组贴窗口右缘
 	# R417：左栏明细的可滚动裁剪视口子节点。clip_contents=true 负责像素级裁掉越界块／文本；
 	# mouse_filter=IGNORE 让它不拦截父节点的左栏命中判定（仍走 _info_panel_rect().has_point）。
 	var _ic := Control.new()

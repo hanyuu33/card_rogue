@@ -40,6 +40,7 @@ const CHIPS_LEFT_MIN := 16.0   # 换行左界（再往左就换行）
 const CHIP_TOP_GAP := 6.0      # 胶囊行与按钮下沿的间距
 
 var _btn: Button
+var _right_gap := 16.0   # R519b：按钮距**窗口**右缘的距离（CanvasLayer 坐标 = 屏幕坐标）
 var _chip_block: Control         # 只盖住「胶囊行」那块矩形的点击拦截层
 var _hover_layer: Control
 var _font: Font
@@ -55,10 +56,23 @@ var _chip_scroll := 0.0          # R405：胶囊行的纵向滚动（px，正 = 
 
 static func attach(host: Node, btn_pos := Vector2(1150, 6)) -> RelicViewer:
 	## 挂到任意界面：返回新建的悬浮层实例。
+	## R519b：与 `DeckViewer` 同一口径 —— 贴**窗口**右缘，和左边那枚的相对间距沿用设计值。
 	var v := RelicViewer.new()
 	host.add_child(v)
-	v._btn.position = btn_pos
+	v._right_gap = UiTheme.STAGE_W - btn_pos.x - v._btn.size.x
+	v._pin_to_window()
 	return v
+
+
+func _pin_to_window() -> void:
+	## R519b：把按钮贴到窗口右缘。顶栏通屏之后，舞台右缘已经不等于屏幕右缘了。
+	if _btn == null:
+		return
+	var vp := get_viewport()
+	if vp == null:
+		return
+	_btn.position = Vector2(vp.get_visible_rect().size.x - _right_gap - _btn.size.x,
+			_btn.position.y)
 
 
 func _init() -> void:
@@ -79,6 +93,7 @@ func _ready() -> void:
 	_btn.pressed.connect(_toggle)
 	UiTheme.apply_chip(_btn, false, true)
 	add_child(_btn)
+	get_viewport().size_changed.connect(_pin_to_window)
 
 	# 胶囊行会压在商店第一排商品上（用户口径就是「第二行」），而桌面端商品是**单击即买** ——
 	# 没有拦截层的话，点道具名会顺手买下一张卡。这一层只盖胶囊行那块矩形，吞掉点击。

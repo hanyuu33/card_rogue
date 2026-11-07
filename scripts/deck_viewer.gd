@@ -39,6 +39,7 @@ const GAP := 24.0
 const GROW_INK := Color("1d6b36")
 
 var _btn: Button
+var _right_gap := 16.0   # R519b：按钮距**窗口**右缘的距离（CanvasLayer 坐标 = 屏幕坐标）
 var _panel: Control
 var _font: Font
 var _font_bold: Font
@@ -52,10 +53,24 @@ var _press := {}
 
 static func attach(host: Node, btn_pos := Vector2(1150, 6)) -> DeckViewer:
 	## 挂到任意界面：返回新建的悬浮层实例。
+	## R519b：按钮改成**贴窗口右缘**（原来是贴 1280 设计右缘）—— 顶栏通屏之后，
+	## 这枚「牌库 N」还停在舞台里的话，会和顶栏右端那排按钮隔开一大截。
 	var v := DeckViewer.new()
 	host.add_child(v)
-	v._btn.position = btn_pos
+	v._right_gap = UiTheme.STAGE_W - btn_pos.x - v._btn.size.x
+	v._pin_to_window()
 	return v
+
+
+func _pin_to_window() -> void:
+	## R519b：把按钮贴到窗口右缘。顶栏通屏之后，舞台右缘已经不等于屏幕右缘了。
+	if _btn == null:
+		return
+	var vp := get_viewport()
+	if vp == null:
+		return
+	_btn.position = Vector2(vp.get_visible_rect().size.x - _right_gap - _btn.size.x,
+			_btn.position.y)
 
 
 func _init() -> void:
@@ -74,6 +89,7 @@ func _ready() -> void:
 	_btn.pressed.connect(_toggle)
 	UiTheme.apply_chip(_btn, false, true)   # 关闭按钮：面板是 PAPER 亮底 + 固定 32px 高 → 浅底 compact
 	add_child(_btn)
+	get_viewport().size_changed.connect(_pin_to_window)
 
 	_panel = Control.new()
 	_panel.set_anchors_preset(Control.PRESET_FULL_RECT)

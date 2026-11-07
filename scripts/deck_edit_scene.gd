@@ -74,6 +74,7 @@ var _back_delay := 1.4     # 结算后回地图的等待（演出要占掉 1.3s 
 
 func _ready() -> void:
 	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
+	UiTheme.stretch_topbar($TopBar)   # R519b：顶栏通屏宽，右侧按钮组贴窗口右缘
 	hint_label.add_theme_color_override("font_color", UiTheme.PAGE_MUTED)
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()

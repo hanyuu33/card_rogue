@@ -118,7 +118,11 @@ func _is_menu_scene(path: String) -> bool:
 	## 屏幕左上 (8, 8) 234×40 —— 正好整块压住战斗顶栏的「▶1x」与「记录」两颗按钮
 	## （实测出图：两颗按钮整条消失，只剩状态条）。战斗内又不用金币，所以一律不显示。
 	for suffix in ["title.tscn", "class_pick.tscn", "record_list.tscn",
-			"settings.tscn", "gallery.tscn", "battle.tscn"]:
+			"settings.tscn", "gallery.tscn", "battle.tscn",
+			# R519b：这两页的「返回」chip 就摆在 (14, 14) 110~150 宽，整块落在状态条
+			# (8, 8) 266×52 底下 —— 出图时按钮直接看不见（`story` 实测如此）。
+			# 两页都跟本局无关（故事簿 / 账号级禁卡表），不显示状态条最省事。
+			"story.tscn", "ban.tscn"]:
 		if path.ends_with(suffix):
 			return true
 	return false

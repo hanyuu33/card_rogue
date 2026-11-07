@@ -402,3 +402,23 @@ deck_edit / record_list / story / settings / ban / relic_pick；`TopBar`（Canva
 **遗留**：① 舞台化的前提是「所有界面都按 1280×720 排」，将来若新增按视口自适应的页面，
 要单独确认它该不该接舞台（event 就是反例）。② 背景在宽屏下是**拉伸**铺满（沿用改前行为），
 不是 cover 裁切 —— 观感上更接近原设计，但 21:9 会略微横向拉长，若日后觉得别扭再换 cover。
+
+## 2026-11-07 R519b 顶栏通屏 + 选职业页「随机」
+
+用户口径：「选人物界面新增一个随机。另外，顶部的工具栏还是希望等同于屏幕宽度，只是上面的元素位置调整。」
+
+- `UiTheme.stretch_topbar(bar)`：底带铺满窗口，直接子节点里 **`Button` 且 `offset_left >= 640`** 的
+  改右锚（按距设计右缘的距离换算）；左端信息与中间标题不动。已接 battle($Toolbar)、
+  gallery / class_pick / deck_edit / relic_pick($TopBar)。
+  ⚠️ 只认 `Button` —— 战斗顶栏的 `StatusLabel` 若跟着右锚会和血条断开。
+- `DeckViewer` / `RelicViewer`（CanvasLayer）改贴**窗口**右缘：`attach()` 算 `_right_gap`，
+  `_pin_to_window()` + `size_changed` 重贴。地图页右上（巧克力 / 完整卡组 / 齿轮）用
+  `UiTheme.win_dx(self)` 平移，`_relayout_topright()` 负责节点重摆。
+- 选职业页「随机」：头像行右端、垂直居中、整组居中（`_av_row_w()`）；只选中不开局；
+  保证换人；实底纸面（CG 明暗不定，半透明底读不清）。
+- 修 bug：`story` / `ban` 的「← 返回」被全局状态条整块盖住（`(14,14)` vs `(8,8) 266×52`），
+  两页加进 `_is_menu_scene`。
+
+验证：`_verify.py` 全通过（mana / engine 5236 / reward 26 / bgm 39 / smoke 64）；
+1920 出图 `_review/d_*`、1280 基线 `_review/n2_*`（顶栏在 16:9 下与改前逐像素一致）。
+细节见 `UI设计规范.md` §4.51。

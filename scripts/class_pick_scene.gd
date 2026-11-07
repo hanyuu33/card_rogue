@@ -11,6 +11,11 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const AV := 96.0                       # 头像边长（小，别占太多面积）
 const AV_GAP := 30.0
+# R519b（用户口径「选人物界面新增一个随机」）：头像行右端一枚「随机」，点一下换一个职业。
+# ⚠️ 只**选中**不直接开局 —— 玩家还得看一眼 CG 和难度档位；连点会一直换人，不会卡住不动。
+const RAND_W := 84.0
+const RAND_H := 38.0
+const RAND_GAP := 22.0
 const PANEL_W := 416.0
 # R223：难度档位从「三个固定按钮」改成「左箭头 / 档位盒 / 右箭头」一行（0~10 共 11 档，
 # 钳制不循环）。下面那条 debuff 文本随之变宽变高。
@@ -31,6 +36,7 @@ var _menu: UiMenu = null      # Esc 主菜单（R148）
 var _hover := -1              # 悬停的头像下标
 var _selected := -1           # 已选职业下标（_ready 里默认置 0 = 第一角色；-1 仅作初值）
 var _picked := false
+var _rand_hover := false      # R519b：「随机」钮的悬停态（自绘按钮，得自己跟）
 var _seed_edit: LineEdit = null   # R261：种子输入框（唯一的原生控件，手机点它弹软键盘）
 var _seed_guard := false          # 防止 text_changed 里改 text 触发二次回调
 var _seed_bad := false            # 输入的种子不合法（红框 + 提示；不静默换成随机）
@@ -41,6 +47,7 @@ static var last_selected := 0
 
 func _ready() -> void:
 	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
+	UiTheme.stretch_topbar($TopBar)   # R519b：顶栏通屏宽，右侧按钮组贴窗口右缘
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
@@ -87,11 +94,21 @@ func _ready() -> void:
 # 几何（绘制与命中**同源**，改版式只改这里）
 # ──────────────────────────────────────────────────────────────
 
-func _av_rect(i: int) -> Rect2:
+func _av_row_w() -> float:
+	## 头像行 + 右端「随机」的**整体**宽度。居中要按整组算，否则加了个按钮头像就偏左。
 	var n := PlayerClass.ids().size()
-	var total := n * AV + maxi(0, n - 1) * AV_GAP
-	var x0 := (size.x - total) / 2.0
+	return n * AV + maxi(0, n - 1) * AV_GAP + RAND_GAP + RAND_W
+
+
+func _av_rect(i: int) -> Rect2:
+	var x0 := (size.x - _av_row_w()) / 2.0
 	return Rect2(x0 + i * (AV + AV_GAP), size.y - AV - 64.0, AV, AV)
+
+
+func _rand_rect() -> Rect2:
+	## R519b：紧跟在最后一个头像右边、与头像行**垂直居中**。
+	var last := _av_rect(PlayerClass.ids().size() - 1)
+	return Rect2(last.end.x + RAND_GAP, last.get_center().y - RAND_H * 0.5, RAND_W, RAND_H)
 
 
 func _panel_rect() -> Rect2:
@@ -278,6 +295,37 @@ func _draw() -> void:
 		_draw_seed_panel()
 	for i in PlayerClass.ids().size():
 		_draw_avatar(i)
+	_draw_rand_button()
+
+
+func _draw_rand_button() -> void:
+	## R519b（用户口径：「选人物界面新增一个随机」）。
+	## 只把 `_selected` 换成别人，**不**直接开局 —— 随机到谁还得让人看一眼 CG 和难度；
+	## 想开局仍然是「确认进入」那一下，行为上没有第二条路径。
+	var r := _rand_rect()
+	# ⚠️ 用**实底**（`draw_info_card` 的纸面）而不是 `draw_action` 的半透明 chip：
+	#    这一枚压在职业 CG 上，角色衣服是白是黑全看选了谁 —— 半透明底会时深时浅，
+	#    深色那段连字都读不出来。实底与头像下面那排名牌同一套，永远读得清。
+	UiTheme.draw_info_card(self, r)
+	draw_rect(r, UiTheme.ADVENTURE_BRASS_LIT if _rand_hover else Color(1, 1, 1, 0.25),
+			false, 2.0 if _rand_hover else 1.0)
+	draw_string(_font_bold, Vector2(r.position.x, r.position.y + 26.0), "随 机",
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
+
+
+func _roll_random() -> void:
+	## 随机换一个职业。⚠️ 只有一个职业时不做事；多种职业时**保证换人**
+	## （随机到同一个 `_selected` 就顺移一位）—— 否则玩家点一下「没反应」，会以为坏了。
+	var n := PlayerClass.ids().size()
+	if n <= 0:
+		return
+	var i := randi() % n
+	if n > 1 and i == _selected:
+		i = (i + 1 + randi() % (n - 1)) % n
+	_selected = i
+	last_selected = i
+	sfx.play("click")
+	queue_redraw()
 
 
 func _draw_avatar(i: int) -> void:
@@ -438,6 +486,11 @@ func _gui_input(event: InputEvent) -> void:
 		if idx != _hover:
 			_hover = idx
 			queue_redraw()   # R186：悬停变化才重绘（原来靠 _process 每帧重绘）
+		# R519b：「随机」钮与头像行是两套命中，悬停态各记各的（头像没变也要重绘这一枚）。
+		var rh := _rand_rect().grow(4.0).has_point(event.position)
+		if rh != _rand_hover:
+			_rand_hover = rh
+			queue_redraw()
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos: Vector2 = event.position
@@ -463,6 +516,11 @@ func _gui_input(event: InputEvent) -> void:
 				sfx.play("click")
 				queue_redraw()   # R186（原来靠 _process 每帧重绘）
 				return
+		# R519b：「随机」钮 —— 放在头像循环之后判，两者不重叠所以顺序无所谓，
+		# 但**必须在 `_selected >= 0` 那个块之外**：`_selected` 为 -1 时也要能点。
+		if _rand_rect().grow(4.0).has_point(pos):
+			_roll_random()
+			return
 
 
 func _choose(cid: String) -> void:

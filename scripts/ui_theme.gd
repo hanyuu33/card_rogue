@@ -810,6 +810,61 @@ static func attach_stage(c: Control) -> void:
 			cc.queue_redraw())
 
 
+static func win_dx(c: Control) -> float:
+	## 窗口比舞台**每侧**多出来的宽度（舞台居中，左右各一份）。
+	## 「要贴屏幕边缘」的元素 = 1280 设计坐标 + 这个量；顶栏底带则左右各溢一份。
+	if c == null or not c.is_inside_tree():
+		return 0.0
+	return maxf(0.0, (c.get_viewport_rect().size.x - STAGE_W) * 0.5)
+
+
+static func stretch_topbar(bar: Control) -> void:
+	## R519b（用户口径）：**顶栏横跨整个屏幕宽**，但上面的元素不掉队 ——
+	## 左端信息、中间标题留在原设计位置；贴着右端的按钮组整体重新锚到窗口右缘。
+	## ⚠️ 只认 `Button`：像战斗顶栏的 `StatusLabel`（敌人状态那行）虽然也排在右半边，
+	##    但它是「接着血条往下读」的信息，被拽到右边就和血条断开了。
+	if bar == null or not bar.is_inside_tree():
+		return
+	_apply_stretch_topbar(bar)
+	if bar.has_meta("_bar_stretched"):
+		return
+	bar.set_meta("_bar_stretched", true)
+	var vp := bar.get_viewport()
+	if vp == null:
+		return
+	var wr: WeakRef = weakref(bar)
+	vp.size_changed.connect(func() -> void:
+		var bb = wr.get_ref()
+		if bb != null:
+			_apply_stretch_topbar(bb))
+
+
+static func _apply_stretch_topbar(bar: Control) -> void:
+	var p := bar.get_parent() as Control
+	if p == null:
+		return
+	# ① 先把右侧按钮组换成右锚（此刻 bar 还是设计宽度，量的就是「距设计右缘多远」）
+	for ch in bar.get_children():
+		var c := ch as Control
+		if c == null or not (c is Button) or c.has_meta("_bar_right_pin"):
+			continue
+		if c.offset_left < STAGE_W * 0.5:
+			continue
+		var d_l := STAGE_W - c.offset_left
+		var d_r := STAGE_W - c.offset_right
+		c.set_meta("_bar_right_pin", true)
+		c.anchor_left = 1.0
+		c.anchor_right = 1.0
+		c.offset_left = -d_l
+		c.offset_right = -d_r
+	# ② 底带铺满窗口（高度不变，纵向不动）
+	var r := bleed_rect(p)
+	bar.anchor_left = 0.0
+	bar.anchor_right = 0.0
+	bar.position.x = r.position.x
+	bar.size.x = r.size.x
+
+
 static func bleed_child(c: Control) -> void:
 	## 让某个子节点铺满**整个窗口**（父节点是舞台，所以用负偏移溢出去）。
 	## 用于「不该跟着内容一起缩」的层：纯色底、整屏底图。
