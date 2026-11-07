@@ -137,3 +137,32 @@ The CENTER strip stays visually empty - only plain scenery there.
 
 `martial` 第 2 版是「把人整体上移」—— 坐地题材做不到，反而把天空画成橙粉落日、
 明度跳出整套，废掉。
+
+---
+
+# R519h 休息处篝火（追加）
+
+## 结论先行：这类主体不要出整屏背景
+
+整屏 4 版全废（位置约束写了「左三分之一」「中心 11% 不超 22%」「bottom-left corner」
+「整堆在上半部」都没用），最终走左右布局。失败对照见 `UI设计规范.md` §4.56。
+
+**规则：主体必须避开某块 UI 区域时，不要靠提示词赌位置，换布局。**
+
+## 侧图（一次过）
+
+`image1 = style_ref/bg_divination.png`，`input_fidelity: low`，`size = 1024x1024`。
+关键句：
+
+```
+SUBJECT: ONE BIG BURNING CAMPFIRE, the hero of the picture, large and close.
+TALL FLAMES as three or four big flat hard-edged shapes:
+deep orange outer flame, bright yellow inner flame, small pale core.
+A few flat diamond-shaped sparks. Thin smoke is ONE hard-edged curved ribbon.
+One flat lighter shape of firelight on the dirt, clean edge.
+The campfire sits slightly LEFT of centre, nothing cut off by the edges.
+The RIGHT SIDE is deliberately QUIET: the same drawn dirt ground continues,
+darker toward the right edge, NEVER a solid rectangle, NEVER a hard edge.
+```
+
+夜景暗调、火焰是唯一暖点。水印在方图内 → `patch_wm()` 修补（不能像 martial 那样裁掉）。

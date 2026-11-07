@@ -164,3 +164,33 @@ NEVER a solid rectangle of one colour, NEVER a hard edge, NEVER a wall.
 
 - `_review/martial_side.png` —— 1280×720
 - `_review/martial_1920.png` —— 1920×720（事件页不接 stage，侧图贴屏幕左缘）
+
+---
+
+# R519h 追加：休息处改左右布局（篝火）
+
+用户口径：「休息处的图需要更换，换成正在燃烧的篝火」。
+
+**整屏试了 4 版全废**（详见 `UI设计规范.md` §4.56 的失败对照表）：
+模型对「画面里要有一堆篝火」的服从度远高于「篝火必须待在 x<22%」，
+每次都落在画面宽度 20%~25%，而卡片左缘在 26% → 必被切。
+**这类需求别再试整屏，直接左右布局。**
+
+| 项 | 值 |
+|---|---|
+| 产物 | `assets/ui/side_rest.png` **742×742** |
+| 代码 | `SIDE_LAYOUT_KINDS` 加 `"rest"`；删 `UiAssets.event_bg()` 的 rest 特判 |
+| 删掉 | `assets/ui/adventure_shared/rest_clearing.png`（黄昏空地，篝火被卡片埋住） |
+| 出图 | 原生 **1024×1024** 方图 → 修补水印 → 缩 742 |
+| 脚本 | `tools/process_side_rest.py` |
+| 水印 | ⚠️ 方图**裁不掉**，在画面内（872..1024 / 948..1024）→ `patch_wm()` 修补 |
+
+废弃清理：`tools/process_rest.py`、`raw/rest.png`、`processed/rest_clearing.png`
+（整屏方案的废稿与脚本，不要复用）。
+
+## 验收
+
+- `_review/rest_after.png` —— 1280×720，篝火完整在左栏，四个选项 + 烟斗提示都放得下
+- `_review/rest_1920.png` —— 1920×720
+- `_review/martial_side.png` —— **重截**的 1280 武术大师（R519g 那张是撤渐变之前的旧图）
+- `_review/_rest_wm_check.png` —— 水印修补区放大

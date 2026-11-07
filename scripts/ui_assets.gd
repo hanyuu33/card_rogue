@@ -116,10 +116,9 @@ static func event_side_pic(kind: String) -> Texture2D:
 
 
 static func event_bg(kind: String) -> Texture2D:
-	if kind == "rest":
-		var clearing := get_tex("adventure_shared/rest_clearing")
-		if clearing != null:
-			return clearing
+	## R519h：rest 改走左右布局（`side_rest.png`），不再有整屏背景，
+	## 原来的 `adventure_shared/rest_clearing` 特判与素材一并删除。
+	## 左右布局的 kind 由 `event_scene._apply_side_layout()` 走 `_add_fallback_bg()`，不经这里。
 	return get_tex("bg_" + kind)
 
 

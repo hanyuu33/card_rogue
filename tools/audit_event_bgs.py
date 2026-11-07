@@ -129,8 +129,15 @@ def main() -> int:
             for r in miss:
                 print("  %-14s %-9s %s" % (r["kind"], r["name"], r["todo"]))
 
+    # R519h：rest（休息处）是地图节点 type=="rest"，**不在事件池里**，所以上面的表格永远不含它；
+    # 但它每局都要看好几次，单列一行，免得换图 / 删图时没人发现。
+    rest_ok = ("rest" in have_side) if "rest" in side_kinds else rest_bg
+    rest_how = "侧图 side_rest.png" if "rest" in side_kinds else "整屏 adventure_shared/rest_clearing.png"
+    print("\n休息处 rest（地图节点，不在事件池）：%s —— %s"
+          % ("OK" if rest_ok else "缺", rest_how))
+
     if "--strict" in sys.argv:
-        return 1 if any(r["verdict"] in ("缺", "仅插图") for r in rows) else 0
+        return 1 if not rest_ok or any(r["verdict"] in ("缺", "仅插图") for r in rows) else 0
     return 0
 
 

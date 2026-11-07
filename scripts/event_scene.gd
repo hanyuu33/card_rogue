@@ -614,7 +614,7 @@ func _kind() -> String:
 ## R519g：`martial` 加入 —— 它的主体（盘坐的老人）只能在地面中段，
 ## 而居中卡片正好压在那里，无论怎么调背景都会被盖住。改成左右布局后
 ## 老人独占左栏、完整可见，文案走右栏。
-const SIDE_LAYOUT_KINDS := ["lake_lady", "martial"]
+const SIDE_LAYOUT_KINDS := ["lake_lady", "martial", "rest"]
 const SIDE_SPLIT_MIN := 0.40      ## 图片最窄占比（文案再长也给图留这么多）
 const SIDE_SPLIT_MAX := 0.62      ## 图片最宽占比（文案很短时图也别宽到没边）
 const SIDE_TEXT_MIN_W := 300.0    ## 右栏最小宽度
@@ -1339,6 +1339,17 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "martial"
+		if args[i] == "--rest":  # 演示：伪装 run 休息节点（R519h 篝火背景截图验证）
+			# ⚠️ 休息处不是 event 房：地图节点 type == "rest"，pending_event 为空。
+			# 写成 {"type":"event"} + pending_event="rest" 会被 `_is_treasure()`
+			# （其余 event 子类型的兜底分支）认领 → 截出来是宝箱，不是篝火。
+			RunState.run_active = true
+			RunState.pending_node = {"type": "rest"}
+			RunState.pending_event = ""
+		if args[i] == "--lake_lady":  # 演示：左右布局版式对照（R519h）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "lake_lady"
 		if args[i] == "--cave":  # 演示：伪装 run 洞穴事件（R467 截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}

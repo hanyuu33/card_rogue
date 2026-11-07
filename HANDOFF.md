@@ -582,3 +582,49 @@ R519d 那批反过来：无描边、厚涂渐变、照片级石木纹理、体�
 截图 `_review/martial_side.png`（1280）与 `martial_1920.png`（1920×720，事件页不接 stage，
 侧图贴屏幕左缘、文字栏按文案反推）。
 规范 §4.55 记录了「什么时候该换左右布局」的判定表。
+
+## 2026-11-07 R519h 休息处换篝火 + 补 1280 截图（两处欠账一起还）
+
+用户口径：「只看到了宽的，不宽的呢？另外休息处的图需要更换，换成正在燃烧的篝火」。
+
+**第一处欠账是我自己的**：R519g 附的 `martial_side.png`（1280）截于 14:15，
+而 `side_martial.png` 14:16 才重新落盘（撤掉右缘压暗渐变）—— 交的是**旧版截图**。
+已重截。教训：**验收图的 mtime 必须晚于素材**，跟 .ctex 那条是同一类自检。
+
+**第二处：休息处换篝火，最后走的是左右布局，不是整屏背景。**
+
+旧 `adventure_shared/rest_clearing.png` 是黄昏黄绿林间空地（写实厚涂），
+篝火埋在正文卡片正后方，游戏里只剩一缕烟 + 右侧一个茶壶。
+
+整屏试了 **4 版全废**，失败方式比结果有用：
+1. 「篝火在左三分之一」→ 中心落 25%，卡片左缘 26%，右半被切。
+2. 「中心 11%、整堆不超过 22%」→ 没听，中心落 20%。
+3. 位置约束提到最前 + 「bottom-left corner」→ 火焰右缘仍贴到 24.5%。
+4. 换维度「整堆放上半部」→ 火被挪到正中央，只剩一点火苗在卡片上方。
+
+**结论：别用百分比 / 方位词跟模型赌「主体必须避开某块区域」。**
+它对「画面里要有一堆篝火」的服从度远高于「篝火必须待在 x<22%」。
+这类需求直接换左右布局（§4.55），侧图独占左栏，一次到位。
+
+落地：
+- 新增 `assets/ui/side_rest.png` 742×742，`SIDE_LAYOUT_KINDS` 加 `"rest"`。
+- 删 `assets/ui/adventure_shared/rest_clearing.png`（+`.import`）和
+  `UiAssets.event_bg()` 的 rest 特判（死代码）。
+- 废弃的整屏方案一并清理：`tools/process_rest.py`、`raw/rest.png`、`processed/rest_clearing.png`。
+
+**方图水印只能修补**：`side_martial` 靠「裁左方形」让水印出界；
+`side_rest` 是原生 1024×1024，水印在画面内 → `patch_wm()` 镜像条带修补。
+脚本 `tools/process_side_rest.py`。
+
+**`--rest` 演示参数（新增）**：休息处不是 event 房，地图节点 `type == "rest"`。
+写成 `{"type":"event"} + pending_event="rest"` 会被 `_is_treasure()`（其余 event 子类型的
+兜底分支）认领 → 截出来是宝箱。正确：`pending_node={"type":"rest"}` 且 `pending_event=""`。
+顺带补 `--lake_lady` 作版式对照入口。
+
+**审计盲区**：rest 不在事件池（`read_names()` 读 `game_layers.gd` 的事件表），
+审计表格永远不含它 —— 这次被忽略就有这个原因。现在表格后单列一行
+「休息处 rest（地图节点，不在事件池）」，`--strict` 也算它。
+
+验证：`_verify.py` 全通过（mana PASS / engine 5236 / reward 26 / bgm 39 / smoke 64）。
+截图 `_review/martial_side.png`（1280 重截）、`rest_after.png`（1280）、`rest_1920.png`（1920×720）。
+规范新增 §4.56。

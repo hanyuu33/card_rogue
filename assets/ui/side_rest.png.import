@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://gtlmrpdfvvs5"
-path="res://.godot/imported/rest_clearing.png-fe1088703500f12ff3a143c91dd6238b.ctex"
+uid="uid://bi2tl6m1y3uqp"
+path="res://.godot/imported/side_rest.png-d8830e0e30bf2126bfdcc3c22db03935.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/adventure_shared/rest_clearing.png"
-dest_files=["res://.godot/imported/rest_clearing.png-fe1088703500f12ff3a143c91dd6238b.ctex"]
+source_file="res://assets/ui/side_rest.png"
+dest_files=["res://.godot/imported/side_rest.png-d8830e0e30bf2126bfdcc3c22db03935.ctex"]
 
 [params]
 
