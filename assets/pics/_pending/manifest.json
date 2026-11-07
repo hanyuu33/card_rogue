@@ -1,6 +1,6 @@
 {
  "note": "AI 生成、尚未人工确认的卡图。放在 assets/pics/_pending/<id>.png；游戏内会自动回退读取，并在卡面右下角打黄色三角标记。确认后跑 python tools/cardart.py approve <id> 移入 assets/pics/。原图（未裁剪）留在 raw/ 下备查。",
- "updated": "2026-11-01",
+ "updated": "2026-11-07",
  "shared_recipe": "统一构图公式：低角度仰拍 + 巨物/渺小参照物对比 + 逆光轮廓 + 能量粒子；日式动画赛璐璐上色，日式西幻；原图 1536x1024 居中裁到 448x403（裁窗口 199~1337），右下角平台水印随之裁掉。\n\n【R478 机械/改造批·风格锚（2026-11-01）】机械题材极易被拉成欧美写实 3D 概念图。中文的「日式动画赛璐璐」不足以拉住它，必须把**英文风格头放在 prompt 第一句**并显式否定：【风格头·必须放第一句】アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art, NOT octane render, NOT metallic texture rendering。 另需在主体描述里写 cartoony / simplified / oversized rivets / single glowing eye 这类简化设计词。批次内先出一张验证风格，对了再批量。\n\n【成色硬约束（2026-11-02 用户明确要求）】所有单位/机械卡图**一律全新出厂，禁止任何做旧**：NO rust, NO corrosion, NO weathering, NO dirt, NO grime, NO stains, NO scratches, NO chipped paint, NO battle damage, NO soot, NO aged patina, NO distressed texture。\n注意：赛璐璐的**块状阴影**不算做旧，可以保留；做旧指的是锈蚀/污渍/磨损/掉漆/烟熏这些『使用痕迹』。\n中文 prompt 里也要写一句「全新出厂、表面洁净无锈无磨损」，不能只在英文头里否定。\n\n【暗影题材风格锚（2026-11-02）】暗影系极易滑向写实暗黑CG/恐怖渲染。配方：\n① 英文风格头照旧（cel / flat / bold outlines + NOT 3D/CGI/photorealistic/dark realistic concept art/gritty texture）；\n② 追加一句定调：`Palette deep midnight blue and violet, BUT colors stay bright, saturated and anime-clean — a vivid night, NOT a murky realistic dark painting.`\n③ 效果涉及**数量**（三张卡/两格/两只鸭子）必须在 prompt 里写死数字，并显式否定常见替代画法\n   （如「不要画残影/分身」）；涉及**位移/方向**用「地面刻度 + 反向箭头 + 拖痕」，别用残影（残影会被画成第二个实体）。\n④ 暗影系配色底：黑紫 + 硬边描光，能量/费用用青蓝，强化主体用琥珀。\n\n【卡牌不入画（2026-11-02 用户硬要求，适用于所有后续卡图）】\n任何卡图里**都不许画卡牌**：不画长方形纸片、不画卡面、不画牌堆、不画发光卡、不画手中捧着的卡。\n原因：卡图本身就是卡面，画里再出现卡牌就是「画中画」，缩到 448x403 后更糊，且与 UI 上的手牌互相干扰。\n- 抽卡 / 取回 / 弃牌 / 弃牌堆这类语义，改用**抽象能量载体**表达：光核、光符、光丝、影池、数据块。\n- prompt 末尾固定加：`NO playing card, NO trading card, NO rectangular paper object, NO card face, NO deck of cards`；\n  中文描述里也要写一句「不画卡牌」。\n- 同理禁用的「符号化标记」：地面箭头、格线、指向符号、UI 图标——它们会被读成界面元素而不是画面内容。\n\n【卡面裁切安全区（2026-11-02 踩坑后定）】\n卡图在卡面上不是整张可见：图区 = 卡高的 `CARD_ART_RATIO`(0.662)，260×312 的卡算出来是 260×206，比例 1.26；\n而卡图规格 448×403 的比例是 1.11 → `cover_region()` 会**上下各裁掉约 6%**。\n- 生成时：头冠、尖角、旗标、头顶特效一律不要贴原图上下边缘，垂直方向留 8% 以上余量。\n- 事后补救（不重画）：纵向压缩 0.93 + 底对齐 + 顶部用第一行像素模糊拉伸补满 → 再按 448×403 居中裁。\n- 左右不用担心：448 宽在 260 宽里是等比缩放，横向不裁（近似的 1.26 比 1.11 更高，横向反而是满的）。\n",
  "items": {
   "9014": {
@@ -54,6 +54,16 @@
    "tier": "S",
    "status": "approved",
    "approved": "2026-11-02"
+  },
+  "8081": {
+   "name": "雪豹",
+   "tier": "A",
+   "created": "2026-11-07",
+   "status": "approved",
+   "approved": "2026-11-07",
+   "ref": "R519l：形象与氛围依据 `assets/ui/bg_snow_leopard.png`（雪豹出现事件）；远景剪影改为可读近景，保留雪夜、满月、足迹、枯树和赛璐璐画风。",
+   "prompt": "一只自然雪豹的近景四分之三全身像，沿雪地足迹向观者走来；蓝灰白毛、深灰环纹、圆耳、平静警觉，完整头、四足与长尾。粗黑描边、平涂两级明暗、冷蓝灰雪夜、满月与黑色枯树。无人物、文字、水印或卡框。",
+   "note": "原图 `art_src/2026-11-07_雪豹卡图R519l/raw/8081.png`；1024×1024 裁 (0,20,1024,941) → 448×403，水印随裁切出界。图鉴 `snow_leopard_gallery_1280.png` 已验收，无 pending 三角。"
   },
   "9018": {
    "name": "金属龙",
