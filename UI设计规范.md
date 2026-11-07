@@ -191,6 +191,11 @@ UiTheme.<颜色|字号|间距令牌>            # 其余
   - ⚠️ 同一页的同类按钮**必须同高一档**。R517 之前按 `size.y <= 44` 判 compact，而场景里四个按钮
     的 `custom_minimum_size` 是 46 / 42 / 38 / 38 → 第一个走大档、其余走小档，「第二行更矮字更小」。
     现在 `_fit_action_button(..., night=true)` 强制 `compact = false`，`scenes/event.tscn` 四个按钮统一 46 高。
+  - ⚠️ 同一页的按钮**还必须同字号**。逐个按钮各自缩字时，文案长的会掉到 `FS_LABEL`、短的是 `FS_SUBHEAD`，
+    一页里两种字号看着仍然不齐。`UiTheme._night_group_font_size()` 取「组里每个按钮都放得下」的
+    最大字号，整组统一下发；挂在 `resized` **和** `minimum_size_changed` 两个信号上
+    （改 `text` 不会发 `resized`，只发后者）。
+    代价：一页里只要有一行超长文案，整组会一起变小 —— 所以超长文案应尽量在文案层就改短。
   - ⚠️ `UiTheme._fit_action_button` 会在按钮 resize 时**重设 stylebox**，
     所以它必须带 `night` 参数，否则深色缎带会被浅色贴图冲掉（R516 踩过）。
 · R516 左右布局（`side_lake_lady` 首个用例）：图片占满左侧 58% 全高，文字与按钮在右侧，

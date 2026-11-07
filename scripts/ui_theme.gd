@@ -629,6 +629,50 @@ static func _chip_box(bg: Color, line: Color, width: int, px: int, py: int,
 const UiPressFx = preload("res://scripts/ui_press_fx.gd")
 
 
+static func _night_group_font_size(btn: Button) -> int:
+	## R517：同一页的 night 按钮**共用同一个字号**。
+	##
+	## 原先每个按钮各自缩字 —— 文案短的那行保持 FS_SUBHEAD、长的那行掉到 FS_LABEL，
+	## 一页里两个按钮字号不一样，看上去还是「第二行字更小」。
+	## 现在取「组里每个按钮都放得下」的最大字号，整组一起用。
+	var parent := btn.get_parent()
+	var group: Array[Button] = []
+	if parent != null:
+		for n in parent.get_children():
+			var b := n as Button
+			if b != null and b.visible and not b.text.is_empty():
+				group.append(b)
+	if group.is_empty():
+		group.append(btn)
+	var face := font()
+	var fs := FS_SUBHEAD
+	for b in group:
+		var avail := b.size.x - 68.0
+		if avail <= 0.0:
+			continue
+		while fs > FS_CAPTION \
+				and face.get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > avail:
+			fs -= 1
+	return fs
+
+
+static func _unify_night_fonts(btn: Button) -> void:
+	## 保证整组字号一致，并处理「文本变了但尺寸没变」——Button 改 text 不会发 resized，
+	## 所以额外挂在 minimum_size_changed 上。设同一个字号不会再次触发该信号，天然收敛。
+	if btn == null or not is_instance_valid(btn):
+		return
+	var fs := _night_group_font_size(btn)
+	var parent := btn.get_parent()
+	if parent == null:
+		btn.add_theme_font_size_override("font_size", fs)
+		return
+	for n in parent.get_children():
+		var b := n as Button
+		if b == null or not b.visible or b.text.is_empty():
+			continue
+		b.add_theme_font_size_override("font_size", fs)
+
+
 static func _fit_action_button(btn: Button, primary: bool, night := false) -> void:
 	if btn.size.y <= 0:
 		return
@@ -650,6 +694,9 @@ static func _fit_action_button(btn: Button, primary: bool, night := false) -> vo
 		elif state == "pressed":
 			bg = bg.darkened(0.08)
 		btn.add_theme_stylebox_override(state, _chip_box(bg, ADVENTURE_BRASS, 1, 10, 4) if compact else adventure_button_style(primary, state))
+	if night:
+		_unify_night_fonts(btn)
+		return
 	var fs := FS_LABEL if compact else (FS_HEADING if primary else FS_SUBHEAD)
 	var face := font_bold() if primary else font()
 	while fs > FS_CAPTION and face.get_string_size(btn.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > btn.size.x - (20 if compact else 68):
@@ -828,6 +875,10 @@ static func apply_night_button(btn: Button, primary := false) -> void:
 	var fit := _fit_action_button.bind(btn, primary, true)
 	if not btn.resized.is_connected(fit):
 		btn.resized.connect(fit)
+	# 事件分支改 `text` 时按钮尺寸不变、`resized` 不会发 → 字号不会重算。
+	# `minimum_size_changed` 会跟着文本变（文字变长 → 最小宽度变），补上这条路。
+	if not btn.minimum_size_changed.is_connected(fit):
+		btn.minimum_size_changed.connect(fit)
 	fit.call_deferred()
 	UiPressFx.attach(btn)
 

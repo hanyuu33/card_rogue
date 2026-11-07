@@ -8,9 +8,12 @@
      ⚠️ 不能用 `modulate_color`：乘色会把比纸暗的金线压成暗红、直接消失。
      生成脚本 `art_src/2026-11-07_暗紫按钮/tools/make_night_buttons.py`
      （按 R−B 暖度分离纸面与金线后各自重映射）。
-  2. **第二行按钮更矮、字更小** → `_fit_action_button` 按 `size.y <= 44` 判 compact，
-     而场景里四个按钮是 46 / 42 / 38 / 38 → 第一个大档、其余小档。
-     现在 night 路径强制 `compact = false`，`scenes/event.tscn` 四个按钮统一 **46 高**。
+  2. **第二行按钮更矮、字更小** → 两个独立成因，都修了：
+     - 高度：`_fit_action_button` 按 `size.y <= 44` 判 compact，而场景里四个按钮是 46 / 42 / 38 / 38
+       → 第一个大档、其余小档。现在 night 路径强制 `compact = false`，`scenes/event.tscn` 四个按钮统一 **46 高**。
+     - 字号：原先逐个按钮各自缩字，长文案掉到 `FS_LABEL`、短的是 `FS_SUBHEAD`。
+       新增 `UiTheme._night_group_font_size()`：取「组里每个按钮都放得下」的最大字号整组统一下发，
+       并挂到 `resized` **和** `minimum_size_changed`（改 `text` 不会发 `resized`）。
   3. **渐变不该强行加白** → 原来只淡 alpha，图里的亮块会一路亮到边界才消失。
      改成两段：`SIDE_FADE_RGB = 0.62` 起把 **RGB 推向页面底色**（按 `UV.y` 与纵向渐变对齐），
      `SIDE_FADE_ALPHA = 0.74` 起才收 alpha。
