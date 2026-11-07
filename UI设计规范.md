@@ -195,11 +195,26 @@ UiTheme.<颜色|字号|间距令牌>            # 其余
     一页里两种字号看着仍然不齐。`UiTheme._night_group_font_size()` 取「组里每个按钮都放得下」的
     最大字号，整组统一下发；挂在 `resized` **和** `minimum_size_changed` 两个信号上
     （改 `text` 不会发 `resized`，只发后者）。
-    代价：一页里只要有一行超长文案，整组会一起变小 —— 所以超长文案应尽量在文案层就改短。
+    R518 起「整组一起变小」基本不会再发生：卡片宽度会先按文案加宽（`CENTER_MIN_W` → `CENTER_MAX_W`），
+    撞到 `CENTER_MAX_W` 才会回到缩字号逻辑。
   - ⚠️ `UiTheme._fit_action_button` 会在按钮 resize 时**重设 stylebox**，
     所以它必须带 `night` 参数，否则深色缎带会被浅色贴图冲掉（R516 踩过）。
-· R516 左右布局（`side_lake_lady` 首个用例）：图片占满左侧 58% 全高，文字与按钮在右侧，
-  **不套信息卡框**，标题与正文左对齐。
+· R518 宽度自适应（**别再写死宽度/接缝**）：文案块与按钮的宽度一律「先量后定」。
+  - 量的口径 `_content_natural_width()`：标题、正文（每行）、每个可见按钮
+    （文字宽 + 它自己 stylebox 的左右 content_margin）取最大值。
+    ⚠️ 按钮**必须按基础字号 `FS_SUBHEAD` 量**，不能读按钮当前字号 —— 当前字号本身就是
+    「按宽度缩过」的产物，拿它当输入会形成 宽度→字号→宽度 的互相追逐。
+  - 居中页：`col = clamp(自然宽 + 2×CENTER_CARD_PAD, CENTER_MIN_W 460, min(CENTER_MAX_W 760, 屏宽−120))`，
+    `Center` 锚点在屏幕中心，所以左右 offset 取 **±col/2**（写成 `屏宽×0.5 − col/2` 会把卡片整个推到屏外）。
+  - 左右布局：`col = clamp(自然宽, SIDE_TEXT_MIN_W 300, min(屏宽×0.46, 屏宽×(1−SIDE_SPLIT_MIN)))`，
+    接缝 `split = 1 − (col + SIDE_GAP 44 + SIDE_PAD_R 52) / 屏宽`，再夹到 `[SIDE_SPLIT_MIN 0.40, SIDE_SPLIT_MAX 0.62]`。
+  - 撞上限时靠 `desc` 的 `AUTOWRAP_WORD_SMART` 折行兜底（R518 起正文与标题都允许折行），
+    所以再长的文案也不会溢出卡片。
+  - 重算时机：根节点 `resized`、`desc.item_rect_changed`、四个按钮的 `minimum_size_changed`，
+    统一进 `_queue_relayout()` 合并成每帧一次；算出来的值没变（居中 <0.5px / 接缝 <0.002）就
+    **直接返回不动**，这是「布局→信号→布局」回环的刹车，别去掉。
+· R516/R518 左右布局（`side_lake_lady` 首个用例）：图片占满左侧（接缝按文案算，≈55%~62%）全高，
+  文字与按钮在右侧，**不套信息卡框**，标题与正文左对齐。
   - 图片右缘的过渡由**内联 shader** 按 `UV.x` 分两段做，**不依赖图片本身** ——
     换图不用重做渐变边，也不必把过渡烘进 PNG：
     ① `SIDE_FADE_RGB = 0.62` 起把 **RGB 推向页面底色**（底色按 `UV.y` 与纵向渐变对齐）；

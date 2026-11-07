@@ -266,7 +266,7 @@ const DIV_FEAST_DESC := """球里摆开一桌佳肴，热气还在往上飘，�
 const DIVINATION_KINDS := 4
 
 const LAKE_DESC := """雾从水面浮起来，两张卡牌悬在雾的上方——
-一张泛着银光，一张泛着金光，慢慢转过来，像在等你挑。
+一张泛着银光，一张泛着金光，慢慢转过来。这是你丢的吗？
 
 「说个谎吧，我替你扔掉一件旧东西。
 或者说句实话，我送你一件礼物。」"""
@@ -602,16 +602,150 @@ func _kind() -> String:
 	return "rest"
 
 
-## ---- R516：左右布局 ----------------------------------------------------------
+## ---- R516/R518：左右布局 -----------------------------------------------------
 ## 图片占满整个左侧（全高），文字与按钮落在右侧、**不套信息卡框**。
 ## 图片右缘不做硬切：用内联 shader 按 UV.x 把颜色推向页面底色、再收 alpha，
 ## 所以**渐变不依赖图片本身** —— 换一张同尺寸的图不用重做边、也不用把渐变烘进 PNG。
+##
+## R518：**接缝位置不再写死**。R516 的 `SIDE_SPLIT = 0.58` 是个常数，文案一变长
+## 就只能靠缩字号硬塞。现在反过来算：先量文案实际需要的宽度（标题 / 正文最长行 /
+## 每个按钮的文字＋内距），右栏取这个宽度的 clamp 值，剩下的全给图片。
+## 文字再长也不会挤掉图 —— 撞到上限时 `desc` 自动折行（本布局里开了 autowrap）。
 const SIDE_LAYOUT_KINDS := ["lake_lady"]
-const SIDE_SPLIT := 0.58        ## 左侧图片占屏宽的比例（1280 → 742）
-const SIDE_FADE_RGB := 0.62     ## 从这一列开始把**颜色**推向背景色（压掉亮块）
-const SIDE_FADE_ALPHA := 0.74   ## 从这一列开始收 alpha（颜色已一致，只求边界绝对无缝）
+const SIDE_SPLIT_MIN := 0.40      ## 图片最窄占比（文案再长也给图留这么多）
+const SIDE_SPLIT_MAX := 0.62      ## 图片最宽占比（文案很短时图也别宽到没边）
+const SIDE_TEXT_MIN_W := 300.0    ## 右栏最小宽度
+const SIDE_TEXT_MAX_RATIO := 0.46 ## 右栏最多占屏宽
+const SIDE_GAP := 44.0            ## 接缝到文字的间距
+const SIDE_PAD_R := 52.0          ## 文字块右侧留白
+const SIDE_FADE_RGB := 0.62       ## 从这一列开始把**颜色**推向背景色（压掉亮块）
+const SIDE_FADE_ALPHA := 0.74     ## 从这一列开始收 alpha（颜色已一致，只求边界绝对无缝）
+
+## ---- R518：居中布局的宽度 ----------------------------------------------------
+## 原来 `Center` 的宽度是写死的 ±230（460）。它只够放中等长度的文案，长一点就
+## 只剩「缩字号」一条路（奥秘之泉那行 25 字就是这么被压小的）。现在同侧栏一样
+## 先量后定：`CENTER_MIN_W` 保底不改变现有观感，超了才加宽，顶到 `CENTER_MAX_W`
+## 才让按钮回到缩字号逻辑。
+const CENTER_MIN_W := 460.0
+const CENTER_MAX_W := 760.0
+const CENTER_EDGE := 120.0        ## 居中布局左右至少留出的空白
+const CENTER_CARD_PAD := 24.0     ## 文字两侧在卡片内的呼吸位（每边）
 
 var _side_layout := false
+var _side_pic: TextureRect = null
+var _side_split := -1.0           ## 当前接缝（比例）；用于「算出来没变就别动」的回环刹车
+var _center_w := -1.0             ## 当前中间一列的宽度（同上）
+var _relayout_queued := false
+
+
+func _line_width(text: String, f: Font, fs: int) -> float:
+	## 一段可能含 \n 的文字里最长那一行的像素宽（不含自动折行 —— 折行是结果，不是需求）。
+	if f == null or fs <= 0:
+		return 0.0
+	var w := 0.0
+	for line in text.split("\n"):
+		if line.strip_edges().is_empty():
+			continue
+		w = maxf(w, f.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
+	return w
+
+
+func _label_natural_width(lbl: Label) -> float:
+	if lbl == null:
+		return 0.0
+	var f := lbl.get_theme_font("font")
+	if f == null:
+		f = _font
+	return _line_width(lbl.text, f, lbl.get_theme_font_size("font_size"))
+
+
+func _button_natural_width(b: Button) -> float:
+	## 按钮要的宽度 ＝ 文案宽 + 左右内距（从它自己的 stylebox 里读，不写死 68）。
+	##
+	## ⚠️ 字号**必须按基础档 FS_SUBHEAD 量**，不能读按钮当前字号：
+	## 当前字号本身就是「按宽度缩过」的产物，拿它当输入会形成
+	## 宽度 → 字号 → 宽度 的追逐（越量越窄、字越缩越小）。
+	var sb := b.get_theme_stylebox("normal")
+	var pad := 68.0
+	if sb != null:
+		pad = sb.get_content_margin(SIDE_LEFT) + sb.get_content_margin(SIDE_RIGHT)
+	var f := b.get_theme_font("font")
+	if f == null:
+		f = _font
+	return _line_width(b.text, f, UiTheme.FS_SUBHEAD) + pad + 8.0
+
+
+func _content_natural_width() -> float:
+	## 整块内容（标题 / 正文 / 结果行 / 可见的按钮）里最宽的那一条 —— 窄于它就只能缩字。
+	var w := _label_natural_width(event_name)
+	w = maxf(w, _label_natural_width(desc))
+	# 结果行常比正文长（「冒险笔记…回到地图时会看见那格亮着金光。」这类），
+	# 原来不参与测宽，长的时候会直接顶出卡片；现在一起算，超上限还有 autowrap 兜底。
+	if not result_label.text.is_empty():
+		w = maxf(w, _label_natural_width(result_label))
+	for b: Button in [rest_btn, bbq_btn, alt_btn, leave_btn]:
+		if b.visible and not b.text.is_empty():
+			w = maxf(w, _button_natural_width(b))
+	return w
+
+
+func _apply_side_metrics() -> void:
+	## 按文案反推接缝：右栏宽度 = clamp(文案自然宽, MIN, min(屏宽×0.46, 屏宽×(1-图最窄)))。
+	var w := size.x
+	if w <= 1.0:
+		return
+	var need := _content_natural_width()
+	var max_col := minf(w * SIDE_TEXT_MAX_RATIO, w * (1.0 - SIDE_SPLIT_MIN))
+	var col := clampf(need, SIDE_TEXT_MIN_W, maxf(SIDE_TEXT_MIN_W, max_col))
+	var split := clampf(1.0 - (col + SIDE_GAP + SIDE_PAD_R) / w, SIDE_SPLIT_MIN, SIDE_SPLIT_MAX)
+	if absf(split - _side_split) < 0.002:
+		return   # 没变化就别再动 —— 顺手掐断「布局 → 信号 → 布局」的回环
+	_side_split = split
+	if _side_pic != null:
+		_side_pic.anchor_right = split
+	var c := $Center as VBoxContainer
+	c.anchor_left = split
+	c.offset_left = SIDE_GAP
+	c.offset_right = -SIDE_PAD_R
+
+
+func _apply_center_width() -> void:
+	## 居中布局的宽度同理：保底 `CENTER_MIN_W`（现有观感不变），长了才加宽。
+	var w := size.x
+	if w <= 1.0:
+		return
+	var need := _content_natural_width() + CENTER_CARD_PAD * 2.0
+	var max_w := maxf(CENTER_MIN_W, minf(CENTER_MAX_W, w - CENTER_EDGE))
+	var col := clampf(need, CENTER_MIN_W, max_w)
+	if absf(col - _center_w) < 0.5:
+		return
+	_center_w = col
+	var c := $Center as VBoxContainer
+	# ⚠️ 锚点在 0.5（屏幕中心），offset 是**相对这个锚点**的，不是相对左边。
+	# 所以左右各取 ±col/2 —— R518 第一版把左边算成 `屏宽×0.5 - col/2`，
+	# 卡片被整体推到屏幕右半之外（奥秘之泉直接右半张飞出去）。
+	c.offset_left = -col * 0.5
+	c.offset_right = col * 0.5
+
+
+func _queue_relayout() -> void:
+	## 文案/字号/窗口尺寸变了都要重算一次宽度。合并成一帧一次，避免连环重排。
+	if _relayout_queued or not is_inside_tree():
+		return
+	_relayout_queued = true
+	call_deferred("_flush_relayout")
+
+
+func _flush_relayout() -> void:
+	_relayout_queued = false
+	if not is_inside_tree():
+		return
+	if _side_layout:
+		_apply_side_metrics()
+		call_deferred("_recenter_side_text")
+	else:
+		_apply_center_width()
+		_fit_center()
 
 
 func _side_fade_material() -> ShaderMaterial:
@@ -664,7 +798,7 @@ func _apply_side_layout(kind: String) -> void:
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		tr.anchor_left = 0.0
 		tr.anchor_top = 0.0
-		tr.anchor_right = SIDE_SPLIT
+		tr.anchor_right = SIDE_SPLIT_MAX   # 先给个占位，真实位置由 `_apply_side_metrics()` 按文案算
 		tr.anchor_bottom = 1.0
 		tr.offset_left = 0.0
 		tr.offset_top = 0.0
@@ -679,22 +813,24 @@ func _apply_side_layout(kind: String) -> void:
 		if _fb_layer != null:
 			idx = _fb_layer.get_index() + 1
 		move_child(tr, idx)
-	# 文字区搬到右侧：整块从 SIDE_SPLIT 到右边缘，垂直居中
+		_side_pic = tr
+	# 文字区搬到右侧：整块从接缝到右边缘，垂直居中
 	var c := $Center as VBoxContainer
-	c.anchor_left = SIDE_SPLIT
+	c.anchor_left = SIDE_SPLIT_MAX   # 同上，占位；`_apply_side_metrics()` 会改
 	c.anchor_top = 0.0
 	c.anchor_right = 1.0
 	# ⚠️ 垂直锚点必须留 0：anchor_bottom=1.0 时 offset_bottom 是「相对底边的偏移」，
 	# 下面按内容高度算出来的绝对 y 会被再加一个屏高（R516 踩过：容器被撑到 1038 高）。
 	c.anchor_bottom = 0.0
-	c.offset_left = 44.0
+	c.offset_left = SIDE_GAP
 	c.offset_top = 0.0
-	c.offset_right = -52.0
+	c.offset_right = -SIDE_PAD_R
 	c.offset_bottom = 0.0
 	c.alignment = BoxContainer.ALIGNMENT_CENTER   # 内容在右侧块里垂直居中
 	# 不套框 → 标题与正文都左对齐，靠字号与颜色分层
 	(event_name as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	(desc as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_apply_side_metrics()
 	# ⚠️ VBoxContainer.alignment 在这里不稳（内容高度由文案行数决定，容器先被撑满），
 	# 改成布局结束后按**内容实际高度**把整块摆正中间。
 	call_deferred("_recenter_side_text")
@@ -1088,6 +1224,25 @@ func _ready() -> void:
 	# 字色不在这里定死 —— 见 `_apply_page_ink()`（暗页要浅字，且此刻 _kind() 可能还没就位）
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
+	# R518：正文与标题一律允许折行 —— 宽度自适应会顶到上限（长文案不再无限加宽），
+	# 撞上限时折行而不是溢出卡片。文案本身没超宽时折行不会生效，观感不变。
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	event_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# R518：文案 / 字号 / 窗口尺寸一变就重算宽度（合并成每帧一次）。
+	# ⚠️ 用 `minimum_size_changed` 而不是 `item_rect_changed`：后者连**位置**变化都发，
+	# 而重排本身就会挪动子节点 → 自己把自己唤醒，成了逐帧空转。
+	for _b: Button in [rest_btn, bbq_btn, alt_btn, leave_btn]:
+		if not _b.minimum_size_changed.is_connected(_queue_relayout):
+			_b.minimum_size_changed.connect(_queue_relayout)
+	if not desc.minimum_size_changed.is_connected(_queue_relayout):
+		desc.minimum_size_changed.connect(_queue_relayout)
+	if not event_name.minimum_size_changed.is_connected(_queue_relayout):
+		event_name.minimum_size_changed.connect(_queue_relayout)
+	if not result_label.minimum_size_changed.is_connected(_queue_relayout):
+		result_label.minimum_size_changed.connect(_queue_relayout)
+	if not resized.is_connected(_queue_relayout):
+		resized.connect(_queue_relayout)
 	# R516：全部事件改暗紫肤 —— 选项是**深色胶囊 + 米色字**（造型沿用原来的圆角与黄铜细边）。
 	for _b: Button in [rest_btn, bbq_btn, alt_btn, leave_btn]:
 		UiTheme.apply_night_button(_b, false)
@@ -1723,6 +1878,13 @@ func _fit_center() -> void:
 	var c: VBoxContainer = $Center
 	var vh: float = get_viewport_rect().size.y
 	result_label.visible = result_label.text != ""
+	# R518：左右布局的垂直位置由 `_recenter_side_text()` 管（按内容居中），
+	# 这里只负责居中布局 —— 两条链各管一半，别再互相覆盖。
+	if _side_layout:
+		_apply_side_metrics()
+		call_deferred("_recenter_side_text")
+		return
+	_apply_center_width()
 	var top_floor := 360.0 if UiAssets.event_pic(_kind()) != null else 150.0
 	var bottom := vh - 30.0
 	var h := 0.0
