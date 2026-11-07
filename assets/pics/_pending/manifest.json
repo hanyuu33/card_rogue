@@ -327,48 +327,54 @@
    "tier": "A",
    "kind": "unit",
    "created": "2026-11-01",
-   "status": "pending",
+   "status": "approved",
    "raw": "9130_helios.png",
    "ref": "希腊太阳神赫利俄斯（金发、日轮、驾日车者）→ 日系「仿生人」设定：等身大人形、外观与人类无异。设定依据：非量产型全部是人形机器人",
    "prompt": "等身大人形机器人赫利俄斯：仿真肤色、白色暗金仪式军装长外套（布料质感）、金发后梳、琥珀金瞳内有一圈刻度光圈；颈侧下颌一道极细同色接缝、手背皮下透出淡金回路；单手抬掌心向外、指间散金色光尘（下合）；背后多层同心金属日轮环 + 全息虚线干涉纹；脚下金属平台、四周巨型量产机械单位仰视。无裸露骨架电缆。",
-   "note": "v1=神殿塔（误读为工事建筑，且 0攻0移≠塔）；v2=装甲机体版（颈部整段裸机械骨架、机械手，超出「外观与人类无异」）。v3 才定：像人但不像【完全】是人。废弃版 raw/_old/9130_helios_v1_神殿塔版.png / _v2_装甲机体版.png"
+   "note": "v1=神殿塔（误读为工事建筑，且 0攻0移≠塔）；v2=装甲机体版（颈部整段裸机械骨架、机械手，超出「外观与人类无异」）。v3 才定：像人但不像【完全】是人。废弃版 raw/_old/9130_helios_v1_神殿塔版.png / _v2_装甲机体版.png",
+   "approved": "2026-11-07"
   },
   "9025": {
    "name": "鸭子窑",
    "tier": "A",
    "kind": "unit",
    "created": "2026-11-01",
-   "status": "pending",
+   "status": "approved",
    "raw": "9025_duck_kiln.png",
    "ref": "窑 = 砖砌环形窑体 + 铁箍；「孵化陶瓷鸭」→ 窑口排队的白瓷鸭（釉光、开片、粗糙鸭脸）",
-   "prompt": "砖砌陶窑工事：窑壁裂缝透橙红火光、窑口冒烟；圆胖白瓷陶瓷鸭排队从火光中走出、有的已站在窑前石地。暖橙与冷灰砖墙、带诡异幽默。"
+   "prompt": "砖砌陶窑工事：窑壁裂缝透橙红火光、窑口冒烟；圆胖白瓷陶瓷鸭排队从火光中走出、有的已站在窑前石地。暖橙与冷灰砖墙、带诡异幽默。",
+   "approved": "2026-11-07"
   },
   "8022": {
    "name": "地狱咏唱者",
    "tier": "A",
    "kind": "unit",
    "created": "2026-11-01",
-   "status": "pending",
+   "status": "approved",
    "raw": "8022_hell_chanter.png",
    "ref": "咏唱者 = 兜帽遮脸、双手施术；效果「攻击时回复 1 点费用」→ 悬空的硬币状符文被吸入掌心",
-   "prompt": "瘦削暗影咏唱者：破损深紫黑斗篷遮脸、十指张开拉出暗紫光丝；周围悬着硬币状符文正碎裂又被吸回掌心；脚下影子延成触须。暗紫与暗红。"
+   "prompt": "瘦削暗影咏唱者：破损深紫黑斗篷遮脸、十指张开拉出暗紫光丝；周围悬着硬币状符文正碎裂又被吸回掌心；脚下影子延成触须。暗紫与暗红。",
+   "approved": "2026-11-07"
   },
   "8080": {
    "name": "涂装机器人",
    "tier": "A",
    "kind": "unit",
    "created": "2026-11-01",
-   "status": "pending",
+   "status": "approved",
    "raw": "8080_paint_robot.png",
    "ref": "效果「把一个友方单位变成随机机械之心单位」→ 喷枪把另一台机械体从脚到头刷成统一灰蓝涂装，交界处漆雾过渡",
-   "prompt": "挂油漆桶的矮壮涂装机器人：手持工业喷枪喷另一台机械体，对方膝盖以下已是完整机械壳、胸口以上还是原样，交界处漆雾渐变。暖黄工作灯与冷灰车间。"
+   "prompt": "挂油漆桶的矮壮涂装机器人：手持工业喷枪喷另一台机械体，对方膝盖以下已是完整机械壳、胸口以上还是原样，交界处漆雾渐变。暖黄工作灯与冷灰车间。",
+   "approved": "2026-11-07"
   },
   "8013": {
    "name": "冻结陷阱",
    "tier": "A",
    "kind": "symbol",
    "created": "2026-11-01",
-   "status": "pending",
+   "status": "archived_removed_card",
+   "archived": "2026-11-07",
+   "archive": "art_src/2026-11-07_卡图批量转正R519m/removed_cards/8013.png",
    "raw": "8013_freeze_trap.png",
    "ref": "场地卡：敌人**路过即触发**并**立即停止移动** + 冰冻。画「踩上的那只脚被冻在原地」而不是画陷阱本体",
    "prompt": "俯视地面局部：金属边框陷阱格里深蓝晶簇炸开，把踩上来的机械脚从脚踝冻进坚冰，含定格气泡与裂纹；石板霜花放射蔓延、空气飘冰晶。"
@@ -378,7 +384,9 @@
    "tier": "A",
    "kind": "symbol",
    "created": "2026-11-01",
-   "status": "pending",
+   "status": "archived_removed_card",
+   "archived": "2026-11-07",
+   "archive": "art_src/2026-11-07_卡图批量转正R519m/removed_cards/8017.png",
    "raw": "8017_giant_trap.png",
    "ref": "场地卡：造成 10 + 目标攻击力×2 伤害 → 伤害随目标变大而变大，所以画面主体是「巨大的东西被夹住」",
    "prompt": "低角度仰拍：石板下升起的巨型带齿铁颚夹钳猛地合拢，咬住踏上来的一头巨型兽类前肢，尖齿入内、金属扭曲；石板顶裂碎石崩飞、铰链爆火花。"
@@ -388,40 +396,44 @@
    "tier": "A",
    "kind": "symbol",
    "created": "2026-11-01",
-   "status": "pending",
+   "status": "approved",
    "raw": "9043_icewall.png",
    "ref": "技能：一条横行生成**三面**冰墙，我方回合开始时融化。数量是机制的一部分，必须能数清三面且都实心",
-   "prompt": "正面平视：三面完全相同的实心冰墙等距并列（无门洞/拱门/镂空），内部放射状结晶与竖向气泡、边缘长满冰锥，墙根冻裂石板满布霜花；背景模糊城墙与烧焦旗杆。空无一人。"
+   "prompt": "正面平视：三面完全相同的实心冰墙等距并列（无门洞/拱门/镂空），内部放射状结晶与竖向气泡、边缘长满冰锥，墙根冻裂石板满布霜花；背景模糊城墙与烧焦旗杆。空无一人。",
+   "approved": "2026-11-07"
   },
   "9093": {
    "name": "连环戏法",
    "tier": "A",
    "kind": "symbol",
    "created": "2026-11-01",
-   "status": "pending",
+   "status": "approved",
    "raw": "9093_chain_trick.png",
    "ref": "技能：4 点伤害；本回合用过 2 张其他卡→抽 1 张；用过 4 张→改为 10 点。递进关系必须画进构图",
-   "prompt": "符号化：三张发光卡牌沿弧线依次飞出，每飞出一张轨迹上多切一道刃痕，第一道短、第二道拉长、第三道成巨大交叉斩，刃痕间以电弧细光连成递进连锁。深紫黑底、冷白与紫高亮。"
+   "prompt": "符号化：三张发光卡牌沿弧线依次飞出，每飞出一张轨迹上多切一道刃痕，第一道短、第二道拉长、第三道成巨大交叉斩，刃痕间以电弧细光连成递进连锁。深紫黑底、冷白与紫高亮。",
+   "approved": "2026-11-07"
   },
   "9122": {
    "name": "专注",
    "tier": "A",
    "kind": "symbol",
    "created": "2026-11-01",
-   "status": "pending",
+   "status": "approved",
    "raw": "9122_focus.png",
    "ref": "技能：从抽牌库选 2 张，本次对战**消失**（不进手牌也不进弃牌区）。语义是「被彻底抹掉」，不是「被摧毁」——所以不用火不用爆炸",
-   "prompt": "符号化：由无数卡牌堆成的深色牌库向深处延伸；一束极细白色聚光照亮中间两张卡，那两张正从边缘无声溃散成白色光尘、卡面已缺一块，其余卡牌完好。深灰蓝黑底、冷白聚光。"
+   "prompt": "符号化：由无数卡牌堆成的深色牌库向深处延伸；一束极细白色聚光照亮中间两张卡，那两张正从边缘无声溃散成白色光尘、卡面已缺一块，其余卡牌完好。深灰蓝黑底、冷白聚光。",
+   "approved": "2026-11-07"
   },
   "9163": {
    "name": "冲击炮",
    "tier": "A",
    "kind": "symbol",
    "created": "2026-11-01",
-   "status": "pending",
+   "status": "approved",
    "raw": "9163_shock_cannon.png",
    "ref": "技能：10 点伤害 + 击退 1 格。击退要有明确方向感——把目标打得双脚离地向后退",
-   "prompt": "侧面低角度：粗短机械炮刚击发，炮口喷橙白火药焰与环状冲击波、炮架后座；炮弹光柱命中敌方单位胸前，对方双脚离地向后滑退、铠片四散、地面拖出刮痕。方向感从右向左。"
+   "prompt": "侧面低角度：粗短机械炮刚击发，炮口喷橙白火药焰与环状冲击波、炮架后座；炮弹光柱命中敌方单位胸前，对方双脚离地向后滑退、铠片四散、地面拖出刮痕。方向感从右向左。",
+   "approved": "2026-11-07"
   },
   "8033": {
    "raw": "8033_energy_barrier.png",
@@ -431,7 +443,8 @@
    "created": "2026-11-01",
    "name": "能量屏障",
    "tier": "A",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "8049": {
    "raw": "8049_dismantle.png",
@@ -441,7 +454,8 @@
    "created": "2026-11-01",
    "name": "拆解",
    "tier": "A",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "9013": {
    "raw": "9013_duck_power.png",
@@ -451,7 +465,8 @@
    "created": "2026-11-01",
    "name": "鸭子之力",
    "tier": "A",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "9024": {
    "raw": "9024_hiss.png",
@@ -461,7 +476,8 @@
    "created": "2026-11-01",
    "name": "哈气",
    "tier": "A",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "9107": {
    "raw": "9107_shadow_hunt.png",
@@ -471,7 +487,9 @@
    "created": "2026-11-01",
    "name": "暗影狩猎",
    "tier": "A",
-   "status": "pending"
+   "status": "archived_removed_card",
+   "archived": "2026-11-07",
+   "archive": "art_src/2026-11-07_卡图批量转正R519m/removed_cards/9107.png"
   },
   "9062": {
    "raw": "9062_familiar_night.png",
@@ -481,7 +499,8 @@
    "created": "2026-11-01",
    "name": "使魔之夜",
    "tier": "A",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "8035": {
    "raw": "8035_self_repair.png",
@@ -491,7 +510,8 @@
    "created": "2026-11-01",
    "name": "自我修复",
    "tier": "A",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "8039": {
    "raw": "8039_system_upgrade.png",
@@ -501,7 +521,8 @@
    "created": "2026-11-01",
    "name": "系统升级",
    "tier": "A",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "8040": {
    "raw": "8040_batch_transfer.png",
@@ -511,7 +532,8 @@
    "created": "2026-11-01",
    "name": "批量传输",
    "tier": "A",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "8053": {
    "raw": "8053_beyond_limits.png",
@@ -521,7 +543,8 @@
    "created": "2026-11-01",
    "name": "超越极限",
    "tier": "A",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "8061": {
    "raw": "8061_dual_teleport.png",
@@ -531,7 +554,8 @@
    "created": "2026-11-01",
    "name": "双向传送",
    "tier": "A",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "9127": {
    "raw": "9127_rework.png",
@@ -541,7 +565,8 @@
    "created": "2026-11-01",
    "name": "返修",
    "tier": "A",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "9131": {
    "raw": "9131_mass_erinyes.png",
@@ -584,7 +609,8 @@
    "created": "2026-11-01",
    "name": "量产型代达罗斯",
    "tier": "S",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "8075": {
    "raw": "8075_mnemosyne_mass.png",
@@ -605,7 +631,8 @@
    "created": "2026-11-02",
    "name": "暗影之刃",
    "tier": "A",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "9112": {
    "raw": "9112_shadow_chain_v3.png",
@@ -615,8 +642,9 @@
    "created": "2026-11-02",
    "name": "暗影锁链",
    "tier": "A",
-   "status": "pending",
-   "updated": "2026-11-02"
+   "status": "approved",
+   "updated": "2026-11-02",
+   "approved": "2026-11-07"
   },
   "9114": {
    "raw": "9114_endless_dark_v2.png",
@@ -626,8 +654,9 @@
    "created": "2026-11-02",
    "name": "无尽黑暗",
    "tier": "A",
-   "status": "pending",
-   "updated": "2026-11-02"
+   "status": "approved",
+   "updated": "2026-11-02",
+   "approved": "2026-11-07"
   },
   "8063": {
    "raw": "8063_dark_trap.png",
@@ -637,7 +666,9 @@
    "created": "2026-11-02",
    "name": "黑暗陷阱",
    "tier": "A",
-   "status": "pending"
+   "status": "archived_removed_card",
+   "archived": "2026-11-07",
+   "archive": "art_src/2026-11-07_卡图批量转正R519m/removed_cards/8063.png"
   },
   "9120": {
    "raw": "9120_shadow_raid_v2.png",
@@ -647,8 +678,9 @@
    "created": "2026-11-02",
    "name": "影袭",
    "tier": "A",
-   "status": "pending",
-   "updated": "2026-11-02"
+   "status": "approved",
+   "updated": "2026-11-02",
+   "approved": "2026-11-07"
   },
   "9121": {
    "raw": "9121_shadow_step_v2.png",
@@ -658,8 +690,9 @@
    "created": "2026-11-02",
    "name": "暗影步",
    "tier": "A",
-   "status": "pending",
-   "updated": "2026-11-02"
+   "status": "approved",
+   "updated": "2026-11-02",
+   "approved": "2026-11-07"
   },
   "8067": {
    "raw": "8067_splitting_shadow_v2.png",
@@ -669,8 +702,9 @@
    "created": "2026-11-02",
    "name": "分裂之影",
    "tier": "A",
-   "status": "pending",
-   "updated": "2026-11-02"
+   "status": "approved",
+   "updated": "2026-11-02",
+   "approved": "2026-11-07"
   },
   "9125": {
    "raw": "9125_shadow_summon.png",
@@ -680,7 +714,8 @@
    "created": "2026-11-02",
    "name": "暗影召唤",
    "tier": "S",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   },
   "9178": {
    "raw": "9178_eternal_night.png",
@@ -690,7 +725,8 @@
    "created": "2026-11-02",
    "name": "永夜",
    "tier": "S",
-   "status": "pending"
+   "status": "approved",
+   "approved": "2026-11-07"
   }
  },
  "skill_recipe": "技能/效果卡画法（与单位卡区分）：**不画人物**，中心一个强符号 + 能量场；暗底 + 单一高亮色（按牌组属性取色：机械橙红/钢蓝、野性深绿、疾风青白、以太紫白）；像咒术卡主视觉。裁切规格与单位卡一致（448x403，居中裁掉平台水印）。"
