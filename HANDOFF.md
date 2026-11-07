@@ -1,4 +1,17 @@
-## 2026-11-07 R519j 苹果与医生补侧图（当前最新）
+## 2026-11-07 R519k 苹果链接文字重影修复（当前最新）
+
+- 用户反馈：苹果与医生正文里可悬浮的「苹果」与普通文字重叠。
+- 根因：R519j 把该事件改为左右布局后，正文变成**左对齐 + 自动折行**；但 `_ref_layout()`
+  仍按「居中 + 只按换行符分行」复算链接坐标，金色叠字落到了后面的普通文字上。
+- 修复：新增 `_desc_visual_lines()`，用 `TextParagraph` + `TextServer.shaped_text_get_range()`
+  取实际可见行；`_ref_layout()` 按 `desc.horizontal_alignment` 处理左 / 中 / 右对齐。
+  Godot 4.3 的 `TextParagraph` 用 `break_flags`（WORD_SMART 对应 MANDATORY / WORD_BOUND /
+  GRAPHEME_BOUND / ADAPTIVE），没有 `autowrap_mode` 属性。
+- 截图：`_review/apple_doctor_link_fix_{1280,1920}.png`，两处「苹果」均只覆盖自己的原文；
+  `_review/smith_link_regression_1280.png` 验证居中事件的「铁栅栏」链接未偏。
+- 回归：`_verify.py` 全通过 —— mana PASS / engine 5236 / reward 26 / bgm 39 / smoke 64。
+
+## 2026-11-07 R519j 苹果与医生补侧图
 
 - 用户口径：「木制的餐桌上放着一个苹果。左右构图。其他暂不生成」。
 - 新增 `assets/ui/side_apple_doctor.png`（742×742）：暗调卡通、粗黑描边，一只完整红苹果放在木桌上；

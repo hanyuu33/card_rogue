@@ -3153,8 +3153,37 @@ func _ref_scan() -> void:
 		_ref_names.append(e)
 
 
+func _desc_visual_lines(font: Font, fs: int, width: float) -> Array[String]:
+	## R519k：Label 的实际可见行。左右布局既左对齐又会自动折行，
+	## 不能再拿 `desc.text.split("\n")` 的逻辑行冒充渲染行。
+	## 用 TextParagraph 复算同一套自动折行，再从 TextServer 取每个可见行的原文区间。
+	var out: Array[String] = []
+	var logical_lines := desc.text.split("\n")
+	if desc.autowrap_mode == TextServer.AUTOWRAP_OFF or width <= 1.0:
+		for line: String in logical_lines:
+			out.append(line)
+		return out
+	var ts := TextServerManager.get_primary_interface()
+	for logical: String in logical_lines:
+		if logical.is_empty():
+			out.append("")
+			continue
+		var p := TextParagraph.new()
+		p.width = width
+		p.break_flags = TextServer.BREAK_MANDATORY | TextServer.BREAK_WORD_BOUND \
+				| TextServer.BREAK_GRAPHEME_BOUND | TextServer.BREAK_ADAPTIVE
+		p.add_string(logical, font, fs)
+		if p.get_line_count() == 0:
+			out.append(logical)
+			continue
+		for li in p.get_line_count():
+			var char_range: Vector2i = ts.shaped_text_get_range(p.get_line_rid(li))
+			out.append(logical.substr(char_range.x, char_range.y - char_range.x))
+	return out
+
+
 func _ref_layout() -> void:
-	## 命中表（**屏幕坐标**）：把 Label 的排版复算一遍 —— 每行水平居中、
+	## 命中表（**屏幕坐标**）：按 Label 的实际对齐与可见折行复算；
 	## 行高 = `get_line_height()`、行距 = `line_spacing` 主题常量。
 	_ref_hits = []
 	if _ref_names.is_empty():
@@ -3167,12 +3196,15 @@ func _ref_layout() -> void:
 	var fs: int = desc.get_theme_font_size("font_size")
 	var lh: float = float(desc.get_line_height())
 	var gap: float = float(desc.get_theme_constant("line_spacing"))
-	var lines := desc.text.split("\n")
+	var lines := _desc_visual_lines(font, fs, box.size.x)
 	var y := box.position.y
-	for li in lines.size():
-		var line: String = lines[li]
+	for line: String in lines:
 		var lw := font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var x0 := box.position.x + (box.size.x - lw) * 0.5
+		var x0 := box.position.x
+		if desc.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER:
+			x0 += (box.size.x - lw) * 0.5
+		elif desc.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT:
+			x0 += box.size.x - lw
 		for e: Dictionary in _ref_names:
 			var tok: String = e["token"]
 			var from := 0

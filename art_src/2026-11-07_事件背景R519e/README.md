@@ -214,3 +214,12 @@ NEVER a solid rectangle of one colour, NEVER a hard edge, NEVER a wall.
 验收：`_review/apple_doctor_1280.png` 与 `_review/apple_doctor_1920.png`。
 两种宽度均为左图右文，苹果完整，标题、正文、两个选项无遮挡，右缘过渡自然。
 审计后事件背景 16 个，待补只剩 `pear` / `hero` / `bluefish`。
+
+---
+
+# R519k 追加：苹果链接文字重影修复
+
+左右布局的正文是左对齐 + 自动折行，旧链接定位却仍按居中逻辑行计算 → 金色「苹果」
+压到「最大生命」。`event_scene.gd` 改为按 `TextParagraph` 的实际可见行与
+`horizontal_alignment` 定位。验收图：`_review/apple_doctor_link_fix_{1280,1920}.png`；
+居中布局回归图：`_review/smith_link_regression_1280.png`。
