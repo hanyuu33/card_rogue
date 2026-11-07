@@ -546,3 +546,39 @@ R519d 那批反过来：无描边、厚涂渐变、照片级石木纹理、体�
 
 追加出图 3 张（`snow_leopard` ×1、`martial` ×2，中间一版废）。
 第二层 `pear` / `hero` / `bluefish` / `apple_doctor` 四张按新契约出。
+
+## 2026-11-07 R519g 武术大师改成左右布局（不再硬调背景）
+
+用户口径：「武术大师：人物会被选项框挡住。这样吧，这个事件也做成湖中仙女那样的左右的格式」。
+
+**为什么不该再改背景**：R519f 已经把老人挪到左侧 18% 避开了卡片，但那是"绕着卡片摆"。
+坐地的人物天生在中段，怎么调都在赌。左右布局直接换赛道：侧图独占左栏，
+卡片去右栏，人物完整可见。
+
+**落地三步**：
+1. `assets/ui/side_martial.png` 742×742（与 `side_lake_lady.png` 同口径，
+   `KEEP_ASPECT_COVERED` 铺满左侧全高）。
+2. `event_scene.gd` 的 `SIDE_LAYOUT_KINDS` 加 `"martial"`。
+3. 删 `assets/ui/bg_martial.png`（+`.import`）—— 左右布局走 `_add_fallback_bg()` 的暗紫渐变，
+   不吃整屏图；留着白占 1 MB 安装包，还让人以为它是活的。
+
+**侧图出图**：方形 1:1。第一版写成「右三分之一留白」→ 模型刷了一条**硬边纯色竖带**
+（x≈72.5%），而 `_side_fade_material()` 的 alpha 从 74% 才收，正好露出一条竖缝 → 废。
+改成「整张都是画出来的地面，只是越往右越安静越暗」→ 一次性过。
+**「留白 / 留空 / keep it clean」这几个词在出图提示词里一律不许用**（和 R519f 同一个坑）。
+
+接缝**不需要额外压暗**：草地轮廓自己淡出 + shader 收 alpha 就够了。试过在图里叠一道
+从 52% 起的线性压暗，反而把坐在 60%~74% 的老人一起压暗 → 撤掉。
+
+**水印是裁掉不是修补**：原图 1536×1024，水印在 x≈1400 之后；侧图要方形，
+直接取左侧 `1024×1024` → 水印自然出界。脚本 `tools/process_side_martial.py`。
+
+**审计脚本跟着改**（否则会误报「缺」）：`tools/audit_event_bgs.py` 现在**从
+`event_scene.gd` 的 `SIDE_LAYOUT_KINDS` 直接读名单**（不手抄，防漂移），
+左右布局的 kind 改查 `side_<kind>.png`，表格标「侧✓」。
+当前结果：24 个事件 / 有背景 15 / 待补 4（pear、hero、bluefish、apple_doctor）。
+
+验证：`_verify.py` 全通过（mana PASS / engine 5236 / reward 26 / bgm 39 / smoke 64）；
+截图 `_review/martial_side.png`（1280）与 `martial_1920.png`（1920×720，事件页不接 stage，
+侧图贴屏幕左缘、文字栏按文案反推）。
+规范 §4.55 记录了「什么时候该换左右布局」的判定表。

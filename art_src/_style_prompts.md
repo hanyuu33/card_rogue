@@ -81,7 +81,23 @@ There must be NO horizontal line across the frame where drawn detail stops and c
 > 「留空」指的是**不放主体**，不是**不放画面**。地面要照画，只是别在上面摆东西。
 > 同理「主体放上三分之二」对**坐地/躺地**的题材不成立 —— 人物只能在中段，
 > 而中段正好是卡片的位置，于是武术大师的老人在游戏里完全看不见。
-> 这类题材**必须往左右两侧摆**。
+> 这类题材**必须往左右两侧摆**（摆不开就换侧图，见下）。
+
+**侧图（左右布局）的构图** —— 方形 1:1，铺满屏幕左侧全高，右缘被 shader 收掉：
+
+```
+A square picture that will sit in the LEFT HALF of a game screen;
+a UI panel fades in over its RIGHT edge.
+Place the subject in the LEFT TWO THIRDS of the square, filling the frame top to bottom.
+The RIGHT THIRD is deliberately PLAIN: the same drawn ground simply gets quieter and DARKER
+in a continuous way - still grass with drawn texture and a drawn silhouette.
+NEVER a solid rectangle of one colour, NEVER a hard edge, NEVER a wall.
+```
+
+> ⚠️ R519g：写「右三分之一留白」→ 模型刷了一条硬边纯色竖带（x≈72.5%），
+> 而 fade 的 alpha 从 74% 才收，正好露出一条竖缝。
+> **「留白 / 留空 / keep it clean」这几个词在背景提示词里一律不许用。**
+> 参考产物：`assets/ui/side_lake_lady.png`（742×742）、`assets/ui/side_martial.png`。
 
 
 ---

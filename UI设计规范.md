@@ -2320,7 +2320,69 @@ The CENTER strip stays visually empty - only plain scenery there.
 godot --headless --path . --import     # 或开一次编辑器
 ```
 
-判据：`ls -la .godot/imported/bg_<kind>.png-*.ctex` 的 mtime 应该晚于 `assets/ui/` 里那张。
+判据：`ls -la .godot/imported/bg_<kind>.png-<hash>.ctex` 的 mtime 应该晚于 `assets/ui/` 里那张。
+
+---
+
+### 4.55 左右布局不是湖中仙女的专利：主体只能在地面中段的题材一律改用它（R519g）
+
+用户口径：「武术大师：人物会被选项框挡住。这样吧，这个事件也做成湖中仙女那样的左右的格式」。
+
+#### 判定：什么时候该从「整屏背景」换成「左右布局」
+
+整屏背景的前提是**主体能放到卡片以外的位置**（上方，或左右两边）。
+但有一类题材做不到 —— **坐着的、躺着的、趴着的人物**，只可能在地面中段，
+而地面中段正是居中卡片的位置。这类题材怎么调背景都会被盖住：
+
+| | 整屏背景 | 左右布局 |
+|---|---|---|
+| 主体位置 | 上三分之二 / 左右三分之一 | 左栏独占，**整张侧图任你摆** |
+| 卡片 | 压在画面中央 | 移到右栏，不遮图 |
+| 适用 | 站立、悬空、远景、静物 | **坐地 / 躺地 / 蹲着的人物** |
+
+所以判据不是「哪个更好看」，是**主体能不能避开卡片**。避不开就换布局，别硬改图。
+
+#### 落地只有三步
+
+1. `side_<kind>.png` —— 侧图 **742×742**（与 `side_lake_lady.png` 同口径），
+   `KEEP_ASPECT_COVERED` 铺满左侧全高。
+2. `SIDE_LAYOUT_KINDS` 里加一个 kind（`event_scene.gd`）。
+3. `bg_<kind>.png` **删掉** —— 左右布局走 `_add_fallback_bg()` 的暗紫渐变，
+   不吃整屏图。留着只会白占 1 MB 安装包体积，还让人以为它是活的。
+
+#### 侧图出图契约（方形）
+
+```
+The tree / subject occupies the LEFT TWO THIRDS of the square, filling the frame top to bottom.
+The RIGHT THIRD is deliberately PLAIN: the same drawn ground simply gets quieter and DARKER
+in a continuous way - still grass with drawn texture and a drawn silhouette.
+NEVER a solid rectangle of one colour, NEVER a hard edge, NEVER a wall.
+```
+
+⚠️ **第一次出的那一版废了**：写成「右三分之一留白」→ 模型刷了一条**硬边纯色竖带**
+（x≈72.5% 处一条直线），而 `_side_fade_material()` 的 alpha 从 74% 才开始收
+→ 正好露出一条竖缝。改成「**整张画面都是画出来的地面，只是越往右越安静越暗**」
+就对了。**「留白」这个词在出图提示词里一律不许用**（和 §4.54 的「留空」同一个坑）。
+
+接缝**不需要额外压暗**：草地轮廓自己会淡出，`_side_fade_material()` 再收 alpha 就够了。
+试过在图里叠一道从 52% 起的线性压暗，反而把坐在 60%~74% 的人物一起压暗了 → 撤掉。
+
+#### 水印：这次是「裁掉」不是「修补」
+
+原图 1536×1024 宽幅，水印在右下角（x≈1400 之后）。侧图要的是**方形**，
+直接取左边 `1024×1024` —— 水印自然出界，不用修补。
+
+#### 审计脚本跟着改（否则会误报）
+
+`tools/audit_event_bgs.py` 原来只认 `bg_<kind>.png`，`martial` 删掉整屏图后会报「缺」。
+现在**从 `event_scene.gd` 的 `SIDE_LAYOUT_KINDS` 直接读名单**（不手抄，防漂移），
+左右布局的 kind 改查 `side_<kind>.png`，表格里标「侧✓」。
+
+#### 宽屏
+
+事件页**不接** `UiTheme.attach_stage()`（R518 起排版按窗口自适应），所以左右布局在
+1920×720 下自然铺满：侧图贴屏幕左缘、文字栏按文案宽度反推。
+
 
 
 ⚠️ 连带改动：`_layout_orb_layers` / `_layout_core_icon` 里复现 cover 的

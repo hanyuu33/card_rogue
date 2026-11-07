@@ -8,7 +8,11 @@
 
 判定口径按 `UI设计规范.md` 的约定：
   · 要「站进去」的场景  → 补 `bg_<kind>.png`（整屏 1280×720）
+  · 左右布局的事件     → 补 `side_<kind>.png`（侧图 742×742），**不吃** `bg_`
   · 只要一个符号性画面 → 补 `event_<kind>.png`（插图，320×240 框）即可，不算缺
+
+左右布局的名单**直接从 `event_scene.gd` 的 `SIDE_LAYOUT_KINDS` 读**，不手抄 ——
+R519g 把 `martial` 改成左右布局时，手抄就会漏。
 
 用法：
     python tools/audit_event_bgs.py            # 表格
@@ -24,6 +28,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LAYERS = ROOT / "scripts" / "game_layers.gd"
+SCENE = ROOT / "scripts" / "event_scene.gd"
 UI = ROOT / "assets" / "ui"
 
 # 不走随机事件池、只在特定分支出现的 kind —— 不在本轮「补图」范围内
@@ -57,16 +62,28 @@ def read_weights() -> dict[str, dict[int, int]]:
     return out
 
 
+def read_side_kinds() -> set[str]:
+    """左右布局的 kind —— 它们用侧图 `side_<kind>.png`，不吃整屏 `bg_<kind>.png`。"""
+    src = SCENE.read_text(encoding="utf-8")
+    m = re.search(r"const SIDE_LAYOUT_KINDS\s*:=\s*\[(.*?)\]", src, re.S)
+    return set(re.findall(r'"([a-z_]+)"', m.group(1))) if m else set()
+
+
 def main() -> int:
     names = read_names()
     weights = read_weights()
+    side_kinds = read_side_kinds()
     have_bg = {p.stem[3:] for p in UI.glob("bg_*.png")}
+    have_side = {p.stem[5:] for p in UI.glob("side_*.png")}
     have_pic = {p.stem[6:] for p in UI.glob("event_*.png")}
     rest_bg = (UI / "adventure_shared" / "rest_clearing.png").exists()
 
     rows = []
     for kind, cn in names.items():
-        if kind == "rest":
+        is_side = kind in side_kinds
+        if is_side:
+            has_bg = kind in have_side
+        elif kind == "rest":
             has_bg = rest_bg
         else:
             has_bg = kind in have_bg
@@ -81,11 +98,13 @@ def main() -> int:
             verdict, todo = "有插图", "符号性画面，按约定不需要整屏背景"
         elif has_pic:
             verdict, todo = "仅插图", "有插图但按约定该是整屏场景 → 建议补 bg_"
+        elif is_side:
+            verdict, todo = "缺", "补 side_<kind>.png（侧图 742×742）"
         else:
             verdict, todo = "缺", "补 bg_<kind>.png（整屏 1280×720）"
         rows.append({
             "kind": kind, "name": cn, "layers": layers,
-            "weights": w, "bg": has_bg, "pic": has_pic,
+            "weights": w, "bg": has_bg, "pic": has_pic, "side": is_side,
             "verdict": verdict, "todo": todo,
         })
 
@@ -95,14 +114,15 @@ def main() -> int:
         miss = [r for r in rows if r["verdict"] in ("缺", "仅插图")]
         print("事件共 %d 个；已有整屏背景 %d 个；待补 %d 个\n"
               % (len(rows), sum(1 for r in rows if r["bg"]), len(miss)))
-        head = "%-14s %-9s %-8s %-6s %-4s %-6s %s"
-        print(head % ("kind", "名称", "出现层", "权重", "bg", "插图", "结论"))
+        head = "%-14s %-9s %-8s %-6s %-6s %-4s %s"
+        print(head % ("kind", "名称", "出现层", "权重", "背景", "插图", "结论"))
         print("-" * 96)
         for r in rows:
             lay = ",".join(str(x) for x in r["layers"]) or "-"
             wt = "/".join(str(r["weights"].get(x, 0)) for x in r["layers"]) or "-"
-            print(head % (r["kind"], r["name"], lay, wt,
-                          "✓" if r["bg"] else "—", "✓" if r["pic"] else "—",
+            cell = ("侧✓" if r["bg"] else "侧—") if r["side"] else ("✓" if r["bg"] else "—")
+            print(head % (r["kind"], r["name"], lay, wt, cell,
+                          "✓" if r["pic"] else "—",
                           r["verdict"] + (("：" + r["todo"]) if r["todo"] else "")))
         if miss:
             print("\n待补清单：")

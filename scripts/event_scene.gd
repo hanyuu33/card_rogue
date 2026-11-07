@@ -611,7 +611,10 @@ func _kind() -> String:
 ## 就只能靠缩字号硬塞。现在反过来算：先量文案实际需要的宽度（标题 / 正文最长行 /
 ## 每个按钮的文字＋内距），右栏取这个宽度的 clamp 值，剩下的全给图片。
 ## 文字再长也不会挤掉图 —— 撞到上限时 `desc` 自动折行（本布局里开了 autowrap）。
-const SIDE_LAYOUT_KINDS := ["lake_lady"]
+## R519g：`martial` 加入 —— 它的主体（盘坐的老人）只能在地面中段，
+## 而居中卡片正好压在那里，无论怎么调背景都会被盖住。改成左右布局后
+## 老人独占左栏、完整可见，文案走右栏。
+const SIDE_LAYOUT_KINDS := ["lake_lady", "martial"]
 const SIDE_SPLIT_MIN := 0.40      ## 图片最窄占比（文案再长也给图留这么多）
 const SIDE_SPLIT_MAX := 0.62      ## 图片最宽占比（文案很短时图也别宽到没边）
 const SIDE_TEXT_MIN_W := 300.0    ## 右栏最小宽度

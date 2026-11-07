@@ -119,3 +119,48 @@ keep it clean and simple」被理解成**刷一块纯色**。
 
 3 张（`snow_leopard` ×1、`martial` ×2，中间那一版废）。
 新契约已固化，下一批（`pear` / `hero` / `bluefish` / `apple_doctor`）直接照 §一·C 出。
+
+---
+
+# R519g 追加：武术大师改成左右布局
+
+用户口径：「武术大师：人物会被选项框挡住。这样吧，这个事件也做成湖中仙女那样的左右的格式」。
+
+R519f 是把老人挪到左侧 18% 避开卡片 —— 那是**绕着卡片摆**。坐地的人物天生在地面中段，
+怎么挪都在赌。左右布局换赛道：侧图独占左栏，卡片去右栏。
+
+| 项 | 值 |
+|---|---|
+| 产物 | `assets/ui/side_martial.png` **742×742**（同 `side_lake_lady.png`） |
+| 代码 | `event_scene.gd` `SIDE_LAYOUT_KINDS` 加 `"martial"` |
+| 删掉 | `assets/ui/bg_martial.png` + `.import` —— 左右布局不吃整屏图 |
+| 出图 | 1536×1024 → 取左侧 `1024×1024` 方形 → 缩 742 |
+| 脚本 | `tools/process_side_martial.py`（`--write` 才落盘） |
+| 水印 | 原图右下 x≈1400 之后 → 裁左方形时**自然出界**，不需要修补 |
+
+## 侧图契约（第一版踩的坑）
+
+第一版写成「右三分之一留白」→ 模型刷了一条**硬边纯色竖带**（x≈72.5%），
+而 `_side_fade_material()` 的 alpha 从 74% 才开始收 → 正好露出一条竖缝，废。
+
+正确写法：
+
+```
+The subject occupies the LEFT TWO THIRDS of the square, filling the frame top to bottom.
+The RIGHT THIRD is deliberately PLAIN: the same drawn ground simply gets quieter and DARKER
+in a continuous way - still grass with drawn texture and a drawn silhouette.
+NEVER a solid rectangle of one colour, NEVER a hard edge, NEVER a wall.
+```
+
+**「留白 / 留空 / keep it clean」这几个词在出图提示词里一律不许用** ——
+和 R519f 的「下三分之一留空」是同一个坑，模型只会理解成刷色块。
+
+## 接缝不需要额外压暗
+
+试过在图里叠一道从 52% 起的线性压暗 → 把坐在 60%~74% 的老人一起压暗了，撤掉。
+草地轮廓自己会淡出，`_side_fade_material()` 再收 alpha 就够。
+
+## 验收
+
+- `_review/martial_side.png` —— 1280×720
+- `_review/martial_1920.png` —— 1920×720（事件页不接 stage，侧图贴屏幕左缘）

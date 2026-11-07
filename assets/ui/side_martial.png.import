@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bpgddi6cdfb6h"
-path="res://.godot/imported/bg_martial.png-7ba539f0c9af4c605c350f7f35b96752.ctex"
+uid="uid://do85n3mob7xpq"
+path="res://.godot/imported/side_martial.png-69c75c9cfbb5c0a13520fa872a264cb1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/bg_martial.png"
-dest_files=["res://.godot/imported/bg_martial.png-7ba539f0c9af4c605c350f7f35b96752.ctex"]
+source_file="res://assets/ui/side_martial.png"
+dest_files=["res://.godot/imported/side_martial.png-69c75c9cfbb5c0a13520fa872a264cb1.ctex"]
 
 [params]
 
