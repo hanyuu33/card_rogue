@@ -431,3 +431,12 @@ map_icons/{start,battle,elite,rest,event,shop,chest,bigchest,unknown}.png：简�
                           · ⚠️ 重跑前注意：原图底色是深灰（~#2a2a2a）不是纯黑，必须走色阶压暗（DARK_FLOOR），
                             否则叠到黑底上会浮出一个矩形亮块。
                           · 缺图时 class_pick_scene 回退成代码画的黑底方块 + 问号，不空白不报错。
+
+2026-11-07（R519d）：bg_{struggle,oblivion,smith,snow_leopard,adventurer,martial}.png —— 第一层缺背景的六个事件，
+                          1280×720 整屏 CG。事件页取背景的唯一入口是 `UiAssets.event_bg(kind)` → `bg_<kind>.png`。
+                          · 由 art_src/2026-11-07_事件背景R519d/tools/process_r519d.py 从 1536×1024 原图居中裁 16:9 后缩到 1280×720。
+                          · ⚠️ 构图契约：**主体全部在上三分之二**（正文卡片从 y≈47% 开始盖下来），下三分之一留空压暗。
+                            新图按这个比例画；下三分之一放重要物件等于白画。
+                          · 1536×1024 居中裁 16:9 取 y=80..944，右下角模型水印在 y≈948 之下 → **自然裁掉**，不用修补。
+                          · ⚠️ 事件页的 EventBG 是「按宽度铺满、**顶部对齐**」（R519d 起，见 event_scene._fit_event_bg）：
+                            宽屏下裁的是**底部**。所以人物类图不能靠「居中裁也切不到头」侥幸，头部留白至少 4%。

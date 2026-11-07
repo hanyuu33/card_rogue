@@ -444,3 +444,33 @@ deck_edit / record_list / story / settings / ban / relic_pick；`TopBar`（Canva
 验证：`_verify.py` 全通过（mana / engine 5236 / reward 26 / bgm 39 / smoke 64）；
 1280×720 出图 `_review/r1_class_pick.png`、1920×720 三位职业 `_review/w0..w2_class_pick.png`。
 细节见 `UI设计规范.md` §4.52。目录 `art_src/**/_review/` 已在 .gitignore 里，只提交 tools/ 与素材。
+
+## 2026-11-07 R519d 补齐第一层六个事件背景 + EventBG 改顶部对齐
+
+用户口径：「那么继续寻找还没有背景的事件」。
+
+**先让它可查**：缺背景不报错，只会悄悄退回 `_add_fallback_bg()` 的程序化兜底，
+所以漏图没人发现。新增 `tools/audit_event_bgs.py`（`--json` / `--strict`）：
+按 `EVENT_NAMES` 逐个查 `bg_<kind>.png` / `event_<kind>.png`，并区分
+「真缺」「仅插图」（gaze / lake_lady 按约定不需要整屏背景）「特殊分支」（whisper / treasure /
+delivery_done / relic_chest 不在随机池里）。审计结果：24 个事件里待补 10 个。
+
+**本轮补 6 张**（第一层 + 一二层共用，按权重）：
+oblivion / smith / martial / struggle / snow_leopard / adventurer，1280×720 整屏 CG。
+构图契约照旧：主体在上三分之二，下三分之一留空压暗（正文卡片从 y≈47% 开始）。
+生成 1536×1024 → 居中裁 16:9（取 y=80..944，右下角水印自然被裁掉）→ 缩 1280×720。
+脚本 `art_src/2026-11-07_事件背景R519d/tools/{process_r519d,shoot_r519d}.py`（`--write` 才落盘）。
+
+**EventBG 改「顶部对齐」**（`event_scene._fit_event_bg`）：
+`STRETCH_KEEP_ASPECT_COVERED` 居中裁，1920×720 下纵向切 360px（原图 1/3），
+人物类背景直接切头（martial 的老人宽屏下只剩胡子）。
+做法是把 TextureRect 的**框**撑到与图同比：`offset_bottom = max(0, 屏宽×0.5625 − 屏高)`，
+框与图同比就不再裁切，多出的高度落到屏幕外 = 顶部对齐。1280×720 下该值为 0，
+**16:9 逐像素不变**（ImageChops 差异框 None）。
+连带把 `_layout_orb_layers` / `_layout_core_icon` 复现 cover 的纵向偏移同步改成 0，
+否则占卜球与核心会错位。
+
+**遗留（下一批）**：第二层还缺 `pear` / `hero` / `bluefish` / `apple_doctor` 四张。
+`gaze` / `lake_lady` 有插图、按约定不需要整屏背景。
+验证：`_verify.py` 全通过（mana / engine 5236 / reward 26 / bgm 39 / smoke 64）；
+出图 `art_src/2026-11-07_事件背景R519d/_review/`（六张 1280、martial/struggle/divination 的 1920 版）。

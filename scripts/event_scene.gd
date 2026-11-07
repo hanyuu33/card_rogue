@@ -925,6 +925,10 @@ func _apply_ui_assets() -> void:
 		trb.offset_bottom = 0.0
 		add_child(trb)
 		move_child(trb, 0)                              # 压到最底层
+		_event_bg = trb
+		_fit_event_bg()
+		if not resized.is_connected(_fit_event_bg):
+			resized.connect(_fit_event_bg)
 		($BG as ColorRect).color = Color(0, 0, 0, 0)    # 让位给自定义背景
 		# R511：占卜室 —— 球内景象单独一层（只换球里的内容，不换整张底图）
 		if kind == "divination":
@@ -949,6 +953,28 @@ const ORB_CY := 188.0
 const ORB_R := 89.0
 const ORB_BASE_W := 1280.0
 const ORB_BASE_H := 720.0
+## R519d：整屏背景的基准比例（720/1280 = 0.5625）。EventBG 的框高按它算，见 `_fit_event_bg`。
+const EVENT_BG_ASPECT := 0.5625
+
+
+func _fit_event_bg() -> void:
+	## R519d：把 EventBG 从「居中裁」改成「按宽度铺满、顶部对齐」。
+	##
+	## `STRETCH_KEEP_ASPECT_COVERED` 永远是**居中**裁 —— 屏比 16:9 宽时，纵向要切掉
+	## 「图高 − 屏高」那么多，上下各分一半。1280×720 下切 0，所以平时看不出来；
+	## 1920×720 下纵向切 360px（原图的 1/3），**人物类背景直接切到头顶**
+	## （武术大师的老人在宽屏下只剩胡子）。
+	##
+	## 做法不给 TextureRect 换 stretch 模式（那会影响占卜球 / 核心图层的换算），
+	## 只把它的**框**撑到与背景图同比例：「框 = 屏宽 × 0.5625」。
+	## 框与图同比 → cover 不再裁切；多出来的高度落在屏幕下方之外，观感就是「顶部对齐」。
+	## 1280×720 时 offset_bottom 恰好为 0 → 16:9 下与改前逐像素一致。
+	if _event_bg == null:
+		return
+	# 用**自身尺寸**算（trb 的锚点是相对本节点的 0..1）；`_ready` 里第一次进来时
+	# 布局还没跑完、size 可能还是 0，这时才退回视口尺寸。
+	var vs := size if size.x > 1.0 else get_viewport_rect().size
+	_event_bg.offset_bottom = maxf(0.0, vs.x * EVENT_BG_ASPECT - vs.y)
 
 
 func _make_orb_layers(bg_rect: TextureRect) -> void:
@@ -989,7 +1015,8 @@ func _layout_orb_layers() -> void:
 		return
 	var vs := get_viewport_rect().size
 	var s := maxf(vs.x / ORB_BASE_W, vs.y / ORB_BASE_H)
-	var off := (vs - Vector2(ORB_BASE_W, ORB_BASE_H) * s) * 0.5
+	# R519d：EventBG 已改成「顶部对齐」，图层换算也要跟着 —— 纵向不再对半分。
+	var off := Vector2((vs.x - ORB_BASE_W * s) * 0.5, 0.0)
 	var c := off + Vector2(ORB_CX, ORB_CY) * s
 	var d := ORB_R * 2.0 * s
 	_orb_vision.position = c - Vector2(d, d) * 0.5
@@ -1009,6 +1036,7 @@ const CORE_ICON_CY := 350.0
 const CORE_ICON_SIZE := 200.0
 
 var _core_icon: TextureRect = null
+var _event_bg: TextureRect = null   # R519d：整屏背景（要随窗口比例改框高，见 `_fit_event_bg`）
 
 
 func _make_core_icon(bg_rect: TextureRect) -> void:
@@ -1031,12 +1059,13 @@ func _make_core_icon(bg_rect: TextureRect) -> void:
 
 
 func _layout_core_icon() -> void:
-	## 与占卜球同一套变换（复现 EventBG 的 KEEP_ASPECT_COVERED），换窗口不会错位。
+	## 与占卜球同一套变换（复现 EventBG 的铺法：横向居中、**纵向顶部对齐**），换窗口不会错位。
 	if _core_icon == null:
 		return
 	var vs := get_viewport_rect().size
 	var s := maxf(vs.x / ORB_BASE_W, vs.y / ORB_BASE_H)
-	var off := (vs - Vector2(ORB_BASE_W, ORB_BASE_H) * s) * 0.5
+	# R519d：EventBG 已改成「顶部对齐」，图层换算也要跟着 —— 纵向不再对半分。
+	var off := Vector2((vs.x - ORB_BASE_W * s) * 0.5, 0.0)
 	var c := off + Vector2(CORE_ICON_CX, CORE_ICON_CY) * s
 	var d := CORE_ICON_SIZE * s
 	_core_icon.position = c - Vector2(d, d) * 0.5
