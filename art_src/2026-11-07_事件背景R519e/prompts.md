@@ -78,3 +78,62 @@ its camera angle. Paint a COMPLETELY DIFFERENT scene.
 3. 石块/木头是否还长着照片纹理。
 4. 下三分之一是否留空、够暗，正文卡片压上去不打架。
 5. 和 `bg_divination.png` 并排看，是不是同一个世界里的两张图。
+
+---
+
+# R519f 构图契约修正（追加）
+
+## 用户口径
+
+「雪豹为什么要刻意做成半张图的效果？没有必要」。
+
+## 契约改了两句
+
+### ① 下三分之一：从「留空压暗」改成「铺满整张」
+
+原写法（**废除**）：
+
+```
+The BOTTOM THIRD is calm empty ground fading to near-black, keep it clean and simple.
+```
+
+新写法：
+
+```
+The scene FILLS THE WHOLE FRAME from top to bottom.
+The ground runs off the bottom edge and is DRAWN - grass tufts, pebbles, roots, bushes,
+cast shadows, a visible silhouette, two tonal steps.
+It may be one shade darker than the rest, but it is NOT a flat single-colour fill,
+NOT a black bar, NOT a void.
+There must be NO horizontal line across the frame where drawn detail stops and colour begins.
+```
+
+「留空」＝不放主体，不是不放画面。
+
+### ② 主体位置：从「上三分之二」改成「左/右三分之一」
+
+原写法（**对坐地题材不成立**）：
+
+```
+All detail lives in the UPPER TWO THIRDS of the frame.
+```
+
+新写法：
+
+```
+A UI text panel will later cover the CENTER of this image.
+Place all subjects in the LEFT THIRD or the RIGHT THIRD, or in the UPPER TWO THIRDS.
+The CENTER strip stays visually empty - only plain scenery there.
+```
+
+卡片遮挡：纵向 y≈47% 往下、横向约 26%–74%。
+
+## 返工记录
+
+| kind | 次数 | 问题 | 改法 |
+|---|---|---|---|
+| `snow_leopard` | 2 | 下半张纯色空块 | 前景雪堤铺满下半 + 碎石枯草 + 脚印延续 |
+| `martial` | 3 | 老人被卡片盖住 | 老人移左 18%、38%–62% 高度线；石头移右同高 |
+
+`martial` 第 2 版是「把人整体上移」—— 坐地题材做不到，反而把天空画成橙粉落日、
+明度跳出整套，废掉。

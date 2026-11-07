@@ -61,12 +61,27 @@ Keep saturation LOW. The image must NOT read as bright, pastel or washed out.
 Sky is dark / deep desaturated, NOT pastel, NOT pink, NOT lavender, NOT magenta.
 ```
 
-**构图契约**（事件页正文卡片从 y≈47% 盖下来）：
+**构图契约**（事件页正文卡片：纵向从 y≈47% 往下，横向占中段约 26%–74%）：
 
 ```
-All detail lives in the UPPER TWO THIRDS of the frame.
-The BOTTOM THIRD is calm empty ground fading to near-black, keep it clean and simple.
+A UI text panel will later cover the CENTER of this image.
+Place all subjects in the LEFT THIRD or the RIGHT THIRD, or in the UPPER TWO THIRDS.
+The CENTER strip stays visually empty - only plain scenery there.
+
+The scene FILLS THE WHOLE FRAME from top to bottom.
+The ground runs off the bottom edge and is DRAWN - with grass tufts, pebbles, roots,
+bushes, cast shadows, a visible silhouette and two tonal steps.
+It may be one shade darker than the rest, but it is NOT a flat single-colour fill,
+NOT a black bar, NOT an empty void.
+There must be NO horizontal line across the frame where drawn detail stops and colour begins.
 ```
+
+> ⚠️ R519f 教训：原来这里写的是「下三分之一留空压暗 / keep it clean and simple」，
+> 被模型理解成**刷一块纯色**，出来的图下半张全空、像被横切的半张图（雪豹那张最明显）。
+> 「留空」指的是**不放主体**，不是**不放画面**。地面要照画，只是别在上面摆东西。
+> 同理「主体放上三分之二」对**坐地/躺地**的题材不成立 —— 人物只能在中段，
+> 而中段正好是卡片的位置，于是武术大师的老人在游戏里完全看不见。
+> 这类题材**必须往左右两侧摆**。
 
 
 ---

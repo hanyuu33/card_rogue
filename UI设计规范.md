@@ -2257,14 +2257,56 @@ NO 3D render, NO muddy brown palette, NO cross-hatching, NO airbrush.
 
 判据：**六张摆在一张拼图里，有没有哪张一眼跳出来**。跳出来的就是明度没锁住。
 
+#### ⛔ 构图契约的两处硬伤（R519f 修正）
+
+用户口径：「雪豹为什么要刻意做成半张图的效果？没有必要」。
+
+这**不是模型的问题，是契约本身写错了**。R519d 起一直沿用这一句：
+
+> 主体全部放上三分之二，下三分之一留空并压暗。
+
+它有两个隐含误解，这次同时爆掉：
+
+**①「留空」≠「不画」**
+模型把「下三分之一留空压暗 / keep it clean and simple」理解成**刷一块纯色**。
+`snow_leopard` 地形到中线就收边，下面整片是一个色值 —— 观感就是**被横切的半张图**。
+正确表述：
+
+```
+The scene FILLS THE WHOLE FRAME from top to bottom.
+The ground runs off the bottom edge and is DRAWN - grass tufts, pebbles, roots, bushes,
+cast shadows, a visible silhouette, two tonal steps.
+It may be one shade darker than the rest, but it is NOT a flat single-colour fill,
+NOT a black bar, NOT a void.
+There must be NO horizontal line across the frame where drawn detail stops and colour begins.
+```
+
+「留空」的准确含义是**不放主体**，不是**不放画面**。
+
+**②「主体放上三分之二」对坐地/躺地题材不成立**
+人物只能在中段，而中段正是卡片的位置。`martial` 的老人一开始坐在正中，
+游戏里被卡片整块盖住 —— 事件叫「武术大师」，画面里没有大师。
+正确做法：**主体摆到左三分之一或右三分之一**，中间那条留给卡片：
+
+```
+A UI text panel will later cover the CENTER of this image.
+Place all subjects in the LEFT THIRD or the RIGHT THIRD, or in the UPPER TWO THIRDS.
+The CENTER strip stays visually empty - only plain scenery there.
+```
+
+卡片实际遮挡范围：纵向 y≈47% 往下、横向约 26%–74%。
+**判据：截一张游戏内的图，问「这个事件的主角看得见吗」和「卡片两侧是不是空块」。**
+
 #### 验收清单（缩到 1280×720 后逐条过）
 
 1. 有没有黑描边 —— 没有直接废。
 2. 缩图后剪影一眼可读，没糊成暗块。
 3. 石块/木头是否还长着照片纹理。
 4. 六张拼一张，明度是否在同一档。
-5. 下三分之一留空够暗，正文卡片压上去不打架。
-6. 和 `bg_divination.png` 并排看，像不像同一个世界。
+5. **画面是否铺满整张** —— 卡片左右两侧露出来的得是**画出来的地面**，不是一块纯色；
+   有没有一条横线把「有细节」和「纯色」切开。
+6. **事件的主角在游戏里看得见吗** —— 截游戏内的图看，别看原图。
+7. 和 `bg_divination.png` 并排看，像不像同一个世界。
 
 #### ⚠️ 流程坑：换图后 Godot 不会自动重导入
 
