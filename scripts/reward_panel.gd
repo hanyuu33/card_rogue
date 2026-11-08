@@ -72,6 +72,9 @@ const PANEL_H := 584.0
 const PAD := 24.0
 const ROW_H := 84.0
 const ROW_GAP := 10.0
+## R531：追加奖励区块的**分隔带**高度 —— 画在 bonus 行**上方**（金线 + 题签 + 暖光）。
+## 行位置一律走 `_row_top()`：这里多出来的高度必须同时算进滚动上限与点击命中。
+const BONUS_HEAD_H := 52.0
 const HEAD_H := 66.0          # 面板头部高度（标题行之下就是列表）
 const FOOT_H := 66.0          # 面板底部按钮带高度
 
@@ -295,10 +298,17 @@ func _entry_name(e: Dictionary) -> String:
 	var k := str(e.get("kind", ""))
 	if k == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
-		return r.relic_name if r != null else "未知道具"
+		var rn := r.relic_name if r != null else "未知道具"
+		# R531：追加奖励的条目名统一带「额外」，和上面那几条普通奖励一眼分开
+		return ("额外道具：" + rn) if _entry_bonus(e) else rn
+	# R531：追加奖励里的两种「直接到账」条目（没有详情页，点右边那颗按钮就领）。
+	if k == RunState.BONUS_GOLD:
+		return "额外 %d 金币" % int(e.get("gold", RunState.BONUS_GOLD_GAIN))
+	if k == RunState.BONUS_HP:
+		return "额外最大生命 +%d" % int(e.get("hp", RunState.BONUS_HP_GAIN))
 	# R351 月亮（9180）：这条不是「挑一张卡」，是「给一次删卡机会」。
 	if k == "deck_delete":
-		return "删除卡组中的一张卡"
+		return "额外一次删卡" if _entry_bonus(e) else "删除卡组中的一张卡"
 	if k == "core":
 		return "核心"
 	# R467：传说卡是**固定单张**，列表里别写成「三选一」
@@ -309,16 +319,33 @@ func _entry_name(e: Dictionary) -> String:
 			if lcard != null:
 				return "传说卡「%s」" % lcard.card_name
 		return "传说卡"
+	if _entry_bonus(e):
+		return "额外卡牌奖励（三选一）"
 	return "卡牌奖励（三选一）"
 
 
 func _entry_tag(e: Dictionary) -> String:
 	var k := str(e.get("kind", ""))
+	# R531：追加奖励里「卡牌组 / 删卡 / 道具」这三种和普通奖励走**同一套 kind**，
+	# 说明必须按「这是额外送的那一份」重写 —— 否则两行文字一模一样，
+	# 玩家会以为是重复条目（出图核验过：加分隔带之后仍然分不清）。
+	if _entry_bonus(e):
+		if k == RunState.BONUS_CARDS:
+			return "额外一组三选一 · %s" % CardReward.type_label(str(e.get("type", "normal")))
+		if k == RunState.BONUS_DELETE:
+			return "挑一张卡组里的卡永久移除"
+		if k == RunState.BONUS_RELIC:
+			var rb: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
+			return ("额外掉落 · " + rb.tag_line()) if rb != null else "额外掉落 · 道具"
 	if k == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		if r == null:
 			return "奖励道具"
 		return r.tag_line()
+	if k == RunState.BONUS_GOLD:
+		return "直接进钱袋"
+	if k == RunState.BONUS_HP:
+		return "生命上限与当前生命一起 +%d" % int(e.get("hp", RunState.BONUS_HP_GAIN))
 	if k == "deck_delete":
 		return "卡组操作 · 点它领下，随后挑一张永久删除"
 	if k == "core":
@@ -337,6 +364,10 @@ func _entry_color(e: Dictionary) -> Color:
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		if r != null:
 			return r.badge_color()
+	if k == RunState.BONUS_GOLD:
+		return Color("c9a227")     # 金币 —— 金
+	if k == RunState.BONUS_HP:
+		return Color("c0392b")     # 最大生命 —— 生命红
 	if k == "deck_delete":
 		return Color("6f86b8")     # 月亮的凉色，和卡牌/道具两条都区分得开
 	if k == "core":
@@ -839,6 +870,11 @@ func _draw_list() -> void:
 			continue
 		if rr.position.y > r.position.y + HEAD_H + view_h:
 			break
+		if _entry_bonus(RunState.pending_rewards[i]):
+			var bhy := rr.position.y - BONUS_HEAD_H
+			# 分隔带整个落在可视区里才画（滚到一半时不画 —— 免得糊在标题行上）
+			if bhy >= r.position.y + HEAD_H - 1.0:
+				_draw_bonus_head(bhy, r)
 		_draw_row(i, rr)
 
 	# 底部按钮
@@ -889,14 +925,74 @@ func _foot_note(r: Rect2, y: float, text: String) -> void:
 
 
 func _rows_per_page() -> int:
-	return maxi(1, int((PANEL_H - HEAD_H - FOOT_H) / (ROW_H + ROW_GAP)))
+	## R531：预算里先扣掉一段分隔带 —— 有了追加奖励，满屏行数会少一点，
+	## 这个函数只用于「一屏大概几行」的估算，宁可估少不估多（估多了会漏画）。
+	return maxi(1, int((PANEL_H - HEAD_H - FOOT_H - BONUS_HEAD_H) / (ROW_H + ROW_GAP)))
 
 
 func _row_rect(i: int) -> Rect2:
 	var r := _panel_rect()
 	return Rect2(r.position.x + PAD,
-			r.position.y + HEAD_H + i * (ROW_H + ROW_GAP) - _scroll,
+			r.position.y + _row_top(i) - _scroll,
 			PANEL_W - PAD * 2.0, ROW_H)
+
+
+static func _entry_bonus(e: Dictionary) -> bool:
+	## R531：这条是不是**追加奖励**（精英战随机摇出来的那一项）。
+	## 标记由 `RunState.queue_elite_bonus()` 打 —— 界面不许自己按 kind 猜，
+	## 因为「删卡 / 卡牌组」这些 kind 普通奖励也在用。
+	return bool(e.get("bonus", false))
+
+
+func _row_top(i: int) -> float:
+	## R531：第 i 行**相对面板顶端**的 y（不含滚动量）。
+	## ⚠️ 不能再按 `i * (ROW_H + ROW_GAP)` 硬算 —— 追加奖励行上方多一段分隔带，
+	##    绘制的可见性判断 / 悬停 / 点击 / 滚动上限全都读这里，否则一出现就整体错位。
+	var y := HEAD_H
+	var n := RunState.pending_rewards.size()
+	for k in clampi(i + 1, 0, n):
+		if k > 0:
+			y += ROW_H + ROW_GAP
+		if _entry_bonus(RunState.pending_rewards[k]):
+			y += BONUS_HEAD_H
+	return y
+
+
+func _draw_bonus_head(y: float, r: Rect2) -> void:
+	## R531：追加奖励的分隔带（用户口径「专门做一个类似 ----追加奖励---- 的 UI」）。
+	## 结构：左右金色细线（粗底 + 亮面两遍，出压印感）+ 中间题签（淡金圆角底 + 深金字
+	## + 两端小菱形）+ 底部一层极淡暖光。**纯装饰**，不承载信息 ——
+	## 具体领什么由行内的名称与说明给，这里只负责「这一档和上面那些不是一回事」。
+	var mid := y + BONUS_HEAD_H * 0.56
+	var cx := r.position.x + r.size.x * 0.5
+	var text := "追加奖励"
+	var tw := _font_bold.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			UiTheme.FS_SUBHEAD).x
+	var chip := Rect2(cx - tw * 0.5 - 24.0, mid - 14.0, tw + 48.0, 28.0)
+	# 暖光先铺，题签压在上面
+	_root.draw_rect(Rect2(r.position.x + PAD, mid + 8.0,
+			r.size.x - PAD * 2.0, 10.0), Color(0.86, 0.70, 0.30, 0.07), true)
+	_round_box(chip, 14.0, Color("fbf1d2"), Color("d8b95c"), false)
+	for side in [-1.0, 1.0]:
+		var x_from := chip.position.x if side < 0.0 else chip.end.x
+		var x_to := (r.position.x + PAD) if side < 0.0 else (r.end.x - PAD)
+		_root.draw_line(Vector2(x_from, mid), Vector2(x_to, mid),
+				Color(0.72, 0.55, 0.18, 0.40), 2.0)
+		_root.draw_line(Vector2(x_from, mid), Vector2(x_to, mid),
+				Color(0.96, 0.85, 0.56, 0.90), 1.0)
+		_draw_diamond(Vector2(x_to, mid), 3.5, Color("c9a227"))
+	_draw_diamond(Vector2(chip.position.x + 9.0, mid), 4.0, Color("c9a227"))
+	_draw_diamond(Vector2(chip.end.x - 9.0, mid), 4.0, Color("c9a227"))
+	_root.draw_string(_font_bold, Vector2(chip.position.x, mid + 6.0), text,
+			HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, UiTheme.FS_SUBHEAD,
+			Color("7a5a14"))
+
+
+func _draw_diamond(c: Vector2, s: float, col: Color) -> void:
+	## 菱形小饰件（分隔带 / 题签专用）。纯装饰，不参与命中。
+	_root.draw_colored_polygon(PackedVector2Array([
+			c + Vector2(0.0, -s), c + Vector2(s, 0.0),
+			c + Vector2(0.0, s), c + Vector2(-s, 0.0)]), col)
 
 
 func _draw_row(i: int, rr: Rect2) -> void:
@@ -907,6 +1003,12 @@ func _draw_row(i: int, rr: Rect2) -> void:
 	if _sb_card == null:
 		_sb_card = _tex_sb(TEX_CARD, 30.0)
 	_root.draw_style_box(_sb_card, rr)
+	if _entry_bonus(e):
+		# R531：追加奖励行 —— 贴图上再压一层淡金底 + 双道金边（外深内亮）。
+		# 分隔带已经写明「追加奖励」，行内不再重复写字，免得挤占名称宽度。
+		_round_box(rr, 12.0, Color(0.996, 0.953, 0.847, 0.62), Color("d9bb62"), false)
+		_round_box(rr.grow(-3.0), 9.0, Color(0, 0, 0, 0),
+				Color(0.86, 0.70, 0.30, 0.45), false)
 	# 左侧来源纹章（色仍由 `_entry_color` 给，档位色唯一口不变）
 	_draw_entry_icon(e, rr.position + Vector2(46.0, ROW_H * 0.5))
 	# 名称 + 标签：文字右边界让开右侧按钮，别压上去
@@ -1982,7 +2084,11 @@ func _max_scroll() -> float:
 	if _view == VIEW_CORE:
 		return maxf(0.0, _grid_content_h(_core_grid.size()) - _deck_clip_rect().size.y)
 	var n := RunState.pending_rewards.size()
-	var content := n * (ROW_H + ROW_GAP) - ROW_GAP
+	# R531：内容高度走 `_row_top()` —— 追加奖励的分隔带也是内容的一部分，
+	# 少算它就会出现「最后一行的按钮滚不到」。
+	var content := 0.0
+	if n > 0:
+		content = _row_top(n - 1) + ROW_H - HEAD_H
 	var view := PANEL_H - HEAD_H - FOOT_H
 	return maxf(0.0, content - view)
 
@@ -2031,6 +2137,40 @@ func _demo_start() -> void:
 					core_pick_deck(int(_core_grid[0])))
 		add_child(tmc)
 		tmc.start()
+		return
+	# R531 出图：**追加奖励区块**（分隔带 + 金色行 + 末尾位置）。
+	#   `-- --screenshot --bonusdemo`              1 道具 + 1 组卡牌 + 追加「金币」
+	#   `-- --screenshot --bonusdemo --bonushp`     追加换成「最大生命 +7」
+	#   `-- --screenshot --bonusdemolow`            只有一条追加奖励（核验分隔带贴顶）
+	if "--bonusdemo" in args or "--bonusdemolow" in args:
+		RunState.run_active = true
+		RunState.relics = []
+		RunState.skipped_relics = []
+		RunState.pending_relic_drop = -1
+		RunState.pending_rewards = []
+		RunState.run_rng = RandomNumberGenerator.new()
+		RunState.run_rng.seed = 531
+		if "--bonusdemolow" not in args:
+			RunState.queue_relic_reward(6005)
+			RunState.queue_card_reward("normal")
+		# 追加奖励的种类可指定 —— 每种都要出图核验（尤其「卡牌组 / 删卡」这两条，
+		# 名称与说明和普通奖励几乎一样，全靠分隔带 + 底色 + 「追加 · 」前缀区分）。
+		var bk := "gold"
+		if "--bonushp" in args:
+			bk = "maxhp"
+		elif "--bonuscards" in args:
+			bk = "cards"
+		elif "--bonusdelete" in args:
+			bk = "delete"
+		elif "--bonusrelic" in args:
+			bk = "relic"
+		RunState.queue_elite_bonus(bk)
+		var tmb := Timer.new()
+		tmb.wait_time = 0.25
+		tmb.one_shot = true
+		tmb.timeout.connect(func(): open())
+		add_child(tmb)
+		tmb.start()
 		return
 	# R469 出图：月亮 9180 / 精英战的删卡页 —— 卡组里前几张预先贴好附魔，
 	# 核验「附魔标记与附魔数值都在」。两种不同附魔（颜色不同）才看得出确实是附魔。

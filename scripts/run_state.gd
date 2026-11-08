@@ -1696,6 +1696,91 @@ static func queue_deck_delete_reward(count: int = 1) -> int:
 	return pending_rewards.size() - 1
 
 
+# ---------------------------------------------------------------- R531 精英追加奖励
+## 用户口径（R531）：精英战原来**固定**送一次删卡，改成按概率摇一项「追加奖励」。
+## 权重合计必须 = 100（`test_engine` 有一条断言守着）；数组顺序即判定顺序，别随手调。
+const BONUS_HP := "maxhp"
+const BONUS_CARDS := "cards"
+const BONUS_DELETE := "delete"
+const BONUS_GOLD := "gold"
+const BONUS_RELIC := "relic"
+const BONUS_HP_GAIN := 7          ## 25%：最大生命 +7（当前生命同时 +7 = 顺便回血）
+const BONUS_GOLD_GAIN := 50       ## 20%：额外 50 金币
+const BONUS_RULES: Array = [
+	{"type": BONUS_HP, "weight": 25},
+	{"type": BONUS_CARDS, "weight": 30},
+	{"type": BONUS_DELETE, "weight": 15},
+	{"type": BONUS_GOLD, "weight": 20},
+	{"type": BONUS_RELIC, "weight": 10},
+]
+
+
+static func roll_elite_bonus() -> String:
+	## 摇一个追加奖励类型（权重见 `BONUS_RULES`）。返回类型常量串。
+	## ⚠️ 只消耗**一个**随机数 —— 别在这里顺手多摇一次，同一 seed 下后续的
+	##    卡池 / 道具顺序会整体错位（录像复现会跟着坏）。
+	var r := run_rng.randi() % 100
+	var acc := 0
+	for rule: Dictionary in BONUS_RULES:
+		acc += int(rule.get("weight", 0))
+		if r < acc:
+			return str(rule.get("type", ""))
+	return str((BONUS_RULES[0] as Dictionary).get("type", ""))
+
+
+static func queue_elite_bonus(force := "") -> int:
+	## 精英胜利后的**追加奖励**入队，返回条目下标（-1 = 没入队）。
+	## `force` 非空时跳过摇奖（测试 / 出图用：maxhp / cards / delete / gold / relic）。
+	##
+	## 实现口径：**不新造奖励种类** —— 一律走原有通道（卡组三选一 / 删卡 / 道具），
+	## 只在条目上打 `bonus = true`。奖励页据此画「追加奖励」分隔带，
+	## 领取 / 放弃的行为与普通奖励完全一致（不用再教玩家怎么点一遍）。
+	## ⚠️ 追加奖励**最后入队** → 天然排在奖励列表末尾（用户口径）。
+	var kind := force if force != "" else roll_elite_bonus()
+	var idx := -1
+	match kind:
+		BONUS_HP:
+			_drop_settled_batch()
+			pending_rewards.append({"kind": BONUS_HP, "hp": BONUS_HP_GAIN,
+					"state": REWARD_PENDING})
+			idx = pending_rewards.size() - 1
+		BONUS_GOLD:
+			_drop_settled_batch()
+			pending_rewards.append({"kind": BONUS_GOLD, "gold": BONUS_GOLD_GAIN,
+					"state": REWARD_PENDING})
+			idx = pending_rewards.size() - 1
+		BONUS_CARDS:
+			idx = queue_card_reward("normal")
+		BONUS_DELETE:
+			idx = queue_deck_delete_reward(1)
+		BONUS_RELIC:
+			# ⚠️ 不能走 `offer_relic_drop()` —— 它写的是**单值** `pending_relic_drop`
+			#    （精英本身可能已经掉了一件），会把主掉落挤掉。这里只摇、只入队。
+			# ⚠️ 还要**排除队列里已经在等领的那几件**（含主掉落 `pending_relic_drop`）：
+			#    那几件只入队、还没 `gain_relic`，奖励池是不知道的 —— 不排除就会
+			#    「同一件道具在列表里出现两条」，领第二条时等于白拿。
+			var took: Array[int] = []
+			for pe: Dictionary in pending_rewards:
+				if str(pe.get("kind", "")) == "relic":
+					took.append(int(pe.get("id", 0)))
+			if pending_relic_drop > 0 and not took.has(pending_relic_drop):
+				took.append(pending_relic_drop)
+			var rid := roll_reward_relic(false, took, false)
+			if rid > 0:
+				queue_relic_reward(rid)
+				idx = pending_rewards.size() - 1
+			else:
+				# 道具池已空（全都拥有 / 被跳过）→ 退化成一笔金币，
+				# 别让玩家「摇到 10% 却什么都没拿到」。
+				_drop_settled_batch()
+				pending_rewards.append({"kind": BONUS_GOLD, "gold": BONUS_GOLD_GAIN,
+						"state": REWARD_PENDING})
+				idx = pending_rewards.size() - 1
+	if idx >= 0 and idx < pending_rewards.size():
+		(pending_rewards[idx] as Dictionary)["bonus"] = true
+	return idx
+
+
 static func can_reroll_reward() -> bool:
 	## 火柴（6051）：「刷新」按钮能不能点的**唯一判据口**（持有 + 还有次数）。
 	## 按钮显隐 / 置灰 / 真正刷新都问这里，别在界面里各写一份 `match_charge > 0`。
@@ -1842,6 +1927,15 @@ static func claim_pending_reward(idx: int) -> bool:
 	# 现在一律**拒绝**：删卡只有一个口 `claim_deck_delete_reward(idx, deck_index)`，
 	# 「删掉卡组第 N 张」与「这条置为已领」在同一次调用里完成。界面走
 	# `RewardPanel._open_entry()` → 卡组视图（R398 的就地删卡）。
+	# R531：追加奖励里两种「直接到账」类型 —— 金币 / 最大生命（上限与当前生命一起涨）。
+	if str(e.get("kind", "")) == BONUS_GOLD:
+		gain_gold(int(e.get("gold", BONUS_GOLD_GAIN)))
+		e["state"] = REWARD_CLAIMED
+		return true
+	if str(e.get("kind", "")) == BONUS_HP:
+		gain_max_hp(int(e.get("hp", BONUS_HP_GAIN)))
+		e["state"] = REWARD_CLAIMED
+		return true
 	if str(e.get("kind", "")) == "deck_delete":
 		return false
 	if str(e.get("kind", "")) != "relic":
@@ -1869,6 +1963,10 @@ static func skip_pending_reward(idx: int) -> bool:
 	if str(e.get("kind", "")) == "cards" and relics.has(DARK_POWER_RELIC_ID):
 		return false
 	if str(e.get("kind", "")) == "deck_delete":
+		e["state"] = REWARD_SKIPPED
+		return true
+	# R531：金币 / 最大生命也可以放弃（点了就置灰，什么都不发生）。
+	if str(e.get("kind", "")) == BONUS_GOLD or str(e.get("kind", "")) == BONUS_HP:
 		e["state"] = REWARD_SKIPPED
 		return true
 	if str(e.get("kind", "")) == "relic":

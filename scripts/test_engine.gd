@@ -16333,6 +16333,121 @@ func _init() -> void:
 	check(not RunState.pick_pending_card(r119_ic, 8001),
 		"R119 不在候选里的卡不能被打发进卡组（返回 false）")
 
+	# ---- R531：精英追加奖励（原来固定送删卡 → 按概率摇一项） ----
+	# 用户口径：25% 最大生命 +7（同时回血）/ 30% 额外一组卡牌 / 15% 删一张卡 /
+	# 20% 额外 50 金币 / 10% 道具。概率表是**唯一口** `RunState.BONUS_RULES`，
+	# 逻辑 / 界面 / 测试都读它，别在任何一处另写一套权重。
+	var r531_weight := 0
+	var r531_types: Array[String] = []
+	for r531_rule: Dictionary in RunState.BONUS_RULES:
+		r531_weight += int(r531_rule.get("weight", 0))
+		r531_types.append(str(r531_rule.get("type", "")))
+	check(r531_weight == 100 and RunState.BONUS_RULES.size() == 5,
+			"R531 追加奖励概率表：5 档、权重合计 100（实际 %d）" % r531_weight)
+	check(r531_types.has(RunState.BONUS_HP) and r531_types.has(RunState.BONUS_CARDS)
+			and r531_types.has(RunState.BONUS_DELETE) and r531_types.has(RunState.BONUS_GOLD)
+			and r531_types.has(RunState.BONUS_RELIC),
+			"R531 概率表五类齐全：最大生命 / 卡牌组 / 删卡 / 金币 / 道具")
+
+	# 摇奖只吃一个随机数：同 seed → 同序列（录像可复现）
+	var r531_save_gold := RunState.gold
+	var r531_save_maxhp := RunState.max_hp
+	var r531_save_hp := RunState.hp
+	var r531_save_active := RunState.run_active
+	var r531_save_drop := RunState.pending_relic_drop
+	var r531_save_relics: Array[int] = RunState.relics.duplicate()
+	var r531_save_skip: Array[int] = RunState.skipped_relics.duplicate()
+	RunState.run_active = true
+	RunState.run_rng = RandomNumberGenerator.new()
+	RunState.run_rng.seed = 531
+	var r531_seq: Array[String] = []
+	for _i in 6:
+		r531_seq.append(RunState.roll_elite_bonus())
+	RunState.run_rng = RandomNumberGenerator.new()
+	RunState.run_rng.seed = 531
+	var r531_seq2: Array[String] = []
+	for _i in 6:
+		r531_seq2.append(RunState.roll_elite_bonus())
+	check(JSON.stringify(r531_seq) == JSON.stringify(r531_seq2),
+			"R531 追加奖励摇奖可复现（同 run_rng 种子 → 同序列：%s）" % "、".join(r531_seq))
+
+	# ① 金币
+	RunState.pending_rewards = []
+	RunState.gold = 100
+	var r531_gi := RunState.queue_elite_bonus(RunState.BONUS_GOLD)
+	var r531_ge: Dictionary = RunState.pending_rewards[r531_gi]
+	check(r531_gi == 0 and str(r531_ge.get("kind", "")) == RunState.BONUS_GOLD
+			and bool(r531_ge.get("bonus", false)),
+			"R531 金币追加奖励：入队一条 gold 且带 bonus 标记（奖励页据此画分隔带）")
+	check(RunState.claim_pending_reward(r531_gi) and RunState.gold == 150,
+			"R531 金币追加奖励：领取后 +50（100 → %d）" % RunState.gold)
+
+	# ② 最大生命 +7（上限与当前生命一起涨 = 同时回血）
+	RunState.pending_rewards = []
+	var r531_hi := RunState.queue_elite_bonus(RunState.BONUS_HP)
+	RunState.max_hp = 50
+	RunState.hp = 20
+	check(RunState.claim_pending_reward(r531_hi) and RunState.max_hp == 57
+			and RunState.hp == 27,
+			"R531 最大生命追加奖励：上限 50→57、当前生命 20→27（同时回血）")
+
+	# ③ 额外一组卡牌（仍走三选一口）
+	RunState.pending_rewards = []
+	var r531_ci := RunState.queue_elite_bonus(RunState.BONUS_CARDS)
+	var r531_ce: Dictionary = RunState.pending_rewards[r531_ci]
+	var r531_cands: Array = r531_ce.get("candidates", [])
+	check(str(r531_ce.get("kind", "")) == "cards" and r531_cands.size() == 3
+			and bool(r531_ce.get("bonus", false)),
+			"R531 卡牌追加奖励：一组三选一（3 张候选）且带 bonus 标记")
+	check(not RunState.claim_pending_reward(r531_ci),
+			"R531 卡牌追加奖励不能空组领取（要进三选一挑一张）")
+
+	# ④ 额外一次删卡
+	RunState.pending_rewards = []
+	var r531_di := RunState.queue_elite_bonus(RunState.BONUS_DELETE)
+	var r531_de: Dictionary = RunState.pending_rewards[r531_di]
+	check(str(r531_de.get("kind", "")) == "deck_delete"
+			and int(r531_de.get("count", 0)) == 1 and bool(r531_de.get("bonus", false)),
+			"R531 删卡追加奖励：一条 deck_delete（1 次）且带 bonus 标记")
+
+	# ⑤ 道具：不挤掉主掉落，也不与队列里已经在等领的那件重复
+	RunState.pending_rewards = []
+	RunState.relics = []
+	RunState.skipped_relics = []
+	RunState.pending_relic_drop = 6005
+	RunState.queue_relic_reward(6005)          # 模拟「精英主掉落已入队、还没领」
+	var r531_ri := RunState.queue_elite_bonus(RunState.BONUS_RELIC)
+	var r531_re: Dictionary = RunState.pending_rewards[r531_ri]
+	var r531_rid := int(r531_re.get("id", 0))
+	check(r531_rid > 0 and r531_rid != 6005 and bool(r531_re.get("bonus", false)),
+			"R531 道具追加奖励：另摇一件（%d，不与主掉落 6005 重复）且带 bonus 标记" % r531_rid)
+	check(RunState.pending_relic_drop == 6005,
+			"R531 道具追加奖励**不挤掉主掉落**（pending_relic_drop 仍是 6005）")
+
+	# ⑥ 位置：追加奖励最后入队 → 列表末尾（用户口径）
+	RunState.pending_rewards = []
+	RunState.queue_card_reward("normal")
+	var r531_bi := RunState.queue_elite_bonus(RunState.BONUS_GOLD)
+	check(RunState.pending_rewards.size() == 2 and r531_bi == 1
+			and bool((RunState.pending_rewards[1] as Dictionary).get("bonus", false))
+			and not bool((RunState.pending_rewards[0] as Dictionary).get("bonus", false)),
+			"R531 追加奖励排在列表末尾（最后入队，且只有它带 bonus 标记）")
+
+	# ⑦ 可放弃：金币 / 最大生命不该被强制领取
+	check(RunState.skip_pending_reward(r531_bi)
+			and str((RunState.pending_rewards[r531_bi] as Dictionary).get("state", ""))
+					== RunState.REWARD_SKIPPED,
+			"R531 金币 / 最大生命这类追加奖励可以放弃（置灰、不发生任何效果）")
+
+	RunState.pending_rewards = []
+	RunState.gold = r531_save_gold
+	RunState.max_hp = r531_save_maxhp
+	RunState.hp = r531_save_hp
+	RunState.run_active = r531_save_active
+	RunState.pending_relic_drop = r531_save_drop
+	RunState.relics = r531_save_relics
+	RunState.skipped_relics = r531_save_skip
+
 	# 一键领取：只收拾道具，卡牌组留给玩家自己挑
 	RunState.pending_rewards = []
 	RunState.relics = []

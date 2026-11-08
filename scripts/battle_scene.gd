@@ -7583,14 +7583,16 @@ func _show_over(win: bool) -> void:
 			for lc: Dictionary in late_cards:
 				UiCardGrant.grant(int(lc.get("id", -1)), _deck_pile_center(), 320)
 				sfx.play("draw")
-			# R390（用户口径）：**精英战**额外给一次删卡 —— 和月亮（9180）走同一条
-			# `deck_delete` 通道，所以它同样进奖励列表、同样受 R340「一批没处理完
-			# 不许换场景」约束。放在卡牌组之后：同一批里它排在卡牌下面，
-			# 「先挑卡、再删卡」的顺序和结算面板从上到下的阅读顺序一致。
-			# R392：再看一次关卡 tier，Boss 即使房间数据误标成 elite 也不发这份精英删卡。
+			# R531（用户口径）：精英战**不再固定送删卡**，改成按概率摇一项「追加奖励」：
+			#   25% 最大生命 +7（同时回血）/ 30% 额外一组卡牌 / 15% 删一张卡 /
+			#   20% 额外 50 金币 / 10% 道具。概率表与落地都在 `RunState.queue_elite_bonus()`
+			#   （唯一口，这里只负责「精英 + 非 Boss」这一个条件）。
+			# 放在卡牌组之后：追加奖励**最后入队** → 奖励页里排在列表末尾，
+			# 并有专门的「追加奖励」分隔带（`RewardPanel._draw_bonus_head`）。
+			# R392：再看一次关卡 tier，Boss 即使房间数据误标成 elite 也不发这份追加奖励。
 			# 月亮 9180 自己的 deck_delete 在上面独立结算，不受这条限制。
 			if node_type == "elite" and not _run_boss_win:
-				RunState.queue_deck_delete_reward(1)
+				RunState.queue_elite_bonus()
 			# R390（用户口径）：**Boss** 额外一组「必定史诗」的卡牌奖励。
 			# 走独立的 "epic" 档（权重只留史诗），和上面那组 boss 档是两组
 			# **各自独立**的三选一 —— 玩家可以各选一张，也可以只选一组。
