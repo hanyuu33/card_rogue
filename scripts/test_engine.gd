@@ -16464,6 +16464,28 @@ func _init() -> void:
 			and not r532_rp.contains("额外最大生命"),
 			"R532 追加奖励的名称 / 说明都不再带「额外」（靠分隔带 + 专属图标区分）")
 
+	# ---- R535：金币 / 最大生命的追加奖励**点开条目就领**（用户报「HP＋7 实际上无法领取」） ----
+	# 病根在界面：`_open_entry()` 只给 deck_delete / core / relic 分派，其余一律进三选一，
+	# 而 gold / maxhp 的 `candidates` 是空的 → 摊开空页面，点不到卡、确认永远置灰。
+	# 数据层 `claim_pending_reward()` 一直是好的，所以只测数据层抓不到这个洞（R531 就这么漏的）。
+	check(RunState.is_direct_reward(RunState.BONUS_GOLD)
+			and RunState.is_direct_reward(RunState.BONUS_HP),
+			"R535 直达到账判据：金币 / 最大生命点开即领")
+	check(not RunState.is_direct_reward(RunState.BONUS_CARDS)
+			and not RunState.is_direct_reward(RunState.BONUS_DELETE)
+			and not RunState.is_direct_reward(RunState.BONUS_RELIC),
+			"R535 卡牌 / 删卡 / 道具各有自己的页面，不算直达到账")
+	var r535_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	var r535_beg := r535_rp.find("func _open_entry(")
+	var r535_endp := r535_rp.find("func _reset_core(", r535_beg)
+	var r535_body := ""
+	if r535_beg >= 0 and r535_endp > r535_beg:
+		r535_body = r535_rp.substr(r535_beg, r535_endp - r535_beg)
+	var r535_direct := r535_body.find("RunState.is_direct_reward(k)")
+	var r535_cards := r535_body.find("_view = VIEW_CARDS")
+	check(r535_direct >= 0 and r535_cards > r535_direct,
+			"R535 奖励页 `_open_entry()` 先判「直达到账」再落到三选一（旧版 gold / maxhp 摊开空页面 = 领不到）")
+
 	# 一键领取：只收拾道具，卡牌组留给玩家自己挑
 	RunState.pending_rewards = []
 	RunState.relics = []

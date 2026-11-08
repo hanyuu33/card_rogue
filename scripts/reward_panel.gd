@@ -579,6 +579,14 @@ func _open_entry(i: int) -> void:
 		_view = VIEW_CORE
 		_root.queue_redraw()
 		return
+	# R535（用户报「HP＋7 实际上无法领取」）：金币 / 最大生命是**直接到账**条目 ——
+	# `candidates` 本来就是空的。旧版没有这一支，它们掉进下面的 `else` 进了三选一，
+	# 摊开的是一个空页面：没有卡可点、「确认选择这张」永远置灰，只剩「放弃这组」能用。
+	# 现在点开 = 当场入账，与 `_entry_tag()` 里「直接进钱袋」是同一个口径。
+	if RunState.is_direct_reward(k):
+		if not _settled(e):
+			_claim_entry(i)
+		return
 	if k == "relic":
 		_view = VIEW_RELIC
 	else:
@@ -2142,6 +2150,9 @@ func _demo_start() -> void:
 	#   `-- --screenshot --bonusdemo`              1 道具 + 1 组卡牌 + 追加「金币」
 	#   `-- --screenshot --bonusdemo --bonushp`     追加换成「最大生命 +7」
 	#   `-- --screenshot --bonusdemolow`            只有一条追加奖励（核验分隔带贴顶）
+	#   `-- --screenshot --bonusdemo --bonushp --bonusclaim`
+	#                                              点开追加那条 = 当场领到（R535 回归核验，
+	#                                              行内状态应变「已领取」）
 	if "--bonusdemo" in args or "--bonusdemolow" in args:
 		RunState.run_active = true
 		RunState.relics = []
@@ -2165,11 +2176,15 @@ func _demo_start() -> void:
 			bk = "delete"
 		elif "--bonusrelic" in args:
 			bk = "relic"
-		RunState.queue_elite_bonus(bk)
+		var bidx := RunState.queue_elite_bonus(bk)
 		var tmb := Timer.new()
 		tmb.wait_time = 0.25
 		tmb.one_shot = true
-		tmb.timeout.connect(func(): open())
+		# `--bonusclaim`：R535 核验「点开这条 = 当场领到」——走的正是玩家点行时的那条路。
+		tmb.timeout.connect(func():
+			open()
+			if "--bonusclaim" in args and bidx >= 0:
+				_open_entry(bidx))
 		add_child(tmb)
 		tmb.start()
 		return

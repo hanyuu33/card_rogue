@@ -1715,6 +1715,15 @@ const BONUS_RULES: Array = [
 ]
 
 
+static func is_direct_reward(kind: String) -> bool:
+	## R535：「直接到账」型奖励（金币 / 最大生命）—— **没有详情页、没有候选**，
+	## 点开它就是领（`claim_pending_reward` 当场入账）。
+	## ⚠️ 唯一判据口：奖励页 `_open_entry()` 的「点开 = 领取」、领取 / 放弃两支都读这里。
+	##    旧版三处各写一遍 `kind == BONUS_GOLD or kind == BONUS_HP`，界面那一处漏了，
+	##    于是这两种奖励摊开一个**空的三选一页面**：领不到、只剩「放弃」能点。
+	return kind == BONUS_GOLD or kind == BONUS_HP
+
+
 static func roll_elite_bonus() -> String:
 	## 摇一个追加奖励类型（权重见 `BONUS_RULES`）。返回类型常量串。
 	## ⚠️ 只消耗**一个**随机数 —— 别在这里顺手多摇一次，同一 seed 下后续的
@@ -1928,12 +1937,13 @@ static func claim_pending_reward(idx: int) -> bool:
 	# 「删掉卡组第 N 张」与「这条置为已领」在同一次调用里完成。界面走
 	# `RewardPanel._open_entry()` → 卡组视图（R398 的就地删卡）。
 	# R531：追加奖励里两种「直接到账」类型 —— 金币 / 最大生命（上限与当前生命一起涨）。
-	if str(e.get("kind", "")) == BONUS_GOLD:
-		gain_gold(int(e.get("gold", BONUS_GOLD_GAIN)))
-		e["state"] = REWARD_CLAIMED
-		return true
-	if str(e.get("kind", "")) == BONUS_HP:
-		gain_max_hp(int(e.get("hp", BONUS_HP_GAIN)))
+	# R535：判据收进 `is_direct_reward()` —— 奖励页「点开条目就领」读的是同一句，
+	# 别再在每一处单独列 kind（列三遍就一定有一遍会被忘掉，R531 就是这么坏的）。
+	if is_direct_reward(str(e.get("kind", ""))):
+		if str(e.get("kind", "")) == BONUS_GOLD:
+			gain_gold(int(e.get("gold", BONUS_GOLD_GAIN)))
+		else:
+			gain_max_hp(int(e.get("hp", BONUS_HP_GAIN)))
 		e["state"] = REWARD_CLAIMED
 		return true
 	if str(e.get("kind", "")) == "deck_delete":
@@ -1966,7 +1976,8 @@ static func skip_pending_reward(idx: int) -> bool:
 		e["state"] = REWARD_SKIPPED
 		return true
 	# R531：金币 / 最大生命也可以放弃（点了就置灰，什么都不发生）。
-	if str(e.get("kind", "")) == BONUS_GOLD or str(e.get("kind", "")) == BONUS_HP:
+	# R535：判据走 `is_direct_reward()`（与领取 / 奖励页同一句）。
+	if is_direct_reward(str(e.get("kind", ""))):
 		e["state"] = REWARD_SKIPPED
 		return true
 	if str(e.get("kind", "")) == "relic":
