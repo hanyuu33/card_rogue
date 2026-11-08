@@ -3027,15 +3027,15 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--revive" in args and engine != null:
-		# 演示（2026-10-01，第 37 轮）：复活术（9078）——打出后弹出「从弃牌区取一张盟友」面板。
+		# 演示（2026-10-01，第 37 轮）：从弃牌区取一张盟友 —— 面板本身与卡无关，
+		# R528 起 9078 改成效果卡（传承记忆），这里直接调机制进面板，演示仍然有效。
 		engine.state.energy = 5
 		for _rid in [8003, 9031, 9032, 9033, 8002]:
 			engine.state.discard.append(repo.get_card(_rid))
 		engine.state.hand.clear()
-		engine.state.hand.append(repo.get_card(9078))
-		engine.use_spell(0)
+		engine._revive_spell(GameEngine.SIDE_SELF)
 		_hover_card = null
-		status_text = "复活术：从弃牌区选择一张盟友回到手卡（必须选一张）"
+		status_text = "从弃牌区选择一张盟友回到手卡（必须选一张）"
 		_shot_t0 = _now()
 		queue_redraw()
 	if NetSession.active:

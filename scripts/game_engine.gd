@@ -788,8 +788,16 @@ const FIREBALL_ID:= 9007
 # 陨石术（9077 技能）：10 费；十字范围 40 伤、不分敌我；「留手」不弃；每次用技能永久 -1。
 const METEOR_ID:= 9077
 const METEOR_DMG:= 40
-# 复活术（9078 技能）：从弃牌区取一张盟友回到手卡。
+# 复活术取牌机制：从弃牌区取一张盟友回到手卡。
+# ⚠️ R528 起 9078「传承记忆」已改成**效果卡**，这个 id 不再以技能身份进入 `_run_spell_effect`；
+#   分派分支与选牌面板（battle_scene 的 revive 面板 / `revive_pending` 一族）**保留**，
+#   作为「从弃牌区取牌」的可复用机制，测试仍直接调 `_revive_spell()` 守着它。
 const REVIVE_ID:= 9078
+# 传承记忆（9078 效果卡，R528）：每回合前 N 个死亡的己方盟友回手卡，且手卡内费用 -1。
+# 张数 = 效果区里本卡的数量（多张叠加 → 名额 +1）；减费走 `hand_cost_delta`（离手即恢复原价）。
+const LEGACY_ID := 9078
+const LEGACY_TRAIT := "传承"
+const LEGACY_COST_CUT := 1
 # 返修（9127 技能，R188，机械之心 1 费稀有）：从弃牌区选一张盟友/工事回手，
 # 并获得永久改造：生命 +3（烤进副本、本场战斗永久，口径同系统升级）。
 const OVERHAUL_ID:= 9127
@@ -11422,6 +11430,54 @@ func _wind_force_dmg(side: String) -> int:
 	return 0
 
 
+func _legacy_count() -> int:
+	## 传承记忆（9078 效果卡，R528）：效果区里有几张 → 每回合几个回手名额。
+	var n := 0
+	for c: CardData in state.effects:
+		if c.id == LEGACY_ID or c.traits.has(LEGACY_TRAIT):
+			n += 1
+	return n
+
+
+func _legacy_try_return(p: Placement) -> bool:
+	## 传承记忆（9078 效果卡，R528）：**每回合第一个死亡的己方盟友回到手卡，费用 -1**。
+	## 返回 true = 这次死亡已由本卡接管（调用方不再走「进弃牌区」）。
+	##
+	## 口径（用户 R528）：
+	##   * 「每回合」= **己方回合**：额度按 `self_turn_no` 记，跨到敌方回合不重置 ——
+	##     敌方回合里死的盟友仍占这个己方回合的名额。
+	##   * 「多个叠加」= 效果区张数：2 张 → 每回合前 2 个死亡的盟友各回手一次（第 X 个 +1）。
+	##   * 「费用 -1」走 `state.hand_cost_delta`：手卡内减费，**打出 / 弃掉即恢复原价** ——
+	##     这就是括号里那条「离开手卡重置」，不用在离手口逐个挂钩。
+	## ⚠️ 只认 `kind == "盟友"`：卡面写的是盟友，工事死了不回。
+	## ⚠️ 手牌满 → 本次不触发且**不消耗额度**（回不去等于没触发），死亡照常进弃牌区。
+	if p == null or p.card == null or p.card.kind != "盟友":
+		return false
+	var quota := _legacy_count()
+	if quota <= 0:
+		return false
+	if state.self_turn_no != state.legacy_turn:
+		state.legacy_turn = state.self_turn_no
+		state.legacy_used = 0
+	if state.legacy_used >= quota:
+		return false
+	if state.hand_full():
+		_log("传承记忆：%s 被击破 → 手牌已满，本次不回收（名额留着）" % p.card.card_name)
+		return false
+	var back := _card_leaving_field(p)
+	if back == null:
+		return false
+	state.hand.append(back)
+	state.hand_cost_delta[back] = int(state.hand_cost_delta.get(back, 0)) + LEGACY_COST_CUT
+	state.legacy_used += 1
+	_log("传承记忆：%s 被击破 → 回到手卡（本回合第 %d / %d 个，费用 -%d）" % [
+		p.card.card_name, state.legacy_used, quota, LEGACY_COST_CUT])
+	action.emit("legacy_recall", {
+		"card": back, "used": state.legacy_used, "quota": quota,
+		"cut": LEGACY_COST_CUT})
+	return true
+
+
 func _on_ally_entered(p: Placement, side: String) -> void :
 	# R493：先刷土元素光环 —— 这一格刚刚多了一个盟友，全体的 +3 要立刻到位
 	#（放在 `kind != 盟友` 的早退之前：土元素自己也可能就是刚上场的那张）。
@@ -14221,6 +14277,8 @@ func _destroy(cell: Vector2i) -> void :
 			else:
 				_log("%s 被击破，返回手牌（变为 1 费）" % p.card.card_name)
 				state.hand.append(back)
+		elif _legacy_try_return(p):
+			pass   # R528 传承记忆：已回手卡（日志与减费都在里面记）
 		else:
 			# 进弃牌区的是「离场还原后」那张卡：栅栏修复术的加血只在场上有效（R67）。
 			# action.emit 里的 card 仍用场上那张（玩家看到的就是它），只有交出去的卡被还原。

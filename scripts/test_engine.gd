@@ -226,9 +226,10 @@ func _init() -> void:
 	check(meteor.is_spell() and meteor.cost == 10 and meteor.rarity == 2
 			and meteor.needs_cell() and meteor.traits.has(FieldState.KEEP_HAND_TRAIT),
 			"陨石术：史诗 10 费技能，选格施放，带「留手」")
-	var revive := repo.get_card(9078)
-	check(revive.is_spell() and revive.cost == 0 and revive.rarity == 0
-			and not revive.needs_target(), "复活术：普通 0 费技能，无需选目标")
+	var legacy := repo.get_card(9078)
+	check(legacy.is_effect() and legacy.cost == 2 and legacy.rarity == 0
+			and not legacy.needs_target() and legacy.traits.has(GameEngine.LEGACY_TRAIT),
+			"传承记忆：普通 2 费**效果卡**，无需选目标（R528 由 0 费技能改来）")
 	var golem_spell := repo.get_card(9079)
 	check(golem_spell.is_spell() and golem_spell.cost == 4 and golem_spell.rarity == 1
 			and golem_spell.needs_cell() and golem_spell.traits.has(GameEngine.GOLEM_TRAIT),
@@ -504,21 +505,19 @@ func _init() -> void:
 	check(chg_e4.charge_count(GameEngine.SIDE_OPPONENT) == 1
 			and chg_e4.charge_count(GameEngine.SIDE_SELF) == 0,
 			"蓄力：按阵营记账（敌方侧也生效，不串到我方）")
-	# 复活术被翻倍 → 可取回 2 张盟友（一层一次，一张一张选）
+	# 坚韧被翻倍 → 场上盟友 +3 生命跑两遍（R528：原用例取的是复活术，它已改成效果卡）
 	var chg_e5 := _new_engine([], 30, 30)
-	chg_e5.state.discard = [_card(8003, "农民", "盟友", 3, 3, 8, 1, 1),
-		_card(8003, "农民", "盟友", 3, 3, 8, 1, 1)]
+	chg_e5.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(3, 0), GameEngine.SIDE_SELF)
+	var chg_tough: Placement = chg_e5.state.unit_at(Vector2i(3, 0))
 	chg_e5.state.hand = [CardData.from_dict(repo.get_card(9085).to_dict()),
-		CardData.from_dict(repo.get_card(9078).to_dict())]
+		CardData.from_dict(repo.get_card(9053).to_dict())]
 	chg_e5.state.energy = 5
 	chg_e5.use_spell(0)
 	chg_e5.use_spell(0)
-	check(chg_e5.revive_pending and chg_e5.revive_remaining == 2,
-			"蓄力：复活术生效 2 次 → 可取回 2 张盟友（剩余 %d）" % chg_e5.revive_remaining)
-	check(chg_e5.revive_recall(0) and chg_e5.revive_remaining == 1
-			and chg_e5.revive_pending, "蓄力：取回第 1 张后还要再选 1 张")
-	check(chg_e5.revive_recall(0) and not chg_e5.revive_pending
-			and chg_e5.revive_remaining == 0, "蓄力：取回第 2 张后选牌结束")
+	check(chg_tough.health == 14,
+			"蓄力：坚韧生效 2 次 → 树人 8 + 3 + 3 = %d 生命" % chg_tough.health)
+	check(chg_e5.charge_count(GameEngine.SIDE_SELF) == 0, "蓄力：翻倍额度用掉即清零")
 	# 鲸鱼之怒被翻倍 → 取牌数 2 → 4
 	var chg_e6 := _new_engine([], 30, 30)
 	chg_e6.state.discard = [_card(8003, "农民", "盟友", 3, 3, 8, 1, 1),
@@ -544,8 +543,8 @@ func _init() -> void:
 			"魔法塔在场：1 费攻击 4 → 5 伤（按原本费用 +1）")
 	check(mt_e._spell_dmg(GameEngine.SIDE_SELF, 40, meteor) == 50,
 			"魔法塔在场：10 费陨石术 40 → 50 伤（按原本费用 +10）")
-	check(mt_e._spell_dmg(GameEngine.SIDE_SELF, 2, repo.get_card(9078)) == 2,
-			"魔法塔：原本 0 费的技能不吃加成（复活术 0 费 → +0）")
+	check(mt_e._spell_dmg(GameEngine.SIDE_SELF, 2, repo.get_card(9037)) == 2,
+			"魔法塔：原本 0 费的技能不吃加成（森林守护 0 费 → +0）")
 	var mt_f := _new_engine([], 20, 20)
 	mt_f.state.place(CardData.from_dict(mt.to_dict()), Vector2i(3, 1), GameEngine.SIDE_SELF)
 	mt_f.state.hand.clear()
@@ -707,40 +706,106 @@ func _init() -> void:
 			"魔像「离场消失」：被击破不进弃牌区")
 	check(gd_e.state.unit_at(Vector2i(4, 1)) == null, "魔像：离场后棋盘上不再有它")
 
-	# 复活术：从弃牌区选一张盟友回到手卡
+	# 复活术取牌机制（R528：9078 已改成效果卡，这套面板作为「从弃牌区取牌」机制保留，直调守它）
 	var rv_e := _new_engine([], 20, 20)
 	rv_e.state.energy = 5
 	rv_e.state.hand.clear()
-	rv_e.state.hand.append(repo.get_card(9078))
 	rv_e.state.discard.clear()
 	check(rv_e._revive_spell(GameEngine.SIDE_SELF) == "弃牌区里没有盟友",
-			"复活术：弃牌区里没有盟友 → 效果落空")
-	check(not rv_e.revive_pending, "复活术：没有可选目标时不进入选牌状态")
+			"复活术机制：弃牌区里没有盟友 → 效果落空")
+	check(not rv_e.revive_pending, "复活术机制：没有可选目标时不进入选牌状态")
 	rv_e.state.discard.append(repo.get_card(8002))    # 攻击：技能，不算盟友
-	rv_e.state.discard.append(repo.get_card(8003))    # 农民：盟友
+	rv_e.state.discard.append(repo.get_card(8003))    # 树人：盟友
 	rv_e.state.discard.append(repo.get_card(9031))    # 白狼：盟友
 	check(rv_e.revive_options() == [1, 2],
-			"复活术：候选只列弃牌区里的盟友（实际 %s）" % str(rv_e.revive_options()))
-	rv_e.use_spell(0)
-	check(rv_e.revive_pending, "复活术：打出后进入选牌状态（等待玩家点一张盟友）")
+			"复活术机制：候选只列弃牌区里的盟友（实际 %s）" % str(rv_e.revive_options()))
+	check(rv_e._revive_spell(GameEngine.SIDE_SELF) == "从弃牌区选择 1 张盟友回到手牌",
+			"复活术机制：进入选牌状态（等待玩家点一张盟友）")
+	check(rv_e.revive_pending, "复活术机制：revive_pending 已置位")
 	var rv_opts := rv_e.revive_options()
-	check(rv_opts == [1, 2], "复活术：复活术自己进弃牌区后不算候选（它是技能）")
+	check(rv_opts == [1, 2], "复活术机制：候选仍是那两张盟友")
 	check(rv_e.revive_recall(rv_opts[0]) and not rv_e.revive_pending,
-			"复活术：选中盟友后从弃牌区回到手卡")
+			"复活术机制：选中盟友后从弃牌区回到手卡")
 	check(rv_e.state.hand[rv_e.state.hand.size() - 1].id == 8003,
-			"复活术：回到手卡的是那张农民")
-	check(rv_e.state.discard.size() == 3, "复活术：被取回的那张离开弃牌区（剩 3 张）")
-	check(rv_e.revive_recall(1) == false, "复活术：选牌状态已结束，重复点击无效")
+			"复活术机制：回到手卡的是那张树人")
+	check(rv_e.state.discard.size() == 2, "复活术机制：被取回的那张离开弃牌区（剩 2 张）")
+	check(rv_e.revive_recall(1) == false, "复活术机制：选牌状态已结束，重复点击无效")
 	var rv_e2 := _new_engine([], 20, 20)
 	rv_e2.state.energy = 5
-	rv_e2.state.hand.clear()
-	rv_e2.state.hand.append(repo.get_card(9078))
-	rv_e2.state.discard.append(repo.get_card(8003))
-	rv_e2.use_spell(0)
 	check(rv_e2._run_spell_effect(repo.get_card(9078), null, GameEngine.SIDE_OPPONENT)
 			== "（复活术：敌方 AI 不使用这张卡）",
-			"复活术：敌方侧不会触发选牌")
+			"复活术机制：敌方侧不会触发选牌")
 
+
+	# ---- R528 传承记忆（9078 效果卡）：每回合第一个死亡的盟友回手卡、费用 -1 ----
+	var legacy_e := _new_engine([], 20, 20)
+	legacy_e.state.effects.append(CardData.from_dict(repo.get_card(9078).to_dict()))
+	legacy_e.state.hand.clear()
+	legacy_e.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(3, 0), GameEngine.SIDE_SELF)
+	legacy_e._destroy(Vector2i(3, 0))
+	check(legacy_e.state.hand.size() == 1 and legacy_e.state.hand[0].id == 8003
+			and legacy_e.state.discard.is_empty(),
+			"传承记忆：本回合第 1 个死亡的盟友回到手卡（不进弃牌区）")
+	check(legacy_e.cost_of(legacy_e.state.hand[0]) == 2,
+			"传承记忆：回到手卡的那张费用 -1（树人 3 → 2）")
+	# 额度只有 1 个 → 第 2 个照常进弃牌区
+	legacy_e.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	legacy_e._destroy(Vector2i(3, 1))
+	check(legacy_e.state.hand.size() == 1 and legacy_e.state.discard.size() == 1,
+			"传承记忆：本回合额度 1 个 → 第 2 个死亡的盟友照常进弃牌区")
+	# 叠加：效果区 2 张 → 每回合前 2 个各回手一次
+	legacy_e.state.effects.append(CardData.from_dict(repo.get_card(9078).to_dict()))
+	legacy_e.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(3, 2), GameEngine.SIDE_SELF)
+	legacy_e._destroy(Vector2i(3, 2))
+	check(legacy_e.state.hand.size() == 2 and legacy_e.state.legacy_used == 2,
+			"传承记忆：叠加 2 张 → 第 2 个死亡的盟友也回手（每回合第 X 个 +1）")
+	# 新回合额度重置
+	legacy_e.state.self_turn_no += 1
+	legacy_e.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(3, 3), GameEngine.SIDE_SELF)
+	legacy_e._destroy(Vector2i(3, 3))
+	check(legacy_e.state.hand.size() == 3 and legacy_e.state.legacy_used == 1,
+			"传承记忆：换到自己下一个回合 → 额度重置（又能回手 1 个）")
+	# 离开手卡 → 减费失效（括号里那条「离开手卡重置」）
+	var lg_back: CardData = legacy_e.state.hand[0]
+	check(legacy_e.cost_of(lg_back) == 2, "传承记忆：减费只在手卡里生效（3 - 1 = 2）")
+	legacy_e.state.hand.erase(lg_back)
+	check(legacy_e.cost_of(lg_back) == 3,
+			"传承记忆：离开手卡即恢复原价（-1 不跟着走）")
+	check(not legacy_e.state.hand_cost_delta.is_empty(),
+			"传承记忆：减费记在 hand_cost_delta（判据是「此刻还在手牌里」）")
+	# 工事不回手（卡面写的是「盟友」）
+	var lg_f := _new_engine([], 20, 20)
+	lg_f.state.effects.append(CardData.from_dict(repo.get_card(9078).to_dict()))
+	lg_f.state.hand.clear()
+	lg_f.state.place(_card(9001, "测试工事", "工事", 1, 0, 6, 0, 0),
+			Vector2i(3, 0), GameEngine.SIDE_SELF)
+	lg_f._destroy(Vector2i(3, 0))
+	check(lg_f.state.hand.is_empty() and lg_f.state.legacy_used == 0,
+			"传承记忆：工事死亡不触发（只认盟友）")
+	# 手牌满 → 本次不回收，名额留着
+	var lg_g := _new_engine([], 20, 20)
+	lg_g.state.effects.append(CardData.from_dict(repo.get_card(9078).to_dict()))
+	lg_g.state.hand.clear()
+	for _i in FieldState.HAND_LIMIT:
+		lg_g.state.hand.append(_card(8002, "攻击", "技能", 1, 0, 0, 0, 0))
+	lg_g.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(3, 0), GameEngine.SIDE_SELF)
+	lg_g._destroy(Vector2i(3, 0))
+	check(lg_g.state.hand.size() == FieldState.HAND_LIMIT and lg_g.state.legacy_used == 0
+			and lg_g.state.discard.size() == 1,
+			"传承记忆：手牌满 → 本次不回收且不消耗名额（死亡照常进弃牌区）")
+	# 效果区没有本卡 → 完全不触发
+	var lg_h := _new_engine([], 20, 20)
+	lg_h.state.hand.clear()
+	lg_h.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(3, 0), GameEngine.SIDE_SELF)
+	lg_h._destroy(Vector2i(3, 0))
+	check(lg_h.state.hand.is_empty() and lg_h.state.discard.size() == 1,
+			"传承记忆：效果区没有本卡 → 死亡照常进弃牌区")
 
 	# ---- 第 38 轮新卡（2026-10-01）：风元素 9082 ----
 	var vl := repo.get_card(9082)
@@ -821,11 +886,11 @@ func _init() -> void:
 	vd_e.use_spell(2, Vector2i(3, 0))
 	check(vd_e.state.void_dmg_spells == 2 and vd_e.cost_of(vd_lord) == 6,
 			"风元素：一次技能打中 2 个敌人也只记 1 次（8 - 2 = 6 费）")
-	# 不造成伤害的技能（复活术 9078）不计
-	vd_e.state.hand.append(CardData.from_dict(repo.get_card(9078).to_dict()))  # [2]
+	# 不造成伤害的技能（智慧 9005）不计
+	vd_e.state.hand.append(CardData.from_dict(repo.get_card(9005).to_dict()))  # [2]
 	vd_e.use_spell(2)
 	check(vd_e.state.void_dmg_spells == 2 and vd_e.cost_of(vd_lord) == 6,
-			"风元素：不造成伤害的技能（复活术）不计数（仍 6 费）")
+			"风元素：不造成伤害的技能（智慧）不计数（仍 6 费）")
 	# 减费跨回合保留（「本次对战中」= 整个战斗，不是单回合）
 	vd_e.state.energy = 30
 	vd_e.end_turn()
@@ -9460,7 +9525,8 @@ func _init() -> void:
 	check(r226_bad_ok,
 			"R226：伤害 +10 拒绝「不能直接造成伤害」的技能卡（自然之力/智慧/重组/坚固围栏/闪躲/能量屏障）"
 			+ ("：全部被拒" if r226_bad_ok else "：被放行 " + ", ".join(r226_bad_names)))
-	# 判据唯一口 `CardData.is_damage_spell()`：92 张玩家技能卡里恰好 33 张能直接造成伤害（R393 猎杀 9205 与 R406 独行 9189 都是技能且直接造成伤害 → 两者各 +2）（R352 摇篮曲 9182 / 森林的朋友们 9183 都不造伤害 → 技能 +2、伤害数不变）（R332 本能 9176 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R329 删紧急埋伏 9106 → 技能 -1）（R290 两张新卡文案含「造成…伤害」→ 自动入判据；R298 合体 9167 只改造不造成伤害 → 技能 +1、伤害数不变）
+	# 判据唯一口 `CardData.is_damage_spell()`：96 张玩家技能卡里恰好 39 张能直接造成伤害
+	# （R528 传承记忆 9078 由技能改效果卡 → 技能 -1、伤害数不变）（R393 猎杀 9205 与 R406 独行 9189 都是技能且直接造成伤害 → 两者各 +2）（R352 摇篮曲 9182 / 森林的朋友们 9183 都不造伤害 → 技能 +2、伤害数不变）（R332 本能 9176 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R329 删紧急埋伏 9106 → 技能 -1）（R290 两张新卡文案含「造成…伤害」→ 自动入判据；R298 合体 9167 只改造不造成伤害 → 技能 +1、伤害数不变）
 	var r226_dmg := 0
 	var r226_skills := 0
 	var r226_leak: Array[String] = []
@@ -9472,7 +9538,7 @@ func _init() -> void:
 			r226_dmg += 1
 		elif r226_card.effect_text.contains("造成") and r226_card.effect_text.contains("伤害"):
 			r226_leak.append(r226_card.card_name)
-	check(r226_skills == 97 and r226_dmg == 39 and r226_leak.is_empty(),
+	check(r226_skills == 96 and r226_dmg == 39 and r226_leak.is_empty(),
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 			% [r226_skills, r226_dmg, "0 张" if r226_leak.is_empty() else str(r226_leak)])
 	check(RunState.enchant_ok("damage", r224_okrepo.get_card(9083), 9999)

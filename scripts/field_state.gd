@@ -153,6 +153,11 @@ var curse_free := false
 ##（再次上手才吃；战斗结束随 FieldState 一起丢）。
 var curse_raise := {}
 var turn_keep: Array[CardData] = []  # 回转 9089 抽到的牌：本回合结束不弃（discard_hand 跳过；回合结束清空）
+## R528 传承记忆（9078 效果卡）：额度所属的**己方回合号**与**该回合已回手几次**。
+## 上限 = 效果区里 9078 的张数（多张叠加 → 每回合前 N 个死亡的盟友各回手一次）。
+## ⚠️ 用回合号做幂等而不是「回合结束清零」：续档 / 演示丢钩子也不会多送一次。
+var legacy_turn := 0
+var legacy_used := 0
 ## 夜行（9155，R232）：本回合**我方所有卡费用为 0**（cost_of 最前判定；回合结束清空）。
 var turn_all_free := false
 ## 夜行（9155，R232）：本回合**我方出牌上限**（含夜行本卡；0 = 不限；回合结束清空）。
@@ -725,6 +730,8 @@ func save_dict() -> Dictionary:
 		"air_raid_turns": air_raid_turns,
 		"mark_bonus": mark_bonus,
 		"harvest_hits": harvest_hits,
+		"legacy_turn": legacy_turn,
+		"legacy_used": legacy_used,
 	}
 	if rng != null:
 		d["rng_seed"] = rng.seed
@@ -751,6 +758,8 @@ func apply_dict(d: Dictionary) -> void:
 	self_hp_damage_taken = int(d.get("self_hp_damage_taken", self_hp_damage_taken))
 	wild_form_used = bool(d.get("wild_form_used", wild_form_used))
 	void_dmg_spells = int(d.get("void_dmg_spells", void_dmg_spells))
+	legacy_turn = int(d.get("legacy_turn", legacy_turn))
+	legacy_used = int(d.get("legacy_used", legacy_used))
 	opp_hand_count = int(d.get("opp_hand_count", opp_hand_count))
 	turn_limit = int(d.get("turn_limit", turn_limit))
 	clear_win = bool(d.get("clear_win", clear_win))

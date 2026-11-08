@@ -1944,8 +1944,8 @@
     {
       "id": 9078,
       "name": "传承记忆",
-      "kind": "技能",
-      "cost": 0,
+      "kind": "效果",
+      "cost": 2,
       "power": 0,
       "health": 0,
       "attack_range": 0,
@@ -1953,8 +1953,8 @@
       "rarity": 0,
       "group": "player",
       "class": "森林精魄",
-      "traits": [],
-      "effect_text": "从弃牌区选择一张盟友，把它加入你的手卡。",
+      "traits": ["传承"],
+      "effect_text": "每回合第一个死亡的己方盟友回到手卡，费用 -1。",
       "target_mode": "none",
       "color": "白",
       "image": ""
