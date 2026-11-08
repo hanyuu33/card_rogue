@@ -141,6 +141,13 @@ var dark_lord_atk: int = 0     # +3 × 存活暗杀者数（进 effective_power�
 ## 与 dark_lord_atk 同范式：只写 Placement、不碰 card，由 `_refresh_mnemosyne()` 重算。
 var mnemo_down: int = 0
 var dark_lord_speed: int = 0   # +1 × 存活暗杀者数（进 effective_speed）
+# ---- R525 叛逃机械（第二层 Boss）----
+# 三只机械的「同伴阵亡」成长线都只记在 Placement 上（**不烤进 CardData** —— 关卡里
+# `repo.get_card()` 给的是**卡库共享实例**，就地改会跨战斗泄漏）。
+var defector_range: int = 0    # 安西-β 9238：同伴阵亡 → 攻程 +1（只加一次，不可叠加）
+var defector_speed: int = 0    # 同上：移速 +1
+var defector_hunt: bool = false     # 塔基尼-γ 9239：已获得「猎杀」（每个己方回合开始开一枪）
+var wanted_dimension: bool = false  # 通缉令 9240：被标记「次元」——离场即消失、不进弃牌区
 ## 「赫卡同克瑞斯」（9136，R152）：场上**只有它一个**己方单位时的孤军 buff —— 力量 +2、
 ## 受到的攻击伤害减半（减伤那一半在引擎 `_unit_damage_taken` 实时判定，不进本类）。
 ## 力量由 `GameEngine._refresh_hecaton()` 在「开局/召唤/击破/回合开始」五处实时重算写值，
@@ -241,7 +248,7 @@ func effective_speed() -> int:
 	# 自然读到 0，不必在 `_move_bfs` 里另写一条分支。
 	if boss_phase >= 3:
 		return 0
-	var sp := card.move_speed + dark_lord_speed + summon_haste - night_owl_weak
+	var sp := card.move_speed + dark_lord_speed + summon_haste + defector_speed - night_owl_weak
 	# R371：启示者阶段 2 起「移动速度 -1」（阶段 3 上面那行已经直接归零）。
 	# 走这个出口 = 移动 / AI 队列全部自然读到，不必在 `_move_bfs` 里另写分支。
 	if boss_phase >= 2:
@@ -263,7 +270,7 @@ func effective_range() -> int:
 	# R371：启示者阶段 3「攻击距离 +2」。与 effective_speed 同款 —— 走这个出口，
 	# 于是 `attack_targets` 的够不够得着、AI 选目标、界面射程圈全部自动生效。
 	var rev_rng := GameEngine.REVELATOR_RANGE_UP if boss_phase >= 3 else 0
-	return maxi(0, card.attack_range + forge_range - night_owl_weak + rev_rng)
+	return maxi(0, card.attack_range + forge_range - night_owl_weak + rev_rng + defector_range)
 
 
 ## 【R106】这张卡**此刻已获得**的增益 / 减益，逐条列出（一条一个 Dictionary）。
@@ -443,6 +450,12 @@ func status_badges() -> Array[Dictionary]:
 		out.append({"text": "惧光", "col": Color("8a6d1f")})
 	if boss_phase > 0:
 		out.append({"text": "阶段 %d" % boss_phase, "col": Color("c0392b")})
+	# R525 叛逃机械：程 / 速 的「同伴阵亡」成长（速那条上面已按净变化算过，这里只补程），
+	# 以及通缉令挂上的「次元」标记。
+	if defector_range > 0:
+		out.append({"text": "程 +%d" % defector_range, "col": Color("2f8f4f")})
+	if wanted_dimension:
+		out.append({"text": "次元", "col": Color("8a5fb0")})
 	return out
 
 
@@ -464,7 +477,8 @@ const _SAVE_FIELDS: Array[String] = [
 	"fuse_left", "forge_period", "forge_idle", "forge_range", "dark_lord_atk",
 	"mnemo_down", "dark_lord_speed", "hecaton_atk", "earth_aura_atk", "action_growth_extra",
 	"action_growth_turns", "summon_haste", "night_owl_weak", "boss_phase",
-	"haste_double",
+	"haste_double", "defector_range", "defector_speed", "defector_hunt",
+	"wanted_dimension",
 ]
 
 

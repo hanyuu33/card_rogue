@@ -2450,6 +2450,7 @@ func _begin_turn(side: String) -> void :
 		_ghost_self_destruct(SIDE_OPPONENT)
 		_assassin_summon(SIDE_OPPONENT)
 		_cannon_fire(SIDE_OPPONENT)   # R158 充能巨炮 9139：己方回合开始随机破坏一个我方单位
+		_defector_hunt_fire(SIDE_OPPONENT)   # R525 塔基尼-γ 猎杀（空场改为直击 HP）
 		_naval_gun(SIDE_OPPONENT)     # R356 舰炮 9201：阶段 1，每回合随机轰击一列
 		_air_raid_fire(SIDE_OPPONENT)   # R451 空袭 9209：敌方行动前砸标记格（只打玩家单位）
 		_revelator_phase_tick(SIDE_OPPONENT)   # R356 阶段 1「自身效果」：每个回合力量 +1
@@ -2768,6 +2769,126 @@ func _cannon_fire(side: String) -> void :
 		_log("充能巨炮：破坏 %s（%s）" % [q.card.card_name, t])
 		action.emit("cannon_fire", {"cell": t, "card": q.card, "side": foe})
 		_destroy(t)
+
+
+# ------------------------------------------------------------ R525 叛逃机械（第二层 Boss）
+# 三只机械的「己方单位死亡时」成长线，唯一命中点 = `_destroy()` → `_defector_ally_died()`。
+# 判据是**死者归属**（必须是我方单位被破坏），不是「谁在场」—— 玩家自己减员不该喂敌方。
+const DEFECTOR_DOUBLE_TRAIT := "阵亡双动"   # 巴兰-α 9237：同伴阵亡 → 永久「一回合行动两次」
+const DEFECTOR_BOOST_TRAIT := "阵亡机动"    # 安西-β 9238：同伴阵亡 → 攻程 / 移速 +1（不可叠加）
+const DEFECTOR_HUNT_TRAIT := "阵亡猎杀"     # 塔基尼-γ 9239：同伴阵亡 → 获得「猎杀」
+const DEFECTOR_HUNT_DMG := 10              # 「猎杀」空场时改为直击玩家 HP 的伤害
+const WANTED_TRAIT := "通缉"               # 通缉令 9240（敌方效果卡）
+const WANTED_TURN := 12                    # 第 12 个回合结束时持卡方自毁
+
+
+func _defector_ally_died(dead: Placement) -> void :
+	## 「叛逃机械」三只机械「己方单位死亡时」的**唯一分派口**（R525），由 `_destroy()` 调用。
+	## ⚠️ 判据是**死者归属**（必须是我方单位被破坏）—— 玩家自己减员不该喂敌方成长。
+	## ⚠️ 调用点在 `_destroy()` 的 `state.board.erase(cell)` **之后**：死去的那只已经离场，
+	##    所以它不会给自己上 buff（卡面「己方单位」= 同伴，不含自己）。
+	## 三只的增益都**只给一次**：巴兰 `haste_double` 天然幂等；安西用字段非零判；
+	## 塔基尼用 `defector_hunt` 判。
+	if dead == null or dead.card == null or dead.owner != SIDE_OPPONENT:
+		return
+	for cell: Vector2i in state.board:
+		var p: Placement = state.unit_at(cell)
+		if p == null or p.owner != SIDE_OPPONENT:
+			continue
+		if p.card.traits.has(DEFECTOR_DOUBLE_TRAIT) and not p.haste_double:
+			p.haste_double = true
+			# `haste_double` 本身就是永久字段（哈气 9024 同一条通道），但**本回合**的行动轮数
+			# 要立刻补发 —— 否则它得等下一回合，而用户口径是「同伴一死，当回合就该双动」。
+			state.grant_actions(p, FieldState.HASTE_ACTIONS)
+			_log("巴兰-α：同伴 %s 阵亡 → 获得一回合行动两次" % dead.card.card_name)
+			action.emit("defector_awaken", {"cell": cell, "card": p.card,
+					"side": SIDE_OPPONENT, "what": "一回合行动两次"})
+		if p.card.traits.has(DEFECTOR_BOOST_TRAIT) \
+				and p.defector_range == 0 and p.defector_speed == 0:
+			p.defector_range = 1
+			p.defector_speed = 1
+			_log("安西-β：同伴 %s 阵亡 → 攻击距离 / 移动速度 +1（不可叠加）"
+					% dead.card.card_name)
+			action.emit("defector_awaken", {"cell": cell, "card": p.card,
+					"side": SIDE_OPPONENT, "what": "攻程 / 移速 +1"})
+		if p.card.traits.has(DEFECTOR_HUNT_TRAIT) and not p.defector_hunt:
+			p.defector_hunt = true
+			_log("塔基尼-γ：同伴 %s 阵亡 → 获得「猎杀」" % dead.card.card_name)
+			action.emit("defector_awaken", {"cell": cell, "card": p.card,
+					"side": SIDE_OPPONENT, "what": "猎杀"})
+
+
+func _defector_hunt_fire(side: String) -> void :
+	## 塔基尼-γ「猎杀」（R525）：**己方每个回合开始时**，随机破坏一个敌方单位；
+	## 敌方场上一个单位都没有 → 改为直击敌方 HP `DEFECTOR_HUNT_DMG` 点。
+	## 这是它区别于充能巨炮 9139 的地方：巨炮空场是空响，猎杀空场照打。
+	## 目标走引擎 `rng`（回放同种子可复现），破坏走唯一口 `_destroy`
+	##（离场记账 / 亡语 / 击杀记功与别处一致）。
+	var hunters:= 0
+	for cell: Vector2i in state.board:
+		var p: Placement = state.unit_at(cell)
+		if p != null and p.owner == side and p.defector_hunt:
+			hunters += 1
+	if hunters <= 0:
+		return
+	var foe:= SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	for _i in range(hunters):
+		if over:
+			return     # 上一枪已经打出胜负，别再往已结束的战场开火
+		var targets: Array[Vector2i] = _side_cells(foe)
+		if targets.is_empty():
+			_log("塔基尼-γ：敌方场上没有单位 → 直击 %s HP %d 点"
+					% ["我方" if foe == SIDE_SELF else "敌方", DEFECTOR_HUNT_DMG])
+			action.emit("defector_hunt", {"side": foe, "amount": DEFECTOR_HUNT_DMG})
+			_damage_player(foe, DEFECTOR_HUNT_DMG, "猎杀")
+			_check_game_over()
+		else:
+			var t: Vector2i = targets[rng.randi_range(0, targets.size() - 1)]
+			var q: Placement = state.unit_at(t)
+			_log("塔基尼-γ：猎杀破坏 %s（%s）" % [q.card.card_name, t])
+			action.emit("defector_hunt", {"side": foe, "cell": t, "card": q.card})
+			_destroy(t)
+
+
+func _wanted_mark(p: Placement, side: String) -> void :
+	## 通缉令（9240）第一条（R525）：「敌方场上所有单位获得次元」。
+	## 从效果卡自己的视角，「敌方」= **玩家**（与「己方 = 持卡方」同一套写法）。
+	## 标记只记在 `Placement.wanted_dimension` 上，**不往卡面烤附魔**：
+	## 关卡里的卡可能是 `repo.get_card()` 的共享实例，就地 `add_affix()` 会跨战斗泄漏。
+	if p == null or p.card == null or side != SIDE_SELF:
+		return
+	if p.wanted_dimension:
+		return
+	if not _zone_has(state.enemy_effects, WANTED_TRAIT):
+		return
+	p.wanted_dimension = true
+	_log("通缉令：%s 被通缉 → 获得「次元」（离场即消失，不进弃牌区）" % p.card.card_name)
+
+
+func _wanted_tick() -> void :
+	## 通缉令（9240）倒数（R525）：**第 12 个回合结束**时，持卡方（敌方）场上所有单位自毁。
+	## 「第 12 个回合」= 双方各走完 12 个回合 —— 玩家先手，所以取两者**较小值**判：
+	## 敌方第 12 个回合结束时两边都到 12，正好落在这个点（我方回合结束那次还差 1）。
+	## 自毁同样走 `_destroy`，于是「离场即消失 / 亡语」照常结算；清空之后
+	## `_check_game_over()` 按「敌方场上单位全灭」判胜 —— 这就是卡面承诺的
+	## 「撑满 12 回合也能赢」那条路。
+	if not _zone_has(state.enemy_effects, WANTED_TRAIT):
+		return
+	if mini(state.self_turn_no, state.opp_turn_no) < WANTED_TURN:
+		return
+	var cells:= _side_cells(SIDE_OPPONENT)
+	if cells.is_empty():
+		return
+	_log("通缉令：第 %d 个回合结束 —— 敌方场上所有单位自毁" % WANTED_TURN)
+	for c: Vector2i in cells:
+		if over:
+			return
+		var p: Placement = state.unit_at(c)
+		if p == null:
+			continue
+		action.emit("wanted_expire", {"cell": c, "card": p.card})
+		_destroy(c)
+	_check_game_over()
 
 
 # ------------------------------------------------------------ R356 启示者（第三层 Boss）
@@ -3979,6 +4100,9 @@ func end_turn() -> void :
 		state.energy = 0
 	else:
 		state.opp_energy = 0
+	_wanted_tick()   # R525 通缉令：第 12 个回合结束时敌方自毁
+	if over:
+		return
 	var nxt:= SIDE_OPPONENT if current_side == SIDE_SELF else SIDE_SELF
 	_begin_turn(nxt)
 
@@ -11299,6 +11423,7 @@ func _on_ally_entered(p: Placement, side: String) -> void :
 
 	if p == null or p.card == null:
 		return
+	_wanted_mark(p, side)   # R525 通缉令：敌方场上所有单位获得「次元」
 	_hidden_energy_tick(p, side)   # R331：友方**单位**（含工事）入场 → 改造 +「死亡」
 	if p.card.kind != "盟友":
 		return
@@ -14034,6 +14159,8 @@ func _destroy(cell: Vector2i) -> void :
 	#    `last_hit_by`**（只有单位普攻写），拿 `_credit_kill` 那套判会漏掉大半击杀。
 	if p.owner != SIDE_SELF:
 		_knight_sword_on_kill(p)
+		# R525 叛逃机械：同伴阵亡 → 剩下两只变强（唯一分派口，见 `_defector_ally_died`）
+		_defector_ally_died(p)
 	# R307 思想钢印（6036）：每场战斗**第一个**被破坏的我方单位不会死 —— 回手卡。
 	# ⚠️ 带「次元」/ 衍生物 / 离场消失的单位**不救**：它们本来就该消失（救回来会破坏语义）。
 	if p.owner == SIDE_SELF and self_relics.has(STEEL_STAMP_RELIC_ID) \
@@ -14050,7 +14177,8 @@ func _destroy(cell: Vector2i) -> void :
 	if p.owner == SIDE_SELF:
 		# R227：带「次元」字段的**单位**同样离场即消失（此前只有「离场消失」trait 会走这条；
 		# 现在字段本身也算数 —— 卡面写的是「离开战场后消失，不会进入弃牌区」）。
-		if p.card.traits.has(EGG_VANISH_TRAIT) or p.card.has_affix(AFFIX_DIMENSION):
+		if p.card.traits.has(EGG_VANISH_TRAIT) or p.card.has_affix(AFFIX_DIMENSION) \
+				or p.wanted_dimension:
 			state.void_count += 1   # R140：消耗区计数（场上次元单位被击破）
 			state.void_cards.append(p.card)
 			_log("%s 被击破，移出场外（离场即消失，不进弃牌区）" % p.card.card_name)

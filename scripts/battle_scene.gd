@@ -12591,6 +12591,31 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# ④ 重弹敌方效果排到「特效播完 + 换好卡面」之后，不盖住演出。
 			_ee_popup_at = n + REV_RETURN_MS - 60 + REV_FX_MS + REV_FACE_GAP_MS
 			_say("⚠ 启示者进入第 %d 阶段（生命 %d）" % [bp_ph, int(data.get("health", 0))])
+		"defector_awaken":
+			# R525 叛逃机械：同伴阵亡 → 剩下两只当场变强。这里只出一行状态条 + 顶部提示；
+			# 卡面上的「行动 N」「程 +1」「速 +1」由 `status_badges()` 自己跟着变。
+			var da_name := "未知单位"
+			if data.get("card") is CardData:
+				da_name = (data["card"] as CardData).card_name
+			status_text = "%s：获得「%s」" % [da_name, str(data.get("what", ""))]
+			_say("⚙ %s 觉醒：%s" % [da_name, str(data.get("what", ""))])
+			queue_redraw()
+		"defector_hunt":
+			# R525 塔基尼-γ：有目标 → 随机破坏（`destroy` 事件自己播击破演出）；
+			# 没目标 → 直击 HP（`_damage_player` 自带 HP 飘字）。
+			if int(data.get("amount", 0)) > 0:
+				status_text = "塔基尼-γ：场上已清空 → 直击 HP %d" % int(data.get("amount", 0))
+				_say("🎯 塔基尼-γ：猎杀落空，改打 HP %d" % int(data.get("amount", 0)))
+			else:
+				status_text = "塔基尼-γ：猎杀锁定"
+				_say("🎯 塔基尼-γ：猎杀")
+				_shake(2.0, 160)
+			queue_redraw()
+		"wanted_expire":
+			# R525 通缉令到期：敌方自毁（逐张 `destroy` 演出由那一路负责）
+			status_text = "通缉令到期：敌方单位自毁"
+			_say("⌛ 通缉令到期 —— 它们被自己的通缉令清算了")
+			queue_redraw()
 		"cannon_fire":
 			# R449：充能巨炮（9139，双机炮阵）原来只有一行日志 + 目标卡直接消失，用户报
 			# 「没有特效」。现在给一发竖直炮击：炮口在画面顶端，光柱落到被点名的这一格。

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""生成《关卡总览》md + html（R524）。
+"""生成《关卡总览》md + html（R525）。
 
 数据源链条（**不硬编码任何数值**）：
     scripts/game_levels.gd  →  tools/dump_levels.gd（Godot headless 导出）
@@ -16,7 +16,7 @@ import sys
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-ROUND = "R524"
+ROUND = "R525"
 SRC_LEVELS = "_levels_dump.json"
 SRC_CARDS = "cards.json"
 OUT_MD = "release/关卡总览_%s.md" % ROUND
@@ -166,11 +166,13 @@ md.append("## 不进抽取池的关（事件专属 / 彩蛋）")
 md.append("")
 md += md_table([cave, revenge], ["洞", "蛋"])
 md.append("")
-md.append("> **洞穴**（`cave_level()`，第 37 关）：只有「洞穴」事件选「探索」才进，"
+md.append("> **洞穴**（`cave_level()`，第 %d 关）：只有「洞穴」事件选「探索」才进，"
+          % (len(levels) + 1) +
           "地图的普通 / 精英 / Boss 池永远摇不到它；胜利后固定给传说卡「%s」。"
           % card_name(int(cave["reward_cards"][0])))
 md.append("")
-md.append("> **恶魔鸭（复仇）**（`revenge_boss()`，第 38 关）：刻意**不**进 `builtin_levels()`，"
+md.append("> **恶魔鸭（复仇）**（`revenge_boss()`，第 %d 关）：刻意**不**进 `builtin_levels()`，"
+          % (len(levels) + 2) +
           "所以它既不出现在调试关卡菜单，也不在 `boss_pool()` 里。触发链是——"
           "**第一层 Boss 摇中「恶魔鸭」→ 50% 置位 → 第二层 Boss 被顶替成这一只**"
           "（`RunState._roll_boss`，`REVENGE_TRIGGER_CHANCE = 0.5`）。"

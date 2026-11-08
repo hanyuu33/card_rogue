@@ -78,7 +78,8 @@ static func builtin_levels() -> Array:
 	## 精英简单×7（第一层 3 + 第二层 4；R449 哈气骑士团下调一层；R502 执法者的审判进二层；
 	##   R506 阿斯克勒庇厄斯的试炼由精英困难下调到精英简单）→
 	## 精英困难×6（第一层 3 + 第二层 3；R506 母舰空袭由精英简单上调到精英困难）→
-	## Boss×6（第一层 3 + 第二层 2 + 第三层 1）。合计 36 关（R174 百眼动员进第二层普通简单；
+	## Boss×7（第一层 3 + 第二层 3 + 第三层 1）。合计 37 关（R525 叛逃机械进第二层 Boss；
+	## R174 百眼动员进第二层普通简单；
 	## R340 永夜鸭群进第一层精英困难；**R356 启示者进第三层**；R451 母舰空袭进第二层精英池；
 	## **R502 执法者的审判进第二层精英简单**；**R506 母舰空袭 ↔ 阿斯克勒庇厄斯的试炼互换档位**）。
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
@@ -90,12 +91,13 @@ static func builtin_levels() -> Array:
 			_enforcer_judgement(), _asclepius(),
 		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(), _mothership_air_raid(),
 		_boss_dragon(), _boss_demon_duck(), _boss_duck_darkside(),
-			_mech_duck_boss(), _hephaestus(), _scrapyard(), _eternal_night(),
+			_mech_duck_boss(), _hephaestus(), _defector_machine(), _scrapyard(),
+			_eternal_night(),
 			_boss_revelator()]
 
 
 static func cave_level() -> Dictionary:
-	## R467：洞穴 —— **事件专属关卡**（第 37 关，但**不进 `builtin_levels()`**）。
+	## R467：洞穴 —— **事件专属关卡**（第 38 关，但**不进 `builtin_levels()`**）。
 	## 只有「洞穴」事件选「探索」才进这一关，地图的普通 / 精英 / Boss 池永远摇不到它，
 	## 所以关卡统计、`all_keys()`、按层内容池的既有口径一字不动。
 	##
@@ -543,6 +545,40 @@ static func _mech_duck_boss() -> Dictionary:
 			[9047, "机械巨鸭", 10, 150, 3, 1, Vector2i(0, 1)],
 		],
 		"enemy_effects": [9049],
+		"tutorial": [],
+	}
+
+
+static func _defector_machine() -> Dictionary:
+	## 第二层 Boss「叛逃机械」（R525，第 37 关），三只机械各带一条「己方单位死亡时」成长线：
+	##   巴兰-α 9237（5/250 程1 速1）→ 同伴阵亡：**一回合行动两次**（永久，与哈气同一条通道）；
+	##   安西-β 9238（8/200 程1 速1）→ 同伴阵亡：攻程 +1、移速 +1（**只触发一次**）；
+	##   塔基尼-γ 9239（10/180 程1 速1）→ 同伴阵亡：获得「猎杀」——己方每个回合开始时
+	##     随机破坏一个敌方单位，敌方场上没有单位 → 直击敌方 HP 10 点。
+	## 于是「先杀谁」就是这一关的题面：杀掉任何一只，剩下两只都会变强。
+	## 敌方效果卡「通缉令」9240 是**双向**的：
+	##   ① 敌方（= 玩家）场上所有单位获得「次元」——离场即消失、不进弃牌区；
+	##   ② 第 12 个回合结束时，持卡方（这队机械）场上所有单位自毁
+	##      → 触发「敌方场上单位全灭」判胜。玩家因此有两条路：12 回合内强拆，或者撑满 12 回合。
+	return {
+		"name": "叛逃机械",
+		"key": "defector_machine",
+		"tier": TIER_BOSS,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"intro": "「编号作废。清除。」",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9237, "巴兰-α", 5, 250, 1, 1, Vector2i(2, 1)],
+			[9238, "安西-β", 8, 200, 1, 1, Vector2i(1, 0)],
+			[9239, "塔基尼-γ", 10, 180, 1, 1, Vector2i(0, 1)],
+		],
+		"enemy_effects": [9240],
 		"tutorial": [],
 	}
 
