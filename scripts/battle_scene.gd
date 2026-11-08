@@ -5915,7 +5915,7 @@ func _build_pick_cfg(k: String) -> Dictionary:
 			var copts2: Array = _recycle_options(_recycle_idx)
 			return {"kind": k, "short": "回收", "opts": copts2,
 					"title": "回收：选择一张手牌，把它换成「素体」",
-					"note": "目标不限种类；素体带一层改造（0 费 1 攻 / 10 血，回合结束不弃牌）",
+					"note": "目标不限种类；素体带一层改造（1 费 1 攻 / 12 血，回合结束不弃牌）",
 					"cards": copts2.map(func(i: int) -> CardData: return engine.state.hand[i]),
 					"max_sel": 1, "confirm_label": "确认回收",
 					"cancel_label": "取消（不扣费）"}
@@ -5938,7 +5938,7 @@ func _build_pick_cfg(k: String) -> Dictionary:
 			return {"kind": k, "short": "淘汰",
 					"opts": elopts,
 					"title": "淘汰：从卡组选一张盟友或工事，把它变成「素体」",
-					"note": "变成 0 费 1/1 的「素体」（回合结束不弃牌）；原来的改造不保留",
+					"note": "变成 1 费 1/3 的「素体」（回合结束不弃牌）；原来的改造不保留",
 					"cards": elopts.map(func(i: int) -> CardData: return engine.state.deck[i]),
 					"max_sel": 1, "confirm_label": "确认淘汰", "cancel_label": "取消（不改卡组）"}
 		"surprise":

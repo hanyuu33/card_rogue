@@ -11755,9 +11755,9 @@ func _init() -> void:
 	var r82_proto: CardData = r82_repo.get_card(GameEngine.PROTO_ID)
 	var r82_con: CardData = r82_repo.get_card(GameEngine.CONSTRUCT_ID)
 	var r82_up: CardData = r82_repo.get_card(GameEngine.UPGRADE_ID)
-	check(r82_proto.cost == 0 and r82_proto.power == 1 and r82_proto.health == 1
+	check(r82_proto.cost == 1 and r82_proto.power == 1 and r82_proto.health == 3
 			and r82_proto.attack_range == 1 and r82_proto.move_speed == 1,
-		"R82 素体：0 费 1/1/1/1（攻程 1 移速 1）")
+		"R82 素体：1 费 1/3/1/1（攻程 1 移速 1；R522 由 0 费 1/1 上调）")
 	check(r82_proto.traits.has("留手") and r82_proto.traits.has("素体"),
 		"R82 素体：带「留手」（回合结束不弃）与「素体」（被改造时额外 +1 血）")
 	check(r82_con.cost == 3 and r82_con.power == 3 and r82_con.health == 8
@@ -11809,10 +11809,11 @@ func _init() -> void:
 	r82_ue.state.energy = 5
 	r82_ue.use_spell(0, Vector2i(2, 1))
 	# R84：素体的「改造额外 +1 血」已从引擎硬编码搬到**卡面字段** upgrade_hp_bonus
-	check(r82_u_proto.health == 1 + GameEngine.UPGRADE_HP
+	check(r82_u_proto.health == r82_proto.health + GameEngine.UPGRADE_HP
 			+ r82_proto.upgrade_hp_bonus,
-		"R82/R84 升级：改造素体额外 +1 血（1 → %d = +%d + 卡面 %d）"
-			% [r82_u_proto.health, GameEngine.UPGRADE_HP, r82_proto.upgrade_hp_bonus])
+		"R82/R84 升级：改造素体额外 +1 血（%d → %d = +%d + 卡面 %d）"
+			% [r82_proto.health, r82_u_proto.health,
+				GameEngine.UPGRADE_HP, r82_proto.upgrade_hp_bonus])
 	# 敌方单位不能改造
 	var r82_u_foe: Placement = r82_ue.state.place(
 			_card(1053, "骷髅兵", "怪物", 3, 2, 1, 1, 1), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
@@ -12137,7 +12138,7 @@ func _init() -> void:
 			r84_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
 	r84_pe.state.energy = 5
 	r84_pe.use_spell(0, Vector2i(4, 1))
-	check(r84_pp.health == 1 + GameEngine.UPGRADE_HP + 1
+	check(r84_pp.health == 3 + GameEngine.UPGRADE_HP + 1
 			and r84_pp.effective_power() == 1 + GameEngine.UPGRADE_ATK,
 		"R84 素体（回归护栏）：改造后 %d 攻 / %d 血（+1 力只来自升级本体、+1 血来自卡面）"
 			% [r84_pp.effective_power(), r84_pp.health])
@@ -12467,24 +12468,24 @@ func _init() -> void:
 			r120_repo.get_card(GameEngine.UPGRADE_ID).to_dict())]
 	r120_e1.state.energy = 5
 	r120_e1.use_spell(0, Vector2i(4, 1))
-	check(r120_p1.health == 1 + GameEngine.UPGRADE_HP + 1,
-		"R120 素体 + 升级：1 + 8 + 素体 1 = %d 血" % r120_p1.health)
+	check(r120_p1.health == 3 + GameEngine.UPGRADE_HP + 1,
+		"R120 素体 + 升级：3 + 8 + 素体 1 = %d 血" % r120_p1.health)
 	# ② 自我修复 8035（R120 前漏掉素体那 +1）
 	var r120_e2 := _new_engine([], 30, 30, -1, false)
 	r120_e2.start_game()
 	var r120_p2: Placement = r120_e2.state.place(
 			CardData.from_dict(r120_proto.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
 	r120_e2._self_repair(Vector2i(4, 1), GameEngine.SIDE_SELF)
-	check(r120_p2.health == 1 + GameEngine.SELF_REPAIR_HP + 1,
-		"R120 素体 + 自我修复：1 + 2 + 素体 1 = %d 血（以前白挨）" % r120_p2.health)
+	check(r120_p2.health == 3 + GameEngine.SELF_REPAIR_HP + 1,
+		"R120 素体 + 自我修复：3 + 2 + 素体 1 = %d 血（以前白挨）" % r120_p2.health)
 	# ③ 超越极限 8053（R120 前这里写死 0/0，素体白挨）
 	var r120_e3 := _new_engine([], 30, 30, -1, false)
 	r120_e3.start_game()
 	var r120_p3: Placement = r120_e3.state.place(
 			CardData.from_dict(r120_proto.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
 	r120_e3._transcend(Vector2i(4, 1), GameEngine.SIDE_SELF)
-	check(r120_p3.upgrade_stacks == 1 and r120_p3.health == 1 + 1,
-		"R120 素体 + 超越极限：记 1 层改造 + 素体那 1 血（1 → %d）" % r120_p3.health)
+	check(r120_p3.upgrade_stacks == 1 and r120_p3.health == 3 + 1,
+		"R120 素体 + 超越极限：记 1 层改造 + 素体那 1 血（3 → %d）" % r120_p3.health)
 	# ④ 改造工厂 8037（R120 前既漏素体 +1，又**不记层**）
 	var r120_e4 := _new_engine([], 30, 30, -1, false)
 	r120_e4.start_game()
@@ -12495,9 +12496,9 @@ func _init() -> void:
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
 	r120_e4._field_aura_tick(GameEngine.SIDE_SELF)
 	check(r120_p4.upgrade_stacks == 1
-			and r120_p4.health == 1 + GameEngine.UPGRADE_FACTORY_HP + 1,
-		"R120 素体 + 改造工厂：+1 血 + 素体 1 = %d 血，且**记 1 层改造**（层 %d）"
-			% [r120_p4.health, r120_p4.upgrade_stacks])
+			and r120_p4.health == 3 + GameEngine.UPGRADE_FACTORY_HP + 1,
+		"R120 素体 + 改造工厂：3 + %d + 素体 1 = %d 血，且**记 1 层改造**（层 %d）"
+			% [GameEngine.UPGRADE_FACTORY_HP, r120_p4.health, r120_p4.upgrade_stacks])
 	# ⑤ 改造工厂给**侦察塔**记层（R120 前不记层 → 光环永远 0）
 	var r120_e5 := _new_engine([], 30, 30, -1, false)
 	r120_e5.start_game()
@@ -12528,8 +12529,8 @@ func _init() -> void:
 	for c: CardData in r120_e6.state.hand:
 		if c.id == GameEngine.PROTO_ID:
 			r120_hand_hp = c.health
-	check(r120_hand_hp == 1 + GameEngine.BATCH_UPGRADE_HP + 1,
-		"R120 素体 + 集体改造（手牌）：1 + 1 + 素体 1 = %d 血" % r120_hand_hp)
+	check(r120_hand_hp == 3 + GameEngine.BATCH_UPGRADE_HP + 1,
+		"R120 素体 + 集体改造（手牌）：3 + 1 + 素体 1 = %d 血" % r120_hand_hp)
 	# ⑦ 光环只对**敌人**生效：己方单位站在塔的范围内不掉血
 	var r120_e7 := _new_engine([], 30, 30, -1, false)
 	r120_e7.start_game()
@@ -13302,7 +13303,7 @@ func _init() -> void:
 			r198_in_pool = true
 	check(r198_in_pool, "R198 回收进机械之心的奖励池（史诗，能摇到）")
 
-	# ---- ② 回收一张技能卡 → 变素体（0 费 1/10，改造 +9 = 8 + 素体自身 1）----
+	# ---- ② 回收一张技能卡 → 变素体（1 费 1/12，改造 +9 = 8 + 素体自身 1）----
 	var r198_e1 := _new_engine([], 30, 30, -1, false)
 	r198_e1.start_game()
 	r198_e1.state.hand.append(CardData.from_dict(r198_repo.get_card(8002).to_dict()))  # 攻击（技能）
@@ -13310,8 +13311,8 @@ func _init() -> void:
 	var r198_msg := r198_e1.cast_recycle(1, 0)
 	var r198_body: CardData = r198_e1.state.hand[0]
 	check(r198_body.id == 8025 and r198_body.card_name == "素体"
-			and r198_body.cost == 0 and r198_body.power == 1
-			and r198_body.health == 1 + GameEngine.RECYCLE_HP + r198_proto.upgrade_hp_bonus,
+			and r198_body.cost == 1 and r198_body.power == 1
+			and r198_body.health == 3 + GameEngine.RECYCLE_HP + r198_proto.upgrade_hp_bonus,
 		"R198 回收：攻击 → 素体 %d 费 %d 攻 %d 血（改造 +%d = 基数 %d + 素体自身 %d）" % [
 			r198_body.cost, r198_body.power, r198_body.health,
 			GameEngine.RECYCLE_HP + r198_proto.upgrade_hp_bonus,
@@ -13329,18 +13330,18 @@ func _init() -> void:
 	check(r198_disc_rc, "R198 回收：「回收」自己进弃牌区")
 
 	# ---- ③ 不污染卡库（换出来的是副本）----
-	check(r198_repo.get_card(8025).health == 1,
-		"R198 回收**没有污染卡库**（素体卡面仍是 1 血）")
+	check(r198_repo.get_card(8025).health == 3,
+		"R198 回收**没有污染卡库**（素体卡面仍是 3 血）")
 	check(r198_repo.get_card(8002).kind == "技能",
 		"R198 回收**没有污染卡库**（攻击卡面未被改动）")
 
 	# ---- ④ 本场战斗永久：素体上场仍带加成 ----
 	r198_e1.state.energy = 5
-	r198_e1.play_from_hand(0, Vector2i(4, 1))     # 打出 1/10 素体
+	r198_e1.play_from_hand(0, Vector2i(4, 1))     # 打出 1/12 素体
 	var r198_field: Placement = r198_e1.state.unit_at(Vector2i(4, 1))
-	check(r198_field != null and r198_field.health == 10
+	check(r198_field != null and r198_field.health == 12
 			and r198_field.effective_power() == 1,
-		"R198 回收出来的素体上场：%d 攻 / %d 血（0 费，改造烤进副本）" % [
+		"R198 回收出来的素体上场：%d 攻 / %d 血（1 费，改造烤进副本）" % [
 			r198_field.effective_power() if r198_field != null else -1,
 			r198_field.health if r198_field != null else -1])
 
@@ -13351,7 +13352,7 @@ func _init() -> void:
 	r198_e2.state.hand.append(CardData.from_dict(r198_repo.get_card(8003).to_dict()))    # 1：树人
 	var r198_msg2 := r198_e2.cast_recycle(0, 1)
 	check(r198_e2.state.hand.size() == 1 and r198_e2.state.hand[0].id == 8025
-			and r198_e2.state.hand[0].health == 10,
+			and r198_e2.state.hand[0].health == 12,
 		"R198 下标顺移：回收 0 号 / 目标 1 号 → 移除回收后仍正确换成素体（%d 张 / %s %d 血）" % [
 			r198_e2.state.hand.size(), r198_e2.state.hand[0].card_name,
 			r198_e2.state.hand[0].health])
@@ -14489,11 +14490,11 @@ func _init() -> void:
 	check(r99_u1.health == 8, "R99 重组：受伤单位被回复至满生命 8（实际 %d）" % r99_u1.health)
 	var r99_u2: Placement = r99_e1.state.place(
 		CardData.from_dict(r99_repo.get_card(8025).to_dict()), Vector2i(4, 2),
-		GameEngine.SIDE_SELF)   # 素体 0/1
+		GameEngine.SIDE_SELF)   # 素体 1/3
 	r99_e1._upgrade_unit(Vector2i(4, 2), GameEngine.SIDE_SELF)  # +升级基数 → 卡面同步
-	# R273：升级基数由 +8 改为 +10 → 素体 1 + UPGRADE_HP + 素体自带奖励 1。
-	# 用常量算而不写死 10 / 12 —— 下次改基数不会再红。
-	var r99_proto_hp: int = 1 + GameEngine.UPGRADE_HP + 1
+	# R273：升级基数由 +8 改为 +10 → 素体 3 + UPGRADE_HP + 素体自带奖励 1（R522 基础血 1→3）。
+	# 用常量算而不写死基数 —— 下次改基数不会再红。
+	var r99_proto_hp: int = 3 + GameEngine.UPGRADE_HP + 1
 	check(r99_u2.card.health == r99_proto_hp, "R99 前置：素体被改造后卡面生命 %d（期望 %d）"
 		% [r99_u2.card.health, r99_proto_hp])
 	r99_e1._reorganize(Vector2i(4, 2), GameEngine.SIDE_SELF)
@@ -14504,7 +14505,7 @@ func _init() -> void:
 	r99_e2.start_game()
 	var r99_t1: Placement = r99_e2.state.place(
 		CardData.from_dict(r99_repo.get_card(8025).to_dict()), Vector2i(4, 1),
-		GameEngine.SIDE_SELF)   # 素体 0/1，未改造、无超负荷
+		GameEngine.SIDE_SELF)   # 素体 1/3，未改造、无超负荷
 	var stacks0: int = r99_t1.upgrade_stacks
 	r99_e2._transcend(Vector2i(4, 1), GameEngine.SIDE_SELF)
 	check(r99_t1.card.has_affix("超负荷"),
@@ -14524,7 +14525,7 @@ func _init() -> void:
 		GameEngine.SIDE_SELF)   # 模仿者 0/10
 	r99_e3.state.place(
 		CardData.from_dict(r99_repo.get_card(8025).to_dict()), Vector2i(4, 1),
-		GameEngine.SIDE_SELF)   # 素体 0/1（与模仿者四方向相邻 → 接通）
+		GameEngine.SIDE_SELF)   # 素体 1/3（与模仿者四方向相邻 → 接通）
 	var mim_stacks0: int = r99_mim.upgrade_stacks
 	r99_e3._transcend(Vector2i(4, 1), GameEngine.SIDE_SELF)
 	check(r99_mim.card.has_affix("超负荷"),
@@ -23452,7 +23453,7 @@ func _init() -> void:
 				r292_e3.state.energy])
 	check(r292_e3.state.hand.size() == 1 and r292_e3.state.hand[0].id == 8025
 			and r292_e3.state.hand[0].health
-				== 1 + GameEngine.RECYCLE_HP + repo.get_card(GameEngine.PROTO_ID).upgrade_hp_bonus,
+				== 3 + GameEngine.RECYCLE_HP + repo.get_card(GameEngine.PROTO_ID).upgrade_hp_bonus,
 			"R292 回收：目标仍原位变成素体（%s）" % r292_e3_msg)
 	check(repo.get_card(GameEngine.RECYCLE_ID).effect_text.contains("变成")
 			and not repo.get_card(GameEngine.RECYCLE_ID).effect_text.contains("这算一次"),
@@ -25012,9 +25013,9 @@ func _init() -> void:
 	check(r317_el.state.deck[r317_target].id == GameEngine.PROTO_ID,
 			"R317 淘汰：%s → 素体（id %d）"
 			% [r317_old_name, r317_el.state.deck[r317_target].id])
-	check(r317_el.state.deck[r317_target].cost == 0
+	check(r317_el.state.deck[r317_target].cost == 1
 			and r317_el.state.deck[r317_target].kind == "盟友",
-			"R317 淘汰：变成的是 0 费盟友（素体），原来的数值不保留")
+			"R317 淘汰：变成的是 1 费盟友（素体），原来的数值不保留")
 	# 取消：卡组不变
 	# ⚠️ 牌库要够抽 4 张还**留下至少一张**盟友 —— 否则「卡组不变」是在空卡组上自证，等于没测。
 	var r317_el2 := _new_engine([_card(9994, "甲盟友", "盟友", 2, 3, 8),

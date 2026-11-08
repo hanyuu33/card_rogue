@@ -1145,7 +1145,7 @@ const BATCH_TRANSFER_DRAW:= 1    # 批量传输：改造完抽 1 张卡
 # 与「系统升级」同族（都改**手牌**、都烤进副本、都本场战斗永久），但结算是
 # **换卡**而不是加数值：目标被**原位替换**成一张干净的「素体」副本（8025），
 # 并立刻吃一次改造 = 生命 +RECYCLE_HP。走 `_upgrade_hp_gain` 唯一口 →
-# 素体自己的 `upgrade_hp_bonus`(1) 照算 → 实际 +9（0 费 1/10），与「系统升级」同口径。
+# 素体自己的 `upgrade_hp_bonus`(1) 照算 → 实际 +9（1 费 1/12），与「系统升级」同口径。
 # 目标**不限盟友/工事**（素体就是盟友，技能/场地卡照样回收）—— 这是它的价值：
 # 把用不上的废卡换成一张能留手的 1/10。唯一入口 `cast_recycle(手牌序号, 目标序号)`。
 const RECYCLE_ID:= 8064
@@ -3402,7 +3402,7 @@ func apply_battle_start_relics(repo: CardRepo) -> void :
 				if _grant_to_hand(CardData.from_dict(proto.to_dict()), "机械核心"):
 					added += 1
 			if added > 0:
-				_log("机械核心：开场手牌加入 %d 张「素体」（0 费 1/1，回合结束不弃）" % added)
+				_log("机械核心：开场手牌加入 %d 张「素体」（1 费 1/3，回合结束不弃）" % added)
 				action.emit("relic", {"id": MECH_CORE_RELIC_ID,
 						"text": "机械核心：手牌 +%d 张「素体」" % added})
 	# 水晶骰子（6040，R311）：「?」房进战斗 → 掷骰，前 X 回合每回合 +1 费。
@@ -6302,7 +6302,7 @@ func eliminate_options() -> Array[int]:
 func eliminate_pick(deck_index: int) -> bool:
 	## R317 淘汰（9174）面板「确认」的唯一结算口：把卡组第 deck_index 张**换成一张新素体**。
 	## * 素体是**全新副本**（不是改造过的）：卡面写的是「变成素体」，改造不保留；
-	## * 原位替换 → 之后抽到它时就是素体（0 费 1/1 盟友、回合结束不弃牌）；
+	## * 原位替换 → 之后抽到它时就是素体（1 费 1/3 盟友、回合结束不弃牌）；
 	## * 抽 4 张**已经在施放时结算过**，这里不再抽（见 `ELIMINATE_ID` 的注释）。
 	if not eliminate_pending:
 		return false
@@ -6319,7 +6319,7 @@ func eliminate_pick(deck_index: int) -> bool:
 	var new_card := CardData.from_dict(proto.to_dict())
 	state.deck[deck_index] = new_card
 	eliminate_pending = false
-	_log("淘汰：卡组里的 %s → 「素体」（0 费 1/1，回合结束不弃牌）" % old_card.card_name)
+	_log("淘汰：卡组里的 %s → 「素体」（1 费 1/3，回合结束不弃牌）" % old_card.card_name)
 	action.emit("eliminate_pick", {"old": old_card, "card": new_card,
 			"index": deck_index})
 	return true
@@ -9033,7 +9033,7 @@ func cast_recycle(hand_index: int, target_hand_index: int, free_cast := false) -
 	##     `from_dict` 复制 + 切断 traits 共享引用，绝不动卡库），手牌顺序与
 	##     扇形布局不受影响；
 	##   * 替换后立刻施加一次改造：生命 +RECYCLE_HP，走 `_upgrade_hp_gain`
-	##     **唯一口**（素体自己的 +1 血照算 → 实际 +9 → 0 费 1/10）；
+	##     **唯一口**（素体自己的 +1 血照算 → 实际 +9 → 1 费 1/12）；
 	##   * 「回收」自己进弃牌区；数值**烤进副本**、**本场战斗永久**
 	##     （下一场 `build_deck()` 重新从卡库取实例 → 自动重置）。
 	if hand_index < 0 or hand_index >= state.hand.size():
@@ -13740,7 +13740,7 @@ func _production_order(side: String) -> String :
 	for _i in 2:
 		# ⚠️ 必须 from_dict 复制成新实例再烤改造：卡库里是共享实例，直接改会污染卡库。
 		var up:= CardData.from_dict(proto.to_dict())
-		# R120：改造奖励走**唯一口** —— 素体自己的 +1 生命也算上（1 攻 / 4+1=5 血）。
+		# R120：改造奖励走**唯一口** —— 素体自己的 +1 生命也算上（1 攻 / 3+4+1=8 血；R522 基础血 1→3）。
 		up.power += _upgrade_atk_gain(up, PROD_ORDER_ATK)
 		up.health += _upgrade_hp_gain(up, PROD_ORDER_HP)
 		up.upgrade_stacks += 1       # R209：产出的素体天生 1 层改造（抽到上场就带着）

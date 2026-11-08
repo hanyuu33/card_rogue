@@ -3717,14 +3717,14 @@ func _check_recycle(scene: Variant) -> void:
 	if ropts.size() != 1 or int(ropts[0]) != 0:
 		_smoke_fail("回收：候选应是除自己以外的 1 张手牌（opts=%s）" % str(ropts))
 		return
-	# ── 3) 确认 → 技能卡换成素体 1/10（带一层改造）──
+	# ── 3) 确认 → 技能卡换成素体 1/12（带一层改造；R522 素体基础血 1→3）──
 	scene._on_pick_confirmed([0])
 	if int(scene._recycle_idx) >= 0:
 		_smoke_fail("回收：确认后应清掉 _recycle_idx（%d）" % scene._recycle_idx)
 		return
 	var got: CardData = eng.state.hand[0]
-	if got.id != 8025 or got.health != 10 or got.power != 1:
-		_smoke_fail("回收：攻击应换成素体 1/10（实际 %s %d/%d）"
+	if got.id != 8025 or got.health != 12 or got.power != 1:
+		_smoke_fail("回收：攻击应换成素体 1/12（实际 %s %d/%d）"
 				% [got.card_name, got.power, got.health])
 		return
 	if got.upgrade_stacks != 1:
