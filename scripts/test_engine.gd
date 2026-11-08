@@ -11945,13 +11945,13 @@ func _init() -> void:
 	var r83_fp: CardData = r83_repo.get_card(GameEngine.FOUNTAIN_ID)
 	# ---- ① 卡面数据 ----
 	check(r83_fp != null and r83_fp.card_name == "清泉" and r83_fp.kind == "场地"
-			and r83_fp.cost == 1 and r83_fp.rarity == 0
+			and r83_fp.cost == 0 and r83_fp.rarity == 0
 			and r83_fp.card_class == PlayerClass.DRUID,
-		"R83 清泉 8028：森林精魄的 1 费普通场地卡")
+		"R524 清泉 8028：森林精魄的 0 费普通场地卡（R83 建卡时为 1 费）")
 	check(r83_fp.traits.has("持续场地"),
 		"R83 清泉：带 trait「持续场地」—— 引擎**按这个 trait**把它与一次性场地分开")
-	check(GameEngine.FOUNTAIN_HEAL == 2,
-		"R83 清泉：回血量常量 FOUNTAIN_HEAL = 2（卡面文案与回归都对着它写）")
+	check(GameEngine.FOUNTAIN_HEAL == 3,
+		"R524 清泉：回血量常量 FOUNTAIN_HEAL = 3（每回合 +3 血，卡面文案与回归都对着它写）")
 	# 「敌我双方都生效」→ trait 写「场地生效·双」→ 放置**无任何行限制**
 	check(r83_fp.traits.has("场地生效·双")
 			and GameEngine.field_aim(r83_fp) == GameEngine.FIELD_AIM_BOTH,
@@ -11979,13 +11979,15 @@ func _init() -> void:
 	r83_e.start_game()
 	var r83_ally: Placement = r83_e.state.place(
 			_card(8003, "树人", "盟友", 3, 3, 8, 1, 1), Vector2i(4, 1), GameEngine.SIDE_SELF)
-	r83_e._hit_unit(r83_ally, 3, "R83 测试")     # 8 → 5
+	r83_e._hit_unit(r83_ally, 5, "R83 测试")     # 8 → 5
 	r83_e.state.hand = [CardData.from_dict(r83_fp.to_dict())]
-	r83_e.state.energy = 5
+	r83_e.state.energy = 0          # R524：清泉改 0 费 → 一点费用都没有也必须放得下
 	r83_e.play_from_hand(0, Vector2i(4, 1))
 	check(r83_e.state.field_at(Vector2i(4, 1)) != null
 			and r83_e.state.field_owner.get(Vector2i(4, 1)) == GameEngine.SIDE_SELF,
 		"R83 清泉：可以直接放在**已有单位**的格子上（场地与单位两套数据互不影响）")
+	check(r83_e.state.energy == 0,
+		"R524 清泉 0 费：能量为 0 也能打出，且不扣费（打完仍是 0）")
 
 	# ---- ④ 核心：在**自己回合结束**时回复 2 点 ----
 	# ⚠️ 步进要小心：`end_turn()` 是**半回合**（self ⇄ opp 交替），
@@ -11993,13 +11995,13 @@ func _init() -> void:
 	# 所以「我方回合结束」= 从**我方回合**出发调**一次** end_turn（不是两次）。
 	# 实测：r83_e.start_game() 后 current_side == self。
 	r83_e.end_turn()      # 我方回合结束 → 清泉结算（+2），随后进入敌方回合
-	check(r83_ally.health == 7,
-		"R83 清泉：我方回合结束时站在上面的单位 +2 血（5 → %d）" % r83_ally.health)
+	check(r83_ally.health == 6,
+		"R83 清泉：我方回合结束时站在上面的单位 +3 血（3 → %d）" % r83_ally.health)
 	r83_e.end_turn()      # 敌方回合结束 → 敌我双方都生效，但我方单位不属于该方 → 不回
-	check(r83_ally.health == 7,
+	check(r83_ally.health == 6,
 		"R83 清泉：**敌方**回合结束时己方单位不回复（只在自己的回合结束回，仍 %d）"
 			% r83_ally.health)
-	r83_e.end_turn()      # 又是��方回合结束 → 再 +2，但**满血上限 8 封顶**（7 → 8）
+	r83_e.end_turn()      # 又是��方回合结束 → 再 +3，但**满血上限 8 封顶**（6 → 8）
 	check(r83_ally.health == 8 and r83_e.state.field_at(Vector2i(4, 1)) != null,
 		"R83 清泉：连续生效且**不超过卡面血量上限**（树人 8 血，7 → %d），场地仍在（不会被消耗掉）"
 			% r83_ally.health)
@@ -12022,9 +12024,9 @@ func _init() -> void:
 	r83_e2.end_turn()      # 我方回合结束 → 敌方单位不属于我方 → 不回
 	check(r83_foe.health == 4,
 		"R83 清泉：我方回合结束时**敌方**单位不回复（仍 %d）" % r83_foe.health)
-	r83_e2.end_turn()      # 敌方回合结束 → 敌方单位 +2
-	check(r83_foe.health == 6,
-		"R83 清泉：**敌方**单位在敌方回合结束时也回 2 血（4 → %d，敌我双方都生效）"
+	r83_e2.end_turn()      # 敌方回合结束 → 敌方单位 +3
+	check(r83_foe.health == 7,
+		"R83 清泉：**敌方**单位在敌方回合结束时也回 3 血（4 → %d，敌我双方都生效）"
 			% r83_foe.health)
 
 	# ---- ⑥ **最关键**：敌人移动经过清泉时**不触发、不被拦停、不消失** ----
@@ -12757,8 +12759,8 @@ func _init() -> void:
 	check(r88_fac != null and r88_fac.kind == "场地" and r88_fac.cost == 2
 			and r88_fac.rarity == 0 and r88_fac.card_class == PlayerClass.MECH,
 		"R88 改造工厂：场地 / 2 费 / 普通 / 机械之心")
-	check(r88_bay.field_heal == 4 and r88_fount.field_heal == 2,
-		"R276 维修间 field_heal=4（每回合回 4）、清泉仍是 2（两个口不复用常量）")
+	check(r88_bay.field_heal == 4 and r88_fount.field_heal == 3,
+		"R276 维修间 field_heal=4（每回合回 4）、清泉 3（两个口不复用常量）")
 	check(r88_fac.field_heal == 0 and r88_fac.traits.has(GameEngine.PERSIST_UPGRADE_TRAIT),
 		"R88 改造工厂：field_heal=0（它不治血，只加攻加血）+ 带 trait「持续改造」")
 	check(r88_bay.traits.has("场地生效·友") and r88_fac.traits.has("场地生效·友")
@@ -12853,9 +12855,9 @@ func _init() -> void:
 	r88_e3.state.set_field(CardData.from_dict(r88_fount.to_dict()), Vector2i(2, 1),
 		GameEngine.SIDE_SELF)
 	r88_e3.end_turn()   # 我方回合结束（敌方单位不受益于我方这半步）
-	r88_e3.end_turn()   # 敌方回合结束 → 清泉是「双」→ 回 2
-	check(r88_foe3.health == 3,
-		"R88 回归护栏：清泉仍是「双」—— 敌方单位在敌方回合结束时 +2 血（1 → %d）"
+	r88_e3.end_turn()   # 敌方回合结束 → 清泉是「双」→ 回 3
+	check(r88_foe3.health == 4,
+		"R88 回归护栏：清泉仍是「双」—— 敌方单位在敌方回合结束时 +3 血（1 → %d）"
 			% r88_foe3.health)
 
 	# ---- ⑥ 改造工厂：每回合 +1 力 / +1 血，**逐回合累加** ----
@@ -21832,10 +21834,10 @@ func _init() -> void:
 	check(r276_tw.traits.has(GameEngine.STACK_DAMAGE_TRAIT),
 		"R276 侦察塔：仍带 trait「改造层数」（调数值不动机制）")
 
-	# ---- ② 维修间 8036：每回合回 2 → **4**（清泉仍 2，两个口不共享数值）----
+	# ---- ② 维修间 8036：每回合回 2 → **4**（清泉 3，两个口不共享数值）----
 	var r276_bay: CardData = r276_repo.get_card(GameEngine.REPAIR_BAY_ID)
 	check(r276_bay.field_heal == 4
-			and r276_repo.get_card(GameEngine.FOUNTAIN_ID).field_heal == 2,
+			and r276_repo.get_card(GameEngine.FOUNTAIN_ID).field_heal == 3,
 		"R276 维修间 field_heal=%d / 清泉 field_heal=%d（各算各的）" % [
 			r276_bay.field_heal,
 			r276_repo.get_card(GameEngine.FOUNTAIN_ID).field_heal])

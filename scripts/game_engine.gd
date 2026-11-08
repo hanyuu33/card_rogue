@@ -1092,14 +1092,14 @@ const FINISHER_LAST_DMG:= 22
 
 # ── R83：清泉（8028）—— 场地卡的**第二个机制类别：持续型** ──
 # 现有 6 张场地（8011~8017）全是「**一次性触发**」：敌人移动经过 → 结算 → 该格消失。
-# 清泉反过来：**不因任何经过而触发、不会消失**，只是「站在这格的单位在自己回合结束时 +2 血」。
+# 清泉反过来：**不因任何经过而触发、不会消失**，只是「站在这格的单位在自己回合结束时 +3 血」。
 # 于是它**必须被排除出陷阱那条链**（否则敌人一走过就被白白消耗掉，这张牌等于废）：
 #   * 它没有任何「踩上去就结算」的效果 → 单位站上去照常行动；
 #   * 它不会被任何经过「吃掉」，只有玩家再放一块场地才会被顶掉。
 # 判据是 **trait「持续场地」**（R83 新增），走 cards.json —— 加新的持续型场地只要写这个 trait。
 const FOUNTAIN_ID:= 8028
 const PERSISTENT_FIELD_TRAIT:= "持续场地"
-const FOUNTAIN_HEAL:= 2
+const FOUNTAIN_HEAL:= 3
 # ── R88：持续型场地的第二族（「改造工厂」8037）──
 # 维修间 8036（1 费稀有，机械之心）：站在上面的**己方**盟友/工事在自己回合结束时回
 #   `CardData.field_heal` 点血（R276：2 → 4）。**与清泉 8028 是同一族机制、只差生效对象**。
@@ -15016,7 +15016,7 @@ func _field_aura_tick(side: String) -> void :
 		# 清泉是「双」→ 不受这条限制（它的 trait 是 场地生效·双）。
 		if field_aim(f) == FIELD_AIM_ALLY and side != SIDE_SELF:
 			continue
-		# ① 治疗：读卡面 field_heal（清泉 2 / 维修间 4 / 其它 0 = 不回血）
+		# ① 治疗：读卡面 field_heal（清泉 3 / 维修间 4 / 其它 0 = 不回血）
 		var heal: int = f.field_heal
 		if heal > 0 and p.health < p.card.health:
 			var before: int = p.health

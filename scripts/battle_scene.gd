@@ -2128,7 +2128,7 @@ func _ready() -> void:
 		queue_redraw()
 	if "--fountain" in args and engine != null:
 		# 演示（R83）：持续型场地「清泉」——
-		#   ① 清泉落在 (4,1)，一只受伤的树人站在上面 → 我方回合结束 +2 血；
+		#   ① 清泉落在 (4,1)，一只受伤的树人站在上面 → 我方回合结束 +3 血；
 		#   ② 敌方速 2 的单位**经过** (2,1) 上另一格清泉 → **不被拦停、不被消耗**。
 		#   与 --r80 的穿刺陷阱对照：脉冲描边 vs 冷青静止描边。
 		RunState.player_class = PlayerClass.DRUID
@@ -2148,7 +2148,7 @@ func _ready() -> void:
 				Vector2i(2, 1), GameEngine.SIDE_SELF)
 		engine.state.reset_units(GameEngine.SIDE_SELF)
 		status_text = "R83：清泉（冷青静止描边）= **持续型场地**，不因经过而触发；" + \
-				"站在上面的单位在**自己回合结束**时 +2 血（树人已受伤）"
+				"站在上面的单位在**自己回合结束**时 +3 血（树人已受伤）"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--charge" in args and engine != null:
