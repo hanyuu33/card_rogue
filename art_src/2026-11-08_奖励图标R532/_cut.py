@@ -10,10 +10,14 @@ from PIL import Image, ImageFilter
 BASE = os.path.dirname(os.path.abspath(__file__))
 RAW = os.path.join(BASE, "raw")
 SRC = {
-    "gold": "Match_the_exact_art_style_of_t_2026-11-08T14-33-16.png",
+    # R532b（用户口径「金币只需要金币袋，不需要外框」）：金币换成无线框的单体钱袋
+    "gold": "Take_ONLY_the_subject_from_the_2026-11-08T14-54-40.png",
     "maxhp": "Match_the_exact_art_style_of_t_2026-11-08T14-35-54.png",
 }
-PAD_RATIO = 0.045          # 抠完再居中放到正方形画布，四周留 4.5% 空白（和其它图标视觉重量一致）
+## 抠完再居中放到正方形画布，四周留白 —— 按主体类型分开：
+## 无框的单个物件要留得多一点，否则 64px 下会比旁边「金环里的小主体」显大。
+PAD = {"gold": 0.14, "maxhp": 0.045}
+MIN_BLOB = 0.02            # 保留面积 ≥ 最大连通域 2% 的块（散落的金币别被当噪点丢掉）
 TH_WHITE = 238             # 亮度阈值
 TH_SAT = 0.22              # 饱和度上限（低于它才算「中性白」）
 OPEN = 9                   # 白区开运算核：吃掉「小面积白岛」（主体的高光保留到前景）
@@ -69,7 +73,7 @@ def cut(name):
 
     bbox = out.getbbox()
     out = out.crop(bbox)
-    side = int(max(out.size) * (1.0 + 2.0 * PAD_RATIO))
+    side = int(max(out.size) * (1.0 + 2.0 * PAD[name]))
     canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
     canvas.paste(out, ((side - out.width) // 2, (side - out.height) // 2), out)
     dst = os.path.join(BASE, name + ".png")
@@ -80,11 +84,15 @@ def cut(name):
 
 
 def _keep_largest(mask):
-    """只保留面积最大的前景连通域（其余白点丢弃）。"""
+    """保留面积够的前景连通域：最大的那块 + 所有 ≥ MIN_BLOB 倍它的块。
+
+    只留「最大一块」会丢掉体外的散落金币（单体钱袋场景尤其常见），
+    所以按面积比留，同时仍然丢掉细碎噪点。
+    """
     w, h = mask.size
     px = mask.load()
     seen = [[False] * w for _ in range(h)]
-    best = []
+    blobs = []
     for y in range(0, h, 2):
         for x in range(0, w, 2):
             if px[x, y] == 0 or seen[y][x]:
@@ -99,15 +107,20 @@ def _keep_largest(mask):
                     if 0 <= nx < w and 0 <= ny < h and not seen[ny][nx] and px[nx, ny] > 0:
                         seen[ny][nx] = True
                         stack.append((nx, ny))
-            if len(pix) > len(best):
-                best = pix
+            blobs.append(pix)
+    if not blobs:
+        return mask
+    biggest = max(len(b) for b in blobs)
     out = Image.new("L", (w, h), 0)
     opx = out.load()
-    for x, y in best:
-        for dy in (0, 1):
-            for dx in (0, 1):
-                if x + dx < w and y + dy < h:
-                    opx[x + dx, y + dy] = 255
+    for pix in blobs:
+        if len(pix) < biggest * MIN_BLOB:
+            continue
+        for x, y in pix:
+            for dy in (0, 1):
+                for dx in (0, 1):
+                    if x + dx < w and y + dy < h:
+                        opx[x + dx, y + dy] = 255
     return out
 
 

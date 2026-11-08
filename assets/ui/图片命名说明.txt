@@ -411,7 +411,7 @@ curtain_plate.png         名称牌（聊谁是说话人）            建议 52
 战斗卡框：adventure_shared/battle_card_trim.png，64×64，由battle_instrument_panel同源缩放，九宫格边缘5px；只在战斗CardFace adventure_frame开启时使用。
 
 reward_icons/{cards,legendary,relic,deck_delete,core}.png：奖励列表类型图标，透明 PNG，内置 imagegen 生成；不替换卡牌数值徽章。
-2026-11-08（R532）：reward_icons/gold.png（钱袋金币）、reward_icons/maxhp.png（红宝石心 + 金十字）—— 精英「追加奖励」里金币 / 最大生命的**专属图标**，与 core.png 同一套金环厚涂画风，界面按 64px 1:1 贴图；源图与抠图脚本在 art_src/2026-11-08_奖励图标R532/。
+2026-11-08（R532）：reward_icons/gold.png（**单体钱袋，无外框** —— 用户口径「金币只需要金币袋，不需要外框」）、reward_icons/maxhp.png（红宝石心 + 金十字 + 金环）—— 精英「追加奖励」里金币 / 最大生命的**专属图标**，与 core.png 同一套厚涂画风，界面按 64px 1:1 贴图、不套色盾；源图与抠图脚本在 art_src/2026-11-08_奖励图标R532/。
 
 map_icons/{start,battle,elite,rest,event,shop,chest,bigchest,unknown}.png：简化轮廓地图图标，通过 UiAssets.node_icon 共用，原 map_*.png 保留回退。reward_icons/deck_delete.png 已改为单独剪刀。
 
