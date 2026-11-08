@@ -806,6 +806,27 @@ func _init() -> void:
 	lg_h._destroy(Vector2i(3, 0))
 	check(lg_h.state.hand.is_empty() and lg_h.state.discard.size() == 1,
 			"传承记忆：效果区没有本卡 → 死亡照常进弃牌区")
+	# 「本来就不进弃牌区」的盟友 → 不触发、也不消耗名额（R528b 写进卡面文案）
+	var lg_i := _new_engine([], 20, 20)
+	lg_i.state.effects.append(CardData.from_dict(repo.get_card(9078).to_dict()))
+	lg_i.state.hand.clear()
+	var lg_dim := CardData.from_dict(repo.get_card(8003).to_dict())
+	lg_dim.add_affix(GameEngine.AFFIX_DIMENSION)
+	lg_i.state.place(lg_dim, Vector2i(3, 0), GameEngine.SIDE_SELF)
+	lg_i._destroy(Vector2i(3, 0))
+	check(lg_i.state.hand.is_empty() and lg_i.state.legacy_used == 0
+			and lg_i.state.void_count == 1 and lg_i.state.discard.is_empty(),
+			"传承记忆：带「次元」的盟友离场即消失 → 不触发、不消耗名额")
+	var lg_j := _new_engine([], 20, 20)
+	lg_j.state.effects.append(CardData.from_dict(repo.get_card(9078).to_dict()))
+	lg_j.state.hand.clear()
+	var lg_egg := CardData.from_dict(repo.get_card(8003).to_dict())
+	lg_egg.traits = [GameEngine.EGG_VANISH_TRAIT]
+	lg_j.state.place(lg_egg, Vector2i(3, 0), GameEngine.SIDE_SELF)
+	lg_j._destroy(Vector2i(3, 0))
+	check(lg_j.state.hand.is_empty() and lg_j.state.legacy_used == 0
+			and lg_j.state.void_count == 1,
+			"传承记忆：「离场消失」的盟友同样不触发（本来就不进弃牌区）")
 
 	# ---- 第 38 轮新卡（2026-10-01）：风元素 9082 ----
 	var vl := repo.get_card(9082)
