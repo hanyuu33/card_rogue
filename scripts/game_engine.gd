@@ -692,6 +692,8 @@ const TURTLE_DOVE_DISCOUNT:= 1
 const DRAGON_BREATH_ID:= 9054
 const DRAGON_BREATH_DMG:= 4      # R227：3 → 4（4 点 × 5 次 = 20，原 3 × 6 = 18）
 const DRAGON_BREATH_HITS:= 5     # R227：6 → 5
+# R527（用户口径）：狂暴去掉「本回合」—— 授予的是**永久双动**（`Placement.haste_double`，
+#   与哈气 9024 / 巴兰-α 同一字段），单位离场即重置（字段随实例一起消失）。
 const FRENZY_ID:= 9055
 const FRENZY_ACTIONS:= 2
 const FRENZY_DISCOUNT:= 1
@@ -4822,17 +4824,21 @@ func fire_wall_rows() -> Array[int]:
 func _frenzy(side: String, target) -> String:
 
 
-
 	var p:= _target_placement(side, target)
 	if p == null or p.owner != side or p.card.kind != "盟友":
 		return "（需要指定一个己方盟友）"
-	if p.card.actions >= FRENZY_ACTIONS or p.acts_total >= FRENZY_ACTIONS:
+	# R527（用户口径）：去掉「本回合」—— 改成**永久双动**，走 `haste_double` 这条现成通道
+	# （哈气 9024 / 巴兰-α 同一字段）。字段挂在 Placement 上，单位一离场实例就没了 →
+	# 「离场重置」不需要任何额外清理代码；此后每回合由 `reset_units()` 按
+	# `unit_actions()`（读 `haste_double`）重新发额度，于是跨回合也一直是两轮。
+	if p.haste_double or p.card.actions >= FRENZY_ACTIONS:
 		return "%s 已拥有同类效果（不可重复获得）" % p.card.card_name
-	# R462：改走 `grant_actions` —— 直接写 `acts_left` 会把「已经行动的这张卡」的
-	# 行动账本抹掉（横置还在、`acts_left` 却变成 2），于是打完一箭就再也动不了。
+	p.haste_double = true
+	# R462：**本回合**的行动轮数照旧走 `grant_actions` 差额补发 —— 直接写 `acts_left` 会把
+	# 「已经行动的这张卡」的行动账本抹掉（横置还在、`acts_left` 却变成 2），打完一箭就再动不了。
 	state.grant_actions(p, FRENZY_ACTIONS)
-	_log("狂暴：%s 本回合可以攻击两次" % p.card.card_name)
-	return "%s 本回合可以攻击两次" % p.card.card_name
+	_log("狂暴：%s 获得双动（离场前一直有效）" % p.card.card_name)
+	return "%s 可以攻击两次（离场前一直有效）" % p.card.card_name
 
 
 func _aether_barrier(side: String) -> String:

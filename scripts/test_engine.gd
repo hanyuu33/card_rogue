@@ -2295,7 +2295,8 @@ func _init() -> void:
 			"R239 打出破绽：付 2 费（5 → %d）、无效果、**本场消失**（void +1、不进弃牌区）（%s）"
 			% [r231_e5.state.energy, r231_played])
 
-	# 狂暴（9055）：稀有 2 费技能，指定己方盟友本回合可以攻击两次；不可重复；>=3 盟友费用 -1
+	# 狂暴（9055）：稀有 2 费技能，指定己方盟友可以攻击两次（R527 起**永久**，离场才重置）；
+	#   不可重复；>=3 盟友费用 -1
 	var nc_fz := repo.get_card(9055)
 	check(nc_fz.card_name == "狂暴" and nc_fz.is_spell() and nc_fz.cost == 2
 			and nc_fz.rarity == 1 and nc_fz.target_mode == "unit" and nc_fz.needs_target(),
@@ -2309,13 +2310,24 @@ func _init() -> void:
 	eng_fz.state.energy = 9
 	var fz_ret := eng_fz.use_spell(0, Vector2i(4, 0))
 	check(fz_p.acts_left == 2 and fz_ret.contains("攻击两次"),
-			"狂暴：指定己方盟友 → 本回合可攻击两次（%s）" % fz_ret)
+			"狂暴：指定己方盟友 → 可以攻击两次（%s）" % fz_ret)
 	# 不可重复获得：同一单位再放一次无效
 	eng_fz.state.hand = [repo.get_card(9055)]
 	eng_fz.state.energy = 9
 	var fz_dup := eng_fz.use_spell(0, Vector2i(4, 0))
 	check(fz_p.acts_left == 2 and fz_dup.contains("不可重复获得"),
 			"狂暴：同一单位重复施放被拒绝、轮数不叠加（%s）" % fz_dup)
+	# —— R527（用户口径）：去掉「本回合」—— 双动跟着单位走，直到它离场 ——
+	check(fz_p.haste_double,
+			"R527 狂暴：授予的是永久双动（haste_double），不再是「本回合」行为")
+	eng_fz.state.reset_units(GameEngine.SIDE_SELF)
+	check(fz_p.acts_left == 2 and not fz_p.tapped,
+			"R527 狂暴：下个自己回合开始仍是 %d 轮行动（回合重置不收回）" % fz_p.acts_left)
+	eng_fz._destroy(Vector2i(4, 0))
+	var fz_back: Placement = eng_fz.state.place(_card(8003, "农民", "盟友", 3, 3, 8),
+			Vector2i(4, 0), GameEngine.SIDE_SELF)
+	check(not fz_back.haste_double and fz_back.acts_left == 1,
+			"R527 狂暴：离场即重置 → 重新上场的单位只有 1 轮行动（%d）" % fz_back.acts_left)
 	# 工事 / 敌方单位 → 被拒绝
 	eng_fz.state.place(_card(8001, "木栅栏", "工事", 2, 0, 6), Vector2i(4, 2))
 	eng_fz.state.place(_card(9399, "敌狼", "盟友", 4, 2, 9), Vector2i(1, 0),
