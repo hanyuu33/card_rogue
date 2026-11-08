@@ -47,15 +47,42 @@ other characters, NO text, NO letters, NO logo, NO watermark, NO card frame, NO 
 
 参数：`size=1024x1024, quality=high, background=opaque`。
 
+## 二版加帽（R519o，image1 编辑，input_fidelity=high）
+
+用户反馈：「执法者需要有警官的感觉，比如有个帽子之类」。
+
+```
+EDIT THIS IMAGE while preserving the existing upright humanoid police-enforcer ROBOT, its
+three-quarter pose, its long sci-fi pulse rifle, its dark gunmetal/charcoal armour, the yellow
+warning stripes, the glowing cyan visor, the hydraulic joints, and the dark sci-fi mechanical
+interior background. Keep the cel-shaded anime/comic outlines, flat colours, and hard-edged
+shadows unchanged.
+
+Add ONLY this one change to give the robot an unmistakable POLICE OFFICER look: place a police
+officer's peaked cap (巡警大檐帽) ON TOP of its head, sitting above the glowing cyan visor,
+partially wrapping the upper helmet. The cap must read clearly as a police hat, in the SAME dark
+gunmetal-and-charcoal sci-fi armour style: a wide glossy black visor brim sweeping forward over
+the forehead, a rounded dark crown, a thin gold band around the base of the crown, and a small
+glowing gold/brass police badge emblem on the front centre of the crown. The peaked cap is an
+armoured machine version of the classic police cap, NOT a soldier helmet, NOT a baseball cap,
+NOT a beret. The wide brim should overlap the upper edge of the cyan visor only slightly so the
+glowing eyes stay readable.
+
+Keep the cap proportional to the large mech head, with enough clearance below the top edge of
+the frame. Do not change anything else. No new characters, no text, no letters, no logo, no
+watermark, no card frame, no border.
+```
+
 ## 处理
 
-- 裁切 `(0, 70, 1024, 991)` = 1024×921 → `448×403`。
+- 二版帽顶约 y≈55，裁切上移：`(0, 40, 1024, 961)` = 1024×921 → `448×403`。
 - 水印固定框（R515b 口径）全图坐标 `(872, 948, 1024, 1024)`，上沿落在窗内 → 对窗内部分
-  `(872, 878, 1024, 921)` 做 `patch_wm()`（右侧背景地面，无主体，修补安全）。
+  `(872, 908, 1024, 921)` 做 `patch_wm()`（右侧背景地面，无主体，修补安全）。
 - 脚本：`tools/process_9223.py`（`--write` 落盘 `processed/9223.png` 与 `assets/pics/9223.png`）。
 
 ## 验收
 
 - 原图：直立持枪警员机器人、科幻感、画风、主体完整、背景铺满 → 通过。
-- 处理图：头/双臂/枪/双足完整，水印彻底清除、无涂抹痕 → 通过。
+- 二版加帽原图：警帽+金色警徽清晰、帽檐只轻遮面罩上沿、主体与姿势保持不变 → 通过。
+- 处理图：警帽/头/双臂/枪/双足完整，水印彻底清除、无涂抹痕 → 通过。
 - 图鉴 `--group enemy --card 9223`：卡图正常、无黄三角、名称属性效果文本正确 → 通过。

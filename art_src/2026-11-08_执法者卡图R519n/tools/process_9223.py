@@ -25,11 +25,11 @@ from PIL import Image, ImageDraw, ImageFilter
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
-RAW = HERE.parent / "raw" / "Use_the_input_image_ONLY_AS_AN_2026-11-08T03-41-26.png"
+RAW = HERE.parent / "raw" / "EDIT_THIS_IMAGE_while_preservi_2026-11-08T03-56-59.png"
 PROC = HERE.parent / "processed"
 PICS = ROOT / "assets" / "pics"
 
-CROP = (0, 70, 1024, 991)    # 1024×921 ≈ 448×403 的宽高比
+CROP = (0, 40, 1024, 961)    # 1024×921 ≈ 448×403 的宽高比；顶部上移以容纳警帽（帽顶 y≈55）
 TARGET = (448, 403)
 WM_BOX = (872, 948, 1024, 1024)   # 水印固定框（全图坐标）
 
