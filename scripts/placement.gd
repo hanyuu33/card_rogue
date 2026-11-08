@@ -153,13 +153,6 @@ var wanted_dimension: bool = false  # 通缉令 9240：被标记「次元」—�
 ## 力量由 `GameEngine._refresh_hecaton()` 在「开局/召唤/击破/回合开始」五处实时重算写值，
 ## 与暗影领主同范式（只记 Placement、**绝不烤进 CardData**，敌方单位用的是卡库共享实例）。
 var hecaton_atk: int = 0       # 孤军成立时 = HECATON_ATK_BUFF(2)，否则 0（进 effective_power）
-## R493 土元素（9218）：场上**该方有土元素时**，所有己方盟友（含土元素自己）力量 +3。
-## 与 hecaton_atk / dark_lord_atk 完全同范式：只写 Placement 字段、**绝不烤进 CardData**
-##（敌方单位用的是卡库共享实例，改 card.power 会跨局泄漏），
-## 由 `GameEngine._refresh_earth_aura()` 在「开局 / 入场 / 击破 / 双方回合开始」重算写值。
-## 减伤那一半不在这里，而是 `_unit_damage_taken` 实时读 `state.has_earth_elemental()`
-##（与量产型赫利俄斯同一条路：光环在不在只看场面）。
-var earth_aura_atk: int = 0     # 场上有土元素 = 3，否则 0（进 effective_power）
 	## 「行动力成长」（R161，赫尔墨斯 9140）：每过 ACTION_GROWTH_PERIOD 个回合，
 	## 该单位本回合行动次数 +1（只记 Placement，不写回 CardData）。
 var action_growth_extra: int = 0   # 已累计的额外行动轮数
@@ -226,7 +219,6 @@ func effective_power() -> int:
 	var debuff := atk_debuff if debuff_stage == 1 else 0
 	var total := maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
 			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk + harp_atk + sword_atk
-			+ earth_aura_atk
 			- debuff - mnemo_down)
 	# R324「惧光」：夜鸭奇数回合**力量临时减半**，只作用在这个出口 ——
 	# 上面每一项（atk_buff / atk_growth / ramp_atk / upgrade_atk / dark_lord_atk …）
@@ -322,9 +314,6 @@ func status_entries() -> Array[Dictionary]:
 				"col": COL_B, "kind": "buff"})
 	if hecaton_atk > 0:
 		out.append({"label": "孤军：力 +%d，攻击伤害减半（场上无其他己方单位）" % hecaton_atk,
-				"col": COL_B, "kind": "buff"})
-	if earth_aura_atk > 0:
-		out.append({"label": "土元素光环：力 +%d，受到的伤害 -1" % earth_aura_atk,
 				"col": COL_B, "kind": "buff"})
 	if mnemo_down > 0:
 		out.append({"label": "谟涅摩叙涅：力 -%d" % mnemo_down,
@@ -475,7 +464,7 @@ const _SAVE_FIELDS: Array[String] = [
 	"dmg_reduce", "first_hit_shield", "armor", "regen", "upgrade_feed_turn",
 	"mass_mnemo_turn", "sleep_left", "stun_left", "harp_atk", "sword_atk",
 	"fuse_left", "forge_period", "forge_idle", "forge_range", "dark_lord_atk",
-	"mnemo_down", "dark_lord_speed", "hecaton_atk", "earth_aura_atk", "action_growth_extra",
+	"mnemo_down", "dark_lord_speed", "hecaton_atk", "action_growth_extra",
 	"action_growth_turns", "summon_haste", "night_owl_weak", "boss_phase",
 	"haste_double", "defector_range", "defector_speed", "defector_hunt",
 	"wanted_dimension",
