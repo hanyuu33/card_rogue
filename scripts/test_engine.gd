@@ -16448,6 +16448,22 @@ func _init() -> void:
 	RunState.relics = r531_save_relics
 	RunState.skipped_relics = r531_save_skip
 
+	# ---- R532：金币 / 最大生命专属图标；追加奖励文案去掉「额外」 ----
+	check(ResourceLoader.exists("res://assets/ui/reward_icons/gold.png")
+			and ResourceLoader.exists("res://assets/ui/reward_icons/maxhp.png"),
+			"R532 追加奖励专属图标 gold.png / maxhp.png 在 assets/ui/reward_icons/（与 core.png 同一套金环画风）")
+	check(UiAssets.small_icon("reward_icons/gold", 64) != null
+			and UiAssets.small_icon("reward_icons/maxhp", 64) != null,
+			"R532 两张专属图标能被 UiAssets.small_icon(64) 取到（界面按 64px 1:1 贴图）")
+	var r532_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	check(r532_rp.contains("reward_icons/gold") and r532_rp.contains("reward_icons/maxhp")
+			and not r532_rp.contains("额外道具：")
+			and not r532_rp.contains("额外一次删卡")
+			and not r532_rp.contains("额外卡牌奖励")
+			and not r532_rp.contains("额外 %d 金币")
+			and not r532_rp.contains("额外最大生命"),
+			"R532 追加奖励的名称 / 说明都不再带「额外」（靠分隔带 + 专属图标区分）")
+
 	# 一键领取：只收拾道具，卡牌组留给玩家自己挑
 	RunState.pending_rewards = []
 	RunState.relics = []

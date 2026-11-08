@@ -299,16 +299,17 @@ func _entry_name(e: Dictionary) -> String:
 	if k == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		var rn := r.relic_name if r != null else "未知道具"
-		# R531：追加奖励的条目名统一带「额外」，和上面那几条普通奖励一眼分开
-		return ("额外道具：" + rn) if _entry_bonus(e) else rn
+		# R532（用户口径）：追加奖励的条目**不再**在名字里带「额外」——
+		# 分隔带 + 专属图标已经分得开，重复写两遍反而挤占名称宽度。
+		return ("道具：" + rn) if _entry_bonus(e) else rn
 	# R531：追加奖励里的两种「直接到账」条目（没有详情页，点右边那颗按钮就领）。
 	if k == RunState.BONUS_GOLD:
-		return "额外 %d 金币" % int(e.get("gold", RunState.BONUS_GOLD_GAIN))
+		return "%d 金币" % int(e.get("gold", RunState.BONUS_GOLD_GAIN))
 	if k == RunState.BONUS_HP:
-		return "额外最大生命 +%d" % int(e.get("hp", RunState.BONUS_HP_GAIN))
+		return "最大生命 +%d" % int(e.get("hp", RunState.BONUS_HP_GAIN))
 	# R351 月亮（9180）：这条不是「挑一张卡」，是「给一次删卡机会」。
 	if k == "deck_delete":
-		return "额外一次删卡" if _entry_bonus(e) else "删除卡组中的一张卡"
+		return "一次删卡" if _entry_bonus(e) else "删除卡组中的一张卡"
 	if k == "core":
 		return "核心"
 	# R467：传说卡是**固定单张**，列表里别写成「三选一」
@@ -319,8 +320,7 @@ func _entry_name(e: Dictionary) -> String:
 			if lcard != null:
 				return "传说卡「%s」" % lcard.card_name
 		return "传说卡"
-	if _entry_bonus(e):
-		return "额外卡牌奖励（三选一）"
+	# R532：追加奖励与普通奖励**同名**，靠分隔带 + 说明行区分（用户口径：不再写「额外」）
 	return "卡牌奖励（三选一）"
 
 
@@ -331,12 +331,12 @@ func _entry_tag(e: Dictionary) -> String:
 	# 玩家会以为是重复条目（出图核验过：加分隔带之后仍然分不清）。
 	if _entry_bonus(e):
 		if k == RunState.BONUS_CARDS:
-			return "额外一组三选一 · %s" % CardReward.type_label(str(e.get("type", "normal")))
+			return "一组三选一 · %s" % CardReward.type_label(str(e.get("type", "normal")))
 		if k == RunState.BONUS_DELETE:
 			return "挑一张卡组里的卡永久移除"
 		if k == RunState.BONUS_RELIC:
 			var rb: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
-			return ("额外掉落 · " + rb.tag_line()) if rb != null else "额外掉落 · 道具"
+			return ("掉落 · " + rb.tag_line()) if rb != null else "掉落 · 道具"
 	if k == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		if r == null:
@@ -2154,7 +2154,8 @@ func _demo_start() -> void:
 			RunState.queue_relic_reward(6005)
 			RunState.queue_card_reward("normal")
 		# 追加奖励的种类可指定 —— 每种都要出图核验（尤其「卡牌组 / 删卡」这两条，
-		# 名称与说明和普通奖励几乎一样，全靠分隔带 + 底色 + 「追加 · 」前缀区分）。
+		# 名称与说明和普通奖励几乎一样，全靠分隔带 + 金色底 + 专属图标区分）
+		# R532：金币 / 最大生命已换成专属图标（gold.png / maxhp.png），文案不再写「额外」。
 		var bk := "gold"
 		if "--bonushp" in args:
 			bk = "maxhp"
@@ -2319,4 +2320,24 @@ func _demo_start() -> void:
 
 
 func _draw_entry_icon(e: Dictionary, center: Vector2) -> void:
+	## R532：金币 / 最大生命 是「到账类」追加奖励，有专属图标
+	## （`reward_icons/gold.png` / `maxhp.png`，与 core.png 同一套金环厚涂画风）。
+	## 直接贴图、**不**再套色盾底 —— 色盾是「来源纹章」，这里要的是「东西本身」。
+	var bonus_tex := _bonus_entry_tex(e)
+	if bonus_tex != null:
+		# 缩略图就是 64px（`_bonus_entry_tex` 里按同一尺寸生成）→ 1:1 贴，最清晰
+		var s := 64.0
+		_root.draw_texture_rect(bonus_tex,
+				Rect2(center - Vector2(s, s) * 0.5, Vector2(s, s)), false)
+		return
 	_row_badge(center, _entry_color(e))
+
+
+func _bonus_entry_tex(e: Dictionary) -> Texture2D:
+	## 只有这两种追加奖励有专属图；其余（卡牌组 / 删卡 / 道具）仍走色盾。
+	var k := str(e.get("kind", ""))
+	if k == RunState.BONUS_GOLD:
+		return UiAssets.small_icon("reward_icons/gold", 64)
+	if k == RunState.BONUS_HP:
+		return UiAssets.small_icon("reward_icons/maxhp", 64)
+	return null
