@@ -3839,7 +3839,7 @@
       "kind": "盟友",
       "cost": 3,
       "power": 4,
-      "health": 9,
+      "health": 10,
       "attack_range": 1,
       "move_speed": 1,
       "rarity": 0,
@@ -3849,7 +3849,7 @@
         "机械"
       ],
       "affixes": [],
-      "effect_text": "入场时，其他场上和手卡盟友获得改造：生命 +4。",
+      "effect_text": "入场时，手卡中的盟友获得改造：生命 +4。",
       "target_mode": "none",
       "color": "白",
       "image": ""
@@ -6146,6 +6146,46 @@
       "effect_text": "对目标造成 15 点伤害。同一回合内，你对被标记的目标造成第 3 次伤害后（本卡自己造成的不算），从抽牌库或弃牌区将一张「恐惧收割」加入手卡，费用 -1；离开手卡后恢复原费用。",
       "target_mode": "unit",
       "color": "紫",
+      "image": ""
+    },
+    {
+      "id": 9235,
+      "name": "土元素",
+      "kind": "盟友",
+      "cost": 8,
+      "power": 5,
+      "health": 15,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 2,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [
+        "留手"
+      ],
+      "affixes": [],
+      "effect_text": "回合结束时不会被丢弃。入场时，对敌方单位分配 3X 点伤害：由近及远，打倒一个就把剩下的分给下一个（X = 本次战斗中你使用过的盟友数，含本卡）。场上每有 1 个己方盟友，手卡中的这张卡费用 -2。",
+      "target_mode": "none",
+      "color": "棕",
+      "image": ""
+    },
+    {
+      "id": 9236,
+      "name": "火元素",
+      "kind": "盟友",
+      "cost": 2,
+      "power": 4,
+      "health": 6,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 1,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "入场时，清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 2 点伤害。",
+      "target_mode": "none",
+      "color": "红",
       "image": ""
     }
   ]

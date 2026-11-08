@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""R522 生成《卡牌总表》：按 职业 → 稀有度 两级分组，带数值与效果。
+"""R523 生成《卡牌总表》：按 职业 → 稀有度 两级分组，带数值与效果。
 唯一数据源 = cards.json（不硬编码任何数值/名字）。
-输出 = release/卡牌总表_R522.md（UTF-8 无 BOM，LF）。
+输出 = release/卡牌总表_R523.md（UTF-8 无 BOM，LF）。
 """
 import json
 import sys
@@ -10,7 +10,7 @@ import collections
 sys.stdout.reconfigure(encoding="utf-8")
 
 SRC = "cards.json"
-OUT = "release/卡牌总表_R522.md"
+OUT = "release/卡牌总表_R523.md"
 
 RARITY = ["普通", "稀有", "史诗", "初始", "怪物", "事件", "诅咒"]
 
@@ -131,7 +131,7 @@ print("rarity dist", dict(collections.Counter(c["rarity"] for c in cards)))
 print("class dist", dict(collections.Counter((c.get("class") or "<none>") for c in cards)))
 
 # ── 网页版：同一份数据，加筛选/搜索，方便 282 张逐条查 ──
-OUT_HTML = "release/卡牌总表_R522.html"
+OUT_HTML = "release/卡牌总表_R523.html"
 RC = ["#2c2c2a", "#1f5fbf", "#8a30b8", "#1d7a4f", "#7a1f1f", "#a44ad0", "#4e4560"]
 
 payload = []

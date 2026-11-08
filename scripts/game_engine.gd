@@ -820,6 +820,24 @@ const EARTH_AURA_ATK:= 3
 const EARTH_AURA_REDUCE:= 1
 const PRESSURE_MINE_ID:= 9219
 
+# ── R523：土元素（9235） / 火元素（9236）——森林精魄的元素系列补完 ──
+# 土元素（森林精魄 · **史诗**盟友，8 费 5/15 程1 速1，带「留手」）两条机制：
+#   ① 入场时对**敌方单位**分配 3X 点伤害：由近及远，一个目标吃满它当前的生命后把
+#      剩下的分给下一个（见 `_earth_primal_enter`）。X = 本次战斗中我方使用过的盟友数
+#      （含本卡自己 —— `_note_card_played()` 在出牌收尾才累加，这里手动 +1）。
+#   ② **还在手上时**：场上每有 1 个己方盟友，这张卡费用 -2（持续型，取当前数量，
+#      走 cost_of 唯一口 `_earth_primal_discount`；离手立刻恢复原价）。
+#   ⚠️ 与 9218 土元素**共用卡名、不共用 trait** —— 9218 的光环按 trait「土元素」查
+#      （`_refresh_earth_aura`），新卡故意不带这个 trait，免得白借 +3 攻 / -1 伤。
+# 火元素（森林精魄 · **稀有**盟友，2 费 4/6 程1 速1）：
+#   入场时清空**自己**抽牌堆 / 手卡 / 弃牌区里的所有诅咒（`is_curse()`，按卡种判、
+#   不写死 id），每清 1 张对随机一个敌人造成 2 点伤害（见 `_fire_primal_enter`）。
+const EARTH_PRIMAL_ID:= 9235
+const EARTH_PRIMAL_PER_ALLY:= 3   ## 入场伤害 = 3 × X
+const EARTH_PRIMAL_COST_DOWN:= 2  ## 场上每个己方盟友 → 手卡中的本卡 -2 费
+const FIRE_PRIMAL_ID:= 9236
+const FIRE_PRIMAL_DMG:= 2
+
 # ── R494：阵地保卫者（9220） / 结合者（9221）──
 # 阵地保卫者（机械之心 · 史诗盟友）：2 费 3/6 程1 速1。己方带「超负荷」的盟友
 #   **因超负荷自身效果**被破坏时（唯一入口 `_overload_tick`），从抽牌库 → 手牌 → 弃牌区
@@ -1412,7 +1430,7 @@ const MASS_DAEDALUS_BORN_HP:= 2
 const MASS_MNEMOSYNE_ID:= 8075
 const MASS_MNEMOSYNE_DMG:= 7
 const MASS_MNEMOSYNE_DISCOUNT:= 1
-# 「改装者」8076（R282，3 费**普通**盟友 4/9/1/1，机械之心；R522 校对卡库时改正旧注释 3/8）：
+# 「改装者」8076（R282，3 费**普通**盟友 4/10/1/1，机械之心；R523 本体 9→10 血、只改手牌）：
 #   入场时己方**所有盟友**（场上 + 手牌）各获得一次「改造」：生命 +4（不含工事；含它自己）。
 const MODDER_ID:= 8076
 const MODDER_HP:= 4
@@ -4059,6 +4077,7 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 	c -= _magic_core_discount(card, side)
 	c -= _void_lord_discount(card, side)
 	c -= _earth_elemental_discount(card, side)
+	c -= _earth_primal_discount(card, side)   # R523 土元素 9235：场上盟友数 × 2
 	# R271：**手卡内减费**（谟涅摩叙涅「随机变化入手 -2」）——
 	# 判据 = 这张卡此刻还在手牌里，离手即自动恢复原价（与 hand_free 同一条路）。
 	if card != null and state.hand_cost_delta.has(card) and state.hand.has(card):
@@ -4246,6 +4265,139 @@ func _earth_elemental_discount(card: CardData, side:= SIDE_SELF) -> int:
 	if side != SIDE_SELF or card == null or card.id != EARTH_ELEMENTAL_ID:
 		return 0
 	return state.self_ally_plays * EARTH_ELEMENTAL_COST_DOWN
+
+
+func _earth_primal_discount(card: CardData, side:= SIDE_SELF) -> int:
+	## 土元素（9235，R523）：**还在手牌里时**，场上每有 1 个己方盟友 → 这张卡费用 -2。
+	## 与 9218（按「本次战斗用过的盟友**张数**」记账、离手也照算）刻意不同：
+	## 这条卡面写的是「场上每存在一个己方盟友」「持续性，取当前数量」—— 所以是**实时**
+	## 读场上数量，盟友被打掉就立刻涨回去，不需要任何全局计数。
+	## ⚠️ 判据带 `state.hand.has(card)`：只对此刻还在手里的那一份生效（打出 / 弃掉后恢复原价）。
+	if side != SIDE_SELF or card == null or card.id != EARTH_PRIMAL_ID:
+		return 0
+	if not state.hand.has(card):
+		return 0
+	return _ally_count_on_field(SIDE_SELF) * EARTH_PRIMAL_COST_DOWN
+
+
+func _ally_count_on_field(side: String) -> int:
+	## 该方场上**活着的盟友**数量（不含工事 / 场地 —— 场地根本不在 board 上）。
+	## 只给「按场上数量算」的卡用（当前 = 土元素 9235 的费用）。
+	var n := 0
+	for cell: Vector2i in state.board:
+		var q: Placement = state.board[cell]
+		if q != null and q.owner == side and q.health > 0 \
+				and q.card != null and q.card.kind == "盟友":
+			n += 1
+	return n
+
+
+func _earth_primal_enter(p: Placement) -> void :
+	## 「土元素」9235（R523，8 费**史诗**盟友 5/15/1/1，带「留手」）：
+	##   入场时，对**敌方单位**分配 3X 点伤害，由近及远；一个目标吃满它当前的生命后
+	##   把剩下的分给下一个（伤害溢出继续分配）。
+	##   X = 本次战斗中我方使用过的盟友数（同名多次使用就多次计数），**含本卡自己**。
+	## ⚠️ X 为什么要 +1：`_note_card_played()` 在 `play_from_hand` **收尾**才累加，走到这里
+	##   时本卡还没记上；不 +1 的话「第一个盟友就是土元素」会打出 0 伤害。
+	## ⚠️ 池子按**分配量**扣，不按实际落地量扣：目标有减伤时只是它自己更耐打，漏出来的
+	##   点数不会再分给下一个（否则同一笔伤害会被减伤「复制」一份，AOE 总量凭空变多）。
+	## ⚠️ 只打**场上的敌方单位**，不直击敌方 HP（与激光扫射 9172 / 风妖精 6042 同口径）。
+	var here: Vector2i = _cell_of(p)
+	var x: int = state.self_ally_plays + 1
+	var pool: int = EARTH_PRIMAL_PER_ALLY * x
+	var rest: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var q: Placement = state.board[cell]
+		if q != null and q.owner != SIDE_SELF and q.health > 0:
+			rest.append(cell)
+	if rest.is_empty():
+		_log("土元素：本次战斗用过 %d 张盟友 → %d 点伤害，场上没有敌方单位（落空）" % [x, pool])
+		action.emit("earth_primal", {"cell": here, "x": x, "total": pool,
+				"hits": 0, "left": pool})
+		return
+	# 由近及远；距离相同按格子序 —— 回放 / 同种子必须逐帧一致（与 `laser_sweep` 同一条纪律）。
+	var ordered: Array[Vector2i] = []
+	while not rest.is_empty():
+		var best := 0
+		for i in range(1, rest.size()):
+			var d_new: int = manhattan(rest[i], here)
+			var d_old: int = manhattan(rest[best], here)
+			if d_new < d_old or (d_new == d_old and rest[i] < rest[best]):
+				best = i
+		ordered.append(rest[best])
+		rest.remove_at(best)
+	var left: int = pool
+	var hits := 0
+	var seq := 0
+	for cell: Vector2i in ordered:
+		if left <= 0:
+			break
+		var q: Placement = state.board.get(cell, null)
+		if q == null or q.health <= 0:
+			continue
+		var chunk: int = mini(left, q.health)
+		_hit_unit(q, chunk, "土元素", true, false, seq)
+		seq += 1
+		hits += 1
+		left -= chunk
+	_destroy_dead()
+	_log("土元素：本次战斗用过 %d 张盟友 → 分配 %d 点伤害（%d 个目标，剩 %d）"
+			% [x, pool, hits, left])
+	action.emit("earth_primal", {"cell": here, "x": x, "total": pool,
+			"hits": hits, "left": left})
+
+
+func _fire_primal_enter(p: Placement) -> void :
+	## 「火元素」9236（R523，2 费**稀有**盟友 4/6/1/1）：
+	##   入场时清空**自己**的抽牌堆 / 手卡 / 弃牌区里的**所有诅咒**，每清 1 张 →
+	##   对随机一个敌人造成 2 点伤害。
+	## ⚠️ 诅咒按 `CardData.is_curse()`（kind == "诅咒"）判，不写死 id —— 以后加新诅咒自动吃到。
+	## ⚠️ 三个区域都只动**自己的**：敌方往我们这边塞的诅咒是「我们的」，照清；
+	##   敌方自己手里的诅咒不碰（卡面写的是「你的」）。
+	## ⚠️ 随机目标**每次重新捞一遍活着的敌人**：上一张把某只打死之后，它不该再被抽中。
+	var purged := 0
+	var kept_deck: Array[CardData] = []
+	for c: CardData in state.deck:
+		if c != null and c.is_curse():
+			purged += 1
+		else:
+			kept_deck.append(c)
+	state.deck = kept_deck
+	var kept_hand: Array[CardData] = []
+	for c: CardData in state.hand:
+		if c != null and c.is_curse():
+			purged += 1
+		else:
+			kept_hand.append(c)
+	state.hand = kept_hand
+	var kept_discard: Array[CardData] = []
+	for c: CardData in state.discard:
+		if c != null and c.is_curse():
+			purged += 1
+		else:
+			kept_discard.append(c)
+	state.discard = kept_discard
+	var dealt := 0
+	for i in purged:
+		var alive: Array[Vector2i] = []
+		for cell: Vector2i in state.board:
+			var q: Placement = state.board[cell]
+			if q != null and q.owner != SIDE_SELF and q.health > 0:
+				alive.append(cell)
+		if alive.is_empty():
+			break
+		alive.sort()
+		var tgt: Placement = state.board.get(alive[rng.randi_range(0, alive.size() - 1)], null)
+		if tgt == null or tgt.health <= 0:
+			continue
+		_hit_unit(tgt, FIRE_PRIMAL_DMG, "火元素", true, false, dealt)
+		dealt += 1
+		if tgt.health <= 0:
+			_destroy_dead()
+	_log("火元素：清除 %d 张诅咒 → 对随机敌人造成 %d 次 %d 点伤害"
+			% [purged, dealt, FIRE_PRIMAL_DMG])
+	action.emit("fire_primal", {"cell": _cell_of(p), "purged": purged,
+			"hits": dealt, "dmg": FIRE_PRIMAL_DMG})
 
 
 func _mark_spell_enemy_hit() -> void :
@@ -4971,7 +5123,11 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	if card.id == MASS_DAEDALUS_ID:
 		_mass_daedalus_enter(p)     # R271 量产型代达罗斯：入场选一张手卡变炮击
 	if card.id == MODDER_ID:
-		_modder_enter(p)          # R282 改装者：入场全体己方盟友（场上+手牌）改造 +4 生命
+		_modder_enter(p)          # R282 改装者：入场**手牌**盟友改造 +4 生命（R523 不再改场上）
+	if card.id == EARTH_PRIMAL_ID:
+		_earth_primal_enter(p)    # R523 土元素：3X 伤害由近及远分配（X = 本场用过的盟友数）
+	if card.id == FIRE_PRIMAL_ID:
+		_fire_primal_enter(p)     # R523 火元素：清空自己的诅咒，每张 → 随机敌人 2 伤
 	if card.id == OUT_OF_CONTROL_FORT_ID:
 		_out_of_control_fort_enter(p)   # R288 失控要塞：每变化过一张牌 → 随机释放一张技能卡（R404）
 	if card.id == CLUSTER_TURRET_ID:
@@ -5085,23 +5241,18 @@ func _daedalus_enter(p: Placement) -> void :
 
 
 func _modder_enter(p: Placement) -> void :
-	## 「改装者」（8076，R282，机械之心 3 费**普通**盟友 4/9/1/1）：
-	##   入场时：**其他**己方盟友（场上 + 手牌）获得一次「改造」：生命 +4（不含工事）。
-	##   ⚠️ R405（用户口径「不应该可以改造自己」）：**它自己不吃这一层** —— 改造者改不了改造者。
-	##      场上的自己靠 `q != p` 排除（引用比较，`_cell_of()` 万一取不到也不至于失效）。
-	##   * **场上**盟友走 `_field_upgrade_grant()` 唯一口（场上改造离场即消失，与「升级」同口径）；
-	##     末尾自动 `_on_unit_upgraded()` → 被改的榴弹击手 +1 攻程、机器鸟抽牌照常触发。
+	## 「改装者」（8076，R282；**R523 削弱：只改手牌 + 本体 10 血**，机械之心 3 费**普通**盟友 4/10/1/1）：
+	##   入场时：**手牌中的**盟友各获得一次「改造」：生命 +4（不含工事）。
+	##   ⚠️ R523（用户口径「不再改造场上，依然改造手牌」）：**场上盟友一律不动**。
+	##      旧实现在这里扫 `state.board` 走 `_field_upgrade_grant()` —— 那一段已整段删掉，
+	##      连 `field_got` 计数也一起去掉；想改回来必须先确认，别再凭「改造者当然改全场」
+	##      的直觉补回去。连带：`modder_enter` 事件的 `field` 键也删了（没有消费方）。
+	##   ⚠️ R405（「不应该可以改造自己」）仍然成立：它自己不在手牌里，天然吃不到这一层。
 	##   * **手牌**盟友烤进副本（`from_dict` 复制 + 原位替换），生命 +4 并记一层 `upgrade_stacks`
 	##     （R209：层数随身带，上场由 `FieldState.place()` 折算成 HP；本场战斗内保留）。
 	##   * 只认「盟友」（kind == "盟友"），不认工事（用户原话「盟友」）。
 	##   * 改造走唯一口 → 素体 / 战斗骨骼等卡面改造奖励照常生效。
-	## ⚠️ 场上盟友改的是 `p.card`（from_dict 副本），手牌同理 —— 都污染不到卡库。
-	var field_got := 0
-	for cell: Vector2i in state.board:
-		var q: Placement = state.board[cell]
-		if q != null and q != p and q.owner == SIDE_SELF and q.card.kind == "盟友":
-			_field_upgrade_grant(q, 0, MODDER_HP, "改装者")
-			field_got += 1
+	## ⚠️ 手牌改的是副本 —— 污染不到卡库。
 	var hand_got := 0
 	var hand_names: Array[String] = []
 	for i in state.hand.size():
@@ -5116,8 +5267,8 @@ func _modder_enter(p: Placement) -> void :
 		state.hand[i] = up
 		hand_got += 1
 		hand_names.append("%s %d血" % [c.card_name, up.health])
-	_log("改装者：场上 %d 个盟友 / 手牌 %d 个盟友各获得改造（生命 +%d）" % [field_got, hand_got, MODDER_HP])
-	action.emit("modder_enter", {"field": field_got, "hand": hand_got, "hp": MODDER_HP})
+	_log("%s：手牌 %d 个盟友各获得改造（生命 +%d）" % [p.card.card_name, hand_got, MODDER_HP])
+	action.emit("modder_enter", {"hand": hand_got, "hp": MODDER_HP})
 	_inspire_tick()   # R300 激发：改装者入场一次改全体 → 只算一次
 
 func _cannon_mech_enter(p: Placement) -> void :
