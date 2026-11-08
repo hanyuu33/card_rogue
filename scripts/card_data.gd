@@ -79,7 +79,7 @@ const AFFIX_DEFS: Dictionary = {
 ##   * `col`   附魔种类色：标记描边环 / 左栏文字 / 商店悬停描边共用
 const ENCHANT_DEFS: Dictionary = {
 	"costdown": {"label": "费用 -1", "icon": "shop_icon_costdown", "col": "6db2f0",
-			"desc": "这张卡的打出费用永久降低 1 点（最低 0）。"},
+			"desc": "这张卡的打出费用一次性降低 1 点（最低 0），之后一直保持；同一张卡不能重复附魔。"},
 	"damage": {"label": "伤害 +10", "icon": "shop_icon_damage", "col": "f08a5a",
 			"desc": "这张技能卡造成的伤害 +10。"},
 	"dimension": {"label": "次元之力", "icon": "shop_icon_dimension", "col": "c08cf0",

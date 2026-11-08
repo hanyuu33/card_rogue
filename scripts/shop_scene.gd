@@ -60,7 +60,7 @@ const ROW3_ITEM_MAX_W := 250.0 # 服务商品收窄，说明改到底部整宽�
 const ENCHANTS := [
 	# ⚠️ 这里的 `name` 只是**冗余副本**，绘制一律走 `_ench_name()`（真源 = `CardData.ENCHANT_DEFS`）；
 	# smoke 会逐条比对两处文案，分叉立刻红（R240）。
-	{"id": "costdown", "name": "费用 -1", "desc": "每次战斗初次使用费用 -1（只能选费用 > 1 且非 X 费的卡）",
+	{"id": "costdown", "name": "费用 -1", "desc": "一次性降低 1 点费用，之后一直保持（只能选费用 > 1 且非 X 费的卡）",
 		"price": 50, "icon": "shop_icon_costdown"},
 	{"id": "damage", "name": "伤害 +10", "desc": "这张技能卡造成的伤害 +10（只能选能直接造成伤害的技能卡）",
 		"price": 60, "icon": "shop_icon_damage"},
