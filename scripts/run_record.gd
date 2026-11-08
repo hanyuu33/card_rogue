@@ -138,6 +138,23 @@ static func finish(result: String, allow_fallback := false) -> void:
 	_delete_pending()
 
 
+static func peek_elapsed() -> int:
+	## R530：**当前这一局已经打了多久**（秒）—— 通关结算界面的「花费时间」。
+	## 与 `finish()` 里算 `secs` 的那一行同一个公式：
+	##   `pending.elapsed`（中断之前各段之和）+ `now - start_unix`（本次进程这一段）。
+	## 所以「关掉游戏的那几个小时」不进去 —— `resume()` 会把 `start_unix` 重置成
+	## 续档那一刻（见 `_revive_interrupted()`）。
+	## pending 不存在（单关 / 兜底路径）→ 返回 0，界面显示 `--`。
+	var p := _read_pending()
+	if p.is_empty():
+		return 0
+	var now := Time.get_unix_time_from_system()
+	var start := float(p.get("start_unix", now))
+	if start <= 0.0:
+		start = now
+	return maxi(0, int(p.get("elapsed", 0)) + maxi(0, int(now - start)))
+
+
 static func snapshot() -> Dictionary:
 	## 一局的**最终状态快照**（记录详情用）。字段都可选，老记录没有就空着。
 	## 卡组按 `{id, e}` 记（卡 id + 附魔 id）：详情页据此还原卡名与附魔标记，

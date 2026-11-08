@@ -32763,6 +32763,100 @@ func _init() -> void:
 	check(r525_t.over and r525_t.result == "胜利",
 			"R525 通缉令：自毁清场 → 判胜（撑满敌方 12 个回合也是一条路）")
 
+	# ---- R530：通关结算（伤害记账 / 整局胜场 / 文案格式化）----
+	# 用户口径：「造成伤害 = 本局玩家总伤害（所有方式）」「战斗胜利 = 本局胜利数」
+	# 「精英胜利 = 本局精英胜利数」。统计口径分三个静态字段（见 RunState）。
+	RunState.reset_total_stats()
+	check(RunState.total_damage == 0 and RunState.total_battle_wins == 0
+			and RunState.total_elite_wins == 0 and RunState.run_summary.is_empty(),
+			"R530 结算统计：reset_total_stats() 三项归零、结算快照清空")
+
+	# ① 打敌方单位 → 走 `_hit_unit` 的扣血口，按**实际扣血**记
+	var r529_e := _new_engine([], 30, 30)
+	var r529_p := r529_e.state.place(_card(9931, "结算靶子", "盟友", 1, 0, 40),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	r529_e._hit_unit(r529_p, 7)
+	check(RunState.total_damage == 7,
+			"R530 伤害记账：打敌方单位 7 点 → 总伤害 7（实际 %d）" % RunState.total_damage)
+
+	# ② 溢出伤害只记实际扣掉的血（40 血，先打 7 再打 99 → 一共 40）
+	r529_e._hit_unit(r529_p, 99)
+	check(RunState.total_damage == 40,
+			"R530 伤害记账：溢出按原有血量封顶（40 血挨 7+99 → 只记 40，实际 %d）"
+				% RunState.total_damage)
+
+	# ③ 打自己人不算「造成伤害」
+	# ⚠️ (0, 0) 是**己方 HP 行**（`forbidden_row_for`），place 会拒绝并返回 null
+	#    → 用一个合法的己方格，否则这条断言会「因为打的是 null 而通过」，等于没测。
+	var r529_mine := r529_e.state.place(_card(9932, "自己人", "盟友", 1, 0, 30),
+			Vector2i(1, 3), GameEngine.SIDE_SELF)
+	check(r529_mine != null, "R530 伤害记账：己方靶子要能真的站上场（place 未被拒绝）")
+	r529_e._hit_unit(r529_mine, 5)
+	check(r529_mine == null or r529_mine.health == 25,
+			"R530 伤害记账：己方靶子真的掉了 5 血（剩 %d）"
+				% (-1 if r529_mine == null else r529_mine.health))
+	check(RunState.total_damage == 40,
+			"R530 伤害记账：打己方单位不计入总伤害（实际 %d）" % RunState.total_damage)
+
+	# ④ 单目标技能打敌方单位 —— 走 `_op_deal_damage` 的单位分支，**不经过** `_hit_unit`
+	RunState.reset_total_stats()
+	var r529_e2 := _new_engine([], 30, 30)
+	var r529_p2 := r529_e2.state.place(_card(9933, "技能靶子", "盟友", 1, 0, 20),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	r529_e2._op_deal_damage(GameEngine.SIDE_SELF, 6, r529_p2)
+	check(RunState.total_damage == 6,
+			"R530 伤害记账：单目标技能打敌方单位也记（6 点 → %d）" % RunState.total_damage)
+
+	# ⑤ 直击敌方 HP（场上无单位 → 落到 HP 分支），同样按实际扣血
+	var r529_e3 := _new_engine([], 30, 30)
+	RunState.reset_total_stats()
+	r529_e3.state.hp_opponent = 25
+	r529_e3._op_deal_damage(GameEngine.SIDE_SELF, 9, null)
+	check(RunState.total_damage == 9 and r529_e3.state.hp_opponent == 16,
+			"R530 伤害记账：直击敌方 HP 也记（累计 %d，剩余 %d）"
+				% [RunState.total_damage, r529_e3.state.hp_opponent])
+	# HP 见底不超记（剩 16 打 40 → 只记 16）
+	r529_e3._op_deal_damage(GameEngine.SIDE_SELF, 40, null)
+	check(RunState.total_damage == 25 and r529_e3.state.hp_opponent == 0,
+			"R530 伤害记账：HP 见底不超记（剩 16 打 40 → 总记 25，实际 %d）"
+				% RunState.total_damage)
+
+	# ⑥ 胜场：本层进度与整局累计同步增长；换层只清本层
+	RunState.reset_total_stats()
+	RunState.start_run([], GameLayers.LAYER_DEFAULT)
+	RunState.on_battle_won("battle")
+	RunState.on_battle_won("elite")
+	RunState.on_battle_won("elite")
+	check(RunState.battle_wins == 1 and RunState.elite_wins == 2
+			and RunState.total_battle_wins == 1 and RunState.total_elite_wins == 2,
+			"R530 胜场：本层与整局同步累计（普通 %d/%d，精英 %d/%d）"
+				% [RunState.battle_wins, RunState.total_battle_wins,
+					RunState.elite_wins, RunState.total_elite_wins])
+	RunState.advance_layer(GameLayers.LAYER_TWO)
+	check(RunState.battle_wins == 0 and RunState.elite_wins == 0
+			and RunState.total_battle_wins == 1 and RunState.total_elite_wins == 2,
+			"R530 胜场：换层清「本层进度」，整局累计保留（%d/%d）"
+				% [RunState.total_battle_wins, RunState.total_elite_wins])
+	# Boss 战不入「战斗胜利 / 精英胜利」两行（用户只要这两项）
+	RunState.on_battle_won("boss")
+	check(RunState.total_battle_wins == 1 and RunState.total_elite_wins == 2,
+			"R530 胜场：Boss 战不混进「战斗胜利 / 精英胜利」（%d/%d）"
+				% [RunState.total_battle_wins, RunState.total_elite_wins])
+	RunState.end_run()
+
+	# ⑦ 结算页文案格式化（静态函数，界面与回归共用一份）
+	var r529_rs: Script = load("res://scripts/run_summary_scene.gd")
+	check(r529_rs != null
+			and str(r529_rs.call("_fmt_time", 45)) == "45 秒"
+			and str(r529_rs.call("_fmt_time", 125)) == "2 分 05 秒"
+			and str(r529_rs.call("_fmt_time", 4823)) == "1 小时 20 分",
+			"R530 时间格式：45 秒 / 2 分 05 秒 / 1 小时 20 分")
+	check(str(r529_rs.call("_thousands", 0)) == "0"
+			and str(r529_rs.call("_thousands", 999)) == "999"
+			and str(r529_rs.call("_thousands", 12345)) == "12,345"
+			and str(r529_rs.call("_thousands", 1234567)) == "1,234,567",
+			"R530 千分位：12345 → 12,345 / 1234567 → 1,234,567")
+
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
 	RunState.pending_rewards = []

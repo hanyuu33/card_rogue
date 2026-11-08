@@ -12276,6 +12276,10 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	## 默认 false（技能/效果/陷阱/反伤…）—— 新增伤害路径时不用改这里。
 	## R363：`seq` = **一次效果打多个目标**时的受击序号（0 起）。只影响界面演出节奏
 	## （逐格错开落地），引擎数值 / 日志 / 回放一字不动。默认 -1 = 不参与错峰。
+	# R530：入口防空 —— 调用方拿到 null（`FieldState.place()` 被拒时返回 null）时
+	# 不该炸成 SCRIPT ERROR。这里静默返回 0，与「这一下没落到任何人身上」同义。
+	if p == null:
+		return 0
 	# 「侦察塔」（8032）光环易伤（R120）：攻击范围内的敌人，受到**任何来源**的伤害 +1/层。
 	# ⚠️ 必须放在 `amount <= 0` **之前**：0 攻的侦察塔自己攻击时基础伤害是 0，
 	#    而卡面口径是「自己打也算」—— 光环得先加进去，否则那一下会被直接吞掉。
@@ -12335,6 +12339,11 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	var hp_before_theseus:= p.health   # R496 忒修斯奇械：先记扣血前的值判「跨越」
 	var dmg:= _unit_damage_taken(p, amount, "attack" if is_attack else "spell")
 	p.health -= dmg
+	# R530：结算「造成伤害」记账 —— 打掉敌方**单位**的血。
+	# ⚠️ 必须按**原有血量封顶**：`_unit_damage_taken` 不截断（40 血挨 99 点它照样返回 99），
+	#    多出来的部分由 `_reap` 当「溢出」另行判定 —— 照 dmg 直接记会把这一下算成两份。
+	if p.owner == SIDE_OPPONENT:
+		RunState.note_damage(mini(dmg, hp_before_theseus))
 	_theseus_on_blood(p, hp_before_theseus)
 	# R504 恐惧化身（9230）：打到被标记的敌人身上 → 它本回合力量 -1（可叠加）。
 	# 挂在这两个「扣血落地口」上（这里 + `_op_deal_damage`），与侦察塔光环同一条纪律。
@@ -13611,6 +13620,11 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 		var amount2:= _unit_damage_taken(p, _apply_rapid_marks(p,
 				_apply_scout_aura(p, amount)), "spell")
 		p.health -= amount2
+		# R530：结算「造成伤害」—— 单目标技能打敌方单位**不走** `_hit_unit`
+		# （它自己扣血，见本文件「两个扣血落地口」那条注释），所以这里必须单独记一次，
+		# 否则技能流玩家的伤害只统计到一半。同样按**原有血量封顶**。
+		if p.owner == SIDE_OPPONENT:
+			RunState.note_damage(mini(amount2, hp_before_theseus))
 		_theseus_on_blood(p, hp_before_theseus)
 		_fear_incarnate_tick(p, amount2)   # R504 恐惧化身：单目标技能这条落地口也要过
 		_fear_harvest_tick(p, amount2)     # R505 恐惧收割：单目标技能这条也要计
@@ -13740,7 +13754,10 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 	if amount > 0:
 		# R490：真扣掉敌方 HP 才算一段 —— ∞ 血那条已经 return 了，不记。
 		_mark_spell_damage()
+	var hp_before_op:= state.hp_opponent
 	state.hp_opponent = maxi(0, state.hp_opponent - amount)
+	# R530：结算「造成伤害」—— 只算真正扣掉的血（HP 见底时不会超记）。
+	RunState.note_damage(hp_before_op - state.hp_opponent)
 	_last_hp_damage = amount      # R145：敌方 HP 没有减伤链，实际 = 账面
 	var left2:= state.hp_opponent
 	_log("敌方 HP -%d（%s），剩余 %d" % [amount, source, left2])
@@ -16009,7 +16026,9 @@ func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	# R145：`dealt` = 真正落到 HP 上的伤害（减伤 / 挡下之后）。0 = 被完全挡下。
 	var dealt:= power
 	if side == SIDE_SELF:
+		var hp_before_atk:= state.hp_opponent
 		state.hp_opponent = maxi(0, state.hp_opponent - power)
+		RunState.note_damage(hp_before_atk - state.hp_opponent)   # R530
 		_log("%s 攻击敌方 HP（从后排 %s）：敌方 -%d，剩余 %d" % [
 			attacker.card.card_name, dst, power, state.hp_opponent])
 	else:

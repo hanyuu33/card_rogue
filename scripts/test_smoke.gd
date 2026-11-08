@@ -481,6 +481,25 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_r444_affix_index],
+		# R530（用户口径）：最后一层 Boss 打完 → **不弹「胜利」小面板**，进结算界面。
+		# 这里验两件事：① 五条数据 / 几何都摆得出来（真渲染，_draw 的错误只有烟测抓得到）；
+		# ② 点「确定」走对出口 —— 清掉本局 + 回标题。
+		["res://scenes/run_summary.tscn", func():
+				_reset()
+				RunState.run_active = true
+				RunState.run_finished = true
+				RunState.player_class = PlayerClass.ROGUE
+				RunState.difficulty = 3
+				RunState.run_summary = {
+					"class": PlayerClass.ROGUE,
+					"difficulty": 3,
+					"layer": GameLayers.LAYER_THREE,
+					"damage": 9876,
+					"seconds": 3725,
+					"battles": 17,
+					"elites": 4,
+				},
+			_check_run_summary],
 	]
 	print("SMOKE === 开始（%d 项场景用例）===" % _plan.size())
 	_next()
@@ -5295,6 +5314,58 @@ func _check_r367_defeat_record(scene: Node) -> void:
 		_smoke_fail("R367 失败记录：失败记录的生命应记 0（现在 %d）" % int(last.get("hp", -1)))
 		return
 	print("  [smoke] R367 失败记录：败北立刻留一条「失败」（幂等，不会写两条）")
+func _check_run_summary(scene: Variant) -> void:
+	## R530：通关结算页。
+	## ① 五行数据齐全、行高与按钮都落在主框内（几何是绘制与命中的同源口）；
+	## ② 数字行拿到的是**目标值**（动画只影响显示，不改数据）；
+	## ③ 点「确定」= 结束本局 + 回标题（用 `route_fn` 截获，不真换场景）。
+	var rows: Array = scene.get("_rows")
+	if rows.size() != 5:
+		_smoke_fail("R530 结算页：应有 5 行数据，实际 %d" % rows.size())
+		return
+	var labels: Array[String] = []
+	for r: Dictionary in rows:
+		labels.append(str(r.get("label", "")))
+	if labels != ["使用角色", "造成伤害", "花费时间", "战斗胜利", "精英胜利"]:
+		_smoke_fail("R530 结算页：行标题不对（%s）" % str(labels))
+		return
+	if str(rows[0].get("text", "")) != PlayerClass.ROGUE:
+		_smoke_fail("R530 结算页：使用角色应为「%s」，实际「%s」"
+				% [PlayerClass.ROGUE, str(rows[0].get("text", ""))])
+		return
+	if int(rows[1].get("num", -1)) != 9876 or int(rows[3].get("num", -1)) != 17 \
+			or int(rows[4].get("num", -1)) != 4:
+		_smoke_fail("R530 结算页：伤害 / 战斗胜利 / 精英胜利 数值不对（%d / %d / %d）"
+				% [int(rows[1].get("num", -1)), int(rows[3].get("num", -1)),
+					int(rows[4].get("num", -1))])
+		return
+	# 几何：主框 / 五行 / 按钮都在 1280×720 舞台内，且最后一行不压按钮
+	var pr: Rect2 = scene.call("_panel_rect")
+	var br: Rect2 = scene.call("_btn_rect")
+	var stage := Rect2(Vector2.ZERO, Vector2(UiTheme.STAGE_W, UiTheme.STAGE_H))
+	if not stage.encloses(pr) or not pr.encloses(br):
+		_smoke_fail("R530 结算页：主框或按钮越出舞台（pr=%s br=%s）" % [str(pr), str(br)])
+		return
+	var last_y: float = scene.call("_row_y", rows.size() - 1)
+	if last_y + 24.0 > br.position.y:
+		_smoke_fail("R530 结算页：最后一行压到按钮（行底 %.0f / 按钮顶 %.0f）"
+				% [last_y + 24.0, br.position.y])
+		return
+	# 出口：确定 → 清本局 → 回标题
+	var routed: Array = []
+	scene.set("route_fn", func(t): routed.append(t))
+	scene.set("_t", 9.0)                 # 把动画推到底（按钮要在可点状态）
+	scene.call("_on_confirm")
+	if routed != ["res://scenes/title.tscn"]:
+		_smoke_fail("R530 结算页：确定应回标题，实际去了 %s" % str(routed))
+		return
+	if RunState.run_active:
+		_smoke_fail("R530 结算页：确定之后本局应已结束（run_active 仍为真）")
+		return
+	scene.set("route_fn", Callable())
+	print("SMOKE OK R530 通关结算页：五行数据 / 几何 / 确定按钮出口")
+
+
 func _check_r444_affix_index(_scene: Variant) -> void:
 	## R444：字段索引浮窗的几何（`CardFace.affix_index_rects()`）。
 	## 断言只认四条硬规则，不测像素：①一块浮窗对一个字段；②单字段靠右

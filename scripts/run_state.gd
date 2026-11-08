@@ -159,8 +159,18 @@ static var battle_log: Array = []            # 本局战斗记录（与持久化
 static var map_strokes: Array = []
 static var map_flags: Array = []
 static var player_class: String = "森林精魄"   # 本局所选角色（PlayerClass.ids() 之一）
-static var battle_wins := 0                   # 本局已胜利的普通战斗数（前 2 场简单）
-static var elite_wins := 0                   # 本局已胜利的精英战斗数（第 1 场简单，第 2 场起困难）
+static var battle_wins := 0                   # 本层已胜利的普通战斗数（前 2 场简单）
+static var elite_wins := 0                   # 本层已胜利的精英战斗数（第 1 场简单，第 2 场起困难）
+# R530 通关结算：上面两个是**本层进度**（换层清零，用来切简单/困难档），
+# 结算界面要的是**整局总数** —— 另开三个只增不清的累计量。
+static var total_battle_wins := 0             # 本局累计普通战斗胜场（换层不清）
+static var total_elite_wins := 0              # 本局累计精英战斗胜场（换层不清）
+## 本局玩家造成的**总伤害**（所有来源：单位 / 技能 / 效果 / 直击 HP）。
+## 口径 = 实际扣掉的血（护盾、减伤之后），不是账面攻击力 —— 记账口在引擎的三个落地处。
+static var total_damage := 0
+## 通关结算快照（`battle_scene` 在最后一层 Boss 打完时填，结算场景读）。
+## 独立放一份：`end_run()` 之后结算页还得能读（页面自己先复制，别指望局状态还在）。
+static var run_summary: Dictionary = {}
 static var used_levels: Array = []           # 本局已进入的关卡名（尽量不重复）
 static var boss_pick: Dictionary = {}       # 本局摇定的本层 Boss 关卡（R63：同层可能有多个 Boss；
 									# 开局摇一次，地图名牌与实际进入读同一份）
@@ -962,6 +972,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	sync_fatigue()                # R223 难度 5：开局巧克力满 → 先入/出一次（<6 才生效）
 	battle_wins = 0
 	elite_wins = 0
+	reset_run_stats()             # R530：新的一局 → 整局统计归零
 	used_levels = []
 	map_strokes = []              # R177：新开一局清掉上一局的玩家标记
 	map_flags = []
@@ -1057,6 +1068,7 @@ static func end_run(clear_save: bool = true) -> void:
 	reward_type = "normal"
 	battle_wins = 0
 	elite_wins = 0
+	reset_run_stats()           # R530：整局统计不跨局
 	delayed_cards = []          # R473：延迟发卡的挂单不跨局（一局结束就作废）
 	sacrament_node = -1         # R473：圣餐的「已结算房间」跟着一局走
 	used_levels = []
@@ -1684,6 +1696,82 @@ static func queue_deck_delete_reward(count: int = 1) -> int:
 	return pending_rewards.size() - 1
 
 
+# ---------------------------------------------------------------- R531 精英追加奖励
+## 用户口径（R531）：精英战原来**固定**送一次删卡，改成按概率摇一项「追加奖励」。
+## 权重合计必须 = 100（`test_engine` 有一条断言守着）；数组顺序即判定顺序，别随手调。
+const BONUS_HP := "maxhp"
+const BONUS_CARDS := "cards"
+const BONUS_DELETE := "delete"
+const BONUS_GOLD := "gold"
+const BONUS_RELIC := "relic"
+const BONUS_HP_GAIN := 7          ## 25%：最大生命 +7（当前生命同时 +7 = 顺便回血）
+const BONUS_GOLD_GAIN := 50       ## 20%：额外 50 金币
+const BONUS_RULES: Array = [
+	{"type": BONUS_HP, "weight": 25},
+	{"type": BONUS_CARDS, "weight": 30},
+	{"type": BONUS_DELETE, "weight": 15},
+	{"type": BONUS_GOLD, "weight": 20},
+	{"type": BONUS_RELIC, "weight": 10},
+]
+
+
+static func roll_elite_bonus() -> String:
+	## 摇一个追加奖励类型（权重见 `BONUS_RULES`）。返回类型常量串。
+	## ⚠️ 只消耗**一个**随机数 —— 别在这里顺手多摇一次，同一 seed 下后续的
+	##    卡池 / 道具顺序会整体错位（录像复现会跟着坏）。
+	var r := run_rng.randi() % 100
+	var acc := 0
+	for rule: Dictionary in BONUS_RULES:
+		acc += int(rule.get("weight", 0))
+		if r < acc:
+			return str(rule.get("type", ""))
+	return str((BONUS_RULES[0] as Dictionary).get("type", ""))
+
+
+static func queue_elite_bonus(force := "") -> int:
+	## 精英胜利后的**追加奖励**入队，返回条目下标（-1 = 没入队）。
+	## `force` 非空时跳过摇奖（测试 / 出图用：maxhp / cards / delete / gold / relic）。
+	##
+	## 实现口径：**不新造奖励种类** —— 一律走原有通道（卡组三选一 / 删卡 / 道具），
+	## 只在条目上打 `bonus = true`。奖励页据此画「追加奖励」分隔带，
+	## 领取 / 放弃的行为与普通奖励完全一致（不用再教玩家怎么点一遍）。
+	## ⚠️ 追加奖励**最后入队** → 天然排在奖励列表末尾（用户口径）。
+	var kind := force if force != "" else roll_elite_bonus()
+	var idx := -1
+	match kind:
+		BONUS_HP:
+			_drop_settled_batch()
+			pending_rewards.append({"kind": BONUS_HP, "hp": BONUS_HP_GAIN,
+					"state": REWARD_PENDING})
+			idx = pending_rewards.size() - 1
+		BONUS_GOLD:
+			_drop_settled_batch()
+			pending_rewards.append({"kind": BONUS_GOLD, "gold": BONUS_GOLD_GAIN,
+					"state": REWARD_PENDING})
+			idx = pending_rewards.size() - 1
+		BONUS_CARDS:
+			idx = queue_card_reward("normal")
+		BONUS_DELETE:
+			idx = queue_deck_delete_reward(1)
+		BONUS_RELIC:
+			# ⚠️ 不能走 `offer_relic_drop()` —— 它写的是**单值** `pending_relic_drop`
+			#    （精英本身可能已经掉了一件），会把主掉落挤掉。这里只摇、只入队。
+			var rid := roll_reward_relic(false, [], false)
+			if rid > 0:
+				queue_relic_reward(rid)
+				idx = pending_rewards.size() - 1
+			else:
+				# 道具池已空（全都拥有 / 被跳过）→ 退化成一笔金币，
+				# 别让玩家「摇到 10% 却什么都没拿到」。
+				_drop_settled_batch()
+				pending_rewards.append({"kind": BONUS_GOLD, "gold": BONUS_GOLD_GAIN,
+						"state": REWARD_PENDING})
+				idx = pending_rewards.size() - 1
+	if idx >= 0 and idx < pending_rewards.size():
+		(pending_rewards[idx] as Dictionary)["bonus"] = true
+	return idx
+
+
 static func can_reroll_reward() -> bool:
 	## 火柴（6051）：「刷新」按钮能不能点的**唯一判据口**（持有 + 还有次数）。
 	## 按钮显隐 / 置灰 / 真正刷新都问这里，别在界面里各写一份 `match_charge > 0`。
@@ -1830,6 +1918,15 @@ static func claim_pending_reward(idx: int) -> bool:
 	# 现在一律**拒绝**：删卡只有一个口 `claim_deck_delete_reward(idx, deck_index)`，
 	# 「删掉卡组第 N 张」与「这条置为已领」在同一次调用里完成。界面走
 	# `RewardPanel._open_entry()` → 卡组视图（R398 的就地删卡）。
+	# R531：追加奖励里两种「直接到账」类型 —— 金币 / 最大生命（上限与当前生命一起涨）。
+	if str(e.get("kind", "")) == BONUS_GOLD:
+		gain_gold(int(e.get("gold", BONUS_GOLD_GAIN)))
+		e["state"] = REWARD_CLAIMED
+		return true
+	if str(e.get("kind", "")) == BONUS_HP:
+		gain_max_hp(int(e.get("hp", BONUS_HP_GAIN)))
+		e["state"] = REWARD_CLAIMED
+		return true
 	if str(e.get("kind", "")) == "deck_delete":
 		return false
 	if str(e.get("kind", "")) != "relic":
@@ -1857,6 +1954,10 @@ static func skip_pending_reward(idx: int) -> bool:
 	if str(e.get("kind", "")) == "cards" and relics.has(DARK_POWER_RELIC_ID):
 		return false
 	if str(e.get("kind", "")) == "deck_delete":
+		e["state"] = REWARD_SKIPPED
+		return true
+	# R531：金币 / 最大生命也可以放弃（点了就置灰，什么都不发生）。
+	if str(e.get("kind", "")) == BONUS_GOLD or str(e.get("kind", "")) == BONUS_HP:
 		e["state"] = REWARD_SKIPPED
 		return true
 	if str(e.get("kind", "")) == "relic":
@@ -2670,6 +2771,27 @@ static func boss_level() -> Dictionary:
 
 # ---- 动态难度（战斗节点不预写关卡，进入时按进度决定） ----
 
+static func note_damage(amount: int) -> void:
+	## R530：**玩家造成的伤害记账**（结算界面的「造成伤害」行）。
+	## 引擎在三个落地口调（单位扣血 / 效果直击敌方 HP / 普攻直击敌方 HP）——
+	## 三处覆盖了所有伤害来源，加新路径时别绕开它们。
+	## 口径是**实际扣掉的血**：护盾挡掉、减伤削掉的部分不算，「打 20 只掉 8」记 8。
+	if amount > 0:
+		total_damage += amount
+
+
+static func reset_run_stats() -> void:
+	## R530：开新局 / 结束一局 → 整局统计归零（含结算快照）。
+	reset_total_stats()
+
+
+static func reset_total_stats() -> void:
+	total_damage = 0
+	total_battle_wins = 0
+	total_elite_wins = 0
+	run_summary = {}
+
+
 static func on_battle_won(node_type: String) -> void:
 	## 战斗胜利后累计同类胜场：决定后续难度（前 2 场简单、之后困难）。
 	## 「事件节点遭遇怪物」（node_type = "event"）**同样按普通战斗计数**（R47 修复）：
@@ -2677,9 +2799,11 @@ static func on_battle_won(node_type: String) -> void:
 	## 玩家可以靠怪物事件反复刷简单战斗。
 	if node_type == "battle" or node_type == "event":
 		battle_wins += 1
+		total_battle_wins += 1      # R530：整局累计（结算用，不随换层清）
 		ProfileData.bump(ProfileData.K_BATTLE_WIN)   # R346：成就统计（累计胜场）
 	elif node_type == "elite":
 		elite_wins += 1
+		total_elite_wins += 1       # R530
 		ProfileData.bump(ProfileData.K_ELITE_WIN)    # R346
 	elif node_type == "boss":
 		mark_boss_beaten()      # R339：本层 Boss 记成「已打」→ 这一层不再入夜

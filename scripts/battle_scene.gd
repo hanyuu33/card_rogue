@@ -725,6 +725,9 @@ var _over_btn_title: Button
 var _lose_recorded := false
 var _run_boss_win := false      # run 结算：本场是否为 Boss 通关（决定按钮路由）
 var _run_next_layer := 0        # Boss 通关后要进入的下一层（0 = 没有下一层 → 结束 run）
+## R530：本场是**整局通关**（最后一层 Boss 打完）→ 不弹「胜利」小面板，
+## 末尾改跳 `run_summary.tscn` 结算界面。判据只有 `_run_boss_win and _run_next_layer <= 0`。
+var _summary_pending := false
 ## R339：**进战斗之前**的一份局状态快照（战斗检查点写它，而不是写当下状态）。
 ## 为什么：`_load_entry_level()` → `start_game()` 会跑第 1 个我方回合，
 ## 而 lucky 7 的跨战斗计数就在那一步 +1。检查点若在这之后写盘，
@@ -1271,6 +1274,19 @@ func _ready() -> void:
 		status_text = "鸭梨：受到 5 点伤害 → 最大生命 %d → %d（当前生命不回复）" % [
 				pear_before, engine.state.max_hp_self]
 		_shot_t0 = _now()
+		queue_redraw()
+	if "--runclear" in args and engine != null:
+		# R530 出图：**第三层 Boss 通关** → 应当跳过「胜 利」小面板，直接切到结算界面。
+		# 用法：`battle.tscn -- --screenshot --runclear --shotframe 9999`
+		# （`--shotframe 9999` = 战斗侧不抓帧，让结算页自己的 1.6s 定时器去拍）。
+		load_level(GameLevels.boss_level(GameLayers.LAYER_THREE))
+		RunState.run_active = true
+		RunState.current_layer = GameLayers.LAYER_THREE
+		RunState.pending_node = {"type": "boss"}
+		RunState.total_damage = 13847
+		RunState.total_battle_wins = 24
+		RunState.total_elite_wins = 5
+		engine._finish("胜利", "演示：第三层 Boss 通关")
 		queue_redraw()
 	if "--bossnext" in args and engine != null:
 		# 演示：第一层 Boss 通关 → 结算面板出现「进入第二层」按钮（截图验证用；
@@ -7567,14 +7583,16 @@ func _show_over(win: bool) -> void:
 			for lc: Dictionary in late_cards:
 				UiCardGrant.grant(int(lc.get("id", -1)), _deck_pile_center(), 320)
 				sfx.play("draw")
-			# R390（用户口径）：**精英战**额外给一次删卡 —— 和月亮（9180）走同一条
-			# `deck_delete` 通道，所以它同样进奖励列表、同样受 R340「一批没处理完
-			# 不许换场景」约束。放在卡牌组之后：同一批里它排在卡牌下面，
-			# 「先挑卡、再删卡」的顺序和结算面板从上到下的阅读顺序一致。
-			# R392：再看一次关卡 tier，Boss 即使房间数据误标成 elite 也不发这份精英删卡。
+			# R531（用户口径）：精英战**不再固定送删卡**，改成按概率摇一项「追加奖励」：
+			#   25% 最大生命 +7（同时回血）/ 30% 额外一组卡牌 / 15% 删一张卡 /
+			#   20% 额外 50 金币 / 10% 道具。概率表与落地都在 `RunState.queue_elite_bonus()`
+			#   （唯一口，这里只负责「精英 + 非 Boss」这一个条件）。
+			# 放在卡牌组之后：追加奖励**最后入队** → 奖励页里排在列表末尾，
+			# 并有专门的「追加奖励」分隔带（`RewardPanel._draw_bonus_head`）。
+			# R392：再看一次关卡 tier，Boss 即使房间数据误标成 elite 也不发这份追加奖励。
 			# 月亮 9180 自己的 deck_delete 在上面独立结算，不受这条限制。
 			if node_type == "elite" and not _run_boss_win:
-				RunState.queue_deck_delete_reward(1)
+				RunState.queue_elite_bonus()
 			# R390（用户口径）：**Boss** 额外一组「必定史诗」的卡牌奖励。
 			# 走独立的 "epic" 档（权重只留史诗），和上面那组 boss 档是两组
 			# **各自独立**的三选一 —— 玩家可以各选一张，也可以只选一组。
@@ -7615,6 +7633,20 @@ func _show_over(win: bool) -> void:
 			_over_btn_level.visible = false
 			_over_btn_title.visible = false
 			if _run_boss_win and _run_next_layer <= 0:
+				# R530：**通关结算快照** —— 角色 / 伤害 / 用时 / 胜场。
+				# ⚠️ 必须在下面 `RunRecord.finish("win")` **之前**取用时：那一步会把
+				#    pending 文件删掉，之后再问 `peek_elapsed()` 就只剩 0 了。
+				RunState.run_summary = {
+					"class": RunState.player_class,
+					"difficulty": RunState.difficulty,
+					"layer": RunState.current_layer,
+					"damage": RunState.total_damage,
+					"seconds": RunRecord.peek_elapsed(),
+					"battles": RunState.total_battle_wins,
+					"elites": RunState.total_elite_wins,
+					"seed": RunState.run_seed,
+				}
+				_summary_pending = true
 				# R346 成就统计：通关 —— 「用该职业通关该难度」。
 				# ⚠️ 必须在 `end_run()` **之前**读 player_class / difficulty：
 				#    它俩会被 end_run 直接复位，读完就没了（顺序反了 = 记成全默认值）。
@@ -7669,6 +7701,13 @@ func _show_over(win: bool) -> void:
 		# 结算面板是米色羊皮卷底：亮金（ACCENT_LIT）在上面发灰，用深一档的金
 		_over_hint.add_theme_color_override("font_color", UiTheme.ACCENT_GOLD)
 		UiToast.toast(story_note, 3200)
+	# R530（用户口径「打通第三层后不要弹出通关提示，而是进入结算界面」）：
+	# 整局通关 → 这张「胜  利」小面板一次都不显示，直接切结算页。
+	# 放在这里（而不是函数开头）是为了让上面那串记账 / 成就 / 剧情解锁 / 胜负音效
+	# 的**副作用**照旧跑完 —— 只是不再画那四个字。
+	if _summary_pending:
+		_goto_scene("res://scenes/run_summary.tscn")
+		return
 	var sb := _over_panel.get_theme_stylebox("panel") as StyleBoxFlat
 	sb.border_color = COL_WIN if win else COL_LOSE
 	_over_title.text = "胜  利" if win else "失  败"
