@@ -15,17 +15,24 @@
 
 ## 9212 枭熊之怒（金 · 枭熊本能）
 
-- image1 = `assets/pics/9214.png`（敌方枭熊形象，只借角色设计，`input_fidelity=low`），
-  改赛璐璐 + 发怒扑击姿态（张嘴嘶吼、耳羽炸开、黄眼发光、前爪挥击）。
-- 裁切 `(0,15,1024,936)` → 448×403；水印在 y≈944 起，裁切底 936 已完全避开，无需修补。
+- 初版（R519p）：image1 = `assets/pics/9214.png`（敌方枭熊形象，只借角色设计），改赛璐璐 +
+  发怒扑击姿态（张嘴嘶吼、耳羽炸开、黄眼发光、前爪挥击）。裁 `(0,15,1024,936)`。
+- **R519q 咆哮版 v2（当前）**：用户反馈「做成枭熊在咆哮的状态，最好有声音特效」。
+  image1 = 初版 `raw/9212_owlbear_fury.png` 只借角色 + 画风（`input_fidelity=low`），
+  重出「仰头张嘴咆哮」，并从喙口放射**加粗高对比青白同心声波环 + 音浪弧 + 速度线**，
+  把「声音」视觉化。第一版咆哮（`9212_owlbear_roar.png`）声波太细、后脚掌贴底、
+  图鉴小卡不明显 → 弃用；第二版（`9212_owlbear_roar_v2.png`）声波加粗、四爪完整、
+  脚掌底 y≈961。裁 `(0,0,1024,921)` 保声波（声波外圈本已贴顶，属放射特效自然效果），
+  水印 y≥955 被裁掉，无需修补。
 
 ## 文件
 
-- `raw/9210_frost_ward.png`、`raw/9212_owlbear_fury.png` 原图
+- `raw/9210_frost_ward.png`、`raw/9212_owlbear_fury.png`（初版扑击）原图
+- `raw/9212_owlbear_roar.png`（咆哮第一版，废稿）、`raw/9212_owlbear_roar_v2.png`（咆哮第二版，采用）原图
 - `processed/9210.png`、`processed/9212.png` 处理中间产物
 - `tools/process_r519p.py` 处理脚本（`patch_from_left` 水平镜像水印修补）
 - `prompts.md` 出图提示词与参数
-- `_review/9210_gallery_1280.png`、`_review/9212_gallery_1280.png` 图鉴验收截图
+- `_review/9210_gallery_1280.png`、`_review/9212_gallery_1280.png`、`_review/9212_roar_v2_gallery_1280.png` 图鉴验收截图
 
 ## 教训
 

@@ -64,3 +64,16 @@ NO card frame, NO border.
 ## 验收
 
 - 图鉴 `--group enemy --card 9210 / 9212`：卡图正常、无黄三角、无水印、属性与效果文本正确。
+
+## R519q · 9212 咆哮版 v2（image1 = 初版扑击图，只借角色+画风，input_fidelity=low）
+
+关键差异（相对初版扑击）：
+- 姿态：`head thrown back, beak wide open toward the top of the frame`（仰头张嘴咆哮）。
+- 声音特效视觉化：`from the wide-open beak radiates several THICK, BOLD pale-cyan-white
+  concentric shockwave arcs and sound-wave rings expanding upward and outward, plus a few sharp
+  jagged speed-lines ... Make the sound-wave arcs THICK and high-contrast so they stay clearly
+  visible even at small card size`。
+- 主体完整：`THE WHOLE CREATURE MUST FIT FULLY INSIDE THE FRAME ... all four paws fully visible
+  with clear margin below the feet and above the ear tufts`。
+- 裁 `(0,0,1024,921)` 保声波；声波外圈贴顶属放射特效自然效果，水印 y≥955 裁掉无需修补。
+- 第一版咆哮（`9212_owlbear_roar.png`）声波太细、后脚掌贴底 → 弃用。
