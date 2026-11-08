@@ -2019,7 +2019,8 @@ static func deck_indices_with_cost(min_cost: int) -> Array[int]:
 	var repo := CardRepo.load_json()
 	for i in deck_ids.size():
 		var c := repo.get_card(int(deck_ids[i]))
-		if c != null and c.cost >= min_cost:
+		# R521：X 费不比任何数大 → 不满足「≥ N 费」
+		if c != null and not c.x_cost and c.cost >= min_cost:
 			out.append(i)
 	return out
 
@@ -2077,7 +2078,7 @@ static func vendor_deck_card(repo: CardRepo, index: int) -> Dictionary:
 		return {"ok": false}
 	var old_id := int(deck_ids[index])
 	var c := repo.get_card(old_id)
-	if c == null or c.cost < MERCHANT_MIN_COST:
+	if c == null or c.x_cost or c.cost < MERCHANT_MIN_COST:
 		return {"ok": false}
 	var old_name := c.card_name
 	if not delete_deck_card(index):

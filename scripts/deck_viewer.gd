@@ -161,8 +161,8 @@ func _merged() -> Array:
 	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ca: CardData = a["card"]
 		var cb: CardData = b["card"]
-		if ca.cost != cb.cost:
-			return ca.cost < cb.cost
+		if ca.cost_sort_key() != cb.cost_sort_key():
+			return ca.cost_sort_key() < cb.cost_sort_key()
 		return ca.id < cb.id)
 	return order
 

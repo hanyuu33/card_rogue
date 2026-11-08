@@ -8084,7 +8084,8 @@ func hand_bonus_ready(card: CardData) -> bool:
 		return state.hand.size() == 1 and state.hand[0] == card
 	if card.id == SHADOW_DEMON_ID:
 		for c: CardData in state.hand:
-			if c.is_spell() and cost_of(c) == 0:
+			# R521：X 费没有固定费用 → 不算「0 费技能」
+			if c.is_spell() and not c.x_cost and cost_of(c) == 0:
 				return true
 		return false
 	if card.id == AETHER_GUARD_ID:
@@ -8102,7 +8103,7 @@ func hand_bonus_text(card: CardData) -> String:
 	if card.id == SHADOW_DEMON_ID:
 		var zero := 0
 		for c: CardData in state.hand:
-			if c.is_spell() and cost_of(c) == 0:
+			if c.is_spell() and not c.x_cost and cost_of(c) == 0:
 				zero += 1
 		return "现在打出：生命 +%d" % (zero * SHADOW_DEMON_HP_PER)
 	if card.id == AETHER_GUARD_ID:
@@ -8391,6 +8392,9 @@ func _fetch_skill_from_deck(mode: int) -> CardData:
 		var dc: CardData = state.deck[i]
 		if dc.kind != "技能":
 			continue
+		# R521：X 费既不等于 0 也不「非 0」→ 两个模式的候选都不收
+		if dc.x_cost:
+			continue
 		if mode == 1 and dc.cost != 0:
 			continue
 		if mode == 2 and dc.cost == 0:
@@ -8426,7 +8430,7 @@ func _shadow_demon_enter(p: Placement) -> void:
 	for c: CardData in state.hand:
 		if c.is_spell():
 			state.turn_card_discount[c] = int(state.turn_card_discount.get(c, 0)) + 1
-			if c.cost == 0:
+			if not c.x_cost and c.cost == 0:
 				zero += 1
 	if zero > 0:
 		p.health += SHADOW_DEMON_HP_PER * zero
@@ -8509,7 +8513,7 @@ func _sleepless_tick(side: String) -> void:
 	if c == null:
 		return
 	var extra := ""
-	if c.cost == 0:
+	if not c.x_cost and c.cost == 0:
 		state.turn_card_discount[c] = int(state.turn_card_discount.get(c, 0)) - 1
 		extra = "，0 费 → 本回合费用 +1"
 	_log("不眠：手里没牌 → 抽 1 张「%s」%s" % [c.card_name, extra])
@@ -8538,7 +8542,7 @@ func _latent_turn_draw(side: String) -> void:
 		return
 	_log("潜伏：回合开始多抽 1 张「%s」" % first.card_name)
 	var second: CardData = null
-	if first.cost == 0:
+	if not first.x_cost and first.cost == 0:
 		second = state.draw()
 		_log("潜伏：0 费 → 再抽 %s" % (("1 张「%s」" % second.card_name) if second != null else "落空"))
 	action.emit("latent", {"card": first, "second": second})
@@ -8719,7 +8723,7 @@ func _fate_reject(side: String) -> String:
 	# ⚠️ 取走一张后**不推进 i**（后面的卡顺移上来）；手牌满了就停 —— 「不超过手牌上限」。
 	while i < state.discard.size() and not state.hand_full():
 		var c: CardData = state.discard[i]
-		if c != null and c.cost <= FATE_CHEAP_MAX:
+		if c != null and not c.x_cost and c.cost <= FATE_CHEAP_MAX:
 			state.discard.remove_at(i)
 			state.hand.append(c)
 			picked.append(c.card_name)
@@ -8741,7 +8745,7 @@ func foresight_options() -> Array[int]:
 		var c: CardData = state.discard[i]
 		if c.id == FORESIGHT_ID:
 			continue   # 预判自己也是 0 费技能卡，但不许选回自己（选完就消失）
-		if c.kind == "技能" and c.cost == 0:
+		if c.kind == "技能" and not c.x_cost and c.cost == 0:
 			out.append(i)
 	return out
 
@@ -10080,7 +10084,8 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			var rp_got := _draw_many(RAPID_DRAW)
 			var rp_zero := 0
 			for rp_i in range(rp_before, state.hand.size()):
-				if cost_of(state.hand[rp_i]) <= 0:
+				# R521：X 费卡不算 0 费（否则空手牌时它会白送一层易伤）
+				if not state.hand[rp_i].x_cost and cost_of(state.hand[rp_i]) <= 0:
 					rp_zero += 1
 			if rp_zero > 0:
 				_rapid_enemy_bonus += rp_zero * RAPID_PER_ZERO
@@ -10527,7 +10532,8 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			var pp_extra := false
 			var pp_zero := 0
 			for pp_c2 in pp_cards:
-				if pp_c2.cost == 0:
+				# R521：X 费卡不算 0 费
+				if not pp_c2.x_cost and pp_c2.cost == 0:
 					pp_zero += 1
 					pp_extra = true
 			var pp_n := pp_cards.size()
@@ -10544,7 +10550,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 					if state.hand_full():
 						break
 					var tr_c: CardData = state.discard[tr_i]
-					if tr_c.cost == 0:
+					if not tr_c.x_cost and tr_c.cost == 0:
 						state.discard.remove_at(tr_i)
 						state.hand.append(tr_c)
 						tr_moved += 1
@@ -11231,6 +11237,9 @@ func _rat_trigger() -> void :
 	for i in state.deck.size():
 		var dc: CardData = state.deck[i]
 		if dc.kind != "盟友":
+			continue
+		# R521：X 费没有大小 → 不参与「费用最低」的比较（枭熊 9213 否则永远最低）
+		if dc.x_cost:
 			continue
 		if min_cost < 0 or dc.cost < min_cost:
 			min_cost = dc.cost
@@ -15620,7 +15629,8 @@ func _snow_leopard_discount(p: Placement) -> void :
 		return
 	var cand: Array[CardData] = []
 	for c: CardData in state.hand:
-		if cost_of(c) > 0:
+		# R521：X 费的费用随剩余行动力浮动，减费对它没有意义
+		if not c.x_cost and cost_of(c) > 0:
 			cand.append(c)
 	if cand.is_empty():
 		_log("雪豹：手牌里没有可以减费的卡")

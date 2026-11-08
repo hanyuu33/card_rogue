@@ -452,6 +452,22 @@ func is_level_effect() -> bool:
 	return group == "enemy" and kind == "效果"
 
 
+## R521：X 费卡的费用**不可比较**（流星雨 9083 / 枭熊 9213）。用户口径：
+##   「费用 X 不算低于任何数，也不算高于任何数，也不等于任何数。」
+## 数据里 `cost` 只是占位用的 0 —— 直接读它等于把 X 费当成 0 费卡，
+## 于是「0 费技能」「费用 ≤ N」「取最低费」这些判定全都会误命中。
+## ⚠️ 只拦**比较 / 筛选**；不拦**支付**：`GameEngine.cost_of()` 对 X 费卡返回
+##    该方当前剩余的全部费用（显示 = 判定 = 实扣同源），那条路径照旧读 cost_of。
+func cost_is_fixed() -> bool:
+	return not x_cost
+
+
+## 按费用排序时的键（手牌 / 牌库 / 区域浏览共用）：X 费没有大小 → 统一排最后。
+## ⚠️ 别直接拿 `cost` 排序，否则 X 费卡会顶到 0 费卡前面。
+func cost_sort_key() -> int:
+	return 9999 if x_cost else cost
+
+
 ## 这张卡带某个字段吗（**唯一判定口**，引擎与界面都读它）。
 func has_affix(name: String) -> bool:
 	return affixes.has(name)

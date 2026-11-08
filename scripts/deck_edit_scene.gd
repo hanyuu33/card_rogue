@@ -672,7 +672,7 @@ func _pick_allowed(pick: int) -> bool:
 		return false
 	if _mode() != "vendor":
 		return true
-	return c != null and c.cost >= RunState.MERCHANT_MIN_COST
+	return c != null and not c.x_cost and c.cost >= RunState.MERCHANT_MIN_COST
 
 
 func _toggle_sel(pick: int) -> void:

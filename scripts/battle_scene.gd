@@ -8218,7 +8218,7 @@ func _tut_pick_hand(cue_card: String) -> int:
 		if pa != pb:
 			if pa:
 				best = i
-		elif hand[i].cost < hand[best].cost:
+		elif hand[i].cost_sort_key() < hand[best].cost_sort_key():
 			best = i
 	return best
 
@@ -15839,8 +15839,8 @@ func _merged_deck(cards: Array) -> Array:
 	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ca: CardData = a["card"]
 		var cb: CardData = b["card"]
-		if ca.cost != cb.cost:
-			return ca.cost < cb.cost
+		if ca.cost_sort_key() != cb.cost_sort_key():
+			return ca.cost_sort_key() < cb.cost_sort_key()
 		if ca.id != cb.id:
 			return ca.id < cb.id
 		return ca.power < cb.power)

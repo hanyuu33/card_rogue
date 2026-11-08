@@ -249,6 +249,9 @@ func _apply_filters() -> void:
 		if not _match_class(c):
 			continue
 		if _cost_filter > 0:
+			# R521：X 费卡没有固定费用 → 任何费用档都不命中（只在「全部」里出现）
+			if c.x_cost:
+				continue
 			if _cost_filter < 5 and c.cost != _cost_filter:
 				continue
 			if _cost_filter == 5 and c.cost < 5:   # 5 费+

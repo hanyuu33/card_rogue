@@ -32373,6 +32373,51 @@ func _init() -> void:
 	check(r505_e.state.harvest_hits == 0,
 		"R505 恐惧收割：敌方回合的伤害不计入（实际 %d）" % r505_e.state.harvest_hits)
 
+	# ---- R521：X 费卡的费用**不可比较**（不算 0 费 / 不比任何数大或小） ----
+	var r521_repo := CardRepo.load_json()
+	var r521_meteor: CardData = r521_repo.get_card(9083)   # 流星雨（X 费技能）
+	var r521_owl: CardData = r521_repo.get_card(9213)      # 枭熊（X 费盟友）
+	var r521_zero := _card(9861, "零费样本", "技能", 0, 0, 0)
+	check(r521_meteor.x_cost and r521_owl.x_cost
+			and not r521_meteor.cost_is_fixed() and not r521_owl.cost_is_fixed()
+			and r521_zero.cost_is_fixed(),
+			"R521 X 费：流星雨 / 枭熊 cost_is_fixed()=false，0 费卡=true")
+	check(r521_meteor.cost_sort_key() == 9999 and r521_owl.cost_sort_key() == 9999
+			and r521_zero.cost_sort_key() == 0,
+			"R521 X 费：排序键统一排最后（9999），0 费卡仍是 0")
+
+	# ① 从卡组取「0 费技能卡」不能取到流星雨
+	var r521_e1 := _new_engine([], 30, 30, -1, false)
+	r521_e1.start_game(0)
+	r521_e1.state.deck = [CardData.from_dict(r521_meteor.to_dict())]
+	var r521_got: CardData = r521_e1._fetch_skill_from_deck(1)
+	check(r521_got == null and r521_e1.state.deck.size() == 1,
+			"R521 X 费：卡组取「0 费技能卡」跳过流星雨（取到 %s）"
+				% ("null" if r521_got == null else r521_got.card_name))
+
+	# ② 巨鼠「抽牌库费用最低的盟友」不能挑枭熊
+	var r521_e2 := _new_engine([], 30, 30, -1, false)
+	r521_e2.start_game(0)
+	r521_e2.state.hand = []
+	r521_e2.state.deck = [CardData.from_dict(r521_owl.to_dict()),
+			_card(9862, "五费盟友", "盟友", 5, 3, 10)]
+	r521_e2._rat_trigger()
+	var r521_hand_ids: Array = []
+	for r521_c: CardData in r521_e2.state.hand:
+		r521_hand_ids.append(r521_c.id)
+	check(r521_hand_ids == [9862] and r521_e2.state.deck.size() == 1
+			and r521_e2.state.deck[0].id == 9213,
+			"R521 X 费：巨鼠取「最低费盟友」跳过枭熊，拿到 5 费那张（手牌 %s）"
+				% str(r521_hand_ids))
+
+	# ③ 影魔（8007）的「手卡有 0 费技能」不能因流星雨成立
+	var r521_e3 := _new_engine([], 30, 30, -1, false)
+	r521_e3.start_game(0)
+	r521_e3.state.energy = 0
+	r521_e3.state.hand = [CardData.from_dict(r521_meteor.to_dict())]
+	check(not r521_e3.hand_bonus_ready(r521_repo.get_card(8007)),
+			"R521 X 费：影魔的「手卡有 0 费技能」不因流星雨成立")
+
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
 	RunState.pending_rewards = []

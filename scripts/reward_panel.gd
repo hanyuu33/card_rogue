@@ -1450,7 +1450,7 @@ func _draw_layer_card(card: CardData, rr: Rect2, selected: bool) -> void:
 	_layer_image("06" if selected else "05", rr.grow(6.0))
 	_root.draw_string(_font_bold, rr.position + Vector2(16, rr.size.y * 0.846), card.card_name, HORIZONTAL_ALIGNMENT_CENTER, rr.size.x - 32, 22, Color("40392e"))
 	_layer_image("14" if card.rarity == 2 else "13", Rect2(rr.end.x - 43, rr.position.y + 2, 32, 85))
-	_layer_badge(rr.position + Vector2(12, 10), "X" if card.cost < 0 else str(card.cost))
+	_layer_badge(rr.position + Vector2(12, 10), "X" if card.x_cost else str(card.cost))
 	if card.health > 0:
 		_layer_badge(Vector2(rr.position.x + 8, rr.end.y - 7), str(card.power))
 		_layer_badge(Vector2(rr.position.x + 46, rr.end.y - 7), str(card.attack_range), true)
