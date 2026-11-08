@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>关卡总览 · R524</title>
+<style>
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:#f5f3ef;color:#232220;display:flex;flex-direction:column;
+ height:100vh;overflow:hidden;
+ font:14px/1.6 "Microsoft YaHei","PingFang SC",system-ui,sans-serif}
+header{padding:22px 26px 14px;background:#fffdfa;border-bottom:1px solid #e2ddd4}
+h1{margin:0 0 6px;font-size:20px;letter-spacing:.5px}
+.sub{color:#6d6660;font-size:13px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+ padding:12px 26px;background:#fffdfa;border-bottom:1px solid #e2ddd4;flex:none}
+label{color:#6d6660;font-size:12px}
+select,input{font:inherit;padding:5px 8px;border:1px solid #d6d0c6;border-radius:6px;
+ background:#fff;color:#232220}
+input{width:190px}
+button{font:inherit;padding:5px 12px;border:1px solid #d6d0c6;border-radius:6px;
+ background:#fff;cursor:pointer}
+button:hover{background:#f2efe9}
+.count{margin-left:auto;color:#6d6660;font-size:12px}
+.wrap{flex:1;min-height:0;overflow:auto;padding:0 26px 40px}
+table{border-collapse:collapse;width:100%;min-width:1180px;background:#fffdfa}
+th,td{border-bottom:1px solid #ece7de;padding:7px 9px;text-align:left;vertical-align:top}
+thead th{position:sticky;top:0;background:#efeae1;z-index:3;font-weight:600;
+ font-size:12px;color:#4a453f;white-space:nowrap;box-shadow:0 1px 0 #ddd6c9}
+tbody td:nth-child(-n+4){white-space:nowrap}
+tbody td:nth-child(2){font-weight:600}
+td.num{text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.id{color:#8d857c;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.u{min-width:250px}
+td.e{color:#3b3733;min-width:150px}
+td.note{color:#6d6660;font-size:12.5px;min-width:190px}
+td.key{color:#8d857c;font-size:12px;font-family:Consolas,monospace;white-space:nowrap}
+.tag{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11.5px;
+ line-height:1.7;color:#fff;white-space:nowrap}
+tr.hide{display:none}
+footer{padding:10px 26px;color:#8d857c;font-size:12px;background:#fffdfa;
+ border-top:1px solid #e2ddd4;flex:none}
+</style></head><body>
+<header>
+  <h1>关卡总览 · R524</h1>
+  <div class="sub">数据源 <code>scripts/game_levels.gd</code> · 共 37 关（含事件专属 1 关）·
+    敌方 HP = (基准 + 精英 10 / Boss 20) × 2</div>
+</header>
+<div class="bar">
+  <label>层</label><select id="fly"><option value="">全部</option><option value="1">第一层</option><option value="2">第二层</option><option value="3">第三层</option></select>
+  <label>分级</label><select id="ftr"><option value="">全部</option><option value="普通敌人-简单">普通敌人-简单</option><option value="普通敌人-困难">普通敌人-困难</option><option value="精英敌人-简单">精英敌人-简单</option><option value="精英敌人-困难">精英敌人-困难</option><option value="Boss">Boss</option></select>
+  <input id="q" placeholder="搜索关卡名 / 单位 / key">
+  <button id="reset">重置</button>
+  <span class="count" id="cnt"></span>
+</div>
+<div class="wrap">
+<table>
+<thead><tr>
+<th>#</th><th>关卡</th><th>层</th><th>分级</th><th>敌方 HP</th>
+<th>敌方单位（力/生/程/速）</th><th>敌方效果卡</th><th>备注</th><th>key</th>
+</tr></thead>
+<tbody id="tb"></tbody>
+</table>
+</div>
+<footer>本文件由 <code>python _leveltable.py</code> 自动生成（先跑 <code>tools/dump_levels.gd</code> 导出 JSON），
+请勿手改。</footer>
+<script>
+const DATA = [{"i": 1, "n": "鸭子骑士来袭", "ly": 1, "lyname": "第一层", "t": "普通敌人-简单", "hp": 60, "u": "鸭子骑士 3/30/1/2×2", "e": "—", "note": "—", "k": "duck_knight"}, {"i": 2, "n": "使魔鸭群", "ly": 1, "lyname": "第一层", "t": "普通敌人-简单", "hp": 60, "u": "使魔鸭子 4/15/1/1×5", "e": "—", "note": "—", "k": "familiars"}, {"i": 3, "n": "弓手与骑士", "ly": 1, "lyname": "第一层", "t": "普通敌人-简单", "hp": 60, "u": "鸭子弓手 3/18/2/1×2、鸭子骑士 3/30/1/2", "e": "—", "note": "—", "k": "archer_knight"}, {"i": 4, "n": "爆炎鸭阵", "ly": 1, "lyname": "第一层", "t": "普通敌人-简单", "hp": 60, "u": "使魔鸭子 4/15/1/1、爆炎鸭 5/3/1/1×2、鸭子骑士 3/30/1/2", "e": "—", "note": "—", "k": "blaze_pack"}, {"i": 5, "n": "骑士冲锋", "ly": 1, "lyname": "第一层", "t": "普通敌人-困难", "hp": 60, "u": "鸭子骑士 3/30/1/2×3", "e": "—", "note": "—", "k": "knight_charge"}, {"i": 6, "n": "巫师的召唤", "ly": 1, "lyname": "第一层", "t": "普通敌人-困难", "hp": 60, "u": "鸭子巫师 8/50/2/1、使魔鸭子 4/15/1/1", "e": "9115 使魔之力", "note": "—", "k": "wizard"}, {"i": 7, "n": "白魔法鸭护阵", "ly": 1, "lyname": "第一层", "t": "普通敌人-困难", "hp": 60, "u": "白魔法鸭 0/30/1/1、鸭子骑士 3/30/1/2×2", "e": "—", "note": "—", "k": "white_mage_guard"}, {"i": 8, "n": "夜鸭阵", "ly": 1, "lyname": "第一层", "t": "普通敌人-困难", "hp": 60, "u": "夜鸭 5/35/2/2、使魔鸭子 4/15/1/1×2", "e": "—", "note": "—", "k": "night_ducks"}, {"i": 9, "n": "鸭子队长登场", "ly": 1, "lyname": "第一层", "t": "精英敌人-简单", "hp": 80, "u": "鸭子队长 6/55/1/1、鸭子骑士 3/30/1/2×2", "e": "—", "note": "—", "k": "captain"}, {"i": 10, "n": "鸭子窑", "ly": 1, "lyname": "第一层", "t": "精英敌人-简单", "hp": 80, "u": "鸭子窑 0/100/0/0", "e": "—", "note": "—", "k": "duck_kiln"}, {"i": 11, "n": "哈气骑士团", "ly": 1, "lyname": "第一层", "t": "精英敌人-简单", "hp": 80, "u": "鸭子弓手 3/18/2/1×2、鸭子骑士 3/30/1/2×3", "e": "9024 哈气", "note": "台词「我要闹了」", "k": "breath_charge"}, {"i": 12, "n": "队长与巫师", "ly": 1, "lyname": "第一层", "t": "精英敌人-困难", "hp": 80, "u": "鸭子队长 6/55/1/1、鸭子巫师 8/50/2/1、使魔鸭子 4/15/1/1", "e": "9115 使魔之力", "note": "—", "k": "captain_wizard"}, {"i": 13, "n": "骑士军团", "ly": 1, "lyname": "第一层", "t": "精英敌人-困难", "hp": 80, "u": "鸭子骑士 3/30/1/2×6", "e": "9013 鸭子之力", "note": "—", "k": "legion"}, {"i": 14, "n": "永夜鸭群", "ly": 1, "lyname": "第一层", "t": "精英敌人-困难", "hp": 80, "u": "夜鸭 5/35/2/2×2", "e": "9178 永夜", "note": "—", "k": "eternal_night"}, {"i": 15, "n": "远古虚骨龙", "ly": 1, "lyname": "第一层", "t": "Boss", "hp": 100, "u": "远古虚骨龙 12/100/2/2", "e": "9015 鸭子号角", "note": "—", "k": "boss_dragon"}, {"i": 16, "n": "恶魔鸭", "ly": 1, "lyname": "第一层", "t": "Boss", "hp": 100, "u": "恶魔鸭 5/100/2/1", "e": "9117 恶魔使魔", "note": "台词「zzZ……（它好像还没睡醒）」", "k": "boss_demon_duck"}, {"i": 17, "n": "鸭之暗面", "ly": 1, "lyname": "第一层", "t": "Boss", "hp": 100, "u": "鸭之暗面 9/100/1/1", "e": "9125 暗影召唤", "note": "台词「……别回头看。」", "k": "boss_duck_darkside"}, {"i": 1, "n": "寒冰防线", "ly": 2, "lyname": "第二层", "t": "普通敌人-简单", "hp": 60, "u": "冰冻术士 4/24/3/1、铁壁卫兵 3/40/1/1、骷髅兵 2/10/1/1、骷髅兵 3/14/1/1", "e": "9210 寒霜结界", "note": "敌方成长：从第 2 回合起每 2 回合攻 +1，上限 +4", "k": "frost_line"}, {"i": 2, "n": "量产流水线", "ly": 2, "lyname": "第二层", "t": "普通敌人-简单", "hp": 60, "u": "量产型赫利俄斯 6/30/1/0、量产型俄倪厄 5/45/1/1×2", "e": "9147 流水线装配", "note": "—", "k": "assembly_line"}, {"i": 3, "n": "量产铁砧", "ly": 2, "lyname": "第二层", "t": "普通敌人-简单", "hp": 60, "u": "量产型赫菲斯托斯 4/50/1/1×3", "e": "—", "note": "—", "k": "mass_anvil"}, {"i": 4, "n": "百眼动员", "ly": 2, "lyname": "第二层", "t": "普通敌人-简单", "hp": 60, "u": "量产型阿尔戈斯 7/35/2/2×2、量产型赫利俄斯 6/30/1/0", "e": "—", "note": "—", "k": "argos_mobilize"}, {"i": 5, "n": "太阳熔炉", "ly": 2, "lyname": "第二层", "t": "普通敌人-困难", "hp": 60, "u": "赫利俄斯 0/50/0/0、量产型俄倪厄 5/45/1/1×2", "e": "—", "note": "—", "k": "sun_forge"}, {"i": 6, "n": "百臂工场", "ly": 2, "lyname": "第二层", "t": "普通敌人-困难", "hp": 60, "u": "赫卡同克瑞斯 8/80/2/1、量产型赫利俄斯 6/30/2/0（程 +1）×2", "e": "—", "note": "—", "k": "hecaton"}, {"i": 7, "n": "亡灵军团", "ly": 2, "lyname": "第二层", "t": "普通敌人-困难", "hp": 60, "u": "亡灵领主 4/55/1/2、骷髅兵 2/28/1/1、腐化尸鬼 4/18/1/2、骷髅兵 3/14/1/1", "e": "—", "note": "敌方成长：从第 2 回合起每 2 回合攻 +1，上限 +4", "k": "undead_legion"}, {"i": 8, "n": "双机炮阵", "ly": 2, "lyname": "第二层", "t": "普通敌人-困难", "hp": 60, "u": "量产型俄倪厄 5/45/1/1×2", "e": "9139 充能巨炮", "note": "—", "k": "twin_cannon"}, {"i": 9, "n": "废料场", "ly": 2, "lyname": "第二层", "t": "普通敌人-困难", "hp": 60, "u": "拾荒者 4/35/1/1×2、废弃机器人 5/40/1/1×3", "e": "—", "note": "台词「……铁锈味比血还重。」", "k": "scrapyard"}, {"i": 10, "n": "赫尔墨斯的试炼", "ly": 2, "lyname": "第二层", "t": "精英敌人-简单", "hp": 80, "u": "赫尔墨斯 9/80/1/1、量产型赫尔墨斯 5/55/1/1×2", "e": "—", "note": "—", "k": "hermes"}, {"i": 11, "n": "龙族巢穴", "ly": 2, "lyname": "第二层", "t": "精英敌人-简单", "hp": 80, "u": "灰烬龙 5/45/1/2、幼龙 5/25/2/1×2、铁壁卫兵 3/40/1/1", "e": "—", "note": "敌方成长：从第 2 回合起每 2 回合攻 +1，上限 +4", "k": "dragon_nest"}, {"i": 12, "n": "执法者的审判", "ly": 2, "lyname": "第二层", "t": "精英敌人-简单", "hp": 80, "u": "执法者 10/80/2/1、量产型俄倪厄 5/45/1/1×2", "e": "—", "note": "台词「站住。这条路不通行。」", "k": "enforcer_judgement"}, {"i": 13, "n": "阿斯克勒庇厄斯的试炼", "ly": 2, "lyname": "第二层", "t": "精英敌人-简单", "hp": 80, "u": "阿斯克勒庇厄斯 12/80/2/2", "e": "—", "note": "敌方成长：从第 2 回合起每 2 回合攻 +1，上限 +4", "k": "asclepius"}, {"i": 14, "n": "机甲巨兵", "ly": 2, "lyname": "第二层", "t": "精英敌人-困难", "hp": 80, "u": "熔岩巨人 8/60/1/2、爆裂机甲 4/30/2/1×2、铁壁卫兵 3/40/1/1", "e": "—", "note": "敌方成长：从第 2 回合起每 2 回合攻 +1，上限 +4", "k": "mech_giant"}, {"i": 15, "n": "钢铁要塞", "ly": 2, "lyname": "第二层", "t": "精英敌人-困难", "hp": 80, "u": "量产型赫利俄斯 6/30/1/0、量产型赫卡同克瑞斯 3/35/1/1、俄倪厄 10/80/1/1", "e": "—", "note": "—", "k": "steel_fortress"}, {"i": 16, "n": "母舰空袭", "ly": 2, "lyname": "第二层", "t": "精英敌人-困难", "hp": 80, "u": "母舰 0/40/0/0、量产型赫尔墨斯 5/55/1/1、量产型阿斯克勒庇厄斯 7/50/1/1×2", "e": "9209 空袭", "note": "敌方血条 ∞；击破本体 母舰 才胜；台词「……警报响了。抬头。」", "k": "air_raid"}, {"i": 17, "n": "机械巨鸭", "ly": 2, "lyname": "第二层", "t": "Boss", "hp": 100, "u": "机械巨鸭 10/150/3/1", "e": "9049 齿轮升腾", "note": "台词「咔哒…咔哒…」", "k": "mech_duck_boss"}, {"i": 18, "n": "赫菲斯托斯工坊", "ly": 2, "lyname": "第二层", "t": "Boss", "hp": 100, "u": "赫菲斯托斯 5/120/1/1、量产型赫菲斯托斯 4/50/1/1×2", "e": "—", "note": "台词「……铁砧还热着。」", "k": "hephaestus_forge"}, {"i": 1, "n": "启示者", "ly": 3, "lyname": "第三层", "t": "Boss", "hp": 100, "u": "启示者 15/300/2/2", "e": "9201 舰炮", "note": "敌方血条 ∞；击破本体 启示者 才胜；台词「……抬头看。」", "k": "boss_revelator"}, {"i": "洞", "n": "洞穴", "ly": 2, "lyname": "第二层（事件专属）", "t": "精英敌人-简单", "hp": 120, "u": "枭熊 10/100/0/0", "e": "9212 枭熊之怒", "note": "事件专属", "k": "cave_owlbear"}];
+const TC = {"普通敌人-简单": "#7a9e6f", "普通敌人-困难": "#c08a3e", "精英敌人-简单": "#8a6fbf", "精英敌人-困难": "#b4534f", "Boss": "#4f5b66"};
+const tb = document.getElementById('tb');
+const fly = document.getElementById('fly'), ftr = document.getElementById('ftr'),
+      q = document.getElementById('q'), cnt = document.getElementById('cnt');
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function rowIt(d){
+  const tr=document.createElement('tr');
+  tr.dataset.ly=d.ly; tr.dataset.tr=d.t;
+  tr.dataset.search=(d.n+' '+d.u+' '+d.k+' '+d.e+' '+d.note).toLowerCase();
+  tr.innerHTML='<td class="id">'+esc(d.i)+'</td>'
+    +'<td>'+esc(d.n)+'</td>'
+    +'<td>'+esc(d.lyname)+'</td>'
+    +'<td><span class="tag" style="background:'+(TC[d.t]||'#888')+'">'+esc(d.t)+'</span></td>'
+    +'<td class="num">'+esc(d.hp)+'</td>'
+    +'<td class="u">'+esc(d.u)+'</td>'
+    +'<td class="e">'+esc(d.e)+'</td>'
+    +'<td class="note">'+esc(d.note)+'</td>'
+    +'<td class="key">'+esc(d.k)+'</td>';
+  return tr;
+}
+DATA.forEach(d=>tb.appendChild(rowIt(d)));
+function apply(){
+  const ly=fly.value, tr=ftr.value, kw=q.value.trim().toLowerCase();
+  let n=0;
+  [...tb.children].forEach(r=>{
+    const ok = (!ly || r.dataset.ly===ly) && (!tr || r.dataset.tr===tr)
+      && (!kw || r.dataset.search.includes(kw));
+    r.classList.toggle('hide', !ok); if(ok) n++;
+  });
+  cnt.textContent = n + ' / ' + DATA.length + ' 关';
+}
+[fly,ftr,q].forEach(e=>e.addEventListener('input',apply));
+document.getElementById('reset').onclick=()=>{fly.value='';ftr.value='';q.value='';apply();};
+apply();
+</script></body></html>

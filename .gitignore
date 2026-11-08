@@ -123,3 +123,5 @@ tools/ai_play/.runs.jsonl
 /_pkg_hold/
 # R503：跑卡图体检 / 回归后留下的临时文本
 /_hits.txt
+# R524：关卡总览表的中间产物（tools/dump_levels.gd 导出，_leveltable.py 消费）
+/_levels_dump.json

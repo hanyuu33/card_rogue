@@ -149,7 +149,7 @@ for c in sorted(cards, key=lambda x: (CLASS_ORDER.index(x.get("class") or ""),
 HTML = """<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>卡牌总表 · R429</title>
+<title>卡牌总表 · R524</title>
 <style>
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -186,7 +186,7 @@ td.aff{color:#6d6660;font-size:12.5px;min-width:130px}
 tfoot td{background:#efeae1;font-weight:600}
 </style></head><body>
 <header>
-<h1>卡牌总表 · R429</h1>
+<h1>卡牌总表 · R524</h1>
 <div class="sub">数据源 cards.json　共 __N__ 张　按职业 → 稀有度排序　
 数值列仅盟友/工事有实体数值，其余为 —</div>
 </header>
