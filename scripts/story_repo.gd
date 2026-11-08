@@ -8,6 +8,8 @@ extends RefCounted
 ##                 所以这里点到的卡 / 道具必须在 cards.json / relics.json 里标 `locked: true`，
 ##                 否则它本来就在池子里，「解锁」对玩家没有任何意义（test_engine R355 有守卫）。
 ##   achievements  成就。[{id, name, hint, stat | stat_prefix, min, episodes: [剧情 id]}]
+##   profiles      追加故事（R534）。结构与 episode 完全一样，但**列表排在其后** ——
+##                 目前只有 `profile5`（通缉令，击败叛逃机械解锁），编号暂定。
 ##
 ## 三段状态（`episode_state()` 的唯一判定口）：
 ##   locked  条件还没达成 / **这一段根本没写正文**（R359）
@@ -29,6 +31,9 @@ const STATE_READY := "ready"
 const STATE_READ := "read"
 
 var episodes: Array = []
+var profiles: Array = []
+## R534：界面列表 = episodes + profiles（顺序固定，profile 永远在最后）。
+var entries: Array = []
 var achievements: Array = []
 
 var _ep := {}      # episode id -> 定义
@@ -54,6 +59,17 @@ static func load_json(path: String = PATH) -> StoryRepo:
 			var ed: Dictionary = e
 			repo.episodes.append(ed)
 			repo._ep[str(ed.get("id", ""))] = ed
+	var profs: Variant = d.get("profiles", [])
+	if profs is Array:
+		for pe: Variant in (profs as Array):
+			if not (pe is Dictionary):
+				continue
+			var pd: Dictionary = pe
+			repo.profiles.append(pd)
+			repo._ep[str(pd.get("id", ""))] = pd
+	# R534：列表顺序 = 全部 episode → 全部 profile（追加故事一律排在后面）。
+	repo.entries = repo.episodes.duplicate()
+	repo.entries.append_array(repo.profiles)
 	var achs: Variant = d.get("achievements", [])
 	if achs is Array:
 		for a: Variant in (achs as Array):

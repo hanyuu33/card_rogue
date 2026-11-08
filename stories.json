@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"_note": "R346 剧情/成就定义；R352 起开始填内容（第一章「游移的音准」/ 第二章「鸭鸭王国的请托」已实装）。grants = 这一段看完之后**加入奖励池**的卡/道具（R355 口径：解锁 ≠ 发放，解锁前它们不属于奖励池），所以这里点到的 id 必须在 cards.json / relics.json 里标 locked:true。列表标签 = chapter-title。统计键见 profile_data.gd 顶部注释。",
+	"_note": "R346 剧情/成就定义；R352 起开始填内容（第一章「游移的音准」/ 第二章「鸭鸭王国的请托」已实装）。grants = 这一段看完之后**加入奖励池**的卡/道具（R355 口径：解锁 ≠ 发放，解锁前它们不属于奖励池），所以这里点到的 id 必须在 cards.json / relics.json 里标 locked:true。列表标签 = chapter-title。R534：`profiles` = **追加故事**（与 episode 同结构，列表里排在全部 episode 之后；`profile5` = 通缉令，击败叛逃机械解锁）。统计键见 profile_data.gd 顶部注释。",
 	"episodes": [
 		{
 			"id": "episode1",
@@ -56,6 +56,21 @@
 			"grants": {"cards": [], "relics": []}
 		}
 	],
+	"profiles": [
+		{
+			"id": "profile5",
+			"chapter": "档案",
+			"title": "通缉令",
+			"text": [
+				"一张卷了边的通缉令，钉在锈蚀的装甲板上，红章盖住了编号。",
+				"“巴兰-α、安西-β、塔基尼-γ：三名机兵擅离防区，劫掠补给，杀害追缉队十一人。见者格杀勿论。”",
+				"告示传了三个月，每经过一个营地就被抄一遍，字迹一次比一次走样。",
+				"其实根本就没有叛逃者，只是写通缉令的人听信了谣言。",
+				"所幸，巴兰，安西，塔基尼并非无辜者。"
+			],
+			"grants": {"cards": [], "relics": [6060]}
+		}
+	],
 	"achievements": [
 		{
 			"id": "ach_first_run",
@@ -104,6 +119,14 @@
 			"stat_prefix": "card_play:",
 			"min": 200,
 			"episodes": ["episode6"]
+		},
+		{
+			"id": "ach_profile5",
+			"name": "通缉令",
+			"hint": "击败第二层 Boss「叛逃机械」",
+			"stat": "boss_kill:叛逃机械",
+			"min": 1,
+			"episodes": ["profile5"]
 		}
 	]
 }

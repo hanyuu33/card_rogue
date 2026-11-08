@@ -27125,7 +27125,8 @@ func _init() -> void:
 	# ---- ② 全量对账（两个方向） ----
 	var r355_gc := {}
 	var r355_gr := {}
-	for r355_epd: Dictionary in r355_story.episodes:
+	# R534：对账口径 = episodes + profiles（追加故事同样会 grants，漏掉就会误报孤儿）。
+	for r355_epd: Dictionary in r355_story.entries:
 		var r355_g: Variant = r355_epd.get("grants", {})
 		if not (r355_g is Dictionary):
 			continue
@@ -32987,6 +32988,120 @@ func _init() -> void:
 			and str(r529_rs.call("_thousands", 12345)) == "12,345"
 			and str(r529_rs.call("_thousands", 1234567)) == "1,234,567",
 			"R530 千分位：12345 → 12,345 / 1234567 → 1,234,567")
+
+	# ================= R534：追加故事 profile5「通缉令」 + 道具「三个机器人」6060 =================
+	# 用户口径：「profile 和 episode 一样是故事，但是会被放在所有 episode 后面。目前只有 5，
+	#   暂定，通关叛逃机兵解锁。解锁道具：三个机器人：每有三个己方盟友被破坏，你抽一张卡。」
+	var r534_rrepo := RelicRepo.load_json()
+	var r534_bot: RelicData = r534_rrepo.get_relic(6060)
+	check(r534_bot != null and r534_bot.relic_name == "三个机器人"
+			and r534_bot.kind == "战斗" and r534_bot.tier == "一般"
+			and r534_bot.source == "奖励" and r534_bot.locked,
+			"R534 道具：三个机器人 6060 = 战斗类 · 一般档 · 奖励来源 · 默认 locked")
+
+	# ① 数据：profiles 独立成段、列表排在全部 episode 之后
+	var r534_story := StoryRepo.load_json()
+	check(r534_story.profiles.size() == 1
+			and str((r534_story.profiles[0] as Dictionary).get("id", "")) == "profile5",
+			"R534 故事：stories.json 有 1 段追加故事 profile5（实际 %d 段）"
+			% r534_story.profiles.size())
+	check(r534_story.entries.size() == r534_story.episodes.size() + r534_story.profiles.size()
+			and str((r534_story.entries[r534_story.entries.size() - 1] as Dictionary)
+					.get("id", "")) == "profile5",
+			"R534 故事：列表 = episode 全部 + profile（profile5 排最后）")
+	check(r534_story.episode_label(r534_story.episode("profile5")) == "档案-通缉令",
+			"R534 故事：列表标签 = 档案-通缉令（实际 %s）"
+			% r534_story.episode_label(r534_story.episode("profile5")))
+	var r534_lines := r534_story.episode_text_lines("profile5")
+	check(r534_lines.size() == 5 and r534_lines[3].find("根本就没有叛逃者") >= 0
+			and r534_lines[4].find("巴兰") >= 0 and r534_lines[4].find("并非无辜者") >= 0,
+			"R534 故事：正文收在用户给的两句（实际 %d 行）" % r534_lines.size())
+	var r534_g: Variant = r534_story.episode_grants("profile5")
+	var r534_gr: Array = []
+	for r534_v: Variant in ((r534_g as Dictionary).get("relics", []) as Array):
+		r534_gr.append(int(r534_v))
+	check(r534_gr == [6060]
+			and ((r534_g as Dictionary).get("cards", []) as Array).is_empty(),
+			"R534 故事：解锁道具 = 三个机器人（实际 %s）" % str(r534_gr))
+
+	# ② 解锁条件 = 击败叛逃机械（boss_kill:<关卡名>，battle_scene 在 Boss 胜利时记账）
+	var r534_ach := r534_story.achievement_for_episode("profile5")
+	check(str(r534_ach.get("stat", "")) == ProfileData.K_BOSS_KILL + "叛逃机械"
+			and int(r534_ach.get("min", 0)) == 1,
+			"R534 故事：条件 = 击败叛逃机械一次（实际 %s）" % str(r534_ach.get("stat", "")))
+
+	# ③ 真实链路：未达成 → 锁；打赢别的 Boss 不算；击败叛逃机械 → 可查看；收下 → 6060 进「一般」池
+	ProfileData.set_test_mode()
+	RunState.run_active = false
+	RunState.run_bans = []
+	check(r534_story.episode_state("profile5") == StoryRepo.STATE_LOCKED,
+			"R534 故事：空档案里通缉令是锁着的")
+	check(not r534_rrepo.reward_ids().has(6060),
+			"R534 奖励池：没看故事时三个机器人不在道具池里")
+	ProfileData.bump(ProfileData.K_BOSS_KILL + "机械巨鸭")
+	ProfileData.check_achievements(r534_story)
+	check(r534_story.episode_state("profile5") == StoryRepo.STATE_LOCKED,
+			"R534 故事：打赢别的 Boss 不解锁通缉令")
+	ProfileData.bump(ProfileData.K_BOSS_KILL + "叛逃机械")
+	check(ProfileData.check_achievements(r534_story).has("profile5"),
+			"R534 故事：击败叛逃机械 → 通缉令解锁")
+	check(r534_story.episode_state("profile5") == StoryRepo.STATE_READY,
+			"R534 故事：解锁后是「可查看」")
+	var r534_claim := ProfileData.claim_episode(r534_story, "profile5")
+	check(bool(r534_claim.get("ok", false))
+			and (r534_claim.get("relics", []) as Array) == [6060]
+			and ProfileData.is_relic_unlocked(6060),
+			"R534 故事：收下后三个机器人解锁（%s）" % str(r534_claim.get("relics", [])))
+	var r534_pool := RelicRepo.load_json()
+	check(r534_pool.reward_ids().has(6060) and r534_pool.normal_reward_ids().has(6060)
+			and not r534_pool.legendary_reward_ids().has(6060),
+			"R534 奖励池：解锁后进「一般」档（不进传奇档）")
+	ProfileData.set_test_mode()
+	RunState.run_bans = []
+
+	# ④ 引擎：每 3 个己方盟友被破坏 → 抽 1 张；工事 / 敌方不算；计数归零后可再来一轮
+	RunState.relics = [6060]
+	var r534_deck: Array[CardData] = []
+	for _i in 6:
+		r534_deck.append(_card(8002, "攻击", "技能", 1, 0, 0))
+	var r534_e := _new_engine(r534_deck, 60, 60, -1, false)
+	r534_e.start_game(0)
+	var r534_hand0: int = r534_e.state.hand.size()
+	r534_e.state.place(_card(8311, "陪练甲", "盟友", 0, 0, 1),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r534_e.state.place(_card(8312, "陪练乙", "盟友", 0, 0, 1),
+			Vector2i(3, 2), GameEngine.SIDE_SELF)
+	r534_e.state.place(_card(8313, "陪练丙", "盟友", 0, 0, 1),
+			Vector2i(3, 3), GameEngine.SIDE_SELF)
+	r534_e.state.place(_card(8314, "木墙", "工事", 0, 0, 1),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r534_e.state.place(_card(8315, "敌兵", "盟友", 0, 0, 1),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r534_e._destroy(Vector2i(3, 1))
+	check(r534_e.state.hand.size() == r534_hand0 and r534_e._three_bots_destroyed == 1,
+			"R534 三个机器人：第 1 个盟友被破坏 → 还不抽（%d / 3）"
+			% r534_e._three_bots_destroyed)
+	r534_e._destroy(Vector2i(4, 1))
+	r534_e._destroy(Vector2i(1, 1))
+	check(r534_e._three_bots_destroyed == 1 and r534_e.state.hand.size() == r534_hand0,
+			"R534 三个机器人：工事 / 敌方单位被破坏都不计数（仍是 %d）"
+			% r534_e._three_bots_destroyed)
+	r534_e._destroy(Vector2i(3, 2))
+	check(r534_e.state.hand.size() == r534_hand0 and r534_e._three_bots_destroyed == 2,
+			"R534 三个机器人：第 2 个盟友被破坏 → 还不抽（%d / 3）"
+			% r534_e._three_bots_destroyed)
+	r534_e._destroy(Vector2i(3, 3))
+	check(r534_e.state.hand.size() == r534_hand0 + 1 and r534_e._three_bots_destroyed == 0,
+			"R534 三个机器人：第 3 个盟友被破坏 → 抽 1 张、计数归零（手牌 %d → %d）"
+			% [r534_hand0, r534_e.state.hand.size()])
+	RunState.relics = []
+
+	# ⑤ 源码锁：计数只在 `_destroy()` 的两条出口各挂一次（思想钢印救回 / 正式离场）
+	var r534_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r534_src.find("func _three_bots_tick") >= 0
+			and r534_src.find("\t\t_three_bots_tick(p)") >= 0
+			and r534_src.find("\t_three_bots_tick(p)") >= 0,
+			"R534 源码：三个机器人的挂点 = `_destroy()` 的两条出口（救回手卡 + 正式离场）")
 
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []

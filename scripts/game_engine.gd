@@ -124,6 +124,7 @@ var wish_pending:= false    # 许愿（9168）：等玩家从**卡组**选一张
 var _steel_stamp_used:= false  # R307 思想钢印：本场战斗是否已经救过一次（每场一次）
 var _thorn_ring_turn:= -1      # R307 荆棘指环：上次触发是第几回合（每回合一次）
 var _knight_sword_fired:= false  # R383 骑士剑：本场战斗的第一次击杀是否已发生（每场一次）
+var _three_bots_destroyed:= 0  # R534 三个机器人：本场战斗已破坏的己方盟友数
 ## R393：本场战斗里，哪些**卡 id** 的「首次击杀」成长已经结算过。
 ## 每个新 GameEngine = 一场新战斗，`start_game()` 清空 → 「每场战斗首次」自然成立。
 ## 按 id 而不是按单位实例：同名两张不会在同一场里各刷一次本局永久成长。
@@ -648,6 +649,10 @@ const HARP_ATK:= 2
 const KNIGHT_SWORD_RELIC_ID:= 6053
 const KNIGHT_SWORD_ATK:= 2
 const KNIGHT_SWORD_SPELL:= 2
+# R534 三个机器人（6060，追加故事「通缉令」解锁道具）：
+#   每 **3 个己方盟友** 被破坏 → 抽 1 张卡（工事不算；计数每场战斗重置）。
+const THREE_BOTS_RELIC_ID:= 6060
+const THREE_BOTS_NEED:= 3
 const FOREST_GUARD_ID:= 9037
 const LION_ID:= 9038
 const LION_ATK_BUFF:= 2
@@ -2068,6 +2073,7 @@ func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	wish_pending = false
 	_steel_stamp_used = false   # R307：思想钢印每场战斗一次
 	_first_kill_growth_done.clear()   # R393：击杀成长每场战斗各卡一次
+	_three_bots_destroyed = 0   # R534：三个机器人的计数每场战斗重置
 	_thorn_ring_turn = -1
 	state.starting_hand(starting_hand)
 	state.energy = FieldState.ENERGY_PER_TURN
@@ -14257,6 +14263,7 @@ func _destroy(cell: Vector2i) -> void :
 		_log("思想钢印：%s 被破坏 → 回到手卡（本场第一次）" % p.card.card_name)
 		action.emit("self_heal", {"healed": 0, "hp": state.hp_self})
 		_funeral_tick(p.card.card_name)   # R327：救回手卡也算「被破坏」
+		_three_bots_tick(p)   # R534：被思想钢印救回也算「被破坏」
 		return
 	if p.owner == SIDE_SELF:
 		# R227：带「次元」字段的**单位**同样离场即消失（此前只有「离场消失」trait 会走这条；
@@ -14365,6 +14372,7 @@ func _settle_death(cell: Vector2i, p: Placement, rec_ok: bool, rec_power: int,
 	# R327 送葬：放在**所有**离场结算之后 —— 先炸（亡语/回收/光环重算）再抽牌，
 	# 抽到的牌不会插进亡语动画中间。判据只看「己方效果区有没有这张」。
 	_funeral_tick(p.card.card_name)
+	_three_bots_tick(p)   # R534
 
 
 func _funeral_tick(source_name: String) -> void :
@@ -14380,6 +14388,31 @@ func _funeral_tick(source_name: String) -> void :
 	else:
 		_log("送葬：%s 被破坏 → 牌库与弃牌区都空，抽不到牌" % source_name)
 	action.emit("funeral", {"name": source_name, "drawn": got})
+
+
+func _three_bots_tick(p: Placement) -> void :
+	## R534 三个机器人（6060）：每有 **3 个己方盟友** 被破坏 → 抽 1 张卡。
+	## ⚠️ 只认 `kind == "盟友"` —— 工事（木栅栏 / 冰墙 / 货物）被拆不算，
+	##    否则拆一堵墙就能喂满计数，与卡面「己方盟友」不符。
+	## ⚠️ 计数**每场战斗重新开始**（一个 GameEngine = 一场，`start_game()` 归零）。
+	## 抽卡走 `_draw_many` 唯一口：手牌满时会 burn 进弃牌区，不会静静吞掉。
+	if not RunState.has_relic(THREE_BOTS_RELIC_ID):
+		return
+	if p == null or p.owner != SIDE_SELF or p.card.kind != "盟友":
+		return
+	_three_bots_destroyed += 1
+	if _three_bots_destroyed < THREE_BOTS_NEED:
+		_log("三个机器人：己方盟友被破坏 %d / %d"
+				% [_three_bots_destroyed, THREE_BOTS_NEED])
+		return
+	_three_bots_destroyed = 0
+	var got:= _draw_many(1)
+	if got > 0:
+		_log("三个机器人：%s 是第 3 个被破坏的己方盟友 → 抽 1 张卡" % p.card.card_name)
+	else:
+		_log("三个机器人：%s 被破坏 → 牌库与弃牌区都空，抽不到牌" % p.card.card_name)
+	action.emit("three_bots", {"name": p.card.card_name, "drawn": got})
+
 
 
 

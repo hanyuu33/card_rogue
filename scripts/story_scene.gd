@@ -128,7 +128,8 @@ func _toggle_sound() -> void:
 
 
 func _refresh() -> void:
-	_episodes = _repo.episodes.duplicate()
+	# R534：列表 = 全部 episode + 追加故事（profiles，排在最后）。
+	_episodes = _repo.entries.duplicate()
 	_scroll = 0
 	queue_redraw()
 
