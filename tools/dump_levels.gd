@@ -40,6 +40,14 @@ func _run() -> void:
 	cave["enemy_hp_final"] = GL.enemy_hp_of(cave)
 	out["cave"] = cave
 
+	# 彩蛋 Boss「恶魔鸭（复仇）」（R73）：同样**不进** builtin_levels / boss_pool，
+	# 只由 RunState 在第一层摇到「恶魔鸭」且 50% 命中时顶替第二层 Boss。
+	# 和洞穴一样属于「定义里有、池子里没有」，文档必须列出来，否则总数对不上。
+	var revenge: Dictionary = GL.revenge_boss().duplicate(true)
+	revenge["tier_name"] = GL.tier_name(int(revenge.get("tier", -1)))
+	revenge["enemy_hp_final"] = GL.enemy_hp_of(revenge)
+	out["revenge"] = revenge
+
 	# 各层抽取池：普通 / 精英 / Boss（第三层另有「精英专用池」）
 	# ⚠️ Boss 要导**两套**：`boss_pool()` = 本层所有可摇的 Boss（开局从中摇 1 只），
 	# `boss_level()` = 确定性兜底（同层多 Boss 时只返回第一个）。只导后者会让人误以为

@@ -36,6 +36,7 @@ d = json.load(open(SRC_LEVELS, encoding="utf-8"))
 cards = {c["id"]: c["name"] for c in json.load(open(SRC_CARDS, encoding="utf-8"))["cards"]}
 levels = d["levels"]
 cave = d["cave"]
+revenge = d["revenge"]
 pools = d["pools"]
 K = d["consts"]
 
@@ -78,7 +79,11 @@ def note_text(lvl):
         parts.append("敌方成长：从第 %d 回合起每 %d 回合攻 +%d，上限 +%d" % (
             g.get("start_turn", 2), g.get("period", 2), g.get("inc", 1), g.get("cap", 0)))
     if lvl.get("intro"):
-        parts.append("台词「%s」" % lvl["intro"])
+        # 少数关卡（彩蛋 Boss）台词自己就带「」，这里统一只包一层
+        q = str(lvl["intro"])
+        if q.startswith("「") and q.endswith("」"):
+            q = q[1:-1]
+        parts.append("台词「%s」" % q)
     if lvl.get("event_only"):
         parts.append("事件专属")
     return "；".join(parts) if parts else "—"
@@ -109,13 +114,14 @@ md.append("")
 md.append("数据源 `scripts/game_levels.gd`：由 `tools/dump_levels.gd` 导出 JSON，"
           "再由 `_leveltable.py` 排版——**本文件不含任何手写数值**，改关卡后重跑两步即可。")
 md.append("")
-md.append("`builtin_levels()` 共 **%d** 关，另有事件专属「%s」1 关不进任何抽取池"
-          "（定义总数 %d）。" % (len(levels), cave["name"], len(levels) + 1))
+md.append("`builtin_levels()` 共 **%d** 关；另有 **%d** 关定义在代码里但不进任何抽取池"
+          "——事件专属「%s」、彩蛋 Boss「%s」（定义总数 %d）。"
+          % (len(levels), 2, cave["name"], revenge["name"], len(levels) + 2))
 md.append("")
 
 md.append("## 通用设定")
 md.append("")
-md.append("36 关完全一致的部分（逐关重复写没有信息量）：")
+md.append("%d 关完全一致的部分（逐关重复写没有信息量）：" % len(levels))
 md.append("")
 md.append("| 项 | 值 |")
 md.append("|---|---|")
@@ -156,13 +162,19 @@ for layer in (1, 2, 3):
     md += md_table(rows)
     md.append("")
 
-md.append("## 事件专属关（不进抽取池）")
+md.append("## 不进抽取池的关（事件专属 / 彩蛋）")
 md.append("")
-md += md_table([cave], ["洞"])
+md += md_table([cave, revenge], ["洞", "蛋"])
 md.append("")
-md.append("> 「洞穴」只有「洞穴」事件选「探索」才进（`cave_level()`，第 37 关），"
+md.append("> **洞穴**（`cave_level()`，第 37 关）：只有「洞穴」事件选「探索」才进，"
           "地图的普通 / 精英 / Boss 池永远摇不到它；胜利后固定给传说卡「%s」。"
           % card_name(int(cave["reward_cards"][0])))
+md.append("")
+md.append("> **恶魔鸭（复仇）**（`revenge_boss()`，第 38 关）：刻意**不**进 `builtin_levels()`，"
+          "所以它既不出现在调试关卡菜单，也不在 `boss_pool()` 里。触发链是——"
+          "**第一层 Boss 摇中「恶魔鸭」→ 50% 置位 → 第二层 Boss 被顶替成这一只**"
+          "（`RunState._roll_boss`，`REVENGE_TRIGGER_CHANCE = 0.5`）。"
+          "地图上的 Boss 名牌与实际进入读的是同一份结果，所以顶替后地图会直接写「恶魔鸭（复仇）」。")
 md.append("")
 
 md.append("## 分层抽取池（地图节点真实会摇到的范围）")
@@ -170,6 +182,7 @@ md.append("")
 def names(keys, with_key=True):
     by_key = {l.get("key"): l["name"] for l in levels}
     by_key[cave.get("key")] = cave["name"]
+    by_key[revenge.get("key")] = revenge["name"]
     if not keys:
         return "—"
     if with_key:
@@ -246,6 +259,15 @@ cave_row = {
     "k": cave.get("key", ""),
 }
 payload.append(cave_row)
+
+revenge_row = {
+    "i": "蛋", "n": revenge["name"], "ly": int(revenge.get("layer", 2)),
+    "lyname": LAYER_NAME[int(revenge.get("layer", 2))] + "（彩蛋）",
+    "t": revenge["tier_name"], "hp": revenge.get("enemy_hp_final", 0),
+    "u": units_text(revenge), "e": effects_text(revenge), "note": note_text(revenge),
+    "k": revenge.get("key", ""),
+}
+payload.append(revenge_row)
 
 HTML = """<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
@@ -366,6 +388,6 @@ html = (HTML.replace("__ROUND__", ROUND)
 
 open(OUT_HTML, "w", encoding="utf-8", newline="\n").write(html)
 print("WROTE", OUT_HTML, len(html.encode("utf-8")), "bytes")
-print("关卡 %d（含洞穴 %d）· 层分布 %s" % (
-    len(levels), len(levels) + 1,
+print("关卡 %d（另有洞穴 / 彩蛋各 1，定义共 %d）· 层分布 %s" % (
+    len(levels), len(levels) + 2,
     dict(collections.Counter(l["layer"] for l in levels))))
