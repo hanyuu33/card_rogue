@@ -811,7 +811,7 @@ const VOID_LORD_DMG_DISCOUNT:= 1
 # 土元素（森林精魄 · 史诗盟友）：10 费 2/23 程1 速1。两条机制：
 #   ① 本次对战中我方**每使用一张盟友卡**，这张卡费用 -2（本场累计，走 cost_of 唯一口）；
 #   ② 在场时，场上**所有己方盟友**力量 +3、受到的伤害 -1（光环，见 _refresh_earth_aura）。
-# 压感地雷（机械之心 · 普通工事）：1 费 1/1 程0，带「超负荷」；死亡时若生命为负数，
+# 压感地雷（机械之心 · 普通工事）：2 费 1/1 程0，带「超负荷」；死亡时若生命为负数，
 #   对**敌方所有单位**造成等同于负血量的伤害（负血越深炸得越狠）。
 const EARTH_ELEMENTAL_ID:= 9218
 const EARTH_ELEMENTAL_TRAIT:= "土元素"
@@ -2779,7 +2779,7 @@ const DEFECTOR_BOOST_TRAIT := "阵亡机动"    # 安西-β 9238：同伴阵亡 
 const DEFECTOR_HUNT_TRAIT := "阵亡猎杀"     # 塔基尼-γ 9239：同伴阵亡 → 获得「猎杀」
 const DEFECTOR_HUNT_DMG := 10              # 「猎杀」空场时改为直击玩家 HP 的伤害
 const WANTED_TRAIT := "通缉"               # 通缉令 9240（敌方效果卡）
-const WANTED_TURN := 12                    # 第 12 个回合结束时持卡方自毁
+const WANTED_TURN := 12                    # 敌方第 12 个回合结束时持卡方自毁
 
 
 func _defector_ally_died(dead: Placement) -> void :
@@ -2866,15 +2866,17 @@ func _wanted_mark(p: Placement, side: String) -> void :
 
 
 func _wanted_tick() -> void :
-	## 通缉令（9240）倒数（R525）：**第 12 个回合结束**时，持卡方（敌方）场上所有单位自毁。
-	## 「第 12 个回合」= 双方各走完 12 个回合 —— 玩家先手，所以取两者**较小值**判：
-	## 敌方第 12 个回合结束时两边都到 12，正好落在这个点（我方回合结束那次还差 1）。
+	## 通缉令（9240）倒数（R525，R526 修口径）：**敌方第 12 个回合结束**时，
+	## 持卡方（敌方）场上所有单位自毁。
+	## 「第 12 个回合」只数**敌人的回合**（`state.opp_turn_no`），不再取双方较小值 ——
+	## 玩家先手走完自己的第 12 个回合时，敌方还只有 11，所以那一刻绝不提前爆；
+	## 本口挂在 `end_turn` 收尾，敌方第 12 回合结束时 `opp_turn_no == 12`，正好落点。
 	## 自毁同样走 `_destroy`，于是「离场即消失 / 亡语」照常结算；清空之后
 	## `_check_game_over()` 按「敌方场上单位全灭」判胜 —— 这就是卡面承诺的
-	## 「撑满 12 回合也能赢」那条路。
+	## 「撑满 12 个回合也能赢」那条路。
 	if not _zone_has(state.enemy_effects, WANTED_TRAIT):
 		return
-	if mini(state.self_turn_no, state.opp_turn_no) < WANTED_TURN:
+	if state.opp_turn_no < WANTED_TURN:
 		return
 	var cells:= _side_cells(SIDE_OPPONENT)
 	if cells.is_empty():

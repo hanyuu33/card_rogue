@@ -1374,15 +1374,16 @@ func _init() -> void:
 	r493_a._destroy(Vector2i(4, 1))
 	check(r493_ally.effective_power() == 3,
 			"R493 土元素光环：土元素离场 → 力量立刻回落（%d）" % r493_ally.effective_power())
-	# 压感地雷（机械之心 · 普通工事）1 费 1/1 程0：超负荷 + 死亡（负血部分炸敌方全体）
+	# 压感地雷（机械之心 · 普通工事）2 费 1/1 程0：超负荷 + 死亡（负血部分炸敌方全体）
+	#   ⚠️ R526 起 1 费 → 2 费（用户口径）
 	var r493_mine := repo.get_card(9219)
 	check(r493_mine.card_name == "压感地雷" and r493_mine.kind == "工事"
-			and r493_mine.card_class == "机械之心" and r493_mine.cost == 1
+			and r493_mine.card_class == "机械之心" and r493_mine.cost == 2
 			and r493_mine.power == 1 and r493_mine.health == 1
 			and r493_mine.attack_range == 0 and r493_mine.move_speed == 0
 			and r493_mine.rarity == 0 and r493_mine.has_affix("超负荷")
 			and r493_mine.has_affix("死亡"),
-			"R493 压感地雷：机械之心普通工事 1 费 1/1 程0，字段 超负荷+死亡")
+			"R493 压感地雷：机械之心普通工事 2 费 1/1 程0，字段 超负荷+死亡（R526 起 2 费）")
 	var r493_m := _new_engine([], 20, 20, -1, false)
 	r493_m.start_game(1)
 	var r493_f1: Placement = r493_m.state.place(
@@ -32634,7 +32635,7 @@ func _init() -> void:
 			"R525 通缉令：「次元」单位离场即消失（消耗区 %d / 弃牌区 %d）"
 			% [r525_w.state.void_count, r525_w.state.discard.size()])
 
-	# —— ④ 通缉令第二条：第 12 个回合结束 → 敌方自毁（清场判胜）——
+	# —— ④ 通缉令第二条：敌方第 12 个回合结束 → 敌方自毁（清场判胜）——
 	var r525_t := _new_engine([], 20, 60)
 	r525_t.state.clear_win = true
 	var r525_tz: Array[CardData] = [repo.get_card(9240)]
@@ -32647,15 +32648,21 @@ func _init() -> void:
 	r525_t.state.opp_turn_no = 11
 	r525_t._wanted_tick()
 	check(r525_t.state.unit_at(Vector2i(2, 1)) != null and not r525_t.over,
-			"R525 通缉令：第 11 个回合结束 → 还不自毁")
+			"R525 通缉令：敌方第 11 个回合结束 → 还不自毁")
+	# R526 口径修正（用户）：只数敌方回合 —— 我方先手走完第 12 回合时敌方才 11，
+	# 旧口径取「双方较小值」在这里就会误触发，这条断言专门钉住新口径。
 	r525_t.state.self_turn_no = GameEngine.WANTED_TURN
+	r525_t.state.opp_turn_no = GameEngine.WANTED_TURN - 1
+	r525_t._wanted_tick()
+	check(r525_t.state.unit_at(Vector2i(2, 1)) != null and not r525_t.over,
+			"R526 通缉令：我方第 12 回合结束、敌方仍是 11 → 不自毁（只数敌方回合）")
 	r525_t.state.opp_turn_no = GameEngine.WANTED_TURN
 	r525_t._wanted_tick()
 	check(r525_t.state.unit_at(Vector2i(2, 1)) == null
 			and r525_t.state.unit_at(Vector2i(1, 0)) == null,
-			"R525 通缉令：第 %d 个回合结束 → 敌方场上所有单位自毁" % GameEngine.WANTED_TURN)
+			"R525 通缉令：敌方第 %d 个回合结束 → 敌方场上所有单位自毁" % GameEngine.WANTED_TURN)
 	check(r525_t.over and r525_t.result == "胜利",
-			"R525 通缉令：自毁清场 → 判胜（撑满 12 回合也是一条路）")
+			"R525 通缉令：自毁清场 → 判胜（撑满敌方 12 个回合也是一条路）")
 
 	# 收尾：别把这套状态漏给后面的用例
 	RunState.relics = []
