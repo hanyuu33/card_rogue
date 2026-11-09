@@ -271,6 +271,11 @@ func _ready() -> void:
 		RunState.set_difficulty(11)
 		RunState.key_relics = [RunState.SCREW_RELIC_ID, RunState.SEED_RELIC_ID,
 				RunState.DAGGER_RELIC_ID]
+	# -- --keysgray：R543 出图 —— 难度 11 + 一件信物都没持有 → 三个灰图标。
+	#  出图：`map.tscn -- --screenshot --keysgray --shotwait 0.8`
+	if "--keysgray" in OS.get_cmdline_user_args():
+		RunState.set_difficulty(11)
+		RunState.key_relics = []
 	# -- --whistle：演示鹰哨（R145 起 = 全图迷雾散尽，每格内容都可见）
 	if "--whistle" in OS.get_cmdline_user_args():
 		RunState.relics = [6001, 6005, 6026]
@@ -1839,11 +1844,11 @@ const KEY_BADGE_Y := 240.0
 
 func _draw_key_relics() -> void:
 	## R543：三样信物的小图标 —— 持续显示在地图**左下角**标记按钮列之下（y≥240）。
-	## ⚠️ 只在「第三层上锁（难度 ≥11）」或「已经持有至少一样信物」时才显示整排；
-	##    低难度且一件信物都没有 → 不画（不打扰低难度玩家）。
+	## ⚠️ 难度 ≥11（第三层上锁）时**进图就显示全部三格**：未持有 → 灰色图标，
+	##    已持有 → 变有色（金边 + 全彩）。低难度（0~10）完全不显示（信物无意义）。
 	if not RunState.run_active:
 		return
-	if RunState.key_relics.is_empty() and not RunState.third_layer_locked():
+	if not RunState.third_layer_locked():
 		return
 	var hover_ok := not (_deck_visible or _records_visible or _relics_visible) \
 			and not UiGate.blocked() \
