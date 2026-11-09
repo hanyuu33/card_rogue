@@ -622,3 +622,20 @@ ELECTRIC WIRES / ELECTRIC CABLES / power cords / leads / conduits / pipes hangin
 plugs / sockets`。箱子明写：`STRICT RECTANGULAR CUBOID — rectangular lid, rectangular sides,
 RECTANGULAR FLAT BASE, all corners 90-degree RIGHT ANGLES, all edges straight`。
 裁切 `(150,0,1288,1024)`，右移避右下水印 (1400,948)。
+
+
+---
+
+## 14. 9215 乱打 v8 —— 双拳同方向（R538g）
+
+用户口径：「双拳朝同一个方向」。
+
+v7 双拳一前一后（左拳朝左、右拳朝右），方向相反；v8 改成双拳都朝左（面向方向）连续乱打。
+
+关键 ACTION 段：`BOTH FISTS PUNCH IN THE SAME DIRECTION` —— lead fist fully extended toward the far left,
+rear fist follows right behind it, both arms stacked and sweeping toward the SAME side. BOTH orange-red punch
+arcs trail toward the LEFT, overlapping and layered, like a burst of rapid jabs at the same target.
+
+关键禁词：`one fist to the left and one fist to the right / opposite directions / fists spread apart to both sides`。
+
+裁切 `(0,40,1024,961)`，与 v7 同款窗口，脚不入画。
