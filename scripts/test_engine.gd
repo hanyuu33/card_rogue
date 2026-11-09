@@ -33074,40 +33074,37 @@ func _init() -> void:
 	RunState.skipped_relics = []
 	RunState.run_active = false
 
-	# ===== R539：传承记忆改 5 费史诗 + 二层普通困难「巨炮防线」（激光炮 9241）=====
+	# ===== R539/R540：传承记忆改 5 费史诗 + 二层普通困难「巨炮防线」（激光巨炮 9241）=====
 	# ① 传承记忆：2 费普通 → 5 费史诗（rarity 0 → 2，其余字段不动）
 	var r539_legacy := repo.get_card(9078)
 	check(r539_legacy.cost == 5 and r539_legacy.rarity == 2
 			and r539_legacy.is_effect() and not r539_legacy.needs_target(),
 			"R539 传承记忆：5 费 / 史诗（rarity 0 → 2），仍是无需选目标的效果卡")
 
-	# ② 激光炮卡面：工事 5 / 125 / 程 0 / 速 0，带「激光炮」+「沉睡」（直接复用恶魔鸭那套）
+	# ② 激光巨炮卡面：工事 5 / 400 / 程 0 / 速 0，带「激光炮」+「沉睡」（直接复用恶魔鸭那套）
 	var r539_laser := repo.get_card(9241)
-	check(r539_laser != null and r539_laser.kind == "工事" and r539_laser.power == 5
-			and r539_laser.health == 125 and r539_laser.attack_range == 0
+	check(r539_laser != null and r539_laser.card_name == "激光巨炮"
+			and r539_laser.kind == "工事" and r539_laser.power == 5
+			and r539_laser.health == 400 and r539_laser.attack_range == 0
 			and r539_laser.move_speed == 0 and r539_laser.group == "enemy"
 			and r539_laser.traits.has(GameEngine.LASER_TRAIT)
 			and r539_laser.traits.has(FieldState.SLEEP_TRAIT)
 			and not r539_laser.traits.has("深眠"),
-			"R539 激光炮：工事 5/125 程0 速0，带「激光炮」+「沉睡」（不再有独立「深眠」）")
+			"R540 激光巨炮：工事 5/400 程0 速0，带「激光炮」+「沉睡」")
 
-	# ③ 关卡编成：第二层 · 普通困难，三座炮全在中排（列 0 / 1 / 2）
+	# ③ 关卡编成：第二层 · 普通困难，**一门**巨炮摆中排正中（R540 三合一）
 	var r539_lv := _level_named("巨炮防线")
 	check(not r539_lv.is_empty() and str(r539_lv.get("key", "")) == "laser_line"
 			and int(r539_lv.get("tier", -1)) == GameLevels.TIER_NORMAL_HARD
 			and int(r539_lv.get("layer", -1)) == GameLayers.LAYER_TWO,
 			"R539 巨炮防线：第二层 · 普通敌人-困难，key = laser_line")
 	var r539_units: Array = r539_lv.get("enemy_units", [])
-	var r539_mid := true
-	var r539_cols: Array = []
-	for r539_u: Array in r539_units:
-		var r539_cell: Vector2i = r539_u[6]
-		if r539_cell.x != 1 or int(r539_u[0]) != 9241:
-			r539_mid = false
-		r539_cols.append(r539_cell.y)
-	check(r539_units.size() == 3 and r539_mid
-			and r539_cols.has(0) and r539_cols.has(1) and r539_cols.has(2),
-			"R539 巨炮防线：中排一整列三座激光炮（行 1 · 列 0/1/2）")
+	var r539_one := r539_units.size() == 1
+	if r539_one:
+		var r539_u1: Array = r539_units[0]
+		var r539_cell: Vector2i = r539_u1[6]
+		r539_one = int(r539_u1[0]) == 9241 and r539_cell == Vector2i(1, 1)
+	check(r539_one, "R540 巨炮防线：三炮合一 → 只剩一门激光巨炮（中排正中 行 1 · 列 1）")
 	# 编成元组与 cards.json 同源（力 / 生 / 程 / 速 一个都不能漂）
 	var r539_drift := ""
 	for r539_u2: Array in r539_units:
@@ -33146,33 +33143,41 @@ func _init() -> void:
 	check(r539_duck.sleep_left == FieldState.SLEEP_TURNS - 1,
 			"R539 对照：恶魔鸭 9116 挨打同样 -1（两者共用一套沉睡）")
 
-	# ⑤ 行动：程 0 → 不能常规攻击；同列第一个吃满力量，后排不动，空列改打 HP
+	# ⑤ 行动：程 0 → 不能常规攻击；**一轮打满三列**，每列各打自己那一列的第一个；空列改打 HP
 	var r539_e2 := _new_engine([], 40, 40)
 	r539_e2.start_game(0)
 	var r539_gun := r539_e2.state.place(CardData.from_dict(repo.get_card(9241).to_dict()),
 			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
-	var r539_front := r539_e2.state.place(_card(8341, "前排", "盟友", 0, 3, 30, 1, 1),
-			Vector2i(3, 1), GameEngine.SIDE_SELF)
-	var r539_back := r539_e2.state.place(_card(8342, "后排", "盟友", 0, 3, 30, 1, 1),
-			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r539_c0 := r539_e2.state.place(_card(8341, "左列前排", "盟友", 0, 3, 30, 1, 1),
+			Vector2i(3, 0), GameEngine.SIDE_SELF)
+	var r539_c2f := r539_e2.state.place(_card(8342, "右列前排", "盟友", 0, 3, 30, 1, 1),
+			Vector2i(3, 2), GameEngine.SIDE_SELF)
+	var r539_c2b := r539_e2.state.place(_card(8343, "右列后排", "盟友", 0, 3, 30, 1, 1),
+			Vector2i(4, 2), GameEngine.SIDE_SELF)
 	check(r539_e2.attack_targets(Vector2i(1, 1), GameEngine.SIDE_OPPONENT, r539_gun.card).is_empty()
 			and r539_e2.hp_targets(Vector2i(1, 1), GameEngine.SIDE_OPPONENT).is_empty(),
-			"R539 激光炮：程 0 → 常规攻击 / 直击 HP 的候选都为空（威胁全部来自专属行动）")
-	check(r539_e2._laser_column_target(Vector2i(1, 1), GameEngine.SIDE_SELF) == Vector2i(3, 1),
-			"R539 激光炮：同列第一个 = 最靠前的那个（row 3，不是 row 4）")
+			"R540 激光巨炮：程 0 → 常规攻击 / 直击 HP 的候选都为空（威胁全部来自专属行动）")
+	check(r539_e2._laser_column_target(Vector2i(1, 2), GameEngine.SIDE_SELF) == Vector2i(3, 2),
+			"R540 激光巨炮：每列第一个 = 最靠前的那个（右列取 row 3，不是 row 4）")
+	var r539_hp0: int = r539_e2.state.hp_self
 	r539_e2._laser_cannon_act(Vector2i(1, 1), r539_gun)
-	check(r539_front.health == 25 and r539_back.health == 30,
-			"R539 激光炮：对同列第一个造成 5 点（等同于力量）伤害，后排一点不掉")
-	check(r539_gun.tapped, "R539 激光炮：开完火就横置（这一发就是它这一轮的全部行动）")
+	check(r539_c0.health == 25 and r539_c2f.health == 25 and r539_c2b.health == 30,
+			"R540 激光巨炮：一轮打满三列 → 左列 / 右列各吃 5 点（等同于力量），右列后排一点不掉")
+	check(r539_e2.state.hp_self == r539_hp0 - 5,
+			"R540 激光巨炮：中间那列没人 → 该列直击我方 HP 5 点（%d → %d）" % [
+					r539_hp0, r539_e2.state.hp_self])
+	check(r539_gun.tapped, "R540 激光巨炮：开完火就横置（这一轮齐射就是它的全部行动）")
 
+	# ⑤2 三列全空 → **三笔** HP（每列各一发，不做 `_hp_once` 去重）
 	var r539_e3 := _new_engine([], 40, 40)
 	r539_e3.start_game(0)
 	var r539_gun3 := r539_e3.state.place(CardData.from_dict(repo.get_card(9241).to_dict()),
-			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
-	var r539_hp0: int = r539_e3.state.hp_self
-	r539_e3._laser_cannon_act(Vector2i(1, 0), r539_gun3)
-	check(r539_e3.state.hp_self == r539_hp0 - 5,
-			"R539 激光炮：整列没有目标 → 直击我方 HP 5 点（%d → %d）" % [r539_hp0, r539_e3.state.hp_self])
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	var r539_hp3: int = r539_e3.state.hp_self
+	r539_e3._laser_cannon_act(Vector2i(1, 1), r539_gun3)
+	check(r539_e3.state.hp_self == r539_hp3 - 15,
+			"R540 激光巨炮：三列全空 → 每列各直击 5 点，共 15 点（%d → %d）" % [
+					r539_hp3, r539_e3.state.hp_self])
 
 	# ⑥ 成长：第 1 个我方回合就 +1，之后每回合再 +1
 	var r539_e4 := _new_engine([], 40, 40)
@@ -33193,7 +33198,9 @@ func _init() -> void:
 	check(r539_eng_src.find("if p.card.traits.has(LASER_TRAIT):") >= 0
 			and r539_eng_src.find("func _laser_cannon_act(") >= 0
 			and r539_eng_src.find("func _laser_column_target(") >= 0,
-			"R539 源码：激光炮走 `_ai_act()` 的专属分派（不混进通用流程）")
+			"R539 源码：激光巨炮走 `_ai_act()` 的专属分派（不混进通用流程）")
+	check(r539_eng_src.find("for col in FieldState.BOARD_COLS:") >= 0,
+			"R540 源码：一轮遍历 `BOARD_COLS` 打满三列（不是只看自己那一列）")
 	check(r539_fs_src.find("if card.traits.has(SLEEP_TRAIT):") >= 0
 			and r539_fs_src.find("DEEP_SLEEP_TRAIT") < 0,
 			"R539 源码：`FieldState.place()` 的沉睡口只认 SLEEP_TRAIT（没有另造「深眠」）")
