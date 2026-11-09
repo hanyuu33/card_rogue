@@ -1868,12 +1868,15 @@ func _draw_key_relics() -> void:
 		if owned:
 			draw_rect(rect, Color("d9a441"), false, 1.4)   # 已获得 → 金边
 		else:
-			draw_rect(rect, Color("5a564c"), false, 1.2)   # 未获得 → 暗灰
-		var tex: Texture2D = UiAssets.key_relic_icon(kid)
+			# R543b：未获得 → 整格黑白。MapMaterial 底框自带金色角饰（贴图材质），
+			# 盖一层中灰半透明罩把外框压成灰阶，图标本体再换灰阶贴图。
+			draw_rect(rect, Color(0.56, 0.56, 0.58, 0.72), true)
+			draw_rect(rect, Color("7d7d7d"), false, 1.4)
+		# R543b：未持有 → 灰阶贴图；持有 → 全彩。
+		var tex: Texture2D = UiAssets.key_relic_icon(kid, not owned)
 		if tex != null:
 			var ir := CardFace.fit_rect(tex.get_size(), rect.grow(-6.0))
-			draw_texture_rect(tex, ir, false,
-					Color(1, 1, 1, 1.0) if owned else Color(1, 1, 1, 0.28))
+			draw_texture_rect(tex, ir, false, Color(1, 1, 1, 1.0))
 		else:
 			draw_string(_font_bold, rect.get_center() + Vector2(-4, 6), "?",
 					HORIZONTAL_ALIGNMENT_CENTER, 8, UiTheme.FS_LABEL,

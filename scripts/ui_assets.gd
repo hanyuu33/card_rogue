@@ -141,18 +141,21 @@ static func core_relic_icon() -> Texture2D:
 	return get_tex("reward_icons/core")
 
 
-static func key_relic_icon(id: int) -> Texture2D:
+static func key_relic_icon(id: int, gray: bool = false) -> Texture2D:
 	## R543：三样信物（解锁第三层所需的信物）的小图标。缺图返回 null（调用方兜底）。
 	##   * 6061 完美螺钉 → key_icon_screw.png
 	##   * 6062 生命之种 → key_icon_seed.png
 	##   * 6063 屠戮匕首 → key_icon_dagger.png（参照暗影刺客角色 CG 里的匕首）
+	## `gray=true`（R543b）：返回**去饱和灰阶版** `key_icon_*_gray.png`，用于
+	##   地图上「未持有」的信物图标整格黑白化（含图标本体，不只外框）。
+	var suffix := "_gray" if gray else ""
 	match id:
 		6061:
-			return get_tex("key_icon_screw")
+			return get_tex("key_icon_screw" + suffix)
 		6062:
-			return get_tex("key_icon_seed")
+			return get_tex("key_icon_seed" + suffix)
 		6063:
-			return get_tex("key_icon_dagger")
+			return get_tex("key_icon_dagger" + suffix)
 	return null
 
 
