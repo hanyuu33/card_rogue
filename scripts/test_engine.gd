@@ -33387,6 +33387,52 @@ func _init() -> void:
 			and r541_fs_gd.find("var self_turn_kinds") >= 0,
 			"R541 源码：护盾光环走 FieldState 的唯一开关；出牌分类计数是 FieldState 字段")
 
+	# ===== R542：横幅文字自适应（用户口径「文字超过了中间文本框的长度」）=====
+	# 触发场景：R541 普罗诺亚之影的开场白（15 字）按 25 号字单行画在 350×80 的木牌上，
+	# 一画就两头同时探出去，压住棋盘和右侧面板。修法是「先缩字号、再折行，永远塞进木牌」
+	# （唯一口 `scripts/banner_fit.gd`），**短句必须一个字都不变**。
+	var r542_f: Font = UiTheme.font_bold()
+	var r542_w := 300.0
+	var r542_h := 52.0
+
+	# ① 短句（回合横幅）：仍走 25 号单行 —— 不许因为这次改动把常用横幅改小 / 改折
+	var r542_short := BannerFit.fit(r542_f, "我方回合 · 第 1 回合", r542_w, r542_h)
+	check(int(r542_short["size"]) == BannerFit.FS_MAX
+			and (r542_short["lines"] as Array).size() == 1,
+			"R542 短句「我方回合 · 第 N 回合」仍是 25 号单行（观感不变）")
+
+	# ② 中句（15 字开场白）：缩小字号换单行，且实测宽度 ≤ 文字区 —— 不再探出木牌
+	var r542_mid := BannerFit.fit(r542_f, "你打出的每一张牌，我都会记住。", r542_w, r542_h)
+	var r542_mid_lines: Array = r542_mid["lines"]
+	var r542_mid_ok: bool = int(r542_mid["size"]) < BannerFit.FS_MAX and r542_mid_lines.size() == 1
+	for r542_ln: String in r542_mid_lines:
+		if r542_f.get_string_size(r542_ln, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				int(r542_mid["size"])).x > r542_w:
+			r542_mid_ok = false
+	check(r542_mid_ok, "R542 中句（15 字）缩字号后单行塞进 300 宽文字区（不探出木牌）")
+
+	# ③ 超长句：折行 —— 行数 ≤ 上限、总高 ≤ 文字区高、每行 ≤ 文字区宽（**绝不溢出**）
+	var r542_long := "启示者进入第三阶段：每有一个己方单位被破坏，就获得 +2 力量，并在每个回合结束时对所有敌人造成 3 点伤害。"
+	var r542_lay := BannerFit.fit(r542_f, r542_long, r542_w, r542_h)
+	var r542_lines: Array = r542_lay["lines"]
+	var r542_sz := int(r542_lay["size"])
+	var r542_ok: bool = r542_lines.size() >= 1 and r542_lines.size() <= BannerFit.MAX_LINES
+	r542_ok = r542_ok and float(r542_lines.size()) * float(r542_lay["lh"]) <= r542_h + 0.01
+	for r542_ln2: String in r542_lines:
+		if r542_f.get_string_size(r542_ln2, HORIZONTAL_ALIGNMENT_LEFT, -1, r542_sz).x > r542_w:
+			r542_ok = false
+	check(r542_ok, "R542 超长句折行后每行不超宽、总高不超框（画在木牌里，不压棋盘 / 面板）")
+
+	# ④ 空串不炸（`_show_banner("")` 这类老路径）
+	check((BannerFit.fit(r542_f, "", r542_w, r542_h)["lines"] as Array).size() == 1,
+			"R542 空串返回一行空行（老路径不崩）")
+
+	# ⑤ 源码锁：横幅只许走 `BannerFit.fit`，旧的 25 号单行直画必须删干净
+	var r542_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check(r542_bs.find("BannerFit.fit(_font_bold, str(_banner.text)") >= 0
+			and r542_bs.find("_draw_string_center(_font_bold, 25, str(_banner.text)") < 0,
+			"R542 源码：`_draw_banner` 走 `BannerFit.fit`，25 号单行直画已删除")
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

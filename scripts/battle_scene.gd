@@ -15840,6 +15840,15 @@ func _set_over_gold(total: int, parts: Array[String]) -> void:
 	_over_gold.visible = true
 
 
+## R542（用户报「文字超过了中间文本框的长度」）：横幅木牌 + **文字安全区**。
+## 贴图 `button_forest` 是 400×92 的六边形（中间满宽、上下两端收窄），画成 350×80 之后
+## 上下两端只剩 ~310 宽、约 52 高 —— 文字区按这个**最窄处**取，宁可窄一点也不探出牌子。
+const BANNER_PLATE_W := 350.0
+const BANNER_PLATE_H := 80.0
+const BANNER_TEXT_W := 300.0
+const BANNER_TEXT_H := 52.0
+
+
 func _draw_banner() -> void:
 	if _map_visible:
 		return
@@ -15852,8 +15861,19 @@ func _draw_banner() -> void:
 	var cy := GRID_Y + GRID_H * 0.42 - 18.0 * p
 	var ribbon := UiAssets.get_tex("adventure_shared/button_forest")
 	if ribbon != null:
-		draw_texture_rect(ribbon, Rect2(cx - 175, cy - 40, 350, 80), false, Color(1, 1, 1, alpha))
-	_draw_string_center(_font_bold, 25, str(_banner.text), Vector2(cx, cy), Color(1, 0.95, 0.81, alpha), -1)
+		draw_texture_rect(ribbon, Rect2(cx - BANNER_PLATE_W / 2.0, cy - BANNER_PLATE_H / 2.0,
+				BANNER_PLATE_W, BANNER_PLATE_H), false, Color(1, 1, 1, alpha))
+	# R542（用户口径「文字超过了中间文本框的长度」）：文字**先折行、再缩字号**，
+	# 永远落在木牌里 —— 排版规则（字号优先 / 折行 / 末行不许太短 / 兜底截断）见
+	# `scripts/banner_fit.gd`，这里只管逐行居中。
+	var lay: Dictionary = BannerFit.fit(_font_bold, str(_banner.text), BANNER_TEXT_W, BANNER_TEXT_H)
+	var lines: Array = lay["lines"]
+	var sz: int = int(lay["size"])
+	var lh: float = float(lay["lh"])
+	var y0: float = cy - lh * float(lines.size() - 1) * 0.5
+	var txt_col := Color(1, 0.95, 0.81, alpha)
+	for i in lines.size():
+		_draw_string_center(_font_bold, sz, str(lines[i]), Vector2(cx, y0 + lh * float(i)), txt_col, -1)
 
 
 func _draw_confetti() -> void:
