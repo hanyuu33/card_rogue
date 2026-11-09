@@ -567,3 +567,58 @@ NO aged or vintage look. NO readable text, NO letters, NO numbers, NO logo, NO w
 裁切居中 `(199,0,1337,1024)`。
 分离的关键不是形容词而是**三条可验证依据**：罐子自带铬底座与四只脚、比箱口矮且窄、透过玻璃能看见
 箱内白搪瓷内壁与稻草在它背后。只写「箱子打开、里面有个罐子」，模型就会把箱壁画成玻璃。
+
+
+---
+
+## 12. 9215 乱打 v7 —— 纯 90° 侧面（R538e）
+
+用户口径：「乱打这个角度不好，应该从90度侧面」。
+
+```
+FLAT ANIME CEL-SHADED ILLUSTRATION, clean crisp dark line art, 2-3 steps of flat shading, hard-edged shadows.
+
+CANVAS FILL — CRITICAL: the painting must cover the ENTIRE canvas EDGE TO EDGE, corner to corner. NO white margin, NO white border, NO white rectangle, NO inset frame.
+
+HOW TO USE THE REFERENCE IMAGE: it is a HEAD-ONLY portrait. Take from it ONLY these four things — hair colour (pale gold), cat ears (black outside, pink inside), eye colour (amber gold), and the two small green leaf hair ornaments. Do NOT copy its head-to-body ratio, face shape, or proportions.
+
+CAMERA ANGLE — THE ONE THING TO GET RIGHT: a pure 90-degree SIDE VIEW (side profile). She faces exactly to the LEFT side of the frame, we look at her straight from the side. Her face is in STRICT PROFILE — only ONE eye visible, nose and mouth shown in silhouette. Her body is turned fully sideways: shoulders stacked one behind the other, one hip toward the camera, both feet pointed to the left.
+
+BODY TYPE — SLENDER TEENAGE GIRL WITH A SMALL HEAD:
+- She is about SIX head-heights tall, a slender fifteen-year-old girl.
+- HER HEAD IS SMALL AND SLIM — the head is only about ONE SIXTH of her total height. It is a slim oval with a slightly pointed chin, a small jaw and a small nose. NOT a big round circle, NOT a wide face, NOT a balloon head.
+Slim girlish build: narrow shoulders, slender arms, slim legs, flat chest. NOT adult, NOT mature, NOT curvy.
+
+FACE: a youthful girl's face in profile, soft cheek, small nose, small pointed chin, determined gritted-teeth expression.
+
+OUTFIT: short sleeveless dress of layered GREEN LEAVES with tiny white daisies, cloth wraps on both forearms and knuckles, vine belt, BARE FEET. ONE fluffy BLACK cat tail.
+
+ACTION: a wild TWO-FISTED FLURRY seen from the side — her LEFT fist punches toward the far LEFT (the direction she faces), her RIGHT fist punches toward the far RIGHT (behind her), both arms thrown out at the same instant, each fist trailing its own long curved ORANGE-RED punch arc sweeping outward in OPPOSITE directions along the horizontal axis. Torso twisted low, wide staggered stance, dust puffs at her feet, hair and tail whipping from the spin.
+
+CAMERA: full body from top of head to bare feet, centred, filling about 86 percent of the frame height.
+
+LIGHT: deep green ancient forest, mossy trunks and roots, cool green ambient, soft rim light. The orange-red punch arcs are the only warm colour.
+
+STRICTLY FORBIDDEN: three-quarter view, front view, back view, both eyes visible, facing the camera. NO chibi, NO super-deformed, NO oversized head, NO big head, NO giant head, NO balloon head, NO round face, NO wide face, NO huge forehead, NO toddler, NO baby proportions. NO adult woman, NO mature woman, NO tall amazon, NO muscular arms, NO curves, NO large bust. NO antlers, NO deer horns, NO helmet, NO armour, NO metal plates, NO red cape, NO second character, NO white background, NO white frame, NO readable text, NO letters, NO numbers, NO logo, NO watermark, NO border, NO photorealistic rendering.
+```
+
+尺寸 1024×1536，`image1 = assets/ui/class_avatar_forest.png`，`input_fidelity=low`。
+裁切 `(0,40,1024,961)`，脚不入画。
+⚠️ 参照图 Q 版大头比例顽固：即使写「头高 = 身高 1/6、椭圆脸尖下巴、禁气球头」，成品仍 5.5 头身、
+头偏大 Q 版感。文字约束压到 5.5 头身即到顶，要彻底去 Q 版只能换参照源或不上 Q 版参照图。
+
+---
+
+## 13. 8079 惊喜运单 v8 —— 标准长方体，禁多边形底座与电线（R538e）
+
+用户口径：「盖子是长方形但是底座是五边形还接了电线」。
+
+参照图 `ref_tank_eel.png` 其实是「圆柱罐 + 弧形斜切底座 + 拱形金属支架 + 左右粗电缆」，v7 把斜切底座
+与电缆抄进了箱子 → 底座多边形 + 挂电线。v8 只借「罐里活电鳗」一项，几何全禁：
+
+关键禁词：`polygonal base / five-sided or six-sided base / beveled or chamfered base / sloping base /
+trapezoid base / round or oval crate / curved crate edges / arch metal frames / metal brackets /
+ELECTRIC WIRES / ELECTRIC CABLES / power cords / leads / conduits / pipes hanging off the crate /
+plugs / sockets`。箱子明写：`STRICT RECTANGULAR CUBOID — rectangular lid, rectangular sides,
+RECTANGULAR FLAT BASE, all corners 90-degree RIGHT ANGLES, all edges straight`。
+裁切 `(150,0,1288,1024)`，右移避右下水印 (1400,948)。
