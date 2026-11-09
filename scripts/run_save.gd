@@ -388,6 +388,9 @@ static func apply(d: Dictionary) -> bool:
 	# 与 `start_run()` 预生成地图那条分支同一套口径。
 	# ⚠️ 只在账本为空时补：账本非空说明存档本身是 R374 之后的，别拿地图去覆盖它
 	#    （地图上可能还有 `?` 房没揭晓，覆盖会把「已出过但图上没有的」记录抹掉）。
+	# R544b（边界澄清）：老档在**第二层**读档时，第一层出过的事件已无法从存档恢复
+	#    （那层地图早被换层替掉了）—— 但第二层地图早已定型、不会重新生成，故不会再撞出
+	#    新的重复；R374 之后的新存档账本完整持久化（`snapshot`/`apply` 双向），跨层不重复已根治。
 	if RunState.event_kinds_used.is_empty() and RunState.map_cells.size() > 0:
 		for mc: Dictionary in RunState.map_cells:
 			if str(mc.get("type", "")) == "event":

@@ -7205,6 +7205,53 @@ func _init() -> void:
 			% str(RunState.event_kinds_used))
 	RunState.end_run()
 
+	# ---- R544b 事件去重加固：源码锁 + 跨层共享事件 + 第二层老档补登记 ----
+	# ① 源码锁：开局 / 换层 / 骰子重摇三条真实游玩路径都显式传入 event_kinds_used，
+	#    防止未来重构漏传 → 退化回「只在单张图内不重复、换层又撞」。
+	var r544_rs := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	check_src(r544_rs.contains("RogueMap.generate(run_rng, layer, null, event_kinds_used)")
+			and r544_rs.contains("RogueMap.reroll_as_unknown(arr, dice_map_rng(), current_layer, event_kinds_used)")
+			and r544_rs.count("event_kinds_used)") == 4,
+			"R544b 源码锁：开局/换层/骰子重摇三条生成路径都显式传 event_kinds_used")
+
+	# ② 跨层共享事件（两层 events 表都登记）靠账本去重：进账本后第二层不再出。
+	var r544_l1 := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
+	var r544_l2 := GameLayers.event_kinds(GameLayers.LAYER_TWO)
+	var r544_shared := {}
+	for r544_k in r544_l1:
+		if r544_l2.has(r544_k):
+			r544_shared[str(r544_k)] = true
+	check(r544_shared.has("oblivion") and r544_shared.has("smith")
+			and r544_shared.has("divination") and r544_shared.has("martial"),
+			"R544b 跨层共享事件集合两层都登记（oblivion/smith/divination/martial）")
+	var r544_rng := RandomNumberGenerator.new()
+	r544_rng.seed = 440001
+	var r544_m2: Array = RogueMap.generate(r544_rng, GameLayers.LAYER_TWO, null,
+			r544_shared.duplicate())
+	var r544_hit := ""
+	for r544_c: Dictionary in r544_m2:
+		if str(r544_c.get("type", "")) == "event" and r544_shared.has(str(r544_c.get("event_kind", ""))):
+			r544_hit = str(r544_c.get("event_kind", ""))
+	check(r544_hit == "",
+			"R544b 共享事件进账本后第二层不再出（违例 %s）"
+			% ("无" if r544_hit == "" else r544_hit))
+
+	# ③ 第二层老档读档：补登记同样覆盖当前层（不局限第一层）。
+	RunState.start_run([], GameLayers.LAYER_DEFAULT)
+	RunState.current_layer = GameLayers.LAYER_TWO
+	RunState.map_cells = [{"id": 0, "col": 0, "row": 0, "type": "event",
+			"hidden": false, "revealed": true, "doors": [], "layer": 2,
+			"event_kind": "moon"}]
+	RunState.event_kinds_used = {"moon": true}
+	var r544_snap: Dictionary = RunSave.snapshot()
+	r544_snap.erase("event_kinds_used")
+	RunState.event_kinds_used = {}
+	RunSave.apply(r544_snap)
+	check(RunState.event_kinds_used.has("moon"),
+			"R544b 第二层老档读档仍从当前层地图补登记（当前 %s）"
+			% str(RunState.event_kinds_used))
+	RunState.end_run()
+
 	# ---- run 流程：开局 / 走节点 / 卡组增长 / 战斗记录持久化 ----
 	RunState.end_run()
 	var run_rng := RandomNumberGenerator.new()
