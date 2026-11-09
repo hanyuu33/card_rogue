@@ -67,6 +67,17 @@ func _initialize() -> void:
 				RunState.pending_level = RunState.next_level({"type": "battle"})
 				_seed_rewards(),
 			_check_r389_auto_leave],
+		# R546（用户口径）：「战斗胜利窗口和整体风格不搭，按游戏风格重做」
+		#   +「继续冒险改为查看奖励，去除返回标题，金币按实际数量，这个提示后应该是奖励领取界面」。
+		# ⚠️ 这是**界面分发**型改动：数据层（金币算得对）全绿也不代表玩家领得到 ——
+		#    必须真场景验「面板可见 / 按钮文案 / 点下去奖励窗真的开」。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"})
+				_seed_rewards(),
+			_check_r546_win_panel],
 		# R391（用户口径）：「增加一个更大更明显的回合结束按钮放在道具栏上方」。
 		# 自绘 + 在 `_on_left_click` 里判矩形 —— 只有真场景能验「画在那 / 点了有反应」。
 		["res://scenes/battle.tscn", func():
@@ -982,6 +993,61 @@ func _check_r389_auto_leave(scene: Variant) -> void:
 		return
 	scene.set("over_route_fn", Callable())
 	print("SMOKE OK R389 领完奖励：关窗即回地图 / 没领完不动 / 转场不重复跳")
+
+
+func _check_r546_win_panel(scene: Variant) -> void:
+	## R546：胜利面板（素材底板 + 缎带 + 金币 + 唯一主按钮）。
+	## 四件事，缺一件玩家就卡住或看不懂：
+	##   ① 胜利面板真的显示、老结算面板收掉（两套皮肤同时出现会叠成一坨）；
+	##   ② 金币大字是**实际结算值**（`RunState.gold_for_tier` 那一档），不是写死的数；
+	##   ③ 主按钮文案 = 「查看奖励」，胜利路径上没有「返回标题」这个出口；
+	##   ④ 点它之后奖励窗真的打开 —— 这个弹窗就是用户说的「奖励领取界面」。
+	var wp: Variant = scene.get("_win_panel")
+	if wp == null:
+		_smoke_fail("R546：战斗场景没有胜利面板（_build_win_panel 没跑？）")
+		return
+	var old_panel: Variant = scene.get("_over_panel")
+	var btn: Variant = scene.get("_win_btn")
+	var gold_box: Variant = scene.get("_win_gold_box")
+	var num: Variant = scene.get("_win_gold_num")
+	if btn == null or gold_box == null or num == null:
+		_smoke_fail("R546：胜利面板的子件没建全（按钮 / 金币块 / 金币大字）")
+		return
+	if RunState.pending_reward_count() <= 0:
+		_smoke_fail("R546：用例需要待领奖励，实际 0")
+		return
+	var gold_before: int = RunState.gold
+	scene.call("_show_over", true)
+	if not wp.visible:
+		_smoke_fail("R546：胜利面板没有显示")
+		return
+	if old_panel != null and old_panel.visible:
+		_smoke_fail("R546：胜利时老结算面板应该收掉（两套皮肤会叠在一起）")
+		return
+	if not gold_box.visible:
+		_smoke_fail("R546：普通关胜利应该有金币行，实际整块被收掉了")
+		return
+	if not str(num.text).begins_with("+"):
+		_smoke_fail("R546：金币大字格式不对：%s" % str(num.text))
+		return
+	# 金币大字必须等于这一场真实入账（面板画的和账上记的要一致，否则玩家会以为少给了）。
+	var expect: int = RunState.gold - gold_before
+	if expect > 0 and str(num.text) != "+%d" % expect:
+		_smoke_fail("R546：金币大字 %s 与实际入账 +%d 不一致" % [str(num.text), expect])
+		return
+	if str(btn.text) != "查看奖励":
+		_smoke_fail("R546：主按钮文案应为「查看奖励」，实际「%s」" % str(btn.text))
+		return
+	var rp: Variant = scene.get("_reward_panel")
+	if rp == null:
+		_smoke_fail("R546：战斗场景没有挂上 RewardPanel")
+		return
+	btn.pressed.emit()
+	if not rp.is_open():
+		_smoke_fail("R546：点「查看奖励」没有打开奖励领取界面")
+		return
+	print("SMOKE OK R546 胜利面板：可见 / 金币 %s（实际入账 +%d）/ 按钮「查看奖励」→ 奖励窗已打开"
+			% [str(num.text), expect])
 
 
 func _check_reward_panel_view(scene: Variant, want_view: int, label: String) -> void:

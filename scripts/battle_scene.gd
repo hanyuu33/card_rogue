@@ -720,6 +720,17 @@ var _over_gold: Label            # R423：结算面板的金币结算行（战�
 var _over_btn_restart: Button
 var _over_btn_level: Button
 var _over_btn_title: Button
+## R546：战斗胜利面板 —— 用户口径「胜利窗口和整体风格不搭，按游戏风格重做」。
+## 底板 `assets/ui/battle_win_plate.png` 是美术侧出的**空白**版（米色羊皮纸 +
+## 森林绿缎带 + 黄铜包边，缎带里没有字），标题 / 金币 / 按钮全部运行时绘制。
+## 与老 `_over_panel` 并存：胜利走它，失败仍走老面板 —— 缎带是「胜利」语义，
+## 同一个绿缎带上写「失败」会自相矛盾。
+const WIN_PANEL_SIDE := 580.0
+var _win_panel: Control
+var _win_gold_box: Control            # 金币整块（本场没发金币时整块收掉）
+var _win_gold_num: Label              # 「+50」大字
+var _win_gold_parts: Label            # 分项来源 + 现有金币
+var _win_btn: Button                  # 唯一主按钮：查看奖励 / 进入下一层 / 回地图 / 再来一局
 ## R367：本场「输」是否已经落过记录 —— `_record_defeat()` 的幂等标记。
 ## 结算面板要等演出播完才弹，但记录必须在 `engine.over` 那一刻就写。
 var _lose_recorded := false
@@ -833,6 +844,7 @@ func _ready() -> void:
 	_build_tut_bar()
 	_build_level_menu()
 	_build_over_panel()
+	_build_win_panel()
 	# R339：**必须在 `_load_entry_level()` 之前**抓 —— 那一句会跑开局第 1 个我方回合，
 	#       跨战斗计数（lucky 7）当场 +1。检查点要的是「这一场开打之前」的局状态。
 	if RunState.run_active:
@@ -1085,6 +1097,15 @@ func _ready() -> void:
 		# R389 出图：假装刚解锁一段**有正文**的剧情 —— 核验结算面板副标题 + 底部轻提示。
 		# 出图：`battle.tscn -- --screenshot --over --storyunlock --shotframe 40`
 		_demo_story_notice = "✦ 新剧情解锁：第一章-游移的音准"
+	if "--windemo" in args and engine != null:
+		# R546 出图：**胜利结算面板**（金币行 + 「查看奖励」）。走 run 模式 + 普通关，
+		# 这样金币行与主按钮都跑真实路径（`gold_for_tier` / `pending_reward_count`）。
+		# 出图：`battle.tscn -- --screenshot --windemo --shotframe 60`
+		if not RunState.run_active:
+			seed(0x546)
+			RunState.start_run([], GameLayers.LAYER_DEFAULT)
+		RunState.pending_node = {"type": "battle"}
+		engine._finish("胜利", "演示：胜利结算面板")
 	if "--bosswin" in args and engine != null:
 		# R179 演示：**Boss 通关结算**（核验短按钮文案 + Boss 档卡牌三选一）。
 		# 必须配 `--level <Boss 关下标>` 用（`_run_boss_win` 由关卡 tier 决定）。
@@ -3995,6 +4016,8 @@ func _setup_net() -> void:
 	_tutorial_finished = true
 	_tut_update_bar()
 	_over_panel.visible = false
+	if _win_panel != null:
+		_win_panel.visible = false
 	_over_shown = false
 	_lose_recorded = false
 	_confetti.clear()
@@ -4300,6 +4323,8 @@ func load_level(lvl: Dictionary) -> void:
 	_tutorial_finished = _tutorial.is_empty()
 	_tut_update_bar()
 	_over_panel.visible = false
+	if _win_panel != null:
+		_win_panel.visible = false
 	_over_shown = false
 	_lose_recorded = false
 	_confetti.clear()
@@ -7355,6 +7380,167 @@ func _build_over_panel() -> void:
 		b.pressed.connect(func(): sfx.play("click"))
 
 
+func _build_win_panel() -> void:
+	## R546：胜利面板的壳。底板 1160×1160 等比缩到 580（四角黄铜不变形），
+	## 子控件全按 580 的局部坐标手摆 —— 缎带、分隔线、按钮必须跟着素材的固定
+	## 像素走，交给 Container 反而会被内容边距挤歪。
+	_win_panel = Control.new()
+	_win_panel.name = "WinPanel"
+	_win_panel.size = Vector2(WIN_PANEL_SIDE, WIN_PANEL_SIDE)
+	_win_panel.position = Vector2((WINDOW_W - WIN_PANEL_SIDE) * 0.5,
+			(WINDOW_H - WIN_PANEL_SIDE) * 0.5)
+	_win_panel.visible = false
+	_win_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_win_panel)
+
+	var plate := TextureRect.new()
+	# ⚠️ 顺序要紧：`expand_mode` 必须**先于**贴图设置，否则 minimum_size 被纹理的
+	# 1160 撑住，后面 `size = 580` 会被 clamp 回去 —— 底板就会按原尺寸画，
+	# 缎带直接糊到面板外（2026-11-09 踩过一次，截图里缎带横穿半个屏幕）。
+	plate.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	plate.stretch_mode = TextureRect.STRETCH_SCALE
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_win_panel.add_child(plate)
+	plate.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	plate.texture = UiAssets.get_tex("battle_win_plate")
+
+	# 缎带标题：素材里绿色缎带主体在原图 y≈175~300 → 缩放后 y≈81~139；
+	# 左右飘带翼张得更开，所以文字框只取中间 62% 宽，别压到翼上。
+	var title := Label.new()
+	title.text = "战 斗 胜 利"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.size = Vector2(WIN_PANEL_SIDE * 0.62, 58.0)
+	title.position = Vector2((WIN_PANEL_SIDE - title.size.x) * 0.5, 84.0)
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title.add_theme_font_override("font", UiTheme.font_bold())
+	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_color_override("font_color", Color("f7ead0"))
+	title.add_theme_color_override("font_shadow_color", Color(0.10, 0.08, 0.03, 0.8))
+	title.add_theme_constant_override("shadow_offset_x", 0)
+	title.add_theme_constant_override("shadow_offset_y", 2)
+	_win_panel.add_child(title)
+
+	# 金币整块：小标题 + （图标 + 大字）+ 分项。整块可整体隐藏。
+	_win_gold_box = Control.new()
+	_win_gold_box.size = Vector2(WIN_PANEL_SIDE, 152.0)
+	_win_gold_box.position = Vector2(0, 194.0)
+	_win_gold_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_win_panel.add_child(_win_gold_box)
+
+	var cap := Label.new()
+	cap.text = "获得金币"
+	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cap.size = Vector2(WIN_PANEL_SIDE, 28.0)
+	cap.position = Vector2.ZERO
+	cap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cap.add_theme_font_override("font", UiTheme.font())
+	cap.add_theme_font_size_override("font_size", 21)
+	cap.add_theme_color_override("font_color", Color("6d5940"))
+	_win_gold_box.add_child(cap)
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.size = Vector2(WIN_PANEL_SIDE, 80.0)
+	row.position = Vector2(0, 28.0)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 14)
+	_win_gold_box.add_child(row)
+
+	var coin := TextureRect.new()
+	coin.texture = UiAssets.get_tex("reward_icons/gold")
+	coin.custom_minimum_size = Vector2(78, 78)
+	coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(coin)
+
+	_win_gold_num = Label.new()
+	_win_gold_num.text = "+0"
+	_win_gold_num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_win_gold_num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_win_gold_num.add_theme_font_override("font", UiTheme.font_bold())
+	_win_gold_num.add_theme_font_size_override("font_size", 56)
+	_win_gold_num.add_theme_color_override("font_color", Color("4a3a22"))
+	row.add_child(_win_gold_num)
+
+	_win_gold_parts = Label.new()
+	_win_gold_parts.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_win_gold_parts.size = Vector2(WIN_PANEL_SIDE - 80.0, 26.0)
+	_win_gold_parts.position = Vector2(40.0, 108.0)
+	_win_gold_parts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_win_gold_parts.add_theme_font_override("font", UiTheme.font())
+	_win_gold_parts.add_theme_font_size_override("font_size", 16)
+	_win_gold_parts.add_theme_color_override("font_color", Color("6f5a3c"))
+	_win_gold_box.add_child(_win_gold_parts)
+
+	# 分隔线：效果图里是细金线 + 中间小菱形，这里用两根 1px 线夹一个菱形字。
+	const LINE_Y := 356.0
+	for lx: float in [118.0, 332.0]:
+		var ln := ColorRect.new()
+		ln.color = Color(0.72, 0.63, 0.47, 0.85)
+		ln.position = Vector2(lx, LINE_Y)
+		ln.size = Vector2(130.0, 1.0)
+		ln.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_win_panel.add_child(ln)
+	var dot := Label.new()
+	dot.text = "◆"
+	dot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dot.size = Vector2(24.0, 18.0)
+	dot.position = Vector2((WIN_PANEL_SIDE - 24.0) * 0.5, LINE_Y - 9.0)
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dot.add_theme_font_size_override("font_size", 12)
+	dot.add_theme_color_override("font_color", Color("b99a5e"))
+	_win_panel.add_child(dot)
+
+	_win_btn = Button.new()
+	_win_btn.text = "查看奖励"
+	_win_btn.size = Vector2(348.0, 64.0)
+	_win_btn.position = Vector2((WIN_PANEL_SIDE - 348.0) * 0.5, 406.0)
+	_win_btn.pressed.connect(func():
+		sfx.play("click")
+		_on_win_primary())
+	_win_panel.add_child(_win_btn)
+	# 主按钮用冒险风格（button_forest = 绿色六边形 + 黄铜边），与底板同一套材质语言。
+	UiTheme.apply_button(_win_btn, true)
+
+
+func _on_win_primary() -> void:
+	## R546：胜利面板的唯一出口（用户口径「这个提示后应该是奖励领取界面」）。
+	## 有奖励 → 进奖励领取页；关掉奖励窗时 `_on_reward_panel_closed` 会自己把玩家送走。
+	## 没奖励 → 直接按老路由走（进下一层 / 回地图 / 再来一局），一步都不多。
+	if RunState.pending_reward_count() > 0 and _reward_panel != null:
+		_reward_panel.open()
+		return
+	_on_over_restart()
+
+
+func _present_win_panel(gold_total: int, gold_parts: Array[String]) -> void:
+	## R546：把这一场的结算填进素材面板。金币**取实际结算值**（战斗 / 硬币 /
+	## 赏金猎人 三段合计，记账在 `_show_over`），不写死任何数字。
+	if _win_panel == null:
+		return
+	_win_gold_box.visible = gold_total > 0
+	if gold_total > 0:
+		_win_gold_num.text = "+%d" % gold_total
+		_win_gold_parts.text = "%s　现有 %d" % [" · ".join(gold_parts), RunState.gold]
+	# 主按钮文案：有奖励才叫「查看奖励」，否则就是送走玩家的那一步。
+	if RunState.pending_reward_count() > 0:
+		_win_btn.text = "查看奖励"
+	elif RunState.run_active and _run_next_layer > 0:
+		_win_btn.text = "进入%s" % GameLayers.layer_name(_run_next_layer)
+	elif RunState.run_active:
+		_win_btn.text = "返回冒险地图 →"
+	else:
+		_win_btn.text = "再来一局"
+	_win_panel.modulate.a = 1.0
+	_win_panel.scale = Vector2.ONE
+	_win_panel.visible = true
+	UiPop.play(_win_panel)
+
+
+
+
 func _mark_battle_checkpoint() -> void:
 	## R323：**进战斗时写一份存档**，记下「我正停在这一场」——
 	## 玩家在战斗里点「返回标题」，标题页的「继续游戏」才能回到这一场。
@@ -7497,6 +7683,11 @@ func _show_over(win: bool) -> void:
 	_run_next_layer = 0
 	_over_hint.text = ""
 	_over_hint.add_theme_color_override("font_color", UiTheme.INK_600)
+	# R546：金币合计提到函数级 —— 胜利面板要读它填大字（原来只在 run 分支里声明）。
+	var gold_total := 0
+	var gold_parts: Array[String] = []
+	if _win_panel != null:
+		_win_panel.visible = false
 	# R423：金币行先整行收掉 —— 败北 / 单关演示不发金币，别留着上一场的数字。
 	if _over_gold != null:
 		_over_gold.visible = false
@@ -7534,8 +7725,6 @@ func _show_over(win: bool) -> void:
 			# R181：战斗胜利掉金币（按关卡分级：普通简单 20 / 普通困难 30 / 精英 50/65 / Boss 100）
 			# R423（用户口径「赏金猎人 / 硬币 加的金币不明显」）：三处来源逐笔记账，
 			# 结算面板要能说清「这些钱从哪来」，而不是只有一个闷声变大的数字。
-			var gold_parts: Array[String] = []
-			var gold_total := 0
 			var gold_gain := RunState.gold_for_tier(tier)
 			if gold_gain > 0:
 				RunState.gain_gold(gold_gain)
@@ -7739,19 +7928,25 @@ func _show_over(win: bool) -> void:
 	if _summary_pending:
 		_goto_scene("res://scenes/run_summary.tscn")
 		return
-	var sb := _over_panel.get_theme_stylebox("panel") as StyleBoxFlat
-	sb.border_color = COL_WIN if win else COL_LOSE
-	_over_title.text = "胜  利" if win else "失  败"
-	_over_title.add_theme_color_override("font_color", COL_WIN if win else COL_LOSE)
-	_over_panel.visible = true
-	UiPop.play(_over_panel)   # R151 P1-9：结算面板入场 scale 0.92→1.0 + 淡入 160ms
 	sfx.play("win" if win else "lose")
 	if win:
+		# R546（用户口径「战斗胜利窗口和整体风格不搭」）：胜利走素材面板
+		# （米色羊皮纸 + 森林绿缎带 + 黄铜包边 + 绿色六边形主按钮）。
+		# 失败仍走老的简化面板 —— 缎带是「胜利」语义，绿缎带上写「失败」自相矛盾。
+		_over_panel.visible = false
+		_present_win_panel(gold_total, gold_parts)
 		_spawn_confetti()
-	# R119：有奖励入队 → 弹出奖励悬浮窗（压在结算面板之上；先看清战利品再决定去向）。
-	# 关掉它不会丢奖励 —— 左上角常驻「✦ 待领奖励 N」可以随时回来。
-	if win and _reward_panel != null and RunState.pending_reward_count() > 0:
-		_reward_panel.open()
+	else:
+		var sb := _over_panel.get_theme_stylebox("panel") as StyleBoxFlat
+		sb.border_color = COL_LOSE
+		_over_title.text = "失  败"
+		_over_title.add_theme_color_override("font_color", COL_LOSE)
+		_over_panel.visible = true
+		UiPop.play(_over_panel)   # R151 P1-9：结算面板入场 scale 0.92→1.0 + 淡入 160ms
+	# R546（用户口径「继续冒险改为查看奖励，这个提示后应该是奖励领取界面」）：
+	# **不再自动弹奖励窗** —— 玩家先看清这一场拿了多少金币，再点「查看奖励」进去。
+	# 奖励不会丢：`RunState.pending_rewards` 一直在，左上角常驻「✦ 待领奖励 N」；
+	# 关掉奖励窗时 `_on_reward_panel_closed` 会照旧把玩家送走。
 
 
 func _spawn_confetti() -> void:
