@@ -264,7 +264,7 @@ var lone_str_bonus: int = 0
 var assemble: Dictionary = {}
 var assemble_pool: String = ""
 
-## 拼装时机 key 白名单（见拼装机制设计.md §2.1；引擎只认这些）。
+## 拼装已知时机 key（用于识别历史数据；实际允许列表和黑名单以 assemble_rules.gd 为准）。
 const ASSEMBLE_TRIGGERS: Array[String] = [
 	"enter", "use", "turn_start", "turn_end", "death", "upgraded",
 	"attack", "attacked", "kill", "damaged", "card_played",

@@ -1,7 +1,10 @@
 extends RefCounted
 
-const TRIGGERS := ["use", "enter", "death", "upgraded", "turn_end"]
-const LABELS := {"use": "使用时", "enter": "入场时", "death": "死亡时", "upgraded": "每次被改造时", "turn_end": "回合结束时"}
+const BLACKLIST := ["card_played", "kill"]
+const DEFERRED := ["random_gained"]
+const TRIGGERS := ["use", "enter", "death", "upgraded", "turn_end", "turn_start",
+	"attack", "attacked", "damaged", "effect_played", "turn_first_play", "after_draw", "action_end"]
+const LABELS := {"use": "使用时", "enter": "入场时", "death": "死亡时", "upgraded": "每次被改造时", "turn_end": "回合结束时", "turn_start": "回合开始时", "attack": "攻击后", "attacked": "被攻击时", "damaged": "受伤后", "effect_played": "使用效果卡后", "turn_first_play": "回合首次使用卡后", "after_draw": "抽牌后", "action_end": "行动结束时"}
 
 static func valid_effect(fx: Variant) -> bool:
 	if not fx is Dictionary or fx.get("type", "") not in CardData.ASSEMBLE_EFFECT_TYPES:

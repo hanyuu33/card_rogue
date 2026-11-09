@@ -2466,7 +2466,7 @@ func _begin_turn(side: String) -> void :
 			state.opp_next_energy = 0
 			_log("活力转移（对方）：费用 +%d" % opp_transfer)
 			action.emit("vitality", {"energy": opp_transfer, "side": SIDE_OPPONENT})
-		state.opp_draw(FieldState.HAND_DRAW_PER_TURN)
+		_assemble_opponent_draw(FieldState.HAND_DRAW_PER_TURN)
 		state.opp_deck_count = maxi(0, state.opp_deck_count - FieldState.HAND_DRAW_PER_TURN)
 		# 无尽黑暗 9114：对称保留（敌方没有真实手牌 → 只结算费用那半边）
 		if _zone_has(state.enemy_effects, ENDLESS_DARK_TRAIT):
@@ -2520,6 +2520,8 @@ func _begin_turn(side: String) -> void :
 		_run_battlecries(SIDE_OPPONENT)
 		_log("── 对手回合开始：费用 %d（上回合结束已清零，本回合重新发放基础费用），手牌 +%d" % [
 			FieldState.ENERGY_PER_TURN, FieldState.HAND_DRAW_PER_TURN])
+
+	_assemble_tick(side, "turn_start")
 
 
 func enable_enemy_effects(cards: Array[CardData]) -> void :
@@ -3530,6 +3532,8 @@ func _draw_many(n: int) -> int:
 	# 抽牌这件事只有引擎知道，所以在这里逐张报实例上去，界面别再去猜。
 	for gc: CardData in gained:
 		action.emit("card_gained", {"card": gc, "how": "draw"})
+	if got + burned > 0:
+		_assemble_tick(SIDE_SELF, "after_draw")
 	return got
 
 
@@ -4918,7 +4922,7 @@ func _wisdom_surge() -> void :
 		return
 	var got:= 0
 	for i in draws:
-		var card:= state.draw()
+		var card:= _assemble_draw_one()
 		if card == null:
 			_log("智慧喷涌：没有抽到卡（牌库已空或手牌已满）")
 			break
@@ -6376,7 +6380,7 @@ func _on_unit_upgraded(p: Placement) -> void :
 		_log("改造触发：%s 移动速度+1（→%d）" % [p.card.card_name, p.card.move_speed])
 	if p.card.traits.has(UPGRADE_DRAW_TRAIT):        # 机器鸟：抽1张
 		if p.owner == SIDE_SELF:
-			state.draw()
+			_assemble_draw_one()
 		_log("改造触发：%s 改造时抽1张" % p.card.card_name)
 	if p.card.traits.has(WASTE_BOT_TRAIT):          # R228 废弃机器人：每次被改造 → 全体敌方 1 伤
 		_waste_bot_ping(p)
@@ -8404,6 +8408,10 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 				% [played.card_name, CURSE_DISCOUNT, CURSE_RAISE])
 
 
+	var assembly_plays: int = state.self_card_plays if side == SIDE_SELF else state.opp_card_plays
+	if played != null and assembly_plays == 1:
+		_assemble_tick(side, "turn_first_play")
+
 func _raid_dmg(side: String) -> int:
 	## 突袭的伤害基数 = RAID_BASE_DMG + X（X = 本回合该方已使用的卡牌数）。
 	## 自身不计入：结算走到这里时它还没经 _note_card_played 记账。
@@ -8860,7 +8868,7 @@ func _sleepless_tick(side: String) -> void:
 		return
 	if not _zone_has_id(side, SLEEPLESS_ID) or not state.hand.is_empty():
 		return
-	var c: CardData = state.draw()
+	var c: CardData = _assemble_draw_one()
 	if c == null:
 		return
 	var extra := ""
@@ -8886,15 +8894,15 @@ func _latent_turn_draw(side: String) -> void:
 	if not _zone_has_id(side, LATENT_ID):
 		return
 	if side != SIDE_SELF:
-		state.opp_draw(1)
+		_assemble_opponent_draw(1)
 		return
-	var first: CardData = state.draw()
+	var first: CardData = _assemble_draw_one()
 	if first == null:
 		return
 	_log("潜伏：回合开始多抽 1 张「%s」" % first.card_name)
 	var second: CardData = null
 	if not first.x_cost and first.cost == 0:
-		second = state.draw()
+		second = _assemble_draw_one()
 		_log("潜伏：0 费 → 再抽 %s" % (("1 张「%s」" % second.card_name) if second != null else "落空"))
 	action.emit("latent", {"card": first, "second": second})
 
@@ -8910,7 +8918,7 @@ func _shadow_split_draw(side: String) -> void:
 	if n <= 0:
 		return
 	if side != SIDE_SELF:
-		state.opp_draw(n)
+		_assemble_opponent_draw(n)
 		_log("分裂之影（对方）：回合开始多抽 %d 张" % n)
 		return
 	var got := _draw_many(n)
@@ -9943,6 +9951,7 @@ func _mage_growth(side: String) -> void :
 
 
 func _on_effect_card_played(side: String, played: CardData) -> void :
+	_assemble_tick(side, "effect_played")
 
 
 
@@ -10637,7 +10646,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			var m:= 0
 			for i in 2:
 				if state.opp_deck_count > 0:
-					state.opp_draw(1)
+					_assemble_opponent_draw(1)
 					state.opp_deck_count -= 1
 					m += 1
 			return "对方抽了 %d 张牌" % m
@@ -10677,7 +10686,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			var m2:= 0
 			for i in 2:
 				if state.opp_deck_count > 0:
-					state.opp_draw(1)
+					_assemble_opponent_draw(1)
 					state.opp_deck_count -= 1
 					m2 += 1
 			return "对方抽了 %d 张牌" % m2
@@ -10790,7 +10799,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			var sp_n := state.self_card_plays
 			var sp_got := 0
 			for sp_i in sp_n:
-				var sp_c: CardData = state.draw()
+				var sp_c: CardData = _assemble_draw_one()
 				if sp_c == null:
 					break
 				if not state.turn_keep.has(sp_c):
@@ -10817,7 +10826,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 				_log("连环戏法：已用 %d 张其他卡 → 改为 %d 点伤害" % [ct_plays, COMBO_TRICK_FULL_DMG])
 			if ct_plays >= COMBO_TRICK_DRAW_NEED:
 				_log("连环戏法：已用 %d 张其他卡 → 抽 1 张" % ct_plays)
-				if side == SIDE_SELF and state.draw() != null:
+				if side == SIDE_SELF and _assemble_draw_one() != null:
 					ct_s += "；抽 1 张"
 			return ct_s
 		OPENING_MOVE_ID:
@@ -10871,13 +10880,13 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 				var pp_m := 0
 				for pp_i in 2:
 					if state.opp_deck_count > 0:
-						state.opp_draw(1)
+						_assemble_opponent_draw(1)
 						state.opp_deck_count -= 1
 						pp_m += 1
 				return "对方抽了 %d 张牌" % pp_m
 			var pp_cards: Array[CardData] = []
 			for pp_i2 in 2:
-				var pp_c: CardData = state.draw()
+				var pp_c: CardData = _assemble_draw_one()
 				if pp_c != null:
 					pp_cards.append(pp_c)
 			var pp_extra := false
@@ -10888,7 +10897,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 					pp_zero += 1
 					pp_extra = true
 			var pp_n := pp_cards.size()
-			if pp_extra and state.draw() != null:
+			if pp_extra and _assemble_draw_one() != null:
 				pp_n += 1
 			_log("准备：抽 %d 张（0 费 %d 张）%s" % [pp_n, pp_zero,
 					"→ 再抽 1 张" if pp_extra else ""])
@@ -12365,6 +12374,8 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	var hp_before_theseus:= p.health   # R496 忒修斯奇械：先记扣血前的值判「跨越」
 	var dmg:= _unit_damage_taken(p, amount, "attack" if is_attack else "spell")
 	p.health -= dmg
+	if dmg > 0:
+		_assemble_execute(p, _cell_of(p), "damaged")
 	# R530：结算「造成伤害」记账 —— 打掉敌方**单位**的血。
 	# ⚠️ 必须按**原有血量封顶**：`_unit_damage_taken` 不截断（40 血挨 99 点它照样返回 99），
 	#    多出来的部分由 `_reap` 当「溢出」另行判定 —— 照 dmg 直接记会把这一下算成两份。
@@ -12959,7 +12970,7 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 				_log("幽灵亡语：%s" % (("卡组随机技能卡「%s」加入手卡" % gh_c.card_name) if gh_c != null else "卡组里没有技能卡"))
 				action.emit("ghost_fetch", {"card": gh_c})
 			else:
-				state.opp_draw(1)
+				_assemble_opponent_draw(1)
 		SKELETON_SUMMON_ID:
 
 			_summon_token(SKELETON_TOKEN_ID, cell, p.owner, 1)
@@ -13647,6 +13658,8 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 		var amount2:= _unit_damage_taken(p, _apply_rapid_marks(p,
 				_apply_scout_aura(p, amount)), "spell")
 		p.health -= amount2
+		if amount2 > 0:
+			_assemble_execute(p, _cell_of(p), "damaged")
 		# R530：结算「造成伤害」—— 单目标技能打敌方单位**不走** `_hit_unit`
 		# （它自己扣血，见本文件「两个扣血落地口」那条注释），所以这里必须单独记一次，
 		# 否则技能流玩家的伤害只统计到一半。同样按**原有血量封顶**。
@@ -13861,6 +13874,7 @@ func _tap(p: Placement, reason:= "") -> void :
 	# R381 漩涡 9186：「处于此格的单位**行动结束后**随机移动 1 格」。
 	# 挂这里而不是 move / attack / activate 各写一遍 —— `_tap` 是**行动结束的唯一口**
 	# （攻击完毕 / 移动后放弃攻击 / 主动发动 / AI 待命·推进失败·按兵不动 全都经过它）。
+	_assemble_execute(p, _cell_of(p), "action_end")
 	_vortex_push(p)
 	if p.acts_left > 1:
 		p.acts_left -= 1
@@ -15929,6 +15943,9 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		var tn:= _taunt_targets(src, side, attacker.card)
 		_log("射程内有嘲讽单位（%s），必须先攻击它" % state.unit_at(tn[0]).card.card_name)
 		return
+	_assemble_execute(defender, dst, "attacked")
+	if state.unit_at(src) != attacker or state.unit_at(dst) != defender:
+		return
 	var atk_power:= attacker.effective_power() + _turn_dmg_bonus(side)\
 	+ _ally_dmg_bonus(attacker.card, side)
 	var hp_before:= defender.health
@@ -16030,6 +16047,7 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		# 放在 `_tap` 之前 —— 前进完再结束行动，落点才是最终位置。
 		_goose_lunge(attacker, dst)
 		_attack_gain_energy(side, attacker)   # 地狱咏唱者 8022 / 黑暗祭坛 8023：攻击时 +1 费
+		_assemble_execute(attacker, _cell_of(attacker), "attack")
 		_snow_leopard_discount(attacker)   # 雪豹（8081，R446）：攻击时随机一张手牌本回合 -1 费
 		_tap(attacker, "行动完毕")
 	_check_game_over()
@@ -16108,6 +16126,7 @@ func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		attacker.ramp_atk = 0
 		_log("潜影者：攻击 HP 后力量重置（当前 %d）" % attacker.effective_power())
 	_attack_gain_energy(side, attacker)   # 地狱咏唱者 / 黑暗祭坛：直击 HP 也算一次攻击
+	_assemble_execute(attacker, _cell_of(attacker), "attack")
 	_tap(attacker, "攻击 HP，行动完毕")
 	_check_game_over()
 
@@ -17515,6 +17534,7 @@ func apply_battle(d: Dictionary) -> bool:
 # Structured assembly. Pool contents are supplied by future cards, not hardcoded IDs.
 const AssembleRules = preload("res://scripts/assemble_rules.gd")
 var assemble_pools: Dictionary = {}
+var _assemble_active: Dictionary = {}
 var assemble_pending := false
 var assemble_stage := "upper"
 var _assemble_base: CardData
@@ -17616,6 +17636,11 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 		return
 	if key != trigger:
 		return
+	var execution_key := str(p.get_instance_id()) + ":" + trigger
+	if _assemble_active.has(execution_key):
+		_log("拼装：跳过同一结算链中的重复触发 " + trigger)
+		return
+	_assemble_active[execution_key] = true
 	for fx in p.card.assemble.get("effects", []).duplicate(true):
 		if not AssembleRules.valid_effect(fx):
 			_log("拼装：无效动作 " + str(fx))
@@ -17626,7 +17651,7 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 				if p.owner == SIDE_SELF:
 					_draw_many(value)
 				else:
-					state.opp_draw(value)
+					_assemble_opponent_draw(value)
 			"buff":
 				p.card = CardData.from_dict(p.card.to_dict())
 				p.upgrade_atk += value
@@ -17654,6 +17679,8 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 					if state.board.has(target):
 						_hit_unit(state.board[target], value, "拼装")
 
+	_assemble_active.erase(execution_key)
+
 func load_assemble_pools(path: String = "res://assemble_pools.json") -> bool:
 	if not FileAccess.file_exists(path):
 		return false
@@ -17670,3 +17697,19 @@ func load_assemble_pools(path: String = "res://assemble_pools.json") -> bool:
 	for id in data:
 		register_assemble_pool(str(id), data[id].upper, data[id].lower)
 	return true
+
+func _assemble_opponent_draw(count: int) -> void:
+	# Enemy uses an abstract hand counter; mirror its actual count gain.
+	var before: int = state.opp_hand_count
+	state.opp_draw(count)
+	if state.opp_hand_count > before:
+		_assemble_tick(SIDE_OPPONENT, "after_draw")
+
+func _assemble_draw_one() -> CardData:
+	# Legacy conditional draws bypass _draw_many; preserve their returned card/burn report.
+	var card: CardData = state.draw()
+	var burned: CardData = state.last_burn_card
+	if card != null or burned != null:
+		_assemble_tick(SIDE_SELF, "after_draw")
+	state.last_burn_card = burned
+	return card
