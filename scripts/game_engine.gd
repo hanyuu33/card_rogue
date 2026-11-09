@@ -2013,6 +2013,7 @@ const FUNERAL_DRAW:= 1            # 每破坏 1 个单位抽几张
 
 func _init(state_: FieldState) -> void :
 	state = state_
+	load_assemble_pools()
 
 
 static func manhattan(a: Vector2i, b: Vector2i) -> int:
@@ -4058,6 +4059,8 @@ func _autoplay_spell_targets(card: CardData) -> Array[Vector2i]:
 
 
 func end_turn() -> void :
+	if assemble_pending:
+		return
 	if over:
 		return
 
@@ -4086,6 +4089,7 @@ func end_turn() -> void :
 	# 放在 `_sleep_tick` 之后：两者都是「本方回合结束的收尾」，挨着才好读。
 	_field_aura_tick(current_side)
 	# 自我修复（8035，R87）：「每回合结束回复 4 点生命」—— 同样只结算本方单位。
+	_assemble_tick(current_side, "turn_end")
 	_regen_tick(current_side)
 	# 充电装置（8041，R91）：被「接通」的**己方**单位每回合结束回 2 点生命。
 	# 放在 `_regen_tick` 之后：两者都是「自己回合结束的回血」，叠在相邻格里会一起回。
@@ -5164,7 +5168,12 @@ func _card_leaving_field(p: Placement) -> CardData:
 
 
 func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
+	if assemble_pending or hand_index < 0 or hand_index >= state.hand.size():
+		return null
 	var card:= state.hand[hand_index]
+	if card.traits.has("拼装") and card.assemble.is_empty():
+		assemble_begin(hand_index, cell)
+		return null
 	# R317 身法（9173）：引擎侧兜底 —— `can_use_card` 管 UI，这里管「绕过去」的路径
 	#（联机回放 / 自动出牌 / 以后新加的效果）。放在 `_pay` 之前：拒绝不扣费。
 	if card.unplayable:
@@ -5390,6 +5399,7 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	_log("%s 上场" % card.card_name)
 	action.emit("place", {"cell": cell, "card": card, "side": SIDE_SELF})
 	_on_ally_entered(p, SIDE_SELF)
+	_assemble_execute(p, cell, "use")
 	_note_card_played(SIDE_SELF, card)
 	# R467：X 为 0 的枭熊一落地就倒 —— 放在**所有入场钩子之后**再销毁（理由见 `_owlbear_enter`）。
 	if x_unit >= 0 and p.health <= 0 and state.board.has(cell):
@@ -6337,6 +6347,7 @@ func _apply_scout_aura(p: Placement, amount: int) -> int:
 
 
 func _on_unit_upgraded(p: Placement) -> void :
+	_assemble_execute(p, _cell_of(p), "upgraded")
 	## R101：「每次获得改造时」触发（榴弹击手/重甲战车/机器鸟）。
 	## 在**所有**给这张单位施加改造的入口末尾调用（升级/自我修复/加厚装甲/
 	## 超越极限/模仿者传导/代达罗斯 群体改造）。
@@ -8025,6 +8036,8 @@ func _spell_card_gone(card: CardData, log_text := "") -> bool:
 
 
 func use_spell(hand_index: int, target = null, free_cast := false) -> String:
+	if assemble_pending:
+		return "请先完成拼装"
 	# R373：不能打出的诅咒（麻痹 9185）—— 引擎侧兜底（UI 走 `can_use_card` 置灰）。
 	if hand_index >= 0 and hand_index < state.hand.size() \
 			and state.hand[hand_index] != null and state.hand[hand_index].unplayable:
@@ -8157,7 +8170,7 @@ func _instinct_panel_open() -> bool:
 	## 本能 9176（R332）：结算中间出现「等玩家选」的面板就得收手 ——
 	## 继续「随机打出」会把面板依赖的下标/候选弄失效（与 use_spell 开头那四个守卫同源，
 	## 这里把弃牌区/卡组/手牌/合并等其余 pending 也一并算上）。
-	return overhaul_pending or creation_pending or cannonize_pending or surprise_pending \
+	return assemble_pending or overhaul_pending or creation_pending or cannonize_pending or surprise_pending \
 		or paint_pending \
 		or focus_pending or wish_pending or shadow_step_pending or revive_pending \
 		or merge_pending or crow_pending or whale_pending or endless_pending \
@@ -8224,6 +8237,8 @@ func _instinct_cast(side: String) -> String:
 
 
 func use_effect(hand_index: int) -> String:
+	if assemble_pending:
+		return "请先完成拼装"
 
 
 
@@ -11527,6 +11542,7 @@ func _legacy_try_return(p: Placement) -> bool:
 
 
 func _on_ally_entered(p: Placement, side: String) -> void :
+	_note_unit_entered(p, "entry")
 	if p == null or p.card == null:
 		return
 	_wanted_mark(p, side)   # R525 通缉令：敌方场上所有单位获得「次元」
@@ -12910,6 +12926,7 @@ func _battlecry_ash(cell: Vector2i, p: Placement) -> void :
 
 
 func _deathrattle(cell: Vector2i, p: Placement) -> void :
+	_assemble_execute(p, cell, "death")
 	# R227 生命循环：被本卡点过的单位被破坏 → 加一张随机盟友卡到手卡。
 	# ⚠️ 只认 Placement 标记（不认「死亡」字段 —— 那是通用标记，别的卡也带）。
 	if p.life_cycle:
@@ -14581,6 +14598,8 @@ func hp_targets(cell: Vector2i, side:= SIDE_SELF, card: CardData = null) -> Arra
 
 
 func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void :
+	if assemble_pending:
+		return
 	var lp:= state.unit_at(src)
 	# R467：枭熊的「移动」一律是跳跃 —— 走 `_leap()` 那条唯一的门，界面上点绿格、
 	# AI 推进、联机回放全都自动同口径（落点含原地，`dst == src` 就是原地起跳）。
@@ -15892,6 +15911,8 @@ func _trample_chain(attacker: Placement, foe_side: String, from_cell: Vector2i,
 
 
 func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
+	if assemble_pending:
+		return
 
 
 
@@ -16038,6 +16059,8 @@ func _snow_leopard_discount(p: Placement) -> void :
 
 
 func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
+	if assemble_pending:
+		return
 	var attacker:= state.unit_at(src)
 	if attacker == null or attacker.owner != side or attacker.tapped:
 		return
@@ -17486,4 +17509,164 @@ func apply_battle(d: Dictionary) -> bool:
 	result = ""
 	result_reason = ""
 	log.clear()
+	return true
+
+
+# Structured assembly. Pool contents are supplied by future cards, not hardcoded IDs.
+const AssembleRules = preload("res://scripts/assemble_rules.gd")
+var assemble_pools: Dictionary = {}
+var assemble_pending := false
+var assemble_stage := "upper"
+var _assemble_base: CardData
+var _assemble_cell := Vector2i(-1, -1)
+var _assemble_upper: Array = []
+var _assemble_lower: Array = []
+var _assemble_u := -1
+var _assemble_l := -1
+
+func register_assemble_pool(id: String, upper: Array, lower: Array) -> bool:
+	if not AssembleRules.valid_pool(upper, lower):
+		_log("拼装：无效的半句池 " + id)
+		return false
+	assemble_pools[id] = {"upper": upper.duplicate(true), "lower": lower.duplicate(true)}
+	return true
+
+func assemble_begin(index: int, cell: Vector2i) -> bool:
+	if assemble_pending or over or current_side != SIDE_SELF or index < 0 or index >= state.hand.size():
+		return false
+	var card: CardData = state.hand[index]
+	if not card_may_enter_board(card) or not can_use_card(card) or not hand_place_allowed(cell, SIDE_SELF):
+		return false
+	if not assemble_pools.has(card.assemble_pool):
+		_log("拼装：尚未配置池 " + card.assemble_pool)
+		return false
+	var pool: Dictionary = assemble_pools[card.assemble_pool]
+	_assemble_upper = pool.upper.duplicate(true)
+	_assemble_lower = pool.lower.duplicate(true)
+	_assemble_base = card
+	_assemble_cell = cell
+	_assemble_u = -1
+	_assemble_l = -1
+	assemble_stage = "upper"
+	assemble_pending = true
+	return true
+
+func assemble_cancel() -> void:
+	assemble_pending = false
+	_assemble_base = null
+	_assemble_upper.clear()
+	_assemble_lower.clear()
+
+func assemble_choices() -> Array:
+	if not assemble_pending:
+		return []
+	if assemble_stage == "order":
+		return [AssembleRules.build(_assemble_base, _assemble_upper[_assemble_u], _assemble_lower[_assemble_l], false),
+			AssembleRules.build(_assemble_base, _assemble_upper[_assemble_u], _assemble_lower[_assemble_l], true)]
+	var choices: Array = []
+	var fragments: Array = _assemble_upper if assemble_stage == "upper" else _assemble_lower
+	for fragment in fragments:
+		var card := CardData.from_dict(_assemble_base.to_dict())
+		card.card_name = str(fragment.get("name", "拼装组件"))
+		card.effect_text = AssembleRules.fragment_text(fragment)
+		choices.append(card)
+	return choices
+
+func assemble_choose(index: int) -> bool:
+	if not assemble_pending or index < 0 or index >= assemble_choices().size():
+		return false
+	if assemble_stage == "upper":
+		_assemble_u = index
+		assemble_stage = "lower"
+		return true
+	if assemble_stage == "lower":
+		_assemble_l = index
+		assemble_stage = "order"
+		return true
+	var result: CardData = assemble_choices()[index]
+	var hand_index := state.hand.find(_assemble_base)
+	var original := _assemble_base
+	var cell := _assemble_cell
+	assemble_cancel()
+	if hand_index < 0:
+		return false
+	state.hand[hand_index] = result
+	var placed := play_from_hand(hand_index, cell)
+	if placed == null:
+		state.hand[hand_index] = original
+		return false
+	return true
+
+func _note_unit_entered(p: Placement, _how: String) -> void:
+	if p != null:
+		_assemble_execute(p, _cell_of(p), "enter")
+
+func _assemble_tick(side: String, trigger: String) -> void:
+	var units: Array = state.board.values().duplicate()
+	for p: Placement in units:
+		if p.owner == side and _cell_of(p) != Vector2i(-1, -1):
+			_assemble_execute(p, _cell_of(p), trigger)
+
+func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
+	if p == null or p.card == null or p.card.assemble.is_empty():
+		return
+	var key := str(p.card.assemble.get("trigger", ""))
+	if key not in AssembleRules.TRIGGERS:
+		_log("拼装：未支持的时机 " + key)
+		return
+	if key != trigger:
+		return
+	for fx in p.card.assemble.get("effects", []).duplicate(true):
+		if not AssembleRules.valid_effect(fx):
+			_log("拼装：无效动作 " + str(fx))
+			continue
+		var value := int(fx.get("value", 0))
+		match str(fx.type):
+			"draw":
+				if p.owner == SIDE_SELF:
+					_draw_many(value)
+				else:
+					state.opp_draw(value)
+			"buff":
+				p.card = CardData.from_dict(p.card.to_dict())
+				p.upgrade_atk += value
+				p.upgrade_hp += value
+				p.card.health += value
+				p.health += value
+			"heal":
+				p.health = mini(p.card.health, p.health + value)
+			"shield":
+				p.first_hit_shield = true
+			"taunt":
+				p.card = CardData.from_dict(p.card.to_dict())
+				p.card.add_affix("嘲讽")
+			"damage":
+				var targets: Array[Vector2i] = []
+				for target in state.board:
+					if state.board[target].owner != p.owner:
+						targets.append(target)
+				if targets.is_empty():
+					_log("拼装：没有敌方目标")
+					continue
+				if fx.get("target", "nearest") == "nearest":
+					targets = [_pick_nearest(cell, targets)]
+				for target in targets:
+					if state.board.has(target):
+						_hit_unit(state.board[target], value, "拼装")
+
+func load_assemble_pools(path: String = "res://assemble_pools.json") -> bool:
+	if not FileAccess.file_exists(path):
+		return false
+	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not data is Dictionary:
+		_log("拼装：池文件格式错误")
+		return false
+	for id in data:
+		var pool: Variant = data[id]
+		if not pool is Dictionary or not pool.get("upper") is Array or not pool.get("lower") is Array:
+			return false
+		if not AssembleRules.valid_pool(pool.upper, pool.lower):
+			return false
+	for id in data:
+		register_assemble_pool(str(id), data[id].upper, data[id].lower)
 	return true

@@ -44,6 +44,7 @@ OK = "\u2713"
 BAD = "\u2717"
 
 SUITES = [
+    ("assemble", ["--headless", "--path", ROOT, "--script", "res://scripts/test_assemble.gd"], "_assemble_test.txt"),
     ("mana", ["--headless", "--path", ROOT, "--script", "res://tools/verify_battle_mana.gd"], "art_src/2026-11-05_handoff_completion/mana_headless.log"),
     ("engine", ["--headless", "--path", ROOT, "--script", "res://scripts/test_engine.gd"], "_e.txt"),
     ("reward", ["--headless", "--path", ROOT, "--script", "res://scripts/test_reward.gd"], "_r.txt"),

@@ -5688,6 +5688,8 @@ func _recall_discard_index(idx: int) -> bool:
 # ── R189 全屏选卡页（PickOverlay）─────────────────────────────
 
 func _pick_active_kind() -> String:
+	if engine.assemble_pending:
+		return "assemble_" + engine.assemble_stage
 	## 当前活跃的选卡场景（"" = 无）。优先级同原小面板的拦截顺序。
 	if _hero_pick_idx >= 0:
 		return "hero"
@@ -5806,6 +5808,14 @@ func _recycle_options(skip: int) -> Array:
 
 
 func _build_pick_cfg(k: String) -> Dictionary:
+	if k.begins_with("assemble_"):
+		var cards := engine.assemble_choices()
+		var title := "选择上半句" if engine.assemble_stage == "upper" else "选择下半句"
+		if engine.assemble_stage == "order":
+			title = "选择结算顺序：左侧原顺序，右侧交换顺序"
+		return {"kind": k, "short": "拼装", "title": title, "note": "选择组件后预览完整效果；确认顺序后上场",
+			"cards": cards, "opts": range(cards.size()), "max_sel": 1,
+			"confirm_label": "确认选择", "cancel_label": "取消拼装"}
 	## 各场景的选卡页配置：cards 与 opts 平行（opts[i] = 网格第 i 张卡的业务下标；
 	## focus 例外：opts 存代表卡的 id，确认时按 id 在卡组找第一张）。
 	var disc_cards := func(i: int) -> CardData: return engine.state.discard[i]
@@ -6077,6 +6087,12 @@ func _on_pick_confirmed(sel: Array) -> void:
 	if _pick == null or sel.is_empty():
 		return
 	var k := _pick.kind()
+	if k.begins_with("assemble_"):
+		engine.assemble_choose(int(sel[0]))
+		_pick.close()
+		_clear_selection()
+		_sync_pick()
+		return
 	var opts: Array = _pick.opts()
 	match k:
 		"hero":
@@ -6294,6 +6310,10 @@ func _on_pick_cancelled() -> void:
 	if _pick.kind() == "view_discard":
 		_pick.close()
 		queue_redraw()
+		return
+	if _pick.kind().begins_with("assemble_"):
+		engine.assemble_cancel()
+		_pick.close()
 		return
 	match _pick.kind():
 		"whale":

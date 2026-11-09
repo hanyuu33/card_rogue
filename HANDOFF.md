@@ -959,3 +959,12 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 
 ## 2026-11-09 R542 战场横幅文字自适应：先缩字号、再折行，绝不探出木牌
 
+
+
+## 2026-11-09 拼装引擎（首批）
+- 基于现有未提交的 CardData.assemble 序列化继续接入；保留该实现，新增 assemble_pool。
+- 新增 assemble_rules.gd、assemble_pools.json（空正式池）、三步选卡界面及池注册/加载/预览/确认/取消接口。
+- 首批 use/enter/death/upgraded/turn_end，六种动作；抽牌区分双方。复用 _on_ally_entered 共同入口并转入 _note_unit_entered。
+- 配置方式见《拼装引擎接入.md》。尚不新增正式卡；其余 11 个触发时机明确拒绝。未完成选择退出后重新选择；网络对战选择流程未作实机验收。
+- 验证：五套完整回归通过（engine 5405、reward 26、bgm 39、smoke 65、mana PASS）；新增专项 test_assemble.gd 通过，已纳入 _verify.py。UI 复用 PickOverlay，通过场景加载检查，未进行人工视觉验收。
+- 外部内容保留：_preview/、拼装机制设计.md；测试运行可能刷新 mana_headless.log。未推送。

@@ -249,6 +249,31 @@ var growth_damage: int = 0
 ##    否则同一场战斗里复制出来的「独行」会凭空退回 7 伤。
 var lone_dmg_bonus: int = 0
 var lone_str_bonus: int = 0
+## R544 拼装（Assemble）：这张卡是「拼装」出来的复合效果卡（{} = 非拼装卡）。
+## 结构：
+##   assemble = {
+##     "trigger": "use",           # 时机 key（唯一，白名单 ASSEMBLE_TRIGGERS，见拼装机制设计.md §2.1）
+##     "effects": [                # 动作列表（顺序 = 结算顺序，玩家拼装时定）
+##       {"type": "draw", "value": 1},
+##       {"type": "damage", "value": 3, "target": "nearest"},
+##     ],
+##     "extra_affixes": ["次元"],  # 附带关键词（非时机，拼装后并入 affixes）
+##   }
+## ⚠️ 必须随 to_dict / from_dict 深拷贝走（复制 / 离场还原 / 联机共用一条通道），
+##   漏了它拼装效果会静默清空。
+var assemble: Dictionary = {}
+var assemble_pool: String = ""
+
+## 拼装时机 key 白名单（见拼装机制设计.md §2.1；引擎只认这些）。
+const ASSEMBLE_TRIGGERS: Array[String] = [
+	"enter", "use", "turn_start", "turn_end", "death", "upgraded",
+	"attack", "attacked", "kill", "damaged", "card_played",
+	"effect_played", "turn_first_play", "random_gained", "after_draw", "action_end",
+]
+## 拼装动作 type 白名单（见拼装机制设计.md §2.2）。
+const ASSEMBLE_EFFECT_TYPES: Array[String] = [
+	"draw", "buff", "damage", "heal", "shield", "taunt",
+]
 
 
 static func from_dict(d: Dictionary) -> CardData:
@@ -310,6 +335,23 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.affixes = []
 	for a in (d.get("affixes", []) as Array):
 		c.affixes.append(str(a))
+	# R544 拼装：assemble 必须深拷贝反序列化 —— effects 是嵌套数组、extra_affixes 是数组，
+	# 逐个重建，不能直接接引用（与 affixes 同一条纪律：接引用会连卡库一起改）。
+	c.assemble_pool = str(d.get("assemble_pool", ""))
+	c.assemble = {}
+	var asm_in: Dictionary = d.get("assemble", {})
+	if not asm_in.is_empty():
+		var fx_out: Array = []
+		for fx in (asm_in.get("effects", []) as Array):
+			fx_out.append((fx as Dictionary).duplicate(true))
+		var xa_out: Array = []
+		for xa in (asm_in.get("extra_affixes", []) as Array):
+			xa_out.append(str(xa))
+		c.assemble = {
+			"trigger": str(asm_in.get("trigger", "")),
+			"effects": fx_out,
+			"extra_affixes": xa_out,
+		}
 	return c
 
 
@@ -366,6 +408,9 @@ func to_dict() -> Dictionary:
 		# ⚠️ `affixes` 同样**必须**在这里 —— 漏了字段会静默清空
 		#（「这张卡被别的卡赋了疾行/幻影/护盾」的强化就没了）。
 		"affixes": affixes.duplicate(),
+		# R544 拼装：assemble 必须随复制 / 离场还原 / 联机通道走（深拷贝），漏了它拼装效果静默清空。
+		"assemble": assemble.duplicate(true),
+		"assemble_pool": assemble_pool,
 	}
 
 
