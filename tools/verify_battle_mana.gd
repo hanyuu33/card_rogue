@@ -20,7 +20,7 @@ func _run() -> void:
 		assert(layout["width"] <= rect.size.x - 14, "Energy value must fit within the instrument")
 		scene.engine.state.energy = value
 		scene.engine._charge[GameEngine.SIDE_SELF] = 3 if value == 125 else 0
-		scene.engine._dodge_active = value == 125
+		scene.engine._taunt_all_active = value == 125
 		scene.queue_redraw()
 		await process_frame
 		if DisplayServer.get_name() == "headless":

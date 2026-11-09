@@ -2084,21 +2084,19 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--dodge" in args and engine != null:
-		# 演示（2026-10-02，R48）：闪躲（9103）—— 0 费普通；直到下个回合开始，
-		#   自己受到的伤害由随机盟友代受（盟友生命不足时超出部分仍由自己承担）。
+		# 演示（2026-10-02，R48；R542 改效果）：闪躲（9103）—— 0 费普通；本回合所有友方单位获得嘲讽。
 		RunState.player_class = PlayerClass.ROGUE
 		engine.state.hand.clear()
 		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.DODGE_ID).to_dict()))
 		engine.state.energy = 5
-		var dg_ally := engine.state.place(CardData.from_dict(repo.get_card(8005).to_dict()),
+		engine.state.place(CardData.from_dict(repo.get_card(8005).to_dict()),
 				Vector2i(4, 1), GameEngine.SIDE_SELF)
 		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
 				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-		engine.use_spell(0, null)                  # 闪躲：开窗口
-		engine._damage_player(GameEngine.SIDE_SELF, 5, "演示")   # 5 伤 → 幽影（3/8）代受
+		engine.use_spell(0, null)                  # 闪躲：全员嘲讽
 		_demo_hover_idx = 0
 		_hover_hand = 0
-		status_text = "闪躲：伤害由随机盟友代受（幽影 8 → %d，我方 HP 未掉）" % dg_ally.health
+		status_text = "闪躲：本回合所有友方单位获得嘲讽（含后上场的单位）"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--finisher" in args and engine != null:
@@ -7102,8 +7100,8 @@ func _on_hover(pos: Vector2) -> void:
 			var charge := engine.charge_count(GameEngine.SIDE_SELF)
 			if charge > 0:
 				tip += "；蓄力 %d：下一张技能结算 %d 次" % [charge, charge + 1]
-			if engine.dodge_active(GameEngine.SIDE_SELF):
-				tip += "；闪躲：盟友代受"
+			if engine.taunt_all_active(GameEngine.SIDE_SELF):
+				tip += "；闪躲：友军嘲讽"
 	if _hover_card == null:
 		var merged_eff := _merged_effects(engine.state.effects)
 		for i in merged_eff.size():
@@ -9060,7 +9058,7 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 		# 替己方 HP 承伤的统一表现（森林守护 9037 / 大树守卫 9067 / 铁栅栏 9072）：
 		# 判定直接问引擎 absorbs_for_hp()，保证「同一机制 = 同一特效」，不再各写各的。
 		draw_arc(center, Vector2(w, h).length() * 0.5, 0, TAU, 30, COL_GUARD, 2.5)
-	if GameEngine.card_has_taunt(p.card):
+	if engine.unit_has_taunt(p):
 		# 嘲讽（铁壁卫兵 1011 / 骷髅兵 1055）：脉冲橙环 + 「嘲讽」徽标，
 		# 让「射程内有它就必须打它」这件事在战场上一眼可见。
 		_draw_taunt_aura(center, w, h, 0)
@@ -9333,7 +9331,7 @@ func _board_has_actable() -> bool:
 func _board_has_taunt() -> bool:
 	## 棋盘上是否有带「嘲讽」的单位（有 → _process 需要逐帧重绘来驱动脉冲）。
 	for cell: Vector2i in engine.state.board:
-		if GameEngine.card_has_taunt(engine.state.board[cell].card):
+		if engine.unit_has_taunt(engine.state.board[cell]):
 			return true
 	return false
 
@@ -9525,7 +9523,7 @@ func _anim_end_for(p: Placement, cap_ms := ATK_DUR_MS) -> int:
 func _pending_impact_ms() -> int:
 	## R393（用户口径：「代替承受伤害的受伤动画依然会快过攻击动画，测试时为一倍速」）。
 	## 攻击演出是先冲刺、到 `ATK_IMPACT_T`（0.62 × 1500ms ≈ 930ms）才撞到目标；
-	## 而代受 / 闪躲这类事件是引擎在**同一批**里紧接着发的，以前一律按「当下」就播 ——
+	## 而代受这类事件是引擎在**同一批**里紧接着发的，以前一律按「当下」就播 ——
 	## 于是「-N」和爆点比攻击动画还早 900 多毫秒，看起来像伤害先到、拳头后到。
 	## 这里取「已经排上但还没撞到」的**最早**那个撞击帧；没有pending 攻击就返回 now
 	## （纯法术触发的代受保持原样，不会凭空多等）。
@@ -9545,7 +9543,7 @@ func _pending_impact_ms() -> int:
 func _attack_impact_at(cell: Vector2i) -> int:
 	## R459：**这一格上的单位**正在播的那一次攻击，什么时候撞到目标（没有就 0）。
 	## 与 `_pending_impact_ms()` 的分工：那个取「全屏最早的一下还没撞到的一击」，
-	## 用于代替承受 / 闪躲这类「同一批里紧接着发」的附带事件；这里是「**自己这一拳**」，
+	## 用于代替承受这类「同一批里紧接着发」的附带事件；这里是「**自己这一拳**」，
 	## 击杀记功只该等打出去的那一下，不该被别的单位的攻击拖后。
 	## ⚠️ 不能拿 `_cell_center()` 比对 `src`：那个返回值里烘了 `_grid_scroll`，
 	##    动画入库时的滚动量和现在不同就永远对不上 → 直接按 Placement 查单槽。
@@ -9577,7 +9575,7 @@ func _slide_floor_at(cell: Vector2i) -> int:
 func _max_slide_floor() -> int:
 	## R465：**全场**还在跑的滑行里最晚的那一个走完时刻（没有就 0）。
 	## 与 `_slide_floor_at(cell)` 的分工：那个问「这一格」，这个问「画面上还有谁在走」——
-	## 代受 / 闪躲这类事件只知道「承受方在哪」，不知道是谁打过来的，
+	## 代受这类事件只知道「承受方在哪」，不知道是谁打过来的，
 	## 而移动 + 攻击打包成一步时，滑行是这批演出里最早的一段。
 	## ⚠️ 演示钉帧的超长 slide（180000ms）不算，与 `_slide_floor_at` 同一条过滤。
 	var now_ms := _now()
@@ -9609,7 +9607,7 @@ func _hit_cue_at(cell: Vector2i = Vector2i(-1, -1)) -> int:
 
 
 func _absorb_cue_at() -> int:
-	## R465：代受 / 闪躲演出的落地时刻 = `max(还没撞到的那一拳, 还在走的那几步)`。
+	## R465：代受演出的落地时刻 = `max(还没撞到的那一拳, 还在走的那几步)`。
 	## 为什么延后到下一帧算（而不是事件入队时算）：引擎 `attack_hp()` 是
 	## 「先代受、后发 hp」——事件到达时攻击动画尚未入队，当场算只会得到「现在」。
 	## 等到这批事件全部落完（下一帧 `_tick_anims`）再问，就一定能看见那一拳。
@@ -10378,7 +10376,7 @@ func _tick_anims() -> bool:
 			_attacks.erase(key2)
 		else:
 			any = true
-	# R465：`at = -1` = 「时刻待定」（代受 / 闪躲）—— 在这一帧统一定时。
+	# R465：`at = -1` = 「时刻待定」（代受）—— 在这一帧统一定时。
 	# 必须排在下面「到点触发」之前：-1 ≤ now 会被当成已到点，当场就播掉了。
 	for evd: Dictionary in _delayed:
 		if int(evd.get("at", 0)) < 0:
@@ -11277,7 +11275,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				ba_name = (data["card"] as CardData).card_name
 			_say("🛡 %s 的能量屏障挡住了 %d 点伤害（护盾消失）"
 					% [ba_name, int(data.get("blocked", 0))])
-			# R466：护盾是在**挨打那一刻**碎的 —— 与代受 / 闪躲同一条口径，
+			# R466：护盾是在**挨打那一刻**碎的 —— 与代受同一条口径，
 			# 等这一拳撞到再演（否则「护盾已碎、拳头还在路上」）。
 			if ba_cell.x >= 0:
 				var ba_at := _hit_cue_at(ba_cell)
@@ -11311,7 +11309,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# R393：**不许当场播** —— 排队到攻击撞到那一帧（见 `_absorb_cue_at()`）。
 			# R465：这条也有同一个坑 —— `_hit_unit()` 在 `action.emit("attack")` **之前**
 			# 就转发到这里，此刻攻击动画还没入队，当场算只会得到「现在」。
-			# 三条代受路径（护盾生成器 / 守护·栅栏 / 闪躲）统一挂 `at = -1` 延后定时。
+			# 两条代受路径（护盾生成器 / 守护·栅栏）统一挂 `at = -1` 延后定时。
 			var sr_src := data.get("cell", Vector2i(-1, -1)) as Vector2i
 			var sr_dst := data.get("to", Vector2i(-1, -1)) as Vector2i
 			var sr_n: int = int(data.get("amount", 0))
@@ -11744,29 +11742,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"dodge":
 			sfx.play("spell")
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y - 62),
-					"text": "闪躲：伤害由随机盟友代受",
+					"text": "闪躲：所有友方单位获得嘲讽",
 					"col": UiTheme.KIND_EFFECT, "size": 16, "outline": 6,
 					"start": n, "dur": 2200})
-			_say("闪躲：本回合你受到的伤害由随机盟友代替承受")
-		"dodge_absorb":
-			var da_name := "?"
-			if data.get("card") is CardData:
-				da_name = (data["card"] as CardData).card_name
-			var da_cell := data.get("cell", Vector2i(-1, -1)) as Vector2i
-			var da_n: int = int(data.get("absorbed", 0))
-			# R393：闪躲也是代受 —— 同样等攻击撞击帧，否则「闪躲 -N」比拳头先到
-			# R465：时刻同样留到下一帧再算（理由见上面 guard_absorb 那段）。
-			var da_pl := engine.state.unit_at(da_cell) if da_cell.x >= 0 else null
-			if da_pl != null:
-				_freeze_hp_exclusive(da_pl, da_n)   # R465：同上
-			if da_cell.x >= 0:
-				_fx_claim(da_cell)   # R465：同守护代受，避免 160ms 那条通用受击抢跑
-			_delayed.append({"at": -1, "kind": "absorb_fx",
-					"data": {"src": Vector2i(-1, -1), "dst": da_cell, "amount": da_n,
-					"say": "闪躲：%s 替我方 HP 承受 %d 点伤害%s" % [
-							da_name, da_n,
-							("（超出 %d 由自己承担）" % int(data.get("rest", 0)))
-							if int(data.get("rest", 0)) > 0 else ""]}})
+			_say("闪躲：本回合所有友方单位获得嘲讽")
 		"finisher":
 			# 收尾（9104）：手卡里仅剩它 → 22 伤（金色大飘字）；平时 6 伤（普通飘字）。
 			var fn_last := bool(data.get("last", false))
@@ -14703,7 +14682,7 @@ func _draw_cost_zone() -> void:
 	var epanel := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
 	preload("res://scripts/battle_energy_hud.gd").draw(self, _font_bold,
 			_roll("energy", state.energy), engine.max_energy(), epanel,
-			engine.charge_count(GameEngine.SIDE_SELF), engine.dodge_active(GameEngine.SIDE_SELF))
+			engine.charge_count(GameEngine.SIDE_SELF), engine.taunt_all_active(GameEngine.SIDE_SELF))
 	# 效果区
 	var zone := Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, bottom - COST_Y - ENERGY_H)
 	BattleHudMaterial.draw(self, Rect2(zone.position, Vector2(zone.size.x, minf(zone.size.y, 46 + 58 * maxi(1, _merged_effects(state.effects).size())))))

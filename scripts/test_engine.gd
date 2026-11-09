@@ -9676,74 +9676,65 @@ func _init() -> void:
 			"回响：技能抗性的敌人照样受伤（2 未到封顶，全额 2）也被降力量（5 → 4）（%d / %d）"
 			% [r48_im.health, r48_im.effective_power()])
 
-	# 闪躲：直到下个回合开始，自己受到的伤害由随机盟友代受
+	# 闪躲：本回合所有友方单位获得嘲讽（含后上场的单位，R542 改效果）
+	check(r48_dodge_c.effect_text.contains("所有友方单位获得嘲讽"),
+			"闪躲：卡面文案 = 本回合所有友方单位获得嘲讽（%s）" % r48_dodge_c.effect_text)
 	var r48_d := _new_engine([], 30, 30)
 	var r48_d_ally := r48_d.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r48_d_fort := r48_d.state.place(_card(8001, "木栅栏", "工事", 2, 0, 6, 0, 0),
+			Vector2i(4, 2), GameEngine.SIDE_SELF)
 	r48_d.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
 	r48_d.use_spell(0, null)
-	check(r48_d.dodge_active(GameEngine.SIDE_SELF) and r48_d.state.energy == 5,
-			"闪躲：0 费；打出后「盟友代受」窗口开启（费用仍是 %d）" % r48_d.state.energy)
-	r48_d._damage_player(GameEngine.SIDE_SELF, 5, "测试")
-	check(r48_d_ally.health == 3 and r48_d.state.hp_self == 30,
-			"闪躲：5 伤全部由盟友代受（幽影 8 → %d，我方 HP 仍是 %d）"
-			% [r48_d_ally.health, r48_d.state.hp_self])
-	r48_d._damage_player(GameEngine.SIDE_SELF, 10, "测试")
-	# R403：溢出也全部吃下（用户口径「全按铁栅栏来做」）—— 盟友只剩 3 血也吃满 10 点，
-	# 我方 HP 一点不掉。改之前这里只吃 3 点、剩下 7 点漏回自己（HP 30 → 23）。
-	check(r48_d.state.hp_self == 30 and r48_d.state.unit_at(Vector2i(4, 1)) == null,
-			"闪躲：盟友只剩 3 血也把 10 点全吃下（溢出不再结算），我方 HP 仍是 %d"
-			% r48_d.state.hp_self)
+	check(r48_d.taunt_all_active(GameEngine.SIDE_SELF) and r48_d.state.energy == 5,
+			"闪躲：0 费；打出后「全员嘲讽」窗口开启（费用仍是 %d）" % r48_d.state.energy)
+	check(r48_d.unit_has_taunt(r48_d_ally) and r48_d.unit_has_taunt(r48_d_fort),
+			"闪躲：盟友与工事都获得嘲讽（unit_has_taunt 判据）")
+	# 后上场的单位也实时获得（不是一次性快照）
+	var r48_d_late := r48_d.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(4, 0), GameEngine.SIDE_SELF)
+	check(r48_d.unit_has_taunt(r48_d_late),
+			"闪躲：窗口内后上场的单位也获得嘲讽")
+	# 敌方单位不受影响（只保我方单位）
+	var r48_d_foe := r48_d.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	check(not r48_d.unit_has_taunt(r48_d_foe),
+			"闪躲：敌方单位不获得嘲讽（只保我方）")
+	# 敌人射程内全是嘲讽单位 → 不能直击 HP（taunt_in_range 判据）
+	var r48_d3 := _new_engine([], 30, 30)
+	var r48_d3_ally := r48_d3.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	var r48_d3_foe := r48_d3.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r48_d3.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
+	r48_d3.use_spell(0, null)
+	check(r48_d3.taunt_in_range(Vector2i(2, 1), GameEngine.SIDE_OPPONENT, r48_d3_foe.card),
+			"闪躲：敌人射程内全是嘲讽 → 只能打单位，不能直击 HP")
 
 	# 闪躲：窗口在自己下个回合开始到期（含中间的敌方回合）
 	var r48_d2 := _new_engine([], 30, 30)
-	r48_d2.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
+	var r48_d2_ally := r48_d2.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
 	r48_d2.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
 	r48_d2.use_spell(0, null)
 	r48_d2._begin_turn(GameEngine.SIDE_SELF)      # 下个回合开始 → 到期
-	check(not r48_d2.dodge_active(GameEngine.SIDE_SELF),
-			"闪躲：自己下个回合开始时窗口到期")
-	r48_d2._damage_player(GameEngine.SIDE_SELF, 4, "测试")
-	check(r48_d2.state.hp_self == 26
-			and r48_d2.state.unit_at(Vector2i(4, 1)).health == 8,
-			"闪躲：窗口过期后伤害回到自己身上（HP 30 → %d，盟友满血 %d）"
-			% [r48_d2.state.hp_self, r48_d2.state.unit_at(Vector2i(4, 1)).health])
+	check(not r48_d2.taunt_all_active(GameEngine.SIDE_SELF)
+			and not r48_d2.unit_has_taunt(r48_d2_ally),
+			"闪躲：自己下个回合开始时窗口到期，嘲讽随之消失")
 
-	# 闪躲：没有盟友 / 只有工事 → 伤害仍归自己；敌方 AI 打出无效
-	var r48_d3 := _new_engine([], 30, 30)
-	r48_d3.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
-	r48_d3.use_spell(0, null)
-	r48_d3._damage_player(GameEngine.SIDE_SELF, 4, "测试")
-	check(r48_d3.state.hp_self == 26, "闪躲：场上没有盟友 → 伤害仍由自己承担（HP 30 → %d）"
-			% r48_d3.state.hp_self)
-	var r48_d4 := _new_engine([], 30, 30)
-	var r48_d4_fence := r48_d4.state.place(_card(8001, "木栅栏", "工事", 2, 0, 6, 0, 0),
-			Vector2i(4, 1), GameEngine.SIDE_SELF)
-	r48_d4.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
-	r48_d4.use_spell(0, null)
-	r48_d4._damage_player(GameEngine.SIDE_SELF, 4, "测试")
-	check(r48_d4.state.hp_self == 26 and r48_d4_fence.health == 6,
-			"闪躲：工事（木栅栏）不算「盟友」→ 不代受（HP 30 → %d，栅栏 %d）"
-			% [r48_d4.state.hp_self, r48_d4_fence.health])
+	# 闪躲：敌方 AI 打出无效
 	var r48_d5 := _new_engine([], 30, 30)
 	r48_d5._run_spell_effect(r48_dodge_c, null, GameEngine.SIDE_OPPONENT)
-	check(not r48_d5.dodge_active(GameEngine.SIDE_OPPONENT)
-			and not r48_d5.dodge_active(GameEngine.SIDE_SELF),
+	check(not r48_d5.taunt_all_active(GameEngine.SIDE_OPPONENT)
+			and not r48_d5.taunt_all_active(GameEngine.SIDE_SELF),
 			"闪躲：敌方 AI 打出无效（只保我方窗口）")
 
-	# 闪躲：有多个盟友时只挑一个代受
-	var r48_d6 := _new_engine([], 30, 30)
-	var r48_d6_a1 := r48_d6.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
-			Vector2i(4, 0), GameEngine.SIDE_SELF)
-	var r48_d6_a2 := r48_d6.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
-			Vector2i(4, 2), GameEngine.SIDE_SELF)
-	r48_d6.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
-	r48_d6.use_spell(0, null)
-	r48_d6._damage_player(GameEngine.SIDE_SELF, 4, "测试")
-	check((r48_d6_a1.health == 4) != (r48_d6_a2.health == 4) and r48_d6.state.hp_self == 30,
-			"闪躲：多个盟友时只随机挑一个代受（%d / %d，HP 仍 %d）"
-			% [r48_d6_a1.health, r48_d6_a2.health, r48_d6.state.hp_self])
+	# R542 源码锁：嘲讽判定统一走 unit_has_taunt，闪躲窗口用 _taunt_all_active
+	var r542_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r542_src.find("func unit_has_taunt(p: Placement) -> bool:") >= 0
+			and r542_src.find("unit_has_taunt(q)") >= 0
+			and r542_src.find("var _taunt_all_active:= false") >= 0,
+			"R542 源码：闪躲全员嘲讽走 unit_has_taunt() 唯一判据（_taunt_targets 也读它）")
 
 	# ---- R49：收尾（9104）—— 1 费普通（R329 由稀有降）；平时 6 伤，打出时若它是手卡里仅剩的一张 → 22 伤
 	# （R71 数值加强：4/15 → 6/22；断言里的血量数字同步换算） ----
@@ -29798,12 +29789,12 @@ func _init() -> void:
 			"R393 源码：点选目标时每个可打单位都报最终伤害（触摸屏没有 hover）")
 	check_src(bs.find("func _pending_impact_ms() -> int:") >= 0,
 			"R393 源码：代受演出按「攻击撞击帧」排（_pending_impact_ms 唯一口）")
-	# R465（用户报「铁栅栏代受的演出依然抢在移动 / 攻击之前」）：三条代受路径
+	# R465（用户报「铁栅栏代受的演出依然抢在移动 / 攻击之前」）：两条代受路径
 	# 一律改成 `at = -1`（时刻待定）—— 引擎是「先代受、后发 attack / hp」，
 	# 入队时算时刻只能得到「现在」。定时统一在 `_tick_anims()` 里做。
 	var absorb_at := bs.count('"at": -1, "kind": "absorb_fx"')
-	check_src(absorb_at == 3,
-			"R465 源码：护盾生成器 / 守护代受 / 闪躲三条代受路径都挂「时刻待定」（实际 %d 处）"
+	check_src(absorb_at == 2,
+			"R465 源码：护盾生成器 / 守护代受两条代受路径都挂「时刻待定」（实际 %d 处）"
 			% absorb_at)
 	check_src(bs.find("func _absorb_cue_at() -> int:") >= 0
 			and bs.find('evd["at"] = _absorb_cue_at()') >= 0,
@@ -30077,8 +30068,7 @@ func _init() -> void:
 	# ================================================================
 	# R403：「代受」的溢出**一律不结算** —— 全部按铁栅栏的口径来
 	#   （用户口径：铁栅栏能吃满溢出，其它代受效果一律照它做）
-	#   之前分叉的两条：闪躲只吃 `min(伤害, 剩余生命)`；护盾生成器把伤害转给
-	#   `_hit_unit()` 后交给 `_destroy_dead()` —— 站**后排**（x=5）时会被
+	#   护盾生成器把伤害转给 `_hit_unit()` 后交给 `_destroy_dead()` —— 站**后排**（x=5）时会被
 	#   「后排溢出」规则漏给玩家 HP，站前排却不漏（同一张卡两种结果）。
 	# ================================================================
 	var r403_saved_cls: String = RunState.player_class
@@ -30109,21 +30099,9 @@ func _init() -> void:
 	check(r403_e2.state.hp_self == 30 and r403_e2.state.unit_at(Vector2i(5, 2)) == null,
 			"R403 铁栅栏（基准）：%d 血吃满 30 伤，溢出不漏给玩家（HP %d）"
 			% [r403_bar_hp, r403_e2.state.hp_self])
-	# ③ 闪躲：代受盟友站后排也要吃满（改之前这里会漏 22 点）
-	var r403_e3 := _new_engine([], 30, 30)
-	r403_e3.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
-			Vector2i(5, 2), GameEngine.SIDE_SELF)
-	r403_e3.state.hand.append(CardData.from_dict(r403_repo.get_card(9103).to_dict()))
-	r403_e3.use_spell(0, null)
-	r403_e3._damage_player(GameEngine.SIDE_SELF, 30, "R403 测试")
-	check(r403_e3.state.hp_self == 30 and r403_e3.state.unit_at(Vector2i(5, 2)) == null,
-			"R403 闪躲（后排代受）：30 伤全吃下，玩家 HP 仍是 %d"
-			% r403_e3.state.hp_self)
 	RunState.player_class = r403_saved_cls
 	# ④ 源码锁：别让「只吃剩余生命」和「留给 _destroy_dead」两条老写法回来
 	var r403_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
-	check_src(r403_src.find("var absorbed:= amount") >= 0,
-			"R403 源码：闪躲代受直接吃满全额（不再 `mini(伤害, 剩余生命)`）")
 	# R469：这条路径改走 `_reap()`（「血降到 0」的收尾统一收口）。生成器本身不带超负荷，
 	# 行为一字未动 —— 只是不再留第二条销毁路径。
 	check_src(r403_src.find("_reap(gen_cell)") >= 0,

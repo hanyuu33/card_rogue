@@ -173,9 +173,10 @@ var _fire_walls: Array = []
 # 蓄力（9085）：该方「下一张技能多结算几次」的待用层数（按阵营记账，用掉即清）。
 # 结算次数 = 1 + 层数（1 层 = 生效 2 次）；见 _charge_add / _charge_take。
 var _charge: Dictionary = {}
-# 闪躲（9103）：自己直到**下个回合开始**前，HP 伤害改由随机一个己方盟友代受。
-# 用法：施放时置 true；_begin_turn(SIDE_SELF) 时清 false（覆盖了中间的敌方回合）。
-var _dodge_active:= false
+# 闪躲（9103）：本回合（直到自己**下个回合开始**，覆盖中间的敌方回合）所有友方单位获得嘲讽。
+# 用法：施放时置 true；_begin_turn(SIDE_SELF) 时清 false。嘲讽判定走 unit_has_taunt()，
+# 所以后上场的单位也会实时获得（不是一次性快照）。
+var _taunt_all_active:= false
 # R145：**最近一次真正落到玩家 HP 上**的伤害（减伤 / 挡下之后的值）。
 # `attack_hp` 与各处「溢出伤害」发出的 `action.emit("hp"/"trample")` 要报
 # 「实际掉了几点」，而不是「攻击力是多少」—— 只扣 1 点却飘一个「-12」是错的。
@@ -424,6 +425,15 @@ static func card_has_taunt(card: CardData) -> bool:
 	if card == null:
 		return false
 	return card.traits.has(TAUNT_TRAIT) or card.has_affix(AFFIX_TAUNT)
+
+
+func unit_has_taunt(p: Placement) -> bool:
+	## 场上某单位**当前**是否视为「嘲讽」= 卡面自带嘲讽（traits / affixes） OR
+	## （闪躲 9103 的全员嘲讽窗口内 && 是我方单位）。引擎内嘲讽判定统一走这里，
+	## 界面也走它（GameEngine.unit_has_taunt）—— 闪躲窗口内后上场的单位实时生效。
+	if p == null:
+		return false
+	return card_has_taunt(p.card) or (_taunt_all_active and p.owner == SIDE_SELF)
 
 ## R427（用户口径两次收口：先「不受技能伤害」→ 再提减半 → 最终定为**最多 3 点**）：
 ## 「技能免疫」这一档**整体取消** —— trait 名改「技能抗性」，
@@ -2219,7 +2229,7 @@ func _begin_turn(side: String) -> void :
 		state.self_energy_spent = 0   # 暗影之刃 9111：X = 本回合已花掉的费用，每回合重新记
 		_aether_used = false
 		_aether_left = 0
-		_dodge_active = false   # 闪躲（9103）：含敌方回合在内的一整个来回结束 → 到期
+		_taunt_all_active = false   # 闪躲（9103）：含敌方回合在内的一整个来回结束 → 到期
 		_roar_fires = 0
 		_space_fires = 0
 		_sync_harp()   # R352 竖琴：战斗中拿到的道具 / 读档续战，此处补齐在场上盟友的 +2
@@ -7940,9 +7950,9 @@ func charge_count(side:= SIDE_SELF) -> int:
 	return int(_charge.get(side, 0))
 
 
-func dodge_active(side:= SIDE_SELF) -> bool:
-	## 闪躲（9103）窗口是否生效。判定唯一来源仍是 _damage_player 里的 _dodge_active。
-	return side == SIDE_SELF and _dodge_active
+func taunt_all_active(side:= SIDE_SELF) -> bool:
+	## 闪躲（9103）「全员嘲讽」窗口是否生效（直到自己下个回合开始）。
+	return side == SIDE_SELF and _taunt_all_active
 
 
 func max_energy() -> int:
@@ -8995,15 +9005,15 @@ func _echo_spell(side: String, card: CardData) -> String:
 
 
 func _dodge_spell(side: String) -> String:
-	## 闪躲（9103）：置起「盟友代受」窗口。窗口一直开到**自己下个回合开始**
+	## 闪躲（9103）：置起「全员嘲讽」窗口。窗口一直开到**自己下个回合开始**
 	## （_begin_turn(SIDE_SELF) 清掉）—— 覆盖了中间的敌方回合，否则这张卡在自己回合里
-	## 几乎不会触发（玩家在自己的回合里很少挨 HP 伤害）。
+	## 几乎没有意义（嘲讽只在敌方回合攻击时才会改变目标选择）。
 	if side != SIDE_SELF:
 		return "（闪躲：敌方 AI 不使用这张卡）"
-	_dodge_active = true
-	_log("闪躲：直到你下个回合开始，你受到的伤害改由随机盟友代替承受")
+	_taunt_all_active = true
+	_log("闪躲：本回合所有友方单位获得嘲讽")
 	action.emit("dodge", {"active": true})
-	return "本回合你受到的伤害由随机盟友代受"
+	return "本回合所有友方单位获得嘲讽"
 
 
 func can_use_card(card: CardData, side:= SIDE_SELF) -> bool:
@@ -11723,39 +11733,6 @@ func _absorb_by_guard(amount: int) -> bool:
 	return true
 
 
-func _dodge_absorb(amount: int) -> int:
-	## 闪躲（9103）：随机一个己方**盟友**（kind == "盟友"，工事不参战）代替本方 HP 承受伤害。
-	## R403：**溢出也全部吃下** —— 用户口径「全按铁栅栏来做」：与森林守护 / 大树守卫 /
-	## 铁栅栏 / 护盾生成器同一条口径，代受单位吃满全额伤害，超出其生命的部分**不再回传**，
-	## 它随即被破坏。改之前这里只吃 `min(伤害, 剩余生命)`，是三条代受路径里唯一会漏的。
-	## 返回「仍需自己承担」的伤害量（0 = 全被盟友吃下）。
-	if amount <= 0:
-		return 0
-	var allies: Array[Placement] = []
-	var cells: Array[Vector2i] = []
-	for cell: Vector2i in state.board:
-		var p: Placement = state.board[cell]
-		if p.owner == SIDE_SELF and p.card.kind == "盟友":
-			allies.append(p)
-			cells.append(cell)
-	if allies.is_empty():
-		_log("闪躲：场上没有盟友 → 伤害仍由自己承担")
-		return amount
-	var i:= rng.randi_range(0, allies.size() - 1)   # 走引擎 rng：回放同种子可复现
-	var g: Placement = allies[i]
-	var cell2: Vector2i = cells[i]
-	var absorbed:= amount
-	_hit_unit(g, absorbed, "闪躲代受")
-	_log("闪躲：%s 替我方 HP 承受 %d 点伤害（溢出全吃，不再结算）" % [
-			g.card.card_name, absorbed])
-	action.emit("dodge_absorb", {"card": g.card, "cell": cell2,
-			"absorbed": absorbed, "rest": 0})
-	# R403：不走 `_destroy_dead` → 站后排也不会漏溢出（伤害全吃、不再回传）。
-	# R469：改走 `_reap()` —— 超负荷单位负数存活，同样不漏溢出。
-	_reap(cell2)
-	return 0
-
-
 func _ally_dmg_bonus(card: CardData, side: String) -> int:
 	if card == null or card.kind != "盟友":
 		return 0
@@ -13730,14 +13707,6 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 			amount -= prev
 		_hp_once_sides[side] = amount + maxi(0, prev)
 	if side == SIDE_SELF:
-		# 闪躲（9103）：窗口期内先让随机盟友代受（不足的部分才落到自己的 HP 上）。
-		if _dodge_active and amount > 0:
-			amount = _dodge_absorb(amount)
-			if amount <= 0:
-				_last_hp_damage = 0     # 全被盟友代受 → 玩家 HP 一点没掉
-				_check_game_over()
-				return state.hp_self
-
 		if _absorb_by_guard(amount):
 			_last_hp_damage = 0         # 替己方 HP 承伤的单位全挡下了
 			return state.hp_self
@@ -16360,7 +16329,7 @@ func _taunt_targets(cell: Vector2i, side: String, card: CardData) -> Array[Vecto
 	var out: Array[Vector2i] = []
 	for t in attack_targets(cell, side, card):
 		var q:= state.unit_at(t)
-		if q != null and card_has_taunt(q.card):
+		if q != null and unit_has_taunt(q):
 			out.append(t)
 	return out
 

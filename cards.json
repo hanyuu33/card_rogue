@@ -2501,7 +2501,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "直到你下个回合开始，你受到的伤害改由随机一个盟友代替承受，溢出也由它一并承受。",
+      "effect_text": "这个回合，所有友方单位获得嘲讽。",
       "target_mode": "none",
       "color": "紫",
       "image": ""

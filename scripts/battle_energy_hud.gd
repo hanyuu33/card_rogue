@@ -43,4 +43,4 @@ static func draw(canvas: CanvasItem, font: Font, current: int, maximum: int, rec
 			status_fs -= 1
 		canvas.draw_string(font, rect.position + Vector2(0, 111), text, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, status_fs, UiTheme.PAGE_INK)
 	if dodge:
-		canvas.draw_string(font, rect.position + Vector2(0, 124), "闪躲：盟友代受", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 10, UiTheme.PAGE_INK)
+		canvas.draw_string(font, rect.position + Vector2(0, 124), "闪躲：友军嘲讽", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 10, UiTheme.PAGE_INK)
