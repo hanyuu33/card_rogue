@@ -391,3 +391,83 @@ STRICTLY FORBIDDEN: gears, cogwheels, sprockets, pistons, springs, exposed machi
 
 裁切：`cardart_prep.py` 居中 `(199,0,1337,1024)`。
 关键句是 `the crate STAYS A CRATE` + `NO see-through machine body` —— v4 就是把整只箱子做成了玻璃罐机器。
+
+### 10. 9215 乱打 · v4（非 Q 版 / 满幅 / 裁切聚焦双拳）
+
+```
+FLAT ANIME CEL-SHADED ILLUSTRATION, clean crisp dark line art, 2-3 steps of flat shading, hard-edged shadows.
+
+HOW TO USE THE REFERENCE IMAGE: it is a HEAD-ONLY portrait. Take from it ONLY these four things —
+hair colour (pale gold), cat ears (black outside, pink inside), eye colour (amber gold),
+and the two small green leaf hair ornaments. IGNORE its head-to-body ratio, IGNORE its face shape,
+IGNORE its proportions completely.
+
+PROPORTIONS — MANDATORY, MEASURABLE: total figure height equals SEVEN head units. Head width must be
+LESS than one eighth of her total body height. Legs from hip to sole equal HALF of the total height.
+Adult face with a defined jawline, small nose, slim cheeks — NOT a round baby face.
+NO chibi, NO super-deformed, NO big head, NO mascot cuteness.
+
+OUTFIT: short sleeveless dress of layered GREEN LEAVES with tiny white daisies, cloth wraps on both
+forearms and knuckles, vine belt, BARE FEET.
+
+ACTION: a wild TWO-FISTED FLURRY — both arms thrown straight out to the sides at the same time,
+LEFT fist to the far left edge, RIGHT fist to the far right edge, each trailing a long curved
+ORANGE-RED punch arc sweeping outward. Torso twisted low, wide braced stance, dust puffs at her feet.
+
+CAMERA: full body, centred, filling about 88 percent of the frame height. The painting must cover the
+canvas EDGE TO EDGE — NO white margin, NO white border, NO white rectangle, NO inset frame.
+
+LIGHT: deep green ancient forest, mossy trunks and roots, cool green ambient, soft rim light.
+The orange-red punch arcs are the only warm colour.
+
+STRICTLY FORBIDDEN: chibi, super-deformed, oversized head, big head, round baby face, chubby cheeks,
+short stubby legs, toddler body, white background, white frame, margin, antlers, deer horns, helmet,
+armour, metal plates, red cape, second character, readable text, letters, numbers, logo, watermark,
+border, photorealistic rendering.
+```
+
+尺寸 1024×1536，`image1 = assets/ui/class_avatar_forest.png`，`input_fidelity=low`。
+裁切 `(0,150,1024,1071)`。
+
+### 11. 8079 惊喜运单 · v6（箱内是参考图里的活电鳗）
+
+```
+FLAT ANIME CEL-SHADED ILLUSTRATION, clean crisp dark line art, 2-3 steps of flat shading,
+hard-edged shadows. Horizontal composition, edge to edge, no white margin.
+
+SUBJECT: ONE pristine shipping crate, OPEN, on a pale clean workbench. The lid is hinged at the back
+and flipped up, standing behind the box; we look slightly down INTO the open box. The crate stays a
+CRATE — a rounded rectangular shipping box, not a machine, not a sci-fi device.
+
+CRATE EXTERIOR: smooth BRAND-NEW milk-white enamel panels; TWO intact bright-orange hazard stripes
+wrapping horizontally around the body; POLISHED BRASS corner caps and latch; ONE amber wax seal
+stamped with a simple QUESTION MARK symbol.
+
+INSIDE THE OPEN CRATE: a thick CLEAR GLASS TANK fitted snugly into the box interior, chrome sealing
+rim, filled with clear pale-blue liquid, small bubbles rising.
+
+THE LIVING THING INSIDE THE LIQUID — THE FOCUS OF THE PICTURE: EXACTLY ONE living ELECTRIC EEL.
+Long thick muscular body, olive-yellow-brown with darker mottling, a blunt rounded head with a small
+dark eye and a wide mouth, a long continuous fin ridge along the tail, wet shiny skin. Coiled in a
+big thrashing S-curve, head lifted and turned toward the viewer. Alive and discharging: bright
+BLUE-WHITE ELECTRIC ARCS crackle through the water from its body to the inner glass walls.
+
+DETAILS on the crate front: a small clean control strip — ONE round chrome knob with a soft blue glow,
+ONE tiny red button on the left, ONE tiny blue button on the right.
+EXACTLY TWO hoses plug into the crate: ONE matte-black on the left, ONE deep-red on the right,
+each with a polished brass coupling.
+
+LIGHT: HIGH-KEY, bright and airy; soft window light from the upper left.
+BACKGROUND: a bright tidy workshop — out-of-focus pale grey-green wall, bright window, neat shelves.
+
+STRICTLY FORBIDDEN: gears, cogwheels, sprockets, pistons, springs, chains, cable bundles, wheels,
+robot parts, engine parts, exposed machinery, card, playing card, paper, parchment, letters,
+document, money, coins, hands, people, faces, tentacles, octopus, shark, extra fish.
+NO rust, NO weathering, NO chipped enamel, NO dents, NO scratches, NO dust, NO grime, NO sepia,
+NO aged or vintage look. NO readable text, NO letters, NO numbers, NO logo, NO watermark, NO border.
+```
+
+尺寸 1536×1024，`image1 = _review/ref_tank_eel.png`，`input_fidelity=low`。
+裁切居中 `(199,0,1337,1024)`。
+这段的分水岭是 `THE LIVING THING INSIDE THE LIQUID` 一节的**主体声明**：
+不写明「罐里只有一条电鳗」，模型就会自己找东西填罐子（v5 填的是一张卡）。
