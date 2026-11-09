@@ -1229,8 +1229,8 @@ const OWLBEAR_FOE_ID:= 9214
 # 程 0 让 `attack_targets` / `hp_targets` 恒空 —— 它的威胁全部来自这里：
 #   * 行动 = 对**同列第一个**敌方单位造成等同于力量的伤害；
 #   * 那一列一个目标都没有 → 直击对方 HP（走 `_damage_player`，与 attack_hp 同口径）；
-#   * 沉睡 / 力量成长都不写进这里：沉睡用 `FieldState.DEEP_SLEEP_TRAIT`（挨打不醒），
-#     成长用关卡 `enemy_growth`（每回合 +1）——两者都是现成机制的复用，不另造一套。
+#   * 沉睡 / 力量成长都不写进这里：沉睡沿用 `FieldState.SLEEP_TRAIT`（恶魔鸭同一套，
+#     回合结束 -1、挨打也 -1），成长用关卡 `enemy_growth`（每回合 +1）——都是现成机制的复用。
 const LASER_TRAIT:= "激光炮"
 # 「填充」（9146，0 费普通技能）：将手牌里一张卡变成聚能炮击。两段式入口 `cast_reload`。
 const RELOAD_ID:= 9146
@@ -15313,13 +15313,8 @@ func _sleep_tick(side: String) -> void :
 			action.emit("wake", {"cell": cell, "card": p.card, "side": side,
 					"hurt": false, "awake": true})
 		else:
-			# R539：深眠（激光炮 9241）没有「挨打 -1」那一条，日志不能照着写。
-			if p.card.traits.has(FieldState.DEEP_SLEEP_TRAIT):
-				_log("%s 仍在沉睡（还剩 %d 点：只按回合 -1）" % [
-						p.card.card_name, p.sleep_left])
-			else:
-				_log("%s 仍在沉睡（还剩 %d 点：回合结束 -1，挨打也 -1）" % [
-						p.card.card_name, p.sleep_left])
+			_log("%s 仍在沉睡（还剩 %d 点：回合结束 -1，挨打也 -1）" % [
+					p.card.card_name, p.sleep_left])
 
 
 func _demon_duck_hurt(p: Placement, cell: Vector2i) -> void :

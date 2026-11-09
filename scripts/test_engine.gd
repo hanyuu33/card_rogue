@@ -33081,15 +33081,15 @@ func _init() -> void:
 			and r539_legacy.is_effect() and not r539_legacy.needs_target(),
 			"R539 传承记忆：5 费 / 史诗（rarity 0 → 2），仍是无需选目标的效果卡")
 
-	# ② 激光炮卡面：工事 5 / 125 / 程 0 / 速 0，带「激光炮」+「深眠」
+	# ② 激光炮卡面：工事 5 / 125 / 程 0 / 速 0，带「激光炮」+「沉睡」（直接复用恶魔鸭那套）
 	var r539_laser := repo.get_card(9241)
 	check(r539_laser != null and r539_laser.kind == "工事" and r539_laser.power == 5
 			and r539_laser.health == 125 and r539_laser.attack_range == 0
 			and r539_laser.move_speed == 0 and r539_laser.group == "enemy"
 			and r539_laser.traits.has(GameEngine.LASER_TRAIT)
-			and r539_laser.traits.has(FieldState.DEEP_SLEEP_TRAIT)
-			and not r539_laser.traits.has(FieldState.SLEEP_TRAIT),
-			"R539 激光炮：工事 5/125 程0 速0，带「激光炮」+「深眠」（刻意不带「沉睡」）")
+			and r539_laser.traits.has(FieldState.SLEEP_TRAIT)
+			and not r539_laser.traits.has("深眠"),
+			"R539 激光炮：工事 5/125 程0 速0，带「激光炮」+「沉睡」（不再有独立「深眠」）")
 
 	# ③ 关卡编成：第二层 · 普通困难，三座炮全在中排（列 0 / 1 / 2）
 	var r539_lv := _level_named("巨炮防线")
@@ -33130,21 +33130,21 @@ func _init() -> void:
 			and not GameLevels.normal_pool(GameLayers.LAYER_DEFAULT).has(r539_lv),
 			"R539 巨炮防线：只进第二层普通池（第一层地图摇不到）")
 
-	# ④ 沉睡：走 place 的唯一初始化口，2 点；且「深眠」挨打不减（恶魔鸭照旧 -1）
+	# ④ 沉睡：走 place 的唯一初始化口，2 点；挨打也 -1（与恶魔鸭 9116 完全同一套语义）
 	var r539_e := _new_engine([], 40, 40)
 	r539_e.start_game(0)
 	var r539_p1 := r539_e.state.place(CardData.from_dict(repo.get_card(9241).to_dict()),
 			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
 	check(r539_p1.sleep_left == FieldState.SLEEP_TURNS,
-			"R539 激光炮：开局沉睡 %d 点（深眠 trait 与「沉睡」共用一个初始化口）" % FieldState.SLEEP_TURNS)
+			"R539 激光炮：开局沉睡 %d 点（走 FieldState.place 的唯一初始化口）" % FieldState.SLEEP_TURNS)
 	r539_e._hit_unit(r539_p1, 3, "测试", true, true)
-	check(r539_p1.sleep_left == FieldState.SLEEP_TURNS,
-			"R539 激光炮：深眠 —— 挨打不会缩短沉睡（受伤口只认「沉睡」trait）")
+	check(r539_p1.sleep_left == FieldState.SLEEP_TURNS - 1,
+			"R539 激光炮：挨打也 -1（与「沉睡」同语义，没有独立机制）")
 	var r539_duck := r539_e.state.place(CardData.from_dict(repo.get_card(9116).to_dict()),
 			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
 	r539_e._hit_unit(r539_duck, 3, "测试", true, true)
 	check(r539_duck.sleep_left == FieldState.SLEEP_TURNS - 1,
-			"R539 对照：恶魔鸭 9116 挨打仍然 -1（两套沉睡语义不串）")
+			"R539 对照：恶魔鸭 9116 挨打同样 -1（两者共用一套沉睡）")
 
 	# ⑤ 行动：程 0 → 不能常规攻击；同列第一个吃满力量，后排不动，空列改打 HP
 	var r539_e2 := _new_engine([], 40, 40)
@@ -33187,15 +33187,16 @@ func _init() -> void:
 	check(r539_pw1 == 6 and r539_pw2 == 7,
 			"R539 巨炮防线：每回合力量 +1（开局 5+1 = %d，下个我方回合 %d）" % [r539_pw1, r539_pw2])
 
-	# ⑦ 源码锁：专属行动的挂点（AI 分派 + 沉睡 trait 的 place 口）
+	# ⑦ 源码锁：专属行动的挂点（AI 分派 + 沉睡只认 SLEEP_TRAIT 的 place 口）
 	var r539_eng_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 	var r539_fs_src := FileAccess.get_file_as_string("res://scripts/field_state.gd")
 	check(r539_eng_src.find("if p.card.traits.has(LASER_TRAIT):") >= 0
 			and r539_eng_src.find("func _laser_cannon_act(") >= 0
 			and r539_eng_src.find("func _laser_column_target(") >= 0,
 			"R539 源码：激光炮走 `_ai_act()` 的专属分派（不混进通用流程）")
-	check(r539_fs_src.find("card.traits.has(DEEP_SLEEP_TRAIT)") >= 0,
-			"R539 源码：深眠与沉睡共用 `FieldState.place()` 的同一个 sleep_left 初始化口")
+	check(r539_fs_src.find("if card.traits.has(SLEEP_TRAIT):") >= 0
+			and r539_fs_src.find("DEEP_SLEEP_TRAIT") < 0,
+			"R539 源码：`FieldState.place()` 的沉睡口只认 SLEEP_TRAIT（没有另造「深眠」）")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

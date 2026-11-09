@@ -1,4 +1,21 @@
-## 2026-11-09 R539 传承记忆改 5 费史诗 + 新关卡「巨炮防线」（当前最新）
+## 2026-11-09 R539b 激光炮的沉睡并入既有「沉睡」（不再另造「深眠」）（当前最新）
+
+- 用户口径：「不需要新机制，和沉睡一样，挨打回合-1」。即激光炮 9241 直接用恶魔鸭 9116 那套
+  `FieldState.SLEEP_TRAIT`，**删掉 R539 新造的 `DEEP_SLEEP_TRAIT`「深眠」**。
+- 回滚清单：`field_state.gd` 删常量 + `place()` 恢复 `if card.traits.has(SLEEP_TRAIT):`；
+  `placement.status_entries` / `battle_scene` 悬停 / `game_engine._sleep_tick` 日志三处文案分支全部撤回
+  单一写法（「回合/受伤各 -1」）；`game_engine.gd` 头注释同步。
+- `cards.json` 9241：traits `["工事","机械","深眠","激光炮"]` → `["工事","机械","沉睡","激光炮"]`，
+  `effect_text` 去掉「（挨打不会提前醒）」。
+- `test_engine.gd` R539 断言块改口径：traits 断言改为**带「沉睡」且不带「深眠」**；
+  ④ 段改为「激光炮挨打也 -1」+ 恶魔鸭对照同样 -1（证明两者共用一套）；
+  ⑦ 源码锁改为「`place()` 只认 SLEEP_TRAIT，且源码里不存在 DEEP_SLEEP_TRAIT」。
+- 文档：`_p14_gendoc.py` 的 `laser_line` 备注改口径后重跑，`关卡与敌人配置总览.md` / `卡图索引.md` 刷新。
+- 验证：`_verify.py` 五套全绿 —— mana 0✗ / engine **5350✓** / reward 26✓ / bgm 39✓ / smoke 65✓
+  （断言条数与 R539 相同：删掉一条「挨打不减」、加成一条「挨打 -1」，总数不变）。
+- 行为差异只有一个：**打它 2 次就能提前催醒**（原本要等满 2 回合）。炮的专属行动 / 成长 / 站位都没动。
+
+## 2026-11-09 R539 传承记忆改 5 费史诗 + 新关卡「巨炮防线」
 
 - 用户口径（两条）：「传承记忆 改为5费史诗卡」；「新增二层普通困难关卡：巨炮防线：敌人中排3激光炮：
   工事，5/125/？。沉睡2回合。不能常规攻击，作为行动的代替，对同列第一个敌人造成等同于力量伤害
@@ -7,14 +24,11 @@
 - **改动 1｜传承记忆 9078**：`cards.json` 里 `cost 2→5`、`rarity 0→2`（普通→史诗），其余不动
   （仍 `kind:"效果"`、traits `["传承"]`）。因为只改数值不动机制，无需碰引擎。
 - **改动 2｜新卡 9241 激光炮**：`kind:"工事"`、`5 力 / 125 血 / 程 0 / 速 0`、`rarity 4`（怪物）、
-  `group:"enemy"`、traits `["工事", "机械", "深眠", "激光炮"]`、`target_mode:"none"`、金色。
+  `group:"enemy"`、traits `["工事", "机械", "沉睡", "激光炮"]`、`target_mode:"none"`、金色。
   卡库 **301→302**（敌 70→71）。
-- **改动 3｜「深眠」新 trait**（`field_state.gd`）：`DEEP_SLEEP_TRAIT := "深眠"`。与 `SLEEP_TRAIT`
-  **共用** `place()` 的 `sleep_left` 初始化口（摆位 / 召唤都走这一处），但恶魔鸭 9116 的
-  「受伤 -1 就醒暴怒」口（`_demon_duck_hurt`）**只认 SLEEP_TRAIT** —— 所以激光炮**挨打不会提前醒**，
-  只按回合 -1（`_sleep_tick` 只看 `sleep_left > 0`，两边共用一个时钟）。
-  三处沉睡文案按 trait 分支：`battle_scene` 悬停「只按回合 -1，挨打不会醒」/ `placement.status_entries`
-  「只按回合 -1」/ `game_engine._sleep_tick` 日志「只按回合 -1」；恶魔鸭仍是「回合/受伤各 -1」。
+- **改动 3｜沉睡**：直接复用 `FieldState.SLEEP_TRAIT`「沉睡」（恶魔鸭 9116 同一套：回合结束 -1、
+  **挨打也 -1**），`place()` 是唯一初始化口。R539 当时曾另造 `DEEP_SLEEP_TRAIT`「深眠」（挨打不减），
+  **R539b 已按用户要求删除**，见上一条。
 - **改动 4｜专属行动 `_laser_cannon_act()`**（`game_engine.gd`）：`LASER_TRAIT := "激光炮"`，
   在 `_ai_act()` 里直接分派（与枭熊 `_owlbear_act` / 暗杀者 `_assassin_act` 同构，不进通用流程）。
   - 「不能常规攻击」靠**程 0** 天然实现（`attack_targets`/`hp_targets` 恒空），不用额外禁手。
@@ -34,11 +48,11 @@
   不该靠程 3 去绕过 375 点总血量。
 - **验证**：`_verify.py` 五套全绿 —— mana 0✗ / engine **5350✓** / reward **26✓** / bgm **39✓** /
   smoke **65✓**。`test_engine.gd` 同步了全部计数断言（卡库 302 / 敌 71 / 传承记忆 5 费 rarity 2 /
-  二层关卡 20 / 二层普通池 10 / 内置 38），并新增 **R539 断言块**：卡面与 traits 组合（含
-  `深眠` 且**不含** `沉睡`）、关卡 tier/layer/key 与三炮中排列、编成与 `cards.json` 同源、
-  成长曲线数值、只进二层普通池、沉睡初始化 = 2、深眠**挨打不减**而对照片恶魔鸭 9116 挨打 -1、
+  二层关卡 20 / 二层普通池 10 / 内置 38），并新增 **R539 断言块**：卡面与 traits 组合（带
+  `沉睡` 且**不带** `深眠`）、关卡 tier/layer/key 与三炮中排列、编成与 `cards.json` 同源、
+  成长曲线数值、只进二层普通池、沉睡初始化 = 2、**挨打也 -1**（与恶魔鸭 9116 对照同值）、
   程 0 候选为空、`_laser_column_target` 取最前、`_laser_cannon_act` 前排掉血后排不掉、
-  空列直击 HP、每回合 +1，以及源码锁（`LASER_TRAIT` 分派 + `DEEP_SLEEP_TRAIT` 在 `place` 口）。
+  空列直击 HP、每回合 +1，以及源码锁（`LASER_TRAIT` 分派 + `place()` 只认 `SLEEP_TRAIT`）。
 - **探针**：`_probe_r539_laser.gd` 拉真实战斗场景跑了一轮，日志确认「炮 力 6 沉眠 2」、
   开火后同列目标 `血 8→2`（6 点 = 力量）、空列 `直击 HP 5`，符合预期；截图
   `_probe_r539_laser_a.png` / `_b.png` 留本地（`/_probe_*.png` 已 gitignore）。
