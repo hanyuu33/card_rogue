@@ -471,3 +471,99 @@ NO aged or vintage look. NO readable text, NO letters, NO numbers, NO logo, NO w
 裁切居中 `(199,0,1337,1024)`。
 这段的分水岭是 `THE LIVING THING INSIDE THE LIQUID` 一节的**主体声明**：
 不写明「罐里只有一条电鳗」，模型就会自己找东西填罐子（v5 填的是一张卡）。
+
+### 12. 9215 乱打 · v5（少女比例，头缩小）
+
+```
+FLAT ANIME CEL-SHADED ILLUSTRATION, clean crisp dark line art, 2-3 steps of flat shading, hard-edged shadows.
+
+HOW TO USE THE REFERENCE IMAGE: it is a HEAD-ONLY portrait. Take from it ONLY these four things —
+hair colour (pale gold), cat ears (black outside, pink inside), eye colour (amber gold),
+and the two small green leaf hair ornaments. Do NOT copy its head-to-body ratio.
+
+BODY TYPE - THE ONE THING TO GET RIGHT: she is a SLENDER TEENAGE GIRL, around fifteen years old,
+about SIX head-heights tall. Her HEAD IS SMALL AND PROPORTIONATE — head width no more than one seventh
+of her total height. Slim girlish build: narrow shoulders, slender arms, slim legs, flat chest, no curves.
+She is NOT an adult woman, NOT a mature woman, NOT a bodybuilder, NOT curvy, NOT tall.
+The ONLY thing to avoid is the CHIBI BIG HEAD: NO oversized head, NO big round head on a small body,
+NO super-deformed / SD proportions, NO toddler body, NO toy figure.
+
+FACE: youthful girl's face, soft rounded cheeks, small nose, determined expression with gritted teeth.
+NOT a mature adult face, NOT a sharp jawline, NOT makeup.
+
+OUTFIT: short sleeveless dress of layered GREEN LEAVES with tiny white daisies, cloth wraps on both
+forearms and knuckles, vine belt, BARE FEET. ONE fluffy BLACK cat tail.
+
+ACTION: a wild TWO-FISTED FLURRY — both arms thrown straight out to the sides at the same time,
+LEFT fist to the far left edge, RIGHT fist to the far right edge, each trailing a long curved
+ORANGE-RED punch arc sweeping outward. Torso twisted low, wide braced stance, dust puffs at her feet.
+
+CAMERA: full body, centred, filling about 86 percent of the frame height. Painting covers the canvas
+EDGE TO EDGE — NO white margin, NO white border, NO white rectangle, NO inset frame.
+
+LIGHT: deep green ancient forest, mossy trunks and roots, cool green ambient, soft rim light.
+The orange-red punch arcs are the only warm colour.
+
+STRICTLY FORBIDDEN: chibi, super-deformed, oversized head, big head, giant head, tiny body with huge head,
+toddler, baby proportions. NO adult woman, NO mature woman, NO tall amazon, NO muscular arms, NO curves,
+NO large bust, NO long mature face, NO make-up. NO antlers, NO deer horns, NO helmet, NO armour,
+NO metal plates, NO red cape, NO second character, NO white background, NO white frame,
+NO readable text, NO letters, NO numbers, NO logo, NO watermark, NO border, NO photorealistic rendering.
+```
+
+尺寸 1024×1536，`image1 = assets/ui/class_avatar_forest.png`，`input_fidelity=low`。
+裁切 `(0,150,1024,1071)`。
+
+### 13. 8079 惊喜运单 · v7（箱子与罐子两件独立物体）
+
+```
+FLAT ANIME CEL-SHADED ILLUSTRATION, clean crisp dark line art, 2-3 steps of flat shading,
+hard-edged shadows. Horizontal composition, edge to edge, no white margin.
+
+TWO SEPARATE OBJECTS — THIS IS THE MOST IMPORTANT RULE. The picture contains a CRATE and, sitting
+inside it, a JAR. They are two distinct things. The crate is packaging; the jar is the cargo.
+The jar must look like a complete, whole, self-contained vessel that a person could lift out of the
+crate with both hands.
+
+OBJECT 1 — THE CRATE (outer, larger): a normal shipping crate, OPEN, its lid hinged at the back and
+flipped up standing behind it; we look slightly down INTO the open box. Smooth BRAND-NEW milk-white
+enamel panels; TWO intact bright-orange hazard stripes wrapping the body; POLISHED BRASS corner caps
+and a brass latch; ONE amber wax seal stamped with a small QUESTION MARK on the front panel.
+Inside the crate: pale straw packing and a few pale foam blocks filling the bottom.
+
+OBJECT 2 — THE JAR (smaller, standing on the straw): a thick CLEAR GLASS LABORATORY JAR with its OWN
+chrome base plate and FOUR small chrome feet resting on the straw, its OWN polished chrome top rim and
+a chrome side handle. Its glass walls are entirely its own — you can see the crate's white enamel inner
+walls AND the straw packing BEHIND and AROUND the jar through the glass, with a visible gap of straw
+between the jar and the crate walls. The jar is clearly SHORTER and NARROWER than the crate opening,
+so the crate rim is visible all the way around it. Filled with clear pale-blue liquid with bubbles.
+
+INSIDE THE JAR: EXACTLY ONE living ELECTRIC EEL. Long thick muscular body, olive-yellow-brown with
+darker mottling, a blunt rounded head with a small dark eye, a long fin ridge, wet shiny skin, coiled
+in a big thrashing S-curve, head lifted toward the viewer. Bright BLUE-WHITE ELECTRIC ARCS crackle
+through the liquid from its body to the jar's inner glass wall.
+
+ON THE JAR'S OWN CHROME BASE: a small control strip — ONE round chrome knob with a soft blue glow,
+ONE tiny red button, ONE tiny blue button. EXACTLY TWO hoses come out of the JAR's base and drape over
+the crate edge: ONE matte-black on the left, ONE deep-red on the right, brass couplings on both.
+
+LIGHT: HIGH-KEY, bright and airy, soft window light from the upper left, pale warm-grey floor with one
+soft contact shadow. The blue glow is the only cold light.
+
+BACKGROUND: a bright tidy workshop — out-of-focus pale grey-green wall, a bright window, neat shelves.
+
+STRICTLY FORBIDDEN: the crate and the jar fused into ONE object, the crate itself made of glass,
+the crate walls replaced by glass, an aquarium built into the box, a glass box, a single tall glass
+tank standing where the crate should be, the jar larger than the crate, the jar sitting flush with the
+crate rim. NO home aquarium decoration: NO gravel, NO pebbles, NO sand, NO water plants, NO seaweed,
+NO coral, NO sunken castle, NO diver toy, NO air-stone. NO gears, cogwheels, pistons, springs, chains,
+exposed machinery, robot parts, wheels. NO card, playing card, paper, parchment, letters, document,
+money, coins. NO hands, NO people, NO faces, NO tentacles, NO octopus, NO shark, NO extra fish.
+NO rust, NO weathering, NO chipped enamel, NO dents, NO scratches, NO dust, NO grime, NO sepia,
+NO aged or vintage look. NO readable text, NO letters, NO numbers, NO logo, NO watermark, NO border.
+```
+
+尺寸 1536×1024，`image1 = _review/ref_tank_eel.png`，`input_fidelity=low`。
+裁切居中 `(199,0,1337,1024)`。
+分离的关键不是形容词而是**三条可验证依据**：罐子自带铬底座与四只脚、比箱口矮且窄、透过玻璃能看见
+箱内白搪瓷内壁与稻草在它背后。只写「箱子打开、里面有个罐子」，模型就会把箱壁画成玻璃。
