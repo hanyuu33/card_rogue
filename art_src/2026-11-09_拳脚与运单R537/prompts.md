@@ -289,3 +289,105 @@ FULL-BLEED image, no white margin, no vignette.
 ```
 
 裁切照常用居中裁（`(199,0,1337,1024)`），参考图的水印在右下，天然落在窗口外。
+
+---
+
+# R538b · 四张全部重出（角色照选择角色界面的 CG）
+
+店长两句话定死了方向：
+
+1. 「前三张图我完全没有看到修改版在哪里」→ 三张拳脚要的是**改过的版本**，不是核查报告。
+2. 「需要添加的纪律只有生成带角色的图片需要参考角色CG图（选择角色界面）」→ 参照源 =
+   `assets/ui/class_avatar_forest.png` / `class_avatar_rogue.png` / `class_avatar_mech.png` 这三张**头像 CG**。
+3. 「我是说箱子打开里面是参考图，而不是箱子换成参考图」→ 8079 要**打开着的箱子**，箱内才是玻璃罐。
+
+## 6. 9215 乱打（v3，1024x1536，image1=class_avatar_forest）
+
+```
+FLAT ANIME CEL-SHADED ILLUSTRATION, clean crisp dark line art, exactly 2-3 steps of flat shading, hard-edged shadows. Vertical composition, full body, full-bleed, no white margin.
+
+EXACT SAME CHARACTER AS THE REFERENCE HEAD - copy her face, hair and ears exactly: a cute chibi forest-sprite girl with PALE-GOLD wavy hair, big rounded BLACK CAT EARS with pink inner fur, two small GREEN LEAF hair ornaments, huge AMBER-GOLD eyes, soft pink blush. Her tail is ONE single big fluffy BLACK cat tail. Chibi proportions, about 4 head-lengths tall, small body.
+
+OUTFIT (not in the reference, follow this exactly): a short dress made of layered GREEN LEAVES with tiny white daisy flowers, simple cloth wraps on the forearms, bare feet.
+
+ACTION: she is caught in a wild two-fisted flurry - both fists swung out at the same time, left fist punching to the far left, right fist punching to the far right, each fist trailing its own separate curved ORANGE-RED punch arc in opposite directions. Her torso is twisted low, one bare foot stepped forward, small dust puffs at her feet. Her face is fierce and determined, teeth gritted.
+
+CAMERA: vertical framing, whole body visible from the top of her head to her bare feet, centred, filling the frame edge to edge; the two fists are the widest points of the silhouette.
+
+LIGHT: deep green ancient forest background with moss and trunks, cool green ambient light, soft rim light on her hair and shoulders. The ONLY warm colour in the picture is the orange-red of the two punch arcs.
+
+STRICTLY FORBIDDEN: NO antlers, NO deer horns, NO helmet, NO armour, NO metal plates, NO red cape, NO knight, NO second character, NO readable text, NO letters, NO numbers, NO logo, NO watermark, NO card frame, NO border, NO photorealistic rendering, NO painterly airbrush, NO dark muddy palette.
+```
+
+裁切：`(40,196,960,1024)` → 920×828（1.1111）→ 448×403。**聚焦双拳**，头顶留一点余量。
+
+## 7. 9216 飞踢（v4，1536x1024，image1=class_avatar_rogue）
+
+```
+FLAT ANIME CEL-SHADED ILLUSTRATION, clean crisp dark line art, exactly 2-3 steps of flat shading, hard-edged shadows. HORIZONTAL 3:2 composition, full-bleed, no white margin.
+
+EXACT SAME CHARACTER AS THE REFERENCE HEAD - copy her face and hair exactly: SILVER-WHITE hair with blurred PURPLE gradient tips, sharp CRIMSON-RED eyes, pale skin, a confident smirk with one fang, sharp pointed ears. Her DEEP PURPLE-BLACK hood is UP but pushed back so her whole face and hair are clearly visible.
+
+OUTFIT (follow this exactly): a fitted BLACK tight bodysuit, cloth wraps on the forearms, a long PURPLE-BLACK hooded half-cloak, tattered purple cloth sashes at the waist, black leather boots with iron toe caps.
+
+BODY: slim young adult proportions, about 6 to 6.5 head-lengths, the head small relative to the body, NOT chibi.
+
+ACTION: she is caught MID-AIR in a flying side kick - her body turned three-quarter toward the camera so her FACE IS CLEARLY VISIBLE, one leg driven straight out toward the lower right with the IRON-SHOD BOOT SOLE angled at the camera and filling the lower right quarter, the other leg tucked under her, cloak and sashes streaming behind her, both fists up near her chest.
+
+CAMERA: three-quarter front view, low angle, THE WHOLE FIGURE fully inside the frame - top of her hood, both boots and the hem of her cloak all visible, with clean empty space above her head and below her boots. She is centred, occupying about 80 percent of the frame height and the middle 60 percent of the width.
+
+LIGHT: a PURPLE-WHITE shock band streaking along the kick direction, a dark stone corridor behind her, thin cracks in the floor. Purple-white is the only bright light.
+
+STRICTLY FORBIDDEN: NO armour plates, NO shoulder pauldrons, NO metal chest piece, NO helmet, NO antlers, NO horns, NO extra character, NO male figure, NO cropped head, NO cut-off feet, NO readable text, NO letters, NO numbers, NO logo, NO watermark, NO card frame, NO border, NO photorealistic rendering, NO painterly airbrush.
+```
+
+裁切：`(382,0,1520,1024)` → 1138×1024。窗口右移是为了保住靴尖（靴子在原图最右侧）。
+**竖版 v3 已弃用**：全身腾空时头到靴底跨 1300px+，448:403 的窗口最多只有 921px 高，
+裁脚就没脸、裁脸就没脚（见 `_review/9216_v3_a.png` / `_b.png`）——所以改横版，纵向全留。
+
+## 8. 9217 冲拳（v3，1024x1536，image1=class_avatar_rogue）
+
+```
+FLAT ANIME CEL-SHADED ILLUSTRATION, clean crisp dark line art, exactly 2-3 steps of flat shading, hard-edged shadows. Vertical composition, full body, full-bleed, no white margin.
+
+EXACT SAME CHARACTER AS THE REFERENCE HEAD - copy her face and hair exactly: SILVER-WHITE hair with blurred PURPLE gradient tips, sharp CRIMSON-RED eyes, pale skin, a small confident smirk with one fang, sharp pointed ears. Her DEEP PURPLE-BLACK hood is UP but pushed back enough that her whole face and hair are clearly visible.
+
+OUTFIT (follow this exactly): a fitted BLACK tight bodysuit, cloth wraps on the forearms and knuckles, a PURPLE-BLACK hooded half-cloak hanging off one shoulder, tattered purple cloth sashes at the waist, black soft boots.
+
+BODY: slim young adult proportions, about 6 to 6.5 head-lengths, the head small relative to the body, NOT chibi.
+
+ACTION: she stands front-on, weight low, and drives ONE fist STRAIGHT AT THE CAMERA - that fist is the biggest object in the picture, pushed far forward with heavy foreshortening, the forearm and the underside of the fist filling the centre-lower frame. A full RING of purple-white shockwave energy bursts outward around the fist, sharp and clean. Her other arm is pulled back at her hip. Her face is visible above the fist, teeth gritted.
+
+CAMERA: vertical framing, whole body from the top of her hood to her boots, centred, slight low angle.
+
+LIGHT: dark stone ruins behind her, broken pillars and deep shadow, the purple-white ring is the only bright light. Pale stone floor with a shallow dent and radial cracks under her feet.
+
+STRICTLY FORBIDDEN: NO armour plates, NO shoulder pauldrons, NO metal chest piece, NO helmet, NO antlers, NO horns, NO extra character, NO male figure, NO glowing ring around her face, NO readable text, NO letters, NO numbers, NO logo, NO watermark, NO card frame, NO border, NO photorealistic rendering, NO painterly airbrush.
+```
+
+裁切：`(0,150,1024,1071)` → 1024×921。同时保住**脸**与**整圈光环**。
+
+## 9. 8079 惊喜运单（v5，1536x1024，image1=店长给的玻璃罐图）
+
+```
+FLAT ANIME CEL-SHADED ILLUSTRATION, clean crisp dark line art, exactly 2-3 steps of flat shading, hard-edged shadows. NOT photorealistic, NOT a 3D render, NOT airbrushed. Horizontal composition, full-bleed, no white margin.
+
+SUBJECT: ONE pristine industrial transport crate, OPEN, standing on a clean pale workbench. IMPORTANT: the crate STAYS A CRATE - a rounded rectangular shipping box with a hinged lid flipped back and standing up behind it; we look slightly down INTO the open box. The glass tank is a separate object sitting INSIDE the crate, not the body of the machine.
+
+CRATE EXTERIOR: smooth BRAND-NEW milk-white enamel panels, glossy and flawless; TWO intact bright-orange hazard stripes wrapping horizontally around the body; POLISHED BRASS corner caps and a polished brass latch; ONE amber wax seal stamped with a simple QUESTION MARK symbol on the front below the lid.
+
+INSIDE THE OPEN CRATE: fitted snugly into the box interior is a thick CLEAR GLASS TANK - a glass liner with a chrome sealing rim, filled with clear pale-blue liquid; small bubbles rise through it. The crate's enamel walls and its open lid are clearly visible around the glass tank.
+
+INSIDE THE LIQUID: EXACTLY ONE single rectangular card floating upright at a slight three-quarter angle. Its LEFT half is dissolving into drifting paper fibres and glowing amber motes; its RIGHT half has already become a different card with a different simple emblem. Warm amber-gold light leaks from the seam where the two halves meet. Thin crackling BLUE-WHITE ELECTRIC ARCS travel through the liquid from the card to the inner glass wall.
+
+DETAIL: a small clean control strip set into the inner front wall of the crate - ONE round chrome knob with a soft blue glow, ONE tiny red button, ONE tiny blue button. EXACTLY TWO hoses plug into the crate: ONE matte-black hose at the back left, ONE deep-red hose at the back right, each with a polished metal coupling.
+
+LIGHT: HIGH-KEY, bright and airy; one soft window light from the upper left; pale warm-grey floor with a single soft contact shadow.
+
+BACKGROUND: a bright tidy workshop - out-of-focus pale grey-green wall, a bright window with white daylight, a couple of neat shelves. Light and clean, NOT a dark factory.
+
+STRICTLY FORBIDDEN: gears, cogwheels, sprockets, pistons, springs, exposed machinery, engine parts, chains, cable bundles, mechanical clutter, robot parts, wheels, legs, a control tower. NO see-through machine body, NO sci-fi device replacing the box. NO rust, NO weathering, NO chipped enamel, NO dents, NO scratches, NO dust, NO grime, NO sepia, NO dull grey-brown palette, NO aged or vintage look. NO hands, NO people, NO faces, NO readable text, NO letters, NO numbers, NO logo, NO watermark, NO card frame, NO border.
+```
+
+裁切：`cardart_prep.py` 居中 `(199,0,1337,1024)`。
+关键句是 `the crate STAYS A CRATE` + `NO see-through machine body` —— v4 就是把整只箱子做成了玻璃罐机器。
