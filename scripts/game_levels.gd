@@ -75,10 +75,11 @@ static func level_names() -> Array[String]:
 
 static func builtin_levels() -> Array:
 	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×10（第一层 4 + 第二层 6）→
-	## 精英简单×7（第一层 3 + 第二层 4；R449 哈气骑士团下调一层；R502 执法者的审判进二层；
-	##   R506 阿斯克勒庇厄斯的试炼由精英困难下调到精英简单）→
+	## 精英简单×8（第一层 3 + 第二层 5；R449 哈气骑士团下调一层；R502 执法者的审判进二层；
+	##   R506 阿斯克勒庇厄斯的试炼由精英困难下调到精英简单；R541 普罗诺亚之影进二层）→
 	## 精英困难×6（第一层 3 + 第二层 3；R506 母舰空袭由精英简单上调到精英困难）→
-	## Boss×7（第一层 3 + 第二层 3 + 第三层 1）。合计 38 关（R539 巨炮防线进二层普通困难；
+	## Boss×7（第一层 3 + 第二层 3 + 第三层 1）。合计 39 关（R541 普罗诺亚之影进二层精英简单；
+	## R539 巨炮防线进二层普通困难；
 	## R525 叛逃机械进第二层 Boss；
 	## R174 百眼动员进第二层普通简单；
 	## R340 永夜鸭群进第一层精英困难；**R356 启示者进第三层**；R451 母舰空袭进第二层精英池；
@@ -90,7 +91,7 @@ static func builtin_levels() -> Array:
 			_sun_forge(), _hecaton(), _undead_legion(), _twin_cannon(),
 			_laser_line(),
 		_captain(), _duck_kiln(), _breath_charge(), _hermes(), _dragon_nest(),
-			_enforcer_judgement(), _asclepius(),
+			_enforcer_judgement(), _asclepius(), _pronoia_shadow(),
 		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(), _mothership_air_raid(),
 		_boss_dragon(), _boss_demon_duck(), _boss_duck_darkside(),
 			_mech_duck_boss(), _hephaestus(), _defector_machine(), _scrapyard(),
@@ -1130,6 +1131,44 @@ static func _asclepius() -> Dictionary:
 		],
 		"tutorial": [],
 	}
+
+static func _pronoia_shadow() -> Dictionary:
+	## 第二层·精英敌人-简单（R541）：后排中央一只**普罗诺亚之影**（9242，8 攻 / 150 血 / 程 1 / 速 1）。
+	## 题面是「**根据敌人（玩家）的行动改变策略**」—— 它自己不变，变的是它召出来的构状体：
+	##   * 每回合开始时统计玩家**上一个回合**打出的卡：盟友 + 工事最多 → 炮击构状体；
+	##     技能 + 场地最多 → 护盾构状体；其余（效果 / 诅咒…）最多 → 迅捷构状体；
+	##     平手按这个顺序取前面的，**一张都没出 → 保持当前形态**。
+	##   * 场上只有它自己 → **损失 10 点生命召唤**一个构状体；已经有构状体 →
+	##     把那一只**原地变形**（保留已受的伤害）。
+	## 三种构状体都是 50 血，所以「保留受伤」不会因为换血上限而被打死：
+	##   * 炮击 9243：15 攻 / 程 3 / 速 1，每回合给一个其他友方单位力量 +1 —— 越拖越疼的远程消耗；
+	##   * 护盾 9244：10 攻 / 程 1 / 速 1，其他己方单位受到的伤害减半 —— 把整场变硬；
+	##   * 迅捷 9245：10 攻 / 程 1 / 速 2，一回合行动两次 —— 贴脸的两轮压力。
+	## 于是玩家的「最优解」不是无脑铺场：喂它盟友会换来炮击、喂它技能会换来护盾，
+	## 而它每召唤一次都要付 10 点自己的血 —— **逼它多召唤**也是一条路（150 血只够 15 次）。
+	##
+	## enemy_hp 取 50（= (50 + 精英 10) × 2 = 120）：场上总血量是 150 + 50 = 200，
+	## 若按标准的 30（→ 80）走，玩家可以靠程 3 直击后排 HP 绕过整套机制 ——
+	## 与「洞穴」（R467）同一条理由。
+	return {
+		"name": "普罗诺亚之影",
+		"key": "pronoia_shadow",
+		"tier": TIER_ELITE_EASY,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"intro": "你打出的每一张牌，我都会记住。",
+		"player_hp": 20,
+		"enemy_hp": 50,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9242, "普罗诺亚之影", 8, 150, 1, 1, Vector2i(0, 1)],
+		],
+		"tutorial": [],
+	}
+
 
 static func _duck_kiln() -> Dictionary:
 	## 第一层·精英敌人-简单（R158 从「第二层·普通敌人-困难」上调）：敌方后排中央一座

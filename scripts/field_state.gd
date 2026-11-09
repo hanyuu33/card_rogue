@@ -60,6 +60,13 @@ var void_dmg_spells := 0       # 风元素 9082：本次对战中「用技能牌
 ## 只在本场战斗内累计（每场战斗新建 FieldState 即归零），累加口 `GameEngine._note_card_played`。
 ## ⚠️ R536：旧土元素 9218（按这份计数减费）已删除，现在只有 9235 读它。
 var self_ally_plays := 0
+## R541：**本回合我方打出的卡按 kind 计数**（"盟友" / "工事" / "技能" / "场地" / "效果" / "诅咒"）。
+## 唯一累加口 = `GameEngine._note_card_played()`（所有出牌路径的收尾），
+## 唯一清零点 = `GameEngine._begin_turn()` 的 SIDE_SELF 分支。
+## 唯一消费方 = 普罗诺亚之影 9242 的形态判定（`GameEngine._pronoia_mode()`）——
+## 「对方本回合用得最多的是哪一类」就是这张表的 argmax。
+## ⚠️ 只记本回合、只记我方；敌方回合开始时读它，玩家新回合开始即清空。
+var self_turn_kinds := {}
 ## R140：本局「消失」的卡数（消耗区计数）—— 离场消失 / 用后消失 / 从抽牌库抹除，
 ## 共同点 = **不进弃牌区、也不回手牌**，等于从本场牌组里抹掉。累加口见各处
 ## `void_count += 1`（FieldState.discard_hand / GameEngine 的 use_spell·_destroy·
@@ -436,6 +443,19 @@ func has_enforcer_minion(side: String) -> bool:
 	## ⚠️ 只数俄倪厄、不数执法者自己：卡面写的是「自己场上有量产型俄倪厄时」。
 	for p: Placement in board.values():
 		if p.owner == side and p.card != null and p.card.id == GameEngine.ENFORCER_MINION_ID:
+			return true
+	return false
+
+
+func has_shield_construct(side: String) -> bool:
+	## 「护盾构状体」（9244）是否在**该方场上** —— 「除自己以外的己方单位受到的伤害减半」
+	## 这条光环的**唯一开关**，与 `has_mass_helios` / `has_sun_forge` 同范式：
+	## 每回合实时扫场面、绝不烤进 CardData —— 「构状体被打掉 → 光环立刻断」是免费的。
+	## ⚠️ 按 **trait** 判（`GameEngine.SHIELD_TRAIT`），不判卡 id：三种构状体共用「构状体」，
+	##    只有护盾这一支带「护盾」。
+	## ⚠️ 光环**不含光源自己**（卡面是「其他己方单位」），那条判据在 `_unit_damage_taken` 里补。
+	for p: Placement in board.values():
+		if p.owner == side and p.card != null and p.card.traits.has(GameEngine.SHIELD_TRAIT):
 			return true
 	return false
 

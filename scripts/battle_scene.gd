@@ -10513,7 +10513,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		_say("✦ 哈气：%s 获得双动（此后每回合行动两次）" % str(data.get("name", "")))
 	# R151 P2-13：力量成长事件族（升级 / 骑士 / 锻造 / 夜行 / 精进 / 使魔）→ 卡面数字跳动 + 扩散环
 	if kind in ["upgrade", "knight_grow", "heph_grow", "night_grow", "mage_grow", "familiar_grow",
-			"revelator_grow"]:
+			"revelator_grow", "construct_grow"]:
 		var pg_cell = data.get("cell")
 		if pg_cell is Vector2i and (pg_cell as Vector2i).x >= 0 and not _shot_pending:
 			_pow_fx.append({"cell": pg_cell, "start": grow_at, "dur": 300})
@@ -10557,6 +10557,30 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						(pb_new as CardData).card_name]
 				if pb_cell.x >= 0:
 					_transform_fx.append({"zone": "cell", "cell": pb_cell, "start": n, "dur": 520})
+				sfx.play("place")
+		"pronoia_morph":
+			# R541 普罗诺亚之影（9242）：召唤 / 变形构状体。
+			# 召唤那一半另有一条 `place`（带 summon）负责落位动画与「召唤 xxx」播报，
+			# 这里只补「损失了多少生命」；变形那一半走 `_transform_fx`
+			# （与涂装机器人 8080 的「变幻」同一条视觉）。
+			var pm_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var pm_new = data.get("new", null)
+			var pm_name := (pm_new as CardData).card_name if pm_new is CardData else "构状体"
+			if bool(data.get("summon", false)):
+				var pm_src: Vector2i = data.get("src", Vector2i(-1, -1))
+				if pm_src.x >= 0:
+					_floaters.append({"pos": _cell_center(pm_src) + Vector2(0, -30),
+							"sc": _grid_scroll, "text": "生命 -%d" % int(data.get("cost", 0)),
+							"col": Color("c85a5a"), "start": n, "dur": 1500, "size": 17})
+				_say("◈ 普罗诺亚之影：损失 %d 点生命 → 召唤 %s" % [
+						int(data.get("cost", 0)), pm_name])
+			else:
+				if pm_cell.x >= 0:
+					_transform_fx.append({"zone": "cell", "cell": pm_cell, "start": n, "dur": 520})
+					_bursts.append({"pos": _cell_center(pm_cell), "sc": _grid_scroll,
+							"start": n, "dur": 520, "col": Color("a855d8"), "big": false})
+				_say("◈ 普罗诺亚之影：%s → %s（保留已受 %d 点伤害）" % [
+						str(data.get("old_name", "")), pm_name, int(data.get("lost", 0))])
 				sfx.play("place")
 		"place":
 			sfx.play("place")
