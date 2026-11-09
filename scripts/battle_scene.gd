@@ -728,9 +728,9 @@ var _over_btn_title: Button
 ## 与老 `_over_panel` 并存：胜利走它，失败仍走老面板 —— 缎带是「胜利」语义，
 ## 同一个绿缎带上写「失败」会自相矛盾。
 const WIN_PANEL_SIDE := 580.0
-## R547：标题是**贴图**（`assets/ui/battle_win_title.png`，金色浮雕字，按 2x 出图），
+## R547b：标题是**贴图**（`assets/ui/battle_win_title.png`，金色浮雕字，按 2x 出图），
 ## 不再用 Label —— 常规字体的字重撑不起这块缎带，而且字号 / 行高一调就飘到上方
-## 盾徽上（R547 用户反馈「位置太高、和上面的标志重叠」「字体太普通」）。
+## 盾徽上（R547b 用户反馈「位置太高、和上面的标志重叠」「字体太普通」）。
 ## 字心 y=131 是量出来的：缎带绿区在中心列是 y≈108~160（上方盾徽尖到 108、
 ## 下方金滚边压在 160），46 高的字居中后上下各留 1~2px。
 const WIN_TITLE_CY := 131.0
@@ -739,7 +739,7 @@ var _win_gold_box: Control            # 金币整块（本场没发金币时整�
 var _win_gold_num: Label              # 「+50」大字
 var _win_gold_parts: Label            # 分项来源 + 现有金币
 var _win_btn: Button                  # 唯一主按钮：查看奖励 / 进入下一层 / 回地图 / 再来一局
-var _win_title: TextureRect = null     # R547：标题贴图（素材 419×132，按 2x 显示）
+var _win_title: TextureRect = null     # R547b：标题贴图（素材 419×132，按 2x 显示）
 ## R367：本场「输」是否已经落过记录 —— `_record_defeat()` 的幂等标记。
 ## 结算面板要等演出播完才弹，但记录必须在 `engine.over` 那一刻就写。
 var _lose_recorded := false
