@@ -441,14 +441,32 @@ func _draw_panel(cid: String) -> void:
 			arrow_on if d < RunState.DIFFICULTY_COUNT - 1 else arrow_off)
 	var br := _diff_box_rect()
 	UiTheme.draw_info_card(self, br, true)
+	# R543：难度 ≥ 11（第三层上锁）→ 难度框描边变橙色（美术风格不变，只换描边色）。
+	var locked := d >= RunState.DIFF_LOCK_FROM
+	if locked:
+		var ob := StyleBoxFlat.new()
+		ob.bg_color = Color(1, 0.5, 0.1, 0.0)
+		ob.border_color = Color("e08a20")
+		ob.set_border_width_all(2)
+		ob.set_corner_radius_all(10)
+		draw_style_box(ob, br)
 	var number_box := Rect2(br.position + Vector2(4, 3), Vector2(42, br.size.y - 6))
-	UiTheme.draw_action(self, number_box, true)
+	if locked:
+		# R543：难度 ≥ 11 时数字框底整个换成橙色（原 `draw_action` 是森林绿底）。
+		var nb := StyleBoxFlat.new()
+		nb.bg_color = Color("c96a14")
+		nb.border_color = Color("f0a336")
+		nb.set_border_width_all(1)
+		nb.set_corner_radius_all(6)
+		draw_style_box(nb, number_box)
+	else:
+		UiTheme.draw_action(self, number_box, true)
 	draw_string(_font_bold, Vector2(number_box.position.x, br.position.y + 26.0),
 			str(d), HORIZONTAL_ALIGNMENT_CENTER, number_box.size.x,
 			UiTheme.FS_HEADING, Color("fff3d5"))
 	draw_string(_font_bold, Vector2(br.position.x + 52, br.position.y + 26.0),
 			RunState.DIFFICULTY_NAMES[d], HORIZONTAL_ALIGNMENT_CENTER, br.size.x - 58,
-			UiTheme.FS_SUBHEAD, UiTheme.PAGE_INK)
+			UiTheme.FS_SUBHEAD, Color("c9700f") if locked else UiTheme.PAGE_INK)
 	# 当前档新增 debuff 文本（R224：只写当前档这一条；高档继承的低档 debuff
 	# 由下面那行数值摘要体现 —— 摘要列的都是「实际生效」的数值）
 	var ny := _note_rect().position.y + 11.0

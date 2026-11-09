@@ -7559,7 +7559,14 @@ func _show_over(win: bool) -> void:
 			# R467：关卡若点名了 `reward_cards`（洞穴 → 传说卡「枭熊」），这一场的卡牌奖励
 			# 就**只有那一张**，不再摇三选一（采集刀也不叠加 —— 不然洞穴会给两张传说卡）。
 			var fixed_cards: Array = lvl.get("reward_cards", [])
-			if fixed_cards.is_empty():
+			# R543（用户口径「第二层 Boss 少掉落一份普通卡牌奖励而是掉落完美螺钉」）：
+			# 第二层 Boss 胜利时，那组普通卡牌奖励（queue_battle_card_rewards）改成
+			# 掉落信物「完美螺钉」6061（直接进 key_relics，不进奖励队列）。
+			# ⚠️ 用户口径「所有信物改动只在难度 ≥ 11 生效」→ 低难度下仍掉落普通卡牌。
+			if _run_boss_win and RunState.current_layer == GameLayers.LAYER_TWO \
+					and RunState.third_layer_locked() and fixed_cards.is_empty():
+				RunState.gain_key(RunState.SCREW_RELIC_ID)
+			elif fixed_cards.is_empty():
 				RunState.queue_battle_card_rewards(RunState.reward_type)
 			else:
 				for fc in fixed_cards:
@@ -7617,6 +7624,12 @@ func _show_over(win: bool) -> void:
 				# Boss 通关：本层打完了 —— 有下一层就推进（满血 + 新地图 + 起始道具
 				# 三选一），没有下一层才结束整局 run。
 				_run_next_layer = GameLayers.next_layer(RunState.current_layer)
+				# R543（用户口径「任何难度都开放第三层，但难度 11 及以上需要凑齐三样信物」）：
+				# 下一层是第三层、且当前难度上锁、且信物没凑齐 → 不进第三层，直接结算。
+				# 结算标题据此显示「胜利？」（见 run_summary_scene）。
+				if _run_next_layer == GameLayers.LAYER_THREE \
+						and not RunState.can_enter_third_layer():
+					_run_next_layer = 0
 			# R179：按钮文案只留几个字（用户报「字太多」）——掉落道具、回血 / 恢复生命
 			# 这些细节都在奖励悬浮窗与结算提示行里，不必塞进按钮。
 			if _run_boss_win:

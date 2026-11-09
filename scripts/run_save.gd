@@ -161,6 +161,7 @@ static func snapshot() -> Dictionary:
 		"boss_pick": RunState.boss_pick,
 		"revenge_pending": RunState.revenge_pending,
 		"relics": RunState.relics,
+		"key_relics": RunState.key_relics,   # R543：信物（解锁第三层，与道具分开记账）
 		# R367：已耗尽的道具（灰显的那些）与每层 Boss 战果 —— 续档要接着画灰 / 接着记。
 		"spent_relics": RunState.spent_relics,
 		"boss_kills": RunState.boss_kills,
@@ -404,6 +405,7 @@ static func apply(d: Dictionary) -> bool:
 	RunState.boss_pick = d.get("boss_pick", {}) if d.get("boss_pick", {}) is Dictionary else {}
 	RunState.revenge_pending = bool(d.get("revenge_pending", false))
 	RunState.relics = _int_array(d.get("relics", []))
+	RunState.key_relics = _int_array(d.get("key_relics", []))   # R543：信物（老存档无此字段 → 空）
 	# R367：灰显道具 / Boss 战果。**必须在 `relics` 之后、下面盆与火柴的复查之前**赋值 ——
 	# 那两处用 `has_relic()`（已排除 spent）决定要不要补满点数。
 	RunState.spent_relics = _int_array(d.get("spent_relics", []))

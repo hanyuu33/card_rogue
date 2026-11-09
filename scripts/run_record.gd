@@ -275,9 +275,14 @@ static func is_spent_in(rec: Dictionary, id: int) -> bool:
 	return false
 
 
-static func result_label(result: String) -> String:
+static func result_label(result: String, layer: int = -1) -> String:
+	## `layer`（可选，默认 -1 不区分）：R543 起，胜利要区分「打通第二层」还是「通关三层」。
+	## layer ≥ 0 且 result == win 时，layer < 3 记「胜利？」（未凑齐信物，第二层就结算），
+	## layer == 3 记「通关」。默认 -1 保持老口径（历史记录没有 layer 信息 → 一律「通关」）。
 	match result:
 		"win":
+			if layer >= 0 and layer < GameLayers.LAYER_THREE:
+				return "胜利？"
 			return "通关"
 		"lose":
 			return "失败"

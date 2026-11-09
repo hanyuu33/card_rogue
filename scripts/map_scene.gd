@@ -265,6 +265,12 @@ func _ready() -> void:
 	#  `map.tscn -- --screenshot --relics --relictip --shotwait 0.8`
 	if "--relictip" in OS.get_cmdline_user_args():
 		_relic_tip_pin = true
+	# -- --keys：R543 出图 —— 演示三样信物徽章（难度 11 + 三样齐）。
+	#  出图：`map.tscn -- --screenshot --keys --shotwait 0.8`
+	if "--keys" in OS.get_cmdline_user_args():
+		RunState.set_difficulty(11)
+		RunState.key_relics = [RunState.SCREW_RELIC_ID, RunState.SEED_RELIC_ID,
+				RunState.DAGGER_RELIC_ID]
 	# -- --whistle：演示鹰哨（R145 起 = 全图迷雾散尽，每格内容都可见）
 	if "--whistle" in OS.get_cmdline_user_args():
 		RunState.relics = [6001, 6005, 6026]
@@ -884,6 +890,7 @@ func _draw() -> void:
 	_draw_sidebar()
 	_draw_mark_buttons()   # R177：三个标记模式按钮（最上层，不被任何面板盖）
 	_draw_relics()
+	_draw_key_relics()      # R543：信物图标（难度 ≥11 或已持有信物时，持续显示在左侧）
 	if _relics_visible:
 		_draw_relic_panel()
 	if _deck_visible:
@@ -1815,6 +1822,84 @@ func _relic_panel_rows() -> Array:
 func _wrap_relic_text(text: String, max_w: float, px: int) -> PackedStringArray:
 	## 折行唯一口 = `TextWrap.wrap_plain`（R292）。
 	return PackedStringArray(TextWrap.wrap_plain(_font, text, max_w, px))
+
+
+# ------------------------------------------------------------ R543 信物
+
+const KEY_BADGE_W := 44.0
+const KEY_BADGE_H := 44.0
+const KEY_BADGE_GAP := 8.0
+## R543：竖排放在**左下角**标记按钮列（画图/标记/擦除，y 96~226）**之下**，y 从 240 起。
+## 选这里的原因：① 左侧 x=14~150 是地图（x≥150）之外的空白竖带，永不压地图；
+## ② 避开 boss 芯片（y62~90）与标记按钮（y96~226）；③ 道具栏在**右侧**竖带
+## （x≈1054~1256，y 滚动可到屏幕底），信物放左下、道具再多也不撞（R543 补口径）。
+const KEY_BADGE_X := 14.0
+const KEY_BADGE_Y := 240.0
+
+
+func _draw_key_relics() -> void:
+	## R543：三样信物的小图标 —— 持续显示在地图**左下角**标记按钮列之下（y≥240）。
+	## ⚠️ 只在「第三层上锁（难度 ≥11）」或「已经持有至少一样信物」时才显示整排；
+	##    低难度且一件信物都没有 → 不画（不打扰低难度玩家）。
+	if not RunState.run_active:
+		return
+	if RunState.key_relics.is_empty() and not RunState.third_layer_locked():
+		return
+	var hover_ok := not (_deck_visible or _records_visible or _relics_visible) \
+			and not UiGate.blocked() \
+			and (_reward_panel == null or not _reward_panel.is_open())
+	# 「信物」标签放在徽章列右侧：压在彩绘背景上的字必须垫底条（R145 口径），
+	# 否则 12px 灰字在草地上根本读不清。
+	var lb := Rect2(KEY_BADGE_X + KEY_BADGE_W + 6.0, KEY_BADGE_Y + 6.0, 42.0, 22.0)
+	draw_rect(lb, Color(0.03, 0.04, 0.06, 0.60), true)
+	draw_string(_font, lb.position + Vector2(6, 16), "信物",
+			HORIZONTAL_ALIGNMENT_LEFT, 34, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
+	var hovered := -1
+	for i in RunState.KEY_RELIC_IDS.size():
+		var kid: int = RunState.KEY_RELIC_IDS[i]
+		var rect := _key_relic_rect(i)
+		var owned := RunState.has_key(kid)
+		MapMaterial.draw(self, rect)
+		if owned:
+			draw_rect(rect, Color("d9a441"), false, 1.4)   # 已获得 → 金边
+		else:
+			draw_rect(rect, Color("5a564c"), false, 1.2)   # 未获得 → 暗灰
+		var tex: Texture2D = UiAssets.key_relic_icon(kid)
+		if tex != null:
+			var ir := CardFace.fit_rect(tex.get_size(), rect.grow(-6.0))
+			draw_texture_rect(tex, ir, false,
+					Color(1, 1, 1, 1.0) if owned else Color(1, 1, 1, 0.28))
+		else:
+			draw_string(_font_bold, rect.get_center() + Vector2(-4, 6), "?",
+					HORIZONTAL_ALIGNMENT_CENTER, 8, UiTheme.FS_LABEL,
+					Color("8d8577") if owned else Color("5a564c"))
+		if hover_ok and rect.has_point(_mouse):
+			hovered = i
+	if hovered >= 0:
+		_draw_key_relic_tip(hovered)
+
+
+func _key_relic_rect(i: int) -> Rect2:
+	## 三样信物**竖排**在左下角（x 固定、y 往下排）。
+	return Rect2(KEY_BADGE_X, KEY_BADGE_Y + i * (KEY_BADGE_H + KEY_BADGE_GAP),
+			KEY_BADGE_W, KEY_BADGE_H)
+
+
+func _draw_key_relic_tip(i: int) -> void:
+	## R543：悬停信物图标 → 弹说明（名字 + 统一描述 + 是否已获得）。
+	var kid: int = RunState.KEY_RELIC_IDS[i]
+	var owned := RunState.has_key(kid)
+	var text := "「%s」：%s%s" % [RunState.key_relic_name(kid),
+			RunState.key_relic_desc(kid), "（已获得）" if owned else "（未获得）"]
+	var w := 340.0
+	var lines := CardFace.wrap_text(_font, text, w - 20.0, 13)
+	var tx: float = clampf(_mouse.x - w / 2, 8, size.x - w - 8)
+	var panel := Rect2(tx, RELIC_TIP_TOP, w, 12.0 + lines.size() * 18.0)
+	draw_rect(panel, Color(0.10, 0.11, 0.15, 0.95), true)
+	draw_rect(panel, Color("d9a441") if owned else Color("6a7078"), false, 1.2)
+	for j in lines.size():
+		draw_string(_font, panel.position + Vector2(10, 22 + j * 18), lines[j],
+				HORIZONTAL_ALIGNMENT_LEFT, w - 20, UiTheme.FS_LABEL, Color("eee6c8"))
 
 
 func _relic_panel_metrics(rows: Array) -> Dictionary:

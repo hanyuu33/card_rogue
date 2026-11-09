@@ -92,7 +92,8 @@ static func shop_icon(name: String) -> Texture2D:
 		"shop_icon_card": "reward_icons/cards", "shop_icon_draw": "reward_icons/cards",
 		"shop_icon_costdown": "icon_cost", "shop_icon_damage": "map_icons/battle",
 		"shop_icon_dimension": "reward_icons/core", "shop_icon_save": "map_icons/chest",
-		"shop_icon_opening": "map_icons/start", "shop_icon_maxhp": "adventure_shared/service_vitality"}
+		"shop_icon_opening": "map_icons/start", "shop_icon_maxhp": "adventure_shared/service_vitality",
+		"shop_icon_dagger": "key_icon_dagger"}
 	# R508：64 → 96。商店里图标实际画到 84~120px（`shop_scene._goods_icon_box` 随行高自适应），
 	# 64px 纹理是被**放大**在用，边缘发虚；96 起才是缩小采样。
 	return small_icon(str(replacements.get(name, name)), 96)
@@ -138,6 +139,21 @@ static func core_relic_icon() -> Texture2D:
 	## 由事件场景把这张图叠进凹槽。**要换标志只换这张**，别在背景里另画一个。
 	## 缺图返回 null（事件照常可玩，只是石台上没有核心）。
 	return get_tex("reward_icons/core")
+
+
+static func key_relic_icon(id: int) -> Texture2D:
+	## R543：三样信物（解锁第三层所需的信物）的小图标。缺图返回 null（调用方兜底）。
+	##   * 6061 完美螺钉 → key_icon_screw.png
+	##   * 6062 生命之种 → key_icon_seed.png
+	##   * 6063 屠戮匕首 → key_icon_dagger.png（参照暗影刺客角色 CG 里的匕首）
+	match id:
+		6061:
+			return get_tex("key_icon_screw")
+		6062:
+			return get_tex("key_icon_seed")
+		6063:
+			return get_tex("key_icon_dagger")
+	return null
 
 
 static func div_orb_glass() -> Texture2D:

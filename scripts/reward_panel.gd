@@ -44,6 +44,8 @@ const VIEW_DECK := 4
 ## 但要走**两段**（先挑祭品、再挑接收者），而且落账口是 `RunState.claim_core_reward()`。
 const VIEW_CORE := 5
 const VIEW_VIEWER := 6         # R463：只看卡组（不结算任何奖励）
+## R543：大宝箱「奖励道具 / 生命之种」二选一视图 —— 两个并列选项，点一个即领取。
+const VIEW_KEY_CHOICE := 7
 const DECK_COLS := 6            # 一行 6 张
 const DECK_CARD_W := 112.0
 const DECK_CARD_H := 135.0
@@ -302,6 +304,9 @@ func _entry_name(e: Dictionary) -> String:
 		# R532（用户口径）：追加奖励的条目**不再**在名字里带「额外」——
 		# 分隔带 + 专属图标已经分得开，重复写两遍反而挤占名称宽度。
 		return ("道具：" + rn) if _entry_bonus(e) else rn
+	# R543：大宝箱二选一
+	if k == "relic_or_key":
+		return "道具 / 生命之种（二选一）"
 	# R531：追加奖励里的两种「直接到账」条目（没有详情页，点右边那颗按钮就领）。
 	if k == RunState.BONUS_GOLD:
 		return "%d 金币" % int(e.get("gold", RunState.BONUS_GOLD_GAIN))
@@ -342,6 +347,8 @@ func _entry_tag(e: Dictionary) -> String:
 		if r == null:
 			return "奖励道具"
 		return r.tag_line()
+	if k == "relic_or_key":
+		return "大宝箱 · 奖励道具或信物二选一"
 	if k == RunState.BONUS_GOLD:
 		return "直接进钱袋"
 	if k == RunState.BONUS_HP:
@@ -529,6 +536,23 @@ func _skip_entry(i: int) -> void:
 	_root.queue_redraw()
 
 
+func _claim_key_choice(take_key: bool) -> void:
+	## R543：二选一领取（点选项卡片）。
+	RunState.claim_key_choice(_sel, take_key)
+	_view = VIEW_LIST
+	_scroll = 0.0
+	_root.queue_redraw()
+	_route_if_waiting_pick()
+
+
+func _skip_key_choice() -> void:
+	## R543：二选一放弃（什么都不拿）。
+	RunState.skip_key_choice(_sel)
+	_view = VIEW_LIST
+	_scroll = 0.0
+	_root.queue_redraw()
+
+
 func _pick_card(i: int, card_id: int) -> void:
 	## 卡牌三选一：选中即入卡组 + 该条置灰。
 	if i < 0 or i >= RunState.pending_rewards.size():
@@ -587,6 +611,11 @@ func _open_entry(i: int) -> void:
 		if not _settled(e):
 			_claim_entry(i)
 		return
+	if k == "relic_or_key":
+		_view = VIEW_KEY_CHOICE
+		_scroll = 0.0
+		_root.queue_redraw()
+		return
 	if k == "relic":
 		_view = VIEW_RELIC
 	else:
@@ -627,6 +656,8 @@ func _on_draw() -> void:
 	match _view:
 		VIEW_RELIC:
 			_draw_relic()
+		VIEW_KEY_CHOICE:
+			_draw_key_choice()
 		VIEW_CARDS:
 			_draw_cards()
 		VIEW_ENCHANT:
@@ -1189,6 +1220,92 @@ func _draw_relic() -> void:
 				"「返回列表」不会丢掉它 —— 可以随时再点进来看、再领取。")
 	_draw_btn(skip, "放弃这件", false, settled)
 	_draw_btn(claim, "领取" if not settled else "已处理", true, settled)
+
+
+func _draw_key_choice() -> void:
+	## R543：大宝箱「奖励道具 / 生命之种」二选一视图。
+	## 两个并列选项卡片（左=奖励道具，右=生命之种信物），点一个即领取；
+	## 底部「返回列表」「放弃这件」照旧。
+	var r := _panel_rect()
+	_draw_panel_box(r)
+	if _sel >= RunState.pending_rewards.size():
+		_back_to_list()
+		return
+	var e: Dictionary = RunState.pending_rewards[_sel]
+	var settled := _settled(e)
+	_draw_btn(_btn_back_rect(), "← 返回列表", false, false)
+	_root.draw_string(_font_bold, Vector2(r.position.x + 180, r.position.y + 40),
+			"大宝箱 · 二选一", HORIZONTAL_ALIGNMENT_LEFT, 520,
+			UiTheme.FS_HEADING, UiTheme.INK_900)
+	_root.draw_string(_font, Vector2(r.position.x + PAD * 2.0, r.position.y + HEAD_H + 30),
+			"选择一件带走（道具 / 信物二选一）", HORIZONTAL_ALIGNMENT_LEFT,
+			PANEL_W - PAD * 4.0, UiTheme.FS_BODY, UiTheme.INK_600)
+	# 两个选项卡片
+	var rid := int(e.get("relic_id", -1))
+	var opt_a := _key_choice_rect(0)
+	var opt_b := _key_choice_rect(1)
+	_draw_key_option(opt_a, 0, rid, settled)
+	_draw_key_option(opt_b, 1, rid, settled)
+	# 底部动作
+	var skip := _btn_skip_rect()
+	if settled:
+		_foot_note(r, skip.position.y, "这条已经处理过了（不可再操作）。")
+	else:
+		_foot_note(r, skip.position.y, "点左侧拿奖励道具，点右侧拿「生命之种」信物。")
+	_draw_btn(skip, "放弃这件", false, settled)
+
+
+func _key_choice_rect(opt: int) -> Rect2:
+	## 二选一里第 opt 个选项卡片的矩形（0 = 左/奖励道具，1 = 右/生命之种）。
+	var r := _panel_rect()
+	var w := (PANEL_W - PAD * 3.0) * 0.5
+	var h := 260.0
+	var y := r.position.y + HEAD_H + 60.0
+	var x := r.position.x + PAD + opt * (w + PAD)
+	return Rect2(Vector2(x, y), Vector2(w, h))
+
+
+func _draw_key_option(rect: Rect2, opt: int, relic_id: int, settled: bool) -> void:
+	## 画一个二选一选项卡片：底 + 图标 + 名称 + 说明。悬停（未结算）→ 亮一档。
+	var hover := (not settled) and _mouse_over(rect)
+	var bg := ROW_CARD_BG_HOT if hover else ROW_CARD_BG
+	_round_box(rect, 18.0, bg, ROW_CARD_LINE, true)
+	var cx := rect.get_center().x
+	# 图标
+	var tex: Texture2D
+	var title := ""
+	var desc := ""
+	if opt == 0:
+		var rd: RelicData = _repo_relics.get_relic(relic_id) if relic_id > 0 else null
+		title = rd.relic_name if rd != null else "奖励道具"
+		desc = rd.desc if rd != null else "（奖励道具已全部拿完，只剩生命之种可选）"
+	else:
+		title = "生命之种"
+		desc = RunState.key_relic_desc(RunState.SEED_RELIC_ID)
+	tex = UiAssets.key_relic_icon(
+			RunState.SEED_RELIC_ID if opt == 1 else -relic_id)
+	var icon_rect := Rect2(cx - 48.0, rect.position.y + 34.0, 96.0, 96.0)
+	if tex != null:
+		_root.draw_texture_rect(tex, icon_rect, false)
+	else:
+		_root.draw_rect(icon_rect, Color(0, 0, 0, 0.08), true)
+	# 名称 + 说明
+	_root.draw_string(_font_bold, Vector2(rect.position.x + 16.0, rect.position.y + 158.0),
+			title, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 32.0,
+			UiTheme.FS_SUBHEAD, ROW_TITLE)
+	var lines := CardFace.wrap_text(_font, desc, rect.size.x - 40.0, UiTheme.FS_BODY)
+	var ly := rect.position.y + 186.0
+	for line: String in lines:
+		_root.draw_string(_font, Vector2(rect.position.x + 20.0, ly), line,
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 40.0,
+				UiTheme.FS_BODY, ROW_TAG)
+		ly += 22.0
+	if settled:
+		_root.draw_rect(rect, Color(1, 1, 1, 0.55), true)
+
+
+func _mouse_over(rect: Rect2) -> bool:
+	return rect.has_point(_root.get_local_mouse_position())
 
 
 static func cards_layout_for_viewport(vs: Vector2) -> Dictionary:
@@ -1954,6 +2071,21 @@ func _on_click(pos: Vector2) -> void:
 				return
 			if _btn_skip_rect().has_point(pos):
 				_skip_entry(_sel)
+				return
+		VIEW_KEY_CHOICE:
+			if _btn_back_rect().has_point(pos):
+				_back_to_list()
+				return
+			if _btn_skip_rect().has_point(pos):
+				_skip_key_choice()
+				return
+			if _settled(RunState.pending_rewards[_sel]):
+				return
+			if _key_choice_rect(0).has_point(pos):
+				_claim_key_choice(false)
+				return
+			if _key_choice_rect(1).has_point(pos):
+				_claim_key_choice(true)
 				return
 		VIEW_DECK:
 			if _btn_deck_back_rect().has_point(pos):

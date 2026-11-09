@@ -1,4 +1,32 @@
-## 2026-11-09 R542 战场横幅文字自适应：先缩字号、再折行，绝不探出木牌（当前最新）
+## 2026-11-09 R543 难度11「上锁」：信物系统 + 第三层解锁机制
+
+**口径（多轮澄清后锁定）**：任何难度都开放第三层；**只有难度 ≥11** 需要
+凑齐三样信物才能进第三层，且**信物相关机制全部只在难度 ≥11 生效**。
+
+- **信物 ≠ 道具**：不入 relics.json、不进道具栏；独立存 `RunState.key_relics`
+  （进存档 snapshot/load_run/start_run/end_run 清理）。id：完美螺钉 6061 /
+  生命之种 6062 / 屠戮匕首 6063（KEY_RELIC_IDS，desc 统一「解锁第三层所需的信物」）。
+- **难度系统**：DIFFICULTY_COUNT 11→12，第 12 档名「上锁」；
+  `DIFF_LOCK_FROM=11`；选职业页难度 ≥11 时难度框整体变橙（数字底框 b46512 + 边框）。
+- **三处获取（全部 third_layer_locked() 门槛）**：
+  ① 二层 Boss 普通卡牌奖励组 → 完美螺钉（battle_scene on_battle_won）；
+  ② 大宝箱不持有生命之种 → 「道具 / 生命之种」二选一（新 kind `relic_or_key` +
+     reward_panel VIEW_KEY_CHOICE 视图 + claim_key_choice/skip_key_choice）；
+  ③ 商店第三排 3 格→4 格售卖屠戮匕首 75 金（_row3_template + _buy_row3 "dagger"）。
+- **三层上锁**：`RunState.can_enter_third_layer()`（难度<11 恒 true；≥11 查三信物）；
+  battle_scene `_run_next_layer==LAYER_THREE` 但不放行 → 0，直接结算（layer 快照=2）。
+- **结算/记录**：结算标题 layer==3 显示「胜利」、否则「胜利？」；
+  记录页 win + layer<3 显示「胜利？（第 2 层）」（result_label 加可选 layer 参数，
+  默认 -1 不改旧行为，test 断言「通关」不动）。
+- **地图信物徽章**：左下竖排（标记按钮列之下 y=240 起）+「信物」标签垫底条；
+  显示条件 = 上锁难度 或 已持有信物；`--keys` 出图口子；金边=已获得/暗灰=未获得，
+  悬停弹说明。⚠️ 不放右下角：道具栏右侧竖带 y 滚动可到底（--relicmany 已核验不撞）。
+- **图标**：assets/ui/key_icon_{screw,seed,dagger}.png（512 透明底，取图唯一口
+  `UiAssets.key_relic_icon`）；匕首按暗影刺客 CG（银刃深紫柄）；槽位已登记
+  图片命名说明.txt + UI设计规范.md。
+- **测试**：engine 5403✓（+13 条 R543 断言：信物存取/门槛/二选一/商店/记录标签）；
+  五套全绿；出图核验：难度 11 橙框 / 信物徽章 / relicmany 同屏不撞。
+
 
 - 用户口径：「文字超过了中间文本框的长度。文字应该能自适应大小，换行，防止超出框体」。
   指的是战场中央那块木牌（`adventure_shared/button_forest`）上的横幅文字：R541 普罗诺亚之影的
@@ -928,3 +956,6 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 `--lakelady --tip 金属龙 --screenshot`。
 
 验证：`_verify.py` 全通过；`_review/card_tip.png` 显示新图、4 费附魔、6 力 21 血、无未确认角标。
+
+## 2026-11-09 R542 战场横幅文字自适应：先缩字号、再折行，绝不探出木牌
+

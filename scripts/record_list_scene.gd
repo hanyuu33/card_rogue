@@ -329,7 +329,7 @@ func _draw_detail() -> void:
 	# 标题：时间 + 结果
 	draw_string(_font_bold, Vector2(x0, r.position.y + 32.0),
 			"%s · %s" % [RunRecord.fmt_time(str(rec.get("time", "?"))),
-			RunRecord.result_label(res)],
+			RunRecord.result_label(res, int(rec.get("layer", -1)))],
 			HORIZONTAL_ALIGNMENT_LEFT, 520, UiTheme.FS_HEADING,
 			UiTheme.PAGE_INK)
 	# 关闭
@@ -452,7 +452,8 @@ func _draw_row(idx: int, rec: Dictionary) -> void:
 	draw_string(_font_bold, r.position + Vector2(246, 24),
 			"角色：%s" % PlayerClass.legacy_id(str(rec.get("class", "?"))),
 			HORIZONTAL_ALIGNMENT_LEFT, 190, UiTheme.FS_BODY, UiTheme.PAGE_GREEN)
-	draw_string(_font_bold, r.position + Vector2(446, 24), RunRecord.result_label(res),
+	draw_string(_font_bold, r.position + Vector2(446, 24),
+			RunRecord.result_label(res, int(rec.get("layer", -1))),
 			HORIZONTAL_ALIGNMENT_LEFT, 140, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	draw_string(_font, r.position + Vector2(596, 24),
 			"难度 %d · 用时 %s" % [int(rec.get("difficulty", 2)),

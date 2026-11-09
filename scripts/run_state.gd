@@ -201,9 +201,9 @@ const DEMON_DUCK_BOSS_NAME := "恶魔鸭"       # 第一层触发条件：摇中
 #        固定 2 间 + 右上角 1 间）、明房与「?」房两条途径的精英出现概率统一 ×1.3（约 +30%）。
 # 档位只在角色选择界面改，不属于 run 状态（end_run / start_run 都不动它）。
 static var difficulty: int = 0
-const DIFFICULTY_COUNT := 11
+const DIFFICULTY_COUNT := 12
 const DIFFICULTY_NAMES: Array[String] = ["轻松", "微恙", "严酷", "顽强", "稀缺",
-		"疲惫", "凶暴", "贫瘠", "匆忙", "虚弱", "噩梦"]
+		"疲惫", "凶暴", "贫瘠", "匆忙", "虚弱", "噩梦", "上锁"]
 ## 各档位**新增** debuff 的文本（用户口径原话）。0 档 = 「无」；第 10 档无新增（空串）。
 ## R224：`difficulty_note()` 只返回**当前档**这一条（用户口径「难度文本没有必要写所有，
 ## 只需要写当前难度新增就行了」）—— 高档继承低档的全部 debuff 由 `difficulty_summary()`
@@ -220,14 +220,15 @@ const DIFFICULTY_TEXTS: Array[String] = [
 	"行动力降低",
 	"虚弱",
 	"精英出现增多",
+	"第三层上锁",
 ]
 ## R224：全局规则「除到达新的一层外不能回复 HP」→ 战斗胜利回血全档位归零。
-## 表保留 11 长度（回归钉死口径；将来若再加「某档回血」类 debuff 改这张表即可）。
-const DIFFICULTY_BATTLE_HEAL: Array[int] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
+## 表保留 12 长度（回归钉死口径；将来若再加「某档回血」类 debuff 改这张表即可）。
+const DIFFICULTY_BATTLE_HEAL: Array[int] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
 ## R237：恢复篝火回血 —— 难度 0 = 40%，1 档起 = 25%（即原始设计；R224 曾按用户要求归零，现加回）。
 ## ⚠️ 战斗胜利回血（DIFFICULTY_BATTLE_HEAL）**仍为 0**：用户只要求篝火能回血，不恢复被动自动回血。
 const DIFFICULTY_REST_PCT: Array[float] = [0.40, 0.25, 0.25, 0.25, 0.25, 0.25,
-		0.25, 0.25, 0.25, 0.25, 0.25]                                   # 休息回复百分比
+		0.25, 0.25, 0.25, 0.25, 0.25, 0.25]                                   # 休息回复百分比
 
 ## 各 debuff 的数值口径（**唯一口** —— 界面 / 引擎 / 测试都读这里，别在各处写死数字）
 const DIFF_GOLD_LOW := 150         # 0~6 档初始金钱（原 100 + 难度 0 的 +50）
@@ -247,6 +248,14 @@ const DIFF_MAX_HP_MUL := 0.8       # 9 档起「虚弱」：最大生命 ×80%�
 ##    （「?」房权重表）—— 别在地图生成之外再乘一次，否则会被重复加权。
 const DIFF_ELITE_FROM := 10        # 10 档起「精英出现增多」
 const DIFF_ELITE_MUL := 1.3        # 精英出现概率乘数（≈ +30%，扣除法见 _weighted_far）
+## R543（用户口径）：难度 11「上锁」—— 第三层需要凑齐三样信物才能进入。
+## ⚠️ 只有难度 ≥ 11 才需要信物；难度 0~10 下第三层照常开放（用户明确「任何难度都开放第三层」）。
+const DIFF_LOCK_FROM := 11         # 11 档起「第三层上锁」
+## 三样信物（解锁第三层所需的信物）：完美螺钉 / 生命之种 / 屠戮匕首。
+const SCREW_RELIC_ID := 6061       # 完美螺钉（第二层 Boss 掉落，替代一份普通卡牌奖励）
+const SEED_RELIC_ID := 6062        # 生命之种（大宝箱二选一）
+const DAGGER_RELIC_ID := 6063      # 屠戮匕首（商店第三排额外售卖）
+const KEY_RELIC_IDS: Array[int] = [SCREW_RELIC_ID, SEED_RELIC_ID, DAGGER_RELIC_ID]
 ## 诅咒卡「疲惫」（9149）：1 费诅咒，打出无效果；**在手里时**所有技能卡费用 +1。
 const FATIGUE_CARD_ID := 9149
 ## R358：疲惫卡的**发放记账** —— 最近一次发放在哪一层（-1 = 本局还没发过）。
@@ -299,6 +308,11 @@ const SEED_ALPHABET := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # ---- 道具 ----
 static var relics: Array[int] = []           # 已拥有的道具 id（跨战斗保留）
+## R543：**信物**（解锁第三层所需的信物）—— 与道具（relics）**分开记账**：
+##   * 不进道具栏、不占道具位、不参与任何道具效果；
+##   * 三样 = 完美螺钉 6061 / 生命之种 6062 / 屠戮匕首 6063（`KEY_RELIC_IDS`）；
+##   * 在地图页（及查看小地图时）持续显示小图标。
+static var key_relics: Array[int] = []       # 已获得的信物 id（跨战斗保留）
 ## R367：**已耗尽的道具**（不锈钢盆计数归零 / 洞窟绳逃跑用掉）——
 ## 不从 `relics` 里删掉，而是留在道具栏里**画灰**：记录页的「最终道具」才能看出
 ## 这一局用过它（用户口径：「方便对战记录统计」）。
@@ -984,6 +998,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# R352：禁卡开局快照 —— 必须在 `player_class` 定下来之后取。
 	run_bans = ProfileData.bans_of(player_class)
 	relics = []
+	key_relics = []   # R543：新的一局没有信物
 	bandage_pending = 0
 	skipped_relics = []
 	pending_relic = -1
@@ -1076,6 +1091,7 @@ static func end_run(clear_save: bool = true) -> void:
 	map_flags = []
 	run_bans = []          # R352：本局结束 → 禁卡快照作废（下一局重新取）
 	relics = []
+	key_relics = []   # R543：本局结束 → 信物清空
 	spent_relics.clear()       # R367：灰显标记随本局一起清掉
 	boss_kills.clear()         # R367：本局 Boss 战果不跨局
 	bandage_pending = 0
@@ -1365,6 +1381,59 @@ static func is_card_banned(id: int) -> bool:
 static func has_relic(id: int) -> bool:
 	## R367：**「还有没有效」的唯一判据** —— 已耗尽（灰掉）的在这里一律 false。
 	return relics.has(id) and not spent_relics.has(id)
+
+
+# ---- R543 信物（解锁第三层所需的信物）----
+
+static func has_key(id: int) -> bool:
+	## 是否持有某一样信物（信物与道具分开记账，见 `key_relics`）。
+	return key_relics.has(id)
+
+
+static func gain_key(id: int) -> bool:
+	## 获得一样信物（幂等：已有则不再重复记）。返回是否真的新获得。
+	if key_relics.has(id):
+		return false
+	key_relics.append(id)
+	return true
+
+
+static func has_all_keys() -> bool:
+	## 是否凑齐三样信物（完美螺钉 / 生命之种 / 屠戮匕首）。
+	for k: int in KEY_RELIC_IDS:
+		if not key_relics.has(k):
+			return false
+	return true
+
+
+static func third_layer_locked() -> bool:
+	## 第三层是否被「上锁」约束：难度 ≥ 11 时，需要凑齐三样信物才能进入。
+	## ⚠️ 难度 0~10 下第三层照常开放（用户明确「任何难度都开放第三层」）。
+	return _diff() >= DIFF_LOCK_FROM
+
+
+static func can_enter_third_layer() -> bool:
+	## 能否进入第三层：难度 < 11 恒可进；难度 ≥ 11 需要凑齐三样信物。
+	if not third_layer_locked():
+		return true
+	return has_all_keys()
+
+
+static func key_relic_name(id: int) -> String:
+	## 信物显示名（唯一口）。
+	match id:
+		SCREW_RELIC_ID:
+			return "完美螺钉"
+		SEED_RELIC_ID:
+			return "生命之种"
+		DAGGER_RELIC_ID:
+			return "屠戮匕首"
+	return "信物"
+
+
+static func key_relic_desc(id: int) -> String:
+	## 信物描述（用户口径：统一为「解锁第三层所需的信物」）。
+	return "解锁第三层所需的信物"
 
 
 static func is_relic_spent(id: int) -> bool:
@@ -2182,12 +2251,64 @@ static func grant_bigchest() -> Dictionary:
 	## 1 件随机奖励道具 + 1 组卡牌奖励（三选一）+ 80 金币。
 	## 地图上大宝箱房与卡片商人「以卡易物」都走这里 —— 数值只在这里写一次。
 	## 返回 {relic_id, gold, reward_idx}（relic_id = -1 表示奖励道具已全拿完）。
+	## R543（用户口径）：开启大宝箱时，若玩家**不持有生命之种**，则道具那格改成
+	## 「奖励道具 / 生命之种」二选一（新增的二选一领取方式）。
+	## ⚠️ 用户口径「所有信物改动只在难度 ≥ 11 生效」→ 低难度下仍走普通道具掉落。
 	gain_gold(BIGCHEST_GOLD)
 	# R314：**大宝箱**的传奇概率翻倍（5% × 层数 → 10% × 层数），所以这里必须传 `true`。
 	var rid := roll_reward_relic(true)
-	queue_relic_reward(rid)
+	if third_layer_locked() and not has_key(SEED_RELIC_ID):
+		queue_key_choice(rid)
+	else:
+		queue_relic_reward(rid)
 	var idx := queue_card_reward("normal")
 	return {"relic_id": rid, "gold": BIGCHEST_GOLD, "reward_idx": idx}
+
+
+static func queue_key_choice(relic_id: int) -> void:
+	## R543：大宝箱「奖励道具 / 生命之种」二选一入队。
+	## 条目 kind = "relic_or_key"，带两个候选 id；玩家在奖励页二选一视图里挑一个。
+	## `relic_id = -1`（奖励道具已全拿完）→ 仍入队，二选一里只剩「生命之种」可选。
+	if relic_id > 0:
+		_drop_settled_batch()
+	pending_rewards.append({"kind": "relic_or_key", "relic_id": relic_id,
+			"key_id": SEED_RELIC_ID, "state": REWARD_PENDING})
+
+
+static func claim_key_choice(idx: int, take_key: bool) -> bool:
+	## R543：二选一领取 —— `take_key = true` 拿「生命之种」信物，否则拿「奖励道具」。
+	## 成功后该条置为 claimed。奖励道具走 gain_relic、信物走 gain_key。
+	if idx < 0 or idx >= pending_rewards.size():
+		return false
+	var e: Dictionary = pending_rewards[idx]
+	if str(e.get("kind", "")) != "relic_or_key":
+		return false
+	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
+		return false
+	if take_key:
+		gain_key(int(e.get("key_id", SEED_RELIC_ID)))
+	else:
+		var rid := int(e.get("relic_id", -1))
+		if rid > 0:
+			gain_relic(rid)
+	e["state"] = REWARD_CLAIMED
+	return true
+
+
+static func skip_key_choice(idx: int) -> bool:
+	## R543：二选一放弃 —— 什么都不拿，奖励道具登记进 skipped（本局不再随机出来）。
+	if idx < 0 or idx >= pending_rewards.size():
+		return false
+	var e: Dictionary = pending_rewards[idx]
+	if str(e.get("kind", "")) != "relic_or_key":
+		return false
+	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
+		return false
+	var rid := int(e.get("relic_id", -1))
+	if rid > 0 and not skipped_relics.has(rid):
+		skipped_relics.append(rid)
+	e["state"] = REWARD_SKIPPED
+	return true
 
 
 static func vendor_deck_card(repo: CardRepo, index: int) -> Dictionary:

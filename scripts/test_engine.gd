@@ -9383,18 +9383,21 @@ func _init() -> void:
 	RunState.set_difficulty(0)
 	check(RunState.difficulty_note() == "无", "R224：0 档文本 = 「无」")
 	RunState.set_difficulty(10)
-	check(RunState.difficulty_name() == "噩梦" and RunState.DIFFICULTY_NAMES.size() == 11,
-			"难度 10 = 噩梦；档位名共 11 个（%s）" % str(RunState.DIFFICULTY_NAMES))
+	check(RunState.difficulty_name() == "噩梦" and RunState.DIFFICULTY_NAMES.size() == 12,
+			"难度 10 = 噩梦；档位名共 12 个（%s）" % str(RunState.DIFFICULTY_NAMES))
+	RunState.set_difficulty(11)
+	check(RunState.difficulty_name() == "上锁" and RunState.third_layer_locked(),
+			"难度 11 = 上锁；第三层进入需信物（third_layer_locked）")
 	RunState.set_difficulty(99)
-	check(RunState.difficulty == 10, "难度档位：越界输入被钳制到 10")
+	check(RunState.difficulty == 11, "难度档位：越界输入被钳制到 11")
 	RunState.set_difficulty(-3)
 	check(RunState.difficulty == 0, "难度档位：负数被钳制到 0")
-	check(RunState.DIFFICULTY_COUNT == 11 and RunState.DIFFICULTY_BATTLE_HEAL.size() == 11
-			and RunState.DIFFICULTY_REST_PCT.size() == 11
-			and RunState.DIFFICULTY_TEXTS.size() == 11
+	check(RunState.DIFFICULTY_COUNT == 12 and RunState.DIFFICULTY_BATTLE_HEAL.size() == 12
+			and RunState.DIFFICULTY_REST_PCT.size() == 12
+			and RunState.DIFFICULTY_TEXTS.size() == 12
 			and RunState.DIFFICULTY_BATTLE_HEAL[0] == 0 and RunState.DIFFICULTY_BATTLE_HEAL[2] == 0
 			and RunState.DIFFICULTY_REST_PCT[0] == 0.40 and RunState.DIFFICULTY_REST_PCT[1] == 0.25,
-			"难度档位：共 11 档；战斗胜利回血恒 0 / 篝火 40%%(0档)·25%%(1档起)（R237 恢复）")
+			"难度档位：共 12 档；战斗胜利回血恒 0 / 篝火 40%%(0档)·25%%(1档起)（R237 恢复）")
 	RunState.reset(50)
 
 	# ---- R224：全局 HP 规则 + 苹果 6027 + 牛奶 6028 + 附魔资格唯一口 ----
@@ -33432,6 +33435,94 @@ func _init() -> void:
 	check(r542_bs.find("BannerFit.fit(_font_bold, str(_banner.text)") >= 0
 			and r542_bs.find("_draw_string_center(_font_bold, 25, str(_banner.text)") < 0,
 			"R542 源码：`_draw_banner` 走 `BannerFit.fit`，25 号单行直画已删除")
+
+	# ================================================================
+	# R543：难度 11「上锁」+ 三样信物（完美螺钉 / 生命之种 / 屠戮匕首）
+	# ================================================================
+	var r543_diff_bak := RunState.difficulty
+	var r543_keys_bak: Array[int] = RunState.key_relics.duplicate()
+	var r543_relics_bak: Array[int] = RunState.relics.duplicate()
+	var r543_pending_bak: Array = RunState.pending_rewards.duplicate(true)
+	# ① 信物记账：与道具分开（gain_key 幂等 / has_key / has_all_keys）
+	RunState.key_relics = []
+	RunState.relics = []
+	check(RunState.gain_key(RunState.SCREW_RELIC_ID)
+			and not RunState.gain_key(RunState.SCREW_RELIC_ID)
+			and RunState.has_key(RunState.SCREW_RELIC_ID)
+			and not RunState.has_all_keys(),
+			"R543 信物：gain_key 幂等；只有一样时不算凑齐")
+	RunState.gain_key(RunState.SEED_RELIC_ID)
+	RunState.gain_key(RunState.DAGGER_RELIC_ID)
+	check(RunState.has_all_keys()
+			and RunState.key_relics.size() == 3
+			and not RunState.has_relic(RunState.SCREW_RELIC_ID),
+			"R543 信物：三样齐 → has_all_keys；信物不计入道具（has_relic 仍 false）")
+	# ② 分档判定：难度 < 11 恒开放；难度 ≥ 11 需要信物
+	RunState.set_difficulty(10)
+	check(not RunState.third_layer_locked() and RunState.can_enter_third_layer(),
+			"R543 上锁：难度 10 不锁、恒可进第三层")
+	RunState.set_difficulty(11)
+	check(RunState.third_layer_locked() and RunState.can_enter_third_layer(),
+			"R543 上锁：难度 11 上锁、信物齐了才放行")
+	RunState.key_relics = []
+	check(not RunState.can_enter_third_layer(),
+			"R543 上锁：难度 11 无信物 → 不能进第三层")
+	# ③ 大宝箱二选一：难度 ≥ 11 且没种子 → relic_or_key 条目；两条领取路 + 放弃
+	RunState.key_relics = []
+	RunState.pending_rewards = []
+	RunState.set_difficulty(11)
+	var r543_bak_gold := RunState.gold
+	RunState.gold = 500
+	var r543_chest := RunState.grant_bigchest()
+	var r543_last: Dictionary = RunState.pending_rewards[RunState.pending_rewards.size() - 2]
+	check(str(r543_last.get("kind", "")) == "relic_or_key"
+			and int(r543_last.get("key_id", 0)) == RunState.SEED_RELIC_ID
+			and int(r543_last.get("relic_id", -1)) > 0,
+			"R543 大宝箱：难度 11 没种子 → 道具那格变成「道具/生命之种」二选一条目")
+	var r543_idx := RunState.pending_rewards.find(r543_last)
+	check(RunState.claim_key_choice(r543_idx, true)
+			and RunState.has_key(RunState.SEED_RELIC_ID)
+			and str(r543_last.get("state", "")) == RunState.REWARD_CLAIMED,
+			"R543 大宝箱：二选一领种子 → 信物入账、条目置 claimed")
+	RunState.key_relics = []
+	RunState.pending_rewards = []
+	RunState.grant_bigchest()
+	r543_last = RunState.pending_rewards[RunState.pending_rewards.size() - 2]
+	r543_idx = RunState.pending_rewards.find(r543_last)
+	var r543_rid := int(r543_last.get("relic_id", -1))
+	check(RunState.claim_key_choice(r543_idx, false)
+			and RunState.has_relic(r543_rid) and not RunState.has_key(RunState.SEED_RELIC_ID),
+			"R543 大宝箱：二选一领道具 → 道具入账（gain_relic）、种子不入")
+	# ④ 低难度大宝箱照旧：直接掉道具，不出二选一
+	RunState.key_relics = []
+	RunState.pending_rewards = []
+	RunState.set_difficulty(3)
+	RunState.grant_bigchest()
+	r543_last = RunState.pending_rewards[RunState.pending_rewards.size() - 2]
+	check(str(r543_last.get("kind", "")) == "relic",
+			"R543 大宝箱：难度 3 照旧直接掉道具（二选一只在上锁难度生效）")
+	# ⑤ 记录口径：win 按 layer 区分「通关」/「胜利？」
+	check(RunRecord.result_label("win") == "通关"
+			and RunRecord.result_label("win", 3) == "通关"
+			and RunRecord.result_label("win", 2) == "胜利？"
+			and RunRecord.result_label("win", 0) == "胜利？",
+			"R543 记录：win + layer=3 → 通关；layer<3 → 胜利？（打通二层未通关三层）")
+	# ⑥ 源码锁：三处信物入口都必须带难度门槛
+	var r543_rs := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	var r543_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check(r543_rs.find("if third_layer_locked() and not has_key(SEED_RELIC_ID):") >= 0
+			and r543_bs.find("RunState.current_layer == GameLayers.LAYER_TWO \\")
+			+ r543_bs.find("RunState.third_layer_locked()") >= 0,
+			"R543 源码：大宝箱二选一与二层 Boss 螺钉掉落都带 third_layer_locked 门槛")
+	check(r543_rs.find("\"kind\": \"relic_or_key\"") >= 0
+			and r543_rs.find("static func claim_key_choice") >= 0,
+			"R543 源码：二选一条目 kind=relic_or_key + claim_key_choice 唯一口在位")
+	# 恢复
+	RunState.set_difficulty(r543_diff_bak)
+	RunState.key_relics = r543_keys_bak
+	RunState.relics = r543_relics_bak
+	RunState.pending_rewards = r543_pending_bak
+	RunState.gold = r543_bak_gold
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

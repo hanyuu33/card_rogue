@@ -213,7 +213,13 @@ func _draw_head(pr: Rect2) -> void:
 	var a := e
 	var cx := pr.get_center().x
 	var ty := pr.position.y + 78.0 - (1.0 - e) * 8.0
-	draw_string(_font_bold, Vector2(pr.position.x, ty), "通 关 结 算",
+	# R543（用户口径）：标题按结局区分 —— 凑齐信物并通关第三层 =「胜利」；
+	# 未凑齐信物、打通第二层就进入结算 =「胜利？」。
+	# 判据 = 结算快照里的 `layer`：真通关必然停在第三层（LAYER_THREE）。
+	var title := "胜  利"
+	if int(_data.get("layer", GameLayers.LAYER_THREE)) != GameLayers.LAYER_THREE:
+		title = "胜利？"
+	draw_string(_font_bold, Vector2(pr.position.x, ty), title,
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_TITLE,
 			Color(TITLE_COL.r, TITLE_COL.g, TITLE_COL.b, a))
 

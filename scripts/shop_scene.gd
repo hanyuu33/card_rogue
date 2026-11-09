@@ -38,6 +38,7 @@ const FLY_DUR := 0.55
 const PRICE_DELETE := 50
 const PRICE_MAXHP := 50
 const PRICE_CHOCO := 80      # R295：120 → 80
+const PRICE_DAGGER := 75     # R543：屠戮匕首（信物，难度 ≥11 且未持有时才上架）
 
 # R432（用户口径）：商店第一行的卡 **每张 20% 概率五折**。
 # 折后价 = 基础价 × OFF_PCT，**向上取整**（25 → 13 / 50 → 25 / 80 → 40）——
@@ -396,6 +397,13 @@ func _row3_template() -> Array:
 	if RunState.current_layer != GameLayers.LAYER_THREE:
 		out.append({"key": "choco", "name": "巧克力", "desc": "获得一块巧克力（行动力 +1）",
 			"price": PRICE_CHOCO, "icon": "chocolate", "sold": false})
+	# R543（用户口径「商店第三排额外售卖屠戮匕首，3 格变 4 格」）：
+	# 难度 ≥11 且玩家不持有屠戮匕首（6063）时，第三排追加一个「屠戮匕首」商品。
+	# ⚠️ 只在难度 ≥11 生效 —— 低难度不出现（信物只在第三层上锁难度下才有意义）。
+	if RunState.third_layer_locked() and not RunState.has_key(RunState.DAGGER_RELIC_ID):
+		out.append({"key": "dagger", "name": "屠戮匕首",
+			"desc": RunState.key_relic_desc(RunState.DAGGER_RELIC_ID),
+			"price": PRICE_DAGGER, "icon": "shop_icon_dagger", "sold": false})
 	return out
 
 
@@ -1453,6 +1461,14 @@ func _buy_row3(i: int) -> void:
 		RunState.add_chocolate(1)   # R236：体力回到 > 0 会撤销「耗尽→开 Boss」的待触发
 		RunState.sync_fatigue()   # R223 难度 5：巧克力回到 6 以上 → 疲惫出卡组
 		_set_hint("巧克力 +1 · %s" % _paid_tag(price))
+	elif key == "dagger":
+		if not _pay(price):
+			_set_hint("金币不足（需要 %d）" % price)
+			return
+		e["sold"] = true
+		_sync_shop_state()      # R390
+		RunState.gain_key(RunState.DAGGER_RELIC_ID)
+		_set_hint("获得信物「屠戮匕首」· %s" % _paid_tag(price))
 
 
 func _on_pick_click(pos: Vector2) -> void:

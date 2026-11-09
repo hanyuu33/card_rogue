@@ -441,3 +441,10 @@ map_icons/{start,battle,elite,rest,event,shop,chest,bigchest,unknown}.png：简�
                           · 1536×1024 居中裁 16:9 取 y=80..944，右下角模型水印在 y≈948 之下 → **自然裁掉**，不用修补。
                           · ⚠️ 事件页的 EventBG 是「按宽度铺满、**顶部对齐**」（R519d 起，见 event_scene._fit_event_bg）：
                             宽屏下裁的是**底部**。所以人物类图不能靠「居中裁也切不到头」侥幸，头部留白至少 4%。
+
+2026-11-09（R543）：key_icon_{screw,seed,dagger}.png —— 三样「第三层信物」的小图标（完美螺钉 / 生命之种 / 屠戮匕首），512×512 透明底，厚涂游戏图标风。屠戮匕首按暗影刺客角色 CG 的匕首（银刃 + 深紫缠柄 + 红刃光）。
+  · 取图唯一口 = `UiAssets.key_relic_icon(id)`：6061→screw / 6062→seed / 6063→dagger。
+  · 使用处：地图左侧信物徽章（44px，`map_scene._draw_key_relics`）、奖励页大宝箱二选一视图、商店第三排屠戮匕首商品（`shop_icon_dagger` 顶替映射到同一张）。
+  · ⚠️ 信物**不是道具**：不入 relics.json、不进道具栏，单独存 `RunState.key_relics`。
+  · 缺图回退：地图徽章画金色「?」占位、徽章框仍显示（暗灰 = 未获得）；不空白不报错。
+  · 源图（含被弃用的深灰棋盘底匕首版）与处理脚本归档在 art_src/2026-11-09_信物图标R543/。
