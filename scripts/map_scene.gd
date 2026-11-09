@@ -145,10 +145,9 @@ var _records_visible := false
 var _records_scroll := 0.0
 var _records: Array = []
 var _shot := false            # --screenshot 探针钉帧（R151：滚动类动画一律钉死）
-var _deck_visible := false
-var _deck_scroll := 0.0
-var _deck_rows: Array = []
-var _hover_deck := -1
+var _deck_visible := false          # R545：完整卡组全屏浏览窗是否打开（PickOverlay view_only）
+var _deck_pick: PickOverlay = null  # R545：完整卡组全屏浏览窗（复用战斗弃牌区的 PickOverlay）
+var _deck_auto_open := false        # R545：--deck 出图旗标 → 等 _deck_pick 建好再开
 var _relics_visible := false
 var _menu: UiMenu = null          # Esc 主菜单（R148）
 var _menu_btn: Button = null      # 上栏那个齿轮（**自绘图标**，需要它算尺寸/hover）
@@ -315,14 +314,13 @@ func _ready() -> void:
 	if "--midway" in OS.get_cmdline_user_args():
 		_prep_midway_demo()
 	# -- --deck：直接打开卡组查看面板
-	# R214：顺手给前两张塞附魔 —— 出图核验「卡面费用正下方有标记」+「列表行标出附魔名」。
+	# R214：顺手给前两张塞附魔 —— 出图核验「卡面费用正下方有标记」+ 浏览窗里附魔卡单列。
 	if "--deck" in OS.get_cmdline_user_args():
 		RunState.ensure_deck_mods()
 		var dm_ids := ["costdown", "save"]
 		for dm_i in mini(dm_ids.size(), RunState.deck_ids.size()):
 			RunState.deck_mods[dm_i] = RunState.enchant_mod(str(dm_ids[dm_i]))
-		_deck_rows = _build_deck_rows()
-		_deck_visible = true
+		_deck_auto_open = true
 	# -- --marks：演示玩家标记（R177：画图 / 旗子，截图核验用）
 	if "--marks" in OS.get_cmdline_user_args():
 		_prep_marks_demo()
@@ -400,6 +398,14 @@ func _ready() -> void:
 	# 判据只有 `RunState.must_take_card_reward()` 一个口（本局已收尾时它自己放行）。
 	if RunState.must_take_card_reward():
 		_reward_panel.open()
+	# R545：地图右上「完整卡组」改成全屏浏览窗（复用战斗弃牌区的 PickOverlay view_only）。
+	# 作为最晚挂上的子节点（盖住按钮栏 / 菜单 / 奖励面板，展开时吃掉全部点击）。
+	_deck_pick = PickOverlay.new()
+	_deck_pick.cancelled.connect(_on_deck_pick_cancelled)
+	add_child(_deck_pick)
+	if _deck_auto_open:
+		# R545：延迟一帧再开 —— _ready 期间锚点还没结算，立刻 open 会把窗口尺寸写成 0。
+		_open_deck_view.call_deferred()
 	# 道具「鸭之低语」（6010）：玩家失去选择权 → 系统随机挑路并自动前进。
 	# ⚠️ R194：这里只负责**接手**（`_start_whisper` 挑出第一间），真正一步步往下走
 	#    由 `_process` → `_tick_whisper` 持续驱动 —— 原来只在 `_ready` 挑一次、
@@ -599,19 +605,16 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		_mouse = event.position
 		# R405：面板开着时，按住拖动 = 滚动（触屏没有滚轮，旧版只能看最上面一截）。
-		# ⚠️ 三个面板的单位不同：道具是**像素**、记录 / 卡组是**行** —— 各按自己的行高折算。
-		if _relics_visible or _records_visible or _deck_visible:
+		# ⚠️ 道具是**像素**、记录是**行**，各按自己的行高折算（完整卡组改走 PickOverlay，
+		#    它自己处理滚轮 / 拖动，不在这里算）。
+		if _relics_visible or _records_visible:
 			var d := UiDrag.scroll_delta(event, 34.0)
 			if d != 0.0:
 				if _relics_visible:
 					_relic_scroll = maxf(0.0, _relic_scroll + d)
-				elif _records_visible:
-					_records_scroll = maxf(0.0, _records_scroll + d / 24.0)
 				else:
-					_deck_scroll = maxf(0.0, _deck_scroll + d / DECK_ROW_H)
+					_records_scroll = maxf(0.0, _records_scroll + d / 24.0)
 				_panel_dragged = true
-			if _deck_visible:
-				_hover_deck = _deck_row_at(event.position)
 			queue_redraw()
 			return
 		var c := _cell_at(event.position)
@@ -622,7 +625,7 @@ func _gui_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
 		# R405：面板开着时**按下不算数**，等于抬起时再判 —— 否则触屏一滑就关面板。
-		if _relics_visible or _records_visible or _deck_visible:
+		if _relics_visible or _records_visible:
 			_panel_dragged = false
 			return
 		# R470：没有「+N」了 —— 点任意一枚徽章就地打开道具一览（完整列表 + 详情）。
@@ -647,11 +650,6 @@ func _gui_input(event: InputEvent) -> void:
 			return
 		if _records_visible:
 			_records_visible = false
-			queue_redraw()
-			return
-		if _deck_visible:
-			if _deck_row_at(event.position) < 0:
-				_deck_visible = false
 			queue_redraw()
 			return
 		_press_active = false
@@ -898,8 +896,6 @@ func _draw() -> void:
 	_draw_key_relics()      # R543：信物图标（难度 ≥11 或已持有信物时，持续显示在左侧）
 	if _relics_visible:
 		_draw_relic_panel()
-	if _deck_visible:
-		_draw_deck_panel()
 	if _records_visible:
 		_draw_records_panel()
 	if _flint_pick:
@@ -2012,99 +2008,42 @@ func _toggle_records() -> void:
 
 
 func _toggle_deck() -> void:
+	## R545：右上「完整卡组」按钮 / 菜单「查看卡组」都走这里 —— 打开全屏浏览窗。
+	_open_deck_view()
+
+
+func _open_deck_view() -> void:
+	## R545：完整卡组全屏浏览窗（复用战斗弃牌区的 PickOverlay view_only 排版）。
+	## 卡面放大、每行 5 张；效果文字在底部描述条随「悬停 / 点卡」显示 ——
+	## 旧的自绘窄列表（效果文截断 30 字）已移除。
+	if _deck_pick == null:
+		return
 	sfx.play("click")
 	if _records_visible:
 		_records_visible = false
-	_deck_rows = _build_deck_rows()
-	_deck_scroll = 0.0
-	_deck_visible = not _deck_visible
+	var repo := CardRepo.load_json()
+	var cards := RunState.build_deck(repo)
+	_deck_visible = true
+	_deck_pick.open({
+		"kind": "deck_view",
+		"short": "完整卡组",
+		"view_only": true,
+		"title": "完整卡组（共 %d 张）" % cards.size(),
+		"note": "",
+		"opts": [],
+		"cards": cards,
+		"max_sel": 0,
+		"confirm_label": "关闭",
+		"cancel_label": "",
+	})
 	queue_redraw()
 
 
-func _build_deck_rows() -> Array:
-	## 卡组聚合：[{id, card, count}]（按首次出现顺序）。
-	## ⚠️ R112 起卡组里不再有「运行时改写费用」的卡 —— 但 **R207** 起必须按
-	## 「卡面签名」（id + 费用 + 力/生 + 词缀）聚合，不能只按 id：
-	## 商店附魔（R181）生成的是**同 id 的独立副本**，只按 id 合并会把「+10 攻击的那张」
-	## 并进原卡、面板上显示成没附魔的数值 —— 玩家花了钱却看不出效果。
-	## 卡实例统一从 `RunState.build_deck()` 取（它负责把附魔烤进副本）。
-	var repo := CardRepo.load_json()
-	var seen := {}
-	var out: Array = []
-	for c: CardData in RunState.build_deck(repo):
-		var key := "%d|%d|%d|%d|%s" % [c.id, c.cost, c.power, c.health,
-				",".join(c.affixes)]
-		if seen.has(key):
-			out[seen[key]]["count"] += 1
-			continue
-		seen[key] = out.size()
-		out.append({"id": c.id, "card": c, "count": 1})
-	return out
-
-
-const DECK_ROW_H := 89.0
-const DECK_COL_W := 470.0
-const DECK_INNER := Rect2(180, 142, 920, 350)
-
-
-func _deck_row_rect(i: int) -> Rect2:
-	var col := i % 2
-	var row := int(i / 2.0)
-	return Rect2(DECK_INNER.position.x + col * DECK_COL_W,
-			DECK_INNER.position.y + row * DECK_ROW_H - _deck_scroll * DECK_ROW_H,
-			450.0, 72.0)
-
-
-func _deck_row_at(pos: Vector2) -> int:
-	for i in _deck_rows.size():
-		if _deck_row_rect(i).has_point(pos):
-			return i
-	return -1
-
-
-func _draw_deck_panel() -> void:
-	var rect := Rect2(160, 90, size.x - 320, size.y - 150)
-	draw_rect(rect, Color("22242c"), true)
-	draw_rect(rect, Color("6a665c"), false, 2.0)
-	draw_string(_font_bold, rect.position + Vector2(20, 34),
-			"我的卡组（共 %d 张）" % RunState.deck_ids.size(),
-			HORIZONTAL_ALIGNMENT_LEFT, 520, UiTheme.FS_BODY, UiTheme.SAND)
-	if _deck_rows.is_empty():
-		draw_string(_font, rect.position + Vector2(20, 90), "卡组是空的。",
-				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
-		return
-	var max_scroll := maxi(0, ceili(_deck_rows.size() / 2.0) - 4)
-	_deck_scroll = clampf(_deck_scroll, 0.0, float(max_scroll))
-	for i in _deck_rows.size():
-		var r := _deck_row_rect(i)
-		if r.end.y < DECK_INNER.position.y or r.position.y > DECK_INNER.end.y:
-			continue
-		var c: CardData = _deck_rows[i]["card"]
-		var hovered := i == _hover_deck
-		if hovered:
-			draw_rect(r.grow(4.0), Color(1, 1, 1, 0.16), true)
-		if c != null:
-			CardFace.draw(self, c,
-					Rect2(r.position + Vector2(0, 1), Vector2(58, 70)),
-					c.health, false, false, _font, _font_bold)
-			var kcol := Color("d8c890") if hovered else Color("eee6c8")
-			draw_string(_font_bold, r.position + Vector2(68, 24),
-					"%s × %d" % [c.card_name, _deck_rows[i]["count"]],
-					HORIZONTAL_ALIGNMENT_LEFT, 340, UiTheme.FS_BODY, kcol)
-			# R214：带附魔的卡在这一行前面标出附魔名（卡面费用正下方同时有附魔标记）——
-			# 列表里一眼能挑出「花过钱的那几张」，不用凑近看卡面小徽章。
-			var stat_txt := "费用 %d · %s" % [c.cost, CardFace.stats_line(c)]
-			var stat_col := Color("9a968c")
-			if c.has_enchant():
-				stat_txt = "附魔「%s」· %s" % [CardData.enchant_title(c), stat_txt]
-				stat_col = CardData.enchant_color(c.enchant)
-			draw_string(_font, r.position + Vector2(68, 45), stat_txt,
-					HORIZONTAL_ALIGNMENT_LEFT, 372, UiTheme.FS_CAPTION, stat_col)
-			var eff: String = CardText.naturalize(c.effect_text).replace("\n", " ")
-			if eff.length() > 30:
-				eff = eff.substr(0, 29) + "…"
-			draw_string(_font, r.position + Vector2(68, 63), eff,
-					HORIZONTAL_ALIGNMENT_LEFT, 372, UiTheme.FS_CAPTION, Color("7d8590"))
+func _on_deck_pick_cancelled() -> void:
+	## R545：浏览窗的「关闭」/ Esc / 右键都走 cancelled（view_only 不发 confirmed）。
+	_deck_pick.close()
+	_deck_visible = false
+	queue_redraw()
 
 
 func _draw_records_panel() -> void:
@@ -2168,14 +2107,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif _relics_visible and event is InputEventMouseButton \
 			and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
 		_relic_scroll = maxf(0.0, _relic_scroll - 34.0)
-		queue_redraw()
-	elif _deck_visible and event is InputEventMouseButton \
-			and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-		_deck_scroll += 1.0
-		queue_redraw()
-	elif _deck_visible and event is InputEventMouseButton \
-			and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
-		_deck_scroll = maxf(0.0, _deck_scroll - 1.0)
 		queue_redraw()
 
 

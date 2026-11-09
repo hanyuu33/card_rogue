@@ -33549,6 +33549,28 @@ func _init() -> void:
 	RunState.pending_rewards = r543_pending_bak
 	RunState.gold = r543_bak_gold
 
+	# ---- R545b：选角色盲选 + 地图完整卡组换 PickOverlay（源码锁）----
+	var r545_cp := FileAccess.get_file_as_string("res://scripts/class_pick_scene.gd")
+	check_src(r545_cp.find("var _rand_pending := false") >= 0
+			and r545_cp.find("func _reveal_random(") >= 0
+			and r545_cp.find("func _start_run(") >= 0
+			and r545_cp.find("已随机 —— 确认进入后揭晓角色") >= 0,
+			"R545b 源码：随机改盲选（_rand_pending + _reveal_random + 揭晓文案在位）")
+	check_src(r545_cp.find("func _roll_random() -> void:") >= 0
+			and r545_cp.find("_rand_pick = randi() % n") >= 0
+			and r545_cp.find("var sel := i == _selected and not _rand_pending") >= 0,
+			"R545b 源码：_roll_random 只摇 _rand_pick、盲选态不标任何头像")
+	var r545_ms := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	check_src(r545_ms.find("func _open_deck_view() -> void:") >= 0
+			and r545_ms.find("\"kind\": \"deck_view\"") >= 0
+			and r545_ms.find("\"view_only\": true") >= 0
+			and r545_ms.find("_deck_pick = PickOverlay.new()") >= 0
+			and r545_ms.find("func _on_deck_pick_cancelled() -> void:") >= 0,
+			"R545b 源码：完整卡组走 PickOverlay view_only（_open_deck_view + deck_view + 关闭信号）")
+	check_src(r545_ms.find("func _draw_deck_panel() -> void:") < 0
+			and r545_ms.find("_deck_scroll") < 0
+			and r545_ms.find("_build_deck_rows") < 0,
+			"R545b 源码：旧自绘窄列表（_draw_deck_panel / _deck_scroll / _build_deck_rows）已移除")
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

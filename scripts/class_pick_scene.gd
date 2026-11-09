@@ -15,6 +15,8 @@ const AV_GAP := 16.0
 # ⚠️ 只**选中**不直接开局 —— 玩家还得看一眼 CG 和难度档位；连点会一直换人，不会卡住不动。
 # R519c（用户口径「随机不能只做按钮，再生成一个黑底的"？"图标」）：从横条改成
 # **与头像同构的方块**（边长 = AV + 黑底问号图标 + 同名牌），一眼就知道是「换人」而不是某项设置。
+# R545（用户口径「随机不要立即看到选了什么」）：随机改成**盲选** —— 点随机只摇不显示，
+# 点「确认进入」才揭晓随到谁并开局（点具体头像 = 取消盲选）。
 const RAND_W := 88.0
 const RAND_H := 88.0
 const RAND_GAP := 10.0
@@ -40,6 +42,8 @@ var _hover := -1              # 悬停的头像下标
 var _selected := -1           # 已选职业下标（_ready 里默认置 0 = 第一角色；-1 仅作初值）
 var _picked := false
 var _rand_hover := false      # R519b：「随机」钮的悬停态（自绘按钮，得自己跟）
+var _rand_pending := false    # R545：盲选已摇，结果待「确认进入」才揭晓
+var _rand_pick := -1          # R545：盲选摇中的职业下标（揭晓前不显示）
 var _seed_edit: LineEdit = null   # R261：种子输入框（唯一的原生控件，手机点它弹软键盘）
 var _seed_guard := false          # 防止 text_changed 里改 text 触发二次回调
 var _seed_bad := false            # 输入的种子不合法（红框 + 提示；不静默换成随机）
@@ -295,7 +299,12 @@ func _draw() -> void:
 	# 并用「顶部优先」的 cover —— 屏一宽，纵向能留的高度就少，居中裁会先削掉头顶。
 	var bleed := UiTheme.bleed_rect(self)
 	var full := Rect2(Vector2.ZERO, size)
-	if _selected < 0:
+	if _rand_pending:
+		# R545：盲选态 —— 不揭晓结果，中性背景 + 带难度/确认的「?」面板
+		UiTheme.draw_page(self, bleed)
+		_draw_pending_panel()
+		_draw_seed_panel()
+	elif _selected < 0:
 		UiTheme.draw_page(self, bleed)
 		draw_string(_font, Vector2(0, 288), "选择与你同行的精灵……",
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_TITLE, UiTheme.PAGE_INK)
@@ -340,7 +349,7 @@ func _draw_rand_button() -> void:
 				UiTheme.ADVENTURE_LIGHT)
 	# ⚠️ 外框用黄铜色而不是「当前职业色」：_selected 可能还是 -1（未选），
 	#    取 class_color(ids()[-1]) 会越界。这枚本来也不属于任何职业。
-	draw_rect(r, UiTheme.ADVENTURE_BRASS_LIT if hov else Color(1, 1, 1, 0.25), false, 2.0)
+	draw_rect(r, UiTheme.ADVENTURE_BRASS_LIT if (hov or _rand_pending) else Color(1, 1, 1, 0.25), false, 2.0)
 	if hov:
 		draw_rect(r.grow(3.0), Color(1, 1, 1, 0.55), false, 2.0)
 	# 名牌：与头像下方那套同一尺寸 / 同一字体，读起来是一行东西
@@ -348,21 +357,19 @@ func _draw_rand_button() -> void:
 	UiTheme.draw_info_card(self, np)
 	draw_string(_font_bold, Vector2(np.position.x, np.position.y + 22.0), "随机",
 			HORIZONTAL_ALIGNMENT_CENTER, np.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
-	draw_string(_font, Vector2(np.position.x, np.position.y + 41.0), "换一个",
+	draw_string(_font, Vector2(np.position.x, np.position.y + 41.0), "已随机" if _rand_pending else "换一个",
 			HORIZONTAL_ALIGNMENT_CENTER, np.size.x, UiTheme.FS_CAPTION, Color("9a968c"))
 
 
 func _roll_random() -> void:
-	## 随机换一个职业。⚠️ 只有一个职业时不做事；多种职业时**保证换人**
-	## （随机到同一个 `_selected` 就顺移一位）—— 否则玩家点一下「没反应」，会以为坏了。
+	## R545（用户口径「随机不要立即看到选了什么」）：随机结果**先藏起来**，
+	## 直到点「确认进入」才揭晓并开局。所以这里只摇、只记，不改 `_selected`、
+	## 不换 CG —— 面板与头像行都保持在盲选态（`_rand_pending`）。
 	var n := PlayerClass.ids().size()
 	if n <= 0:
 		return
-	var i := randi() % n
-	if n > 1 and i == _selected:
-		i = (i + 1 + randi() % (n - 1)) % n
-	_selected = i
-	last_selected = i
+	_rand_pick = randi() % n
+	_rand_pending = true
 	sfx.play("click")
 	queue_redraw()
 
@@ -370,7 +377,7 @@ func _roll_random() -> void:
 func _draw_avatar(i: int) -> void:
 	var cid := PlayerClass.ids()[i]
 	var r := _av_rect(i)
-	var sel := i == _selected
+	var sel := i == _selected and not _rand_pending   # R545：盲选态不标任何头像
 	var cc: Color = UiTheme.class_color(cid)
 	UiTheme.draw_info_card(self, r)
 	var tex := UiAssets.class_avatar(cid)
@@ -423,6 +430,11 @@ func _draw_panel(cid: String) -> void:
 					UiTheme.FS_CAPTION, UiTheme.PAGE_INK)
 			y += 17.0
 		y += 4.0
+	_draw_difficulty_block(x, w)
+
+
+func _draw_difficulty_block(x: float, w: float) -> void:
+	## R545：从 _draw_panel 抽出的难度档位 + 摘要 + 确认钮（盲选面板与角色面板共用）。
 	# 难度档位（R223：左箭头 / 档位盒 / 右箭头，0~10 共 11 档，钳制不循环）
 	draw_string(_font_bold, Vector2(x, _diff_row_rect().position.y - 13.0), "难度档位",
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, UiTheme.PAGE_INK)
@@ -485,6 +497,21 @@ func _draw_panel(cid: String) -> void:
 	UiTheme.draw_action(self, cr, true)
 	draw_string(_font_bold, Vector2(cr.position.x, cr.position.y + 37.0), "确认进入",
 			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_HEADING, UiTheme.ADVENTURE_LIGHT)
+
+
+func _draw_pending_panel() -> void:
+	## R545：盲选态面板 —— 职业名写「随机」，难度档位与确认照常（不揭晓具体角色）。
+	var p := _panel_rect()
+	UiTheme.draw_panel_bg(self, p)
+	var x := p.position.x + 48.0
+	var w := PANEL_W - 88.0
+	var y := p.position.y + 46.0
+	draw_string(_font_bold, Vector2(x, y), "随机",
+			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, UiTheme.PAGE_INK)
+	y += 30.0
+	draw_string(_font, Vector2(x, y), "已随机 —— 确认进入后揭晓角色",
+			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
+	_draw_difficulty_block(x, w)
 
 
 func _wrap_text(t: String, max_w: float, px: int) -> Array[String]:
@@ -570,6 +597,7 @@ func _gui_input(event: InputEvent) -> void:
 			if _av_rect(i).grow(5.0).has_point(pos):
 				_selected = i
 				last_selected = i
+				_rand_pending = false   # R545：点具体角色 = 取消盲选
 				sfx.play("click")
 				queue_redraw()   # R186（原来靠 _process 每帧重绘）
 				return
@@ -594,6 +622,29 @@ func _choose(cid: String) -> void:
 		_seed_bad = true
 		queue_redraw()
 		return
+	# R545：盲选确认 —— 先揭晓随机结果，短暂停留后再开局
+	if _rand_pending:
+		_reveal_random(code)
+		return
+	_start_run(cid, code)
+
+
+func _reveal_random(code: String) -> void:
+	## R545：揭晓盲选结果。先把 CG / 面板换成随到的角色，0.6 秒后真正开局。
+	_selected = clampi(_rand_pick, 0, PlayerClass.ids().size() - 1)
+	last_selected = _selected
+	_rand_pending = false
+	_picked = true          # 揭晓瞬间锁定输入（防连点再摇）
+	queue_redraw()
+	var t := Timer.new()
+	t.wait_time = 0.6
+	t.one_shot = true
+	t.timeout.connect(func(): _start_run(PlayerClass.ids()[_selected], code))
+	add_child(t)
+	t.start()
+
+
+func _start_run(cid: String, code: String) -> void:
 	_picked = true
 	GameSettings.ensure_loaded()
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, cid, 0, code)
