@@ -24518,9 +24518,9 @@ func _init() -> void:
 			"R313 风妖精 / 快速符文 已进奖励池（%d 件）" % r313_repo.reward_ids().size())
 	check(r313_wf.desc.contains("第五张") and r313_wf.desc.contains("4"),
 			"R313 风妖精文案：写明「第五张」与 4 点伤害")
-	check(r313_rune.desc.contains("10") and r313_rune.desc.contains("加倍")
+	check(r313_rune.desc.contains("5") and r313_rune.desc.contains("加倍")
 			and r313_rune.desc.contains("冰封"),
-			"R313 快速符文文案：写明 10% / 加倍 / 冰封沉睡")
+			"R313 快速符文文案：写明 5% / 加倍 / 冰封沉睡")
 
 	# ---- 风妖精：第 5 张牌 → 全体 4 伤 ----
 	var r313_fe := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)),
@@ -24555,18 +24555,18 @@ func _init() -> void:
 	var r313_se := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)),
 			40, 40, -1, false)
 	r313_se.self_relics = [GameEngine.SWIFT_RUNE_RELIC_ID]
-	check(GameEngine.SWIFT_RUNE_PCT == 10 and GameEngine.SWIFT_RUNE_RELIC_ID == 6043,
-			"R313 快速符文常量：6043 / 每张 +10%")
+	check(GameEngine.SWIFT_RUNE_PCT == 5 and GameEngine.SWIFT_RUNE_RELIC_ID == 6043,
+			"R313 快速符文常量：6043 / 每张 +5%")
 	check(r313_se._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
 			"R313 快速符文：本回合还没出牌 → 不加成（%d）"
 				% r313_se._spell_dmg(GameEngine.SIDE_SELF, 10))
 	r313_se.state.self_card_plays = 3
-	check(r313_se._swift_rune_pct() == 30,
-			"R313 快速符文：出 3 张 → 百分比 30（%d）" % r313_se._swift_rune_pct())
-	check(r313_se._spell_dmg(GameEngine.SIDE_SELF, 10) == 13,
-			"R313 快速符文：10 点技能伤害 → 13（10 × 1.3，去尾）")
-	check(r313_se._spell_dmg(GameEngine.SIDE_SELF, 7) == 9,
-			"R313 快速符文：7 点 → 9（9.1 去尾，不是四舍五入到 9 / 10 之间摇摆）")
+	check(r313_se._swift_rune_pct() == 15,
+			"R313 快速符文：出 3 张 → 百分比 15（%d）" % r313_se._swift_rune_pct())
+	check(r313_se._spell_dmg(GameEngine.SIDE_SELF, 10) == 11,
+			"R313 快速符文：10 点技能伤害 → 11（10 × 1.15，去尾）")
+	check(r313_se._spell_dmg(GameEngine.SIDE_SELF, 7) == 8,
+			"R313 快速符文：7 点 → 8（8.05 去尾，不是四舍五入到 8 / 9 之间摇摆）")
 	check(r313_se._spell_dmg(GameEngine.SIDE_OPPONENT, 10) == 10,
 			"R313 快速符文：敌方技能不受影响（%d）"
 				% r313_se._spell_dmg(GameEngine.SIDE_OPPONENT, 10))
@@ -24578,16 +24578,16 @@ func _init() -> void:
 	check(not r313_d1.cannot_act_next_turn() and not r313_d2.cannot_act_next_turn(),
 			"R313 不能行动判据：默认不成立")
 	r313_se._spell_scope_depth = 1   # 模拟「正在结算技能卡」
-	r313_se._hit_unit(r313_d1, 13, "测试")
-	check(r313_d1.health == 80 - 13,
-			"R313 快速符文：**没被控**的敌人只吃基础加成（-13，%d）"
+	r313_se._hit_unit(r313_d1, 11, "测试")
+	check(r313_d1.health == 80 - 11,
+			"R313 快速符文：**没被控**的敌人只吃基础加成（-11，%d）"
 				% (80 - r313_d1.health))
 	r313_d1.health = 80
 	r313_d1.frozen = true
 	check(r313_d1.cannot_act_next_turn(), "R313 不能行动判据：冰封 → 成立")
-	r313_se._hit_unit(r313_d1, 13, "测试")
-	check(r313_d1.health == 80 - 16,
-			"R313 快速符文：冰封的敌人**效果加倍**（-16 = 10 × 1.6，%d）"
+	r313_se._hit_unit(r313_d1, 11, "测试")
+	check(r313_d1.health == 80 - 12,
+			"R313 快速符文：冰封的敌人**效果加倍**（-12 = 10 × 1.2，%d）"
 				% (80 - r313_d1.health))
 	# 沉睡也算；禁足不算
 	r313_d1.health = 80
@@ -24602,9 +24602,9 @@ func _init() -> void:
 	# 不在技能作用域里（效果 / 陷阱 / 反伤）→ 不加倍
 	r313_d1.frozen = true
 	r313_se._spell_scope_depth = 0
-	r313_se._hit_unit(r313_d1, 13, "测试")
-	check(r313_d1.health == 80 - 13,
-			"R313 快速符文：非技能伤害（陷阱 / 反伤）不加倍（-13，%d）"
+	r313_se._hit_unit(r313_d1, 11, "测试")
+	check(r313_d1.health == 80 - 11,
+			"R313 快速符文：非技能伤害（陷阱 / 反伤）不加倍（-11，%d）"
 				% (80 - r313_d1.health))
 	# 结算完必须把作用域关干净（否则后面所有伤害都会被当成技能）
 	r313_se._run_spell_effect(_card(9999, "测试技能", "技能", 1, 0, 0), null)
