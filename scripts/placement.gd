@@ -383,7 +383,10 @@ func status_entries() -> Array[Dictionary]:
 	if stun_left > 0:
 		out.append({"label": "眩晕：下回合不能行动", "col": COL_D, "kind": "debuff"})
 	if sleep_left > 0:
-		out.append({"label": "沉睡：还剩 %d（回合/受伤各 -1）" % sleep_left,
+		# R539：深眠只按回合递减（挨打不减），文案要分开 —— 与 battle_scene 悬停同一口径。
+		var deep_sleep := card != null and card.traits.has(FieldState.DEEP_SLEEP_TRAIT)
+		out.append({"label": "沉睡：还剩 %d（%s）" % [sleep_left,
+				"只按回合 -1" if deep_sleep else "回合/受伤各 -1"],
 				"col": COL_D, "kind": "debuff"})
 	if rooted > 0:
 		# R143：区分「已挂待生效」（rooted=1，本次只是挂上，**下个**自己回合才拦移动）

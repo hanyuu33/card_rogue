@@ -29,6 +29,10 @@ const CLONE_TRAIT := "自我复制"
 ## 引擎在 end_turn 里对该方单位 -1；>0 时不能移动 / 攻击 / 直击 HP。
 const SLEEP_TRAIT := "沉睡"
 const SLEEP_TURNS := 2
+# 「深眠」（R539 激光炮 9241）：同样是「上场就睡 SLEEP_TURNS 点」，但**挨打不会**
+# 缩短 —— 恶魔鸭 9116 的「受伤 -1 / 醒了暴怒」那一整套只认 SLEEP_TRAIT，深眠不参与。
+# 回合口是共用的：`GameEngine._sleep_tick()` 只看 sleep_left > 0，所以两边都按时醒。
+const DEEP_SLEEP_TRAIT := "深眠"
 # 「按张记账」的卡：减费记在这个实例身上 → 抽到时必须换成独立副本，
 # 否则同名卡共享库内实例，一张的减费会串到卡组里其它同名卡上。
 const PER_INSTANCE_TRAITS: Array[String] = ["留手", "魔像"]
@@ -591,7 +595,7 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	p.acts_total = p.acts_left      # R462：发了几轮就记几轮（之后补行动只按差额算）
 	# 沉睡（恶魔鸭 9116）：带「沉睡」trait 的单位一上场就开始睡（SLEEP_TURNS 点）。
 	# 放在 place 里 = 唯一初始化口，关卡摆位 / 效果卡召唤出来的都算。
-	if card.traits.has(SLEEP_TRAIT):
+	if card.traits.has(SLEEP_TRAIT) or card.traits.has(DEEP_SLEEP_TRAIT):
 		p.sleep_left = SLEEP_TURNS
 	# 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：带「铸造」trait 的单位一上场就挂表。
 	# 同样放在 place 里 = **唯一初始化口**（与沉睡 / 护盾同一套路）；回合数取引擎常量

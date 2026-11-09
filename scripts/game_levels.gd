@@ -74,11 +74,12 @@ static func level_names() -> Array[String]:
 
 
 static func builtin_levels() -> Array:
-	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×9（第一层 4 + 第二层 5）→
+	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×10（第一层 4 + 第二层 6）→
 	## 精英简单×7（第一层 3 + 第二层 4；R449 哈气骑士团下调一层；R502 执法者的审判进二层；
 	##   R506 阿斯克勒庇厄斯的试炼由精英困难下调到精英简单）→
 	## 精英困难×6（第一层 3 + 第二层 3；R506 母舰空袭由精英简单上调到精英困难）→
-	## Boss×7（第一层 3 + 第二层 3 + 第三层 1）。合计 37 关（R525 叛逃机械进第二层 Boss；
+	## Boss×7（第一层 3 + 第二层 3 + 第三层 1）。合计 38 关（R539 巨炮防线进二层普通困难；
+	## R525 叛逃机械进第二层 Boss；
 	## R174 百眼动员进第二层普通简单；
 	## R340 永夜鸭群进第一层精英困难；**R356 启示者进第三层**；R451 母舰空袭进第二层精英池；
 	## **R502 执法者的审判进第二层精英简单**；**R506 母舰空袭 ↔ 阿斯克勒庇厄斯的试炼互换档位**）。
@@ -87,6 +88,7 @@ static func builtin_levels() -> Array:
 			_frost_line(), _assembly_line(), _mass_anvil(), _argos_mobilize(),
 		_knight_charge(), _wizard(), _white_mage_guard(), _night_ducks(),
 			_sun_forge(), _hecaton(), _undead_legion(), _twin_cannon(),
+			_laser_line(),
 		_captain(), _duck_kiln(), _breath_charge(), _hermes(), _dragon_nest(),
 			_enforcer_judgement(), _asclepius(),
 		_captain_wizard(), _legion(), _mech_giant(), _steel_fortress(), _mothership_air_raid(),
@@ -1362,6 +1364,55 @@ static func _twin_cannon() -> Dictionary:
 			[9131, "量产型俄倪厄", 5, 45, 1, 1, Vector2i(2, 2)],
 		],
 		"enemy_effects": [9139],
+		"tutorial": [],
+	}
+
+
+## 「巨炮防线」专属成长曲线（R539）：**每回合 +1 力量，不封顶**。
+## 与 `LAYER2_GROWTH`（第 2 回合起每 2 回合 +1、封顶 +4）刻意不同 —— 这一关只有三座
+## 不会移动的炮台，压力必须靠「时间」而不是「走位」累积：拖得越久，每一下越疼。
+## 与沉睡互不干扰：成长走 `_tick_enemy_growth()`（我方回合开始推进），沉睡走
+## `_sleep_tick()`（敌方回合结束 -1）—— 睡着的两回合里力量一样在涨。
+const LASER_GROWTH := {
+	"start_turn": 1,    # 第 1 个我方回合就 +1（"每回合 +1"从开局算起）
+	"period": 1,        # 每回合
+	"inc": 1,           # +1 力量
+	"cap": 99,          # 不封顶（卡面写的就是「每回合力量 +1」）
+}
+
+
+static func _laser_line() -> Dictionary:
+	## 第二层·普通敌人-困难「巨炮防线」（R539）：**中排一整列三座激光炮**（9241，
+	## 工事 5 力 / 125 血 / 程 0 / 速 0），开局**沉睡 2 回合**（`深眠` trait → 挨打不会提前醒）。
+	##
+	## 题面：它**不能进行常规攻击**（程 0），全部威胁是每回合那一次「同列炮击」——
+	## 对**同列第一个**敌方单位造成等同于力量的伤害；那一列空着就直接轰对方 HP
+	## （`GameEngine._laser_cannon_act()`，与 attack_hp 同一条 HP 伤害口）。
+	## 于是玩家的取舍是：**站哪一列**。三列各摆一个单位 → 三门炮都有活干；
+	## 只站一两列 → 空列会被直接轰脸（每回合掉一次 HP，无法用单位挡）。
+	##
+	## 数值：每回合力量 +1（`LASER_GROWTH`，不封顶）。前两回合它在睡，玩家有 2 轮
+	## 「免费」的窗口去抢血 / 铺场；第 3 个敌方回合起每一炮都比上一炮重。
+	## 正解是拆炮（`clear_win`：清光场上单位即胜），而不是靠程 3 直击后排 HP ——
+	## 375 点总血量本来也不该被绕过。
+	return {
+		"name": "巨炮防线",
+		"key": "laser_line",
+		"tier": TIER_NORMAL_HARD,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"enemy_growth": LASER_GROWTH,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9241, "激光炮", 5, 125, 0, 0, Vector2i(1, 0)],
+			[9241, "激光炮", 5, 125, 0, 0, Vector2i(1, 1)],
+			[9241, "激光炮", 5, 125, 0, 0, Vector2i(1, 2)],
+		],
 		"tutorial": [],
 	}
 

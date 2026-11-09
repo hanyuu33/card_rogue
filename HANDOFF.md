@@ -1,4 +1,60 @@
-## 2026-11-08 R519q 枭熊之怒改咆哮 + 声音特效（当前最新）
+## 2026-11-09 R539 传承记忆改 5 费史诗 + 新关卡「巨炮防线」（当前最新）
+
+- 用户口径（两条）：「传承记忆 改为5费史诗卡」；「新增二层普通困难关卡：巨炮防线：敌人中排3激光炮：
+  工事，5/125/？。沉睡2回合。不能常规攻击，作为行动的代替，对同列第一个敌人造成等同于力量伤害
+  （没有则攻击HP）。每回合力+1」。规格里的「？」按 `enemy_units` 元组 `[id,名,力,生,程,速]` 口径
+  解为**射程**，激光炮「不能常规攻击」取程 0；125 是血量。
+- **改动 1｜传承记忆 9078**：`cards.json` 里 `cost 2→5`、`rarity 0→2`（普通→史诗），其余不动
+  （仍 `kind:"效果"`、traits `["传承"]`）。因为只改数值不动机制，无需碰引擎。
+- **改动 2｜新卡 9241 激光炮**：`kind:"工事"`、`5 力 / 125 血 / 程 0 / 速 0`、`rarity 4`（怪物）、
+  `group:"enemy"`、traits `["工事", "机械", "深眠", "激光炮"]`、`target_mode:"none"`、金色。
+  卡库 **301→302**（敌 70→71）。
+- **改动 3｜「深眠」新 trait**（`field_state.gd`）：`DEEP_SLEEP_TRAIT := "深眠"`。与 `SLEEP_TRAIT`
+  **共用** `place()` 的 `sleep_left` 初始化口（摆位 / 召唤都走这一处），但恶魔鸭 9116 的
+  「受伤 -1 就醒暴怒」口（`_demon_duck_hurt`）**只认 SLEEP_TRAIT** —— 所以激光炮**挨打不会提前醒**，
+  只按回合 -1（`_sleep_tick` 只看 `sleep_left > 0`，两边共用一个时钟）。
+  三处沉睡文案按 trait 分支：`battle_scene` 悬停「只按回合 -1，挨打不会醒」/ `placement.status_entries`
+  「只按回合 -1」/ `game_engine._sleep_tick` 日志「只按回合 -1」；恶魔鸭仍是「回合/受伤各 -1」。
+- **改动 4｜专属行动 `_laser_cannon_act()`**（`game_engine.gd`）：`LASER_TRAIT := "激光炮"`，
+  在 `_ai_act()` 里直接分派（与枭熊 `_owlbear_act` / 暗杀者 `_assassin_act` 同构，不进通用流程）。
+  - 「不能常规攻击」靠**程 0** 天然实现（`attack_targets`/`hp_targets` 恒空），不用额外禁手。
+  - `_laser_column_target(cell, foe)`：从炮所在行朝对方半场**单向**扫描取同列第一个敌方单位
+    （不回头取身后）。
+  - 有目标 → `_hit_unit` 结算，溢出只在打穿后排单位时漏 HP（与 `attack()` 同口径）；无目标 →
+    `_damage_player` **直击 HP**（复用 attack_hp 的同一伤害口）。两条路都发 `action` 信号，
+    所以炮击有正常弹道 / 伤害飘字。
+  - 力量取值走 `effective_power() + _turn_dmg_bonus + _ally_dmg_bonus`，与普通攻击同源。
+- **改动 5｜关卡 `_laser_line()` / key `laser_line`**（`game_levels.gd`）：二层·**普通敌人-困难**，
+  三座炮摆**中排 row 1** 的 col 0/1/2，`player_hp 20 / enemy_hp 30`、`starting_hand 0`。
+  成长用新常量 `LASER_GROWTH = {start_turn 1, period 1, inc 1, cap 99}` —— **每回合 +1、不封顶**，
+  走现成 `_tick_enemy_growth()`（我方回合开始推进），与沉睡（回合结束 -1）互不干扰：睡着的两回合
+  力量照涨。普通困难 9→10、内置合计 37→38。
+  关卡设计意图写进函数注释：三列各站一个 → 三门炮都有活干；只站一两列 → 空列直接轰脸（挡不住），
+  所以取舍是「站哪一列」；两回合沉睡是免费的抢血窗口；正解是拆炮（清光场上单位即胜），
+  不该靠程 3 去绕过 375 点总血量。
+- **验证**：`_verify.py` 五套全绿 —— mana 0✗ / engine **5350✓** / reward **26✓** / bgm **39✓** /
+  smoke **65✓**。`test_engine.gd` 同步了全部计数断言（卡库 302 / 敌 71 / 传承记忆 5 费 rarity 2 /
+  二层关卡 20 / 二层普通池 10 / 内置 38），并新增 **R539 断言块**：卡面与 traits 组合（含
+  `深眠` 且**不含** `沉睡`）、关卡 tier/layer/key 与三炮中排列、编成与 `cards.json` 同源、
+  成长曲线数值、只进二层普通池、沉睡初始化 = 2、深眠**挨打不减**而对照片恶魔鸭 9116 挨打 -1、
+  程 0 候选为空、`_laser_column_target` 取最前、`_laser_cannon_act` 前排掉血后排不掉、
+  空列直击 HP、每回合 +1，以及源码锁（`LASER_TRAIT` 分派 + `DEEP_SLEEP_TRAIT` 在 `place` 口）。
+- **探针**：`_probe_r539_laser.gd` 拉真实战斗场景跑了一轮，日志确认「炮 力 6 沉眠 2」、
+  开火后同列目标 `血 8→2`（6 点 = 力量）、空列 `直击 HP 5`，符合预期；截图
+  `_probe_r539_laser_a.png` / `_b.png` 留本地（`/_probe_*.png` 已 gitignore）。
+- **文档**：`_p14_gendoc.py` 的 `LEVEL_NOTES` 加了 `laser_line` 手写备注（重跑不丢），
+  `关卡与敌人配置总览.md` 与 `卡图索引.md` 均由脚本重跑刷新（后者把 9241 列进「待做」）。
+- **已知项**：
+  1. 激光炮 9241 **暂无卡图**（`assets/pics/9241.png` 不存在）→ 战斗/图鉴走缺图回退（半透明占位 +
+     黄色 pending 三角），按本仓库「缺图不算 bug」的纪律留待出图批次。
+  2. `dist/` 里的 `DuckCardsRogue.exe` / `DuckCardsRogue_R511.apk` 仍是旧包，**不含 R514~R539**；
+     要真机演示需重导。
+- **改动文件**：`cards.json`、`scripts/field_state.gd`、`scripts/placement.gd`、
+  `scripts/game_engine.gd`、`scripts/game_levels.gd`、`scripts/battle_scene.gd`、
+  `scripts/test_engine.gd`、`scripts/test_reward.gd`、`_p14_gendoc.py`、
+  `关卡与敌人配置总览.md`、`卡图索引.md`。
+
+## 2026-11-08 R519q 枭熊之怒改咆哮 + 声音特效
 
 - 用户反馈：「枭熊之怒做成枭熊在咆哮的状态，最好有声音特效」。
 - 重出 `assets/pics/9212.png`（448×403）：仰头张嘴咆哮，从喙口放射加粗高对比青白同心声波环 +

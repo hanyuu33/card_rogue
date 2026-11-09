@@ -1224,6 +1224,14 @@ const OWLBEAR_GUARD:= 1                  # 半血以上：受到的伤害 -1
 const OWLBEAR_HP_PER_X:= 9               # 传说卡：生命 = 9X
 const OWLBEAR_CARD_ID:= 9213
 const OWLBEAR_FOE_ID:= 9214
+# ── R539：巨炮防线 · 激光炮（9241，敌方工事）──
+# 「程 0 + 专属行动」的第三种单位（前两种：枭熊 9214 跳跃、鸭子暗杀者 9112 闪现）。
+# 程 0 让 `attack_targets` / `hp_targets` 恒空 —— 它的威胁全部来自这里：
+#   * 行动 = 对**同列第一个**敌方单位造成等同于力量的伤害；
+#   * 那一列一个目标都没有 → 直击对方 HP（走 `_damage_player`，与 attack_hp 同口径）；
+#   * 沉睡 / 力量成长都不写进这里：沉睡用 `FieldState.DEEP_SLEEP_TRAIT`（挨打不醒），
+#     成长用关卡 `enemy_growth`（每回合 +1）——两者都是现成机制的复用，不另造一套。
+const LASER_TRAIT:= "激光炮"
 # 「填充」（9146，0 费普通技能）：将手牌里一张卡变成聚能炮击。两段式入口 `cast_reload`。
 const RELOAD_ID:= 9146
 # ── R290：机械之心两张伤害技能（集中突破 9162 / 冲击炮 9163）──
@@ -15305,8 +15313,13 @@ func _sleep_tick(side: String) -> void :
 			action.emit("wake", {"cell": cell, "card": p.card, "side": side,
 					"hurt": false, "awake": true})
 		else:
-			_log("%s 仍在沉睡（还剩 %d 点：回合结束 -1，挨打也 -1）" % [
-					p.card.card_name, p.sleep_left])
+			# R539：深眠（激光炮 9241）没有「挨打 -1」那一条，日志不能照着写。
+			if p.card.traits.has(FieldState.DEEP_SLEEP_TRAIT):
+				_log("%s 仍在沉睡（还剩 %d 点：只按回合 -1）" % [
+						p.card.card_name, p.sleep_left])
+			else:
+				_log("%s 仍在沉睡（还剩 %d 点：回合结束 -1，挨打也 -1）" % [
+						p.card.card_name, p.sleep_left])
 
 
 func _demon_duck_hurt(p: Placement, cell: Vector2i) -> void :
@@ -16783,6 +16796,10 @@ func _ai_act(cell: Vector2i, p: Placement) -> void :
 	if is_leaper(p):
 		_owlbear_act(cell, p)
 		return
+	# R539 激光炮：程 0 的工事，通用流程同样只能「原地待命」——整条行动换成开火。
+	if p.card.traits.has(LASER_TRAIT):
+		_laser_cannon_act(cell, p)
+		return
 
 
 
@@ -16893,6 +16910,71 @@ func _owlbear_act(cell: Vector2i, p: Placement) -> void :
 		_tap(p, "AI：跳过去也砸不到人")
 		return
 	_leap(cell, best, p.owner)
+
+
+# ================= R539：激光炮专属 AI =================
+
+func _laser_column_target(cell: Vector2i, foe: String) -> Vector2i:
+	## 同列「第一个」敌方单位：从激光炮所在行朝**对方半场**逐行扫，
+	## 第一个 owner == foe 的格子就是目标；整列扫完都没有 → (-1, -1)。
+	## 只朝一个方向扫（不回头看身后）—— 这就是「第一个」的口径。
+	## ⚠️ 不能改成「取曼哈顿最近的敌方单位」：那会把身后的单位也算进来，
+	##    与卡面「同列第一个」不是一件事。
+	var dir: int = 1 if foe == SIDE_SELF else -1
+	var r: int = cell.x + dir
+	while r >= 0 and r < FieldState.BOARD_ROWS:
+		var c:= Vector2i(r, cell.y)
+		var q: Placement = state.unit_at(c)
+		if q != null and q.owner == foe:
+			return c
+		r += dir
+	return Vector2i(-1, -1)
+
+
+func _laser_cannon_act(cell: Vector2i, p: Placement) -> void :
+	## 激光炮（9241）的唯一行动：不能常规攻击（程 0）→ 整条行动换成这一发。
+	##   * 同列有我方单位 → 只打**最靠前的那一个**（等同力量的伤害，按攻击类结算）；
+	##   * 整列都空 → 直击对方 HP（护盾代受 / 减伤 / 不锈钢盆都照吃，与 attack_hp 同路）。
+	## 收尾与 `attack()` / `attack_hp()` 一致：先播报、再收尸、`_tap()` 结束这一轮，
+	## 最后才 `_check_game_over()`（顺序反了会在 over 之后还写日志 / 播动作）。
+	var foe := SIDE_OPPONENT if p.owner == SIDE_SELF else SIDE_SELF
+	var power:= p.effective_power() + _turn_dmg_bonus(p.owner) + _ally_dmg_bonus(p.card, p.owner)
+	var target:= _laser_column_target(cell, foe)
+	if target.x < 0:
+		# 整列没有目标：直击 HP。横幅落点取对方后排行同列（`hp` 事件本来就这么定位）。
+		var banner:= Vector2i(back_row(foe), cell.y)
+		_log("%s：第 %d 列没有目标 → 直击 HP %d" % [p.card.card_name, cell.y + 1, power])
+		_damage_player(foe, power, "激光炮")
+		action.emit("hp", {"src": cell, "dst": banner, "damage": _last_hp_damage,
+				"raw": power, "side": p.owner, "atk_name": p.card.card_name})
+		_tap(p, "激光炮：直击 HP")
+		_check_game_over()
+		return
+	var q: Placement = state.unit_at(target)
+	if q == null:
+		_tap(p, "激光炮：目标已不在")
+		return
+	var hp_before:= q.health
+	q.last_hit_by = cell          # 击杀记功：与普通攻击同一条（鸭子骑士那类「击杀成长」才认得出）
+	var dmg:= _hit_unit(q, power, "激光炮", true, true)
+	_log("%s 轰击同列第一个目标 %s：-%d 生命（剩 %d）" % [
+			p.card.card_name, q.card.card_name, dmg, q.health])
+	# 不践踏：溢出只在「打穿的是对方后排单位」时漏到 HP —— 与 `attack()` 的通用规则一字不差。
+	var overflow:= 0
+	if dmg > hp_before and target.x == back_row(foe):
+		overflow = dmg - maxi(hp_before, 0)
+	action.emit("attack", {"src": cell, "dst": target, "damage": dmg,
+			"side": p.owner, "overflow": overflow,
+			"atk_name": p.card.card_name, "def_name": q.card.card_name})
+	if q.health <= 0 and _reap(target):
+		if overflow > 0:
+			_log("溢出伤害：%d 点越过 %s 漏到 HP" % [overflow, q.card.card_name])
+			_damage_player(foe, overflow, "溢出")
+			action.emit("trample", {"side": foe, "amount": _last_hp_damage, "src": cell,
+					"dst": target, "atk_name": p.card.card_name,
+					"def_name": q.card.card_name})
+	_tap(p, "激光炮：开火完毕")
+	_check_game_over()
 
 
 # ================= R111：鸭子暗杀者专属 AI =================

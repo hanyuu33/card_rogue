@@ -7025,7 +7025,11 @@ func _on_hover(pos: Vector2) -> void:
 			# R122：沉睡有**两个**递减口 —— 自己的回合结束 -1（回合口）、每次受伤 -1
 			#（受伤口）。写清「还剩几点」，玩家才知道该不该现在就打。
 			if p.sleep_left > 0:
-				tip += "　💤 沉睡（还剩 %d：自己的回合结束 -1，挨打也 -1）" % p.sleep_left
+				# R539：深眠（激光炮 9241）只按回合递减 —— 写「挨打也 -1」会让玩家以为打它能催醒。
+				if p.card.traits.has(FieldState.DEEP_SLEEP_TRAIT):
+					tip += "　💤 沉睡（还剩 %d：只按回合 -1，挨打不会醒）" % p.sleep_left
+				else:
+					tip += "　💤 沉睡（还剩 %d：自己的回合结束 -1，挨打也 -1）" % p.sleep_left
 			# R87：护盾 / 自我修复都是隐藏状态，悬停必须写明「为什么它没掉血」。
 			if p.first_hit_shield:
 				tip += "　🛡 能量屏障（**第一次受到的伤害为 0**，用完消失）"
