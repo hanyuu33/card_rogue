@@ -256,3 +256,36 @@ NO people, NO hands, NO gloves, NO fingers, NO arms, NO face, NO creature, NO ro
 ('raw/9217_straight_punch_v2.png',(110,180,  910,  900), 'assets/pics/_pending/9217.png')
 ('raw/8079_surprise_delivery_v3.png',(199,0,1337,1024),   'assets/pics/_pending/8079.png')
 ```
+
+## 5. 8079 惊喜运单 v4（R538，1536x1024，image1 = 店长给的电鳗玻璃罐图）
+
+> v3 被店长退回：「不应该生成那么多齿轮。箱子内的东西参考这张图」。
+> 齿轮不是我写进 prompt 的，是**从参照图 8039 传染来的**（8039 卡面本身浮着一圈青色齿轮）。
+> v4 的 `image1` 换成 `_review/ref_tank_eel.png`（白色机身 + 玻璃罐 + 蓝液体 + 放电 + 两根软管），
+> `input_fidelity=low`：只借这套「玻璃罐语言」，箱子仍是我们自己的运单箱。
+
+```
+FLAT ANIME CEL-SHADED ILLUSTRATION, clean crisp dark line art, exactly 2-3 tone steps, hard-edged shadows. NOT photorealistic, NOT a 3D render, NOT airbrushed.
+
+SUBJECT - ONE single pristine "special delivery" transport crate that doubles as a liquid inspection tank. It stands centred, occupying the middle 70 percent of the frame width, on a clean pale workbench.
+
+LOWER BODY of the crate: smooth BRAND-NEW milk-white enamel panels, glossy and flawless; TWO intact bright-orange hazard stripes wrapping horizontally around the body; POLISHED BRASS corner caps and a polished brass latch; the lid seam is sealed with ONE amber wax seal stamped with a simple QUESTION MARK symbol.
+
+UPPER FRONT: a large rounded-rectangle GLASS WINDOW with a thick brushed-metal frame and a soft rubber gasket, filled with clear pale-blue liquid. Small bubbles drift upward inside the liquid.
+
+INSIDE THE LIQUID: EXACTLY ONE single rectangular card, floating upright at a slight three-quarter angle. Its LEFT half is dissolving into drifting paper fibres and glowing amber motes; its RIGHT half has already become a different card with a different simple emblem. Warm amber-gold light leaks from the seam where the two halves meet. Thin crackling BLUE-WHITE ELECTRIC ARCS travel through the liquid from the card to the inner glass wall, like electricity in water.
+
+BELOW the glass window: a small clean control strip - ONE round chrome knob with a soft blue glow, ONE tiny red button, ONE tiny blue button, two short recessed indicator slots.
+
+EXACTLY TWO hoses plug into the crate: ONE matte-black hose on the left, ONE deep-red hose on the right, each with a polished metal coupling. Nothing else is plugged in.
+
+LIGHT: HIGH-KEY, bright and airy; one soft window light from the upper left; pale warm-grey floor with a single soft contact shadow.
+
+BACKGROUND: a bright tidy workshop - out-of-focus pale grey-green wall, a bright window with white daylight, a couple of neat shelves. Light and clean, NOT a dark factory.
+
+STRICTLY FORBIDDEN: gears, cogwheels, sprockets, pistons, springs, exposed machinery, engine parts, chains, cable bundles, mechanical clutter, robot parts. NO rust, NO rust stains, NO weathered or worn paint, NO chipped enamel, NO dents, NO scratches, NO dust, NO grime, NO moss, NO peeling paint, NO sepia, NO dull grey-brown palette, NO aged / vintage / antique look. NO hands, NO people, NO faces, NO readable text, NO letters, NO numbers, NO logo, NO watermark, NO card frame, NO border.
+
+FULL-BLEED image, no white margin, no vignette.
+```
+
+裁切照常用居中裁（`(199,0,1337,1024)`），参考图的水印在右下，天然落在窗口外。
