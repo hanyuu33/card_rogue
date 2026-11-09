@@ -728,11 +728,18 @@ var _over_btn_title: Button
 ## 与老 `_over_panel` 并存：胜利走它，失败仍走老面板 —— 缎带是「胜利」语义，
 ## 同一个绿缎带上写「失败」会自相矛盾。
 const WIN_PANEL_SIDE := 580.0
+## R547：标题是**贴图**（`assets/ui/battle_win_title.png`，金色浮雕字，按 2x 出图），
+## 不再用 Label —— 常规字体的字重撑不起这块缎带，而且字号 / 行高一调就飘到上方
+## 盾徽上（R547 用户反馈「位置太高、和上面的标志重叠」「字体太普通」）。
+## 字心 y=131 是量出来的：缎带绿区在中心列是 y≈108~160（上方盾徽尖到 108、
+## 下方金滚边压在 160），46 高的字居中后上下各留 1~2px。
+const WIN_TITLE_CY := 131.0
 var _win_panel: Control
 var _win_gold_box: Control            # 金币整块（本场没发金币时整块收掉）
 var _win_gold_num: Label              # 「+50」大字
 var _win_gold_parts: Label            # 分项来源 + 现有金币
 var _win_btn: Button                  # 唯一主按钮：查看奖励 / 进入下一层 / 回地图 / 再来一局
+var _win_title: TextureRect = null     # R547：标题贴图（素材 419×132，按 2x 显示）
 ## R367：本场「输」是否已经落过记录 —— `_record_defeat()` 的幂等标记。
 ## 结算面板要等演出播完才弹，但记录必须在 `engine.over` 那一刻就写。
 var _lose_recorded := false
@@ -7406,22 +7413,22 @@ func _build_win_panel() -> void:
 	plate.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	plate.texture = UiAssets.get_tex("battle_win_plate")
 
-	# 缎带标题：素材里绿色缎带主体在原图 y≈175~300 → 缩放后 y≈81~139；
-	# 左右飘带翼张得更开，所以文字框只取中间 62% 宽，别压到翼上。
-	var title := Label.new()
-	title.text = "战 斗 胜 利"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title.size = Vector2(WIN_PANEL_SIDE * 0.62, 58.0)
-	title.position = Vector2((WIN_PANEL_SIDE - title.size.x) * 0.5, 84.0)
+	# 缎带标题：**图片素材**，运行时不再画字。
+	# 素材 419×132（字高 46 的 2x），四周 10px 留白藏投影/描边 → 按 0.5 缩放贴。
+	# 尺寸从纹理算，不写死：素材重出（换字 / 换排版）只替换 png，这里不用动。
+	var title := TextureRect.new()
+	title.name = "TitleArt"
+	title.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	title.stretch_mode = TextureRect.STRETCH_SCALE
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title.add_theme_font_override("font", UiTheme.font_bold())
-	title.add_theme_font_size_override("font_size", 34)
-	title.add_theme_color_override("font_color", Color("f7ead0"))
-	title.add_theme_color_override("font_shadow_color", Color(0.10, 0.08, 0.03, 0.8))
-	title.add_theme_constant_override("shadow_offset_x", 0)
-	title.add_theme_constant_override("shadow_offset_y", 2)
+	title.texture = UiAssets.get_tex("battle_win_title")
 	_win_panel.add_child(title)
+	_win_title = title
+	var tsz := Vector2(209.5, 66.0)                     # 素材缺失时的兜底尺寸
+	if title.texture != null:
+		tsz = title.texture.get_size() * 0.5
+	title.size = tsz
+	title.position = Vector2((WIN_PANEL_SIDE - tsz.x) * 0.5, WIN_TITLE_CY - tsz.y * 0.5)
 
 	# 金币整块：小标题 + （图标 + 大字）+ 分项。整块可整体隐藏。
 	_win_gold_box = Control.new()
@@ -7477,7 +7484,7 @@ func _build_win_panel() -> void:
 	_win_gold_box.add_child(_win_gold_parts)
 
 	# 分隔线：效果图里是细金线 + 中间小菱形，这里用两根 1px 线夹一个菱形字。
-	const LINE_Y := 356.0
+	const LINE_Y := 370.0
 	for lx: float in [118.0, 332.0]:
 		var ln := ColorRect.new()
 		ln.color = Color(0.72, 0.63, 0.47, 0.85)
@@ -7498,7 +7505,7 @@ func _build_win_panel() -> void:
 	_win_btn = Button.new()
 	_win_btn.text = "查看奖励"
 	_win_btn.size = Vector2(348.0, 64.0)
-	_win_btn.position = Vector2((WIN_PANEL_SIDE - 348.0) * 0.5, 406.0)
+	_win_btn.position = Vector2((WIN_PANEL_SIDE - 348.0) * 0.5, 432.0)
 	_win_btn.pressed.connect(func():
 		sfx.play("click")
 		_on_win_primary())
