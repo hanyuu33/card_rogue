@@ -7425,8 +7425,8 @@ func _init() -> void:
 	check(is_equal_approx(float(r146_hold["scroll"]), r146_smin)
 			and is_equal_approx(float(r146_hold["zoom"]), r146_zoom),
 			"R146 敌方半场停留：滚到最上（%.0f）+ 放大到 %.2f" % [r146_smin, r146_zoom])
-	check(r146_zoom > 1.0 and r146_zoom <= 1.25,
-			"R146 放大倍率 %.2f 属于「适当放大」（>1 且不激进 —— 棋盘左右只有 6px 余量）"
+	check(r146_zoom > 1.0 and r146_zoom <= 1.35,
+			"R146 放大倍率 %.2f 属于「适当放大」（>1 且不激进 —— 1.35 已出图实测左右只盖水面不遮格子）"
 			% r146_zoom)
 	# 去程 / 回程中点：位置与大小**同步**（两段是同一条路径的正反走）
 	var r146_mid_a: Dictionary = r146bs.intro_pose(r146_hold0 + r146_pan * 0.5)
