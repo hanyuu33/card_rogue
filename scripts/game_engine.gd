@@ -1224,6 +1224,36 @@ const OWLBEAR_GUARD:= 1                  # 半血以上：受到的伤害 -1
 const OWLBEAR_HP_PER_X:= 9               # 传说卡：生命 = 9X
 const OWLBEAR_CARD_ID:= 9213
 const OWLBEAR_FOE_ID:= 9214
+# ── R539/R540：巨炮防线 · 激光巨炮（9241，敌方工事）──
+# 「程 0 + 专属行动」的第三种单位（前两种：枭熊 9214 跳跃、鸭子暗杀者 9112 闪现）。
+# 程 0 让 `attack_targets` / `hp_targets` 恒空 —— 它的威胁全部来自这里：
+#   * 行动 = **一轮打满三列**：每列对**该列第一个**敌方单位造成等同于力量的伤害（R540 三合一）；
+#   * 某一列一个目标都没有 → 该列直击对方 HP（走 `_damage_player`，与 attack_hp 同口径）；
+#   * 沉睡 / 力量成长都不写进这里：沉睡沿用 `FieldState.SLEEP_TRAIT`（恶魔鸭同一套，
+#     回合结束 -1、挨打也 -1），成长用关卡 `enemy_growth`（每回合 +1）——都是现成机制的复用。
+const LASER_TRAIT:= "激光炮"
+# ── R541：普罗诺亚之影（9242）与三种「构状体」（9243 炮击 / 9244 护盾 / 9245 迅捷）──
+# 它本身是个普通单位（8/150/程 1/速 1，走通用 AI 推进 + 攻击）；特色全在**敌方回合开始时**：
+#   * 统计玩家**上一个回合**打出的卡（`FieldState.self_turn_kinds`）：
+#     盟友 + 工事 → 炮击；技能 + 场地 → 护盾；其余 → 迅捷。
+#     **平手按这个顺序取前面的**（`>=`）—— 玩家能预测、也能主动把结果推向某一支。
+#   * 场上还没有构状体（= 它是唯一的己方单位）→ **损失 10 点生命召唤**一个（`summon = true`）；
+#     已有构状体 → 把它**原地变形成**对应形态，**保留已受的伤害**（三档最大生命都是 50）。
+#   * 一张牌都没用 → 保持当前形态，不召唤也不变形。
+# 判据口：`_pronoia_mode()` / `_pronoia_morph()` / `_pronoia_transform()`；
+# 战力口：`_siege_construct_tick()`（炮击：每回合给一个友军 +1 攻）与
+#        `FieldState.has_shield_construct()`（护盾：其他己方单位受伤减半）；
+# 迅捷那一支**没有引擎代码** —— 卡面 `actions: 2` 走现成的 `FieldState.unit_actions()`。
+const PRONOIA_TRAIT:= "普罗诺亚"
+const CONSTRUCT_TRAIT:= "构状体"
+const SIEGE_TRAIT:= "炮击"
+const SHIELD_TRAIT:= "护盾"
+const SWIFT_TRAIT:= "迅捷"
+const PRONOIA_CARD_ID:= 9242
+const SIEGE_CONSTRUCT_ID:= 9243
+const SHIELD_CONSTRUCT_ID:= 9244
+const SWIFT_CONSTRUCT_ID:= 9245
+const PRONOIA_MORPH_COST:= 10       # 召唤一次的自身生命代价（卡面写 10 点）
 # 「填充」（9146，0 费普通技能）：将手牌里一张卡变成聚能炮击。两段式入口 `cast_reload`。
 const RELOAD_ID:= 9146
 # ── R290：机械之心两张伤害技能（集中突破 9162 / 冲击炮 9163）──
@@ -2184,6 +2214,8 @@ func _begin_turn(side: String) -> void :
 		state.self_effect_plays = 0
 		state.self_skill_plays = 0
 		state.self_card_plays = 0
+		# R541：本回合各类卡的张数（普罗诺亚之影读它）—— 与 self_card_plays 同一条生命周期。
+		state.self_turn_kinds.clear()
 		state.self_energy_spent = 0   # 暗影之刃 9111：X = 本回合已花掉的费用，每回合重新记
 		_aether_used = false
 		_aether_left = 0
@@ -2465,6 +2497,11 @@ func _begin_turn(side: String) -> void :
 		_naval_gun(SIDE_OPPONENT)     # R356 舰炮 9201：阶段 1，每回合随机轰击一列
 		_air_raid_fire(SIDE_OPPONENT)   # R451 空袭 9209：敌方行动前砸标记格（只打玩家单位）
 		_revelator_phase_tick(SIDE_OPPONENT)   # R356 阶段 1「自身效果」：每个回合力量 +1
+		# R541 普罗诺亚之影：**先**让已在场的炮击构状体给友军 +1 攻，**再**按玩家上回合的
+		# 出牌类型召唤 / 变形 —— 与「回合开始成长排在召唤之前」同一口径，
+		# 因此刚召唤出来的炮击构状体当回合不吃自己那一口。
+		_siege_construct_tick(SIDE_OPPONENT)
+		_pronoia_morph(SIDE_OPPONENT)
 		_refresh_dark_lord(SIDE_OPPONENT)
 		_refresh_hecaton(SIDE_OPPONENT)
 		_refresh_mnemosyne()           # R271 谟涅摩叙涅：对称保留（敌方正常拿不到）
@@ -8282,6 +8319,14 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 	##   5) 不眠（9101 效果）：结算收尾时手里没牌 → 抽 1 张（0 费卡本回合 +1 费）。
 	if side == SIDE_SELF:
 		state.self_card_plays += 1
+		# R541 普罗诺亚之影（9242）：形态判定读「本回合各类卡各打了几张」。
+		# 累加口只在这里（play_from_hand / use_spell / use_effect / remote_* 全走本函数）；
+		# 清零点在 `_begin_turn()` 的 SIDE_SELF 分支。
+		# ⚠️ `played == null` 的收尾（没有具体卡）不记账 —— 那不是「用了一张某一类的卡」。
+		if played != null:
+			var kind_played: String = played.kind
+			state.self_turn_kinds[kind_played] = \
+					int(state.self_turn_kinds.get(kind_played, 0)) + 1
 		# R523 土元素（9235）：「入场伤害 X = 本场用过的盟友数」读这份计数（R536 起仅它读）。
 		# 只认**盟友卡**（工事 / 技能 / 效果都不算）；累加口就这一处，风元素那条留在
 		# `_mark_spell_enemy_hit` 的伤害计数里，两者互不干扰。
@@ -12035,6 +12080,17 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 			and p.boss_phase >= 3 and _revelator_has_escort(p):
 		_log("启示者（阶段 3）：场上还有随从 → 免疫这次非攻击伤害")
 		return 0
+	# ③c2 R541 护盾构状体（9244）：「这张卡在场时，其他己方单位受到的伤害减半」。
+	#     与量产型赫利俄斯（③）同一条「实时扫场面」通道 —— 构状体被打掉，光环立刻断。
+	#     **向上取整、至少 1 点**（与量产型赫利俄斯同口径；向下取整会把 1 点伤害减成 0）。
+	#     ⚠️ 不按来源分流：卡面写的是「受到的伤害」，攻击 / 技能都吃（与执法者 ②b 同理）。
+	#     ⚠️ 排在 ③d **之前**：技能抗性那条是「最终落地值封顶」，必须让各种减半先算完。
+	if p != null and p.card != null and dmg > 0 and not p.card.traits.has(SHIELD_TRAIT) \
+			and state.has_shield_construct(p.owner):
+		var scb:= dmg
+		dmg = maxi(1, (dmg + 1) / 2)
+		if dmg != scb:
+			_log("%s：伤害 %d → %d（护盾构状体光环，向上取整）" % [p.card.card_name, scb, dmg])
 	# ③d 技能抗性（熔岩巨人 1071，R427 用户口径「受到技能伤害最多为 3 点」）：
 	#     放在减伤链**最后一格**（启示者阶段 3 之后、道具之前）—— 「最多 3 点」说的是
 	#     **最终落地值**：先让各种减伤算完再封顶；顺序反了会把 10 伤算成 1（减 2 再封顶 3 之前的中间值）。
@@ -12157,6 +12213,9 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 		dmg = maxi(1, (dmg + 1) / 2)
 	if dmg > 0 and not is_attack and p.boss_phase == 2:
 		dmg = maxi(1, dmg / 2)
+	# R541 护盾构状体（9244）：与 `_unit_damage_taken()` 的 ③c2 同判据、同位置
+	if dmg > 0 and not p.card.traits.has(SHIELD_TRAIT) and state.has_shield_construct(p.owner):
+		dmg = maxi(1, (dmg + 1) / 2)
 	if dmg > SPELL_RESIST_CAP and not is_attack and p.card.traits.has(SPELL_RESIST_TRAIT):
 		dmg = SPELL_RESIST_CAP    # R427：与 `_unit_damage_taken()` 的 ③d 同位置同理
 	if dmg > 0 and p.owner == SIDE_SELF:
@@ -16783,6 +16842,10 @@ func _ai_act(cell: Vector2i, p: Placement) -> void :
 	if is_leaper(p):
 		_owlbear_act(cell, p)
 		return
+	# R539/R540 激光巨炮：程 0 的工事，通用流程同样只能「原地待命」——整条行动换成开火。
+	if p.card.traits.has(LASER_TRAIT):
+		_laser_cannon_act(cell, p)
+		return
 
 
 
@@ -16895,6 +16958,81 @@ func _owlbear_act(cell: Vector2i, p: Placement) -> void :
 	_leap(cell, best, p.owner)
 
 
+# ================= R539/R540：激光巨炮专属 AI =================
+
+func _laser_column_target(cell: Vector2i, foe: String) -> Vector2i:
+	## 同列「第一个」敌方单位：从激光巨炮所在行朝**对方半场**逐行扫，
+	## 第一个 owner == foe 的格子就是目标；整列扫完都没有 → (-1, -1)。
+	## 只朝一个方向扫（不回头看身后）—— 这就是「第一个」的口径。
+	## 巨炮一轮要打三列，调用方只借它的**行**当起点、列由 `Vector2i(cell.x, col)` 传入。
+	## ⚠️ 不能改成「取曼哈顿最近的敌方单位」：那会把身后的单位也算进来，
+	##    与卡面「同列第一个」不是一件事。
+	var dir: int = 1 if foe == SIDE_SELF else -1
+	var r: int = cell.x + dir
+	while r >= 0 and r < FieldState.BOARD_ROWS:
+		var c:= Vector2i(r, cell.y)
+		var q: Placement = state.unit_at(c)
+		if q != null and q.owner == foe:
+			return c
+		r += dir
+	return Vector2i(-1, -1)
+
+
+func _laser_cannon_act(cell: Vector2i, p: Placement) -> void :
+	## 激光巨炮（9241）的唯一行动：不能常规攻击（程 0）→ 整条行动换成这一轮炮击。
+	## R540「三合一」：三座小炮并成一门巨炮，所以**一轮打满三列**，每列各打自己那一列的
+	## 「第一个」，列与列之间互不替代：
+	##   * 该列有我方单位 → 打**最靠前的那一个**（等同力量的伤害，按攻击类结算）；
+	##   * 该列全空 → 直击对方 HP（护盾代受 / 减伤 / 不锈钢盆都照吃，与 attack_hp 同路）。
+	## 三列是**三次独立结算**：空两列就是两笔 HP —— 不要套 `_hp_once_*`（那是给「单次多格 AOE」
+	## 只落地一次的规则，套上去会把这门炮的「一列一发」压成一发）。
+	## 收尾与 `attack()` / `attack_hp()` 一致：先播报、再收尸、`_tap()` 结束这一轮，
+	## 最后才 `_check_game_over()`（顺序反了会在 over 之后还写日志 / 播动作）。
+	var foe := SIDE_OPPONENT if p.owner == SIDE_SELF else SIDE_SELF
+	var power:= p.effective_power() + _turn_dmg_bonus(p.owner) + _ally_dmg_bonus(p.card, p.owner)
+	var n_hit := 0
+	var n_hp := 0
+	for col in FieldState.BOARD_COLS:
+		if over:
+			break            # 某列已经打空 HP → 后面几列不再开火（胜负已定）
+		var target:= _laser_column_target(Vector2i(cell.x, col), foe)
+		if target.x < 0:
+			# 该列没有目标：直击 HP。横幅落点取对方后排行同列（`hp` 事件本来就这么定位）。
+			var banner:= Vector2i(back_row(foe), col)
+			_log("%s：第 %d 列没有目标 → 直击 HP %d" % [p.card.card_name, col + 1, power])
+			_damage_player(foe, power, "激光巨炮")
+			n_hp += 1
+			action.emit("hp", {"src": cell, "dst": banner, "damage": _last_hp_damage,
+					"raw": power, "side": p.owner, "atk_name": p.card.card_name})
+			continue
+		var q: Placement = state.unit_at(target)
+		if q == null:
+			continue          # 理论上不会发生（同帧内没人能插进来），防御性跳过
+		var hp_before:= q.health
+		q.last_hit_by = cell      # 击杀记功：与普通攻击同一条（鸭子骑士那类「击杀成长」才认得出）
+		var dmg:= _hit_unit(q, power, "激光巨炮", true, true)
+		n_hit += 1
+		_log("%s 轰击第 %d 列第一个目标 %s：-%d 生命（剩 %d）" % [
+				p.card.card_name, col + 1, q.card.card_name, dmg, q.health])
+		# 不践踏：溢出只在「打穿的是对方后排单位」时漏到 HP —— 与 `attack()` 的通用规则一字不差。
+		var overflow:= 0
+		if dmg > hp_before and target.x == back_row(foe):
+			overflow = dmg - maxi(hp_before, 0)
+		action.emit("attack", {"src": cell, "dst": target, "damage": dmg,
+				"side": p.owner, "overflow": overflow,
+				"atk_name": p.card.card_name, "def_name": q.card.card_name})
+		if q.health <= 0 and _reap(target):
+			if overflow > 0:
+				_log("溢出伤害：%d 点越过 %s 漏到 HP" % [overflow, q.card.card_name])
+				_damage_player(foe, overflow, "溢出")
+				action.emit("trample", {"side": foe, "amount": _last_hp_damage, "src": cell,
+						"dst": target, "atk_name": p.card.card_name,
+						"def_name": q.card.card_name})
+	_tap(p, "激光巨炮：%d 列命中 / %d 列直击 HP" % [n_hit, n_hp])
+	_check_game_over()
+
+
+
 # ================= R111：鸭子暗杀者专属 AI =================
 
 func _assassin_other_ally(p: Placement) -> bool:
@@ -16968,6 +17106,177 @@ func _assassin_step(src: Vector2i, p: Placement) -> Variant:
 	if best == src:
 		return null
 	return best
+
+
+# ================= R541：普罗诺亚之影（9242）=================
+#
+# 它不是「专属 AI」型单位（有程 1 / 速 1，走通用 AI 正常推进 + 攻击）；
+# 全部特色发生在**敌方回合开始时**（`_begin_turn` 的 SIDE_OPPONENT 分支）：
+#   ① `_siege_construct_tick()` —— 已在场的炮击构状体给一个友军 +1 力量；
+#   ② `_pronoia_morph()` —— 按玩家上回合的出牌类型召唤 / 变形构状体。
+# 顺序不能反：先成长、后召唤（与既有的「回合开始成长排在召唤之前」同口径）。
+
+func _pronoia_find(side: String) -> Array:
+	## 返回 `[普罗诺亚之影的格子, 当前构状体的格子]`，没有的那项是 `Vector2i(-1, -1)`。
+	## 两个都取 `entry_seq` 最小的那个（本关各只有一只，纯粹为了确定性与回放可复现）。
+	var boss := Vector2i(-1, -1)
+	var boss_seq := 1 << 30
+	var cons := Vector2i(-1, -1)
+	var cons_seq := 1 << 30
+	for cell: Vector2i in state.board:
+		var p: Placement = state.board[cell]
+		if p == null or p.owner != side or p.card == null:
+			continue
+		if p.card.traits.has(PRONOIA_TRAIT) and p.entry_seq < boss_seq:
+			boss = cell
+			boss_seq = p.entry_seq
+		if p.card.traits.has(CONSTRUCT_TRAIT) and p.entry_seq < cons_seq:
+			cons = cell
+			cons_seq = p.entry_seq
+	return [boss, cons]
+
+
+func _pronoia_mode() -> String:
+	## 「对方本回合使用最多的卡牌类型」→ 形态：`"siege"` / `"shield"` / `"swift"`。
+	## 分组按卡面：盟友 + 工事 / 技能 + 场地 / 其余（效果、诅咒…）。
+	## **平手时前面的档位先胜**（`>=`）—— 玩家能预测，也能主动把结果推向某一支；
+	## 换成随机会让这关的读牌变成猜拳，与「根据敌人行动改变策略」的题面相反。
+	## 一张牌都没用 → `""`（保持当前形态：不召唤、不变形）。
+	var ally := int(state.self_turn_kinds.get("盟友", 0)) + int(state.self_turn_kinds.get("工事", 0))
+	var skill := int(state.self_turn_kinds.get("技能", 0)) + int(state.self_turn_kinds.get("场地", 0))
+	var other := 0
+	for k in state.self_turn_kinds:
+		var ks := str(k)
+		if ks == "盟友" or ks == "工事" or ks == "技能" or ks == "场地":
+			continue
+		other += int(state.self_turn_kinds[k])
+	if ally + skill + other <= 0:
+		return ""
+	if ally >= skill and ally >= other:
+		return "siege"
+	if skill >= ally and skill >= other:
+		return "shield"
+	return "swift"
+
+
+func _pronoia_proto(mode: String) -> CardData:
+	## 形态 → 卡（**独立副本**：`from_dict` + traits / affixes 深拷，改它不会串到卡库）。
+	var cid := SIEGE_CONSTRUCT_ID
+	if mode == "shield":
+		cid = SHIELD_CONSTRUCT_ID
+	elif mode == "swift":
+		cid = SWIFT_CONSTRUCT_ID
+	var repo := CardRepo.load_json()
+	if repo == null:
+		return null
+	var base: CardData = repo.get_card(cid)
+	if base == null:
+		push_error("普罗诺亚之影：卡库缺少构状体 %d" % cid)
+		return null
+	var copy := CardData.from_dict(base.to_dict())
+	copy.traits = (copy.traits as Array).duplicate()
+	copy.affixes = (copy.affixes as Array).duplicate()
+	return copy
+
+
+func _pronoia_morph(side: String) -> void :
+	## 敌方回合开始时结算一次。三种结果：
+	##   * 没出牌 → 保持（只写一句日志）；
+	##   * 场上没有构状体（= 它是唯一的己方单位）→ 扣 `PRONOIA_MORPH_COST` 生命召唤一个；
+	##   * 已有构状体 → 原地变形，**保留已受伤害**。
+	## ⚠️ 生命不足时**不召唤**（不让它把自己扣死）：这关的胜负不该是「对面自爆」。
+	var found := _pronoia_find(side)
+	var boss_cell: Vector2i = found[0]
+	if boss_cell.x < 0:
+		return
+	var mode := _pronoia_mode()
+	if mode == "":
+		_log("普罗诺亚之影：对方本回合没有使用任何卡牌 → 保持当前形态")
+		return
+	var proto := _pronoia_proto(mode)
+	if proto == null:
+		return
+	var cons_cell: Vector2i = found[1]
+	if cons_cell.x >= 0:
+		_pronoia_transform(cons_cell, proto, side, mode)
+		return
+	var boss: Placement = state.unit_at(boss_cell)
+	if boss == null:
+		return
+	if boss.health <= PRONOIA_MORPH_COST:
+		_log("普罗诺亚之影：生命只剩 %d，不足以支付 %d 点召唤代价 → 保持当前形态" % [
+				boss.health, PRONOIA_MORPH_COST])
+		return
+	var spot := _free_cell_near(boss_cell, side)
+	if spot == Vector2i(-1, -1):
+		_log("普罗诺亚之影：己方半场没有空位 → 本回合召唤失败")
+		return
+	boss.health -= PRONOIA_MORPH_COST
+	_log("普罗诺亚之影：损失 %d 点生命（剩 %d）→ 召唤 %s（%s）" % [
+			PRONOIA_MORPH_COST, boss.health, proto.card_name, spot])
+	var summoned := state.place(proto, spot, side, true)
+	action.emit("place", {"cell": spot, "card": proto, "side": side, "summon": true})
+	action.emit("pronoia_morph", {"cell": spot, "old": null, "new": proto,
+			"mode": mode, "summon": true, "cost": PRONOIA_MORPH_COST,
+			"hp": boss.health, "src": boss_cell})
+	_on_ally_entered(summoned, side)
+
+
+func _pronoia_transform(cell: Vector2i, proto: CardData, side: String, mode: String) -> void :
+	## 「当前构状体变成对应形态（保留受伤）」—— 原地换卡，**不走 `place`**：
+	##   * `place` 会把生命重置成满血、重发行动轮、重跑入场（那是「新单位」的语义）；
+	##   * 这里是**同一只构状体换了个形态**：生命按「已损失量」平移，行动轮按新卡重算，
+	##     不触发任何入场 / 亡语 / 击杀记账。
+	## 三档最大生命都是 50，所以「保留受伤」不会因为换血上限而被打死；仍夹一个 `maxi(1, …)` 兜底。
+	var old: Placement = state.unit_at(cell)
+	if old == null or old.card == null:
+		return
+	if old.card.id == proto.id:
+		_log("普罗诺亚之影：构状体已经是 %s → 形态不变" % proto.card_name)
+		return
+	var old_card: CardData = old.card
+	var lost := maxi(0, old_card.health - old.health)
+	old.card = proto
+	old.health = maxi(1, proto.health - lost)
+	old.acts_left = state.unit_actions(old, side)
+	old.acts_total = old.acts_left
+	_log("普罗诺亚之影：%s → %s（保留已受 %d 点伤害，现 %d/%d）" % [
+			old_card.card_name, proto.card_name, lost, old.health, proto.health])
+	action.emit("pronoia_morph", {"cell": cell, "old": old_card, "new": proto,
+			"old_name": old_card.card_name, "mode": mode, "summon": false,
+			"lost": lost, "health": old.health, "max": proto.health})
+
+
+func _siege_construct_tick(side: String) -> void :
+	## 炮击构状体（9243）：「每个回合开始时，使一个其他友方单位力量 +1」。
+	## 挑谁：**当前力量最高**的那个友方单位（同力量取 `entry_seq` 小的）——
+	## 增益落在最吃力量的人身上，且不带随机，回放天然可复现。
+	## 走 `atk_buff`（与鸭子骑士 / 启示者同一条「永久累计、无上限」通道）：
+	## ⚠️ 不能用 `_apply_growth` 那种 `GROW_CAP` 封顶的口，卡面没写上限。
+	for cell: Vector2i in state.board:
+		var p: Placement = state.board[cell]
+		if p == null or p.owner != side or p.card == null:
+			continue
+		if not p.card.traits.has(SIEGE_TRAIT):
+			continue
+		var best: Placement = null
+		var best_cell := Vector2i(-1, -1)
+		for c2: Vector2i in state.board:
+			var q: Placement = state.board[c2]
+			if q == null or q.owner != side or q == p:
+				continue
+			if best == null or q.effective_power() > best.effective_power() \
+					or (q.effective_power() == best.effective_power() and q.entry_seq < best.entry_seq):
+				best = q
+				best_cell = c2
+		if best == null:
+			_log("%s：场上没有其他友方单位 → 本回合力量 +1 落空" % p.card.card_name)
+			continue
+		best.atk_buff += 1
+		_log("%s：使 %s 力量 +1（现 %d）" % [
+				p.card.card_name, best.card.card_name, best.effective_power()])
+		action.emit("construct_grow", {"cell": best_cell, "amount": 1,
+				"name": best.card.card_name, "src": cell})
 
 
 func _assassin_act(cell: Vector2i, p: Placement) -> void :

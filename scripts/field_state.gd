@@ -60,6 +60,13 @@ var void_dmg_spells := 0       # 风元素 9082：本次对战中「用技能牌
 ## 只在本场战斗内累计（每场战斗新建 FieldState 即归零），累加口 `GameEngine._note_card_played`。
 ## ⚠️ R536：旧土元素 9218（按这份计数减费）已删除，现在只有 9235 读它。
 var self_ally_plays := 0
+## R541：**本回合我方打出的卡按 kind 计数**（"盟友" / "工事" / "技能" / "场地" / "效果" / "诅咒"）。
+## 唯一累加口 = `GameEngine._note_card_played()`（所有出牌路径的收尾），
+## 唯一清零点 = `GameEngine._begin_turn()` 的 SIDE_SELF 分支。
+## 唯一消费方 = 普罗诺亚之影 9242 的形态判定（`GameEngine._pronoia_mode()`）——
+## 「对方本回合用得最多的是哪一类」就是这张表的 argmax。
+## ⚠️ 只记本回合、只记我方；敌方回合开始时读它，玩家新回合开始即清空。
+var self_turn_kinds := {}
 ## R140：本局「消失」的卡数（消耗区计数）—— 离场消失 / 用后消失 / 从抽牌库抹除，
 ## 共同点 = **不进弃牌区、也不回手牌**，等于从本场牌组里抹掉。累加口见各处
 ## `void_count += 1`（FieldState.discard_hand / GameEngine 的 use_spell·_destroy·
@@ -440,6 +447,19 @@ func has_enforcer_minion(side: String) -> bool:
 	return false
 
 
+func has_shield_construct(side: String) -> bool:
+	## 「护盾构状体」（9244）是否在**该方场上** —— 「除自己以外的己方单位受到的伤害减半」
+	## 这条光环的**唯一开关**，与 `has_mass_helios` / `has_sun_forge` 同范式：
+	## 每回合实时扫场面、绝不烤进 CardData —— 「构状体被打掉 → 光环立刻断」是免费的。
+	## ⚠️ 按 **trait** 判（`GameEngine.SHIELD_TRAIT`），不判卡 id：三种构状体共用「构状体」，
+	##    只有护盾这一支带「护盾」。
+	## ⚠️ 光环**不含光源自己**（卡面是「其他己方单位」），那条判据在 `_unit_damage_taken` 里补。
+	for p: Placement in board.values():
+		if p.owner == side and p.card != null and p.card.traits.has(GameEngine.SHIELD_TRAIT):
+			return true
+	return false
+
+
 func has_sun_forge(side: String) -> bool:
 	## 「太阳熔炉」的太阳装置（赫利俄斯 9130）是否在**该方场上**。
 	## 它是「量产型俄倪厄双动」与「俄倪厄每回合回血」两条光环的**唯一开关**，
@@ -589,7 +609,7 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	#    玩家主动出牌（play_from_hand）照旧吃哈气 —— 那是「他自己花费用打出来的」。
 	p.acts_left = 1 if summon else unit_actions(p, owner)
 	p.acts_total = p.acts_left      # R462：发了几轮就记几轮（之后补行动只按差额算）
-	# 沉睡（恶魔鸭 9116）：带「沉睡」trait 的单位一上场就开始睡（SLEEP_TURNS 点）。
+	# 沉睡（恶魔鸭 9116 / 激光炮 9241）：带「沉睡」trait 的单位一上场就开始睡（SLEEP_TURNS 点）。
 	# 放在 place 里 = 唯一初始化口，关卡摆位 / 效果卡召唤出来的都算。
 	if card.traits.has(SLEEP_TRAIT):
 		p.sleep_left = SLEEP_TURNS
