@@ -284,6 +284,7 @@ const ASSEMBLE_TRIGGERS: Array[String] = [
 ## 拼装动作 type 白名单（见拼装机制设计.md §2.2）。
 const ASSEMBLE_EFFECT_TYPES: Array[String] = [
 	"draw", "buff", "damage", "heal", "shield", "taunt",
+	"summon", "upgrade", "energy", "knockback", "freeze", "stun",
 ]
 
 

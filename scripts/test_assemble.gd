@@ -75,6 +75,8 @@ func _init() -> void:
 	check(state.hand.has(base) and base.assemble.is_empty(), "cancel preserves source")
 	_test_extended_triggers()
 	_test_source_locks()
+	_test_new_actions()
+	_test_formal_pool()
 	print("Assembly tests failures: ", failures)
 	quit(failures)
 
@@ -163,3 +165,90 @@ func _test_source_locks() -> void:
 	check(eng.count("_assemble_active") >= 3, "源码锁：防重入标记")
 	check(eng.count("_assemble_opponent_draw") >= 3 and eng.count("_assemble_draw_one") >= 3,
 			"源码锁：抽牌双口覆盖")
+
+func _test_new_actions() -> void:
+	# energy：回复费用
+	var e1 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e1.ai_enabled = false
+	var p1 := _probe_unit(e1, "use")
+	e1.state.energy = 0
+	p1.card.assemble = {"trigger":"use", "effects":[{"type":"energy","value":3}]}
+	e1._assemble_execute(p1, Vector2i(3, 0), "use")
+	check(e1.state.energy == 3, "energy gain")
+	# upgrade：永久改造 +N力+N生，记层
+	var e2 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e2.ai_enabled = false
+	var p2 := _probe_unit(e2, "use")
+	p2.upgrade_stacks = 0
+	var hp0: int = p2.health
+	p2.card.assemble = {"trigger":"use", "effects":[{"type":"upgrade","value":2}]}
+	e2._assemble_execute(p2, Vector2i(3, 0), "use")
+	check(p2.upgrade_atk == 2 and p2.upgrade_hp == 2 and p2.upgrade_stacks == 1, "upgrade permanent +stack")
+	check(p2.health == hp0 + 2, "upgrade hp")
+	# summon：召唤 2 个骷髅（9029）
+	var e3 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e3.ai_enabled = false
+	var p3 := _probe_unit(e3, "use")
+	p3.card.assemble = {"trigger":"use", "effects":[{"type":"summon","value":9029,"count":2}]}
+	e3._assemble_execute(p3, Vector2i(3, 0), "use")
+	var tokens := 0
+	for c: Vector2i in e3.state.board:
+		if e3.state.board[c].card.id == 9029:
+			tokens += 1
+	check(tokens == 2, "summon two tokens")
+	# damage random：随机打一个敌人
+	var e4 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e4.ai_enabled = false
+	var p4 := _probe_unit(e4, "use")
+	var foe := _probe_unit(e4, "", Vector2i(2, 0), "opponent")
+	var foe2 := _probe_unit(e4, "", Vector2i(2, 1), "opponent")
+	foe.health = 50
+	foe2.health = 50
+	p4.card.assemble = {"trigger":"use", "effects":[{"type":"damage","value":5,"target":"random"}]}
+	e4._assemble_execute(p4, Vector2i(3, 0), "use")
+	check(foe.health + foe2.health == 95, "damage random hits exactly one")
+	# knockback：击退最近敌人 2 格
+	var e5 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e5.ai_enabled = false
+	var p5 := _probe_unit(e5, "use")
+	var kb_foe := _probe_unit(e5, "", Vector2i(2, 0), "opponent")
+	p5.card.assemble = {"trigger":"use", "effects":[{"type":"knockback","value":2}]}
+	e5._assemble_execute(p5, Vector2i(3, 0), "use")
+	check(e5.state.unit_at(Vector2i(0, 0)) == kb_foe, "knockback pushed 2")
+	# freeze：冰封最近敌人
+	var e6 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e6.ai_enabled = false
+	var p6 := _probe_unit(e6, "use")
+	var fr_foe := _probe_unit(e6, "", Vector2i(2, 0), "opponent")
+	p6.card.assemble = {"trigger":"use", "effects":[{"type":"freeze"}]}
+	e6._assemble_execute(p6, Vector2i(3, 0), "use")
+	check(fr_foe.frozen, "freeze nearest")
+	# stun：眩晕最近敌人
+	var e7 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e7.ai_enabled = false
+	var p7 := _probe_unit(e7, "use")
+	var st_foe := _probe_unit(e7, "", Vector2i(2, 0), "opponent")
+	p7.card.assemble = {"trigger":"use", "effects":[{"type":"stun"}]}
+	e7._assemble_execute(p7, Vector2i(3, 0), "use")
+	check(st_foe.stun_left > 0, "stun nearest")
+
+func _test_formal_pool() -> void:
+	# 正式池 assemble_pools.json 能被引擎加载，主体卡 8083 端到端走通拼装
+	var eng := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng.ai_enabled = false
+	check(eng.load_assemble_pools("res://assemble_pools.json"), "formal pool loads")
+	check(eng.assemble_pools.has("default"), "default pool registered")
+	var repo := CardRepo.load_json()
+	var base := repo.get_card(8083)
+	check(base != null and base.traits.has("拼装") and base.assemble_pool == "default", "formal card 8083")
+	if base == null:
+		return
+	var card := CardData.from_dict(base.to_dict())
+	eng.state.hand.append(card)
+	eng.state.energy = 10
+	check(eng.assemble_begin(0, Vector2i(4, 1)), "formal begin")
+	check(eng.assemble_choose(0) and eng.assemble_choose(0), "formal pick upper+lower")
+	check(eng.assemble_choices().size() == 2, "formal order previews")
+	check(eng.assemble_choose(0), "formal commit")
+	var placed: Placement = eng.state.unit_at(Vector2i(4, 1))
+	check(placed != null and not placed.card.assemble.is_empty(), "formal placed with assembly")

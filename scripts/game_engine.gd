@@ -17745,21 +17745,62 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 			"taunt":
 				p.card = CardData.from_dict(p.card.to_dict())
 				p.card.add_affix("嘲讽")
+			"summon":
+				_summon_token(int(fx.get("value", 0)), cell, p.owner, int(fx.get("count", 1)))
+			"upgrade":
+				p.card = CardData.from_dict(p.card.to_dict())
+				p.card.traits = (p.card.traits as Array).duplicate()
+				p.upgrade_atk += value
+				p.upgrade_hp += value
+				_add_upgrade_stack(p)
+				p.card.health += value
+				p.health += value
+			"energy":
+				if p.owner == SIDE_SELF:
+					state.energy += value
+				else:
+					state.opp_energy += value
+			"knockback":
+				var kb_cell := _assemble_nearest_enemy_cell(p, cell)
+				if kb_cell != Vector2i(-1, -1):
+					_knockback(p.owner, kb_cell, value)
+			"freeze":
+				var fr_cell := _assemble_nearest_enemy_cell(p, cell)
+				if fr_cell != Vector2i(-1, -1):
+					_apply_frozen(state.board[fr_cell], "拼装")
+			"stun":
+				var st_cell := _assemble_nearest_enemy_cell(p, cell)
+				if st_cell != Vector2i(-1, -1):
+					_apply_stun(state.board[st_cell], "拼装")
 			"damage":
-				var targets: Array[Vector2i] = []
-				for target in state.board:
-					if state.board[target].owner != p.owner:
-						targets.append(target)
+				var targets: Array[Vector2i] = _assemble_enemy_cells(p)
 				if targets.is_empty():
 					_log("拼装：没有敌方目标")
 					continue
-				if fx.get("target", "nearest") == "nearest":
-					targets = [_pick_nearest(cell, targets)]
+				match str(fx.get("target", "nearest")):
+					"nearest":
+						targets = [_pick_nearest(cell, targets)]
+					"random":
+						targets = [targets[rng.randi_range(0, targets.size() - 1)]]
 				for target in targets:
 					if state.board.has(target):
 						_hit_unit(state.board[target], value, "拼装")
 
 	_assemble_active.erase(execution_key)
+
+func _assemble_enemy_cells(p: Placement) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for target: Vector2i in state.board:
+		if state.board[target].owner != p.owner:
+			cells.append(target)
+	return cells
+
+func _assemble_nearest_enemy_cell(p: Placement, cell: Vector2i) -> Vector2i:
+	var cells := _assemble_enemy_cells(p)
+	if cells.is_empty():
+		_log("拼装：没有敌方目标")
+		return Vector2i(-1, -1)
+	return _pick_nearest(cell, cells)
 
 func load_assemble_pools(path: String = "res://assemble_pools.json") -> bool:
 	if not FileAccess.file_exists(path):
