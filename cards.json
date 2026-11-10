@@ -6453,6 +6453,49 @@
       "target_mode": "none",
       "color": "绿",
       "image": ""
+    },
+    {
+      "id": 9246,
+      "name": "宝石兽",
+      "kind": "盟友",
+      "cost": 1,
+      "power": 1,
+      "health": 1,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 1,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [
+        "宝石兽"
+      ],
+      "effect_text": "死亡时，组合一张卡。",
+      "target_mode": "none",
+      "color": "绿",
+      "image": "",
+      "combo_trigger": "death"
+    },
+    {
+      "id": 9247,
+      "name": "拼装工厂",
+      "kind": "工事",
+      "cost": 3,
+      "power": 0,
+      "health": 12,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [
+        "工事",
+        "拼装工厂"
+      ],
+      "effect_text": "回合开始时，组合一张卡。",
+      "target_mode": "none",
+      "color": "灰",
+      "image": "",
+      "combo_trigger": "turn_start"
     }
   ]
 }

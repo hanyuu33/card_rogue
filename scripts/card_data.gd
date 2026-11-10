@@ -282,6 +282,14 @@ var lower_effect: Dictionary = {}
 ## 与 `enchant` 刻意分开：它不是商店附魔 —— 不进随机附魔池，也不算「同一张卡不能重复附魔」的已附魔状态，
 ## 更不会在卡面上渲染成 buff 条（R565 用户口径：要费用下面的专属印记，不要「组合」这个 buff）。
 var combine_mark: bool = false
+## R572：卡自带的「组合一张卡」钩子 —— 与 `assemble` **刻意分开**。
+## `assemble` 是「组合产物的效果」（那套动作白名单 `ASSEMBLE_EFFECT_TYPES` 是给组合产物用的，
+## 若把「组合一张卡」也加进去，玩家就能组合出「再组合一张卡」的动作，无限套娃）。
+## 这是卡自带能力（跟卡走、不跟扳机结算），和 R570 老虎的静态句同一个口径。
+##   · `combo_trigger`："" = 不触发；"death" = 死亡时（宝石兽 9246）；"turn_start" = 自己回合开始时（拼装工厂 9247）
+##   · `combo_scope`  ："" = **本角色卡池**（用户口径默认）；"all" = 全角色卡池
+var combo_trigger: String = ""
+var combo_scope: String = ""
 
 ## 组合已知时机 key（用于识别历史数据；实际允许列表和黑名单以 assemble_rules.gd 为准）。
 const ASSEMBLE_TRIGGERS: Array[String] = [
@@ -394,6 +402,9 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.upper_effect = (d.get("upper_effect", {}) as Dictionary).duplicate(true)
 	c.lower_effect = (d.get("lower_effect", {}) as Dictionary).duplicate(true)
 	c.combine_mark = bool(d.get("combine_mark", false))
+	# R572：组合钩子必须随复制 / 离场还原 / 联机通道走 —— 漏了它，一张宝石兽被复制出来就不会再给组合。
+	c.combo_trigger = str(d.get("combo_trigger", ""))
+	c.combo_scope = str(d.get("combo_scope", ""))
 	return c
 
 
@@ -462,6 +473,9 @@ func to_dict() -> Dictionary:
 		"lower_effect": lower_effect.duplicate(true),
 		# R565：组合专属印记随复制 / 离场还原通道走，漏了它卡一进战场印记就没了。
 		"combine_mark": combine_mark,
+		# R572：组合钩子同理（宝石兽 / 拼装工厂）。
+		"combo_trigger": combo_trigger,
+		"combo_scope": combo_scope,
 	}
 
 

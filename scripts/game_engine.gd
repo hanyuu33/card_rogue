@@ -2528,6 +2528,9 @@ func _begin_turn(side: String) -> void :
 			FieldState.ENERGY_PER_TURN, FieldState.HAND_DRAW_PER_TURN])
 
 	_assemble_tick(side, "turn_start")
+	# R572：卡自带的「回合开始时，组合一张卡」（拼装工厂 9247）—— 排在组合时机结算之后，
+	# 与「回合开始成长先于召唤」的既有口径一致：场上已有的工事这一拍就生效。
+	_combo_tick(side, "turn_start")
 
 
 func enable_enemy_effects(cards: Array[CardData]) -> void :
@@ -13023,6 +13026,10 @@ func _battlecry_ash(cell: Vector2i, p: Placement) -> void :
 
 func _deathrattle(cell: Vector2i, p: Placement) -> void :
 	_assemble_execute(p, cell, "death")
+	# R572：卡自带的「死亡时，组合一张卡」（宝石兽 9246）。
+	# 死亡的单位已经不在 board 上，所以不能靠 `_combo_tick` 遍历 —— 直接认 `combo_trigger` 字段。
+	if p.card != null and p.owner == SIDE_SELF and str(p.card.combo_trigger) == "death":
+		_open_combo("%s（死亡时）" % p.card.card_name, _combo_scope_of(p.card))
 	# R227 生命循环：被本卡点过的单位被破坏 → 加一张随机盟友卡到手卡。
 	# ⚠️ 只认 Placement 标记（不认「死亡」字段 —— 那是通用标记，别的卡也带）。
 	if p.life_cycle:
@@ -17735,6 +17742,9 @@ var _combo_cards: Array = []
 var _combo_attr := -1
 var _combo_upper := -1
 var _combo_lower := -1
+## R572：排队中的组合机会（pending 期间又来一次 → 记这里，当前这次确认/落空后立刻开下一次）。
+## 元素 = {"label": 来源名, "scope": 候选池范围}；scope = "" = 全角色，其余 = 该角色卡池。
+var _combo_queue: Array = []
 func _note_unit_entered(p: Placement, _how: String) -> void:
 	if p != null:
 		_assemble_execute(p, _cell_of(p), "enter")
@@ -17931,11 +17941,15 @@ func _assemble_nearest_enemy_cell(p: Placement, cell: Vector2i) -> Vector2i:
 func _assemble_busy() -> bool:
 	return assemble_combo_pending
 
-func _combo_candidate_cards() -> Array:
-	## 可组合候选：全角色卡池里同时带 upper_effect + lower_effect 的盟友/工事卡。
+func _combo_candidate_cards(class_scope := "") -> Array:
+	## 可组合候选：同时带 upper_effect + lower_effect 的盟友/工事卡。
+	## R572：`class_scope` = "" → 全角色卡池（传授卡沿用的既有行为）；
+	## 否则只取该角色的卡（用户口径「没有声明全卡池则默认本角色卡池」，见 `_combo_scope_of`）。
 	var out: Array = []
 	var repo := CardRepo.load_json()
 	for c: CardData in repo.all_cards():
+		if class_scope != "" and c.card_class != class_scope:
+			continue
 		if (c.kind == "盟友" or c.kind == "工事") and c.group == "player" \
 				and not c.upper_effect.is_empty() and not c.lower_effect.is_empty():
 			out.append(c)
@@ -17949,20 +17963,66 @@ func _pick_random_cards(pool: Array, n: int) -> Array:
 		out.append(src.pop_at(rng.randi_range(0, src.size() - 1)))
 	return out
 
-func _teach_spell(side: String) -> String:
-	if side != SIDE_SELF:
-		return "（传授：敌方 AI 不使用这张卡）"
-	var pool := _combo_candidate_cards()
+func _combo_scope_of(card: CardData) -> String:
+	## R572：组合候选池范围 —— 卡上声明 `combo_scope = "all"` → 全角色卡池；
+	## 否则**本角色**（用户口径「没有声明全卡池则默认本角色卡池」）。
+	return "" if card != null and str(card.combo_scope) == "all" else \
+			(str(card.card_class) if card != null else "")
+
+
+func _open_combo(label: String, class_scope := "") -> bool:
+	## R572：「组合一张卡」的**唯一入口**。三条来源共用这一段：
+	##   · 传授卡 8084/8085/8086 打出（`_teach_spell`，`class_scope = ""` 全角色，既有行为）
+	##   · 宝石兽 9246 死亡时（`_deathrattle`）／拼装工厂 9247 回合开始时（`_combo_tick`）
+	##     —— 传自己的角色 = 本角色卡池
+	## ⚠️ pending 期间又来一次机会 → **排队**，不许直接覆盖（覆盖 = 前一次组合机会白丢）。
+	if over:
+		return false
+	if assemble_combo_pending:
+		_combo_queue.append({"label": label, "scope": class_scope})
+		_log("组合：%s 的机会已排队（当前这次完成后继续）" % label)
+		return true
+	var pool := _combo_candidate_cards(class_scope)
 	if pool.size() < 3:
-		_log("传授：可组合的盟友/工事卡不足（%d 张）" % pool.size())
-		return "（传授：可组合的盟友/工事卡不足）"
+		_log("组合：%s 可用的盟友/工事卡不足（%d 张）" % [label, pool.size()])
+		return false
 	_combo_cards = _pick_random_cards(pool, 6)
 	_combo_attr = -1
 	_combo_upper = -1
 	_combo_lower = -1
 	assemble_combo_pending = true
-	_log("传授：进入组合，从 %d 张盟友/工事卡中拖 3 张" % _combo_cards.size())
+	_log("组合：%s，从 %d 张%s卡中拖 3 张" % [label, _combo_cards.size(),
+			"全角色" if class_scope == "" else class_scope])
 	action.emit("assemble_combo", {})
+	return true
+
+
+func _combo_tick(side: String, trigger: String) -> void:
+	## R572：卡自带的「组合一张卡」钩子（遍历**场上**单位）。
+	## 死亡时那一路在 `_deathrattle` 里单独挂 —— 死亡的单位已经不在 board 上，遍历不到。
+	## ⚠️ 不走 `assemble` 字段：那是「组合产物的效果」，会进 `ASSEMBLE_EFFECT_TYPES` 白名单，
+	## 玩家就能组合出「再组合一张卡」的动作（无限套娃）。卡自带能力与 R570 静态句同一口径。
+	if side != SIDE_SELF or over:
+		return
+	for p: Placement in state.board.values().duplicate():
+		if p.owner != side or p.card == null:
+			continue
+		if _cell_of(p) == Vector2i(-1, -1):
+			continue
+		if str(p.card.combo_trigger) != trigger:
+			continue
+		_open_combo("%s（%s）" % [p.card.card_name, "回合开始时" if trigger == "turn_start" else trigger],
+				_combo_scope_of(p.card))
+
+
+func _teach_spell(side: String) -> String:
+	## R572：传授卡的「组合一张卡」也收敛到 `_open_combo` —— 与宝石兽 / 拼装工厂共用同一段，
+	## 免得「打开组合页」出现第二份实现（排队 / pending / 候选池口径一漂移就是两套行为）。
+	## 传授卡不声明 `combo_scope` → 沿用既有行为：全角色卡池。
+	if side != SIDE_SELF:
+		return "（传授：敌方 AI 不使用这张卡）"
+	if not _open_combo("传授", ""):
+		return "（传授：组合机会未开启）"
 	return "进入组合"
 
 func assemble_combo_cards() -> Array:
@@ -18031,6 +18091,15 @@ func assemble_combo_cancel() -> void:
 	_combo_attr = -1
 	_combo_upper = -1
 	_combo_lower = -1
+	# R572：排队中的组合机会 → 立刻开下一次。UI 的关页走 `close.call_deferred()`，
+	# 下一帧 `_sync_pick` 看到 pending 又为 true 且页已关，会用新候选重开页面。
+	if over:
+		_combo_queue.clear()
+		return
+	if _combo_queue.is_empty():
+		return
+	var next: Dictionary = _combo_queue.pop_front()
+	_open_combo(str(next.get("label", "组合")), str(next.get("scope", "")))
 
 func _assemble_opponent_draw(count: int) -> void:
 	# Enemy uses an abstract hand counter; mirror its actual count gain.

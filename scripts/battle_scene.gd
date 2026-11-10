@@ -8874,6 +8874,11 @@ func _ai_step() -> void:
 	# R362：诅咒展示同理 —— 演出没播完就别推 AI 的下一步。
 	if _death_wait() or _curse_busy():
 		return
+	# R572：组合页挂着 → AI 这一拍不动。宝石兽可能在**敌方回合**被打死并立刻给一次组合，
+	# 页面全屏盖着；AI 要是继续打，玩家就只能盲着拖卡（而且 pending 期间玩家操作本来就被锁）。
+	# 玩家确认 / 落空后 pending 清掉，时间器下一拍自然续上。
+	if engine.assemble_combo_pending:
+		return
 	if engine.over:
 		_ai_timer.stop()
 		status_text = "对局结束：%s（%s）" % [engine.result, engine.result_reason]

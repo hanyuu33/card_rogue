@@ -80,6 +80,7 @@ func _init() -> void:
 	_test_r569_pool_forms()
 	_test_r570_actions()
 	_test_r571_no_cancel()
+	_test_r572_combo_hooks()
 	print("Combination tests failures: ", failures)
 	quit(failures)
 
@@ -542,7 +543,17 @@ func _test_retired_assemble() -> void:
 	for id in [8083, 8087, 8088]:
 		check(repo.get_card(id) == null, "R561：拼装主体卡 %d 已移除" % id)
 	var raw := FileAccess.get_file_as_string("res://cards.json")
-	check(not raw.contains("拼装"), "R561：cards.json 不含「拼装」字样")
+	# ⚠️ R572：用户新加了一张卡就叫「拼装工厂」9247 —— 原来那条「cards.json 不含『拼装』二字」
+	# 的字面锁直接失效。原意是「旧拼装机制的**措辞**不许复活」，所以判据收到卡面效果文本
+	# （卡名不算），仍然锁得住「不许把旧机制写回卡面」。
+	var parsed: Variant = JSON.parse_string(raw)
+	var all_cards: Array = (parsed as Dictionary).get("cards", []) if parsed is Dictionary else parsed
+	var bad_text: Array = []
+	for c in all_cards:
+		if str((c as Dictionary).get("effect_text", "")).contains("拼装"):
+			bad_text.append((c as Dictionary).get("id", 0))
+	check(bad_text.is_empty(),
+			"R561：卡面效果文本不含「拼装」措辞（R572 起卡名「拼装工厂」例外）：%s" % str(bad_text))
 	check(not raw.contains("assemble_pool"), "R561：cards.json 不含 assemble_pool 字段")
 	check(not FileAccess.file_exists("res://assemble_pools.json"), "R561：半句池文件已删除")
 	var src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
@@ -1128,3 +1139,83 @@ func _test_r571_no_cancel() -> void:
 	check(ov.find("var can := _preview_card() != null") >= 0,
 			"R571 源码锁：确认按钮可用判据 = 填满且 build 得出产物")
 	check(ov.find("必须完成") >= 0, "R571：右键 / ESC 只提示「必须完成」，不留放弃口")
+
+
+func _test_r572_combo_hooks() -> void:
+	## R572（用户口径）：「新增森林精魄稀有盟友：宝石兽。1费1/1/1/1。死亡时，组合一张卡。
+	## （没有声明全卡池则默认本角色卡池，组合后加入手卡）新增机械之心稀有工事：拼装工厂：
+	## 3费0/12/0。回合开始时，组合一张卡。」
+	## 这两张把「组合」从「打出传授卡」变成**卡自带钩子**，所以锁四件事：
+	##   ① 数据（费用 / 四维 / 稀有度 / 角色 / combo_trigger / 卡面文本）；
+	##   ② 钩子真的开页，且候选池 = 本角色；
+	##   ③ pending 期间再来一次 → 排队不丢，当前这次结束立刻接上；
+	##   ④ 不许走 assemble 白名单（否则玩家能组合出「再组合一张卡」，无限套娃）。
+	var repo := CardRepo.load_json()
+	var gem: CardData = repo.get_card(9246)
+	var fac: CardData = repo.get_card(9247)
+	check(gem != null and gem.card_name == "宝石兽" and gem.kind == "盟友"
+			and gem.card_class == "森林精魄" and gem.rarity == 1 and gem.cost == 1
+			and gem.power == 1 and gem.health == 1
+			and gem.attack_range == 1 and gem.move_speed == 1,
+			"R572：宝石兽 9246 = 森林精魄稀有盟友 1 费 1/1/1/1")
+	check(gem != null and gem.combo_trigger == "death"
+			and gem.effect_text.contains("死亡时，组合一张卡"),
+			"R572：宝石兽 = 死亡时，组合一张卡")
+	check(fac != null and fac.card_name == "拼装工厂" and fac.kind == "工事"
+			and fac.card_class == "机械之心" and fac.rarity == 1 and fac.cost == 3
+			and fac.power == 0 and fac.health == 12 and fac.attack_range == 0,
+			"R572：拼装工厂 9247 = 机械之心稀有工事 3 费 0/12/0")
+	check(fac != null and fac.combo_trigger == "turn_start"
+			and fac.effect_text.contains("回合开始时，组合一张卡"),
+			"R572：拼装工厂 = 回合开始时，组合一张卡")
+	if gem == null or fac == null:
+		return
+	# ② 复制 / 离场还原通道（漏了它，复制出来的宝石兽就不再给组合）
+	var rt := CardData.from_dict(gem.to_dict())
+	check(rt.combo_trigger == "death" and rt.combo_scope == "",
+			"R572：combo_trigger / combo_scope 随 to_dict → from_dict 走")
+	# ③ 死亡钩子 → 开组合，候选只来自本角色
+	var eng := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng.ai_enabled = false
+	var p := eng.state.place(CardData.from_dict(gem.to_dict()), Vector2i(1, 0), GameEngine.SIDE_SELF)
+	check(p != null, "R572：宝石兽能上场（探针）")
+	eng._deathrattle(Vector2i(1, 0), p)
+	check(eng.assemble_combo_pending, "R572：宝石兽死亡 → 开组合")
+	check(eng.assemble_combo_cards().size() >= 3, "R572：宝石兽的组合候选 ≥3 张")
+	for c: CardData in eng.assemble_combo_cards():
+		check(c.card_class == "森林精魄",
+				"R572：宝石兽的候选只来自本角色（实际混进 %s）" % c.card_class)
+	# ④ 拼装工厂回合开始 → 排队（此时已有 pending），当前这次结束后自动接上
+	eng.state.place(CardData.from_dict(fac.to_dict()), Vector2i(1, 1), GameEngine.SIDE_SELF)
+	eng._combo_tick(GameEngine.SIDE_SELF, "turn_start")
+	check(eng._combo_queue.size() == 1 and eng.assemble_combo_pending,
+			"R572：pending 期间的第二次机会排队，不覆盖当前这次")
+	eng.assemble_combo_cancel()
+	check(eng.assemble_combo_pending and eng._combo_queue.is_empty(),
+			"R572：当前这次结束后立刻开排队的那一次")
+	for c: CardData in eng.assemble_combo_cards():
+		check(c.card_class == "机械之心",
+				"R572：拼装工厂的候选只来自本角色（实际混进 %s）" % c.card_class)
+	eng.assemble_combo_cancel()
+	check(not eng.assemble_combo_pending, "R572：队列空后不再重新开页")
+	# ⑤ 敌方场上不触发（组合页只有玩家能操作）
+	var eng2 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng2.ai_enabled = false
+	eng2.state.place(CardData.from_dict(fac.to_dict()), Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	eng2._combo_tick(GameEngine.SIDE_OPPONENT, "turn_start")
+	check(not eng2.assemble_combo_pending, "R572：敌方的拼装工厂不会给玩家开组合")
+	# ⑥ 源码锁
+	var gs := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(gs.count("_open_combo(") >= 4,
+			"R572 源码锁：开组合只有 `_open_combo` 一个口（定义 + 传授 + 死亡 + 回合开始）")
+	check(gs.count("_combo_cards = _pick_random_cards") == 1,
+			"R572 源码锁：候选池只在一处抽卡，钩子不许自己抽")
+	check(not CardData.ASSEMBLE_EFFECT_TYPES.has("combo")
+			and not CardData.ASSEMBLE_EFFECT_TYPES.has("combo_grant"),
+			"R572：组合动作不进产物白名单（否则能组合出「再组合一张卡」）")
+	check(eng._combo_candidate_cards("机械之心").size() >= 3
+			and eng._combo_candidate_cards("森林精魄").size() >= 3,
+			"R572：两个角色的候选池都 ≥3 张（拼装工厂每回合都能开出组合）")
+	var bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check(bs.find("if engine.assemble_combo_pending:") >= 0,
+			"R572 源码锁：组合页挂着时 AI 停手（敌方回合触发也不会让玩家盲拖）")
