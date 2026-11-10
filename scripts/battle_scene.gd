@@ -892,7 +892,7 @@ func _ready() -> void:
 	# R559：拖拽组合页（传授 8084）—— 盖在最上层，pending 时吃掉全部点击。
 	_assemble_overlay = AssembleOverlay.new()
 	_assemble_overlay.confirmed.connect(_on_assemble_combo_confirmed)
-	_assemble_overlay.cancelled.connect(_on_assemble_combo_cancelled)
+	# R571：`cancelled` 信号已随「取消组合」按钮一起删掉 —— 组合页只有「确认组合」一个出口。
 	add_child(_assemble_overlay)
 	# 命令行 -- --screenshot / -- --demo：自动化演示与截图（验证视觉效果用）
 	var args := OS.get_cmdline_user_args()
@@ -6184,18 +6184,6 @@ func _on_assemble_combo_confirmed() -> void:
 		engine.assemble_combo_commit()
 	if _assemble_overlay != null:
 		_assemble_overlay.close.call_deferred()
-	queue_redraw()
-
-
-func _on_assemble_combo_cancelled() -> void:
-	## 拖拽组合页「取消」：引擎清 pending，关页。
-	## ⚠️ R562：关页延迟到帧末（原因同 `_on_assemble_combo_confirmed`）。
-	## 右键/ESC 已改成「只提示不取消」—— 这里只会由「取消组合」按钮触发。
-	if engine != null:
-		engine.assemble_combo_cancel()
-	if _assemble_overlay != null:
-		_assemble_overlay.close.call_deferred()
-	status_text = "已放弃本次组合（那张传授卡已经打出，组合机会不再保留）"
 	queue_redraw()
 
 

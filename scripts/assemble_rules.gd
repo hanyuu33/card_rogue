@@ -62,34 +62,59 @@ static func valid_passive(pv: Variant) -> bool:
 	return true
 
 
+static func valid_upper(part: Variant) -> bool:
+	## R571：上半半边的合法性 —— 从 `valid_pool` 抽出来的**唯一口**。
+	## 组合页去掉「取消组合」之后没有退路，填槽时必须当场判断「这张卡能不能当②」，
+	## 判据不许在 UI 里另写一份（另写就会跟 build 判废的口径漂移，玩家被锁死在页面上）。
+	## 上半：必须有合法扳机；效果**可以为空**（空钩子，用户口径「上半只有钩子也无所谓」）；
+	## `passive` 永续段可选（R568，下半不允许带）。
+	if not part is Dictionary:
+		return false
+	if not part.get("effects", []) is Array:
+		return false
+	if part.get("trigger", "") not in TRIGGERS:
+		return false
+	for fx in part.get("effects", []):
+		if not valid_effect(fx):
+			return false
+	for affix in part.get("extra_affixes", []):
+		if not CardData.AFFIX_DEFS.has(str(affix)):
+			return false
+	if part.has("passive") and not valid_passive(part.get("passive", {})):
+		return false
+	return true
+
+
+static func valid_lower(part: Variant) -> bool:
+	## R571：下半半边的合法性（与 `valid_upper` 同源共用，理由同上）。
+	## R567（用户口径）：「下半不应该是完整效果，需要裁掉上半部分 —— 扳机是在上半的，
+	## 不应该也分发到下半」。所以下半**结构上不允许有 trigger**：有就是数据写错了，直接判废。
+	## 下半只承载「效果」+ 可选的 `note`（纯描述，如「在本回合结束时」，不是扳机），
+	## 且至少要有一条效果 —— 一句效果都没有的下半等于什么都没兑现。
+	if not part is Dictionary:
+		return false
+	if not part.get("effects", []) is Array:
+		return false
+	if part.has("trigger") or part.has("extra_affixes"):
+		return false
+	if part.get("effects", []).is_empty():
+		return false
+	for fx in part.get("effects", []):
+		if not valid_effect(fx):
+			return false
+	if not part.get("note", "") is String:
+		return false
+	return true
+
+
 static func valid_pool(upper: Array, lower: Array) -> bool:
 	if upper.is_empty() or lower.is_empty():
 		return false
-	for half in [upper, lower]:
-		for part in half:
-			if not part is Dictionary or not part.get("effects", []) is Array:
-				return false
-			for fx in part.get("effects", []):
-				if not valid_effect(fx):
-					return false
-			for affix in part.get("extra_affixes", []):
-				if not CardData.AFFIX_DEFS.has(str(affix)):
-					return false
 	for part in upper:
-		if part.get("trigger", "") not in TRIGGERS:
-			return false
-		# R568：上半的永续段（可选）。下半**不允许**带 —— 下半只承载跟着扳机走的效果。
-		if part.has("passive") and not valid_passive(part.get("passive", {})):
+		if not valid_upper(part):
 			return false
 	for part in lower:
-		## R567（用户口径）：「下半不应该是完整效果，需要裁掉上半部分 —— 扳机是在上半的，
-		## 不应该也分发到下半」。所以下半**结构上不允许有 trigger**：有就是数据写错了，直接判废。
-		## 下半只承载「效果」+ 可选的 `note`（纯描述，如「在本回合结束时」，不是扳机）。
-		if part.has("trigger") or part.has("extra_affixes"):
-			return false
-		if part.get("effects", []).is_empty():
-			return false
-		if not part.get("note", "") is String:
+		if not valid_lower(part):
 			return false
 	return true
 

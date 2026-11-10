@@ -79,6 +79,7 @@ func _init() -> void:
 	_test_r569_actions()
 	_test_r569_pool_forms()
 	_test_r570_actions()
+	_test_r571_no_cancel()
 	print("Combination tests failures: ", failures)
 	quit(failures)
 
@@ -640,23 +641,20 @@ func _test_combo() -> void:
 	var ov := FileAccess.get_file_as_string("res://scripts/assemble_overlay.gd")
 	var bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 	# ① 右键不许再直接取消：在 `_gui_input` 里把自己 hide 掉，会让鼠标 over 状态悬在
-	#    一个已隐藏控件上，之后所有点击全部落空（玩家感知＝卡死）。右键只提示，
-	#    「取消组合」按钮才是唯一出口。
+	#    一个已隐藏控件上，之后所有点击全部落空（玩家感知＝卡死）。右键只提示。
+	#    R571：「取消组合」按钮也删了 —— 现在连放弃口都不存在。
 	var rb := ov.find("MOUSE_BUTTON_RIGHT and mb.pressed:")
 	var rb_seg := ov.substr(rb, 420) if rb >= 0 else ""
 	check(rb >= 0 and rb_seg.find("_show_tip(") >= 0 and rb_seg.find("cancelled.emit()") < 0,
 			"R562 源码锁：右键只提示，不许直接取消")
 	# ② 关页一律 `close.call_deferred()`（同一次输入回调里 hide 会卡住鼠标派发）。
 	#    `_sync_pick` 那处是 `_process` 里关的，允许同步。
+	#    R571：取消回调整段删除，确认回调到 `_abort_empty_pick` 之间只剩这一个关页口。
 	var f1 := bs.find("func _on_assemble_combo_confirmed")
-	var f2 := bs.find("func _on_assemble_combo_cancelled")
 	var f3 := bs.find("func _abort_empty_pick")
-	var seg1 := bs.substr(f1, f2 - f1) if f1 >= 0 and f2 > f1 else ""
-	var seg2 := bs.substr(f2, f3 - f2) if f2 >= 0 and f3 > f2 else ""
+	var seg1 := bs.substr(f1, f3 - f1) if f1 >= 0 and f3 > f1 else ""
 	check(seg1.find("close.call_deferred()") >= 0 and seg1.find("_assemble_overlay.close()") < 0,
 			"R562 源码锁：确认组合后关页要延迟到帧末")
-	check(seg2.find("close.call_deferred()") >= 0 and seg2.find("_assemble_overlay.close()") < 0,
-			"R562 源码锁：取消组合后关页要延迟到帧末")
 	# ③ 上/下半效果框各自独立判断，不许再套一层 `_all_filled()`
 	#    （原来拖进上半后框里空空，玩家以为没吃进去）
 	check(ov.count("if i == 0 and _slot_upper >= 0:") == 1
@@ -1058,3 +1056,75 @@ func _test_r570_actions() -> void:
 			"R570b 源码锁：其他盟友加攻只有 `_buff_other_allies_atk` 一个实现口（老虎 + 组合）")
 	check(gs.count("_night_erosion_heal(") >= 3,
 			"R570 源码锁：按剩余费用回血只有 `_night_erosion_heal` 一个实现口（夜蚀 + 组合）")
+
+
+func _test_r571_no_cancel() -> void:
+	## R571（用户口径「去掉取消组合按钮。使用了效果，必须组合。」）：
+	## 组合页从此**没有退路**，唯一出口是「确认组合」。不退路就必须保证每条路都走得到：
+	##   ① 填槽时按同源判据（valid_upper / valid_lower）拦掉「放不进这个槽」的卡；
+	##   ② 确认按钮的可用判据 = 填满 **且** 产物真能 build 出来；
+	##   ③ 引擎侧同样拒收 —— UI 拦不住的路径（回放 / AI / 旧存档）也不许留下死局；
+	##   ④ 候选池里每一张卡都必须两边都接得住，否则「随便拖三张」也会开不出产物。
+	# ① 半边判据的行为（从 valid_pool 抽出来、两边共用的同一口）
+	check(Rules.valid_upper({"trigger": "enter", "effects": []}),
+			"R571 valid_upper：空钩子（有扳机没效果）合法")
+	check(not Rules.valid_upper({"trigger": "nope", "effects": []}),
+			"R571 valid_upper：非法扳机判废")
+	check(not Rules.valid_upper({"trigger": "turn_end", "passive": {"text": ""}, "effects": []}),
+			"R571 valid_upper：空文本永续段判废")
+	check(Rules.valid_lower({"effects": [{"type": "draw", "value": 1}]}),
+			"R571 valid_lower：只带效果合法")
+	check(not Rules.valid_lower({"effects": []}), "R571 valid_lower：没有效果判废")
+	check(not Rules.valid_lower({"trigger": "enter", "effects": [{"type": "draw", "value": 1}]}),
+			"R571 valid_lower：带扳机判废")
+	# valid_pool 必须仍是「两个半边判据的组合」，不许在别处另写一份
+	var rs := FileAccess.get_file_as_string("res://scripts/assemble_rules.gd")
+	check(rs.find("func valid_upper") >= 0 and rs.find("func valid_lower") >= 0
+			and rs.find("if not valid_upper(part):") >= 0 and rs.find("if not valid_lower(part):") >= 0,
+			"R571 源码锁：valid_pool 复用 valid_upper / valid_lower，不另写判据")
+	# ④ 候选池全部「两边都接得住」—— 随便拖三张一定能组合出来（没有取消按钮的前提）
+	var repo := CardRepo.load_json()
+	var cand: Array = []
+	for c: CardData in repo.all_cards():
+		if (c.kind == "盟友" or c.kind == "工事") and c.group == "player" \
+				and not c.upper_effect.is_empty() and not c.lower_effect.is_empty():
+			cand.append(c)
+	var bad: Array = []
+	for c: CardData in cand:
+		if not Rules.valid_upper(c.upper_effect) or not Rules.valid_lower(c.lower_effect):
+			bad.append(c.id)
+	check(bad.is_empty(), "R571：候选池每张卡都能当②或③（不合格：%s）" % str(bad))
+	check(cand.size() >= 24, "R571：候选池仍 ≥24 张（实际 %d）" % cand.size())
+	# ③ 引擎拒收「当不了这个槽」的卡
+	var eng := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng.ai_enabled = false
+	eng._teach_spell(GameEngine.SIDE_SELF)
+	check(eng.assemble_combo_pending, "R571：进入组合")
+	var pool: Array = eng.assemble_combo_cards()
+	if not pool.is_empty():
+		var broken: CardData = CardData.from_dict((pool[0] as CardData).to_dict())
+		broken.lower_effect = {"effects": []}
+		eng._combo_cards.append(broken)
+		var bi: int = eng._combo_cards.size() - 1
+		eng.assemble_combo_set_slot("lower", bi)
+		check(eng._combo_lower == -1, "R571：没有下半效果的卡塞不进③（引擎拒收，不留死局）")
+		eng.assemble_combo_set_slot("upper", bi)
+		check(eng._combo_upper == bi, "R571：同一张卡仍可当②上半（只是没有下半）")
+		eng.assemble_combo_set_slot("upper", -1)
+		check(eng._combo_upper == -1, "R571：撤回（-1）永远放行")
+	eng.assemble_combo_cancel()
+	# ② UI / 场景源码锁：取消按钮与信号都没了，确认判据收紧到 build 成功
+	var ov := FileAccess.get_file_as_string("res://scripts/assemble_overlay.gd")
+	var bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check(ov.find("_cancel_rect") < 0 and ov.find("signal cancelled") < 0
+			and ov.find("cancelled.emit") < 0,
+			"R571 源码锁：组合页没有「取消组合」按钮，也没有取消信号")
+	check(bs.find("_on_assemble_combo_cancelled") < 0
+			and bs.find("assemble_overlay.cancelled") < 0,
+			"R571 源码锁：战斗场景不再接取消回调（组合没有第二个关页口）")
+	check(ov.find("func _slot_accepts") >= 0 and ov.find("AssembleRules.valid_upper") >= 0
+			and ov.find("AssembleRules.valid_lower") >= 0,
+			"R571 源码锁：填槽前按同源判据校验（_slot_accepts）")
+	check(ov.find("var can := _preview_card() != null") >= 0,
+			"R571 源码锁：确认按钮可用判据 = 填满且 build 得出产物")
+	check(ov.find("必须完成") >= 0, "R571：右键 / ESC 只提示「必须完成」，不留放弃口")

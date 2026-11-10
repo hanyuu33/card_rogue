@@ -6,7 +6,7 @@ extends Control
 ##   左栏：6 张待选卡（2×3），拖拽源 —— 已放进槽位的卡在这里**消失**（留淡空位），
 ##        拖回原位 / 任意左栏位置即可撤回
 ##   中栏：3 个空槽位（上中下：①属性值+卡图 ②上半效果 ③下半效果），槽内卡右上角有 ✕ 可一键撤回
-##   右栏：结果预览 = 组合卡（带「组合」印记）+ 上/下效果框 + 确认/取消按钮
+##   右栏：结果预览 = 组合卡（带「组合」印记）+ 上/下效果框 + 确认按钮
 ##
 ## 交互：按住待选卡（或槽内卡）→ 拖到槽位 → 松手填入；拖动可在槽位间移动/互换；
 ##       点任意卡（待选 / 槽内 / 结果预览）→ 打开卡牌详情。三个槽位填满后「确认组合」可点。
@@ -25,9 +25,17 @@ extends Control
 ##   ① 槽位可撤回：拖回左栏，或点槽内卡右上角的 ✕；
 ##   ② 已进槽的卡在左栏**不再画卡**，只留一个淡空位（位置不跳动，方便拖回）；
 ##   ③ 点任意卡打开 `CardDetailOverlay`（选卡页的卡面只留卡名，看不到效果文）。
+##
+## ⚠️ R571（用户口径「去掉取消组合按钮。使用了效果，必须组合。」）：
+##   **唯一出口 = 「确认组合」**。传授卡打出去的时候代价已经付了（费用/出牌数），
+##   中途放弃＝白扔一张卡还留着 pending，玩家只会当成卡死；所以这里不给退路。
+##   不退路就必须保证**每条路都走得到确认**，两件事一起做：
+##     ① 填槽前先问「这张卡能不能当这个槽」（`_slot_accepts` → AssembleRules.valid_upper/
+##        valid_lower，与引擎/build 同源，不另写一份判据）；放不进就提示、不落槽；
+##     ② 确认按钮的可用判据从「三槽填满」收紧成「填满 **且** build 得出产物」。
+##   否则一张没有下半效果的卡塞进③，三槽看着是满的、产物却永远是 null → 真卡死。
 
 signal confirmed()
-signal cancelled()
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const CardFace = preload("res://scripts/card_face.gd")
@@ -59,7 +67,7 @@ var _drag_from := -1                      # 拖拽源：左栏待选卡下标
 var _drag_slot := -1                      # 拖拽源：槽位（把已经放进去的卡再拿起来）
 var _drag_pos := Vector2.ZERO
 var _press := {}                          # {pos, moved}
-var _tip := ""                            # R562：底部一句提示（右键/ESC 不再直接取消）
+var _tip := ""                            # R562：一句提示（右键/ESC 都不退页，R571 起连取消按钮也没了）
 var _tip_until := 0
 var _detail: CardDetailOverlay = null     # R564：卡牌详情浮层
 
@@ -216,7 +224,8 @@ func _effect_rect(i: int) -> Rect2:
 	# R570b：96 → 112。羊皮纸九宫格的上下花纹各占 16px，96 高时**纸面只有 64px**，
 	# 而正文区是从 y+46 开始的（标题占掉上面一段）→ 实际可用不到 34px，
 	# 夜蚀那种三行长句必然把最后一行压到框线上（出图实测：纸面 465~529，第三行墨迹顶到 529）。
-	# 加高 16 并把两框间距 12 → 8，总高不变（仍是 2×112+8 = 232，底边离「取消组合」还有 25px）。
+	# 加高 16 并把两框间距 12 → 8，总高不变（仍是 2×112+8 = 232）。
+	# R571：原来这下面还有一颗「取消组合」按钮，删掉后两框底边离「确认组合」约 83px，更宽松。
 	var h := 112.0
 	var sr := _seal_rect()
 	var y := sr.end.y + 22.0 + i * (h + 8.0)
@@ -224,17 +233,44 @@ func _effect_rect(i: int) -> Rect2:
 
 
 func _confirm_rect() -> Rect2:
+	## R571：原来这里上下叠着「取消组合」+「确认组合」两颗；取消删掉后确认留在底部居中，
+	## 高度不变（48 > 44，才走 adventure_button_style 素材胶囊，不走纯色 chip）。
 	var cx := size.x * RIGHT_CX
 	return Rect2(cx - 110.0, size.y - 64.0, 220.0, BUTTON_H)
 
 
-func _cancel_rect() -> Rect2:
-	var cx := size.x * RIGHT_CX
-	return Rect2(cx - 110.0, size.y - 64.0 - BUTTON_H - 10.0, 220.0, BUTTON_H)
-
-
 func _all_filled() -> bool:
 	return _slot_attr >= 0 and _slot_upper >= 0 and _slot_lower >= 0
+
+
+func _preview_card() -> CardData:
+	## R571：产物能不能真的 build 出来 —— 确认按钮的可用判据就是它。
+	## 去掉「取消组合」之后，「填满但 build 失败」＝没有出口的死局，必须提前判掉。
+	if not _all_filled() or _engine == null:
+		return null
+	return _engine.assemble_combo_preview() as CardData
+
+
+func _slot_accepts(slot: int, idx: int) -> bool:
+	## R571：这张卡能不能当这个槽。判据与引擎 `assemble_combo_set_slot` / build 判废**同源**。
+	## ①属性：任何卡都行（它就是产物本体）；②上半：要合法扳机；③下半：要能不带扳机地兑现。
+	if idx < 0 or idx >= _cards.size():
+		return false
+	if slot == 0:
+		return true
+	var c: CardData = _cards[idx]
+	if slot == 1:
+		return AssembleRules.valid_upper(c.upper_effect)
+	return AssembleRules.valid_lower(c.lower_effect)
+
+
+func _slot_reject_tip(slot: int, idx: int) -> String:
+	## 放不进时说的话：**告诉玩家换哪个槽**，别只丢一句「不行」。
+	var c: CardData = _cards[idx] if idx >= 0 and idx < _cards.size() else null
+	var name := c.card_name if c != null else "这张卡"
+	if slot == 1:
+		return "「%s」没有可用的上半钩子 —— 试试拖进③下半" % name
+	return "「%s」没有可用的下半效果 —— 试试拖进②上半" % name
 
 
 func _slot_index(slot: int) -> int:
@@ -391,17 +427,17 @@ func _draw_preview() -> void:
 	draw_string(_font_bold, Vector2(cx - size.x * 0.1, TITLE_H + 26.0), "结果预览",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x * 0.2, UiTheme.FS_LABEL, UiTheme.ACCENT_LIT)
 	var pr := _preview_rect()
-	if not _all_filled():
-		# 未填满：空预览卡框 + 提示
+	var result: CardData = _preview_card()
+	if result == null:
+		# 还没拖满（或填满了但 build 不出来 —— R571 起填槽已经拦掉这种情况）：
+		# 空预览卡框 + 提示。判据与确认按钮同一个口，避免「按钮亮了、卡面空着」。
 		_draw_slot_paper(pr)
 		draw_string(_font, Vector2(pr.position.x, pr.position.y + pr.size.y * 0.46), "拖满 3 个槽位",
 				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 		draw_string(_font, Vector2(pr.position.x, pr.position.y + pr.size.y * 0.46 + 20.0), "后显示组合卡",
 				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 	else:
-		var result: CardData = _engine.assemble_combo_preview() if _engine != null else null
-		if result != null:
-			CardFace.draw_pick(self, result, pr, _font, _font_bold, false)
+		CardFace.draw_pick(self, result, pr, _font, _font_bold, false)
 	# 产物印记说明条（结果卡下方）：combine 自绘符号 + 金字，指的就是卡面费用正下方那枚
 	var sr := _seal_rect()
 	draw_rect(sr, Color(0.12, 0.10, 0.06, 0.95))
@@ -446,7 +482,7 @@ func _draw_preview() -> void:
 			_draw_wrapped(body, txt, UiTheme.FS_CAPTION, UiTheme.INK_800)
 	if _tip != "":
 		# R562：底部一句提示（右键/ESC/撤回/落点为空时的说明），自带暗底 + 金边。
-		# R564：位置改到**顶栏正下方居中** —— 原来放在「取消组合」按钮上方，
+		# R564：位置改到**顶栏右侧空白区**（见下方坐标注释），原来放在底部按钮上方，
 		# 正好压在战斗的「我方生命」条上，看着像把血条盖掉了。
 		var fs := UiTheme.FS_CAPTION
 		var tw: float = _font.get_string_size(_tip, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
@@ -459,11 +495,10 @@ func _draw_preview() -> void:
 		draw_rect(br, UiTheme.ACCENT_GOLD, false, 1.0)
 		draw_string(_font, Vector2(bx + 12.0, ty), _tip, HORIZONTAL_ALIGNMENT_LEFT, tw,
 				fs, UiTheme.ACCENT_LIT)
-	# 取消 / 确认按钮（button_paper / button_forest 素材）
-	var cr := _cancel_rect()
-	UiTheme.draw_secondary_btn(self, cr, "取消组合", false, false, false)
+	# 确认按钮（button_forest 素材）—— R571：这里是组合页的**唯一出口**，没有取消。
+	# 可用判据不是「三槽填满」，而是「填满且产物真的 build 得出来」（见 `_preview_card`）。
 	var ok := _confirm_rect()
-	var can := _all_filled()
+	var can := _preview_card() != null
 	UiTheme.draw_secondary_btn(self, ok, "确认组合", false, not can, true)
 
 
@@ -524,8 +559,8 @@ func _gui_input(event: InputEvent) -> void:
 			# R562：⛔ 原来这里直接发取消信号 —— 界面当场隐藏，而这张传授卡
 			# 已经打出去了，组合机会白丢；更要命的是在 `_gui_input` 里把自己 hide 掉，
 			# 鼠标的 over 状态留在了一个已隐藏的控件上，之后所有点击都落空（表现为卡死）。
-			# 现在右键只提示，真正的放弃必须点下方「取消组合」按钮。
-			_show_tip("要放弃这次组合，请点下方「取消组合」")
+			# R571：连「取消组合」也删了 —— 右键只提示「必须完成」，不留任何放弃口。
+			_show_tip("组合一旦开始就必须完成 —— 把 3 个槽位拖满，再点「确认组合」")
 			accept_event()
 			return
 	elif event is InputEventMouseMotion:
@@ -579,7 +614,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		if not k.pressed or k.echo:
 			return
 		if k.keycode == KEY_ESCAPE:
-			_show_tip("要放弃这次组合，请点下方「取消组合」")
+			# R571：ESC 同样是「只提示不退出」—— 组合页没有放弃口。
+			_show_tip("组合一旦开始就必须完成 —— 把 3 个槽位拖满，再点「确认组合」")
 		get_viewport().set_input_as_handled()
 
 
@@ -645,6 +681,11 @@ func _drop_at(pos: Vector2) -> void:
 func fill_slot(slot: int, idx: int) -> void:
 	## 填槽唯一口（拖拽落点 / 演示预填共用）。
 	## R564：idx < 0 = 清空该槽；同一张卡不会同时占两个槽（填进新槽会自动清掉旧槽）。
+	## R571：idx >= 0 时先过 `_slot_accepts` —— 放不进这个槽就别落，提示玩家换槽。
+	## 召回（idx < 0）永远放行，否则连撤回都会被拦住。
+	if idx >= 0 and not _slot_accepts(slot, idx):
+		_show_tip(_slot_reject_tip(slot, idx))
+		return
 	if idx >= 0:
 		for s in 3:
 			if s != slot and _slot_index(s) == idx:
@@ -671,7 +712,8 @@ func _set_slot(slot: int, idx: int) -> void:
 
 
 func _tap(pos: Vector2) -> void:
-	## 点按（未拖动）：✕ 撤回 → 按钮 → 槽内卡详情 → 待选卡详情 → 结果预览详情。
+	## 点按（未拖动）：✕ 撤回 → 确认 → 槽内卡详情 → 待选卡详情 → 结果预览详情。
+	## R571：取消分支整段删除（按钮和 `cancelled` 信号一起没了）。
 	for s in 3:
 		if _slot_index(s) >= 0 and _slot_close_rect(_slot_rect(s)).has_point(pos):
 			_set_slot(s, -1)
@@ -679,11 +721,10 @@ func _tap(pos: Vector2) -> void:
 			queue_redraw()
 			return
 	if _confirm_rect().has_point(pos):
-		if _all_filled():
+		# R571：按得下的确认必须真的能成 —— 判据与按钮绘制同一口（`_preview_card`），
+		# 否则会出现「按钮是亮的、按下去什么都没发生」的观感。
+		if _preview_card() != null:
 			confirmed.emit()
-		return
-	if _cancel_rect().has_point(pos):
-		cancelled.emit()
 		return
 	var s2 := _slot_at(pos)
 	if s2 >= 0 and _slot_index(s2) >= 0:
@@ -693,9 +734,9 @@ func _tap(pos: Vector2) -> void:
 	if k >= 0:
 		_open_detail_index(k, "已放入槽位" if _slot_of_index(k) >= 0 else "")
 		return
-	# 结果预览卡（填满三槽后才有真卡可看）
-	if _all_filled() and _preview_rect().has_point(pos) and _engine != null:
-		var res: CardData = _engine.assemble_combo_preview()
+	# 结果预览卡（填满三槽且 build 得出产物后才有真卡可看）
+	if _preview_rect().has_point(pos):
+		var res: CardData = _preview_card()
 		if res != null:
 			_open_detail_card(res, "组合结果预览 —— 按「确认组合」后才会真正生成")
 

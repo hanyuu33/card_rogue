@@ -17974,6 +17974,15 @@ func assemble_combo_set_slot(slot: String, index: int) -> void:
 	## 卡一旦放进槽就再也拿不出来，玩家只能把整次组合取消掉。
 	if index < -1 or index >= _combo_cards.size():
 		return
+	## R571：槽位要**接得住**这张卡。组合页已经没有「取消组合」了，塞一张当不了上半/下半
+	## 的卡进来，三槽填满也 build 不出产物 —— 玩家没有出口，只能退出整局。
+	## 判据与 `AssembleRules.valid_pool` 同一个口（valid_upper / valid_lower），不另写一份。
+	if index >= 0:
+		var c: CardData = _combo_cards[index]
+		if slot == "upper" and not AssembleRules.valid_upper(c.upper_effect):
+			return
+		if slot == "lower" and not AssembleRules.valid_lower(c.lower_effect):
+			return
 	match slot:
 		"attr": _combo_attr = index
 		"upper": _combo_upper = index
