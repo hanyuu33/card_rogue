@@ -18,11 +18,11 @@ const CardFace = preload("res://scripts/card_face.gd")
 const UiAssets = preload("res://scripts/ui_assets.gd")
 const AssembleRules = preload("res://scripts/assemble_rules.gd")
 
-const DIM_ALPHA := 0.74                 # 暗罩不透明度（深蓝夜色，战场隐约可见）
+const DIM_ALPHA := 0.85                 # 暗罩不透明度（深蓝夜色，战场隐约可见）
 const LEFT_X := 0.035                   # 左栏起点（比例）
 const LEFT_W := 0.235                   # 左栏宽（比例）
-const MID_CX := 0.420                   # 中栏中心（比例）
-const RIGHT_CX := 0.745                 # 右栏中心（比例）
+const MID_CX := 0.440                   # 中栏中心（比例）
+const RIGHT_CX := 0.720                 # 右栏中心（比例）
 const CARD_ASPECT := 76.0 / 63.0        # 卡面高/宽
 const SLOT_ASPECT := 528.0 / 440.0      # 槽位高/宽
 const SLOT_W := 0.125                   # 槽位宽（相对 size.x）
@@ -46,6 +46,19 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
+	# ⚠️ anchors 首帧可能未立即生效（实测 size 停在 (0,0)）→ 手动对齐父节点尺寸；
+	# 窗口缩放 / 安卓切前台时靠 resized + viewport.size_changed 重新对齐。
+	resized.connect(_sync_size)
+	get_viewport().size_changed.connect(_sync_size)
+
+
+func _sync_size() -> void:
+	var p := get_parent()
+	if p is Control:
+		var ps: Vector2 = (p as Control).size
+		if ps != size:
+			size = ps
+			queue_redraw()
 
 
 func open(engine_ref: Object, cards: Array) -> void:
@@ -56,6 +69,7 @@ func open(engine_ref: Object, cards: Array) -> void:
 	_slot_lower = -1
 	_drag_from = -1
 	_press = {}
+	_sync_size()
 	visible = true
 	queue_redraw()
 

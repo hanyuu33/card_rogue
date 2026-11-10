@@ -1131,6 +1131,13 @@ func _ready() -> void:
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		RunState.pending_node = {"type": "battle"}
 		engine._finish("胜利", "演示：胜利结算面板")
+	if "--combodemo" in args and engine != null:
+		# R559 出图：拼装组合 UI（传授 8084 全屏拖拽三栏）。直接进组合 pending。
+		# 出图：`battle.tscn -- --screenshot --combodemo --shotframe 60`
+		if not RunState.run_active:
+			seed(0x559)
+			RunState.start_run([], GameLayers.LAYER_DEFAULT)
+		engine._teach_spell(GameEngine.SIDE_SELF)
 	if "--bosswin" in args and engine != null:
 		# R179 演示：**Boss 通关结算**（核验短按钮文案 + Boss 档卡牌三选一）。
 		# 必须配 `--level <Boss 关下标>` 用（`_run_boss_win` 由关卡 tier 决定）。
