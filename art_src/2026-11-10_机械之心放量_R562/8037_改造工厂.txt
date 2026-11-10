@@ -1,0 +1,9 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "OVERHAUL FACTORY" (a location card: the inside of a machine-upgrade plant). NO humans, NO robots walking around, NO characters.
+A dark factory floor FILLED to the frame edges: a wide steel conveyor line carrying half-finished grey mech chassis parts (an arm, a torso block, a leg plate), overhead robotic assembly arms with visible pistons lowering welding heads, and a big arched OVERHAUL GATE made of steel frames that pours a broad clean CYAN light down onto the passing parts. Bright cyan weld sparks, glowing cyan conduit strips along the floor, a few AMBER warning lamps on the machinery. Riveted steel, oily dark floor with cyan reflections.
+Colours: steel grey + deep teal shadows + cyan glow + amber accents. Wide establishing shot, no empty sky.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO text, NO letters, NO numbers, NO watermark, NO logo, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO playing cards, NO card frames. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

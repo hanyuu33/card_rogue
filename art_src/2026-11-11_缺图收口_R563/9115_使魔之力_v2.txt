@@ -1,0 +1,14 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is the CHARACTER DESIGN reference: keep this FAMILIAR DUCK EXACTLY as shown — a small round fluffy WHITE duckling with big warm BROWN eyes, a flat GOLDEN-YELLOW bill, a little tuft of three white feathers sticking up on top of its head, short stubby wings, small golden-yellow webbed feet, soft cheek feather tufts. Reproduce its face, proportions and colour placement faithfully. Repaint it in the project's cel-shaded card-art style (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark blurred background + bright clearly-lit subject; NO photorealistic, NO 3D render, NO soft airbrush gradients).
+
+NEW POSE AND NEW ACTION — do NOT copy the reference image's plain standing pose or its magic-circle floor:
+
+SUBJECT — "FAMILIAR POWER". The WHITE DUCKLING is the MAIN SUBJECT and must dominate the frame. It faces the viewer, both stubby wings RAISED and spread outward, eyes bright and determined, beak slightly open, one webbed foot lifted as if channelling power. Around the raised wings and above its head float a handful of small crisp CYAN diamond-shaped light motes and two or three tiny angular cyan feather-shaped sparks — small flat hard-edged shapes only. The duckling itself radiates a thin clean CYAN rim light along its silhouette. Its white feathers stay WHITE and are the brightest thing in the picture.
+NO large circular ring around it, NO big blue circle, NO feather emblem replacing the duck, NO human, NO second duck, NO other creature, NO hat, NO weapon.
+
+BACKGROUND: dark blurred ritual chamber interior, deep blue-grey with faint stone pillars, empty and softly out of focus so the white duckling pops.
+
+COMPOSITION (MANDATORY): centre the duckling, keep its WHOLE body, BOTH raised wings, the head tuft and BOTH feet FULLY inside the frame with generous safe margins (at least 10% empty background on every side), do NOT crop any part of it, do NOT fill the frame edge-to-edge, pull the camera back. Everything must read clearly when shrunk to a small 448x403 trading-card window.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO invented humanoid, NO extra creature, NO second duck, NO feather emblem, NO circular energy rings, NO big blue circles, NO halos, NO glowing rings, NO text, NO letters, NO numbers, NO watermark, NO logo, NO readable symbols, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO playing cards, NO card frames, NO light cones, NO beams of light, NO glowing fog. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

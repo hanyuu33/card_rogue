@@ -1,0 +1,10 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "AUXILIARY BLADE" (a small blade module added to an ally). NO human, NO creature, NO full robot body.
+Close-up of a single short AUXILIARY BLADE clamped onto a steel mechanical wrist mount. The blade is slim, straight, silver-grey, with a glowing CYAN cutting edge and a folded hinge mechanism at the base plus two bolts and a cyan-glowing energy coupling. The wrist mount is cool grey armour with cyan seam lines, cropped by the frame edges.
+BACKGROUND: dark blurred hangar, deep blue-grey, empty.
+Diagonal composition, blade tip toward the upper right, the edge the brightest element.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO text, NO letters, NO numbers, NO watermark, NO logo, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO playing cards, NO card frames. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

@@ -1,0 +1,20 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+STYLE — FLAT ROAD-SIGN / TRAFFIC PICTOGRAM. This is the whole point, follow it strictly:
+The image must look like a modern abstract warning-sign SYMBOL, NOT a picture of a physical object and NOT an illustration.
+Pure 2D vector geometry: a few big simple flat colour shapes, thick uniform black outlines of constant width, only 3 or 4 flat colours total, perfectly centred and symmetrical, high contrast, instantly readable at thumbnail size.
+ABSOLUTELY NO realism: NO 3D depth, NO perspective, NO bevel, NO metallic shine, NO gloss, NO gradient, NO highlight, NO cast shadow, NO cel-shaded facets, NO texture, NO rivets, NO bolts, NO seams, NO layered broken edges, NO flying fragments, NO debris, NO sparks, NO particles, NO scenery, NO ground, NO sky, NO illustrated background, NO blurred background.
+The background is ONE uniform flat dark blue-grey colour with no gradient and no vignette.
+
+SUBJECT — "FLAW / BROKEN GUARD" (a curse status icon).
+One round ROAD-SIGN PLATE centred in the frame: a perfect circle with a thick BLACK outer ring and a thin WHITE inner ring, its face filled with flat dark slate-blue.
+Inside the circle sits ONE large bold PICTOGRAM made of a few flat geometric shapes with thick black outlines:
+  - a simple SYMMETRICAL SHIELD SILHOUETTE (rounded top, pointed bottom) filled with flat COOL CYAN-BLUE,
+  - split straight down the middle by ONE wide JAGGED ZIG-ZAG GAP filled with BRIGHT PALE CYAN-WHITE, so the shield reads as two clean separated halves,
+  - the two halves are shifted apart by one small even amount: a flat graphic gap, NOT broken 3D pieces.
+Nothing else in the frame. No other shapes, no decorations, no text.
+Palette: dark slate-blue plate, cool cyan-blue shield, pale cyan-white crack, black outlines, white inner ring.
+
+COMPOSITION (MANDATORY): the whole circle sits fully inside the frame with at least 12% empty FLAT background on every side; the circle occupies about 72% of the frame height. Straight-on, perfectly centred, no tilt, no perspective, no crop, do NOT fill the frame edge-to-edge, pull the camera back. Everything must read clearly when shrunk to a small 448x403 trading-card window.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO character, NO human, NO humanoid, NO creature, NO face, NO eyes, NO hands, NO arms, NO full armour, NO sword, NO weapon, NO real shield object, NO metal, NO stone, NO wood, NO heraldic emblem, NO hexagon badge, NO seal disc, NO text, NO letters, NO numbers, NO watermark, NO logo, NO readable symbols, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO light cones, NO beams of light, NO energy streams, NO glowing fog, NO smoke, NO playing cards, NO card frames. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

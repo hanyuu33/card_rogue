@@ -1,0 +1,12 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, its scale, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "SWIFT CONFIGURATION" (enemy ally construct, ONE machine, NO pilot, NO human, NO second robot).
+A TALL SLENDER construct of deep NAVY-BLUE-GREY armour built for speed: long thin limbs, sharp fin-like shoulder blades, bright CYAN thruster nozzles on the calves and two smaller ones on the back, a narrow low head with ONE thin CYAN visor slit — NO face. Leaning forward in a running-ready stance, one foot forward one back. TWO flat pale-violet AFTERIMAGE SILHOUETTES trail behind at slight offsets (crisp flat shapes, NOT motion lines, NOT speed lines, NOT blur smear). Small CRIMSON warning marks on the thighs.
+NORMAL head-to-body proportion, NOT chibi.
+BACKGROUND: dark blurred storm clouds / deck, deep blue-grey.
+
+COMPOSITION (MANDATORY): scale the whole figure to about 76% of the frame height, centre it, leave at least 8% empty background at the TOP and at the BOTTOM edge; the top of the head and BOTH feet must be FULLY visible and NOT cropped; every extra part or afterimage must also stay completely inside the frame. Do NOT fill the frame edge-to-edge like the reference image, pull the camera back.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO invented humanoid, NO hooded figure, NO running silhouette, NO extra creature, NO text, NO letters, NO numbers, NO watermark, NO logo, NO readable symbols, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO playing cards, NO card frames, NO light cones, NO beams of light, NO energy streams, NO glowing fog. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

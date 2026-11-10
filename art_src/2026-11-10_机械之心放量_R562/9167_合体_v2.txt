@@ -1,0 +1,21 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, its scale, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "FUSION" (Japanese TOKUSATSU / SUPER SENTAI style combining mecha). This is a PHYSICAL MECHANICAL DOCKING, like a sentai robot combining from separate component machines. Everything is SOLID METAL with hard edges and clearly readable joints. ABSOLUTELY NO energy absorption, NO dissolving, NO light streams, NO particle dust, NO pixel fragments, NO big energy explosion in the middle, NO two torsos pressed chest-to-chest.
+
+CENTRE: ONE complete fully-armoured host mech (the ally) standing in a heroic tokusatsu "combination complete" pose — feet planted wide, chest forward, both arms held slightly out and angled down, head up. Cool STEEL GREY plate armour with bright thin CYAN seams, a low blocky sensor head with a wide horizontal cyan visor slit — NO face, NO eyes, NO mouth. NORMAL head-to-body proportion, NOT chibi.
+
+AROUND IT: the parts of a SECOND, PLAINER construct are DOCKING onto the host, each part still slightly separated from its socket so the joining reads clearly, like the differently-coloured component mecha of a sentai combination:
+ - a big pale-grey SHOULDER COWL with an open SOCKET and a chunky locking pin, swinging in from the upper left over the host's left shoulder;
+ - a boxy ADD-ON GAUNTLET with a hydraulic latch arm and two exposed bolt holes, sliding onto the right forearm from the right;
+ - a thick extra SHIN PLATE with a rail-and-slot connection, coming in at the lower left toward the left leg;
+ - a small CHEST SIDE PANEL with a visible hinge and a cyan coupling plug, hovering just off the chest.
+These add-on parts are a slightly LIGHTER grey with simpler plain surfaces and small ORANGE test-paint marks — clearly from a DIFFERENT machine. Show the mechanical connectors in detail: slots, rails, pins, hinges, pistons, bolt holes, exposed latch arms, panel openings. At EACH contact seam there is only a SHORT crisp CYAN energy ring plus a few tiny orange sparks — a small accent, NOT a burst, NOT a beam. NO arrows, NO motion lines, NO speed lines; the tilted angles of the parts alone convey movement. The host mech itself stays solid and intact, nothing on it dissolves.
+
+BACKGROUND: dark blurred industrial hangar interior with a ruined battlefield beyond, deep blue-grey, softly out of focus, EMPTY — no figures, no silhouettes.
+One strong cool key light from the upper left. Bright clearly-lit subject against a dark background. Slightly low three-quarter camera angle for tokusatsu hero perspective.
+
+COMPOSITION (MANDATORY): scale the whole host mech to about 76% of the frame height, centre it, leave at least 8% empty background at the TOP and at the BOTTOM edge; the top of the head and BOTH feet must be FULLY visible and NOT cropped; all four incoming parts must also stay completely inside the frame. Do NOT fill the frame edge-to-edge like the reference image, pull the camera back. Everything must stay legible when shrunk to a small 448x403 trading-card window.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO text, NO letters, NO numbers, NO watermark, NO logo, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO playing cards, NO card frames. NO scanning beams, NO energy streams, NO dissolving bodies, NO giant glow blob. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

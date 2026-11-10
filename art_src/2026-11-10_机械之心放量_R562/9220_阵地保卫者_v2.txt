@@ -1,0 +1,16 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "POSITION GUARDIAN" (机械之心 ally mech, ONE machine, NO pilot, NO human, NO second robot).
+A HEAVY defensive construct, wider and thicker than a normal frame: massive layered shoulder armour, a squat armoured torso, and a huge TOWER SHIELD planted point-down into the ground in front of it, the shield's edge glowing with a thin CYAN energy line, its face a blank steel plate with a bold amber stripe. The mech's free arm is a short heavy hammer-fist held ready. Cool STEEL GREY armour, thick cyan seams, one amber sensor eye slit in a low blocky head — NO face, NO eyes, NO mouth. Stance is braced, protective, planted.
+NORMAL head-to-body proportion, NOT chibi.
+BACKGROUND: dark ruined battlefield, softly blurred, deep blue-grey.
+
+COMPOSITION — CRITICAL: the whole machine must sit INSIDE the frame with clear empty background
+above its head and below its boots. Scale the figure to about 78% of the frame height and centre it,
+so there is at least 8% of empty background at the TOP edge and at least 8% at the BOTTOM edge.
+Both the top of the head and both feet must be FULLY visible and NOT cropped by the frame.
+Do NOT fill the frame edge-to-edge like the reference image; pull the camera back.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO text, NO letters, NO numbers, NO watermark, NO logo, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO playing cards, NO card frames. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

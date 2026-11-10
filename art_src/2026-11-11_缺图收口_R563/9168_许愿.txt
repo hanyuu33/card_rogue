@@ -1,0 +1,12 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, its scale, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "WISH" (0-cost skill: choose a card from the deck, add it to hand, then it vanishes). Card imagery is ALLOWED here.
+A small fan of FIVE completely BLANK-BACKED CARDS lies on a dark surface; ONE card lifts out of the fan toward the upper right, caught in a thin clean CRESCENT of pale GOLD-WHITE light with three small four-point star sparkles. The lifted card's back is plain deep indigo with one simple circular gold emblem (NO letter). The other cards stay flat and dim. NO hands, NO human, NO creature.
+BACKGROUND: dark blurred night sky / dim interior, deep blue-violet. Diagonal composition, the lifted card bright against the dark.
+
+COMPOSITION (MANDATORY): keep the entire subject fully inside the frame with generous safe margins (at least 10% empty background on every side), do NOT crop any part of it, do NOT fill the frame edge-to-edge, pull the camera back. Everything must read clearly when shrunk to a small 448x403 trading-card window.
+
+CARD RULE: cards ARE allowed in this picture, but every card must be completely BLANK — NO text, NO letters, NO numbers, NO suits, NO readable symbols, NO ornate frames.
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO invented humanoid, NO hooded figure, NO hands, NO extra creature, NO text, NO letters, NO numbers, NO watermark, NO logo, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO light cones, NO glowing fog. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

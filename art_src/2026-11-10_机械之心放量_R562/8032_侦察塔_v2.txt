@@ -1,0 +1,17 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "RECON TOWER" (a mechanical outpost structure, NOT a robot, NO human figure, NO wheels).
+A tall slender STEEL LATTICE TOWER standing on a small armoured base, built from riveted steel beams in cool grey; thin glowing CYAN seam strips run up the four legs and across the cross-braces. Yellow-black hazard stripes ring the base. On top is a compact sensor head with a row of small dark sensor windows and ONE round, bright CYAN OPTICAL LENS that faces the viewer — this lens, together with the tower's cyan seams, is the ONLY cyan light source. A short mast carries a round AMBER indicator lamp glowing warm orange.
+
+THE RADAR DISH: mounted beside the sensor head on a swivel bracket, a PARABOLIC DISH built as a PLAIN MECHANICAL RECEIVER — segmented steel-grey panels, a visible triangular mesh/rib frame, a central feed horn on a three-strut support, bolted rim, and a visible rotation gear at its base. It is PURELY PASSIVE METAL: the dish is NOT a light source, it EMITS NOTHING, it casts NO beam, NO cone, NO scanning wedge, NO projection, NO glow onto the scene. Its surface shows only ordinary cool ambient reflection and hard cel-shaded grey panels. ABSOLUTELY NO cyan cone of light coming out of the dish, NO beam of any kind, NO scanning sweep, NO volumetric light. The dish reads as an antenna that LISTENS, not a lamp that shines.
+
+A few small plain whip antennas and a shallow status light strip on the base complete the recon equipment. Nothing else glows: no light rays, no glowing ground, no lit-up rubble.
+
+BACKGROUND: dark ruined battlefield at night, broken concrete slabs and distant rubble, softly blurred, deep blue-grey, so the bright grey tower pops. The background stays dark and unlit — NO cyan wash across it.
+One cool key light from the upper left. Camera slightly low three-quarter view.
+
+COMPOSITION (MANDATORY): whole tower fully inside the frame with generous safe margins on all four sides — the antenna mast tip and the base are NOT cropped, and there is clear empty dark background around the silhouette. Do NOT fill the frame edge-to-edge. Keep the tower slim and readable, roughly 80% of the frame height, centred. Everything must stay legible when shrunk to a small 448x403 trading-card window.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO text, NO letters, NO numbers, NO watermark, NO logo, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO playing cards, NO card frames. NO light cone, NO light beam, NO laser, NO glowing fog, NO radar waves drawn as lines or arcs. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

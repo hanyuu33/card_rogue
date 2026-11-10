@@ -1,0 +1,20 @@
+Use the ATTACHED image ONLY AS AN ART-STYLE REFERENCE: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, steel-grey armour with thin glowing cyan seams, dark muted blurred background + bright clearly-lit subject). Do NOT copy its character design, its pose, its stance, its blank armour layout, its hangar background, or its colour placement. Paint a COMPLETELY DIFFERENT mech.
+
+Generate ONE image with the image_gen tool: a completely NEW 1024x1024 SQUARE Japanese anime cel-shaded card illustration, like a modern light-fantasy mobile game trading card. Flat 2-3 step cel shading, THIN clean black line art, hard-edged shadows, big clean colour blocks, ONE strong light source. The subject is BRIGHT and clearly lit against a DARKER softly-blurred background. Keep the subject CENTERED, single clear subject, simple uncluttered composition, safe margins on all four sides.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO ray-traced reflections, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO text, NO watermark. It must stay crisp and legible when shrunk to a small 448x403 card.
+
+SUBJECT — "RESCUE CONSTRUCT" (机械之心 / Mech-Heart ally, a rescue-support machine). ONE single machine only, NO pilot, NO human figure, NO second robot.
+
+DESIGN:
+A stocky, wide-shouldered industrial rescue construct, much BULKIER and HEAVIER than a combat frame. Body built from thick slab armour plates in cool STEEL GREY with a few WHITE-painted rescue panels and YELLOW-BLACK hazard stripes on the shoulder and shin plating. Thin glowing CYAN energy seams run along the joints and chest core. Head is a low blocky sensor head with a wide horizontal CYAN visor slit (no human face, no eyes, no mouth). On top of one shoulder sits a small round AMBER warning beacon, glowing warm orange — the only warm accent in the image.
+
+RIGHT ARM: a heavy articulated hydraulic crane arm ending in a large three-finger GRAB CLAW with visible pistons, the claw open and reaching FORWARD toward the viewer's left, as if about to lift a fallen comrade. LEFT ARM: a forearm-mounted curved RIOT/RESCUE SHIELD plate painted white with a bold amber cross-band, held angled across the body. On its back a coiled steel TOW CABLE spools around a drum. Chest has a round glowing CYAN core behind a protective grille, and a small amber chevron marking.
+
+POSE: planted firmly, legs braced wide apart in a stable A-stance, torso turned slightly to its left, the crane arm extended forward in a clear lifting gesture. Confident, protective, heavy. NORMAL head-to-body proportion, NOT chibi, NOT super-deformed.
+
+COLOUR: steel grey + white + cyan glow + amber beacon and hazard stripes.
+
+BACKGROUND: a dark ruined industrial battlefield, jagged broken concrete and bent rebar, softly blurred and DARK (deep blue-grey), a few faint amber emergency lights bokeh-free flat shapes, so the bright grey machine pops. NO characters, NO silhouettes of people, NO other machines, NO text.
+
+ABSOLUTELY NO arrows, NO arrow symbols, NO direction markers, NO motion-trail lines, NO speed lines, NO arc lines, NO graphic symbols of any kind.

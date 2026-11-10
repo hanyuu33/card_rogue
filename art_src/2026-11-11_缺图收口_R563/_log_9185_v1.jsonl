@@ -1,0 +1,7 @@
+WARNING: failed to clean up stale arg0 temp dirs: 拒绝访问。 (os error 5)
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1c65b-749e-7952-8c9b-c772b507ca47"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"我会按参考图的绘制技法生成一张全新主题的图像。\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"已生成一张「麻痹」主题图像。"}}
+{"type":"turn.completed","usage":{"input_tokens":38793,"cached_input_tokens":29440,"cache_write_input_tokens":0,"output_tokens":415,"reasoning_output_tokens":0}}

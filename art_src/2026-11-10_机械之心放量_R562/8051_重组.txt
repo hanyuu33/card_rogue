@@ -1,0 +1,10 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "RECONSTRUCTION" (repairing a damaged ally). NO human, NO creature.
+Close-up: a steel mechanical arm with a welding torch tip is sealing a long jagged CRACK across a thick grey armour plate. The crack is closing with bright molten CYAN light, a short spray of fine cyan sparks flying out, a thin line of cooling metal behind the weld. Rivets and a cyan seam strip run across the plate. Everything is clean cel-shaded steel with hard edges.
+BACKGROUND: dark blurred foundry interior, deep blue-grey, empty.
+Diagonal composition, the weld line running corner to corner, the torch entering from the upper right.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO text, NO letters, NO numbers, NO watermark, NO logo, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO playing cards, NO card frames. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

@@ -1,0 +1,12 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, its scale, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "SKELETON" (enemy ally, ONE undead warrior, NO living human, NO flesh, NO second character).
+A full skeleton warrior of clean pale BONE plates with crisp black outlines: rounded skull with two hollow sockets holding small COLD GREEN ghost-flame dots (NOT red, NOT glowing haze), narrow jaw, rib cage with clearly separated ribs, simple pelvis, long limb bones with visible joints, holding a plain chipped short sword in one hand and a small round battered shield in the other. NO armour, NO clothing, NO cape. Standing slightly hunched, feet planted, sword lowered.
+NORMAL head-to-body proportion, NOT chibi, NOT a cute mascot.
+BACKGROUND: dark blurred graveyard, deep blue-grey.
+
+COMPOSITION (MANDATORY): scale the whole figure to about 76% of the frame height, centre it, leave at least 8% empty background at the TOP and at the BOTTOM edge; the top of the head and BOTH feet must be FULLY visible and NOT cropped; every extra part or afterimage must also stay completely inside the frame. Do NOT fill the frame edge-to-edge like the reference image, pull the camera back.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO invented humanoid, NO hooded figure, NO running silhouette, NO extra creature, NO text, NO letters, NO numbers, NO watermark, NO logo, NO readable symbols, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO playing cards, NO card frames, NO light cones, NO beams of light, NO energy streams, NO glowing fog. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

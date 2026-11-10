@@ -1,0 +1,9 @@
+Create a completely NEW 1024x1024 SQUARE Japanese anime cel-shaded card illustration, like a modern light-fantasy mobile game trading card. Flat 2-3 step cel shading, THIN clean black line art, hard-edged shadows, big clean color blocks, ONE strong light source. The subject is BRIGHT and clearly lit, standing out against a DARKER softly-blurred background.
+
+FRAMING — MOST IMPORTANT: the whole mech must fit ENTIRELY inside the frame. It stands at about 70% of the image height, with clear empty space above its head and a visible strip of floor below its feet. Do NOT crop the legs, do NOT let it touch the top or bottom edge.
+
+SUBJECT — A CHIMERIC WAR MECH TYRANT: a massive towering mech in a mech hangar. It is an amalgam of only FIVE clearly readable parts fused onto one central torso: (1) a main bulky gunmetal torso with a big COLD CYAN energy core glowing at the chest — this core is the single brightest focal point of the whole picture, (2) one hydraulic claw arm on the left, (3) one thick cannon fused into the right arm, (4) a tank tread plate on one shoulder, (5) a smaller half-buried mech melded into its lower chest. Heavy welded seams and a few cables bind these parts. Keep the silhouette clean and readable — NOT a cluttered pile.
+
+MECH-CORE STYLE: gunmetal-grey and matte steel base tones, cold cyan glow only at the seams and the chest core, tiny amber warning accents. Its head is a CLOSED sensor dome with a single slim cyan visor line — NO human face, NO skull.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic metal texture, NO ray-traced reflections, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO text, NO watermark. It must stay crisp and legible when shrunk to a small 448x403 card.

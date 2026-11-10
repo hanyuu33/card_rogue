@@ -1,0 +1,19 @@
+Create a completely NEW 1024x1024 SQUARE Japanese anime cel-shaded card illustration, like a modern light-fantasy mobile game trading card. Flat 2-3 step cel shading, THIN clean black line art, hard-edged shadows, big clean color blocks, ONE strong light source. The subject is BRIGHT and clearly lit against a DARKER softly-blurred background. Keep the composition SIMPLE and UNCLUTTERED, safe margins on all four sides.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO ray-traced reflections, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO text, NO watermark. It must stay crisp and legible when shrunk to a small 448x403 card.
+
+STRICT RULES FOR THIS IMAGE:
+- EXACTLY ONE hand (a single gloved female assassin hand) and EXACTLY ONE dagger. NO second hand, NO second weapon, NO face, NO full body, NO other character, NO duck, NO full figure of any kind.
+- This is a CLOSE-UP of only the hand and the dagger. The hand enters from the lower-left, thrusting a single silver dagger toward the upper-right.
+
+THE HAND (only visible subject, about 65% of frame, entering from lower-left):
+A slim female hand in a black fingerless assassin glove. The hand grips a SINGLE silver dagger — a short blade with a diamond-shaped tip, a simple cross-guard, and a dark wrapped grip. The hand thrusts the dagger forward in a clean, readable striking pose, blade pointed diagonally toward the upper-right. The arm disappears off the lower-left edge of the frame. Only ONE hand. No face, no body, no torso, no other limbs.
+
+THE DAGGER:
+One silver blade, edge glinting with a single thin highlight. The blade is the brightest element, catching the key light. NO second blade, NO floating daggers, NO duplicate weapons, NO chaotic trails.
+
+COMPOSITION:
+A single clean diagonal action line from lower-left (hand) to upper-right (blade tip). Two or three simple straight speed lines behind the blade show the strike direction. The moment reads instantly: "a single dagger strike."
+
+BACKGROUND:
+A dark blurred deep-purple forest, softly out of focus, muted and DARK so the bright hand and silver blade pop. NO figures, NO silhouettes of characters, only abstract blurred foliage.

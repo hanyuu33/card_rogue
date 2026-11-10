@@ -1,0 +1,9 @@
+Create a completely NEW 1024x1024 SQUARE Japanese anime cel-shaded card illustration, like a modern light-fantasy mobile game trading card. Flat 2-3 step cel shading, THIN clean black line art, hard-edged shadows, big clean color blocks, ONE strong light source. The subject is BRIGHT and clearly lit, standing out against a DARKER softly-blurred background.
+
+FRAMING — MOST IMPORTANT: LOW-ANGLE shot looking UP at the giant from below (the viewer stands at the mech's feet looking up), which makes the giant tower over the frame. The whole mech fits inside the frame with a little headroom at the top.
+
+SUBJECT — A CHIMERIC WAR MECH TYRANT rising out of a SCRAP YARD: a massive, towering mech standing dominant on a pile of scrap and wreckage in a junk yard. It is NOT a standardized factory mech — it is a crude patchwork of WHATEVER parts were available: mismatched armor plates from different mechs, a hydraulic claw on one arm, a cannon barrel fused into the other arm, a tank tread plate bolted on one shoulder, welded seams, loose cables and riveted patches holding the disparate parts together. Some parts are rusty, some are fresh steel, sizes do not quite match — this is a scavenger's frankenstein machine. Cold CYAN energy glows at the seams and in the chest core, with tiny amber warning accents.
+
+MECH-CORE STYLE: gunmetal-grey and matte steel base tones, cold cyan glow only at seams and chest core. Its head is a CLOSED sensor dome with a single slim cyan visor — NO human face, NO skull. The giant is the BRIGHTEST subject, clearly separated from a darker blurred scrap-yard background.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic metal texture, NO ray-traced reflections, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO text, NO watermark. It must stay crisp and legible when shrunk to a small 448x403 card.

@@ -1,0 +1,10 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "RECON TOWER" (a mechanical outpost structure, NOT a robot, NO human figure, NO wheels).
+A tall slender STEEL LATTICE TOWER standing on a small armoured base, built from riveted steel beams in cool grey with thin glowing CYAN seam strips running up the legs. On top sits a rotating RADAR DISH antenna plus a small cyan sensor lens, and a short mast with a round AMBER indicator lamp. From the dish a thin, crisp CYAN SCANNING CONE sweeps down-forward at an angle, drawn as clean flat translucent shapes (NOT a beam of light haze, NO arrows). Yellow-black hazard stripes ring the base.
+BACKGROUND: dark ruined battlefield at night, broken concrete slabs, softly blurred, deep blue-grey, so the bright grey tower pops.
+Camera slightly low three-quarter view, whole tower inside the frame, safe margins.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO text, NO letters, NO numbers, NO watermark, NO logo, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO playing cards, NO card frames. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

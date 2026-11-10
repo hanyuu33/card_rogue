@@ -1,0 +1,11 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, its scale, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "ASSEMBLY LINE" (enemy effect: summons a mass-produced unit every 3 turns). NO human, NO creature, NO full robot.
+A wide STEEL CONVEYOR BELT running diagonally across the frame carrying THREE identical half-finished grey machine chassis blocks (plain rectangular torso shells, NO heads, NO limbs), evenly spaced. Two overhead robotic ARM manipulators with visible pistons lower toward the middle chassis, their tips holding small CYAN weld points. THREE round AMBER status lamps hang in a row above the belt (a quiet 'three turns' motif). Cyan guide strips along the belt edge, riveted steel, oily dark floor.
+BACKGROUND: dark blurred factory, deep blue-grey.
+
+COMPOSITION (MANDATORY): keep the entire subject fully inside the frame with generous safe margins (at least 10% empty background on every side), do NOT crop any part of it, do NOT fill the frame edge-to-edge, pull the camera back. Everything must read clearly when shrunk to a small 448x403 trading-card window.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO invented humanoid, NO hooded figure, NO running silhouette, NO extra creature, NO text, NO letters, NO numbers, NO watermark, NO logo, NO readable symbols, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO playing cards, NO card frames, NO light cones, NO beams of light, NO energy streams, NO glowing fog. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

@@ -1,0 +1,10 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "CONCENTRATED BREAKTHROUGH" (a single focused strike). NO human, NO creature, NO full robot.
+A single tight CORING BEAM of concentrated cyan energy punches straight through a thick grey steel armour plate standing upright in the frame. The entry point is a blazing cyan-white hole with a ring of molten metal peeling outward, a spiderweb of glowing cracks spreading across the plate, and a burst of fine sparks and steel shards flying toward the viewer. A second thin beam core spirals inside the main beam for detail. The plate's rivets and seam strips glow hot near the impact.
+BACKGROUND: dark blurred industrial wall, deep blue-grey.
+Impact point slightly above centre, dramatic but readable at thumbnail size.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO text, NO letters, NO numbers, NO watermark, NO logo, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO playing cards, NO card frames. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

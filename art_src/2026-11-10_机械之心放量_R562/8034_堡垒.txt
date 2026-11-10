@@ -1,0 +1,10 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "BASTION" (a heavy mechanical fortress wall, NOT a robot, NO human, NO gun turret on top).
+A massive layered STEEL BUNKER wall filling the centre of the frame: three stacked riveted armour slabs in cool STEEL GREY stepped back from each other, cast-concrete corner blocks, deep firing slits glowing faint CYAN from inside, a bolted shield-shaped emblem plate (blank, NO text) on the front, yellow-black hazard chevrons on the lower edge. Thick hydraulic bracing struts angle into the ground. Everything reads heavy, thick and immovable.
+BACKGROUND: dark blurred battlefield with craters and rubble, deep blue-grey.
+Straight-on slightly low angle, symmetrical, single subject.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO text, NO letters, NO numbers, NO watermark, NO logo, NO arrows, NO arrow symbols, NO motion-trail lines, NO speed lines, NO graphic marks of any kind, NO playing cards, NO card frames. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

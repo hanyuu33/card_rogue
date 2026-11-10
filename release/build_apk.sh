@@ -8,6 +8,12 @@
 #     bash release/build_apk.sh                     # test build, no archive -> dist/DuckCardsRogue.apk
 #     bash release/build_apk.sh "" release          # release build, no archive
 #
+# Import-cache hygiene (R563): step 3 prunes stale .godot/imported/*.ctex on
+# EVERY build, because Godot copies that folder into the APK and never evicts
+# blobs whose source image was deleted. CARDROGUE_IMPORT_CACHE=orphan (default)
+# | full (wipe all, Godot re-imports) | skip (debug only). Step 6 audits the
+# finished APK for orphan .ctex.
+#
 # 第二参 = 构建模式：test（默认，全职业·全难度直接可用）/ release（发布版：
 # 职业·难度渐进解锁，见 scripts/unlock_system.gd）。两版共用代码与素材，只有
 # 导出预设里的 custom_features="cardrogue_release" 区分，`GameBuild.is_release()` 判定。
@@ -58,6 +64,7 @@ OUT_SIGNED="$ROOT/dist/DuckCardsRogue${SFX}-signed.apk"
 say()  { printf '\n\033[1;36m[build]\033[0m %s\n' "$*"; }
 warn() { printf '\n\033[1;33m[build]\033[0m %s\n' "$*"; }
 die()  { printf '\n\033[1;31m[build][FATAL]\033[0m %s\n' "$*" >&2; exit 1; }
+PY="$(command -v python || command -v python3 || true)"
 
 # fingerprint of a keystore -> lowercase SHA-256 hex (no colons)
 sha_of() {
@@ -98,9 +105,26 @@ if [ "$NEED_SYNC" = "1" ]; then
 fi
 say "signature key OK: SHA-256 $CANON_SHA256"
 
-# ---- 3/6 clean old artifacts ----------------------------------------------
-say "3/6 clean old artifacts"
+# ---- 3/6 clean old artifacts + stale Godot import cache --------------------
+say "3/6 clean old artifacts + stale import cache"
 rm -f "$OUT_UNSIGNED" "$OUT_UNSIGNED.idsig" "$OUT_SIGNED" "$OUT_SIGNED.idsig"
+
+# Godot ships .godot/imported/*.ctex inside the APK (assets/.godot/imported/).
+# Blobs whose source image was deleted are never evicted, so a one-off raw
+# dump / renamed candidate keeps bloating EVERY later build. Prune by whitelist
+# of live .import dest_files; valid caches stay, no full re-import needed.
+CACHE_MODE="${CARDROGUE_IMPORT_CACHE:-orphan}"
+case "$CACHE_MODE" in
+  skip) warn "import cache cleanup skipped (CARDROGUE_IMPORT_CACHE=skip)" ;;
+  orphan|full)
+    [ -n "$PY" ] || die "python not found; cannot clean import cache (CARDROGUE_IMPORT_CACHE=skip to bypass)"
+    CACHE_ARGS=("--apply")
+    [ "$CACHE_MODE" = "full" ] && CACHE_ARGS+=("--full")
+    "$PY" "$ROOT/tools/clean_godot_import_cache.py" "${CACHE_ARGS[@]}" \
+      || die "import cache cleanup failed"
+    ;;
+  *) die "bad CARDROGUE_IMPORT_CACHE=$CACHE_MODE (orphan|full|skip)" ;;
+esac
 
 # ---- 4/6 export (Godot may auto-sign) -------------------------------------
 say "4/6 export APK"
@@ -155,12 +179,20 @@ if [ -n "$ROUND" ]; then
   FINAL="$ROOT/dist/DuckCardsRogue${SFX}_R${ROUND}.apk"
   cp -f "$OUT_SIGNED" "$FINAL"
   rm -f "$OUT_UNSIGNED" "$OUT_SIGNED"
+  AUDIT_APK="$FINAL"
   ls -l "$FINAL"
   say "DONE: $FINAL"
   say "REMINDER: keep only latest + previous in dist/ (delete older _R*.apk)"
 else
   cp -f "$OUT_SIGNED" "$OUT_UNSIGNED"
   rm -f "$OUT_SIGNED"
+  AUDIT_APK="$OUT_UNSIGNED"
   ls -l "$OUT_UNSIGNED"
   say "DONE: dist/DuckCardsRogue${SFX}.apk (no round given)"
+fi
+
+# post-build guard: no stale blobs may ship inside the finished APK
+if [ -n "$PY" ] && [ "$CACHE_MODE" != "skip" ] && [ -f "$AUDIT_APK" ]; then
+  "$PY" "$ROOT/tools/clean_godot_import_cache.py" --audit-apk "$AUDIT_APK" \
+    || warn "APK still contains orphan .ctex -- see [cache] lines above"
 fi
