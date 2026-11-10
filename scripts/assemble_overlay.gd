@@ -281,8 +281,8 @@ func _draw_preview() -> void:
 		var er := _effect_rect(i)
 		# R559c：用 adventure 面板素材（panel_journal_light 九宫格）而非纯色圆角矩形。
 		draw_style_box(UiTheme.adventure_panel_style(12.0), er)
-		draw_string(_font_bold, Vector2(er.position.x + 36.0, er.position.y + 32.0),
-				tags[i], HORIZONTAL_ALIGNMENT_LEFT, er.size.x - 48.0,
+		draw_string(_font_bold, Vector2(er.position.x, er.position.y + 32.0),
+				tags[i], HORIZONTAL_ALIGNMENT_CENTER, er.size.x,
 				UiTheme.FS_CAPTION, UiTheme.ACCENT_GOLD)
 		var txt := ""
 		if _all_filled():
