@@ -75,6 +75,9 @@ func _init() -> void:
 	_test_r565_fidelity()
 	_test_r566_split_text()
 	_test_r568_passive()
+	_test_r569_purge()
+	_test_r569_actions()
+	_test_r569_pool_forms()
 	print("Combination tests failures: ", failures)
 	quit(failures)
 
@@ -90,6 +93,10 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 		"draw": return text.contains("抽一张")
 		"stun": return text.contains("眩晕")
 		"knockback": return text.contains("击退 %d 格" % n)
+		"purge_curse": return text.contains("所有诅咒") and text.contains("%d 点伤害" % n)
+		"add_random_effect": return text.contains("效果卡")
+		"hand_discount": return text.contains("本回合费用 -%d" % n)
+		"hand_upgrade": return text.contains("生命 +%d" % n)
 	return true
 
 
@@ -198,9 +205,17 @@ func _test_r566_split_text() -> void:
 				"R567：%d %s 的下半不许带扳机" % [c.id, c.card_name])
 		var body := Rules.body_text(c.lower_effect)
 		check(body != "", "R567：%d %s 下半文案不许为空" % [c.id, c.card_name])
-		check(not body.contains("："),
-				"R567：%d %s 下半文案里不许出现扳机式冒号（实际「%s」）"
-				% [c.id, c.card_name, body])
+		# R569：判据从「不许有任何冒号」收紧到**真正要防的那件事** —— 不许出现扳机式冒号。
+		# 原写法把「获得改造：生命 +4」也一起判死了（那是效果内部的结构，不是时机），
+		# 而用户真正否掉的是「下半重新印一遍时机」。
+		var trig_prefix := ""
+		for label: String in Rules.LABELS.values():
+			if body.contains(label + "："):
+				trig_prefix = label
+				break
+		check(trig_prefix == "",
+				"R567：%d %s 下半文案里不许出现扳机式冒号 %s（实际「%s」）"
+				% [c.id, c.card_name, trig_prefix, body])
 		check(not body.ends_with("：") and not body.contains("时："),
 				"R567：%d %s 下半不许以扳机名开头（实际「%s」）" % [c.id, c.card_name, body])
 	check(rows >= 8, "R567：可组合候选至少 8 张（实际 %d）" % rows)
@@ -217,11 +232,12 @@ func _test_r566_split_text() -> void:
 	var fence: CardData = repo.get_card(8018)
 	check(Rules.body_text(fence.lower_effect) == "抽1张牌",
 			"R567：活体栅栏下半 =「抽1张牌」（实际「%s」）" % Rules.body_text(fence.lower_effect))
-	# 火元素：「每清除 1 张，对随机一个敌人造成 2 点伤害」依赖前置的清除数量，
-	# 下半单独拿出来就不是原效果（用户口径「甚至跟原本效果不符」）→ 已移出候选池。
+	# 火元素：R567 曾按「下半依赖『每清除 1 张』的前提」把它移出候选池；
+	# R569 用户口径改判 —— 「如果后半是整体，那就全放到下句」，整条效果本来就是下半的。
+	# 真正的判据不是「句子依赖别处」，而是「下半有没有兑现原卡效果」，见 `_test_r569_purge`。
 	var fire: CardData = repo.get_card(9236)
-	check(fire.upper_effect.is_empty() and fire.lower_effect.is_empty(),
-			"R567：火元素已移出候选池（下半依赖「每清除 1 张」的前提）")
+	check(not fire.upper_effect.is_empty() and not fire.lower_effect.is_empty(),
+			"R569：火元素回到候选池（上半入场钩子 + 下半整条效果）")
 	# 黑暗领主：note 是描述前缀，不是扳机
 	var dark: CardData = repo.get_card(8021)
 	check(Rules.body_text(dark.lower_effect) == "在本回合结束时回复5点费用",
@@ -536,7 +552,7 @@ func _test_combo() -> void:
 	eng.ai_enabled = false
 	# 数据层：可组合候选 = 同时带 upper/lower 的玩家盟友/工事卡
 	var cand: Array = eng._combo_candidate_cards()
-	check(cand.size() == 12, "R567 组合：可组合盟友/工事候选 %d 张（期望 12）" % cand.size())
+	check(cand.size() >= 16, "R569 组合：可组合盟友/工事候选 %d 张（期望 ≥16）" % cand.size())
 	# 候选必须覆盖三职业盟友 + 工事，且全是盟友/工事（不允许其他 kind 混入）
 	var has_fort := false
 	var has_rogue := false
@@ -668,3 +684,187 @@ func _test_combo() -> void:
 	var dov := FileAccess.get_file_as_string("res://scripts/card_detail_overlay.gd")
 	check(dov != "" and dov.find("close.call_deferred()") >= 0 and dov.find("z_index = 200") >= 0,
 			"R564 源码锁：详情层帧末关闭 + 压在组合页之上")
+
+func _test_r569_purge() -> void:
+	## R569：用户口径「火元素也没道理退出，如果后半是整体，那就全放到下句。
+	## 上半：入场时，下半：清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，
+	## 对随机一个敌人造成 2 点伤害」。
+	##
+	## 火元素在 R567 被我误判成「下半依赖前置条件」而移出池子 —— 其实是**整条效果**都该放下半，
+	## 上半只留钩子。这一节锁三件事：① 它回到池子且形态正确；② 新动作 `purge_curse` 的文本
+	## 逐字等于原卡效果；③ 结算真的清三个区域、每张打 2 点。
+	var repo := CardRepo.load_json()
+	var fire: CardData = repo.get_card(9236)
+	check(fire != null and not fire.upper_effect.is_empty() and not fire.lower_effect.is_empty(),
+			"R569：火元素 9236 必须回到候选池（上半钩子 + 下半整条效果）")
+	if fire == null:
+		return
+	check(str(fire.upper_effect.get("trigger", "")) == "enter"
+			and (fire.upper_effect.get("effects", []) as Array).is_empty(),
+			"R569：火元素上半 = 纯钩子「入场时」")
+	check(Rules.body_text(fire.lower_effect)
+			== "清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 2 点伤害",
+			"R569：火元素下半逐字 = 原卡效果（实际「%s」）" % Rules.body_text(fire.lower_effect))
+	# 产物文本：扳机只印一次，整条效果跟在后面
+	var base := CardData.new()
+	base.card_name = "R569 探针"
+	base.kind = "盟友"
+	base.health = 20
+	base.power = 1
+	base.attack_range = 1
+	var prod := Rules.build(base, fire.upper_effect, fire.lower_effect)
+	check(prod != null and prod.effect_text.count("入场时") == 1
+			and prod.effect_text.begins_with("入场时：清除你的抽牌堆"),
+			"R569：产物 = 一个「入场时：」+ 整条效果（实际「%s」）"
+			% (prod.effect_text if prod != null else "null"))
+	# 结算：三个区域的诅咒全清，每清 1 张 → 随机敌人 2 伤
+	var eng := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng.ai_enabled = false
+	var curse_proto: CardData = null
+	for c: CardData in repo.all_cards():
+		if c.is_curse():
+			curse_proto = c
+			break
+	check(curse_proto != null, "R569：卡池里要有至少一张诅咒卡做探针")
+	if curse_proto != null:
+		for _i in 3:
+			eng.state.deck.append(CardData.from_dict(curse_proto.to_dict()))
+		eng.state.hand.append(CardData.from_dict(curse_proto.to_dict()))
+		eng.state.discard.append(CardData.from_dict(curse_proto.to_dict()))
+	var foe_card := CardData.new()
+	foe_card.kind = "盟友"
+	foe_card.card_name = "R569 靶子"
+	foe_card.health = 40
+	foe_card.power = 0
+	var foe := eng.state.place(foe_card, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var p := _probe_unit(eng, "enter", Vector2i(4, 0))
+	p.card.assemble = prod.assemble.duplicate(true)
+	eng._assemble_execute(p, Vector2i(4, 0), "enter")
+	check(eng.state.deck.is_empty() and eng.state.discard.is_empty(),
+			"R569：抽牌堆 / 弃牌区的诅咒全清（deck %d / discard %d）"
+			% [eng.state.deck.size(), eng.state.discard.size()])
+	check(foe != null and foe.health == 30,
+			"R569：清 5 张诅咒 → 5 次 2 伤（40 → 30，实际 %d）"
+			% (foe.health if foe != null else -1))
+	# 源码锁：两处走同一个实现口
+	var gs := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(gs.find("func _purge_self_curses") >= 0 and gs.find("_fire_primal_enter") >= 0
+			and gs.count("_purge_self_curses(") >= 3,
+			"R569 源码锁：诅咒清算只有 `_purge_self_curses` 一个实现口（火元素入场 + 组合动作共用）")
+
+
+func _test_r569_actions() -> void:
+	## R569：用户口径「继续找所有能做的填入，上半需要至少有一个钩子，下半需要至少有一个可执行效果」。
+	## 本轮新增三个**已有引擎实现**的动作（各自都有唯一实现口，与母卡共用）：
+	##   · `add_random_effect`（猫头鹰 9073，`from = "deck"` 时从牌库取）
+	##   · `hand_discount`（雪豹 8081）
+	##   · `hand_upgrade`（改装者 8076）
+	var repo := CardRepo.load_json()
+	# ① 从牌库取随机效果卡
+	var owl: CardData = repo.get_card(9073)
+	check(owl != null and not owl.lower_effect.is_empty(), "R569：猫头鹰 9073 必须进候选池")
+	var effect_proto: CardData = null
+	for c: CardData in repo.all_cards():
+		if c.is_effect() and c.group == "player":
+			effect_proto = c
+			break
+	check(effect_proto != null, "R569：卡池里要有至少一张效果卡做探针")
+	var eng := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng.ai_enabled = false
+	if effect_proto != null:
+		eng.state.deck.append(CardData.from_dict(effect_proto.to_dict()))
+	var p := _probe_unit(eng, "use", Vector2i(3, 0))
+	p.card.assemble = {"trigger": "use", "effects": owl.lower_effect.get("effects", []).duplicate(true)}
+	eng._assemble_execute(p, Vector2i(3, 0), "use")
+	check(eng.state.deck.is_empty() and eng.state.hand.size() == 1,
+			"R569：`from = deck` → 牌库 -1、手牌 +1（deck %d / hand %d）"
+			% [eng.state.deck.size(), eng.state.hand.size()])
+	# ② 随机手牌本回合费用 -1
+	var eng2 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng2.ai_enabled = false
+	var cheap := CardData.new()
+	cheap.kind = "盟友"
+	cheap.card_name = "减费靶"
+	cheap.cost = 3
+	cheap.health = 5
+	eng2.state.hand.append(cheap)
+	var p2 := _probe_unit(eng2, "attack", Vector2i(3, 0))
+	p2.card.assemble = {"trigger": "attack", "effects": [{"type": "hand_discount", "value": 1}]}
+	eng2._assemble_execute(p2, Vector2i(3, 0), "attack")
+	check(int(eng2.state.hand_cost_turn.get(cheap, 0)) == 1,
+			"R569：手牌本回合费用 -1（实际 %d）" % int(eng2.state.hand_cost_turn.get(cheap, 0)))
+	# ③ 手牌盟友改造：生命 +4 + 一层改造
+	var eng3 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng3.ai_enabled = false
+	var ally := CardData.new()
+	ally.kind = "盟友"
+	ally.card_name = "改造靶"
+	ally.cost = 1
+	ally.health = 5
+	ally.power = 1
+	eng3.state.hand.append(ally)
+	var p3 := _probe_unit(eng3, "enter", Vector2i(3, 0))
+	p3.card.assemble = {"trigger": "enter", "effects": [{"type": "hand_upgrade", "value": 4}]}
+	eng3._assemble_execute(p3, Vector2i(3, 0), "enter")
+	check(eng3.state.hand[0].health == 9 and eng3.state.hand[0].upgrade_stacks == 1,
+			"R569：手牌盟友改造 +4 生命 / +1 层（实际 %d 血 / %d 层）"
+			% [eng3.state.hand[0].health, eng3.state.hand[0].upgrade_stacks])
+	# ④ 数值校验：0 张 / 减 0 费 / 改造 +0 都是空动作，判废
+	check(Rules.valid_effect({"type": "purge_curse", "value": 2}), "R569：purge_curse 合法")
+	check(not Rules.valid_effect({"type": "add_random_effect", "value": 0}),
+			"R569：加 0 张效果卡判废")
+	check(not Rules.valid_effect({"type": "hand_discount", "value": 0}), "R569：减 0 费判废")
+	check(not Rules.valid_effect({"type": "hand_upgrade", "value": 0}), "R569：改造 +0 判废")
+	# ⑤ 源码锁：三个动作各有唯一实现口，母卡与组合共用
+	var gs := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(gs.find("func _discount_random_hand") >= 0 and gs.count("_discount_random_hand(") >= 3,
+			"R569 源码锁：手牌减费只有 `_discount_random_hand` 一个实现口（雪豹 + 组合）")
+	check(gs.find("func _upgrade_hand_allies") >= 0 and gs.count("_upgrade_hand_allies(") >= 3,
+			"R569 源码锁：手牌改造只有 `_upgrade_hand_allies` 一个实现口（改装者 + 组合）")
+
+
+func _test_r569_pool_forms() -> void:
+	## R569：用户口径「上半需要至少有一个钩子，下半需要至少有一个可执行效果」。
+	## 这是**候选池的形状规则**，不是某一两张卡的事 —— 全池逐张锁，以后加卡自动受约束。
+	## 同时锁「无法移动」已从全卡池清除（用户口径「无法移动全部删除，空白文本也无所谓」）。
+	var repo := CardRepo.load_json()
+	var pool: Array[CardData] = []
+	for c: CardData in repo.all_cards():
+		if (c.kind == "盟友" or c.kind == "工事") and c.group == "player" \
+				and not c.upper_effect.is_empty() and not c.lower_effect.is_empty():
+			pool.append(c)
+	check(pool.size() >= 16, "R569：候选池至少 16 张（实际 %d）" % pool.size())
+	for c: CardData in pool:
+		check(Rules.TRIGGERS.has(str(c.upper_effect.get("trigger", ""))),
+				"R569：%d %s 上半必须有合法钩子" % [c.id, c.card_name])
+		check((c.upper_effect.get("effects", []) as Array).is_empty(),
+				"R569：%d %s 上半不承载效果（整条效果放下半）" % [c.id, c.card_name])
+		check(not c.lower_effect.has("trigger"),
+				"R569：%d %s 下半不许带扳机" % [c.id, c.card_name])
+		var lf: Array = c.lower_effect.get("effects", [])
+		check(lf.size() >= 1, "R569：%d %s 下半至少一个可执行效果" % [c.id, c.card_name])
+		for fx: Variant in lf:
+			check(Rules.valid_effect(fx), "R569：%d %s 的动作 %s 不可执行"
+					% [c.id, c.card_name, str(fx)])
+			if fx is Dictionary:
+				check(_fx_in_text(fx, c.effect_text.replace("**", "")),
+						"R569 保真：%d %s 的动作 %s 在原卡文本里找不到出处（原文：%s）"
+						% [c.id, c.card_name, str(fx), c.effect_text])
+	# 全卡池：「无法移动」清零（用户口径「空白文本也无所谓，没有效果就应该是空白」）
+	for c: CardData in repo.all_cards():
+		check(not c.effect_text.contains("无法移动"),
+				"R569：「无法移动」应全部删除，但 %d %s 还有：%s"
+				% [c.id, c.card_name, c.effect_text])
+	# 空文本是真空白（木栅栏 / 箭塔 改成没有效果就该是空串，不是只剩一个句号）
+	for cid: int in [8001, 9019]:
+		var c: CardData = repo.get_card(cid)
+		check(c != null and c.effect_text.strip_edges() == "",
+				"R569：%d 没有效果 → 文本必须为空（实际「%s」）"
+				% [cid, c.effect_text if c != null else "null"])
+	# 源码锁：超框缩字号（用户口径「文字应该增加自适应大小，超框需要缩小」）
+	var cf := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+	check(cf.find("func fit_text_lines") >= 0, "R569 源码锁：卡面有「超框缩字号」公共口")
+	check(cf.find("fit_text_lines(font, eff") >= 0, "R569 源码锁：卡面效果文字走自适应")
+	var ao := FileAccess.get_file_as_string("res://scripts/assemble_overlay.gd")
+	check(ao.find("CardFace.fit_text_lines") >= 0,
+			"R569 源码锁：组合页上/下效果框也走自适应（犀牛那三行不再顶出框底）")

@@ -4549,6 +4549,18 @@ func _fire_primal_enter(p: Placement) -> void :
 	## 「火元素」9236（R523，2 费**稀有**盟友 4/6/1/1）：
 	##   入场时清空**自己**的抽牌堆 / 手卡 / 弃牌区里的**所有诅咒**，每清 1 张 →
 	##   对随机一个敌人造成 2 点伤害。
+	## R569：清算逻辑抽到唯一口 `_purge_self_curses` —— 组合动作 `purge_curse` 与这里共用。
+	## 火元素既能当承载体（原卡 id 钩子走这里）、也能被拖进组合的下半（走 assemble），
+	## 两处各写一遍必然走形。
+	var r := _purge_self_curses(FIRE_PRIMAL_DMG, "火元素")
+	action.emit("fire_primal", {"cell": _cell_of(p), "purged": int(r.get("purged", 0)),
+			"hits": int(r.get("hits", 0)), "dmg": FIRE_PRIMAL_DMG})
+
+
+func _purge_self_curses(dmg: int, tag: String) -> Dictionary:
+	## R569：「清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人
+	## 造成 N 点伤害」的**唯一实现口** —— 火元素入场（`_fire_primal_enter`）与组合动作
+	## `purge_curse` 都走这里。返回 {"purged": 清除张数, "hits": 实际命中次数}。
 	## ⚠️ 诅咒按 `CardData.is_curse()`（kind == "诅咒"）判，不写死 id —— 以后加新诅咒自动吃到。
 	## ⚠️ 三个区域都只动**自己的**：敌方往我们这边塞的诅咒是「我们的」，照清；
 	##   敌方自己手里的诅咒不碰（卡面写的是「你的」）。
@@ -4588,14 +4600,12 @@ func _fire_primal_enter(p: Placement) -> void :
 		var tgt: Placement = state.board.get(alive[rng.randi_range(0, alive.size() - 1)], null)
 		if tgt == null or tgt.health <= 0:
 			continue
-		_hit_unit(tgt, FIRE_PRIMAL_DMG, "火元素", true, false, dealt)
+		_hit_unit(tgt, dmg, tag, true, false, dealt)
 		dealt += 1
 		if tgt.health <= 0:
 			_destroy_dead()
-	_log("火元素：清除 %d 张诅咒 → 对随机敌人造成 %d 次 %d 点伤害"
-			% [purged, dealt, FIRE_PRIMAL_DMG])
-	action.emit("fire_primal", {"cell": _cell_of(p), "purged": purged,
-			"hits": dealt, "dmg": FIRE_PRIMAL_DMG})
+	_log("%s：清除 %d 张诅咒 → 对随机敌人造成 %d 次 %d 点伤害" % [tag, purged, dealt, dmg])
+	return {"purged": purged, "hits": dealt}
 
 
 func _mark_spell_enemy_hit() -> void :
@@ -5456,28 +5466,36 @@ func _modder_enter(p: Placement) -> void :
 	##      连 `field_got` 计数也一起去掉；想改回来必须先确认，别再凭「改造者当然改全场」
 	##      的直觉补回去。连带：`modder_enter` 事件的 `field` 键也删了（没有消费方）。
 	##   ⚠️ R405（「不应该可以改造自己」）仍然成立：它自己不在手牌里，天然吃不到这一层。
-	##   * **手牌**盟友烤进副本（`from_dict` 复制 + 原位替换），生命 +4 并记一层 `upgrade_stacks`
-	##     （R209：层数随身带，上场由 `FieldState.place()` 折算成 HP；本场战斗内保留）。
-	##   * 只认「盟友」（kind == "盟友"），不认工事（用户原话「盟友」）。
-	##   * 改造走唯一口 → 素体 / 战斗骨骼等卡面改造奖励照常生效。
-	## ⚠️ 手牌改的是副本 —— 污染不到卡库。
+	## R569：改造本体抽到唯一口 `_upgrade_hand_allies`（组合动作 `hand_upgrade` 共用）——
+	## 两处各写一遍，迟早一边改了一边没改（用户对「效果和原本对不上」极敏感）。
+	var hand_got := _upgrade_hand_allies(MODDER_HP, p.card.card_name)
+	action.emit("modder_enter", {"hand": hand_got, "hp": MODDER_HP})
+	_inspire_tick()   # R300 激发：改装者入场一次改全体 → 只算一次
+
+
+func _upgrade_hand_allies(hp_gain: int, tag: String) -> int:
+	## R569：**手牌里的每个盟友各获得一次改造：生命 +`hp_gain`**。唯一实现口 ——
+	## 改装者 8076 的入场效果与组合动作 `hand_upgrade` 共用。返回改到的张数。
+	## ⚠️ 只认「盟友」（kind == "盟友"），不认工事（用户原话「盟友」）。
+	## ⚠️ 手牌改的是**副本**（`from_dict` 复制 + 原位替换）—— 卡库是共享实例，
+	##    直接改会让「这张卡被改造过」泄漏到图鉴和下一局。
+	## ⚠️ 层数记 `upgrade_stacks`（R209：层数随身带，上场由 `FieldState.place()` 折算成 HP）。
+	## ⚠️ 改造走唯一口 → 素体 / 战斗骨骼等卡面改造奖励照常生效。
 	var hand_got := 0
-	var hand_names: Array[String] = []
 	for i in state.hand.size():
 		var c: CardData = state.hand[i]
 		if c.kind != "盟友":
 			continue
 		var up := CardData.from_dict(c.to_dict())
 		up.traits = (up.traits as Array).duplicate()
-		var mh: int = _upgrade_hp_gain(up, MODDER_HP)
+		var mh: int = _upgrade_hp_gain(up, hp_gain)
 		up.health += mh
 		up.upgrade_stacks += 1        # R209：层数随身带（上场由 place() 接到 Placement）
 		state.hand[i] = up
 		hand_got += 1
-		hand_names.append("%s %d血" % [c.card_name, up.health])
-	_log("%s：手牌 %d 个盟友各获得改造（生命 +%d）" % [p.card.card_name, hand_got, MODDER_HP])
-	action.emit("modder_enter", {"hand": hand_got, "hp": MODDER_HP})
-	_inspire_tick()   # R300 激发：改装者入场一次改全体 → 只算一次
+	_log("%s：手牌 %d 个盟友各获得改造（生命 +%d）" % [tag, hand_got, hp_gain])
+	return hand_got
+
 
 func _cannon_mech_enter(p: Placement) -> void :
 	## 「聚能机兵」8073（R271，2 费普通盟友 1/8/1/1）：入场时，本次对战中你每使用过
@@ -16167,25 +16185,36 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 
 func _snow_leopard_discount(p: Placement) -> void :
 	## R446 雪豹（8081，事件「雪豹出现」选项 2）：**攻击时**随机一张手牌**本回合**费用 -1。
-	## 减费走 `state.hand_cost_turn`（回合级临时表：`end_turn` 清空、离手自动恢复原价）
-	## —— 与「随心组装 9144」同一张表，别另造一套按卡记账。
-	## 候选只取「此刻费用 > 0」的卡：0 费卡减费没有意义，也会把「免费」的记账搅乱。
+	## R569：减费本体抽到唯一口 `_discount_random_hand`（组合动作 `hand_discount` 共用）。
 	if p == null or p.owner != SIDE_SELF or p.card.id != SNOW_LEOPARD_ID:
 		return
+	var pick_name := _discount_random_hand(SNOW_LEOPARD_DISCOUNT, "雪豹")
+	if pick_name == "":
+		return
+	action.emit("snow_leopard", {"id": p.card.id, "name": pick_name,
+			"amount": SNOW_LEOPARD_DISCOUNT})
+
+
+func _discount_random_hand(amount: int, tag: String) -> String:
+	## R569：**随机一张手牌，本回合费用 -`amount`**。唯一实现口 —— 雪豹 8081 的
+	## 「攻击时随机一张手牌本回合费用 -1」与组合动作 `hand_discount` 共用。
+	## 减费走 `state.hand_cost_turn`（回合级临时表：`end_turn` 清空、离手自动恢复原价）
+	## —— 与「随心组装 9144」同一张表，别另造一套按卡记账。
+	## 候选只取「此刻费用 > 0」的卡：0 费卡减费没有意义，也会把「免费」的记账搅乱；
+	## R521 的 X 费同理（费用随剩余行动力浮动，减费对它没有意义）。
+	## 返回被减费的卡名；没有候选时返回 ""。
 	var cand: Array[CardData] = []
 	for c: CardData in state.hand:
-		# R521：X 费的费用随剩余行动力浮动，减费对它没有意义
 		if not c.x_cost and cost_of(c) > 0:
 			cand.append(c)
 	if cand.is_empty():
-		_log("雪豹：手牌里没有可以减费的卡")
-		return
+		_log("%s：手牌里没有可以减费的卡" % tag)
+		return ""
 	var pick: CardData = cand[rng.randi_range(0, cand.size() - 1)]
-	var now: int = int(state.hand_cost_turn.get(pick, 0)) + SNOW_LEOPARD_DISCOUNT
+	var now: int = int(state.hand_cost_turn.get(pick, 0)) + amount
 	state.hand_cost_turn[pick] = now
-	_log("雪豹：随机手牌「%s」本回合费用 -%d" % [pick.card_name, SNOW_LEOPARD_DISCOUNT])
-	action.emit("snow_leopard", {"id": p.card.id, "name": pick.card_name,
-			"amount": SNOW_LEOPARD_DISCOUNT})
+	_log("%s：随机手牌「%s」本回合费用 -%d" % [tag, pick.card_name, amount])
+	return pick.card_name
 
 
 func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
@@ -17719,6 +17748,53 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 				p.card = CardData.from_dict(p.card.to_dict())
 				p.card.attack_range += value
 				p.upgrade_range += value
+			"purge_curse":
+				# R569：火元素式的「清除自己的全部诅咒，每清 1 张 → 随机敌人 N 伤」。
+				# 与 `_fire_primal_enter` 共用唯一口 `_purge_self_curses`（两处各写一遍必然走形）。
+				# ⚠️ 组合只能由玩家发动，这里固定清**自己**；敌方没有真实牌库。
+				_purge_self_curses(value, "组合")
+			"add_random_effect":
+				# R569：随机一张**效果卡**加入手卡。
+				#   · 默认「凭空给」：从本职业奖励池取（无尽加护 9061 同口径），牌库不减少。
+				#   · `from = "deck"`：**从牌库取**（猫头鹰 9073「从卡组加入手卡」），牌库当场少一张。
+				# 两条路都走引擎 rng → 回放可复现；`from_dict` 复制后再给，不污染卡库。
+				if str(fx.get("from", "")) == "deck":
+					var ae_got := 0
+					for _j in maxi(1, value):
+						var ae_idx: Array[int] = []
+						for di in state.deck.size():
+							var dc: CardData = state.deck[di]
+							if dc != null and dc.is_effect():
+								ae_idx.append(di)
+						if ae_idx.is_empty():
+							break
+						var di2: int = ae_idx[rng.randi_range(0, ae_idx.size() - 1)]
+						var ae_taken: CardData = state.deck[di2]
+						state.deck.remove_at(di2)
+						_grant_to_hand(CardData.from_dict(ae_taken.to_dict()), "组合")
+						ae_got += 1
+					if ae_got == 0:
+						_log("组合：牌库里没有效果卡，取牌落空")
+				else:
+					var ae_pool: Array[CardData] = []
+					var ae_repo := CardRepo.load_json()
+					if ae_repo != null:
+						for c: CardData in ae_repo.reward_pool_for(RunState.player_class):
+							if c.is_effect():
+								ae_pool.append(c)
+					if ae_pool.is_empty():
+						_log("组合：没有可以给予的效果卡")
+					else:
+						for _j in maxi(1, value):
+							var ae_pick: CardData = ae_pool[rng.randi_range(0, ae_pool.size() - 1)]
+							_grant_to_hand(CardData.from_dict(ae_pick.to_dict()), "组合")
+			"hand_upgrade":
+				# R569：手牌里的盟友各获得一次改造：生命 +N（改装者 8076 同口径，
+				# 共用 `_upgrade_hand_allies`；改造走唯一口 → 素体 / 战斗骨骼照常响应）。
+				_upgrade_hand_allies(value, "组合")
+			"hand_discount":
+				# R569：随机一张手牌本回合费用 -N（雪豹 8081 同口径，共用 `_discount_random_hand`）。
+				_discount_random_hand(value, "组合")
 			"energy":
 				if p.owner == SIDE_SELF:
 					state.energy += value

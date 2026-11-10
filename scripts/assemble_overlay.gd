@@ -432,8 +432,11 @@ func _draw_preview() -> void:
 				txt = AssembleRules.body_text(lo.lower_effect)
 		if txt != "":
 			# R562：左右内边距对称（原来左 36 / 右 12），别让文字贴死在包角上。
-			var body := Rect2(er.position.x + 40.0, er.position.y + 50.0,
-					er.size.x - 80.0, er.size.y - 60.0)
+			# R569：底部留白 10 → 6 —— 火元素那种 45 字的长效果在 9px 下要 3 行（39px），
+			# 原来的 36px 差 3px 就被截成「对随…」；缩字号已经能把字塞进框，
+			# 不该再因为差这几像素把半句话吃掉。
+			var body := Rect2(er.position.x + 40.0, er.position.y + 46.0,
+					er.size.x - 80.0, er.size.y - 50.0)
 			_draw_wrapped(body, txt, UiTheme.FS_CAPTION, UiTheme.INK_800)
 	if _tip != "":
 		# R562：底部一句提示（右键/ESC/撤回/落点为空时的说明），自带暗底 + 金边。
@@ -459,12 +462,26 @@ func _draw_preview() -> void:
 
 
 func _draw_wrapped(rect: Rect2, text: String, fs: int, col: Color) -> void:
-	var lines := CardFace.wrap_text(_font, text, rect.size.x, fs)
-	var y := rect.position.y + 4.0
-	for li in mini(lines.size(), 4):
-		draw_string(_font, Vector2(rect.position.x, y + fs * 0.8), lines[li],
-				HORIZONTAL_ALIGNMENT_LEFT, rect.size.x, fs, col)
-		y += fs + 3.0
+	## R569：**超框缩字号**（用户口径「文字应该增加自适应大小，超框需要缩小」）。
+	## 原来固定 `FS_CAPTION` + 行距 `fs+3` 硬塞 4 行 —— 犀牛「受到伤害减少 1 点，
+	## 但至少仍要受到 1 点。回合结束时」正好折成 3 行，最后一行基线顶出框底。
+	## 现在交给 `CardFace.fit_text_lines` 逐级降字号，仍放不下才截断补「…」。
+	var fit := CardFace.fit_text_lines(_font, text, rect.size.x, rect.size.y, fs, 8)
+	var lines: Array = fit["lines"]
+	var lh: float = float(fit["line_h"])
+	var fsz: int = int(fit["fs"])
+	var asc: float = float(_font.get_ascent(fsz))
+	var desc: float = float(_font.get_descent(fsz))
+	# 能画几行要按**真实墨迹**算：首行基线在 `rect.y + asc`，最后一行底在「基线 + desc」。
+	# 只按 `rect.size.y / lh` 取整会在字体的 ascent 偏大时把最后一行压到框线上（出图实测）。
+	var cap: int = maxi(1, int(floor((rect.size.y - asc - desc) / lh)) + 1)
+	var n: int = mini(lines.size(), cap)
+	for li in n:
+		var t: String = str(lines[li])
+		if li == n - 1 and lines.size() > n:
+			t = CardFace._ellipsize(_font, t + "…", rect.size.x, fsz)
+		draw_string(_font, Vector2(rect.position.x, rect.position.y + asc + lh * li), t,
+				HORIZONTAL_ALIGNMENT_LEFT, rect.size.x, fsz, col)
 
 
 # ── 输入 ─────────────────────────────────────────────────────

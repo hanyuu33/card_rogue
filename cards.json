@@ -283,7 +283,7 @@
         "防御",
         "栅栏"
       ],
-      "effect_text": "无法移动。",
+      "effect_text": "",
       "target_mode": "none",
       "color": "灰",
       "image": ""
@@ -759,7 +759,7 @@
         "工事",
         "远程"
       ],
-      "effect_text": "无法移动。",
+      "effect_text": "",
       "target_mode": "none",
       "color": "灰",
       "image": ""
@@ -1859,7 +1859,9 @@
       "effect_text": "使用时，将一张随机效果卡从卡组加入手卡。",
       "target_mode": "none",
       "color": "白",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use", "effects": []},
+      "lower_effect": {"effects": [{"type": "add_random_effect", "value": 1, "from": "deck"}]}
     },
     {
       "id": 9074,
@@ -3019,7 +3021,7 @@
         "侦察塔",
         "改造层数"
       ],
-      "effect_text": "无法移动。每拥有一层改造，它攻击范围内的敌人受到的伤害 +1。任何来源的伤害都算。",
+      "effect_text": "每拥有一层改造，它攻击范围内的敌人受到的伤害 +1。任何来源的伤害都算。",
       "target_mode": "none",
       "color": "灰",
       "image": ""
@@ -3924,7 +3926,9 @@
       "effect_text": "入场时，手卡中的盟友获得改造：生命 +4。",
       "target_mode": "none",
       "color": "白",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "enter", "effects": []},
+      "lower_effect": {"effects": [{"type": "hand_upgrade", "value": 4}]}
     },
     {
       "id": 9143,
@@ -4718,7 +4722,7 @@
       "affixes": [
         "次元"
       ],
-      "effect_text": "无法移动。死亡：召唤一个随机敌人。字段「次元」：离场即消失，不进弃牌区。",
+      "effect_text": "死亡：召唤一个随机敌人。字段「次元」：离场即消失，不进弃牌区。",
       "target_mode": "none",
       "value": 0,
       "color": "灰",
@@ -5623,7 +5627,9 @@
       "effect_text": "攻击时，随机一张手牌本回合费用 -1。",
       "target_mode": "none",
       "color": "白",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "attack", "effects": []},
+      "lower_effect": {"effects": [{"type": "hand_discount", "value": 1}]}
     },
     {
       "id": 8082,
@@ -6263,7 +6269,9 @@
       "effect_text": "入场时，清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 2 点伤害。",
       "target_mode": "none",
       "color": "红",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "enter", "effects": []},
+      "lower_effect": {"effects": [{"type": "purge_curse", "value": 2}]}
     },
     {
       "id": 9237,

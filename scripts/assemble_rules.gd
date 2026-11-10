@@ -19,6 +19,10 @@ static func valid_effect(fx: Variant) -> bool:
 		return false
 	if fx.type == "damage":
 		return fx.get("target", "nearest") in ["nearest", "all", "random"]
+	# R569：「加卡 / 减费 / 改造」三个动作的数值必须 ≥1 —— 0 张 / 减 0 费 / 改造 +0
+	# 等于一个空动作，卡面却会写出来，玩家会以为自己拿到了东西。
+	if fx.type in ["add_random_effect", "hand_discount", "hand_upgrade"]:
+		return int(fx.value) >= 1
 	return true
 
 static func valid_passive(pv: Variant) -> bool:
@@ -95,6 +99,15 @@ static func effect_text(fx: Dictionary) -> String:
 		"freeze": return "冰封最近敌人"
 		"stun": return "眩晕最近敌人"
 		"range": return "攻击距离 +%d" % n
+		"purge_curse":
+			return "清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 %d 点伤害" % n
+		"add_random_effect":
+			var ae_src := "从卡组" if str(fx.get("from", "")) == "deck" else ""
+			return "%s随机将%d张效果卡加入你的手卡" % [ae_src, maxi(1, n)]
+		"hand_upgrade":
+			return "手卡中的盟友获得改造：生命 +%d" % n
+		"hand_discount":
+			return "随机一张手牌本回合费用 -%d" % n
 	return ""
 
 

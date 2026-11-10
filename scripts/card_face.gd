@@ -789,11 +789,17 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	var eff_base0: float = base_meta + row_h                 # 效果首行基线
 	var eff_n: int = 0
 	var eff_lines: Array = []
+	var eff_sz: int = sz
 	if eff != "":
+		# R569：**超框缩字号**（用户口径「文字应该增加自适应大小，超框需要缩小」）。
+		# 原来字号固定、只按「放得下几行」截断 —— 长文本（组合产物的犀牛那种）直接被砍掉
+		# 半句，玩家读不到完整效果。现在先降字号塞进去，缩到底（7px）仍放不下才截断补「…」。
+		var fit := fit_text_lines(font, eff, maxw, bottom - eff_base0 + asc, sz, maxi(7, sz - 5))
+		eff_sz = int(fit["fs"])
+		eff_lines = fit["lines"]
+		line_h = float(fit["line_h"])
 		eff_n = int(floor((bottom - desc - eff_base0) / line_h)) + 1
-		if eff_n > 0:
-			eff_lines = wrap_text(font, eff, maxw, sz)
-			eff_n = mini(eff_lines.size(), eff_n)
+		eff_n = mini(eff_lines.size(), maxi(0, eff_n))
 	# R208：**不再铺底衬**（用户口径「卡牌文字背后那个淡黄色长方形不需要，只留卡名
 	# 文字和底背景图」）—— 文字直接坐在 card_paper 自带的姓名牌羊皮纸上。
 	# ── 第二遍：画字（**不描边**）───────────────────────────────────────
@@ -835,10 +841,10 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	for i in eff_n:
 		var t: String = eff_lines[i]
 		if i == eff_n - 1 and eff_lines.size() > eff_n:
-			t = _ellipsize(font, t + "…", maxw, sz)
+			t = _ellipsize(font, t + "…", maxw, eff_sz)
 		canvas.draw_string(font, Vector2(rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad,
 				eff_base0 + line_h * i), t,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, sz, UiTheme.INK_600)
+				HORIZONTAL_ALIGNMENT_LEFT, -1, eff_sz, UiTheme.INK_600)
 
 
 static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, rect: Rect2,
@@ -1170,6 +1176,32 @@ static func wrap_text(font: Font, text: String, max_w: float, size: int) -> Arra
 	## 规则：行首不落「，）」」这类收尾标点、行尾不留开引号、`「卡名」` 不拆、`+2/12/HP`
 	## 不从中间断、折行处不吃空格、超宽单元退化成逐字硬切。
 	return TextWrap.wrap_plain(font, text, max_w, size)
+
+
+static func fit_text_lines(font: Font, text: String, max_w: float, max_h: float,
+		fs_max: int, fs_min: int, max_lines: int = 99) -> Dictionary:
+	## R569：**超框就缩字号**（用户口径「文字应该增加自适应大小，超框需要缩小」）。
+	## 从 `fs_max` 往下逐级试，取第一个「折行数 ≤ max_lines 且整块行高 ≤ max_h」的字号；
+	## 一路缩到 `fs_min` 仍放不下时返回 `fs_min` 的结果 —— **截断由调用方决定**，
+	## 这里不悄悄丢字（悄悄丢掉的那部分，玩家永远不知道自己漏了什么）。
+	## 返回 {"fs": int, "lines": Array[String], "line_h": float}。
+	##
+	## ⚠️ 行高用字体真实 `get_height`，不按字号估：雅黑 9px 行高 13，按 1.16 倍估成 10
+	##    会让两行墨迹叠在一起（R115 出图实测）。
+	## ⚠️ 循环**严格递减**（`sz -= 1`），绝不依赖「条件终将不成立」退出 —— 绘制代码里
+	##    这类循环一旦条件写错就是整帧不返回，表现为游戏未响应（R164 踩过）。
+	if text.strip_edges() == "":
+		var none: Array[String] = []
+		return {"fs": fs_max, "lines": none, "line_h": float(fs_max)}
+	var sz: int = maxi(fs_min, fs_max)
+	while sz > fs_min:
+		var probe := wrap_text(font, text, max_w, sz)
+		var lh: float = maxf(font.get_height(sz), float(sz))
+		if probe.size() <= max_lines and probe.size() * lh <= max_h:
+			return {"fs": sz, "lines": probe, "line_h": lh}
+		sz -= 1
+	var lines := wrap_text(font, text, max_w, fs_min)
+	return {"fs": fs_min, "lines": lines, "line_h": maxf(font.get_height(fs_min), float(fs_min))}
 
 
 static func _ellipsize(font: Font, text: String, max_w: float, size: int) -> String:

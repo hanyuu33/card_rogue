@@ -293,6 +293,7 @@ const ASSEMBLE_TRIGGERS: Array[String] = [
 const ASSEMBLE_EFFECT_TYPES: Array[String] = [
 	"draw", "buff", "damage", "heal", "shield", "taunt",
 	"summon", "upgrade", "energy", "knockback", "freeze", "stun", "range",
+	"purge_curse", "add_random_effect", "hand_discount", "hand_upgrade",
 ]
 
 
