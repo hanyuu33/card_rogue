@@ -1912,8 +1912,11 @@ func _draw_key_relic_tip(i: int) -> void:
 	var lines := CardFace.wrap_text(_font, text, w - 20.0, 13)
 	var hint := "" if owned else "获取：%s" % RunState.key_relic_source(kid)
 	var extra_h := 0.0 if hint == "" else 18.0
-	var tx: float = clampf(_mouse.x - w / 2, 8, size.x - w - 8)
-	var panel := Rect2(tx, RELIC_TIP_TOP, w, 12.0 + lines.size() * 18.0 + extra_h)
+	# R553b（用户口径）：提示框贴到信物图标**旁边**，左上角落在原「信物」标签框的
+	# 位置（图标右侧 x=KEY_BADGE_X+KEY_BADGE_W+6、顶部对齐 y=KEY_BADGE_Y），
+	# 不再用顶部的悬浮条。
+	var tx: float = KEY_BADGE_X + KEY_BADGE_W + 6.0
+	var panel := Rect2(tx, KEY_BADGE_Y, w, 12.0 + lines.size() * 18.0 + extra_h)
 	draw_rect(panel, Color(0.10, 0.11, 0.15, 0.95), true)
 	draw_rect(panel, Color("d9a441") if owned else Color("6a7078"), false, 1.2)
 	for j in lines.size():
