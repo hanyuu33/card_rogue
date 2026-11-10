@@ -140,6 +140,10 @@ const FLASH_SECS := 14.0
 var _flint_pick := false
 var _flint_ids: Array = []
 var _flint_blocked: Array = []   # R448：整张图里「点不着」的那几格（起点 / 商店 / 当前格 / 已有篝火）
+## R555 飞行器：正在等玩家点一个「没走过」的房间传送过去。
+var _fly_pick := false
+var _fly_ids: Array = []
+var _fly_blocked: Array = []     # 飞行器点不着的那几格（走过 / 起点 / Boss / 固定商店 / 空地）
 var _mouse := Vector2.ZERO
 var _records_visible := false
 var _records_scroll := 0.0
@@ -462,6 +466,9 @@ func _ready() -> void:
 		# 出图用：截图探针没有鼠标移动，手动钉一个悬停格，才看得到亮橙呼吸框
 		if "--flintdemo" in OS.get_cmdline_user_args() and not _flint_ids.is_empty():
 			_hover_id = int(_flint_ids[_flint_ids.size() / 2])
+	# R555 飞行器：事件页选了「使用飞行器」→ pending_fly 置位 → 一进地图就进选格模式。
+	if RunState.pending_fly:
+		_start_fly_pick()
 	# 命令行 -- --screenshot：自动截图退出
 	#（`-- --enteranim --shotwait 1.0` 可以指定延迟，用来截过场的不同时刻）
 	if "--screenshot" in OS.get_cmdline_user_args():
@@ -660,6 +667,10 @@ func _gui_input(event: InputEvent) -> void:
 		if _dragging:
 			_dragging = false
 			return
+		# R555 飞行器：选格模式下这一下点击归飞行器所有（传送 + 进房）
+		if _fly_pick:
+			_fly_click(event.position)
+			return
 		# R447 燧石：选格模式下这一下点击归道具所有（不进门、不消耗巧克力）
 		if _flint_pick:
 			_flint_click(event.position)
@@ -746,6 +757,13 @@ func _commit_enter(cell: Dictionary) -> void:
 		else:
 			_set_note("这里是走过的房间，什么都不会发生（不消耗巧克力）")
 		return
+	_dispatch_node(cell)
+
+
+func _dispatch_node(cell: Dictionary) -> void:
+	## 结算 + 按房间类型分流（正常进房 / 飞行器传送**共用**这一条）。
+	## ⚠️ 进来时 `RunState.advance()`（或 `flyer_teleport`）已经标好了「已走过」，
+	##    这里只管设置 pending_node 并跳场景 / 弹奖励。
 	# R200：持有货物 → 第二层第一个事件房替换成「委托完成」（一次性）。
 	# ⚠️ 必须在 pending_node = cell **之前**改：Dictionary 是引用，后改会断开。
 	var delivery_kind := RunState.delivery_override_kind()
@@ -897,6 +915,7 @@ func _draw() -> void:
 	_draw_states()
 	_draw_map_flash()    # R447 冒险笔记：把那格「刚变成大宝箱」写成会呼吸的金光
 	_draw_flint_cells()  # R447 燧石：候选格的橙色呼吸框（选格模式）
+	_draw_fly_cells()   # R555 飞行器：候选格的蓝色呼吸框（选格模式）
 	_draw_marks()        # R177：玩家标记画在地图内容之上、HUD 之下
 	_draw_hud()
 	_draw_sidebar()
@@ -913,6 +932,11 @@ func _draw() -> void:
 			_draw_move_note()
 		else:
 			_draw_flint_hint()
+	elif _fly_pick:
+		if _move_note_t > 0.0 and _move_note != "":
+			_draw_move_note()
+		else:
+			_draw_fly_hint()
 	else:
 		_draw_move_note()
 	if _boss_alert:
@@ -1067,12 +1091,12 @@ func _draw_states() -> void:
 				draw_string(_font_bold, Vector2(r.position.x, r.end.y - 9.0),
 						"可再进店", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 11,
 						Color(0.60, 0.92, 1.0))
-		elif _is_adjacent(cell) and not _flint_pick:
+		elif _is_adjacent(cell) and not _flint_pick and not _fly_pick:
 			# 「下一步」：绿脉动框（原样，最醒目）
 			var pulse := 0.5 + 0.5 * sin(_t * 4.0)
 			draw_rect(r.grow(2.0),
 					Color(0.45, 0.90, 0.50, 0.42 + 0.42 * pulse), false, 2.6)
-		elif _is_available(cell) and not _flint_pick:
+		elif _is_available(cell) and not _flint_pick and not _fly_pick:
 			# R322：隔着一间走过的空房也能去（或那格本身走过）→ **虚线**细框。
 			# 用虚线不是随手选的：实线框是「下一步」（上面那档、会呼吸），
 			# 虚线是「走得到但不是下一步」—— 形状上一眼可分，满图绿框也不会抢指向性。
@@ -1147,6 +1171,47 @@ func _flint_click(pos: Vector2) -> void:
 	queue_redraw()
 
 
+func _start_fly_pick() -> void:
+	## R555 飞行器：进入「选格模式」—— 候选 = 全图「没走过」的格子（RunState.flyer_candidates）。
+	## 没有候选（图都走完了）→ 作废，别把玩家困在一张点不动的图上。
+	_fly_ids = RunState.flyer_candidates()
+	_fly_blocked = []
+	for _bc: Dictionary in RunState.map_cells:
+		var _bid := int(_bc["id"])
+		if RogueMap.is_void(_bc) or _fly_ids.has(_bid):
+			continue
+		_fly_blocked.append(_bid)
+	if _fly_ids.is_empty():
+		RunState.pending_fly = false
+		_fly_pick = false
+		_set_note("飞行器没有能去的地方：没去过的房间都已经去过了")
+		return
+	_fly_pick = true
+	queue_redraw()
+
+
+func _fly_click(pos: Vector2) -> void:
+	## R555 飞行器：点候选格 → 传送过去（扣 1 巧克力 + 进房结算）。
+	## 点别处只给一句提示，不退出选格模式（同燧石的收法）。
+	var fc := _cell_at(pos)
+	var fid := int(fc.get("id", -1))
+	if fid < 0 or not _fly_ids.has(fid):
+		_set_note("这一格飞不过去（走过 / 起点 / Boss / 商店 / 空地都不行）")
+		queue_redraw()
+		return
+	var res := RunState.flyer_teleport(fid)
+	if not bool(res.get("ok", false)):
+		_set_note("飞不过去（巧克力不足）")
+		queue_redraw()
+		return
+	sfx.play("click")
+	_fly_pick = false
+	_fly_ids = []
+	_fly_blocked = []
+	RunState.pending_fly = false
+	_dispatch_node(fc)
+
+
 func _draw_flint_cells() -> void:
 	## R447 燧石：选格模式下的框。R448 候选放开成**整张图**，所以画法反过来：
 	##   * 候选（默认全部）→ **不画**。29 格逐个描边在雾上根本看不清，还糊成一片；
@@ -1183,6 +1248,37 @@ func _draw_flint_hint() -> void:
 	draw_string(_font_bold, rect.position + Vector2(10, 17),
 			"燧石：在地图上任选一格，点着成篝火（走过的会退回未探索）",
 			HORIZONTAL_ALIGNMENT_CENTER, w - 20, UiTheme.FS_CAPTION, Color("f0c98a"))
+
+
+func _draw_fly_cells() -> void:
+	## R555 飞行器：选格模式下的框。候选（没走过的）默认不画，只把点不着的
+	## 那几格用暗色细框点出来；鼠标停住的候选格 → 亮蓝呼吸粗框。
+	if not _fly_pick:
+		return
+	for bid: int in _fly_blocked:
+		var bc: Dictionary = RunState.map_cells[bid]
+		var br := _cell_rect(bc)
+		draw_rect(br.grow(1.0), Color(0.46, 0.50, 0.58, 0.55), false, 1.4)
+		draw_line(br.position + Vector2(6, 6), br.end - Vector2(6, 6),
+				Color(0.50, 0.55, 0.64, 0.45), 1.6)
+	if _fly_ids.has(_hover_id):
+		var hc2: Dictionary = RunState.map_cells[_hover_id]
+		var hr := _cell_rect(hc2)
+		var p := 0.5 + 0.5 * sin(_t * 4.5)
+		draw_rect(hr.grow(2.0), Color(0.35, 0.68, 1.0, 0.55 + 0.40 * p), false, 3.0)
+
+
+func _draw_fly_hint() -> void:
+	## R555 飞行器：顶部那条常驻提示（跟燧石同一条位置，两个选格互斥不会同屏）。
+	if not _fly_pick:
+		return
+	var w := 520.0
+	var rect := Rect2(size.x / 2 - w / 2, 60.0, w, 26.0)
+	draw_rect(rect, Color(0.08, 0.10, 0.14, 0.96), true)
+	draw_rect(rect, Color(0.40, 0.72, 1.0, 0.60), false, 1.2)
+	draw_string(_font_bold, rect.position + Vector2(10, 17),
+			"飞行器：挑一个没去过的房间，飞过去（消耗 1 块巧克力）",
+			HORIZONTAL_ALIGNMENT_CENTER, w - 20, UiTheme.FS_CAPTION, Color("a8d0f0"))
 
 
 func _draw_map_flash() -> void:

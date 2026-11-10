@@ -6599,12 +6599,13 @@ func _init() -> void:
 			and not ev_kinds_layer.has("whisper"),
 			"第一层事件池：10 种子类型（挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物/R473 武术大师；R512 移除卡牌宝箱；R514 移除鸭鸭低语→改二层起点三选一；无凝视、无怪物）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
-	check(l2_ev_kinds.size() == 14 and l2_ev_kinds.has("smith") \
+	check(l2_ev_kinds.size() == 15 and l2_ev_kinds.has("smith") \
 			and l2_ev_kinds.has("martial") \
 			and l2_ev_kinds.has("moon") and l2_ev_kinds.has("furnace")
 			and l2_ev_kinds.has("core_contract") and l2_ev_kinds.has("cave")
-			and l2_ev_kinds.has("card_merchant") and l2_ev_kinds.has("divination"),
-			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 + R458 契约的核心 + R467 洞穴 + R473 武术大师 = 14 种子类型")
+			and l2_ev_kinds.has("card_merchant") and l2_ev_kinds.has("divination")
+			and l2_ev_kinds.has("flyer"),
+			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 + R458 契约的核心 + R467 洞穴 + R473 武术大师 + R555 飞行器 = 15 种子类型")
 	var pear_ev_kinds := l2_ev_kinds        # 旧用例里沿用的变量名（保持后文读到本地变量）
 	check(l2_ev_kinds.has("gaze") and not ev_kinds_layer.has("gaze"),
 			"鸭之凝视已改为第二层事件（第一层不再出 gaze）")
@@ -20665,6 +20666,80 @@ func _init() -> void:
 	RunState.map_flash_id = r447_sv_flash
 	RunState.pending_relic = r447_sv_pending
 	RunState.relics = r447_sv_relics
+	# ==== R555：事件「飞行器」—— 传送（选格）+ 巧克力约束 ====
+	var r555_l2 := GameLayers.event_kinds(GameLayers.LAYER_TWO)
+	check(r555_l2.has("flyer"),
+			"R555 飞行器：第二层事件池已登记（第二层 %d 种）" % r555_l2.size())
+	check(not GameLayers.event_kinds(GameLayers.LAYER_DEFAULT).has("flyer"),
+			"R555 飞行器只在第二层（第一层不串层）")
+	check(GameLayers.event_name("flyer") == "飞行器",
+			"R555 事件显示名已登记")
+	# 地图状态上验传送（改完原样还原）
+	var r555_sv_cells: Array = RunState.map_cells
+	var r555_sv_cleared: Array = RunState.cleared_ids.duplicate()
+	var r555_sv_cur := RunState.current_node_id
+	var r555_sv_choco := RunState.chocolate
+	var r555_sv_fly := RunState.pending_fly
+	var r555_mrng := RandomNumberGenerator.new()
+	r555_mrng.seed = 555001
+	var r555_cells: Array = RogueMap.generate(r555_mrng, GameLayers.LAYER_TWO)
+	RunState.map_cells = r555_cells
+	var r555_start := int(RogueMap.start_cell(r555_cells)["id"])
+	RunState.current_node_id = r555_start
+	RunState.cleared_ids = [r555_start]
+	RunState.chocolate = 12
+	RunState.pending_fly = false
+	# 候选 = 全图「没走过」的格子（已走过 / 起点 / Boss / 固定商店 / 虚空除外）
+	var r555_cands := RunState.flyer_candidates()
+	var r555_expect := 0
+	for r555_c: Dictionary in r555_cells:
+		var r555_id := int(r555_c["id"])
+		var r555_ty := str(r555_c.get("type", ""))
+		if RunState.cleared_ids.has(r555_id) or RogueMap.is_void(r555_c) \
+				or r555_ty == "start" or r555_ty == "boss" \
+				or RogueMap.is_fixed_shop(r555_id):
+			continue
+		r555_expect += 1
+	check(r555_cands.size() == r555_expect and not r555_cands.has(r555_start),
+			"R555 飞行器：候选 = 没走过的格子（%d 格，不含已走过 / 起点 / Boss / 固定商店 / 虚空）" % r555_expect)
+	# 挑一个候选格传送
+	var r555_target := int(r555_cands[0])
+	var r555_choco_before := RunState.chocolate
+	var r555_res := RunState.flyer_teleport(r555_target)
+	check(bool(r555_res.get("ok", false))
+			and RunState.current_node_id == r555_target
+			and RunState.cleared_ids.has(r555_target)
+			and RunState.chocolate == r555_choco_before - 1,
+			"R555 飞行器：传送成功（标记走过 + 扣 1 巧克力 + 换格）")
+	check(not bool(RunState.flyer_teleport(r555_target).get("ok", false)),
+			"R555 飞行器：已经走过的格子不再能飞")
+	# 巧克力不足（< 2）飞不过去 —— 候选仍在，但传送被拦
+	RunState.chocolate = 1
+	var r555_cands2 := RunState.flyer_candidates()
+	var r555_target2 := -1
+	for r555_c2: Dictionary in r555_cells:
+		var r555_id2 := int(r555_c2["id"])
+		if r555_cands2.has(r555_id2):
+			r555_target2 = r555_id2
+			break
+	check(r555_target2 >= 0,
+			"R555 飞行器：巧克力不足时候选仍在（选格不看巧克力，传送才拦）")
+	check(not bool(RunState.flyer_teleport(r555_target2).get("ok", false))
+			and RunState.chocolate == 1,
+			"R555 飞行器：巧克力不足 2 块时传送被拒（扣完至少得剩 1）")
+	# 源码锁
+	check_src("_is_flyer()" in FileAccess.get_file_as_string("res://scripts/event_scene.gd"),
+			"R555 飞行器：事件场景接了分支")
+	check_src("_fly_pick" in FileAccess.get_file_as_string("res://scripts/map_scene.gd"),
+			"R555 飞行器：地图场景真的有选格模式")
+	check_src("flyer_candidates" in FileAccess.get_file_as_string("res://scripts/run_state.gd"),
+			"R555 飞行器：引擎真的有传送候选逻辑")
+	# 还原
+	RunState.map_cells = r555_sv_cells
+	RunState.cleared_ids = r555_sv_cleared
+	RunState.current_node_id = r555_sv_cur
+	RunState.chocolate = r555_sv_choco
+	RunState.pending_fly = r555_sv_fly
 	# ==== R245：初始道具 勇气徽章 6031 / 陶罐 6032 + 诅咒「罐子」9157 / 召唤物 9158 ====
 	var r245_rrepo := RelicRepo.load_json()
 	var r245_crepo := CardRepo.load_json()

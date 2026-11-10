@@ -140,6 +140,15 @@ const MARTIAL_PUNCH_DESC := """老人往石头上捶了一下，石头裂了，�
 「这一拳不难学，难的是你配不配。去打两场硬的——精英，或者守着关底的那种。」
 「冲拳」（2 场精英 / Boss 后到手）：2 费，16 伤 + 击退 1 格，其余敌人各 8 伤。"""
 
+# R555 飞行器（第二层专属）：两个选项 —— 使用飞行器（回地图选一格没去过的房间传过去，
+# 消耗 1 巧克力）/ 不移动。巧克力不足 2 块时飞不起来（扣掉这格后至少还得剩 1）。
+const FLYER_DESC := """空地中央停着一架旧飞行器，桨叶歪歪地指着天。
+坐上去，它能把你直接送到任何一个还没去过的房间——
+代价是 1 块巧克力；巧克力只剩 1 块或没有的时候，它飞不起来。"""
+
+const FLYER_TAKEN_DESC := """引擎已经热起来了，桨叶搅得空气嗡嗡响。
+回到地图后挑一个没去过的房间，它就把你送过去。"""
+
 const BLUEFISH_DESC := """一条通体蓝色的大肥鱼搁浅在岸边，肚皮一起一伏，像还在做梦。
 它翻了个身，从嘴里吐出一枚亮晶晶的东西——
 「鲸鱼之怒」：1 费技能，造成 11 点伤害，
@@ -324,6 +333,8 @@ var _adv_pick := ""            # 冒险家的遗物（R447）：本次拿走的�
 var _adv_result := ""          # 冒险家的遗物（R447）：收尾态那行结果（读档重绘要能复现）
 var _martial_pick := ""         # 武术大师（R473）：本次选的是 "brawl" / "kick" / "punch" / ""
 var _martial_result := ""       # 武术大师（R473）：收尾态那行结果（重绘要能复现）
+var _fly_done := false          # R555 飞行器：本次是否已选了「使用飞行器」（等回地图选格）
+var _fly_result := ""           # R555 飞行器：收尾态那行结果（重绘要能复现）
 var _furnace_opts: Array[int] = []   # 熔炉（R454）：本次铺出来的可投入道具（_ready 里摇一次）
 var _furnace_invested := -1          # 熔炉（R454）：本次投进去的那件（-1 = 还没投）
 var _furnace_result := ""            # 熔炉（R454）：收尾态那行结果（重绘要能复现）
@@ -452,6 +463,12 @@ func _is_martial() -> bool:
 	return _is_event_node() and _pending_kind() == "martial"
 
 
+func _is_flyer() -> bool:
+	## R555 飞行器（第二层专属）：使用飞行器（回地图选一格没去过的房间传送过去）
+	## / 不移动。巧克力不足 2 块时飞不起来。
+	return _is_event_node() and _pending_kind() == "flyer"
+
+
 func _is_cave() -> bool:
 	## R467 洞穴（第二层专属）：两个选项 —— 探索（打一场，赢了拿传说卡）／离开。
 	## ⚠️ 这是**唯一一个会进战斗的事件房**（R128 之后事件房本来不再遭遇战斗）：
@@ -544,7 +561,8 @@ func _is_treasure() -> bool:
 			and not _is_delivery() and not _is_delivery_done() \
 			and not _is_card_merchant() and not _is_lake_lady() \
 			and not _is_divination() and not _is_moon() and not _is_snow_leopard() \
-			and not _is_adventurer() and not _is_furnace() and not _is_core_contract()
+			and not _is_adventurer() and not _is_furnace() and not _is_core_contract() \
+			and not _is_flyer()
 
 
 func _kind() -> String:
@@ -597,6 +615,8 @@ func _kind() -> String:
 	# 于是武术大师的房间会点亮休息处的篝火、铺休息处的空地背景。
 	if _is_martial():
 		return "martial"
+	if _is_flyer():
+		return "flyer"
 	if _is_treasure():
 		return "treasure"
 	return "rest"
@@ -1172,7 +1192,7 @@ func _kind_tint(kind: String) -> Color:
 			return Color("c8951c")   # 交易 / 匠人：金
 		"whisper", "divination", "moon", "arcane", "bluefish", "hero":
 			return Color("8a7fd4")   # 神秘 / 预兆：紫
-		"pear", "snow_leopard", "adventurer", "cave":
+		"pear", "snow_leopard", "adventurer", "cave", "flyer":
 			return Color("6faa62")   # 自然 / 探索：绿
 		"treasure", "relic_chest":
 			return Color("d99b3f")   # 收获：橙金
@@ -1792,6 +1812,25 @@ func _ready() -> void:
 			leave_btn.text = "离开（什么都不学）"
 			leave_btn.disabled = false
 			result_label.text = ""
+	elif _is_flyer():
+		event_name.text = "飞 行 器"
+		desc.text = FLYER_TAKEN_DESC if _fly_done else FLYER_DESC
+		if _fly_done:
+			_collapse_to_leave()
+			result_label.text = _fly_result
+			result_label.add_theme_color_override("font_color", Color("8fc0d8"))
+		else:
+			rest_btn.visible = true
+			rest_btn.text = ("使用飞行器（飞到一个没去过的房间，消耗 1 块巧克力）"
+					if RunState.chocolate >= 2
+					else "巧克力不足，飞不起来（至少需要 2 块）")
+			rest_btn.disabled = RunState.chocolate < 2
+			bbq_btn.visible = false
+			alt_btn.visible = false
+			leave_btn.visible = true
+			leave_btn.text = "不移动（离开）"
+			leave_btn.disabled = false
+			result_label.text = ""
 	elif _is_cave():
 		event_name.text = "洞 穴"
 		desc.text = CAVE_DESC
@@ -1968,6 +2007,23 @@ func _on_main() -> void:
 		_martial_result = "「乱打」已加入卡组：2 费，对随机 2 个敌人各造成 10 点伤害。"
 		result_label.text = _martial_result
 		result_label.add_theme_color_override("font_color", Color("c86a5a"))
+		_redraw()
+		return
+	if _is_flyer():
+		if _fly_done:
+			_on_leave()
+			return
+		# 巧克力不足（chocolate < 2）时按钮已经置灰，这里再兜底一次。
+		if RunState.chocolate < 2:
+			return
+		_fly_done = true
+		RunState.pending_fly = true   # 回地图后由 map_scene 进「飞行器选格」收尾
+		_claim_reward(rest_btn)
+		_collapse_to_leave()
+		desc.text = FLYER_TAKEN_DESC
+		_fly_result = "飞行器已就绪——回到地图后，挑一个没去过的房间，它就把你送过去。"
+		result_label.text = _fly_result
+		result_label.add_theme_color_override("font_color", Color("8fc0d8"))
 		_redraw()
 		return
 	if _is_adventurer():

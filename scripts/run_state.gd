@@ -330,6 +330,7 @@ static var skipped_relics: Array[int] = []   # 奖励掉落里被「跳过」的
 static var relic_choice: Array[int] = []     # 起点三选一的候选（选定后清空）
 static var pending_relic := -1               # 等待卡组选择的即时道具 id（-1 = 无）
 static var pending_relic_drop := -1          # 精英/Boss 掉落的道具 id（-1 = 无，领取后清空）
+static var pending_fly := false              # R555 飞行器：待在地图上选一格传送（回地图进选格模式）
 
 # ---- R119：待领奖励队列（奖励悬浮窗的数据源）----
 ## 「获得奖励」不再当场发放，而是**先入队** → 由 RewardPanel 悬浮窗逐项展示。
@@ -733,6 +734,54 @@ static func flint_rebuild_rest(node_id: int) -> bool:
 	return true
 
 
+static func flyer_candidates() -> Array:
+	## R555 飞行器（第二层事件）：能飞到的格子 = 全图「没走过」的格子。
+	## 只排掉：void（不存在）、起点、Boss（不能直接飞上去开战）、固定商店、已经走过的。
+	## 飞过去 = 当次移动（扣 1 巧克力），所以目标只能是「没走过」的新格子。
+	var out: Array = []
+	for c: Dictionary in map_cells:
+		var cid := int(c["id"])
+		if RogueMap.is_void(c):
+			continue
+		if cleared_ids.has(cid):
+			continue
+		var ty := str(c.get("type", ""))
+		if ty == "start" or ty == "boss":
+			continue
+		if RogueMap.is_fixed_shop(cid):
+			continue
+		out.append(cid)
+	return out
+
+
+static func flyer_teleport(node_id: int) -> Dictionary:
+	## R555 飞行器：无视相邻关系，直接飞到 node_id（必须是「没走过」的格子）。
+	## 返回 {"ok", "cost", "revealed", "chocolate"}。
+	## 与 advance() 的「进新房间」分支同构，只是不要求有门（can_move_to）。
+	## ⚠️ 约束（用户口径）：飞之前必须保证「扣掉这一格之后至少剩 1」——
+	##   不能靠飞行器把自己飞到「巧克力耗尽 → 入夜」的死局（选项页已置灰，这里兜底）。
+	if node_id < 0 or node_id >= map_cells.size():
+		return {"ok": false, "cost": 0, "revealed": false, "chocolate": chocolate}
+	if cleared_ids.has(node_id) or not flyer_candidates().has(node_id):
+		return {"ok": false, "cost": 0, "revealed": false, "chocolate": chocolate}
+	var c: Dictionary = map_cells[node_id]
+	var free_layer: bool = int(c.get("layer", current_layer)) == GameLayers.LAYER_THREE
+	var cost := 0 if free_layer else 1
+	if cost > 0 and chocolate - cost < 1:
+		return {"ok": false, "cost": 0, "revealed": false, "chocolate": chocolate}
+	cleared_ids.append(node_id)
+	var revealed := false
+	if bool(c.get("hidden", false)) and not bool(c.get("revealed", false)):
+		c["revealed"] = true
+		revealed = true
+	if cost > 0:
+		chocolate = maxi(0, chocolate - cost)
+		sync_fatigue()
+	current_node_id = node_id
+	reveal_known()
+	return {"ok": true, "cost": cost, "revealed": revealed, "chocolate": chocolate}
+
+
 static func lucky7_left() -> int:
 	## 距下一次生效还有几个回合（刚生效过则返回 7；计数为 0 时返回 7）。
 	var r := lucky7_turns % LUCKY7_EVERY
@@ -1007,6 +1056,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	skipped_relics = []
 	pending_relic = -1
 	pending_relic_drop = -1
+	pending_fly = false          # R555：新的一局 → 没有待选的飞行器
 	map_flash_id = -1
 	pending_rewards = []   # R119：开新 run 清空待领奖励
 	reset_shop_session()   # R390：新的一局没有旧货架，也没有可重进的店
@@ -1113,6 +1163,7 @@ static func end_run(clear_save: bool = true) -> void:
 	skipped_relics = []
 	pending_relic = -1
 	pending_relic_drop = -1
+	pending_fly = false         # R555：本局结束 → 待选飞行器复位
 	map_flash_id = -1
 	match_charge = 0            # R342：本局结束 → 火柴次数复位
 	duck_revive_chance = 100
