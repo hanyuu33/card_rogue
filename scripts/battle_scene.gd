@@ -709,6 +709,7 @@ var _relic_scroll := 0.0        # 道具浏览面板滚动量（道具太多时�
 var _hero_pick_idx := -1
 var _hero_pick_cell := Vector2i(-1, -1)   # 英雄要落到的空格
 var _pick: PickOverlay = null            # R189：全屏选卡页（8 套旧小面板的统一替换）
+var _assemble_overlay: AssembleOverlay = null   # R559：拖拽拼装页（传授 8084）
 var _hover_card: CardData = null  # 鼠标悬停的卡（左侧信息栏优先显示）
 var _hover_pl: Placement = null   # 悬停的战场单位（可显示当前生命）
 var _hover_hand := -1             # 悬停的手牌下标（-1 = 无）：仅用于绘制时抬手
@@ -887,6 +888,11 @@ func _ready() -> void:
 	_pick.confirmed.connect(_on_pick_confirmed)
 	_pick.cancelled.connect(_on_pick_cancelled)
 	add_child(_pick)
+	# R559：拖拽拼装页（传授 8084）—— 盖在最上层，pending 时吃掉全部点击。
+	_assemble_overlay = AssembleOverlay.new()
+	_assemble_overlay.confirmed.connect(_on_assemble_combo_confirmed)
+	_assemble_overlay.cancelled.connect(_on_assemble_combo_cancelled)
+	add_child(_assemble_overlay)
 	# 命令行 -- --screenshot / -- --demo：自动化演示与截图（验证视觉效果用）
 	var args := OS.get_cmdline_user_args()
 	_demo_args = args
@@ -6083,6 +6089,14 @@ func _sync_pick() -> void:
 	# ⚠️ 必须先放行：否则下一步 `_pick_active_kind()` 返回 "" 就会把它每帧关掉。
 	if _pick.is_view():
 		return
+	# R559 组合（传授 8084）：pending 出现 → 打开拖拽拼装页（独立于 PickOverlay）。
+	if engine.assemble_combo_pending:
+		if not _assemble_overlay.visible:
+			_assemble_overlay.open(engine, engine.assemble_combo_cards())
+			queue_redraw()
+		return
+	elif _assemble_overlay.visible:
+		_assemble_overlay.close()
 	var k := _pick_active_kind()
 	# R376：候选空了（手牌被抽干 / 被别的东西吃光）→ 立刻落空收掉待选。
 	# 否则会开出一个**点不动的空网格**：面板在、没有东西可选、回合也结束不了。
@@ -6106,6 +6120,24 @@ func _sync_pick() -> void:
 			return
 		_pick.open(cfg)
 		queue_redraw()
+
+
+func _on_assemble_combo_confirmed() -> void:
+	## 拖拽拼装页「确认组合」：引擎结算（组合卡加入手牌），关页。
+	if engine != null:
+		engine.assemble_combo_commit()
+	if _assemble_overlay != null:
+		_assemble_overlay.close()
+	queue_redraw()
+
+
+func _on_assemble_combo_cancelled() -> void:
+	## 拖拽拼装页「取消」：引擎清 pending，关页。
+	if engine != null:
+		engine.assemble_combo_cancel()
+	if _assemble_overlay != null:
+		_assemble_overlay.close()
+	queue_redraw()
 
 
 func _abort_empty_pick(kind: String) -> void:

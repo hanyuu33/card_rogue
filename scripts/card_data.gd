@@ -61,6 +61,7 @@ const AFFIX_DEFS: Dictionary = {
 	"交换": {"label": "交换", "desc": "可放置在已有友方单位的格子上，原本在那个格子上的友方单位返回手卡。", "glyph": "swap", "on_board": false, "bg": "0a2a2e", "fg": "5fe0d0"},
 	"保存": {"label": "保存", "desc": "回合结束时，手牌里的这张卡不会丢弃（保留到下一回合）。", "glyph": "save", "on_board": false, "bg": "1a2a0a", "fg": "b9e85a"},
 	"共享护盾": {"label": "共享护盾", "desc": "我方 HP 要受到伤害时，改由这张卡承受（每次都能顶，顶到它死亡）。", "glyph": "share", "bg": "33161c", "fg": "ff8fa8"},
+	"组合": {"label": "组合", "desc": "这张卡由拼装组合生成（生成它）。", "glyph": "combine", "bg": "33200c", "fg": "ffc14e"},
 }
 
 ## ── 【商店附魔】（R214）`enchant` = 这张卡吃过的商店附魔 id（"" = 没附魔）──
@@ -274,6 +275,11 @@ var lone_str_bonus: int = 0
 ##   漏了它拼装效果会静默清空。
 var assemble: Dictionary = {}
 var assemble_pool: String = ""
+## R559 组合：这张卡作为待选卡被拖进拼装槽时提供的上/下半效果。
+## upper_effect = 上半句（时机 + 动作），lower_effect = 下半句（纯动作），
+## 结构同 AssembleRules 的 fragment（见拼装机制设计.md）；{} = 不可组合。
+var upper_effect: Dictionary = {}
+var lower_effect: Dictionary = {}
 
 ## 拼装已知时机 key（用于识别历史数据；实际允许列表和黑名单以 assemble_rules.gd 为准）。
 const ASSEMBLE_TRIGGERS: Array[String] = [
@@ -367,6 +373,9 @@ static func from_dict(d: Dictionary) -> CardData:
 			"effects": fx_out,
 			"extra_affixes": xa_out,
 		}
+	# R559 组合：上下半句随复制通道走（深拷贝），漏了它待选卡拖进槽位取不到效果。
+	c.upper_effect = (d.get("upper_effect", {}) as Dictionary).duplicate(true)
+	c.lower_effect = (d.get("lower_effect", {}) as Dictionary).duplicate(true)
 	return c
 
 
@@ -431,6 +440,9 @@ func to_dict() -> Dictionary:
 		# R544 拼装：assemble 必须随复制 / 离场还原 / 联机通道走（深拷贝），漏了它拼装效果静默清空。
 		"assemble": assemble.duplicate(true),
 		"assemble_pool": assemble_pool,
+		# R559 组合：上下半句随复制 / 离场还原 / 联机通道走，漏了它待选卡无法组合。
+		"upper_effect": upper_effect.duplicate(true),
+		"lower_effect": lower_effect.duplicate(true),
 	}
 
 

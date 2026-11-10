@@ -321,6 +321,11 @@ static func draw_glyph(cv: CanvasItem, c: Vector2, r: float, glyph: String, col:
 			var bm_e := bm.duplicate()
 			bm_e.append(bm[0])
 			cv.draw_polyline(bm_e, col, 1.4)
+		"combine":                 # 组合：两个拼块左右拼接（左实右虚）
+			cv.draw_rect(Rect2(c + Vector2(-r * 0.62, -r * 0.40), Vector2(r * 0.58, r * 0.80)),
+					col, false, 1.5)
+			cv.draw_rect(Rect2(c + Vector2(0.04, -r * 0.40), Vector2(r * 0.58, r * 0.80)),
+					Color(col.r, col.g, col.b, 0.5), false, 1.5)
 		"up", "down":              # buff 增益（向上）/ 减益（向下）：粗箭头
 			# ⚠️ R304 修：旧写法把 up/down 画反了（增益显示成向下箭头，减益反而朝上）。
 			var sgn: float = 1.0 if glyph == "up" else -1.0

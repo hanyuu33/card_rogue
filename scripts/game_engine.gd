@@ -1052,6 +1052,8 @@ const BOUNCE_KNIFE_BOUNCES:= 2
 # 预判（9097 技能）：0 费史诗；二选一：①弃牌区选一张 0 费技能卡（之后本卡消失）
 # ②卡组随机非 0 费技能卡入手。面板走 foresight_* 状态机。
 const FORESIGHT_ID:= 9097
+# R559 传授（8084）：从全角色卡池组合一张盟友卡（拖拽拼装 UI）。
+const TEACH_ID:= 8084
 # 拒绝命运（9098 技能）：2 费史诗；弃掉**全部**手卡 → 从弃牌区把**所有 0 费 / 1 费卡**
 #   按弃牌区顺序加回手卡（不超过手牌上限）→ 本卡消失（带「次元」）。
 # R292 改「自动结算」：以前是「从弃牌区选等量、必须选满」的模态面板；玩家口径
@@ -4063,7 +4065,7 @@ func _autoplay_spell_targets(card: CardData) -> Array[Vector2i]:
 
 
 func end_turn() -> void :
-	if assemble_pending:
+	if _assemble_busy():
 		return
 	if over:
 		return
@@ -5176,7 +5178,7 @@ func _card_leaving_field(p: Placement) -> CardData:
 
 
 func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
-	if assemble_pending or hand_index < 0 or hand_index >= state.hand.size():
+	if _assemble_busy() or hand_index < 0 or hand_index >= state.hand.size():
 		return null
 	var card:= state.hand[hand_index]
 	if card.traits.has("拼装") and card.assemble.is_empty():
@@ -8047,7 +8049,7 @@ func _spell_card_gone(card: CardData, log_text := "") -> bool:
 
 
 func use_spell(hand_index: int, target = null, free_cast := false) -> String:
-	if assemble_pending:
+	if _assemble_busy():
 		return "请先完成拼装"
 	# R373：不能打出的诅咒（麻痹 9185）—— 引擎侧兜底（UI 走 `can_use_card` 置灰）。
 	if hand_index >= 0 and hand_index < state.hand.size() \
@@ -8181,7 +8183,7 @@ func _instinct_panel_open() -> bool:
 	## 本能 9176（R332）：结算中间出现「等玩家选」的面板就得收手 ——
 	## 继续「随机打出」会把面板依赖的下标/候选弄失效（与 use_spell 开头那四个守卫同源，
 	## 这里把弃牌区/卡组/手牌/合并等其余 pending 也一并算上）。
-	return assemble_pending or overhaul_pending or creation_pending or cannonize_pending or surprise_pending \
+	return assemble_combo_pending or assemble_pending or overhaul_pending or creation_pending or cannonize_pending or surprise_pending \
 		or paint_pending \
 		or focus_pending or wish_pending or shadow_step_pending or revive_pending \
 		or merge_pending or crow_pending or whale_pending or endless_pending \
@@ -8248,7 +8250,7 @@ func _instinct_cast(side: String) -> String:
 
 
 func use_effect(hand_index: int) -> String:
-	if assemble_pending:
+	if _assemble_busy():
 		return "请先完成拼装"
 
 
@@ -10932,6 +10934,8 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			foresight_mode = true
 			_log("预判：选择一个效果（面板二选一）")
 			return "选择一个效果"
+		TEACH_ID:
+			return _teach_spell(side)
 		FATE_REJECT_ID:
 			return _fate_reject(side)
 		INFILTRATE_ID:
@@ -14611,7 +14615,7 @@ func hp_targets(cell: Vector2i, side:= SIDE_SELF, card: CardData = null) -> Arra
 
 
 func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void :
-	if assemble_pending:
+	if _assemble_busy():
 		return
 	var lp:= state.unit_at(src)
 	# R467：枭熊的「移动」一律是跳跃 —— 走 `_leap()` 那条唯一的门，界面上点绿格、
@@ -16005,7 +16009,7 @@ func _trample_chain(attacker: Placement, foe_side: String, from_cell: Vector2i,
 
 
 func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
-	if assemble_pending:
+	if _assemble_busy():
 		return
 
 
@@ -16157,7 +16161,7 @@ func _snow_leopard_discount(p: Placement) -> void :
 
 
 func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
-	if assemble_pending:
+	if _assemble_busy():
 		return
 	var attacker:= state.unit_at(src)
 	if attacker == null or attacker.owner != side or attacker.tapped:
@@ -17617,6 +17621,11 @@ var assemble_pools: Dictionary = {}
 var _assemble_active: Dictionary = {}
 var assemble_pending := false
 var assemble_stage := "upper"
+var assemble_combo_pending := false   # R559 组合（传授 8084）：等玩家拖 3 张卡拼装
+var _combo_cards: Array = []
+var _combo_attr := -1
+var _combo_upper := -1
+var _combo_lower := -1
 var _assemble_base: CardData
 var _assemble_cell := Vector2i(-1, -1)
 var _assemble_upper: Array = []
@@ -17818,6 +17827,100 @@ func load_assemble_pools(path: String = "res://assemble_pools.json") -> bool:
 	for id in data:
 		register_assemble_pool(str(id), data[id].upper, data[id].lower)
 	return true
+
+
+# ── R559 组合（传授 8084）：从全角色卡池拖 3 张卡拼装一张盟友卡 ──
+
+func _assemble_busy() -> bool:
+	return assemble_pending or assemble_combo_pending
+
+func _combo_candidate_cards() -> Array:
+	## 可组合候选：全角色卡池里同时带 upper_effect + lower_effect 的盟友卡。
+	var out: Array = []
+	var repo := CardRepo.load_json()
+	for c: CardData in repo.all_cards():
+		if c.kind == "盟友" and c.group == "player" \
+				and not c.upper_effect.is_empty() and not c.lower_effect.is_empty():
+			out.append(c)
+	return out
+
+func _pick_random_cards(pool: Array, n: int) -> Array:
+	## 从 pool 无放回随机抽 min(n, pool.size()) 张（不改变原池）。
+	var src := pool.duplicate()
+	var out: Array = []
+	while out.size() < n and not src.is_empty():
+		out.append(src.pop_at(rng.randi_range(0, src.size() - 1)))
+	return out
+
+func _teach_spell(side: String) -> String:
+	if side != SIDE_SELF:
+		return "（传授：敌方 AI 不使用这张卡）"
+	var pool := _combo_candidate_cards()
+	if pool.size() < 3:
+		_log("传授：可组合的盟友卡不足（%d 张）" % pool.size())
+		return "（传授：可组合的盟友卡不足）"
+	_combo_cards = _pick_random_cards(pool, 6)
+	_combo_attr = -1
+	_combo_upper = -1
+	_combo_lower = -1
+	assemble_combo_pending = true
+	_log("传授：进入拼装，从 %d 张盟友卡中拖 3 个组件" % _combo_cards.size())
+	action.emit("assemble_combo", {})
+	return "进入拼装"
+
+func assemble_combo_cards() -> Array:
+	return _combo_cards
+
+func assemble_combo_set_slot(slot: String, index: int) -> void:
+	## UI 把第 index 张待选卡拖进某个槽位（slot = attr / upper / lower）。
+	if index < 0 or index >= _combo_cards.size():
+		return
+	match slot:
+		"attr": _combo_attr = index
+		"upper": _combo_upper = index
+		"lower": _combo_lower = index
+
+func assemble_combo_preview() -> CardData:
+	if not assemble_combo_pending:
+		return null
+	if _combo_attr < 0 or _combo_upper < 0 or _combo_lower < 0:
+		return null
+	return _assemble_combo_build()
+
+func _assemble_combo_build() -> CardData:
+	var attr: CardData = _combo_cards[_combo_attr]
+	var upper: CardData = _combo_cards[_combo_upper]
+	var lower: CardData = _combo_cards[_combo_lower]
+	var result := AssembleRules.build(attr, upper.upper_effect, lower.lower_effect, false)
+	if result == null:
+		return null
+	result.add_affix("组合")
+	return result
+
+func assemble_combo_commit() -> bool:
+	## 确认拼装：组合卡加入手牌，清掉 pending。手牌满则落空。
+	if not assemble_combo_pending:
+		return false
+	var result := assemble_combo_preview()
+	if result == null:
+		return false
+	if state.hand_full():
+		_log("传授：手牌已满，组合卡落空")
+		assemble_combo_cancel()
+		return false
+	state.hand.append(result)
+	var label := result.card_name
+	assemble_combo_cancel()
+	_log("传授：组合出「%s」加入手牌" % label)
+	action.emit("assemble_combo_done", {"card": result})
+	return true
+
+func assemble_combo_cancel() -> void:
+	assemble_combo_pending = false
+	_combo_cards.clear()
+	_combo_attr = -1
+	_combo_upper = -1
+	_combo_lower = -1
 
 func _assemble_opponent_draw(count: int) -> void:
 	# Enemy uses an abstract hand counter; mirror its actual count gain.

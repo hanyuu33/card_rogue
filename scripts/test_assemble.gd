@@ -77,6 +77,7 @@ func _init() -> void:
 	_test_source_locks()
 	_test_new_actions()
 	_test_formal_pool()
+	_test_combo()
 	print("Assembly tests failures: ", failures)
 	quit(failures)
 
@@ -252,3 +253,52 @@ func _test_formal_pool() -> void:
 	check(eng.assemble_choose(0), "formal commit")
 	var placed: Placement = eng.state.unit_at(Vector2i(4, 1))
 	check(placed != null and not placed.card.assemble.is_empty(), "formal placed with assembly")
+
+func _test_combo() -> void:
+	# R559 组合（传授 8084）：从全角色盟友卡池抽 6 张，拖 3 张分别定属性/上半/下半，结果带「组合」印记。
+	var repo := CardRepo.load_json()
+	var teach: CardData = repo.get_card(GameEngine.TEACH_ID)
+	check(teach != null and teach.kind == "技能" and teach.card_class == "森林精魄"
+			and teach.cost == 1 and teach.rarity == 1,
+			"R559 传授：8084 是森林精魄 1 费稀有技能")
+	var eng := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng.ai_enabled = false
+	# 数据层：可组合候选 = 同时带 upper/lower 的玩家盟友卡
+	var cand: Array = eng._combo_candidate_cards()
+	check(cand.size() == 10, "R559 组合：可组合盟友候选 %d 张（期望 10）" % cand.size())
+	# 触发传授
+	eng.state.energy = 10
+	var ret := eng._teach_spell(GameEngine.SIDE_SELF)
+	check(eng.assemble_combo_pending and ret == "进入拼装", "R559 传授：进入拼装 pending")
+	var six: Array = eng.assemble_combo_cards()
+	check(six.size() == 6, "R559 传授：抽 6 张待选（实际 %d）" % six.size())
+	# 三槽未满时无预览
+	check(eng.assemble_combo_preview() == null, "R559 组合：三槽未满无预览")
+	# 填三槽
+	eng.assemble_combo_set_slot("attr", 0)
+	eng.assemble_combo_set_slot("upper", 1)
+	eng.assemble_combo_set_slot("lower", 2)
+	var result: CardData = eng.assemble_combo_preview()
+	check(result != null, "R559 组合：三槽填满有预览")
+	if result != null:
+		check(result.has_affix("组合"), "R559 组合：结果带「组合」印记")
+		var attr_card: CardData = six[0]
+		check(result.power == attr_card.power and result.health == attr_card.health
+				and result.cost == attr_card.cost,
+				"R559 组合：属性值取自属性卡（%d/%d/%d 费）" % [result.power, result.health, result.cost])
+		check(not result.assemble.is_empty(), "R559 组合：结果带 assemble 效果")
+	# commit
+	var before: int = eng.state.hand.size()
+	check(eng.assemble_combo_commit(), "R559 组合：commit 成功")
+	check(eng.state.hand.size() == before + 1 and not eng.assemble_combo_pending,
+			"R559 组合：commit 后手牌 +1 且 pending 清空")
+	# 再触发一次 → cancel
+	eng._teach_spell(GameEngine.SIDE_SELF)
+	check(eng.assemble_combo_pending, "R559 组合：再次进入拼装")
+	eng.assemble_combo_cancel()
+	check(not eng.assemble_combo_pending, "R559 组合：cancel 清空 pending")
+	# 源码锁：传授入口 / 组合结算 / 守卫挂接
+	var src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(src.count("TEACH_ID:") >= 1 and src.count("_teach_spell") >= 2
+			and src.count("assemble_combo_commit") >= 1 and src.count("_assemble_busy") >= 4,
+			"R559 源码锁：传授入口 / 组合结算 / 守卫挂接")
