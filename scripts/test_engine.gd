@@ -26180,6 +26180,7 @@ func _init() -> void:
 
 	# ---- ② 条件判定 → 解锁 → 看过才发奖励 ----
 	ProfileData.set_test_mode()
+	GameBuild.set_test_release(1)
 	var r346_ach: Dictionary = r346_repo.achievements[0]
 	var r346_ep: String = str((r346_ach.get("episodes", []) as Array)[0])
 	check(r346_repo.episode_state(r346_ep) == StoryRepo.STATE_LOCKED,
@@ -26243,6 +26244,7 @@ func _init() -> void:
 	check((r346_c2.get("relics", []) as Array).size() == 1
 			and ProfileData.is_relic_unlocked(6005),
 			"R346 收下会解锁这一段挂的 1 件道具")
+	GameBuild.set_test_release(-1)
 
 	# ---- R359：**没写正文的段落默认上锁**（用户口径）----
 	# 空壳期 episode3~6 的 text 还是空的（R382 起 episode2 已填正文），但成就在这段时间里
@@ -27006,6 +27008,7 @@ func _init() -> void:
 			"R352 道具：竖琴 6052（**一般档**，不是传奇）")
 
 	# ---- ② 故事 1：内容 / 条件 / 奖励 ----
+	GameBuild.set_test_release(1)
 	var r352_story := StoryRepo.load_json()
 	var r352_ep := r352_story.episode("episode1")
 	check(not r352_ep.is_empty() and str(r352_ep.get("title", "")) != "？？？",
@@ -27059,6 +27062,7 @@ func _init() -> void:
 			"R352 奖励池：收下故事后两张新卡进入奖励池")
 	check(r352_relic_repo.reward_ids().has(6052),
 			"R352 奖励池：收下故事后竖琴进入道具池")
+	GameBuild.set_test_release(-1)
 
 	# ---- ③ ban 位按职业：公用卡给**每个职业**各 1 个名额 ----
 	var r352_qf := ProfileData.ban_quota_for(r352_repo, PlayerClass.DRUID)
@@ -33258,6 +33262,7 @@ func _init() -> void:
 
 	# ③ 真实链路：未达成 → 锁；打赢别的 Boss 不算；击败叛逃机械 → 可查看；收下 → 6060 进「一般」池
 	ProfileData.set_test_mode()
+	GameBuild.set_test_release(1)
 	RunState.run_active = false
 	RunState.run_bans = []
 	check(r534_story.episode_state("profile5") == StoryRepo.STATE_LOCKED,
@@ -33282,6 +33287,7 @@ func _init() -> void:
 	check(r534_pool.reward_ids().has(6060) and r534_pool.normal_reward_ids().has(6060)
 			and not r534_pool.legendary_reward_ids().has(6060),
 			"R534 奖励池：解锁后进「一般」档（不进传奇档）")
+	GameBuild.set_test_release(-1)
 	ProfileData.set_test_mode()
 	RunState.run_bans = []
 
@@ -33867,6 +33873,35 @@ func _init() -> void:
 	RunState.run_active = r550_active
 	RunState.player_class = r550_cls
 	RunState.difficulty = r550_diff
+
+	# ---- R550b：测试版剧情全解锁 / 正式版走白名单（续 R550 发布版差异体系）----
+	# 测试版（默认，编辑器/普通导出）：任意剧情 id 恒解锁 —— 含未达成、未定义、后续新增的段
+	ProfileData.reset_all()
+	check(ProfileData.is_story_unlocked("episode1"),
+			"R550b 测试版：episode1 自动解锁")
+	check(ProfileData.is_story_unlocked("episode2"),
+			"R550b 测试版：episode2 无需达成成就也解锁")
+	check(ProfileData.is_story_unlocked("episode_future_999"),
+			"R550b 测试版：后续新增的段也自动解锁")
+	# 正式版：回到 unlocked_stories 白名单判定
+	GameBuild.set_test_release(1)
+	ProfileData.reset_all()
+	check(not ProfileData.is_story_unlocked("episode1"),
+			"R550b 正式版：未解锁的段返回 false")
+	ProfileData.unlock_story("episode1")
+	check(ProfileData.is_story_unlocked("episode1"),
+			"R550b 正式版：解锁后返回 true")
+	check(not ProfileData.is_story_unlocked("episode2"),
+			"R550b 正式版：episode2 仍未解锁")
+	# 源码锁：判定口上叠了 GameBuild 闸门
+	var r550b_pd := FileAccess.get_file_as_string("res://scripts/profile_data.gd")
+	var r550b_isu := r550b_pd.substr(r550b_pd.find("static func is_story_unlocked"),
+			r550b_pd.find("static func mark_story_read")
+			- r550b_pd.find("static func is_story_unlocked"))
+	check_src(r550b_isu.find("GameBuild.is_release()") >= 0
+			and r550b_isu.find("unlocked_stories.has(id)") >= 0,
+			"R550b 源码：is_story_unlocked 叠了 GameBuild.is_release() 闸门，正式版走白名单")
+	GameBuild.set_test_release(-1)
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

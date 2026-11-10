@@ -236,7 +236,11 @@ static func unlock_story(id: String) -> bool:
 
 
 static func is_story_unlocked(id: String) -> bool:
+	## 测试版（默认）所有剧情恒解锁 —— 含后续新增的段，无需达成成就；
+	## 正式版才走 `unlocked_stories` 白名单判定（R550b）。
 	ensure_loaded()
+	if not GameBuild.is_release():
+		return true
 	return unlocked_stories.has(id)
 
 
