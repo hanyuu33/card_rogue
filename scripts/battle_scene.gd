@@ -710,6 +710,7 @@ var _hero_pick_idx := -1
 var _hero_pick_cell := Vector2i(-1, -1)   # 英雄要落到的空格
 var _pick: PickOverlay = null            # R189：全屏选卡页（8 套旧小面板的统一替换）
 var _assemble_overlay: AssembleOverlay = null   # R559：拖拽拼装页（传授 8084）
+var _combodemo_fill := false                     # R559b 出图：预填三槽标记
 var _hover_card: CardData = null  # 鼠标悬停的卡（左侧信息栏优先显示）
 var _hover_pl: Placement = null   # 悬停的战场单位（可显示当前生命）
 var _hover_hand := -1             # 悬停的手牌下标（-1 = 无）：仅用于绘制时抬手
@@ -1138,6 +1139,10 @@ func _ready() -> void:
 			seed(0x559)
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		engine._teach_spell(GameEngine.SIDE_SELF)
+		if "--combodemofill" in args:
+			# R559b 出图：预填三槽，看填满态（结果卡 + 绿色确认按钮 + 效果文字）。
+			# overlay 在 _sync_pick 里才 open，这里打标记，open 后由 _sync_pick 补填。
+			_combodemo_fill = true
 	if "--bosswin" in args and engine != null:
 		# R179 演示：**Boss 通关结算**（核验短按钮文案 + Boss 档卡牌三选一）。
 		# 必须配 `--level <Boss 关下标>` 用（`_run_boss_win` 由关卡 tier 决定）。
@@ -6100,6 +6105,13 @@ func _sync_pick() -> void:
 	if engine.assemble_combo_pending:
 		if not _assemble_overlay.visible:
 			_assemble_overlay.open(engine, engine.assemble_combo_cards())
+			queue_redraw()
+		if _combodemo_fill:
+			# R559b 出图：预填三槽（0=属性 1=上半 2=下半），看填满态。
+			_combodemo_fill = false
+			_assemble_overlay.fill_slot(0, 0)
+			_assemble_overlay.fill_slot(1, 1)
+			_assemble_overlay.fill_slot(2, 2)
 			queue_redraw()
 		return
 	elif _assemble_overlay.visible:
