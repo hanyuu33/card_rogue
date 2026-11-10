@@ -425,14 +425,11 @@ func _draw_preview() -> void:
 		elif i == 1 and _slot_lower >= 0:
 			var lo: CardData = _cards[_slot_lower]
 			if not lo.lower_effect.is_empty():
-				# R566：下半**只写效果**（用户实测：「下半应该是抽一张牌」，原先是整句
-				# 「回合开始时：抽一张卡」，看着像上下半各抄了一遍整卡）。
-				# 只有当下半时机与上半不同（黑暗领主 上半 use / 下半 turn_end）才补时机；
-				# 上半槽还空着时也补 —— 那时框里没有任何上下文。
-				var up_t := ""
-				if _slot_upper >= 0:
-					up_t = str(_cards[_slot_upper].upper_effect.get("trigger", ""))
-				txt = AssembleRules.lower_text(lo.lower_effect, up_t)
+				# R567：下半**永远只写效果**，一个扳机字都不带（用户口径「下半不应该是完整效果，
+				# 需要裁掉上半部分 —— 扳机是在上半的，不应该也分发到下半」）。
+				# 上半槽空着 / 跨时机也一样不补 —— 补了就会重新变成整句，而且产物卡面写 A 时机、
+				# 实际按 B 时机结算。`note`（黑暗领主「在本回合结束时」）是描述前缀，不是扳机。
+				txt = AssembleRules.body_text(lo.lower_effect)
 		if txt != "":
 			# R562：左右内边距对称（原来左 36 / 右 12），别让文字贴死在包角上。
 			var body := Rect2(er.position.x + 40.0, er.position.y + 50.0,

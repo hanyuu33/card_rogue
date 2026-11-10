@@ -17651,28 +17651,20 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 	if p == null or p.card == null or p.card.assemble.is_empty():
 		return
 	var key := str(p.card.assemble.get("trigger", ""))
-	# R565：下半可以自带时机（「使用后，你在本回合结束时获得 5 费」= 上半 use + 下半 turn_end）。
-	# 下半没写就跟随上半 —— 旧存档 / 老结构里没有 lower_trigger，靠这条保住原行为。
-	var lower_key := str(p.card.assemble.get("lower_trigger", ""))
-	if lower_key == "":
-		lower_key = key
+	# R567：产物只有**一个扳机** —— 上半那张卡提供的。下半没有扳机（它的效果挂在同一个扳机上），
+	# 这里把上半段 + 下半段按顺序拼起来结算。显示侧同样不印下半的扳机，两边由此一致。
 	if key not in AssembleRules.TRIGGERS:
 		_log("组合：未支持的时机 " + key)
 		return
-	var hit_upper := key == trigger
-	var hit_lower := lower_key == trigger
-	if not hit_upper and not hit_lower:
+	if key != trigger:
 		return
 	var execution_key := str(p.get_instance_id()) + ":" + trigger
 	if _assemble_active.has(execution_key):
 		_log("组合：跳过同一结算链中的重复触发 " + trigger)
 		return
 	_assemble_active[execution_key] = true
-	var fx_queue: Array = []
-	if hit_upper:
-		fx_queue.append_array(p.card.assemble.get("effects", []).duplicate(true))
-	if hit_lower:
-		fx_queue.append_array((p.card.assemble.get("lower_effects", []) as Array).duplicate(true))
+	var fx_queue: Array = (p.card.assemble.get("effects", []) as Array).duplicate(true)
+	fx_queue.append_array((p.card.assemble.get("lower_effects", []) as Array).duplicate(true))
 	for fx in fx_queue:
 		if not AssembleRules.valid_effect(fx):
 			_log("组合：无效动作 " + str(fx))

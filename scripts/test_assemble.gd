@@ -109,17 +109,17 @@ func _test_r565_fidelity() -> void:
 					% [c.id, c.card_name, Rules.effect_text(fx), text])
 		check(str(c.upper_effect.get("trigger", "")) in Rules.TRIGGERS,
 				"R565：%d 上半时机必须在白名单" % c.id)
-		if c.lower_effect.has("trigger"):
-			check(str(c.lower_effect.get("trigger", "")) in Rules.TRIGGERS,
-					"R565：%d 下半时机必须在白名单" % c.id)
+		check(not c.lower_effect.has("trigger"),
+				"R567：%d %s 的下半不许带扳机（扳机只在上半）" % [c.id, c.card_name])
 	check(rows >= 8, "R565：可组合候选至少 8 张（实际 %d）" % rows)
 	# 用户点名的两张：黑暗领主 = 上半「使用后」空钩子 + 下半「回合结束时 5 费」；
 	# 榴弹击手 = 上半「每次获得改造时」空钩子 + 下半「攻击距离+1」。
 	var dark: CardData = repo.get_card(8021)
 	check(dark.upper_effect.trigger == "use" and (dark.upper_effect.effects as Array).is_empty()
-			and dark.lower_effect.trigger == "turn_end"
+			and not dark.lower_effect.has("trigger")
+			and str(dark.lower_effect.get("note", "")) == "在本回合结束时"
 			and int(dark.lower_effect.effects[0].value) == 5,
-			"R565：黑暗领主 = 上半 use（空）+ 下半 turn_end 5 费")
+			"R567：黑暗领主 = 上半 use（空）+ 下半 note + 5 费（无扳机）")
 	var nade: CardData = repo.get_card(8057)
 	check(nade.upper_effect.trigger == "upgraded" and (nade.upper_effect.effects as Array).is_empty()
 			and nade.lower_effect.effects[0].type == "range",
@@ -133,24 +133,30 @@ func _test_r565_fidelity() -> void:
 	base.attack_range = 1
 	var built := Rules.build(base, dark.upper_effect, dark.lower_effect)
 	check(built != null and built.assemble.trigger == "use"
-			and built.assemble.lower_trigger == "turn_end", "R565：下半时机进 assemble")
-	check(built.effect_text == "回合结束时：回复5点费用",
-			"R565 空钩子不写占位（实际「%s」）" % built.effect_text)
+			and not built.assemble.has("lower_trigger")
+			and (built.assemble.get("lower_effects", []) as Array).size() == 1,
+			"R567：产物只记上半扳机 + 下半效果")
+	check(built.effect_text == "使用时：在本回合结束时回复5点费用",
+			"R567 产物文本 = 扳机 + note + 效果（实际「%s」）" % built.effect_text)
+	var rt := CardData.from_dict(built.to_dict())
+	check(str(rt.assemble.get("lower_note", "")) == "在本回合结束时"
+			and (rt.assemble.get("lower_effects", []) as Array).size() == 1,
+			"R567：下半效果 + note 随 to_dict/from_dict 走（复制一次不丢）")
 	var eng := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
 	eng.ai_enabled = false
 	var p := _probe_unit(eng, "")
 	p.card.assemble = built.assemble.duplicate(true)
 	eng.state.energy = 0
-	eng._assemble_execute(p, eng._cell_of(p), "use")
-	check(eng.state.energy == 0, "R565：上半空钩子在 use 时不产生效果")
 	eng._assemble_execute(p, eng._cell_of(p), "turn_end")
-	check(eng.state.energy == 5, "R565：下半在 turn_end 结算（+5 费）")
+	check(eng.state.energy == 0, "R567：下半自己的原扳机（turn_end）不再生效")
+	eng._assemble_execute(p, eng._cell_of(p), "use")
+	check(eng.state.energy == 5, "R567：整张产物按**上半**扳机（use）结算一次 +5 费")
 	# range 动作：攻击距离 +N
 	var eng2 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
 	eng2.ai_enabled = false
 	var p2 := _probe_unit(eng2, "use")
 	var r0: int = p2.card.attack_range
-	p2.card.assemble = {"trigger": "use", "effects": [], "lower_trigger": "use",
+	p2.card.assemble = {"trigger": "use", "effects": [],
 			"lower_effects": [{"type": "range", "value": 1}]}
 	eng2._assemble_execute(p2, eng2._cell_of(p2), "use")
 	check(p2.card.attack_range == r0 + 1 and p2.upgrade_range == 1, "R565：range 动作加攻程")
@@ -171,63 +177,91 @@ func _test_r565_fidelity() -> void:
 
 
 func _test_r566_split_text() -> void:
-	## R566：用户第二轮实测 —— 「混乱之影下半应该是抽一张牌，现在虽然上半切对了，但是下半是
-	## 完整的效果，黑暗祭坛也是类似的问题」。
+	## R566 + R567：用户连续两轮实测 —— ①「混乱之影下半应该是抽一张牌，现在下半是完整的效果」；
+	## ②「惊奇盒子下半应该是眩晕最近的敌人，但现在变成了完整效果」「火元素更是直接变成下半入场时对
+	## 随机敌人造成 2 点伤害，跟原本效果不符」「机器鸟、活体栅栏作为下半也不对，给了完整效果」
+	## 「下半不应该是完整效果，需要裁掉上半部分 —— 至少大部分卡扳机是在上半的，不应该也分发到下半」。
 	##
-	## 根因**不在数据**（下半只存了 `{draw 1}`），而在**组合页取文本**：下半框调的是
-	## `fragment_text`，它会把下半的时机一并印出来 → 13 张全部变成「回合开始时：抽一张卡」，
-	## 看着像上下半各抄了一遍整卡。这一节把「下半只写效果」钉死。
+	## 上一轮（R566）只做到「同时机不重复印扳机」，跨时机就补前缀 —— 那还是把扳机塞进了下半，
+	## 而且产物卡面写 A 时机、引擎按 B 时机结算，显示与结算打架。本轮把它钉成**结构规则**：
+	##   · 下半**没有扳机**（`lower_effect` 里出现 `trigger` → `valid_pool` 直接判废）；
+	##   · 产物只有上半那张卡的扳机，下半效果挂在同一个扳机上一起结算；
+	##   · 下半只出「效果」+ 可选 `note`（描述前缀，如黑暗领主「在本回合结束时」，不带冒号）。
 	var repo := CardRepo.load_json()
 	var rows := 0
 	for c: CardData in repo.all_cards():
-		if c.lower_effect.is_empty():
+		if c.upper_effect.is_empty() and c.lower_effect.is_empty():
 			continue
 		rows += 1
-		var t_up := str(c.upper_effect.get("trigger", ""))
-		var t_lo := str(c.lower_effect.get("trigger", t_up))
+		check(not c.lower_effect.has("trigger"),
+				"R567：%d %s 的下半不许带扳机" % [c.id, c.card_name])
 		var body := Rules.body_text(c.lower_effect)
-		var shown := Rules.lower_text(c.lower_effect, t_up)
+		check(body != "", "R567：%d %s 下半文案不许为空" % [c.id, c.card_name])
 		check(not body.contains("："),
-				"R566：%d %s 的下半效果本体不该带时机（实际「%s」）" % [c.id, c.card_name, body])
-		if t_lo == t_up:
-			check(shown == body,
-					"R566：%d %s 下半时机与上半相同 → 不重复印时机（实际「%s」）" % [c.id, c.card_name, shown])
-		else:
-			check(shown == str(Rules.LABELS.get(t_lo, "")) + "：" + body,
-					"R566：%d %s 下半时机不同 → 标出时机（实际「%s」）" % [c.id, c.card_name, shown])
-	check(rows >= 8, "R566：至少 8 张卡参与下半文案检查（实际 %d）" % rows)
-	# 用户点名的两张逐字核对
-	var sp: CardData = repo.get_card(8067)   # 分裂之影（用户说的「混乱之影」）
-	check(Rules.lower_text(sp.lower_effect, sp.upper_effect.trigger) == "抽1张牌",
-			"R566：分裂之影下半 =「抽一张卡」（实际「%s」）"
-			% Rules.lower_text(sp.lower_effect, sp.upper_effect.trigger))
-	var altar: CardData = repo.get_card(8023)   # 黑暗祭坛
-	check(Rules.lower_text(altar.lower_effect, altar.upper_effect.trigger) == "回复1点费用",
-			"R566：黑暗祭坛下半 =「回复1点费用」（实际「%s」）"
-			% Rules.lower_text(altar.lower_effect, altar.upper_effect.trigger))
-	# 上半槽还空着时也要带时机（否则框里没有上下文）
-	check(Rules.lower_text(sp.lower_effect, "") == "回合开始时：抽1张牌",
-			"R566：上半未填时下半补时机")
-	# 产物卡面仍写完整句子 —— 产物是一张独立卡，卡面没别处能读时机
+				"R567：%d %s 下半文案里不许出现扳机式冒号（实际「%s」）"
+				% [c.id, c.card_name, body])
+		check(not body.ends_with("：") and not body.contains("时："),
+				"R567：%d %s 下半不许以扳机名开头（实际「%s」）" % [c.id, c.card_name, body])
+	check(rows >= 8, "R567：可组合候选至少 8 张（实际 %d）" % rows)
+	# 用户逐条点名的四张：下半必须只剩效果本身
+	var sp: CardData = repo.get_card(8067)
+	check(Rules.body_text(sp.lower_effect) == "抽1张牌",
+			"R567：分裂之影下半 =「抽1张牌」（实际「%s」）" % Rules.body_text(sp.lower_effect))
+	var box: CardData = repo.get_card(9179)
+	check(Rules.body_text(box.lower_effect) == "眩晕最近敌人",
+			"R567：惊奇盒子下半 =「眩晕最近敌人」（实际「%s」）" % Rules.body_text(box.lower_effect))
+	var bird: CardData = repo.get_card(8059)
+	check(Rules.body_text(bird.lower_effect) == "抽1张牌",
+			"R567：机器鸟下半 =「抽1张牌」（实际「%s」）" % Rules.body_text(bird.lower_effect))
+	var fence: CardData = repo.get_card(8018)
+	check(Rules.body_text(fence.lower_effect) == "抽1张牌",
+			"R567：活体栅栏下半 =「抽1张牌」（实际「%s」）" % Rules.body_text(fence.lower_effect))
+	# 火元素：「每清除 1 张，对随机一个敌人造成 2 点伤害」依赖前置的清除数量，
+	# 下半单独拿出来就不是原效果（用户口径「甚至跟原本效果不符」）→ 已移出候选池。
+	var fire: CardData = repo.get_card(9236)
+	check(fire.upper_effect.is_empty() and fire.lower_effect.is_empty(),
+			"R567：火元素已移出候选池（下半依赖「每清除 1 张」的前提）")
+	# 黑暗领主：note 是描述前缀，不是扳机
+	var dark: CardData = repo.get_card(8021)
+	check(Rules.body_text(dark.lower_effect) == "在本回合结束时回复5点费用",
+			"R567：黑暗领主下半 = note + 效果、无冒号（实际「%s」）"
+			% Rules.body_text(dark.lower_effect))
+	# 跨时机组合：产物只用上半扳机，下半的时机被丢弃
 	var base := CardData.new()
-	base.card_name = "R566 探针"
+	base.card_name = "R567 探针"
 	base.kind = "工事"
 	base.health = 5
 	base.power = 0
 	base.attack_range = 1
-	var prod := Rules.build(base, sp.upper_effect, sp.lower_effect)
-	check(prod != null and prod.effect_text == "回合开始时：抽1张牌",
-			"R566：产物卡面写完整时机（实际「%s」）" % (prod.effect_text if prod != null else "null"))
+	var prod := Rules.build(base, dark.upper_effect, bird.lower_effect)
+	check(prod != null and prod.assemble.trigger == "use"
+			and (prod.assemble.get("lower_effects", []) as Array).size() == 1,
+			"R567：产物扳机只来自上半（黑暗领主 use + 机器鸟下半）")
+	check(prod != null and prod.effect_text == "使用时：抽1张牌",
+			"R567：跨时机产物卡面只写上半扳机（实际「%s」）"
+			% (prod.effect_text if prod != null else "null"))
+	# valid_pool 结构锁：下半带扳机直接判废
+	check(not Rules.valid_pool([dark.upper_effect],
+			[{"trigger": "turn_end", "effects": [{"type": "draw", "value": 1}]}]),
+			"R567：下半带扳机 → valid_pool 判废")
+	check(Rules.valid_pool([dark.upper_effect], [bird.lower_effect]),
+			"R567：下半无扳机 → valid_pool 通过")
 	# 惊奇盒子：它是工事，本体不能移动，「无法移动」属于冗余描述
-	var box: CardData = repo.get_card(9179)
 	check(box.effect_text == "被攻击时，使攻击者下回合眩晕（不能行动）。",
-			"R566：惊奇盒子文本去掉「无法移动」（实际「%s」）" % box.effect_text)
-	# 源码锁：组合页下半走 lower_text，fragment_text 只留给上半
+			"R567：惊奇盒子文本去掉「无法移动」（实际「%s」）" % box.effect_text)
+	# 源码锁
 	var ov := FileAccess.get_file_as_string("res://scripts/assemble_overlay.gd")
-	check(ov.find("AssembleRules.lower_text(") >= 0, "R566 源码锁：组合页下半走 lower_text")
+	check(ov.find("AssembleRules.body_text(") >= 0 and ov.find("AssembleRules.lower_text(") < 0,
+			"R567 源码锁：组合页下半走 body_text，补扳机的 lower_text 已不存在")
 	check(ov.count("AssembleRules.fragment_text(") == 1,
-			"R566 源码锁：fragment_text 只用于上半（实际引用 %d 处）"
+			"R567 源码锁：fragment_text 只用于上半（实际引用 %d 处）"
 			% ov.count("AssembleRules.fragment_text("))
+	var rs := FileAccess.get_file_as_string("res://scripts/assemble_rules.gd")
+	check(rs.find("func lower_text") < 0, "R567 源码锁：lower_text 已删除")
+	check(rs.find("if part.has(\"trigger\") or part.has(\"extra_affixes\"):") >= 0,
+			"R567 源码锁：valid_pool 禁止下半带扳机")
+	var gs := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(gs.find("lower_trigger") < 0, "R567 源码锁：引擎不再有 lower_trigger 分支")
 
 
 func _probe_unit(eng: GameEngine, trigger: String, cell := Vector2i(3, 0), side := "self") -> Placement:
@@ -414,7 +448,7 @@ func _test_combo() -> void:
 	eng.ai_enabled = false
 	# 数据层：可组合候选 = 同时带 upper/lower 的玩家盟友/工事卡
 	var cand: Array = eng._combo_candidate_cards()
-	check(cand.size() == 13, "R565 组合：可组合盟友/工事候选 %d 张（期望 13）" % cand.size())
+	check(cand.size() == 12, "R567 组合：可组合盟友/工事候选 %d 张（期望 12）" % cand.size())
 	# 候选必须覆盖三职业盟友 + 工事，且全是盟友/工事（不允许其他 kind 混入）
 	var has_fort := false
 	var has_rogue := false

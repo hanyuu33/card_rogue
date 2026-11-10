@@ -699,7 +699,7 @@
       "color": "白",
       "image": "",
       "upper_effect": {"trigger": "turn_end", "effects": []},
-      "lower_effect": {"trigger": "turn_end", "effects": [{"type": "heal", "value": 2}]}
+      "lower_effect": {"effects": [{"type": "heal", "value": 2}]}
     },
     {
       "id": 9017,
@@ -2547,7 +2547,7 @@
       "color": "蓝",
       "image": "",
       "upper_effect": {"trigger": "enter", "effects": []},
-      "lower_effect": {"trigger": "enter", "effects": [{"type": "draw", "value": 1}]}
+      "lower_effect": {"effects": [{"type": "draw", "value": 1}]}
     },
     {
       "id": 8019,
@@ -2650,7 +2650,7 @@
       "color": "黑",
       "image": "",
       "upper_effect": {"trigger": "use", "effects": []},
-      "lower_effect": {"trigger": "turn_end", "effects": [{"type": "energy", "value": 5}]}
+      "lower_effect": {"note": "在本回合结束时", "effects": [{"type": "energy", "value": 5}]}
     },
     {
       "id": 9112,
@@ -2712,7 +2712,7 @@
       "color": "白",
       "image": "",
       "upper_effect": {"trigger": "attack", "effects": []},
-      "lower_effect": {"trigger": "attack", "effects": [{"type": "energy", "value": 1}]}
+      "lower_effect": {"effects": [{"type": "energy", "value": 1}]}
     },
     {
       "id": 8023,
@@ -2735,7 +2735,7 @@
       "color": "紫",
       "image": "",
       "upper_effect": {"trigger": "attack", "effects": []},
-      "lower_effect": {"trigger": "attack", "effects": [{"type": "energy", "value": 1}]}
+      "lower_effect": {"effects": [{"type": "energy", "value": 1}]}
     },
     {
       "id": 9114,
@@ -2966,7 +2966,7 @@
       "upgrade_atk_bonus": 2,
       "upgrade_hp_bonus": 2,
       "upper_effect": {"trigger": "upgraded", "effects": []},
-      "lower_effect": {"trigger": "upgraded", "effects": [{"type": "buff", "value": 2}]}
+      "lower_effect": {"effects": [{"type": "buff", "value": 2}]}
     },
     {
       "id": 8030,
@@ -3528,7 +3528,7 @@
       "color": "蓝",
       "image": "",
       "upper_effect": {"trigger": "upgraded", "effects": []},
-      "lower_effect": {"trigger": "upgraded", "effects": [{"type": "range", "value": 1}]}
+      "lower_effect": {"effects": [{"type": "range", "value": 1}]}
     },
     {
       "id": 8058,
@@ -3575,7 +3575,7 @@
       "color": "蓝",
       "image": "",
       "upper_effect": {"trigger": "upgraded", "effects": []},
-      "lower_effect": {"trigger": "upgraded", "effects": [{"type": "draw", "value": 1}]}
+      "lower_effect": {"effects": [{"type": "draw", "value": 1}]}
     },
     {
       "id": 8060,
@@ -3749,7 +3749,7 @@
       "color": "蓝",
       "image": "",
       "upper_effect": {"trigger": "turn_start", "effects": []},
-      "lower_effect": {"trigger": "turn_start", "effects": [{"type": "draw", "value": 1}]}
+      "lower_effect": {"effects": [{"type": "draw", "value": 1}]}
     },
     {
       "id": 8068,
@@ -5204,7 +5204,7 @@
       "color": "灰",
       "image": "",
       "upper_effect": {"trigger": "attacked", "effects": []},
-      "lower_effect": {"trigger": "attacked", "effects": [{"type": "stun"}]}
+      "lower_effect": {"effects": [{"type": "stun"}]}
     },
     {
       "id": 9180,
@@ -5380,7 +5380,7 @@
       "image": "",
       "locked": true,
       "upper_effect": {"trigger": "attack", "effects": []},
-      "lower_effect": {"trigger": "attack", "effects": [{"type": "knockback", "value": 1}]}
+      "lower_effect": {"effects": [{"type": "knockback", "value": 1}]}
     },
     {
       "id": 9200,
@@ -6184,7 +6184,7 @@
       "color": "黑",
       "image": "",
       "upper_effect": {"trigger": "attack", "effects": []},
-      "lower_effect": {"trigger": "attack", "effects": [{"type": "heal", "value": 3}]}
+      "lower_effect": {"effects": [{"type": "heal", "value": 3}]}
     },
     {
       "id": 9233,
@@ -6263,9 +6263,7 @@
       "effect_text": "入场时，清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 2 点伤害。",
       "target_mode": "none",
       "color": "红",
-      "image": "",
-      "upper_effect": {"trigger": "enter", "effects": []},
-      "lower_effect": {"trigger": "enter", "effects": [{"type": "damage", "value": 2, "target": "random"}]}
+      "image": ""
     },
     {
       "id": 9237,

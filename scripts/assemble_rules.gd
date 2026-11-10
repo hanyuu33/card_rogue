@@ -38,11 +38,14 @@ static func valid_pool(upper: Array, lower: Array) -> bool:
 		if part.get("trigger", "") not in TRIGGERS:
 			return false
 	for part in lower:
-		## R565：下半**允许自带时机** —— 「使用后，你在本回合结束时获得 5 费用」这类卡，
-		## 效果挂在另一个时机上；下半没写 trigger 时才跟随上半的时机。
-		if part.get("effects", []).is_empty() or part.has("extra_affixes"):
+		## R567（用户口径）：「下半不应该是完整效果，需要裁掉上半部分 —— 扳机是在上半的，
+		## 不应该也分发到下半」。所以下半**结构上不允许有 trigger**：有就是数据写错了，直接判废。
+		## 下半只承载「效果」+ 可选的 `note`（纯描述，如「在本回合结束时」，不是扳机）。
+		if part.has("trigger") or part.has("extra_affixes"):
 			return false
-		if part.has("trigger") and str(part.get("trigger", "")) not in TRIGGERS:
+		if part.get("effects", []).is_empty():
+			return false
+		if not part.get("note", "") is String:
 			return false
 	return true
 
@@ -84,50 +87,30 @@ static func effects_text(fx_list: Array) -> String:
 
 
 static func body_text(part: Dictionary) -> String:
-	## 只出效果本身、**不带时机**（下半槽位用它 —— 时机已经由上半那张卡提供了）。
-	return effects_text(part.get("effects", []))
-
-
-static func lower_text(lower: Dictionary, upper_trigger: String) -> String:
-	## R566：下半框的文案（用户实测反馈：「混乱之影下半应该是抽一张牌」）。
-	##
-	## 原先这里错用 `fragment_text`，它会把下半的时机一并印出来 → 13 张**全部**显示成
-	## 「攻击时：回复 1 点费用」这种完整句子，看着像上下半各抄了一遍整卡。
-	## 现在的口径：下半**只写效果**；只有当下半的时机与上半不同（黑暗领主 = 上半 use、
-	## 下半 turn_end）才补上时机，否则玩家读不出它挂在另一个时机上。
-	## 上半槽还空着（upper_trigger == ""）时也带时机 —— 那时玩家手上没有任何上下文。
-	var body := body_text(lower)
-	if body == "":
-		return ""
-	var t := str(lower.get("trigger", ""))
-	if t == "" or t == upper_trigger:
-		return body
-	return str(LABELS.get(t, "")) + "：" + body
+	## 只出「效果本身」，**永远不带扳机**（下半槽位用它 —— 扳机由上半那张卡提供）。
+	## R567：用户口径「下半不应该是完整效果，需要裁掉上半部分」。这里不再有任何
+	## 「跨时机就补扳机前缀」的分支 —— 那种补法会让下半重新变成整句，
+	## 而且产物卡面写 A 时机、实际按 B 时机结算，显示与结算必然打架。
+	## `note` 是**描述性前缀**（如黑暗领主的「在本回合结束时」），不是扳机，不带冒号。
+	var body := effects_text(part.get("effects", []))
+	return str(part.get("note", "")) + body
 
 
 static func assembled_text(asm: Dictionary) -> String:
-	## R565：组合卡的效果文本 = 上半（时机：效果）+ 下半（时机：效果）。
-	## 上半可以是**空钩子**（只提供时机、没有效果，用户口径「上半只有钩子也无所谓」）——
-	## 那时只写下半，不写「（无）」这种占位。
-	var t1 := str(asm.get("trigger", ""))
-	var t2 := str(asm.get("lower_trigger", ""))
+	## 组合卡的效果文本 = **一个扳机**（来自上半那张卡）+ 上半效果 + 下半效果。
+	## 上半可以是**空钩子**（只提供扳机、没有效果，用户口径「上半只有钩子也无所谓」）。
+	## 下半的 `lower_note` 是描述性前缀，紧贴在下半效果前面（黑暗领主 =「在本回合结束时获得5点费用」）。
+	var t := str(asm.get("trigger", ""))
 	var s1 := effects_text(asm.get("effects", []))
-	var s2 := effects_text(asm.get("lower_effects", []))
+	var s2 := str(asm.get("lower_note", "")) + effects_text(asm.get("lower_effects", []))
 	var out := ""
 	if s1 != "":
-		out = str(LABELS.get(t1, "")) + "：" + s1
+		out = s1
 	if s2 != "":
-		if out != "":
-			out += "。"
-			# 上半已有内容：下半时机与上半相同就不重复写
-			if t2 != "" and t2 != t1:
-				out += str(LABELS.get(t2, "")) + "："
-		else:
-			# R566：上半是空钩子时，产物卡面上**必须**写出时机 ——
-			# 产物是一张独立卡，卡面没别的地方能看出它挂在哪个时机。
-			out += str(LABELS.get(t2, "")) + "："
-		out += s2
-	return out
+		out = s2 if out == "" else (out + "。" + s2)
+	if out == "":
+		return ""
+	return str(LABELS.get(t, "")) + "：" + out
 
 
 static func fragment_text(part: Dictionary) -> String:
@@ -143,18 +126,13 @@ static func build(base: CardData, upper: Dictionary, lower: Dictionary, reverse:
 	var result := CardData.from_dict(base.to_dict())
 	var first: Dictionary = lower if reverse else upper
 	var second: Dictionary = upper if reverse else lower
-	# R565：上下半各自带时机（下半没写就跟上半），两边都空是不可能的 —— valid_pool 保证上半有时机。
-	var t1 := str(first.get("trigger", ""))
-	var t2 := str(second.get("trigger", ""))
-	if t1 == "":
-		t1 = t2
-	if t2 == "":
-		t2 = t1
+	# R567：产物只有**一个扳机** —— 就是上半那张卡的（valid_pool 保证上半一定有）。下半的
+	# 效果挂在同一个扳机上一起结算，`note` 只影响文案，不改变触发时机。
 	result.assemble = {
-		"trigger": t1,
+		"trigger": str(upper.get("trigger", "")),
 		"effects": (first.get("effects", []) as Array).duplicate(true),
-		"lower_trigger": t2,
 		"lower_effects": (second.get("effects", []) as Array).duplicate(true),
+		"lower_note": str(second.get("note", "")),
 		"extra_affixes": (first.get("extra_affixes", []) as Array).duplicate(true),
 	}
 	for affix in result.assemble.extra_affixes:

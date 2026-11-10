@@ -369,16 +369,16 @@ static func from_dict(d: Dictionary) -> CardData:
 		var xa_out: Array = []
 		for xa in (asm_in.get("extra_affixes", []) as Array):
 			xa_out.append(str(xa))
-		# R565：下半可以自带时机（「使用后，你在本回合结束时获得 5 费」= 上半 use + 下半 turn_end），
-		# 所以 lower_trigger / lower_effects 必须一起重建，否则组合卡一被复制下半效果就没了。
+		# R567：产物只有**一个扳机**（上半那张卡的）。下半只有效果 + 可选 `note`（描述性前缀），
+		# 没有扳机 —— 但 lower_effects / lower_note 必须一起重建，否则组合卡一被复制下半效果就没了。
 		var lfx_out: Array = []
 		for fx in (asm_in.get("lower_effects", []) as Array):
 			lfx_out.append((fx as Dictionary).duplicate(true))
 		c.assemble = {
 			"trigger": str(asm_in.get("trigger", "")),
 			"effects": fx_out,
-			"lower_trigger": str(asm_in.get("lower_trigger", "")),
 			"lower_effects": lfx_out,
+			"lower_note": str(asm_in.get("lower_note", "")),
 			"extra_affixes": xa_out,
 		}
 	# R559 组合：上下半句随复制通道走（深拷贝），漏了它待选卡拖进槽位取不到效果。
