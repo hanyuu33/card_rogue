@@ -17786,7 +17786,9 @@ func assemble_combo_cards() -> Array:
 
 func assemble_combo_set_slot(slot: String, index: int) -> void:
 	## UI 把第 index 张待选卡拖进某个槽位（slot = attr / upper / lower）。
-	if index < 0 or index >= _combo_cards.size():
+	## R564：index == -1 = 清空该槽（把已放入的卡拖回左栏撤回）。原来负数一律被拒，
+	## 卡一旦放进槽就再也拿不出来，玩家只能把整次组合取消掉。
+	if index < -1 or index >= _combo_cards.size():
 		return
 	match slot:
 		"attr": _combo_attr = index

@@ -356,3 +356,36 @@ func _test_combo() -> void:
 			"R562 源码锁：上/下半效果框各自独立显示")
 	# ④ 全屏模态页要压在所有战斗 UI 之上（tscn 里的 hp_strip 会盖掉底部提示行）
 	check(ov.count("z_index = 100") == 1, "R562：组合页 z_index 顶层化")
+
+	# ── R564 撤回与详情（用户口径：放进去的卡要能拿下来 / 左边不该还留着 / 要看得到详情）──
+	# ① 引擎：`set_slot(x, -1)` = 清空该槽（原来负数一律被拒 → 卡放进去就再也拿不出来）
+	eng._teach_spell(GameEngine.SIDE_SELF)
+	check(eng.assemble_combo_pending, "R564：进入组合")
+	eng.assemble_combo_set_slot("attr", 0)
+	eng.assemble_combo_set_slot("upper", 1)
+	eng.assemble_combo_set_slot("lower", 2)
+	check(eng.assemble_combo_preview() != null, "R564：三槽填满可预览")
+	eng.assemble_combo_set_slot("upper", -1)
+	check(eng.assemble_combo_preview() == null, "R564：清空上半槽后预览消失（可撤回）")
+	eng.assemble_combo_set_slot("upper", 99)
+	check(eng.assemble_combo_preview() == null, "R564：越界下标不会写进槽位")
+	eng.assemble_combo_set_slot("upper", 1)
+	check(eng.assemble_combo_preview() != null, "R564：重新拖回上半槽后预览恢复")
+	eng.assemble_combo_cancel()
+	# ② 源码锁：组合页可撤回 + 左栏去重 + 详情入口
+	check(ov.count("_slot_of_index") >= 3, "R564 源码锁：同一张卡只占一个槽（_slot_of_index）")
+	check(ov.count("_draw_left_gap") >= 2, "R564 源码锁：已放入的卡在左栏只留空位（_draw_left_gap）")
+	check(ov.count("_slot_close_rect") >= 3, "R564 源码锁：槽内卡有 ✕ 撤回角标")
+	check(ov.find("_left_zone().has_point(pos)") >= 0, "R564 源码锁：拖回左栏 = 撤回")
+	check(ov.find("_set_slot(_drag_slot, -1)") >= 0, "R564 源码锁：撤回走 set_slot(-1)")
+	check(ov.find("_open_detail_card") >= 0 and ov.find("CardDetailOverlay.new()") >= 0,
+			"R564 源码锁：组合页接了卡牌详情")
+	# ③ 源码锁：选卡页 / 弃牌区浏览也能看详情（同一组件）
+	var pov := FileAccess.get_file_as_string("res://scripts/pick_overlay.gd")
+	check(pov.find("CardDetailOverlay.new()") >= 0 and pov.find("_desc_detail_rect") >= 0
+			and pov.find("_desc_card()") >= 0,
+			"R564 源码锁：选卡页描述条带「详情」入口")
+	# ④ 源码锁：详情层自己关的时候也必须帧末 hide（R562 的坑，别在新组件里重犯）
+	var dov := FileAccess.get_file_as_string("res://scripts/card_detail_overlay.gd")
+	check(dov != "" and dov.find("close.call_deferred()") >= 0 and dov.find("z_index = 200") >= 0,
+			"R564 源码锁：详情层帧末关闭 + 压在组合页之上")

@@ -17,6 +17,7 @@ signal cancelled()
 signal collapsed_changed(collapsed: bool)
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const CardDetailOverlay = preload("res://scripts/card_detail_overlay.gd")
 
 const COLS := 5                 # 每行 5 张（用户口径）
 const GAP := 30.0               # 卡间距（用户口径：别排太紧凑）
@@ -39,6 +40,7 @@ var _press := {}                # {pos, scroll, moved} 左键/触屏按下状态
 var _hover_idx := -1           # R191：悬停卡下标（无悬停时描述条显示最后选中的）
 var _clip: Control              # 裁剪容器（clip_contents：滚出视区的半行不画）
 var _grid: PickGrid             # 网格节点（_draw 画全部卡；position.y = -_scroll）
+var _detail: CardDetailOverlay = null   # R564：卡牌详情浮层（卡面只留卡名，全文在这里看）
 
 
 class PickGrid extends Control:
@@ -64,6 +66,10 @@ func _ready() -> void:
 	_grid.overlay = self
 	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE   # 命中判定全在 PickOverlay 手动做
 	_clip.add_child(_grid)
+	# R564：详情浮层挂在本页之上（组件自身 z_index=200），全屏吃点击，关掉才回到本页
+	_detail = CardDetailOverlay.new()
+	_detail.name = "CardDetail"
+	add_child(_detail)
 	# R395：尺寸晚到（首帧 anchors / 安卓切前台 / 分辨率变化）也要重排 ——
 	# 否则面板还开着、网格却按旧尺寸裁，卡会整片看不见。
 	resized.connect(func():
@@ -83,6 +89,8 @@ func open(cfg: Dictionary) -> void:
 	_scroll = 0.0
 	_hover_idx = -1   # R294：新一轮选卡 → 悬停下标清零（否则描述条停在上局的卡上）
 	visible = true
+	if _detail != null:
+		_detail.close()
 	_layout()
 	_grid.queue_redraw()
 	queue_redraw()
@@ -91,6 +99,8 @@ func open(cfg: Dictionary) -> void:
 
 func close() -> void:
 	visible = false
+	if _detail != null:
+		_detail.close()
 	_cfg = {}
 	_cards = []
 	_selected = []
@@ -105,6 +115,8 @@ func collapse() -> void:
 		cancelled.emit()
 		return
 	visible = false
+	if _detail != null:
+		_detail.close()
 	collapsed_changed.emit(true)
 
 
@@ -244,6 +256,23 @@ static func _center_y(rect: Rect2, fs: int) -> float:
 	return rect.position.y + rect.size.y / 2.0 + fs * 0.35
 
 
+func _desc_detail_rect() -> Rect2:
+	## R564：描述条右侧的「详情」按钮。
+	var dr := Rect2(SIDE, size.y - BOT_H - DESC_H - 6.0,
+			size.x - SIDE * 2.0, DESC_H)
+	return Rect2(dr.end.x - 108.0, dr.get_center().y - 15.0, 96.0, 30.0)
+
+
+func _desc_card() -> CardData:
+	## 描述条当前显示的那张卡（悬停优先，其次最后选中的）—— 与 `_draw` 的取法一致。
+	var di := _hover_idx
+	if di < 0 and not _selected.is_empty():
+		di = _selected[-1]
+	if di >= 0 and di < _cards.size():
+		return _cards[di]
+	return null
+
+
 # ── 绘制 ─────────────────────────────────────────────────────
 
 func _draw() -> void:
@@ -312,11 +341,18 @@ func _draw() -> void:
 		draw_string(_font, dr.position + Vector2(14, 48), meta,
 				HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_CAPTION, Color("9a94a8"))
 		var eff := CardText.naturalize(dc.effect_text)
-		var lines := CardFace.wrap_text(_font, eff, dr.size.x - 210.0, UiTheme.FS_BODY)
+		# R564：右侧给「详情」按钮留位（卡面只留卡名，长规则一行描述装不下）
+		var eff_w: float = dr.size.x - 210.0 - 116.0
+		var lines := CardFace.wrap_text(_font, eff, eff_w, UiTheme.FS_BODY)
 		for li in mini(lines.size(), 3):
 			draw_string(_font, dr.position + Vector2(196, 24 + li * 20), lines[li],
-					HORIZONTAL_ALIGNMENT_LEFT, dr.size.x - 210.0, UiTheme.FS_BODY, Color("e8e2d4"))
-	# 底栏
+					HORIZONTAL_ALIGNMENT_LEFT, eff_w, UiTheme.FS_BODY, Color("e8e2d4"))
+		var db := _desc_detail_rect()
+		draw_rect(db, Color(0.20, 0.17, 0.26, 0.96))
+		draw_rect(db, Color("ffd27d"), false, 1.4)
+		draw_string(_font_bold, Vector2(db.position.x, _center_y(db, UiTheme.FS_LABEL)),
+				"详情", HORIZONTAL_ALIGNMENT_CENTER, db.size.x,
+				UiTheme.FS_LABEL, Color("ffd27d"))
 	draw_rect(Rect2(0, h - BOT_H, w, BOT_H), Color(0.10, 0.09, 0.14, 0.92))
 	draw_rect(Rect2(0, h - BOT_H, w, 2.0), UiTheme.INK_500)
 	var note := String(_cfg.get("note", ""))
@@ -374,6 +410,9 @@ func draw_cards(g: Control) -> void:
 
 func _gui_input(event: InputEvent) -> void:
 	if _cfg.is_empty():
+		return
+	# R564：详情层打开时，所有点击都属于「关掉详情」，本页一概不处理
+	if _detail != null and _detail.visible:
 		return
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
@@ -453,6 +492,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	## overlay 展开时吃掉快捷键（不能选到一半按 E 结束回合）；Esc = 返回（收起看战场）。
 	if _cfg.is_empty() or not visible:
 		return
+	if _detail != null and _detail.visible:
+		return
 	if event is InputEventKey:
 		var k := event as InputEventKey
 		if not k.pressed or k.echo:
@@ -479,6 +520,11 @@ func _tap(pos: Vector2) -> void:
 		return
 	if _cfg.get("cancel_label", "") != "" and _cancel_rect().has_point(pos):
 		cancelled.emit()
+		return
+	if _desc_detail_rect().has_point(pos):
+		var dcard := _desc_card()
+		if dcard != null and _detail != null:
+			_detail.open(dcard, "选卡页的卡面只显示卡名 —— 完整卡面与规则全文在这里")
 		return
 	var k := _card_at(pos)
 	if k >= 0:

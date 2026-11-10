@@ -3,11 +3,13 @@ extends Control
 ## R559 组合 UI：使用「传授」等组合效果后弹出的全屏拖拽组合页。
 ##
 ## 三栏（左→右，比例定位、宽屏自适应）：
-##   左栏：6 张待选卡（2×3），拖拽源
-##   中栏：3 个【一样】的空槽位（上中下：①属性值+卡图 ②上半效果 ③下半效果）
+##   左栏：6 张待选卡（2×3），拖拽源 —— 已放进槽位的卡在这里**消失**（留淡空位），
+##        拖回原位 / 任意左栏位置即可撤回
+##   中栏：3 个空槽位（上中下：①属性值+卡图 ②上半效果 ③下半效果），槽内卡右上角有 ✕ 可一键撤回
 ##   右栏：结果预览 = 组合卡（带「组合」印记）+ 上/下效果框 + 确认/取消按钮
 ##
-## 交互：按住待选卡 → 拖到槽位 → 松手填入；三个槽位填满后「确认组合」可点。
+## 交互：按住待选卡（或槽内卡）→ 拖到槽位 → 松手填入；拖动可在槽位间移动/互换；
+##       点任意卡（待选 / 槽内 / 结果预览）→ 打开卡牌详情。三个槽位填满后「确认组合」可点。
 ## 组合逻辑全部交给引擎（engine.assemble_combo_*），本页只负责显示与拖拽。
 ##
 ## ⚠️ R559b 视觉重做（用户口径「文字和框体搭配非常差，美术素材基本没上」）：
@@ -15,9 +17,14 @@ extends Control
 ##   slot_effect），风格与游戏不符。重做后**全部接回游戏现有素材体系**：
 ##     · 空槽位 = `card_paper` 纸底 + `ACCENT_GOLD` 描边（与真卡同源纸底，天然协调）；
 ##     · 待选卡 / 结果卡 = `CardFace.draw_pick` 真卡；
-##     · 上/下效果框 = `UiTheme.draw_info_card`（羊皮纸面板 + 黄铜细线）；
+##     · 上/下效果框 = `UiTheme.adventure_panel_style`（panel_journal_light 羊皮纸面板）；
 ##     · 按钮 = `UiTheme.draw_secondary_btn`（button_forest / button_paper 素材）；
 ##     · 「组合」印记 = `CardInfoBoxes.draw_glyph` 的 combine 自绘符号 + 金字，不贴图。
+##
+## ⚠️ R564（用户口径「放进去的卡拿不下来 / 左边还留着同一张 / 看不了详情」）：
+##   ① 槽位可撤回：拖回左栏，或点槽内卡右上角的 ✕；
+##   ② 已进槽的卡在左栏**不再画卡**，只留一个淡空位（位置不跳动，方便拖回）；
+##   ③ 点任意卡打开 `CardDetailOverlay`（选卡页的卡面只留卡名，看不到效果文）。
 
 signal confirmed()
 signal cancelled()
@@ -27,6 +34,7 @@ const CardFace = preload("res://scripts/card_face.gd")
 const UiAssets = preload("res://scripts/ui_assets.gd")
 const AssembleRules = preload("res://scripts/assemble_rules.gd")
 const CardInfoBoxes = preload("res://scripts/card_info_boxes.gd")
+const CardDetailOverlay = preload("res://scripts/card_detail_overlay.gd")
 
 const DIM_ALPHA := 0.85                 # 暗罩不透明度（深蓝夜色，战场隐约可见）
 const TITLE_H := 56.0                   # 顶栏高
@@ -38,6 +46,7 @@ const CARD_ASPECT := 76.0 / 63.0        # 卡面高/宽
 const SLOT_W := 0.120                   # 槽位 / 结果卡宽（相对 size.x）
 const SLOT_GAP := 24.0                  # 槽位竖直间距
 const BUTTON_H := 48.0                  # 按钮高（>44 才走 adventure_button_style 素材胶囊，不走纯色 chip）
+const SLOT_CLOSE_R := 13.0              # 槽内卡右上角 ✕ 角标半径
 
 var _font: Font
 var _font_bold: Font
@@ -46,11 +55,13 @@ var _cards: Array = []
 var _slot_attr := -1
 var _slot_upper := -1
 var _slot_lower := -1
-var _drag_from := -1
+var _drag_from := -1                      # 拖拽源：左栏待选卡下标
+var _drag_slot := -1                      # 拖拽源：槽位（把已经放进去的卡再拿起来）
 var _drag_pos := Vector2.ZERO
 var _press := {}                          # {pos, moved}
 var _tip := ""                            # R562：底部一句提示（右键/ESC 不再直接取消）
 var _tip_until := 0
+var _detail: CardDetailOverlay = null     # R564：卡牌详情浮层
 
 
 func _ready() -> void:
@@ -67,6 +78,10 @@ func _ready() -> void:
 	# 窗口缩放 / 安卓切前台时靠 resized + viewport.size_changed 重新对齐。
 	resized.connect(_sync_size)
 	get_viewport().size_changed.connect(_sync_size)
+	# R564：详情浮层作为子节点（z 叠加 → 永远压在本页之上）
+	_detail = CardDetailOverlay.new()
+	_detail.name = "CardDetail"
+	add_child(_detail)
 
 
 func _sync_size() -> void:
@@ -85,6 +100,7 @@ func open(engine_ref: Object, cards: Array) -> void:
 	_slot_upper = -1
 	_slot_lower = -1
 	_drag_from = -1
+	_drag_slot = -1
 	_press = {}
 	_tip = ""
 	_tip_until = 0
@@ -101,8 +117,11 @@ func close() -> void:
 	_slot_upper = -1
 	_slot_lower = -1
 	_drag_from = -1
+	_drag_slot = -1
 	_tip = ""
 	_tip_until = 0
+	if _detail != null:
+		_detail.close()
 
 
 func _show_tip(text: String, ms := 4000) -> void:
@@ -148,6 +167,12 @@ func _card_rect(k: int) -> Rect2:
 	return Rect2(x0 + col * (cw + gap), top + row * (ch + gap), cw, ch)
 
 
+func _left_zone() -> Rect2:
+	## 「拖回左栏 = 撤回」的判定区（比卡片区域宽一圈，好拖）
+	return Rect2(0.0, TITLE_H, size.x * (LEFT_X + LEFT_W) + size.x * 0.02,
+			size.y - TITLE_H)
+
+
 func _slot_center(slot: int) -> Vector2:
 	# 三个槽位在中栏垂直均布（顶部给标题留白）
 	var cx := size.x * MID_CX
@@ -163,6 +188,13 @@ func _slot_rect(slot: int) -> Rect2:
 	var sw := _slot_w()
 	var sh := _slot_h()
 	return Rect2(c.x - sw / 2.0, c.y - sh / 2.0, sw, sh)
+
+
+func _slot_close_rect(sr: Rect2) -> Rect2:
+	## 槽内卡右上角的 ✕ 角标（探出卡框，别遮住卡面）：
+	## 点它 = 把这张卡撤回左栏，不必再拖一次。
+	var c := Vector2(sr.end.x - 4.0, sr.position.y + 4.0)
+	return Rect2(c.x - SLOT_CLOSE_R, c.y - SLOT_CLOSE_R, SLOT_CLOSE_R * 2.0, SLOT_CLOSE_R * 2.0)
 
 
 func _preview_rect() -> Rect2:
@@ -209,6 +241,33 @@ func _slot_index(slot: int) -> int:
 	return -1
 
 
+func _slot_of_index(idx: int) -> int:
+	## 这张待选卡现在在哪个槽里（-1 = 不在任何槽）。R564：同一张卡只能占一个槽。
+	if idx < 0:
+		return -1
+	if idx == _slot_attr:
+		return 0
+	if idx == _slot_upper:
+		return 1
+	if idx == _slot_lower:
+		return 2
+	return -1
+
+
+func _slot_at(pos: Vector2) -> int:
+	for slot in 3:
+		if _slot_rect(slot).has_point(pos):
+			return slot
+	return -1
+
+
+func _drag_index() -> int:
+	## 当前拖着的卡在 `_cards` 里的下标（源可能是左栏，也可能是槽位）。
+	if _drag_slot >= 0:
+		return _slot_index(_drag_slot)
+	return _drag_from
+
+
 # ── 绘制 ─────────────────────────────────────────────────────
 
 func _draw() -> void:
@@ -227,44 +286,79 @@ func _draw() -> void:
 	# 左栏：待选卡（真卡）
 	draw_string(_font_bold, Vector2(size.x * LEFT_X, TITLE_H + 26.0), "待选卡",
 			HORIZONTAL_ALIGNMENT_LEFT, size.x * LEFT_W, UiTheme.FS_LABEL, UiTheme.ACCENT_LIT)
-	draw_string(_font, Vector2(size.x * LEFT_X, TITLE_H + 26.0 + 18.0), "拖到中栏槽位 · ①属性 ②上半 ③下半",
+	draw_string(_font, Vector2(size.x * LEFT_X, TITLE_H + 26.0 + 18.0),
+			"拖进中栏 · 拖回可撤回 · 点卡看详情",
 			HORIZONTAL_ALIGNMENT_LEFT, size.x * LEFT_W, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
+	var dragging := _drag_from >= 0 or _drag_slot >= 0
 	for k in _cards.size():
 		var r := _card_rect(k)
-		if k == _drag_from:
+		if k == _drag_index():
 			continue   # 被拖的卡在手指下方单独画
-		var card: CardData = _cards[k]
-		var used := k == _slot_attr or k == _slot_upper or k == _slot_lower
-		CardFace.draw_pick(self, card, r, _font, _font_bold, used)
-	# 中栏：3 个一样空槽位
+		# R564：已经放进槽位的卡，左栏这里**不再画卡**，只留一个淡空位（位置固定不跳动）
+		if _slot_of_index(k) >= 0:
+			_draw_left_gap(r)
+			continue
+		CardFace.draw_pick(self, _cards[k], r, _font, _font_bold, false)
+	# 拖动中：把左栏整块圈一下，表示「松手就是撤回」
+	if dragging and _left_zone().has_point(_drag_pos) and _drag_slot >= 0:
+		draw_rect(_left_zone().grow(-4.0), Color(0.42, 0.72, 0.46, 0.85), false, 2.0)
+	# 中栏：3 个空槽位
 	# ⚠️ R562：`HORIZONTAL_ALIGNMENT_CENTER` 的第二个参数是**矩形左边界**，不是中心点。
 	# 原来这里传 `size.x * MID_CX`（中心）+ 宽 0.2w → 文字整体右移半格，标题压在右栏边上。
 	draw_string(_font_bold, Vector2(size.x * MID_CX - size.x * 0.1, TITLE_H + 26.0), "拖入槽位",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x * 0.2, UiTheme.FS_LABEL, UiTheme.ACCENT_LIT)
 	for slot in 3:
 		var sr := _slot_rect(slot)
-		var idx := _slot_index(slot)
+		var idx := -1 if slot == _drag_slot else _slot_index(slot)
 		_draw_slot(sr, slot, idx)
 		# R562：拖动中把「松手会落进去的那个槽」圈出来 —— 之前完全没有落点反馈。
-		if _drag_from >= 0 and sr.has_point(_drag_pos):
+		if dragging and sr.has_point(_drag_pos):
 			draw_rect(sr.grow(2.0), UiTheme.ACCENT_LIT, false, 3.0)
 	# 右栏：结果预览
 	_draw_preview()
 	# 拖拽中的卡（画在最上层）
-	if _drag_from >= 0 and _drag_from < _cards.size():
+	var di := _drag_index()
+	if dragging and di >= 0 and di < _cards.size():
 		var dr := Rect2(_drag_pos - Vector2(_slot_w() * 0.4, _slot_w() * 0.4 * CARD_ASPECT),
 				Vector2(_slot_w() * 0.8, _slot_w() * 0.8 * CARD_ASPECT))
-		CardFace.draw_pick(self, _cards[_drag_from], dr, _font, _font_bold, false)
+		CardFace.draw_pick(self, _cards[di], dr, _font, _font_bold, false)
+
+
+func _draw_left_gap(r: Rect2) -> void:
+	## R564：已放进槽位的卡，在左栏原位留一个淡空位 ——
+	## 不画卡（用户口径「放进去左边就该没有这张」），但格子位置固定，
+	## 拖回这里 / 点 ✕ 都能把卡收回来。
+	var gold := Color(UiTheme.ACCENT_GOLD.r, UiTheme.ACCENT_GOLD.g,
+			UiTheme.ACCENT_GOLD.b, 0.42)
+	draw_rect(r, Color(UiTheme.ACCENT_GOLD.r, UiTheme.ACCENT_GOLD.g,
+			UiTheme.ACCENT_GOLD.b, 0.06), true)
+	draw_rect(r, gold, false, 1.0)
+	draw_string(_font, Vector2(r.position.x, r.get_center().y + 4.0), "已放入",
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_CAPTION,
+			Color(UiTheme.ACCENT_GOLD.r, UiTheme.ACCENT_GOLD.g, UiTheme.ACCENT_GOLD.b, 0.75))
 
 
 func _draw_slot(sr: Rect2, slot: int, idx: int) -> void:
-	## 槽位：空态 = card_paper 纸底 + 金边 + 序号徽章（不写任何效果文本）；填态 = 真卡。
+	## 槽位：空态 = card_paper 纸底 + 金边 + 序号徽章（不写任何效果文本）；填态 = 真卡 + ✕ 角标。
 	## R559c：效果文字只出现在右侧文本框；中栏槽位（①属性 ②上半 ③下半）填了就是一张卡。
 	if idx >= 0:
 		CardFace.draw_pick(self, _cards[idx], sr, _font, _font_bold, false)
+		if slot != _drag_slot:
+			_draw_slot_close(sr)
 		return
 	_draw_slot_paper(sr)
 	_draw_slot_index(sr, slot)
+
+
+func _draw_slot_close(sr: Rect2) -> void:
+	## R564：槽内卡右上角的 ✕ —— 一键把卡撤回左栏（比拖一次省事，尤其手机）。
+	var cr := _slot_close_rect(sr)
+	var c := cr.get_center()
+	draw_circle(c, SLOT_CLOSE_R, Color(0.10, 0.08, 0.06, 0.92))
+	draw_circle(c, SLOT_CLOSE_R, UiTheme.ACCENT_GOLD, false, 1.5)
+	var d := SLOT_CLOSE_R * 0.42
+	draw_line(c + Vector2(-d, -d), c + Vector2(d, d), UiTheme.ACCENT_LIT, 1.8)
+	draw_line(c + Vector2(d, -d), c + Vector2(-d, d), UiTheme.ACCENT_LIT, 1.8)
 
 
 func _draw_slot_index(sr: Rect2, slot: int) -> void:
@@ -338,14 +432,16 @@ func _draw_preview() -> void:
 					er.size.x - 80.0, er.size.y - 60.0)
 			_draw_wrapped(body, txt, UiTheme.FS_CAPTION, UiTheme.INK_800)
 	if _tip != "":
-		# R562：取消按钮上方的提示行（右键/ESC/落点为空时的说明）——
-		# 自带暗底 + 金边围一条，压在血条/战场上也能一眼看见。
+		# R562：底部一句提示（右键/ESC/撤回/落点为空时的说明），自带暗底 + 金边。
+		# R564：位置改到**顶栏正下方居中** —— 原来放在「取消组合」按钮上方，
+		# 正好压在战斗的「我方生命」条上，看着像把血条盖掉了。
 		var fs := UiTheme.FS_CAPTION
 		var tw: float = _font.get_string_size(_tip, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		# 提示条跟「取消组合」按钮同一栏居中（按整屏居中的话会甩到左栏槽位上）
-		var bx: float = _cancel_rect().get_center().x - (tw + 24.0) * 0.5
-		var ty := _cancel_rect().position.y - 20.0
-		var br := Rect2(bx, ty - fs, tw + 24.0, fs + 12.0)
+		# 落在**顶栏右侧的空白区**：顶栏下方是三栏标题行（y≈TITLE_H+26），
+		# 提示条压在那儿会把「拖入槽位」盖住。
+		var bx: float = size.x - 26.0 - tw - 12.0
+		var ty := TITLE_H * 0.5 + fs * 0.35
+		var br := Rect2(bx, TITLE_H * 0.5 - fs * 0.75, tw + 24.0, fs + 11.0)
 		draw_rect(br, Color(0.08, 0.07, 0.05, 0.94))
 		draw_rect(br, UiTheme.ACCENT_GOLD, false, 1.0)
 		draw_string(_font, Vector2(bx + 12.0, ty), _tip, HORIZONTAL_ALIGNMENT_LEFT, tw,
@@ -372,22 +468,28 @@ func _draw_wrapped(rect: Rect2, text: String, fs: int, col: Color) -> void:
 func _gui_input(event: InputEvent) -> void:
 	if _cards.is_empty():
 		return
+	# R564：详情页打开时，本页一概不处理（所有点击都属于「关掉详情」）
+	if _detail != null and _detail.visible:
+		return
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
 				_press = {"pos": mb.position, "moved": false}
-				_drag_from = _card_at(mb.position)
-				_drag_pos = mb.position
+				_begin_drag(mb.position)
 				queue_redraw()
 			else:
 				var moved: bool = _press.get("moved", true)
 				_press = {}
-				if _drag_from >= 0:
-					_drop_at(mb.position)
+				if _drag_slot >= 0 or _drag_from >= 0:
+					if moved:
+						_drop_at(mb.position)
+					else:
+						_tap(mb.position)
 				elif not moved:
 					_tap(mb.position)
 				_drag_from = -1
+				_drag_slot = -1
 				queue_redraw()
 			accept_event()
 			return
@@ -401,7 +503,7 @@ func _gui_input(event: InputEvent) -> void:
 			return
 	elif event is InputEventMouseMotion:
 		var mm := event as InputEventMouseMotion
-		if _drag_from >= 0:
+		if _drag_from >= 0 or _drag_slot >= 0:
 			if (mm.position - (_press.get("pos", mm.position) as Vector2)).length() > 6.0:
 				_press["moved"] = true
 			_drag_pos = mm.position
@@ -412,23 +514,26 @@ func _gui_input(event: InputEvent) -> void:
 		var st := event as InputEventScreenTouch
 		if st.pressed:
 			_press = {"pos": st.position, "moved": false}
-			_drag_from = _card_at(st.position)
-			_drag_pos = st.position
+			_begin_drag(st.position)
 			queue_redraw()
 		else:
 			var moved2: bool = _press.get("moved", true)
 			_press = {}
-			if _drag_from >= 0:
-				_drop_at(st.position)
+			if _drag_slot >= 0 or _drag_from >= 0:
+				if moved2:
+					_drop_at(st.position)
+				else:
+					_tap(st.position)
 			elif not moved2:
 				_tap(st.position)
 			_drag_from = -1
+			_drag_slot = -1
 			queue_redraw()
 		accept_event()
 		return
 	elif event is InputEventScreenDrag:
 		var sd := event as InputEventScreenDrag
-		if _drag_from >= 0:
+		if _drag_from >= 0 or _drag_slot >= 0:
 			if (sd.position - (_press.get("pos", sd.position) as Vector2)).length() > 6.0:
 				_press["moved"] = true
 			_drag_pos = sd.position
@@ -440,6 +545,8 @@ func _gui_input(event: InputEvent) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if _cards.is_empty() or not visible:
 		return
+	if _detail != null and _detail.visible:
+		return
 	if event is InputEventKey:
 		var k := event as InputEventKey
 		if not k.pressed or k.echo:
@@ -447,6 +554,25 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		if k.keycode == KEY_ESCAPE:
 			_show_tip("要放弃这次组合，请点下方「取消组合」")
 		get_viewport().set_input_as_handled()
+
+
+func _begin_drag(pos: Vector2) -> void:
+	## R564：拖拽源有两处 —— 左栏待选卡、以及**已经放进槽位的卡**（从左栏空位或槽内都能再拿起来）。
+	_drag_from = _card_at(pos)
+	_drag_slot = -1
+	_drag_pos = pos
+	if _drag_from >= 0:
+		var s := _slot_of_index(_drag_from)
+		if s >= 0:
+			# 点在「已放入」的空位上 → 等于把槽里那张卡拿起来
+			_drag_slot = s
+			_drag_from = -1
+	if _drag_from < 0 and _drag_slot < 0:
+		var s2 := _slot_at(pos)
+		# ✕ 角标区域不算拖拽（留给点按撤回）
+		if s2 >= 0 and _slot_index(s2) >= 0 \
+				and not _slot_close_rect(_slot_rect(s2)).has_point(pos):
+			_drag_slot = s2
 
 
 func _card_at(pos: Vector2) -> int:
@@ -457,34 +583,74 @@ func _card_at(pos: Vector2) -> int:
 
 
 func _drop_at(pos: Vector2) -> void:
-	## 松手：落在哪个槽位就填哪个（overlay 自己记 + 引擎同步，供预览结算用）。
-	for slot in 3:
-		if _slot_rect(slot).has_point(pos):
-			fill_slot(slot, _drag_from)
+	## 松手：落在槽位 → 填入 / 移动 / 互换；从槽位拖回左栏 → 撤回。
+	var target := _slot_at(pos)
+	if _drag_slot >= 0:
+		if target == _drag_slot:
 			return
+		if target >= 0:
+			# 槽位之间移动 / 互换（目标空 = 移动，目标有卡 = 互换）
+			var a := _slot_index(_drag_slot)
+			var b := _slot_index(target)
+			_set_slot(_drag_slot, -1)
+			_set_slot(target, -1)
+			_set_slot(_drag_slot, b)
+			_set_slot(target, a)
+			if b >= 0:
+				_show_tip("两个槽位的卡已互换")
+		elif _left_zone().has_point(pos):
+			_set_slot(_drag_slot, -1)
+			_show_tip("已撤回，卡回到左栏待选")
+		else:
+			_show_tip("拖回左栏可以撤回这张卡")
+		queue_redraw()
+		return
+	# 从左栏拖出
+	if target >= 0:
+		fill_slot(target, _drag_from)
+		return
+	if _left_zone().has_point(pos):
+		return   # 拖来拖去还在左栏 = 没动
 	# R562：落在槽位外面 → 说一句，别让玩家以为「拖了但没反应」。
 	_show_tip("拖到中栏三个槽位里才能放：①属性 ②上半 ③下半")
 
 
 func fill_slot(slot: int, idx: int) -> void:
-	## 填槽唯一口：overlay 自己记 + 引擎同步（拖拽落点 / 演示预填共用）。
-	match slot:
-		0:
-			_slot_attr = idx
-			if _engine != null:
-				_engine.assemble_combo_set_slot("attr", idx)
-		1:
-			_slot_upper = idx
-			if _engine != null:
-				_engine.assemble_combo_set_slot("upper", idx)
-		2:
-			_slot_lower = idx
-			if _engine != null:
-				_engine.assemble_combo_set_slot("lower", idx)
+	## 填槽唯一口（拖拽落点 / 演示预填共用）。
+	## R564：idx < 0 = 清空该槽；同一张卡不会同时占两个槽（填进新槽会自动清掉旧槽）。
+	if idx >= 0:
+		for s in 3:
+			if s != slot and _slot_index(s) == idx:
+				_set_slot(s, -1)
+	_set_slot(slot, idx)
 	queue_redraw()
 
 
+func _set_slot(slot: int, idx: int) -> void:
+	## 只改数据 + 同步引擎（不重绘）—— fill_slot / 撤回 / 互换都走这里。
+	var key := "attr"
+	match slot:
+		0:
+			_slot_attr = idx
+			key = "attr"
+		1:
+			_slot_upper = idx
+			key = "upper"
+		2:
+			_slot_lower = idx
+			key = "lower"
+	if _engine != null:
+		_engine.assemble_combo_set_slot(key, idx)
+
+
 func _tap(pos: Vector2) -> void:
+	## 点按（未拖动）：✕ 撤回 → 按钮 → 槽内卡详情 → 待选卡详情 → 结果预览详情。
+	for s in 3:
+		if _slot_index(s) >= 0 and _slot_close_rect(_slot_rect(s)).has_point(pos):
+			_set_slot(s, -1)
+			_show_tip("已撤回，卡回到左栏待选")
+			queue_redraw()
+			return
 	if _confirm_rect().has_point(pos):
 		if _all_filled():
 			confirmed.emit()
@@ -492,3 +658,29 @@ func _tap(pos: Vector2) -> void:
 	if _cancel_rect().has_point(pos):
 		cancelled.emit()
 		return
+	var s2 := _slot_at(pos)
+	if s2 >= 0 and _slot_index(s2) >= 0:
+		_open_detail_index(_slot_index(s2), "")
+		return
+	var k := _card_at(pos)
+	if k >= 0:
+		_open_detail_index(k, "已放入槽位" if _slot_of_index(k) >= 0 else "")
+		return
+	# 结果预览卡（填满三槽后才有真卡可看）
+	if _all_filled() and _preview_rect().has_point(pos) and _engine != null:
+		var res: CardData = _engine.assemble_combo_preview()
+		if res != null:
+			_open_detail_card(res, "组合结果预览 —— 按「确认组合」后才会真正生成")
+
+
+func _open_detail_index(idx: int, note: String) -> void:
+	if idx < 0 or idx >= _cards.size() or _detail == null:
+		return
+	_open_detail_card(_cards[idx], note)
+
+
+func _open_detail_card(card: CardData, note: String) -> void:
+	if card == null or _detail == null:
+		return
+	_detail.open(card, note)
+	queue_redraw()
