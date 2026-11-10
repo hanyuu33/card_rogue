@@ -227,9 +227,9 @@ func _init() -> void:
 			and meteor.needs_cell() and meteor.traits.has(FieldState.KEEP_HAND_TRAIT),
 			"陨石术：史诗 10 费技能，选格施放，带「留手」")
 	var legacy := repo.get_card(9078)
-	check(legacy.is_effect() and legacy.cost == 4 and legacy.rarity == 2
+	check(legacy.is_effect() and legacy.cost == 5 and legacy.rarity == 2
 			and not legacy.needs_target() and legacy.traits.has(GameEngine.LEGACY_TRAIT),
-			"传承记忆：**史诗 4 费**效果卡，无需选目标（R563 由 5 费下调；R539 由 2 费普通上调；R528 由 0 费技能改来）")
+			"传承记忆：**史诗 5 费**效果卡，无需选目标（R563 加「场上每 1 个盟友 -1 费」并回到 5 费；R539 由 2 费普通上调；R528 由 0 费技能改来）")
 	var golem_spell := repo.get_card(9079)
 	check(golem_spell.is_spell() and golem_spell.cost == 4 and golem_spell.rarity == 1
 			and golem_spell.needs_cell() and golem_spell.traits.has(GameEngine.GOLEM_TRAIT),
@@ -25487,8 +25487,8 @@ func _init() -> void:
 	var r327_card: CardData = r327_repo.get_card(9175)
 	check(r327_card != null and r327_card.card_name == "送葬",
 			"R327 送葬：卡表里有 9175「送葬」")
-	check(r327_card.kind == "效果" and r327_card.cost == 2 and r327_card.rarity == 1,
-			"R327 送葬：2 费·稀有·效果（%s / %d 费 / 稀有度 %d）"
+	check(r327_card.kind == "效果" and r327_card.cost == 2 and r327_card.rarity == 2,
+			"R327/R563 送葬：2 费·**史诗**·效果（R563 稀有升史诗；%s / %d 费 / 稀有度 %d）"
 			% [r327_card.kind, r327_card.cost, r327_card.rarity])
 	check(r327_card.card_class == PlayerClass.DRUID and r327_card.traits.has("送葬"),
 			"R327 送葬：森林精魄卡、带「送葬」trait（%s / %s）"
@@ -32847,14 +32847,14 @@ func _init() -> void:
 	var r523_earth: CardData = r523_repo.get_card(9235)
 	var r523_fire: CardData = r523_repo.get_card(9236)
 	check(r523_earth != null and r523_earth.cost == 8 and r523_earth.power == 5
-			and r523_earth.health == 15 and r523_earth.attack_range == 1
+			and r523_earth.health == 13 and r523_earth.attack_range == 1
 			and r523_earth.move_speed == 1 and r523_earth.rarity == 2
 			and r523_earth.card_class == PlayerClass.DRUID
 			and r523_earth.traits.has("留手")
 			and r523_earth.traits.has(GameEngine.TAUNT_TRAIT)
 			and GameEngine.card_has_taunt(r523_earth)
 			and not r523_earth.traits.has("土元素"),
-			"R523 土元素 9235：8 费 5/15 程1 速1 史诗 森林精魄 + 留手 + **嘲讽**（R563 新增；**不带**「土元素」trait，该 trait 随旧 9218 在 R536 删除）")
+			"R523 土元素 9235：8 费 5/13 程1 速1 史诗 森林精魄 + 留手 + **嘲讽**（R563 加嘲讽、血 15→13；**不带**「土元素」trait，该 trait 随旧 9218 在 R536 删除）")
 	check(r523_fire != null and r523_fire.cost == 2 and r523_fire.power == 4
 			and r523_fire.health == 6 and r523_fire.attack_range == 1
 			and r523_fire.move_speed == 1 and r523_fire.rarity == 1
@@ -32881,6 +32881,40 @@ func _init() -> void:
 			% r523_e.cost_of(r523_e.state.hand[0]))
 	check(r523_e.cost_of(CardData.from_dict(r523_earth.to_dict())) == 8,
 			"R523 土元素：不在**这张**手牌里的副本不减费（仍 8 费）")
+
+	# ①b R563 传承记忆 9078：5 费，**手牌里**时场上每有 1 个己方盟友 -1 费（实时、离手恢复）
+	var r563_e := _new_engine([], 30, 30, -1, false)
+	r563_e.start_game(0)
+	r563_e.state.energy = 30
+	r563_e.state.board.clear()
+	r563_e.state.hand = [CardData.from_dict(r523_repo.get_card(9078).to_dict())]
+	check(r563_e.cost_of(r563_e.state.hand[0]) == 5,
+			"R563 传承记忆：5 费，场上没有盟友（实际 %d）"
+			% r563_e.cost_of(r563_e.state.hand[0]))
+	r563_e.state.place(_card(9866, "甲", "盟友", 1, 1, 5), Vector2i(4, 0), GameEngine.SIDE_SELF)
+	r563_e.state.place(_card(9867, "乙", "盟友", 1, 1, 5), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r563_e.cost_of(r563_e.state.hand[0]) == 3,
+			"R563 传承记忆：场上 2 个己方盟友 → 每盟友 -1 → 3 费（实际 %d）"
+			% r563_e.cost_of(r563_e.state.hand[0]))
+	r563_e.state.place(_card(9868, "丙", "工事", 1, 0, 5), Vector2i(5, 0), GameEngine.SIDE_SELF)
+	check(r563_e.cost_of(r563_e.state.hand[0]) == 3,
+			"R563 传承记忆：工事不算「盟友」（仍 3 费，实际 %d）"
+			% r563_e.cost_of(r563_e.state.hand[0]))
+	check(r563_e.cost_of(CardData.from_dict(r523_repo.get_card(9078).to_dict())) == 5,
+			"R563 传承记忆：不在**这张**手牌里的副本不减费（仍 5 费）")
+	# 盟友被打掉 → 立刻涨回去（实时，不是记账）
+	r563_e.state.board.erase(Vector2i(4, 1))
+	check(r563_e.cost_of(r563_e.state.hand[0]) == 4,
+			"R563 传承记忆：少一个盟友 → 立刻回到 4 费（实际 %d）"
+			% r563_e.cost_of(r563_e.state.hand[0]))
+	# 打出真的只扣 3 费（扣费走 `_pay` → `cost_of`，与卡面同口径）
+	r563_e.state.place(_card(9869, "丁", "盟友", 1, 1, 5), Vector2i(4, 2), GameEngine.SIDE_SELF)
+	r563_e.state.energy = 10
+	r563_e.use_effect(0)
+	check(r563_e.state.energy == 7,
+			"R563 传承记忆：打出实扣 3 费（10 → %d）" % r563_e.state.energy)
+	check(r563_e.state.effects.any(func(e): return e != null and e.id == 9078),
+			"R563 传承记忆：打出后进效果区（名额来源）")
 
 	# ② 入场：3X 伤害由近及远分配，打倒近的就溢出给下一个
 	var r523_e2 := _new_engine([], 30, 30, -1, false)
@@ -33304,9 +33338,9 @@ func _init() -> void:
 	# ===== R539/R540：传承记忆改 5 费史诗 + 二层普通困难「巨炮防线」（激光巨炮 9241）=====
 	# ① 传承记忆：2 费普通 → 5 费史诗（rarity 0 → 2，其余字段不动）；R563 再下调到 4 费
 	var r539_legacy := repo.get_card(9078)
-	check(r539_legacy.cost == 4 and r539_legacy.rarity == 2
+	check(r539_legacy.cost == 5 and r539_legacy.rarity == 2
 			and r539_legacy.is_effect() and not r539_legacy.needs_target(),
-			"R539 传承记忆：史诗 / 无需选目标的效果卡，费用 5 → **4**（R563 下调）")
+			"R539 传承记忆：5 费 / 史诗（rarity 0 → 2），仍是无需选目标的效果卡（R563 维持 5 费、加了场上盟友减费）")
 
 	# ② 激光巨炮卡面：工事 5 / 400 / 程 0 / 速 0，带「激光炮」+「沉睡」（直接复用恶魔鸭那套）
 	var r539_laser := repo.get_card(9241)

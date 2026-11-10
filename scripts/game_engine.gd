@@ -813,6 +813,10 @@ const REVIVE_ID:= 9078
 const LEGACY_ID := 9078
 const LEGACY_TRAIT := "传承"
 const LEGACY_COST_CUT := 1
+## R563：传承记忆在**手牌里**时，场上每有 1 个己方盟友 → 它自己 -1 费（实时，离手恢复原价）。
+## ⚠️ 与上面那个 `LEGACY_COST_CUT` 是两回事：那个是「盟友被击破回手卡时，那张回手的卡 -1」，
+##    结算在 `_legacy_try_return()` 里、走 `hand_cost_delta`；这个只在 `cost_of()` 里按场上数量算。
+const LEGACY_FIELD_COST_CUT := 1
 # 返修（9127 技能，R188，机械之心 1 费稀有）：从弃牌区选一张盟友/工事回手，
 # 并获得永久改造：生命 +3（烤进副本、本场战斗永久，口径同系统升级）。
 const OVERHAUL_ID:= 9127
@@ -841,14 +845,14 @@ const VOID_LORD_DMG_DISCOUNT:= 1
 const PRESSURE_MINE_ID:= 9219
 
 # ── R523：土元素（9235） / 火元素（9236）——森林精魄的元素系列补完 ──
-# 土元素（森林精魄 · **史诗**盟友，8 费 5/15 程1 速1，带「留手」+「嘲讽」）两条机制：
+# 土元素（森林精魄 · **史诗**盟友，8 费 5/13 程1 速1，带「留手」+「嘲讽」）两条机制：
 #   ① 入场时对**敌方单位**分配 3X 点伤害：由近及远，一个目标吃满它当前的生命后把
 #      剩下的分给下一个（见 `_earth_primal_enter`）。X = 本次战斗中我方使用过的盟友数
 #      （含本卡自己 —— `_note_card_played()` 在出牌收尾才累加，这里手动 +1）。
 #   ② **还在手上时**：场上每有 1 个己方盟友，这张卡费用 -2（持续型，取当前数量，
 #      走 cost_of 唯一口 `_earth_primal_discount`；离手立刻恢复原价）。
 #   ⚠️ R536 起库里**只剩这一张「土元素」**（旧的 9218 同名卡已删）；trait 带「留手」+
-#      「嘲讽」（R563 加嘲讽：8 费 5/15 站在前场就是把「优先打它」写进卡面），但**不带**
+#      「嘲讽」（R563 加嘲讽 / 血 15→13：站在前场就是把「优先打它」写进卡面），但**不带**
 #      「土元素」—— 免得将来再加光环类土系卡时白借 buff（旧 9218 就这么按 trait 查）。
 # 火元素（森林精魄 · **稀有**盟友，2 费 4/6 程1 速1）：
 #   入场时清空**自己**抽牌堆 / 手卡 / 弃牌区里的所有诅咒（`is_curse()`，按卡种判、
@@ -4274,7 +4278,7 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 	c -= _turn_instance_discount(card, side)
 	c -= _magic_core_discount(card, side)
 	c -= _void_lord_discount(card, side)
-	c -= _earth_primal_discount(card, side)   # R523 土元素 9235：场上盟友数 × 2
+	c -= _field_allies_discount(card, side)   # R523 土元素 -2/盟友；R563 传承记忆 -1/盟友
 	# R271：**手卡内减费**（谟涅摩叙涅「随机变化入手 -2」）——
 	# 判据 = 这张卡此刻还在手牌里，离手即自动恢复原价（与 hand_free 同一条路）。
 	if card != null and state.hand_cost_delta.has(card) and state.hand.has(card):
@@ -4454,22 +4458,29 @@ func _void_lord_discount(card: CardData, side:= SIDE_SELF) -> int:
 	return d
 
 
-func _earth_primal_discount(card: CardData, side:= SIDE_SELF) -> int:
-	## 土元素（9235，R523）：**还在手牌里时**，场上每有 1 个己方盟友 → 这张卡费用 -2。
+func _field_allies_discount(card: CardData, side:= SIDE_SELF) -> int:
+	## 「场上每有 1 个己方盟友 → 手卡中的本卡 -N 费」的**唯一口**（R523 土元素 / R563 传承记忆）。
 	## 与 9218（按「本次战斗用过的盟友**张数**」记账、离手也照算）刻意不同：
 	## 这条卡面写的是「场上每存在一个己方盟友」「持续性，取当前数量」—— 所以是**实时**
 	## 读场上数量，盟友被打掉就立刻涨回去，不需要任何全局计数。
+	##   * 土元素 9235（R523）：-2 / 盟友
+	##   * 传承记忆 9078（R563）：-1 / 盟友
 	## ⚠️ 判据带 `state.hand.has(card)`：只对此刻还在手里的那一份生效（打出 / 弃掉后恢复原价）。
-	if side != SIDE_SELF or card == null or card.id != EARTH_PRIMAL_ID:
+	if side != SIDE_SELF or card == null:
 		return 0
-	if not state.hand.has(card):
+	var per := 0
+	if card.id == EARTH_PRIMAL_ID:
+		per = EARTH_PRIMAL_COST_DOWN
+	elif card.id == LEGACY_ID:
+		per = LEGACY_FIELD_COST_CUT
+	if per <= 0 or not state.hand.has(card):
 		return 0
-	return _ally_count_on_field(SIDE_SELF) * EARTH_PRIMAL_COST_DOWN
+	return _ally_count_on_field(SIDE_SELF) * per
 
 
 func _ally_count_on_field(side: String) -> int:
 	## 该方场上**活着的盟友**数量（不含工事 / 场地 —— 场地根本不在 board 上）。
-	## 只给「按场上数量算」的卡用（当前 = 土元素 9235 的费用）。
+	## 只给「按场上数量算」的卡用（土元素 9235 / 传承记忆 9078 的费用）。
 	var n := 0
 	for cell: Vector2i in state.board:
 		var q: Placement = state.board[cell]
@@ -4480,7 +4491,7 @@ func _ally_count_on_field(side: String) -> int:
 
 
 func _earth_primal_enter(p: Placement) -> void :
-	## 「土元素」9235（R523，8 费**史诗**盟友 5/15/1/1，带「留手」）：
+	## 「土元素」9235（R523，8 费**史诗**盟友 5/13/1/1，带「留手」+ 嘲讽）：
 	##   入场时，对**敌方单位**分配 3X 点伤害，由近及远；一个目标吃满它当前的生命后
 	##   把剩下的分给下一个（伤害溢出继续分配）。
 	##   X = 本次战斗中我方使用过的盟友数（同名多次使用就多次计数），**含本卡自己**。
