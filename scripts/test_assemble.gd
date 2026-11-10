@@ -263,9 +263,25 @@ func _test_combo() -> void:
 			"R559 传授：8084 是森林精魄 1 费稀有技能")
 	var eng := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
 	eng.ai_enabled = false
-	# 数据层：可组合候选 = 同时带 upper/lower 的玩家盟友卡
+	# 数据层：可组合候选 = 同时带 upper/lower 的玩家盟友/工事卡
 	var cand: Array = eng._combo_candidate_cards()
-	check(cand.size() == 10, "R559 组合：可组合盟友候选 %d 张（期望 10）" % cand.size())
+	check(cand.size() == 25, "R559 组合：可组合盟友/工事候选 %d 张（期望 25）" % cand.size())
+	# 候选必须覆盖三职业盟友 + 工事，且全是盟友/工事（不允许其他 kind 混入）
+	var has_fort := false
+	var has_rogue := false
+	var has_mech := false
+	var kinds_ok := true
+	for c: CardData in cand:
+		if c.card_class == "暗影刺客":
+			has_rogue = true
+		elif c.card_class == "机械之心":
+			has_mech = true
+		if c.kind == "工事":
+			has_fort = true
+		if c.kind != "盟友" and c.kind != "工事":
+			kinds_ok = false
+	check(has_fort and has_rogue and has_mech and kinds_ok,
+			"R559 组合：候选覆盖暗影/机械盟友 + 工事，且全为盟友/工事")
 	# 触发传授
 	eng.state.energy = 10
 	var ret := eng._teach_spell(GameEngine.SIDE_SELF)

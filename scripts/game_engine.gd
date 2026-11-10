@@ -17835,11 +17835,11 @@ func _assemble_busy() -> bool:
 	return assemble_pending or assemble_combo_pending
 
 func _combo_candidate_cards() -> Array:
-	## 可组合候选：全角色卡池里同时带 upper_effect + lower_effect 的盟友卡。
+	## 可组合候选：全角色卡池里同时带 upper_effect + lower_effect 的盟友/工事卡。
 	var out: Array = []
 	var repo := CardRepo.load_json()
 	for c: CardData in repo.all_cards():
-		if c.kind == "盟友" and c.group == "player" \
+		if (c.kind == "盟友" or c.kind == "工事") and c.group == "player" \
 				and not c.upper_effect.is_empty() and not c.lower_effect.is_empty():
 			out.append(c)
 	return out
