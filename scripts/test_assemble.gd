@@ -20,7 +20,8 @@ func _init() -> void:
 		for l in lower:
 			for reverse in [false, true]:
 				var card := Rules.build(base, u, l, reverse)
-				check(card != null and card.assemble.effects.size() == 2, "18 combinations build")
+				check(card != null and card.assemble.effects.size() + card.assemble.lower_effects.size() == 2,
+						"18 combinations build")
 				check(card.assemble.effects[0] == (l.effects[0] if reverse else u.effects[0]), "order")
 				var copy := CardData.from_dict(card.to_dict())
 				copy.assemble.effects[0].type = "shield"
@@ -71,8 +72,102 @@ func _init() -> void:
 	_test_new_actions()
 	_test_retired_assemble()
 	_test_combo()
+	_test_r565_fidelity()
 	print("Combination tests failures: ", failures)
 	quit(failures)
+
+func _fx_in_text(fx: Dictionary, text: String) -> bool:
+	## 单个组合动作是否能在原卡文本里找到出处（R565 保真判据）。
+	var n := int(fx.get("value", 0))
+	match str(fx.type):
+		"heal": return text.contains("%d 点生命" % n)
+		"damage": return text.contains("%d 点伤害" % n)
+		"energy": return text.contains("%d 点费用" % n)
+		"buff": return text.contains("+%d 力量" % n)
+		"range": return text.contains("攻击距离+%d" % n) or text.contains("攻击距离 +%d" % n)
+		"draw": return text.contains("抽一张")
+		"stun": return text.contains("眩晕")
+		"knockback": return text.contains("击退 %d 格" % n)
+	return true
+
+
+func _test_r565_fidelity() -> void:
+	## R565：用户口径「确保上下半拆分的效果是原本的」。
+	## R559e 那版是凭印象手编的 —— 黑暗领主本体根本没有「造成 3 点伤害」，榴弹击手也没有
+	## （它只有「攻击距离+1」）。这一节把「保真」钉成可回归的规则，并锁住下半独立时机 + 专属印记。
+	var repo := CardRepo.load_json()
+	var rows := 0
+	for c: CardData in repo.all_cards():
+		if c.upper_effect.is_empty() and c.lower_effect.is_empty():
+			continue
+		rows += 1
+		var text := c.effect_text.replace("**", "")
+		for fx in (c.lower_effect.get("effects", []) as Array):
+			check(_fx_in_text(fx, text),
+					"R565 保真：%d %s 的下半「%s」在原文里找不到出处（原文：%s）"
+					% [c.id, c.card_name, Rules.effect_text(fx), text])
+		check(str(c.upper_effect.get("trigger", "")) in Rules.TRIGGERS,
+				"R565：%d 上半时机必须在白名单" % c.id)
+		if c.lower_effect.has("trigger"):
+			check(str(c.lower_effect.get("trigger", "")) in Rules.TRIGGERS,
+					"R565：%d 下半时机必须在白名单" % c.id)
+	check(rows >= 8, "R565：可组合候选至少 8 张（实际 %d）" % rows)
+	# 用户点名的两张：黑暗领主 = 上半「使用后」空钩子 + 下半「回合结束时 5 费」；
+	# 榴弹击手 = 上半「每次获得改造时」空钩子 + 下半「攻击距离+1」。
+	var dark: CardData = repo.get_card(8021)
+	check(dark.upper_effect.trigger == "use" and (dark.upper_effect.effects as Array).is_empty()
+			and dark.lower_effect.trigger == "turn_end"
+			and int(dark.lower_effect.effects[0].value) == 5,
+			"R565：黑暗领主 = 上半 use（空）+ 下半 turn_end 5 费")
+	var nade: CardData = repo.get_card(8057)
+	check(nade.upper_effect.trigger == "upgraded" and (nade.upper_effect.effects as Array).is_empty()
+			and nade.lower_effect.effects[0].type == "range",
+			"R565：榴弹击手 = 上半 upgraded（空）+ 下半攻击距离")
+	# 下半自带时机：build 后两个时机各自独立
+	var base := CardData.new()
+	base.card_name = "R565 探针"
+	base.kind = "盟友"
+	base.health = 10
+	base.power = 1
+	base.attack_range = 1
+	var built := Rules.build(base, dark.upper_effect, dark.lower_effect)
+	check(built != null and built.assemble.trigger == "use"
+			and built.assemble.lower_trigger == "turn_end", "R565：下半时机进 assemble")
+	check(built.effect_text == "回合结束时：回复5点费用",
+			"R565 空钩子不写占位（实际「%s」）" % built.effect_text)
+	var eng := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng.ai_enabled = false
+	var p := _probe_unit(eng, "")
+	p.card.assemble = built.assemble.duplicate(true)
+	eng.state.energy = 0
+	eng._assemble_execute(p, eng._cell_of(p), "use")
+	check(eng.state.energy == 0, "R565：上半空钩子在 use 时不产生效果")
+	eng._assemble_execute(p, eng._cell_of(p), "turn_end")
+	check(eng.state.energy == 5, "R565：下半在 turn_end 结算（+5 费）")
+	# range 动作：攻击距离 +N
+	var eng2 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng2.ai_enabled = false
+	var p2 := _probe_unit(eng2, "use")
+	var r0: int = p2.card.attack_range
+	p2.card.assemble = {"trigger": "use", "effects": [], "lower_trigger": "use",
+			"lower_effects": [{"type": "range", "value": 1}]}
+	eng2._assemble_execute(p2, eng2._cell_of(p2), "use")
+	check(p2.card.attack_range == r0 + 1 and p2.upgrade_range == 1, "R565：range 动作加攻程")
+	# 专属印记：随复制通道走，且卡面 draw / draw_pick 都画
+	var cm := CardData.new()
+	cm.combine_mark = true
+	check(CardData.from_dict(cm.to_dict()).combine_mark, "R565：combine_mark 随 to_dict/from_dict 走")
+	check(not CardData.AFFIX_DEFS.has("组合"), "R565：「组合」不再是字段（不再渲染成 buff）")
+	var cf := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+	check(cf.count("_draw_combine_mark(canvas, card, rect)") == 2
+			and cf.find("func _draw_combine_mark") >= 0,
+			"R565 源码锁：卡面 draw / draw_pick 都画组合印记")
+	check(cf.find("combine_badge_center(rect, card.has_enchant())") >= 0,
+			"R565 源码锁：印记与附魔标记同竖列、自动让位")
+	var gsrc := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(gsrc.find("result.combine_mark = true") >= 0 and gsrc.find("add_affix(\"组合\")") < 0,
+			"R565 源码锁：产物只打专属印记，不挂「组合」字段")
+
 
 func _probe_unit(eng: GameEngine, trigger: String, cell := Vector2i(3, 0), side := "self") -> Placement:
 	var card := CardData.new()
@@ -245,7 +340,7 @@ func _test_retired_assemble() -> void:
 			"R561：引擎已无拼装 pending / 池状态")
 	check(src.contains("assemble_combo_commit") and src.contains("_assemble_execute"),
 			"R561：组合入口与结算层保留")
-	check(CardData.AFFIX_DEFS.has("组合"), "R561：「组合」印记仍在")
+	check(not CardData.AFFIX_DEFS.has("组合"), "R565：「组合」字段已下线（改专属印记）")
 
 func _test_combo() -> void:
 	# R559/R561 组合：从全角色盟友·工事卡池抽 6 张，拖 3 张分别定属性/上半/下半，结果带「组合」印记。
@@ -258,7 +353,7 @@ func _test_combo() -> void:
 	eng.ai_enabled = false
 	# 数据层：可组合候选 = 同时带 upper/lower 的玩家盟友/工事卡
 	var cand: Array = eng._combo_candidate_cards()
-	check(cand.size() == 25, "R559 组合：可组合盟友/工事候选 %d 张（期望 25）" % cand.size())
+	check(cand.size() == 13, "R565 组合：可组合盟友/工事候选 %d 张（期望 13）" % cand.size())
 	# 候选必须覆盖三职业盟友 + 工事，且全是盟友/工事（不允许其他 kind 混入）
 	var has_fort := false
 	var has_rogue := false
@@ -294,7 +389,8 @@ func _test_combo() -> void:
 	var result: CardData = eng.assemble_combo_preview()
 	check(result != null, "R559 组合：三槽填满有预览")
 	if result != null:
-		check(result.has_affix("组合"), "R559 组合：结果带「组合」印记")
+		check(result.combine_mark and not result.has_affix("组合"),
+				"R565 组合：结果带专属印记，且不再挂「组合」字段")
 		var attr_card: CardData = six[0]
 		check(result.power == attr_card.power and result.health == attr_card.health
 				and result.cost == attr_card.cost,

@@ -398,13 +398,13 @@ func _draw_preview() -> void:
 		var result: CardData = _engine.assemble_combo_preview() if _engine != null else null
 		if result != null:
 			CardFace.draw_pick(self, result, pr, _font, _font_bold, false)
-	# 「组合 · 生成它」印记（结果卡下方）：combine 自绘符号 + 金字
+	# 产物印记说明条（结果卡下方）：combine 自绘符号 + 金字，指的就是卡面费用正下方那枚
 	var sr := _seal_rect()
 	draw_rect(sr, Color(0.12, 0.10, 0.06, 0.95))
 	draw_rect(sr, UiTheme.ACCENT_GOLD, false, 1.5)
 	CardInfoBoxes.draw_glyph(self, Vector2(sr.position.x + 18.0, sr.get_center().y), 10.0, "combine", UiTheme.ACCENT_LIT)
 	draw_string(_font_bold, Vector2(sr.position.x + 34.0, sr.get_center().y + UiTheme.FS_CAPTION * 0.35),
-			"组合 · 生成它", HORIZONTAL_ALIGNMENT_LEFT, sr.size.x - 40.0,
+			"组合产物 · 卡面金印为记", HORIZONTAL_ALIGNMENT_LEFT, sr.size.x - 40.0,
 			UiTheme.FS_CAPTION, UiTheme.ACCENT_LIT)
 	# 上/下效果框（游戏羊皮纸面板素材 + 黄铜包角；未拖入对应卡时不写效果文本）
 	var tags := ["上半效果", "下半效果"]

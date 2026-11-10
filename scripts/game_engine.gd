@@ -17651,17 +17651,29 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 	if p == null or p.card == null or p.card.assemble.is_empty():
 		return
 	var key := str(p.card.assemble.get("trigger", ""))
+	# R565：下半可以自带时机（「使用后，你在本回合结束时获得 5 费」= 上半 use + 下半 turn_end）。
+	# 下半没写就跟随上半 —— 旧存档 / 老结构里没有 lower_trigger，靠这条保住原行为。
+	var lower_key := str(p.card.assemble.get("lower_trigger", ""))
+	if lower_key == "":
+		lower_key = key
 	if key not in AssembleRules.TRIGGERS:
 		_log("组合：未支持的时机 " + key)
 		return
-	if key != trigger:
+	var hit_upper := key == trigger
+	var hit_lower := lower_key == trigger
+	if not hit_upper and not hit_lower:
 		return
 	var execution_key := str(p.get_instance_id()) + ":" + trigger
 	if _assemble_active.has(execution_key):
 		_log("组合：跳过同一结算链中的重复触发 " + trigger)
 		return
 	_assemble_active[execution_key] = true
-	for fx in p.card.assemble.get("effects", []).duplicate(true):
+	var fx_queue: Array = []
+	if hit_upper:
+		fx_queue.append_array(p.card.assemble.get("effects", []).duplicate(true))
+	if hit_lower:
+		fx_queue.append_array((p.card.assemble.get("lower_effects", []) as Array).duplicate(true))
+	for fx in fx_queue:
 		if not AssembleRules.valid_effect(fx):
 			_log("组合：无效动作 " + str(fx))
 			continue
@@ -17695,6 +17707,12 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 				_add_upgrade_stack(p)
 				p.card.health += value
 				p.health += value
+			"range":
+				# R565：攻击距离+N（榴弹击手「每次获得改造时，攻击距离+1」的零件）。
+				# 与 trait「改造攻程」同一套记法：`upgrade_range` 记加成，卡面按差值显示基础值。
+				p.card = CardData.from_dict(p.card.to_dict())
+				p.card.attack_range += value
+				p.upgrade_range += value
 			"energy":
 				if p.owner == SIDE_SELF:
 					state.energy += value
@@ -17809,7 +17827,9 @@ func _assemble_combo_build() -> CardData:
 	var result := AssembleRules.build(attr, upper.upper_effect, lower.lower_effect, false)
 	if result == null:
 		return null
-	result.add_affix("组合")
+	# R565：产物带**专属印记**（卡面费用正下方），不再挂「组合」字段 ——
+	# 用户口径「要有组合的专属附魔标记，不需要组合这个 buff」。
+	result.combine_mark = true
 	return result
 
 func assemble_combo_commit() -> bool:

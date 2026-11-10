@@ -420,6 +420,7 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 			speed_override, range_override)
 	# ⑧ 附魔标记（R214）—— 同样压在最上层（它骑在卡图左上角上）
 	_draw_enchant_mark(canvas, card, rect, font_bold)
+	_draw_combine_mark(canvas, card, rect)                       # R565：组合专属印记
 	# ⑨ 本局成长角标（R393b）—— 卡图左下角，写明「哪几个数字是长出来的」
 	_draw_growth_mark(canvas, card, rect, font_bold)
 
@@ -449,6 +450,7 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 	_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold)   # R193：姓名牌内框 + 居中卡名（只留卡名）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, card.health, -1)
 	_draw_enchant_mark(canvas, card, rect, font_bold)            # R214：选卡页也要看到附魔标记
+	_draw_combine_mark(canvas, card, rect)                       # R565：组合专属印记
 	_draw_lock_mark(canvas, card, rect)                          # R351：不可删除的卡带锁
 	_draw_growth_mark(canvas, card, rect, font_bold)            # R393b：本局成长角标
 
@@ -528,6 +530,40 @@ static func _draw_enchant_mark(canvas: CanvasItem, card: CardData, rect: Rect2,
 		var fs: int = maxi(6, roundi(10.0 * ui_scale_of(rect)))
 		_draw_center_outlined(canvas, font_bold, fs,
 				CardData.enchant_title(card).substr(0, 1), c, col)
+
+
+static func combine_badge_center(rect: Rect2, enchanted: bool) -> Vector2:
+	## R565：组合印记的圆心 = 附魔标记那条竖列的下一位。
+	## 这张卡同时带商店附魔时自动让开一格（两张印记不叠）。
+	var c := enchant_badge_center(rect)
+	if enchanted:
+		c.y += 2.0 * badge_radius(rect) + UiTheme.CARD_BADGE_GAP * ui_scale_of(rect)
+	return c
+
+
+static func _draw_combine_mark(canvas: CanvasItem, card: CardData, rect: Rect2) -> void:
+	## **组合专属印记**（R565）—— 用户口径「要有组合的专属附魔标记（费用下面那个），
+	## 不需要组合这个 buff」。
+	##
+	## 视觉与附魔标记同一套：深色圆盘 + 亮色环 + 符号，位置也在费用正下方那条竖列
+	## （`combine_badge_center`）。区别只在符号：走 `CardInfoBoxes.draw_glyph("combine")`
+	## ——两个拼块左右拼接的自绘符号，不依赖素材，也就不会缺图。
+	##
+	## ⚠️ 它**不是** `enchant`：不写 `ENCHANT_DEFS`、不进随机附魔池、不参与「同一张卡不能
+	##    重复附魔」，更不挂 `affixes` —— 所以卡面上不会多出一条「组合」buff条。
+	##    （R559 那版就是 `add_affix("组合")`，结果在卡面渲染成了 buff。）
+	if card == null or not card.combine_mark:
+		return
+	var r: float = badge_radius(rect)
+	if r < 3.0:
+		return
+	var c := combine_badge_center(rect, card.has_enchant())
+	var col: Color = UiTheme.ACCENT_GOLD
+	var disc: Color = col.darkened(0.78)
+	disc.a = 0.95
+	canvas.draw_circle(c, r, disc)
+	canvas.draw_arc(c, r, 0.0, TAU, 28, col, maxf(1.2, r * 0.22), true)
+	preload("res://scripts/card_info_boxes.gd").draw_glyph(canvas, c, r * 0.62, "combine", col)
 
 
 static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,

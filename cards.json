@@ -698,8 +698,8 @@
       "regen_per_turn": 2,
       "color": "白",
       "image": "",
-      "upper_effect": {"trigger": "turn_end", "effects": [{"type": "heal", "value": 2}]},
-      "lower_effect": {"effects": [{"type": "taunt"}]}
+      "upper_effect": {"trigger": "turn_end", "effects": []},
+      "lower_effect": {"trigger": "turn_end", "effects": [{"type": "heal", "value": 2}]}
     },
     {
       "id": 9017,
@@ -762,9 +762,7 @@
       "effect_text": "无法移动。",
       "target_mode": "none",
       "color": "灰",
-      "image": "",
-      "upper_effect": {"trigger": "turn_end", "effects": [{"type": "damage", "value": 2, "target": "nearest"}]},
-      "lower_effect": {"effects": [{"type": "damage", "value": 1, "target": "nearest"}]}
+      "image": ""
     },
     {
       "id": 9020,
@@ -1004,9 +1002,7 @@
       "target_mode": "none",
       "actions": 2,
       "color": "灰",
-      "image": "",
-      "upper_effect": {"trigger": "turn_end", "effects": [{"type": "buff", "value": 1}]},
-      "lower_effect": {"effects": [{"type": "damage", "value": 3, "target": "nearest"}]}
+      "image": ""
     },
     {
       "id": 9032,
@@ -1030,9 +1026,7 @@
       "effect_text": "使用后：手牌增加一张此卡的「短暂复制」（次元；回合结束时消失）。",
       "target_mode": "none",
       "color": "白",
-      "image": "",
-      "upper_effect": {"trigger": "enter", "effects": [{"type": "draw", "value": 1}]},
-      "lower_effect": {"effects": [{"type": "summon", "value": 9032, "count": 1}]}
+      "image": ""
     },
     {
       "id": 9033,
@@ -1052,9 +1046,7 @@
       "effect_text": "被破坏后返回手牌，并变为 1 费。",
       "target_mode": "none",
       "color": "黄",
-      "image": "",
-      "upper_effect": {"trigger": "enter", "effects": [{"type": "buff", "value": 1}]},
-      "lower_effect": {"effects": [{"type": "damage", "value": 2, "target": "nearest"}]}
+      "image": ""
     },
     {
       "id": 9034,
@@ -1074,9 +1066,7 @@
       "effect_text": "使用后从卡组随机抽取一张技能牌，该卡本回合费用 -1。",
       "target_mode": "none",
       "color": "红",
-      "image": "",
-      "upper_effect": {"trigger": "enter", "effects": [{"type": "damage", "value": 2, "target": "nearest"}]},
-      "lower_effect": {"effects": [{"type": "stun"}]}
+      "image": ""
     },
     {
       "id": 9035,
@@ -1157,9 +1147,7 @@
       "effect_text": "自己弃牌区每有一个盟友，这张卡费用 -1。使用时自己场上其他盟友攻击 +2。",
       "target_mode": "none",
       "color": "棕",
-      "image": "",
-      "upper_effect": {"trigger": "attack", "effects": [{"type": "damage", "value": 2, "target": "random"}]},
-      "lower_effect": {"effects": [{"type": "buff", "value": 1}]}
+      "image": ""
     },
     {
       "id": 9039,
@@ -1744,9 +1732,7 @@
       "target_mode": "none",
       "value": 5,
       "color": "白",
-      "image": "",
-      "upper_effect": {"trigger": "enter", "effects": [{"type": "shield"}]},
-      "lower_effect": {"effects": [{"type": "taunt"}]}
+      "image": ""
     },
     {
       "id": 9068,
@@ -1873,9 +1859,7 @@
       "effect_text": "使用时，将一张随机效果卡从卡组加入手卡。",
       "target_mode": "none",
       "color": "白",
-      "image": "",
-      "upper_effect": {"trigger": "turn_start", "effects": [{"type": "draw", "value": 1}]},
-      "lower_effect": {"effects": [{"type": "freeze"}]}
+      "image": ""
     },
     {
       "id": 9074,
@@ -1896,9 +1880,7 @@
       "target_mode": "none",
       "value": 2,
       "color": "白",
-      "image": "",
-      "upper_effect": {"trigger": "enter", "effects": [{"type": "heal", "value": 2}]},
-      "lower_effect": {"effects": [{"type": "draw", "value": 1}]}
+      "image": ""
     },
     {
       "id": 9075,
@@ -1919,9 +1901,7 @@
       "effect_text": "在场时，伤害类技能原本费用每有 1 点，增加 1 点伤害。",
       "target_mode": "none",
       "color": "紫",
-      "image": "",
-      "upper_effect": {"trigger": "turn_start", "effects": [{"type": "energy", "value": 1}]},
-      "lower_effect": {"effects": [{"type": "damage", "value": 2, "target": "random"}]}
+      "image": ""
     },
     {
       "id": 9076,
@@ -2191,9 +2171,7 @@
       "effect_text": "打出时，若包含这张卡本回合打出的卡达到 3 张，从卡组将一张随机技能卡加入手卡。",
       "target_mode": "none",
       "color": "白",
-      "image": "",
-      "upper_effect": {"trigger": "enter", "effects": [{"type": "draw", "value": 1}]},
-      "lower_effect": {"effects": [{"type": "buff", "value": 1}]}
+      "image": ""
     },
     {
       "id": 8007,
@@ -2355,9 +2333,7 @@
       "effect_text": "在场时每使用一张卡，这张卡力量 +1，攻击或离场后重置。",
       "target_mode": "none",
       "color": "白",
-      "image": "",
-      "upper_effect": {"trigger": "effect_played", "effects": [{"type": "buff", "value": 1}]},
-      "lower_effect": {"effects": [{"type": "damage", "value": 2, "target": "nearest"}]}
+      "image": ""
     },
     {
       "id": 9096,
@@ -2569,7 +2545,9 @@
       "effect_text": "入场时抽一张卡。",
       "target_mode": "none",
       "color": "蓝",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "enter", "effects": []},
+      "lower_effect": {"trigger": "enter", "effects": [{"type": "draw", "value": 1}]}
     },
     {
       "id": 8019,
@@ -2671,8 +2649,8 @@
       "target_mode": "none",
       "color": "黑",
       "image": "",
-      "upper_effect": {"trigger": "turn_end", "effects": [{"type": "energy", "value": 1}]},
-      "lower_effect": {"effects": [{"type": "damage", "value": 3, "target": "nearest"}]}
+      "upper_effect": {"trigger": "use", "effects": []},
+      "lower_effect": {"trigger": "turn_end", "effects": [{"type": "energy", "value": 5}]}
     },
     {
       "id": 9112,
@@ -2732,7 +2710,9 @@
       "effect_text": "攻击时，回复 1 点费用。",
       "target_mode": "none",
       "color": "白",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "attack", "effects": []},
+      "lower_effect": {"trigger": "attack", "effects": [{"type": "energy", "value": 1}]}
     },
     {
       "id": 8023,
@@ -2754,8 +2734,8 @@
       "target_mode": "none",
       "color": "紫",
       "image": "",
-      "upper_effect": {"trigger": "turn_end", "effects": [{"type": "heal", "value": 2}]},
-      "lower_effect": {"effects": [{"type": "energy", "value": 1}]}
+      "upper_effect": {"trigger": "attack", "effects": []},
+      "lower_effect": {"trigger": "attack", "effects": [{"type": "energy", "value": 1}]}
     },
     {
       "id": 9114,
@@ -2985,8 +2965,8 @@
       "image": "",
       "upgrade_atk_bonus": 2,
       "upgrade_hp_bonus": 2,
-      "upper_effect": {"trigger": "upgraded", "effects": [{"type": "buff", "value": 2}]},
-      "lower_effect": {"effects": [{"type": "upgrade", "value": 1}]}
+      "upper_effect": {"trigger": "upgraded", "effects": []},
+      "lower_effect": {"trigger": "upgraded", "effects": [{"type": "buff", "value": 2}]}
     },
     {
       "id": 8030,
@@ -3080,9 +3060,7 @@
       "effect_text": "每拥有一层改造，这张卡获得 **+3 生命**。",
       "target_mode": "none",
       "color": "灰",
-      "image": "",
-      "upper_effect": {"trigger": "turn_end", "effects": [{"type": "heal", "value": 2}]},
-      "lower_effect": {"effects": [{"type": "shield"}]}
+      "image": ""
     },
     {
       "id": 8035,
@@ -3238,9 +3216,7 @@
       "effect_text": "**接通**（闪电链那种四方向相邻传导，**只算我方单位**）的我方单位**受到伤害时**，改为由这张卡来承受。**溢出的伤害不再结算**。",
       "target_mode": "none",
       "color": "蓝",
-      "image": "",
-      "upper_effect": {"trigger": "turn_start", "effects": [{"type": "shield"}]},
-      "lower_effect": {"effects": [{"type": "taunt"}]}
+      "image": ""
     },
     {
       "id": 8043,
@@ -3505,9 +3481,7 @@
       "effect_text": "超负荷；嘲讽。",
       "target_mode": "none",
       "color": "蓝",
-      "image": "",
-      "upper_effect": {"trigger": "enter", "effects": [{"type": "shield"}]},
-      "lower_effect": {"effects": [{"type": "taunt"}]}
+      "image": ""
     },
     {
       "id": 8056,
@@ -3553,8 +3527,8 @@
       "target_mode": "none",
       "color": "蓝",
       "image": "",
-      "upper_effect": {"trigger": "upgraded", "effects": [{"type": "damage", "value": 2, "target": "random"}]},
-      "lower_effect": {"effects": [{"type": "upgrade", "value": 1}]}
+      "upper_effect": {"trigger": "upgraded", "effects": []},
+      "lower_effect": {"trigger": "upgraded", "effects": [{"type": "range", "value": 1}]}
     },
     {
       "id": 8058,
@@ -3577,9 +3551,7 @@
       "effect_text": "**嘲讽**。每拥有一层改造，这张卡受到的伤害 -1，但每次至少仍受 1 点。",
       "target_mode": "none",
       "color": "蓝",
-      "image": "",
-      "upper_effect": {"trigger": "enter", "effects": [{"type": "taunt"}]},
-      "lower_effect": {"effects": [{"type": "buff", "value": 1}]}
+      "image": ""
     },
     {
       "id": 8059,
@@ -3601,7 +3573,9 @@
       "effect_text": "每次获得改造时，抽一张卡。",
       "target_mode": "none",
       "color": "蓝",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "upgraded", "effects": []},
+      "lower_effect": {"trigger": "upgraded", "effects": [{"type": "draw", "value": 1}]}
     },
     {
       "id": 8060,
@@ -3624,9 +3598,7 @@
       "effect_text": "嘲讽。入场时，本次对战中你每使用过一张「聚能炮击」，本卡生命 +3。本回合，你手卡里的「聚能炮击」费用为 0。",
       "target_mode": "none",
       "color": "蓝",
-      "image": "",
-      "upper_effect": {"trigger": "enter", "effects": [{"type": "buff", "value": 2}]},
-      "lower_effect": {"effects": [{"type": "taunt"}]}
+      "image": ""
     },
     {
       "id": 8061,
@@ -3775,7 +3747,9 @@
       "effect_text": "回合开始时，抽一张卡。",
       "target_mode": "none",
       "color": "蓝",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "turn_start", "effects": []},
+      "lower_effect": {"trigger": "turn_start", "effects": [{"type": "draw", "value": 1}]}
     },
     {
       "id": 8068,
@@ -5228,7 +5202,9 @@
       "effect_text": "无法移动。被攻击时，使攻击者下回合眩晕（不能行动）。",
       "target_mode": "none",
       "color": "灰",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "attacked", "effects": []},
+      "lower_effect": {"trigger": "attacked", "effects": [{"type": "stun"}]}
     },
     {
       "id": 9180,
@@ -5402,7 +5378,9 @@
       "target_mode": "none",
       "color": "白",
       "image": "",
-      "locked": true
+      "locked": true,
+      "upper_effect": {"trigger": "attack", "effects": []},
+      "lower_effect": {"trigger": "attack", "effects": [{"type": "knockback", "value": 1}]}
     },
     {
       "id": 9200,
@@ -5574,9 +5552,7 @@
       "first_kill_power": 1,
       "battle_end_gold": 20,
       "color": "紫",
-      "image": "",
-      "upper_effect": {"trigger": "attack", "effects": [{"type": "damage", "value": 2, "target": "random"}]},
-      "lower_effect": {"effects": [{"type": "buff", "value": 1}]}
+      "image": ""
     },
     {
       "id": 9205,
@@ -6207,8 +6183,8 @@
       "target_mode": "none",
       "color": "黑",
       "image": "",
-      "upper_effect": {"trigger": "attack", "effects": [{"type": "heal", "value": 3}]},
-      "lower_effect": {"effects": [{"type": "taunt"}]}
+      "upper_effect": {"trigger": "attack", "effects": []},
+      "lower_effect": {"trigger": "attack", "effects": [{"type": "heal", "value": 3}]}
     },
     {
       "id": 9233,
@@ -6288,8 +6264,8 @@
       "target_mode": "none",
       "color": "红",
       "image": "",
-      "upper_effect": {"trigger": "turn_end", "effects": [{"type": "damage", "value": 2, "target": "all"}]},
-      "lower_effect": {"effects": [{"type": "energy", "value": 1}]}
+      "upper_effect": {"trigger": "enter", "effects": []},
+      "lower_effect": {"trigger": "enter", "effects": [{"type": "damage", "value": 2, "target": "random"}]}
     },
     {
       "id": 9237,

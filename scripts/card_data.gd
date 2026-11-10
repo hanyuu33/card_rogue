@@ -61,7 +61,6 @@ const AFFIX_DEFS: Dictionary = {
 	"交换": {"label": "交换", "desc": "可放置在已有友方单位的格子上，原本在那个格子上的友方单位返回手卡。", "glyph": "swap", "on_board": false, "bg": "0a2a2e", "fg": "5fe0d0"},
 	"保存": {"label": "保存", "desc": "回合结束时，手牌里的这张卡不会丢弃（保留到下一回合）。", "glyph": "save", "on_board": false, "bg": "1a2a0a", "fg": "b9e85a"},
 	"共享护盾": {"label": "共享护盾", "desc": "我方 HP 要受到伤害时，改由这张卡承受（每次都能顶，顶到它死亡）。", "glyph": "share", "bg": "33161c", "fg": "ff8fa8"},
-	"组合": {"label": "组合", "desc": "这张卡由组合组合生成（生成它）。", "glyph": "combine", "bg": "33200c", "fg": "ffc14e"},
 }
 
 ## ── 【商店附魔】（R214）`enchant` = 这张卡吃过的商店附魔 id（"" = 没附魔）──
@@ -279,6 +278,10 @@ var assemble: Dictionary = {}
 ## 结构同 AssembleRules 的 fragment（见拼装机制设计.md）；{} = 不可组合。
 var upper_effect: Dictionary = {}
 var lower_effect: Dictionary = {}
+## R565：组合产物的**专属印记**（卡面费用正下方那枚金色符号，见 `CardFace._draw_combine_mark`）。
+## 与 `enchant` 刻意分开：它不是商店附魔 —— 不进随机附魔池，也不算「同一张卡不能重复附魔」的已附魔状态，
+## 更不会在卡面上渲染成 buff 条（R565 用户口径：要费用下面的专属印记，不要「组合」这个 buff）。
+var combine_mark: bool = false
 
 ## 组合已知时机 key（用于识别历史数据；实际允许列表和黑名单以 assemble_rules.gd 为准）。
 const ASSEMBLE_TRIGGERS: Array[String] = [
@@ -289,7 +292,7 @@ const ASSEMBLE_TRIGGERS: Array[String] = [
 ## 组合动作 type 白名单（见拼装机制设计.md §2.2）。
 const ASSEMBLE_EFFECT_TYPES: Array[String] = [
 	"draw", "buff", "damage", "heal", "shield", "taunt",
-	"summon", "upgrade", "energy", "knockback", "freeze", "stun",
+	"summon", "upgrade", "energy", "knockback", "freeze", "stun", "range",
 ]
 
 
@@ -366,14 +369,22 @@ static func from_dict(d: Dictionary) -> CardData:
 		var xa_out: Array = []
 		for xa in (asm_in.get("extra_affixes", []) as Array):
 			xa_out.append(str(xa))
+		# R565：下半可以自带时机（「使用后，你在本回合结束时获得 5 费」= 上半 use + 下半 turn_end），
+		# 所以 lower_trigger / lower_effects 必须一起重建，否则组合卡一被复制下半效果就没了。
+		var lfx_out: Array = []
+		for fx in (asm_in.get("lower_effects", []) as Array):
+			lfx_out.append((fx as Dictionary).duplicate(true))
 		c.assemble = {
 			"trigger": str(asm_in.get("trigger", "")),
 			"effects": fx_out,
+			"lower_trigger": str(asm_in.get("lower_trigger", "")),
+			"lower_effects": lfx_out,
 			"extra_affixes": xa_out,
 		}
 	# R559 组合：上下半句随复制通道走（深拷贝），漏了它待选卡拖进槽位取不到效果。
 	c.upper_effect = (d.get("upper_effect", {}) as Dictionary).duplicate(true)
 	c.lower_effect = (d.get("lower_effect", {}) as Dictionary).duplicate(true)
+	c.combine_mark = bool(d.get("combine_mark", false))
 	return c
 
 
@@ -440,6 +451,8 @@ func to_dict() -> Dictionary:
 		# R559 组合：上下半句随复制 / 离场还原 / 联机通道走，漏了它待选卡无法组合。
 		"upper_effect": upper_effect.duplicate(true),
 		"lower_effect": lower_effect.duplicate(true),
+		# R565：组合专属印记随复制 / 离场还原通道走，漏了它卡一进战场印记就没了。
+		"combine_mark": combine_mark,
 	}
 
 

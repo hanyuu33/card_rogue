@@ -38,7 +38,11 @@ static func valid_pool(upper: Array, lower: Array) -> bool:
 		if part.get("trigger", "") not in TRIGGERS:
 			return false
 	for part in lower:
-		if part.has("trigger") or part.get("effects", []).is_empty() or part.has("extra_affixes"):
+		## R565：下半**允许自带时机** —— 「使用后，你在本回合结束时获得 5 费用」这类卡，
+		## 效果挂在另一个时机上；下半没写 trigger 时才跟随上半的时机。
+		if part.get("effects", []).is_empty() or part.has("extra_affixes"):
+			return false
+		if part.has("trigger") and str(part.get("trigger", "")) not in TRIGGERS:
 			return false
 	return true
 
@@ -59,6 +63,7 @@ static func effect_text(fx: Dictionary) -> String:
 		"knockback": return "将最近敌人击退%d格" % n
 		"freeze": return "冰封最近敌人"
 		"stun": return "眩晕最近敌人"
+		"range": return "攻击距离 +%d" % n
 	return ""
 
 
@@ -71,6 +76,33 @@ static func card_label(card_id: int) -> String:
 		_card_name_cache[card_id] = c.card_name if c != null else "衍生物"
 	return str(_card_name_cache[card_id])
 
+static func effects_text(fx_list: Array) -> String:
+	var texts: Array[String] = []
+	for fx in fx_list:
+		texts.append(effect_text(fx))
+	return "，".join(texts)
+
+
+static func assembled_text(asm: Dictionary) -> String:
+	## R565：组合卡的效果文本 = 上半（时机：效果）+ 下半（时机：效果）。
+	## 上半可以是**空钩子**（只提供时机、没有效果，用户口径「上半只有钩子也无所谓」）——
+	## 那时只写下半，不写「（无）」这种占位。
+	var t1 := str(asm.get("trigger", ""))
+	var t2 := str(asm.get("lower_trigger", ""))
+	var s1 := effects_text(asm.get("effects", []))
+	var s2 := effects_text(asm.get("lower_effects", []))
+	var out := ""
+	if s1 != "":
+		out = str(LABELS.get(t1, "")) + "：" + s1
+	if s2 != "":
+		if out != "":
+			out += "。"
+		if t2 != "" and t2 != t1:
+			out += str(LABELS.get(t2, "")) + "："
+		out += s2
+	return out
+
+
 static func fragment_text(part: Dictionary) -> String:
 	var texts: Array[String] = []
 	for fx in part.get("effects", []):
@@ -82,12 +114,23 @@ static func build(base: CardData, upper: Dictionary, lower: Dictionary, reverse:
 	if not valid_pool([upper], [lower]):
 		return null
 	var result := CardData.from_dict(base.to_dict())
-	var first: Array = lower.get("effects", []) if reverse else upper.get("effects", [])
-	var second: Array = upper.get("effects", []) if reverse else lower.get("effects", [])
-	var effects := first.duplicate(true)
-	effects.append_array(second.duplicate(true))
-	result.assemble = {"trigger": upper.trigger, "effects": effects, "extra_affixes": upper.get("extra_affixes", []).duplicate(true)}
+	var first: Dictionary = lower if reverse else upper
+	var second: Dictionary = upper if reverse else lower
+	# R565：上下半各自带时机（下半没写就跟上半），两边都空是不可能的 —— valid_pool 保证上半有时机。
+	var t1 := str(first.get("trigger", ""))
+	var t2 := str(second.get("trigger", ""))
+	if t1 == "":
+		t1 = t2
+	if t2 == "":
+		t2 = t1
+	result.assemble = {
+		"trigger": t1,
+		"effects": (first.get("effects", []) as Array).duplicate(true),
+		"lower_trigger": t2,
+		"lower_effects": (second.get("effects", []) as Array).duplicate(true),
+		"extra_affixes": (first.get("extra_affixes", []) as Array).duplicate(true),
+	}
 	for affix in result.assemble.extra_affixes:
 		result.add_affix(str(affix))
-	result.effect_text = fragment_text(result.assemble)
+	result.effect_text = assembled_text(result.assemble)
 	return result

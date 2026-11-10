@@ -13554,8 +13554,9 @@ func _init() -> void:
 		"R91 充电装置：带 trait「接通」（与闪电链同一个 trait 族）")
 
 	# ---- ② 字段系统：定义表 / 判定口 / 序列化往返 ----
-	check(CardData.AFFIX_DEFS.size() == 11,
-		"R91 字段表：11 个字段（疾行 / 嘲讽 / 死亡 / 幻影 / 护盾 / **次元** R93 / **超负荷** R98 / **交换** R101 / **保存** R181 / **共享护盾** R269 / **组合** R559），实际 %d"
+	# R565：「组合」从字段表下线（产物改走专属印记 `combine_mark`，不再是一条 buff），故 11 → 10。
+	check(CardData.AFFIX_DEFS.size() == 10,
+		"R91 字段表：10 个字段（疾行 / 嘲讽 / 死亡 / 幻影 / 护盾 / **次元** R93 / **超负荷** R98 / **交换** R101 / **保存** R181 / **共享护盾** R269），实际 %d"
 		% CardData.AFFIX_DEFS.size())
 	var r91_all: Dictionary = {}
 	for c91 in r91_repo.all_cards():
