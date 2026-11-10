@@ -163,9 +163,6 @@ func _do_event(node: Dictionary) -> void:
 				RunState.delete_deck_card(idx)
 				trace.append({"node": "oblivion", "deleted_idx": idx})
 			RunState.complete_current()
-		"bluefish":
-			RunState.add_card(9050)
-			RunState.complete_current()
 		"hero":
 			if RunState.can_trade_five(repo):
 				var res := RunState.trade_five_for_one(repo)

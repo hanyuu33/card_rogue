@@ -52,20 +52,21 @@ map_bridge.png      小桥的**俯视图**（桥身在画面上**竖着**）  16
 ------------------------------------------------------------------------
  二、事件插图 event_<kind>.png —— 事件界面标题下方的那张图
 ------------------------------------------------------------------------
-· kind 的唯一出处是 `event_scene._kind()`（25 个分支），这张表按它列全。
+· kind 的唯一出处是 `event_scene._kind()`（R573 后 24 个在册事件 + 1 个已下线兜底）。
 · 建议尺寸 **320 × 240（横向 4:3）**，等比缩放居中显示
   （代码 `STRETCH_KEEP_ASPECT_CENTERED`；旧文写「300 × 240 / 5:4」是错的）。
 · 显示位置：窗口水平居中、顶部标题条下方（y 约 116 ~ 356）。
 · 不提供时铺 `_add_fallback_bg()` 的程序化渐变（六类主题色纹章）。
   ⚠️ **篝火只属于休息处**（R478）—— 旧文「所有事件都会显示篝火」已作废。
-· 「暂缓」= R512 用户口径明确这一轮不做，别自作主张补。
+· R573：蓝色大肥鱼事件已删除；绝赞五换一 / 鸭梨山大 / 飞行器三张整屏背景已补齐。
+  R512 那一档「暂缓」至此全部收口。
 
   event_gaze.png          鸭之凝视          ★R512 已提供
   event_whisper.png       鸭鸭低语          （R514：不再是独立事件 → 不做事件图）
   event_struggle.png      挣扎              （暂不生成）
-  event_pear.png          鸭梨山大          （R512 暂缓）
-  event_hero.png          绝赞五换一        （R512 暂缓）
-  event_bluefish.png      蓝色大肥鱼        （R512 暂缓）
+  event_pear.png          鸭梨山大          （R573 改走整屏背景 bg_pear，不做插图）
+  event_hero.png          绝赞五换一        （R573 改走整屏背景 bg_hero，不做插图）
+  event_flyer.png         飞行器            （R555 新增；R573 改走整屏背景 bg_flyer，不做插图）
   event_apple_doctor.png  苹果与医生
   event_snow_leopard.png  雪豹出现          （R514：画面**不出现烟斗**，烟斗玩法保留）
   event_adventurer.png    冒险家的遗物
@@ -109,9 +110,9 @@ map_bridge.png      小桥的**俯视图**（桥身在画面上**竖着**）  16
   bg_rest.png             休息处            （实际读 adventure_shared/rest_clearing.png）
   bg_whisper.png          鸭鸭低语          （R514：不再是独立事件 → 不做图）
   bg_struggle.png         挣扎              （暂不生成）
-  bg_pear.png             鸭梨山大          （R512 暂缓）
-  bg_hero.png             绝赞五换一        （R512 暂缓）
-  bg_bluefish.png         蓝色大肥鱼        （R512 暂缓）
+  bg_pear.png             鸭梨山大          ★R573 已提供（巨大的梨 + 小人／小车参照物）
+  bg_hero.png             绝赞五换一        ★R573 已提供（五张换一张；本游戏羊皮纸墨蓝金框卡面）
+  bg_flyer.png            飞行器            ★R573 已提供（喷气式背包，无桨叶无机翼）
   bg_apple_doctor.png     苹果与医生
   bg_snow_leopard.png     雪豹出现          （R514：画面**不出现烟斗**）
   bg_adventurer.png       冒险家的遗物

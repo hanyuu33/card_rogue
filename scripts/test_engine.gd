@@ -6599,13 +6599,13 @@ func _init() -> void:
 			and not ev_kinds_layer.has("whisper"),
 			"第一层事件池：10 种子类型（挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物/R473 武术大师；R512 移除卡牌宝箱；R514 移除鸭鸭低语→改二层起点三选一；无凝视、无怪物）")
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
-	check(l2_ev_kinds.size() == 15 and l2_ev_kinds.has("smith") \
+	check(l2_ev_kinds.size() == 14 and l2_ev_kinds.has("smith") \
 			and l2_ev_kinds.has("martial") \
 			and l2_ev_kinds.has("moon") and l2_ev_kinds.has("furnace")
 			and l2_ev_kinds.has("core_contract") and l2_ev_kinds.has("cave")
 			and l2_ev_kinds.has("card_merchant") and l2_ev_kinds.has("divination")
 			and l2_ev_kinds.has("flyer"),
-			"第二层事件池：鸭梨山大 / 绝赞五换一 / 蓝色大肥鱼 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 + R458 契约的核心 + R467 洞穴 + R473 武术大师 + R555 飞行器 = 15 种子类型")
+			"第二层事件池：鸭梨山大 / 绝赞五换一 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 + R458 契约的核心 + R467 洞穴 + R473 武术大师 + R555 飞行器 = 14 种子类型（R573 删除蓝色大肥鱼）")
 	var pear_ev_kinds := l2_ev_kinds        # 旧用例里沿用的变量名（保持后文读到本地变量）
 	check(l2_ev_kinds.has("gaze") and not ev_kinds_layer.has("gaze"),
 			"鸭之凝视已改为第二层事件（第一层不再出 gaze）")
@@ -6637,12 +6637,17 @@ func _init() -> void:
 	check(pear_ev_kinds.has("hero") and not ev_kinds_layer.has("hero"),
 			"绝赞五换一只在第二层事件池（第一层不含 hero，不串层）")
 	check(GameLayers.event_name("hero") == "绝赞五换一", "绝赞五换一事件的显示名")
-	check(pear_ev_kinds.has("bluefish") and not ev_kinds_layer.has("bluefish"),
-			"蓝色大肥鱼只在第二层事件池（第一层不含 bluefish，不串层）")
-	check(GameLayers.event_name("bluefish") == "蓝色大肥鱼", "蓝色大肥鱼事件的显示名")
-	var bf_ev_w := GameLayers.event_weights(GameLayers.LAYER_TWO)
-	check(int(bf_ev_w.get("bluefish", 0)) > 0,
-			"蓝色大肥鱼在第二层事件权重 > 0（可被抽到）")
+	# ==== R573：蓝色大肥鱼（bluefish）事件已删除 ====
+	check(not pear_ev_kinds.has("bluefish") and not ev_kinds_layer.has("bluefish"),
+			"R573：蓝色大肥鱼已从两层事件池删除（都不含 bluefish）")
+	check(not GameLayers.EVENT_NAMES.has("bluefish"),
+			"R573：EVENT_NAMES 不再登记蓝色大肥鱼")
+	check(int(GameLayers.event_weights(GameLayers.LAYER_TWO).get("bluefish", 0)) == 0,
+			"R573：蓝色大肥鱼在第二层权重为 0（抽不到）")
+	var bf_src := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	check_src("BLUEFISH_DESC" not in bf_src and "_bluefish_taken" not in bf_src
+			and "--bluefish" not in bf_src,
+			"R573 源码锁：事件场景不再有蓝色大肥鱼的文案 / 状态 / 演示入口")
 	var pear_ev_w := GameLayers.event_weights(GameLayers.LAYER_TWO)
 	check(int(pear_ev_w.get("pear", 0)) > 0,
 			"鸭梨山大在第二层事件权重 > 0（可被抽到）")
@@ -6972,8 +6977,10 @@ func _init() -> void:
 			if not GameLayers.event_kinds(GameLayers.LAYER_TWO).has(q_l2m_kind):
 				q_l2_ev_ok = false
 	check(q_l2_ev_ok, "第二层地图：event_kind 全部取自第二层事件池（不串到第一层）")
-	check(q_l2_ev_seen.has("pear") or q_l2_ev_seen.has("hero") or q_l2_ev_seen.has("bluefish"),
-			"第二层地图多次生成：出鸭梨山大/绝赞五换一/蓝色大肥鱼专属事件")
+	check(q_l2_ev_seen.has("pear") or q_l2_ev_seen.has("hero"),
+			"第二层地图多次生成：出鸭梨山大/绝赞五换一专属事件（R573 已删蓝色大肥鱼）")
+	check(not q_l2_ev_seen.has("bluefish"),
+			"R573：第二层地图 40 次生成里不再出现蓝色大肥鱼")
 
 	# ---- R192：起点后第一格（起点的每一个邻居）类型约束 ----
 	# 第一层：只可能是事件或一般战斗（不是?/商店/精英/篝火）；

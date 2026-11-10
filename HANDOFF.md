@@ -1395,3 +1395,26 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 
 ## 2026-11-11 元素入场伤害特效与时序
 新增透明岩刺/火焰贴图及逐段入场伤害队列。土元素先分配目标与伤害；火元素每段重新选择存活目标；命中时扣血与出字，次数>6加速。按用户澄清，整批伤害完成后才结算亡语；破坏表现仍逐次完成。独立验证 tools/verify_primal_fx.gd 覆盖规则、7次同目标命中、加速、致死后剩余分配先于亡语；真实battle场景截图归档。test_engine 全通过。仅单机启用延迟，联机保持现有同步路径。已有其他未提交代码/卡图修改保留，提交按本轮差异单独暂存。
+
+
+## 2026-11-11 R573 事件背景收口 + 蓝色大肥鱼删除
+- 用户口径：「绝赞5换1可以参考这个构图，但是要注意卡牌风格和数量，尽可能不要用这张参与图生图」／
+  「蓝色大肥鱼事件删除」／「鸭梨山大，生成一张很大的梨（最好有参照物）」／「飞行器：喷气式背包」。
+- 出图**一律委托 codex**（R562 管线 `art_src/2026-11-10_机械之心放量_R562/_run_batch.py`），三张全部纯文生图、
+  不带 `-i`；游戏王截图只转成文字构图，不进图生图。误用内置出图的第一张废稿已弃用（raw/ 里 `_discard_imagegen_*`）。
+- 画风沿用 R519e 契约（粗黑描边／平涂两级明暗／低饱和冷灰蓝 + 一处暖点／主体避开中央正文区／画面铺满整幅）。
+  产物 1536×1024 → 居中裁 16:9 → 1280×720，落地 `assets/ui/bg_{hero,pear,flyer}.png`，已 `--import` 重导入。
+  `hero` = 上方 5 张 + 手中 1 张、本游戏羊皮纸深蓝标题条蓝宝石卡面；`pear` = 巨梨 + 小人／小车／梨树参照物；
+  `flyer` = 双喷嘴喷气背包，无桨叶无机翼无座舱。
+- 游戏内截图 `art_src/2026-11-11_事件背景R573/_review/ingame_{pear,hero,flyer}.png` 三张均通过；
+  `flyer` 右下少许被实心正文卡片压住，属「中央留空」契约预期，主体一眼可辨，不返工。为此补 `--flyer` 演示参数。
+- 代码：bluefish 事件删除（game_layers 事件名/权重、event_scene 分支/文案/演示入口、test_engine 断言与源码锁、
+  `_playthrough.gd`、`assets/ui/图片命名说明.txt`），旧存档只留 `RETIRED_EVENT_DESC` 兜底页、不发奖励。
+  R512 那档「暂缓」至此全部收口；源码锁判据只禁旧实现常量/状态/演示参数，兜底页不算违规。
+- 审计 `python tools/audit_event_bgs.py --strict`：24 个事件 / 已有背景 19 / **待补 0**。
+- 回归 `_verify.py`：assemble 0 / engine 5475✓ 0✗ / reward 26 / bgm 39 / smoke 67-0 / mana PASS；
+  userdata 先备份再逐文件 cmp 还原，`RESTORE_VERIFY OK`。
+  还原判据只看「文件集合 + 内容」：`settings.cfg` 会被 Godot 退出时重写、mtime 必变，拿 mtime 当最终判据会误报。
+- 环境：codex 需 Clash Verge 的 7897 代理；本轮启动 `D:\新建文件夹\clash-verge.exe` 后 `verge-mihomo.exe` 才监听 7897
+  （只跑 service 不够）。预检必须真连 HTTPS 且把 HTTPError 视为链路通（Cloudflare 会因默认 UA 回 403，curl 带 UA 是 200）；
+  端口可用 `CODEX_PROXY` 覆盖，`_run_codex.py` 会先预检再开工。

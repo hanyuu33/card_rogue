@@ -10,7 +10,7 @@ extends Control
 ##   * event + gaze     鸭之凝视：获得事件道具「一袋米抗几楼」，或放弃；
 ##   * event + pear     鸭梨山大（第二层专属）：获得事件道具「鸭梨」，或放弃；
 ##   * event + apple_doctor 苹果与医生（R244，第二层专属）：收下道具「苹果」，或放弃并离开；
-##   * event + bluefish 蓝色大肥鱼（第二层专属）：把一张「鲸鱼之怒」加入卡组，或放弃；
+##   * R573：蓝色大肥鱼（bluefish）事件已删除，旧存档只剩「已移除」兜底页；
 ##   * event + delivery 运送委托（R200，第一层专属）：平铺挑 1~6 张「货物」加入卡组，或离开；
 ##   * event + delivery_done 委托完成（R200）：持有货物时**第二层第一个事件房**替换而来，
 ##                     卡组每保有 1 张货物 → 抽奖一次（卡牌奖励 / 80 金币 / 随机道具 / 巧克力 10%）；
@@ -28,8 +28,8 @@ extends Control
 ##
 ## 插图与背景走 assets/ui/ 的可替换图片（详见 assets/ui/图片命名说明.txt）：
 ##   event_<事件>.png 插图（标题下方） / bg_<事件>.png 整屏背景；
-##   事件 = rest / treasure / whisper / struggle / gaze / pear / apple_doctor / bluefish /
-##          moon（R351 赏月）/ relic_chest。
+##   事件 = rest / treasure / whisper / struggle / gaze / pear / apple_doctor /
+##          moon（R351 赏月）/ relic_chest / flyer（R555 飞行器）。
 ## 缺图时回退内置绘制（所有事件共用的篝火动画 / 深灰底色）。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
@@ -46,7 +46,7 @@ const HERO_CARD_ID := 9023        # 英雄（绝赞五换一的奖励卡）
 const HERO_TRADE_NEED := 5        # 绝赞五换一：要交出 5 张**不同名**的卡
 const STRUGGLE_CARD_ID := 9018    # 金属龙（事件卡牌，不可奖励获取）
 const STRUGGLE_LIFE := 21         # 挣扎代价：失去的生命
-const WHALE_CARD_ID := 9050       # 鲸鱼之怒（蓝色大肥鱼事件的奖励卡，不可奖励获取）
+const WHALE_CARD_ID := 9050       # 鲸鱼之怒（占卜室幻象「鲸鱼」的解读奖励，不可奖励获取）
 const ARCANE_CHARM_ID := 6020     # 奥秘护符（奥秘之泉事件给予；奖励池也能正常获得）
 const CARGO_CARD_ID := 8065       # 货物（R200 运送委托；3 费工事 0/6/0/0，被破坏时从卡组删除）
 const DELIVERY_MIN := 1           # 运送委托：最少接几张
@@ -142,21 +142,15 @@ const MARTIAL_PUNCH_DESC := """老人往石头上捶了一下，石头裂了，�
 
 # R555 飞行器（第二层专属）：两个选项 —— 使用飞行器（回地图选一格没去过的房间传过去，
 # 消耗 1 巧克力）/ 不移动。巧克力不足 2 块时飞不起来（扣掉这格后至少还得剩 1）。
-const FLYER_DESC := """空地中央停着一架旧飞行器，桨叶歪歪地指着天。
-坐上去，它能把你直接送到任何一个还没去过的房间——
+const FLYER_DESC := """空地中央立着一架旧喷气背包，两只喷口还留着一点余温。
+背上它，你能直接飞到任何一个还没去过的房间——
 代价是 1 块巧克力；巧克力只剩 1 块或没有的时候，它飞不起来。"""
 
-const FLYER_TAKEN_DESC := """引擎已经热起来了，桨叶搅得空气嗡嗡响。
+const FLYER_TAKEN_DESC := """喷口已经热起来了，暖橙色的火苗轻轻跳着。
 回到地图后挑一个没去过的房间，它就把你送过去。"""
 
-const BLUEFISH_DESC := """一条通体蓝色的大肥鱼搁浅在岸边，肚皮一起一伏，像还在做梦。
-它翻了个身，从嘴里吐出一枚亮晶晶的东西——
-「鲸鱼之怒」：1 费技能，造成 11 点伤害，
-随后可从弃牌堆选 2 张卡回到手牌；用掉之后本场战斗里不再出现。
-要不要把它捡起来？"""
-
-const BLUEFISH_TAKEN_DESC := """大肥鱼心满意足地打了个嗝，翻着肚皮漂远了。
-「鲸鱼之怒」已经躺进你的卡组——什么时候用它，就看你了。"""
+# R573：蓝色大肥鱼事件已删除。只留一句旧存档兜底文案，不发任何奖励。
+const RETIRED_EVENT_DESC := """这里原本有一条蓝色大肥鱼。它已经游走了。"""
 
 # R351 赏月（第二层专属事件）产出的两张效果卡。都带 `no_remove`（不可从卡组删除）。
 const MOON_CARD_ID := 9180
@@ -340,7 +334,6 @@ var _furnace_invested := -1          # 熔炉（R454）：本次投进去的那�
 var _furnace_result := ""            # 熔炉（R454）：收尾态那行结果（重绘要能复现）
 var _core_pick := ""                 # 契约的核心（R458）：拿走的是 "contract" / "core" / ""
 var _core_result := ""               # 契约的核心（R458）：收尾态那行结果（重绘要能复现）
-var _bluefish_taken := false  # 蓝色大肥鱼：是否已收下「鲸鱼之怒」
 ## R351 赏月：本次拿走的是 "moon"（花光金币换月亮）/ "coin"（直接拿硬币）/ ""（还没拿）。
 ## 两个选项**互斥**，拿了一个另一个就收起 —— 走 `_claim_reward()` 那条统一规则。
 var _moon_pick := ""
@@ -477,7 +470,8 @@ func _is_cave() -> bool:
 
 
 func _is_bluefish() -> bool:
-	## 蓝色大肥鱼（第二层专属事件）：可将一张「鲸鱼之怒」（9050）加入卡组。
+	## R573 已下线：只用来认出旧存档 / 脏数据里的 bluefish，
+	## 让它走「已移除」兜底页，而不是落进 _is_treasure() 误开宝箱发奖励。
 	return _is_event_node() and _pending_kind() == "bluefish"
 
 
@@ -1190,7 +1184,7 @@ func _kind_tint(kind: String) -> Color:
 			return Color("b5484a")   # 危险：暗红
 		"smith", "card_merchant", "lake_lady", "apple_doctor", "delivery", "delivery_done", "martial":
 			return Color("c8951c")   # 交易 / 匠人：金
-		"whisper", "divination", "moon", "arcane", "bluefish", "hero":
+		"whisper", "divination", "moon", "arcane", "hero":
 			return Color("8a7fd4")   # 神秘 / 预兆：紫
 		"pear", "snow_leopard", "adventurer", "cave", "flyer":
 			return Color("6faa62")   # 自然 / 探索：绿
@@ -1344,6 +1338,10 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "pear"
+		if args[i] == "--flyer":  # 演示：伪装 run 飞行器事件（R573 背景截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "flyer"
 		if args[i] == "--apple":  # 演示：伪装 run 苹果与医生事件（R244 截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -1373,10 +1371,7 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "cave"
-		if args[i] == "--bluefish":  # 演示：伪装 run 蓝色大肥鱼事件（截图验证）
-			RunState.run_active = true
-			RunState.pending_node = {"type": "event"}
-			RunState.pending_event = "bluefish"
+		# R573：该事件已下线，旧演示参数入口一并移除（旧存档只走兜底页）。
 		if args[i] == "--moon":  # 演示：伪装 run 赏月事件（第二层专属，带 120 金币）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -1562,17 +1557,11 @@ func _ready() -> void:
 			$Center/LeaveBtn.text = "放弃并离开"
 			result_label.text = ""
 	elif _is_bluefish():
+		# R573 已下线：只留「离开」，不给卡、不发奖励（旧存档 / 脏数据兜底）。
 		event_name.text = "蓝 色 大 肥 鱼"
-		desc.text = BLUEFISH_TAKEN_DESC if _bluefish_taken else BLUEFISH_DESC
-		if _bluefish_taken:
-			_collapse_to_leave()
-			result_label.text = "「鲸鱼之怒」已加入卡组——用掉之后本场战斗里不再出现。"
-			result_label.add_theme_color_override("font_color", UiTheme.RARITY_RARE)
-		else:
-			rest_btn.text = "收下「鲸鱼之怒」（加入卡组）"
-			rest_btn.disabled = false
-			$Center/LeaveBtn.text = "不捡（放弃）"
-			result_label.text = ""
+		desc.text = RETIRED_EVENT_DESC
+		_collapse_to_leave()
+		result_label.text = "这个事件已经从游戏里移除了。"
 	elif _is_moon():
 		event_name.text = "赏 月"
 		desc.text = MOON_TAKEN_DESC if _moon_pick == "moon" \
@@ -2169,20 +2158,8 @@ func _on_main() -> void:
 		_redraw()
 		return
 	if _is_bluefish():
-		if _bluefish_taken:
-			_on_leave()
-			return
-		RunState.add_card(WHALE_CARD_ID)
-		_bluefish_taken = true
-		_claim_reward(rest_btn)   # R147
-		var wcard := CardRepo.load_json().get_card(WHALE_CARD_ID)
-		var wname := wcard.card_name if wcard != null else "鲸鱼之怒"
-		_collapse_to_leave()
-		desc.text = BLUEFISH_TAKEN_DESC
-		result_label.text = "「%s」已加入卡组：%s" % [wname,
-				CardText.naturalize(wcard.effect_text) if wcard != null else ""]
-		result_label.add_theme_color_override("font_color", UiTheme.RARITY_RARE)
-		_redraw()
+		# R573 兜底：任何残留点击都只关页，绝不发「鲸鱼之怒」。
+		_on_leave()
 		return
 	if _is_moon():
 		if _moon_pick != "":
