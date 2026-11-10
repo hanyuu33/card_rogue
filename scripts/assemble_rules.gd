@@ -83,6 +83,28 @@ static func effects_text(fx_list: Array) -> String:
 	return "，".join(texts)
 
 
+static func body_text(part: Dictionary) -> String:
+	## 只出效果本身、**不带时机**（下半槽位用它 —— 时机已经由上半那张卡提供了）。
+	return effects_text(part.get("effects", []))
+
+
+static func lower_text(lower: Dictionary, upper_trigger: String) -> String:
+	## R566：下半框的文案（用户实测反馈：「混乱之影下半应该是抽一张牌」）。
+	##
+	## 原先这里错用 `fragment_text`，它会把下半的时机一并印出来 → 13 张**全部**显示成
+	## 「攻击时：回复 1 点费用」这种完整句子，看着像上下半各抄了一遍整卡。
+	## 现在的口径：下半**只写效果**；只有当下半的时机与上半不同（黑暗领主 = 上半 use、
+	## 下半 turn_end）才补上时机，否则玩家读不出它挂在另一个时机上。
+	## 上半槽还空着（upper_trigger == ""）时也带时机 —— 那时玩家手上没有任何上下文。
+	var body := body_text(lower)
+	if body == "":
+		return ""
+	var t := str(lower.get("trigger", ""))
+	if t == "" or t == upper_trigger:
+		return body
+	return str(LABELS.get(t, "")) + "：" + body
+
+
 static func assembled_text(asm: Dictionary) -> String:
 	## R565：组合卡的效果文本 = 上半（时机：效果）+ 下半（时机：效果）。
 	## 上半可以是**空钩子**（只提供时机、没有效果，用户口径「上半只有钩子也无所谓」）——
@@ -97,7 +119,12 @@ static func assembled_text(asm: Dictionary) -> String:
 	if s2 != "":
 		if out != "":
 			out += "。"
-		if t2 != "" and t2 != t1:
+			# 上半已有内容：下半时机与上半相同就不重复写
+			if t2 != "" and t2 != t1:
+				out += str(LABELS.get(t2, "")) + "："
+		else:
+			# R566：上半是空钩子时，产物卡面上**必须**写出时机 ——
+			# 产物是一张独立卡，卡面没别的地方能看出它挂在哪个时机。
 			out += str(LABELS.get(t2, "")) + "："
 		out += s2
 	return out

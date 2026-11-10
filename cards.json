@@ -5199,7 +5199,7 @@
         "惊奇盒子"
       ],
       "affixes": [],
-      "effect_text": "无法移动。被攻击时，使攻击者下回合眩晕（不能行动）。",
+      "effect_text": "被攻击时，使攻击者下回合眩晕（不能行动）。",
       "target_mode": "none",
       "color": "灰",
       "image": "",

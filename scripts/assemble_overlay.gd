@@ -425,7 +425,14 @@ func _draw_preview() -> void:
 		elif i == 1 and _slot_lower >= 0:
 			var lo: CardData = _cards[_slot_lower]
 			if not lo.lower_effect.is_empty():
-				txt = AssembleRules.fragment_text(lo.lower_effect)
+				# R566：下半**只写效果**（用户实测：「下半应该是抽一张牌」，原先是整句
+				# 「回合开始时：抽一张卡」，看着像上下半各抄了一遍整卡）。
+				# 只有当下半时机与上半不同（黑暗领主 上半 use / 下半 turn_end）才补时机；
+				# 上半槽还空着时也补 —— 那时框里没有任何上下文。
+				var up_t := ""
+				if _slot_upper >= 0:
+					up_t = str(_cards[_slot_upper].upper_effect.get("trigger", ""))
+				txt = AssembleRules.lower_text(lo.lower_effect, up_t)
 		if txt != "":
 			# R562：左右内边距对称（原来左 36 / 右 12），别让文字贴死在包角上。
 			var body := Rect2(er.position.x + 40.0, er.position.y + 50.0,

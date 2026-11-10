@@ -1139,6 +1139,18 @@ func _ready() -> void:
 			seed(0x559)
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		engine._teach_spell(GameEngine.SIDE_SELF)
+		# R566 出图：`--combocards 8023,8022,8023` 把候选换成指定卡（走不到正式逻辑，
+		# 只有 --combodemo 这条出图捷径会读）。用来稳定复现「同一时机」/「跨时机」两种下半文案。
+		for ci in args.size():
+			if args[ci] == "--combocards" and ci + 1 < args.size():
+				var crepo := CardRepo.load_json()
+				var clist: Array = []
+				for tok in String(args[ci + 1]).split(",", false):
+					var cd: CardData = crepo.get_card(int(str(tok).strip_edges()))
+					if cd != null:
+						clist.append(cd)
+				if clist.size() >= 3:
+					engine._combo_cards = clist
 		if "--combodemofill" in args:
 			# R559b 出图：预填三槽，看填满态（结果卡 + 绿色确认按钮 + 效果文字）。
 			# overlay 在 _sync_pick 里才 open，这里打标记，open 后由 _sync_pick 补填。

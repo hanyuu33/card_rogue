@@ -73,6 +73,7 @@ func _init() -> void:
 	_test_retired_assemble()
 	_test_combo()
 	_test_r565_fidelity()
+	_test_r566_split_text()
 	print("Combination tests failures: ", failures)
 	quit(failures)
 
@@ -167,6 +168,66 @@ func _test_r565_fidelity() -> void:
 	var gsrc := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 	check(gsrc.find("result.combine_mark = true") >= 0 and gsrc.find("add_affix(\"组合\")") < 0,
 			"R565 源码锁：产物只打专属印记，不挂「组合」字段")
+
+
+func _test_r566_split_text() -> void:
+	## R566：用户第二轮实测 —— 「混乱之影下半应该是抽一张牌，现在虽然上半切对了，但是下半是
+	## 完整的效果，黑暗祭坛也是类似的问题」。
+	##
+	## 根因**不在数据**（下半只存了 `{draw 1}`），而在**组合页取文本**：下半框调的是
+	## `fragment_text`，它会把下半的时机一并印出来 → 13 张全部变成「回合开始时：抽一张卡」，
+	## 看着像上下半各抄了一遍整卡。这一节把「下半只写效果」钉死。
+	var repo := CardRepo.load_json()
+	var rows := 0
+	for c: CardData in repo.all_cards():
+		if c.lower_effect.is_empty():
+			continue
+		rows += 1
+		var t_up := str(c.upper_effect.get("trigger", ""))
+		var t_lo := str(c.lower_effect.get("trigger", t_up))
+		var body := Rules.body_text(c.lower_effect)
+		var shown := Rules.lower_text(c.lower_effect, t_up)
+		check(not body.contains("："),
+				"R566：%d %s 的下半效果本体不该带时机（实际「%s」）" % [c.id, c.card_name, body])
+		if t_lo == t_up:
+			check(shown == body,
+					"R566：%d %s 下半时机与上半相同 → 不重复印时机（实际「%s」）" % [c.id, c.card_name, shown])
+		else:
+			check(shown == str(Rules.LABELS.get(t_lo, "")) + "：" + body,
+					"R566：%d %s 下半时机不同 → 标出时机（实际「%s」）" % [c.id, c.card_name, shown])
+	check(rows >= 8, "R566：至少 8 张卡参与下半文案检查（实际 %d）" % rows)
+	# 用户点名的两张逐字核对
+	var sp: CardData = repo.get_card(8067)   # 分裂之影（用户说的「混乱之影」）
+	check(Rules.lower_text(sp.lower_effect, sp.upper_effect.trigger) == "抽1张牌",
+			"R566：分裂之影下半 =「抽一张卡」（实际「%s」）"
+			% Rules.lower_text(sp.lower_effect, sp.upper_effect.trigger))
+	var altar: CardData = repo.get_card(8023)   # 黑暗祭坛
+	check(Rules.lower_text(altar.lower_effect, altar.upper_effect.trigger) == "回复1点费用",
+			"R566：黑暗祭坛下半 =「回复1点费用」（实际「%s」）"
+			% Rules.lower_text(altar.lower_effect, altar.upper_effect.trigger))
+	# 上半槽还空着时也要带时机（否则框里没有上下文）
+	check(Rules.lower_text(sp.lower_effect, "") == "回合开始时：抽1张牌",
+			"R566：上半未填时下半补时机")
+	# 产物卡面仍写完整句子 —— 产物是一张独立卡，卡面没别处能读时机
+	var base := CardData.new()
+	base.card_name = "R566 探针"
+	base.kind = "工事"
+	base.health = 5
+	base.power = 0
+	base.attack_range = 1
+	var prod := Rules.build(base, sp.upper_effect, sp.lower_effect)
+	check(prod != null and prod.effect_text == "回合开始时：抽1张牌",
+			"R566：产物卡面写完整时机（实际「%s」）" % (prod.effect_text if prod != null else "null"))
+	# 惊奇盒子：它是工事，本体不能移动，「无法移动」属于冗余描述
+	var box: CardData = repo.get_card(9179)
+	check(box.effect_text == "被攻击时，使攻击者下回合眩晕（不能行动）。",
+			"R566：惊奇盒子文本去掉「无法移动」（实际「%s」）" % box.effect_text)
+	# 源码锁：组合页下半走 lower_text，fragment_text 只留给上半
+	var ov := FileAccess.get_file_as_string("res://scripts/assemble_overlay.gd")
+	check(ov.find("AssembleRules.lower_text(") >= 0, "R566 源码锁：组合页下半走 lower_text")
+	check(ov.count("AssembleRules.fragment_text(") == 1,
+			"R566 源码锁：fragment_text 只用于上半（实际引用 %d 处）"
+			% ov.count("AssembleRules.fragment_text("))
 
 
 func _probe_unit(eng: GameEngine, trigger: String, cell := Vector2i(3, 0), side := "self") -> Placement:
