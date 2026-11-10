@@ -7795,11 +7795,25 @@ func _contractor_enter(p: Placement) -> void :
 	## 回合结束随 end_turn 清零，不跨回合。
 	## 挂在 play_from_hand 的「盟友」分支：卡此时已离手，涨价不会算到它自己头上。
 	state.energy += CONTRACTOR_GAIN
-	state.turn_card_raise = CONTRACTOR_RAISE
+	_raise_hand_cost(CONTRACTOR_RAISE, p.card.card_name, true)
 	_log("%s 登场：费用 +%d；本回合手卡费用 +%d（回合结束失效）" % [
 		p.card.card_name, CONTRACTOR_GAIN, CONTRACTOR_RAISE])
 	action.emit("contractor", {"cell": _cell_of(p), "energy": CONTRACTOR_GAIN,
 		"raise": CONTRACTOR_RAISE, "name": p.card.card_name})
+
+
+func _raise_hand_cost(v: int, tag: String, quiet: bool = false) -> void :
+	## R570：「本回合手卡中所有卡费用 +N」的唯一实现口 —— 契约签订者 8024 的登场效果
+	## 与组合动作 `hand_cost_raise` 共用。
+	## 涨价记在 `FieldState.turn_card_raise`（**全体手卡**，不按实例）：`cost_of` 是唯一读取口，
+	## 回合结束随 end_turn 清零，不跨回合。所以这里赋**同一个值**而不是累加 ——
+	## 多个来源不叠成 +8（与母卡口径一致）。
+	## `quiet = true` 时只改值不打日志（契约自己那条日志里已经写了涨价点数）。
+	if v <= 0:
+		return
+	state.turn_card_raise = v
+	if not quiet:
+		_log("%s：本回合手卡中所有卡费用 +%d（回合结束失效）" % [tag, v])
 
 
 func _demon_fetch(_p: Placement) -> void :
@@ -7855,7 +7869,7 @@ func _fox_trigger() -> void :
 	_fetch_skill_card("赤狐")
 
 
-func _fetch_skill_card(source: String) -> void :
+func _fetch_skill_card(source: String, discount: int = FETCH_SKILL_DISCOUNT) -> void :
 	## 「从卡组取一张随机技能牌进手，**且只有这一张**本回合费用 -1」——
 	## 赤狐 9034 的**唯一入口**（别在别处再写一份同样的取牌逻辑）。
 	##
@@ -7880,10 +7894,10 @@ func _fetch_skill_card(source: String) -> void :
 	# R299：手牌满 → 直接进弃牌区；减费标记照旧挂着（本回合有效，回合结束清空）。
 	_grant_to_hand(copy, source)
 	state.turn_card_discount[copy] = int(state.turn_card_discount.get(copy, 0)) \
-			+ FETCH_SKILL_DISCOUNT
+			+ discount
 	_log("%s：从卡组取到技能牌「%s」（**本回合仅这一张**费用 -%d）"
-			% [source, copy.card_name, FETCH_SKILL_DISCOUNT])
-	action.emit("fetch_skill", {"card": copy, "discount": FETCH_SKILL_DISCOUNT,
+			% [source, copy.card_name, discount])
+	action.emit("fetch_skill", {"card": copy, "discount": discount,
 		"source": source})
 
 
@@ -11851,17 +11865,29 @@ func _tiger_roar(tiger: Placement) -> void :
 
 
 func _hound_snapshot(hound: Placement) -> void :
+	## 猎犬 9040（1 费普通盟友）：**使用时**，自己场上每有一个其他盟友 → 力量 +2。
+	## R570：结算抽到唯一口 `_buff_per_other_ally`（组合动作 `buff_per_ally` 共用）。
+	_buff_per_other_ally(hound, HOUND_ATK_BUFF, "猎犬")
 
 
-	var n:= 0
-	for p: Placement in state.board.values():
-		if p.owner == SIDE_SELF and p.card.kind == "盟友" and p != hound:
+func _buff_per_other_ally(p: Placement, per: int, tag: String) -> int:
+	## R570：「自己场上每有一个**其他**盟友，力量 +N」的唯一实现口 ——
+	## 猎犬 9040 的入场钩子与组合动作 `buff_per_ally` 共用。返回计到的盟友数。
+	##
+	## ⚠️ 「其他」= **排除自己**（`q != p`）：猎犬自己不算，否则一只上场就白拿 +N。
+	## ⚠️ 只数**盟友**（`kind == "盟友"`），工事不算 —— 卡面写的就是「其他盟友」，
+	##    这与老虎 9038「其他盟友攻击 +N」是同一套判据。
+	## ⚠️ 遍历用 `p.owner` 而不是写死 SIDE_SELF：组合产物挂在哪一方就跟哪一方数。
+	var n := 0
+	for q: Placement in state.board.values():
+		if q.owner == p.owner and q.card.kind == "盟友" and q != p:
 			n += 1
 	if n <= 0:
-		_log("猎犬：场上没有其他盟友，未获得力量加成")
-		return
-	hound.atk_buff += n * HOUND_ATK_BUFF
-	_log("猎犬：获得 +%d 力量（上场时场上 %d 个其他盟友）" % [n * HOUND_ATK_BUFF, n])
+		_log("%s：场上没有其他盟友，未获得力量加成" % tag)
+		return 0
+	p.atk_buff += n * per
+	_log("%s：场上 %d 个其他盟友 → 力量 +%d（当前 %d）" % [tag, n, n * per, p.effective_power()])
+	return n
 
 
 func crow_options() -> Array[int]:
@@ -15575,6 +15601,34 @@ func _enforcer_watch(p: Placement, cell: Vector2i) -> void :
 
 
 
+func _buff_by_surplus_energy(p: Placement, atk_per: int, hp_per: int,
+		tag: String, left: int = -1) -> void :
+	## R570：「剩余费用每有 1 点 → 力量 +A / 生命 +H（**永久**）」的唯一实现口 ——
+	## 地狱猫 8019（+1/+2）与鲜血堡垒 8020（+1/+3）的回合结束结算，以及组合动作
+	## `buff_per_energy`，三处共用这一段。
+	##
+	## ⚠️ 写入的是 `p.end_atk`（永久力量）与 `p.health`（当前血）—— 与母卡原实现一致；
+	##    这里**不改** `p.card.health`（血上限），所以不是「永久堆上限」的那种成长。
+	## ⚠️ `left` 由调用方传入：`_end_turn_surplus` 已经算好了剩余费用（且含黑暗领主加成），
+	##    组合动作没有那一层上下文，传 -1 让它自己读当前费用。
+	## ⚠️ 剩余费用 0 → 不结算（不刷「+0」的噪声日志）。
+	if left < 0:
+		left = state.energy_of(p.owner)
+	if left <= 0:
+		_log("%s：剩余费用 0 → 本次不成长" % tag)
+		return
+	var atk_gain := left * atk_per
+	var hp_gain := left * hp_per
+	if atk_gain <= 0 and hp_gain <= 0:
+		return
+	p.end_atk += atk_gain
+	p.health += hp_gain
+	_log("%s：剩余费用 %d → 力量 +%d、生命 +%d（现 %d/%d）" % [
+		p.card.card_name, left, atk_gain, hp_gain, p.effective_power(), p.health])
+	action.emit("surplus", {"cell": _cell_of(p), "card": p.card, "left": left,
+			"atk": atk_gain, "hp": hp_gain, "side": p.owner})
+
+
 func _end_turn_surplus(side: String) -> void :
 	## 「回合结束 · 剩余费用 / 已花费用」系列六张卡的**唯一结算入口**
 	## （end_turn 里在费用清零之前调用）。结算顺序是**规则的一部分**，按序：
@@ -15614,23 +15668,10 @@ func _end_turn_surplus(side: String) -> void :
 		if p.card.traits.has(NIGHT_EROSION_TRAIT):
 			_night_erosion_heal(p, left, side)
 			continue
-		var atk_gain := 0
-		var hp_gain := 0
 		if p.card.traits.has(HELL_CAT_TRAIT):
-			atk_gain = left * HELL_CAT_ATK
-			hp_gain = left * HELL_CAT_HP
+			_buff_by_surplus_energy(p, HELL_CAT_ATK, HELL_CAT_HP, "地狱猫", left)
 		elif p.card.traits.has(BLOOD_FORT_TRAIT):
-			atk_gain = left * BLOOD_FORT_ATK
-			hp_gain = left * BLOOD_FORT_HP
-		if atk_gain <= 0 and hp_gain <= 0:
-			continue
-		p.end_atk += atk_gain
-		p.health += hp_gain
-		_log("%s：剩余费用 %d → 力量 +%d、生命 +%d（现 %d/%d）" % [
-			p.card.card_name, left, atk_gain, hp_gain,
-			p.effective_power(), p.health])
-		action.emit("surplus", {"cell": cell, "card": p.card, "left": left,
-				"atk": atk_gain, "hp": hp_gain, "side": side})
+			_buff_by_surplus_energy(p, BLOOD_FORT_ATK, BLOOD_FORT_HP, "鲜血堡垒", left)
 
 	# 活力转移：效果区里有就算（多张不叠加 —— 与自愈/ 魔力核心同一口径）。
 	if _zone_has(zone, VITALITY_TRAIT):
@@ -15704,7 +15745,8 @@ func _dark_spread_strike(side: String, left: int) -> void :
 	action.emit("dark_spread", {"dmg": dmg, "left": left, "hits": total, "side": side})
 
 
-func _night_erosion_heal(p: Placement, left: int, side: String) -> void :
+func _night_erosion_heal(p: Placement, left: int, side: String,
+		per: int = NIGHT_EROSION_PER_ENERGY) -> void :
 	## 夜蚀 8062（R103，2 费史诗盟友 2/8/程1/速1）：自己回合结束时，
 	## 回复 X = **剩余费用** 点生命值。
 	##
@@ -15720,7 +15762,7 @@ func _night_erosion_heal(p: Placement, left: int, side: String) -> void :
 		return
 	if p.health >= p.card.health:
 		return     # 满血：静默跳过
-	var amount: int = mini(left * NIGHT_EROSION_PER_ENERGY,
+	var amount: int = mini(left * per,
 			p.card.health - p.health)
 	if amount <= 0:
 		return
@@ -17795,6 +17837,32 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 			"hand_discount":
 				# R569：随机一张手牌本回合费用 -N（雪豹 8081 同口径，共用 `_discount_random_hand`）。
 				_discount_random_hand(value, "组合")
+			"buff_per_ally":
+				# R570：猎犬 9040「自己场上每有一个其他盟友，获得 +N 力量」
+				# （共用 `_buff_per_other_ally`；「其他」= 排除本卡自己）。
+				_buff_per_other_ally(p, value, "组合")
+			"buff_per_energy":
+				# R570：地狱猫 8019 / 鲜血堡垒 8020「剩余费用每有 1 点 → +A 力 +H 血」
+				# （共用 `_buff_by_surplus_energy`；组合没有 end_turn 那层上下文，自己读费用）。
+				_buff_by_surplus_energy(p, int(fx.get("atk", 0)), int(fx.get("hp", 0)), "组合")
+			"heal_per_energy":
+				# R570：夜蚀 8062「回复 X 点生命，X = 剩余费用」（共用 `_night_erosion_heal`）。
+				# ⚠️ 那个函数自带「满血静默跳过 / 不超过上限」，这里不要自己再写一遍 clamp。
+				_night_erosion_heal(p, state.energy_of(p.owner), p.owner, value)
+			"draw_random_skill":
+				# R570：赤狐 9034「从卡组随机抽一张技能牌，该卡本回合费用 -N」
+				# （共用 `_fetch_skill_card`，牌库当场少一张、减费只挂那一张）。
+				_fetch_skill_card("组合", value)
+			"hand_cost_raise":
+				# R570：契约签订者 8024「本回合手卡中所有卡费用 +N」
+				# （共用 `_raise_hand_cost`；赋同一个值不累加，回合结束随表清空）。
+				_raise_hand_cost(value, "组合")
+			"add_copy":
+				# R570：野兔 9032「手牌增加一张此卡的短暂复制」
+				# （共用 `_spawn_self_clone`：复制品带次元 + is_ephemeral，离场/回合结束消失）。
+				# ⚠️ `p.card` 是组合产物本身 —— 复制出来的也是产物，保留同一套 assemble。
+				for _j in maxi(1, value):
+					_spawn_self_clone(p.card)
 			"energy":
 				if p.owner == SIDE_SELF:
 					state.energy += value

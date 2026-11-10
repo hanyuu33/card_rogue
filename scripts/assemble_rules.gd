@@ -13,6 +13,16 @@ static func valid_effect(fx: Variant) -> bool:
 		return true
 	if fx.type == "summon":
 		return (fx.get("value") is int or fx.get("value") is float) and int(fx.get("value")) > 0
+	# R570：`buff_per_energy` 没有 `value` —— 它的数值是「每点剩余费用换多少」，两个分量。
+	# 两个都是 0 就等于一个空动作（卡面会印出一句不打折扣的话），判废。
+	if fx.type == "buff_per_energy":
+		for key: String in ["atk", "hp"]:
+			var rv: Variant = fx.get(key, 0)
+			if not rv is int and not rv is float:
+				return false
+			if float(rv) < 0 or float(rv) != int(rv):
+				return false
+		return int(fx.get("atk", 0)) > 0 or int(fx.get("hp", 0)) > 0
 	if not fx.get("value") is int and not fx.get("value") is float:
 		return false
 	if float(fx.value) < 0 or float(fx.value) != int(fx.value):
@@ -21,7 +31,9 @@ static func valid_effect(fx: Variant) -> bool:
 		return fx.get("target", "nearest") in ["nearest", "all", "random"]
 	# R569：「加卡 / 减费 / 改造」三个动作的数值必须 ≥1 —— 0 张 / 减 0 费 / 改造 +0
 	# 等于一个空动作，卡面却会写出来，玩家会以为自己拿到了东西。
-	if fx.type in ["add_random_effect", "hand_discount", "hand_upgrade"]:
+	if fx.type in ["add_random_effect", "hand_discount", "hand_upgrade",
+			"buff_per_ally", "heal_per_energy", "draw_random_skill",
+			"hand_cost_raise", "add_copy"]:
 		return int(fx.value) >= 1
 	return true
 
@@ -108,6 +120,21 @@ static func effect_text(fx: Dictionary) -> String:
 			return "手卡中的盟友获得改造：生命 +%d" % n
 		"hand_discount":
 			return "随机一张手牌本回合费用 -%d" % n
+		# ── R570：六条「母卡已有实现」的动作。文案全部逐字对着原卡写，
+		#    改这里之前先回去看那张卡的 effect_text（测试有保真锁，编不出来）。
+		"buff_per_ally":
+			return "自己场上每有一个其他盟友，获得 +%d 力量" % n
+		"buff_per_energy":
+			return "剩余费用每有 1 点，这张卡获得 %d 点力量和 %d 点生命" % [
+					int(fx.get("atk", 0)), int(fx.get("hp", 0))]
+		"heal_per_energy":
+			return "回复 X 点生命值，X 为自己剩余费用（每 1 点剩余费用回复 %d 点生命，不超过生命上限）" % n
+		"draw_random_skill":
+			return "从卡组随机抽取一张技能牌，该卡本回合费用 -%d" % n
+		"hand_cost_raise":
+			return "本回合手卡中所有卡费用 +%d" % n
+		"add_copy":
+			return "手牌增加一张此卡的「短暂复制」"
 	return ""
 
 

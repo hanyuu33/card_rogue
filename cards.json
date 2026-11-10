@@ -1026,7 +1026,9 @@
       "effect_text": "使用后：手牌增加一张此卡的「短暂复制」（次元；回合结束时消失）。",
       "target_mode": "none",
       "color": "白",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use", "effects": []},
+      "lower_effect": {"effects": [{"type": "add_copy", "value": 1}]}
     },
     {
       "id": 9033,
@@ -1066,7 +1068,9 @@
       "effect_text": "使用后从卡组随机抽取一张技能牌，该卡本回合费用 -1。",
       "target_mode": "none",
       "color": "红",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use", "effects": []},
+      "lower_effect": {"effects": [{"type": "draw_random_skill", "value": 1}]}
     },
     {
       "id": 9035,
@@ -1187,7 +1191,9 @@
       "effect_text": "使用时，自己场上每有一个其他盟友，获得 +2 力量。",
       "target_mode": "none",
       "color": "棕",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use", "effects": []},
+      "lower_effect": {"effects": [{"type": "buff_per_ally", "value": 2}]}
     },
     {
       "id": 9041,
@@ -2569,7 +2575,9 @@
       "effect_text": "自己回合结束时，剩余费用每有 1 点，这张卡获得 1 点力量和 2 点生命。",
       "target_mode": "none",
       "color": "黑",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "turn_end", "effects": []},
+      "lower_effect": {"effects": [{"type": "buff_per_energy", "atk": 1, "hp": 2}]}
     },
     {
       "id": 8020,
@@ -2590,7 +2598,9 @@
       "effect_text": "自己回合结束时，剩余费用每有 1 点，这张卡获得 1 点力量和 3 点生命。",
       "target_mode": "none",
       "color": "红",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "turn_end", "effects": []},
+      "lower_effect": {"effects": [{"type": "buff_per_energy", "atk": 1, "hp": 3}]}
     },
     {
       "id": 9110,
@@ -2798,7 +2808,9 @@
       "effect_text": "登场：回复 4 点费用。本回合手卡中所有卡费用 +4。",
       "target_mode": "none",
       "color": "黑",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "enter", "effects": []},
+      "lower_effect": {"effects": [{"type": "energy", "value": 4}, {"type": "hand_cost_raise", "value": 4}]}
     },
     {
       "id": 9116,
@@ -4185,7 +4197,9 @@
       "effect_text": "自己回合结束时，回复 X 点生命值，X 为自己剩余费用（每 1 点剩余费用回复 1 点生命，不超过生命上限）。",
       "target_mode": "none",
       "color": "黑",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "turn_end", "effects": []},
+      "lower_effect": {"effects": [{"type": "heal_per_energy", "value": 1}]}
     },
     {
       "id": 9119,

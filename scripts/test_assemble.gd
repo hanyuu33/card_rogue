@@ -78,6 +78,7 @@ func _init() -> void:
 	_test_r569_purge()
 	_test_r569_actions()
 	_test_r569_pool_forms()
+	_test_r570_actions()
 	print("Combination tests failures: ", failures)
 	quit(failures)
 
@@ -97,6 +98,17 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 		"add_random_effect": return text.contains("效果卡")
 		"hand_discount": return text.contains("本回合费用 -%d" % n)
 		"hand_upgrade": return text.contains("生命 +%d" % n)
+		# ── R570：六条新动作的保真判据。特征串取自各母卡的 effect_text，
+		#    改文案要连这里一起改（否则测试立刻红，正是想要的效果）。
+		"buff_per_ally": return text.contains("每有一个其他盟友") and text.contains("获得 +%d 力量" % n)
+		"buff_per_energy":
+			return text.contains("剩余费用每有 1 点") \
+					and text.contains("%d 点生命" % int(fx.get("hp", 0)))
+		"heal_per_energy": return text.contains("剩余费用") and text.contains("回复 %d 点生命" % n)
+		"draw_random_skill":
+			return text.contains("技能牌") and text.contains("本回合费用 -%d" % n)
+		"hand_cost_raise": return text.contains("费用 +%d" % n)
+		"add_copy": return text.contains("复制")
 	return true
 
 
@@ -833,7 +845,7 @@ func _test_r569_pool_forms() -> void:
 		if (c.kind == "盟友" or c.kind == "工事") and c.group == "player" \
 				and not c.upper_effect.is_empty() and not c.lower_effect.is_empty():
 			pool.append(c)
-	check(pool.size() >= 16, "R569：候选池至少 16 张（实际 %d）" % pool.size())
+	check(pool.size() >= 23, "R570：候选池至少 23 张（实际 %d）" % pool.size())
 	for c: CardData in pool:
 		check(Rules.TRIGGERS.has(str(c.upper_effect.get("trigger", ""))),
 				"R569：%d %s 上半必须有合法钩子" % [c.id, c.card_name])
@@ -868,3 +880,156 @@ func _test_r569_pool_forms() -> void:
 	var ao := FileAccess.get_file_as_string("res://scripts/assemble_overlay.gd")
 	check(ao.find("CardFace.fit_text_lines") >= 0,
 			"R569 源码锁：组合页上/下效果框也走自适应（犀牛那三行不再顶出框底）")
+
+func _test_r570_actions() -> void:
+	## R570：用户口径「排查一下还有其他可以做的卡吗」。
+	## 判据（R569 定下的池形状 + R565 的保真锁）：
+	##   · 上半只有钩子；下半至少一条可执行效果；每条动作的文字特征能在原卡 effect_text 找到。
+	##   · **整条效果**必须能完整表达 —— 只做半句就算走形（所以老虎「弃牌区每盟友 -1 费」那句
+	##     表达不了 → 整张先不进池；影魔后半句是动态计数 → 同理）。
+	## 本轮进池 7 张，六个新动作各抽唯一实现口与母卡共用。
+	var repo := CardRepo.load_json()
+	# ① buff_per_ally（猎犬 9040）：场上 2 个**其他**盟友 → +2×2 力量；自己不算、工事不算
+	var eng := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng.ai_enabled = false
+	for i in 2:
+		var ally := CardData.new()
+		ally.kind = "盟友"
+		ally.card_name = "陪衬%d" % i
+		ally.health = 5
+		ally.power = 1
+		eng.state.place(ally, Vector2i(i + 1, 0), GameEngine.SIDE_SELF)
+	var fort := CardData.new()
+	fort.kind = "工事"
+	fort.card_name = "陪衬工事"
+	fort.health = 5
+	eng.state.place(fort, Vector2i(3, 0), GameEngine.SIDE_SELF)
+	var p := _probe_unit(eng, "use", Vector2i(3, 0))
+	p.card.assemble = {"trigger": "use", "effects": [{"type": "buff_per_ally", "value": 2}]}
+	var before := p.effective_power()
+	eng._assemble_execute(p, Vector2i(3, 0), "use")
+	check(p.effective_power() == before + 4,
+			"R570：场上 2 个其他盟友 → +4 力量（自己/工事不算；实际 %d → %d）"
+			% [before, p.effective_power()])
+
+	# ② buff_per_energy（地狱猫 8019 / 鲜血堡垒 8020）：剩余 3 费 → +3 力 +6 血
+	var eng2 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng2.ai_enabled = false
+	var p2 := _probe_unit(eng2, "turn_end", Vector2i(3, 0))
+	p2.card.assemble = {"trigger": "turn_end",
+			"effects": [{"type": "buff_per_energy", "atk": 1, "hp": 2}]}
+	eng2.state.energy = 3
+	var hp2 := p2.health
+	var atk2 := p2.end_atk
+	eng2._assemble_execute(p2, Vector2i(3, 0), "turn_end")
+	check(p2.end_atk == atk2 + 3 and p2.health == hp2 + 6,
+			"R570：剩余 3 费 → +3 力 / +6 血（实际 +%d 力 / +%d 血）"
+			% [p2.end_atk - atk2, p2.health - hp2])
+	# 剩余费用 0 → 不结算（不刷 +0）
+	var eng2b := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng2b.ai_enabled = false
+	var p2b := _probe_unit(eng2b, "turn_end", Vector2i(3, 0))
+	p2b.card.assemble = {"trigger": "turn_end",
+			"effects": [{"type": "buff_per_energy", "atk": 1, "hp": 2}]}
+	eng2b.state.energy = 0
+	var hp2b := p2b.health
+	eng2b._assemble_execute(p2b, Vector2i(3, 0), "turn_end")
+	check(p2b.health == hp2b and p2b.end_atk == 0, "R570：剩余费用 0 时 `buff_per_energy` 不结算")
+
+	# ③ heal_per_energy（夜蚀 8062）：剩余 5 费、只差 2 血 → 回 2（不超过上限）
+	var eng3 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng3.ai_enabled = false
+	var p3 := _probe_unit(eng3, "turn_end", Vector2i(3, 0))
+	p3.card.assemble = {"trigger": "turn_end", "effects": [{"type": "heal_per_energy", "value": 1}]}
+	p3.health = p3.card.health - 2
+	eng3.state.energy = 5
+	eng3._assemble_execute(p3, Vector2i(3, 0), "turn_end")
+	check(p3.health == p3.card.health,
+			"R570：剩余 5 费、只差 2 血 → 回满且不越界（实际 %d / %d）" % [p3.health, p3.card.health])
+
+	# ④ draw_random_skill（赤狐 9034）：牌库 -1、手牌 +1，且只有那张本回合 -1 费
+	var skill: CardData = null
+	for c: CardData in repo.all_cards():
+		if c.kind == "技能" and c.group == "player":
+			skill = c
+			break
+	check(skill != null, "R570：卡池里要有至少一张玩家技能牌做探针")
+	var eng4 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng4.ai_enabled = false
+	if skill != null:
+		eng4.state.deck.append(CardData.from_dict(skill.to_dict()))
+	var p4 := _probe_unit(eng4, "use", Vector2i(3, 0))
+	p4.card.assemble = {"trigger": "use", "effects": [{"type": "draw_random_skill", "value": 1}]}
+	eng4._assemble_execute(p4, Vector2i(3, 0), "use")
+	check(eng4.state.deck.is_empty() and eng4.state.hand.size() == 1,
+			"R570：从卡组取技能牌 → 牌库 -1 / 手牌 +1（deck %d / hand %d）"
+			% [eng4.state.deck.size(), eng4.state.hand.size()])
+	if eng4.state.hand.size() == 1:
+		var got: CardData = eng4.state.hand[0]
+		check(int(eng4.state.turn_card_discount.get(got, 0)) == 1,
+				"R570：取到的那张本回合 -1 费（实际 %d）"
+				% int(eng4.state.turn_card_discount.get(got, 0)))
+
+	# ⑤ hand_cost_raise（契约签订者 8024）：回复 4 费 + 手卡全体涨价 4
+	var eng5 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng5.ai_enabled = false
+	var p5 := _probe_unit(eng5, "enter", Vector2i(3, 0))
+	p5.card.assemble = {"trigger": "enter", "effects": [
+			{"type": "energy", "value": 4}, {"type": "hand_cost_raise", "value": 4}]}
+	eng5.state.energy = 0
+	eng5._assemble_execute(p5, Vector2i(3, 0), "enter")
+	check(eng5.state.energy == 4 and eng5.state.turn_card_raise == 4,
+			"R570：契约 → 费用 +4 / 手卡涨价 +4（实际 %d / %d）"
+			% [eng5.state.energy, eng5.state.turn_card_raise])
+	# 涨价是「赋同一个值」不累加：再来一次仍是 4，不是 8
+	eng5._assemble_execute(p5, Vector2i(3, 0), "enter")
+	check(eng5.state.turn_card_raise == 4,
+			"R570：涨价不叠加（仍应为 4，实际 %d）" % eng5.state.turn_card_raise)
+
+	# ⑥ add_copy（野兔 9032）：手牌 +1，且复制品是**衍生物**（离场/回合结束消失）
+	var eng6 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng6.ai_enabled = false
+	var p6 := _probe_unit(eng6, "use", Vector2i(3, 0))
+	p6.card.card_name = "R570 复制探针"
+	p6.card.assemble = {"trigger": "use", "effects": [{"type": "add_copy", "value": 1}]}
+	eng6._assemble_execute(p6, Vector2i(3, 0), "use")
+	check(eng6.state.hand.size() == 1 and eng6.state.hand[0].is_ephemeral,
+			"R570：手牌 +1 且带衍生物标记（hand %d / ephemeral %s）"
+			% [eng6.state.hand.size(),
+			str(eng6.state.hand[0].is_ephemeral) if eng6.state.hand.size() == 1 else "n/a"])
+
+	# ⑦ 数值校验：空动作判废
+	check(Rules.valid_effect({"type": "buff_per_energy", "atk": 1, "hp": 2}),
+			"R570：buff_per_energy(1/2) 合法")
+	check(not Rules.valid_effect({"type": "buff_per_energy", "atk": 0, "hp": 0}),
+			"R570：buff_per_energy(0/0) 是空动作 → 判废")
+	check(not Rules.valid_effect({"type": "buff_per_ally", "value": 0}), "R570：+0 力量判废")
+	check(not Rules.valid_effect({"type": "add_copy", "value": 0}), "R570：复制 0 张判废")
+
+	# ⑧ 有出处的数量：本轮 7 张各自的下半文本要能逐字对上原卡
+	var want := {9040: "每有一个其他盟友", 8019: "剩余费用每有 1 点", 8020: "剩余费用每有 1 点",
+			8062: "剩余费用", 9034: "技能牌", 8024: "费用 +4", 9032: "复制"}
+	for cid: int in want.keys():
+		var c: CardData = repo.get_card(cid)
+		check(c != null and not c.lower_effect.is_empty(),
+				"R570：%d 必须进候选池" % cid)
+		if c != null:
+			var body := Rules.body_text(c.lower_effect)
+			check(body.contains(str(want[cid])),
+					"R570：%d %s 的下半文案缺特征「%s」（实际「%s」）"
+					% [cid, c.card_name, str(want[cid]), body])
+
+	# ⑨ 源码锁：六条动作各有唯一实现口，母卡与组合共用同一段
+	var gs := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(gs.find("func _buff_per_other_ally") >= 0 and gs.count("_buff_per_other_ally(") >= 3,
+			"R570 源码锁：每盟友成长只有 `_buff_per_other_ally` 一个实现口（猎犬 + 组合）")
+	check(gs.find("func _buff_by_surplus_energy") >= 0 and gs.count("_buff_by_surplus_energy(") >= 4,
+			"R570 源码锁：剩余费用成长只有 `_buff_by_surplus_energy` 一个实现口（地狱猫/鲜血堡垒 + 组合）")
+	check(gs.find("func _raise_hand_cost") >= 0 and gs.count("_raise_hand_cost(") >= 3,
+			"R570 源码锁：手卡涨价只有 `_raise_hand_cost` 一个实现口（契约 + 组合）")
+	check(gs.count("_fetch_skill_card(") >= 3,
+			"R570 源码锁：从卡组取技能牌只有 `_fetch_skill_card` 一个实现口（赤狐 + 组合）")
+	check(gs.count("_spawn_self_clone(") >= 3,
+			"R570 源码锁：自我复制只有 `_spawn_self_clone` 一个实现口（野兔 + 组合）")
+	check(gs.count("_night_erosion_heal(") >= 3,
+			"R570 源码锁：按剩余费用回血只有 `_night_erosion_heal` 一个实现口（夜蚀 + 组合）")
