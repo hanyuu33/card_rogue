@@ -227,9 +227,9 @@ func _init() -> void:
 			and meteor.needs_cell() and meteor.traits.has(FieldState.KEEP_HAND_TRAIT),
 			"陨石术：史诗 10 费技能，选格施放，带「留手」")
 	var legacy := repo.get_card(9078)
-	check(legacy.is_effect() and legacy.cost == 5 and legacy.rarity == 2
+	check(legacy.is_effect() and legacy.cost == 4 and legacy.rarity == 2
 			and not legacy.needs_target() and legacy.traits.has(GameEngine.LEGACY_TRAIT),
-			"传承记忆：**史诗 5 费**效果卡，无需选目标（R539 由 2 费普通上调；R528 由 0 费技能改来）")
+			"传承记忆：**史诗 4 费**效果卡，无需选目标（R563 由 5 费下调；R539 由 2 费普通上调；R528 由 0 费技能改来）")
 	var golem_spell := repo.get_card(9079)
 	check(golem_spell.is_spell() and golem_spell.cost == 4 and golem_spell.rarity == 1
 			and golem_spell.needs_cell() and golem_spell.traits.has(GameEngine.GOLEM_TRAIT),
@@ -32851,8 +32851,10 @@ func _init() -> void:
 			and r523_earth.move_speed == 1 and r523_earth.rarity == 2
 			and r523_earth.card_class == PlayerClass.DRUID
 			and r523_earth.traits.has("留手")
+			and r523_earth.traits.has(GameEngine.TAUNT_TRAIT)
+			and GameEngine.card_has_taunt(r523_earth)
 			and not r523_earth.traits.has("土元素"),
-			"R523 土元素 9235：8 费 5/15 程1 速1 史诗 森林精魄 + 留手（**不带**「土元素」trait；该 trait 随旧 9218 在 R536 删除）")
+			"R523 土元素 9235：8 费 5/15 程1 速1 史诗 森林精魄 + 留手 + **嘲讽**（R563 新增；**不带**「土元素」trait，该 trait 随旧 9218 在 R536 删除）")
 	check(r523_fire != null and r523_fire.cost == 2 and r523_fire.power == 4
 			and r523_fire.health == 6 and r523_fire.attack_range == 1
 			and r523_fire.move_speed == 1 and r523_fire.rarity == 1
@@ -32895,6 +32897,8 @@ func _init() -> void:
 	var r523_p: Placement = r523_e2.play_from_hand(0, Vector2i(3, 1))
 	check(r523_p != null and r523_p.card.id == 9235,
 			"R523 土元素：8 费正常上场")
+	check(r523_e2.unit_has_taunt(r523_p),
+			"R563 土元素：场上判定 `unit_has_taunt` 成立 —— 敌方必须优先攻击它")
 	check(r523_near.health <= 0 and r523_far.health == 5,
 			"R523 土元素：X=3 → 9 点，近卫 4 血吃满即死、溢出 5 点给远卫（远卫剩 %d）"
 			% r523_far.health)
@@ -33298,11 +33302,11 @@ func _init() -> void:
 	RunState.run_active = false
 
 	# ===== R539/R540：传承记忆改 5 费史诗 + 二层普通困难「巨炮防线」（激光巨炮 9241）=====
-	# ① 传承记忆：2 费普通 → 5 费史诗（rarity 0 → 2，其余字段不动）
+	# ① 传承记忆：2 费普通 → 5 费史诗（rarity 0 → 2，其余字段不动）；R563 再下调到 4 费
 	var r539_legacy := repo.get_card(9078)
-	check(r539_legacy.cost == 5 and r539_legacy.rarity == 2
+	check(r539_legacy.cost == 4 and r539_legacy.rarity == 2
 			and r539_legacy.is_effect() and not r539_legacy.needs_target(),
-			"R539 传承记忆：5 费 / 史诗（rarity 0 → 2），仍是无需选目标的效果卡")
+			"R539 传承记忆：史诗 / 无需选目标的效果卡，费用 5 → **4**（R563 下调）")
 
 	# ② 激光巨炮卡面：工事 5 / 400 / 程 0 / 速 0，带「激光炮」+「沉睡」（直接复用恶魔鸭那套）
 	var r539_laser := repo.get_card(9241)
