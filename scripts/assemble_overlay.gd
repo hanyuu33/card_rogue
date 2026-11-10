@@ -1,6 +1,6 @@
 class_name AssembleOverlay
 extends Control
-## R559 拼装 UI：使用「传授」等拼装效果后弹出的全屏拖拽拼装页。
+## R559 组合 UI：使用「传授」等组合效果后弹出的全屏拖拽组合页。
 ##
 ## 三栏（左→右，比例定位、宽屏自适应）：
 ##   左栏：6 张待选卡（2×3），拖拽源
@@ -106,14 +106,23 @@ func _slot_h() -> float:
 
 
 func _card_rect(k: int) -> Rect2:
-	var gap := size.x * 0.018
-	var cw := (size.x * LEFT_W - gap) / 2.0
-	var ch := cw * CARD_ASPECT
+	## ⚠️ R561：卡片上下各有数值徽章**故意探出卡框**（费用圆心压左上角、力/生在卡下沿），
+	## 行距必须 ≥ 两倍徽章半径，否则上一排的生命徽章会和下一排的费用徽章叠在一起。
+	## 同时顶部要给「待选卡 / 拖到中栏槽位…」两行说明留位，卡片不能再从 TITLE_H+40 开始压上去。
+	var gap := size.x * 0.026
+	var top := TITLE_H + 54.0
+	var avail := size.y - top - 12.0
+	var ch: float = (avail - gap * 2.0) / 3.0
+	var cw: float = ch / CARD_ASPECT
+	var max_w: float = (size.x * LEFT_W - gap) / 2.0
+	if cw > max_w:
+		cw = max_w
+		ch = cw * CARD_ASPECT
+	var total_w: float = cw * 2.0 + gap
+	var x0: float = size.x * LEFT_X + (size.x * LEFT_W - total_w) * 0.5
 	var col := k % 2
 	var row := int(k / 2)
-	var x := size.x * LEFT_X + col * (cw + gap)
-	var y := TITLE_H + 40.0 + row * (ch + gap)
-	return Rect2(x, y, cw, ch)
+	return Rect2(x0 + col * (cw + gap), top + row * (ch + gap), cw, ch)
 
 
 func _slot_center(slot: int) -> Vector2:
@@ -190,7 +199,7 @@ func _draw() -> void:
 	draw_rect(Rect2(0, 0, w, TITLE_H), Color(0.10, 0.09, 0.14, 0.92))
 	draw_rect(Rect2(0, TITLE_H - 2.0, w, 2.0), UiTheme.ACCENT_GOLD)
 	draw_string(_font_bold, Vector2(0, TITLE_H / 2.0 + UiTheme.FS_SUBHEAD * 0.35),
-			"拼装组合", HORIZONTAL_ALIGNMENT_CENTER, w,
+			"组合", HORIZONTAL_ALIGNMENT_CENTER, w,
 			UiTheme.FS_SUBHEAD, UiTheme.ACCENT_LIT)
 	# 左栏：待选卡（真卡）
 	draw_string(_font_bold, Vector2(size.x * LEFT_X, TITLE_H + 26.0), "待选卡",
@@ -298,7 +307,7 @@ func _draw_preview() -> void:
 			_draw_wrapped(body, txt, UiTheme.FS_CAPTION, UiTheme.INK_800)
 	# 取消 / 确认按钮（button_paper / button_forest 素材）
 	var cr := _cancel_rect()
-	UiTheme.draw_secondary_btn(self, cr, "取消拼装", false, false, false)
+	UiTheme.draw_secondary_btn(self, cr, "取消组合", false, false, false)
 	var ok := _confirm_rect()
 	var can := _all_filled()
 	UiTheme.draw_secondary_btn(self, ok, "确认组合", false, not can, true)

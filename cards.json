@@ -3645,28 +3645,6 @@
       "image": ""
     },
     {
-      "id": 8083,
-      "name": "拼装原型",
-      "kind": "盟友",
-      "cost": 3,
-      "power": 3,
-      "health": 4,
-      "attack_range": 1,
-      "move_speed": 1,
-      "rarity": 1,
-      "group": "player",
-      "class": "机械之心",
-      "traits": [
-        "机械",
-        "拼装"
-      ],
-      "assemble_pool": "default",
-      "effect_text": "拼装：打出时先从上半句池选一段（时机+效果），再从下半句池选一段（纯动作），拼成这张卡的效果；两段动作的结算顺序可调换。",
-      "target_mode": "none",
-      "color": "灰",
-      "image": ""
-    },
-    {
       "id": 8084,
       "name": "传授",
       "kind": "技能",
@@ -3718,49 +3696,6 @@
       "effect_text": "组合一张盟友/工事卡：从随机 6 张候选卡中拖 3 张，分别决定属性值、上半效果、下半效果；生成的卡带「组合」印记。",
       "target_mode": "none",
       "color": "蓝",
-      "image": ""
-    },
-    {
-      "id": 8087,
-      "name": "树灵雏形",
-      "kind": "盟友",
-      "cost": 3,
-      "power": 3,
-      "health": 4,
-      "attack_range": 1,
-      "move_speed": 1,
-      "rarity": 1,
-      "group": "player",
-      "class": "森林精魄",
-      "traits": [
-        "拼装"
-      ],
-      "assemble_pool": "default",
-      "effect_text": "拼装：打出时先从上半句池选一段（时机+效果），再从下半句池选一段（纯动作），拼成这张卡的效果；两段动作的结算顺序可调换。",
-      "target_mode": "none",
-      "color": "绿",
-      "image": ""
-    },
-    {
-      "id": 8088,
-      "name": "影偶",
-      "kind": "盟友",
-      "cost": 3,
-      "power": 3,
-      "health": 4,
-      "attack_range": 1,
-      "move_speed": 1,
-      "rarity": 1,
-      "group": "player",
-      "class": "暗影刺客",
-      "traits": [
-        "幽影",
-        "拼装"
-      ],
-      "assemble_pool": "default",
-      "effect_text": "拼装：打出时先从上半句池选一段（时机+效果），再从下半句池选一段（纯动作），拼成这张卡的效果；两段动作的结算顺序可调换。",
-      "target_mode": "none",
-      "color": "紫",
       "image": ""
     },
     {
@@ -6108,7 +6043,7 @@
         "场地生效·双"
       ],
       "affixes": [],
-      "effect_text": "场地效果（全场同时只存在一个标记）。处于这一格的敌人受到的伤害 +1；每个我方回合开始时该数值 +1。换一个格子放标记会把旧的顶掉、数值重置为 1；在同一格上再标一次不算换位，数值保持不变。",
+      "effect_text": "场地效果（全场同时只存在一个标记）。处于这一格的敌人受到的伤害 +1（固定，不随回合成长）。换一个格子放标记会把旧的顶掉；在同一格上再标一次不算换位，数值仍是 +1。",
       "target_mode": "none",
       "color": "紫",
       "image": ""

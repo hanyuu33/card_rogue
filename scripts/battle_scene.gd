@@ -709,7 +709,7 @@ var _relic_scroll := 0.0        # 道具浏览面板滚动量（道具太多时�
 var _hero_pick_idx := -1
 var _hero_pick_cell := Vector2i(-1, -1)   # 英雄要落到的空格
 var _pick: PickOverlay = null            # R189：全屏选卡页（8 套旧小面板的统一替换）
-var _assemble_overlay: AssembleOverlay = null   # R559：拖拽拼装页（传授 8084）
+var _assemble_overlay: AssembleOverlay = null   # R559：拖拽组合页（传授 8084）
 var _combodemo_fill := false                     # R559b 出图：预填三槽标记
 var _hover_card: CardData = null  # 鼠标悬停的卡（左侧信息栏优先显示）
 var _hover_pl: Placement = null   # 悬停的战场单位（可显示当前生命）
@@ -889,7 +889,7 @@ func _ready() -> void:
 	_pick.confirmed.connect(_on_pick_confirmed)
 	_pick.cancelled.connect(_on_pick_cancelled)
 	add_child(_pick)
-	# R559：拖拽拼装页（传授 8084）—— 盖在最上层，pending 时吃掉全部点击。
+	# R559：拖拽组合页（传授 8084）—— 盖在最上层，pending 时吃掉全部点击。
 	_assemble_overlay = AssembleOverlay.new()
 	_assemble_overlay.confirmed.connect(_on_assemble_combo_confirmed)
 	_assemble_overlay.cancelled.connect(_on_assemble_combo_cancelled)
@@ -1133,7 +1133,7 @@ func _ready() -> void:
 		RunState.pending_node = {"type": "battle"}
 		engine._finish("胜利", "演示：胜利结算面板")
 	if "--combodemo" in args and engine != null:
-		# R559 出图：拼装组合 UI（传授 8084 全屏拖拽三栏）。直接进组合 pending。
+		# R559 出图：组合组合 UI（传授 8084 全屏拖拽三栏）。直接进组合 pending。
 		# 出图：`battle.tscn -- --screenshot --combodemo --shotframe 60`
 		if not RunState.run_active:
 			seed(0x559)
@@ -5754,8 +5754,6 @@ func _recall_discard_index(idx: int) -> bool:
 # ── R189 全屏选卡页（PickOverlay）─────────────────────────────
 
 func _pick_active_kind() -> String:
-	if engine.assemble_pending:
-		return "assemble_" + engine.assemble_stage
 	## 当前活跃的选卡场景（"" = 无）。优先级同原小面板的拦截顺序。
 	if _hero_pick_idx >= 0:
 		return "hero"
@@ -5874,14 +5872,6 @@ func _recycle_options(skip: int) -> Array:
 
 
 func _build_pick_cfg(k: String) -> Dictionary:
-	if k.begins_with("assemble_"):
-		var cards := engine.assemble_choices()
-		var title := "选择上半句" if engine.assemble_stage == "upper" else "选择下半句"
-		if engine.assemble_stage == "order":
-			title = "选择结算顺序：左侧原顺序，右侧交换顺序"
-		return {"kind": k, "short": "拼装", "title": title, "note": "选择组件后预览完整效果；确认顺序后上场",
-			"cards": cards, "opts": range(cards.size()), "max_sel": 1,
-			"confirm_label": "确认选择", "cancel_label": "取消拼装"}
 	## 各场景的选卡页配置：cards 与 opts 平行（opts[i] = 网格第 i 张卡的业务下标；
 	## focus 例外：opts 存代表卡的 id，确认时按 id 在卡组找第一张）。
 	var disc_cards := func(i: int) -> CardData: return engine.state.discard[i]
@@ -6101,7 +6091,7 @@ func _sync_pick() -> void:
 	# ⚠️ 必须先放行：否则下一步 `_pick_active_kind()` 返回 "" 就会把它每帧关掉。
 	if _pick.is_view():
 		return
-	# R559 组合（传授 8084）：pending 出现 → 打开拖拽拼装页（独立于 PickOverlay）。
+	# R559 组合（传授 8084）：pending 出现 → 打开拖拽组合页（独立于 PickOverlay）。
 	if engine.assemble_combo_pending:
 		if not _assemble_overlay.visible:
 			_assemble_overlay.open(engine, engine.assemble_combo_cards())
@@ -6142,7 +6132,7 @@ func _sync_pick() -> void:
 
 
 func _on_assemble_combo_confirmed() -> void:
-	## 拖拽拼装页「确认组合」：引擎结算（组合卡加入手牌），关页。
+	## 拖拽组合页「确认组合」：引擎结算（组合卡加入手牌），关页。
 	if engine != null:
 		engine.assemble_combo_commit()
 	if _assemble_overlay != null:
@@ -6151,7 +6141,7 @@ func _on_assemble_combo_confirmed() -> void:
 
 
 func _on_assemble_combo_cancelled() -> void:
-	## 拖拽拼装页「取消」：引擎清 pending，关页。
+	## 拖拽组合页「取消」：引擎清 pending，关页。
 	if engine != null:
 		engine.assemble_combo_cancel()
 	if _assemble_overlay != null:
@@ -6186,12 +6176,6 @@ func _on_pick_confirmed(sel: Array) -> void:
 	if _pick == null or sel.is_empty():
 		return
 	var k := _pick.kind()
-	if k.begins_with("assemble_"):
-		engine.assemble_choose(int(sel[0]))
-		_pick.close()
-		_clear_selection()
-		_sync_pick()
-		return
 	var opts: Array = _pick.opts()
 	match k:
 		"hero":
@@ -6409,10 +6393,6 @@ func _on_pick_cancelled() -> void:
 	if _pick.kind() == "view_discard":
 		_pick.close()
 		queue_redraw()
-		return
-	if _pick.kind().begins_with("assemble_"):
-		engine.assemble_cancel()
-		_pick.close()
 		return
 	match _pick.kind():
 		"whale":
@@ -9295,7 +9275,8 @@ func _draw_field_markers() -> void:
 					rect.position + Vector2(0, off), Color(col.r, col.g, col.b, 0.30), 2.0)
 		draw_rect(rect, col, false, 2.0)
 		# 右下角小标签（场地名，缩到能塞进角里）
-		# R503：标记是「会涨的」场地 → 角标直接写当前加伤数值，别让玩家自己记
+		# R503/R562：标记角标直接写当前加伤数值 —— 现在固定 +1，但照旧读 `mark_bonus`
+		# （数值出口只有一个，将来若调档位/加变体，画法不用跟着改）。
 		var tag := card.card_name
 		if card.id == GameEngine.MARK_ID:
 			tag = "标记 +%d" % engine.state.mark_bonus

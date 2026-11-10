@@ -1,3 +1,28 @@
+## 2026-11-10 R561 拼装并入组合（删除独立入口）
+
+**口径（用户决定）**：「拼装」是炉石术语，本游戏只叫**组合**。组合不需要专门的承载体卡 ——
+三张候选里第①张就是承载体，身材（费用 / 攻血 / 射程）、卡名、卡图、稀有度全部沿用，
+差异只体现在产物带「组合」附魔印记；底层怎么实现不对外暴露。
+
+- **删卡 −3**：8083 拼装原型（机械之心）/ 8087 树灵雏形（森林精魄）/ 8088 影偶（暗影刺客）。
+  图鉴 313→310、玩家 238→235、奖励池 200→197（注入后 218→215）、
+  森林精魄 74→73、暗影刺客 65→64、机械之心 73→72。
+- **删机制**：`assemble_pools.json`（上半 10 + 下半 13 = 23 条半句）整体删除；引擎
+  `assemble_begin / assemble_choose / assemble_choices / assemble_cancel / register_assemble_pool /
+  load_assemble_pools / assemble_pools / assemble_pending / assemble_stage /
+  _assemble_base|cell|upper|lower|u|l` 全部删除；`play_from_hand` 的 `traits.has("拼装")` 拦截删除；
+  `CardData.assemble_pool` 字段删除；`battle_scene` 的三步选卡配置与确认/取消分支删除。
+- **保留**：组合三栏拖拽（`assemble_overlay.gd`）+ `AssembleRules`（valid_pool / build / fragment_text）
+  + 13 时机结算层（`_assemble_execute` / `_assemble_tick`）。`assemble` 字段 = 组合产出的效果记号。
+- **唯一入口**：传授类技能 8084 传授（森林精魄）/ 8085 影缚（暗影刺客）/ 8086 重构（机械之心），
+  由 `TEACH_IDS` 集合触发；产物带「组合」印记。
+- **文案**：组合页标题「组合」、取消按钮「取消组合」；战斗日志与守卫提示改为「请先完成组合」。
+- **测试**：`test_assemble.gd` 重写 —— 删三步选卡用例，保留 `build` + 13 时机 + 12 动作；
+  新增 `_test_retired_assemble()` 锁死「不许复活」（卡 id 不存在 / cards.json 无「拼装」字样 /
+  无 `assemble_pool` / 池文件不存在 / 引擎无入口 API）；组合断言新增「卡名·卡图（同 id）·稀有度沿用属性卡」
+  与「组合 pending 期间结束回合被挡」。
+- **回归**：assemble 0 / engine 5453 / reward 26 / bgm 39 / smoke 67-0 / mana PASS。
+
 ## 2026-11-09 R543 难度11「上锁」：信物系统 + 第三层解锁机制
 
 **口径（多轮澄清后锁定）**：任何难度都开放第三层；**只有难度 ≥11** 需要

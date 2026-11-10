@@ -1,4 +1,6 @@
 extends SceneTree
+## R561：本套件只测「组合」——`assemble` 字段是组合产出的效果记号，结算层（13 时机 / 12 动作）
+## 与 `AssembleRules.build` 都在；「拼装」作为独立入口（半句池 + 三步选卡 + 主体卡）已整体下线。
 const Rules = preload("res://scripts/assemble_rules.gd")
 var failures := 0
 func check(ok: bool, message: String) -> void:
@@ -7,13 +9,11 @@ func check(ok: bool, message: String) -> void:
 		printerr(message)
 func _init() -> void:
 	var base := CardData.new()
-	base.card_name = "测试拼装体"
+	base.card_name = "测试组合体"
 	base.kind = "盟友"
 	base.health = 10
 	base.power = 2
 	base.cost = 0
-	base.traits.append("拼装")
-	base.assemble_pool = "test"
 	var upper := [{"trigger":"use", "effects":[{"type":"draw", "value":1}]}, {"trigger":"death", "effects":[{"type":"damage", "value":2}]}, {"trigger":"upgraded", "effects":[{"type":"buff", "value":1}]}]
 	var lower := [{"effects":[{"type":"damage", "value":3}]}, {"effects":[{"type":"draw", "value":2}]}, {"effects":[{"type":"taunt"}]}]
 	for u in upper:
@@ -25,19 +25,19 @@ func _init() -> void:
 				var copy := CardData.from_dict(card.to_dict())
 				copy.assemble.effects[0].type = "shield"
 				check(card.assemble.effects[0].type != "shield", "deep copy")
+	# 组合结果卡 = 属性卡副本 + 上下半效果（卡名 / 卡图 / 身材 / 稀有度全沿用属性卡）
+	var built := Rules.build(base, upper[2], lower[2])
+	check(built != null and built.assemble.trigger == "upgraded", "build upgraded/taunt")
+	check(built.card_name == base.card_name and built.health == base.health
+			and built.power == base.power and built.cost == base.cost, "result keeps attr card shell")
 	var state := FieldState.new([], 20, 20, -1, "测试", false)
 	var eng := GameEngine.new(state)
 	eng.ai_enabled = false
-	check(eng.register_assemble_pool("test", upper, lower), "register")
-	check(not eng.register_assemble_pool("bad", [{"trigger":"kill"}], lower), "unsupported trigger")
-	state.hand.append(base)
-	check(eng.assemble_begin(0, Vector2i(4, 1)), "begin")
-	check(state.hand[0] == base, "no mutation while picking")
-	check(eng.assemble_choose(2) and eng.assemble_choose(2), "pick fragments")
-	check(eng.assemble_choices().size() == 2, "two order previews")
-	check(eng.assemble_choose(0), "commit")
+	state.hand.append(built)
+	var used_card := eng.play_from_hand(0, Vector2i(4, 1))
+	check(used_card != null, "unit placed")
 	var p: Placement = state.unit_at(Vector2i(4, 1))
-	check(p != null, "unit placed")
+	check(p != null, "unit at cell")
 	if p != null:
 		eng._on_unit_upgraded(p)
 		check(p.upgrade_atk == 1 and p.health == 11 and p.card.affixes.has("嘲讽"), "upgrade dispatch")
@@ -66,19 +66,12 @@ func _init() -> void:
 	state.hand.append(second)
 	var used := eng.play_from_hand(state.hand.find(second), Vector2i(5, 0))
 	check(used != null and used.first_hit_shield, "actual use hook")
-	state.hand.append(base)
-	check(eng.assemble_begin(state.hand.find(base), Vector2i(5, 2)), "begin second selection")
-	var turn := eng.current_side
-	eng.end_turn()
-	check(eng.current_side == turn, "pending blocks turn")
-	eng.assemble_cancel()
-	check(state.hand.has(base) and base.assemble.is_empty(), "cancel preserves source")
 	_test_extended_triggers()
 	_test_source_locks()
 	_test_new_actions()
-	_test_formal_pool()
+	_test_retired_assemble()
 	_test_combo()
-	print("Assembly tests failures: ", failures)
+	print("Combination tests failures: ", failures)
 	quit(failures)
 
 func _probe_unit(eng: GameEngine, trigger: String, cell := Vector2i(3, 0), side := "self") -> Placement:
@@ -233,29 +226,29 @@ func _test_new_actions() -> void:
 	e7._assemble_execute(p7, Vector2i(3, 0), "use")
 	check(st_foe.stun_left > 0, "stun nearest")
 
-func _test_formal_pool() -> void:
-	# 正式池 assemble_pools.json 能被引擎加载，主体卡 8083 端到端走通拼装
-	var eng := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
-	eng.ai_enabled = false
-	check(eng.load_assemble_pools("res://assemble_pools.json"), "formal pool loads")
-	check(eng.assemble_pools.has("default"), "default pool registered")
+func _test_retired_assemble() -> void:
+	# R561：用户口径「拼装是炉石术语，本游戏叫组合」——拼装作为独立入口整套下线：
+	# 三张主体卡（8083 拼装原型 / 8087 树灵雏形 / 8088 影偶）+ 半句池 + 三步选卡 API 全删，
+	# 只留组合（真卡三选）+ 结算层。这里锁死「不许复活」。
 	var repo := CardRepo.load_json()
-	var base := repo.get_card(8083)
-	check(base != null and base.traits.has("拼装") and base.assemble_pool == "default", "formal card 8083")
-	if base == null:
-		return
-	var card := CardData.from_dict(base.to_dict())
-	eng.state.hand.append(card)
-	eng.state.energy = 10
-	check(eng.assemble_begin(0, Vector2i(4, 1)), "formal begin")
-	check(eng.assemble_choose(0) and eng.assemble_choose(0), "formal pick upper+lower")
-	check(eng.assemble_choices().size() == 2, "formal order previews")
-	check(eng.assemble_choose(0), "formal commit")
-	var placed: Placement = eng.state.unit_at(Vector2i(4, 1))
-	check(placed != null and not placed.card.assemble.is_empty(), "formal placed with assembly")
+	for id in [8083, 8087, 8088]:
+		check(repo.get_card(id) == null, "R561：拼装主体卡 %d 已移除" % id)
+	var raw := FileAccess.get_file_as_string("res://cards.json")
+	check(not raw.contains("拼装"), "R561：cards.json 不含「拼装」字样")
+	check(not raw.contains("assemble_pool"), "R561：cards.json 不含 assemble_pool 字段")
+	check(not FileAccess.file_exists("res://assemble_pools.json"), "R561：半句池文件已删除")
+	var src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	for api in ["func assemble_begin", "func assemble_choose", "func assemble_choices",
+			"func assemble_cancel", "func load_assemble_pools", "func register_assemble_pool"]:
+		check(not src.contains(api), "R561：引擎已无 " + api)
+	check(not src.contains("assemble_pending") and not src.contains("assemble_pools"),
+			"R561：引擎已无拼装 pending / 池状态")
+	check(src.contains("assemble_combo_commit") and src.contains("_assemble_execute"),
+			"R561：组合入口与结算层保留")
+	check(CardData.AFFIX_DEFS.has("组合"), "R561：「组合」印记仍在")
 
 func _test_combo() -> void:
-	# R559 组合（传授 8084）：从全角色盟友卡池抽 6 张，拖 3 张分别定属性/上半/下半，结果带「组合」印记。
+	# R559/R561 组合：从全角色盟友·工事卡池抽 6 张，拖 3 张分别定属性/上半/下半，结果带「组合」印记。
 	var repo := CardRepo.load_json()
 	var teach: CardData = repo.get_card(8084)
 	check(teach != null and teach.kind == "技能" and teach.card_class == "森林精魄"
@@ -285,9 +278,13 @@ func _test_combo() -> void:
 	# 触发传授
 	eng.state.energy = 10
 	var ret := eng._teach_spell(GameEngine.SIDE_SELF)
-	check(eng.assemble_combo_pending and ret == "进入拼装", "R559 传授：进入拼装 pending")
+	check(eng.assemble_combo_pending and ret == "进入组合", "R559 传授：进入组合 pending")
 	var six: Array = eng.assemble_combo_cards()
 	check(six.size() == 6, "R559 传授：抽 6 张待选（实际 %d）" % six.size())
+	# R561：组合 pending 期间推进回合被挡（守卫 _assemble_busy）
+	var turn := eng.current_side
+	eng.end_turn()
+	check(eng.current_side == turn, "R561 组合：pending 期间结束回合被挡")
 	# 三槽未满时无预览
 	check(eng.assemble_combo_preview() == null, "R559 组合：三槽未满无预览")
 	# 填三槽
@@ -302,6 +299,10 @@ func _test_combo() -> void:
 		check(result.power == attr_card.power and result.health == attr_card.health
 				and result.cost == attr_card.cost,
 				"R559 组合：属性值取自属性卡（%d/%d/%d 费）" % [result.power, result.health, result.cost])
+		# R561 口径：第一张卡就是承载体 —— 卡名 / 卡图（按 id 取图）/ 稀有度全沿用，只加「组合」印记
+		check(result.id == attr_card.id and result.card_name == attr_card.card_name
+				and result.rarity == attr_card.rarity,
+				"R561 组合：卡名/卡图（同 id）/稀有度沿用属性卡")
 		check(not result.assemble.is_empty(), "R559 组合：结果带 assemble 效果")
 	# commit
 	var before: int = eng.state.hand.size()
@@ -310,10 +311,10 @@ func _test_combo() -> void:
 			"R559 组合：commit 后手牌 +1 且 pending 清空")
 	# 再触发一次 → cancel
 	eng._teach_spell(GameEngine.SIDE_SELF)
-	check(eng.assemble_combo_pending, "R559 组合：再次进入拼装")
+	check(eng.assemble_combo_pending, "R559 组合：再次进入组合")
 	eng.assemble_combo_cancel()
 	check(not eng.assemble_combo_pending, "R559 组合：cancel 清空 pending")
-	# R560：新增传授卡 8085 影缚（暗影刺客）/ 8086 重构（机械之心），走 TEACH_IDS 集合触发
+	# R560：传授卡 8085 影缚（暗影刺客）/ 8086 重构（机械之心），走 TEACH_IDS 集合触发
 	var teach2: CardData = repo.get_card(8085)
 	var teach3: CardData = repo.get_card(8086)
 	check(teach2 != null and teach2.card_class == "暗影刺客" and teach2.kind == "技能" and teach2.cost == 1,
@@ -322,15 +323,6 @@ func _test_combo() -> void:
 			"R560 传授：8086 重构是机械之心 1 费技能")
 	check(GameEngine.TEACH_IDS.has(8084) and GameEngine.TEACH_IDS.has(8085) and GameEngine.TEACH_IDS.has(8086),
 			"R560 传授：TEACH_IDS 集合含 8084/8085/8086")
-	# R560：新增拼装主体卡 8087 树灵雏形（森林精魄）/ 8088 影偶（暗影刺客），traits 含「拼装」+ assemble_pool
-	var proto2: CardData = repo.get_card(8087)
-	var proto3: CardData = repo.get_card(8088)
-	check(proto2 != null and proto2.card_class == "森林精魄" and proto2.kind == "盟友"
-			and proto2.traits.has("拼装") and proto2.assemble_pool == "default",
-			"R560 拼装：8087 树灵雏形是森林精魄拼装主体")
-	check(proto3 != null and proto3.card_class == "暗影刺客" and proto3.kind == "盟友"
-			and proto3.traits.has("拼装") and proto3.assemble_pool == "default",
-			"R560 拼装：8088 影偶是暗影刺客拼装主体")
 	# 源码锁：传授入口 / 组合结算 / 守卫挂接
 	var src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 	check(src.count("TEACH_IDS") >= 1 and src.count("_teach_spell") >= 2

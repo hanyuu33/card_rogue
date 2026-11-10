@@ -1052,7 +1052,7 @@ const BOUNCE_KNIFE_BOUNCES:= 2
 # 预判（9097 技能）：0 费史诗；二选一：①弃牌区选一张 0 费技能卡（之后本卡消失）
 # ②卡组随机非 0 费技能卡入手。面板走 foresight_* 状态机。
 const FORESIGHT_ID:= 9097
-# R559 传授（8084/8085/8086）：从全角色卡池组合一张盟友/工事卡（拖拽拼装 UI）。
+# R559 传授（8084/8085/8086）：从全角色卡池组合一张盟友/工事卡（拖拽组合 UI）。
 const TEACH_IDS: Array[int] = [8084, 8085, 8086]
 # 拒绝命运（9098 技能）：2 费史诗；弃掉**全部**手卡 → 从弃牌区把**所有 0 费 / 1 费卡**
 #   按弃牌区顺序加回手卡（不超过手牌上限）→ 本卡消失（带「次元」）。
@@ -1601,13 +1601,13 @@ const INSTINCT_MAX_COST:= 1
 const SLAY_ID:= 9205     # 猎杀：3 费史诗技能 · 次元；击杀后伤害本局永久 +4
 
 # ---- R503（2026-11-06）标记（9224）+ 五张围绕它的卡 ----
-# 用户口径：「标记：0 费场地。处于此位置的敌人受到伤害 +1，此效果每回合 +1，
-#   直到此场地移动后重置（标记场地唯一，同时只能存在一个）」。
+# 用户口径（R562 定稿）：「标记：0 费场地。处于此位置的敌人受到伤害 **固定 +1**，
+#   **不再按回合成长**」——R503 原设计那档「每回合 +1」已整条删除，**所有**标记来源
+#   （手牌 / 死亡预告 / 恐惧投射 / 致命自动标 / 死亡预告与恐惧投射的自动落标）一视同仁。
 # 落地：存在性 / 数值的唯一口都在 FieldState（`mark_cell()` / `mark_bonus`），
 #   写入只走 `_place_mark()`，加伤挂在 `_unit_damage_taken()` 与只读镜像 `preview_hit_damage()`。
 const MARK_ID:= 9224
-const MARK_BASE_BONUS:= 1     # 刚落下的标记：此格上的敌人受到伤害 +1
-const MARK_GROWTH:= 1         # 每个**我方**回合开始 +1（敌方回合不长，玩家感觉不到差别）
+const MARK_BASE_BONUS:= 1     # 标记唯一的一档：此格上的敌人受到伤害 +1（不再成长）
 const DEATH_OMEN_ID:= 9225    # 死亡预告：1 费普通技能 · 标记目标所在格 + 6 伤
 const DEATH_OMEN_DMG:= 6
 const FATAL_ID:= 9226         # 致命：3 费**史诗效果** · 被标记的敌人受到额外 50% 伤害
@@ -2015,7 +2015,6 @@ const FUNERAL_DRAW:= 1            # 每破坏 1 个单位抽几张
 
 func _init(state_: FieldState) -> void :
 	state = state_
-	load_assemble_pools()
 
 
 static func manhattan(a: Vector2i, b: Vector2i) -> int:
@@ -2405,7 +2404,7 @@ func _begin_turn(side: String) -> void :
 		_action_growth_tick(SIDE_SELF)   # R161：先推进成长计数，再刷新 acts_left
 		_haste_pick_tick(SIDE_SELF)      # R479 哈气：第 3/5/7 回合挑一个单位永久双动（必须在 reset 之前）
 		state.reset_units(SIDE_SELF)
-		_mark_tick(SIDE_SELF)   # R503 标记：每个我方回合 +1
+		_mark_clamp(SIDE_SELF)   # R562 标记：不再按回合成长，只把旧档残留的数值钳回 +1
 		state.harvest_hits = 0   # R505 恐惧收割：计数只活在「一个回合内」
 		_arm_debuffs(SIDE_SELF)
 		# ── ① 回合开始的**成长**先结算 ──
@@ -5181,9 +5180,6 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	if _assemble_busy() or hand_index < 0 or hand_index >= state.hand.size():
 		return null
 	var card:= state.hand[hand_index]
-	if card.traits.has("拼装") and card.assemble.is_empty():
-		assemble_begin(hand_index, cell)
-		return null
 	# R317 身法（9173）：引擎侧兜底 —— `can_use_card` 管 UI，这里管「绕过去」的路径
 	#（联机回放 / 自动出牌 / 以后新加的效果）。放在 `_pay` 之前：拒绝不扣费。
 	if card.unplayable:
@@ -8050,7 +8046,7 @@ func _spell_card_gone(card: CardData, log_text := "") -> bool:
 
 func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 	if _assemble_busy():
-		return "请先完成拼装"
+		return "请先完成组合"
 	# R373：不能打出的诅咒（麻痹 9185）—— 引擎侧兜底（UI 走 `can_use_card` 置灰）。
 	if hand_index >= 0 and hand_index < state.hand.size() \
 			and state.hand[hand_index] != null and state.hand[hand_index].unplayable:
@@ -8183,7 +8179,7 @@ func _instinct_panel_open() -> bool:
 	## 本能 9176（R332）：结算中间出现「等玩家选」的面板就得收手 ——
 	## 继续「随机打出」会把面板依赖的下标/候选弄失效（与 use_spell 开头那四个守卫同源，
 	## 这里把弃牌区/卡组/手牌/合并等其余 pending 也一并算上）。
-	return assemble_combo_pending or assemble_pending or overhaul_pending or creation_pending or cannonize_pending or surprise_pending \
+	return assemble_combo_pending or overhaul_pending or creation_pending or cannonize_pending or surprise_pending \
 		or paint_pending \
 		or focus_pending or wish_pending or shadow_step_pending or revive_pending \
 		or merge_pending or crow_pending or whale_pending or endless_pending \
@@ -8251,7 +8247,7 @@ func _instinct_cast(side: String) -> String:
 
 func use_effect(hand_index: int) -> String:
 	if _assemble_busy():
-		return "请先完成拼装"
+		return "请先完成组合"
 
 
 
@@ -14919,18 +14915,21 @@ func activate(cell: Vector2i, side:= SIDE_SELF) -> bool:
 # ══════════════════════════════════════════════════════════════════════════
 #  R503：标记（9224）—— 暗影刺客的伤害增幅场地
 # ══════════════════════════════════════════════════════════════════════════
-# 用户口径：0 费场地，**全场同时只存在一个**；此格上的敌人**受到伤害 +1**，
-#   该数值**每回合 +1**，**换格子后重置**；「致命」把它**改为** +50%。
+# 用户口径（R562 定稿）：0 费场地，**全场同时只存在一个**；此格上的敌人**受到伤害 +1**，
+#   该数值**固定、不随回合成长**（R503 那档「每回合 +1」已删）；**换格子后仍是 1**；
+#   「致命」把它**改为** +50%。
 # 三条实现决定：
 #   ① 存在性只认 `FieldState.mark_cell()`（扫 field_effects 找 9224），不另存坐标表；
 #   ② 数值存在 `FieldState.mark_bonus`，写入只走 `_place_mark()`（先摘旧、再放新）；
+#      它现在恒等于 `MARK_BASE_BONUS`，保留变量只为「旧存档兼容 + 数值单一出口」，
+#      所以别指望它再涨 —— 想改档位就改 `MARK_BASE_BONUS`。
 #   ③ 加伤挂在 `_unit_damage_taken()`（受击唯一口）+ `preview_hit_damage()`（只读镜像），
 #      于是普攻 / 技能 / 多格 / 亡语 / 反伤全都吃，拖牌预览与实打永远一致。
 
 func _place_mark(cell: Vector2i, side: String, why := "") -> void :
-	## 标记的**唯一写入口**（R503）。
+	## 标记的**唯一写入口**（R503 / R562）。
 	##   * **同一格**再标一次 → **不刷新**（用户口径）：数值原样保留，场地也不摘掉重放，直接返回；
-	##   * **换格子**（含从无到有） → 先摘旧格的、再放新的，数值回到 MARK_BASE_BONUS。
+	##   * **换格子**（含从无到有） → 先摘旧格的、再放新的，数值回到 MARK_BASE_BONUS（唯一那一档）。
 	## ⚠️ 别在别处直接 `state.set_field(标记卡)`：那样数值不会重置、也不会摘掉旧标记。
 	var tag := why if why != "" else "标记"
 	var old_cell := state.mark_cell()
@@ -14970,16 +14969,18 @@ func _is_marked_enemy(p: Placement) -> bool:
 	return p.owner != owner_side
 
 
-func _mark_tick(side: String) -> void :
-	## 标记的**成长唯一口**（R503）：每个**我方**回合开始时 +MARK_GROWTH。
-	## 只涨不消 —— 直到标记被顶掉 / 换了格子才重置（`_place_mark` 负责重置）。
+func _mark_clamp(side: String) -> void :
+	## 标记数值的**归一口**（R562，取代 R503 的 `_mark_tick` 成长）。
+	## 口径变化：标记**不再按回合增长** —— 全场只有最初那一档 +`MARK_BASE_BONUS`。
+	## 这个每回合的调用只为一件事：**旧存档**里残留的 >1 数值（成长时代存下的）
+	## 在下一个我方回合被钳回 +1；否则读档后还会继续吃旧档那份高加伤。
 	if side != SIDE_SELF or not state.has_mark():
 		return
-	var before := state.mark_bonus
-	state.mark_bonus += MARK_GROWTH
-	_log("标记：数值 %d → %d（此格上的敌人受到伤害 +%d）" % [
-		before, state.mark_bonus, state.mark_bonus])
-	action.emit("mark_growth", {"cell": state.mark_cell(), "bonus": state.mark_bonus})
+	if state.mark_bonus == MARK_BASE_BONUS:
+		return
+	_log("标记：数值 %d → %d（不再按回合成长，回到最初那一档）" % [
+		state.mark_bonus, MARK_BASE_BONUS])
+	state.mark_bonus = MARK_BASE_BONUS
 
 
 func _fear_incarnate_tick(p: Placement, dmg: int) -> void :
@@ -17618,95 +17619,12 @@ func apply_battle(d: Dictionary) -> bool:
 
 # Structured assembly. Pool contents are supplied by future cards, not hardcoded IDs.
 const AssembleRules = preload("res://scripts/assemble_rules.gd")
-var assemble_pools: Dictionary = {}
 var _assemble_active: Dictionary = {}
-var assemble_pending := false
-var assemble_stage := "upper"
-var assemble_combo_pending := false   # R559 组合（传授 8084）：等玩家拖 3 张卡拼装
+var assemble_combo_pending := false   # R559 组合（传授 8084）：等玩家拖 3 张卡组合
 var _combo_cards: Array = []
 var _combo_attr := -1
 var _combo_upper := -1
 var _combo_lower := -1
-var _assemble_base: CardData
-var _assemble_cell := Vector2i(-1, -1)
-var _assemble_upper: Array = []
-var _assemble_lower: Array = []
-var _assemble_u := -1
-var _assemble_l := -1
-
-func register_assemble_pool(id: String, upper: Array, lower: Array) -> bool:
-	if not AssembleRules.valid_pool(upper, lower):
-		_log("拼装：无效的半句池 " + id)
-		return false
-	assemble_pools[id] = {"upper": upper.duplicate(true), "lower": lower.duplicate(true)}
-	return true
-
-func assemble_begin(index: int, cell: Vector2i) -> bool:
-	if assemble_pending or over or current_side != SIDE_SELF or index < 0 or index >= state.hand.size():
-		return false
-	var card: CardData = state.hand[index]
-	if not card_may_enter_board(card) or not can_use_card(card) or not hand_place_allowed(cell, SIDE_SELF):
-		return false
-	if not assemble_pools.has(card.assemble_pool):
-		_log("拼装：尚未配置池 " + card.assemble_pool)
-		return false
-	var pool: Dictionary = assemble_pools[card.assemble_pool]
-	_assemble_upper = pool.upper.duplicate(true)
-	_assemble_lower = pool.lower.duplicate(true)
-	_assemble_base = card
-	_assemble_cell = cell
-	_assemble_u = -1
-	_assemble_l = -1
-	assemble_stage = "upper"
-	assemble_pending = true
-	return true
-
-func assemble_cancel() -> void:
-	assemble_pending = false
-	_assemble_base = null
-	_assemble_upper.clear()
-	_assemble_lower.clear()
-
-func assemble_choices() -> Array:
-	if not assemble_pending:
-		return []
-	if assemble_stage == "order":
-		return [AssembleRules.build(_assemble_base, _assemble_upper[_assemble_u], _assemble_lower[_assemble_l], false),
-			AssembleRules.build(_assemble_base, _assemble_upper[_assemble_u], _assemble_lower[_assemble_l], true)]
-	var choices: Array = []
-	var fragments: Array = _assemble_upper if assemble_stage == "upper" else _assemble_lower
-	for fragment in fragments:
-		var card := CardData.from_dict(_assemble_base.to_dict())
-		card.card_name = str(fragment.get("name", "拼装组件"))
-		card.effect_text = AssembleRules.fragment_text(fragment)
-		choices.append(card)
-	return choices
-
-func assemble_choose(index: int) -> bool:
-	if not assemble_pending or index < 0 or index >= assemble_choices().size():
-		return false
-	if assemble_stage == "upper":
-		_assemble_u = index
-		assemble_stage = "lower"
-		return true
-	if assemble_stage == "lower":
-		_assemble_l = index
-		assemble_stage = "order"
-		return true
-	var result: CardData = assemble_choices()[index]
-	var hand_index := state.hand.find(_assemble_base)
-	var original := _assemble_base
-	var cell := _assemble_cell
-	assemble_cancel()
-	if hand_index < 0:
-		return false
-	state.hand[hand_index] = result
-	var placed := play_from_hand(hand_index, cell)
-	if placed == null:
-		state.hand[hand_index] = original
-		return false
-	return true
-
 func _note_unit_entered(p: Placement, _how: String) -> void:
 	if p != null:
 		_assemble_execute(p, _cell_of(p), "enter")
@@ -17722,18 +17640,18 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 		return
 	var key := str(p.card.assemble.get("trigger", ""))
 	if key not in AssembleRules.TRIGGERS:
-		_log("拼装：未支持的时机 " + key)
+		_log("组合：未支持的时机 " + key)
 		return
 	if key != trigger:
 		return
 	var execution_key := str(p.get_instance_id()) + ":" + trigger
 	if _assemble_active.has(execution_key):
-		_log("拼装：跳过同一结算链中的重复触发 " + trigger)
+		_log("组合：跳过同一结算链中的重复触发 " + trigger)
 		return
 	_assemble_active[execution_key] = true
 	for fx in p.card.assemble.get("effects", []).duplicate(true):
 		if not AssembleRules.valid_effect(fx):
-			_log("拼装：无效动作 " + str(fx))
+			_log("组合：无效动作 " + str(fx))
 			continue
 		var value := int(fx.get("value", 0))
 		match str(fx.type):
@@ -17777,15 +17695,15 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 			"freeze":
 				var fr_cell := _assemble_nearest_enemy_cell(p, cell)
 				if fr_cell != Vector2i(-1, -1):
-					_apply_frozen(state.board[fr_cell], "拼装")
+					_apply_frozen(state.board[fr_cell], "组合")
 			"stun":
 				var st_cell := _assemble_nearest_enemy_cell(p, cell)
 				if st_cell != Vector2i(-1, -1):
-					_apply_stun(state.board[st_cell], "拼装")
+					_apply_stun(state.board[st_cell], "组合")
 			"damage":
 				var targets: Array[Vector2i] = _assemble_enemy_cells(p)
 				if targets.is_empty():
-					_log("拼装：没有敌方目标")
+					_log("组合：没有敌方目标")
 					continue
 				match str(fx.get("target", "nearest")):
 					"nearest":
@@ -17794,7 +17712,7 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 						targets = [targets[rng.randi_range(0, targets.size() - 1)]]
 				for target in targets:
 					if state.board.has(target):
-						_hit_unit(state.board[target], value, "拼装")
+						_hit_unit(state.board[target], value, "组合")
 
 	_assemble_active.erase(execution_key)
 
@@ -17808,32 +17726,14 @@ func _assemble_enemy_cells(p: Placement) -> Array[Vector2i]:
 func _assemble_nearest_enemy_cell(p: Placement, cell: Vector2i) -> Vector2i:
 	var cells := _assemble_enemy_cells(p)
 	if cells.is_empty():
-		_log("拼装：没有敌方目标")
+		_log("组合：没有敌方目标")
 		return Vector2i(-1, -1)
 	return _pick_nearest(cell, cells)
 
-func load_assemble_pools(path: String = "res://assemble_pools.json") -> bool:
-	if not FileAccess.file_exists(path):
-		return false
-	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not data is Dictionary:
-		_log("拼装：池文件格式错误")
-		return false
-	for id in data:
-		var pool: Variant = data[id]
-		if not pool is Dictionary or not pool.get("upper") is Array or not pool.get("lower") is Array:
-			return false
-		if not AssembleRules.valid_pool(pool.upper, pool.lower):
-			return false
-	for id in data:
-		register_assemble_pool(str(id), data[id].upper, data[id].lower)
-	return true
-
-
-# ── R559 组合（传授 8084）：从全角色卡池拖 3 张卡拼装一张盟友卡 ──
+# ── R559 组合（传授 8084）：从全角色卡池拖 3 张卡组合一张盟友卡 ──
 
 func _assemble_busy() -> bool:
-	return assemble_pending or assemble_combo_pending
+	return assemble_combo_pending
 
 func _combo_candidate_cards() -> Array:
 	## 可组合候选：全角色卡池里同时带 upper_effect + lower_effect 的盟友/工事卡。
@@ -17858,16 +17758,16 @@ func _teach_spell(side: String) -> String:
 		return "（传授：敌方 AI 不使用这张卡）"
 	var pool := _combo_candidate_cards()
 	if pool.size() < 3:
-		_log("传授：可组合的盟友卡不足（%d 张）" % pool.size())
-		return "（传授：可组合的盟友卡不足）"
+		_log("传授：可组合的盟友/工事卡不足（%d 张）" % pool.size())
+		return "（传授：可组合的盟友/工事卡不足）"
 	_combo_cards = _pick_random_cards(pool, 6)
 	_combo_attr = -1
 	_combo_upper = -1
 	_combo_lower = -1
 	assemble_combo_pending = true
-	_log("传授：进入拼装，从 %d 张盟友卡中拖 3 个组件" % _combo_cards.size())
+	_log("传授：进入组合，从 %d 张盟友/工事卡中拖 3 张" % _combo_cards.size())
 	action.emit("assemble_combo", {})
-	return "进入拼装"
+	return "进入组合"
 
 func assemble_combo_cards() -> Array:
 	return _combo_cards
@@ -17899,7 +17799,7 @@ func _assemble_combo_build() -> CardData:
 	return result
 
 func assemble_combo_commit() -> bool:
-	## 确认拼装：组合卡加入手牌，清掉 pending。手牌满则落空。
+	## 确认组合：组合卡加入手牌，清掉 pending。手牌满则落空。
 	if not assemble_combo_pending:
 		return false
 	var result := assemble_combo_preview()
