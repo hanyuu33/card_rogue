@@ -664,8 +664,8 @@ const KNIGHT_SWORD_SPELL:= 2
 const THREE_BOTS_RELIC_ID:= 6060
 const THREE_BOTS_NEED:= 3
 const FOREST_GUARD_ID:= 9037
-const LION_ID:= 9038
-const LION_ATK_BUFF:= 2
+const TIGER_ID:= 9038
+const TIGER_ATK_BUFF:= 2
 const CROW_ID:= 9039
 const CROW_TRAIT:= "鸦"
 const HOUND_ID:= 9040
@@ -4256,7 +4256,7 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 	if side == SIDE_SELF:
 		c -= state.self_cost_reduction
 		c -= _coord_discount(card)
-		c -= _lion_discount(card)
+		c -= _tiger_discount(card)
 		c -= _dove_discount(card)
 		c -= _arcane_charm_discount(card)
 		c -= _demon_discount(card)
@@ -4639,8 +4639,8 @@ func _ally_count(side: String) -> int:
 	return n
 
 
-func _lion_discount(card: CardData) -> int:
-	if card.id != LION_ID:
+func _tiger_discount(card: CardData) -> int:
+	if card.id != TIGER_ID:
 		return 0
 	var n:= 0
 	for c: CardData in state.discard:
@@ -5342,8 +5342,8 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	# 涂装机器人 8080「变成」出来的单位也要吃，否则同一张盟友卡两条来路两种力量。
 	_relic_on_enter_buffs(p)
 
-	if card.id == LION_ID:
-		_lion_roar(p)
+	if card.id == TIGER_ID:
+		_tiger_roar(p)
 
 	if card.id == HOUND_ID:
 		_hound_snapshot(p)
@@ -11803,13 +11803,13 @@ func _beast_hp_bonus(card: CardData) -> int:
 	return 0
 
 
-func _lion_roar(lion: Placement) -> void :
+func _tiger_roar(tiger: Placement) -> void :
 	var n:= 0
 	for p: Placement in state.board.values():
-		if p.owner == SIDE_SELF and p.card.kind == "盟友" and p != lion:
-			p.atk_buff += LION_ATK_BUFF
+		if p.owner == SIDE_SELF and p.card.kind == "盟友" and p != tiger:
+			p.atk_buff += TIGER_ATK_BUFF
 			n += 1
-	_log("狮子：%d 个盟友攻击 +%d（不含狮子自己）" % [n, LION_ATK_BUFF])
+	_log("老虎：%d 个盟友攻击 +%d（不含老虎自己）" % [n, TIGER_ATK_BUFF])
 
 
 func _hound_snapshot(hound: Placement) -> void :

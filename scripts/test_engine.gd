@@ -1086,55 +1086,55 @@ func _init() -> void:
 	var guard_dup := eng_guard.use_spell(0, Vector2i(4, 1))
 	check(guard_dup.contains("不可重复获得"), "森林守护：同一单位重复施放被拒绝（%s）" % guard_dup)
 
-	# ---- 狮子（9038，2026-09-30 新增） ----
-	var lion := repo.get_card(9038)
-	check(lion.kind == "盟友" and lion.cost == 4 and lion.power == 6
-				and lion.health == 16 and lion.rarity == 2
-				and lion.attack_range == 1 and lion.move_speed == 1,
-			"狮子：史诗 4 费 6/16 程1 速1")
+	# ---- 老虎（9038，2026-09-30 新增） ----
+	var tiger := repo.get_card(9038)
+	check(tiger.kind == "盟友" and tiger.cost == 4 and tiger.power == 6
+				and tiger.health == 16 and tiger.rarity == 2
+				and tiger.attack_range == 1 and tiger.move_speed == 1,
+			"老虎：史诗 4 费 6/16 程1 速1")
 	# 自己弃牌区每有一个盟友 → 费用 -1（实时；技能/工事不算；最低 0）
-	var eng_lion := _new_engine([], 20, 20, -1, false)
-	eng_lion.start_game(1)
-	eng_lion.state.hand = [lion]
-	check(eng_lion.cost_of(lion) == 4, "狮子：弃牌区无盟友 → 费用 4（基础）")
-	eng_lion.state.discard.append(_card(8003, "农民", "盟友", 3, 3, 8))
-	check(eng_lion.cost_of(lion) == 3, "狮子：弃牌区 1 个盟友 → 费用 3")
-	eng_lion.state.discard.append(_card(8002, "攻击", "技能", 1, 0, 0))
-	eng_lion.state.discard.append(_card(8001, "木栅栏", "工事", 2, 0, 6))
-	check(eng_lion.cost_of(lion) == 3, "狮子：弃牌区的技能/工事不计入减费")
+	var eng_tiger := _new_engine([], 20, 20, -1, false)
+	eng_tiger.start_game(1)
+	eng_tiger.state.hand = [tiger]
+	check(eng_tiger.cost_of(tiger) == 4, "老虎：弃牌区无盟友 → 费用 4（基础）")
+	eng_tiger.state.discard.append(_card(8003, "农民", "盟友", 3, 3, 8))
+	check(eng_tiger.cost_of(tiger) == 3, "老虎：弃牌区 1 个盟友 → 费用 3")
+	eng_tiger.state.discard.append(_card(8002, "攻击", "技能", 1, 0, 0))
+	eng_tiger.state.discard.append(_card(8001, "木栅栏", "工事", 2, 0, 6))
+	check(eng_tiger.cost_of(tiger) == 3, "老虎：弃牌区的技能/工事不计入减费")
 	for i in 3:
-		eng_lion.state.discard.append(_card(8003, "农民", "盟友", 3, 3, 8))
-	check(eng_lion.cost_of(lion) == 0, "狮子：弃牌区 4 个盟友 → 费用 4-4=0（不为负）")
-	eng_lion.state.energy = 0
-	check(eng_lion.can_pay_card(lion), "狮子：实际费用 0 时 0 费用也能打出")
-	# 使用时：自己场上「其他」盟友攻击 +2（不含狮子自己；永久保留）
-	eng_lion.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(4, 0))
-	eng_lion.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(4, 2))
-	eng_lion.state.place(_card(8001, "木栅栏", "工事", 2, 0, 6), Vector2i(3, 0))
-	eng_lion.state.place(_card(9399, "敌狼", "盟友", 4, 2, 9), Vector2i(1, 0),
-			GameEngine.SIDE_OPPONENT)   # 敌方盟友：不应吃到狮子的 +2
-	eng_lion.state.hand = [lion]
-	eng_lion.state.energy = 5
-	eng_lion.play_from_hand(0, Vector2i(4, 1))
-	var lion_self: Placement = eng_lion.state.unit_at(Vector2i(4, 1))
-	check(lion_self != null and lion_self.atk_buff == 0
-				and lion_self.effective_power() == 6,
-			"狮子：自己不吃 +2（atk_buff 0，保持 6 攻）")
-	var lion_a: Placement = eng_lion.state.unit_at(Vector2i(4, 0))
-	var lion_b: Placement = eng_lion.state.unit_at(Vector2i(4, 2))
-	check(lion_a != null and lion_a.atk_buff == 2 and lion_a.effective_power() == 5
-				and lion_b != null and lion_b.atk_buff == 2 and lion_b.effective_power() == 5,
-			"狮子：使用时场上 2 个盟友攻击 +2（3 → 5，永久保留）")
-	var lion_w: Placement = eng_lion.state.unit_at(Vector2i(3, 0))
-	check(lion_w != null and lion_w.atk_buff == 0,
-			"狮子：工事不是盟友，不吃 +2（atk_buff 仍 0）")
-	var lion_foe: Placement = eng_lion.state.unit_at(Vector2i(1, 0))
-	check(lion_foe != null and lion_foe.atk_buff == 0
-				and lion_foe.effective_power() == 2,
-			"狮子：敌方盟友不吃 +2（保持 2 攻）")
-	eng_lion._begin_turn(GameEngine.SIDE_SELF)
-	check(lion_a != null and lion_a.atk_buff == 2 and lion_a.effective_power() == 5,
-			"狮子：+2 永久保留（下回合开始仍在）")
+		eng_tiger.state.discard.append(_card(8003, "农民", "盟友", 3, 3, 8))
+	check(eng_tiger.cost_of(tiger) == 0, "老虎：弃牌区 4 个盟友 → 费用 4-4=0（不为负）")
+	eng_tiger.state.energy = 0
+	check(eng_tiger.can_pay_card(tiger), "老虎：实际费用 0 时 0 费用也能打出")
+	# 使用时：自己场上「其他」盟友攻击 +2（不含老虎自己；永久保留）
+	eng_tiger.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(4, 0))
+	eng_tiger.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(4, 2))
+	eng_tiger.state.place(_card(8001, "木栅栏", "工事", 2, 0, 6), Vector2i(3, 0))
+	eng_tiger.state.place(_card(9399, "敌狼", "盟友", 4, 2, 9), Vector2i(1, 0),
+			GameEngine.SIDE_OPPONENT)   # 敌方盟友：不应吃到老虎的 +2
+	eng_tiger.state.hand = [tiger]
+	eng_tiger.state.energy = 5
+	eng_tiger.play_from_hand(0, Vector2i(4, 1))
+	var tiger_self: Placement = eng_tiger.state.unit_at(Vector2i(4, 1))
+	check(tiger_self != null and tiger_self.atk_buff == 0
+				and tiger_self.effective_power() == 6,
+			"老虎：自己不吃 +2（atk_buff 0，保持 6 攻）")
+	var tiger_a: Placement = eng_tiger.state.unit_at(Vector2i(4, 0))
+	var tiger_b: Placement = eng_tiger.state.unit_at(Vector2i(4, 2))
+	check(tiger_a != null and tiger_a.atk_buff == 2 and tiger_a.effective_power() == 5
+				and tiger_b != null and tiger_b.atk_buff == 2 and tiger_b.effective_power() == 5,
+			"老虎：使用时场上 2 个盟友攻击 +2（3 → 5，永久保留）")
+	var tiger_w: Placement = eng_tiger.state.unit_at(Vector2i(3, 0))
+	check(tiger_w != null and tiger_w.atk_buff == 0,
+			"老虎：工事不是盟友，不吃 +2（atk_buff 仍 0）")
+	var tiger_foe: Placement = eng_tiger.state.unit_at(Vector2i(1, 0))
+	check(tiger_foe != null and tiger_foe.atk_buff == 0
+				and tiger_foe.effective_power() == 2,
+			"老虎：敌方盟友不吃 +2（保持 2 攻）")
+	eng_tiger._begin_turn(GameEngine.SIDE_SELF)
+	check(tiger_a != null and tiger_a.atk_buff == 2 and tiger_a.effective_power() == 5,
+			"老虎：+2 永久保留（下回合开始仍在）")
 
 	# 乌鸦 / 猎犬 / 快速出击（9039~9041，2026-09-30）
 	var nc_crow := repo.get_card(9039)

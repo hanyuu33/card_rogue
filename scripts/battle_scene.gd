@@ -2791,9 +2791,9 @@ func _ready() -> void:
 		status_text = "替 HP 承伤统一特效：森林守护 / 铁栅栏 / 大树守卫 都画绿环，普通农民不画"
 		_shot_t0 = _now()
 		queue_redraw()
-	if "--lion" in args and engine != null:
-		# 演示：狮子（9038，2026-09-30）—— ① 自己弃牌区每有一个盟友费用 -1（手牌费用圆显绿）
-		#   ② 使用时自己场上其他盟友攻击 +2（不含狮子自己）
+	if "--tiger" in args and engine != null:
+		# 演示：老虎（9038，2026-09-30）—— ① 自己弃牌区每有一个盟友费用 -1（手牌费用圆显绿）
+		#   ② 使用时自己场上其他盟友攻击 +2（不含老虎自己）
 		for i in 3:
 			engine.state.discard.append(repo.get_card(8003))   # 弃牌区 3 个盟友 → 费用 4-3 = 1
 		engine.state.discard.append(repo.get_card(8002))       # 技能牌不计入减费
@@ -2801,12 +2801,12 @@ func _ready() -> void:
 		engine.state.place(repo.get_card(8003), Vector2i(4, 0), GameEngine.SIDE_SELF)  # 农民（盟友）3 攻
 		engine.state.place(repo.get_card(8003), Vector2i(4, 2), GameEngine.SIDE_SELF)  # 农民（盟友）3 攻
 		engine.state.hand.clear()
-		engine.state.hand.append(repo.get_card(GameEngine.LION_ID))
-		engine.state.hand.append(repo.get_card(GameEngine.LION_ID))
+		engine.state.hand.append(repo.get_card(GameEngine.TIGER_ID))
+		engine.state.hand.append(repo.get_card(GameEngine.TIGER_ID))
 		engine.play_from_hand(0, Vector2i(3, 1))   # 打出一只：场上两个盟友 3 → 5 攻
 		_hover_hand = 0
 		_hover_card = engine.state.hand[0]         # 手里另一只 → 绿色费用「1」（原 4）
-		status_text = "狮子：弃牌区 3 盟友 → 费用 4→1（绿色）；使用时场上盟友攻击 +2（3→5），自己保持 6"
+		status_text = "老虎：弃牌区 3 盟友 → 费用 4→1（绿色）；使用时场上盟友攻击 +2（3→5），自己保持 6"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--crow" in args and engine != null:
@@ -3369,7 +3369,7 @@ func _demo_tick() -> void:
 		# 悬停清掉 → 截图期间每帧重新钉住（验证「抬手 + 左栏详情面板」用）
 		_hover_hand = engine.state.hand.size() / 2
 		_hover_card = engine.state.hand[_hover_hand]
-	if _shot_pending and ("--newcards" in _demo_args or "--lion" in _demo_args or "--hound" in _demo_args) and not engine.state.hand.is_empty():
+	if _shot_pending and ("--newcards" in _demo_args or "--tiger" in _demo_args or "--hound" in _demo_args) and not engine.state.hand.is_empty():
 		# 同上：钉住 0 号手牌的悬停，让左栏详情显示「费用 N（原 M）」标绿
 		_hover_hand = 0
 		_hover_card = engine.state.hand[0]
