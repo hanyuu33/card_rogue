@@ -1038,8 +1038,9 @@ func _check_r546_win_panel(scene: Variant) -> void:
 	if str(btn.text) != "查看奖励":
 		_smoke_fail("R546：主按钮文案应为「查看奖励」，实际「%s」" % str(btn.text))
 		return
-	# R548：标题必须是**缎带+金字一体的图片素材**（TextureRect + 贴图），不是运行时画的字。
-	# 位置是量出来的：素材在设计稿上贴于 (77,110)/1100×301，1254→580 系数 0.4625。
+	# R548/R549：标题必须是**金字+缎带的图片素材**（TextureRect + 贴图），不是运行时画的字。
+	# 位置是量出来的：字 bbox 设计稿 (555,152)-(983,237) 扩边 8px → (547,144)，按缎带
+	# 宽度比 1.0137 映射到底板、再乘 1254→580 的 0.4625 → (187.8, 108.2)。
 	var rbn: Variant = scene.get("_win_ribbon")
 	if rbn == null or not (rbn is TextureRect):
 		_smoke_fail("R548：胜利标题应为 TextureRect（缎带素材），实际 %s" % str(rbn))
@@ -1047,11 +1048,17 @@ func _check_r546_win_panel(scene: Variant) -> void:
 	if rbn.texture == null:
 		_smoke_fail("R548：缎带素材没加载上（assets/ui/battle_win_ribbon.png 缺导入？）")
 		return
-	if rbn.position.distance_to(Vector2(35.6, 50.9)) > 2.0:
-		_smoke_fail("R548：缎带素材位置 %s 不在 (35.6,50.9) —— 偏了就会盖住盾徽或压到金币" % str(rbn.position))
+	if rbn.position.distance_to(Vector2(187.8, 108.2)) > 2.0:
+		_smoke_fail("R548：缎带素材位置 %s 不在 (187.8,108.2) —— 偏了字就不在缎带正中" % str(rbn.position))
 		return
 	if absf(rbn.size.x - rbn.texture.get_size().x * 0.5) > 1.0:
 		_smoke_fail("R548：缎带素材宽度 %.1f 与纹理不符（应按 0.5 显示）" % rbn.size.x)
+		return
+	# R549：素材不许有「内部孤立透明洞」——R548 就是抠图把字心挖穿了，贴上去透出底层绿，
+	# 看着像字上长绿斑。判据：不透明像素占整块的 85% 以上（矩形裁块约 90%，挖洞版只有 ~76%）。
+	var ratio := _ribbon_opaque_ratio(rbn.texture)
+	if ratio < 0.85:
+		_smoke_fail("R549：缎带素材不透明像素只占 %.1f%%（<85%%）——大概率又被抠出洞，字会透出绿底" % (ratio * 100.0))
 		return
 	var rp: Variant = scene.get("_reward_panel")
 	if rp == null:
@@ -5506,3 +5513,22 @@ func _check_r444_affix_index(_scene: Variant) -> void:
 					% [rr3.position.x, rr3.end.x])
 			return
 	print("  [smoke] R444 字段浮窗：单字段靠右 / 两字段一左一右不压卡 / bounds 夹回屏内")
+
+## R549：统计贴图里不透明像素的占比。Image 读不到时返回 1.0（视为通过，别误报）。
+func _ribbon_opaque_ratio(tex: Texture2D) -> float:
+	var img: Image = tex.get_image()
+	if img == null:
+		return 1.0
+	if img.is_compressed():
+		img.decompress()
+	var w := img.get_width()
+	var h := img.get_height()
+	if w <= 0 or h <= 0:
+		return 1.0
+	var opaque := 0
+	for y in range(h):
+		for x in range(w):
+			if img.get_pixel(x, y).a > 0.85:
+				opaque += 1
+	return float(opaque) / float(w * h)
+

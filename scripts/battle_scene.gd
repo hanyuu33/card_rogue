@@ -728,19 +728,26 @@ var _over_btn_title: Button
 ## 与老 `_over_panel` 并存：胜利走它，失败仍走老面板 —— 缎带是「胜利」语义，
 ## 同一个绿缎带上写「失败」会自相矛盾。
 const WIN_PANEL_SIDE := 580.0
-## R548：缎带标题**整块是美术素材** —— `assets/ui/battle_win_ribbon.png` 里已经含
-## 绿缎带本体 + 金色「战斗胜利」+ 顶部盾徽，是从设计稿里连缎带一起裁下来的（不是运行时画的字）。
+## R548/R549：缎带标题**是美术素材** —— `assets/ui/battle_win_ribbon.png` 里是
+## 「金色战斗胜利四个字 + 一圈绿缎带」的矩形裁块，运行时不再画字。
 ## 为什么不用 Label / 自绘金字：常规字体撑不起这块缎带（字重、压纹、字距都要逐个调），
 ## 自绘的金色浮雕字放大看仍是「平涂」，用户两次否过。
-## 叠放坐标是量出来的：素材块在设计稿 1254 原图上贴于 (77,110)、尺寸 1100×301，
-## 1254 → 游戏 580 面板的系数 0.4625 → 位置 (35.6, 50.9)，素材按 0.5 显示（2x 出图）。
-const WIN_RIBBON_POS := Vector2(35.6, 50.9)
+## ⚠️ R549 修正（用户反馈「四个字带上了很多预期外的绿色色块」）：R548 用三路遮罩把整条
+## 缎带连形状一起抠（逐列绿段 + 金字补洞 + 连通域过滤），判据互相打架，字内部的中暗调像素
+## 哪一路都不满足 → 被挖成小洞，贴到底板上透出底层绿色，看着就是「字上长绿斑」。
+## R549 改成**矩形裁块**：四边都落在纯绿缎带内部（字 bbox 各扩 8px），矩形内像素原样保留、
+## 完全不透明 —— 物理上不可能出洞；边缘只做 4px 柔化（边两侧本来就是同一块绿）。
+## 盾徽 / 月桂 / 两端飘带翼全部用空白底板原生那套（少抠一块就少一处错位）。
+## 叠放坐标是量出来的：字 bbox 设计稿 (555,152)-(983,237) → 扩边后矩形 (547,144)，
+## 按缎带宽度比 1.0137 映射到底板、再乘 1254→580 系数 0.4625 → 位置 (187.8, 108.2)。
+## 素材 417×95 按 0.5 显示成 208.5×47.5（2x 出图）。
+const WIN_RIBBON_POS := Vector2(187.8, 108.2)
 var _win_panel: Control
 var _win_gold_box: Control            # 金币整块（本场没发金币时整块收掉）
 var _win_gold_num: Label              # 「+50」大字
 var _win_gold_parts: Label            # 分项来源 + 现有金币
 var _win_btn: Button                  # 唯一主按钮：查看奖励 / 进入下一层 / 回地图 / 再来一局
-var _win_ribbon: TextureRect = null    # R548：缎带+金字+盾徽一体素材（1018×285，按 0.5 显示）
+var _win_ribbon: TextureRect = null    # R548/R549：金字+缎带矩形裁块（417×95，按 0.5 显示）
 ## R367：本场「输」是否已经落过记录 —— `_record_defeat()` 的幂等标记。
 ## 结算面板要等演出播完才弹，但记录必须在 `engine.over` 那一刻就写。
 var _lose_recorded := false
@@ -7414,8 +7421,8 @@ func _build_win_panel() -> void:
 	plate.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	plate.texture = UiAssets.get_tex("battle_win_plate")
 
-	# 缎带标题：**整块美术素材**（缎带 + 金字 + 盾徽一体），运行时不再画字。
-	# 素材 1018×285 → 按 0.5 显示成 509×142.5，位置由量出来的 WIN_RIBBON_POS 固定。
+	# 缎带标题：**美术素材**（金字 + 一圈绿缎带，矩形裁块），运行时不再画字。
+	# 素材 417×95 → 按 0.5 显示成 208.5×47.5，位置由量出来的 WIN_RIBBON_POS 固定。
 	# 尺寸从纹理算：素材重出（换「失败」字样 / 换配色）只替换 png，这里不用动。
 	var ribbon := TextureRect.new()
 	ribbon.name = "RibbonArt"
@@ -7425,7 +7432,7 @@ func _build_win_panel() -> void:
 	ribbon.texture = UiAssets.get_tex("battle_win_ribbon")
 	_win_panel.add_child(ribbon)
 	_win_ribbon = ribbon
-	var rsz := Vector2(509.0, 142.5)                    # 素材缺失时的兜底尺寸
+	var rsz := Vector2(208.5, 47.5)                     # 素材缺失时的兜底尺寸
 	if ribbon.texture != null:
 		rsz = ribbon.texture.get_size() * 0.5
 	ribbon.size = rsz
