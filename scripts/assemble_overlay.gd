@@ -149,7 +149,7 @@ func _seal_rect() -> Rect2:
 func _effect_rect(i: int) -> Rect2:
 	var cx := size.x * RIGHT_CX
 	var w := _slot_w() * 1.45
-	var h := 64.0
+	var h := 96.0
 	var sr := _seal_rect()
 	var y := sr.end.y + 22.0 + i * (h + 12.0)
 	return Rect2(cx - w / 2.0, y, w, h)
@@ -195,7 +195,7 @@ func _draw() -> void:
 	# 左栏：待选卡（真卡）
 	draw_string(_font_bold, Vector2(size.x * LEFT_X, TITLE_H + 26.0), "待选卡",
 			HORIZONTAL_ALIGNMENT_LEFT, size.x * LEFT_W, UiTheme.FS_LABEL, UiTheme.ACCENT_LIT)
-	draw_string(_font, Vector2(size.x * LEFT_X, TITLE_H + 26.0 + 18.0), "拖到右侧槽位 · 分别决定属性 / 上半 / 下半",
+	draw_string(_font, Vector2(size.x * LEFT_X, TITLE_H + 26.0 + 18.0), "拖到中栏槽位 · ①属性 ②上半 ③下半",
 			HORIZONTAL_ALIGNMENT_LEFT, size.x * LEFT_W, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
 	for k in _cards.size():
 		var r := _card_rect(k)
@@ -221,34 +221,23 @@ func _draw() -> void:
 
 
 func _draw_slot(sr: Rect2, slot: int, idx: int) -> void:
-	## 槽位：card_paper 纸底 + 金色描边（空态）；已填属性槽画真卡，效果槽画纸底+文字。
-	var labels := ["① 属性值 + 卡图", "② 上半效果", "③ 下半效果"]
-	var label: String = labels[slot]
-	if idx >= 0 and slot == 0:
-		# ① 已填：直接画完整卡面（卡图 + 姓名牌 + 数值徽章）
+	## 槽位：空态 = card_paper 纸底 + 金边 + 序号徽章（不写任何效果文本）；填态 = 真卡。
+	## R559c：效果文字只出现在右侧文本框；中栏槽位（①属性 ②上半 ③下半）填了就是一张卡。
+	if idx >= 0:
 		CardFace.draw_pick(self, _cards[idx], sr, _font, _font_bold, false)
 		return
-	# 槽位底：卡面纸底（与真卡同源）
 	_draw_slot_paper(sr)
-	# 槽位内顶部：金色小标签
-	draw_string(_font_bold, Vector2(sr.position.x, sr.position.y + UiTheme.FS_CAPTION + 10.0),
-			label, HORIZONTAL_ALIGNMENT_CENTER, sr.size.x, UiTheme.FS_CAPTION, UiTheme.ACCENT_GOLD)
-	if idx >= 0:
-		# 效果槽已填：写效果文字
-		var card: CardData = _cards[idx]
-		var text := ""
-		if slot == 1 and not card.upper_effect.is_empty():
-			text = AssembleRules.fragment_text(card.upper_effect)
-		elif slot == 2 and not card.lower_effect.is_empty():
-			text = AssembleRules.fragment_text(card.lower_effect)
-		var body := Rect2(sr.position.x + 10.0, sr.position.y + sr.size.y * 0.30,
-				sr.size.x - 20.0, sr.size.y * 0.62)
-		_draw_wrapped(body, text, UiTheme.FS_CAPTION, UiTheme.INK_800)
-	else:
-		# 空态：居中提示
-		var hint := "拖入卡"
-		draw_string(_font, Vector2(sr.position.x, sr.position.y + sr.size.y * 0.60),
-				hint, HORIZONTAL_ALIGNMENT_CENTER, sr.size.x - 10.0, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
+	_draw_slot_index(sr, slot)
+
+
+func _draw_slot_index(sr: Rect2, slot: int) -> void:
+	## 空槽位左上角序号徽章（①②③）：金圈 + 数字，标识「①属性 ②上半 ③下半」。
+	var marks := ["①", "②", "③"]
+	var c := sr.position + Vector2(18.0, 18.0)
+	draw_circle(c, 11.0, Color(0.12, 0.10, 0.06, 0.92))
+	draw_circle(c, 11.0, UiTheme.ACCENT_GOLD, false, 1.5)
+	draw_string(_font_bold, Vector2(c.x - 11.0, c.y + UiTheme.FS_CAPTION * 0.35),
+			marks[slot], HORIZONTAL_ALIGNMENT_CENTER, 22.0, UiTheme.FS_CAPTION, UiTheme.ACCENT_LIT)
 
 
 func _draw_slot_paper(sr: Rect2) -> void:
@@ -286,13 +275,14 @@ func _draw_preview() -> void:
 	draw_string(_font_bold, Vector2(sr.position.x + 34.0, sr.get_center().y + UiTheme.FS_CAPTION * 0.35),
 			"组合 · 生成它", HORIZONTAL_ALIGNMENT_LEFT, sr.size.x - 40.0,
 			UiTheme.FS_CAPTION, UiTheme.ACCENT_LIT)
-	# 上/下效果框（羊皮纸信息卡）
+	# 上/下效果框（游戏羊皮纸面板素材 + 黄铜包角；未拖入对应卡时不写效果文本）
 	var tags := ["上半效果", "下半效果"]
 	for i in 2:
 		var er := _effect_rect(i)
-		UiTheme.draw_info_card(self, er)
-		draw_string(_font_bold, Vector2(er.position.x + 12.0, er.position.y + 18.0),
-				tags[i], HORIZONTAL_ALIGNMENT_LEFT, er.size.x - 24.0,
+		# R559c：用 adventure 面板素材（panel_journal_light 九宫格）而非纯色圆角矩形。
+		draw_style_box(UiTheme.adventure_panel_style(12.0), er)
+		draw_string(_font_bold, Vector2(er.position.x + 36.0, er.position.y + 32.0),
+				tags[i], HORIZONTAL_ALIGNMENT_LEFT, er.size.x - 48.0,
 				UiTheme.FS_CAPTION, UiTheme.ACCENT_GOLD)
 		var txt := ""
 		if _all_filled():
@@ -302,11 +292,10 @@ func _draw_preview() -> void:
 				txt = AssembleRules.fragment_text(up.upper_effect)
 			elif i == 1 and not lo.lower_effect.is_empty():
 				txt = AssembleRules.fragment_text(lo.lower_effect)
-		if txt == "":
-			txt = "（待选）"
-		var body := Rect2(er.position.x + 12.0, er.position.y + 34.0,
-				er.size.x - 24.0, er.size.y - 40.0)
-		_draw_wrapped(body, txt, UiTheme.FS_CAPTION, UiTheme.INK_800)
+		if txt != "":
+			var body := Rect2(er.position.x + 36.0, er.position.y + 50.0,
+					er.size.x - 48.0, er.size.y - 60.0)
+			_draw_wrapped(body, txt, UiTheme.FS_CAPTION, UiTheme.INK_800)
 	# 取消 / 确认按钮（button_paper / button_forest 素材）
 	var cr := _cancel_rect()
 	UiTheme.draw_secondary_btn(self, cr, "取消拼装", false, false, false)
