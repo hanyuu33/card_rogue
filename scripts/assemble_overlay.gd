@@ -213,9 +213,13 @@ func _seal_rect() -> Rect2:
 func _effect_rect(i: int) -> Rect2:
 	var cx := size.x * RIGHT_CX
 	var w := _slot_w() * 1.45
-	var h := 96.0
+	# R570b：96 → 112。羊皮纸九宫格的上下花纹各占 16px，96 高时**纸面只有 64px**，
+	# 而正文区是从 y+46 开始的（标题占掉上面一段）→ 实际可用不到 34px，
+	# 夜蚀那种三行长句必然把最后一行压到框线上（出图实测：纸面 465~529，第三行墨迹顶到 529）。
+	# 加高 16 并把两框间距 12 → 8，总高不变（仍是 2×112+8 = 232，底边离「取消组合」还有 25px）。
+	var h := 112.0
 	var sr := _seal_rect()
-	var y := sr.end.y + 22.0 + i * (h + 12.0)
+	var y := sr.end.y + 22.0 + i * (h + 8.0)
 	return Rect2(cx - w / 2.0, y, w, h)
 
 
@@ -435,8 +439,10 @@ func _draw_preview() -> void:
 			# R569：底部留白 10 → 6 —— 火元素那种 45 字的长效果在 9px 下要 3 行（39px），
 			# 原来的 36px 差 3px 就被截成「对随…」；缩字号已经能把字塞进框，
 			# 不该再因为差这几像素把半句话吃掉。
-			var body := Rect2(er.position.x + 40.0, er.position.y + 46.0,
-					er.size.x - 80.0, er.size.y - 50.0)
+			# R570b：正文收进**纸面**内。纸面 = y+16 .. y+96（九宫格花纹各 16px），
+			# 所以正文从 y+44 起、高 52 → 底边正好落在纸面下沿，不再压到框线。
+			var body := Rect2(er.position.x + 40.0, er.position.y + 44.0,
+					er.size.x - 80.0, er.size.y - 60.0)
 			_draw_wrapped(body, txt, UiTheme.FS_CAPTION, UiTheme.INK_800)
 	if _tip != "":
 		# R562：底部一句提示（右键/ESC/撤回/落点为空时的说明），自带暗底 + 金边。
