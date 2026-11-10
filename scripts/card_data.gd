@@ -374,11 +374,17 @@ static func from_dict(d: Dictionary) -> CardData:
 		var lfx_out: Array = []
 		for fx in (asm_in.get("lower_effects", []) as Array):
 			lfx_out.append((fx as Dictionary).duplicate(true))
+		# R568：上半的**永续段**（犀牛「受到伤害减少 1 点…」）也要一起重建 ——
+		# 漏了它，组合卡一被复制就丢掉减伤描述（显示没写、引擎却还在减，两边对不上）。
+		var pv_out: Dictionary = {}
+		if asm_in.get("passive", {}) is Dictionary:
+			pv_out = (asm_in.get("passive", {}) as Dictionary).duplicate(true)
 		c.assemble = {
 			"trigger": str(asm_in.get("trigger", "")),
 			"effects": fx_out,
 			"lower_effects": lfx_out,
 			"lower_note": str(asm_in.get("lower_note", "")),
+			"passive": pv_out,
 			"extra_affixes": xa_out,
 		}
 	# R559 组合：上下半句随复制通道走（深拷贝），漏了它待选卡拖进槽位取不到效果。

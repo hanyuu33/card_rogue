@@ -74,6 +74,7 @@ func _init() -> void:
 	_test_combo()
 	_test_r565_fidelity()
 	_test_r566_split_text()
+	_test_r568_passive()
 	print("Combination tests failures: ", failures)
 	quit(failures)
 
@@ -262,6 +263,93 @@ func _test_r566_split_text() -> void:
 			"R567 源码锁：valid_pool 禁止下半带扳机")
 	var gs := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 	check(gs.find("lower_trigger") < 0, "R567 源码锁：引擎不再有 lower_trigger 分支")
+
+
+func _test_r568_passive() -> void:
+	## R568：用户第五轮实测「本次测试很顺利。但是永续效果似乎被吞了。犀牛既然有受到伤害 -1 的
+	## 持续效果，应该加入上半：受到伤害减少 1 点，但至少仍要受到 1 点。每回合结束时」。
+	##
+	## 根因：犀牛的减伤挂在 `traits: ["犀牛"]` 上，上半段只印了一个空钩子「回合结束时：」——
+	## 那半句在 `effect_text` 里有、却没进上半。而且上半那张犀牛**不当承载体**时，trait 不会
+	## 跟到产物上，只补文本就会变成「写着减伤、一点没减」。本轮把永续段做成上半的正式组成：
+	##   · 显示：`fragment_text` 把永续句印在扳机**前面**（原卡语序）
+	##   · 结算：`assemble.passive.reduce` 进 `_unit_damage_taken`，下限同犀牛「至少仍受 1 点」
+	var repo := CardRepo.load_json()
+	var rhino: CardData = repo.get_card(9016)
+	# ① 保真锁：永续段文本必须逐字出现在原卡 effect_text 里（和上下半同一条纪律）
+	var rows := 0
+	for c: CardData in repo.all_cards():
+		var pv0: Dictionary = c.upper_effect.get("passive", {})
+		if pv0.is_empty():
+			continue
+		rows += 1
+		var full := c.effect_text.replace("**", "")
+		check(str(pv0.get("text", "")) != "" and full.contains(str(pv0.get("text", ""))),
+			"R568 保真：%d %s 的永续段「%s」在原卡文本里找不到出处（原文：%s）"
+			% [c.id, c.card_name, str(pv0.get("text", "")), full])
+		check(str(pv0.get("source_trait", "")) == "" or c.traits.has(str(pv0.get("source_trait", ""))),
+			"R568：%d 永续段的 source_trait 必须是本卡自带的 trait" % c.id)
+	check(rows >= 1, "R568：至少 1 张卡带永续段（实际 %d）" % rows)
+	# ② 犀牛：上半 = 永续句 + 扳机
+	check(rhino.upper_effect.trigger == "turn_end", "R568：犀牛上半扳机仍是回合结束")
+	check(Rules.fragment_text(rhino.upper_effect)
+			== "受到伤害减少 1 点，但至少仍要受到 1 点。回合结束时：",
+			"R568：犀牛上半框 = 永续句 + 扳机（实际「%s」）" % Rules.fragment_text(rhino.upper_effect))
+	# ③ 产物文本：永续句在最前面（承载体是别的卡）
+	var base := CardData.new()
+	base.card_name = "R568 探针"
+	base.kind = "盟友"
+	base.health = 20
+	base.power = 1
+	base.attack_range = 1
+	var bird: CardData = repo.get_card(8059)
+	var prod := Rules.build(base, rhino.upper_effect, bird.lower_effect)
+	check(prod != null and prod.effect_text
+			== "受到伤害减少 1 点，但至少仍要受到 1 点。回合结束时：抽1张牌",
+			"R568：产物文本 = 永续句 + 扳机 + 下半（实际「%s」）"
+			% (prod.effect_text if prod != null else "null"))
+	check(prod != null and int((prod.assemble.get("passive", {}) as Dictionary).get("reduce", 0)) == 1,
+			"R568：承载体不是犀牛 → 永续减伤记进 assemble（要真减）")
+	# ④ 结算：真的减 1，且「至少仍要受到 1 点」
+	var eng := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng.ai_enabled = false
+	var p := _probe_unit(eng, "turn_end", Vector2i(4, 0))
+	p.card.assemble = prod.assemble.duplicate(true)
+	check(eng._unit_damage_taken(p, 5) == 4, "R568：组合永续减伤 5 → 4")
+	check(eng._unit_damage_taken(p, 1) == 1, "R568：永续减伤的底仍是至少 1 点")
+	check(eng._unit_damage_taken(p, 0) == 0, "R568：0 伤害不会被减成负数")
+	# ⑤ 承载体本身就是犀牛 → 不许叠成双减
+	var prod2 := Rules.build(rhino, rhino.upper_effect, bird.lower_effect)
+	check(prod2 != null and not (prod2.assemble.get("passive", {}) as Dictionary).has("reduce"),
+			"R568：承载体已是犀牛 → passive.reduce 清零（trait 那条已经减过）")
+	check(prod2 != null and str((prod2.assemble.get("passive", {}) as Dictionary).get("text", "")) != "",
+			"R568：清零后永续文本仍保留（卡面照写）")
+	var eng2 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng2.ai_enabled = false
+	var p2 := _probe_unit(eng2, "turn_end", Vector2i(5, 0))
+	var tr: Array[String] = ["犀牛"]
+	p2.card.traits = tr
+	p2.card.assemble = prod2.assemble.duplicate(true)
+	check(eng2._unit_damage_taken(p2, 5) == 4, "R568：犀牛载体 + 上半犀牛 → 只减 1（5 → 4，不是 3）")
+	# ⑥ 复制通道：永续段不能一复制就丢
+	var rt := CardData.from_dict(prod.to_dict())
+	check(int((rt.assemble.get("passive", {}) as Dictionary).get("reduce", 0)) == 1,
+			"R568：永续段随 to_dict/from_dict 走")
+	# ⑦ 结构校验
+	check(Rules.valid_pool([rhino.upper_effect], [bird.lower_effect]), "R568：合法永续段通过 valid_pool")
+	check(not Rules.valid_pool([{"trigger": "turn_end", "passive": {"text": ""}, "effects": []}],
+			[bird.lower_effect]), "R568：空文本永续段判废")
+	check(not Rules.valid_pool([{"trigger": "turn_end",
+			"passive": {"text": "x", "reduce": -1}, "effects": []}],
+			[bird.lower_effect]), "R568：负减伤判废")
+	check(not Rules.valid_pool([{"trigger": "turn_end", "passive": "文字", "effects": []}],
+			[bird.lower_effect]), "R568：非字典永续段判废")
+	# ⑧ 源码锁
+	var gs := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(gs.find("组合永续减伤") >= 0, "R568 源码锁：受击结算读 assemble 的永续减伤")
+	var rs := FileAccess.get_file_as_string("res://scripts/assemble_rules.gd")
+	check(rs.find("func valid_passive") >= 0 and rs.find("func passive_text") >= 0,
+			"R568 源码锁：永续段的校验与取文本都在 AssembleRules")
 
 
 func _probe_unit(eng: GameEngine, trigger: String, cell := Vector2i(3, 0), side := "self") -> Placement:

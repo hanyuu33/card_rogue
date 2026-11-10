@@ -12014,6 +12014,20 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		dmg = maxi(1, dmg - RHINO_DAMAGE_REDUCE)
 		if dmg != before:
 			_log("犀牛：受到的伤害 %d → %d" % [before, dmg])
+	# ①a2 R568：**组合产物**带上半卡的永续减伤（犀牛「受到伤害减少 1 点，但至少仍要受到 1 点」）。
+	#   用户实测：「永续效果似乎被吞了。犀牛既然有受到伤害 -1 的持续效果，应该加入上半」。
+	#   永续段记在 `assemble.passive` 里：上半那张犀牛不当承载体时 trait「犀牛」不会跟过来，
+	#   只靠文本就是「写着减伤、一点没减」。这里让它真正落地，下限同犀牛（至少仍受 1 点）。
+	#   ⚠️ 承载体**本身**就是犀牛时，`AssembleRules.build` 已把 `reduce` 清零（trait 那条减过了），
+	#     这里读到 0 —— 不会叠成减 2。
+	if p != null and p.card != null and dmg > 0 and not p.card.assemble.is_empty():
+		var pv: Dictionary = p.card.assemble.get("passive", {})
+		var pr: int = int(pv.get("reduce", 0))
+		if pr > 0:
+			var pb:= dmg
+			dmg = maxi(1, dmg - pr)
+			if dmg != pb:
+				_log("%s：组合永续减伤 → 受到的伤害 %d → %d" % [p.card.card_name, pb, dmg])
 	# ①b 重甲战车（8058，R275）：**每拥有一层改造，受到的伤害 -1，至少仍受 1 点**。
 	#    层数随身（手牌 / 牌库攒的也算），所以只读 `upgrade_stacks`、不另存字段。
 	if p != null and p.card != null and dmg > 0 and p.card.id == HEAVY_TANK_ID \

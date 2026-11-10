@@ -21,6 +21,31 @@ static func valid_effect(fx: Variant) -> bool:
 		return fx.get("target", "nearest") in ["nearest", "all", "random"]
 	return true
 
+static func valid_passive(pv: Variant) -> bool:
+	## R568：上半可带**永续段**（`passive`）—— 犀牛「受到伤害减少 1 点，但至少仍要受到 1 点」。
+	## 它**没有扳机、永远生效**，所以不能塞进 `effects`（那是跟着扳机结算的）。
+	##   · `text`     ：逐字取自原卡 `effect_text` 的描述（测试里有保真锁，编不出来）
+	##   · `reduce`   ：可结算的数值部分（减伤点数），缺省 = 0 = 纯描述
+	##   · `source_trait`：这条永续来自原卡的哪个 trait（犀牛 9016 = "犀牛"）。
+	##     承载体本身就是那张卡时，它的常驻能力已经由 trait 生效，build 会据此把 `reduce`
+	##     清零只留文本 —— 否则同一机制被算两次（减 2 而不是 1）。
+	if not pv is Dictionary:
+		return false
+	if not pv.get("text", "") is String:
+		return false
+	if str(pv.get("text", "")).strip_edges() == "":
+		return false
+	if not pv.get("source_trait", "") is String:
+		return false
+	if pv.has("reduce"):
+		var rd: Variant = pv.get("reduce")
+		if not rd is int and not rd is float:
+			return false
+		if float(rd) < 0 or float(rd) != int(rd):
+			return false
+	return true
+
+
 static func valid_pool(upper: Array, lower: Array) -> bool:
 	if upper.is_empty() or lower.is_empty():
 		return false
@@ -36,6 +61,9 @@ static func valid_pool(upper: Array, lower: Array) -> bool:
 					return false
 	for part in upper:
 		if part.get("trigger", "") not in TRIGGERS:
+			return false
+		# R568：上半的永续段（可选）。下半**不允许**带 —— 下半只承载跟着扳机走的效果。
+		if part.has("passive") and not valid_passive(part.get("passive", {})):
 			return false
 	for part in lower:
 		## R567（用户口径）：「下半不应该是完整效果，需要裁掉上半部分 —— 扳机是在上半的，
@@ -108,17 +136,33 @@ static func assembled_text(asm: Dictionary) -> String:
 		out = s1
 	if s2 != "":
 		out = s2 if out == "" else (out + "。" + s2)
+	var pv := str((asm.get("passive", {}) as Dictionary).get("text", ""))
+	# R568：只有永续段、没有扳机效果时，产物文本就是那半句（不必硬凑一个空冒号）。
 	if out == "":
-		return ""
-	return str(LABELS.get(t, "")) + "：" + out
+		return pv
+	var one := str(LABELS.get(t, "")) + "：" + out
+	return pv + one if pv != "" else one
+
+
+static func passive_text(part: Dictionary) -> String:
+	## 上半永续段的描述文本（没有就是空串）。
+	var pv: Dictionary = part.get("passive", {}) if part.get("passive", {}) is Dictionary else {}
+	return str(pv.get("text", ""))
 
 
 static func fragment_text(part: Dictionary) -> String:
+	## 上半槽的文案 = 永续段 + 扳机 + 效果。
+	## R568：犀牛的「受到伤害减少 1 点，但至少仍要受到 1 点」没有扳机、永远生效，
+	## 印在扳机**前面**（原卡也是这个语序）。永续句自带句号，不再补分隔符。
 	var texts: Array[String] = []
 	for fx in part.get("effects", []):
 		texts.append(effect_text(fx))
 	var prefix := str(LABELS.get(part.get("trigger", ""), ""))
-	return (prefix + "：" if prefix != "" else "") + "，".join(texts)
+	var body := (prefix + "：" if prefix != "" else "") + "，".join(texts)
+	var pv := passive_text(part)
+	if pv != "":
+		return pv + body
+	return body
 
 static func build(base: CardData, upper: Dictionary, lower: Dictionary, reverse: bool = false) -> CardData:
 	if not valid_pool([upper], [lower]):
@@ -128,11 +172,20 @@ static func build(base: CardData, upper: Dictionary, lower: Dictionary, reverse:
 	var second: Dictionary = upper if reverse else lower
 	# R567：产物只有**一个扳机** —— 就是上半那张卡的（valid_pool 保证上半一定有）。下半的
 	# 效果挂在同一个扳机上一起结算，`note` 只影响文案，不改变触发时机。
+	var pv: Dictionary = {}
+	if upper.get("passive", {}) is Dictionary:
+		pv = (upper.get("passive", {}) as Dictionary).duplicate(true)
+	# R568：承载体本身就是那张卡（犀牛做第①张）时，它的常驻减伤**已经由 traits 生效**，
+	# 这里把 `reduce` 清零、只留文本 —— 否则同一机制被算两次（减 2 而不是 1）。
+	var src_trait := str(pv.get("source_trait", ""))
+	if src_trait != "" and base != null and base.traits.has(src_trait):
+		pv.erase("reduce")
 	result.assemble = {
 		"trigger": str(upper.get("trigger", "")),
 		"effects": (first.get("effects", []) as Array).duplicate(true),
 		"lower_effects": (second.get("effects", []) as Array).duplicate(true),
 		"lower_note": str(second.get("note", "")),
+		"passive": pv,
 		"extra_affixes": (first.get("extra_affixes", []) as Array).duplicate(true),
 	}
 	for affix in result.assemble.extra_affixes:

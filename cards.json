@@ -698,7 +698,7 @@
       "regen_per_turn": 2,
       "color": "白",
       "image": "",
-      "upper_effect": {"trigger": "turn_end", "effects": []},
+      "upper_effect": {"trigger": "turn_end", "passive": {"text": "受到伤害减少 1 点，但至少仍要受到 1 点。", "reduce": 1, "source_trait": "犀牛"}, "effects": []},
       "lower_effect": {"effects": [{"type": "heal", "value": 2}]}
     },
     {
