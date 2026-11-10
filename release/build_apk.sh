@@ -3,8 +3,14 @@
 # card_rogue Android APK one-shot build (signature-consistency guard)
 #
 # Usage:
-#     bash release/build_apk.sh R534        # archive as dist/DuckCardsRogue_R534.apk
-#     bash release/build_apk.sh             # keep as dist/DuckCardsRogue.apk (no archive)
+#     bash release/build_apk.sh R534                # test build -> dist/DuckCardsRogue_R534.apk
+#     bash release/build_apk.sh R534 release        # release build -> dist/DuckCardsRogue_release_R534.apk
+#     bash release/build_apk.sh                     # test build, no archive -> dist/DuckCardsRogue.apk
+#     bash release/build_apk.sh "" release          # release build, no archive
+#
+# 第二参 = 构建模式：test（默认，全职业·全难度直接可用）/ release（发布版：
+# 职业·难度渐进解锁，见 scripts/unlock_system.gd）。两版共用代码与素材，只有
+# 导出预设里的 custom_features="cardrogue_release" 区分，`GameBuild.is_release()` 判定。
 #
 # WHY THIS SCRIPT EXISTS
 #   Two machines used to sign with DIFFERENT keystores, so the same package name
@@ -37,9 +43,17 @@ KS_PASS="android"
 CANON_SHA256="59651c9b76e61240d1a1223a14635f658fe4d43f15020b3e44cfe22eec6e5baa"
 
 ROUND="${1:-}"
+MODE="${2:-test}"   # test（默认，全解锁）/ release（发布版：职业·难度渐进解锁）
+case "$MODE" in
+  release|Release) MODE=release ;;
+  *) MODE=test ;;
+esac
 PRESET="Android"
-OUT_UNSIGNED="$ROOT/dist/DuckCardsRogue.apk"
-OUT_SIGNED="$ROOT/dist/DuckCardsRogue-signed.apk"
+[ "$MODE" = "release" ] && PRESET="Android Release"
+SFX=""
+[ "$MODE" = "release" ] && SFX="_release"
+OUT_UNSIGNED="$ROOT/dist/DuckCardsRogue${SFX}.apk"
+OUT_SIGNED="$ROOT/dist/DuckCardsRogue${SFX}-signed.apk"
 
 say()  { printf '\n\033[1;36m[build]\033[0m %s\n' "$*"; }
 warn() { printf '\n\033[1;33m[build]\033[0m %s\n' "$*"; }
@@ -136,9 +150,9 @@ FINAL_SHA="$("$APKSIGNER" verify --print-certs "$OUT_SIGNED" 2>/dev/null \
 say "signature verified: SHA-256 $FINAL_SHA"
 
 # ---- 6/6 archive as R<round> ----------------------------------------------
-say "6/6 archive"
+say "6/6 archive (mode=$MODE)"
 if [ -n "$ROUND" ]; then
-  FINAL="$ROOT/dist/DuckCardsRogue_R${ROUND}.apk"
+  FINAL="$ROOT/dist/DuckCardsRogue${SFX}_R${ROUND}.apk"
   cp -f "$OUT_SIGNED" "$FINAL"
   rm -f "$OUT_UNSIGNED" "$OUT_SIGNED"
   ls -l "$FINAL"
@@ -148,5 +162,5 @@ else
   cp -f "$OUT_SIGNED" "$OUT_UNSIGNED"
   rm -f "$OUT_SIGNED"
   ls -l "$OUT_UNSIGNED"
-  say "DONE: dist/DuckCardsRogue.apk (no round given)"
+  say "DONE: dist/DuckCardsRogue${SFX}.apk (no round given)"
 fi

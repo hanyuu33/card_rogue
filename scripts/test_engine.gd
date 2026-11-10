@@ -33557,7 +33557,7 @@ func _init() -> void:
 			and r545_cp.find("已随机 —— 确认进入后揭晓角色") >= 0,
 			"R545b 源码：随机改盲选（_rand_pending + _reveal_random + 揭晓文案在位）")
 	check_src(r545_cp.find("func _roll_random() -> void:") >= 0
-			and r545_cp.find("_rand_pick = randi() % n") >= 0
+			and r545_cp.find("_rand_pick = pool[randi() % pool.size()]") >= 0
 			and r545_cp.find("var sel := i == _selected and not _rand_pending") >= 0,
 			"R545b 源码：_roll_random 只摇 _rand_pick、盲选态不标任何头像")
 	var r545_ms := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
@@ -33571,6 +33571,68 @@ func _init() -> void:
 			and r545_ms.find("_deck_scroll") < 0
 			and r545_ms.find("_build_deck_rows") < 0,
 			"R545b 源码：旧自绘窄列表（_draw_deck_panel / _deck_scroll / _build_deck_rows）已移除")
+	# ---- R550：发布版解锁体系（职业 / 难度渐进解锁）----
+	var r550_active := RunState.run_active
+	var r550_cls := RunState.player_class
+	var r550_diff := RunState.difficulty
+	GameBuild.set_test_release(1)
+	ProfileData.reset_all()
+	check(UnlockSystem.is_class_unlocked(PlayerClass.DRUID),
+			"R550 发布版：森林精魄起始恒解锁")
+	check(not UnlockSystem.is_class_unlocked(PlayerClass.ROGUE),
+			"R550 发布版：暗影刺客初始未解锁")
+	check(not UnlockSystem.is_class_unlocked(PlayerClass.MECH),
+			"R550 发布版：机械之心初始未解锁")
+	check(UnlockSystem.difficulty_cap(PlayerClass.DRUID) == 0,
+			"R550 发布版：森林精魄难度上限 0")
+	check(UnlockSystem.global_max_difficulty() == 0,
+			"R550 发布版：全局最高难度 0")
+	# 见到一层 Boss → 依次解锁暗影刺客、机械之心
+	UnlockSystem.note_boss_seen(GameLayers.LAYER_DEFAULT)
+	check(UnlockSystem.is_class_unlocked(PlayerClass.ROGUE),
+			"R550 发布版：见到一层 Boss → 暗影刺客解锁")
+	check(not UnlockSystem.is_class_unlocked(PlayerClass.MECH),
+			"R550 发布版：第一次还没机械之心")
+	UnlockSystem.note_boss_seen(GameLayers.LAYER_DEFAULT)
+	check(UnlockSystem.is_class_unlocked(PlayerClass.MECH),
+			"R550 发布版：第二次 → 机械之心解锁")
+	# 非一层 Boss 不算（只认第一层）
+	ProfileData.reset_all()
+	UnlockSystem.note_boss_seen(GameLayers.LAYER_TWO)
+	check(not UnlockSystem.is_class_unlocked(PlayerClass.ROGUE),
+			"R550 发布版：第二层 Boss 不算「见到一层 Boss」")
+	# 打通 2 层 → 当前职业难度 +1
+	RunState.run_active = true
+	RunState.player_class = PlayerClass.DRUID
+	RunState.difficulty = 0
+	UnlockSystem.note_layer_two_cleared()
+	check(UnlockSystem.difficulty_cap(PlayerClass.DRUID) == 1,
+			"R550 发布版：打通 2 层 → 森林精魄难度 0→1")
+	RunState.difficulty = 1
+	UnlockSystem.note_layer_two_cleared()
+	check(UnlockSystem.difficulty_cap(PlayerClass.DRUID) == 2,
+			"R550 发布版：难度 1 打通 → 上限抬到 2")
+	# 源码锁：三处关键入口在位
+	var r550_gb := FileAccess.get_file_as_string("res://scripts/game_build.gd")
+	check_src(r550_gb.find("func is_release()") >= 0
+			and r550_gb.find("cardrogue_release") >= 0,
+			"R550 源码：game_build.is_release + cardrogue_release feature 在位")
+	var r550_us := FileAccess.get_file_as_string("res://scripts/unlock_system.gd")
+	check_src(r550_us.find("static func is_class_unlocked") >= 0
+			and r550_us.find("static func note_boss_seen") >= 0
+			and r550_us.find("static func note_layer_two_cleared") >= 0,
+			"R550 源码：unlock_system 三个关键函数在位")
+	var r550_cp := FileAccess.get_file_as_string("res://scripts/class_pick_scene.gd")
+	check_src(r550_cp.find("class_avatar_locked") >= 0
+			and r550_cp.find("未解锁") >= 0
+			and r550_cp.find("UnlockSystem.is_class_unlocked(ids[i])") >= 0
+			and r550_cp.find("UnlockSystem.difficulty_cap(ids[_rand_pick])") >= 0,
+			"R550 源码：选角色锁定头像 + 随机只在已解锁职业里摇")
+	# 恢复
+	GameBuild.set_test_release(-1)
+	RunState.run_active = r550_active
+	RunState.player_class = r550_cls
+	RunState.difficulty = r550_diff
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

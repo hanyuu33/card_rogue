@@ -364,6 +364,13 @@ static func class_avatar(cls: String) -> Texture2D:
 	return small_icon("class_avatar_" + k, 160) if k != "" else null
 
 
+static func class_avatar_locked(cls: String) -> Texture2D:
+	## 锁定职业的**剪影 + 金锁**头像（R550，发布版解锁）—— 不露真实立绘。
+	## 缺图返回 null，调用方回退 `class_badge` 圆徽。
+	var k := class_key(cls)
+	return small_icon("class_avatar_" + k + "_locked", 160) if k != "" else null
+
+
 static func clear_cache() -> void:
 	## 运行中换了图想立刻生效时可以调（正常流程不需要）。
 	_cache.clear()

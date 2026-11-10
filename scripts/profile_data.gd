@@ -44,12 +44,21 @@ const K_ELITE_WIN := "elite_win"
 const K_BOSS_WIN := "boss_win"
 const K_RUN_WIN := "run_win"
 const K_RUN_START := "run_start"     # R352：开局次数（故事 1 的判据）
+## R550（发布版解锁）：累计「见到一层 Boss」的次数 —— 职业解锁的判据。
+## 只统计「进入第一层 Boss 战」那一刻（打赢与否不算），见 `UnlockSystem.note_boss_seen()`。
+const K_BOSS_SEEN := "boss_seen"
 
 static var stats: Dictionary = {}
 static var unlocked_stories: Array[String] = []
 static var read_stories: Array[String] = []
 static var unlocked_cards: Array[int] = []
 static var unlocked_relics: Array[int] = []
+## R550（发布版解锁）：已解锁的职业 id（森林精魄是起始职业，**恒视为已解锁**，不写进这里）。
+## 测试版无视此表（全部职业直接可用）。
+static var unlocked_classes: Array[String] = []
+## R550（发布版解锁）：各职业**已解锁的最高难度** {职业: int}。缺省 = 0（初始只提供难度 0）。
+## 测试版无视此表（难度 0~11 全部可用）。
+static var class_diff: Dictionary = {}
 ## R352：禁卡表**按职业分组**（原来是扁平 Array[int]）—— 用户口径
 ## 「每获得一张卡新增一个 ban 位（公用卡则是每个职业一个 ban 位）」，
 ## 公用卡会在三个职业的奖励池里都出现，所以要 ban 三次，各职业各一个名额。
@@ -80,6 +89,8 @@ static func clear_memory() -> void:
 	read_stories = []
 	unlocked_cards = []
 	unlocked_relics = []
+	unlocked_classes = []     # R550
+	class_diff = {}           # R550
 	banned_by_class = {}
 	_dirty = false
 
@@ -117,6 +128,12 @@ static func ensure_loaded() -> void:
 	read_stories = _str_array(d.get("read_stories", []))
 	unlocked_cards = _int_array(d.get("unlocked_cards", []))
 	unlocked_relics = _int_array(d.get("unlocked_relics", []))
+	unlocked_classes = _str_array(d.get("unlocked_classes", []))   # R550
+	# R550：class_diff 是 {职业: int} —— JSON 数字读回来是 float，逐个 int()。
+	var cd: Variant = d.get("class_diff", {})
+	if cd is Dictionary:
+		for k: Variant in (cd as Dictionary).keys():
+			class_diff[str(k)] = int((cd as Dictionary)[k])
 	# R352：禁卡表按职业分组。老档案（R346~R351）是扁平数组 `banned_cards` →
 	# 视为「三个职业都禁过同样的卡」迁移过来，别把玩家的设置丢掉。
 	var bb: Variant = d.get("banned_by_class", {})
@@ -139,6 +156,8 @@ static func save() -> bool:
 		"read_stories": read_stories,
 		"unlocked_cards": unlocked_cards,
 		"unlocked_relics": unlocked_relics,
+		"unlocked_classes": unlocked_classes,   # R550
+		"class_diff": class_diff,               # R550
 		"banned_by_class": banned_by_class,
 	}
 	var f := FileAccess.open(_path, FileAccess.WRITE)
@@ -268,6 +287,42 @@ static func is_card_unlocked(id: int) -> bool:
 static func is_relic_unlocked(id: int) -> bool:
 	ensure_loaded()
 	return unlocked_relics.has(id)
+
+
+# ------------------------------------------------------------ R550 发布版解锁（职业 / 难度）
+#
+# 数据只在这里存取；**判定是否生效**走 `UnlockSystem`（它包一层 `GameBuild.is_release()`）。
+# 测试版照常写这些字段，但 `UnlockSystem` 会无视它们（全部放行），所以写脏也无副作用。
+
+static func is_class_unlocked(cid: String) -> bool:
+	## 该职业是否已解锁（**不含**「森林精魄恒解锁」那条 —— 那是 UnlockSystem 的规则）。
+	ensure_loaded()
+	return unlocked_classes.has(cid)
+
+
+static func unlock_class(cid: String) -> bool:
+	ensure_loaded()
+	if cid == "" or unlocked_classes.has(cid):
+		return false
+	unlocked_classes.append(cid)
+	_dirty = true
+	return true
+
+
+static func class_difficulty(cid: String) -> int:
+	## 该职业已解锁的最高难度（缺省 0）。
+	ensure_loaded()
+	return int(class_diff.get(cid, 0))
+
+
+static func set_class_difficulty(cid: String, d: int) -> bool:
+	## 抬高该职业的难度上限（只升不降）。返回是否真的变了。
+	ensure_loaded()
+	if cid == "" or d <= int(class_diff.get(cid, 0)):
+		return false
+	class_diff[cid] = d
+	_dirty = true
+	return true
 
 
 # ------------------------------------------------------------ 成就 → 剧情

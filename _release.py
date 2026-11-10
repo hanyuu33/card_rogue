@@ -2,7 +2,8 @@
 """卡牌肉鸽 · 发布独立版。
 
 用法：
-    python _release.py                  回归 → 导出 → 覆盖目标 → 用发布产物自检
+    python _release.py                  回归 → 导出 → 覆盖目标 → 用发布产物自检（测试版）
+    python _release.py --release        构建**发布版**（职业·难度渐进解锁，见 unlock_system.gd）
     python _release.py --no-verify      跳过回归（已经手工跑过时）
     python _release.py --two-file       exe + 旁挂 pck 双文件（旧形态，保留兼容）
     python _release.py --target=目录    写到别的目录（验证用，不碰正式发布目录）
@@ -57,10 +58,12 @@ import subprocess
 import sys
 
 GODOT_CONSOLE = r"C:\Users\Administrator\.workbuddy\binaries\godot\Godot_v4.3-stable_win64_console.exe"
-ROOT = r"D:\work\card_rogue"
-TARGET = r"D:\work\卡牌肉鸽_独立版"
+# 双机通用：以脚本自身位置推导工程根目录（D:\work 或 E:\work 都一样），别再写死盘符。
+ROOT = os.path.dirname(os.path.abspath(__file__))
+TARGET = os.path.join(os.path.dirname(ROOT), "卡牌肉鸽_独立版")
 
 PRESET = "Windows Desktop"
+PRESET_RELEASE = "Windows Desktop Release"   # R550：发布版（custom_features=cardrogue_release）
 EXE_NAME = "DuckCardsRogue.exe"
 PCK_NAME = "DuckCardsRogue.pck"
 PACK_REL = "dist/" + PCK_NAME
@@ -176,6 +179,16 @@ def main():
     args = sys.argv[1:]
     do_verify = "--no-verify" not in args
     two_file = "--two-file" in args
+    # R550：`--release` 构建**发布版**（职业·难度渐进解锁），默认构建**测试版**（全解锁）。
+    # 通过 global 改模块级 PRESET / EXE_NAME / PCK_NAME，其余代码照旧。
+    global PRESET, EXE_NAME, PCK_NAME, PACK_REL
+    release = "--release" in args
+    if release:
+        PRESET = PRESET_RELEASE
+        sfx = "_release"
+        EXE_NAME = "DuckCardsRogue" + sfx + ".exe"
+        PCK_NAME = "DuckCardsRogue" + sfx + ".pck"
+        PACK_REL = "dist/" + PCK_NAME
     target = TARGET
     for a in args:
         if a.startswith("--target="):
@@ -183,7 +196,7 @@ def main():
     os.chdir(ROOT)
 
     mode = "双文件（exe + 旁挂 pck）" if two_file else "单文件（pck 内嵌）"
-    print("发布模式：%s" % mode)
+    print("发布模式：%s  |  构建：%s" % (mode, "发布版" if release else "测试版"))
     print("目标目录：%s" % target)
 
     # ---------- 1) 回归 ----------

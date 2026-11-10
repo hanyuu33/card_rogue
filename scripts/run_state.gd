@@ -936,6 +936,10 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	run_rng.seed = run_seed
 	run_active = true
 	player_class = cid if cid != "" else PlayerClass.default_id()
+	# R550（发布版解锁）：防御性钳制 —— 难度不得超过当前职业已解锁的上限。
+	# UI（class_pick_scene）里已经拦，这里是纵深防御：任何路径带着超限难度进来都会被压回。
+	if GameBuild.is_release():
+		difficulty = clampi(difficulty, 0, UnlockSystem.difficulty_cap(player_class))
 	# R352：统计「开局次数」—— 故事 1 的解锁条件就是「进行任意一局游戏」。
 	# 只记内存 + 置脏，落盘交给 `flush()`（`map_scene` 进地图时会调）。
 	ProfileData.bump(ProfileData.K_RUN_START)

@@ -365,10 +365,19 @@ func _roll_random() -> void:
 	## R545（用户口径「随机不要立即看到选了什么」）：随机结果**先藏起来**，
 	## 直到点「确认进入」才揭晓并开局。所以这里只摇、只记，不改 `_selected`、
 	## 不换 CG —— 面板与头像行都保持在盲选态（`_rand_pending`）。
-	var n := PlayerClass.ids().size()
-	if n <= 0:
+	## R550（发布版解锁）：只在**已解锁**的职业里摇；难度取「尽可能高」=
+	## 已解锁职业的最高难度（`global_max_difficulty`），但**不突破**随到职业自己的上限
+	## （`min(global, cap(picked))` —— 因随到职业必已解锁，实际 = 该职业自己的最高难度）。
+	var ids := PlayerClass.ids()
+	var pool: Array[int] = []
+	for i in ids.size():
+		if UnlockSystem.is_class_unlocked(ids[i]):
+			pool.append(i)
+	if pool.is_empty():
 		return
-	_rand_pick = randi() % n
+	_rand_pick = pool[randi() % pool.size()]
+	RunState.set_difficulty(mini(UnlockSystem.global_max_difficulty(),
+			UnlockSystem.difficulty_cap(ids[_rand_pick])))
 	_rand_pending = true
 	sfx.play("click")
 	queue_redraw()
@@ -378,9 +387,11 @@ func _draw_avatar(i: int) -> void:
 	var cid := PlayerClass.ids()[i]
 	var r := _av_rect(i)
 	var sel := i == _selected and not _rand_pending   # R545：盲选态不标任何头像
+	var unlocked := UnlockSystem.is_class_unlocked(cid)
 	var cc: Color = UiTheme.class_color(cid)
 	UiTheme.draw_info_card(self, r)
-	var tex := UiAssets.class_avatar(cid)
+	# R550：锁定职业用「剪影 + 金锁」头像（缺图回退职业圆徽），不露真实立绘。
+	var tex := UiAssets.class_avatar_locked(cid) if not unlocked else UiAssets.class_avatar(cid)
 	if tex != null:
 		var fr := CardFace.fit_rect(tex.get_size(), r.grow(-6.0))
 		draw_texture_rect(tex, fr, false)
@@ -389,10 +400,18 @@ func _draw_avatar(i: int) -> void:
 		var badge := UiAssets.class_badge(cid)
 		if badge != null:
 			draw_texture_rect(badge, r.grow(-8.0), false)
-	draw_rect(r, cc if sel else Color(1, 1, 1, 0.25), false, 4.0 if sel else 2.0)
+	# R550：锁定职业不标职业色，只留中性灰框（不可选）
+	draw_rect(r, cc if (sel and unlocked) else Color(1, 1, 1, 0.25), false, 4.0 if sel else 2.0)
 	if i == _hover and not sel:
 		draw_rect(r.grow(3.0), Color(1, 1, 1, 0.55), false, 2.0)
 	UiTheme.draw_info_card(self, Rect2(r.position.x - 4, r.end.y + 4, r.size.x + 8, 48))
+	# R550：锁定职业名牌替换成「未解锁」，不显示名字与生命
+	if not unlocked:
+		draw_string(_font_bold, Vector2(r.position.x, r.end.y + 24.0), "未解锁",
+				HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, Color("9a968c"))
+		draw_string(_font, Vector2(r.position.x, r.end.y + 44.0), "进行游戏解锁",
+				HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_CAPTION, Color("7d8590"))
+		return
 	draw_string(_font_bold, Vector2(r.position.x, r.end.y + 24.0), PlayerClass.name_of(cid),
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	# 初始最大生命（R182：选职业界面明示，便于对比）
@@ -408,6 +427,15 @@ func _draw_panel(cid: String) -> void:
 	var x := p.position.x + 48.0
 	var w := PANEL_W - 88.0
 	var y := p.position.y + 46.0
+	# R550（纵深防御）：锁定职业不该能被选进来 —— 万一进来，面板只显示「未解锁」。
+	if not UnlockSystem.is_class_unlocked(cid):
+		draw_string(_font_bold, Vector2(x, y), "未解锁",
+				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, UiTheme.PAGE_INK)
+		y += 30.0
+		draw_string(_font, Vector2(x, y), "尚未解锁 —— 进行游戏即可解锁",
+				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
+		_draw_difficulty_block(x, w)
+		return
 	draw_string(_font_bold, Vector2(x, y), PlayerClass.name_of(cid),
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, UiTheme.PAGE_INK)
 	y += 30.0
@@ -433,16 +461,35 @@ func _draw_panel(cid: String) -> void:
 	_draw_difficulty_block(x, w)
 
 
+func _effective_class() -> String:
+	## R550：当前「实际在选」的职业 —— 盲选态用摇中的 `_rand_pick`，否则用 `_selected`。
+	var ids := PlayerClass.ids()
+	if _rand_pending:
+		return ids[clampi(_rand_pick, 0, ids.size() - 1)]
+	return ids[clampi(_selected, 0, ids.size() - 1)]
+
+
+func _diff_cap() -> int:
+	## R550：当前职业**可选的最高难度**（发布版 = 该职业已解锁上限；测试版 = 最高档）。
+	return UnlockSystem.difficulty_cap(_effective_class())
+
+
+func _diff_set_to(d: int) -> void:
+	## R550：设难度并钳到当前职业上限（点箭头 / 键盘左右都走这里）。
+	RunState.set_difficulty(clampi(d, 0, _diff_cap()))
+
+
 func _draw_difficulty_block(x: float, w: float) -> void:
 	## R545：从 _draw_panel 抽出的难度档位 + 摘要 + 确认钮（盲选面板与角色面板共用）。
 	# 难度档位（R223：左箭头 / 档位盒 / 右箭头，0~10 共 11 档，钳制不循环）
 	draw_string(_font_bold, Vector2(x, _diff_row_rect().position.y - 13.0), "难度档位",
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, UiTheme.PAGE_INK)
-	var d := clampi(RunState.difficulty, 0, RunState.DIFFICULTY_COUNT - 1)
+	var cap := _diff_cap()
+	var d := clampi(RunState.difficulty, 0, cap)
 	var lr := _diff_left_rect()
 	var rr := _diff_right_rect()
 	UiTheme.draw_action(self, lr, false, d == 0)
-	UiTheme.draw_action(self, rr, false, d == RunState.DIFFICULTY_COUNT - 1)
+	UiTheme.draw_action(self, rr, false, d == cap)
 	var arrow_on := UiTheme.PAGE_INK
 	var arrow_off := Color("6b675f")
 	draw_string(_font_bold, Vector2(lr.position.x, lr.position.y + 26.0), "<",
@@ -450,7 +497,7 @@ func _draw_difficulty_block(x: float, w: float) -> void:
 			arrow_on if d > 0 else arrow_off)
 	draw_string(_font_bold, Vector2(rr.position.x, rr.position.y + 26.0), ">",
 			HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_HEADING,
-			arrow_on if d < RunState.DIFFICULTY_COUNT - 1 else arrow_off)
+			arrow_on if d < cap else arrow_off)
 	var br := _diff_box_rect()
 	UiTheme.draw_info_card(self, br, true)
 	# R543：难度 ≥ 11（第三层上锁）→ 难度框描边变橙色（美术风格不变，只换描边色）。
@@ -546,15 +593,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _picked:
 		return
-	# R223：键盘 ←/→ 也能调难度档位（与点箭头同效果）
+	# R223：键盘 ←/→ 也能调难度档位（与点箭头同效果）；R550 钳到当前职业上限
 	if event is InputEventKey and event.pressed and _selected >= 0:
 		match event.keycode:
 			KEY_LEFT:
-				RunState.set_difficulty(RunState.difficulty - 1)
+				_diff_set_to(RunState.difficulty - 1)
 				sfx.play("click")
 				queue_redraw()
 			KEY_RIGHT:
-				RunState.set_difficulty(RunState.difficulty + 1)
+				_diff_set_to(RunState.difficulty + 1)
 				sfx.play("click")
 				queue_redraw()
 
@@ -589,15 +636,23 @@ func _gui_input(event: InputEvent) -> void:
 				return
 			if _diff_left_rect().has_point(pos) or _diff_right_rect().has_point(pos):
 				var dir := -1 if _diff_left_rect().has_point(pos) else 1
-				RunState.set_difficulty(RunState.difficulty + dir)
+				_diff_set_to(RunState.difficulty + dir)   # R550：钳到当前职业上限
 				sfx.play("click")
 				queue_redraw()   # R186（原来靠 _process 每帧重绘）
 				return
 		for i in PlayerClass.ids().size():
 			if _av_rect(i).grow(5.0).has_point(pos):
+				# R550：锁定职业不可选 —— 只给一句提示，不改选择
+				if not UnlockSystem.is_class_unlocked(PlayerClass.ids()[i]):
+					sfx.play("click")
+					UiToast.toast("尚未解锁", 1200)
+					queue_redraw()
+					return
 				_selected = i
 				last_selected = i
 				_rand_pending = false   # R545：点具体角色 = 取消盲选
+				# R550：换职业后难度可能超出新职业上限 → 当场压回
+				_diff_set_to(RunState.difficulty)
 				sfx.play("click")
 				queue_redraw()   # R186（原来靠 _process 每帧重绘）
 				return

@@ -866,6 +866,8 @@ func _start_boss_battle() -> void:
 	RunState.boss_pending = false
 	RunState.pending_level = RunState.boss_level()
 	RunState.pending_node = {"type": "boss"}
+	# R550（发布版解锁）：进入 Boss 战即算「见到 Boss」（打赢与否不算）——职业解锁判据。
+	UnlockSystem.note_boss_seen(RunState.current_layer)
 	SceneFx.goto("res://scenes/battle.tscn")
 
 

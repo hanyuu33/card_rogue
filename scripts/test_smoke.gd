@@ -44,6 +44,8 @@ func _initialize() -> void:
 		["res://scenes/class_pick.tscn", func():
 				_reset()
 				RunState.player_class = PlayerClass.MECH],
+		# R550（发布版解锁）：锁定职业的剪影+金锁头像素材要能加载、发布版初始闸门要对。
+		["res://scenes/class_pick.tscn", func(): _reset(), _check_r550_locked_class],
 		# 地图场景（R69 的 14 层 + 第 9 层固定休息层）。
 		# `relic_choice = []` 是**必须的**：start_run 会填 3 个待选初始道具，
 		# 而 map_scene._ready 见它非空就 `change_scene_to_file(relic_pick)` 直接 return，
@@ -994,6 +996,26 @@ func _check_r389_auto_leave(scene: Variant) -> void:
 	scene.set("over_route_fn", Callable())
 	print("SMOKE OK R389 领完奖励：关窗即回地图 / 没领完不动 / 转场不重复跳")
 
+
+func _check_r550_locked_class(scene: Variant) -> void:
+	## R550（发布版解锁）：锁定职业的剪影+金锁头像素材必须能加载（UiAssets 内部走
+	## ResourceLoader，别用 FileAccess —— 导出包里 png 被 ctex 取代会假失败），
+	## 且发布版初始闸门要对：森林精魄恒解锁 / 另两个初始锁定 / 全局最高难度 0。
+	## 发布位在本函数内自收自放：场景实例化失败（check 不跑）时也不会泄漏给后续用例。
+	GameBuild.set_test_release(1)
+	ProfileData.reset_all()
+	for cls: String in [PlayerClass.DRUID, PlayerClass.ROGUE, PlayerClass.MECH]:
+		if UiAssets.class_avatar_locked(cls) == null:
+			_smoke_fail("R550：锁定头像素材缺失（%s_locked 没导进来）" % cls)
+	if not UnlockSystem.is_class_unlocked(PlayerClass.DRUID):
+		_smoke_fail("R550：发布版森林精魄应恒解锁")
+	if UnlockSystem.is_class_unlocked(PlayerClass.ROGUE):
+		_smoke_fail("R550：发布版暗影刺客初始应锁定")
+	if UnlockSystem.is_class_unlocked(PlayerClass.MECH):
+		_smoke_fail("R550：发布版机械之心初始应锁定")
+	if UnlockSystem.global_max_difficulty() != 0:
+		_smoke_fail("R550：发布版初始全局最高难度应为 0，实际 %d" % UnlockSystem.global_max_difficulty())
+	GameBuild.set_test_release(-1)
 
 func _check_r546_win_panel(scene: Variant) -> void:
 	## R546：胜利面板（素材底板 + 缎带 + 金币 + 唯一主按钮）。
