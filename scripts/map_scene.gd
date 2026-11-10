@@ -33,19 +33,8 @@ const UiRoll = preload("res://scripts/ui_roll.gd")
 const CELL := 118.0                  # 格子边长（正方形，相邻格共享边）
 const MAP_W := 826.0                 # 7 × 118
 const MAP_H := 590.0                 # 5 × 118
-const MAP_X0_STD := 200.0            # R554：标准宽度下地图右移，右侧给道具栏（两列 + 一点留空）让位
+const MAP_X0 := 200.0                # R554：地图右移，右侧给道具栏（两列 + 一点留空）让位
 const MAP_Y0 := 94.0                 # 标题行 + 信息行之下
-
-
-func _map_x0() -> float:
-	## R554：地图水平起点。标准宽度（视口 ≤1280）下右移到 MAP_X0_STD，给右侧道具栏
-	## 留「两列 + 一点留空」；宽屏（视口比 1280 舞台宽）下道具栏贴屏幕右缘、右边空间大，
-	## 地图随窗口加宽**线性居中**到舞台中心（= 屏幕正中心，因为舞台本身已居中）。
-	var dx := UiTheme.win_dx(self)
-	if dx <= 0.0:
-		return MAP_X0_STD
-	var center := (UiTheme.STAGE_W - MAP_W) * 0.5   # 227，舞台内水平居中
-	return lerpf(MAP_X0_STD, center, clampf(dx / (center - MAP_X0_STD), 0.0, 1.0))
 
 const VIEW_H := 720.0
 const DRAG_THRESHOLD := 6.0          # 弃用（保留：点击判定仍用它区分按下/拖动）
@@ -378,7 +367,7 @@ func _ready() -> void:
 	# R148：上栏原来挂着「回到标题 / 战斗记录 / 查看卡组」三个 chip —— 全部收进
 	# Esc 菜单（点齿轮或按 Esc 打开），上栏只留**一个齿轮**。
 	_menu_btn = Button.new()
-	_menu_btn.position = Vector2(size.x - 64 + UiTheme.win_dx(self), 12)
+	_menu_btn.position = Vector2(size.x - 64, 12)
 	_menu_btn.size = Vector2(40, 30)
 	_menu_btn.pressed.connect(_open_menu)
 	_menu_btn.draw.connect(_draw_menu_gear)
@@ -396,9 +385,8 @@ func _ready() -> void:
 	_deck_btn.pressed.connect(func(): sfx.play("click"))
 	UiTheme.apply_chip(_deck_btn, true)
 	add_child(_deck_btn)
-	# R519b：窗口一变宽，右上那一排（巧克力 / 完整卡组 / 齿轮）要跟着贴到**新的**右缘。
-	# 节点位置是算一次就固定的，所以这里挂一个回调；绘制部分（`_choco_panel_rect` 等）
-	# 每次 `_draw` 现算，不用管。
+	# R554b：右上那排（巧克力 / 完整卡组 / 齿轮）统一「收拢」在舞台右缘（不再贴屏幕右缘），
+	# 宽屏下随舞台居中、左右对称。size_changed 回调保留但已变成 no-op（重摆到固定位置）。
 	var _wr: WeakRef = weakref(self)
 	get_viewport().size_changed.connect(func() -> void:
 		var s = _wr.get_ref()
@@ -542,7 +530,7 @@ func _prep_midway_demo() -> void:
 func _cell_rect(cell: Dictionary) -> Rect2:
 	var col := int(cell["col"])
 	var row := int(cell["row"])
-	return Rect2(_map_x0() + col * CELL, MAP_Y0 + row * CELL, CELL, CELL)
+	return Rect2(MAP_X0 + col * CELL, MAP_Y0 + row * CELL, CELL, CELL)
 
 
 func _cell_center(cell: Dictionary) -> Vector2:
@@ -551,7 +539,7 @@ func _cell_center(cell: Dictionary) -> Vector2:
 
 
 func _cell_at(pos: Vector2) -> Dictionary:
-	var col := int((pos.x - _map_x0()) / CELL)
+	var col := int((pos.x - MAP_X0) / CELL)
 	var row := int((pos.y - MAP_Y0) / CELL)
 	if not RogueMap.in_bounds(col, row):
 		return {}
@@ -590,7 +578,7 @@ func _is_current(cell: Dictionary) -> bool:
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and not (_relics_visible or _records_visible or _deck_visible) and _anim_cell.is_empty():
-		var strip := Rect2(size.x + UiTheme.win_dx(self) - 232, RELIC_BADGE_Y, 216, size.y - RELIC_BADGE_Y - 34)
+		var strip := Rect2(size.x - 232, RELIC_BADGE_Y, 216, size.y - RELIC_BADGE_Y - 34)
 		if strip.has_point(event.position) and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			_relic_scroll_row += 1 if event.button_index == MOUSE_BUTTON_WHEEL_DOWN else -1
 			_relic_slot_list()
@@ -1234,7 +1222,7 @@ func _draw_player_marker(r: Rect2) -> void:
 
 
 func _draw_hud() -> void:
-	var title := Rect2(_map_x0() + MAP_W / 2 - 150, 8, 300, 54)
+	var title := Rect2(MAP_X0 + MAP_W / 2 - 150, 8, 300, 54)
 	MapMaterial.draw(self, title)
 	draw_string(_font_bold, title.position + Vector2(0, 33), "冒险地图", HORIZONTAL_ALIGNMENT_CENTER, title.size.x, 26, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(title.position.x, 80), GameLayers.layer_name(RunState.current_layer), HORIZONTAL_ALIGNMENT_CENTER, title.size.x, 15, Color("f6edcf"))
@@ -1251,7 +1239,7 @@ func _draw_boss_chip() -> void:
 
 func _choco_panel_rect() -> Rect2:
 	# R519b：贴**窗口**右缘 —— 顶栏通屏后，舞台右缘已经不是屏幕右缘了
-	return Rect2(size.x - 302 + UiTheme.win_dx(self), 12, CHOCO_PANEL_W, CHOCO_PANEL_H)
+	return Rect2(size.x - 302, 12, CHOCO_PANEL_W, CHOCO_PANEL_H)
 
 
 func _draw_choco_icon(box: Rect2, alpha: float = 1.0) -> void:
@@ -1492,7 +1480,7 @@ func _mark_set_mode(m: int) -> void:
 
 func _mark_clamp(p: Vector2) -> Vector2:
 	## 标记点限制在地图区内（否则战斗内总览做线性映射时会跑到面板外）。
-	return Vector2(clampf(p.x, _map_x0(), _map_x0() + MAP_W),
+	return Vector2(clampf(p.x, MAP_X0, MAP_X0 + MAP_W),
 			clampf(p.y, MAP_Y0, MAP_Y0 + MAP_H))
 
 
@@ -1721,13 +1709,14 @@ const DECK_BTN_GAP := 8.0     # 与最右一枚道具徽章之间留的空
 const RELIC_TIP_TOP := 46.0
 
 func _deck_btn_rect() -> Rect2:
-	return Rect2(size.x - 174 + UiTheme.win_dx(self), 12, DECK_BTN_W, DECK_BTN_H)
+	return Rect2(size.x - 174, 12, DECK_BTN_W, DECK_BTN_H)
 
 
 func _relayout_topright() -> void:
-	## R519b：把右上那排节点重新贴到当前窗口右缘（窗口变宽时由 size_changed 驱动）。
+	## R554b：右上那排节点收拢在舞台右缘（`size.x - 常量`），窗口变宽时位置不变——
+	## 此回调随 size_changed 触发但已是 no-op，保留以防未来恢复「贴屏幕右缘」。
 	if _menu_btn != null:
-		_menu_btn.position = Vector2(size.x - 64 + UiTheme.win_dx(self), 12)
+		_menu_btn.position = Vector2(size.x - 64, 12)
 	if _deck_btn != null:
 		var r := _deck_btn_rect()
 		_deck_btn.position = r.position
@@ -1739,7 +1728,7 @@ var _relic_scroll_row := 0
 
 
 func _relic_reserved() -> Array[Rect2]:
-	return [_deck_btn_rect().grow(2), _choco_panel_rect().grow(2), Rect2(size.x - 64 + UiTheme.win_dx(self), 12, 40, 30), Rect2(_map_x0(), MAP_Y0, MAP_W, MAP_H)]
+	return [_deck_btn_rect().grow(2), _choco_panel_rect().grow(2), Rect2(size.x - 64, 12, 40, 30), Rect2(MAP_X0, MAP_Y0, MAP_W, MAP_H)]
 
 
 func _relic_slot_list() -> Array[Rect2]:
@@ -1752,7 +1741,7 @@ func _relic_slot_list() -> Array[Rect2]:
 		if row < 0 or row >= visible_rows:
 			out.append(Rect2(-1000, -1000, 0, 0))
 		else:
-			out.append(Rect2(size.x + UiTheme.win_dx(self) - RELIC_EDGE_R - RELIC_BADGE_W - int(i / rows) * RELIC_STEP_X,
+			out.append(Rect2(size.x - RELIC_EDGE_R - RELIC_BADGE_W - int(i / rows) * RELIC_STEP_X,
 					RELIC_BADGE_Y + row * RELIC_STEP_Y, RELIC_BADGE_W, RELIC_BADGE_H))
 	return out
 
@@ -1761,7 +1750,7 @@ func _relic_rect(i: int) -> Rect2:
 	## 与绘制共用槽位；滚出可视范围的条目返回屏外零尺寸矩形。
 	var slots := _relic_slot_list()
 	if slots.is_empty():
-		return Rect2(size.x + UiTheme.win_dx(self) - RELIC_EDGE_R - RELIC_BADGE_W, RELIC_BADGE_Y,
+		return Rect2(size.x - RELIC_EDGE_R - RELIC_BADGE_W, RELIC_BADGE_Y,
 				RELIC_BADGE_W, RELIC_BADGE_H)
 	if i < 0:
 		i = 0
@@ -1777,7 +1766,7 @@ func _draw_relics() -> void:
 			and not UiGate.blocked() \
 			and (_reward_panel == null or not _reward_panel.is_open())
 	if RunState.relics.size() > int((size.y - 34 - RELIC_BADGE_Y) / RELIC_STEP_Y) * 2:
-		draw_string(_font, Vector2(size.x + UiTheme.win_dx(self) - 230, size.y - 12), "滚轮浏览道具", HORIZONTAL_ALIGNMENT_CENTER, 208, 12, UiTheme.PAGE_INK)
+		draw_string(_font, Vector2(size.x - 230, size.y - 12), "滚轮浏览道具", HORIZONTAL_ALIGNMENT_CENTER, 208, 12, UiTheme.PAGE_INK)
 	var repo := RelicRepo.load_json()
 	var hovered := -1
 	for i in RunState.relics.size():
@@ -1812,7 +1801,7 @@ func _draw_relic_tip(repo: RelicRepo, rel: RelicData, note: String) -> void:
 			rel.desc, ("  " + note) if note != "" else ""]
 	var w := 480.0
 	var lines := CardFace.wrap_text(_font, text, w - 20.0, 13)
-	var tx: float = clampf(_mouse.x - w / 2, 8, size.x + UiTheme.win_dx(self) - w - 8)
+	var tx: float = clampf(_mouse.x - w / 2, 8, size.x - w - 8)
 	var panel := Rect2(tx, RELIC_TIP_TOP, w, 12.0 + lines.size() * 18.0)
 	draw_rect(panel, Color(0.10, 0.11, 0.15, 0.95), true)
 	draw_rect(panel, rel.badge_color(), false, 1.2)
