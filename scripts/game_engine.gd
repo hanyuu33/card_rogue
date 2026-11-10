@@ -1052,8 +1052,8 @@ const BOUNCE_KNIFE_BOUNCES:= 2
 # 预判（9097 技能）：0 费史诗；二选一：①弃牌区选一张 0 费技能卡（之后本卡消失）
 # ②卡组随机非 0 费技能卡入手。面板走 foresight_* 状态机。
 const FORESIGHT_ID:= 9097
-# R559 传授（8084）：从全角色卡池组合一张盟友卡（拖拽拼装 UI）。
-const TEACH_ID:= 8084
+# R559 传授（8084/8085/8086）：从全角色卡池组合一张盟友/工事卡（拖拽拼装 UI）。
+const TEACH_IDS: Array[int] = [8084, 8085, 8086]
 # 拒绝命运（9098 技能）：2 费史诗；弃掉**全部**手卡 → 从弃牌区把**所有 0 费 / 1 费卡**
 #   按弃牌区顺序加回手卡（不超过手牌上限）→ 本卡消失（带「次元」）。
 # R292 改「自动结算」：以前是「从弃牌区选等量、必须选满」的模态面板；玩家口径
@@ -10289,7 +10289,10 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 	return out_det
 
 
-func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:	match card.id:
+func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
+	if card.id in TEACH_IDS:
+		return _teach_spell(side)
+	match card.id:
 		WISH_ID:
 			# 许愿（9168，R306）：**从卡组**选一张卡加入手卡 —— 选卡页接管（`wish_pending`），
 			# 结算口是 `wish_pick()`。卡组空了就白打（这张卡自己仍按「次元」进消耗区）。
@@ -10934,8 +10937,6 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			foresight_mode = true
 			_log("预判：选择一个效果（面板二选一）")
 			return "选择一个效果"
-		TEACH_ID:
-			return _teach_spell(side)
 		FATE_REJECT_ID:
 			return _fate_reject(side)
 		INFILTRATE_ID:

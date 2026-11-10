@@ -257,7 +257,7 @@ func _test_formal_pool() -> void:
 func _test_combo() -> void:
 	# R559 组合（传授 8084）：从全角色盟友卡池抽 6 张，拖 3 张分别定属性/上半/下半，结果带「组合」印记。
 	var repo := CardRepo.load_json()
-	var teach: CardData = repo.get_card(GameEngine.TEACH_ID)
+	var teach: CardData = repo.get_card(8084)
 	check(teach != null and teach.kind == "技能" and teach.card_class == "森林精魄"
 			and teach.cost == 1 and teach.rarity == 1,
 			"R559 传授：8084 是森林精魄 1 费稀有技能")
@@ -313,8 +313,26 @@ func _test_combo() -> void:
 	check(eng.assemble_combo_pending, "R559 组合：再次进入拼装")
 	eng.assemble_combo_cancel()
 	check(not eng.assemble_combo_pending, "R559 组合：cancel 清空 pending")
+	# R560：新增传授卡 8085 影缚（暗影刺客）/ 8086 重构（机械之心），走 TEACH_IDS 集合触发
+	var teach2: CardData = repo.get_card(8085)
+	var teach3: CardData = repo.get_card(8086)
+	check(teach2 != null and teach2.card_class == "暗影刺客" and teach2.kind == "技能" and teach2.cost == 1,
+			"R560 传授：8085 影缚是暗影刺客 1 费技能")
+	check(teach3 != null and teach3.card_class == "机械之心" and teach3.kind == "技能" and teach3.cost == 1,
+			"R560 传授：8086 重构是机械之心 1 费技能")
+	check(GameEngine.TEACH_IDS.has(8084) and GameEngine.TEACH_IDS.has(8085) and GameEngine.TEACH_IDS.has(8086),
+			"R560 传授：TEACH_IDS 集合含 8084/8085/8086")
+	# R560：新增拼装主体卡 8087 树灵雏形（森林精魄）/ 8088 影偶（暗影刺客），traits 含「拼装」+ assemble_pool
+	var proto2: CardData = repo.get_card(8087)
+	var proto3: CardData = repo.get_card(8088)
+	check(proto2 != null and proto2.card_class == "森林精魄" and proto2.kind == "盟友"
+			and proto2.traits.has("拼装") and proto2.assemble_pool == "default",
+			"R560 拼装：8087 树灵雏形是森林精魄拼装主体")
+	check(proto3 != null and proto3.card_class == "暗影刺客" and proto3.kind == "盟友"
+			and proto3.traits.has("拼装") and proto3.assemble_pool == "default",
+			"R560 拼装：8088 影偶是暗影刺客拼装主体")
 	# 源码锁：传授入口 / 组合结算 / 守卫挂接
 	var src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
-	check(src.count("TEACH_ID:") >= 1 and src.count("_teach_spell") >= 2
+	check(src.count("TEACH_IDS") >= 1 and src.count("_teach_spell") >= 2
 			and src.count("assemble_combo_commit") >= 1 and src.count("_assemble_busy") >= 4,
 			"R559 源码锁：传授入口 / 组合结算 / 守卫挂接")
