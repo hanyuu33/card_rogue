@@ -1038,18 +1038,20 @@ func _check_r546_win_panel(scene: Variant) -> void:
 	if str(btn.text) != "查看奖励":
 		_smoke_fail("R546：主按钮文案应为「查看奖励」，实际「%s」" % str(btn.text))
 		return
-	# R547b：标题必须是**图片素材**（TextureRect + 贴图），不是运行时画的字；
-	# 且字心要落在缎带绿区里 —— 上移就会压到上面的盾徽（用户报过）。
-	var ttl: Variant = scene.get("_win_title")
-	if ttl == null or not (ttl is TextureRect):
-		_smoke_fail("R547b：胜利标题应为 TextureRect（图片素材），实际 %s" % str(ttl))
+	# R548：标题必须是**缎带+金字一体的图片素材**（TextureRect + 贴图），不是运行时画的字。
+	# 位置是量出来的：素材在设计稿上贴于 (77,110)/1100×301，1254→580 系数 0.4625。
+	var rbn: Variant = scene.get("_win_ribbon")
+	if rbn == null or not (rbn is TextureRect):
+		_smoke_fail("R548：胜利标题应为 TextureRect（缎带素材），实际 %s" % str(rbn))
 		return
-	if ttl.texture == null:
-		_smoke_fail("R547b：胜利标题贴图没加载上（assets/ui/battle_win_title.png 缺导入？）")
+	if rbn.texture == null:
+		_smoke_fail("R548：缎带素材没加载上（assets/ui/battle_win_ribbon.png 缺导入？）")
 		return
-	var tcy: float = ttl.position.y + ttl.size.y * 0.5
-	if absf(tcy - 131.0) > 3.0:
-		_smoke_fail("R547b：标题字心 y=%.1f，应在 131 附近（更高会压盾徽，更低会压金滚边）" % tcy)
+	if rbn.position.distance_to(Vector2(35.6, 50.9)) > 2.0:
+		_smoke_fail("R548：缎带素材位置 %s 不在 (35.6,50.9) —— 偏了就会盖住盾徽或压到金币" % str(rbn.position))
+		return
+	if absf(rbn.size.x - rbn.texture.get_size().x * 0.5) > 1.0:
+		_smoke_fail("R548：缎带素材宽度 %.1f 与纹理不符（应按 0.5 显示）" % rbn.size.x)
 		return
 	var rp: Variant = scene.get("_reward_panel")
 	if rp == null:

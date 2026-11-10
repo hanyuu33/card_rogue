@@ -728,18 +728,19 @@ var _over_btn_title: Button
 ## 与老 `_over_panel` 并存：胜利走它，失败仍走老面板 —— 缎带是「胜利」语义，
 ## 同一个绿缎带上写「失败」会自相矛盾。
 const WIN_PANEL_SIDE := 580.0
-## R547b：标题是**贴图**（`assets/ui/battle_win_title.png`，金色浮雕字，按 2x 出图），
-## 不再用 Label —— 常规字体的字重撑不起这块缎带，而且字号 / 行高一调就飘到上方
-## 盾徽上（R547b 用户反馈「位置太高、和上面的标志重叠」「字体太普通」）。
-## 字心 y=131 是量出来的：缎带绿区在中心列是 y≈108~160（上方盾徽尖到 108、
-## 下方金滚边压在 160），46 高的字居中后上下各留 1~2px。
-const WIN_TITLE_CY := 131.0
+## R548：缎带标题**整块是美术素材** —— `assets/ui/battle_win_ribbon.png` 里已经含
+## 绿缎带本体 + 金色「战斗胜利」+ 顶部盾徽，是从设计稿里连缎带一起裁下来的（不是运行时画的字）。
+## 为什么不用 Label / 自绘金字：常规字体撑不起这块缎带（字重、压纹、字距都要逐个调），
+## 自绘的金色浮雕字放大看仍是「平涂」，用户两次否过。
+## 叠放坐标是量出来的：素材块在设计稿 1254 原图上贴于 (77,110)、尺寸 1100×301，
+## 1254 → 游戏 580 面板的系数 0.4625 → 位置 (35.6, 50.9)，素材按 0.5 显示（2x 出图）。
+const WIN_RIBBON_POS := Vector2(35.6, 50.9)
 var _win_panel: Control
 var _win_gold_box: Control            # 金币整块（本场没发金币时整块收掉）
 var _win_gold_num: Label              # 「+50」大字
 var _win_gold_parts: Label            # 分项来源 + 现有金币
 var _win_btn: Button                  # 唯一主按钮：查看奖励 / 进入下一层 / 回地图 / 再来一局
-var _win_title: TextureRect = null     # R547b：标题贴图（素材 419×132，按 2x 显示）
+var _win_ribbon: TextureRect = null    # R548：缎带+金字+盾徽一体素材（1018×285，按 0.5 显示）
 ## R367：本场「输」是否已经落过记录 —— `_record_defeat()` 的幂等标记。
 ## 结算面板要等演出播完才弹，但记录必须在 `engine.over` 那一刻就写。
 var _lose_recorded := false
@@ -7413,22 +7414,22 @@ func _build_win_panel() -> void:
 	plate.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	plate.texture = UiAssets.get_tex("battle_win_plate")
 
-	# 缎带标题：**图片素材**，运行时不再画字。
-	# 素材 419×132（字高 46 的 2x），四周 10px 留白藏投影/描边 → 按 0.5 缩放贴。
-	# 尺寸从纹理算，不写死：素材重出（换字 / 换排版）只替换 png，这里不用动。
-	var title := TextureRect.new()
-	title.name = "TitleArt"
-	title.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	title.stretch_mode = TextureRect.STRETCH_SCALE
-	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title.texture = UiAssets.get_tex("battle_win_title")
-	_win_panel.add_child(title)
-	_win_title = title
-	var tsz := Vector2(209.5, 66.0)                     # 素材缺失时的兜底尺寸
-	if title.texture != null:
-		tsz = title.texture.get_size() * 0.5
-	title.size = tsz
-	title.position = Vector2((WIN_PANEL_SIDE - tsz.x) * 0.5, WIN_TITLE_CY - tsz.y * 0.5)
+	# 缎带标题：**整块美术素材**（缎带 + 金字 + 盾徽一体），运行时不再画字。
+	# 素材 1018×285 → 按 0.5 显示成 509×142.5，位置由量出来的 WIN_RIBBON_POS 固定。
+	# 尺寸从纹理算：素材重出（换「失败」字样 / 换配色）只替换 png，这里不用动。
+	var ribbon := TextureRect.new()
+	ribbon.name = "RibbonArt"
+	ribbon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ribbon.stretch_mode = TextureRect.STRETCH_SCALE
+	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ribbon.texture = UiAssets.get_tex("battle_win_ribbon")
+	_win_panel.add_child(ribbon)
+	_win_ribbon = ribbon
+	var rsz := Vector2(509.0, 142.5)                    # 素材缺失时的兜底尺寸
+	if ribbon.texture != null:
+		rsz = ribbon.texture.get_size() * 0.5
+	ribbon.size = rsz
+	ribbon.position = WIN_RIBBON_POS
 
 	# 金币整块：小标题 + （图标 + 大字）+ 分项。整块可整体隐藏。
 	_win_gold_box = Control.new()
@@ -7731,6 +7732,9 @@ func _show_over(win: bool) -> void:
 				# 用 `current_layer`（推进层在 `_on_over_restart` 才发生，此刻还是本层）。
 				RunState.note_boss_kill(RunState.current_layer,
 						str(lvl.get("key", "")), str(lvl.get("name", "?")))
+				# R550（发布版解锁）：打通 2 层（击败第二层 Boss）→ 该职业难度上限 +1。
+				if RunState.current_layer == GameLayers.LAYER_TWO:
+					UnlockSystem.note_layer_two_cleared()
 			# R181：战斗胜利掉金币（按关卡分级：普通简单 20 / 普通困难 30 / 精英 50/65 / Boss 100）
 			# R423（用户口径「赏金猎人 / 硬币 加的金币不明显」）：三处来源逐笔记账，
 			# 结算面板要能说清「这些钱从哪来」，而不是只有一个闷声变大的数字。
