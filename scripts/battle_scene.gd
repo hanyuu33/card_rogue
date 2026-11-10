@@ -4293,6 +4293,7 @@ func load_level(lvl: Dictionary) -> void:
 	# R360：单机战斗开启「死亡效果延迟结算」—— 亡语要等那张卡的击破演出到点才跑
 	# （否则辅助刃先回手、场上那张卡还站着）。联机镜像模式**不开**：见引擎侧注释。
 	engine.defer_death_effects = true
+	engine.defer_primal_effects = true
 	if RunState.run_active:
 		engine.rng.seed = battle_seed   # 战斗内全部随机（含 AI）可复现
 	engine.ai_enabled = bool(lvl["enemy_ai"])
@@ -4531,7 +4532,7 @@ func _pass_moved_pending() -> int:
 func _death_wait() -> bool:
 	## R360：还有死亡效果在等击破演出 → 这段时间不收操作、也不让 AI 推进。
 	## 窗口很短（卡抹掉后 180ms）；判据只有引擎那一条队列，界面不自己算。
-	return engine != null and engine.has_pending_death_effects()
+	return engine != null and (engine.has_pending_death_effects() or engine.has_pending_primal_effects() or not _primal_fx.is_empty())
 
 
 func _curse_busy() -> bool:
@@ -8944,6 +8945,7 @@ func _draw() -> void:
 	_draw_air_raid_marks()   # R451：空袭标记格（红色准星）—— 在可点高亮之下
 	_draw_highlights()
 	_draw_bursts()
+	_draw_primal_fx()
 	_draw_cues()          # R288：通用效果演出（脉冲 / 光带 / 卡名）—— 压在卡牌之上才看得见
 	_draw_rev_fx()        # R357：转阶段特效（蜂窝电磁屏障 / 燃烧）—— 盖在启示者卡面上
 	_draw_wake_rings()
@@ -10783,10 +10785,10 @@ func _tick_anims() -> bool:
 	# R360：死亡效果还没结算 → 仍然算「演出中」（结算面板 / 回合推进都别抢跑）。
 	# 兜底：闹钟丢了（`_delayed` 被清 / 演出被打断）就一次跑完 ——
 	# 宁可亡语早到账，也不能让「待结算」把玩家操作永久锁死。
-	var death_busy := _death_wait()
+	var death_busy := engine != null and engine.has_pending_death_effects() and not engine.has_pending_primal_effects()
 	if death_busy and _delayed.is_empty():
 		engine.flush_all_death_effects()
-		death_busy = _death_wait()
+		death_busy = engine.has_pending_death_effects()
 	return any or death_busy or not _ghosts.is_empty() or not _floaters.is_empty() \
 			or not _bursts.is_empty() or not _dying.is_empty() \
 			or not _meteors.is_empty() \
@@ -10825,6 +10827,15 @@ func _reject_fx(idx: int, reason := "", target = null) -> void:
 func _on_engine_action(kind: String, data: Dictionary) -> void:
 	## 引擎动作 → 动画 + 音效。
 	var n := _now()
+	if kind == "fx_impact" and _primal_landing and str(data.get("source", "")) in ["土元素", "火元素"]:
+		var cell: Vector2i = data.cell
+		var col := Color("ff742a") if str(data.source) == "火元素" else Color("dba14b")
+		_floaters.append({"pos": _cell_center(cell) + Vector2(0, -32), "sc": _grid_scroll,
+			"text": "-%d" % int(data.amount), "col": col, "start": n, "dur": _primal_hit_ms})
+		var target := engine.state.unit_at(cell)
+		if target != null:
+			_flashes[target] = {"col": col, "start": n, "dur": 180}
+		return
 	# R459：击杀记功（鸭子骑士）的增益演出时刻。引擎的顺序是 `attack` → `_destroy`
 	# → `knight_grow`，也就是「拳头已经挥出去、目标已经判死」才轮到增益 —— 但播出的
 	# 时刻不能是当下：那一下还在飞（ATK_IMPACT_T × 1500 ≈ 930ms），破坏还要再等等。
@@ -14089,9 +14100,19 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 	## 定时特效到点：攻击在冲刺结束那一刻才"命中"。
 	var n := _now()
 	match kind:
+		"primal_land":
+			_primal_landing = true
+			engine.resolve_primal_hit()
+			_primal_landing = false
+			sfx.play("hit")
+			_shake(4.0, 180)
+		"primal_end":
+			_primal_fx = {}
 		"death_effects":
 			# R360：这张卡的击破演出到点 → 结算它的死亡效果（辅助刃回手等）。
 			if engine != null:
+				if engine.has_pending_primal_effects() or not _primal_fx.is_empty():
+					return # Entire entry batch precedes its deathrattles.
 				engine.flush_death_effects(d.get("cell", Vector2i(-1, -1)) as Vector2i)
 				queue_redraw()
 		"destroy_fx":
@@ -16602,6 +16623,9 @@ func _process(delta: float) -> void:
 	# 这样同一帧里刚出的牌动画能立刻开始播。
 	var earring_busy := _tick_earring_autoplay()
 	var anim_busy := _tick_anims()
+	if not anim_busy and engine.has_pending_primal_effects():
+		_start_primal_hit()
+		anim_busy = engine.has_pending_primal_effects()
 	# R388：敌方演出窗口的收尾 —— AI 停了、动画也播完了才回 1×。
 	# 不等这一步的话，最后一击的击破 / 飘字会被「已经轮到我方」砍回半速。
 	if _foe_phase and _ai_timer.is_stopped() and not anim_busy and _delayed.is_empty() \
@@ -16725,3 +16749,48 @@ func _draw_effect_thumbnail(card: CardData, rect: Rect2, count := 1, show_counte
 			px -= 1
 		var y := 26.0 if labels.size() == 1 else 17.0 + i * 20.0
 		_draw_string_center(_font_bold, px, labels[i], rect.position + Vector2(61, y), Color("4d5943"), -1)
+
+
+# Elemental entry VFX: rules resolve at contact, next hit waits for all aftermath.
+var _primal_fx: Dictionary = {}
+var _primal_landing := false
+var _primal_hit_ms := 520
+var _primal_tex_earth: Texture2D = preload("res://assets/fx/fx_primal_earth.png")
+var _primal_tex_fire: Texture2D = preload("res://assets/fx/fx_primal_fire.png")
+
+func _start_primal_hit() -> void:
+	var hit := engine.next_primal_hit()
+	if hit.is_empty():
+		return
+	var n := _now()
+	var fast := int(hit.count) > 6
+	var travel := 160 if fast else 340
+	_primal_hit_ms = 240 if fast else 520
+	_primal_fx = hit.duplicate()
+	_primal_fx["start"] = n
+	_primal_fx["land"] = n + travel
+	_primal_fx["end"] = n + travel + _primal_hit_ms
+	_delayed.append({"at": n + travel, "kind": "primal_land", "data": {}})
+	_delayed.append({"at": n + travel + _primal_hit_ms, "kind": "primal_end", "data": {}})
+	queue_redraw()
+
+func _draw_primal_fx() -> void:
+	if _primal_fx.is_empty():
+		return
+	var f := _primal_fx
+	var n := _now()
+	var dst := _cell_center(f.cell)
+	var src: Vector2i = f.src
+	var origin := _cell_center(src) if src.x >= 0 else dst + Vector2(0, -120)
+	var fire := str(f.source) == "火元素"
+	var tex := _primal_tex_fire if fire else _primal_tex_earth
+	if n < int(f.land):
+		var t := clampf(float(n - int(f.start)) / float(int(f.land) - int(f.start)), 0.0, 1.0)
+		var pos := origin.lerp(dst, t)
+		pos.y -= sin(t * PI) * (45.0 if fire else 12.0)
+		draw_arc(dst, 28.0, 0, TAU, 32, Color(1, 0.7, 0.3, 0.6), 2.0)
+		draw_texture_rect(tex, Rect2(pos - Vector2(30, 38), Vector2(60, 60)), false)
+	else:
+		var t := clampf(float(n - int(f.land)) / float(_primal_hit_ms), 0.0, 1.0)
+		var size := Vector2(125, 140) * (0.65 + 0.35 * minf(t * 5.0, 1.0))
+		draw_texture_rect(tex, Rect2(dst + Vector2(-size.x / 2.0, -size.y * 0.72), size), false, Color(1, 1, 1, 1.0 - t))

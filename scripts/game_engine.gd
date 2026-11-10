@@ -28,6 +28,49 @@ var ai_enabled:= true
 ## headless（单元测试 / 回放）保持 false → 同步结算，断言不受影响；
 ## battle_scene 只对**单机战斗**置 true，由击破演出到点调 `flush_death_effects(cell)`。
 ## ⚠️ 联机镜像模式必须保持 false：两侧靠同一份 action 序列对齐，不能掺本地动画时间。
+var defer_primal_effects := false
+var primal_queue: Array = []
+var primal_active: Dictionary = {}
+
+func has_pending_primal_effects() -> bool:
+	return not primal_queue.is_empty() or not primal_active.is_empty()
+
+func next_primal_hit() -> Dictionary:
+	if not primal_active.is_empty():
+		return {}
+	while not primal_queue.is_empty():
+		var hit: Dictionary = primal_queue.pop_front()
+		if bool(hit.get("random", false)):
+			var alive: Array[Vector2i] = []
+			for cell: Vector2i in state.board:
+				var q: Placement = state.board[cell]
+				if q.owner != SIDE_SELF and q.health > 0:
+					alive.append(cell)
+			alive.sort()
+			if alive.is_empty():
+				continue
+			hit["target"] = state.board[alive[rng.randi_range(0, alive.size() - 1)]]
+		var target: Placement = hit.target
+		var cell := _cell_of(target)
+		if cell.x < 0 or target.health <= 0:
+			continue
+		hit["cell"] = cell
+		primal_active = hit
+		return hit
+	_check_game_over()
+	return {}
+
+func resolve_primal_hit() -> void:
+	if primal_active.is_empty():
+		return
+	var hit := primal_active
+	var target: Placement = hit.target
+	if _cell_of(target).x >= 0 and target.health > 0:
+		_hit_unit(target, int(hit.amount), str(hit.source), true, false)
+		_destroy_dead()
+	primal_active = {}
+	_check_game_over()
+
 var defer_death_effects:= false
 ## R360：待结算的死亡效果 —— `cell -> Array[Callable]`。
 ## 用格子当键、而不是一条全局队列：同一帧死两个单位时，各自的亡语要等**自己那张卡的**
@@ -2132,6 +2175,8 @@ func _log(text: String) -> void :
 
 
 func _check_game_over() -> bool:
+	if has_pending_primal_effects():
+		return false
 	## R356：`enemy_hp_infinite` → 「敌方 HP 归零」这条胜利条件整条失效（打不空），
 	## 胜负改由「击破指定 Boss」（`win_on_boss`）与「我方 HP 归零」两条决定。
 	if over:
@@ -4527,6 +4572,7 @@ func _earth_primal_enter(p: Placement) -> void :
 				best = i
 		ordered.append(rest[best])
 		rest.remove_at(best)
+	var plan: Array = []
 	var left: int = pool
 	var hits := 0
 	var seq := 0
@@ -4537,10 +4583,16 @@ func _earth_primal_enter(p: Placement) -> void :
 		if q == null or q.health <= 0:
 			continue
 		var chunk: int = mini(left, q.health)
-		_hit_unit(q, chunk, "土元素", true, false, seq)
+		plan.append({"target": q, "amount": chunk, "source": "土元素", "src": here, "random": false})
 		seq += 1
 		hits += 1
 		left -= chunk
+	for hit: Dictionary in plan:
+		hit["count"] = plan.size()
+		if defer_primal_effects:
+			primal_queue.append(hit)
+		else:
+			_hit_unit(hit.target, int(hit.amount), "土元素", true, false)
 	_destroy_dead()
 	_log("土元素：本次战斗用过 %d 张盟友 → 分配 %d 点伤害（%d 个目标，剩 %d）"
 			% [x, pool, hits, left])
@@ -4555,12 +4607,12 @@ func _fire_primal_enter(p: Placement) -> void :
 	## R569：清算逻辑抽到唯一口 `_purge_self_curses` —— 组合动作 `purge_curse` 与这里共用。
 	## 火元素既能当承载体（原卡 id 钩子走这里）、也能被拖进组合的下半（走 assemble），
 	## 两处各写一遍必然走形。
-	var r := _purge_self_curses(FIRE_PRIMAL_DMG, "火元素")
+	var r := _purge_self_curses(FIRE_PRIMAL_DMG, "火元素", _cell_of(p))
 	action.emit("fire_primal", {"cell": _cell_of(p), "purged": int(r.get("purged", 0)),
 			"hits": int(r.get("hits", 0)), "dmg": FIRE_PRIMAL_DMG})
 
 
-func _purge_self_curses(dmg: int, tag: String) -> Dictionary:
+func _purge_self_curses(dmg: int, tag: String, src := Vector2i(-1, -1)) -> Dictionary:
 	## R569：「清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人
 	## 造成 N 点伤害」的**唯一实现口** —— 火元素入场（`_fire_primal_enter`）与组合动作
 	## `purge_curse` 都走这里。返回 {"purged": 清除张数, "hits": 实际命中次数}。
@@ -4590,6 +4642,10 @@ func _purge_self_curses(dmg: int, tag: String) -> Dictionary:
 		else:
 			kept_discard.append(c)
 	state.discard = kept_discard
+	if defer_primal_effects and tag == "火元素":
+		for i in purged:
+			primal_queue.append({"random": true, "amount": dmg, "source": tag, "src": src, "count": purged})
+		return {"purged": purged, "hits": 0}
 	var dealt := 0
 	for i in purged:
 		var alive: Array[Vector2i] = []
