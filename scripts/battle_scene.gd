@@ -1143,6 +1143,38 @@ func _ready() -> void:
 			# R559b 出图：预填三槽，看填满态（结果卡 + 绿色确认按钮 + 效果文字）。
 			# overlay 在 _sync_pick 里才 open，这里打标记，open 后由 _sync_pick 补填。
 			_combodemo_fill = true
+	if "--comboplay" in args and engine != null:
+		# R562 人工试玩：`battle.tscn -- --comboplay [forest|shadow|mech]`
+		# 与 `--combodemo`（出图捷径：直接 _teach_spell + 自动截图退出）不同，这条走**真实出牌链路**：
+		# 手牌里放一张该职业的传授卡，玩家自己点牌打出 → `play_from_hand` → `_teach_spell` → 三栏拖拽。
+		# 费用给 6：传授卡 1 费，剩 5 费够把组合产物（按第①张卡的费用，多为 2~3 费）当场打出去看效果。
+		var cp_key := "forest"
+		for i in args.size():
+			if args[i] == "--comboplay" and i + 1 < args.size() \
+					and not String(args[i + 1]).begins_with("--"):
+				cp_key = String(args[i + 1])
+		var cp_map := {"forest": PlayerClass.DRUID, "shadow": PlayerClass.ROGUE,
+				"mech": PlayerClass.MECH}
+		var cp_teach := {"forest": 8084, "shadow": 8085, "mech": 8086}
+		if not cp_map.has(cp_key):
+			cp_key = "forest"
+		var cp_cid: String = String(cp_map[cp_key])
+		var cp_tid: int = int(cp_teach[cp_key])
+		seed(0x562)
+		RunState.start_run([], GameLayers.LAYER_DEFAULT, cp_cid)
+		RunState.pending_level = {}
+		load_level(GameLevels.builtin_levels()[0])   # 最弱的第 1 关：想试第二次也不会被打死
+		# load_level 会重建 engine / 手牌，塞卡必须放在它后面。
+		engine.state.hand.clear()
+		var cp_repo := CardRepo.load_json()
+		var cp_card := cp_repo.get_card(cp_tid)
+		if cp_card != null:
+			engine.state.hand.append(CardData.from_dict(cp_card.to_dict()))
+		engine.state.energy = 6
+		status_text = "试玩组合 · 点手牌里的传授卡（%d）打出" % cp_tid
+		_clear_hover_state()
+		selection = null
+		queue_redraw()
 	if "--bosswin" in args and engine != null:
 		# R179 演示：**Boss 通关结算**（核验短按钮文案 + Boss 档卡牌三选一）。
 		# 必须配 `--level <Boss 关下标>` 用（`_run_boss_win` 由关卡 tier 决定）。
@@ -6133,19 +6165,25 @@ func _sync_pick() -> void:
 
 func _on_assemble_combo_confirmed() -> void:
 	## 拖拽组合页「确认组合」：引擎结算（组合卡加入手牌），关页。
+	## ⚠️ R562：**关页必须延迟到帧末**。这个信号是在 overlay 的 `_gui_input` 里同步发出的，
+	## 当场 `visible = false` 会让 viewport 的鼠标 over 目标留在一个已隐藏的控件上，
+	## 之后所有点击都落空（玩家看到的就是「关了界面，什么都点不动」）。
 	if engine != null:
 		engine.assemble_combo_commit()
 	if _assemble_overlay != null:
-		_assemble_overlay.close()
+		_assemble_overlay.close.call_deferred()
 	queue_redraw()
 
 
 func _on_assemble_combo_cancelled() -> void:
 	## 拖拽组合页「取消」：引擎清 pending，关页。
+	## ⚠️ R562：关页延迟到帧末（原因同 `_on_assemble_combo_confirmed`）。
+	## 右键/ESC 已改成「只提示不取消」—— 这里只会由「取消组合」按钮触发。
 	if engine != null:
 		engine.assemble_combo_cancel()
 	if _assemble_overlay != null:
-		_assemble_overlay.close()
+		_assemble_overlay.close.call_deferred()
+	status_text = "已放弃本次组合（那张传授卡已经打出，组合机会不再保留）"
 	queue_redraw()
 
 

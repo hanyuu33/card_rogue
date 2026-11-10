@@ -49,12 +49,18 @@ var _slot_lower := -1
 var _drag_from := -1
 var _drag_pos := Vector2.ZERO
 var _press := {}                          # {pos, moved}
+var _tip := ""                            # R562：底部一句提示（右键/ESC 不再直接取消）
+var _tip_until := 0
 
 
 func _ready() -> void:
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# ⚠️ R562：battle.tscn 里的 hp_strip 等节点排在 overlay **之后**（本节点是 _ready 里
+	# add_child 的，但不是最后一个），不抬 z 的话它们会画在本页之上 —— 实测底部提示行
+	# 被「我方生命」条整段盖掉。全屏模态页必须压在所有战斗 UI 之上。
+	z_index = 100
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	# ⚠️ anchors 首帧可能未立即生效（实测 size 停在 (0,0)）→ 手动对齐父节点尺寸；
@@ -80,6 +86,8 @@ func open(engine_ref: Object, cards: Array) -> void:
 	_slot_lower = -1
 	_drag_from = -1
 	_press = {}
+	_tip = ""
+	_tip_until = 0
 	_sync_size()
 	visible = true
 	queue_redraw()
@@ -93,6 +101,21 @@ func close() -> void:
 	_slot_upper = -1
 	_slot_lower = -1
 	_drag_from = -1
+	_tip = ""
+	_tip_until = 0
+
+
+func _show_tip(text: String, ms := 4000) -> void:
+	## R562：只提示、不动作 —— 误触右键不该把这次组合机会直接丢掉。
+	_tip = text
+	_tip_until = Time.get_ticks_msec() + ms
+	queue_redraw()
+
+
+func _process(_d: float) -> void:
+	if _tip != "" and Time.get_ticks_msec() > _tip_until:
+		_tip = ""
+		queue_redraw()
 
 
 # ── 布局（比例定位，宽屏自适应）───────────────────────────────
@@ -214,12 +237,17 @@ func _draw() -> void:
 		var used := k == _slot_attr or k == _slot_upper or k == _slot_lower
 		CardFace.draw_pick(self, card, r, _font, _font_bold, used)
 	# 中栏：3 个一样空槽位
-	draw_string(_font_bold, Vector2(size.x * MID_CX, TITLE_H + 26.0), "拖入槽位",
+	# ⚠️ R562：`HORIZONTAL_ALIGNMENT_CENTER` 的第二个参数是**矩形左边界**，不是中心点。
+	# 原来这里传 `size.x * MID_CX`（中心）+ 宽 0.2w → 文字整体右移半格，标题压在右栏边上。
+	draw_string(_font_bold, Vector2(size.x * MID_CX - size.x * 0.1, TITLE_H + 26.0), "拖入槽位",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x * 0.2, UiTheme.FS_LABEL, UiTheme.ACCENT_LIT)
 	for slot in 3:
 		var sr := _slot_rect(slot)
 		var idx := _slot_index(slot)
 		_draw_slot(sr, slot, idx)
+		# R562：拖动中把「松手会落进去的那个槽」圈出来 —— 之前完全没有落点反馈。
+		if _drag_from >= 0 and sr.has_point(_drag_pos):
+			draw_rect(sr.grow(2.0), UiTheme.ACCENT_LIT, false, 3.0)
 	# 右栏：结果预览
 	_draw_preview()
 	# 拖拽中的卡（画在最上层）
@@ -262,15 +290,15 @@ func _draw_slot_paper(sr: Rect2) -> void:
 
 func _draw_preview() -> void:
 	var cx := size.x * RIGHT_CX
-	draw_string(_font_bold, Vector2(cx, TITLE_H + 26.0), "结果预览",
+	draw_string(_font_bold, Vector2(cx - size.x * 0.1, TITLE_H + 26.0), "结果预览",
 			HORIZONTAL_ALIGNMENT_CENTER, size.x * 0.2, UiTheme.FS_LABEL, UiTheme.ACCENT_LIT)
 	var pr := _preview_rect()
 	if not _all_filled():
 		# 未填满：空预览卡框 + 提示
 		_draw_slot_paper(pr)
-		draw_string(_font, Vector2(cx, pr.position.y + pr.size.y * 0.46), "拖满 3 个槽位",
+		draw_string(_font, Vector2(pr.position.x, pr.position.y + pr.size.y * 0.46), "拖满 3 个槽位",
 				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
-		draw_string(_font, Vector2(cx, pr.position.y + pr.size.y * 0.46 + 20.0), "后显示组合卡",
+		draw_string(_font, Vector2(pr.position.x, pr.position.y + pr.size.y * 0.46 + 20.0), "后显示组合卡",
 				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 	else:
 		var result: CardData = _engine.assemble_combo_preview() if _engine != null else null
@@ -293,18 +321,35 @@ func _draw_preview() -> void:
 		draw_string(_font_bold, Vector2(er.position.x, er.position.y + 32.0),
 				tags[i], HORIZONTAL_ALIGNMENT_CENTER, er.size.x,
 				UiTheme.FS_CAPTION, UiTheme.ACCENT_GOLD)
+		# R562：两个框**各自独立** —— 拖进上半就立刻显示上半效果，不必等下半也填好。
+		# （原来套了一层 `_all_filled()`，玩家拖上半时框里空空，以为没吃进去。）
 		var txt := ""
-		if _all_filled():
+		if i == 0 and _slot_upper >= 0:
 			var up: CardData = _cards[_slot_upper]
-			var lo: CardData = _cards[_slot_lower]
-			if i == 0 and not up.upper_effect.is_empty():
+			if not up.upper_effect.is_empty():
 				txt = AssembleRules.fragment_text(up.upper_effect)
-			elif i == 1 and not lo.lower_effect.is_empty():
+		elif i == 1 and _slot_lower >= 0:
+			var lo: CardData = _cards[_slot_lower]
+			if not lo.lower_effect.is_empty():
 				txt = AssembleRules.fragment_text(lo.lower_effect)
 		if txt != "":
-			var body := Rect2(er.position.x + 36.0, er.position.y + 50.0,
-					er.size.x - 48.0, er.size.y - 60.0)
+			# R562：左右内边距对称（原来左 36 / 右 12），别让文字贴死在包角上。
+			var body := Rect2(er.position.x + 40.0, er.position.y + 50.0,
+					er.size.x - 80.0, er.size.y - 60.0)
 			_draw_wrapped(body, txt, UiTheme.FS_CAPTION, UiTheme.INK_800)
+	if _tip != "":
+		# R562：取消按钮上方的提示行（右键/ESC/落点为空时的说明）——
+		# 自带暗底 + 金边围一条，压在血条/战场上也能一眼看见。
+		var fs := UiTheme.FS_CAPTION
+		var tw: float = _font.get_string_size(_tip, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		# 提示条跟「取消组合」按钮同一栏居中（按整屏居中的话会甩到左栏槽位上）
+		var bx: float = _cancel_rect().get_center().x - (tw + 24.0) * 0.5
+		var ty := _cancel_rect().position.y - 20.0
+		var br := Rect2(bx, ty - fs, tw + 24.0, fs + 12.0)
+		draw_rect(br, Color(0.08, 0.07, 0.05, 0.94))
+		draw_rect(br, UiTheme.ACCENT_GOLD, false, 1.0)
+		draw_string(_font, Vector2(bx + 12.0, ty), _tip, HORIZONTAL_ALIGNMENT_LEFT, tw,
+				fs, UiTheme.ACCENT_LIT)
 	# 取消 / 确认按钮（button_paper / button_forest 素材）
 	var cr := _cancel_rect()
 	UiTheme.draw_secondary_btn(self, cr, "取消组合", false, false, false)
@@ -347,7 +392,11 @@ func _gui_input(event: InputEvent) -> void:
 			accept_event()
 			return
 		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
-			cancelled.emit()
+			# R562：⛔ 原来这里直接发取消信号 —— 界面当场隐藏，而这张传授卡
+			# 已经打出去了，组合机会白丢；更要命的是在 `_gui_input` 里把自己 hide 掉，
+			# 鼠标的 over 状态留在了一个已隐藏的控件上，之后所有点击都落空（表现为卡死）。
+			# 现在右键只提示，真正的放弃必须点下方「取消组合」按钮。
+			_show_tip("要放弃这次组合，请点下方「取消组合」")
 			accept_event()
 			return
 	elif event is InputEventMouseMotion:
@@ -396,7 +445,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		if not k.pressed or k.echo:
 			return
 		if k.keycode == KEY_ESCAPE:
-			cancelled.emit()
+			_show_tip("要放弃这次组合，请点下方「取消组合」")
 		get_viewport().set_input_as_handled()
 
 
@@ -413,6 +462,8 @@ func _drop_at(pos: Vector2) -> void:
 		if _slot_rect(slot).has_point(pos):
 			fill_slot(slot, _drag_from)
 			return
+	# R562：落在槽位外面 → 说一句，别让玩家以为「拖了但没反应」。
+	_show_tip("拖到中栏三个槽位里才能放：①属性 ②上半 ③下半")
 
 
 func fill_slot(slot: int, idx: int) -> void:

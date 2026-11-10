@@ -328,3 +328,31 @@ func _test_combo() -> void:
 	check(src.count("TEACH_IDS") >= 1 and src.count("_teach_spell") >= 2
 			and src.count("assemble_combo_commit") >= 1 and src.count("_assemble_busy") >= 4,
 			"R559 源码锁：传授入口 / 组合结算 / 守卫挂接")
+	# ── R562 交互回归锁（用户实测报的两个 bug，都是「看起来卡死」级别）──────────
+	var ov := FileAccess.get_file_as_string("res://scripts/assemble_overlay.gd")
+	var bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	# ① 右键不许再直接取消：在 `_gui_input` 里把自己 hide 掉，会让鼠标 over 状态悬在
+	#    一个已隐藏控件上，之后所有点击全部落空（玩家感知＝卡死）。右键只提示，
+	#    「取消组合」按钮才是唯一出口。
+	var rb := ov.find("MOUSE_BUTTON_RIGHT and mb.pressed:")
+	var rb_seg := ov.substr(rb, 420) if rb >= 0 else ""
+	check(rb >= 0 and rb_seg.find("_show_tip(") >= 0 and rb_seg.find("cancelled.emit()") < 0,
+			"R562 源码锁：右键只提示，不许直接取消")
+	# ② 关页一律 `close.call_deferred()`（同一次输入回调里 hide 会卡住鼠标派发）。
+	#    `_sync_pick` 那处是 `_process` 里关的，允许同步。
+	var f1 := bs.find("func _on_assemble_combo_confirmed")
+	var f2 := bs.find("func _on_assemble_combo_cancelled")
+	var f3 := bs.find("func _abort_empty_pick")
+	var seg1 := bs.substr(f1, f2 - f1) if f1 >= 0 and f2 > f1 else ""
+	var seg2 := bs.substr(f2, f3 - f2) if f2 >= 0 and f3 > f2 else ""
+	check(seg1.find("close.call_deferred()") >= 0 and seg1.find("_assemble_overlay.close()") < 0,
+			"R562 源码锁：确认组合后关页要延迟到帧末")
+	check(seg2.find("close.call_deferred()") >= 0 and seg2.find("_assemble_overlay.close()") < 0,
+			"R562 源码锁：取消组合后关页要延迟到帧末")
+	# ③ 上/下半效果框各自独立判断，不许再套一层 `_all_filled()`
+	#    （原来拖进上半后框里空空，玩家以为没吃进去）
+	check(ov.count("if i == 0 and _slot_upper >= 0:") == 1
+			and ov.count("elif i == 1 and _slot_lower >= 0:") == 1,
+			"R562 源码锁：上/下半效果框各自独立显示")
+	# ④ 全屏模态页要压在所有战斗 UI 之上（tscn 里的 hp_strip 会盖掉底部提示行）
+	check(ov.count("z_index = 100") == 1, "R562：组合页 z_index 顶层化")
