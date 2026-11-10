@@ -154,6 +154,7 @@ var _menu_btn: Button = null      # 上栏那个齿轮（**自绘图标**，需�
 var _deck_btn: Button = null      # R155：右上「卡组」按钮（非战斗界面也能直接看卡组，不必先按 Esc）
 var _relic_scroll := 0.0
 var _relic_tip_pin := false       # R407 出图：把悬停钉在第一个道具上（--relictip）
+var _key_tip_pin := false         # R553 出图：把悬停钉在第一个信物上（--keytip）
 var _whisper_auto := false
 var _whisper_next: Dictionary = {}   # 命运本轮选中的下一间（画紫圈的目标）
 var _whisper_wait := 0.0             # 距命运落下一步还有多少秒（<= 0 即可走）
@@ -275,6 +276,10 @@ func _ready() -> void:
 	if "--keysgray" in OS.get_cmdline_user_args():
 		RunState.set_difficulty(11)
 		RunState.key_relics = []
+	# -- --keytip：R553 出图 —— 把 _mouse 钉在第一个信物图标（未获得）上，让获取途径提示画出来。
+	#  出图：`map.tscn -- --screenshot --keysgray --keytip --shotwait 0.8`
+	if "--keytip" in OS.get_cmdline_user_args():
+		_key_tip_pin = true
 	# -- --whistle：演示鹰哨（R145 起 = 全图迷雾散尽，每格内容都可见）
 	if "--whistle" in OS.get_cmdline_user_args():
 		RunState.relics = [6001, 6005, 6026]
@@ -792,6 +797,9 @@ func _process(delta: float) -> void:
 	# R407 出图：没有真鼠标时钉住悬停位置，否则浮窗永远不出现
 	if _relic_tip_pin and not RunState.relics.is_empty():
 		_mouse = _relic_rect(0).get_center()
+		queue_redraw()
+	if _key_tip_pin and RunState.third_layer_locked():
+		_mouse = _key_relic_rect(0).get_center()
 		queue_redraw()
 	if _move_note_t > 0.0:
 		_move_note_t = maxf(0.0, _move_note_t - delta)
@@ -1893,19 +1901,28 @@ func _key_relic_rect(i: int) -> Rect2:
 
 func _draw_key_relic_tip(i: int) -> void:
 	## R543：悬停信物图标 → 弹说明（名字 + 统一描述 + 是否已获得）。
+	## R553（用户口径）：未获得（灰色）时，追加一行获取途径提示（金色强调）——
+	##   藏在宝箱中 / 可以买到 / BOSS 战斗。
 	var kid: int = RunState.KEY_RELIC_IDS[i]
 	var owned := RunState.has_key(kid)
-	var text := "「%s」：%s%s" % [RunState.key_relic_name(kid),
-			RunState.key_relic_desc(kid), "（已获得）" if owned else "（未获得）"]
+	var text := "「%s」：%s" % [RunState.key_relic_name(kid), RunState.key_relic_desc(kid)]
+	if owned:
+		text += "（已获得）"
 	var w := 340.0
 	var lines := CardFace.wrap_text(_font, text, w - 20.0, 13)
+	var hint := "" if owned else "获取：%s" % RunState.key_relic_source(kid)
+	var extra_h := 0.0 if hint == "" else 18.0
 	var tx: float = clampf(_mouse.x - w / 2, 8, size.x - w - 8)
-	var panel := Rect2(tx, RELIC_TIP_TOP, w, 12.0 + lines.size() * 18.0)
+	var panel := Rect2(tx, RELIC_TIP_TOP, w, 12.0 + lines.size() * 18.0 + extra_h)
 	draw_rect(panel, Color(0.10, 0.11, 0.15, 0.95), true)
 	draw_rect(panel, Color("d9a441") if owned else Color("6a7078"), false, 1.2)
 	for j in lines.size():
 		draw_string(_font, panel.position + Vector2(10, 22 + j * 18), lines[j],
 				HORIZONTAL_ALIGNMENT_LEFT, w - 20, UiTheme.FS_LABEL, Color("eee6c8"))
+	if hint != "":
+		# 获取途径用饱和金黄，与「已获得」金边同一色系，在米白正文下形成强调。
+		draw_string(_font, panel.position + Vector2(10, 22 + lines.size() * 18 + 2), hint,
+				HORIZONTAL_ALIGNMENT_LEFT, w - 20, UiTheme.FS_LABEL, Color("f0b840"))
 
 
 func _relic_panel_metrics(rows: Array) -> Dictionary:

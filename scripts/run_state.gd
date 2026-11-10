@@ -1450,6 +1450,21 @@ static func key_relic_desc(id: int) -> String:
 	return "解锁第三层所需的信物"
 
 
+static func key_relic_source(id: int) -> String:
+	## R553：信物获取途径（地图左下角悬停「未获得」图标时的提示文案，唯一口）。
+	##   * 完美螺钉 6061 —— 第二层 Boss 掉落 → 「BOSS 战斗」
+	##   * 生命之种 6062 —— 大宝箱二选一 → 「藏在宝箱中」
+	##   * 屠戮匕首 6063 —— 商店第三排售卖 → 「可以买到」
+	match id:
+		SCREW_RELIC_ID:
+			return "BOSS 战斗"
+		SEED_RELIC_ID:
+			return "藏在宝箱中"
+		DAGGER_RELIC_ID:
+			return "可以买到"
+	return ""
+
+
 static func is_relic_spent(id: int) -> bool:
 	## 还挂在栏里、但已经用尽（画灰 + 状态注）。
 	return relics.has(id) and spent_relics.has(id)
