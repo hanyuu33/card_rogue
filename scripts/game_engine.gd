@@ -1100,7 +1100,7 @@ const FINISHER_LAST_DMG:= 22
 # 它钉在**一个格子**上（FieldState.field_effects，唯一写入口 set_field，每格最多 1 个）。
 # 现存场地只有两族：
 #   * **持续型**（trait「持续场地」）：不因任何经过而触发、也不会消失，按自己的时机结算 ——
-#     清泉 8028 / 维修间 8036 / 改造工厂 8037 走 `_field_aura_tick`，漩涡 9186 走 `_vortex_push`；
+#     清泉 8028 / 维修间 8036 / 改造工厂 8037 / 漩涡 9186 / 毒沼 8082 都走 `_field_aura_tick`；
 #   * **标记**（R503，9224）：暗影刺客的伤害增幅场，同样不触发、不消失，
 #     判据读 `FieldState.mark_cell()`，**同一时刻只存在一个标记**。
 # ⚠️ R503（用户口径「移除暗影刺客所有陷阱 / 场地相关的卡」）：原本那 8 张一次性陷阱
@@ -1135,11 +1135,11 @@ const PLAYER_ONLY_FIELD_TRAIT:= "仅玩家可放置"
 const UPGRADE_FACTORY_ATK:= 1
 const UPGRADE_FACTORY_HP:= 1
 # ── R381：漩涡 9186 / 鹅 9187（森林精魄剧情卡，暂无解锁渠道）──
-# 漩涡（1 费场地）：**第三族持续型场地** —— 前两族（清泉 / 维修间 / 改造工厂）挂在
-#   「自己回合结束时」结算（`_field_aura_tick`），它挂的是一个**新时机**：
-#   「站在上面的单位**行动结束时**」→ 挂在 `_tap()`（所有行动结束的唯一口），
-#   结算口 = `_vortex_push()`。
-const PERSIST_VORTEX_TRAIT:= "涡旋"   # 漩涡的判据 trait（持续型场地 · 行动后卷人）
+# 漩涡（R557 起 3 费场地）：持续型场地（走 `_field_aura_tick`，同清泉 / 维修间那族）。
+#   * 使用（放置）时：若落格没有单位，随机把一个「与此格距离 1」的单位拉过来 ——
+#     结算口 = `_vortex_pull()`（挂在场地 play 分支、`set_field` 之后）。
+#   * 每回合结束时：对站在上面的单位造成 `field_vortex_dmg + vortex_stacks` 点伤害，
+#     然后 `vortex_stacks +1`（「后续受到的漩涡伤害 +1」）—— 结算在 `_field_aura_tick`。
 # 鹅（2 费盟友 1/9）：攻击后把目标向后击退 1 格、自己前进 1 格。
 # 结算口 = `_goose_lunge()`（挂在 attack 尾部「攻击者还活着」那块里）。
 const GOOSE_TRAIT:= "扑击"
@@ -5252,6 +5252,9 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 		_log("场地生效：%s 放在 %s" % [card.card_name, cell])
 		action.emit("field_place", {"cell": cell, "card": card,
 			"replaced": old_field != null})
+		# R557 漩涡：放置时若落格没有单位，随机拉一个「距离 1」的单位过来（见 _vortex_pull）。
+		if card.field_vortex_dmg > 0:
+			_vortex_pull(cell)
 		_note_card_played(SIDE_SELF, card)
 		return null
 	# 交换（R101）：放在已有己方单位的格子上 → 原单位回手，新卡占据该格
@@ -12726,32 +12729,24 @@ func _knockback(side: String, target, steps: int) -> String:
 	return "%s 后退 %d 格" % [p.card.card_name, moved]
 
 
-func _vortex_push(p: Placement) -> void :
-	## **漩涡（9186，R381）的唯一结算口**：「处于此格的单位**行动结束后**，随机向一个方向
-	## 移动 1 格」。挂在 `_tap()`（所有行动结束的唯一口，见那里的注释）。
+func _vortex_pull(cell: Vector2i) -> void :
+	## **漩涡（9186，R557）放置时的「拉人」结算口**：「使用时，若此格没有单位，
+	## 随机将一个与此格距离 1 的单位移动到本格」。挂在场地 play 分支、`set_field` 之后。
 	##
 	## 口径与边界（每条都别省）：
-	##   * 「处于此格」读的是**行动结束时脚下的格子** —— 它自己走出去就不再被卷
-	##     （漩涡管的是「还站在上面的人」，不是「从上面出发的人」）；
-	##   * 方向在**能落脚的方向**里随机（上下左右 4 选 1）；四面被挡 / 出界 → 不动；
+	##   * 「距离 1」= 上下左右 4 个相邻格（曼哈顿距离 1）；
+	##   * 候选 = 相邻格里**有单位且不免疫位移**的（`_displace_immune` 判据，赫菲斯托斯
+	##     9135 / 启示者 9200 不会被拉）；相邻无单位 / 全是免疫单位 → 不拉；
 	##   * 随机数走引擎 `rng` → 回放同种子可复现；
-	##   * 这是**位移效果** → 照走 `_displace_immune()`（赫菲斯托斯 9135 / 启示者 9200）；
-	##   * 不判 `field_aim`：卡面写「场地生效·双」，敌我站上去都会被卷；
-	##   * 直接 `state.move_unit`（不消耗移动权、不触发沿途陷阱），与 `_knockback` 同口径 ——
-	##     所以被卷进**另一个**漩涡不会连锁（只有 `_tap` 触发，不递归）。
-	if p == null or p.card == null or over:
-		return
-	if p.health <= 0:
-		return
-	var cell: Vector2i = _cell_of(p)
+	##   * 直接 `state.move_unit`（不消耗移动权、不触发沿途陷阱），与 `_knockback` 同口径；
+	##   * 不判 `field_aim`：卡面写「场地生效·双」，敌我相邻单位都可能被拉进来。
 	if cell == Vector2i(-1, -1):
 		return
 	var f: CardData = state.field_at(cell)
-	if f == null or not f.traits.has(PERSIST_VORTEX_TRAIT):
+	if f == null or f.field_vortex_dmg <= 0:
 		return
-	if _displace_immune(p):
-		_log("%s 免疫位移：%s 没能把它卷走" % [p.card.card_name, f.card_name])
-		return
+	if state.unit_at(cell) != null:
+		return   # 落格已经有单位 → 不拉（需求写「若此格没有单位」才拉）
 	var dirs: Array[Vector2i] = [Vector2i(-1, 0), Vector2i(1, 0),
 			Vector2i(0, -1), Vector2i(0, 1)]
 	var spots: Array[Vector2i] = []
@@ -12761,18 +12756,20 @@ func _vortex_push(p: Placement) -> void :
 			continue
 		if nxt.y < 0 or nxt.y >= FieldState.BOARD_COLS:
 			continue
-		if state.board.has(nxt):
+		var q: Placement = state.unit_at(nxt)
+		if q == null or q.health <= 0 or _displace_immune(q):
 			continue
 		spots.append(nxt)
 	if spots.is_empty():
-		_log("%s 站在 %s 上，四面都被挡住：没有移动" % [p.card.card_name, f.card_name])
 		return
-	var dst: Vector2i = spots[rng.randi_range(0, spots.size() - 1)]
-	state.move_unit(cell, dst)
-	_log("%s 被 %s 卷走 1 格（%s → %s）" % [p.card.card_name, f.card_name, cell, dst])
-	var v_path: Array[Vector2i] = [cell, dst]
-	action.emit("move", {"src": cell, "dst": dst, "card": p.card,
-		"side": p.owner, "path": v_path})
+	var src: Vector2i = spots[rng.randi_range(0, spots.size() - 1)]
+	var pulled: Placement = state.unit_at(src)
+	state.move_unit(src, cell)
+	_log("%s 被 %s 拉进漩涡（%s → %s）" % [
+		pulled.card.card_name, f.card_name, src, cell])
+	var v_path: Array[Vector2i] = [src, cell]
+	action.emit("move", {"src": src, "dst": cell, "card": pulled.card,
+		"side": pulled.owner, "path": v_path})
 
 
 func _goose_lunge(attacker: Placement, tgt: Vector2i) -> void :
@@ -13875,11 +13872,9 @@ func _cell_of(p: Placement) -> Vector2i:
 func _tap(p: Placement, reason:= "") -> void :
 
 
-	# R381 漩涡 9186：「处于此格的单位**行动结束后**随机移动 1 格」。
-	# 挂这里而不是 move / attack / activate 各写一遍 —— `_tap` 是**行动结束的唯一口**
-	# （攻击完毕 / 移动后放弃攻击 / 主动发动 / AI 待命·推进失败·按兵不动 全都经过它）。
+	# R381 漩涡 9186（R557 前是「行动结束后随机移动 1 格」，现已改为每回合伤害递增，
+	# 挂在 _field_aura_tick；这里不再有行动后卷人逻辑）。
 	_assemble_execute(p, _cell_of(p), "action_end")
-	_vortex_push(p)
 	if p.acts_left > 1:
 		p.acts_left -= 1
 		p.tapped = false
@@ -15285,6 +15280,7 @@ func _field_aura_tick(side: String) -> void :
 	## 满血单位跳过回血（避免每回合刷无意义的飘字）—— 但**改造不跳过**（它不是回血）。
 	var healed := 0
 	var upgraded := 0
+	var vortex_cells: Array[Vector2i] = []
 	for cell: Vector2i in state.board.keys():
 		var p: Placement = state.unit_at(cell)
 		if p == null or p.owner != side:
@@ -15349,12 +15345,44 @@ func _field_aura_tick(side: String) -> void :
 		# 「双」生效 → 敌我双方的单位各自在自己回合结束被施加；「友」限制不适用于它。
 		if f.field_poison_dmg > 0:
 			_apply_poison(p, f.field_poison_dmg, f.field_poison_turns)
+		# ④ 漩涡（R557）：站在漩涡格上 → 只**收集**，循环外结算伤害 —— 直接扣血可能
+		# 致死改 board，不能在遍历里杀（与 `_poison_tick` 同口径）。
+		if f.field_vortex_dmg > 0:
+			vortex_cells.append(cell)
 	if healed > 0:
 		_log("持续型场地：%d 个单位在自己回合结束时回复了生命" % healed)
 	if upgraded > 0:
 		_inspire_tick()   # R300 激发：改造工厂一次结算改多个单位 → 只算一次
 		_log("改造工厂：%d 个单位获得改造（每回合 +%d 力 / +%d 血，可无限叠）" % [
 			upgraded, UPGRADE_FACTORY_ATK, UPGRADE_FACTORY_HP])
+	for vcell: Vector2i in vortex_cells:
+		_vortex_damage(vcell)
+
+
+func _vortex_damage(cell: Vector2i) -> void :
+	## **漩涡（9186，R557）每回合伤害的唯一结算口**：「每个回合结束时对此格上的单位
+	## 造成 15 点伤害，且后续受到的漩涡伤害 +1」。由 `_field_aura_tick` 在**循环外**调用
+	## （已按 side 过滤过：只结算「属于当前回合方」的单位）。
+	##
+	## 口径与边界：
+	##   * 伤害 = 卡面 `field_vortex_dmg`（15）+ 该单位 `vortex_stacks`（已受漩涡伤害次数），
+	##     结算后 `vortex_stacks +1` → 第一次 15、第二次 16、第三次 17…；
+	##   * 「后续 +1」记在**单位**上（不写回卡面），离开漩涡格不清零、再站回来继续递增；
+	##     单位死亡 / 离场随 Placement 消失；
+	##   * 伤害走 `_hit_unit` → 减伤 / 护盾 / 超负荷 / 标记加成照常；可致死（改 board），
+	##     所以不能放在 `_field_aura_tick` 的遍历里结算（那里可能边遍历边杀）。
+	var p: Placement = state.unit_at(cell)
+	if p == null or p.health <= 0:
+		return
+	var f: CardData = state.field_at(cell)
+	if f == null or f.field_vortex_dmg <= 0:
+		return
+	var dmg: int = f.field_vortex_dmg + p.vortex_stacks
+	p.vortex_stacks += 1
+	_log("漩涡：%s 受到 %d 点伤害（下次 +1）" % [p.card.card_name, dmg])
+	action.emit("vortex", {"cell": cell, "card": p.card, "amount": dmg,
+		"stacks": p.vortex_stacks, "side": p.owner})
+	_hit_unit(p, dmg, "漩涡")
 
 
 func _apply_poison(p: Placement, dmg: int, turns: int) -> void :

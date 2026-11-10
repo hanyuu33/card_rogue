@@ -174,6 +174,11 @@ var field_heal: int = 0
 ## 「取伤害高」由 `_apply_poison` 结算（刷新时伤害取 max、持续取 max），字段本身只存卡面原值。
 var field_poison_dmg: int = 0
 var field_poison_turns: int = 0
+## **漩涡每回合结算的基础伤害**（R557）：漩涡 9186 = 15，其余 = 0。
+## 0 = 这张持续型场地不造成漩涡伤害（判据：`GameEngine._field_aura_tick` 靠 `field_vortex_dmg > 0`
+## 决定要不要结算）。实际伤害 = 基础值 + 该单位已受漩涡伤害的次数（`Placement.vortex_stacks`，
+## 「后续受到的漩涡伤害 +1」），递增记在单位上、不写回卡面。放卡面而不是引擎常量：与 `field_heal` 同族。
+var field_vortex_dmg: int = 0
 ## **卡面自带的「每回合结束回血」**（R233）：犀牛 9016 = 2，其余 = 0。
 ## 0 = 这张单位不回血。由 `GameEngine._regen_tick` 在**该单位所属方回合结束**时
 ## 与 `Placement.regen`（自我修复给的）、太阳熔炉光环**相加**结算；
@@ -308,6 +313,7 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.field_heal = int(d.get("field_heal", 0))
 	c.field_poison_dmg = maxi(0, int(d.get("field_poison_dmg", 0)))
 	c.field_poison_turns = maxi(0, int(d.get("field_poison_turns", 0)))
+	c.field_vortex_dmg = maxi(0, int(d.get("field_vortex_dmg", 0)))
 	c.regen_per_turn = maxi(0, int(d.get("regen_per_turn", 0)))
 	c.own_copy = bool(d.get("own_copy", false))
 	c.random_born = bool(d.get("random_born", false))
@@ -387,6 +393,7 @@ func to_dict() -> Dictionary:
 		# 漏了它 = 毒沼一放就失效。
 		"field_poison_dmg": field_poison_dmg,
 		"field_poison_turns": field_poison_turns,
+		"field_vortex_dmg": field_vortex_dmg,
 		# R233：自带每回合回血必须随序列化走（复制 / 离场还原 / 联机共用这条通道），
 		# 漏了它 = 犀牛一上场 / 一复制就失去回血。
 		"regen_per_turn": regen_per_turn,

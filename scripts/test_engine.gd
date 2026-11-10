@@ -28472,7 +28472,8 @@ func _init() -> void:
 
 	# ================= R381：漩涡 9186 / 鹅 9187（森林精魄剧情卡）+ R382 解锁渠道 =================
 	# 用户口径（R381）：「新增森林精魄故事卡牌（暂无解锁渠道）」
-	#   漩涡：1 费场地 —— 处于此格的单位**行动时**，会随机向一个方向移动一格。
+	#   漩涡（R557 起 3 费场地）：使用时若此格无单位随机拉一个「距离 1」的单位过来；
+	#     每回合结束对此格单位造成 15 伤，且后续受到漩涡伤害 +1（15 / 16 / 17…）。
 	#   鹅：2 费盟友 1 攻 / 9 血 —— 攻击敌人会将其向后击退一格，自己前进一格（如果可能）。
 	# 用户口径（R382）：「以上两张卡由 episode2 解锁。使用森林精魄角色通关一次解锁。
 	#   （注意，解锁后卡牌 ban 位只增加森林精魄的），这两张卡为普通稀有度。」
@@ -28480,11 +28481,13 @@ func _init() -> void:
 	var r381_repo := CardRepo.load_json()
 	var r381_v: CardData = r381_repo.get_card(9186)
 	var r381_g: CardData = r381_repo.get_card(9187)
-	check(r381_v != null and r381_v.kind == "场地" and r381_v.cost == 1
+	check(r381_v != null and r381_v.kind == "场地" and r381_v.cost == 3
 			and r381_v.card_class == "森林精魄" and r381_v.is_field()
 			and GameEngine.is_persistent_field(r381_v)
-			and r381_v.traits.has(GameEngine.PERSIST_VORTEX_TRAIT),
-			"R381 漩涡 9186：1 费持续场地（森林精魄），判据 trait「涡旋」")
+			and r381_v.field_vortex_dmg == 15
+			and r381_v.traits.has("持续场地") and r381_v.traits.has("场地生效·双")
+			and not r381_v.traits.has("涡旋"),
+			"R381 漩涡 9186：3 费持续场地（森林精魄），漩涡伤害 15，已无「涡旋」trait")
 	check(r381_g != null and r381_g.kind == "盟友" and r381_g.cost == 2
 			and r381_g.power == 2 and r381_g.health == 10
 			and r381_g.attack_range == 1 and r381_g.move_speed == 1
@@ -28575,75 +28578,111 @@ func _init() -> void:
 	ProfileData.set_test_mode()      # 收尾：别把上面的解锁/禁用留给后面的用例
 	RunState.run_bans = []
 
-	# ② 漩涡：站在上面 → 行动结束被卷走**恰好 1 格**，且场地不消失（20 次全中）
+	# ② 放置拉人：落格没有单位 → 随机把一个「距离 1」的单位拉进来
 	var r381_e := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
 	r381_e.start_game()
 	var r381_vc := Vector2i(3, 1)
-	var r381_ok := 0
-	var r381_where := {}
-	for r381_i in 20:
-		r381_e.state.set_field(r381_v, r381_vc, "self")
-		var r381_p: Placement = r381_e.state.place(_card(8101, "木桩", "盟友", 1, 0, 20),
-				r381_vc, "self")
-		r381_e._tap(r381_p, "R381 测试")
-		var r381_n: Vector2i = r381_e._cell_of(r381_p)
-		var r381_dd: Vector2i = r381_n - r381_vc
-		if absi(r381_dd.x) + absi(r381_dd.y) == 1 and r381_e.state.field_at(r381_vc) != null:
-			r381_ok += 1
-			r381_where[str(r381_dd)] = true
-		# 复位：把木桩搬回原格 + 清掉场地，下一轮重来
-		if r381_n != r381_vc and r381_e.state.board.has(r381_n):
-			r381_e.state.move_unit(r381_n, r381_vc)
-		r381_e.state.clear_field(r381_vc)
-		r381_e.state.board.erase(r381_vc)
-	check(r381_ok == 20,
-			"R381 漩涡：20 次「行动结束」全部被卷走 1 格、场地不消失（%d/20）" % r381_ok)
-	check(r381_where.size() >= 2,
-			"R381 漩涡：方向确实是随机的（20 次落到 %d 个不同方向）" % r381_where.size())
+	var r381_adj: Placement = r381_e.state.place(_card(8131, "木桩", "盟友", 1, 0, 20),
+			Vector2i(3, 0), "opponent")
+	r381_e.state.set_field(CardData.from_dict(r381_v.to_dict()), r381_vc, "self")
+	r381_e._vortex_pull(r381_vc)
+	check(r381_e.state.unit_at(r381_vc) == r381_adj,
+			"R381 漩涡：落格没单位 → 相邻单位被拉进漩涡（%s）" % str(r381_e._cell_of(r381_adj)))
 
-	# ③ 漩涡：四面被挡 → 不动（不会硬挤）
+	# ③ 放置拉人：落格已经有单位 → 不拉（需求写「若此格没有单位」才拉）
 	var r381_e2 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
 	r381_e2.start_game()
-	r381_e2.state.set_field(r381_v, r381_vc, "self")
-	var r381_mid: Placement = r381_e2.state.place(_card(8111, "木桩", "盟友", 1, 0, 20),
+	var r381_here: Placement = r381_e2.state.place(_card(8121, "木桩", "盟友", 1, 0, 20),
 			r381_vc, "self")
-	r381_e2.state.place(_card(8112, "木桩", "盟友", 1, 0, 20), Vector2i(2, 1), "opponent")
-	r381_e2.state.place(_card(8113, "木桩", "盟友", 1, 0, 20), Vector2i(4, 1), "self")
-	r381_e2.state.place(_card(8114, "木桩", "盟友", 1, 0, 20), Vector2i(3, 0), "self")
-	r381_e2.state.place(_card(8115, "木桩", "盟友", 1, 0, 20), Vector2i(3, 2), "self")
-	r381_e2._tap(r381_mid, "R381 测试")
-	check(r381_e2._cell_of(r381_mid) == r381_vc,
-			"R381 漩涡：四面都被挡住 → 原地不动（%s）" % str(r381_e2._cell_of(r381_mid)))
+	r381_e2.state.place(_card(8122, "木桩", "盟友", 1, 0, 20), Vector2i(3, 0), "opponent")
+	r381_e2.state.set_field(CardData.from_dict(r381_v.to_dict()), r381_vc, "self")
+	r381_e2._vortex_pull(r381_vc)
+	check(r381_e2.state.unit_at(r381_vc) == r381_here
+			and r381_e2.state.unit_at(Vector2i(3, 0)) != null,
+			"R381 漩涡：落格已有单位 → 不拉（相邻单位原地不动）")
 
-	# ④ 漩涡：位移免疫单位（赫菲斯托斯 9135）卷不动
+	# ④ 放置拉人：相邻无单位 / 位移免疫（9135）→ 不拉
 	var r381_e3 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
 	r381_e3.start_game()
-	r381_e3.state.set_field(r381_v, Vector2i(4, 1), "self")
+	r381_e3.state.set_field(CardData.from_dict(r381_v.to_dict()), r381_vc, "self")
+	r381_e3._vortex_pull(r381_vc)
+	check(r381_e3.state.unit_at(r381_vc) == null,
+			"R381 漩涡：相邻无单位 → 不拉")
 	var r381_imm: Placement = r381_e3.state.place(r381_repo.get_card(9135),
-			Vector2i(4, 1), "self")
-	r381_e3._tap(r381_imm, "R381 测试")
-	check(r381_e3._cell_of(r381_imm) == Vector2i(4, 1),
-			"R381 漩涡：位移免疫（9135）不被卷走（%s）" % str(r381_e3._cell_of(r381_imm)))
+			Vector2i(3, 0), "self")
+	r381_e3._vortex_pull(r381_vc)
+	check(r381_e3.state.unit_at(r381_vc) == null
+			and r381_e3._cell_of(r381_imm) == Vector2i(3, 0),
+			"R381 漩涡：相邻单位位移免疫（9135）→ 不拉")
 
-	# ⑤ 漩涡：不站在上面就没事（相邻格不触发）
+	# ⑤ 随机拉人：4 个方向都有单位 → 被拉进来的是「距离 1」之一，方向不唯一
 	var r381_e4 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
 	r381_e4.start_game()
-	r381_e4.state.set_field(r381_v, r381_vc, "self")
-	var r381_side: Placement = r381_e4.state.place(_card(8121, "木桩", "盟友", 1, 0, 20),
-			Vector2i(4, 1), "self")
-	r381_e4._tap(r381_side, "R381 测试")
-	check(r381_e4._cell_of(r381_side) == Vector2i(4, 1),
-			"R381 漩涡：站在相邻格不会被卷（只有站在上面才触发）")
+	var r381_where := {}
+	var r381_uid := 8300
+	for r381_i in 12:
+		r381_e4.state.board.clear()
+		var r381_tag := {}
+		for r381_d in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
+			var r381_nc: Vector2i = r381_vc + r381_d
+			r381_uid += 1
+			var r381_nu := r381_e4.state.place(_card(r381_uid, "木桩", "盟友", 1, 0, 20),
+					r381_nc, "opponent")
+			r381_tag[r381_nc] = r381_nu
+		r381_e4.state.set_field(CardData.from_dict(r381_v.to_dict()), r381_vc, "self")
+		r381_e4._vortex_pull(r381_vc)
+		var r381_landed: Placement = r381_e4.state.unit_at(r381_vc)
+		for r381_cc: Vector2i in r381_tag:
+			if r381_tag[r381_cc] == r381_landed:
+				r381_where[r381_cc] = true
+		r381_e4.state.clear_field(r381_vc)
+	check(r381_where.size() >= 2,
+			"R381 漩涡：随机拉人（12 次拉到 %d 个不同相邻方向）" % r381_where.size())
 
-	# ⑥ 漩涡：敌我都能被卷（卡面写的就是「场地生效·双」）
+	# ⑥ 每回合结束伤害递增：15 → 16 → 17（「后续受到漩涡伤害 +1」）
 	var r381_e5 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
 	r381_e5.start_game()
-	r381_e5.state.set_field(r381_v, Vector2i(1, 1), "self")
-	var r381_foe0: Placement = r381_e5.state.place(_card(8131, "木桩", "盟友", 1, 0, 20),
+	var r381_vict: Placement = r381_e5.state.place(_card(8141, "木桩", "盟友", 1, 0, 100),
+			r381_vc, "self")
+	r381_e5.state.set_field(CardData.from_dict(r381_v.to_dict()), r381_vc, "self")
+	r381_e5.end_turn()   # 我方回合结束：15 伤
+	check(r381_vict.health == 85 and r381_vict.vortex_stacks == 1,
+			"R381 漩涡：第 1 次回合结束 15 伤（100 → %d，stacks=%d）"
+			% [r381_vict.health, r381_vict.vortex_stacks])
+	r381_e5.end_turn()   # 敌方回合结束（我方单位不结算）
+	check(r381_vict.health == 85,
+			"R381 漩涡：敌方回合结束时我方单位不结算（仍 %d 血）" % r381_vict.health)
+	r381_e5.end_turn()   # 我方回合结束：16 伤
+	check(r381_vict.health == 69 and r381_vict.vortex_stacks == 2,
+			"R381 漩涡：第 2 次 16 伤（85 → %d）" % r381_vict.health)
+	r381_e5.end_turn()   # 敌方
+	r381_e5.end_turn()   # 我方：17 伤
+	check(r381_vict.health == 52 and r381_vict.vortex_stacks == 3,
+			"R381 漩涡：第 3 次 17 伤（69 → %d，后续 +1）" % r381_vict.health)
+	# 离开再站回来：vortex_stacks 不清零 → 继续按已累积递增（「后续」口径）
+	r381_e5.state.move_unit(r381_vc, Vector2i(2, 1))
+	r381_e5.end_turn()   # 敌方
+	r381_e5.end_turn()   # 我方：不站漩涡不结算（仍 52）
+	check(r381_vict.health == 52,
+			"R381 漩涡：离开漩涡格后不再结算（仍 %d 血）" % r381_vict.health)
+	r381_e5.state.move_unit(Vector2i(2, 1), r381_vc)
+	r381_e5.end_turn()   # 敌方
+	r381_e5.end_turn()   # 我方：18 伤（stacks 保留，不是 15）
+	check(r381_vict.health == 34 and r381_vict.vortex_stacks == 4,
+			"R381 漩涡：再站回来继续递增（52 → %d，第 4 次 18 伤）" % r381_vict.health)
+
+	# ⑦ 敌方单位在敌方回合也被结算（卡面写的就是「场地生效·双」）
+	var r381_e6v := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
+	r381_e6v.start_game()
+	var r381_foe0: Placement = r381_e6v.state.place(_card(8151, "木桩", "盟友", 1, 0, 100),
 			Vector2i(1, 1), "opponent")
-	r381_e5._tap(r381_foe0, "R381 测试")
-	check(r381_e5._cell_of(r381_foe0) != Vector2i(1, 1),
-			"R381 漩涡：敌方单位站上去同样被卷（%s）" % str(r381_e5._cell_of(r381_foe0)))
+	r381_e6v.state.set_field(CardData.from_dict(r381_v.to_dict()), Vector2i(1, 1), "self")
+	r381_e6v.end_turn()   # 我方回合结束（敌方单位不结算）
+	check(r381_foe0.health == 100 and r381_foe0.vortex_stacks == 0,
+			"R381 漩涡：我方回合结束时敌方单位不结算（仍 100 血）")
+	r381_e6v.end_turn()   # 敌方回合结束 → 结算 15 伤
+	check(r381_foe0.health == 85 and r381_foe0.vortex_stacks == 1,
+			"R381 漩涡：敌方回合结束时结算（100 → %d）" % r381_foe0.health)
 
 	# ⑦ 鹅：攻击 → 目标后退 1 格 + 自己前进 1 格
 	var r381_e6 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 60, 60, -1, false)
@@ -28693,11 +28732,11 @@ func _init() -> void:
 			and r381_e9._cell_of(r381_gs4) == Vector2i(3, 1),
 			"R381 鹅：目标免疫位移 → 双方都不动")
 
-	# ⑪ 源码锁：两个结算口各自只有一个挂点（别在 move / activate 里再抄一遍）
+	# ⑪ 源码锁：漩涡的放置拉人 / 每回合伤害各有唯一结算口，鹅不变
 	var r381_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
-	check_src(r381_src.find("func _vortex_push") >= 0
-			and r381_src.find("\t_vortex_push(p)") >= 0,
-			"R381 源码：漩涡的结算口只有 `_tap()` 一处挂点")
+	check_src(r381_src.find("func _vortex_pull") >= 0
+			and r381_src.find("func _vortex_damage") >= 0,
+			"R381 源码：漩涡有放置拉人 _vortex_pull + 每回合伤害 _vortex_damage 两个结算口")
 	check_src(r381_src.find("func _goose_lunge") >= 0
 			and r381_src.find("\t\t_goose_lunge(attacker, dst)") >= 0,
 			"R381 源码：鹅的结算口只有 attack 尾部一处挂点")
