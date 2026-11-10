@@ -33,11 +33,13 @@ var _target := ""
 ## 现在分两种情况收下：phase 1（还没提交目标）→ **改目的地**，省掉一个中间场景；
 ## phase 2（目标已提交、屏幕正在揭开）→ 记在 `_pending`，揭开完立刻接着走。
 var _pending := ""
+var _fx := "wipe"           # R551：本次转场模式（"wipe" 斜切 / "eye" 闭眼黑屏）
 var _cv: Control = null
 
 
-static func goto(path: String, instant := false) -> void:
+static func goto(path: String, instant := false, fx := "wipe") -> void:
 	## 唯一入口。重复调用（转场途中）直接忽略 —— 双击 / 连点防护。
+	## R551：`fx` 选转场模式，`"eye"` = 失败结算的「闭眼黑屏」。
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree == null or tree.root == null:
 		return   # 没有场景树（纯逻辑测试）：放弃切换，别崩
@@ -57,6 +59,7 @@ static func goto(path: String, instant := false) -> void:
 		_inst._phase = 0
 		_inst._pending = ""
 		_inst._cv.queue_redraw()
+	_inst._fx = fx               # R551：设本次转场模式
 	_inst._begin(path)
 
 
@@ -135,6 +138,10 @@ func _on_cv_draw() -> void:
 
 
 func _draw_wipe(p: float) -> void:
+	## R551：`_fx == "eye"` 走「闭眼黑屏」（上下眼皮合拢），否则走斜切擦除。
+	if _fx == "eye":
+		_draw_eye(p)
+		return
 	## 斜切擦除：{x + y <= E} 的一侧已被 INK_900 盖住；E 随 p 从 -1 扫到 W+H+1。
 	var vp := _cv.size
 	if vp.x <= 0.0 or vp.y <= 0.0:
@@ -155,3 +162,39 @@ func _draw_wipe(p: float) -> void:
 		pts = PackedVector2Array([Vector2.ZERO, Vector2(w, 0), Vector2(w, e - h),
 				Vector2(e - h, h), Vector2(0, h)])
 	_cv.draw_colored_polygon(pts, WIPE_COL)
+
+
+func _draw_eye(p: float) -> void:
+	## R551：闭眼黑屏 —— 上下两片「眼皮」从上下往中间合拢，p 0=睁眼 / 1=闭眼。
+	## 内沿带一点弧度（眼皮的曲线），中心比两侧多探出；合到 p=1 时两片在中线
+	## 互相咬合（重叠），不留缝。曲率随合拢程度增大 —— p=0 时无眼皮、画面全露。
+	var vp := _cv.size
+	if vp.x <= 0.0 or vp.y <= 0.0:
+		vp = Vector2(1280, 720)
+	var w := vp.x
+	var h := vp.y
+	var half := h * 0.5
+	var cover := half * p                 # 每片遮到离各自边缘 cover 远
+	var arc := cover * 0.25               # 内沿弧度幅度（中心多探出这么多）
+	_cv.draw_colored_polygon(_lid_poly(w, h, cover, arc, true), WIPE_COL)
+	_cv.draw_colored_polygon(_lid_poly(w, h, cover, arc, false), WIPE_COL)
+
+
+func _lid_poly(w: float, h: float, cover: float, arc: float, top: bool) -> PackedVector2Array:
+	## 一片眼皮的多边形。上眼皮：上沿贴顶（y=0），下沿是带弧的曲线；下眼皮镜像。
+	## 弧线用正弦近似（中心最深），steps 段折线 —— 直线上没有可见毛边。
+	var pts := PackedVector2Array()
+	var steps := 16
+	if top:
+		pts.append(Vector2(0, 0))
+		pts.append(Vector2(w, 0))
+		for i in range(steps, -1, -1):
+			var t := float(i) / steps
+			pts.append(Vector2(w * t, cover + arc * sin(PI * t)))
+	else:
+		for i in range(steps + 1):
+			var t := float(i) / steps
+			pts.append(Vector2(w * t, h - cover - arc * sin(PI * t)))
+		pts.append(Vector2(w, h))
+		pts.append(Vector2(0, h))
+	return pts

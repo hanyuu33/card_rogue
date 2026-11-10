@@ -756,6 +756,8 @@ var _run_next_layer := 0        # Boss 通关后要进入的下一层（0 = 没�
 ## R530：本场是**整局通关**（最后一层 Boss 打完）→ 不弹「胜利」小面板，
 ## 末尾改跳 `run_summary.tscn` 结算界面。判据只有 `_run_boss_win and _run_next_layer <= 0`。
 var _summary_pending := false
+var _summary_fail := false     # R551：_summary_pending 为真时的**失败**分支（标题/转场走失败口径）
+var _lose_elapsed := 0         # R551：败北那一刻的用时（finish 会删 pending，之后 peek_elapsed 读不到）
 ## R339：**进战斗之前**的一份局状态快照（战斗检查点写它，而不是写当下状态）。
 ## 为什么：`_load_entry_level()` → `start_game()` 会跑第 1 个我方回合，
 ## 而 lucky 7 的跨战斗计数就在那一步 +1。检查点若在这之后写盘，
@@ -4037,6 +4039,8 @@ func _setup_net() -> void:
 		_win_panel.visible = false
 	_over_shown = false
 	_lose_recorded = false
+	_summary_fail = false
+	_lose_elapsed = 0
 	_confetti.clear()
 	status_text = "联机对局 vs %s —— %s" % [NetSession.opp_name,
 			"你先手，请行动" if NetSession.i_start else "等待对方行动…"]
@@ -4344,6 +4348,8 @@ func load_level(lvl: Dictionary) -> void:
 		_win_panel.visible = false
 	_over_shown = false
 	_lose_recorded = false
+	_summary_fail = false
+	_lose_elapsed = 0
 	_confetti.clear()
 	var limit: int = int(lvl["turn_limit"])
 	if limit > 0:
@@ -7661,13 +7667,14 @@ func _on_over_restart() -> void:
 		_goto_scene("res://scenes/title.tscn")
 
 
-func _goto_scene(path: String) -> void:
+func _goto_scene(path: String, fx := "wipe") -> void:
 	## R389：切场景的唯一收口 —— 烟测里用 `over_route_fn` 截获目标，不真换场景树
 	## （headless 下真换会把用例自己的树掀掉）。
+	## R551：`fx` 选转场模式（"wipe" 斜切 / "eye" 闭眼黑屏），失败结算用 "eye"。
 	if over_route_fn.is_valid():
 		over_route_fn.call(path)
 	else:
-		SceneFx.goto(path)
+		SceneFx.goto(path, false, fx)
 
 
 func _on_reward_panel_closed() -> void:
@@ -7686,6 +7693,9 @@ func _record_defeat() -> void:
 	if _lose_recorded or not RunState.run_active or engine == null:
 		return
 	_lose_recorded = true
+	# R551：先把本局用时取下 —— 下面 `finish()` 会删 pending，之后 `peek_elapsed()`
+	# 读不到，而失败结算页的「花费时间」要用它。
+	_lose_elapsed = RunRecord.peek_elapsed()
 	var lvl: Dictionary = _cur_level if not _cur_level.is_empty() else {}
 	RunState.record_battle(repo, str(lvl.get("name", "?")), int(lvl.get("tier", -1)),
 			false, maxi(0, engine.state.hp_self))
@@ -7903,12 +7913,27 @@ func _show_over(win: bool) -> void:
 			# R367：正常路径下这里已经是第二次（`engine.over` 首帧就记过了）——
 			# `_record_defeat()` 自带幂等，不会写出两条「失败」。
 			_record_defeat()
-			RunState.end_run()
+			# R551（用户口径「失败后不弹小窗，直接闭眼黑屏进结算界面」）：
+			# 与整局通关同一条路 —— 填好结算快照、标「失败」，末尾切 `run_summary.tscn`。
+			# 用时取 `_lose_elapsed`（`_record_defeat` 里已在 finish 删 pending 之前取下，
+			# 此刻 `peek_elapsed()` 已经读不到 pending 了）。
+			RunState.run_summary = {
+				"class": RunState.player_class,
+				"difficulty": RunState.difficulty,
+				"layer": RunState.current_layer,
+				"damage": RunState.total_damage,
+				"seconds": _lose_elapsed,
+				"battles": RunState.total_battle_wins,
+				"elites": RunState.total_elite_wins,
+				"seed": RunState.run_seed,
+				"result": "lose",
+			}
+			_summary_pending = true
+			_summary_fail = true
+			# 只落章「本局结束」+ 删档（镜像整局通关的 mark_run_won），真正的清空交给
+			# 结算页点「确定」时再跑 end_run() —— 否则 run_summary 会被 reset_run_stats 清掉。
+			RunState.mark_run_lost()
 			_run_boss_win = false
-			_over_btn_restart.visible = false
-			_over_btn_level.visible = false
-			_over_btn_title.text = "返回标题"
-			_over_btn_title.visible = true
 	else:
 		# 单关/演示模式：胜利 → 剩余生命带回 run（下一场接着用）；失败 → 重置满血再来
 		_run_boss_win = false
@@ -7946,7 +7971,8 @@ func _show_over(win: bool) -> void:
 	# 放在这里（而不是函数开头）是为了让上面那串记账 / 成就 / 剧情解锁 / 胜负音效
 	# 的**副作用**照旧跑完 —— 只是不再画那四个字。
 	if _summary_pending:
-		_goto_scene("res://scenes/run_summary.tscn")
+		# R551：失败走「闭眼黑屏」转场，通关仍走默认斜切擦除。
+		_goto_scene("res://scenes/run_summary.tscn", "eye" if _summary_fail else "wipe")
 		return
 	sfx.play("win" if win else "lose")
 	if win:

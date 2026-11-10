@@ -1046,6 +1046,16 @@ static func mark_run_won() -> void:
 	RunSave.clear_save("run_won")
 
 
+static func mark_run_lost() -> void:
+	## R551：失败也要进结算页 —— 与 `mark_run_won` 同形，只落章「本局不再继续」+
+	## 删续档，**不**清内存里的卡组 / 统计 / `run_summary`（结算页还要读）。
+	## 真正的 `end_run()` 等玩家在结算页点「确定」再跑（见 run_summary_scene._on_confirm）。
+	if run_finished:
+		return
+	run_finished = true
+	RunSave.clear_save("run_lost")
+
+
 static func end_run(clear_save: bool = true) -> void:
 	## run 结束（通关 / 失败）：
 	##   * clear_save = true（默认）：连**续档**一起清掉 —— 这一局真的结束了；

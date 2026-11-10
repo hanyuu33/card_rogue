@@ -60,12 +60,19 @@ func _ready() -> void:
 	Bgm.play("title")
 	set_process(true)
 	var args := OS.get_cmdline_user_args()
-	# 出图 / 调试：`--summarydemo` 灌一组假数据（真实流程永远从 run_summary 来）
-	if "--summarydemo" in args:
+	# 出图 / 调试：`--summarydemo` 灌一组假数据（真实流程永远从 run_summary 来）。
+	# R551：加 `--summarydemo-lose` 出「失败」结算页（标题 + 副标题走失败口径）。
+	# 注意 `--summarydemo-lose` 是独立参数，不是 `--summarydemo` 的子串，两个都要判。
+	if "--summarydemo" in args or "--summarydemo-lose" in args:
 		RunState.run_summary = {
 			"class": PlayerClass.DRUID, "difficulty": 6, "layer": GameLayers.LAYER_THREE,
 			"damage": 13847, "seconds": 4823, "battles": 24, "elites": 5,
 		}
+		if "--summarydemo-lose" in args:
+			RunState.run_summary["result"] = "lose"
+			RunState.run_summary["layer"] = GameLayers.LAYER_TWO
+			RunState.run_summary["battles"] = 11
+			RunState.run_summary["elites"] = 2
 	_load_data()
 	_build_rows()
 	if "--screenshot" in args:
@@ -216,8 +223,11 @@ func _draw_head(pr: Rect2) -> void:
 	# R543（用户口径）：标题按结局区分 —— 凑齐信物并通关第三层 =「胜利」；
 	# 未凑齐信物、打通第二层就进入结算 =「胜利？」。
 	# 判据 = 结算快照里的 `layer`：真通关必然停在第三层（LAYER_THREE）。
+	# R551（用户口径「失败也进这张结算页」）：快照带 `result: "lose"` 时显示「失败」。
 	var title := "胜  利"
-	if int(_data.get("layer", GameLayers.LAYER_THREE)) != GameLayers.LAYER_THREE:
+	if str(_data.get("result", "")) == "lose":
+		title = "失  败"
+	elif int(_data.get("layer", GameLayers.LAYER_THREE)) != GameLayers.LAYER_THREE:
 		title = "胜利？"
 	draw_string(_font_bold, Vector2(pr.position.x, ty), title,
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_TITLE,
