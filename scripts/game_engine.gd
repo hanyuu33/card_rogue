@@ -4092,6 +4092,10 @@ func end_turn() -> void :
 	# 清泉（8028，R83）：持续型场地 —— 本方回合结束时，站在清泉上的本方单位回血。
 	# 放在 `_sleep_tick` 之后：两者都是「本方回合结束的收尾」，挨着才好读。
 	_field_aura_tick(current_side)
+	# 毒沼（8082，R556）：中毒伤害结算 —— 必须排在 `_field_aura_tick` **之后**：
+	# 毒沼在 `_field_aura_tick` 里先给站上去的单位「施加中毒」，这里紧接着结算伤害，
+	# 于是「站上毒沼的当回合结束」就会掉血；离开毒沼后中毒仍按剩余回合继续扣。
+	_poison_tick(current_side)
 	# 自我修复（8035，R87）：「每回合结束回复 4 点生命」—— 同样只结算本方单位。
 	_assemble_tick(current_side, "turn_end")
 	_regen_tick(current_side)
@@ -15340,12 +15344,60 @@ func _field_aura_tick(side: String) -> void :
 		# 废弃机器人）站在改造工厂上完全不响应 —— 用户报的就是榴弹击手加不了射程。
 		if f.traits.has(PERSIST_UPGRADE_TRAIT):
 			_on_unit_upgraded(p)
+		# ③ 毒沼（R556）：站在毒沼格上的单位**获得中毒**（先施加，伤害由 `_poison_tick`
+		# 在 `end_turn` 里紧接着结算 —— 所以「站上毒沼的当回合结束」就会掉血）。
+		# 「双」生效 → 敌我双方的单位各自在自己回合结束被施加；「友」限制不适用于它。
+		if f.field_poison_dmg > 0:
+			_apply_poison(p, f.field_poison_dmg, f.field_poison_turns)
 	if healed > 0:
 		_log("持续型场地：%d 个单位在自己回合结束时回复了生命" % healed)
 	if upgraded > 0:
 		_inspire_tick()   # R300 激发：改造工厂一次结算改多个单位 → 只算一次
 		_log("改造工厂：%d 个单位获得改造（每回合 +%d 力 / +%d 血，可无限叠）" % [
 			upgraded, UPGRADE_FACTORY_ATK, UPGRADE_FACTORY_HP])
+
+
+func _apply_poison(p: Placement, dmg: int, turns: int) -> void :
+	## 施加中毒的唯一入口（R556 毒沼 8082）。用户口径：
+	##   * 重复受到效果只刷新持续时间（不叠加成更多回合）；
+	##   * 同时受到多种中毒取伤害高的（伤害、持续都取 max，避免更强的毒被弱毒盖掉）。
+	## 字段复用 `Placement.poison_left`（剩余回合）/ `poison_dmg`（每跳伤害）——
+	## R503 删掉旧剧毒陷阱后这两个字段一直留着但无施加者，R556 重新激活。
+	if p == null or p.health <= 0 or dmg <= 0:
+		return
+	var was_left := p.poison_left
+	var was_dmg := p.poison_dmg
+	p.poison_dmg = maxi(p.poison_dmg, dmg)
+	p.poison_left = maxi(p.poison_left, turns)
+	if p.poison_left == was_left and p.poison_dmg == was_dmg:
+		return   # 强度完全没变（已经被更毒的中毒盖着）→ 不刷事件、不刷日志
+	_log("%s 中毒：每回合结束 %d 点伤害，持续 %d 回合（取伤害高，重复只刷新）"
+		% [p.card.card_name, p.poison_dmg, p.poison_left])
+	action.emit("poison", {"cell": _cell_of(p), "card": p.card,
+		"amount": p.poison_dmg, "left": p.poison_left, "side": p.owner})
+
+
+func _poison_tick(side: String) -> void :
+	## 中毒伤害结算（R556）：**该单位所属方回合结束**时，带中毒的单位受到 `poison_dmg`
+	## 点伤害，`poison_left -1`；减到 0 中毒解除。⚠️ 先收集快照再逐个结算 ——
+	## 扣血可能致死（触发亡语 / 召唤改 board），边遍历边杀会踩到已删除的格子
+	## （与 `_overload_tick` 同形）。伤害走 `_hit_unit` → 减伤 / 护盾 / 超负荷 / 标记加成照常。
+	var poison_cells: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var p: Placement = state.unit_at(cell)
+		if p != null and p.owner == side and p.poison_left > 0:
+			poison_cells.append(cell)
+	for cell: Vector2i in poison_cells:
+		var p: Placement = state.unit_at(cell)
+		if p == null or p.poison_left <= 0 or p.health <= 0:
+			continue
+		var dmg := p.poison_dmg
+		p.poison_left -= 1
+		if p.poison_left <= 0:
+			p.poison_left = 0
+			p.poison_dmg = 0
+		_log("中毒：%s 受到 %d 点伤害（还剩 %d 回合）" % [p.card.card_name, dmg, p.poison_left])
+		_hit_unit(p, dmg, "中毒")
 
 
 func _sleep_tick(side: String) -> void :

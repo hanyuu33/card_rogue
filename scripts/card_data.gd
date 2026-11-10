@@ -168,6 +168,12 @@ var upgrade_stacks: int = 0
 ## 以及结算多少 —— 之前那里硬编码 `f.id == FOUNTAIN_ID`，加第二张持续型场地就会被忽略）。
 ## 放卡面而不是引擎常量：**加新的治疗型场地只要填这个数字，引擎一行都不用改**。
 var field_heal: int = 0
+## **毒沼每跳伤害 / 持续回合数**（R556）：毒沼 8082 = 10 / 2，其余 = 0。
+## 0 = 这张持续型场地不施加中毒（判据：`GameEngine._field_aura_tick` 靠 `field_poison_dmg > 0`
+## 决定要不要施加，`field_poison_turns` 决定持续几回合）。放卡面而不是引擎常量：与 `field_heal` 同族。
+## 「取伤害高」由 `_apply_poison` 结算（刷新时伤害取 max、持续取 max），字段本身只存卡面原值。
+var field_poison_dmg: int = 0
+var field_poison_turns: int = 0
 ## **卡面自带的「每回合结束回血」**（R233）：犀牛 9016 = 2，其余 = 0。
 ## 0 = 这张单位不回血。由 `GameEngine._regen_tick` 在**该单位所属方回合结束**时
 ## 与 `Placement.regen`（自我修复给的）、太阳熔炉光环**相加**结算；
@@ -300,6 +306,8 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.upgrade_hp_bonus = int(d.get("upgrade_hp_bonus", 0))
 	c.upgrade_stacks = maxi(0, int(d.get("upgrade_stacks", 0)))
 	c.field_heal = int(d.get("field_heal", 0))
+	c.field_poison_dmg = maxi(0, int(d.get("field_poison_dmg", 0)))
+	c.field_poison_turns = maxi(0, int(d.get("field_poison_turns", 0)))
 	c.regen_per_turn = maxi(0, int(d.get("regen_per_turn", 0)))
 	c.own_copy = bool(d.get("own_copy", false))
 	c.random_born = bool(d.get("random_born", false))
@@ -375,6 +383,10 @@ func to_dict() -> Dictionary:
 		# 改造 / 离场还原 / 联机序列化的统一通道，漏了它字段会静默归 0
 		#（持续型场地直接失效）。
 		"field_heal": field_heal,
+		# R556：毒沼的中毒数值同样必须随序列化走（复制 / 离场还原 / 联机同一条通道），
+		# 漏了它 = 毒沼一放就失效。
+		"field_poison_dmg": field_poison_dmg,
+		"field_poison_turns": field_poison_turns,
 		# R233：自带每回合回血必须随序列化走（复制 / 离场还原 / 联机共用这条通道），
 		# 漏了它 = 犀牛一上场 / 一复制就失去回血。
 		"regen_per_turn": regen_per_turn,

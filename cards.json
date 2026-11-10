@@ -5550,6 +5550,25 @@
       "image": ""
     },
     {
+      "id": 8082,
+      "name": "毒沼",
+      "kind": "场地",
+      "cost": 2,
+      "rarity": 0,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [
+        "场地生效·双",
+        "持续场地"
+      ],
+      "effect_text": "场地效果。站在此格的单位，在**自己回合结束时**获得中毒：回合结束时受到 10 点伤害，持续 2 回合。重复获得只刷新持续时间；同时受到多种中毒时，取伤害最高的一种。",
+      "field_poison_dmg": 10,
+      "field_poison_turns": 2,
+      "target_mode": "none",
+      "color": "绿",
+      "image": ""
+    },
+    {
       "id": 9207,
       "name": "量产型阿斯克勒庇厄斯",
       "kind": "盟友",
