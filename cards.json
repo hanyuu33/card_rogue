@@ -1151,7 +1151,9 @@
       "effect_text": "自己弃牌区每有一个盟友，这张卡费用 -1。使用时自己场上其他盟友攻击 +2。",
       "target_mode": "none",
       "color": "棕",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use", "effects": []},
+      "lower_effect": {"effects": [{"type": "buff_allies_atk", "value": 2}]}
     },
     {
       "id": 9039,

@@ -11856,12 +11856,25 @@ func _beast_hp_bonus(card: CardData) -> int:
 
 
 func _tiger_roar(tiger: Placement) -> void :
-	var n:= 0
-	for p: Placement in state.board.values():
-		if p.owner == SIDE_SELF and p.card.kind == "盟友" and p != tiger:
-			p.atk_buff += TIGER_ATK_BUFF
+	## 老虎 9038：**使用时**，自己场上**其他**盟友攻击 +2（不含自己）。
+	## R570b：结算抽到唯一口 `_buff_other_allies_atk`（组合动作 `buff_allies_atk` 共用）。
+	_buff_other_allies_atk(tiger, TIGER_ATK_BUFF, "老虎")
+
+
+func _buff_other_allies_atk(p: Placement, per: int, tag: String) -> int:
+	## R570b：「自己场上其他盟友攻击 +N」的唯一实现口 —— 老虎 9038 的入场钩子与
+	## 组合动作 `buff_allies_atk` 共用。返回加到的盟友数。
+	##
+	## ⚠️ 「其他」= 排除自己（`q != p`）：老虎自己那 1 点攻击不在卡面这半句里。
+	## ⚠️ 只加**盟友**，工事不加（与 `_buff_per_other_ally` 同一套判据）。
+	## ⚠️ 加的是 `atk_buff`（永久），不是 `end_atk` —— 老虎原实现就是常驻加攻。
+	var n := 0
+	for q: Placement in state.board.values():
+		if q.owner == p.owner and q.card.kind == "盟友" and q != p:
+			q.atk_buff += per
 			n += 1
-	_log("老虎：%d 个盟友攻击 +%d（不含老虎自己）" % [n, TIGER_ATK_BUFF])
+	_log("%s：%d 个盟友攻击 +%d（不含自己）" % [tag, n, per])
+	return n
 
 
 func _hound_snapshot(hound: Placement) -> void :
@@ -17863,6 +17876,9 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 				# ⚠️ `p.card` 是组合产物本身 —— 复制出来的也是产物，保留同一套 assemble。
 				for _j in maxi(1, value):
 					_spawn_self_clone(p.card)
+			"buff_allies_atk":
+				# R570b：老虎 9038「自己场上其他盟友攻击 +N」（共用 `_buff_other_allies_atk`）。
+				_buff_other_allies_atk(p, value, "组合")
 			"energy":
 				if p.owner == SIDE_SELF:
 					state.energy += value

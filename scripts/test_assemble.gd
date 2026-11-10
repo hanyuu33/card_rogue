@@ -109,6 +109,7 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 			return text.contains("技能牌") and text.contains("本回合费用 -%d" % n)
 		"hand_cost_raise": return text.contains("费用 +%d" % n)
 		"add_copy": return text.contains("复制")
+		"buff_allies_atk": return text.contains("其他盟友攻击 +%d" % n)
 	return true
 
 
@@ -845,7 +846,7 @@ func _test_r569_pool_forms() -> void:
 		if (c.kind == "盟友" or c.kind == "工事") and c.group == "player" \
 				and not c.upper_effect.is_empty() and not c.lower_effect.is_empty():
 			pool.append(c)
-	check(pool.size() >= 23, "R570：候选池至少 23 张（实际 %d）" % pool.size())
+	check(pool.size() >= 24, "R570：候选池至少 24 张（实际 %d）" % pool.size())
 	for c: CardData in pool:
 		check(Rules.TRIGGERS.has(str(c.upper_effect.get("trigger", ""))),
 				"R569：%d %s 上半必须有合法钩子" % [c.id, c.card_name])
@@ -986,6 +987,28 @@ func _test_r570_actions() -> void:
 	check(eng5.state.turn_card_raise == 4,
 			"R570：涨价不叠加（仍应为 4，实际 %d）" % eng5.state.turn_card_raise)
 
+	# ⑤b buff_allies_atk（老虎 9038）：其他 2 个盟友各 +2 攻，自己不加
+	var eng5b := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	eng5b.ai_enabled = false
+	var mate: Array[Placement] = []
+	for i in 2:
+		var a2 := CardData.new()
+		a2.kind = "盟友"
+		a2.card_name = "虎伴%d" % i
+		a2.health = 5
+		a2.power = 1
+		mate.append(eng5b.state.place(a2, Vector2i(i + 1, 0), GameEngine.SIDE_SELF))
+	var p5b := _probe_unit(eng5b, "use", Vector2i(4, 0))
+	p5b.card.assemble = {"trigger": "use", "effects": [{"type": "buff_allies_atk", "value": 2}]}
+	var own_before := p5b.effective_power()
+	eng5b._assemble_execute(p5b, Vector2i(4, 0), "use")
+	check(mate[0] != null and mate[1] != null
+			and mate[0].effective_power() == 3 and mate[1].effective_power() == 3,
+			"R570b：老虎 → 其他盟友各 +2 攻（实际 %d / %d）"
+			% [mate[0].effective_power() if mate[0] != null else -1,
+			mate[1].effective_power() if mate[1] != null else -1])
+	check(p5b.effective_power() == own_before, "R570b：老虎的「其他盟友」不含自己")
+
 	# ⑥ add_copy（野兔 9032）：手牌 +1，且复制品是**衍生物**（离场/回合结束消失）
 	var eng6 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
 	eng6.ai_enabled = false
@@ -1008,7 +1031,7 @@ func _test_r570_actions() -> void:
 
 	# ⑧ 有出处的数量：本轮 7 张各自的下半文本要能逐字对上原卡
 	var want := {9040: "每有一个其他盟友", 8019: "剩余费用每有 1 点", 8020: "剩余费用每有 1 点",
-			8062: "剩余费用", 9034: "技能牌", 8024: "费用 +4", 9032: "复制"}
+			8062: "剩余费用", 9034: "技能牌", 8024: "费用 +4", 9032: "复制", 9038: "其他盟友攻击 +2"}
 	for cid: int in want.keys():
 		var c: CardData = repo.get_card(cid)
 		check(c != null and not c.lower_effect.is_empty(),
@@ -1031,5 +1054,7 @@ func _test_r570_actions() -> void:
 			"R570 源码锁：从卡组取技能牌只有 `_fetch_skill_card` 一个实现口（赤狐 + 组合）")
 	check(gs.count("_spawn_self_clone(") >= 3,
 			"R570 源码锁：自我复制只有 `_spawn_self_clone` 一个实现口（野兔 + 组合）")
+	check(gs.find("func _buff_other_allies_atk") >= 0 and gs.count("_buff_other_allies_atk(") >= 3,
+			"R570b 源码锁：其他盟友加攻只有 `_buff_other_allies_atk` 一个实现口（老虎 + 组合）")
 	check(gs.count("_night_erosion_heal(") >= 3,
 			"R570 源码锁：按剩余费用回血只有 `_night_erosion_heal` 一个实现口（夜蚀 + 组合）")

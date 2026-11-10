@@ -33,7 +33,7 @@ static func valid_effect(fx: Variant) -> bool:
 	# 等于一个空动作，卡面却会写出来，玩家会以为自己拿到了东西。
 	if fx.type in ["add_random_effect", "hand_discount", "hand_upgrade",
 			"buff_per_ally", "heal_per_energy", "draw_random_skill",
-			"hand_cost_raise", "add_copy"]:
+			"hand_cost_raise", "add_copy", "buff_allies_atk"]:
 		return int(fx.value) >= 1
 	return true
 
@@ -135,6 +135,8 @@ static func effect_text(fx: Dictionary) -> String:
 			return "本回合手卡中所有卡费用 +%d" % n
 		"add_copy":
 			return "手牌增加一张此卡的「短暂复制」"
+		"buff_allies_atk":
+			return "自己场上其他盟友攻击 +%d" % n
 	return ""
 
 

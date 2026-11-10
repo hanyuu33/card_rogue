@@ -295,7 +295,7 @@ const ASSEMBLE_EFFECT_TYPES: Array[String] = [
 	"summon", "upgrade", "energy", "knockback", "freeze", "stun", "range",
 	"purge_curse", "add_random_effect", "hand_discount", "hand_upgrade",
 	"buff_per_ally", "buff_per_energy", "heal_per_energy",
-	"draw_random_skill", "hand_cost_raise", "add_copy",
+	"draw_random_skill", "hand_cost_raise", "add_copy", "buff_allies_atk",
 ]
 
 
