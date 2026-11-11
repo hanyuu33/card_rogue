@@ -20938,6 +20938,33 @@ func _init() -> void:
 			"R577b 源码：奖励领取页（列表 / 详情 / 二选一）走图标口")
 	check_src(icon577_es.contains("UiAssets.relic_icon("),
 			"R577b 源码：事件里提到道具的名字带图标")
+	# ==== R577c：拆掉文字横条槽，图标直接放大铺满正方形格 ====
+	var icon577c_m0 := icon577_ms.find("func _draw_relics()")
+	var icon577c_m1 := icon577_ms.find("func _draw_relic_tip(")
+	var icon577c_b0 := icon577_bs.find("func _draw_relic_bar()")
+	var icon577c_b1 := icon577_bs.find("func _draw_cost_zone()")
+	var icon577c_mseg := icon577_ms.substr(icon577c_m0, icon577c_m1 - icon577c_m0)
+	var icon577c_bseg := icon577_bs.substr(icon577c_b0, icon577c_b1 - icon577c_b0)
+	check_src(icon577c_m0 >= 0 and icon577c_m1 > icon577c_m0
+			and icon577c_b0 >= 0 and icon577c_b1 > icon577c_b0,
+			"R577c 源码锁：两处绘制段边界可取")
+	check_src(icon577c_mseg.contains("draw_texture_rect(tex, rect, false,")
+			and not icon577c_mseg.contains("MapMaterial.draw(")
+			and not icon577c_mseg.contains("draw_rect(chip")
+			and not icon577c_mseg.contains("draw_rect(rect, scol, false"),
+			"R577c 源码：地图道具栏图标占满正方形格、不再有槽底板/边框/色条")
+	check_src(icon577_ms.contains("const RELIC_BADGE_W := 46.0")
+			and icon577_ms.contains("const RELIC_BADGE_H := 46.0")
+			and icon577_ms.contains("const RELIC_STEP_Y := 52.0"),
+			"R577c 数据：地图图标格 46x46、行距 52（不再是文字横条槽）")
+	check_src(icon577c_bseg.contains("draw_texture_rect(tex, rect, false,")
+			and not icon577c_bseg.contains("draw_rect(chip")
+			and not icon577c_bseg.contains("draw_rect(rect, scol, false"),
+			"R577c 源码：战斗右栏图标占满正方形格、不再有槽底板/边框/色条")
+	check_src(icon577_bs.contains("Rect2(794, 348, 338, 232)")
+			and icon577_bs.contains("Vector2(44, 44)")
+			and icon577_bs.contains("var draw_z := Rect2(z.position,"),
+			"R577c 数据：战斗右栏容量 12 格、每格 44x44，底板按行数收拢")
 	# ==== R556：场地卡「毒沼」8082 —— 中毒（回合结束伤害）====
 	var r556_repo := CardRepo.load_json()
 	var r556_swamp: CardData = r556_repo.get_card(8082)

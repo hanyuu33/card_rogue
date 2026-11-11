@@ -14919,12 +14919,15 @@ func _enemy_effect_zone_max_slots() -> int:
 
 
 func _relic_zone_rect() -> Rect2:
-	return Rect2(794, 348, 338, 176)
+	## R577c：容量契约 —— 固定装得下 3 列 x 4 行 = 12 格 44x44 图标
+	## （test_smoke 的「第 12 个徽章不越界」锁的就是这条，不跟着件数缩）。
+	## 视觉上不留空白：_draw_relic_bar() 另算 draw_z，只把底板画到实际行数。
+	return Rect2(794, 348, 338, 232)
 
 
 func _relic_rect(i: int) -> Rect2:
 	var z := _relic_zone_rect()
-	return Rect2(z.position + Vector2(14 + (i % 3) * 104, 34 + int(i / 3) * 32), Vector2(98, 26))
+	return Rect2(z.position + Vector2(14 + (i % 3) * 104, 34 + int(i / 3) * 48), Vector2(44, 44))
 
 
 func _relic_bar_ids() -> Array:
@@ -14963,9 +14966,13 @@ func _draw_relic_bar() -> void:
 	## 右栏道具栏：本局获得的道具（来源色块 = 初始白 / 奖励黄 / 事件紫）。
 	var ids := _relic_bar_ids()
 	var z := _relic_zone_rect()
-	BattleHudMaterial.draw(self, z)
+	# R577c：底板只画到当前实际行数，避免只拿 3 件道具时留出一大块空白。
+	# 输入命中 / 容量契约仍用 z（固定 12 格），两者分开，不互相牵连。
+	var draw_rows := clampi(ceili(float(mini(ids.size(), 12)) / 3.0), 1, 4)
+	var draw_z := Rect2(z.position, Vector2(z.size.x, 40.0 + draw_rows * 48.0))
+	BattleHudMaterial.draw(self, draw_z)
 	_draw_string_center(_font_bold, 14, "道具 %d" % ids.size(),
-			Vector2(z.position.x + z.size.x / 2, z.position.y + 16.0), Color("7a6230"), -1)
+			Vector2(draw_z.position.x + draw_z.size.x / 2, draw_z.position.y + 16.0), Color("7a6230"), -1)
 	var repo := RelicRepo.load_json()
 	var n_rel := ids.size()
 	var cap_r := _relic_max_slots()
@@ -14979,38 +14986,20 @@ func _draw_relic_bar() -> void:
 		# 玩家也不会以为「我明明拿过，怎么不见了」。
 		var rspent := RunState.is_relic_spent(int(ids[i]))
 		var scol := Color("8a8f98") if rspent else rel.badge_color()
-		# R309（用户口径「道具名不太清晰」）：去掉描边 + 底衬改成**浅实色** ——
-		# 来源色向白混 62%，深棕字压在浅底上才有对比度；原来 28% 半透明会透出草地，
-		# 深棕字和背景糊成一片（加 2px 描边只会更糊）。
-		draw_rect(rect, Color("d9d7cf") if rspent else scol.lerp(Color.WHITE, 0.62), true)
-		draw_rect(rect, scol, false, 1.2)
-		# R314（用户口径）：**这一刻会不会真的触发**的道具要亮起 ——
-		# 呼吸外框（金） + 更亮的底。判据见 `GameEngine.relic_highlight()`：
-		# 「一直被动生效」的那些（鸭嘴 / 鸭之眼 / 快速符文 / 水晶骰子…）不在其中，
-		# 因为常亮等于没有信息量。
+		# R577c（店长口径）：去掉每件道具的横条底 / 边框 / 来源色块，图标本身就是格子。
+		# R314 呼吸高亮改走「图标外一圈青白光环」，不再依赖矩形外框。
 		if engine.relic_highlight(ids[i]):
-			var lit_ph := 0.5 + 0.5 * sin(float(_now()) / 220.0)   # 约 1.4 秒一个来回
-			var glow := Rect2(rect.position - Vector2(2.0, 2.0),
-					rect.size + Vector2(4.0, 4.0))
-			# ⚠️ 高亮色**不能用金色**：奖励 / 传奇徽章本来就是黄橙（#e0b23c / #e8933a），
-			#    金边压上去几乎看不出来（实测出图分辨不出哪一行亮着）。改用**青白**（补色），
-			#    在黄橙底上一眼就能分出来。
+			var lit_ph := 0.5 + 0.5 * sin(float(_now()) / 220.0)
 			var lit_col := Color(0.56, 0.92, 1.0)
-			draw_rect(glow, Color(lit_col.r, lit_col.g, lit_col.b, 0.30 + 0.34 * lit_ph), true)
-			draw_rect(glow, Color(lit_col.r, lit_col.g, lit_col.b, 0.80 + 0.20 * lit_ph), false, 1.8)
-			draw_rect(rect, scol.lerp(Color.WHITE, 0.86), true)   # 底再提亮一档
-			# 右端一颗呼吸亮点：即使缩到最小尺寸 / 灰度打印也读得出「这行在亮」
-			var dot := Vector2(rect.position.x + rect.size.x - 9.0,
-					rect.position.y + rect.size.y / 2.0)
-			draw_circle(dot, 3.0 + 1.4 * lit_ph, lit_col)
-		# 来源色块（白色描述边在浅底上不醒目，配实心块 + 深描边）
-		var chip := Rect2(rect.position + Vector2(4, 4), Vector2(6, rect.size.y - 8))
-		draw_rect(chip, scol, true)
-		draw_rect(chip, Color(0, 0, 0, 0.5), false, 1.0)
-		# R577b：槽位几何 / 堆叠 / 呼吸高亮全部不变，格子里改放无背景小图标；
-		# 缺图才回退到 R309 那套文字（项目既有纪律：导出包照常可玩）。
+			var cc := rect.get_center()
+			draw_circle(cc, rect.size.x * 0.66,
+					Color(lit_col.r, lit_col.g, lit_col.b, 0.18 + 0.20 * lit_ph))
+			draw_arc(cc, rect.size.x * 0.63, 0.0, TAU, 40,
+					Color(lit_col.r, lit_col.g, lit_col.b, 0.72 + 0.24 * lit_ph), 2.2, true)
+		# R577b 的唯一取图口不变；缺图才回退到 R309 那套文字（导出包照常可玩）。
 		var tex := UiAssets.relic_icon(int(ids[i]))
 		if tex == null:
+			draw_rect(rect, Color("d9d7cf") if rspent else scol.lerp(Color.WHITE, 0.62), true)
 			# R309：**不描边**（outline = -1）—— 8~10 号字上 2px 描边会把笔画糊掉，
 			# 「雕像（3）」这种带括号的名字尤其看不清。
 			# R343：传奇道具名走**暗金**（底是来源色向白混 62% 的浅实色 → 亮金会糊），
@@ -15022,13 +15011,10 @@ func _draw_relic_bar() -> void:
 			_draw_string_center(_font_bold, label_size,
 					label,
 					Vector2(rect.position.x + 12.0 + (rect.size.x - 12.0) / 2,
-							rect.position.y + 14.0),
+							rect.position.y + rect.size.y * 0.5 + 4.0),
 					Color("9a9488") if rspent else rel.name_color(Color("4a3c14")), -1)
 		else:
-			var s := minf(rect.size.y - 4.0, 22.0)
-			var ir := Rect2(rect.position + Vector2((rect.size.x - s) * 0.5,
-					(rect.size.y - s) * 0.5), Vector2(s, s))
-			draw_texture_rect(tex, ir, false,
+			draw_texture_rect(tex, rect, false,
 					Color(0.52, 0.52, 0.55, 0.85) if rspent else Color.WHITE)
 	# 道具太多装不下 → 末位换成「+N 点击查看全部」摘要行（点道具栏打开浏览面板）
 	if n_rel > shown_r:
@@ -15037,7 +15023,7 @@ func _draw_relic_bar() -> void:
 	if engine.self_relics.has(6010):
 		_draw_string_box_nw(_font_bold, UI_FS_CAPTION,
 				"鸭之低语：%s" % (_whisper_txt if _whisper_txt != "" else "…"),
-				Vector2(z.position.x + 6.0, z.position.y + z.size.y + 20.0), Color("d9a8ff"))
+				Vector2(draw_z.position.x + 6.0, draw_z.position.y + draw_z.size.y + 20.0), Color("d9a8ff"))
 
 
 ## R117：这里原本是 `_draw_opponent_hand()`（顶部一排**卡背** + 「（对手手牌区）」占位字）。

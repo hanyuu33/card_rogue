@@ -1791,10 +1791,12 @@ func _ellipsis(text: String, max_w: float, px: int) -> String:
 # ------------------------------------------------------------ 道具栏
 
 ## 右侧两列：从右列向下排，再排左列；超过容量在两列内滚动，不遮地图。
-const RELIC_BADGE_W := 98.0
-const RELIC_BADGE_H := 26.0
-const RELIC_STEP_X := 104.0    # 徽章宽 98 + 6 间隙
-const RELIC_STEP_Y := 30.0     # 徽章高 26 + 4 间隙
+## R577c（店长口径）：不再保留给文字准备的横条槽 —— 图标本身就是格子，
+## 正方形 46x46 直接铺在地图上，无底板 / 无边框 / 无来源色条。
+const RELIC_BADGE_W := 46.0
+const RELIC_BADGE_H := 46.0
+const RELIC_STEP_X := 52.0     # 图标 46 + 6 间隙
+const RELIC_STEP_Y := 52.0     # 图标 46 + 6 间隙
 const RELIC_EDGE_R := 24.0     # 右侧内边距（与「卡组」按钮同一条竖线）
 const RELIC_EDGE_L := 8.0
 const RELIC_BADGE_Y := 56.0    # R407：道具徽章首行的顶沿（卡组按钮据此对齐）
@@ -1881,29 +1883,31 @@ func _draw_relics() -> void:
 		var rect := _relic_rect(i)
 		if rect.size == Vector2.ZERO:
 			continue
-		# R367：已耗尽的画灰（边框 / 色块 / 名称一起压暗），一眼能看出「这件用完了」。
+		# R367：已耗尽的画灰，一眼能看出「这件用完了」。
 		var spent := RunState.is_relic_spent(int(RunState.relics[i]))
-		var scol := Color("6a7078") if spent else rel.badge_color()
-		MapMaterial.draw(self, rect)
-		draw_rect(rect, scol, false, 1.4)
-		var chip := Rect2(rect.position + Vector2(5, 5), Vector2(7, rect.size.y - 10))
-		draw_rect(chip, scol, true)
-		draw_rect(chip, Color(0, 0, 0, 0.55), false, 1.0)
-		# R577b：右侧堆叠方式不变（仍是两列 98x26 槽位 / 滚动 / 悬停浮窗），
-		# 槽里改放无背景小图标；缺图才回退到原来的文字（导出包照常可玩）。
+		var is_hover := hover_ok and rect.has_point(_mouse)
+		# R577c：只在悬停时给一圈柔和浅底光晕（不是常驻框），让图标在地图纹理上更醒目。
+		if is_hover:
+			draw_circle(rect.get_center(), rect.size.x * 0.68,
+					Color(1.0, 0.98, 0.88, 0.32))
+		# R577c：去掉文字横条槽，图标直接占满 46x46 正方形格；
+		# 缺图才回退到原来的文字（导出包照常可玩）。
 		var tex := UiAssets.relic_icon(int(RunState.relics[i]))
 		if tex == null:
-			# R343：传奇道具名走亮金（底是来源色 18% 覆在地图上，属深底）。
-			draw_string(_font_bold, rect.position + Vector2(14, 18), rel.relic_name,
-					HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 18, UiTheme.FS_LABEL,
+			# 缺图兜底：临时浅底 + 缩小名字，仅在这条分支出现。
+			draw_rect(rect, Color(0.90, 0.88, 0.82, 0.92), true)
+			var fs := 11
+			while fs > 7 and _font_bold.get_string_size(rel.relic_name,
+					HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > rect.size.x - 6:
+				fs -= 1
+			draw_string(_font_bold,
+					rect.position + Vector2(0, rect.size.y * 0.5 + fs * 0.35),
+					rel.relic_name, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, fs,
 					Color("8d8577") if spent else rel.name_color(UiTheme.PAGE_INK))
 		else:
-			var s := minf(rect.size.y - 4.0, 22.0)
-			var ir := Rect2(rect.position + Vector2((rect.size.x - s) * 0.5,
-					(rect.size.y - s) * 0.5), Vector2(s, s))
-			draw_texture_rect(tex, ir, false,
+			draw_texture_rect(tex, rect, false,
 					Color(0.52, 0.52, 0.55, 0.85) if spent else Color.WHITE)
-		if hover_ok and rect.has_point(_mouse):
+		if is_hover:
 			hovered = i
 	if hovered >= 0:
 		var rel2 := repo.get_relic(RunState.relics[hovered])
