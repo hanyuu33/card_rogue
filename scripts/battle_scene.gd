@@ -15007,19 +15007,29 @@ func _draw_relic_bar() -> void:
 		var chip := Rect2(rect.position + Vector2(4, 4), Vector2(6, rect.size.y - 8))
 		draw_rect(chip, scol, true)
 		draw_rect(chip, Color(0, 0, 0, 0.5), false, 1.0)
-		# R309：**不描边**（outline = -1）—— 8~10 号字上 2px 描边会把笔画糊掉，
-		# 「雕像（3）」这种带括号的名字尤其看不清。
-		# R343：传奇道具名走**暗金**（底是来源色向白混 62% 的浅实色 → 亮金会糊），
-		# 普通道具仍是原来的深棕。判据在 `RelicData.name_color()`，这里不写特例。
-		var label := RunState.relic_display_name(ids[i], engine.state.self_card_plays)
-		var label_size := 13
-		while label_size > 9 and _font_bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, label_size).x > rect.size.x - 18:
-			label_size -= 1
-		_draw_string_center(_font_bold, label_size,
-				label,
-				Vector2(rect.position.x + 12.0 + (rect.size.x - 12.0) / 2,
-						rect.position.y + 14.0),
-				Color("9a9488") if rspent else rel.name_color(Color("4a3c14")), -1)
+		# R577b：槽位几何 / 堆叠 / 呼吸高亮全部不变，格子里改放无背景小图标；
+		# 缺图才回退到 R309 那套文字（项目既有纪律：导出包照常可玩）。
+		var tex := UiAssets.relic_icon(int(ids[i]))
+		if tex == null:
+			# R309：**不描边**（outline = -1）—— 8~10 号字上 2px 描边会把笔画糊掉，
+			# 「雕像（3）」这种带括号的名字尤其看不清。
+			# R343：传奇道具名走**暗金**（底是来源色向白混 62% 的浅实色 → 亮金会糊），
+			# 普通道具仍是原来的深棕。判据在 `RelicData.name_color()`，这里不写特例。
+			var label := RunState.relic_display_name(ids[i], engine.state.self_card_plays)
+			var label_size := 13
+			while label_size > 9 and _font_bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, label_size).x > rect.size.x - 18:
+				label_size -= 1
+			_draw_string_center(_font_bold, label_size,
+					label,
+					Vector2(rect.position.x + 12.0 + (rect.size.x - 12.0) / 2,
+							rect.position.y + 14.0),
+					Color("9a9488") if rspent else rel.name_color(Color("4a3c14")), -1)
+		else:
+			var s := minf(rect.size.y - 4.0, 22.0)
+			var ir := Rect2(rect.position + Vector2((rect.size.x - s) * 0.5,
+					(rect.size.y - s) * 0.5), Vector2(s, s))
+			draw_texture_rect(tex, ir, false,
+					Color(0.52, 0.52, 0.55, 0.85) if rspent else Color.WHITE)
 	# 道具太多装不下 → 末位换成「+N 点击查看全部」摘要行（点道具栏打开浏览面板）
 	if n_rel > shown_r:
 		_draw_more_tile(_relic_rect(shown_r), "+%d" % (n_rel - shown_r), "")

@@ -3309,6 +3309,16 @@ func _on_tip_draw() -> void:
 			_tip_layer.draw_string(dfont,
 					Vector2(rr.position.x, rr.position.y + dfont.get_ascent(dfs)),
 					str(h["ref"]["token"]), HORIZONTAL_ALIGNMENT_LEFT, -1, dfs, mcol)
+		# R577b：这条提及指向道具时，名字右侧紧跟那件道具的小图标。
+		# 只画在浮层上，**不动 Label 排版**（R122 以来的老契约）。
+		if str(h["ref"].get("kind", "")) == "relic":
+			var itex := UiAssets.relic_icon(int(h["ref"].get("id", 0)))
+			if itex != null:
+				var isz := float(dfs) * 0.9
+				_tip_layer.draw_texture_rect(itex,
+						Rect2(rr.end.x + 3.0,
+								rr.position.y + (rr.size.y - isz) * 0.5,
+								isz, isz), false)
 		var col := UiTheme.ACCENT_GOLD
 		col.a = 0.9 if hot else 0.5
 		_tip_layer.draw_line(Vector2(rr.position.x, rr.end.y - 1.0),

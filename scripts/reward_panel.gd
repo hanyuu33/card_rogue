@@ -1181,6 +1181,16 @@ func _draw_relic() -> void:
 	var e: Dictionary = RunState.pending_rewards[_sel]
 	var settled := _settled(e)
 	_draw_btn(_btn_back_rect(), "← 返回列表", false, false)
+	# R577b：领取详情标题右侧放这件道具的大图标（缺图就只留标题）。
+	if str(e.get("kind", "")) == "relic":
+		var icon577_tex := UiAssets.relic_icon(int(e.get("id", 0)))
+		if icon577_tex != null:
+			# 贴在标题**右侧**（「← 返回列表」按钮占着 x+PAD..+154，左侧会压按钮）
+			var icon577_tw := _font_bold.get_string_size("「%s」" % _entry_name(e),
+					HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_HEADING).x
+			_root.draw_texture_rect(icon577_tex,
+					Rect2(r.position.x + 180 + icon577_tw + 14.0,
+							r.position.y + 6, 56.0, 56.0), false)
 	_root.draw_string(_font_bold, Vector2(r.position.x + 180, r.position.y + 40),
 			"「%s」" % _entry_name(e), HORIZONTAL_ALIGNMENT_LEFT, 520,
 			UiTheme.FS_HEADING, _entry_name_color(e, UiTheme.INK_900))
@@ -1282,8 +1292,9 @@ func _draw_key_option(rect: Rect2, opt: int, relic_id: int, settled: bool) -> vo
 	else:
 		title = "生命之种"
 		desc = RunState.key_relic_desc(RunState.SEED_RELIC_ID)
-	tex = UiAssets.key_relic_icon(
-			RunState.SEED_RELIC_ID if opt == 1 else -relic_id)
+	# R577b：左格改用「那件奖励道具」自己的图标 —— 旧写法把 -relic_id 传给
+	# key_relic_icon 恒返回 null，所以二选一左格一直空着；右格信物仍走 R543 的图。
+	tex = UiAssets.relic_icon(RunState.SEED_RELIC_ID if opt == 1 else relic_id)
 	var icon_rect := Rect2(cx - 48.0, rect.position.y + 34.0, 96.0, 96.0)
 	if tex != null:
 		_root.draw_texture_rect(tex, icon_rect, false)
@@ -2477,6 +2488,14 @@ func _draw_entry_icon(e: Dictionary, center: Vector2) -> void:
 		_root.draw_texture_rect(bonus_tex,
 				Rect2(center - Vector2(s, s) * 0.5, Vector2(s, s)), false)
 		return
+	# R577b：道具条目换用那件道具自己的图标（与金币 / 最大生命同一套 64px 缩略）。
+	if str(e.get("kind", "")) == "relic":
+		var rtex := UiAssets.relic_icon(int(e.get("id", 0)))
+		if rtex != null:
+			var s2 := 64.0
+			_root.draw_texture_rect(rtex,
+					Rect2(center - Vector2(s2, s2) * 0.5, Vector2(s2, s2)), false)
+			return
 	_row_badge(center, _entry_color(e))
 
 

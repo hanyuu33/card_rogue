@@ -91,12 +91,18 @@ func _draw() -> void:
 		draw_string(_font_bold, band.position + Vector2(0, 23), "道具 · %s" % rel.kind,
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_BODY, rel.badge_color())
 		# 名称
+		# R577b：三选一卡片也用那件道具的图标（缺图就不画，名字 / 说明照旧）。
+		var ptex := UiAssets.relic_icon(int(RunState.relic_choice[i]))
+		if ptex != null:
+			draw_texture_rect(ptex,
+					Rect2(rect.position + Vector2((rect.size.x - 56.0) * 0.5, 40.0),
+							Vector2(56.0, 56.0)), false)
 		# R343：传奇道具名走亮金（面板是深底）。
-		draw_string(_font_bold, rect.position + Vector2(0, 78), rel.relic_name,
+		draw_string(_font_bold, rect.position + Vector2(0, 112), rel.relic_name,
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_HEADING,
 				rel.name_color(Color("f2ead0")))
 		# 描述（字符级换行）
-		var y := 116.0
+		var y := 150.0
 		for line: String in _wrap_text(rel.desc, rect.size.x - 40.0, 15):
 			draw_string(_font, rect.position + Vector2(20, y), line,
 					HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 40.0, UiTheme.FS_BODY, Color("cfcabb"))

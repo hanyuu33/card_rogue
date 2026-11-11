@@ -159,6 +159,21 @@ static func key_relic_icon(id: int, gray: bool = false) -> Texture2D:
 	return null
 
 
+static func relic_icon_path(id: int) -> String:
+	## R577b：道具图标文件名（128x128 无背景 PNG）。文件名即契约 —— 换图只覆盖
+	## assets/ui/relic_icon_<id>.png，别在别处另写一份路径。
+	return path_for("relic_icon_%d" % id)
+
+
+static func relic_icon(id: int) -> Texture2D:
+	## R577b：道具小图标**唯一取图口**。缺图返回 null → 调用方必须回退到原来的文字
+	## 绘制（项目既有纪律：没导入 / 导出包读不到 png 时游戏照常可玩）。
+	## 三样信物（6061~6063）不入 relics.json，沿用 R543 的 key_icon_*.png。
+	if id == 6061 or id == 6062 or id == 6063:
+		return key_relic_icon(id)
+	return get_tex("relic_icon_%d" % id)
+
+
 static func div_orb_glass() -> Texture2D:
 	## 水晶球玻璃壳（R511）：从 `bg_divination.png` 原图剥离的高光/内壁/边缘，
 	## 只保留亮部（暗部近乎全黑）。代码侧用 **ADD 混合**盖在幻象之上，

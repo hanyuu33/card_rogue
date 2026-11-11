@@ -1884,10 +1884,20 @@ func _draw_relics() -> void:
 		var chip := Rect2(rect.position + Vector2(5, 5), Vector2(7, rect.size.y - 10))
 		draw_rect(chip, scol, true)
 		draw_rect(chip, Color(0, 0, 0, 0.55), false, 1.0)
-		# R343：传奇道具名走亮金（底是来源色 18% 覆在地图上，属深底）。
-		draw_string(_font_bold, rect.position + Vector2(14, 18), rel.relic_name,
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 18, UiTheme.FS_LABEL,
-				Color("8d8577") if spent else rel.name_color(UiTheme.PAGE_INK))
+		# R577b：右侧堆叠方式不变（仍是两列 98x26 槽位 / 滚动 / 悬停浮窗），
+		# 槽里改放无背景小图标；缺图才回退到原来的文字（导出包照常可玩）。
+		var tex := UiAssets.relic_icon(int(RunState.relics[i]))
+		if tex == null:
+			# R343：传奇道具名走亮金（底是来源色 18% 覆在地图上，属深底）。
+			draw_string(_font_bold, rect.position + Vector2(14, 18), rel.relic_name,
+					HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 18, UiTheme.FS_LABEL,
+					Color("8d8577") if spent else rel.name_color(UiTheme.PAGE_INK))
+		else:
+			var s := minf(rect.size.y - 4.0, 22.0)
+			var ir := Rect2(rect.position + Vector2((rect.size.x - s) * 0.5,
+					(rect.size.y - s) * 0.5), Vector2(s, s))
+			draw_texture_rect(tex, ir, false,
+					Color(0.52, 0.52, 0.55, 0.85) if spent else Color.WHITE)
 		if hover_ok and rect.has_point(_mouse):
 			hovered = i
 	if hovered >= 0:

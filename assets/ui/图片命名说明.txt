@@ -449,3 +449,13 @@ map_icons/{start,battle,elite,rest,event,shop,chest,bigchest,unknown}.png：简�
   · ⚠️ 信物**不是道具**：不入 relics.json、不进道具栏，单独存 `RunState.key_relics`。
   · 缺图回退：地图徽章画金色「?」占位、徽章框仍显示（暗灰 = 未获得）；不空白不报错。
   · 源图（含被弃用的深灰棋盘底匕首版）与处理脚本归档在 art_src/2026-11-09_信物图标R543/。
+
+2026-11-11（R577b）：relic_icon_<id>.png —— 60 件道具的小图标，128 × 128 无背景透明 PNG
+  （粗黑描边 / 平涂两级明暗 / 低饱和冷灰蓝；codex 纯文生图批量产出，后期边缘 flood-fill 去白底）。
+  · 使用处：地图右侧道具栏、战斗右侧道具栏、奖励列表条目 / 领取详情 / 大宝箱二选一、
+    起点道具三选一、事件文案里「」提到道具的名字右侧。
+  · 唯一取图口 `UiAssets.relic_icon(id)`；缺图一律回退到原来的文字绘制，不因缺图空白。
+  · ⚠️ 三样信物（6061~6063）**不是道具**，仍用 R543 的 key_icon_{screw,seed,dagger}.png；
+    `relic_icon()` 对这三个 id 会自动回退到 R543 的图。
+  · 源图 / prompt / 去背脚本归档在 art_src/2026-11-11_道具图标_R577/（目录名为历史路径，
+    本线原编号 R577 与 Steam AppID 接入撞号，已让位为 R577b，脚本里的目录名不再改）。

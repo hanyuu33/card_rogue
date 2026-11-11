@@ -20901,6 +20901,43 @@ func _init() -> void:
 	RunState.current_node_id = r555_sv_cur
 	RunState.chocolate = r555_sv_choco
 	RunState.pending_fly = r555_sv_fly
+	# ==== R577b：道具小图标（无背景 PNG）+ 界面分发 + 源码锁 ====
+	# ① 数据层：60 件道具逐件都有图标（素材断言一律用 ResourceLoader.exists，
+	#    导出包里 png 会被 .ctex 取代，FileAccess.file_exists 会假红）。
+	var icon577_repo := RelicRepo.load_json()
+	var icon577_missing: Array[int] = []
+	var icon577_src := FileAccess.get_file_as_string("res://relics.json")
+	var icon577_src_ok := true
+	for icon577_r: RelicData in icon577_repo.all_relics():
+		if not ResourceLoader.exists(UiAssets.relic_icon_path(icon577_r.id)):
+			icon577_missing.append(icon577_r.id)
+		# 保真锁：回到源头文本核对 id，别让派生列表漂走（R565 口径）
+		if not icon577_src.contains('"id": %d' % icon577_r.id):
+			icon577_src_ok = false
+	check(icon577_missing.is_empty(),
+			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 60,
+			"R577b 保真锁：60 件道具的 id 都能在 relics.json 源文本里找到")
+	# ② 取图口：首末两件 + 信物回退
+	var icon577_t1 := UiAssets.relic_icon(6001)
+	check(icon577_t1 != null and icon577_t1.get_size() == Vector2(128, 128)
+			and UiAssets.relic_icon(6060) != null,
+			"R577b 取图口：首末两件道具都取到 128x128 图标")
+	check(UiAssets.relic_icon(6062) != null,
+			"R577b 取图口：信物 6062 回退到 R543 的 key_icon_seed")
+	# ③ 界面分发 + 源码锁（四处都走唯一取图口，且缺图仍回退文字）
+	var icon577_ms := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	var icon577_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var icon577_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	var icon577_es := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	check_src(icon577_ms.contains("UiAssets.relic_icon(") and icon577_ms.contains("if tex == null:"),
+			"R577b 源码：地图右侧堆叠换图标且缺图回退文字")
+	check_src(icon577_bs.contains("UiAssets.relic_icon(") and icon577_bs.contains("if tex == null:"),
+			"R577b 源码：战斗右侧堆叠换图标且缺图回退文字")
+	check_src(icon577_rp.contains("UiAssets.relic_icon("),
+			"R577b 源码：奖励领取页（列表 / 详情 / 二选一）走图标口")
+	check_src(icon577_es.contains("UiAssets.relic_icon("),
+			"R577b 源码：事件里提到道具的名字带图标")
 	# ==== R556：场地卡「毒沼」8082 —— 中毒（回合结束伤害）====
 	var r556_repo := CardRepo.load_json()
 	var r556_swamp: CardData = r556_repo.get_card(8082)
