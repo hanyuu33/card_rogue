@@ -34110,6 +34110,48 @@ func _init() -> void:
 	check(FileAccess.file_exists("res://steam_appid.txt.template"),
 			"R577 AppID 模板在位（.template 入库，真文件 steam_appid.txt 已 gitignore）")
 	# 复位，别把测试态留给后续用途
+	# ---- R578：游戏名唯一口（GameBrand）----
+	# 「title 能自定义」的判据不是某一版文案，而是**只有一个口**：
+	# 改 scripts/game_brand.gd 一处，五处显示跟着变 ——
+	# 窗口标题 / 大标题 / 副标题 / 右下版本串 / 鸣谢页抬头。
+	check(GameBrand.NAME_CN != "", "R578 游戏名常量非空（空名会画不出标题）")
+	check(GameBrand.display_name() == GameBrand.NAME_CN, "R578 display_name 取自 NAME_CN")
+	check(GameBrand.spaced("卡牌肉鸽") == "卡 牌 肉 鸽", "R578 中文短名逐字加空格")
+	check(GameBrand.spaced("Duck Cards Rogue") == "Duck Cards Rogue",
+			"R578 英文名不插空格（不变成 D u c k）")
+	check(GameBrand.spaced("卡牌肉鸽之深渊回响") == "卡牌肉鸽之深渊回响",
+			"R578 长中文名（>6 字）不插空格")
+	check(GameBrand.spaced("") == "", "R578 空名不炸")
+	check(GameBrand.subtitle().contains(GameBrand.VERSION), "R578 副标题带版本号（来自 VERSION）")
+	check(GameBrand.footer_text().contains(GameBrand.VERSION), "R578 右下版本串来自 VERSION")
+	check(not GameBrand.subtitle().contains("{v}"), "R578 副标题 {v} 占位已替换")
+	check(not GameBrand.footer_text().contains("{v}"), "R578 版本串 {v} 占位已替换")
+	check(GameBrand.window_title() == GameBrand.display_name(),
+			"R578 无英文名时窗口标题 = 中文名")
+	# ---- 源码锁：文案不许再散落在各处 ----
+	var r578_ts: String = FileAccess.get_file_as_string("res://scripts/title_scene.gd")
+	var r578_tscn: String = FileAccess.get_file_as_string("res://scenes/title.tscn")
+	var r578_cre: String = FileAccess.get_file_as_string("res://scripts/credits_scene.gd")
+	var r578_proj: String = FileAccess.get_file_as_string("res://project.godot")
+	check_src(r578_ts.contains("GameBrand.window_title()"),
+			"R578 源码：窗口标题走 GameBrand")
+	check_src(r578_ts.find("window_set_title(\"卡牌肉鸽\")") < 0,
+			"R578 源码：窗口标题不再硬编码")
+	check_src(r578_ts.contains("_apply_brand()"),
+			"R578 源码：标题 / 副标题由 _apply_brand() 注入")
+	check_src(r578_tscn.find("卡 牌 肉 鸽") < 0,
+			"R578 场景：大标题文字已清空（由脚本注入）")
+	check_src(r578_tscn.find("肉鸽版") < 0,
+			"R578 场景：副标题文字已清空（由脚本注入）")
+	check_src(r578_cre.contains("{name}"),
+			"R578 源码：鸣谢页抬头用 {name} 占位")
+	check_src(r578_cre.find("[font_size=58][color=#ffffff]卡牌肉鸽") < 0,
+			"R578 源码：鸣谢页不再硬编码游戏名")
+	# ⚠️ 存档目录锁：config/name 决定 user:// 路径，改名会让老玩家的
+	#    profile.json / run_save.sav 看起来「消失」（实际躺在旧目录里）。
+	#    这条不是「必须叫卡牌肉鸽」，而是「改之前必须先写存档迁移」。
+	check_src(r578_proj.contains("config/name=\"卡牌肉鸽\""),
+			"R578 存档目录锁：config/name 未被顺手改掉（改它 = 老存档换目录）")
 	SteamAchievements.reset_for_test()
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)

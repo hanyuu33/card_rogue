@@ -11,8 +11,9 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 const SCROLL_SPEED := 44.0
 
 ## 鸣谢正文（BBCode）。[center] 居中，[font_size] / [color] 分层级。
+## R578：抬头用 `{name}` 占位，由 `credits_text()` 从 GameBrand 注入 —— 改名不用改这里。
 const CREDITS_TEXT := """[center]
-[font_size=58][color=#ffffff]卡牌肉鸽[/color][/font_size]
+[font_size=58][color=#ffffff]{name}[/color][/font_size]
 
 
 [font_size=26][color=#9a9a9a]开发[/color][/font_size]
@@ -49,6 +50,11 @@ https://creativecommons.org/licenses/by/4.0[/color][/font_size]
 [/center]"""
 
 
+static func credits_text() -> String:
+	## 把 `{name}` 换成当前游戏名（唯一来源 = GameBrand）。
+	return CREDITS_TEXT.replace("{name}", GameBrand.display_name())
+
+
 var _label: RichTextLabel
 var _done := false
 
@@ -57,7 +63,7 @@ func _ready() -> void:
 	# 纯黑底：背景在 _draw 里铺满，不挂 UiTheme.attach_stage（那套是羊皮纸舞台风格）。
 	_label = RichTextLabel.new()
 	_label.bbcode_enabled = true
-	_label.text = CREDITS_TEXT
+	_label.text = credits_text()
 	_label.fit_content = true
 	_label.scroll_active = false
 	_label.add_theme_font_override("normal_font", UiTheme.font())

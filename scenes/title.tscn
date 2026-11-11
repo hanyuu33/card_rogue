@@ -18,28 +18,28 @@ script = ExtResource("1_title")
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 150.0
-offset_bottom = 260.0
+offset_top = 120.0
+offset_bottom = 230.0
 grow_horizontal = 2
 theme_override_fonts/font = SubResource("SysFont_cjk")
 theme_override_font_sizes/font_size = 64
 theme_override_colors/font_color = Color(0.12, 0.16, 0.24, 1)
 theme_override_colors/font_outline_color = Color(0.784, 0.584, 0.11, 1)
 theme_override_constants/outline_size = 4
-text = "卡 牌 肉 鸽"
+text = ""
 horizontal_alignment = 1
 
 [node name="SubLabel" type="Label" parent="."]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 268.0
-offset_bottom = 300.0
+offset_top = 222.0
+offset_bottom = 254.0
 grow_horizontal = 2
 theme_override_fonts/font = SubResource("SysFont_cjk")
 theme_override_font_sizes/font_size = 20
-theme_override_colors/font_color = Color(0.35, 0.38, 0.44, 1)
-text = "肉鸽版 · v1.0"
+theme_override_colors/font_color = Color(0.16, 0.19, 0.26, 1)
+text = ""
 horizontal_alignment = 1
 
 [node name="Buttons" type="VBoxContainer" parent="."]

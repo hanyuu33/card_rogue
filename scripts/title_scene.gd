@@ -12,20 +12,23 @@ var _petals: Array = []         # {x, y, spd, ph, sc, rot, kind}  R154 飘落花
 var _cont_btn: Button = null    # 「继续游戏」按钮（R359：读档失败时要能立刻藏掉 + 提示）
 var _toast := ""                # 底部一次性提示（读档失败）
 var _toast_t := 0.0
+var _title_fs := GameBrand.TITLE_FONT_SIZE   # R578：大标题实际字号（名字长时自动缩）
 
 
 
 func _ready() -> void:
 	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
-	# 窗口标题固定为游戏名：开发用的引擎是 debug 构建，默认会在标题后加
-	# 「(DEBUG)」（打包成独立版后同样如此），这里显式覆盖掉。headless 下跳过。
+	# R578：游戏名统一走 GameBrand（改名只改 scripts/game_brand.gd）。
+	# 窗口标题显式覆盖：开发用的引擎是 debug 构建，默认会在标题后加「(DEBUG)」，
+	# 打包成独立版后同样如此。headless 下跳过。
 	if DisplayServer.get_name() != "headless":
-		DisplayServer.window_set_title("卡牌肉鸽")
+		DisplayServer.window_set_title(GameBrand.window_title())
 	# R154：标题页专用背景（晨光小镇）；缺图回退战斗背景 → 再退纯色（_draw 里的 BOARD_BG）
 	_bg_tex = UiAssets.title_bg()
 	if _bg_tex == null:
 		_bg_tex = load("res://assets/battle_bg.png")
 	_font = UiTheme.font()
+	_apply_brand()
 	sfx = Sfx.new()
 	add_child(sfx)
 	# R176：标题页 BGM（Holy_Place）；选人 / 地图 / 战斗各自在进入时换曲。
@@ -177,7 +180,7 @@ func _draw() -> void:
 	# R154：标题两侧的金线卷草（程序画）—— 描金标题在 title.tscn 用 font_outline 做。
 	_draw_title_ornaments()
 	# 底部信息
-	var ver := "v1.0-rogue · 肉鸽开发版"
+	var ver := GameBrand.footer_text()   # R578：版本串从 GameBrand 取
 	draw_string(_font, Vector2(size.x - 250, size.y - 16), ver,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	draw_string(_font, Vector2(14, size.y - 16), "Godot 4.3 自包含副本",
@@ -216,15 +219,47 @@ const PETAL_COLORS: Array[Color] = [
 ]
 
 
+func _apply_brand() -> void:
+	## R578：标题 / 副标题文字从 GameBrand 注入，并按宽度**自动缩字号** ——
+	## 换成长名字或英文名时不会溢出屏幕；金线卷草的排布跟着实际字号走。
+	## ⚠️ 只改 GameBrand 就够，别在这里另写一份文案。
+	var tl := get_node_or_null("TitleLabel") as Label
+	var sl := get_node_or_null("SubLabel") as Label
+	var t := GameBrand.title_text()
+	var fs := GameBrand.TITLE_FONT_SIZE
+	if tl != null and _font != null:
+		# 左右各留 138（30 间距 + 96 金线 + 12 边距），缩到放得下为止；
+		# 最低 28 —— 再小就不像标题了，宁可让金线整段不画。
+		var avail := UiTheme.STAGE_W - 276.0
+		while fs > 28 and _font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > avail:
+			fs -= 2
+		tl.text = t
+		tl.add_theme_font_size_override("font_size", fs)
+	_title_fs = fs
+	if sl != null:
+		sl.text = GameBrand.subtitle()
+
+
 func _draw_title_ornaments() -> void:
-	## 标题「卡 牌 肉 鸽」两侧的金线卷草：金线 + 外端小菱 + 内端小珠，左右对称。
+	## 标题两侧的金线卷草：金线 + 外端小菱 + 内端小珠，左右对称。
+	## R578：文字 / 字号 / 中心线都从**实际渲染的 Label** 取（换名字自动跟随）；
+	## 名字长到没地方放金线时整段跳过 —— 绝不画到屏幕外、也不糊到标题上。
+	var tl := get_node_or_null("TitleLabel") as Label
 	var cy := 205.0
-	var tw := _font.get_string_size("卡 牌 肉 鸽", HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x
+	var tw := 0.0
+	if tl != null and _font != null:
+		cy = tl.position.y + tl.size.y * 0.5
+		tw = _font.get_string_size(tl.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				tl.get_theme_font_size("font_size")).x
+	var arm := 96.0
+	# 外端要留在屏幕内（留 12 边距）；放不下就整段不画。
+	if tw * 0.5 + 30.0 + arm + 12.0 > size.x * 0.5:
+		return
 	var gold := Color("c8951c")
 	var gold_soft := Color(0.784, 0.584, 0.11, 0.55)
 	for side: float in [-1.0, 1.0]:
 		var xi: float = size.x * 0.5 + side * (tw * 0.5 + 30.0)   # 内端（贴标题）
-		var xo: float = xi + side * 96.0                          # 外端
+		var xo: float = xi + side * arm                           # 外端
 		draw_line(Vector2(xi, cy), Vector2(xo, cy), gold_soft, 4.0)
 		draw_line(Vector2(xi, cy), Vector2(xo, cy), gold, 1.6)
 		# 外端小菱
