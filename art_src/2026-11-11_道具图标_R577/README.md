@@ -72,9 +72,26 @@
 ## 五、验收图
 
 `_review/ingame_{map_relics,battle_relics,reward_relic,relic_pick,event_mention}.png`
-——由 `tools/shoot_r577.py` 一次跑完五处实机截图（**必须带窗口**，`--headless` 下
-`get_image()` 返回 null）。演示参数：`--relicmany` / `--relics` / `--r119relic` /
-`relic_pick.tscn --screenshot` / `--apple`。
+——由 `tools/shoot_r577.py` 一次跑完**六处**实机截图（**必须带窗口**，`--headless` 下
+`get_image()` 返回 null）。演示参数：`--relicrework` / `--relicmany` / `--relics` /
+`--r119relic` / `relic_pick.tscn --screenshot` / `--apple`。
+`shoot_r577.py` 支持只跑指定产物名（如 `python shoot_r577.py ingame_rework4.png`），
+便于按增量节奏先交一张。
+
+### 实机截图（2026-11-11 重拍，60 张全部落地后）
+
+| 产物 | 场景 / 演示口 | 验什么 |
+|---|---|---|
+| `ingame_rework4.png` | `map.tscn -- --screenshot --relicrework --shotwait 0.8` | 四张返工同屏：6013 / 6018 / 6036 / 6045 |
+| `ingame_map_relics.png` | `--relicmany` | 20 件堆叠，不挤固定 UI |
+| `ingame_battle_relics.png` | `--relics --shotframe 600` | 战斗右栏 3 件 |
+| `ingame_reward_relic.png` | `--r119relic --shotframe 600` | 领取详情标题右侧大图标 |
+| `ingame_relic_pick.png` | `relic_pick.tscn --screenshot` | 起点三选一卡片顶部图标 |
+| `ingame_event_mention.png` | `--apple` | 事件「苹果」提及文字内联图标 |
+
+⚠️ `--relicrework` 是 R577b 追加的**纯演示口**（`map_scene.gd`，只写 `RunState.relics`），
+正常玩法不会触发；四张返工原来分散在 6001~6060 里，现有演示参数没有一屏能同验到它们。
+汇总页 `_review/ingame_all.html`、增量页 `_review/ingame_rework4.html`（base64 内嵌）。
 
 ## 六、目录
 

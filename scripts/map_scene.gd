@@ -264,6 +264,11 @@ func _ready() -> void:
 		RunState.relics = [6001, 6002, 6003, 6004, 6005, 6006, 6007, 6008, 6009, 6010,
 				6011, 6012, 6013, 6014, 6015, 6016, 6017, 6018, 6019, 6020]
 		RunState.relic_choice = []
+	# -- --relicrework：R577b 四张返工图标实机验收（箱子画鸭 / 白蛋 / 手持钢印 / 老虎机 7）。
+	# 出图：`map.tscn -- --screenshot --relicrework --shotwait 0.8`
+	if "--relicrework" in OS.get_cmdline_user_args():
+		RunState.relics = [6013, 6018, 6036, 6045]
+		RunState.relic_choice = []
 	# -- --relictip：出图用 —— 把 `_mouse` 钉在第一个道具徽章上，让说明浮窗真的画出来
 	#（核验「卡组按钮已让开、不压说明」）。出图：
 	#  `map.tscn -- --screenshot --relics --relictip --shotwait 0.8`

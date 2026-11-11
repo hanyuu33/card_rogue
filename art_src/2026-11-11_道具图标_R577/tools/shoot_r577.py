@@ -6,6 +6,7 @@
 """
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -15,6 +16,9 @@ OUT = ROOT / "art_src" / "2026-11-11_道具图标_R577" / "_review"
 OUT.mkdir(parents=True, exist_ok=True)
 
 SHOTS = [
+    # R577b 四张返工：同一屏同时验到 6013 / 6018 / 6036 / 6045
+    ("ingame_rework4.png", "res://scenes/map.tscn",
+     ["--screenshot", "--relicrework", "--shotwait", "0.8"], "screenshot.png"),
     # (产物名, 场景, 参数, 该场景写出的截图文件)
     ("ingame_map_relics.png", "res://scenes/map.tscn",
      ["--screenshot", "--relicmany", "--shotwait", "0.8"], "screenshot.png"),
@@ -30,7 +34,10 @@ SHOTS = [
 
 
 def main() -> int:
+    only = set(sys.argv[1:]) if len(sys.argv) > 1 else None
     for name, scene, args, produced in SHOTS:
+        if only is not None and name not in only:
+            continue
         src = ROOT / produced
         if src.exists():
             src.unlink()
