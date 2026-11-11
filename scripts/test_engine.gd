@@ -25241,6 +25241,72 @@ func _init() -> void:
 	check(not r314_hl.relic_highlight(6044), "R314 高亮：储物箱一直在生效 → 不亮")
 	check(not r314_hl.relic_highlight(9999), "R314 高亮：未持有的道具不会亮")
 
+	# ============ R577e：图标高亮判定扩到「下一次 / 本回合生效」 ============
+	var r577e_hl := _new_engine([], 20, 20)
+	r577e_hl.self_relics = [6010, 6012, 6015, 6016, 6022, 6036, 6037,
+			6040, 6053, 6055, 6058, 6060, 6006, 6044]
+	r577e_hl.turn_number = 1
+	r577e_hl.current_side = GameEngine.SIDE_SELF
+	r577e_hl._rice_used = false
+	r577e_hl.state.wild_form_used = false
+	r577e_hl._steel_stamp_used = false
+	r577e_hl._thorn_ring_turn = -1
+	r577e_hl.dice_energy_turns = 3
+	r577e_hl._knight_sword_fired = false
+	r577e_hl.state.curse_free = true
+	r577e_hl._three_bots_destroyed = GameEngine.THREE_BOTS_NEED - 1
+	var r577e_pipe_saved: bool = RunState.pipe_ready
+	RunState.pipe_ready = true
+	var r577e_on: Array[int] = [6010, 6012, 6015, 6016, 6022, 6036, 6037,
+			6040, 6053, 6055, 6058, 6060]
+	var r577e_bad := ""
+	for r577e_id: int in r577e_on:
+		if not r577e_hl.relic_highlight(r577e_id):
+			r577e_bad += " %d" % r577e_id
+	check(r577e_bad == "",
+			"R577e 数据：12 件「下一次/本回合生效」道具全该亮（漏:%s）" % r577e_bad)
+	# 把「差一步」的条件逐条翻掉 → 同一件道具必须灭
+	r577e_hl.turn_number = 5
+	check(not r577e_hl.relic_highlight(6015) and not r577e_hl.relic_highlight(6016),
+			"R577e 数据：鸭语耳环 / 冰淇淋过了首回合就灭")
+	r577e_hl._rice_used = true
+	check(not r577e_hl.relic_highlight(6012), "R577e 数据：一袋米本回合触发过就灭")
+	r577e_hl.state.wild_form_used = true
+	check(not r577e_hl.relic_highlight(6022), "R577e 数据：荒野形态本场触发过就灭")
+	r577e_hl._steel_stamp_used = true
+	check(not r577e_hl.relic_highlight(6036), "R577e 数据：思想钢印救过一次就灭")
+	r577e_hl._thorn_ring_turn = r577e_hl.turn_number
+	check(not r577e_hl.relic_highlight(6037), "R577e 数据：荆棘指环本回合抽过就灭")
+	r577e_hl.dice_energy_turns = 0
+	check(not r577e_hl.relic_highlight(6040), "R577e 数据：水晶骰子没骰出回合数就不亮")
+	r577e_hl._knight_sword_fired = true
+	check(not r577e_hl.relic_highlight(6053), "R577e 数据：骑士剑击杀过就灭")
+	RunState.pipe_ready = false
+	check(not r577e_hl.relic_highlight(6055), "R577e 数据：烟斗熄灭后不亮")
+	r577e_hl.state.curse_free = false
+	check(not r577e_hl.relic_highlight(6058), "R577e 数据：咒缚额度用掉就灭")
+	r577e_hl._three_bots_destroyed = 0
+	check(not r577e_hl.relic_highlight(6060), "R577e 数据：三个机器人差两个时不亮")
+	r577e_hl.current_side = GameEngine.SIDE_OPPONENT
+	check(not r577e_hl.relic_highlight(6010), "R577e 数据：敌方回合鸭之低语不亮")
+	RunState.pipe_ready = r577e_pipe_saved
+	check(not r577e_hl.relic_highlight(6006) and not r577e_hl.relic_highlight(6044),
+			"R577e 数据：常驻被动（鸭嘴 / 储物箱）仍然不亮")
+	# 源码锁：判定口 / 界面分发 / 绘制顺序
+	var r577e_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	var r577e_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r577e_ge.contains("func relic_highlight(")
+			and r577e_ge.contains("RunState.pipe_ready")
+			and r577e_ge.contains("state.curse_free"),
+			"R577e 源码：高亮唯一判定口覆盖下一次 / 本回合生效")
+	check_src(r577e_bs.contains("func _relic_icon_modulate(")
+			and r577e_bs.contains("func _relic_icon_lit("),
+			"R577e 源码：图标本体提亮与亮/灭判定各有唯一界面分发口")
+	var r577e_p_icon := r577e_bs.find("draw_texture_rect(tex, rect, false, _relic_icon_modulate(i))")
+	var r577e_p_ring := r577e_bs.find("R577e 顶环")
+	check_src(r577e_p_icon > 0 and r577e_p_ring > r577e_p_icon,
+			"R577e 源码：外环画在图标之后（不会被 44x44 贴图吃掉）")
+
 	# ================= R339：续档不重复计数 / 一层只打一次 Boss =================
 	# ① 检查点必须写「进战斗之前」的快照：lucky 7 的跨战斗计数在开局第 1 个我方回合就 +1。
 	#    检查点若写「当下」状态，续档重打这一场就等于从「已 +1」起步 → 每续一次多算一格

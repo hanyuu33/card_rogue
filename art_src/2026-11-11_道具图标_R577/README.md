@@ -185,3 +185,14 @@ R577b 只是把 98×26 的**文字横条槽**里的字换成 22px 小图，底�
 - 演示口：`battle.tscn -- --screenshot --reliccount 7 --shotframe 600`。
   验收页 `_preview/r577d_layout.html`（4 / 7 / 12 / 16 件整页 + 右栏放大）。
 - 补丁 `tools/_patch_r577d.py` 可重跑；`tools/make_r577d_review.py` 负责拼图与内嵌页。
+
+## R577e：道具图标高亮（同日补轮）
+
+- 判定唯一口仍是 `GameEngine.relic_highlight()`；口径 = 「将要在下一次生效 / 本回合生效」才亮，
+  一直被动生效的不亮。补齐 12 件：6010 / 6012 / 6015 / 6016 / 6022 / 6036 / 6037 /
+  6040 / 6053 / 6055 / 6058 / 6060，全部复用已有引擎状态位，不改 rng、不改结算。
+- 视觉：`scripts/battle_scene.gd` 的 `_relic_icon_modulate()` 让**图标本体**提亮成青白，
+  外圈青白呼吸环改画在图标之后；底层用 `fx_glow` 柔光，删掉旧版硬边浅蓝圆盘
+  （R577c 刚拆过框，别再装回去）。三个纯函数即界面分发唯一口，smoke 直接调它们验。
+- 演示口：`battle.tscn -- --screenshot --relichl --shotframe 600`（6 亮 + 6 灭同屏）。
+  验收页 `_preview/r577e_highlight.html`；补丁 `tools/_patch_r577e.py` 可重跑。

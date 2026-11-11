@@ -13946,14 +13946,18 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 
 
 func relic_highlight(id: int) -> bool:
-	## R314（用户口径）：道具栏**高亮**的唯一判定口 —— 「这一刻会不会真的落到触发点上」。
-	## 界面（`battle_scene._draw_relic_bar`）只负责画亮边，判据全在这里，好在回归里逐条钉。
+	## R314 / R577e（用户口径）：道具栏**图标高亮**的唯一判定口 ——
+	## 「这一刻会不会真的落到触发点上 / 本回合是否正在生效」。
+	## 界面（`battle_scene._draw_relic_bar`）只负责画亮，判据全在这里，好在回归里逐条钉。
 	##
 	## 口径：
-	##   * **临近触发 / 正在生效** → 亮（风妖精差一张牌、鸭翼/勇气徽章在生效回合、lucky 7 生效轮）；
-	##   * **一直被动生效**的 → **不亮**（鸭嘴/鸭之眼/快速符文/水晶骰子/不锈钢盆 …）。
+	##   * **临近触发 / 正在生效** → 亮（风妖精差一张牌、鸭翼/勇气徽章在生效回合、
+	##     lucky 7 生效轮、咒缚还没用掉的首张减费、荒野形态本场还没挨打 …）；
+	##   * **一直被动生效**的 → **不亮**（鸭嘴/鸭之眼/快速符文/储物箱/不锈钢盆 …）。
 	##     它们没有「这一刻」可言，常亮等于没有信息量（用户明确排除这类）。
 	##   * 未持有 → 不亮。
+	## R577e：把「将要在下一次生效 / 本回合生效」这批补齐，只判已有状态位，
+	##   不新增随机数消耗、不改结算；界面高亮与数据判据共用这一份口径。
 	if not self_relics.has(id):
 		return false
 	match id:
@@ -13987,6 +13991,31 @@ func relic_highlight(id: int) -> bool:
 		STATUE_RELIC_ID:
 			# 雕像：每 10 张牌回 1 费用 → 差 1 张就满的时候亮
 			return RunState.statue_charge % 10 == 9
+		# ---- R577e：补齐「将要在下一次生效 / 本回合生效」的道具 ----
+		6010:   # 鸭之低语：每回合开始随机一种本回合强化
+			return current_side == SIDE_SELF
+		6012:   # 一袋米抗几楼：本回合第一次我方受伤将触发
+			return not _rice_used
+		EARRING_RELIC_ID:   # 鸭语耳环：首回合自动出牌（每回合 +1 费用属常驻，不算）
+			return turn_number == 1
+		ICECREAM_RELIC_ID:  # 冰淇淋与汽水：第 1 回合额外费用 / 抽牌
+			return turn_number == 1
+		WILD_FORM_RELIC_ID:   # 荒野形态：本场第一次被攻击时减伤 + 反伤
+			return not state.wild_form_used
+		STEEL_STAMP_RELIC_ID: # 思想钢印：本场第一个被破坏的我方单位回手
+			return not _steel_stamp_used
+		THORN_RING_RELIC_ID:  # 荆棘指环：本回合第一次受伤抽 2
+			return _thorn_ring_turn != turn_number
+		DICE_RELIC_ID:        # 水晶骰子：前 X 回合每回合 +1 费用（有期限，非常驻）
+			return dice_energy_turns > 0 and turn_number <= dice_energy_turns
+		KNIGHT_SWORD_RELIC_ID: # 骑士剑：本场第一次击杀敌人后全体强化
+			return not _knight_sword_fired
+		PIPE_RELIC_ID:        # 烟斗：点着时下一场战斗首回合生效（将要在下一次生效）
+			return RunState.pipe_ready
+		CURSE_BIND_RELIC_ID:  # 咒缚：本场第一张卡 -3 费（额度还没用掉）
+			return state.curse_free
+		THREE_BOTS_RELIC_ID:  # 三个机器人：差一个盟友被破坏就抽牌
+			return _three_bots_destroyed == THREE_BOTS_NEED - 1
 	return false
 
 

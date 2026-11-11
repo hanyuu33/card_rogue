@@ -573,6 +573,7 @@ func _check_relic_highlight(scene: Variant) -> void:
 	# ⚠️ 必须用**类型化数组**：`self_relics` 是 Array[int]，直接赋无类型字面量会报
 	#    「Invalid assignment … of type Array」（运行时报错但值又会被塞进去，最容易漏看）。
 	var r314_ids: Array[int] = [6042, 6045, 6007, 6006, 6044]
+	RunState.relics = r314_ids   # R577e：绘制用的 ids 与引擎同源（_relic_bar_lit 走绘制那份）
 	scene.engine.self_relics = r314_ids
 	scene.engine.state.self_card_plays = 4
 	if not scene.engine.relic_highlight(6042):
@@ -598,6 +599,24 @@ func _check_relic_highlight(scene: Variant) -> void:
 	if int(wf.get("dur", 0)) <= 0 or int(wf.get("start", 0)) <= 0:
 		_smoke_fail("R314 风妖精：飘字必须带时间维度（start=%s dur=%s）"
 				% [str(wf.get("start")), str(wf.get("dur"))])
+	# R577e 界面分发：**图标本体**要跟着高亮，不只是外面套一圈环。
+	RunState.relics = []
+	var r577e_ids: Array[int] = [6042, 6006]
+	scene.engine.self_relics = r577e_ids
+	scene.engine.state.self_card_plays = 4
+	if not scene._relic_icon_lit(0) or scene._relic_icon_lit(1):
+		_smoke_fail("R577e 界面分发：风妖精该亮、鸭嘴不该亮")
+		return
+	var r577e_lit_col: Variant = scene._relic_icon_modulate(0)
+	if r577e_lit_col.r <= 1.0 or r577e_lit_col.b <= 1.0:
+		_smoke_fail("R577e 界面分发：亮着的图标本体没提亮（%s）" % str(r577e_lit_col))
+		return
+	if scene._relic_icon_modulate(1) != Color.WHITE:
+		_smoke_fail("R577e 界面分发：不亮的图标应保持原色")
+		return
+	if not scene._relic_bar_lit():
+		_smoke_fail("R577e 界面分发：有亮图标时呼吸重绘没接上")
+		return
 
 
 func _check_discard_view(scene: Variant) -> void:

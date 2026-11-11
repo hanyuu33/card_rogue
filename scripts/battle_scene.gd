@@ -1229,6 +1229,22 @@ func _ready() -> void:
 		engine.self_relics = r577d_ids.duplicate()
 		status_text = "R577d：%d 件道具按行平均分配" % r577d_n
 		queue_redraw()
+	if "--relichl" in args and engine != null:
+		# R577e 出图：亮的（下一次 / 本回合生效）与不亮的（常驻被动）同屏对比。
+		# 用法：`battle.tscn -- --screenshot --relichl --shotframe 600`
+		var hl_ids: Array[int] = [6042, 6012, 6022, 6037, 6058, 6060,
+				6006, 6044, 6041, 6009, 6043, 6052]
+		RunState.relics = hl_ids
+		engine.self_relics = hl_ids.duplicate()
+		engine.turn_number = 3
+		engine.state.self_card_plays = 4      # 6042 风妖精：下一张就是第 5 张
+		engine._three_bots_destroyed = 2      # 6060 三个机器人：差一个
+		engine.state.curse_free = true        # 6058 咒缚：第一张卡还没打
+		engine._rice_used = false             # 6012 一袋米：本回合还没受过伤
+		engine.state.wild_form_used = false   # 6022 荒野形态：本场还没触发
+		engine._thorn_ring_turn = -1          # 6037 荆棘指环：本回合还没触发
+		status_text = "R577e：亮 = 下一次/本回合生效；不亮 = 一直在被动生效"
+		queue_redraw()
 	if "--r352harp" in args and engine != null:
 		# R352 出图：竖琴（**一般档**）与传奇道具并排 —— 确认档位徽章与名字色都对，
 		# 而不是被 R289 那条「传奇档只能是奖励道具」逼成传奇。
@@ -14977,14 +14993,46 @@ func _relic_bar_overflowed() -> bool:
 
 
 func _relic_bar_lit() -> bool:
-	## R314：道具栏里**有没有亮着的徽章**（有 → 需要逐帧呼吸重绘，见 `_process`）。
-	## 判据全部在 `GameEngine.relic_highlight()`；这里只做「是否至少有一个」。
-	if engine == null:
-		return false
-	for rid: int in engine.self_relics:
-		if engine.relic_highlight(rid):
+	## R314：道具栏里**有没有亮着的图标**（有 → 需要逐帧呼吸重绘，见 `_process`）。
+	## R577e：改成遍历绘制用的那份 ids（`_relic_bar_ids()`），与格位 / 图标同源，
+	## 避免 RunState.relics 与 engine.self_relics 不一致时「画亮了却不呼吸」。
+	var ids := _relic_bar_ids()
+	for i in ids.size():
+		if _relic_icon_lit(i):
 			return true
 	return false
+
+
+func _relic_icon_lit(i: int) -> bool:
+	## R577e 界面分发唯一口：这一格该不该亮。判据全在 `GameEngine.relic_highlight()`，
+	## 界面只补一条「已耗尽（画灰）的不亮」。
+	if engine == null:
+		return false
+	var ids := _relic_bar_ids()
+	if i < 0 or i >= ids.size():
+		return false
+	if RunState.is_relic_spent(int(ids[i])):
+		return false
+	return engine.relic_highlight(int(ids[i]))
+
+
+func _relic_lit_phase() -> float:
+	## 呼吸相位（0..1）：柔光 / 图标提亮 / 外环共用同一相位，别各跳各的。
+	return 0.5 + 0.5 * sin(float(_now()) / 220.0)
+
+
+func _relic_icon_modulate(i: int) -> Color:
+	## R577e：**图标本体**的着色 —— 亮着的提亮成青白，灰掉的压灰，其余原色。
+	## 这是「道具图标高亮」的界面分发口（test_smoke 直接调它验，不靠截图猜）。
+	var ids := _relic_bar_ids()
+	if i < 0 or i >= ids.size():
+		return Color.WHITE
+	if RunState.is_relic_spent(int(ids[i])):
+		return Color(0.52, 0.52, 0.55, 0.85)
+	if _relic_icon_lit(i):
+		var ph := _relic_lit_phase()
+		return Color(1.10 + 0.14 * ph, 1.22 + 0.16 * ph, 1.34 + 0.16 * ph, 1.0)
+	return Color.WHITE
 
 
 func _draw_relic_bar() -> void:
@@ -15012,15 +15060,12 @@ func _draw_relic_bar() -> void:
 		var rspent := RunState.is_relic_spent(int(ids[i]))
 		var scol := Color("8a8f98") if rspent else rel.badge_color()
 		# R577c（店长口径）：去掉每件道具的横条底 / 边框 / 来源色块，图标本身就是格子。
-		# R314 呼吸高亮改走「图标外一圈青白光环」，不再依赖矩形外框。
-		if engine.relic_highlight(ids[i]):
-			var lit_ph := 0.5 + 0.5 * sin(float(_now()) / 220.0)
-			var lit_col := Color(0.56, 0.92, 1.0)
-			var cc := rect.get_center()
-			draw_circle(cc, rect.size.x * 0.66,
-					Color(lit_col.r, lit_col.g, lit_col.b, 0.18 + 0.20 * lit_ph))
-			draw_arc(cc, rect.size.x * 0.63, 0.0, TAU, 40,
-					Color(lit_col.r, lit_col.g, lit_col.b, 0.72 + 0.24 * lit_ph), 2.2, true)
+		# R577e：高亮 = **图标本体提亮** + 外圈青白呼吸环；环画在图标之后才看得全，
+		# 底层柔光用 fx_glow 贴图（R577c 不要框，硬边圆盘不再画）。
+		var lit577e := _relic_icon_lit(i)
+		if lit577e and _fx_glow_tex != null:
+			draw_texture_rect(_fx_glow_tex, rect.grow(13.0), false,
+					Color(0.56, 0.92, 1.0, 0.30 + 0.22 * _relic_lit_phase()))
 		# R577b 的唯一取图口不变；缺图才回退到 R309 那套文字（导出包照常可玩）。
 		var tex := UiAssets.relic_icon(int(ids[i]))
 		if tex == null:
@@ -15039,8 +15084,14 @@ func _draw_relic_bar() -> void:
 							rect.position.y + rect.size.y * 0.5 + 4.0),
 					Color("9a9488") if rspent else rel.name_color(Color("4a3c14")), -1)
 		else:
-			draw_texture_rect(tex, rect, false,
-					Color(0.52, 0.52, 0.55, 0.85) if rspent else Color.WHITE)
+			draw_texture_rect(tex, rect, false, _relic_icon_modulate(i))
+		# R577e 顶环：画在图标**之后**，完整压在图标外沿上（旧版画在前面被 44x44 吃掉）。
+		if lit577e:
+			var lit_ph := _relic_lit_phase()
+			var lit_col := Color(0.56, 0.92, 1.0)
+			var cc := rect.get_center()
+			draw_arc(cc, rect.size.x * 0.66, 0.0, TAU, 40,
+					Color(lit_col.r, lit_col.g, lit_col.b, 0.72 + 0.24 * lit_ph), 2.2, true)
 	# 道具太多装不下 → 末位换成「+N 点击查看全部」摘要行（点道具栏打开浏览面板）
 	if n_rel > shown_r:
 		_draw_more_tile(_relic_rect(shown_r), "+%d" % (n_rel - shown_r), "")
