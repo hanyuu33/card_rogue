@@ -764,6 +764,9 @@ func _dispatch_node(cell: Dictionary) -> void:
 	## 结算 + 按房间类型分流（正常进房 / 飞行器传送**共用**这一条）。
 	## ⚠️ 进来时 `RunState.advance()`（或 `flyer_teleport`）已经标好了「已走过」，
 	##    这里只管设置 pending_node 并跳场景 / 弹奖励。
+	# R574：巧克力不足时飞行器事件在**进房前**就被替换掉（遇不到，不是遇到不能用）。
+	# ⚠️ 必须排在所有事件改写之前：delivery 覆盖也走这一份 cell。
+	cell = RunState.resolve_event_kind(cell)
 	# R200：持有货物 → 第二层第一个事件房替换成「委托完成」（一次性）。
 	# ⚠️ 必须在 pending_node = cell **之前**改：Dictionary 是引用，后改会断开。
 	var delivery_kind := RunState.delivery_override_kind()

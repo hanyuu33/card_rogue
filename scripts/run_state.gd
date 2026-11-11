@@ -734,6 +734,34 @@ static func flint_rebuild_rest(node_id: int) -> bool:
 	return true
 
 
+static func resolve_event_kind(cell: Dictionary) -> Dictionary:
+	## R574（用户口径）：巧克力不足时**遇不到飞行器事件**，而不是遇到一个不能用的事件。
+	## ⚠️ 时机：事件 kind 是地图生成时写进格子的（那时巧克力是满的），巧克力却一路走一路扣，
+	##    所以过滤只能挂在**进房这一刻** —— 唯一调用点 `map_scene._dispatch_node()`。
+	## 命中时：把这一格重摇成另一个当下可用的事件（与生成期同一本 `event_kinds_used` 账）；
+	## 池子抽空则按 R374 老口径降级成一般战斗（「?」房本来就看不见内容）。
+	## ⚠️ 不消耗 `run_rng`：用分类种子派生，回放确定性与别的分类解耦（R312 口径）。
+	if str(cell.get("type", "")) != "event":
+		return cell
+	if str(cell.get("event_kind", "")) != "flyer":
+		return cell
+	if chocolate >= GameLayers.FLYER_MIN_CHOCOLATE:
+		return cell
+	var out := cell.duplicate()   # 别污染 map_cells 里那份（与 delivery_override 同口径）
+	var layer := int(cell.get("layer", current_layer))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_of("event_alt", int(cell.get("id", 0)) + layer * 1000)
+	# 飞行器这一格没真被遇到 → 账本里摘掉，让替代事件占它的位置
+	event_kinds_used.erase("flyer")
+	var alt := GameLayers.roll_event_kind(layer, rng, event_kinds_used, chocolate)
+	if alt == "":
+		out["type"] = "battle"
+		out["event_kind"] = ""
+	else:
+		out["event_kind"] = alt
+	return out
+
+
 static func flyer_candidates() -> Array:
 	## R555 飞行器（第二层事件）：能飞到的格子 = 全图「没走过」的格子。
 	## 只排掉：void（不存在）、起点、Boss（不能直接飞上去开战）、固定商店、已经走过的。
@@ -759,7 +787,8 @@ static func flyer_teleport(node_id: int) -> Dictionary:
 	## 返回 {"ok", "cost", "revealed", "chocolate"}。
 	## 与 advance() 的「进新房间」分支同构，只是不要求有门（can_move_to）。
 	## ⚠️ 约束（用户口径）：飞之前必须保证「扣掉这一格之后至少剩 1」——
-	##   不能靠飞行器把自己飞到「巧克力耗尽 → 入夜」的死局（选项页已置灰，这里兜底）。
+	##   不能靠飞行器把自己飞到「巧克力耗尽 → 入夜」的死局。R574：入口已按巧克力过滤，
+	##   事件页也不再置灰，这里只保留最后一道防死局的兜底。
 	if node_id < 0 or node_id >= map_cells.size():
 		return {"ok": false, "cost": 0, "revealed": false, "chocolate": chocolate}
 	if cleared_ids.has(node_id) or not flyer_candidates().has(node_id):

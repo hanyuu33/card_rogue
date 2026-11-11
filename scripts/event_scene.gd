@@ -141,10 +141,15 @@ const MARTIAL_PUNCH_DESC := """老人往石头上捶了一下，石头裂了，�
 「冲拳」（2 场精英 / Boss 后到手）：2 费，16 伤 + 击退 1 格，其余敌人各 8 伤。"""
 
 # R555 飞行器（第二层专属）：两个选项 —— 使用飞行器（回地图选一格没去过的房间传过去，
-# 消耗 1 巧克力）/ 不移动。巧克力不足 2 块时飞不起来（扣掉这格后至少还得剩 1）。
+# 消耗 1 巧克力）/ 不移动。R574（用户口径）：巧克力不足 2 块时**遇不到**这个事件
+# （过滤在进房入口 `RunState.resolve_event_kind`），所以这里不再有「禁用」按钮。
 const FLYER_DESC := """空地中央立着一架旧喷气背包，两只喷口还留着一点余温。
 背上它，你能直接飞到任何一个还没去过的房间——
-代价是 1 块巧克力；巧克力只剩 1 块或没有的时候，它飞不起来。"""
+代价是 1 块巧克力。"""
+
+# 只服务旧存档 / `--flyer` 演示：正常流程进不来，也不摆一个灰掉的按钮。
+const FLYER_NO_FUEL_DESC := """喷口凉着，背包沉沉地立在那里，像是早就算准了你今天带的巧克力不够。
+你拍了拍它，转身继续赶路。"""
 
 const FLYER_TAKEN_DESC := """喷口已经热起来了，暖橙色的火苗轻轻跳着。
 回到地图后挑一个没去过的房间，它就把你送过去。"""
@@ -458,7 +463,7 @@ func _is_martial() -> bool:
 
 func _is_flyer() -> bool:
 	## R555 飞行器（第二层专属）：使用飞行器（回地图选一格没去过的房间传送过去）
-	## / 不移动。巧克力不足 2 块时飞不起来。
+	## / 不移动。R574：巧克力不足 2 块时进房前就被替换掉，这里遇不到。
 	return _is_event_node() and _pending_kind() == "flyer"
 
 
@@ -1342,6 +1347,15 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "flyer"
+			# R574：演示不经过进房入口，巧克力默认 0 → 会误落进「没油」兜底页。
+			# 按真实进房时该有的量补上，才截得到「可用按钮」的正常态。
+			RunState.chocolate = RunState.chocolate_per_layer()
+		if args[i] == "--flyerlow":  # 演示：旧存档 / 巧克力不足的兜底页（R574 截图验证）
+			# 正常流程走不到这里（进房入口已按巧克力过滤），只验「不摆灰按钮」。
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "flyer"
+			RunState.chocolate = 1
 		if args[i] == "--apple":  # 演示：伪装 run 苹果与医生事件（R244 截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -1808,12 +1822,17 @@ func _ready() -> void:
 			_collapse_to_leave()
 			result_label.text = _fly_result
 			result_label.add_theme_color_override("font_color", Color("8fc0d8"))
+		elif not GameLayers.event_kind_available("flyer", RunState.chocolate):
+			# R574：旧存档 / 演示参数才可能走到这儿 —— 不摆灰按钮，直接给一个收尾页。
+			desc.text = FLYER_NO_FUEL_DESC
+			_fly_done = true
+			_collapse_to_leave()
+			result_label.text = "巧克力不够，飞行器没能起飞。你没有在这里停留。"
+			result_label.add_theme_color_override("font_color", Color("8fc0d8"))
 		else:
 			rest_btn.visible = true
-			rest_btn.text = ("使用飞行器（飞到一个没去过的房间，消耗 1 块巧克力）"
-					if RunState.chocolate >= 2
-					else "巧克力不足，飞不起来（至少需要 2 块）")
-			rest_btn.disabled = RunState.chocolate < 2
+			rest_btn.text = "使用飞行器（飞到一个没去过的房间，消耗 1 块巧克力）"
+			rest_btn.disabled = false
 			bbq_btn.visible = false
 			alt_btn.visible = false
 			leave_btn.visible = true
@@ -2002,8 +2021,8 @@ func _on_main() -> void:
 		if _fly_done:
 			_on_leave()
 			return
-		# 巧克力不足（chocolate < 2）时按钮已经置灰，这里再兜底一次。
-		if RunState.chocolate < 2:
+		# R574：进房入口已过滤，事件页也不再置灰；这里只留一道防死局的兜底。
+		if not GameLayers.event_kind_available("flyer", RunState.chocolate):
 			return
 		_fly_done = true
 		RunState.pending_fly = true   # 回地图后由 map_scene 进「飞行器选格」收尾

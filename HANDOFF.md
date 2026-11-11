@@ -1418,3 +1418,30 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - 环境：codex 需 Clash Verge 的 7897 代理；本轮启动 `D:\新建文件夹\clash-verge.exe` 后 `verge-mihomo.exe` 才监听 7897
   （只跑 service 不够）。预检必须真连 HTTPS 且把 HTTPError 视为链路通（Cloudflare 会因默认 UA 回 403，curl 带 UA 是 200）；
   端口可用 `CODEX_PROXY` 覆盖，`_run_codex.py` 会先预检再开工。
+
+
+## 2026-11-11 R574 飞行器：巧克力不足时遇不到事件（不是遇到不能用）
+- 用户口径：「飞行器逻辑有问题：是巧克力不足遇不到这个事件，而不是遇到不能用」。
+- 时序要点：事件 kind 在 `RogueMap._make_cells` 生成地图时就写进格子（那时巧克力是满的），
+  巧克力却随 `advance()` 一路扣 —— 所以过滤**不能挂在生成期**，必须挂在进房统一入口
+  `map_scene._dispatch_node()`（正常进房 / 飞行器传送共用这一条）。
+- 落地：
+  ① `GameLayers.FLYER_MIN_CHOCOLATE = 2` + `event_kind_available(kind, chocolate)` 唯一判据口；
+     `roll_event_kind(..., chocolate = -1)` 加可选参数（>= 0 时按判据过滤，-1 保持测试 / 工具旧行为）。
+  ② `RunState.resolve_event_kind(cell)`：进房时若该格是 flyer 且巧克力 < 2 → 用分类种子派生 rng
+     （`seed_of("event_alt", ...)`，不消耗 `run_rng`、保回放确定性）重摇一个当下可用的事件，
+     与生成期共用 `event_kinds_used` 账本（先把 flyer 摘掉）；池空按 R374 老口径降级成一般战斗。
+     只改返回副本，不污染 `map_cells`。
+  ③ `map_scene._dispatch_node()` 开头调用它，排在 delivery_override 之前。
+  ④ `event_scene` 拆掉 `rest_btn.disabled = RunState.chocolate < 2` 的灰按钮；
+     旧存档 / 演示参数才可能遇到的「没油」态改成 `FLYER_NO_FUEL_DESC` 收尾页（单个「离开」）。
+     `run_state.flyer_teleport` 只留最后一道防死局兜底。
+  ⑤ 演示参数 `--flyer` 补 `RunState.chocolate = chocolate_per_layer()`（演示默认 0 会误落兜底页），
+     另加 `--flyerlow` 验没油态。
+- 测试 `test_engine` 新增 12 条：判据（阈值 / 边界 / 其它事件不受限）、抽取过滤（不足 400 次抽不到、
+  充足能抽到）、进房替换（低 / 足两态 + 不污染本体）、分发与源码锁（_dispatch_node / run_state /
+  事件页无禁用按钮 / 常量只在 GameLayers 一处）。
+- 截图 `art_src/2026-11-11_飞行器入口过滤_R574/_review/{flyer_ok,flyer_low}.png`：
+  正常态两个亮按钮、无「巧克力不足」文案；没油态单「离开」收尾页，两处都无灰按钮。
+- 回归：assemble 0 / engine **5487✓ 0✗** / reward 26 / bgm 39 / smoke 67-0 / mana PASS；
+  userdata 备份后逐文件还原 `RESTORE_VERIFY OK`。

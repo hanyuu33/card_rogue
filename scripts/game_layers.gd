@@ -92,7 +92,8 @@ const LAYERS := {
 			# 学点真本事（2 场战斗后得「飞踢」）/ 要学绝技（2 场精英或 Boss 后得「冲拳」）。
 			"martial": 16,
 			# R555 飞行器（第二层专属）：使用飞行器 → 在地图上任选一格没走过的房间传送过去
-			# （消耗 1 巧克力；巧克力不足 2 时飞不起来）/ 不移动。
+			# （消耗 1 巧克力）/ 不移动。R574：巧克力不足 2 块时**根本不会遇到**这个事件，
+			# 过滤在进房统一入口 `RunState.resolve_event_kind()`，判据见 FLYER_MIN_CHOCOLATE。
 			"flyer": 16,
 		},
 	},
@@ -220,8 +221,22 @@ static func event_name(kind: String) -> String:
 	return str(EVENT_NAMES.get(kind, kind))
 
 
+## R574（用户口径）：巧克力不足时**根本遇不到飞行器事件**，不是遇到了再把按钮置灰。
+## 2 块的来历：飞一次扣 1，扣完至少还得剩 1，才不会把自己送进「巧克力耗尽 → 入夜」。
+const FLYER_MIN_CHOCOLATE := 2
+
+
+static func event_kind_available(kind: String, chocolate: int) -> bool:
+	## 该事件子类型在「当前巧克力」下能不能被遇到 —— 唯一判据口，
+	## 进房过滤（`RunState.resolve_event_kind`）与抽取过滤（`roll_event_kind`）共用。
+	## 目前只有飞行器有条件；别在 UI 里另写一份 `chocolate < 2`。
+	if kind == "flyer":
+		return chocolate >= FLYER_MIN_CHOCOLATE
+	return true
+
+
 static func roll_event_kind(layer: int, rng: RandomNumberGenerator,
-		used: Dictionary = {}) -> String:
+		used: Dictionary = {}, chocolate: int = -1) -> String:
 	## 按本层权重抽一个事件子类型（权重 ≤ 0 的不会被抽到）。
 	##
 	## **一局只出一次（R374，R445 复核保留）**：`used` = **本局**已经出过的子类型集合
@@ -233,14 +248,16 @@ static func roll_event_kind(layer: int, rng: RandomNumberGenerator,
 	## `used` 是**就地修改**的（Dictionary 传引用）。
 	## ⚠️ 每层各建一份 `used` = 回到「层内不重复、换层又撞」的老毛病 —— 必须跨层共用。
 	## 不传 `used`（默认空表）= 纯按权重抽、允许重复（测试 / 工具用）。
+	## R574：`chocolate >= 0` 时按 `event_kind_available()` 过滤候选（飞行器不足 2 块不参与抽）；
+	## 传 -1（默认）= 不按巧克力过滤，保持测试 / 工具原有行为。
 	var w := event_weights(layer)
 	if w.is_empty():
 		# R512：没有事件池就不再硬塞一张卡牌宝箱，交回空串由调用方降级
 		return ""
-	# 本轮候选 = 池子里权重 > 0 且还没被 used 占掉的
+	# 本轮候选 = 池子里权重 > 0、按当前巧克力可用、且还没被 used 占掉的
 	var cand := {}
 	for k in w:
-		if int(w[k]) > 0:
+		if int(w[k]) > 0 and (chocolate < 0 or event_kind_available(str(k), chocolate)):
 			cand[k] = int(w[k])
 	for k in used.keys():
 		cand.erase(str(k))

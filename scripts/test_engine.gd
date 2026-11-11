@@ -20721,6 +20721,7 @@ func _init() -> void:
 			"R555 飞行器：传送成功（标记走过 + 扣 1 巧克力 + 换格）")
 	check(not bool(RunState.flyer_teleport(r555_target).get("ok", false)),
 			"R555 飞行器：已经走过的格子不再能飞")
+	# R574：入口已按巧克力过滤，这里只验引擎侧最后一道防死局兜底
 	# 巧克力不足（< 2）飞不过去 —— 候选仍在，但传送被拦
 	RunState.chocolate = 1
 	var r555_cands2 := RunState.flyer_candidates()
@@ -20742,6 +20743,64 @@ func _init() -> void:
 			"R555 飞行器：地图场景真的有选格模式")
 	check_src("flyer_candidates" in FileAccess.get_file_as_string("res://scripts/run_state.gd"),
 			"R555 飞行器：引擎真的有传送候选逻辑")
+	# ==== R574：巧克力不足时**遇不到**飞行器（入口过滤，不是遇到不能用）====
+	# ① 数据层判据：唯一口在 GameLayers，别在 UI 里另写一份 chocolate < 2
+	check(GameLayers.FLYER_MIN_CHOCOLATE == 2,
+			"R574：飞行器最低巧克力 = 2（扣 1 后至少剩 1）")
+	check(not GameLayers.event_kind_available("flyer", 1)
+			and not GameLayers.event_kind_available("flyer", 0)
+			and GameLayers.event_kind_available("flyer", 2),
+			"R574：event_kind_available 只在巧克力 >= 2 时放行飞行器")
+	check(GameLayers.event_kind_available("pear", 0)
+			and GameLayers.event_kind_available("hero", 1),
+			"R574：其它事件不受巧克力约束")
+	# ② 抽取过滤：chocolate >= 0 时飞行器不入候选；-1 保持旧行为（测试 / 工具）
+	var r574_rng := RandomNumberGenerator.new()
+	r574_rng.seed = 574001
+	var r574_seen_low := false
+	for r574_i in 400:
+		if GameLayers.roll_event_kind(GameLayers.LAYER_TWO, r574_rng, {}, 1) == "flyer":
+			r574_seen_low = true
+			break
+	check(not r574_seen_low,
+			"R574：巧克力不足 2 块时 400 次抽取都抽不到飞行器")
+	var r574_rng2 := RandomNumberGenerator.new()
+	r574_rng2.seed = 574002
+	var r574_seen_ok := false
+	for r574_j in 400:
+		if GameLayers.roll_event_kind(GameLayers.LAYER_TWO, r574_rng2, {}, 12) == "flyer":
+			r574_seen_ok = true
+			break
+	check(r574_seen_ok,
+			"R574：巧克力充足时飞行器仍能被抽到（没被误删出池）")
+	# ③ 进房替换：同一格在巧克力 1 / 12 两种状态下走 resolve_event_kind
+	var r574_sv_used: Dictionary = RunState.event_kinds_used.duplicate()
+	var r574_cell := {"id": 17, "type": "event", "event_kind": "flyer",
+			"layer": GameLayers.LAYER_TWO}
+	RunState.event_kinds_used = {"pear": true, "hero": true}
+	RunState.chocolate = 1
+	var r574_low := RunState.resolve_event_kind(r574_cell)
+	check(str(r574_low.get("event_kind", "flyer")) != "flyer",
+			"R574：巧克力不足时进房过滤把飞行器格换掉（或降级成战斗）")
+	check(r574_cell.get("event_kind") == "flyer",
+			"R574：过滤只改返回的副本，不污染 map_cells 本体")
+	RunState.chocolate = 12
+	var r574_ok := RunState.resolve_event_kind(r574_cell)
+	check(str(r574_ok.get("event_kind", "")) == "flyer",
+			"R574：巧克力充足时飞行器格原样保留")
+	RunState.event_kinds_used = r574_sv_used
+	RunState.chocolate = r555_sv_choco
+	# ④ 分发 + 源码锁：界面入口真的调了过滤、事件页不再有禁用按钮
+	check_src("resolve_event_kind" in FileAccess.get_file_as_string("res://scripts/map_scene.gd"),
+			"R574：进房统一入口 _dispatch_node 调了 resolve_event_kind")
+	check_src("resolve_event_kind" in FileAccess.get_file_as_string("res://scripts/run_state.gd"),
+			"R574：引擎侧真的有进房过滤")
+	var r574_ev_src := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	check_src("巧克力不足，飞不起来" not in r574_ev_src
+			and "rest_btn.disabled = RunState.chocolate < 2" not in r574_ev_src,
+			"R574：事件页不再有「遇到但不能用」的禁用按钮")
+	check_src("FLYER_MIN_CHOCOLATE" in FileAccess.get_file_as_string("res://scripts/game_layers.gd"),
+			"R574：阈值常量只在 GameLayers 定义一处")
 	# 还原
 	RunState.map_cells = r555_sv_cells
 	RunState.cleared_ids = r555_sv_cleared
