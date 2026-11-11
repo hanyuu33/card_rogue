@@ -735,37 +735,42 @@ static func flint_rebuild_rest(node_id: int) -> bool:
 
 
 static func resolve_event_kind(cell: Dictionary) -> Dictionary:
-	## R574（用户口径）：巧克力不足时**遇不到飞行器事件**，而不是遇到一个不能用的事件。
-	## ⚠️ 时机：事件 kind 是地图生成时写进格子的（那时巧克力是满的），巧克力却一路走一路扣，
-	##    所以过滤只能挂在**进房这一刻** —— 唯一调用点 `map_scene._dispatch_node()`。
-	## 命中时：把这一格重摇成另一个当下可用的事件（与生成期同一本 `event_kinds_used` 账）；
-	## 池子抽空则按 R374 老口径降级成一般战斗（「?」房本来就看不见内容）。
-	## ⚠️ 不消耗 `run_rng`：用分类种子派生，回放确定性与别的分类解耦（R312 口径）。
+	## R575（用户口径）：**事件格子在生成时只是事件格子，触发（进房）时才确定事件**。
+	## 唯一调用点 = `map_scene._dispatch_node()`（正常进房 / 飞行器传送共用这一条）。
+	## 按「当下的巧克力」过滤候选（`GameLayers.event_kind_available`），
+	## 与 `event_kinds_used` 账本（一局只出一次，跨层共用）一起落地；
+	## 池子抽空按 R374 老口径降级成一般战斗（「?」房本来就看不见内容）。
+	## ⚠️ 用分类种子派生 rng（seed_of），**不消耗 run_rng**，回放确定性解耦（R312 口径）。
+	## ⚠️ 结果写回 `map_cells` 里那一格：事件只决定一次，读档 / 再看时不会重摇。
+	## R575 之前的老存档若已带 event_kind，原样沿用（不推翻旧档的决定）。
 	if str(cell.get("type", "")) != "event":
 		return cell
-	if str(cell.get("event_kind", "")) != "flyer":
-		return cell
-	if chocolate >= GameLayers.FLYER_MIN_CHOCOLATE:
+	if str(cell.get("event_kind", "")) != "":
 		return cell
 	var out := cell.duplicate()   # 别污染 map_cells 里那份（与 delivery_override 同口径）
 	var layer := int(cell.get("layer", current_layer))
 	var rng := RandomNumberGenerator.new()
-	rng.seed = seed_of("event_alt", int(cell.get("id", 0)) + layer * 1000)
-	# 飞行器这一格没真被遇到 → 账本里摘掉，让替代事件占它的位置
-	event_kinds_used.erase("flyer")
-	var alt := GameLayers.roll_event_kind(layer, rng, event_kinds_used, chocolate)
-	if alt == "":
+	rng.seed = seed_of("event_pick", int(cell.get("id", 0)) + layer * 1000)
+	var kind := GameLayers.roll_event_kind(layer, rng, event_kinds_used, chocolate)
+	if kind == "":
 		out["type"] = "battle"
 		out["event_kind"] = ""
 	else:
-		out["event_kind"] = alt
+		out["event_kind"] = kind
+	# 定型：写回地图本体（按 id 找；外部预生成 / 测试图里找不到就只回副本）
+	var cid := int(cell.get("id", -1))
+	if cid >= 0 and cid < map_cells.size():
+		var origin: Dictionary = map_cells[cid]
+		if int(origin.get("id", -1)) == cid:
+			origin["type"] = str(out["type"])
+			origin["event_kind"] = str(out["event_kind"])
 	return out
 
 
 static func flyer_candidates() -> Array:
 	## R555 飞行器（第二层事件）：能飞到的格子 = 全图「没走过」的格子。
 	## 只排掉：void（不存在）、起点、Boss（不能直接飞上去开战）、固定商店、已经走过的。
-	## 飞过去 = 当次移动（扣 1 巧克力），所以目标只能是「没走过」的新格子。
+	## R575：飞行器不消耗巧克力；目标仍只能是「没走过」的新格子（飞过去 = 一次跳跃）。
 	var out: Array = []
 	for c: Dictionary in map_cells:
 		var cid := int(c["id"])
@@ -785,30 +790,22 @@ static func flyer_candidates() -> Array:
 static func flyer_teleport(node_id: int) -> Dictionary:
 	## R555 飞行器：无视相邻关系，直接飞到 node_id（必须是「没走过」的格子）。
 	## 返回 {"ok", "cost", "revealed", "chocolate"}。
-	## 与 advance() 的「进新房间」分支同构，只是不要求有门（can_move_to）。
-	## ⚠️ 约束（用户口径）：飞之前必须保证「扣掉这一格之后至少剩 1」——
-	##   不能靠飞行器把自己飞到「巧克力耗尽 → 入夜」的死局。R574：入口已按巧克力过滤，
-	##   事件页也不再置灰，这里只保留最后一道防死局的兜底。
+	## R575（用户口径）：**飞行器不消耗巧克力** —— cost 恒 0，也不触发入夜 / 疲惫同步。
+	## 「巧克力见底就遇不到飞行器」由 `resolve_event_kind()` 在触发那一刻保证，
+	## 这里不再摆第二道判据（不再有「遇到但不能用」）。
 	if node_id < 0 or node_id >= map_cells.size():
 		return {"ok": false, "cost": 0, "revealed": false, "chocolate": chocolate}
 	if cleared_ids.has(node_id) or not flyer_candidates().has(node_id):
 		return {"ok": false, "cost": 0, "revealed": false, "chocolate": chocolate}
 	var c: Dictionary = map_cells[node_id]
-	var free_layer: bool = int(c.get("layer", current_layer)) == GameLayers.LAYER_THREE
-	var cost := 0 if free_layer else 1
-	if cost > 0 and chocolate - cost < 1:
-		return {"ok": false, "cost": 0, "revealed": false, "chocolate": chocolate}
 	cleared_ids.append(node_id)
 	var revealed := false
 	if bool(c.get("hidden", false)) and not bool(c.get("revealed", false)):
 		c["revealed"] = true
 		revealed = true
-	if cost > 0:
-		chocolate = maxi(0, chocolate - cost)
-		sync_fatigue()
 	current_node_id = node_id
 	reveal_known()
-	return {"ok": true, "cost": cost, "revealed": revealed, "chocolate": chocolate}
+	return {"ok": true, "cost": 0, "revealed": revealed, "chocolate": chocolate}
 
 
 static func lucky7_left() -> int:
@@ -1021,8 +1018,9 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# R352：统计「开局次数」—— 故事 1 的解锁条件就是「进行任意一局游戏」。
 	# 只记内存 + 置脏，落盘交给 `flush()`（`map_scene` 进地图时会调）。
 	ProfileData.bump(ProfileData.K_RUN_START)
-	# R374：新的一局 → 事件账本清空。⚠️ 外部**预生成**的地图（`map` 非空，map_scene 的兜底
-	# 与出图都这么干）要把图上已有的事件登记进来，否则换到第二层时会跟第一层撞同一个事件。
+	# R374：新的一局 → 事件账本清空。R575：事件在**进房时**才决定，生成期不再往账本登记；
+	# 外部**预生成**的地图（`map` 非空）里若带着老格式的 event_kind（R575 之前的存档），
+	# 仍要补登记，免得换层又撞同一个事件。
 	event_kinds_used = {}
 	if not map.is_empty():
 		for c: Dictionary in map:

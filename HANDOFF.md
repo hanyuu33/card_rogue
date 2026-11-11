@@ -1445,3 +1445,33 @@ manifest 的 9018 条目已更新 ref / prompt / note。
   正常态两个亮按钮、无「巧克力不足」文案；没油态单「离开」收尾页，两处都无灰按钮。
 - 回归：assemble 0 / engine **5487✓ 0✗** / reward 26 / bgm 39 / smoke 67-0 / mana PASS；
   userdata 备份后逐文件还原 `RESTORE_VERIFY OK`。
+
+
+## 2026-11-11 R575 事件在触发时才决定 + 飞行器不消耗巧克力
+- 用户口径：「不。飞行器不消耗巧克力。然后事件格子在生成时只是事件格子，触发时才确定事件。」
+  → 推翻 R574 的「生成期写死 kind + 进房替换」架构，也去掉「飞一次扣 1 块巧克力」。
+- ① 生成期：`RogueMap._make_cells` / `reroll_as_unknown` 对 event 格只写 `event_kind: ""`，
+  不预定子类型、不记 `event_kinds_used` 账本、不再池空降级；仍调用一次
+  `GameLayers.roll_event_kind(layer, rng, {})` 并把结果丢弃，只为固定地图布局 / 回放的随机链（R312 口径）。
+- ② 触发期：`RunState.resolve_event_kind(cell)` 重写 —— 进房统一入口 `map_scene._dispatch_node()`
+  调用（正常进房 / 飞行器传送共用），按**当下的巧克力**过滤候选（`GameLayers.event_kind_available`），
+  用 `seed_of("event_pick", id + layer*1000)` 派生 rng（不消耗 `run_rng`），
+  与 `event_kinds_used` 账本（一局只出一次）一起落地；池空按 R374 老口径在触发时降级成一般战斗。
+  结果**写回 `map_cells` 里那一格**（只决定一次，读档不重摇）；R575 之前的老档已带 kind 则原样沿用。
+- ③ 飞行器：`FLYER_MIN_CHOCOLATE` 2 → **1**（不再扣巧克力，「不足」= 见底 / 入夜）；
+  `flyer_teleport` cost 恒 0，删掉防死局判据 / 扣减 / `sync_fatigue`；
+  事件页删掉 `FLYER_NO_FUEL_DESC` 与「没油」收尾页、按钮改「使用飞行器（飞到一个没去过的房间）」、
+  正文改「不用你掏巧克力」、地图选格提示改「不消耗巧克力」；去掉 `--flyerlow` 演示与 chocolate 初始化。
+- ④ 顺带修既有 UI bug：`event_scene._refresh()` 白名单漏了 `_is_flyer()`，
+  把「不移动（离开）」刷成「离开（不烤肉）」；补登记并加源码锁。
+- 测试：test_engine 加 helper `_r575_trigger_all()`（把生成图的事件格逐个触发，历史断言按触发期语义迁移）；
+  R68 / R374 / R445 / R512 等「图上 event_kind」断言全部改到触发期；R555 传送断言改成「不扣巧克力」；
+  R574 块 12 条整体重写成 R575 的 17 条（数据层 / 生成期 / 触发期 / 定型 / 池空 / 不消耗 / 源码锁）。
+- 截图 `art_src/2026-11-11_事件触发时定事件_R575/_review/flyer_no_chocolate_cost.png`：
+  两个亮按钮「使用飞行器（飞到一个没去过的房间）」/「不移动（离开）」，正文无消耗、无「不足」、无灰按钮。
+- 回归：assemble 0 / engine **5492✓ 0✗** / reward 26 / bgm 39 / smoke 67-0 / mana PASS；
+  userdata 备份后逐文件还原 `RESTORE_VERIFY OK`。
+- 工程经验：①「遇不到」的门槛要从**消耗**里摘出来 —— 不消耗就没有「扣完剩 1」的依据，阈值 2 → 1。
+  ② 把决定从生成期挪到触发期，历史断言别删，加一个「触发 helper」让它们按新语义继续验。
+  ③ 生成期保留等量 rng 消耗，能保住地图布局与回放链，避免整张图统计类断言漂移。
+  ④ 别忘扫玩家可见文案（事件页按钮 / 正文 / 地图选格提示 / 注释禁词），并逐条加源码锁。

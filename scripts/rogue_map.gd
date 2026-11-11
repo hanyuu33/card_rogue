@@ -273,10 +273,9 @@ static func generate(rng: RandomNumberGenerator,
 	if layer == GameLayers.LAYER_THREE:
 		last_attempts = 1
 		return line_cells(layer)
-	# R374：`used_bank` = **本局**已出过的事件子类型（`RunState.event_kinds_used`）。
-	# 传空表（默认）= 老行为：只在「这一张图」内不重复。
-	# ⚠️ 重试循环里每轮都从 `used_bank` **重新拷一份**：失败的那几次尝试不许污染账本，
-	#    否则「同一局重试三次」会把三次的临时事件都记成已出过，池子白白被吃空。
+	# R575：`used_bank` 只为兼容旧签名 / 老档保留 —— 事件在**进房时**才决定，
+	# 生成期既不预定子类型也不记账本；账本由 `RunState.resolve_event_kind()` 在触发时写。
+	# ⚠️ 重试循环里每轮仍从 `used_bank` 拷一份，避免把临时状态带回调用方。
 	for attempt in MAX_ATTEMPTS:
 		var used := used_bank.duplicate()
 		var adj := _build_adjacency(rng)
@@ -382,9 +381,8 @@ static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: i
 		far_sum += elite_far_factor(col_of(i), row_of(i))
 		far_n += 1
 	var far_norm: float = (far_sum / float(far_n)) if far_n > 0 else 1.0
-	# ② 事件子类型：从**本局账本**（`used`）出发，再把「仍然留在图上」的事件登记进去
-	# （含没被重摇的 ? 房）。R374：`used` 就是全局账本本身（就地写回），
-	# 所以重摇出来的新事件同样受「一局只出一次」约束。
+	# ② R575：事件子类型不再在生成 / 重摇期预定，统一等玩家踩上去那一刻决定。
+	# 保留下面这一步只为兼容 R575 之前的老档：图上若还带 event_kind，补登记进账本。
 	var used_events: Dictionary = used
 	for cell2: Dictionary in cells:
 		var ek := str(cell2.get("event_kind", ""))
@@ -406,11 +404,8 @@ static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: i
 		cell3["revealed"] = false
 		cell3["event_kind"] = ""
 		if t == "event":
-			var ek3 := GameLayers.roll_event_kind(layer, rng, used_events)
-			if ek3 == "":
-				cell3["type"] = "battle"   # R374：本局事件池用尽 → 这格是一场普通战斗
-			else:
-				cell3["event_kind"] = ek3
+			# R575：与生成期同口径 —— 只保随机链，不预定事件、不记账。
+			GameLayers.roll_event_kind(layer, rng, {})
 		n += 1
 	return n
 
@@ -729,20 +724,13 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 			"event_kind": "",
 		}
 		if type == "event":
-			# R374（用户口径）：**一个事件在一局里只被抽出一次** —— `used_events` 是整局账本
-			# （`RunState.event_kinds_used`，跨层共用），抽空了**不重开**。
-			# R445 复核（用户口径「这一局不会再出现占卜事件」）：占卜也走这本账，
-			# 用尽时 `roll_event_kind` 返回空串 → **这一格降级成一般战斗**（于是不会再撞见）。
-			# 「?」房对玩家本来就是未知的，走进去打一场，看不出「少了一个事件」。
-			# ⚠️ 事件格数量（实测均值 7.3 / 峰值 13）本来就可能大于单层事件池（9~10 种），
-			#    所以「用尽」是正常路径，不是异常 —— 别当成错误去 push_error。
-			# R372：小宝箱统一「免费开 + 只给卡牌」，不再有「箱子里装道具」的旗标
-			# （原来那一半道具的概率连随机数一起吃掉了）。
-			var ek := GameLayers.roll_event_kind(layer, rng, used_events)
-			if ek == "":
-				cell["type"] = "battle"
-			else:
-				cell["event_kind"] = ek
+			# R575（用户口径）：**事件格子在生成时只是事件格子** —— 不预定子类型、不记账本。
+			# 具体事件在玩家踩上去那一刻由 `RunState.resolve_event_kind()` 决定，
+			# 那时才能按「当下的巧克力」过滤（巧克力是走一路扣一路的）。
+			# 「一局只出一次」的账本也在那一刻才登记；池子抽空则按 R374 老口径降级成战斗。
+			# ⚠️ 仍消耗一次与旧版等量的随机数：只为固定地图布局与回放的随机链（R312 口径），
+			#    抽到的子类型当场丢弃，绝不写进 cell。
+			GameLayers.roll_event_kind(layer, rng, {})
 		cells.append(cell)
 	return cells
 

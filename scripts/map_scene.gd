@@ -764,7 +764,8 @@ func _dispatch_node(cell: Dictionary) -> void:
 	## 结算 + 按房间类型分流（正常进房 / 飞行器传送**共用**这一条）。
 	## ⚠️ 进来时 `RunState.advance()`（或 `flyer_teleport`）已经标好了「已走过」，
 	##    这里只管设置 pending_node 并跳场景 / 弹奖励。
-	# R574：巧克力不足时飞行器事件在**进房前**就被替换掉（遇不到，不是遇到不能用）。
+	# R575：事件格子在生成时只是「事件格」，进房这一刻才决定具体事件
+	# （按当下的巧克力过滤 + 一局只出一次）。正常进房 / 飞行器传送共用这一条。
 	# ⚠️ 必须排在所有事件改写之前：delivery 覆盖也走这一份 cell。
 	cell = RunState.resolve_event_kind(cell)
 	# R200：持有货物 → 第二层第一个事件房替换成「委托完成」（一次性）。
@@ -1194,7 +1195,7 @@ func _start_fly_pick() -> void:
 
 
 func _fly_click(pos: Vector2) -> void:
-	## R555 飞行器：点候选格 → 传送过去（扣 1 巧克力 + 进房结算）。
+	## R555 飞行器：点候选格 → 传送过去（R575 起不消耗巧克力）+ 进房结算。
 	## 点别处只给一句提示，不退出选格模式（同燧石的收法）。
 	var fc := _cell_at(pos)
 	var fid := int(fc.get("id", -1))
@@ -1204,7 +1205,7 @@ func _fly_click(pos: Vector2) -> void:
 		return
 	var res := RunState.flyer_teleport(fid)
 	if not bool(res.get("ok", false)):
-		_set_note("飞不过去（巧克力不足）")
+		_set_note("这一格飞不过去")
 		queue_redraw()
 		return
 	sfx.play("click")
@@ -1280,7 +1281,7 @@ func _draw_fly_hint() -> void:
 	draw_rect(rect, Color(0.08, 0.10, 0.14, 0.96), true)
 	draw_rect(rect, Color(0.40, 0.72, 1.0, 0.60), false, 1.2)
 	draw_string(_font_bold, rect.position + Vector2(10, 17),
-			"飞行器：挑一个没去过的房间，飞过去（消耗 1 块巧克力）",
+			"飞行器：挑一个没去过的房间，飞过去（不消耗巧克力）",
 			HORIZONTAL_ALIGNMENT_CENTER, w - 20, UiTheme.FS_CAPTION, Color("a8d0f0"))
 
 

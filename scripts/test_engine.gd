@@ -38,6 +38,29 @@ func check_src(cond: bool, msg: String) -> void:
 	check(cond, msg)
 
 
+func _r575_trigger_all(cells: Array, keep_bank := false) -> void:
+	## R575：把生成好的事件格逐个「触发」一遍（模拟玩家依次踩上去），
+	## 让 event_kind 落到格子上 —— 历史断言因此仍能按「图上的事件」来验。
+	## keep_bank = true 时沿用当前账本（跨层共用），否则本图单独起一本账。
+	var sv_map: Array = RunState.map_cells
+	var sv_bank: Dictionary = RunState.event_kinds_used
+	var sv_choco: int = RunState.chocolate
+	RunState.map_cells = cells
+	if not keep_bank:
+		RunState.event_kinds_used = {}
+	RunState.chocolate = 99
+	for _r575_c: Dictionary in cells:
+		if str(_r575_c.get("type", "")) != "event":
+			continue
+		var _r575_r := RunState.resolve_event_kind(_r575_c)
+		_r575_c["event_kind"] = str(_r575_r.get("event_kind", ""))
+		if str(_r575_r.get("type", "")) != "event":
+			_r575_c["type"] = str(_r575_r["type"])
+	RunState.map_cells = sv_map
+	RunState.event_kinds_used = sv_bank
+	RunState.chocolate = sv_choco
+
+
 func _new_engine(deck: Array[CardData] = [], hp_me := 20, hp_foe := 20,
 		limit := -1, shuffle := true) -> GameEngine:
 	var st := FieldState.new(deck, hp_me, hp_foe, limit, "测试", shuffle)
@@ -4377,6 +4400,7 @@ func _init() -> void:
 	var ev_pool := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
 	for i in 40:
 		var em: Array = RogueMap.generate(ev_rng, GameLayers.LAYER_DEFAULT)
+		_r575_trigger_all(em)
 		for node: Dictionary in em:
 			if int(node.get("layer", -1)) != GameLayers.LAYER_DEFAULT:
 				ev_layer_ok = false
@@ -6799,14 +6823,12 @@ func _init() -> void:
 		check(RogueMap.display_type(q_hc) == str(q_hc["type"]), "「?」房揭晓后显示真实类型")
 		q_hc["revealed"] = false
 
-	# 事件房的 event_kind 必须取自本层事件池
+	# R575：事件格子在生成期只是「事件格」，event_kind 一律留空（触发时才决定）
 	var q_ev_kind_ok := true
 	for q_c: Dictionary in q_map1:
-		if str(q_c["type"]) == "event":
-			if not GameLayers.event_kinds(GameLayers.LAYER_DEFAULT).has(
-					str(q_c.get("event_kind", ""))):
-				q_ev_kind_ok = false
-	check(q_ev_kind_ok, "地图：事件房的 event_kind 全部取自本层事件池")
+		if str(q_c["type"]) == "event" and str(q_c.get("event_kind", "")) != "":
+			q_ev_kind_ok = false
+	check(q_ev_kind_ok, "R575 地图：事件格生成时不预定子类型（event_kind 恒空）")
 
 	# 批量生成：60 张都必须满足全部约束（生成算法必须稳定，不允许偶发失败）
 	var q_bulk_ok := true
@@ -6944,31 +6966,27 @@ func _init() -> void:
 	var q_l2_bad := false
 	var q_l2_ev_bad := false
 	var q_l2_leak := ""
-	# 「只属于第一层」的事件子类型（第二层地图里一个都不该出现）
-	var q_l2_only_l1 := ["whisper", "struggle", "arcane", "treasure"]
+	# R575：生成期不预定事件，「不串第一层」由触发期判据（见 R575 块）保证
 	for q_l2_n: Dictionary in q_l2:
 		if int(q_l2_n.get("layer", -1)) != GameLayers.LAYER_TWO:
 			q_l2_bad = true
-		if str(q_l2_n["type"]) == "event":
-			var q_l2k := str(q_l2_n.get("event_kind", ""))
-			if not GameLayers.event_kinds(GameLayers.LAYER_TWO).has(q_l2k):
-				q_l2_ev_bad = true
-			if q_l2_only_l1.has(q_l2k):
-				q_l2_leak = q_l2k
+		if str(q_l2_n["type"]) == "event" and str(q_l2_n.get("event_kind", "")) != "":
+			q_l2_ev_bad = true
 	check(not q_l2_bad, "第二层地图：每个房间都标记 layer = 2")
-	check(not q_l2_ev_bad, "第二层地图：事件房只出第二层事件池里的事件（不串第一层）")
-	check(q_l2_leak == "", "第二层地图：绝不出现第一层专属事件（本次泄漏：%s）"
+	check(not q_l2_ev_bad, "R575 第二层地图：事件格生成时不预定子类型（event_kind 恒空）")
+	check(q_l2_leak == "", "R575 第二层地图：生成期不出现第一层专属事件（本次泄漏：%s）"
 			% ("无" if q_l2_leak == "" else q_l2_leak))
 	check(RogueMap.steps_from(q_l2, int(RogueMap.start_cell(q_l2)["id"])).size()
 			== RogueMap.CELLS, "第二层地图结构照常连通（%d 格）" % RogueMap.CELLS)
 
-	# 多次生成第二层地图：只出第二层专属事件
+	# 多次生成第二层地图：R575 起先触发，再检查决定的事件只出第二层专属池
 	var q_l2_ev_ok := true
 	var q_l2_ev_seen := {}
 	var q_l2_ev_rng := RandomNumberGenerator.new()
 	q_l2_ev_rng.randomize()
 	for q_l2_i in 40:
 		var q_l2m: Array = RogueMap.generate(q_l2_ev_rng, GameLayers.LAYER_TWO)
+		_r575_trigger_all(q_l2m)
 		for q_l2m_n: Dictionary in q_l2m:
 			if str(q_l2m_n["type"]) != "event":
 				continue
@@ -6976,7 +6994,7 @@ func _init() -> void:
 			q_l2_ev_seen[q_l2m_kind] = true
 			if not GameLayers.event_kinds(GameLayers.LAYER_TWO).has(q_l2m_kind):
 				q_l2_ev_ok = false
-	check(q_l2_ev_ok, "第二层地图：event_kind 全部取自第二层事件池（不串到第一层）")
+	check(q_l2_ev_ok, "R575 第二层地图：触发时决定的事件全部取自第二层事件池（不串第一层）")
 	check(q_l2_ev_seen.has("pear") or q_l2_ev_seen.has("hero"),
 			"第二层地图多次生成：出鸭梨山大/绝赞五换一专属事件（R573 已删蓝色大肥鱼）")
 	check(not q_l2_ev_seen.has("bluefish"),
@@ -7051,6 +7069,7 @@ func _init() -> void:
 	var q_r68_map_rng := RandomNumberGenerator.new()
 	for q_r68_m in 60:
 		var q_r68_map: Array = RogueMap.generate(q_r68_map_rng, GameLayers.LAYER_DEFAULT)
+		_r575_trigger_all(q_r68_map)
 		var q_r68_cnt := {}
 		var q_r68_pool_n: int = GameLayers.event_kinds(GameLayers.LAYER_DEFAULT).size()
 		var q_r68_ev_total := 0
@@ -7070,6 +7089,7 @@ func _init() -> void:
 	var q_r68_l2_pool_n: int = GameLayers.event_kinds(GameLayers.LAYER_TWO).size()
 	for q_r68_m2 in 60:
 		var q_r68_map2: Array = RogueMap.generate(q_r68_map_rng, GameLayers.LAYER_TWO)
+		_r575_trigger_all(q_r68_map2)
 		var q_r68_cnt2 := {}
 		var q_r68_seen2 := 0
 		for q_r68_n2: Dictionary in q_r68_map2:
@@ -7087,15 +7107,19 @@ func _init() -> void:
 	# ---- R374（用户口径）：**一个事件在一局里只被抽出一次** ----
 	# 旧口径是「一张图内不重复、池子抽空还能重开一轮」，而且 `used` 每层各建一份 →
 	# 第一层抽过的「遗忘之泉 / 鸭鸭工匠 / 占卜室」，第二层照样能再抽到（实测 81% 的局都会撞）。
-	# 现在：账本 = `RunState.event_kinds_used`（**跨层共用**），池子抽空 → 那格降级成一般战斗。
+	# R575：账本仍 = `RunState.event_kinds_used`（跨层共用），但**在触发（进房）时**才登记；
+	# 池子抽空 → 那格在进房时降级成一般战斗。
 	var r374_dup := ""
 	var r374_total_ok := true
 	var r374_cross_ok := true
+	var r374_sv_bank: Dictionary = RunState.event_kinds_used
 	for r374_s in 40:
 		var r374_bank := {}
 		var r374_r1 := RandomNumberGenerator.new()
 		r374_r1.seed = 770000 + r374_s
 		var r374_m1: Array = RogueMap.generate(r374_r1, GameLayers.LAYER_DEFAULT, null, r374_bank)
+		RunState.event_kinds_used = r374_bank
+		_r575_trigger_all(r374_m1, true)
 		var r374_k1 := {}
 		for r374_n1: Dictionary in r374_m1:
 			if str(r374_n1["type"]) == "event":
@@ -7106,6 +7130,8 @@ func _init() -> void:
 		var r374_r2 := RandomNumberGenerator.new()
 		r374_r2.seed = 880000 + r374_s
 		var r374_m2: Array = RogueMap.generate(r374_r2, GameLayers.LAYER_TWO, null, r374_bank)
+		RunState.event_kinds_used = r374_bank
+		_r575_trigger_all(r374_m2, true)
 		var r374_k2 := {}
 		for r374_n2: Dictionary in r374_m2:
 			if str(r374_n2["type"]) != "event":
@@ -7126,16 +7152,15 @@ func _init() -> void:
 			if r374_dup == "":
 				r374_dup = "账本 %d 种 / 图上 %d 种" % [r374_bank.size(), r374_union.size()]
 	check(r374_total_ok,
-			"R374 一局内每种事件最多出现一次，且账本与图上事件严格对齐（违例：%s）"
+			"R575/R374 一局内每种事件最多出现一次，且账本与图上事件严格对齐（违例：%s）"
 			% ("无" if r374_total_ok else r374_dup))
 	check(r374_cross_ok,
-			"R374 跨层共用账本：第一层出过的事件，第二层不再出（违例：%s）"
+			"R575/R374 跨层共用账本：第一层出过的事件，第二层不再出（违例：%s）"
 			% ("无" if r374_cross_ok else r374_dup))
+	RunState.event_kinds_used = r374_sv_bank
 
-	# ② 池子用尽 → 那一格降级成一般战斗（不是空事件格、也不是消失的格子）
-	#    R445 复核（用户口径「这一局不会再出现占卜事件」）：这条**保持不变** ——
-	#    试过「清空账本重开一轮」，被下面的断言当场打回：第一轮的记录作废之后，
-	#    同一张图后半段 / 换层又会抽到第一层出过的事件（账本 3 种 / 图上 15 种）。
+	# ② R575：池子用尽 → **触发那一刻**那一格降级成一般战斗（生成期仍是事件格）
+	#    R445 的「一局不会再出现占卜事件」口径不变：账本不清空、不重开。
 	var r374_starve_bank := {}
 	for r374_k_all in GameLayers.event_kinds(GameLayers.LAYER_DEFAULT):
 		r374_starve_bank[r374_k_all] = true
@@ -7143,6 +7168,8 @@ func _init() -> void:
 	r374_srng.seed = 990001
 	var r374_smap: Array = RogueMap.generate(r374_srng, GameLayers.LAYER_DEFAULT, null,
 			r374_starve_bank)
+	RunState.event_kinds_used = r374_starve_bank
+	_r575_trigger_all(r374_smap, true)
 	var r374_left := 0
 	var r374_bad_cell := ""
 	for r374_c: Dictionary in r374_smap:
@@ -7152,23 +7179,28 @@ func _init() -> void:
 		if str(r374_c.get("event_kind", "")) != "" and str(r374_c["type"]) != "event":
 			r374_bad_cell = "非事件格残留 event_kind"
 	check(r374_left == 0 and r374_bad_cell == "",
-			"R374 池子先用光 → 整张图不再出现事件房，且没有残留 event_kind（%s）"
+			"R575/R374 池子先用光 → 触发时每个事件格都降级成一般战斗（%s）"
 			% ("无" if r374_bad_cell == "" else r374_bad_cell))
+	RunState.event_kinds_used = r374_sv_bank
 
 	# ②-b R445（用户口径）：占卜室跟其它事件走**同一本账** —— 已经出过就整层不再出现。
-	#    （一局之内因此绝不会撞见第二次占卜：用尽时那格降级成一般战斗，不会重开。）
+	#    R575：这一判据现在落在「触发那一刻」，生成期图上仍看不到事件。
 	var r445_div_bank := {"divination": true}
+	var r445_div_sv: Dictionary = RunState.event_kinds_used
 	var r445_divrng := RandomNumberGenerator.new()
 	r445_divrng.seed = 550001
 	var r445_divmap: Array = RogueMap.generate(r445_divrng, GameLayers.LAYER_DEFAULT,
 			null, r445_div_bank)
+	RunState.event_kinds_used = r445_div_bank
+	_r575_trigger_all(r445_divmap, true)
 	var r445_div_hit := ""
 	for r445_dc: Dictionary in r445_divmap:
 		if str(r445_dc.get("event_kind", "")) == "divination":
 			r445_div_hit = "第 %d 格" % int(r445_dc.get("id", -1))
 	check(r445_div_hit == "",
-			"R445 占卜室进了事件账本：一局只出一次，未用尽前整层不再出现（违例 %s）"
+			"R575/R445 占卜室进了事件账本：触发时也不会再出（违例 %s）"
 			% ("无" if r445_div_hit == "" else r445_div_hit))
+	RunState.event_kinds_used = r445_div_sv
 
 	# ③ 续档：账本要跟着存档走，否则读档后同一局又能抽到旧事件
 	RunState.end_run()
@@ -7182,7 +7214,7 @@ func _init() -> void:
 			"R374 续档：event_kinds_used 进存档并能原样读回（%s）"
 			% str(RunState.event_kinds_used))
 
-	# ④ 外部预生成的地图（map_scene 兜底 / 出图都这么干）→ start_run 要把图上事件登记进账本
+	# ④ R575：预生成地图的事件格不带子类型 → start_run 不该往账本登记任何东西
 	var r374_pre_rng := RandomNumberGenerator.new()
 	r374_pre_rng.seed = 660001
 	var r374_pre: Array = RogueMap.generate(r374_pre_rng, GameLayers.LAYER_DEFAULT)
@@ -7192,8 +7224,8 @@ func _init() -> void:
 			r374_pre_first = str(r374_pc.get("event_kind", ""))
 			break
 	RunState.start_run(r374_pre, GameLayers.LAYER_DEFAULT)
-	check(r374_pre_first != "" and RunState.event_kinds_used.has(r374_pre_first),
-			"R374 预生成地图：start_run 把图上已有事件登记进本局账本（%s）" % r374_pre_first)
+	check(r374_pre_first == "" and RunState.event_kinds_used.is_empty(),
+			"R575 预生成地图：生成期不预定事件，start_run 不预登记账本")
 	RunState.end_run()
 
 	# ⑤ R445（用户口径「这一局不会再出现占卜室」）：**R374 之前的老存档没有账本字段**，
@@ -20717,13 +20749,13 @@ func _init() -> void:
 	check(bool(r555_res.get("ok", false))
 			and RunState.current_node_id == r555_target
 			and RunState.cleared_ids.has(r555_target)
-			and RunState.chocolate == r555_choco_before - 1,
-			"R555 飞行器：传送成功（标记走过 + 扣 1 巧克力 + 换格）")
+			and RunState.chocolate == r555_choco_before
+			and int(r555_res.get("cost", -1)) == 0,
+			"R575 飞行器：传送成功（标记走过 + 换格，**不消耗巧克力**）")
 	check(not bool(RunState.flyer_teleport(r555_target).get("ok", false)),
 			"R555 飞行器：已经走过的格子不再能飞")
-	# R574：入口已按巧克力过滤，这里只验引擎侧最后一道防死局兜底
-	# 巧克力不足（< 2）飞不过去 —— 候选仍在，但传送被拦
-	RunState.chocolate = 1
+	# R575：飞行器不消耗巧克力 → 巧克力见底也能飞（「遇不到」由触发时过滤保证）
+	RunState.chocolate = 0
 	var r555_cands2 := RunState.flyer_candidates()
 	var r555_target2 := -1
 	for r555_c2: Dictionary in r555_cells:
@@ -20732,10 +20764,11 @@ func _init() -> void:
 			r555_target2 = r555_id2
 			break
 	check(r555_target2 >= 0,
-			"R555 飞行器：巧克力不足时候选仍在（选格不看巧克力，传送才拦）")
-	check(not bool(RunState.flyer_teleport(r555_target2).get("ok", false))
-			and RunState.chocolate == 1,
-			"R555 飞行器：巧克力不足 2 块时传送被拒（扣完至少得剩 1）")
+			"R575 飞行器：巧克力见底时候选仍在（选格不看巧克力）")
+	var r555_res2 := RunState.flyer_teleport(r555_target2)
+	check(bool(r555_res2.get("ok", false)) and RunState.chocolate == 0
+			and int(r555_res2.get("cost", -1)) == 0,
+			"R575 飞行器：巧克力为 0 也能传送，且 cost = 0（不消耗巧克力）")
 	# 源码锁
 	check_src("_is_flyer()" in FileAccess.get_file_as_string("res://scripts/event_scene.gd"),
 			"R555 飞行器：事件场景接了分支")
@@ -20743,64 +20776,125 @@ func _init() -> void:
 			"R555 飞行器：地图场景真的有选格模式")
 	check_src("flyer_candidates" in FileAccess.get_file_as_string("res://scripts/run_state.gd"),
 			"R555 飞行器：引擎真的有传送候选逻辑")
-	# ==== R574：巧克力不足时**遇不到**飞行器（入口过滤，不是遇到不能用）====
-	# ① 数据层判据：唯一口在 GameLayers，别在 UI 里另写一份 chocolate < 2
-	check(GameLayers.FLYER_MIN_CHOCOLATE == 2,
-			"R574：飞行器最低巧克力 = 2（扣 1 后至少剩 1）")
-	check(not GameLayers.event_kind_available("flyer", 1)
-			and not GameLayers.event_kind_available("flyer", 0)
-			and GameLayers.event_kind_available("flyer", 2),
-			"R574：event_kind_available 只在巧克力 >= 2 时放行飞行器")
+	# ==== R575：事件在触发时才决定 + 飞行器不消耗巧克力 ====
+	# ① 数据层：唯一判据口在 GameLayers；阈值 = 1（巧克力见底 = 入夜）
+	check(GameLayers.FLYER_MIN_CHOCOLATE == 1,
+			"R575：飞行器出现门槛 = 巧克力 >= 1（不消耗巧克力，见底才遇不到）")
+	check(not GameLayers.event_kind_available("flyer", 0)
+			and GameLayers.event_kind_available("flyer", 1)
+			and GameLayers.event_kind_available("flyer", 12),
+			"R575：event_kind_available 只在巧克力见底时挡住飞行器")
 	check(GameLayers.event_kind_available("pear", 0)
-			and GameLayers.event_kind_available("hero", 1),
-			"R574：其它事件不受巧克力约束")
-	# ② 抽取过滤：chocolate >= 0 时飞行器不入候选；-1 保持旧行为（测试 / 工具）
-	var r574_rng := RandomNumberGenerator.new()
-	r574_rng.seed = 574001
-	var r574_seen_low := false
-	for r574_i in 400:
-		if GameLayers.roll_event_kind(GameLayers.LAYER_TWO, r574_rng, {}, 1) == "flyer":
-			r574_seen_low = true
-			break
-	check(not r574_seen_low,
-			"R574：巧克力不足 2 块时 400 次抽取都抽不到飞行器")
-	var r574_rng2 := RandomNumberGenerator.new()
-	r574_rng2.seed = 574002
-	var r574_seen_ok := false
-	for r574_j in 400:
-		if GameLayers.roll_event_kind(GameLayers.LAYER_TWO, r574_rng2, {}, 12) == "flyer":
-			r574_seen_ok = true
-			break
-	check(r574_seen_ok,
-			"R574：巧克力充足时飞行器仍能被抽到（没被误删出池）")
-	# ③ 进房替换：同一格在巧克力 1 / 12 两种状态下走 resolve_event_kind
-	var r574_sv_used: Dictionary = RunState.event_kinds_used.duplicate()
-	var r574_cell := {"id": 17, "type": "event", "event_kind": "flyer",
-			"layer": GameLayers.LAYER_TWO}
-	RunState.event_kinds_used = {"pear": true, "hero": true}
-	RunState.chocolate = 1
-	var r574_low := RunState.resolve_event_kind(r574_cell)
-	check(str(r574_low.get("event_kind", "flyer")) != "flyer",
-			"R574：巧克力不足时进房过滤把飞行器格换掉（或降级成战斗）")
-	check(r574_cell.get("event_kind") == "flyer",
-			"R574：过滤只改返回的副本，不污染 map_cells 本体")
+			and GameLayers.event_kind_available("hero", 0),
+			"R575：其它事件不受巧克力约束")
+	# ② 生成期：事件格子只是事件格，event_kind 恒空
+	var r575_gen_empty := true
+	var r575_gen_events := 0
+	for r575_s in 12:
+		var r575_grng := RandomNumberGenerator.new()
+		r575_grng.seed = 575000 + r575_s
+		var r575_gm: Array = RogueMap.generate(r575_grng, GameLayers.LAYER_TWO)
+		for r575_gc: Dictionary in r575_gm:
+			if str(r575_gc.get("type", "")) != "event":
+				continue
+			r575_gen_events += 1
+			if str(r575_gc.get("event_kind", "")) != "":
+				r575_gen_empty = false
+	check(r575_gen_events > 0 and r575_gen_empty,
+			"R575 生成期：%d 个事件格全部不带子类型（触发时才决定）" % r575_gen_events)
+	# ③ 触发期：巧克力见底时遇不到飞行器；充足时能遇到
+	var r575_sv_bank: Dictionary = RunState.event_kinds_used
+	var r575_sv_map: Array = RunState.map_cells
+	var r575_sv_choco: int = RunState.chocolate
+	var r575_low_seen := false
+	var r575_ok_seen := false
+	for r575_t in 30:
+		var r575_trng := RandomNumberGenerator.new()
+		r575_trng.seed = 576000 + r575_t
+		var r575_tm: Array = RogueMap.generate(r575_trng, GameLayers.LAYER_TWO)
+		RunState.map_cells = r575_tm
+		RunState.event_kinds_used = {}
+		RunState.chocolate = 0
+		for r575_tc: Dictionary in r575_tm:
+			if str(r575_tc.get("type", "")) != "event":
+				continue
+			var r575_low := RunState.resolve_event_kind(r575_tc)
+			if str(r575_low.get("event_kind", "")) == "flyer":
+				r575_low_seen = true
+		var r575_tm2: Array = RogueMap.generate(r575_trng, GameLayers.LAYER_TWO)
+		RunState.map_cells = r575_tm2
+		RunState.event_kinds_used = {}
+		RunState.chocolate = 12
+		for r575_tc2: Dictionary in r575_tm2:
+			if str(r575_tc2.get("type", "")) != "event":
+				continue
+			var r575_high := RunState.resolve_event_kind(r575_tc2)
+			if str(r575_high.get("event_kind", "")) == "flyer":
+				r575_ok_seen = true
+	check(not r575_low_seen and r575_ok_seen,
+			"R575 触发期：巧克力见底时 30 张图没有一格出飞行器，充足时能遇到")
+	# ④ 决定只做一次：结果写回 map_cells 并登记账本；老档已带 kind 的格子沿用
+	var r575_one := {"id": 0, "col": 0, "row": 0, "type": "event",
+			"hidden": false, "revealed": true, "doors": [], "layer": 2,
+			"event_kind": ""}
+	RunState.map_cells = [r575_one]
+	RunState.event_kinds_used = {}
 	RunState.chocolate = 12
-	var r574_ok := RunState.resolve_event_kind(r574_cell)
-	check(str(r574_ok.get("event_kind", "")) == "flyer",
-			"R574：巧克力充足时飞行器格原样保留")
-	RunState.event_kinds_used = r574_sv_used
-	RunState.chocolate = r555_sv_choco
-	# ④ 分发 + 源码锁：界面入口真的调了过滤、事件页不再有禁用按钮
-	check_src("resolve_event_kind" in FileAccess.get_file_as_string("res://scripts/map_scene.gd"),
-			"R574：进房统一入口 _dispatch_node 调了 resolve_event_kind")
-	check_src("resolve_event_kind" in FileAccess.get_file_as_string("res://scripts/run_state.gd"),
-			"R574：引擎侧真的有进房过滤")
-	var r574_ev_src := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
-	check_src("巧克力不足，飞不起来" not in r574_ev_src
-			and "rest_btn.disabled = RunState.chocolate < 2" not in r574_ev_src,
-			"R574：事件页不再有「遇到但不能用」的禁用按钮")
+	var r575_decided := RunState.resolve_event_kind(r575_one)
+	var r575_kind := str(r575_decided.get("event_kind", ""))
+	check(r575_kind != "" and str(RunState.map_cells[0].get("event_kind", "")) == r575_kind
+			and RunState.event_kinds_used.has(r575_kind),
+			"R575 触发期：决定写回地图本体并登记账本（%s）" % r575_kind)
+	check(str(RunState.resolve_event_kind(RunState.map_cells[0]).get("event_kind", "")) == r575_kind,
+			"R575 触发期：同一格不会重摇（第二次沿用已定型的事件）")
+	var r575_legacy := {"id": 0, "type": "event", "event_kind": "divination", "layer": 1}
+	check(str(RunState.resolve_event_kind(r575_legacy).get("event_kind", "")) == "divination",
+			"R575：R575 之前的老存档里已带 event_kind 的格子原样沿用")
+	# ⑤ 池空 → 触发那一刻降级成一般战斗
+	RunState.event_kinds_used = {}
+	for r575_k_all in GameLayers.event_kinds(GameLayers.LAYER_TWO):
+		RunState.event_kinds_used[r575_k_all] = true
+	var r575_empty_cell := {"id": 0, "type": "event", "event_kind": "", "layer": 2}
+	RunState.map_cells = [r575_empty_cell]
+	RunState.chocolate = 12
+	var r575_starved := RunState.resolve_event_kind(r575_empty_cell)
+	check(str(r575_starved.get("type", "")) == "battle"
+			and str(r575_starved.get("event_kind", "")) == "",
+			"R575：本局事件池用尽 → 触发时那一格降级成一般战斗")
+	RunState.map_cells = r575_sv_map
+	RunState.event_kinds_used = r575_sv_bank
+	RunState.chocolate = r575_sv_choco
+	# ⑥ 飞行器不消耗巧克力（引擎 + 源码锁）
+	check(int(r555_res.get("cost", -1)) == 0 and int(r555_res2.get("cost", -1)) == 0,
+			"R575：飞行器传送 cost = 0（巧克力充足 / 见底两态都不扣）")
+	var r575_rs := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	var r575_ev := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	var r575_ms := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	var r575_rm := FileAccess.get_file_as_string("res://scripts/rogue_map.gd")
+	check_src("resolve_event_kind" in r575_ms and r575_rs.find("event_pick") >= 0,
+			"R575：进房统一入口调触发期决定，且用分类种子派生 rng（不消耗 run_rng）")
+	check_src(r575_rm.find('cell["event_kind"] = ek') < 0
+			and r575_rm.find('cell3["event_kind"] = ek3') < 0,
+			"R575 源码：地图生成 / 重摇期不再写死事件子类型")
+	var r575_ft_a := r575_rs.find("static func flyer_teleport(")
+	var r575_ft_b := r575_rs.find("static func lucky7_left(")
+	var r575_ft := r575_rs.substr(r575_ft_a, r575_ft_b - r575_ft_a)
+	check_src(r575_ft_a >= 0 and r575_ft_b > r575_ft_a
+			and not r575_ft.contains("chocolate -") and not r575_ft.contains("sync_fatigue"),
+			"R575 源码：飞行器传送函数里不再有扣巧克力 / 疲惫同步")
+	check_src("消耗 1 块巧克力" not in r575_ev and "FLYER_NO_FUEL_DESC" not in r575_ev
+			and "巧克力不足" not in r575_ev,
+			"R575 源码：事件页不再有消耗 / 不足 / 灰按钮那套文案")
+	check_src("消耗 1 块巧克力" not in r575_ms,
+			"R575 源码：地图选格提示也不再写「消耗 1 块巧克力」")
+	var r575_ref_a := r575_ev.find("func _refresh() -> void:")
+	var r575_ref_b := r575_ev.find("func _refresh_bbq() -> void:")
+	var r575_ref := r575_ev.substr(r575_ref_a, r575_ref_b - r575_ref_a)
+	check_src(r575_ref_a >= 0 and r575_ref_b > r575_ref_a
+			and r575_ref.contains("_is_flyer()"),
+			"R575 源码：飞行器页在 _refresh 白名单里（离开按钮不被「不烤肉」覆盖）")
 	check_src("FLYER_MIN_CHOCOLATE" in FileAccess.get_file_as_string("res://scripts/game_layers.gd"),
-			"R574：阈值常量只在 GameLayers 定义一处")
+			"R575：阈值常量只在 GameLayers 定义一处")
 	# 还原
 	RunState.map_cells = r555_sv_cells
 	RunState.cleared_ids = r555_sv_cleared

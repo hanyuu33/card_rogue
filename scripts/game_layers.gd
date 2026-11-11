@@ -92,8 +92,9 @@ const LAYERS := {
 			# 学点真本事（2 场战斗后得「飞踢」）/ 要学绝技（2 场精英或 Boss 后得「冲拳」）。
 			"martial": 16,
 			# R555 飞行器（第二层专属）：使用飞行器 → 在地图上任选一格没走过的房间传送过去
-			# （消耗 1 巧克力）/ 不移动。R574：巧克力不足 2 块时**根本不会遇到**这个事件，
-			# 过滤在进房统一入口 `RunState.resolve_event_kind()`，判据见 FLYER_MIN_CHOCOLATE。
+			# / 不移动。R575：**不消耗巧克力**；巧克力见底（入夜）时遇不到这个事件。
+			# 事件格子生成时不预定内容，进房那一刻才按当下的巧克力决定
+			# （唯一口 `RunState.resolve_event_kind()`，判据见 FLYER_MIN_CHOCOLATE）。
 			"flyer": 16,
 		},
 	},
@@ -221,15 +222,16 @@ static func event_name(kind: String) -> String:
 	return str(EVENT_NAMES.get(kind, kind))
 
 
-## R574（用户口径）：巧克力不足时**根本遇不到飞行器事件**，不是遇到了再把按钮置灰。
-## 2 块的来历：飞一次扣 1，扣完至少还得剩 1，才不会把自己送进「巧克力耗尽 → 入夜」。
-const FLYER_MIN_CHOCOLATE := 2
+## R575（用户口径）：飞行器**不消耗巧克力**；巧克力见底（入夜）时根本遇不到这个事件。
+## 1 块的来历：巧克力按「走进新房间」逐格扣，扣到 0 就入夜；见底时飞行器不再刷出。
+## 刷出来之后飞过去也不再额外收费 —— 门槛在「遇不遇得到」，不在「用不用得起」。
+const FLYER_MIN_CHOCOLATE := 1
 
 
 static func event_kind_available(kind: String, chocolate: int) -> bool:
-	## 该事件子类型在「当前巧克力」下能不能被遇到 —— 唯一判据口，
-	## 进房过滤（`RunState.resolve_event_kind`）与抽取过滤（`roll_event_kind`）共用。
-	## 目前只有飞行器有条件；别在 UI 里另写一份 `chocolate < 2`。
+	## 该事件子类型在「当前巧克力」下能不能被遇到 —— 唯一判据口。
+	## R575：只在**触发（进房）那一刻**由 `RunState.resolve_event_kind()` 使用；
+	## 生成期不预定事件，别在 UI / 地图生成里另写一份 `chocolate < 1`。
 	if kind == "flyer":
 		return chocolate >= FLYER_MIN_CHOCOLATE
 	return true
@@ -242,13 +244,14 @@ static func roll_event_kind(layer: int, rng: RandomNumberGenerator,
 	## **一局只出一次（R374，R445 复核保留）**：`used` = **本局**已经出过的子类型集合
 	## （`RunState.event_kinds_used`，跨层共用同一份）。在 `used` 里的子类型不再参与抽取；
 	## **池子抽空了不会清空重来** —— 直接返回 `""`，由调用方把那格降级成一般战斗
-	## （唯一处理点 = `RogueMap._make_cells`）。
+	## （R575：唯一处理点 = `RunState.resolve_event_kind()`，即触发那一刻）。
 	## R445（用户口径「这一局不会再出现占卜事件，除非事件用尽」）：占卜室跟其它事件走
 	## **同一本账**，所以第一轮里只会撞见一次；用尽之后那格变成一般战斗，不会重开。
 	## `used` 是**就地修改**的（Dictionary 传引用）。
 	## ⚠️ 每层各建一份 `used` = 回到「层内不重复、换层又撞」的老毛病 —— 必须跨层共用。
 	## 不传 `used`（默认空表）= 纯按权重抽、允许重复（测试 / 工具用）。
-	## R574：`chocolate >= 0` 时按 `event_kind_available()` 过滤候选（飞行器不足 2 块不参与抽）；
+	## R575：`chocolate >= 0` 时按 `event_kind_available()` 过滤候选 —— 这是「触发时决定事件」
+	## 的唯一口径（进房由 `RunState.resolve_event_kind()` 传入当下的巧克力）。
 	## 传 -1（默认）= 不按巧克力过滤，保持测试 / 工具原有行为。
 	var w := event_weights(layer)
 	if w.is_empty():
