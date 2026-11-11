@@ -196,3 +196,15 @@ R577b 只是把 98×26 的**文字横条槽**里的字换成 22px 小图，底�
   （R577c 刚拆过框，别再装回去）。三个纯函数即界面分发唯一口，smoke 直接调它们验。
 - 演示口：`battle.tscn -- --screenshot --relichl --shotframe 600`（6 亮 + 6 灭同屏）。
   验收页 `_preview/r577e_highlight.html`；补丁 `tools/_patch_r577e.py` 可重跑。
+
+## R577f：单层暖黄转动弧 + 蓝色边缘光（同日补轮，已落地）
+
+- 店长最终口径：**不需要加深**，转动层保持 P1 原黄，蓝色边缘光不变。
+  动态层严格只有一圈转动弧；中心亮斑柔光 / 完整硬环 / 图标爆白全部删除。
+- 蓝色边缘光不是画框：由 `tools/_make_r577f_rims.py` 沿每张图标 alpha 轮廓
+  预生成 `assets/ui/relic_rim_<id>.png`（60 张，128x128 RGBA，与源图同尺寸），
+  绘制时叠在图标本体之后。唯一取图口 `UiAssets.relic_rim(id)`，缺图回退只画弧。
+- 参数唯一口 `scripts/relic_fx.gd`：2.4s 一圈、每格 +22° 错相、9 段渐隐拖尾，
+  头 (255,222,150) / 尾 (214,140,40)；`ICON_LIT` 分量全 <= 1 不爆白。
+- 演示口沿用 `--relichl`（6 亮 + 6 灭）/ `--r314relic` / `--reliccount N`。
+  验收页 `_preview/r577f_review.html`；补丁 `tools/_patch_r577f.py` 可重跑。

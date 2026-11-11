@@ -14,6 +14,8 @@ extends Control
 const UiTheme = preload("res://scripts/ui_theme.gd")
 ## R577d：战斗道具格排版的唯一口（纯静态脚本，故意不写 class_name）。
 const RelicBarLayout = preload("res://scripts/relic_bar_layout.gd")
+## R577f：光效参数唯一口（同样无 class_name，显式 preload headless 才读得到）。
+const RelicFx = preload("res://scripts/relic_fx.gd")
 const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiRoll = preload("res://scripts/ui_roll.gd")
@@ -15017,21 +15019,39 @@ func _relic_icon_lit(i: int) -> bool:
 
 
 func _relic_lit_phase() -> float:
-	## 呼吸相位（0..1）：柔光 / 图标提亮 / 外环共用同一相位，别各跳各的。
-	return 0.5 + 0.5 * sin(float(_now()) / 220.0)
+	## R577f：唯一动态层（暖黄转动弧）的主时钟相位 0..1，周期 2.4s。
+	## 柔光 / 硬环 / 图标爆白三层都删了，只剩这一层在转，别再引入第二套节奏。
+	return RelicFx.sweep_phase(float(_now()))
+
+
+func _relic_sweep_angle(i: int) -> float:
+	## R577f：转动弧起始角（度），每格按格位错相；test_smoke 直接调它验。
+	return RelicFx.sweep_angle(float(_now()), i)
+
+
+func _draw_relic_sweep(rect: Rect2, i: int) -> void:
+	## R577f：**唯一动态层** —— 9 段短弧拼出 99° 渐隐拖尾，绕图标缓慢转动。
+	## 没有完整硬环、没有中心亮斑、没有第二层柔光（店长口径：单层）。
+	var cc := rect.get_center()
+	var rad := rect.size.x * 0.5 + 9.0
+	var a0 := _relic_sweep_angle(i)
+	for j in RelicFx.SWEEP_SEGMENTS:
+		var ang0 := deg_to_rad(a0 - (float(j) + 1.0) * RelicFx.SWEEP_SEG_DEG)
+		var ang1 := deg_to_rad(a0 - float(j) * RelicFx.SWEEP_SEG_DEG)
+		draw_arc(cc, rad, ang0, ang1, 5, RelicFx.sweep_color(j), RelicFx.SWEEP_WIDTH, true)
 
 
 func _relic_icon_modulate(i: int) -> Color:
-	## R577e：**图标本体**的着色 —— 亮着的提亮成青白，灰掉的压灰，其余原色。
-	## 这是「道具图标高亮」的界面分发口（test_smoke 直接调它验，不靠截图猜）。
+	## R577f：图标本体的着色 —— 亮着的只做极轻冷调（分量 <= 1，LDR 不爆白），
+	## 灰掉的压灰，其余原色。高亮交给「蓝色边缘光 + 暖黄转动弧」两层。
+	## 这是界面分发口（test_smoke 直接调它验，不靠截图猜）。
 	var ids := _relic_bar_ids()
 	if i < 0 or i >= ids.size():
 		return Color.WHITE
 	if RunState.is_relic_spent(int(ids[i])):
 		return Color(0.52, 0.52, 0.55, 0.85)
 	if _relic_icon_lit(i):
-		var ph := _relic_lit_phase()
-		return Color(1.10 + 0.14 * ph, 1.22 + 0.16 * ph, 1.34 + 0.16 * ph, 1.0)
+		return RelicFx.ICON_LIT
 	return Color.WHITE
 
 
@@ -15060,12 +15080,9 @@ func _draw_relic_bar() -> void:
 		var rspent := RunState.is_relic_spent(int(ids[i]))
 		var scol := Color("8a8f98") if rspent else rel.badge_color()
 		# R577c（店长口径）：去掉每件道具的横条底 / 边框 / 来源色块，图标本身就是格子。
-		# R577e：高亮 = **图标本体提亮** + 外圈青白呼吸环；环画在图标之后才看得全，
-		# 底层柔光用 fx_glow 贴图（R577c 不要框，硬边圆盘不再画）。
-		var lit577e := _relic_icon_lit(i)
-		if lit577e and _fx_glow_tex != null:
-			draw_texture_rect(_fx_glow_tex, rect.grow(13.0), false,
-					Color(0.56, 0.92, 1.0, 0.30 + 0.22 * _relic_lit_phase()))
+		# R577f：高亮 = 蓝色边缘光（恒定、贴轮廓）+ 唯一动态层暖黄转动弧。
+		# 中心亮斑柔光 / 完整硬环 / 图标爆白三层全删（店长：单层 + 蓝边，不需要加深）。
+		var lit577f := _relic_icon_lit(i)
 		# R577b 的唯一取图口不变；缺图才回退到 R309 那套文字（导出包照常可玩）。
 		var tex := UiAssets.relic_icon(int(ids[i]))
 		if tex == null:
@@ -15085,13 +15102,13 @@ func _draw_relic_bar() -> void:
 					Color("9a9488") if rspent else rel.name_color(Color("4a3c14")), -1)
 		else:
 			draw_texture_rect(tex, rect, false, _relic_icon_modulate(i))
-		# R577e 顶环：画在图标**之后**，完整压在图标外沿上（旧版画在前面被 44x44 吃掉）。
-		if lit577e:
-			var lit_ph := _relic_lit_phase()
-			var lit_col := Color(0.56, 0.92, 1.0)
-			var cc := rect.get_center()
-			draw_arc(cc, rect.size.x * 0.66, 0.0, TAU, 40,
-					Color(lit_col.r, lit_col.g, lit_col.b, 0.72 + 0.24 * lit_ph), 2.2, true)
+			# R577f：蓝色边缘光贴图标 alpha 轮廓，画在本体之后；缺 rim 时只画弧。
+			var rim577f := UiAssets.relic_rim(int(ids[i]))
+			if lit577f and rim577f != null:
+				draw_texture_rect(rim577f, rect, false, Color.WHITE)
+		# R577f：唯一动态层 —— 暖黄渐隐拖尾弧，画在蓝边之后，每格错相 22°。
+		if lit577f:
+			_draw_relic_sweep(rect, i)
 	# 道具太多装不下 → 末位换成「+N 点击查看全部」摘要行（点道具栏打开浏览面板）
 	if n_rel > shown_r:
 		_draw_more_tile(_relic_rect(shown_r), "+%d" % (n_rel - shown_r), "")

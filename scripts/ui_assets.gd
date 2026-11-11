@@ -174,6 +174,20 @@ static func relic_icon(id: int) -> Texture2D:
 	return get_tex("relic_icon_%d" % id)
 
 
+static func relic_rim_path(id: int) -> String:
+	## R577f：沿图标 alpha 轮廓预生成的「蓝色边缘光」叠加图（128x128 RGBA）。
+	## 文件名即契约；换 rim 只覆盖 assets/ui/relic_rim_<id>.png。
+	return path_for("relic_rim_%d" % id)
+
+
+static func relic_rim(id: int) -> Texture2D:
+	## R577f：蓝色边缘光**唯一取图口**。缺图返回 null → 界面只画转动弧，照常可玩。
+	## 6061~6063 三样信物走 R543 的 key_icon_*，且不参与高亮判定，故无 rim。
+	if id == 6061 or id == 6062 or id == 6063:
+		return null
+	return get_tex("relic_rim_%d" % id)
+
+
 static func div_orb_glass() -> Texture2D:
 	## 水晶球玻璃壳（R511）：从 `bg_divination.png` 原图剥离的高光/内壁/边缘，
 	## 只保留亮部（暗部近乎全黑）。代码侧用 **ADD 混合**盖在幻象之上，

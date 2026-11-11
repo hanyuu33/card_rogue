@@ -16,6 +16,8 @@ const CardMorphFx = preload("res://scripts/card_morph_fx.gd")
 const UiDrag = preload("res://scripts/ui_drag.gd")
 ## R577d：排版唯一口（无 class_name，显式 preload 才能被 headless 套件调用）。
 const RelicBarLayout = preload("res://scripts/relic_bar_layout.gd")
+## R577f：光效参数唯一口（同样无 class_name，显式 preload）。
+const RelicFx = preload("res://scripts/relic_fx.gd")
 
 var fails := 0
 
@@ -25303,9 +25305,46 @@ func _init() -> void:
 			and r577e_bs.contains("func _relic_icon_lit("),
 			"R577e 源码：图标本体提亮与亮/灭判定各有唯一界面分发口")
 	var r577e_p_icon := r577e_bs.find("draw_texture_rect(tex, rect, false, _relic_icon_modulate(i))")
-	var r577e_p_ring := r577e_bs.find("R577e 顶环")
-	check_src(r577e_p_icon > 0 and r577e_p_ring > r577e_p_icon,
-			"R577e 源码：外环画在图标之后（不会被 44x44 贴图吃掉）")
+	var r577f_p_rim := r577e_bs.find("draw_texture_rect(rim577f, rect, false, Color.WHITE)")
+	var r577f_p_arc := r577e_bs.find("_draw_relic_sweep(rect, i)")
+	check_src(r577e_p_icon > 0 and r577f_p_rim > r577e_p_icon and r577f_p_arc > r577f_p_rim,
+			"R577f 源码：蓝边与转动弧都画在图标之后（不会被 44x44 贴图吃掉）")
+
+	# ============ R577f：单层转动 + 蓝色边缘光（P1 原黄，不加深） ============
+	check(RelicFx.SWEEP_CYCLE_MS == 2400.0 and RelicFx.SWEEP_PHASE_STEP_DEG == 22.0
+			and RelicFx.SWEEP_SEGMENTS == 9,
+			"R577f 数据：唯一动态层 2.4s 一圈 / 每格错相 22° / 9 段拖尾")
+	check(RelicFx.sweep_phase(0.0) == 0.0 and RelicFx.sweep_phase(2400.0) == 0.0
+			and RelicFx.sweep_phase(600.0) > 0.24 and RelicFx.sweep_phase(600.0) < 0.26,
+			"R577f 数据：主时钟相位守恒（0 / 2.4s 归零，600ms = 0.25）")
+	check(absf(RelicFx.sweep_angle(1000.0, 1) - RelicFx.sweep_angle(1000.0, 0)
+			- RelicFx.SWEEP_PHASE_STEP_DEG) < 0.001,
+			"R577f 数据：相邻两格弧角差恒为 22°（不齐转）")
+	var r577f_head := RelicFx.sweep_color(0)
+	check(r577f_head.r > 0.99 and r577f_head.g > 0.86 and r577f_head.b > 0.58
+			and r577f_head.b < 0.60,
+			"R577f 数据：转动层是 P1 原黄档（未加深）")
+	check(RelicFx.sweep_color(8).a < r577f_head.a * 0.1,
+			"R577f 数据：拖尾末端几乎全透明（渐隐）")
+	var r577f_lit := RelicFx.ICON_LIT
+	check(r577f_lit.r <= 1.0 and r577f_lit.g <= 1.0 and r577f_lit.b <= 1.0,
+			"R577f 数据：图标本体着色分量 <= 1（LDR 不爆白）")
+	var r577f_missing := 0
+	for r577f_id in range(6001, 6061):
+		if not ResourceLoader.exists("res://assets/ui/relic_rim_%d.png" % r577f_id):
+			r577f_missing += 1
+	check(r577f_missing == 0,
+			"R577f 素材：60 张蓝色边缘光贴图齐全（缺 %d）" % r577f_missing)
+	var r577f_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r577f_ua := FileAccess.get_file_as_string("res://scripts/ui_assets.gd")
+	check_src(r577f_bs.contains("func _draw_relic_sweep(")
+			and r577f_bs.contains("func _relic_sweep_angle(")
+			and r577f_ua.contains("func relic_rim("),
+			"R577f 源码：单层转动与蓝色边缘光各有唯一口")
+	check_src(not r577f_bs.contains("R577e 顶环")
+			and not r577f_bs.contains("_fx_glow_tex, rect.grow(13.0)")
+			and not r577f_bs.contains("Color(1.10 + 0.14 * ph"),
+			"R577f 源码：中心亮斑 / 完整硬环 / 爆白 modulate 全删")
 
 	# ================= R339：续档不重复计数 / 一层只打一次 Boss =================
 	# ① 检查点必须写「进战斗之前」的快照：lucky 7 的跨战斗计数在开局第 1 个我方回合就 +1。

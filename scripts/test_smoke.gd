@@ -608,14 +608,30 @@ func _check_relic_highlight(scene: Variant) -> void:
 		_smoke_fail("R577e 界面分发：风妖精该亮、鸭嘴不该亮")
 		return
 	var r577e_lit_col: Variant = scene._relic_icon_modulate(0)
-	if r577e_lit_col.r <= 1.0 or r577e_lit_col.b <= 1.0:
-		_smoke_fail("R577e 界面分发：亮着的图标本体没提亮（%s）" % str(r577e_lit_col))
+	if r577e_lit_col == Color.WHITE:
+		_smoke_fail("R577f 界面分发：亮着的图标本体应走极轻冷调（%s）" % str(r577e_lit_col))
+		return
+	if r577e_lit_col.r > 1.0 or r577e_lit_col.g > 1.0 or r577e_lit_col.b > 1.0:
+		_smoke_fail("R577f 界面分发：图标着色分量 >1 会爆白（%s）" % str(r577e_lit_col))
 		return
 	if scene._relic_icon_modulate(1) != Color.WHITE:
 		_smoke_fail("R577e 界面分发：不亮的图标应保持原色")
 		return
 	if not scene._relic_bar_lit():
 		_smoke_fail("R577e 界面分发：有亮图标时呼吸重绘没接上")
+		return
+	# R577f 界面分发：单层转动 + 蓝色边缘光
+	if not ResourceLoader.exists("res://assets/ui/relic_rim_6042.png"):
+		_smoke_fail("R577f 界面分发：风妖精的蓝色边缘光贴图缺失")
+		return
+	var r577f_a0: float = scene._relic_sweep_angle(0)
+	var r577f_a1: float = scene._relic_sweep_angle(1)
+	if absf(r577f_a1 - r577f_a0 - 22.0) > 0.001:
+		_smoke_fail("R577f 界面分发：相邻格转动弧没按 22° 错相")
+		return
+	var r577f_ph: float = scene._relic_lit_phase()
+	if r577f_ph < 0.0 or r577f_ph >= 1.0:
+		_smoke_fail("R577f 界面分发：主时钟相位越界（%f）" % r577f_ph)
 		return
 
 
