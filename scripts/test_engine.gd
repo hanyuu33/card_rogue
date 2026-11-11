@@ -34112,8 +34112,9 @@ func _init() -> void:
 	# 复位，别把测试态留给后续用途
 	# ---- R578：游戏名唯一口（GameBrand）----
 	# 「title 能自定义」的判据不是某一版文案，而是**只有一个口**：
-	# 改 scripts/game_brand.gd 一处，五处显示跟着变 ——
-	# 窗口标题 / 大标题 / 副标题 / 右下版本串 / 鸣谢页抬头。
+	# 改 scripts/game_brand.gd 一处，四处显示跟着变 ——
+	# 窗口标题 / 大标题 / 右下版本串 / 鸣谢页抬头。
+	# R579：副标题已移除，所以从「五处」变「四处」。
 	check(GameBrand.NAME_CN != "", "R578 游戏名常量非空（空名会画不出标题）")
 	check(GameBrand.display_name() == GameBrand.NAME_CN, "R578 display_name 取自 NAME_CN")
 	check(GameBrand.spaced("卡牌肉鸽") == "卡 牌 肉 鸽", "R578 中文短名逐字加空格")
@@ -34122,9 +34123,7 @@ func _init() -> void:
 	check(GameBrand.spaced("卡牌肉鸽之深渊回响") == "卡牌肉鸽之深渊回响",
 			"R578 长中文名（>6 字）不插空格")
 	check(GameBrand.spaced("") == "", "R578 空名不炸")
-	check(GameBrand.subtitle().contains(GameBrand.VERSION), "R578 副标题带版本号（来自 VERSION）")
 	check(GameBrand.footer_text().contains(GameBrand.VERSION), "R578 右下版本串来自 VERSION")
-	check(not GameBrand.subtitle().contains("{v}"), "R578 副标题 {v} 占位已替换")
 	check(not GameBrand.footer_text().contains("{v}"), "R578 版本串 {v} 占位已替换")
 	check(GameBrand.window_title() == GameBrand.display_name(),
 			"R578 无英文名时窗口标题 = 中文名")
@@ -34138,11 +34137,19 @@ func _init() -> void:
 	check_src(r578_ts.find("window_set_title(\"卡牌肉鸽\")") < 0,
 			"R578 源码：窗口标题不再硬编码")
 	check_src(r578_ts.contains("_apply_brand()"),
-			"R578 源码：标题 / 副标题由 _apply_brand() 注入")
+			"R578 源码：标题由 _apply_brand() 注入")
 	check_src(r578_tscn.find("卡 牌 肉 鸽") < 0,
 			"R578 场景：大标题文字已清空（由脚本注入）")
-	check_src(r578_tscn.find("肉鸽版") < 0,
-			"R578 场景：副标题文字已清空（由脚本注入）")
+	# R579：副标题整体移除 —— 判「真的没了」，不是「文字被清空」。
+	# 三条各锁一个曾经挂着副标题的地方：常量口 / 场景节点 / 注入代码。
+	# 只删常量不删节点 = 留一个空 Label 占着 222~254 的位置，往后谁也不知道它干什么的。
+	var r579_gb: String = FileAccess.get_file_as_string("res://scripts/game_brand.gd")
+	check_src(r579_gb.find("SUBTITLE") < 0 and r579_gb.find("func subtitle") < 0,
+			"R579 源码：GameBrand 里没有 SUBTITLE 常量 / subtitle() 函数")
+	check_src(r578_tscn.find("SubLabel") < 0,
+			"R579 场景：title.tscn 里 SubLabel 节点已删除")
+	check_src(r578_ts.find("SubLabel") < 0,
+			"R579 源码：title_scene 不再引用 SubLabel")
 	check_src(r578_cre.contains("{name}"),
 			"R578 源码：鸣谢页抬头用 {name} 占位")
 	check_src(r578_cre.find("[font_size=58][color=#ffffff]卡牌肉鸽") < 0,

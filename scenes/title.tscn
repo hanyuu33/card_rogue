@@ -29,19 +29,6 @@ theme_override_constants/outline_size = 4
 text = ""
 horizontal_alignment = 1
 
-[node name="SubLabel" type="Label" parent="."]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 222.0
-offset_bottom = 254.0
-grow_horizontal = 2
-theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 20
-theme_override_colors/font_color = Color(0.16, 0.19, 0.26, 1)
-text = ""
-horizontal_alignment = 1
-
 [node name="Buttons" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 8

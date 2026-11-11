@@ -223,8 +223,8 @@ func _apply_brand() -> void:
 	## R578：标题 / 副标题文字从 GameBrand 注入，并按宽度**自动缩字号** ——
 	## 换成长名字或英文名时不会溢出屏幕；金线卷草的排布跟着实际字号走。
 	## ⚠️ 只改 GameBrand 就够，别在这里另写一份文案。
+	## R579：副标题整段移除（店长口径）—— 标题下直接就是按钮列，别再补回去。
 	var tl := get_node_or_null("TitleLabel") as Label
-	var sl := get_node_or_null("SubLabel") as Label
 	var t := GameBrand.title_text()
 	var fs := GameBrand.TITLE_FONT_SIZE
 	if tl != null and _font != null:
@@ -236,8 +236,6 @@ func _apply_brand() -> void:
 		tl.text = t
 		tl.add_theme_font_size_override("font_size", fs)
 	_title_fs = fs
-	if sl != null:
-		sl.text = GameBrand.subtitle()
 
 
 func _draw_title_ornaments() -> void:

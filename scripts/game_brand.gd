@@ -2,7 +2,9 @@ class_name GameBrand
 ## 品牌 / 标题配置（R578）：**游戏名的唯一来源**。
 ##
 ## 想改名字（比如上 Steam 时换成正式名 / 加英文名）时，**只改这里**就够了 ——
-## 窗口标题、标题页大标题、副标题、底部版本串、鸣谢页抬头全部从这里取。
+## 窗口标题、标题页大标题、底部版本串、鸣谢页抬头全部从这里取。
+## （R579：标题页副标题已移除 —— 名字之外只剩大标题 / 底部署名，
+##  别再把「肉鸽版 · v1.0」这类字样塞回来，店长明确不要。）
 ##
 ## ⚠️ 但有三件事这个文件管不到，改名前必须一起处理：
 ##   1. `export_presets.cfg` 的 `application/product_name` + `package/name`
@@ -22,10 +24,7 @@ const NAME_CN := "卡牌肉鸽"
 ## 英文名。留空 = 不展示；上 Steam 后填商店英文名，窗口标题会变成「中文名 (English)」。
 const NAME_EN := ""
 
-## 副标题模板。`{v}` 会被 VERSION 替换，想改文案只动这一行。
-const SUBTITLE := "肉鸽版 · v{v}"
-
-## 版本号（单一来源）：副标题、右下角版本串都从这里取。
+## 版本号（单一来源）：右下角版本串从这里取。
 const VERSION := "1.0"
 
 ## 右下角版本串模板。`{v}` → VERSION。
@@ -85,11 +84,6 @@ static func title_text() -> String:
 	if not TITLE_SPACED:
 		return display_name()
 	return spaced(display_name())
-
-
-static func subtitle() -> String:
-	## 副标题（带版本号）。
-	return SUBTITLE.replace("{v}", VERSION)
 
 
 static func footer_text() -> String:
