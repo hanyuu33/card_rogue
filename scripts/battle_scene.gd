@@ -7973,6 +7973,9 @@ func _show_over(win: bool) -> void:
 				ProfileData.bump(ProfileData.K_CLEAR + "%s:%d"
 					% [RunState.player_class, RunState.difficulty])
 				ProfileData.bump(ProfileData.K_RUN_WIN)
+				# R576 Steam 成就：真通关（打通第三层）→ 完整通关 + 职业通关 + 高难度通关。
+				if RunState.current_layer == GameLayers.LAYER_THREE:
+					SteamAchievements.note_game_clear(RunState.player_class, RunState.difficulty)
 				RunRecord.finish("win")   # 通关：整局结果记一行
 				# R471：**不再当场 `end_run()`**。结算面板弹出来的这一刻奖励面板往往还没
 				# 处理完，而 `end_run()` 会把 `pending_relic` / 卡组 / 道具一起清掉 —— 于是

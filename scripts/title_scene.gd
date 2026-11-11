@@ -30,6 +30,8 @@ func _ready() -> void:
 	add_child(sfx)
 	# R176：标题页 BGM（Holy_Place）；选人 / 地图 / 战斗各自在进入时换曲。
 	Bgm.play("title")
+	# R576：Steam 成就初始化（未装 GodotSteam 时静默跳过，见 steam_achievements.gd）。
+	SteamAchievements.init()
 	$Buttons/StartBtn.pressed.connect(_on_start)
 	$Buttons/GalleryBtn.pressed.connect(_on_gallery)
 	$Buttons/QuitBtn.pressed.connect(_on_quit)
@@ -45,6 +47,12 @@ func _ready() -> void:
 	set_btn.tooltip_text = "音效 / 音乐 / 全屏"
 	$Buttons.add_child(set_btn)
 	set_btn.pressed.connect(_on_settings)
+	# R576：鸣谢页（纯黑底滚动字）—— 引擎 / 音乐署名 / 特别鸣谢。
+	var credit_btn := Button.new()
+	credit_btn.text = "鸣谢"
+	credit_btn.tooltip_text = "引擎 / 音乐署名（PeriTune）"
+	$Buttons.add_child(credit_btn)
+	credit_btn.pressed.connect(_on_credits)
 	# R346：剧情解锁入口 —— 条件达成后点开剧情，收下里面解锁的卡牌 / 道具。
 	var story_btn := Button.new()
 	story_btn.text = "查看故事"
@@ -66,9 +74,10 @@ func _ready() -> void:
 	$Buttons.move_child(rec_btn, 3)
 	$Buttons.move_child(story_btn, 4)
 	$Buttons.move_child(set_btn, 5)
-	$Buttons.move_child($Buttons/QuitBtn, 6)
+	$Buttons.move_child(credit_btn, 6)
+	$Buttons.move_child($Buttons/QuitBtn, 7)
 	for b: Button in [$Buttons/StartBtn, $Buttons/GalleryBtn, $Buttons/QuitBtn,
-			cont_btn, rec_btn, set_btn, story_btn]:
+			cont_btn, rec_btn, set_btn, story_btn, credit_btn]:
 		b.pressed.connect(func(): sfx.play("click"))
 	# R113 按钮主次：**一屏只有一个主按钮**（开始对战）。规格全部来自 UiTheme.apply_button，
 	# 这里不写任何字号 / 圆角 / 颜色 —— 以后新界面照抄这几行即可。
@@ -79,6 +88,7 @@ func _ready() -> void:
 	UiTheme.apply_button(rec_btn, false)
 	UiTheme.apply_button(set_btn, false)
 	UiTheme.apply_button(story_btn, false)
+	UiTheme.apply_button(credit_btn, false)
 	# R166：难度档位不再在标题页选 —— 挪到角色选择界面（class_pick_scene）。
 	# R215：设置（音效 / 音乐 / 全屏）按上次保存的值套上；上次启动留下的「没打完的一局」
 	# 在这里补记成「中断」（关窗口 / 崩溃都算）。
@@ -283,3 +293,8 @@ func _on_story() -> void:
 
 func _on_settings() -> void:
 	SceneFx.goto("res://scenes/settings.tscn")
+
+
+func _on_credits() -> void:
+	## R576：鸣谢页（纯黑底滚动字）。
+	SceneFx.goto("res://scenes/credits.tscn")

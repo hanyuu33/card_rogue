@@ -61,6 +61,10 @@ static func unlocked_count() -> int:
 static func note_boss_seen(layer: int) -> void:
 	## 「见到一层 Boss」→ 累计 + 按顺序解锁职业。幂等（同一局只触发一次由调用方保证）。
 	## 测试版直接 return，不写脏玩家档案。
+	# R576 Steam 成就：直面恐惧（见到第一层 Boss）。独立于版本闸门 —— 幂等，
+	# 未装 GodotSteam 时 SteamAchievements.unlock 内部静默跳过。
+	if layer == GameLayers.LAYER_DEFAULT:
+		SteamAchievements.note_first_boss()
 	if not GameBuild.is_release():
 		return
 	if layer != GameLayers.LAYER_DEFAULT:
@@ -76,6 +80,8 @@ static func note_boss_seen(layer: int) -> void:
 static func note_layer_two_cleared() -> void:
 	## 「打通 2 层」（击败第二层 Boss）→ 当前职业难度上限 +1（封顶最高档）。
 	## 测试版直接 return。幂等：`set_class_difficulty` 只升不降，重复调也只会抬一次。
+	# R576 Steam 成就：深入腹地（打通第二层）。独立于版本闸门（幂等）。
+	SteamAchievements.note_layer2_clear()
 	if not GameBuild.is_release():
 		return
 	if not RunState.run_active:

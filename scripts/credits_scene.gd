@@ -1,0 +1,115 @@
+extends Control
+## 鸣谢页（R576）—— 纯黑底滚动字（电影式结尾字幕）。
+## 入口：标题页「鸣谢」按钮。点击 / 任意键跳过，滚完自动回标题。
+##
+## 音乐署名来自 `assets/audio/credits.md`（PeriTune · CC BY 4.0，**必须署名**，
+## 这里就是游戏内的署名载体）。新增 BGM 后记得同步更新 CREDITS_TEXT 的曲目列表。
+
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
+## 每秒上移像素（电影式字幕的舒缓节奏）。
+const SCROLL_SPEED := 44.0
+
+## 鸣谢正文（BBCode）。[center] 居中，[font_size] / [color] 分层级。
+const CREDITS_TEXT := """[center]
+[font_size=58][color=#ffffff]卡牌肉鸽[/color][/font_size]
+
+
+[font_size=26][color=#9a9a9a]开发[/color][/font_size]
+[font_size=32][color=#ffffff]hanyuu33[/color][/font_size]
+
+
+[font_size=26][color=#9a9a9a]引擎[/color][/font_size]
+[font_size=32][color=#ffffff]Godot 4.3[/color][/font_size]
+
+
+[font_size=26][color=#9a9a9a]音乐 · PeriTune（CC BY 4.0）[/color][/font_size]
+[font_size=24][color=#c8c8c8]Holy_Place
+Piano_Refreshing
+Poema
+Strategy4
+Dramatic
+EpicBattle
+Raid_FolkMetal
+Firmament3
+Soaring
+Rapid4
+Havoc[/color][/font_size]
+
+[font_size=20][color=#888888]https://peritune.com/
+License: Creative Commons CC BY 4.0
+https://creativecommons.org/licenses/by/4.0[/color][/font_size]
+
+
+[font_size=26][color=#9a9a9a]特别鸣谢[/color][/font_size]
+[font_size=24][color=#c8c8c8]每一位测试与反馈的伙伴[/color][/font_size]
+
+
+[font_size=32][color=#ffffff]感谢游玩[/color][/font_size]
+[/center]"""
+
+
+var _label: RichTextLabel
+var _done := false
+
+
+func _ready() -> void:
+	# 纯黑底：背景在 _draw 里铺满，不挂 UiTheme.attach_stage（那套是羊皮纸舞台风格）。
+	_label = RichTextLabel.new()
+	_label.bbcode_enabled = true
+	_label.text = CREDITS_TEXT
+	_label.fit_content = true
+	_label.scroll_active = false
+	_label.add_theme_font_override("normal_font", UiTheme.font())
+	_label.add_theme_font_override("bold_font", UiTheme.font())
+	_label.add_theme_font_override("italics_font", UiTheme.font())
+	_label.add_theme_font_override("bold_italics_font", UiTheme.font())
+	_label.custom_minimum_size = Vector2(size.x, 0)
+	add_child(_label)
+	# 初始停在屏幕底边之外；等一帧让 fit_content 算出真实高度再定位。
+	_label.position = Vector2(0, size.y)
+	await get_tree().process_frame
+	_label.position = Vector2(0, size.y)
+	Bgm.play("title")
+	# 命令行 -- --screenshot：出图验收用（滚到中段再截，能看到正文）。
+	if "--screenshot" in OS.get_cmdline_user_args():
+		var t := Timer.new()
+		t.wait_time = 2.0
+		t.one_shot = true
+		t.timeout.connect(func():
+			var img := get_viewport().get_texture().get_image()
+			img.save_png(ProjectSettings.globalize_path("res://screenshot_credits.png"))
+			get_tree().quit())
+		add_child(t)
+		t.start()
+
+
+func _process(delta: float) -> void:
+	if _done:
+		return
+	_label.position.y -= SCROLL_SPEED * delta
+	# 整块文本滚出屏幕顶部 → 自动回标题。
+	if _label.position.y + _label.size.y < -24.0:
+		_back()
+
+
+func _input(event: InputEvent) -> void:
+	# 点击 / 任意键跳过（echo 不算，避免按住连发）。
+	if _done:
+		return
+	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+		_back()
+	elif event is InputEventKey and (event as InputEventKey).pressed \
+			and not (event as InputEventKey).echo:
+		_back()
+
+
+func _back() -> void:
+	if _done:
+		return
+	_done = true
+	SceneFx.goto("res://scenes/title.tscn")
+
+
+func _draw() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color.BLACK)
