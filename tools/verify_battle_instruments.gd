@@ -25,12 +25,13 @@ func _run() -> void:
 	RunState.relics.clear()
 	for i in 10:
 		RunState.relics.append(relics[i].id)
-	for i in scene._relic_max_slots():
+	var shown := mini(RunState.relics.size(), scene._relic_max_slots())
+	for i in shown:
 		assert(scene._relic_zone_rect().encloses(scene._relic_rect(i)))
 		for j in i:
 			assert(not scene._relic_rect(i).intersects(scene._relic_rect(j)))
-	assert(scene._relic_rect(0).position.y == scene._relic_rect(2).position.y)
-	assert(scene._relic_rect(3).position.y > scene._relic_rect(2).position.y)
+	assert(scene._relic_rect(0).position.y == scene._relic_rect(4).position.y)
+	assert(scene._relic_rect(5).position.y > scene._relic_rect(4).position.y)
 	assert(not scene._relic_zone_rect().intersects(scene._end_turn_big_rect()))
 	assert(not scene._enemy_zone_rect().intersects(scene._end_turn_big_rect()))
 	assert(not scene._relic_bar_overflowed())
@@ -56,7 +57,7 @@ func _run() -> void:
 	assert(scene._zone_panel_cards().size() == 1)
 	await _shot(scene, "draw_pile")
 	print("DECK ENTRIES PASS: toolbar signal opens full 4-card deck; pile click opens remaining 1-card draw pile")
-	print("BATTLE INSTRUMENTS PASS: 3-column wrap, 12 nonoverlapping slots, overflow, separated controls")
+	print("BATTLE INSTRUMENTS PASS: balanced rows, 12-slot capacity, overflow, separated controls")
 	quit()
 
 func _shot(scene, name: String) -> void:

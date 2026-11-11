@@ -14,6 +14,8 @@ const SpeechBubble = preload("res://scripts/speech_bubble.gd")
 const CardMorphFx = preload("res://scripts/card_morph_fx.gd")
 ## R405：滚动手势唯一口（同样没有 class_name）—— 断言它的三种输入折算。
 const UiDrag = preload("res://scripts/ui_drag.gd")
+## R577d：排版唯一口（无 class_name，显式 preload 才能被 headless 套件调用）。
+const RelicBarLayout = preload("res://scripts/relic_bar_layout.gd")
 
 var fails := 0
 
@@ -20938,6 +20940,44 @@ func _init() -> void:
 			"R577b 源码：奖励领取页（列表 / 详情 / 二选一）走图标口")
 	check_src(icon577_es.contains("UiAssets.relic_icon("),
 			"R577b 源码：事件里提到道具的名字带图标")
+	# ==== R577d：战斗中道具排版按数量适应 + 换行平均分配 ====
+	var r577d_lay := FileAccess.get_file_as_string("res://scripts/relic_bar_layout.gd")
+	check_src(r577d_lay.contains("const CELL := 44.0")
+			and r577d_lay.contains("const MAX_COLS := 6")
+			and r577d_lay.contains("static func row_counts("),
+			"R577d 源码：排版唯一口是纯静态脚本，图标 44 恒定 / 单行上限 6")
+	var r577d_bad := ""
+	for r577d_n in range(1, 13):
+		var r577d_rows := RelicBarLayout.row_counts(r577d_n, 12)
+		var r577d_sum := 0
+		for r577d_c: int in r577d_rows:
+			r577d_sum += r577d_c
+		if r577d_sum != r577d_n:
+			r577d_bad = "%d 件：分配合计 %d" % [r577d_n, r577d_sum]
+		for r577d_c2: int in r577d_rows:
+			if r577d_c2 < 1 or r577d_c2 > 6 or absi(r577d_c2 - r577d_rows[0]) > 1:
+				r577d_bad = "%d 件：某行 %d 个（平均分配被破坏）" % [r577d_n, r577d_c2]
+		if r577d_bad != "":
+			break
+		if r577d_n <= 6 and r577d_rows.size() != 1:
+			r577d_bad = "%d 件不该换行" % r577d_n
+			break
+		if r577d_n > 6 and r577d_rows.size() != 2:
+			r577d_bad = "%d 件应恰好换一次行" % r577d_n
+			break
+	check(r577d_bad == "", "R577d 数据：1~12 件每行差 <= 1、总数守恒、最少行数（%s）"
+			% ("OK" if r577d_bad == "" else r577d_bad))
+	var r577d_a := RelicBarLayout.row_counts(4, 12)
+	var r577d_b := RelicBarLayout.row_counts(7, 12)
+	var r577d_c := RelicBarLayout.row_counts(12, 12)
+	check(r577d_a.size() == 1 and r577d_a[0] == 4
+			and r577d_b.size() == 2 and r577d_b[0] == 4 and r577d_b[1] == 3
+			and r577d_c.size() == 2 and r577d_c[0] == 6 and r577d_c[1] == 6,
+			"R577d 定案：4 件一排 / 7 件 4+3 / 12 件 6+6，没有 N+1 尾巴")
+	check_src(icon577_bs.contains("RelicBarLayout.row_counts(")
+			and icon577_bs.contains("RelicBarLayout.rect_for(")
+			and icon577_bs.contains("RelicBarLayout.ROW_STEP"),
+			"R577d 源码：绘制行数 / 格位 / 悬停全走唯一排版口")
 	# ==== R577c：拆掉文字横条槽，图标直接放大铺满正方形格 ====
 	var icon577c_m0 := icon577_ms.find("func _draw_relics()")
 	var icon577c_m1 := icon577_ms.find("func _draw_relic_tip(")
@@ -20962,8 +21002,8 @@ func _init() -> void:
 			and not icon577c_bseg.contains("draw_rect(rect, scol, false"),
 			"R577c 源码：战斗右栏图标占满正方形格、不再有槽底板/边框/色条")
 	check_src(icon577_bs.contains("Rect2(794, 348, 338, 232)")
-			and icon577_bs.contains("Vector2(44, 44)")
-			and icon577_bs.contains("var draw_z := Rect2(z.position,"),
+			and icon577_bs.contains("var draw_z := Rect2(z.position,")
+			and r577d_lay.contains("const CELL := 44.0"),
 			"R577c 数据：战斗右栏容量 12 格、每格 44x44，底板按行数收拢")
 	# ==== R556：场地卡「毒沼」8082 —— 中毒（回合结束伤害）====
 	var r556_repo := CardRepo.load_json()

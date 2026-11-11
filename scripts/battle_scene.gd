@@ -12,6 +12,8 @@ extends Control
 # ------------------------------------------------------------ 布局常量（设计坐标 1280x720）
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+## R577d：战斗道具格排版的唯一口（纯静态脚本，故意不写 class_name）。
+const RelicBarLayout = preload("res://scripts/relic_bar_layout.gd")
 const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiRoll = preload("res://scripts/ui_roll.gd")
@@ -1213,6 +1215,20 @@ func _ready() -> void:
 		# 演示：右栏道具栏（截图验证用；放在 args 循环后，避免被 --level 重建覆盖）
 		engine.self_relics = [6001, 6005, 6010]   # 初始白 / 奖励黄 / 事件紫
 		_whisper_txt = "本回合造成的伤害 +1"
+	if "--reliccount" in args and engine != null:
+		# R577d 出图：按件数验「数量适应 / 满了换行 / 按行平均分配」。
+		# 用法：`battle.tscn -- --screenshot --reliccount 7 --shotframe 600`
+		var r577d_n := 4
+		for r577d_i in args.size():
+			if args[r577d_i] == "--reliccount" and r577d_i + 1 < args.size():
+				r577d_n = clampi(int(args[r577d_i + 1]), 1, 16)
+		var r577d_ids: Array[int] = []
+		for r577d_k in r577d_n:
+			r577d_ids.append(6001 + r577d_k)
+		RunState.relics = r577d_ids
+		engine.self_relics = r577d_ids.duplicate()
+		status_text = "R577d：%d 件道具按行平均分配" % r577d_n
+		queue_redraw()
 	if "--r352harp" in args and engine != null:
 		# R352 出图：竖琴（**一般档**）与传奇道具并排 —— 确认档位徽章与名字色都对，
 		# 而不是被 R289 那条「传奇档只能是奖励道具」逼成传奇。
@@ -14919,15 +14935,24 @@ func _enemy_effect_zone_max_slots() -> int:
 
 
 func _relic_zone_rect() -> Rect2:
-	## R577c：容量契约 —— 固定装得下 3 列 x 4 行 = 12 格 44x44 图标
+	## 容量契约 —— 固定装得下 12 格 44x44 图标
 	## （test_smoke 的「第 12 个徽章不越界」锁的就是这条，不跟着件数缩）。
 	## 视觉上不留空白：_draw_relic_bar() 另算 draw_z，只把底板画到实际行数。
 	return Rect2(794, 348, 338, 232)
 
 
+func _relic_layout_count() -> int:
+	## 绘制 / 悬停 / 命中判定的唯一取数口：含溢出时末位那张「+N」摘要格。
+	return clampi(_relic_bar_ids().size(), 1, _relic_max_slots())
+
+
 func _relic_rect(i: int) -> Rect2:
-	var z := _relic_zone_rect()
-	return Rect2(z.position + Vector2(14 + (i % 3) * 104, 34 + int(i / 3) * 48), Vector2(44, 44))
+	## R577d：格位按当前件数排 —— 一行最多 6 个，放不下才换行，
+	## 换行后把总数按行平均分配（每行差 <= 1），间距随每行个数收紧。
+	## i 超出当前件数时按「至少装得下 i+1 个」取布局，容量判据仍落在区域内。
+	var want := clampi(maxi(_relic_layout_count(), i + 1), 1, _relic_max_slots())
+	var counts := RelicBarLayout.row_counts(want, _relic_max_slots())
+	return RelicBarLayout.rect_for(i, _relic_zone_rect(), counts)
 
 
 func _relic_bar_ids() -> Array:
@@ -14966,10 +14991,10 @@ func _draw_relic_bar() -> void:
 	## 右栏道具栏：本局获得的道具（来源色块 = 初始白 / 奖励黄 / 事件紫）。
 	var ids := _relic_bar_ids()
 	var z := _relic_zone_rect()
-	# R577c：底板只画到当前实际行数，避免只拿 3 件道具时留出一大块空白。
+	# 底板只画到当前实际行数，避免只拿 3 件道具时留出一大块空白。
 	# 输入命中 / 容量契约仍用 z（固定 12 格），两者分开，不互相牵连。
-	var draw_rows := clampi(ceili(float(mini(ids.size(), 12)) / 3.0), 1, 4)
-	var draw_z := Rect2(z.position, Vector2(z.size.x, 40.0 + draw_rows * 48.0))
+	var draw_rows := RelicBarLayout.row_counts(mini(ids.size(), _relic_max_slots()), _relic_max_slots()).size()
+	var draw_z := Rect2(z.position, Vector2(z.size.x, 40.0 + draw_rows * RelicBarLayout.ROW_STEP))
 	BattleHudMaterial.draw(self, draw_z)
 	_draw_string_center(_font_bold, 14, "道具 %d" % ids.size(),
 			Vector2(draw_z.position.x + draw_z.size.x / 2, draw_z.position.y + 16.0), Color("7a6230"), -1)

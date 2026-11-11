@@ -5172,6 +5172,22 @@ func _check_overflow(scene: Variant) -> void:
 	else:
 		print("SMOKE OK 溢出兜底：效果区 %d 槽 / 敌方效果 %d 槽 / 道具 %d 槽（末位均不越界，超出改画 +N 摘要）"
 				% [cap_eff, cap_ee, cap_rel])
+	# R577d 界面分发：真的把件数塞进战斗页，看格位是不是按行平均分配。
+	var r577d_saved: Array = RunState.relics.duplicate()
+	RunState.relics = [6001, 6002, 6003, 6004]
+	var r577d_y4: float = scene._relic_rect(0).position.y
+	for r577d_i in 4:
+		if scene._relic_rect(r577d_i).position.y != r577d_y4:
+			_smoke_fail("R577d 4 件道具应排在同一行（第 %d 枚换了行 = N+1 尾巴）" % r577d_i)
+			break
+	RunState.relics = [6001, 6002, 6003, 6004, 6005, 6006, 6007]
+	var r577d_y7a: float = scene._relic_rect(0).position.y
+	var r577d_y7b: float = scene._relic_rect(6).position.y
+	if r577d_y7b <= r577d_y7a:
+		_smoke_fail("R577d 7 件道具应换成两行")
+	elif scene._relic_rect(4).position.y != r577d_y7b or scene._relic_rect(3).position.y != r577d_y7a:
+		_smoke_fail("R577d 7 件应 4+3 平均分配（不是 6+1）")
+	RunState.relics = r577d_saved
 
 
 func _check_milk_enchant(s: Node) -> void:
