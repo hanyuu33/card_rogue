@@ -1,0 +1,23 @@
+# ============================================================
+# steam_appid.txt 模板（R577）
+# ============================================================
+#
+# 什么时候需要它：
+#   * 只在【本地离线调试】时需要 —— 想让 Godot 直接用某个 AppID 起 Steamworks。
+#   * 【发行到 Steam 之后不需要】。Steam 客户端启动游戏时会注入 SteamAppId 环境变量，
+#     godotsteam 自己会读；而 export_presets.cfg 的 exclude_filter 里带 *.txt，
+#     这个文件根本进不了发行包（Valve 也要求别带 —— 带了会盖掉客户端注入的值）。
+#
+# 怎么用：
+#   1. 把本文件复制一份，改名成 steam_appid.txt（去掉 .template 后缀）
+#   2. 内容只留【纯数字的 AppID】，删掉所有 # 注释行和空行
+#   3. 放项目根目录（和 project.godot 同级）
+#
+# AppID 填什么：
+#   * 已有自己的 App：填 Steamworks 后台「App Admin → 应用信息」里的 App ID
+#   * 还没拿到 AppID：临时用 480（Valve 公开的 Spacewar 测试 App，人人都能用）
+#   * 不想填：干脆别建这个文件 —— 等价于 SteamAchievements.APP_ID = 0，
+#     交给环境变量，这就是发行形态
+#
+# ⚠️ steam_appid.txt 本身已进 .gitignore，不入库；只有本模板会提交。
+# ============================================================

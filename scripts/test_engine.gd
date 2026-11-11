@@ -34062,6 +34062,55 @@ func _init() -> void:
 			and r550b_isu.find("unlocked_stories.has(id)") >= 0,
 			"R550b 源码：is_story_unlocked 叠了 GameBuild.is_release() 闸门，正式版走白名单")
 	GameBuild.set_test_release(-1)
+	# ---- R577：Steam 成就的 AppID 接入（留空 = 发行形态；没装插件时全程静默）----
+	# 本机没装 GodotSteam → 这里验的是「没有插件也绝不崩 + 判据形状正确」。
+	# 真装上插件后的连通性（能解出成就）由 release/steam_achievements.md 的手工步骤验。
+	var r577_src := FileAccess.get_file_as_string("res://scripts/steam_achievements.gd")
+	check_src(r577_src.find("const APP_ID := 0") >= 0,
+			"R577 AppID 常量默认留空（发行形态靠 Steam 客户端注入 SteamAppId）")
+	check_src(r577_src.find("func effective_app_id() -> int") >= 0
+			and r577_src.find("steam_appid.txt") >= 0,
+			"R577 AppID 三级来源：常量 → 本地 steam_appid.txt → 0（交给环境变量）")
+	check_src(r577_src.find("steamInitEx") >= 0,
+			"R577 走 steamInitEx 拿 status/verbal（能区分客户端没开 / AppID 无效）")
+	# 源码锁：本文件不许出现对 Steam 全局单例的直接引用（`Steam.xxx`）——
+	# 没装 GodotSteam 时那会在编译期 Parse Error，把整个工程打崩。
+	# ⚠️ 判据是「禁词」，以后写注释也别写 `Steam.` 字样（R573 同款教训）。
+	check_src(r577_src.find("Steam.") < 0,
+			"R577 源码：零处裸引用 Steam 标识符（全走 has_singleton + call 反射）")
+	# 没装插件时的实际运行行为
+	SteamAchievements.reset_for_test()
+	check(SteamAchievements.effective_app_id() == 0,
+			"R577 未配置 AppID 时 effective_app_id() = 0（不瞎编一个 AppID）")
+	SteamAchievements.init()
+	if Engine.has_singleton("Steam"):
+		print("  · [跳过] 本机已装 GodotSteam，未安装态断言不适用")
+	else:
+		check(not SteamAchievements.is_ready(),
+				"R577 没装 GodotSteam → is_ready() 为 false")
+		check(SteamAchievements.status_text().find("未安装") >= 0,
+				"R577 没装 GodotSteam → status_text() 明说「未安装」")
+	# 六个钩子在不就绪时必须全部静默 —— 有任何异常这里就挂掉，走不到下一行断言。
+	SteamAchievements.note_first_step()
+	SteamAchievements.note_first_boss()
+	SteamAchievements.note_layer2_clear()
+	SteamAchievements.note_game_clear(PlayerClass.DRUID, 0)
+	SteamAchievements.note_game_clear(PlayerClass.ROGUE, SteamAchievements.HARD_DIFF)
+	SteamAchievements.note_game_clear("nonexistent_class", 99)
+	check(true, "R577 六个成就钩子在不就绪时静默跳过（无异常、不影响对局流程）")
+	# 成就定义本身的完整性（Steamworks 后台要照这些 API name 建）
+	check(SteamAchievements.CLEAR_API_BY_CLASS.size() == 3,
+			"R577 三职业各有一个通关成就映射")
+	check(SteamAchievements.CLEAR_API_BY_CLASS.get(PlayerClass.DRUID, "") == "CLEAR_FOREST"
+			and SteamAchievements.CLEAR_API_BY_CLASS.get(PlayerClass.ROGUE, "") == "CLEAR_ROGUE"
+			and SteamAchievements.CLEAR_API_BY_CLASS.get(PlayerClass.MECH, "") == "CLEAR_MECH",
+			"R577 职业 → 成就 API name 映射正确")
+	check(SteamAchievements.HARD_DIFF == 5,
+			"R577 高难度成就门槛 = 难度 5")
+	check(FileAccess.file_exists("res://steam_appid.txt.template"),
+			"R577 AppID 模板在位（.template 入库，真文件 steam_appid.txt 已 gitignore）")
+	# 复位，别把测试态留给后续用途
+	SteamAchievements.reset_for_test()
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 	quit(1 if fails > 0 else 0)
 

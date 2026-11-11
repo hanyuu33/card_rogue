@@ -10,6 +10,11 @@ mono_crash.*.json
 /dist/
 export/
 
+# R577：Steam AppID（本地离线调试用，因机器而异，不入库）。
+#   模板 steam_appid.txt.template 照常入库；真文件填的是各后台自己的 AppID。
+#   export_presets.cfg 的 exclude_filter 已含 *.txt，它本来也进不了发行包。
+/steam_appid.txt
+
 # 运行日志与临时文件
 _e.txt
 _r.txt
