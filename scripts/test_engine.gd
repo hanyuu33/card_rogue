@@ -53731,7 +53731,9 @@ func _init() -> void:
 
 	RunState.run_finished = true
 
-	check(RunSave.save_run(), "R359b 已收尾的局也能写（造一个废档）")
+	# R640：`save_run()` 已拒绝为已收尾的局写档 → 造废档改用直接落盘快照
+	# （这里要测的是「读档口怎么处理已收尾的档」，不是「能不能写进去」）。
+	check(RunSave.save_snapshot(RunSave.snapshot()), "R359b 已收尾的档直接落盘（造一个废档）")
 
 	RunState.run_finished = false
 
@@ -53873,7 +53875,8 @@ func _init() -> void:
 
 	RunState.run_finished = true
 
-	check(RunSave.save_run(), "R377 已收尾的局也能写（造废档）")
+	# R640：同 R359b —— 收尾的局不能走 `save_run()`，直接落盘造废档。
+	check(RunSave.save_snapshot(RunSave.snapshot()), "R377 已收尾的档直接落盘（造废档）")
 
 	RunState.run_finished = false
 
@@ -53928,6 +53931,64 @@ func _init() -> void:
 	check(RunSave.save_run() and RunSave.has_save(),
 			"R623 行为：新局落盘覆盖旧档，「开新局」替换语义不变")
 	RunState.end_run()
+
+
+	# ---- R640：通关那一局不许复活（用户报「通关后继续游戏，又回到打过的母舰空袭」）----
+	# 根因分两层：① `save_run()` 只问 `run_active`，通关后（`mark_run_won` 已删档、
+	# 但 `end_run()` 还没跑）任何一次迟到的检查点都能把那一局原样写回盘上；
+	# ② 就算档被写回来（双开 / 转场窗口期 / `.prev` 回滚），读档口也没有「这局已经打通」
+	# 的判据 —— 那份档 `run_finished: false`，看起来完全合法。
+	# 修法：`save_run()` 认 `run_finished`；通关时额外立「墓碑」（按 `run_seed` 记账），
+	# 读档口与 `has_save()` 都认墓碑 —— 任何来源的复活档一律作废。
+	RunSave.clear_save()
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.default_id())
+	var r640_seed: int = RunState.run_seed
+	RunState.current_layer = GameLayers.LAYER_THREE
+	check(RunSave.save_run() and RunSave.has_save(), "R640 正常局：档在、「继续游戏」亮")
+
+	# ① 通关 → 档删掉，且**不再能写回来**
+	RunState.mark_run_won()
+	check(RunSave.is_cleared(r640_seed), "R640 通关墓碑记下了这一局的 seed")
+	check(not FileAccess.file_exists(RunSave.SAVE_PATH), "R640 通关后盘上没有续档")
+	check(not RunSave.has_save(), "R640 通关后「继续游戏」不再亮")
+	check(not RunSave.save_run(), "R640 通关后 save_run 拒绝写档（run_finished 守得住）")
+
+	# ② 模拟「别的实例 / 迟到的检查点把通关前的快照写回来」
+	RunState.run_finished = false
+	RunState.run_active = true
+	var r640_zombie: Dictionary = RunSave.snapshot()
+	r640_zombie["run_finished"] = false
+	check(RunSave.save_snapshot(r640_zombie), "R640 复活档落盘成功（复现现场）")
+	check(not RunSave.has_save(), "R640 复活档：has_save 为假 → 标题页按钮不亮")
+	check(not RunSave.load_run(), "R640 复活档：load_run 拒绝继续")
+	check(not FileAccess.file_exists(RunSave.SAVE_PATH), "R640 复活档被直接删掉（不留 .bad）")
+
+	# ③ end_run(false)（回标题、保留续档）不许把收尾标记反写成假
+	RunSave.clear_save()
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.default_id())
+	RunSave.save_run()
+	RunState.run_finished = true
+	RunState.end_run(false)
+	check(RunState.run_finished, "R640 end_run(false) 不把收尾标记反写成假")
+	check(FileAccess.file_exists(RunSave.SAVE_PATH), "R640 end_run(false) 仍然保留续档")
+	RunState.end_run()
+
+	# ④ 源码守卫：两条闸都在，且墓碑先于删档
+	var r640_save_src := FileAccess.get_file_as_string("res://scripts/run_save.gd")
+	check_src(r640_save_src.find("if RunState.run_finished:") >= 0,
+			"R640 源码：save_run 有 run_finished 守卫")
+	check_src(r640_save_src.find("RunSave.mark_cleared(run_seed)") >= 0
+			or FileAccess.get_file_as_string("res://scripts/run_state.gd").find(
+					"RunSave.mark_cleared(run_seed)") >= 0,
+			"R640 源码：通关时立墓碑")
+	check_src(r640_save_src.find("is_cleared(_cleared_seed)") >= 0,
+			"R640 源码：读档口认墓碑")
+
+	# 收尾：墓碑测试档清掉，别污染后面的用例
+	for r640_p: String in [RunSave.CLEARED_PATH, RunSave.SAVE_PATH, RunSave.SAVE_PATH + ".tmp",
+			RunSave.SAVE_PATH + ".prev", RunSave.SAVE_PATH + ".bad"]:
+		if FileAccess.file_exists(r640_p):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(r640_p))
 
 
 	# ---- R378：测试进程的存档路径必须与玩家那份隔离 ----

@@ -62,6 +62,28 @@ static var last_error_kind := ""
 ## 但**文件一个字节都不动** —— 档被同步 / 重写（指纹变了）就自动解封，不用重启游戏。
 static var _blocked_stamp := ""
 
+## R640：**「这局已经通关过」的墓碑**（按 `run_seed` 记账，最多留 `CLEARED_KEEP` 条）。
+## 为什么需要它（用户报「通关后依旧可以继续游戏，又回到已经打过的母舰空袭」）：
+## 通关那一刻 `mark_run_won()` 确实 `clear_save()` 删了档，但**删掉不等于再也写不回来** ——
+## 只要还有一个实例 / 一次迟到的检查点拿着通关前那份快照往 `user://run_save.sav` 写一次
+## （双开、转场窗口期、`.prev` 回滚……），盘上就又出现一份「第三层打到一半」的合法档，
+## 标题页照旧亮「继续游戏」，玩家点进去就回到那局已经打通的进度上重打。
+## 判据放在**读档口**（而不是只在写档口堵）：只要种子在这张名单里，任何来源的档一律作废 ——
+## 这才是「通关就该结束」这件事的唯一权威。
+## ⚠️ 只按 seed 认，不按层数 / 时间猜：同一个 seed = 同一局，没有例外。
+## ⚠️ 和 `SAVE_PATH` 一样**必须分测试路径**（R640）：回归套件里会真的通关几十次，
+##    共用一个文件就把玩家自己的通关名单冲掉 / 塞满。
+const REAL_CLEARED_PATH := "user://run_cleared.sav"
+const TEST_CLEARED_PATH := "user://run_cleared_test.sav"
+static var CLEARED_PATH := REAL_CLEARED_PATH
+const CLEARED_KEEP := 20
+
+## `has_save()` 的缓存：标题页 `_process` **每帧**都会问一次，而判断「已收尾 / 已通关种子」
+## 必须把 8KB 存档解包一遍 —— 每帧解包是纯浪费。按文件指纹（长度:修改时间）缓存结果，
+## 档被写 / 被删（指纹变了）就自动重算，不会读到过期结论。
+static var _resume_stamp := ""
+static var _resume_ok := false
+
 
 static func set_test_mode() -> void:
 	## R378（用户二次上报「你测试的时候可能没有问题，可是我玩的时候就是会有」的真正原因）：
@@ -72,6 +94,7 @@ static func set_test_mode() -> void:
 	## ⚠️ 三个测试脚本入口（test_engine / test_smoke / test_reward）第一行就得调它。
 	SAVE_PATH = TEST_SAVE_PATH
 	TRACE_FILE = TEST_TRACE_PATH
+	CLEARED_PATH = TEST_CLEARED_PATH     # R640：通关墓碑同样不许写玩家那份
 
 
 # ------------------------------------------------------------ 查询
@@ -82,11 +105,56 @@ static func has_save() -> bool:
 	# 它内容就是新档，直接提升回来。不然按钮白白消失，玩家以为「档没了」。
 	_recover_tmp()
 	if not FileAccess.file_exists(SAVE_PATH):
+		_resume_stamp = ""
 		return false
 	# R486：判过「来自更新版本」的那份档**留着但不给按** —— 它多半是从另一台机器
 	# 同步过来的新进度，删掉等于把玩家的未来进度抹了。指纹变了（档被重写 / 换回来）
 	# 自动解封，所以切回新版游戏、或同步覆盖之后都不用重启。
 	if protects_save():
+		return false
+	# R640：**「继续游戏」按钮亮不亮，等于「这份档能不能真的接着打」**。
+	# 以前这里只问「文件在不在」—— 于是通关后又被写回来的那份档、以及已经收尾的档
+	# 都会让按钮亮起来，玩家点下去才被拒绝（甚至被放回去重打）。判据往下沉一层：
+	# 收尾过的 / 通关过的种子，同样算「没有档」。按指纹缓存，别每帧解包 8KB。
+	var st := _light_stamp(SAVE_PATH)
+	if st == _resume_stamp and _resume_stamp != "":
+		return _resume_ok
+	_resume_stamp = st
+	_resume_ok = _resumable()
+	return _resume_ok
+
+
+static func _light_stamp(path: String) -> String:
+	## R640：`has_save()` 每帧都要问一次，所以指纹必须**便宜**。
+	## `_stamp_of()` 是读整个文件取长度（8KB，每帧一次纯浪费）；这里只开句柄取长度 + 修改时间。
+	## 判据仍然是「档被重写 / 被删」→ 指纹变 → 缓存失效，足够。
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return ""
+	var n := f.get_length()
+	f.close()
+	return "%d:%d" % [n, FileAccess.get_modified_time(path)]
+
+
+static func _resumable() -> bool:
+	## R640：`has_save()` 的轻量体检 —— 只回答「点『继续游戏』会不会被立刻踢回来」。
+	## **不做完整 `validate()`**（那是 `load_run()` 的活，它还要说清失败原因）：
+	## 这里只认两条「按了也白按」的死条件：
+	##   ① 档里 `run_finished` 已真（这一局已经收尾）；
+	##   ② 档里的 `run_seed` 在通关墓碑名单里（这一局已经打通）。
+	## 解不开的档**仍然算有档**（返回 true）—— 保持老行为：让玩家点进去，
+	## 由 `load_run()` 告诉他「存档已损坏 / 版本太旧」，比按钮凭空消失清楚得多。
+	if not _readable(SAVE_PATH):
+		return true
+	var root: Variant = str_to_var(FileAccess.get_file_as_string(SAVE_PATH))
+	if not (root is Dictionary):
+		return true
+	var d: Variant = (root as Dictionary).get("d", null)
+	if not (d is Dictionary):
+		return true
+	if bool((d as Dictionary).get("run_finished", false)):
+		return false
+	if is_cleared(int((d as Dictionary).get("run_seed", 0))):
 		return false
 	return true
 
@@ -96,6 +164,53 @@ static func protects_save() -> bool:
 	## 「继续游戏」不该亮、写新档前必须先把它留成 `.bad`。指纹变了（档被同步 / 重写）
 	## 就自动为假，不用重启游戏。
 	return _blocked_stamp != "" and _stamp_of(SAVE_PATH) == _blocked_stamp
+
+
+# ------------------------------------------------------------ R640 通关墓碑
+
+static func mark_cleared(seed_id: int) -> void:
+	## 这一局打通了 → 把 seed 记进名单（幂等，同一 seed 只留一条，只留最近 `CLEARED_KEEP` 条）。
+	## 调用点唯一：`RunState.mark_run_won()`（通关那一瞬，比删档晚不了几毫秒）。
+	## 为什么按 seed 认而不是按「层数 / 时间」猜：seed 是这一局的唯一身份，
+	## 同一 seed = 同一局，没有例外 —— 猜层数会把「第二层刚进第三层」的合法档误杀。
+	## ⚠️ 写失败不影响通关：最坏退化成老行为（只靠删档），不会有额外的错误路径。
+	if seed_id == 0:
+		return
+	var seeds := cleared_seeds()
+	var at := seeds.find(seed_id)
+	if at >= 0:
+		seeds.remove_at(at)
+	seeds.append(seed_id)
+	while seeds.size() > CLEARED_KEEP:
+		seeds.remove_at(0)
+	var f := FileAccess.open(CLEARED_PATH, FileAccess.WRITE)
+	if f == null:
+		push_warning("RunSave：通关墓碑写不进去 " + CLEARED_PATH)
+		return
+	for s: int in seeds:
+		f.store_line(str(s))
+	f.close()
+	_resume_stamp = ""       # 通关之后一律不该再有「继续游戏」，缓存立刻作废
+	_trace("CLEARED seed=%d（名单 %d 局）" % [seed_id, seeds.size()])
+
+
+static func cleared_seeds() -> Array[int]:
+	## 通关墓碑名单（新 → 旧）。文件不存在 = 一局都没通过（老玩家 / 首次启动）。
+	var out: Array[int] = []
+	if not FileAccess.file_exists(CLEARED_PATH):
+		return out
+	for line: String in FileAccess.get_file_as_string(CLEARED_PATH).split("\n", false):
+		var t := line.strip_edges()
+		if t.is_valid_int():
+			out.append(int(t))
+	return out
+
+
+static func is_cleared(seed_id: int) -> bool:
+	## 这一局的 seed 是不是已经打通过。`load_run()` / `has_save()` 都靠它把复活档按死。
+	if seed_id == 0:
+		return false
+	return cleared_seeds().has(seed_id)
 
 
 static func probe_newer_save() -> void:
@@ -213,7 +328,14 @@ static func snapshot() -> Dictionary:
 
 static func save_run() -> bool:
 	## 把当前 run 写入本地存档。非 run 中 / 写盘失败返回 false。
+	## R640：**已收尾的一局不许再写档**。`mark_run_won()` 已经把续档删了，可那时
+	## `run_active` 还是真的（R471 要等玩家离开才 `end_run()`）—— 这段窗口里任何一次
+	## 迟到的检查点（`_clear_battle_checkpoint` / 地图落盘 / 奖励面板回来）都会把
+	## 「通关那局」原样写回盘上，标题页于是又冒出「继续游戏」。
+	## 判据只有 `run_finished`：它一真，这一局就不该再有续档。
 	if not RunState.run_active:
+		return false
+	if RunState.run_finished:
 		return false
 	return save_snapshot(snapshot())
 
@@ -320,6 +442,20 @@ static func load_run() -> bool:
 	if bool(d.get("run_finished", false)):
 		push_warning("RunSave：存档是已收尾的一局，隔离不继续")
 		_fail("finished", "这一局已经结束，不能继续", true, "已收尾")
+		return false
+	# R640：**通关过的种子一律作废**（用户报「通关后继续游戏又回到打过的母舰空袭」）。
+	# 上面那条只管「档里自己写着收尾」，而复活的那份档写的是 `run_finished: false`
+	# —— 它看起来完全合法。真正的权威是**这一局的 seed 有没有打通过**：
+	# 通关那一刻 `mark_cleared()` 已经把 seed 记进墓碑，于是哪怕档被别的实例 /
+	# 迟到的检查点 / `.prev` 回滚写回来，也读不进去。
+	# ⚠️ 这里**直接删**（不隔离成 .bad）：这份档没有任何取证价值，它就是一局已经打完的进度；
+	# 留着只会在目录里越积越多，还让 `_recover_tmp()` 有东西可捡。
+	var _cleared_seed := int(d.get("run_seed", 0))
+	if _cleared_seed != 0 and is_cleared(_cleared_seed):
+		push_warning("RunSave：存档属于已通关的一局（seed=%d），作废" % _cleared_seed)
+		_trace("LOAD-DROP(cleared) seed=%d 已通关，续档作废" % _cleared_seed)
+		clear_save()
+		_fail("finished", "这一局已经通关，不能继续", false, "已通关种子")
 		return false
 	# R486：**体检**。`_readable()` 只证明「包能解开」，解出来的东西可以荒谬到根本没法继续
 	# （卡组全是已下架的卡 / 地图是空的 / 停在第九层）。以前这种档会被 `apply()` 硬读进来，
@@ -669,20 +805,39 @@ static func _stamp_of(path: String) -> String:
 static func clear_save(src := "") -> void:
 	## 删档。R377：带上 `src` 才会写进 `save_trace.log` ——
 	## 「谁把玩家的档删了」这个问题光靠读代码猜不出来，必须留证据。
-	if FileAccess.file_exists(SAVE_PATH):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
-	# R486：删档 = 连「这份档被判不可用」的记忆一起清掉，否则下一次同步来的档
-	# 可能刚好指纹相同（同长度同秒）而被继续挡住 —— 概率低，但没理由留这个坑。
+	##
+	## R640：**删没删掉必须当真**。旧写法无条件 `remove_absolute()` 然后照写
+	## `CLEAR by xxx` —— 文件被占用（双开 / 杀软 / 同步盘）时删除会失败，
+	## 日志里却写着「已清」，于是通关后盘上那份档还在、标题页照旧亮「继续游戏」，
+	## 而现场日志完全对不上（查了两轮才想到要看文件本身）。
+	## 现在：删一次 → 复查 → 还在就重试一次并留 `DELETE-FAIL`，让下次排查有据可查。
+	var err := _remove(SAVE_PATH)
+	if err != OK and FileAccess.file_exists(SAVE_PATH):
+		err = _remove(SAVE_PATH)
+		if err != OK:
+			push_warning("RunSave：存档删不掉（err=%d）—— 下次启动可能还会亮「继续游戏」" % err)
+			_trace("DELETE-FAIL %s err=%d" % [SAVE_PATH, err])
 	_blocked_stamp = ""
 	last_error = ""
 	last_error_kind = ""
+	_resume_stamp = ""          # R640：档没了 → 「有没有档」的缓存立刻作废
 	if src != "":
 		_trace("CLEAR by %s" % src)
 	# 顺手把伴侣文件也收干净，别留下让 `_recover_tmp()` 误判的孤儿
+	# ⚠️ **不删 `.bad`** —— 那是「档坏了 / 来自新版本」时留给玩家和我们的现场（R377），
+	#    清档顺手把它删掉等于把唯一能事后查证的东西抹了。
 	for suf: String in [".tmp", ".prev"]:
 		var p2 := SAVE_PATH + suf
 		if FileAccess.file_exists(p2):
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(p2))
+			_remove(p2)
+
+
+static func _remove(path: String) -> int:
+	## R640：删一个文件并**把结果交回去**（`DirAccess.remove_absolute` 的返回值以前没人看）。
+	## 文件本来就不存在 = 已经达成目标，直接 OK。
+	if not FileAccess.file_exists(path):
+		return OK
+	return DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
 # ------------------------------------------------------------ R377 取证 / 自愈

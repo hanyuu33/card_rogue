@@ -1124,6 +1124,10 @@ static func mark_run_won() -> void:
 	if run_finished:
 		return
 	run_finished = true
+	# R640：**先立墓碑，再删档**。两件事都可能失败（墓碑文件写不进 / 档被占用删不掉），
+	# 顺序反了就有一半概率让这一局复活；先立墓碑的话，最坏也只是盘上多一份**读不进去**的档。
+	# 墓碑 = 「这个 seed 已经打通」的权威记录，读档口认它（见 `RunSave.is_cleared`）。
+	RunSave.mark_cleared(run_seed)
 	RunSave.clear_save("run_won")
 
 
@@ -1165,7 +1169,12 @@ static func end_run(clear_save: bool = true) -> void:
 	# R339：本局已收尾（地图场景据此不再兜底开新局）。
 	# R359：**只有真的结束才算收尾** —— 回标题（clear_save=false）是「先离开一下」，
 	# 这一局还要接着打，置真的话内存里就自相矛盾（保了档却说自己已结束）。
-	run_finished = clear_save
+	# R640：**不许反写成假**。旧写法 `run_finished = clear_save` 在「已经通关、玩家却在
+	# 结算前点了返回标题」那条路上会把收尾标记抹掉 —— 内存里于是变成「一局已通关却声称
+	# 还在进行」，紧接着任何一次检查点都会把它原样写回盘上，通关成果当场复活。
+	# 只允许「由假变真」，不允许「由真变假」。
+	if clear_save:
+		run_finished = true
 	pending_level = {}
 	pending_node = {}
 	reward_context = ""

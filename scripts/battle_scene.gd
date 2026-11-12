@@ -4346,7 +4346,12 @@ func _on_back_to_title() -> void:
 			_record_defeat()
 		# R167：回标题**不再放弃本局** —— 只复位内存状态，续档保留，
 		# 标题页「继续游戏」可以从上一次地图检查点接着打。
-		RunState.end_run(false)
+		# R640：但**已经收尾的一局**（通关 / 失败已定）回标题不是「先离开一下」，
+		# 而是真的结束：`end_run(false)` 会把 `run_finished` 抹掉、留一局通关了还说
+		# 「在打」的内存残局，紧接着任何一次检查点都会把它原样写回盘上 ——
+		# 用户报的「通关后又能继续、又去打已经打过的母舰空袭」就是这么复活的。
+		# 判据只看 `run_finished`（结算流程早就算过了），这里不重算输赢。
+		RunState.end_run() if RunState.run_finished else RunState.end_run(false)
 	if _net_mode:
 		_net_send({"type": "bye"})
 	NetSession.clear()
@@ -7740,6 +7745,11 @@ func _mark_battle_checkpoint() -> void:
 	## （`advance()` 在点格子那一刻就标了），这场战斗再也打不到。
 	## ⚠️ 只在真实游玩时写：出图 / headless 探针不落盘。
 	if not RunState.run_active or _shot_pending or _net_mode:
+		return
+	# R640：**已收尾的局不许再写检查点**。下面的 `save_snapshot()` 是绕过
+	# `RunSave.save_run()` 直接落盘的（它要写「进战斗之前」那份快照），
+	# 所以那道 `run_finished` 守卫管不到这里 —— 必须自己挡一次。
+	if RunState.run_finished:
 		return
 	# R477：但 AI 对局（`--ai-bridge`，本来就无窗口跑）必须写 —— 那个进程被系统回收过
 	# 两次，没档就是整局白打。出图 / 回归探针没有这个参数，照旧不落盘。
