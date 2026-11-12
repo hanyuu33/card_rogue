@@ -1529,3 +1529,18 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - 卡组级复制（鸭血 6024 `duplicate_deck_cards`）本来就走 `deck_mods.append({})`，实测复制品 cost 回原价、`enchant` 为空；这次补了回归锁。事件侧没有「复制卡」入口（鸭鸭工匠 = 变形、五换一 = 删 5 加 1、遗忘之泉 = 删）。
 - 文案：9079 魔像术「每使用一张技能卡…-1」→「每回合第一次使用技能卡时…-1」（机制改了文案必须同步）。8007 影魔 / 8081 雪豹保留原文（通用规则不重复写进卡面）。
 - 回归：新增 9 条断言（两张影魔只减一次 / 跨 `hand_cost_turn` 不叠 / 野兔复制品 / 复制术复制品 / 鸭血 deck_mods / 2 条源码锁），魔像术原「累加」断言改成「仍 3 费」。六套全绿：assemble 0 / engine **5796✓** 0✗ / reward 26 / bgm 39 / smoke 68 / mana PASS；userdata 备份后逐文件还原 `RESTORE_VERIFY OK`。
+
+
+## 2026-11-13 R646 元素入场逐段发射间隔压到 70ms（停留不动）
+- 店长口径三段演进：「土元素的动画有点慢，播放间隙调为 30ms」→（追问后澄清）「不减少停留，而是下一段更快发射」→「30ms 太短，改成 70ms」。
+- **病灶不是某个时长太大，而是架构串行**：`_start_primal_hit()` 靠「上一段 `primal_end` 播完 + `anim_busy` 落回 false」才起下一段，`_primal_fx` 与 `primal_active` 都是**单槽**。土元素 X=3 时每段 340 飞行 + 520 爆发 = 860ms，整批约 2.6s。
+- **改法（发射节奏与单段时长脱钩）**：
+  ① 引擎 `primal_active` 由 `Dictionary` 改 **FIFO `Array`**，`next_primal_hit()` 取消「active 非空就返回空」的幂等保护（改为出队即入 active），`resolve_primal_hit()` 改 `pop_front()`。同批 `count` 相同 → travel 相同 → 落地顺序 = 发射顺序，FIFO 拿到的正是此刻落地那段。
+  ② 新增 `can_launch_primal_next()` 安全阀：`primal_active` 里只要有 `random` 段（火元素**发射那一刻才挑存活敌人**）就不许抢跑，否则会选到即将被打死的目标、打在尸体上；土元素目标在 `_earth_primal_enter` 里一次分配完，可以连射。**这条是火元素没有被连射改坏的唯一原因。**
+  ③ 表现层 `_primal_fx` 单字典改 **数组**，每段自带 `id / start / land / end`；`_delayed` 的 `primal_land` / `primal_end` 带 `id`，`_primal_seg(id)` 按序号认领。爆发淡出的时间分母改 `end - land`（跨批 count 不同时各段时长不一致，别再用全局 `_primal_hit_ms` 当分母）。
+  ④ `_process` 驱动：首段仍等 `anim_busy` 清场，这批一开跑就只看 `PRIMAL_LAUNCH_GAP_MS`。⚠️ **原来那句 `if not anim_busy` 在连射时永远等不到** —— `_primal_fx` / `_delayed` 非空本身就把 busy 顶成 true。
+- 常量 `PRIMAL_LAUNCH_GAP_MS := 70`（`battle_scene` 常量区，紧挨 `FX_MULTI_HIT_GAP_MS`）。数值演进 30 → 70：30ms 时两段几乎同帧、岩刺扩散糊成一片。
+- **验证**：`tools/verify_primal_fx.gd` 补断言「土元素两段发射间隔 70~130ms」（帧对齐会落在 70~120）；规则 / 火元素 7 段 / 土元素致死+亡语三条序列全 PASS。
+- **回归**：assemble 0 / mana PASS / engine **5838✓** 0✗ / reward 26✓ / bgm 39✓ / smoke 69✓。注：5838 含并行线 R645 的 11 项，本线没动 `test_engine.gd`。
+- **提交卫生**：`battle_scene.gd` 与 `game_engine.gd` 里混着并行线未提交的 **R645 龙息多段**改动（`FX_SEG_HIT_GAP_MS` / `fi_seg` / `_hit_unit(seg)`），按纪律走**干净 HEAD + index-only**（`hash-object` + `update-index --cacheinfo`），提交里 0 处 R645。
+- **编号**：R642 已被并行线占用（图鉴「见过才解锁」`93fe1635`），R643 稀有度缎带 / R644 老虎卡图 / R645 龙息在用，本轮让到 **R646**。
