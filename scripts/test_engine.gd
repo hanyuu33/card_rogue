@@ -6447,6 +6447,34 @@ func _init() -> void:
 
 			"鸭窝：2 张 → 第 3 次使用不再触发（仍 2 张鸭蛋）")
 
+	# R619：鸭窝 9069 正文里的「鸭蛋」必须能关联到 9022。
+	# 原文是裸卡名（没带「」），R168 Mention 只认带标记的名字 → 选卡界面里那两个字点不出鸭蛋卡面。
+	var r619_nest := repo.get_card(9069)
+
+	check(r619_nest.effect_text.contains("「鸭蛋」") and not r619_nest.effect_text.contains("一张鸭蛋"),
+
+			"R619 数据层：鸭窝两处「鸭蛋」都要带「」（否则选卡界面关联不到 9022）")
+
+	var r619_ref := Mention.resolve("鸭蛋")
+
+	check(not r619_ref.is_empty() and str(r619_ref.get("kind", "")) == "card" and int(r619_ref.get("id", -1)) == 9022,
+
+			"R619 名字表：「鸭蛋」必须解析成卡牌 9022")
+
+	var r619_segs := CardText.parse(r619_nest.effect_text)
+
+	var r619_hits := 0
+
+	for seg in r619_segs:
+		var men: Dictionary = seg.get("mention", {})
+		if str(men.get("name", "")) == "鸭蛋" and int(men.get("id", -1)) == 9022:
+			r619_hits += 1
+
+	check(r619_hits == 2,
+
+			"R619 显示层：鸭窝正文两处「鸭蛋」都要生成指向 9022 的提及片段")
+
+
 	# 飓风咆哮（9063）：2 张 → 前 2 次使用效果卡各轰一次；技能卡不计入次数（R268）
 
 	var roar2 := _new_engine([], 20, 20, -1, false)
@@ -15522,6 +15550,43 @@ func _init() -> void:
 		check(r148_missing == "",
 
 				"R148 每个游戏内界面都挂上了主菜单（缺：%s）" % r148_missing)
+
+		# R619（用户口径「卡组和地图应该在任何时候都能查看，这个约束不要丢了」）：
+		# 逐场景锁住入口 —— 改版式、挤按钮、换函数名导致任何一处消失，回归立刻红。
+		var r619_deck_scenes := ["event_scene", "relic_pick_scene", "class_pick_scene",
+
+				"record_list_scene", "shop_scene"]
+
+		var r619_deck_missing := ""
+
+		for s: String in r619_deck_scenes:
+
+			if FileAccess.get_file_as_string("res://scripts/%s.gd" % s).find("DeckViewer.attach(self)") < 0:
+
+				r619_deck_missing += s + " "
+
+		check(r619_deck_missing == "",
+
+				"R619 卡组全局入口：每个 run 内界面都挂了 DeckViewer（缺：%s）" % r619_deck_missing)
+
+		var r619_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+
+		check(r619_rp.find("func _open_deck_viewer") >= 0 and r619_rp.find("VIEW_VIEWER") >= 0 and r619_rp.find("_btn_view_deck_cards_rect()") >= 0,
+
+				"R619 选奖励卡界面：三选一页必须能进「只看卡组」并回到原页")
+
+		var r619_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+
+		check(r619_bs.find("DeckBtn") >= 0 and r619_bs.find("MapBtn") >= 0 and r619_bs.find("func _toggle_map()") >= 0,
+
+				"R619 战斗内：顶栏卡组 / 地图两个入口都在")
+
+		var r619_ms := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+
+		check(r619_ms.find("_toggle_deck") >= 0 and r619_ms.find("_deck_btn_rect") >= 0,
+
+				"R619 冒险地图页：右上「卡组」与菜单「查看卡组」都在")
+
 
 		var r148_um := FileAccess.get_file_as_string("res://scripts/ui_menu.gd")
 
