@@ -53891,6 +53891,23 @@ func _init() -> void:
 
 
 
+	# ---- R623：开新局不提前删旧档（选人页关窗 = 回上一局）----
+	# 用户报「关闭游戏窗口后重启没有继续游戏按钮」的根因：旧 _on_start 立刻 clear_save()，
+	# 而选人页 run_active=false、不写检查点 → 窗口期关窗就旧档已删、新档未写。
+	var r621_title := FileAccess.get_file_as_string("res://scripts/title_scene.gd")
+	check(r621_title.find("clear_save(\"title.start_new\")") < 0,
+			"R623 源码：开始新局不再提前删旧档（由新局第一个检查点自然覆盖）")
+	RunSave.clear_save()
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.default_id(), 0, "")
+	RunSave.save_run()
+	check(RunSave.has_save(),
+			"R623 行为：开新局后在选人页关窗，旧档保留 → 重启仍有「继续游戏」")
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.default_id(), 0, "")
+	check(RunSave.save_run() and RunSave.has_save(),
+			"R623 行为：新局落盘覆盖旧档，「开新局」替换语义不变")
+	RunState.end_run()
+
+
 	# ---- R378：测试进程的存档路径必须与玩家那份隔离 ----
 
 	# 用户二次上报「你测试的时候可能没有问题，可是我玩的时候就是会有」——
