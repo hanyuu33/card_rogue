@@ -180,8 +180,12 @@ static func snapshot() -> Dictionary:
 		"max_hp": RunState.max_hp,
 		"gold": RunState.gold,
 		"layer": RunState.current_layer,
-		"battles": RunState.battle_wins,
-		"elites": RunState.elite_wins,
+		# R630：**整局**口径。原先取的是本层 `battle_wins / elite_wins`，而换层时
+		# `advance_layer()` 会把它清零 —— 记录页的「战斗胜场」于是永远只等于**最后一层**
+		# 打了几场（用户口径「3 层胜利后只统计了三层的战斗和精英战斗」）。
+		# 本层那两个数只服务于动态难度（前 2 场简单 / 之后再难），不该进记录。
+		"battles": RunState.total_battle_wins,
+		"elites": RunState.total_elite_wins,
 		"relics": relics,
 		"spent": spent,
 		"bosses": RunState.boss_kills.duplicate(true),

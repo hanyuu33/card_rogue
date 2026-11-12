@@ -67652,6 +67652,108 @@ func _init() -> void:
 
 				% [RunState.total_battle_wins, RunState.total_elite_wins])
 
+	# ---- R630：整局统计的两个出口（记录快照 / 存档往返 / 老档兜底）----
+
+	# 用户口径：「3 层胜利后只统计了三层的战斗和精英战斗」。根因两条：
+
+	#   ① `RunRecord.snapshot()` 取的是本层 `battle_wins/elite_wins`（换层即清零）
+
+	#      → 记录页的「战斗胜场」永远只等于**最后一层**（2 层、3 层都一样）；
+
+	#   ② `RunSave` 只存本层两个数 → 关游戏再「继续游戏」后整局累计从 0 起算。
+
+	RunState.reset_total_stats()
+
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.default_id(), 6301211)
+
+	RunState.run_active = true
+
+	RunState.on_battle_won("battle")
+
+	RunState.on_battle_won("battle")
+
+	RunState.on_battle_won("elite")
+
+	RunState.advance_layer(GameLayers.LAYER_TWO)
+
+	RunState.on_battle_won("battle")
+
+	RunState.on_battle_won("elite")
+
+	RunState.advance_layer(GameLayers.LAYER_THREE)
+
+	RunState.on_battle_won("battle")
+
+	# 整局 = 4 普通 / 2 精英；第 3 层自己的 = 1 普通 / 0 精英
+
+	var r630_rec := RunRecord.snapshot()
+
+	check(int(r630_rec.get("battles", -1)) == 4 and int(r630_rec.get("elites", -1)) == 2,
+
+			"R630 记录快照：按整局记（普通 4 / 精英 2，实际 %s/%s）"
+
+				% [str(r630_rec.get("battles", "?")), str(r630_rec.get("elites", "?"))])
+
+	check(RunState.battle_wins == 1 and RunState.elite_wins == 0,
+
+			"R630 记录快照：本层计数仍是第 3 层自己的（1/0，实际 %d/%d）"
+
+				% [RunState.battle_wins, RunState.elite_wins])
+
+	var r630_save := RunSave.snapshot()
+
+	check(int(r630_save.get("total_battle_wins", -1)) == 4
+
+			and int(r630_save.get("total_elite_wins", -1)) == 2
+
+			and r630_save.has("total_damage"),
+
+			"R630 存档：整局三项（战斗 / 精英 / 伤害）都进档")
+
+	RunState.total_battle_wins = 0
+
+	RunState.total_elite_wins = 0
+
+	RunState.total_damage = 0
+
+	RunSave.apply(r630_save)
+
+	check(RunState.total_battle_wins == 4 and RunState.total_elite_wins == 2,
+
+			"R630 存档：读档后整局累计回填（%d/%d）"
+
+				% [RunState.total_battle_wins, RunState.total_elite_wins])
+
+	# 老档（R630 之前）没有 total_* 三个键 → 用本层数兜底，不能清成 0
+
+	var r630_old := r630_save.duplicate(true)
+
+	r630_old.erase("total_battle_wins")
+
+	r630_old.erase("total_elite_wins")
+
+	r630_old.erase("total_damage")
+
+	r630_old["battle_wins"] = 2
+
+	r630_old["elite_wins"] = 1
+
+	RunState.total_battle_wins = 9
+
+	RunState.total_elite_wins = 9
+
+	RunSave.apply(r630_old)
+
+	check(RunState.total_battle_wins == 2 and RunState.total_elite_wins == 1,
+
+			"R630 老档兜底：缺 total_* 时用本层数接上（%d/%d）"
+
+				% [RunState.total_battle_wins, RunState.total_elite_wins])
+
+	RunState.end_run()
+
+
+
 	RunState.end_run()
 
 

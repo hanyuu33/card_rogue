@@ -157,6 +157,12 @@ static func snapshot() -> Dictionary:
 		"player_class": RunState.player_class,
 		"battle_wins": RunState.battle_wins,
 		"elite_wins": RunState.elite_wins,
+		# R630：**整局累计**三项（结算页 / 记录页读的就是它们）。原先只存了「本层」两个数 →
+		# 关掉游戏再「继续游戏」之后，战斗 / 精英 / 伤害从 0 重新起算，通关结算只剩
+		# 「读档之后」那一段（用户口径「3 层只统计了 3 层」的第二个来源）。
+		"total_battle_wins": RunState.total_battle_wins,
+		"total_elite_wins": RunState.total_elite_wins,
+		"total_damage": RunState.total_damage,
 		"used_levels": RunState.used_levels,
 		"boss_pick": RunState.boss_pick,
 		"revenge_pending": RunState.revenge_pending,
@@ -404,6 +410,11 @@ static func apply(d: Dictionary) -> bool:
 	RunState.player_class = str(d.get("player_class", PlayerClass.default_id()))
 	RunState.battle_wins = int(d.get("battle_wins", 0))
 	RunState.elite_wins = int(d.get("elite_wins", 0))
+	# R630：整局累计跟着一起回填。**老档没有这三个键**（R630 之前的档）→ 用「本层」两个数
+	# 兜底：那至少是同一局打出来的真实场次；直接兜 0 等于把老档的统计抹平，比少算更糟。
+	RunState.total_battle_wins = int(d.get("total_battle_wins", d.get("battle_wins", 0)))
+	RunState.total_elite_wins = int(d.get("total_elite_wins", d.get("elite_wins", 0)))
+	RunState.total_damage = int(d.get("total_damage", 0))
 	RunState.used_levels = _str_array(d.get("used_levels", []))
 	RunState.boss_pick = d.get("boss_pick", {}) if d.get("boss_pick", {}) is Dictionary else {}
 	RunState.revenge_pending = bool(d.get("revenge_pending", false))
