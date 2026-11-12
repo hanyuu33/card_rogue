@@ -101,6 +101,8 @@ func _ready() -> void:
 	# R166：难度档位不再在标题页选 —— 挪到角色选择界面（class_pick_scene）。
 	# R215：设置（音效 / 音乐 / 全屏）按上次保存的值套上；上次启动留下的「没打完的一局」
 	# 在这里补记成「中断」（关窗口 / 崩溃都算）。
+	# R635：⚠️ 这里**不能**强制落值 —— 窗口已经是全屏时（F11 / `--fullscreen` /
+	# 系统层面进的全屏，设置里没有）要跟着现状走，否则每次回主界面都被打回窗口。
 	GameSettings.ensure_loaded()
 	GameSettings.apply_display()
 	RunRecord.recover()

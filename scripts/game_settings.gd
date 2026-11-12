@@ -117,7 +117,7 @@ static func set_fullscreen(v: bool) -> void:
 	if v == fullscreen:
 		return
 	fullscreen = v
-	apply_display()
+	apply_display(true)
 	save()
 
 
@@ -162,9 +162,25 @@ static func set_next_seed_code(v: String) -> void:
 	save()
 
 
-static func apply_display() -> void:
+static func apply_display(force := false) -> void:
 	## 把 `fullscreen` 落到窗口上（headless / 无窗口时不碰 DisplayServer）。
+	##
+	## R635（店长报「开故事界面、关掉回主界面，全屏会变窗口」）：
+	## 根因**不在故事界面** —— 探针实测 story → title 全程 FULLSCREEN，是主界面
+	## `_ready` 每次都无条件按 `fullscreen` 重设窗口。而玩家的全屏常常不是本设置页
+	## 给的（引擎 / 系统层面：F11、`--fullscreen`、窗口管理器），`settings.cfg`
+	## 里仍是 `fullscreen=false` → 每回一次主界面就被打回窗口。
+	##
+	## 所以 `force = false`（启动 / 回主界面）时**先看窗口现状**：已经是全屏就
+	## 什么都不做，只把内存值对齐成 true（不写盘 —— 这是「读到现状」，不是玩家改设置）。
+	## `force = true`（设置页切换全屏）必须强制落值，否则「关掉全屏」会被现状顶回来。
 	if DisplayServer.get_name() == "headless":
+		return
+	var m := DisplayServer.window_get_mode()
+	var is_fs := (m == DisplayServer.WINDOW_MODE_FULLSCREEN
+			or m == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+	if not force and is_fs:
+		fullscreen = true
 		return
 	DisplayServer.window_set_mode(
 			DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen
