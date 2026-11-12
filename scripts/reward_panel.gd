@@ -1811,7 +1811,7 @@ func _layer_badge(center: Vector2, value: String, gold := false) -> void:
 func _draw_layer_card(card: CardData, rr: Rect2, selected: bool) -> void:
 	var ar := Rect2(rr.position + rr.size * Vector2(0.055, 0.035), rr.size * Vector2(0.89, 0.74))
 	_root.draw_rect(ar, Color("e9dfca"))
-	var art := CardFace.art_for(card.id)
+	var art := CardFace.art_for(card.pic_id())   # R637：产物 id 归 0，取图认 pic_id
 	if art != null:
 		_root.draw_texture_rect_region(art, ar, CardFace.cover_region(art.get_size(), ar))
 	else:

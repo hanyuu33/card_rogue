@@ -738,10 +738,70 @@ func _test_combo() -> void:
 				and result.cost == attr_card.cost,
 				"R559 组合：属性值取自属性卡（%d/%d/%d 费）" % [result.power, result.health, result.cost])
 		# R561 口径：第一张卡就是承载体 —— 卡名 / 卡图（按 id 取图）/ 稀有度全沿用，只加「组合」印记
-		check(result.id == attr_card.id and result.card_name == attr_card.card_name
+		# R637：产物 id 归 0（不再命中引擎里「按 card.id 派发」的母卡效果），
+		# 但卡名 / 稀有度 / 卡图（art_id）照旧沿用属性卡。
+		check(result.id == 0 and result.art_id == attr_card.id
+				and result.pic_id() == attr_card.id
+				and result.card_name == attr_card.card_name
 				and result.rarity == attr_card.rarity,
-				"R561 组合：卡名/卡图（同 id）/稀有度沿用属性卡")
+				"R561/R637 组合：卡名/卡图（art_id）/稀有度沿用属性卡，但 id 已归 0")
 		check(not result.assemble.is_empty(), "R559 组合：结果带 assemble 效果")
+	# ── R637：属性槽**只给身材与外观**，母卡的效果不许跟着产物跑 ──────────────
+	# 用户实测：赤狐 9034 当第①张 → 产物上场又「从卡组取一张技能牌，本回合费用 -1」。
+	# 根因：产物由 `base.to_dict()` 整份复制而来，id / traits / 各类效果字段全都带过来了，
+	# 引擎里按 `card.id` 派发的那套母卡入场效果照旧命中。现在产物 id 归 0、art_id 只留给表现层。
+	var fox: CardData = repo.get_card(GameEngine.FOX_ID)
+	var tiger_card: CardData = repo.get_card(GameEngine.TIGER_ID)
+	var hare: CardData = repo.get_card(9032)
+	var fox_prod := Rules.build(fox, tiger_card.upper_effect, hare.lower_effect, false)
+	check(fox_prod != null and fox_prod.id == 0 and fox_prod.art_id == fox.id
+			and fox_prod.pic_id() == fox.id,
+			"R637 组合：产物 id 归 0、art_id 记属性槽原 id（卡图照旧取得到）")
+	check(fox_prod.traits.is_empty() and fox_prod.affixes.is_empty()
+			and fox_prod.trigger == "" and fox_prod.combo_trigger == ""
+			and fox_prod.combo_scope == ""
+			and fox_prod.field_heal == 0 and fox_prod.regen_per_turn == 0
+			and fox_prod.upgrade_atk_bonus == 0 and fox_prod.upgrade_hp_bonus == 0
+			and fox_prod.per_kill_damage == 0 and fox_prod.growth_power == 0
+			and fox_prod.upper_effect.is_empty() and fox_prod.lower_effect.is_empty(),
+			"R637 组合：traits / affixes / 各类效果字段一律不继承")
+	check(fox_prod.effect_text.find("从卡组随机抽取") < 0,
+			"R637 组合：卡面不再写母卡效果")
+	# 行为锁：产物上场 → 牌库不减少（赤狐的「抽一张技能牌」不触发）；真赤狐照旧触发
+	var fox_st := FieldState.new([], 20, 20, -1, "测试", false)
+	var fox_eng := GameEngine.new(fox_st)
+	fox_eng.ai_enabled = false
+	fox_st.energy = 10
+	for sid_a in [8002, 9083, 9077]:
+		var sc: CardData = repo.get_card(sid_a)
+		if sc != null:
+			fox_st.deck.append(CardData.from_dict(sc.to_dict()))
+	fox_st.hand.append(fox_prod)
+	var fd0 := fox_st.deck.size()
+	fox_eng.play_from_hand(0, Vector2i(4, 1))
+	check(fox_st.deck.size() == fd0, "R637 行为锁：产物上场不抽走技能牌")
+	var fox_st2 := FieldState.new([], 20, 20, -1, "测试", false)
+	var fox_eng2 := GameEngine.new(fox_st2)
+	fox_eng2.ai_enabled = false
+	fox_st2.energy = 10
+	for sid_b in [8002, 9083, 9077]:
+		var sc2: CardData = repo.get_card(sid_b)
+		if sc2 != null:
+			fox_st2.deck.append(CardData.from_dict(sc2.to_dict()))
+	fox_st2.hand.append(CardData.from_dict(fox.to_dict()))
+	var fd1 := fox_st2.deck.size()
+	fox_eng2.play_from_hand(0, Vector2i(4, 1))
+	check(fox_st2.deck.size() == fd1 - 1, "R637 行为锁：对照组赤狐本体照旧抽走技能牌")
+	# 序列化通道：复制 / 存档回来后仍是「无 id 的产物」
+	var fox_copy := CardData.from_dict(fox_prod.to_dict())
+	check(fox_copy.id == 0 and fox_copy.art_id == fox.id,
+			"R637 组合：to_dict → from_dict 通道不变形")
+	var fox_legacy := fox_prod.to_dict()
+	fox_legacy["id"] = fox.id
+	fox_legacy.erase("art_id")
+	var fox_old := CardData.from_dict(fox_legacy)
+	check(fox_old.id == 0 and fox_old.art_id == fox.id,
+			"R637 组合：旧存档里的产物读回来 id 归 0（from_dict 兜底）")
 	# commit
 	var before: int = eng.state.hand.size()
 	check(eng.assemble_combo_commit(), "R559 组合：commit 成功")

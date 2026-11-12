@@ -133,6 +133,12 @@ const ENCHANT_DEFS: Dictionary = {
 }
 
 var id: int = 0
+## R637：**卡面表现（卡图 / 未确认角标 / 数值染色基准）认的 id**；0 = 用自身 id。
+## 为什么要多一个字段：组合产物（`combine_mark`）的 `id` 现在归 0 —— 否则产物会照旧命中
+## 引擎里「按 `card.id` 派发」的母卡效果（用户实测：赤狐 9034 当属性槽 → 产物上场又抽一张
+## 技能牌并减费）。但卡图、卡面底色、染色基准都还认那张母卡，所以另开一个字段只给表现层用。
+## ⚠️ 卡图取图口一律走 `pic_id()`，别再直接传 `card.id`。
+var art_id: int = 0
 var card_name: String = ""
 var kind: String = ""          # 盟友 / 法术 / 工事 / 场地 / 效果
 var cost: int = 0
@@ -353,6 +359,8 @@ const ASSEMBLE_EFFECT_TYPES: Array[String] = [
 static func from_dict(d: Dictionary) -> CardData:
 	var c := CardData.new()
 	c.id = int(d.get("id", 0))
+	# R637：取图 id 随复制 / 离场还原 / 联机 / 存档通道走（缺省 0 → 老数据全走自身 id）。
+	c.art_id = int(d.get("art_id", 0))
 	c.card_name = str(d.get("name", ""))
 	c.kind = str(d.get("kind", ""))
 	c.cost = int(d.get("cost", 0))
@@ -456,6 +464,14 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.upper_effect = (d.get("upper_effect", {}) as Dictionary).duplicate(true)
 	c.lower_effect = (d.get("lower_effect", {}) as Dictionary).duplicate(true)
 	c.combine_mark = bool(d.get("combine_mark", false))
+	# R637：**组合产物一律没有自己的 id**。老存档 / 联机 / 复制通道里可能还带着母卡 id，
+	# 在唯一反序列化口兜一次：产物（combine_mark）的 id 归 0，原 id 转成取图用的 art_id。
+	# 不这么兜，旧存档里的产物读回来会继续执行母卡那套按 id 派发的效果。
+	if c.combine_mark:
+		if c.id > 0:
+			c.art_id = c.id
+			c.id = 0
+		c.strip_inherited_effects()
 	# R572：组合钩子必须随复制 / 离场还原 / 联机通道走 —— 漏了它，一张宝石兽被复制出来就不会再给组合。
 	c.combo_trigger = str(d.get("combo_trigger", ""))
 	c.combo_scope = str(d.get("combo_scope", ""))
@@ -465,7 +481,7 @@ static func from_dict(d: Dictionary) -> CardData:
 func to_dict() -> Dictionary:
 	## 序列化（联机时随「play / spell」消息发给对方重放）。
 	return {
-		"id": id, "name": card_name, "kind": kind, "cost": cost,
+		"id": id, "art_id": art_id, "name": card_name, "kind": kind, "cost": cost,
 		"power": power, "health": health,
 		"attack_range": attack_range, "move_speed": move_speed,
 		"color": color, "traits": traits,
@@ -531,6 +547,41 @@ func to_dict() -> Dictionary:
 		"combo_trigger": combo_trigger,
 		"combo_scope": combo_scope,
 	}
+
+
+func strip_inherited_effects() -> void:
+	## R637：**组合产物不许继承属性槽原卡的任何效果** —— 唯一清理口。
+	##
+	## 用户实测：赤狐 9034 当第①张 → 产物上场又「从卡组取一张技能牌，本回合费用 -1」。
+	## 根因是产物由 `base.to_dict()` 整份复制而来：id / traits / 各种效果字段全带了过来，
+	## 引擎里按 `card.id` 派发的那一整套母卡入场效果照旧命中。
+	##
+	## 口径：产物 = 费用 / 力量 / 生命 / 射程 / 移速 + 卡名卡图 + 种类 / 职业 + `assemble` 那一段。
+	## `id` 归 0 与 `art_id` 的取舍在 `AssembleRules.build()` 里做（卡图还要认母卡），
+	## 这里只管「效果类字段一律归零」。调用点只有两处：生成口与旧存档兜底。
+	traits = []
+	affixes = []
+	enchant = ""
+	enchant_label = ""
+	trigger = ""
+	combo_trigger = ""
+	combo_scope = ""
+	random_born = false
+	own_copy = false
+	upper_effect = {}
+	lower_effect = {}
+	for f in ["field_heal", "field_poison_dmg", "field_poison_turns", "field_vortex_dmg",
+			"regen_per_turn", "first_kill_power", "first_kill_health", "per_kill_damage",
+			"battle_end_gold", "growth_power", "growth_health", "growth_damage",
+			"lone_dmg_bonus", "lone_str_bonus", "upgrade_atk_bonus", "upgrade_hp_bonus",
+			"upgrade_stacks", "diff_power", "diff_health"]:
+		set(f, 0)
+
+
+func pic_id() -> int:
+	## R637：卡面表现（卡图 / 待确认角标 / 染色基准）该用哪个 id —— 唯一口。
+	## 组合产物 `id` 归 0、`art_id` 记着属性槽那张卡，所以**不许**在界面上直接读 `card.id`。
+	return art_id if art_id > 0 else id
 
 
 func rarity_name() -> String:

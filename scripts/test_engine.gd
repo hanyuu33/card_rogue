@@ -69754,7 +69754,9 @@ func _init() -> void:
 
 	var r582_prev: CardData = r582_tf_e.assemble_combo_preview()
 
-	check(r582_prev != null and r582_prev.id == 8026
+	check(r582_prev != null and r582_prev.id == 0 and r582_prev.art_id == 8026
+
+			and r582_prev.pic_id() == 8026
 
 			and r582_prev.card_name == "构装体"
 

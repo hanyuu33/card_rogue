@@ -9152,7 +9152,7 @@ func _draw() -> void:
 
 
 func _art(card: CardData, rect: Rect2) -> void:
-	var tex := CardFace.art_for(card.id)
+	var tex := CardFace.art_for(card.pic_id())   # R637：产物 id 归 0，取图认 pic_id
 	if tex == null:
 		return
 	# 保持比例放进插图区
@@ -17088,7 +17088,7 @@ func _draw_effect_thumbnail(card: CardData, rect: Rect2, count := 1, show_counte
 	draw_style_box(sb, frame)
 	draw_rect(frame.grow(-4), Color("bda575"), false, 1)
 	var picture := frame.grow(-5)
-	var art := CardFace.art_for(card.id)
+	var art := CardFace.art_for(card.pic_id())   # R637：产物 id 归 0，取图认 pic_id
 	if art != null:
 		var ts := art.get_size()
 		var side := minf(ts.x, ts.y)

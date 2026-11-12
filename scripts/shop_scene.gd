@@ -1738,7 +1738,7 @@ func _draw_fly() -> void:
 		var tint := CardFace.paper_tint(card)
 		tint.a = 1.0 - 0.2 * e
 		draw_rect(rr, tint, true)
-		var art := CardFace.art_for(card.id, false, 0)
+		var art := CardFace.art_for(card.pic_id(), false, 0)   # R637：产物 id 归 0，取图认 pic_id
 		if art != null and rr.size.x > 20.0:
 			var abox := Rect2(rr.position, Vector2(rr.size.x, rr.size.y * UiTheme.CARD_ART_RATIO))
 			draw_texture_rect_region(art, abox,

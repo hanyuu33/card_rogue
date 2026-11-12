@@ -617,7 +617,8 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 			Vector2(rect.size.x, rect.size.y * UiTheme.CARD_ART_RATIO))
 	if box.size.x < 6.0 or box.size.y < 6.0:
 		return
-	var tex := art_for(card.id, sleeping, phase)
+	var tex := art_for(card.pic_id(), sleeping, phase)
+	# R637：取图认 `pic_id()` —— 组合产物 id 归 0，卡图仍要出属性槽那张。
 	if tex != null:
 		# 覆盖式铺满（cover）：卡图出血到卡边、不留白（R165 开放式卡图）。
 		tex = UiAssets.filtered(tex, ceili(maxf(box.size.x, box.size.y) * 1.5))
@@ -635,7 +636,7 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 	# 有图无图都画：无图回退的渐变横幅同样需要一圈边框，否则那一档卡看起来「没做完」。
 	_draw_art_frame(canvas, card, box, k)
 	# R478：未确认卡图打角标（AI 生成、待人工确认）。
-	if tex != null and is_pending_art(card.id):
+	if tex != null and is_pending_art(card.pic_id()):
 		_draw_pending_mark(canvas, box, k)
 
 
@@ -1122,15 +1123,16 @@ static func _base_vals(card: CardData) -> Dictionary:
 	## 找不到（动态生成的衍生物 / 卡库没有的 id）→ 空字典 = 一律按「没变」处理（不染色）。
 	if card == null:
 		return {}
-	if _base_cache.has(card.id):
-		return _base_cache[card.id]
+	# R637：染色基准认 `pic_id()` —— 产物 id 归 0，但它的身材来自属性槽那张，基准还是它。
+	if _base_cache.has(card.pic_id()):
+		return _base_cache[card.pic_id()]
 	var d := {}
 	var repo := _base_repo()
-	var proto: CardData = repo.get_card(card.id) if repo != null else null
+	var proto: CardData = repo.get_card(card.pic_id()) if repo != null else null
 	if proto != null:
 		d = {"power": proto.power, "health": proto.health,
 				"range": proto.attack_range, "speed": proto.move_speed}
-	_base_cache[card.id] = d
+	_base_cache[card.pic_id()] = d
 	return d
 
 

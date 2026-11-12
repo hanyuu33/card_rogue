@@ -320,6 +320,17 @@ static func build(base: CardData, upper: Dictionary, lower: Dictionary, reverse:
 	if not valid_pool([upper], [lower]):
 		return null
 	var result := CardData.from_dict(base.to_dict())
+	# ── R637：属性槽**只给身材与外观**，不给效果 ──
+	# 用户实测：赤狐 9034 当第①张 → 产物上场又「从卡组取一张技能牌，本回合费用 -1」。
+	# 根因是产物从 `base.to_dict()` 整份复制：id / traits / 各种效果字段全带了过来，
+	# 引擎里按 `card.id` 派发的那一整套母卡入场效果照旧命中。
+	# 产物 = 身材（费用/攻/血/程/速）+ 卡名卡图 + 种类/职业 + `assemble` 那一段；
+	# `art_id` 只给卡面取图 / 染色基准用，不参与任何结算。
+	result.art_id = base.id
+	result.id = 0
+	# R637：产物印记在生成口就打上（`CardData.from_dict` 的旧存档兜底靠它认「这是产物」）。
+	result.combine_mark = true
+	result.strip_inherited_effects()
 	var first: Dictionary = lower if reverse else upper
 	var second: Dictionary = upper if reverse else lower
 	# R567：产物只有**一个扳机** —— 就是上半那张卡的（valid_pool 保证上半一定有）。下半的
