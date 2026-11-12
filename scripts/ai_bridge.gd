@@ -1903,8 +1903,21 @@ func _reward_targets() -> Array:
 			out.append({"id": "rws%d" % i, "hint": "奖励 %d：放弃这组卡" % i})
 		elif kind == "relic":
 			var rid := int(e.get("id", 0))
-			out.append({"id": "rw%d" % i, "hint": "奖励 %d：领取道具「%s」" % [
-					i, RunState.relic_display_name(rid)]})
+			# R636：鸭血领到的那一下，奖励面板会就地摊开卡组（VIEW_DUP）。
+			# 摊开时把可复制的卡列出来 —— 否则 AI 只会反复点「领取」，永远走不到「确定复制」。
+			var rpd2: Variant = _scene().get("_reward_panel")
+			var dup_open: bool = (rid == RunState.DUCK_BLOOD_RELIC_ID and rpd2 != null
+					and rpd2.is_open() and int(rpd2._view) == RewardPanel.VIEW_DUP)
+			if dup_open:
+				for di in RunState.deck_ids.size():
+					var dc2: CardData = repo.get_card(int(RunState.deck_ids[di]))
+					var dnm2 := dc2.card_name if dc2 != null else "?"
+					out.append({"id": "rp%d" % di,
+							"hint": "鸭血：选中 / 取消卡组第 %d 张「%s」" % [di, dnm2]})
+				out.append({"id": "rdup", "hint": "鸭血：确定复制已选中的卡"})
+			else:
+				out.append({"id": "rw%d" % i, "hint": "奖励 %d：领取道具「%s」" % [
+						i, RunState.relic_display_name(rid)]})
 			out.append({"id": "rws%d" % i, "hint": "奖励 %d：放弃这件道具" % i})
 		elif kind == "deck_delete":
 			# R414：删卡**没有「接受」这一步** —— 点它就是摊开卡组，点一张当场删掉。
@@ -1990,6 +2003,19 @@ func _reward_click(target: String) -> Dictionary:
 		if rpc2 == null or not rpc2.is_open():
 			return {"ok": false, "msg": "奖励窗没开着"}
 		return rpc2.core_pick_deck(int(target.substr(2)))
+	# R636：`rp<卡组下标>` —— 鸭血复制页上点一张（选中 / 取消）；`rdup` —— 落账。
+	if target.begins_with("rp") and target.substr(2).is_valid_int():
+		var rpd3: Variant = s.get("_reward_panel")
+		if rpd3 == null or not rpd3.is_open() or int(rpd3._view) != RewardPanel.VIEW_DUP:
+			return {"ok": false, "msg": "鸭血复制页没开着"}
+		rpd3._dup_toggle(int(target.substr(2)))
+		return {"ok": true, "msg": "切换选中：卡组第 %s 张" % target.substr(2)}
+	if target == "rdup":
+		var rpd4: Variant = s.get("_reward_panel")
+		if rpd4 == null or not rpd4.is_open() or int(rpd4._view) != RewardPanel.VIEW_DUP:
+			return {"ok": false, "msg": "鸭血复制页没开着"}
+		rpd4._dup_confirm()
+		return {"ok": true, "msg": "鸭血：已落账复制"}
 	if target.begins_with("rws"):
 		var si := int(target.substr(3))
 		if RunState.skip_pending_reward(si):

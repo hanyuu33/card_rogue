@@ -46,6 +46,10 @@ const VIEW_CORE := 5
 const VIEW_VIEWER := 6         # R463：只看卡组（不结算任何奖励）
 ## R543：大宝箱「奖励道具 / 生命之种」二选一视图 —— 两个并列选项，点一个即领取。
 const VIEW_KEY_CHOICE := 7
+## R636（用户口径「鸭血应该在领取时立即结算，而不是等奖励界面关闭」）：
+## 鸭血的复制选卡也搬到面板里**就地完成** —— 与 R398 月亮的删卡同一条思路，
+## 区别是**多选 + 确认**（最多 `RunState.DUCK_BLOOD_MAX` 张，可一张都不选）。
+const VIEW_DUP := 8
 const DECK_COLS := 6            # 一行 6 张
 const DECK_CARD_W := 112.0
 const DECK_CARD_H := 135.0
@@ -104,6 +108,9 @@ var _pick_sel := -1           # R167：卡牌三选一里「已点选、待确�
 ## R467：传说卡揭示动画的起点（ms；-1 = 没在播）。只影响绘制，不参与任何结算。
 var _legend_t := -1
 var _deck_hover := -1         # R398：删卡视图里鼠标压中的卡组下标（-1 = 没有）
+## R636：鸭血复制视图里已选中的**卡组下标**（最多 DUCK_BLOOD_MAX 个，顺序 = 选择顺序）。
+## 只记下标、不立刻复制 —— 点「确定复制」才真正写卡组，中途能反复改选。
+var _dup_sel: Array[int] = []
 ## R458 核心视图：`_core_grid` 是**卡组下标**的列表（不是第几张卡），
 ## 网格位置 → 卡组下标的换算只在这一层，点击 / 绘制 / AI 桥都读同一份。
 var _core_grid: Array[int] = []
@@ -225,6 +232,7 @@ func close() -> void:
 	_scroll = 0.0
 	_pick_sel = -1
 	_ench_t0 = 0
+	_dup_sel.clear()
 	_reset_core()
 	_refresh_btn()
 	if not _closing_to_route and on_closed.is_valid():
@@ -435,6 +443,14 @@ func _claim_entry(i: int) -> void:
 	if was_milk and not RunState.milk_anim.is_empty():
 		_open_enchant_view()
 		return
+	# R636（用户口径「鸭血应该在领取时立即结算，而不是等奖励界面关闭」）：
+	# 领到鸭血 → **就在这一下**摊开卡组选卡。旧路是「领下 → 等本批奖励都处理完 →
+	# 关界面 → 跳 deck_edit」，玩家看到的就是「拿了鸭血没反应，关了界面才选」。
+	if (RunState.pending_relic == RunState.DUCK_BLOOD_RELIC_ID
+			and not RunState.deck_ids.is_empty()):
+		_dup_sel.clear()
+		_open_dup_view()
+		return
 	_root.queue_redraw()
 	# R216：即时道具（鸭血 / 源数之力 / 失忆药水）领完**立刻**去选卡 ——
 	# 旧版要玩家先关掉本界面、回到地图 `_ready` 才跳，表现就是「拿了鸭血没反应」。
@@ -616,6 +632,14 @@ func _open_entry(i: int) -> void:
 		_scroll = 0.0
 		_root.queue_redraw()
 		return
+	# R636：鸭血领过之后回到列表，再点这一条要能**重新摊开**选卡
+	#（条目已置为已领，但 `pending_relic` 还在 —— 复制还没落账）。
+	if (k == "relic" and int(e.get("id", 0)) == RunState.DUCK_BLOOD_RELIC_ID
+			and RunState.pending_relic == RunState.DUCK_BLOOD_RELIC_ID):
+		if RunState.deck_ids.is_empty():
+			return
+		_open_dup_view()
+		return
 	if k == "relic":
 		_view = VIEW_RELIC
 	else:
@@ -646,6 +670,51 @@ func _back_to_list() -> void:
 	_root.queue_redraw()
 
 
+func _open_dup_view() -> void:
+	## R636：鸭血 —— 就地摊开卡组选卡（最多 `RunState.DUCK_BLOOD_MAX` 张）。
+	## ⚠️ **不清 `_dup_sel`**：从视图里「返回列表」再点开时，选过的两张要还在
+	##    （玩家只是回去看了一眼别的奖励，不该把选择丢掉）。清空只发生在
+	##    「领取到鸭血的那一下」与「落账 / 关窗」两处。
+	_view = VIEW_DUP
+	_scroll = 0.0
+	_deck_hover = -1
+	_root.queue_redraw()
+
+
+func _dup_toggle(di: int) -> void:
+	## 点一张卡：已选 → 取消；没满 → 选中；已满 → **替换最早选的那张**
+	## （与 `deck_edit_scene` 的多选口径一致：玩家点第三张的意图是「我改主意了」，
+	## 静默忽略最让人困惑）。
+	if di < 0 or di >= RunState.deck_ids.size():
+		return
+	var at := _dup_sel.find(di)
+	if at >= 0:
+		_dup_sel.remove_at(at)
+	else:
+		_dup_sel.append(di)
+		while _dup_sel.size() > RunState.DUCK_BLOOD_MAX:
+			_dup_sel.remove_at(0)
+	_root.queue_redraw()
+
+
+func _dup_confirm() -> void:
+	## 落账唯一口：`RunState.duplicate_deck_cards()` —— 与 `deck_edit_scene` 同一个，
+	## 所以「完整复制附魔」的规则只有一份，界面不许自己拼卡组。
+	var res := RunState.duplicate_deck_cards(_repo_cards, _dup_sel)
+	var nms: Array[String] = []
+	for it: Dictionary in res.get("copied", []):
+		nms.append(str(it["name"]))
+	if nms.is_empty():
+		UiToast.toast("鸭血：没有复制任何卡（卡组不变）")
+	else:
+		UiToast.toast("鸭血：复制了「%s」各一份" % "、".join(nms))
+	_dup_sel.clear()
+	_view = VIEW_LIST
+	_scroll = 0.0
+	_deck_hover = -1
+	_root.queue_redraw()
+
+
 # ------------------------------------------------------------ 绘制
 
 func _on_draw() -> void:
@@ -668,6 +737,8 @@ func _on_draw() -> void:
 			_draw_core()
 		VIEW_VIEWER:
 			_draw_deck_viewer()
+		VIEW_DUP:
+			_draw_dup()
 		_:
 			_draw_list()
 	_draw_mention_tip()   # R168：悬浮件画在最后（压在所有内容之上）
@@ -1526,6 +1597,66 @@ func _draw_deck_viewer() -> void:
 	_draw_btn(_btn_viewer_back_rect(), "← 返回", false, false)
 
 
+# ------------------------------------------------------------ R636 鸭血复制
+
+func _draw_dup() -> void:
+	## 鸭血：卡组摊开、最多挑 2 张，点「确定复制」才落账。
+	## 面板 / 网格几何与月亮删卡（`_draw_deck`）完全共用，区别只有「多选 + 确认」。
+	## ⚠️ 不复用 `_draw_deck()`：那一版读 `pending_rewards[_sel]` 并直接落删卡结算。
+	var vs := _vs()
+	_root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.045, 0.08, 0.86), true)
+	var pr := _deck_panel_rect()
+	UiTheme.draw_scroll_bg(_root, pr)
+	var n := RunState.deck_ids.size()
+	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
+			"鸭血 —— 选择最多 %d 张卡复制" % RunState.DUCK_BLOOD_MAX,
+			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_HEADING, Color("2f2a20"))
+	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 78),
+			"选中的卡各复制一份加入卡组（原卡保留、附魔一起带走）｜已选 %d 张" % _dup_sel.size(),
+			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
+	var c := _deck_clip_rect()
+	if n <= 0:
+		_root.draw_string(_font, Vector2(c.position.x, c.position.y + 40),
+				"卡组里没有可复制的卡", HORIZONTAL_ALIGNMENT_CENTER, c.size.x,
+				UiTheme.FS_BODY, UiTheme.INK_600)
+	for i in n:
+		var rr := _deck_card_rect(i)
+		# 滚出可视区的整张卡不画（纯自绘，没有 clip 容器）
+		if rr.end.y < c.position.y - 2.0 or rr.position.y > c.end.y + 2.0:
+			continue
+		# 走 `card_with_mod()` —— 复制品与展示必须同一份数值（附魔标记 / 费用都在卡面上）
+		var card: CardData = RunState.card_with_mod(_repo_cards, i)
+		if card == null:
+			continue
+		if i == _deck_hover:
+			_root.draw_rect(rr.grow(6.0), Color(1, 1, 1, 0.75), true)
+		CardFace.draw_pick(_root, card, rr, _font, _font_bold, false)
+		var pick_n := _dup_sel.find(i) + 1
+		if pick_n > 0:
+			# 选中：金色描边 + 一层暖光 + **卡内侧右上角**序号（选两张时看得出先后）。
+			# ⚠️ 序号绝不能放卡面外侧四角 —— 那里正好是费用 / 攻 / 血 / 甲四枚徽章，
+			#    首版放左上角直接把费用徽章压住了（出图当场看出来）。
+			_root.draw_rect(rr, Color(1.0, 0.84, 0.32, 0.14), true)
+			# 双层描边：外深金 + 内亮金 —— 单层浅金在奶油色卡底上几乎看不出来（出图实测）。
+			_root.draw_rect(rr.grow(5.0), Color("c8871a"), false, 5.0)
+			_root.draw_rect(rr.grow(2.0), Color("ffd77a"), false, 2.0)
+			var badge := Rect2(rr.position + Vector2(rr.size.x - 34.0, 8.0), Vector2(28.0, 28.0))
+			_root.draw_circle(badge.get_center(), 14.0, Color("ffd77a"))
+			_root.draw_circle(badge.get_center(), 12.0, Color("c8871a"))
+			_root.draw_string(_font_bold, badge.position + Vector2(0.0, 19.0),
+					str(pick_n), HORIZONTAL_ALIGNMENT_CENTER, 28.0,
+					UiTheme.FS_SUBHEAD, Color("2b1d08"))
+	if _max_scroll() > 0.0:
+		_root.draw_string(_font, Vector2(c.position.x, c.end.y - 2.0),
+				"滚轮查看更多（%d 张）" % n, HORIZONTAL_ALIGNMENT_RIGHT, c.size.x,
+				UiTheme.FS_CAPTION, UiTheme.INK_600)
+	_draw_btn(_btn_deck_back_rect(), "← 返回列表", false, false)
+	# 一张都不选也合法（= 跳过这次复制），所以按钮**永远可用**，只是不亮主色。
+	_draw_btn(_btn_deck_skip_rect(),
+			"确定复制（%d/%d）" % [_dup_sel.size(), RunState.DUCK_BLOOD_MAX],
+			not _dup_sel.is_empty(), false)
+
+
 # ------------------------------------------------------------ R458 核心视图
 
 ## 「核心」的兑换页：一副卡组摊开、两段选 —— 先挑**祭品**、再挑**接收者**。
@@ -2061,6 +2192,8 @@ func _on_motion(pos: Vector2) -> void:
 			_deck_hover = _deck_index_at(pos)
 		VIEW_VIEWER:
 			_deck_hover = _deck_index_at(pos)
+		VIEW_DUP:
+			_deck_hover = _deck_index_at(pos)
 		VIEW_CORE:
 			_core_hover = _core_index_at(pos)
 	if old_row != _hover_row or old_card != _hover_card or old_core != _core_hover \
@@ -2147,6 +2280,17 @@ func _on_click(pos: Vector2) -> void:
 				return
 			core_pick_deck(int(_core_grid[cgi]))
 			return
+		VIEW_DUP:
+			if _btn_deck_back_rect().has_point(pos):
+				_back_to_list()
+				return
+			if _btn_deck_skip_rect().has_point(pos):
+				_dup_confirm()
+				return
+			var dup_i := _deck_index_at(pos)
+			if dup_i >= 0:
+				_dup_toggle(dup_i)
+			return
 		VIEW_VIEWER:
 			if _btn_viewer_back_rect().has_point(pos):
 				_close_deck_viewer()
@@ -2210,6 +2354,12 @@ func _on_click(pos: Vector2) -> void:
 			if any_relic and _btn_claim_all_rect().has_point(pos):
 				RunState.claim_all_relic_rewards()
 				_root.queue_redraw()
+				# R636：一键领取里包含鸭血 → 当刻就地摊开卡组（与单条领取同一个口）。
+				if (RunState.pending_relic == RunState.DUCK_BLOOD_RELIC_ID
+						and not RunState.deck_ids.is_empty()):
+					_dup_sel.clear()
+					_open_dup_view()
+					return
 				_route_if_waiting_pick()   # R216：一键领到鸭血也要立刻去选卡
 				return
 			for i in RunState.pending_rewards.size():
@@ -2237,7 +2387,7 @@ func _draw_mention_tip() -> void:
 
 
 func _max_scroll() -> float:
-	if _view == VIEW_DECK or _view == VIEW_VIEWER:
+	if _view == VIEW_DECK or _view == VIEW_VIEWER or _view == VIEW_DUP:
 		return maxf(0.0, _deck_content_h() - _deck_clip_rect().size.y)
 	if _view == VIEW_CORE:
 		return maxf(0.0, _grid_content_h(_core_grid.size()) - _deck_clip_rect().size.y)
@@ -2359,6 +2509,34 @@ func _demo_start() -> void:
 				_open_entry(didx))
 		add_child(tmd)
 		tmd.start()
+		return
+	# R636 出图：鸭血的就地复制视图。
+	#   `-- --screenshot --dupdemo`            摊开卡组（还没选）
+	#   `-- --screenshot --dupdemo --duppick`  已选 2 张（核验金框 / 序号 / 按钮文案）
+	if "--dupdemo" in args:
+		RunState.run_active = true
+		RunState.relics = []
+		RunState.skipped_relics = []
+		RunState.deck_ids = [8003, 8002, 8052, 9003, 9162, 8001, 9018]
+		RunState.deck_mods = []
+		RunState.ensure_deck_mods()
+		RunState.enchant_deck_card(0, RunState.enchant_mod("damage"))
+		RunState.enchant_deck_card(2, RunState.enchant_mod("costdown"))
+		RunState.pending_rewards = []
+		RunState.pending_relic = -1
+		RunState.pending_rewards.append({"kind": "relic",
+				"id": RunState.DUCK_BLOOD_RELIC_ID, "state": RunState.REWARD_PENDING})
+		var tmdu := Timer.new()
+		tmdu.wait_time = 0.25
+		tmdu.one_shot = true
+		tmdu.timeout.connect(func():
+			open()
+			_claim_entry(0)
+			if "--duppick" in args:
+				_dup_toggle(0)
+				_dup_toggle(2))
+		add_child(tmdu)
+		tmdu.start()
 		return
 	# R323 出图：牛奶附魔演示 —— 不碰卡组，直接造两份演示数据。
 	#   `-- --screenshot --milkdemo`            整段动画（约 1.2s 后落定）

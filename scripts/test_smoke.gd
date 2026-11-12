@@ -767,10 +767,13 @@ func _check_discard_view(scene: Variant) -> void:
 
 
 func _check_duck_blood_instant(scene: Variant) -> void:
-	## R216：奖励界面领到鸭血 → 当刻关界面并转去卡组选择页（不等地图 `_ready`）。
+	## R636（用户口径「鸭血应该在领取时立即结算，而不是等奖励界面关闭」）：
+	## 领到鸭血的那一下**就地摊开卡组**（VIEW_DUP），不再等本批领完 / 关界面再跳 deck_edit。
+	## 这一条同时守住 R340 的老坑：不跳场景 → 不会先跑宿主 `_settle_before_pick()` →
+	## 不会在卡牌三选一还没展示时就 `advance_layer()`。
 	var p: Variant = scene._reward_panel
 	if p == null:
-		_smoke_fail("R216 鸭血即时结算：地图没有挂上 RewardPanel")
+		_smoke_fail("R636 鸭血即时结算：地图没有挂上 RewardPanel")
 		return
 	var routed: Array = []
 	var hooked: Array = [false]
@@ -778,6 +781,9 @@ func _check_duck_blood_instant(scene: Variant) -> void:
 	p.on_before_pick = func(): hooked[0] = true
 	RunState.pending_relic = -1
 	RunState.pending_relic_drop = -1
+	RunState.deck_ids = [8001, 8002, 8003]
+	RunState.deck_mods = [RunState.enchant_mod("costdown"), RunState.enchant_mod("damage"), {}]
+	RunState.ensure_deck_mods()
 	RunState.pending_rewards = [{"kind": "relic", "id": RunState.DUCK_BLOOD_RELIC_ID,
 			"state": RunState.REWARD_PENDING}]
 	p.open()
@@ -785,28 +791,51 @@ func _check_duck_blood_instant(scene: Variant) -> void:
 	var bad := ""
 	if RunState.pending_relic != RunState.DUCK_BLOOD_RELIC_ID:
 		bad = "领取当刻就该置待选卡，实际 pending_relic=%d" % RunState.pending_relic
-	elif not bool(hooked[0]):
-		bad = "跳转前没有调用宿主收尾钩子（房间会漏结算）"
-	elif routed.size() != 1 or str(routed[0]) != "res://scenes/deck_edit.tscn":
-		bad = "应立刻转去卡组选择页，实际 %s" % str(routed)
-	elif p.is_open():
-		bad = "转页前没有关闭奖励界面"
+	elif not p.is_open():
+		bad = "领完就把面板关掉了（复制还没落账）"
+	elif int(p._view) != RewardPanel.VIEW_DUP:
+		bad = "应就地摊开卡组（VIEW_DUP），实际 view=%d" % int(p._view)
+	elif not routed.is_empty() or bool(hooked[0]):
+		bad = "不该跳场景 / 调宿主收尾（%s）" % str(routed)
+	elif RunState.deck_ids.size() != 3:
+		bad = "还没确认就改卡组了（%d 张）" % RunState.deck_ids.size()
 	if bad != "":
-		_smoke_fail("R216 鸭血即时结算：" + bad)
+		_smoke_fail("R636 鸭血即时结算：" + bad)
 	else:
-		print("SMOKE OK R216 鸭血即时结算：领取当刻关界面并转卡组选择页（钩子先收尾）")
+		print("SMOKE OK R636 鸭血即时结算：领取当刻就地摊开卡组（不关面板 / 不跳场景）")
+	# 选 2 张 → 确定：卡组 +2、附魔跟着走、待办清零、回列表
+	p._on_click(p._deck_card_rect(0).get_center())
+	p._on_click(p._deck_card_rect(1).get_center())
+	if p._dup_sel.size() != 2:
+		_smoke_fail("R636 鸭血：点两张应选中 2 张，实际 %d" % p._dup_sel.size())
+	p._on_click(p._btn_deck_skip_rect().get_center())
+	var bad2 := ""
+	if RunState.deck_ids.size() != 5:
+		bad2 = "确定复制后卡组应 +2（3 → 5），实际 %d" % RunState.deck_ids.size()
+	elif (RunState.enchant_id_of(RunState.deck_mods[3]) != "costdown"
+			or RunState.enchant_id_of(RunState.deck_mods[4]) != "damage"):
+		bad2 = "复制品应完整带走附魔，实际 %s" % str(RunState.deck_mods)
+	elif RunState.pending_relic != -1:
+		bad2 = "落账后应清掉待办，实际 %d" % RunState.pending_relic
+	elif int(p._view) != RewardPanel.VIEW_LIST:
+		bad2 = "落账后应回列表，实际 view=%d" % int(p._view)
+	elif not routed.is_empty() or bool(hooked[0]):
+		bad2 = "落账不该跳场景 / 调宿主收尾（%s）" % str(routed)
+	if bad2 != "":
+		_smoke_fail("R636 鸭血复制落账：" + bad2)
+	else:
+		print("SMOKE OK R636 鸭血复制：选 2 张各复制一份，附魔一起带走，面板留在原地")
 	# 普通道具（不需要选卡）→ 不转页
-	# ⚠️ 先把上一段的待选清掉：真流程里选卡页已经把它结算了，这里用 `route_fn` 假跳，
-	#    不清就会把「还没选完」的待办算到这一段头上。
+	# ⚠️ 先把上一段的待选清掉：真流程里选卡已经在面板内结算了。
 	RunState.pending_relic = -1
 	RunState.pending_rewards = [{"kind": "relic", "id": 6005,
 			"state": RunState.REWARD_PENDING}]
 	p.open()
 	p._claim_entry(0)
-	if routed.size() != 1:
-		_smoke_fail("R216 普通道具：不需要选卡却转页了（%s）" % str(routed))
+	if not routed.is_empty():
+		_smoke_fail("R636 普通道具：不需要选卡却转页了（%s）" % str(routed))
 	# R340（用户报「打完 Boss 拿完道具直接进二层、没拿卡牌奖励」）：
-	# 同一批里「道具 + 卡牌三选一」都在时，领道具**不许**立刻跳走 ——
+	# 同一批里「道具 + 卡牌三选一」都在时，领道具**不许**跳走 ——
 	# 跳走会先调宿主 `_settle_before_pick()` → `advance_layer()`，卡牌还没展示就换层了。
 	# 先把道具从身上摘掉：`gain_relic` 对「已拥有」直接 return，不置 `pending_relic`。
 	RunState.relics.erase(RunState.DUCK_BLOOD_RELIC_ID)
@@ -820,29 +849,36 @@ func _check_duck_blood_instant(scene: Variant) -> void:
 	routed.clear()
 	hooked[0] = false
 	var deck_before: Array = RunState.deck_ids.duplicate()
+	var mods_before: Array = RunState.deck_mods.duplicate(true)
 	p.open()
 	p._claim_entry(0)
 	var bad340 := ""
 	if RunState.pending_relic != RunState.DUCK_BLOOD_RELIC_ID:
 		bad340 = "领鸭血后应置待选卡，实际 %d" % RunState.pending_relic
-	elif not routed.is_empty():
+	elif not routed.is_empty() or bool(hooked[0]):
 		bad340 = "本批还有卡牌三选一没处理，却跳走了（%s）" % str(routed)
-	elif bool(hooked[0]):
-		bad340 = "不该调用宿主收尾（会在卡牌奖励之前抢先换层）"
+	elif int(p._view) != RewardPanel.VIEW_DUP:
+		bad340 = "应就地摊开卡组，实际 view=%d" % int(p._view)
 	elif RunState.pending_reward_count() != 1:
 		bad340 = "卡牌条目应仍在待领，实际 %d" % RunState.pending_reward_count()
 	if bad340 == "":
-		# 把这一组的卡选掉 = 本批真正结束 → 这时才允许转去卡组选择页
-		RunState.pick_pending_card(1, 9018)
-		RunState.deck_ids.assign(deck_before)   # 还原卡组，别污染后面的用例
-		if RunState.pending_reward_count() != 0:
-			bad340 = "选完卡后待领应清零，实际 %d" % RunState.pending_reward_count()
-		elif RewardPanel.route_target_after_pick() != "res://scenes/deck_edit.tscn":
-			bad340 = "本批处理完之后应允许转卡组选择页"
+		# 选 1 张 → 确定：鸭血在面板内落账，卡牌条目仍待领
+		p._on_click(p._deck_card_rect(0).get_center())
+		p._on_click(p._btn_deck_skip_rect().get_center())
+		if RunState.pending_relic != -1:
+			bad340 = "复制落账后待办应清零，实际 %d" % RunState.pending_relic
+		elif RunState.pending_reward_count() != 1:
+			bad340 = "落账不该动卡牌奖励，实际待领 %d" % RunState.pending_reward_count()
+		elif not routed.is_empty():
+			bad340 = "落账就跳场景了（%s）" % str(routed)
+		elif RewardPanel.route_target_after_pick() != "":
+			bad340 = "鸭血已在面板内结算，不该再转 deck_edit"
+	RunState.deck_ids = deck_before
+	RunState.deck_mods = mods_before
 	if bad340 != "":
-		_smoke_fail("R340 Boss 奖励：领道具不该越过卡牌三选一换层 —— " + bad340)
+		_smoke_fail("R340/R636 Boss 奖励：领道具不该越过卡牌三选一换层 —— " + bad340)
 	else:
-		print("SMOKE OK R340 奖励批次：本批没处理完不跳走，处理完才转卡组选择页")
+		print("SMOKE OK R340/R636 奖励批次：鸭血就地结算、卡牌仍待领、不跳场景")
 	p.route_fn = Callable()
 	p.on_before_pick = Callable()
 	RunState.pending_relic = -1

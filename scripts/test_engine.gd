@@ -71836,7 +71836,9 @@ func _test_r592b() -> void:
 
 				"R592b：字段 %s 必须有 glyph（标志素材按它取名）" % a)
 
-	# ---- R624：① 同一张卡一回合只吃一次减费 ② 复制品不继承商店附魔 ----
+	# ---- R624：① 同一张卡一回合只吃一次减费 ② 战斗内复制品不继承商店附魔 ----
+	# ⚠️ R636 起口径分开：**卡组级**复制（鸭血）完整带走附魔；战斗内的临时复制
+	#    （野兔 / 复制术 = 次元幻影，离场即消失）仍然剥掉附魔。
 
 	var r621_repo := CardRepo.load_json()
 
@@ -71990,7 +71992,7 @@ func _test_r592b() -> void:
 
 					r621_copied.enchant if r621_copied != null else "?"])
 
-	# ⑤ 卡组级（鸭血 6024）：复制品 deck_mods 为空 —— 与 R181 同口径，这里补锁
+	# ⑤ 卡组级（鸭血 6024）：R636 起**完整复制** —— 附魔跟着走（推翻了 R181 的空 mod）
 
 	RunState.deck_ids = [8001, 8002]
 
@@ -72000,9 +72002,11 @@ func _test_r592b() -> void:
 
 	RunState.duplicate_deck_cards(r621_repo, [0])
 
-	check(RunState.deck_mods.size() == 3 and (RunState.deck_mods[2] as Dictionary).is_empty(),
+	check(RunState.deck_mods.size() == 3
+			and RunState.enchant_id_of(RunState.deck_mods[2]) == "costdown"
+			and int((RunState.deck_mods[2] as Dictionary).get("cost", 0)) == -1,
 
-			"R624：鸭血复制品 deck_mods 为空（不带走附魔）")
+			"R636：鸭血复制品**完整带走附魔**（costdown → 副本同附魔 / 同 -1 费）")
 
 	RunState.deck_ids = []
 
@@ -72029,4 +72033,54 @@ func _test_r592b() -> void:
 			and r621_eng_src.contains("RunState.strip_enchant(copy)"),
 
 			"R624 源码锁：`RunState.strip_enchant()` 是复制剥附魔的唯一口，野兔 / 复制术都调它")
+
+	# ---- R636（用户口径「需要能完整复制卡片，携带同种附魔」）----
+	# ① 鸭血复制：附魔一起带走（副本与原卡同 id / 同数值）
+	RunState.deck_ids = [8001, 8002, 8003]
+	RunState.deck_mods = [RunState.enchant_mod("damage"), {}, {}]
+	RunState.ensure_deck_mods()
+	var r633_before := RunState.deck_ids.size()
+	var r633_res := RunState.duplicate_deck_cards(r621_repo, [0])
+	check(r633_res["ok"] and RunState.deck_ids.size() == r633_before + 1
+			and RunState.enchant_id_of(RunState.deck_mods[3]) == "damage"
+			and int((RunState.deck_mods[3] as Dictionary).get("power", 0)) == 10,
+			"R636 鸭血：复制品完整继承附魔（damage → 副本也 +10 攻）")
+	# ② 卡组实例化后，原卡与副本的附魔数值 / 标记必须一致（展示层同一个口）
+	var r633_a: CardData = RunState.card_with_mod(r621_repo, 0)
+	var r633_b: CardData = RunState.card_with_mod(r621_repo, 3)
+	check(r633_a != null and r633_b != null
+			and r633_a.power == r633_b.power
+			and r633_a.enchant == r633_b.enchant and r633_b.enchant != "",
+			"R636 鸭血：原卡与副本的附魔数值 / 标记一致")
+	# ③ deep 拷贝：改副本的 mod 不许污染原卡
+	(RunState.deck_mods[3] as Dictionary)["power"] = 99
+	check(int((RunState.deck_mods[0] as Dictionary).get("power", 0)) == 10,
+			"R636 鸭血：副本附魔是 deep 拷贝（改副本不污染原卡）")
+	(RunState.deck_mods[3] as Dictionary)["power"] = 10
+	# ④ deck_mods 与 deck_ids 不等长（读档 / 演示路径）→ 先对齐再取附魔，不许崩 / 错位
+	RunState.deck_ids = [8001]
+	RunState.deck_mods = []
+	RunState.duplicate_deck_cards(r621_repo, [0])
+	check(RunState.deck_mods.size() == 2
+			and (RunState.deck_mods[0] as Dictionary).is_empty()
+			and (RunState.deck_mods[1] as Dictionary).is_empty(),
+			"R636 鸭血：附魔列表先对齐再复制（不等长不越界）")
+	RunState.deck_ids = []
+	RunState.deck_mods = []
+	# ⑤ 源码锁：奖励面板有就地复制视图，落账走同一个口
+	var r633_rp_src := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	check_src(r633_rp_src.contains("const VIEW_DUP := 8")
+			and r633_rp_src.contains("func _draw_dup() -> void:")
+			and r633_rp_src.contains("func _dup_confirm() -> void:")
+			and r633_rp_src.contains("RunState.duplicate_deck_cards(_repo_cards, _dup_sel)"),
+			"R636 源码锁：鸭血在奖励面板里就地选卡（VIEW_DUP / 同一个落账口）")
+	# ⑥ 源码锁：领取当刻就摊开卡组，不再等本批结束 / 关界面
+	var r633_ce_i := r633_rp_src.find("func _claim_entry(i: int) -> void:")
+	var r633_ce_j := r633_rp_src.find("func _is_milk_entry", r633_ce_i)
+	var r633_ce := ""
+	if r633_ce_i >= 0 and r633_ce_j > r633_ce_i:
+		r633_ce = r633_rp_src.substr(r633_ce_i, r633_ce_j - r633_ce_i)
+	check_src(r633_ce.contains("_open_dup_view()")
+			and r633_ce.find("_open_dup_view()") < r633_ce.find("_route_if_waiting_pick()"),
+			"R636 源码锁：领取鸭血的那一下先摊开卡组（在 `_route_if_waiting_pick()` 之前）")
 

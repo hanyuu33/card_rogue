@@ -2537,14 +2537,26 @@ static func duplicate_deck_cards(repo: CardRepo, indices: Array) -> Dictionary:
 		if i >= 0 and i < deck_ids.size() and not picked.has(i):
 			picked.append(i)
 	var copied: Array = []
+	ensure_deck_mods()          # R636：取附魔前先对齐（读档 / 演示路径可能留下不等长）
 	for i2: int in picked:
 		if copied.size() >= DUCK_BLOOD_MAX:
 			break
 		var id: int = deck_ids[i2]
 		var c := repo.get_card(id)
 		copied.append({"id": id, "name": c.card_name if c != null else str(id)})
+		# ⚠️ 必须**先取附魔再 append**：`_mod_at()` 里有 `ensure_deck_mods()`，
+		# 若先 append 了 deck_ids 再取，它会把 mods 补一个空槽对齐到**新长度**，
+		# 随后再 append 一次副本附魔 → 两个列表就错位了（R636 首版实测）。
+		var src_mod: Dictionary = _mod_at(i2).duplicate(true)
 		deck_ids.append(id)     # 副本追加到卡组末尾（原卡位置不动）
-		deck_mods.append({})    # R181：复制品无附魔
+		# R636（用户口径「需要能完整复制卡片，携带同种附魔」）：副本 = 原卡的**完整拷贝**，
+		# 附魔（`deck_mods`）一起带过去，并且必须 **deep 拷贝** —— 共享同一个 dict 的话，
+		# 之后给副本贴新附魔会把原卡一并改掉。
+		# 本局永久成长（`card_growth`）按卡 id 记账，副本天然继承，不需要另外搬。
+		# ⚠️ 这里与 R181 的旧口径（复制品无附魔）相反 —— R181 是为了防「复制刷附魔」，
+		#    用户在 R636 明确要求「完整复制」，所以改回带附魔；战斗内的临时复制
+		#    （野兔 / 复制术走 `strip_enchant()`）不受影响，仍是幻影不带附魔。
+		deck_mods.append(src_mod)
 	pending_relic = -1
 	return {"ok": not copied.is_empty(), "copied": copied}
 
