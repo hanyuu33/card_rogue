@@ -128,6 +128,11 @@ tools/ai_play/.runs.jsonl
 **/_review/
 # R500：双机同步时的临时暂存（WIP 出图 + 存档备份），本地留底用，不入库
 /_pkg_hold/
+# R612：批量截图工具 tools/_shot_scenes.gd 的输出目录（临时验收图，不进包也不入库）
+# 写成 `/_shots/*` 而不是 `/_shots/`，是为了让其中的 .gdignore 仍能入库 ——
+# 别人 checkout 后第一次跑截图工具时就带着忽略标记，不会把 13 张 png 打进包。
+/_shots/*
+!/_shots/.gdignore
 # R503：跑卡图体检 / 回归后留下的临时文本
 /_hits.txt
 # R524：关卡总览表的中间产物（tools/dump_levels.gd 导出，_leveltable.py 消费）
