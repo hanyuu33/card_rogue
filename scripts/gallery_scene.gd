@@ -34,6 +34,10 @@ var _group := "player"           # 图鉴分组：player=玩家卡牌图鉴 / en
 var _kind_filter := "全部"
 var _cost_filter := 0            # 0=全部，1..5=费用，6=5+
 var _search := ""
+var _search_lc := ""             # R631：小写化后的搜索词（中文不变，`HP` / `hp` 要能互通）
+var _search_pool: Dictionary = {}   # R631：id -> 可搜索文本（含空格版，见 _build_search_index）
+var _search_flat: Dictionary = {}   # R631：id -> 去空白版（搜「聚能 炮击」也能中）
+var _text_only_hits := 0         # R631：卡名不含、只在效果文 / 特性 / 字段里命中的张数
 var _class_filter := "全部"       # R77：按职业查找（"" = 无归属 / 通用）
 
 var _menu: UiMenu = null      # Esc 主菜单（R148）
@@ -90,6 +94,7 @@ func _ready() -> void:
 	detail_text.add_theme_color_override("font_color", UiTheme.INK_800)
 	repo = CardRepo.load_json()
 	_all = repo.all_cards()
+	_build_search_index()   # R631：搜索索引只在载入时建一次
 	for t: String in ["费用不限", "1 费", "2 费", "3 费", "4 费", "5 费+"]:
 		cost_opt.add_item(t)
 	_rebuild_classes()
@@ -116,6 +121,12 @@ func _ready() -> void:
 		# R325：`--scroll N` 出图前先滚到 N —— 可见行裁剪之后要证明「滚下去照样画」。
 		if args[i] == "--scroll" and i + 1 < args.size():
 			_shot_scroll = int(args[i + 1])
+		# R631：`--search 词` 出图 / 探针前先填搜索框（验收「搜效果文能命中」用）。
+		# ⚠️ 程序赋值 `text` 不保证发 `text_changed`（实测 4.3 里不发）→ 必须显式调一次，
+		# 否则 `_search_lc` 还是空串、等于没搜（这个坑踩过，见 tools/probe_r631_search.gd）。
+		if args[i] == "--search" and i + 1 < args.size():
+			search_edit.text = str(args[i + 1])
+			_on_search_changed(str(args[i + 1]))
 	_rebuild_kinds()
 	_apply_filters()
 	# 命令行 -- --screenshot：打开后自动截图退出（视觉验证用）
@@ -174,8 +185,8 @@ func _group_title() -> String:
 
 func _hint_text() -> String:
 	if _group == "enemy":
-		return "敌方单位 + 敌方关卡效果（开局即挂在敌方效果区持续生效）。\n左键点卡牌查看详情"
-	return "玩家卡牌：初始卡组 / 奖励池 / 事件卡 / 衍生物。\n左键点卡牌查看详情"
+		return "敌方单位 + 敌方关卡效果（开局即挂在敌方效果区持续生效）。\n搜索匹配卡名 / 效果文 / 特性。\n左键点卡牌查看详情"
+	return "玩家卡牌：初始卡组 / 奖励池 / 事件卡 / 衍生物。\n搜索匹配卡名 / 效果文 / 特性。\n左键点卡牌查看详情"
 
 
 func _kind_options() -> Array:
@@ -244,8 +255,69 @@ func _set_group(g: String) -> void:
 	_refresh_detail()
 
 
+# ------------------------------------------------------------ 搜索（R631）
+
+func _build_search_index() -> void:
+	## R631：搜索索引 —— 图鉴搜索从「只认卡名」扩成
+	## 「卡名 + 效果正文 + 特性 / 字段 / 种类 / 职业」。
+	## 为什么预建而不是每次按键现算：`CardText.parse` 自带缓存，但 316 张卡 × 每次
+	## `text_changed` 都要重新拼串 + 归一，安卓输入法连续上屏时是实打实的卡顿；
+	## 索引只在载入时建一次，之后每次按键只是 316 次 `contains`。
+	_search_pool.clear()
+	_search_flat.clear()
+	for c in _all:
+		var blob := _search_blob(c)
+		_search_pool[c.id] = blob
+		_search_flat[c.id] = blob.replace(" ", "")
+
+
+func _search_blob(c: CardData) -> String:
+	## 一张卡参与搜索的全部文本（小写）。
+	## 正文收**两套口径**：
+	##   · `CardText.naturalize()` = 玩家在图鉴右栏实际看到的字（去 `**`、剥括号补注、术语归一）；
+	##   · `effect_text` 原文 = 括号补注与加粗里的字也能搜到（如「不分敌我」这类补注）；
+	## 特性 / 字段也收：卡面正文里通常不写「机械」「嘲讽」这些词，
+	## 但玩家搜种族、搜字段是再自然不过的用法。
+	var parts := PackedStringArray()
+	parts.append(c.card_name)
+	parts.append(CardText.naturalize(c.effect_text))
+	parts.append(c.effect_text)
+	parts.append(c.kind)
+	parts.append(c.card_class)
+	for t in c.traits:
+		parts.append(str(t))
+	for a in c.affixes:
+		parts.append(str(a))
+	return " ".join(parts).to_lower()
+
+
+func _match_search(c: CardData) -> bool:
+	## 搜索命中（R631）。空词放行。
+	if _search_lc == "":
+		return true
+	var blob := str(_search_pool.get(c.id, ""))
+	if blob == "":
+		# 索引里没有（理论上不会发生）→ 退化成老口径「只认卡名」，绝不放行全部
+		return c.card_name.to_lower().contains(_search_lc)
+	if blob.contains(_search_lc):
+		return true
+	var q_flat := _search_lc.replace(" ", "")
+	if q_flat != _search_lc:
+		return str(_search_flat.get(c.id, "")).contains(q_flat)
+	return false
+
+
+func _match_name(c: CardData) -> bool:
+	## 卡名是否直接含搜索词 —— 只用来计数，区分「名字里有」和「只在效果文里有」。
+	if _search_lc == "":
+		return true
+	var n := c.card_name.to_lower()
+	return n.contains(_search_lc) or n.contains(_search_lc.replace(" ", ""))
+
+
 func _apply_filters() -> void:
 	_shown.clear()
+	_text_only_hits = 0
 	for c in _all:
 		if c.group != _group:
 			continue
@@ -261,10 +333,18 @@ func _apply_filters() -> void:
 				continue
 			if _cost_filter == 5 and c.cost < 5:   # 5 费+
 				continue
-		if _search != "" and not c.card_name.contains(_search):
+		if not _match_search(c):
 			continue
+		if _search_lc != "" and not _match_name(c):
+			_text_only_hits += 1
 		_shown.append(c)
-	count_label.text = "%s · 共 %d 种卡牌" % [_group_title(), _shown.size()]
+	var summary := "%s · 共 %d 种卡牌" % [_group_title(), _shown.size()]
+	# R631：命中的卡里有相当一部分「卡名里没有这个词」——它可能来自效果文，也可能是
+	# 特性 / 字段 / 职业（搜「机械」会命中整个机械之心）。文案只说「卡名不含」这个**事实**，
+	# 不承诺命中的是哪一处（详情右栏能看到来源），免得玩家以为搜索串了。
+	if _search_lc != "" and _text_only_hits > 0:
+		summary += "（其中 %d 张卡名不含）" % _text_only_hits
+	UiTheme.autoshrink_label(count_label, summary, 14, 11, Vector2(470.0, 24.0))
 	# 网格内容尺寸随结果数量变化（滚动）
 	var cols := int(GRID_W / CELL_W)
 	var rows := int(ceil(_shown.size() / float(cols)))
@@ -423,4 +503,5 @@ func _on_class_changed(idx: int) -> void:
 
 func _on_search_changed(text: String) -> void:
 	_search = text.strip_edges()
+	_search_lc = _search.to_lower()   # R631
 	_apply_filters()

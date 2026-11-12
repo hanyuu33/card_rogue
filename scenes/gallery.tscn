@@ -170,7 +170,7 @@ offset_right = 200.0
 offset_bottom = 264.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
 theme_override_font_sizes/font_size = 14
-placeholder_text = "输入卡名…"
+placeholder_text = "输入卡名 / 效果文…"
 
 [node name="Hint" type="Label" parent="LeftPanel"]
 layout_mode = 0
