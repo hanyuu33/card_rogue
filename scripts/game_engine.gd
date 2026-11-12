@@ -617,6 +617,7 @@ const STUN_BOX_TRAIT:= "惊奇盒子"
 const STUN_TURNS:= 1
 const CAVE_ROPE_RELIC_ID:= 6048
 const DEER_TROPHY_RELIC_ID:= 6049
+const MEMORY_POTION_RELIC_ID:= 6067
 # R440 暗动力（6054，传奇奖励道具）：「每回合开始时多抽一张牌」。
 # 另两条（不能跳过卡牌奖励 / 商店不能删卡）在 RunState 与界面，引擎不掺和。
 const DARK_POWER_RELIC_ID:= 6054
@@ -3721,8 +3722,61 @@ func apply_battle_start_relics(repo: CardRepo) -> void :
 				action.emit("relic", {"id": MECHANICAL_ARM_RELIC_ID,
 						"text": "机械臂：「%s」加入手卡，本回合 -%d 费"
 						% [arm_copy.card_name, MECHANICAL_ARM_DISCOUNT]})
+	# R509 记忆药水（6067，第二层起始池）：每次战斗开始，从**抽牌库**随机打出一张效果卡。
+	# 放在本函数**最后**（同水晶骰子 / 机械臂）—— 它要动 `state.deck`，追加在末尾不干扰前面。
+	if self_relics.has(MEMORY_POTION_RELIC_ID):
+		_memory_potion_tick()
 
-
+func _memory_potion_tick() -> void:
+	## R509 记忆药水（6067）：每次战斗开始，从**抽牌库**随机打出一张效果卡。
+	##   * 「打出」= 完整走一次效果卡生效路径（进效果区 + 反应 + traits + 出牌收尾），
+	##     但**不付费**（免费打出）且**不占手牌**（直接从 deck 取、不经过 hand）。
+	##   * 抽牌库里没有效果卡 → 静默跳过（与 `_demon_fetch` / `_owl_fetch` 同口径）。
+	##   * deck 里是**卡库共享实例** → 先 `from_dict` 复制独立副本再动它，避免串到同名卡。
+	##   * 致命不可叠加判据对齐 `use_effect`（R504）：效果区已有致命时不叠加。
+	var cand: Array[int] = []
+	for i in state.deck.size():
+		if state.deck[i].is_effect():
+			cand.append(i)
+	if cand.is_empty():
+		_log("记忆药水：抽牌库里没有效果卡，跳过")
+		return
+	var pick: int = cand[rng.randi() % cand.size()]
+	var chosen: CardData = state.deck[pick]
+	state.deck.remove_at(pick)
+	if not chosen.own_copy:
+		var own := CardData.from_dict(chosen.to_dict())
+		own.own_copy = true
+		chosen = own
+	# 复刻 use_effect 的生效逻辑（跳过 _pay 与 hand.remove_at、不消耗小精灵减费）：
+	state.self_next_effect_reduction = 0
+	state.self_effect_plays += 1
+	_on_effect_card_played(SIDE_SELF, chosen)
+	_on_turn_first_play(SIDE_SELF, chosen)
+	if chosen.id == FATAL_ID and _zone_has(state.effects, FATAL_TRAIT):
+		_log("致命：效果区已经有这一条了，不叠加")
+		action.emit("effect_no_stack", {"card": chosen, "trait": FATAL_TRAIT})
+		return
+	state.effects.append(chosen)
+	_note_card_played(SIDE_SELF, chosen)
+	if chosen.traits.has(STONESKIN_TRAIT):
+		_stoneskin_left += maxi(1, chosen.value)
+		_log("石肤：己方 HP 接下来 %d 次伤害变为 1（累计剩余 %d 次）" % [
+			maxi(1, chosen.value), _stoneskin_left])
+		action.emit("stoneskin", {"left": _stoneskin_left, "add": maxi(1, chosen.value)})
+	if chosen.traits.has(DUCK_NEST_TRAIT):
+		_egg_to_hand("鸭窝")
+	if chosen.id == FATAL_ID:
+		_auto_mark_if_none("致命", true)
+	if chosen.id == FEAR_INCARNATE_ID:
+		_auto_mark_if_none("恐惧化身")
+	if chosen.id == REFRACT_CANNON_ID:
+		_refract_grant_cannon()
+	_log("记忆药水：战斗开始自动打出效果卡「%s」" % chosen.card_name)
+	state.apply_extra_actions(SIDE_SELF)
+	action.emit("effect", {"card": chosen})
+	action.emit("relic", {"id": MEMORY_POTION_RELIC_ID,
+		"text": "记忆药水：自动打出「%s」" % chosen.card_name})
 
 func _heal_aura(side: String) -> void :
 
@@ -12054,13 +12108,13 @@ func _absorb_by_guard(amount: int) -> bool:
 
 
 func _ally_dmg_bonus(card: CardData, side: String) -> int:
+	## R617：野兽之心卡面写明「可叠加」——按效果区「野性」**张数**逐份累加，
+	## 别再见到第一张就 return（那样界面画 3 张、结算只认 1 张）。
+	## 与致命 9226（_zone_has 不叠加）相对，和恐惧化身 9230 同走 _zone_count()。
 	if card == null or card.kind != "盟友":
 		return 0
 	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
-	for c: CardData in zone:
-		if c.traits.has(BEAST_TRAIT):
-			return BEAST_DMG_BONUS
-	return 0
+	return _zone_count(zone, BEAST_TRAIT) * BEAST_DMG_BONUS
 
 
 func _relic_on_enter_buffs(p: Placement) -> void :
@@ -12090,12 +12144,15 @@ func _relic_on_enter_buffs(p: Placement) -> void :
 
 
 func _beast_hp_bonus(card: CardData) -> int:
+	## R617：与 _ally_dmg_bonus 同源，按「野性」张数逐份累加；保留 maxi(2, value)
+	## 给 value 更大的产物留口（组合候选池不含效果卡，正常恒为 2）。
 	if card.kind != "盟友":
 		return 0
+	var total := 0
 	for c: CardData in state.effects:
 		if c.traits.has(BEAST_TRAIT):
-			return maxi(BEAST_HP_BONUS, c.value)
-	return 0
+			total += maxi(BEAST_HP_BONUS, c.value)
+	return total
 
 
 func _tiger_roar(tiger: Placement) -> void :

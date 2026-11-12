@@ -2332,6 +2332,29 @@ func _init() -> void:
 
 			"野兽之心：工事不是盟友，不吃伤害 +1（5 点，30 → 25）")
 
+	# R617：野兽之心多张真叠加（效果区 N 张 → 盟友伤害 +N、落地盟友 +2N 生命）
+	check(beast.effect_text.contains("可叠加"),
+			"R617：野兽之心卡面写明「可叠加」")
+	var eng_beast3 := _new_engine([], 20, 20, -1, false)
+	eng_beast3.start_game(1)
+	eng_beast3.state.hand = [beast, beast, beast]
+	for _i in 3:
+		eng_beast3.state.energy = 5
+		eng_beast3.use_effect(0)
+	check(eng_beast3.state.effects.size() == 3,
+			"R617：三张野兽之心都进效果区（实际 %d 张）" % eng_beast3.state.effects.size())
+	eng_beast3.state.hand = [_card(8003, "农民", "盟友", 3, 3, 8)]
+	eng_beast3.state.energy = 5
+	eng_beast3.play_from_hand(0, Vector2i(4, 0))
+	var beast3_p: Placement = eng_beast3.state.unit_at(Vector2i(4, 0))
+	check(beast3_p != null and beast3_p.health == 14,
+			"R617：三张叠加 → 盟友 +6 生命（8 → 14）")
+	eng_beast3.state.place(_card(9001, "鸭子骑士", "盟友", 6, 5, 30), Vector2i(3, 0), "opponent")
+	eng_beast3.attack(Vector2i(4, 0), Vector2i(3, 0))
+	var beast3_q: Placement = eng_beast3.state.unit_at(Vector2i(3, 0))
+	check(beast3_q != null and beast3_q.health == 24,
+			"R617：三张叠加 → 盟友伤害 +3（3 + 3 = 6，30 → 24）")
+
 
 
 	# 森林守护：指定盟友 → 我方 HP 受伤时改由它承受（溢出也算它的；同一单位不可重复）
@@ -15712,13 +15735,15 @@ func _init() -> void:
 
 	var l2ids := l2repo.layer2_ids()
 
-	check(l2ids.size() == 8 and l2ids.has(6014) and l2ids.has(6015)
+	check(l2ids.size() == 9 and l2ids.has(6014) and l2ids.has(6015)
 
 			and l2ids.has(6016) and l2ids.has(6017) and l2ids.has(6018)
 
-			and l2ids.has(6033) and l2ids.has(6049) and l2ids.has(6010),
+			and l2ids.has(6033) and l2ids.has(6049) and l2ids.has(6010)
 
-			"第二层起始道具池 8 件（黄桃罐头/鸭语耳环/冰淇淋与汽水/重鸭/生蛋鸭 + R246 兼修 6033 + R341 鹿首标本 6049 + R514 鸭之低语 6010）")
+			and l2ids.has(6067),
+
+			"第二层起始道具池 9 件（黄桃罐头/鸭语耳环/冰淇淋与汽水/重鸭/生蛋鸭 + R246 兼修 6033 + R341 鹿首标本 6049 + R514 鸭之低语 6010 + R509 记忆药水 6067）")
 
 	# R375（用户口径）：附魔大师 6034 移出二层起始池 —— 数据还在（旧存档 / 图鉴照样能读），
 
@@ -15869,6 +15894,33 @@ func _init() -> void:
 	RunState.choose_start_relic(RunState.relic_choice[0])
 
 	check(RunState.relic_choice.is_empty(), "第二层起始道具：选定后清空候选")
+	# R509 记忆药水（6067）：战斗开始从抽牌库随机打出一张效果卡（不占手牌、不扣费）。
+	# 用真实效果卡（迅捷 9002）构造牌组，验证 apply_battle_start_relics 后它进了效果区。
+	var mp_repo := CardRepo.load_json()
+	var mp_fx := mp_repo.get_card(9002)   # 迅捷（2 费效果卡）
+	var mp_deck: Array[CardData] = []
+	mp_deck.append(mp_fx)
+	mp_deck.append(_card(8003, "农民", "盟友", 3, 3, 8))
+	var mp_eng := _new_engine(mp_deck, 40, 40, -1, false)
+	mp_eng.self_relics = [GameEngine.MEMORY_POTION_RELIC_ID]
+	var mp_deck_before := mp_eng.state.deck.size()
+	var mp_effects_before := mp_eng.state.effects.size()
+	mp_eng.apply_battle_start_relics(mp_repo)
+	check(mp_eng.state.effects.size() == mp_effects_before + 1
+		and mp_eng.state.deck.size() == mp_deck_before - 1,
+		"R509 记忆药水：战斗开始自动打出效果卡进效果区（deck %d→%d，effects %d→%d）"
+			% [mp_deck_before, mp_eng.state.deck.size(), mp_effects_before,
+				mp_eng.state.effects.size()])
+	# 无效果卡 → 静默跳过（effects 与 deck 都不变）
+	var mp_nodeck: Array[CardData] = []
+	mp_nodeck.append(_card(8003, "农民", "盟友", 3, 3, 8))
+	var mp_eng2 := _new_engine(mp_nodeck, 40, 40, -1, false)
+	mp_eng2.self_relics = [GameEngine.MEMORY_POTION_RELIC_ID]
+	var mp_deck_before2 := mp_eng2.state.deck.size()
+	mp_eng2.apply_battle_start_relics(mp_repo)
+	check(mp_eng2.state.effects.is_empty()
+		and mp_eng2.state.deck.size() == mp_deck_before2,
+		"R509 记忆药水：抽牌库无效果卡时静默跳过")
 
 	RunState.relics = []
 
@@ -39405,11 +39457,27 @@ func _init() -> void:
 
 			"R217 改名：9071 卡名 = 坚固围栏（trait 同步，旧名不再存在）")
 
-	check(r217_repo.get_card(9072).effect_text.contains("坚固围栏")
+	# 铁栅栏 9072：来源说明（「由…召唤的墙；鸭鸭工匠…」）已删，正文只留承伤。
+	# 原 R217 保真锁认「坚固围栏」四字；文案改版后改锁「没有来源说明」。
+	check(r217_repo.get_card(9072).effect_text == "替你的 HP 承受伤害。"
+
+			and not r217_repo.get_card(9072).effect_text.contains("坚固围栏")
+
+			and not r217_repo.get_card(9072).effect_text.contains("鸭鸭工匠")
 
 			and not r217_repo.get_card(9072).effect_text.contains("在启动了"),
 
-			"R217 铁栅栏文案：改成「由「坚固围栏」召唤的墙」")
+			"铁栅栏 9072 文案：来源说明已删，正文只留「替你的 HP 承受伤害。」")
+
+	var r217_shown := ""
+	for seg in CardText.parse(r217_repo.get_card(9072).effect_text):
+		r217_shown += str(seg.get("text", ""))
+	check(not r217_shown.contains("坚固围栏") and not r217_shown.contains("鸭鸭工匠")
+
+			and r217_shown.contains("承受伤害"),
+
+			"铁栅栏 9072 显示层：卡面正文只留承伤，不出现来源说明")
+
 
 
 
@@ -42009,7 +42077,7 @@ func _init() -> void:
 
 	# ==== R577b：道具小图标（无背景 PNG）+ 界面分发 + 源码锁 ====
 
-	# ① 数据层：62 件道具逐件都有图标（素材断言一律用 ResourceLoader.exists，
+	# ① 数据层：63 件道具逐件都有图标（素材断言一律用 ResourceLoader.exists，
 
 	#    导出包里 png 会被 .ctex 取代，FileAccess.file_exists 会假红）。
 
@@ -42037,9 +42105,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 62,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 63,
 
-			"R577b 保真锁：62 件道具的 id 都能在 relics.json 源文本里找到")
+			"R577b 保真锁：63 件道具的 id 都能在 relics.json 源文本里找到")
 
 	# ② 取图口：首末两件 + 信物回退
 
@@ -42667,7 +42735,7 @@ func _init() -> void:
 
 	# R375 起附魔大师 6034 被移出（`not r246_l2.has(6034)`）—— 道具数据本身不动。
 
-	check(r246_l2.size() == 8 and r246_l2.has(6033) and not r246_l2.has(6034),
+	check(r246_l2.size() == 9 and r246_l2.has(6033) and not r246_l2.has(6034),
 
 			"R246 二层起始道具池：兼修 6033 在池里 / 附魔大师 6034 已移出 / R514 +鸭之低语 6010（%d 件）" % r246_l2.size())
 
