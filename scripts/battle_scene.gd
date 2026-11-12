@@ -590,8 +590,14 @@ var _lone_hit_cell := Vector2i(-1, -1)
 var _lone_hit_at := 0
 ## 吞卡演出条目：{from, pos, sc, start, dur, hold, name, hp, pw}（全部走 assets/fx 素材）
 var _lone_fx: Array = []
-## 吞卡段时长（ms）：流光走完 + 目标处炸开，之后才轮到伤害数字与降力飘字。
-const LONE_ABSORB_MS := 430
+## 吸取段总长（ms）：光柱走到目标位的那一刻。
+const LONE_ABSORB_MS := 340
+## R629（店长：「吸取到一半就开始吞噬，减少吞噬时间，让总体在1秒内」）：
+## 吞噬**不等吸取演完** —— 吸取过半（= 本常量）就张嘴：光柱还在往上吸，
+## 目标处已经开始收拢。两段重叠成一次连贯动作，而不是「吸完 → 停 → 再吞」两拍。
+const LONE_BITE_MS := 170
+## 吞噬段时长（ms）：420 → 260。配合上面的 170，整体 430ms 演完。
+const LONE_SWALLOW_MS := 260
 var _hand_known: Array = []     # 手牌 id 快照（保序双指针 diff，见 _hand_sync）
 var _hand_known_init := false   # 首次 sync 只建快照不播（开场发牌不飞，留给巡场）
 var _flyout_skip: Array = []    # 本帧「是打出不是消失」的卡 id（place/spell/effect 事件喂入，sync 消费并清空）
@@ -12675,9 +12681,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				# 而卡在事件之前就已经离手了，取不到它原来那格。
 				_lone_fx.append({"from": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 26.0),
 						"pos": _cell_center(lw_cell2), "sc": _grid_scroll, "start": n,
-						"dur": LONE_ABSORB_MS + 430, "hold": LONE_ABSORB_MS})
+						"dur": LONE_BITE_MS + LONE_SWALLOW_MS + 120,
+						"hold": LONE_ABSORB_MS})
 				_lone_hit_cell = lw_cell2
-				_lone_hit_at = n + LONE_ABSORB_MS
+				# 伤害数字压到「嘴张开之后」——比吞噬零点晚 90ms，
+				# 读起来仍是「吞进去 → 打出去」，因果不反（R625 定下的顺序）。
+				_lone_hit_at = n + LONE_BITE_MS + 90
 
 				_say("独行：手卡「%s」被吞掉 → 伤害 +%d、降力 +%d（累计 %d / %d）"
 						% [lw_nm, lw_hp2, lw_pw2, lw_db, lw_sb])
@@ -14067,9 +14076,9 @@ func _draw_lone_fx() -> void:
 	## `fx_lone_maw.png`（虚空漩涡，吞噬点）／`fx_lone_ring.png`（收束光环）。
 	## 店长口径：「不要用这种文字特效，委托 codex 生成素材图，然后用素材图做特效」
 	## → 原来贴着目标卡的「{卡名} 并入 +N」文字框**整段删除**，只留画面。
-	## 时序：0 ~ `hold` = 吸取段（手卡处收束环 → 光柱沿路径长出 → 头部漩涡前推）；
-	##      `hold` 之后 = 吞噬段（漩涡张开收拢 + 冲击光环 + 命中爆点）。
-	## `hold` 正是 fx_impact 被推后的量 → 「独行 -N」与吞噬同帧落地，因果不反。
+	## 时序（R629 重叠版）：吸取段 0 ~ `hold`；吞噬段从 `LONE_BITE_MS`（= hold 的一半）
+	## 就起手 —— 光柱还在往上吸，目标处已经开始张嘴，两段叠成一次连贯动作。
+	## 伤害数字压到 `_lone_hit_at`（= 吞噬零点 + 90ms）落地，仍是「先吞、后打」。
 	## ⚠️ 本函数在**屏幕空间**被调用（排在 `--draw_meteors()` 那一段），所以可以临时
 	##    `draw_set_transform` 把光柱旋到 from→to 方向；用完必须还原成 `_shake_cur`。
 	if _lone_fx.is_empty():
@@ -14087,6 +14096,10 @@ func _draw_lone_fx() -> void:
 		# 精灵的「上」是 -Y，要转到 from→to：R(θ)(0,1) = dir ⇒ θ = atan2(-dir.x, dir.y)
 		var ang := atan2(-dir.x, dir.y)
 		var prog := clampf(float(t0) / float(maxi(hold, 1)), 0.0, 1.0)
+		# R629：吞噬一旦张嘴，吸取这边就逐步「交棒」——`tsink` 从吞噬零点起 0→1，
+		# 光柱 / 收束环 / 头部漩涡按它淡出，视觉重心自然挪到目标处的吞噬上。
+		var tsink := clampf(float(t0 - LONE_BITE_MS)
+				/ float(maxi(LONE_ABSORB_MS - LONE_BITE_MS, 1)), 0.0, 1.0)
 		# ---- 吸取段 ----
 		if t0 <= hold:
 			# ① 起手：手卡处一圈光被抽走（由外向内收，越收越淡）
@@ -14094,7 +14107,7 @@ func _draw_lone_fx() -> void:
 				var r0 := lerpf(74.0, 20.0, pow(prog, 0.75))
 				draw_texture_rect(_fx_lone_ring_tex,
 						Rect2(from - Vector2(r0, r0), Vector2(r0, r0) * 2.0), false,
-						Color(1, 1, 1, (1.0 - prog) * 0.9))
+						Color(1, 1, 1, (1.0 - prog) * 0.9 * (1.0 - tsink * 0.7)))
 			# ② 光柱：从 from 沿 from→to 长出来（素材下端在 from，上端朝 to）
 			if _fx_lone_col_tex != null:
 				# 整根铺满 from→to，靠 alpha 淡入 —— 不裁 region：素材下端本来就是
@@ -14111,41 +14124,47 @@ func _draw_lone_fx() -> void:
 				draw_texture_rect_region(_fx_lone_col_tex,
 						Rect2(-tw * 0.5, -dist * 0.10, tw, dist * 1.40),
 						Rect2(0.0, tex_h2 * 0.08, tex_w2, tex_h2 * 0.84),
-						Color(1, 1, 1, grow * 0.95))
+						# R629b：吞噬起手后光柱淡得更快（0.45→0.75）—— 否则中段还亮着，
+						# 看起来像「一边在吸一边在吞」两件事并行；淡下去才读成「被吸进去了」。
+						Color(1, 1, 1, grow * 0.95 * (1.0 - tsink * 0.75)))
 				draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
 			# ③ 头部：漩涡球往前顶，读成「这张卡正被吸过去」
 			var head: Vector2 = from.lerp(to, prog)
 			if _fx_lone_maw_tex != null:
+				# 头部漩涡在吞噬起手后快速淡出 —— 否则目标处会同时挂着「半路的头」
+				# 和「张嘴的漩涡」两个球，读起来是两团东西。到 hold 时正淡到 0。
 				var hs := lerpf(56.0, 96.0, prog)
 				draw_texture_rect(_fx_lone_maw_tex,
 						Rect2(head - Vector2(hs, hs) * 0.5, Vector2(hs, hs)), false,
-						Color(1, 1, 1, 0.95))
+						Color(1, 1, 1, 0.95 * clampf(1.0 - tsink * 2.2, 0.0, 1.0)))
 			if _fx_glow_tex != null:
 				draw_texture_rect(_fx_glow_tex,
 						Rect2(head - Vector2(18, 18), Vector2(36, 36)), false,
-						Color(0.95, 0.88, 1.0, 0.7))
-		# ---- 吞噬段（时间零点 = hold）----
-		if t0 < hold:
+						Color(0.95, 0.88, 1.0, 0.7 * clampf(1.0 - tsink * 2.2, 0.0, 1.0)))
+		# ---- 吞噬段（时间零点 = LONE_BITE_MS —— 吸取过半就开吞，不等 hold）----
+		if t0 < LONE_BITE_MS:
 			continue
-		var bt := clampf(float(t0 - hold) / 420.0, 0.0, 1.0)
+		var bt := clampf(float(t0 - LONE_BITE_MS) / float(LONE_SWALLOW_MS), 0.0, 1.0)
 		if bt >= 1.0:
 			continue
 		# ④ 虚空漩涡：张开到最大再收拢熄灭
+		# R629b：提速后每一帧都更挤 —— 220→196、顶到 1.30（原 1.55），
+		# 并压一档亮度：否则 200~300ms 那两帧紫色糊满整格，敌人卡的血量读不出来。
 		if _fx_lone_maw_tex != null:
-			var ms := lerpf(0.75, 1.55, pow(bt, 0.45))
+			var ms := lerpf(0.66, 1.30, pow(bt, 0.45))
 			draw_texture_rect(_fx_lone_maw_tex,
-					Rect2(to - Vector2(110.0, 110.0) * ms, Vector2(220.0, 220.0) * ms), false,
-					Color(1, 1, 1, pow(1.0 - bt, 0.55)))
+					Rect2(to - Vector2(98.0, 98.0) * ms, Vector2(196.0, 196.0) * ms), false,
+					Color(1, 1, 1, pow(1.0 - bt, 0.7) * 0.88))
 		# ⑤ 收束光环：吞下去的一瞬间向外炸一圈紫环
 		if _fx_lone_ring_tex != null:
-			var rs := lerpf(0.85, 2.0, pow(bt, 0.6))
+			var rs := lerpf(0.80, 1.72, pow(bt, 0.6))
 			draw_texture_rect(_fx_lone_ring_tex,
-					Rect2(to - Vector2(96.0, 96.0) * rs, Vector2(192.0, 192.0) * rs), false,
+					Rect2(to - Vector2(88.0, 88.0) * rs, Vector2(176.0, 176.0) * rs), false,
 					Color(1, 0.84, 1.0, pow(1.0 - bt, 1.5) * 0.95))
 		if _fx_hit_burst_tex != null:
-			var bs := lerpf(0.55, 1.15, pow(bt, 0.45))
+			var bs := lerpf(0.50, 1.02, pow(bt, 0.45))
 			draw_texture_rect(_fx_hit_burst_tex,
-					Rect2(to - Vector2(88.0, 88.0) * bs, Vector2(176.0, 176.0) * bs), false,
+					Rect2(to - Vector2(80.0, 80.0) * bs, Vector2(160.0, 160.0) * bs), false,
 					Color(0.9, 0.8, 1.0, pow(1.0 - bt, 1.6) * 0.8))
 
 func _rev_art_phase(p: Placement) -> int:
