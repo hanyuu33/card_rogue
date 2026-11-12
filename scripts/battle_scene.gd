@@ -281,6 +281,10 @@ const GROW_AFTER_BREAK_MS := 120
 ## R363：**一次效果打多个目标**（灰烬龙战吼 / 全场 AOE）时，每一格之间的落地间隔。
 ## 原来所有格子同帧起爆 —— 一排「-4」同时冒出来，看不出是谁打的、也读不出扫过去的感觉。
 const FX_MULTI_HIT_GAP_MS := 90
+## R646（用户口径「土元素的动画有点慢，播放间隙调为 30ms」→「30ms 太短，改成 70ms」）：
+## 元素入场**逐段发射**的间隔。注意它只压「下一段什么时候起手」，
+## 每段的飞行 / 爆发 / 飘字停留一律不动（「不减少停留，而是下一段更快发射」）。
+const PRIMAL_LAUNCH_GAP_MS := 70
 ## R360：卡被抹掉 / 白闪 / 爆点起播之后，再等这么久才结算「死亡效果」（辅助刃回手、
 ## 生命循环、送葬抽牌…）—— 落在幽灵淡出最浓的那一段，读起来就是「卡碎了 → 刃飞回来」。
 const DEATH_SETTLE_DELAY_MS := 180
@@ -14354,13 +14358,22 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 	var n := _now()
 	match kind:
 		"primal_land":
+			# R646：多段可能同时在播 → 先按序号认领「正在落地的这一段」，
+			# 把飘字停留改成**这一段自己的**爆发时长（同批 count 相同，但跨批可能不同）。
+			var land_seg := _primal_seg(int(d.get("id", -1)))
+			if not land_seg.is_empty():
+				_primal_hit_ms = int(land_seg.end) - int(land_seg.land)
 			_primal_landing = true
 			engine.resolve_primal_hit()
 			_primal_landing = false
 			sfx.play("hit")
 			_shake(4.0, 180)
 		"primal_end":
-			_primal_fx = {}
+			var end_id := int(d.get("id", -1))
+			if end_id < 0:
+				_primal_fx = []
+			else:
+				_primal_fx = _primal_fx.filter(func(s): return int(s.id) != end_id)
 		"death_effects":
 			# R360：这张卡的击破演出到点 → 结算它的死亡效果（辅助刃回手等）。
 			if engine != null:
@@ -16985,8 +16998,13 @@ func _process(delta: float) -> void:
 	# 这样同一帧里刚出的牌动画能立刻开始播。
 	var earring_busy := _tick_earring_autoplay()
 	var anim_busy := _tick_anims()
-	if not anim_busy and engine.has_pending_primal_effects():
-		_start_primal_hit()
+	# R646：元素入场 —— **首段**照旧等别的演出清场；这批一旦开跑，后续段只受
+	# `PRIMAL_LAUNCH_GAP_MS` 约束，不再看 `anim_busy`（那时 busy 里有一半就是这批元素段
+	# 自己造成的，等它等于永远不发下一段）。
+	if engine.has_pending_primal_effects():
+		var batch_running := not _primal_fx.is_empty() or engine.has_active_primal()
+		if batch_running or not anim_busy:
+			_start_primal_hit()
 		anim_busy = engine.has_pending_primal_effects()
 	# R388：敌方演出窗口的收尾 —— AI 停了、动画也播完了才回 1×。
 	# 不等这一步的话，最后一击的击破 / 飘字会被「已经轮到我方」砍回半速。
@@ -17121,33 +17139,59 @@ func _draw_effect_thumbnail(card: CardData, rect: Rect2, count := 1, show_counte
 
 
 # Elemental entry VFX: rules resolve at contact, next hit waits for all aftermath.
-var _primal_fx: Dictionary = {}
+## R646：同一批里前一段还在演，后一段已经在飞（间隔 `PRIMAL_LAUNCH_GAP_MS`）——
+## 所以这里存的是**多条时间线**，不是单槽。每段自带 id / start / land / end。
+var _primal_fx: Array = []
 var _primal_landing := false
-var _primal_hit_ms := 520
+var _primal_hit_ms := 520           # 最近落地那一段的爆发时长（飘字停留 / verify 读它）
+var _primal_seq := 0                # 段序号：`_delayed` 靠它认领自己那一段
+var _primal_next_at := 0            # 下一段最早可发射的时刻（70ms 节流）
 var _primal_tex_earth: Texture2D = preload("res://assets/fx/fx_primal_earth.png")
 var _primal_tex_fire: Texture2D = preload("res://assets/fx/fx_primal_fire.png")
 
+func _primal_seg(id: int) -> Dictionary:
+	## 按序号找还在播的那一段（`primal_land` / `primal_end` 到点时用）。
+	if id < 0:
+		return {}
+	for seg: Dictionary in _primal_fx:
+		if int(seg.id) == id:
+			return seg
+	return {}
+
 func _start_primal_hit() -> void:
+	var n := _now()
+	if n < _primal_next_at:
+		return                      # 距上一段发射还没到 70ms
+	if not engine.can_launch_primal_next():
+		return                      # 火元素这类「发射时才挑目标」的段必须等前一段落地
 	var hit := engine.next_primal_hit()
 	if hit.is_empty():
 		return
-	var n := _now()
 	var fast := int(hit.count) > 6
 	var travel := 160 if fast else 340
 	_primal_hit_ms = 240 if fast else 520
-	_primal_fx = hit.duplicate()
-	_primal_fx["start"] = n
-	_primal_fx["land"] = n + travel
-	_primal_fx["end"] = n + travel + _primal_hit_ms
-	_delayed.append({"at": n + travel, "kind": "primal_land", "data": {}})
-	_delayed.append({"at": n + travel + _primal_hit_ms, "kind": "primal_end", "data": {}})
+	_primal_seq += 1
+	var seg := hit.duplicate()
+	seg["id"] = _primal_seq
+	seg["start"] = n
+	seg["land"] = n + travel
+	seg["end"] = n + travel + _primal_hit_ms
+	_primal_fx.append(seg)
+	_primal_next_at = n + PRIMAL_LAUNCH_GAP_MS
+	_delayed.append({"at": n + travel, "kind": "primal_land",
+			"data": {"id": _primal_seq}})
+	_delayed.append({"at": n + travel + _primal_hit_ms, "kind": "primal_end",
+			"data": {"id": _primal_seq}})
 	queue_redraw()
 
 func _draw_primal_fx() -> void:
 	if _primal_fx.is_empty():
 		return
-	var f := _primal_fx
 	var n := _now()
+	for seg: Dictionary in _primal_fx:
+		_draw_primal_seg(seg, n)
+
+func _draw_primal_seg(f: Dictionary, n: int) -> void:
 	var dst := _cell_center(f.cell)
 	var src: Vector2i = f.src
 	var origin := _cell_center(src) if src.x >= 0 else dst + Vector2(0, -120)
@@ -17160,6 +17204,7 @@ func _draw_primal_fx() -> void:
 		draw_arc(dst, 28.0, 0, TAU, 32, Color(1, 0.7, 0.3, 0.6), 2.0)
 		draw_texture_rect(tex, Rect2(pos - Vector2(30, 38), Vector2(60, 60)), false)
 	else:
-		var t := clampf(float(n - int(f.land)) / float(_primal_hit_ms), 0.0, 1.0)
+		var seg_ms := maxf(float(int(f.end) - int(f.land)), 1.0)
+		var t := clampf(float(n - int(f.land)) / seg_ms, 0.0, 1.0)
 		var size := Vector2(125, 140) * (0.65 + 0.35 * minf(t * 5.0, 1.0))
 		draw_texture_rect(tex, Rect2(dst + Vector2(-size.x / 2.0, -size.y * 0.72), size), false, Color(1, 1, 1, 1.0 - t))

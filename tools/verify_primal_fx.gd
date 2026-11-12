@@ -2,6 +2,7 @@ extends SceneTree
 
 var hits := 0
 var death_done := false
+var launch_gap := -1
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -91,13 +92,21 @@ func _run() -> void:
 	scene.engine._earth_primal_enter(earth)
 	deadline = Time.get_ticks_msec() + 15000
 	shot = false
+	launch_gap = -1
 	while scene.engine.has_pending_primal_effects() or not scene._primal_fx.is_empty() or scene.engine.has_pending_death_effects():
 		await process_frame
 		assert(Time.get_ticks_msec() < deadline)
-		if not shot and not scene._primal_fx.is_empty() and scene._now() > int(scene._primal_fx.land) + 60:
+		# R646：土元素两段必须**连着发射**（节流 70ms，按帧对齐会落在 70~120ms），
+		# 而不再是一段播完（340 + 520）才起下一段。
+		if launch_gap < 0 and scene._primal_fx.size() >= 2:
+			launch_gap = int(scene._primal_fx[1].start) - int(scene._primal_fx[0].start)
+		if (not shot and not scene._primal_fx.is_empty()
+				and scene._now() > int(scene._primal_fx[0].land) + 60):
 			await RenderingServer.frame_post_draw
 			root.get_texture().get_image().save_png("res://art_src/2026-11-11_元素入场特效/earth_live.png")
 			shot = true
+	assert(launch_gap >= 70 and launch_gap <= 130,
+			"土元素两段应背靠背发射（约 70ms），实测 %dms" % launch_gap)
 	assert(death_done and survivor.health == 13)
 	print("PRIMAL EARTH LIVE PASS: lethal first hit, remaining allocation, then deathrattle")
 	quit()

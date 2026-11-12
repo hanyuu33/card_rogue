@@ -30,14 +30,32 @@ var ai_enabled:= true
 ## ⚠️ 联机镜像模式必须保持 false：两侧靠同一份 action 序列对齐，不能掺本地动画时间。
 var defer_primal_effects := false
 var primal_queue: Array = []
-var primal_active: Dictionary = {}
+## R646：**在播的段**，FIFO（先发射的先落地、先结算）。
+## 用户口径「土元素的动画有点慢，播放间隙调为 30ms」→「不减少停留，而是下一段更快发射」：
+## 每段的飞行 / 爆发时长一律照旧，只把「下一段起手」的节流压到 `PRIMAL_LAUNCH_GAP_MS`
+## （见 `battle_scene`），于是前一段还在演时后一段已经出发 —— 单槽装不下这件事，
+## 必须允许同时有多段在播。
+var primal_active: Array = []
 
 func has_pending_primal_effects() -> bool:
 	return not primal_queue.is_empty() or not primal_active.is_empty()
 
+func has_active_primal() -> bool:
+	## 这一批是不是已经开跑了（有段在飞 / 在爆）。界面的首段判据读它。
+	return not primal_active.is_empty()
+
+func can_launch_primal_next() -> bool:
+	## 目标要**发射那一刻才选**的段（火元素：每段重新挑存活敌人）不许抢跑 ——
+	## 它在飞的时候前一段可能已经把目标打死，提前选就会打在尸体上。
+	## 土元素的目标是入场时一次性分配的（`_earth_primal_enter`），所以能连射。
+	for hit: Dictionary in primal_active:
+		if bool(hit.get("random", false)):
+			return false
+	return true
+
 func next_primal_hit() -> Dictionary:
-	if not primal_active.is_empty():
-		return {}
+	## ⚠️ 不再「active 非空就返回空」—— 连射时允许多段同时在飞；
+	## 但每次出队都立刻入 active，同一段不会被取出两次。
 	while not primal_queue.is_empty():
 		var hit: Dictionary = primal_queue.pop_front()
 		if bool(hit.get("random", false)):
@@ -55,20 +73,21 @@ func next_primal_hit() -> Dictionary:
 		if cell.x < 0 or target.health <= 0:
 			continue
 		hit["cell"] = cell
-		primal_active = hit
+		primal_active.append(hit)
 		return hit
 	_check_game_over()
 	return {}
 
 func resolve_primal_hit() -> void:
+	## FIFO：先发射的那段先落地。同批 `count` 相同 → travel 相同 → 落地顺序与发射顺序一致，
+	## 所以 `pop_front()` 拿到的正是「此刻真正落地的那一段」。
 	if primal_active.is_empty():
 		return
-	var hit := primal_active
+	var hit: Dictionary = primal_active.pop_front()
 	var target: Placement = hit.target
 	if _cell_of(target).x >= 0 and target.health > 0:
 		_hit_unit(target, int(hit.amount), str(hit.source), true, false)
 		_destroy_dead()
-	primal_active = {}
 	_check_game_over()
 
 var defer_death_effects:= false
