@@ -25,6 +25,13 @@ const CARD_W := 76.0
 const CARD_H := 92.0
 const DETAIL_X := 1000.0
 
+## R641：费用档选项表 —— **索引即选项顺序**，不再与「费用值」画等号。
+## 原版第一档是「1 费」，0 费卡（哈气 9024 / 生命循环 9150 / 灵魂收割者 9077…）
+## 在任何费用档里都查不到，玩家只能翻「费用不限」自己数。补一档「0 费」。
+const COST_OPTIONS: Array[String] = ["费用不限", "0 费", "1 费", "2 费", "3 费", "4 费", "5 费+"]
+const COST_FIRST := 1            # 第一个「具体费用」档 = 0 费 → 该档 cost == idx - COST_FIRST
+const COST_OPEN := 6             # 最后一档 = 5 费以上
+
 var repo: CardRepo
 var _all: Array[CardData] = []
 var _shown: Array[CardData] = []
@@ -32,7 +39,7 @@ var _selected = null             # CardData or null
 
 var _group := "player"           # 图鉴分组：player=玩家卡牌图鉴 / enemy=敌人图鉴
 var _kind_filter := "全部"
-var _cost_filter := 0            # 0=全部，1..5=费用，6=5+
+var _cost_filter := 0            # 选中项索引（语义见 COST_OPTIONS / _cost_match）
 var _search := ""
 var _search_lc := ""             # R631：小写化后的搜索词（中文不变，`HP` / `hp` 要能互通）
 var _search_pool: Dictionary = {}   # R631：id -> 可搜索文本（含空格版，见 _build_search_index）
@@ -95,7 +102,7 @@ func _ready() -> void:
 	repo = CardRepo.load_json()
 	_all = repo.all_cards()
 	_build_search_index()   # R631：搜索索引只在载入时建一次
-	for t: String in ["费用不限", "1 费", "2 费", "3 费", "4 费", "5 费+"]:
+	for t: String in COST_OPTIONS:
 		cost_opt.add_item(t)
 	_rebuild_classes()
 	kind_opt.item_selected.connect(_on_kind_changed)
@@ -127,6 +134,13 @@ func _ready() -> void:
 		if args[i] == "--search" and i + 1 < args.size():
 			search_edit.text = str(args[i + 1])
 			_on_search_changed(str(args[i + 1]))
+		# R641：`--cost N` 出图 / 验收前先选费用档（N = 费用值：0..4 精确档，5 及以上 = 5 费+）。
+		# 与 `--search` 同一条纪律：`OptionButton.select()` **不发** `item_selected`，必须显式调一次。
+		if args[i] == "--cost" and i + 1 < args.size():
+			var cv := clampi(int(args[i + 1]), 0, 5)
+			var ci: int = COST_OPEN if cv >= 5 else COST_FIRST + cv
+			cost_opt.select(ci)
+			_on_cost_changed(ci)
 	_rebuild_kinds()
 	_apply_filters()
 	# 命令行 -- --screenshot：打开后自动截图退出（视觉验证用）
@@ -315,6 +329,23 @@ func _match_name(c: CardData) -> bool:
 	return n.contains(_search_lc) or n.contains(_search_lc.replace(" ", ""))
 
 
+func _cost_match(c: CardData, idx: int) -> bool:
+	## 费用档的**唯一判据**（R641）。`idx` 是下拉框索引，**不是**费用值 ——
+	## 加了「0 费」这一档后索引整体右移一位，再按「idx == cost」写会整列错一行。
+	## 口径（与卡面 / R521 一致）：
+	##   * 0 = 不限 → 全收（X 费卡只在这里出现）；
+	##   * 1..5 = 0..4 费 → 精确匹配；
+	##   * 6 = 5 费+ → cost >= 5。
+	if idx <= 0:
+		return true
+	# R521：X 费卡没有固定费用 → 任何费用档都不命中
+	if c.x_cost:
+		return false
+	if idx >= COST_OPEN:
+		return c.cost >= 5
+	return c.cost == idx - COST_FIRST
+
+
 func _apply_filters() -> void:
 	_shown.clear()
 	_text_only_hits = 0
@@ -325,14 +356,8 @@ func _apply_filters() -> void:
 			continue
 		if not _match_class(c):
 			continue
-		if _cost_filter > 0:
-			# R521：X 费卡没有固定费用 → 任何费用档都不命中（只在「全部」里出现）
-			if c.x_cost:
-				continue
-			if _cost_filter < 5 and c.cost != _cost_filter:
-				continue
-			if _cost_filter == 5 and c.cost < 5:   # 5 费+
-				continue
+		if not _cost_match(c, _cost_filter):
+			continue
 		if not _match_search(c):
 			continue
 		if _search_lc != "" and not _match_name(c):
@@ -491,7 +516,7 @@ func _on_kind_changed(idx: int) -> void:
 
 
 func _on_cost_changed(idx: int) -> void:
-	_cost_filter = idx  # 0=全部 1..4, 5=5费+
+	_cost_filter = idx  # 下拉框索引（语义见 COST_OPTIONS / _cost_match）
 	_apply_filters()
 
 
