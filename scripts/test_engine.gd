@@ -71904,7 +71904,7 @@ func _test_r592b() -> void:
 
 			"R624：hand_cost_turn 已减过的那张，影魔不再叠第二次（%d → %d）" % [r621_t0, r621_t1])
 
-	# ③ 野兔 9032：复制品不继承附魔（cost 回到原价、enchant 清空）
+	# ③ 野兔 9032：R638 起**完整复制** —— 附魔跟着走（推翻 R624 的「回到原卡数值」）
 
 	var r621_rabbit := CardData.from_dict(r621_repo.get_card(9032).to_dict())
 
@@ -71942,15 +71942,83 @@ func _test_r592b() -> void:
 
 			break
 
-	check(r621_clone != null and r621_clone.enchant == ""
+	check(r621_clone != null and r621_clone.enchant == "costdown"
 
-			and r621_clone.cost == r621_rabbit_cost,
+			and r621_clone.cost == maxi(0, r621_rabbit_cost - 1),
 
-			"R624：野兔复制品不继承附魔（cost %d / 原价 %d / enchant '%s'）" % [
+			"R638：野兔复制品**继承**减费附魔（cost %d / 期望 %d / enchant '%s'）" % [
 
-					r621_clone.cost if r621_clone != null else -1, r621_rabbit_cost,
+					r621_clone.cost if r621_clone != null else -1,
+
+					maxi(0, r621_rabbit_cost - 1),
 
 					r621_clone.enchant if r621_clone != null else "?"])
+
+	# ③-b 数值型附魔 + 附魔带出来的字段 + 「【附魔】…」标注：一个都不能少
+
+	var r638_seed := CardData.from_dict(r621_repo.get_card(9032).to_dict())
+
+	RunState._apply_mod(r638_seed, RunState.enchant_mod("damage"))
+
+	r638_seed.add_affix("保存")     # 模拟附魔带出来的 affix（保存）一起被复制
+
+	var r638_e := _new_engine([CardData.from_dict(r638_seed.to_dict())], 20, 20, -1, false)
+
+	r638_e.start_game()
+
+	r638_e.state.energy = 9
+
+	var r638_i := -1
+
+	for i in r638_e.state.hand.size():
+
+		if r638_e.state.hand[i].id == 9032:
+
+			r638_i = i
+
+			break
+
+	r638_e.play_from_hand(r638_i, Vector2i(4, 1))
+
+	var r638_clone: CardData = null
+
+	for c: CardData in r638_e.state.hand:
+
+		if c.id == 9032 and c.is_ephemeral:
+
+			r638_clone = c
+
+			break
+
+	check(r638_clone != null and r638_clone.enchant == "damage"
+
+			and r638_clone.power == r638_seed.power
+
+			and r638_clone.effect_text.find("【附魔】") >= 0
+
+			and r638_clone.has_affix("保存")
+
+			and r638_clone.has_affix(GameEngine.AFFIX_DIMENSION)
+
+			and r638_clone.is_ephemeral,
+
+			"R638：野兔复制品带走附魔数值 / 字段 / 标注（攻 %d / 原 %d / %s）" % [
+
+					r638_clone.power if r638_clone != null else -1, r638_seed.power,
+
+					str(r638_clone.affixes) if r638_clone != null else "?"])
+
+	check(r638_clone != null and not r638_clone.has_affix(GameEngine.AFFIX_PHANTOM),
+
+			"R638：野兔复制品仍只有「次元」，不挂「幻影」")
+
+	# ③-c 「保存」附魔带进复制品之后**不能**把它留在手里 —— 衍生物消失优先于留手
+
+	r638_e.end_turn()
+
+	check(not r638_e.state.hand.has(r638_clone),
+
+			"R638：带「保存」附魔的复制品回合结束照旧消失（衍生物优先于留手）")
 
 	# ④ 复制术 9165：复制场上带「伤害 +10」附魔的盟友 → 复制品回到原攻击力
 
@@ -72030,11 +72098,11 @@ func _test_r592b() -> void:
 
 	check_src(r621_rs_src.contains("static func strip_enchant(c: CardData) -> bool:")
 
-			and r621_eng_src.contains("RunState.strip_enchant(clone)")
+			and r621_eng_src.contains("RunState.strip_enchant(copy)")
 
-			and r621_eng_src.contains("RunState.strip_enchant(copy)"),
+			and not r621_eng_src.contains("RunState.strip_enchant(clone)"),
 
-			"R624 源码锁：`RunState.strip_enchant()` 是复制剥附魔的唯一口，野兔 / 复制术都调它")
+			"R638 源码锁：剥附魔只留给复制术（野兔改为完整复制，`_spawn_self_clone` 不许再调）")
 
 	# ---- R636（用户口径「需要能完整复制卡片，携带同种附魔」）----
 	# ① 鸭血复制：附魔一起带走（副本与原卡同 id / 同数值）

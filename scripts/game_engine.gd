@@ -6423,16 +6423,23 @@ func _spawn_self_clone(card: CardData) -> void :
 	## 注：实际流程里**几乎走不到**这个分支 —— 复制发生在「打出的那张已离手」之后，
 	## 手牌刚好腾出一格，所以永远是「不满」。留着是防御（例如将来改成从别处触发复制）。
 	var clone:= CardData.from_dict(card.to_dict())
-	# R624（店长口径）：复制品**不继承商店附魔** —— 已烤进 cost / power / health 的附魔数值、
-	# 附魔带出来的 affix 与「【附魔】…」标注一起撤掉，回到原卡数值。
-	# （本局永久成长 `card_growth` 不是附魔，照旧跟着卡种走，见 `RunState.card_with_mod()`。）
-	RunState.strip_enchant(clone)
+	# R638（店长口径，**推翻 R624**）：复制品**完整继承商店附魔** —— 已烤进 cost / power /
+	# health 的数值、附魔带出来的 affix（保存 / 次元）、「【附魔】…」标注与 `enchant` 标记
+	# 一起带走。口径与鸭血 6024（R636「完整复制」）统一：复制就是复制，不做减法。
+	# ⚠️ 本函数**不许**调 `RunState.strip_enchant()` —— 它现在只留给复制术 9165
+	#    （那个复制的是场上单位，卡上的数值另有改造叠加，见 `_duplicate_spell`）。
+	# （本局永久成长 `card_growth` 本来就不是附魔，照旧跟着卡种走，见 `RunState.card_with_mod()`。）
 	clone.traits = (card.traits as Array).duplicate()   # 切断与卡库的共享引用
 	clone.is_ephemeral = true      # 衍生物标记：离场消失、不进弃牌区（卡库原卡没有它）
 	# R319（用户口径）：复制品是「短暂复制」= 次元 + 回合结束消失 → 徽标写**次元**，
 	# 不再是本体那个「幻影」（幻影只说明「手牌里会消失」，看不出离场也消失）。
-	# ⚠️ 必须**换新数组**：直接改 `clone.affixes` 会串到卡库共享实例上。
-	clone.affixes = [AFFIX_DIMENSION]
+	# `from_dict` 已经重建了一份 affixes（card_data.gd 逐条 append），可以直接改，
+	# 不会串到卡库实例。继承来的字段除了「幻影」全部保留（保存 / 死亡 / 附魔带来的次元…）。
+	# ⚠️ **幻影必须摘掉**：它是「打出就再复制一张」的触发标记，复制品带着它就能
+	#    一张接一张无限链下去（R91 / R319 的口径：幻影只留在本体上）。
+	clone.affixes.erase(AFFIX_PHANTOM)
+	if not clone.affixes.has(AFFIX_DIMENSION):
+		clone.affixes.append(AFFIX_DIMENSION)
 	# R299：手牌满 → 走 `_grant_to_hand`；它认得 `is_ephemeral`，会把衍生物送进**消耗区**
 	# 而不是弃牌区（弃牌区会被洗回牌库 → 无限刷）。
 	_grant_to_hand(clone, card.card_name)
