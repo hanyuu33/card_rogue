@@ -1,0 +1,13 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly ONE image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+A single isolated 2D game SPELL EFFECT sprite: a round VOID MAW — a swirling purple vortex that devours energy, seen straight on, floating on a PURE BLACK (#000000) FLAT background. This will be converted into a transparent additive-blend sprite, so a clean uniform pure black background is CRITICAL and the vortex must GLOW brightly against it.
+
+STYLE: 2D hand-painted anime-fantasy game visual effect, the kind of spell overlay used in a cozy storybook card game. Clean cel-shaded shapes with two or three values only, hard-edged ribbons, plus fine particle sparks. Vivid glow, strong contrast. Absolutely NO 3D render, NO photorealism, NO photo texture, NO noise grain, NO volumetric fog, NO lens flare.
+
+SHAPE: ONE circular whirlpool of dark magenta-violet energy, like a mouth of empty space tearing open. The outer rim is a jagged ring of bright #B07BFF light with 10 to 14 sharp flame-like tongues curling inward clockwise. Inside the rim the energy spirals down into near-black #14001F at the very center, with 3 to 5 thin bright spiral arms winding inward and 20 to 30 tiny sparks being pulled toward the middle. A faint white-lavender #F2E6FF rim highlight on the upper-left edge only. The vortex disc fills about 78% of the frame and is a clean circle, fully inside the frame, nothing cut off.
+
+COMPOSITION: one circle only, dead center, perfectly round, straight-on view, no perspective tilt, no ellipse, no rotation. The energy fades into pure black at the outer edges so the sprite blends seamlessly. NO ground, NO floor, NO scenery, NO background objects, NO cast shadow, NO frame, NO border, NO panel, NO card shape, NO second vortex. The ENTIRE background MUST be uniform pure black #000000: NO gradient, NO texture, NO pattern, NO coloured backdrop.
+
+STRICTLY FORBIDDEN: any text, letters, words, runes, numbers, digits, labels, watermark, logo or signature anywhere; any human figure, face, hands, eye, mouth with teeth, jaw, skull, creature, animal, ghost body; any weapon; any second object; any UI element, button, icon or card frame.
+
+NO readable text. NO numbers. NO watermark. Pure black background only.

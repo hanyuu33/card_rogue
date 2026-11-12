@@ -505,6 +505,11 @@ var _fx_ember_tex: Texture2D = null    # 火星
 var _fx_shield_tex: Texture2D = null   # 电磁护盾球（六边形网格 + rim）
 var _fx_arc_tex: Texture2D = null      # 一截电弧
 var _fx_wave_tex: Texture2D = null     # 冲击波环（清场）
+## R628：独行（9189）吞卡演出专用贴图 —— 店长口径「不要文字特效，用素材图做」。
+## 三张都由 codex 纯文生图出（黑底 → 亮度转 alpha），管线见 art_src/2026-11-12_独行特效_R628/。
+var _fx_lone_col_tex: Texture2D = null   # 竖直吸取光柱（底端在图的底部，顶端在顶部）
+var _fx_lone_maw_tex: Texture2D = null   # 虚空漩涡（圆形，吞噬点）
+var _fx_lone_ring_tex: Texture2D = null  # 收束光环（圆形，空心）
 var _flames: Array = []                # {pos, sc, start, dur, size, seed}   正在烧的火
 var _shield_fx: Dictionary = {}        # {cell, src, start, dur, land}      电磁屏障被击中
 var _purge_wave: Dictionary = {}       # {cell, start, dur}                 第三阶段清场冲击波
@@ -848,6 +853,9 @@ func _ready() -> void:
 	_fx_arc_tex = load("res://assets/fx/fx_arc.png")
 	_fx_wave_tex = load("res://assets/fx/fx_shockwave.png")
 	_fx_arc_elec_tex = load("res://assets/fx/fx_arc_elec.png")
+	_fx_lone_col_tex = load("res://assets/fx/fx_lone_column.png")
+	_fx_lone_maw_tex = load("res://assets/fx/fx_lone_maw.png")
+	_fx_lone_ring_tex = load("res://assets/fx/fx_lone_ring.png")
 	_discard_tex = load("res://assets/ui/discard_icon.png")
 	_void_tex = load("res://assets/ui/void_icon.png")
 	_hp_icon = load("res://assets/ui/icon_health.png")
@@ -3878,8 +3886,8 @@ func _demo_tick() -> void:
 		status_text = "收尾 6 伤 / 手卡仅剩它 22 伤"
 		_shot_t0 = _now()
 		queue_redraw()
-	if "--lonewalk" in _demo_args and _demo_frame == 150 and engine != null:
-		# R625：出牌延到第 150 帧 —— 开场「我方回合」横幅正好横在流光路径上。
+	if "--lonewalk" in _demo_args and _demo_frame == 240 and engine != null:
+		# R628：出牌延到第 240 帧 —— 开场「我方回合」横幅正好横在光柱路径上。
 		engine.use_spell(0, Vector2i(2, 1))
 		_demo_hover_idx = -1
 		_hover_hand = -1
@@ -9037,7 +9045,6 @@ func _draw() -> void:
 	_draw_air_raid_marks()   # R451：空袭标记格（红色准星）—— 在可点高亮之下
 	_draw_highlights()
 	_draw_bursts()
-	_draw_lone_fx()          # R625：独行吞卡演出（素材驱动）
 	_draw_primal_fx()
 	_draw_cues()          # R288：通用效果演出（脉冲 / 光带 / 卡名）—— 压在卡牌之上才看得见
 	_draw_rev_fx()        # R357：转阶段特效（蜂窝电磁屏障 / 燃烧）—— 盖在启示者卡面上
@@ -9048,6 +9055,7 @@ func _draw() -> void:
 	_draw_grid_frame()
 	draw_set_transform(shake, 0.0, Vector2.ONE)   # 复位缩放，回到屏幕空间（只留震动）
 	_draw_grid_mask()
+	_draw_lone_fx()     # R628：独行吞卡演出（光柱要斜着拉，必须在屏幕空间）
 	_draw_meteors()          # R430：流星画在遮罩**之后** —— 上方空间本来就窄，
 	_draw_naval_beam()       # R431：舰炮竖直激光（同样要越过遮罩，从画面顶端下来）
 	_draw_cannon_beams()     # R449：充能巨炮的竖直炮击（炮口在顶端，落一格）
@@ -12649,9 +12657,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"lone_walk":
 			# R625 独行（9189）专属：手卡里随机一张盟友 / 工事被**吞掉**，生命 / 力量
 			# 永久并进这张卡（引擎 `lone_walk` 事件，结算在伤害之前）。
-			# 店长口径：「伤害显示不正常，实际打出伤害正常，需要做特效」—— 这里把
-			# 「吞了谁、并了多少」演一遍，命中数字顺延到吞卡演完（见 fx_impact 的
-			# `_lone_hit_at`）。素材全部来自 `assets/fx/*.png`，不走矢量圆。
+			# 演出见 `_draw_lone_fx()`：R628 起改成纯素材画面（吸取光柱 → 虚空漩涡），
+			# 不再贴「{卡名} 并入 +N」那种文字框。命中数字顺延到吞噬演完（见 fx_impact
+			# 的 `_lone_hit_at`），画面里一个数值都不写死。
 			var lw_nm := str(data.get("name", ""))
 			var lw_cell2: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var lw_hp2 := int(data.get("health", 0))
@@ -12663,16 +12671,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_say("独行：手卡里没有盟友或工事 → 这一下只按已累积的数值结算")
 			else:
 				sfx.play("spell")
+				# 起点固定在屏幕下方中央（手牌区上方）—— 引擎事件不带手卡槽位，
+				# 而卡在事件之前就已经离手了，取不到它原来那格。
 				_lone_fx.append({"from": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 26.0),
 						"pos": _cell_center(lw_cell2), "sc": _grid_scroll, "start": n,
-						"dur": LONE_ABSORB_MS + 540, "hold": LONE_ABSORB_MS,
-						"name": lw_nm, "hp": lw_hp2, "pw": lw_pw2})
+						"dur": LONE_ABSORB_MS + 430, "hold": LONE_ABSORB_MS})
 				_lone_hit_cell = lw_cell2
 				_lone_hit_at = n + LONE_ABSORB_MS
-				# 手卡侧先说一句「这张没了，换来什么」——否则手卡凭空少一张
-				_floaters.append({"pos": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 44.0),
-						"text": "%s 被吞 → 生命 +%d / 力量 +%d" % [lw_nm, lw_hp2, lw_pw2],
-						"col": Color("9b5cf0"), "start": n, "dur": 1600, "size": 17})
+
 				_say("独行：手卡「%s」被吞掉 → 伤害 +%d、降力 +%d（累计 %d / %d）"
 						% [lw_nm, lw_hp2, lw_pw2, lw_db, lw_sb])
 		"stun_blow":
@@ -14056,11 +14062,16 @@ func _draw_bursts() -> void:
 
 
 func _draw_lone_fx() -> void:
-	## R625：独行（9189）的「吞卡」演出 —— **全部走素材**（`assets/fx/*.png`），
-	## 不画矢量圆：手卡区中央 → 目标格拉一串紫色光点（fx_glow，头亮尾暗），
-	## 到点之后目标处炸开（fx_shockwave 两圈 + fx_hit_burst 命中爆点）。
-	## 时序：0 ~ `hold` = 流光段；`hold` 之后 = 爆发段。`hold` 正好是 fx_impact
-	## 被推后的量，所以「独行 -N」的飘字与炸开同帧落地，读起来是「吞了 → 打了」。
+	## R628：独行（9189）的「吞卡」演出 —— 全部走 codex 出的素材图：
+	## `assets/fx/fx_lone_column.png`（竖直吸取光柱，绞股灵魂光 + 白芯）／
+	## `fx_lone_maw.png`（虚空漩涡，吞噬点）／`fx_lone_ring.png`（收束光环）。
+	## 店长口径：「不要用这种文字特效，委托 codex 生成素材图，然后用素材图做特效」
+	## → 原来贴着目标卡的「{卡名} 并入 +N」文字框**整段删除**，只留画面。
+	## 时序：0 ~ `hold` = 吸取段（手卡处收束环 → 光柱沿路径长出 → 头部漩涡前推）；
+	##      `hold` 之后 = 吞噬段（漩涡张开收拢 + 冲击光环 + 命中爆点）。
+	## `hold` 正是 fx_impact 被推后的量 → 「独行 -N」与吞噬同帧落地，因果不反。
+	## ⚠️ 本函数在**屏幕空间**被调用（排在 `--draw_meteors()` 那一段），所以可以临时
+	##    `draw_set_transform` 把光柱旋到 from→to 方向；用完必须还原成 `_shake_cur`。
 	if _lone_fx.is_empty():
 		return
 	var n := _now()
@@ -14071,74 +14082,71 @@ func _draw_lone_fx() -> void:
 		var hold := int(f.get("hold", 0))
 		var to: Vector2 = _fx_pos(f)
 		var from: Vector2 = f["from"]
-		# ① 流光：头在前、尾在后面褪色；抛物线让轨迹不是一条死直线
-		if t0 <= hold and _fx_glow_tex != null:
-			var prog := clampf(float(t0) / float(maxi(hold, 1)), 0.0, 1.0)
+		var dir := to - from
+		var dist: float = maxf(dir.length(), 1.0)
+		# 精灵的「上」是 -Y，要转到 from→to：R(θ)(0,1) = dir ⇒ θ = atan2(-dir.x, dir.y)
+		var ang := atan2(-dir.x, dir.y)
+		var prog := clampf(float(t0) / float(maxi(hold, 1)), 0.0, 1.0)
+		# ---- 吸取段 ----
+		if t0 <= hold:
+			# ① 起手：手卡处一圈光被抽走（由外向内收，越收越淡）
+			if _fx_lone_ring_tex != null:
+				var r0 := lerpf(74.0, 20.0, pow(prog, 0.75))
+				draw_texture_rect(_fx_lone_ring_tex,
+						Rect2(from - Vector2(r0, r0), Vector2(r0, r0) * 2.0), false,
+						Color(1, 1, 1, (1.0 - prog) * 0.9))
+			# ② 光柱：从 from 沿 from→to 长出来（素材下端在 from，上端朝 to）
+			if _fx_lone_col_tex != null:
+				# 整根铺满 from→to，靠 alpha 淡入 —— 不裁 region：素材下端本来就是
+				# 渐隐的细尾，按进度裁出来再压扁，会变成一小截又细又淡的东西（R628 首版）。
+				var tw := clampf(dist * 0.44, 130.0, 210.0)
+				var grow := clampf(prog * 1.7, 0.0, 1.0)
+				draw_set_transform(from, ang, Vector2.ONE)
+				# ⚠️ 矩形从 0 起：旋转后局部 +Y 才是 from→to。写成 -dist 会把整根柱子
+				# 甩到屏幕另一头（R628 首版就画到画面外面去了，只剩一小截露在手牌上方）。
+				# 只取纹理中段（上下各让开 8%）：素材两头本身是渐隐的细尾，
+				# 直接铺满会在半路淡掉，看起来像「光柱只长了一半」（R628 第二版）。
+				var tex_w2 := float(_fx_lone_col_tex.get_width())
+				var tex_h2 := float(_fx_lone_col_tex.get_height())
+				draw_texture_rect_region(_fx_lone_col_tex,
+						Rect2(-tw * 0.5, -dist * 0.10, tw, dist * 1.40),
+						Rect2(0.0, tex_h2 * 0.08, tex_w2, tex_h2 * 0.84),
+						Color(1, 1, 1, grow * 0.95))
+				draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+			# ③ 头部：漩涡球往前顶，读成「这张卡正被吸过去」
 			var head: Vector2 = from.lerp(to, prog)
-			head.y -= sin(prog * PI) * 42.0
-			# ① 主光柱：把 fx_glow 拉成细长条，沿 from → 头部 分 7 段接起来
-			#   （素材是圆光斑，拉伸后就是柔光柱；Godot 4 的 draw_texture_rect 不能旋转，
-			#    所以用「多段斜接」近似一条斜柱 —— 每段只偏几像素，看不出接缝）
-			for s in 7:
-				var s0 := float(s) / 7.0
-				var s1 := float(s + 1) / 7.0
-				if s0 >= prog:
-					break
-				var pa: Vector2 = from.lerp(head, s0)
-				var pb: Vector2 = from.lerp(head, minf(s1, prog))
-				var seg_h: float = maxf(pb.y - pa.y, 1.0) + 26.0
-				var seg_w := 46.0 - 12.0 * s0
-				var seg_a: float = (0.92 - 0.06 * float(s)) * (0.45 + 0.55 * prog)
+			if _fx_lone_maw_tex != null:
+				var hs := lerpf(56.0, 96.0, prog)
+				draw_texture_rect(_fx_lone_maw_tex,
+						Rect2(head - Vector2(hs, hs) * 0.5, Vector2(hs, hs)), false,
+						Color(1, 1, 1, 0.95))
+			if _fx_glow_tex != null:
 				draw_texture_rect(_fx_glow_tex,
-						Rect2(Vector2(pa.x - seg_w * 0.5, pa.y - 13.0), Vector2(seg_w, seg_h)),
-						false, Color(0.68, 0.40, 1.0, seg_a))
-			# ② 粒子尾巴：16 颗，头亮尾暗（读成「吸过去的一股力」）
-			for i in 16:
-				var ft := prog - float(i) * 0.030
-				if ft <= 0.0 or ft > 1.0:
-					continue
-				var pp: Vector2 = from.lerp(to, ft)
-				pp.y -= sin(ft * PI) * 42.0
-				var ss := 30.0 - 1.1 * float(i)
-				var aa: float = (1.0 - float(i) / 16.0) * 0.95
-				draw_texture_rect(_fx_glow_tex,
-						Rect2(pp - Vector2(ss, ss) * 0.5, Vector2(ss, ss)), false,
-						Color(0.72, 0.44, 1.0, aa))
-			# ③ 头部亮球：白紫双叠，读成「这一点正在被吸走」
-			draw_texture_rect(_fx_glow_tex,
-					Rect2(head - Vector2(34, 34), Vector2(68, 68)), false,
-					Color(0.86, 0.66, 1.0, 0.85))
-			draw_texture_rect(_fx_glow_tex,
-					Rect2(head - Vector2(15, 15), Vector2(30, 30)), false,
-					Color(1, 0.97, 1.0, 0.92))
-		# ---- 流光段结束（下面进爆发段）----
-		# ② 爆发：两圈冲击环 + 命中爆点（时间零点 = hold）
+						Rect2(head - Vector2(18, 18), Vector2(36, 36)), false,
+						Color(0.95, 0.88, 1.0, 0.7))
+		# ---- 吞噬段（时间零点 = hold）----
 		if t0 < hold:
 			continue
-		var bt := clampf(float(t0 - hold) / 540.0, 0.0, 1.0)
+		var bt := clampf(float(t0 - hold) / 420.0, 0.0, 1.0)
 		if bt >= 1.0:
 			continue
-		if _fx_wave_tex != null:
-			for k in 2:
-				var rk := clampf(bt - float(k) * 0.18, 0.0, 1.0)
-				if rk <= 0.0:
-					continue
-				var rr := lerpf(30.0, 134.0 - 24.0 * float(k), rk)
-				draw_texture_rect(_fx_wave_tex,
-						Rect2(to - Vector2(rr, rr), Vector2(rr, rr) * 2.0), false,
-						Color(0.66, 0.42, 1.0, pow(1.0 - rk, 1.5) * 0.9))
+		# ④ 虚空漩涡：张开到最大再收拢熄灭
+		if _fx_lone_maw_tex != null:
+			var ms := lerpf(0.75, 1.55, pow(bt, 0.45))
+			draw_texture_rect(_fx_lone_maw_tex,
+					Rect2(to - Vector2(110.0, 110.0) * ms, Vector2(220.0, 220.0) * ms), false,
+					Color(1, 1, 1, pow(1.0 - bt, 0.55)))
+		# ⑤ 收束光环：吞下去的一瞬间向外炸一圈紫环
+		if _fx_lone_ring_tex != null:
+			var rs := lerpf(0.85, 2.0, pow(bt, 0.6))
+			draw_texture_rect(_fx_lone_ring_tex,
+					Rect2(to - Vector2(96.0, 96.0) * rs, Vector2(192.0, 192.0) * rs), false,
+					Color(1, 0.84, 1.0, pow(1.0 - bt, 1.5) * 0.95))
 		if _fx_hit_burst_tex != null:
-			var bs := lerpf(0.55, 1.25, pow(bt, 0.45))
+			var bs := lerpf(0.55, 1.15, pow(bt, 0.45))
 			draw_texture_rect(_fx_hit_burst_tex,
 					Rect2(to - Vector2(88.0, 88.0) * bs, Vector2(176.0, 176.0) * bs), false,
-					Color(0.86, 0.74, 1.0, pow(1.0 - bt, 1.6)))
-		# ③ 把「并进去多少」写清楚 —— 数字来源是引擎报上来的卡面生命 / 力量
-		if bt < 0.55:
-			_draw_string_box_center(_font_bold, 17,
-					"%s 并入 +%d" % [str(f.get("name", "")), int(f.get("hp", 0))],
-					to + Vector2(0, -74), Color("d9c2ff"),
-					Color(0.16, 0.08, 0.26, 0.86))
-
+					Color(0.9, 0.8, 1.0, pow(1.0 - bt, 1.6) * 0.8))
 
 func _rev_art_phase(p: Placement) -> int:
 	## 场上单位该用哪张「阶段卡图」（R357）。只有启示者有多阶段卡图，其余恒为 0。
