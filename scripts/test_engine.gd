@@ -5090,9 +5090,9 @@ func _init() -> void:
 
 
 
-	# 镜像（9056）：2 费史诗效果卡；「每回合第一次使用效果牌时」把该牌的**同名副本**加入本局卡组。
+	# 镜像（9056）：2 费史诗效果卡；「每回合第一次使用效果牌时」把该牌的**同名副本**加入本局卡组，
 
-	# 不可叠加 → 效果区几张都只触发一次、只加一份；不再抽牌（打出自己那一下不算触发）。
+	# **并抽一张卡**。不可叠加 → 效果区几张都只触发一次、只加一份、只抽一张（打出自己那一下不算触发）。
 
 	var nc_mirror := repo.get_card(9056)
 
@@ -5102,11 +5102,13 @@ func _init() -> void:
 
 			and nc_mirror.effect_text.contains("每回合第一次使用效果牌时")
 
+			and nc_mirror.effect_text.contains("抽一张卡")
+
 			and nc_mirror.effect_text.contains("不叠加"),
 
-			"镜像：史诗 2 费效果卡，trait 镜像，文案「每回合第一次」+「不叠加」")
+			"镜像：史诗 2 费效果卡，trait 镜像，文案「每回合第一次」+「抽一张卡」+「不叠加」")
 
-	# 打出自身不触发（效果区当时为空 → 无复制）
+	# 打出自身不触发（效果区当时为空 → 既不复制、也不抽卡）
 
 	var mir_e1 := _new_engine([], 20, 20, -1, false)
 
@@ -5124,9 +5126,9 @@ func _init() -> void:
 
 			and mir_e1.state.hand.is_empty(),
 
-			"镜像：打出自身那一下不触发（牌组不变）")
+			"镜像：打出自身那一下不触发（牌组不变、也不抽卡）")
 
-	# 镜像已在效果区 → 之后再打效果牌：复制「迅捷」入卡组（不抽牌）
+	# 镜像已在效果区 → 之后再打效果牌：复制「迅捷」入卡组，**再抽一张**（draw() 取牌库尾 → 抽回副本）
 
 	var mir_e2 := _new_engine([], 20, 20, -1, false)
 
@@ -5142,13 +5144,15 @@ func _init() -> void:
 
 	mir_e2.use_effect(0)
 
-	check(mir_e2.state.effects.size() == 2 and mir_e2.state.deck.size() == 1
+	check(mir_e2.state.effects.size() == 2 and mir_e2.state.deck.is_empty()
 
-			and mir_e2.state.deck[0].card_name == "迅捷" and mir_e2.state.hand.is_empty(),
+			and mir_e2.state.hand.size() == 1
 
-			"镜像：本回合第一次使用效果牌 → 一份副本入卡组、不抽牌")
+			and mir_e2.state.hand[0].card_name == "迅捷",
 
-	check(mir_e2.state.deck[0] != mir_e2.state.effects[1],
+			"镜像：本回合第一次使用效果牌 → 一份副本入卡组、再抽一张（副本被抽回手牌）")
+
+	check(mir_e2.state.hand[0] != mir_e2.state.effects[1],
 
 			"镜像：加入的是同名**副本**（不是同一个对象）")
 
@@ -5162,7 +5166,7 @@ func _init() -> void:
 
 	check(mir_logged, "镜像：触发时有日志记录")
 
-	# 同一回合第二次使用效果牌 → 不再复制
+	# 同一回合第二次使用效果牌 → 不再复制、也不再抽卡（牌库预置 2 张，判据 = 数量不动）
 
 	var mir_e3 := _new_engine([], 20, 20, -1, false)
 
@@ -5170,29 +5174,31 @@ func _init() -> void:
 
 	mir_e3.state.effects.append(repo.get_card(9056))
 
-	mir_e3.state.deck = []
+	mir_e3.state.deck = [repo.get_card(8003), repo.get_card(8004)]
 
 	mir_e3.state.hand = [repo.get_card(9002)]
 
 	mir_e3.state.energy = 9
 
-	mir_e3.use_effect(0)     # 第一次 → 复制 1 份
+	mir_e3.use_effect(0)     # 第一次 → 复制 1 份 + 抽 1 张
 
-	check(mir_e3.state.deck.size() == 1 and mir_e3.state.hand.is_empty(),
+	check(mir_e3.state.deck.size() == 2 and mir_e3.state.hand.size() == 1
 
-			"镜像：第一次使用效果牌 → 复制 1 份入卡组")
+			and mir_e3.state.hand[0].card_name == "迅捷",
+
+			"镜像：第一次使用效果牌 → 复制 1 份入卡组 + 抽 1 张（抽回副本，牌库其余 2 张不动）")
 
 	mir_e3.state.hand = [repo.get_card(9002)]
 
 	mir_e3.state.energy = 9
 
-	mir_e3.use_effect(0)     # 第二次 → 不再复制
+	mir_e3.use_effect(0)     # 第二次 → 不再复制、不再抽卡
 
-	check(mir_e3.state.deck.size() == 1,
+	check(mir_e3.state.deck.size() == 2 and mir_e3.state.hand.is_empty(),
 
-			"镜像：同回合第二次使用效果牌 → 不再复制（仍 1 份）")
+			"镜像：同回合第二次使用效果牌 → 不再复制、不再抽卡（牌库仍 2 张）")
 
-	# 不可叠加：效果区 2 张镜像 → 第一次使用仍只加 1 份，第 2 次使用也不触发
+	# 不可叠加：效果区 2 张镜像 → 第一次使用仍只加 1 份、只抽 1 张，第 2 次使用也不触发
 
 	var mir_e4 := _new_engine([], 20, 20, -1, false)
 
@@ -5202,7 +5208,7 @@ func _init() -> void:
 
 	mir_e4.state.effects.append(repo.get_card(9056))
 
-	mir_e4.state.deck = []
+	mir_e4.state.deck = [repo.get_card(8003), repo.get_card(8004)]
 
 	mir_e4.state.hand = [repo.get_card(9002)]
 
@@ -5210,9 +5216,11 @@ func _init() -> void:
 
 	mir_e4.use_effect(0)
 
-	check(mir_e4.state.deck.size() == 1,
+	check(mir_e4.state.deck.size() == 2 and mir_e4.state.hand.size() == 1
 
-			"镜像：不可叠加 → 效果区 2 张，第一次使用也只加 1 份")
+			and mir_e4.state.hand[0].card_name == "迅捷",
+
+			"镜像：不可叠加 → 效果区 2 张，第一次使用也只加 1 份、只抽 1 张")
 
 	mir_e4.state.hand = [repo.get_card(9002)]
 
@@ -5220,15 +5228,17 @@ func _init() -> void:
 
 	mir_e4.use_effect(0)
 
-	check(mir_e4.state.deck.size() == 1,
+	check(mir_e4.state.deck.size() == 2 and mir_e4.state.hand.is_empty(),
 
-			"镜像：不可叠加 → 同回合第 2 次使用不触发（仍 1 份）")
+			"镜像：不可叠加 → 同回合第 2 次使用不触发（既不复制也不抽卡）")
 
-	# 跨回合：新回合第一次使用效果牌 → 再复制 1 份
+	# 跨回合：新回合第一次使用效果牌 → 再复制 1 份 + 再抽 1 张
+
+	mir_e4.end_turn()
 
 	mir_e4.end_turn()
 
-	mir_e4.end_turn()
+	mir_e4.state.deck = [repo.get_card(8003), repo.get_card(8004)]
 
 	var mir_deck0 := mir_e4.state.deck.size()
 
@@ -5238,9 +5248,11 @@ func _init() -> void:
 
 	mir_e4.use_effect(0)
 
-	check(mir_e4.state.deck.size() == mir_deck0 + 1,
+	check(mir_e4.state.deck.size() == mir_deck0 and mir_e4.state.hand.size() == 1
 
-			"镜像：下一回合第一次使用效果牌 → 再复制 1 份")
+			and mir_e4.state.hand[0].card_name == "迅捷",
+
+			"镜像：下一回合第一次使用效果牌 → 再复制 1 份 + 再抽 1 张（抽回副本）")
 
 
 

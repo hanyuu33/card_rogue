@@ -10335,8 +10335,9 @@ func _on_effect_card_played(side: String, played: CardData) -> void :
 			_arcane_refund(side, maxi(1, c.value))
 		if c.traits.has(FAMILIAR_NIGHT_TRAIT):
 			_crow_to_hand(side)
-	# 镜像（9056）：每回合**第一次**使用效果牌时，把该牌的一张同名副本加入本局卡组。
-	# 「不可叠加」→ 效果区里有几张镜像都只触发一次、只加一张，**不进**下面的「每回合第 X 次」放宽组。
+	# 镜像（9056）：每回合**第一次**使用效果牌时，把该牌的一张同名副本加入本局卡组，**并抽一张卡**。
+	# 「不可叠加」→ 效果区里有几张镜像都只触发一次、只加一张、也只抽一张，
+	# **不进**下面的「每回合第 X 次」放宽组。
 	if _trait_copies(zone, MIRROR_TRAIT) > 0 and plays <= 1:
 		_mirror_reflect(side, played)
 	# 「每回合第 X 次」：X = 效果区里该类卡的张数 → 本回合**前 X 次**使用效果牌都会触发，每张各一次。
@@ -10457,9 +10458,19 @@ func _mirror_reflect(side: String, played: CardData) -> void :
 		state.deck.append(mr_copy)
 		_log("镜像：将一张「%s」加入本局卡组" % played.card_name)
 		action.emit("deck_added", {"card": mr_copy, "side": side})
+		# R647（用户规则）：镜像**每次触发**都再抽一张卡。
+		# ⚠️ 顺序固定「先入卡组、再抽」，与卡面文案一致；`FieldState.draw()` 取牌库**尾**，
+		#    刚 append 的副本就在尾部 → 手牌未满时抽回的通常正是这张副本（= 复制直接上手）。
+		#    别把两行调成「先抽后放」：那样手牌 +1 的同时牌库也 +1，等于白赚一份。
+		var got:= _draw_many(1)
+		_log("镜像：抽一张卡（进手牌 %d 张）" % got)
 	else:
 		state.opp_deck_count += 1
 		_log("镜像（敌方）：本局卡组 +1 张「%s」" % played.card_name)
+		# 敌方没有真实牌库 / 手牌，按引擎既有口径只推进抽象计数
+		# （与 `_latent_turn_draw` / `_shadow_split_draw` 的敌方分支同口径）。
+		_assemble_opponent_draw(1)
+		_log("镜像（敌方）：抽一张卡")
 
 
 func _lone_walk_vanish(side: String) -> CardData:
