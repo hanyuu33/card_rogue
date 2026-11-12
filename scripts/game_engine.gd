@@ -705,10 +705,13 @@ const FOREST_FRIENDS_DISCOUNT:= 2
 const HARP_RELIC_ID:= 6052
 const HARP_ATK:= 2
 # R383 骑士剑（6053，剧情解锁道具）：本场战斗**第一次击杀敌人**之后 ——
-#   己方所有盟友 +2 力量（与竖琴同一套持续 buff 写法），己方技能伤害 +2。
+#   己方所有盟友 +1 力量（与竖琴同一套持续 buff 写法），己方技能伤害 +1。
+# ⚠️ R634（店长口径「骑士剑从＋2改为＋1（全部）」）：数值**只住在这两个常量里**。
+#    三处调用（`_sync_knight_sword` / `_relic_on_enter_buffs` / `_spell_dmg`）全读它，
+#    以后调数值只改这里；判据里别再写死数字（写死就会「代码 +1、某处 +2」）。
 const KNIGHT_SWORD_RELIC_ID:= 6053
-const KNIGHT_SWORD_ATK:= 2
-const KNIGHT_SWORD_SPELL:= 2
+const KNIGHT_SWORD_ATK:= 1
+const KNIGHT_SWORD_SPELL:= 1
 # R534 三个机器人（6060，追加故事「通缉令」解锁道具）：
 #   每 **3 个己方盟友** 被破坏 → 抽 1 张卡（工事不算；计数每场战斗重置）。
 const THREE_BOTS_RELIC_ID:= 6060
@@ -10006,8 +10009,8 @@ func _knight_sword_active() -> bool:
 
 
 func _knight_sword_on_kill(victim: Placement) -> void:
-	## R383 骑士剑（6053）：**本场战斗的第一次击杀** —— 己方所有盟友 +2 力量、
-	## 己方技能伤害 +2，持续到本场战斗结束。
+	## R383 骑士剑（6053）：**本场战斗的第一次击杀** —— 己方所有盟友 +1 力量、
+	## 己方技能伤害 +1，持续到本场战斗结束（R634 起两个常量统一为 1）。
 	## 只认第一次：`_knight_sword_fired` 一置位就再也不进门（不会叠成 +4）。
 	## 没持有道具时杀敌**不置位** —— 中途拿到道具，从拿到那一刻起算第一次。
 	if _knight_sword_fired or not RunState.has_relic(KNIGHT_SWORD_RELIC_ID):
@@ -12182,7 +12185,7 @@ func _relic_on_enter_buffs(p: Placement) -> void :
 		p.harp_atk = HARP_ATK
 		_log("竖琴：%s 获得 +%d 力量（%d）"
 				% [card.card_name, HARP_ATK, p.effective_power()])
-	# R383 骑士剑（6053）：本场第一次击杀之后**才上场**的己方盟友同样 +2 力量。
+	# R383 骑士剑（6053）：本场第一次击杀之后**才上场**的己方盟友同样 +1 力量。
 	# 与竖琴逐字同构（字段 + effective_power 出口，不烤进共享 CardData）。
 	if _knight_sword_active() and p.owner == SIDE_SELF and card.kind == "盟友":
 		p.sword_atk = KNIGHT_SWORD_ATK
@@ -13052,7 +13055,7 @@ func _spell_dmg(side: String, base: int, card: CardData = null) -> int:
 	out += turn_spell_bonus
 	out += turn_dmg_bonus
 	out += deer_bonus   # R341 鹿首标本：每回合 +1（本场累计）
-	# R383 骑士剑（6053）：本场第一次击杀之后，己方技能伤害 +2（固定值，只加一次）。
+	# R383 骑士剑（6053）：本场第一次击杀之后，己方技能伤害 +1（固定值，只加一次）。
 	if _knight_sword_active():
 		out += KNIGHT_SWORD_SPELL
 	# lucky 7（6045，R314）：生效回合技能额外 +7。
@@ -14789,7 +14792,7 @@ func _destroy(cell: Vector2i) -> void :
 				_rec_list.append(ru)
 	state.board.erase(cell)
 	_credit_kill(p)
-	# R383 骑士剑（6053）：「战斗内第一次击杀一个敌人」→ 己方全体 +2 力量 / 技能 +2。
+	# R383 骑士剑（6053）：「战斗内第一次击杀一个敌人」→ 己方全体 +1 力量 / 技能 +1。
 	# ⚠️ 判据只能是「被破坏的是敌方单位」—— 技能 / 陷阱 / 效果击杀都**不写
 	#    `last_hit_by`**（只有单位普攻写），拿 `_credit_kill` 那套判会漏掉大半击杀。
 	if p.owner != SIDE_SELF:

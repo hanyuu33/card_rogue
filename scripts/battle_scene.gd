@@ -12236,7 +12236,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("%s 击杀敌人 → 攻击力 +%d（当前 %d）" % [
 					kg_name, int(data.get("amount", 0)), int(data.get("power", 0))])
 		"knight_sword":
-			# 骑士剑（6053，R383）：本场第一次击杀 → 己方盟友 +2 力量、技能伤害 +2。
+			# 骑士剑（6053，R383）：本场第一次击杀 → 己方盟友 +1 力量、技能伤害 +1（R634 起）。
+			# 数值取事件里的 `amount` / `spell`（引擎常量），界面不写死。
 			# 只有这一次机会，玩家必须看见 —— 否则道具生效了屏幕上什么都没有。
 			_say("骑士剑：首次击杀 → 己方盟友 +%d 力量、技能伤害 +%d（本场战斗持续）"
 					% [int(data.get("amount", 0)), int(data.get("spell", 0))])
