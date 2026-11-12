@@ -37,7 +37,12 @@ var _counts: Array = []
 var _selected: Array[int] = []
 var _scroll := 0.0
 var _press := {}                # {pos, scroll, moved} 左键/触屏按下状态
-var _hover_idx := -1           # R191：悬停卡下标（无悬停时描述条显示最后选中的）
+## R618：描述条当前显示的卡下标 —— **最近指过 / 点过的那张**。
+## ⚠️ 鼠标离开卡面时**不清成 -1**：描述条连同右侧「详情」按钮都只在有卡时才绘制，
+##    一清空整条就没了，玩家把鼠标从卡片挪到按钮的路上按钮会先消失（PC 上永远点不到）。
+##    触屏没有 motion 事件、本来就能点到，所以这个坑只有在电脑版才复现。
+##    `open()` / `close()` / `refresh()` 仍会清零，别把上一轮的卡带到新一轮。
+var _hover_idx := -1
 var _clip: Control              # 裁剪容器（clip_contents：滚出视区的半行不画）
 var _grid: PickGrid             # 网格节点（_draw 画全部卡；position.y = -_scroll）
 var _detail: CardDetailOverlay = null   # R564：卡牌详情浮层（卡面只留卡名，全文在这里看）
@@ -256,19 +261,32 @@ static func _center_y(rect: Rect2, fs: int) -> float:
 	return rect.position.y + rect.size.y / 2.0 + fs * 0.35
 
 
+func _desc_bar_rect() -> Rect2:
+	## R618：描述条矩形唯一几何口（`_draw` / 「详情」按钮 / 回归用例都走这里）。
+	return Rect2(SIDE, size.y - BOT_H - DESC_H - 6.0,
+			size.x - SIDE * 2.0, DESC_H)
+
+
 func _desc_detail_rect() -> Rect2:
 	## R564：描述条右侧的「详情」按钮。
-	var dr := Rect2(SIDE, size.y - BOT_H - DESC_H - 6.0,
-			size.x - SIDE * 2.0, DESC_H)
+	var dr := _desc_bar_rect()
 	return Rect2(dr.end.x - 108.0, dr.get_center().y - 15.0, 96.0, 30.0)
 
 
+func _desc_idx() -> int:
+	## R618：**描述条取卡唯一口** —— `_draw()` 与 `_tap()` 都走这里，不许各写一套。
+	## 顺序：最近指过/点过的卡 → 最后选中的卡（触屏兜底）→ -1（还没碰过任何卡）。
+	if _hover_idx >= 0 and _hover_idx < _cards.size():
+		return _hover_idx
+	if not _selected.is_empty() and _selected[-1] >= 0 and _selected[-1] < _cards.size():
+		return _selected[-1]
+	return -1
+
+
 func _desc_card() -> CardData:
-	## 描述条当前显示的那张卡（悬停优先，其次最后选中的）—— 与 `_draw` 的取法一致。
-	var di := _hover_idx
-	if di < 0 and not _selected.is_empty():
-		di = _selected[-1]
-	if di >= 0 and di < _cards.size():
+	## 描述条当前显示的那张卡 —— 与 `_draw` 的取法一致（都走 `_desc_idx()`）。
+	var di := _desc_idx()
+	if di >= 0:
 		return _cards[di]
 	return null
 
@@ -327,12 +345,10 @@ func _draw() -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL,
 				Color("ffd27d") if _can_confirm() else Color("9a94a8"))
 	# 描述条（R191）：卡面只留卡名 → 点选/悬停的卡在这里读描述
-	var desc_idx := _hover_idx
-	if desc_idx < 0 and not _selected.is_empty():
-		desc_idx = _selected[-1]
-	if desc_idx >= 0 and desc_idx < _cards.size():
+	var desc_idx := _desc_idx()
+	if desc_idx >= 0:
 		var dc: CardData = _cards[desc_idx]
-		var dr := Rect2(SIDE, h - BOT_H - DESC_H - 6.0, w - SIDE * 2.0, DESC_H)
+		var dr := _desc_bar_rect()
 		draw_rect(dr, Color(0.08, 0.07, 0.12, 0.88))
 		draw_rect(dr, Color("ffd27d"), false, 1.2)
 		draw_string(_font_bold, dr.position + Vector2(14, 26), dc.card_name,
@@ -448,7 +464,11 @@ func _gui_input(event: InputEvent) -> void:
 			# R191：无按压的纯移动 = 悬停跟踪（描述条用）；变化才重绘
 			var hm := event as InputEventMouseMotion
 			var hidx := _card_at(hm.position)
-			if hidx != _hover_idx:
+			# R618：**只在指到某张卡时更新**。旧版指到空白处就把 `_hover_idx` 清成 -1，
+			# 于是玩家把鼠标从卡片挪向底部「详情」按钮的途中，描述条（含按钮）先消失，
+			# 电脑版根本点不到详情；触屏没有 motion 事件才一直正常。
+			# 保持上一张 = 描述条一直有卡可显示、按钮一直可点；换页仍由 open/refresh 清零。
+			if hidx >= 0 and hidx != _hover_idx:
 				_hover_idx = hidx
 				queue_redraw()
 			return
@@ -531,7 +551,7 @@ func _tap(pos: Vector2) -> void:
 		# R294：**点中的卡 = 描述条要显示的那张**。触屏没有 motion 事件，
 		# 光靠悬停跟踪的话点了卡描述条也不动；选满时 `_toggle` 会忽略，
 		# 但「点一下看看这张」仍然应该成立。
-		_hover_idx = k
+		_hover_idx = k   # R618：同时是描述条的持久来源（移开鼠标也不清空）
 		if not is_view():
 			_toggle(k)   # R301：浏览模式点卡只换描述条，不选中
 

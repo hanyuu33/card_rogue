@@ -660,6 +660,55 @@ func _check_discard_view(scene: Variant) -> void:
 		_smoke_fail("R301 弃牌区：候选应为 3 张，实际 %d" % scene._pick.opts().size())
 		return
 	var n_before: int = scene.engine.state.discard.size()
+	# ── R618：电脑版「详情」按钮必须点得到 ──────────────────────────────
+	# 旧实现：描述条只在 `_hover_idx >= 0` 时绘制，而鼠标每动一下都会把它重写，
+	# 离开卡面就清成 -1 → 描述条连同右侧「详情」按钮一起消失。纯浏览模式又不选中卡
+	# （`_selected` 恒为空，没有回落），所以鼠标从卡片挪到按钮的路上按钮就没了。
+	# 触屏没有 motion 事件、描述条一直留着，所以这个坑只在电脑版复现。
+	var ov618: PickOverlay = scene._pick
+	ov618.size = Vector2(1280, 720)   # headless 下 anchors 不结算，手动给尺寸
+	ov618._layout()
+	var r618 := ov618._card_rect(0)
+	var card618: CardData = ov618._cards[0]
+	ov618._press = {}
+	# ① 纯悬停路径：只把鼠标指到卡上、不点，再挪到描述条 → 描述条仍要有卡
+	var mm618 := InputEventMouseMotion.new()
+	mm618.position = ov618._clip.position + ov618._grid.position + r618.get_center()
+	ov618._gui_input(mm618)
+	if ov618._hover_idx != 0:
+		_smoke_fail("R618 弃牌区：悬停第一张卡应记下下标 0，实际 %d" % ov618._hover_idx)
+		return
+	var mg618 := InputEventMouseMotion.new()
+	mg618.position = ov618._desc_bar_rect().get_center()
+	ov618._gui_input(mg618)
+	if ov618._desc_card() != card618:
+		_smoke_fail("R618 弃牌区：鼠标离开卡面后描述条不许消失（详情按钮会跟着没）")
+		return
+	# ② 点「详情」→ 详情层打开，且打开的是同一张卡
+	ov618._tap(ov618._desc_detail_rect().get_center())
+	if ov618._detail == null or not ov618._detail.is_open():
+		_smoke_fail("R618 弃牌区：点「详情」应打开卡牌详情层")
+		return
+	if ov618._detail._card != card618:
+		_smoke_fail("R618 弃牌区：详情层应显示描述条那张卡")
+		return
+	ov618._detail.close()
+	# ③ 点卡路径（触屏口径不能被改坏）：点中的卡也要能一路点到详情
+	ov618._tap(ov618._clip.position + ov618._grid.position + r618.get_center())
+	if ov618._hover_idx != 0 or ov618._desc_card() != card618:
+		_smoke_fail("R618 弃牌区：点卡后描述条应显示这张卡")
+		return
+	var mb618 := InputEventMouseMotion.new()
+	mb618.position = ov618._desc_detail_rect().get_center()
+	ov618._gui_input(mb618)
+	if ov618._desc_card() != card618:
+		_smoke_fail("R618 弃牌区：点卡后把鼠标移到详情按钮，描述条仍应显示同一张")
+		return
+	ov618._tap(ov618._desc_detail_rect().get_center())
+	if ov618._detail == null or not ov618._detail.is_open() or ov618._detail._card != card618:
+		_smoke_fail("R618 弃牌区：点卡后「详情」应能打开且卡正确")
+		return
+	ov618._detail.close()
 	scene._pick.collapse()   # 浏览模式下「返回」= 关窗（不是收起看战场）
 	if scene._pick.is_picking():
 		_smoke_fail("R301 弃牌区：关闭后 overlay 不应仍在 picking")
@@ -667,6 +716,7 @@ func _check_discard_view(scene: Variant) -> void:
 	if scene.engine.state.discard.size() != n_before:
 		_smoke_fail("R301 弃牌区：纯浏览不应改动弃牌堆（%d → %d）"
 				% [n_before, scene.engine.state.discard.size()])
+	print("SMOKE OK R301 弃牌区：全屏浏览窗 / 关窗不动引擎 / R618 电脑版「详情」按钮可点")
 
 
 func _check_duck_blood_instant(scene: Variant) -> void:
