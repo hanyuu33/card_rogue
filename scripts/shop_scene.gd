@@ -1105,25 +1105,55 @@ func _draw_affix_index() -> void:
 			Rect2(Vector2.ZERO, _vs()))
 
 
+func _desc_plate_rect(anchor: Rect2, line_count: int) -> Rect2:
+	## 描述板几何**唯一口**：优先贴在卡正下方 12px，下方放不下就翻到卡上方；
+	## x / y 都夹进屏幕，行数也按屏幕高度夹住 —— 任何窗口比例下整块板子都在视口内。
+	## 抽成独立口是为了让几何探针能直接验「不超出屏幕」，而不是靠肉眼估。
+	var vs := _vs()
+	var width: float = minf(320.0, vs.x - 24.0)
+	var max_lines: int = maxi(1, int((maxf(80.0, vs.y - 24.0) - 54.0) / 25.0))
+	var n: int = clampi(line_count, 1, max_lines)
+	var height: float = 54.0 + n * 25.0
+	var gap := 12.0
+	var y: float = anchor.end.y + gap
+	if y + height > vs.y - 12.0:
+		y = anchor.position.y - height - gap
+	y = clampf(y, 12.0, maxf(12.0, vs.y - height - 12.0))
+	var x: float = clampf(anchor.get_center().x - width * 0.5,
+			12.0, maxf(12.0, vs.x - width - 12.0))
+	return Rect2(x, y, width, height)
+
+
 func _draw_desc_plate() -> void:
-	## R203：商店卡面改为只留卡名后，效果描述的查看入口 = 底部这条描述板。
-	## 桌面端鼠标悬停即显示；移动端无 hover → 两段式点击的「首击选中查看」同样显示。
+	## 卡片描述贴在**这张卡**旁边 —— R203 起是屏幕底部一条通栏板，看卡要来回扫视线。
+	## 外观与 `_draw_goods_popup()`（附魔 / 服务商品说明）同款：320 宽信息卡 + 折行正文。
+	## 位置与高度全交给 `_desc_plate_rect()`（含屏幕夹取），这里只负责画。
 	var card := _hover_card()
 	if card == null:
 		return
-	var vs := _vs()
-	var rr := Rect2(_goods_x0(), vs.y - 58.0, _goods_w(), 40.0)
-	UiTheme.draw_info_card(self, rr)
+	var anchor := _hover_card_rect()
+	if anchor.size.x <= 0.0:
+		return
+	var width: float = minf(320.0, _vs().x - 24.0)
+	var eff: String = CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
+	var lines := TextWrap.wrap_plain(_font, eff, width - 32.0, 18)
+	var rr := _desc_plate_rect(anchor, lines.size())
+	# 行数上限由几何口给出（板子高度已按屏幕夹过），多出来的行砍掉、末行补省略号。
+	var room: int = int((rr.size.y - 54.0) / 25.0)
+	if lines.size() > room:
+		lines = lines.slice(0, room)
+		lines[room - 1] = CardFace._ellipsize(_font,
+				str(lines[room - 1]) + "…", width - 32.0, 18)
+	_draw_plate(rr, false, true)
 	var affix: String = card.affix_line()
 	var meta: String = card.kind + ((" · " + affix) if affix != "" else "")
-	draw_string(_font_bold, rr.position + Vector2(10, 17),
+	draw_string(_font_bold, rr.position + Vector2(16, 26),
 			"%s   %s" % [card.card_name, meta],
-			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 20.0, 12, UiTheme.PAGE_INK)
-	var eff: String = CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
-	if eff != "":
-		draw_string(_font, rr.position + Vector2(10, 33),
-				CardFace._ellipsize(_font, eff, rr.size.x - 20.0, 10),
-				HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 20.0, 10, UiTheme.PAGE_INK)
+			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 32.0, 18, UiTheme.PAGE_INK)
+	for i in lines.size():
+		draw_string(_font, rr.position + Vector2(16, 52 + i * 25), str(lines[i]),
+				HORIZONTAL_ALIGNMENT_LEFT, rr.size.x - 32.0, 18, UiTheme.PAGE_INK)
+
 
 
 # ------------------------------------------------------------ 附魔选卡覆盖层

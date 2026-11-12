@@ -1412,6 +1412,13 @@ func _check_shop_enchant(scene: Variant) -> void:
 		if src.find("RunState.add_chocolate(1)") < 0 or src.find("RunState.chocolate += 1") >= 0:
 			_smoke_fail("R236 商店：买巧克力应走 RunState.add_chocolate(1)（撤销 boss_pending），不能再裸 +=1")
 			return
+		# 描述板必须贴卡：走 _desc_plate_rect() 唯一几何口，不许退回屏幕底部通栏。
+		# 这条只锁源码形状；「任何窗口都不出屏幕」由 tools/verify_shop_desc_plate.gd 实测。
+		if (src.find("func _desc_plate_rect") < 0
+				or src.find("_desc_plate_rect(anchor") < 0
+				or src.find("vs.y - 58.0") >= 0):
+			_smoke_fail("商店描述板：必须走 _desc_plate_rect() 贴卡定位，不能再钉在屏幕底部")
+			return
 	else:
 		print("  · [跳过] 商店附魔 / R236 源码守卫 —— 打包环境读不到源文本")
 	# ② 附魔槽位必须与卡组等长，否则 enchant_deck_card 越界。
