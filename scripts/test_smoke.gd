@@ -5587,7 +5587,19 @@ func _check_r444_affix_index(_scene: Variant) -> void:
 			_smoke_fail("R444 字段浮窗：bounds 没把浮窗夹回屏内（%.1f ~ %.1f）"
 					% [rr3.position.x, rr3.end.x])
 			return
+	# R614：机制词条（「组合」）也走同一套浮窗 —— 传授 8084 = 「次元」+「组合」两条。
+	var teach: CardData = repo.get_card(8084)
+	if teach == null:
+		_smoke_fail("R614：找不到 8084 传授")
+		return
+	var kw_names: Array = []
+	for rk: Dictionary in CardFace.affix_index_rects(teach, card_rect, font):
+		kw_names.append(str((rk["item"] as Dictionary).get("affix", "")))
+	if not (kw_names.has("次元") and kw_names.has("组合")):
+		_smoke_fail("R614：传授浮窗应同时列出「次元」与「组合」，实得 %s" % str(kw_names))
+		return
 	print("  [smoke] R444 字段浮窗：单字段靠右 / 两字段一左一右不压卡 / bounds 夹回屏内")
+	print("  [smoke] R614 机制词条并入浮窗：传授 = 次元 + 组合")
 
 ## R549：统计贴图里不透明像素的占比。Image 读不到时返回 1.0（视为通过，别误报）。
 func _ribbon_opaque_ratio(tex: Texture2D) -> float:

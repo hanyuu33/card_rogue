@@ -27370,9 +27370,10 @@ func _init() -> void:
 
 	check(r91_all.has("疾行") and r91_all.has("嘲讽") and r91_all.has("死亡")
 
-			and r91_all.has("幻影"),
+			and not r91_all.has("幻影"),
 
-		"R91 数据层：四类字段都已写进 cards.json（%s）" % ", ".join(r91_all.keys()))
+		"R91 数据层：疾行 / 嘲讽 / 死亡写进 cards.json；「幻影」**例外**（R613 起只由代码赋予，卡库不带）（实际 %s）"
+			% ", ".join(r91_all.keys()))
 
 	check(CardData.affix_label("疾行") == "疾行"
 
@@ -28116,13 +28117,51 @@ func _init() -> void:
 
 		"R93 不变量：带 trait「离场消失」的卡**全部**有次元（漏：%s）" % str(r93_vanish_nodim))
 
-	# ④ 野兔本体：**没有**次元（它自己不会消失，消失的是它产出的复制品）
+	# ④ 野兔本体：**任何字段都不带**（R613 店长口径 2026-11-12：野兔在商店里也带上标记，
+	#    「这不对，野兔制造的复制野兔才需要标记」）。原卡只是「会造复制」，它自己不会消失，
+	#    卡面右上圆槽的标记只属于它造出来的复制品（复制品带「次元」）。
 
-	check(r93_repo.get_card(9032).has_affix(GameEngine.AFFIX_PHANTOM)
+	check((r93_repo.get_card(9032).affixes as Array).is_empty(),
 
-			and not r93_repo.get_card(9032).has_affix(GameEngine.AFFIX_DIMENSION),
+		"R613 野兔本体**不带任何字段**（实际 %s）" % str(r93_repo.get_card(9032).affixes))
 
-		"R93 野兔本体只有「幻影」、**没有**次元（消失的是复制品，不是它自己）")
+	check(r93_repo.get_card(9032).traits.has("自我复制"),
+
+		"R613 摘掉字段后仍靠 trait「自我复制」触发复制（能力没丢）")
+
+	check(CardFace.affix_badge_queue(r93_repo.get_card(9032)).is_empty(),
+
+		"R613 商店 / 牌库 / 图鉴的卡面标记队列为空（实际 %s）"
+			% str(CardFace.affix_badge_queue(r93_repo.get_card(9032))))
+
+	# ④-b R613 全局锁：**卡库里不许任何一张卡自带「幻影」** —— 这个字段的语义是
+	#     「我造得出临时复制」，属于**产物**的性质，写在本体上就是错标（同类问题一起锁）。
+	#     判据用字段名而不是 id 清单：将来谁往数据里加回「幻影」立刻就红。
+
+	var r613_bad_phantom: Array = []
+
+	for r613_c: CardData in r93_repo.all_cards():
+
+		if r613_c.has_affix(GameEngine.AFFIX_PHANTOM):
+
+			r613_bad_phantom.append([r613_c.id, r613_c.card_name])
+
+	check(r613_bad_phantom.is_empty(),
+
+		"R613 卡库没有任何卡自带「幻影」字段（违规：%s）" % str(r613_bad_phantom))
+
+	# ④-c R613：`from_dict` 必须切断 traits 的共享引用 —— 这条曾让「副本 append 一个 trait」
+	#     写回卡库那份（跨战斗 / 跨 run 泄漏，正是「商店里的卡莫名带标记」的温床）。
+
+	var r613_src := CardData.from_dict({"id": 1, "name": "R613", "traits": ["甲"]})
+
+	var r613_cp := CardData.from_dict(r613_src.to_dict())
+
+	r613_cp.traits.append("乙")
+
+	check(not r613_src.traits.has("乙"),
+
+		"R613 from_dict 切断 traits 共享引用（源卡未被污染：%s）" % str(r613_src.traits))
 
 	# ⑤ to_dict / from_dict 往返保留次元
 
@@ -51778,11 +51817,12 @@ func _init() -> void:
 
 			"R319 野兔文案：写明「短暂复制（次元；回合结束时消失）」")
 
-	check(r319_hare.has_affix(GameEngine.AFFIX_PHANTOM)
+	check(not r319_hare.has_affix(GameEngine.AFFIX_PHANTOM)
 
 			and not r319_hare.has_affix(GameEngine.AFFIX_DIMENSION),
 
-			"R319 野兔**本体**仍只挂「幻影」（它自己不会消失，消失的是复制品）")
+			"R613 野兔**本体不挂任何字段**（R319 时挂的是「幻影」，店长报「商店里也带标记」后摘掉；"
+			+ "它自己不会消失，带标记的是复制品）")
 
 
 
@@ -71155,6 +71195,36 @@ func _test_r589() -> void:
 	check(actp.health == hp0 + 3,
 
 			"R589：hp_per_zero_skill → 每张 0 费技能卡 +3 生命")
+
+	# R615：**减完变 0** 的技能牌必须计入 —— 母卡「攻击」8002 就是 1 费技能卡，
+
+	# 被 hand_skill_discount 减 -1 后账面 0 费；旧实现读 `c.cost`（基础费用 1）整批漏掉，
+
+	# 于是预览口 hand_bonus_text 显示 +6、实打 +0（用户 2026-11-12 报的现象）。
+
+	e.state.hand.clear()
+
+	var sk1 := _card(90011, "R615 一费技能", "技能", 1, 4, 0)
+
+	e.state.hand.append(sk1)
+
+	actp.health = 10
+
+	actp.card.assemble = {"trigger": "use", "effects": [
+
+			{"type": "hand_skill_discount", "value": 1},
+
+			{"type": "hp_per_zero_skill", "value": 3}]}
+
+	e._assemble_execute(actp, Vector2i(5, 0), "use")
+
+	check(e.cost_of(sk1) == 0,
+
+			"R615：1 费技能牌被减成账面 0 费（基础 cost 仍是 1）")
+
+	check(actp.health == 13,
+
+			"R615：减完变 0 的技能牌计入 → 生命 +3（读基础费用会漏成 +0）")
 
 	# fetch_cheapest_ally
 

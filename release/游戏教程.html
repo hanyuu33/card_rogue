@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>嘎嘎乱杀 · 上手教程</title>
+<style>
+  :root{
+    --bg:#12100f;
+    --bg2:#181513;
+    --panel:#1e1a17;
+    --panel2:#241f1b;
+    --line:#3a322b;
+    --ink:#efe6d4;
+    --ink2:#c9bda8;
+    --muted:#9a8b76;
+    --gold:#d8a44c;
+    --gold2:#f0cf8a;
+    --paper:#f3e9d7;
+    --green:#5f8f6a;
+    --red:#b04a3f;
+    --deepred:#7a2a24;
+    --purple:#7d5fa8;
+    --blue:#4f7a92;
+    --choco:#8a5a34;
+    --shadow:0 18px 40px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #2a231d 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 100%, #1d2422 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    font-size:16px;
+    line-height:1.85;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1000px;margin:0 auto;padding:0 22px 90px}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;
+    padding:74px 0 46px;
+    text-align:center;
+    overflow:hidden;
+  }
+  .hero:before{
+    content:"";
+    position:absolute;left:50%;top:-120px;transform:translateX(-50%);
+    width:760px;height:420px;
+    background:radial-gradient(closest-side, rgba(216,164,76,.20), transparent 72%);
+    pointer-events:none;
+  }
+  .kicker{
+    display:inline-block;
+    font-size:12.5px;letter-spacing:.34em;
+    color:var(--gold);
+    border:1px solid rgba(216,164,76,.35);
+    border-radius:999px;
+    padding:5px 16px 5px 19px;
+    margin-bottom:26px;
+    background:rgba(216,164,76,.06);
+  }
+  h1{
+    margin:0;
+    font-family:"Noto Serif SC","Songti SC","SimSun",serif;
+    font-size:clamp(42px,8vw,72px);
+    letter-spacing:.06em;
+    line-height:1.15;
+    color:#fbf3e2;
+    text-shadow:0 0 40px rgba(216,164,76,.22);
+  }
+  .h1-en{
+    display:block;
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:15px;letter-spacing:.5em;
+    color:var(--gold);
+    margin-top:12px;
+    text-transform:uppercase;
+  }
+  .lede{
+    max-width:600px;margin:26px auto 0;
+    color:var(--ink2);font-size:16.5px;
+  }
+  .hero-rule{
+    width:120px;height:1px;margin:34px auto;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);
+    position:relative;
+  }
+  .hero-rule:after{
+    content:"";position:absolute;left:50%;top:-2.5px;transform:translateX(-50%) rotate(45deg);
+    width:6px;height:6px;background:var(--gold);
+  }
+
+  /* ---------- 概览三卡 ---------- */
+  .overview{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;
+    margin:8px 0 10px;
+  }
+  .ov{
+    background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px 18px;
+    position:relative;
+    overflow:hidden;
+  }
+  .ov:after{
+    content:"";position:absolute;inset:0 0 auto 0;height:2px;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);
+    opacity:.5;
+  }
+  .ov .num{
+    font-family:Georgia,serif;font-size:12px;letter-spacing:.2em;
+    color:var(--gold);opacity:.85;
+  }
+  .ov h3{
+    margin:6px 0 8px;font-size:18px;letter-spacing:.04em;
+    font-family:"Noto Serif SC","Songti SC",serif;font-weight:600;
+  }
+  .ov p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.75}
+
+  /* ---------- 目录 ---------- */
+  nav.toc{
+    position:sticky;top:0;z-index:20;
+    margin:36px 0 10px;
+    padding:10px 0;
+    background:rgba(18,16,15,.95);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid rgba(58,50,43,.8);
+    box-shadow:0 10px 24px rgba(0,0,0,.35);
+  }
+  nav.toc ul{
+    list-style:none;margin:0;padding:0;
+    display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
+  }
+  nav.toc a{
+    display:block;
+    font-size:13px;
+    color:var(--muted);
+    text-decoration:none;
+    padding:6px 13px;
+    border-radius:999px;
+    border:1px solid transparent;
+    transition:.22s;
+    white-space:nowrap;
+  }
+  nav.toc a:hover{color:var(--ink);border-color:var(--line)}
+  nav.toc a.on{color:#1a1512;background:var(--gold);border-color:var(--gold);font-weight:600}
+
+  /* ---------- 章节 ---------- */
+  section{scroll-margin-top:70px;margin-top:64px}
+  .sec-head{
+    display:grid;grid-template-columns:auto 1fr;
+    column-gap:18px;align-items:center;
+    margin-bottom:8px;
+  }
+  .sec-no{
+    font-family:Georgia,serif;
+    font-size:54px;line-height:1;
+    color:transparent;
+    -webkit-text-stroke:1px rgba(216,164,76,.55);
+    letter-spacing:.02em;
+    padding-bottom:4px;
+  }
+  h2{
+    margin:0;
+    font-family:"Noto Serif SC","Songti SC",serif;
+    font-size:clamp(24px,4vw,32px);
+    letter-spacing:.05em;
+    font-weight:600;
+    color:#fbf3e2;
+  }
+  .sec-sub{color:var(--muted);font-size:14px;margin:2px 0 0}
+  .sec-body{margin-top:26px}
+  h3{
+    font-size:17px;letter-spacing:.06em;margin:38px 0 12px;
+    color:var(--gold2);font-weight:600;
+    display:flex;align-items:center;gap:10px;
+  }
+  h3:before{
+    content:"";width:14px;height:1px;background:var(--gold);flex:none;
+  }
+  h3:first-child{margin-top:6px}
+  p{margin:12px 0}
+  .dim{color:var(--muted)}
+  strong{color:#fff4e0;font-weight:600}
+  em{font-style:normal;color:var(--gold2);border-bottom:1px dashed rgba(216,164,76,.5)}
+
+  /* ---------- 战场示意 ---------- */
+  .board-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .board-rowlabel{
+    grid-column:1/-1;
+    font-size:11px;letter-spacing:.18em;color:var(--muted);
+    padding:14px 0 4px;
+  }
+  .cell{
+    aspect-ratio:1.6/1;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:linear-gradient(180deg,#221d1a,#1a1613);
+    display:flex;align-items:center;justify-content:center;
+    font-size:12.5px;color:var(--muted);letter-spacing:.08em;
+    position:relative;
+  }
+  .cell.opp{background:linear-gradient(180deg,#26191a,#1c1413);border-color:#4a2c28}
+  .cell.self{background:linear-gradient(180deg,#1a231c,#141b16);border-color:#2d4434}
+  .cell.backrow{box-shadow:inset 0 0 0 1px rgba(216,164,76,.34)}
+  .cell .tag{
+    position:absolute;top:5px;left:7px;
+    font-size:10px;letter-spacing:.1em;color:rgba(216,164,76,.75);
+  }
+  .cell .mark{font-size:15px;color:#d9cbb2}
+  .cell.hit{
+    background:linear-gradient(180deg,#3a1e1c,#2a1513);
+    border-color:var(--deepred);
+    color:#f0b9a9;
+  }
+
+  /* ---------- 时间线 ---------- */
+  .steps{counter-reset:s;margin:6px 0 0;padding:0;list-style:none}
+  .steps li{
+    counter-increment:s;
+    position:relative;
+    padding:0 0 22px 52px;
+    border-left:1px solid var(--line);
+    margin-left:15px;
+  }
+  .steps li:last-child{border-left-color:transparent;padding-bottom:0}
+  .steps li:before{
+    content:counter(s);
+    position:absolute;left:-15px;top:0;
+    width:30px;height:30px;border-radius:50%;
+    background:var(--panel);border:1px solid var(--gold);
+    color:var(--gold);
+    display:flex;align-items:center;justify-content:center;
+    font-family:Georgia,serif;font-size:14px;
+  }
+  .steps b{display:block;color:#fff4e0;font-weight:600;margin-bottom:2px}
+  .steps span{color:var(--ink2);font-size:14.5px}
+
+  /* ---------- 通用卡片 ---------- */
+  .grid-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin:16px 0}
+  .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:16px 0}
+  .grid-2>.box,.grid-3>.box{min-width:0}
+  .box{
+    background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px;
+  }
+  .box h4{
+    margin:0 0 6px;font-size:14.5px;color:#fff4e0;font-weight:600;letter-spacing:.04em;
+  }
+  .box p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.8}
+  .box .big{
+    font-family:Georgia,serif;font-size:28px;color:var(--gold);line-height:1.2;
+  }
+
+  /* ---------- 高亮色表 ---------- */
+  .colors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
+  .clr{
+    display:flex;align-items:center;gap:12px;
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:12px 14px;min-width:0;
+  }
+  .swatch{width:26px;height:26px;border-radius:6px;flex:none;border:1px solid rgba(255,255,255,.14)}
+  .clr b{font-weight:600;color:#fff4e0;font-size:14px}
+  .clr span{display:block;color:var(--muted);font-size:12.5px}
+
+  /* ---------- 键位 ---------- */
+  kbd{
+    display:inline-block;
+    font-family:ui-monospace,Consolas,monospace;
+    font-size:12px;
+    background:#2a2420;
+    border:1px solid #4a4038;
+    border-bottom-width:2px;
+    border-radius:5px;
+    padding:1px 7px;
+    color:#f0d9a8;
+    margin-right:4px;
+    min-width:22px;text-align:center;
+  }
+  .keys{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+  .keys td{padding:9px 12px;border-bottom:1px solid rgba(58,50,43,.7);vertical-align:top}
+  .keys td:first-child{width:150px;white-space:nowrap}
+  .keys td:last-child{color:var(--ink2)}
+
+  /* ---------- 表格 ---------- */
+  .tbl-wrap{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:12px}
+  table.data{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
+  table.data th{
+    text-align:left;padding:12px 14px;
+    background:#241f1b;color:var(--gold2);
+    font-weight:600;font-size:12.5px;letter-spacing:.1em;
+    border-bottom:1px solid var(--line);
+    white-space:nowrap;
+  }
+  table.data td{
+    padding:12px 14px;border-bottom:1px solid rgba(58,50,43,.55);
+    vertical-align:top;color:var(--ink2);
+  }
+  table.data tr:last-child td{border-bottom:none}
+  table.data td:first-child{color:#fff4e0;white-space:nowrap;font-weight:500}
+  table.data tr:hover td{background:rgba(216,164,76,.045)}
+
+  /* ---------- 地图示意 ---------- */
+  .map-legend{display:flex;flex-wrap:wrap;gap:14px;margin:14px 0 18px;font-size:12.5px;color:var(--muted)}
+  .map-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  .mapgrid{
+    display:grid;
+    grid-template-columns:repeat(7,minmax(0,1fr));
+    gap:7px;
+    max-width:560px;
+    margin:0 auto;
+  }
+  .m{
+    aspect-ratio:1/1;
+    border-radius:9px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:600;
+    border:1px solid var(--line);
+    position:relative;
+    cursor:default;
+    transition:transform .18s, box-shadow .18s;
+  }
+  .m:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.4)}
+  .m:after{
+    content:attr(data-label);
+    position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);
+    background:#2a2420;border:1px solid var(--line);color:var(--ink);
+    font-size:11.5px;padding:3px 9px;border-radius:6px;white-space:nowrap;
+    opacity:0;pointer-events:none;transition:.16s;z-index:5;font-weight:400;
+  }
+  .m:hover:after{opacity:1}
+  .m-start{background:#22322a;color:#9fdcae;border-color:#3d6b4d;box-shadow:0 0 0 2px rgba(95,143,106,.35)}
+  .m-battle{background:#2a1f1e;color:#d99a90;border-color:#4d302c}
+  .m-elite{background:#3a1b17;color:#f0a08f;border-color:#6d2f26}
+  .m-event{background:#20242f;color:#9db6d6;border-color:#37415a}
+  .m-rest{background:#2e2618;color:#e0bb78;border-color:#544325}
+  .m-chest{background:#2f2a17;color:#ecd18a;border-color:#5a4d22}
+  .m-bigchest{background:#3a3016;color:#ffe6a3;border-color:#8a7128;box-shadow:0 0 0 2px rgba(216,164,76,.4)}
+  .m-shop{background:#1d2b28;color:#8ed6c0;border-color:#2f534b}
+  .m-unknown{background:#242220;color:#9c9083;border-color:#3f3833}
+  .m-boss{background:#3b1518;color:#ff9d8a;border-color:#8e2e2e;box-shadow:0 0 0 2px rgba(176,74,63,.4)}
+  .m-void{background:transparent;border:1px dashed #2a2420;color:transparent}
+
+  .line-map{
+    display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;
+    max-width:560px;margin:0 auto;
+  }
+  .line-map .m{aspect-ratio:1.25/1}
+  .arrowline{
+    display:flex;justify-content:center;color:var(--muted);
+    font-size:12px;letter-spacing:.2em;margin:10px 0 0;
+  }
+
+  /* ---------- 巧克力预算条 ---------- */
+  .choco-bar{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 6px}
+  .choco-bar b{
+    width:34px;height:26px;border-radius:5px;
+    background:linear-gradient(180deg,#7d4c2a,#5a3420);
+    border:1px solid #9a6440;
+    box-shadow:inset 0 1px 0 rgba(255,220,180,.22);
+    position:relative;
+  }
+  .choco-bar b:after{
+    content:"";position:absolute;inset:5px 6px;
+    background:repeating-linear-gradient(90deg,rgba(0,0,0,.28) 0 2px,transparent 2px 7px);
+  }
+  .choco-bar b.used{background:#2a2320;border-color:#3a322b;box-shadow:none;opacity:.6}
+  .choco-bar b.used:after{opacity:.25}
+  .choco-note{font-size:13px;color:var(--muted)}
+
+  /* ---------- 提示条 ---------- */
+  .callout{
+    border-left:2px solid var(--gold);
+    background:linear-gradient(90deg,rgba(216,164,76,.09),rgba(216,164,76,.015));
+    border-radius:0 10px 10px 0;
+    padding:14px 18px;margin:18px 0;
+    font-size:14.5px;color:var(--ink2);
+  }
+  .callout b{color:var(--gold2)}
+  .callout.warn{
+    border-left-color:var(--red);
+    background:linear-gradient(90deg,rgba(176,74,63,.10),rgba(176,74,63,.015));
+  }
+  .callout.warn b{color:#f0a496}
+
+  /* ---------- 大结论 ---------- */
+  .punch{
+    text-align:center;
+    margin:26px 0;padding:26px 20px;
+    border:1px solid rgba(216,164,76,.28);
+    border-radius:14px;
+    background:
+      radial-gradient(500px 160px at 50% 0%, rgba(216,164,76,.12), transparent 70%),
+      var(--panel);
+  }
+  .punch .p-big{
+    font-family:"Noto Serif SC","Songti SC",serif;
+    font-size:clamp(20px,3.4vw,26px);
+    color:#fbf3e2;letter-spacing:.05em;
+  }
+  .punch .p-sub{margin-top:8px;font-size:13.5px;color:var(--muted)}
+
+  /* ---------- FAQ ---------- */
+  details{
+    border:1px solid var(--line);border-radius:10px;
+    background:var(--panel);margin:10px 0;
+    overflow:hidden;
+  }
+  details summary{
+    cursor:pointer;padding:13px 16px;font-size:14.5px;color:#fff4e0;
+    list-style:none;display:flex;justify-content:space-between;gap:12px;
+  }
+  details summary::-webkit-details-marker{display:none}
+  details summary:after{
+    content:"+";color:var(--gold);font-family:Georgia,serif;font-size:17px;line-height:1;
+  }
+  details[open] summary:after{content:"–"}
+  details .ans{padding:0 16px 15px;font-size:14px;color:var(--ink2);border-top:1px solid rgba(58,50,43,.6);padding-top:12px}
+
+  footer{
+    margin-top:70px;padding-top:26px;
+    border-top:1px solid var(--line);
+    text-align:center;color:var(--muted);font-size:12.5px;letter-spacing:.06em;
+  }
+  footer .sig{color:var(--gold);letter-spacing:.3em;font-family:Georgia,serif;font-size:11px;margin-top:6px}
+
+  @media (max-width:480px){
+    .wrap{padding:0 16px 70px}
+    .keys td:first-child{width:104px;padding:9px 8px}
+    .keys td{padding:9px 8px;font-size:13px}
+    .cell .mark{font-size:11.5px}
+    .cell .tag{font-size:9px}
+    .choco-bar b{width:28px;height:22px}
+    .mapgrid{gap:4px}
+    .line-map{gap:6px}
+    table.data{min-width:520px}
+    details summary{font-size:13.5px}
+    .punch{padding:20px 14px}
+  }
+
+  @media (max-width:720px){
+    .overview{grid-template-columns:1fr}
+    .grid-2,.grid-3,.colors{grid-template-columns:1fr}
+    .sec-no{font-size:38px}
+    .board-grid{gap:5px}
+    .cell{aspect-ratio:1.35/1;font-size:10.5px}
+    .mapgrid{gap:5px}
+    .m{font-size:11.5px;border-radius:7px}
+    nav.toc a{font-size:12px;padding:5px 10px}
+    body{font-size:15.5px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">上 手 教 程</div>
+    <h1>嘎嘎乱杀<span class="h1-en">Quackill</span></h1>
+    <p class="lede">三章，讲清三件事：<b>战斗怎么下手</b>、<b>道具和巧克力到底怎么用</b>、<b>地图上那些格子是什么意思、Boss 从哪儿进去</b>。</p>
+    <div class="hero-rule"></div>
+  </header>
+
+  <div class="overview">
+    <div class="ov">
+      <div class="num">01</div>
+      <h3>打一场</h3>
+      <p>6×3 的棋盘，每回合 5 点费用、抽 5 张牌。拖牌出人、点单位走路，把对面生命打空。</p>
+    </div>
+    <div class="ov">
+      <div class="num">02</div>
+      <h3>带一身</h3>
+      <p>道具是拿到就生效的被动，不用按。<br>巧克力不是吃的，是你这一层的步数。</p>
+    </div>
+    <div class="ov">
+      <div class="num">03</div>
+      <h3>走一圈</h3>
+      <p>7×5 的格子迷宫，十二块巧克力走完就天黑。天黑的那一刻，Boss 自己找上门。</p>
+    </div>
+  </div>
+
+  <nav class="toc">
+    <ul>
+      <li><a href="#s1" class="on">一 · 战斗怎么操作</a></li>
+      <li><a href="#s2">二 · 道具与巧克力</a></li>
+      <li><a href="#s3">三 · 地图格子与 Boss</a></li>
+      <li><a href="#s4">速查与答疑</a></li>
+    </ul>
+  </nav>
+
+  <!-- ============================ 01 ============================ -->
+  <section id="s1">
+    <div class="sec-head">
+      <div class="sec-no">01</div>
+      <div>
+        <h2>战斗时怎么操作</h2>
+        <p class="sec-sub">先认清战场，再学三个动作：出牌、动单位、结束回合。</p>
+      </div>
+    </div>
+
+    <div class="sec-body">
+
+      <h3>战场是一块 6 行 × 3 列的棋盘</h3>
+      <p>下面三行是你的，上面三行是敌人的。各自最里面那一行——你的第 6 行、敌人的第 1 行——叫<em>后排</em>，那是两边互相「打脸」的入口。</p>
+
+      <div class="box" style="padding:20px 18px 18px">
+        <div class="board-grid">
+          <div class="board-rowlabel">敌 方 半 场</div>
+          <div class="cell opp backrow"><span class="tag">第 1 行</span><span class="mark">敌方后排 · 打脸入口</span></div>
+          <div class="cell opp backrow"><span class="tag">第 1 行</span><span class="mark">敌方后排 · 打脸入口</span></div>
+          <div class="cell opp backrow"><span class="tag">第 1 行</span><span class="mark">敌方后排 · 打脸入口</span></div>
+          <div class="cell opp"><span class="tag">第 2 行</span><span class="mark">敌方阵地</span></div>
+          <div class="cell opp"><span class="tag">第 2 行</span><span class="mark">敌方阵地</span></div>
+          <div class="cell opp"><span class="tag">第 2 行</span><span class="mark">敌方阵地</span></div>
+          <div class="cell opp"><span class="tag">第 3 行</span><span class="mark">敌方阵地</span></div>
+          <div class="cell opp"><span class="tag">第 3 行</span><span class="mark">敌方阵地</span></div>
+          <div class="cell opp"><span class="tag">第 3 行</span><span class="mark">敌方阵地</span></div>
+          <div class="board-rowlabel">你 的 半 场</div>
+          <div class="cell self"><span class="tag">第 4 行</span><span class="mark">你的前线</span></div>
+          <div class="cell self"><span class="tag">第 4 行</span><span class="mark">你的前线</span></div>
+          <div class="cell self"><span class="tag">第 4 行</span><span class="mark">你的前线</span></div>
+          <div class="cell self"><span class="tag">第 5 行</span><span class="mark">你的阵地</span></div>
+          <div class="cell self"><span class="tag">第 5 行</span><span class="mark">你的阵地</span></div>
+          <div class="cell self"><span class="tag">第 5 行</span><span class="mark">你的阵地</span></div>
+          <div class="cell self backrow"><span class="tag">第 6 行</span><span class="mark">你的后排 · 打脸入口</span></div>
+          <div class="cell self backrow"><span class="tag">第 6 行</span><span class="mark">你的后排 · 打脸入口</span></div>
+          <div class="cell self backrow"><span class="tag">第 6 行</span><span class="mark">你的后排 · 打脸入口</span></div>
+        </div>
+        <p class="choco-note" style="margin-top:14px">双方都不能主动走进对方的后排——那一行只能用来挨打，不能用来站人。</p>
+      </div>
+
+      <h3>一个回合的四拍</h3>
+      <ul class="steps">
+        <li><b>回合交给你</b><span>你场上所有单位重新点亮（横置状态清掉），抽 5 张牌，费用回到 5 点。</span></li>
+        <li><b>想干什么干什么</b><span>出牌、走位、攻击，顺序随意，费用够就行——这一拍没有步骤限制。</span></li>
+        <li><b>按「回合结束」</b><span>剩下的费用清零（不攒到下回合），手牌全部弃掉（带「保存」的除外）。</span></li>
+        <li><b>敌方行动</b><span>敌方单位逐个行动、敌方效果卡结算，然后回到第 1 拍。觉得磨叽，按顶栏的倍速键切成 ×1.5 / ×2。</span></li>
+      </ul>
+
+      <div class="callout warn">
+        <b>最常见的白给：</b>费用没花完就按了「回合结束」。剩几点就浪费几点，因为它不会留到下一回合。
+      </div>
+
+      <h3>出牌只有两种手势</h3>
+      <div class="grid-2">
+        <div class="box">
+          <h4>① 拖</h4>
+          <p>按住手牌，拖到目标格 / 目标单位上，松手生效。要放在自己半场的单位（盟友、工事）就拖到你的空地上。</p>
+        </div>
+        <div class="box">
+          <h4>② 点两次</h4>
+          <p>点一下牌选中它，再点目标格。不需要目标的牌（大部分技能、效果卡），<strong>连点两次同一张</strong>就打出去了。</p>
+        </div>
+      </div>
+      <p class="dim">触屏上一样：按住拖动 = 拖；点一下选中、再点目标 = 点两次。</p>
+
+      <h3>单位怎么动：一回合一次行动</h3>
+      <div class="grid-3">
+        <div class="box">
+          <h4>先走，再打</h4>
+          <p>最常用的组合。走到攻击距离内，然后出手。</p>
+        </div>
+        <div class="box">
+          <h4>只走 / 只打</h4>
+          <p>走出去不打，这次行动就结束了；打出去立刻横置，这一回合不能再动。</p>
+        </div>
+        <div class="box">
+          <h4>挂着「疾行」</h4>
+          <p>一回合能做两轮行动。第一轮走完还能接着打，第二轮也是。</p>
+        </div>
+      </div>
+      <p>攻击距离按<em>曼哈顿距离</em>算：横向格数 + 纵向格数 ≤ 攻程。攻程 1 只打上下左右紧邻的四格，斜着两格算 2、打不到。攻程 0 的单位（大多数工事）不能主动攻击，但照样能被别人打。</p>
+
+      <div class="callout">
+        <b>新上场的单位当回合就能动。</b>这一回合出人、这一回合打人，是完全成立的——这是本作节奏快的根源，别浪费。
+      </div>
+
+      <h3>格子的颜色在说话</h3>
+      <p>点选自己的单位，棋盘会按颜色告诉你这一格能干什么。这四种颜色看懂了，战斗就通了八成。</p>
+      <div class="colors">
+        <div class="clr"><div class="swatch" style="background:#5f8f6a"></div><div><b>绿 · 可以走过去</b><span>空格、在移速范围内、路上没被挡住</span></div></div>
+        <div class="clr"><div class="swatch" style="background:#b04a3f"></div><div><b>红 · 可以打这个单位</b><span>在攻击距离内的敌方单位</span></div></div>
+        <div class="clr"><div class="swatch" style="background:#7a2a24"></div><div><b>深红 · 打脸</b><span>射程内没有挡路的，这一下直接砸对方生命</span></div></div>
+        <div class="clr"><div class="swatch" style="background:#7d5fa8"></div><div><b>紫 · 这张牌要先选目标</b><span>牌选中了，等你点一个单位</span></div></div>
+      </div>
+
+      <div class="callout">
+        <b>打脸是这游戏最重要的进攻方式。</b>射程内没有敌方单位时，你可以把伤害直接砸到对方后排——扣的是对面的<strong>生命值</strong>，不是某个单位。清不掉对面的大怪，不等于没办法：算好距离，掏脸。
+      </div>
+      <p>唯一挡路的是<em>嘲讽</em>：带嘲讽的单位只要在你射程里，你就不能打别人、也不能打脸，只能先拆它。看到橙色徽标，就说明「不解决它，这一路都过不去」。反过来，你自己也能拿工事和嘲讽单位当墙，替后排挡刀。</p>
+
+      <h3>键盘与触屏</h3>
+      <table class="keys">
+        <tr><td><kbd>E</kbd></td><td>结束回合（同界面上的「回合结束」大按钮）</td></tr>
+        <tr><td><kbd>M</kbd></td><td>战斗里随时翻看全图——只读，不会改路线</td></tr>
+        <tr><td><kbd>F</kbd></td><td>对选中的单位「主动发动」它的特殊能力（有的单位才有）</td></tr>
+        <tr><td><kbd>L</kbd></td><td>开关战斗日志</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>打开菜单；有浮层时先关浮层</td></tr>
+        <tr><td><kbd>右键</kbd></td><td>取消当前选择（拖到一半不想打了也按它）</td></tr>
+        <tr><td><kbd>滚轮</kbd></td><td>棋盘 / 左栏明细上下滚</td></tr>
+        <tr><td><kbd>长按</kbd></td><td>触屏专用，等于右键：取消选择 / 看详情</td></tr>
+      </table>
+
+      <h3>第一场别踩这三个坑</h3>
+      <div class="grid-3">
+        <div class="box">
+          <h4>费用剩着就结束</h4>
+          <p>清零不结转。按结束前先扫一眼左上那颗费用仪表。</p>
+        </div>
+        <div class="box">
+          <h4>出了人忘了动</h4>
+          <p>新单位当回合就能行动，站着不打等于白花三四点费用。</p>
+        </div>
+        <div class="box">
+          <h4>只看伤害不看距离</h4>
+          <p>攻程 1 的单位站两格外就是块木头。出人之前先数格子。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 02 ============================ -->
+  <section id="s2">
+    <div class="sec-head">
+      <div class="sec-no">02</div>
+      <div>
+        <h2>道具与巧克力</h2>
+        <p class="sec-sub">一个是你身上的被动，一个是你脚下的步数。名字都很甜，用法完全不同。</p>
+      </div>
+    </div>
+
+    <div class="sec-body">
+
+      <h3>道具：拿到就生效，不用按</h3>
+      <p>道具是<strong>整局跟着你的被动加成</strong>。它不进手牌、不占费用、也没有「使用」这个动作——你拿到它的那一刻，规则就变了。</p>
+      <p>触发时机各不一样：有的每场战斗开场就响，有的每回合响，有的只在特定时刻响（第一次挨打、第 3 回合、进 Boss 战、战斗结束）。触发时屏幕上有飘字，告诉你是哪一件在生效。</p>
+
+      <div class="grid-2">
+        <div class="box">
+          <h4>怎么看自己带了什么</h4>
+          <p>战斗时看右侧那一条道具栏，图标悬停就是完整说明。地图上方也排着一行小图标，点任意一个会展开本局全部道具。</p>
+        </div>
+        <div class="box">
+          <h4>一般 与 传奇</h4>
+          <p>分两档，只影响标签和名字颜色（传奇是金橙），<strong>不影响掉落概率</strong>。传奇只是效果更不讲道理一点。</p>
+        </div>
+      </div>
+
+      <h4 style="margin:22px 0 8px;font-size:14px;color:var(--gold2);letter-spacing:.08em">几个能立刻记住的例子</h4>
+      <div class="tbl-wrap">
+        <table class="data">
+          <tr><th>道具</th><th>它替你做的事</th></tr>
+          <tr><td>鸭蹼</td><td>每场战斗前两个回合，各多抽一张牌。</td></tr>
+          <tr><td>鸭翼</td><td>每场战斗的第 3 回合，白给 3 点额外费用——大牌可以专门留给这一拍。</td></tr>
+          <tr><td>鸭嘴</td><td>每次受伤，每满 5 点减 2 点（最少还是吃 1 点）。前期非常顶。</td></tr>
+          <tr><td>类固醇</td><td>最大生命 +10，当前生命同样 +10。等于一次免费的大补。</td></tr>
+          <tr><td>烤肉</td><td>在篝火烤好的，进 Boss 战时自动吃掉，回 25% 最大生命。烤完别指望它平时能救命。</td></tr>
+        </table>
+      </div>
+
+      <h4 style="margin:22px 0 8px;font-size:14px;color:var(--gold2);letter-spacing:.08em">从哪来</h4>
+      <ul class="steps" style="margin-top:10px">
+        <li><b>起点三选一</b><span>每层开局在起点弹一次，从三件里挑一件。第三层不给——那一层是直道，起点只负责把你的血回满。</span></li>
+        <li><b>精英战 / Boss 战之后</b><span>打赢就有，掉在奖励页里。</span></li>
+        <li><b>宝箱</b><span>开箱拿到的可能不止金币和卡牌。</span></li>
+        <li><b>某些事件</b><span>也有的地方是「拿一件换一件」，比如把身上的道具投进熔炉。</span></li>
+        <li><b>角色赠品</b><span>选角色时自带的，不占三选一的名额。</span></li>
+      </ul>
+      <div class="callout">
+        <b>道具是不用「想起来用」的，但值得「想起来它存在」。</b>带着「第 3 回合额外费用」，就敢把 6 费的大牌留着；带着「第一次受伤减伤」，就敢让单位先顶上去。
+      </div>
+
+      <h3>巧克力：你的步数，不是零食</h3>
+      <p>名字听起来能吃，实际上它是<em>这一层的行动力</em>。地图右上角那个「巧克力 N」，N 就是你还能走多少间没去过的房间。</p>
+
+      <div class="grid-3">
+        <div class="box" style="text-align:center">
+          <div class="big">12</div>
+          <h4 style="margin-top:4px">每层开局</h4>
+          <p>难度 8 档起是 11 块。第三层是 0——那一层不用这套机制。</p>
+        </div>
+        <div class="box" style="text-align:center">
+          <div class="big">−1</div>
+          <h4 style="margin-top:4px">走进一间新房间</h4>
+          <p>只算「没去过的」。走回头路、原地转、去看地图，都不扣。</p>
+        </div>
+        <div class="box" style="text-align:center">
+          <div class="big">0</div>
+          <h4 style="margin-top:4px">天黑</h4>
+          <p>当前这间房结算完，画面一暗，Boss 出来。没有加时。</p>
+        </div>
+      </div>
+
+      <div class="box" style="margin-top:18px">
+        <h4 style="margin-bottom:10px">一层 12 块的账，大概是这样</h4>
+        <div class="choco-bar">
+          <b class="used"></b><b class="used"></b><b class="used"></b><b class="used"></b>
+          <b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b>
+        </div>
+        <p class="choco-note">左边四块已经花在「战斗 / 事件 / 宝箱 / 商店」上了，还剩八块。要留够打 Boss 前把血补回来的余地。</p>
+      </div>
+
+      <p>所以这一层能做的事情，总共就是 <strong>12 件</strong>。不是 12 场架，是 12 次「进新房间」——十二场战斗、十二次购物，或者任意混合。</p>
+
+      <div class="callout">
+        <b>这条规则决定了整个游戏最重要的取舍：</b>地图上的东西你拿不完。十二步之内要碰到宝箱和商店，还要留够时间变强，剩下的路才打得赢 Boss。
+      </div>
+
+      <h4 style="margin:22px 0 8px;font-size:14px;color:var(--gold2);letter-spacing:.08em">巧克力从哪来</h4>
+      <div class="tbl-wrap">
+        <table class="data">
+          <tr><th>来源</th><th>说明</th></tr>
+          <tr><td>每层开局</td><td>自动满上 12 块（难度 8 档起 11 块）。</td></tr>
+          <tr><td>商店第三行</td><td>80 金币买一块，等于这一层多走一间房。走到最后一块才想起来买，是最值的。</td></tr>
+          <tr><td>某些事件</td><td>有的事件藏着「一块巧克力」当大奖。</td></tr>
+        </table>
+      </div>
+      <div class="callout warn">
+        <b>关键时机：</b>如果你在只剩最后一块巧克力时走进商店，买下巧克力，这一层就又活了——它会撤销「这间房结算完就开 Boss」的判定。手快有，手慢就是一场没准备的 Boss 战。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 03 ============================ -->
+  <section id="s3">
+    <div class="sec-head">
+      <div class="sec-no">03</div>
+      <div>
+        <h2>地图上的格子，和 Boss 在哪里</h2>
+        <p class="sec-sub">一张 7×5 的房间迷宫，三十五间，你只走得起十二间。</p>
+      </div>
+    </div>
+
+    <div class="sec-body">
+
+      <h3>先看清这张图</h3>
+      <p>每层是一张 <strong>7 列 × 5 行</strong>的房间格（35 间），相邻房间之间有门，你只能沿门走。起点固定在最下面一行的中间。</p>
+
+      <div class="map-legend">
+        <span><i style="background:#22322a;border:1px solid #3d6b4d"></i>起点</span>
+        <span><i style="background:#2a1f1e;border:1px solid #4d302c"></i>战斗</span>
+        <span><i style="background:#3a1b17;border:1px solid #6d2f26"></i>精英</span>
+        <span><i style="background:#20242f;border:1px solid #37415a"></i>事件</span>
+        <span><i style="background:#2e2618;border:1px solid #544325"></i>休息</span>
+        <span><i style="background:#1d2b28;border:1px solid #2f534b"></i>商店</span>
+        <span><i style="background:#3a3016;border:1px solid #8a7128"></i>大宝箱</span>
+        <span><i style="background:#242220;border:1px solid #3f3833"></i>「?」</span>
+      </div>
+
+      <div class="box">
+        <div class="mapgrid">
+          <div class="m m-bigchest" data-label="大宝箱 · 固定在左上角">大</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-battle" data-label="战斗">战</div>
+          <div class="m m-event" data-label="事件">事</div>
+          <div class="m m-elite" data-label="精英">英</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-shop" data-label="商店 · 固定在右上角">商</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-battle" data-label="战斗">战</div>
+          <div class="m m-rest" data-label="休息（篝火）">息</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-battle" data-label="战斗">战</div>
+          <div class="m m-event" data-label="事件">事</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-event" data-label="事件">事</div>
+          <div class="m m-elite" data-label="精英">英</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-battle" data-label="战斗">战</div>
+          <div class="m m-rest" data-label="休息（篝火）">息</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-battle" data-label="战斗">战</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-rest" data-label="休息（篝火）">息</div>
+          <div class="m m-battle" data-label="战斗">战</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-event" data-label="事件">事</div>
+          <div class="m m-elite" data-label="精英">英</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-battle" data-label="战斗">战</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-event" data-label="事件">事</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-battle" data-label="战斗">战</div>
+          <div class="m m-unknown" data-label="「?」未知房">?</div>
+          <div class="m m-start" data-label="起点 · 固定在下方中间">起</div>
+        </div>
+        <p class="choco-note" style="margin-top:16px;text-align:center">鼠标停上去看这格是什么。每局的地图都不一样，这张只是示意——但三个固定位置永远不变：</p>
+        <div class="grid-3" style="margin-top:10px">
+          <div class="box" style="background:none;border:none;padding:6px 0"><h4 style="text-align:center">左上角 = 大宝箱</h4><p style="text-align:center">奖励最厚的一格，每层都在那儿。</p></div>
+          <div class="box" style="background:none;border:none;padding:6px 0"><h4 style="text-align:center">右上角 = 商店</h4><p style="text-align:center">每层保底有一间，就在那个角上。</p></div>
+          <div class="box" style="background:none;border:none;padding:6px 0"><h4 style="text-align:center">最下排中间 = 起点</h4><p style="text-align:center">你出生、也是领起始道具的地方。</p></div>
+        </div>
+      </div>
+
+      <h3>十种格子，各给什么</h3>
+      <div class="tbl-wrap">
+        <table class="data">
+          <tr><th>格子</th><th>进去发生什么</th><th>该注意的</th></tr>
+          <tr>
+            <td>起点</td>
+            <td>出生点。每层开局在这里弹一次「三选一道具」。</td>
+            <td>第三层例外，不给道具，但会把血回满。</td>
+          </tr>
+          <tr>
+            <td>战斗</td>
+            <td>普通战。赢了给金币 + 三选一卡牌。</td>
+            <td>明房里的主力，也是练手最安全的地方。</td>
+          </tr>
+          <tr>
+            <td>精英</td>
+            <td>强化战。赢了给金币 + 卡牌 + 一件道具，还会<strong>按概率</strong>额外摇一份「追加奖励」（奖励页末尾单列一块）。</td>
+            <td>变强最快、也最容易翻车。血不满别碰。</td>
+          </tr>
+          <tr>
+            <td>事件</td>
+            <td>一小段剧情，通常是二选一 / 三选一：拿好处付代价，或者放弃。</td>
+            <td>同一种事件一局基本只遇到一次。少数事件会直接改动地图本身。</td>
+          </tr>
+          <tr>
+            <td>休息（篝火）</td>
+            <td>二选一：<strong>休息</strong>回血（难度 0 回 40% 最大，1 档起 25%）；<strong>烤肉</strong>拿道具「烤肉」，进 Boss 战自动吃掉回 25%。</td>
+            <td>已经带着烤肉就不能再烤。带「圣餐」的话，到达篝火就自动回 50%。</td>
+          </tr>
+          <tr>
+            <td>商店</td>
+            <td>花金币买卡、买附魔、删卡、加最大生命、买巧克力。</td>
+            <td>每层保底三间（右上角那间 + 两间随机）。</td>
+          </tr>
+          <tr>
+            <td>宝箱</td>
+            <td>直接开：金币 + 卡牌，有时还有道具。</td>
+            <td>不再出现在明面上，只藏在「?」房里。</td>
+          </tr>
+          <tr>
+            <td>大宝箱</td>
+            <td>比普通箱子厚，每层固定左上角一个。</td>
+            <td>要走很远。十二步里为它留出预算，是门技术。</td>
+          </tr>
+          <tr>
+            <td>「?」未知</td>
+            <td>走进去才揭晓真实类型：可能是战斗、事件、精英、宝箱、商店。</td>
+            <td>见下一节。</td>
+          </tr>
+          <tr>
+            <td>Boss</td>
+            <td><strong>不是地图上的格子。</strong>巧克力用完时自动开打。</td>
+            <td>见「怎么进 Boss」。</td>
+          </tr>
+        </table>
+      </div>
+
+      <h3>「?」房到底是什么</h3>
+      <p>「?」大约占全图的<strong>三分之一</strong>，是地图上数量最多的一类格子。它在你走进去那一刻才揭晓，实际内容的分布大致是：</p>
+      <div class="grid-3">
+        <div class="box"><h4>事件 · 约一半</h4><p>所以「?」房多数时候是安全的，能白拿点东西。</p></div>
+        <div class="box"><h4>战斗 · 约四分之一</h4><p>踩进去就是一场普通战，也能顺便拿卡。</p></div>
+        <div class="box"><h4>精英 · 接近一成</h4><p>剩下的是宝箱和商店。踩到精英，血少就真的会死。</p></div>
+      </div>
+      <div class="callout">
+        <b>另外两个贴心设计：</b>第一层的起点后面那第一格，<strong>只可能是战斗或事件</strong>——不会一出门就撞精英。而所有层的起点邻居都不会是精英或篝火。
+      </div>
+
+      <h3>三层，三种节奏</h3>
+      <div class="tbl-wrap">
+        <table class="data">
+          <tr><th>层</th><th>地图</th><th>Boss</th></tr>
+          <tr>
+            <td>第一层</td>
+            <td>标准 7×5 迷宫，12 块巧克力。新手层，敌人以中低强度普通怪为主。</td>
+            <td>「远古虚骨龙」或「恶魔鸭」，每局随机一只——<strong>出发前地图上就写着是谁</strong>。</td>
+          </tr>
+          <tr>
+            <td>第二层</td>
+            <td>同样是 7×5、12 块。强度上台阶，事件更有意思，精英更硬。</td>
+            <td>「机械巨鸭」或「鸭之暗面」。</td>
+          </tr>
+          <tr>
+            <td>第三层</td>
+            <td><strong>不再是迷宫</strong>：一条 5 格的直道，不消耗巧克力，不给起始道具。</td>
+            <td>直道尽头固定是「启示者」。</td>
+          </tr>
+        </table>
+      </div>
+
+      <p style="margin-top:18px">第三层长这样，走进第一格就没得选了：</p>
+      <div class="box">
+        <div class="line-map">
+          <div class="m m-start" data-label="起点 · 血回满">起</div>
+          <div class="m m-elite" data-label="精英 · 从第二层最硬的三关里挑">英</div>
+          <div class="m m-shop" data-label="商店">商</div>
+          <div class="m m-rest" data-label="休息（篝火）">息</div>
+          <div class="m m-boss" data-label="Boss · 启示者">王</div>
+        </div>
+        <div class="arrowline">起 点 ── 精 英 ── 商 店 ── 篝 火 ── Boss</div>
+        <p class="choco-note" style="margin-top:12px;text-align:center">起点会把你血回满——这是终局段唯一的回血机会，所以别急着往前冲，先在起点确认一遍卡组和道具。直道上那只精英只会从第二层最硬的几关里挑，没有软柿子。</p>
+      </div>
+
+      <h3>怎么进 Boss</h3>
+      <div class="punch">
+        <div class="p-big">Boss 不是一扇门，是时间到了。</div>
+        <div class="p-sub">前两层：十二块巧克力走完，天黑，它自己来找你。</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="box">
+          <h4>第一层 / 第二层</h4>
+          <p>巧克力扣到 0 之后，<strong>当前这间房先结算完</strong>——战斗打完、奖励领完、商店逛完——然后画面暗下来，提示「强大的敌人来袭」，直接进 Boss 战。</p>
+          <p style="margin-top:8px">所以不存在「我准备好了再去找 Boss」。你唯一能控制的是：把最后那几块巧克力花在什么上。</p>
+        </div>
+        <div class="box">
+          <h4>第三层</h4>
+          <p>直道最后一格就是 Boss，走进去就打。没有巧克力这回事，也没有绕路和回头的余地。</p>
+          <p style="margin-top:8px">顺序固定：精英 → 商店（最后补一次）→ 篝火（最后回一次血）→ Boss。走到篝火之前，把该买的都买了。</p>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <b>最容易犯的致命错：</b>巧克力只剩一两块时走进精英。打完立刻接 Boss，中间既没有商店也没有篝火，血是残的就只能硬着头皮上。
+      </div>
+
+      <h3>站在门口，先问自己三句</h3>
+      <ul class="steps">
+        <li><b>我现在血够吗？</b><span>血少还硬闯精英，是新手最常见的死法。Boss 战前尤其要留出至少一次篝火的位置。</span></li>
+        <li><b>我还剩几块巧克力？</b><span>快见底时进精英 = 打完马上接 Boss，没有调整空间。这时候宁可去事件房。</span></li>
+        <li><b>这条路后面还有什么？</b><span>地图全都能看（战斗中按 M）。想清楚这十二步里宝箱、商店、篝火各要不要去，顺序怎么排。</span></li>
+      </ul>
+
+      <p style="margin-top:16px">经验上的顺序：<strong>前期</strong>优先普通战和事件（拿卡、拿道具）；<strong>中期</strong>去商店删掉卡组里的废牌、补一件关键附魔；<strong>后期</strong>血不满就走篝火，钱花完，最后再解决 Boss。</p>
+    </div>
+  </section>
+
+  <!-- ============================ 04 ============================ -->
+  <section id="s4">
+    <div class="sec-head">
+      <div class="sec-no">04</div>
+      <div>
+        <h2>速查与答疑</h2>
+        <p class="sec-sub">记不住的时候，看这一页就够。</p>
+      </div>
+    </div>
+
+    <div class="sec-body">
+      <div class="tbl-wrap">
+        <table class="data">
+          <tr><th>你想知道</th><th>答案</th></tr>
+          <tr><td>怎么出牌</td><td>拖到目标上松手；或点一下牌、再点目标。不用目标的牌连点两次。</td></tr>
+          <tr><td>怎么让单位走</td><td>点它，绿色格子是能走的地方，点一下就走过去。</td></tr>
+          <tr><td>怎么打人</td><td>点它，红色格子是能打的敌人，深红是直接打对面生命。</td></tr>
+          <tr><td>一回合几点费用</td><td>5 点。用完就没了，不累积到下一回合。</td></tr>
+          <tr><td>每回合抽几张</td><td>5 张。手牌上限 10 张，满了再抽就白扔。</td></tr>
+          <tr><td>单位一回合能动几次</td><td>1 次行动：先走再打，或只做一样。带「疾行」是 2 次。</td></tr>
+          <tr><td>道具怎么用</td><td>不用按。拿到就生效，到时机自己触发。</td></tr>
+          <tr><td>巧克力是什么</td><td>这一层的步数。进没去过的房间扣 1 块，走回头路不扣。</td></tr>
+          <tr><td>巧克力用完会怎样</td><td>当前房间结算完，天黑，直接进 Boss 战。</td></tr>
+          <tr><td>Boss 在地图哪一格</td><td>不在格子上。前两层是「巧克力耗尽」触发，第三层在直道尽头。</td></tr>
+        </table>
+      </div>
+
+      <h3>常见疑问</h3>
+
+      <details>
+        <summary>我打不到对面任何单位，是不是卡住了？</summary>
+        <div class="ans">不是。射程内没有敌方单位时，那一格会变成深红色——你可以直接把伤害砸到对方生命上，扣的是对面的血条，不是某个单位。这是正常的进攻方式，也是这游戏最主要的赢法。</div>
+      </details>
+
+      <details>
+        <summary>单位上场了却动不了？</summary>
+        <div class="ans">三种可能：它带着「沉睡」正在睡；它被冰封 / 眩晕（下回合不能行动）；或者它这一回合已经行动过了——卡面变暗、横过来，就是「横置」。鼠标停在它身上，左栏会写清楚是哪一种。</div>
+      </details>
+
+      <details>
+        <summary>手里的牌怎么都打不出去？</summary>
+        <div class="ans">看三点：费用够不够（左上费用仪表）；是不是这张牌要先选目标（点它之后格子会亮紫色）；以及现在是不是你的回合——敌方行动时是不能出牌的。</div>
+      </details>
+
+      <details>
+        <summary>地图上的「?」值不值得踩？</summary>
+        <div class="ans">多数值得。它大约一半是事件、四分之一是普通战，剩下才是宝箱、商店和少量精英。血在安全线以上就踩，血见底时绕着走——因为一旦是精英，你是没有退路的。</div>
+      </details>
+
+      <details>
+        <summary>商店最该买什么？</summary>
+        <div class="ans">前期买附魔（一张卡只能带一个，性价比最高），中期花 50 金币删掉卡组里的废牌——牌越少，抽到关键牌的概率越高；巧克力只剩最后一两块时，80 金币买一块巧克力往往比买卡更救命。</div>
+      </details>
+
+      <details>
+        <summary>打输了会怎样？</summary>
+        <div class="ans">生命归零这一局就结束，回标题、记成「失败」，什么都不保留。中途关掉游戏倒是没关系：下次打开点「继续游戏」，会从当时的位置接着打（战斗中关的会回到这一场开打之前）。</div>
+      </details>
+    </div>
+  </section>
+
+  <footer>
+    <div>嘎嘎乱杀 · Quackill — 上手教程</div>
+    <div class="sig">BATTLE · RELICS · MAP</div>
+  </footer>
+</div>
+
+<script>
+  (function(){
+    var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+    var secs = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+    function sync(){
+      var y = window.scrollY + 120, best = 0;
+      for (var i = 0; i < secs.length; i++){
+        if (secs[i] && secs[i].offsetTop <= y) best = i;
+      }
+      links.forEach(function(a, i){ a.classList.toggle('on', i === best); });
+    }
+    window.addEventListener('scroll', sync, {passive:true});
+    window.addEventListener('resize', sync);
+    sync();
+  })();
+</script>
+</body>
+</html>

@@ -402,9 +402,6 @@ var _drag_anywhere := false     # 拖到棋盘任意处即可释放（无目标�
 var _drag_place := false        # 拖拽的是随从/工事：落到自己半场空格放置
 var _drag_place_cells: Array[Vector2i] = []   # 随从/工事的合法放置格（自己半场空格）
 var _drag_to_effects := false   # R106：拖的是效果卡 → 可**直接拖到左侧效果区**启用
-## R106：战场单位顶部徽标里**状态类**（增益/减益）最多画几条 —— 徽标是往上叠的，
-## 条数多了会盖住上面一行的卡；完整逐条列表在左侧信息栏（悬停/选中可见）。
-const MAX_STATUS_BADGES := 3
 
 
 func _say(text: String) -> void:
@@ -716,6 +713,7 @@ var _pick: PickOverlay = null            # R189：全屏选卡页（8 套旧小�
 var _assemble_overlay: AssembleOverlay = null   # R559：拖拽组合页（传授 8084）
 var _combodemo_fill := false                     # R559b 出图：预填三槽标记
 var _hover_card: CardData = null  # 鼠标悬停的卡（左侧信息栏优先显示）
+var _hover_zone_rect := Rect2()  # R614：区域面板里悬停那张卡的矩形（解释浮窗贴它画，见 `_draw()` 末尾）
 var _hover_pl: Placement = null   # 悬停的战场单位（可显示当前生命）
 var _hover_hand := -1             # 悬停的手牌下标（-1 = 无）：仅用于绘制时抬手
 var _over_shown := false        # 结算覆盖层是否已弹出（边沿检测）
@@ -3095,7 +3093,10 @@ func _ready() -> void:
 			var demo_ids: Array[int] = []
 			for dc: CardData in engine.state.deck:
 				demo_ids.append(dc.id)
-			for extra: int in [8004, 9032, 9010]:
+			var extras: Array[int] = [8004, 9032, 9010]
+			if "--combohover" in args:
+				extras.append(8084)   # R614：把「传授」塞进完整卡组，供浮窗出图
+			for extra: int in extras:
 				if repo.get_card(extra) != null:
 					demo_ids.append(extra)
 			RunState.deck_ids = demo_ids
@@ -3380,6 +3381,19 @@ func _r360_probe_tick() -> void:
 
 func _demo_tick() -> void:
 	_demo_frame += 1
+	if "--combohover" in _demo_args and _run_deck_visible \
+			and _demo_frame == _shot_frame - 30:
+		# 出图（R614）：完整卡组里把「鼠标」钉在「传授」上 —— 验证解释浮窗
+		# 是画在区域面板**之上**的（面板会盖住左栏信息面板，卡组一多就全遮住）。
+		# 用法：--screenshot --level 0 --rundeckpanel --combohover --shotframe 60
+		var zcards := _zone_panel_cards()
+		var zlay := _zone_panel_layout(zcards.size())
+		for zi in zcards.size():
+			if (zcards[zi] as CardData).id == 8084:
+				_hover_card = zcards[zi]
+				_hover_zone_rect = _zone_card_rect(zi, zlay)
+				queue_redraw()
+				break
 	if "--r302mention" in _demo_args and engine != null and not _mention_hits.is_empty():
 		# R302 演示：鼠标压在第一个「提及」命中矩形上 → 左栏底部没有固定摘要块，
 		# 而是弹出真实卡面（触屏路径是「点一下钉住」，走 `_on_left_click`）。
@@ -7103,6 +7117,7 @@ func _clear_hover_state() -> void:
 	_hover_card = null
 	_hover_pl = null
 	_hover_hand = -1
+	_hover_zone_rect = Rect2()   # R614：跟着一起清，否则浮窗会留在屏幕上
 	_hover_relic_tip = ""
 	_hover_mention = {}          # R302：提及浮窗跟着一起收
 
@@ -7173,6 +7188,7 @@ func _on_hover(pos: Vector2) -> void:
 			if zr.has_point(pos):
 				var zc: CardData = zp[i]
 				_hover_card = zc
+				_hover_zone_rect = zr   # R614：解释浮窗要贴这张卡画
 				if Time.get_ticks_msec() >= _status_hold_until:
 					status_text = "%s 费用%d（效果见左侧）" % [zc.card_name,
 							engine.cost_of(zc)]
@@ -9059,6 +9075,14 @@ func _draw() -> void:
 	if _enemy_effects_visible:
 		_draw_zone_panel("敌方效果 %d 张（同名合并，开局启用，持续生效中）" % engine.state.enemy_effects.size(),
 				_zone_panel_cards(), _zone_panel_counts())
+	# R614：区域面板（完整卡组 / 牌堆 / 消耗区 / 效果区）会盖住左栏信息面板 ——
+	#   卡组一多 `pw` 几乎满屏（实测 30 张时 px≈73，左栏被整个吃掉），
+	#   悬停那张卡的「字段 / 机制词条」解释必须画在面板**之上**，
+	#   否则玩家在「查看完整卡组」里永远查不到「次元」「组合」是什么。
+	#   底下一层（左栏 `_draw_info_panel()`）留着：卡组小时两处都看得到，不冲突。
+	if _hover_card != null and _hover_zone_rect.size.x > 0.0:
+		CardFace.draw_affix_index(self, _hover_card, _hover_zone_rect, _font, _font_bold,
+				172.0, Rect2(0.0, 0.0, WINDOW_W, WINDOW_H))
 	if _relics_visible:
 		_draw_relic_panel()
 	_draw_relic_tip_panel()
@@ -9479,55 +9503,12 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	if p.owner == GameEngine.SIDE_SELF and engine.can_activate(cell, GameEngine.SIDE_SELF):
 		_draw_activatable_aura(center, w, h, _badge_row)
 		_badge_row += 1
-	# 【字段系统 R91】把这张卡**此刻生效**的字段逐个画在卡上方（轮流显示 = 依次往下排）。
-	# ⚠️ **不硬编码任何字段**：判据是 `CardData.active_affixes()`，它读 `card.affixes`
-	# 并按场上实况过滤（疾行用掉一轮就不显示、护盾用掉就不显示）。
-	# 于是「过载给这张牌加了疾行」「能量屏障给了护盾」这类**后续赋予**的字段
-	# 也会自动出现在战场上 —— 不需要在这里为每个字段写一段。
-	_badge_row = _draw_affix_badges(center, w, h, p, _badge_row)
-	# 【R106】最上面再叠「已获得的增益 / 减益」摘要（限量）：完整逐条列表在左侧信息栏。
-	_draw_status_badges(center, w, h, p, _badge_row)
-
-
-## 字段徽标（R91）：把 `p.card` 此刻生效的字段逐个画成顶部徽标。
-## **「轮流显示」= 按顺序用 `_badge_row` 往下错开**，与冰封 / 沉睡 共用同一个底座
-## （`_draw_state_badge`）—— 徽标多了不会互相盖住。
-## 返回**下一个可用的 row**（调用方接着往下排）。
-func _draw_affix_badges(center: Vector2, w: float, h: float, p: Placement,
-		start_row: int) -> int:
-	var row := start_row
-	if p.card == null:
-		return row
-	for a in p.card.active_affixes(p.acts_left, p.first_hit_shield):
-		# 嘲讽已经有脉冲橙环 + 徽标（`_draw_taunt_aura`），不重复画文字徽标。
-		if a == GameEngine.AFFIX_TAUNT:
-			continue
-		var cols: Array = CardData.affix_colors(a)
-		_draw_state_badge(center, w, h, row, CardData.affix_label(a),
-				cols[0], cols[1], cols[1], Color(0.02, 0.02, 0.02, 0.75))
-		row += 1
-	return row
-
-
-func _draw_status_badges(center: Vector2, w: float, h: float, p: Placement,
-		start_row: int) -> void:
-	## 【R106】把这张卡**已获得**的增益 / 减益摘要画成顶部徽标。
-	## 数据来自 `Placement.status_badges()`（与信息栏的逐条列表同源），只挑最要紧的几项，
-	## 并且**限量** MAX_STATUS_BADGES 条 —— 徽标是往上叠的，多了会盖住上面一行的卡。
-	if p == null or p.card == null:
-		return
-	var row := start_row
-	var shown := 0
-	for b in p.status_badges():
-		if shown >= MAX_STATUS_BADGES:
-			break
-		var col: Color = b["col"]
-		_draw_state_badge(center, w, h, row, str(b["text"]),
-				Color(col.r * 0.20, col.g * 0.20, col.b * 0.20, 0.90), col,
-				Color(1, 1, 1, 0.96), Color(0.04, 0.04, 0.04, 0.72))
-		row += 1
-		shown += 1
-
+	# ⚠️ R613b（店长口径）：战场单位卡**不再叠文字徽标条**。
+	#   · 字段（次元 / 护盾 / 疾行 …）已由卡面右上角 glyph 承载（CardFace._draw_affix_badges，on_board 过滤），
+	#     早年那版同名文字条在此重复绘制，已删（次元回归 glyph）。
+	#   · 增益 / 减益摘要（Placement.status_badges()）完整逐条列表在**左侧信息栏**，
+	#     顶部不再另画文字芯片（店长：「只留可发动的标签」）。
+	#   带环的「标记」（嘲讽 / 冰封 / 沉睡 / 倒数 / 可发动 F）仍各自在上方绘制。
 
 func _draw_frozen_aura(center: Vector2, w: float, h: float, badge_row: int) -> void:
 	## 冰封特效（`Placement.frozen` 的唯一表现口）：冷蓝双环脉冲 + 顶部「冰封」徽标
@@ -16090,6 +16071,18 @@ static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 			"title": CardData.affix_label(a),
 			"segs": [{"text": CardData.affix_label(a), "bold": true},
 					{"text": "：" + CardData.affix_desc(a)}],
+		})
+	# R614：机制词条（「组合」）—— 和字段同一套框，但名字来自 `MECH_KEYWORDS`
+	#   （按正文命中，不是 `affixes`；进 `affixes` 会被画成假 buff，R559 踩过）。
+	for kw: String in card.mech_keywords():
+		var kc := CardData.affix_colors(kw)
+		out.append({
+			"type": "line", "kind": "affix",
+			"glyph": CardData.affix_glyph(kw),
+			"col": (kc[1] as Color).darkened(0.30),
+			"title": CardData.affix_label(kw),
+			"segs": [{"text": CardData.affix_label(kw), "bold": true},
+					{"text": "：" + CardData.affix_desc(kw)}],
 		})
 	# ④ buff 框：每种一个（附魔按用户口径也算 buff）
 	if card.has_enchant():

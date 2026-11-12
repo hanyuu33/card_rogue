@@ -278,6 +278,17 @@ func _ready() -> void:
 				_row1[k4]["card"] = dc
 		_sel_row1 = 0
 		_ask_redraw()
+	# R614 出图：`--combodemo` 把第一行头一张换成 8084「传授」并「选中查看」——
+	# 它的两个可查词条正好是**字段「次元」+ 机制「组合」**（正文「从全职业卡池组合一张卡。」）。
+	# 组合卡只从特定事件 / 传授来，商店货架靠自然摇基本摇不到，等于没有核验手段。
+	# 只换卡不 `_sync_shop_state()`：演示卡不该被写进货架存档。
+	# 出图：`shop.tscn -- --screenshot --shop --combodemo`
+	if "--combodemo" in args:
+		var dc6: CardData = _repo.get_card(8084)
+		if dc6 != null and not _row1.is_empty():
+			_row1[0]["card"] = dc6
+			_sel_row1 = 0
+		_ask_redraw()
 	# R432 出图：`--off N` 把第一行第 N 张**强制设为五折** —— 五折本身是 20% 概率，
 	# 截图核验不能靠运气（跑十次九次截不到贴纸，等于没有核验手段）。
 	# 只改这一个标记，价格与贴纸全走正常渲染路径。

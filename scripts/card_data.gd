@@ -28,6 +28,10 @@ const RARITY_COLORS: Array[Color] = [Color("2c2c2a"), Color("1f5fbf"),
 ##   * **嘲讽** = 敌方只能攻击这张卡
 ##   * **死亡** = 被破坏时生效（**只做标记**，具体内容看卡面 effect_text）
 ##   * **幻影** = 打出后手牌里多一张自身的短暂复制（回合结束消失）
+##     ⚠️ R613（店长口径 2026-11-12）：**卡库原卡不再自带这个字段** —— 野兔 9032 已摘掉。
+##     原卡只是「会造复制」，它自己不会消失；卡面右上圆槽的标记只属于它**造出来的复制品**
+##     （复制品带「次元」）。字段本身继续保留：别的卡被 `add_affix("幻影")` 赋予时照旧获得
+##     造复制的能力（R91 不变量），所以引擎一行都不用改。
 ##   * **护盾** = 第一次受到的伤害为 0（一次性；由「能量屏障」8033 赋予）
 ##   * **次元** = 使用后 / 离开战场后消失，**不进弃牌区**（R93）
 ##     技能卡用后的去向**唯一口径** = `GameEngine._spell_card_gone()`（R211）：带本字段的
@@ -64,6 +68,31 @@ const AFFIX_DEFS: Dictionary = {
 	"保存": {"label": "保存", "desc": "回合结束时，手牌里的这张卡不会丢弃（保留到下一回合）。", "glyph": "save", "on_board": false, "bg": "1a2a0a", "fg": "b9e85a"},
 	"共享护盾": {"label": "共享护盾", "desc": "我方 HP 要受到伤害时，改由这张卡承受（每次都能顶，顶到它死亡）。", "glyph": "share", "bg": "33161c", "fg": "ff8fa8"},
 }
+
+## ── 【机制词条】（R614）正文里会提到、但**不是字段**的机制名 ──
+##
+## 和字段的分工：
+##   * `AFFIX_DEFS`  = **持久状态**。进卡面右上圆槽、战场徽标、引擎判据（`affixes` 数组）。
+##   * `MECH_KEYWORDS` = **一次性流程的名字**。没有状态可挂，不进 `affixes`。
+##
+## 「组合」为什么不能塞进 `AFFIX_DEFS`（R559 踩过）：`add_affix("组合")` 之后卡面立刻多出
+## 一条 buff 条 + 一枚不存在的「状态」图标（`_draw_affix_badges`），而那根本不是状态。
+## 但它同样需要「玩家能查到解释」——所以单独一张表，**与字段共用同一套解释浮窗 / 词条框**
+## （`CardFace.affix_index_items()` 与 `BattleScene._info_blocks()` 都读 `word_def()`）。
+##
+## 用户口径（R614）：「确保在商店、奖励卡、查看完整卡组界面都能联系到组合这个词条。」
+const MECH_KEYWORDS: Dictionary = {
+	"组合": {"label": "组合", "desc": "从随机 6 张候选卡中拖 3 张，分别决定属性值、上半效果、下半效果，生成一张带「组合」金印的新卡。", "glyph": "combine", "bg": "2b2410", "fg": "ffd76e"},
+}
+
+
+## 字段 / 机制词条的**统一解释查询**：先 AFFIX_DEFS，再 MECH_KEYWORDS。
+## 新增一个「正文里查得到」的机制名时，只改 `MECH_KEYWORDS` 一处。
+static func word_def(name: String) -> Dictionary:
+	var d: Dictionary = AFFIX_DEFS.get(name, {})
+	if not d.is_empty():
+		return d
+	return MECH_KEYWORDS.get(name, {})
 
 ## ── 【商店附魔】（R214）`enchant` = 这张卡吃过的商店附魔 id（"" = 没附魔）──
 ##
@@ -331,7 +360,12 @@ static func from_dict(d: Dictionary) -> CardData:
 		var v = d.get(key)
 		c.set(key, 0 if v == null else int(v))
 	c.color = str(d.get("color", ""))
-	c.traits = d.get("traits", []) as Array
+	# R613：**必须切断与源卡的共享引用** —— 以前这里直接接 `d["traits"]` 那个数组，
+	# 于是 `from_dict(x.to_dict())` 出来的副本与源卡**共用同一个 Array**：副本 append 一个
+	# trait，写回的就是卡库那份（跨战斗 / 跨 run 泄漏，表现为「商店里的卡莫名带上标记」）。
+	# 全项目此前靠在每个调用点手写 `traits = traits.duplicate()` 兜底，漏一处就出事 ——
+	# 现在在唯一反序列化口就切干净，调用点那些 duplicate 变成无害的幂等兜底。
+	c.traits = (d.get("traits", []) as Array).duplicate()
 	c.effect_text = str(d.get("effect_text", ""))
 	c.target_mode = str(d.get("target_mode", "none"))
 	c.value = int(d.get("value", 0))
@@ -616,20 +650,20 @@ func add_affix(name: String) -> bool:
 ## 字段的显示名（未注册的字段回退到字段名本身 —— 加字段忘了写进 AFFIX_DEFS
 ## 也不至于显示空白，只是没有专属配色与说明）。
 static func affix_label(name: String) -> String:
-	var d: Dictionary = AFFIX_DEFS.get(name, {})
+	var d: Dictionary = word_def(name)
 	return str(d.get("label", name))
 
 
 ## 字段的说明文字（卡面 / 悬停 / 图鉴用）。未注册 → 空串。
 static func affix_desc(name: String) -> String:
-	var d: Dictionary = AFFIX_DEFS.get(name, {})
+	var d: Dictionary = word_def(name)
 	return str(d.get("desc", ""))
 
 
 ## 字段的图标名（R297，自绘符号；`CardInfoBoxes.draw_glyph()` 认这些名字）。
 ## 未注册 → 空串（调用方回退成中性小菱形，不空白）。
 static func affix_glyph(name: String) -> String:
-	var d: Dictionary = AFFIX_DEFS.get(name, {})
+	var d: Dictionary = word_def(name)
 	return str(d.get("glyph", ""))
 
 
@@ -657,7 +691,7 @@ static func affix_on_board(name: String) -> bool:
 ## 色值是**十六进制字符串**（const 里不能放 Color(...) 构造），这里运行时构造 ——
 ## 底色统一 0.92 透明度，保证字能读清；未注册字段回退到中性灰。
 static func affix_colors(name: String) -> Array:
-	var d: Dictionary = AFFIX_DEFS.get(name, {})
+	var d: Dictionary = word_def(name)
 	if d.is_empty():
 		return [Color(0.15, 0.15, 0.15, 0.92), Color("dddddd")]
 	var bg := Color(str(d["bg"]))
@@ -724,6 +758,17 @@ static func random_enchant_ids() -> Array[String]:
 		if ENCHANT_RANDOM_EXCLUDE.has(id):
 			continue
 		out.append(id)
+	return out
+
+
+## 这张卡**正文里提到**的机制词条（按 `MECH_KEYWORDS` 顺序，去重）。
+## 为什么按正文命中、而不是按数据挂载：这些名字没有持久状态（见 `MECH_KEYWORDS` 的说明），
+## 但卡面写着它，玩家就得能查到解释 —— 商店 / 奖励卡 / 完整卡组的浮窗都读这里。
+func mech_keywords() -> Array[String]:
+	var out: Array[String] = []
+	for k: String in MECH_KEYWORDS:
+		if effect_text.contains(k) and not out.has(k):
+			out.append(k)
 	return out
 
 

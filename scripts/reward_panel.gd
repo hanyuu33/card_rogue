@@ -2411,6 +2411,14 @@ func _demo_start() -> void:
 			var en4: Dictionary = RunState.pending_rewards[i]
 			if str(en4.get("kind", "")) == "cards":
 				en4["candidates"] = [8055, 9031, 9080]
+	# R614 出图：`--combocards` 把三选一固定成三张**传授**（正文「从全职业卡池组合
+	# 一张卡。」，各自带「次元」字段）—— 核验奖励卡浮窗能同时查到「组合」与「次元」。
+	# 出图：`battle.tscn -- --screenshot --r119cards --combocards --shotframe 600`
+	if "--combocards" in args:
+		for i in RunState.pending_rewards.size():
+			var en5: Dictionary = RunState.pending_rewards[i]
+			if str(en5.get("kind", "")) == "cards":
+				en5["candidates"] = [8084, 8085, 8086]
 	# R342 出图：`--r342relic` = 奖励列表里只放两件新道具
 	# （核验徽章色：采集刀传奇橙金 / 火柴一般黄；以及长描述在行内的换行）
 	# R398 出图：`--r119deck` = 月亮删卡视图（卡组摊开 + 一张带锁的月亮自己）

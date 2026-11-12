@@ -63,10 +63,13 @@ static func small_icon(name: String, edge := 128) -> Texture2D:
 		if source == null:
 			return null
 		var img := source.get_image()
+		# R613：驱动读回失败时退回原纹理，不能继续对空图取宽高。
+		if img == null or img.is_empty():
+			return source
 		# R596g：卡图改成 VRAM 压缩（astc/bptc）后 get_image() 拿到的是压缩图，
 		# 直接 resize 会报 "Cannot resize in compressed or custom image formats"。
 		# 与 test_smoke 的 _ribbon_opaque_ratio 同口径：先解压再处理。
-		if img != null and img.is_compressed():
+		if img.is_compressed():
 			img.decompress()
 		var scale := minf(1.0, float(edge) / maxf(img.get_width(), img.get_height()))
 		img.resize(maxi(1, roundi(img.get_width() * scale)), maxi(1, roundi(img.get_height() * scale)), Image.INTERPOLATE_LANCZOS)
@@ -85,7 +88,10 @@ static func filtered(tex: Texture2D, edge: int) -> Texture2D:
 	var key := "filtered:%d:%d" % [tex.get_instance_id(), target]
 	if not _cache.has(key):
 		var img := tex.get_image()
-		if img != null and img.is_compressed():
+		# R613：驱动读回失败时退回原纹理，不能继续对空图取宽高。
+		if img == null or img.is_empty():
+			return tex
+		if img.is_compressed():
 			img.decompress()
 		var ratio := float(target) / maxf(img.get_width(), img.get_height())
 		img.resize(maxi(1, roundi(img.get_width() * ratio)), maxi(1, roundi(img.get_height() * ratio)), Image.INTERPOLATE_LANCZOS)

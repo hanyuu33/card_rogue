@@ -1459,19 +1459,39 @@ func _test_r592_combo_dimension() -> void:
 	##   · 宝石兽 9246（death）/ 拼装工厂 9247（turn_start）
 	## 9144 随心组装是手牌变形（不产出新卡、不开组合页），不在判据内。
 	var repo := CardRepo.load_json()
-	var rows := {
-		8084: "打出后消失", 8085: "打出后消失", 8086: "打出后消失",
-		9191: "打出后消失", 9193: "打出后消失",
-		9246: "离场即消失", 9247: "离场即消失",
-	}
-	for cid: int in rows:
+	var ids: Array[int] = [8084, 8085, 8086, 9191, 9193, 9246, 9247]
+	for cid: int in ids:
 		var c: CardData = repo.get_card(cid)
 		check(c.has_affix("次元"),
 				"R592：%d %s 必须带「次元」" % [cid, c.card_name])
-		var tail: String = "字段「次元」：%s，不进弃牌区。" % str(rows[cid])
-		check(c.effect_text.ends_with(tail),
-				"R592：%d %s 卡面末句应为「%s」（实际「%s」）"
-				% [cid, c.card_name, tail, c.effect_text])
+		# R614（用户口径「文本依然有冗余描述」）：正文**不再**写「字段「次元」：…」这一句。
+		#   原来这里锁的是「卡面末句必须是那句」，现在改成锁**显示层查得到** ——
+		#   悬停浮窗必须能给出「次元」和「组合」的解释，否则缩了正文就等于丢了信息。
+		check(CardData.affix_desc("次元") != "" and CardData.affix_desc("组合") != "",
+				"R614：「次元」「组合」都要有解释文案（浮窗 / 词条框共用 `word_def()`）")
+		check(c.mech_keywords().has("组合"),
+				"R614：%d %s 正文提到「组合」，`mech_keywords()` 必须认出来"
+				% [cid, c.card_name])
+
+	# R614：解释浮窗必须真的把机制词条画出来（源码锁 —— 防止只加数据不接显示）
+	var cf := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+	check(cf.find("for kw: String in card.mech_keywords()") >= 0,
+			"R614：字段浮窗并入机制词条（商店 / 奖励卡能查到「组合」）")
+	var bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check(bs.find("CardFace.draw_affix_index(self, _hover_card, _hover_zone_rect") >= 0,
+			"R614：完整卡组等区域面板悬停时补画解释浮窗")
+	# 三张传授卡：**显示层**正文只剩一句（用户口径「只需要：从全职业卡池组合一张卡。」）。
+	# 数据层仍保留「字段「次元」：…」这句 —— R411 的源头保真锁认它，
+	# `CardText.clean_meta_notes()` 在显示层整句剥掉（R600 同一套口径：数据权威、显示清洗）。
+	# 两条一起锁，才既不会为了「看着短」把后果从数据里删掉，也不会让玩家在卡面上读到它。
+	for tid: int in [8084, 8085, 8086]:
+		var tc: CardData = repo.get_card(tid)
+		var shown := CardText.clean_meta_notes(tc.effect_text)
+		check(shown == "从全职业卡池组合一张卡。",
+				"R614：%d %s 显示层正文应为一句（实际「%s」）"
+				% [tid, tc.card_name, shown])
+		check(tc.effect_text.contains("字段「次元」"),
+				"R614：%d %s 数据层仍要写明次元后果（R411 源头保真）" % [tid, tc.card_name])
 	# 判据锁（文本级）：认的是「卡面在说自己会组合」，不是 id 清单 ——
 	# 以后新增「组合一张卡」的卡忘了加次元，这条直接红。
 	for c2: CardData in repo.all_cards():

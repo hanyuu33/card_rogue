@@ -1419,7 +1419,15 @@ static func affix_index_items(card: CardData, font: Font, box_w := AFFIX_INDEX_W
 	if card == null:
 		return out
 	var body_w: float = box_w - AFFIX_INDEX_PAD * 2.0
+	# R614：字段 + **机制词条**（「组合」这类：不是 affixes、没有状态可挂，但正文里出现、
+	# 玩家同样要能查到解释）。两者共用同一块浮窗，所以先并成一条名字流再画。
+	var names: Array[String] = []
 	for a: String in card.affixes:
+		names.append(a)
+	for kw: String in card.mech_keywords():
+		if not names.has(kw):
+			names.append(kw)
+	for a: String in names:
 		var desc := CardData.affix_desc(a)
 		var lines: Array[String] = []
 		if desc != "":

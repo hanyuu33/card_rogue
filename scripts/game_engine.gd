@@ -1920,8 +1920,11 @@ const MAGE_GROW_BUFF:= 1
 const CLONE_TRAIT:= "自我复制"
 # R319（用户口径）：野兔的复制统一成「**短暂复制**」—— 定义是：
 #   ① 带**次元**字段（徽标显示次元；离场 / 用后即消失）；② `is_ephemeral` → 手牌回合结束消失。
-# 于是复制品生成时**去掉幻影、换上次元**：幻影只描述「手牌里会消失」，看不出离场那条；
-# 本体自己**保留**幻影（它才是「打出后多一张短暂复制」的触发标记）。
+# 于是复制品生成时**去掉幻影、换上次元**：幻影只描述「手牌里会消失」，看不出离场那条。
+# ⚠️ R613（店长口径 2026-11-12）：**本体不带任何字段** —— 卡面圆槽标记只属于复制品。
+#   以前本体挂「幻影」，结果商店 / 牌库 / 图鉴里的野兔也顶着一个标记，店长报「这不对」。
+#   摘掉字段不影响触发：`play_from_hand` 的判据是
+#   `traits.has(CLONE_TRAIT) or has_affix(AFFIX_PHANTOM)`，野兔靠**trait「自我复制」**成立。
 # 「升级」（8027，2 费技能，机械之心）：改造一个己方盟友或工事 → +2 攻 / +8 血。
 # 加成**只在场上有效**、离场由 _card_leaving_field 还原（不烤进 CardData）。
 # R84：每张卡**自己的**改造奖励（素体 +1 血 / 战斗骨骼 +2 力 +2 血）**读卡面字段**
@@ -5520,12 +5523,15 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 		# 【字段「幻影」R91】**使用后**手牌增加一张自己的复制。
 		# 判据 = 「带幻影字段」或「带自我复制 trait」（旧字段，保留兼容）——
 		# 这就是字段系统的意义：**别的卡只要带上这个字段就自动获得复制能力**，
-		# 引擎与文案都不用再改（野兔 9032 是卡面自带的「幻影」）。
+		# 引擎与文案都不用再改。
+		# ⚠️ R613：卡库里**已经没有任何卡自带「幻影」** —— 野兔 9032 靠 trait「自我复制」
+		# 走左边的判据，字段这条只剩「被别的卡赋予」时才生效（实测仍能触发）。
 		#
 		# 挂在「已离手、已上场」之后：幻影是「本场战斗内的衍生物」，
 		# 不能进牌库 / 弃牌区（否则会被洗回牌库无限刷），
 		# 寿命由 `CardData.is_ephemeral` 的两段规则管（手牌回合结束 / 场上离场）。
-		# ⚠️ 幻影**保留**幻影字段 → 打出它会再次触发本分支（用户口径：还能再复制）。
+		# ⚠️ 复制品保留 trait「自我复制」（字段已换成「次元」）→ 打出它仍会再次触发本分支
+		# （用户口径：还能再复制）。链式增殖的判据是 **trait**，不是字段，别搞反。
 		_spawn_self_clone(card)
 
 	if self_relics.has(6008) and not _unit_played_this_turn:
@@ -8955,6 +8961,12 @@ func _discount_hand_skills(p: Placement, n: int, hp_per: int, source: String) ->
 	##   · 手卡中所有技能牌本回合费用 -n（走 `turn_card_discount`，回合结束自动清空）；
 	##   · 手卡每有一张**费用为 0** 的技能卡 → `p` 获得 +hp_per 生命。
 	## ⚠️ 0 费判定必须排除 X 费卡（`x_cost` 的 cost 也记 0，但它不是「0 费卡」）。
+	## ⚠️ R615：判据必须是**账面费用** `cost_of()`，不能读 `c.cost`（基础费用）——
+	##   本函数刚把 1 费技能牌减成 0 费，读基础费用会把它整批漏掉（影魔 8007 与
+	##   组合动作 `hp_per_zero_skill` 都因此少算生命；预览口 `hand_bonus_text` 一直用
+	##   `cost_of()`，于是悬停显示 +6、实打 +0）。
+	## ⚠️ 「先减费、再判 0」的顺序不许颠倒 —— 同一次循环内先写表、后判 0；
+	##   8007 这两条效果永远作为同一段下半场一起进组合产物，数据侧不会倒序。
 	## ⚠️ n = 0 时不写减费表 —— 否则攒一堆「+0」条目，排查时看着像减了费。
 	var zero := 0
 	for c: CardData in state.hand:
@@ -8962,7 +8974,7 @@ func _discount_hand_skills(p: Placement, n: int, hp_per: int, source: String) ->
 			continue
 		if n > 0:
 			state.turn_card_discount[c] = int(state.turn_card_discount.get(c, 0)) + n
-		if not c.x_cost and c.cost == 0:
+		if not c.x_cost and cost_of(c, SIDE_SELF) == 0:
 			zero += 1
 	if hp_per > 0 and zero > 0:
 		p.health += hp_per * zero
