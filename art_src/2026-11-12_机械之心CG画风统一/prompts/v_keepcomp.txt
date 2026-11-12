@@ -1,0 +1,31 @@
+REDRAW this reference image in a STRICTLY anime cel-shaded style. Change ONLY the rendering
+technique. Keep EVERYTHING else — character, pose, composition, background, colours — EXACTLY
+identical.
+
+KEEP EXACTLY (do NOT change, do NOT move, do NOT add, do NOT remove):
+- CHARACTER: a young woman mechanical engineer. Long dark hair in a low ponytail, thin-rim round
+  glasses, off-white / light-tan mechanic workwear, calm focused expression. Keep her face, hair,
+  glasses, clothes and their colours EXACTLY as in the reference.
+- POSE: she stands upright, body slightly turned toward the LEFT, arms crossed over her chest.
+  Keep this crossed-arm standing pose EXACTLY.
+- POSITION & CROP: she stands on the RIGHT, around 60%-80% of the frame width, waist-up to mid-thigh
+  (3/4 body), head near the top, coat hem cropped by the bottom edge. Keep this framing EXACTLY.
+- BACKGROUND (keep every element and its position EXACTLY):
+  upper-LEFT: a large glowing cyan-blue holographic engineering screen with a 3D mechanical-core
+  wireframe, ring structures and data panels;
+  lower-LEFT (foreground): a workbench with a lit black desk lamp, a heart-shaped mechanical core
+  device, gears, parts, circuit boards, a soldering station and tools;
+  upper-RIGHT: a blueprint screen showing a heart-shaped mechanical core exploded view with gears;
+  mid-RIGHT: a white robotic arm reaching left, and a torso-shaped mechanical skeleton;
+  lower-RIGHT: an instrument counter stacked with oscilloscopes showing green waveforms;
+  back: a glass-partitioned laboratory, metal frames, glass panels, top light strips, cool blue tone.
+- COLOURS: keep the current cool blue-grey palette and every object's colour EXACTLY.
+
+CHANGE ONLY THE RENDERING STYLE to STRICT anime cel-shading:
+- clean crisp THIN black line art around every shape and object;
+- flat colour blocks with exactly TWO hard-edged shadow steps per area, no soft gradient inside
+  a colour area;
+- the character is the brightest, sharpest thing in the frame.
+- NO soft gradient shading, NO airbrushing, NO environmental light spill on skin or clothes,
+  NO light bloom, NO volumetric glow, NO photorealistic texture, NO cinematic multi-light film
+  grading, NO depth-of-field, NO 3D render look.

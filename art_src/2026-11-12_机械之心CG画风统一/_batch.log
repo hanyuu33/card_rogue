@@ -1,0 +1,12 @@
+[16:31:53] 代理预检 HTTP 200
+[16:31:53] 代理预检 OK：http://127.0.0.1:7897
+[16:31:53] RUN  v_forest  参考=class_cg_forest.png  第1次
+[16:44:17] OK   v_forest  <- exec-4013b368-011b-439b-ad2f-d2815fff2d4c.png  (744s, 2074 KB)
+[16:44:17] RUN  v_rogue  参考=class_cg_rogue.png  第1次
+[16:49:10] OK   v_rogue  <- exec-d154e801-52d4-4248-bfff-e24a75fba8c2.png  (293s, 2074 KB)
+[16:49:10] === 机械之心CG画风统一结束 成功2 / 失败0 []
+[17:48:39] 代理预检 HTTP 200
+[17:48:39] 代理预检 OK：http://127.0.0.1:7897
+[17:48:39] RUN  v_keepcomp  参考=class_cg_mech.png  第1次
+[17:51:40] OK   v_keepcomp  <- exec-30241ab9-7723-4616-994c-685a3fb91374.png  (181s, 2284 KB)
+[17:51:40] === 机械之心CG画风统一结束 成功1 / 失败0 []

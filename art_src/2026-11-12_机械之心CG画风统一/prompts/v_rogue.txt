@@ -1,0 +1,45 @@
+Use the reference image ONLY AS AN ART-STYLE REFERENCE: copy ONLY its drawing technique —
+clean crisp dark anime line art, cel-shaded flat colour blocks, hard-edged shadow shapes,
+a dark blurred background with a bright subject, and a single cool light source.
+Do NOT copy its character (a vampire/assassin girl), its moonlit castle scene, its silver-to-violet
+hair, its purple-black palette, its smug expression, its standing pose, or its composition.
+Paint a COMPLETELY DIFFERENT subject in a DIFFERENT scene.
+
+STYLE — JAPANESE ANIME trading-card / visual-novel CG illustration:
+anime cel-shaded style, clean crisp THIN black line art, 2-step cel shading with real volume,
+HARD-EDGED shadow shapes with NO soft gradient inside a colour area, hand-painted look.
+The subject is the brightest, sharpest thing in the frame.
+NO photorealistic rendering, NO ray-traced reflections, NO photographic metal/skin/fur texture,
+NO pores, NO wrinkles, NO cinematic 3D render, NO depth-of-field bokeh,
+NO flat vector illustration, NO painterly airbrushing, NO soft airbrushed shading,
+NO environmental light spill tinting the skin and clothes, NO uniform flat even lighting,
+NO heavy multi-light film lighting.
+
+SUBJECT — a young adult woman mechanical engineer, owner of a repair workshop:
+- long straight BLACK hair in a low ponytail with a neat fringe;
+- large HUMAN eyes, pale ice-blue iris (light but NOT glowing, NO ring pattern, NO glowing pupil);
+- thin round silver-frame glasses;
+- off-white / light-tan mechanic workwear: a shirt + functional overalls or a light tech jacket
+  with a tool belt; NOT a dark grey work vest, NOT armour, NOT exposed joints, NOT cybernetic parts;
+- the ONLY glowing element: a small cyan-blue mechanical core pendant at her collar (~5% of the frame);
+- a small palm-sized maintenance drone hovers near her shoulder;
+- calm, focused, rational, quiet technician; NOT cute, NOT smiling, NOT cheerful, NOT gloomy.
+
+BODY PROPORTIONS — a normal adult woman, about 6 head-lengths tall, head small relative to body.
+NO chibi, NO oversized head, NO toddler proportions, NO four-head-tall figure, NO elongated or
+matured body. Keep her age unchanged.
+
+POSE / ACTION (a NEW pose, NOT the reference image's pose):
+She is half-leaning forward over a workbench, holding a soldering iron, wiring the open chest cavity
+of a half-disassembled clockwork construct. Inside the chest cavity: gears, circuit boards and a
+faint cyan glow. Her free hand steadies the construct.
+
+BACKGROUND — a night-time mechanical workshop / garage:
+a warm amber desk lamp + cold cyan machine light, a wet reflective metal floor, shelves of parts,
+blueprints and tools, the half-open construct on the workbench. Dark and low-key overall mood,
+but the character's face, hands and the glowing core pendant are the brightest, sharpest things.
+Single accent colour = cyan, limited to the core pendant and the faint machine glow.
+
+COMPOSITION — wide 16:9 cinematic frame. The character stands on the RIGHT THIRD, head, torso and
+hands all fully visible. The LEFT two thirds open into the workshop depth (workbench with the
+construct, shelves, lamp). Do NOT copy the reference image's composition or camera angle.

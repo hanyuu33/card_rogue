@@ -39,6 +39,8 @@ screenshot*.import
 /_*_msg.txt
 /_bk_*/
 /_preview/
+# UI 文本溢出审计的一次性输出（tools/audit_ui_text.gd 随时可重跑）
+/_ui_text_audit.json
 
 # 背景图生成原件的工作目录（裁切前的 1536x1024 出图，已归档进 art_src/，不入库）
 /assets/ui/_bgnew/
