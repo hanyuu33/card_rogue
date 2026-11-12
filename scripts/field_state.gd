@@ -560,7 +560,7 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	var p := Placement.new()
 	p.card = card
 	p.owner = owner
-	# R464：入场序号 —— **唯一发放口就在这里**（关卡摆位 / 手牌打出 / 召唤 / 亡语召唤
+	# R464：入场序号 —— **唯一发放口就在这里**（关卡摆位 / 手牌打出 / 召唤 / 死亡召唤
 	# 全走 place）。放在 place 里而不是各调用点，才不会漏掉某条路径。
 	entry_counter += 1
 	p.entry_seq = entry_counter

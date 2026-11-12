@@ -66,12 +66,12 @@
       "class": "敌人",
       "traits": [
         "龙",
-        "亡语"
+        "死亡"
       ],
       "affixes": [
         "死亡"
       ],
-      "effect_text": "亡语：召唤一只龙裔。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
+      "effect_text": "死亡：召唤一只龙裔。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "红",
       "image": ""
@@ -111,12 +111,12 @@
       "class": "敌人",
       "traits": [
         "亡灵",
-        "亡语"
+        "死亡"
       ],
       "affixes": [
         "死亡"
       ],
-      "effect_text": "亡语：对敌方 HP 造成 5 点伤害。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
+      "effect_text": "死亡：对敌方 HP 造成 5 点伤害。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "黑",
       "image": ""
@@ -136,13 +136,13 @@
       "traits": [
         "亡灵",
         "巨人",
-        "亡语"
+        "死亡"
       ],
       "affixes": [
         "疾行",
         "死亡"
       ],
-      "effect_text": "亡语：召唤两只骷髅。每回合可以行动两次。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
+      "effect_text": "死亡：召唤两只骷髅。每回合可以行动两次。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "actions": 2,
       "color": "黑",
@@ -182,12 +182,12 @@
       "class": "敌人",
       "traits": [
         "亡灵",
-        "亡语"
+        "死亡"
       ],
       "affixes": [
         "死亡"
       ],
-      "effect_text": "亡语：召唤一只骷髅。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
+      "effect_text": "死亡：召唤一只骷髅。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "黑",
       "image": ""
@@ -231,12 +231,12 @@
       "class": "敌人",
       "traits": [
         "机械",
-        "亡语"
+        "死亡"
       ],
       "affixes": [
         "死亡"
       ],
-      "effect_text": "亡语：对场上其它所有单位造成 8 点伤害，不分敌我。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
+      "effect_text": "死亡：对场上其它所有单位造成 8 点伤害，不分敌我。关卡成长：每 2 个回合攻击力 +1，最多累计 +4。",
       "target_mode": "none",
       "color": "黄",
       "image": ""
@@ -782,7 +782,7 @@
         "鸭",
         "爆炎"
       ],
-      "effect_text": "亡语：对周身一圈各造成 10 点伤害（不分敌我）。",
+      "effect_text": "死亡：对周身一圈各造成 10 点伤害（不分敌我）。",
       "target_mode": "none",
       "color": "红",
       "image": ""
@@ -957,7 +957,7 @@
       "traits": [
         "龙"
       ],
-      "effect_text": "由幼龙的亡语召唤。",
+      "effect_text": "由幼龙的死亡召唤。",
       "target_mode": "none",
       "color": "红",
       "image": ""
@@ -977,7 +977,7 @@
       "traits": [
         "亡灵"
       ],
-      "effect_text": "由亡灵领主或骷髅兵的亡语召唤。",
+      "effect_text": "由亡灵领主或骷髅兵的死亡召唤。",
       "target_mode": "none",
       "color": "白",
       "image": ""
@@ -4737,32 +4737,6 @@
       "color": "灰",
       "image": "",
       "no_remove": true
-    },
-    {
-      "id": 9158,
-      "name": "罐子",
-      "kind": "工事",
-      "cost": 0,
-      "power": 0,
-      "health": 1,
-      "attack_range": 0,
-      "move_speed": 0,
-      "rarity": 5,
-      "group": "player",
-      "class": "",
-      "traits": [
-        "工事",
-        "罐子",
-        "离场消失"
-      ],
-      "affixes": [
-        "次元"
-      ],
-      "effect_text": "死亡：召唤一个随机敌人。字段「次元」：离场即消失，不进弃牌区。",
-      "target_mode": "none",
-      "value": 0,
-      "color": "灰",
-      "image": ""
     },
     {
       "id": 9160,

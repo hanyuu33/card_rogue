@@ -437,7 +437,7 @@ const COURAGE_RELIC_ID := 6031
 # R245 新道具：陶罐（6032，初始池）—— 获得时随机 2 件奖励道具 + 一张「罐子」诅咒进卡组。
 const POT_RELIC_ID := 6032
 const POT_RELIC_COUNT := 2
-const JAR_CURSE_ID := 9157        # 罐子（诅咒卡；召唤物是 9158）
+const JAR_CURSE_ID := 9157        # 罐子（诅咒卡；R632 删了工事召唤物 9158）
 # R246 二层起始道具：兼修（6033）—— 每回合 +1 费，且奖励/商店不再按职业过滤。
 # 判定只看「持有这件道具」（不去存一个 bool），存档 / 换层 / 读档都不用额外照顾。
 const VERSATILE_RELIC_ID := 6033

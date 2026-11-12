@@ -464,8 +464,8 @@ func _refresh_detail() -> void:
 	UiTheme.autoshrink_label(detail_text, CardText.naturalize(c.effect_text),
 			16, 11, B_BODY)
 	# 编号附在名字后
-	UiTheme.autoshrink_label(detail_name, "%s（#%d）" % [c.card_name, c.id],
-			20, 13, B_TITLE)
+	# R632：玩家不需要看到卡牌编号（内部 id）—— 只写卡名。
+	UiTheme.autoshrink_label(detail_name, c.card_name, 20, 13, B_TITLE)
 	detail_badge.visible = c.needs_target()
 	UiTheme.autoshrink_label(detail_badge, "需要选择目标", 14, 10, Vector2(BX, 30.0))
 	$DetailPanel.queue_redraw()

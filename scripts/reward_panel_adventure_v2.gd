@@ -48,7 +48,9 @@ func _draw_card_detail(cands: Array) -> void:
 		stat_lines = CardFace.wrap_text(_font, stats, col_w, UiTheme.FS_CAPTION).size()
 	var eff_lines: int = CardText.wrap_segments(_font, _font_bold, segs, ew, 13).size()
 	var right_h := 48.0 + float(eff_lines) * 19.0
-	var left_h := 64.0 + float(stat_lines) * 17.0
+	# R632：关键字行也占高度（最多两行）→ 详情盒跟着长高，否则最后一行会被盒底裁掉（右侧效果文短的时候，左栏就是最高的一列）。
+	var kw_lines := CardFace.keyword_line_count(_font, card, col_w)
+	var left_h := 64.0 + float(stat_lines) * 17.0 + float(kw_lines) * 17.0
 	var avail := _btn_confirm_rect().position.y - top - 16.0         # 下方胶囊按钮与留白
 	var box_h := clampf(maxf(left_h, right_h) + pad, minf(128.0, avail), minf(DETAIL_STRIP_H, avail))
 	var box := Rect2(bx, top, bw, box_h)
@@ -65,7 +67,7 @@ func _draw_card_detail(cands: Array) -> void:
 			HORIZONTAL_ALIGNMENT_CENTER, name_w - 12.0, UiTheme.FS_SUBHEAD, REWARD_TEXT)
 	var ly := ny + 44.0
 	_root.draw_string(_font, Vector2(lx, ly),
-			"#%d  %s · %d 费 · %s" % [card.id, card.kind, card.cost, card.rarity_name()],
+			"%s · %d 费 · %s" % [card.kind, card.cost, card.rarity_name()],
 			HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
 	ly += 19.0
 	if stats != "":
@@ -73,6 +75,11 @@ func _draw_card_detail(cands: Array) -> void:
 			_root.draw_string(_font, Vector2(lx, ly), t,
 					HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
 			ly += 17.0
+	# R632：关联关键字（特性 / 字段 / 机制词条）—— 卡面只留卡名，这里补上「这张卡挂着什么」。
+	# 最多两行、装不下以「…」收尾；悬停卡面时 `_draw_affix_index()` 给可解释词的说明。
+	ly += 3.0
+	CardFace.draw_keyword_line(_root, _font, card, lx, ly, col_w, 2,
+			box.end.y - pad, UiTheme.INK_800)
 	# 右栏：青色标签 + 效果全文（提及仍由 CardText 统一上色与命中）。
 	_round_box(Rect2(ex, box.position.y + 11.0, 64.0, 22.0), 11.0,
 			Color("4a5672"), Color(0, 0, 0, 0), false)

@@ -2480,7 +2480,7 @@ func _ready() -> void:
 		queue_redraw()
 	if "--r331hidden" in args and engine != null:
 		# 演示（R331）：隐藏能源 8078 —— 效果区挂它 → 友方单位入场获得改造 +「死亡」。
-		# 敌方单位摆在 (3,1)，与出牌的 (4,1) 曼哈顿距离正好 1（亡语必中它）。
+		# 敌方单位摆在 (3,1)，与出牌的 (4,1) 曼哈顿距离正好 1（死亡必中它）。
 		# ⚠️ 「打掉那个单位」不在这里：放在截图前 40 帧（见 `_demo_tick`），
 		#    否则 `--shotframe 600` 时 1600ms 的「隐藏能源 -8」飘字早就消失了。
 		RunState.player_class = PlayerClass.MECH
@@ -2510,7 +2510,7 @@ func _ready() -> void:
 		queue_redraw()
 	if "--r360probe" in args and engine != null:
 		# R360 时序探针（headless）：给树人挂上「辅助刃」的「死亡」，再由 `_demo_tick`
-		# 打掉它，逐帧记录「卡什么时候消失 / 亡语什么时候才入账」。
+		# 打掉它，逐帧记录「卡什么时候消失 / 死亡什么时候才入账」。
 		#   godot --headless --path . battle.tscn -- --r360probe
 		# 期望：`hand` 变多的时刻 **晚于** 卡被抹掉的时刻（R360 之前是同一帧甚至更早）。
 		RunState.player_class = PlayerClass.MECH
@@ -3261,7 +3261,7 @@ var _r361_mode := "unit"
 var _r361_cell := Vector2i(1, 0)
 var _r361_last := ""
 var _r361_ai_at := 0
-## R360 时序探针（只服务 `--r360probe`，不进正式流程）：记录「击破演出 / 亡语结算」的先后。
+## R360 时序探针（只服务 `--r360probe`，不进正式流程）：记录「击破演出 / 死亡结算」的先后。
 var _r360_probe := false
 var _r360_probe_frame := 0
 var _r360_t_kill := 0
@@ -3410,7 +3410,7 @@ func _r360_probe_tick() -> void:
 				engine.state.hand[engine.state.hand.size() - 1].card_name])
 	if t >= 1300:
 		var ok := _r360_t_hide > 0 and _r360_t_hand > _r360_t_hide
-		print("[R360] 结论：卡抹掉 %dms / 亡语入账 %dms → %s" % [
+		print("[R360] 结论：卡抹掉 %dms / 死亡入账 %dms → %s" % [
 				_r360_t_hide, _r360_t_hand,
 				"✓ 先死亡演出、后结算" if ok else "✗ 仍然是结算抢在演出前"])
 		print("[R360] 末态：hand=%d  pending=%s  dying=%d  delayed=%d" % [
@@ -3584,11 +3584,11 @@ func _demo_tick() -> void:
 		queue_redraw()
 	if "--r363nest" in _demo_args and _demo_frame == 40 and engine != null:
 		# R363 复现（`--screenshot --level 20 --r363nest --shotms N`）：打掉 (1,0) 的幼龙，
-		# 看亡语召出的龙裔会不会把另一只幼龙 (1,2) 一起换掉。
+		# 看死亡召出的龙裔会不会把另一只幼龙 (1,2) 一起换掉。
 		_banner = {}
 		engine.damage_cell(Vector2i(1, 0), 99, "演示")
 		engine._destroy_dead()
-		status_text = "R363 幼龙亡语复现：(1,0) 被打掉"
+		status_text = "R363 幼龙死亡复现：(1,0) 被打掉"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--r362curse" in _demo_args and _demo_frame == 40 and engine != null:
@@ -4387,7 +4387,7 @@ func load_level(lvl: Dictionary) -> void:
 			int(lvl["turn_limit"]), str(lvl["name"]), bool(lvl["shuffle"]), brng)
 	state.max_hp_self = RunState.max_hp   # 上限独立于当前值（休息事件可回复）
 	engine = GameEngine.new(state)
-	# R360：单机战斗开启「死亡效果延迟结算」—— 亡语要等那张卡的击破演出到点才跑
+	# R360：单机战斗开启「死亡效果延迟结算」—— 死亡要等那张卡的击破演出到点才跑
 	# （否则辅助刃先回手、场上那张卡还站着）。联机镜像模式**不开**：见引擎侧注释。
 	engine.defer_death_effects = true
 	engine.defer_primal_effects = true
@@ -8977,7 +8977,7 @@ func _on_end_turn() -> void:
 
 func _ai_step() -> void:
 	# R360：死亡效果还在等击破演出 → 这一拍先跳过（下一次 timer 再来）。
-	# 不这样的话 AI 会在「亡语未结算」的中间态上继续决策。
+	# 不这样的话 AI 会在「死亡未结算」的中间态上继续决策。
 	# R362：诅咒展示同理 —— 演出没播完就别推 AI 的下一步。
 	if _death_wait() or _curse_busy():
 		return
@@ -10860,7 +10860,7 @@ func _tick_anims() -> bool:
 		_screen_flash = {}
 	# R360：死亡效果还没结算 → 仍然算「演出中」（结算面板 / 回合推进都别抢跑）。
 	# 兜底：闹钟丢了（`_delayed` 被清 / 演出被打断）就一次跑完 ——
-	# 宁可亡语早到账，也不能让「待结算」把玩家操作永久锁死。
+	# 宁可死亡早到账，也不能让「待结算」把玩家操作永久锁死。
 	var death_busy := engine != null and engine.has_pending_death_effects() and not engine.has_pending_primal_effects()
 	if death_busy and _delayed.is_empty():
 		engine.flush_all_death_effects()
@@ -11041,7 +11041,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						"from_grid": pl_from_grid}
 				if pl_sc != 1.0:
 					_slides[pl]["from_scale"] = pl_sc
-				# R363：**召唤**（亡语 / 效果）要报出「谁出来了」——
+				# R363：**召唤**（死亡 / 效果）要报出「谁出来了」——
 				# 幼龙死后原地变龙裔，原来只看到一张新卡凭空出现：玩家分不清是
 				# 「这只幼龙死了变龙裔」还是「旁边那只幼龙被换了」。
 				if bool(data.get("summon", false)):
@@ -12369,7 +12369,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_delayed.append({"at": hide_at, "kind": "destroy_fx",
 					"data": {"center": center, "sc": _grid_scroll,
 							"card": data["card"], "cell": cell}})
-			# R360：亡语（辅助刃回手 / 生命循环 / 送葬抽牌…）等**自己那张卡**的击破演出
+			# R360：死亡（辅助刃回手 / 生命循环 / 送葬抽牌…）等**自己那张卡**的击破演出
 			# 过去再结算 —— 卡抹掉 + 白闪 + 大爆点之后 `DEATH_SETTLE_DELAY_MS`。
 			# 这里只给闹钟，结不结算由引擎的队列说了算（联机不开队列 → 空操作）。
 			_delayed.append({"at": hide_at + DEATH_SETTLE_DELAY_MS,
@@ -12383,11 +12383,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						"text": "送葬 +%d 张" % fn_drawn,
 						"col": UiTheme.KIND_EFFECT, "start": n, "dur": 1600, "size": 20})
 		"blast":
-			# 爆炎鸭亡语 / 爆炸陷阱（R50）：尸体周围四格炸出的火焰（不分敌我）—— 同特效同源。
+			# 爆炎鸭死亡 / 爆炸陷阱（R50）：尸体周围四格炸出的火焰（不分敌我）—— 同特效同源。
 			# 起播稍微延后一点，读起来就是「先倒下 → 再爆开」。
 			sfx.play("destroy")
 			# R466：爆炸场地是「走进来」踩响的 —— 火焰等那几步滑完再炸。
-			# 爆炎鸭亡语同样走这里，那时没有滑行 → `maxi` 取回原来的 n + 120。
+			# 爆炎鸭死亡同样走这里，那时没有滑行 → `maxi` 取回原来的 n + 120。
 			var bwhen := maxi(n + 120, _hit_cue_at(data.get("center", Vector2i(-1, -1)) as Vector2i))
 			for c2 in data.get("cells", []):
 				_bursts.append({"pos": _cell_center(c2 as Vector2i), "sc": _grid_scroll, "start": bwhen,
@@ -13485,8 +13485,8 @@ func _purge_retime_deaths(home: Vector2i, maxd: float, t0: int) -> void:
 	## R434：把清场里每一格的「击破演出」推到**冲击波扫到它**的那一刻。
 	## 引擎是先逐个 `_destroy` 再 emit `revelator_purge` —— 那些 destroy 事件早已排好队，
 	## 所以这里只能**往后推**、不能重排。三处必须一起推：
-	## `_dying`（卡面还在屏上多久）、`destroy_fx`（碎卡 + 爆点）、`death_effects`（亡语）。
-	## 只推其中一个，就会出现「卡先碎、火后到」或「火还没到、亡语先结算」。
+	## `_dying`（卡面还在屏上多久）、`destroy_fx`（碎卡 + 爆点）、`death_effects`（死亡）。
+	## 只推其中一个，就会出现「卡先碎、火后到」或「火还没到、死亡先结算」。
 	var shift := {}
 	for d: Dictionary in _dying:
 		var c: Vector2i = d.get("cell", Vector2i(-1, -1))
@@ -16357,7 +16357,7 @@ func _draw_info_panel() -> void:
 	var y := top + 54.0
 	# R349（用户口径）：左栏是**浅羊皮纸底**，文字一律不描边（`-1`）——
 	# 小字号自动描 2~3px 会把笔画糊成一团（R309 的同一个坑，这次连正文一起清干净）。
-	_draw_string_nw(_font_bold, UI_FS_CAPTION, "#%d %s" % [card.id, card.card_name],
+	_draw_string_nw(_font_bold, UI_FS_CAPTION, card.card_name,
 			Vector2(left, y), card.rarity_color(), -1, UiTheme.SURFACE, inner_w)
 	y += 22.0
 	# 费用：显示**当前实际费用**（悬停/选中手牌时套用本回合减费，低于卡面则标绿）

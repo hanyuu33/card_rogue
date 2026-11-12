@@ -1446,6 +1446,89 @@ const AFFIX_INDEX_BODY_FS := 10
 const AFFIX_INDEX_LINE_H := 13.0
 
 
+# ------------------------------------------------------------ 关联关键字（R632）
+
+const KEYWORD_FS := 13
+const KEYWORD_LINE_H := 17.0
+
+
+static func keyword_names(card: CardData) -> Array[String]:
+	## R632：卡牌奖励页要展示的「关联关键字」= 特性 + 字段 + 正文里查得到的机制词条。
+	## 与 `kind` 同名的特性（「工事」「场地」…）不列 —— 详情盒上一行「种类 · 费用 · 稀有度」
+	## 已经写了同一件事，重复一次只会把这一行挤爆。
+	var out: Array[String] = []
+	if card == null:
+		return out
+	for t in card.traits:
+		var tn := str(t)
+		if tn == card.kind or out.has(tn):
+			continue
+		out.append(tn)
+	for a in card.affixes:
+		var an := str(a)
+		if not out.has(an):
+			out.append(an)
+	for k in card.mech_keywords():
+		if not out.has(k):
+			out.append(k)
+	return out
+
+
+static func keyword_lines(font: Font, card: CardData, max_w: float) -> Array[String]:
+	## 把「关键字：A · B · C」按**词**折行 —— 绝不把一个名字切成两半。
+	## ⚠️ 不能直接用 `wrap_text()`：它是整串折行，9222 实测把「超负荷」拆成「超」/「负荷」。
+	## 行首不落「 · 」。单个词自己就超宽时（现库最长「仅玩家可放置」≈78px，不会发生）
+	## 这一行会溢出框，调用方靠 `max_w` 的绘制宽度兜不住 —— 真出现再加硬切。
+	var out: Array[String] = []
+	var names := keyword_names(card)
+	if names.is_empty():
+		return out
+	var prefix := "关键字："
+	var cur := prefix
+	for i in names.size():
+		var unit: String = names[i] if cur == prefix else " · " + names[i]
+		var probe := cur + unit
+		if cur != prefix and font.get_string_size(probe, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				KEYWORD_FS).x > max_w:
+			out.append(cur)
+			cur = names[i]
+		else:
+			cur = probe
+	out.append(cur)
+	return out
+
+
+static func keyword_line_count(font: Font, card: CardData, max_w: float,
+		max_lines := 2) -> int:
+	## 关键字会占几行 —— 给调用方算详情盒高度（量高与画字共用 `keyword_lines`）。
+	return mini(keyword_lines(font, card, max_w).size(), max_lines)
+
+
+static func draw_keyword_line(canvas: CanvasItem, font: Font, card: CardData,
+		x: float, y: float, max_w: float, max_lines := 2, max_y := -1.0,
+		ink := Color("333333")) -> int:
+	## 画「关键字：…」这一块。返回实际画出的行数（0 = 这张卡没有关键字）。
+	## * 超过 `max_lines` → 最后一行以「…」收尾。**完整解释不靠这一行**：
+	##   把鼠标压到卡面上，`draw_affix_index()` 会在卡两侧弹出每个可解释词的说明，
+	##   所以这里只负责「看得见有哪些关键字」，装不下也不会丢信息。
+	## * `max_y > 0` = 可用底线：再画一行就压到盒底时**不画** —— 宁可少一行也不溢出。
+	var lines := keyword_lines(font, card, max_w)
+	if lines.is_empty():
+		return 0
+	if lines.size() > max_lines:
+		lines = lines.slice(0, max_lines)
+		var last: String = lines[max_lines - 1]
+		lines[max_lines - 1] = last.substr(0, maxi(0, last.length() - 1)) + "…"
+	var drawn := 0
+	for i in lines.size():
+		if max_y > 0.0 and y + float(i) * KEYWORD_LINE_H > max_y:
+			break
+		canvas.draw_string(font, Vector2(x, y + float(i) * KEYWORD_LINE_H), lines[i],
+				HORIZONTAL_ALIGNMENT_LEFT, max_w, KEYWORD_FS, ink)
+		drawn += 1
+	return drawn
+
+
 static func affix_index_items(card: CardData, font: Font, box_w := AFFIX_INDEX_W) -> Array:
 	## 每个字段一条浮窗的内容与高度。绘制与测高共用这一口（与 `wrap_text` 同一折行器，
 	## 不会出现「量高一套、画字另一套」的字戳出框）。
@@ -1458,6 +1541,14 @@ static func affix_index_items(card: CardData, font: Font, box_w := AFFIX_INDEX_W
 	var names: Array[String] = []
 	for a: String in card.affixes:
 		names.append(a)
+	# R632：特性里**有解释的**也进浮窗（改版后「死亡」既是敌人卡的特性、也是字段，
+	# 奖励页的关键字行把它写出来了，玩家就得能查到它是什么意思）。
+	# 纯专名（「聚能炮击」「月亮」）没有定义 → 不进浮窗，免得弹出一串只有标题的空框。
+	for t in card.traits:
+		var tn := str(t)
+		if names.has(tn) or CardData.word_def(tn).is_empty():
+			continue
+		names.append(tn)
 	for kw: String in card.mech_keywords():
 		if not names.has(kw):
 			names.append(kw)

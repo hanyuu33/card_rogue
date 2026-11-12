@@ -23,8 +23,8 @@ var result:= ""
 var result_reason:= ""
 var ai_enabled:= true
 ## R360：死亡效果延迟结算（**只影响时机，不改逻辑顺序**）。
-## 根因：`_destroy()` 里亡语是同步跑的，而界面要等击破演出（`DESTROY_HOLD_MS` + 幽灵淡出）
-## 才把那把卡抹掉 —— 于是「辅助刃」这类回手亡语先出现在手卡、场上那张卡还站着。
+## 根因：`_destroy()` 里死亡是同步跑的，而界面要等击破演出（`DESTROY_HOLD_MS` + 幽灵淡出）
+## 才把那把卡抹掉 —— 于是「辅助刃」这类回手死亡先出现在手卡、场上那张卡还站着。
 ## headless（单元测试 / 回放）保持 false → 同步结算，断言不受影响；
 ## battle_scene 只对**单机战斗**置 true，由击破演出到点调 `flush_death_effects(cell)`。
 ## ⚠️ 联机镜像模式必须保持 false：两侧靠同一份 action 序列对齐，不能掺本地动画时间。
@@ -73,7 +73,7 @@ func resolve_primal_hit() -> void:
 
 var defer_death_effects:= false
 ## R360：待结算的死亡效果 —— `cell -> Array[Callable]`。
-## 用格子当键、而不是一条全局队列：同一帧死两个单位时，各自的亡语要等**自己那张卡的**
+## 用格子当键、而不是一条全局队列：同一帧死两个单位时，各自的死亡要等**自己那张卡的**
 ## 击破演出到点才结算，不会因为先播完的那个把后面的一起跑掉。
 var _death_effects:= {}
 ## R472（用户口径「有死亡召唤单位的敌人死亡会直接结算游戏」）：排队中的**加卡型**
@@ -157,7 +157,7 @@ var focus_label:= "专注"       # 面板文案标签（专注 / 负重减轻）
 ## R298 合体 9167：场上目标已选、等玩家从**卡组**挑一张「素体」的待办（UI kind = "merge"）。
 ## `merge_hand_index` / `merge_cell` 在面板期间一直留着 —— 面板确认后由 battle_scene 用它们
 ## 调 `use_spell()`，付费 / 弃牌 / 出牌计数 / 次元判定全部交回 use_spell 统一收尾。
-## R300 激发 8077：重入保护 —— 它自己造成伤害，若某张敌方亡语反过来改造了我方卡，
+## R300 激发 8077：重入保护 —— 它自己造成伤害，若某张敌方死亡反过来改造了我方卡，
 ## 会再次走进 `_inspire_tick()`。这个标记保证「一次结算不会被自己递归放大」。
 var _inspire_busy:= false
 var merge_pending:= false
@@ -264,10 +264,10 @@ const PET_DUCK_TRAIT:= "宠物鸭"
 # ---- 「钢铁要塞」关卡（R149，第二层精英困难）----
 # 量产型赫卡同克瑞斯（9133）上场就带铸造倒计时：**我方回合结束** -1，
 # 减到 0 → 破坏自身并在**原地**立起一座钢铁要塞（9134，工事 5/100 程2 嘲讽）。
-# ⚠️ **这不是亡语**：只有「倒计时走完」这一条路径会铸出要塞。被玩家提前打掉
+# ⚠️ **这不是死亡**：只有「倒计时走完」这一条路径会铸出要塞。被玩家提前打掉
 #    走的是常规 `_destroy`，什么都不留下（卡面 effect_text 已写明这一条），
 #    所以刻意**不进 `_deathrattle`** —— 进那里就变成「怎么死都要塞照出」。
-const FUSE_TRAIT:= "铸造"           # 只做标记（与「亡语 / 孵化」同套路），回合数在引擎
+const FUSE_TRAIT:= "铸造"           # 只做标记（与「死亡 / 孵化」同套路），回合数在引擎
 const HECATE_ID:= 9133              # 量产型赫卡同克瑞斯（盟友 3/35 程1 速1）
 const STEEL_FORTRESS_ID:= 9134      # 钢铁要塞（工事 5/100 程2 速0，嘲讽）
 const FUSE_TURNS:= 5                # 铸造倒计时的初始回合数（与卡面 effect_text 同源）
@@ -340,7 +340,7 @@ const BREACH_CURSE_ID:= 9154      # 诅咒「破绽」（2 费，打出无效果
 const MASS_FORGE_TRAIT:= "量产锻造"   # 只做标记（与「锻造 / 铸造」同套路），无数值字段
 # ---- 敌人效果卡「充能巨炮」（R158，第二层普通困难「双机炮阵」）----
 # 效果区里有「巨炮」trait 的卡：**己方每个回合开始时**，随机破坏**一个敌方单位**
-# （从持有效果卡那方看 = 对方单位）。破坏走唯一口 `_destroy`（离场记账 / 亡语 /
+# （从持有效果卡那方看 = 对方单位）。破坏走唯一口 `_destroy`（离场记账 / 死亡 /
 # 击杀记功与别处完全一致），不是另起一套删除。一次破坏几个由卡面 `value` 决定
 # （默认 1）—— 于是 value 有消费方，不是死数据。
 const CANNON_TRAIT:= "巨炮"           # 只做标记，破坏次数取卡面 value（默认 1）
@@ -455,8 +455,8 @@ const AI_ROLE_TANK:= "tank"               # 嘲讽 / 工事 / 血厚低速：优
 const AI_ROLE_SUPPORT:= "support"        # 治疗 / 成长光环 / 召唤引擎：活着就增益队友，优先击杀
 const AI_ROLE_SNIPER:= "sniper"          # 射程 ≥2 且有力：后排输出，优先清场
 const AI_ROLE_ASSAULT:= "assault"        # 高速 / 多动 / 穿行：积极前压、绕路
-const AI_ROLE_SUMMONER:= "summoner"      # 孵化 / 锻造 / 铸造 / 亡语召唤：击杀后可能生东西
-const AI_ROLE_VOLATILE:= "volatile"      # 亡语有伤害：能避免就不主动碰，必要时远距离点掉
+const AI_ROLE_SUMMONER:= "summoner"      # 孵化 / 锻造 / 铸造 / 死亡召唤：击杀后可能生东西
+const AI_ROLE_VOLATILE:= "volatile"      # 死亡有伤害：能避免就不主动碰，必要时远距离点掉
 const AI_ROLE_GROWTH:= "growth"          # 每回合自己变强：越放越大，优先处理
 const AI_ROLE_BRUISER:= "bruiser"        # 高力量近战：正面威胁
 const AI_ROLE_GENERIC:= "generic"        # 其它
@@ -659,7 +659,9 @@ const COURAGE_RELIC_ID:= 6031
 ## 原来精英 1 回合、Boss **2** 回合 → 现在两档都只给**首回合**，所以合并成一个常量
 ## （留两个各 =1 的常量会给以后「又改回两档」留漂移口）。
 const COURAGE_TURNS:= 1
-# R245 诅咒「罐子」（9157）与它的召唤物（9158）。
+# R245 诅咒「罐子」（9157）。
+# R632：工事罐子 9158 已删除（旧召唤物机制，店长确认不再生成）——
+# 留手惩罚仍然走 `_summon_jar_enemy()`，但它不再是一张卡。
 # R351 赏月产出的两张效果卡（都在 `battle_end_rewards()` 里结算）。
 const MOON_CARD_ID:= 9180
 const COIN_CARD_ID:= 9181
@@ -668,7 +670,6 @@ const JAR_CURSE_ID:= 9157
 # R373 诅咒「麻痹」（9185）：启示者阶段 2 的电磁屏障**每次**受到技能伤害 → 往玩家弃牌库
 # 塞一张。无费用、**不能打出**（`CardData.unplayable`）、回合结束仍在手牌就消失。
 const PARALYSIS_CARD_ID:= 9185
-const JAR_TOKEN_ID:= 9158
 # R246 二层起始道具「兼修」（6033）：我方每回合额外 +1 费用（与其它「回合开始加费」并列）。
 const VERSATILE_RELIC_ID:= 6033
 
@@ -776,7 +777,7 @@ const FRENZY_ALLY_MIN:= 3
 #     （`_destroy` 的己方分支认这个字段，与「离场消失」trait 同路）；
 #   * 死亡 → 被破坏时把**一张随机盟友卡**加入手卡（`_deathrattle` 的 `life_cycle` 分支）。
 # 随机源 = 本角色奖励池里的盟友卡（与「新生」9148 同口径），走引擎 rng → 回放可复现。
-# ⚠️ 「死亡」字段是**通用标记**（幼龙 / 腐化尸鬼 / 捕兽大师等各有亡语，按卡 id 结算）→
+# ⚠️ 「死亡」字段是**通用标记**（幼龙 / 腐化尸鬼 / 捕兽大师等各有死亡，按卡 id 结算）→
 #    本卡的效果绝不能用 `has_affix("死亡")` 判，只认 `Placement.life_cycle`。
 # ⚠️ 本卡自己是普通技能（无次元字段）→ 用完照常进弃牌区。
 const LIFE_CYCLE_ID:= 9150
@@ -1376,7 +1377,7 @@ const RUSH_PUNCH_STEPS:= 1
 #   * 同时挂「死亡」字段 + `Placement.blade_gift` 标记 → 被破坏时**把一张辅助刃加入手卡**
 #     （`_deathrattle` 开头按**标记**分派；判据不认「死亡」字段，见 Placement 的注释）；
 #   * 字段是「场上这段」的：离场由 `_card_leaving_field()` 摘掉，回手后仍是原样。
-#   ⚠️ 0 费 + 亡语回收一张自己 → 会循环（给 A 打一张、A 死了拿回一张），这是卡面本就
+#   ⚠️ 0 费 + 死亡回收一张自己 → 会循环（给 A 打一张、A 死了拿回一张），这是卡面本就
 #      写着的口径；强度靠「必须死一个单位」来换，不做上限拦截。
 const BLADE_GIFT_ID:= 9164
 const BLADE_ATK:= 2
@@ -1630,7 +1631,7 @@ const INSPIRE_TARGETS:= 2
 #        UI 高亮可点的己方单位，点一格走 `paint_pick()`、右键 `paint_cancel()`；
 #        场上没有别的己方单位 → 直接落空，**不挂 pending**（免得玩家被一个没得点的状态卡住）；
 #     ② 「变成」**不是**「被破坏」→ 旧单位直接从棋盘摘掉（`state.board.erase`），
-#        亡语 / 击杀记功 / 零件回收者 / 思想钢印一律不触发；
+#        死亡 / 击杀记功 / 零件回收者 / 思想钢印一律不触发；
 #     ③ 「变成」**也不是**「入场」→ 新单位**不跑**入场效果。否则随机到失控要塞会再开一串技能、
 #        随机到量产型代达罗斯会开手牌面板，嵌套 pending 一路打不完；
 #     ④ 新单位以 `summon = true` 落地（本回合 1 次行动），并照常吃道具的常驻力量加成
@@ -2080,7 +2081,7 @@ const FROST_WARD_TRAIT:= "寒霜"
 
 # ---- R327：送葬（9175，森林精魄 2 费稀有·效果）----
 # 「场上每有一个单位被破坏，抽 1 张卡。」挂在己方效果区，在**全局唯一破坏口**
-# `_destroy` 尾部结算（所以亡语、溢出、超负荷真死、思想钢印救回都算）。
+# `_destroy` 尾部结算（所以死亡、溢出、超负荷真死、思想钢印救回都算）。
 #   * 任何一方的单位都算 —— 卡面写的是「场上」，不限定敌我。
 #   * 效果区**多张不叠加**（沿用效果区惯例：卡面没写「可叠加」就只算一张）。
 #   * 「思想钢印」救回手卡的那张**也算被破坏**（与嵌合暴君回费同口径）。
@@ -2887,7 +2888,7 @@ func _cannon_fire(side: String) -> void :
 	## 充能巨炮（9139，R158 敌人效果卡）：**己方每个回合开始时**，随机破坏
 	## **一个敌方单位**（从持有效果卡那方看 = 对方单位）。
 	##   * 目标池 = 对方场上**所有**单位（含工事），走引擎 `rng` → 回放同种子可复现；
-	##   * 破坏走唯一口 `_destroy`（离场记账 / 亡语 / 击杀记功与别处完全一致），
+	##   * 破坏走唯一口 `_destroy`（离场记账 / 死亡 / 击杀记功与别处完全一致），
 	##     不在这里另起一套删除；
 	##   * 没有目标 → 静默跳过（只打一行日志），**不会**转而伤害对方 HP ——
 	##     卡面写的是「破坏一个单位」，没有单位就是空响。
@@ -2969,7 +2970,7 @@ func _defector_hunt_fire(side: String) -> void :
 	## 敌方场上一个单位都没有 → 改为直击敌方 HP `DEFECTOR_HUNT_DMG` 点。
 	## 这是它区别于充能巨炮 9139 的地方：巨炮空场是空响，猎杀空场照打。
 	## 目标走引擎 `rng`（回放同种子可复现），破坏走唯一口 `_destroy`
-	##（离场记账 / 亡语 / 击杀记功与别处一致）。
+	##（离场记账 / 死亡 / 击杀记功与别处一致）。
 	var hunters:= 0
 	for cell: Vector2i in state.board:
 		var p: Placement = state.unit_at(cell)
@@ -3017,7 +3018,7 @@ func _wanted_tick() -> void :
 	## 「第 12 个回合」只数**敌人的回合**（`state.opp_turn_no`），不再取双方较小值 ——
 	## 玩家先手走完自己的第 12 个回合时，敌方还只有 11，所以那一刻绝不提前爆；
 	## 本口挂在 `end_turn` 收尾，敌方第 12 回合结束时 `opp_turn_no == 12`，正好落点。
-	## 自毁同样走 `_destroy`，于是「离场即消失 / 亡语」照常结算；清空之后
+	## 自毁同样走 `_destroy`，于是「离场即消失 / 死亡」照常结算；清空之后
 	## `_check_game_over()` 按「敌方场上单位全灭」判胜 —— 这就是卡面承诺的
 	## 「撑满 12 个回合也能赢」那条路。
 	if not _zone_has(state.enemy_effects, WANTED_TRAIT):
@@ -3059,7 +3060,7 @@ func _naval_gun(side: String) -> void:
 	##     三列全空才走 HP（而且只打**一次** 5 点，不是三列各一次）。
 	##   * 列号走引擎 `rng` → 回放同种子可复现。
 	##   * 伤害走 `_hit_unit`（与技能同口径：光环易伤 / 护盾 / 减伤都吃），
-	##     结算完统一 `_destroy_dead()`（击杀记功 / 亡语与别处一致）。
+	##     结算完统一 `_destroy_dead()`（击杀记功 / 死亡与别处一致）。
 	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
 	var dmg:= 0
 	for c: CardData in zone:
@@ -3195,7 +3196,7 @@ func _revelator_check_phase(p: Placement) -> void:
 func _revelator_enter_phase(p: Placement, phase: int) -> void:
 	## 转阶段（R356）——用户口径「明确的动画提示 + 重新弹出敌方效果」的引擎侧：
 	##   ① 退回后排中间 (0, 1)：原格**有东西就消灭它**（走 `_destroy` 唯一口，
-	##      亡语 / 击杀记功 / 离场记账与别处完全一致）；
+	##      死亡 / 击杀记功 / 离场记账与别处完全一致）；
 	##   ② 换掉场上效果卡（舰炮 → 电磁屏障 → 紧急呼叫，右栏效果区随之变化）；
 	##   ③ 血量钳到至少 1 —— 一次大伤害把血打成负数时，转阶段不该直接判死；
 	##   ④ 发 `boss_phase` 事件：界面播阶段横幅 + 重弹敌方效果 + 把镜头带到它身上。
@@ -3211,8 +3212,8 @@ func _revelator_enter_phase(p: Placement, phase: int) -> void:
 	if from_cell.x >= 0 and from_cell != home and state.board.has(from_cell):
 		state.move_unit(from_cell, home)
 	# R371：2 → 3 阶段「破坏场上所有其他单位」（敌我双方全算，只留它自己）。
-	# 走 `_destroy` 唯一口（亡语 / 击杀记功 / 离场记账与别处完全一致）。
-	# ⚠️ 先把格子抄一份再逐个杀 —— `_destroy` 里的亡语可能往 board 里**放新单位**，
+	# 走 `_destroy` 唯一口（死亡 / 击杀记功 / 离场记账与别处完全一致）。
+	# ⚠️ 先把格子抄一份再逐个杀 —— `_destroy` 里的死亡可能往 board 里**放新单位**，
 	#    直接遍历 `state.board.keys()` 等于在迭代中改字典（会漏格 / 会重复杀）。
 	var purge_cells: Array[Vector2i] = []
 	var purge_names: Array[String] = []
@@ -5481,7 +5482,7 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	#   场上副本的 `card.health` 可能已被「升级」`_upgrade_unit` 抬过，拿它就变成
 	#   「含场上改造」，与卡面印的数字对不上（用户口径：初始 = 卡面上的）。
 	#   卡库取不到时退回副本字段，绝不静默变成 0。
-	# * 破坏走唯一口 `_destroy` → 亡语 / 零件回收者 / 送葬 / 爆炎鸭 / 压感地雷全部照常，
+	# * 破坏走唯一口 `_destroy` → 死亡 / 零件回收者 / 送葬 / 爆炎鸭 / 压感地雷全部照常，
 	#   与「拆解」8049 同一条纪律（别自己 erase）。
 	# * 加成落 `upgrade_atk` / `upgrade_hp` + 抬 `card.health` / `p.health`（与 `_upgrade_unit`
 	#   同口径：离场由 `_card_leaving_field` 一并减回，弃牌区那张仍是 1/11）。
@@ -5934,7 +5935,7 @@ func _paint_pool() -> Array[CardData] :
 func _paint_morph(cell: Vector2i) -> bool :
 	## 把场上 `cell` 那个单位**原地变成**一张随机机械之心单位（涂装机器人的唯一结算口）。
 	## 三条要点：①「变成」不是「被破坏」→ 直接 `state.board.erase()`，**不**走 `_destroy()`
-	##   （亡语 / 击杀记功 / 零件回收者 / 思想钢印一个都不该触发）；
+	##   （死亡 / 击杀记功 / 零件回收者 / 思想钢印一个都不该触发）；
 	## ②「变成」也不是「入场」→ 新单位**不跑**入场效果（避免失控要塞 / 量产型代达罗斯嵌套 pending）；
 	## ③ 新单位照样吃道具常驻加成（`_relic_on_enter_buffs()`），与手牌打出同一口径。
 	var pool := _paint_pool()
@@ -6546,7 +6547,7 @@ func _scout_aura_bonus(victim: Placement, victim_cell: Vector2i) -> int:
 func _apply_rapid_marks(p: Placement, amount: int) -> int:
 	## R316 极速（9171）：「本回合所有敌人受到伤害 +N」的**统一施加口**。
 	## 与「侦察塔光环」必须成对出现在**同两个落地口**：`_hit_unit`（普攻 / 多格效果 /
-	## 陷阱 / 亡语…）与 `_op_deal_damage`（单目标技能卡）—— 只挂一处会让另一条路被绕过
+	## 陷阱 / 死亡…）与 `_op_deal_damage`（单目标技能卡）—— 只挂一处会让另一条路被绕过
 	## （侦察塔当年就踩过这个坑，见 `_apply_scout_aura` 的注释）。
 	## ⚠️ 只作用于**敌方单位**：我方单位被打不该吃自己的易伤；敌方 HP（没有 Placement）
 	##    也不在此列 —— 与侦察塔「只加单位」同一口径。
@@ -6563,7 +6564,7 @@ func _apply_rapid_marks(p: Placement, amount: int) -> int:
 func _apply_scout_aura(p: Placement, amount: int) -> int:
 	## R138：「侦察塔」光环易伤的**统一施加口** —— 返回加成后的伤害。
 	## ⚠️ 单位扣血有**两个落地口**（见 `_unit_damage_taken` 的注释）：`_hit_unit`
-	##   （普通攻击 / 多格效果 / 陷阱 / 亡语…）与 `_op_deal_damage`（**单目标技能卡**那条）。
+	##   （普通攻击 / 多格效果 / 陷阱 / 死亡…）与 `_op_deal_damage`（**单目标技能卡**那条）。
 	##   原来光环只挂在 `_hit_unit` → **技能卡打上去时被绕过**（用户实测反馈）。
 	##   现在两边都调本函数，口径一致。
 	if p == null or p.card == null:
@@ -6793,7 +6794,7 @@ func _inspire_tick() -> int:
 	##   * 只打**场上的敌方单位**，不直击敌方 HP（没有单位时效果落空）；
 	##   * 每轮**独立抽取**：两轮可以打到不同两只，也可能重复打同一只（各自 3 点）；
 	##     抽取走 `rng`（回放一致），命中顺序按格子排序（日志 / 飘字顺序稳定）；
-	##   * ⚠️ 重入保护：本函数自己造成伤害 → 若某张敌方亡语反过来改造了我方卡，
+	##   * ⚠️ 重入保护：本函数自己造成伤害 → 若某张敌方死亡反过来改造了我方卡，
 	##     会再走进来。`_inspire_busy` 保证一次结算不被自己递归放大。
 	if _inspire_busy:
 		return 0
@@ -7159,7 +7160,7 @@ func _waste_bot_ping(p: Placement) -> void :
 	## 废弃机器人（9152，R228）：**每次被改造** → 对它这一方的**所有敌方单位**
 	## （= 玩家单位）各造成 WASTE_BOT_DMG 点伤害。
 	## 伤害走 `_hit_unit`（与技能同口径：护盾 / 减伤 / 石肤照常生效），
-	## 致死统一交给 `_destroy_dead()`（亡语 / 击杀记功与别处一致）。
+	## 致死统一交给 `_destroy_dead()`（死亡 / 击杀记功与别处一致）。
 	## ⚠️ 快照先取格子（`_hit_unit` 不删格，但 `_destroy_dead` 会 → 边遍历边删不安全）。
 	var foe_side: String = SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
 	var cells: Array[Vector2i] = []
@@ -8998,7 +8999,7 @@ func _phantom_cloak_tick(side: String) -> void:
 func _fetch_skill_from_deck(mode: int) -> CardData:
 	## 从卡组随机取一张「技能卡」加入手卡。mode：0=任意 1=费用为0 2=费用不为0。
 	## R299：手牌满不再「不动卡组直接落空」—— 照样取出来，由 `_grant_to_hand` 送进弃牌区。
-	## 连刺 / 幽灵亡语 / 影子猫 / 预判② 共用本口。
+	## 连刺 / 幽灵死亡 / 影子猫 / 预判② 共用本口。
 	var cand: Array[int] = []
 	for i in state.deck.size():
 		var dc: CardData = state.deck[i]
@@ -9228,7 +9229,7 @@ func _fallback_glowgrass() -> CardData:
 
 
 func _ghost_self_destruct(side: String) -> void:
-	## 幽灵（8008）：自己回合开始时，场上的幽灵破坏（亡语：卡组随机技能卡入手）。
+	## 幽灵（8008）：自己回合开始时，场上的幽灵破坏（死亡：卡组随机技能卡入手）。
 	for cell: Vector2i in state.board.keys().duplicate():
 		var p: Placement = state.unit_at(cell)
 		if p != null and p.owner == side and p.card.id == GHOST_ID:
@@ -9849,7 +9850,7 @@ func _life_cycle_death(p: Placement, cell: Vector2i) -> void :
 		return
 	var copy:= CardData.from_dict(c.to_dict())
 	copy.affixes = (c.affixes as Array).duplicate()
-	# R299：手牌满 → 直接进弃牌区（亡语不再因为满手白掉）
+	# R299：手牌满 → 直接进弃牌区（死亡不再因为满手白掉）
 	_grant_to_hand(copy, "生命循环")
 	_log("生命循环：%s 被破坏 → 手卡加入「%s」" % [p.card.card_name, copy.card_name])
 	action.emit("life_cycle", {"card": copy, "from": p.card, "cell": cell})
@@ -9863,7 +9864,7 @@ func _blade_gift(target, side:= SIDE_SELF) -> String:
 	## 「每次被改造」那一族全部自动生效，这里一行都不手写。
 	## ⚠️ 只认 `kind == "盟友"`：工事不是「盟友」（与生命循环 9150 / 加厚装甲 8044 同口径）。
 	## ⚠️ 允许对同一个目标重复施放（每次各 +BLADE_ATK 力量、各算一层改造）——
-	##    卡面没有「只能一次」，而亡语回收的那张就该能再点一次。
+	##    卡面没有「只能一次」，而死亡回收的那张就该能再点一次。
 	var p:= _target_placement(side, target)
 	if p == null:
 		return "（没有目标）"
@@ -9891,7 +9892,7 @@ func _blade_gift_death(p: Placement, cell: Vector2i) -> void :
 		return                     # 只有玩家能施放本卡，敌方分支不需要效果
 	var proto: CardData = CardRepo.load_json().get_card(BLADE_GIFT_ID)
 	if proto == null:
-		_log("辅助刃：卡库缺少「辅助刃」(9164)，亡语落空")
+		_log("辅助刃：卡库缺少「辅助刃」(9164)，死亡落空")
 		return
 	# ⚠️ 必须 from_dict 复制成独立实例（卡库是共享实例）—— 与其它「加入手卡」同一条纪律。
 	var copy:= CardData.from_dict(proto.to_dict())
@@ -9932,7 +9933,7 @@ func _duplicate_spell(target, side:= SIDE_SELF) -> String:
 		# R624：复制品不继承商店附魔。必须放在 affixes 复制**之后** ——
 		# 否则上面那句会把附魔带出来的 affix（次元 / 保存）又抄回来。
 		RunState.strip_enchant(copy)
-		# 「死亡」若是辅助刃挂上去的（`blade_added`），复制品**不带走** —— 那条亡语挂在
+		# 「死亡」若是辅助刃挂上去的（`blade_added`），复制品**不带走** —— 那条死亡挂在
 		# `Placement.blade_gift` 上，复制品上场后没有这个标记，留着字段就是「卡面写着却不触发」
 		# （R227 立的口径）。力量那部分照常保留（已烤进 power）。
 		for bg_a: String in p.blade_added:
@@ -10963,7 +10964,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			# 其余每个敌方单位各吃 RUSH_PUNCH_SPLASH 点。
 			return _rush_punch(side, target, card)
 		BLADE_GIFT_ID:
-			# 辅助刃 9164（R291，机械之心）：己方盟友获得改造（力 +2）+「死亡」亡语回收自己。
+			# 辅助刃 9164（R291，机械之心）：己方盟友获得改造（力 +2）+「死亡」死亡回收自己。
 			return _blade_gift(target, side)
 		DUPLICATE_ID:
 			# 复制术 9165（R291，机械之心）：复制己方一个盟友 / 工事两份到手卡（带「次元」，本回合 0 费）。
@@ -11982,7 +11983,7 @@ func _hidden_energy_tick(p: Placement, side: String) -> void :
 	## 「隐藏能源」8078（R331，机械之心 3 费稀有效果）。
 	## * 改造走 `_field_upgrade_grant()`（场上改造唯一口）—— 层数 / 卡面改造奖励 /
 	##   「每次被改造」那一族（侦察塔 / 堡垒 / 无限装甲 / 废弃机器人 / 激发）全部自动生效。
-	##   atk / hp 都传 0：本卡的改造**不带数值**，只挂亡语（与共享护盾 8069 同形态）。
+	##   atk / hp 都传 0：本卡的改造**不带数值**，只挂死亡（与共享护盾 8069 同形态）。
 	## * ⚠️ 判据只认 `Placement.hidden_energy` 标记，**不认** `has_affix("死亡")`。
 	## * ⚠️ 走到这里时 p 还没被别的效果改过，`has_affix` 读到的是卡面原值 ——
 	##   「死亡」只有本卡**新挂**上去时才记进 `hidden_energy_added`（离场要摘）。
@@ -12401,9 +12402,9 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 	## `kind`（R152）：""（未分类）/ "attack"（单位普通攻击）/ "spell"（技能卡与效果）。
 	## 「百臂工场」两条减伤要按来源分流 —— 赫卡同克瑞斯只减**攻击**，
 	## 量产型赫利俄斯只减**技能**（+ 效果，与玩家口径的二分：非攻击即技能）。
-	## 单位**受击前的减伤唯一口** —— 普通攻击 / 单目标技能 / 多格效果 / 陷阱 / 亡语 /
+	## 单位**受击前的减伤唯一口** —— 普通攻击 / 单目标技能 / 多格效果 / 陷阱 / 死亡 /
 	## 反伤，全都要经过这里，否则减伤会被绕过。
-	## ⚠️ 引擎里单位扣血有**两个落地口**：`_hit_unit`（普通攻击、多格、陷阱、亡语…）与
+	## ⚠️ 引擎里单位扣血有**两个落地口**：`_hit_unit`（普通攻击、多格、陷阱、死亡…）与
 	##   `_op_deal_damage`（**单目标技能**那条）。两边都必须调本函数 —— 此前
 	##   道具「护心」的 `_relic_damage_taken` 就是在这两处各写了一遍，正是收口的原因。
 	## 判定顺序：① 自身减伤（犀牛 9016，R125）→ ② 赫卡同克瑞斯孤军（仅攻击，R152）
@@ -12826,7 +12827,7 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 			# R403：生成器被打死 → **立刻就地销毁**，不要留给 `_destroy_dead()`。
 			# 它站后排（x=5）时 `_destroy_dead` 会把 `-health` 当「后排溢出」漏给玩家 HP，
 			# 站前排却不会 —— 同一张卡两种结果。走 `_destroy()` 与森林守护 / 铁栅栏完全
-			# 同形（亡语、击杀记功照常，只是不吃那条溢出）。
+			# 同形（死亡、击杀记功照常，只是不吃那条溢出）。
 			# R469：统一走 `_reap()`（生成器本身不带超负荷，行为不变，但不留另一条销毁路径）。
 			if gen_cell != Vector2i(-1, -1):
 				_reap(gen_cell)
@@ -13420,8 +13421,8 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 			_summon_token(WYVERN_TOKEN_ID, cell, p.owner, 1)
 		GHOUL_ID:
 			var foe:= SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
-			_damage_player(foe, GHOUL_DMG, "%s 亡语" % p.card.card_name)
-			_log("%s 亡语：对%s HP 造成 %d 点伤害" % [
+			_damage_player(foe, GHOUL_DMG, "%s 死亡" % p.card.card_name)
+			_log("%s 死亡：对%s HP 造成 %d 点伤害" % [
 				p.card.card_name, "我方" if foe == SIDE_SELF else "敌方", GHOUL_DMG])
 			action.emit("deathrattle", {"cell": cell, "card": p.card, 
 				"kind": "ghoul", "amount": GHOUL_DMG})
@@ -13430,7 +13431,7 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 		GHOST_ID:
 			if p.owner == SIDE_SELF:
 				var gh_c := _fetch_skill_from_deck(0)
-				_log("幽灵亡语：%s" % (("卡组随机技能卡「%s」加入手卡" % gh_c.card_name) if gh_c != null else "卡组里没有技能卡"))
+				_log("幽灵死亡：%s" % (("卡组随机技能卡「%s」加入手卡" % gh_c.card_name) if gh_c != null else "卡组里没有技能卡"))
 				action.emit("ghost_fetch", {"card": gh_c})
 			else:
 				_assemble_opponent_draw(1)
@@ -13440,15 +13441,12 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 			action.emit("deathrattle", {"cell": cell, "card": p.card, "kind": "summon"})
 		MECH_ID:
 			_death_wipe(cell, MECH_DMG, p.card)
-		JAR_TOKEN_ID:
-			# R245 罐子（工事 0/1/0）：死亡 → 召唤一个本层非 Boss 的随机敌人
-			_summon_jar_enemy("罐子亡语")
 		_:
 			pass
 
 
 func _summon_token(card_id: int, near: Vector2i, side: String, count: int) -> void :
-	## R363：亡语 / 效果召唤的**唯一口**。
+	## R363：死亡 / 效果召唤的**唯一口**。
 	## ⚠️ 落点规则没变：先原地（`near`），原地被占才退到四邻 —— 但**绝不覆盖**已有单位
 	##    （`_can_hold` 挡住），退位时写一行日志，方便查「怎么出现在这格」。
 	## `place` 事件带 `summon: true`：界面据此演成「召唤」（名字 + 落点光环），
@@ -13470,7 +13468,7 @@ func _summon_token(card_id: int, near: Vector2i, side: String, count: int) -> vo
 			_log("召唤被拦下：%s 已经有单位" % str(spot))
 			break
 		var summoned:= state.place(spawn, spot, side)
-		_log("亡语：召唤了 %s（%s）" % [spawn.card_name, spot])
+		_log("死亡：召唤了 %s（%s）" % [spawn.card_name, spot])
 		action.emit("place", {"cell": spot, "card": spawn, "side": side,
 				"summon": true, "from": near})
 		_on_ally_entered(summoned, side)
@@ -13570,7 +13568,7 @@ func _egg_hatch_tick() -> void :
 	## 生蛋鸭（6018）/ 鸭蛋（9022，R340）：**我方回合结束时**仍存活的鸭蛋
 	## → **原地**变成「宠物鸭」（9177，盟友 3/15/程 1 /速 1），替我方 HP 承受伤害。
 	## ⚠️ 用 `state.place()` **覆盖同一格**，不走进 `_destroy`：这是「孵化」不是「死亡」，
-	##    不该触发亡语 / 击杀记功 / 后排溢出伤害；鸭蛋本身也没有亡语，语义上更接近「变幻」。
+	##    不该触发死亡 / 击杀记功 / 后排溢出伤害；鸭蛋本身也没有死亡，语义上更接近「变幻」。
 	## ⚠️ 副本必须 `from_dict` + `traits.duplicate()`：卡库实例共享，场上被改造会跨局泄漏。
 	var cells: Array[Vector2i] = []
 	for cell: Vector2i in state.board.keys():
@@ -13609,10 +13607,10 @@ func _jar_spot(side: String) -> Vector2i:
 
 
 func _summon_jar_enemy(reason: String) -> void :
-	## 罐子（9157 留手 / 9158 亡语，R245 起；R340 起留手也走这里）的唯一召唤口：
+	## 罐子（9157 留手，R340 起）的唯一召唤口：
 	## 召唤一个**本层非 Boss** 的随机敌人 —— 优先敌方后排（第 0 行），满了再退敌方半场随机；
 	## 敌方半场全满则召唤失败（不炸场、不卡死）。
-	## ⚠️ `reason` 只用于日志（「罐子」/「罐子亡语」），不再依赖被破坏单位的 Placement ——
+	## ⚠️ `reason` 只用于日志（「罐子」），不再依赖被破坏单位的 Placement ——
 	##    R340 的留手惩罚没有「被破坏的东西」，硬传会为 null。
 	var layer:= RunState.current_layer if RunState.run_active else GameLayers.LAYER_DEFAULT
 	var card:= _jar_enemy_card(layer)
@@ -13669,7 +13667,7 @@ func _death_wipe(center: Vector2i, amount: int, card: CardData) -> void :
 
 
 func _pressure_mine_blast(cell: Vector2i, p: Placement) -> void :
-	## 压感地雷（9219，R493）的亡语：**若此卡生命为负数**，对**敌方所有单位**
+	## 压感地雷（9219，R493）的死亡：**若此卡生命为负数**，对**敌方所有单位**
 	## 造成等同于负血量绝对值的伤害（「低于 0 的部分」）。
 	## ⚠️ 只有 `health < 0` 才炸：恰好 0 血（1 伤打死）负血部分 = 0，等于没炸 ——
 	##    这是卡面写死的口径，不是漏判。
@@ -13790,7 +13788,7 @@ func _guardian_backfill(cell: Vector2i, got: CardData, where: String) -> void :
 	##   这些入场钩子与手牌打出**完全同一条路**，不另开分支。
 	## * ⚠️ 被拉回来的那张若自己也被挂了超负荷（超越极限 8053），下次超负荷死亡还会再拉一张；
 	##   卡面没写例外，按字面不挡 —— 每次都要真死一张，不存在「同名无限循环」。
-	## * ⚠️ 格子已被别的东西占了（同回合多张超负荷卡 + 亡语召唤）→ 不抢位，卡退回弃牌区。
+	## * ⚠️ 格子已被别的东西占了（同回合多张超负荷卡 + 死亡召唤）→ 不抢位，卡退回弃牌区。
 	if got == null:
 		return
 	if state.board.has(cell):
@@ -13985,7 +13983,7 @@ func _heph_kill_forge(killer: Placement) -> void :
 func _fuse_tick() -> void :
 	## 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：**我方回合结束** -1；
 	## 减到 0 → 破坏自身，并**在原地**立起一座「钢铁要塞」（9134，工事 5/100 程2 嘲讽）。
-	## ⚠️ **不是亡语**（不进 `_deathrattle`）：只有倒计时走完才铸出要塞；
+	## ⚠️ **不是死亡**（不进 `_deathrattle`）：只有倒计时走完才铸出要塞；
 	##    被玩家提前打掉走的是常规 `_destroy`，什么都不留。
 	## ⚠️ 破坏与落地都走唯一口 `_destroy` + `state.place`，离场记账 / 击杀记功 /
 	##    战场事件与别处完全一致，不在这里另起一套。
@@ -14179,7 +14177,7 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 ## 在窗口内，两条 HP 路径都汇入 _damage_player，在这里按方去重：**先到先结算，后面全跳过**：
 ##   * 空格落在 HP 行 → 直击那一方 HP（原先陨石 / 爆炎各自去重，现在统一到这一处）；
 ##   * 打破**后排**单位 → 溢出漏到那一方 HP（_destroy_dead 的通用溢出）。
-## 窗口可嵌套（亡语在窗口里再炸一轮）：嵌套层共用同一份记录，不重复给机会。
+## 窗口可嵌套（死亡在窗口里再炸一轮）：嵌套层共用同一份记录，不重复给机会。
 var _hp_once_depth := 0
 var _hp_once_sides := {}
 
@@ -14481,7 +14479,7 @@ func configure_growth(cfg: Dictionary) -> void :
 
 func _sync_enemy_growth() -> void :
 	## 把「开局修正 + 已累计成长」写进每个敌方单位的 atk_growth。
-	## 新上场的单位（亡语召唤等）也会拿到当前层数，保持同一条曲线。
+	## 新上场的单位（死亡召唤等）也会拿到当前层数，保持同一条曲线。
 	if growth_cfg.is_empty():
 		return
 	var inc:= int(growth_cfg.get("inc", 1))
@@ -14764,7 +14762,7 @@ func flush_death_effects(cell: Vector2i) -> void :
 
 func flush_all_death_effects() -> void :
 	## R360：兜底口 —— 界面上的闹钟丢了（动画被打断 / 定时器被清空）就一次跑完，
-	## 绝不让「待结算」把玩家操作永久锁死。带次数上限：亡语互相引爆时不会在这里打转。
+	## 绝不让「待结算」把玩家操作永久锁死。带次数上限：死亡互相引爆时不会在这里打转。
 	var guard:= 0
 	while not _death_effects.is_empty() and guard < 128:
 		flush_death_effects(_death_effects.keys()[0] as Vector2i)
@@ -14863,7 +14861,7 @@ func _destroy(cell: Vector2i) -> void :
 		_log("%s 被击破，移出场外" % p.card.card_name)
 	action.emit("destroy", {"cell": cell, "card": p.card, "placement": p})
 
-	# R360：亡语这一批**不在这一帧结算** —— 界面此刻还停在击破演出上（卡要留
+	# R360：死亡这一批**不在这一帧结算** —— 界面此刻还停在击破演出上（卡要留
 	# `DESTROY_HOLD_MS` 才抹掉，幽灵淡出还要 800ms）。同步跑就会出现
 	# 「辅助刃先回手 / 送葬先抽牌，而场上那张卡还站着」的时序倒错。
 	# 现在统一入队，由 battle_scene 在那张卡的击破演出到点时调 `flush_death_effects(cell)`。
@@ -14877,14 +14875,14 @@ func _death_adds_cards(p: Placement) -> bool:
 	## R472：这张卡死掉之后，会不会**往场上 / 手卡里加东西**？
 	## 只有这一类要抢在胜利判定之前结算 —— 因为它们可能把「清场」这个条件重新弄成不成立
 	##（骷髅 / 龙裔 / 罐子召唤、母舰补造、幽灵与生命循环加手卡）。
-	## 伤害类亡语（食尸鬼 9036 扣 HP、机械 9131 群伤、爆炎鸭爆炸）**故意不算**：
+	## 伤害类死亡（食尸鬼 9036 扣 HP、机械 9131 群伤、爆炎鸭爆炸）**故意不算**：
 	## 它们不改场上张数，早结算晚结算都不影响胜负，没必要为它们推迟结算。
 	if p == null or p.card == null:
 		return false
 	if p.life_cycle or p.blade_gift:      # 生命循环 / 辅助刃：加一张手卡
 		return true
 	match p.card.id:
-		WYVERN_ID, LICH_ID, SKELETON_SUMMON_ID, JAR_TOKEN_ID, GHOST_ID:
+		WYVERN_ID, LICH_ID, SKELETON_SUMMON_ID, GHOST_ID:
 			return true
 	# 母舰 9208：敌方友方被破坏 → 旁边补造一份复制（`_mothership_on_ally_death`）。
 	if p.owner == SIDE_OPPONENT and p.card.id != MOTHERSHIP_ID 			and _cell_of_unit(MOTHERSHIP_ID) != Vector2i(-1, -1):
@@ -14894,7 +14892,7 @@ func _death_adds_cards(p: Placement) -> bool:
 
 func _settle_death(cell: Vector2i, p: Placement, rec_ok: bool, rec_power: int,
 		rec_list: Array) -> void :
-	## R360：一个单位被破坏之后的**全部**触发 —— 爆炎鸭爆炸 / 亡语 / 胜负判定 /
+	## R360：一个单位被破坏之后的**全部**触发 —— 爆炎鸭爆炸 / 死亡 / 胜负判定 /
 	## 零件回收者 / 三个光环重算 / 送葬抽牌。顺序与 R327 时完全一致，
 	## 只是从 `_destroy()` 尾部搬到这里，好让界面决定「什么时候才跑」。
 	## ⚠️ 别把「进弃牌区 / 离场摘字段」搬进来：那部分仍在 `_destroy()` 里同步做
@@ -14903,7 +14901,7 @@ func _settle_death(cell: Vector2i, p: Placement, rec_ok: bool, rec_power: int,
 		_death_blast(cell, BLAZE_DUCK_DAMAGE, p.card)
 	_deathrattle(cell, p)
 	# R451 母舰 9208：场上每个友方单位被破坏 → 旁边补一份复制 + 自身生命 -10。
-	# 挂在 `_settle_death()` 里（= 亡语那一批），所以「击破演出演完才结算」的口径一致。
+	# 挂在 `_settle_death()` 里（= 死亡那一批），所以「击破演出演完才结算」的口径一致。
 	_mothership_on_ally_death(p)
 	_check_game_over()
 	# R96：零件回收者 —— 被销毁的是己方「素体以外」盟友/工事时，连通块内的回收者回收其力量 + 手牌加素体。
@@ -14916,8 +14914,8 @@ func _settle_death(cell: Vector2i, p: Placement, rec_ok: bool, rec_power: int,
 	_refresh_hecaton(p.owner)
 	# R271 谟涅摩叙涅：场上少了一张（可能是它自己）→ 光环立刻重算。
 	_refresh_mnemosyne()
-	# R327 送葬：放在**所有**离场结算之后 —— 先炸（亡语/回收/光环重算）再抽牌，
-	# 抽到的牌不会插进亡语动画中间。判据只看「己方效果区有没有这张」。
+	# R327 送葬：放在**所有**离场结算之后 —— 先炸（死亡/回收/光环重算）再抽牌，
+	# 抽到的牌不会插进死亡动画中间。判据只看「己方效果区有没有这张」。
 	_funeral_tick(p.card.card_name)
 	_three_bots_tick(p)   # R534
 
@@ -15467,7 +15465,7 @@ func activate(cell: Vector2i, side:= SIDE_SELF) -> bool:
 #      它现在恒等于 `MARK_BASE_BONUS`，保留变量只为「旧存档兼容 + 数值单一出口」，
 #      所以别指望它再涨 —— 想改档位就改 `MARK_BASE_BONUS`。
 #   ③ 加伤挂在 `_unit_damage_taken()`（受击唯一口）+ `preview_hit_damage()`（只读镜像），
-#      于是普攻 / 技能 / 多格 / 亡语 / 反伤全都吃，拖牌预览与实打永远一致。
+#      于是普攻 / 技能 / 多格 / 死亡 / 反伤全都吃，拖牌预览与实打永远一致。
 
 func _place_mark(cell: Vector2i, side: String, why := "") -> void :
 	## 标记的**唯一写入口**（R503 / R562）。
@@ -15974,7 +15972,7 @@ func _apply_poison(p: Placement, dmg: int, turns: int) -> void :
 func _poison_tick(side: String) -> void :
 	## 中毒伤害结算（R556）：**该单位所属方回合结束**时，带中毒的单位受到 `poison_dmg`
 	## 点伤害，`poison_left -1`；减到 0 中毒解除。⚠️ 先收集快照再逐个结算 ——
-	## 扣血可能致死（触发亡语 / 召唤改 board），边遍历边杀会踩到已删除的格子
+	## 扣血可能致死（触发死亡 / 召唤改 board），边遍历边杀会踩到已删除的格子
 	## （与 `_overload_tick` 同形）。伤害走 `_hit_unit` → 减伤 / 护盾 / 超负荷 / 标记加成照常。
 	var poison_cells: Array[Vector2i] = []
 	for cell: Vector2i in state.board:
@@ -16856,7 +16854,7 @@ func _ai_role_priority(card: CardData) -> int:
 		AI_ROLE_SUMMONER: return 4   # 召唤/锻造
 		AI_ROLE_GROWTH:   return 5   # 每回合成长
 		AI_ROLE_SUPPORT:  return 6   # 治疗/光环
-		AI_ROLE_VOLATILE: return 7   # 亡语伤害
+		AI_ROLE_VOLATILE: return 7   # 死亡伤害
 		AI_ROLE_TANK:     return 8   # 坦克/工事最后动
 	return 9
 
@@ -16958,7 +16956,7 @@ func _ai_role(card: CardData) -> String:
 		return AI_ROLE_TANK
 	if traits.has("孵化") or traits.has("锻造") or traits.has("量产锻造") or traits.has("铸造") or traits.has("暗杀召唤") or traits.has("召唤"):
 		return AI_ROLE_SUMMONER
-	if traits.has("爆炎") or (traits.has("亡语") and ("伤害" in txt or "造成" in txt)):
+	if traits.has("爆炎") or (traits.has("死亡") and ("伤害" in txt or "造成" in txt)):
 		return AI_ROLE_VOLATILE
 	if traits.has("治疗") or traits.has("成长") or traits.has("哈气") or traits.has("使魔成长") or traits.has("机械成长") or (card.power == 0 and not card.is_fort()):
 		return AI_ROLE_SUPPORT
@@ -16966,7 +16964,7 @@ func _ai_role(card: CardData) -> String:
 		return AI_ROLE_SNIPER
 	if (card.move_speed >= 2 or traits.has("队长") or traits.has("穿行")) and card.power >= 3:
 		return AI_ROLE_ASSAULT
-	if traits.has("亡语") or "每回合开始时，力量" in card.effect_text or "每过一个自己的回合" in card.effect_text:
+	if traits.has("死亡") or "每回合开始时，力量" in card.effect_text or "每过一个自己的回合" in card.effect_text:
 		return AI_ROLE_GROWTH
 	if traits.has(ACTION_GROWTH_TRAIT):   # R161：赫尔墨斯——越拖行动次数越多
 		return AI_ROLE_GROWTH
@@ -17911,7 +17909,7 @@ func _pronoia_transform(cell: Vector2i, proto: CardData, side: String, mode: Str
 	## 「当前构状体变成对应形态（保留受伤）」—— 原地换卡，**不走 `place`**：
 	##   * `place` 会把生命重置成满血、重发行动轮、重跑入场（那是「新单位」的语义）；
 	##   * 这里是**同一只构状体换了个形态**：生命按「已损失量」平移，行动轮按新卡重算，
-	##     不触发任何入场 / 亡语 / 击杀记账。
+	##     不触发任何入场 / 死亡 / 击杀记账。
 	## 三档最大生命都是 50，所以「保留受伤」不会因为换血上限而被打死；仍夹一个 `maxi(1, …)` 兜底。
 	var old: Placement = state.unit_at(cell)
 	if old == null or old.card == null:
