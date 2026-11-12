@@ -1590,7 +1590,9 @@ func _init() -> void:
 
 	mv_e.use_spell(1, null)
 
-	check(mv_e.cost_of(mv_e.state.hand[0]) == 2, "魔像术：用过 2 张技能 → 2 费（本回合内累加）")
+	check(mv_e.cost_of(mv_e.state.hand[0]) == 3,
+
+			"R624：魔像术用过 2 张技能仍是 3 费（同一张卡一回合只减一次）")
 
 	check(mv_e.state.turn_card_discount.size() == 1 and mv_e.state.card_discount.is_empty(),
 
@@ -71711,4 +71713,198 @@ func _test_r592b() -> void:
 		check(CardData.affix_glyph(a) != "",
 
 				"R592b：字段 %s 必须有 glyph（标志素材按它取名）" % a)
+
+	# ---- R624：① 同一张卡一回合只吃一次减费 ② 复制品不继承商店附魔 ----
+
+	var r621_repo := CardRepo.load_json()
+
+	# ① 影魔 8007 两张在手：同一张技能牌只被减一次（2 → 1 → 仍是 1）
+
+	var r621_sd_e := _new_engine([], 20, 20)
+
+	r621_sd_e.state.energy = 40
+
+	r621_sd_e.state.hand.clear()
+
+	for _i in 2:
+
+		r621_sd_e.state.hand.append(CardData.from_dict(
+
+				r621_repo.get_card(GameEngine.SHADOW_DEMON_ID).to_dict()))
+
+	var r621_spell: CardData = CardData.from_dict(r621_repo.get_card(9003).to_dict())
+
+	r621_sd_e.state.hand.append(r621_spell)
+
+	var r621_c0 := r621_sd_e.cost_of(r621_spell)
+
+	r621_sd_e.play_from_hand(0, Vector2i(4, 1))
+
+	var r621_c1 := r621_sd_e.cost_of(r621_spell)
+
+	r621_sd_e.play_from_hand(0, Vector2i(3, 1))
+
+	var r621_c2 := r621_sd_e.cost_of(r621_spell)
+
+	check(r621_c0 == 2 and r621_c1 == 1 and r621_c2 == 1,
+
+			"R624：两张影魔只把同一张技能牌减到 1 费（%d → %d → %d）" % [r621_c0, r621_c1, r621_c2])
+
+	# ② 跨两张回合表判额度：hand_cost_turn 已经减过 → 影魔不再叠第二次
+
+	var r621_tbl_e := _new_engine([], 20, 20)
+
+	r621_tbl_e.state.energy = 30
+
+	r621_tbl_e.state.hand.clear()
+
+	r621_tbl_e.state.hand.append(CardData.from_dict(
+
+			r621_repo.get_card(GameEngine.SHADOW_DEMON_ID).to_dict()))
+
+	var r621_s2: CardData = CardData.from_dict(r621_repo.get_card(9003).to_dict())
+
+	r621_tbl_e.state.hand.append(r621_s2)
+
+	r621_tbl_e.state.hand_cost_turn[r621_s2] = 1
+
+	var r621_t0 := r621_tbl_e.cost_of(r621_s2)
+
+	r621_tbl_e.play_from_hand(0, Vector2i(4, 1))
+
+	var r621_t1 := r621_tbl_e.cost_of(r621_s2)
+
+	check(r621_t0 == 1 and r621_t1 == 1,
+
+			"R624：hand_cost_turn 已减过的那张，影魔不再叠第二次（%d → %d）" % [r621_t0, r621_t1])
+
+	# ③ 野兔 9032：复制品不继承附魔（cost 回到原价、enchant 清空）
+
+	var r621_rabbit := CardData.from_dict(r621_repo.get_card(9032).to_dict())
+
+	var r621_rabbit_cost := r621_rabbit.cost
+
+	r621_rabbit.cost = maxi(0, r621_rabbit.cost - 1)
+
+	r621_rabbit.enchant = "costdown"
+
+	var r621_cl_e := _new_engine([CardData.from_dict(r621_rabbit.to_dict())], 20, 20, -1, false)
+
+	r621_cl_e.start_game()
+
+	r621_cl_e.state.energy = 9
+
+	var r621_ci := -1
+
+	for i in r621_cl_e.state.hand.size():
+
+		if r621_cl_e.state.hand[i].id == 9032:
+
+			r621_ci = i
+
+			break
+
+	r621_cl_e.play_from_hand(r621_ci, Vector2i(4, 1))
+
+	var r621_clone: CardData = null
+
+	for c: CardData in r621_cl_e.state.hand:
+
+		if c.id == 9032 and c.is_ephemeral:
+
+			r621_clone = c
+
+			break
+
+	check(r621_clone != null and r621_clone.enchant == ""
+
+			and r621_clone.cost == r621_rabbit_cost,
+
+			"R624：野兔复制品不继承附魔（cost %d / 原价 %d / enchant '%s'）" % [
+
+					r621_clone.cost if r621_clone != null else -1, r621_rabbit_cost,
+
+					r621_clone.enchant if r621_clone != null else "?"])
+
+	# ④ 复制术 9165：复制场上带「伤害 +10」附魔的盟友 → 复制品回到原攻击力
+
+	var r621_dup_e := _new_engine([], 20, 20)
+
+	r621_dup_e.start_game()
+
+	var r621_dp := CardData.from_dict(r621_repo.get_card(8003).to_dict())
+
+	var r621_base_power := r621_dp.power
+
+	r621_dp.power += 10
+
+	r621_dp.enchant = "damage"
+
+	r621_dp.effect_text += "\n【附魔】伤害 +10"
+
+	r621_dup_e.state.place(r621_dp, Vector2i(4, 1), GameEngine.SIDE_SELF)
+
+	r621_dup_e._duplicate_spell(Vector2i(4, 1))
+
+	var r621_copied: CardData = null
+
+	for c: CardData in r621_dup_e.state.hand:
+
+		if c.id == 8003:
+
+			r621_copied = c
+
+			break
+
+	check(r621_copied != null and r621_copied.enchant == ""
+
+			and r621_copied.power == r621_base_power
+
+			and r621_copied.effect_text.find("【附魔】") < 0,
+
+			"R624：复制术复制品不继承附魔（power %d / 原 %d / enchant '%s'）" % [
+
+					r621_copied.power if r621_copied != null else -1, r621_base_power,
+
+					r621_copied.enchant if r621_copied != null else "?"])
+
+	# ⑤ 卡组级（鸭血 6024）：复制品 deck_mods 为空 —— 与 R181 同口径，这里补锁
+
+	RunState.deck_ids = [8001, 8002]
+
+	RunState.deck_mods = [RunState.enchant_mod("costdown"), {}]
+
+	RunState.ensure_deck_mods()
+
+	RunState.duplicate_deck_cards(r621_repo, [0])
+
+	check(RunState.deck_mods.size() == 3 and (RunState.deck_mods[2] as Dictionary).is_empty(),
+
+			"R624：鸭血复制品 deck_mods 为空（不带走附魔）")
+
+	RunState.deck_ids = []
+
+	RunState.deck_mods = []
+
+	# ⑥ 源码锁：两个唯一口不许被绕过
+
+	var r621_eng_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+
+	var r621_rs_src := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+
+	check_src(r621_eng_src.contains("func _turn_discount_taken(card: CardData) -> bool:")
+
+			and r621_eng_src.contains("if n > 0 and not _turn_discount_taken(c):")
+
+			and r621_eng_src.contains("if c.id == GOLEM_SPELL_ID and not _turn_discount_taken(c):"),
+
+			"R624 源码锁：本回合减费唯一判据 `_turn_discount_taken()` 已接入影魔 / 魔像术")
+
+	check_src(r621_rs_src.contains("static func strip_enchant(c: CardData) -> bool:")
+
+			and r621_eng_src.contains("RunState.strip_enchant(clone)")
+
+			and r621_eng_src.contains("RunState.strip_enchant(copy)"),
+
+			"R624 源码锁：`RunState.strip_enchant()` 是复制剥附魔的唯一口，野兔 / 复制术都调它")
 

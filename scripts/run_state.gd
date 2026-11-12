@@ -3478,6 +3478,41 @@ static func _apply_mod(c: CardData, mod: Dictionary) -> void:
 		c.effect_text += "\n【附魔】" + note
 
 
+static func strip_enchant(c: CardData) -> bool:
+	## R624：把**商店附魔**从一张已经烤过数值的卡上撤掉（战斗内复制专用）。
+	##
+	## 为什么需要它：`_apply_mod()` 把附魔烤进 cost / power / health / affix，烤完之后与
+	## 「原生就长这样」的卡无法区分 —— 只有 `enchant`（附魔种类 id）还记得来源。
+	## 战斗内复制（野兔 9032 / 复制术 9165）的复制品**不继承附魔**（店长口径），
+	## 所以在复制之后先把附魔数值还原成原卡。
+	##
+	## ⚠️ 只认 `enchant`：空串 = 没吃过附魔（含老存档没记的情况）→ 原样返回，**一个字节都不动**。
+	##    绝不能靠「猜数值」去减，那会把卡面原生的数值一起削掉。
+	## ⚠️ 本局永久成长（`growth_power/health/damage`）**不是附魔**，这里不碰 —— 成长跟着卡种走，
+	##    复制品照旧继承（与 R393 同口径）。
+	## 返回 True = 真的剥掉了附魔。
+	if c == null or c.enchant == "":
+		return false
+	var m := enchant_mod(c.enchant)
+	if m.is_empty():
+		return false
+	c.cost = maxi(0, c.cost - int(m.get("cost", 0)))
+	c.power = maxi(0, c.power - int(m.get("power", 0)))
+	c.health = maxi(0, c.health - int(m.get("health", 0)))
+	var affix := str(m.get("affix", ""))
+	if affix != "":
+		c.affixes.erase(affix)
+	var note := str(m.get("note", ""))
+	if note != "":
+		var tag := "\n【附魔】" + note
+		var at := c.effect_text.find(tag)
+		if at >= 0:
+			c.effect_text = c.effect_text.substr(0, at) + c.effect_text.substr(at + tag.length())
+	c.enchant = ""
+	c.enchant_label = ""
+	return true
+
+
 static func _sync_mods_remove(index: int) -> void:
 	## 删卡后同步附魔下标（前移）。越界安全。
 	if index < 0 or index >= deck_mods.size():

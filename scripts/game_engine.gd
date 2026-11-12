@@ -4545,6 +4545,24 @@ func _turn_instance_discount(card: CardData, side:= SIDE_SELF) -> int:
 	return int(state.turn_card_discount.get(card, 0))
 
 
+func _turn_discount_taken(card: CardData) -> bool:
+	## R624（店长口径）：**同一张卡一个回合只能吃一次减费**。
+	## 判据 = 两张「回合级减费表」里这张卡是否已经有正数项：
+	##   * `turn_card_discount` —— 魔像术 9079 / 影魔 8007 / 报废 8071 / 取牌类；
+	##   * `hand_cost_turn`     —— 雪豹 8081 / 机械臂 6065 / 随心组装 9144 / 森林的朋友们 9183。
+	## ⚠️ **负数 = 涨价**（不眠 9101 的「0 费卡本回合 +1」），不占减费额度 ——
+	##    涨过价的卡本回合仍然可以被减一次。
+	## ⚠️ 永久减费（`card_discount`：陨石术 9077 / 灵魂收割者）刻意不在判据里：
+	##    那是「本场一直累加」的记账，与回合无关，也没有「一回合一次」的卡面语义。
+	## ⚠️ 新入手 / 刚变化出来的卡（机械臂 / 森林的朋友们 / 随心组装 / 取牌）天然是新实例，
+	##    判据必为 false —— 那几个写入点不需要再单独判一次。
+	if card == null:
+		return false
+	var by_turn := int(state.turn_card_discount.get(card, 0))
+	var by_hand := int(state.hand_cost_turn.get(card, 0))
+	return by_turn > 0 or by_hand > 0
+
+
 func _magic_core_discount(card: CardData, side:= SIDE_SELF) -> int:
 
 
@@ -6398,6 +6416,10 @@ func _spawn_self_clone(card: CardData) -> void :
 	## 注：实际流程里**几乎走不到**这个分支 —— 复制发生在「打出的那张已离手」之后，
 	## 手牌刚好腾出一格，所以永远是「不满」。留着是防御（例如将来改成从别处触发复制）。
 	var clone:= CardData.from_dict(card.to_dict())
+	# R624（店长口径）：复制品**不继承商店附魔** —— 已烤进 cost / power / health 的附魔数值、
+	# 附魔带出来的 affix 与「【附魔】…」标注一起撤掉，回到原卡数值。
+	# （本局永久成长 `card_growth` 不是附魔，照旧跟着卡种走，见 `RunState.card_with_mod()`。）
+	RunState.strip_enchant(clone)
 	clone.traits = (card.traits as Array).duplicate()   # 切断与卡库的共享引用
 	clone.is_ephemeral = true      # 衍生物标记：离场消失、不进弃牌区（卡库原卡没有它）
 	# R319（用户口径）：复制品是「短暂复制」= 次元 + 回合结束消失 → 徽标写**次元**，
@@ -8560,7 +8582,8 @@ func _spell_play_tick() -> void:
 	for c: CardData in state.hand:
 		if c.id == METEOR_ID and hits > 0:
 			state.card_discount[c] = int(state.card_discount.get(c, 0)) + hits
-		if c.id == GOLEM_SPELL_ID:
+		# R624：魔像术本回合**只减一次**（第二张技能不再往上叠），与「同一张卡一回合一次」同口径。
+		if c.id == GOLEM_SPELL_ID and not _turn_discount_taken(c):
 			state.turn_card_discount[c] = int(state.turn_card_discount.get(c, 0)) + 1
 
 
@@ -9023,17 +9046,21 @@ func _discount_hand_skills(p: Placement, n: int, hp_per: int, source: String) ->
 	##   8007 这两条效果永远作为同一段下半场一起进组合产物，数据侧不会倒序。
 	## ⚠️ n = 0 时不写减费表 —— 否则攒一堆「+0」条目，排查时看着像减了费。
 	var zero := 0
+	var cut := 0
 	for c: CardData in state.hand:
 		if not c.is_spell():
 			continue
-		if n > 0:
+		# R624：同一张卡本回合只吃一次减费 —— 已经被雪豹 / 机械臂 / 另一张影魔减过的跳过，
+		# 但下面「0 费技能卡 +生命」照常按**当前**账面费用判（卡面口径不变）。
+		if n > 0 and not _turn_discount_taken(c):
 			state.turn_card_discount[c] = int(state.turn_card_discount.get(c, 0)) + n
+			cut += 1
 		if not c.x_cost and cost_of(c, SIDE_SELF) == 0:
 			zero += 1
 	if hp_per > 0 and zero > 0:
 		p.health += hp_per * zero
-	_log("%s：手卡技能牌本回合 -%d 费；0 费技能卡 %d 张 → 生命 +%d（当前 %d）" % [
-			source, n, zero, hp_per * zero, p.health])
+	_log("%s：手卡技能牌本回合 -%d 费（本次 %d 张）；0 费技能卡 %d 张 → 生命 +%d（当前 %d）" % [
+			source, n, cut, zero, hp_per * zero, p.health])
 	return zero
 
 
@@ -9899,12 +9926,17 @@ func _duplicate_spell(target, side:= SIDE_SELF) -> String:
 		var copy:= CardData.from_dict(p.card.to_dict())
 		copy.traits = (p.card.traits as Array).duplicate()
 		copy.affixes = (p.card.affixes as Array).duplicate()
+		# R624：复制品不继承商店附魔。必须放在 affixes 复制**之后** ——
+		# 否则上面那句会把附魔带出来的 affix（次元 / 保存）又抄回来。
+		RunState.strip_enchant(copy)
 		# 「死亡」若是辅助刃挂上去的（`blade_added`），复制品**不带走** —— 那条亡语挂在
 		# `Placement.blade_gift` 上，复制品上场后没有这个标记，留着字段就是「卡面写着却不触发」
 		# （R227 立的口径）。力量那部分照常保留（已烤进 power）。
 		for bg_a: String in p.blade_added:
 			copy.affixes.erase(bg_a)
-		copy.power = p.card.power + p.upgrade_atk   # 保留力量改造（它只在 Placement 上）
+		# R624：基数是 strip 之后的 copy.power（原卡数值），不能再用 p.card.power ——
+		# 那是烤过附魔的值，拿它当基数等于把刚剥掉的附魔又加回来。
+		copy.power = copy.power + p.upgrade_atk   # 保留力量改造（它只在 Placement 上）
 		copy.upgrade_stacks = 0                     # 数值已烤进副本 → 不再随身，防 place 双计
 		copy.own_copy = true
 		copy.add_affix(AFFIX_DIMENSION)
@@ -16687,10 +16719,11 @@ func _discount_random_hand(amount: int, tag: String) -> String:
 	## 返回被减费的卡名；没有候选时返回 ""。
 	var cand: Array[CardData] = []
 	for c: CardData in state.hand:
-		if not c.x_cost and cost_of(c) > 0:
+		# R624：本回合已经减过费的那张不再进候选（同一张卡一回合只减一次）。
+		if not c.x_cost and cost_of(c) > 0 and not _turn_discount_taken(c):
 			cand.append(c)
 	if cand.is_empty():
-		_log("%s：手牌里没有可以减费的卡" % tag)
+		_log("%s：手牌里没有可以减费的卡（每张本回合都已经减过）" % tag)
 		return ""
 	var pick: CardData = cand[rng.randi_range(0, cand.size() - 1)]
 	var now: int = int(state.hand_cost_turn.get(pick, 0)) + amount

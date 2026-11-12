@@ -1521,3 +1521,11 @@ manifest 的 9018 条目已更新 ref / prompt / note。
   `.gitignore` 增补 `/.workbuddy/`、`/generated-images/` 与根目录一次性补丁/日志模式。
 - **回归**：assemble 0 / engine **5766✓** / reward 26 / bgm 39 / smoke 68 / mana PASS；
   存档目录备份后逐文件还原，`RESTORE_VERIFY OK`。
+
+## 2026-11-12 R624 同一张卡一回合只减一次费 / 复制品不继承附魔
+- 店长口径两条：①**同一张卡的减费一个回合不能生效两次**；②**复制卡的事件 / 遗物不能复制卡上的附魔**。
+- ① 唯一判据 `GameEngine._turn_discount_taken(card)`：两张**回合级**减费表（`turn_card_discount` / `hand_cost_turn`）任一已有正数 → 本回合不再减（负数 = 涨价，不占额度）。接入三处：`_discount_hand_skills`（影魔 8007 / 组合 `hand_skill_discount`）、`_discount_random_hand`（雪豹 8081 / 组合 `hand_discount`，候选池直接排除已减过的卡）、`_spell_play_tick` 的魔像术 9079。永久减费（`card_discount`：陨石术 9077 / 灵魂收割者）与「新入手 / 刚变化出来」的卡（机械臂 6065 / 随心组装 9144 / 森林的朋友们 9183 / 取牌）不在此列 —— 后者天然是新实例。
+- ② 新增 `RunState.strip_enchant(card)`：只认 `c.enchant`，按 `enchant_mod()` 反算把 cost / power / health 减回去、erase 附魔 affix、删掉「【附魔】…」标注、清 `enchant` + `enchant_label`。接入 `_spawn_self_clone`（野兔 9032）与 `_duplicate_spell`（复制术 9165，注意放在 `affixes` 复制**之后**，否则又把附魔 affix 抄回来；力量基数改成 `copy.power + p.upgrade_atk`）。本局永久成长 `card_growth` **不属于附魔**，照旧跟着卡种走。
+- 卡组级复制（鸭血 6024 `duplicate_deck_cards`）本来就走 `deck_mods.append({})`，实测复制品 cost 回原价、`enchant` 为空；这次补了回归锁。事件侧没有「复制卡」入口（鸭鸭工匠 = 变形、五换一 = 删 5 加 1、遗忘之泉 = 删）。
+- 文案：9079 魔像术「每使用一张技能卡…-1」→「每回合第一次使用技能卡时…-1」（机制改了文案必须同步）。8007 影魔 / 8081 雪豹保留原文（通用规则不重复写进卡面）。
+- 回归：新增 9 条断言（两张影魔只减一次 / 跨 `hand_cost_turn` 不叠 / 野兔复制品 / 复制术复制品 / 鸭血 deck_mods / 2 条源码锁），魔像术原「累加」断言改成「仍 3 费」。六套全绿：assemble 0 / engine **5796✓** 0✗ / reward 26 / bgm 39 / smoke 68 / mana PASS；userdata 备份后逐文件还原 `RESTORE_VERIFY OK`。
