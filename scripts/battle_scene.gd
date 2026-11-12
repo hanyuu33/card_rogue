@@ -3547,6 +3547,15 @@ func _demo_tick() -> void:
 		# 三条 fx_impact 会被界面合并成一条演出（光带才连得起来）。
 		var rk_card := CardRepo.load_json().get_card(9160)
 		engine._bounce_knife(GameEngine.SIDE_SELF, Vector2i(2, 1), rk_card)
+	if _shot_pending and "--r645breath" in _demo_args \
+			and _demo_frame == _shot_frame - 150 and engine != null:
+		# 真走引擎：`_dragon_breath_spell` 连打 5 段 → 5 条带 seg 的 fx_impact。
+		# ⚠️ 不用 `use_spell()`：出图模式下靠前的帧上回合状态还没就绪，它会静默拒绝
+		#    （手牌还在、费用没扣、一点伤害都没有 —— 首版就这么空跑了两次）。
+		#    直接调引擎的龙息结算口，伤害 / fx_impact / 日志全部照常，与帧号无关。
+		engine._dragon_breath_spell(GameEngine.SIDE_SELF, Vector2i(2, 1),
+				CardRepo.load_json().get_card(9054))
+
 	if _shot_pending and "--r288span" in _demo_args \
 			and _demo_frame == _shot_frame - 12 and engine != null:
 		# 跨屏：发动者 (5,1) 与受影者 (0,1) 一起入队 → _begin_cue 自动切成两段
@@ -10930,7 +10939,8 @@ func _tick_anims() -> bool:
 			or not _naval_beam.is_empty() \
 			or not _cannon_beams.is_empty() \
 			or not _knives.is_empty() \
-			or not _flames.is_empty() or not _shield_fx.is_empty() \
+			or not _flames.is_empty() or not _breaths.is_empty() \
+			or not _shield_fx.is_empty() \
 			or not _purge_wave.is_empty() \
 			or not _paralyze_fly.is_empty() or not _paralyze_fx.is_empty() \
 			or not _wake_rings.is_empty() \
@@ -11460,8 +11470,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				# 普通受击（seg = -1，含攻击动画的同帧 fx_impact）判据不变。
 				var fi_seg := int(data.get("seg", -1))
 				var fi_owned := _fx_claimed.has(fc) and n - int(_fx_claimed[fc]) < 700
-				if not fi_owned:
-					_fx_claim(fc)
+				if not fi_owned or fi_seg >= 0:
+					if fi_seg <= 0:
+						_fx_claim(fc)   # 只由第 0 段认领，后续段跟着它演
 					# R361：画面里还有一击没落地（`_attacks` 里撞击时刻在未来）→ 这笔受击
 					# 跟着它一起落地。否则「攻击 HP 顺带的余波 / 溢出」会在 160ms 就炸，
 					# 而主体攻击动画还要 930ms 才撞到 —— 读起来就是特效早于动画。
@@ -11514,7 +11525,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					if fi_lone:
 						fi_col = Color("9b5cf0")
 					_delayed.append({"at": fi_at, "kind": "fx_hit",
-							"data": {"cell": fc, "dmg": fi_dmg,
+							"data": {"cell": fc, "dmg": fi_dmg, "seg": fi_seg,
 							"source": str(data.get("source", "")),
 							"pl": fi_pl, "hold": fi_hold,
 							"col": fi_col,
@@ -13698,7 +13709,7 @@ func _draw_flames() -> void:
 		# R645：`tint` 让同一张橙火贴图也能当紫色龙焰用（默认白色 = 原样）。
 		var ftint: Color = f.get("tint", Color(1, 1, 1, 1))
 		draw_texture_rect(_fx_flame_tex, Rect2(-96, -178, 192, 256), false,
-				Color(1, 1, 1, a))
+				Color(ftint.r, ftint.g, ftint.b, a * ftint.a))
 		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
 
 

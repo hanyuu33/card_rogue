@@ -4985,7 +4985,7 @@ func _meteor_shower(side: String, card: CardData) -> String:
 			continue
 		var t: Vector2i = pool[rng.randi() % pool.size()]
 		var q: Placement = state.unit_at(t)
-		var dealt:= _hit_unit(q, hit, "流星雨")
+		var dealt:= _hit_unit(q, hit, "流星雨", true, false, -1, i)
 		total += dealt
 		falls += 1
 		_log("流星雨第 %d 颗：命中 %s -%d（剩余 %d）" % [
