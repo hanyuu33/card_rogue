@@ -4397,9 +4397,12 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 
 
 
-	# 夜行（9155，R232）：本回合我方所有卡费用为 0 —— 放在最前，X 费卡与「最低 N 费」也一并免费。
+	# 夜行（9155，R232）：本回合我方所有卡费用为 0 —— 放在最前，X 费卡也一并免费。
+	# ⚠️ R625：**卡面写死的费用下限**仍要压住夜行 —— 这里过一层 `_cost_floor`，不再裸 return 0。
+	#    否则「回响」9102（卡面「费用最低为 1」）在夜行回合变 0 费：它每次结算完都返回手卡，
+	#    于是 1 张牌就能无限回手（每轮对全体敌人 2 伤 + 本回合降力 1），下限形同不存在。
 	if side == SIDE_SELF and state.turn_all_free:
-		return 0
+		return _cost_floor(card, 0)
 	# X 费卡（流星雨 9083）：费用 = 该方当前剩余的**全部费用**（显示=判定=实扣 都读这里）。
 	if card != null and card.x_cost:
 		return maxi(0, state.energy_of(side))
@@ -11112,7 +11115,8 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 				_log("敲晕：%s 力量 -%d（当前 %d），持续到它的回合结束" % [
 						st_p.card.card_name, STUN_BLOW_DEBUFF, st_p.effective_power()])
 				action.emit("stun_blow", {"cell": _cell_of(st_p), "card": st_p.card,
-						"amount": STUN_BLOW_DEBUFF, "power": st_p.effective_power()})
+						"amount": STUN_BLOW_DEBUFF, "power": st_p.effective_power(),
+						"label": "敲晕"})
 			_destroy_dead()
 			return st_s
 		LONE_WALK_ID:
@@ -11133,6 +11137,19 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 						card.lone_dmg_bonus, card.lone_str_bonus])
 			else:
 				_log("独行：手卡里没有盟友或工事 → 本次不消失任何卡（只按累积值结算）")
+			# R625（店长口径：「伤害显示不正常，实际打出伤害正常，需要做特效」）：
+			# 把「吞了哪一张、并进去多少」单独报给界面 —— 吞卡在**伤害之前**发生，
+			# 演出也就有先后：先看见手卡被吸走、数值并进去，再看见这一下打出去多少。
+			# ⚠️ 事件只带表现所需的数据，一个数值都不改；`name` 为空 = 手卡里没有
+			#    盟友 / 工事（落空），界面据此报一句，而不是硬演一次吞卡。
+			action.emit("lone_walk", {
+					"cell": _cell_of(lw_p),
+					"name": lw_gone.card_name if lw_gone != null else "",
+					"kind": lw_gone.kind if lw_gone != null else "",
+					"health": lw_gone.health if lw_gone != null else 0,
+					"power": lw_gone.power if lw_gone != null else 0,
+					"dmg_bonus": card.lone_dmg_bonus,
+					"str_bonus": card.lone_str_bonus})
 			var lw_dmg: int = _hit_unit(lw_p, _spell_dmg(side,
 					LONE_WALK_DMG + card.lone_dmg_bonus, card), "独行")
 			var lw_s := "%s -%d" % [lw_p.card.card_name, lw_dmg]
@@ -11146,7 +11163,8 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 				_log("独行：%s 力量 -%d（当前 %d），持续到它的回合结束" % [
 						lw_p.card.card_name, lw_n, lw_p.effective_power()])
 				action.emit("stun_blow", {"cell": _cell_of(lw_p), "card": lw_p.card,
-						"amount": lw_n, "power": lw_p.effective_power()})
+						"amount": lw_n, "power": lw_p.effective_power(),
+						"label": "独行"})
 			_destroy_dead()
 			if lw_gone != null:
 				lw_s += "；手卡「%s」消失" % lw_gone.card_name

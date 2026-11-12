@@ -40532,7 +40532,21 @@ func _init() -> void:
 
 			"R232 夜行自身付 2 费（10→%d），计入出牌数 1" % r232_e.state.energy)
 
-	check(r232_e.cost_of(r232_probe) == 0, "R232 夜行后：任何卡费用为 0（%d）" % r232_e.cost_of(r232_probe))
+	check(r232_e.cost_of(r232_probe) == 0, "R232 夜行后：普通技能费用为 0（%d）"
+			% r232_e.cost_of(r232_probe))
+
+	# ①b R625（店长报障「使用《夜行》后，《回响》被错误置为 0 费」）：
+	# 夜行让所有卡免费，但**卡面写死的费用下限**不能被它绕过 —— 回响 9102 的
+	# 卡面是「使用后返回手卡，费用最低为 1」，0 费回手 = 1 张牌无限循环
+	#（每次都对全体敌人 2 伤 + 降力 1）。判据走 `cost_of()` 唯一口，
+	# 显示 / 判定 / 实扣三处自动一致，不另设分支。
+	var r232_echo := CardData.from_dict(r232_repo.get_card(GameEngine.ECHO_ID).to_dict())
+	r232_e.state.hand.append(r232_echo)
+	check(r232_e.cost_of(r232_echo) == GameEngine.ECHO_MIN_COST,
+			"R625 夜行下回响仍是最低 %d 费（实际 %d）"
+			% [GameEngine.ECHO_MIN_COST, r232_e.cost_of(r232_echo)])
+	check(r232_e.cost_of(r232_probe) == 0,
+			"R625 夜行下普通技能仍免费（%d）" % r232_e.cost_of(r232_probe))
 
 
 

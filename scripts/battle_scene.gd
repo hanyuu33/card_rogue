@@ -577,6 +577,16 @@ var _pulse_redraw_at := 0
 var _pulse_ms := 0              # R187：实际节流窗口（懒初始化；安卓 = PULSE_FRAME_MS×2，PC 不变）
 # R151 批 1（动效设计 §三）：手牌因果动画 —— 抽牌飞入（P0-1）/ 弃牌·消耗飞出（P0-2）
 var _hand_fly: Array = []       # {mode:"in"|"out_d"|"out_v"|"fade", card?, from/from_rect, slot?, start, dur}
+## R625 独行（9189）专属演出：手卡被「吞掉」→ 数值并进这张卡 → 再打出伤害。
+## 店长口径：「伤害显示不正常，实际打出伤害正常，需要做特效」—— 引擎先报 `lone_walk`
+## （吞了哪张、并了多少），界面把这一口演完，`fx_impact` 的伤害数字才落地，因果不反。
+## `_lone_hit_cell` = 正在演吞卡的那一格；`_lone_hit_at` = 吞卡演完的时刻（fx_impact 读）。
+var _lone_hit_cell := Vector2i(-1, -1)
+var _lone_hit_at := 0
+## 吞卡演出条目：{from, pos, sc, start, dur, hold, name, hp, pw}（全部走 assets/fx 素材）
+var _lone_fx: Array = []
+## 吞卡段时长（ms）：流光走完 + 目标处炸开，之后才轮到伤害数字与降力飘字。
+const LONE_ABSORB_MS := 430
 var _hand_known: Array = []     # 手牌 id 快照（保序双指针 diff，见 _hand_sync）
 var _hand_known_init := false   # 首次 sync 只建快照不播（开场发牌不飞，留给巡场）
 var _flyout_skip: Array = []    # 本帧「是打出不是消失」的卡 id（place/spell/effect 事件喂入，sync 消费并清空）
@@ -2248,6 +2258,23 @@ func _ready() -> void:
 				Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
 		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
 				Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
+	if "--lonewalk" in args and engine != null:
+		# 演示（R625）：独行（9189）—— 手卡只留一张「饲料」（树人 8 血 / 3 力），
+		# 打出时它被吞掉，数值并进这张卡：伤害 7 + 8 = 15、降力 1 + 3 = 4。
+		# 只放一张 → 吞哪张是确定的，出图可复现（多张时随机挑）。
+		#   出图（吞卡流光）：`battle.tscn -- --screenshot --lonewalk --shotframe 60 --shotms 200`
+		#   出图（炸开+飘字）：`... --lonewalk --shotframe 60 --shotms 620`
+		RunState.player_class = "暗影刺客"
+		engine.state.hand.clear()
+		engine.state.hand.append(CardData.from_dict(
+				repo.get_card(GameEngine.LONE_WALK_ID).to_dict()))
+		engine.state.hand.append(CardData.from_dict(repo.get_card(8003).to_dict()))
+		engine.state.energy = 9
+		var r622_foe := engine.state.place(
+				CardData.from_dict(repo.get_card(1051).to_dict()),
+				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+		if r622_foe != null:
+			r622_foe.health = 90
 	if "--markdemo" in args and engine != null:
 		# 演示（R503）：标记（9224）—— 0 费场地，**全场同时只存在一个**，
 		#   此格上的敌人受到伤害 +1，且**每个我方回合 +1**（换格子则重置）。
@@ -3849,6 +3876,14 @@ func _demo_tick() -> void:
 		_demo_hover_idx = -1
 		_hover_hand = -1
 		status_text = "收尾 6 伤 / 手卡仅剩它 22 伤"
+		_shot_t0 = _now()
+		queue_redraw()
+	if "--lonewalk" in _demo_args and _demo_frame == 150 and engine != null:
+		# R625：出牌延到第 150 帧 —— 开场「我方回合」横幅正好横在流光路径上。
+		engine.use_spell(0, Vector2i(2, 1))
+		_demo_hover_idx = -1
+		_hover_hand = -1
+		status_text = "R625 独行：吞一张盟友 → 数值并入 → 大号「独行 -15」飘字"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--bypassshot" in _demo_args and _demo_frame == 60:
@@ -9002,6 +9037,7 @@ func _draw() -> void:
 	_draw_air_raid_marks()   # R451：空袭标记格（红色准星）—— 在可点高亮之下
 	_draw_highlights()
 	_draw_bursts()
+	_draw_lone_fx()          # R625：独行吞卡演出（素材驱动）
 	_draw_primal_fx()
 	_draw_cues()          # R288：通用效果演出（脉冲 / 光带 / 卡名）—— 压在卡牌之上才看得见
 	_draw_rev_fx()        # R357：转阶段特效（蜂窝电磁屏障 / 燃烧）—— 盖在启示者卡面上
@@ -11349,6 +11385,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					# 跟着它一起落地。否则「攻击 HP 顺带的余波 / 溢出」会在 160ms 就炸，
 					# 而主体攻击动画还要 930ms 才撞到 —— 读起来就是特效早于动画。
 					var fi_at := maxi(n + 160, _impact_floor(n))
+					# R625 独行：「吞卡」还没演完 → 这一下的数字等它演完再落。
+					# 否则玩家先看见 -15、后看见手上的卡被吸走，因果是反的。
+					# 时间窗兜住「同一格后续又挨了别的伤害」—— 过了窗口就不再算独行那一下
+					var fi_lone := (fc == _lone_hit_cell and _lone_hit_at > 0
+							and n <= _lone_hit_at + 600)
+					if fi_lone:
+						fi_at = maxi(fi_at, _lone_hit_at)
 					# R363：带 `seq` = 一次效果打多个目标 → 按序号逐格错开落地。
 					var fi_seq := int(data.get("seq", -1))
 					if fi_seq >= 0:
@@ -11375,15 +11418,21 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						fi_land = _slide_floor_at(data["land"] as Vector2i)
 						if fi_land > fi_at:
 							fi_at = fi_land
-					var fi_hold := (fi_seq >= 0 or fi_beam > 0 or fi_mv > 0 or fi_land > 0) \
+					var fi_hold := (fi_lone or fi_seq >= 0 or fi_beam > 0 or fi_mv > 0 or fi_land > 0) \
 							and fi_pl != null and fi_pl.health > 0
 					if fi_hold:
 						_freeze_hp(fi_pl, fi_dmg)
+					# R625：独行那一下的颜色 / 文案 / 字号都在这里分叉（普通受击不变）
+					var fi_col: Color = METEOR_C_MID if fi_beam > 0 else Color("8f5ad0")
+					if fi_lone:
+						fi_col = Color("9b5cf0")
 					_delayed.append({"at": fi_at, "kind": "fx_hit",
 							"data": {"cell": fc, "dmg": fi_dmg,
 							"source": str(data.get("source", "")),
 							"pl": fi_pl, "hold": fi_hold,
-							"col": METEOR_C_MID if fi_beam > 0 else Color("8f5ad0")}})
+							"col": fi_col,
+							"label": "独行 -%d" % fi_dmg if fi_lone else "",
+							"size": 26 if fi_lone else 0}})
 					_push_cue([fc], "", Color("8f5ad0"))
 		"spell":
 			sfx.play("heal" if int(data["card"].id) in [2002, 7202] else "spell")
@@ -12597,14 +12646,56 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": fp_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "火墙 -%d" % int(data.get("dmg", 0)),
 					"col": Color("d84a12"), "start": fwp_at, "dur": 1300, "size": 18})
+		"lone_walk":
+			# R625 独行（9189）专属：手卡里随机一张盟友 / 工事被**吞掉**，生命 / 力量
+			# 永久并进这张卡（引擎 `lone_walk` 事件，结算在伤害之前）。
+			# 店长口径：「伤害显示不正常，实际打出伤害正常，需要做特效」—— 这里把
+			# 「吞了谁、并了多少」演一遍，命中数字顺延到吞卡演完（见 fx_impact 的
+			# `_lone_hit_at`）。素材全部来自 `assets/fx/*.png`，不走矢量圆。
+			var lw_nm := str(data.get("name", ""))
+			var lw_cell2: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var lw_hp2 := int(data.get("health", 0))
+			var lw_pw2 := int(data.get("power", 0))
+			var lw_db := int(data.get("dmg_bonus", 0))
+			var lw_sb := int(data.get("str_bonus", 0))
+			if lw_nm == "":
+				# 手卡里没有盟友 / 工事 → 没有可吞的，只报一句（不硬演一次吞卡）
+				_say("独行：手卡里没有盟友或工事 → 这一下只按已累积的数值结算")
+			else:
+				sfx.play("spell")
+				_lone_fx.append({"from": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 26.0),
+						"pos": _cell_center(lw_cell2), "sc": _grid_scroll, "start": n,
+						"dur": LONE_ABSORB_MS + 540, "hold": LONE_ABSORB_MS,
+						"name": lw_nm, "hp": lw_hp2, "pw": lw_pw2})
+				_lone_hit_cell = lw_cell2
+				_lone_hit_at = n + LONE_ABSORB_MS
+				# 手卡侧先说一句「这张没了，换来什么」——否则手卡凭空少一张
+				_floaters.append({"pos": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 44.0),
+						"text": "%s 被吞 → 生命 +%d / 力量 +%d" % [lw_nm, lw_hp2, lw_pw2],
+						"col": Color("9b5cf0"), "start": n, "dur": 1600, "size": 17})
+				_say("独行：手卡「%s」被吞掉 → 伤害 +%d、降力 +%d（累计 %d / %d）"
+						% [lw_nm, lw_hp2, lw_pw2, lw_db, lw_sb])
 		"stun_blow":
 			# 敲晕（9088）：目标力量 -3（金色爆点 + 飘字）
-			var sb_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_bursts.append({"pos": sb_pos, "sc": _grid_scroll, "start": n, "dur": 480,
+			# R625：文案取事件里的 `label` —— 独行（9189）复用同一条降力通道，
+			# 以前写死「敲晕」，打出独行也会飘「敲晕 力量 -4」，读起来是另一张卡的效果。
+			var sb_lab := str(data.get("label", "敲晕"))
+			var sb_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var sb_pos := _cell_center(sb_cell)
+			# R625：独行的降力跟伤害是同一下打出来的，但「吞卡 → 命中」有先后 ——
+			# 降力也压到吞卡演完，否则数字还没冒出来、横幅先报「力量 -4」。
+			var sb_at := n
+			var sb_off := Vector2(0, -12)
+			if (sb_lab == "独行" and sb_cell == _lone_hit_cell
+					and _lone_hit_at > 0 and n <= _lone_hit_at + 600):
+				sb_at = maxi(n, _lone_hit_at + 90)
+				# 独行的伤害数字占的是卡面正中 → 降力条往下让开一行，两条不叠在一起
+				sb_off = Vector2(0, 26)
+			_bursts.append({"pos": sb_pos, "sc": _grid_scroll, "start": sb_at, "dur": 480,
 					"col": Color("ffd54f"), "big": false})
-			_floaters.append({"pos": sb_pos + Vector2(0, -12), "sc": _grid_scroll,
-					"text": "敲晕 力量 -%d" % int(data.get("amount", 0)),
-					"col": UiTheme.STAT_POWER, "start": n, "dur": 1300, "size": 16})
+			_floaters.append({"pos": sb_pos + sb_off, "sc": _grid_scroll,
+					"text": "%s 力量 -%d" % [sb_lab, int(data.get("amount", 0))],
+					"col": UiTheme.STAT_POWER, "start": sb_at, "dur": 1300, "size": 16})
 		"gale":
 			# 疾风（9091）：随机敌人吃 2 伤
 			var ga_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
@@ -13964,6 +14055,91 @@ func _draw_bursts() -> void:
 			draw_line(pos + dir * near, pos + dir * far, lcol, 2.0 if big else 1.5)
 
 
+func _draw_lone_fx() -> void:
+	## R625：独行（9189）的「吞卡」演出 —— **全部走素材**（`assets/fx/*.png`），
+	## 不画矢量圆：手卡区中央 → 目标格拉一串紫色光点（fx_glow，头亮尾暗），
+	## 到点之后目标处炸开（fx_shockwave 两圈 + fx_hit_burst 命中爆点）。
+	## 时序：0 ~ `hold` = 流光段；`hold` 之后 = 爆发段。`hold` 正好是 fx_impact
+	## 被推后的量，所以「独行 -N」的飘字与炸开同帧落地，读起来是「吞了 → 打了」。
+	if _lone_fx.is_empty():
+		return
+	var n := _now()
+	for f: Dictionary in _lone_fx:
+		var t0 := n - int(f["start"])
+		if t0 < 0:
+			continue
+		var hold := int(f.get("hold", 0))
+		var to: Vector2 = _fx_pos(f)
+		var from: Vector2 = f["from"]
+		# ① 流光：头在前、尾在后面褪色；抛物线让轨迹不是一条死直线
+		if t0 <= hold and _fx_glow_tex != null:
+			var prog := clampf(float(t0) / float(maxi(hold, 1)), 0.0, 1.0)
+			var head: Vector2 = from.lerp(to, prog)
+			head.y -= sin(prog * PI) * 42.0
+			# ① 主光柱：把 fx_glow 拉成细长条，沿 from → 头部 分 7 段接起来
+			#   （素材是圆光斑，拉伸后就是柔光柱；Godot 4 的 draw_texture_rect 不能旋转，
+			#    所以用「多段斜接」近似一条斜柱 —— 每段只偏几像素，看不出接缝）
+			for s in 7:
+				var s0 := float(s) / 7.0
+				var s1 := float(s + 1) / 7.0
+				if s0 >= prog:
+					break
+				var pa: Vector2 = from.lerp(head, s0)
+				var pb: Vector2 = from.lerp(head, minf(s1, prog))
+				var seg_h: float = maxf(pb.y - pa.y, 1.0) + 26.0
+				var seg_w := 46.0 - 12.0 * s0
+				var seg_a: float = (0.92 - 0.06 * float(s)) * (0.45 + 0.55 * prog)
+				draw_texture_rect(_fx_glow_tex,
+						Rect2(Vector2(pa.x - seg_w * 0.5, pa.y - 13.0), Vector2(seg_w, seg_h)),
+						false, Color(0.68, 0.40, 1.0, seg_a))
+			# ② 粒子尾巴：16 颗，头亮尾暗（读成「吸过去的一股力」）
+			for i in 16:
+				var ft := prog - float(i) * 0.030
+				if ft <= 0.0 or ft > 1.0:
+					continue
+				var pp: Vector2 = from.lerp(to, ft)
+				pp.y -= sin(ft * PI) * 42.0
+				var ss := 30.0 - 1.1 * float(i)
+				var aa: float = (1.0 - float(i) / 16.0) * 0.95
+				draw_texture_rect(_fx_glow_tex,
+						Rect2(pp - Vector2(ss, ss) * 0.5, Vector2(ss, ss)), false,
+						Color(0.72, 0.44, 1.0, aa))
+			# ③ 头部亮球：白紫双叠，读成「这一点正在被吸走」
+			draw_texture_rect(_fx_glow_tex,
+					Rect2(head - Vector2(34, 34), Vector2(68, 68)), false,
+					Color(0.86, 0.66, 1.0, 0.85))
+			draw_texture_rect(_fx_glow_tex,
+					Rect2(head - Vector2(15, 15), Vector2(30, 30)), false,
+					Color(1, 0.97, 1.0, 0.92))
+		# ---- 流光段结束（下面进爆发段）----
+		# ② 爆发：两圈冲击环 + 命中爆点（时间零点 = hold）
+		if t0 < hold:
+			continue
+		var bt := clampf(float(t0 - hold) / 540.0, 0.0, 1.0)
+		if bt >= 1.0:
+			continue
+		if _fx_wave_tex != null:
+			for k in 2:
+				var rk := clampf(bt - float(k) * 0.18, 0.0, 1.0)
+				if rk <= 0.0:
+					continue
+				var rr := lerpf(30.0, 134.0 - 24.0 * float(k), rk)
+				draw_texture_rect(_fx_wave_tex,
+						Rect2(to - Vector2(rr, rr), Vector2(rr, rr) * 2.0), false,
+						Color(0.66, 0.42, 1.0, pow(1.0 - rk, 1.5) * 0.9))
+		if _fx_hit_burst_tex != null:
+			var bs := lerpf(0.55, 1.25, pow(bt, 0.45))
+			draw_texture_rect(_fx_hit_burst_tex,
+					Rect2(to - Vector2(88.0, 88.0) * bs, Vector2(176.0, 176.0) * bs), false,
+					Color(0.86, 0.74, 1.0, pow(1.0 - bt, 1.6)))
+		# ③ 把「并进去多少」写清楚 —— 数字来源是引擎报上来的卡面生命 / 力量
+		if bt < 0.55:
+			_draw_string_box_center(_font_bold, 17,
+					"%s 并入 +%d" % [str(f.get("name", "")), int(f.get("hp", 0))],
+					to + Vector2(0, -74), Color("d9c2ff"),
+					Color(0.16, 0.08, 0.26, 0.86))
+
+
 func _rev_art_phase(p: Placement) -> int:
 	## 场上单位该用哪张「阶段卡图」（R357）。只有启示者有多阶段卡图，其余恒为 0。
 	## `_rev_face_phase` 非 0 时以它为准 —— 那是「特效还没播完、先别改卡面」的延迟口径；
@@ -14289,8 +14465,10 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 				_bursts.append({"pos": fpos, "sc": _grid_scroll, "start": n, "dur": 520,
 						"col": d.get("col", Color("8f5ad0")), "big": false})
 				_floaters.append({"pos": fpos + Vector2(0, -10), "sc": _grid_scroll,
-						"text": "-%d" % int(d.get("dmg", 0)), "col": UiTheme.SIDE_FOE,
-						"start": n, "dur": 1150})
+						"text": str(d.get("label", "")) if str(d.get("label", "")) != "" else "-%d" % int(d.get("dmg", 0)),
+						"col": UiTheme.SIDE_FOE,
+						"start": n, "dur": 1150,
+						"size": int(d.get("size", 0)) if int(d.get("size", 0)) > 0 else 20})
 				_shake(3.0, 180)
 				# R363：多目标效果（带 `seq`）到点 → 受击闪红 + 卡面生命这一刻才掉，
 				# 与普通攻击的「闪红 → 掉血」完全同一条读法。
@@ -16757,6 +16935,11 @@ func _process(delta: float) -> void:
 		_hand_fly = _hand_fly.filter(func(f): return n3 - int(f.start) < int(f.dur))
 		if not _hand_fly.is_empty():
 			queue_redraw()  # 手牌飞行动画播放中
+	if not _lone_fx.is_empty():
+		var n5 := _now()
+		_lone_fx = _lone_fx.filter(func(f): return n5 - int(f.start) < int(f.dur))
+		if not _lone_fx.is_empty():
+			queue_redraw()  # R625：独行吞卡演出播放中
 	if UiRoll.rolling("energy") or UiRoll.rolling("hp_self") or UiRoll.rolling("hp_opp") \
 			or UiRoll.rolling("opp_energy") or UiRoll.rolling("hp_self_bar") \
 			or UiRoll.rolling("hp_opp_bar"):
