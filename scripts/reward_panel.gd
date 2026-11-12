@@ -1818,7 +1818,11 @@ func _draw_layer_card(card: CardData, rr: Rect2, selected: bool) -> void:
 		_root.draw_string(_font_bold, ar.position + Vector2(0, ar.size.y * 0.62), card.card_name.left(1), HORIZONTAL_ALIGNMENT_CENTER, ar.size.x, 82, Color("c7bda7"))
 	_layer_image("06" if selected else "05", rr.grow(6.0))
 	_root.draw_string(_font_bold, rr.position + Vector2(16, rr.size.y * 0.846), card.card_name, HORIZONTAL_ALIGNMENT_CENTER, rr.size.x - 32, 22, Color("40392e"))
-	_layer_image("14" if card.rarity == 2 else "13", Rect2(rr.end.x - 43, rr.position.y + 2, 32, 85))
+	# R643：缎带**只由稀有度决定** —— 走 CardFace 的唯一口，不再在这里挑素材。
+	# 原先按 `rarity == 2` 手挑「金 / 紫」两档素材，于是稀有 / 初始 /
+	# 怪物 / 事件全挂金缎带，跟卡下方那块写着稀有度名的铭牌直接打架。
+	CardFace._draw_rarity_ribbon(_root, card, rr, rr.size.y / CardFace.CARD_H_DESIGN,
+			UiTheme.CARD_PAD * rr.size.y / CardFace.CARD_H_DESIGN, rr.size.y * 0.327)
 	_layer_badge(rr.position + Vector2(12, 10), "X" if card.x_cost else str(card.cost))
 	if card.health > 0:
 		_layer_badge(Vector2(rr.position.x + 8, rr.end.y - 7), str(card.power))
@@ -2596,6 +2600,14 @@ func _demo_start() -> void:
 			var en4: Dictionary = RunState.pending_rewards[i]
 			if str(en4.get("kind", "")) == "cards":
 				en4["candidates"] = [8055, 9031, 9080]
+	# R643 出图：`--r643mix` 三选一固定成「普通 / 稀有 / 史诗」各一张 ——
+	# 核验缎带款式是否真的跟着稀有度走（改之前除史诗外全挂金缎带）。
+	# 出图：`battle.tscn -- --screenshot --r119cards --r643mix --shotframe 600`
+	if "--r643mix" in args:
+		for i in RunState.pending_rewards.size():
+			var en6: Dictionary = RunState.pending_rewards[i]
+			if str(en6.get("kind", "")) == "cards":
+				en6["candidates"] = [8037, 9222, 9031]
 	# R614 出图：`--combocards` 把三选一固定成三张**传授**（正文「从全职业卡池组合
 	# 一张卡。」，各自带「次元」字段）—— 核验奖励卡浮窗能同时查到「组合」与「次元」。
 	# 出图：`battle.tscn -- --screenshot --r119cards --combocards --shotframe 600`

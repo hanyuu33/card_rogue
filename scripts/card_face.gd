@@ -823,33 +823,62 @@ static func _draw_one_affix_badge(canvas: CanvasItem, name: String, box: Rect2,
 
 
 static func _draw_rarity_ribbon(canvas: CanvasItem, card: CardData, rect: Rect2,
-		k: float, pad: float) -> void:
+		k: float, pad: float, h_override := 0.0) -> void:
 	## 稀有度缎带（R170）：挂在卡面**右上角**的锦旗 —— 稀有度的**主通道**。
 	## 素材 `assets/ui/ribbon_<0..5>.png`（透明底、燕尾下垂，下标同 RARITY_COLORS）；
-	## 缺图回退程序小旗（同色多边形）—— 不空白也不报错。
+	## 缺图回退**同形状的程序缎带**（杆 + 布条 + 燕尾，色取 `rarity_color()`）。
 	## ⚠️ 必须画在卡图**之后**：开放式卡图铺满上半，先画会被整个盖住（旧小旗就是这么没的）。
 	## ⚠️ 尺寸（R173）：旗高 27k ≈ 卡高的 39% —— R170 第一版只有 13k，细长燕尾被压成
 	##    一条 6px 细线，肉眼观感 = 「没应用素材」；27k 后金绣/燕尾在各种卡尺寸下都可辨认。
+	## ⚠️ R643：**款式只能由 `card.rarity` 决定**，调用方不许自己挑素材。
+	##    奖励三选一曾写死「史诗→紫缎带 / 其它→金缎带」，于是稀有 / 初始 / 怪物 / 事件
+	##    全挂金缎带，跟卡下方的稀有度铭牌对不上（用户实测「搭配不上」）。
+	##    `h_override > 0` 只换高度（奖励页卡大，要跟它自己的尺寸口径），不换款式。
+	var rh: float = 27.0 * k
+	if h_override > 0.0:
+		rh = h_override
 	var ribbon: Texture2D = UiAssets.rarity_ribbon(card.rarity)
 	if ribbon != null:
-		var rh: float = 27.0 * k
 		var rw: float = rh * ribbon.get_width() / maxf(1.0, ribbon.get_height())
 		var rx: float = rect.end.x - pad - rw
 		var ry: float = rect.position.y - 1.2 * k   # 横杆骑在卡顶边（微探出 = 「挂」在卡上）
 		canvas.draw_texture_rect(ribbon, Rect2(rx, ry, rw, rh), false)
 		return
-	# 回退：程序小旗（形状与旧版一致，但画在卡图之后，不再被盖）
-	var rar_col: Color = card.rarity_color()
-	var flag_w: float = 9.0 * k
-	var flag_h: float = 22.0 * k
-	var fx: float = rect.end.x - pad - flag_w
-	var fy: float = rect.position.y + pad
-	var flag := PackedVector2Array([
-			Vector2(fx, fy), Vector2(fx + flag_w, fy),
-			Vector2(fx + flag_w, fy + flag_h),
-			Vector2(fx + flag_w / 2.0, fy + flag_h * 0.72),
-			Vector2(fx, fy + flag_h)])
-	canvas.draw_colored_polygon(flag, rar_col)
+	_draw_ribbon_procedural(canvas, card, rect, k, pad, rh)
+
+
+static func _draw_ribbon_procedural(canvas: CanvasItem, card: CardData, rect: Rect2,
+		k: float, pad: float, rh: float) -> void:
+	## 无素材时的程序缎带（R643）：**形状照素材**（顶部卷轴杆 + 下垂布条 + 燕尾缺口），
+	## 颜色取 `rarity_color()` —— 缺的是图，不是「这一档不该是缎带」。
+	## 旧版回退是三角小旗：挂在满排燕尾缎带里一眼就看得出「这张没配图」
+	## （诅咒 9149 / 9154 / 9157 / 9185 就是这样，rarity 6 没素材）。
+	var col: Color = card.rarity_color()
+	var rw: float = rh * 0.30                 # 布条宽 ≈ 素材 56/192（其余几档也在 0.29~0.40）
+	var bar_h: float = maxf(2.0, rh * 0.045)
+	var rx: float = rect.end.x - pad - rw
+	var ry: float = rect.position.y - 1.2 * k
+	# ① 卷轴杆：横跨布条、两端各探出一点
+	var bar := Rect2(rx - rw * 0.06, ry, rw * 1.12, bar_h)
+	canvas.draw_rect(bar, col.lightened(0.35))
+	canvas.draw_rect(Rect2(bar.position, Vector2(bar.size.x, bar_h * 0.45)), col.lightened(0.62))
+	# ② 布条：顶边齐杆下，底边做燕尾（中间抬到 84% 高）
+	var top: float = ry + bar_h
+	var bot: float = ry + rh
+	var notch: float = bot - rh * 0.16
+	var cloth := PackedVector2Array([
+			Vector2(rx, top), Vector2(rx + rw, top),
+			Vector2(rx + rw, bot), Vector2(rx + rw * 0.5, notch),
+			Vector2(rx, bot)])
+	canvas.draw_colored_polygon(cloth, col)
+	# ③ 两条暗边 + 一条亮褶：平涂也要看得出是「布」
+	var edge_w: float = maxf(1.0, rw * 0.07)
+	canvas.draw_line(Vector2(rx + edge_w * 0.5, top), Vector2(rx + edge_w * 0.5, bot),
+			col.darkened(0.4), edge_w)
+	canvas.draw_line(Vector2(rx + rw - edge_w * 0.5, top), Vector2(rx + rw - edge_w * 0.5, bot),
+			col.darkened(0.4), edge_w)
+	canvas.draw_line(Vector2(rx + rw * 0.42, top + bar_h), Vector2(rx + rw * 0.42, notch),
+			col.lightened(0.28), maxf(1.0, rw * 0.10))
 
 
 static func banner_cols(card: CardData) -> Array:

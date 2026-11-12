@@ -22147,6 +22147,23 @@ func _init() -> void:
 
 				"R173 缎带旗高 27k（≈卡高 39%）—— 不许缩回 13k 细线")
 
+	# ---- R643 源码守卫：缎带款式**只能由 rarity 决定** ----
+	# 奖励三选一曾自己写死「史诗→紫缎带 / 其它→金缎带」（`"14" if card.rarity == 2 else "13"`），
+	# 于是稀有 / 初始 / 怪物 / 事件全挂金缎带，跟卡下方的稀有度名对不上（用户实测）。
+	# 锁三件事：奖励页不许再手挑素材、必须走唯一口、0..5 档素材齐全。
+	if r122_in_dev:
+		var r643_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+		check(r643_rp.find("_layer_image(\"14\"") < 0,
+				"R643 奖励页不许按稀有度手挑缎带（款式只能由 UiAssets.rarity_ribbon 决定）")
+		check(r643_rp.find("CardFace._draw_rarity_ribbon(") >= 0,
+				"R643 奖励页的缎带必须走 CardFace 的唯一口")
+		var r643_missing := ""
+		for r643_i in 6:
+			if UiAssets.rarity_ribbon(r643_i) == null:
+				r643_missing += (" " + str(r643_i))
+		check(r643_missing == "",
+				"R643 稀有度 0..5 的缎带素材必须齐全（缺：%s）" % r643_missing)
+
 
 
 	# ---- R401 源码守卫：奖励页稀有度铭牌必须是**浅底深字** ----
