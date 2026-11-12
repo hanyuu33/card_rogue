@@ -1522,6 +1522,22 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - **回归**：assemble 0 / engine **5766✓** / reward 26 / bgm 39 / smoke 68 / mana PASS；
   存档目录备份后逐文件还原，`RESTORE_VERIFY OK`。
 
+## 2026-11-12 Workshop engineer CG
+- Goal: generate workshop engineer illustration using rogue CG solely as drawing-technique reference.
+- Added assets/ui/workshop_engineer_cg_v1.png using built-in image_gen. No scene integration or existing asset replacement.
+- Validation: visually reviewed output: black ponytail, glasses, neutral expression, light mechanic overalls, soldering pose, open construct, workshop depth and drone present. Asset-only review, not in-game verification.
+- Known deviations: drone has a small cyan panel; background remains relatively sharp; pendant glow is restrained. Full six-head height cannot be verified in cropped composition.
+- Git status --short failed because git.exe execution was denied. Existing external changes could not be inventoried. No commit or push performed.
+- Next: review asset; if integrating, verify real scene and narrow viewport. Commit explicit new asset and HANDOFF.md when Git works.
+
+## 2026-11-12 Mechanical engineer cel redraw
+- Goal: rendering-only anime cel-shading edit of assets/ui/class_cg_mech.png.
+- Added assets/ui/class_cg_mech_cel_v1.png using built-in image_gen; reference preserved, no scene integration.
+- Prompt: preserve exact reference framing, identity, pose, objects and palette; thin black outlines, flat base colours and two hard-edged shadow steps; no gradients, bloom, blur, textures or light spill. Reference arm placement takes precedence over prose description.
+- Validation: visually inspected generated image; hard cel shadows and crisp outlines present. Fine mechanical geometry, face details and some colours differ; not pixel-identical preservation. Asset review only, no game-scene acceptance.
+- Git status --short failed: git.exe execution denied. External changes could not be inventoried. No commit or push performed.
+- Next: review fidelity before integration; commit explicit new asset and this handoff addition when Git access is restored.
+
 ## 2026-11-12 R624 同一张卡一回合只减一次费 / 复制品不继承附魔
 - 店长口径两条：①**同一张卡的减费一个回合不能生效两次**；②**复制卡的事件 / 遗物不能复制卡上的附魔**。
 - ① 唯一判据 `GameEngine._turn_discount_taken(card)`：两张**回合级**减费表（`turn_card_discount` / `hand_cost_turn`）任一已有正数 → 本回合不再减（负数 = 涨价，不占额度）。接入三处：`_discount_hand_skills`（影魔 8007 / 组合 `hand_skill_discount`）、`_discount_random_hand`（雪豹 8081 / 组合 `hand_discount`，候选池直接排除已减过的卡）、`_spell_play_tick` 的魔像术 9079。永久减费（`card_discount`：陨石术 9077 / 灵魂收割者）与「新入手 / 刚变化出来」的卡（机械臂 6065 / 随心组装 9144 / 森林的朋友们 9183 / 取牌）不在此列 —— 后者天然是新实例。
@@ -1544,3 +1560,14 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - **回归**：assemble 0 / mana PASS / engine **5838✓** 0✗ / reward 26✓ / bgm 39✓ / smoke 69✓。注：5838 含并行线 R645 的 11 项，本线没动 `test_engine.gd`。
 - **提交卫生**：`battle_scene.gd` 与 `game_engine.gd` 里混着并行线未提交的 **R645 龙息多段**改动（`FX_SEG_HIT_GAP_MS` / `fi_seg` / `_hit_unit(seg)`），按纪律走**干净 HEAD + index-only**（`hash-object` + `update-index --cacheinfo`），提交里 0 处 R645。
 - **编号**：R642 已被并行线占用（图鉴「见过才解锁」`93fe1635`），R643 稀有度缎带 / R644 老虎卡图 / R645 龙息在用，本轮让到 **R646**。
+
+## 2026-11-13 R648 多段伤害逐段补漏 + 机械之心 CG 归档
+- **代码**（`battle_scene.gd` / `game_engine.gd`）：R645 定的「多段伤害必须带 seg」有几处没接上，表现为一次连打只飘最后一个数字。
+  ① `_meteor_shower` 逐颗 `_hit_unit(..., -1, i)` 带上第 i 颗的 `seg`（以前只有 `seq`，同格命中被去重）；
+  ② `_on_engine_action` 去重判据改 `if not fi_owned or fi_seg >= 0`，且只有第 0 段 `_fx_claim()`，后续段跟着它演；
+  ③ `_delayed` 的 `fx_hit` 数据带 `seg`；④ `_tick_anims` 的 busy 判据补 `_breaths`（`_breaths` 按 `start+dur` 自然过期，不会永久阻塞）；
+  ⑤ `_draw_flames` 真正应用 `ftint`（R645 取了 tint 仍画白色 → 紫龙焰是橙的）；⑥ `--r645breath` 截图档位直连 `_dragon_breath_spell`，不走 `use_spell()`（出图帧上回合状态未就绪会静默拒绝，首版空跑两次）。
+- **美术归档**：并行线的「机械之心 CG 画风统一」产物落地 —— `assets/ui/class_cg_mech.png` 换成 landed 版（1280x720，尺寸不变，4 的倍数，Android VRAM 压缩无风险）；新增两张**尚未接入场景**的候选 `class_cg_mech_cel_v1.png`（硬边赛璐璐重绘）/ `workshop_engineer_cg_v1.png`（工坊工程师），均为 1672x941。HANDOFF 里另两条英文记录由该线写入，原样保留。
+- **杂项**：`tools/probe_r633_ban.gd` / `probe_r633_save.gd`（r633 期探针）补入库；`art_src` 两张回归产物（`fire_live.png` 重存、`mana_headless.log` 去掉 exit 泄漏警告）刷新。
+- **回归**：assemble 0 / mana PASS / engine **5843✓** 0✗ / reward 26✓ / bgm 39✓ / smoke 69-0。存档目录 `_bk_r648_userdata` 备份后逐文件还原。
+- **出包**：测试版（非 release）—— Windows 单文件 exe（`_release.py`）+ Android APK（`release/build_apk.sh`）。
