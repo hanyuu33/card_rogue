@@ -4335,6 +4335,79 @@ func _init() -> void:
 
 	check(lg_r5.contains("敌方单位"), "龙息：空目标被拒绝（%s）" % lg_r5)
 
+	# ---- R645：多段伤害逐段飘字（用户报「没有动画的多段伤害只飘最后一个数字」）----
+
+	# 龙息 4×5 打同一格 → 引擎 5 条 fx_impact 必须分别带 seg 0..4，
+	# 界面才有东西可错开（原来 5 条挤在同一帧，被「同格 700ms 只演一次」吞成 1 条）。
+
+	var r645_e := _new_engine([], 20, 20, -1, false)
+
+	r645_e.start_game(1)
+
+	r645_e.state.place(_card(9398, "厚甲敌", "盟友", 5, 4, 40), Vector2i(1, 0),
+
+			GameEngine.SIDE_OPPONENT)
+
+	r645_e.state.hand = [repo.get_card(9054)]
+
+	r645_e.state.energy = 9
+
+	var r645_segs: Array = []
+
+	r645_e.action.connect(func(k: String, d: Dictionary) -> void:
+
+			if k == "fx_impact":
+
+				r645_segs.append(int(d.get("seg", -1))))
+
+	r645_e.use_spell(0, Vector2i(1, 0))
+
+	check(r645_segs == [0, 1, 2, 3, 4],
+
+			"R645：龙息 5 段的 fx_impact 分别带 seg 0..4（实际 %s）" % str(r645_segs))
+
+	# 单段伤害**不能**带 seg —— 界面的「同格 700ms 只演一次」对普通受击照旧生效
+
+	var r645_e2 := _new_engine([], 20, 20, -1, false)
+
+	r645_e2.start_game(1)
+
+	r645_e2.state.place(_card(9398, "厚甲敌", "盟友", 5, 4, 40), Vector2i(1, 0),
+
+			GameEngine.SIDE_OPPONENT)
+
+	var r645_plain: Array = []
+
+	r645_e2.action.connect(func(k: String, d: Dictionary) -> void:
+
+			if k == "fx_impact":
+
+				r645_plain.append(d.has("seg")))
+
+	r645_e2._hit_unit(r645_e2.state.unit_at(Vector2i(1, 0)), 3, "测试")
+
+	check(r645_plain == [false],
+
+			"R645：单段伤害不带 seg（普通受击判据不变，实际 %s）" % str(r645_plain))
+
+	# 界面侧两条锁：① 多段不再被认领机制吞掉；② 飘字按段号错位（只错时间会叠成一点）
+
+	var r645_ui := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+
+	check_src(r645_ui.find("const FX_SEG_HIT_GAP_MS := 150") >= 0
+
+			and r645_ui.find("if not fi_owned or fi_seg >= 0") >= 0,
+
+			"R645 源码锁：多段受击不再被「同格 700ms 只演一次」吞掉（逐段错开 150ms）")
+
+	check_src(r645_ui.find("FX_SEG_FLOAT_STEP * float(fsx)") >= 0,
+
+			"R645 源码锁：多段飘字按段号右上阶梯错位")
+
+	check_src(r645_ui.find("or fi_seg >= 0") >= 0,
+
+			"R645 源码锁：多段逐段冻血 / 掉血（血条跟着数字一节一节走）")
+
 
 
 	# ---- R227：生命循环（9150，森林精魄 · 普通 · 0 费技能；R429 由稀有下调）----

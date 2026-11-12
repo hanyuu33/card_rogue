@@ -281,6 +281,22 @@ const GROW_AFTER_BREAK_MS := 120
 ## R363：**一次效果打多个目标**（灰烬龙战吼 / 全场 AOE）时，每一格之间的落地间隔。
 ## 原来所有格子同帧起爆 —— 一排「-4」同时冒出来，看不出是谁打的、也读不出扫过去的感觉。
 const FX_MULTI_HIT_GAP_MS := 90
+## R645：**同一目标的多段伤害**逐段间隔（龙息 4×5 = 5 段）。
+## 90ms 太赶、字还没飘起来下一个就盖上去；150ms 时 5 段刚好铺满 600ms，
+## 每段都有独立的爆点 + 掉血，玩家才数得清「打了几下」。
+const FX_SEG_HIT_GAP_MS := 150
+## R645：多段飘字的横向 / 纵向阶梯偏移（第 N 段往右上走一格）。
+## 只靠时间错开不够 —— 飘字存活 1150ms，前一个还在屏上时后一个从同一点冒出来，
+## 叠在一起照样读成一个数。错位量比字宽（「-5」约 26px）略大，才不互相压。
+const FX_SEG_FLOAT_STEP := Vector2(27.0, -17.0)
+## R645：龙息喷流的总时长。**必须覆盖 5 段的数字**（4 × 150 + 一段的停留 ≈ 600ms）——
+## 喷流中途断掉、只剩数字在冒，读起来就像「火没烧到却在掉血」。
+const BREATH_MS := 620
+## 喷流长度长到满所占的比例。0.26 × 620 ≈ 161ms —— 与 `fx_impact` 的 +160ms 落地
+## 对齐：火苗够着目标的那一帧，伤害数字正好冒出来。
+const BREATH_GROW := 0.26
+## 超过这个比例开始淡出（前面的时间留给「持续烧」）。
+const BREATH_FADE := 0.58
 ## R646（用户口径「土元素的动画有点慢，播放间隙调为 30ms」→「30ms 太短，改成 70ms」）：
 ## 元素入场**逐段发射**的间隔。注意它只压「下一段什么时候起手」，
 ## 每段的飞行 / 爆发 / 飘字停留一律不动（「不减少停留，而是下一段更快发射」）。
@@ -500,6 +516,8 @@ var _fx_knife_tex: Texture2D = null    # 飞刀（刀尖朝上）
 var _fx_glow_tex: Texture2D = null     # 通用柔光（落地亮斑 / 拖尾 / 预热点）
 var _fx_laser_tex: Texture2D = null    # R449：充能巨炮的激光柱（冷色 蓝→青→冰白）
 var _fx_hit_burst_tex: Texture2D = null   # R449：命中爆点（白核 + 光刺 + 冲击环）
+var _fx_breath_tex: Texture2D = null      # R645：龙息喷流（左窄右宽的锥形幽紫火焰）
+var _fx_breath_impact_tex: Texture2D = null  # R645：龙息命中爆点
 var _shake_cur := Vector2.ZERO         # 本帧震屏偏移 —— 自绘贴图用完必须还原成它
 ## R434：灰烬龙战吼 / 启示者清场的**火焰**，以及阶段 2 电磁屏障的**护盾球 + 电弧**。
 ## 全部走 `assets/fx/*.png`（程序化生成，见 tools/gen_fx_textures.py），
@@ -514,7 +532,10 @@ var _fx_wave_tex: Texture2D = null     # 冲击波环（清场）
 var _fx_lone_col_tex: Texture2D = null   # 竖直吸取光柱（底端在图的底部，顶端在顶部）
 var _fx_lone_maw_tex: Texture2D = null   # 虚空漩涡（圆形，吞噬点）
 var _fx_lone_ring_tex: Texture2D = null  # 收束光环（圆形，空心）
-var _flames: Array = []                # {pos, sc, start, dur, size, seed}   正在烧的火
+var _flames: Array = []                # {pos, sc, start, dur, size, seed[, tint]}   正在烧的火
+var _breaths: Array = []         # R645：{from, to, sc, start, dur} 龙息喷流（格锚像素中心）
+var _breath_src: Dictionary = {} # R645：{"cell", "at"} 最近一次「龙息」的发动者 ——
+                                 #       随后同帧到达的 fx_impact(seg=0) 靠它配对受影者
 var _shield_fx: Dictionary = {}        # {cell, src, start, dur, land}      电磁屏障被击中
 var _purge_wave: Dictionary = {}       # {cell, start, dur}                 第三阶段清场冲击波
 const FLAME_RISE := 30.0               # 火苗在生命周期里往上窜的像素
@@ -857,6 +878,9 @@ func _ready() -> void:
 	_fx_glow_tex = load("res://assets/fx/fx_glow.png")
 	_fx_laser_tex = load("res://assets/fx/fx_laser.png")
 	_fx_hit_burst_tex = load("res://assets/fx/fx_hit_burst.png")
+	# R645：龙息吐息（codex 出图 → 黑底亮度转 alpha，见 art_src/2026-11-13_龙息特效_R645）
+	_fx_breath_tex = load("res://assets/fx/fx_breath_cone.png")
+	_fx_breath_impact_tex = load("res://assets/fx/fx_breath_impact.png")
 	_fx_flame_tex = load("res://assets/fx/fx_flame.png")
 	_fx_ember_tex = load("res://assets/fx/fx_ember.png")
 	_fx_shield_tex = load("res://assets/fx/fx_shield.png")
@@ -1012,6 +1036,24 @@ func _ready() -> void:
 				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 		engine.state.hand.clear()
 		status_text = "远古虚骨龙 · 龙息"
+		queue_redraw()
+	if "--r645breath" in args and engine != null:
+		# R645 出图：龙息吐息动画 + 5 段伤害数字。
+		# 期望画面：一道锥形幽紫火焰从龙口（4,1）喷向受影者（2,1），目标格在烧，
+		# 伤害数字「-4」沿右上阶梯排开（5 段依次落地，不是叠成一个）。
+		# 出图：`battle.tscn -- --screenshot --level 0 --r645breath --shotframe 600`
+		_cue_demo = true
+		_grid_intro_t = -1.0            # 关掉开场巡场，钉死构图
+		engine.ai_enabled = false
+		engine.state.board.clear()
+		var rb_repo := CardRepo.load_json()
+		engine.state.place(CardData.from_dict(rb_repo.get_card(9014).to_dict()),
+				Vector2i(4, 1), GameEngine.SIDE_SELF)
+		engine.state.place(CardData.from_dict(rb_repo.get_card(9001).to_dict()),
+				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+		status_text = "远古虚骨龙 · 龙息 4×5"
+		_clear_hover_state()
+		selection = null
 		queue_redraw()
 	if "--r288span" in args and engine != null:
 		# R288 出图：**跨屏轮流**取证 —— 发动者 (5,1) 与受影者 (0,1) 相隔 6 行，
@@ -9083,6 +9125,7 @@ func _draw() -> void:
 	                         # 放在棋盘变换里会被裁成「凭空冒爆点」
 	_draw_purge_wave()       # R434：启示者清场冲击波（从它身上径向扫开，越过遮罩）
 	_draw_flames()           # R434：火焰（灰烬龙战吼 / 清场落点）
+	_draw_breaths()          # R645：龙息喷流（压在火焰之上，火舌才盖得住目标格）
 	_draw_shield_fx()        # R434：电磁屏障被击中（护盾球 + 电弧）
 	_draw_grid_caption()
 	_draw_speech_bubbles()   # R386：对话气泡 —— 压在卡牌之上、面板与手牌之下
@@ -10840,6 +10883,8 @@ func _tick_anims() -> bool:
 	# R434：火焰 / 护盾 / 冲击波按各自时长收掉。**要和 `_bursts` 一样计入 busy** ——
 	# 不给 busy 就不会逐帧重绘，动画会卡在中间一格。
 	_flames = _flames.filter(func(f): return n - int(f.get("start", 0)) < int(f.get("dur", 1)))
+	# R645：喷流同样要按各自时长收掉（收不掉 = busy 永远为真，回合推进会卡死）
+	_breaths = _breaths.filter(func(b): return n - int(b.get("start", 0)) < int(b.get("dur", 1)))
 	if not _shield_fx.is_empty() \
 			and n - int(_shield_fx.get("start", 0)) >= int(_shield_fx.get("dur", 1)):
 		_shield_fx = {}
@@ -11364,6 +11409,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						cp_col = UiTheme.KIND_ALLY
 				# R321：这是**唯一**有发动者的来路 → 只有它会画脉冲 / 光带 / 拉镜头。
 				_push_cue([cp_cell], str(data.get("label", "")), cp_col, cp_cell)
+				# R645：龙息要有「从龙口喷出去」的方向 —— 先把发动者记下来，
+				# 紧接着同帧到达的 fx_impact(seg=0) 才知道这道火该从哪儿出发。
+				if str(data.get("label", "")) == "龙息":
+					_breath_src = {"cell": cp_cell, "at": n}
 		"battlecry":
 			# R363：战吼的**发动者**演出。引擎这侧原来完全没接线（只有一行 `_log`）——
 			# 灰烬龙对我方全场打 4 时，玩家看到的只是自己整排单位同时掉血，
@@ -11406,6 +11455,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var fi_cell = data.get("cell")
 			if fi_cell is Vector2i:
 				var fc: Vector2i = fi_cell
+				# R645：多段（`seg >= 0`）**不许**被这条「同格 700ms 只演一次」吞掉 ——
+				# 龙息 5 段打同一格，原来后 4 段全被吞，屏幕上只剩一个数字。
+				# 普通受击（seg = -1，含攻击动画的同帧 fx_impact）判据不变。
+				var fi_seg := int(data.get("seg", -1))
 				var fi_owned := _fx_claimed.has(fc) and n - int(_fx_claimed[fc]) < 700
 				if not fi_owned:
 					_fx_claim(fc)
@@ -11424,6 +11477,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					var fi_seq := int(data.get("seq", -1))
 					if fi_seq >= 0:
 						fi_at += fi_seq * FX_MULTI_HIT_GAP_MS
+					# R645：同一目标的第 N 段 —— 排在前面那段之后 150ms 落地
+					if fi_seg > 0:
+						fi_at += fi_seg * FX_SEG_HIT_GAP_MS
 					# 卡面生命也跟着冻结：数字等**这一格**的爆点落地才往下掉
 					# （与普通攻击同一条口径）。原来 AOE 的卡面血量在事件到达时就变了，
 					# 玩家看到的是「血先掉、然后才冒紫点」——用户说的「没有动画特效」。
@@ -11446,7 +11502,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						fi_land = _slide_floor_at(data["land"] as Vector2i)
 						if fi_land > fi_at:
 							fi_at = fi_land
-					var fi_hold := (fi_lone or fi_seq >= 0 or fi_beam > 0 or fi_mv > 0 or fi_land > 0) \
+					# R645：多段也逐段冻 / 逐段掉 —— 血条跟着 5 个数字一节一节往下走，
+					# 比「憋到最后一次性跳完」清楚得多（`_hp_pending` 是队列，一冻一掉正好配对）。
+					var fi_hold := (fi_lone or fi_seq >= 0 or fi_seg >= 0 \
+							or fi_beam > 0 or fi_mv > 0 or fi_land > 0) \
 							and fi_pl != null and fi_pl.health > 0
 					if fi_hold:
 						_freeze_hp(fi_pl, fi_dmg)
@@ -11462,6 +11521,35 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 							"label": "独行 -%d" % fi_dmg if fi_lone else "",
 							"size": 26 if fi_lone else 0}})
 					_push_cue([fc], "", Color("8f5ad0"))
+					# R645：龙息 —— 首段（seg=0）拉一道锥形喷流到受影者。
+					# 只在首段起，后面 4 段共用同一条火（一口持续的吐息连烧 5 下），
+					# 每段自己的爆点 / 数字仍由常规受击路径出。
+					# 起点分两种：
+					#   ① 有场上发动者（9014 远古虚骨龙的回合吐息）→ 从龙口喷；
+					#   ② 技能卡 9054 **没有站位**（`_fx_pulse` 不会被调）→ 从目标格左上方
+					#      的空中斜着灌下来。没有②的话技能版龙息会「只掉血、不见火」。
+					# 时间窗兜住「发动者那一帧没记上」→ 宁可不画，也不能从十几秒前的
+					# 旧格子上拉一道火过来。
+					if fi_seg == 0 and str(data.get("source", "")) == "龙息":
+						var br_to := _cell_center(fc)
+						var br_from := br_to + Vector2(-CELL_W * 1.85, -CELL * 2.35)
+						if not _breath_src.is_empty() \
+								and n - int(_breath_src.get("at", 0)) < 900:
+							var bs: Vector2i = _breath_src["cell"]
+							if bs != fc:
+								br_from = _cell_center(bs)
+						if br_from.distance_to(br_to) > 8.0:
+							_breaths.append({"from": br_from, "to": br_to,
+									"sc": _grid_scroll, "start": n + 10, "dur": BREATH_MS})
+						# 目标格烧起来：喷流一过，那一格得一直是火的 —— 否则 5 段数字
+						# 冒了 600ms，画面却只剩一根静止的光柱。紫色 tint 与龙息同色。
+						for bi in 3:
+							var bx: float = (float(bi) - 1.0) * 24.0
+							_flames.append({"pos": _cell_center(fc) + Vector2(bx, 16.0),
+									"sc": _grid_scroll, "start": n + 120 + bi * 90,
+									"dur": 620 - bi * 60, "size": 62 + bi * 6, "seed": 31 + bi,
+									"tint": Color(0.66, 0.46, 1.0)})
+						_breath_src = {}
 		"spell":
 			sfx.play("heal" if int(data["card"].id) in [2002, 7202] else "spell")
 			var detail := str(data.get("detail", ""))
@@ -13519,6 +13607,49 @@ func _purge_retime_deaths(home: Vector2i, maxd: float, t0: int) -> void:
 			ev["at"] = int(ev.get("at", 0)) + int(shift[c2])
 
 
+func _draw_breaths() -> void:
+	## R645：龙息喷流。素材 `fx_breath_cone.png` 是**左窄右宽**（左端 = 龙口），
+	## 所以把原点放在发动者格、按 from→to 的角度旋转，矩形从 0 起算向后铺长度。
+	## 三拍：0~26% 吐出去长到满 → 保持（持续烧）→ 58% 之后淡出。
+	## ⚠️ 必须在 `_draw_grid_mask()` **之后的屏幕空间**画：跨屏吐息会越过棋盘上下沿，
+	##    关在棋盘变换里会被裁成「凭空先炸一下」。
+	if _breaths.is_empty() or _fx_breath_tex == null:
+		return
+	var n := _now()
+	for b: Dictionary in _breaths:
+		var st := int(b.get("start", 0))
+		var du := maxi(1, int(b.get("dur", BREATH_MS)))
+		var t := float(n - st) / float(du)
+		if t < 0.0 or t >= 1.0:
+			continue
+		var from: Vector2 = _fx_pos({"pos": b["from"], "sc": b.get("sc", _grid_scroll)})
+		var to: Vector2 = _fx_pos({"pos": b["to"], "sc": b.get("sc", _grid_scroll)})
+		var d := to - from
+		var full := d.length()
+		if full < 4.0:
+			continue
+		# 长度：先慢后快地「吐出去」（抛物线收尾 = 出膛后越飞越快）
+		var reach := clampf(t / BREATH_GROW, 0.0, 1.0)
+		var ln := maxf(6.0, full * (1.0 - pow(1.0 - reach, 2.2)))
+		var a := 1.0
+		if t > BREATH_FADE:
+			a = 1.0 - clampf((t - BREATH_FADE) / (1.0 - BREATH_FADE), 0.0, 1.0)
+		# 火舌高度：跟着张开一点，再叠一层低频抖动 —— 否则是一根静止的贴图棒
+		var hh := full * 0.42 * (0.62 + 0.38 * clampf(t / 0.45, 0.0, 1.0))
+		hh *= 1.0 + 0.10 * sin(t * 26.0)
+		draw_set_transform(from, d.angle(), Vector2.ONE)
+		draw_texture_rect(_fx_breath_tex, Rect2(0.0, -hh * 0.5, ln, hh), false,
+				Color(1.0, 1.0, 1.0, a))
+		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+		# 命中点：火苗够着之后才亮，跟着整段一起淡出
+		if _fx_breath_impact_tex != null and t > BREATH_GROW * 0.82:
+			var it := clampf((t - BREATH_GROW * 0.82) / 0.34, 0.0, 1.0)
+			var isz := full * (0.26 + 0.20 * it)
+			draw_texture_rect(_fx_breath_impact_tex,
+					Rect2(to - Vector2(isz, isz) * 0.5, Vector2(isz, isz)), false,
+					Color(1.0, 1.0, 1.0, (1.0 - it) * 0.95))
+
+
 func _draw_flames() -> void:
 	## R434：火焰（灰烬龙战吼 / 清场落点）。贴图 fx_flame.png 的锚点是**火球中心**
 	## （192×256 里的 (96,178)）→ 绘制时把原点对到火球中心，`size` 就是火球直径。
@@ -13564,6 +13695,8 @@ func _draw_flames() -> void:
 			_draw_flame_fallback(pos, base * 0.62, a)
 			continue
 		draw_set_transform(pos, 0.0, Vector2(k, sy))
+		# R645：`tint` 让同一张橙火贴图也能当紫色龙焰用（默认白色 = 原样）。
+		var ftint: Color = f.get("tint", Color(1, 1, 1, 1))
 		draw_texture_rect(_fx_flame_tex, Rect2(-96, -178, 192, 256), false,
 				Color(1, 1, 1, a))
 		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
@@ -14515,7 +14648,10 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 				var fpos: Vector2 = _cell_center(fc2)
 				_bursts.append({"pos": fpos, "sc": _grid_scroll, "start": n, "dur": 520,
 						"col": d.get("col", Color("8f5ad0")), "big": false})
-				_floaters.append({"pos": fpos + Vector2(0, -10), "sc": _grid_scroll,
+				# R645：多段的第 N 段往右上走一格 —— 时间错开 + 位置错开，两层都做才读得清
+				var fsx := int(d.get("seg", -1))
+				var foff := Vector2.ZERO if fsx < 0 else FX_SEG_FLOAT_STEP * float(fsx)
+				_floaters.append({"pos": fpos + Vector2(0, -10) + foff, "sc": _grid_scroll,
 						"text": str(d.get("label", "")) if str(d.get("label", "")) != "" else "-%d" % int(d.get("dmg", 0)),
 						"col": UiTheme.SIDE_FOE,
 						"start": n, "dur": 1150,

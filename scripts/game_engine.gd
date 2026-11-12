@@ -4940,7 +4940,8 @@ func _dragon_breath_spell(side: String, target, card: CardData) -> String:
 	for i in DRAGON_BREATH_HITS:
 		if p.health <= 0:
 			break
-		total += _hit_unit(p, hit, "龙息")
+		# R645：`seg = i` → 界面把 5 段的伤害数字按 150ms 逐段错开（原来全叠成一个字）
+		total += _hit_unit(p, hit, "龙息", true, false, -1, i)
 		hits += 1
 	if p.health <= 0:
 		_destroy_dead()
@@ -12791,7 +12792,12 @@ func _justice_backstab_mult(p: Placement, side_ok: bool) -> int:
 
 
 func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= true,
-		is_attack:= false, seq:= -1) -> int:
+		is_attack:= false, seq:= -1, seg:= -1) -> int:
+	## R645：`seg` = **同一次效果里的第几段**（0 起）。龙息 4×5 这种「同一目标连打 5 下」
+	## 原来 5 条 `fx_impact` 全挤在同一帧，界面的「同格 700ms 只演一次」把它吞成一条 ——
+	## 玩家只看见一个数字。带上 seg，界面就能逐段错开落地，没有动画也数得清。
+	## 与 `seq` 的分工：`seq` = 一次打**多个目标**（逐格错峰 90ms），
+	## `seg` = 打**同一个目标**的第 N 段（逐段错峰 150ms）。两者可同时带。
 	## R152：`is_attack` = 这一笔是不是**单位普通攻击**（只有 8466 行「战斗」那处传 true）。
 	## 「百臂工场」两条减伤按来源分流：赫卡同克瑞斯只减攻击、量产型赫利俄斯只减技能。
 	## 默认 false（技能/效果/陷阱/反伤…）—— 新增伤害路径时不用改这里。
@@ -12907,6 +12913,8 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 				"source": source, "side": p.owner}
 		if seq >= 0:
 			fi["seq"] = seq     # R363：多目标效果 → 界面按序号逐格错开落地
+		if seg >= 0:
+			fi["seg"] = seg     # R645：多段效果 → 界面按段号逐段错开落地（龙息 5 段）
 		if _hit_land.x >= 0:
 			fi["land"] = _hit_land   # R467 枭熊跃击：数字等落地那一帧（R466 同一口径）
 		action.emit("fx_impact", fi)
