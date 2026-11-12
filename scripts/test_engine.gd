@@ -81,6 +81,22 @@ func check_src(cond: bool, msg: String) -> void:
 		return
 
 	check(cond, msg)
+## R612s：仅测试版语义的断言 —— 发布版（`--release`）里 `RunState.start_run()` 会把难度
+
+## 钳在 `UnlockSystem.difficulty_cap()`（新档 = 0），「按难度档位算开局数值」的前提不成立。
+
+## 这类断言在发布包里打印跳过、不计通过也不计失败；dev / 测试版包里与 check() 等价。
+
+func check_test_only(cond: bool, msg: String) -> void:
+
+	if GameBuild.is_release():
+
+		print("  · [跳过] ", msg, " —— 仅测试版语义（发布版难度受解锁上限钳制）")
+
+		return
+
+	check(cond, msg)
+
 
 
 
@@ -1250,7 +1266,7 @@ func _init() -> void:
 
 	var r591_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 
-	check(r591_src.contains("func _run_spell_multi(")
+	check_src(r591_src.contains("func _run_spell_multi(")
 
 		and r591_src.contains("_run_spell_multi(card, target, SIDE_SELF, times)")
 
@@ -33110,7 +33126,7 @@ func _init() -> void:
 
 	var r532_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
 
-	check(r532_rp.contains("reward_icons/gold") and r532_rp.contains("reward_icons/maxhp")
+	check_src(r532_rp.contains("reward_icons/gold") and r532_rp.contains("reward_icons/maxhp")
 
 			and not r532_rp.contains("额外道具：")
 
@@ -33164,7 +33180,7 @@ func _init() -> void:
 
 	var r535_cards := r535_body.find("_view = VIEW_CARDS")
 
-	check(r535_direct >= 0 and r535_cards > r535_direct,
+	check_src(r535_direct >= 0 and r535_cards > r535_direct,
 
 			"R535 奖励页 `_open_entry()` 先判「直达到账」再落到三选一（旧版 gold / maxhp 摊开空页面 = 领不到）")
 
@@ -39932,13 +39948,13 @@ func _init() -> void:
 
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
 
-	check(RunState.gold == 100, "R223 难度 7 开局：金钱 100")
+	check_test_only(RunState.gold == 100, "R223 难度 7 开局：金钱 100")
 
 	RunState.set_difficulty(8)
 
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
 
-	check(RunState.chocolate == 11, "R223 难度 8 开局：巧克力 11")
+	check_test_only(RunState.chocolate == 11, "R223 难度 8 开局：巧克力 11")
 
 	RunState.end_run()
 
@@ -39958,7 +39974,7 @@ func _init() -> void:
 
 	RunState.sync_fatigue()
 
-	check(RunState.deck_ids.has(RunState.FATIGUE_CARD_ID)
+	check_test_only(RunState.deck_ids.has(RunState.FATIGUE_CARD_ID)
 
 			and RunState.deck_ids.count(RunState.FATIGUE_CARD_ID) == 1,
 
@@ -39966,7 +39982,7 @@ func _init() -> void:
 
 	RunState.sync_fatigue()
 
-	check(RunState.deck_ids.count(RunState.FATIGUE_CARD_ID) == 1,
+	check_test_only(RunState.deck_ids.count(RunState.FATIGUE_CARD_ID) == 1,
 
 			"R223 反复 sync 不会叠出第二张疲惫")
 
@@ -40022,7 +40038,7 @@ func _init() -> void:
 
 	RunState.sync_fatigue()
 
-	check(RunState.deck_ids.count(RunState.FATIGUE_CARD_ID) == 1
+	check_test_only(RunState.deck_ids.count(RunState.FATIGUE_CARD_ID) == 1
 
 			and RunState.fatigue_granted_layer == RunState.current_layer,
 
@@ -40068,7 +40084,7 @@ func _init() -> void:
 
 	RunState.sync_fatigue()
 
-	check(RunState.deck_ids.count(RunState.FATIGUE_CARD_ID) == 1
+	check_test_only(RunState.deck_ids.count(RunState.FATIGUE_CARD_ID) == 1
 
 			and RunState.fatigue_granted_layer == RunState.current_layer,
 
@@ -40090,7 +40106,7 @@ func _init() -> void:
 
 	RunSave.apply(r358_snap)
 
-	check(RunState.fatigue_granted_layer == RunState.current_layer
+	check_test_only(RunState.fatigue_granted_layer == RunState.current_layer
 
 			and RunState.chocolate == 5
 
@@ -67942,7 +67958,7 @@ func _init() -> void:
 
 	var r539_fs_src := FileAccess.get_file_as_string("res://scripts/field_state.gd")
 
-	check(r539_eng_src.find("if p.card.traits.has(LASER_TRAIT):") >= 0
+	check_src(r539_eng_src.find("if p.card.traits.has(LASER_TRAIT):") >= 0
 
 			and r539_eng_src.find("func _laser_cannon_act(") >= 0
 
@@ -67950,11 +67966,11 @@ func _init() -> void:
 
 			"R539 源码：激光巨炮走 `_ai_act()` 的专属分派（不混进通用流程）")
 
-	check(r539_eng_src.find("for col in FieldState.BOARD_COLS:") >= 0,
+	check_src(r539_eng_src.find("for col in FieldState.BOARD_COLS:") >= 0,
 
 			"R540 源码：一轮遍历 `BOARD_COLS` 打满三列（不是只看自己那一列）")
 
-	check(r539_fs_src.find("if card.traits.has(SLEEP_TRAIT):") >= 0
+	check_src(r539_fs_src.find("if card.traits.has(SLEEP_TRAIT):") >= 0
 
 			and r539_fs_src.find("DEEP_SLEEP_TRAIT") < 0,
 
@@ -68296,7 +68312,7 @@ func _init() -> void:
 
 	var r541_fs_gd := FileAccess.get_file_as_string("res://scripts/field_state.gd")
 
-	check(r541_src_gd.find("func _pronoia_mode(") >= 0
+	check_src(r541_src_gd.find("func _pronoia_mode(") >= 0
 
 			and r541_src_gd.find("func _pronoia_morph(") >= 0
 
@@ -68304,7 +68320,7 @@ func _init() -> void:
 
 			"R541 源码：形态判定 / 召唤变形 / 原地变形是三个独立入口")
 
-	check(r541_src_gd.find("_siege_construct_tick(SIDE_OPPONENT)") >= 0
+	check_src(r541_src_gd.find("_siege_construct_tick(SIDE_OPPONENT)") >= 0
 
 			and r541_src_gd.find("_pronoia_morph(SIDE_OPPONENT)") >= 0 \
 
@@ -68314,11 +68330,11 @@ func _init() -> void:
 
 			"R541 源码：敌方回合开始「先成长、后召唤/变形」（新召出的炮击构状体当回合不吃那一口）")
 
-	check(r541_src_gd.find("old.card = proto") >= 0,
+	check_src(r541_src_gd.find("old.card = proto") >= 0,
 
 			"R541 源码：变形是原地换卡（走 place 会把生命重置成满血）")
 
-	check(r541_fs_gd.find("func has_shield_construct(") >= 0
+	check_src(r541_fs_gd.find("func has_shield_construct(") >= 0
 
 			and r541_fs_gd.find("var self_turn_kinds") >= 0,
 
@@ -68410,7 +68426,7 @@ func _init() -> void:
 
 	var r542_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 
-	check(r542_bs.find("BannerFit.fit(_font_bold, str(_banner.text)") >= 0
+	check_src(r542_bs.find("BannerFit.fit(_font_bold, str(_banner.text)") >= 0
 
 			and r542_bs.find("_draw_string_center(_font_bold, 25, str(_banner.text)") < 0,
 
@@ -68566,7 +68582,7 @@ func _init() -> void:
 
 	var r543_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 
-	check(r543_rs.find("if third_layer_locked() and not has_key(SEED_RELIC_ID):") >= 0
+	check_src(r543_rs.find("if third_layer_locked() and not has_key(SEED_RELIC_ID):") >= 0
 
 			and r543_bs.find("RunState.current_layer == GameLayers.LAYER_TWO \\")
 
@@ -68574,7 +68590,7 @@ func _init() -> void:
 
 			"R543 源码：大宝箱二选一与二层 Boss 螺钉掉落都带 third_layer_locked 门槛")
 
-	check(r543_rs.find("\"kind\": \"relic_or_key\"") >= 0
+	check_src(r543_rs.find("\"kind\": \"relic_or_key\"") >= 0
 
 			and r543_rs.find("static func claim_key_choice") >= 0,
 
@@ -68770,15 +68786,15 @@ func _init() -> void:
 
 	ProfileData.reset_all()
 
-	check(ProfileData.is_story_unlocked("episode1"),
+	check_test_only(ProfileData.is_story_unlocked("episode1"),
 
 			"R550b 测试版：episode1 自动解锁")
 
-	check(ProfileData.is_story_unlocked("episode2"),
+	check_test_only(ProfileData.is_story_unlocked("episode2"),
 
 			"R550b 测试版：episode2 无需达成成就也解锁")
 
-	check(ProfileData.is_story_unlocked("episode_future_999"),
+	check_test_only(ProfileData.is_story_unlocked("episode_future_999"),
 
 			"R550b 测试版：后续新增的段也自动解锁")
 
@@ -68910,7 +68926,7 @@ func _init() -> void:
 
 			"R577 高难度成就门槛 = 难度 5")
 
-	check(FileAccess.file_exists("res://steam_appid.txt.template"),
+	check_src(FileAccess.file_exists("res://steam_appid.txt.template"),
 
 			"R577 AppID 模板在位（.template 入库，真文件 steam_appid.txt 已 gitignore）")
 
@@ -69462,7 +69478,7 @@ func _init() -> void:
 
 	var r583_gsrc := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 
-	check(r583_gsrc.find("if c.id == TECH_FUSION_BASE_ID:") >= 0,
+	check_src(r583_gsrc.find("if c.id == TECH_FUSION_BASE_ID:") >= 0,
 
 			"R583 源码锁：候选池显式排除构装体")
 
@@ -69910,7 +69926,7 @@ func _init() -> void:
 
 	var r586_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 
-	check(r586_src.contains("func _justice_backstab_mult")
+	check_src(r586_src.contains("func _justice_backstab_mult")
 
 			and r586_src.contains("dmg *= jb_mult")
 
@@ -69930,7 +69946,7 @@ func _init() -> void:
 
 	var r586_map_src := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
 
-	check(r586_map_src.contains("K_BOSS_SEEN_TWO")
+	check_src(r586_map_src.contains("K_BOSS_SEEN_TWO")
 
 			and r586_map_src.contains("GameLayers.LAYER_TWO"),
 
@@ -70102,7 +70118,7 @@ func _test_r600() -> void:
 
 	var r600_gallery := FileAccess.get_file_as_string("res://scripts/gallery_scene.gd")
 
-	check(not r600_gallery.contains("c.color")
+	check_src(not r600_gallery.contains("c.color")
 
 			and r600_gallery.contains('"%s · %s · %d 费 · %s" % ['),
 
@@ -70386,7 +70402,7 @@ func _test_r598() -> void:
 
 	var r598_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 
-	check(r598_bs.contains("ProfileData.bump(ProfileData.K_BOSS_KILL + str(lvl.get(\"name\", \"?\")))"),
+	check_src(r598_bs.contains("ProfileData.bump(ProfileData.K_BOSS_KILL + str(lvl.get(\"name\", \"?\")))"),
 
 			"R598 源码锁：两篇档案复用真实 Boss 胜利按关卡名记账的唯一口")
 
@@ -70486,7 +70502,7 @@ func _test_r597() -> void:
 
 	var r597_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 
-	check(r597_bs.contains("if tier == GameLevels.TIER_ELITE_EASY or tier == GameLevels.TIER_ELITE_HARD:")
+	check_src(r597_bs.contains("if tier == GameLevels.TIER_ELITE_EASY or tier == GameLevels.TIER_ELITE_HARD:")
 
 			and r597_bs.contains("ProfileData.bump(ProfileData.K_ELITE_KILL + str(lvl.get(\"name\", \"?\")))"),
 
@@ -70862,7 +70878,7 @@ func _test_r593() -> void:
 
 	var r593_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 
-	check(r593_src.contains("_grant_to_hand(arm_copy, \"机械臂\")")
+	check_src(r593_src.contains("_grant_to_hand(arm_copy, \"机械臂\")")
 
 			and r593_src.contains("state.hand_cost_turn[arm_copy]")
 
@@ -71446,7 +71462,7 @@ func _test_r592b() -> void:
 
 	var cfs := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 
-	check(cfs.contains('var affix_txt: String = ""'),
+	check_src(cfs.contains('var affix_txt: String = ""'),
 
 			"R592b：文字区不再把字段名拼进「种类 · 字段」那行")
 
@@ -71454,7 +71470,7 @@ func _test_r592b() -> void:
 
 			"R592b：卡面不再画成长角标（+力/+生命 只在详细描述）")
 
-	check(cfs.contains("_draw_affix_badges(canvas, card, rect, k, on_board)")
+	check_src(cfs.contains("_draw_affix_badges(canvas, card, rect, k, on_board)")
 
 			and cfs.contains("_draw_affix_badges(canvas, card, rect, k, false)"),
 
@@ -71464,7 +71480,7 @@ func _test_r592b() -> void:
 
 	var det := FileAccess.get_file_as_string("res://scripts/card_detail_overlay.gd")
 
-	check(det.contains("CardFace.growth_text(_card)"),
+	check_src(det.contains("CardFace.growth_text(_card)"),
 
 			"R592b：详细描述仍显示本局永久成长")
 

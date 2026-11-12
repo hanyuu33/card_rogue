@@ -7,6 +7,8 @@ rem R477: dist only keeps versioned packs (DuckCardsRogue_R<round>.exe).
 rem Try the plain name first, then fall back to the highest DuckCardsRogue_R*.exe
 rem (sort by NAME, not by mtime -- a freshly copied old pack would win on mtime).
 set "GAME=%~dp0DuckCardsRogue.exe"
+rem R612: --release build ships as DuckCardsRogue_release.exe (progressive unlock).
+if not exist "%GAME%" if exist "%~dp0DuckCardsRogue_release.exe" set "GAME=%~dp0DuckCardsRogue_release.exe"
 set "PICK="
 if not exist "%GAME%" (
   for /f "delims=" %%F in ('dir /b /o-n "%~dp0DuckCardsRogue_R*.exe" 2^>nul') do (
