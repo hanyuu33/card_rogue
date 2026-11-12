@@ -11,14 +11,21 @@ func _initialize() -> void:
 
 
 func _m() -> void:
+	# R631：支持 `-- --card <id>` 指定卡（默认仍是 R602 用的 9207 最长卡名），
+	# 方便逐张核对效果文是否越框。
+	var want := 9207
+	var args := OS.get_cmdline_user_args()
+	var ai := args.find("--card")
+	if ai >= 0 and ai + 1 < args.size():
+		want = int(args[ai + 1])
 	var repo = CardRepo.load_json()
 	var card = null
 	for c in repo.all_cards():
-		if c.id == 9207:
+		if c.id == want:
 			card = c
 			break
 	if card == null:
-		print("[shot] card 9207 not found")
+		print("[shot] card %d not found" % want)
 		quit()
 		return
 	var root := Control.new()
@@ -32,5 +39,5 @@ func _m() -> void:
 	await process_frame
 	var img := get_root().get_texture().get_image()
 	img.save_png("res://_shot_card_detail.png")
-	print("[shot] saved _shot_card_detail.png %s" % str(img.get_size()))
+	print("[shot] saved _shot_card_detail.png %s card=%d" % [str(img.get_size()), want])
 	quit()

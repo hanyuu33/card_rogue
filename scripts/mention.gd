@@ -214,7 +214,8 @@ static func relic_tip_metrics(font: Font, font_bold: Font, n_lines: int) -> Dict
 	var name_base := p + asc_n
 	var tag_base := name_base + dsc_n + 5.0 + asc_t
 	var desc_base := tag_base + dsc_t + 8.0 + asc_d
-	var line := 19.0
+	# R631：行距取字体真实行高（写死的 19 配 FS_LABEL 会叠字）；量法与画法共用这一个数。
+	var line: float = maxf(font.get_height(UiTheme.FS_LABEL), 19.0)
 	var h := desc_base + maxf(0.0, float(n_lines - 1)) * line + dsc_d + p
 	return {"name_base": name_base, "tag_base": tag_base, "desc_base": desc_base,
 			"line": line, "h": h}

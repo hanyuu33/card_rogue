@@ -16764,10 +16764,17 @@ func _relic_panel_rows() -> Array:
 
 
 func _relic_panel_rows_height() -> float:
+	## R631：行距改走 `_relic_p_line()`（字体真实行高）—— 写死的 17px 配 13px 正文会叠字。
 	var h := 0.0
 	for r in _relic_panel_rows():
-		h += RELIC_P_ROWH + (r[2] as PackedStringArray).size() * RELIC_P_LINE + 10.0
+		h += RELIC_P_ROWH + (r[2] as PackedStringArray).size() * _relic_p_line() + 10.0
 	return h
+
+
+func _relic_p_line() -> float:
+	## 道具面板说明行的行距（R631）。**不许写死**：字号一变，按经验值给的行距就叠字。
+	## 取「字体真实行高」与「字号 × 1.3」的较大者，任何字号下都不会压到上一行。
+	return maxf(_font.get_height(RELIC_P_DESC), float(RELIC_P_DESC) * 1.3)
 
 
 func _draw_relic_panel() -> void:
@@ -16800,7 +16807,7 @@ func _draw_relic_panel() -> void:
 		var dlines: PackedStringArray = r[2]
 		var scol: Color = r[3]
 		var ncol: Color = r[4]
-		var row_h: float = RELIC_P_ROWH + dlines.size() * RELIC_P_LINE + 10.0
+		var row_h: float = RELIC_P_ROWH + dlines.size() * _relic_p_line() + 10.0
 		# 只画面板内可见的行（滚出面板的内容自然被面板矩形盖不住 → 手动跳过）
 		# R405：只画整行都在内容区里的（旧的半行判定会让首行压在标题上，见 map_scene 同处）
 		if y >= py + 52.0 and y + row_h <= py + ph - 6.0:
@@ -16813,7 +16820,7 @@ func _draw_relic_panel() -> void:
 					Vector2(px + 36 + nw + 6.0, y), Color("4a3c14"), -1)
 			for d_i in dlines.size():
 				_draw_string_nw(_font, RELIC_P_DESC, dlines[d_i],
-						Vector2(px + 36, y + RELIC_P_ROWH - 8.0 + d_i * RELIC_P_LINE),
+						Vector2(px + 36, y + RELIC_P_ROWH - 8.0 + d_i * _relic_p_line()),
 						UiTheme.INK_600, -1)
 		y += row_h
 
@@ -16824,31 +16831,60 @@ func _draw_relic_panel() -> void:
 const RELIC_TIP_W := 480.0
 const RELIC_TIP_PAD := 12.0
 const RELIC_TIP_SIZE := 13
+const RELIC_TIP_SIZE_MIN := 10
 const RELIC_TIP_LINE := 18.0
 
 
 func _draw_relic_tip_panel() -> void:
 	## 道具悬停说明：浮动折行面板（长描述如「叠加态的鸭」不溢出）。
 	## 位置优先贴在道具栏上方；上方放不下就翻到下方。两个轴都夹进窗口内。
-	if _hover_relic_tip == "":
-		return
+	##
+	## R631（用户口径「暗影斗篷看不到力量 -1」「描述超过格子」）修掉两个硬伤：
+	##   ① 以前每行是 `draw_string(..., width = inner, ...)` —— draw_string 的 width
+	##      **不只是对齐宽度，超出部分会被直接裁掉**。折行时贴在右边界的那一小段
+	##      （幻影斗篷的「力量 -1」正好卡在那儿）整块消失，玩家永远读不到。
+	##      现在 width 一律传 -1（不裁），「每行不超宽」由折行 + 安全余量保证。
+	##   ② 面板高 = 行数 × 固定行距，没有上限 —— 长描述会一路顶到窗口外。
+	##      现在先按「道具栏上方 / 下方各自能腾出的高度」取大的那侧，放不下
+	##      先缩字号（13 → 10），缩到底仍放不下才按高度截断补「…」。
 	var w := RELIC_TIP_W
 	var inner := w - RELIC_TIP_PAD * 2.0
-	var lines := CardFace.wrap_text(_font, _hover_relic_tip, inner, RELIC_TIP_SIZE)
-	var h := RELIC_TIP_PAD * 2.0 + lines.size() * RELIC_TIP_LINE
 	var z := _relic_zone_rect()
-	var x: float = clampf(z.position.x + z.size.x - w, 8.0, WINDOW_W - w - 8.0)
+	var x: float = clampf(z.position.x + z.size.x - w, 8.0, maxf(8.0, WINDOW_W - w - 8.0))
+	# 两个候选位置各自能腾出的高度（贴着窗口内边距 8）
+	var room_up: float = z.position.y - 10.0 - 8.0
+	var room_dn: float = WINDOW_H - (z.position.y + z.size.y + 10.0) - 8.0
+	var max_h: float = minf(WINDOW_H - 16.0, maxf(room_up, maxf(room_dn, 60.0)))
+	var fs := RELIC_TIP_SIZE
+	var lines := CardFace.wrap_text(_font, _hover_relic_tip, inner, fs)
+	var lh: float = maxf(_font.get_height(fs), float(fs))
+	while fs > RELIC_TIP_SIZE_MIN:
+		if RELIC_TIP_PAD * 2.0 + lines.size() * lh <= max_h:
+			break
+		fs -= 1
+		lines = CardFace.wrap_text(_font, _hover_relic_tip, inner, fs)
+		lh = maxf(_font.get_height(fs), float(fs))
+	# 缩到下限仍超高 → 按可用高度截断（末行补「…」），绝不画到窗口外
+	var max_lines: int = maxi(1, int(floor((max_h - RELIC_TIP_PAD * 2.0) / lh)))
+	if lines.size() > max_lines:
+		var keep: Array[String] = []
+		for li in max_lines:
+			keep.append(lines[li])
+		keep[max_lines - 1] = CardFace.ellipsize(_font,
+				keep[max_lines - 1] + "…", inner, fs)
+		lines = keep
+	var h: float = RELIC_TIP_PAD * 2.0 + lines.size() * lh
 	var y: float = z.position.y - h - 10.0
 	if y < 8.0:
-		y = clampf(z.position.y + z.size.y + 10.0, 8.0, WINDOW_H - h - 8.0)
+		y = z.position.y + z.size.y + 10.0
+	y = clampf(y, 8.0, maxf(8.0, WINDOW_H - h - 8.0))
 	draw_rect(Rect2(x, y, w, h), Color(0.10, 0.11, 0.15, 0.95), true)
 	draw_rect(Rect2(x, y, w, h), UiTheme.ACCENT_GOLD, false, 1.2)
 	for li in lines.size():
-		# 行槽 = [y+pad + li*line, +line]，基线取槽中心下方 0.36em（与 _draw_string_center 同约定）
-		var by: float = y + RELIC_TIP_PAD + RELIC_TIP_LINE * (float(li) + 0.5) \
-				+ RELIC_TIP_SIZE * 0.36
+		# 行槽 = [y+pad + li*lh, +lh]，基线取槽中心下方 0.36em（与 _draw_string_center 同约定）
+		var by: float = y + RELIC_TIP_PAD + lh * (float(li) + 0.5) + fs * 0.36
 		draw_string(_font, Vector2(x + RELIC_TIP_PAD, by), lines[li],
-				HORIZONTAL_ALIGNMENT_LEFT, inner, RELIC_TIP_SIZE, Color("f0ead8"))
+				HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("f0ead8"))
 
 
 func _draw_log_panel() -> void:

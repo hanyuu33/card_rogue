@@ -391,14 +391,18 @@ func _draw_detail(merged: Array, L: Dictionary) -> void:
 	var eff := CardText.naturalize(c.effect_text)
 	if eff != "":
 		var avail_h: float = maxf(20.0, py + ph - 44.0 - y)
-		var fit := CardFace.fit_text_lines(_font, eff, w, avail_h, UiTheme.FS_BODY, 10)
+		# R631：缩字号下限 10 → 9，按「末行墨迹底」判。
+		var fit := CardFace.fit_text_lines(_font, eff, w, avail_h, UiTheme.FS_BODY, 9, 99, true)
 		var fs := int(fit["fs"])
 		var lh := float(fit["line_h"]) + 2.0
 		var lines: Array = fit["lines"]
-		var n := mini(lines.size(), maxi(0, int(avail_h / lh)))
-		for li in n:
+		var limit_y: float = py + ph - 44.0   # 效果文不许压到「卡组中…张」那行
+		for li in lines.size():
+			# R631：逐行确认字脚还在框内；width 传 -1（width 会裁字）。
+			if y + fs + 4.0 > limit_y:
+				break
 			_panel.draw_string(_font, Vector2(x, y), lines[li],
-					HORIZONTAL_ALIGNMENT_LEFT, w, fs, UiTheme.INK_800)
+					HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiTheme.INK_800)
 			y += lh
 	y += 12.0
 	y = minf(y, py + ph - 28.0)   # R602：最后一行永远留在框内（别压到面板下边框）

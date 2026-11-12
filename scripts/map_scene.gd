@@ -1950,8 +1950,14 @@ func _relic_panel_rows() -> Array:
 		rows.append(["「%s」（%s%s）" % [rel.relic_name,
 				"已耗尽 · " if spent else "", rel.tag_line()],
 				lines, Color("6a7078") if spent else rel.badge_color(),
-				RELIC_P_ROWH + lines.size() * RELIC_P_LINE + 10.0])
+				RELIC_P_ROWH + lines.size() * _relic_p_line() + 10.0])
 	return rows
+
+
+func _relic_p_line() -> float:
+	## 道具面板说明行的行距（R631）。**不许写死 17**：13px 正文的真实行高约 20，
+	## 按旧经验值排会让相邻两行叠字（R115 在卡面踩过的同一个坑）。
+	return maxf(_font.get_height(RELIC_P_DESC), float(RELIC_P_DESC) * 1.3)
 
 
 func _wrap_relic_text(text: String, max_w: float, px: int) -> PackedStringArray:
@@ -2088,7 +2094,7 @@ func _draw_relic_panel() -> void:
 			var dlines: PackedStringArray = r[1]
 			for d_i in dlines.size():
 				draw_string(_font, Vector2(px + 38,
-						y + RELIC_P_ROWH - 8.0 + d_i * RELIC_P_LINE), dlines[d_i],
+						y + RELIC_P_ROWH - 8.0 + d_i * _relic_p_line()), dlines[d_i],
 						HORIZONTAL_ALIGNMENT_LEFT, RELIC_P_W - 60, RELIC_P_DESC,
 						Color("4a4438"))
 		y += row_h

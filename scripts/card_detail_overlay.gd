@@ -159,14 +159,20 @@ func _draw() -> void:
 	var eff := CardText.naturalize(_card.effect_text)
 	if eff != "":
 		var avail_h := t.end.y - y
-		var fit := CardFace.fit_text_lines(_font, eff, w, avail_h, UiTheme.FS_BODY, 10)
+		# R631：缩字号下限 10 → 9，并按「末行墨迹底」判（与卡面同一套口径）。
+		var fit := CardFace.fit_text_lines(_font, eff, w, avail_h, UiTheme.FS_BODY, 9, 99, true)
 		var fs := int(fit["fs"])
 		var line_h := float(fit["line_h"]) + 2.0
 		var lines: Array = fit["lines"]
-		var n := mini(lines.size(), maxi(1, int(avail_h / line_h)))
-		for li in n:
+		for li in lines.size():
+			# R631：以前是 `maxi(1, int(avail_h / line_h))` —— **强制至少画一行**，
+			# 可用高度不够时那一行就压到面板下边框上（用户口径「描述超过了格子」）。
+			# 现在逐行确认字脚还在框内，放不下就停。
+			if y + fs + 4.0 > t.end.y:
+				break
+			# width 传 -1：`draw_string` 的 width 会把超出部分裁掉，贴边的字会凭空消失。
 			draw_string(_font, Vector2(x, y + fs * 0.9), lines[li],
-					HORIZONTAL_ALIGNMENT_LEFT, w, fs, UiTheme.INK_800)
+					HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiTheme.INK_800)
 			y += line_h
 	# 调用方补充说明
 	if _note != "":
