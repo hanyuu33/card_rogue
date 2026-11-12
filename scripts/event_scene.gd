@@ -3278,7 +3278,11 @@ func _ref_button_hits() -> void:
 	## 按钮文字由 Godot 自己画（不能只给名字上色），所以这里只登记命中矩形 +
 	## 在提示层给按钮描一圈淡金（悬停点亮）—— 明确「这个选项还有东西可看」。
 	_ref_btn_hits = []
-	for b: Button in [rest_btn, bbq_btn, leave_btn]:
+	# R627：必须**四个都扫**（与 705/1286/1298 行同一份名单）——
+	# 第二个选项（alt_btn）也常写「获得道具 + 名字」这种句式
+	# （冒险家的遗物 / 雪豹出现 / 武术大师 / 契约的核心），
+	# 漏了它就等于「第二个选项关联不到名字」。
+	for b: Button in [rest_btn, bbq_btn, alt_btn, leave_btn]:
 		if b == null or not b.visible or b.text.strip_edges() == "":
 			continue
 		# 环色按**按钮底色**取（不是字色）：事件页选项是浅色胶囊，金色环在上面等于没画。

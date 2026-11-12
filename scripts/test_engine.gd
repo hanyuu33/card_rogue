@@ -41752,6 +41752,20 @@ func _init() -> void:
 
 			"R447 冒险家的遗物：事件场景接了分支")
 
+	# R627：事件页的「选项按钮提及」必须扫四个按钮 —— `alt_btn`（第二个选项）漏掉时，
+	# 「拿取工具（获得道具「燧石」）」这类按钮悬停不出描述（用户报障）。
+	var r627_src := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+
+	check_src(r627_src.count("[rest_btn, bbq_btn, alt_btn, leave_btn]") >= 4,
+
+			"R627 源码锁：按钮四处名单都含 alt_btn（含提及扫描 _ref_button_hits）")
+
+	var r627_m := Mention.scan("拿取工具（获得道具「燧石」）")
+
+	check(r627_m.size() == 1 and int(r627_m[0]["id"]) == 6057,
+
+			"R627 燧石：第二选项按钮上的名字能解析到道具 6057")
+
 	# 还原
 
 	RunState.map_cells = r447_sv_cells

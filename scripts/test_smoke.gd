@@ -223,6 +223,14 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "rest"}
 				_seed_rewards(),
 			func(s): _check_reward_panel_view(s, RewardPanel.VIEW_LIST, "列表")],
+		# R627（用户报障）：「冒险家的遗物 · 第二个选项关联不到燧石的描述」。
+		# 只有真场景能验 —— 命中表是 `_ref_button_hits()` 在跑，漏一枚按钮就静默少一条。
+		["res://scenes/event.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "event"}
+				RunState.pending_event = "adventurer",
+			func(s): _check_r627_alt_btn_mention(s)],
 		["res://scenes/event.tscn", func():
 				_reset()
 				RunState.start_run(_map())
@@ -1218,6 +1226,23 @@ func _check_r546_win_panel(scene: Variant) -> void:
 		return
 	print("SMOKE OK R546 胜利面板：可见 / 金币 %s（实际入账 +%d）/ 按钮「查看奖励」→ 奖励窗已打开"
 			% [str(num.text), expect])
+
+
+func _check_r627_alt_btn_mention(scene: Variant) -> void:
+	## R627：事件页**第二个选项**（alt_btn）上的名字必须能悬浮。
+	## 不依赖帧序 —— 自己重跑一次登记，断言道具 6057（燧石）真的在命中表里。
+	scene._ref_button_hits()
+	var hits: Array = scene._ref_btn_hits
+	var ok := false
+	for h: Dictionary in hits:
+		var r: Dictionary = h.get("ref", {})
+		if int(r.get("id", -1)) == 6057:
+			ok = true
+			break
+	if not ok:
+		_smoke_fail("R627 冒险家的遗物：第二个选项的「燧石」不在悬浮命中表里（alt_btn 又漏扫了）")
+		return
+	print("SMOKE OK R627 冒险家的遗物：第二选项「燧石」可悬浮（命中表 %d 条）" % hits.size())
 
 
 func _check_reward_panel_view(scene: Variant, want_view: int, label: String) -> void:
