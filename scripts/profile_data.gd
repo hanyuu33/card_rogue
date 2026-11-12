@@ -13,6 +13,10 @@ extends RefCounted
 ##   read_stories     已经**点开看过**的剧情 id（看过的才会发放卡牌 / 道具）
 ##   unlocked_cards   已解锁的卡牌 id（这些卡才会进奖励池）
 ##   unlocked_relics  已解锁的道具 id（这些道具才会进奖励池）
+##   seen_cards       **见过**的卡牌 id（R642：图鉴解锁判据）
+##                    ⚠️ 与 `unlocked_cards` 是**两件事**，别混：
+##                      · unlocked = 剧情解锁 → 进奖励池；
+##                      · seen     = 玩家亲眼见过卡面 → 图鉴里列出来。
 ##   banned_by_class  玩家禁掉的卡牌 id，**按职业分组**（R352）：{职业: [卡 id]}
 ##                    —— 一张公用卡在三个职业的奖励池里都会出现，所以每个职业各要一个名额
 ##
@@ -62,6 +66,10 @@ static var unlocked_stories: Array[String] = []
 static var read_stories: Array[String] = []
 static var unlocked_cards: Array[int] = []
 static var unlocked_relics: Array[int] = []
+## R642：见过的卡牌（图鉴解锁判据）。形状与 `unlocked_cards` 同（id 数组），
+## 另配一张 `_seen_set` 做热路径 O(1) 判定 —— 卡面每帧都在画，不能每帧线性扫数组。
+static var seen_cards: Array[int] = []
+static var _seen_set: Dictionary = {}
 ## R550（发布版解锁）：已解锁的职业 id（森林精魄是起始职业，**恒视为已解锁**，不写进这里）。
 ## 测试版无视此表（全部职业直接可用）。
 static var unlocked_classes: Array[String] = []
@@ -98,6 +106,8 @@ static func clear_memory() -> void:
 	read_stories = []
 	unlocked_cards = []
 	unlocked_relics = []
+	seen_cards = []           # R642
+	_seen_set.clear()         # R642
 	unlocked_classes = []     # R550
 	class_diff = {}           # R550
 	banned_by_class = {}
@@ -137,6 +147,13 @@ static func ensure_loaded() -> void:
 	read_stories = _str_array(d.get("read_stories", []))
 	unlocked_cards = _int_array(d.get("unlocked_cards", []))
 	unlocked_relics = _int_array(d.get("unlocked_relics", []))
+	# R642：老档案没有 `seen_cards` → 空（图鉴从零开始）。这里**不做补偿推断**
+	# （别拿 `card_play:*` 统计去反推「见过」：统计只记打出去的卡，会漏掉一堆
+	# 玩家明明在奖励三选一里见过的卡，补出来反而不准）。
+	seen_cards = _int_array(d.get("seen_cards", []))
+	_seen_set.clear()
+	for sid: int in seen_cards:
+		_seen_set[sid] = true
 	unlocked_classes = _str_array(d.get("unlocked_classes", []))   # R550
 	# R550：class_diff 是 {职业: int} —— JSON 数字读回来是 float，逐个 int()。
 	var cd: Variant = d.get("class_diff", {})
@@ -165,6 +182,7 @@ static func save() -> bool:
 		"read_stories": read_stories,
 		"unlocked_cards": unlocked_cards,
 		"unlocked_relics": unlocked_relics,
+		"seen_cards": seen_cards,               # R642
 		"unlocked_classes": unlocked_classes,   # R550
 		"class_diff": class_diff,               # R550
 		"banned_by_class": banned_by_class,
@@ -306,6 +324,50 @@ static func is_card_unlocked(id: int) -> bool:
 static func is_relic_unlocked(id: int) -> bool:
 	ensure_loaded()
 	return unlocked_relics.has(id)
+
+
+# ------------------------------------------------------------ R642 图鉴「见过」解锁
+#
+# 店长口径：**发布版**图鉴只列**见过**的卡 —— 没见过的连条目都没有、搜也搜不到；
+# 全卡开（测试版）时全部位置都排出来，没见过的画成一张通用的「未解锁」图。
+#
+# 「见过」的唯一语义 = **卡面真的在玩家眼前被画出来过**。记账口因此只有两处：
+# `CardFace.draw()` 与 `CardFace.draw_pick()`（所有卡面绘制的两个总口）。
+#   · 好处：手牌 / 场上单位 / 牌库查看 / 商店陈列 / 奖励三选一 / 组合候选 /
+#     事件发卡 / 提示浮窗…… 一处不漏，也不用在每个界面各埋一个记账调用；
+#   · ⚠️ 图鉴自己画卡面时必须传 `record_seen = false`，否则一开图鉴就全解锁。
+#
+# 与 `unlocked_cards` 的分工：那张表是「剧情解锁 → 进奖励池」，与「见过」无关；
+# 一张卡可以见过但没解锁（敌人卡、事件卡），也可以解锁但从没见过。
+
+static func mark_card_seen(id: int) -> bool:
+	## 记一次「玩家见过这张卡」。返回是否**这次新解锁**（已在表里 → false）。
+	## ⚠️ 热路径：卡面每帧都在画，所以先用 `_seen_set` 挡掉重复调用，
+	## 命中就 return，不再走任何落盘逻辑。
+	if id <= 0:
+		return false
+	if not _loaded:
+		ensure_loaded()
+	if _seen_set.has(id):
+		return false
+	_seen_set[id] = true
+	seen_cards.append(id)
+	_dirty = true
+	return true
+
+
+static func is_card_seen(id: int) -> bool:
+	## 图鉴解锁判据（唯一口）。
+	if not _loaded:
+		ensure_loaded()
+	return _seen_set.has(id)
+
+
+static func seen_count() -> int:
+	## 已见过的张数（图鉴「已收集 X / Y」用）。
+	if not _loaded:
+		ensure_loaded()
+	return seen_cards.size()
 
 
 # ------------------------------------------------------------ R550 发布版解锁（职业 / 难度）

@@ -215,8 +215,11 @@ func _kind_options() -> Array:
 func _rebuild_classes() -> void:
 	## R77：职业下拉。选项从**卡库实际出现过的 class 值**动态汇总（去重、排序），
 	## 这样以后新增角色不用改这里；"无归属" 对应 class 为空的卡。
+	## R642：发布版只汇总「见过」的卡（不然下拉框会先说漏有新职业）。
 	var names: Array[String] = []
 	for c in _all:
+		if not _visible(c):
+			continue
 		var cn: String = c.card_class
 		if cn == "" or names.has(cn):
 			continue
@@ -269,6 +272,53 @@ func _set_group(g: String) -> void:
 	_refresh_detail()
 
 
+# ------------------------------------------------------------ 解锁（R642）
+#
+# 店长口径：**发布版**图鉴只列「见过」的卡 —— 没见过的连条目都没有、搜也搜不到；
+# 全卡开（测试版）时全部位置都排出来，没见过的画成一张**通用未解锁图**。
+# 「见过」的记账在 `CardFace.draw() / draw_pick()`（唯一口），见 `ProfileData`。
+
+static func gallery_visible(c: CardData, release_mode: bool) -> bool:
+	## R642：图鉴可见性的**唯一判据**。抽成静态是为了测试能直接调
+	## （`preload("res://scripts/gallery_scene.gd").gallery_visible(card, true)`），
+	## 不必把整个场景实例化起来才能验一条布尔。
+	if release_mode and not ProfileData.is_card_seen(c.id):
+		return false
+	return true
+
+
+func _visible(c: CardData) -> bool:
+	## 这张卡在当前版本的图鉴里**存不存在**。
+	return gallery_visible(c, GameBuild.is_release())
+
+
+func _locked(c: CardData) -> bool:
+	## 只有全卡开才可能为真：位置排出来了，但玩家还没见过 → 遮蔽成通用图。
+	## 发布版里未见的卡在 `_visible()` 就被挡掉，走不到这里。
+	return not ProfileData.is_card_seen(c.id)
+
+
+func _has_active_filter() -> bool:
+	## 有任何筛选 / 搜索在用 → 未解锁的占位卡全部退出结果。
+	## 口径是「不能搜到」，筛选同理：一搜「机械」就把未知卡带出来，等于报答案。
+	## 所以未知卡**只**在「什么都不筛」的默认视图里占位，告诉玩家还差多少。
+	return (_search_lc != "" or _kind_filter != "全部"
+			or _class_filter != "全部" or _cost_filter != 0)
+
+
+func _group_counts() -> Array[int]:
+	## [该分组总张数, 已见过张数] —— 顶栏「已收集 X / Y」用。
+	var total := 0
+	var seen := 0
+	for c in _all:
+		if c.group != _group:
+			continue
+		total += 1
+		if ProfileData.is_card_seen(c.id):
+			seen += 1
+	return [total, seen]
+
+
 # ------------------------------------------------------------ 搜索（R631）
 
 func _build_search_index() -> void:
@@ -280,6 +330,8 @@ func _build_search_index() -> void:
 	_search_pool.clear()
 	_search_flat.clear()
 	for c in _all:
+		if not _visible(c):
+			continue   # R642：没见过的卡不进索引 —— 从源头上就搜不到
 		var blob := _search_blob(c)
 		_search_pool[c.id] = blob
 		_search_flat[c.id] = blob.replace(" ", "")
@@ -352,6 +404,12 @@ func _apply_filters() -> void:
 	for c in _all:
 		if c.group != _group:
 			continue
+		# R642：发布版没见过的卡**不存在**于图鉴（因此也搜不到）。
+		if not _visible(c):
+			continue
+		# 全卡开才有的一层：未解锁的只在默认视图占位，一旦筛选 / 搜索就退出。
+		if _locked(c) and _has_active_filter():
+			continue
 		if not _match_kind(c):
 			continue
 		if not _match_class(c):
@@ -363,7 +421,20 @@ func _apply_filters() -> void:
 		if _search_lc != "" and not _match_name(c):
 			_text_only_hits += 1
 		_shown.append(c)
-	var summary := "%s · 共 %d 种卡牌" % [_group_title(), _shown.size()]
+	var summary := ""
+	if GameBuild.is_release():
+		# 发布版：说「收集进度」而不是「卡池总量」—— 玩家看不到没见过的部分，
+		# 报总数等于直接告诉他「还有多少张没解锁」，那是另一件事（全卡开才给）。
+		var gc := _group_counts()
+		summary = "%s · 已收集 %d / %d" % [_group_title(), int(gc[1]), int(gc[0])]
+		if _shown.size() != int(gc[1]):
+			summary += "（显示 %d 张）" % _shown.size()
+	else:
+		summary = "%s · 共 %d 种卡牌" % [_group_title(), _shown.size()]
+		var gc2 := _group_counts()
+		var unknown_n := int(gc2[0]) - int(gc2[1])
+		if unknown_n > 0 and not _has_active_filter():
+			summary += "（其中 %d 张未解锁）" % unknown_n
 	# R631：命中的卡里有相当一部分「卡名里没有这个词」——它可能来自效果文，也可能是
 	# 特性 / 字段 / 职业（搜「机械」会命中整个机械之心）。文案只说「卡名不含」这个**事实**，
 	# 不承诺命中的是哪一处（详情右栏能看到来源），免得玩家以为搜索串了。
@@ -417,8 +488,14 @@ func _on_grid_draw() -> void:
 		var rect := _cell_rect(i)
 		if rect.end.y < top or rect.position.y > bottom:
 			continue
-		CardFace.draw(grid, _shown[i], rect, _shown[i].health,
-				_shown[i] == _selected, false, _font, _font_bold)
+		# R642：全卡开时未解锁的位置画**通用未解锁图**，不泄露卡名 / 数值 / 卡图。
+		if _locked(_shown[i]):
+			CardFace.draw_locked(grid, rect, _font_bold)
+			continue
+		# 图鉴自己画卡面**不记**「见过」（`draw_no_record`）——
+		# 否则一开图鉴就把全部卡标成见过，这套解锁等于没有。
+		CardFace.draw_no_record(grid, _shown[i], rect, _shown[i].health,
+				_shown[i] == _selected, _font, _font_bold)
 
 
 func _on_grid_input(event: InputEvent) -> void:
@@ -448,13 +525,24 @@ func _on_detail_draw() -> void:
 	## 详情面板底部的大卡面（放大 132x160，走共享 CardFace 绘制）
 	if _selected == null:
 		return
-	CardFace.draw($DetailPanel, _selected, Rect2(70, 445, 132, 160),
-			_selected.health, false, false, _font, _font_bold)
+	var r := Rect2(70, 445, 132, 160)
+	# R642：未解锁的详情也不给看卡面（卡图本身就是最大的剧透）。
+	if _locked(_selected):
+		CardFace.draw_locked($DetailPanel, r, _font_bold)
+		return
+	CardFace.draw_no_record($DetailPanel, _selected, r,
+			_selected.health, false, _font, _font_bold)
 
 
 func _refresh_detail() -> void:
 	if _selected == null:
+		# R642：发布版第一次进图鉴可能是**全空**（一局都没打过 = 一张都没见过）。
+		# 这时候必须说清楚「为什么空」，否则玩家会以为图鉴坏了。
+		# 文案压在 11 字以内（236px 宽、20 号字），超了会被 Label 撑出框线。
 		detail_name.text = "（无卡牌）"
+		if GameBuild.is_release():
+			detail_name.text = ("还没见过任何卡牌" if ProfileData.seen_count() == 0
+					else "（没有符合条件的卡牌）")
 		for l: Label in [detail_kind, detail_stats, detail_traits, detail_text]:
 			l.text = ""
 		detail_badge.visible = false
@@ -469,6 +557,19 @@ func _refresh_detail() -> void:
 	const B_TITLE := Vector2(BX, 30.0)
 	const B_LINE := Vector2(BX, 24.0)
 	const B_BODY := Vector2(BX, 230.0)
+	# R642：未解锁的卡只报「还没解锁」，卡名 / 种类 / 数值 / 正文一律不写 ——
+	# 图鉴的解锁乐趣全在「第一次见到它」那一刻，详情面板不能提前把答案给出来。
+	# 只留一句**怎么解锁**，否则玩家会以为这是 Bug。
+	if _locked(c):
+		UiTheme.autoshrink_label(detail_name, "？？？", 20, 13, B_TITLE)
+		UiTheme.autoshrink_label(detail_kind, "未解锁", 14, 10, B_LINE)
+		UiTheme.autoshrink_label(detail_stats, "", 14, 10, B_LINE)
+		UiTheme.autoshrink_label(detail_traits, "", 14, 10, B_LINE)
+		UiTheme.autoshrink_label(detail_text,
+				"在游戏里见过这张卡后，才会收录进图鉴。", 16, 11, B_BODY)
+		detail_badge.visible = false
+		$DetailPanel.queue_redraw()
+		return
 	# R77：详情里带上职业（图鉴现在支持按职业查了，写出来才看得到筛选是否对）
 	# R328：class 留空的卡分两种 —— 公用初始卡（木栅栏/攻击，三职业共用）写「公用初始」，
 	# 其余（事件产出 / 诅咒）仍写「无归属」，别让这两类在详情里混成同一个标签。

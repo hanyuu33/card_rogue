@@ -368,10 +368,16 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		selected: bool, is_tapped: bool, font: Font, font_bold: Font,
 		power_override := -1, on_board := false, sleeping := false,
 		name_only := false, phase := 0,
-		speed_override := -1, range_override := -1, adventure_frame := false) -> void:
+		speed_override := -1, range_override := -1, adventure_frame := false,
+		record_seen := true) -> void:
 	## 卡面一律按 rect **完整排版**，与图鉴/战场小卡同一套比例，没有「按可见高度重锚」
 	## 之类的特例 —— 手牌卡底沉出窗口下沿时，被挡住的那截就让它挡住
 	## （作者口径：卡片是一个整体，排版要与正常状态完全一致，别为了躲裁剪挪数值）。
+	##
+	## `record_seen`（R642）：画出来 = 玩家见过 → 顺带记进 `ProfileData.seen_cards`。
+	## **图鉴自己画卡面时必须传 false**，否则一开图鉴就把 315 张全标成见过。
+	if record_seen:
+		ProfileData.mark_card_seen(card.id)
 	var k := rect.size.y / CARD_H_DESIGN
 	var kc: float = minf(k, UiTheme.CARD_BADGE_SCALE_CAP)
 	var kt: float = minf(k, UiTheme.CARD_TEXT_SCALE_CAP)
@@ -428,11 +434,65 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	#    `CardDetailOverlay` 的「本局永久成长　力+1 生+6」那一段就是它的新家。
 
 
+static func draw_no_record(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
+		selected: bool, font: Font, font_bold: Font) -> void:
+	## R642：图鉴专用 —— 与 `draw()` 完全一致，只是**不**记「玩家见过这张卡」。
+	## 为什么单独开一个口：GDScript 没有具名参数，要把 `record_seen` 传成 false，
+	## 就得把中间那一串带默认值的参数逐个写成 `-1 / false / 0`，调用处读起来像密码。
+	draw(canvas, card, rect, hp, selected, false, font, font_bold,
+			-1, false, false, false, 0, -1, -1, false, false)
+
+
+static func draw_locked(canvas: CanvasItem, rect: Rect2, font_bold: Font) -> void:
+	## R642：图鉴里「还没见过」的卡位 —— 统一画成一张**通用未解锁图**。
+	## 底图直接用现成的卡背（`assets/ui/card_back.png`），按卡面比例**居中裁切**再铺：
+	## 卡背是 2:3、卡面是 76:92（≈5:6），直接铺会横向拉宽 24%，一眼就看出被压扁。
+	## 上面再压一层暗色 + 「？」+「未解锁」，保证它不会被误读成一张真卡。
+	## 换皮：以后有专用未解锁插画，只需让 `UiAssets.card_back()` 这条底图换掉，
+	## 裁切 / 压暗 / 文字全部不用动。
+	var tex: Texture2D = UiAssets.card_back()
+	if tex != null and tex.get_height() > 0:
+		var tw := float(tex.get_width())
+		var th := float(tex.get_height())
+		var want: float = rect.size.x / maxf(rect.size.y, 1.0)
+		var src := Vector2(tw, th)
+		if tw / th > want:
+			src.x = th * want      # 源图更宽 → 左右各裁一点
+		else:
+			src.y = tw / want      # 源图更高 → 上下各裁一点（卡背是这一种）
+		var off := Vector2((tw - src.x) * 0.5, (th - src.y) * 0.5)
+		canvas.draw_texture_rect_region(tex, rect, Rect2(off, src))
+	else:
+		canvas.draw_rect(rect, UiTheme.SURFACE)
+	canvas.draw_rect(rect, Color(0.07, 0.08, 0.11, 0.58))
+	canvas.draw_rect(rect, Color(0.72, 0.58, 0.32, 0.85), false,
+			maxf(1.0, rect.size.y / CARD_H_DESIGN * 1.6))
+	# 「？」—— 卡面中间偏上
+	var qs := int(maxf(12.0, rect.size.y * 0.42))
+	var q := "？"
+	var qw: float = font_bold.get_string_size(q, HORIZONTAL_ALIGNMENT_LEFT, -1, qs).x
+	canvas.draw_string(font_bold,
+			Vector2(rect.position.x + (rect.size.x - qw) * 0.5, rect.position.y + rect.size.y * 0.62),
+			q, HORIZONTAL_ALIGNMENT_LEFT, -1, qs, Color(0.88, 0.77, 0.53, 0.9))
+	# 「未解锁」—— 卡面底部
+	var fs := int(maxf(9.0, rect.size.y * 0.115))
+	var s := "未解锁"
+	var sw: float = font_bold.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	canvas.draw_string(font_bold,
+			Vector2(rect.position.x + (rect.size.x - sw) * 0.5, rect.end.y - rect.size.y * 0.06),
+			s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.93, 0.89, 0.79, 0.92))
+
+
 static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
-		font: Font, font_bold: Font, selected := false) -> void:
+		font: Font, font_bold: Font, selected := false, record_seen := true) -> void:
 	## 选卡场景专用简洁卡面（R191，用户口径「卡面只留卡名，描述点选后再看」）：
 	## 纸底 + 卡图 + 稀有度缎带 + 数值徽章 + **只有卡名**的文字区（不画种类行与效果文）。
 	## 用于战斗内选卡页 / 卡牌奖励三选一 / 卡组编辑选卡 —— 战场与手牌仍走 `draw()`。
+	##
+	## `record_seen`（R642）：奖励三选一 / 商店陈列 / 组合候选都是**真给玩家看卡面**，
+	## 照常记账；只有图鉴自己要传 false。
+	if record_seen:
+		ProfileData.mark_card_seen(card.id)
 	var k := rect.size.y / CARD_H_DESIGN
 	var kc: float = minf(k, UiTheme.CARD_BADGE_SCALE_CAP)
 	var kt: float = minf(k, UiTheme.CARD_TEXT_SCALE_CAP)

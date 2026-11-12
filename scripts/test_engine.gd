@@ -72232,3 +72232,75 @@ func _test_r592b() -> void:
 			and r633_ce.find("_open_dup_view()") < r633_ce.find("_route_if_waiting_pick()"),
 			"R636 源码锁：领取鸭血的那一下先摊开卡组（在 `_route_if_waiting_pick()` 之前）")
 
+	# ---- R642（店长口径「图鉴要见过才解锁」）----
+
+	# ① 记账：mark 一次就算见过，重复 mark 不再算「新解锁」
+
+	ProfileData.seen_cards = []
+
+	ProfileData._seen_set.clear()
+
+	check(ProfileData.mark_card_seen(8001) and ProfileData.is_card_seen(8001),
+
+			"R642 见过：首次标记成功，is_card_seen 立即可见")
+
+	check(not ProfileData.mark_card_seen(8001) and ProfileData.seen_count() == 1,
+
+			"R642 见过：重复标记返回 false，计数不涨")
+
+	check(not ProfileData.mark_card_seen(0) and not ProfileData.mark_card_seen(-5),
+
+			"R642 见过：id <= 0 一律不记（衍生物 id=0 不许混进来）")
+
+	# ② 判据：发布版没见过的卡**不进图鉴**；全卡开照旧露位置（由绘制层遮蔽）
+
+	var r642_gs = preload("res://scripts/gallery_scene.gd")
+
+	var r642_seen_card := r621_repo.get_card(8001)
+
+	var r642_new_card := r621_repo.get_card(8002)
+
+	check(r642_gs.gallery_visible(r642_seen_card, true)
+
+			and not r642_gs.gallery_visible(r642_new_card, true),
+
+			"R642 判据：发布版只收见过的卡（没见过的连条目都没有，因此搜不到）")
+
+	check(r642_gs.gallery_visible(r642_new_card, false),
+
+			"R642 判据：全卡开仍然全部可见，交给绘制层遮蔽成通用未解锁图")
+
+	# ③ 落盘往返：见过去的卡进档案，重读还在；没见过的不会凭空出现
+
+	ProfileData.save()
+
+	ProfileData._loaded = false
+
+	ProfileData.ensure_loaded()
+
+	check(ProfileData.is_card_seen(8001) and not ProfileData.is_card_seen(8002),
+
+			"R642 落盘：seen_cards 往返档案不丢、不多")
+
+	# ④ 源码锁：记账口在 CardFace 两个总口；图鉴自己画卡面必须走 no_record
+
+	var r642_cf_src := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+
+	var r642_gs_src := FileAccess.get_file_as_string("res://scripts/gallery_scene.gd")
+
+	check_src(r642_cf_src.contains("if record_seen:")
+
+			and r642_cf_src.contains("ProfileData.mark_card_seen(card.id)"),
+
+			"R642 源码锁：draw / draw_pick 两个总口都记「见过」")
+
+	check_src(r642_gs_src.contains("CardFace.draw_no_record(")
+
+			and not r642_gs_src.contains("CardFace.draw(grid, _shown[i]"),
+
+			"R642 源码锁：图鉴画卡面走 draw_no_record（不许把自己看过的全标成见过）")
+
+	ProfileData.seen_cards = []
+
+	ProfileData._seen_set.clear()
+
