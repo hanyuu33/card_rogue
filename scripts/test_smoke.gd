@@ -709,6 +709,45 @@ func _check_discard_view(scene: Variant) -> void:
 		_smoke_fail("R618 弃牌区：点卡后「详情」应能打开且卡正确")
 		return
 	ov618._detail.close()
+	# ── R620：从卡组取卡（选卡模式）也必须能点到「详情」──────────────
+	# 许愿 / 专注移除 / 淘汰 / 惊喜运单 / 合体 都走同一个 PickOverlay，只是 view_only=false。
+	# R618 的修复写在 _gui_input() 里、不分模式，但上面的用例只跑浏览模式 ——
+	# 这里补上选卡模式，防止日后按 mode 分叉时把「鼠标移开不清悬停」弄丢。
+	var r620_cards: Array = []
+	for _j in 3:
+		r620_cards.append(CardData.from_dict(repo.get_card(8003).to_dict()))
+	ov618.open({
+		"kind": "wish", "short": "许愿", "title": "许愿：从卡组选择一张卡加入手卡",
+		"note": "", "opts": [0, 1, 2], "cards": r620_cards,
+		"max_sel": 1, "confirm_label": "确认", "cancel_label": "放弃许愿",
+	})
+	ov618._layout()
+	var r620_c0: CardData = ov618._cards[0]
+	var r620_p0 := ov618._clip.position + ov618._grid.position + ov618._card_rect(0).get_center()
+	ov618._press = {}
+	var r620_mm := InputEventMouseMotion.new()
+	r620_mm.position = r620_p0
+	ov618._gui_input(r620_mm)
+	if ov618._hover_idx != 0:
+		_smoke_fail("R620 从卡组取卡：悬停第一张应记下下标 0")
+		return
+	var r620_mg := InputEventMouseMotion.new()
+	r620_mg.position = ov618._desc_detail_rect().get_center()
+	ov618._gui_input(r620_mg)
+	if ov618._desc_card() != r620_c0:
+		_smoke_fail("R620 从卡组取卡：鼠标移到「详情」按钮后描述条不许消失")
+		return
+	ov618._tap(r620_p0)
+	if ov618.selected_count() != 1 or ov618._desc_card() != r620_c0:
+		_smoke_fail("R620 从卡组取卡：选卡模式点卡应选中 1 张且描述条不跳卡")
+		return
+	ov618._tap(ov618._desc_detail_rect().get_center())
+	if ov618._detail == null or not ov618._detail.is_open() or ov618._detail._card != r620_c0:
+		_smoke_fail("R620 从卡组取卡：选卡模式「详情」按钮应可点且卡正确")
+		return
+	ov618._detail.close()
+	ov618.close()
+	scene._open_discard_view()   # 恢复成原来的弃牌区浏览窗，下面的关窗断言照旧
 	scene._pick.collapse()   # 浏览模式下「返回」= 关窗（不是收起看战场）
 	if scene._pick.is_picking():
 		_smoke_fail("R301 弃牌区：关闭后 overlay 不应仍在 picking")
@@ -716,7 +755,7 @@ func _check_discard_view(scene: Variant) -> void:
 	if scene.engine.state.discard.size() != n_before:
 		_smoke_fail("R301 弃牌区：纯浏览不应改动弃牌堆（%d → %d）"
 				% [n_before, scene.engine.state.discard.size()])
-	print("SMOKE OK R301 弃牌区：全屏浏览窗 / 关窗不动引擎 / R618 电脑版「详情」按钮可点")
+	print("SMOKE OK R301 弃牌区：全屏浏览窗 / 关窗不动引擎 / R618+R620 电脑版「详情」按钮可点（浏览 + 选卡两模式）")
 
 
 func _check_duck_blood_instant(scene: Variant) -> void:
