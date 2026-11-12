@@ -27,7 +27,7 @@ m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 
 # 60 件 relics.json 道具；6061~6063 三样信物已有 key_icon_*.png（R543），不重出。
-JOBS = list(range(6001, 6061))
+JOBS = list(range(6001, 6061)) + [6064, 6065]  # R586 正义背刺 / R593 机械臂
 PROXY = os.environ.get("CODEX_PROXY", m.PROXY)
 m.PROXY = PROXY
 

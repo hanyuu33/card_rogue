@@ -16,7 +16,7 @@ from PIL import Image, ImageFilter, ImageChops
 
 ROOT = r'E:/work/card_rogue'
 ICON_DIR = os.path.join(ROOT, 'assets', 'ui')
-IDS = list(range(6001, 6061))
+IDS = list(range(6001, 6061)) + [6064, 6065]  # R586 正义背刺 / R593 机械臂
 
 BLUE_RIM = (86, 178, 255)      # 预览 BLUE_RIM，贴图标轮廓的冷蓝
 BLUE_HALO = (56, 138, 240)     # 预览 BLUE_HALO，外扩一圈极淡晕

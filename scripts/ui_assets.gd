@@ -63,6 +63,11 @@ static func small_icon(name: String, edge := 128) -> Texture2D:
 		if source == null:
 			return null
 		var img := source.get_image()
+		# R596g：卡图改成 VRAM 压缩（astc/bptc）后 get_image() 拿到的是压缩图，
+		# 直接 resize 会报 "Cannot resize in compressed or custom image formats"。
+		# 与 test_smoke 的 _ribbon_opaque_ratio 同口径：先解压再处理。
+		if img != null and img.is_compressed():
+			img.decompress()
 		var scale := minf(1.0, float(edge) / maxf(img.get_width(), img.get_height()))
 		img.resize(maxi(1, roundi(img.get_width() * scale)), maxi(1, roundi(img.get_height() * scale)), Image.INTERPOLATE_LANCZOS)
 		img.fix_alpha_edges()
@@ -80,6 +85,8 @@ static func filtered(tex: Texture2D, edge: int) -> Texture2D:
 	var key := "filtered:%d:%d" % [tex.get_instance_id(), target]
 	if not _cache.has(key):
 		var img := tex.get_image()
+		if img != null and img.is_compressed():
+			img.decompress()
 		var ratio := float(target) / maxf(img.get_width(), img.get_height())
 		img.resize(maxi(1, roundi(img.get_width() * ratio)), maxi(1, roundi(img.get_height() * ratio)), Image.INTERPOLATE_LANCZOS)
 		img.fix_alpha_edges()
@@ -186,6 +193,20 @@ static func relic_rim(id: int) -> Texture2D:
 	if id == 6061 or id == 6062 or id == 6063:
 		return null
 	return get_tex("relic_rim_%d" % id)
+
+
+static func affix_badge_path(glyph: String) -> String:
+	## R592：字段标志文件名（128x128 无背景 PNG）。文件名即契约 —— 换图只覆盖
+	## assets/ui/affix_<glyph>.png；`<glyph>` 由 `CardData.affix_glyph(字段名)` 给出。
+	return path_for("affix_%s" % glyph)
+
+
+static func affix_badge(glyph: String) -> Texture2D:
+	## R592：字段标志**唯一取图口**。缺图返回 null → 卡面回退
+	## `CardInfoBoxes.draw_glyph()` 的矢量符号（没导入 / 导出包读不到 png 时照常可玩）。
+	if glyph == "":
+		return null
+	return get_tex("affix_%s" % glyph)
 
 
 static func div_orb_glass() -> Texture2D:
@@ -337,6 +358,17 @@ static func title_bg() -> Texture2D:
 	## 标题页背景（R153 入库 / R154 挂接）：1280×720 晨光小镇。
 	## 缺图时返回 null，`title_scene` 回退 battle_bg → 再退纯色渐变。
 	return get_tex("title_bg")
+
+
+static func title_art() -> Texture2D:
+	## R604 主界面主视觉：1920×1080，标题字已烘焙进图里（合成脚本 tools/_compose_r604_art.py）。
+	## 缺图返回 null → `title_scene` 回退 `title_bg` + 文字标题，`opening_scene` 直接跳标题。
+	return get_tex("title_art")
+
+
+static func studio_mark() -> Texture2D:
+	## R604 厂牌徽记（透明底）：片头卡中心 + 启动 splash 共用同一张。缺图时片头只出文字。
+	return get_tex("studio_mark")
 
 
 static func card_back() -> Texture2D:

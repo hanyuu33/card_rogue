@@ -35,6 +35,8 @@ func _initialize() -> void:
 	RunSave.set_test_mode()
 	_plan = [
 		["res://scenes/title.tscn", func(): _reset()],
+				# R590：百科（主界面的二级入口，纯自绘页面 —— 空引用只有冒烟能抓到）
+				["res://scenes/codex.tscn", func(): _reset()],
 		# R346：剧情解锁界面 + 禁卡表（两个都是自绘界面，_draw 里的空引用只有冒烟能抓到）
 		["res://scenes/story.tscn", func(): _reset()],
 		["res://scenes/ban.tscn", func(): _reset()],

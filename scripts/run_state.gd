@@ -1018,6 +1018,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# R352：统计「开局次数」—— 故事 1 的解锁条件就是「进行任意一局游戏」。
 	# 只记内存 + 置脏，落盘交给 `flush()`（`map_scene` 进地图时会调）。
 	ProfileData.bump(ProfileData.K_RUN_START)
+	# R580：故事 3「用暗影刺客进行一局游戏」—— 按职业再记一份，不影响故事 1 的无后缀计数。
+	ProfileData.bump(ProfileData.K_RUN_START_CLASS + player_class)
 	# R576 Steam 成就：初次启程（幂等，重复开局无害）。
 	SteamAchievements.note_first_step()
 	# R374：新的一局 → 事件账本清空。R575：事件在**进房时**才决定，生成期不再往账本登记；

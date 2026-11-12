@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1c825-0f25-7c90-8dd0-e44149c9a422"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll generate one square chest icon with a pure white background.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated exactly one square treasure chest icon on a white background."}}
+{"type":"turn.completed","usage":{"input_tokens":34602,"cached_input_tokens":24832,"cache_write_input_tokens":0,"output_tokens":385,"reasoning_output_tokens":0}}

@@ -18,12 +18,16 @@ extends RefCounted
 ##
 ## ── 统计键（新加统计**只在这里登记**，别在各处散着拼字符串）──
 ##   `boss_kill:<关卡名>`   击败该 Boss 的次数
+##   `elite_kill:<关卡名>`  击败该精英关卡的次数（R597：档案 2「量产型」的判据）
 ##   `clear:<职业>:<难度>`  用该职业通关该难度的次数（结局那一下才记）
 ##   `card_play:<卡 id>`    累计使用该卡的次数
 ##   `kind_play:<卡类>`     累计使用该类卡的次数（盟友 / 技能 / 工事 / 效果 / 场地）
 ##   `relic_got:<道具 id>`  获得该道具的次数（首次 = 1，「首次获得」判据就是 >= 1）
 ##   `battle_win` / `elite_win` / `boss_win` / `run_win`   各类胜场
 ##   `run_start`            开局次数（R352：故事 1「进行任意一局游戏」的判据）
+##   `run_start:<职业>`     用该职业开局的次数（R580：故事 3「用暗影刺客进行一局游戏」的判据）
+##   `boss_seen:layer2`     见到第二层 Boss 的次数（R586：故事 5「在第二层见到 boss」的判据；
+##                         进入 Boss 战那一刻记一次，打赢与否不算；与一层 `boss_seen` 互不相干）
 ##
 ## ⚠️ **写盘纪律**：`bump()` 只改内存 + 置脏，`flush()` 才落盘 —— 战斗中每打一张牌都写文件
 ##    太浪费。`flush()` 的调用点 = 战斗结算 / 剧情解锁 / 禁卡变更 / 回标题。
@@ -35,6 +39,7 @@ const FORMAT := 1
 
 ## 统计键前缀（与上方注释同源，代码里拼键时用这些常量）
 const K_BOSS_KILL := "boss_kill:"
+const K_ELITE_KILL := "elite_kill:"
 const K_CLEAR := "clear:"
 const K_CARD_PLAY := "card_play:"
 const K_KIND_PLAY := "kind_play:"
@@ -44,9 +49,13 @@ const K_ELITE_WIN := "elite_win"
 const K_BOSS_WIN := "boss_win"
 const K_RUN_WIN := "run_win"
 const K_RUN_START := "run_start"     # R352：开局次数（故事 1 的判据）
+const K_RUN_START_CLASS := "run_start:"  # R580：按职业记开局次数（故事 3 的判据）
 ## R550（发布版解锁）：累计「见到一层 Boss」的次数 —— 职业解锁的判据。
 ## 只统计「进入第一层 Boss 战」那一刻（打赢与否不算），见 `UnlockSystem.note_boss_seen()`。
 const K_BOSS_SEEN := "boss_seen"
+## R586（故事 5）：累计「见到第二层 Boss」的次数 —— 进入第二层 Boss 战那一刻记一次。
+## ⚠️ 与 K_BOSS_SEEN（一层、仅发布版）互不相干，别混用。
+const K_BOSS_SEEN_TWO := "boss_seen:layer2"
 
 static var stats: Dictionary = {}
 static var unlocked_stories: Array[String] = []
@@ -203,8 +212,9 @@ static func stat(key: String) -> int:
 	return int(stats.get(key, 0))
 
 
-static func stat_sum(prefix: String) -> int:
+static func stat_sum(prefix: String, suffix_min: int = -1) -> int:
 	## 前缀合计：`boss_kill:` 这类「任意一只 Boss」的判据。
+	## R596：suffix_min >= 0 时只计「前缀 + 整数后缀」且后缀达标的键；用于难度 1 以上通关。
 	## ⚠️ 必须前缀**精确匹配** —— `card_play:80` 不该把 `card_play:8001` 算进来，
 	## 所以键一律写成 `前缀 + 主键 + 结束`，比较时逐键 starts_with 即可（键本身含分隔符）。
 	ensure_loaded()
@@ -212,14 +222,19 @@ static func stat_sum(prefix: String) -> int:
 		return 0
 	var total := 0
 	for k: Variant in stats.keys():
-		if str(k).begins_with(prefix):
-			total += int(stats[k])
+		if not str(k).begins_with(prefix):
+			continue
+		if suffix_min >= 0:
+			var suffix := str(k).substr(prefix.length())
+			if not suffix.is_valid_int() or int(suffix) < suffix_min:
+				continue
+		total += int(stats[k])
 	return total
 
 
-static func stat_of(key: String, prefix: String) -> int:
-	## 成就条件的统一取值口：有精确键就用精确键，否则用前缀合计。
-	return stat(key) if key != "" else stat_sum(prefix)
+static func stat_of(key: String, prefix: String, suffix_min: int = -1) -> int:
+	## 成就条件的统一取值口：有精确键就用精确键，否则用前缀合计（可选数值后缀下限）。
+	return stat(key) if key != "" else stat_sum(prefix, suffix_min)
 
 
 # ------------------------------------------------------------ 剧情
@@ -350,12 +365,14 @@ static func check_achievements(repo: StoryRepo) -> Array[String]:
 
 static func _ach_done(ach: Dictionary) -> bool:
 	var need := int(ach.get("min", 1))
-	var got := stat_of(str(ach.get("stat", "")), str(ach.get("stat_prefix", "")))
+	var got := stat_of(str(ach.get("stat", "")), str(ach.get("stat_prefix", "")),
+			int(ach.get("stat_suffix_min", -1)))
 	return got >= need
 
 
 static func achievement_progress(ach: Dictionary) -> int:
-	return stat_of(str(ach.get("stat", "")), str(ach.get("stat_prefix", "")))
+	return stat_of(str(ach.get("stat", "")), str(ach.get("stat_prefix", "")),
+			int(ach.get("stat_suffix_min", -1)))
 
 
 static func claim_episode(repo: StoryRepo, episode_id: String) -> Dictionary:

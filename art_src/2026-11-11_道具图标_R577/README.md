@@ -1,4 +1,7 @@
-# R577b · 道具小图标（60 件）
+# R577b · 道具小图标（初批 60 件；现 62 件）
+
+> 后续增件：R586 正义背刺 6064、R593 机械臂 6065。二者均按同一管线单张出图、去背与生成蓝边；
+> 信物 6061~6063 仍走 `key_icon_*`，不纳入普通道具连续范围。下文的「60」均指 R577b 初批。
 
 > ⚠️ **轮次让位**：本线原编号 R577，与已提交的「R577 Steam 成就 AppID 接入」（`a3d17b1`）撞号，按项目惯例让位为 **R577b**。
 > 中途曾让位为 R579，但并行会话又抢先提交了 `4ff9355 R579 标题页去掉副标题`，故最终定为 **R577b**；
@@ -208,3 +211,38 @@ R577b 只是把 98×26 的**文字横条槽**里的字换成 22px 小图，底�
   头 (255,222,150) / 尾 (214,140,40)；`ICON_LIT` 分量全 <= 1 不爆白。
 - 演示口沿用 `--relichl`（6 亮 + 6 灭）/ `--r314relic` / `--reliccount N`。
   验收页 `_preview/r577f_review.html`；补丁 `tools/_patch_r577f.py` 可重跑。
+
+## 6022 图标返工：银金色毛山猫头像（16:01 店长口径）
+
+> ⚠️ 并行会话已占用 **R584**（机械之心补零件 / `add_card` 白名单），按项目撞号让位惯例，
+> 本条是**图标支线、不编号**，避免出现两个 R584。
+
+> 「修改荒野形态的图标：改成一个银金色毛的山猫头像」
+
+- 旧图是 **灰狼皮兜帽**（空壳 + 两只尖耳 + 底部金饰），来自 R577b 的
+  `one grey wolf pelt hood with two pointed ears, empty inside`。
+  新图 = 正面 **lynx / bobcat 头像**：耳尖黑簇毛、双侧蓬松颊鬃、短吻小三角鼻、
+  琥珀金眼睛，银白 / 银灰毛 + 香槟金高光（眉 / 颊 / 耳缘）。仍守 R577b 契约：
+  粗黑描边、两级平涂、纯白底单物体、无文字数字，成品 128×128 RGBA 无背景。
+- **口径防漂移**：`tools/_gen_prompts.py` 的 `SUBJECTS[6022]` 同步换成新主体；
+  新增 `HEAD_LYNX`（只把通用调色板「低饱和冷灰蓝 + 一处暖点」替换成银金主色，
+  并追加 `NO wolf / hood / pelt / mask / full body / pendant` 显式排除），
+  挂进 `OVERRIDE_HEAD`。不改这两处，以后整批重跑会把兜帽 prompt 写回来。
+  `ICON_INDEX.md` 由 `python tools/_gen_prompts.py 6022` 自动刷新，不手改。
+- 委托 codex 纯文生图（**无 `-i` 参考图**），`python _run_codex.py 6022`，134 秒出图。
+  `_rework_6022.py` 三段：`prepare`（旧 icon / rim / processed / raw / prompt / 索引
+  备份到 `rework_6022/`，把旧 raw **移走**避免 `_run_codex.py` SKIP）→ `finish` → `land`。
+- **去背容差自适应**（防 6018 白蛋坑复发）：`_finish.cutout()` 默认 tol=38 会把浅银毛
+  吃穿（中心 40×40 不透明率 88.9%），脚本依次试 38 / 20 / 10，tol=20 回到
+  **100%**、coverage 53.4%，采用它。三个候选都留在 `rework_6022/` 可复查。
+- **rim 必须跟着重算**：`assets/ui/relic_rim_6022.png` 是 R577f 按图标 alpha 轮廓
+  预生成的蓝色边缘光，只调 `make_rim()` 单张重出（不跑全量 60 张）；
+  与旧 rim 的像素 diff bbox `(4,0,124,128)`，确认不是旧兜帽轮廓。
+- Godot `--headless --import` exit 0；icon / rim 的 `.import` 各指向新 ctex，
+  清掉 2 个旧缓存 blob / 1.0 MiB，复查 0 孤儿。
+- 验收页 `_review/6022_compare.png`：旧兜帽 / 新 raw / 128×128 透明成品（棋盘格）/
+  44×44 实机尺寸放大；44px 下仍能一眼认出猫头。
+- 实机截图（`--relichl` 带窗口演示，**非 headless**）：`_review/ingame_6022_relichl.png`
+  + 右栏局部放大 `_review/ingame_6022_relichl_crop.png`。上排第三个即新山猫头像，
+  青白高亮环 / 蓝色边缘光沿新轮廓走，旧兜帽（黑空洞 + 底部金珠）已不在画面里。
+- 未 commit / 未 push / 未打包；`relics.json` 与任何玩法代码都没动。

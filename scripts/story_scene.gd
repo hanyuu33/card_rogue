@@ -17,8 +17,8 @@ extends Control
 ## 用户口径（R346）：「解锁时在故事界面点击查看故事解锁，之后可以解锁一些卡牌/道具
 ## 加入奖励池」—— 所以**条件达成 ≠ 发奖励**，必须在正文面板里点「收下」才发。
 ##
-## 现在是**空壳期**：正文全部为空（显示「（这一段故事还没有写。）」），`grants` 也全空。
-## 填内容只需要改 `stories.json`，这个界面一行都不用动。
+## 六章正文已齐；未来新增空正文段时仍由通用 locked 规则挡住。
+## 填内容只需要改 `stories.json`，这个界面不用另开特例。
 ##
 ## 解锁动画（R352）：在正文面板点「收下这一段」后，拿到的卡牌 / 道具会**逐个浮现**
 ## 出来（名字 + 稀有度 + 类型），玩家一眼看清「往奖励池里加了什么」。
@@ -33,6 +33,7 @@ extends Control
 ##   `-- --screenshot --demo --story N` 再打开第 N 段（0 起）的正文面板
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const UiRoute = preload("res://scripts/ui_route.gd")
 
 const ROW_H := 76.0
 const ROW_W := 980.0
@@ -117,7 +118,9 @@ func _menu_items() -> Array:
 	return [
 		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
 			"fn": _toggle_sound, "keep_open": true},
-		{"text": "返回标题", "fn": _back_to_title},
+		# R590：文案跟着去向走（从百科进来写「返回百科」），行为不变。
+		{"text": func(): return "返回百科" if UiRoute.has_back() else "返回标题",
+					"fn": _back_to_title},
 	]
 
 
@@ -142,7 +145,10 @@ func _satisfy_all() -> void:
 		if key != "":
 			ProfileData.bump(key, need)
 		else:
-			ProfileData.bump(str(ach.get("stat_prefix", "demo:")) + "__demo", need)
+			# R596：带数值后缀下限的条件要灌一个真实达标后缀，__demo 不能冒充难度。
+			var suffix_min := int(ach.get("stat_suffix_min", -1))
+			var suffix := "__demo" if suffix_min < 0 else str(suffix_min)
+			ProfileData.bump(str(ach.get("stat_prefix", "demo:")) + suffix, need)
 	ProfileData.check_achievements(_repo)
 
 
@@ -311,7 +317,17 @@ func _process(delta: float) -> void:
 
 
 func _back_to_title() -> void:
-	SceneFx.goto("res://scenes/title.tscn")
+	## R590：从百科进来的 → 退回百科（玩家刚从那页来，丢回标题等于让他重走一趟）。
+	## 去向由 `UiRoute` 记（`SceneFx.goto` 不带参数），`take_back()` 取一次就清空，
+	## 否则下次从别处进故事页会莫名退回百科。
+	var back := UiRoute.take_back()
+	SceneFx.goto(back if back != "" else "res://scenes/title.tscn")
+
+
+func _back_label() -> String:
+	## 返回按钮文案跟着**实际去向**走（R590）：从百科进来就写「返回百科」。
+	## ⚠️ 只改文案，不改行为 —— 去向一律由 `_back_to_title()` 里的 UiRoute 决定。
+	return "← 返回百科" if UiRoute.has_back() else "← 返回标题"
 
 
 # ------------------------------------------------------------ 三态图标
@@ -387,7 +403,7 @@ func _draw() -> void:
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
 	UiTheme.draw_action(self, back, false, false, hov_back)
-	draw_string(_font_bold, back.position + Vector2(0, 22), "← 返回标题",
+	draw_string(_font_bold, back.position + Vector2(0, 22), _back_label(),
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	if _episodes.is_empty():
 		draw_string(_font, Vector2(0, LIST_Y + 40),

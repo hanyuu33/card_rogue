@@ -1,0 +1,17 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject, cool steel-white armour with thin CYAN energy seams). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, its scale, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "SUPPORT BARRAGE" — ARRIVING RIGHT NOW, mid-impact. NO human, NO creature, NO robot body, NO standing figure, NO weapon held by anyone, NO crater with an object resting quietly in it.
+
+A heavy artillery shell SLAMMING into a thick dark steel deck plate, frozen at the exact instant of impact. The shell body is thick gunmetal grey with a hard metallic sheen and a pale violet heat glow leaking from its open base vent at the back; it enters the deck at a steep diagonal (roughly 55 degrees, nose down toward lower left, muzzle end still outside the hole and clearly visible). Only the front third of the shell has punched through; the rear two thirds and the tail fins still stick out above the plate, so the shell reads as a projectile, NOT as a standing canister, NOT as a capsule, NOT as a jar.
+
+IMPACT: at the entry point a small intense white-cyan flash core, and hard-edged fractures radiating outward across the plate in an irregular star pattern. Whole deck plates are being buckled upward along the crack lines with visible thickness and torn bolts; a few rectangular plate fragments and broken bolts are flung outward along the shell's entry direction, each with a clear hard cel-shaded face. Two or three thin parallel white air streaks hug the shell body tightly for only about 1.5x the shell's length to show it just arrived.
+
+NO smooth circle, NO glowing ring band, NO magic circle, NO portal disc, NO flat annulus on the ground, NO beam, NO light cone, NO ray.
+
+BACKGROUND: dark blurred steel interior of a mechanical foundry, deep blue-grey walls and gantry silhouettes far out of focus, a few small dim amber warning lamps as soft dots.
+
+COMPOSITION (MANDATORY): the subject group fills about 70 percent of the frame, centred slightly low, with generous safe margins (at least 8 percent empty background on every side); do NOT crop the shell tail or the flung fragments; pull the camera back so everything reads clearly when shrunk to a small 448x403 trading-card window.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO invented humanoid, NO hooded figure, NO standing robot, NO running silhouette, NO extra creature, NO text, NO letters, NO numbers, NO watermark, NO logo, NO readable symbols, NO arrows, NO arrow symbols, NO abstract speed lines, NO incoming long projectile trail, NO muzzle flash, NO graphic marks of any kind, NO playing cards, NO card frames, NO glowing fog. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

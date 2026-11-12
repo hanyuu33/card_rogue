@@ -1,0 +1,56 @@
+{
+  "generated": [
+    "run",
+    "taunt",
+    "death",
+    "ghost",
+    "shield",
+    "portal",
+    "overload",
+    "swap",
+    "save",
+    "share"
+  ],
+  "defs": {
+    "run": {
+      "bg": "0e2e1a",
+      "fg": "3fbf6f"
+    },
+    "taunt": {
+      "bg": "331c05",
+      "fg": "ffa41f"
+    },
+    "death": {
+      "bg": "330f14",
+      "fg": "ff7a7a"
+    },
+    "ghost": {
+      "bg": "1f1a38",
+      "fg": "b79cff"
+    },
+    "shield": {
+      "bg": "0f2a33",
+      "fg": "6ec6ff"
+    },
+    "portal": {
+      "bg": "2a0d33",
+      "fg": "e58cff"
+    },
+    "overload": {
+      "bg": "33120a",
+      "fg": "ff7a3c"
+    },
+    "swap": {
+      "bg": "0a2a2e",
+      "fg": "5fe0d0"
+    },
+    "save": {
+      "bg": "1a2a0a",
+      "fg": "b9e85a"
+    },
+    "share": {
+      "bg": "33161c",
+      "fg": "ff8fa8"
+    }
+  }
+}

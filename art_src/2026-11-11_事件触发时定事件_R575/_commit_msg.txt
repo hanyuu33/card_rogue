@@ -1,0 +1,18 @@
+R575 事件触发时才决定 + 飞行器不消耗巧克力
+
+用户口径：「飞行器不消耗巧克力」「事件格子在生成时只是事件格子，触发时才确定事件」，
+推翻 R574 的「生成期写死 event_kind + 进房替换 + 飞一次扣 1 巧克力」。
+
+- 生成期：RogueMap._make_cells / reroll_as_unknown 对事件格只留空 event_kind，
+  不预定子类型、不记账本、不池空降级；保留一次等量 rng 消耗以固定地图布局 / 回放链。
+- 触发期：RunState.resolve_event_kind() 由 map_scene._dispatch_node() 在进房时调用，
+  按当下巧克力过滤（GameLayers.event_kind_available）、seed_of("event_pick") 派生 rng、
+  event_kinds_used 账本落地、池空降级战斗；结果写回 map_cells（只决定一次，读档不重摇），
+  老档已带 kind 则沿用。
+- 飞行器：FLYER_MIN_CHOCOLATE 2→1（不消耗，见底＝入夜才遇不到）；
+  flyer_teleport cost 恒 0；事件页删没油兜底，按钮 / 正文 / 地图选格提示改成不消耗口径；
+  去掉 --flyerlow 演示；补 event_scene._refresh() 白名单漏项（离开按钮曾被刷成「不烤肉」）。
+- 测试：test_engine 加 _r575_trigger_all() helper，把历史「图上 event_kind」断言迁到触发期；
+  R574 块重写为 R575 17 条（数据层 / 生成期 / 触发期 / 定型 / 池空 / 不消耗 / 源码锁）。
+- 回归：assemble 0 / engine 5492✓ 0✗ / reward 26 / bgm 39 / smoke 67-0 / mana PASS；
+  userdata 备份后逐文件还原 RESTORE_VERIFY OK。

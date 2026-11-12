@@ -1,8 +1,11 @@
 extends Control
-## 标题界面（肉鸽版）—— 开始冒险 / 继续 / 图鉴 / 对战记录 / 设置 / 退出。
+## 标题界面（肉鸽版）—— 开始冒险 / 继续 / 百科 / 对战记录 / 设置 / 鸣谢 / 退出。
 ## R58：移除了「卡牌奖励（演示）」「事件：休息（演示）」两个入口（开发调试用，正式流程已覆盖）。
+## R590（用户口径「主界面太挤了」）：「卡牌图鉴」「查看故事」都收进 `codex.tscn`（百科），
+##      主界面只留一个「百科」入口；有已达成、还没点开看过的故事时，按钮上亮提示点。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const UiBadge = preload("res://scripts/ui_badge.gd")
 
 var _bg_tex: Texture2D
 var _font: Font
@@ -13,6 +16,7 @@ var _cont_btn: Button = null    # 「继续游戏」按钮（R359：读档失败
 var _toast := ""                # 底部一次性提示（读档失败）
 var _toast_t := 0.0
 var _title_fs := GameBrand.TITLE_FONT_SIZE   # R578：大标题实际字号（名字长时自动缩）
+var _has_art := false            # R604：主视觉已含标题字（true 时隐藏文字标题与金线）
 
 
 
@@ -23,8 +27,12 @@ func _ready() -> void:
 	# 打包成独立版后同样如此。headless 下跳过。
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_title(GameBrand.window_title())
-	# R154：标题页专用背景（晨光小镇）；缺图回退战斗背景 → 再退纯色（_draw 里的 BOARD_BG）
-	_bg_tex = UiAssets.title_bg()
+	# R604：主界面主视觉（16:9，标题字已烘焙在图里）优先；缺图回退 R154 的晨光小镇 +
+	# 文字标题，再退战斗背景 → 纯色（_draw 里的 BOARD_BG）。三级兜底，缺任何一张都不黑屏。
+	_bg_tex = UiAssets.title_art()
+	_has_art = _bg_tex != null
+	if _bg_tex == null:
+		_bg_tex = UiAssets.title_bg()
 	if _bg_tex == null:
 		_bg_tex = load("res://assets/battle_bg.png")
 	_font = UiTheme.font()
@@ -35,62 +43,60 @@ func _ready() -> void:
 	Bgm.play("title")
 	# R576：Steam 成就初始化（未装 GodotSteam 时静默跳过，见 steam_achievements.gd）。
 	SteamAchievements.init()
-	$Buttons/StartBtn.pressed.connect(_on_start)
-	$Buttons/GalleryBtn.pressed.connect(_on_gallery)
-	$Buttons/QuitBtn.pressed.connect(_on_quit)
+	$Buttons/Row1/StartBtn.pressed.connect(_on_start)
+	$Buttons/Row1/CodexBtn.pressed.connect(_on_codex)
+	$Buttons/Row2/QuitBtn.pressed.connect(_on_quit)
 	# R215：「录像回放」整块删掉（回放机制不再维护），换成只记结果的「对战记录」；
 	# 同时补上原来缺失的「设置」入口。两者都插在「退出」之前。
 	var rec_btn := Button.new()
 	rec_btn.text = "对战记录"
 	rec_btn.tooltip_text = "每局的最终结果（通关 / 失败 / 中断）"
-	$Buttons.add_child(rec_btn)
+	$Buttons/Row1.add_child(rec_btn)
 	rec_btn.pressed.connect(_on_records)
 	var set_btn := Button.new()
 	set_btn.text = "设置"
 	set_btn.tooltip_text = "音效 / 音乐 / 全屏"
-	$Buttons.add_child(set_btn)
+	$Buttons/Row2.add_child(set_btn)
 	set_btn.pressed.connect(_on_settings)
 	# R576：鸣谢页（纯黑底滚动字）—— 引擎 / 音乐署名 / 特别鸣谢。
 	var credit_btn := Button.new()
 	credit_btn.text = "鸣谢"
 	credit_btn.tooltip_text = "引擎 / 音乐署名（PeriTune）"
-	$Buttons.add_child(credit_btn)
+	$Buttons/Row2.add_child(credit_btn)
 	credit_btn.pressed.connect(_on_credits)
-	# R346：剧情解锁入口 —— 条件达成后点开剧情，收下里面解锁的卡牌 / 道具。
-	var story_btn := Button.new()
-	story_btn.text = "查看故事"
-	story_btn.tooltip_text = "成就解锁的剧情；看完会解锁新的卡牌 / 道具"
-	$Buttons.add_child(story_btn)
-	story_btn.pressed.connect(_on_story)
+	# R590：这里原来还挂着「查看故事」按钮 —— 已收进百科（codex.tscn），
+	# 主界面不再单独占一行（8 个竖排按钮挤到上下贴边）。
 	# 续档入口（"继续游戏"）：有本地存档才显示，放在「开始」之后。
 	var cont_btn := Button.new()
 	cont_btn.text = "继续游戏"
-	$Buttons.add_child(cont_btn)
+	$Buttons/Row1.add_child(cont_btn)
 	cont_btn.pressed.connect(_on_continue)
 	# R486b：先探一次盘 —— 「来自更新版本的档」会让按钮消失，玩家没点过任何东西，
 	# 不给说明就成了「进度凭空不见」。探测只读不写（见 `RunSave.probe_newer_save`）。
 	RunSave.probe_newer_save()
 	cont_btn.visible = RunSave.has_save()
 	_cont_btn = cont_btn
-	# 顺序固定：开始 / 继续 / 图鉴 / 记录 / 故事 / 设置 / 退出
-	$Buttons.move_child(cont_btn, 1)
-	$Buttons.move_child(rec_btn, 3)
-	$Buttons.move_child(story_btn, 4)
-	$Buttons.move_child(set_btn, 5)
-	$Buttons.move_child(credit_btn, 6)
-	$Buttons.move_child($Buttons/QuitBtn, 7)
-	for b: Button in [$Buttons/StartBtn, $Buttons/GalleryBtn, $Buttons/QuitBtn,
-			cont_btn, rec_btn, set_btn, story_btn, credit_btn]:
+	# 顺序固定 —— 上排：开始 / 继续 / 百科 / 记录；下排：设置 / 鸣谢 / 退出。
+	# 「继续游戏」有存档才可见，所以上排是 4 个（无存档时 3 个），下排恒 3 个。
+	$Buttons/Row1.move_child(cont_btn, 1)
+	$Buttons/Row2.move_child($Buttons/Row2/QuitBtn, 2)
+	for b: Button in [$Buttons/Row1/StartBtn, $Buttons/Row1/CodexBtn,
+			$Buttons/Row2/QuitBtn, cont_btn, rec_btn, set_btn, credit_btn]:
 		b.pressed.connect(func(): sfx.play("click"))
+		# R609：只给宽度、不给高度 —— 宽度 220 = R608 之前竖排时容器宽（VBox 会把子节点
+		# 拉满，所以旧版每个按钮都是 220 宽），高度交回 Button 自身，字号 / 内边距 /
+		# 圆角全由 UiTheme.apply_button 决定，风格与旧版完全一致。
+		# HBox 默认会把子节点拉满，所以必须 SHRINK_CENTER：按钮保持 220，成组居中。
+		b.custom_minimum_size = Vector2(220, 0)
+		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	# R113 按钮主次：**一屏只有一个主按钮**（开始对战）。规格全部来自 UiTheme.apply_button，
 	# 这里不写任何字号 / 圆角 / 颜色 —— 以后新界面照抄这几行即可。
-	UiTheme.apply_button($Buttons/StartBtn, true)
-	UiTheme.apply_button($Buttons/GalleryBtn, false)
+	UiTheme.apply_button($Buttons/Row1/StartBtn, true)
+	UiTheme.apply_button($Buttons/Row1/CodexBtn, false)
 	UiTheme.apply_button(cont_btn, false)
-	UiTheme.apply_button($Buttons/QuitBtn, false)
+	UiTheme.apply_button($Buttons/Row2/QuitBtn, false)
 	UiTheme.apply_button(rec_btn, false)
 	UiTheme.apply_button(set_btn, false)
-	UiTheme.apply_button(story_btn, false)
 	UiTheme.apply_button(credit_btn, false)
 	# R166：难度档位不再在标题页选 —— 挪到角色选择界面（class_pick_scene）。
 	# R215：设置（音效 / 音乐 / 全屏）按上次保存的值套上；上次启动留下的「没打完的一局」
@@ -98,6 +104,13 @@ func _ready() -> void:
 	GameSettings.ensure_loaded()
 	GameSettings.apply_display()
 	RunRecord.recover()
+	# R590：百科入口的「有新东西」提示 —— 已达成、但还没点开看过的故事有几段。
+	# 判定唯一口 = StoryRepo.ready_count()（内部就是 episode_state() == READY），
+	# 界面不另写一份；check_achievements 幂等，先把「刚达成、还没记账」的补上，
+	# 免得玩家刚通关回主界面却看不到提示。
+	var sr := StoryRepo.load_json()
+	ProfileData.check_achievements(sr)
+	UiBadge.attach($Buttons/Row1/CodexBtn, sr.ready_count())
 	# R154：飘落花瓣 + 光尘（替换「漂浮白方块」—— 浅色卡背贴在浅底上只剩一个灰色占位块，
 	# UI 检视报告点名它像没删干净的占位符）。花瓣缓慢下落、横向轻摆；光尘微微闪烁。
 	for i in 14:
@@ -178,7 +191,8 @@ func _draw() -> void:
 			draw_circle(Vector2.ZERO, 6.0, Color(col, col.a * 0.85))
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	# R154：标题两侧的金线卷草（程序画）—— 描金标题在 title.tscn 用 font_outline 做。
-	_draw_title_ornaments()
+	if not _has_art:
+		_draw_title_ornaments()
 	# 底部信息
 	var ver := GameBrand.footer_text()   # R578：版本串从 GameBrand 取
 	draw_string(_font, Vector2(size.x - 250, size.y - 16), ver,
@@ -225,6 +239,11 @@ func _apply_brand() -> void:
 	## ⚠️ 只改 GameBrand 就够，别在这里另写一份文案。
 	## R579：副标题整段移除（店长口径）—— 标题下直接就是按钮列，别再补回去。
 	var tl := get_node_or_null("TitleLabel") as Label
+	if _has_art:
+		# R604：主视觉里已经排好标题字，Label 只作缺图兜底 —— 别两套字叠在一起
+		if tl != null:
+			tl.visible = false
+		return
 	var t := GameBrand.title_text()
 	var fs := GameBrand.TITLE_FONT_SIZE
 	if tl != null and _font != null:
@@ -305,8 +324,9 @@ func _on_continue() -> void:
 	SceneFx.goto("res://scenes/map.tscn")
 
 
-func _on_gallery() -> void:
-	SceneFx.goto("res://scenes/gallery.tscn")
+func _on_codex() -> void:
+	## R590：百科 —— 卡牌图鉴 / 查看故事 都收在里面（主界面只留这一个入口）。
+	SceneFx.goto("res://scenes/codex.tscn")
 
 
 func _on_quit() -> void:
@@ -318,10 +338,6 @@ func _on_quit() -> void:
 func _on_records() -> void:
 	SceneFx.goto("res://scenes/record_list.tscn")
 
-
-func _on_story() -> void:
-	## R346：剧情解锁界面（条件达成的条目可以点开，看完收下解锁的卡牌 / 道具）。
-	SceneFx.goto("res://scenes/story.tscn")
 
 
 func _on_settings() -> void:

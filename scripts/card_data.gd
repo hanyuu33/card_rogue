@@ -54,10 +54,12 @@ const AFFIX_DEFS: Dictionary = {
 	"疾行": {"label": "疾行", "desc": "一回合可以行动两次。", "glyph": "run", "bg": "0e2e1a", "fg": "3fbf6f"},
 	"嘲讽": {"label": "嘲讽", "desc": "可以攻击到这张卡的单位只能攻击这张卡。", "glyph": "taunt", "bg": "331c05", "fg": "ffa41f"},
 	"死亡": {"label": "死亡", "desc": "这张卡被破坏时生效（具体效果见卡面）。", "glyph": "death", "bg": "330f14", "fg": "ff7a7a"},
-	"幻影": {"label": "幻影", "desc": "打出后手牌里多一张这张卡的短暂复制（回合结束消失）。", "glyph": "ghost", "on_board": false, "bg": "1f1a38", "fg": "b79cff"},
+	"幻影": {"label": "幻影", "desc": "打出时手牌里多一张这张卡的短暂复制（回合结束消失）。", "glyph": "ghost", "on_board": false, "bg": "1f1a38", "fg": "b79cff"},
 	"护盾": {"label": "护盾", "desc": "第一次受到的伤害为 0（一次性，用完消失）。", "glyph": "shield", "bg": "0f2a33", "fg": "6ec6ff"},
-	"次元": {"label": "次元", "desc": "使用后 / 离开战场后消失，不会进入弃牌区。", "glyph": "portal", "bg": "2a0d33", "fg": "e58cff"},
+	"次元": {"label": "次元", "desc": "使用时 / 离开战场时消失，不会进入弃牌区。", "glyph": "portal", "bg": "2a0d33", "fg": "e58cff"},
 	"超负荷": {"label": "超负荷", "desc": "生命降到 0 以下不会立即死亡，会以负数血量继续存活；在自己回合结束时若生命仍是负数则死亡（伤害不会溢出）。", "glyph": "overload", "bg": "33120a", "fg": "ff7a3c"},
+	# R592d：**恢复卡面图标**（店长口径「交换图标也是有用的，短暂、次元、交换都需要手卡上显示」）。
+	# R592c 曾把它关掉（理由是「放下之前怎么放，图标给不出这个信息」），现按店长口径撤销。
 	"交换": {"label": "交换", "desc": "可放置在已有友方单位的格子上，原本在那个格子上的友方单位返回手卡。", "glyph": "swap", "on_board": false, "bg": "0a2a2e", "fg": "5fe0d0"},
 	"保存": {"label": "保存", "desc": "回合结束时，手牌里的这张卡不会丢弃（保留到下一回合）。", "glyph": "save", "on_board": false, "bg": "1a2a0a", "fg": "b9e85a"},
 	"共享护盾": {"label": "共享护盾", "desc": "我方 HP 要受到伤害时，改由这张卡承受（每次都能顶，顶到它死亡）。", "glyph": "share", "bg": "33161c", "fg": "ff8fa8"},
@@ -296,6 +298,8 @@ const ASSEMBLE_TRIGGERS: Array[String] = [
 	"enter", "use", "turn_start", "turn_end", "death", "upgraded",
 	"attack", "attacked", "kill", "damaged", "card_played",
 	"effect_played", "turn_first_play", "random_gained", "after_draw", "action_end",
+	# R589：主动发动 / 使用后 / 生命降到 0 或更低。
+	"active", "use_after", "lethal",
 ]
 ## 组合动作 type 白名单（见拼装机制设计.md §2.2）。
 const ASSEMBLE_EFFECT_TYPES: Array[String] = [
@@ -304,6 +308,16 @@ const ASSEMBLE_EFFECT_TYPES: Array[String] = [
 	"purge_curse", "add_random_effect", "hand_discount", "hand_upgrade",
 	"buff_per_ally", "buff_per_energy", "heal_per_energy",
 	"draw_random_skill", "hand_cost_raise", "add_copy", "buff_allies_atk",
+	"absorb_linked",
+	# R584：把指定卡加入手卡（机械之心「加入一张升级/聚能炮击」族）。
+	"add_card",
+	# R585：把指定卡加入抽牌库（集束炮台 9166 的入场句）。
+	"add_card_to_deck",
+	# R589：七条新动作 —— 每条都有母卡实现口，组合与母卡共用同一个函数：
+	#   小精灵 9074 / 斑鸠 9052 / 水元素 9068 / 影魔 8007（两条）/ 巨鼠 9046 / 乌鸦 9039。
+	"next_effect_discount", "next_ally_discount", "add_effect_from_deck",
+	"hand_skill_discount", "hp_per_zero_skill",
+	"fetch_cheapest_ally", "recall_ally_from_discard",
 ]
 
 
@@ -385,6 +399,11 @@ static func from_dict(d: Dictionary) -> CardData:
 		var lfx_out: Array = []
 		for fx in (asm_in.get("lower_effects", []) as Array):
 			lfx_out.append((fx as Dictionary).duplicate(true))
+		# R585：上半的**独立入场段**（集束炮台「入场加两张炮击」）也要一起重建 ——
+		# 漏了它，组合卡一被复制入场效果就凭空消失。
+		var efx_out: Array = []
+		for fx in (asm_in.get("enter_effects", []) as Array):
+			efx_out.append((fx as Dictionary).duplicate(true))
 		# R568：上半的**永续段**（犀牛「受到伤害减少 1 点…」）也要一起重建 ——
 		# 漏了它，组合卡一被复制就丢掉减伤描述（显示没写、引擎却还在减，两边对不上）。
 		var pv_out: Dictionary = {}
@@ -397,6 +416,7 @@ static func from_dict(d: Dictionary) -> CardData:
 			"lower_note": str(asm_in.get("lower_note", "")),
 			"passive": pv_out,
 			"extra_affixes": xa_out,
+			"enter_effects": efx_out,
 		}
 	# R559 组合：上下半句随复制通道走（深拷贝），漏了它待选卡拖进槽位取不到效果。
 	c.upper_effect = (d.get("upper_effect", {}) as Dictionary).duplicate(true)
@@ -611,6 +631,16 @@ static func affix_desc(name: String) -> String:
 static func affix_glyph(name: String) -> String:
 	var d: Dictionary = AFFIX_DEFS.get(name, {})
 	return str(d.get("glyph", ""))
+
+
+static func affix_badge_on_card(name: String) -> bool:
+	## 这个字段**要不要在卡面圆形槽位里出图**（默认要）。
+	## ⚠️ R592d：**当前没有任何字段写 `badge: false`** —— R592c 曾用它关掉「交换」，
+	## 店长随后改口径「交换图标也是有用的，短暂、次元、交换都需要手卡上显示」，
+	## 于是撤销。这个开关留着：将来出现「图标反而误导」的字段还能一键关掉，
+	## 而且它是**唯一判据**（`CardFace.affix_badge_queue()` 只读它，不写字段白名单）。
+	var d: Dictionary = AFFIX_DEFS.get(name, {})
+	return bool(d.get("badge", true))
 
 
 ## 这个字段在这张卡**已经站在场上**之后还有意义吗（R118，`AFFIX_DEFS.on_board`）。

@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1c841-7d37-7833-8c6a-6722ca3cb7de"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll generate one square icon with a clean, pure white background.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated one square duck-headed stone bust icon on a white background."}}
+{"type":"turn.completed","usage":{"input_tokens":35771,"cached_input_tokens":29312,"cache_write_input_tokens":0,"output_tokens":422,"reasoning_output_tokens":0}}

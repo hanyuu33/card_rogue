@@ -7,9 +7,11 @@ extends RefCounted
 ##                 `grants` = 看完之后**加入奖励池**的 id（不是发到手里，R355 用户口径）——
 ##                 所以这里点到的卡 / 道具必须在 cards.json / relics.json 里标 `locked: true`，
 ##                 否则它本来就在池子里，「解锁」对玩家没有任何意义（test_engine R355 有守卫）。
-##   achievements  成就。[{id, name, hint, stat | stat_prefix, min, episodes: [剧情 id]}]
+##   achievements  成就。[{id, name, hint, stat | stat_prefix, stat_suffix_min?, min, episodes: [剧情 id]}]
+##                 R596：`stat_suffix_min` 可选；前缀键的数值后缀低于它就剔除（难度 1 以上通关）。
 ##   profiles      追加故事（R534）。结构与 episode 完全一样，但**列表排在其后** ——
-##                 目前只有 `profile5`（通缉令，击败叛逃机械解锁），编号暂定。
+##                 当前含 `profile1`（苏醒）、`profile2`（量产型）、`profile3`（机械巨鸭）、
+##                 `profile4`（闲谈，R598）与 `profile5`（通缉令）。
 ##
 ## 三段状态（`episode_state()` 的唯一判定口）：
 ##   locked  条件还没达成 / **这一段根本没写正文**（R359）
@@ -21,8 +23,8 @@ extends RefCounted
 ##    玩家点开看过之后才发卡牌/道具（`read_stories`）。用户口径：
 ##    「解锁时在故事界面点击查看故事解锁，之后可以解锁一些卡牌/道具加入奖励池」。
 ##
-## ⚠️ 现在是**空壳期**：剧情正文全部为空（列表显示 `episodeX-？？？`），
-##    `grants` 也全空 —— 框架先通，内容后填（填内容不用改一行代码）。
+## ⚠️ 六章正文已齐；未来若再加空正文段，仍按 locked 处理。
+##    填内容只改 `stories.json`，本仓库的状态判定不用另开特例。
 
 const PATH := "res://stories.json"
 
@@ -125,6 +127,19 @@ func episode_state(ep_id: String) -> String:
 	return STATE_LOCKED
 
 
+func ready_count() -> int:
+	## 「条件已达成、还没点开看过」的段数（R590）—— 百科入口提示点的**唯一判定口**。
+	## 内部就是 `episode_state() == STATE_READY`，别在界面里再写一份三态判定：
+	## 任意空正文的段在这里自动不算，已读的也不算。
+	## ⚠️ `entries` = episodes + profiles，与故事页的列表**同一份顺序、同一批段**，
+	##    所以这个数字和玩家点进去看到的亮点数一定对得上。
+	var n := 0
+	for ep: Dictionary in entries:
+		if episode_state(str(ep.get("id", ""))) == STATE_READY:
+			n += 1
+	return n
+
+
 func episode_label(ep: Dictionary) -> String:
 	## 列表里的显示名：`episodeX-？？？`（章节名 + 标题）。
 	## 内容还没写的时候标题就是「？？？」，写完之后把 title 换成真标题即可。
@@ -178,8 +193,8 @@ func grant_count(ep_id: String) -> int:
 func unlock_notice(ids: Array) -> String:
 	## R389：把「刚解锁的剧情 id」变成一句提示（空串 = 不用提示）。
 	##
-	## ⚠️ 只算**有正文**的段落：空壳期的 episode3~6 条件达成也会进 `unlocked_stories`
-	##    （成就在空壳期就能达成），但界面上它们是 `locked` 的「？？？」——
+	## ⚠️ 只算**有正文**的段落：空正文段即使条件达成、进了 `unlocked_stories`，
+	##    界面上仍是 `locked` 的「？？？」——
 	##    弹一句「解锁了剧情」再点进去只看得到占位，比不提示更糟。
 	## 多段只报数量，一段报章节名（结算面板的副标题行只有 280px 宽）。
 	var ready: Array[String] = []

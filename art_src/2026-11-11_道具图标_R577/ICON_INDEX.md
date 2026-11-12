@@ -1,4 +1,4 @@
-# R577b 道具图标清单（60 张）
+# R577b 道具图标清单（62 张）
 
 纯文生图、无参考图；产物 `assets/ui/relic_icon_<id>.png`，128x128 RGBA 无背景。
 
@@ -25,7 +25,7 @@
 | 6019 | 鸭梨 | one ripe yellow-green pear with a short brown stem and one leaf |
 | 6020 | 奥秘护符 | one gold amulet on a short chain with one deep-blue faceted gem in the centre |
 | 6021 | 栅栏修复术 | one short wooden fence panel with a small hammer leaning against it |
-| 6022 | 荒野形态 | one grey wolf pelt hood with two pointed ears, empty inside |
+| 6022 | 荒野形态 | a single FRONT-FACING LYNX / BOBCAT HEAD (a real living wild cat, NOT a hood, NOT a pelt, NOT a mask): two tall pointed ears each tipped with a short BLACK ear tuft, broad fluffy cheek ruffs on both sides, a short muzzle with a small dark triangular nose, large amber-gold eyes looking straight at the viewer, calm alert expression; fur is SILVER-white with warm champagne-gold shading on brow and cheeks, thick black outlines and flat two-step cel shading |
 | 6023 | 幻影斗篷 | one hooded deep-violet cloak with a faint second translucent outline behind it |
 | 6024 | 鸭血 | one small round glass bowl filled with dark red liquid |
 | 6025 | 机械核心 | one brass mechanical gear core with a glowing pale-blue centre |
@@ -64,3 +64,5 @@
 | 6058 | 咒缚 | one coiled dark chain with one violet rune charm, blank charm face |
 | 6059 | 核心 | one glowing amber mechanical core with four metal brackets |
 | 6060 | 三个机器人 | three tiny identical rounded robot figurines standing side by side |
+| 6064 | 正义背刺 | one slender steel dagger with a small golden balance-scale emblem on the crossguard, blade pointing down |
+| 6065 | 机械臂 | one compact articulated mechanical arm with a small three-finger claw hand, exposed hinged joints and a muted amber power core |

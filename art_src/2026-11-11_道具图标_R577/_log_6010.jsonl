@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1c82c-a82e-7282-a162-7be86b7f6772"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll generate one square ghostly duck icon on a pure white background.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated one square ghostly duck icon on a white background."}}
+{"type":"turn.completed","usage":{"input_tokens":35746,"cached_input_tokens":29312,"cache_write_input_tokens":0,"output_tokens":427,"reasoning_output_tokens":0}}

@@ -31,32 +31,45 @@ horizontal_alignment = 1
 
 [node name="Buttons" type="VBoxContainer" parent="."]
 layout_mode = 1
-anchors_preset = 8
+anchors_preset = 7
 anchor_left = 0.5
-anchor_top = 0.5
+anchor_top = 1.0
 anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -110.0
-offset_top = -60.0
-offset_right = 110.0
-offset_bottom = 330.0
+anchor_bottom = 1.0
+offset_left = -455.0
+offset_top = -100.0
+offset_right = 455.0
+offset_bottom = -100.0
 grow_horizontal = 2
-grow_vertical = 2
+grow_vertical = 0
+alignment = 1
 theme_override_constants/separation = 10
 
-[node name="StartBtn" type="Button" parent="Buttons"]
+; R609：两行按键（上 4 下 3 / 无存档时 3＋3）。行是 HBox，按钮最小宽 220 = 原来竖排
+; 时的容器宽，风格不变；容器高 0 靠 grow_vertical=0 向上撑，别写死高度。
+[node name="Row1" type="HBoxContainer" parent="Buttons"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="StartBtn" type="Button" parent="Buttons/Row1"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SysFont_cjk")
 theme_override_font_sizes/font_size = 20
 text = "开始对战"
 
-[node name="GalleryBtn" type="Button" parent="Buttons"]
+[node name="CodexBtn" type="Button" parent="Buttons/Row1"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SysFont_cjk")
 theme_override_font_sizes/font_size = 20
-text = "卡牌图鉴"
+text = "百科"
 
-[node name="QuitBtn" type="Button" parent="Buttons"]
+[node name="Row2" type="HBoxContainer" parent="Buttons"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="QuitBtn" type="Button" parent="Buttons/Row2"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SysFont_cjk")
 theme_override_font_sizes/font_size = 16

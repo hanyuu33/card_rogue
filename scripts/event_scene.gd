@@ -159,9 +159,9 @@ const COIN_CARD_ID := 9181
 
 const MOON_DESC := """天色暗下来，月亮低低地挂在山脊上，把水面照成一条银路。
 石台上摆着两样东西，都泛着不属于这里的光——
-「月亮」：3 费效果。战斗结束后奖励界面多一条「删除一张卡」。
+「月亮」：3 费效果。战斗结束时奖励界面多一条「删除一张卡」。
 此卡不可以从卡组删除。
-「硬币」：2 费效果。战斗结束后额外获得 40 金币。此卡不可以从卡组删除。
+「硬币」：2 费效果。战斗结束时额外获得 40 金币。此卡不可以从卡组删除。
 月亮的代价是此刻的全部金币；硬币什么都不要。两样必须拿走一样。"""
 
 const MOON_TAKEN_DESC := """月亮落进你的口袋，钱袋却空了。
@@ -1957,6 +1957,10 @@ func _fit_center() -> void:
 		call_deferred("_recenter_side_text")
 		return
 	_apply_center_width()
+	# R602（用户口径「文字和外框重叠 / 溢出」）：正文长短悬殊（27 处 `desc.text = …`），
+	# 而 Label 的 minimum size 会跟着文本长高 → VBox 被撑高，末位选项挤出屏幕。
+	# 统一在拿到宽度之后先缩字号（16→10），缩到底仍超才按 354 高裁切。
+	_fit_event_text()
 	var top_floor := 360.0 if UiAssets.event_pic(_kind()) != null else 150.0
 	var bottom := vh - 30.0
 	var h := 0.0
@@ -1968,6 +1972,15 @@ func _fit_center() -> void:
 	var top: float = clampf(bottom - h, top_floor, vh * 0.5 + 60.0)
 	c.offset_top = top - vh * 0.5
 	c.offset_bottom = c.offset_top + h
+
+
+func _fit_event_text() -> void:
+	## 事件正文 / 结果行的「框内自适应」：框宽 = Center 当前宽，正文高度上限 354
+	## （=`Desc` 在 720 高度下的实际可用高度），结果行一行 36。
+	var c: VBoxContainer = $Center
+	var w: float = maxf(200.0, c.size.x)
+	UiTheme.autoshrink_label(desc, desc.text, 16, 10, Vector2(w, 354.0))
+	UiTheme.autoshrink_label(result_label, result_label.text, 16, 10, Vector2(w, 36.0))
 
 
 func _on_main() -> void:

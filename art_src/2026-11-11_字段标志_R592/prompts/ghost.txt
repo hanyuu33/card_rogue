@@ -1,0 +1,13 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly ONE SQUARE image, 1024x1024 if supported (otherwise the most square size available; do NOT generate a wide landscape image). Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+Generate ONE game STATUS BADGE icon, isolated on a PURE WHITE (#FFFFFF) FLAT background. This will be cut out into a transparent PNG badge, so a clean uniform white background is CRITICAL.
+
+STYLE: 2D hand-drawn anime-fantasy game UI badge. ONE circular medallion: a DEEP #1F1A38 filled disc with a THIN metallic #B79CFF rim ring, and on top of the disc ONE large glowing #B79CFF symbol with a THICK CLEAN BLACK OUTLINE. Flat cel-shaded, exactly TWO shading steps, hard-edged shadow shapes, no gradient on the fill. Cozy light-fantasy storybook look. Readable silhouette at tiny size: the symbol must be simple, bold and instantly recognisable when shrunk to 24 pixels.
+
+SUBJECT: TWO overlapping outline silhouettes of the same small humanoid figure, offset up and to the right, the back one faded and semi-transparent, reading as an afterimage / duplicate. NOT a bedsheet ghost, NOT a face, NOT a skull, NOT a mirror.
+
+COMPOSITION: ONE circular medallion only, LARGE and CENTERED, the disc filling about 74% of the frame, perfectly round, fully inside the frame with nothing cut off. SQUARE framing, straight-on view, no perspective tilt, the badge faces the viewer flat. The medallion must be COMPLETELY SEPARATED from the frame edges by white space. NO ribbon, NO banner, NO hanging chain, NO stand, NO pedestal, NO cast shadow, NO scenery, NO background objects, NO decorative outer frame, NO card, NO panel. The ENTIRE background MUST be uniform pure white: NO gradient, NO texture, NO pattern, NO vignette, NO coloured backdrop.
+
+STRICTLY FORBIDDEN: any text, letters, words, numbers, digits, labels, watermark, logo or signature anywhere in the image; any human figure, human face, human hands or character body; any photorealistic texture, 3D render, PBR material, photo grain, noise, film grain, airbrush, soft glow bloom, volumetric fog, god rays; any second object; any other-game card frame or UI element.
+
+NO readable text. NO numbers. NO watermark. Pure white background only.

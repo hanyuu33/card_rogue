@@ -1,0 +1,31 @@
+[20:14:36] 代理预检 HTTP 200
+[20:14:36] 代理预检 OK：http://127.0.0.1:7897
+[20:14:36] RUN  run  纯文生图(无参考图)  第1次
+[20:15:37] OK   run  <- exec-9eaf707d-1da9-4ecb-a58b-ec5d29a86da2.png  (61s, 1123 KB)
+[20:15:37] === R592 字段标志结束 成功1 / 失败0 []
+[20:15:48] 代理预检 HTTP 200
+[20:15:48] 代理预检 OK：http://127.0.0.1:7897
+[20:15:48] RUN  taunt  纯文生图(无参考图)  第1次
+[20:16:44] OK   taunt  <- exec-d3af3f85-4861-443c-b8fb-1811cd0f82e9.png  (56s, 1203 KB)
+[20:16:44] RUN  death  纯文生图(无参考图)  第1次
+[20:17:47] OK   death  <- exec-73a37a62-c85e-4263-a4f3-8f05ba9f86a0.png  (63s, 1083 KB)
+[20:17:47] RUN  ghost  纯文生图(无参考图)  第1次
+[20:18:56] OK   ghost  <- exec-3f21f4eb-971a-40a5-9989-fe0d5e0d645d.png  (68s, 1216 KB)
+[20:18:56] RUN  shield  纯文生图(无参考图)  第1次
+[20:20:02] OK   shield  <- exec-c3c2d4e7-4c09-4741-9ecf-8093fa2aceef.png  (67s, 1120 KB)
+[20:20:02] RUN  portal  纯文生图(无参考图)  第1次
+[20:21:00] OK   portal  <- exec-62a74262-37fa-4dc3-bae7-2b493fa75b56.png  (58s, 1251 KB)
+[20:21:00] RUN  overload  纯文生图(无参考图)  第1次
+[20:21:55] OK   overload  <- exec-192b30d8-c84f-41c7-9da6-525db59b52a5.png  (55s, 1253 KB)
+[20:21:55] RUN  swap  纯文生图(无参考图)  第1次
+[20:22:57] OK   swap  <- exec-40d7b0d5-0b9f-410a-a064-3bf0d765b3bb.png  (61s, 1171 KB)
+[20:22:57] RUN  save  纯文生图(无参考图)  第1次
+[20:24:01] OK   save  <- exec-d49a44f9-2c8c-4585-928e-0c4b2bb75d9a.png  (64s, 1110 KB)
+[20:24:01] RUN  share  纯文生图(无参考图)  第1次
+[20:25:02] OK   share  <- exec-d13804a2-5bfd-4ed2-96cc-8ddeaba2d4d1.png  (61s, 1160 KB)
+[20:25:02] === R592 字段标志结束 成功9 / 失败0 []
+[05:24:44] 代理预检 HTTP 200
+[05:24:44] 代理预检 OK：http://127.0.0.1:7897
+[05:24:44] RUN  portal  纯文生图(无参考图)  第1次
+[05:25:35] OK   portal  <- exec-6e56f42b-aced-46ed-9cc8-bfb3b431d8bb.png  (52s, 1250 KB)
+[05:25:35] === R592 字段标志结束 成功1 / 失败0 []

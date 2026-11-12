@@ -1475,3 +1475,49 @@ manifest 的 9018 条目已更新 ref / prompt / note。
   ② 把决定从生成期挪到触发期，历史断言别删，加一个「触发 helper」让它们按新语义继续验。
   ③ 生成期保留等量 rng 消耗，能保住地图布局与回放链，避免整张图统计类断言漂移。
   ④ 别忘扫玩家可见文案（事件页按钮 / 正文 / 地图选格提示 / 注释禁词），并逐条加源码锁。
+
+## 2026-11-12 Title key art banner
+- Goal: generate a new bright duck-village title illustration with blank parchment banner and quiet lower button area.
+- Added assets/ui/title_key_art_banner_v1.png; original title_bg.png preserved; no scene integration.
+- Validation: visually inspected generated art: blank banner, brass duck/gear emblem, two lower-left ducks, low-contrast center, no visible text. This is an asset review, not an in-game scene acceptance.
+- Git status attempt failed: git.exe Access is denied. Existing changes could not be inventoried; no commit or push performed.
+- Next: review in actual title scene if integration is requested; commit explicit asset, prompt and handoff files when Git is available.
+
+
+## 2026-11-12 Duck lettering title key art
+- Goal: generate a new 16:9 title illustration with four Chinese characters and ducks integrated into strokes.
+- Added assets/ui/title_key_art_duck_letters_v1.png using built-in image_gen; original artwork preserved. No scene integration.
+- Validation: inspected generated image visually; four title characters, integrated duck heads, feather tail, webbed foot, two lower ducks and peeking duck present. Asset-only review, not actual game scene acceptance.
+- Known deviations: central distant gate remains visible in mist; bottom ducks larger than requested quarter-letter height; letter outlines touch in places. Needs refinement before strict visual acceptance.
+- Git status --short failed with git.exe Access is denied. Existing external uncommitted work could not be inventoried. No commit or push performed.
+- Next: refine noted deviations if needed; verify actual title scene only when integrated; commit explicit asset and handoff files when Git works.
+
+## 2026-11-12 Wooden signs title key art
+- Goal: new 16:9 title art with four separate Chinese character wooden signs and four duck interactions.
+- Added assets/ui/title_key_art_wood_signs_v1.png and matching .prompt.txt using built-in image_gen. Original assets preserved; no scene integration.
+- Validation: visually reviewed generated output: four separate signs, title characters, perched ducks, hanging plush and dangling duck; quiet lower center. Asset review only, no in-game acceptance.
+- Known deviations: plush uses a separate nearby rope; carved lettering reads somewhat raised; extra duck costume details present. Strict refinement may be needed.
+- Git status --short failed: git.exe Access is denied. External modifications could not be inventoried. No commit or push performed.
+- Next: refine if requested; actual title-scene verification upon integration; commit these explicit files and HANDOFF.md when Git execution is restored.
+
+## 2026-11-12 R604–R609 开场片头 / 定名 / 标题页 + 素材归档
+
+- **品牌（R603）**：`GameBrand.NAME_CN = 嘎嘎乱杀` / `NAME_EN = Quackill` 为唯一口；
+  `export_presets.cfg` 的 `application/product_name → Quackill`、`package/name → 嘎嘎乱杀`；
+  ⚠️ `project.godot` 的 `config/name` **不动**（它决定 `user://` 存档目录）。
+- **开场（R604）**：`scenes/opening.tscn` + `scripts/opening_scene.gd` + `shaders/studio_reveal.gdshader`（`progress` 勾线显现）；
+  厂牌 risusumai + 徽记 `assets/ui/studio_mark.png`（512×512 透明底）；boot splash 换该图并配底色；
+  `--no-opening` 可跳过；缺图直接交接（不进黑屏）。
+- **标题页（R608 / R609）**：`assets/ui/title_art.png` = 9011 鸭嘴版铺满 1920×1080（字烘焙在图里，故无副标题）；
+  按钮改两行 `Buttons/Row1`（开始/继续/百科/记录）+ `Buttons/Row2`（设置/鸣谢/退出），
+  无存档时上排 3 个；按钮宽 220、高度自适应（**店长口径：不许改风格**），路径变 `$Buttons/Row1/StartBtn`。
+- **鸣谢页（R604 / R605）**：作者署名「栗鼠大怪兽」；新增「素材说明 / 本作部分美术素材使用 AI 工具辅助生成」
+  （Steam 不强制游戏内标注，这是主动披露；Steamworks 内容调查仍必须如实填预生成内容）。
+- **素材归档**：`python tools/archive_pending_r595c.py` 实跑 —— 补空缺 0 / 覆盖 0 / 内容相同 115 /
+  孤儿不搬 `8083.png`（卡表已无此 id，留在 `_pending`）。新增卡图与 UI 图标（`affix_*`、`relic_icon/rim_6064/6065`）一并入库。
+- **包体卫生**：`generated-images/`（87MB codex 原始出图）补 `.gdignore`；
+  三版候选大图 `title_key_art_*` 从 `assets/ui/` 移到 `_review/r606_keyart_candidates/`
+  （`_review/` 已被 `.gdignore` + gitignore 双挡，7.9MB 无用候选不再进包）；
+  `.gitignore` 增补 `/.workbuddy/`、`/generated-images/` 与根目录一次性补丁/日志模式。
+- **回归**：assemble 0 / engine **5766✓** / reward 26 / bgm 39 / smoke 68 / mana PASS；
+  存档目录备份后逐文件还原，`RESTORE_VERIFY OK`。

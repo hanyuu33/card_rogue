@@ -15,6 +15,10 @@ extends RefCounted
 ##   * `to_bbcode()`：转成 BBCode（给 RichTextLabel 用）
 ##   * `wrap_segments()` / `draw_wrapped()`：按宽度折行 + 逐段取字体绘制（给自绘面板用）
 ##
+## R600：显示层再收两类「不该给玩家看」的东西 ——
+##   * 「字段「次元」：…」与「离开手牌后恢复原价」属于字段框 / 规则层，不进效果正文；
+##   * 时机关联词统一成「…时」（使用后 → 使用时），「然后 / 之后 / 后排」等语序方位词不动。
+##
 ## 之所以**不动数据**：测试里有大量 `effect_text.contains("移动进入某个场地")` 这类
 ## 断言（补注本身就写在括号里），改数据会连带改坏断言；而玩家看到的只是卡面，
 ## 收在显示层既拿到自然语言，又让 `cards.json` 保持「带完整补注的权威版本」。
@@ -39,6 +43,22 @@ static var _parse_cache := {}
 ## 这些修正刻意只在**显示层**做 —— `cards.json` 是权威数据、测试里有
 ## `effect_text.contains("返回手卡")` 这类的断言，动数据会连带改坏断言。
 const PHRASE_FIXES := [
+	# R600：时机统一 —— 卡面写「…时」，不写「…后」。
+	# 只列**时机关联词**；「然后 / 之后 / 后排 / 退后 / 后续」是语序或方位，不动。
+	["使用效果牌后", "使用效果牌时"],
+	["使用效果卡后", "使用效果卡时"],
+	["攻击或离场后", "攻击或离场时"],
+	["战斗结束后", "战斗结束时"],
+	["使用后", "使用时"],
+	["登场后", "登场时"],
+	["被破坏后", "被破坏时"],
+	["抽牌之后", "抽牌时"],
+	["沉睡归零后", "沉睡归零时"],
+	["交付完成后", "交付完成时"],
+	["整列打穿后", "整列打穿时"],
+	["攻击敌人后", "攻击敌人时"],
+	["造成第 3 次伤害后", "造成第 3 次伤害时"],
+	["其他卡后", "其他卡时"],
 	# R344：术语三统一（**只在显示层**，cards.json 保持原样 —— 测试按原文断言）。
 	# ① 「攻击力」→「力量」：卡面数值、左栏信息、道具说明里都叫「力量」，
 	#    只有数据里的旧写法还是「攻击力」，同一个数字两个名字最伤阅读。
@@ -112,6 +132,34 @@ static func naturalize_phrases(s: String) -> String:
 	return out
 
 
+## R600：字段解释与「离手恢复原价」属于字段框 / 规则层，不再占卡牌效果正文。
+## 只在显示层剥掉，`cards.json` 仍是权威原文（老断言仍可读原文）。
+static var _field_note_re: RegEx = null
+static var _leave_hand_re: RegEx = null
+
+
+static func clean_meta_notes(s: String) -> String:
+	var out := s
+	# 「字段「次元」：打出时消失…」整句删掉 —— 字段框已经写了同一件事。
+	if _field_note_re == null:
+		_field_note_re = RegEx.new()
+		_field_note_re.compile("字段「[^」]+」：[^。]*。?")
+	out = _field_note_re.sub(out, "", true)
+	# 少见的无括号写法：保留「手牌中费用 -1」这个结论，删掉离手后的状态复位解释。
+	out = out.replace("费用 -1；离开手牌后恢复原费用", "手牌中费用 -1")
+	out = out.replace("费用 -1；离开手卡后恢复原费用", "手牌中费用 -1")
+	if _leave_hand_re == null:
+		_leave_hand_re = RegEx.new()
+		_leave_hand_re.compile("[，；]离开手[牌卡](?:后|即|时)?(?:恢复原价|恢复原费用)")
+	out = _leave_hand_re.sub(out, "", true)
+	while out.contains("  "):
+		out = out.replace("  ", " ")
+	for p in ["，。", "；。", "，；", "；，"]:
+		while out.contains(p):
+			out = out.replace(p, p.substr(1, 1))
+	return out.strip_edges()
+
+
 static func _seg(text: String, bold: bool, italic: bool, code: bool) -> Dictionary:
 	return {"text": text, "bold": bold, "italic": italic, "code": code}
 
@@ -160,7 +208,7 @@ static func parse(md: String, hide_parens := HIDE_PARENS) -> Array:
 	var ck := ("1" if hide_parens else "0") + "|" + md
 	if _parse_cache.has(ck):
 		return (_parse_cache[ck] as Array).duplicate()
-	var s: String = naturalize_phrases(md)
+	var s: String = clean_meta_notes(naturalize_phrases(md))
 	if hide_parens:
 		s = strip_parens(s)
 	var segs: Array = []

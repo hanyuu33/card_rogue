@@ -1,0 +1,15 @@
+R574 飞行器：巧克力不足时遇不到事件，而不是遇到不能用
+
+- 用户口径：巧克力不足时根本不该刷出飞行器事件，不是遇到了再给一个灰按钮。
+- 时序：事件 kind 在地图生成期写入格子（那时巧克力是满的），巧克力随 advance() 一路扣，
+  所以过滤必须挂在进房统一入口 map_scene._dispatch_node()（正常进房与飞行器传送共用）。
+- GameLayers 新增 FLYER_MIN_CHOCOLATE=2 与 event_kind_available() 唯一判据口；
+  roll_event_kind 加可选 chocolate 参数（>=0 按判据过滤，-1 保持测试/工具旧行为）。
+- RunState.resolve_event_kind()：不足时把该格重摇成另一个当下可用事件（分类种子派生 rng，
+  不消耗 run_rng、保回放确定性，与生成期共用 event_kinds_used 账本），池空按 R374 降级战斗；
+  只改返回副本，不污染 map_cells。
+- event_scene 去掉禁用按钮；旧存档/演示的没油态改成收尾页（FLYER_NO_FUEL_DESC）；
+  flyer_teleport 只留防死局兜底。演示 --flyer 补巧克力、新增 --flyerlow。
+- test_engine 新增 12 条：判据 / 抽取过滤 / 进房替换 / 分发与源码锁。
+- 回归 assemble 0 / engine 5487✓ 0✗ / reward 26 / bgm 39 / smoke 67-0 / mana PASS，
+  RESTORE_VERIFY OK；截图 _review/{flyer_ok,flyer_low}.png 两态均无灰按钮。

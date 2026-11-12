@@ -4,6 +4,11 @@ extends Control
 ##
 ## 音乐署名来自 `assets/audio/credits.md`（PeriTune · CC BY 4.0，**必须署名**，
 ## 这里就是游戏内的署名载体）。新增 BGM 后记得同步更新 CREDITS_TEXT 的曲目列表。
+##
+## R605「素材说明」：Steam **不要求**在游戏内标注 AI 生成内容，平台只强制 Steamworks
+## 后台的内容调查表（生成式 AI 部分），再由 Valve 展示到商店页。这里主动写明属于加分项：
+## 被截图质疑时不必临时补解释，也不需要玩家去商店页翻。措辞保持「部分素材 / 辅助生成」，
+## 与实际情况一致（AI 出图 + 人工筛选、切图、排版），不要改成「全部由 AI 生成」。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
@@ -17,7 +22,7 @@ const CREDITS_TEXT := """[center]
 
 
 [font_size=26][color=#9a9a9a]开发[/color][/font_size]
-[font_size=32][color=#ffffff]hanyuu33[/color][/font_size]
+[font_size=32][color=#ffffff]栗鼠大怪兽[/color][/font_size]
 
 
 [font_size=26][color=#9a9a9a]引擎[/color][/font_size]
@@ -40,6 +45,10 @@ Havoc[/color][/font_size]
 [font_size=20][color=#888888]https://peritune.com/
 License: Creative Commons CC BY 4.0
 https://creativecommons.org/licenses/by/4.0[/color][/font_size]
+
+
+[font_size=26][color=#9a9a9a]素材说明[/color][/font_size]
+[font_size=22][color=#c8c8c8]本作部分美术素材使用 AI 工具辅助生成[/color][/font_size]
 
 
 [font_size=26][color=#9a9a9a]特别鸣谢[/color][/font_size]

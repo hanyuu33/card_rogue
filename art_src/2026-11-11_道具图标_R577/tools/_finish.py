@@ -33,7 +33,7 @@ TOL_BY_ID = {6018: 10}
 # 6013 是满幅方形木箱，非透明占比 62% 属正常构图，不是「背景没去净」。
 COVERAGE_OK_IDS = {6013}
 # 60 件道具；6061~6063 三样信物已有 key_icon_*.png（R543），不重出。
-IDS = list(range(6001, 6061))
+IDS = list(range(6001, 6061)) + [6064, 6065]  # R586 正义背刺 / R593 机械臂
 
 relics = json.loads((ROOT / "relics.json").read_text(encoding="utf-8"))["relics"]
 NAMES = {int(r["id"]): str(r["name"]) for r in relics}

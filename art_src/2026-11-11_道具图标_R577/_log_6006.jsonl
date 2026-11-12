@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1c829-d45e-7b20-a8aa-8af3ec47d473"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’m generating one square duck-bill icon on a pure white background.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated one square orange duck-bill icon on a white background."}}
+{"type":"turn.completed","usage":{"input_tokens":34564,"cached_input_tokens":24832,"cache_write_input_tokens":0,"output_tokens":372,"reasoning_output_tokens":0}}

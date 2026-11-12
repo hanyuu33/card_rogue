@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1c852-f1d4-72c0-80c7-0766e4415b50"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll generate one square icon with a single centered 7 on pure white.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated one square image featuring a single red-and-gold 7 on a white background."}}
+{"type":"turn.completed","usage":{"input_tokens":34847,"cached_input_tokens":31104,"cache_write_input_tokens":0,"output_tokens":436,"reasoning_output_tokens":0}}

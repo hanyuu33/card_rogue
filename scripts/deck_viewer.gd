@@ -347,13 +347,18 @@ func _draw_detail(merged: Array, L: Dictionary) -> void:
 	var x: float = card_rect.end.x + 40.0
 	var w: float = px + pw - 44.0 - x
 	var y: float = py + 84.0
+	# R602：与图鉴详情同一口径 —— 卡名等单行文本先量宽再定字号，超宽缩字而不是硬画出去。
 	_panel.draw_string(_font_bold, Vector2(x, y), c.card_name,
-			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, UiTheme.INK_900)
+			HORIZONTAL_ALIGNMENT_LEFT, w,
+			UiTheme.fit_font_size(_font_bold, c.card_name, w, 40.0, UiTheme.FS_TITLE, 16),
+			UiTheme.INK_900)
 	y += 36.0
 	var fee_txt := "X 费" if c.x_cost else "%d 费" % c.cost
-	_panel.draw_string(_font, Vector2(x, y),
-			"%s · %s · %s · %s" % [c.kind, c.card_class, c.rarity_name(), fee_txt],
-			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL, UiTheme.INK_600)
+	var meta_txt := "%s · %s · %s · %s" % [c.kind, c.card_class, c.rarity_name(), fee_txt]
+	_panel.draw_string(_font, Vector2(x, y), meta_txt,
+			HORIZONTAL_ALIGNMENT_LEFT, w,
+			UiTheme.fit_font_size(_font, meta_txt, w, 30.0, UiTheme.FS_LABEL, 10),
+			UiTheme.INK_600)
 	y += 30.0
 	# 数值行：`stats_line()` 对技能卡只说「直接使用」→ 这里把伤害写出来，
 	# 否则「猎杀 25 伤害（长到 31）」的成长在详情页会没有落点。
@@ -361,16 +366,20 @@ func _draw_detail(merged: Array, L: Dictionary) -> void:
 	if c.kind == "技能" and c.value > 0:
 		st = "造成 %d 点伤害" % c.value
 	_panel.draw_string(_font, Vector2(x, y), st,
-			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL, UiTheme.INK_800)
+			HORIZONTAL_ALIGNMENT_LEFT, w,
+			UiTheme.fit_font_size(_font, st, w, 38.0, UiTheme.FS_LABEL, 10),
+			UiTheme.INK_800)
 	y += 38.0
 	# 本局永久成长
 	var gt := CardFace.growth_text(c)
 	if gt != "":
 		_panel.draw_rect(Rect2(x, y - 20.0, w, 56.0), Color(0.14, 0.42, 0.22, 0.10), true)
 		_panel.draw_rect(Rect2(x, y - 20.0, 3.0, 56.0), GROW_INK, true)
-		_panel.draw_string(_font_bold, Vector2(x + 12.0, y + 2.0),
-				"本局永久成长　%s" % gt, HORIZONTAL_ALIGNMENT_LEFT, w - 20.0,
-				UiTheme.FS_LABEL, GROW_INK)
+		var gt_line := "本局永久成长　%s" % gt
+		_panel.draw_string(_font_bold, Vector2(x + 12.0, y + 2.0), gt_line,
+				HORIZONTAL_ALIGNMENT_LEFT, w - 20.0,
+				UiTheme.fit_font_size(_font_bold, gt_line, w - 20.0, 22.0,
+						UiTheme.FS_LABEL, 10), GROW_INK)
 		_panel.draw_string(_font, Vector2(x + 12.0, y + 26.0),
 				"跨战斗保留 · 随存档走 · 新开一局才清空",
 				HORIZONTAL_ALIGNMENT_LEFT, w - 20.0, UiTheme.FS_CAPTION, UiTheme.INK_500)
@@ -378,14 +387,26 @@ func _draw_detail(merged: Array, L: Dictionary) -> void:
 	else:
 		y += 8.0
 	# 效果文
-	var lines := CardFace.wrap_text(_font, CardText.naturalize(c.effect_text), w, UiTheme.FS_BODY)
-	for li in mini(lines.size(), 7):
-		_panel.draw_string(_font, Vector2(x, y), lines[li],
-				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, UiTheme.INK_800)
-		y += 24.0
+	# R602：可用高度 = 面板底（留 44 给「卡组中…张」那行）→ 先折行再缩字号。
+	var eff := CardText.naturalize(c.effect_text)
+	if eff != "":
+		var avail_h: float = maxf(20.0, py + ph - 44.0 - y)
+		var fit := CardFace.fit_text_lines(_font, eff, w, avail_h, UiTheme.FS_BODY, 10)
+		var fs := int(fit["fs"])
+		var lh := float(fit["line_h"]) + 2.0
+		var lines: Array = fit["lines"]
+		var n := mini(lines.size(), maxi(0, int(avail_h / lh)))
+		for li in n:
+			_panel.draw_string(_font, Vector2(x, y), lines[li],
+					HORIZONTAL_ALIGNMENT_LEFT, w, fs, UiTheme.INK_800)
+			y += lh
 	y += 12.0
-	_panel.draw_string(_font, Vector2(x, y), "卡组中同名同状态共 %d 张" % cnt,
-			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL, UiTheme.INK_600)
+	y = minf(y, py + ph - 28.0)   # R602：最后一行永远留在框内（别压到面板下边框）
+	var cnt_txt := "卡组中同名同状态共 %d 张" % cnt
+	_panel.draw_string(_font, Vector2(x, y), cnt_txt,
+			HORIZONTAL_ALIGNMENT_LEFT, w,
+			UiTheme.fit_font_size(_font, cnt_txt, w, 26.0, UiTheme.FS_LABEL, 10),
+			UiTheme.INK_600)
 	_panel.draw_string(_font, Vector2(px + pw - 300.0, py + ph - 12.0),
 			"左键点空白返回 · 右键关闭",
 			HORIZONTAL_ALIGNMENT_LEFT, 280.0, UiTheme.FS_CAPTION, UiTheme.INK_500)

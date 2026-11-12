@@ -8,6 +8,7 @@ extends Control
 ##   右栏：大卡详情（卡面 + 数值 + 效果文本）
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const UiRoute = preload("res://scripts/ui_route.gd")
 
 const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
@@ -96,6 +97,8 @@ func _ready() -> void:
 	cost_opt.item_selected.connect(_on_cost_changed)
 	class_opt.item_selected.connect(_on_class_changed)
 	search_edit.text_changed.connect(_on_search_changed)
+	# R590：返回按钮文案跟着去向走（从百科进来就写「返回百科」）。
+	back_btn.text = "← 返回百科" if UiRoute.has_back() else "← 返回标题"
 	back_btn.pressed.connect(_on_back)
 	player_tab.toggled.connect(_on_group_toggled.bind("player"))
 	enemy_tab.toggled.connect(_on_group_toggled.bind("enemy"))
@@ -152,7 +155,9 @@ func _ready() -> void:
 func _menu_items() -> Array:
 	## 本界面的 Esc 菜单项（R148）。图鉴页**没有音效开关**（本场景没建 Sfx）→ 只给返回标题。
 	return [
-		{"text": "返回标题", "fn": _on_back},
+		# R590：文案跟着去向走，行为不变。
+		{"text": func(): return "返回百科" if UiRoute.has_back() else "返回标题",
+					"fn": _on_back},
 	]
 
 
@@ -350,32 +355,48 @@ func _refresh_detail() -> void:
 		detail_badge.visible = false
 		return
 	var c: CardData = _selected
-	detail_name.text = c.card_name
+	# R602：**先量框再写字**。这一页的 Label 宽度是场景里写死的（18→254 = 236），
+	# 而 Label 的 minimum size 会跟着文本变长 → 长卡名（「量产型阿斯克勒庇厄斯（#9207）」
+	# 实测 330px）会把 Label 自己撑宽、直接画到右侧面板的框线外。
+	# 现在统一走 `UiTheme.autoshrink_label`：放不下就缩字号（20→13），缩到底才裁。
+	# 框尺寸与 `scenes/gallery.tscn` 的 offset 一一对应，改场景时必须同步这里。
+	const BX := 236.0
+	const B_TITLE := Vector2(BX, 30.0)
+	const B_LINE := Vector2(BX, 24.0)
+	const B_BODY := Vector2(BX, 230.0)
 	# R77：详情里带上职业（图鉴现在支持按职业查了，写出来才看得到筛选是否对）
 	# R328：class 留空的卡分两种 —— 公用初始卡（木栅栏/攻击，三职业共用）写「公用初始」，
 	# 其余（事件产出 / 诅咒）仍写「无归属」，别让这两类在详情里混成同一个标签。
 	var cls_txt: String = c.card_class
 	if cls_txt == "":
 		cls_txt = "公用初始" if PlayerClass.is_base_common(c.id) else "无归属"
-	detail_kind.text = "%s · %s · %d 费 · %s · %s" % [
-			"玩家" if _group == "player" else "敌方", _kind_label(c), c.cost,
-			c.color, cls_txt]
-	detail_stats.text = CardFace.stats_line(c)
-	detail_traits.text = "特性：" + ("、".join(PackedStringArray(c.traits)) if not c.traits.is_empty() else "无")
+	# R600：颜色是内部元数据，玩家不需要在详情里看到；只留阵营 / 种类 / 费用 / 归属。
+	UiTheme.autoshrink_label(detail_kind, "%s · %s · %d 费 · %s" % [
+			"玩家" if _group == "player" else "敌方", _kind_label(c), c.cost, cls_txt],
+			14, 10, B_LINE)
+	UiTheme.autoshrink_label(detail_stats, CardFace.stats_line(c), 14, 10, B_LINE)
+	UiTheme.autoshrink_label(detail_traits,
+			"特性：" + ("、".join(PackedStringArray(c.traits)) if not c.traits.is_empty() else "无"),
+			14, 10, B_LINE)
 	# R106：图鉴正文同样是「纯文本降级」—— 隐藏「（…）」补注、去掉 `**加粗**` 标记，
 	# 免得 Label 里出现裸星号（这里是 Label 不是 RichTextLabel，用 naturalize 而非 bbcode）。
-	detail_text.text = CardText.naturalize(c.effect_text)
+	# R602：正文框 236×230 固定 → 长效果文先折行、再缩字号，缩到底才裁。
+	UiTheme.autoshrink_label(detail_text, CardText.naturalize(c.effect_text),
+			16, 11, B_BODY)
 	# 编号附在名字后
-	detail_name.text = "%s（#%d）" % [c.card_name, c.id]
+	UiTheme.autoshrink_label(detail_name, "%s（#%d）" % [c.card_name, c.id],
+			20, 13, B_TITLE)
 	detail_badge.visible = c.needs_target()
-	detail_badge.text = "需要选择目标"
+	UiTheme.autoshrink_label(detail_badge, "需要选择目标", 14, 10, Vector2(BX, 30.0))
 	$DetailPanel.queue_redraw()
 
 
 # ------------------------------------------------------------ 信号
 
 func _on_back() -> void:
-	SceneFx.goto("res://scenes/title.tscn")
+	## R590：从百科进来的 → 退回百科（见 `ui_route.gd` 的说明）。
+	var back := UiRoute.take_back()
+	SceneFx.goto(back if back != "" else "res://scenes/title.tscn")
 
 
 func _on_group_toggled(on: bool, g: String) -> void:

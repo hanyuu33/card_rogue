@@ -902,6 +902,10 @@ func _start_boss_battle() -> void:
 	RunState.pending_node = {"type": "boss"}
 	# R550（发布版解锁）：进入 Boss 战即算「见到 Boss」（打赢与否不算）——职业解锁判据。
 	UnlockSystem.note_boss_seen(RunState.current_layer)
+	# R586：故事 5「在第二层见到 boss」—— 进入 Boss 战那一刻记一次（打赢与否不算）。
+	# 只改内存统计，不碰 run_rng；`boss_pending = false` + `_boss_alert` 天然幂等。
+	if RunState.current_layer == GameLayers.LAYER_TWO:
+		ProfileData.bump(ProfileData.K_BOSS_SEEN_TWO)
 	SceneFx.goto("res://scenes/battle.tscn")
 
 

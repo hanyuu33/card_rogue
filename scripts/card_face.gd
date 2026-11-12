@@ -408,6 +408,8 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	# ④b 稀有度缎带（R170）：挂在**右上角**、压在卡图之上。
 	#     （旧色块小旗画在卡图**之前**，被开放式卡图整个盖住 —— 等于没画。）
 	_draw_rarity_ribbon(canvas, card, rect, k, pad)
+	# ④c R592：字段标志（贴卡框右上角，多字段轮播；R592d 起压在缎带上层）
+	_draw_affix_badges(canvas, card, rect, k, on_board)
 	# ⑤ 卡图与文字区的分隔线
 	# ⚠️ R153：v2 底图**自带金线分隔**（CARD_ART_RATIO 0.745 处的金条），不再手画灰线。
 	# ⚠️ R122：**横置时不画** —— 那时卡图铺满整卡（见 _draw_art），横一道线很突兀。
@@ -421,8 +423,9 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	# ⑧ 附魔标记（R214）—— 同样压在最上层（它骑在卡图左上角上）
 	_draw_enchant_mark(canvas, card, rect, font_bold)
 	_draw_combine_mark(canvas, card, rect)                       # R565：组合专属印记
-	# ⑨ 本局成长角标（R393b）—— 卡图左下角，写明「哪几个数字是长出来的」
-	_draw_growth_mark(canvas, card, rect, font_bold)
+	# ⑨ R592：**卡面不再画成长角标**（用户口径「+力/+生命 直接不在卡面上显示」）。
+	#    数值照旧按「比原型高」染色，具体加了多少去详细描述看 ——
+	#    `CardDetailOverlay` 的「本局永久成长　力+1 生+6」那一段就是它的新家。
 
 
 static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
@@ -447,12 +450,13 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 			canvas.draw_rect(rect.grow(1.0 + gi), glow, false, 1.0)
 	_draw_art(canvas, card, rect, k, pad, false, font_bold, false)
 	_draw_rarity_ribbon(canvas, card, rect, k, pad)
+	_draw_affix_badges(canvas, card, rect, k, false)   # R592：字段标志
 	_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold)   # R193：姓名牌内框 + 居中卡名（只留卡名）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, card.health, -1)
 	_draw_enchant_mark(canvas, card, rect, font_bold)            # R214：选卡页也要看到附魔标记
 	_draw_combine_mark(canvas, card, rect)                       # R565：组合专属印记
 	_draw_lock_mark(canvas, card, rect)                          # R351：不可删除的卡带锁
-	_draw_growth_mark(canvas, card, rect, font_bold)            # R393b：本局成长角标
+	# R592：选卡页同样不画成长角标（+力/+生命 只在详细描述里）
 
 
 static func _draw_lock_mark(canvas: CanvasItem, card: CardData, rect: Rect2) -> void:
@@ -681,6 +685,142 @@ static func _draw_art_frame(canvas: CanvasItem, card: CardData, box: Rect2, k: f
 	canvas.draw_rect(box.grow(-maxf(0.5, 1.0 * k)), col, false, maxf(1.0, 2.0 * k))
 
 
+# ------------------------------------------------------------ 字段标志（R592）
+## **字段不再走文字**（用户口径 R592：「所有贴在卡上的 buff 都不再用纯文字」）。
+## 卡面右上角有一个**圆形槽位**，同一时刻只显示一个字段标志；卡上有多个字段时
+## 按 `AFFIX_BADGE_CYCLE_MS` 轮流切换（收尾交叉淡化 `AFFIX_BADGE_FADE_MS`）。
+##   · 素材：`assets/ui/affix_<glyph>.png`（`CardData.affix_glyph()` 给名字），
+##     缺图回退 `CardInfoBoxes.draw_glyph()` 的矢量符号 + 语义色圆底。
+##   · 位置（R592e）：**与费用徽章镜像对称** —— 费用圆心在卡片左上角（`cost_badge_center`），
+##     字段标志圆心就在卡片**右上角**（`affix_badge_center`），两枚关于卡面竖直中轴对称。
+##     半径也走同一个 `badge_radius()`（= `CARD_BADGE_R × min(k, CARD_BADGE_SCALE_CAP)`），
+##     与费用**同尺寸**，圆心同样压在框线上、一半探出卡外。
+##     于是玩家的眼睛只要记一对角：左上 = 费用，右上 = 字段。
+##     ⚠️ 它必然压在稀有度缎带上（缎带挂在右上角），这是店长明确接受的：
+##        「略微遮挡旗子也无所谓」。绘制顺序在缎带之后 → 标志在上层。
+##     ⚠️ 试过「底部正中、与数值徽章同一行」：四枚数值徽章圆心全压在卡框线上、
+##        彼此相切，中间只剩 2.8k 的缝，放不进可读的标志（要腾位得把徽章砍到 5k）。
+##   · 战场卡面（`on_board`）沿用 `affix_on_board()` 过滤：交换 / 幻影上场后不再显示。
+## ⚠️ R592e：**没有独立的尺寸常量** —— 直径就是 `2 × badge_radius(rect)`，
+## 与费用 / 力量 / 生命那几个数值徽章同一口径（改尺寸只改 `UiTheme.CARD_BADGE_R`）。
+const AFFIX_BADGE_CYCLE_MS := 1800     # 单个标志停留时长
+const AFFIX_BADGE_FADE_MS := 240       # 收尾交叉淡化时长
+
+
+static func affix_badge_queue(card: CardData, on_board := false) -> Array[String]:
+	## 这张卡**要轮流显示**的字段（中文名，按 `affixes` 顺序）。两层过滤：
+	##   · `CardData.affix_badge_on_card()` 为 false 的字段**卡面一律不出图标**
+	##     （R592d 起没有字段用它 —— 交换已按店长口径恢复显示）；
+	##   · 战场卡面再滤掉「上场之后已无作用」的（幻影），与旧文字行同一口径。
+	var out: Array[String] = []
+	if card == null:
+		return out
+	for a: String in card.affixes:
+		if not CardData.affix_badge_on_card(a):
+			continue
+		if on_board and not CardData.affix_on_board(a):
+			continue
+		out.append(a)
+	return out
+
+
+static func affix_badge_center(rect: Rect2) -> Vector2:
+	## **字段标志的圆心**（R592e）= 卡片的**右上角**。
+	## 与 `cost_badge_center()`（左上角）关于卡面竖直中轴对称 —— 店长口径
+	## 「放到和费用对应的位置」：左上读费用、右上读字段，视线只用记住一对角。
+	## 圆心压在框线上（一半露在卡外），与费用徽章完全一样的手感。
+	return Vector2(rect.end.x, rect.position.y)
+
+
+static func affix_badge_rect(card: CardData, rect: Rect2, on_board := false) -> Rect2:
+	## **圆形槽位的唯一口**（绘制与回归共用，别各算一遍）。
+	## 没有字段 → 空 Rect2（`size == Vector2.ZERO`）。
+	## R592e：圆心 = `affix_badge_center()`（卡框右上角），半径 = `badge_radius()`
+	## —— 与费用徽章**同尺寸、同「挂在框上」的位置关系**，允许压住稀有度缎带。
+	if card == null or affix_badge_queue(card, on_board).is_empty():
+		return Rect2()
+	var r: float = badge_radius(rect)
+	var c := affix_badge_center(rect)
+	return Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0)
+
+
+static func affix_badge_state(card: CardData, on_board: bool, now_ms: int) -> Dictionary:
+	## 轮播状态**唯一口**：`{count, index, next, fade}`。
+	## `fade` = 0 全然是 `index`，= 1 全然是 `next`（`next == -1` 表示没有下一张）。
+	## 只有一张时不轮播（fade 恒 0）；多张按环形推进 —— 到末尾自然接回第 0 张。
+	var n := affix_badge_queue(card, on_board).size()
+	if n <= 0:
+		return {"count": 0, "index": 0, "next": -1, "fade": 0.0}
+	if n == 1:
+		return {"count": 1, "index": 0, "next": -1, "fade": 0.0}
+	var cycle := AFFIX_BADGE_CYCLE_MS
+	var t: int = now_ms % (cycle * n)
+	var idx: int = int(t / cycle)
+	var phase: int = t % cycle
+	var fade := 0.0
+	var nxt := -1
+	if phase > cycle - AFFIX_BADGE_FADE_MS:
+		fade = float(phase - (cycle - AFFIX_BADGE_FADE_MS)) / float(AFFIX_BADGE_FADE_MS)
+		nxt = (idx + 1) % n
+	return {"count": n, "index": idx, "next": nxt, "fade": clampf(fade, 0.0, 1.0)}
+
+
+static func affix_badge_text(card: CardData, on_board: bool, now_ms: int) -> String:
+	## 此刻**正在显示**的字段名（测试与悬停提示共用；不进绘制路径）。
+	var q := affix_badge_queue(card, on_board)
+	if q.is_empty():
+		return ""
+	var st := affix_badge_state(card, on_board, now_ms)
+	return q[int(st["index"])]
+
+
+static func _draw_affix_badges(canvas: CanvasItem, card: CardData, rect: Rect2,
+		k: float, on_board: bool, now_ms := -1) -> void:
+	## 右上角圆形槽位（R592d：压在稀有度缎带上层）：先画下一张（淡入），
+	## 再画当前张（淡出），交叉过渡不闪。
+	## `now_ms` 可注入（截图 / 回归固定时刻用）；-1 = 读系统时钟。
+	if card == null:
+		return
+	var q := affix_badge_queue(card, on_board)
+	if q.is_empty():
+		return
+	var box := affix_badge_rect(card, rect, on_board)
+	if box.size.x <= 0.0 or box.size.y <= 0.0:
+		return
+	var st := affix_badge_state(card, on_board,
+			now_ms if now_ms >= 0 else Time.get_ticks_msec())
+	var fade: float = float(st["fade"])
+	var nxt: int = int(st["next"])
+	# 描边宽度跟徽章口径走（尺寸本身已由 `affix_badge_rect()` 决定，这里只管线宽）
+	var kc: float = minf(k, UiTheme.CARD_BADGE_SCALE_CAP)
+	if nxt >= 0 and fade > 0.0:
+		_draw_one_affix_badge(canvas, q[nxt], box, kc, fade)
+	_draw_one_affix_badge(canvas, q[int(st["index"])], box, kc, 1.0 - fade)
+
+
+static func _draw_one_affix_badge(canvas: CanvasItem, name: String, box: Rect2,
+		k: float, alpha: float) -> void:
+	if alpha <= 0.01:
+		return
+	var glyph := CardData.affix_glyph(name)
+	var tex: Texture2D = UiAssets.affix_badge(glyph)
+	if tex != null:
+		canvas.draw_texture_rect(tex, box, false, Color(1.0, 1.0, 1.0, alpha))
+		return
+	# 回退：语义色圆底 + 矢量符号（素材缺图时照常可玩，只是没那么精致）
+	var cols: Array = CardData.affix_colors(name)
+	var bg: Color = cols[0]
+	var fg: Color = cols[1]
+	bg.a *= alpha
+	fg.a *= alpha
+	var c := box.get_center()
+	canvas.draw_circle(c, box.size.y * 0.5, bg)
+	canvas.draw_arc(c, box.size.y * 0.46, 0.0, TAU, 28,
+			Color(fg.r, fg.g, fg.b, 0.9 * alpha), maxf(1.0, 1.2 * k))
+	preload("res://scripts/card_info_boxes.gd").draw_glyph(
+			canvas, c, box.size.y * 0.30, glyph, fg)
+
+
 static func _draw_rarity_ribbon(canvas: CanvasItem, card: CardData, rect: Rect2,
 		k: float, pad: float) -> void:
 	## 稀有度缎带（R170）：挂在卡面**右上角**的锦旗 —— 稀有度的**主通道**。
@@ -760,6 +900,11 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 		_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold, true)   # 战斗内：贴金条上移，避开底部徽章
 		return
 	var bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_BOTTOM - pad  # 姓名牌内框下沿
+	# R602（用户口径「卡名和外框 / 别的东西重叠」）：底部数值徽章的圆心压在卡框下边缘、
+	# 上半圈**侵入卡内一个半径**（`text_zone_bottom()`）—— 姓名牌内框比它更低，于是大卡
+	# 上卡名最后一行直接压在徽章上（实测图鉴 132×160：卡名墨迹到 y=150，徽章自 y=142 起），
+	# 连「盟友」那行一起被吃掉。下界一律取两者更小者，卡名 / 种类 / 效果文都让开徽章带。
+	bottom = minf(bottom, text_zone_bottom(rect))
 	var top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad       # 姓名牌内框上沿
 	if bottom - top < 6.0:
 		return
@@ -775,15 +920,26 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	var asc_b: float = float(font_bold.get_ascent(sz))
 	var desc: float = float(font.get_descent(sz))
 	var meta_a: String = card.kind
-	# R118：战场卡面（`on_board`）只写**上场之后仍然有用**的字段 —— 交换 / 幻影是
-	# 「打出那一刻」的规则，卡一落到格子上就再无作用，继续写在这里只会误导玩家。
-	# ⚠️ 判空不能用 `card.affixes.is_empty()`：过滤之后**可能整段为空**（只剩种类的卡）。
-	var affix_txt: String = card.field_affix_line() if on_board else card.affix_line()
+	# R592：**字段改走右上角标志**（`_draw_affix_badges`），这一行只剩卡种。
+	# 字段名不再出现在文字里 —— 用户口径「所有贴在卡上的 buff 都不再用纯文字」。
+	# `card.affix_line()` / `field_affix_line()` 保留：它们是数据层口径
+	# （悬停浮层 / 战场徽标 / 测试仍在用），只是卡面不再画。
+	var affix_txt: String = ""
 	var meta_b: String = (" · " + affix_txt) if affix_txt != "" else ""
 	var eff: String = CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
 	var line_h: float = sz * 1.16
-	# ── 第一遍：只算基线，不画 ──────────────────────────────────────────
-	var base_name: float = top + asc_b                       # 卡名基线
+	# ── 第一遍：先定卡名字号，再算基线，不画 ──────────────────────────────
+	# ⚠️ 基线必须用**最终字号**的 ascent：早前用固定 `sz` 的 `asc_b`，卡名一缩字号，
+	#    基线却还停在原处 → 缩小的字整体下沉、反而更压徽章（R602 出图实测）。
+	# `max_h` 传「内框顶 → 徽章带顶」的可用高度：放不下就继续缩，缩到底才滚动。
+	var ninfo := name_layout(card.card_name, rect, font_bold, bottom - top)
+	var nsz: int = int(ninfo["sz"])
+	# ⚠️ **不能用 `font_bold.get_ascent(nsz)` 定基线**：这个 FontFile 的高度度量按字号
+	#   跳变（实测 10px 返回 30、17px 返回 34、7px 返回 14，不是线性），拿它算基线会把
+	#   卡名整行压到卡底、骑在数值徽章上（R602 出图复核才看出来的真凶）。
+	#   改为按字号比例估算字墨（思源黑体 ascent≈0.88em / descent≈0.22em），并夹在
+	#   「内框顶 → 徽章带顶」之间 —— 这样任何字号都不会越到下界之外。
+	var base_name: float = minf(top + float(nsz) * 0.88, bottom - float(nsz) * 0.22)
 	var base_meta: float = base_name + row_h                 # 种类 · 字段基线
 	var has_meta: bool = base_meta + desc <= bottom
 	var eff_base0: float = base_meta + row_h                 # 效果首行基线
@@ -806,8 +962,6 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	# R203：卡名横幅（R165 的 banner 渐变条）已去掉 —— 用户口径「卡名后面垫着的那条
 	# 绿色长方形直接去掉，卡名直接放在上面就好」；卡名直接画在羊皮卷/木板底衬上。
 	# R281：卡名恒单行（宽度自适应 → 超宽横向滚动），不再折行；超宽时也不省略。
-	var ninfo := name_layout(card.card_name, rect, font_bold)
-	var nsz: int = int(ninfo["sz"])
 	if bool(ninfo["need_scroll"]):
 		_draw_name_marquee(canvas, font_bold, nsz, card.card_name,
 			rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad,

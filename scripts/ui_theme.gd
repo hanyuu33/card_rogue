@@ -673,6 +673,77 @@ static func _unify_night_fonts(btn: Button) -> void:
 		b.add_theme_font_size_override("font_size", fs)
 
 
+# ------------------------------------------------------------ R602 框内文字自适应
+#
+# 用户口径：「检查项目内所有有框的，文字会不会和外框重叠？文字太多会不会溢出？
+# 溢出需要自适应缩小字体」。之前工程里只有三处各自写了缩字逻辑（按钮
+# `_fit_action_button` / 回合横幅 `BannerFit` / 卡面效果文 `CardFace.fit_text_lines`），
+# Label 与其它 draw_string 一律「超了就被裁 / 干脆画出框」—— 图鉴详情的长卡名
+# 就是直接顶穿右框线。这里补**唯一两口**：
+#   ① `fit_font_size()`：给定框宽高，返回放得下的字号（自绘 draw_string 用）；
+#   ② `autoshrink_label()`：给 Label 赋值 + 缩字号 + 到下限仍放不下才裁切。
+#
+# ⚠️ 循环一律**严格递减** `fs -= 1`，不依赖「条件终将不成立」退出的写法 ——
+#    绘制期死循环的表现是整帧不返回（游戏未响应），R164 踩过。
+
+static func fit_font_size(face: Font, text: String, max_w: float, max_h: float,
+		fs_max: int, fs_min: int, wrap := false) -> int:
+	## 从 `fs_max` 逐级往下试，返回第一个「放得进 max_w × max_h」的字号。
+	## `wrap=true` 时按折行后的整块尺寸判断（多行正文）；否则按单行宽度 + 行高。
+	## 缩到 `fs_min` 仍放不下就返回 `fs_min` —— **截断与否交给调用方**，这里不悄悄丢字。
+	if face == null or text.strip_edges() == "" or max_w <= 1.0:
+		return maxi(fs_min, fs_max)
+	var hi := maxi(fs_min, fs_max)
+	var fs := hi
+	while fs > fs_min:
+		var need := text_need(face, text, max_w, fs, wrap)
+		if need.x <= max_w + 0.5 and need.y <= max_h + 0.5:
+			return fs
+		fs -= 1
+	return fs_min
+
+
+static func text_need(face: Font, text: String, max_w: float, fs: int, wrap := false) -> Vector2:
+	## 文字在 `fs` 字号下的实际占位（宽, 高）。绘制与测量共用这一口。
+	if wrap:
+		var sz := face.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT,
+				max_w, fs)
+		return Vector2(minf(sz.x, max_w), sz.y)
+	# ⚠️ 单行只判**宽度**，高度一律返回 0（= 不参与判定）。
+	#   实测这个 FontFile 的高度度量按字号**跳变**：20px→60、18→54、16→25、14→42
+	#   （不是线性，也不是行距 1.4 倍的关系，`get_ascent` / `get_descent` / `get_height`
+	#   三个口都给这种跳变值）—— 拿它当上限比，会把能放下的 20px 卡名误缩成 16px、
+	#   把 14px 的「种类 · 职业 · 费用」误缩成 10px。宽度度量是线性的、可靠。
+	#   Label 的竖直溢出改由 `clip_text` 兜底，不靠缩字号。
+	return Vector2(face.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x, 0.0)
+
+
+static func autoshrink_label(lb: Label, text: String, fs_max := -1, fs_min := 10,
+		box := Vector2.ZERO) -> void:
+	## Label 版「框里放不下就缩字号」。
+	## `box` 传**场景里写死的框**（Label 自己的 size 会被长文本的 minimum size 撑大，
+	## 拿 lb.size 当判据等于用「已经被撑开的框」去量，永远不超）。
+	## 缩到 `fs_min` 仍放不下 → `clip_text = true` 兜底，绝不画到框外。
+	if lb == null or not is_instance_valid(lb):
+		return
+	var face := lb.get_theme_font("font")
+	if face == null:
+		lb.text = text
+		return
+	var b := box if box.x > 1.0 and box.y > 1.0 else lb.size
+	if b.x <= 1.0 or b.y <= 1.0:
+		lb.text = text
+		return
+	var hi := fs_max if fs_max > 0 else lb.get_theme_font_size("font_size")
+	var wrap := lb.autowrap_mode != TextServer.AUTOWRAP_OFF
+	var fs := fit_font_size(face, text, b.x, b.y, hi, fs_min, wrap)
+	lb.add_theme_font_size_override("font_size", fs)
+	lb.text = text
+	var need := text_need(face, text, b.x, fs, wrap)
+	if need.x > b.x + 0.5 or (wrap and need.y > b.y + 0.5):
+		lb.clip_text = true
+
+
 static func _fit_action_button(btn: Button, primary: bool, night := false) -> void:
 	if btn.size.y <= 0:
 		return

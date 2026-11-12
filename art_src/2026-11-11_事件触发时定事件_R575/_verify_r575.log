@@ -1,0 +1,13 @@
+assemble exit=0  0✓ / 0✗
+        Combination tests failures: 0
+mana    exit=0  0✓ / 0✗
+        MANA HUD PASS: zero / normal / three digits + charge + dodge; real battle scene
+engine  exit=0  5492✓ / 0✗
+        == 结果：全部通过 ==
+reward  exit=0  26✓ / 0✗
+        == 结果：全部通过 ==
+bgm     exit=0  39✓ / 0✗
+        == 结果：全部通过 ==
+smoke   exit=0  67✓ / 0✗
+        SMOKE === 结束：67 通过 / 0 失败 ===
+== _verify：全部通过 ==

@@ -6,9 +6,14 @@ config_version=5
 [application]
 
 config/name="卡牌肉鸽"
-run/main_scene="res://scenes/title.tscn"
+run/main_scene="res://scenes/opening.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 config/icon="res://assets/ui/icon_android_legacy.png"
+boot_splash/bg_color=Color(0.06, 0.05, 0.04, 1)
+boot_splash/fullsize=false
+boot_splash/image="res://assets/ui/studio_mark.png"
+boot_splash/show_image=true
+boot_splash/use_filter=true
 
 [display]
 

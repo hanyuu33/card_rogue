@@ -38,6 +38,7 @@ screenshot*.import
 /_*.log
 /_*_msg.txt
 /_bk_*/
+/_preview/
 
 # 背景图生成原件的工作目录（裁切前的 1536x1024 出图，已归档进 art_src/，不入库）
 /assets/ui/_bgnew/
@@ -131,3 +132,33 @@ tools/ai_play/.runs.jsonl
 /_hits.txt
 # R524：关卡总览表的中间产物（tools/dump_levels.gd 导出，_leveltable.py 消费）
 /_levels_dump.json
+
+# R609：WorkBuddy 的本地会话数据（记忆 / 日志 / 索引），不是工程代码。
+/.workbuddy/
+
+# R609：codex 出图工具的默认落盘目录（87MB 原始出图，已被 .gdignore 挡在包外）。
+#   成品走 art_src/<日期_主题>/raw/ 或 assets/，这里只放机器产出的中间图。
+/generated-images/
+
+# R609：根目录一次性补丁脚本 / 探针输出 / 回归日志 —— 每轮都会生成，跑完即弃。
+#   注意：/**_verify.py** 这类长期工具**不在此列**，别把规则写成 /_*。
+/_patch_*.py
+/_stage_*.py
+/_explore_*.py
+/_dedup_*.py
+/_fix_*.py
+/_e_r*.txt
+/_verify_r*.txt
+/_msg_r*.txt
+/_probe_r*.txt
+/_no_bg_audit.*
+/_style_*.html
+/_review_*.html
+/_repro_*.gd
+/_bk_*.gd
+/_组合新卡_进度.txt
+
+# R609：art_src 下各轮的**第三方参考图**（影之诗 / 游戏王等正版卡图，抓来比对风格用）。
+#   与 R439 的 art_src/_ref/ 同一条口径：只作内部参考，**绝不入库**。
+#   需要复现时按同目录 README / _yugi_url.txt 重新抓。
+/art_src/**/refs/

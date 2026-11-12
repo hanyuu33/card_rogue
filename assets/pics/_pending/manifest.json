@@ -1,6 +1,6 @@
 {
  "note": "AI 生成、尚未人工确认的卡图。放在 assets/pics/_pending/<id>.png；游戏内会自动回退读取，并在卡面右下角打黄色三角标记。确认后跑 python tools/cardart.py approve <id> 移入 assets/pics/。原图（未裁剪）留在 raw/ 下备查。",
- "updated": "2026-11-09",
+ "updated": "2026-11-11",
  "shared_recipe": "统一构图公式：低角度仰拍 + 巨物/渺小参照物对比 + 逆光轮廓 + 能量粒子；日式动画赛璐璐上色，日式西幻；原图 1536x1024 居中裁到 448x403（裁窗口 199~1337），右下角平台水印随之裁掉。\n\n【R478 机械/改造批·风格锚（2026-11-01）】机械题材极易被拉成欧美写实 3D 概念图。中文的「日式动画赛璐璐」不足以拉住它，必须把**英文风格头放在 prompt 第一句**并显式否定：【风格头·必须放第一句】アニメのセル画 / 2D hand-drawn anime cel, flat cel shading with hard-edged shadow blocks, bold clean black outlines, limited flat color palette. NOT 3D render, NOT CGI, NOT photorealistic, NOT concept art, NOT octane render, NOT metallic texture rendering。 另需在主体描述里写 cartoony / simplified / oversized rivets / single glowing eye 这类简化设计词。批次内先出一张验证风格，对了再批量。\n\n【成色硬约束（2026-11-02 用户明确要求）】所有单位/机械卡图**一律全新出厂，禁止任何做旧**：NO rust, NO corrosion, NO weathering, NO dirt, NO grime, NO stains, NO scratches, NO chipped paint, NO battle damage, NO soot, NO aged patina, NO distressed texture。\n注意：赛璐璐的**块状阴影**不算做旧，可以保留；做旧指的是锈蚀/污渍/磨损/掉漆/烟熏这些『使用痕迹』。\n中文 prompt 里也要写一句「全新出厂、表面洁净无锈无磨损」，不能只在英文头里否定。\n\n【暗影题材风格锚（2026-11-02）】暗影系极易滑向写实暗黑CG/恐怖渲染。配方：\n① 英文风格头照旧（cel / flat / bold outlines + NOT 3D/CGI/photorealistic/dark realistic concept art/gritty texture）；\n② 追加一句定调：`Palette deep midnight blue and violet, BUT colors stay bright, saturated and anime-clean — a vivid night, NOT a murky realistic dark painting.`\n③ 效果涉及**数量**（三张卡/两格/两只鸭子）必须在 prompt 里写死数字，并显式否定常见替代画法\n   （如「不要画残影/分身」）；涉及**位移/方向**用「地面刻度 + 反向箭头 + 拖痕」，别用残影（残影会被画成第二个实体）。\n④ 暗影系配色底：黑紫 + 硬边描光，能量/费用用青蓝，强化主体用琥珀。\n\n【卡牌不入画（2026-11-02 用户硬要求，适用于所有后续卡图）】\n任何卡图里**都不许画卡牌**：不画长方形纸片、不画卡面、不画牌堆、不画发光卡、不画手中捧着的卡。\n原因：卡图本身就是卡面，画里再出现卡牌就是「画中画」，缩到 448x403 后更糊，且与 UI 上的手牌互相干扰。\n- 抽卡 / 取回 / 弃牌 / 弃牌堆这类语义，改用**抽象能量载体**表达：光核、光符、光丝、影池、数据块。\n- prompt 末尾固定加：`NO playing card, NO trading card, NO rectangular paper object, NO card face, NO deck of cards`；\n  中文描述里也要写一句「不画卡牌」。\n- 同理禁用的「符号化标记」：地面箭头、格线、指向符号、UI 图标——它们会被读成界面元素而不是画面内容。\n\n【卡面裁切安全区（2026-11-02 踩坑后定）】\n卡图在卡面上不是整张可见：图区 = 卡高的 `CARD_ART_RATIO`(0.662)，260×312 的卡算出来是 260×206，比例 1.26；\n而卡图规格 448×403 的比例是 1.11 → `cover_region()` 会**上下各裁掉约 6%**。\n- 生成时：头冠、尖角、旗标、头顶特效一律不要贴原图上下边缘，垂直方向留 8% 以上余量。\n- 事后补救（不重画）：纵向压缩 0.93 + 底对齐 + 顶部用第一行像素模糊拉伸补满 → 再按 448×403 居中裁。\n- 左右不用担心：448 宽在 260 宽里是等比缩放，横向不裁（近似的 1.26 比 1.11 更高，横向反而是满的）。\n",
  "items": {
   "9014": {
@@ -861,6 +861,46 @@
    "ref": "codex 会话 01a1c0bc（2026-11-09）；同批次火水风土四元素共用一套「元素 djinn」语言",
    "prompt": "成年女性火 djinn：浑身火焰、金色瞳孔、长橙红焰发、深红金高领合身战裙；第二版改为躯干扭转的横扫攻击动作，四分之三侧面，单臂横向挥出。赛璐璐 2-3 色阶、硬边阴影。",
    "note": "已裁 448x403（原图 1254×1254 居中裁）；原图 raw/9236_fire_elemental.png；首版（站立构图）留档 art_src/…R545/raw/9236_fire_v1_初版弃用.png"
+  },
+  "9246": {
+   "name": "宝石兽",
+   "tier": "A",
+   "created": "2026-11-11",
+   "ref": "影之诗「马纳历亚宝石兽」+ 游戏王「宝玉兽 红玉兽」实图（refs/，纪律 O）；图生图形象参考 参考A_影之诗小幻兽.png；风格参考桶 treant=8003",
+   "prompt": "毛茸茸的奶油浅绿小幻兽：额上一颗绿宝石、两只大尖耳、蓬松大尾、琥珀色眼睛，蹲在苔石上，脚下冒出嫩芽；暗色柔焦森林背景，硬边赛璐璐平涂。宝石是嵌在活物身上的饰物，不是身体材质。",
+   "note": "v1 几何矿石兽方向错（按卡名脑补材质，纪律 O）。15:11 店长点名 v2a 转正为 _pending 成品，v2b 四耳小狐留候选；v1 备份 backup_9246/。正式 prompt 9246_宝石兽_v2a.txt，raw/9246_宝石兽_v2a.png。15:23 整批 approve 入库。",
+   "status": "approved",
+   "approved": "2026-11-11"
+  },
+  "9247": {
+   "name": "拼装工厂",
+   "tier": "A",
+   "created": "2026-11-11",
+   "ref": "风格参考桶 mech=8025；画面纪律 H（R563 侦察塔 / 9167 合体踩坑）",
+   "prompt": "固定钢制工厂工事，正面三个不同形状的模块插槽（方块 / 楔块 / 圆柱）与实体灰色部件物理扣合，琥珀状态片只为平涂色块、不发光；暗色工业背景。",
+   "note": "明确排除发光雷达碟 / 炮管 / 炮塔 / 传送带 / 烟雾，避免与 8037 改造工厂、9147 流水线装配撞画面。448×403 验收四边留白足。",
+   "status": "approved",
+   "approved": "2026-11-11"
+  },
+  "9190": {
+   "name": "猫鼠游戏",
+   "tier": "A",
+   "created": "2026-11-11",
+   "ref": "风格参考桶 shadow_beast=8006；规范 A/B（技能卡只画物件、不画生物 / 不画卡牌）",
+   "prompt": "暗紫棋盘上两枚无脸几何棋子（尖耳 / 圆耳）+ 沙漏（紫沙落在下半球）+ 两片重叠新月刃影表示下回合翻倍，地上散几片空白小片；暗紫调硬边平涂。",
+   "note": "不画真猫真鼠、人脸、卡牌、卡框、文字、箭头、光束。语义＝丢弃所有手牌 + 下回合技能伤害加倍。",
+   "status": "approved",
+   "approved": "2026-11-11"
+  },
+  "9191": {
+   "name": "黑暗嵌合",
+   "tier": "A",
+   "created": "2026-11-11",
+   "ref": "风格参考桶 shadow_beast=8006；规范 A/B；避开 9167「合体吸能」老坑",
+   "prompt": "三块黑曜石楔块带榫卯接缝物理扣合成一枚菱形核心，周围六片朝外的扁平紫色菱形碎片表示打全体；暗紫调硬边平涂，无漩涡 / 光束 / 烟雾。",
+   "note": "语义＝组合一张卡使其获得「保存」并对所有敌人造成伤害；楔块必须是硬扣合，不是能量吸收。",
+   "status": "approved",
+   "approved": "2026-11-11"
   }
  },
  "skill_recipe": "技能/效果卡画法（与单位卡区分）：**不画人物**，中心一个强符号 + 能量场；暗底 + 单一高亮色（按牌组属性取色：机械橙红/钢蓝、野性深绿、疾风青白、以太紫白）；像咒术卡主视觉。裁切规格与单位卡一致（448x403，居中裁掉平台水印）。"

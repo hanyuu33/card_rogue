@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1c83b-a608-7002-9ac0-30da5380f155"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll generate one square medal icon on a pure white background.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated one square gold star medal icon with a short ribbon on a white background."}}
+{"type":"turn.completed","usage":{"input_tokens":34585,"cached_input_tokens":29440,"cache_write_input_tokens":0,"output_tokens":385,"reasoning_output_tokens":0}}

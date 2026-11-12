@@ -81,6 +81,9 @@ func _init() -> void:
 	_test_r570_actions()
 	_test_r571_no_cancel()
 	_test_r572_combo_hooks()
+	_test_r589_materials()
+	_test_r592_combo_dimension()
+	_test_r604_opening()
 	print("Combination tests failures: ", failures)
 	quit(failures)
 
@@ -112,6 +115,34 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 		"hand_cost_raise": return text.contains("费用 +%d" % n)
 		"add_copy": return text.contains("复制")
 		"buff_allies_atk": return text.contains("其他盟友攻击 +%d" % n)
+		# R583：补回原本漏掉的两个分支（taunt 以前直接落 return true，零校验）。
+		"taunt": return text.contains("嘲讽")
+		"absorb_linked": return text.contains("破坏所有与这张卡接通的己方卡") and text.contains("力量与生命加到这张卡上")
+		# R584：出处 = 原句点名这张卡，且写「加入…手牌/手卡」。错卡名不放过。
+		"add_card":
+			var ac_ok := text.contains("「" + Rules.card_label(int(fx.get("card_id", 0))) + "」") \
+					and (text.contains("加入你的手牌") or text.contains("加入手卡"))
+			if str(fx.get("from", "")) == "deck":
+				return ac_ok and text.contains("从卡组")
+			return ac_ok
+		# R585：入库句的出处必须写「加入抽牌库」，光有卡名不算。
+		"add_card_to_deck":
+			return text.contains("「" + Rules.card_label(int(fx.get("card_id", 0))) + "」") \
+					and text.contains("加入抽牌库")
+		# ── R589：七条新动作。**每条都要有判据** —— 不写分支就会落到末尾的
+		#    `return true`，等于零校验（R583 踩过的坑：五个动作白过保真锁）。
+		"next_effect_discount": return text.contains("下一张效果卡费用减少 %d" % n)
+		"next_ally_discount": return text.contains("下一个盟友时，费用 -%d" % n)
+		"add_effect_from_deck":
+			return text.contains("从卡组") and text.contains("效果卡加入手卡") \
+					and text.contains("费用减少 %d" % int(fx.get("discount", 0)))
+		"hand_skill_discount": return text.contains("所有技能牌本回合费用 -%d" % n)
+		"hp_per_zero_skill":
+			return text.contains("费用为 0 的技能卡") and text.contains("+%d 生命" % n)
+		"fetch_cheapest_ally":
+			return text.contains("费用最低的盟友") and text.contains("加入手卡")
+		"recall_ally_from_discard":
+			return text.contains("弃牌堆") and text.contains("盟友回到手卡")
 	return true
 
 
@@ -130,11 +161,98 @@ func _test_r565_fidelity() -> void:
 			check(_fx_in_text(fx, text),
 					"R565 保真：%d %s 的下半「%s」在原文里找不到出处（原文：%s）"
 					% [c.id, c.card_name, Rules.effect_text(fx), text])
+		# R585：上半的独立入场段同样逐字对原文，别让它变成编出来的效果。
+		for fx in (c.upper_effect.get("enter_effects", []) as Array):
+			check(_fx_in_text(fx, text),
+					"R585 保真：%d %s 的入场段「%s」在原文里找不到出处（原文：%s）"
+					% [c.id, c.card_name, Rules.effect_text(fx), text])
 		check(str(c.upper_effect.get("trigger", "")) in Rules.TRIGGERS,
 				"R565：%d 上半时机必须在白名单" % c.id)
 		check(not c.lower_effect.has("trigger"),
 				"R567：%d %s 的下半不许带扳机（扳机只在上半）" % [c.id, c.card_name])
 	check(rows >= 8, "R565：可组合候选至少 8 张（实际 %d）" % rows)
+	# R584：add_card 的保真判据必须认「卡名 + 加入手牌」，且错卡名不通过。
+	var r584_inf: CardData = repo.get_card(8038)
+	var r584_gun: CardData = repo.get_card(9166)
+	var r584_inf_t := r584_inf.effect_text.replace("**", "")
+	var r584_gun_t := r584_gun.effect_text.replace("**", "")
+	check(_fx_in_text({"type": "add_card", "card_id": 8027, "value": 1}, r584_inf_t)
+			and _fx_in_text({"type": "add_card", "card_id": 9145, "value": 1}, r584_gun_t)
+			and not _fx_in_text({"type": "add_card", "card_id": 8027, "value": 1}, r584_gun_t),
+			"R584：加卡保真判据认卡名 + 加入手牌，错卡不放过")
+
+	# R585：集束炮台 9166 按店长切法重切 —— 上半「入场加两张（独立段）+ 每次改造（钩子）」，
+	# 下半「从卡组捞一张 + 次元」。次元是常驻词缀，单独处理，不进 effects、不挂钩子。
+	var r585_gun: CardData = repo.get_card(9166)
+	var r585_up: Dictionary = r585_gun.upper_effect
+	var r585_ee: Array = r585_up.get("enter_effects", []) as Array
+	var r585_lo: Array = r585_gun.lower_effect.get("effects", []) as Array
+	check(str(r585_up.get("trigger", "")) == "upgraded"
+			and (r585_up.get("effects", []) as Array).is_empty()
+			and r585_ee.size() == 1
+			and str((r585_ee[0] as Dictionary).get("type", "")) == "add_card_to_deck"
+			and int((r585_ee[0] as Dictionary).get("card_id", 0)) == 9145
+			and int((r585_ee[0] as Dictionary).get("value", 0)) == 2
+			and not r585_gun.lower_effect.has("trigger")
+			and not r585_gun.lower_effect.has("extra_affixes")
+			and r585_lo.size() == 1
+			and str((r585_lo[0] as Dictionary).get("type", "")) == "add_card"
+			and str((r585_lo[0] as Dictionary).get("from", "")) == "deck"
+			and r585_gun.has_affix("次元"),
+			"R585：9166 上半入场段 + 改造钩子；下半从卡组捞；次元只留常驻词缀")
+	check(Rules.valid_pool([r585_up], [r585_gun.lower_effect]),
+			"R585：9166 上下半合法、仍在组合候选池")
+	var r585_base := CardData.new()
+	r585_base.card_name = "R585 探针"
+	r585_base.kind = "盟友"
+	r585_base.health = 10
+	r585_base.power = 1
+	r585_base.attack_range = 1
+	var r585_built: CardData = Rules.build(r585_base, r585_up, r585_gun.lower_effect)
+	check(r585_built != null
+			and r585_built.effect_text == "入场时，将2张「聚能炮击」加入抽牌库。每次被改造时：从卡组把1张「聚能炮击」加入手卡"
+			and (r585_built.assemble.get("enter_effects", []) as Array).size() == 1
+			and str(r585_built.assemble.get("trigger", "")) == "upgraded"
+			and (r585_built.assemble.get("lower_effects", []) as Array).size() == 1,
+			"R585：产物卡面逐字 = 入场句 + 改造钩子 + 下半；入场段不挂主扳机")
+	check(Rules.fragment_text(r585_up).begins_with("入场时，将2张「聚能炮击」加入抽牌库。"),
+			"R585：组合页上半槽也显示入场段")
+	check(Rules.valid_effect({"type": "add_card_to_deck", "card_id": 9145, "value": 2})
+			and Rules.effect_text({"type": "add_card_to_deck", "card_id": 9145, "value": 2}) == "将2张「聚能炮击」加入抽牌库"
+			and not Rules.valid_effect({"type": "add_card_to_deck", "value": 2})
+			and not Rules.valid_effect({"type": "add_card", "card_id": 9145, "value": 1, "from": "void"}),
+			"R585：入场动作合法性（缺 card_id / 假来源判废）+ 文案逐字")
+	check(_fx_in_text({"type": "add_card", "card_id": 9145, "value": 1, "from": "deck"}, r584_gun_t)
+			and _fx_in_text({"type": "add_card_to_deck", "card_id": 9145, "value": 2}, r584_gun_t)
+			and not _fx_in_text({"type": "add_card", "card_id": 8027, "value": 1, "from": "deck"}, r584_inf_t),
+			"R585：保真判据认「从卡组」与「加入抽牌库」，错来源不放过")
+	# 复制通道：enter_effects 必须随 from_dict 一起走，漏了组合卡一被复制就丢入场段。
+	var r585_copy := CardData.from_dict(r585_built.to_dict())
+	check((r585_copy.assemble.get("enter_effects", []) as Array).size() == 1,
+			"R585：独立入场段随复制通道深拷贝")
+
+	# R583：嵌合暴君按店长口径重切 —— 上半「嘲讽（常驻词缀）+ 使用时（扳机）」，
+	# 下半「破坏接通的己方卡并吸收力量生命」。词缀不许被当成运行时效果。
+	var r583_tyrant: CardData = repo.get_card(8047)
+	var r583_tfx: Array = r583_tyrant.lower_effect.get("effects", []) as Array
+	check(str(r583_tyrant.upper_effect.get("trigger", "")) == "use"
+			and (r583_tyrant.upper_effect.get("effects", []) as Array).is_empty()
+			and (r583_tyrant.upper_effect.get("extra_affixes", []) as Array).has("嘲讽")
+			and not r583_tyrant.lower_effect.has("trigger")
+			and r583_tfx.size() == 1
+			and str((r583_tfx[0] as Dictionary).get("type", "")) == "absorb_linked",
+			"R583：嵌合暴君上半 = 嘲讽 + 使用时；下半 = 接通吸收")
+	var r583_base := CardData.new()
+	r583_base.card_name = "R583 探针"
+	r583_base.kind = "盟友"
+	r583_base.health = 10
+	r583_base.power = 1
+	r583_base.attack_range = 1
+	var r583_built := Rules.build(r583_base, r583_tyrant.upper_effect, r583_tyrant.lower_effect)
+	check(r583_built != null
+			and r583_built.effect_text == "使用时：破坏所有与这张卡接通的己方卡，并将那些卡的力量与生命加到这张卡上"
+			and r583_built.has_affix("嘲讽"),
+			"R583：产物卡面逐字保真 + 嘲讽是常驻词缀")
 	# 用户点名的两张：黑暗领主 = 上半「使用后」空钩子 + 下半「回合结束时 5 费」；
 	# 榴弹击手 = 上半「每次获得改造时」空钩子 + 下半「攻击距离+1」。
 	var dark: CardData = repo.get_card(8021)
@@ -890,6 +1008,18 @@ func _test_r569_pool_forms() -> void:
 	var ao := FileAccess.get_file_as_string("res://scripts/assemble_overlay.gd")
 	check(ao.find("CardFace.fit_text_lines") >= 0,
 			"R569 源码锁：组合页上/下效果框也走自适应（犀牛那三行不再顶出框底）")
+	# R602 源码锁：**有框的文字一律先量框、再缩字号**（用户口径「检查所有有框的，
+	# 文字会不会和外框重叠？文字太多会不会溢出？」）—— 三个入口各锁一条，防止回退。
+	var ut := FileAccess.get_file_as_string("res://scripts/ui_theme.gd")
+	check(ut.find("static func autoshrink_label") >= 0,
+			"R602 源码锁：框内缩字号公共口（Label 版）")
+	check(ut.find("static func fit_font_size") >= 0,
+			"R602 源码锁：框内缩字号公共口（draw_string 版）")
+	check(cf.find("bottom = minf(bottom, text_zone_bottom(rect))") >= 0,
+			"R602 源码锁：卡面文字区让开底部数值徽章")
+	var gs := FileAccess.get_file_as_string("res://scripts/gallery_scene.gd")
+	check(gs.find("UiTheme.autoshrink_label(detail_name") >= 0,
+			"R602 源码锁：图鉴详情卡名走自适应（长名不再顶穿右框）")
 
 func _test_r570_actions() -> void:
 	## R570：用户口径「排查一下还有其他可以做的卡吗」。
@@ -1219,3 +1349,192 @@ func _test_r572_combo_hooks() -> void:
 	var bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 	check(bs.find("if engine.assemble_combo_pending:") >= 0,
 			"R572 源码锁：组合页挂着时 AI 停手（敌方回合触发也不会让玩家盲拖）")
+
+
+func _test_r589_materials() -> void:
+	## R589：用户逐张点名的八张素材卡入池 —— 上半只给扳机、效果全放下半。
+	##   · 熊 8004「上半主动发动」→ `active` 是**通用扳机**（组合产物只要上半选它就能发动）；
+	##   · 忒修斯奇械 9222「上半超负荷 + 每次生命降到 0 或更低」→ `lethal` 跨越判定 + 常驻字段；
+	##   · 小精灵 9074 / 斑鸠 9052 / 巨鼠 9046 / 乌鸦 9039：上半「使用后」；
+	##   · 水元素 9068 / 影魔 8007：上半「使用时」。
+	## 另外两张**明确不入池**：堡垒 8034（纯持续效果，没有扳机）、素体 8025（万用素材）。
+	var repo := CardRepo.load_json()
+	# ① 三条新扳机在白名单与文案表里
+	for tk: String in ["active", "use_after", "lethal"]:
+		check(Rules.TRIGGERS.has(tk), "R589：扳机 %s 必须在白名单" % tk)
+		check(Rules.LABELS.has(tk), "R589：扳机 %s 必须有卡面文案" % tk)
+	# 「之后横置 / 在场只能发动一次」不是装饰句：引擎 activate 就是按它实现的
+	check(str(Rules.TRIGGER_RULES.get("active", "")).contains("在场只能发动一次"),
+			"R589：主动发动必须自带「在场只能发动一次」规则句")
+	# ② 八张卡的上半扳机 / 下半首动作 / 关键数值
+	var rows := {
+		8004: ["active", "heal", 6],
+		9222: ["lethal", "add_card", 9145],
+		9074: ["use_after", "next_effect_discount", 2],
+		9052: ["use_after", "next_ally_discount", 1],
+		9068: ["use", "add_effect_from_deck", 1],
+		8007: ["use", "hand_skill_discount", 1],
+		9046: ["use_after", "fetch_cheapest_ally", 0],
+		9039: ["use_after", "recall_ally_from_discard", 0],
+	}
+	for cid: int in rows:
+		var c: CardData = repo.get_card(cid)
+		check(c != null, "R589：卡 %d 存在" % cid)
+		if c == null:
+			continue
+		var want: Array = rows[cid]
+		check(str(c.upper_effect.get("trigger", "")) == str(want[0]),
+				"R589：%d %s 上半扳机 = %s（实际 %s）"
+				% [cid, c.card_name, want[0], c.upper_effect.get("trigger", "")])
+		check((c.upper_effect.get("effects", []) as Array).is_empty(),
+				"R589：%d %s 上半只给钩子" % [cid, c.card_name])
+		var lo: Array = c.lower_effect.get("effects", []) as Array
+		check(not lo.is_empty(), "R589：%d %s 下半必须有效果" % [cid, c.card_name])
+		if lo.is_empty():
+			continue
+		var fx0: Dictionary = lo[0]
+		check(str(fx0.get("type", "")) == str(want[1]),
+				"R589：%d %s 下半首动作 = %s（实际 %s）"
+				% [cid, c.card_name, want[1], fx0.get("type", "")])
+		if int(want[2]) > 0:
+			var got_n: int = int(fx0.get("card_id", fx0.get("value", 0)))
+			check(got_n == int(want[2]),
+					"R589：%d %s 下半数值 = %d（实际 %d）"
+					% [cid, c.card_name, want[2], got_n])
+		check(Rules.valid_pool([c.upper_effect], [c.lower_effect]),
+				"R589：%d %s 上下半合法" % [cid, c.card_name])
+	# 影魔下半是两句：先给手卡技能牌减费、再按 0 费技能卡长血
+	var sd: CardData = repo.get_card(8007)
+	var sdl: Array = sd.lower_effect.get("effects", []) as Array
+	check(sdl.size() == 2 and str((sdl[1] as Dictionary).get("type", "")) == "hp_per_zero_skill" \
+			and int((sdl[1] as Dictionary).get("value", 0)) == 3,
+			"R589：影魔下半 = 减 1 费 + 每张 0 费技能卡 +3 生命")
+	# ③ 两张明确不入池
+	for cid: int in [8034, 8025]:
+		var c2: CardData = repo.get_card(cid)
+		check(c2 != null and c2.upper_effect.is_empty() and c2.lower_effect.is_empty(),
+				"R589：%d 不加入候选池（用户口径）" % cid)
+	# ④ 产物文案：主动发动必须把规则句一起印出来（卡面写了才敢这么结算）
+	var probe := CardData.new()
+	probe.card_name = "R589 探针"
+	probe.kind = "盟友"
+	probe.health = 10
+	probe.power = 1
+	probe.attack_range = 1
+	var bear_card: CardData = repo.get_card(8004)
+	var bear_built: CardData = Rules.build(probe, bear_card.upper_effect, bear_card.lower_effect)
+	check(bear_built != null
+			and bear_built.effect_text == "主动发动：代替行动回复6点生命，之后横置。在场只能发动一次。",
+			"R589：熊产物文案（实际「%s」）"
+			% (bear_built.effect_text if bear_built != null else "null"))
+	# 忒修斯：上半带「超负荷」「次元」两个常驻字段 → 产物是负血不死的
+	var the_card: CardData = repo.get_card(9222)
+	var the_built: CardData = Rules.build(probe, the_card.upper_effect, the_card.lower_effect)
+	check(the_built != null and the_built.has_affix("超负荷") and the_built.has_affix("次元"),
+			"R589：忒修斯产物带超负荷 + 次元")
+	check(the_built != null and the_built.effect_text.contains("每次生命降到 0 或更低")
+			and the_built.effect_text.contains("聚能炮击"),
+			"R589：忒修斯产物文案（实际「%s」）"
+			% (the_built.effect_text if the_built != null else "null"))
+	# ⑤ 保真判据真的能拦住错卡（不是一路 return true 放行）
+	check(not _fx_in_text({"type": "next_effect_discount", "value": 2}, "抽1张牌"),
+			"R589 保真：小精灵判据拦得住无关文本")
+	check(not _fx_in_text({"type": "add_effect_from_deck", "value": 1, "discount": 2},
+			"对最近敌人造成 3 点伤害"), "R589 保真：水元素判据拦得住无关文本")
+	check(not _fx_in_text({"type": "fetch_cheapest_ally"}, "抽1张牌"),
+			"R589 保真：巨鼠判据拦得住无关文本")
+	# ⑥ 池子确实长了：八张全在里面
+	var pool := 0
+	for c3: CardData in repo.all_cards():
+		if (c3.kind == "盟友" or c3.kind == "工事") and c3.group == "player" \
+				and not c3.upper_effect.is_empty() and not c3.lower_effect.is_empty():
+			pool += 1
+	check(pool >= 36, "R589：候选池至少 36 张（实际 %d）" % pool)
+
+func _test_r592_combo_dimension() -> void:
+	## R592：所有「组合一张卡」的入口卡统一带「次元」（用后 / 离场即消失，不进弃牌区）。
+	## 判据 = **能打开组合页的卡**，也就是 `_open_combo()` 的全部调用点：
+	##   · 传授系 8084 / 8085 / 8086（TEACH_IDS）
+	##   · 黑暗嵌合 9191 / 技术结合 9193（技能卡自带入口）
+	##   · 宝石兽 9246（death）/ 拼装工厂 9247（turn_start）
+	## 9144 随心组装是手牌变形（不产出新卡、不开组合页），不在判据内。
+	var repo := CardRepo.load_json()
+	var rows := {
+		8084: "打出后消失", 8085: "打出后消失", 8086: "打出后消失",
+		9191: "打出后消失", 9193: "打出后消失",
+		9246: "离场即消失", 9247: "离场即消失",
+	}
+	for cid: int in rows:
+		var c: CardData = repo.get_card(cid)
+		check(c.has_affix("次元"),
+				"R592：%d %s 必须带「次元」" % [cid, c.card_name])
+		var tail: String = "字段「次元」：%s，不进弃牌区。" % str(rows[cid])
+		check(c.effect_text.ends_with(tail),
+				"R592：%d %s 卡面末句应为「%s」（实际「%s」）"
+				% [cid, c.card_name, tail, c.effect_text])
+	# 判据锁（文本级）：认的是「卡面在说自己会组合」，不是 id 清单 ——
+	# 以后新增「组合一张卡」的卡忘了加次元，这条直接红。
+	for c2: CardData in repo.all_cards():
+		if c2.effect_text.contains("组合一张卡") or c2.effect_text.contains("组合一张盟友"):
+			check(c2.has_affix("次元"),
+					"R592：%s %d 文案是「组合一张卡」却没带次元"
+					% [c2.card_name, c2.id])
+	# 判据锁（字段级）：自带组合扳机的卡（宝石兽 / 拼装工厂）走的是这条。
+	for c3: CardData in repo.all_cards():
+		if c3.combo_trigger != "":
+			check(c3.has_affix("次元"),
+					"R592：combo_trigger=%s 的 %d %s 漏了次元"
+					% [c3.combo_trigger, c3.id, c3.card_name])
+
+
+func _test_r604_opening() -> void:
+	## R604 开场：主场景必须走 opening.tscn，徽记靠 shader 勾线生长，缺图不许黑屏。
+	var proj := FileAccess.get_file_as_string("res://project.godot")
+	check(proj.find('run/main_scene="res://scenes/opening.tscn"') >= 0,
+			"R604 主场景 = 开场（否则一开窗就跳标题）")
+	check(proj.find('boot_splash/image="res://assets/ui/studio_mark.png"') >= 0,
+			"R604 启动 splash 用工作室徽记，不再显示引擎默认 logo")
+	check(proj.find("boot_splash/bg_color=Color(0.06, 0.05, 0.04, 1)") >= 0,
+			"R604 splash 底色与开场黑场同色（不然开机闪一下白/灰）")
+
+	var sh := FileAccess.get_file_as_string("res://shaders/studio_reveal.gdshader")
+	check(sh.find("uniform float progress") >= 0 and sh.find("void fragment()") >= 0,
+			"R604 徽记勾线 shader 在位（缺它只剩整张淡入）")
+
+	var op := FileAccess.get_file_as_string("res://scripts/opening_scene.gd")
+	check(op.find("_art == null") >= 0 and op.find("_handoff()") >= 0,
+			"R604 没有主视觉时直接交接，不许演四秒黑屏")
+	check(op.find('set_shader_parameter("progress"') >= 0,
+			"R604 每帧把 progress 喂给 shader")
+	check(op.find("--no-opening") >= 0,
+			"R604 保留 --no-opening 调试开关（截图工具依赖）")
+
+	check(GameBrand.STUDIO_EN != "" or GameBrand.STUDIO_CN != "",
+			"R604 厂牌名不能两边都空（片头会变成一张空卡）")
+	check(GameBrand.STUDIO_EN == "risusumai",
+			"R604 厂牌英文名 = risusumai（店长定案）")
+
+	var cr := FileAccess.get_file_as_string("res://scripts/credits_scene.gd")
+	check(cr.find("栗鼠大怪兽") >= 0,
+			"R604 鸣谢页作者署名 = 栗鼠大怪兽")
+	check(cr.find("AI 工具辅助生成") >= 0 and cr.find("素材说明") >= 0,
+			"R605 鸣谢页保留 AI 素材说明（Steam 不强制，主动披露）")
+
+	# R607：全游戏不设副标题 —— 名字只有一行，英文名不跟着露脸。
+	# 三个曾经/可能挂第二行的地方各锁一条：片头卡、鸣谢页、标题页。
+	check(op.find("NAME_EN") < 0 and op.find("display_name") < 0,
+			"R607 片头卡只出厂牌一行，不显示游戏名/英文副标")
+	check(cr.find("NAME_EN") < 0,
+			"R607 鸣谢页抬头不做双语（全游戏不设副标题）")
+	var ts := FileAccess.get_file_as_string("res://scripts/title_scene.gd")
+	check(ts.find("NAME_EN") < 0,
+			"R607 标题页不另起第二行（大标题走 GameBrand.title_text()）")
+
+	# R609：标题页按钮改两行（上排最多 4 / 下排恒 3），**风格沿用旧版** ——
+	# 店长口径：「不要把按键风格也改了」。旧版按钮宽 220（VBox 拉满容器的结果），
+	# 高度由 Button 自身决定，所以这里锁「宽 220、不给高度」，防止有人再压窄或写死高度。
+	var tt := FileAccess.get_file_as_string("res://scenes/title.tscn")
+	check(tt.find("Row1") >= 0 and tt.find("Row2") >= 0,
+			"R609 标题页按钮分两行（Buttons/Row1 + Buttons/Row2）")
+	check(ts.find("Vector2(220, 0)") >= 0 and ts.find("Vector2(136, 52)") < 0,
+			"R609 按钮宽度回到 220、高度不自定（保持原版外观）")

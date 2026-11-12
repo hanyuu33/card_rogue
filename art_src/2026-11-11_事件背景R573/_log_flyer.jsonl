@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1c7d5-c541-7e51-ad27-9acc160a0f55"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll generate one wide landscape image with the jetpack on the left and a quiet center for the UI panel.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated exactly one original wide landscape image at 1536 × 1024."}}
+{"type":"turn.completed","usage":{"input_tokens":36554,"cached_input_tokens":29824,"cache_write_input_tokens":0,"output_tokens":723,"reasoning_output_tokens":0}}

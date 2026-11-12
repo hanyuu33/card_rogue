@@ -125,7 +125,7 @@ func _is_menu_scene(path: String) -> bool:
 			# R519b：这两页的「返回」chip 就摆在 (14, 14) 110~150 宽，整块落在状态条
 			# (8, 8) 266×52 底下 —— 出图时按钮直接看不见（`story` 实测如此）。
 			# 两页都跟本局无关（故事簿 / 账号级禁卡表），不显示状态条最省事。
-			"story.tscn", "ban.tscn"]:
+			"story.tscn", "ban.tscn", "codex.tscn"]:
 		if path.ends_with(suffix):
 			return true
 	return false

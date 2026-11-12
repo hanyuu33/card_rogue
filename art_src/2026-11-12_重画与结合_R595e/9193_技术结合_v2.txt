@@ -1,0 +1,21 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image defines the MACHINE DESIGN you must rebuild — a construct unit. Copy its construction language faithfully: warm BRASS-OCHRE armour plates (muted mustard-yellow, matte painted metal, not gold, not chrome), dark charcoal-grey inner frame and joints, many small round rivets along every plate edge, rounded pauldron shoulders with a riveted rim, a pointed wedge-shaped helmet head with a dark visor slit and no face, thick segmented limbs, and above all a ROUND CHEST CORE seated in a thick dark machined bezel of fine concentric turned rings. Do NOT copy its pose, its standing full-body framing, its pale empty background, or its grey daylight lighting. Keep the same cel-shading technique: Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject.
+
+SUBJECT — "TECH FUSION" — a core being pushed INTO a construct's open chest socket. The single most important thing: the core and the socket are COAXIAL, one directly in front of the other, like a bearing being pressed onto its shaft.
+
+A CLOSE-UP of the same brass-ochre construct's upper torso, filling the frame, shot almost dead-on, only very slightly from the left. Its chest is split open on two hinge arms: the LEFT and RIGHT chest plates both swing outward and back, forming a symmetric V-shaped opening, their inner faces visible and catching the cyan light.
+
+At the centre of that opening sits the EMPTY core socket: a deep charcoal cylindrical cavity of fine concentric machined rings with three bare cable sockets and short exposed pistons around its rim.
+
+Directly in front of it, on the SAME axis, hangs ONE ROUND CORE: a glossy pale-cyan glowing sphere seated in a thin dark machined bezel ring, bright highlight at its upper-left. It is only about HALF a core-diameter in front of the socket mouth and slightly OVERLAPS the opening's front rim, so it unmistakably reads as being pushed in right now — a half-seated part, not a separate object being offered. The core centre and the socket centre must sit on the same screen point, the core appearing as a disc laid over the socket mouth, NOT offset to the left, NOT beside the chest, NOT held out to the side.
+
+Thin crisp cyan energy lines run from the socket rim to the core bezel, taut like docking tethers — single thin lines, NOT a beam, NOT a light cone, NOT a glow cloud.
+
+TWO slender multi-jointed assembly arms enter from the lower left and lower right of the frame: thin dark steel rods with visible hydraulic pistons and small three-finger grippers, one gripper gripping the core's bezel edge, the other gripping the opened right chest plate. They are thin and mechanical, unmistakably tool arms, not limbs of a person.
+
+BACKGROUND: dark blue-grey blurred mechanical foundry interior, gantry silhouettes far out of focus, a few dim amber lamps, cool cyan fill light on the brass plates.
+
+COMPOSITION (MANDATORY): the torso fills the frame, the socket-plus-core pair at the exact centre of the image, both fully inside with safe margins (at least 8 percent empty background on every side); the head may be partially cropped at the top, the arms may enter from the edges. Everything must read clearly when shrunk to a small 448x403 trading-card window.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO human face, NO human skin, NO human body, NO pilot, NO person in the frame, NO extra creature, NO text, NO letters, NO numbers, NO watermark, NO logo, NO readable symbols, NO arrows, NO arrow symbols, NO abstract speed lines, NO graphic marks of any kind, NO playing cards, NO card frames, NO beam of light, NO light cone, NO glowing fog, NO sparks shower, NO second core, NO floating core off to the side. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

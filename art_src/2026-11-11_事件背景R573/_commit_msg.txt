@@ -1,0 +1,14 @@
+R573 事件背景收口：委托 codex 补三张整屏背景 + 删除蓝色大肥鱼
+
+- hero / pear / flyer 三张 1280x720 背景落地 assets/ui/，沿用 R519e 卡通赛璐璐契约；
+  全部委托 codex 纯文生图（不带 -i），游戏王截图只转成文字构图、不参与图生图。
+  hero = 上方五张 + 手中一张（本游戏羊皮纸深蓝标题条卡面）；
+  pear = 巨梨 + 小人/小车/梨树参照物；flyer = 双喷嘴喷气背包，无桨叶无机翼。
+  三张游戏内截图验收通过；补 --flyer 演示参数便于后续核验。
+- bluefish 事件删除：事件名与权重、场景分支与文案、演示入口、测试断言与源码锁、
+  _playthrough.gd、图片命名说明；旧存档只留兜底页、不发奖励。R512 那档暂缓全部收口。
+- 审计 --strict：24 个事件 / 已有背景 19 / 待补 0。
+- 回归：assemble 0 / engine 5475✓ 0✗ / reward 26 / bgm 39 / smoke 67-0 / mana PASS；
+  userdata 先备份再逐文件 cmp 还原，RESTORE_VERIFY OK。
+- codex 预检：必须真连 HTTPS，HTTPError 视为链路通（Cloudflare 会因默认 UA 回 403）；
+  代理端口可用 CODEX_PROXY 覆盖，Clash Verge 需启动主程序才会监听 7897。

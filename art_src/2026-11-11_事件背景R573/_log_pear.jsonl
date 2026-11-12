@@ -1,0 +1,7 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1c7d4-ec92-7533-af0d-7c4963533311"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’m generating one wide landscape image with the enormous pear and tiny traveller.\n"}}
+2026-11-10T23:40:12.692986Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/ps/mcp)")))
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated exactly one wide landscape image at 1536×1024."}}
+{"type":"turn.completed","usage":{"input_tokens":86987,"cached_input_tokens":75648,"cache_write_input_tokens":0,"output_tokens":817,"reasoning_output_tokens":33}}

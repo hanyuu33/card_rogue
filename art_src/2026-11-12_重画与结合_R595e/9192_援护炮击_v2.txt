@@ -1,0 +1,21 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY: copy its drawing technique (Japanese anime cel shading, THIN clean black line art, hard-edged 2-3 step shadows, big flat colour blocks, dark muted softly-blurred background + bright clearly-lit subject, cool steel-white armour with thin CYAN energy seams). Do NOT copy its character, its pose, its stance, its props, its scene, its composition, its scale, or its colour placement. Paint a COMPLETELY DIFFERENT subject.
+
+SUBJECT — "SUPPORT BARRAGE" — a heavy field howitzer CAUGHT THE INSTANT IT FIRES. The gun itself is the whole picture. NO projectile anywhere in the frame, NO flying shell, NO falling shell, NO crater, NO impact, NO ground damage, NO human, NO creature, NO robot, NO standing figure.
+
+THE GUN: a squat, brutal, industrial cannon on a heavy steel base. Its thick barrel enters from the LOWER LEFT of the frame and rises diagonally toward the UPPER RIGHT at about 30 degrees, so the muzzle sits in the upper-right third. Length of visible barrel about two thirds of the frame diagonal, diameter fat and short-barrelled like a siege gun, NOT a long slim anti-tank gun, NOT a laser emitter.
+
+- MUZZLE: a heavy boxy MUZZLE BRAKE with two thick baffle plates and side vent slots, its front face turned three-quarters toward the viewer. From the muzzle mouth bursts a SHORT hard-edged ORANGE-WHITE flash, only about two muzzle-diameters long, cut flat at its front like a manga explosion shape, with a couple of crisp angular flame tongues. The flash is the ONLY warm colour in the image. Not a beam, not a light cone, not a ray, not a long jet of fire.
+- RECOIL: behind the barrel, a massive hydraulic recoil cylinder with a polished bare steel piston rod sliding back along two thick guide rails, clearly displaced so the gun reads as having JUST fired. Coiled coolant hoses loop from the cylinder to the breech block.
+- BREECH: a big blocky breech ring with visible interrupted-thread lugs, a loading tray flipped down and empty.
+- BASE: a square welded steel pedestal with four heavy corner gussets and anchor bolts biting into the deck, a circular traverse ring at its top, and two thick armoured feet spread left and right. NOT a tripod, NOT three legs.
+- SURFACE: dark gunmetal grey-blue plates, matte, with rows of rivets, chunky weld beads and a few thin CYAN seam lights along the barrel jacket and the recoil rails.
+
+CAMERA: low three-quarter front view from slightly below the barrel line, close enough that the gun fills the frame and the muzzle dominates; the base may be partially cropped at the bottom edge, the barrel must not be cropped at the muzzle.
+
+BACKGROUND: dark blue-grey blurred mechanical foundry interior, gantry silhouettes and hanging chains far out of focus, a few small dim amber lamps as soft dots, cool cyan fill light raking along the top of the barrel.
+
+COMPOSITION (MANDATORY): the gun and its flash fill about 80 percent of the frame, muzzle in the upper-right third, breech in the lower left; nothing important touching the frame edge except the cropped base; everything must still read clearly when shrunk to a small 448x403 trading-card window.
+
+AVOID ALWAYS: NO photorealistic rendering, NO photographic texture, NO 3D render, NO painterly airbrush, NO soft gradients, NO depth-of-field bokeh, NO chibi, NO cute mascot, NO humanoid, NO hooded figure, NO soldier, NO crew, NO extra creature, NO text, NO letters, NO numbers, NO watermark, NO logo, NO readable symbols, NO arrows, NO arrow symbols, NO abstract speed lines, NO projectile trail, NO shell in flight, NO smoke plume filling the frame, NO laser, NO glowing ring, NO magic circle, NO portal disc, NO graphic marks of any kind, NO playing cards, NO card frames, NO light cone, NO beam, NO glowing fog. It must stay crisp and legible when shrunk to a small 448x403 trading-card window.

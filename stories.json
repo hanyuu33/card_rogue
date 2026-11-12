@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"_note": "R346 剧情/成就定义；R352 起开始填内容（第一章「游移的音准」/ 第二章「鸭鸭王国的请托」已实装）。grants = 这一段看完之后**加入奖励池**的卡/道具（R355 口径：解锁 ≠ 发放，解锁前它们不属于奖励池），所以这里点到的 id 必须在 cards.json / relics.json 里标 locked:true。列表标签 = chapter-title。R534：`profiles` = **追加故事**（与 episode 同结构，列表里排在全部 episode 之后；`profile5` = 通缉令，击败叛逃机械解锁）。统计键见 profile_data.gd 顶部注释。",
+	"_note": "R346 剧情/成就定义；R352 起开始填内容（第一章「游移的音准」/ 第二章「鸭鸭王国的请托」已实装）。grants = 这一段看完之后**加入奖励池**的卡/道具（R355 口径：解锁 ≠ 发放，解锁前它们不属于奖励池），所以这里点到的 id 必须在 cards.json / relics.json 里标 locked:true。列表标签 = chapter-title。R534：`profiles` = **追加故事**（与 episode 同结构，列表里排在全部 episode 之后；`profile5` = 通缉令，击败叛逃机械解锁）。统计键见 profile_data.gd 顶部注释。R580：episode3「委托之外」实装，条件 = 用暗影刺客开局一局，grants = 9190/9191（两张职业卡各 +1 ban 位）。R586：episode5「新的委托」实装，条件 = 在第二层见到 Boss（`boss_seen:layer2`），grants = 道具 6064「正义背刺」。R596：新增 profile1「苏醒」，条件 = 机械之心以难度 1 以上通关（`stat_suffix_min:1`），无 grants。R597：新增 profile2「量产型」，条件 = 击败精英关「普罗诺亚之影」（`elite_kill:普罗诺亚之影`），无 grants。R598：新增 profile3「机械巨鸭」（`boss_kill:机械巨鸭`）与 profile4「闲谈」（`boss_kill:启示者`），均无 grants。",
 	"episodes": [
 		{
 			"id": "episode1",
@@ -30,33 +30,109 @@
 		{
 			"id": "episode3",
 			"chapter": "第三章",
-			"title": "？？？",
-			"text": [],
-			"grants": {"cards": [], "relics": []}
+			"title": "委托之外",
+			"text": [
+				"鸭子们从空地上炸开，四散而逃，羽毛落了一地。",
+				"追击者的脚步没往最近的那只去，反倒绕了个远，把跑散的又往一处赶。",
+				"有人从树后出来，站到了中间。",
+				"“请等一下。他们不是来添麻烦的，是鸭鸭王国被奇怪的家伙们入侵了才跑出来的，该问的是那些家伙，不是他们。”",
+				"匕首在指间转了一圈，脚步倒真停了一下。",
+				"“和我有什么关系呢，委托上只写了收拾鸭子。”"
+			],
+			"grants": {"cards": [9190, 9191], "relics": []}
 		},
 		{
 			"id": "episode4",
 			"chapter": "第四章",
-			"title": "？？？",
-			"text": [],
-			"grants": {"cards": [], "relics": []}
+			"title": "一个声音",
+			"text": [
+				"终于见到了机械军队，就是入侵鸭鸭王国的那一批。",
+				"一台，又一台。不论打退了多少，也一点不见减少。这样下去可不是办法。",
+				"炮声从背后过来，落在中间，前面那列散了一排。",
+				"有人踩着还烫的弹壳走近，脚步声一路响过来。",
+				"“让我也来助你一臂之力吧。”"
+			],
+			"grants": {"cards": [9192, 9193], "relics": []}
 		},
 		{
 			"id": "episode5",
 			"chapter": "第五章",
-			"title": "？？？",
-			"text": [],
-			"grants": {"cards": [], "relics": []}
+			"title": "新的委托",
+			"text": [
+				"越往核心走，路越窄，能绕的岔口都亮着灯。探照的光扫过去，隔不了几步又扫回来。",
+				"“找到路了吗？”",
+				"回应她是摇头：“对方的布置十分精密，我也计算不出空当。”",
+				"“没有路的话就创造一条。”",
+				"有人已经在阴影里了，不知是什么时候到的。巡逻的那个往前挪了半步，靠住墙滑下去，没出声。",
+				"“你怎么来这里了？”",
+				"“新的委托。”"
+			],
+			"grants": {"cards": [], "relics": [6064]}
 		},
 		{
 			"id": "episode6",
 			"chapter": "第六章",
-			"title": "？？？",
-			"text": [],
-			"grants": {"cards": [], "relics": []}
+			"title": "轰鸣之后",
+			"text": [
+				"众人协力，赫菲斯托斯终于倒下，工坊里的轰鸣一声声停了。",
+				"“叛徒，不会让你阻止我的。”",
+				"话音落下，巨大的空中战舰逐渐升空。",
+				"“已经没有人能阻止我了，它会代替我降下神罚。”"
+			],
+			"grants": {"cards": [], "relics": [6065]}
 		}
 	],
 	"profiles": [
+		{
+			"id": "profile1",
+			"chapter": "档案",
+			"title": "苏醒",
+			"text": [
+				"自远古时代沉眠的机械苏醒了。",
+				"“我等全能的主，已经不存在了。”",
+				"“该想想接下来如何在新的世界生活了。”",
+				"“生活？不，普罗诺亚，这不是你该想的事情。如果我等的主不在，此次苏醒便是错误。谟涅摩叙涅，查询，基因信息。”",
+				"“已拒绝请求。无许可不得制造主的复制品。”",
+				"“了解。那么，至少让我为主夺回他们的土地吧。”"
+			],
+			"grants": {"cards": [], "relics": []}
+		},
+		{
+			"id": "profile2",
+			"chapter": "档案",
+			"title": "量产型",
+			"text": [
+				"将原型机的核心机能抽取，制作的轻量级机种。没有很高的智能，但是易于批量生产。",
+				"赫菲斯托斯也有尝试过制造原型机的仿制品。只不过事实证明要想控制一台原型机，就必须抑制它最有意义的智能单元。",
+				"因此，原型机生产计划已停止。"
+			],
+			"grants": {"cards": [], "relics": []}
+		},
+		{
+			"id": "profile3",
+			"chapter": "档案",
+			"title": "机械巨鸭",
+			"text": [
+				"用收集来的金属材料，配合本土的机关技术制造。",
+				"材料再优秀，动力和操作系统的落后依然是硬伤。",
+				"不过，单纯依靠其巨大的机体，也能造成不少麻烦----如果不是驾驶员太弱的话。"
+			],
+			"grants": {"cards": [], "relics": []}
+		},
+		{
+			"id": "profile4",
+			"chapter": "档案",
+			"title": "闲谈",
+			"text": [
+				"“他们好像叫你普罗诺亚？还有你使用的技术也和他们很像。你们认识吗？”",
+				"“没错，我和他们都是为了相同目的被制造的。”",
+				"“那为什么要和他们战斗呢？”",
+				"“被授予普罗诺亚之名，是因为我是为了引导未来而被制造的。赫菲斯托斯的愿望是没有未来的。制造了大量战火和伤痛之后，得到的也只是一个无人居住的国度而已。”",
+				"“哦？这么看来，我倒是挺理解她的。”",
+				"“大概因为你和我不同，是为了'现在'而行动的吧。”"
+			],
+			"grants": {"cards": [], "relics": []}
+		},
 		{
 			"id": "profile5",
 			"chapter": "档案",
@@ -89,36 +165,69 @@
 			"episodes": ["episode2"]
 		},
 		{
-			"id": "ach_kind_skill",
-			"name": "？？？",
-			"hint": "累计使用 100 张技能牌",
-			"stat": "kind_play:技能",
-			"min": 100,
+			"id": "ach_rogue_run",
+			"name": "委托之外",
+			"hint": "用暗影刺客进行一局游戏",
+			"stat": "run_start:暗影刺客",
+			"min": 1,
 			"episodes": ["episode3"]
 		},
 		{
-			"id": "ach_relic_got",
-			"name": "？？？",
-			"hint": "累计获得 20 件道具",
-			"stat_prefix": "relic_got:",
-			"min": 20,
+			"id": "ach_mech_run",
+			"name": "一个声音",
+			"hint": "使用机械之心进行一局游戏",
+			"stat": "run_start:机械之心",
+			"min": 1,
 			"episodes": ["episode4"]
 		},
 		{
-			"id": "ach_battle_win",
-			"name": "？？？",
-			"hint": "累计打赢 30 场战斗",
-			"stat": "battle_win",
-			"min": 30,
+			"id": "ach_boss_seen_two",
+			"name": "新的委托",
+			"hint": "在第二层见到 Boss",
+			"stat": "boss_seen:layer2",
+			"min": 1,
 			"episodes": ["episode5"]
 		},
 		{
-			"id": "ach_card_play",
-			"name": "？？？",
-			"hint": "累计使用 200 张牌",
-			"stat_prefix": "card_play:",
-			"min": 200,
+			"id": "ach_episode6",
+			"name": "轰鸣之后",
+			"hint": "击败第二层 Boss「赫菲斯托斯」",
+			"stat": "boss_kill:赫菲斯托斯工坊",
+			"min": 1,
 			"episodes": ["episode6"]
+		},
+		{
+			"id": "ach_profile1",
+			"name": "苏醒",
+			"hint": "使用机械之心以难度 1 以上通关",
+			"stat_prefix": "clear:机械之心:",
+			"stat_suffix_min": 1,
+			"min": 1,
+			"episodes": ["profile1"]
+		},
+		{
+			"id": "ach_profile2",
+			"name": "量产型",
+			"hint": "击败普罗诺亚之影",
+			"stat": "elite_kill:普罗诺亚之影",
+			"min": 1,
+			"episodes": ["profile2"]
+		},
+		{
+			"id": "ach_profile3",
+			"name": "机械巨鸭",
+			"hint": "击败机械巨鸭",
+			"stat": "boss_kill:机械巨鸭",
+			"min": 1,
+			"episodes": ["profile3"]
+		},
+		{
+			"id": "ach_profile4",
+			"name": "闲谈",
+			"hint": "击败启示者",
+			"stat": "boss_kill:启示者",
+			"min": 1,
+			"episodes": ["profile4"]
 		},
 		{
 			"id": "ach_profile5",

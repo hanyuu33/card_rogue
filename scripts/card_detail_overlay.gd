@@ -112,14 +112,20 @@ func _draw() -> void:
 	var x := t.position.x
 	var w := t.size.x
 	var y := t.position.y + 6.0
+	# R602：这里每一行都是「单行 draw_string + 固定行距」，超宽时只会被裁掉尾巴
+	# （卡名尤其明显）。一律先问 `fit_font_size` 要一个放得下的字号，再画。
+	var name_fs := UiTheme.fit_font_size(_font_bold, _card.card_name, w, 40.0,
+			UiTheme.FS_TITLE, 16)
 	draw_string(_font_bold, Vector2(x, y), _card.card_name,
-			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, UiTheme.INK_900)
+			HORIZONTAL_ALIGNMENT_LEFT, w, name_fs, UiTheme.INK_900)
 	y += 34.0
 	var fee_txt := "X 费" if _card.x_cost else "%d 费" % _card.cost
-	draw_string(_font, Vector2(x, y),
-			"%s · %s · %s · %s" % [_card.kind, _card.card_class,
-					_card.rarity_name(), fee_txt],
-			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL, UiTheme.INK_600)
+	var meta_txt := "%s · %s · %s · %s" % [_card.kind, _card.card_class,
+			_card.rarity_name(), fee_txt]
+	draw_string(_font, Vector2(x, y), meta_txt,
+			HORIZONTAL_ALIGNMENT_LEFT, w,
+			UiTheme.fit_font_size(_font, meta_txt, w, 30.0, UiTheme.FS_LABEL, 10),
+			UiTheme.INK_600)
 	y += 30.0
 	# 数值行：技能卡 `stats_line()` 只说「直接使用」→ 把伤害写出来，否则看不出成长
 	var st := CardFace.stats_line(_card)
@@ -127,16 +133,20 @@ func _draw() -> void:
 		st = "造成 %d 点伤害" % _card.value
 	if st != "":
 		draw_string(_font, Vector2(x, y), st,
-				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL, UiTheme.INK_800)
+				HORIZONTAL_ALIGNMENT_LEFT, w,
+				UiTheme.fit_font_size(_font, st, w, 34.0, UiTheme.FS_LABEL, 10),
+				UiTheme.INK_800)
 		y += 34.0
 	# 本局永久成长（有成长才占位）
 	var gt := CardFace.growth_text(_card)
 	if gt != "":
 		draw_rect(Rect2(x, y - 18.0, w, 50.0), Color(0.14, 0.42, 0.22, 0.12), true)
 		draw_rect(Rect2(x, y - 18.0, 3.0, 50.0), Color(0.13, 0.42, 0.24), true)
-		draw_string(_font_bold, Vector2(x + 12.0, y + 4.0),
-				"本局永久成长　%s" % gt, HORIZONTAL_ALIGNMENT_LEFT, w - 20.0,
-				UiTheme.FS_LABEL, Color(0.13, 0.42, 0.24))
+		var gt_line := "本局永久成长　%s" % gt
+		draw_string(_font_bold, Vector2(x + 12.0, y + 4.0), gt_line,
+				HORIZONTAL_ALIGNMENT_LEFT, w - 20.0,
+				UiTheme.fit_font_size(_font_bold, gt_line, w - 20.0, 22.0,
+						UiTheme.FS_LABEL, 10), Color(0.13, 0.42, 0.24))
 		draw_string(_font, Vector2(x + 12.0, y + 26.0),
 				"跨战斗保留 · 随存档走 · 新开一局才清空",
 				HORIZONTAL_ALIGNMENT_LEFT, w - 20.0, UiTheme.FS_CAPTION, UiTheme.INK_500)
@@ -144,20 +154,27 @@ func _draw() -> void:
 	else:
 		y += 6.0
 	# 效果文全文（不截断到 3 行 —— 这个页面就是来看全文的）
+	# R602：仍然「能全文就全文」，但先按可用高度**折行 + 缩字号**（16→10），
+	# 长了就降字号而不是把后半句直接砍掉。
 	var eff := CardText.naturalize(_card.effect_text)
 	if eff != "":
-		var lines := CardFace.wrap_text(_font, eff, w, UiTheme.FS_BODY)
-		var line_h := UiTheme.FS_BODY + 6.0
-		var avail := int((t.end.y - y) / line_h)
-		for li in mini(lines.size(), maxi(1, avail)):
-			draw_string(_font, Vector2(x, y + UiTheme.FS_BODY * 0.9), lines[li],
-					HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, UiTheme.INK_800)
+		var avail_h := t.end.y - y
+		var fit := CardFace.fit_text_lines(_font, eff, w, avail_h, UiTheme.FS_BODY, 10)
+		var fs := int(fit["fs"])
+		var line_h := float(fit["line_h"]) + 2.0
+		var lines: Array = fit["lines"]
+		var n := mini(lines.size(), maxi(1, int(avail_h / line_h)))
+		for li in n:
+			draw_string(_font, Vector2(x, y + fs * 0.9), lines[li],
+					HORIZONTAL_ALIGNMENT_LEFT, w, fs, UiTheme.INK_800)
 			y += line_h
 	# 调用方补充说明
 	if _note != "":
 		y = maxf(y, t.end.y - 30.0)
 		draw_string(_font, Vector2(x, y + 12.0), _note,
-				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_CAPTION, UiTheme.INK_600)
+				HORIZONTAL_ALIGNMENT_LEFT, w,
+				UiTheme.fit_font_size(_font, _note, w, 24.0, UiTheme.FS_CAPTION, 9),
+				UiTheme.INK_600)
 	# 底部：关闭提示（面板下沿内侧居右）
 	var pr: Rect2 = L["panel"]
 	# 右边界内缩 56：面板九宫格右下角饰占 34，右对齐到 -26 会把「ESC 关闭」压在角饰上。

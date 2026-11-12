@@ -487,7 +487,7 @@ func describe() -> String:
 	if s == null:
 		return "（没有场景）"
 	var out: Array[String] = []
-	out.append("═══ 卡牌肉鸽 · AI 视图 ═══")
+	out.append("═══ %s · AI 视图 ═══" % GameBrand.display_name())
 	out.append("场景：%s" % _kind_cn())
 	out.append(_run_line())
 	if RunState.run_active and RunState.seed_text() != "":

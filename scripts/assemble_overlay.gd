@@ -60,6 +60,7 @@ var _font: Font
 var _font_bold: Font
 var _engine: Object = null
 var _cards: Array = []
+var _force_attr := false       # R582：第①槽是强制底座（技术结合）
 var _slot_attr := -1
 var _slot_upper := -1
 var _slot_lower := -1
@@ -104,7 +105,11 @@ func _sync_size() -> void:
 func open(engine_ref: Object, cards: Array) -> void:
 	_engine = engine_ref
 	_cards = cards.duplicate()
-	_slot_attr = -1
+	var locked_attr := -1
+	if engine_ref != null and engine_ref.has_method("assemble_combo_locked_attr"):
+		locked_attr = int(engine_ref.assemble_combo_locked_attr())
+	_force_attr = locked_attr >= 0
+	_slot_attr = locked_attr
 	_slot_upper = -1
 	_slot_lower = -1
 	_drag_from = -1
@@ -121,6 +126,7 @@ func close() -> void:
 	visible = false
 	_cards = []
 	_engine = null
+	_force_attr = false
 	_slot_attr = -1
 	_slot_upper = -1
 	_slot_lower = -1
@@ -257,7 +263,7 @@ func _slot_accepts(slot: int, idx: int) -> bool:
 	if idx < 0 or idx >= _cards.size():
 		return false
 	if slot == 0:
-		return true
+		return not _force_attr
 	var c: CardData = _cards[idx]
 	if slot == 1:
 		return AssembleRules.valid_upper(c.upper_effect)
@@ -383,7 +389,7 @@ func _draw_slot(sr: Rect2, slot: int, idx: int) -> void:
 	## R559c：效果文字只出现在右侧文本框；中栏槽位（①属性 ②上半 ③下半）填了就是一张卡。
 	if idx >= 0:
 		CardFace.draw_pick(self, _cards[idx], sr, _font, _font_bold, false)
-		if slot != _drag_slot:
+		if slot != _drag_slot and not (_force_attr and slot == 0):
 			_draw_slot_close(sr)
 		return
 	_draw_slot_paper(sr)
@@ -679,6 +685,9 @@ func _drop_at(pos: Vector2) -> void:
 
 
 func fill_slot(slot: int, idx: int) -> void:
+	if _force_attr and (slot == 0 or idx == 0):
+		_show_tip("这一张是固定的底座，不能换")
+		return
 	## 填槽唯一口（拖拽落点 / 演示预填共用）。
 	## R564：idx < 0 = 清空该槽；同一张卡不会同时占两个槽（填进新槽会自动清掉旧槽）。
 	## R571：idx >= 0 时先过 `_slot_accepts` —— 放不进这个槽就别落，提示玩家换槽。
@@ -695,6 +704,8 @@ func fill_slot(slot: int, idx: int) -> void:
 
 
 func _set_slot(slot: int, idx: int) -> void:
+	if _force_attr and (slot == 0 or idx == 0):
+		return
 	## 只改数据 + 同步引擎（不重绘）—— fill_slot / 撤回 / 互换都走这里。
 	var key := "attr"
 	match slot:
@@ -716,6 +727,10 @@ func _tap(pos: Vector2) -> void:
 	## R571：取消分支整段删除（按钮和 `cancelled` 信号一起没了）。
 	for s in 3:
 		if _slot_index(s) >= 0 and _slot_close_rect(_slot_rect(s)).has_point(pos):
+			if _force_attr and s == 0:
+				_show_tip("这一张是固定的底座，不能换")
+				queue_redraw()
+				return
 			_set_slot(s, -1)
 			_show_tip("已撤回，卡回到左栏待选")
 			queue_redraw()

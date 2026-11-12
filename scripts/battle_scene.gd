@@ -5245,7 +5245,7 @@ func _use_hand_card(i: int) -> void:
 			elif card.id == GameEngine.TRANSCEND_ID:
 				target_hint = "**自己的一个盟友或工事**（还没超负荷）：挂上超负荷 + 算一层改造"
 			elif card.id == GameEngine.REBOOT_ID:
-				target_hint = "**自己的一个盟友或工事**：返回手卡（0 费，离手重置）"
+				target_hint = "**自己的一个盟友或工事**：返回手卡（0 费）"
 			elif card.id == GameEngine.BLADE_GIFT_ID:
 				target_hint = "**自己的一个盟友**（改造：力 +%d，并获得「死亡」）" \
 						% GameEngine.BLADE_ATK
@@ -7845,6 +7845,10 @@ func _show_over(win: bool) -> void:
 			RunState.record_battle(repo, str(lvl.get("name", "?")), tier,
 					true, RunState.hp)
 			_run_boss_win = tier == GameLevels.TIER_BOSS
+			# R597：精英关也按关卡名记账（profile2「量产型」= 击败普罗诺亚之影）。
+			# 与 boss_kill 分开：只在 run 的真实胜利分支记录；单关演示、失败与普通关均不算。
+			if tier == GameLevels.TIER_ELITE_EASY or tier == GameLevels.TIER_ELITE_HARD:
+				ProfileData.bump(ProfileData.K_ELITE_KILL + str(lvl.get("name", "?")))
 			# R346 成就统计：击败的是**哪一只** Boss —— 按关卡名记账（「打过特定 boss」
 			# 这类成就读它；`RunState.on_battle_won` 那边只记「赢了几个 Boss」的总数）。
 			if _run_boss_win:
@@ -8064,7 +8068,7 @@ func _show_over(win: bool) -> void:
 	var story_new := ProfileData.check_achievements(story_repo)
 	ProfileData.flush()
 	# R389：真的解锁了**有正文**的剧情 → 结算面板副标题 + 底部轻提示各报一句。
-	# 没写正文的段落（episode3~6）不提示 —— `unlock_notice()` 里已经挡掉。
+	# 任意没写正文的段落都不提示 —— `unlock_notice()` 里已经挡掉。
 	var story_note := story_repo.unlock_notice(story_new)
 	if story_note == "" and _demo_story_notice != "":
 		story_note = _demo_story_notice   # 出图用（真实路径永远是上面那一行）
@@ -9236,9 +9240,13 @@ func _draw_string_center(font: Font, px: int, text: String, center: Vector2, col
 
 
 func _draw_string_nw(font: Font, px: int, text: String, pos: Vector2, col: Color,
-		outline := 0, outline_col := UiTheme.SURFACE) -> void:
+		outline := 0, outline_col := UiTheme.SURFACE, max_w := 0.0) -> void:
 	if px < 7:
 		px = 7
+	# R602：给了宽度就按宽度**缩字号**（单行）。左栏的卡名 / 费用 / 词条行原本用
+	# width=-1 硬画，长名字会直接冲出 296px 的信息栏、压到战场或面板框线上。
+	if max_w > 1.0:
+		px = UiTheme.fit_font_size(font, text, max_w, 9999.0, px, 8)
 	if outline < 0:
 		outline = 0            # R309：负数 = 明确不描边
 	elif outline == 0:
@@ -11979,7 +11987,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if ia_card is CardData:
 				var ia_name: String = (ia_card as CardData).card_name
 				sfx.play("draw")
-				_say("◆ 无限装甲供能：「%s」入手（在手牌里 %d 费，离开手牌恢复原价）"
+				_say("◆ 无限装甲供能：「%s」入手（在手牌里 %d 费）"
 					% [ia_name, GameEngine.INF_ARMOR_FEED_COST])
 				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
 					"text": "%s · 0 费入手" % ia_name, "col": Color("8ad4f0"),
@@ -12451,6 +12459,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": UiTheme.KIND_EFFECT, "start": n, "dur": 1400, "size": 18})
 			_say("❦ %s 发动回春：回复 %d 点生命，之后横置" % [
 					str(data.get("name", "熊")), int(data.get("amount", 0))])
+		"assemble_active":
+			# R589：组合产物的「主动发动」（上半扳机 = active）。与回春同样式，
+			# 但台词不写具体效果 —— 效果由玩家组合出来的动作决定，可能根本不是回血。
+			sfx.play("place")
+			var aa_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
+			_bursts.append({"pos": aa_pos, "sc": _grid_scroll, "start": n, "dur": 520,
+					"col": Color("4caf50"), "big": false})
+			var aa_amt := int(data.get("amount", 0))
+			if aa_amt != 0:
+				_floaters.append({"pos": aa_pos + Vector2(0, -12), "sc": _grid_scroll,
+						"text": "主动发动 +%d" % aa_amt, "col": UiTheme.KIND_EFFECT,
+						"start": n, "dur": 1400, "size": 18})
+			_say("❦ %s 主动发动，之后横置" % str(data.get("name", "组合产物")))
 		"wild_form_guard":
 			# 荒野形态（6022，R60 重做）：每场第一次我方 HP 被普通攻击打中 →
 			# 这次伤害 -4（最少 1）+ 对攻击者反伤 4。
@@ -16129,14 +16150,17 @@ func _draw_info_panel() -> void:
 	var top := GRID_Y
 	UiTheme.draw_panel_bg(self, Rect2(INFO_X, top, INFO_W, GRID_H))
 	draw_rect(Rect2(INFO_X, top, INFO_W, GRID_H), UiTheme.INK_300, false, 1.0)
-	var left := INFO_X + 10.0
-	var right := INFO_X + INFO_W - 10.0
-	var inner_w := INFO_W - 20.0
-	var y := top + 24.0
+	# R602（用户口径「文字和外框重叠」）：`draw_panel_bg` 是**九宫格**面板，四角各占
+	# 34px 的木框边饰 —— 原来内容从 +10 / +24 起，卡名与「技能 · 费用」直接压在左边框
+	# 和上边框的花纹上（实测放大图：字被木框盖住一截）。内容安全区按边饰内缩。
+	var left := INFO_X + 44.0
+	var right := INFO_X + INFO_W - 34.0
+	var inner_w := INFO_W - 78.0
+	var y := top + 54.0
 	# R349（用户口径）：左栏是**浅羊皮纸底**，文字一律不描边（`-1`）——
 	# 小字号自动描 2~3px 会把笔画糊成一团（R309 的同一个坑，这次连正文一起清干净）。
 	_draw_string_nw(_font_bold, UI_FS_CAPTION, "#%d %s" % [card.id, card.card_name],
-			Vector2(left, y), card.rarity_color(), -1)
+			Vector2(left, y), card.rarity_color(), -1, UiTheme.SURFACE, inner_w)
 	y += 22.0
 	# 费用：显示**当前实际费用**（悬停/选中手牌时套用本回合减费，低于卡面则标绿）
 	var hand_idx := _hover_hand
@@ -16154,7 +16178,8 @@ func _draw_info_panel() -> void:
 		# X 费卡（流星雨）：费用随剩余费用浮动 → 左栏直接写「费用 X（X = 剩余全部费用）」
 		cost_line = "%s · 费用 X（X = 剩余全部费用）· %s" % [card.kind, card.rarity_name()]
 	_draw_string_nw(_font, UI_FS_MICRO, cost_line,
-			Vector2(left, y), COL_COST_LOW_BG if cost_low else UiTheme.INK_600, -1)
+			Vector2(left, y), COL_COST_LOW_BG if cost_low else UiTheme.INK_600, -1,
+			UiTheme.SURFACE, inner_w)
 	y += 18.0
 	draw_line(Vector2(left, y), Vector2(right, y), Color("cfcbc2"), 1.0)
 	y += 20.0
@@ -16171,7 +16196,7 @@ func _draw_info_panel() -> void:
 		for t in card.traits:
 			tt += (" · " if tt != "" else "") + str(t)
 		_draw_string_nw(_font, UI_FS_MICRO, "词条：" + tt, Vector2(left, y),
-				Color("886000"), -1)
+				Color("886000"), -1, UiTheme.SURFACE, inner_w)
 		y += 20.0
 	# R297：**框体流**（用户口径）—— 数值两框 → 效果文本框 → 字段框 → buff 框。
 	# 以前这些全是纯文本行「力量 3 生命 5 / 字段：嘲讽 · 次元 / · 护盾：免疫…」，
@@ -16807,7 +16832,9 @@ func _process(delta: float) -> void:
 		has_any_deck = true
 	deck_btn.disabled = not has_any_deck and not _run_deck_visible
 	map_btn.disabled = not _mapview_available()
-	status_label.text = status_text
+	# R602：顶栏状态是「一行 + 固定 180px 宽」，长消息原来直接省略尾部。
+	# 先缩字号（17→11）把整句塞进去，缩到底仍不够才由 Label 的 overrun 省略。
+	UiTheme.autoshrink_label(status_label, status_text, 17, 10, Vector2(180.0, 28.0))
 
 
 func _draw_effect_thumbnail(card: CardData, rect: Rect2, count := 1, show_counter := false) -> void:

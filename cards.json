@@ -343,7 +343,9 @@
       "effect_text": "主动发动：代替行动回复 6 点生命，之后横置。在场只能发动一次。",
       "target_mode": "none",
       "color": "白",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "active", "effects": []},
+      "lower_effect": {"effects": [{"type": "heal", "value": 6}], "note": "代替行动"}
     },
     {
       "id": 8005,
@@ -1173,7 +1175,9 @@
       "effect_text": "使用后选择弃牌堆中一张盟友回到手卡，乌鸦除外。",
       "target_mode": "none",
       "color": "黑",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use_after", "effects": []},
+      "lower_effect": {"effects": [{"type": "recall_ally_from_discard"}]}
     },
     {
       "id": 9040,
@@ -1310,7 +1314,9 @@
       "effect_text": "使用后从抽牌库将一张费用最低的盟友加入手卡。",
       "target_mode": "none",
       "color": "灰",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use_after", "effects": []},
+      "lower_effect": {"effects": [{"type": "fetch_cheapest_ally"}]}
     },
     {
       "id": 9047,
@@ -1431,10 +1437,12 @@
       "group": "player",
       "class": "森林精魄",
       "traits": [],
-      "effect_text": "本回合使用下一个盟友时，费用 -1。",
+      "effect_text": "使用后，本回合使用下一个盟友时，费用 -1。",
       "target_mode": "none",
       "color": "灰",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use_after", "effects": []},
+      "lower_effect": {"effects": [{"type": "next_ally_discount", "value": 1}]}
     },
     {
       "id": 9053,
@@ -1761,7 +1769,9 @@
       "target_mode": "none",
       "value": 2,
       "color": "白",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use", "effects": []},
+      "lower_effect": {"effects": [{"type": "add_effect_from_deck", "value": 1, "discount": 2}]}
     },
     {
       "id": 9069,
@@ -1890,7 +1900,9 @@
       "target_mode": "none",
       "value": 2,
       "color": "白",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use_after", "effects": []},
+      "lower_effect": {"effects": [{"type": "next_effect_discount", "value": 2}]}
     },
     {
       "id": 9075,
@@ -2196,10 +2208,12 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "打出时，手卡中所有技能牌本回合费用 -1；手卡每有一张费用为 0 的技能卡，这张卡获得 +3 生命。",
+      "effect_text": "使用时，手卡中所有技能牌本回合费用 -1；手卡每有一张费用为 0 的技能卡，这张卡获得 +3 生命。",
       "target_mode": "none",
       "color": "紫",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use", "effects": []},
+      "lower_effect": {"effects": [{"type": "hand_skill_discount", "value": 1}, {"type": "hp_per_zero_skill", "value": 3}]}
     },
     {
       "id": 9090,
@@ -3153,7 +3167,9 @@
       "effect_text": "**每回合一次**：这张卡被「改造」时，将一张「升级」加入你的手牌，那张牌在手牌里**费用为 0**（离开手牌后恢复原价）。",
       "target_mode": "none",
       "color": "灰",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "upgraded", "effects": []},
+      "lower_effect": {"effects": [{"type": "add_card", "card_id": 8027, "value": 1}]}
     },
     {
       "id": 8039,
@@ -3209,7 +3225,9 @@
       "effect_text": "**接通**（闪电链那种四方向相邻传导，但**只算我方单位**）的我方盟友和工事，在**自己回合结束时**回复 2 点生命。",
       "target_mode": "none",
       "color": "灰",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "turn_end", "effects": []},
+      "lower_effect": {"effects": [{"type": "heal", "value": 2}]}
     },
     {
       "id": 8042,
@@ -3338,7 +3356,9 @@
       "effect_text": "**嘲讽**。**使用时**：破坏所有与这张卡**接通**的**己方**卡，并将那些卡的力量与生命加到这张卡上。",
       "target_mode": "none",
       "color": "紫",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use", "effects": [], "extra_affixes": ["嘲讽"]},
+      "lower_effect": {"effects": [{"type": "absorb_linked"}]}
     },
     {
       "id": 8048,
@@ -3645,7 +3665,8 @@
       "group": "player",
       "class": "森林精魄",
       "traits": [],
-      "effect_text": "组合一张盟友/工事卡：从随机 6 张候选卡中拖 3 张，分别决定属性值、上半效果、下半效果；生成的卡带「组合」印记。",
+      "affixes": ["次元"],
+      "effect_text": "组合一张盟友/工事卡：从随机 6 张候选卡中拖 3 张，分别决定属性值、上半效果、下半效果；生成的卡带「组合」印记。字段「次元」：打出后消失，不进弃牌区。",
       "target_mode": "none",
       "color": "绿",
       "image": ""
@@ -3663,7 +3684,8 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "组合一张盟友/工事卡：从随机 6 张候选卡中拖 3 张，分别决定属性值、上半效果、下半效果；生成的卡带「组合」印记。",
+      "affixes": ["次元"],
+      "effect_text": "组合一张盟友/工事卡：从随机 6 张候选卡中拖 3 张，分别决定属性值、上半效果、下半效果；生成的卡带「组合」印记。字段「次元」：打出后消失，不进弃牌区。",
       "target_mode": "none",
       "color": "紫",
       "image": ""
@@ -3681,7 +3703,8 @@
       "group": "player",
       "class": "机械之心",
       "traits": [],
-      "effect_text": "组合一张盟友/工事卡：从随机 6 张候选卡中拖 3 张，分别决定属性值、上半效果、下半效果；生成的卡带「组合」印记。",
+      "affixes": ["次元"],
+      "effect_text": "组合一张盟友/工事卡：从随机 6 张候选卡中拖 3 张，分别决定属性值、上半效果、下半效果；生成的卡带「组合」印记。字段「次元」：打出后消失，不进弃牌区。",
       "target_mode": "none",
       "color": "蓝",
       "image": ""
@@ -4881,7 +4904,9 @@
       "effect_text": "入场时，将两张「聚能炮击」加入抽牌库。每次获得改造时，从卡组把一张「聚能炮击」加入手卡。字段「次元」：离场即消失，不进弃牌区。",
       "target_mode": "none",
       "color": "白",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "upgraded", "effects": [], "enter_effects": [{"type": "add_card_to_deck", "card_id": 9145, "value": 2}]},
+      "lower_effect": {"effects": [{"type": "add_card", "card_id": 9145, "value": 1, "from": "deck"}]}
     },
     {
       "id": 9167,
@@ -6000,7 +6025,9 @@
       "effect_text": "**超负荷**。每次此卡的生命降到 0 或更低，将一张「聚能炮击」加入手卡。字段「次元」：离场即消失，不进弃牌区。",
       "target_mode": "none",
       "color": "橙",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "lethal", "effects": [], "extra_affixes": ["超负荷", "次元"]},
+      "lower_effect": {"effects": [{"type": "add_card", "card_id": 9145, "value": 1}]}
     },
     {
       "id": 9223,
@@ -6055,12 +6082,12 @@
       "health": 0,
       "attack_range": 0,
       "move_speed": 0,
-      "rarity": 0,
+      "rarity": 1,
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
       "affixes": [],
-      "effect_text": "标记目标所在的格子，然后对目标造成 6 点伤害。",
+      "effect_text": "对目标造成 6 点伤害，然后标记目标所在的格子。",
       "target_mode": "unit",
       "color": "紫",
       "image": ""
@@ -6081,7 +6108,7 @@
         "致命"
       ],
       "affixes": [],
-      "effect_text": "被标记的敌人受到的所有伤害提升 50%（替代标记本身的加伤）。打出时若场上没有标记，随机标记一个敌人所在的格子。",
+      "effect_text": "被标记的敌人受到的所有伤害提升 50%（替代标记本身的加伤）。打出时若场上没有标记，随机标记一个格子。",
       "target_mode": "none",
       "color": "紫",
       "image": ""
@@ -6133,7 +6160,7 @@
       "health": 0,
       "attack_range": 0,
       "move_speed": 0,
-      "rarity": 0,
+      "rarity": 1,
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
@@ -6469,7 +6496,8 @@
       "traits": [
         "宝石兽"
       ],
-      "effect_text": "死亡时，组合一张卡。",
+      "affixes": ["次元"],
+      "effect_text": "死亡时，组合一张卡。字段「次元」：离场即消失，不进弃牌区。",
       "target_mode": "none",
       "color": "绿",
       "image": "",
@@ -6491,11 +6519,76 @@
         "工事",
         "拼装工厂"
       ],
-      "effect_text": "回合开始时，组合一张卡。",
+      "affixes": ["次元"],
+      "effect_text": "回合开始时，组合一张卡。字段「次元」：离场即消失，不进弃牌区。",
       "target_mode": "none",
       "color": "灰",
       "image": "",
       "combo_trigger": "turn_start"
+    },
+    {
+      "id": 9190,
+      "name": "猫鼠游戏",
+      "kind": "技能",
+      "cost": 5,
+      "rarity": 0,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "丢弃所有手牌。下回合，自己的技能伤害加倍（与其他增加乘算）。",
+      "target_mode": "none",
+      "color": "紫",
+      "image": "",
+      "locked": true
+    },
+    {
+      "id": 9191,
+      "name": "黑暗嵌合",
+      "kind": "技能",
+      "cost": 2,
+      "rarity": 1,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "affixes": ["次元"],
+      "effect_text": "组合一张卡，使那张卡获得「保存」，对所有敌人造成那个力量值的伤害。字段「次元」：打出后消失，不进弃牌区。",
+      "target_mode": "none",
+      "color": "紫",
+      "image": "",
+      "locked": true
+    },
+    {
+      "id": 9192,
+      "name": "援护炮击",
+      "kind": "技能",
+      "cost": 2,
+      "rarity": 1,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "造成 8 点伤害，使目标本回合降低 8 力量。",
+      "target_mode": "unit",
+      "color": "紫",
+      "image": "",
+      "locked": true
+    },
+    {
+      "id": 9193,
+      "name": "技术结合",
+      "kind": "技能",
+      "cost": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [],
+      "affixes": ["次元"],
+      "effect_text": "以构装体为基础组合一张卡。字段「次元」：打出后消失，不进弃牌区。",
+      "target_mode": "none",
+      "color": "紫",
+      "image": "",
+      "locked": true
     }
   ]
 }

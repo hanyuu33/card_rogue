@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1c84a-6434-7a40-8ad0-209364ab09c4"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’m generating the square matchbox icon now.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated one square matchbox icon with three matchsticks on a white background."}}
+{"type":"turn.completed","usage":{"input_tokens":35704,"cached_input_tokens":22016,"cache_write_input_tokens":0,"output_tokens":393,"reasoning_output_tokens":0}}
