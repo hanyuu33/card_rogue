@@ -309,7 +309,10 @@ func _draw() -> void:
 			break
 		_draw_row(idx, _cards[idx])
 	if _cards.size() > _max_rows():
-		draw_string(_font, Vector2(0, size.y - 12),
+		# R630：底注原来画在 size.y - 12，纸面九宫格内框只到 size.y - 16、边框还有 ~12 厚
+		# → 整行被框线横切（与故事页 / 记录页同款）。收到 -36，落在内框内侧。
+		# ⚠️ 这个数要和 story_scene.gd 的底注保持一致，改一处就要对齐另一处。
+		draw_string(_font, Vector2(0, size.y - 36),
 				"第 %d–%d 张 / 共 %d 张"
 				% [_scroll + 1, mini(_scroll + _max_rows(), _cards.size()), _cards.size()],
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,

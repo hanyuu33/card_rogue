@@ -1877,7 +1877,8 @@ func _draw_relics() -> void:
 			and not UiGate.blocked() \
 			and (_reward_panel == null or not _reward_panel.is_open())
 	if RunState.relics.size() > int((size.y - 34 - RELIC_BADGE_Y) / RELIC_STEP_Y) * 2:
-		draw_string(_font, Vector2(size.x - 230, size.y - 12), "滚轮浏览道具", HORIZONTAL_ALIGNMENT_CENTER, 208, 12, UiTheme.PAGE_INK)
+		# R630：同底注口径，-12 贴在窗口/纸面下边，收到 -36。
+		draw_string(_font, Vector2(size.x - 230, size.y - 36), "滚轮浏览道具", HORIZONTAL_ALIGNMENT_CENTER, 208, 12, UiTheme.PAGE_INK)
 	var repo := RelicRepo.load_json()
 	var hovered := -1
 	for i in RunState.relics.size():

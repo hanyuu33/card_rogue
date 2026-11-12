@@ -166,7 +166,11 @@ func _card_rect(k: int) -> Rect2:
 	## 行距必须 ≥ 两倍徽章半径，否则上一排的生命徽章会和下一排的费用徽章叠在一起。
 	## 同时顶部要给「待选卡 / 拖到中栏槽位…」两行说明留位，卡片不能再从 TITLE_H+40 开始压上去。
 	var gap := size.x * 0.026
-	var top := TITLE_H + 54.0
+	# R630：顶部也要按「徽章半径」留位。费用徽章圆心压卡左上角、含描边半径约 12px，
+	# 卡顶取 TITLE_H + 54 时徽章上半（≈TITLE_H+42 起）正好盖住上面那行
+	# 「拖进中栏 · 拖回可撤回 · 点卡看详情」的下半截（用户口径「文本压框」）。
+	# R561 只补了**行间**“≥ 两倍徽章半径”，行首这条同款约束一直缺着。
+	var top := TITLE_H + 70.0
 	var avail := size.y - top - 12.0
 	var ch: float = (avail - gap * 2.0) / 3.0
 	var cw: float = ch / CARD_ASPECT

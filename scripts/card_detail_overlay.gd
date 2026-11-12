@@ -178,7 +178,9 @@ func _draw() -> void:
 	# 底部：关闭提示（面板下沿内侧居右）
 	var pr: Rect2 = L["panel"]
 	# 右边界内缩 56：面板九宫格右下角饰占 34，右对齐到 -26 会把「ESC 关闭」压在角饰上。
-	draw_string(_font, Vector2(pr.position.x, pr.end.y - 14.0),
+	# R630：基线原来取 `pr.end.y - 14`，而九宫格边框本身约 12px 厚 —— FS_CAPTION 的
+	# 字底（基线 +3~4）正好落在框线上，整行被横切（用户口径「文本压框」）。收到 -22。
+	draw_string(_font, Vector2(pr.position.x, pr.end.y - 22.0),
 			"点任意处 / 右键 / ESC 关闭", HORIZONTAL_ALIGNMENT_RIGHT,
 			pr.size.x - 56.0, UiTheme.FS_CAPTION, UiTheme.INK_500)
 

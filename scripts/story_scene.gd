@@ -416,7 +416,11 @@ func _draw() -> void:
 			break
 		_draw_row(idx, _episodes[idx])
 	if _episodes.size() > _max_rows():
-		draw_string(_font, Vector2(0, size.y - 12),
+		# R630：底注原来画在 `size.y - 12`（720 → 基线 708），而 `draw_page()`
+		# 的纸面内框只到 `size.y - 16`（704）—— 这一行是**整个坐在框外**、还被框线
+		# 横切过去（用户口径「有一些文本超出框」）。九宫格边框本身还有 ~12~14 的厚度，
+		# 光收进 -16 仍会压在边框上，所以收到 -36（字底落在内框内侧，留 5 左右）。
+		draw_string(_font, Vector2(0, size.y - 36),
 				"第 %d–%d 段 / 共 %d 段"
 				% [_scroll + 1, mini(_scroll + _max_rows(), _episodes.size()), _episodes.size()],
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,

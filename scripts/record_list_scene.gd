@@ -235,7 +235,8 @@ func _draw() -> void:
 	if _sel >= 0 and _sel < _rows.size():
 		_draw_detail()   # R241：详情盖在列表之上
 	if _rows.size() > _max_rows():
-		draw_string(_font, Vector2(0, size.y - 12),
+		# R630：同故事页 / 禁卡页 —— -12 会被纸面九宫格的下边框横切，收到 -36。
+		draw_string(_font, Vector2(0, size.y - 36),
 				"第 %d–%d 条 / 共 %d 条"
 				% [_scroll + 1, mini(_scroll + _max_rows(), _rows.size()), _rows.size()],
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
@@ -446,24 +447,27 @@ func _draw_row(idx: int, rec: Dictionary) -> void:
 	# 结果色条（左沿）：一眼分辨通关 / 失败 / 中断
 	draw_rect(Rect2(r.position.x, r.position.y, 5.0, r.size.y),
 			RunRecord.result_color(res), true)
-	draw_string(_font_bold, r.position + Vector2(18, 24),
+	draw_string(_font_bold, r.position + Vector2(18, 22),
 			RunRecord.fmt_time(str(rec.get("time", "?"))),
 			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_BODY, UiTheme.PAGE_INK)
-	draw_string(_font_bold, r.position + Vector2(246, 24),
+	draw_string(_font_bold, r.position + Vector2(246, 22),
 			"角色：%s" % PlayerClass.legacy_id(str(rec.get("class", "?"))),
 			HORIZONTAL_ALIGNMENT_LEFT, 190, UiTheme.FS_BODY, UiTheme.PAGE_GREEN)
-	draw_string(_font_bold, r.position + Vector2(446, 24),
+	draw_string(_font_bold, r.position + Vector2(446, 22),
 			RunRecord.result_label(res, int(rec.get("layer", -1))),
 			HORIZONTAL_ALIGNMENT_LEFT, 140, UiTheme.FS_BODY, UiTheme.PAGE_INK)
-	draw_string(_font, r.position + Vector2(596, 24),
+	draw_string(_font, r.position + Vector2(596, 22),
 			"难度 %d · 用时 %s" % [int(rec.get("difficulty", 2)),
 			RunRecord.fmt_secs(int(rec.get("secs", 0)))],
 			HORIZONTAL_ALIGNMENT_LEFT, 280, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
-	draw_string(_font, r.position + Vector2(18, 43),
+	# R630：两行一起收（24/43 → 22/38）。行高 48（ROW_H 56 - 8）要塞 FS_BODY 16 + FS_CAPTION 12
+	# 两行，第二行基线下探到 43 时字底已经贴住下框线（用户口径「可能压框」）。
+	# 行距保持 16，底部留 7（原来 5），第一行顶部留 10。
+	draw_string(_font, r.position + Vector2(18, 38),
 			"结束于 %s" % RunRecord.fmt_time(str(rec.get("end", ""))),
 			HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 	# R261：种子码也列在列表行上（不用点进详情就能抄下来复现）
 	var row_seed := int(rec.get("seed", 0))
-	draw_string(_font, r.position + Vector2(430, 43),
+	draw_string(_font, r.position + Vector2(430, 38),
 			"种子：%s" % ("—" if row_seed == 0 else RunState.seed_text_of(row_seed)),
 			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_CAPTION, Color("b39a5e"))
