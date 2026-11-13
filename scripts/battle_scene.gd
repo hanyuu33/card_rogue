@@ -20,6 +20,9 @@ const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
 const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiRoll = preload("res://scripts/ui_roll.gd")
 const UiPop = preload("res://scripts/ui_pop.gd")
+## R655：ESC 菜单「设置」= 设置页浮层（`open_overlay`）。preload 而非 load：
+## 设置页与 battle 无循环依赖（它只 preload ui_theme），编译期就能查错。
+const SettingsScene = preload("res://scripts/settings_scene.gd")
 ## R474：卡牌入组演出（浮起 → 停住 → 收进卡组堆）。**故意没有 class_name** ——
 ## 同 ui_theme.gd：全局类缓存只能由编辑器重建，headless 回归读不到它。
 const UiCardGrant = preload("res://scripts/ui_card_grant.gd")
@@ -733,6 +736,7 @@ var _banner := {}               # {text, col, start, dur}  回合切换大字横
 var _confetti: Array = []       # {pos, vel, rot, vr, size, col}  胜利彩带
 var _log_visible := false       # 对局记录面板开关
 var _menu: UiMenu = null         # Esc 主菜单（R148）—— 顶栏「记录/音效/标题/选关/地图」的收容所
+var _settings_overlay: Control = null   # R655：设置页浮层（ESC 菜单「设置」开的那个）
 var _map_visible := false       # 冒险地图总览面板开关（R64：战斗内查看地图，只读）
 # R127：滚动容器的「上下还能滚」提示开关 —— **只在**新玩家第一局为真（判据见 ScrollHint.is_new_player）。
 # 地图总览 / 棋盘格子区都**不再画滚动条**，改画半透明双箭头（画法见 ScrollHint，规范 §4.12）。
@@ -8302,16 +8306,31 @@ func _whisper_suffix() -> String:
 
 
 func _menu_items() -> Array:
-	## 战斗中的主菜单项 —— R155 起**只放设置类**（音效 / 返回标题）：
+	## 战斗中的主菜单项 —— R155 起**只放设置类**（设置 / 返回标题）：
 	## 地图 / 战斗记录 / 卡组都有顶栏专属按钮（用户口径：不该只藏在设置里），
 	## 「选择关卡」从菜单下线（用户口径）。
 	##
-	## ⚠️ 本函数**每次打开菜单都会重新调用**（attach 传的是函数引用），音效文案总是当下值。
+	## ⚠️ 本函数**每次打开菜单都会重新调用**（attach 传的是函数引用），禁用态总是当下值。
+	## R655：原来那个只管音效的开关换成「设置」—— 音效 / 音乐 / 音量 / 全屏都在设置页，
+	## 菜单里再留一个只管音效的开关，等于让玩家在两处改同一件事（店长口径）。
 	return [
-		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
-			"fn": _toggle_sound, "keep_open": true},
+		{"text": "设置", "fn": _open_settings},
 		{"text": "返回标题", "fn": _on_back_to_title},
 	]
+
+
+func _open_settings() -> void:
+	## R655：菜单项「设置」—— 直接进设置页，但**不切场景**：设置页以浮层盖在战场上，
+	## 关掉就回到这一局（棋盘 / 手牌 / 引擎实例原封不动，见 `settings_scene.open_overlay`）。
+	## ⚠️ 必须延后一帧：本回调之后 UiMenu 还会 `close()` → `_release_pause()` 把暂停
+	##    还回去；当场开浮层会被紧跟着解冻（`_open_level_menu` 同一口径）。
+	_show_settings_overlay.call_deferred()
+
+
+func _show_settings_overlay() -> void:
+	if _settings_overlay != null and is_instance_valid(_settings_overlay):
+		return   # 已经开着（连点）→ 不叠第二层
+	_settings_overlay = SettingsScene.open_overlay(self)
 
 
 func _open_menu() -> void:
@@ -8677,12 +8696,6 @@ func _draw_map_legend(pr: Rect2) -> void:
 	draw_string(_font, Vector2(pr.position.x + 28.0, y + 24.0),
 			"金框：当前房间　绿框：可前往　小桥：通路　云：未探索",
 			HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 24.0, UI_FS_CAPTION, UiTheme.PAGE_MUTED)
-
-
-func _toggle_sound() -> void:
-	sfx.enabled = not sfx.enabled
-	if sfx.enabled:
-		sfx.play("click")
 
 
 func _tut_step() -> Dictionary:

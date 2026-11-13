@@ -3239,6 +3239,7 @@ func _check_battle(scene: Variant) -> void:
 	_check_r106(scene)
 	_check_cancel_armed(scene)
 	_check_menu(scene)
+	_check_settings_overlay(scene)
 	_check_attack_art_variant()
 	_check_long_press(scene)
 	_check_back_key(scene)
@@ -5240,7 +5241,8 @@ func _check_menu(scene: Variant) -> void:
 		texts.append(str(it.get("text", "")))
 		if bool(it.get("primary", false)):
 			primaries += 1
-	for want: String in ["返回战斗", "音效：开", "返回标题"]:
+	# R655：「音效：开/关」换成「设置」（音效 / 音乐 / 音量 / 全屏都进设置页了）
+	for want: String in ["返回战斗", "设置", "返回标题"]:
 		if not texts.has(want):
 			_smoke_fail("R155：战斗菜单缺少「%s」项（实际 %s）" % [want, str(texts)])
 			return
@@ -5253,6 +5255,35 @@ func _check_menu(scene: Variant) -> void:
 		return
 	print("SMOKE OK R148 主菜单：打开暂停 + UiGate 让位 → 关闭恢复；战斗菜单项 %s"
 			% str(texts))
+
+
+func _check_settings_overlay(scene: Variant) -> void:
+	## R655：Esc 菜单「设置」= 设置页**浮层**，不是切场景 ——
+	##   ① 打开 → 暂停场景树（敌人不能接着打）+ 仍停在同一个场景 / 同一个引擎实例；
+	##   ② 关掉（左上角「← 返回战斗」走的就是 `_close_overlay`）→ 暂停必须还回去。
+	var eng0: Variant = scene.get("engine")
+	scene.call("_show_settings_overlay")
+	var s: Variant = scene.get("_settings_overlay")
+	if s == null or not is_instance_valid(s):
+		_smoke_fail("R655：Esc 菜单「设置」应开出设置页浮层")
+		return
+	if not paused:
+		_smoke_fail("R655：设置浮层打开必须暂停场景树（否则敌人照打）")
+		return
+	if scene.get("engine") != eng0 or not scene.is_ancestor_of(s):
+		_smoke_fail("R655：设置浮层不该切场景 / 重开战斗（引擎实例要原封不动、浮层挂在宿主下）")
+		return
+	if not (s.get_parent() is CanvasLayer):
+		_smoke_fail("R655：设置浮层应挂在 CanvasLayer 上（不然被棋盘 / 顶栏盖住）")
+		return
+	s.call("_close_overlay")
+	if paused:
+		_smoke_fail("R655：关掉设置浮层必须恢复暂停（否则整局假死）")
+		return
+	if scene.get("engine") != eng0:
+		_smoke_fail("R655：关掉浮层后必须回到原来那一局（引擎实例不能换）")
+		return
+	print("SMOKE OK R655：Esc 菜单「设置」= 设置页浮层（暂停 + 不切场景 + 关掉回原局）")
 
 
 func _check_map_panel(scene: Variant) -> void:

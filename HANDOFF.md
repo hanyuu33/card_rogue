@@ -1578,3 +1578,14 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - **改动**（`scripts/class_pick_scene.gd`）：`_draw_difficulty_block()` 删掉 `difficulty_summary()` 的绘制循环；连带删除只服务它的 `_summary_rect()` 与 `SUM_LINES` / `SUM_LH` 常量（避免留死代码）。`RunState.difficulty_summary()` **保留** —— 回归仍在断言它的取值，将来想查数值也还有唯一口。区块现在 = 难度档位行 + 当前档文本 + 确认进入，文本底到确认钮之间留 34px 呼吸。
 - **测试**（`scripts/test_engine.gd`，+1 条源码锁）：`_summary_rect` 不得复活、`_wrap_text(RunState.difficulty_summary()` 不得出现在 `class_pick_scene.gd`、当前档文本绘制必须在位。判据刻意收窄到「绘制调用」而不是函数名 —— 首版按 `RunState.difficulty_summary` 判 0 次出现，被同文件注释里的字面误伤，engine 当场红 1 条。
 - **回归**：assemble 0 / mana PASS / engine **5844✓** 0✗（5838 基线 + 本轮 1 条 + 并行线）+ reward 26✓ / bgm 39✓ / smoke 69✓；存档备份 `E:	mp650_userdata_bk` → `RESTORE_VERIFY OK`（71 项）。驱动脚本 `tools/_run_r650_verify.py` 一并入库。
+
+## 2026-11-13 R655 ESC 菜单「音效开关」→「设置」（设置页浮层，回来还是这一局）
+- **口径（用户）**：「esc 菜单里，把音效开关按钮改成设置按钮，直接进入设置界面，并且确保这个方式进入可以通过按钮正确返回战斗。」
+- **为什么不能切场景**：`SceneFx.goto(settings)` 会把战斗场景整个换掉 —— 棋盘 / 手牌 / 引擎实例都在场景里，回来就是重开一局。所以设置页走**浮层**：`settings_scene.open_overlay(host)` 把设置页实例挂到宿主的 `CanvasLayer(layer=28)` 上，盖住战场并 `paused = true`；左上角「← 返回战斗」和 Esc 都只关浮层，宿主原封不动（已实测：`_settings_overlay` 打开后 `paused=true`、关掉 `paused=false`、`engine` 实例不变）。
+- **浮层模式的四处岔口**（`_overlay` 开关）：① `process_mode = ALWAYS`（场景树暂停时只有它能收点击 / Esc）；② **不动 BGM**（背后那局还在，切成标题曲像已经回标题页了）；③ **不挂自己的 ESC 菜单**（两层菜单抢 Esc，且「返回标题」宿主菜单里本来就有）；④ **不接 `--screenshot` 钩子** —— 这条是踩出来的：设置页那个 0.6s 后 `quit()` 的截图钩子一进树就把进程掐了，拍出来的是上一张旧图，排查了半小时才定位。
+- **暂停归属**：浮层只还自己开的暂停（`_overlay_paused`），`_exit_tree` 兜底 —— 与 `UiMenu` 同一条纪律（忘了还就是整局假死）。
+- **战斗侧**：`_menu_items()` 换成「设置 / 返回标题」；`_open_settings()` **`call_deferred` 一帧**再开浮层 —— 菜单项回调之后 UiMenu 还会 `close()` → `_release_pause()` 把暂停还回去，当场开会被紧跟着解冻（`_open_level_menu` 同一口径）。顺带删掉只剩一处调用的 `_toggle_sound()`。
+- **测试**：smoke 新增 `_check_settings_overlay()`（浮层挂宿主下 + 打开暂停 + 引擎实例不变 + 关掉恢复暂停）；engine 新增 2 条源码锁（战斗菜单是「设置」且不含音效开关、设置页 open/close/ALWAYS/标题页旧路都在）。⚠️ 源码锁又踩了同一个坑：判「某字面 0 次出现」时被**自己写的注释**撞（注释里写了「音效：开/关」）—— 判 0 出现的锁，锚点就别在注释里复述那个字面。
+- **回归**：assemble 0 / mana PASS / engine **5839✓ 0✗** / reward 26 / bgm 39 / smoke 69-0；存档备份 `E:	mp651_userdata_bk` → `RESTORE_VERIFY OK`。
+  ⚠️ 计数口径：同环境用 `git show HEAD:scripts/test_engine.gd` 单跑得 **5837**，本轮 5839 = 恰好 +2 条新断言（R650 记的 5844 是当时档案 / 解锁状态带出来的浮动数，别拿它当基线）。
+- **出图**：`tools/_shot_r651_settings.gd`（探针，SceneTree 自己数帧，避开「浮层暂停 → 战斗帧数走不到截图帧」的死结）→ `_shot_r651_overlay.png`；菜单那张走 `--menu` + `--shotframe`。

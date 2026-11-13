@@ -69015,6 +69015,20 @@ func _init() -> void:
 
 			"R650 源码：难度档位下方只留当前档文本，数值摘要整行删除")
 
+	# ---- R655：ESC 菜单「设置」= 设置页浮层（不切场景，回来还是这一局）----
+
+	var r651_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r651_ss := FileAccess.get_file_as_string("res://scripts/settings_scene.gd")
+	check_src(r651_bs.find("{\"text\": \"设置\", \"fn\": _open_settings}") >= 0
+			and r651_bs.find("音效：开") < 0
+			and r651_bs.find("_show_settings_overlay.call_deferred()") >= 0,
+			"R655 源码：战斗菜单「设置」项走 deferred 开浮层，音效开关已下线")
+	check_src(r651_ss.find("static func open_overlay(") >= 0
+			and r651_ss.find("func _close_overlay(") >= 0
+			and r651_ss.find("process_mode = Node.PROCESS_MODE_ALWAYS") >= 0
+			and r651_ss.find("SceneFx.goto(\"res://scenes/title.tscn\")") >= 0,
+			"R655 源码：设置页浮层 open / close 在位，且暂停里照收输入；标题页那条路仍在")
+
 	var r545_ms := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
 
 	check_src(r545_ms.find("func _open_deck_view() -> void:") >= 0

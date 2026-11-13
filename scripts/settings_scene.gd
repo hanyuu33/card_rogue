@@ -4,6 +4,11 @@ extends Control
 ##
 ## 入口：标题页「设置」按钮。之所以单开一页而不是塞进标题页：标题页是按钮栈
 ## （`Buttons` 容器），塞开关进去会把一屏一个主按钮的层次搞乱。
+##
+## R655：**第二个入口** = 各界面 ESC 菜单的「设置」。那条路**不切场景**，走 `open_overlay()`：
+##   设置页作为浮层盖在当前界面之上、场景树暂停，关掉即原样回去。为什么不能切场景 ——
+##   战斗的棋盘 / 手牌 / 引擎状态全在场景实例里，`SceneFx.goto(settings)` 一换场景，
+##   回来就是重开一局；玩家按 Esc 只是想关小一点音乐，不该赔上一整场。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
@@ -25,17 +30,55 @@ var _last_mp := Vector2.INF
 var _seed_edit: LineEdit = null   # R241「下一局种子」输入框（唯一的原生控件）
 var _seed_guard := false          # 防止 text_changed 里改 text 触发二次回调
 var _seed_hover := false          # R325：「复制」按钮的悬停态（自绘按钮要自己记）
+## R655：浮层模式（ESC 菜单进来的那条路）。`_overlay == true` 时「返回」= 关自己，
+## **不切场景**；左上角文案跟着宿主改（战斗中 = 「← 返回战斗」）。
+var _overlay := false
+var _overlay_back := "返回战斗"
+var _overlay_host: Node = null
+var _overlay_layer: CanvasLayer = null
+var _overlay_paused := false      # 暂停是浮层开的 → 由它还（不去解别人的暂停）
+
+
+static func open_overlay(host: Node, back_text := "返回战斗") -> Control:
+	## R655：ESC 菜单「设置」的**唯一入口** —— 设置页盖在 `host` 之上，不切场景。
+	## ⚠️ 调用时机：在菜单项的按钮回调里直接调，会被紧接着的 `close()` 解冻
+	##    （UiMenu 的 `_release_pause` 会把 `paused` 还回去），所以宿主要先
+	##    `call_deferred` 一帧（`battle_scene._open_settings` 就是这么排的）。
+	var ps := load("res://scenes/settings.tscn") as PackedScene
+	if ps == null:
+		return null
+	var s: Variant = ps.instantiate()
+	s._overlay = true
+	s._overlay_back = back_text
+	s._overlay_host = host
+	var cl := CanvasLayer.new()
+	cl.name = "SettingsOverlay"
+	cl.layer = 28            # UiMenu 是 30：设置页盖住界面，宿主自己的 Esc 菜单仍在它上面
+	host.add_child(cl)
+	cl.add_child(s)          # 进树即 `_ready` —— 那边靠 `_overlay` 决定不动 BGM / 不挂菜单
+	s._overlay_layer = cl
+	if not host.get_tree().paused:
+		host.get_tree().paused = true
+		s._overlay_paused = true
+	return s as Control
 
 
 func _ready() -> void:
+	# R655：浮层模式下场景树是**暂停**的 —— 本节点必须绕过暂停才收得到点击 / Esc。
+	if _overlay:
+		process_mode = Node.PROCESS_MODE_ALWAYS
 	UiTheme.attach_stage(self)   # R519：宽屏下内容居中，背景溢出铺满两侧
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	GameSettings.ensure_loaded()
 	sfx = Sfx.new()
 	add_child(sfx)
-	Bgm.play("title")
-	if "--screenshot" in OS.get_cmdline_user_args():
+	# R655：浮层**不动 BGM** —— 背后那一局还在，切成标题曲会让人以为已经回标题页了。
+	if not _overlay:
+		Bgm.play("title")
+	# R655：浮层**不接**这个钩子 —— `--screenshot` 是「单独打开设置页出图」用的（0.6s 后
+	# 直接 quit）。浮层是在战斗里出图的，宿主还没走到截图帧就被它掐掉，拍出来的是旧图。
+	if not _overlay and "--screenshot" in OS.get_cmdline_user_args():
 		var t := Timer.new()
 		t.wait_time = 0.6
 		t.one_shot = true
@@ -46,10 +89,13 @@ func _ready() -> void:
 		add_child(t)
 		t.start()
 	_build_seed_edit()
-	_menu = UiMenu.attach(self, _menu_items, {
-		"back": "继续",
-		"sub": "设置",
-	})
+	# R655：浮层不挂自己的 ESC 菜单（Esc 直接关浮层）—— 两层菜单叠着只会互相抢 Esc；
+	# 浮层里也不需要「返回标题」（宿主菜单里本来就有那一条）。
+	if not _overlay:
+		_menu = UiMenu.attach(self, _menu_items, {
+			"back": "继续",
+			"sub": "设置",
+		})
 
 
 # ------------------------------------------------------------ 种子（R241）
@@ -158,6 +204,13 @@ func _menu_items() -> Array:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# R655：浮层里 Esc = 关掉浮层回原界面（宿主是暂停的，只有本节点收得到这个事件）
+	if _overlay:
+		if event is InputEventKey and event.pressed and not event.echo \
+				and (event as InputEventKey).keycode == KEY_ESCAPE:
+			get_viewport().set_input_as_handled()
+			_close_overlay()
+		return
 	if _menu != null and _menu.handle_esc(event):
 		return
 
@@ -291,7 +344,35 @@ func _set_volume(i: int, v: float) -> void:
 
 
 func _back_to_title() -> void:
+	## R655：浮层模式下「返回」回的是**宿主界面**（战斗），标题页是另一条路。
+	if _overlay:
+		_close_overlay()
+		return
 	SceneFx.goto("res://scenes/title.tscn")
+
+
+func _close_overlay() -> void:
+	## R655：关掉浮层 —— 连包着它的 CanvasLayer 一起 free（自己随之释放）。
+	## 暂停在 `_restore_overlay_pause()` 里还；`_exit_tree` 再兜一次底。
+	if _overlay_layer != null and is_instance_valid(_overlay_layer):
+		_overlay_layer.queue_free()
+	_overlay_layer = null
+	_restore_overlay_pause()
+
+
+func _restore_overlay_pause() -> void:
+	if not _overlay_paused:
+		return
+	_overlay_paused = false
+	var t := get_tree()
+	if t != null:
+		t.paused = false
+
+
+func _exit_tree() -> void:
+	## 兜底：浮层被强拆（宿主切场景 / 被 free / 关卡结束）时也必须把暂停还回去，
+	## 否则回到任何界面都是假死 —— 与 UiMenu 的 `_exit_tree` 同一条纪律。
+	_restore_overlay_pause()
 
 
 # ------------------------------------------------------------ 绘制
@@ -324,7 +405,9 @@ func _draw() -> void:
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
 	UiTheme.draw_action(self, back, false, false, hov_back)
-	draw_string(_font_bold, back.position + Vector2(0, 22), "← 返回标题",
+	# R655：浮层里回的是宿主界面（战斗中 = 「← 返回战斗」）
+	var back_label := "← %s" % _overlay_back if _overlay else "← 返回标题"
+	draw_string(_font_bold, back.position + Vector2(0, 22), back_label,
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	for i in ROW_COUNT:
 		_draw_row(i, _row(i))
