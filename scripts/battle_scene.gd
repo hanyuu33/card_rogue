@@ -211,7 +211,7 @@ const INFO_W := 296.0   # 左栏（详细效果 / 对局记录）：宽一点，
 ## 图鉴 / 卡组编辑全读它），改一处就连锁改七处。这里只抬高**战斗界面自己画**的那些
 ## 文字，每档 +2~6px，档与档之间的层级差保持不变。
 ## 不进这套的（= 视觉上属于「卡面」的一部分）：`card_face.gd` 的 CARD_FS_*、
-## 战场单位的状态徽标（`_draw_state_badge`）、效果卡的「×N / 剩 N」角标、
+## 战场单位的**状态槽位**（R656 起改成卡面右上角图标，旧文字底座已删）、效果卡的「×N / 剩 N」角标、
 ## 区域方块（卡组/弃牌/消耗 63×76）的区域名与张数徽章、以及**道具栏**。
 const UI_FS_MICRO := 15      ## 原 FS_MICRO 10（表头 / 计数 / 面板脚注）
 const UI_FS_CAPTION := 18    ## 原 FS_CAPTION 12（说明 / HP / 区域标题）
@@ -9270,7 +9270,8 @@ func _art(card: CardData, rect: Rect2) -> void:
 
 func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_tapped: bool,
 		cost_override := -1, power_override := -1, on_board := false, sleeping := false,
-		phase := 0, speed_override := -1, range_override := -1) -> void:
+		phase := 0, speed_override := -1, range_override := -1,
+		state_slots: Array = []) -> void:
 	## 卡面一律按 rect 完整排版（含手牌）—— 卡底沉出窗口下沿的那截由视口裁掉，
 	## 卡面内容**不做**任何偏移补偿：卡片是一个整体，被挡住就挡住。
 	## cost_override >= 0 且不等于卡面费用 → 在费用圆上重画**绿色**数字，
@@ -9283,8 +9284,11 @@ func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_ta
 	##   （R118：交换 / 幻影 是打出那一刻的规则，落在格子上之后再标就是噪音）。
 	## name_only = true（战斗内一律）→ 卡面**只画卡名**，不画种类·字段与效果文 ——
 	##   效果详情由悬停/点选的描述面板提供（左侧信息栏「悬停优先，其次选中的卡」）。
+	# ⚠️ 位置参数：第 16 = `adventure_frame`（战斗卡面**要**冒险框，原样传 true）、
+	#    第 17 = `record_seen`（画出来 = 玩家见过，必须 true）、第 18 才是 `state_slots`。
+	#    漏一个就会让数组落到 bool 位上（R656 第一次改就是这么炸的）。
 	CardFace.draw(self, card, rect, hp, selected, is_tapped, _font, _font_bold, power_override,
-			on_board, sleeping, true, phase, speed_override, range_override, true)
+			on_board, sleeping, true, phase, speed_override, range_override, true, true, state_slots)
 	if not card.x_cost and cost_override >= 0 and cost_override != card.cost:
 		# ⚠️ R122：**必须走 CardFace.draw_badge()**（同一个槽位的唯一绘制口）。
 		# 这里原来自己 `draw_circle` 盖一个纯色圆盘 —— R115 把费用徽章换成
@@ -9607,14 +9611,24 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 				var sc2 := lerpf(fs, 1.0, 1.0 - pow(1.0 - t2, 3.0))
 				w *= sc2
 				h *= sc2
-	# 顶部状态徽标的行号：嘲讽 → 冰封 → 沉睡，按出现顺序往下排（共用底座 _draw_state_badge）
-	var _badge_row := 0
+	# R656：眩晕时**整张卡轻微摇晃** —— 「晕」是运动语义，一圈静止的金环只能说明
+	# 「它身上有个状态」，晃起来才一眼看出「它这回合转了向」。
+	# ⚠️ 幅度压到 1.6px：再大，相邻格子看着像在挪位（紧凑棋盘上会被误读成移动）；
+	#    相位 11.0 / 8.3 故意不成整数比 —— 整数比会走成规则椭圆，看着像瞄准而不是发抖。
+	# ⚠️ 命中判定按 cell 独立算 rect，不吃这个偏移；差 1.6px 玩家感知不到。
+	if p.stun_left > 0:
+		var sw_t := float(_now()) / 1000.0
+		center += Vector2(sin(sw_t * 11.0) * 1.6, cos(sw_t * 8.3) * 0.7)
+	# R656：右上角圆槽的**状态**槽位（店长口径：卡面不许有文字标记，状态一律图标化）。
+	# 环照旧单独画（见下），槽位只负责「图标 + 数字角标」。
+	var _slots := _state_slots(p, cell)
 	# R118：`on_board = true` —— 战场卡面的「种类 · 字段」行**不再标出**上场后已无作用的
 	# 字段（交换 / 幻影）。判据在 `CardData.affix_on_board()`，这里只负责声明「我在战场上」。
 	# 沉睡（恶魔鸭 9116，sleep_left>0）→ 换沉睡专用卡图；其余状态用普通卡图。
 	_draw_card_face(p.card, Rect2(center - Vector2(w, h) / 2.0, Vector2(w, h)),
 			_show_hp(p, p.health), selected, false, -1, p.effective_power(), true,
-			p.sleep_left > 0, _rev_art_phase(p), p.effective_speed(), p.effective_range())
+			p.sleep_left > 0, _rev_art_phase(p), p.effective_speed(), p.effective_range(),
+			_slots)
 	# R165：移除「横置」视觉——不再把卡转横。改用青色**就绪光环**标明「可行动」：
 	# 凡本回合还有行动权（未横置）的单位都亮脉动环（敌我同标），以此区分不能动的卡。
 	if not p.tapped:
@@ -9624,32 +9638,27 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 		# 判定直接问引擎 absorbs_for_hp()，保证「同一机制 = 同一特效」，不再各写各的。
 		draw_arc(center, Vector2(w, h).length() * 0.5, 0, TAU, 30, COL_GUARD, 2.5)
 	if engine.unit_has_taunt(p):
-		# 嘲讽（铁壁卫兵 1011 / 骷髅兵 1055）：脉冲橙环 + 「嘲讽」徽标，
+		# 嘲讽（铁壁卫兵 1011 / 骷髅兵 1055）：脉冲橙环 ——
 		# 让「射程内有它就必须打它」这件事在战场上一眼可见。
-		_draw_taunt_aura(center, w, h, 0)
-		_badge_row = 1
+		# R656：文字徽标取缔，图标由 `_state_slots()` 送进卡面圆槽（卡面自带嘲讽字段时那边已画）。
+		_draw_taunt_aura(center, w, h)
 	if p.frozen:
 		# 冰封（R68：寒冰箭 9011 / 冰冻术士战吼 / 冻结陷阱 8013）：
 		# 「下回合不能行动」是**看卡面看不出来**的隐藏状态 → 必须常驻可见。
-		_draw_frozen_aura(center, w, h, _badge_row)
-		_badge_row += 1
+		_draw_frozen_aura(center, w, h)
 	if p.stun_left > 0:
 		# 眩晕（R654：惊奇盒子 9179 / 摇篮曲 / 组合）：与冰封同属「下回合不能行动」的
-		# **看卡面看不出来** 的隐藏状态 —— 施加那一下只有 1.5 秒飘字，
-		# R613b 拆掉顶部文字条之后这里一直是空的（连注释都写着「会画」）。
-		_draw_stun_aura(center, w, h, _badge_row)
-		_badge_row += 1
+		# **看卡面看不出来** 的隐藏状态 —— 除了虚线环 + 绕头星，R656 起整张卡还会轻微摇晃。
+		_draw_stun_aura(center, w, h)
 	if p.sleep_left > 0:
 		# 沉睡（R63/R72 补特效；R76 改口径）：恶魔鸭 9116 初始沉睡 2，
-		# 每挨一下 -1、**归零立刻恢复行动**。徽标写出「还差几下」而不是「几回合」。
-		_draw_sleep_aura(center, w, h, p.sleep_left, _badge_row)
-		_badge_row += 1
+		# 每挨一下 -1、**归零立刻恢复行动**。槽位数字写「还差几下」而不是「几回合」。
+		_draw_sleep_aura(center, w, h)
 	if p.fuse_left > 0:
 		# 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：**还剩几个我方回合就会变成钢铁要塞**
-		# 是看卡面看不出来的隐藏状态 → 必须常驻可见，而且要写出**数字**：光写「铸造」
+		# 是看卡面看不出来的隐藏状态 → 必须常驻可见，槽位角标写出**数字**：光有沙漏图标
 		# 等于把「还能拖几回合 / 要不要现在就拆」这个决策藏起来（与「沉睡 N」同一套路）。
-		_draw_fuse_aura(center, w, h, p.fuse_left, _badge_row)
-		_badge_row += 1
+		_draw_fuse_aura(center, w, h)
 	if p.first_hit_shield:
 		# 能量屏障（8033，R87）：**首次受伤免掉**的一次性护盾。
 		# 徽标同样交给字段系统（字段「护盾」），这里只留**呼吸青环**提示「还剩一次」——
@@ -9661,22 +9670,51 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 				Color(0.50, 0.84, 0.94, 0.40 + sh_pulse * 0.30), 2.0)
 	# R142：**可以主动发动**的我方单位（熊 8004「回春」）—— 原来的提示只有
 	# 「选中它之后状态栏写一句」，没选中就等于看不见。这里加一层**常驻**的
-	# 亮黄绿脉动环 + 四向指向卡面的内箭头 + 顶部「可发动 F」徽标。
+	# 亮黄绿脉动环 + 四向指向卡面的内箭头（R656 起文字徽标取缔，图标进卡面圆槽）。
 	# ⚠️ 判据走引擎的 `can_activate`（与「再点一次」/ 按 F 完全同源），不在这里重判 traits；
 	#    **只标我方**：敌人也可能能发动，但玩家点不动它，标成「按 F」是误导。
 	if p.owner == GameEngine.SIDE_SELF and engine.can_activate(cell, GameEngine.SIDE_SELF):
-		_draw_activatable_aura(center, w, h, _badge_row)
-		_badge_row += 1
+		_draw_activatable_aura(center, w, h)
 	# ⚠️ R613b（店长口径）：战场单位卡**不再叠文字徽标条**。
 	#   · 字段（次元 / 护盾 / 疾行 …）已由卡面右上角 glyph 承载（CardFace._draw_affix_badges，on_board 过滤），
 	#     早年那版同名文字条在此重复绘制，已删（次元回归 glyph）。
 	#   · 增益 / 减益摘要（Placement.status_badges()）完整逐条列表在**左侧信息栏**，
 	#     顶部不再另画文字芯片（店长：「只留可发动的标签」）。
-	#   带环的「标记」（嘲讽 / 冰封 / 眩晕 / 沉睡 / 倒数 / 可发动 F）仍各自在上方绘制。
+	# ⚠️ R656（店长口径）：**连带环的那六块文字底板也一并取缔** —— 嘲讽 / 冰封 / 眩晕 /
+	#     沉睡 N / 倒数 N / 可发动 F 原来各画一块「底板 + 文字」压在卡上沿，现在全部改图标，
+	#     排进卡面右上角那个圆槽轮播（`_state_slots()` → `CardFace.badge_slots()`）。
+	#     环本身保留：环说「有这个状态」，图标说「是哪个状态」，两者不重复。
+	#     于是这个函数里**一行文字都不该出现**（`_draw_state_badge` 已删除）。
 
-func _draw_stun_aura(center: Vector2, w: float, h: float, badge_row: int) -> void:
+
+func _state_slots(p: Placement, cell: Vector2i) -> Array:
+	## R656：卡面右上角圆槽里的**状态**槽位（卡面自带的字段由 `CardFace.badge_slots()` 接在后面）。
+	## 店长口径：卡面不许有文字标记，状态一律图标化 → 这里是「该出哪些状态」的唯一判据口。
+	## 顺序 = 紧急度：不能行动的三种（冰封 / 眩晕 / 沉睡）→ 倒计时 → 可操作提示 → 临时嘲讽。
+	## ⚠️ 嘲讽默认**不在这里**：它是卡面字段（`AFFIX_DEFS.嘲讽`），字段队列已经会画图标。
+	##    只有两种「卡面没写嘲讽、此刻却生效」的情况要补：嘲讽来自 traits，或闪躲 9103 的
+	##    全员嘲讽窗口 —— 否则那个橙色环就成了唯一线索，等于没说明。
+	## ⚠️ 沉睡 / 倒数的 `count` 是**决策信息**（还剩几下 / 几回合），不是文字标记，必须带。
+	var out: Array = []
+	if p == null or p.card == null:
+		return out
+	if p.frozen:
+		out.append({"glyph": "frozen", "label": "冰封"})
+	if p.stun_left > 0:
+		out.append({"glyph": "stun", "label": "眩晕"})
+	if p.sleep_left > 0:
+		out.append({"glyph": "sleep", "label": "沉睡", "count": p.sleep_left})
+	if p.fuse_left > 0:
+		out.append({"glyph": "fuse", "label": "铸造", "count": p.fuse_left})
+	if p.owner == GameEngine.SIDE_SELF and engine.can_activate(cell, GameEngine.SIDE_SELF):
+		out.append({"glyph": "activate", "label": "可发动"})
+	if engine.unit_has_taunt(p) and not p.card.has_affix("嘲讽"):
+		out.append({"glyph": "taunt", "label": "嘲讽"})
+	return out
+
+func _draw_stun_aura(center: Vector2, w: float, h: float) -> void:
 	## 眩晕特效（`Placement.stun_left` 的唯一表现口，R654）：**金色虚线环**旋转 +
-	## 环上三颗星 + 顶部「眩晕」徽标。
+	## 环上三颗星。
 	## ⚠️ 刻意**不画实线同心环**：嘲讽（橙）/ 冰封（冷蓝）/ 沉睡（紫）/ 倒数（橙红）/
 	##    可发动（黄绿）已经把实线环这个形状用满，再加一个只能靠颜色分辨；
 	##    虚线 + 绕头星是「晕」的既有语义，形状上就能和那五个一眼分开
@@ -9684,6 +9722,7 @@ func _draw_stun_aura(center: Vector2, w: float, h: float, badge_row: int) -> voi
 	## ⚠️ 就绪光环（未横置的青色环）**不在这里屏蔽**：眩晕只挡「下一个自己回合」，
 	##    本回合没行动的单位确实还有行动权 —— 屏蔽它会说出与规则相反的话。
 	##    代价是浅色背景上两层环会叠在一起，所以虚线要「暗底 + 亮金」双描才立得住。
+	## R656：文字徽标取缔（「眩晕」二字改成右上角槽位里的三星图标）。
 	var t := float(_now()) / 1000.0
 	var base := Vector2(w, h).length() * 0.5
 	var r := base + 3.0
@@ -9701,9 +9740,6 @@ func _draw_stun_aura(center: Vector2, w: float, h: float, badge_row: int) -> voi
 		var a := spin + float(i) * TAU / 3.0
 		var pos := center + Vector2(cos(a), sin(a)) * (r + 6.0)
 		_draw_sparkle(pos, 5.2, Color(1.0, 0.96, 0.72))
-	_draw_state_badge(center, w, h, badge_row, "眩晕",
-			Color(0.24, 0.16, 0.02, 0.92), Color(1.0, 0.82, 0.30, 0.95),
-			Color(1.0, 0.96, 0.82), Color(0.14, 0.08, 0.01))
 
 
 func _draw_sparkle(pos: Vector2, r: float, col: Color) -> void:
@@ -9721,10 +9757,11 @@ func _draw_sparkle(pos: Vector2, r: float, col: Color) -> void:
 				pos + Vector2(rr * 0.72, 0.0), pos + Vector2(0.0, -rr * 0.30)]), cc)
 
 
-func _draw_frozen_aura(center: Vector2, w: float, h: float, badge_row: int) -> void:
-	## 冰封特效（`Placement.frozen` 的唯一表现口）：冷蓝双环脉冲 + 顶部「冰封」徽标
-	## + 卡面覆一层寒霜。判据直接读 `p.frozen`，保证「同一状态 = 同一特效」。
+func _draw_frozen_aura(center: Vector2, w: float, h: float) -> void:
+	## 冰封特效（`Placement.frozen` 的唯一表现口）：冷蓝双环脉冲 + 卡面覆一层寒霜。
+	## 判据直接读 `p.frozen`，保证「同一状态 = 同一特效」。
 	## 与「禁足 rooted」（只是不能移动、仍可攻击）刻意做出形状差异，避免玩家看混。
+	## R656：文字徽标取缔（「冰封」二字改成右上角槽位里的六角冰晶图标）。
 	var t := float(_now()) / 1000.0
 	var pulse := (sin(t * 2.6) + 1.0) * 0.5                 # 0..1 呼吸（比嘲讽慢）
 	var base := Vector2(w, h).length() * 0.5
@@ -9746,18 +9783,16 @@ func _draw_frozen_aura(center: Vector2, w: float, h: float, badge_row: int) -> v
 			var dir2 := Vector2(0.0, -sy)
 			draw_line(corner, corner + dir * arm, Color(0.88, 0.97, 1.0, 0.75), 2.0)
 			draw_line(corner, corner + dir2 * arm, Color(0.88, 0.97, 1.0, 0.75), 2.0)
-	_draw_state_badge(center, w, h, badge_row, "冰封",
-			Color(0.04, 0.16, 0.30, 0.92), COL_FROZEN,
-			Color(0.90, 0.98, 1.0), Color(0.02, 0.09, 0.18))
 
 
-func _draw_sleep_aura(center: Vector2, w: float, h: float, left: int, badge_row: int) -> void:
+func _draw_sleep_aura(center: Vector2, w: float, h: float) -> void:
 	## 沉睡特效（`Placement.sleep_left` 的唯一表现口）：**紫色**脉冲环（与冰封的冷蓝
-	## 明显区分）+ 卡面暗紫薄纱 + 右上角飘「Zzz」+ 顶部「沉睡 N」徽标。
-	## 徽标**写出还剩几点**是刻意的：沉睡的代价是「白站几回合」，R122 起
+	## 明显区分）+ 卡面暗紫薄纱 + 右上角飘「Zzz」。
+	## 槽位角标**写出还剩几点**是刻意的：沉睡的代价是「白站几回合」，R122 起
 	## 「自己回合结束 -1」和「每次受伤 -1」两条都会减它，
 	## 玩家得能一眼判断「现在打它值不值」（R76：每挨一下沉睡 -1、打空立刻能行动），
-	## 光写「沉睡」等于把这个决策藏起来。
+	## 光有月亮图标等于把这个决策藏起来。
+	## R656：文字徽标取缔（「沉睡 N」改成「月亮图标 + 数字角标」）。
 	var t := float(_now()) / 1000.0
 	var pulse := (sin(t * 1.7) + 1.0) * 0.5                # 0..1 呼吸（比冰封更慢 = 睡得更沉）
 	var base := Vector2(w, h).length() * 0.5
@@ -9777,43 +9812,30 @@ func _draw_sleep_aura(center: Vector2, w: float, h: float, left: int, badge_row:
 		var zs := 13 - i * 2
 		_draw_string_center(_font_bold, zs, "Z", zpos,
 				Color(0.90, 0.82, 1.0, za), 2, Color(0.20, 0.10, 0.34, za * 0.8))
-	_draw_state_badge(center, w, h, badge_row, "沉睡 %d" % left,
-			Color(0.13, 0.07, 0.24, 0.92), COL_SLEEP,
-			Color(0.93, 0.86, 1.0), Color(0.08, 0.04, 0.16))
 
 
-func _draw_fuse_aura(center: Vector2, w: float, h: float, left: int, badge_row: int) -> void :
-	## 铸造倒计时（`Placement.fuse_left` 的唯一表现口）：橙红脉冲环 + 顶部「倒数 N」徽标。
-	## 徽标**写出还剩几回合**是刻意的：玩家要靠它判断「先拆它还是先处理别的」。
+func _draw_fuse_aura(center: Vector2, w: float, h: float) -> void:
+	## 铸造倒计时（`Placement.fuse_left` 的唯一表现口）：橙红脉冲环。
+	## 剩余回合数由槽位角标给出（不是文字底板）：玩家要靠它判断「先拆它还是先处理别的」。
 	## ⚠️ 颜色刻意与嘲讽（STATE_TAUNT 橙 ff8f00）拉开：钢铁要塞身上两个状态会同时出现。
+	## R656：文字徽标取缔（「倒数 N」改成「沙漏图标 + 数字角标」）。
 	var t := float(_now()) / 1000.0
 	var pulse := (sin(t * 4.0) + 1.0) * 0.5                # 0..1（比沉睡快 = 更「催」）
 	var base := Vector2(w, h).length() * 0.5
 	draw_arc(center, base + 2.0 + pulse * 2.5, 0.0, TAU, 40,
 			Color(COL_FUSE.r, COL_FUSE.g, COL_FUSE.b, 0.45 + pulse * 0.40), 2.5)
-	_draw_state_badge(center, w, h, badge_row, "倒数 %d" % left,
-			Color(0.28, 0.09, 0.03, 0.92), COL_FUSE,
-			Color(1.0, 0.93, 0.86), Color(0.16, 0.05, 0.02))
 
 
-func _draw_state_badge(center: Vector2, w: float, h: float, row: int, text: String,
-		bg: Color, border: Color, fg: Color, shadow: Color) -> void:
-	## 战场单位顶部**状态徽标**的共用底座：嘲讽 / 冰封 / 沉睡三者位置完全相同，
-	## 靠 `row`（第几个状态）往下错开 —— 各自算偏移早晚会在「三状态同时成立」时重叠，
-	## 重叠 = 既有信息被盖掉，等于没显示。row 0 压在卡上沿（半内半外），
-	## 之后每个往下挪一个徽标高。
-	# R393：字号 12 → 15 后，底板必须同比放大，否则「倒数 3」这种四字徽标会把字挤出框
-	var bw := maxf(46.0, 16.0 + float(text.length()) * 13.0)
-	var bh := 23.0
-	var badge := Rect2(center + Vector2(-bw / 2.0,
-			-h / 2.0 - bh * 0.45 + float(row) * (bh + 2.0)), Vector2(bw, bh))
-	draw_rect(badge, bg, true)
-	draw_rect(badge, border, false, 2.0)
-	_draw_string_center(_font_bold, UI_FS_CAPTION, text, badge.position + badge.size / 2.0, fg, 3, shadow)
+## R656：`_draw_state_badge()`（卡上沿的「底板 + 文字」状态芯片）**已整体删除**。
+## 店长口径：卡面不许再出现任何文字标记 —— 状态一律进卡面右上角圆槽（图标 + 数字角标），
+## 数据由 `_state_slots()` 给、绘制由 `CardFace.badge_slots()` / `_draw_one_badge()` 完成。
+## 想加新状态时：① 在 `CardInfoBoxes.draw_glyph()` 加一个符号；
+## ② 在 `_state_slots()` 追加一条；③ 需要「还剩几次」就填 `count`。**别再往卡上写字。**
 
 
-func _draw_taunt_aura(center: Vector2, w: float, h: float, badge_row: int) -> void:
-	## 嘲讽特效：外圈脉冲光环 + 顶部「嘲讽」徽标 —— 敌方单位射程内有它就必须打它。
+func _draw_taunt_aura(center: Vector2, w: float, h: float) -> void:
+	## 嘲讽特效：外圈脉冲光环 —— 敌方单位射程内有它就必须打它。
+	## R656：文字徽标取缔（图标由 `_state_slots()` 送进卡面圆槽；卡面自带嘲讽字段时那边已画）。
 	var t := float(_now()) / 1000.0
 	var pulse := (sin(t * 3.4) + 1.0) * 0.5                  # 0..1 呼吸
 	var base := Vector2(w, h).length() * 0.5
@@ -9822,17 +9844,14 @@ func _draw_taunt_aura(center: Vector2, w: float, h: float, badge_row: int) -> vo
 	draw_arc(center, r, 0.0, TAU, 48, Color(COL_TAUNT.r, COL_TAUNT.g, COL_TAUNT.b, a), 3.5)
 	draw_arc(center, r + 5.0, 0.0, TAU, 48,
 			Color(1.0, 0.78, 0.35, a * 0.40), 1.5)
-	# 顶部徽标
-	_draw_state_badge(center, w, h, badge_row, "嘲讽",
-			Color(0.20, 0.11, 0.02, 0.92), Color(1.0, 0.62, 0.12, 0.95),
-			Color(1.0, 0.84, 0.40), Color(0.12, 0.06, 0.01))
 
 
-func _draw_activatable_aura(center: Vector2, w: float, h: float, badge_row: int) -> void:
-	## 可主动发动特效（R142）：**黄绿双环脉动 + 四向指向卡面的内箭头 + 「可发动 F」徽标**。
+func _draw_activatable_aura(center: Vector2, w: float, h: float) -> void:
+	## 可主动发动特效（R142）：**黄绿双环脉动 + 四向指向卡面的内箭头**。
 	## 为什么不用又一个纯色圆环：嘲讽（橙）/ 冰封（冷蓝）/ 沉睡（紫）/ 屏障（青）已经把
 	## 圆环用满了，再来一个只能靠颜色区分；箭头是**动作**语义（「点它 / 按 F」），
 	## 形状上就和那四种「状态」分开 —— 瞄一眼就知道这张卡现在还能操作。
+	## R656：文字徽标取缔（「可发动 F」改成「键帽 + 上箭头」图标进卡面圆槽，真键位走悬停说明）。
 	var t := float(_now()) / 1000.0
 	var pulse := (sin(t * 5.0) + 1.0) * 0.5                # 0..1（比嘲讽 3.4 更快 = 更「催」）
 	var base := Vector2(w, h).length() * 0.5
@@ -9855,9 +9874,6 @@ func _draw_activatable_aura(center: Vector2, w: float, h: float, badge_row: int)
 		var side := Vector2(-d.y, d.x) * (arm * 0.45)
 		draw_colored_polygon(PackedVector2Array([tip, back + side, back - side]),
 				Color(COL_ACTIVATABLE.r, COL_ACTIVATABLE.g, COL_ACTIVATABLE.b, 0.55 + pulse * 0.40))
-	_draw_state_badge(center, w, h, badge_row, "可发动 F",
-			Color(0.08, 0.20, 0.06, 0.94), COL_ACTIVATABLE,
-			Color(0.94, 1.0, 0.82), Color(0.02, 0.10, 0.02))
 
 
 func _draw_ready_aura(center: Vector2, w: float, h: float) -> void:

@@ -71899,11 +71899,67 @@ func _test_r592b() -> void:
 
 			"R592b：卡面不再画成长角标（+力/+生命 只在详细描述）")
 
-	check_src(cfs.contains("_draw_affix_badges(canvas, card, rect, k, on_board)")
+	check_src(cfs.contains("_draw_affix_badges(canvas, card, rect, k, on_board, -1, state_slots)")
 
 			and cfs.contains("_draw_affix_badges(canvas, card, rect, k, false)"),
 
-			"R592b：draw() 与 draw_pick() 两口都画字段标志")
+			"R592b/R656：draw() 带状态槽位、draw_pick() 两口都画字段标志")
+
+
+
+	# ⑤b R656（店长口径）：卡面**不许有文字标记** —— 状态改图标，排进同一条右上角槽位队列。
+
+	#     状态在前、字段在后；`count` 原样带出（沉睡还剩几下 / 倒数还剩几回合）。
+
+	var st_c := CardData.from_dict(base.to_dict())
+
+	st_c.affixes = ["疾行"]
+
+	var slots := CardFace.badge_slots(st_c, true, [
+
+			{"glyph": "stun", "label": "眩晕"},
+
+			{"glyph": "sleep", "label": "沉睡", "count": 2}])
+
+	check(slots.size() == 3 and String(slots[0]["glyph"]) == "stun"
+
+			and not bool(slots[0]["affix"]) and String(slots[0]["label"]) == "眩晕",
+
+			"R656：状态排在字段之前（实际 %s）" % str(slots))
+
+	check(int(slots[1]["count"]) == 2 and int(slots[2]["count"]) == 0
+
+			and String(slots[2]["label"]) == "疾行" and bool(slots[2]["affix"]),
+
+			"R656：沉睡剩余次数进槽位、字段不带数字（实际 %s）" % str(slots))
+
+	check(CardFace.badge_slots(st_c, true).size() == 1,
+
+			"R656：不给状态时槽位只装字段（旧口径不变）")
+
+	# 源码锁：六块文字底板全部取缔，battle 侧改为送槽位；五个状态 glyph 必须有矢量符号
+
+	var bfs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+
+	check(not bfs.contains("func _draw_state_badge(")
+
+			and bfs.contains("func _state_slots(")
+
+			and not bfs.contains("\"沉睡 %d\""),
+
+			"R656：卡面文字状态底板已取缔（_draw_state_badge 删除、_state_slots 接管）")
+
+	var ibs := FileAccess.get_file_as_string("res://scripts/card_info_boxes.gd")
+
+	var glyph_ok := true
+
+	for g: String in ["stun", "frozen", "sleep", "fuse", "activate"]:
+
+		if not ibs.contains("\"%s\":" % g):
+
+			glyph_ok = false
+
+	check(glyph_ok, "R656：五个状态 glyph 都有矢量符号（stun/frozen/sleep/fuse/activate）")
 
 	# ⑥ 详细描述仍然是「+力/+生命」的唯一展示位
 

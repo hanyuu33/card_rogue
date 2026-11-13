@@ -334,6 +334,64 @@ static func draw_glyph(cv: CanvasItem, c: Vector2, r: float, glyph: String, col:
 			cv.draw_colored_polygon(PackedVector2Array([
 				c + Vector2(0.0, -sgn * r * 0.82), c + Vector2(-r * 0.44, sgn * r * 0.20),
 				c + Vector2(r * 0.44, sgn * r * 0.20)]), col)
+		"stun":                    # 眩晕（R656）：螺旋 —— 「晕」的通用符号
+			# ⚠️ R656 首版画的是「轨道 + 三颗四角星」，出图后发现 40px 槽位里三颗星只有
+			#    1.5px，糊成一圈金点，读不出任何东西。螺旋是单笔连续形状，缩小后仍然成立。
+			var su_pts := PackedVector2Array()
+			for i in 41:
+				var su_t: float = float(i) / 40.0
+				var su_a: float = su_t * TAU * 2.35
+				var su_r: float = lerpf(0.09, 0.86, su_t) * r
+				su_pts.append(c + Vector2(cos(su_a), sin(su_a)) * su_r)
+			cv.draw_polyline(su_pts, col, 1.8)
+		"frozen":                  # 冰封（R656）：六角冰晶（三条轴 + 每轴两对短枝）
+			# 不用「米字」：三条光秃秃的直线在 12px 半径里读不出冰；
+			# 每根轴在中段与近端各挑两根短枝，才像雪花结晶。
+			for i in 3:
+				var fa: float = PI * float(i) / 3.0
+				var fd := Vector2(cos(fa), sin(fa))
+				cv.draw_line(c - fd * r * 0.84, c + fd * r * 0.84, col, 1.5)
+				for tv in [0.50, 0.84]:
+					var fp: Vector2 = c + fd * (r * float(tv))
+					for sg in [-1.0, 1.0]:
+						var fb: float = fa + float(sg) * 0.92
+						cv.draw_line(fp, fp + Vector2(cos(fb), sin(fb)) * r * 0.26, col, 1.2)
+			cv.draw_circle(c, r * 0.13, col)
+		"sleep":                   # 沉睡（R656）：弯月轮廓 —— 与旧版 Zzz 同义，但不再是文字
+			# ⚠️ R656 首版是「外弧 + 内弧」拼的**填充**多边形，两弧端点没对齐 → 自交，
+			#    Godot 直接 `triangulation failed`（图里只剩数字角标）。改成闭合描边：
+			#    外弧 90°→270° + 内弧 270°→90°，端点各用一小段直线接上，永不三角化。
+			var sl_out := PackedVector2Array()
+			for i in 15:
+				var la: float = deg_to_rad(lerpf(90.0, 270.0, float(i) / 14.0))
+				sl_out.append(c + Vector2(cos(la), sin(la)) * r * 0.88)
+			var sl_in := PackedVector2Array()
+			for i in 15:
+				var lb: float = deg_to_rad(lerpf(270.0, 90.0, float(i) / 14.0))
+				sl_in.append(c + Vector2(cos(lb) * r * 0.66 + r * 0.20, sin(lb) * r * 0.70))
+			var sl_all := PackedVector2Array(sl_out)
+			sl_all.append_array(sl_in)
+			sl_all.append(sl_out[0])
+			cv.draw_polyline(sl_all, col, 2.0)
+		"fuse":                    # 铸造倒计时（R656）：沙漏（上沙已流向下，下半实心）
+			var fu_w: float = r * 0.50
+			cv.draw_line(c + Vector2(-fu_w, -r * 0.76), c + Vector2(fu_w, -r * 0.76), col, 1.6)
+			cv.draw_line(c + Vector2(-fu_w, r * 0.76), c + Vector2(fu_w, r * 0.76), col, 1.6)
+			cv.draw_colored_polygon(PackedVector2Array([
+					c + Vector2(-fu_w * 0.80, -r * 0.62), c + Vector2(fu_w * 0.80, -r * 0.62),
+					c + Vector2(0.0, -r * 0.06)]), Color(col.r, col.g, col.b, 0.55))
+			cv.draw_colored_polygon(PackedVector2Array([
+					c + Vector2(0.0, r * 0.06), c + Vector2(fu_w * 0.80, r * 0.62),
+					c + Vector2(-fu_w * 0.80, r * 0.62)]), col)
+			cv.draw_line(c + Vector2(0.0, -r * 0.34), c + Vector2(0.0, r * 0.14), col, 1.1)
+		"activate":                # 可发动（R656）：上箭头 + 键帽 —— 「按它」而不是「状态」
+			# 旧版写「可发动 F」，R656 取缔文字；键帽保留「这是个按键」的语义（真键位走悬停说明）。
+			cv.draw_line(c + Vector2(0.0, r * 0.18), c + Vector2(0.0, -r * 0.40), col, 1.6)
+			cv.draw_colored_polygon(PackedVector2Array([
+					c + Vector2(0.0, -r * 0.76), c + Vector2(-r * 0.36, -r * 0.26),
+					c + Vector2(r * 0.36, -r * 0.26)]), col)
+			cv.draw_rect(Rect2(c + Vector2(-r * 0.44, r * 0.30), Vector2(r * 0.88, r * 0.28)),
+					col, false, 1.4)
 		_:                         # 中性 / 未知：小菱形
 			cv.draw_colored_polygon(PackedVector2Array([
 				c + Vector2(0.0, -r * 0.52), c + Vector2(r * 0.52, 0.0),

@@ -369,7 +369,7 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		power_override := -1, on_board := false, sleeping := false,
 		name_only := false, phase := 0,
 		speed_override := -1, range_override := -1, adventure_frame := false,
-		record_seen := true) -> void:
+		record_seen := true, state_slots: Array = []) -> void:
 	## 卡面一律按 rect **完整排版**，与图鉴/战场小卡同一套比例，没有「按可见高度重锚」
 	## 之类的特例 —— 手牌卡底沉出窗口下沿时，被挡住的那截就让它挡住
 	## （作者口径：卡片是一个整体，排版要与正常状态完全一致，别为了躲裁剪挪数值）。
@@ -415,7 +415,9 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	#     （旧色块小旗画在卡图**之前**，被开放式卡图整个盖住 —— 等于没画。）
 	_draw_rarity_ribbon(canvas, card, rect, k, pad)
 	# ④c R592：字段标志（贴卡框右上角，多字段轮播；R592d 起压在缎带上层）
-	_draw_affix_badges(canvas, card, rect, k, on_board)
+	#     R656：状态槽位（眩晕 / 冰封 / 沉睡 N / 倒数 N / 可发动 / 临时嘲讽）排进同一条队列，
+	#     状态在前、字段在后 —— 卡面**不再有文字标记**，全靠这个圆槽说话。
+	_draw_affix_badges(canvas, card, rect, k, on_board, -1, state_slots)
 	# ⑤ 卡图与文字区的分隔线
 	# ⚠️ R153：v2 底图**自带金线分隔**（CARD_ART_RATIO 0.745 处的金条），不再手画灰线。
 	# ⚠️ R122：**横置时不画** —— 那时卡图铺满整卡（见 _draw_art），横一道线很突兀。
@@ -806,10 +808,57 @@ static func affix_badge_rect(card: CardData, rect: Rect2, on_board := false) -> 
 
 
 static func affix_badge_state(card: CardData, on_board: bool, now_ms: int) -> Dictionary:
-	## 轮播状态**唯一口**：`{count, index, next, fade}`。
+	## 字段轮播状态：`{count, index, next, fade}`。
 	## `fade` = 0 全然是 `index`，= 1 全然是 `next`（`next == -1` 表示没有下一张）。
 	## 只有一张时不轮播（fade 恒 0）；多张按环形推进 —— 到末尾自然接回第 0 张。
-	var n := affix_badge_queue(card, on_board).size()
+	## ⚠️ R656 起算法搬进 `badge_slot_state()`（状态与字段共用一条队列），这里只做薄包装
+	##    —— 回归断言的旧入口与旧语义一个字都没变。
+	return badge_slot_state(affix_badge_queue(card, on_board).size(), now_ms)
+
+
+static func affix_badge_text(card: CardData, on_board: bool, now_ms: int) -> String:
+	## 此刻**正在显示**的字段名（测试与悬停提示共用；不进绘制路径）。
+	var q := affix_badge_queue(card, on_board)
+	if q.is_empty():
+		return ""
+	var st := affix_badge_state(card, on_board, now_ms)
+	return q[int(st["index"])]
+
+
+# ------------------------------------------------------------ 状态槽位（R656）
+## 店长口径 R656：**卡面不再出现任何文字标记**。原来那六块文字底板
+## （嘲讽 / 冰封 / 眩晕 / 沉睡 N / 倒数 N / 可发动 F，画在 `battle_scene._draw_state_badge`）
+## 全部取缔 —— 状态改成**图标**，排进右上角那个圆槽，与字段图标共用同一条轮播队列。
+##   · 顺序：**状态在前、字段在后**。「下回合不能行动」比「有疾行」紧急，轮播时先露它。
+##   · 数据形状 `{glyph, label, count, affix}`：
+##       - `affix = true` → 有素材就贴 `assets/ui/affix_<glyph>.png`（缺图走矢量回退）；
+##       - `count > 0`   → 圆徽**右下角**贴数字角标（沉睡还剩几下 / 倒数还剩几回合）。
+##         ⚠️ 数字不算「文字标记」：那是决策信息，去掉后玩家得点开详情才知道
+##            「现在打它值不值」（R76 就有这个口径）。
+##   · `label` 只给悬停提示与回归用，**不上卡面**。
+
+static func badge_slots(card: CardData, on_board: bool, states: Array = []) -> Array[Dictionary]:
+	## **槽位队列的唯一口** = 调用方给的状态 + 卡面自带的字段。
+	if card == null:
+		return []
+	var out: Array[Dictionary] = []
+	for sv: Variant in states:
+		if typeof(sv) != TYPE_DICTIONARY:
+			continue
+		var sd: Dictionary = sv
+		var g := String(sd.get("glyph", ""))
+		if g == "":
+			continue
+		out.append({"glyph": g, "label": String(sd.get("label", "")),
+				"count": int(sd.get("count", 0)), "affix": false})
+	for a: String in affix_badge_queue(card, on_board):
+		out.append({"glyph": CardData.affix_glyph(a), "label": a, "count": 0, "affix": true})
+	return out
+
+
+static func badge_slot_state(n: int, now_ms: int) -> Dictionary:
+	## 轮播的**唯一实现**（`affix_badge_state()` 只是它的薄包装，节拍完全同一套）。
+	## 返回 `{count, index, next, fade}`：`fade = 1` 表示整张已经是 `next`。
 	if n <= 0:
 		return {"count": 0, "index": 0, "next": -1, "fade": 0.0}
 	if n == 1:
@@ -826,60 +875,115 @@ static func affix_badge_state(card: CardData, on_board: bool, now_ms: int) -> Di
 	return {"count": n, "index": idx, "next": nxt, "fade": clampf(fade, 0.0, 1.0)}
 
 
-static func affix_badge_text(card: CardData, on_board: bool, now_ms: int) -> String:
-	## 此刻**正在显示**的字段名（测试与悬停提示共用；不进绘制路径）。
-	var q := affix_badge_queue(card, on_board)
-	if q.is_empty():
-		return ""
-	var st := affix_badge_state(card, on_board, now_ms)
-	return q[int(st["index"])]
+static func badge_slot_rect(has_any: bool, rect: Rect2) -> Rect2:
+	## 圆槽**唯一口**（与 `affix_badge_rect()` 同一圆心半径，只是不关心队列来源）。
+	if not has_any:
+		return Rect2()
+	var r: float = badge_radius(rect)
+	var c := affix_badge_center(rect)
+	return Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0)
+
+
+static func _state_style(glyph: String) -> Array:
+	## 状态图标的语义色（底 / 线）：沿用被取缔的那套文字底板配色，玩家不用重学。
+	match glyph:
+		"stun":
+			return [Color(0.24, 0.16, 0.02), Color(1.0, 0.85, 0.36)]
+		"frozen":
+			return [Color(0.04, 0.16, 0.30), Color(0.90, 0.98, 1.0)]
+		"sleep":
+			return [Color(0.13, 0.07, 0.24), Color(0.93, 0.86, 1.0)]
+		"fuse":
+			return [Color(0.28, 0.09, 0.03), Color(1.0, 0.93, 0.86)]
+		"activate":
+			return [Color(0.08, 0.20, 0.06), Color(0.94, 1.0, 0.82)]
+		"taunt":
+			return [Color(0.20, 0.11, 0.02), Color(1.0, 0.84, 0.40)]
+		_:
+			return [Color(0.17, 0.16, 0.19), Color(0.94, 0.94, 0.96)]
+
 
 
 static func _draw_affix_badges(canvas: CanvasItem, card: CardData, rect: Rect2,
-		k: float, on_board: bool, now_ms := -1) -> void:
+		k: float, on_board: bool, now_ms := -1, states: Array = []) -> void:
 	## 右上角圆形槽位（R592d：压在稀有度缎带上层）：先画下一张（淡入），
 	## 再画当前张（淡出），交叉过渡不闪。
 	## `now_ms` 可注入（截图 / 回归固定时刻用）；-1 = 读系统时钟。
+	## `states`（R656）：战场状态槽位（`battle_scene._state_slots()` 给），空 = 只有字段。
 	if card == null:
 		return
-	var q := affix_badge_queue(card, on_board)
-	if q.is_empty():
+	var slots := badge_slots(card, on_board, states)
+	if slots.is_empty():
 		return
-	var box := affix_badge_rect(card, rect, on_board)
+	var box := badge_slot_rect(true, rect)
 	if box.size.x <= 0.0 or box.size.y <= 0.0:
 		return
-	var st := affix_badge_state(card, on_board,
+	var st := badge_slot_state(slots.size(),
 			now_ms if now_ms >= 0 else Time.get_ticks_msec())
 	var fade: float = float(st["fade"])
 	var nxt: int = int(st["next"])
-	# 描边宽度跟徽章口径走（尺寸本身已由 `affix_badge_rect()` 决定，这里只管线宽）
+	# 描边宽度跟徽章口径走（尺寸本身已由 `badge_slot_rect()` 决定，这里只管线宽）
 	var kc: float = minf(k, UiTheme.CARD_BADGE_SCALE_CAP)
 	if nxt >= 0 and fade > 0.0:
-		_draw_one_affix_badge(canvas, q[nxt], box, kc, fade)
-	_draw_one_affix_badge(canvas, q[int(st["index"])], box, kc, 1.0 - fade)
+		_draw_one_badge(canvas, slots[nxt], box, kc, fade)
+	_draw_one_badge(canvas, slots[int(st["index"])], box, kc, 1.0 - fade)
+
+
+static func _draw_one_badge(canvas: CanvasItem, e: Dictionary, box: Rect2,
+		k: float, alpha: float) -> void:
+	## 单个槽位：素材优先 → 矢量回退 →（有 count 时）右下角数字角标。
+	if alpha <= 0.01:
+		return
+	var glyph := String(e.get("glyph", ""))
+	var label := String(e.get("label", ""))
+	var is_affix: bool = bool(e.get("affix", false))
+	var tex: Texture2D = UiAssets.affix_badge(glyph) if is_affix else null
+	if tex != null:
+		canvas.draw_texture_rect(tex, box, false, Color(1.0, 1.0, 1.0, alpha))
+	else:
+		# 回退：语义色圆底 + 矢量符号（素材缺图时照常可玩，只是没那么精致）
+		var cols: Array = CardData.affix_colors(label) if is_affix else _state_style(glyph)
+		var bg: Color = cols[0]
+		var fg: Color = cols[1]
+		bg.a *= alpha
+		fg.a *= alpha
+		var c := box.get_center()
+		canvas.draw_circle(c, box.size.y * 0.5, bg)
+		canvas.draw_arc(c, box.size.y * 0.46, 0.0, TAU, 28,
+				Color(fg.r, fg.g, fg.b, 0.9 * alpha), maxf(1.0, 1.2 * k))
+		preload("res://scripts/card_info_boxes.gd").draw_glyph(
+				canvas, c, box.size.y * 0.30, glyph, fg)
+	var cnt := int(e.get("count", 0))
+	if cnt > 0:
+		_draw_count_pip(canvas, box, k, cnt, alpha)
+
+
+static func _draw_count_pip(canvas: CanvasItem, box: Rect2, k: float,
+		n: int, alpha: float) -> void:
+	## 数字角标：圆徽**右下角**贴一枚小圆（半压在徽章边缘上），里面是剩余次数。
+	## 为什么要它：沉睡 / 倒数都是「还剩几下」，纯图标只能告诉玩家「有这个状态」，
+	## 说不出「现在打它值不值」—— 只有数字能。（R76 的老口径，文字底板取缔后由它接手。）
+	## 图上写 `9+` 不再扩宽：真要知道确切数字去左侧信息栏 / 悬停，卡面只保证「快到了」。
+	## ⚠️ R656 首版半径 0.32×槽位、圆心内缩 0.55 —— 出图后它把沙漏整个盖住了
+	##    （槽位才 40px，角标直径 25px）。现在半径 0.24、圆心贴到角上，只咬掉槽位右下角。
+	var pr := maxf(4.5, box.size.y * 0.24)
+	var pc := Vector2(box.end.x - pr * 0.18, box.end.y - pr * 0.18)
+	canvas.draw_circle(pc, pr, Color(0.07, 0.05, 0.03, 0.94 * alpha))
+	canvas.draw_arc(pc, pr, 0.0, TAU, 18,
+			Color(1.0, 0.97, 0.86, 0.90 * alpha), maxf(1.0, 0.9 * k))
+	var f: FontFile = UiTheme.font_bold()
+	var fs := maxi(8, roundi(pr * 1.45))
+	var txt := str(n) if n < 10 else "9+"
+	var tw: float = f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	canvas.draw_string(f, pc + Vector2(-tw * 0.5, float(fs) * 0.36), txt,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1.0, 0.98, 0.92, alpha))
 
 
 static func _draw_one_affix_badge(canvas: CanvasItem, name: String, box: Rect2,
 		k: float, alpha: float) -> void:
-	if alpha <= 0.01:
-		return
-	var glyph := CardData.affix_glyph(name)
-	var tex: Texture2D = UiAssets.affix_badge(glyph)
-	if tex != null:
-		canvas.draw_texture_rect(tex, box, false, Color(1.0, 1.0, 1.0, alpha))
-		return
-	# 回退：语义色圆底 + 矢量符号（素材缺图时照常可玩，只是没那么精致）
-	var cols: Array = CardData.affix_colors(name)
-	var bg: Color = cols[0]
-	var fg: Color = cols[1]
-	bg.a *= alpha
-	fg.a *= alpha
-	var c := box.get_center()
-	canvas.draw_circle(c, box.size.y * 0.5, bg)
-	canvas.draw_arc(c, box.size.y * 0.46, 0.0, TAU, 28,
-			Color(fg.r, fg.g, fg.b, 0.9 * alpha), maxf(1.0, 1.2 * k))
-	preload("res://scripts/card_info_boxes.gd").draw_glyph(
-			canvas, c, box.size.y * 0.30, glyph, fg)
+	## R656：旧入口保留（只画字段），内部走 `_draw_one_badge()` 的同一条绘制路径。
+	_draw_one_badge(canvas, {"glyph": CardData.affix_glyph(name), "label": name,
+			"count": 0, "affix": true}, box, k, alpha)
 
 
 static func _draw_rarity_ribbon(canvas: CanvasItem, card: CardData, rect: Rect2,
