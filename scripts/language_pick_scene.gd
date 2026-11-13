@@ -12,6 +12,9 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 const L10n = preload("res://scripts/l10n.gd")
 const LanguageMenu = preload("res://scripts/language_menu.gd")
 
+## R660c：标题匾加高到 100 —— 原先 82 时 32px 的「选择语言」字头
+## 正好压在 10px 的 LANGUAGE 小字上（店长当场看到「language 被四个汉字挡住」）。
+const HEAD_H := 100.0
 const MENU_W := 620.0
 const MENU_ROW_H := 56.0
 const MENU_MAX_ROWS := 6
@@ -153,16 +156,16 @@ func _draw() -> void:
 		draw_rect(full, UiTheme.SCREEN_BG)
 
 	var top := _menu.position.y - 12.0
-	var head := Rect2(_menu.position.x, top - 82.0, MENU_W, 82.0)
+	var head := Rect2(_menu.position.x, top - HEAD_H, MENU_W, HEAD_H)
 	draw_rect(head, Color(0.14, 0.11, 0.08, 0.68), true)
 	draw_rect(head, Color(UiTheme.ADVENTURE_BRASS, 0.9), false, 1.2)
 	_draw_head_ornaments(head)
 	_draw_kicker(head)
 	var title := L10n.t("language.title", _selected)
-	draw_string(_font_bold, Vector2(head.position.x, head.position.y + 45.0), title,
+	draw_string(_font_bold, Vector2(head.position.x, head.position.y + 62.0), title,
 			HORIZONTAL_ALIGNMENT_CENTER, head.size.x, UiTheme.FS_TITLE,
 			UiTheme.ADVENTURE_LIGHT)
-	draw_string(_font, Vector2(head.position.x, head.position.y + 68.0),
+	draw_string(_font, Vector2(head.position.x, head.position.y + 84.0),
 			L10n.t("language.subtitle", _selected),
 			HORIZONTAL_ALIGNMENT_CENTER, head.size.x, UiTheme.FS_LABEL,
 			Color(0.92, 0.87, 0.76, 0.92))
@@ -229,6 +232,6 @@ func _draw_kicker(head: Rect2) -> void:
 	total += track * float(maxi(0, txt.length() - 1))
 	var x := head.position.x + (head.size.x - total) * 0.5
 	for i in txt.length():
-		draw_string(_font_bold, Vector2(x, head.position.y + 22.0), txt.substr(i, 1),
+		draw_string(_font_bold, Vector2(x, head.position.y + 24.0), txt.substr(i, 1),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiTheme.PAGE_GOLD)
 		x += widths[i] + track

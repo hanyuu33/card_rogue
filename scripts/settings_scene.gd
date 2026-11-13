@@ -9,24 +9,33 @@ extends Control
 ##   设置页作为浮层盖在当前界面之上、场景树暂停，关掉即原样回去。为什么不能切场景 ——
 ##   战斗的棋盘 / 手牌 / 引擎状态全在场景实例里，`SceneFx.goto(settings)` 一换场景，
 ##   回来就是重开一局；玩家按 Esc 只是想关小一点音乐，不该赔上一整场。
-## R660：语言 = 页首右侧的**下拉按钮** + 可滚动列表（`language_menu.gd`）。
-##   不塞进下面 5 行，是因为种子面板已经贴到屏幕下沿；也不做三段固定按钮 ——
-##   以后语言变多时，只有一份列表需要改，设置页和首次选择页共用。
+##
+## R660c（店长口径）：**设置项按类分页** —— 音频 / 画面 / 语言 / 对局四个页签，
+##   语言不再挂在页首右上角。为什么改：右上角那个下拉既挤标题行，又和「设置」标题
+##   抢同一片留白；而语言本来就是一类设置，独立成页比塞在角落更像"设置项"。
+##   分页后每页只留本类的东西，以后再加设置只需要往对应页里加一行。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const L10n = preload("res://scripts/l10n.gd")
 const LanguageMenu = preload("res://scripts/language_menu.gd")
 
+const TABS := ["audio", "display", "language", "run"]
+const TAB_AUDIO := 0
+const TAB_DISPLAY := 1
+const TAB_LANGUAGE := 2
+const TAB_RUN := 3
+
+const TAB_Y := 126.0
+const TAB_H := 40.0
+const TAB_GAP := 10.0
+const TAB_MIN_W := 92.0
+const CONTENT_Y := 196.0
 const ROW_W := 520.0
-const ROW_H := 54.0        # R246：5 行（3 开关 + 2 音量）要塞进原来 3 行的位置
+const ROW_H := 54.0
 const ROW_GAP := 10.0
-const ROW_COUNT := 5
-const LIST_Y := 166.0
 const SEED_H := 138.0     # R241：种子面板高度
-const VOL_STEP := 0.1      # R246：音量一档 10%
+const VOL_STEP := 0.1     # R246：音量一档 10%
 const VOL_NUM := 20
-const LANG_BTN_W := 236.0
-const LANG_MENU_W := 300.0
 const LANG_ROW_H := 48.0
 const LANG_MAX_ROWS := 5
 
@@ -34,7 +43,9 @@ var _font: Font
 var _font_bold: Font
 var sfx: Sfx
 var _menu: UiMenu = null
-var _hover := -1
+var _tab := TAB_AUDIO          # 当前页签（0 音频 / 1 画面 / 2 语言 / 3 对局）
+var _tab_hover := -1
+var _hover := -1               # 悬停的设置行序号
 var _last_mp := Vector2.INF
 var _seed_edit: LineEdit = null   # R241「下一局种子」输入框（唯一的原生控件）
 var _seed_guard := false          # 防止 text_changed 里改 text 触发二次回调
@@ -46,9 +57,7 @@ var _overlay_back := "返回战斗"
 var _overlay_host: Node = null
 var _overlay_layer: CanvasLayer = null
 var _overlay_paused := false      # 暂停是浮层开的 → 由它还（不去解别人的暂停）
-var _lang_menu: Control = null    # R660：可滚动语言列表（下拉面板）
-var _lang_open := false
-var _lang_hover := false
+var _lang_list: Control = null    # R660c：语言页里的可滚动列表（内嵌，不再做下拉）
 
 
 static func open_overlay(host: Node, back_text := "返回战斗") -> Control:
@@ -88,6 +97,8 @@ func _ready() -> void:
 	# R655：浮层**不动 BGM** —— 背后那一局还在，切成标题曲会让人以为已经回标题页了。
 	if not _overlay:
 		Bgm.play("title")
+	# 出图探针：`--tab=语言页键`（audio / display / language / run），旧写法 `--lang-menu` 等同 language。
+	_tab = _tab_from_args()
 	# R655：浮层**不接**这个钩子 —— `--screenshot` 是「单独打开设置页出图」用的（0.6s 后
 	# 直接 quit）。浮层是在战斗里出图的，宿主还没走到截图帧就被它掐掉，拍出来的是旧图。
 	if not _overlay and "--screenshot" in OS.get_cmdline_user_args():
@@ -101,10 +112,7 @@ func _ready() -> void:
 		add_child(t)
 		t.start()
 	_build_seed_edit()
-	_build_language_menu()
-	# 出图探针：`--screenshot --lang-menu` 直接把下拉列表打开再拍。
-	if "--lang-menu" in OS.get_cmdline_user_args():
-		_open_language_menu.call_deferred()
+	_build_language_list()
 	# R655：浮层不挂自己的 ESC 菜单（Esc 直接关浮层）—— 两层菜单叠着只会互相抢 Esc；
 	# 浮层里也不需要「返回标题」（宿主菜单里本来就有那一条）。
 	if not _overlay:
@@ -114,12 +122,99 @@ func _ready() -> void:
 		})
 
 
+func _tab_from_args() -> int:
+	if "--lang-menu" in OS.get_cmdline_user_args():
+		return TAB_LANGUAGE
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--tab="):
+			var k := a.substr(6).strip_edges().to_lower()
+			var i := TABS.find(k)
+			if i >= 0:
+				return i
+	return TAB_AUDIO
+
+
+# ------------------------------------------------------------ 页签 / 布局
+
+func _tab_key(i: int) -> String:
+	match i:
+		TAB_AUDIO:
+			return "settings.tab_audio"
+		TAB_DISPLAY:
+			return "settings.tab_display"
+		TAB_LANGUAGE:
+			return "settings.tab_language"
+	return "settings.tab_run"
+
+
+func _tab_rects() -> Array[Rect2]:
+	## 页签宽度按**当前语言**的文字量算，中文 / 英文 / 日文都能自己撑开，不写死。
+	var widths: Array[float] = []
+	var total := 0.0
+	for i in TABS.size():
+		var w := _font_bold.get_string_size(L10n.t(_tab_key(i)), HORIZONTAL_ALIGNMENT_LEFT,
+				-1, UiTheme.FS_LABEL).x + 44.0
+		w = maxf(w, TAB_MIN_W)
+		widths.append(w)
+		total += w
+	total += TAB_GAP * float(TABS.size() - 1)
+	var x := (size.x - total) * 0.5
+	var out: Array[Rect2] = []
+	for i in widths.size():
+		out.append(Rect2(x, TAB_Y, widths[i], TAB_H))
+		x += widths[i] + TAB_GAP
+	return out
+
+
+func _tab_at(pos: Vector2) -> int:
+	var rects := _tab_rects()
+	for i in rects.size():
+		if rects[i].has_point(pos):
+			return i
+	return -1
+
+
+func _set_tab(i: int) -> void:
+	if i < 0 or i >= TABS.size() or i == _tab:
+		return
+	_tab = i
+	_hover = -1
+	_seed_hover = false
+	_sync_seed_edit()
+	_sync_language_list()
+	queue_redraw()
+
+
+func _row_rect(i: int) -> Rect2:
+	## 内容从页签下方开始，**不垂直居中** —— 分页后每页行数不同，居中会让切换时整页跳。
+	return Rect2((size.x - ROW_W) * 0.5, CONTENT_Y + float(i) * (ROW_H + ROW_GAP),
+			ROW_W, ROW_H)
+
+
+func _vol_rects(r: Rect2) -> Array[Rect2]:
+	## R246 音量行右侧的几何唯一口（画与点共用）：[−][条][+]。
+	var cy := r.position.y + r.size.y / 2.0
+	return [
+		Rect2(r.position.x + r.size.x - 300.0, cy - 16.0, 32.0, 32.0),
+		Rect2(r.position.x + r.size.x - 260.0, cy - 7.0, 118.0, 14.0),
+		Rect2(r.position.x + r.size.x - 134.0, cy - 16.0, 32.0, 32.0),
+	]
+
+
+func _cycle_rect(r: Rect2) -> Rect2:
+	## 循环档位（敌人速度）右侧的小按钮，几何唯一口。
+	return Rect2(r.position.x + r.size.x - 104.0, r.get_center().y - 16.0, 84.0, 32.0)
+
+
+func _back_rect() -> Rect2:
+	return Rect2(14, 14, 110, 34)
+
+
 # ------------------------------------------------------------ 种子（R241）
 
 func _seed_panel_rect() -> Rect2:
-	## 三行开关下面的一块 —— 本局种子（只读）+ 下一局种子（可填）。
-	var last := _row_rect(ROW_COUNT - 1)
-	return Rect2(last.position.x, last.end.y + 22.0, ROW_W, SEED_H)
+	## 对局页顶上一块 —— 本局种子（只读）+ 下一局种子（可填）。
+	return Rect2((size.x - ROW_W) * 0.5, CONTENT_Y, ROW_W, SEED_H)
 
 
 func _seed_copy_rect() -> Rect2:
@@ -189,6 +284,10 @@ func _build_seed_edit() -> void:
 func _sync_seed_edit() -> void:
 	if _seed_edit == null:
 		return
+	# R660c：输入框只在「对局」页存在 —— 别的页留着它会浮在行卡上面。
+	_seed_edit.visible = _tab == TAB_RUN
+	if not _seed_edit.visible:
+		_seed_edit.release_focus()
 	var r := _seed_edit_rect()
 	_seed_edit.position = r.position
 	_seed_edit.size = r.size
@@ -213,72 +312,51 @@ func _on_seed_changed(txt: String) -> void:
 	queue_redraw()
 
 
-func _menu_items() -> Array:
-	return [
-		{"text": L10n.t("settings.back_title"), "fn": _back_to_title},
-	]
+# ------------------------------------------------------------ 语言列表（R660c）
 
-
-func _build_language_menu() -> void:
-	## R660：列表只建一次，开合只改 visible / 位置 / 数据。
-	_lang_menu = LanguageMenu.new()
-	_lang_menu.visible = false
-	_lang_menu.z_index = 20        # 盖住种子输入框与设置行
-	_lang_menu.picked.connect(_on_language_picked)
-	_lang_menu.activated.connect(_on_language_picked)
-	add_child(_lang_menu)
-
-
-func _lang_btn_rect() -> Rect2:
-	## 宽屏放右上角（不挤标题），窄屏落到副标题下方居中。
-	if size.x >= 1120.0:
-		return Rect2(size.x - LANG_BTN_W - 28.0, 46.0, LANG_BTN_W, 36.0)
-	return Rect2((size.x - LANG_BTN_W) * 0.5, 116.0, LANG_BTN_W, 36.0)
-
-
-func _lang_menu_rect() -> Rect2:
-	if _lang_menu == null:
-		return Rect2()
-	return Rect2(_lang_menu.position, _lang_menu.size)
-
-
-func _open_language_menu() -> void:
-	if _lang_menu == null:
-		return
-	var items: Array = L10n.LANGUAGES
-	var rows := mini(items.size(), LANG_MAX_ROWS)
+func _lang_list_rect() -> Rect2:
+	var rows := mini(L10n.LANGUAGES.size(), LANG_MAX_ROWS)
 	var h := float(rows) * LANG_ROW_H + 16.0
-	var b := _lang_btn_rect()
-	var x := b.position.x + b.size.x - LANG_MENU_W
-	x = clampf(x, 8.0, maxf(8.0, size.x - LANG_MENU_W - 8.0))
-	var y := b.end.y + 6.0
-	if y + h > size.y - 16.0:
-		y = maxf(8.0, b.position.y - h - 6.0)
-	_lang_menu.position = Vector2(x, y)
-	_lang_menu.size = Vector2(LANG_MENU_W, h)
-	_lang_menu.setup(items, GameSettings.language, LANG_ROW_H)
-	_lang_menu.visible = true
-	_lang_menu.grab_focus()
-	_lang_open = true
-	queue_redraw()
+	return Rect2((size.x - ROW_W) * 0.5, CONTENT_Y, ROW_W, h)
 
 
-func _close_language_menu() -> void:
-	if _lang_menu != null:
-		_lang_menu.visible = false
-		_lang_menu.release_focus()
-	_lang_open = false
-	queue_redraw()
+func _build_language_list() -> void:
+	## 列表只建一次：切页只改 visible / 几何 / 数据，不反复 new。
+	_lang_list = LanguageMenu.new()
+	_lang_list.visible = false
+	_lang_list.picked.connect(_on_language_picked)
+	_lang_list.activated.connect(_on_language_picked)
+	_lang_list.highlighted.connect(_on_language_picked)   # 设置页是即时生效：↑↓ 也算选定
+	add_child(_lang_list)
+	_sync_language_list()
+	resized.connect(_sync_language_list)
+
+
+func _sync_language_list() -> void:
+	if _lang_list == null:
+		return
+	_lang_list.visible = _tab == TAB_LANGUAGE
+	if not _lang_list.visible:
+		_lang_list.release_focus()
+		return
+	var r := _lang_list_rect()
+	_lang_list.position = r.position
+	_lang_list.size = r.size
+	_lang_list.setup(L10n.LANGUAGES, GameSettings.language, LANG_ROW_H)
 
 
 func _on_language_picked(code: String) -> void:
-	## 设置页是**选完立刻生效**：列表收起、整页重绘、Esc 菜单文案也跟着换。
+	## 设置页是**选完立刻生效**：整页重绘、Esc 菜单文案也跟着换。
+	if code == GameSettings.language:
+		return
 	GameSettings.set_language(code, true)
-	_close_language_menu()
 	if _seed_edit != null:
 		_seed_edit.placeholder_text = L10n.t("settings.seed_placeholder")
 	_rebuild_menu()
 	UiToast.toast(L10n.t("settings.language_changed"))
+	if _lang_list != null:
+		_lang_list.setup(L10n.LANGUAGES, GameSettings.language, LANG_ROW_H)
+	_sync_seed_edit()
 	queue_redraw()
 
 
@@ -293,25 +371,33 @@ func _rebuild_menu() -> void:
 	})
 
 
+# ------------------------------------------------------------ 输入
+
+func _menu_items() -> Array:
+	return [
+		{"text": L10n.t("settings.back_title"), "fn": _back_to_title},
+	]
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	# R660：列表有焦点时 Esc 先收列表（列表自己不吃 Esc，会落到这里）。
-	if _lang_open and event is InputEventKey and event.pressed and not event.echo:
-		if (event as InputEventKey).keycode == KEY_ESCAPE:
-			get_viewport().set_input_as_handled()
-			_close_language_menu()
-			return
 	# R655：浮层里 Esc = 关掉浮层回原界面（宿主是暂停的，只有本节点收得到这个事件）
 	if _overlay:
 		if event is InputEventKey and event.pressed and not event.echo \
 				and (event as InputEventKey).keycode == KEY_ESCAPE:
 			get_viewport().set_input_as_handled()
-			if _lang_open:
-				_close_language_menu()
-			else:
-				_close_overlay()
+			_close_overlay()
 		return
 	if _menu != null and _menu.handle_esc(event):
 		return
+	# R660c：← → 翻页（列表有焦点时方向键归列表，这里只收左右）
+	if event is InputEventKey and event.pressed and not event.echo:
+		var k := (event as InputEventKey).keycode
+		if k == KEY_LEFT:
+			_set_tab(maxi(0, _tab - 1))
+			get_viewport().set_input_as_handled()
+		elif k == KEY_RIGHT:
+			_set_tab(mini(TABS.size() - 1, _tab + 1))
+			get_viewport().set_input_as_handled()
 
 
 func _process(_delta: float) -> void:
@@ -321,30 +407,9 @@ func _process(_delta: float) -> void:
 		queue_redraw()
 
 
-# ------------------------------------------------------------ 布局 / 输入
-
-func _row_rect(i: int) -> Rect2:
-	var total := float(ROW_COUNT) * ROW_H + float(ROW_COUNT - 1) * ROW_GAP
-	var y := LIST_Y + (320.0 - total) * 0.35
-	return Rect2((size.x - ROW_W) / 2.0, y + i * (ROW_H + ROW_GAP), ROW_W, ROW_H)
-
-
-func _vol_rects(r: Rect2) -> Array[Rect2]:
-	## R246 音量行右侧的几何唯一口（画与点共用）：[−][条][+]。
-	var cy := r.position.y + r.size.y / 2.0
-	return [
-		Rect2(r.position.x + r.size.x - 300.0, cy - 16.0, 32.0, 32.0),
-		Rect2(r.position.x + r.size.x - 260.0, cy - 7.0, 118.0, 14.0),
-		Rect2(r.position.x + r.size.x - 134.0, cy - 16.0, 32.0, 32.0),
-	]
-
-
-func _back_rect() -> Rect2:
-	return Rect2(14, 14, 110, 34)
-
-
 func _row_at(pos: Vector2) -> int:
-	for i in ROW_COUNT:
+	var rows := _rows()
+	for i in rows.size():
 		if _row_rect(i).has_point(pos):
 			return i
 	return -1
@@ -352,36 +417,27 @@ func _row_at(pos: Vector2) -> int:
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
-		var h := _row_at(event.position) if not _lang_open else -1
-		var sh := _seed_copy_rect().has_point(event.position) and not _lang_open
-		var lh := _lang_btn_rect().has_point(event.position)
-		if h != _hover or sh != _seed_hover or lh != _lang_hover:
+		var th := _tab_at(event.position)
+		var h := _row_at(event.position)
+		var sh := _tab == TAB_RUN and _seed_copy_rect().has_point(event.position)
+		if th != _tab_hover or h != _hover or sh != _seed_hover:
+			_tab_hover = th
 			_hover = h
 			_seed_hover = sh
-			_lang_hover = lh
 			queue_redraw()
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
-		# R660：语言列表打开时，点列表外只负责收起 —— 不能顺手把下面的设置行翻掉。
-		if _lang_open:
-			if _lang_btn_rect().has_point(event.position):
+		var ti := _tab_at(event.position)
+		if ti >= 0:
+			if ti != _tab:
 				sfx.play("click")
-				_close_language_menu()
-				return
-			if _lang_menu_rect().has_point(event.position):
-				return
-			sfx.play("click")
-			_close_language_menu()
-			return
-		if _lang_btn_rect().has_point(event.position):
-			sfx.play("click")
-			_open_language_menu()
+			_set_tab(ti)
 			return
 		if _back_rect().has_point(event.position):
 			sfx.play("click")
 			_back_to_title()
 			return
-		if _seed_copy_rect().has_point(event.position):
+		if _tab == TAB_RUN and _seed_copy_rect().has_point(event.position):
 			if _seed_copy_text() != "":
 				sfx.play("click")
 			_copy_seed()
@@ -389,68 +445,71 @@ func _gui_input(event: InputEvent) -> void:
 			return
 		var i := _row_at(event.position)
 		if i >= 0:
-			if str(_row(i).get("kind", "toggle")) == "volume":
+			var d: Dictionary = _rows()[i]
+			if str(d.get("kind", "toggle")) == "volume":
 				var vr := _vol_rects(_row_rect(i))
 				if vr[0].has_point(event.position):
 					sfx.play("click")
-					_nudge_volume(i, -VOL_STEP)
+					_nudge_volume(str(d["id"]), -VOL_STEP)
 					return
 				if vr[2].has_point(event.position):
 					sfx.play("click")
-					_nudge_volume(i, VOL_STEP)
+					_nudge_volume(str(d["id"]), VOL_STEP)
 					return
 				if vr[1].grow(8.0).has_point(event.position):
 					# 点条上任意位置直接定位（条本身就是滑块）
 					sfx.play("click")
-					_set_volume(i, (event.position.x - vr[1].position.x) / vr[1].size.x)
+					_set_volume(str(d["id"]),
+							(event.position.x - vr[1].position.x) / vr[1].size.x)
 					return
 				return   # 点行进空白处：不动作（别把音量行当成开关翻掉）
 			sfx.play("click")
-			_flip(i)
+			_activate_row(d)
 			return
 		queue_redraw()
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
-		if _lang_open:
-			_close_language_menu()
-		elif _menu != null:
+		if _menu != null:
 			_menu.toggle()
 
 
-func _flip(i: int) -> void:
+func _activate_row(d: Dictionary) -> void:
+	## 点行 = 切换（开关翻面 / 档位循环）。唯一落地点都在这一个函数里。
 	GameSettings.ensure_loaded()
-	match i:
-		0:
+	match str(d.get("id", "")):
+		"sfx":
 			GameSettings.set_sfx_on(not GameSettings.sfx_on)
 			sfx.enabled = GameSettings.sfx_on
 			if sfx.enabled:
 				sfx.play("click")
-		2:
+		"music":
 			GameSettings.set_music_on(not GameSettings.music_on)
 			Bgm.set_enabled(GameSettings.music_on)
 			if GameSettings.music_on:
 				Bgm.play("title")   # 当场就有反馈（否则要等下一次切场景才响）
-		4:
+		"fullscreen":
 			GameSettings.set_fullscreen(not GameSettings.fullscreen)
+		"foe_speed":
+			GameSettings.set_foe_speed(GameSettings.next_foe_speed(GameSettings.foe_speed))
 	queue_redraw()
 
 
-func _nudge_volume(i: int, delta: float) -> void:
+func _nudge_volume(id: String, delta: float) -> void:
 	## R246：− / + 按一档（10%）步进，并对齐到整档（避免 10% 累积出 0.30000001）。
-	var cur := _volume_of(i)
+	var cur := _volume_of(id)
 	var steps := roundf((cur + delta) * float(VOL_NUM))
-	_set_volume(i, steps / float(VOL_NUM))
+	_set_volume(id, steps / float(VOL_NUM))
 
 
-func _volume_of(i: int) -> float:
+func _volume_of(id: String) -> float:
 	GameSettings.ensure_loaded()
-	return GameSettings.sfx_volume if i == 1 else GameSettings.music_volume
+	return GameSettings.sfx_volume if id == "sfx_vol" else GameSettings.music_volume
 
 
-func _set_volume(i: int, v: float) -> void:
+func _set_volume(id: String, v: float) -> void:
 	## 唯一落地点：写设置 + 落到正在播的实例 + 重绘（两档音量共用）。
 	var nv := clampf(v, 0.0, 1.0)
 	nv = roundf(nv * float(VOL_NUM)) / float(VOL_NUM)   # 吸附到 5% 网格（点条也整齐）
-	if i == 1:
+	if id == "sfx_vol":
 		GameSettings.set_sfx_volume(nv)
 		sfx.volume = nv
 		if nv > 0.0:
@@ -493,28 +552,38 @@ func _exit_tree() -> void:
 	_restore_overlay_pause()
 
 
-# ------------------------------------------------------------ 绘制
+# ------------------------------------------------------------ 内容
 
-func _row(i: int) -> Dictionary:
+func _rows() -> Array:
+	## 当前页的行描述。`id` 是行为唯一键（画、点、落盘都靠它，不再用序号下标）。
 	GameSettings.ensure_loaded()
-	match i:
-		0:
-			return {"title": L10n.t("settings.sfx"), "desc": L10n.t("settings.sfx_desc"),
-					"kind": "toggle", "on": GameSettings.sfx_on}
-		1:
-			return {"title": L10n.t("settings.sfx_vol"),
-					"desc": L10n.t("settings.sfx_vol_desc"),
-					"kind": "volume", "val": GameSettings.sfx_volume}
-		2:
-			return {"title": L10n.t("settings.music"), "desc": L10n.t("settings.music_desc"),
-					"kind": "toggle", "on": GameSettings.music_on}
-		3:
-			return {"title": L10n.t("settings.music_vol"),
-					"desc": L10n.t("settings.music_vol_desc"),
-					"kind": "volume", "val": GameSettings.music_volume}
-	return {"title": L10n.t("settings.fullscreen"),
-			"desc": L10n.t("settings.fullscreen_desc"),
-			"kind": "toggle", "on": GameSettings.fullscreen}
+	match _tab:
+		TAB_AUDIO:
+			return [
+				{"id": "sfx", "kind": "toggle", "on": GameSettings.sfx_on,
+						"title": L10n.t("settings.sfx"),
+						"desc": L10n.t("settings.sfx_desc")},
+				{"id": "sfx_vol", "kind": "volume", "val": GameSettings.sfx_volume,
+						"title": L10n.t("settings.sfx_vol"),
+						"desc": L10n.t("settings.sfx_vol_desc")},
+				{"id": "music", "kind": "toggle", "on": GameSettings.music_on,
+						"title": L10n.t("settings.music"),
+						"desc": L10n.t("settings.music_desc")},
+				{"id": "music_vol", "kind": "volume", "val": GameSettings.music_volume,
+						"title": L10n.t("settings.music_vol"),
+						"desc": L10n.t("settings.music_vol_desc")},
+			]
+		TAB_DISPLAY:
+			return [
+				{"id": "fullscreen", "kind": "toggle", "on": GameSettings.fullscreen,
+						"title": L10n.t("settings.fullscreen"),
+						"desc": L10n.t("settings.fullscreen_desc")},
+				{"id": "foe_speed", "kind": "cycle", "on": true,
+						"value": GameSettings.foe_speed,
+						"title": L10n.t("settings.foe_speed"),
+						"desc": L10n.t("settings.foe_speed_desc")},
+			]
+	return []
 
 
 func _draw() -> void:
@@ -523,7 +592,7 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(0, 110), L10n.t("settings.autosave"),
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
-	_draw_language_control()
+	_draw_tabs()
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
 	UiTheme.draw_action(self, back, false, false, hov_back)
@@ -534,33 +603,42 @@ func _draw() -> void:
 	var back_label := "← %s" % back_name if _overlay else "← %s" % L10n.t("settings.back_title")
 	draw_string(_font_bold, back.position + Vector2(0, 22), back_label,
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
-	for i in ROW_COUNT:
-		_draw_row(i, _row(i))
-	_draw_seed_panel()
-	draw_string(_font, Vector2(0, size.y - 44), L10n.t("settings.seed_footer"),
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
-			UiTheme.PAGE_MUTED)
+	var rows := _rows()
+	for i in rows.size():
+		_draw_row(i, rows[i])
+	if _tab == TAB_LANGUAGE:
+		_draw_language_note()
+	elif _tab == TAB_RUN:
+		_draw_seed_panel()
 
 
-func _draw_language_control() -> void:
-	## R660：页首下拉按钮。只显示「当前语言」，完整列表交给 `LanguageMenu`。
-	var r := _lang_btn_rect()
-	var hov := _lang_hover or _lang_open
-	UiTheme.draw_action(self, r, _lang_open, false, hov)
-	var ink := UiTheme.ADVENTURE_LIGHT if _lang_open else UiTheme.PAGE_INK
-	var label := "%s · %s" % [L10n.t("settings.language"),
-			L10n.native_name(GameSettings.language)]
-	draw_string(_font_bold, r.position + Vector2(14.0, 23.0), label,
-			HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 44.0, UiTheme.FS_LABEL, ink)
-	var c := Vector2(r.end.x - 18.0, r.get_center().y)
-	var dy := 2.0 if not _lang_open else -2.0
-	draw_polyline(PackedVector2Array([c + Vector2(-4.0, -dy), c,
-			c + Vector2(4.0, -dy)]), ink, 1.6, true)
-	if _lang_open:
-		# 面板投一点暗影，和纸面分开（Godot 的 Control 没有 z 阴影，这里直接画一条软边）
-		var mr := _lang_menu_rect()
-		draw_rect(Rect2(mr.position + Vector2(3, 4), mr.size),
-				Color(0.12, 0.10, 0.06, 0.22), true)
+func _draw_tabs() -> void:
+	## 页签：选中 = 深绿底 + 亮金边（和列表里选中行同一套语言），未选 = 半透纸卡。
+	var rects := _tab_rects()
+	for i in rects.size():
+		var r: Rect2 = rects[i]
+		var active := i == _tab
+		var hov := i == _tab_hover and not active
+		var bg := UiTheme.ADVENTURE_FOREST if active else (
+				Color(1.0, 0.98, 0.90, 0.72) if hov else Color(1.0, 1.0, 1.0, 0.34))
+		draw_rect(r, bg, true)
+		draw_rect(r, UiTheme.ADVENTURE_BRASS_LIT if active else UiTheme.ADVENTURE_BRASS,
+				false, 1.6 if active else 1.0)
+		draw_string(_font_bold, Vector2(r.position.x, r.position.y + 26.0),
+				L10n.t(_tab_key(i)), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
+				UiTheme.FS_LABEL,
+				UiTheme.ADVENTURE_LIGHT if active else UiTheme.PAGE_INK)
+	# 页签下方一条极淡金线，把「页签 / 内容」分开（不画满，两端各留 40）
+	var y := TAB_Y + TAB_H + 10.0
+	draw_line(Vector2(40.0, y), Vector2(size.x - 40.0, y),
+			Color(UiTheme.PAGE_GOLD, 0.30), 1.0)
+
+
+func _draw_language_note() -> void:
+	var r := _lang_list_rect()
+	draw_string(_font, Vector2(r.position.x, r.end.y + 26.0),
+			L10n.t("settings.language_note"), HORIZONTAL_ALIGNMENT_LEFT, r.size.x,
+			UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 
 
 func _draw_seed_panel() -> void:
@@ -593,10 +671,14 @@ func _draw_seed_panel() -> void:
 	var can_copy := _seed_copy_text() != ""
 	var hov := _seed_hover and can_copy
 	draw_rect(cr, UiTheme.PAGE_PAPER if hov else UiTheme.ADVENTURE_INPUT, true)
-	draw_rect(cr, UiTheme.ADVENTURE_BRASS if hov else UiTheme.ADVENTURE_BRASS, false, 1.4)
+	draw_rect(cr, UiTheme.ADVENTURE_BRASS, false, 1.4)
 	draw_string(_font_bold, cr.position + Vector2(0, 18), L10n.t("settings.copy"),
 			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_CAPTION,
 			UiTheme.PAGE_INK if can_copy else Color("63687a"))
+	# 页脚提示挂在种子面板下面（它讲的就是种子，跟着本页走）
+	draw_string(_font, Vector2(0, p.end.y + 30.0), L10n.t("settings.seed_footer"),
+			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
+			UiTheme.PAGE_MUTED)
 
 
 func _draw_row(i: int, d: Dictionary) -> void:
@@ -604,13 +686,19 @@ func _draw_row(i: int, d: Dictionary) -> void:
 	var hov := i == _hover
 	UiTheme.draw_info_card(self, r, hov)
 	draw_string(_font_bold, r.position + Vector2(20, 24), str(d["title"]),
-			HORIZONTAL_ALIGNMENT_LEFT, 160, UiTheme.FS_BODY, UiTheme.PAGE_INK)
-	var is_vol := str(d.get("kind", "toggle")) == "volume"
+			HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_BODY, UiTheme.PAGE_INK)
+	var kind := str(d.get("kind", "toggle"))
+	var is_vol := kind == "volume"
+	# 档位行右侧只剩一颗小铜牌（-104 起），描述可以铺到 386；开关行要给开关让位。
 	draw_string(_font, r.position + Vector2(20, 43), str(d["desc"]),
-			HORIZONTAL_ALIGNMENT_LEFT, 190.0 if is_vol else 360, UiTheme.FS_CAPTION,
-			UiTheme.PAGE_MUTED)
+			HORIZONTAL_ALIGNMENT_LEFT,
+			190.0 if is_vol else (386.0 if kind == "cycle" else 360),
+			UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 	if is_vol:
 		_draw_volume_row(r, float(d.get("val", 1.0)))
+		return
+	if kind == "cycle":
+		_draw_cycle_chip(r, float(d.get("value", 1.0)), hov)
 		return
 	var on := bool(d["on"])
 	# 右侧开关：药丸底 + 圆点（开 = 绿 / 关 = 灰），文字跟着走
@@ -639,6 +727,16 @@ func _draw_row(i: int, d: Dictionary) -> void:
 			UiTheme.PAGE_GREEN if on else UiTheme.PAGE_MUTED)
 
 
+func _draw_cycle_chip(r: Rect2, value: float, hov: bool) -> void:
+	## 循环档位（敌人速度）：一颗小铜牌，写着 ×1.0 / ×1.5 / ×2.0，点它翻下一档。
+	var c := _cycle_rect(r)
+	draw_rect(c, UiTheme.PAGE_PAPER if hov else UiTheme.ADVENTURE_INPUT, true)
+	draw_rect(c, UiTheme.ADVENTURE_BRASS_LIT if hov else UiTheme.ADVENTURE_BRASS,
+			false, 1.4)
+	draw_string(_font_bold, c.position + Vector2(0, 21), "×%.1f" % value,
+			HORIZONTAL_ALIGNMENT_CENTER, c.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
+
+
 func _draw_volume_row(r: Rect2, val: float) -> void:
 	## R246：音量行右侧 = [−][滑条][+][ 80% ]。三块几何走 `_vol_rects`（与点击同一份）。
 	var vr := _vol_rects(r)
@@ -646,7 +744,7 @@ func _draw_volume_row(r: Rect2, val: float) -> void:
 	for k in [0, 2]:
 		var b: Rect2 = vr[k]
 		var hb := b.has_point(mp)
-		draw_rect(b, UiTheme.PAGE_PAPER if hb else UiTheme.PAGE_PAPER, true)
+		draw_rect(b, UiTheme.PAGE_PAPER, true)
 		draw_rect(b, Color("7d8aa4") if hb else UiTheme.ADVENTURE_BRASS, false, 1.4)
 		draw_string(_font_bold, b.position + Vector2(0, 22), "−" if k == 0 else "+",
 				HORIZONTAL_ALIGNMENT_CENTER, b.size.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)

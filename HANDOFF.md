@@ -1577,7 +1577,7 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - **11 档为什么只有一行**：R224 起 `difficulty_note()` 只返回**当前档新增**这一条，不再把 1..当前档拼起来；11 档新增 = 「第三层上锁」，所以屏幕上就一行 —— 不是漏追加。截图档 `-- --screenshot --diff 11` + `--diff 0` 各拍一张复核过（11 = 「11 上锁 / 第三层上锁」橙色档位框；0 = 「0 轻松 / 无」）。
 - **改动**（`scripts/class_pick_scene.gd`）：`_draw_difficulty_block()` 删掉 `difficulty_summary()` 的绘制循环；连带删除只服务它的 `_summary_rect()` 与 `SUM_LINES` / `SUM_LH` 常量（避免留死代码）。`RunState.difficulty_summary()` **保留** —— 回归仍在断言它的取值，将来想查数值也还有唯一口。区块现在 = 难度档位行 + 当前档文本 + 确认进入，文本底到确认钮之间留 34px 呼吸。
 - **测试**（`scripts/test_engine.gd`，+1 条源码锁）：`_summary_rect` 不得复活、`_wrap_text(RunState.difficulty_summary()` 不得出现在 `class_pick_scene.gd`、当前档文本绘制必须在位。判据刻意收窄到「绘制调用」而不是函数名 —— 首版按 `RunState.difficulty_summary` 判 0 次出现，被同文件注释里的字面误伤，engine 当场红 1 条。
-- **回归**：assemble 0 / mana PASS / engine **5844✓** 0✗（5838 基线 + 本轮 1 条 + 并行线）+ reward 26✓ / bgm 39✓ / smoke 69✓；存档备份 `E:	mp650_userdata_bk` → `RESTORE_VERIFY OK`（71 项）。驱动脚本 `tools/_run_r650_verify.py` 一并入库。
+- **回归**：assemble 0 / mana PASS / engine **5844✓** 0✗（5838 基线 + 本轮 1 条 + 并行线）+ reward 26✓ / bgm 39✓ / smoke 69✓；存档备份 `E:\tmp650_userdata_bk` → `RESTORE_VERIFY OK`（71 项）。驱动脚本 `tools/_run_r650_verify.py` 一并入库。
 
 ## 2026-11-13 R655 ESC 菜单「音效开关」→「设置」（设置页浮层，回来还是这一局）
 - **口径（用户）**：「esc 菜单里，把音效开关按钮改成设置按钮，直接进入设置界面，并且确保这个方式进入可以通过按钮正确返回战斗。」
@@ -1586,7 +1586,7 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - **暂停归属**：浮层只还自己开的暂停（`_overlay_paused`），`_exit_tree` 兜底 —— 与 `UiMenu` 同一条纪律（忘了还就是整局假死）。
 - **战斗侧**：`_menu_items()` 换成「设置 / 返回标题」；`_open_settings()` **`call_deferred` 一帧**再开浮层 —— 菜单项回调之后 UiMenu 还会 `close()` → `_release_pause()` 把暂停还回去，当场开会被紧跟着解冻（`_open_level_menu` 同一口径）。顺带删掉只剩一处调用的 `_toggle_sound()`。
 - **测试**：smoke 新增 `_check_settings_overlay()`（浮层挂宿主下 + 打开暂停 + 引擎实例不变 + 关掉恢复暂停）；engine 新增 2 条源码锁（战斗菜单是「设置」且不含音效开关、设置页 open/close/ALWAYS/标题页旧路都在）。⚠️ 源码锁又踩了同一个坑：判「某字面 0 次出现」时被**自己写的注释**撞（注释里写了「音效：开/关」）—— 判 0 出现的锁，锚点就别在注释里复述那个字面。
-- **回归**：assemble 0 / mana PASS / engine **5839✓ 0✗** / reward 26 / bgm 39 / smoke 69-0；存档备份 `E:	mp651_userdata_bk` → `RESTORE_VERIFY OK`。
+- **回归**：assemble 0 / mana PASS / engine **5839✓ 0✗** / reward 26 / bgm 39 / smoke 69-0；存档备份 `E:\tmp651_userdata_bk` → `RESTORE_VERIFY OK`。
   ⚠️ 计数口径：同环境用 `git show HEAD:scripts/test_engine.gd` 单跑得 **5837**，本轮 5839 = 恰好 +2 条新断言（R650 记的 5844 是当时档案 / 解锁状态带出来的浮动数，别拿它当基线）。
 - **出图**：`tools/_shot_r651_settings.gd`（探针，SceneTree 自己数帧，避开「浮层暂停 → 战斗帧数走不到截图帧」的死结）→ `_shot_r651_overlay.png`；菜单那张走 `--menu` + `--shotframe`。
 
@@ -1596,16 +1596,16 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - **改法**：`apply_button(btn, primary, _on_dark, fs_override := 0)` 新增第 4 参，>0 时写进 button meta 并强制该字号；`_fit_action_button()` 读 meta 优先，且**指定过字号的按钮不吃 compact 分档**（否则同尺寸两个按钮又会因 primary 一个 24 一个 20）。`ui_menu._rebuild()` 统一传 `FS_SUBHEAD` → 整列 20 号，主按钮只靠**深绿底 + 粗体**分层次。
 - **影响面**：只有 `UiMenu`（9 个界面的 ESC 菜单）。标题页开始按钮 / 结算重启 / 胜利 / 卡组编辑确认都是各自的**单主按钮**，身边没有次按钮可比，仍 24，不动。
 - **测试**：`test_smoke._check_menu` +1 条 —— 菜单容器里所有 `Button` 的 `font_size` 必须一致（凑不到 2 个视为拿错容器）。
-- **回归**：assemble 0✗ / smoke **69✓ 0✗**；存档 `E:	mp657_userdata_bk` → `RESTORE_VERIFY OK`（69 项）。
+- **回归**：assemble 0✗ / smoke **69✓ 0✗**；存档 `E:\tmp657_userdata_bk` → `RESTORE_VERIFY OK`（69 项）。
   ⚠️ 本轮**只跑这两套**：并行会话正在改 R656（`battle_scene` / `card_face` / `card_info_boxes` / `test_engine` 在工作区里都是脏的），跑全六套既会跟它抢 `_e.txt` 等中间文件，也会把它的半成品算进我的基线 —— engine / reward / bgm / mana 按「未触及」处理。驱动脚本 `tools/_run_r657_verify.py`。
 - **编号**：开工时 HEAD = R655，并行线已占 R656（工作区有 `tools/_run_r656_verify.py`、`_shot_r656_slots.gd`）→ 本轮让到 **R657**。
 - **出图**：`battle.tscn -- --screenshot --level 0 --menu --shotframe 120`；改前 `_shot_r651_menu.png`、改后 `_shot_r657_menu20.png`，并排对比 `_z_cmp_menu.png`（三个按钮现在等高）。
 - **顺带发现（未改，待定）**：设置页种子框里「随机种子」是 FS_BODY(16)、「下一局种子」是 FS_LABEL(14)，同一框内同级标题差一号，像手误；店长没点名，先记着。
 
-## 2026-11-13 R660 语言切换（设置下拉 + 正式版首次选择）
-- **入口**：设置页右上角「语言 · 当前语言」下拉；正式版第一次启动（片头之后、首页之前）进 `scenes/language_pick.tscn`。测试版不弹，老玩家（有 profile / 存档 / 对战记录）视为已选择，不打断；`--force-language-pick` 可强制出图。
+## 2026-11-13 R660 / R660c 语言切换（设置分页 + 正式版首次选择）
+- **入口**：设置页「语言」页签里的内嵌列表（R660c 改掉了原先右上角下拉）；正式版第一次启动（片头之后、首页之前）进 `scenes/language_pick.tscn`。测试版不弹，老玩家（有 profile / 存档 / 对战记录）视为已选择，不打断；`--force-language-pick` 可强制出图。
 - **可扩展**：`scripts/l10n.gd` 的 `LANGUAGES` 是唯一注册表（当前 zh / en / ja），列表行由 `scripts/language_menu.gd` 绘制；3 项目前刚好排满，超过可视行数自动出现滚动条，支持滚轮 / ↑↓ / 拖动。新增语言只加注册表 + 文案，不改两个入口。
-- **UI**：设置页不新增第六行（种子面板已贴下沿），语言用页首下拉；首次选择页用一只木牌标题 + 纸卡列表 + 主按钮。背景 `assets/ui/language_bg.png`（1920×1080）由 codex 纯文生图，无文字 / UI；源图与 prompt 在 `art_src/2026-11-13_语言选择_R660/`。
+- **UI**：设置页按类分页 —— 音频 / 画面 / 语言 / 对局四个页签，每页只摊本类的东西；语言列表内嵌在语言页，种子输入框只在「对局」页显示；画面页顺手把早就存在 `GameSettings.foe_speed` 的「敌人行动速度」搬了上来（和战斗里那颗按钮同一份设置）。首次选择页用一只木牌标题 + 纸卡列表 + 主按钮。背景 `assets/ui/language_bg.png`（1920×1080）由 codex 纯文生图，无文字 / UI；源图与 prompt 在 `art_src/2026-11-13_语言选择_R660/`。
 - **文案范围**：本批只翻界面骨架（标题页按钮、设置页、语言选择页、页脚）。卡牌 / 道具 / 事件正文仍由并行 i18n 流水线处理，本批**没动** `i18n/cards_*`、`noncard_*` 或 `battle_scene.gd`。
 - **品牌名取值**：非中文标题走 `GameBrand.title_text_localized()`，英文名只在这个函数里读。`title_scene.gd` 直接引用 `NAME_EN` 会踩 R607 源码锁（`test_assemble` 用 `find("NAME_EN") < 0` 硬拦，本轮踩过一次，报 `Combination tests failures: 1`）。
-- **验证**：`python _verify.py` 全绿（assemble 0 失败 / mana PASS / engine 5930✓ 0✗ / reward 26 / bgm 39 / smoke 70）；`test_engine` 有 R660 落盘 / 回退 / 路由 / 12 项滚动 9 条用例；截图 `screenshot_language.png`、`screenshot_settings.png` 及英文 / 日文首页、设置页各一张。开发口：`--lang=en`、`--force-language-pick`、`--screenshot --lang-menu`。
+- **验证**：`python _verify.py` 全绿（assemble 0 失败 / mana PASS / engine 5930✓ 0✗ / reward 26 / bgm 39 / smoke 70）；`test_engine` 有 R660 落盘 / 回退 / 路由 / 12 项滚动 9 条用例；截图 `screenshot_language.png`、`screenshot_settings.png` 及英文 / 日文首页、设置页各一张；`smoke` 新增 R660c 结构用例（4 页签 / 列表与输入框按页显隐）。开发口：`--lang=en`、`--force-language-pick`、`--screenshot --tab=audio|display|language|run`（`--lang-menu` 仍等同 language）。

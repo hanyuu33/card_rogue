@@ -333,7 +333,7 @@ func _initialize() -> void:
 			_check_duck_blood_instant],
 		# 对战记录 / 设置（R215：回放已删）
 		["res://scenes/record_list.tscn", func(): _prep_records(), _check_record_list],
-		["res://scenes/settings.tscn", func(): _reset()],
+		["res://scenes/settings.tscn", func(): _reset(), _check_settings],
 		# 事件场景的其它子类型
 		["res://scenes/event.tscn", func():
 				_reset()
@@ -1007,6 +1007,37 @@ func _check_duck_blood_instant(scene: Variant) -> void:
 	RunState.pending_relic_drop = -1
 	RunState.run_finished = r442_fin
 
+
+
+func _check_settings(scene: Variant) -> void:
+	## R660c：设置页按类分页 —— 四个页签各摊自己的项；语言列表 / 种子输入框
+	## 只在对应页可见（别的页留着会浮在行卡上面）。
+	if scene.TABS.size() != 4:
+		_smoke_fail("R660c 设置页：页签应有 4 个，实际 %d" % scene.TABS.size())
+		return
+	scene._set_tab(scene.TAB_AUDIO)
+	var audio_rows: Array = scene._rows()
+	var seed_hidden: bool = scene._seed_edit != null and not scene._seed_edit.visible
+	scene._set_tab(scene.TAB_LANGUAGE)
+	var lang_rows: Array = scene._rows()
+	var lang_vis: bool = scene._lang_list != null and scene._lang_list.visible
+	scene._set_tab(scene.TAB_RUN)
+	var seed_vis: bool = scene._seed_edit != null and scene._seed_edit.visible
+	scene._set_tab(scene.TAB_AUDIO)
+	if audio_rows.size() != 4:
+		_smoke_fail("R660c 设置页：音频页应有 4 行，实际 %d" % audio_rows.size())
+	elif not seed_hidden:
+		_smoke_fail("R660c 设置页：音频页上种子输入框不该显示")
+	elif not lang_rows.is_empty():
+		_smoke_fail("R660c 设置页：语言页不该有设置行")
+	elif not lang_vis:
+		_smoke_fail("R660c 设置页：语言页没把语言列表显示出来")
+	elif not seed_vis:
+		_smoke_fail("R660c 设置页：对局页没把种子输入框显示出来")
+	elif scene._tab_rects().size() != 4 or scene._tab_rects()[0].size.x < 60.0:
+		_smoke_fail("R660c 设置页：页签几何无效")
+	else:
+		print("SMOKE OK R660c 设置页：4 页签各摊自己的项 · 列表/输入框按页显隐")
 
 
 func _check_record_list(scene: Variant) -> void:
