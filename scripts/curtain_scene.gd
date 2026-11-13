@@ -92,6 +92,10 @@ func _ready() -> void:
 	_fill_options()
 	_relayout()
 	get_viewport().size_changed.connect(_relayout)
+	# 起点三选一时玩家要能确认自己现有的卡组与道具 —— 右上角挂「牌库 N / 道具 N」
+	# 两个查看按钮（与其他 run 内界面同一口径）。全局状态条（头像/生命/金币）本就显示。
+	DeckViewer.attach(self)
+	RelicViewer.attach(self, Vector2(1044, 6))
 	_say(CurtainLines.greeting(_layer, _cls))
 	if _tip_demo >= 0:
 		_hover = _tip_demo
@@ -285,9 +289,10 @@ func _relayout() -> void:
 		var b: Button = _opts[i]
 		b.position = Vector2(x0 + i * (OPT_W + OPT_GAP), oy)
 		b.size = Vector2(OPT_W, OPT_H)
-	# 跳过 / 离开（屏幕右上角，不压对话框的藤蔓角饰）
+	# 跳过 / 离开（左上角，全局状态条正下方；右上角让给「牌库 N / 道具 N」查看按钮）
 	_skip.size = Vector2(150.0, 34.0)
-	_skip.position = Vector2(size.x - _skip.size.x - 22.0, 18.0)
+	var so := UiTheme.stage_origin(get_viewport().get_visible_rect().size)
+	_skip.position = so + Vector2(8.0, 62.0)
 
 
 # ──────────────────────────────────────────────────────── 台词 / 状态机
