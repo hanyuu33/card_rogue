@@ -13,6 +13,10 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 const ROW_H := 56.0
 const ROW_W := 980.0
 const LIST_Y := 132.0
+## R673：列表底部留白。原来只留 24 —— 1280x720 下算出 10 行，最后一行占到 y=684，
+## 正压在页脚纸边和「第 N-M 条」那行上（用户口径「字压住框」）。留 48 后是 9 行，
+## 最后一行收到 628，「第 N-M 条」（基线 684）上面还空 44。
+const LIST_BOTTOM_PAD := 48.0
 
 var _font: Font
 var _font_bold: Font
@@ -117,7 +121,7 @@ func _clear_rect() -> Rect2:
 
 
 func _max_rows() -> int:
-	return maxi(1, int((size.y - LIST_Y - 24.0) / ROW_H))
+	return maxi(1, int((size.y - LIST_Y - LIST_BOTTOM_PAD) / ROW_H))
 
 
 func _row_at(pos: Vector2) -> int:
@@ -227,14 +231,17 @@ func _draw() -> void:
 				GameI18n.ui("shell", "RECORD_EMPTY", "还没有记录 —— 从标题「开始对战」打一局，结束后这里会有一行结果。"),
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 		return
-	for i in _max_rows():
-		var idx := _scroll + i
-		if idx >= _rows.size():
-			break
-		_draw_row(idx, _rows[idx])
+	# R673：详情打开时**不画列表** —— 遮罩只有 0.55 黑压不住字，最后一行会从面板下沿
+	# 漏出来，落在页脚纸边上（就是「字压住框」）。
+	if _sel < 0:
+		for i in _max_rows():
+			var idx := _scroll + i
+			if idx >= _rows.size():
+				break
+			_draw_row(idx, _rows[idx])
 	if _sel >= 0 and _sel < _rows.size():
 		_draw_detail()   # R241：详情盖在列表之上
-	if _rows.size() > _max_rows():
+	if _sel < 0 and _rows.size() > _max_rows():
 		# R630：同故事页 / 禁卡页 —— -12 会被纸面九宫格的下边框横切，收到 -36。
 		draw_string(_font, Vector2(0, size.y - 36),
 				GameI18n.ui("shell", "RECORD_RANGE", "第 %d–%d 条 / 共 %d 条")
@@ -250,8 +257,9 @@ func _detail_rect() -> Rect2:
 
 
 func _detail_close_rect() -> Rect2:
+	## R673：右上角是 34px 角花，原来 +10 贴在花上；退到 +40 / -86 的花内空白处。
 	var r := _detail_rect()
-	return Rect2(r.end.x - 50.0, r.position.y + 10.0, 36.0, 30.0)
+	return Rect2(r.end.x - 86.0, r.position.y + 40.0, 36.0, 30.0)
 
 
 func _open_detail(idx: int) -> void:
@@ -319,16 +327,21 @@ func _deck_entries(rec: Dictionary) -> Array:
 
 func _draw_detail() -> void:
 	## 详情面板：上面概览（含种子 / 生命 / 最大生命），下面左道具右卡组。
+	## R673：面板九宫格四周各有 34px 角花 —— 内容原来从 +48 / +32 起算，结果标题左端被
+	## 左上卷边切掉、字顶压在上边框花纹上，关闭钮和分隔线也都骑在角花上（用户口径
+	## 「字压住框」）。这里统一把内容退到角花之内：左右 72、上 54、下 42。
 	var r := _detail_rect()
 	# 遮罩 + 面板
 	draw_rect(UiTheme.bleed_rect(self), Color(0, 0, 0, 0.55), true)
 	UiTheme.draw_panel_bg(self, r)
 	var rec: Dictionary = _rows[_sel]
 	var res := str(rec.get("result", ""))
-	var x0 := r.position.x + 48.0
-	var x1 := r.end.x - 32.0
+	var x0 := r.position.x + 72.0
+	var x1 := r.end.x - 72.0
+	var top := r.position.y + 54.0
+	var bot := r.end.y - 42.0
 	# 标题：时间 + 结果
-	draw_string(_font_bold, Vector2(x0, r.position.y + 32.0),
+	draw_string(_font_bold, Vector2(x0, top),
 			"%s · %s" % [RunRecord.fmt_time(str(rec.get("time", "?"))),
 			RunRecord.result_label(res, int(rec.get("layer", -1)))],
 			HORIZONTAL_ALIGNMENT_LEFT, 520, UiTheme.FS_HEADING,
@@ -338,10 +351,10 @@ func _draw_detail() -> void:
 	UiTheme.draw_close(self, cr, cr.has_point(get_local_mouse_position()))
 	# 概览两行
 	var seed_v := int(rec.get("seed", 0))
-	draw_string(_font_bold, Vector2(x0, r.position.y + 58.0),
+	draw_string(_font_bold, Vector2(x0, top + 26.0),
 			GameI18n.ui("shell", "RECORD_SEED", "种子：%s") % ("—" if seed_v == 0 else RunState.seed_text_of(seed_v)),
 			HORIZONTAL_ALIGNMENT_LEFT, 320, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
-	draw_string(_font, Vector2(x0 + 250.0, r.position.y + 58.0),
+	draw_string(_font, Vector2(x0 + 250.0, top + 26.0),
 			GameI18n.ui("shell", "RECORD_CLASS_DIFFICULTY_TIME", "角色：%s · 难度 %d · 用时 %s")
 			% [PlayerClass.legacy_id(str(rec.get("class", "?"))),
 			int(rec.get("difficulty", 2)), RunRecord.fmt_secs(int(rec.get("secs", 0)))],
@@ -351,10 +364,10 @@ func _draw_detail() -> void:
 		var hp := int(rec.get("hp", 0))
 		var mhp := int(rec.get("max_hp", 0))
 		var hp_col := Color("e07a6a") if (res == "lose" or hp <= 0) else UiTheme.PAGE_GREEN
-		draw_string(_font_bold, Vector2(x0, r.position.y + 82.0),
+		draw_string(_font_bold, Vector2(x0, top + 50.0),
 				GameI18n.ui("shell", "RECORD_HP", "生命 %d / %d") % [hp, mhp],
 				HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_BODY, hp_col)
-		draw_string(_font, Vector2(x0 + 250.0, r.position.y + 82.0),
+		draw_string(_font, Vector2(x0 + 250.0, top + 50.0),
 				GameI18n.ui("shell", "RECORD_SNAPSHOT_STATS", "金币 %d · 层数 %d · 战斗胜场 %d（精英 %d）")
 				% [int(rec.get("gold", 0)), int(rec.get("layer", 0)),
 				int(rec.get("battles", 0)), int(rec.get("elites", 0))],
@@ -367,11 +380,11 @@ func _draw_detail() -> void:
 			if b is Dictionary:
 				parts.append(GameI18n.ui("shell", "RECORD_BOSS_ITEM", "第 %d 层 · %s") % [int((b as Dictionary).get("layer", 0)),
 						str((b as Dictionary).get("name", "?"))])
-		draw_string(_font, Vector2(x0, r.position.y + 102.0),
+		draw_string(_font, Vector2(x0, top + 70.0),
 				GameI18n.ui("shell", "RECORD_BOSS_LIST", "Boss：%s") % "　/　".join(parts),
 				HORIZONTAL_ALIGNMENT_LEFT, 900, UiTheme.FS_LABEL, Color("e8b04a"))
 	# 分隔线
-	var sep_y := r.position.y + 118.0
+	var sep_y := top + 88.0
 	draw_line(Vector2(x0, sep_y), Vector2(x1, sep_y), Color("3d424e"), 1.0)
 	var body_y := sep_y + 26.0
 	if not has_snap:
@@ -381,14 +394,14 @@ func _draw_detail() -> void:
 		return
 	# ---- 左列：最终道具 ----
 	var mid := r.position.x + 456.0
-	draw_line(Vector2(mid - 14.0, body_y), Vector2(mid - 14.0, r.end.y - 16.0),
+	draw_line(Vector2(mid - 14.0, body_y), Vector2(mid - 14.0, bot),
 			Color("3d424e"), 1.0)
 	var relics := _relic_entries(rec)
 	draw_string(_font_bold, Vector2(x0, body_y),
 			GameI18n.ui("shell", "RECORD_FINAL_RELICS", "最终道具（%d）") % relics.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	var ly := body_y + 24.0
-	var max_rel := maxi(1, int((r.end.y - 16.0 - ly) / 22.0))
+	var max_rel := maxi(1, int((bot - ly) / 22.0))
 	if relics.is_empty():
 		draw_string(_font, Vector2(x0, ly + 14.0), GameI18n.ui("shell", "RECORD_NO_RELICS", "（这一局没有获得道具）"),
 				HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
@@ -414,7 +427,9 @@ func _draw_detail() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, 460, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	var dy := body_y + 24.0
 	var row_h := 21.0
-	var max_deck := maxi(1, int((r.end.y - 16.0 - dy) / row_h))
+	# R673：底部界线从 `r.end.y - 16` 收到 `bot`（下角花 34 + 8）—— 原来多出来的十几行
+	# 会把卡名画到下边框的花纹上；同时给「卡组 第 N–M 行」留一行位置。
+	var max_deck := maxi(1, int((bot - 18.0 - dy) / row_h))
 	var max_scroll := maxi(0, deck.size() - max_deck)
 	if _deck_scroll > max_scroll:
 		_deck_scroll = max_scroll
@@ -432,7 +447,7 @@ func _draw_detail() -> void:
 					CardData.enchant_color(eid))
 		dy += row_h
 	if max_scroll > 0:
-		draw_string(_font, Vector2(mid, r.end.y - 16.0),
+		draw_string(_font, Vector2(mid, bot),
 				GameI18n.ui("shell", "RECORD_DECK_RANGE", "卡组 第 %d–%d 行 / 共 %d 行")
 				% [_deck_scroll + 1, mini(_deck_scroll + max_deck, deck.size()), deck.size()],
 				HORIZONTAL_ALIGNMENT_LEFT, 460, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
