@@ -1317,12 +1317,14 @@ func _draw_key_choice() -> void:
 	var e: Dictionary = RunState.pending_rewards[_sel]
 	var settled := _settled(e)
 	_draw_btn(_btn_back_rect(), "← 返回列表", false, false)
-	_root.draw_string(_font_bold, Vector2(r.position.x + 180, r.position.y + 60),
-			GameI18n.ui("reward", "REWARD_BIG_CHEST_CHOICE_TITLE", "大宝箱 · 二选一"), HORIZONTAL_ALIGNMENT_LEFT, 520,
+	# R678：标题与副标题都**整幅居中**。原来标题从 x+180 左起（正好贴住「返回列表」右沿 184，
+	# 截图里「大」字是顶在按钮上的），副标题从 x+PAD*2 左起，右边空一大片。
+	_root.draw_string(_font_bold, Vector2(r.position.x, r.position.y + 66),
+			GameI18n.ui("reward", "REWARD_BIG_CHEST_CHOICE_TITLE", "大宝箱 · 二选一"), HORIZONTAL_ALIGNMENT_CENTER, PANEL_W,
 			UiTheme.FS_HEADING, UiTheme.INK_900)
-	_root.draw_string(_font, Vector2(r.position.x + PAD * 2.0, r.position.y + HEAD_H + 30),
-			GameI18n.ui("reward", "REWARD_BIG_CHEST_CHOICE_SUBTITLE", "选择一件带走（道具 / 信物二选一）"), HORIZONTAL_ALIGNMENT_LEFT,
-			PANEL_W - PAD * 4.0, UiTheme.FS_BODY, UiTheme.INK_600)
+	_root.draw_string(_font, Vector2(r.position.x, r.position.y + HEAD_H + 34),
+			GameI18n.ui("reward", "REWARD_BIG_CHEST_CHOICE_SUBTITLE", "选择一件带走（道具 / 信物二选一）"), HORIZONTAL_ALIGNMENT_CENTER,
+			PANEL_W, UiTheme.FS_BODY, UiTheme.INK_600)
 	# 两个选项卡片
 	var rid := int(e.get("relic_id", -1))
 	var opt_a := _key_choice_rect(0)
@@ -1343,7 +1345,7 @@ func _key_choice_rect(opt: int) -> Rect2:
 	var r := _panel_rect()
 	var w := (PANEL_W - PAD * 3.0) * 0.5
 	var h := 260.0
-	var y := r.position.y + HEAD_H + 60.0
+	var y := r.position.y + HEAD_H + 64.0
 	var x := r.position.x + PAD + opt * (w + PAD)
 	return Rect2(Vector2(x, y), Vector2(w, h))
 
