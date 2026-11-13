@@ -1,0 +1,272 @@
+{
+  "version": 1,
+  "updated": "2026-11-13",
+  "source": "i18n/noncard_zh_canonical.json",
+  "relics": {
+    "6001": {
+      "name": "Steroids",
+      "desc": "On pickup: Gain +10 Max Health; your current Health also increases by 10."
+    },
+    "6002": {
+      "name": "Numeron Force",
+      "desc": "On pickup: Lose up to 5 Max Health (retain at least 1; your current Health decreases by the actual amount lost), then choose 1 card that can be removed from your Deck and transform it into a random reward card. Its original Enchant is cleared."
+    },
+    "6004": {
+      "name": "Amnesia Potion",
+      "desc": "On pickup: Choose 1 card that can be removed from your Deck and Remove it from your Deck."
+    },
+    "6005": {
+      "name": "Duck Webbing",
+      "desc": "At the start of your first 2 turns each battle, draw 1 additional card."
+    },
+    "6006": {
+      "name": "Duck Bill",
+      "desc": "When you take damage, reduce it by 2 for every full 5 points of damage, applied after all other damage reductions. You still take at least 1 damage."
+    },
+    "6007": {
+      "name": "Duck Wing",
+      "desc": "On your 3rd turn of each battle, gain 3 additional Cost."
+    },
+    "6008": {
+      "name": "Duck Down",
+      "desc": "The first unit you play during each of your turns gains +2 current Health (its printed Max Health does not increase)."
+    },
+    "6009": {
+      "name": "Eye of the Duck",
+      "desc": "Your Skills deal +X damage, where X is the Skill card's original Cost."
+    },
+    "6010": {
+      "name": "Whisper of the Duck",
+      "desc": "While held, you cannot manually choose a path on the map and instead keep advancing randomly until you enter an unexplored room. At the start of each of your turns, randomly gain 1 of these bonuses for the turn: +1 Cost / friendly units' attacks and your Skills deal +1 damage / draw 1 additional card."
+    },
+    "6011": {
+      "name": "Barbecue",
+      "desc": "Meat roasted at a Rest Stop. Automatically consumed when you enter a Boss battle: restore 25% of your Max Health, rounded up and capped at your Max Health. While held, you cannot roast another at a Rest Stop."
+    },
+    "6012": {
+      "name": "One Bag of Pain",
+      "desc": "After the first time your Health takes damage each turn, draw 1 card, and your Skills deal +1 damage for the rest of the turn."
+    },
+    "6013": {
+      "name": "Superposition Duck",
+      "desc": "When your Health reaches 0, you have a 100% chance to revive and restore 1 Health. After each revival, this chance permanently decreases by 25% (100 → 75 → 50 → 25 → 0). At 0%, you can no longer revive."
+    },
+    "6014": {
+      "name": "Canned Yellow Peaches",
+      "desc": "After winning each battle, restore 4 Health, up to your Max Health."
+    },
+    "6015": {
+      "name": "Duckspeak Earrings",
+      "desc": "Gain +1 Cost each turn. During your first turn of each battle, after your normal draw, automatically attempt to play each card in your Hand from left to right, choosing targets and positions at random and skipping cards that cannot be played. Stop when no cards can be played or 20 cards have been played automatically."
+    },
+    "6016": {
+      "name": "Ice Cream & Soda",
+      "desc": "At the start of each battle, lose up to 3 Health (retain at least 1). On your first turn, gain 2 additional Cost and draw 3 additional cards."
+    },
+    "6017": {
+      "name": "Heavy Duck",
+      "desc": "On pickup: Gain +6 Max Health; your current Health also increases by 6. While held, any enemy unit movement distance greater than 1 is treated as 1."
+    },
+    "6018": {
+      "name": "Egg-Laying Duck",
+      "desc": "At the start of each battle, place a Duck Egg Structure with 0 Power and 1 Health in the center of your front row. At the end of the turn, if Duck Egg is still alive, it becomes a Pet Duck with 3 Power and 15 Health that takes Health damage in your place."
+    },
+    "6019": {
+      "name": "Duck Pear",
+      "desc": "After your Health takes damage, gain +1 Max Health (this only raises the cap and does not restore Health)."
+    },
+    "6020": {
+      "name": "Arcane Charm",
+      "desc": "Your first Effect card each turn has Cost -1."
+    },
+    "6021": {
+      "name": "Fence Mending",
+      "desc": "Fence cards can be played on tiles that already contain a friendly Fence. The Fences merge into one, adding their Health together and combining their traits without duplicating identical traits."
+    },
+    "6022": {
+      "name": "Wild Shape",
+      "desc": "The first time each battle that an enemy unit's normal attack directly damages your Health, reduce that damage by 4 (minimum 1) and deal 4 damage to the attacker."
+    },
+    "6023": {
+      "name": "Cloak of Illusions",
+      "desc": "After every 2 cards you use, give a random enemy unit -1 Power until the start of your next turn."
+    },
+    "6024": {
+      "name": "Duck Blood",
+      "desc": "On pickup: Choose up to 2 cards from your Deck and add 1 exact copy of each, including any Enchant, to your Deck. The original cards remain. You may choose only 1 card or none."
+    },
+    "6025": {
+      "name": "Mechanical Core",
+      "desc": "At the start of each battle, add 2 Chassis cards to your Hand (1-Cost Allies with 1 Power and 3 Health; they are not discarded at the end of the turn)."
+    },
+    "6026": {
+      "name": "Eagle Whistle",
+      "desc": "While held, the contents of every map tile are visible (Paths are already visible across the map). This effect is not added to your permanent exploration memory."
+    },
+    "6027": {
+      "name": "Apple",
+      "desc": "On pickup: Gain +7 Max Health and restore your Health to maximum."
+    },
+    "6028": {
+      "name": "Milk",
+      "desc": "On pickup: Randomly roll 2 distinct Enchants and apply each to a card in your Deck that can receive an Enchant and does not already have one. Each card can still have only 1 Enchant."
+    },
+    "6029": {
+      "name": "Styptic Bandage",
+      "desc": "After winning a battle, if the total damage your Health actually took in that battle was greater than 20, restore an additional 8 Health the next time you reach a Rest Stop on this layer. Multiple triggers on the same layer stack; healing is capped at your Max Health."
+    },
+    "6030": {
+      "name": "Traveler's Pack",
+      "desc": "On pickup: Gain 100 Gold and add 1 Wooden Fence to your Deck."
+    },
+    "6031": {
+      "name": "Badge of Courage",
+      "desc": "Gain 1 additional Cost on your 1st turn of each Elite Battle and Boss Battle."
+    },
+    "6032": {
+      "name": "Clay Pot",
+      "desc": "On pickup: Randomly gain up to 2 distinct Reward Relics and add 1 Jar to your Deck."
+    },
+    "6033": {
+      "name": "Dual Training",
+      "desc": "Gain 1 additional Cost each turn; cards from all classes can appear in rewards and shops."
+    },
+    "6034": {
+      "name": "Enchantment Master",
+      "desc": "After you choose Rest at a Campfire, give a random eligible card in your Deck with no Enchant a random valid Enchant."
+    },
+    "6035": {
+      "name": "Spring Water",
+      "desc": "At the start of each turn, units in your back row (the last row) restore 4 Health."
+    },
+    "6036": {
+      "name": "Thought Brand",
+      "desc": "The first eligible friendly unit that would be Destroyed each battle returns to your Hand instead of dying. Units with Dimensional or Banish on Leave, as well as generated units, are ineligible and do not use up this effect."
+    },
+    "6037": {
+      "name": "Thorn Ring",
+      "desc": "After the first time your Health actually takes damage each turn, draw 2 cards."
+    },
+    "6038": {
+      "name": "Sacrament",
+      "desc": "When you reach a Campfire, restore 50% of your Max Health (rounded up and capped at your Max Health). Triggers once per Campfire."
+    },
+    "6039": {
+      "name": "Statue",
+      "desc": "After every 10 cards you use, restore 1 Cost. The count carries over between turns and battles and is shown next to the Relic's name."
+    },
+    "6040": {
+      "name": "Crystal Die",
+      "desc": "All rooms on the map become \"?\" rooms, except those on Layer 3, the Starting Point, Large Chests, the Shop in the upper-right corner, and Rest Stops. When entering battle in a \"?\" room, roll a die showing 1 to 6. Gain 1 additional Cost each turn for your first X turns, where X is the result."
+    },
+    "6041": {
+      "name": "Stainless Steel Basin",
+      "desc": "While held, this Relic has 10 charges. Damage you would take is absorbed by it instead, reducing its charges by the same amount; lose this Relic when they reach 0. When you buy an item in a Shop, this Relic is used as payment first: spend no Gold and lose it instead."
+    },
+    "6042": {
+      "name": "Wind Fairy",
+      "desc": "When you play your 5th card in one of your turns, deal 4 damage to all enemy units (the number of cards played this turn is shown next to the Relic's name)."
+    },
+    "6043": {
+      "name": "Haste Rune",
+      "desc": "Each time you play a card, your Skill damage bonus this turn increases by 5% (the card currently being played does not count; round down). Against enemy units that cannot act next turn, this percentage bonus is doubled."
+    },
+    "6044": {
+      "name": "Storage Chest",
+      "desc": "At the end of your turn, your Hand is exempt from the normal discard and is retained until your next turn. Cards with explicit end-of-turn Banish effects still resolve normally."
+    },
+    "6045": {
+      "name": "Lucky 7",
+      "desc": "On every 7th turn you take (counted across battles), from the start of that turn until the start of your next turn, you are immune to all Health damage and your Skills deal +7 damage."
+    },
+    "6046": {
+      "name": "Popcorn",
+      "desc": "If you did not use a Skill targeting an enemy or an enemy's tile this turn, draw 1 card at the start of your next turn."
+    },
+    "6047": {
+      "name": "Surprise Box",
+      "desc": "On pickup: Add 1 Surprise Box to your Deck."
+    },
+    "6048": {
+      "name": "Cave Rope",
+      "desc": "Battles other than Boss battles have an additional \"Flee\" button. After fleeing, lose this Relic and gain no rewards."
+    },
+    "6049": {
+      "name": "Stag Head Trophy",
+      "desc": "At the start of each of your turns, your Skill damage gains a stacking +1 for this battle (starting on turn 1)."
+    },
+    "6050": {
+      "name": "Gathering Knife",
+      "desc": "After winning a battle, add 1 group to the normal random card reward (the 2 groups are separate; choose 1 card from each)."
+    },
+    "6051": {
+      "name": "Matchstick",
+      "desc": "The card reward screen gains a \"Reroll\" option that deals a new group of cards, replacing the current 3. All reward groups share 3 rerolls; the option stops working once they are used."
+    },
+    "6052": {
+      "name": "Harp",
+      "desc": "All Allies have +2 Power (persistent; does not stack)."
+    },
+    "6053": {
+      "name": "Knight's Sword",
+      "desc": "After you kill an enemy for the first time each battle, all friendly Allies gain +1 Power and your Skills deal +1 damage for the rest of the battle."
+    },
+    "6054": {
+      "name": "Dark Drive",
+      "desc": "You can no longer skip card rewards: you must take 1 card immediately to close the reward screen and cannot save card rewards for later. You also cannot Remove cards from your Deck at shops. At the start of each turn, draw 1 additional card."
+    },
+    "6055": {
+      "name": "Smoking Pipe",
+      "desc": "While lit, on your first turn of the next battle: gain 1 Cost, draw 1 additional card, and lose up to 1 Health (retain at least 1). It then goes out; each time you reach a Campfire, it lights again."
+    },
+    "6056": {
+      "name": "Adventure Notes",
+      "desc": "On pickup: A random valid unexplored room on the map becomes a Large Chest, and a ring of golden light highlights that tile."
+    },
+    "6057": {
+      "name": "Flint",
+      "desc": "On pickup: Choose a valid room on the map and turn it into a Campfire. If it was explored, it becomes unexplored again and is revealed."
+    },
+    "6058": {
+      "name": "Cursebind",
+      "desc": "The first non-X-Cost card you play each battle has Cost -3 (minimum 0; the unused discount carries over between turns). That card then has Cost +1 for the rest of the battle."
+    },
+    "6059": {
+      "name": "Core",
+      "desc": "Your actual Health loss in victorious battles accumulates across battles. When the total reaches 15 or more, a \"Core\" option appears on the victory reward page: permanently Remove 1 eligible damage Skill from your Deck and add its first instance of base damage as an Enchant to another damage Skill with no Enchant. After use, this Relic becomes inactive."
+    },
+    "6060": {
+      "name": "Three Robots",
+      "desc": "For every 3 friendly Allies Destroyed, draw 1 card (the count resets each battle)."
+    },
+    "6064": {
+      "name": "Righteous Backstab",
+      "desc": "Double the damage you deal to enemy units at full Health; this does not apply to the enemy's Health."
+    },
+    "6065": {
+      "name": "Mechanical Arm",
+      "desc": "At the start of each battle, add a random Ally from the current class's reward pool to your Hand; it has Cost -1 during your first turn."
+    },
+    "6067": {
+      "name": "Memory Potion",
+      "desc": "At the start of each battle, play a random Effect card directly from your Draw Pile, bypassing your Hand and paying no Cost. If your Draw Pile has no Effect cards, skip this effect."
+    }
+  },
+  "classes": {
+    "森林精魄": {
+      "name": "Forest Spirit",
+      "subtitle": "Nature's Power · Alongside Bears and Treants",
+      "desc": "Steady and resilient. Use Structures and high-Health Allies to gain an advantage, then take control through growth and healing.\nNot built for aggressive openings, but difficult to bring down in one blow."
+    },
+    "暗影刺客": {
+      "name": "Shadow Assassin",
+      "subtitle": "Swift Shadow Strikes · Alongside Shades and Quick Blades",
+      "desc": "Seize the early advantage. Use low-Cost Skills and sustained weakening to wear down the enemy's Health, then finish the fight with a burst before they can stabilize.\nFast-paced and unforgiving, demanding initiative and careful card sequencing."
+    },
+    "机械之心": {
+      "name": "Mechanical Heart",
+      "subtitle": "Dismantle and Reassemble · Refit Units into Growing Threats",
+      "desc": "Strength in numbers. Start each battle with 2 Chassis cards in your Hand that cost 1 and are not discarded at the end of the turn. Save them for the right moment, then use Refit on them one by one, building a force that is hard to break.\nSlow to start, but once built up, difficult to break through with a single attack."
+    }
+  }
+}

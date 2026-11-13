@@ -39,6 +39,7 @@ for rule in [
     "卡牌稀有度只有普通／稀有／史诗／初始／怪物／事件／诅咒；传奇是道具 tier，不得给卡牌另造传说稀有度。",
     "字段（AFFIX_DEFS）与附魔（ENCHANT_DEFS）是两个命名空间；名称与说明分别按各自真源翻译。",
     "同名剧情与成就共用译名；非卡牌专名若已有卡名译文，必须复用，不另起一套。",
+    "即时道具只表示获得时立即结算，仍保留在 relics 列表；时机标注用 On pickup／入手時，不得写 Consumed on pickup／入手時に消費。",
 ]:
     if rule not in g["rules"]:
         g["rules"].append(rule)
