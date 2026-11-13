@@ -250,7 +250,7 @@ if len(translations) == 2:
           and "検索" in ja["map.GALLERY_SUMMARY_TEXT_ONLY"],
           "图鉴搜索计数明确为卡名不含搜索词")
     for path in ("map.MAP_FLINT_INVALID_CELL", "map.MAP_FLY_INVALID_CELL"):
-        check("fixed Shop" in en[path] and "固定商店" in ja[path],
+        check("Fixed Shop" in en[path] and "固定商店" in ja[path],
               path + " 只排除固定商店")
     check("Boss" in en["map.MAP_FLINT_INVALID_CELL"]
           and "ボス" in ja["map.MAP_FLINT_INVALID_CELL"],
