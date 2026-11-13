@@ -50326,7 +50326,7 @@ func _init() -> void:
 
 
 
-	# ---- 快速符文：每张牌 +10%（加算、去尾）/ 对不能行动的敌人加倍 ----
+	# ---- 快速符文：每张牌 +5%（加算、去尾）/ 对不能行动的敌人加倍 ----
 
 	var r313_se := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)),
 
@@ -50396,9 +50396,11 @@ func _init() -> void:
 
 	r313_se._hit_unit(r313_d1, 11, "测试")
 
-	check(r313_d1.health == 80 - 12,
+	r313_se._hit_unit(r313_d1, r313_dmg_ice, "测试")
 
-			"R313 快速符文：冰封的敌人**效果加倍**（-12 = 10 × 1.2，%d）"
+	check(r313_d1.health == 80 - 13,
+
+			"R661 快速符文：冰封的敌人**效果加倍**（-13 = 10 × 1.3：+15% 变 +30%，%d）"
 
 				% (80 - r313_d1.health))
 
@@ -50428,7 +50430,7 @@ func _init() -> void:
 
 	r313_se._spell_scope_depth = 0
 
-	r313_se._hit_unit(r313_d1, 11, "测试")
+	var r313_dmg_ice := r313_se._spell_dmg(GameEngine.SIDE_SELF, 10)   # 10 × 1.15 → 11
 
 	check(r313_d1.health == 80 - 11,
 
@@ -50551,6 +50553,181 @@ func _init() -> void:
 	var r314_id2 := RunState.roll_reward_relic(true)
 
 	check(r314_id2 > 0 and r314_repo.get_relic(r314_id2).tier == RelicData.TIER_LEGENDARY,
+
+	# ================= R661：审计掏出来的实现缺口（卡面写了、代码没做） =================
+
+	# ① 抽牌叠加　② 直击 HP 的免疫/承伤/计数　③ 快速符文单目标路径　④ 圣餐跨层　⑤ 逃跑写回
+
+
+
+	# ---- ① 鸭蹼 6005 + 暗动力 6054：同时持有要**各 +1** ----
+
+	# 旧写法在鸭蹼那支用赋值 `extra_draw = 1`，把 6054 的 +1 直接覆盖掉（等于鸭蹼白拿）。
+
+	var r660_draw := _new_engine(_ordered_deck(), 20, 20, -1, false)
+
+	r660_draw.self_relics = [6005, GameEngine.DARK_POWER_RELIC_ID]
+
+	r660_draw.start_game()
+
+	check(r660_draw.state.hand.size() == FieldState.HAND_DRAW_PER_TURN + 2,
+
+			"R661 鸭蹼 + 暗动力：第 1 回合共多抽 2 张（实际 %d）"
+
+				% r660_draw.state.hand.size())
+
+
+
+	# ---- ② lucky 7 6045：生效轮里「普通攻击直击 HP」也要整笔免疫 ----
+
+	# attack_hp 自己扣血，旧写法整条只接了「森林守护 / 荒野形态」两个钩子。
+
+	var r660_l7 := _new_engine([], 30, 30)
+
+	r660_l7.self_relics = [GameEngine.LUCKY7_RELIC_ID]
+
+	r660_l7._lucky7_active = true
+
+	r660_l7.state.place(_card(9014, "远古虚骨龙", "盟友", 12, 12, 100, 2, 2),
+
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+
+	r660_l7.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+
+	check(r660_l7.state.hp_self == 30 and r660_l7.state.self_hp_damage_taken == 0,
+
+			"R661 lucky 7：普通攻击直击 HP 也整笔免疫（HP %d，本场受伤 %d）"
+
+				% [r660_l7.state.hp_self, r660_l7.state.self_hp_damage_taken])
+
+
+
+	# ---- ③ 不锈钢盆 6041 代吞 + 受伤计数（止血绷带 6029 / 核心 6059 的判据）----
+
+	var r660_basin := _new_engine([], 30, 30)
+
+	r660_basin.self_relics = [GameEngine.BASIN_RELIC_ID]
+
+	r660_basin.basin_charge = 10
+
+	r660_basin.state.place(_card(9014, "远古虚骨龙", "盟友", 12, 12, 100, 2, 2),
+
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+
+	r660_basin.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+
+	check(r660_basin.state.hp_self == 28 and r660_basin.basin_charge == 0,
+
+			"R661 不锈钢盆：普通攻击 12 点 → 盆吃 10、玩家只掉 2（HP %d，盆 %d）"
+
+				% [r660_basin.state.hp_self, r660_basin.basin_charge])
+
+	check(r660_basin.state.self_hp_damage_taken == 2,
+
+			"R661 受伤计数：普通攻击直击 HP 也累进本场受伤（%d）"
+
+				% r660_basin.state.self_hp_damage_taken)
+
+
+
+	# ---- ④ 快速符文 6043：单目标技能（不走 _hit_unit）也要吃到「加倍」----
+
+	var r660_rune := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)),
+
+			40, 40, -1, false)
+
+	r660_rune.self_relics = [GameEngine.SWIFT_RUNE_RELIC_ID]
+
+	r660_rune.state.self_card_plays = 3
+
+	r660_rune.state.place(_card(1053, "冻结兵", "盟友", 1, 1, 80, 1, 1),
+
+			Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+
+	var r660_tgt: Placement = r660_rune.state.unit_at(Vector2i(2, 0))
+
+	r660_tgt.frozen = true
+
+	r660_rune._spell_scope_depth = 1
+
+	var r660_tgt_hp0 := r660_tgt.health
+
+	var r660_rune_dmg := r660_rune._spell_dmg(GameEngine.SIDE_SELF, 10)   # 10 × 1.15 → 11
+
+	r660_rune._op_deal_damage(GameEngine.SIDE_SELF, r660_rune_dmg, Vector2i(2, 0))
+
+	r660_rune._spell_scope_depth = 0
+
+	check(r660_tgt_hp0 - r660_tgt.health == 13,
+
+			"R661 快速符文：单目标技能打冰封敌人 = 10 × 1.3 → 13（实际 %d）"
+
+				% (r660_tgt_hp0 - r660_tgt.health))
+
+
+
+	# ---- ⑤ 圣餐 6038：跨层同编号的篝火**必须各回一次** ----
+
+	var r660_lay := RunState.current_layer
+
+	var r660_nid := RunState.current_node_id
+
+	var r660_sac := RunState.sacrament_node
+
+	var r660_max := RunState.max_hp
+
+	var r660_shp := RunState.hp
+
+	var r660_rel := RunState.relics.duplicate()
+
+	RunState.max_hp = 60
+
+	RunState.hp = 10
+
+	RunState.relics = [RunState.RELIC_SACRAMENT_ID]
+
+	RunState.current_layer = 0
+
+	RunState.current_node_id = 12
+
+	RunState.sacrament_node = -1
+
+	check(RunState.sacrament_arrive() == 30,
+
+			"R661 圣餐：第一层 12 号篝火回 50%% 最大生命（回 %d）" % (RunState.hp - 10))
+
+	RunState.current_layer = 1
+
+	RunState.current_node_id = 12   # 同一编号、不同层
+
+	check(RunState.sacrament_arrive() == 20,
+
+			"R661 圣餐：第二层**同编号**的篝火是另一间，仍要回血（回 %d）" % (RunState.hp - 40))
+
+	RunState.current_layer = r660_lay
+
+	RunState.current_node_id = r660_nid
+
+	RunState.sacrament_node = r660_sac
+
+	RunState.max_hp = r660_max
+
+	RunState.hp = r660_shp
+
+	RunState.relics = r660_rel
+
+
+
+	# ---- ⑥ 叠加态的鸭 6013：逃跑那条路也要把「已用掉的复活概率」写回 run ----
+
+	var r660_scene_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+
+	check(r660_scene_src.count("RunState.duck_revive_chance = engine.duck_revive_chance") >= 2,
+
+			"R661 叠加态的鸭：结算面板与**逃跑**两条路都写回复活概率")
+
+
+
 
 			"R314 抽取：同一次掷点，大宝箱翻倍到 10%% → 出传奇（%d）" % r314_id2)
 

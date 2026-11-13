@@ -83,9 +83,12 @@ static var run_finished := false
 ## 卡名交回调用方（结算面板要播一行「飞踢已加入卡组」）。
 ## ⚠️ 必须续档：挂单跨战斗、跨层存活，漏存就会在退出重进时凭空消失（道具白拿）。
 static var delayed_cards: Array = []
-## R473：圣餐已经在**哪一间**休息处结算过（`current_node_id`）。
+## R473：圣餐已经在**哪一间**休息处结算过，存的是 `sacrament_stay_key()`（层号 + 节点 id）。
 ## ⚠️ 必须有它：`_ui_main()` 每次重绘都会走休息分支，没有这个标记就会反复回血，
 ##    退出重进同一间还能无限刷。`-1` = 这一局还没结算过。
+## ⚠️ **不能只存 `current_node_id`**：每层地图的 id 都从 0 重新编号，
+##    第二层的 12 号与第一层的 12 号是两间不同的篝火 —— 只比 id 会让第二层的篝火
+##    因为「上一层同一编号已经结算过」而整层不回血（R661 修）。
 static var sacrament_node: int = -1
 ## R234 止血绷带（6029）：本层累计的「下次休息额外回血」点数。换层 / 开新局 / 结束局清零。
 static var bandage_pending := 0
@@ -567,16 +570,25 @@ static func rest() -> int:
 	return heal(rest_heal_amount())
 
 
+static func sacrament_stay_key() -> int:
+	## R661：圣餐（6038）的「哪一间篝火」唯一键 = **层号 + 节点 id**。
+	## ⚠️ 每层地图的节点 id 都从 0 重新编号，只用 `current_node_id` 会跨层撞号 ——
+	##    第二层编号 12 的篝火会被当成第一层那间「已经结算过」，整层不回血。
+	## `× 10000` 是因为单层节点数远小于一万，不会串到下一层。
+	return current_layer * 10000 + current_node_id
+
+
 static func sacrament_arrive() -> int:
 	## R473 圣餐（6038）：**到达**篝火处回复 50% 最大生命，返回实际回复量。
 	## 0 = 没持有 / 这一间已经结算过 / 本来就是满血。
-	## ⚠️ 用 `sacrament_node` 记住结算过的那一间（`current_node_id`）—— 事件页会反复
-	##    重绘，退出去重进也能再进同一条分支，没有这个标记就能无限刷血。
+	## ⚠️ 用 `sacrament_node` 记住结算过的那一间（见 `sacrament_stay_key()`）—— 事件页会
+	##    反复重绘，退出去重进也能再进同一条分支，没有这个标记就能无限刷血。
 	if not has_relic(RELIC_SACRAMENT_ID):
 		return 0
-	if sacrament_node == current_node_id:
+	var stay_key := sacrament_stay_key()
+	if sacrament_node == stay_key:
 		return 0
-	sacrament_node = current_node_id
+	sacrament_node = stay_key
 	return heal(ceili(max_hp * SACRAMENT_ARRIVE_PCT))
 
 

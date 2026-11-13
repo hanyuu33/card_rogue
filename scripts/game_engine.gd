@@ -126,6 +126,12 @@ var _hit_land:= Vector2i(-1, -1)
 ## 效果卡 / 陷阱 / 反伤打出来的伤害不享受。
 ## ⚠️ 用深度而不是布尔：回响会嵌套重放同一张技能卡，布尔会在内层退出时提前关掉。
 var _spell_scope_depth:= 0
+## R661：快速符文「加倍」的**基数缓存** —— `_spell_dmg()` 里「还没加符文、还没乘猫鼠」的值。
+## ⚠️ 不能从最终数值反推：`_hit_unit()` 里补差额时 amount 已经被侦察塔 / 极速的易伤抬过，
+##    而 `f(B)=B+floor(B·p/100)` 的像会**跳过一些整数**（p=15 时 f(15)=17，16 无解）——
+##    反推常常无解，一返回 0 就等于让「加倍」整段消失（比不修更糟）。
+## -1 = 这次结算没有可用基数（退回到反解 / 旧公式两级兜底）。
+var _swift_rune_base_cached:= -1
 ## R314 lucky 7（6045）：当下这一轮是否处在「生效回合」。
 ## ⚠️ 由**我方回合开始**置位 / 复位，敌方回合**不清** —— 见常量区的口径说明。
 var _lucky7_active:= false
@@ -2370,7 +2376,9 @@ func _begin_turn(side: String) -> void :
 		if self_relics.has(DARK_POWER_RELIC_ID):
 			extra_draw += 1
 		if self_relics.has(6005) and turn_number <= 2:
-			extra_draw = 1
+			# ⚠️ 必须 `+=`：暗动力（6054）在上面已经 +1，旧写法用赋值会把那一张**吞掉**，
+			# 两件道具同时持有反而只多抽 1 张（等于鸭蹼白拿）。
+			extra_draw += 1
 			_log("鸭蹼：第 %d 回合开始，额外抽 1 张" % turn_number)
 
 		var bonus_energy:= 0
@@ -13091,6 +13099,10 @@ func _spell_dmg(side: String, base: int, card: CardData = null) -> int:
 	# ⚠️ 放在**所有加法之后**再按百分比放大：固定加成（荧光草 +1 / 魔力核心 +1…）
 	#    也一起吃百分比，与「先算总量再乘」的直觉一致。
 	# ⚠️ 「对不能行动的敌人加倍」不在这里做 —— 那要逐目标判，在 `_hit_unit()` 补。
+	# R661：先把「未加符文、未乘猫鼠」的基数存下来 —— 加倍差额必须按它算，
+	# 否则易伤抬高 amount 后既反推不出基数、也会把易伤也算进加成里。
+	if self_relics.has(SWIFT_RUNE_RELIC_ID):
+		_swift_rune_base_cached = out
 	out += _swift_rune_bonus(out)
 	# R580 猫鼠游戏：所有加算加成吃完后才乘 ——「和其他增加乘算」= (base + 各路加算) × 2。
 	if spell_mult > 1 and _in_spell_scope():
@@ -13104,7 +13116,7 @@ func _in_spell_scope() -> bool:
 
 
 func _swift_rune_pct() -> int:
-	## 快速符文（6043）本回合的**百分比基数**（未加倍）：10 × 本回合已打出的牌数。
+	## 快速符文（6043）本回合的**百分比基数**（未加倍）：5 × 本回合已打出的牌数。
 	## ⚠️ 口径 = **不含正在结算的这张**：`_note_card_played()` 在出牌收尾才 +1，
 	##    与「终结 9086 的 X = 本回合已用张数」同一套计数，玩家看到的就是这个数。
 	##    于是「先垫 3 张，再打一发大招」= +30%，与直觉一致。
@@ -13124,13 +13136,40 @@ func _swift_rune_bonus(amount: int) -> int:
 
 func _swift_rune_extra(amount: int) -> int:
 	## 「加倍」的那**差额**：入参是**已经含过一次加成**的 amount。
-	## 推导：amount = floor(B×(100+p)/100) ⇒ B ≈ amount×100/(100+p) ⇒ 差额 = B×p/100。
-	## 结果就是让总量从「+p%」变成「+2p%」—— 卡面写的「效果加倍」指加成部分，不是总量翻倍。
+	## 卡面口径 = 加成从 +p% 变 +2p%，总量 `floor(B × (100+2p)/100)`。
+	## ⚠️ R661：旧写法先把基数反推成 `amount*100/(100+p)` 再乘 p，两次整数截断叠加 ——
+	##    240 组（B=1..30 × 出牌 1..8）里有 132 组**少 1 点**（B=3、出 4 张时拿 3 而不是 4）。
+	##    现在按 `floor(B·2p/100) − floor(B·p/100)` 补差额、一次截断都不多；
+	##    B 优先取 `_spell_dmg()` 存下的基数（不受易伤影响），没有才反解。
 	var pct := _swift_rune_pct()
 	if pct <= 0 or amount <= 0:
 		return 0
-	var base:= (amount * 100) / (100 + pct)
-	return (base * pct) / 100
+	# 首选 `_spell_dmg()` 存下的基数（不受易伤 / 猫鼠 / 符文影响）。
+	# 没有时退回反解；连反解都不成立 → 用旧公式，保证「加倍」不会整段消失。
+	var base := _swift_rune_base_cached
+	if base <= 0:
+		base = _swift_rune_base_of(amount, pct)
+	if base <= 0:
+		base = (amount * 100) / (100 + pct)
+	return (base * pct * 2) / 100 - (base * pct) / 100
+
+
+func _swift_rune_base_of(amount: int, pct: int) -> int:
+	## 反推「还没吃快速符文」的基数 B：满足 `B + (B·pct)/100 == amount`。
+	## `f(B)` 随 B 严格递增（每 +1 至少 +1），所以解唯一 → 二分即可。
+	## 找不到（amount 不是这条加成链产出的值，例如被易伤抬高过）→ 返回 0，不补差额。
+	var lo := 1
+	var hi := amount
+	while lo <= hi:
+		var mid := (lo + hi) / 2
+		var guess := mid + (mid * pct) / 100
+		if guess == amount:
+			return mid
+		if guess < amount:
+			lo = mid + 1
+		else:
+			hi = mid - 1
+	return 0
 
 
 func _turn_dmg_bonus(side: String) -> int:
@@ -14153,12 +14192,19 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 		# R138：技能卡伤害也要吃「侦察塔」光环易伤 —— 与 `_hit_unit` 同一条口径
 		# （原先只挂在 `_hit_unit`，单目标技能走这里 → 光环被绕过）。
 		# R316 极速与侦察塔光环走同一处：单目标技能卡也必须吃到敌人易伤。
+		# R661：易伤 → 快速符文加倍 → 接通代受，与 `_hit_unit()` / `preview_hit_damage()`
+		# **完全同序**。旧写法把 `_revelator_split` 提到最前、且整条链里没有快速符文那一步，
+		# 于是所有「单目标技能」（龙息 / 弹跳飞刀 / 猎杀…）都吃不到「对不能行动的敌人加倍」，
+		# 分半基数也和界面上预览的数字对不上。
+		var hp_before_theseus:= p.health   # R496 忒修斯奇械：单目标技能这条也要判
+		var amt_spell:= _apply_rapid_marks(p, _apply_scout_aura(p, amount))
+		# R313 / R661 快速符文（6043）：只认**技能卡**结算，只对敌方不能行动的敌人加倍。
+		if _in_spell_scope() and p.owner == SIDE_OPPONENT and p.cannot_act_next_turn():
+			amt_spell += _swift_rune_extra(amt_spell)
 		# R356：启示者阶段 3 的「接通代受」对**单目标技能**同样成立 ——
 		# 这条伤害不走 `_hit_unit`（自己扣血），所以要在减伤之前单独调一次。
-		amount = _revelator_split(p, amount, "技能")
-		var hp_before_theseus:= p.health   # R496 忒修斯奇械：单目标技能这条也要判
-		var amount2:= _unit_damage_taken(p, _apply_rapid_marks(p,
-				_apply_scout_aura(p, amount)), "spell")
+		amt_spell = _revelator_split(p, amt_spell, "技能")
+		var amount2:= _unit_damage_taken(p, amt_spell, "spell")
 		amount2 *= jb_mult2
 		p.health -= amount2
 		if amount2 > 0:
@@ -16802,13 +16848,32 @@ func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		if _absorb_by_guard(power):
 			dealt = 0
 			_log("森林守护盟友替我方挡下 %s 的攻击" % attacker.card.card_name)
+		elif _lucky7_active and power > 0:
+			# lucky 7（6045，R314）：生效回合 → **免疫所有 HP 伤害**。
+			# ⚠️ 普通攻击直击 HP 走的是这里、不是 `_damage_player` —— 少了这一支，
+			#    免疫轮里敌人只要还有直击路线就照掉血（`_damage_player` 那边判了也没用）。
+			#    与 `_damage_player` 同序：在减伤 / 不锈钢盆**之前**整笔不落地。
+			dealt = 0
+			_log("lucky 7：本回合免疫 HP 伤害（挡下 %d 点）" % power)
+			action.emit("lucky7_immune", {"amount": power})
 		else:
 			# 荒野形态 6022：每场第一次「普通攻击直击我方 HP」→ 减伤 + 反伤。
 			# 只挂在普通攻击这条路径上：技能 / 效果 / 溢出的 HP 伤害都走
 			# _damage_player → _hp_damage_taken，不会触发它。
 			var self_dmg:= _wild_form_first_hit(attacker, power)
+			# 不锈钢盆（6041，R311）：**代替玩家承受等量伤害**。
+			# ⚠️ 与 `_damage_player` 同一条口径（减伤之后、HP 落血之前）——
+			#    旧写法只把盆挂在效果 / 溢出路径上，敌人普通攻击直击 HP 时盆白拿。
+			var basin_take:= _basin_absorb(self_dmg)
+			if basin_take > 0:
+				self_dmg -= basin_take
+				_log("不锈钢盆挡下 %d 点 → 实际掉血 %d" % [basin_take, self_dmg])
 			dealt = self_dmg
 			state.hp_self = maxi(0, state.hp_self - self_dmg)
+			# R234 止血绷带 6029 / R458 核心 6059：**本场我方 HP 实际损失**的累计。
+			# ⚠️ 普通攻击直击 HP 是玩家掉血的主要来源，漏在这里两件道具基本形同虚设。
+			if self_dmg > 0:
+				state.self_hp_damage_taken += self_dmg
 			_log("%s 攻击我方 HP：我方 -%d，剩余 %d" % [
 				attacker.card.card_name, self_dmg, state.hp_self])
 			if self_dmg > 0:
