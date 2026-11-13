@@ -1,4 +1,9 @@
 class_name GameBrand
+
+## R660：只给 `title_text_localized()` 用来判断当前界面语言。
+## l10n.gd 不反向依赖本文件，不会成环。
+const L10n = preload("res://scripts/l10n.gd")
+
 ## 品牌 / 标题配置（R578）：**游戏名的唯一来源**。
 ##
 ## 想改名字（比如上 Steam 时换成正式名 / 加英文名）时，**只改这里**就够了 ——
@@ -109,3 +114,13 @@ static func title_text() -> String:
 static func footer_text() -> String:
 	## 右下角版本串。
 	return FOOTER.replace("{v}", VERSION)
+
+
+static func title_text_localized() -> String:
+	## R660：按**当前界面语言**取大标题。非中文用英文名，中文走 `title_text()`。
+	## 仍然是**一行**、不是副标题 —— 只是换掉主标题本体的文字，R607 口径不变。
+	## ⚠️ 英文名只在这里读：`title_scene.gd` 里出现 `NAME_EN` 会踩 R607 源码锁
+	## （「标题页不另起第二行」）。品牌名要露脸也必须从 GameBrand 出去。
+	if L10n.current() != "zh" and NAME_EN != "":
+		return spaced(NAME_EN)
+	return title_text()

@@ -372,6 +372,12 @@ static func title_art() -> Texture2D:
 	return get_tex("title_art")
 
 
+static func language_bg() -> Texture2D:
+	## R660 首次语言选择背景：1920×1080，codex 纯文生图（无文字）。
+	## 缺图返回 null → 选择页回退 `title_art` → `title_bg`，不会黑屏。
+	return get_tex("language_bg")
+
+
 static func studio_mark() -> Texture2D:
 	## R604 厂牌徽记（透明底）：片头卡中心 + 启动 splash 共用同一张。缺图时片头只出文字。
 	return get_tex("studio_mark")

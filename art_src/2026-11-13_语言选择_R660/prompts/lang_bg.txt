@@ -1,0 +1,7 @@
+Create a single 16:9 wide background illustration for a language-selection screen in a cozy hand-painted fantasy card roguelike game.
+
+Scene: a sunlit wooden desk beside a tall window in an old apothecary inn, seen straight-on. An open leather traveler's journal rests low in the frame with blank cream pages. Around it: an antique brass compass, a white duck feather quill resting in a small ink pot, two tiny carved white duck figurines, scattered ginkgo leaves and a few soft white flower petals, a rolled parchment map tied with sage-green ribbon. The upper-middle two thirds of the image should stay clean, softly out of focus, warm and uncluttered, reserved for game UI text and three large buttons. Gentle morning mist and golden window light, cozy storybook atmosphere.
+
+Art direction: hand-painted watercolor and gouache, delicate warm ink outlines, soft paper grain, muted sage green, warm cream, honey brown and antique brass gold. Japanese anime fantasy warmth blended with western storybook adventure. Match the visual language of a whimsical duck-themed fantasy card game. Painterly, gentle, elegant, not busy.
+
+Hard requirements: absolutely NO text, NO letters, NO numbers, NO runes, NO logos, NO watermark, NO UI panels, NO button frames, NO decorative border, NO title lettering. Do not draw any readable writing on the journal, map, ribbons or signs. The image must be a clean atmospheric background only.

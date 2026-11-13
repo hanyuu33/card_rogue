@@ -6,9 +6,11 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const UiBadge = preload("res://scripts/ui_badge.gd")
+const L10n = preload("res://scripts/l10n.gd")
 
 var _bg_tex: Texture2D
 var _font: Font
+var _font_bold: Font
 var sfx: Sfx
 var _t := 0.0
 var _petals: Array = []         # {x, y, spd, ph, sc, rot, kind}  R154 飘落花瓣 / 光尘（换掉漂浮白方块）
@@ -29,13 +31,21 @@ func _ready() -> void:
 		DisplayServer.window_set_title(GameBrand.window_title())
 	# R604：主界面主视觉（16:9，标题字已烘焙在图里）优先；缺图回退 R154 的晨光小镇 +
 	# 文字标题，再退战斗背景 → 纯色（_draw 里的 BOARD_BG）。三级兜底，缺任何一张都不黑屏。
-	_bg_tex = UiAssets.title_art()
-	_has_art = _bg_tex != null
+	# R660：非中文不用这张烘焙了中文标题的主视觉 —— 换无字背景 + 当前语言的文字标题，
+	# 否则英文/日文界面顶着一行中文大字，语言切换看起来像没生效。
+	var lang := L10n.current()
+	if lang == "zh":
+		_bg_tex = UiAssets.title_art()
+		_has_art = _bg_tex != null
+	else:
+		_bg_tex = UiAssets.title_bg()
+		_has_art = false
 	if _bg_tex == null:
 		_bg_tex = UiAssets.title_bg()
 	if _bg_tex == null:
 		_bg_tex = load("res://assets/battle_bg.png")
 	_font = UiTheme.font()
+	_font_bold = UiTheme.font_bold()
 	_apply_brand()
 	sfx = Sfx.new()
 	add_child(sfx)
@@ -43,32 +53,35 @@ func _ready() -> void:
 	Bgm.play("title")
 	# R576：Steam 成就初始化（未装 GodotSteam 时静默跳过，见 steam_achievements.gd）。
 	SteamAchievements.init()
+	$Buttons/Row1/StartBtn.text = L10n.t("title.start")
+	$Buttons/Row1/CodexBtn.text = L10n.t("title.codex")
+	$Buttons/Row2/QuitBtn.text = L10n.t("title.quit")
 	$Buttons/Row1/StartBtn.pressed.connect(_on_start)
 	$Buttons/Row1/CodexBtn.pressed.connect(_on_codex)
 	$Buttons/Row2/QuitBtn.pressed.connect(_on_quit)
 	# R215：「录像回放」整块删掉（回放机制不再维护），换成只记结果的「对战记录」；
 	# 同时补上原来缺失的「设置」入口。两者都插在「退出」之前。
 	var rec_btn := Button.new()
-	rec_btn.text = "对战记录"
-	rec_btn.tooltip_text = "每局的最终结果（通关 / 失败 / 中断）"
+	rec_btn.text = L10n.t("title.records")
+	rec_btn.tooltip_text = L10n.t("title.tip_records")
 	$Buttons/Row1.add_child(rec_btn)
 	rec_btn.pressed.connect(_on_records)
 	var set_btn := Button.new()
-	set_btn.text = "设置"
-	set_btn.tooltip_text = "音效 / 音乐 / 全屏"
+	set_btn.text = L10n.t("title.settings")
+	set_btn.tooltip_text = L10n.t("title.tip_settings")
 	$Buttons/Row2.add_child(set_btn)
 	set_btn.pressed.connect(_on_settings)
 	# R576：鸣谢页（纯黑底滚动字）—— 引擎 / 音乐署名 / 特别鸣谢。
 	var credit_btn := Button.new()
-	credit_btn.text = "鸣谢"
-	credit_btn.tooltip_text = "引擎 / 音乐署名（PeriTune）"
+	credit_btn.text = L10n.t("title.credits")
+	credit_btn.tooltip_text = L10n.t("title.tip_credits")
 	$Buttons/Row2.add_child(credit_btn)
 	credit_btn.pressed.connect(_on_credits)
 	# R590：这里原来还挂着「查看故事」按钮 —— 已收进百科（codex.tscn），
 	# 主界面不再单独占一行（8 个竖排按钮挤到上下贴边）。
 	# 续档入口（"继续游戏"）：有本地存档才显示，放在「开始」之后。
 	var cont_btn := Button.new()
-	cont_btn.text = "继续游戏"
+	cont_btn.text = L10n.t("title.continue")
 	$Buttons/Row1.add_child(cont_btn)
 	cont_btn.pressed.connect(_on_continue)
 	# R486b：先探一次盘 —— 「来自更新版本的档」会让按钮消失，玩家没点过任何东西，
@@ -196,10 +209,10 @@ func _draw() -> void:
 	if not _has_art:
 		_draw_title_ornaments()
 	# 底部信息
-	var ver := GameBrand.footer_text()   # R578：版本串从 GameBrand 取
+	var ver := "v%s-rogue · %s" % [GameBrand.VERSION, L10n.t("title.footer_dev")]
 	draw_string(_font, Vector2(size.x - 250, size.y - 16), ver,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
-	draw_string(_font, Vector2(14, size.y - 16), "Godot 4.3 自包含副本",
+	draw_string(_font, Vector2(14, size.y - 16), L10n.t("title.footer_godot"),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	# R486b：**常驻**说明（不是 6 秒 toast）。这类档文件还在、只是本版本读不懂，
 	# 玩家需要知道「进度没丢、升级游戏能接着打」；只把按钮藏掉 = 进度凭空蒸发。
@@ -240,13 +253,14 @@ func _apply_brand() -> void:
 	## 换成长名字或英文名时不会溢出屏幕；金线卷草的排布跟着实际字号走。
 	## ⚠️ 只改 GameBrand 就够，别在这里另写一份文案。
 	## R579：副标题整段移除（店长口径）—— 标题下直接就是按钮列，别再补回去。
+	## R660：非中文用英文品牌名（标题主视觉是无字背景），字号逻辑完全复用。
 	var tl := get_node_or_null("TitleLabel") as Label
 	if _has_art:
 		# R604：主视觉里已经排好标题字，Label 只作缺图兜底 —— 别两套字叠在一起
 		if tl != null:
 			tl.visible = false
 		return
-	var t := GameBrand.title_text()
+	var t := GameBrand.title_text_localized()
 	var fs := GameBrand.TITLE_FONT_SIZE
 	if tl != null and _font != null:
 		# 左右各留 138（30 间距 + 96 金线 + 12 边距），缩到放得下为止；
@@ -255,6 +269,7 @@ func _apply_brand() -> void:
 		while fs > 28 and _font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > avail:
 			fs -= 2
 		tl.text = t
+		tl.add_theme_font_override("font", _font_bold)
 		tl.add_theme_font_size_override("font_size", fs)
 	_title_fs = fs
 

@@ -1601,3 +1601,11 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - **编号**：开工时 HEAD = R655，并行线已占 R656（工作区有 `tools/_run_r656_verify.py`、`_shot_r656_slots.gd`）→ 本轮让到 **R657**。
 - **出图**：`battle.tscn -- --screenshot --level 0 --menu --shotframe 120`；改前 `_shot_r651_menu.png`、改后 `_shot_r657_menu20.png`，并排对比 `_z_cmp_menu.png`（三个按钮现在等高）。
 - **顺带发现（未改，待定）**：设置页种子框里「随机种子」是 FS_BODY(16)、「下一局种子」是 FS_LABEL(14)，同一框内同级标题差一号，像手误；店长没点名，先记着。
+
+## 2026-11-13 R660 语言切换（设置下拉 + 正式版首次选择）
+- **入口**：设置页右上角「语言 · 当前语言」下拉；正式版第一次启动（片头之后、首页之前）进 `scenes/language_pick.tscn`。测试版不弹，老玩家（有 profile / 存档 / 对战记录）视为已选择，不打断；`--force-language-pick` 可强制出图。
+- **可扩展**：`scripts/l10n.gd` 的 `LANGUAGES` 是唯一注册表（当前 zh / en / ja），列表行由 `scripts/language_menu.gd` 绘制；3 项目前刚好排满，超过可视行数自动出现滚动条，支持滚轮 / ↑↓ / 拖动。新增语言只加注册表 + 文案，不改两个入口。
+- **UI**：设置页不新增第六行（种子面板已贴下沿），语言用页首下拉；首次选择页用一只木牌标题 + 纸卡列表 + 主按钮。背景 `assets/ui/language_bg.png`（1920×1080）由 codex 纯文生图，无文字 / UI；源图与 prompt 在 `art_src/2026-11-13_语言选择_R660/`。
+- **文案范围**：本批只翻界面骨架（标题页按钮、设置页、语言选择页、页脚）。卡牌 / 道具 / 事件正文仍由并行 i18n 流水线处理，本批**没动** `i18n/cards_*`、`noncard_*` 或 `battle_scene.gd`。
+- **品牌名取值**：非中文标题走 `GameBrand.title_text_localized()`，英文名只在这个函数里读。`title_scene.gd` 直接引用 `NAME_EN` 会踩 R607 源码锁（`test_assemble` 用 `find("NAME_EN") < 0` 硬拦，本轮踩过一次，报 `Combination tests failures: 1`）。
+- **验证**：`python _verify.py` 全绿（assemble 0 失败 / mana PASS / engine 5930✓ 0✗ / reward 26 / bgm 39 / smoke 70）；`test_engine` 有 R660 落盘 / 回退 / 路由 / 12 项滚动 9 条用例；截图 `screenshot_language.png`、`screenshot_settings.png` 及英文 / 日文首页、设置页各一张。开发口：`--lang=en`、`--force-language-pick`、`--screenshot --lang-menu`。

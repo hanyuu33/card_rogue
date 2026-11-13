@@ -139,7 +139,15 @@ func _handoff() -> void:
 	if _handed:
 		return
 	_handed = true
-	get_tree().change_scene_to_file.call_deferred("res://scenes/title.tscn")
+	get_tree().change_scene_to_file.call_deferred(after_opening_scene())
+
+
+static func after_opening_scene() -> String:
+	## R660：正式版**第一次**打开时，片头之后先选语言，再进首页。
+	## 判定在 GameSettings 里（测试版不弹 / 老玩家不打断 / `--force-language-pick` 可出图）。
+	if GameSettings.needs_language_pick():
+		return "res://scenes/language_pick.tscn"
+	return "res://scenes/title.tscn"
 
 
 func _draw() -> void:

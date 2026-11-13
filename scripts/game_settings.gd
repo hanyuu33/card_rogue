@@ -31,6 +31,12 @@ static var next_seed_code := ""
 ## 它只作用在**敌方回合的演出时钟**上（见 battle_scene 的 `_foe_phase`）：
 ## 玩家自己的出牌 / 拖拽 / 飘字一律照常，敌人那套走位、攻击、击破按 1.5× / 2× 播。
 static var foe_speed := 1.0
+## R660：界面语言。存 code（zh / en / ja…），不认识的值交给 L10n 回退，
+## 本文件**不做语言白名单** —— 以后加语言只改 `scripts/l10n.gd` 的注册表。
+static var language := "zh"
+## 是否已经完成过「首次语言选择」。正式版第一次进首页前会看这一位；
+## 老玩家（已有档案 / 存档 / 对战记录）视为已选择，不拿一次弹窗打断他们。
+static var language_chosen := false
 
 ## R388：合法档位 —— 按钮就是在这三个值里循环（1 → 1.5 → 2 → 1）。
 const FOE_SPEEDS := [1.0, 1.5, 2.0]
@@ -45,6 +51,7 @@ static func ensure_loaded() -> void:
 	_loaded = true
 	var cf := ConfigFile.new()
 	if cf.load(PATH) != OK:
+		_apply_locale()
 		return
 	sfx_on = bool(cf.get_value("audio", "sfx", true))
 	music_on = bool(cf.get_value("audio", "music", true))
@@ -52,12 +59,23 @@ static func ensure_loaded() -> void:
 	music_volume = clampf(float(cf.get_value("audio", "music_volume", 1.0)), 0.0, 1.0)
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
 	foe_speed = normalize_foe_speed(float(cf.get_value("battle", "foe_speed", 1.0)))
+	language = str(cf.get_value("i18n", "language", "zh")).strip_edges().to_lower()
+	if language == "":
+		language = "zh"
+	language_chosen = bool(cf.get_value("i18n", "chosen", false))
 	next_seed_code = str(cf.get_value("run", "seed_code", ""))
 	if next_seed_code == "":
 		# 旧版（R241~R260）的 int 种子 → 迁移成同值的 10 位种子码（复现结果不变）
 		var legacy := int(cf.get_value("run", "seed", 0))
 		if legacy > 0:
 			next_seed_code = RunState.seed_text_of(legacy)
+	# 开发 / 出图口：`--lang=en` 只覆盖本次进程的语言，不写盘（正式玩家走设置页）。
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--lang="):
+			var ov := a.substr("--lang=".length()).strip_edges().to_lower()
+			if ov != "":
+				language = ov
+	_apply_locale()
 
 
 static func save() -> void:
@@ -68,6 +86,8 @@ static func save() -> void:
 	cf.set_value("audio", "music_volume", music_volume)
 	cf.set_value("display", "fullscreen", fullscreen)
 	cf.set_value("battle", "foe_speed", foe_speed)
+	cf.set_value("i18n", "language", language)
+	cf.set_value("i18n", "chosen", language_chosen)
 	cf.set_value("run", "seed_code", next_seed_code)
 	# 旧键（int 种子）清掉：否则玩家把种子清空后，下次启动又被旧键迁移回来
 	if cf.has_section_key("run", "seed"):
@@ -146,6 +166,67 @@ static func set_foe_speed(v: float) -> void:
 		return
 	foe_speed = nv
 	save()
+
+
+static func set_language(code: String, chosen := true) -> void:
+	## R660：设置页与首次选择页的**唯一落地点**。空值回落中文；
+	## 只改真的变了的字段（同 setter 纪律），然后同步 TranslationServer 的 locale，
+	## 以后接 `.translation` 资源时不用再补一条调用链。
+	ensure_loaded()
+	var nv := code.strip_edges().to_lower()
+	if nv == "":
+		nv = "zh"
+	var dirty := false
+	if nv != language:
+		language = nv
+		dirty = true
+	if chosen and not language_chosen:
+		language_chosen = true
+		dirty = true
+	_apply_locale()
+	if dirty:
+		save()
+
+
+static func _apply_locale() -> void:
+	## 界面文案走 `L10n` 查表，但 locale 仍要同步给引擎：
+	## 日期 / 数字格式和以后加载的 Translation 资源都读这一个值。
+	match language:
+		"zh":
+			TranslationServer.set_locale("zh_CN")
+		"ja":
+			TranslationServer.set_locale("ja")
+		"en":
+			TranslationServer.set_locale("en")
+		_:
+			TranslationServer.set_locale(language)
+
+
+static func needs_language_pick() -> bool:
+	## R660：正式版**首次进首页前**是否要开语言选择。
+	##   * 测试版默认不弹（开发 / 回归不被挡）；
+	##   * `--force-language-pick` 供出图与探针强制打开；
+	##   * 老玩家已有档案 / 存档 / 对战记录 → 视为已选择，补写 chosen，不打扰。
+	ensure_loaded()
+	if "--force-language-pick" in OS.get_cmdline_user_args():
+		return true
+	if language_chosen or not GameBuild.is_release():
+		return false
+	if _has_existing_progress():
+		language_chosen = true
+		save()
+		return false
+	return true
+
+
+static func _has_existing_progress() -> bool:
+	## 只读探测：任一存在即认为不是「第一次打开正式版」。
+	## 不调 ProfileData / RunSave 的加载函数 —— 这一问发生在首页之前，
+	## 不该为了判断有没有档就把整套档案读一遍（也避免它们顺手写盘）。
+	for p in ["user://profile.json", "user://run_save.sav", "user://run_records.json"]:
+		if FileAccess.file_exists(p):
+			return true
+	return false
 
 
 static func set_next_seed_code(v: String) -> void:

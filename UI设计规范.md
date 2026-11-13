@@ -2537,6 +2537,26 @@ NEVER a solid rectangle of one colour, NEVER a hard edge, NEVER a wall.
 所以审计表格永远不含它 —— 这次它被忽略就有这个原因。现在表格后单列一行
 「休息处 rest（地图节点，不在事件池）」，`--strict` 也把它算进去。
 
+### 4.57 语言选择：一份注册表 + 一个可滚动列表（R660）
+
+- **不要做固定三段按钮**。语言数量会增长；`scripts/l10n.gd` 的 `LANGUAGES` 是唯一注册表，
+  设置页下拉和首次选择页共用 `scripts/language_menu.gd`。现在 3 种刚好排满，超过可视行数
+  自动出滚动条（滚轮 / ↑↓ / 拖动都支持），新增语言只加注册表 + 文案。
+- **设置页不塞第六行**：5 行设置 + 种子面板已经贴到 720 下沿；语言入口放页首右上
+  （窄屏落到副标题下方居中），点开才是列表。列表打开时点外面只收起，不能顺带翻动设置行。
+- **列表用纸卡 `draw_info_card`，不要用九宫格卷轴 `draw_panel_bg`**：后者四角有 34px
+  装饰，最后一行副标题会被卷边压住（R660 出图当场复现）。行内 baseline 只加行内偏移，
+  不要重复加 `r.position.y`，否则第二行会被推到下一行。
+- **正式版首次启动**：`opening_scene.after_opening_scene()` 在片头后、首页前路由到
+  `language_pick.tscn`；测试版不弹，老玩家（profile / 存档 / 对战记录任一存在）视为已选择。
+  提交只发生在「进入游戏」按钮，误触某一行不会永久改语言。
+- **非中文首页**：`title_art.png` 里烘焙了中文标题，不能复用；改用 `title_bg.png` +
+  当前语言的文字标题。中文仍用原主视觉（`_has_art = true`，隐藏 Label）。
+- **英文名只从 `GameBrand` 出去**：标题页取文案走 `GameBrand.title_text_localized()`。
+  `title_scene.gd` 里出现 `NAME_EN` / `display_name` 会直接踩 R607 的源码锁
+  （「全游戏不设副标题」，`test_assemble` 用 `find("NAME_EN") < 0` 硬拦）。
+  换语言只换**主标题本体的一行文字**，不是加副标题 —— 所以修的是取值口，不是放宽断言。
+
 ---
 
 ## 5. 无障碍底线

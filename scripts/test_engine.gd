@@ -16,6 +16,13 @@ extends SceneTree
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
+## R660：语言注册表 / 界面文案（无 class_name，显式 preload）。
+
+const L10n = preload("res://scripts/l10n.gd")
+
+## R660：可滚动语言列表（组件级用例，数据不写死）。
+const LanguageMenu = preload("res://scripts/language_menu.gd")
+
 ## R386：战场对话气泡同样是「无 class_name 的纯自绘 RefCounted」→ 显式 preload。
 
 ## ⚠️ 别给它加 class_name：`--check-only` / 跨脚本引用时会 Parse Error（R386 踩过）。
@@ -37907,6 +37914,104 @@ func _init() -> void:
 		"R215 回放机制已删（replay_log / replay_list 都不在了）")
 
 	# ================================================================
+
+	# ================================================================
+
+	# R660：语言设置 / 注册表 / 正式版首次启动闸门
+
+	# ================================================================
+
+	var r660_lang := GameSettings.language
+
+	var r660_chosen := GameSettings.language_chosen
+
+	GameSettings.set_language("en", true)
+
+	GameSettings._loaded = false
+
+	GameSettings.ensure_loaded()
+
+	check(GameSettings.language == "en" and GameSettings.language_chosen,
+
+			"R660 语言：en + chosen 落盘并读回")
+
+	check(L10n.t("settings.language", "en") == "Language"
+
+			and L10n.t("settings.language", "ja") == "言語"
+
+			and L10n.native_name("ja") == "日本語",
+
+			"R660 语言：界面文案按注册表取，日文原生写法不翻译")
+
+	check(L10n.t("settings.language", "fr") == "Language"
+
+			and L10n.normalize("fr") == "zh",
+
+			"R660 语言：未知 code 文案回退 en、界面回落 zh")
+
+	check(L10n.LANGUAGES.size() >= 3 and L10n.has_language("zh")
+
+			and L10n.has_language("en") and L10n.has_language("ja"),
+
+			"R660 语言：注册表可扩展且当前三语齐全")
+
+	var r660_menu = LanguageMenu.new()
+
+	root.add_child(r660_menu)
+
+	r660_menu.size = Vector2(300, 160)
+
+	var r660_many: Array = []
+
+	for i in 12:
+
+		r660_many.append({"code": "l%d" % i, "native": "L%d" % i, "en": ""})
+
+	r660_menu.setup(r660_many, "l3", 48.0)
+
+	check(r660_menu.visible_rows() == 3 and r660_menu._max_scroll() == 9,
+
+			"R660 语言列表：12 项时可视 3 行 / 可滚 9 行（以后加语言不写死）")
+
+	r660_menu.select_code("l11")
+
+	check(str(r660_menu.selected_code()) == "l11"
+
+			and int(r660_menu.get("_scroll")) == 9,
+
+			"R660 语言列表：选中末项会自动滚到底")
+
+	r660_menu.free()
+
+
+
+	GameBuild.set_test_release(0)
+
+	check(not GameSettings.needs_language_pick(), "R660 首次语言：测试版不弹")
+
+	GameBuild.set_test_release(1)
+
+	GameSettings.language_chosen = true
+
+	check(not GameSettings.needs_language_pick(), "R660 首次语言：已选择后不再弹")
+
+	GameBuild.set_test_release(-1)
+
+	GameSettings.language = r660_lang
+
+	GameSettings.language_chosen = r660_chosen
+
+	GameSettings._loaded = false
+
+	GameSettings.save()
+
+	var r660_os := FileAccess.get_file_as_string("res://scripts/opening_scene.gd")
+
+	check_src(r660_os.find("after_opening_scene") >= 0
+
+			and r660_os.find("res://scenes/language_pick.tscn") >= 0,
+
+			"R660 首次语言：片头交接会先路由到语言选择页")
 
 	# R297：左栏「框体流」—— 数值两框 / 效果自适应框 / 字段框 / buff 框
 

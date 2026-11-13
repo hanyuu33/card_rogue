@@ -14,6 +14,7 @@ extends SceneTree
 
 const MapBridge = preload("res://scripts/map_bridge.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const L10n = preload("res://scripts/l10n.gd")
 
 const FRAMES_PER_SCENE := 8
 
@@ -35,6 +36,9 @@ func _initialize() -> void:
 	RunSave.set_test_mode()
 	_plan = [
 		["res://scenes/title.tscn", func(): _reset()],
+		# R660：正式版首次语言选择 —— 列表必须是注册表驱动，3 种语言现在刚好排满；
+		# 以后加语言只改 L10n，本页自动多一行 / 多滚动条。
+		["res://scenes/language_pick.tscn", func(): _reset(), _check_language_pick],
 				# R590：百科（主界面的二级入口，纯自绘页面 —— 空引用只有冒烟能抓到）
 				["res://scenes/codex.tscn", func(): _reset()],
 		# R346：剧情解锁界面 + 禁卡表（两个都是自绘界面，_draw 里的空引用只有冒烟能抓到）
@@ -1030,6 +1034,29 @@ func _check_record_list(scene: Variant) -> void:
 		var pf := FileAccess.open(RunRecord.PENDING_PATH, FileAccess.WRITE)
 		pf.store_string(_rec_pend_bak)
 		pf = null
+
+
+func _check_language_pick(scene: Variant) -> void:
+	## R660：首次选择页的列表来自 L10n 注册表，不是写死三项。
+	var menu: Variant = scene.get("_menu")
+	if menu == null or not is_instance_valid(menu):
+		_smoke_fail("R660：语言选择页没有建列表")
+		return
+	var items: Array = menu.get("_items")
+	if items.size() != L10n.LANGUAGES.size():
+		_smoke_fail("R660：语言列表 %d 项，注册表 %d 项（写死了？）"
+				% [items.size(), L10n.LANGUAGES.size()])
+		return
+	var sel := str(menu.call("selected_code"))
+	if not L10n.has_language(sel):
+		_smoke_fail("R660：默认高亮不是注册表里的语言：%s" % sel)
+		return
+	var btn: Rect2 = scene.call("_confirm_rect")
+	if btn.size.x < 200.0 or btn.size.y < 40.0:
+		_smoke_fail("R660：确认按钮几何异常 %s" % str(btn))
+		return
+	print("SMOKE OK R660：首次语言选择页（注册表 %d 项 / 默认 %s / 列表可滚动）"
+			% [items.size(), sel])
 
 
 func _reset() -> void:
