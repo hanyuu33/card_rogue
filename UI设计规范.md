@@ -2556,6 +2556,10 @@ NEVER a solid rectangle of one colour, NEVER a hard edge, NEVER a wall.
   `title_scene.gd` 里出现 `NAME_EN` / `display_name` 会直接踩 R607 的源码锁
   （「全游戏不设副标题」，`test_assemble` 用 `find("NAME_EN") < 0` 硬拦）。
   换语言只换**主标题本体的一行文字**，不是加副标题 —— 所以修的是取值口，不是放宽断言。
+- **浅色水彩背景上的小字要深墨 + 奶油描边**：首次选择页左上角厂牌原先用 `ADVENTURE_BRASS_LIT`，
+  压在亮窗格上实测只有 ~1.6:1（字在但读不清）；白色系背景上的浅色装饰字一律不合格。
+  改深墨 `#332a1e` + 一层 0.45 奶油描边垫底 → 实测 **6.50:1**。小字（≤12px）按 ≥5:1 验，
+  别凭眼睛判断「看起来还行」。
 
 ---
 

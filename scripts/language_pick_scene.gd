@@ -190,9 +190,14 @@ func _draw() -> void:
 			size.x, UiTheme.FS_LABEL, Color(0.98, 0.94, 0.84, 0.96))
 
 	# 左上角厂牌：只做一枚小字锚点，不抢主标题。
+	# ⚠️ 背景是浅色水彩（窗格 / 银杏叶），奶油金小字压在亮部只有 ~1.6:1 —— 低于
+	# 「≤12px 小字 ≥5:1」的底线（R660 出图当场看见，字在但读不清）。改羊皮纸墨色，
+	# 底下垫一层半透明奶油做描边，深葉与浅窗两种背景上都立得住。
 	var brand := GameBrand.NAME_EN if GameBrand.NAME_EN != "" else GameBrand.NAME_CN
+	draw_string(_font_bold, Vector2(34, 47.4), brand, HORIZONTAL_ALIGNMENT_LEFT,
+			-1, UiTheme.FS_LABEL, Color(1.0, 0.97, 0.90, 0.45))
 	draw_string(_font_bold, Vector2(34, 48), brand, HORIZONTAL_ALIGNMENT_LEFT,
-			-1, UiTheme.FS_LABEL, Color(UiTheme.ADVENTURE_BRASS_LIT, 0.92))
+			-1, UiTheme.FS_LABEL, Color("332a1e", 0.96))
 
 
 func _draw_head_ornaments(head: Rect2) -> void:
