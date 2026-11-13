@@ -606,7 +606,9 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	# R671：只有**真的溢出**才需要呼吸重绘（箭头不动就不醒目）；20fps 足够，
 	# 逐帧重绘纯属白烧电量（安卓上更明显）。
-	if _list_max_scroll() > 0 or (_sel >= 0 and _body_overflow()):
+	# R683：正文面板底部那行「点击任意位置关闭」现在也呼吸 —— 短正文（不溢出）的面板
+	# 同样要跟着重绘，否则一段三行的正文打开后提示是死的。判据因此放宽到 `_sel >= 0`。
+	if _list_max_scroll() > 0 or _sel >= 0:
 		_breath_acc += delta
 		if _breath_acc >= 0.05:
 			_breath_acc = 0.0
@@ -844,10 +846,15 @@ func _draw_detail() -> void:
 	# R682：**这里没有按钮了**。原来「收下这一段」和右上角 X 一起撤掉，只留一行压暗的小字。
 	# ⚠️ 这是 R353「界面不写操作教学」的一处**显式破例**：那条规矩的前提是界面上有可见
 	#    控件去表达可交互性；两个按钮都撤之后，正文面板确实需要一个「怎么出去」的提示。
+	# R683：**呼吸**。用户口径「点击任意位置关闭有明暗闪烁吗」—— 原来是一格写死的 0.88，
+	# 一动不动，压在满屏正文下面很难被注意到。这里接 `ScrollHint.breath()`（滚动箭头用的
+	# 同一套节律，2.6 rad/s ≈ 2.4s 一呼一吸），只有下面这个透明度在动，颜色令牌不换。
+	# 0.68~0.92：谷底仍读得清（纯黑底都没有，下面是米色纸面），峰顶不超过原来那格 0.88 太多。
+	var bk := (ScrollHint.breath() - 0.72) / 0.28
 	draw_string(_font, Vector2(r.position.x, r.end.y - 30.0),
 			GameI18n.ui("shell", "STORY_DETAIL_CLICK_ANYWHERE", "点击任意位置关闭"),
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL,
-			Color(UiTheme.PAGE_MUTED, 0.88))
+			Color(UiTheme.PAGE_MUTED, 0.68 + 0.24 * bk))
 
 
 func _draw_body(eid: String) -> void:
