@@ -70851,6 +70851,7 @@ func _init() -> void:
 	_test_r598()
 
 	_test_r600()
+	_test_r676()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -72747,3 +72748,72 @@ func _test_r592b() -> void:
 
 	ProfileData._seen_set.clear()
 
+
+
+func _test_r676() -> void:
+	# R676：鹅 9187「扑击」的方向感 + 落点合法性（用户实测两条）：
+	#   ① 横向攻击时没有横向推动 —— 敌人反被「朝对方后排」的老逻辑往**我方**方向拖，
+	#      自己则往前顶了一行；
+	#   ② 目标站在对方后排（HP 行）被打死时，鹅顺势「前进」进了敌方 HP 格子。
+	# 修法：方向 = 攻击方向（`_goose_dir`），击退方向可覆盖（`_knockback_step`），
+	#      前进落点过 `unit_slot_allowed`（唯一禁区判据）。
+	var r676_repo := CardRepo.load_json()
+	var r676_raw: CardData = r676_repo.get_card(9187)
+	check(r676_raw != null, "R676：鹅 9187 取得到（下面四条用例都靠它）")
+	if r676_raw == null:
+		return
+
+	# ① 横向（向右）：鹅 (4,0) 打 (4,1) → 敌人到 (4,2)、自己跟进 (4,1)
+	var r676_a := _new_engine()
+	var r676_ga: Placement = r676_a.state.place(
+			CardData.from_dict(r676_raw.to_dict()), Vector2i(4, 0), GameEngine.SIDE_SELF)
+	var r676_fa: Placement = r676_a.state.place(
+			_card(999001, "靶子", "盟友", 1, 0, 30), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	r676_a.attack(Vector2i(4, 0), Vector2i(4, 1))
+	check(r676_a.state.unit_at(Vector2i(4, 2)) == r676_fa,
+			"R676 鹅横向攻击：敌人被**横向**推到 (4,2)（原先被往我方方向拖到 (3,1)）")
+	check(r676_a.state.unit_at(Vector2i(4, 1)) == r676_ga
+			and r676_a.state.unit_at(Vector2i(4, 0)) == null,
+			"R676 鹅横向攻击：自己横向跟进敌人原格 (4,1)（原先往前顶到 (3,0)）")
+
+	# ② 横向（向左）：方向必须跟着攻击方向翻
+	var r676_b := _new_engine()
+	var r676_gb: Placement = r676_b.state.place(
+			CardData.from_dict(r676_raw.to_dict()), Vector2i(4, 2), GameEngine.SIDE_SELF)
+	var r676_fb: Placement = r676_b.state.place(
+			_card(999001, "靶子", "盟友", 1, 0, 30), Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	r676_b.attack(Vector2i(4, 2), Vector2i(4, 1))
+	check(r676_b.state.unit_at(Vector2i(4, 0)) == r676_fb
+			and r676_b.state.unit_at(Vector2i(4, 1)) == r676_gb,
+			"R676 鹅横向攻击（向左）：敌人到 (4,0)、自己跟进 (4,1)")
+
+	# ③ 纵向老口径不许回归
+	var r676_c := _new_engine()
+	var r676_gc: Placement = r676_c.state.place(
+			CardData.from_dict(r676_raw.to_dict()), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r676_fc: Placement = r676_c.state.place(
+			_card(999001, "靶子", "盟友", 1, 0, 30), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	r676_c.attack(Vector2i(4, 1), Vector2i(3, 1))
+	check(r676_c.state.unit_at(Vector2i(2, 1)) == r676_fc
+			and r676_c.state.unit_at(Vector2i(3, 1)) == r676_gc,
+			"R676 鹅纵向攻击：老口径不变（敌人退到 (2,1)、自己进 (3,1)）")
+
+	# ④ HP 行硬禁区：鹅 (1,1) 把 (0,1) 的敌人打死 → 不许「前进」到敌方 HP 行
+	var r676_d := _new_engine()
+	var r676_gd: Placement = r676_d.state.place(
+			CardData.from_dict(r676_raw.to_dict()), Vector2i(1, 1), GameEngine.SIDE_SELF)
+	r676_d.state.place(_card(999001, "靶子", "盟友", 1, 0, 1),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r676_d.attack(Vector2i(1, 1), Vector2i(0, 1))
+	check(r676_d.state.unit_at(Vector2i(0, 1)) == null
+			and r676_d.state.unit_at(Vector2i(1, 1)) == r676_gd,
+			"R676 鹅：目标在对方后排（HP 行）被打死时不前进上去 —— 那行是硬禁区")
+
+	# ⑤ 源码守卫：三条判据都在唯一口上（删掉任一 = 退回老 bug）
+	var r676_eng := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(r676_eng.contains("func _knockback_step(")
+			and r676_eng.contains("var step:= _knockback_step(p, dir_override)")
+			and r676_eng.contains("func _goose_dir("),
+			"R676：击退方向 / 鹅的攻击方向都收敛到唯一口")
+	check(r676_eng.contains("if not unit_slot_allowed(nxt, attacker.owner):"),
+			"R676：鹅的前进落点真的过了 unit_slot_allowed")

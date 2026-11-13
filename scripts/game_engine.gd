@@ -13233,7 +13233,17 @@ func _displace_immune(p: Placement) -> bool:
 	return false
 
 
-func _knockback(side: String, target, steps: int) -> String:
+func _knockback_step(p: Placement, dir_override: Vector2i) -> Vector2i:
+	## **击退方向**的唯一口（R676）：给了 `dir_override` 就用它（按轴钳成单位向量），
+	## 否则退回老口径「朝目标方后排」（敌方 -x / 我方 +x）。
+	## 为什么需要它：鹅 9187 横向攻击横向相邻的敌人时，「朝对方后排」会把敌人往
+	## **我方**方向拖，看起来像被吸过来 —— 用户口径「横向攻击也应该横向推动」。
+	if dir_override != Vector2i.ZERO:
+		return Vector2i(clampi(dir_override.x, -1, 1), clampi(dir_override.y, -1, 1))
+	return Vector2i(-1 if p.owner == SIDE_OPPONENT else 1, 0)
+
+
+func _knockback(side: String, target, steps: int, dir_override:= Vector2i.ZERO) -> String:
 	var p:= _target_placement(side, target)
 	if p == null:
 		return "（没有目标）"
@@ -13246,11 +13256,19 @@ func _knockback(side: String, target, steps: int) -> String:
 	var cell:= _cell_of(p)
 	if cell == Vector2i(-1, -1):
 		return "（目标已不在场上）"
-	var dir:= -1 if p.owner == SIDE_OPPONENT else 1
+	# R676：方向可覆盖 —— 横向攻击（src → 目标的 y 方向）就横向推，不再一律朝
+	# 「对方后排」。不传方向 = 老口径，冲击炮 / 暗影锁链等调用点一行不用改。
+	var step:= _knockback_step(p, dir_override)
 	var moved:= 0
 	for i in steps:
-		var nxt:= cell + Vector2i(dir, 0)
-		if nxt.x < 0 or nxt.x >= FieldState.BOARD_ROWS or state.board.has(nxt):
+		var nxt:= cell + step
+		if nxt.x < 0 or nxt.x >= FieldState.BOARD_ROWS:
+			break
+		if nxt.y < 0 or nxt.y >= FieldState.BOARD_COLS:
+			break
+		# R676：落点也过 `unit_slot_allowed` —— 横向推碰不到行边界，但「把单位推进
+		# 对方后排行」这种非法落点必须在唯一口里拦掉，不能指望每个调用方自己记。
+		if state.board.has(nxt) or not unit_slot_allowed(nxt, p.owner):
 			break
 		cell = nxt
 		moved += 1
@@ -13259,7 +13277,7 @@ func _knockback(side: String, target, steps: int) -> String:
 	var src:= _cell_of(p)
 	var kb_path: Array[Vector2i] = []
 	for i in moved + 1:
-		kb_path.append(src + Vector2i(dir * i, 0))
+		kb_path.append(src + step * i)
 	state.move_unit(src, cell)
 	_log("%s 被击退 %d 格（%s → %s）" % [p.card.card_name, moved, src, cell])
 	action.emit("move", {"src": src, "dst": cell, "card": p.card, 
@@ -13310,6 +13328,17 @@ func _vortex_pull(cell: Vector2i) -> void :
 		"side": pulled.owner, "path": v_path})
 
 
+func _goose_dir(attacker: Placement, src: Vector2i, tgt: Vector2i) -> Vector2i:
+	## 鹅的「攻击方向」（R676）：`src -> tgt` 按轴钳成单位向量（正交邻格就是单位向量，
+	## 射程更远时也仍只进 1 格）。
+	## 目标坐标与自己重合（理论上不会发生）→ 退回老口径「朝对方后排」，绝不返回零向量：
+	## 零向量会让前进落点 = 原地，白播一段「前进 1 格」的假动画。
+	var d:= tgt - src
+	if d == Vector2i.ZERO:
+		return Vector2i(1 if attacker.owner == SIDE_OPPONENT else -1, 0)
+	return Vector2i(clampi(d.x, -1, 1), clampi(d.y, -1, 1))
+
+
 func _goose_lunge(attacker: Placement, tgt: Vector2i) -> void :
 	## **鹅（9187，R381）的唯一结算口**：「攻击敌人后，将其向后击退 1 格，自己前进 1 格
 	## （被挡住则不动）」。挂在 `attack()` 尾部「攻击者还活着」那块里（`_tap` 之前）。
@@ -13317,24 +13346,29 @@ func _goose_lunge(attacker: Placement, tgt: Vector2i) -> void :
 	## 两件事各自独立判：
 	##   ① 击退走**唯一口** `_knockback()` → 位移免疫 / 被己方单位挡住 / 边界全部自动生效；
 	##      目标已被打死（不在 board 里了）就没有「击退」这回事；
-	##   ② 前进 = 自己朝**对方后排**方向挪 1 格，只判「界内 + 那格空」—— 射程 1 时
-	##      正好落进目标腾出来的格子；目标没退开（被挡 / 免疫位移）自己也就跟不上去。
+	##   ② 前进 = 自己朝**本次攻击方向**挪 1 格（R676：横向攻击就横向进，不再写死
+	##      朝对方后排），落点过 `unit_slot_allowed`（不许站进对方后排行 = HP 行）——
+	##      射程 1 时正好落进目标腾出来的格子；目标没退开（被挡 / 免疫位移）就跟不上去。
 	## ⚠️ 前进**不走 `move()`**：那不是一次「移动行动」，不该消耗移动权、也不该触发
 	##    沿途陷阱 —— 与 `_knockback` 同口径（`state.move_unit` + 补一条 move 动画）。
 	if attacker == null or attacker.card == null:
 		return
 	if not attacker.card.traits.has(GOOSE_TRAIT):
 		return
-	if state.board.has(tgt):
-		var d: Placement = state.board[tgt]
-		if d.health > 0 and d.owner != attacker.owner:
-			_knockback(attacker.owner, tgt, 1)
 	var src: Vector2i = _cell_of(attacker)
 	if src == Vector2i(-1, -1):
 		return
-	var dir: int = 1 if attacker.owner == SIDE_OPPONENT else -1
-	var nxt: Vector2i = src + Vector2i(dir, 0)
-	if nxt.x < 0 or nxt.x >= FieldState.BOARD_ROWS:
+	# R676：方向 = **攻击方向**（自己 → 目标）。横向攻击就横向推、横向跟进；
+	# 老实现写死「朝对方后排」的 x 方向，横向攻击时敌人被往我方拖、自己却往前顶。
+	var dir_v:= _goose_dir(attacker, src, tgt)
+	if state.board.has(tgt):
+		var d: Placement = state.board[tgt]
+		if d.health > 0 and d.owner != attacker.owner:
+			_knockback(attacker.owner, tgt, 1, dir_v)
+	var nxt: Vector2i = src + dir_v
+	# R676：进这一行是**硬禁区**（直击 HP 的落点行）。目标站在对方后排被打死时
+	# 原本会顺势「前进」上去，用户实测「能用效果移动到敌方 HP 格子上」就是这个。
+	if not unit_slot_allowed(nxt, attacker.owner):
 		return
 	if state.board.has(nxt):
 		return
