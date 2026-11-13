@@ -1928,9 +1928,21 @@ func _ready() -> void:
 	# R148：Esc 主菜单。事件页是**选择类界面** —— 内容选项（休息 / 烤肉 / 离开）留在
 	# 场景自己身上，菜单里只放「画面之外」的操作：返回事件 / 音效 / 返回标题。
 	_menu = UiMenu.attach(self, _menu_items, {
-		"back": "返回事件",
-		"sub": "事件",
+		"back": GameI18n.ui("map", "EVENT_MENU_BACK", "返回事件"),
+		"sub": GameI18n.ui("map", "EVENT_MENU_SUBTITLE", "事件"),
 	})
+
+
+func _localize_text() -> void:
+	## 事件页显示层统一翻译；选项逻辑与结算字段仍保留权威中文。
+	$TopBar/TitleLabel.text = GameI18n.ui("map", "EVENT_TOP_TITLE", "事  件")
+	if GameI18n.language() == "zh":
+		return
+	event_name.text = GameI18n.source(event_name.text)
+	desc.text = GameI18n.source(desc.text)
+	result_label.text = GameI18n.source(result_label.text)
+	for b: Button in [rest_btn, bbq_btn, alt_btn, leave_btn]:
+		b.text = GameI18n.source(b.text)
 
 
 func _redraw() -> void:
@@ -1941,6 +1953,7 @@ func _redraw() -> void:
 
 
 func _fit_center() -> void:
+	_localize_text()
 	## 中间一列按内容实际高度排布：默认位置不变；放不下时先收紧间距、藏起空的结果行，
 	## 再整体上移（上不越过插图下沿约 356），保证「离开 / 继续前进」这类末位选项永远完整可见。
 	##

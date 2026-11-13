@@ -396,9 +396,9 @@ func _row3_template() -> Array:
 	## 第三行固定三项的**唯一定义**（R390 抽出来）：恢复货架时要按 key 反查，
 	## 两处各写一份 —— 改价只改一处、另一处还留着老价钱，是最典型的漂移。
 	var out: Array = [
-		{"key": "delete", "name": "删除一张卡", "desc": "从卡组里删掉一张卡", "price": PRICE_DELETE,
+		{"key": "delete", "name": GameI18n.ui("shop", "SHOP_SERVICE_DELETE_NAME", "删除一张卡"), "desc": GameI18n.ui("shop", "SHOP_SERVICE_DELETE_DESC", "从卡组里删掉一张卡"), "price": PRICE_DELETE,
 			"icon": "shop_icon_remove", "sold": false},
-		{"key": "maxhp", "name": "+5 最大生命", "desc": "最大生命 +5，并回复 5 点生命", "price": PRICE_MAXHP,
+		{"key": "maxhp", "name": GameI18n.ui("shop", "SHOP_SERVICE_MAX_HP_NAME", "+5 最大生命"), "desc": GameI18n.ui("shop", "SHOP_SERVICE_MAX_HP_DESC", "最大生命 +5，并回复 5 点生命"), "price": PRICE_MAXHP,
 			"icon": "shop_icon_maxhp", "sold": false},
 	]
 	# R399（用户口径「第三层应该不再提供巧克力」）：第三层是直道、每格 cost 恒 0，
@@ -406,7 +406,7 @@ func _row3_template() -> Array:
 	# ⚠️ 绘制 / 命中 / 恢复货架全都按 `_row3.size()` 自适应，少一项不会留空位
 	#    （`_row3[0]` 仍是「删除一张卡」，没有硬编码下标会错位）。
 	if RunState.current_layer != GameLayers.LAYER_THREE:
-		out.append({"key": "choco", "name": "巧克力", "desc": "获得一块巧克力（行动力 +1）",
+		out.append({"key": "choco", "name": "巧克力", "desc": GameI18n.ui("shop", "SHOP_SERVICE_CHOCOLATE_DESC", "获得一块巧克力（行动力 +1）"),
 			"price": PRICE_CHOCO, "icon": "chocolate", "sold": false})
 	# R543（用户口径「商店第三排额外售卖屠戮匕首，3 格变 4 格」）：
 	# 难度 ≥11 且玩家不持有屠戮匕首（6063）时，第三排追加一个「屠戮匕首」商品。
@@ -712,7 +712,7 @@ func _draw_header() -> void:
 	## ⚠️ 顶部留白别急着砍：`DeckViewer` / `RelicViewer` 两个悬浮按钮挂在右上角 (1150,6)/(1044,6)，
 	##    标题带压到 40 以下就会贴到它们。
 	UiTheme.draw_info_card(self, Rect2(_vs().x * 0.5 - 150, 10, 300, 48))
-	draw_string(_font_bold, Vector2(0, 41), "神 秘 商 店",
+	draw_string(_font_bold, Vector2(0, 41), GameI18n.ui("shop", "SHOP_TITLE", "神 秘 商 店"),
 			HORIZONTAL_ALIGNMENT_CENTER, _vs().x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 
 
@@ -906,7 +906,7 @@ func _draw_goods_popup() -> void:
 	else:
 		return
 	var width := minf(320.0, _vs().x - 24.0)
-	var lines := TextWrap.wrap_plain(_font, str(entry["desc"]), width - 32, 18)
+	var lines := TextWrap.wrap_plain(_font, GameI18n.source(str(entry["desc"])), width - 32, 18)
 	var height := 78.0 + lines.size() * 25.0
 	var icon_top := _goods_icon_box(anchor).position.y
 	var x := clampf(anchor.get_center().x - width * 0.5, 12.0, _vs().x - width - 12.0)
@@ -918,7 +918,7 @@ func _draw_goods_popup() -> void:
 	for i in lines.size():
 		draw_string(_font, rr.position + Vector2(16, 57 + i * 25), lines[i],
 				HORIZONTAL_ALIGNMENT_LEFT, width - 32, 18, UiTheme.PAGE_INK)
-	draw_string(_font_bold, Vector2(x + 16, rr.end.y - 15), "%d 金币" % int(entry["price"]),
+	draw_string(_font_bold, Vector2(x + 16, rr.end.y - 15), GameI18n.ui("shop", "SHOP_PRICE_GOLD", "%d 金币") % int(entry["price"]),
 			HORIZONTAL_ALIGNMENT_LEFT, width - 32, 18, UiTheme.PAGE_INK)
 
 
@@ -1031,7 +1031,7 @@ func _draw_leave() -> void:
 	var rr := _leave_rect()
 	var hovered := _hover == 100
 	UiTheme.draw_action(self, rr, false, false, hovered)
-	draw_string(_font_bold, rr.position + Vector2(0, 29), "离开商店",
+	draw_string(_font_bold, rr.position + Vector2(0, 29), GameI18n.ui("shop", "SHOP_LEAVE", "离开商店"),
 			HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_BODY, Color("1a1c22"))
 
 
@@ -1042,7 +1042,7 @@ func _draw_hint() -> void:
 	#    实测「不锈钢盆 10」放那儿会被价签的水晶盖掉一半。
 	if RunState.has_basin():
 		draw_string(_font, Vector2(0, _vs().y - 48),
-				"不锈钢盆 %d 点 · 本次购买优先抵账（不花金币）" % RunState.basin_charge,
+				GameI18n.ui("shop", "SHOP_BASIN_STATUS", "不锈钢盆 %d 点 · 本次购买优先抵账（不花金币）") % RunState.basin_charge,
 				HORIZONTAL_ALIGNMENT_CENTER, _vs().x, UiTheme.FS_CAPTION, UiTheme.ADVENTURE_LIGHT)
 	if _hint_t <= 0.0 or _hint == "":
 		return
@@ -1166,15 +1166,15 @@ func _draw_pick_overlay() -> void:
 	draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, 0.55), true)
 	UiTheme.draw_info_card(self, Rect2(vs.x * 0.5 - 290, 24, 580, 80))
 	if _deleting:
-		draw_string(_font_bold, Vector2(0, 60), "选择要删除的卡",
+		draw_string(_font_bold, Vector2(0, 60), GameI18n.ui("shop", "SHOP_DELETE_PICK_TITLE", "选择要删除的卡"),
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
-		draw_string(_font, Vector2(0, 92), "选中的卡会被永久删除。",
+		draw_string(_font, Vector2(0, 92), GameI18n.ui("shop", "SHOP_DELETE_PICK_WARNING", "选中的卡会被永久删除。"),
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	else:
 		var ench: Dictionary = _row2[_enchanting]["ench"]
-		draw_string(_font_bold, Vector2(0, 60), "选择要附魔的卡 —— %s" % _ench_name(ench),
+		draw_string(_font_bold, Vector2(0, 60), GameI18n.ui("shop", "SHOP_ENCHANT_PICK_TITLE", "选择要附魔的卡 —— %s") % _ench_name(ench),
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
-		draw_string(_font, Vector2(0, 92), "给选中的卡附加「%s」。" % _ench_name(ench),
+		draw_string(_font, Vector2(0, 92), GameI18n.ui("shop", "SHOP_ENCHANT_PICK_DESC", "给选中的卡附加「%s」。") % _ench_name(ench),
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	# ⚠️ 这里**绝对不能**调 `_build_deck_cards()`（R204 修卡死）：
 	# 它会把 `_sel_pick` 重置成 -1，而 `_draw()` 在每次 `queue_redraw()` 之后都会跑 →
@@ -1199,15 +1199,15 @@ func _draw_pick_overlay() -> void:
 			draw_rect(rr, Color(0, 0, 0, 0.6), true)
 	if not any_ok:
 		draw_string(_font, Vector2(0, 300),
-				"没有符合这张附魔条件的卡" if not _deleting else "卡组里没有卡可删",
+				GameI18n.ui("shop", "SHOP_ENCHANT_NO_ELIGIBLE_CARDS", "没有符合这张附魔条件的卡") if not _deleting else GameI18n.ui("shop", "SHOP_DELETE_NO_CARDS", "卡组里没有卡可删"),
 				HORIZONTAL_ALIGNMENT_CENTER, vs.x, UiTheme.FS_SUBHEAD, UiTheme.ADVENTURE_LIGHT)
 	# R235 + R353：「确定」按钮（选中卡后点它成交）—— 附魔与删除**都有**。
 	# 原来删除只有「取消」，成交只能靠「再点一次同一张」，交互没有 UI 表达。
 	var confirm := _pick_confirm_rect()
 	var ready := _sel_pick >= 0
-	UiTheme.draw_secondary_btn(self, confirm, "确定", false, not ready, true)
+	UiTheme.draw_secondary_btn(self, confirm, GameI18n.ui("shop", "SHOP_CONFIRM", "确定"), false, not ready, true)
 	var cancel := _pick_cancel_rect()
-	UiTheme.draw_secondary_btn(self, cancel, "取消", false)
+	UiTheme.draw_secondary_btn(self, cancel, GameI18n.ui("shop", "SHOP_CANCEL", "取消"), false)
 
 
 func _build_deck_cards() -> void:
@@ -1353,7 +1353,7 @@ func _on_click(pos: Vector2) -> void:
 		if _sel_goods != hit:
 			_sel_goods = hit
 			_sel_row1 = -1
-			_set_hint("再次点击选中商品购买")
+			_set_hint(GameI18n.ui("shop", "SHOP_TOUCH_BUY_AGAIN", "再次点击选中商品购买"))
 			return
 		_sel_goods = -1
 	elif _is_touch():
@@ -1408,7 +1408,7 @@ func _pay(price: int) -> bool:
 func _paid_tag(price: int) -> String:
 	## 购买提示的付费后缀（**唯一口**）：盆抵账 or 具体金币数。
 	## 五处购买点共用，免得某处改成盆、另一处还在说「-50 金币」。
-	return "不锈钢盆抵账" if _paid_by_basin else "%d 金币" % price
+	return GameI18n.ui("shop", "SHOP_PAID_BY_BASIN", "不锈钢盆抵账") if _paid_by_basin else "%d 金币" % price
 
 
 func _buy_card(i: int) -> void:
@@ -1416,13 +1416,13 @@ func _buy_card(i: int) -> void:
 	var card: CardData = e["card"]
 	var price := _row1_price(e)          # R432：五折走同一口，别再读基础价
 	if not _pay(price):
-		_set_hint("金币不足（需要 %d）" % price)
+		_set_hint(GameI18n.ui("shop", "SHOP_INSUFFICIENT_GOLD", "金币不足（需要 %d）") % price)
 		return
 	e["sold"] = true
 	RunState.add_card(card.id)
 	_sync_shop_state()                                    # R390：重进要看到「已售罄」
 	_start_fly(card, _row1_rect(i))                       # R390：卡飞进卡组
-	_set_hint("购买「%s」（%s）" % [card.card_name, _paid_tag(price)])
+	_set_hint(GameI18n.ui("shop", "SHOP_CARD_PURCHASED", "购买「%s」（%s）") % [card.card_name, _paid_tag(price)])
 
 
 func _start_enchant(i: int) -> void:
@@ -1473,7 +1473,7 @@ func _buy_row3(i: int) -> void:
 	if key == "delete":
 		# R440 暗动力（6054）：持有它就不能在商店删卡 —— 判据只问 RunState。
 		if not RunState.shop_delete_allowed():
-			_set_hint("暗动力：无法在商店删除卡牌")
+			_set_hint(GameI18n.ui("shop", "SHOP_DELETE_BLOCKED_DARK_POWER", "暗动力：无法在商店删除卡牌"))
 			return
 		if RunState.deck_ids.is_empty():
 			_set_hint("卡组里没有卡可删")
@@ -1492,7 +1492,7 @@ func _buy_row3(i: int) -> void:
 		e["sold"] = true
 		_sync_shop_state()      # R390
 		RunState.gain_max_hp(5)
-		_set_hint("最大生命 +5（并回复 5 点）· %s" % _paid_tag(price))
+		_set_hint(GameI18n.ui("shop", "SHOP_MAX_HP_GAINED", "最大生命 +5（并回复 5 点）· %s") % _paid_tag(price))
 	elif key == "choco":
 		if not _pay(price):
 			_set_hint("金币不足（需要 %d）" % price)
@@ -1501,7 +1501,7 @@ func _buy_row3(i: int) -> void:
 		_sync_shop_state()      # R390
 		RunState.add_chocolate(1)   # R236：体力回到 > 0 会撤销「耗尽→开 Boss」的待触发
 		RunState.sync_fatigue()   # R223 难度 5：巧克力回到 6 以上 → 疲惫出卡组
-		_set_hint("巧克力 +1 · %s" % _paid_tag(price))
+		_set_hint(GameI18n.ui("shop", "SHOP_CHOCOLATE_GAINED", "巧克力 +1 · %s") % _paid_tag(price))
 	elif key == "dagger":
 		if not _pay(price):
 			_set_hint("金币不足（需要 %d）" % price)
@@ -1509,7 +1509,7 @@ func _buy_row3(i: int) -> void:
 		e["sold"] = true
 		_sync_shop_state()      # R390
 		RunState.gain_key(RunState.DAGGER_RELIC_ID)
-		_set_hint("获得信物「屠戮匕首」· %s" % _paid_tag(price))
+		_set_hint(GameI18n.ui("shop", "SHOP_DAGGER_OBTAINED", "获得信物「屠戮匕首」· %s") % _paid_tag(price))
 
 
 func _on_pick_click(pos: Vector2) -> void:
@@ -1518,7 +1518,7 @@ func _on_pick_click(pos: Vector2) -> void:
 	# 删除模式同样走这里）。
 	if _pick_confirm_rect().has_point(pos):
 		if _sel_pick < 0:
-			_set_hint("请先点选一张卡")
+			_set_hint(GameI18n.ui("shop", "SHOP_SELECT_CARD_FIRST", "请先点选一张卡"))
 			return
 		_on_pick_click(_pick_card_rect(_sel_pick).get_center())
 		return
@@ -1575,14 +1575,14 @@ func _on_pick_click(pos: Vector2) -> void:
 			return
 		# 先删卡、再扣钱（R204）：删失败绝不白扣。
 		if not RunState.delete_deck_card(idx):
-			_set_hint("删除失败")
+			_set_hint(GameI18n.ui("shop", "SHOP_DELETE_FAILED", "删除失败"))
 			_deleting = false
 			_ask_redraw()
 			return
 		_pay(del_price)   # R311：有盆就用盆抵（前面 `_can_pay` 已经把「付不起」挡掉了）
 		_row3[0]["sold"] = true
 		_sync_shop_state()      # R390
-		_set_hint("删除了「%s」（%s）" % [del_name, _paid_tag(del_price)])
+		_set_hint(GameI18n.ui("shop", "SHOP_CARD_DELETED", "删除了「%s」（%s）") % [del_name, _paid_tag(del_price)])
 		_deleting = false
 		_hover_enchant_card = -1
 		_ask_redraw()
@@ -1598,7 +1598,7 @@ func _on_pick_click(pos: Vector2) -> void:
 	var mod := _ench_mod(str(ench["id"]))
 	# 先落附魔、再扣钱（R204）：附魔失败（越界 / 已有附魔）绝不白扣金币。
 	if not RunState.enchant_deck_card(idx, mod):
-		_set_hint("附魔失败")
+		_set_hint(GameI18n.ui("shop", "SHOP_ENCHANT_FAILED", "附魔失败"))
 		_enchanting = -1
 		_ask_redraw()
 		return
@@ -1606,7 +1606,7 @@ func _on_pick_click(pos: Vector2) -> void:
 	_row2[_enchanting]["sold"] = true
 	_sync_shop_state()      # R390
 	var c := _repo.get_card(RunState.deck_ids[idx])
-	_set_hint("「%s」获得附魔「%s」（%s）" % [c.card_name if c != null else str(idx),
+	_set_hint(GameI18n.ui("shop", "SHOP_ENCHANT_GRANTED", "「%s」获得附魔「%s」（%s）") % [c.card_name if c != null else str(idx),
 			_ench_name(ench), _paid_tag(price)])
 	_enchanting = -1
 	_hover_enchant_card = -1
@@ -1702,7 +1702,7 @@ func _draw_buy_buttons() -> void:
 		var rr := _buy_btn_rect(i)
 		var price := _row1_price(e)          # R432：触摸端按钮也要显示折后价
 		var can := _can_pay(price)
-		UiTheme.draw_secondary_btn(self, rr, "购买 · %d" % price, false, not can, true)
+		UiTheme.draw_secondary_btn(self, rr, GameI18n.ui("shop", "SHOP_BUY_BUTTON", "购买 · %d") % price, false, not can, true)
 
 
 # ------------------------------------------------------------ R390：卡飞进卡组

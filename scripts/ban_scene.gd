@@ -78,8 +78,8 @@ func _ready() -> void:
 		add_child(t)
 		t.start()
 	_menu = UiMenu.attach(self, _menu_items, {
-		"back": "继续",
-		"sub": "禁卡表",
+		"back": GameI18n.ui("shared", "BAN_MENU_CONTINUE", "继续"),
+		"sub": GameI18n.ui("shared", "BAN_MENU_SUBTITLE", "禁卡表"),
 	})
 
 
@@ -103,10 +103,10 @@ func _demo_unlock() -> void:
 
 func _menu_items() -> Array:
 	return [
-		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+		{"text": func(): return GameI18n.ui("shared", "BAN_SOUND_ON", "音效：开") if sfx.enabled else GameI18n.ui("shared", "BAN_SOUND_OFF", "音效：关"),
 			"fn": _toggle_sound, "keep_open": true},
-		{"text": func(): return "清空「%s」的禁用" % _cls, "fn": _clear_all},
-		{"text": "返回角色选择", "fn": _back},
+		{"text": func(): return GameI18n.ui("shared", "BAN_CLEAR_CLASS", "清空「%s」的禁用") % _cls, "fn": _clear_all},
+		{"text": GameI18n.ui("shared", "BAN_BACK_TO_CLASS_PICK", "返回角色选择"), "fn": _back},
 	]
 
 
@@ -119,7 +119,7 @@ func _toggle_sound() -> void:
 func _clear_all() -> void:
 	ProfileData.clear_bans(_cls)
 	sfx.play("click")
-	_set_toast("已清空「%s」的禁用" % _cls)
+	_set_toast(GameI18n.ui("shared", "BAN_CLASS_CLEARED", "已清空「%s」的禁用") % _cls)
 	queue_redraw()
 
 
@@ -223,14 +223,14 @@ func _toggle(c: CardData) -> void:
 	if had:
 		ProfileData.toggle_ban_for(c.id, _repo, _cls)
 		sfx.play("click")
-		_set_toast("已取消：%s（仅「%s」）" % [c.card_name, _cls])
+		_set_toast(GameI18n.ui("shared", "BAN_CARD_UNBANNED", "已取消：%s（仅「%s」）") % [c.card_name, _cls])
 	else:
 		if ProfileData.toggle_ban_for(c.id, _repo, _cls):
 			sfx.play("attack")
-			_set_toast("已禁：%s（「%s」的奖励池不再出现，下一局生效）" % [c.card_name, _cls])
+			_set_toast(GameI18n.ui("shared", "BAN_CARD_BANNED", "已禁：%s（「%s」的奖励池不再出现，下一局生效）") % [c.card_name, _cls])
 		else:
 			sfx.play("lose")
-			_set_toast("「%s」这一档没有剩余名额（先通过剧情解锁更多卡牌）"
+			_set_toast(GameI18n.ui("shared", "BAN_NO_QUOTA", "「%s」这一档没有剩余名额（先通过剧情解锁更多卡牌）")
 					% CardData.RARITY_NAMES[clampi(c.rarity, 0, 6)])
 	queue_redraw()
 
@@ -261,10 +261,10 @@ func _back() -> void:
 
 func _draw() -> void:
 	UiTheme.draw_page(self, UiTheme.bleed_rect(self))   # R519：铺满窗口
-	draw_string(_font_bold, Vector2(0, 62), "禁 卡 表", HORIZONTAL_ALIGNMENT_CENTER,
+	draw_string(_font_bold, Vector2(0, 62), GameI18n.ui("shared", "BAN_TITLE", "禁 卡 表"), HORIZONTAL_ALIGNMENT_CENTER,
 			size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(0, 92),
-			"禁卡表按职业分别记账：解锁一张职业卡 → 该职业 +1 名额；解锁一张公用卡 → 三个职业各 +1",
+			GameI18n.ui("shared", "BAN_EXPLANATION", "禁卡表按职业分别记账：解锁一张职业卡 → 该职业 +1 名额；解锁一张公用卡 → 三个职业各 +1"),
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 	# R352：三个职业页签
 	var ids := PlayerClass.ids()
@@ -291,16 +291,16 @@ func _draw() -> void:
 			UiTheme.PAGE_INK if quota > 0 else Color("8a8f9c"))
 	if quota == 0:
 		draw_string(_font, Vector2(0, 190),
-				"没有任何这个职业能用的禁卡名额 —— 剧情里解锁卡牌后才有（故事界面看完剧情才会有）",
+				GameI18n.ui("shared", "BAN_NO_QUOTA_EXPLANATION", "没有任何这个职业能用的禁卡名额 —— 剧情里解锁卡牌后才有（故事界面看完剧情才会有）"),
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION, Color("9aa0ad"))
 	# 返回
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
 	UiTheme.draw_action(self, back, false, false, hov_back)
-	draw_string(_font_bold, back.position + Vector2(0, 22), "← 返回角色选择",
+	draw_string(_font_bold, back.position + Vector2(0, 22), GameI18n.ui("shared", "BAN_BACK_TO_CLASS_PICK_ARROW", "← 返回角色选择"),
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	if _cards.is_empty():
-		draw_string(_font, Vector2(0, LIST_Y + 40), "奖励池是空的。",
+		draw_string(_font, Vector2(0, LIST_Y + 40), GameI18n.ui("shared", "BAN_REWARD_POOL_EMPTY", "奖励池是空的。"),
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 		return
 	for i in _max_rows():
@@ -313,7 +313,7 @@ func _draw() -> void:
 		# → 整行被框线横切（与故事页 / 记录页同款）。收到 -36，落在内框内侧。
 		# ⚠️ 这个数要和 story_scene.gd 的底注保持一致，改一处就要对齐另一处。
 		draw_string(_font, Vector2(0, size.y - 36),
-				"第 %d–%d 张 / 共 %d 张"
+				GameI18n.ui("shared", "BAN_LIST_RANGE", "第 %d–%d 张 / 共 %d 张")
 				% [_scroll + 1, mini(_scroll + _max_rows(), _cards.size()), _cards.size()],
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
 				UiTheme.PAGE_MUTED)
@@ -348,18 +348,18 @@ func _draw_row(idx: int, c: CardData) -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, 420, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	draw_string(_font, r.position + Vector2(520, 24), c.kind,
 			HORIZONTAL_ALIGNMENT_LEFT, 120, UiTheme.FS_CAPTION, Color("9aa0ad"))
-	draw_string(_font, r.position + Vector2(640, 24), "费用 %d" % c.cost,
+	draw_string(_font, r.position + Vector2(640, 24), GameI18n.ui("shared", "BAN_CARD_COST", "费用 %d") % c.cost,
 			HORIZONTAL_ALIGNMENT_LEFT, 120, UiTheme.FS_CAPTION, Color("8fb4d8"))
-	var tag := "禁"
+	var tag := GameI18n.ui("shared", "BAN_TAG_AVAILABLE", "禁")
 	var tcol := Color("b9ae8a")
 	if banned:
-		tag = "已禁"
+		tag = GameI18n.ui("shared", "BAN_TAG_BANNED", "已禁")
 		tcol = Color("ff8fa8")
 	else:
 		var quota := ProfileData.ban_quota_for(_repo, _cls)
 		var used := ProfileData.banned_by_rarity_for(_repo, _cls)
 		if int(used.get(c.rarity, 0)) >= int(quota.get(c.rarity, 0)):
-			tag = "无名额"
+			tag = GameI18n.ui("shared", "BAN_TAG_NO_QUOTA", "无名额")
 			tcol = Color("6f7684")
 	draw_string(_font_bold, r.position + Vector2(r.size.x - 120, 24), tag,
 			HORIZONTAL_ALIGNMENT_RIGHT, 100, UiTheme.FS_BODY, tcol)

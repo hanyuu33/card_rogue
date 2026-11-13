@@ -5,8 +5,8 @@ extends RefCounted
 
 static var active := false
 static var link = null                 # Net.NetLink（无类型引用避免循环依赖问题）
-static var my_name := "玩家"
-static var opp_name := "对手"
+static var my_name := GameI18n.ui("shared", "NET_SESSION_DEFAULT_MY_NAME", "玩家")
+static var opp_name := GameI18n.ui("shared", "NET_SESSION_DEFAULT_OPPONENT_NAME", "对手")
 static var opp_deck_size := 30
 static var i_start := true             # 房主先手
 static var my_deck_ids: Array[int] = []   # 空 = 内置新手卡组

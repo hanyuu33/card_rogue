@@ -230,7 +230,7 @@ func _draw_board(anchor: Vector2, card: CardData, a: float) -> void:
 	## 卡面本身只画卡名（`name_only`，与战斗内同一口径），所以效果这一段必须由这里补上 ——
 	## 否则玩家只看得到一个卡名，不知道自己刚拿到的是张什么卡。
 	## 硬边深底 + 细金线，与 UiToast 同一套色；金色是奖励语义，这里用得着。
-	var title := "✦ 已加入卡组"
+	var title := GameI18n.ui("reward", "REWARD_CARD_GRANTED", "✦ 已加入卡组")
 	var body: String = CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
 	var bw: float = maxf(CARD_SIZE.x + 74.0, 236.0)
 	var inner: float = bw - 32.0

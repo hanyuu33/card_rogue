@@ -233,7 +233,7 @@ static func probe_newer_save() -> void:
 	if str(v.get("kind", "")) != "version_new":
 		return
 	last_error_kind = "version_new"
-	last_error = str(v.get("msg", "存档来自更新的版本，本版本不能使用"))
+	last_error = str(v.get("msg", GameI18n.ui("shared", "RUN_SAVE_NEWER_FALLBACK", "存档来自更新的版本，本版本不能使用")))
 	_blocked_stamp = _stamp_of(SAVE_PATH)
 	_trace("PROBE-BLOCK(version_new) 标题页先发现：%s" % last_error)
 
@@ -422,12 +422,12 @@ static func load_run() -> bool:
 	_blocked_stamp = ""
 	_recover_tmp()
 	if not FileAccess.file_exists(SAVE_PATH):
-		_fail("missing", "没有可继续的存档", false)
+		_fail("missing", GameI18n.ui("shared", "RUN_SAVE_MISSING", "没有可继续的存档"), false)
 		_trace("LOAD-FAIL 盘上没有档")
 		return false
 	if not _readable(SAVE_PATH):
 		push_warning("RunSave：存档格式不兼容或已损坏")
-		_fail("corrupt", "存档已损坏，不能使用", true, "格式损坏")
+		_fail("corrupt", GameI18n.ui("shared", "RUN_SAVE_CORRUPT", "存档已损坏，不能使用"), true, "格式损坏")
 		return false
 	var txt := FileAccess.get_file_as_string(SAVE_PATH)
 	var root: Variant = str_to_var(txt)
@@ -441,7 +441,7 @@ static func load_run() -> bool:
 	# 玩家那份档就真的没了，连事后人工捞回来的机会都没有。
 	if bool(d.get("run_finished", false)):
 		push_warning("RunSave：存档是已收尾的一局，隔离不继续")
-		_fail("finished", "这一局已经结束，不能继续", true, "已收尾")
+		_fail("finished", GameI18n.ui("shared", "RUN_SAVE_FINISHED", "这一局已经结束，不能继续"), true, "已收尾")
 		return false
 	# R640：**通关过的种子一律作废**（用户报「通关后继续游戏又回到打过的母舰空袭」）。
 	# 上面那条只管「档里自己写着收尾」，而复活的那份档写的是 `run_finished: false`
@@ -455,7 +455,7 @@ static func load_run() -> bool:
 		push_warning("RunSave：存档属于已通关的一局（seed=%d），作废" % _cleared_seed)
 		_trace("LOAD-DROP(cleared) seed=%d 已通关，续档作废" % _cleared_seed)
 		clear_save()
-		_fail("finished", "这一局已经通关，不能继续", false, "已通关种子")
+		_fail("finished", GameI18n.ui("shared", "RUN_SAVE_CLEARED", "这一局已经通关，不能继续"), false, "已通关种子")
 		return false
 	# R486：**体检**。`_readable()` 只证明「包能解开」，解出来的东西可以荒谬到根本没法继续
 	# （卡组全是已下架的卡 / 地图是空的 / 停在第九层）。以前这种档会被 `apply()` 硬读进来，
@@ -463,7 +463,7 @@ static func load_run() -> bool:
 	var v := validate(d)
 	if not bool(v.get("ok", false)):
 		var kind := str(v.get("kind", "content"))
-		var msg := str(v.get("msg", "存档内容不合理，不能使用"))
+		var msg := str(v.get("msg", GameI18n.ui("shared", "RUN_SAVE_INVALID_FALLBACK", "存档内容不合理，不能使用")))
 		push_warning("RunSave：存档体检不通过（%s）—— %s" % [kind, msg])
 		# 来自更新版本的档**不隔离**：它可能是另一台机器同步过来的新进度，
 		# 删掉 / 改名等于替玩家做了「这份进度不要了」的决定。
@@ -665,22 +665,22 @@ static func validate(d: Dictionary) -> Dictionary:
 	##      战斗里第一张牌就炸；而它看起来只是「我的卡组少了一张」。
 	##   ③ **结构**：没有卡组 / 没有地图 / 格子缺字段 / 层数越界 / 停在图上不存在的格子。
 	if d.is_empty():
-		return _verdict(false, "content", "存档内容是空的，不能使用")
+		return _verdict(false, "content", GameI18n.ui("shared", "RUN_SAVE_EMPTY", "存档内容是空的，不能使用"))
 	var ver := int(d.get("data_ver", 0))
 	if ver > CONTENT_VERSION:
 		return _verdict(false, "version_new",
-				"存档来自更新的版本（存档 v%d / 本作 v%d），本版本不能使用该存档" % [ver, CONTENT_VERSION])
+				GameI18n.ui("shared", "RUN_SAVE_NEWER_VERSION", "存档来自更新的版本（存档 v%d / 本作 v%d），本版本不能使用该存档") % [ver, CONTENT_VERSION])
 	if ver < MIN_CONTENT_VERSION:
 		return _verdict(false, "version_old",
-				"存档版本过旧（存档 v%d / 本作 v%d），不能使用" % [ver, CONTENT_VERSION])
+				GameI18n.ui("shared", "RUN_SAVE_OLDER_VERSION", "存档版本过旧（存档 v%d / 本作 v%d），不能使用") % [ver, CONTENT_VERSION])
 	# ② 卡组
 	var deck: Variant = d.get("deck_ids", [])
 	if not (deck is Array) or (deck as Array).is_empty():
-		return _verdict(false, "content", "存档里没有卡组，不能使用")
+		return _verdict(false, "content", GameI18n.ui("shared", "RUN_SAVE_NO_DECK", "存档里没有卡组，不能使用"))
 	var gone := _missing_card_ids(deck as Array)
 	if not gone.is_empty():
 		return _verdict(false, "version_old",
-				"存档里有 %d 张已下架的卡（%s），属于旧版本，不能使用" % [
+				GameI18n.ui("shared", "RUN_SAVE_REMOVED_CARDS", "存档里有 %d 张已下架的卡（%s），属于旧版本，不能使用") % [
 						gone.size(), _ids_text(gone)])
 	# ② 待领奖励 / 延迟发卡的候选（这里引用了不存在的卡 → 奖励页一点就炸）
 	var pend: Array = []
@@ -697,34 +697,34 @@ static func validate(d: Dictionary) -> Dictionary:
 	var gone_p := _missing_card_ids(pend)
 	if not gone_p.is_empty():
 		return _verdict(false, "version_old",
-				"存档的待领奖励里有 %d 张已下架的卡（%s），属于旧版本，不能使用" % [
+				GameI18n.ui("shared", "RUN_SAVE_PENDING_REMOVED_CARDS", "存档的待领奖励里有 %d 张已下架的卡（%s），属于旧版本，不能使用") % [
 						gone_p.size(), _ids_text(gone_p)])
 	# ② 道具
 	var rel: Variant = d.get("relics", [])
 	var gone_r := _missing_relic_ids(rel if rel is Array else [])
 	if not gone_r.is_empty():
 		return _verdict(false, "version_old",
-				"存档里有 %d 件已下架的道具（%s），属于旧版本，不能使用" % [
+				GameI18n.ui("shared", "RUN_SAVE_REMOVED_RELICS", "存档里有 %d 件已下架的道具（%s），属于旧版本，不能使用") % [
 						gone_r.size(), _ids_text(gone_r)])
 	# ③ 结构
 	if int(d.get("max_hp", 0)) <= 0:
-		return _verdict(false, "content", "存档的血量上限异常（%d），不能使用" % int(d.get("max_hp", 0)))
+		return _verdict(false, "content", GameI18n.ui("shared", "RUN_SAVE_INVALID_MAX_HP", "存档的血量上限异常（%d），不能使用") % int(d.get("max_hp", 0)))
 	var cells: Variant = d.get("map_cells", [])
 	if not (cells is Array) or (cells as Array).is_empty():
-		return _verdict(false, "content", "存档里没有地图，不能使用")
+		return _verdict(false, "content", GameI18n.ui("shared", "RUN_SAVE_NO_MAP", "存档里没有地图，不能使用"))
 	var ids := {}
 	for mc: Variant in cells:
 		if not (mc is Dictionary) or not (mc as Dictionary).has("id") \
 				or not (mc as Dictionary).has("type"):
-			return _verdict(false, "content", "存档的地图格子结构损坏，不能使用")
+			return _verdict(false, "content", GameI18n.ui("shared", "RUN_SAVE_INVALID_MAP_CELL", "存档的地图格子结构损坏，不能使用"))
 		ids[int((mc as Dictionary)["id"])] = true
 	var layer := int(d.get("current_layer", 0))
 	if not GameLayers.exists(layer):
-		return _verdict(false, "content", "存档停在不存在的第 %d 层，不能使用" % layer)
+		return _verdict(false, "content", GameI18n.ui("shared", "RUN_SAVE_INVALID_LAYER", "存档停在不存在的第 %d 层，不能使用") % layer)
 	# current_node_id = -1 是合法的「还没落在地图格上」（开局那一刻就是这样）
 	var node := int(d.get("current_node_id", -1))
 	if node >= 0 and not ids.has(node):
-		return _verdict(false, "content", "存档停在地图上不存在的格子（%d），不能使用" % node)
+		return _verdict(false, "content", GameI18n.ui("shared", "RUN_SAVE_INVALID_NODE", "存档停在地图上不存在的格子（%d），不能使用") % node)
 	return _verdict(true, "", "")
 
 

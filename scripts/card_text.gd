@@ -73,17 +73,37 @@ const PHRASE_FIXES := [
 	["技能牌", "技能卡"],
 	["返回手卡", "收回手牌"],
 	# R649：显示层术语统一补齐（数据层 cards.json 仍是权威原文，不动）。
-	# 顺序敏感：弃牌复合词必须先于「牌库」，否则「弃牌库」会被拆成「弃抽牌堆」。
+	# 顺序敏感：弃牌复合词必须先于「牌库」，否则「弃牌库」会被拆成「弃抽牌库」。
+	# 店长 2026-11-13 定案：卡组＝完整卡组（顶栏按钮）；抽牌库＝战斗中待抽
+	# （右下角牌堆，UI 区域名即「抽牌库」）；弃牌区统一叫弃牌区。
 	["弃牌库", "弃牌区"],
 	["弃牌堆", "弃牌区"],
 	["抽牌库", "抽牌堆"],
 	["牌库", "抽牌堆"],
+	# 收口：上面两条先把「抽牌库／牌库」挪成不含「牌库」的中间形，再统一回正名。
+	# 不能删掉第一条，否则「抽牌库」会被「牌库 -> 抽牌库」拆成「抽抽牌库」。
+	["抽牌堆", "抽牌库"],
 	["手卡", "手牌"],
 	["生命值", "生命"],
 	["血量", "生命"],
 	["一回合可以行动两次", "每回合可以行动两次"],
 	["一回合行动两次", "每回合可以行动两次"],
 	["费用变为0", "费用变为 0"],
+	# 2026-11-13 区域术语纠正（R2 回正）：卡组＝完整卡组，抽牌库＝战斗待抽区。
+	# 精确短语，只改「战斗内待抽区」语义；「从卡组删除 / 不可以从卡组删除」等
+	# 跨战斗增删语义必须保留「卡组」，所以这里绝不能用全局「卡组 -> 抽牌库」。
+	["从卡组随机抽取", "从抽牌库随机抽取"],
+	["从卡组随机将一张", "从抽牌库随机将一张"],
+	["从卡组选择一张", "从抽牌库选择一张"],
+	["从卡组将一张", "从抽牌库将一张"],
+	["从卡组把一张", "从抽牌库把一张"],
+	["从卡组加入手", "从抽牌库加入手"],
+	["选择卡组一张", "选择抽牌库一张"],
+	["选卡组一张", "选抽牌库一张"],
+	["手牌和卡组", "手牌和抽牌库"],
+	["卡组里的两张卡", "抽牌库里的两张卡"],
+	["加入你的卡组", "加入抽牌库"],
+	["往对方卡组中", "往对方抽牌库中"],
 ]
 
 
@@ -214,10 +234,11 @@ static func parse(md: String, hide_parens := HIDE_PARENS) -> Array:
 	## 解析极简 Markdown → 片段数组：[{text, bold, italic, code}, ...]
 	## 支持 `**加粗**`、`*斜体*`、`` `代码` ``。标记不成对时按字面保留（不吞字）。
 	## ⚠️ R187：返回的是缓存的**浅副本** —— 片段 Dictionary 请勿原地改写。
-	var ck := ("1" if hide_parens else "0") + "|" + md
+	var ck := GameI18n.language() + "|" + ("1" if hide_parens else "0") + "|" + md
 	if _parse_cache.has(ck):
 		return (_parse_cache[ck] as Array).duplicate()
-	var s: String = clean_meta_notes(naturalize_phrases(md))
+	var translated := GameI18n.source(md)
+	var s: String = clean_meta_notes(naturalize_phrases(translated))
 	if hide_parens:
 		s = strip_parens(s)
 	var segs: Array = []
@@ -293,8 +314,9 @@ static func mark_mentions(segs: Array) -> Array:
 		var i := 0
 		var n := t.length()
 		while i < n:
-			if t[i] == "「":
-				var j := t.find("」", i + 1)
+			if t[i] == "「" or t[i] == "«":
+				var closer := "」" if t[i] == "「" else "»"
+				var j := t.find(closer, i + 1)
 				if j > 0:
 					var nm := t.substr(i + 1, j - i - 1)
 					var ref := Mention.resolve(nm)

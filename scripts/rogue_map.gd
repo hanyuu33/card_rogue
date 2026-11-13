@@ -903,11 +903,13 @@ static func display_type(cell: Dictionary) -> String:
 
 
 static func type_label(type: String) -> String:
-	return str(TYPE_LABELS.get(type, type))
+	var fallback := str(TYPE_LABELS.get(type, type))
+	return GameI18n.ui("map", "ROGUE_MAP_TYPE_" + type.to_upper(), fallback)
 
 
 static func type_mark(type: String) -> String:
-	return str(TYPE_MARKS.get(type, "?"))
+	var fallback := str(TYPE_MARKS.get(type, "?"))
+	return GameI18n.ui("map", "ROGUE_MAP_MARK_" + type.to_upper(), fallback)
 
 
 static func all_nodes(cells: Array) -> Array:

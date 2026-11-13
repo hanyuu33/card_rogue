@@ -30,6 +30,9 @@ var _pair_reported := {}  # R66：已打印过「牌库/道具成对」的场景
 
 
 func _initialize() -> void:
+	# R668：本套件含中文显示断言；只固定当前进程，不写玩家设置。
+	GameSettings.ensure_loaded()
+	GameSettings.language = "zh"
 	# R346：冒烟会实例化各场景（含剧情 / 禁卡），绝不许写玩家真实档案
 	ProfileData.set_test_mode()
 	# R378：存档也换独立文件 —— 否则跑一次测试就把玩家正在打的那一局删了

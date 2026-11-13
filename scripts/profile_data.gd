@@ -452,22 +452,22 @@ static func claim_episode(repo: StoryRepo, episode_id: String) -> Dictionary:
 	##    所以 `mark_story_read()` 和白名单写入必须在同一处，不能拆开。
 	var res := {"ok": false, "cards": [], "relics": [], "reason": ""}
 	if repo == null:
-		res["reason"] = "剧情数据缺失"
+		res["reason"] = GameI18n.ui("shared", "PROFILE_STORY_DATA_MISSING", "剧情数据缺失")
 		return res
 	# R359：没写正文的段落不能领 —— 界面已经不给点（`episode_state` 恒 locked），
 	# 这里是**纵深防御**：万一路径漏判，也不许把空段落的奖励记账写进档案。
 	if not repo.has_content(episode_id):
-		res["reason"] = "这一段还没有内容"
+		res["reason"] = GameI18n.ui("shared", "PROFILE_EPISODE_EMPTY", "这一段还没有内容")
 		return res
 	if not is_story_unlocked(episode_id):
-		res["reason"] = "条件还没达成"
+		res["reason"] = GameI18n.ui("shared", "PROFILE_REQUIREMENT_UNMET", "条件还没达成")
 		return res
 	if is_story_read(episode_id):
-		res["reason"] = "已经看过了"
+		res["reason"] = GameI18n.ui("shared", "PROFILE_EPISODE_ALREADY_READ", "已经看过了")
 		return res
 	var ep := repo.episode(episode_id)
 	if ep.is_empty():
-		res["reason"] = "没有这一段"
+		res["reason"] = GameI18n.ui("shared", "PROFILE_EPISODE_MISSING", "没有这一段")
 		return res
 	ensure_loaded()
 	var cards: Array[int] = []
@@ -616,7 +616,7 @@ static func ban_summary_for(repo: CardRepo, cls: String) -> String:
 	var used := banned_by_rarity_for(repo, cls)
 	var parts: Array[String] = []
 	for r in [0, 1, 2]:
-		parts.append("%s 已禁 %d / 名额 %d" % [CardData.RARITY_NAMES[r],
+		parts.append(GameI18n.ui("shared", "PROFILE_BAN_SUMMARY_PART", "%s 已禁 %d / 名额 %d") % [CardData.RARITY_NAMES[r],
 				int(used.get(r, 0)), int(quota.get(r, 0))])
 	return " · ".join(parts)
 

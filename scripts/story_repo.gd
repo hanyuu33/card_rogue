@@ -143,7 +143,10 @@ func ready_count() -> int:
 func episode_label(ep: Dictionary) -> String:
 	## 列表里的显示名：`episodeX-？？？`（章节名 + 标题）。
 	## 内容还没写的时候标题就是「？？？」，写完之后把 title 换成真标题即可。
-	return "%s-%s" % [str(ep.get("chapter", "?")), str(ep.get("title", "？？？"))]
+	var id := str(ep.get("id", ""))
+	var chapter := GameI18n.story_value(id, "chapter", 0, str(ep.get("chapter", "?")))
+	var title := GameI18n.story_value(id, "title", 0, str(ep.get("title", "？？？")))
+	return "%s-%s" % [chapter, title]
 
 
 func requirement_text(ep_id: String) -> String:
@@ -156,9 +159,10 @@ func requirement_text(ep_id: String) -> String:
 	var ach := achievement_for_episode(ep_id)
 	if ach.is_empty():
 		return ""
-	var hint := str(ach.get("hint", ""))
+	var hint := GameI18n.achievement_value(str(ach.get("id", "")), "hint",
+			str(ach.get("hint", "")))
 	if hint == "":
-		hint = "达成某个条件"
+		hint = GameI18n.source("达成某个条件")
 	var need := int(ach.get("min", 1))
 	var got := mini(ProfileData.achievement_progress(ach), need)
 	return "%s（%d / %d）" % [hint, got, need]
@@ -168,10 +172,12 @@ func episode_text_lines(ep_id: String) -> Array[String]:
 	## 剧情正文（一行一句）。空 → 返回一句占位，界面不用各处判空。
 	var out: Array[String] = []
 	var ep := episode(ep_id)
+	var index := 0
 	for v: Variant in (ep.get("text", []) as Array):
-		out.append(str(v))
+		out.append(GameI18n.story_value(ep_id, "text", index, str(v)))
+		index += 1
 	if out.is_empty():
-		out.append("（这一段故事还没有写。）")
+		out.append(GameI18n.source("（这一段故事还没有写。）"))
 	return out
 
 
@@ -205,5 +211,5 @@ func unlock_notice(ids: Array) -> String:
 	if ready.is_empty():
 		return ""
 	if ready.size() == 1:
-		return "✦ 新剧情解锁：%s" % episode_label(episode(ready[0]))
-	return "✦ 新剧情解锁 %d 段（主界面查看）" % ready.size()
+		return GameI18n.source("✦ 新剧情解锁：%s") % episode_label(episode(ready[0]))
+	return GameI18n.source("✦ 新剧情解锁 %d 段（主界面查看）") % ready.size()

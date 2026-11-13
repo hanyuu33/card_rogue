@@ -61,7 +61,7 @@ https://creativecommons.org/licenses/by/4.0[/color][/font_size]
 
 static func credits_text() -> String:
 	## 把 `{name}` 换成当前游戏名（唯一来源 = GameBrand）。
-	return CREDITS_TEXT.replace("{name}", GameBrand.display_name())
+	return GameI18n.ui("shell", "CREDITS_BODY", CREDITS_TEXT).replace("{name}", GameBrand.display_name())
 
 
 var _label: RichTextLabel

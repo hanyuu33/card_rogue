@@ -1,4 +1,26 @@
+## 2026-11-13 R668 西班牙语版本：运行时、术语、战斗与图鉴验收
+
+**目标**：交付可选、可运行、可回归的 Español 版本，不停留在静态 JSON。中文权威数据、内部 ID、存档字段、AI 与战斗判断不改；显示层按 `es → en → 调用方中文 fallback` 回退，中文直接返回中文。
+
+- **运行时桥**：`GameI18n` 统一读取 `res://i18n/<domain>_<lang>.json`，领域、原文、模板、反向映射与卡面缓存按语言隔离；显式 `L10n.t(key, "en")` 不受当前西语影响。标题、首次选择、设置语言页与系统 `es` locale 已接入。
+- **界面装订**：canonical 六域共 **788 条**（shop 68 / reward 120 / map 244 / battle 72 / shell 195 / shared 89），英、日、西三语键完整。战斗含 41 个稳定关卡 key、洞穴事件关、5 个分级、回合横幅、HUD、费用、效果区、胜利与结算；`GameLevels.display_name()` 只翻译显示名。
+- **全内容数据**：西语覆盖 315 卡、62 道具、3 角色、4 陷阱、26 事件/64 段正文、11 剧情/54 行、11 成就提示、155 条事件交互、788 条界面与 56 条骨架。卡牌、道具优先按稳定 ID；事件与正文保留占位符、前导换行及书名号提及扫描。
+- **术语与图鉴**：卡库 199 种特性中，83 种复用卡名/canonical，剩余 116 种由 `glossary_es.json` 补齐；既有 `glossary.json` 继续服务英日。图鉴标题、计数、搜索、筛选、详情卡名、特性与正文均已本地化；筛选显示值与中文内部值分离，搜索同时保留中文与译文索引。
+- **长文本与中文素材**：费用、效果区和图鉴标题按宽度缩字；西语搜索提示缩短但不丢语义。非中文胜利标题用本地化面板，中文仍显示原 `battle_win_ribbon.png`，未改定稿素材。
+- **截图暴露的显示修复**：自绘大按钮与后续回合横幅接入既有 battle key；空 `_hover_relic_tip` 不再画出 480px 黑色底板。该黑条是原有显示守卫缺失，不是横幅或西语译文；修复仅为空文本提前返回，不改陷阱/战斗逻辑。
+- **截图证据**（均用 `E:/tmp/r668_*_appdata` 隔离档案，不读写真实玩家进度）：`_preview/r668_spanish/title.png`、`event.png`、`gallery.png`、`battle.png`、`victory.png`、`victory_zh.png`。最新战斗大图完整显示 `Fin del turno`，胜利页为 `Victoria / Oro obtenido / Ver recompensas`，中文胜利对照仍为原美术字。
+- **验证**：
+  - `python i18n/validate_spanish.py` → **SPANISH I18N OK: 21978 checks**；
+  - `validate_interface.py` / `validate_noncard.py` / `validate_narrative.py` / `validate_event_ui.py` 全过；
+  - `test_i18n.gd` → **31 通过 / 0 失败**；临时 `--export-pack` 后以 `--main-pack` 从包内重跑同为 **31/0**，新增 JSON 无需额外修改导出预设；
+  - 干净 HEAD + 仅本提交暂存内容的独立快照：西语校验 **21906 项**（R663 真源缺席时陷阱/三项增强断言按权威数据休眠），运行时 **31/0**；完整回归 assemble / mana 通过，engine **5870✓ 0✗**、reward **26✓ 0✗**、bgm **39✓ 0✗**、smoke **70✓ 0✗**。快照复用主工程有效导入缓存以避免 Godot 冷导入预载崩溃，源码与数据全部由 git index 生成；
+  - `python tools/_run_r663_verify.py` → assemble / mana 通过，engine **5887✓ 0✗**、reward **26✓ 0✗**、bgm **39✓ 0✗**、traps **36✓ 0✗**、trapinput **33✓ 0✗**、smoke **70✓ 0✗**；`[RESTORE_VERIFY] OK（68 项，新增搬走 6 个）`，`[REGRESSION] GREEN`。
+- **已知限制**：固定 180px 顶栏中的超长开战状态会先缩字、再按原设计省略，完整文本在 tooltip；右侧关卡铭牌完整。旧 `title.log` 留有一条 Godot `_shape_run: fd is null` 警告，标题实际渲染正常，不写成“完全无警告”。未主动制作发布包。
+- **提交边界**：只提交本地化数据、运行时与对应测试/文档；R663/R667 陷阱、三张卡数值效果、并行 engine/shop/map/battle hunks 及其素材继续留在工作区，不混入本提交。共享文件按 hunk staged，CRLF 文件保持 CRLF。9005/9037/9055 的提交内译文对齐 HEAD 旧机制，工作区新机制译文保留为未提交修改；traps 真源缺席时校验只检查译文包结构，真源存在即恢复完整 ID/效果锁。
+- **对应提交**：R668 西班牙语运行时与全内容本地化（本提交）。
+
 ## 2026-11-11 R572 两张「组合」钩子卡：宝石兽 9246 / 拼装工厂 9247
+
 
 **口径（用户）**：「新增森林精魄稀有盟友：宝石兽。1费1/1/1/1。死亡时，组合一张卡。（没有声明全卡池则默认
 本角色卡池，组合后加入手卡）新增机械之心稀有工事：拼装工厂：3费0/12/0。回合开始时，组合一张卡。」

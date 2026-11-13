@@ -20,6 +20,7 @@ const LANGUAGES := [
 	{"code": "zh", "native": "中文", "en": "Chinese (Simplified)"},
 	{"code": "en", "native": "English", "en": "English"},
 	{"code": "ja", "native": "日本語", "en": "Japanese"},
+	{"code": "es", "native": "Español", "en": "Spanish"},
 ]
 
 const TEXT := {
@@ -166,6 +167,8 @@ static func system_language() -> String:
 		return "ja"
 	if loc.begins_with("zh"):
 		return "zh"
+	if loc.begins_with("es"):
+		return "es"
 	return "en"
 
 
@@ -183,6 +186,10 @@ static func t(key: String, lang := "") -> String:
 		code = lang.strip_edges().to_lower()
 		if not has_language(code):
 			code = FALLBACK_LANG
+	if code != DEFAULT_LANG:
+		var external := GameI18n.skeleton(key, "", code)
+		if external != "":
+			return external
 	var row: Dictionary = TEXT.get(key, {})
 	if row.has(code):
 		return str(row[code])

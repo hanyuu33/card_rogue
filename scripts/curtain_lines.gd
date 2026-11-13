@@ -20,14 +20,14 @@ const SPEAKER_SUB := "豚鼠吟游诗人"
 static func greeting(layer: int, cls: String) -> String:
 	## 卷卷的开场白。
 	if layer <= GameLayers.LAYER_DEFAULT:
-		return "看看这里有什么能帮到你的。"
+		return GameI18n.ui("shell", "CURTAIN_GREETING_DEFAULT", "看看这里有什么能帮到你的。")
 	match PlayerClass.legacy_id(cls):
 		PlayerClass.DRUID:
-			return "在这里遇到你真开心。"
+			return GameI18n.ui("shell", "CURTAIN_GREETING_DRUID", "在这里遇到你真开心。")
 		PlayerClass.ROGUE:
-			return "这些就当做定金吧。"
+			return GameI18n.ui("shell", "CURTAIN_GREETING_ROGUE", "这些就当做定金吧。")
 		PlayerClass.MECH:
-			return "你喜欢音乐吗？"
+			return GameI18n.ui("shell", "CURTAIN_GREETING_MECH", "你喜欢音乐吗？")
 	return "看看这里有什么能帮到你的。"
 
 
@@ -42,11 +42,11 @@ static func reply(layer: int, cls: String) -> String:
 		return ""
 	match PlayerClass.legacy_id(cls):
 		PlayerClass.DRUID:
-			return "我也是。"
+			return GameI18n.ui("shell", "CURTAIN_REPLY_DRUID", "我也是。")
 		PlayerClass.ROGUE:
-			return "……"
+			return GameI18n.ui("shell", "CURTAIN_REPLY_ROGUE", "……")
 		PlayerClass.MECH:
-			return "是的，这个节奏让我安心。"
+			return GameI18n.ui("shell", "CURTAIN_REPLY_MECH", "是的，这个节奏让我安心。")
 	return ""
 
 
@@ -58,5 +58,5 @@ static func reply_speaker(layer: int, cls: String) -> String:
 static func skip_label(layer: int) -> String:
 	## 「不要道具」那个出口的文案（第一层 / 二层起语气不同）。
 	if layer <= GameLayers.LAYER_DEFAULT:
-		return "摇摇头（不拿）"
-	return "摆手拒绝（不拿）"
+		return GameI18n.ui("shell", "CURTAIN_SKIP_LAYER_ONE", "摇摇头（不拿）")
+	return GameI18n.ui("shell", "CURTAIN_SKIP_LAYER_TWO", "摆手拒绝（不拿）")

@@ -2259,16 +2259,16 @@ static func relic_state_note(id: int) -> String:
 	## 道具的动态状态说明（叠加态的鸭：当前复活概率）；无动态状态时返回 ""。
 	# R367：已耗尽（灰掉）的优先说清楚 —— 这不是「没有状态」，是**这件已经用完了**。
 	if is_relic_spent(id):
-		return "已耗尽，效果不再生效。"
+		return GameI18n.ui("reward", "REWARD_RELIC_STATE_SPENT", "已耗尽，效果不再生效。")
 	if id == STACK_DUCK_RELIC_ID and relics.has(STACK_DUCK_RELIC_ID):
-		return "当前复活概率 %d%%。" % duck_revive_chance
+		return GameI18n.ui("reward", "REWARD_RELIC_STATE_REVIVE_CHANCE", "当前复活概率 %d%%。") % duck_revive_chance
 	# R314 lucky 7：写清「还差几个回合生效」—— 它的效果是周期性脉冲，不是常亮
 	if id == MATCH_RELIC_ID and relics.has(MATCH_RELIC_ID):
-		return "剩余刷新次数 %d 次。" % maxi(0, match_charge)
+		return GameI18n.ui("reward", "REWARD_RELIC_STATE_REROLLS", "剩余刷新次数 %d 次。") % maxi(0, match_charge)
 	if id == LUCKY7_RELIC_ID and relics.has(LUCKY7_RELIC_ID):
 		if lucky7_is_due():
-			return "本回合生效：免疫所有 HP 伤害 + 技能额外 7 点伤害。"
-		return "距下次生效还有 %d 个回合。" % lucky7_left()
+			return GameI18n.ui("reward", "REWARD_RELIC_STATE_LUCKY7_ACTIVE", "本回合生效：免疫所有 HP 伤害 + 技能额外 7 点伤害。")
+		return GameI18n.ui("reward", "REWARD_RELIC_STATE_LUCKY7_WAITING", "距下次生效还有 %d 个回合。") % lucky7_left()
 	return ""
 
 
@@ -2288,10 +2288,10 @@ static func remove_block_reason(index: int) -> String:
 	## 选卡页全都读它，界面只负责提前告知与灰化。
 	## 带锁的卡只有三张：月亮 9180 / 硬币 9181 / 罐子 9157（`no_remove`）。
 	if index < 0 or index >= deck_ids.size():
-		return "卡组里没有这一张"
+		return GameI18n.ui("shop", "SHOP_REMOVE_CARD_MISSING", "卡组里没有这一张")
 	var c := CardRepo.load_json().get_card(int(deck_ids[index]))
 	if c != null and c.no_remove:
-		return "「%s」带锁，不能从卡组删除" % c.card_name
+		return GameI18n.ui("shop", "SHOP_REMOVE_CARD_LOCKED", "「%s」带锁，不能从卡组删除") % c.card_name
 	return ""
 
 

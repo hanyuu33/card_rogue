@@ -385,7 +385,7 @@ func _ready() -> void:
 	# R155：右上「卡组」按钮；R407 挪到**右上角最右端**（道具那一行的第一格）——
 	# 旧位置贴在巧克力面板左边（y≈54），正好压住悬停道具时从 46 起展开的描述浮窗。
 	_deck_btn = Button.new()
-	_deck_btn.text = "完整卡组"
+	_deck_btn.text = GameI18n.ui("map", "MAP_FULL_DECK_BUTTON", "完整卡组")
 	var dbr := _deck_btn_rect()
 	_deck_btn.position = dbr.position
 	_deck_btn.size = dbr.size
@@ -402,8 +402,8 @@ func _ready() -> void:
 		if s != null:
 			s._relayout_topright())
 	_menu = UiMenu.attach(self, _menu_items, {
-		"back": "返回地图",
-		"sub": "冒险地图",
+		"back": GameI18n.ui("map", "MAP_MENU_BACK", "返回地图"),
+		"sub": GameI18n.ui("map", "MAP_MENU_SUBTITLE", "冒险地图"),
 	})
 	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
 	# R442：暗动力（6054）的代价 —— 卡牌奖励必须当场领掉，**不许**靠「关窗 → 上地图 →
@@ -751,16 +751,16 @@ func _commit_enter(cell: Dictionary) -> void:
 			and int(cell.get("layer", 0)) == GameLayers.LAYER_THREE:
 		var gained := RunState.heal(RunState.max_hp - RunState.hp)
 		if gained > 0:
-			_set_note("起点补给：回复 %d 点生命（%d/%d）" % [gained, RunState.hp, RunState.max_hp])
+			_set_note(GameI18n.ui("map", "MAP_START_HEAL", "起点补给：回复 %d 点生命（%d/%d）") % [gained, RunState.hp, RunState.max_hp])
 		else:
-			_set_note("起点补给：生命已满（%d/%d）" % [RunState.hp, RunState.max_hp])
+			_set_note(GameI18n.ui("map", "MAP_START_HEAL_FULL", "起点补给：生命已满（%d/%d）") % [RunState.hp, RunState.max_hp])
 	if not bool(res.get("is_new", false)):
 		# 原路返回：不扣巧克力、不结算 —— 给一句轻提示，免得玩家以为点击失效。
 		# R357：第三层本来就不消耗步数，提示里不该再提「巧克力」这三个字。
 		if RunState.current_layer == GameLayers.LAYER_THREE:
-			_set_note("这里是走过的房间，什么都不会发生")
+			_set_note(GameI18n.ui("map", "MAP_REVISIT_NOTE_LAYER_THREE", "这里是走过的房间，什么都不会发生"))
 		else:
-			_set_note("这里是走过的房间，什么都不会发生（不消耗巧克力）")
+			_set_note(GameI18n.ui("map", "MAP_REVISIT_NOTE_DEFAULT", "这里是走过的房间，什么都不会发生（不消耗巧克力）"))
 		return
 	_dispatch_node(cell)
 
@@ -1102,7 +1102,7 @@ func _draw_states() -> void:
 				draw_rect(r.grow(11.0),
 						Color(0.42, 0.86, 0.96, 0.46 + 0.40 * pcs), false, 3.0)
 				draw_string(_font_bold, Vector2(r.position.x, r.end.y - 9.0),
-						"可再进店", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 11,
+						GameI18n.ui("map", "MAP_SHOP_REVISIT", "可再进店"), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 11,
 						Color(0.60, 0.92, 1.0))
 		elif _is_adjacent(cell) and not _flint_pick and not _fly_pick:
 			# 「下一步」：绿脉动框（原样，最醒目）
@@ -1156,7 +1156,7 @@ func _start_flint_pick() -> void:
 	if _flint_ids.is_empty():
 		RunState.pending_relic = -1
 		_flint_pick = false
-		_set_note("燧石没有用武之地：这张图上没有能点火的地方")
+		_set_note(GameI18n.ui("map", "MAP_FLINT_NO_CANDIDATES", "燧石没有用武之地：这张图上没有能点火的地方"))
 		return
 	_flint_pick = true
 	queue_redraw()
@@ -1167,11 +1167,11 @@ func _flint_click(pos: Vector2) -> void:
 	var fc := _cell_at(pos)
 	var fid := int(fc.get("id", -1))
 	if fid < 0 or not _flint_ids.has(fid):
-		_set_note("这一格点不着（当前所站 / 起点 / 商店 / 已经是篝火 / 空地都不行）")
+		_set_note(GameI18n.ui("map", "MAP_FLINT_INVALID_CELL", "这一格点不着（当前所站 / 起点 / 商店 / 已经是篝火 / 空地都不行）"))
 		queue_redraw()
 		return
 	if not RunState.flint_rebuild_rest(fid):
-		_set_note("这一格点不着火")
+		_set_note(GameI18n.ui("map", "MAP_FLINT_FAILED", "这一格点不着火"))
 		queue_redraw()
 		return
 	sfx.play("click")
@@ -1180,7 +1180,7 @@ func _flint_click(pos: Vector2) -> void:
 	_flint_blocked = []
 	RunState.pending_relic = -1
 	var c: Dictionary = RunState.map_cells[fid]
-	_set_note("篝火点起来了（第 %d 列第 %d 行）—— 走过去就能休息" % [int(c["col"]) + 1, int(c["row"]) + 1])
+	_set_note(GameI18n.ui("map", "MAP_FLINT_SUCCESS", "篝火点起来了（第 %d 列第 %d 行）—— 走过去就能休息") % [int(c["col"]) + 1, int(c["row"]) + 1])
 	queue_redraw()
 
 
@@ -1197,7 +1197,7 @@ func _start_fly_pick() -> void:
 	if _fly_ids.is_empty():
 		RunState.pending_fly = false
 		_fly_pick = false
-		_set_note("飞行器没有能去的地方：没去过的房间都已经去过了")
+		_set_note(GameI18n.ui("map", "MAP_FLY_NO_CANDIDATES", "飞行器没有能去的地方：没去过的房间都已经去过了"))
 		return
 	_fly_pick = true
 	queue_redraw()
@@ -1209,12 +1209,12 @@ func _fly_click(pos: Vector2) -> void:
 	var fc := _cell_at(pos)
 	var fid := int(fc.get("id", -1))
 	if fid < 0 or not _fly_ids.has(fid):
-		_set_note("这一格飞不过去（走过 / 起点 / Boss / 商店 / 空地都不行）")
+		_set_note(GameI18n.ui("map", "MAP_FLY_INVALID_CELL", "这一格飞不过去（走过 / 起点 / Boss / 商店 / 空地都不行）"))
 		queue_redraw()
 		return
 	var res := RunState.flyer_teleport(fid)
 	if not bool(res.get("ok", false)):
-		_set_note("这一格飞不过去")
+		_set_note(GameI18n.ui("map", "MAP_FLY_FAILED", "这一格飞不过去"))
 		queue_redraw()
 		return
 	sfx.play("click")
@@ -1259,7 +1259,7 @@ func _draw_flint_hint() -> void:
 	draw_rect(rect, Color(0.12, 0.09, 0.06, 0.96), true)
 	draw_rect(rect, Color(1.0, 0.70, 0.32, 0.60), false, 1.2)
 	draw_string(_font_bold, rect.position + Vector2(10, 17),
-			"燧石：在地图上任选一格，点着成篝火（走过的会退回未探索）",
+			GameI18n.ui("map", "MAP_FLINT_HINT", "燧石：在地图上任选一格，点着成篝火（走过的会退回未探索）"),
 			HORIZONTAL_ALIGNMENT_CENTER, w - 20, UiTheme.FS_CAPTION, Color("f0c98a"))
 
 
@@ -1290,7 +1290,7 @@ func _draw_fly_hint() -> void:
 	draw_rect(rect, Color(0.08, 0.10, 0.14, 0.96), true)
 	draw_rect(rect, Color(0.40, 0.72, 1.0, 0.60), false, 1.2)
 	draw_string(_font_bold, rect.position + Vector2(10, 17),
-			"飞行器：挑一个没去过的房间，飞过去（不消耗巧克力）",
+			GameI18n.ui("map", "MAP_FLY_HINT", "飞行器：挑一个没去过的房间，飞过去（不消耗巧克力）"),
 			HORIZONTAL_ALIGNMENT_CENTER, w - 20, UiTheme.FS_CAPTION, Color("a8d0f0"))
 
 
@@ -1313,7 +1313,7 @@ func _draw_map_flash() -> void:
 	# 所以图标必须**自己画一遍**压在雾上，否则玩家只看见一圈光、看不见箱子里是什么。
 	_draw_anim_icon(c, r.grow(-16.0), 0.92)
 	draw_string(_font_bold, Vector2(r.position.x, r.end.y - 9.0),
-			"大宝箱", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 11, Color(1.0, 0.94, 0.68))
+			GameI18n.ui("map", "MAP_FLASH_BIGCHEST", "大宝箱"), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 11, Color(1.0, 0.94, 0.68))
 
 
 func _draw_player_marker(r: Rect2) -> void:
@@ -1333,7 +1333,7 @@ func _draw_player_marker(r: Rect2) -> void:
 func _draw_hud() -> void:
 	var title := Rect2(MAP_X0 + MAP_W / 2 - 150, 8, 300, 54)
 	MapMaterial.draw(self, title)
-	draw_string(_font_bold, title.position + Vector2(0, 33), "冒险地图", HORIZONTAL_ALIGNMENT_CENTER, title.size.x, 26, UiTheme.PAGE_INK)
+	draw_string(_font_bold, title.position + Vector2(0, 33), GameI18n.ui("map", "MAP_HUD_TITLE", "冒险地图"), HORIZONTAL_ALIGNMENT_CENTER, title.size.x, 26, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(title.position.x, 80), GameLayers.layer_name(RunState.current_layer), HORIZONTAL_ALIGNMENT_CENTER, title.size.x, 15, Color("f6edcf"))
 	_draw_boss_chip()
 	if RunState.current_layer != GameLayers.LAYER_THREE:
@@ -1343,7 +1343,7 @@ func _draw_hud() -> void:
 func _draw_boss_chip() -> void:
 	var r := Rect2(14, 62, 320, 28)
 	MapMaterial.draw(self, r)
-	draw_string(_font_bold, r.position + Vector2(10, 19), _ellipsis("本层首领：%s" % _boss_label(), 300, 14), HORIZONTAL_ALIGNMENT_LEFT, 300, 14, UiTheme.PAGE_INK)
+	draw_string(_font_bold, r.position + Vector2(10, 19), _ellipsis(GameI18n.ui("map", "MAP_HUD_BOSS", "本层首领：%s") % _boss_label(), 300, 14), HORIZONTAL_ALIGNMENT_LEFT, 300, 14, UiTheme.PAGE_INK)
 
 
 func _choco_panel_rect() -> Rect2:
@@ -1438,7 +1438,8 @@ func _draw_bridge_slide() -> void:
 func _enter_label(cell: Dictionary) -> String:
 	## 过场文字。读 `display_type`：「?」房此刻**还没**揭晓 → 落到「不确定的命运」。
 	var dt := RogueMap.display_type(cell)
-	return str(ENTER_LABELS.get(dt, RogueMap.type_label(dt)))
+	var fallback := str(ENTER_LABELS.get(dt, RogueMap.type_label(dt)))
+	return GameI18n.ui("map", "MAP_ENTER_" + dt.to_upper(), fallback)
 
 
 func _ramp(p: float, a: float, b: float) -> float:
@@ -1526,8 +1527,8 @@ func _draw_sidebar() -> void:
 	var bar := Rect2(0.0, bar_y, size.x, maxf(0.0, size.y - bar_y))
 	draw_rect(bar, Color(0.03, 0.04, 0.06, 0.60), true)
 	draw_rect(Rect2(bar.position, Vector2(size.x, 1.2)), Color(1, 1, 1, 0.10), true)
-	var items := [["起点", "start"], ["战斗", "battle"], ["精英", "elite"], ["休息", "rest"],
-			["事件", "event"], ["宝箱", "chest"], ["大宝箱", "bigchest"], ["未知", "unknown"]]
+	var items := [[GameI18n.ui("map", "MAP_LEGEND_START", "起点"), "start"], [GameI18n.ui("map", "MAP_LEGEND_BATTLE", "战斗"), "battle"], [GameI18n.ui("map", "MAP_LEGEND_ELITE", "精英"), "elite"], [GameI18n.ui("map", "MAP_LEGEND_REST", "休息"), "rest"],
+			[GameI18n.ui("map", "MAP_LEGEND_EVENT", "事件"), "event"], [GameI18n.ui("map", "MAP_LEGEND_CHEST", "宝箱"), "chest"], [GameI18n.ui("map", "MAP_LEGEND_BIGCHEST", "大宝箱"), "bigchest"], [GameI18n.ui("map", "MAP_LEGEND_UNKNOWN", "未知"), "unknown"]]
 	var x := 14.0
 	var y := size.y - 30.0
 	for it: Array in items:
@@ -1545,13 +1546,13 @@ func _draw_sidebar() -> void:
 		x += 84.0
 	# 右下提示
 	# R357：第三层是一条直道、不吃巧克力 —— 提示换成「走到首领格就开打」。
-	var hint := "小桥＝通路，全图可见 · 迷雾遮住房间内容，只看得清「下一步」的几间 · 走过的房间可免费返回 · 巧克力用完即打 Boss"
+	var hint := GameI18n.ui("map", "MAP_HINT_DEFAULT", "小桥＝通路，全图可见 · 迷雾遮住房间内容，只看得清「下一步」的几间 · 走过的房间可免费返回 · 巧克力用完即打 Boss")
 	if RunState.current_layer == GameLayers.LAYER_THREE:
-		hint = "第三层是一条直道：起点 → 精英 → 商店 → 篝火 → 首领 · 这一层不消耗巧克力 · 走到首领格即开战"
+		hint = GameI18n.ui("map", "MAP_HINT_LAYER_THREE", "第三层是一条直道：起点 → 精英 → 商店 → 篝火 → 首领 · 这一层不消耗巧克力 · 走到首领格即开战")
 	elif _whisper_auto:
-		hint = "【鸭之低语】前路已被命运选定，你无法自主选择……"
+		hint = GameI18n.ui("map", "MAP_HINT_WHISPER", "【鸭之低语】前路已被命运选定，你无法自主选择……")
 	elif RunState.has_relic(RunState.EAGLE_WHISTLE_RELIC_ID):
-		hint = "鹰哨：全图迷雾已散，每一格都看得见 · 小桥＝通路 · 巧克力用完即打 Boss"
+		hint = GameI18n.ui("map", "MAP_HINT_EAGLE_WHISTLE", "鹰哨：全图迷雾已散，每一格都看得见 · 小桥＝通路 · 巧克力用完即打 Boss")
 	draw_string(_font, Vector2(size.x - 600.0, size.y - 30.0 + 14.0),
 			_ellipsis(hint, 586.0, UiTheme.FS_CAPTION),
 			HORIZONTAL_ALIGNMENT_RIGHT, 586.0, UiTheme.FS_CAPTION, Color("efe9db"))
@@ -1711,7 +1712,7 @@ func _draw_mark_buttons() -> void:
 				_draw_mark_icon_flag(c, on)
 			MARK_ERASE:
 				_draw_mark_icon_erase(c, on)
-		var label: String = ["画图", "标记", "擦除"][i]
+		var label: String = [GameI18n.ui("map", "MAP_MARK_PEN", "画图"), GameI18n.ui("map", "MAP_MARK_FLAG", "标记"), GameI18n.ui("map", "MAP_MARK_ERASE", "擦除")][i]
 		draw_string(_font, Vector2(r.position.x + 42.0, c.y + 5.0), label,
 				HORIZONTAL_ALIGNMENT_LEFT, 48.0, UiTheme.FS_LABEL,
 				UiTheme.ACCENT_LIT if on else UiTheme.INK_300)
@@ -1773,11 +1774,11 @@ func _draw_move_note() -> void:
 func _draw_boss_alert() -> void:
 	## 巧克力耗尽：整屏暗罩 + 大字提示（2 秒后自动进 Boss 战）。
 	draw_rect(Rect2(0, 0, size.x, size.y), Color(0.02, 0.01, 0.03, 0.72), true)
-	draw_string(_font_bold, Vector2(0, size.y / 2 - 26), "入 夜 了",
+	draw_string(_font_bold, Vector2(0, size.y / 2 - 26), GameI18n.ui("map", "MAP_NIGHT_TITLE", "入 夜 了"),
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_TITLE, Color("e8c27a"))
-	draw_string(_font_bold, Vector2(0, size.y / 2 + 18), "强大的敌人来袭",
+	draw_string(_font_bold, Vector2(0, size.y / 2 + 18), GameI18n.ui("map", "MAP_NIGHT_SUBTITLE", "强大的敌人来袭"),
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_HEADING, Color("f2d79a"))
-	draw_string(_font_bold, Vector2(0, size.y / 2 + 54), "—— %s ——" % _boss_label(),
+	draw_string(_font_bold, Vector2(0, size.y / 2 + 54), GameI18n.ui("map", "MAP_NIGHT_BOSS_TEMPLATE", "—— %s ——") % _boss_label(),
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.INK_300)
 
 
@@ -1878,7 +1879,7 @@ func _draw_relics() -> void:
 			and (_reward_panel == null or not _reward_panel.is_open())
 	if RunState.relics.size() > int((size.y - 34 - RELIC_BADGE_Y) / RELIC_STEP_Y) * 2:
 		# R630：同底注口径，-12 贴在窗口/纸面下边，收到 -36。
-		draw_string(_font, Vector2(size.x - 230, size.y - 36), "滚轮浏览道具", HORIZONTAL_ALIGNMENT_CENTER, 208, 12, UiTheme.PAGE_INK)
+		draw_string(_font, Vector2(size.x - 230, size.y - 36), GameI18n.ui("map", "MAP_RELIC_SCROLL_HINT", "滚轮浏览道具"), HORIZONTAL_ALIGNMENT_CENTER, 208, 12, UiTheme.PAGE_INK)
 	var repo := RelicRepo.load_json()
 	var hovered := -1
 	for i in RunState.relics.size():
@@ -1921,7 +1922,7 @@ func _draw_relics() -> void:
 
 
 func _draw_relic_tip(repo: RelicRepo, rel: RelicData, note: String) -> void:
-	var text := "「%s」（%s）：%s%s" % [rel.relic_name, rel.tag_line(),
+	var text := GameI18n.ui("map", "MAP_RELIC_TOOLTIP_TEMPLATE", "「%s」（%s）：%s%s") % [rel.relic_name, rel.tag_line(),
 			rel.desc, ("  " + note) if note != "" else ""]
 	var w := 480.0
 	var lines := CardFace.wrap_text(_font, text, w - 20.0, 13)
@@ -1944,11 +1945,11 @@ func _relic_panel_rows() -> Array:
 		var body: String = rel.desc
 		var note := RunState.relic_state_note(int(id))
 		if note != "":
-			body += "  （%s）" % note
+			body += GameI18n.ui("map", "MAP_RELIC_NOTE_SUFFIX", "  （%s）") % note
 		var lines := _wrap_relic_text(body, RELIC_P_W - 90.0, RELIC_P_DESC)
 		var spent := RunState.is_relic_spent(int(id))
-		rows.append(["「%s」（%s%s）" % [rel.relic_name,
-				"已耗尽 · " if spent else "", rel.tag_line()],
+		rows.append([GameI18n.ui("map", "MAP_RELIC_ROW_TEMPLATE", "「%s」（%s%s）") % [rel.relic_name,
+				GameI18n.ui("map", "MAP_RELIC_SPENT_PREFIX", "已耗尽 · ") if spent else "", rel.tag_line()],
 				lines, Color("6a7078") if spent else rel.badge_color(),
 				RELIC_P_ROWH + lines.size() * _relic_p_line() + 10.0])
 	return rows
@@ -1993,7 +1994,7 @@ func _draw_key_relics() -> void:
 	# 否则 12px 灰字在草地上根本读不清。
 	var lb := Rect2(KEY_BADGE_X + KEY_BADGE_W + 6.0, KEY_BADGE_Y + 6.0, 42.0, 22.0)
 	draw_rect(lb, Color(0.03, 0.04, 0.06, 0.60), true)
-	draw_string(_font, lb.position + Vector2(6, 16), "信物",
+	draw_string(_font, lb.position + Vector2(6, 16), GameI18n.ui("map", "MAP_KEY_RELIC_LABEL", "信物"),
 			HORIZONTAL_ALIGNMENT_LEFT, 34, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 	var hovered := -1
 	for i in RunState.KEY_RELIC_IDS.size():
@@ -2035,12 +2036,12 @@ func _draw_key_relic_tip(i: int) -> void:
 	##   藏在宝箱中 / 可以买到 / BOSS 战斗。
 	var kid: int = RunState.KEY_RELIC_IDS[i]
 	var owned := RunState.has_key(kid)
-	var text := "「%s」：%s" % [RunState.key_relic_name(kid), RunState.key_relic_desc(kid)]
+	var text := GameI18n.ui("map", "MAP_KEY_RELIC_TOOLTIP_TEMPLATE", "「%s」：%s") % [RunState.key_relic_name(kid), RunState.key_relic_desc(kid)]
 	if owned:
-		text += "（已获得）"
+		text += GameI18n.ui("map", "MAP_KEY_RELIC_OWNED", "（已获得）")
 	var w := 340.0
 	var lines := CardFace.wrap_text(_font, text, w - 20.0, 13)
-	var hint := "" if owned else "获取：%s" % RunState.key_relic_source(kid)
+	var hint := "" if owned else GameI18n.ui("map", "MAP_KEY_RELIC_SOURCE", "获取：%s") % RunState.key_relic_source(kid)
 	var extra_h := 0.0 if hint == "" else 18.0
 	# R553b（用户口径）：提示框贴到信物图标**旁边**，左上角落在原「信物」标签框的
 	# 位置（图标右侧 x=KEY_BADGE_X+KEY_BADGE_W+6、顶部对齐 y=KEY_BADGE_Y），
@@ -2078,7 +2079,7 @@ func _draw_relic_panel() -> void:
 	draw_rect(Rect2(px, py, RELIC_P_W, ph), UiTheme.PAPER)
 	draw_rect(Rect2(px, py, RELIC_P_W, ph), UiTheme.INK_600, false, 2.0)
 	draw_string(_font_bold, Vector2(px + 22, py + 36),
-			"我的道具（共 %d 件 · 完整效果）"
+			GameI18n.ui("map", "MAP_RELIC_PANEL_TITLE", "我的道具（共 %d 件 · 完整效果）")
 			% RunState.relics.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, RELIC_P_W - 44, UiTheme.FS_SUBHEAD, UiTheme.INK_800)
 	var y := py + 56.0 - _relic_scroll
@@ -2112,11 +2113,11 @@ func _menu_items() -> Array:
 	## 冒险地图的菜单项（R148）—— 上栏原来那三个 chip 都搬到这里了。
 	## ⚠️ 每次打开菜单都会重新调用本函数（attach 传的是函数引用）→ 音效文案是当下值。
 	return [
-		{"text": "战斗记录", "fn": _toggle_records},
-		{"text": "查看卡组", "fn": _toggle_deck},
-		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+		{"text": GameI18n.ui("map", "MAP_MENU_BATTLE_RECORDS", "战斗记录"), "fn": _toggle_records},
+		{"text": GameI18n.ui("map", "MAP_MENU_VIEW_DECK", "查看卡组"), "fn": _toggle_deck},
+		{"text": func(): return GameI18n.ui("map", "MAP_MENU_SOUND_ON", "音效：开") if sfx.enabled else GameI18n.ui("map", "MAP_MENU_SOUND_OFF", "音效：关"),
 			"fn": _toggle_sound, "keep_open": true},
-		{"text": "回到标题", "fn": _on_back_to_title},
+		{"text": GameI18n.ui("map", "MAP_MENU_BACK_TITLE", "回到标题"), "fn": _on_back_to_title},
 	]
 
 
@@ -2178,14 +2179,14 @@ func _open_deck_view() -> void:
 	_deck_visible = true
 	_deck_pick.open({
 		"kind": "deck_view",
-		"short": "完整卡组",
+		"short": GameI18n.ui("map", "MAP_DECK_VIEW_SHORT", "完整卡组"),
 		"view_only": true,
-		"title": "完整卡组（共 %d 张）" % cards.size(),
+		"title": GameI18n.ui("map", "MAP_DECK_VIEW_TITLE", "完整卡组（共 %d 张）") % cards.size(),
 		"note": "",
 		"opts": [],
 		"cards": cards,
 		"max_sel": 0,
-		"confirm_label": "关闭",
+		"confirm_label": GameI18n.ui("map", "MAP_DECK_VIEW_CLOSE", "关闭"),
 		"cancel_label": "",
 	})
 	queue_redraw()
@@ -2203,7 +2204,7 @@ func _draw_records_panel() -> void:
 	draw_rect(rect, Color("22242c"), true)
 	draw_rect(rect, Color("6a665c"), false, 2.0)
 	draw_string(_font_bold, rect.position + Vector2(20, 34),
-			"战斗记录（共 %d 场）" % _records.size(),
+			GameI18n.ui("map", "MAP_RECORDS_TITLE", "战斗记录（共 %d 场）") % _records.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_BODY, UiTheme.SAND)
 	var inner := Rect2(rect.position + Vector2(20, 52), rect.size - Vector2(40, 70))
 	var line_h := 40.0
@@ -2216,27 +2217,27 @@ func _draw_records_panel() -> void:
 			break
 		var r: Dictionary = _records[idx]
 		var y := inner.position.y + i * line_h
-		var res_txt := "胜" if bool(r["win"]) else "败"
+		var res_txt := GameI18n.ui("map", "MAP_RECORD_WIN", "胜") if bool(r["win"]) else GameI18n.ui("map", "MAP_RECORD_LOSS", "败")
 		var res_col := Color("7fd18a") if bool(r["win"]) else Color("e07a6a")
 		draw_string(_font_bold, Vector2(inner.position.x, y + 14),
 				str(r["time"]), HORIZONTAL_ALIGNMENT_LEFT, 150, UiTheme.FS_LABEL, Color("9a968c"))
 		draw_string(_font_bold, Vector2(inner.position.x + 155, y + 14),
-				"%s（%s）" % [r["level"], GameLevels.tier_name(int(r["tier"]))],
+				GameI18n.ui("map", "MAP_RECORD_LEVEL_TEMPLATE", "%s（%s）") % [r["level"], GameLevels.tier_name(int(r["tier"]))],
 				HORIZONTAL_ALIGNMENT_LEFT, 240, UiTheme.FS_LABEL, UiTheme.SAND)
 		draw_string(_font_bold, Vector2(inner.position.x + 400, y + 14),
 				res_txt, HORIZONTAL_ALIGNMENT_LEFT, 40, UiTheme.FS_LABEL, res_col)
 		draw_string(_font, Vector2(inner.position.x + 445, y + 14),
-				"最终血量 %d/%d" % [int(r["final_hp"]), int(r["max_hp"])],
+				GameI18n.ui("map", "MAP_RECORD_FINAL_HP", "最终血量 %d/%d") % [int(r["final_hp"]), int(r["max_hp"])],
 				HORIZONTAL_ALIGNMENT_LEFT, 130, UiTheme.FS_LABEL, UiTheme.INK_300)
 		var parts: Array[String] = []
 		for d in r["deck"]:
 			parts.append("%s×%d" % [d["name"], d["count"]])
 		draw_string(_font, Vector2(inner.position.x, y + 32),
-				"卡组：" + "、".join(parts), HORIZONTAL_ALIGNMENT_LEFT,
+				GameI18n.ui("map", "MAP_RECORD_DECK_PREFIX", "卡组：") + "、".join(parts), HORIZONTAL_ALIGNMENT_LEFT,
 				inner.size.x, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
 	if _records.is_empty():
 		draw_string(_font, inner.position + Vector2(0, 30),
-				"还没有战斗记录——去打第一场吧！", HORIZONTAL_ALIGNMENT_LEFT,
+				GameI18n.ui("map", "MAP_RECORDS_EMPTY", "还没有战斗记录——去打第一场吧！"), HORIZONTAL_ALIGNMENT_LEFT,
 				400, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 
 

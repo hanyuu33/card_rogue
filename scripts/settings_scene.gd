@@ -596,7 +596,7 @@ func _draw() -> void:
 	var back_name := _overlay_back
 	if _overlay_back == "返回战斗":
 		back_name = L10n.t("settings.back_battle")
-	var back_label := "← %s" % back_name if _overlay else "← %s" % L10n.t("settings.back_title")
+	var back_label := GameI18n.ui("shell", "SETTINGS_BACK_LABEL", "← %s") % back_name if _overlay else GameI18n.ui("shell", "SETTINGS_BACK_LABEL", "← %s") % L10n.t("settings.back_title")
 	draw_string(_font_bold, back.position + Vector2(0, 22), back_label,
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	var rows := _rows()
@@ -746,7 +746,7 @@ func _draw_cycle_chip(r: Rect2, value: float, hov: bool) -> void:
 	draw_rect(c, UiTheme.PAGE_PAPER if hov else UiTheme.ADVENTURE_INPUT, true)
 	draw_rect(c, UiTheme.ADVENTURE_BRASS_LIT if hov else UiTheme.ADVENTURE_BRASS,
 			false, 1.4)
-	draw_string(_font_bold, c.position + Vector2(0, 21), "×%.1f" % value,
+	draw_string(_font_bold, c.position + Vector2(0, 21), GameI18n.ui("shell", "SETTINGS_FOE_SPEED_VALUE", "×%.1f") % value,
 			HORIZONTAL_ALIGNMENT_CENTER, c.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 
 
@@ -767,5 +767,5 @@ func _draw_volume_row(r: Rect2, val: float) -> void:
 			UiTheme.PAGE_INK, true)
 	draw_rect(bar, UiTheme.ADVENTURE_BRASS, false, 1.2)
 	draw_string(_font_bold, Vector2(r.position.x + r.size.x - 92.0, bar.position.y + 13.0),
-			"%d%%" % int(roundf(val * 100.0)), HORIZONTAL_ALIGNMENT_LEFT, 76,
+			GameI18n.ui("shell", "SETTINGS_VOLUME_PERCENT", "%d%%") % int(roundf(val * 100.0)), HORIZONTAL_ALIGNMENT_LEFT, 76,
 			UiTheme.FS_LABEL, UiTheme.PAGE_INK if val > 0.0 else Color("8b8f98"))

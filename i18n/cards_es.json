@@ -1,0 +1,1270 @@
+{
+ "version": 1,
+ "lang": "es",
+ "source": "i18n/zh_canonical.json",
+ "count": 315,
+ "cards": {
+  "1011": {
+   "name": "Guardia de la Muralla de Hierro",
+   "effect_text": "Provocar: las unidades enemigas deben atacarla primero. Crecimiento de nivel: +1 de Poder cada 2 turnos, hasta +4 en total."
+  },
+  "1013": {
+   "name": "Dragón de Ceniza",
+   "effect_text": "Al comienzo del primer turno tras entrar al campo: inflige 4 de daño a todas las unidades enemigas. Puede actuar dos veces por turno. Crecimiento de nivel: +1 de Poder cada 2 turnos, hasta +4 en total."
+  },
+  "1014": {
+   "name": "Dragón Joven",
+   "effect_text": "Muerte: Invocar un Vástago de Dragón. Crecimiento de nivel: +1 de Poder cada 2 turnos, hasta +4 en total."
+  },
+  "1031": {
+   "name": "Brujo de Escarcha",
+   "effect_text": "Al comienzo del primer turno tras entrar al campo: congela a la **primera unidad enemiga que entra al campo en esta batalla**, de modo que no pueda actuar el próximo turno."
+  },
+  "1050": {
+   "name": "Necrófago Corrupto",
+   "effect_text": "Muerte: inflige 5 de daño a los HP enemigos. Crecimiento de nivel: +1 de Poder cada 2 turnos, hasta +4 en total."
+  },
+  "1051": {
+   "name": "Señor de los No Muertos",
+   "effect_text": "Muerte: Invocar dos Esqueletos. Puede actuar dos veces por turno. Crecimiento de nivel: +1 de Poder cada 2 turnos, hasta +4 en total."
+  },
+  "1053": {
+   "name": "Soldado Esqueleto",
+   "effect_text": "Crecimiento de nivel: +1 de Poder cada 2 turnos, hasta +4 en total."
+  },
+  "1054": {
+   "name": "Soldado Esqueleto",
+   "effect_text": "Muerte: Invocar un Esqueleto. Crecimiento de nivel: +1 de Poder cada 2 turnos, hasta +4 en total."
+  },
+  "1055": {
+   "name": "Soldado Esqueleto",
+   "effect_text": "Provocar: las unidades enemigas deben atacarla primero. Crecimiento de nivel: +1 de Poder cada 2 turnos, hasta +4 en total."
+  },
+  "1061": {
+   "name": "Meca Explosivo",
+   "effect_text": "Muerte: inflige 8 de daño a todas las demás unidades del campo, tanto aliadas como enemigas. Crecimiento de nivel: +1 de Poder cada 2 turnos, hasta +4 en total."
+  },
+  "1071": {
+   "name": "Gigante de Lava",
+   "effect_text": "El daño de Habilidad que recibe se limita a 3. Puede actuar dos veces por turno. Crecimiento de nivel: +1 de Poder cada 2 turnos, hasta +4 en total."
+  },
+  "8001": {
+   "name": "Valla de Madera",
+   "effect_text": ""
+  },
+  "8002": {
+   "name": "Golpe",
+   "effect_text": "Inflige 4 de daño a un objetivo."
+  },
+  "8003": {
+   "name": "Ente",
+   "effect_text": ""
+  },
+  "8004": {
+   "name": "Oso",
+   "effect_text": "Activar: en lugar de actuar, recupera 6 de Vida y luego se gira. Solo puede activarse una vez mientras esté en el campo."
+  },
+  "8005": {
+   "name": "Sombra",
+   "effect_text": ""
+  },
+  "8006": {
+   "name": "Gato Sombrío",
+   "effect_text": "Al jugarla, si esta es la 3.ª carta que se juega este turno, añade una carta de Habilidad aleatoria de la pila de robo a la mano."
+  },
+  "8007": {
+   "name": "Demonio Sombrío",
+   "effect_text": "Al usarla: todas las cartas de Habilidad de la mano cuestan 1 menos este turno; por cada carta de Habilidad de Coste 0 en la mano, esta carta obtiene +3 de Vida."
+  },
+  "8008": {
+   "name": "Fantasma",
+   "effect_text": "Al comienzo de tu turno, destruye esta carta. Cuando esta carta es destruida, añade una carta de Habilidad aleatoria de la pila de robo a la mano."
+  },
+  "8009": {
+   "name": "Acechador de las Sombras",
+   "effect_text": "Mientras esté en el campo, cada vez que uses una carta, esta carta obtiene +1 de Poder; se reinicia tras atacar o salir del campo."
+  },
+  "8010": {
+   "name": "Hierba Luminosa",
+   "effect_text": "Mientras esté en el campo, tu daño de Habilidad aumenta +1. Palabra clave «dimensional»: se destierra al salir del campo; no va a la pila de descarte."
+  },
+  "8018": {
+   "name": "Valla Viviente",
+   "effect_text": "Al entrar al campo: roba una carta."
+  },
+  "8019": {
+   "name": "Gato Infernal",
+   "effect_text": "Al final de tu turno, por cada 1 punto de Coste restante, esta carta obtiene +1 de Poder y +2 de Vida."
+  },
+  "8020": {
+   "name": "Fortaleza de Sangre",
+   "effect_text": "Al final de tu turno, por cada 1 punto de Coste restante, esta carta obtiene +1 de Poder y +3 de Vida."
+  },
+  "8021": {
+   "name": "Señor Oscuro",
+   "effect_text": "Después de usarla, obtienes 5 de Coste al final de este turno (se resuelve primero).",
+   "lower_effect_note": "al final de este turno"
+  },
+  "8022": {
+   "name": "Cantor Infernal",
+   "effect_text": "Al atacar, recupera 1 de Coste."
+  },
+  "8023": {
+   "name": "Altar Oscuro",
+   "effect_text": "Al atacar, recupera 1 de Coste."
+  },
+  "8024": {
+   "name": "Firmante del Pacto",
+   "effect_text": "Al entrar al campo: recupera 4 de Coste. Todas las cartas de la mano cuestan +4 este turno."
+  },
+  "8025": {
+   "name": "Chasis",
+   "effect_text": "No se descarta al final del turno. Cada vez que recibe una mejora, obtiene además +1 de Vida."
+  },
+  "8026": {
+   "name": "Constructo",
+   "effect_text": ""
+  },
+  "8027": {
+   "name": "Reequipar",
+   "effect_text": "Mejora un Aliado o una Estructura aliada y le otorga +2 de Poder y +10 de Vida. Si el objetivo es un Chasis, también obtiene +1 de Vida adicional."
+  },
+  "8028": {
+   "name": "Manantial Cristalino",
+   "effect_text": "Efecto de campo. Una unidad situada en esta casilla recupera 3 de Vida **al final de su propio turno** (se aplica a ambos bandos)."
+  },
+  "8029": {
+   "name": "Esqueleto de Combate",
+   "effect_text": "Al ser mejorado, obtiene +2 de Poder y +2 de Vida."
+  },
+  "8030": {
+   "name": "Sobrecarga",
+   "effect_text": "Elige al azar un Aliado de la pila de robo que **no tenga «puede actuar dos veces por turno»** y le otorga «puede actuar dos veces por turno». Si no hay ningún Aliado así en la pila de robo, el efecto no se produce."
+  },
+  "8031": {
+   "name": "Mejora Masiva",
+   "effect_text": "Todos los **Aliados y Estructuras** de la **mano y la pila de robo** reciben una mejora: +3 de Vida. Si no hay Aliados ni Estructuras en ninguno de los dos lugares, el efecto no se produce."
+  },
+  "8032": {
+   "name": "Torre de Vigilancia",
+   "effect_text": "Por cada acumulación de mejora que tenga, los enemigos dentro de su alcance de ataque reciben +1 de daño. Cuenta el daño de cualquier fuente."
+  },
+  "8033": {
+   "name": "Barrera de Energía",
+   "effect_text": "Mejora al azar un Aliado o una Estructura de la pila de robo que **aún no tenga Barrera de Energía**, de modo que **el primer daño que reciba se convierta en 0**. Luego roba 3 cartas."
+  },
+  "8034": {
+   "name": "Bastión",
+   "effect_text": "Por cada acumulación de mejora, esta carta obtiene **+3 de Vida**."
+  },
+  "8035": {
+   "name": "Autorreparación",
+   "effect_text": "Mejora **un Aliado aliado en el campo**, otorgándole +2 de Vida máxima y **recuperación de 4 de Vida al final de cada turno**."
+  },
+  "8036": {
+   "name": "Taller de Reparaciones",
+   "effect_text": "Efecto de campo. Un **Aliado o una Estructura aliada** situado en esta casilla recupera 4 de Vida **al final de su propio turno**."
+  },
+  "8037": {
+   "name": "Fábrica de Mejoras",
+   "effect_text": "Efecto de campo. Un **Aliado o una Estructura aliada** situado en esta casilla recibe una mejora **al final de su propio turno**: +1 de Poder y +1 de Vida. **Se resuelve cada turno y se acumula sin límite**."
+  },
+  "8038": {
+   "name": "Armadura Infinita",
+   "effect_text": "**Una vez por turno**: cuando esta carta recibe una mejora, añade una «Reequipar» a la mano; esa carta **cuesta 0 mientras esté en la mano** (recupera su Coste original al salir de la mano)."
+  },
+  "8039": {
+   "name": "Mejora del Sistema",
+   "effect_text": "Elige un Aliado o una Estructura **de la mano** y aplícale una mejora: **Coste +1, Poder +3, Vida +6**."
+  },
+  "8040": {
+   "name": "Transferencia por Lotes",
+   "effect_text": "**Todos los Aliados y Estructuras de la mano** reciben una mejora: **+1 de Poder y +4 de Vida, sin cambiar el Coste**, **y luego roba 1 carta**."
+  },
+  "8041": {
+   "name": "Dispositivo de Carga",
+   "effect_text": "Los Aliados y Estructuras aliados **vinculados** a esta carta (conducción en cadena entre unidades adyacentes en las cuatro direcciones, **solo unidades aliadas**) recuperan 2 de Vida **al final de su propio turno**."
+  },
+  "8042": {
+   "name": "Generador de Escudos",
+   "effect_text": "Cuando una unidad aliada **vinculada** a esta carta (conducción en cadena entre unidades adyacentes en las cuatro direcciones, **solo unidades aliadas**) **fuera a recibir daño**, esta carta lo recibe en su lugar. **El daño excedente no se resuelve**."
+  },
+  "8043": {
+   "name": "Imitador",
+   "effect_text": "Cuando un Aliado aliado **vinculado** a esta carta (conducción en cadena entre unidades adyacentes en las cuatro direcciones, **solo unidades aliadas**) **recibe una mejora**, esta carta recibe **la misma mejora**."
+  },
+  "8044": {
+   "name": "Blindaje Reforzado",
+   "effect_text": "Otorga una mejora a **un Aliado aliado en el campo**: +4 de Vida y -1 al daño recibido, pero sigue recibiendo al menos 1 de daño cada vez."
+  },
+  "8045": {
+   "name": "Mejora Autónoma",
+   "effect_text": "**Al comienzo de tu turno**, un Aliado o una Estructura aleatoria **de la mano** recibe una mejora: +1 de Poder y +3 de Vida."
+  },
+  "8046": {
+   "name": "Reciclador de Piezas",
+   "effect_text": "Cuando un Aliado o una Estructura aliada **que no sea un Chasis** y esté **vinculado** a esta carta es **destruido**: esta carta obtiene Poder igual al Poder de esa carta y añade un «Chasis» a la mano."
+  },
+  "8047": {
+   "name": "Tirano Quimérico",
+   "effect_text": "**Provocar**. **Al usarla**: destruye todas las cartas **aliadas** **vinculadas** a esta carta y añade su Poder y su Vida a esta carta."
+  },
+  "8048": {
+   "name": "Orden de Producción",
+   "effect_text": "Añade dos «Chasis» a la pila de robo; esas dos cartas reciben una mejora: +1 de Poder y +4 de Vida."
+  },
+  "8049": {
+   "name": "Desmontaje",
+   "effect_text": "Elige uno de tus Aliados o Estructuras aliadas y **destrúyelo**, recupera 3 de Coste y añade un «Chasis» a la mano. Si el objetivo **estaba mejorado**, obtienes además una «Reequipar»."
+  },
+  "8050": {
+   "name": "Máquina de Guerra Anticuada",
+   "effect_text": "**Sobrecarga**: no muere de inmediato cuando su Vida baja a 0 o menos, y sobrevive con Vida negativa (el daño no se desborda); si su Vida sigue siendo negativa al final de su propio turno, muere."
+  },
+  "8051": {
+   "name": "Reconstitución",
+   "effect_text": "Elige una unidad aliada y restablece toda su Vida."
+  },
+  "8052": {
+   "name": "Muralla",
+   "effect_text": "**Provocar**. **Sobrecarga**: no muere de inmediato cuando su Vida baja a 0 o menos, y sobrevive con Vida negativa (el daño no se desborda); si su Vida sigue siendo negativa al final de su propio turno, muere."
+  },
+  "8053": {
+   "name": "Más Allá del Límite",
+   "effect_text": "Elige un Aliado o una Estructura aliada y otórgale una mejora: Sobrecarga. Palabra clave «dimensional»: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "8054": {
+   "name": "Reinicio",
+   "effect_text": "Devuelve una unidad aliada del campo a la mano; su Coste pasa a ser 0 (se reinicia al salir de la mano)."
+  },
+  "8055": {
+   "name": "Guardián de Acero",
+   "effect_text": "Sobrecarga; Provocar."
+  },
+  "8056": {
+   "name": "Constructo de Rescate",
+   "effect_text": "Intercambio: también puede colocarse en una casilla ocupada por una unidad aliada; la unidad aliada que ocupaba esa casilla vuelve a la mano."
+  },
+  "8057": {
+   "name": "Granadero",
+   "effect_text": "Cada vez que recibe una mejora, alcance de ataque +1."
+  },
+  "8058": {
+   "name": "Tanque Pesado",
+   "effect_text": "**Provocar**. Por cada acumulación de mejora, esta carta recibe -1 de daño, pero sigue recibiendo al menos 1 de daño cada vez."
+  },
+  "8059": {
+   "name": "Pájaro Mecánico",
+   "effect_text": "Cada vez que recibe una mejora, roba una carta."
+  },
+  "8060": {
+   "name": "Dédalo",
+   "effect_text": "Provocar. Al entrar al campo: por cada «Bombardeo Cargado» que hayas usado en esta batalla, esta carta obtiene +3 de Vida. Este turno, las cartas «Bombardeo Cargado» de la mano cuestan 0."
+  },
+  "8061": {
+   "name": "Teletransporte Bidireccional",
+   "effect_text": "Elige **dos unidades** del campo de batalla e **intercambia sus posiciones** (pueden ser de cualquier bando; sus estados también se intercambian)."
+  },
+  "8062": {
+   "name": "Eclipse Nocturno",
+   "effect_text": "Al final de tu turno, recupera X de Vida, donde X es el Coste restante (1 de Vida por cada 1 punto de Coste restante, sin superar la Vida máxima)."
+  },
+  "8064": {
+   "name": "Recuperación",
+   "effect_text": "**Transforma** una carta **de la mano** en un «Chasis» y otorga a ese «Chasis» una mejora: **+8 de Vida**."
+  },
+  "8065": {
+   "name": "Carga",
+   "effect_text": "Carga encomendada para su entrega: recibe daño en lugar de tus HP. Se elimina del mazo tanto al ser destruida como **una vez completada la entrega**."
+  },
+  "8066": {
+   "name": "Reducción de Carga",
+   "effect_text": "Elige una carta de la pila de robo y **destiérrala** (se retira de esta batalla: no va ni a la mano ni a la pila de descarte). **Roba una carta adicional al comienzo del próximo turno**."
+  },
+  "8067": {
+   "name": "Sombra Escindida",
+   "effect_text": "Al comienzo de tu turno, roba una carta."
+  },
+  "8068": {
+   "name": "Aligeramiento",
+   "effect_text": "Elige un Aliado **de la mano** y aplícale una mejora: **Coste -1, velocidad de movimiento +1**; su Coste no puede bajar de 0."
+  },
+  "8069": {
+   "name": "Escudo Compartido",
+   "effect_text": "Otorga una mejora a **un Aliado aliado en el campo**: Escudo Compartido; a partir de entonces, **cuando tus HP fueran a recibir daño, ese Aliado lo recibe en su lugar**."
+  },
+  "8070": {
+   "name": "Ingenio",
+   "effect_text": "Al comienzo de tu turno, elige una carta de la mano y transfórmala en una carta aleatoria **que tenga un efecto adicional al ser mejorada**; luego otórgale una mejora: +2 de Vida."
+  },
+  "8071": {
+   "name": "Chatarra",
+   "effect_text": "Transforma **todas las demás cartas** de la mano en «Bombardeo Cargado». Esas cartas cuestan 0 este turno; recuperan su Coste original al salir de la mano. Palabra clave «dimensional»: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "8072": {
+   "name": "Mnemosine",
+   "effect_text": "Mientras esté en el campo, **todos los enemigos tienen -1 de Poder por cada acumulación de mejora**. Si esta carta fue creada mediante una **transformación aleatoria** **durante la batalla**, su Coste es -2."
+  },
+  "8073": {
+   "name": "Meca Cargado",
+   "effect_text": "Al entrar al campo: por cada «Bombardeo Cargado» que hayas usado en esta batalla, esta carta obtiene +1 de Poder."
+  },
+  "8074": {
+   "name": "Dédalo de Producción en Serie",
+   "effect_text": "Al entrar al campo: elige una carta de la mano y transfórmala en un «Bombardeo Cargado». Si esta carta fue creada mediante una **transformación aleatoria** **durante la batalla**, obtiene +2 de Poder y +2 de Vida."
+  },
+  "8075": {
+   "name": "Mnemosine de Producción en Serie",
+   "effect_text": "**Una vez por turno**: cuando uses un «Bombardeo Cargado», ese bombardeo inflige +7 de daño y la carta robada como resultado cuesta -1."
+  },
+  "8076": {
+   "name": "Modificador",
+   "effect_text": "Al entrar al campo: los Aliados de la mano reciben una mejora: +4 de Vida."
+  },
+  "8077": {
+   "name": "Ignición",
+   "effect_text": "Cada vez que una de tus cartas recibe una mejora, inflige **3** de daño a **2** enemigos aleatorios. Se acumula."
+  },
+  "8078": {
+   "name": "Fuente de Energía Oculta",
+   "effect_text": "Cuando una unidad aliada entra al campo, recibe una mejora y obtiene «Muerte»: cuando sea destruida, inflige **8** de daño a un enemigo aleatorio a distancia 1."
+  },
+  "8079": {
+   "name": "Albarán Sorpresa",
+   "effect_text": "Al comienzo de tu turno, elige una carta de la pila de robo, transfórmala en una carta aleatoria y añádela a la mano."
+  },
+  "8080": {
+   "name": "Robot Pintor",
+   "effect_text": "Al entrar al campo: elige otra unidad aliada del campo y transfórmala en una unidad aleatoria de Corazón mecánico."
+  },
+  "8081": {
+   "name": "Leopardo de las Nieves",
+   "effect_text": "Al atacar, una carta aleatoria de la mano cuesta -1 este turno."
+  },
+  "8082": {
+   "name": "Ciénaga Venenosa",
+   "effect_text": "Efecto de campo. Una unidad situada en esta casilla obtiene veneno **al final de su propio turno**: recibe 10 de daño al final de cada turno durante 2 turnos. Volver a obtenerlo solo renueva la duración; si sufre varios tipos de veneno a la vez, solo se aplica el de mayor daño."
+  },
+  "8084": {
+   "name": "Enseñanza",
+   "effect_text": "Ensambla una carta de la reserva de cartas de todas las clases. Palabra clave «dimensional»: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "8085": {
+   "name": "Atadura de Sombras",
+   "effect_text": "Ensambla una carta de la reserva de cartas de todas las clases. Palabra clave «dimensional»: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "8086": {
+   "name": "Reconstrucción",
+   "effect_text": "Ensambla una carta de la reserva de cartas de todas las clases. Palabra clave «dimensional»: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9001": {
+   "name": "Caballero Pato",
+   "effect_text": "+2 de Poder por cada enemigo que mata."
+  },
+  "9002": {
+   "name": "Rapidez",
+   "effect_text": "Reduce en 2 el daño que recibe, pero sigue recibiendo al menos 1 de daño."
+  },
+  "9003": {
+   "name": "Flecha de Fuego",
+   "effect_text": "Inflige 17 de daño a un objetivo."
+  },
+  "9004": {
+   "name": "Retroceso",
+   "effect_text": "Empuja una unidad enemiga 2 casillas hacia atrás; se detiene si choca con un obstáculo."
+  },
+  "9005": {
+   "name": "Sabiduría",
+   "effect_text": "Roba 2 cartas."
+  },
+  "9006": {
+   "name": "Rayo en Cadena",
+   "effect_text": "El rayo se propaga entre unidades adyacentes e inflige 11 de daño a cada unidad alcanzada por la cadena (tanto aliadas como enemigas)."
+  },
+  "9007": {
+   "name": "Bola de Fuego",
+   "effect_text": "Elige una casilla e inflige 20 de daño a esa casilla y a todas las unidades del anillo circundante (tanto aliadas como enemigas)."
+  },
+  "9008": {
+   "name": "Pato Hechicero",
+   "effect_text": "Al comienzo de tu turno, si no hay ningún Pato Familiar en el campo, invoca uno y gira esta carta (no puede volver a actuar este turno)."
+  },
+  "9009": {
+   "name": "Pato Familiar",
+   "effect_text": "Invocado por Pato Hechicero."
+  },
+  "9010": {
+   "name": "Debilitar",
+   "effect_text": "Otorga -9 de Poder a una unidad el próximo turno."
+  },
+  "9011": {
+   "name": "Flecha de Hielo",
+   "effect_text": "Inflige 3 de daño a una unidad y la congela, de modo que no pueda actuar el próximo turno."
+  },
+  "9012": {
+   "name": "Capitán Pato",
+   "effect_text": "Puede actuar dos veces por turno."
+  },
+  "9013": {
+   "name": "Poder del Pato",
+   "effect_text": "Al comienzo de cada turno, todas las unidades aliadas obtienen +1 de Poder (hasta +4 por unidad)."
+  },
+  "9014": {
+   "name": "Dragón de Huesos Huecos Ancestral",
+   "effect_text": "Al comienzo de tu turno: inflige 5 de daño a una unidad enemiga aleatoria; si no hay unidades enemigas en el campo, daña los HP enemigos en su lugar."
+  },
+  "9015": {
+   "name": "Cuerno de Pato",
+   "effect_text": "Invoca un Caballero Pato cada 3 turnos."
+  },
+  "9016": {
+   "name": "Rinoceronte",
+   "effect_text": "Reduce en 1 el daño recibido, pero sigue recibiendo al menos 1 de daño. Al final de cada turno, recupera 2 de Vida.",
+   "upper_effect_passive_text": "Reduce en 1 el daño recibido, pero sigue recibiendo al menos 1 de daño."
+  },
+  "9017": {
+   "name": "Arquero Pato",
+   "effect_text": ""
+  },
+  "9018": {
+   "name": "Dragón Metálico",
+   "effect_text": ""
+  },
+  "9019": {
+   "name": "Torre de Flechas",
+   "effect_text": ""
+  },
+  "9020": {
+   "name": "Pato de Llama Explosiva",
+   "effect_text": "Muerte: inflige 10 de daño a cada unidad del anillo circundante (tanto aliadas como enemigas)."
+  },
+  "9021": {
+   "name": "Pato de Magia Blanca",
+   "effect_text": "Al comienzo de tu turno, restaura 5 de Vida a la unidad aliada más herida. Al comienzo de cada turno, +1 de Poder."
+  },
+  "9022": {
+   "name": "Huevo de Pato",
+   "effect_text": "Lo coloca el «Pata ponedora» en el centro de tu primera fila al comienzo de cada batalla. Si sigue vivo al final del turno, se convierte en un Pato Mascota con 3 de Ataque y 15 de Vida, que recibe el daño de Vida en tu lugar. Palabra clave «dimensional»: se destierra al salir del campo; no va a la pila de descarte."
+  },
+  "9023": {
+   "name": "Héroe",
+   "effect_text": "Para jugarlo, se deben descartar 4 cartas adicionales de la mano."
+  },
+  "9024": {
+   "name": "Bufido",
+   "effect_text": "Al comienzo de tus turnos 3.º, 5.º y 7.º, otorga de forma permanente «puede actuar dos veces por turno» a una unidad aliada con la Vida actual más alta que aún no pueda actuar dos veces por turno."
+  },
+  "9025": {
+   "name": "Horno de Patos",
+   "effect_text": "Al comienzo de tu turno, invoca Patos de Cerámica: mientras haya menos de 3 Patos de Cerámica en el campo, invoca uno en cada casilla vacía adyacente; cuando haya 3, elige al azar 1 casilla vacía adyacente, invoca solo 1 y otorga +1 de Vida a todos los Patos de Cerámica. La Vida de los patos recién horneados aumenta en 1 cada 2 turnos."
+  },
+  "9026": {
+   "name": "Pato de Cerámica",
+   "effect_text": "Horneado por el Horno de Patos. Su Vida aumenta en 1 cada 2 turnos."
+  },
+  "9027": {
+   "name": "Pato Nocturno",
+   "effect_text": "Al comienzo de cada turno, +1 de Poder. En los **turnos impares**, velocidad de movimiento -1 y alcance de ataque -1."
+  },
+  "9028": {
+   "name": "Vástago de Dragón",
+   "effect_text": "Invocado por la muerte del Dragón Joven."
+  },
+  "9029": {
+   "name": "Esqueleto",
+   "effect_text": "Invocado por la muerte del Señor de los No Muertos o del Soldado Esqueleto."
+  },
+  "9031": {
+   "name": "Lobo Blanco",
+   "effect_text": "Puede actuar dos veces por turno."
+  },
+  "9032": {
+   "name": "Liebre",
+   "effect_text": "Después de usarla: añade una «copia efímera» de esta carta a la mano (dimensional; se destierra al final del turno)."
+  },
+  "9033": {
+   "name": "Lince",
+   "effect_text": "Después de ser destruido, vuelve a la mano y pasa a costar 1."
+  },
+  "9034": {
+   "name": "Zorro Rojo",
+   "effect_text": "Después de usarla, roba una carta de Habilidad aleatoria de la pila de robo; esa carta cuesta -1 este turno."
+  },
+  "9035": {
+   "name": "Ataque Coordinado",
+   "effect_text": "Inflige 14 de daño a un objetivo; por cada Aliado de tu lado del campo, el Coste de esta carta es -1."
+  },
+  "9036": {
+   "name": "Corazón de Bestia",
+   "effect_text": "Todos tus Aliados infligen +1 de daño; cuando uses un Aliado desde la mano, ese Aliado obtiene +2 de Vida. Se acumula."
+  },
+  "9037": {
+   "name": "Guardián del Bosque",
+   "effect_text": "Elige un Aliado: cuando tu Vida fuera a recibir daño, ese Aliado lo recibe en su lugar. La misma unidad no puede obtener este efecto más de una vez."
+  },
+  "9038": {
+   "name": "Tigre",
+   "effect_text": "Por cada Aliado en tu pila de descarte, el Coste de esta carta es -1. Al usarla: tus demás Aliados en el campo obtienen +2 de Poder."
+  },
+  "9039": {
+   "name": "Cuervo",
+   "effect_text": "Después de usarla, elige un Aliado de la pila de descarte y devuélvelo a la mano, excepto el propio Cuervo."
+  },
+  "9040": {
+   "name": "Sabueso",
+   "effect_text": "Al usarla: +2 de Poder por cada otro Aliado de tu lado del campo."
+  },
+  "9041": {
+   "name": "Ataque Veloz",
+   "effect_text": "Este turno, los Aliados de la mano cuestan -1."
+  },
+  "9042": {
+   "name": "Mordisco",
+   "effect_text": "Elige un Aliado aliado: +8 de Poder este turno."
+  },
+  "9043": {
+   "name": "Conjuro de Muro de Hielo",
+   "effect_text": "Crea tres Muros de Hielo a lo largo de una fila horizontal; los Muros de Hielo se derriten al comienzo de tu turno."
+  },
+  "9044": {
+   "name": "Muro de Hielo",
+   "effect_text": "Un muro creado por Conjuro de Muro de Hielo."
+  },
+  "9045": {
+   "name": "Fuerza del Vendaval",
+   "effect_text": "Cada vez que un Aliado aliado entra al campo de batalla, inflige 4 de daño a un enemigo aleatorio."
+  },
+  "9046": {
+   "name": "Rata Gigante",
+   "effect_text": "Después de usarla, añade a la mano el Aliado de menor Coste de la pila de robo."
+  },
+  "9047": {
+   "name": "Megapato Mecánico",
+   "effect_text": "Al comienzo de cada turno, repone los Patos de Cuerda del campo hasta que haya 2."
+  },
+  "9048": {
+   "name": "Pato de Cuerda",
+   "effect_text": "Invocado por el Megapato Mecánico."
+  },
+  "9049": {
+   "name": "Ascenso de Engranajes",
+   "effect_text": "Al comienzo de cada turno, todas las unidades aliadas obtienen +2 de Poder (permanente)."
+  },
+  "9050": {
+   "name": "Ira de la Ballena",
+   "effect_text": "Inflige 11 de daño. Elige 2 cartas de la pila de descarte y añádelas a la mano. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9051": {
+   "name": "Fuerza de la Naturaleza",
+   "effect_text": "Recupera 1 de Coste. Recupera 1 de Coste adicional por cada Aliado de tu lado del campo."
+  },
+  "9052": {
+   "name": "Tórtola",
+   "effect_text": "Después de usarla, el próximo Aliado que uses este turno cuesta -1."
+  },
+  "9053": {
+   "name": "Tenacidad",
+   "effect_text": "Todos tus Aliados en el campo obtienen +3 de Vida."
+  },
+  "9054": {
+   "name": "Aliento de Dragón",
+   "effect_text": "Inflige 4 de daño a una unidad enemiga, repetido 5 veces."
+  },
+  "9055": {
+   "name": "Frenesí",
+   "effect_text": "Elige un Aliado aliado; puede atacar dos veces (hasta que salga del campo). No tiene efecto si ya posee un efecto similar. Cuesta -1 mientras tengas 3 o más Aliados en el campo."
+  },
+  "9056": {
+   "name": "Imagen Especular",
+   "effect_text": "La primera vez que uses una carta de Efecto cada turno, añade una copia de esa carta a la pila de robo y roba una carta. Varias copias de esta carta en la zona de Efectos no se acumulan."
+  },
+  "9057": {
+   "name": "Disuasión",
+   "effect_text": "Después de cada una de las primeras X cartas de Efecto que uses cada turno, un enemigo aleatorio obtiene -10 de Poder hasta el comienzo de tu próximo turno. X es el número de copias de esta carta en la zona de Efectos."
+  },
+  "9058": {
+   "name": "Dominio Arcano",
+   "effect_text": "Después de usar una carta de Efecto, recupera 1 de Coste."
+  },
+  "9059": {
+   "name": "Torrente de Sabiduría",
+   "effect_text": "Al comienzo de tu turno, roba una carta; si es una carta de Efecto, el Coste de esta carta es -1."
+  },
+  "9060": {
+   "name": "Barrera de Tormenta",
+   "effect_text": "Las primeras X veces que recibas daño este turno, ese daño se convierte en 1, donde X es el número de cartas de Efecto usadas este turno antes de activar esta carta. Solo la primera copia tiene efecto cada turno."
+  },
+  "9061": {
+   "name": "Bendición Infinita",
+   "effect_text": "Al comienzo de tu turno, añade una carta de Efecto aleatoria a la mano."
+  },
+  "9062": {
+   "name": "Noche de Familiares",
+   "effect_text": "Cada vez que uses una carta de Efecto, añade un Cuervo a la mano; cuesta 0 este turno."
+  },
+  "9063": {
+   "name": "Rugido del Huracán",
+   "effect_text": "Por cada una de las primeras X cartas de Efecto usadas cada turno, inflige 4 de daño a todos los enemigos. Usar esta carta no lo activa. X es el número de copias de esta carta en la zona de Efectos."
+  },
+  "9064": {
+   "name": "Guardia de la Brisa",
+   "effect_text": "Por cada una de las primeras X cartas de Efecto usadas cada turno, empuja 2 casillas hacia atrás a un enemigo aleatorio de entre los más cercanos a tus HP. Usar esta carta no lo activa. X es el número de copias de esta carta en la zona de Efectos."
+  },
+  "9065": {
+   "name": "Autocuración",
+   "effect_text": "Cuando termina la batalla, recuperas 8 de Vida. Varias copias de esta carta en la zona de Efectos no se acumulan."
+  },
+  "9066": {
+   "name": "Piel de Piedra",
+   "effect_text": "Las próximas 2 veces que tus HP reciban daño, si el daño sería de 2 o más, se convierte en 1; el número de veces puede acumularse."
+  },
+  "9067": {
+   "name": "Guardián del Gran Árbol",
+   "effect_text": "Esta carta recibe el daño de HP en tu lugar. Al usarla: +1 de Poder y +2 de Vida por cada carta de Efecto de tu lado del campo, hasta 5 veces."
+  },
+  "9068": {
+   "name": "Elemental de Agua",
+   "effect_text": "El Coste de esta carta es -1 por cada carta de Efecto de tu lado del campo. Al usarla: añade una carta de Efecto de la pila de robo a la mano; su Coste se reduce en 2."
+  },
+  "9069": {
+   "name": "Nido de Patos",
+   "effect_text": "Añade un «Huevo de Pato» a la mano. Por cada una de las primeras X cartas de Efecto usadas cada turno, añade un «Huevo de Pato» a la mano. X es el número de copias de esta carta en la zona de Efectos."
+  },
+  "9070": {
+   "name": "Asalto Colectivo",
+   "effect_text": "Las unidades **vinculadas** ignoran la distancia al realizar sus propios ataques (pueden alcanzar todo el campo)."
+  },
+  "9071": {
+   "name": "Cercado Resistente",
+   "effect_text": "Invoca una Valla de Hierro con 0 de Ataque y 12 de Vida en la posición elegida. Recibe daño en lugar de tus HP; mientras permanezca en el campo, tus HP no reciben daño. Cada carta de Efecto que uses este turno reduce en 1 el Coste de esta carta."
+  },
+  "9072": {
+   "name": "Valla de Hierro",
+   "effect_text": "Recibe daño en lugar de tus HP."
+  },
+  "9073": {
+   "name": "Búho",
+   "effect_text": "Al usarla: añade una carta de Efecto aleatoria de la pila de robo a la mano."
+  },
+  "9074": {
+   "name": "Duendecillo",
+   "effect_text": "Después de usarla, la próxima carta de Efecto que uses cuesta 2 menos."
+  },
+  "9075": {
+   "name": "Torre Mágica",
+   "effect_text": "Mientras esté en el campo, las Habilidades que infligen daño ganan +1 de daño por cada 1 punto de su Coste original."
+  },
+  "9076": {
+   "name": "Núcleo de Maná",
+   "effect_text": "La primera carta de Habilidad usada cada turno cuesta -1 e inflige +1 de daño. Varias copias de esta carta en la zona de Efectos no se acumulan."
+  },
+  "9077": {
+   "name": "Meteorito",
+   "effect_text": "Esta carta no se descarta de la mano al final del turno. Inflige 40 de daño en un área en forma de cruz, tanto a aliados como a enemigos. Cada vez que una Habilidad inflige daño, el Coste de esta carta se reduce permanentemente en 1."
+  },
+  "9078": {
+   "name": "Memoria Heredada",
+   "effect_text": "El primer Aliado aliado que muere cada turno vuelve a la mano con Coste -1. Las cartas que vuelven a la mano sin entrar en la pila de descarte, como las dimensionales, no activan este efecto. Por cada 1 Aliado aliado en el campo, el Coste de esta carta es -1 mientras esté en la mano."
+  },
+  "9079": {
+   "name": "Golemancia",
+   "effect_text": "Invoca un Gólem en tu mitad del campo. La primera vez que uses una carta de Habilidad cada turno, esta carta de la mano cuesta -1 este turno."
+  },
+  "9080": {
+   "name": "Gólem",
+   "effect_text": "Invocado por «Golemancia». Provocar: las unidades enemigas deben atacarlo primero. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+  },
+  "9082": {
+   "name": "Elemental de Viento",
+   "effect_text": "Mientras esta carta esté en el campo, las cartas de Habilidad cuestan -1; cada vez que una Habilidad daña a un enemigo en esta batalla, el Coste de esta carta es -1."
+  },
+  "9083": {
+   "name": "Lluvia de Meteoritos",
+   "effect_text": "Inflige 8 de daño a un enemigo aleatorio, repetido X veces, donde X es todo el Coste gastado; el objetivo es aleatorio cada vez. Puede usarse incluso sin Coste (en ese caso, X es 0)."
+  },
+  "9084": {
+   "name": "Muro de Fuego",
+   "effect_text": "Inflige 14 de daño a todas las unidades de una fila horizontal, tanto aliadas como enemigas. Hasta el comienzo de tu próximo turno, las unidades que atraviesen esa fila reciben 7 de daño; la misma unidad recibe como máximo 14 de daño."
+  },
+  "9085": {
+   "name": "Carga de Poder",
+   "effect_text": "La próxima Habilidad que uses se resuelve 2 veces."
+  },
+  "9086": {
+   "name": "Remate",
+   "effect_text": "Inflige 2+X de daño a un objetivo, donde X es el número de cartas que has usado este turno."
+  },
+  "9087": {
+   "name": "Ráfaga de Estocadas",
+   "effect_text": "Inflige 4 de daño a un objetivo y añade una carta de Habilidad aleatoria de Coste 0 de la pila de robo a la mano."
+  },
+  "9088": {
+   "name": "Aturdimiento",
+   "effect_text": "Inflige 3 de daño a un objetivo; ese objetivo pierde 3 de Poder este turno."
+  },
+  "9089": {
+   "name": "Revolución",
+   "effect_text": "Roba X cartas, donde X es el número de cartas que has usado este turno; esas cartas no se descartan al final de este turno."
+  },
+  "9090": {
+   "name": "Emboscada",
+   "effect_text": "Inflige 5 de daño; si el objetivo tiene toda su Vida, inflige 12 de daño en su lugar."
+  },
+  "9091": {
+   "name": "Vendaval",
+   "effect_text": "Cada vez que uses una carta, inflige 2 de daño a un enemigo aleatorio."
+  },
+  "9092": {
+   "name": "Acecho",
+   "effect_text": "Roba 1 carta adicional al comienzo de tu turno; si esta carta cuesta 0, roba 1 más."
+  },
+  "9093": {
+   "name": "Truco en Cadena",
+   "effect_text": "Inflige 4 de daño a un objetivo. Si ya has usado 2 cartas más este turno, roba 1 carta; si ya has usado 4 cartas más este turno, inflige 10 de daño en su lugar."
+  },
+  "9094": {
+   "name": "Preparación",
+   "effect_text": "Roba 2 cartas; si alguna de ellas cuesta 0, roba 1 carta más."
+  },
+  "9095": {
+   "name": "Marea Furiosa",
+   "effect_text": "Inflige 10 de daño a un objetivo y devuelve todas las cartas de Coste 0 de la pila de descarte a la mano."
+  },
+  "9096": {
+   "name": "Tajo Giratorio",
+   "effect_text": "Inflige 17 de daño a las unidades enemigas de un área en forma de cruz. Solo puede usarse después de haber usado 4 o más cartas más este turno."
+  },
+  "9097": {
+   "name": "Previsión",
+   "effect_text": "Elige una opción: añade una carta de Habilidad de Coste 0 de la pila de descarte a la mano; o añade una carta de Habilidad aleatoria de Coste distinto de 0 de la pila de robo a la mano. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9098": {
+   "name": "Desafiar al Destino",
+   "effect_text": "Descarta toda la mano y luego añade **todas las cartas de Coste 0 y Coste 1** de la pila de descarte a la mano, en el orden de la pila de descarte y hasta alcanzar el límite de la mano. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9099": {
+   "name": "Resplandor Tenue",
+   "effect_text": "Al comienzo de tu turno, añade una Hierba Luminosa a la mano."
+  },
+  "9100": {
+   "name": "Infiltración",
+   "effect_text": "Elige un Aliado y muévelo a cualquier casilla vacía; obtiene +4 de Poder este turno."
+  },
+  "9101": {
+   "name": "Insomnio",
+   "effect_text": "Durante tu turno, cada vez que no tengas cartas en la mano, roba 1 carta; las cartas de Coste 0 robadas de este modo cuestan +1 este turno."
+  },
+  "9102": {
+   "name": "Eco",
+   "effect_text": "Inflige 2 de daño a todos los enemigos; todos los enemigos pierden 1 de Poder este turno. Después de usarla, vuelve a la mano con un Coste mínimo de 1."
+  },
+  "9103": {
+   "name": "Evasión",
+   "effect_text": "Este turno, todas las unidades aliadas obtienen Provocar."
+  },
+  "9104": {
+   "name": "Golpe de Gracia",
+   "effect_text": "Inflige 6 de daño; si esta carta es la única que queda en la mano, inflige 22 de daño en su lugar."
+  },
+  "9110": {
+   "name": "Transferencia de Vitalidad",
+   "effect_text": "Al final de tu turno, por cada 2 de Coste restante, obtén 1 de Coste adicional al comienzo de tu próximo turno. Varias copias de esta carta en la zona de Efectos no se acumulan."
+  },
+  "9111": {
+   "name": "Hoja de las Sombras",
+   "effect_text": "Al final de tu turno, inflige X de daño a un enemigo aleatorio, donde X es el Coste que has gastado este turno. Varias copias de esta carta en la zona de Efectos no se acumulan."
+  },
+  "9112": {
+   "name": "Cadenas de las Sombras",
+   "effect_text": "Al final de tu turno, por cada 3 de Coste restante, empuja a un enemigo aleatorio 2 casillas hacia atrás. Varias copias de esta carta en la zona de Efectos no se acumulan."
+  },
+  "9113": {
+   "name": "Oscuridad Expansiva",
+   "effect_text": "Al final de tu turno, por cada 1 punto de Coste restante, inflige 2 de daño a todos los enemigos. Varias copias de esta carta en la zona de Efectos no se acumulan."
+  },
+  "9114": {
+   "name": "Oscuridad Infinita",
+   "effect_text": "Después de robar cartas cada turno, debes elegir 1 carta de la mano para descartarla (no puedes omitirlo) y luego obtienes 2 de Coste. Varias copias de esta carta en la zona de Efectos no se acumulan."
+  },
+  "9115": {
+   "name": "Poder Familiar",
+   "effect_text": "Al comienzo de cada turno, todos los Patos Familiares obtienen +1 de Poder (permanente)."
+  },
+  "9116": {
+   "name": "Pato Demoníaco",
+   "effect_text": "Comienza con dormir 2: no actúa. Dormir disminuye en 1 después de cada uno de sus turnos y en 1 cada vez que recibe daño; vuelve a actuar en cuanto dormir llega a cero. Mientras esté despierto, obtiene +1 de Poder cada vez que recibe daño (permanente)."
+  },
+  "9117": {
+   "name": "Familiar Demoníaco",
+   "effect_text": "Al comienzo de cada turno, todos los Patos Familiares obtienen +1 de Poder (permanente); cada 2 turnos, invoca un Pato Familiar en una casilla vacía aleatoria (excepto en la última fila del jugador)."
+  },
+  "9118": {
+   "name": "Pato Demoníaco (Venganza)",
+   "effect_text": "No duerme y puede actuar desde el principio. Por cada 1 punto de daño que recibe, obtiene +1 de Poder este turno (se acumula y se reinicia al final del turno) y obtiene +1 de Poder permanente."
+  },
+  "9119": {
+   "name": "Movimiento de Apertura",
+   "effect_text": "Inflige 4 de daño a un objetivo y luego roba 1 carta."
+  },
+  "9120": {
+   "name": "Golpe Sombrío",
+   "effect_text": "Inflige 8 de daño a un objetivo. Si has usado 3 cartas este turno **incluida esta**, recupera 1 de Coste."
+  },
+  "9121": {
+   "name": "Paso de las Sombras",
+   "effect_text": "Inflige 8 de daño a un objetivo y luego devuelve **cualquier carta que elijas de la pila de descarte** (de cualquier tipo) a la mano."
+  },
+  "9122": {
+   "name": "Concentración",
+   "effect_text": "**Elige 2 cartas** de la pila de robo; esas 2 cartas quedan **desterradas** durante esta batalla (no van ni a la mano ni a la pila de descarte)."
+  },
+  "9123": {
+   "name": "Pato Asesino",
+   "effect_text": "Mientras haya unidades que no sean «Pato Asesino» en tu lado del campo: no puede atacar los HP del oponente; en su lugar, puede gastar una acción para **trasladarse instantáneamente** a cualquier casilla vacía del campo de batalla."
+  },
+  "9124": {
+   "name": "Lado Oscuro del Pato",
+   "effect_text": "Al moverse, puede **ignorar el bloqueo de unidades** (puede atravesar cualquier unidad, pero no detenerse sobre ella); cada Pato Asesino vivo otorga a esta carta **+3 de Poder y +1 de velocidad de movimiento**."
+  },
+  "9125": {
+   "name": "Invocación de Sombras",
+   "effect_text": "Al **comienzo de la batalla** y **cada 3 turnos**, invoca un Pato Asesino."
+  },
+  "9127": {
+   "name": "Reacondicionamiento",
+   "effect_text": "Elige un Aliado o una Estructura de la pila de descarte; esa carta vuelve a la mano y recibe una mejora permanente: +3 de Vida."
+  },
+  "9130": {
+   "name": "Helios",
+   "effect_text": "Mientras esté en el campo, los «Onie de Producción en Serie» del campo pueden actuar dos veces por turno y recuperan 2 de Vida cada turno."
+  },
+  "9131": {
+   "name": "Onie de Producción en Serie",
+   "effect_text": "Al comienzo de tu turno, añade una «Apertura» (Maldición de Coste 2, sin efecto al jugarla) a la pila de robo del oponente."
+  },
+  "9132": {
+   "name": "Onie",
+   "effect_text": "Puede actuar dos veces por turno. Al comienzo de tu turno, añade una «Apertura» (Maldición de Coste 2, sin efecto al jugarla) a la pila de robo del oponente."
+  },
+  "9133": {
+   "name": "Hecatonquiro de Producción en Serie",
+   "effect_text": "Forja: al final de tu turno, la cuenta atrás disminuye en 1; al llegar a 0, destruye esta unidad y erige una «Fortaleza de Acero» (5/100, alcance de ataque 2, Provocar) donde se encontraba. Si se destruye antes, no deja nada."
+  },
+  "9134": {
+   "name": "Fortaleza de Acero",
+   "effect_text": "Provocar: las unidades enemigas deben atacarla primero."
+  },
+  "9135": {
+   "name": "Hefesto",
+   "effect_text": "Forjar: cuando mata personalmente a un enemigo, invoca un «Onie de Producción en Serie» (5/45) en una casilla vacía aleatoria de tu mitad del campo. Cada turno en el que no mate a ningún enemigo, obtiene permanentemente alcance de ataque +1 y Poder +1. Atropellar: cuando su ataque mata a una unidad enemiga, el daño excedente pasa por la misma columna a la siguiente unidad enemiga; tras atravesar toda la columna, golpea directamente los HP del oponente. Inmunidad a desplazamiento: no puede ser empujado ni intercambiar su posición."
+  },
+  "9136": {
+   "name": "Hecatonquiro",
+   "effect_text": "Al comienzo de tu turno, si no hay otras unidades aliadas en el campo, obtiene: +2 de Poder y el daño de ataque recibido se reduce a la mitad."
+  },
+  "9137": {
+   "name": "Helios de Producción en Serie",
+   "effect_text": "Mientras esté en el campo, las unidades aliadas que no sean Helios de Producción en Serie obtienen: el daño de Habilidad recibido se reduce a la mitad (redondeando hacia arriba)."
+  },
+  "9138": {
+   "name": "Hefesto de Producción en Serie",
+   "effect_text": "Forja en serie: cuando mata personalmente a una unidad enemiga, forja un «Onie de Producción en Serie» (5/45) en una casilla vacía aleatoria de tu mitad del campo. Atropellar: el daño excedente de una muerte pasa por la misma columna a la siguiente unidad aliada."
+  },
+  "9139": {
+   "name": "Cañón Cargado",
+   "effect_text": "Al comienzo de cada uno de tus turnos, destruye una unidad enemiga aleatoria."
+  },
+  "9140": {
+   "name": "Hermes",
+   "effect_text": "Puede actuar dos veces por turno. Cada 3 turnos, su número de acciones aumenta en 1."
+  },
+  "9141": {
+   "name": "Asclepio",
+   "effect_text": "Obtiene 20 de armadura cada turno. Si ya tenía armadura antes de obtenerla, su armadura vuelve a cero e inflige daño igual a esa armadura a una unidad enemiga aleatoria; luego obtiene +1 de Poder."
+  },
+  "9142": {
+   "name": "Argos de Producción en Serie",
+   "effect_text": "Solo una vez mientras esté en el campo: al atacar a una unidad, invoca un Onie de Producción en Serie en tu última fila y le otorga +1 de velocidad de movimiento."
+  },
+  "9143": {
+   "name": "Experto en Invención",
+   "effect_text": "Cada vez que **transformes** una carta, recupera **2** de Coste (no se acumula). Transformar: convertir una carta en otra durante la batalla."
+  },
+  "9144": {
+   "name": "Ensamblaje Libre",
+   "effect_text": "Transforma todas las cartas de la mano en cartas aleatorias (procedentes de la reserva de recompensas, con la misma probabilidad para todas las rarezas). Las **cartas de Aliado** producidas de este modo cuestan -1 este turno; recuperan su Coste original al salir de la mano."
+  },
+  "9145": {
+   "name": "Bombardeo Cargado",
+   "effect_text": "Inflige **9** de daño y luego roba una carta."
+  },
+  "9146": {
+   "name": "Rellenar",
+   "effect_text": "Transforma una carta de la mano en un «Bombardeo Cargado». Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9147": {
+   "name": "Línea de Ensamblaje",
+   "effect_text": "Cada 3 turnos, invoca al azar un Onie de Producción en Serie o un Helios de Producción en Serie en tu mitad del campo."
+  },
+  "9148": {
+   "name": "Renacimiento",
+   "effect_text": "Al comienzo de tu turno, elige una carta de la mano para desterrarla y luego añade una carta aleatoria a la mano."
+  },
+  "9149": {
+   "name": "Fatiga",
+   "effect_text": "No tiene efecto al jugarla. Mientras esté en la mano, todas las cartas de Habilidad cuestan +1."
+  },
+  "9150": {
+   "name": "Ciclo de Vida",
+   "effect_text": "Elige un Aliado aliado: obtiene «dimensional» y «Muerte»; cuando sea destruido, añade una carta de Aliado aleatoria a la mano."
+  },
+  "9151": {
+   "name": "Carroñero",
+   "effect_text": "Al comienzo de tu turno, otorga una mejora a una unidad aliada que no sea «Carroñero»: +3 de Poder y +5 de Vida."
+  },
+  "9152": {
+   "name": "Robot Abandonado",
+   "effect_text": "Cada vez que recibe una mejora, inflige 1 de daño a todas las unidades enemigas."
+  },
+  "9154": {
+   "name": "Apertura",
+   "effect_text": "No tiene efecto al jugarla. Dimensional: se destierra después de jugarla; no va a la pila de descarte y no vuelve a aparecer en esta batalla."
+  },
+  "9155": {
+   "name": "Caminata Nocturna",
+   "effect_text": "Este turno, todas tus cartas no cuestan nada al usarlas. Incluida esta carta, solo puedes usar 5 cartas este turno (tanto si se usaron antes como después de esta)."
+  },
+  "9156": {
+   "name": "Acumulación de Fuerza",
+   "effect_text": "Inflige 0 de daño. Al final del turno, por cada 1 punto de Coste sin gastar, esta carta de la mano obtiene +3 de daño (no se reinicia durante esta batalla)."
+  },
+  "9157": {
+   "name": "Jarro",
+   "effect_text": "No tiene efecto al jugarla. Si esta carta sigue en la mano al final del turno: se destierra e invoca un enemigo en una posición aleatoria de la mitad enemiga del campo. Esta carta no puede eliminarse del mazo."
+  },
+  "9160": {
+   "name": "Cuchillo Rebotador",
+   "effect_text": "Inflige 5 de daño a un enemigo y luego rebota dos veces al azar entre enemigos distintos, con el daño reducido en 1 cada vez."
+  },
+  "9161": {
+   "name": "Fortaleza Descontrolada",
+   "effect_text": "Al entrar al campo: por cada carta que hayas transformado en esta batalla, activa una carta de Habilidad aleatoria de Corazón mecánico; los objetivos y las posiciones de impacto son aleatorios y no se consume Coste."
+  },
+  "9162": {
+   "name": "Brecha Concentrada",
+   "effect_text": "Inflige **10** de daño a un enemigo. Por cada 1 acumulación de mejora de las unidades aliadas en el campo, daño +4."
+  },
+  "9163": {
+   "name": "Cañón de Impacto",
+   "effect_text": "Inflige **10** de daño a un enemigo y lo empuja 1 casilla hacia atrás."
+  },
+  "9164": {
+   "name": "Hoja Auxiliar",
+   "effect_text": "Otorga una mejora a un Aliado aliado: **+2 de Poder**, y obtiene «Muerte»: cuando sea destruido, añade una «Hoja Auxiliar» a la mano. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9165": {
+   "name": "Duplicación",
+   "effect_text": "Elige un Aliado o una Estructura de tu campo de batalla y añade dos copias a la mano (conservan las mejoras y demás potenciadores, y tienen «dimensional»). Esas copias cuestan 0 mientras estén en la mano."
+  },
+  "9166": {
+   "name": "Batería de Racimo",
+   "effect_text": "Al entrar al campo: añade dos «Bombardeo Cargado» a la pila de robo. Cada vez que recibe una mejora, añade un «Bombardeo Cargado» de la pila de robo a la mano. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+  },
+  "9167": {
+   "name": "Fusión",
+   "effect_text": "Elige un «Chasis» de la pila de robo y **destiérralo** (se retira de esta batalla); otorga una mejora a un Aliado o una Estructura aliada en el campo: su Poder y su Vida aumentan, cada uno, en los valores de ese Chasis."
+  },
+  "9168": {
+   "name": "Deseo",
+   "effect_text": "Elige una carta de la pila de robo y añádela a la mano. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9169": {
+   "name": "Espada de Llamas",
+   "effect_text": "Inflige 10 de daño al enemigo más avanzado de cada columna."
+  },
+  "9170": {
+   "name": "Energía de Emergencia",
+   "effect_text": "Obtén 1 de Coste y roba 1 carta. Todas las unidades aliadas del campo recuperan 2 de Vida. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9171": {
+   "name": "Velocidad",
+   "effect_text": "Roba 2 cartas. Por cada carta de Coste 0 robada, todos los enemigos reciben +1 de daño este turno."
+  },
+  "9172": {
+   "name": "Barrido Láser",
+   "effect_text": "Inflige 9 de daño a todos los enemigos."
+  },
+  "9173": {
+   "name": "Agilidad",
+   "effect_text": "Roba 5 cartas. Hasta el final de este turno, no puedes usar cartas de Aliado ni de Estructura."
+  },
+  "9174": {
+   "name": "Eliminación",
+   "effect_text": "Elige una carta de Aliado o de Estructura de la pila de robo y transfórmala en un «Chasis». Roba 4 cartas."
+  },
+  "9175": {
+   "name": "Funeral",
+   "effect_text": "Cada vez que una unidad del campo es destruida, roba 1 carta."
+  },
+  "9176": {
+   "name": "Instinto",
+   "effect_text": "Juega 3 cartas de Habilidad aleatorias con Coste 1 o menos de la pila de robo."
+  },
+  "9177": {
+   "name": "Pato Mascota",
+   "effect_text": "Eclosiona de un «Huevo de Pato». Recibe el daño de HP en tu lugar. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+  },
+  "9178": {
+   "name": "Noche Eterna",
+   "effect_text": "El Pato Nocturno ya no se debilita: deja de verse afectado por «fotofobia» (su alcance de ataque, velocidad de movimiento y Poder no disminuyen ni siquiera en los turnos impares)."
+  },
+  "9179": {
+   "name": "Caja Sorpresa",
+   "effect_text": "Al ser atacada, aturde al atacante durante su próximo turno (no puede actuar)."
+  },
+  "9180": {
+   "name": "Luna",
+   "effect_text": "Cuando termina esta batalla: se añade una recompensa adicional a la pantalla de recompensas, que permite eliminar una carta del mazo. Esta carta no puede eliminarse del mazo."
+  },
+  "9181": {
+   "name": "Moneda",
+   "effect_text": "Cuando termina esta batalla: obtén 40 de Oro adicional. Esta carta no puede eliminarse del mazo."
+  },
+  "9182": {
+   "name": "Canción de Cuna",
+   "effect_text": "Todas las unidades no pueden actuar durante 1 turno, tanto aliadas como enemigas. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9183": {
+   "name": "Amigos del Bosque",
+   "effect_text": "Añade un Aliado Espíritu del bosque aleatorio a la mano; cuesta -2 este turno. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9184": {
+   "name": "Organización de Inventario",
+   "effect_text": "Transforma al azar dos cartas de la pila de robo, cada una en otra carta aleatoria."
+  },
+  "9185": {
+   "name": "Parálisis",
+   "effect_text": "No puede jugarse. Si esta carta sigue en la mano al final del turno: se destierra."
+  },
+  "9186": {
+   "name": "Vórtice",
+   "effect_text": "Efecto de campo. Al usarla, si no hay ninguna unidad en esta casilla, mueve a esta casilla una unidad aleatoria situada a distancia 1. Una unidad en esta casilla recibe 15 de daño **al final de su propio turno**, y el daño de Vórtice que reciba posteriormente aumenta en 1."
+  },
+  "9187": {
+   "name": "Ganso",
+   "effect_text": "Después de atacar a un enemigo, lo empuja 1 casilla hacia atrás y avanza 1 casilla (no se mueve si está bloqueado)."
+  },
+  "9188": {
+   "name": "Hermes de Producción en Serie",
+   "effect_text": ""
+  },
+  "9189": {
+   "name": "Lobo Solitario",
+   "effect_text": "Inflige 7 de daño a un enemigo y hace que pierda 1 de Poder este turno. Destierra un Aliado o una Estructura aleatoria de la mano: su Vida se añade permanentemente al daño de esta carta y su Poder se añade permanentemente a la reducción de Poder de esta carta."
+  },
+  "9190": {
+   "name": "El Gato y el Ratón",
+   "effect_text": "Descarta toda la mano. El próximo turno, tu daño de Habilidad se duplica (multiplicativo con otros aumentos)."
+  },
+  "9191": {
+   "name": "Fusión Oscura",
+   "effect_text": "Ensambla una carta y otórgale «conservar»; luego inflige daño igual a su Poder a todos los enemigos. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9192": {
+   "name": "Fuego de Apoyo",
+   "effect_text": "Inflige 8 de daño y reduce en 8 el Poder del objetivo este turno."
+  },
+  "9193": {
+   "name": "Fusión Técnica",
+   "effect_text": "Ensambla una carta usando un Constructo como base. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9200": {
+   "name": "El Revelador",
+   "effect_text": "Tres fases: cuando su Vida restante baja a 2/3 y 1/3, avanza una fase, retrocede al centro de la última fila y cambia su efecto de campo. Es inmune al movimiento forzado en las tres fases. Primera fase - Cañoneo: cada turno, bombardea una columna aleatoria e inflige 5 de daño a todas las unidades enemigas de esa columna; si no hay ninguna unidad en esa columna, golpea directamente los HP del jugador. Sí mismo: +1 de Poder cada turno. Segunda fase - Barrera Electromagnética: las unidades que lo atacan reciben 5 de daño; cada vez que recibe daño de Habilidad, añade una «Parálisis» (Maldición de Coste 0 - no puede jugarse - se destierra si sigue en la mano al final del turno) a tu pila de descarte. Sí mismo: Atropellar, daño de Habilidad recibido reducido a la mitad, velocidad de movimiento -1, puede actuar dos veces por turno. Tercera fase - Llamada de Emergencia: al comienzo de cada turno del jugador, invoca una unidad de Producción en Serie con +10 de Poder. Sí mismo: al entrar al campo, destruye todas las demás unidades del campo; puede actuar dos veces por turno, alcance de ataque +2, velocidad de movimiento 0, inmune a todo daño que no provenga de ataques mientras haya otras unidades aliadas en el campo, y las unidades aliadas vinculadas a él reciben la mitad de su daño en su lugar."
+  },
+  "9201": {
+   "name": "Cañoneo",
+   "effect_text": "Cada turno, bombardea una columna aleatoria: todas las unidades enemigas de esa columna reciben 5 de daño; si no hay ninguna unidad en esa columna, golpea directamente los HP del jugador."
+  },
+  "9202": {
+   "name": "Barrera Electromagnética",
+   "effect_text": "Las unidades que atacan a El Revelador reciben 5 de daño. Cada vez que El Revelador recibe daño de Habilidad, añade una «Parálisis» (Maldición de Coste 0 - no puede jugarse - se destierra si sigue en la mano al final del turno) a tu pila de descarte."
+  },
+  "9203": {
+   "name": "Llamada de Emergencia",
+   "effect_text": "Al comienzo de cada turno del jugador, invoca un enemigo aleatorio de Producción en Serie con +10 de Poder."
+  },
+  "9204": {
+   "name": "Cazarrecompensas",
+   "effect_text": "Primera vez que mata a un enemigo en cada batalla: +1 de Poder permanente durante esta partida. Obtén 20 de Oro al terminar la batalla. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+  },
+  "9205": {
+   "name": "Cacería",
+   "effect_text": "Inflige 22 de daño a un objetivo. Si esta carta mata a un enemigo, su daño aumenta permanentemente en 4 durante esta partida. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9206": {
+   "name": "Buitre",
+   "effect_text": "Primera vez que mata a un enemigo en cada batalla: +3 de Poder y +6 de Vida permanentes durante esta partida. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+  },
+  "9207": {
+   "name": "Asclepio de Producción en Serie",
+   "effect_text": "Obtiene 10 de armadura cada turno. Si ya tenía armadura antes de obtenerla, también obtiene +1 de Poder."
+  },
+  "9208": {
+   "name": "Nave Nodriza",
+   "effect_text": "Inmune a todo daño. Cada vez que una unidad aliada del campo es destruida, invoca una unidad idéntica junto a esta carta y reduce en 10 la Vida de esta carta. Si esta carta es destruida, el oponente gana."
+  },
+  "9209": {
+   "name": "Incursión Aérea",
+   "effect_text": "Al comienzo del turno del jugador, marca 5 casillas aleatorias. Antes de que actúe el enemigo, las unidades del jugador en las casillas marcadas reciben 5 de daño; este daño aumenta en 1 cada turno."
+  },
+  "9210": {
+   "name": "Barrera de Escarcha",
+   "effect_text": "Al comienzo de cada 2.º turno, todas las unidades aliadas obtienen +1 de Poder, hasta +4 por unidad."
+  },
+  "9211": {
+   "name": "Cañón de Refracción",
+   "effect_text": "Al jugarla: añade un «Bombardeo Cargado» a la mano. A partir de entonces, cada vez que uses un «Bombardeo Cargado», además del objetivo principal, inflige el mismo daño a otra unidad enemiga aleatoria."
+  },
+  "9212": {
+   "name": "Ira del Oso Búho",
+   "effect_text": "Mientras la Vida del Oso Búho sea superior a la mitad, recibe -1 de daño; cuando su Vida baja a la mitad o menos, obtiene «Atropellar»: cuando el daño que inflige mata a una unidad, el daño excedente continúa por la misma columna; no se activa si no atacó a ninguna unidad."
+  },
+  "9213": {
+   "name": "Oso Búho",
+   "effect_text": "Cuesta X; al jugarlo consume todo el Coste. Al aterrizar, su Poder se fija en X y su Vida en 9X, y ninguno cambia durante el resto de esta batalla; si X es 0, se desploma en cuanto aterriza. Cuando actúa, salta a una casilla vacía e inflige daño igual a su Poder a cada unidad enemiga a distancia 1. No puede realizar ataques normales."
+  },
+  "9214": {
+   "name": "Oso Búho",
+   "effect_text": "No puede realizar ataques normales. Cuando actúa, salta a una casilla vacía e inflige daño igual a su Poder a cada unidad enemiga a distancia 1."
+  },
+  "9215": {
+   "name": "Golpes Desenfrenados",
+   "effect_text": "Inflige 10 de daño a cada uno de 2 enemigos aleatorios (si hay menos de 2 enemigos, golpea a todos los que haya)."
+  },
+  "9216": {
+   "name": "Patada Voladora",
+   "effect_text": "Inflige 22 de daño a un enemigo; si lo mata, el daño excedente continúa por la misma columna (Atropellar)."
+  },
+  "9217": {
+   "name": "Puñetazo de Carga",
+   "effect_text": "Inflige 16 de daño a un enemigo y lo empuja 1 casilla hacia atrás; además, inflige 8 de daño a cada uno de los demás enemigos."
+  },
+  "9219": {
+   "name": "Mina de Presión",
+   "effect_text": "**Sobrecarga**. Muerte: si la Vida de esta carta es negativa, inflige daño igual a esa cantidad negativa a todas las unidades enemigas."
+  },
+  "9220": {
+   "name": "Defensor de Posición",
+   "effect_text": "Cuando un Aliado aliado con «Sobrecarga» muere por Sobrecarga, coloca una copia de esta carta de la pila de robo, la mano o la pila de descarte en su posición original."
+  },
+  "9221": {
+   "name": "Combinador",
+   "effect_text": "**Sobrecarga**. Puede colocarse sobre una unidad aliada: destruye esa unidad y esta carta obtiene el Poder y la Vida impresos en su carta."
+  },
+  "9222": {
+   "name": "Máquina de Teseo",
+   "effect_text": "**Sobrecarga**. Cada vez que la Vida de esta carta baja a 0 o menos, añade un «Bombardeo Cargado» a la mano. Palabra clave «dimensional»: se destierra al salir del campo; no va a la pila de descarte."
+  },
+  "9223": {
+   "name": "Ejecutor",
+   "effect_text": "Mientras haya un «Onie de Producción en Serie» en tu lado del campo, el daño recibido se reduce a la mitad. Cada vez que un «Onie de Producción en Serie» de tu lado del campo recibe daño, +1 de Poder este turno."
+  },
+  "9224": {
+   "name": "Marca",
+   "effect_text": "Efecto de campo (solo existe una Marca en todo el campo a la vez). Los enemigos de esta casilla reciben +1 de daño (fijo; no aumenta con los turnos). Colocar la Marca en otra casilla sustituye a la anterior; marcar de nuevo la misma casilla no cuenta como moverla y el valor sigue siendo +1."
+  },
+  "9225": {
+   "name": "Presagio de Muerte",
+   "effect_text": "Inflige 6 de daño a un objetivo y luego marca la casilla en la que se encuentra."
+  },
+  "9226": {
+   "name": "Letal",
+   "effect_text": "Los enemigos marcados reciben un 50% más de daño de todas las fuentes (sustituye la bonificación de daño de la propia Marca). Si no hay ninguna Marca en el campo al jugarla, marca una casilla aleatoria."
+  },
+  "9227": {
+   "name": "Llegada de la Parca",
+   "effect_text": "Inflige 14 de daño a un objetivo; si el objetivo está marcado, inflige 20 de daño en su lugar y roba 2 cartas."
+  },
+  "9228": {
+   "name": "Sombra de Terror",
+   "effect_text": "Los enemigos marcados infligen la mitad de daño a esta carta."
+  },
+  "9229": {
+   "name": "Proyección de Terror",
+   "effect_text": "Marca la casilla en la que se encuentra el objetivo y le otorga -11 de Poder este turno. Si el objetivo ya está marcado, le inflige 8 de daño en su lugar. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+  },
+  "9230": {
+   "name": "Terror Encarnado",
+   "effect_text": "Al infligir daño a un enemigo marcado, le otorga -1 de Poder este turno. Si no hay ninguna Marca en el campo, marca la posición de un enemigo aleatorio."
+  },
+  "9231": {
+   "name": "Mal Augurio",
+   "effect_text": "Al final de tu turno, los enemigos en casillas marcadas reciben 4 de daño."
+  },
+  "9232": {
+   "name": "Heraldo de la Perdición",
+   "effect_text": "Al atacar a un enemigo marcado, recupera 3 de Vida."
+  },
+  "9233": {
+   "name": "Segador de Almas",
+   "effect_text": "Cada vez que infliges daño a un enemigo marcado, el Coste de esta carta se reduce permanentemente en 1. Cuando esta carta mata a una unidad, recupera toda su Vida."
+  },
+  "9234": {
+   "name": "Cosecha de Terror",
+   "effect_text": "Inflige 15 de daño a un objetivo. En el mismo turno, después de infligir daño por 3.ª vez a un objetivo marcado (el daño infligido por esta carta no cuenta), añade una «Cosecha de Terror» de la pila de robo o de la pila de descarte a la mano con Coste -1; recupera su Coste original al salir de la mano."
+  },
+  "9235": {
+   "name": "Elemental de Tierra",
+   "effect_text": "Provocar: las unidades enemigas deben atacarlo primero. No se descarta al final del turno. Al entrar al campo, distribuye 3X de daño entre las unidades enemigas (X = el número de Aliados usados en esta batalla, incluida esta carta): del más cercano al más lejano y, cada vez que uno cae, el resto pasa al siguiente. Por cada 1 Aliado aliado en el campo, el Coste de esta carta se reduce en 2 mientras esté en la mano."
+  },
+  "9236": {
+   "name": "Elemental de Fuego",
+   "effect_text": "Al entrar al campo: purga todas las Maldiciones de la pila de robo, la mano y la pila de descarte; por cada 1 Maldición purgada, inflige 2 de daño a un enemigo aleatorio."
+  },
+  "9237": {
+   "name": "Balan-α",
+   "effect_text": "Cada vez que muere una unidad aliada, esta carta obtiene «puede actuar dos veces por turno»."
+  },
+  "9238": {
+   "name": "Anxi-β",
+   "effect_text": "Cada vez que muere una unidad aliada, esta carta obtiene alcance de ataque y velocidad de movimiento +1 (solo se activa una vez; no se acumula)."
+  },
+  "9239": {
+   "name": "Taquini-γ",
+   "effect_text": "Cuando muere una unidad aliada, obtiene: al comienzo de cada uno de tus turnos, destruye una unidad enemiga aleatoria; si no hay unidades en el campo enemigo, inflige 10 de daño a los HP enemigos en su lugar."
+  },
+  "9240": {
+   "name": "Orden de Busca",
+   "effect_text": "Todas las unidades del campo enemigo obtienen «dimensional». Al final de tu 12.º turno, destruye todas las unidades de tu propio campo."
+  },
+  "9241": {
+   "name": "Cañón Láser",
+   "effect_text": "No puede realizar ataques normales. Duerme durante 2 turnos. Cuando actúa, inflige daño igual a su Poder a la primera unidad enemiga de cada columna; si no hay ningún objetivo en esa columna, golpea directamente los HP del oponente. +1 de Poder cada turno."
+  },
+  "9242": {
+   "name": "Sombra de Pronoia",
+   "effect_text": "Al comienzo de cada turno, cambia de forma según el tipo de carta que el oponente más haya usado este turno: Aliado o Estructura -> Autómata de Artillería; Habilidad o Campo -> Autómata de Escudo; cualquier otro tipo -> Autómata Veloz. Si es la única unidad en el campo, pierde 10 de Vida para invocar un Autómata; de lo contrario, el Autómata actual se transforma en la forma correspondiente."
+  },
+  "9243": {
+   "name": "Autómata de Artillería",
+   "effect_text": "Al comienzo de cada turno, otorga +1 de Poder a otra unidad aliada."
+  },
+  "9244": {
+   "name": "Autómata de Escudo",
+   "effect_text": "Mientras esta carta esté en el campo, las demás unidades aliadas reciben la mitad de daño."
+  },
+  "9245": {
+   "name": "Autómata Veloz",
+   "effect_text": "Puede actuar dos veces por turno."
+  },
+  "9246": {
+   "name": "Bestia de Gemas",
+   "effect_text": "Al morir, ensambla una carta. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+  },
+  "9247": {
+   "name": "Fábrica de Ensamblaje",
+   "effect_text": "Al comienzo de tu turno, ensambla una carta. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+  }
+ }
+}

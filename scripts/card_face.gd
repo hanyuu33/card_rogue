@@ -73,6 +73,10 @@ static var _char_cache := {}         # "字体|字号|文本" -> Array[float]（
 static var _scroll_watch_ms := 0     # 最近一次「画了滚动卡名」的时刻
 
 
+static func _display_name(card: CardData) -> String:
+	return GameI18n.card_name(card.id, card.card_name)
+
+
 static func name_layout(card_name: String, rect: Rect2, font_bold: Font,
 		max_h := 0.0) -> Dictionary:
 	## **卡名单行排版唯一判定口**（绘制与测试共用，R281）。
@@ -478,7 +482,7 @@ static func draw_locked(canvas: CanvasItem, rect: Rect2, font_bold: Font) -> voi
 			q, HORIZONTAL_ALIGNMENT_LEFT, -1, qs, Color(0.88, 0.77, 0.53, 0.9))
 	# 「未解锁」—— 卡面底部
 	var fs := int(maxf(9.0, rect.size.y * 0.115))
-	var s := "未解锁"
+	var s := GameI18n.ui("shared", "CARD_FACE_LOCKED", "未解锁")
 	var sw: float = font_bold.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	canvas.draw_string(font_bold,
 			Vector2(rect.position.x + (rect.size.x - sw) * 0.5, rect.end.y - rect.size.y * 0.06),
@@ -648,7 +652,7 @@ static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 		var badge_r: float = UiTheme.CARD_BADGE_R * minf(k, UiTheme.CARD_BADGE_SCALE_CAP)
 		badge_top = rect.end.y - badge_r - pad * 0.5
 	var max_h: float = (badge_top - parch_top) if pin_gold else (zone_bottom - zone_top)
-	var info := name_layout(card.card_name, rect, font_bold, max_h)
+	var info := name_layout(_display_name(card), rect, font_bold, max_h)
 	var sz: int = int(info["sz"])
 	var maxw: float = float(info["maxw"])
 	var row_h: float = font_bold.get_height(sz)
@@ -663,10 +667,10 @@ static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	text_top = maxf(text_top, rect.position.y + 1.0)
 	var baseline: float = text_top + float(font_bold.get_ascent(sz))
 	if bool(info["need_scroll"]):
-		_draw_name_marquee(canvas, font_bold, sz, card.card_name, text_x, baseline, maxw,
+		_draw_name_marquee(canvas, font_bold, sz, _display_name(card), text_x, baseline, maxw,
 			UiTheme.INK_900, float(info["text_w"]))
 		return
-	canvas.draw_string(font_bold, Vector2(text_x, baseline), card.card_name,
+	canvas.draw_string(font_bold, Vector2(text_x, baseline), _display_name(card),
 			HORIZONTAL_ALIGNMENT_CENTER, maxw, sz, UiTheme.INK_900)
 
 
@@ -693,7 +697,7 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 		var glyph: Color = cols[1]
 		glyph.a = 0.40
 		_draw_center(canvas, font_bold, int(minf(box.size.x, box.size.y) * 0.9),
-				card.card_name.substr(0, 1), box.get_center(), glyph)
+				_display_name(card).substr(0, 1), box.get_center(), glyph)
 	# R498：卡图区窄边框（按归属分色）—— 卡图之后、待确认角标之前（角标要压在最上层）。
 	# 有图无图都画：无图回退的渐变横幅同样需要一圈边框，否则那一档卡看起来「没做完」。
 	_draw_art_frame(canvas, card, box, k)
@@ -1090,7 +1094,7 @@ static func text_zone_layout(card: CardData, rect: Rect2, font: Font, font_bold:
 	var maxw: float = rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0
 	var row_h: float = maxf(font.get_height(sz), font_bold.get_height(sz))
 	var desc: float = float(font.get_descent(sz))
-	var ninfo := name_layout(card.card_name, rect, font_bold, bottom - top)
+	var ninfo := name_layout(_display_name(card), rect, font_bold, bottom - top)
 	var nsz: int = int(ninfo["sz"])
 	var base_name: float = minf(top + float(nsz) * 0.88, bottom - float(nsz) * 0.22)
 	var base_meta: float = base_name + row_h                 # 种类行基线
@@ -1172,11 +1176,11 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	# 绿色长方形直接去掉，卡名直接放在上面就好」；卡名直接画在羊皮卷/木板底衬上。
 	# R281：卡名恒单行（宽度自适应 → 超宽横向滚动），不再折行；超宽时也不省略。
 	if bool(ninfo["need_scroll"]):
-		_draw_name_marquee(canvas, font_bold, nsz, card.card_name,
+		_draw_name_marquee(canvas, font_bold, nsz, _display_name(card),
 			rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad,
 			base_name, float(ninfo["maxw"]), UiTheme.INK_900, float(ninfo["text_w"]))
 	else:
-		_draw_center(canvas, font_bold, nsz, card.card_name,
+		_draw_center(canvas, font_bold, nsz, _display_name(card),
 			Vector2(cx, base_name - nsz * 0.36), UiTheme.INK_900)
 	if bool(L["has_meta"]):
 		var wa: float = font.get_string_size(meta_a, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
@@ -1444,14 +1448,14 @@ static func stats_line(card: CardData, hp := -1) -> String:
 	var shown := hp if hp >= 0 else card.health
 	match card.kind:
 		"盟友":
-			return "力量 %d   生命 %d   射程 %d   速度 %d" % [
+			return GameI18n.ui("shared", "CARD_FACE_ALLY_STATS", "力量 %d   生命 %d   射程 %d   速度 %d") % [
 				card.power, shown, card.attack_range, card.move_speed]
 		"工事":
-			return "力量 %d   生命 %d   射程 %d" % [card.power, shown, card.attack_range]
+			return GameI18n.ui("shared", "CARD_FACE_FORT_STATS", "力量 %d   生命 %d   射程 %d") % [card.power, shown, card.attack_range]
 		"技能":
-			return "直接使用"
+			return GameI18n.ui("shared", "CARD_FACE_SKILL_STATS", "直接使用")
 		"效果":
-			return "在效果区持续生效"
+			return GameI18n.ui("shared", "CARD_FACE_EFFECT_STATS", "在效果区持续生效")
 	return ""
 
 
@@ -1465,11 +1469,11 @@ static func growth_text(card: CardData) -> String:
 		return ""
 	var parts: Array[String] = []
 	if card.growth_power > 0:
-		parts.append("力+%d" % card.growth_power)
+		parts.append(GameI18n.ui("shared", "CARD_FACE_GROWTH_POWER", "力+%d") % card.growth_power)
 	if card.growth_health > 0:
-		parts.append("生+%d" % card.growth_health)
+		parts.append(GameI18n.ui("shared", "CARD_FACE_GROWTH_HEALTH", "生+%d") % card.growth_health)
 	if card.growth_damage > 0:
-		parts.append("伤+%d" % card.growth_damage)
+		parts.append(GameI18n.ui("shared", "CARD_FACE_GROWTH_DAMAGE", "伤+%d") % card.growth_damage)
 	return " ".join(parts)
 
 
@@ -1678,7 +1682,7 @@ static func keyword_lines(font: Font, card: CardData, max_w: float) -> Array[Str
 	var names := keyword_names(card)
 	if names.is_empty():
 		return out
-	var prefix := "关键字："
+	var prefix := GameI18n.ui("shared", "CARD_FACE_KEYWORDS", "关键字：%s") % ""
 	var cur := prefix
 	for i in names.size():
 		var unit: String = names[i] if cur == prefix else " · " + names[i]

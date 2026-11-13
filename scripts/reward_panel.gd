@@ -264,7 +264,7 @@ func _process(_delta: float) -> void:
 func _refresh_btn() -> void:
 	_cached_n = RunState.pending_reward_count()
 	_btn.visible = _cached_n > 0 and not _open
-	_btn.text = "✦ 待领奖励 %d" % _cached_n
+	_btn.text = GameI18n.ui("reward", "REWARD_PENDING_ENTRY", "✦ 待领奖励 %d") % _cached_n
 	_btn.tooltip_text = ""
 
 
@@ -308,33 +308,33 @@ func _entry_name(e: Dictionary) -> String:
 	var k := str(e.get("kind", ""))
 	if k == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
-		var rn := r.relic_name if r != null else "未知道具"
+		var rn := r.relic_name if r != null else GameI18n.ui("reward", "REWARD_UNKNOWN_RELIC", "未知道具")
 		# R532（用户口径）：追加奖励的条目**不再**在名字里带「额外」——
 		# 分隔带 + 专属图标已经分得开，重复写两遍反而挤占名称宽度。
-		return ("道具：" + rn) if _entry_bonus(e) else rn
+		return (GameI18n.ui("reward", "REWARD_BONUS_RELIC_NAME", "道具：%s") % rn) if _entry_bonus(e) else rn
 	# R543：大宝箱二选一
 	if k == "relic_or_key":
-		return "道具 / 生命之种（二选一）"
+		return GameI18n.ui("reward", "REWARD_RELIC_OR_KEY_NAME", "道具 / 生命之种（二选一）")
 	# R531：追加奖励里的两种「直接到账」条目（没有详情页，点右边那颗按钮就领）。
 	if k == RunState.BONUS_GOLD:
-		return "%d 金币" % int(e.get("gold", RunState.BONUS_GOLD_GAIN))
+		return GameI18n.ui("reward", "REWARD_BONUS_GOLD_NAME", "%d 金币") % int(e.get("gold", RunState.BONUS_GOLD_GAIN))
 	if k == RunState.BONUS_HP:
-		return "最大生命 +%d" % int(e.get("hp", RunState.BONUS_HP_GAIN))
+		return GameI18n.ui("reward", "REWARD_BONUS_HP_NAME", "最大生命 +%d") % int(e.get("hp", RunState.BONUS_HP_GAIN))
 	# R351 月亮（9180）：这条不是「挑一张卡」，是「给一次删卡机会」。
 	if k == "deck_delete":
-		return "一次删卡" if _entry_bonus(e) else "删除卡组中的一张卡"
+		return GameI18n.ui("reward", "REWARD_BONUS_DELETE_NAME", "一次删卡") if _entry_bonus(e) else GameI18n.ui("reward", "REWARD_DELETE_NAME", "删除卡组中的一张卡")
 	if k == "core":
-		return "核心"
+		return GameI18n.ui("reward", "REWARD_CORE_NAME", "核心")
 	# R467：传说卡是**固定单张**，列表里别写成「三选一」
 	if k == "cards" and bool(e.get("legendary", false)):
 		var lc: Array = e.get("candidates", [])
 		if not lc.is_empty():
 			var lcard: CardData = _repo_cards.get_card(int(lc[0]))
 			if lcard != null:
-				return "传说卡「%s」" % lcard.card_name
-		return "传说卡"
+				return GameI18n.ui("reward", "REWARD_LEGENDARY_CARD_NAME", "传说卡「%s」") % GameI18n.card_name(lcard.id, lcard.card_name)
+		return GameI18n.ui("reward", "REWARD_LEGENDARY_CARD_FALLBACK", "传说卡")
 	# R532：追加奖励与普通奖励**同名**，靠分隔带 + 说明行区分（用户口径：不再写「额外」）
-	return "卡牌奖励（三选一）"
+	return GameI18n.ui("reward", "REWARD_CARD_GROUP_NAME", "卡牌奖励（三选一）")
 
 
 func _entry_tag(e: Dictionary) -> String:
@@ -344,33 +344,33 @@ func _entry_tag(e: Dictionary) -> String:
 	# 玩家会以为是重复条目（出图核验过：加分隔带之后仍然分不清）。
 	if _entry_bonus(e):
 		if k == RunState.BONUS_CARDS:
-			return "一组三选一 · %s" % CardReward.type_label(str(e.get("type", "normal")))
+			return GameI18n.ui("reward", "REWARD_BONUS_CARD_GROUP_TAG", "一组三选一 · %s") % CardReward.type_label(str(e.get("type", "normal")))
 		if k == RunState.BONUS_DELETE:
-			return "挑一张卡组里的卡永久移除"
+			return GameI18n.ui("reward", "REWARD_BONUS_DELETE_TAG", "挑一张卡组里的卡永久移除")
 		if k == RunState.BONUS_RELIC:
 			var rb: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
-			return ("掉落 · " + rb.tag_line()) if rb != null else "掉落 · 道具"
+			return (GameI18n.ui("reward", "REWARD_BONUS_RELIC_TAG", "掉落 · %s") % rb.tag_line()) if rb != null else GameI18n.ui("reward", "REWARD_BONUS_RELIC_FALLBACK_TAG", "掉落 · 道具")
 	if k == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		if r == null:
-			return "奖励道具"
+			return GameI18n.ui("reward", "REWARD_RELIC_FALLBACK_NAME", "奖励道具")
 		return r.tag_line()
 	if k == "relic_or_key":
-		return "大宝箱 · 奖励道具或信物二选一"
+		return GameI18n.ui("reward", "REWARD_BIG_CHEST_TAG", "大宝箱 · 奖励道具或信物二选一")
 	if k == RunState.BONUS_GOLD:
-		return "直接进钱袋"
+		return GameI18n.ui("reward", "REWARD_GOLD_DIRECT_TAG", "直接进钱袋")
 	if k == RunState.BONUS_HP:
-		return "生命上限与当前生命一起 +%d" % int(e.get("hp", RunState.BONUS_HP_GAIN))
+		return GameI18n.ui("reward", "REWARD_HP_DIRECT_TAG", "生命上限与当前生命一起 +%d") % int(e.get("hp", RunState.BONUS_HP_GAIN))
 	if k == "deck_delete":
-		return "卡组操作 · 点它领下，随后挑一张永久删除"
+		return GameI18n.ui("reward", "REWARD_DELETE_TAG", "卡组操作 · 点它领下，随后挑一张永久删除")
 	if k == "core":
 		var d := int(e.get("dmg", 0))
 		if d > 0:
 			# 兑换完之后这条要能读出「献祭了谁、附到什么上」，不然置灰得莫名其妙
-			return "已献祭「%s」→「%s」伤害 +%d" % [
+			return GameI18n.ui("reward", "REWARD_CORE_SETTLED_TAG", "已献祭「%s」→「%s」伤害 +%d") % [
 					str(e.get("src_name", "")), str(e.get("dst_name", "")), d]
-		return "献祭一张伤害技能牌 · 把它的第一段伤害变成另一张的附魔（用掉即失效）"
-	return "卡牌奖励 · %s" % CardReward.type_label(str(e.get("type", "normal")))
+		return GameI18n.ui("reward", "REWARD_CORE_DESCRIPTION", "献祭一张伤害技能牌 · 把它的第一段伤害变成另一张的附魔（用掉即失效）")
+	return GameI18n.ui("reward", "REWARD_CARD_GROUP_TAG", "卡牌奖励 · %s") % CardReward.type_label(str(e.get("type", "normal")))
 
 
 func _entry_color(e: Dictionary) -> Color:
@@ -403,13 +403,13 @@ func _state_label(e: Dictionary) -> String:
 	var st := str(e.get("state", RunState.REWARD_PENDING))
 	# 核心不是「领下就进栏」，它要进去选两张卡 —— 「待领」会让人以为点一下就完事
 	if st == RunState.REWARD_PENDING and str(e.get("kind", "")) == "core":
-		return "待兑换"
+		return GameI18n.ui("reward", "REWARD_STATE_PENDING_CORE", "待兑换")
 	match st:
 		RunState.REWARD_CLAIMED:
-			return "已领取"
+			return GameI18n.ui("reward", "REWARD_STATE_CLAIMED", "已领取")
 		RunState.REWARD_SKIPPED:
-			return "已放弃"
-	return "待领"
+			return GameI18n.ui("reward", "REWARD_STATE_SKIPPED", "已放弃")
+	return GameI18n.ui("reward", "REWARD_STATE_PENDING", "待领")
 
 
 func _settled(e: Dictionary) -> bool:
@@ -419,9 +419,9 @@ func _settled(e: Dictionary) -> bool:
 func _relic_desc_text(e: Dictionary) -> String:
 	var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 	if r == null:
-		return "（这件道具的说明缺失）"
+		return GameI18n.ui("reward", "REWARD_RELIC_DESC_MISSING", "（这件道具的说明缺失）")
 	var note := RunState.relic_state_note(r.id)
-	return r.desc if note == "" else "%s  （%s）" % [r.desc, note]
+	return r.desc if note == "" else GameI18n.ui("reward", "REWARD_RELIC_DESC_WITH_STATE", "%s  （%s）") % [r.desc, note]
 
 
 func _wrap(text: String, max_w: float, size: int) -> Array[String]:
@@ -705,9 +705,9 @@ func _dup_confirm() -> void:
 	for it: Dictionary in res.get("copied", []):
 		nms.append(str(it["name"]))
 	if nms.is_empty():
-		UiToast.toast("鸭血：没有复制任何卡（卡组不变）")
+		UiToast.toast(GameI18n.ui("reward", "REWARD_DUCK_BLOOD_NO_COPY", "鸭血：没有复制任何卡（卡组不变）"))
 	else:
-		UiToast.toast("鸭血：复制了「%s」各一份" % "、".join(nms))
+		UiToast.toast(GameI18n.ui("reward", "REWARD_DUCK_BLOOD_COPIED", "鸭血：复制了「%s」各一份") % "、".join(nms))
 	_dup_sel.clear()
 	_view = VIEW_LIST
 	_scroll = 0.0
@@ -967,9 +967,9 @@ func _draw_list() -> void:
 	var total := RunState.pending_rewards.size()
 	var pend := RunState.pending_reward_count()
 	_root.draw_string(_font_bold, Vector2(r.position.x + PAD, r.position.y + 40),
-			"✦ 获得奖励", HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_HEADING, UiTheme.INK_900)
+			GameI18n.ui("reward", "REWARD_LIST_TITLE", "✦ 获得奖励"), HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_HEADING, UiTheme.INK_900)
 	_root.draw_string(_font, Vector2(r.position.x + 250, r.position.y + 38),
-			"共 %d 件 · 待领 %d 件　（点任意一条查看详情）" % [total, pend],
+			GameI18n.ui("reward", "REWARD_LIST_SUMMARY", "共 %d 件 · 待领 %d 件　（点任意一条查看详情）") % [total, pend],
 			HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - 300, UiTheme.FS_BODY, UiTheme.INK_600)
 
 	# 条目列表
@@ -998,12 +998,12 @@ func _draw_list() -> void:
 	# R440 暗动力（6054）：卡牌奖励还没拿 → 不许关界面（「完成」同时置灰）。
 	var must_pick := RunState.must_take_card_reward()
 	if any_relic:
-		_draw_btn(all, "领取全部道具", true, false)
+		_draw_btn(all, GameI18n.ui("reward", "REWARD_CLAIM_ALL_RELICS", "领取全部道具"), true, false)
 	if must_pick:
 		# 这一句优先级最高 —— 它解释「完成」为什么是灰的。
 		# ⚠️ 必须**加粗 + 深红 + 垫一层浅底**：卷轴下沿是烧焦的深色渐变，
 		#    普通字重的暗红压在上面几乎读不出来（出图实测过一版淡红，直接糊掉）。
-		var warn := "暗动力：必须当场拿取一张卡，不能留到以后领"
+		var warn := GameI18n.ui("reward", "REWARD_DARK_POWER_MUST_PICK", "暗动力：必须当场拿取一张卡，不能留到以后领")
 		var warn_w := _font_bold.get_string_size(warn, HORIZONTAL_ALIGNMENT_LEFT, -1,
 				UiTheme.FS_CAPTION).x
 		var wchip := Rect2(Vector2(r.position.x + PAD - 8, done.position.y + 1),
@@ -1013,13 +1013,13 @@ func _draw_list() -> void:
 		_root.draw_string(_font_bold, Vector2(r.position.x + PAD, done.position.y + 16),
 				warn, HORIZONTAL_ALIGNMENT_LEFT, 620, UiTheme.FS_CAPTION, Color("8c1a10"))
 	elif any_relic:
-		_foot_note(r, done.position.y, "「领取全部道具」不碰卡牌奖励 —— 卡牌要自己挑一张")
+		_foot_note(r, done.position.y, GameI18n.ui("reward", "REWARD_CLAIM_ALL_NOTE", "「领取全部道具」不碰卡牌奖励 —— 卡牌要自己挑一张"))
 	else:
 		_foot_note(r, done.position.y,
-				"卡牌 / 删卡 / 核心奖励要点进去处理（不能一键领取）" if pend > 0 else "全部奖励都已处理，可以点「完成」")
-	_draw_btn(done, "完成", false, must_pick)
+				GameI18n.ui("reward", "REWARD_MANUAL_PROCESSING_NOTE", "卡牌 / 删卡 / 核心奖励要点进去处理（不能一键领取）") if pend > 0 else GameI18n.ui("reward", "REWARD_ALL_SETTLED_NOTE", "全部奖励都已处理，可以点「完成」"))
+	_draw_btn(done, GameI18n.ui("reward", "REWARD_DONE", "完成"), false, must_pick)
 	# R463：右上角「卡组」—— 领奖励之前先看一眼这局攒了什么（选卡时最常想翻）
-	_draw_btn(_btn_view_deck_rect(r), "卡组", false, false)
+	_draw_btn(_btn_view_deck_rect(r), GameI18n.ui("reward", "REWARD_DECK_BUTTON", "卡组"), false, false)
 
 
 func _foot_note(r: Rect2, y: float, text: String) -> void:
@@ -1075,7 +1075,7 @@ func _draw_bonus_head(y: float, r: Rect2) -> void:
 	## 具体领什么由行内的名称与说明给，这里只负责「这一档和上面那些不是一回事」。
 	var mid := y + BONUS_HEAD_H * 0.56
 	var cx := r.position.x + r.size.x * 0.5
-	var text := "追加奖励"
+	var text := GameI18n.ui("reward", "REWARD_BONUS_HEADING", "追加奖励")
 	var tw := _font_bold.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 			UiTheme.FS_SUBHEAD).x
 	var chip := Rect2(cx - tw * 0.5 - 24.0, mid - 14.0, tw + 48.0, 28.0)
@@ -1184,10 +1184,10 @@ func _draw_enchant() -> void:
 	UiTheme.draw_scroll_bg(_root, pr)
 	var ink := Color("2f2a20")
 	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
-			"牛奶 —— 随机附魔", HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
+			GameI18n.ui("reward", "REWARD_MILK_TITLE", "牛奶 —— 随机附魔"), HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
 			UiTheme.FS_HEADING, ink)
 	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 76),
-			"这两张卡被贴上了附魔（数值已经生效）",
+			GameI18n.ui("reward", "REWARD_MILK_SUBTITLE", "这两张卡被贴上了附魔（数值已经生效）"),
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
 	var n := _ench_cards.size()
 	var total := n * CARD_W + maxi(0, n - 1) * CARD_GAP
@@ -1239,7 +1239,7 @@ func _draw_enchant() -> void:
 		var btn := Rect2(pr.position.x + pr.size.x / 2.0 - 70.0, pr.end.y - 40.0, 140.0, 28.0)
 		_root.draw_rect(btn, Color("3f8a4f"), true)
 		_root.draw_rect(btn, Color("c8f0a0"), false, 1.5)
-		_root.draw_string(_font_bold, btn.position + Vector2(0, 19), "继 续",
+		_root.draw_string(_font_bold, btn.position + Vector2(0, 19), GameI18n.ui("reward", "REWARD_ENCHANT_CONTINUE", "继 续"),
 				HORIZONTAL_ALIGNMENT_CENTER, btn.size.x, UiTheme.FS_CAPTION, Color("0e2010"))
 
 
@@ -1251,7 +1251,7 @@ func _draw_relic() -> void:
 		return
 	var e: Dictionary = RunState.pending_rewards[_sel]
 	var settled := _settled(e)
-	_draw_btn(_btn_back_rect(), "← 返回列表", false, false)
+	_draw_btn(_btn_back_rect(), GameI18n.ui("reward", "REWARD_BACK_TO_LIST", "← 返回列表"), false, false)
 	# R577b：领取详情标题右侧放这件道具的大图标（缺图就只留标题）。
 	if str(e.get("kind", "")) == "relic":
 		var icon577_tex := UiAssets.relic_icon(int(e.get("id", 0)))
@@ -1277,7 +1277,7 @@ func _draw_relic() -> void:
 	_root.draw_rect(Rect2(r.position.x + PAD, r.position.y + HEAD_H, PANEL_W - PAD * 2.0,
 			body_h), Color(0.99, 0.97, 0.90, 0.55), true)
 	_root.draw_string(_font, Vector2(r.position.x + PAD * 2.0, r.position.y + HEAD_H + 30),
-			"%s　·　状态：%s" % [_entry_tag(e), _state_label(e)],
+			GameI18n.ui("reward", "REWARD_RELIC_STATUS_LINE", "%s　·　状态：%s") % [_entry_tag(e), _state_label(e)],
 			HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - PAD * 4.0, UiTheme.FS_BODY, UiTheme.INK_600)
 	# R168：正文改用富文本绘制 —— 「提到的卡牌 / 道具名」自动换色并交出命中矩形。
 	var txt_w := PANEL_W - PAD * 4.0
@@ -1295,12 +1295,12 @@ func _draw_relic() -> void:
 	var skip := _btn_skip_rect()
 	if settled:
 		_foot_note(r, claim.position.y,
-				"这条已经%s了（不可再操作）" % ("领取" if _state_label(e) == "已领取" else "放弃"))
+				GameI18n.ui("reward", "REWARD_SETTLED_RELIC_NOTE", "这条已经%s了（不可再操作）") % ("领取" if _state_label(e) == "已领取" else GameI18n.ui("reward", "REWARD_SETTLED_VERB_SKIPPED", "放弃")))
 	else:
 		_foot_note(r, claim.position.y,
-				"「返回列表」不会丢掉它 —— 可以随时再点进来看、再领取。")
-	_draw_btn(skip, "放弃这件", false, settled)
-	_draw_btn(claim, "领取" if not settled else "已处理", true, settled)
+				GameI18n.ui("reward", "REWARD_RETURN_KEEPS_REWARD", "「返回列表」不会丢掉它 —— 可以随时再点进来看、再领取。"))
+	_draw_btn(skip, GameI18n.ui("reward", "REWARD_SKIP_THIS", "放弃这件"), false, settled)
+	_draw_btn(claim, GameI18n.ui("reward", "REWARD_CLAIM", "领取") if not settled else GameI18n.ui("reward", "REWARD_SETTLED_BUTTON", "已处理"), true, settled)
 
 
 func _draw_key_choice() -> void:
@@ -1316,10 +1316,10 @@ func _draw_key_choice() -> void:
 	var settled := _settled(e)
 	_draw_btn(_btn_back_rect(), "← 返回列表", false, false)
 	_root.draw_string(_font_bold, Vector2(r.position.x + 180, r.position.y + 40),
-			"大宝箱 · 二选一", HORIZONTAL_ALIGNMENT_LEFT, 520,
+			GameI18n.ui("reward", "REWARD_BIG_CHEST_CHOICE_TITLE", "大宝箱 · 二选一"), HORIZONTAL_ALIGNMENT_LEFT, 520,
 			UiTheme.FS_HEADING, UiTheme.INK_900)
 	_root.draw_string(_font, Vector2(r.position.x + PAD * 2.0, r.position.y + HEAD_H + 30),
-			"选择一件带走（道具 / 信物二选一）", HORIZONTAL_ALIGNMENT_LEFT,
+			GameI18n.ui("reward", "REWARD_BIG_CHEST_CHOICE_SUBTITLE", "选择一件带走（道具 / 信物二选一）"), HORIZONTAL_ALIGNMENT_LEFT,
 			PANEL_W - PAD * 4.0, UiTheme.FS_BODY, UiTheme.INK_600)
 	# 两个选项卡片
 	var rid := int(e.get("relic_id", -1))
@@ -1330,9 +1330,9 @@ func _draw_key_choice() -> void:
 	# 底部动作
 	var skip := _btn_skip_rect()
 	if settled:
-		_foot_note(r, skip.position.y, "这条已经处理过了（不可再操作）。")
+		_foot_note(r, skip.position.y, GameI18n.ui("reward", "REWARD_SETTLED_CHOICE_NOTE", "这条已经处理过了（不可再操作）。"))
 	else:
-		_foot_note(r, skip.position.y, "点左侧拿奖励道具，点右侧拿「生命之种」信物。")
+		_foot_note(r, skip.position.y, GameI18n.ui("reward", "REWARD_KEY_CHOICE_HINT", "点左侧拿奖励道具，点右侧拿「生命之种」信物。"))
 	_draw_btn(skip, "放弃这件", false, settled)
 
 
@@ -1359,9 +1359,9 @@ func _draw_key_option(rect: Rect2, opt: int, relic_id: int, settled: bool) -> vo
 	if opt == 0:
 		var rd: RelicData = _repo_relics.get_relic(relic_id) if relic_id > 0 else null
 		title = rd.relic_name if rd != null else "奖励道具"
-		desc = rd.desc if rd != null else "（奖励道具已全部拿完，只剩生命之种可选）"
+		desc = rd.desc if rd != null else GameI18n.ui("reward", "REWARD_NO_RELIC_LEFT", "（奖励道具已全部拿完，只剩生命之种可选）")
 	else:
-		title = "生命之种"
+		title = GameI18n.ui("reward", "REWARD_LIFE_SEED_NAME", "生命之种")
 		desc = RunState.key_relic_desc(RunState.SEED_RELIC_ID)
 	# R577b：左格改用「那件奖励道具」自己的图标 —— 旧写法把 -relic_id 传给
 	# key_relic_icon 恒返回 null，所以二选一左格一直空着；右格信物仍走 R543 的图。
@@ -1490,12 +1490,12 @@ func _draw_deck() -> void:
 			"删除卡组中的一张卡", HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
 			UiTheme.FS_HEADING, Color("2f2a20"))
 	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 78),
-			"点一张直接删 —— 这一局不会再回来；带锁的卡不能删",
+			GameI18n.ui("reward", "REWARD_DELETE_SUBTITLE", "点一张直接删 —— 这一局不会再回来；带锁的卡不能删"),
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
 	var c := _deck_clip_rect()
 	var n := RunState.deck_ids.size()
 	if n <= 0:
-		_root.draw_string(_font, c.position + Vector2(0, 40), "卡组里没有可删的卡",
+		_root.draw_string(_font, c.position + Vector2(0, 40), GameI18n.ui("reward", "REWARD_NO_DELETABLE_CARDS", "卡组里没有可删的卡"),
 				HORIZONTAL_ALIGNMENT_CENTER, c.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
 	for i in n:
 		var rr := _deck_card_rect(i)
@@ -1515,10 +1515,10 @@ func _draw_deck() -> void:
 			_root.draw_rect(rr, Color(0.06, 0.06, 0.08, 0.42), true)
 	if _max_scroll() > 0.0:
 		_root.draw_string(_font, Vector2(c.position.x, c.end.y - 2.0),
-				"滚轮查看更多（%d 张）" % n, HORIZONTAL_ALIGNMENT_RIGHT, c.size.x,
+				GameI18n.ui("reward", "REWARD_SCROLL_MORE", "滚轮查看更多（%d 张）") % n, HORIZONTAL_ALIGNMENT_RIGHT, c.size.x,
 				UiTheme.FS_CAPTION, UiTheme.INK_600)
 	_draw_btn(_btn_deck_back_rect(), "← 返回列表", false, false)
-	_draw_btn(_btn_deck_skip_rect(), "放弃这次删卡", false, settled)
+	_draw_btn(_btn_deck_skip_rect(), GameI18n.ui("reward", "REWARD_SKIP_DELETE", "放弃这次删卡"), false, settled)
 
 
 # ------------------------------------------------------------ R463 只看卡组
@@ -1569,14 +1569,14 @@ func _draw_deck_viewer() -> void:
 	UiTheme.draw_scroll_bg(_root, pr)
 	var n := RunState.deck_ids.size()
 	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
-			"卡组（%d 张）" % n, HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
+			GameI18n.ui("reward", "REWARD_DECK_COUNT", "卡组（%d 张）") % n, HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
 			UiTheme.FS_HEADING, Color("2f2a20"))
 	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 78),
-			"这一局的整副卡组 —— 滚轮 / 按住拖动查看；这里只是看，不会改动任何一张",
+			GameI18n.ui("reward", "REWARD_DECK_VIEWER_SUBTITLE", "这一局的整副卡组 —— 滚轮 / 按住拖动查看；这里只是看，不会改动任何一张"),
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
 	var c := _deck_clip_rect()
 	if n <= 0:
-		_root.draw_string(_font, c.position + Vector2(0, 40), "卡组里还没有卡",
+		_root.draw_string(_font, c.position + Vector2(0, 40), GameI18n.ui("reward", "REWARD_DECK_EMPTY", "卡组里还没有卡"),
 				HORIZONTAL_ALIGNMENT_CENTER, c.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
 	for i in n:
 		var rr := _deck_card_rect(i)
@@ -1594,7 +1594,7 @@ func _draw_deck_viewer() -> void:
 		_root.draw_string(_font, Vector2(c.position.x, c.end.y - 2.0),
 				"滚轮查看更多（%d 张）" % n, HORIZONTAL_ALIGNMENT_RIGHT, c.size.x,
 				UiTheme.FS_CAPTION, UiTheme.INK_600)
-	_draw_btn(_btn_viewer_back_rect(), "← 返回", false, false)
+	_draw_btn(_btn_viewer_back_rect(), GameI18n.ui("reward", "REWARD_BACK", "← 返回"), false, false)
 
 
 # ------------------------------------------------------------ R636 鸭血复制
@@ -1609,15 +1609,15 @@ func _draw_dup() -> void:
 	UiTheme.draw_scroll_bg(_root, pr)
 	var n := RunState.deck_ids.size()
 	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
-			"鸭血 —— 选择最多 %d 张卡复制" % RunState.DUCK_BLOOD_MAX,
+			GameI18n.ui("reward", "REWARD_DUP_TITLE", "鸭血 —— 选择最多 %d 张卡复制") % RunState.DUCK_BLOOD_MAX,
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_HEADING, Color("2f2a20"))
 	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 78),
-			"选中的卡各复制一份加入卡组（原卡保留、附魔一起带走）｜已选 %d 张" % _dup_sel.size(),
+			GameI18n.ui("reward", "REWARD_DUP_SUBTITLE", "选中的卡各复制一份加入卡组（原卡保留、附魔一起带走）｜已选 %d 张") % _dup_sel.size(),
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
 	var c := _deck_clip_rect()
 	if n <= 0:
 		_root.draw_string(_font, Vector2(c.position.x, c.position.y + 40),
-				"卡组里没有可复制的卡", HORIZONTAL_ALIGNMENT_CENTER, c.size.x,
+				GameI18n.ui("reward", "REWARD_DUP_EMPTY", "卡组里没有可复制的卡"), HORIZONTAL_ALIGNMENT_CENTER, c.size.x,
 				UiTheme.FS_BODY, UiTheme.INK_600)
 	for i in n:
 		var rr := _deck_card_rect(i)
@@ -1653,7 +1653,7 @@ func _draw_dup() -> void:
 	_draw_btn(_btn_deck_back_rect(), "← 返回列表", false, false)
 	# 一张都不选也合法（= 跳过这次复制），所以按钮**永远可用**，只是不亮主色。
 	_draw_btn(_btn_deck_skip_rect(),
-			"确定复制（%d/%d）" % [_dup_sel.size(), RunState.DUCK_BLOOD_MAX],
+			GameI18n.ui("reward", "REWARD_DUP_CONFIRM", "确定复制（%d/%d）") % [_dup_sel.size(), RunState.DUCK_BLOOD_MAX],
 			not _dup_sel.is_empty(), false)
 
 
@@ -1747,27 +1747,27 @@ func _draw_core() -> void:
 	_root.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.045, 0.08, 0.86), true)
 	var pr := _deck_panel_rect()
 	UiTheme.draw_scroll_bg(_root, pr)
-	var title := "核心 —— 献祭一张伤害技能牌"
+	var title := GameI18n.ui("reward", "REWARD_CORE_TITLE_SACRIFICE", "核心 —— 献祭一张伤害技能牌")
 	if _core_stage == 1:
-		title = "核心 —— 选一张接住这段伤害的技能牌"
+		title = GameI18n.ui("reward", "REWARD_CORE_TITLE_TARGET", "核心 —— 选一张接住这段伤害的技能牌")
 	_root.draw_string(_font_bold, Vector2(pr.position.x, pr.position.y + 46),
 			title, HORIZONTAL_ALIGNMENT_CENTER, pr.size.x,
 			UiTheme.FS_HEADING, Color("2f2a20"))
-	var sub := "这张卡会从卡组里永久删除，它的第一段伤害成为附魔贴到下一张上"
+	var sub := GameI18n.ui("reward", "REWARD_CORE_SUBTITLE_SACRIFICE", "这张卡会从卡组里永久删除，它的第一段伤害成为附魔贴到下一张上")
 	if _core_stage == 1:
 		var src: CardData = null
 		if _core_src_idx >= 0 and _core_src_idx < RunState.deck_ids.size():
 			# R469：祭品若带「伤害 +N」附魔，`spell_first_hit()` 必须读**实际卡**，否则这里显示的伤害会比真正结算的少。
 			src = RunState.card_with_mod(_repo_cards, _core_src_idx)
 		var dmg: int = GameEngine.spell_first_hit(src) if src != null else 0
-		sub = "「%s」的第一段伤害 %d 点 → 变成这张卡的附魔「伤害 +%d」（已有附魔的卡不能选）" % [
-				src.card_name if src != null else "那张卡", dmg, dmg]
+		sub = GameI18n.ui("reward", "REWARD_CORE_SUBTITLE_TARGET", "「%s」的第一段伤害 %d 点 → 变成这张卡的附魔「伤害 +%d」（已有附魔的卡不能选）") % [
+				src.card_name if src != null else GameI18n.ui("reward", "REWARD_CORE_UNKNOWN_SOURCE_CARD", "那张卡"), dmg, dmg]
 	_root.draw_string(_font, Vector2(pr.position.x, pr.position.y + 78),
 			sub, HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
 	var c := _deck_clip_rect()
 	var n := _core_grid.size()
 	if n <= 0:
-		_root.draw_string(_font, c.position + Vector2(0, 40), "没有可以选的卡",
+		_root.draw_string(_font, c.position + Vector2(0, 40), GameI18n.ui("reward", "REWARD_CORE_EMPTY", "没有可以选的卡"),
 				HORIZONTAL_ALIGNMENT_CENTER, c.size.x, UiTheme.FS_BODY, UiTheme.INK_600)
 	for i in n:
 		var rr := _grid_card_rect(i, n)
@@ -1784,11 +1784,11 @@ func _draw_core() -> void:
 			_root.draw_rect(rr, Color(0.06, 0.06, 0.08, 0.42), true)
 	if _max_scroll() > 0.0:
 		_root.draw_string(_font, Vector2(c.position.x, c.end.y - 2.0),
-				"滚轮 / 按住拖动查看更多（%d 张）" % n, HORIZONTAL_ALIGNMENT_RIGHT, c.size.x,
+				GameI18n.ui("reward", "REWARD_CORE_SCROLL_MORE", "滚轮 / 按住拖动查看更多（%d 张）") % n, HORIZONTAL_ALIGNMENT_RIGHT, c.size.x,
 				UiTheme.FS_CAPTION, UiTheme.INK_600)
-	_draw_btn(_btn_deck_back_rect(), "← 返回列表" if _core_stage == 0 else "← 重选祭品",
+	_draw_btn(_btn_deck_back_rect(), "← 返回列表" if _core_stage == 0 else GameI18n.ui("reward", "REWARD_CORE_RESELECT", "← 重选祭品"),
 			false, false)
-	_draw_btn(_btn_deck_skip_rect(), "放弃这次兑换", false, settled)
+	_draw_btn(_btn_deck_skip_rect(), GameI18n.ui("reward", "REWARD_CORE_SKIP", "放弃这次兑换"), false, settled)
 
 
 func _layer_image(key: String, rect: Rect2) -> void:
@@ -1800,7 +1800,7 @@ func _layer_image(key: String, rect: Rect2) -> void:
 func _draw_reward_heading(pr: Rect2) -> void:
 	var rr := Rect2(pr.position.x - 18, pr.position.y - 27, 301, 76)
 	_layer_image("01", rr)
-	_root.draw_string(_font_bold, rr.position + Vector2(112, 47), "卡牌奖励", HORIZONTAL_ALIGNMENT_LEFT, 180, 30, Color("f1ddb1"))
+	_root.draw_string(_font_bold, rr.position + Vector2(112, 47), GameI18n.ui("reward", "REWARD_CARD_HEADING", "卡牌奖励"), HORIZONTAL_ALIGNMENT_LEFT, 180, 30, Color("f1ddb1"))
 
 
 func _layer_badge(center: Vector2, value: String, gold := false) -> void:
@@ -1876,17 +1876,17 @@ func _draw_cards() -> void:
 	if RunState.has_relic(RunState.MATCH_RELIC_ID):
 		var rb := _btn_cards_reroll_rect()
 		var left := maxi(0, RunState.match_charge)
-		var rtxt := "刷新 · 剩 %d" % left if rb.size.x >= 132.0 else "刷新 %d" % left
+		var rtxt := GameI18n.ui("reward", "REWARD_REROLL_LEFT", "刷新 · 剩 %d") % left if rb.size.x >= 132.0 else GameI18n.ui("reward", "REWARD_REROLL_LEFT_COMPACT", "刷新 %d") % left
 		_draw_btn(rb, rtxt, false, settled or left <= 0)
 	# R440 暗动力（6054）：持有它 → 卡牌奖励不可放弃，按钮换文案并置灰。
-	_draw_btn(_btn_cards_skip_rect(), "不可放弃" if must_pick else "放弃这组", false,
+	_draw_btn(_btn_cards_skip_rect(), GameI18n.ui("reward", "REWARD_CANNOT_SKIP", "不可放弃") if must_pick else GameI18n.ui("reward", "REWARD_SKIP_GROUP", "放弃这组"), false,
 			settled or must_pick)
 	# R167：确认按钮（触屏必需 —— 没有悬停就得靠它「先看后拿」）
 	var can_pick := (not settled) and _pick_sel >= 0 and _pick_sel < cands.size()
-	_draw_btn(_btn_confirm_rect(), "确认选择这张", true, not can_pick)
+	_draw_btn(_btn_confirm_rect(), GameI18n.ui("reward", "REWARD_CONFIRM_CARD", "确认选择这张"), true, not can_pick)
 	if settled:
 		_root.draw_string(_font, Vector2(pr.position.x, pr.end.y - 20.0),
-				"这组已经处理过了",
+				GameI18n.ui("reward", "REWARD_GROUP_SETTLED", "这组已经处理过了"),
 				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_CAPTION, REWARD_TEXT)
 	# 右下角的淡金花叶与主框顶饰呼应，透明度低，不碰按钮文字。
 
@@ -1959,7 +1959,7 @@ func _draw_card_detail(cands: Array) -> void:
 			HORIZONTAL_ALIGNMENT_CENTER, name_w - 12.0, UiTheme.FS_SUBHEAD, REWARD_TEXT)
 	var ly := ny + 44.0
 	_root.draw_string(_font, Vector2(lx, ly),
-			"%s · %d 费 · %s" % [card.kind, card.cost, card.rarity_name()],
+			GameI18n.ui("reward", "REWARD_CARD_META", "%s · %d 费 · %s") % [card.kind, card.cost, card.rarity_name()],
 			HORIZONTAL_ALIGNMENT_LEFT, col_w, UiTheme.FS_CAPTION, UiTheme.INK_600)
 	ly += 19.0
 	if stats != "":
@@ -1975,7 +1975,7 @@ func _draw_card_detail(cands: Array) -> void:
 	# 右栏：青色标签 + 效果全文（提及仍由 CardText 统一上色与命中）。
 	_round_box(Rect2(ex, box.position.y + 11.0, 64.0, 22.0), 11.0,
 			Color("4a5672"), Color(0, 0, 0, 0), false)
-	_root.draw_string(_font_bold, Vector2(ex, box.position.y + 27.0), "效果",
+	_root.draw_string(_font_bold, Vector2(ex, box.position.y + 27.0), GameI18n.ui("reward", "REWARD_EFFECT_LABEL", "效果"),
 			HORIZONTAL_ALIGNMENT_CENTER, 64.0, UiTheme.FS_CAPTION, Color("ffffff"))
 	var res := CardText.draw_wrapped_hits(_root, _font, _font_bold, segs, ex,
 			box.position.y + 51.0, ew, 13, 19.0, ink, box.end.y - pad, -1.0, bg)

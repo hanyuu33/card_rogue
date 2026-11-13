@@ -279,8 +279,8 @@ func _slot_reject_tip(slot: int, idx: int) -> String:
 	var c: CardData = _cards[idx] if idx >= 0 and idx < _cards.size() else null
 	var name := c.card_name if c != null else "这张卡"
 	if slot == 1:
-		return "「%s」没有可用的上半钩子 —— 试试拖进③下半" % name
-	return "「%s」没有可用的下半效果 —— 试试拖进②上半" % name
+		return GameI18n.ui("shop", "ASSEMBLE_UPPER_HOOK_MISSING", "「%s」没有可用的上半钩子 —— 试试拖进③下半") % name
+	return GameI18n.ui("shop", "ASSEMBLE_LOWER_EFFECT_MISSING", "「%s」没有可用的下半效果 —— 试试拖进②上半") % name
 
 
 func _slot_index(slot: int) -> int:
@@ -331,13 +331,13 @@ func _draw() -> void:
 	draw_rect(Rect2(0, 0, w, TITLE_H), Color(0.10, 0.09, 0.14, 0.92))
 	draw_rect(Rect2(0, TITLE_H - 2.0, w, 2.0), UiTheme.ACCENT_GOLD)
 	draw_string(_font_bold, Vector2(0, TITLE_H / 2.0 + UiTheme.FS_SUBHEAD * 0.35),
-			"组合", HORIZONTAL_ALIGNMENT_CENTER, w,
+			GameI18n.ui("shop", "ASSEMBLE_TITLE", "组合"), HORIZONTAL_ALIGNMENT_CENTER, w,
 			UiTheme.FS_SUBHEAD, UiTheme.ACCENT_LIT)
 	# 左栏：待选卡（真卡）
-	draw_string(_font_bold, Vector2(size.x * LEFT_X, TITLE_H + 26.0), "待选卡",
+	draw_string(_font_bold, Vector2(size.x * LEFT_X, TITLE_H + 26.0), GameI18n.ui("shop", "ASSEMBLE_CANDIDATES_TITLE", "待选卡"),
 			HORIZONTAL_ALIGNMENT_LEFT, size.x * LEFT_W, UiTheme.FS_LABEL, UiTheme.ACCENT_LIT)
 	draw_string(_font, Vector2(size.x * LEFT_X, TITLE_H + 26.0 + 18.0),
-			"拖进中栏 · 拖回可撤回 · 点卡看详情",
+			GameI18n.ui("shop", "ASSEMBLE_DRAG_INSTRUCTIONS", "拖进中栏 · 拖回可撤回 · 点卡看详情"),
 			HORIZONTAL_ALIGNMENT_LEFT, size.x * LEFT_W, UiTheme.FS_CAPTION, UiTheme.INK_ON_DARK)
 	var dragging := _drag_from >= 0 or _drag_slot >= 0
 	for k in _cards.size():
@@ -355,7 +355,7 @@ func _draw() -> void:
 	# 中栏：3 个空槽位
 	# ⚠️ R562：`HORIZONTAL_ALIGNMENT_CENTER` 的第二个参数是**矩形左边界**，不是中心点。
 	# 原来这里传 `size.x * MID_CX`（中心）+ 宽 0.2w → 文字整体右移半格，标题压在右栏边上。
-	draw_string(_font_bold, Vector2(size.x * MID_CX - size.x * 0.1, TITLE_H + 26.0), "拖入槽位",
+	draw_string(_font_bold, Vector2(size.x * MID_CX - size.x * 0.1, TITLE_H + 26.0), GameI18n.ui("shop", "ASSEMBLE_SLOTS_TITLE", "拖入槽位"),
 			HORIZONTAL_ALIGNMENT_CENTER, size.x * 0.2, UiTheme.FS_LABEL, UiTheme.ACCENT_LIT)
 	for slot in 3:
 		var sr := _slot_rect(slot)
@@ -383,7 +383,7 @@ func _draw_left_gap(r: Rect2) -> void:
 	draw_rect(r, Color(UiTheme.ACCENT_GOLD.r, UiTheme.ACCENT_GOLD.g,
 			UiTheme.ACCENT_GOLD.b, 0.06), true)
 	draw_rect(r, gold, false, 1.0)
-	draw_string(_font, Vector2(r.position.x, r.get_center().y + 4.0), "已放入",
+	draw_string(_font, Vector2(r.position.x, r.get_center().y + 4.0), GameI18n.ui("shop", "ASSEMBLE_CARD_PLACED", "已放入"),
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_CAPTION,
 			Color(UiTheme.ACCENT_GOLD.r, UiTheme.ACCENT_GOLD.g, UiTheme.ACCENT_GOLD.b, 0.75))
 
@@ -434,7 +434,7 @@ func _draw_slot_paper(sr: Rect2) -> void:
 
 func _draw_preview() -> void:
 	var cx := size.x * RIGHT_CX
-	draw_string(_font_bold, Vector2(cx - size.x * 0.1, TITLE_H + 26.0), "结果预览",
+	draw_string(_font_bold, Vector2(cx - size.x * 0.1, TITLE_H + 26.0), GameI18n.ui("shop", "ASSEMBLE_PREVIEW_TITLE", "结果预览"),
 			HORIZONTAL_ALIGNMENT_CENTER, size.x * 0.2, UiTheme.FS_LABEL, UiTheme.ACCENT_LIT)
 	var pr := _preview_rect()
 	var result: CardData = _preview_card()
@@ -442,9 +442,10 @@ func _draw_preview() -> void:
 		# 还没拖满（或填满了但 build 不出来 —— R571 起填槽已经拦掉这种情况）：
 		# 空预览卡框 + 提示。判据与确认按钮同一个口，避免「按钮亮了、卡面空着」。
 		_draw_slot_paper(pr)
-		draw_string(_font, Vector2(pr.position.x, pr.position.y + pr.size.y * 0.46), "拖满 3 个槽位",
+		var empty_lines := GameI18n.ui("shop", "ASSEMBLE_PREVIEW_EMPTY", "拖满 3 个槽位\n后显示组合卡").split("\n")
+		draw_string(_font, Vector2(pr.position.x, pr.position.y + pr.size.y * 0.46), empty_lines[0],
 				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
-		draw_string(_font, Vector2(pr.position.x, pr.position.y + pr.size.y * 0.46 + 20.0), "后显示组合卡",
+		draw_string(_font, Vector2(pr.position.x, pr.position.y + pr.size.y * 0.46 + 20.0), empty_lines[mini(1, empty_lines.size() - 1)],
 				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_LABEL, UiTheme.INK_ON_DARK)
 	else:
 		CardFace.draw_pick(self, result, pr, _font, _font_bold, false)
@@ -454,10 +455,10 @@ func _draw_preview() -> void:
 	draw_rect(sr, UiTheme.ACCENT_GOLD, false, 1.5)
 	CardInfoBoxes.draw_glyph(self, Vector2(sr.position.x + 18.0, sr.get_center().y), 10.0, "combine", UiTheme.ACCENT_LIT)
 	draw_string(_font_bold, Vector2(sr.position.x + 34.0, sr.get_center().y + UiTheme.FS_CAPTION * 0.35),
-			"组合产物 · 卡面金印为记", HORIZONTAL_ALIGNMENT_LEFT, sr.size.x - 40.0,
+			GameI18n.ui("shop", "ASSEMBLE_RESULT_SEAL", "组合产物 · 卡面金印为记"), HORIZONTAL_ALIGNMENT_LEFT, sr.size.x - 40.0,
 			UiTheme.FS_CAPTION, UiTheme.ACCENT_LIT)
 	# 上/下效果框（游戏羊皮纸面板素材 + 黄铜包角；未拖入对应卡时不写效果文本）
-	var tags := ["上半效果", "下半效果"]
+	var tags := [GameI18n.ui("shop", "ASSEMBLE_UPPER_EFFECT_LABEL", "上半效果"), GameI18n.ui("shop", "ASSEMBLE_LOWER_EFFECT_LABEL", "下半效果")]
 	for i in 2:
 		var er := _effect_rect(i)
 		# R559c：用 adventure 面板素材（panel_journal_light 九宫格）而非纯色圆角矩形。
@@ -509,7 +510,7 @@ func _draw_preview() -> void:
 	# 可用判据不是「三槽填满」，而是「填满且产物真的 build 得出来」（见 `_preview_card`）。
 	var ok := _confirm_rect()
 	var can := _preview_card() != null
-	UiTheme.draw_secondary_btn(self, ok, "确认组合", false, not can, true)
+	UiTheme.draw_secondary_btn(self, ok, GameI18n.ui("shop", "ASSEMBLE_CONFIRM", "确认组合"), false, not can, true)
 
 
 func _draw_wrapped(rect: Rect2, text: String, fs: int, col: Color) -> void:
@@ -570,7 +571,7 @@ func _gui_input(event: InputEvent) -> void:
 			# 已经打出去了，组合机会白丢；更要命的是在 `_gui_input` 里把自己 hide 掉，
 			# 鼠标的 over 状态留在了一个已隐藏的控件上，之后所有点击都落空（表现为卡死）。
 			# R571：连「取消组合」也删了 —— 右键只提示「必须完成」，不留任何放弃口。
-			_show_tip("组合一旦开始就必须完成 —— 把 3 个槽位拖满，再点「确认组合」")
+			_show_tip(GameI18n.ui("shop", "ASSEMBLE_MUST_COMPLETE", "组合一旦开始就必须完成 —— 把 3 个槽位拖满，再点「确认组合」"))
 			accept_event()
 			return
 	elif event is InputEventMouseMotion:
@@ -670,12 +671,12 @@ func _drop_at(pos: Vector2) -> void:
 			_set_slot(_drag_slot, b)
 			_set_slot(target, a)
 			if b >= 0:
-				_show_tip("两个槽位的卡已互换")
+				_show_tip(GameI18n.ui("shop", "ASSEMBLE_SLOTS_SWAPPED", "两个槽位的卡已互换"))
 		elif _left_zone().has_point(pos):
 			_set_slot(_drag_slot, -1)
-			_show_tip("已撤回，卡回到左栏待选")
+			_show_tip(GameI18n.ui("shop", "ASSEMBLE_CARD_WITHDRAWN", "已撤回，卡回到左栏待选"))
 		else:
-			_show_tip("拖回左栏可以撤回这张卡")
+			_show_tip(GameI18n.ui("shop", "ASSEMBLE_DRAG_BACK_TO_WITHDRAW", "拖回左栏可以撤回这张卡"))
 		queue_redraw()
 		return
 	# 从左栏拖出
@@ -685,12 +686,12 @@ func _drop_at(pos: Vector2) -> void:
 	if _left_zone().has_point(pos):
 		return   # 拖来拖去还在左栏 = 没动
 	# R562：落在槽位外面 → 说一句，别让玩家以为「拖了但没反应」。
-	_show_tip("拖到中栏三个槽位里才能放：①属性 ②上半 ③下半")
+	_show_tip(GameI18n.ui("shop", "ASSEMBLE_DROP_OUTSIDE_SLOTS", "拖到中栏三个槽位里才能放：①属性 ②上半 ③下半"))
 
 
 func fill_slot(slot: int, idx: int) -> void:
 	if _force_attr and (slot == 0 or idx == 0):
-		_show_tip("这一张是固定的底座，不能换")
+		_show_tip(GameI18n.ui("shop", "ASSEMBLE_FIXED_BASE", "这一张是固定的底座，不能换"))
 		return
 	## 填槽唯一口（拖拽落点 / 演示预填共用）。
 	## R564：idx < 0 = 清空该槽；同一张卡不会同时占两个槽（填进新槽会自动清掉旧槽）。
@@ -751,13 +752,13 @@ func _tap(pos: Vector2) -> void:
 		return
 	var k := _card_at(pos)
 	if k >= 0:
-		_open_detail_index(k, "已放入槽位" if _slot_of_index(k) >= 0 else "")
+		_open_detail_index(k, GameI18n.ui("shop", "ASSEMBLE_PLACED_IN_SLOT_NOTE", "已放入槽位") if _slot_of_index(k) >= 0 else "")
 		return
 	# 结果预览卡（填满三槽且 build 得出产物后才有真卡可看）
 	if _preview_rect().has_point(pos):
 		var res: CardData = _preview_card()
 		if res != null:
-			_open_detail_card(res, "组合结果预览 —— 按「确认组合」后才会真正生成")
+			_open_detail_card(res, GameI18n.ui("shop", "ASSEMBLE_RESULT_PREVIEW_NOTE", "组合结果预览 —— 按「确认组合」后才会真正生成"))
 
 
 func _open_detail_index(idx: int, note: String) -> void:

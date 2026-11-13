@@ -111,11 +111,11 @@ func _build_rows() -> void:
 	## 五行的文字口径。数字行（`num >= 0`）走滚动，文本行直接显示。
 	var cid := str(_data.get("class", PlayerClass.default_id()))
 	_rows = [
-		{"label": "使用角色", "text": PlayerClass.name_of(cid), "num": -1, "suffix": ""},
-		{"label": "造成伤害", "text": "", "num": int(_data.get("damage", 0)), "suffix": ""},
-		{"label": "花费时间", "text": _fmt_time(int(_data.get("seconds", 0))), "num": -1, "suffix": ""},
-		{"label": "战斗胜利", "text": "", "num": int(_data.get("battles", 0)), "suffix": " 场"},
-		{"label": "精英胜利", "text": "", "num": int(_data.get("elites", 0)), "suffix": " 场"},
+		{"label": GameI18n.ui("shell", "RUN_SUMMARY_CLASS", "使用角色"), "text": PlayerClass.name_of(cid), "num": -1, "suffix": ""},
+		{"label": GameI18n.ui("shell", "RUN_SUMMARY_DAMAGE", "造成伤害"), "text": "", "num": int(_data.get("damage", 0)), "suffix": ""},
+		{"label": GameI18n.ui("shell", "RUN_SUMMARY_TIME", "花费时间"), "text": _fmt_time(int(_data.get("seconds", 0))), "num": -1, "suffix": ""},
+		{"label": GameI18n.ui("shell", "RUN_SUMMARY_BATTLES", "战斗胜利"), "text": "", "num": int(_data.get("battles", 0)), "suffix": GameI18n.ui("shell", "RUN_SUMMARY_BATTLES_VALUE", "%s 场").replace("%s", "")},
+		{"label": GameI18n.ui("shell", "RUN_SUMMARY_ELITES", "精英胜利"), "text": "", "num": int(_data.get("elites", 0)), "suffix": GameI18n.ui("shell", "RUN_SUMMARY_ELITES_VALUE", "%s 场").replace("%s", "")},
 	]
 
 
@@ -224,11 +224,11 @@ func _draw_head(pr: Rect2) -> void:
 	# 未凑齐信物、打通第二层就进入结算 =「胜利？」。
 	# 判据 = 结算快照里的 `layer`：真通关必然停在第三层（LAYER_THREE）。
 	# R551（用户口径「失败也进这张结算页」）：快照带 `result: "lose"` 时显示「失败」。
-	var title := "胜  利"
+	var title := GameI18n.ui("shell", "RUN_SUMMARY_VICTORY", "胜  利")
 	if str(_data.get("result", "")) == "lose":
-		title = "失  败"
+		title = GameI18n.ui("shell", "RUN_SUMMARY_DEFEAT", "失  败")
 	elif int(_data.get("layer", GameLayers.LAYER_THREE)) != GameLayers.LAYER_THREE:
-		title = "胜利？"
+		title = GameI18n.ui("shell", "RUN_SUMMARY_VICTORY_QUESTION", "胜利？")
 	draw_string(_font_bold, Vector2(pr.position.x, ty), title,
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_TITLE,
 			Color(TITLE_COL.r, TITLE_COL.g, TITLE_COL.b, a))
@@ -331,7 +331,7 @@ func _draw_button() -> void:
 			Vector2(r.end.x - r.size.y * 0.48, r.position.y + 3.0),
 			Color(1, 1, 1, 0.30 * e), 1.2, true)
 	draw_string(_font_bold, Vector2(r.position.x, r.position.y + r.size.y * 0.5 + 9.0),
-			"确 定", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_SUBHEAD,
+			GameI18n.ui("shell", "RUN_SUMMARY_CONFIRM", "确 定"), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_SUBHEAD,
 			Color(1, 1, 1, e))
 
 
@@ -415,11 +415,11 @@ static func _fmt_time(secs: int) -> String:
 	## 只算实际游戏时间：`RunRecord.peek_elapsed()` 把「关掉游戏」的那段排除在外。
 	var s := maxi(0, secs)
 	if s < 60:
-		return "%d 秒" % s
+		return GameI18n.ui("shell", "RUN_SUMMARY_SECONDS", "%d 秒") % s
 	var m := s / 60
 	var r := s % 60
 	if m < 60:
-		return "%d 分 %02d 秒" % [m, r]
+		return GameI18n.ui("shell", "RUN_SUMMARY_MINUTES_SECONDS", "%d 分 %02d 秒") % [m, r]
 	var h := m / 60
 	m = m % 60
-	return "%d 小时 %02d 分" % [h, m]
+	return GameI18n.ui("shell", "RUN_SUMMARY_HOURS_MINUTES", "%d 小时 %02d 分") % [h, m]

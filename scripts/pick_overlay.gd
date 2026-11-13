@@ -318,7 +318,7 @@ func _draw() -> void:
 	# R479（用户口径）：这个按钮是「战场 ↔ 待选牌」的开关，不该叫「返回」——
 	# 玩家会以为点了等于放弃选择。浏览模式没有待办，点它就是关窗，仍写「关闭」。
 	draw_string(_font_bold, br.position + Vector2(40, 27),
-			"关闭" if is_view() else "看战场",
+			GameI18n.ui("map", "PICK_CLOSE", "关闭") if is_view() else GameI18n.ui("map", "PICK_VIEW_BATTLEFIELD", "看战场"),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL, Color("f5ead2"))
 	# 标题（顶栏居中）
 	var title_fs := UiTheme.FS_SUBHEAD
@@ -337,11 +337,11 @@ func _draw() -> void:
 	var max_sel := int(_cfg.get("max_sel", 1))
 	if is_view():
 		draw_string(_font_bold, Vector2(w - 240.0, TOP_H / 2.0 + UiTheme.FS_LABEL * 0.35),
-				"共 %d 张" % _cards.size(),
+				GameI18n.ui("map", "PICK_VIEW_COUNT", "共 %d 张") % _cards.size(),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL, Color("c9c2d4"))
 	else:
 		draw_string(_font_bold, Vector2(w - 240.0, TOP_H / 2.0 + UiTheme.FS_LABEL * 0.35),
-				"已选 %d / %d" % [_selected.size(), max_sel],
+				GameI18n.ui("map", "PICK_SELECTED_COUNT", "已选 %d / %d") % [_selected.size(), max_sel],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_LABEL,
 				Color("ffd27d") if _can_confirm() else Color("9a94a8"))
 	# 描述条（R191）：卡面只留卡名 → 点选/悬停的卡在这里读描述
@@ -353,7 +353,7 @@ func _draw() -> void:
 		draw_rect(dr, Color("ffd27d"), false, 1.2)
 		draw_string(_font_bold, dr.position + Vector2(14, 26), dc.card_name,
 				HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_BODY, Color("ffd27d"))
-		var meta := "%s · %d 费 · %s" % [dc.kind, dc.cost, dc.rarity_name()]
+		var meta := GameI18n.ui("map", "PICK_CARD_META", "%s · %d 费 · %s") % [dc.kind, dc.cost, dc.rarity_name()]
 		draw_string(_font, dr.position + Vector2(14, 48), meta,
 				HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_CAPTION, Color("9a94a8"))
 		var eff := CardText.naturalize(dc.effect_text)
@@ -367,7 +367,7 @@ func _draw() -> void:
 		draw_rect(db, Color(0.20, 0.17, 0.26, 0.96))
 		draw_rect(db, Color("ffd27d"), false, 1.4)
 		draw_string(_font_bold, Vector2(db.position.x, _center_y(db, UiTheme.FS_LABEL)),
-				"详情", HORIZONTAL_ALIGNMENT_CENTER, db.size.x,
+				GameI18n.ui("map", "PICK_DETAIL", "详情"), HORIZONTAL_ALIGNMENT_CENTER, db.size.x,
 				UiTheme.FS_LABEL, Color("ffd27d"))
 	draw_rect(Rect2(0, h - BOT_H, w, BOT_H), Color(0.10, 0.09, 0.14, 0.92))
 	draw_rect(Rect2(0, h - BOT_H, w, 2.0), UiTheme.INK_500)
@@ -388,9 +388,9 @@ func _draw() -> void:
 	var can := _can_confirm()
 	draw_rect(ok, Color(0.24, 0.44, 0.30, 0.98) if can else Color(0.24, 0.23, 0.28, 0.9))
 	draw_rect(ok, Color("7fc98a") if can else UiTheme.INK_500, false, 2.0)
-	var label := String(_cfg.get("confirm_label", "确认"))
+	var label := String(_cfg.get("confirm_label", GameI18n.ui("map", "PICK_CONFIRM_DEFAULT", "确认")))
 	if max_sel > 1 and not is_view():
-		label += "（%d/%d）" % [_selected.size(), max_sel]
+		label += GameI18n.ui("map", "PICK_CONFIRM_COUNT_SUFFIX", "（%d/%d）") % [_selected.size(), max_sel]
 	draw_string(_font_bold, Vector2(ok.position.x, _center_y(ok, UiTheme.FS_LABEL)),
 			label, HORIZONTAL_ALIGNMENT_CENTER, ok.size.x,
 			UiTheme.FS_LABEL, Color.WHITE if can else Color("8d879a"))
@@ -544,7 +544,7 @@ func _tap(pos: Vector2) -> void:
 	if _desc_detail_rect().has_point(pos):
 		var dcard := _desc_card()
 		if dcard != null and _detail != null:
-			_detail.open(dcard, "选卡页的卡面只显示卡名 —— 完整卡面与规则全文在这里")
+			_detail.open(dcard, GameI18n.ui("map", "PICK_DETAIL_NOTE", "选卡页的卡面只显示卡名 —— 完整卡面与规则全文在这里"))
 		return
 	var k := _card_at(pos)
 	if k >= 0:

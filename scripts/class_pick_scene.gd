@@ -90,8 +90,8 @@ func _ready() -> void:
 	queue_redraw()
 	# R148：Esc 主菜单
 	_menu = UiMenu.attach(self, _menu_items, {
-		"back": "继续选角色",
-		"sub": "选择角色",
+		"back": GameI18n.ui("shell", "CLASS_PICK_MENU_CONTINUE", "继续选角色"),
+		"sub": GameI18n.ui("shell", "CLASS_PICK_MENU_SUBTITLE", "选择角色"),
 	})
 
 
@@ -194,7 +194,7 @@ func _build_seed_edit() -> void:
 	## 原生 LineEdit（手机上点它才会弹软键盘）—— 样式与设置页的种子框同一套。
 	GameSettings.ensure_loaded()
 	_seed_edit = LineEdit.new()
-	_seed_edit.placeholder_text = "留空 = 每局随机"
+	_seed_edit.placeholder_text = GameI18n.ui("shell", "CLASS_PICK_SEED_BLANK", "留空 = 每局随机")
 	_seed_edit.max_length = RunState.SEED_LEN
 	_seed_edit.text = GameSettings.next_seed_code
 	var sb := StyleBoxFlat.new()
@@ -235,7 +235,7 @@ func _draw_ban_button() -> void:
 	var bg := Color(0.10, 0.11, 0.15, 0.86) if not hov else Color(0.16, 0.18, 0.24, 0.92)
 	UiTheme.draw_action(self, r, false, false, hov)
 	draw_rect(r, UiTheme.ADVENTURE_BRASS_LIT if hov else Color(1, 1, 1, 0.22), false, 1.4)
-	var label := "禁卡表 · 已禁 %d / 名额 %d" % [used, quota]
+	var label := GameI18n.ui("shell", "CLASS_PICK_BAN_QUOTA", "禁卡表 · 已禁 %d / 名额 %d") % [used, quota]
 	var col := UiTheme.PAGE_INK if quota > 0 else Color("9a968c")
 	draw_string(_font_bold, Vector2(r.position.x, r.position.y + 24.0), label,
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, col)
@@ -272,14 +272,14 @@ func _draw_seed_panel() -> void:
 	var p := _seed_panel_rect()
 	UiTheme.draw_info_card(self, p)
 	draw_rect(p, Color("b4523f") if _seed_bad else Color(1, 1, 1, 0.22), false, 1.6)
-	draw_string(_font_bold, p.position + Vector2(18, 26), "随机种子",
+	draw_string(_font_bold, p.position + Vector2(18, 26), GameI18n.ui("shell", "CLASS_PICK_SEED_TITLE", "随机种子"),
 			HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	draw_string(_font, p.position + Vector2(18, 96), "留空 = 每局随机",
 			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 36.0, UiTheme.FS_CAPTION, Color("9a968c"))
-	var hint2 := "或填 10 位（A-Z / 0-9）复现同一局"
+	var hint2 := GameI18n.ui("shell", "CLASS_PICK_SEED_FORMAT_HINT", "或填 10 位（A-Z / 0-9）复现同一局")
 	var hint_col := Color("7d8590")
 	if _seed_bad:
-		hint2 = "种子需 10 位：大写字母 / 数字"
+		hint2 = GameI18n.ui("shell", "CLASS_PICK_SEED_INVALID", "种子需 10 位：大写字母 / 数字")
 		hint_col = Color("e07a6a")
 	draw_string(_font, p.position + Vector2(18, 116), hint2,
 			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 36.0, UiTheme.FS_CAPTION, hint_col)
@@ -299,9 +299,9 @@ func _draw() -> void:
 		_draw_seed_panel()
 	elif _selected < 0:
 		UiTheme.draw_page(self, bleed)
-		draw_string(_font, Vector2(0, 288), "选择与你同行的精灵……",
+		draw_string(_font, Vector2(0, 288), GameI18n.ui("shell", "CLASS_PICK_EMPTY_TITLE", "选择与你同行的精灵……"),
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_TITLE, UiTheme.PAGE_INK)
-		draw_string(_font, Vector2(0, 330), "点头像查看该角色，再选难度、确认进入",
+		draw_string(_font, Vector2(0, 330), GameI18n.ui("shell", "CLASS_PICK_EMPTY_HINT", "点头像查看该角色，再选难度、确认进入"),
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 	else:
 		var cid := PlayerClass.ids()[_selected]
@@ -348,9 +348,9 @@ func _draw_rand_button() -> void:
 	# 名牌：与头像下方那套同一尺寸 / 同一字体，读起来是一行东西
 	var np := Rect2(r.position.x - 4.0, r.end.y + 4.0, r.size.x + 8.0, 48.0)
 	UiTheme.draw_info_card(self, np)
-	draw_string(_font_bold, Vector2(np.position.x, np.position.y + 22.0), "随机",
+	draw_string(_font_bold, Vector2(np.position.x, np.position.y + 22.0), GameI18n.ui("shell", "CLASS_PICK_RANDOM", "随机"),
 			HORIZONTAL_ALIGNMENT_CENTER, np.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
-	draw_string(_font, Vector2(np.position.x, np.position.y + 41.0), "已随机" if _rand_pending else "换一个",
+	draw_string(_font, Vector2(np.position.x, np.position.y + 41.0), GameI18n.ui("shell", "CLASS_PICK_RANDOM_PENDING", "已随机") if _rand_pending else GameI18n.ui("shell", "CLASS_PICK_RANDOM_AGAIN", "换一个"),
 			HORIZONTAL_ALIGNMENT_CENTER, np.size.x, UiTheme.FS_CAPTION, Color("9a968c"))
 
 
@@ -400,15 +400,15 @@ func _draw_avatar(i: int) -> void:
 	UiTheme.draw_info_card(self, Rect2(r.position.x - 4, r.end.y + 4, r.size.x + 8, 48))
 	# R550：锁定职业名牌替换成「未解锁」，不显示名字与生命
 	if not unlocked:
-		draw_string(_font_bold, Vector2(r.position.x, r.end.y + 24.0), "未解锁",
+		draw_string(_font_bold, Vector2(r.position.x, r.end.y + 24.0), GameI18n.ui("shell", "CLASS_PICK_LOCKED", "未解锁"),
 				HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, Color("9a968c"))
-		draw_string(_font, Vector2(r.position.x, r.end.y + 44.0), "进行游戏解锁",
+		draw_string(_font, Vector2(r.position.x, r.end.y + 44.0), GameI18n.ui("shell", "CLASS_PICK_LOCKED_HINT", "进行游戏解锁"),
 				HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_CAPTION, Color("7d8590"))
 		return
 	draw_string(_font_bold, Vector2(r.position.x, r.end.y + 24.0), PlayerClass.name_of(cid),
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	# 初始最大生命（R182：选职业界面明示，便于对比）
-	var hp_txt := "生命 %d" % PlayerClass.base_hp_of(cid)
+	var hp_txt := GameI18n.ui("shell", "CLASS_PICK_HP", "生命 %d") % PlayerClass.base_hp_of(cid)
 	draw_string(_font, Vector2(r.position.x, r.end.y + 44.0), hp_txt,
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_CAPTION,
 			UiTheme.class_color(cid).lightened(0.35))
@@ -425,7 +425,7 @@ func _draw_panel(cid: String) -> void:
 		draw_string(_font_bold, Vector2(x, y), "未解锁",
 				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, UiTheme.PAGE_INK)
 		y += 30.0
-		draw_string(_font, Vector2(x, y), "尚未解锁 —— 进行游戏即可解锁",
+		draw_string(_font, Vector2(x, y), GameI18n.ui("shell", "CLASS_PICK_LOCKED_DESCRIPTION", "尚未解锁 —— 进行游戏即可解锁"),
 				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 		_draw_difficulty_block(x, w)
 		return
@@ -438,7 +438,7 @@ func _draw_panel(cid: String) -> void:
 	y += 30.0
 	# 初始最大生命（R182：按职业不同，选职业界面明示）
 	y += 2.0
-	draw_string(_font, Vector2(x, y), "初始最大生命",
+	draw_string(_font, Vector2(x, y), GameI18n.ui("shell", "CLASS_PICK_INITIAL_MAX_HP", "初始最大生命"),
 			HORIZONTAL_ALIGNMENT_LEFT, w * 0.5, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	draw_string(_font_bold, Vector2(x + w * 0.5, y), "%d" % PlayerClass.base_hp_of(cid),
 			HORIZONTAL_ALIGNMENT_RIGHT, w * 0.5, UiTheme.FS_HEADING,
@@ -476,7 +476,7 @@ func _draw_difficulty_block(x: float, w: float) -> void:
 	## R545：从 _draw_panel 抽出的难度档位 + 当前档文本 + 确认钮（盲选面板与角色面板共用）。
 	## R650：数值摘要整行删除（店长口径），区块里只剩一句 debuff 人话。
 	# 难度档位（R223：左箭头 / 档位盒 / 右箭头，0~11 共 12 档，钳制不循环）
-	draw_string(_font_bold, Vector2(x, _diff_row_rect().position.y - 13.0), "难度档位",
+	draw_string(_font_bold, Vector2(x, _diff_row_rect().position.y - 13.0), GameI18n.ui("shell", "CLASS_PICK_DIFFICULTY", "难度档位"),
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	var cap := _diff_cap()
 	var d := clampi(RunState.difficulty, 0, cap)
@@ -532,7 +532,7 @@ func _draw_difficulty_block(x: float, w: float) -> void:
 	# 确认进入
 	var cr := _confirm_rect()
 	UiTheme.draw_action(self, cr, true)
-	draw_string(_font_bold, Vector2(cr.position.x, cr.position.y + 37.0), "确认进入",
+	draw_string(_font_bold, Vector2(cr.position.x, cr.position.y + 37.0), GameI18n.ui("shell", "CLASS_PICK_CONFIRM", "确认进入"),
 			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x, UiTheme.FS_HEADING, UiTheme.ADVENTURE_LIGHT)
 
 
@@ -546,7 +546,7 @@ func _draw_pending_panel() -> void:
 	draw_string(_font_bold, Vector2(x, y), "随机",
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_TITLE, UiTheme.PAGE_INK)
 	y += 30.0
-	draw_string(_font, Vector2(x, y), "已随机 —— 确认进入后揭晓角色",
+	draw_string(_font, Vector2(x, y), GameI18n.ui("shell", "CLASS_PICK_RANDOM_DESCRIPTION", "已随机 —— 确认进入后揭晓角色"),
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 	_draw_difficulty_block(x, w)
 
@@ -559,9 +559,9 @@ func _wrap_text(t: String, max_w: float, px: int) -> Array[String]:
 func _menu_items() -> Array:
 	## 本界面的 Esc 菜单项（R148）。每次打开都会重新调用，文案永远最新。
 	return [
-		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+		{"text": func(): return GameI18n.ui("shell", "CLASS_PICK_SOUND_ON", "音效：开") if sfx.enabled else GameI18n.ui("shell", "CLASS_PICK_SOUND_OFF", "音效：关"),
 			"fn": _toggle_sound, "keep_open": true},
-		{"text": "返回标题", "fn": _on_back_to_title},
+		{"text": GameI18n.ui("shell", "CLASS_PICK_BACK_TITLE", "返回标题"), "fn": _on_back_to_title},
 	]
 
 
@@ -635,7 +635,7 @@ func _gui_input(event: InputEvent) -> void:
 				# R550：锁定职业不可选 —— 只给一句提示，不改选择
 				if not UnlockSystem.is_class_unlocked(PlayerClass.ids()[i]):
 					sfx.play("click")
-					UiToast.toast("尚未解锁", 1200)
+					UiToast.toast(GameI18n.ui("shell", "CLASS_PICK_LOCKED_TOAST", "尚未解锁"), 1200)
 					queue_redraw()
 					return
 				_selected = i

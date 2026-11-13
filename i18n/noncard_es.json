@@ -1,0 +1,272 @@
+{
+  "version": 1,
+  "updated": "2026-11-13",
+  "source": "i18n/noncard_zh_canonical.json",
+  "relics": {
+    "6001": {
+      "name": "Esteroides",
+      "desc": "Al recoger: obtén +10 de Vida máxima; tu Vida actual también aumenta en 10."
+    },
+    "6002": {
+      "name": "Fuerza Numeron",
+      "desc": "Al recoger: pierde hasta 5 de Vida máxima (conserva al menos 1; tu Vida actual disminuye en la cantidad perdida real) y luego elige 1 carta del mazo que se pueda eliminar y transfórmala en una carta de recompensa aleatoria. Su Encantamiento original se elimina."
+    },
+    "6004": {
+      "name": "Poción de amnesia",
+      "desc": "Al recoger: elige 1 carta del mazo que se pueda eliminar y elimínala del mazo."
+    },
+    "6005": {
+      "name": "Membrana de pato",
+      "desc": "Al comienzo de tus primeros 2 turnos de cada combate, roba 1 carta adicional."
+    },
+    "6006": {
+      "name": "Pico de pato",
+      "desc": "Cuando recibas daño, redúcelo en 2 por cada 5 puntos completos de daño, después de aplicar todas las demás reducciones. Siempre recibes al menos 1 de daño."
+    },
+    "6007": {
+      "name": "Ala de pato",
+      "desc": "En tu 3.º turno de cada combate, obtén 3 de Coste adicional."
+    },
+    "6008": {
+      "name": "Plumón de pato",
+      "desc": "La primera unidad que juegues en cada uno de tus turnos obtiene +2 de Vida actual (la Vida máxima indicada en la carta no aumenta)."
+    },
+    "6009": {
+      "name": "Ojo del pato",
+      "desc": "Tus Habilidades infligen +X de daño, donde X es el Coste original de la carta de Habilidad."
+    },
+    "6010": {
+      "name": "Susurro del pato",
+      "desc": "Mientras la tengas, no puedes elegir manualmente una ruta en el mapa y avanzas aleatoriamente hasta entrar en una sala sin explorar. Al comienzo de cada uno de tus turnos, obtén aleatoriamente una de estas mejoras para el turno: +1 de Coste / los ataques de las unidades aliadas y tus Habilidades infligen +1 de daño / roba 1 carta adicional."
+    },
+    "6011": {
+      "name": "Carne asada",
+      "desc": "Carne asada en una zona de descanso. Se consume automáticamente al entrar en un combate contra un Jefe: recupera el 25% de tu Vida máxima, redondeando hacia arriba y sin superar tu Vida máxima. Mientras la tengas, no puedes asar otra en una zona de descanso."
+    },
+    "6012": {
+      "name": "Un saco de dolor",
+      "desc": "Después de que tu Vida reciba daño por primera vez cada turno, roba 1 carta y tus Habilidades infligen +1 de daño durante el resto del turno."
+    },
+    "6013": {
+      "name": "Pato en superposición",
+      "desc": "Cuando tu Vida llegue a 0, tienes un 100% de probabilidad de revivir y recuperar 1 de Vida. Tras cada resurrección, esta probabilidad se reduce permanentemente en un 25% (100 → 75 → 50 → 25 → 0). Al llegar a 0%, ya no puedes revivir."
+    },
+    "6014": {
+      "name": "Melocotones amarillos enlatados",
+      "desc": "Después de ganar cada combate, recupera 4 de Vida, sin superar tu Vida máxima."
+    },
+    "6015": {
+      "name": "Pendientes de idioma pato",
+      "desc": "Obtén +1 de Coste cada turno. Durante tu primer turno de cada combate, después del robo normal, intenta jugar automáticamente cada carta de tu mano de izquierda a derecha, eligiendo objetivos y posiciones al azar y omitiendo las cartas que no se puedan jugar. Detente cuando no quede ninguna carta que se pueda jugar o cuando se hayan jugado 20 cartas automáticamente."
+    },
+    "6016": {
+      "name": "Helado y refresco",
+      "desc": "Al comienzo de cada combate, pierde hasta 3 de Vida (conserva al menos 1). En tu primer turno, obtén 2 de Coste adicional y roba 3 cartas adicionales."
+    },
+    "6017": {
+      "name": "Pato pesado",
+      "desc": "Al recoger: obtén +6 de Vida máxima; tu Vida actual también aumenta en 6. Mientras la tengas, cualquier distancia de movimiento de una unidad enemiga superior a 1 se considera 1."
+    },
+    "6018": {
+      "name": "Pata ponedora",
+      "desc": "Al comienzo de cada combate, coloca una Estructura «Huevo de Pato» con 0 de Poder y 1 de Vida en el centro de tu primera fila. Al final del turno, si el Huevo de Pato sigue con vida, se convierte en un Pato mascota con 3 de Poder y 15 de Vida que recibe el daño a la Vida en tu lugar."
+    },
+    "6019": {
+      "name": "Pera de pato",
+      "desc": "Cada vez que tu Vida reciba daño, obtén +1 de Vida máxima (solo aumenta el límite y no recupera Vida)."
+    },
+    "6020": {
+      "name": "Amuleto arcano",
+      "desc": "Tu primera carta de Efecto de cada turno tiene Coste -1."
+    },
+    "6021": {
+      "name": "Reparación de vallas",
+      "desc": "Las cartas de Valla se pueden jugar en casillas que ya contengan una Valla aliada. Las Vallas se fusionan en una, suman su Vida y combinan sus rasgos sin duplicar los rasgos idénticos."
+    },
+    "6022": {
+      "name": "Forma salvaje",
+      "desc": "La primera vez en cada combate que el ataque normal de una unidad enemiga dañe directamente tu Vida, reduce ese daño en 4 (mínimo 1) e inflige 4 de daño al atacante."
+    },
+    "6023": {
+      "name": "Capa de ilusiones",
+      "desc": "Por cada 2 cartas que uses, una unidad enemiga aleatoria obtiene -1 de Poder hasta el comienzo de tu próximo turno."
+    },
+    "6024": {
+      "name": "Sangre de pato",
+      "desc": "Al recoger: elige hasta 2 cartas de tu mazo y añade al mazo 1 copia exacta de cada una, incluidos los Encantamientos. Las cartas originales se conservan. Puedes elegir solo 1 carta o ninguna."
+    },
+    "6025": {
+      "name": "Núcleo mecánico",
+      "desc": "Al comienzo de cada combate, añade 2 cartas de Chasis a tu mano (Aliados de Coste 1 con 1 de Poder y 3 de Vida; no se descartan al final del turno)."
+    },
+    "6026": {
+      "name": "Silbato de águila",
+      "desc": "Mientras la tengas, el contenido de todas las casillas del mapa es visible (los Caminos ya son visibles en todo el mapa). Este efecto no se añade a tu memoria de exploración permanente."
+    },
+    "6027": {
+      "name": "Manzana",
+      "desc": "Al recoger: obtén +7 de Vida máxima y recupera Vida hasta alcanzar el máximo."
+    },
+    "6028": {
+      "name": "Leche",
+      "desc": "Al recoger: genera aleatoriamente 2 Encantamientos distintos y aplica cada uno a una carta de tu mazo que pueda recibir un Encantamiento y aún no tenga ninguno. Cada carta solo puede tener 1 Encantamiento."
+    },
+    "6029": {
+      "name": "Venda hemostática",
+      "desc": "Después de ganar un combate, si el daño total que tu Vida recibió realmente en ese combate fue superior a 20, recupera 8 de Vida adicional la próxima vez que llegues a una zona de descanso en esta planta. Los efectos de la misma planta se acumulan; la recuperación no puede superar tu Vida máxima."
+    },
+    "6030": {
+      "name": "Macuto de viaje",
+      "desc": "Al recoger: obtén 100 de Oro y añade 1 Valla de Madera a tu mazo."
+    },
+    "6031": {
+      "name": "Insignia de valor",
+      "desc": "Obtén 1 de Coste adicional en tu 1.er turno de cada combate de Élite y de cada combate contra un Jefe."
+    },
+    "6032": {
+      "name": "Tinaja de barro",
+      "desc": "Al recoger: obtén aleatoriamente hasta 2 Reliquias de recompensa distintas y añade 1 Jarro a tu mazo."
+    },
+    "6033": {
+      "name": "Formación dual",
+      "desc": "Obtén 1 de Coste adicional cada turno; en las recompensas y las tiendas pueden aparecer cartas de todas las clases."
+    },
+    "6034": {
+      "name": "Maestro de encantamientos",
+      "desc": "Después de elegir Descansar en una hoguera, otorga un Encantamiento válido aleatorio a una carta aleatoria de tu mazo que pueda recibirlo y aún no tenga ninguno."
+    },
+    "6035": {
+      "name": "Agua de manantial",
+      "desc": "Al comienzo de cada turno, las unidades de tu última fila recuperan 4 de Vida."
+    },
+    "6036": {
+      "name": "Sello del pensamiento",
+      "desc": "La primera unidad aliada elegible que fuera a ser destruida en cada combate vuelve a tu mano en lugar de morir. Las unidades con «Dimensional» o «Desterrar al salir», así como las unidades generadas, no son elegibles y no consumen este efecto."
+    },
+    "6037": {
+      "name": "Anillo de espinas",
+      "desc": "Después de que tu Vida reciba daño real por primera vez cada turno, roba 2 cartas."
+    },
+    "6038": {
+      "name": "Santa Comunión",
+      "desc": "Al llegar a una hoguera, recupera el 50% de tu Vida máxima (redondeando hacia arriba y sin superar tu Vida máxima). Se activa una vez por hoguera."
+    },
+    "6039": {
+      "name": "Estatua",
+      "desc": "Por cada 10 cartas que uses, recupera 1 de Coste. El recuento se mantiene entre turnos y combates y se muestra junto al nombre de la Reliquia."
+    },
+    "6040": {
+      "name": "Dado de cristal",
+      "desc": "Todas las salas del mapa se convierten en salas «?», excepto las de la planta 3, el Punto de partida, los Cofres grandes, la Tienda de la esquina superior derecha y las zonas de descanso. Al entrar en un combate en una sala «?», lanza un dado de 1 a 6. Obtén 1 de Coste adicional cada turno durante tus primeros X turnos, donde X es el resultado."
+    },
+    "6041": {
+      "name": "Palangana de acero inoxidable",
+      "desc": "Mientras la tengas, esta Reliquia tiene 10 cargas. El daño que recibirías lo absorbe ella y sus cargas se reducen en la misma cantidad; pierdes esta Reliquia cuando llegan a 0. Al comprar un objeto en una Tienda, esta Reliquia se usa primero como pago: no gastas Oro y la pierdes en su lugar."
+    },
+    "6042": {
+      "name": "Hada del viento",
+      "desc": "Cuando juegues tu 5.ª carta en uno de tus turnos, inflige 4 de daño a todas las unidades enemigas (el número de cartas jugadas este turno se muestra junto al nombre de la Reliquia)."
+    },
+    "6043": {
+      "name": "Runa de celeridad",
+      "desc": "Cada vez que juegues una carta, tu bonificación de daño de Habilidad de este turno aumenta un 5% (la carta que se está jugando no cuenta; redondea hacia abajo). Contra unidades enemigas que no puedan actuar el próximo turno, esta bonificación porcentual se duplica."
+    },
+    "6044": {
+      "name": "Cofre de almacenamiento",
+      "desc": "Al final de tu turno, tu mano queda exenta del descarte normal y se conserva hasta tu próximo turno. Las cartas con efectos explícitos de destierro al final del turno se resuelven con normalidad."
+    },
+    "6045": {
+      "name": "7 de la suerte",
+      "desc": "Cada 7.º turno que juegues (contando entre combates), desde el comienzo de ese turno hasta el comienzo de tu próximo turno, eres inmune a todo el daño a la Vida y tus Habilidades infligen +7 de daño."
+    },
+    "6046": {
+      "name": "Palomitas",
+      "desc": "Si este turno no usaste una Habilidad que tuviera como objetivo a un enemigo o a la casilla de un enemigo, roba 1 carta al comienzo de tu próximo turno."
+    },
+    "6047": {
+      "name": "Caja sorpresa",
+      "desc": "Al recoger: añade 1 Caja Sorpresa a tu mazo."
+    },
+    "6048": {
+      "name": "Cuerda de caverna",
+      "desc": "Los combates que no sean contra un Jefe tienen un botón adicional de «Huir». Después de huir, pierdes esta Reliquia y no obtienes recompensas."
+    },
+    "6049": {
+      "name": "Trofeo de cabeza de ciervo",
+      "desc": "Al comienzo de cada uno de tus turnos, el daño de tus Habilidades obtiene un +1 acumulativo para este combate (a partir del turno 1)."
+    },
+    "6050": {
+      "name": "Cuchillo de recolección",
+      "desc": "Después de ganar un combate, añade 1 grupo a la recompensa normal de cartas aleatorias (los 2 grupos son independientes; elige 1 carta de cada uno)."
+    },
+    "6051": {
+      "name": "Cerilla",
+      "desc": "La pantalla de recompensa de cartas obtiene una opción de «Volver a tirar» que genera un nuevo grupo de cartas y sustituye las 3 actuales. Todos los grupos de recompensa comparten 3 usos; la opción deja de funcionar cuando se agotan."
+    },
+    "6052": {
+      "name": "Arpa",
+      "desc": "Todos los Aliados tienen +2 de Poder (efecto persistente; no se acumula)."
+    },
+    "6053": {
+      "name": "Espada de caballero",
+      "desc": "Después de matar a un enemigo por primera vez en cada combate, todos tus Aliados obtienen +1 de Poder y tus Habilidades infligen +1 de daño durante el resto del combate."
+    },
+    "6054": {
+      "name": "Impulso oscuro",
+      "desc": "Ya no puedes omitir las recompensas de cartas: debes tomar 1 carta de inmediato para cerrar la pantalla de recompensa y no puedes guardar las recompensas de cartas para más adelante. Tampoco puedes eliminar cartas de tu mazo en las tiendas. Al comienzo de cada turno, roba 1 carta adicional."
+    },
+    "6055": {
+      "name": "Pipa de fumar",
+      "desc": "Mientras esté encendida, en tu primer turno del próximo combate: obtén 1 de Coste, roba 1 carta adicional y pierde hasta 1 de Vida (conserva al menos 1). Después se apaga; se vuelve a encender cada vez que llegas a una hoguera."
+    },
+    "6056": {
+      "name": "Notas de aventura",
+      "desc": "Al recoger: una sala válida sin explorar elegida al azar en el mapa se convierte en un Cofre grande y un anillo de luz dorada resalta esa casilla."
+    },
+    "6057": {
+      "name": "Pedernal",
+      "desc": "Al recoger: elige una sala válida del mapa y conviértela en una hoguera. Si estaba explorada, vuelve a estar sin explorar y se revela."
+    },
+    "6058": {
+      "name": "Atadura maldita",
+      "desc": "La primera carta sin Coste X que juegues en cada combate tiene Coste -3 (mínimo 0; el descuento no utilizado se conserva entre turnos). Después, esa carta tiene Coste +1 durante el resto del combate."
+    },
+    "6059": {
+      "name": "Núcleo",
+      "desc": "La Vida que pierdes realmente en los combates ganados se acumula entre combates. Cuando el total alcance 15 o más, aparece una opción de «Núcleo» en la página de recompensas de victoria: elimina permanentemente del mazo 1 Habilidad de daño elegible y añade su primera instancia de daño base como Encantamiento a otra Habilidad de daño que no tenga ninguno. Tras usarla, esta Reliquia queda inactiva."
+    },
+    "6060": {
+      "name": "Tres robots",
+      "desc": "Por cada 3 Aliados destruidos, roba 1 carta (el recuento se reinicia en cada combate)."
+    },
+    "6064": {
+      "name": "Puñalada justiciera",
+      "desc": "Duplica el daño que infliges a las unidades enemigas con toda su Vida; no se aplica a la Vida del enemigo."
+    },
+    "6065": {
+      "name": "Brazo mecánico",
+      "desc": "Al comienzo de cada combate, añade a tu mano un Aliado aleatorio del grupo de recompensas de la clase actual; tiene Coste -1 durante tu primer turno."
+    },
+    "6067": {
+      "name": "Poción de memoria",
+      "desc": "Al comienzo de cada combate, juega una carta de Efecto aleatoria directamente desde tu pila de robo, sin pasar por tu mano y sin pagar su Coste. Si tu pila de robo no tiene cartas de Efecto, omite este efecto."
+    }
+  },
+  "classes": {
+    "森林精魄": {
+      "name": "Espíritu del bosque",
+      "subtitle": "Poder de la naturaleza · Junto a osos y ents",
+      "desc": "Progresión firme. Usa Estructuras y Aliados con mucha Vida para ganar ventaja, y haz que el combate siga tu ritmo mediante crecimiento y recuperación.\nNo destaca en los ataques rápidos, pero es muy difícil de derrotar de una sola vez."
+    },
+    "暗影刺客": {
+      "name": "Asesino de las sombras",
+      "subtitle": "Golpes de sombra veloces · Junto a sombras y cuchillas ligeras",
+      "desc": "Domina desde el principio. Usa Habilidades de bajo Coste y debilitamiento constante para reducir la Vida del rival, y acaba el combate con una explosión de daño antes de que se estabilice.\nRitmo rápido y poco margen de error; exige tomar la iniciativa y cuidar el orden de las cartas."
+    },
+    "机械之心": {
+      "name": "Corazón mecánico",
+      "subtitle": "Desmontar y recomponer · «Reequipar» unidades para hacerlas cada vez más fuertes",
+      "desc": "La fuerza del conjunto. Empieza cada combate con 2 cartas de Chasis de Coste 1 en la mano, que no se descartan al final del turno. Guárdalas hasta el momento adecuado y aplica «Reequipar» una a una para formar un bloque difícil de destruir.\nEmpieza con lentitud, pero una vez desarrollada, resulta difícil de atravesar con un solo ataque."
+    }
+  }
+}

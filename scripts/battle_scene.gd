@@ -915,8 +915,12 @@ func _ready() -> void:
 	# R155：顶栏操作按钮 —— 记录（偏左）/ 卡组·地图（右侧）。不再只藏在 Esc 菜单里。
 	log_btn.pressed.connect(_toggle_log)
 	deck_btn.pressed.connect(_toggle_deck_panel)
-	deck_btn.text = "完整卡组"
-	deck_btn.tooltip_text = "查看本局完整卡组（包括已抽到、弃牌和消耗的构筑卡）"
+	log_btn.text = GameI18n.ui("battle", "BATTLE_LOG", "记录")
+	deck_btn.text = GameI18n.ui("battle", "BATTLE_FULL_DECK", "完整卡组")
+	deck_btn.tooltip_text = GameI18n.ui("battle", "BATTLE_FULL_DECK_HINT", "查看本局完整卡组（包括已抽到、弃牌和消耗的构筑卡）")
+	map_btn.text = GameI18n.ui("battle", "BATTLE_MAP", "地图")
+	end_turn_btn.text = GameI18n.ui("battle", "BATTLE_END_TURN", "回合结束")
+	flee_btn.text = GameI18n.ui("battle", "BATTLE_FLEE", "逃跑")
 	map_btn.pressed.connect(_toggle_map)
 	hp_strip.draw.connect(_draw_hp_strip)
 	# 齿轮图标**自绘**（字体里的 ⚙ 不保证有，缺字会变成一个方框）—— 见 UiTheme.draw_gear
@@ -4305,7 +4309,7 @@ func _setup_net() -> void:
 	status_text = "联机对局 vs %s —— %s" % [NetSession.opp_name,
 			"你先手，请行动" if NetSession.i_start else "等待对方行动…"]
 	if NetSession.i_start:
-		_show_banner("我方回合 · 第 1 回合")
+		_show_banner(GameI18n.ui("battle", "BATTLE_TURN_SELF", "我方回合 · 第 %d 回合") % 1)
 	else:
 		_show_banner("%s 行动中" % NetSession.opp_name, Color("8a2b2b"))
 	queue_redraw()
@@ -4622,16 +4626,17 @@ func load_level(lvl: Dictionary) -> void:
 	_lose_elapsed = 0
 	_confetti.clear()
 	var limit: int = int(lvl["turn_limit"])
+	var shown_level := GameLevels.display_name(lvl)
 	if limit > 0:
 		status_text = "%s：%d 回合内把敌方 HP（%d）打到 0！" % [
-				lvl["name"], limit, GameLevels.enemy_hp_of(lvl)]
+				shown_level, limit, GameLevels.enemy_hp_of(lvl)]
 	elif not _tutorial.is_empty():
-		status_text = "%s：跟着顶部引导条一步步做。" % lvl["name"]
+		status_text = "%s：跟着顶部引导条一步步做。" % shown_level
 	else:
 		var tier_prefix := ""
 		if lvl.has("tier"):
 			tier_prefix = "【%s】" % GameLevels.tier_name(int(lvl["tier"]))
-		status_text = "%s%s 开始！" % [tier_prefix, lvl["name"]]
+		status_text = GameI18n.ui("battle", "BATTLE_BATTLE_START", "%s%s 开始！") % [tier_prefix, shown_level]
 	if bbq_heal >= 0:
 		# 状态栏很窄（310px），只放简短标记；详细提示见开场飘字。
 		status_text += "　｜　烤肉 +%d HP" % bbq_heal
@@ -4640,7 +4645,7 @@ func load_level(lvl: Dictionary) -> void:
 		# 关卡开场台词（如「哈气骑士团」的「我要闹了」）：盖过回合横幅，停留更久
 		_show_banner(intro, UiTheme.STAT_POWER, 2400)
 	else:
-		_show_banner("我方回合 · 第 1 回合")
+		_show_banner(GameI18n.ui("battle", "BATTLE_TURN_SELF", "我方回合 · 第 %d 回合") % 1)
 	# R136/R146：开场巡场 —— 停自己半场 → 推进到对方半场（放大）→ **拖回我方 + 还原大小**。
 	_ee_popup = false   # R197：新一场战斗，开场弹窗重新计一次
 	_ee_popup_at = 0    # R356：上一场排队中的「转阶段重弹」不许漏到这一场
@@ -7665,7 +7670,7 @@ func _build_over_panel() -> void:
 	_over_gold.visible = false
 	box.add_child(_over_gold)
 	_over_btn_restart = Button.new()
-	_over_btn_restart.text = "再来一局"
+	_over_btn_restart.text = GameI18n.ui("reward", "REWARD_VICTORY_RESTART", "再来一局")
 	_over_btn_restart.custom_minimum_size = Vector2(220, 40)
 	_over_btn_restart.pressed.connect(_on_over_restart)
 	box.add_child(_over_btn_restart)
@@ -7729,6 +7734,31 @@ func _build_win_panel() -> void:
 		rsz = ribbon.texture.get_size() * 0.5
 	ribbon.size = rsz
 	ribbon.position = WIN_RIBBON_POS
+	# 中文保留定稿金字素材；其它语言不能把素材里的中文继续露出来。
+	ribbon.visible = GameI18n.language() == "zh"
+	if not ribbon.visible:
+		var localized_ribbon := Panel.new()
+		localized_ribbon.position = WIN_RIBBON_POS + Vector2(-35.75, -3.25)
+		localized_ribbon.size = Vector2(280.0, 54.0)
+		localized_ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var ribbon_style := StyleBoxFlat.new()
+		ribbon_style.bg_color = Color("173c2a")
+		ribbon_style.border_color = Color("b99a5e")
+		ribbon_style.set_border_width_all(2)
+		localized_ribbon.add_theme_stylebox_override("panel", ribbon_style)
+		_win_panel.add_child(localized_ribbon)
+		var victory_title := Label.new()
+		victory_title.text = GameI18n.ui("battle", "BATTLE_VICTORY_TITLE", "战斗胜利")
+		victory_title.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		victory_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		victory_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		victory_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		victory_title.add_theme_font_override("font", UiTheme.font_bold())
+		victory_title.add_theme_font_size_override("font_size", 30)
+		victory_title.add_theme_color_override("font_color", Color("ffe7a3"))
+		victory_title.add_theme_color_override("font_outline_color", Color("3c2b16"))
+		victory_title.add_theme_constant_override("outline_size", 3)
+		localized_ribbon.add_child(victory_title)
 
 	# 金币整块：小标题 + （图标 + 大字）+ 分项。整块可整体隐藏。
 	_win_gold_box = Control.new()
@@ -7738,7 +7768,7 @@ func _build_win_panel() -> void:
 	_win_panel.add_child(_win_gold_box)
 
 	var cap := Label.new()
-	cap.text = "获得金币"
+	cap.text = GameI18n.ui("reward", "REWARD_VICTORY_GOLD_HEADING", "获得金币")
 	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cap.size = Vector2(WIN_PANEL_SIDE, 28.0)
 	cap.position = Vector2.ZERO
@@ -7803,7 +7833,7 @@ func _build_win_panel() -> void:
 	_win_panel.add_child(dot)
 
 	_win_btn = Button.new()
-	_win_btn.text = "查看奖励"
+	_win_btn.text = GameI18n.ui("reward", "REWARD_VICTORY_VIEW_REWARDS", "查看奖励")
 	_win_btn.size = Vector2(348.0, 64.0)
 	_win_btn.position = Vector2((WIN_PANEL_SIDE - 348.0) * 0.5, 432.0)
 	_win_btn.pressed.connect(func():
@@ -7832,16 +7862,16 @@ func _present_win_panel(gold_total: int, gold_parts: Array[String]) -> void:
 	_win_gold_box.visible = gold_total > 0
 	if gold_total > 0:
 		_win_gold_num.text = "+%d" % gold_total
-		_win_gold_parts.text = "%s　现有 %d" % [" · ".join(gold_parts), RunState.gold]
+		_win_gold_parts.text = GameI18n.ui("reward", "REWARD_VICTORY_GOLD_PARTS", "%s　现有 %d") % [" · ".join(gold_parts), RunState.gold]
 	# 主按钮文案：有奖励才叫「查看奖励」，否则就是送走玩家的那一步。
 	if RunState.pending_reward_count() > 0:
-		_win_btn.text = "查看奖励"
+		_win_btn.text = GameI18n.ui("reward", "REWARD_VICTORY_VIEW_REWARDS", "查看奖励")
 	elif RunState.run_active and _run_next_layer > 0:
-		_win_btn.text = "进入%s" % GameLayers.layer_name(_run_next_layer)
+		_win_btn.text = GameI18n.ui("reward", "REWARD_VICTORY_ENTER_LAYER", "进入%s") % GameLayers.layer_name(_run_next_layer)
 	elif RunState.run_active:
-		_win_btn.text = "返回冒险地图 →"
+		_win_btn.text = GameI18n.ui("reward", "REWARD_VICTORY_RETURN_MAP", "返回冒险地图 →")
 	else:
-		_win_btn.text = "再来一局"
+		_win_btn.text = GameI18n.ui("reward", "REWARD_VICTORY_RESTART", "再来一局")
 	_win_panel.modulate.a = 1.0
 	_win_panel.scale = Vector2.ONE
 	_win_panel.visible = true
@@ -7923,7 +7953,7 @@ func _on_over_restart() -> void:
 	if RunState.must_take_card_reward():
 		if _reward_panel != null:
 			_reward_panel.open()
-		UiToast.toast("暗动力：卡牌奖励必须领取", 2200)
+		UiToast.toast(GameI18n.ui("reward", "REWARD_DARK_POWER_CLAIM_REQUIRED", "暗动力：卡牌奖励必须领取"), 2200)
 		return
 	if RunState.run_active and _run_next_layer > 0:
 		var next_lay: int = _run_next_layer
@@ -8054,14 +8084,14 @@ func _show_over(win: bool) -> void:
 			if gold_gain > 0:
 				RunState.gain_gold(gold_gain)
 				gold_total += gold_gain
-				gold_parts.append("战斗 %d" % gold_gain)
+				gold_parts.append(GameI18n.ui("reward", "REWARD_GOLD_PART_BATTLE", "战斗 %d") % gold_gain)
 			# R351：**效果卡**的战斗结束收益（月亮 9180 / 硬币 9181）。
 			# 只管入队 / 加钱 —— 队列后面交给结算面板的奖励悬浮窗，别在这里弹界面。
 			var fx := engine.battle_end_rewards()
 			if int(fx.get("coin", 0)) > 0:
 				RunState.gain_gold(int(fx["coin"]))
 				gold_total += int(fx["coin"])
-				gold_parts.append("硬币 %d" % int(fx["coin"]))
+				gold_parts.append(GameI18n.ui("reward", "REWARD_GOLD_PART_COIN", "硬币 %d") % int(fx["coin"]))
 			if bool(fx.get("moon", false)):
 				RunState.queue_deck_delete_reward(1)
 			# R393：卡组里的「赏金猎人」战斗结束给金币（同名多张不叠加，取 20）。
@@ -8070,7 +8100,7 @@ func _show_over(win: bool) -> void:
 			if deck_gold > 0:
 				RunState.gain_gold(deck_gold)
 				gold_total += deck_gold
-				gold_parts.append("赏金猎人 %d" % deck_gold)
+				gold_parts.append(GameI18n.ui("reward", "REWARD_GOLD_PART_BOUNTY_HUNTER", "赏金猎人 %d") % deck_gold)
 			_set_over_gold(gold_total, gold_parts)
 			# R151 P1-18：Boss 击破与胜利 → 全屏黑白闪（≤40ms，绝不滥用 —— 只有这一处）
 			if win and _run_boss_win and not _shot_pending:
@@ -8172,7 +8202,7 @@ func _show_over(win: bool) -> void:
 			else:
 					# R137：奖励在结算悬浮窗里就已经领过了，这里只是「回去」——
 				# 再写「领取奖励」会让人以为按钮才是领取入口。
-				_over_btn_restart.text = "返回冒险地图 →"
+				_over_btn_restart.text = GameI18n.ui("reward", "REWARD_VICTORY_RETURN_MAP", "返回冒险地图 →")
 			_over_btn_restart.visible = true
 			_over_btn_restart.disabled = false
 			_over_btn_level.visible = false
@@ -8240,7 +8270,7 @@ func _show_over(win: bool) -> void:
 			RunState.max_hp = maxi(RunState.max_hp, engine.state.max_hp_self)
 		else:
 			RunState.reset(RunState.max_hp)
-		_over_btn_restart.text = "再来一局"
+		_over_btn_restart.text = GameI18n.ui("reward", "REWARD_VICTORY_RESTART", "再来一局")
 		_over_btn_restart.visible = true
 		_over_btn_level.visible = true
 		_over_btn_title.text = "回到标题"
@@ -8569,7 +8599,7 @@ func _draw_map_panel() -> void:
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 62.0), UiTheme.PAGE_MUTED, -1)
 	_draw_string_center(_font, UI_FS_CAPTION,
 			"本层 Boss：%s　·　战斗中不能改路线"
-			% str(RunState.boss_level().get("name", "")),
+			% GameLevels.display_name(RunState.boss_level()),
 			Vector2(pr.position.x + pr.size.x * 0.5, pr.position.y + 82.0), Color("8f8b80"), -1)
 	# ⚠️ 顺序不可换：格子底 → 通路（小桥） → 图标（与冒险地图同一套）。
 	_draw_map_tiles()
@@ -8734,7 +8764,7 @@ func _tut_update_bar() -> void:
 		_tut_bar.visible = false
 		return
 	_tut_bar.visible = true
-	_tut_title.text = "%s · %s" % [_cur_level["name"], step["title"]]
+	_tut_title.text = "%s · %s" % [GameLevels.display_name(_cur_level), step["title"]]
 	# 进度点：◆ 当前 ● 已走完 ○ 还没到
 	var dots := ""
 	for i in _tutorial.size():
@@ -9091,12 +9121,12 @@ func _on_end_turn() -> void:
 		engine.end_turn()
 		status_text = "第 %d 回合：费用重置为 %d，抽 5 张%s" % [engine.turn_number,
 				engine.max_energy(), _whisper_suffix()]
-		_show_banner("我方回合 · 第 %d 回合" % engine.turn_number, UiTheme.SIDE_SELF_TEXT)
+		_show_banner(GameI18n.ui("battle", "BATTLE_TURN_SELF", "我方回合 · 第 %d 回合") % engine.turn_number, UiTheme.SIDE_SELF_TEXT)
 		sfx.play("turn")
 		queue_redraw()
 		return
-	status_text = "对手回合…"
-	_show_banner("对手回合", Color("8a2b2b"))
+	status_text = GameI18n.ui("battle", "BATTLE_TURN_OPPONENT", "对手回合") + "…"
+	_show_banner(GameI18n.ui("battle", "BATTLE_TURN_OPPONENT", "对手回合"), Color("8a2b2b"))
 	sfx.play("turn")
 	queue_redraw()
 	_foe_phase = true                      # R388：这条回合的演出按倍速走
@@ -9129,7 +9159,7 @@ func _ai_step() -> void:
 		if not engine.over:
 			status_text = "第 %d 回合：费用重置为 %d，抽 5 张%s" % [engine.turn_number,
 				engine.max_energy(), _whisper_suffix()]
-			_show_banner("我方回合 · 第 %d 回合" % engine.turn_number, UiTheme.SIDE_SELF_TEXT)
+			_show_banner(GameI18n.ui("battle", "BATTLE_TURN_SELF", "我方回合 · 第 %d 回合") % engine.turn_number, UiTheme.SIDE_SELF_TEXT)
 			sfx.play("turn")
 		queue_redraw()
 		return
@@ -15310,7 +15340,8 @@ func _draw_level_plate() -> void:
 		return
 	if _tut_bar != null and _tut_bar.visible:
 		return
-	var txt := "关卡：%s" % engine.state.level_name
+	var shown_level := GameLevels.display_name(_cur_level) if not _cur_level.is_empty() else engine.state.level_name
+	var txt := GameI18n.ui("battle", "BATTLE_LEVEL", "关卡：%s") % shown_level
 	var px := UI_FS_LABEL
 	var tw := _font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 	var pad_x := 18.0
@@ -15339,7 +15370,7 @@ func _draw_grid_caption() -> void:
 	# ⚠️ R391：顶栏长到 44px 之后，「棋盘上方 12px」那条缝只剩 8px —— 带底衬的
 	#    表头会被整条吃掉（顶栏是子节点、画在本层之上）。改成**不铺底、只描边**，
 	#    压在边框上沿：既不占高度，也不遮第一行卡面。
-	_draw_string_center(_font_bold, UI_FS_MICRO, "战场",
+	_draw_string_center(_font_bold, UI_FS_MICRO, GameI18n.ui("battle", "BATTLE_FIELD", "战场"),
 			Vector2(GRID_X + GRID_W / 2, GRID_Y - 3), TXT_LIGHT, 3,
 			Color(0.10, 0.08, 0.05, 0.92))
 
@@ -15358,7 +15389,7 @@ func _draw_hp_banner() -> void:
 		if _hp_icon != null:
 			draw_texture_rect(_hp_icon, Rect2(r.position + Vector2(10, 9), Vector2(28, 28)), false)
 		var value := "%d/%d" % [_roll("hp_self", _show_hp("hp_self", engine.state.hp_self)), engine.state.max_hp_self] if own else ("∞" if engine.enemy_hp_infinite else str(_roll("hp_opp", _show_hp("hp_opp", engine.state.hp_opponent))))
-		_draw_string_nw(_font_bold, 14, "我方生命" if own else "敌方生命", r.position + Vector2(46, 29), col, -1)
+		_draw_string_nw(_font_bold, 14, GameI18n.ui("battle", "BATTLE_HP_SELF", "我方生命") if own else GameI18n.ui("battle", "BATTLE_HP_OPPONENT", "敌方生命"), r.position + Vector2(46, 29), col, -1)
 		_draw_string_center(_font_bold, 24, value, r.position + Vector2(258, 25), col, -1)
 
 
@@ -15412,7 +15443,7 @@ func _draw_end_turn_big() -> void:
 				icon_c + Vector2(ox - 6.0, 13.0)]), icon_col)
 	# 主文案 + 副文案
 	var text_cx := r.position.x + r.size.x * 0.5 + 16.0
-	_draw_string_center(_font_bold, UI_FS_HEADING, "回合结束",
+	_draw_string_center(_font_bold, UI_FS_HEADING, GameI18n.ui("battle", "BATTLE_END_TURN", "回合结束"),
 			Vector2(text_cx, r.get_center().y),
 			Color("fff2cf") if ready else Color("a8a8ac"), 2, Color(0, 0, 0, 0.55))
 
@@ -15513,7 +15544,7 @@ func _draw_enemy_effects() -> void:
 	var state := engine.state
 	var z := _enemy_zone_rect()
 	BattleHudMaterial.draw(self, z)
-	_draw_string_center(_font_bold, UI_FS_MICRO, "敌方效果 %d" % state.enemy_effects.size(),
+	_draw_string_center(_font_bold, UI_FS_MICRO, GameI18n.ui("battle", "BATTLE_ENEMY_EFFECTS", "敌方效果 %d") % state.enemy_effects.size(),
 			Vector2(z.position.x + z.size.x / 2, z.position.y + 22.0), Color("7a3a3a"), -1)
 	# 同名合并显示（左下角 ×N 角标）
 	var merged_e := _merged_effects(state.enemy_effects)
@@ -15650,7 +15681,7 @@ func _draw_relic_bar() -> void:
 	var draw_rows := RelicBarLayout.row_counts(mini(ids.size(), _relic_max_slots()), _relic_max_slots()).size()
 	var draw_z := Rect2(z.position, Vector2(z.size.x, 40.0 + draw_rows * RelicBarLayout.ROW_STEP))
 	BattleHudMaterial.draw(self, draw_z)
-	_draw_string_center(_font_bold, 14, "道具 %d" % ids.size(),
+	_draw_string_center(_font_bold, 14, GameI18n.ui("battle", "BATTLE_RELICS", "道具 %d") % ids.size(),
 			Vector2(draw_z.position.x + draw_z.size.x / 2, draw_z.position.y + 16.0), Color("7a6230"), -1)
 	var repo := RelicRepo.load_json()
 	var n_rel := ids.size()
@@ -15721,7 +15752,11 @@ func _draw_cost_zone() -> void:
 	# 效果区
 	var zone := Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, bottom - COST_Y - ENERGY_H)
 	BattleHudMaterial.draw(self, Rect2(zone.position, Vector2(zone.size.x, minf(zone.size.y, 46 + 58 * maxi(1, _merged_effects(state.effects).size())))))
-	_draw_string_center(_font_bold, UI_FS_MICRO, "效果区 %d" % state.effects.size(),
+	var effects_text := GameI18n.ui("battle", "BATTLE_EFFECTS", "效果区 %d") % state.effects.size()
+	var effects_fs := UI_FS_MICRO
+	while effects_fs > 9 and _font_bold.get_string_size(effects_text, HORIZONTAL_ALIGNMENT_LEFT, -1, effects_fs).x > TAP_W + 4:
+		effects_fs -= 1
+	_draw_string_center(_font_bold, effects_fs, effects_text,
 			Vector2(mid_x, COST_Y + ENERGY_H + 22.0), Color("4a6a4a"), -1)
 	# 效果卡：同名合并显示（左下角 ×N 角标），栏高固定、最多画满可见槽位；
 	# 装不下的用一张「+N」摘要卡兜底（点区域看全部）
@@ -15960,17 +15995,17 @@ func _draw_deck_and_discard() -> void:
 		draw_rect(drect, UiTheme.INK_300, false, 1.0)
 	else:
 		_draw_card_back(drect)
-	_draw_zone_name(drect, "抽牌库")
+	_draw_zone_name(drect, GameI18n.ui("battle", "BATTLE_DRAW_PILE", "抽牌库"))
 	_draw_zone_count(drect, state.deck.size())
 	# ---- 弃牌区：图标 + 张数（不再显示卡面）----
 	var crect := _zone_rect("discard")
 	_draw_zone_icon(_discard_tex, crect, Color("a08a52"))
-	_draw_zone_name(crect, "弃牌")
+	_draw_zone_name(crect, GameI18n.ui("battle", "BATTLE_DISCARD_PILE", "弃牌"))
 	_draw_zone_count(crect, state.discard.size())
 	# ---- 消耗区：次元图标 + 本局消失张数 ----
 	var vrect := _zone_rect("void")
 	_draw_zone_icon(_void_tex, vrect, Color("b06ae0"))
-	_draw_zone_name(vrect, "消耗")
+	_draw_zone_name(vrect, GameI18n.ui("battle", "BATTLE_VOID", "消耗"))
 	_draw_zone_count(vrect, state.void_count)
 
 
@@ -15992,7 +16027,9 @@ func _draw_zone_name(rect: Rect2, label: String) -> void:
 	var plate := rect.grow(-3.0)
 	var strip := Rect2(plate.position.x, plate.end.y - ZONE_NAME_H, plate.size.x, ZONE_NAME_H)
 	draw_rect(strip, Color(0.04, 0.035, 0.03, 0.82), true)
-	_draw_string_center(_font_bold, UI_FS_MICRO, label,
+	var label_size := UiTheme.fit_font_size(_font_bold, label, strip.size.x - 4.0,
+			ZONE_NAME_H, UI_FS_MICRO, 8)
+	_draw_string_center(_font_bold, label_size, label,
 			strip.get_center(), Color("e8dcc0"), -1)
 
 
@@ -16032,7 +16069,7 @@ func _draw_hand() -> void:
 	var full: bool = engine.state.hand_full()
 	var hand_badge := Rect2(300, 628, 110, 42)
 	BattleHudMaterial.draw(self, hand_badge)
-	_draw_string_center(_font_bold, 15, "手牌 %d/%d" % [n, FieldState.HAND_LIMIT], hand_badge.get_center(), Color("9a493e") if full else Color("45654e"), -1)
+	_draw_string_center(_font_bold, 15, GameI18n.ui("battle", "BATTLE_HAND", "手牌 %d/%d") % [n, FieldState.HAND_LIMIT], hand_badge.get_center(), Color("9a493e") if full else Color("45654e"), -1)
 	# 悬停的那张抬起来、并压在最上层（重叠时才看得清）；被选中的卡（点击 / 拖拽）
 	# 也压到最上层，放大后才不会被相邻卡盖住（R416）。
 	var order: Array[int] = []
@@ -16878,7 +16915,7 @@ func _set_over_gold(total: int, parts: Array[String]) -> void:
 		_over_gold.text = ""
 		_over_gold.visible = false
 		return
-	_over_gold.text = "金币 ＋%d（%s）　现有 %d" % [total, " · ".join(parts),
+	_over_gold.text = GameI18n.ui("reward", "REWARD_GOLD_LEGACY_SUMMARY", "金币 ＋%d（%s）　现有 %d") % [total, " · ".join(parts),
 			RunState.gold]
 	_over_gold.visible = true
 
@@ -17216,6 +17253,8 @@ const RELIC_TIP_LINE := 18.0
 
 func _draw_relic_tip_panel() -> void:
 	## 道具悬停说明：浮动折行面板（长描述如「叠加态的鸭」不溢出）。
+	if _hover_relic_tip.strip_edges().is_empty():
+		return
 	## 位置优先贴在道具栏上方；上方放不下就翻到下方。两个轴都夹进窗口内。
 	##
 	## R631（用户口径「暗影斗篷看不到力量 -1」「描述超过格子」）修掉两个硬伤：
@@ -17436,17 +17475,17 @@ func _process(delta: float) -> void:
 		_tut_poll()
 	if _net_mode:
 		if engine.over:
-			turn_label.text = "对局结束"
+			turn_label.text = GameI18n.ui("battle", "BATTLE_TURN_OVER", "对局结束")
 		elif engine.current_side == GameEngine.SIDE_SELF:
-			turn_label.text = "我方回合 · 第 %d 回合" % engine.turn_number
+			turn_label.text = GameI18n.ui("battle", "BATTLE_TURN_SELF", "我方回合 · 第 %d 回合") % engine.turn_number
 		else:
-			turn_label.text = "%s 行动中" % NetSession.opp_name
+			turn_label.text = GameI18n.ui("battle", "BATTLE_TURN_NET_OPPONENT", "%s 行动中") % NetSession.opp_name
 	elif engine.current_side == GameEngine.SIDE_SELF and not engine.over:
-		turn_label.text = "我方回合 · 第 %d 回合" % engine.turn_number
+		turn_label.text = GameI18n.ui("battle", "BATTLE_TURN_SELF", "我方回合 · 第 %d 回合") % engine.turn_number
 	elif engine.over:
-		turn_label.text = "对局结束"
+		turn_label.text = GameI18n.ui("battle", "BATTLE_TURN_OVER", "对局结束")
 	else:
-		turn_label.text = "对手回合"
+		turn_label.text = GameI18n.ui("battle", "BATTLE_TURN_OPPONENT", "对手回合")
 	# R155/R156：顶栏血量条改自绘（图标 + 滚动数字），这里只触发重绘 + 维护按钮禁用态
 	hp_strip.queue_redraw()
 	# R207：顶栏「卡组」看的是**完整卡组** → 本场牌堆抽空也不该变灰（整副牌还在）
@@ -17457,7 +17496,9 @@ func _process(delta: float) -> void:
 	map_btn.disabled = not _mapview_available()
 	# R602：顶栏状态是「一行 + 固定 180px 宽」，长消息原来直接省略尾部。
 	# 先缩字号（17→11）把整句塞进去，缩到底仍不够才由 Label 的 overrun 省略。
-	UiTheme.autoshrink_label(status_label, status_text, 17, 10, Vector2(180.0, 28.0))
+	var shown_status := GameI18n.source(status_text)
+	status_label.tooltip_text = shown_status
+	UiTheme.autoshrink_label(status_label, shown_status, 17, 10, Vector2(180.0, 28.0))
 
 
 func _draw_effect_thumbnail(card: CardData, rect: Rect2, count := 1, show_counter := false) -> void:

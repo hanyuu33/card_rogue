@@ -585,7 +585,7 @@ func pic_id() -> int:
 
 
 func rarity_name() -> String:
-	return RARITY_NAMES[clampi(rarity, 0, 6)]
+	return GameI18n.source(RARITY_NAMES[clampi(rarity, 0, 6)])
 
 
 func rarity_color() -> Color:
@@ -702,13 +702,13 @@ func add_affix(name: String) -> bool:
 ## 也不至于显示空白，只是没有专属配色与说明）。
 static func affix_label(name: String) -> String:
 	var d: Dictionary = word_def(name)
-	return str(d.get("label", name))
+	return GameI18n.source(str(d.get("label", name)))
 
 
 ## 字段的说明文字（卡面 / 悬停 / 图鉴用）。未注册 → 空串。
 static func affix_desc(name: String) -> String:
 	var d: Dictionary = word_def(name)
-	return str(d.get("desc", ""))
+	return GameI18n.source(str(d.get("desc", "")))
 
 
 ## 字段的图标名（R297，自绘符号；`CardInfoBoxes.draw_glyph()` 认这些名字）。
@@ -758,7 +758,7 @@ static func enchant_name(id: String) -> String:
 	if id == "":
 		return ""
 	var d: Dictionary = ENCHANT_DEFS.get(id, {})
-	return str(d.get("label", id))
+	return GameI18n.source(str(d.get("label", id)))
 
 
 ## 附魔的种类色：卡面标记的描边环、左栏文字、商店悬停描边共用这一个色。
@@ -773,7 +773,7 @@ static func enchant_desc(id: String) -> String:
 	if id == "":
 		return ""
 	var d: Dictionary = ENCHANT_DEFS.get(id, {})
-	return str(d.get("desc", ""))
+	return GameI18n.source(str(d.get("desc", "")))
 
 
 static func enchant_icon_name(id: String) -> String:

@@ -64,11 +64,11 @@ static func normalize_tier(raw: String) -> String:
 static func from_dict(d: Dictionary) -> RelicData:
 	var r := RelicData.new()
 	r.id = int(d.get("id", 0))
-	r.relic_name = str(d.get("name", ""))
+	r.relic_name = GameI18n.relic_name(r.id, str(d.get("name", "")))
 	r.kind = str(d.get("kind", KIND_INSTANT))
 	r.source = str(d.get("source", SRC_INITIAL))
 	r.tier = normalize_tier(str(d.get("tier", TIER_NORMAL)))
-	r.desc = str(d.get("desc", ""))
+	r.desc = GameI18n.relic_desc(r.id, str(d.get("desc", "")))
 	# R346：剧情解锁标记（缺省 false = 老数据不用改，一直在奖励池里）
 	r.locked = bool(d.get("locked", false))
 	# R476：关联卡牌（缺省 -1 = 这件道具不加卡）。字段缺失一律回落，旧数据安全。
@@ -105,7 +105,7 @@ func source_color() -> Color:
 
 
 func source_label() -> String:
-	return "%s道具" % source
+	return GameI18n.ui("shared", "RELIC_SOURCE_LABEL", "%s道具") % GameI18n.source(source)
 
 
 func is_initial() -> bool:
@@ -117,7 +117,7 @@ func is_legendary() -> bool:
 
 
 func tier_label() -> String:
-	return "%s道具" % tier
+	return GameI18n.ui("shared", "RELIC_TIER_LABEL", "%s道具") % GameI18n.source(tier)
 
 
 func tier_color() -> Color:
@@ -157,7 +157,7 @@ func badge_color() -> Color:
 func tag_line() -> String:
 	## 道具标签**唯一口**：来源 · 生效时机（奖励道具再追加档位）。
 	## 消费方 = 奖励悬浮窗 / 道具图鉴 / 提及浮窗 / 地图道具面板 共 6 处。
-	var base := "%s · %s" % [source_label(), kind]
+	var base := "%s · %s" % [source_label(), GameI18n.source(kind)]
 	if source == SRC_REWARD:
-		return "%s · %s" % [base, tier]
+		return "%s · %s" % [base, GameI18n.source(tier)]
 	return base

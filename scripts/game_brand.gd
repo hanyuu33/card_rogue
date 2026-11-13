@@ -113,7 +113,7 @@ static func title_text() -> String:
 
 static func footer_text() -> String:
 	## 右下角版本串。
-	return FOOTER.replace("{v}", VERSION)
+	return GameI18n.ui("shell", "GAME_BRAND_FOOTER", FOOTER).replace("{v}", VERSION)
 
 
 static func title_text_localized() -> String:

@@ -13,7 +13,7 @@ GLOSSARY = json.loads((I18N / "glossary.json").read_text(encoding="utf-8"))
 CARDS = json.loads((ROOT / "cards.json").read_text(encoding="utf-8-sig"))["cards"]
 CARDS_EN = json.loads((I18N / "cards_en.json").read_text(encoding="utf-8"))["cards"]
 CARDS_JA = json.loads((I18N / "cards_ja.json").read_text(encoding="utf-8"))["cards"]
-SCOPES = ("shop", "reward", "map", "shell", "shared")
+SCOPES = ("shop", "reward", "map", "battle", "shell", "shared")
 errors = []
 source_cache = {}
 
@@ -95,7 +95,7 @@ entries = {}
 for scope in SCOPES:
     for key, entry in ZH["scopes"].get(scope, {}).items():
         entries[scope + "." + key] = entry
-check(set(zh_rows) == set(entries), "五组界面底本键可稳定展开")
+check(set(zh_rows) == set(entries), "六组界面底本键可稳定展开")
 overrides = ZH.get("canonical_overrides", {})
 for path, entry in entries.items():
     filename = entry["source"].split(":", 1)[0]

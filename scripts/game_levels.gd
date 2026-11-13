@@ -42,7 +42,16 @@ const TIER_NAMES: Array[String] = [
 
 
 static func tier_name(tier: int) -> String:
-	return TIER_NAMES[clampi(tier, 0, TIER_NAMES.size() - 1)]
+	var idx := clampi(tier, 0, TIER_NAMES.size() - 1)
+	var keys := ["TIER_NORMAL_EASY", "TIER_NORMAL_HARD", "TIER_ELITE_EASY", "TIER_ELITE_HARD", "TIER_BOSS"]
+	return GameI18n.ui("battle", keys[idx], TIER_NAMES[idx])
+
+
+static func display_name(lvl: Dictionary) -> String:
+	## 显示层按稳定 key 翻译；内部关卡名、AI 与存档字段仍保留权威中文。
+	var fallback := str(lvl.get("name", ""))
+	var key := str(lvl.get("key", "")).strip_edges().to_upper()
+	return GameI18n.ui("battle", "LEVEL_" + key, fallback) if key != "" else fallback
 
 
 # ---- 敌方 HP：关卡基准值 + 精英 +10 / Boss +20，最后整体 ×2 ----
@@ -69,7 +78,7 @@ static func level_names() -> Array[String]:
 	var out: Array[String] = []
 	var lvls := builtin_levels()
 	for lvl in lvls:
-		out.append("【%s】%s" % [tier_name(int(lvl["tier"])), str(lvl["name"])])
+		out.append("【%s】%s" % [tier_name(int(lvl["tier"])), display_name(lvl)])
 	return out
 
 

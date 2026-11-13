@@ -294,6 +294,9 @@ func _single_deck(card: CardData) -> Array[CardData]:
 
 
 func _init() -> void:
+	# R668：本套件含中文显示断言；只固定当前进程，不写玩家设置。
+	GameSettings.ensure_loaded()
+	GameSettings.language = "zh"
 
 	# R346：测试进程绝不许写玩家真实档案（剧情 / 成就 / 禁卡进度都在里面）
 
@@ -63297,7 +63300,8 @@ func _init() -> void:
 
 				% r440_rp.count("RunState.must_take_card_reward()"))
 
-	check_src(r440_rp.find('"不可放弃" if must_pick else "放弃这组"') >= 0,
+	check_src(r440_rp.contains('GameI18n.ui("reward", "REWARD_CANNOT_SKIP", "不可放弃") if must_pick else')
+			and r440_rp.contains('GameI18n.ui("reward", "REWARD_SKIP_GROUP", "放弃这组")'),
 
 			"R440 界面：「放弃这组」在持有暗动力时换成「不可放弃」并置灰")
 
@@ -70861,7 +70865,7 @@ func _test_r600() -> void:
 
 	check_src(not r600_gallery.contains("c.color")
 
-			and r600_gallery.contains('"%s · %s · %d 费 · %s" % ['),
+			and r600_gallery.contains('GameI18n.ui("map", "GALLERY_DETAIL_META", "%s · %s · %d 费 · %s") % ['),
 
 			"R600：图鉴详情不显示卡牌颜色（只留阵营 / 种类 / 费用 / 归属）")
 

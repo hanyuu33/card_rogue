@@ -124,8 +124,8 @@ func _ready() -> void:
 			and "--screenshot" not in OS.get_cmdline_user_args():
 		RunSave.save_run()
 	_menu = UiMenu.attach(self, _menu_items, {
-		"back": "继续这段对话",
-		"sub": "起点",
+		"back": GameI18n.ui("shell", "CURTAIN_MENU_CONTINUE", "继续这段对话"),
+		"sub": GameI18n.ui("shell", "CURTAIN_MENU_SUBTITLE", "起点"),
 	})
 
 
@@ -211,7 +211,7 @@ func _build_nodes() -> void:
 	_plate.texture = UiAssets.get_tex("curtain_plate")
 	add_child(_plate)
 	_title = Label.new()
-	_title.text = CurtainLines.SPEAKER
+	_title.text = GameI18n.source(CurtainLines.SPEAKER)
 	_title.add_theme_font_override("font", _font_bold)
 	_title.add_theme_font_size_override("font_size", UiTheme.FS_SUBHEAD)
 	_title.add_theme_color_override("font_color", Color("5b3f1c"))
@@ -304,7 +304,7 @@ func _say(text: String, speaker := "") -> void:
 	_desc.text = text
 	_desc.visible_characters = 0 if not _instant else -1
 	if speaker != "":
-		_title.text = speaker
+		_title.text = GameI18n.source(speaker)
 	if _instant:
 		_typing = false
 		_desc.visible_characters = -1
@@ -364,15 +364,15 @@ func _fill_options() -> void:
 		var b: Button = _opts[i]
 		if i >= RunState.relic_choice.size():
 			b.disabled = true
-			b.text = "（空缺）"
+			b.text = GameI18n.ui("shell", "CURTAIN_OPTION_EMPTY", "（空缺）")
 			continue
 		var rel: RelicData = repo.get_relic(RunState.relic_choice[i])
 		if rel == null:
-			b.text = "（未知道具 %d）" % RunState.relic_choice[i]
+			b.text = GameI18n.ui("shell", "CURTAIN_OPTION_UNKNOWN", "（未知道具 %d）") % RunState.relic_choice[i]
 			b.disabled = true
 			continue
 		# 带「」的名字 = `Mention` 认得的「可查看」标记（与其它界面同一套口径）
-		b.text = "「%s」" % rel.relic_name
+		b.text = GameI18n.ui("shell", "CURTAIN_OPTION_NAME", "「%s」") % rel.relic_name
 		b.disabled = false
 
 
@@ -408,10 +408,10 @@ func _pick(i: int) -> void:
 	if CurtainLines.has_reply(_layer):
 		# 二层起：角色回一句（R310 修订：只换名称牌，不再出立绘 —— 用户口径）
 		_say(CurtainLines.reply(_layer, _cls), CurtainLines.reply_speaker(_layer, _cls))
-		_skip.text = "离开"
+		_skip.text = GameI18n.ui("shell", "CURTAIN_LEAVE", "离开")
 	elif name != "":
-		_say("「%s」收下了——路上小心哦。" % name, CurtainLines.SPEAKER)
-		_skip.text = "离开"
+		_say(GameI18n.ui("shell", "CURTAIN_ACCEPTED_FALLBACK", "「%s」收下了——路上小心哦。") % name, CurtainLines.SPEAKER)
+		_skip.text = GameI18n.ui("shell", "CURTAIN_LEAVE", "离开")
 	else:
 		_end_stage()
 
@@ -539,7 +539,7 @@ func _draw_tip() -> void:
 	_tip.draw_string(_font_bold, rect.position + Vector2(16, 28), rel.relic_name,
 			HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 32.0, UiTheme.FS_SUBHEAD,
 			rel.name_color(Color("f2e6c8")))
-	_tip.draw_string(_font, rect.position + Vector2(16, 50), "道具 · %s" % rel.kind,
+	_tip.draw_string(_font, rect.position + Vector2(16, 50), GameI18n.ui("shell", "CURTAIN_RELIC_KIND", "道具 · %s") % rel.kind,
 			HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 32.0, UiTheme.FS_CAPTION,
 			rel.badge_color())
 	var y: float = 50.0 + 30.0
@@ -576,7 +576,7 @@ func _draw_linked_card(card: CardData, rect: Rect2, y0: float) -> void:
 	var head_base := base_y + LINKED_HEAD_H - 6.0
 	_tip.draw_line(Vector2(ix, head_base - 16.0), Vector2(ix + iw, head_base - 16.0),
 			Color(1, 1, 1, 0.12), 1.0)
-	_tip.draw_string(_font, Vector2(ix, head_base), "获得卡牌",
+	_tip.draw_string(_font, Vector2(ix, head_base), GameI18n.ui("shell", "CURTAIN_LINKED_CARD_TITLE", "获得卡牌"),
 			HORIZONTAL_ALIGNMENT_LEFT, iw, UiTheme.FS_CAPTION, UiTheme.ACCENT_GOLD)
 	var cw: float = LINKED_CARD_H * 63.0 / 76.0
 	# +14（不是 +8）：卡面的费用 / 血量徽章会**外溢**卡框，贴太近会压到上面那行标题。
@@ -589,7 +589,7 @@ func _draw_linked_card(card: CardData, rect: Rect2, y0: float) -> void:
 	_tip.draw_string(_font_bold, Vector2(tx, ty), card.card_name,
 			HORIZONTAL_ALIGNMENT_LEFT, tw, UiTheme.FS_BODY, Color("f2e6c8"))
 	ty += 22.0
-	_tip.draw_string(_font, Vector2(tx, ty), "%s · %d 费 · %s" % [card.kind,
+	_tip.draw_string(_font, Vector2(tx, ty), GameI18n.ui("shell", "CURTAIN_LINKED_CARD_META", "%s · %d 费 · %s") % [card.kind,
 			card.cost, CardFace.stats_line(card)], HORIZONTAL_ALIGNMENT_LEFT, tw,
 			UiTheme.FS_CAPTION, Color("c9c3b4"))
 	ty += 19.0
@@ -606,9 +606,9 @@ func _draw_linked_card(card: CardData, rect: Rect2, y0: float) -> void:
 
 func _menu_items() -> Array:
 	return [
-		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+		{"text": func(): return GameI18n.ui("shell", "CURTAIN_SOUND_ON", "音效：开") if sfx.enabled else GameI18n.ui("shell", "CURTAIN_SOUND_OFF", "音效：关"),
 			"fn": _toggle_sound, "keep_open": true},
-		{"text": "返回标题", "fn": _on_back_to_title},
+		{"text": GameI18n.ui("shell", "CURTAIN_BACK_TITLE", "返回标题"), "fn": _on_back_to_title},
 	]
 
 

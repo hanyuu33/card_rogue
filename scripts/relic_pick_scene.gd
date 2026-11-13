@@ -31,7 +31,7 @@ func _ready() -> void:
 	# 牌库任何时候都可以查看（无论在哪个界面）
 	DeckViewer.attach(self)
 	RelicViewer.attach(self, Vector2(1044, 6))
-	title_label.text = "选择你的%s起始道具（三选一）" % GameLayers.layer_name(RunState.current_layer)
+	title_label.text = GameI18n.ui("reward", "REWARD_STARTING_RELIC_TITLE", "选择你的%s起始道具（三选一）") % GameLayers.layer_name(RunState.current_layer)
 	# -- --layer2：演示第二层起始道具三选一（截图验证用）
 	if "--layer2" in OS.get_cmdline_user_args():
 		RunState.current_layer = GameLayers.LAYER_TWO
@@ -55,8 +55,8 @@ func _ready() -> void:
 	queue_redraw()
 	# R148：Esc 主菜单
 	_menu = UiMenu.attach(self, _menu_items, {
-		"back": "继续选道具",
-		"sub": "选择起始道具",
+		"back": GameI18n.ui("reward", "REWARD_STARTING_RELIC_MENU_BACK", "继续选道具"),
+		"sub": GameI18n.ui("reward", "REWARD_STARTING_RELIC_MENU_SUBTITLE", "选择起始道具"),
 	})
 
 
@@ -73,7 +73,7 @@ func _draw() -> void:
 	if _picked:
 		return
 	var repo := RelicRepo.load_json()
-	draw_string(_font, Vector2(0, 120), "起点处的一位行商愿意送你一件随身之物……",
+	draw_string(_font, Vector2(0, 120), GameI18n.ui("reward", "REWARD_STARTING_RELIC_FLAVOR", "起点处的一位行商愿意送你一件随身之物……"),
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.INK_300)
 	for i in RunState.relic_choice.size():
 		var rel := repo.get_relic(RunState.relic_choice[i])
@@ -88,7 +88,7 @@ func _draw() -> void:
 		# 顶部来源色带 + 类别名
 		var band := Rect2(rect.position, Vector2(rect.size.x, 34))
 		draw_rect(band, Color(rel.badge_color(), 0.30), true)
-		draw_string(_font_bold, band.position + Vector2(0, 23), "道具 · %s" % rel.kind,
+		draw_string(_font_bold, band.position + Vector2(0, 23), GameI18n.ui("reward", "REWARD_STARTING_RELIC_KIND", "道具 · %s") % rel.kind,
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UiTheme.FS_BODY, rel.badge_color())
 		# 名称
 		# R577b：三选一卡片也用那件道具的图标（缺图就不画，名字 / 说明照旧）。
@@ -136,9 +136,9 @@ func _menu_items() -> Array:
 	## 本界面的 Esc 菜单项（R148）。⚠️ 每次打开菜单都会重新调用（见 UiMenu.attach 注释），
 	## 所以音效这类随状态变的文案永远是最新的。
 	return [
-		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+		{"text": func(): return GameI18n.ui("reward", "REWARD_SOUND_ON", "音效：开") if sfx.enabled else GameI18n.ui("reward", "REWARD_SOUND_OFF", "音效：关"),
 			"fn": _toggle_sound, "keep_open": true},
-		{"text": "返回标题", "fn": _on_back_to_title},
+		{"text": GameI18n.ui("reward", "REWARD_RETURN_TITLE", "返回标题"), "fn": _on_back_to_title},
 	]
 
 

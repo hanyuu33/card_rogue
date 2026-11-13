@@ -210,8 +210,8 @@ func _ready() -> void:
 	queue_redraw()
 	# R148：Esc 主菜单
 	_menu = UiMenu.attach(self, _menu_items, {
-		"back": "继续",
-		"sub": "卡组编辑",
+		"back": GameI18n.ui("map", "DECK_EDIT_MENU_BACK", "继续"),
+		"sub": GameI18n.ui("map", "DECK_EDIT_MENU_SUBTITLE", "卡组编辑"),
 	})
 
 
@@ -315,36 +315,36 @@ func _refresh_title() -> void:
 	## 标题 / 提示按模式切换（遗忘之泉删卡 / 6004 删卡 / 6002 改造 / 6024 复制）。
 	match _mode():
 		"oblivion":
-			title_label.text = "遗忘之泉 — 选择一张卡遗忘"
-			hint_label.text = "选中的卡会从卡组中永久删除。"
+			title_label.text = GameI18n.ui("map", "DECK_EDIT_OBLIVION_TITLE", "遗忘之泉 — 选择一张卡遗忘")
+			hint_label.text = GameI18n.ui("map", "DECK_EDIT_OBLIVION_HINT", "选中的卡会从卡组中永久删除。")
 		"delete":
-			title_label.text = "失忆药水 — 选择一张卡删除"
-			hint_label.text = "选中的卡会被永远删除。"
+			title_label.text = GameI18n.ui("map", "DECK_EDIT_DELETE_TITLE", "失忆药水 — 选择一张卡删除")
+			hint_label.text = GameI18n.ui("map", "DECK_EDIT_DELETE_HINT", "选中的卡会被永远删除。")
 		"transform":
-			title_label.text = "源数之力 — 选择一张卡改造"
-			hint_label.text = "选中的卡会变成一张随机奖励卡牌。"
+			title_label.text = GameI18n.ui("map", "DECK_EDIT_TRANSFORM_TITLE", "源数之力 — 选择一张卡改造")
+			hint_label.text = GameI18n.ui("map", "DECK_EDIT_TRANSFORM_HINT", "选中的卡会变成一张随机奖励卡牌。")
 		"smith":
-			title_label.text = "鸭鸭工匠 — 选择一张卡锻造成铁栅栏"
-			hint_label.text = "选中的卡会被锻造成一张 2 费铁栅栏。"
+			title_label.text = GameI18n.ui("map", "DECK_EDIT_SMITH_TITLE", "鸭鸭工匠 — 选择一张卡锻造成铁栅栏")
+			hint_label.text = GameI18n.ui("map", "DECK_EDIT_SMITH_HINT", "选中的卡会被锻造成一张 2 费铁栅栏。")
 		"transform_class":
-			title_label.text = "卡片商人 — 选择一张卡换掉"
-			hint_label.text = "选中的卡会变成一张随机本职业奖励卡。"
+			title_label.text = GameI18n.ui("map", "DECK_EDIT_TRANSFORM_CLASS_TITLE", "卡片商人 — 选择一张卡换掉")
+			hint_label.text = GameI18n.ui("map", "DECK_EDIT_TRANSFORM_CLASS_HINT", "选中的卡会变成一张随机本职业奖励卡。")
 		"vendor":
-			title_label.text = "卡片商人 — 交出 5 费卡换大宝箱"
-			hint_label.text = "只能选 5 费及以上的卡。确认后得到：一件道具 + 一组卡牌奖励 + %d 金币。" \
+			title_label.text = GameI18n.ui("map", "DECK_EDIT_VENDOR_TITLE", "卡片商人 — 交出 5 费卡换大宝箱")
+			hint_label.text = GameI18n.ui("map", "DECK_EDIT_VENDOR_HINT", "只能选 5 费及以上的卡。确认后得到：一件道具 + 一组卡牌奖励 + %d 金币。") \
 					% RunState.BIGCHEST_GOLD
 		"duplicate":
-			title_label.text = "鸭血 — 选择最多 %d 张卡复制" % _limit()
-			hint_label.text = "每张选中的卡都会复制一份加入卡组，原卡保留（可多选，已选 %d/%d；一张都不选也可以）。" % [_sel.size(), _limit()]
+			title_label.text = GameI18n.ui("map", "DECK_EDIT_DUPLICATE_TITLE", "鸭血 — 选择最多 %d 张卡复制") % _limit()
+			hint_label.text = GameI18n.ui("map", "DECK_EDIT_DUPLICATE_HINT", "每张选中的卡都会复制一份加入卡组，原卡保留（可多选，已选 %d/%d；一张都不选也可以）。") % [_sel.size(), _limit()]
 		_:
-			title_label.text = "卡组编辑"
+			title_label.text = GameI18n.ui("map", "DECK_EDIT_DEFAULT_TITLE", "卡组编辑")
 			hint_label.text = ""
 	if not _cards.is_empty():
-		hint_label.text += "　（卡组共 %d 张）" % _cards.size()
+		hint_label.text += GameI18n.ui("map", "DECK_EDIT_DECK_COUNT_SUFFIX", "　（卡组共 %d 张）") % _cards.size()
 	if _is_remove_mode() and _has_no_remove_card():
-		hint_label.text += "　｜　带锁标记的卡不可以从卡组删除"
+		hint_label.text += GameI18n.ui("map", "DECK_EDIT_NO_REMOVE_SUFFIX", "　｜　带锁标记的卡不可以从卡组删除")
 	if _mode() == "transform":
-		hint_label.text += "　｜　代价：失去 %d 点最大生命（已结算）" \
+		hint_label.text += GameI18n.ui("map", "DECK_EDIT_TRANSFORM_COST_SUFFIX", "　｜　代价：失去 %d 点最大生命（已结算）") \
 				% RunState.SOURCE_POWER_HP_COST
 
 
@@ -439,13 +439,13 @@ func _draw() -> void:
 	# 背景（根节点自绘在子节点之下，BG 色块会盖住 _draw，故在这里画）
 	UiTheme.draw_page(self, UiTheme.bleed_rect(self))   # R154：墨蓝夜色锚点（清单 §2.6）；R519 铺满窗口
 	if _cards.is_empty():
-		draw_string(_font, Vector2(0, size.y / 2), "卡组是空的……",
+		draw_string(_font, Vector2(0, size.y / 2), GameI18n.ui("map", "DECK_EDIT_EMPTY", "卡组是空的……"),
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 		# R353：「继续」画成按钮 —— 可交互性靠 UI 表达，不写「（点击继续）」。
 		var btn := Rect2(size.x / 2.0 - 80.0, size.y / 2.0 + 24.0, 160.0, 36.0)
 		UiTheme.draw_panel_bg(self, btn)
 		draw_rect(btn, Color("8a93ad"), false, 1.5)
-		draw_string(_font_bold, btn.position + Vector2(0, 24), "继 续",
+		draw_string(_font_bold, btn.position + Vector2(0, 24), GameI18n.ui("map", "DECK_EDIT_EMPTY_CONTINUE", "继 续"),
 				HORIZONTAL_ALIGNMENT_CENTER, btn.size.x, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 		return
 	_layout()
@@ -462,14 +462,14 @@ func _draw() -> void:
 			draw_string(_font_bold, dr.position + Vector2(14, 26), dc.card_name,
 					HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 			draw_string(_font, dr.position + Vector2(14, 48),
-					"%s · %d 费 · %s" % [dc.kind, dc.cost, dc.rarity_name()],
+					GameI18n.ui("map", "DECK_EDIT_CARD_META", "%s · %d 费 · %s") % [dc.kind, dc.cost, dc.rarity_name()],
 					HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 			# R393b：本局永久成长写在种类行下面 —— 删卡 / 锻造 / 改造前必须看得见，
 			# 否则玩家会把长到 +6 的猎杀当成普通卡送出去。
 			var grow_line := CardFace.growth_text(dc)
 			if grow_line != "":
 				draw_string(_font_bold, dr.position + Vector2(14, 68),
-						"本局永久成长 %s（跨战斗保留）" % grow_line,
+						GameI18n.ui("map", "DECK_EDIT_CARD_GROWTH", "本局永久成长 %s（跨战斗保留）") % grow_line,
 						HORIZONTAL_ALIGNMENT_LEFT, 180.0, UiTheme.FS_CAPTION, UiTheme.PAGE_GREEN)
 			var lines := CardFace.wrap_text(_font, CardText.naturalize(dc.effect_text),
 					dr.size.x - 210.0, UiTheme.FS_BODY)
@@ -546,9 +546,9 @@ func _menu_items() -> Array:
 	## 本界面的 Esc 菜单项（R148）。⚠️ 每次打开菜单都会重新调用（见 UiMenu.attach 注释），
 	## 所以音效这类随状态变的文案永远是最新的。
 	return [
-		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+		{"text": func(): return GameI18n.ui("map", "DECK_EDIT_MENU_SOUND_ON", "音效：开") if sfx.enabled else GameI18n.ui("map", "DECK_EDIT_MENU_SOUND_OFF", "音效：关"),
 			"fn": _toggle_sound, "keep_open": true},
-		{"text": "返回标题", "fn": _on_back_to_title},
+		{"text": GameI18n.ui("map", "DECK_EDIT_MENU_BACK_TITLE", "返回标题"), "fn": _on_back_to_title},
 	]
 
 
@@ -711,17 +711,17 @@ func _refresh_ui() -> void:
 		_refresh_title()      # 提示里的「已选 N/M」跟着变
 		confirm_btn.disabled = false
 		if _sel.is_empty():
-			confirm_btn.text = "不复制任何卡（继续）"
+			confirm_btn.text = GameI18n.ui("map", "DECK_EDIT_SKIP_DUPLICATE", "不复制任何卡（继续）")
 		else:
 			var nms: Array[String] = []
 			for i: int in _sel:
 				var c := repo.get_card(_cards[i])
 				nms.append(c.card_name if c != null else str(_cards[i]))
-			confirm_btn.text = "确定复制 %d 张：%s" % [_sel.size(), "、".join(nms)]
+			confirm_btn.text = GameI18n.ui("map", "DECK_EDIT_CONFIRM_DUPLICATE", "确定复制 %d 张：%s") % [_sel.size(), "、".join(nms)]
 		return
 	if _sel.is_empty():
 		confirm_btn.disabled = true
-		confirm_btn.text = "请先选择一张卡"
+		confirm_btn.text = GameI18n.ui("map", "DECK_EDIT_SELECT_REQUIRED", "请先选择一张卡")
 		return
 	var pick: int = _sel[0]
 	var c2 := repo.get_card(_cards[pick])
@@ -729,11 +729,11 @@ func _refresh_ui() -> void:
 	confirm_btn.disabled = false
 	match _mode():
 		"oblivion":
-			confirm_btn.text = "确定遗忘「%s」" % nm
+			confirm_btn.text = GameI18n.ui("map", "DECK_EDIT_CONFIRM_FORGET", "确定遗忘「%s」") % nm
 		"delete":
-			confirm_btn.text = "确定删除「%s」" % nm
+			confirm_btn.text = GameI18n.ui("map", "DECK_EDIT_CONFIRM_DELETE", "确定删除「%s」") % nm
 		_:
-			confirm_btn.text = "确定改造「%s」" % nm
+			confirm_btn.text = GameI18n.ui("map", "DECK_EDIT_CONFIRM_TRANSFORM", "确定改造「%s」") % nm
 
 
 func _on_confirm() -> void:
@@ -753,15 +753,15 @@ func _apply_duplicate() -> void:
 	sfx.play("click")
 	var res := RunState.duplicate_deck_cards(repo, _sel)
 	confirm_btn.disabled = true
-	confirm_btn.text = "完成"
+	confirm_btn.text = GameI18n.ui("map", "DECK_EDIT_DUPLICATE_DONE", "完成")
 	var copied: Array = res["copied"]
 	if copied.is_empty():
-		_result = "鸭血：没有复制任何卡（卡组不变）"
+		_result = GameI18n.ui("map", "DECK_EDIT_DUPLICATE_NONE", "鸭血：没有复制任何卡（卡组不变）")
 	else:
 		var nms: Array[String] = []
 		for it: Dictionary in copied:
 			nms.append(str(it["name"]))
-		_result = "鸭血复制了「%s」各一份（卡组 +%d 张）" % ["、".join(nms), copied.size()]
+		_result = GameI18n.ui("map", "DECK_EDIT_DUPLICATE_RESULT", "鸭血复制了「%s」各一份（卡组 +%d 张）") % ["、".join(nms), copied.size()]
 	_go_back_soon()
 
 
@@ -782,40 +782,40 @@ func _apply(pick: int) -> void:
 	var cname: String = c.card_name if c != null else str(id)
 	if _mode() == "oblivion":
 		if RunState.delete_deck_card(pick):
-			_result = "「%s」已被遗忘，永远离开了卡组" % cname
+			_result = GameI18n.ui("map", "DECK_EDIT_FORGET_RESULT", "「%s」已被遗忘，永远离开了卡组") % cname
 		else:
-			_result = "删除失败：卡组里没有这一张"
+			_result = GameI18n.ui("map", "DECK_EDIT_OBLIVION_DELETE_FAILED", "删除失败：卡组里没有这一张")
 		RunState.pending_deck_edit = ""
 	elif RunState.pending_relic == 6004:
 		if RunState.delete_deck_card(pick):
-			_result = "「%s」已从卡组中删除（失忆药水）" % cname
+			_result = GameI18n.ui("map", "DECK_EDIT_DELETE_RESULT", "「%s」已从卡组中删除（失忆药水）") % cname
 		else:
-			_result = "删除失败：卡组里没有这一张"
+			_result = GameI18n.ui("map", "DECK_EDIT_DELETE_FAILED", "删除失败：卡组里没有这一张")
 	elif _mode() == "smith":
 		var sres := RunState.smith_deck_card(pick)
 		if bool(sres.get("ok", false)):
-			_result = "「%s」被锻造成了一张 %d 费铁栅栏（卡组里那张的费用按 %d 计）" % [
+			_result = GameI18n.ui("map", "DECK_EDIT_SMITH_RESULT", "「%s」被锻造成了一张 %d 费铁栅栏（卡组里那张的费用按 %d 计）") % [
 					cname, int(sres.get("cost", 2)), int(sres.get("cost", 2))]
 		else:
-			_result = "锻造失败：卡组里没有这一张"
+			_result = GameI18n.ui("map", "DECK_EDIT_SMITH_FAILED", "锻造失败：卡组里没有这一张")
 	elif _mode() == "transform_class":
 		var tc := RunState.transform_deck_card(repo, pick, true)
 		var tc_card := repo.get_card(int(tc.get("new_id", 0)))
-		_result = "「%s」变成了「%s」（本职业奖励卡）" % [cname,
+		_result = GameI18n.ui("map", "DECK_EDIT_TRANSFORM_CLASS_RESULT", "「%s」变成了「%s」（本职业奖励卡）") % [cname,
 				tc_card.card_name if tc_card != null else str(tc.get("new_id", 0))]
 		RunState.pending_deck_edit = ""
 	elif _mode() == "vendor":
 		var vr := RunState.vendor_deck_card(repo, pick)
 		if bool(vr.get("ok", false)):
-			var rel_txt := "一件道具" if int(vr.get("relic_id", -1)) > 0 else "道具（已全拿完）"
-			_result = "「%s」换来了大宝箱：%s + 一组卡牌奖励 + %d 金币" % [cname, rel_txt,
+			var rel_txt := GameI18n.ui("map", "DECK_EDIT_VENDOR_RELIC", "一件道具") if int(vr.get("relic_id", -1)) > 0 else GameI18n.ui("map", "DECK_EDIT_VENDOR_RELIC_EXHAUSTED", "道具（已全拿完）")
+			_result = GameI18n.ui("map", "DECK_EDIT_VENDOR_RESULT", "「%s」换来了大宝箱：%s + 一组卡牌奖励 + %d 金币") % [cname, rel_txt,
 					int(vr.get("gold", 0))]
 		else:
-			_result = "易物失败：这张卡不是 5 费卡"
+			_result = GameI18n.ui("map", "DECK_EDIT_VENDOR_FAILED", "易物失败：这张卡不是 5 费卡")
 	elif RunState.pending_relic == RunState.SOURCE_POWER_ID:
 		var res := RunState.transform_deck_card(repo, pick)
 		var nc := repo.get_card(int(res["new_id"]))
-		_result = "「%s」变成了「%s」（源数之力）" % [cname,
+		_result = GameI18n.ui("map", "DECK_EDIT_TRANSFORM_RESULT", "「%s」变成了「%s」（源数之力）") % [cname,
 				nc.card_name if nc != null else str(res["new_id"])]
 		# R390（用户口径）：改造要看得见 —— 旧卡炸开 → 新卡浮现 → 名字对照。
 		# 结算在这一行之前就落了账，演出只是把「已经发生的事」演一遍；
@@ -825,7 +825,7 @@ func _apply(pick: int) -> void:
 	else:
 		_result = ""
 	confirm_btn.disabled = true
-	confirm_btn.text = "完成"
+	confirm_btn.text = GameI18n.ui("map", "DECK_EDIT_CONFIRM_DONE", "完成")
 	_go_back_soon(_back_delay)
 
 

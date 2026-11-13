@@ -119,8 +119,8 @@ func _draw() -> void:
 	draw_string(_font_bold, Vector2(x, y), _card.card_name,
 			HORIZONTAL_ALIGNMENT_LEFT, w, name_fs, UiTheme.INK_900)
 	y += 34.0
-	var fee_txt := "X 费" if _card.x_cost else "%d 费" % _card.cost
-	var meta_txt := "%s · %s · %s · %s" % [_card.kind, _card.card_class,
+	var fee_txt := GameI18n.ui("map", "CARD_DETAIL_X_COST", "X 费") if _card.x_cost else GameI18n.ui("map", "CARD_DETAIL_COST", "%d 费") % _card.cost
+	var meta_txt := GameI18n.ui("map", "CARD_DETAIL_META_TEMPLATE", "%s · %s · %s · %s") % [_card.kind, _card.card_class,
 			_card.rarity_name(), fee_txt]
 	draw_string(_font, Vector2(x, y), meta_txt,
 			HORIZONTAL_ALIGNMENT_LEFT, w,
@@ -130,7 +130,7 @@ func _draw() -> void:
 	# 数值行：技能卡 `stats_line()` 只说「直接使用」→ 把伤害写出来，否则看不出成长
 	var st := CardFace.stats_line(_card)
 	if _card.kind == "技能" and _card.value > 0:
-		st = "造成 %d 点伤害" % _card.value
+		st = GameI18n.ui("map", "CARD_DETAIL_SKILL_DAMAGE", "造成 %d 点伤害") % _card.value
 	if st != "":
 		draw_string(_font, Vector2(x, y), st,
 				HORIZONTAL_ALIGNMENT_LEFT, w,
@@ -142,13 +142,13 @@ func _draw() -> void:
 	if gt != "":
 		draw_rect(Rect2(x, y - 18.0, w, 50.0), Color(0.14, 0.42, 0.22, 0.12), true)
 		draw_rect(Rect2(x, y - 18.0, 3.0, 50.0), Color(0.13, 0.42, 0.24), true)
-		var gt_line := "本局永久成长　%s" % gt
+		var gt_line := GameI18n.ui("map", "CARD_DETAIL_GROWTH", "本局永久成长　%s") % gt
 		draw_string(_font_bold, Vector2(x + 12.0, y + 4.0), gt_line,
 				HORIZONTAL_ALIGNMENT_LEFT, w - 20.0,
 				UiTheme.fit_font_size(_font_bold, gt_line, w - 20.0, 22.0,
 						UiTheme.FS_LABEL, 10), Color(0.13, 0.42, 0.24))
 		draw_string(_font, Vector2(x + 12.0, y + 26.0),
-				"跨战斗保留 · 随存档走 · 新开一局才清空",
+				GameI18n.ui("map", "CARD_DETAIL_GROWTH_NOTE", "跨战斗保留 · 随存档走 · 新开一局才清空"),
 				HORIZONTAL_ALIGNMENT_LEFT, w - 20.0, UiTheme.FS_CAPTION, UiTheme.INK_500)
 		y += 56.0
 	else:
@@ -187,7 +187,7 @@ func _draw() -> void:
 	# R630：基线原来取 `pr.end.y - 14`，而九宫格边框本身约 12px 厚 —— FS_CAPTION 的
 	# 字底（基线 +3~4）正好落在框线上，整行被横切（用户口径「文本压框」）。收到 -22。
 	draw_string(_font, Vector2(pr.position.x, pr.end.y - 22.0),
-			"点任意处 / 右键 / ESC 关闭", HORIZONTAL_ALIGNMENT_RIGHT,
+			GameI18n.ui("map", "CARD_DETAIL_CLOSE_HINT", "点任意处 / 右键 / ESC 关闭"), HORIZONTAL_ALIGNMENT_RIGHT,
 			pr.size.x - 56.0, UiTheme.FS_CAPTION, UiTheme.INK_500)
 
 

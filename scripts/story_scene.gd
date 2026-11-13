@@ -109,17 +109,17 @@ func _ready() -> void:
 		add_child(t)
 		t.start()
 	_menu = UiMenu.attach(self, _menu_items, {
-		"back": "继续",
-		"sub": "故事",
+		"back": GameI18n.ui("shell", "STORY_MENU_CONTINUE", "继续"),
+		"sub": GameI18n.ui("shell", "STORY_MENU_SUBTITLE", "故事"),
 	})
 
 
 func _menu_items() -> Array:
 	return [
-		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+		{"text": func(): return GameI18n.ui("shell", "STORY_SOUND_ON", "音效：开") if sfx.enabled else GameI18n.ui("shell", "STORY_SOUND_OFF", "音效：关"),
 			"fn": _toggle_sound, "keep_open": true},
 		# R590：文案跟着去向走（从百科进来写「返回百科」），行为不变。
-		{"text": func(): return "返回百科" if UiRoute.has_back() else "返回标题",
+		{"text": func(): return GameI18n.ui("shell", "STORY_MENU_BACK_CODEX", "返回百科") if UiRoute.has_back() else GameI18n.ui("shell", "STORY_MENU_BACK_TITLE", "返回标题"),
 					"fn": _back_to_title},
 	]
 
@@ -286,7 +286,7 @@ func _claim(idx: int) -> void:
 	var eid := str(ep.get("id", ""))
 	var res := ProfileData.claim_episode(_repo, eid)
 	if not bool(res.get("ok", false)):
-		_set_toast(str(res.get("reason", "现在还不能解锁")))
+		_set_toast(str(res.get("reason", GameI18n.ui("shell", "STORY_CLAIM_UNAVAILABLE", "现在还不能解锁"))))
 		sfx.play("lose")
 		return
 	sfx.play("win")
@@ -327,7 +327,7 @@ func _back_to_title() -> void:
 func _back_label() -> String:
 	## 返回按钮文案跟着**实际去向**走（R590）：从百科进来就写「返回百科」。
 	## ⚠️ 只改文案，不改行为 —— 去向一律由 `_back_to_title()` 里的 UiRoute 决定。
-	return "← 返回百科" if UiRoute.has_back() else "← 返回标题"
+	return GameI18n.ui("shell", "STORY_BACK_CODEX", "← 返回百科") if UiRoute.has_back() else GameI18n.ui("shell", "STORY_BACK_TITLE", "← 返回标题")
 
 
 # ------------------------------------------------------------ 三态图标
@@ -390,7 +390,7 @@ func _draw_legend(center: Vector2, counts: Dictionary) -> void:
 
 func _draw() -> void:
 	UiTheme.draw_page(self, UiTheme.bleed_rect(self))   # R519：铺满窗口
-	draw_string(_font_bold, Vector2(0, 62), "故 事", HORIZONTAL_ALIGNMENT_CENTER,
+	draw_string(_font_bold, Vector2(0, 62), GameI18n.ui("shell", "STORY_TITLE", "故 事"), HORIZONTAL_ALIGNMENT_CENTER,
 			size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	# 顶部总览：三态**只给图标 + 数量**（R347 用户口径），不写「已解锁 / 已读」这类状态词。
 	var counts := {StoryRepo.STATE_LOCKED: 0, StoryRepo.STATE_READY: 0,
@@ -407,7 +407,7 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	if _episodes.is_empty():
 		draw_string(_font, Vector2(0, LIST_Y + 40),
-				"还没有任何剧情段（stories.json 是空的）。",
+				GameI18n.ui("shell", "STORY_EMPTY", "还没有任何剧情段（stories.json 是空的）。"),
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 		return
 	for i in _max_rows():
@@ -421,7 +421,7 @@ func _draw() -> void:
 		# 横切过去（用户口径「有一些文本超出框」）。九宫格边框本身还有 ~12~14 的厚度，
 		# 光收进 -16 仍会压在边框上，所以收到 -36（字底落在内框内侧，留 5 左右）。
 		draw_string(_font, Vector2(0, size.y - 36),
-				"第 %d–%d 段 / 共 %d 段"
+				GameI18n.ui("shell", "STORY_RANGE", "第 %d–%d 段 / 共 %d 段")
 				% [_scroll + 1, mini(_scroll + _max_rows(), _episodes.size()), _episodes.size()],
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
 				UiTheme.PAGE_MUTED)
@@ -516,7 +516,7 @@ func _draw_detail() -> void:
 	# 正文
 	var y := r.position.y + 82.0
 	if st == StoryRepo.STATE_LOCKED:
-		draw_string(_font_bold, Vector2(x0, y), "这一段还没有解锁",
+		draw_string(_font_bold, Vector2(x0, y), GameI18n.ui("shell", "STORY_DETAIL_LOCKED", "这一段还没有解锁"),
 				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 		y += 28.0
 		for line: String in TextWrap.wrap_plain(_font, _repo.requirement_text(eid),
@@ -539,20 +539,20 @@ func _draw_detail() -> void:
 	var relics: Array = g.get("relics", [])
 	var gy := r.end.y - 92.0
 	draw_line(Vector2(x0, gy - 16.0), Vector2(x1, gy - 16.0), Color("3d424e"), 1.0)
-	var gtxt := "看完这一段没有额外奖励。"
+	var gtxt := GameI18n.ui("shell", "STORY_DETAIL_NO_REWARD", "看完这一段没有额外奖励。")
 	if not cards.is_empty() or not relics.is_empty():
-		gtxt = "看完解锁：卡牌 %d 张 · 道具 %d 件（加入奖励池）" % [cards.size(), relics.size()]
+		gtxt = GameI18n.ui("shell", "STORY_DETAIL_REWARDS", "看完解锁：卡牌 %d 张 · 道具 %d 件（加入奖励池）") % [cards.size(), relics.size()]
 	draw_string(_font, Vector2(x0, gy), gtxt, HORIZONTAL_ALIGNMENT_LEFT, w - 220.0,
 			UiTheme.FS_LABEL, Color("b9ae8a"))
 	# 收下按钮
 	var br := _claim_rect()
 	var can := st == StoryRepo.STATE_READY
 	var hov := br.has_point(get_local_mouse_position())
-	var btxt := "收下这一段"
+	var btxt := GameI18n.ui("shell", "STORY_CLAIM", "收下这一段")
 	if st == StoryRepo.STATE_READ:
-		btxt = "已经看过"
+		btxt = GameI18n.ui("shell", "STORY_ALREADY_READ", "已经看过")
 	elif not can:
-		btxt = "条件未达成"
+		btxt = GameI18n.ui("shell", "STORY_REQUIREMENT_UNMET", "条件未达成")
 	UiTheme.draw_secondary_btn(self, br, btxt, hov, not can, true)
 
 
@@ -580,7 +580,7 @@ func _start_reveal(cards: Array, relics: Array) -> void:
 		_reveal.append({
 			"kind": "card",
 			"name": c.card_name,
-			"sub": "%s · %s · %d 费" % [CardData.RARITY_NAMES[rar],
+			"sub": GameI18n.ui("shell", "STORY_REVEAL_CARD_META", "%s · %s · %d 费") % [CardData.RARITY_NAMES[rar],
 					c.kind, c.cost],
 			"col": CardData.RARITY_COLORS[rar],
 		})
@@ -592,12 +592,12 @@ func _start_reveal(cards: Array, relics: Array) -> void:
 		_reveal.append({
 			"kind": "relic",
 			"name": r.relic_name,
-			"sub": "道具 · %s" % r.tier_label(),
+			"sub": GameI18n.ui("shell", "STORY_REVEAL_RELIC_META", "道具 · %s") % r.tier_label(),
 			"col": r.tier_color(),
 		})
 	_reveal_t = 0.0
 	if _reveal.is_empty():
-		_set_toast("已解锁（这一段没有额外奖励）")
+		_set_toast(GameI18n.ui("shell", "STORY_REVEAL_NO_REWARD", "已解锁（这一段没有额外奖励）"))
 	queue_redraw()
 
 
@@ -617,10 +617,10 @@ func _draw_reveal() -> void:
 	var r := Rect2((size.x - 620.0) / 2.0, (size.y - panel_h) / 2.0, 620.0, panel_h)
 	draw_rect(UiTheme.bleed_rect(self), Color(0, 0, 0, 0.76), true)
 	UiTheme.draw_panel_bg(self, r)
-	draw_string(_font_bold, Vector2(r.position.x, r.position.y + 44), "解 锁",
+	draw_string(_font_bold, Vector2(r.position.x, r.position.y + 44), GameI18n.ui("shell", "STORY_REVEAL_TITLE", "解 锁"),
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(r.position.x, r.position.y + 70),
-			"以下内容已加入奖励池",
+			GameI18n.ui("shell", "STORY_REVEAL_SUBTITLE", "以下内容已加入奖励池"),
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 	for i in n:
 		var a := clampf((_reveal_t - i * REVEAL_INTERVAL) / REVEAL_FADE, 0.0, 1.0)
@@ -635,12 +635,12 @@ func _draw_reveal() -> void:
 		draw_rect(Rect2(row.position.x, row.position.y, 5.0, row.size.y),
 				Color(col.r, col.g, col.b, a), true)
 		draw_string(_font_bold, row.position + Vector2(22, 32),
-				str(item.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT,
+				GameI18n.source(str(item.get("name", ""))), HORIZONTAL_ALIGNMENT_LEFT,
 				row.size.x - 44, UiTheme.FS_SUBHEAD, Color(UiTheme.PAGE_INK, a))
 		draw_string(_font, row.position + Vector2(22, 58),
-				str(item.get("sub", "")), HORIZONTAL_ALIGNMENT_LEFT,
+				GameI18n.source(str(item.get("sub", ""))), HORIZONTAL_ALIGNMENT_LEFT,
 				row.size.x - 44, UiTheme.FS_CAPTION, Color(UiTheme.PAGE_MUTED, a))
 	if _reveal_finished():
 		# R353：「继续」画成按钮 —— 可交互性靠 UI 表达，不写「点击任意处继续」。
 		var btn := Rect2(r.position.x + r.size.x / 2.0 - 70.0, r.end.y - 34.0, 140.0, 28.0)
-		UiTheme.draw_secondary_btn(self, btn, "继续", false, false, true)
+		UiTheme.draw_secondary_btn(self, btn, GameI18n.ui("shell", "STORY_REVEAL_CONTINUE", "继续"), false, false, true)

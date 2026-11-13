@@ -209,7 +209,7 @@ func _draw() -> void:
 	if not _has_art:
 		_draw_title_ornaments()
 	# 底部信息
-	var ver := "v%s-rogue · %s" % [GameBrand.VERSION, L10n.t("title.footer_dev")]
+	var ver := GameI18n.ui("shell", "TITLE_VERSION_FOOTER", "v%s-rogue · %s") % [GameBrand.VERSION, L10n.t("title.footer_dev")]
 	draw_string(_font, Vector2(size.x - 250, size.y - 16), ver,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	draw_string(_font, Vector2(14, size.y - 16), L10n.t("title.footer_godot"),
@@ -219,10 +219,11 @@ func _draw() -> void:
 	# ⚠️ 必须带自己的底板：第一版直接写在 size.y-76，正好糊在「退出」按钮上（出图当场看见）。
 	# 底板落在按钮列下沿与底部版本号之间的空白带，左右两个角标（左下 / 右下）都不碰。
 	if RunSave.protects_save():
-		var note := RunSave.last_error
-		if note == "":
-			note = "存档来自更新的版本，本版本不能使用"
-		note += "（文件已保留，升级后可继续）"
+		var raw_note := RunSave.last_error
+		if raw_note == "":
+			raw_note = "存档来自更新的版本，本版本不能使用"
+		raw_note += "（文件已保留，升级后可继续）"
+		var note := GameI18n.ui("shell", "TITLE_NEWER_SAVE_NOTICE", raw_note)
 		var fs := UiTheme.FS_LABEL
 		var nw := _font.get_string_size(note, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var panel := Rect2(Vector2((size.x - nw) * 0.5 - 18.0, size.y - 58.0),
@@ -328,12 +329,12 @@ func _on_continue() -> void:
 		# 统一给出（版本太新 / 太旧 / 卡组里有已下架的卡 / 地图坏了），三个读档入口同一句。
 		push_warning("RunSave：继续游戏读档失败 —— " + RunSave.last_error)
 		_refresh_continue()
-		_toast = "存档读取失败（已备份为 run_save.sav.bad）"
+		_toast = GameI18n.ui("shell", "TITLE_LOAD_FAILED", "存档读取失败（已备份为 run_save.sav.bad）")
 		if RunSave.last_error != "":
 			_toast = RunSave.last_error
 			# 「来自更新版本」的档**没有**被隔离（要留给新版游戏），别骗玩家说备份了
 			if RunSave.last_error_kind != "version_new":
-				_toast += "（原件已备份为 .bad）"
+				_toast = GameI18n.ui("shell", "TITLE_LOAD_ERROR_BACKUP", "%s（原件已备份为 .bad）") % RunSave.last_error
 		# 4 秒太短：玩家常在这几秒里还在找按钮，回过神来字已经没了。
 		_toast_t = 6.0
 		return

@@ -62,8 +62,8 @@ func _ready() -> void:
 		_ready_n = 0
 	_build_rows()
 	_menu = UiMenu.attach(self, _menu_items, {
-		"back": "继续",
-		"sub": "百科",
+		"back": GameI18n.ui("map", "CODEX_MENU_BACK", "继续"),
+		"sub": GameI18n.ui("map", "CODEX_MENU_SUBTITLE", "百科"),
 	})
 	# 命令行 -- --screenshot：打开后自动截图退出（视觉验证用）
 	if "--screenshot" in args:
@@ -82,14 +82,14 @@ func _build_rows() -> void:
 	## 条目表：一行 = 一个二级入口。`badge` = 该行的提示点数字（0 = 不亮）。
 	_rows = [
 		{
-			"title": "卡牌图鉴",
-			"sub": "玩家卡牌 / 敌人图鉴 · 按种类、费用、职业筛选",
+			"title": GameI18n.ui("map", "CODEX_GALLERY_TITLE", "卡牌图鉴"),
+			"sub": GameI18n.ui("map", "CODEX_GALLERY_SUBTITLE", "玩家卡牌 / 敌人图鉴 · 按种类、费用、职业筛选"),
 			"target": "res://scenes/gallery.tscn",
 			"badge": 0,
 		},
 		{
-			"title": "查看故事",
-			"sub": "成就解锁的剧情 · 看完把卡牌 / 道具加进奖励池",
+			"title": GameI18n.ui("map", "CODEX_STORY_TITLE", "查看故事"),
+			"sub": GameI18n.ui("map", "CODEX_STORY_SUBTITLE", "成就解锁的剧情 · 看完把卡牌 / 道具加进奖励池"),
 			"target": "res://scenes/story.tscn",
 			"badge": _ready_n,
 		},
@@ -98,9 +98,9 @@ func _build_rows() -> void:
 
 func _menu_items() -> Array:
 	return [
-		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+		{"text": func(): return GameI18n.ui("map", "CODEX_MENU_SOUND_ON", "音效：开") if sfx.enabled else GameI18n.ui("map", "CODEX_MENU_SOUND_OFF", "音效：关"),
 			"fn": _toggle_sound, "keep_open": true},
-		{"text": "返回标题", "fn": _back},
+		{"text": GameI18n.ui("map", "CODEX_MENU_BACK_TITLE", "返回标题"), "fn": _back},
 	]
 
 
@@ -177,20 +177,20 @@ func _back() -> void:
 
 func _draw() -> void:
 	UiTheme.draw_page(self, UiTheme.bleed_rect(self))   # R519：铺满窗口
-	draw_string(_font_bold, Vector2(0, 108), "百 科", HORIZONTAL_ALIGNMENT_CENTER,
+	draw_string(_font_bold, Vector2(0, 108), GameI18n.ui("map", "CODEX_TITLE", "百 科"), HORIZONTAL_ALIGNMENT_CENTER,
 			size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
-	draw_string(_font, Vector2(0, 140), "卡牌与故事，都收在这里",
+	draw_string(_font, Vector2(0, 140), GameI18n.ui("map", "CODEX_SUBTITLE", "卡牌与故事，都收在这里"),
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 	var back := _back_rect()
 	UiTheme.draw_action(self, back, false, false, back.has_point(get_local_mouse_position()))
-	draw_string(_font_bold, back.position + Vector2(0, 22), "← 返回",
+	draw_string(_font_bold, back.position + Vector2(0, 22), GameI18n.ui("map", "CODEX_BACK", "← 返回"),
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	for i in _rows.size():
 		_draw_row(i, _rows[i])
 	if _ready_n > 0:
 		# 提示点的说明只写一句；具体有几段就写在圆点里，别在正文再重复一遍。
 		draw_string(_font, Vector2(0, size.y - 58),
-				"金色圆点 = 有已达成、还没点开看过的故事",
+				GameI18n.ui("map", "CODEX_BADGE_HINT", "金色圆点 = 有已达成、还没点开看过的故事"),
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 
 

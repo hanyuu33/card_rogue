@@ -200,7 +200,7 @@ func _refresh_btn() -> void:
 	_cached_n = RunState.relics.size()
 	# R405：装不下时补一个 ▾ —— 触屏玩家不会知道「下面还有」，而这正是旧版的病根。
 	var overflowing := _chip_max_scroll() > 0.5
-	_btn.text = ("道具 %d ▾" % _cached_n) if overflowing else ("道具 %d" % _cached_n)
+	_btn.text = (GameI18n.ui("map", "RELIC_VIEWER_BUTTON_OVERFLOW", "道具 %d ▾") % _cached_n) if overflowing else (GameI18n.ui("map", "RELIC_VIEWER_BUTTON", "道具 %d") % _cached_n)
 	# R394：按钮**永远可点** —— 点一下展开 / 收起胶囊行（旧版「装不下才可点」，
 	# 装得下时按钮是禁用态，于是屏幕写着「点道具查看更多」却点不动，用户报的就是这个）。
 	_btn.disabled = _cached_n <= 0
@@ -228,7 +228,7 @@ func _entries() -> Array:
 func _tag_of(e: Dictionary) -> String:
 	## R367：已耗尽的在标签前挂「已耗尽」—— 名称本身不塞状态词，读起来仍是原名。
 	var rel: RelicData = e["relic"]
-	return ("已耗尽 · " + rel.tag_line()) if bool(e.get("spent", false)) else rel.tag_line()
+	return (GameI18n.ui("map", "RELIC_VIEWER_SPENT_PREFIX", "已耗尽 · ") + rel.tag_line()) if bool(e.get("spent", false)) else rel.tag_line()
 
 
 # ------------------------------------------------------------ 胶囊行版式

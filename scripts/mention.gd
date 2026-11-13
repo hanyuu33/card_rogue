@@ -76,10 +76,14 @@ static func index() -> Dictionary:
 	for c: CardData in CardRepo.load_json().all_cards():
 		if c.card_name != "":
 			idx[c.card_name] = {"kind": "card", "id": c.id}
+			idx[GameI18n.card_name(c.id, c.card_name)] = {"kind": "card", "id": c.id}
 		cmap[c.id] = c
 	for r: RelicData in RelicRepo.load_json().all_relics():
 		if r.relic_name != "" and not idx.has(r.relic_name):
 			idx[r.relic_name] = {"kind": "relic", "id": r.id}
+		var original_name := GameI18n.original(r.relic_name)
+		if original_name != "" and not idx.has(original_name):
+			idx[original_name] = {"kind": "relic", "id": r.id}
 		rmap[r.id] = r
 	_index = idx
 	_cards = cmap
@@ -88,7 +92,11 @@ static func index() -> Dictionary:
 
 
 static func resolve(name: String) -> Dictionary:
-	return index().get(name.strip_edges(), {})
+	var clean := name.strip_edges()
+	var direct: Dictionary = index().get(clean, {})
+	if not direct.is_empty():
+		return direct
+	return index().get(GameI18n.original(clean), {})
 
 
 static func card_of(id: int) -> CardData:
@@ -129,8 +137,9 @@ static func scan(text: String) -> Array:
 		var tok := ""
 		var nm := ""
 		var nxt := i + 1
-		if text[i] == "「":
-			var j := text.find("」", i + 1)
+		if text[i] == "「" or text[i] == "«":
+			var closer := "」" if text[i] == "「" else "»"
+			var j := text.find(closer, i + 1)
 			if j < 0:
 				break
 			tok = text.substr(i, j - i + 1)
@@ -187,13 +196,13 @@ static func label_of(ref: Dictionary) -> String:
 	## 人类可读的名字（找不到就返回空串）。
 	if str(ref.get("kind", "")) == "card":
 		var c := card_of(int(ref.get("id", -1)))
-		return c.card_name if c != null else ""
+		return GameI18n.card_name(c.id, c.card_name) if c != null else ""
 	var r := relic_of(int(ref.get("id", -1)))
 	return r.relic_name if r != null else ""
 
 
 static func kind_label(ref: Dictionary) -> String:
-	return "卡牌" if str(ref.get("kind", "")) == "card" else "道具"
+	return GameI18n.ui("shared", "MENTION_KIND_CARD", "卡牌") if str(ref.get("kind", "")) == "card" else GameI18n.ui("shared", "MENTION_KIND_RELIC", "道具")
 
 
 static func relic_tip_metrics(font: Font, font_bold: Font, n_lines: int) -> Dictionary:
@@ -312,18 +321,18 @@ static func _card_tip_blocks(card: CardData) -> Array:
 	## 卡牌浮窗下半段的**文字块**（R303）。顺序 = 基本信息 → 效果 → 字段 → 附魔。
 	## ⚠️ 文案与配色全部读数据层（`CardData` 的字段 / 附魔表），界面里不写特例。
 	var out: Array = []
-	out.append({"segs": [{"text": "%s · %d 费 · %s" % [card.kind, card.cost,
+	out.append({"segs": [{"text": GameI18n.ui("shared", "MENTION_CARD_TIP_META", "%s · %d 费 · %s") % [card.kind, card.cost,
 			card.rarity_name()]}],
 			"col": UiTheme.PAGE_MUTED, "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 0.0})
 	if card.kind == "盟友" or card.kind == "工事":
 		out.append({"segs": [{"text": CardFace.stats_line(card)}],
 				"col": UiTheme.PAGE_MUTED, "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 2.0})
-	out.append({"segs": [{"text": "效果", "bold": true}], "col": UiTheme.ADVENTURE_FOREST,
+	out.append({"segs": [{"text": GameI18n.ui("shared", "MENTION_SECTION_EFFECT", "效果"), "bold": true}], "col": UiTheme.ADVENTURE_FOREST,
 			"size": UiTheme.FS_CAPTION, "line": 16.0, "gap": 9.0})
 	out.append({"segs": CardText.parse(card.effect_text), "col": UiTheme.PAGE_INK,
 			"size": UiTheme.FS_LABEL, "line": 19.0, "gap": 3.0})
 	if not card.affixes.is_empty():
-		out.append({"segs": [{"text": "字段", "bold": true}], "col": UiTheme.ADVENTURE_FOREST,
+		out.append({"segs": [{"text": GameI18n.ui("shared", "MENTION_SECTION_AFFIX", "字段"), "bold": true}], "col": UiTheme.ADVENTURE_FOREST,
 				"size": UiTheme.FS_CAPTION, "line": 16.0, "gap": 10.0})
 		for a: String in card.affixes:
 			out.append({"segs": [{"text": CardData.affix_label(a), "bold": true},
@@ -331,8 +340,8 @@ static func _card_tip_blocks(card: CardData) -> Array:
 					"col": UiTheme.PAGE_INK, "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 4.0})
 	if card.has_enchant():
 		out.append({"segs": [
-				{"text": "附魔 · " + CardData.enchant_title(card), "bold": true},
-				{"text": "：" + CardData.enchant_desc(card.enchant)}],
+				{"text": GameI18n.ui("shared", "MENTION_ENCHANT_WITH_DESC", "附魔 · %s：%s") % [
+						CardData.enchant_title(card), CardData.enchant_desc(card.enchant)], "bold": true}],
 				"col": UiTheme.ADVENTURE_FOREST, "size": UiTheme.FS_CAPTION,
 				"line": 17.0, "gap": 8.0})
 	return out
@@ -383,7 +392,7 @@ static func _draw_relic_card(canvas: CanvasItem, font: Font, font_bold: Font,
 	var head_base := y0 + RELIC_CARD_HEAD_H - 8.0
 	canvas.draw_line(Vector2(ix, head_base - 15.0), Vector2(ix + iw, head_base - 15.0),
 			UiTheme.ADVENTURE_BRASS, 1.0)
-	canvas.draw_string(font, Vector2(ix, head_base), "获得卡牌",
+	canvas.draw_string(font, Vector2(ix, head_base), GameI18n.ui("shared", "MENTION_GRANTED_CARD_HEAD", "获得卡牌"),
 			HORIZONTAL_ALIGNMENT_LEFT, iw, UiTheme.FS_CAPTION, UiTheme.ADVENTURE_FOREST)
 	var cw: float = RELIC_CARD_H * 63.0 / 76.0
 	# +10（不是 +6）：数值徽章会外溢卡框，贴太近会压到上面那行标题。
@@ -396,7 +405,7 @@ static func _draw_relic_card(canvas: CanvasItem, font: Font, font_bold: Font,
 	canvas.draw_string(font_bold, Vector2(tx, ty), card.card_name,
 			HORIZONTAL_ALIGNMENT_LEFT, tw, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	ty += 19.0
-	canvas.draw_string(font, Vector2(tx, ty), "%s · %d 费 · %s" % [card.kind,
+	canvas.draw_string(font, Vector2(tx, ty), GameI18n.ui("shared", "MENTION_GRANTED_CARD_META", "%s · %d 费 · %s") % [card.kind,
 			card.cost, CardFace.stats_line(card)], HORIZONTAL_ALIGNMENT_LEFT, tw,
 			UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 	ty += 17.0
@@ -431,7 +440,7 @@ static func summary_lines(font: Font, ref: Dictionary, max_w: float, max_lines :
 			return out
 		var stats := CardFace.stats_line(c)
 		var eff := CardText.naturalize(c.effect_text).replace("\n", " ").strip_edges()
-		body = "%s · %d 费 · %s%s" % [c.kind, c.cost, stats,
+		body = GameI18n.ui("shared", "MENTION_CARD_SUMMARY_META", "%s · %d 费 · %s%s") % [c.kind, c.cost, stats,
 				("；" + eff) if eff != "" else ""]
 	else:
 		var r := relic_of(int(ref.get("id", -1)))
@@ -470,7 +479,7 @@ static func draw_reference_block(canvas: CanvasItem, font: Font, font_bold: Font
 				Color(base_col.r, base_col.g, base_col.b, 0.22), 1.0)
 		if max_y >= 0.0 and ty + 22.0 > max_y:
 			return res
-		canvas.draw_string(font_bold, Vector2(x, ty + 6.0), BLOCK_HEAD,
+		canvas.draw_string(font_bold, Vector2(x, ty + 6.0), GameI18n.ui("shared", "MENTION_BLOCK_HEAD", BLOCK_HEAD),
 				HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_CAPTION, base_col)
 		ty += BLOCK_HEAD_H
 	for r: Dictionary in refs:

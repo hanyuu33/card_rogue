@@ -1,0 +1,272 @@
+{
+  "version": 1,
+  "updated": "2026-11-13",
+  "source": "i18n/event_ui_zh_canonical.json",
+  "options": {
+    "common": {
+      "LEAVE": "Salir"
+    },
+    "rest": {
+      "REST_HEAL": "Descansar aquí (recuperar %d Vida)",
+      "ADD_FIREWOOD": "Añadir leña (eliminar 1 carta del mazo)",
+      "BBQ_AVAILABLE": "Asar carne (obtener «Carne asada» y guardarla para el combate contra el Jefe)",
+      "BBQ_OWNED_DISABLED": "Ya tienes «Carne asada» (se consume automáticamente al entrar en un combate contra el Jefe)",
+      "LEAVE_WITHOUT_BBQ": "Salir (sin asar carne)"
+    },
+    "whisper": {
+      "TAKE_WHISPER": "Obtener «Susurro del pato»",
+      "DECLINE_WHISPER": "Rechazar (no sufrir los efectos del susurro)"
+    },
+    "gaze": {
+      "TAKE_RICE": "Obtener «Un saco de dolor»",
+      "LOOK_AWAY": "Apartar la mirada (rechazar)"
+    },
+    "pear": {
+      "TAKE_PEAR": "Obtener «Pera de pato»",
+      "PUSH_PEAR_AWAY": "Apartar la pera (rechazar)"
+    },
+    "apple_doctor": {
+      "TAKE_APPLE": "Aceptar la manzana (mantener alejado al médico)",
+      "LEAVE_WITHOUT_APPLE": "Rechazar y salir"
+    },
+    "moon": {
+      "TAKE_MOON_FOR_GOLD": "Perder %d de Oro y tomar «Luna»",
+      "TAKE_MOON_NO_GOLD_DISABLED": "Sin Oro para intercambiar por «Luna»",
+      "TAKE_COIN": "Tomar «Moneda»"
+    },
+    "furnace": {
+      "INVEST_RELIC": "Ofrecer «%s»",
+      "INVEST_LEGENDARY_RELIC": "Ofrecer «%s» (Legendaria · recibir 2 Reliquias a cambio)",
+      "LEAVE_NO_RELICS": "Salir (no hay Reliquias en tu inventario para ofrecer)",
+      "LEAVE_WITHOUT_INVESTING": "Salir (sin ofrecer nada)"
+    },
+    "core_contract": {
+      "SIGN_CONTRACT": "Firmar el contrato (obtener la Reliquia «Atadura maldita»)",
+      "CONTRACT_SIGNED_DISABLED": "Contrato ya firmado",
+      "TAKE_CORE": "Reclamar el Núcleo (tomar la Reliquia «Núcleo»)",
+      "CORE_FORMED_DISABLED": "Núcleo ya formado (canjear en la pantalla de recompensas después del combate)",
+      "CORE_CHARGING_DISABLED": "El Núcleo aún se está formando (Vida perdida total: %d / %d)",
+      "CORE_NO_PAIR_DISABLED": "Tu mazo no contiene una pareja válida: una Habilidad de daño que pueda sacrificarse y otra Habilidad de daño sin Encantamiento",
+      "LEAVE_WITHOUT_TOUCHING": "No tocar nada (salir)"
+    },
+    "hero": {
+      "TRADE_FIVE_FOR_HERO": "¡Intercambiar! Entrega 5 cartas con nombres distintos y obtén «Héroe»",
+      "TRADE_INSUFFICIENT_DISABLED": "No puedes proporcionar %d cartas con nombres distintos",
+      "LEAVE_WITHOUT_HERO_TRADE": "No intercambiar (salir del evento)",
+      "LEAVE_INSUFFICIENT": "Salir del evento"
+    },
+    "arcane": {
+      "TAKE_CHARM": "Tomar el amuleto: obtener la Reliquia «Amuleto arcano»",
+      "TAKE_CHARM_OWNED_DISABLED": "Continuar (ya llevas un amuleto)",
+      "DRINK_SPRING": "Beber del manantial: elegir 1 de 3 cartas aleatorias de Efecto / Habilidad para añadirla a tu mazo",
+      "LEAVE_WITH_OWNED_CHARM": "Salir (sin carta nueva)",
+      "LEAVE_WITHOUT_ARCANE_REWARD": "Salir (sin tomar ninguna)"
+    },
+    "divination": {
+      "START_DIVINATION": "Realizar una adivinación",
+      "LEAVE_WITHOUT_DIVINATION": "Salir (sin adivinación)",
+      "LEAVE_WITHOUT_INTERPRETING": "Salir (sin interpretarla)",
+      "WHALE_FIGHT": "Lucharé por ella (obtener «Ira de la Ballena»)",
+      "WHALE_COMMAND": "Obedecerá mis órdenes (obtener «Deseo»)",
+      "LIQUID_NEED": "Te hará falta (obtener la Reliquia «Agua de manantial»)",
+      "LIQUID_DANGER": "Es peligroso (obtener la Reliquia «Sello del pensamiento»)",
+      "THORN_PATH": "Recorrer un camino lleno de dificultades (obtener «Espada de Llamas»)",
+      "THORN_EMBRACE": "Abrazar el dolor (obtener la Reliquia «Anillo de espinas»)",
+      "FEAST_GENEROUS": "Es un regalo generoso (obtener la Reliquia «Santa Comunión»)",
+      "FEAST_MERCY": "Es una última muestra de compasión (obtener la Reliquia «Estatua»)"
+    },
+    "card_merchant": {
+      "TRANSFORM_CARD": "Transformar: elegir 1 carta para convertirla en una carta de recompensa aleatoria de tu clase",
+      "BARTER_FOR_BIG_CHEST": "Trueque: entregar una carta de Coste 5 o superior (excepto las de Coste X) a cambio de un cofre grande",
+      "BARTER_NO_ELIGIBLE_DISABLED": "Trueque: (tu mazo no tiene cartas de Coste 5 o superior, excepto las de Coste X)",
+      "SELL_RANDOM_CARD": "Vender a precio reducido: perder una carta aleatoria que no sea una Maldición a cambio de %d de Oro",
+      "SELL_NO_ELIGIBLE_DISABLED": "Vender a precio reducido: (solo quedan Maldiciones en tu mazo)",
+      "LEAVE_WITHOUT_MERCHANT_TRADE": "Salir (sin intercambiar nada)"
+    },
+    "lake_lady": {
+      "LIE_LOSE_CARD": "Mentira: perder «%s»",
+      "LIE_NO_ELIGIBLE_DISABLED": "Mentira: (tu mazo no tiene cartas válidas que perder)",
+      "TRUTH_RANDOM_EPIC": "Verdad: obtener una carta Épica aleatoria",
+      "LEAVE_WITHOUT_SPEAKING": "Salir (sin decir nada)"
+    },
+    "oblivion": {
+      "FORGET_CARD": "Olvido: elegir 1 carta y eliminarla del mazo",
+      "LEAVE_WITHOUT_DELETING": "Salir (sin eliminar cartas)"
+    },
+    "smith": {
+      "FORGE_CARD": "Forjar: transformar 1 carta de tu mazo en una «Valla de Hierro» de 2 Coste",
+      "LEAVE_WITHOUT_FORGING": "Salir (sin Forjar)"
+    },
+    "delivery": {
+      "ACCEPT_CARGO": "Aceptar el envío: elegir 1~%d cartas «Carga» entre las extendidas y añadirlas a tu mazo",
+      "DECLINE_CARGO": "Rechazar (darte la vuelta y marcharte)"
+    },
+    "delivery_done": {
+      "SETTLE_CARGO": "Cobrar la entrega: %d cartas «Carga» en tu mazo × 1 tirada cada una",
+      "LEAVE_WITHOUT_DELIVERY_REWARD": "Sin pago (salir)"
+    },
+    "relic_chest": {
+      "OPEN_RELIC_CHEST": "Abrir el cofre (obtener 1 Reliquia de recompensa aleatoria)",
+      "LEAVE_EMPTY_HANDED": "Salir con las manos vacías"
+    },
+    "snow_leopard": {
+      "SILENCE_FOR_PIPE": "Hacer callar al leopardo de las nieves (obtener la Reliquia «Pipa de fumar»)",
+      "FEED_CHEESE_FOR_CARD": "Darle queso (obtener la carta «Leopardo de las Nieves»)"
+    },
+    "adventurer": {
+      "READ_NOTE": "Leer las notas (obtener la Reliquia «Notas de aventura»)",
+      "TAKE_FLINT": "Tomar la herramienta (obtener la Reliquia «Pedernal»)"
+    },
+    "martial": {
+      "LEARN_BRAWL": "Aprender algo sencillo (obtener «Golpes Desenfrenados»)",
+      "LEARN_KICK": "Aprender una verdadera destreza (obtener «Patada Voladora» tras 2 combates)",
+      "LEARN_PUNCH": "Aprender la técnica definitiva (obtener «Puñetazo de Carga» tras 2 combates contra Élites o Jefes)",
+      "LEAVE_WITHOUT_LEARNING": "Salir (sin aprender nada)"
+    },
+    "flyer": {
+      "USE_FLYER": "Usar el aparato volador (volar a una sala sin explorar)",
+      "LEAVE_WITHOUT_MOVING": "No moverse (salir)"
+    },
+    "cave": {
+      "EXPLORE_CAVE": "Explorar (luchar contra un oso búho y obtener la carta Épica «Oso Búho» al vencer)"
+    },
+    "treasure": {
+      "OPEN_CARD_CHEST": "Abrir el cofre (obtener una recompensa de cartas)",
+      "LEAVE_WITHOUT_OPENING": "No abrirlo (darte la vuelta y marcharte)"
+    },
+    "struggle": {
+      "ACCEPT_STRUGGLE": "Aceptar la lucha (perder %d Vida y obtener «Dragón Metálico»)",
+      "LEAVE_UNCHANGED": "Darte la vuelta y marcharte (dejar todo como está)"
+    }
+  },
+  "pickers": {
+    "delivery": {
+      "title": "Encargo de entrega · Elegir Carga",
+      "note": "Se obtiene la cantidad seleccionada (%d~%d cartas); si una Carga es destruida, se elimina del mazo",
+      "confirm_label": "Aceptar la Carga",
+      "cancel_label": "Rechazar (plegar)",
+      "short": "Encargo de entrega"
+    }
+  },
+  "results": {
+    "whisper": {
+      "WHISPER_ALREADY_HEARD": "Ya has oído el susurro: el camino por delante sigue en manos del destino.",
+      "WHISPER_RELIC_GAINED": "«Susurro del pato» se ha añadido a tu inventario de Reliquias: %s"
+    },
+    "gaze": {
+      "GAZE_ALREADY_HAVE_RICE": "Ya llevas ese saco de arroz al hombro; el Ojo del pato sigue observando, pero no te dará nada más.",
+      "GAZE_RELIC_GAINED": "«Un saco de dolor» se ha añadido a tu inventario de Reliquias: %s"
+    },
+    "pear": {
+      "PEAR_ALREADY_HAVE": "Ya llevas la Pera de pato al hombro; cada herida a partir de ahora te hará un poco más «fuerte».",
+      "PEAR_RELIC_GAINED": "«Pera de pato» se ha añadido a tu inventario de Reliquias: %s"
+    },
+    "apple_doctor": {
+      "APPLE_DOCTOR_ALREADY_HAVE": "Ya has aceptado la Manzana; el médico no volverá a prestarte atención.",
+      "APPLE_DOCTOR_RELIC_GAINED": "«Manzana» se ha añadido a tu inventario de Reliquias: %s"
+    },
+    "bluefish": {
+      "BLUEFISH_EVENT_REMOVED": "Este evento se ha eliminado del juego."
+    },
+    "moon": {
+      "MOON_ALREADY_TAKEN": "El pedestal de piedra ya está vacío: solo queda uno de los dos objetos y solo puedes llevarte uno.",
+      "MOON_CARD_GAINED": "«%s» se ha añadido a tu mazo y has dejado %d de Oro en el pedestal de piedra.",
+      "MOON_COIN_GAINED": "«%s» se ha añadido a tu mazo."
+    },
+    "hero": {
+      "HERO_TRADE_RESTORE": "Intercambio completado: «Héroe» está en tu mazo (%d cartas entregadas).",
+      "HERO_TRADE_AVAILABLE": "Tu mazo ahora contiene %d nombres de carta diferentes: suficientes para el intercambio.",
+      "HERO_TRADE_UNAVAILABLE": "Tu mazo solo contiene %d nombres de carta diferentes, así que no se puede realizar el intercambio (solo puedes salir).",
+      "HERO_TRADE_COMPLETED": "%d cartas entregadas (%s): «%s» se ha añadido a tu mazo."
+    },
+    "card_merchant": {
+      "CARD_MERCHANT_ALREADY_TRADED": "Ya has hecho un trato aquí.",
+      "CARD_MERCHANT_NO_SELLABLE_CARD": "No hay cartas en tu mazo que puedan venderse (las Maldiciones no cuentan).",
+      "CARD_MERCHANT_CARD_SOLD": "Has vendido «%s» a precio reducido por %d de Oro."
+    },
+    "lake_lady": {
+      "LAKE_LADY_ALREADY_DONE": "La superficie del agua vuelve a estar en calma.",
+      "LAKE_LADY_LIE_RESULT": "La mentira se hace realidad: «%s» se ha eliminado de tu mazo.",
+      "LAKE_LADY_TRUTH_RESULT": "Un regalo por decir la verdad: «%s» se ha añadido a tu mazo."
+    },
+    "oblivion": {
+      "OBLIVION_ALREADY_DONE": "Ya has olvidado una carta en el manantial."
+    },
+    "smith": {
+      "SMITH_ALREADY_DONE": "Ya has forjado una carta en la fragua."
+    },
+    "delivery": {
+      "DELIVERY_ACCEPTED_RESTORE": "Has aceptado %d cartas «Carga». El destinatario te pagará por cada una en la primera sala de eventos del nivel 2.",
+      "DELIVERY_ACCEPTED": "Has aceptado %d cartas «Carga» (Estructura de 3 Coste 0/6/0); el pago se liquidará en la primera sala de eventos del nivel 2."
+    },
+    "delivery_done": {
+      "DELIVERY_DONE_CARGO_SETTLED": "Pago liquidado por las %d cartas «Carga»",
+      "DELIVERY_DONE_CARD_REWARDS": "Recompensas de cartas ×%d",
+      "DELIVERY_DONE_GOLD_REWARD": "%d de Oro",
+      "DELIVERY_DONE_RELIC_REWARDS": "Reliquias aleatorias ×%d",
+      "DELIVERY_DONE_CHOCOLATE_REWARD": "Gran premio oculto: Chocolate ×%d!",
+      "DELIVERY_DONE_CARGO_REMOVED": "%d cartas «Carga» se han eliminado de tu mazo",
+      "DELIVERY_DONE_RESULT_PREFIX": "Resultado del pago:",
+      "DELIVERY_DONE_PENDING_SUFFIX": "(Recompensas pendientes: consulta la ventana emergente de la esquina superior derecha)"
+    },
+    "snow_leopard": {
+      "SNOW_LEOPARD_PIPE_RESTORE": "La Pipa de fumar está en tu inventario de Reliquias: surtirá efecto en el primer turno del próximo combate; después, volverá a encenderse cada vez que llegues a una hoguera.",
+      "SNOW_LEOPARD_CAT_RESTORE": "«Leopardo de las Nieves» está en tu mazo: cuando ataca, una carta de tu mano cuesta menos durante un turno.",
+      "SNOW_LEOPARD_PIPE_GAINED": "«Pipa de fumar» se ha añadido a tu inventario de Reliquias: %s",
+      "SNOW_LEOPARD_CAT_GAINED": "«%s» se ha añadido a tu mazo: %s"
+    },
+    "adventurer": {
+      "ADVENTURER_NOTE_SUCCESS": "«Notas de aventura» se han añadido a tu inventario de Reliquias: una sala sin explorar del mapa se ha convertido en un cofre grande; al volver al mapa, verás esa casilla brillar con una luz dorada.",
+      "ADVENTURER_NOTE_NO_UNEXPLORED_ROOM": "«Notas de aventura» se han añadido a tu inventario de Reliquias, pero ya no quedan salas sin explorar en el mapa, así que no se ha escrito nada en la página.",
+      "ADVENTURER_FLINT_GAINED": "«Pedernal» se ha añadido a tu inventario de Reliquias; al volver al mapa, elige cualquier casilla y enciende su fuego."
+    },
+    "martial": {
+      "MARTIAL_BRAWL_GAINED": "«Golpes Desenfrenados» se ha añadido a tu mazo: 2 Coste; inflige 10 de daño a cada uno de 2 enemigos aleatorios.",
+      "MARTIAL_PUNCH_DELAYED": "«Puñetazo de Carga» queda pendiente: se añadirá automáticamente a tu mazo cuando ganes %d combates más contra Élites o Jefes.",
+      "MARTIAL_KICK_DELAYED": "«Patada Voladora» queda pendiente: se añadirá automáticamente a tu mazo cuando ganes %d combates más."
+    },
+    "flyer": {
+      "FLYER_READY": "El aparato volador está listo; al volver al mapa, elige una sala sin explorar y te llevará hasta allí."
+    },
+    "rest": {
+      "REST_BANDAGE_HEAL_RESULT": "Venda hemostática: recupera %d Vida",
+      "REST_HEAL_RESULT": "La calidez de la hoguera te llena el corazón... recuperas %d Vida (actual: %d / %d)%s",
+      "REST_ENCHANT_MASTER_SUFFIX": "; el Maestro de encantamientos ha encantado «%s» con «%s»",
+      "REST_BBQ_RESULT": "«Carne asada» se ha añadido a tu inventario de Reliquias; se consume automáticamente al entrar en un combate contra el Jefe y recupera 25% de tu Vida máxima."
+    },
+    "arcane": {
+      "ARCANE_CHARM_GAINED": "«Amuleto arcano» se ha añadido a tu inventario de Reliquias: %s (este manantial solo concede una recompensa)",
+      "ARCANE_CHARM_ALREADY_OWNED": "Ya llevas el Amuleto arcano, pero aún puedes beber del manantial (solo una recompensa esta vez).",
+      "ARCANE_DRINK_REWARD_PENDING": "«Beber del manantial»: elige 1 de 3 cartas de Efecto / Habilidad en la ventana emergente de recompensas (solo una recompensa esta vez)."
+    },
+    "relic_chest": {
+      "RELIC_CHEST_EMPTY": "El cofre está vacío (ya tienes todas las Reliquias de recompensa)",
+      "RELIC_CHEST_REWARD_PENDING": "Has encontrado 1 Reliquia, «%s» (pendiente: consulta la ventana emergente de recompensas)"
+    },
+    "treasure": {
+      "TREASURE_CARD_REWARD_PENDING": "Has encontrado una recompensa de cartas; elige 1 para añadirla a tu mazo (pendiente: consulta la ventana emergente de recompensas)"
+    },
+    "struggle": {
+      "STRUGGLE_CARD_GAINED": "Has perdido %d Vida (actual: %d/%d); «%s» se ha añadido a tu mazo"
+    },
+    "furnace": {
+      "FURNACE_NO_OPTIONS": "El horno mira tus manos vacías y no dice nada.",
+      "FURNACE_RELIC_MISSING": "«%s» ya no está en tu inventario de Reliquias.",
+      "FURNACE_NO_REWARD": "Has arrojado «%s» al horno, pero este solo ha expulsado una bocanada de aire caliente: no le quedan Reliquias que darte.",
+      "FURNACE_REWARDS_PENDING": "Has arrojado «%s» al horno y este ha escupido %d Reliquias: %s. Recógelas en la ventana emergente de recompensas."
+    },
+    "core_contract": {
+      "CORE_CONTRACT_CURSE_GAINED": "«Atadura maldita» se ha añadido a tu inventario de Reliquias: %s",
+      "CORE_CONTRACT_CORE_GAINED": "«Núcleo» se ha añadido a tu inventario de Reliquias: tras perder un total acumulado de %d Vida en combate, tomará forma; al terminar este combate, aparecerá un intercambio adicional en la página de recompensas: sacrifica 1 Habilidad de daño, eliminándola permanentemente del mazo, y añade su primera instancia de daño como Encantamiento a otra Habilidad de daño que no tenga Encantamiento. Se vuelve inactivo después de usarlo."
+    },
+    "divination": {
+      "DIVINATION_CARD_GAINED": "«%s» se ha añadido a tu mazo.",
+      "DIVINATION_RELIC_GAINED": "«%s» se ha añadido a tu inventario de Reliquias."
+    }
+  },
+  "rest_dynamic": {
+    "REST_DYNAMIC_SACRAMENT_HEAL": "\n\n[Santa Comunión] Ha recuperado %d Vida (ahora %d / %d).",
+    "REST_DYNAMIC_BANDAGE_HEAL": "\n\n[Venda hemostática] Ha recuperado %d Vida (ahora %d / %d).",
+    "REST_DYNAMIC_PIPE_RELIGHT": "\n\n[Pipa de fumar] La llama parpadea: la Pipa de fumar vuelve a estar encendida. En tu primer turno del próximo combate: obtén 1 Coste, roba 1 carta adicional y pierde hasta 1 Vida (conserva al menos 1)."
+  }
+}

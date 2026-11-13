@@ -103,14 +103,21 @@ func _ready() -> void:
 	_all = repo.all_cards()
 	_build_search_index()   # R631：搜索索引只在载入时建一次
 	for t: String in COST_OPTIONS:
-		cost_opt.add_item(t)
+		cost_opt.add_item(GameI18n.source(t))
 	_rebuild_classes()
 	kind_opt.item_selected.connect(_on_kind_changed)
 	cost_opt.item_selected.connect(_on_cost_changed)
 	class_opt.item_selected.connect(_on_class_changed)
 	search_edit.text_changed.connect(_on_search_changed)
 	# R590：返回按钮文案跟着去向走（从百科进来就写「返回百科」）。
-	back_btn.text = "← 返回百科" if UiRoute.has_back() else "← 返回标题"
+	back_btn.text = GameI18n.ui("map", "GALLERY_BACK_CODEX", "← 返回百科") if UiRoute.has_back() else GameI18n.ui("map", "GALLERY_BACK_TITLE", "← 返回标题")
+	player_tab.text = GameI18n.ui("map", "GALLERY_TAB_PLAYER", "玩家卡牌图鉴")
+	enemy_tab.text = GameI18n.ui("map", "GALLERY_TAB_ENEMY", "敌人图鉴")
+	$LeftPanel/KindTitle.text = GameI18n.ui("map", "GALLERY_FILTER_KIND", "种类")
+	$LeftPanel/CostTitle.text = GameI18n.ui("map", "GALLERY_FILTER_COST", "费用")
+	$LeftPanel/ClassTitle.text = GameI18n.ui("map", "GALLERY_FILTER_CLASS", "职业")
+	$LeftPanel/SearchTitle.text = GameI18n.ui("map", "GALLERY_SEARCH_TITLE", "搜索")
+	search_edit.placeholder_text = GameI18n.ui("map", "GALLERY_SEARCH_PLACEHOLDER", "输入卡名 / 效果文…")
 	back_btn.pressed.connect(_on_back)
 	player_tab.toggled.connect(_on_group_toggled.bind("player"))
 	enemy_tab.toggled.connect(_on_group_toggled.bind("enemy"))
@@ -172,7 +179,7 @@ func _ready() -> void:
 	grid.queue_redraw()
 	# R148：Esc 主菜单（图鉴页没有 sfx → 菜单里不给音效项）
 	_menu = UiMenu.attach(self, _menu_items, {
-		"back": "继续看图鉴",
+		"back": GameI18n.ui("map", "GALLERY_MENU_BACK", "继续看图鉴"),
 		"sub": "卡图鉴",
 	})
 
@@ -181,7 +188,7 @@ func _menu_items() -> Array:
 	## 本界面的 Esc 菜单项（R148）。图鉴页**没有音效开关**（本场景没建 Sfx）→ 只给返回标题。
 	return [
 		# R590：文案跟着去向走，行为不变。
-		{"text": func(): return "返回百科" if UiRoute.has_back() else "返回标题",
+		{"text": func(): return GameI18n.ui("map", "GALLERY_MENU_RETURN_CODEX", "返回百科") if UiRoute.has_back() else GameI18n.ui("map", "GALLERY_MENU_RETURN_TITLE", "返回标题"),
 					"fn": _on_back},
 	]
 
@@ -194,19 +201,25 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _group_title() -> String:
 	## 顶栏/计数用的分组名（敌人图鉴要显式带上「关卡效果」）。
-	return "玩家卡牌图鉴" if _group == "player" else "敌人图鉴（含敌方关卡效果）"
+	return GameI18n.ui("map", "GALLERY_GROUP_PLAYER", "玩家卡牌图鉴") if _group == "player" else GameI18n.ui("map", "GALLERY_GROUP_ENEMY", "敌人图鉴（含敌方关卡效果）")
 
 
 func _hint_text() -> String:
 	if _group == "enemy":
-		return "敌方单位 + 敌方关卡效果（开局即挂在敌方效果区持续生效）。\n搜索匹配卡名 / 效果文 / 特性。\n左键点卡牌查看详情"
-	return "玩家卡牌：初始卡组 / 奖励池 / 事件卡 / 衍生物。\n搜索匹配卡名 / 效果文 / 特性。\n左键点卡牌查看详情"
+		return GameI18n.ui("map", "GALLERY_HINT_ENEMY", "敌方单位 + 敌方关卡效果（开局即挂在敌方效果区持续生效）。\n搜索匹配卡名 / 效果文 / 特性。\n左键点卡牌查看详情")
+	return GameI18n.ui("map", "GALLERY_HINT_PLAYER", "玩家卡牌：初始卡组 / 奖励池 / 事件卡 / 衍生物。\n搜索匹配卡名 / 效果文 / 特性。\n左键点卡牌查看详情")
 
 
 func _kind_options() -> Array:
 	## 敌人图鉴把「效果」这类卡单独叫「关卡效果」（它们只作为关卡脚本挂在敌方效果区）。
 	## R77：补上「场地」—— R74 把陷阱类卡改成了新卡种，图鉴里之前**根本选不到它们**。
 	## R223：玩家图鉴补「诅咒」（难度 5 的「疲惫」9149 走这个新卡种）。
+	if _group == "enemy":
+		return [GameI18n.ui("map", "GALLERY_KIND_ALL", "全部"), GameI18n.ui("map", "GALLERY_KIND_ALLY", "盟友"), GameI18n.ui("map", "GALLERY_KIND_STRUCTURE", "工事"), GameI18n.ui("map", "GALLERY_KIND_FIELD", "场地"), GameI18n.ui("map", "GALLERY_KIND_LEVEL_EFFECT", "关卡效果")]
+	return [GameI18n.ui("map", "GALLERY_KIND_ALL", "全部"), GameI18n.ui("map", "GALLERY_KIND_ALLY", "盟友"), GameI18n.ui("map", "GALLERY_KIND_SKILL", "技能"), GameI18n.ui("map", "GALLERY_KIND_EFFECT", "效果"), GameI18n.ui("map", "GALLERY_KIND_STRUCTURE", "工事"), GameI18n.ui("map", "GALLERY_KIND_FIELD", "场地"), GameI18n.ui("map", "GALLERY_KIND_CURSE", "诅咒")]
+
+
+func _kind_values() -> Array:
 	if _group == "enemy":
 		return ["全部", "盟友", "工事", "场地", "关卡效果"]
 	return ["全部", "盟友", "技能", "效果", "工事", "场地", "诅咒"]
@@ -226,10 +239,13 @@ func _rebuild_classes() -> void:
 		names.append(cn)
 	names.sort()
 	class_opt.clear()
-	class_opt.add_item("全部")
-	class_opt.add_item("无归属")
+	class_opt.add_item(GameI18n.ui("map", "GALLERY_CLASS_ALL", "全部"))
+	class_opt.set_item_metadata(0, "全部")
+	class_opt.add_item(GameI18n.ui("map", "GALLERY_CLASS_NONE", "无归属"))
+	class_opt.set_item_metadata(1, "无归属")
 	for cn2 in names:
-		class_opt.add_item(cn2)
+		class_opt.add_item(GameI18n.class_name_of(cn2))
+		class_opt.set_item_metadata(class_opt.item_count - 1, cn2)
 	class_opt.select(0)
 	_class_filter = "全部"
 
@@ -245,11 +261,15 @@ func _match_class(c: CardData) -> bool:
 
 func _rebuild_kinds() -> void:
 	kind_opt.clear()
-	for t in _kind_options():
-		kind_opt.add_item(str(t))
+	var values := _kind_values()
+	var labels := _kind_options()
+	for i in labels.size():
+		kind_opt.add_item(str(labels[i]))
+		kind_opt.set_item_metadata(i, values[i])
 	kind_opt.select(0)
 	_kind_filter = "全部"
-	title_label.text = "卡牌图鉴"
+	title_label.text = GameI18n.ui("map", "GALLERY_TITLE", "卡牌图鉴")
+	UiTheme.autoshrink_label(title_label, title_label.text, 20, 12, Vector2(136.0, 26.0))
 	hint_label.text = _hint_text()
 
 
@@ -262,7 +282,22 @@ func _match_kind(c: CardData) -> bool:
 
 
 func _kind_label(c: CardData) -> String:
-	return "关卡效果" if c.is_level_effect() else c.kind
+	if c.is_level_effect():
+		return GameI18n.ui("map", "GALLERY_DETAIL_KIND_LEVEL_EFFECT", "关卡效果")
+	match c.kind:
+		"盟友":
+			return GameI18n.ui("map", "GALLERY_KIND_ALLY", "盟友")
+		"技能":
+			return GameI18n.ui("map", "GALLERY_KIND_SKILL", "技能")
+		"效果":
+			return GameI18n.ui("map", "GALLERY_KIND_EFFECT", "效果")
+		"工事":
+			return GameI18n.ui("map", "GALLERY_KIND_STRUCTURE", "工事")
+		"场地":
+			return GameI18n.ui("map", "GALLERY_KIND_FIELD", "场地")
+		"诅咒":
+			return GameI18n.ui("map", "GALLERY_KIND_CURSE", "诅咒")
+	return c.kind
 
 
 func _set_group(g: String) -> void:
@@ -346,14 +381,20 @@ func _search_blob(c: CardData) -> String:
 	## 但玩家搜种族、搜字段是再自然不过的用法。
 	var parts := PackedStringArray()
 	parts.append(c.card_name)
+	parts.append(GameI18n.card_name(c.id, c.card_name))
 	parts.append(CardText.naturalize(c.effect_text))
 	parts.append(c.effect_text)
+	parts.append(GameI18n.card_effect(c.id, c.effect_text))
 	parts.append(c.kind)
+	parts.append(_kind_label(c))
 	parts.append(c.card_class)
+	parts.append(GameI18n.class_name_of(c.card_class))
 	for t in c.traits:
 		parts.append(str(t))
+		parts.append(GameI18n.source(str(t)))
 	for a in c.affixes:
 		parts.append(str(a))
+		parts.append(CardData.affix_label(str(a)))
 	return " ".join(parts).to_lower()
 
 
@@ -377,7 +418,7 @@ func _match_name(c: CardData) -> bool:
 	## 卡名是否直接含搜索词 —— 只用来计数，区分「名字里有」和「只在效果文里有」。
 	if _search_lc == "":
 		return true
-	var n := c.card_name.to_lower()
+	var n := (c.card_name + " " + GameI18n.card_name(c.id, c.card_name)).to_lower()
 	return n.contains(_search_lc) or n.contains(_search_lc.replace(" ", ""))
 
 
@@ -426,15 +467,15 @@ func _apply_filters() -> void:
 		# 发布版：说「收集进度」而不是「卡池总量」—— 玩家看不到没见过的部分，
 		# 报总数等于直接告诉他「还有多少张没解锁」，那是另一件事（全卡开才给）。
 		var gc := _group_counts()
-		summary = "%s · 已收集 %d / %d" % [_group_title(), int(gc[1]), int(gc[0])]
+		summary = GameI18n.ui("map", "GALLERY_SUMMARY_RELEASE", "%s · 已收集 %d / %d") % [_group_title(), int(gc[1]), int(gc[0])]
 		if _shown.size() != int(gc[1]):
-			summary += "（显示 %d 张）" % _shown.size()
+			summary += GameI18n.ui("map", "GALLERY_SUMMARY_SHOWN", "（显示 %d 张）") % _shown.size()
 	else:
-		summary = "%s · 共 %d 种卡牌" % [_group_title(), _shown.size()]
+		summary = GameI18n.ui("map", "GALLERY_SUMMARY_TEST", "%s · 共 %d 种卡牌") % [_group_title(), _shown.size()]
 		var gc2 := _group_counts()
 		var unknown_n := int(gc2[0]) - int(gc2[1])
 		if unknown_n > 0 and not _has_active_filter():
-			summary += "（其中 %d 张未解锁）" % unknown_n
+			summary += GameI18n.ui("map", "GALLERY_SUMMARY_LOCKED", "（其中 %d 张未解锁）") % unknown_n
 	# R631：命中的卡里有相当一部分「卡名里没有这个词」——它可能来自效果文，也可能是
 	# 特性 / 字段 / 职业（搜「机械」会命中整个机械之心）。文案只说「卡名不含」这个**事实**，
 	# 不承诺命中的是哪一处（详情右栏能看到来源），免得玩家以为搜索串了。
@@ -539,10 +580,10 @@ func _refresh_detail() -> void:
 		# R642：发布版第一次进图鉴可能是**全空**（一局都没打过 = 一张都没见过）。
 		# 这时候必须说清楚「为什么空」，否则玩家会以为图鉴坏了。
 		# 文案压在 11 字以内（236px 宽、20 号字），超了会被 Label 撑出框线。
-		detail_name.text = "（无卡牌）"
+		detail_name.text = GameI18n.ui("map", "GALLERY_EMPTY", "（无卡牌）")
 		if GameBuild.is_release():
-			detail_name.text = ("还没见过任何卡牌" if ProfileData.seen_count() == 0
-					else "（没有符合条件的卡牌）")
+			detail_name.text = (GameI18n.ui("map", "GALLERY_EMPTY_UNSEEN", "还没见过任何卡牌") if ProfileData.seen_count() == 0
+					else GameI18n.ui("map", "GALLERY_EMPTY_FILTERED", "（没有符合条件的卡牌）"))
 		for l: Label in [detail_kind, detail_stats, detail_traits, detail_text]:
 			l.text = ""
 		detail_badge.visible = false
@@ -561,28 +602,32 @@ func _refresh_detail() -> void:
 	# 图鉴的解锁乐趣全在「第一次见到它」那一刻，详情面板不能提前把答案给出来。
 	# 只留一句**怎么解锁**，否则玩家会以为这是 Bug。
 	if _locked(c):
-		UiTheme.autoshrink_label(detail_name, "？？？", 20, 13, B_TITLE)
-		UiTheme.autoshrink_label(detail_kind, "未解锁", 14, 10, B_LINE)
+		UiTheme.autoshrink_label(detail_name, GameI18n.ui("map", "GALLERY_LOCKED_NAME", "？？？"), 20, 13, B_TITLE)
+		UiTheme.autoshrink_label(detail_kind, GameI18n.ui("map", "GALLERY_LOCKED_KIND", "未解锁"), 14, 10, B_LINE)
 		UiTheme.autoshrink_label(detail_stats, "", 14, 10, B_LINE)
 		UiTheme.autoshrink_label(detail_traits, "", 14, 10, B_LINE)
 		UiTheme.autoshrink_label(detail_text,
-				"在游戏里见过这张卡后，才会收录进图鉴。", 16, 11, B_BODY)
+				GameI18n.ui("map", "GALLERY_LOCKED_DESCRIPTION", "在游戏里见过这张卡后，才会收录进图鉴。"), 16, 11, B_BODY)
 		detail_badge.visible = false
 		$DetailPanel.queue_redraw()
 		return
 	# R77：详情里带上职业（图鉴现在支持按职业查了，写出来才看得到筛选是否对）
 	# R328：class 留空的卡分两种 —— 公用初始卡（木栅栏/攻击，三职业共用）写「公用初始」，
 	# 其余（事件产出 / 诅咒）仍写「无归属」，别让这两类在详情里混成同一个标签。
-	var cls_txt: String = c.card_class
+	var cls_txt: String = GameI18n.class_name_of(c.card_class)
 	if cls_txt == "":
-		cls_txt = "公用初始" if PlayerClass.is_base_common(c.id) else "无归属"
+		cls_txt = GameI18n.ui("map", "GALLERY_CLASS_BASE_COMMON", "公用初始") if PlayerClass.is_base_common(c.id) else GameI18n.ui("map", "GALLERY_DETAIL_CLASS_NONE", "无归属")
 	# R600：颜色是内部元数据，玩家不需要在详情里看到；只留阵营 / 种类 / 费用 / 归属。
-	UiTheme.autoshrink_label(detail_kind, "%s · %s · %d 费 · %s" % [
-			"玩家" if _group == "player" else "敌方", _kind_label(c), c.cost, cls_txt],
+	UiTheme.autoshrink_label(detail_kind, GameI18n.ui("map", "GALLERY_DETAIL_META", "%s · %s · %d 费 · %s") % [
+			GameI18n.ui("map", "GALLERY_DETAIL_PLAYER", "玩家") if _group == "player" else GameI18n.ui("map", "GALLERY_DETAIL_ENEMY", "敌方"), _kind_label(c), c.cost, cls_txt],
 			14, 10, B_LINE)
 	UiTheme.autoshrink_label(detail_stats, CardFace.stats_line(c), 14, 10, B_LINE)
+	var trait_labels := PackedStringArray()
+	for trait_name in c.traits:
+		trait_labels.append(GameI18n.source(str(trait_name)))
+	var trait_separator := "、" if GameI18n.language() in ["zh", "ja"] else ", "
 	UiTheme.autoshrink_label(detail_traits,
-			"特性：" + ("、".join(PackedStringArray(c.traits)) if not c.traits.is_empty() else "无"),
+			GameI18n.ui("map", "GALLERY_DETAIL_TRAITS_PREFIX", "特性：") + (trait_separator.join(trait_labels) if not trait_labels.is_empty() else GameI18n.ui("map", "GALLERY_DETAIL_TRAITS_NONE", "无")),
 			14, 10, B_LINE)
 	# R106：图鉴正文同样是「纯文本降级」—— 隐藏「（…）」补注、去掉 `**加粗**` 标记，
 	# 免得 Label 里出现裸星号（这里是 Label 不是 RichTextLabel，用 naturalize 而非 bbcode）。
@@ -591,9 +636,9 @@ func _refresh_detail() -> void:
 			16, 11, B_BODY)
 	# 编号附在名字后
 	# R632：玩家不需要看到卡牌编号（内部 id）—— 只写卡名。
-	UiTheme.autoshrink_label(detail_name, c.card_name, 20, 13, B_TITLE)
+	UiTheme.autoshrink_label(detail_name, GameI18n.card_name(c.id, c.card_name), 20, 13, B_TITLE)
 	detail_badge.visible = c.needs_target()
-	UiTheme.autoshrink_label(detail_badge, "需要选择目标", 14, 10, Vector2(BX, 30.0))
+	UiTheme.autoshrink_label(detail_badge, GameI18n.ui("map", "GALLERY_TARGET_REQUIRED", "需要选择目标"), 14, 10, Vector2(BX, 30.0))
 	$DetailPanel.queue_redraw()
 
 
@@ -612,7 +657,8 @@ func _on_group_toggled(on: bool, g: String) -> void:
 
 
 func _on_kind_changed(idx: int) -> void:
-	_kind_filter = kind_opt.get_item_text(idx)
+	var value: Variant = kind_opt.get_item_metadata(idx)
+	_kind_filter = str(value) if value != null else kind_opt.get_item_text(idx)
 	_apply_filters()
 
 
@@ -623,7 +669,8 @@ func _on_cost_changed(idx: int) -> void:
 
 func _on_class_changed(idx: int) -> void:
 	## R77：按职业查找。
-	_class_filter = class_opt.get_item_text(idx)
+	var value: Variant = class_opt.get_item_metadata(idx)
+	_class_filter = str(value) if value != null else class_opt.get_item_text(idx)
 	_apply_filters()
 
 

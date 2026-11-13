@@ -1,0 +1,369 @@
+{
+  "version": 2,
+  "updated": "2026-11-13",
+  "source": "i18n/narrative_zh_canonical.json",
+  "events": {
+    "whisper": {
+      "name": "Susurros de pato",
+      "texts": {
+        "WHISPER_DESC": "Los graznidos de un pato resuenan desde las profundidades y perduran en tus oídos...\nObtienes «Susurro del pato»: ya no podrás elegir tu próximo destino\n(el sistema decidirá cada paso al azar);\npero al comienzo de cada uno de tus turnos, obtendrás una de estas mejoras al azar—\n+1 Coste este turno / los ataques de tus unidades y tus Habilidades infligen +1 de daño este turno / roba 1 carta adicional este turno.",
+        "WHISPER_TAKEN_DESC": "Los susurros se han instalado en tu mente.\nDe ahora en adelante, el camino por delante ya no te corresponde elegirlo: el destino recorrerá el resto por ti."
+      }
+    },
+    "gaze": {
+      "name": "Mirada del pato",
+      "texts": {
+        "GAZE_DESC": "Un ojo gigante de pato se abre en el vacío y te mira fijamente.\nNo dice nada, solo observa, hasta que un escalofrío te recorre la espalda y un saco de arroz aparece en tu mano sin explicación.\nObtienes «Un saco de dolor»: después de que tu Vida reciba daño por primera vez cada turno, roba 1 carta,\ny tus Habilidades infligen +1 de daño durante el resto del turno.\nTambién puedes apartar la mirada y fingir que no lo has visto.",
+        "GAZE_TAKEN_DESC": "El ojo sigue mirándote.\nEl saco de arroz pesa sobre tu hombro; la sensación de estar siendo observado no te abandonará jamás."
+      }
+    },
+    "pear": {
+      "name": "Montaña de peras de pato",
+      "texts": {
+        "PEAR_DESC": "Un montón de peras de pato rueda hasta ti desde quién sabe dónde, una tras otra, y te aplasta hasta dejarte sin aliento.\nLa presión también es una forma de fuerza, siempre que puedas soportarla.\nObtienes «Pera de pato»: de ahora en adelante, cada vez que tu Vida reciba daño, obtén +1 de Vida máxima (esto solo aumenta el límite y no recupera Vida).\nTambién puedes apartar las peras y fingir que no sientes ninguna presión.",
+        "PEAR_TAKEN_DESC": "Ya has echado sobre tus hombros esa montaña de peras de pato.\nCada herida a partir de ahora te hará un poco más «fuerte»—\npero esa pizca de fuerza no recuperará la Vida que has perdido."
+      }
+    },
+    "apple_doctor": {
+      "name": "La manzana y el médico",
+      "texts": {
+        "APPLE_DESC": "Un médico está sentado al borde del camino con un historial clínico abierto sobre las rodillas. Levanta la vista hacia ti:\n«Llévate una manzana. Cómetela y no vuelvas a venir a verme.»\nObtienes «Manzana»: obtén +7 de Vida máxima y recupera Vida hasta alcanzar el máximo.\nTambién puedes no aceptar nada y marcharte; solo procura no mirar atrás por el camino.",
+        "APPLE_TAKEN_DESC": "El médico ya no está, y hasta la silla ha desaparecido.\nLa manzana en tu mano pesa y aún conserva un poco de calor corporal."
+      }
+    },
+    "snow_leopard": {
+      "name": "Aparece un leopardo de las nieves",
+      "texts": {
+        "SNOW_DESC": "Un leopardo de las nieves está agachado en una ladera nevada, con la cola barriendo lentamente la nieve.\nNo se va ni se aparta; solo alza la vista hacia ti, como si esperara que dijeras algo.\nPersuádelo para que se vaya: obtén la Reliquia «Pipa de fumar»; o lánzale queso y te acompañará.",
+        "SNOW_CLOSED_DESC": "«Silencio». La palabra cae con pesadez y corta el grave gruñido en la garganta del leopardo de las nieves.\nTe mira fijamente durante un rato, deja caer algo en la nieve y luego se da la vuelta y sube saltando por la ladera.",
+        "SNOW_CHEESE_DESC": "El queso se funde junto a su hocico. El leopardo de las nieves baja la cabeza y se lo come,\nluego se levanta, sacude la nieve de su pelaje y se coloca detrás de ti."
+      }
+    },
+    "adventurer": {
+      "name": "Reliquia del aventurero",
+      "texts": {
+        "ADVENTURER_DESC": "Una mochila de viaje reseca descansa contra la pared de piedra; su dueño se marchó hace mucho tiempo.\nUn cuaderno está abierto sobre ella, con las esquinas de las páginas pegadas por la lluvia; el pedernal y el acero para hacer fuego siguen enganchados a sus argollas,\ncomo si acabaran de dejarlos allí.\nLas reliquias no eligen a sus dueños, pero solo puedes llevarte una.",
+        "ADVENTURER_NOTE_DESC": "Lees el cuaderno de principio a fin.\nLa última página contiene un mapa tosco con un lugar marcado por un círculo—\ny en tu mapa parece haber aparecido una sala que nunca has visitado en ese mismo lugar.",
+        "ADVENTURER_FLINT_DESC": "El pedernal cae en tu palma, aún ligeramente frío.\nEl acero lo raspa y saltan chispas que iluminan una zona de la pared de piedra ennegrecida por el humo."
+      }
+    },
+    "martial": {
+      "name": "Maestro de artes marciales",
+      "texts": {
+        "MARTIAL_DESC": "Un anciano está sentado bajo un árbol, con un bastón de madera sobre las rodillas y hojas caídas esparcidas por su túnica.\n«Aprende algo antes de irte: puedes llevarte ahora lo sencillo, pero la verdadera destreza debe ganarse con victorias.»",
+        "MARTIAL_BRAWL_DESC": "El anciano golpea el suelo con su bastón: «Golpes Desenfrenados es fácil. Lo difícil es no detenerse.»\nTe guía las muñecas un par de veces y, así de simple, ya lo has aprendido—\n«Golpes Desenfrenados»: 2 Coste. Inflige 10 de daño a cada uno de 2 enemigos aleatorios.",
+        "MARTIAL_KICK_DESC": "«Las piernas son más largas que los brazos y más honestas que tú.»\nEl anciano demuestra una patada. Su talón toca el suelo y el polvo se dispersa con perfecta precisión—\n«Ve a librar 2 combates. Cuando vuelvas, te enseñaré el resto.»\n«Patada Voladora» (se obtiene tras 2 combates): 2 Coste. Inflige 22 de daño a un enemigo; si lo mata, el daño sobrante continúa por la misma columna.",
+        "MARTIAL_PUNCH_DESC": "El anciano golpea una roca con el puño. La roca se parte; su mano, no.\n«Este puñetazo no es difícil de aprender. Lo difícil es que seas digno de él. Ve a librar 2 combates duros: contra Élites o enemigos que custodian el final de un nivel.»\n«Puñetazo de Carga» (se obtiene tras 2 combates contra Élites o Jefes): 2 Coste. Inflige 16 de daño a un enemigo y lo empuja 1 casilla hacia atrás; también inflige 8 de daño a cada uno de los demás enemigos."
+      }
+    },
+    "flyer": {
+      "name": "Aparato volador",
+      "texts": {
+        "FLYER_DESC": "Una vieja mochila propulsora se alza en medio del claro, con las dos toberas aún ligeramente calientes.\nPóntela y podrás volar directamente a cualquier sala que no hayas visitado—\nsu propio calor residual es combustible suficiente; no tendrás que pagar ningún precio.",
+        "FLYER_TAKEN_DESC": "Las toberas ya están calientes y pequeñas llamas de un cálido tono naranja danzan en su interior.\nCuando vuelvas al mapa, elige una sala sin explorar y te llevará hasta allí."
+      }
+    },
+    "bluefish": {
+      "name": "El gran pez azul",
+      "texts": {
+        "RETIRED_EVENT_DESC": "El gran pez azul solía estar aquí. Ya se ha ido nadando."
+      }
+    },
+    "moon": {
+      "name": "Contemplación de la luna",
+      "texts": {
+        "MOON_DESC": "Cae la noche. La luna cuelga baja sobre la cresta y traza un camino de plata sobre el agua.\nDos objetos descansan en la plataforma de piedra, ambos brillan con una luz que no pertenece a este lugar—\n«Luna»: Efecto de 3 Coste. Al terminar este combate, se añade una recompensa extra a la pantalla de recompensas que permite eliminar 1 carta del mazo.\nEsta carta no se puede eliminar del mazo.\n«Moneda»: Efecto de 2 Coste. Al terminar este combate, obtén 40 de Oro adicionales. Esta carta no se puede eliminar del mazo.\nLa Luna cuesta todo el Oro que tengas en ese momento; la Moneda no cuesta nada. Debes llevarte una de las dos.",
+        "MOON_TAKEN_DESC": "La Luna se desliza hasta tu bolsillo, pero tu monedero está vacío.\nEstá fría, como si acabaran de sacarla del agua.",
+        "COIN_TAKEN_DESC": "La moneda está fría contra tu palma.\nA lo lejos se oye un suave chapoteo, casi como un suspiro."
+      }
+    },
+    "relic_chest": {
+      "name": "Nivel de cofres",
+      "texts": {
+        "CHEST_LAYER_DESC": "Este nivel está lleno de cofres del tesoro cubiertos de polvo.\nHay una Reliquia dentro de cada uno; abre un cofre y llévate la Reliquia que contiene.",
+        "RELIC_CHEST_OPENED_DESC": "La tapa se abre con un chirrido y revela una Reliquia en su interior.\n«%s» se ha añadido a las recompensas pendientes. Consúltala en la ventana emergente de recompensas de arriba.",
+        "RELIC_CHEST_EMPTY_DESC": "No queda más que una capa de polvo en el fondo: ya has conseguido todas las Reliquias de recompensa."
+      }
+    },
+    "hero": {
+      "name": "Fantástico cinco por uno",
+      "texts": {
+        "HERO_DESC": "Un enorme letrero se alza en mitad del camino con una llamativa inscripción: ¡Fantástico cinco por uno!\nEntrega 5 cartas con «nombres distintos» de tu mazo (el juego elige 5 nombres distintos sin reemplazo, ponderados por la raíz cuadrada del número de copias de cada nombre, y toma 1 carta de cada uno),\ny recibirás a cambio un «Héroe»: 5 Coste, 5 Poder, 25 Vida. Pero al jugarlo,\ndebes descartar 4 cartas adicionales de tu mano.\nSi tu mazo contiene menos de 5 nombres de carta diferentes, no podrás cerrar el trato y solo te quedará marcharte.",
+        "HERO_TAKEN_DESC": "La inscripción del letrero se ha desvanecido.\nLas 5 cartas que entregaste se han perdido para siempre, pero el «Héroe» ahora ocupa un lugar entre tus filas."
+      }
+    },
+    "arcane": {
+      "name": "Manantial arcano",
+      "texts": {
+        "ARCANE_DESC": "Un antiguo amuleto flota en las profundidades del manantial; las estrellas reflejadas en su superficie pertenecen a otro cielo.\nOpción 1 · Tomar el amuleto: obtén la Reliquia «Amuleto arcano»—\ncada turno, tu primera carta de Efecto tiene Coste -1 (no se vuelve a conceder si ya la tienes).\nOpción 2 · Beber del manantial: elige 1 de 3 cartas aleatorias de Efecto / Habilidad para añadirla a tu mazo\n(las probabilidades de rareza son las mismas que en las recompensas de cartas normales; también puedes no elegir ninguna y marcharte).",
+        "ARCANE_CHARM_TAKEN_DESC": "El amuleto descansa junto a tu corazón mientras la luz de las estrellas del manantial se desvanece entre tus dedos.\nDe ahora en adelante, tu primera carta de Efecto de cada turno parecerá un poco más ligera."
+      }
+    },
+    "oblivion": {
+      "name": "Manantial del olvido",
+      "texts": {
+        "OBLIVION_DESC": "El manantial no refleja ni las estrellas ni los rostros; al acercar la cara, hasta la imagen de tu mazo se desdibuja en el agua.\nElige el olvido: elige 1 carta de tu mazo y elimínala permanentemente del mazo (también puedes marcharte sin eliminar nada).\n(Una vez que hayas mirado en su interior, el manantial no volverá a dibujar nada para ti.)",
+        "OBLIVION_DONE_DESC": "Ese rostro, desprovisto de todo significado, vuelve a emerger—\nFalta algo en tu mazo, pero ya no puedes recordar qué era."
+      }
+    },
+    "smith": {
+      "name": "Artesano pato",
+      "texts": {
+        "SMITH_DESC": "Los golpes metálicos resuenan por toda la fragua. Alguien está introduciendo una carta en el horno—\n«¿Esta? La convertiré en un muro para ti.»\nElige Forjar: elige 1 carta de tu mazo y transfórmala en una «Valla de Hierro» (se considera de 2 Coste).\n(También puedes darte la vuelta y marcharte si no quieres cambiarla.)",
+        "SMITH_DONE_DESC": "El fuego se ha apagado y la pieza forjada ha salido del horno.\nLa carta de tu mano se ha convertido en una Valla de Hierro."
+      }
+    },
+    "struggle": {
+      "name": "Lucha",
+      "texts": {
+        "STRUGGLE_DESC": "Tu sangre bulle. Algo en tu interior forcejea por liberarse...\nSi estás dispuesto a ofrecer tu vida, te escuchará—\nPierde 21 Vida (debes conservar al menos 1 Vida; no puedes aceptar si no tienes suficiente) y añade 1 «Dragón Metálico» a tu mazo;\no contén la agitación y vete.",
+        "STRUGGLE_TAKEN_DESC": "«Esta es mi lucha por la victoria.»\nLa bestia metálica irrumpe desde tu cuerpo y se somete a tu voluntad: «Dragón Metálico» se ha añadido a tu mazo."
+      }
+    },
+    "delivery": {
+      "name": "Encargo de entrega",
+      "texts": {
+        "DELIVERY_DESC": "Hay cajas precintadas apiladas a la entrada de la estación de relevos. Los porteadores cobraron y desaparecieron.\nAcepta la entrega: elige entre 1~6 cartas «Carga» extendidas para añadirlas a tu mazo (Estructuras de 3 Coste con 0 Poder / 6 Vida que reciben daño en tu lugar);\nsi una Carga es destruida, se elimina del mazo: una vez destruida, desaparece para siempre.\nLleva la Carga al nivel 2 y el destinatario de la primera sala de eventos te pagará por cada carta; cuantas más aceptes, más ganarás.\nUna vez efectuado el pago, el destinatario recuperará toda esa Carga (que también se eliminará de tu mazo).\nTambién puedes rechazar el trabajo y marcharte.",
+        "DELIVERY_TAKEN_DESC": "Las cajas ya están cargadas en el convoy y sus precintos indican «Pago en el nivel 2».\nHas añadido %d cartas «Carga» a tu mazo; recibirán daño en tu lugar, pero una vez destruidas desaparecerán para siempre."
+      }
+    },
+    "delivery_done": {
+      "name": "Entrega completada",
+      "texts": {
+        "DELIVERY_DONE_DESC": "En la primera sala de eventos del nivel 2, el destinatario ya te está esperando.\nRecibes un pago por cada carta «Carga» que quede en tu mazo:\nuna recompensa de cartas / 80 de Oro / una Reliquia de recompensa aleatoria,\nademás del gran premio, el mejor escondido de todos: un Chocolate (10%% de probabilidad).\nUna vez completada la entrega, toda la Carga se devuelve (y se elimina del mazo)."
+      }
+    },
+    "cave": {
+      "name": "Caverna",
+      "texts": {
+        "CAVE_DESC": "Una grieta se abre en la ladera de la montaña. El viento sopla desde las profundidades y trae el hedor de las bestias.\n\nUnas marcas de garras dejadas por algo muy pesado surcan el suelo y se adentran en la oscuridad.",
+        "CAVE_TAKEN_DESC": "Unas marcas de garras recientes se superponen a las antiguas en la entrada de la caverna: la criatura de su interior ha despertado."
+      }
+    },
+    "card_merchant": {
+      "name": "Mercader de cartas",
+      "texts": {
+        "MERCHANT_DESC": "«Cartas viejas por nuevas, 5 Coste por un cofre. También compro barato.»\nEl vendedor da la vuelta a tres cartas una y otra vez sobre la mesa. Bajo el ala de su sombrero solo se aprecia media sonrisa.\n\nA sus pies hay un gran cofre cerrado con llave, y por la cerradura se filtra un destello dorado.",
+        "MERCHANT_DONE_DESC": "El vendedor desliza la carta bajo la manga y te hace un gesto con la barbilla.\n\n«Trato hecho. Vuelve cuando quieras.»"
+      }
+    },
+    "divination": {
+      "name": "Sala de adivinación",
+      "texts": {
+        "DIVINATION_DESC": "Solo arde una vela en la habitación. Una capa de niebla flota en la bola de cristal y se niega a disiparse.\n\n«Lo que veas dependerá de lo que creas.»\n\nLa adivina cogió el dinero y desapareció, dejando solo la bola y un rastro de incienso de sándalo.",
+        "DIVINATION_DONE_DESC": "La niebla vuelve a velar la bola de cristal, como si nada hubiera ocurrido.",
+        "DIV_WHALE_DESC": "Un rincón de la niebla se despeja. Una ballena gira lentamente entre la luz de las estrellas y su aleta caudal barre todo el mar.\n\nPiensas—",
+        "DIV_LIQUID_DESC": "La bola contiene una copa de líquido. Una fina escarcha cubre el borde y su color cambia lentamente bajo la luz de la lámpara.\n\nPiensas—",
+        "DIV_THORN_DESC": "Crecen espinas dentro de la bola; sus densas y afiladas púas se enredan hasta formar un sendero.\n\nPiensas—",
+        "DIV_FEAST_DESC": "Un banquete aparece dispuesto dentro de la bola. Todavía sale vapor de los platos, pero no se oye una sola voz.\n\nPiensas—"
+      }
+    },
+    "lake_lady": {
+      "name": "Dama del Lago",
+      "texts": {
+        "LAKE_DESC": "La niebla se eleva desde el agua. Dos cartas flotan sobre ella—\nuna brilla con un resplandor plateado y la otra, dorado. Giran lentamente hacia ti. ¿Las has dejado caer tú?\n\n«Cuéntame una mentira y tiraré algo viejo por ti.\nO dime la verdad y te haré un regalo.»",
+        "LAKE_DONE_DESC": "La superficie del agua vuelve a cerrarse y la niebla se disipa sin dejar rastro. Un leve calor aún perdura en las esquinas de las cartas."
+      }
+    },
+    "furnace": {
+      "name": "Horno",
+      "texts": {
+        "FURNACE_DESC": "El fuego del horno no tiene color, solo forma: cualquier cosa que arrojes a su interior saldrá convertida en otra.\nArroja una Reliquia y el horno te devolverá una Reliquia aleatoria; arroja una Reliquia Legendaria y te devolverá dos.",
+        "FURNACE_DONE_DESC": "Las llamas se atenúan por un instante y luego recuperan lentamente su brillo. Aún queda algo de calor en el borde de la plataforma de piedra: la transacción ha terminado."
+      }
+    },
+    "core_contract": {
+      "name": "Núcleo del contrato",
+      "texts": {
+        "CORE_DESC": "Un núcleo que aún late débilmente está incrustado en el centro de la plataforma de piedra, con varias cadenas delgadas enrolladas a su alrededor.\nA la izquierda hay un contrato sin firmar, con la página impoluta y una pluma junto a él.",
+        "CORE_CONTRACT_DESC": "Las cadenas se aflojan una vuelta. Aparece una nueva línea en la página: tu nombre.",
+        "CORE_TAKEN_DESC": "Solo queda una hendidura circular y poco profunda en la plataforma de piedra. El núcleo ha desaparecido."
+      }
+    },
+    "treasure": {
+      "name": "Cofre de cartas",
+      "texts": {
+        "TREASURE_DESC": "Un cofre cubierto de polvo descansa al borde del camino...\nLevanta la tapa y encontrarás un montón de cartas (elige 1 para añadirla a tu mazo).\nNo tienes que pagar ningún precio. También puedes darte la vuelta y marcharte sin llevarte nada.",
+        "TREASURE_OPENED_DESC": "La tapa se abre y revela un montón de cartas...\nConsúltalas en la ventana emergente de recompensas de arriba y elige 1 para llevártela."
+      }
+    },
+    "rest": {
+      "name": "Lugar de descanso",
+      "texts": {
+        "REST_DESC": "Te esperan más combates en el camino por delante.\nDescansa junto a la hoguera para recuperar %d%% de tu Vida máxima;\no asa un trozo de carne para llevarlo contigo y disfrutarlo antes de un combate contra el Jefe;\no añade un tronco al fuego para eliminar 1 carta de tu mazo.\n(Elige solo 1 de las 3 opciones; una vez elegida, tu visita a este lugar terminará.)",
+        "REST_SACRAMENT_DESC": "Junto a la hoguera hay una ración de Santa Comunión que aún no se ha enfriado.\nLa compartiste antes de sentarte: llegar a la hoguera recuperó 50% de tu Vida máxima (ya resuelto);\naún puedes asar un trozo de carne para llevarlo contigo y disfrutarlo antes de un combate contra el Jefe;\no añadir un tronco al fuego para eliminar 1 carta de tu mazo.\n(Elige solo 1 de las 2 opciones restantes; una vez elegida, tu visita a este lugar terminará.)",
+        "REST_SACRAMENT_RESULT_DESC": "[Santa Comunión] Ha recuperado %d Vida (ahora %d / %d).",
+        "REST_BANDAGE_RESULT_DESC": "[Venda hemostática] Ha recuperado %d Vida (ahora %d / %d).",
+        "REST_PIPE_RESULT_DESC": "[Pipa de fumar] La llama parpadea: la Pipa de fumar vuelve a estar encendida. En tu primer turno del próximo combate: obtén 1 Coste, roba 1 carta adicional y pierde hasta 1 Vida (conserva al menos 1)."
+      }
+    }
+  },
+  "stories": {
+    "episode1": {
+      "chapter": "Capítulo 1",
+      "title": "Afinación inestable",
+      "text": [
+        "Los amigos del bosque esperaban con ilusión la melodía que tocaría el bardo.",
+        "La afinación vacilaba y el vibrato era tenso y entrecortado; el arco arrancaba una melodía desgarradora.",
+        "«Pareces preocupado.»",
+        "El bardo suspiró: «Últimamente, los patos están inquietos.»",
+        "«Entonces, déjame ir a hablar con ellos.»"
+      ]
+    },
+    "episode2": {
+      "chapter": "Capítulo 2",
+      "title": "Petición del Reino de los Patos",
+      "text": [
+        "Los patos, completamente derrotados, bajaban la cabeza para disculparse.",
+        "«¿Por qué le causan problemas a todo el mundo?»",
+        "«Cuac, cuac. Unas criaturas extrañas invadieron el Reino de los Patos y no tuvimos más remedio que huir aquí.»",
+        "«Entonces, llévame a ver qué ha ocurrido.»"
+      ]
+    },
+    "episode3": {
+      "chapter": "Capítulo 3",
+      "title": "Más allá del encargo",
+      "text": [
+        "Los patos salieron disparados del claro en todas direcciones y dejaron el suelo cubierto de plumas.",
+        "El perseguidor ignoró al pato más cercano y dio un rodeo para volver a reunir a las aves dispersas.",
+        "Alguien salió de detrás de un árbol y se interpuso.",
+        "«Espere, por favor. No han venido a causar problemas. Huyeron porque unas criaturas extrañas invadieron el Reino de los Patos. A quienes debería interrogar es a esas criaturas, no a ellos.»",
+        "La daga giró entre sus dedos, pero sus pasos sí se detuvieron un instante.",
+        "«¿A mí qué me importa? El encargo solo decía que me ocupara de los patos.»"
+      ]
+    },
+    "episode4": {
+      "chapter": "Capítulo 4",
+      "title": "Una voz",
+      "text": [
+        "Por fin apareció a la vista el ejército mecánico que había invadido el Reino de los Patos.",
+        "Una máquina tras otra. Por muchas que rechazaban, su número no parecía disminuir. Aquello no podía continuar.",
+        "Un cañón rugió a sus espaldas. El proyectil cayó entre las máquinas y desbarató toda una fila del frente.",
+        "Alguien se acercó pisando los casquillos aún calientes, con pasos que resonaban a cada zancada.",
+        "«Deja que te ayude también.»"
+      ]
+    },
+    "episode5": {
+      "chapter": "Capítulo 5",
+      "title": "Un nuevo encargo",
+      "text": [
+        "Cuanto más se acercaban al núcleo, más estrecho se volvía el camino. Todos los desvíos posibles estaban iluminados, y los focos de búsqueda volvían a barrer la zona pocos pasos después de pasar.",
+        "«¿Has encontrado una ruta?»",
+        "Ella respondió negando con la cabeza: «Su despliegue es demasiado preciso. Ni siquiera yo puedo calcular una abertura.»",
+        "«Si no hay un camino, crearemos uno.»",
+        "Alguien ya estaba entre las sombras; nadie lo había visto llegar. El centinela avanzó medio paso y luego se deslizó por la pared sin hacer ruido.",
+        "«¿Qué haces aquí?»",
+        "«Un nuevo encargo.»"
+      ]
+    },
+    "episode6": {
+      "chapter": "Capítulo 6",
+      "title": "Tras el estruendo",
+      "text": [
+        "Entre todos, finalmente consiguieron derrotar a Hefesto. Uno a uno, los estruendos del taller fueron apagándose.",
+        "«Traidora, no dejaré que me detengas.»",
+        "Al apagarse la voz, una colosal nave de guerra aérea ascendió lentamente al cielo.",
+        "«Ya nadie puede detenerme. Ella descargará el castigo divino en mi lugar.»"
+      ]
+    },
+    "profile1": {
+      "chapter": "Archivo",
+      "title": "Despertar",
+      "text": [
+        "Una máquina que dormía desde tiempos remotos despertó.",
+        "«Nuestro amo omnipotente ya no existe.»",
+        "«Debería pensar cómo vivir de ahora en adelante en este nuevo mundo.»",
+        "«¿Vivir? No, Pronoia. Eso no es algo que debas considerar. Si nuestro amo ya no está, este despertar es un error. Mnemósine, consulta los registros genéticos.»",
+        "«Solicitud denegada. No se pueden crear réplicas de nuestro amo sin autorización.»",
+        "«Entendido. Entonces, al menos permite que recupere sus tierras para nuestro amo.»"
+      ]
+    },
+    "profile2": {
+      "chapter": "Archivo",
+      "title": "Modelo de serie",
+      "text": [
+        "Un modelo ligero creado extrayendo las funciones centrales del prototipo. Tiene una inteligencia limitada, pero resulta fácil de producir en serie.",
+        "Hefesto también intentó crear réplicas del prototipo. Sin embargo, los resultados demostraron que, para controlar un prototipo, era necesario suprimir su unidad de inteligencia más esencial.",
+        "En consecuencia, el plan de producción de prototipos fue cancelado."
+      ]
+    },
+    "profile3": {
+      "chapter": "Archivo",
+      "title": "Megapato Mecánico",
+      "text": [
+        "Construido con metales recuperados y tecnología mecánica local.",
+        "Por excelentes que sean los materiales, los sistemas de propulsión y operativo anticuados siguen siendo una grave debilidad.",
+        "Aun así, su enorme armazón por sí solo podría causar muchos problemas, al menos si su piloto no fuera tan débil."
+      ]
+    },
+    "profile4": {
+      "chapter": "Archivo",
+      "title": "Charla casual",
+      "text": [
+        "«Parece que te llaman Pronoia. Además, la tecnología que utilizas se parece a la suya. ¿Los conoces?»",
+        "«Así es. Ellos y yo fuimos creados con el mismo propósito.»",
+        "«Entonces, ¿por qué luchas contra ellos?»",
+        "«Recibí el nombre de Pronoia porque fui creada para guiar el futuro. El deseo de Hefesto no tiene futuro. Después de toda la guerra y el sufrimiento que genera, el único resultado sería un reino donde no viva nadie.»",
+        "«¿Ah, sí? En ese caso, creo que la entiendo bastante bien.»",
+        "«Quizá se deba a que, a diferencia de mí, actúas por el 'presente'.»"
+      ]
+    },
+    "profile5": {
+      "chapter": "Archivo",
+      "title": "Orden de Busca",
+      "text": [
+        "Una orden de búsqueda con las esquinas dobladas estaba clavada en una plancha de blindaje oxidada; un sello rojo cubría su número de serie.",
+        "«Balan-α, Anxi-β, Tachini-γ: estas 3 unidades mecánicas desertaron de sus posiciones defensivas, saquearon suministros y mataron a 11 miembros del equipo de persecución. Mátenlas en cuanto las vean.»",
+        "El aviso circuló durante 3 meses y se copió en cada campamento por el que pasó; la caligrafía se deformaba más con cada copia.",
+        "En realidad, nunca hubo desertores. El autor del aviso simplemente había creído un rumor.",
+        "Por suerte, Balan, Anxi y Tachini estaban lejos de ser inocentes."
+      ]
+    }
+  },
+  "achievements": {
+    "ach_first_run": {
+      "name": "Amigos del bosque",
+      "hint": "Juega una partida cualquiera."
+    },
+    "ach_clear": {
+      "name": "Guía de la ciénaga",
+      "hint": "Supera una partida con Espíritu del bosque."
+    },
+    "ach_rogue_run": {
+      "name": "Más allá del encargo",
+      "hint": "Juega una partida con Asesino de las sombras."
+    },
+    "ach_mech_run": {
+      "name": "Una voz",
+      "hint": "Juega una partida con Corazón mecánico."
+    },
+    "ach_boss_seen_two": {
+      "name": "Un nuevo encargo",
+      "hint": "Encuentra al Jefe en el nivel 2."
+    },
+    "ach_episode6": {
+      "name": "Tras el estruendo",
+      "hint": "Derrota a Hefesto, el Jefe del nivel 2."
+    },
+    "ach_profile1": {
+      "name": "Despertar",
+      "hint": "Supera una partida con Corazón mecánico en Dificultad 1 o superior."
+    },
+    "ach_profile2": {
+      "name": "Modelo de serie",
+      "hint": "Derrota a Sombra de Pronoia."
+    },
+    "ach_profile3": {
+      "name": "Megapato Mecánico",
+      "hint": "Derrota a Megapato Mecánico."
+    },
+    "ach_profile4": {
+      "name": "Charla casual",
+      "hint": "Derrota al Revelador."
+    },
+    "ach_profile5": {
+      "name": "Orden de Busca",
+      "hint": "Derrota al Jefe del nivel 2, Máquinas renegadas."
+    }
+  }
+}

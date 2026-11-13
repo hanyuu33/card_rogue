@@ -249,7 +249,7 @@ func _draw_name(cx: float, cy: float, a: float) -> void:
 func _draw_hint() -> void:
 	var fs := UiTheme.FS_CAPTION
 	var f := UiTheme.font()
-	var hint := "按任意键继续"
+	var hint := GameI18n.ui("shell", "OPENING_CONTINUE_HINT", "按任意键继续")
 	var tw := f.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var a := clampf((_t - 1.0) / 0.4, 0.0, 1.0) * 0.42
 	draw_string(f, Vector2(size.x - tw - 24.0, size.y - 20.0), hint,

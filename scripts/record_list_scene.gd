@@ -53,16 +53,16 @@ func _ready() -> void:
 		add_child(t)
 		t.start()
 	_menu = UiMenu.attach(self, _menu_items, {
-		"back": "继续",
-		"sub": "对战记录",
+		"back": GameI18n.ui("shell", "RECORD_MENU_CONTINUE", "继续"),
+		"sub": GameI18n.ui("shell", "RECORD_MENU_SUBTITLE", "对战记录"),
 	})
 
 
 func _menu_items() -> Array:
 	return [
-		{"text": func(): return "音效：开" if sfx.enabled else "音效：关",
+		{"text": func(): return GameI18n.ui("shell", "RECORD_SOUND_ON", "音效：开") if sfx.enabled else GameI18n.ui("shell", "RECORD_SOUND_OFF", "音效：关"),
 			"fn": _toggle_sound, "keep_open": true},
-		{"text": "返回标题", "fn": _back_to_title},
+		{"text": GameI18n.ui("shell", "RECORD_MENU_BACK_TITLE", "返回标题"), "fn": _back_to_title},
 	]
 
 
@@ -198,20 +198,20 @@ func _back_to_title() -> void:
 
 func _draw() -> void:
 	UiTheme.draw_page(self, UiTheme.bleed_rect(self))   # R519：铺满窗口
-	draw_string(_font_bold, Vector2(0, 62), "对 战 记 录",
+	draw_string(_font_bold, Vector2(0, 62), GameI18n.ui("shell", "RECORD_TITLE", "对 战 记 录"),
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
 	var wins := 0
 	for r: Dictionary in _rows:
 		if str(r.get("result", "")) == "win":
 			wins += 1
 	draw_string(_font, Vector2(0, 94),
-			"共 %d 局 · 通关 %d 局（中断 / 中途放弃也会记在这里）" % [_rows.size(), wins],
+			GameI18n.ui("shell", "RECORD_SUMMARY", "共 %d 局 · 通关 %d 局（中断 / 中途放弃也会记在这里）") % [_rows.size(), wins],
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 	# 左上返回 / 右上清空
 	var back := _back_rect()
 	var hov_back := back.has_point(get_local_mouse_position())
 	UiTheme.draw_action(self, back, false, false, hov_back)
-	draw_string(_font_bold, back.position + Vector2(0, 22), "← 返回标题",
+	draw_string(_font_bold, back.position + Vector2(0, 22), GameI18n.ui("shell", "RECORD_BACK_TITLE", "← 返回标题"),
 			HORIZONTAL_ALIGNMENT_CENTER, back.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	var cl := _clear_rect()
 	var hov_cl := cl.has_point(get_local_mouse_position()) and not _rows.is_empty()
@@ -219,12 +219,12 @@ func _draw() -> void:
 			else UiTheme.PAGE_PAPER), true)
 	draw_rect(cl, Color(0, 0, 0, 0.35), false, 2.0)
 	draw_string(_font_bold, cl.position + Vector2(0, 22),
-			"确认清空？" if _clear_armed else "清空记录",
+			GameI18n.ui("shell", "RECORD_CLEAR_CONFIRM", "确认清空？") if _clear_armed else GameI18n.ui("shell", "RECORD_CLEAR", "清空记录"),
 			HORIZONTAL_ALIGNMENT_CENTER, cl.size.x, UiTheme.FS_LABEL,
 			Color("ffd8d8") if _clear_armed else UiTheme.PAGE_MUTED)
 	if _rows.is_empty():
 		draw_string(_font, Vector2(0, LIST_Y + 40),
-				"还没有记录 —— 从标题「开始对战」打一局，结束后这里会有一行结果。",
+				GameI18n.ui("shell", "RECORD_EMPTY", "还没有记录 —— 从标题「开始对战」打一局，结束后这里会有一行结果。"),
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 		return
 	for i in _max_rows():
@@ -237,7 +237,7 @@ func _draw() -> void:
 	if _rows.size() > _max_rows():
 		# R630：同故事页 / 禁卡页 —— -12 会被纸面九宫格的下边框横切，收到 -36。
 		draw_string(_font, Vector2(0, size.y - 36),
-				"第 %d–%d 条 / 共 %d 条"
+				GameI18n.ui("shell", "RECORD_RANGE", "第 %d–%d 条 / 共 %d 条")
 				% [_scroll + 1, mini(_scroll + _max_rows(), _rows.size()), _rows.size()],
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_CAPTION,
 				UiTheme.PAGE_MUTED)
@@ -284,7 +284,7 @@ func _relic_entries(rec: Dictionary) -> Array:
 			continue
 		var spent := RunRecord.is_spent_in(rec, int(v))
 		# R343：名字另配一色（传奇金橙）—— `col` 仍是左侧圆点的徽章色。
-		out.append({"name": rel.relic_name + ("（已耗尽）" if spent else ""),
+		out.append({"name": (GameI18n.ui("shell", "RECORD_RELIC_SPENT", "%s（已耗尽）") % rel.relic_name) if spent else rel.relic_name,
 				"col": Color("6a7078") if spent else rel.badge_color(),
 				"ncol": Color("8d857a") if spent else rel.name_color(UiTheme.PAGE_INK)})
 	return out
@@ -339,10 +339,10 @@ func _draw_detail() -> void:
 	# 概览两行
 	var seed_v := int(rec.get("seed", 0))
 	draw_string(_font_bold, Vector2(x0, r.position.y + 58.0),
-			"种子：%s" % ("—" if seed_v == 0 else RunState.seed_text_of(seed_v)),
+			GameI18n.ui("shell", "RECORD_SEED", "种子：%s") % ("—" if seed_v == 0 else RunState.seed_text_of(seed_v)),
 			HORIZONTAL_ALIGNMENT_LEFT, 320, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	draw_string(_font, Vector2(x0 + 250.0, r.position.y + 58.0),
-			"角色：%s · 难度 %d · 用时 %s"
+			GameI18n.ui("shell", "RECORD_CLASS_DIFFICULTY_TIME", "角色：%s · 难度 %d · 用时 %s")
 			% [PlayerClass.legacy_id(str(rec.get("class", "?"))),
 			int(rec.get("difficulty", 2)), RunRecord.fmt_secs(int(rec.get("secs", 0)))],
 			HORIZONTAL_ALIGNMENT_LEFT, 640, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
@@ -352,10 +352,10 @@ func _draw_detail() -> void:
 		var mhp := int(rec.get("max_hp", 0))
 		var hp_col := Color("e07a6a") if (res == "lose" or hp <= 0) else UiTheme.PAGE_GREEN
 		draw_string(_font_bold, Vector2(x0, r.position.y + 82.0),
-				"生命 %d / %d" % [hp, mhp],
+				GameI18n.ui("shell", "RECORD_HP", "生命 %d / %d") % [hp, mhp],
 				HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_BODY, hp_col)
 		draw_string(_font, Vector2(x0 + 250.0, r.position.y + 82.0),
-				"金币 %d · 层数 %d · 战斗胜场 %d（精英 %d）"
+				GameI18n.ui("shell", "RECORD_SNAPSHOT_STATS", "金币 %d · 层数 %d · 战斗胜场 %d（精英 %d）")
 				% [int(rec.get("gold", 0)), int(rec.get("layer", 0)),
 				int(rec.get("battles", 0)), int(rec.get("elites", 0))],
 				HORIZONTAL_ALIGNMENT_LEFT, 640, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
@@ -365,10 +365,10 @@ func _draw_detail() -> void:
 		var parts: Array[String] = []
 		for b: Variant in bosses:
 			if b is Dictionary:
-				parts.append("第 %d 层 · %s" % [int((b as Dictionary).get("layer", 0)),
+				parts.append(GameI18n.ui("shell", "RECORD_BOSS_ITEM", "第 %d 层 · %s") % [int((b as Dictionary).get("layer", 0)),
 						str((b as Dictionary).get("name", "?"))])
 		draw_string(_font, Vector2(x0, r.position.y + 102.0),
-				"Boss：" + "　/　".join(parts),
+				GameI18n.ui("shell", "RECORD_BOSS_LIST", "Boss：%s") % "　/　".join(parts),
 				HORIZONTAL_ALIGNMENT_LEFT, 900, UiTheme.FS_LABEL, Color("e8b04a"))
 	# 分隔线
 	var sep_y := r.position.y + 118.0
@@ -376,7 +376,7 @@ func _draw_detail() -> void:
 	var body_y := sep_y + 26.0
 	if not has_snap:
 		draw_string(_font, Vector2(r.position.x, body_y + 30.0),
-				"这条记录是旧版本留下的，没有存最终道具 / 卡组（只记了结果与用时）。",
+				GameI18n.ui("shell", "RECORD_OLD_NO_SNAPSHOT", "这条记录是旧版本留下的，没有存最终道具 / 卡组（只记了结果与用时）。"),
 				HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 		return
 	# ---- 左列：最终道具 ----
@@ -385,12 +385,12 @@ func _draw_detail() -> void:
 			Color("3d424e"), 1.0)
 	var relics := _relic_entries(rec)
 	draw_string(_font_bold, Vector2(x0, body_y),
-			"最终道具（%d）" % relics.size(),
+			GameI18n.ui("shell", "RECORD_FINAL_RELICS", "最终道具（%d）") % relics.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	var ly := body_y + 24.0
 	var max_rel := maxi(1, int((r.end.y - 16.0 - ly) / 22.0))
 	if relics.is_empty():
-		draw_string(_font, Vector2(x0, ly + 14.0), "（这一局没有获得道具）",
+		draw_string(_font, Vector2(x0, ly + 14.0), GameI18n.ui("shell", "RECORD_NO_RELICS", "（这一局没有获得道具）"),
 				HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_LABEL, UiTheme.PAGE_MUTED)
 	else:
 		for i in mini(relics.size(), max_rel):
@@ -402,7 +402,7 @@ func _draw_detail() -> void:
 			ly += 22.0
 		if relics.size() > max_rel:
 			draw_string(_font, Vector2(x0 + 18.0, ly + 14.0),
-					"…还有 %d 件" % (relics.size() - max_rel),
+					GameI18n.ui("shell", "RECORD_MORE_RELICS", "…还有 %d 件") % (relics.size() - max_rel),
 					HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 	# ---- 右列：最终卡组（可滚轮） ----
 	var deck := _deck_entries(rec)
@@ -410,7 +410,7 @@ func _draw_detail() -> void:
 	for e2: Dictionary in deck:
 		total_cards += int(e2["n"])
 	draw_string(_font_bold, Vector2(mid, body_y),
-			"最终卡组（%d 张 / %d 种）" % [total_cards, deck.size()],
+			GameI18n.ui("shell", "RECORD_FINAL_DECK", "最终卡组（%d 张 / %d 种）") % [total_cards, deck.size()],
 			HORIZONTAL_ALIGNMENT_LEFT, 460, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	var dy := body_y + 24.0
 	var row_h := 21.0
@@ -427,13 +427,13 @@ func _draw_detail() -> void:
 		var eid := str(d["ench"])
 		if eid != "":
 			draw_string(_font, Vector2(mid + 300.0, dy + 14.0),
-					"附魔：" + CardData.enchant_name(eid),
+					GameI18n.ui("shell", "RECORD_ENCHANT", "附魔：%s") % CardData.enchant_name(eid),
 					HORIZONTAL_ALIGNMENT_LEFT, 170, UiTheme.FS_CAPTION,
 					CardData.enchant_color(eid))
 		dy += row_h
 	if max_scroll > 0:
 		draw_string(_font, Vector2(mid, r.end.y - 16.0),
-				"卡组 第 %d–%d 行 / 共 %d 行"
+				GameI18n.ui("shell", "RECORD_DECK_RANGE", "卡组 第 %d–%d 行 / 共 %d 行")
 				% [_deck_scroll + 1, mini(_deck_scroll + max_deck, deck.size()), deck.size()],
 				HORIZONTAL_ALIGNMENT_LEFT, 460, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 
@@ -451,20 +451,20 @@ func _draw_row(idx: int, rec: Dictionary) -> void:
 			RunRecord.fmt_time(str(rec.get("time", "?"))),
 			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	draw_string(_font_bold, r.position + Vector2(246, 22),
-			"角色：%s" % PlayerClass.legacy_id(str(rec.get("class", "?"))),
+			GameI18n.ui("shell", "RECORD_ROW_CLASS", "角色：%s") % PlayerClass.legacy_id(str(rec.get("class", "?"))),
 			HORIZONTAL_ALIGNMENT_LEFT, 190, UiTheme.FS_BODY, UiTheme.PAGE_GREEN)
 	draw_string(_font_bold, r.position + Vector2(446, 22),
 			RunRecord.result_label(res, int(rec.get("layer", -1))),
 			HORIZONTAL_ALIGNMENT_LEFT, 140, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	draw_string(_font, r.position + Vector2(596, 22),
-			"难度 %d · 用时 %s" % [int(rec.get("difficulty", 2)),
+			GameI18n.ui("shell", "RECORD_ROW_DIFFICULTY_TIME", "难度 %d · 用时 %s") % [int(rec.get("difficulty", 2)),
 			RunRecord.fmt_secs(int(rec.get("secs", 0)))],
 			HORIZONTAL_ALIGNMENT_LEFT, 280, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	# R630：两行一起收（24/43 → 22/38）。行高 48（ROW_H 56 - 8）要塞 FS_BODY 16 + FS_CAPTION 12
 	# 两行，第二行基线下探到 43 时字底已经贴住下框线（用户口径「可能压框」）。
 	# 行距保持 16，底部留 7（原来 5），第一行顶部留 10。
 	draw_string(_font, r.position + Vector2(18, 38),
-			"结束于 %s" % RunRecord.fmt_time(str(rec.get("end", ""))),
+			GameI18n.ui("shell", "RECORD_ROW_END_TIME", "结束于 %s") % RunRecord.fmt_time(str(rec.get("end", ""))),
 			HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 	# R261：种子码也列在列表行上（不用点进详情就能抄下来复现）
 	var row_seed := int(rec.get("seed", 0))

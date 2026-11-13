@@ -1,0 +1,23 @@
+{
+ "version": 1,
+ "lang": "es",
+ "source": "traps.json",
+ "traps": {
+  "7001": {
+   "name": "Bomba Alquímica",
+   "desc": "Colócala en una casilla vacía del campo de batalla. Cuando un enemigo la pisa, le inflige 18 de daño; después, la trampa desaparece."
+  },
+  "7002": {
+   "name": "Trampa de Hielo",
+   "desc": "Colócala en una casilla vacía del campo de batalla. Cuando un enemigo la pisa, le inflige 2 de daño y lo congela durante un turno; después, la trampa desaparece."
+  },
+  "7003": {
+   "name": "Frasco de Veneno",
+   "desc": "Colócala en una casilla vacía del campo de batalla. Cuando un enemigo la pisa, le inflige 8 de daño y lo envenena; después, recibe 8 de daño más al final de cada turno enemigo, con 3 resoluciones en total (según las mismas reglas que Ciénaga Venenosa). Después, la trampa desaparece."
+  },
+  "7004": {
+   "name": "Trampa Perforante",
+   "desc": "Colócala en una casilla vacía del campo de batalla. Cuando un enemigo la pisa, le inflige 10 de daño y lo inmoviliza durante un turno; después, la trampa desaparece."
+  }
+ }
+}

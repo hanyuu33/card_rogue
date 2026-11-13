@@ -286,15 +286,15 @@ static func result_label(result: String, layer: int = -1) -> String:
 	match result:
 		"win":
 			if layer >= 0 and layer < GameLayers.LAYER_THREE:
-				return "胜利？"
-			return "通关"
+				return GameI18n.ui("shell", "RUN_RECORD_VICTORY_QUESTION", "胜利？")
+			return GameI18n.ui("shell", "RUN_RECORD_WIN", "通关")
 		"lose":
-			return "失败"
+			return GameI18n.ui("shell", "RUN_RECORD_LOSE", "失败")
 		"quit":
-			return "中途放弃"
+			return GameI18n.ui("shell", "RUN_RECORD_QUIT", "中途放弃")
 		"interrupted":
-			return "中断"
-	return "未结束"
+			return GameI18n.ui("shell", "RUN_RECORD_INTERRUPTED", "中断")
+	return GameI18n.ui("shell", "RUN_RECORD_UNFINISHED", "未结束")
 
 
 static func result_color(result: String) -> Color:
@@ -321,8 +321,8 @@ static func fmt_secs(secs: int) -> String:
 		return "—"
 	var m := secs / 60
 	if m <= 0:
-		return "%d 秒" % secs
-	return "%d 分 %d 秒" % [m, secs % 60]
+		return GameI18n.ui("shell", "RUN_RECORD_SECONDS", "%d 秒") % secs
+	return GameI18n.ui("shell", "RUN_RECORD_MINUTES_SECONDS", "%d 分 %d 秒") % [m, secs % 60]
 
 
 # ------------------------------------------------------------ 落盘

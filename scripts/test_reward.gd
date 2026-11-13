@@ -25,6 +25,9 @@ func _mk(id: int, name: String, rarity: int) -> CardData:
 
 
 func _init() -> void:
+	# R668：本套件含中文显示断言；只固定当前进程，不写玩家设置。
+	GameSettings.ensure_loaded()
+	GameSettings.language = "zh"
 	# R346：测试进程绝不许写玩家真实档案
 	ProfileData.set_test_mode()
 	# R378：存档也换独立文件 —— 否则跑一次测试就把玩家正在打的那一局删了

@@ -133,7 +133,7 @@ func draw(cv: CanvasItem, now_ms: int, font: Font, font_bold: Font) -> void:
 		cv.draw_string(font_bold, Vector2(base.x - w * 0.5, base.y), line,
 				HORIZONTAL_ALIGNMENT_CENTER, w, 18, Color(1.0, 0.95, 0.82, a5))
 		cv.draw_string(font, Vector2(base.x - w * 0.5, base.y + 22.0),
-				"源数之力 · 卡牌已被改写", HORIZONTAL_ALIGNMENT_CENTER, w, 13,
+				GameI18n.ui("shared", "CARD_MORPH_COMPLETE", "源数之力 · 卡牌已被改写"), HORIZONTAL_ALIGNMENT_CENTER, w, 13,
 				Color(0.72, 0.70, 0.80, a5))
 
 

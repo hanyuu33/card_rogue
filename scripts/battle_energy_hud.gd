@@ -35,12 +35,16 @@ static func draw(canvas: CanvasItem, font: Font, current: int, maximum: int, rec
 	canvas.draw_string(font, Vector2(x, baseline), main, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ink)
 	x += font.get_string_size(main, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 3
 	canvas.draw_string(font, Vector2(x, baseline), "/%d" % maximum, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, UiTheme.PAGE_MUTED)
-	canvas.draw_string(font, rect.position + Vector2(0, 96), "可用费用", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 12, UiTheme.PAGE_INK)
+	var available := GameI18n.ui("battle", "BATTLE_ENERGY_AVAILABLE", "可用费用")
+	var available_fs := 12
+	while available_fs > 8 and font.get_string_size(available, HORIZONTAL_ALIGNMENT_LEFT, -1, available_fs).x > rect.size.x - 8:
+		available_fs -= 1
+	canvas.draw_string(font, rect.position + Vector2(0, 96), available, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, available_fs, UiTheme.PAGE_INK)
 	if charge > 0:
-		var text := "蓄力%d · 技能×%d" % [charge, charge + 1]
+		var text := GameI18n.ui("battle", "BATTLE_ENERGY_CHARGE", "蓄力%d · 技能×%d") % [charge, charge + 1]
 		var status_fs := 10
 		while status_fs > 8 and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, status_fs).x > rect.size.x - 12:
 			status_fs -= 1
 		canvas.draw_string(font, rect.position + Vector2(0, 111), text, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, status_fs, UiTheme.PAGE_INK)
 	if dodge:
-		canvas.draw_string(font, rect.position + Vector2(0, 124), "闪躲：友军嘲讽", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 10, UiTheme.PAGE_INK)
+		canvas.draw_string(font, rect.position + Vector2(0, 124), GameI18n.ui("battle", "BATTLE_ENERGY_DODGE", "闪躲：友军嘲讽"), HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 10, UiTheme.PAGE_INK)

@@ -90,4 +90,4 @@ func _draw_top_hint(cv: CanvasItem) -> void:
 	var font := UiTheme.font_bold()
 	var fs := 18
 	cv.draw_string(font, Vector2(cx, r.get_center().y + font.get_ascent(fs) * 0.5),
-			"▲ 上滑查看", HORIZONTAL_ALIGNMENT_CENTER, pw, fs, Color("ffe6a8"))
+			GameI18n.ui("shared", "INFO_CLIP_SCROLL_UP", "▲ 上滑查看"), HORIZONTAL_ALIGNMENT_CENTER, pw, fs, Color("ffe6a8"))

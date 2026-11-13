@@ -124,7 +124,7 @@ func _process(_delta: float) -> void:
 
 func _refresh_btn() -> void:
 	_shown_n = RunState.deck_ids.size()
-	_btn.text = "牌库 %d" % _shown_n
+	_btn.text = GameI18n.ui("map", "DECK_VIEWER_BUTTON", "牌库 %d") % _shown_n
 
 
 func _toggle() -> void:
@@ -248,15 +248,15 @@ func _on_panel_draw() -> void:
 	if _detail >= 0:
 		_detail = clampi(_detail, 0, n - 1)
 		_panel.draw_string(_font_bold, Vector2(px + 20, py + 32),
-				"卡牌详情（左键点空白处返回卡组）",
+				GameI18n.ui("map", "DECK_VIEWER_DETAIL_TITLE", "卡牌详情（左键点空白处返回卡组）"),
 				HORIZONTAL_ALIGNMENT_LEFT, pw - 40, UiTheme.FS_BODY, UiTheme.INK_800)
 		_draw_detail(merged, L)
 		return
 	_panel.draw_string(_font_bold, Vector2(px + 20, py + 32),
-			"我的卡组（共 %d 张 · 相同卡合并）" % RunState.deck_ids.size(),
+			GameI18n.ui("map", "DECK_VIEWER_GRID_TITLE", "我的卡组（共 %d 张 · 相同卡合并）") % RunState.deck_ids.size(),
 			HORIZONTAL_ALIGNMENT_LEFT, pw - 40, UiTheme.FS_BODY, UiTheme.INK_800)
 	if n == 0:
-		_panel.draw_string(_font, Vector2(px + 20, py + 80), "卡组是空的。",
+		_panel.draw_string(_font, Vector2(px + 20, py + 80), GameI18n.ui("map", "DECK_VIEWER_EMPTY", "卡组是空的。"),
 				HORIZONTAL_ALIGNMENT_LEFT, 300, UiTheme.FS_LABEL, UiTheme.INK_500)
 		return
 	var cols: int = L["cols"]
@@ -284,7 +284,7 @@ func _on_panel_draw() -> void:
 	# 滚动提示
 	if max_scroll > 0:
 		_panel.draw_string(_font, Vector2(px + pw - 300, py + ph - 12),
-				"第 %d/%d 屏（滚轮或按住拖动翻页）" % [skip_rows + 1, int(max_scroll) + 1],
+				GameI18n.ui("map", "DECK_VIEWER_PAGE_HINT", "第 %d/%d 屏（滚轮或按住拖动翻页）") % [skip_rows + 1, int(max_scroll) + 1],
 				HORIZONTAL_ALIGNMENT_LEFT, 240, UiTheme.FS_CAPTION, UiTheme.INK_500)
 		# R405：▲ / ▼ 兜底按钮 —— 触屏上最可靠的一手（拖动会被某些设备吞掉）
 		var btns := _page_btns()
@@ -353,8 +353,8 @@ func _draw_detail(merged: Array, L: Dictionary) -> void:
 			UiTheme.fit_font_size(_font_bold, c.card_name, w, 40.0, UiTheme.FS_TITLE, 16),
 			UiTheme.INK_900)
 	y += 36.0
-	var fee_txt := "X 费" if c.x_cost else "%d 费" % c.cost
-	var meta_txt := "%s · %s · %s · %s" % [c.kind, c.card_class, c.rarity_name(), fee_txt]
+	var fee_txt := GameI18n.ui("map", "DECK_VIEWER_X_COST", "X 费") if c.x_cost else GameI18n.ui("map", "DECK_VIEWER_COST", "%d 费") % c.cost
+	var meta_txt := GameI18n.ui("map", "DECK_VIEWER_META_TEMPLATE", "%s · %s · %s · %s") % [GameI18n.source(c.kind), GameI18n.class_name_of(c.card_class), c.rarity_name(), fee_txt]
 	_panel.draw_string(_font, Vector2(x, y), meta_txt,
 			HORIZONTAL_ALIGNMENT_LEFT, w,
 			UiTheme.fit_font_size(_font, meta_txt, w, 30.0, UiTheme.FS_LABEL, 10),
@@ -364,7 +364,7 @@ func _draw_detail(merged: Array, L: Dictionary) -> void:
 	# 否则「猎杀 25 伤害（长到 31）」的成长在详情页会没有落点。
 	var st := CardFace.stats_line(c)
 	if c.kind == "技能" and c.value > 0:
-		st = "造成 %d 点伤害" % c.value
+		st = GameI18n.ui("map", "DECK_VIEWER_SKILL_DAMAGE", "造成 %d 点伤害") % c.value
 	_panel.draw_string(_font, Vector2(x, y), st,
 			HORIZONTAL_ALIGNMENT_LEFT, w,
 			UiTheme.fit_font_size(_font, st, w, 38.0, UiTheme.FS_LABEL, 10),
@@ -375,13 +375,13 @@ func _draw_detail(merged: Array, L: Dictionary) -> void:
 	if gt != "":
 		_panel.draw_rect(Rect2(x, y - 20.0, w, 56.0), Color(0.14, 0.42, 0.22, 0.10), true)
 		_panel.draw_rect(Rect2(x, y - 20.0, 3.0, 56.0), GROW_INK, true)
-		var gt_line := "本局永久成长　%s" % gt
+		var gt_line := GameI18n.ui("map", "DECK_VIEWER_GROWTH", "本局永久成长　%s") % gt
 		_panel.draw_string(_font_bold, Vector2(x + 12.0, y + 2.0), gt_line,
 				HORIZONTAL_ALIGNMENT_LEFT, w - 20.0,
 				UiTheme.fit_font_size(_font_bold, gt_line, w - 20.0, 22.0,
 						UiTheme.FS_LABEL, 10), GROW_INK)
 		_panel.draw_string(_font, Vector2(x + 12.0, y + 26.0),
-				"跨战斗保留 · 随存档走 · 新开一局才清空",
+				GameI18n.ui("map", "DECK_VIEWER_GROWTH_NOTE", "跨战斗保留 · 随存档走 · 新开一局才清空"),
 				HORIZONTAL_ALIGNMENT_LEFT, w - 20.0, UiTheme.FS_CAPTION, UiTheme.INK_500)
 		y += 56.0
 	else:
@@ -406,13 +406,13 @@ func _draw_detail(merged: Array, L: Dictionary) -> void:
 			y += lh
 	y += 12.0
 	y = minf(y, py + ph - 28.0)   # R602：最后一行永远留在框内（别压到面板下边框）
-	var cnt_txt := "卡组中同名同状态共 %d 张" % cnt
+	var cnt_txt := GameI18n.ui("map", "DECK_VIEWER_CARD_COUNT", "卡组中同名同状态共 %d 张") % cnt
 	_panel.draw_string(_font, Vector2(x, y), cnt_txt,
 			HORIZONTAL_ALIGNMENT_LEFT, w,
 			UiTheme.fit_font_size(_font, cnt_txt, w, 26.0, UiTheme.FS_LABEL, 10),
 			UiTheme.INK_600)
 	_panel.draw_string(_font, Vector2(px + pw - 300.0, py + ph - 12.0),
-			"左键点空白返回 · 右键关闭",
+			GameI18n.ui("map", "DECK_VIEWER_DETAIL_FOOTER", "左键点空白返回 · 右键关闭"),
 			HORIZONTAL_ALIGNMENT_LEFT, 280.0, UiTheme.FS_CAPTION, UiTheme.INK_500)
 
 

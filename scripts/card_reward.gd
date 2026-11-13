@@ -27,7 +27,8 @@ const CHOICES := 3
 
 
 static func type_label(reward_type: String) -> String:
-	return TYPE_LABELS.get(reward_type, reward_type)
+	var fallback := str(TYPE_LABELS.get(reward_type, reward_type))
+	return GameI18n.ui("reward", "REWARD_TYPE_" + reward_type.to_upper(), fallback)
 
 
 ## 从候选池按稀有度权重抽 count 张互不重名的卡。

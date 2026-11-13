@@ -158,7 +158,7 @@ static func exists(layer: int) -> bool:
 static func layer_name(layer: int) -> String:
 	## 层名（未配置时退回「第 N 层」）。
 	var cfg: Variant = LAYERS.get(layer, null)
-	return str(cfg["name"]) if cfg != null else "第 %d 层" % layer
+	return GameI18n.source(str(cfg["name"])) if cfg != null else GameI18n.ui("shared", "LAYER_FALLBACK_NAME", "第 %d 层") % layer
 
 
 static func content_layers(layer: int) -> Array[int]:
@@ -219,7 +219,7 @@ static func event_kinds(layer: int) -> Array[String]:
 
 
 static func event_name(kind: String) -> String:
-	return str(EVENT_NAMES.get(kind, kind))
+	return GameI18n.source(str(EVENT_NAMES.get(kind, kind)))
 
 
 ## R575（用户口径）：飞行器**不消耗巧克力**；巧克力见底（入夜）时根本遇不到这个事件。

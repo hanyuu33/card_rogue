@@ -70,7 +70,7 @@
   },
   "8006": {
    "name": "Shadow Cat",
-   "effect_text": "When played, if this is the 3rd card you have played this turn, add a random Skill card from your Deck to your Hand."
+   "effect_text": "When played, if this is the 3rd card you have played this turn, add a random Skill card from your Draw Pile to your Hand."
   },
   "8007": {
    "name": "Shadow Fiend",
@@ -78,7 +78,7 @@
   },
   "8008": {
    "name": "Ghost",
-   "effect_text": "At the start of your turn, Destroy this card. When this card is Destroyed, add a random Skill card from your Deck to your Hand."
+   "effect_text": "At the start of your turn, Destroy this card. When this card is Destroyed, add a random Skill card from your Draw Pile to your Hand."
   },
   "8009": {
    "name": "Shadowlurker",
@@ -139,11 +139,11 @@
   },
   "8030": {
    "name": "Overload",
-   "effect_text": "Randomly choose an Ally in your Deck that **does not have \"act twice per turn\"** and grant it \"act twice per turn\". If there is no such Ally in the Deck, the effect fizzles."
+   "effect_text": "Randomly choose an Ally in your Draw Pile that **does not have \"act twice per turn\"** and grant it \"act twice per turn\". If there is no such Ally in the Draw Pile, the effect fizzles."
   },
   "8031": {
    "name": "Mass Upgrade",
-   "effect_text": "All **Allies and Structures** in your **Hand and Deck** gain an Upgrade: +3 Health. If there is no Ally or Structure in either place, the effect fizzles."
+   "effect_text": "All **Allies and Structures** in your **Hand and Draw Pile** gain an Upgrade: +3 Health. If there is no Ally or Structure in either place, the effect fizzles."
   },
   "8032": {
    "name": "Watchtower",
@@ -151,7 +151,7 @@
   },
   "8033": {
    "name": "Energy Barrier",
-   "effect_text": "Randomly Upgrade an Ally or Structure in your Deck that **does not already have Energy Barrier**, making **the first damage it takes become 0**. Then draw 3 cards."
+   "effect_text": "Randomly Upgrade an Ally or Structure in your Draw Pile that **does not already have Energy Barrier**, making **the first damage it takes become 0**. Then draw 3 cards."
   },
   "8034": {
    "name": "Bastion",
@@ -211,7 +211,7 @@
   },
   "8048": {
    "name": "Production Order",
-   "effect_text": "Add two \"Chassis\" to your Deck (draw pile); those two cards gain an Upgrade: +1 Power and +4 Health."
+   "effect_text": "Add two \"Chassis\" to your Draw Pile (draw pile); those two cards gain an Upgrade: +1 Power and +4 Health."
   },
   "8049": {
    "name": "Dismantle",
@@ -279,7 +279,7 @@
   },
   "8066": {
    "name": "Load Shedding",
-   "effect_text": "Choose a card in your Deck and **Banish** it (removed from this battle: it goes to neither your Hand nor the Discard Pile). **Draw an extra card at the start of your next turn**."
+   "effect_text": "Choose a card in your Draw Pile and **Banish** it (removed from this battle: it goes to neither your Hand nor the Discard Pile). **Draw an extra card at the start of your next turn**."
   },
   "8067": {
    "name": "Splitting Shade",
@@ -331,7 +331,7 @@
   },
   "8079": {
    "name": "Surprise Waybill",
-   "effect_text": "At the start of your turn, choose a card in your Deck, transform it into a random card and add it to your Hand."
+   "effect_text": "At the start of your turn, choose a card in your Draw Pile, transform it into a random card and add it to your Hand."
   },
   "8080": {
    "name": "Painting Robot",
@@ -488,7 +488,7 @@
   },
   "9034": {
    "name": "Red Fox",
-   "effect_text": "After use, draw a random Skill card from your Deck; that card costs -1 this turn."
+   "effect_text": "After use, draw a random Skill card from your Draw Pile; that card costs -1 this turn."
   },
   "9035": {
    "name": "Coordinated Attack",
@@ -536,7 +536,7 @@
   },
   "9046": {
    "name": "Giant Rat",
-   "effect_text": "After use, add the lowest-Cost Ally from your Deck to your Hand."
+   "effect_text": "After use, add the lowest-Cost Ally from your Draw Pile to your Hand."
   },
   "9047": {
    "name": "Mechanical Mega Duck",
@@ -576,7 +576,7 @@
   },
   "9056": {
    "name": "Mirror Image",
-   "effect_text": "The first time you use an Effect card each turn, add a copy of it to your Deck and draw a card. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "The first time you use an Effect card each turn, add a copy of it to your Draw Pile and draw a card. Multiple copies of this card in the Effect Zone do not stack."
   },
   "9057": {
    "name": "Deterrence",
@@ -624,7 +624,7 @@
   },
   "9068": {
    "name": "Water Elemental",
-   "effect_text": "This card's Cost is -1 for each Effect card on your side of the field. On Use: add an Effect card from your Deck to your Hand; its Cost is reduced by 2."
+   "effect_text": "This card's Cost is -1 for each Effect card on your side of the field. On Use: add an Effect card from your Draw Pile to your Hand; its Cost is reduced by 2."
   },
   "9069": {
    "name": "Duck Nest",
@@ -644,7 +644,7 @@
   },
   "9073": {
    "name": "Owl",
-   "effect_text": "On Use: add a random Effect card from your Deck to your Hand."
+   "effect_text": "On Use: add a random Effect card from your Draw Pile to your Hand."
   },
   "9074": {
    "name": "Sprite",
@@ -696,7 +696,7 @@
   },
   "9087": {
    "name": "Flurry",
-   "effect_text": "Deal 4 damage to a target, then add a random 0-cost Skill card from your Deck to your Hand."
+   "effect_text": "Deal 4 damage to a target, then add a random 0-cost Skill card from your Draw Pile to your Hand."
   },
   "9088": {
    "name": "Daze",
@@ -736,7 +736,7 @@
   },
   "9097": {
    "name": "Foresight",
-   "effect_text": "Choose one: add a 0-cost Skill card from your Discard Pile to your Hand; or add a random Skill card with non-zero Cost from your Deck to your Hand. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Choose one: add a 0-cost Skill card from your Discard Pile to your Hand; or add a random Skill card with non-zero Cost from your Draw Pile to your Hand. Dimensional: Banished after being played; does not go to the Discard Pile."
   },
   "9098": {
    "name": "Defy Fate",
@@ -816,7 +816,7 @@
   },
   "9122": {
    "name": "Focus",
-   "effect_text": "**Choose 2 cards** from your Deck; those 2 cards are **Banished** for this battle (they go to neither your Hand nor the Discard Pile)."
+   "effect_text": "**Choose 2 cards** from your Draw Pile; those 2 cards are **Banished** for this battle (they go to neither your Hand nor the Discard Pile)."
   },
   "9123": {
    "name": "Duck Assassin",
@@ -840,11 +840,11 @@
   },
   "9131": {
    "name": "Mass-Produced Onyae",
-   "effect_text": "At the start of your turn, add an \"Opening\" (2-cost Curse, no effect when played) to the opponent's Deck."
+   "effect_text": "At the start of your turn, add an \"Opening\" (2-cost Curse, no effect when played) to the opponent's Draw Pile."
   },
   "9132": {
    "name": "Onyae",
-   "effect_text": "May act twice per turn. At the start of your turn, add an \"Opening\" (2-cost Curse, no effect when played) to the opponent's Deck."
+   "effect_text": "May act twice per turn. At the start of your turn, add an \"Opening\" (2-cost Curse, no effect when played) to the opponent's Draw Pile."
   },
   "9133": {
    "name": "Mass-Produced Hecatoncheires",
@@ -968,15 +968,15 @@
   },
   "9166": {
    "name": "Cluster Battery",
-   "effect_text": "On Play: add two \"Charged Bombardment\" to your Deck. Each time it gains an Upgrade, add a \"Charged Bombardment\" from your Deck to your Hand. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+   "effect_text": "On Play: add two \"Charged Bombardment\" to your Draw Pile. Each time it gains an Upgrade, add a \"Charged Bombardment\" from your Draw Pile to your Hand. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
   },
   "9167": {
    "name": "Merge",
-   "effect_text": "Choose a \"Chassis\" in your Deck and **Banish** it (removed from this battle); give a friendly Ally or Structure on the field an Upgrade: its Power and Health each increase by that Chassis's values."
+   "effect_text": "Choose a \"Chassis\" in your Draw Pile and **Banish** it (removed from this battle); give a friendly Ally or Structure on the field an Upgrade: its Power and Health each increase by that Chassis's values."
   },
   "9168": {
    "name": "Wish",
-   "effect_text": "Choose a card from your Deck and add it to your Hand. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Choose a card from your Draw Pile and add it to your Hand. Dimensional: Banished after being played; does not go to the Discard Pile."
   },
   "9169": {
    "name": "Sword of Flames",
@@ -1000,7 +1000,7 @@
   },
   "9174": {
    "name": "Eliminate",
-   "effect_text": "Choose an Ally or Structure card from your Deck and transform it into a \"Chassis\". Draw 4 cards."
+   "effect_text": "Choose an Ally or Structure card from your Draw Pile and transform it into a \"Chassis\". Draw 4 cards."
   },
   "9175": {
    "name": "Funeral",
@@ -1008,7 +1008,7 @@
   },
   "9176": {
    "name": "Instinct",
-   "effect_text": "Play 3 random Skill cards with Cost 1 or less from your Deck."
+   "effect_text": "Play 3 random Skill cards with Cost 1 or less from your Draw Pile."
   },
   "9177": {
    "name": "Pet Duck",
@@ -1040,7 +1040,7 @@
   },
   "9184": {
    "name": "Inventory Sorting",
-   "effect_text": "Randomly transform two cards in your Deck into other random cards, one each."
+   "effect_text": "Randomly transform two cards in your Draw Pile into other random cards, one each."
   },
   "9185": {
    "name": "Paralysis",
@@ -1156,7 +1156,7 @@
   },
   "9220": {
    "name": "Position Defender",
-   "effect_text": "When a friendly Ally with \"Overload\" dies from Overload, place a copy of this card from your Deck, Hand or Discard Pile onto its original position."
+   "effect_text": "When a friendly Ally with \"Overload\" dies from Overload, place a copy of this card from your Draw Pile, Hand or Discard Pile onto its original position."
   },
   "9221": {
    "name": "Combiner",
@@ -1212,7 +1212,7 @@
   },
   "9234": {
    "name": "Dread Harvest",
-   "effect_text": "Deal 15 damage to a target. In the same turn, after you deal damage to a Marked target for the 3rd time (damage dealt by this card itself does not count), add a \"Dread Harvest\" from your Deck or Discard Pile to your Hand with Cost -1; its original Cost returns after it leaves your Hand."
+   "effect_text": "Deal 15 damage to a target. In the same turn, after you deal damage to a Marked target for the 3rd time (damage dealt by this card itself does not count), add a \"Dread Harvest\" from your Draw Pile or Discard Pile to your Hand with Cost -1; its original Cost returns after it leaves your Hand."
   },
   "9235": {
    "name": "Earth Elemental",
@@ -1220,7 +1220,7 @@
   },
   "9236": {
    "name": "Fire Elemental",
-   "effect_text": "On Play: purge all Curses from your Deck, Hand and Discard Pile; for each Curse purged, deal 2 damage to a random enemy."
+   "effect_text": "On Play: purge all Curses from your Draw Pile, Hand and Discard Pile; for each Curse purged, deal 2 damage to a random enemy."
   },
   "9237": {
    "name": "Balan-Alpha",

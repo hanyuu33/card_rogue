@@ -167,7 +167,7 @@ class Discoverer:
 				var key := "room:%d" % port
 				if not rooms.has(key):
 					rooms[key] = {"host": ip, "port": port,
-							"name": str(data.get("name", "未命名房间"))}
+							"name": str(data.get("name", GameI18n.ui("shared", "NET_UNNAMED_ROOM", "未命名房间")))}
 
 	func done() -> bool:
 		return Time.get_ticks_msec() >= _deadline

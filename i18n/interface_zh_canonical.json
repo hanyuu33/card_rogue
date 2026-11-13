@@ -1931,6 +1931,46 @@
         "source": "scripts/gallery_scene.gd:596",
         "zh": "需要选择目标"
       },
+      "GALLERY_TAB_PLAYER": {
+        "source": "scripts/gallery_scene.gd:113",
+        "zh": "玩家卡牌图鉴"
+      },
+      "GALLERY_TAB_ENEMY": {
+        "source": "scripts/gallery_scene.gd:114",
+        "zh": "敌人图鉴"
+      },
+      "GALLERY_FILTER_KIND": {
+        "source": "scripts/gallery_scene.gd:115",
+        "zh": "种类"
+      },
+      "GALLERY_FILTER_COST": {
+        "source": "scripts/gallery_scene.gd:116",
+        "zh": "费用"
+      },
+      "GALLERY_FILTER_CLASS": {
+        "source": "scripts/gallery_scene.gd:117",
+        "zh": "职业"
+      },
+      "GALLERY_SEARCH_TITLE": {
+        "source": "scripts/gallery_scene.gd:118",
+        "zh": "搜索"
+      },
+      "GALLERY_SEARCH_PLACEHOLDER": {
+        "source": "scripts/gallery_scene.gd:119",
+        "zh": "输入卡名 / 效果文…"
+      },
+      "EVENT_MENU_BACK": {
+        "source": "scripts/event_scene.gd:1931",
+        "zh": "返回事件"
+      },
+      "EVENT_MENU_SUBTITLE": {
+        "source": "scripts/event_scene.gd:1932",
+        "zh": "事件"
+      },
+      "EVENT_TOP_TITLE": {
+        "source": "scripts/event_scene.gd:1936",
+        "zh": "事  件"
+      },
       "RELIC_VIEWER_BUTTON_OVERFLOW": {
         "source": "scripts/relic_viewer.gd:203",
         "zh": "道具 %d ▾"
@@ -1942,6 +1982,296 @@
       "RELIC_VIEWER_SPENT_PREFIX": {
         "source": "scripts/relic_viewer.gd:231",
         "zh": "已耗尽 · "
+      }
+    },
+    "battle": {
+      "BATTLE_LOG": {
+        "source": "scripts/battle_scene.gd:931",
+        "zh": "记录"
+      },
+      "BATTLE_FULL_DECK": {
+        "source": "scripts/battle_scene.gd:933",
+        "zh": "完整卡组"
+      },
+      "BATTLE_FULL_DECK_HINT": {
+        "source": "scripts/battle_scene.gd:934",
+        "zh": "查看本局完整卡组（包括已抽到、弃牌和消耗的构筑卡）"
+      },
+      "BATTLE_MAP": {
+        "source": "scripts/battle_scene.gd:935",
+        "zh": "地图"
+      },
+      "BATTLE_END_TURN": {
+        "source": "scripts/battle_scene.gd:936",
+        "zh": "回合结束"
+      },
+      "BATTLE_FLEE": {
+        "source": "scripts/battle_scene.gd:937",
+        "zh": "逃跑"
+      },
+      "BATTLE_TURN_OVER": {
+        "source": "scripts/battle_scene.gd:17664",
+        "zh": "对局结束"
+      },
+      "BATTLE_TURN_SELF": {
+        "source": "scripts/battle_scene.gd:17666",
+        "zh": "我方回合 · 第 %d 回合"
+      },
+      "BATTLE_TURN_OPPONENT": {
+        "source": "scripts/battle_scene.gd:17674",
+        "zh": "对手回合"
+      },
+      "BATTLE_TURN_NET_OPPONENT": {
+        "source": "scripts/battle_scene.gd:17668",
+        "zh": "%s 行动中"
+      },
+      "BATTLE_LEVEL": {
+        "source": "scripts/battle_scene.gd:15538",
+        "zh": "关卡：%s"
+      },
+      "BATTLE_FIELD": {
+        "source": "scripts/battle_scene.gd:15567",
+        "zh": "战场"
+      },
+      "BATTLE_HP_SELF": {
+        "source": "scripts/battle_scene.gd:15586",
+        "zh": "我方生命"
+      },
+      "BATTLE_HP_OPPONENT": {
+        "source": "scripts/battle_scene.gd:15586",
+        "zh": "敌方生命"
+      },
+      "BATTLE_ENEMY_EFFECTS": {
+        "source": "scripts/battle_scene.gd:15741",
+        "zh": "敌方效果 %d"
+      },
+      "BATTLE_RELICS": {
+        "source": "scripts/battle_scene.gd:15878",
+        "zh": "道具 %d"
+      },
+      "BATTLE_DRAW_PILE": {
+        "source": "scripts/battle_scene.gd:16188",
+        "zh": "抽牌库"
+      },
+      "BATTLE_DISCARD_PILE": {
+        "source": "scripts/battle_scene.gd:16193",
+        "zh": "弃牌"
+      },
+      "BATTLE_VOID": {
+        "source": "scripts/battle_scene.gd:16198",
+        "zh": "消耗"
+      },
+      "BATTLE_HAND": {
+        "source": "scripts/battle_scene.gd:16260",
+        "zh": "手牌 %d/%d"
+      },
+      "BATTLE_VICTORY_TITLE": {
+        "source": "scripts/battle_scene.gd:7818",
+        "zh": "战斗胜利"
+      },
+      "BATTLE_ENERGY_AVAILABLE": {
+        "source": "scripts/battle_energy_hud.gd:38",
+        "zh": "可用费用"
+      },
+      "BATTLE_ENERGY_CHARGE": {
+        "source": "scripts/battle_energy_hud.gd:40",
+        "zh": "蓄力%d · 技能×%d"
+      },
+      "BATTLE_ENERGY_DODGE": {
+        "source": "scripts/battle_energy_hud.gd:46",
+        "zh": "闪躲：友军嘲讽"
+      },
+      "BATTLE_EFFECTS": {
+        "source": "scripts/battle_scene.gd:15978",
+        "zh": "效果区 %d"
+      },
+      "BATTLE_BATTLE_START": {
+        "source": "scripts/battle_scene.gd:4653",
+        "zh": "%s%s 开始！"
+      },
+      "TIER_NORMAL_EASY": {
+        "source": "scripts/game_levels.gd:40",
+        "zh": "普通敌人-简单"
+      },
+      "TIER_NORMAL_HARD": {
+        "source": "scripts/game_levels.gd:40",
+        "zh": "普通敌人-困难"
+      },
+      "TIER_ELITE_EASY": {
+        "source": "scripts/game_levels.gd:40",
+        "zh": "精英敌人-简单"
+      },
+      "TIER_ELITE_HARD": {
+        "source": "scripts/game_levels.gd:40",
+        "zh": "精英敌人-困难"
+      },
+      "TIER_BOSS": {
+        "source": "scripts/game_levels.gd:40",
+        "zh": "Boss"
+      },
+      "LEVEL_CAVE_OWLBEAR": {
+        "source": "scripts/game_levels.gd:115",
+        "zh": "洞穴"
+      },
+      "LEVEL_DUCK_KNIGHT": {
+        "source": "scripts/game_levels.gd:269",
+        "zh": "鸭子骑士来袭"
+      },
+      "LEVEL_WIZARD": {
+        "source": "scripts/game_levels.gd:294",
+        "zh": "巫师的召唤"
+      },
+      "LEVEL_FROST_LINE": {
+        "source": "scripts/game_levels.gd:335",
+        "zh": "寒冰防线"
+      },
+      "LEVEL_UNDEAD_LEGION": {
+        "source": "scripts/game_levels.gd:362",
+        "zh": "亡灵军团"
+      },
+      "LEVEL_DRAGON_NEST": {
+        "source": "scripts/game_levels.gd:388",
+        "zh": "龙族巢穴"
+      },
+      "LEVEL_MECH_GIANT": {
+        "source": "scripts/game_levels.gd:414",
+        "zh": "机甲巨兵"
+      },
+      "LEVEL_BOSS_DRAGON": {
+        "source": "scripts/game_levels.gd:440",
+        "zh": "远古虚骨龙"
+      },
+      "LEVEL_BOSS_DEMON_DUCK": {
+        "source": "scripts/game_levels.gd:469",
+        "zh": "恶魔鸭"
+      },
+      "LEVEL_BOSS_DEMON_DUCK_REVENGE": {
+        "source": "scripts/game_levels.gd:502",
+        "zh": "恶魔鸭（复仇）"
+      },
+      "LEVEL_MECH_DUCK_BOSS": {
+        "source": "scripts/game_levels.gd:535",
+        "zh": "机械巨鸭"
+      },
+      "LEVEL_DEFECTOR_MACHINE": {
+        "source": "scripts/game_levels.gd:567",
+        "zh": "叛逃机械"
+      },
+      "LEVEL_BOSS_DUCK_DARKSIDE": {
+        "source": "scripts/game_levels.gd:600",
+        "zh": "鸭之暗面"
+      },
+      "LEVEL_HEPHAESTUS_FORGE": {
+        "source": "scripts/game_levels.gd:634",
+        "zh": "赫菲斯托斯工坊"
+      },
+      "LEVEL_BOSS_REVELATOR": {
+        "source": "scripts/game_levels.gd:671",
+        "zh": "启示者"
+      },
+      "LEVEL_SCRAPYARD": {
+        "source": "scripts/game_levels.gd:706",
+        "zh": "废料场"
+      },
+      "LEVEL_LEGION": {
+        "source": "scripts/game_levels.gd:734",
+        "zh": "骑士军团"
+      },
+      "LEVEL_FAMILIARS": {
+        "source": "scripts/game_levels.gd:761",
+        "zh": "使魔鸭群"
+      },
+      "LEVEL_KNIGHT_CHARGE": {
+        "source": "scripts/game_levels.gd:786",
+        "zh": "骑士冲锋"
+      },
+      "LEVEL_CAPTAIN_WIZARD": {
+        "source": "scripts/game_levels.gd:810",
+        "zh": "队长与巫师"
+      },
+      "LEVEL_ARCHER_KNIGHT": {
+        "source": "scripts/game_levels.gd:834",
+        "zh": "弓手与骑士"
+      },
+      "LEVEL_BLAZE_PACK": {
+        "source": "scripts/game_levels.gd:860",
+        "zh": "爆炎鸭阵"
+      },
+      "LEVEL_WHITE_MAGE_GUARD": {
+        "source": "scripts/game_levels.gd:893",
+        "zh": "白魔法鸭护阵"
+      },
+      "LEVEL_NIGHT_DUCKS": {
+        "source": "scripts/game_levels.gd:918",
+        "zh": "夜鸭阵"
+      },
+      "LEVEL_ETERNAL_NIGHT": {
+        "source": "scripts/game_levels.gd:945",
+        "zh": "永夜鸭群"
+      },
+      "LEVEL_BREATH_CHARGE": {
+        "source": "scripts/game_levels.gd:972",
+        "zh": "哈气骑士团"
+      },
+      "LEVEL_HERMES": {
+        "source": "scripts/game_levels.gd:1004",
+        "zh": "赫尔墨斯的试炼"
+      },
+      "LEVEL_AIR_RAID": {
+        "source": "scripts/game_levels.gd:1046",
+        "zh": "母舰空袭"
+      },
+      "LEVEL_ENFORCER_JUDGEMENT": {
+        "source": "scripts/game_levels.gd:1087",
+        "zh": "执法者的审判"
+      },
+      "LEVEL_ASCLEPIUS": {
+        "source": "scripts/game_levels.gd:1118",
+        "zh": "阿斯克勒庇厄斯的试炼"
+      },
+      "LEVEL_PRONOIA_SHADOW": {
+        "source": "scripts/game_levels.gd:1155",
+        "zh": "普罗诺亚之影"
+      },
+      "LEVEL_DUCK_KILN": {
+        "source": "scripts/game_levels.gd:1180",
+        "zh": "鸭子窑"
+      },
+      "LEVEL_SUN_FORGE": {
+        "source": "scripts/game_levels.gd:1210",
+        "zh": "太阳熔炉"
+      },
+      "LEVEL_HECATON": {
+        "source": "scripts/game_levels.gd:1254",
+        "zh": "百臂工场"
+      },
+      "LEVEL_ASSEMBLY_LINE": {
+        "source": "scripts/game_levels.gd:1287",
+        "zh": "量产流水线"
+      },
+      "LEVEL_MASS_ANVIL": {
+        "source": "scripts/game_levels.gd:1324",
+        "zh": "量产铁砧"
+      },
+      "LEVEL_ARGOS_MOBILIZE": {
+        "source": "scripts/game_levels.gd:1361",
+        "zh": "百眼动员"
+      },
+      "LEVEL_TWIN_CANNON": {
+        "source": "scripts/game_levels.gd:1391",
+        "zh": "双机炮阵"
+      },
+      "LEVEL_LASER_LINE": {
+        "source": "scripts/game_levels.gd:1441",
+        "zh": "巨炮防线"
+      },
+      "LEVEL_STEEL_FORTRESS": {
+        "source": "scripts/game_levels.gd:1480",
+        "zh": "钢铁要塞"
+      },
+      "LEVEL_CAPTAIN": {
+        "source": "scripts/game_levels.gd:1505",
+        "zh": "鸭子队长登场"
       }
     },
     "shell": {
@@ -3097,7 +3427,8 @@
   "expected_counts": {
     "shop": 68,
     "reward": 120,
-    "map": 234,
+    "map": 244,
+    "battle": 72,
     "shell": 195,
     "shared": 89
   }

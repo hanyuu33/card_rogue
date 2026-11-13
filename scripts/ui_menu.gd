@@ -57,7 +57,7 @@ const BACKDROP := Color(0.03, 0.04, 0.07, 0.66)   # 全屏压暗遮罩
 var _host: Node
 var _items: Variant = []     # Array、或「返回 Array 的 Callable」（每次打开重新求值）
 var _pause := true
-var _back_text := "继续游戏"
+var _back_text := GameI18n.ui("shell", "UI_MENU_CONTINUE", "继续游戏")
 var _sub_text := ""
 var _sfx: Sfx = null
 var _is_open := false
@@ -252,7 +252,7 @@ func _rebuild() -> void:
 	for c in _box.get_children():
 		_box.remove_child(c)
 		c.queue_free()
-	_box.add_child(_mk_label("菜单", UiTheme.FS_HEADING, UiTheme.PAGE_INK, true))
+	_box.add_child(_mk_label(GameI18n.ui("shell", "UI_MENU_TITLE", "菜单"), UiTheme.FS_HEADING, UiTheme.PAGE_INK, true))
 	if _sub_text != "":
 		_box.add_child(_mk_label(_sub_text, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED, false))
 	var gap := Control.new()
@@ -285,7 +285,7 @@ func _rebuild() -> void:
 		var sp := Control.new()
 		sp.custom_minimum_size = Vector2(0, 4)
 		_box.add_child(sp)
-		_box.add_child(_mk_label("种子：%s" % RunState.seed_text(),
+		_box.add_child(_mk_label(GameI18n.ui("shell", "UI_MENU_SEED", "种子：%s") % RunState.seed_text(),
 				UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED, false))
 
 

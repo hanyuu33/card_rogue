@@ -73,10 +73,14 @@ static func legacy_id(cid: String) -> String:
 
 
 static func name_of(cid: String) -> String:
-	return cid
+	return GameI18n.class_name_of(cid)
 
 
 static func subtitle_of(cid: String) -> String:
+	return GameI18n.class_field(cid, "subtitle", _subtitle_zh(cid))
+
+
+static func _subtitle_zh(cid: String) -> String:
 	match cid:
 		DRUID:
 			return "自然之力 · 与熊、树人同行"
@@ -91,6 +95,10 @@ static func subtitle_of(cid: String) -> String:
 ## 只讲这个角色的打法取向与优劣势，**不列具体卡牌 / 数值** —— 初始卡组与赠品道具的实际
 ## 效果由界面底部的「初始道具」块单独展示（读 relics.json 的 desc，class_pick_scene 负责）。
 static func desc_of(cid: String) -> String:
+	return GameI18n.class_field(cid, "desc", _desc_zh(cid))
+
+
+static func _desc_zh(cid: String) -> String:
 	match cid:
 		DRUID:
 			return "稳扎稳打。用工事与厚血盟友换取优势，靠成长与恢复把战斗拖进自己的节奏。\n不擅长速攻，但很难被一次打垮。"
