@@ -1254,19 +1254,25 @@ func _draw_relic() -> void:
 	var e: Dictionary = RunState.pending_rewards[_sel]
 	var settled := _settled(e)
 	_draw_btn(_btn_back_rect(), GameI18n.ui("reward", "REWARD_BACK_TO_LIST", "← 返回列表"), false, false)
-	# R577b：领取详情标题右侧放这件道具的大图标（缺图就只留标题）。
+	# R680：标题（含 R577b 那枚道具图）**整组居中** —— 与二选一视图同一个口径。
+	# 原来标题 `x+180` 左起正好压住「← 返回列表」右沿（184），图标再挂在标题右端，
+	# 整组贴在左边、右边空掉一大半。现在把「文字 + 14 间距 + 44 图标」当成一组算总宽，
+	# 组中心对齐面板中线；基线 60→66 与按钮中线齐平（同 R678）。
+	var title680 := "「%s」" % _entry_name(e)
+	var title680_w := _font_bold.get_string_size(title680, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			UiTheme.FS_HEADING).x
+	var icon680_tex: Texture2D = null
 	if str(e.get("kind", "")) == "relic":
-		var icon577_tex := UiAssets.relic_icon(int(e.get("id", 0)))
-		if icon577_tex != null:
-			# 贴在标题**右侧**（「← 返回列表」按钮占着 x+PAD..+154，左侧会压按钮）
-			var icon577_tw := _font_bold.get_string_size("「%s」" % _entry_name(e),
-					HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_HEADING).x
-			_root.draw_texture_rect(icon577_tex,
-					Rect2(r.position.x + 180 + icon577_tw + 14.0,
-							r.position.y + 34, 44.0, 44.0), false)
-	_root.draw_string(_font_bold, Vector2(r.position.x + 180, r.position.y + 60),
-			"「%s」" % _entry_name(e), HORIZONTAL_ALIGNMENT_LEFT, 520,
-			UiTheme.FS_HEADING, _entry_name_color(e, UiTheme.INK_900))
+		icon680_tex = UiAssets.relic_icon(int(e.get("id", 0)))
+	var group680_w := title680_w + (14.0 + 44.0 if icon680_tex != null else 0.0)
+	var gx680 := r.position.x + PANEL_W / 2.0 - group680_w / 2.0
+	_root.draw_string(_font_bold, Vector2(gx680, r.position.y + 66), title680,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_HEADING,
+			_entry_name_color(e, UiTheme.INK_900))
+	if icon680_tex != null:
+		# 图标垂直居中于标题字身：基线 66 - 0.35*24 ≈ 58 的字心，44 高 → 顶 36
+		_root.draw_texture_rect(icon680_tex,
+				Rect2(gx680 + title680_w + 14.0, r.position.y + 36, 44.0, 44.0), false)
 	# R206：改半透明奶油底（透出羊皮卷纹理）+ **高度随内容自适应** —— 与卡牌三选一的
 	# 详情条同一语言。旧版是**实心** `f0ede4` 铺满整块，短描述就在卷轴上摊一张白纸，
 	# 和两边卷边完全脱节；现在内容少就收短，长描述仍然吃满（超出照样滚动）。
@@ -1278,9 +1284,11 @@ func _draw_relic() -> void:
 			+ 34.0, 150.0, PANEL_H - HEAD_H - FOOT_H)
 	_root.draw_rect(Rect2(r.position.x + PAD, r.position.y + HEAD_H, PANEL_W - PAD * 2.0,
 			body_h), Color(0.99, 0.97, 0.90, 0.55), true)
-	_root.draw_string(_font, Vector2(r.position.x + PAD * 2.0, r.position.y + HEAD_H + 30),
+	# R680：状态行跟着标题一起整幅居中（同二选一副标题）—— 正文段落仍左对齐，
+	# 长段落居中会难读，所以只居中「标题带 + 元信息」这两层。
+	_root.draw_string(_font, Vector2(r.position.x, r.position.y + HEAD_H + 34),
 			GameI18n.ui("reward", "REWARD_RELIC_STATUS_LINE", "%s　·　状态：%s") % [_entry_tag(e), _state_label(e)],
-			HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - PAD * 4.0, UiTheme.FS_BODY, UiTheme.INK_600)
+			HORIZONTAL_ALIGNMENT_CENTER, PANEL_W, UiTheme.FS_BODY, UiTheme.INK_600)
 	# R168：正文改用富文本绘制 —— 「提到的卡牌 / 道具名」自动换色并交出命中矩形。
 	var txt_w := PANEL_W - PAD * 4.0
 	var txt_x := r.position.x + PAD * 2.0
