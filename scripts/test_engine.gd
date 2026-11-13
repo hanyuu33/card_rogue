@@ -6638,71 +6638,6 @@ func _init() -> void:
 
 
 
-	# ---- 道具「鸡煲」（6003）改版：去掉每场一次 —— 第一回合结束 或 用过效果卡的回合结束 ----
-
-	var cp_e := _new_engine([], 20, 20, -1, false)
-
-	cp_e.start_game(0)
-
-	cp_e.self_relics = [6003]
-
-	cp_e.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(0, 0),
-
-			GameEngine.SIDE_OPPONENT)
-
-	cp_e.end_turn()
-
-	check(cp_e.state.unit_at(Vector2i(0, 0)) != null
-
-			and cp_e.state.unit_at(Vector2i(0, 0)).health == 5,
-
-			"鸡煲：第 1 回合结束 → 随机敌人 8-3=5")
-
-	var cp_e2 := _new_engine([], 20, 20, -1, false)
-
-	cp_e2.start_game(0)
-
-	cp_e2.self_relics = [6003]
-
-	cp_e2.turn_number = 3
-
-	cp_e2.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(0, 0),
-
-			GameEngine.SIDE_OPPONENT)
-
-	cp_e2.end_turn()   # 第 3 回合、没用过效果卡 → 不触发
-
-	check(cp_e2.state.unit_at(Vector2i(0, 0)) != null
-
-			and cp_e2.state.unit_at(Vector2i(0, 0)).health == 8,
-
-			"鸡煲：不是第一回合、也没用效果卡 → 不触发")
-
-	cp_e2.end_turn()
-
-	cp_e2.state.self_effect_plays = 1
-
-	cp_e2.end_turn()   # 本回合用过效果卡 → 触发
-
-	check(cp_e2.state.unit_at(Vector2i(0, 0)) != null
-
-			and cp_e2.state.unit_at(Vector2i(0, 0)).health == 5,
-
-			"鸡煲：使用过效果卡的回合结束 → 触发（8-3=5）")
-
-	cp_e2.end_turn()
-
-	cp_e2.state.self_effect_plays = 1
-
-	cp_e2.end_turn()   # 已去掉「整场一次」→ 每个满足条件的回合结束都触发
-
-	check(cp_e2.state.unit_at(Vector2i(0, 0)) != null
-
-			and cp_e2.state.unit_at(Vector2i(0, 0)).health == 2,
-
-			"鸡煲：去掉每场一次 → 再次满足条件的回合结束再次触发（5-3=2）")
-
-
 
 	# ============================================================
 
@@ -8371,53 +8306,6 @@ func _init() -> void:
 	check(CardRepo.load_json().get_card(9007).needs_target(),
 
 			"火球术：NEEDS_CELL 也算需要选目标（点击/拖拽都会进入选格子模式）")
-
-
-
-	# ---- 道具：鸡煲（6003）第一次回合结束随机敌人 -3 ----
-
-	var eng_r := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)), 20, 20, -1, false)
-
-	eng_r.self_relics = [6003]
-
-	eng_r.start_game()
-
-	var duck_c := _card(9001, "鸭子骑士", "盟友", 1, 5, 30, 1, 2)
-
-	eng_r.state.place(duck_c, Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
-
-	var duck_hp0 := eng_r.state.unit_at(Vector2i(0, 1)).health
-
-	eng_r.end_turn()   # 我方第 1 回合结束 → 鸡煲触发
-
-	var duck_after := eng_r.state.unit_at(Vector2i(0, 1))
-
-	check(duck_after != null and duck_after.health == duck_hp0 - 3,
-
-			"鸡煲：第一次回合结束对随机敌人造成 3 点伤害")
-
-	eng_r.end_turn()   # 对手回合结束（不应触发）
-
-	eng_r.end_turn()   # 我方第 2 回合结束（不应再触发）
-
-	var duck_final := eng_r.state.unit_at(Vector2i(0, 1))
-
-	check(duck_final != null and duck_final.health == duck_hp0 - 3,
-
-			"鸡煲：没用过效果卡的回合结束不触发（第 2 回合结束不掉血）")
-
-	# 无敌人时落空（不崩溃、不掉自己 HP）
-
-	var eng_r2 := _new_engine(_single_deck(_card(8003, "农民", "盟友", 3, 3, 8)), 20, 20, -1, false)
-
-	eng_r2.self_relics = [6003]
-
-	eng_r2.start_game()
-
-	eng_r2.end_turn()
-
-	check(eng_r2.state.hp_self == 20 and not eng_r2.over, "鸡煲：场上没有敌人时效果落空")
-
 
 
 	# ---- 道具（奖励池）：鸭蹼 / 鸭嘴 / 鸭翼（6005-6007） ----
@@ -42276,7 +42164,7 @@ func _init() -> void:
 
 	# ==== R577b：道具小图标（无背景 PNG）+ 界面分发 + 源码锁 ====
 
-	# ① 数据层：63 件道具逐件都有图标（素材断言一律用 ResourceLoader.exists，
+	# ① 数据层：62 件道具逐件都有图标（素材断言一律用 ResourceLoader.exists，
 
 	#    导出包里 png 会被 .ctex 取代，FileAccess.file_exists 会假红）。
 
@@ -42304,9 +42192,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 63,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 62,
 
-			"R577b 保真锁：63 件道具的 id 都能在 relics.json 源文本里找到")
+			"R577b 保真锁：62 件道具的 id 都能在 relics.json 源文本里找到")
 
 	# ② 取图口：首末两件 + 信物回退
 
@@ -51114,7 +51002,15 @@ func _init() -> void:
 
 	var r577f_missing := 0
 
+	# R652：鸡煲 6003 删除后不再算缺失 —— 按 relics.json 现存 id 过滤，
+	# 以后删道具不会把这条锁钉死在一个过期数量上。
+	var r577f_repo := RelicRepo.load_json()
+
 	for r577f_id in range(6001, 6061):
+
+		if r577f_repo.get_relic(r577f_id) == null:
+
+			continue
 
 		if not ResourceLoader.exists("res://assets/ui/relic_rim_%d.png" % r577f_id):
 
@@ -51122,7 +51018,7 @@ func _init() -> void:
 
 	check(r577f_missing == 0,
 
-			"R577f 素材：60 张蓝色边缘光贴图齐全（缺 %d）" % r577f_missing)
+			"R577f 素材：蓝色边缘光贴图齐全（6001-6060 现存道具，缺 %d）" % r577f_missing)
 
 	check(ResourceLoader.exists("res://assets/ui/relic_rim_6064.png"),
 

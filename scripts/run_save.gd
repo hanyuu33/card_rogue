@@ -554,11 +554,11 @@ static func apply(d: Dictionary) -> bool:
 	RunState.used_levels = _str_array(d.get("used_levels", []))
 	RunState.boss_pick = d.get("boss_pick", {}) if d.get("boss_pick", {}) is Dictionary else {}
 	RunState.revenge_pending = bool(d.get("revenge_pending", false))
-	RunState.relics = _int_array(d.get("relics", []))
+	RunState.relics = _drop_unknown_relics(_int_array(d.get("relics", [])))
 	RunState.key_relics = _int_array(d.get("key_relics", []))   # R543：信物（老存档无此字段 → 空）
 	# R367：灰显道具 / Boss 战果。**必须在 `relics` 之后、下面盆与火柴的复查之前**赋值 ——
 	# 那两处用 `has_relic()`（已排除 spent）决定要不要补满点数。
-	RunState.spent_relics = _int_array(d.get("spent_relics", []))
+	RunState.spent_relics = _drop_unknown_relics(_int_array(d.get("spent_relics", [])))
 	var bk_raw: Variant = d.get("boss_kills", [])
 	RunState.boss_kills = []
 	if bk_raw is Array:
@@ -910,6 +910,17 @@ static func _trace(msg: String) -> void:
 
 
 # ------------------------------------------------------------ 工具
+
+static func _drop_unknown_relics(ids: Array[int]) -> Array[int]:
+	## R652：剔除 relics.json 里已不存在的道具 id（旧存档可能残留已删除的 6003 鸡煲）。
+	## 下游有四十余处 `get_relic()` 直接取属性，读档时先清一遍，免得 null 一路传下去。
+	var repo := RelicRepo.load_json()
+	var out: Array[int] = []
+	for id: int in ids:
+		if repo.get_relic(id) != null:
+			out.append(id)
+	return out
+
 
 static func _int_array(a: Variant) -> Array[int]:
 	var out: Array[int] = []

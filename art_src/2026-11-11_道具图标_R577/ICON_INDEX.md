@@ -6,7 +6,7 @@
 |---|---|---|
 | 6001 | 类固醇 | a small glass medicine vial with pale mint-green liquid, a cork stopper and one completely blank paper label |
 | 6002 | 源数之力 | a floating deep-blue crystal octahedron wrapped in two thin glowing arcane rings with NO symbols on them |
-| 6003 | 鸡煲 | a round earthenware casserole pot with two small handles, a lid and a tiny chicken-shaped knob |
+| ~~6003~~ | ~~鸡煲~~（R652 道具已删除，图标仅留档案） | ~~a round earthenware casserole pot with two small handles, a lid and a tiny chicken-shaped knob~~ |
 | 6004 | 失忆药水 | a round violet potion bottle with a long thin neck and a cork stopper |
 | 6005 | 鸭蹼 | one single orange duck webbed foot seen from above |
 | 6006 | 鸭嘴 | one single orange duck bill in side view |

@@ -254,7 +254,7 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		RunState.relics = []
-		for rid: int in [6035, 6036, 6015, 6001, 6003, 6005, 6010, 6041]:
+		for rid: int in [6035, 6036, 6015, 6001, 6005, 6010, 6041]:
 			RunState.gain_relic(rid)
 	# R440 出图：`--r440` 塞「暗动力」6054 —— 核验商店「删除一张卡」被封成「暗动力」遮罩。
 	# 出图：`shop.tscn -- --screenshot --r440`

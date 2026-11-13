@@ -1271,7 +1271,7 @@ func _ready() -> void:
 	if "--r367spent" in args and engine != null:
 		# R367 出图：盆用尽 → **灰在道具栏里**（不是消失）。旁边留两件正常道具做对比。
 		# 出图：`-- --screenshot --r367spent --shotframe 600`
-		RunState.relics = [RunState.BASIN_RELIC_ID, 6001, 6003]
+		RunState.relics = [RunState.BASIN_RELIC_ID, 6001, 6002]
 		RunState.spent_relics.clear()
 		RunState.spend_relic(RunState.BASIN_RELIC_ID)
 		RunState.basin_charge = 0
@@ -3038,7 +3038,7 @@ func _ready() -> void:
 			var eo_e := repo.get_card(eo_eid)
 			if eo_e != null:
 				engine.state.enemy_effects.append(eo_e)
-		engine.self_relics = [6001, 6002, 6003, 6005, 6006, 6007, 6008, 6010]
+		engine.self_relics = [6001, 6002, 6005, 6006, 6007, 6008, 6010]
 		if "--relicpanel" in args:
 			_relics_visible = true
 		if "--effectpanel" in args:

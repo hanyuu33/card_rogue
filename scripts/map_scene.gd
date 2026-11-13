@@ -261,7 +261,7 @@ func _ready() -> void:
 	# 让开固定 UI（卡组按钮 / 巧克力 / 本层 Boss / 标题 / 标记按钮）」。
 	# 出图：`map.tscn -- --screenshot --relicmany --shotwait 0.8`
 	if "--relicmany" in OS.get_cmdline_user_args():
-		RunState.relics = [6001, 6002, 6003, 6004, 6005, 6006, 6007, 6008, 6009, 6010,
+		RunState.relics = [6001, 6002, 6004, 6005, 6006, 6007, 6008, 6009, 6010,
 				6011, 6012, 6013, 6014, 6015, 6016, 6017, 6018, 6019, 6020]
 		RunState.relic_choice = []
 	# -- --relicrework：R577b 四张返工图标实机验收（箱子画鸭 / 白蛋 / 手持钢印 / 老虎机 7）。

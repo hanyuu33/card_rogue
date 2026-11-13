@@ -4248,12 +4248,6 @@ func end_turn() -> void :
 		return
 
 
-	# 鸡煲（6003）：不再限制「每场战斗一次」→ 第一回合结束、以及每个用过效果卡的回合结束都触发
-	if current_side == SIDE_SELF and self_relics.has(6003)\
-	and (turn_number == 1 or state.self_effect_plays > 0):
-		_chicken_pot()
-
-
 	for cell: Vector2i in state.board:
 		var p: Placement = state.unit_at(cell)
 		if p != null and p.owner == current_side:
@@ -5203,20 +5197,6 @@ func _endless_blessing() -> void :
 			_log("无尽加护：随机一张「%s」进入手卡" % copy.card_name)
 	if given > 0:
 		action.emit("blessing", {"count": given})
-
-
-func _chicken_pot() -> void :
-	var enemies:= _side_cells(SIDE_OPPONENT)
-	if enemies.is_empty():
-		_log("鸡煲：场上没有敌人，效果落空")
-		return
-	var cell: Vector2i = enemies[rng.randi() % enemies.size()]
-	var p: Placement = state.board[cell]
-	_hit_unit(p, 3 + _turn_dmg_bonus(SIDE_SELF), "鸡煲")
-	if p.health <= 0:
-		_destroy_dead()
-	else:
-		_check_game_over()
 
 
 func energy_of(side:= SIDE_SELF) -> int:
@@ -14348,9 +14328,6 @@ func relic_highlight(id: int) -> bool:
 			return turn_number == DUCK_WING_TURN
 		6005:   # 鸭蹼：前两回合开局多抽一张 → 该回合一开始就亮
 			return turn_number <= 2
-		6003:   # 鸡煲：第 1 回合、以及用过效果卡的回合（回合结束才结算）
-			return current_side == SIDE_SELF \
-					and (turn_number == 1 or state.self_effect_plays > 0)
 		6020:   # 奥秘护符：本回合第一张效果牌 -1 → 还没打过效果牌时亮
 			return state.self_effect_plays == 0
 		6008:   # 鸭绒：每回合**第一个**单位 +2 血 → 还没打过单位时亮

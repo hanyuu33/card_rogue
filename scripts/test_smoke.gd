@@ -246,12 +246,12 @@ func _initialize() -> void:
 		["res://scenes/relic_pick.tscn", func():
 				_reset()
 				RunState.start_run(_map())
-				RunState.relic_choice = [6001, 6002, 6003]],
+				RunState.relic_choice = [6001, 6002, 6004]],
 		# R310：每层起点的「卷卷」对话（原起点三选一入口）。第一层不切立绘。
 		["res://scenes/curtain.tscn", func():
 				_reset()
 				RunState.start_run(_map())
-				RunState.relic_choice = [6001, 6002, 6003]],
+				RunState.relic_choice = [6001, 6002, 6004]],
 		# R310：第二层 + 机械之心 → 走「收下道具 → 立绘出场 → 角色回答」那一支，
 		# 顺带把效果浮窗、名称牌换字、立绘贴图全部渲染一遍（缺图 / 空引用会在这里炸）。
 		["res://scenes/curtain.tscn", func():
@@ -421,7 +421,7 @@ func _initialize() -> void:
 				_reset()
 				RunState.start_run(_map())
 				RunState.pending_node = {"type": "shop"}
-				RunState.relics = [6035, 6036, 6015, 6001, 6003, 6005, 6010, 6041],
+				RunState.relics = [6035, 6036, 6015, 6001, 6005, 6010, 6041],
 			_check_r394_relic_chips],
 		["res://scenes/battle.tscn", func():
 				_reset()
@@ -2137,7 +2137,7 @@ func _check_relic_bar(scene: Variant) -> void:
 	# 无限堆叠，并且**绕开固定 UI**（卡组按钮 / 巧克力 / 本层 Boss / 标题 / 图例条 / 标记按钮）。
 	# 这里一屏塞 20 件，逐条钉：全部有槽位、互不重叠、都不压住保留矩形。
 	var saved: Array = RunState.relics.duplicate()
-	var many: Array[int] = [6001, 6003, 6005, 6006, 6007, 6008, 6009, 6010, 6011, 6012,
+	var many: Array[int] = [6001, 6024, 6005, 6006, 6007, 6008, 6009, 6010, 6011, 6012,
 			6013, 6014, 6015, 6016, 6017, 6018, 6019, 6020, 6021, 6026]
 	RunState.relics = many.duplicate()
 	var rects: Array = []
@@ -4616,8 +4616,8 @@ func _check_relic_gate(scene: Variant) -> void:
 	# R367：道具栏的**显示**取 `RunState.relics`（全量，含已耗尽的灰显项），
 	# 引擎那份 `self_relics` 只决定「生效」。用例两边一起改，才是真实同源。
 	var saved_rs: Array[int] = RunState.relics.duplicate()
-	eng.self_relics = [6001, 6003]
-	RunState.relics = [6001, 6003]
+	eng.self_relics = [6001, 6002]
+	RunState.relics = [6001, 6002]
 	if scene._relic_bar_overflowed():
 		_smoke_fail("道具栏：2 件（容量 %d）却判定为装不下" % cap)
 		return
@@ -5368,13 +5368,13 @@ func _check_overflow(scene: Variant) -> void:
 				% [cap_eff, cap_ee, cap_rel])
 	# R577d 界面分发：真的把件数塞进战斗页，看格位是不是按行平均分配。
 	var r577d_saved: Array = RunState.relics.duplicate()
-	RunState.relics = [6001, 6002, 6003, 6004]
+	RunState.relics = [6001, 6002, 6005, 6006]
 	var r577d_y4: float = scene._relic_rect(0).position.y
 	for r577d_i in 4:
 		if scene._relic_rect(r577d_i).position.y != r577d_y4:
 			_smoke_fail("R577d 4 件道具应排在同一行（第 %d 枚换了行 = N+1 尾巴）" % r577d_i)
 			break
-	RunState.relics = [6001, 6002, 6003, 6004, 6005, 6006, 6007]
+	RunState.relics = [6001, 6002, 6004, 6005, 6006, 6007, 6008]
 	var r577d_y7a: float = scene._relic_rect(0).position.y
 	var r577d_y7b: float = scene._relic_rect(6).position.y
 	if r577d_y7b <= r577d_y7a:
