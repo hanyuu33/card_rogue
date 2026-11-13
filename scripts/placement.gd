@@ -49,7 +49,7 @@ var poison_dmg: int = 0       # 中毒每跳伤害（取高，见 `_apply_poison
 ## **已受漩涡伤害的次数**（R557 漩涡 9186）：站在漩涡格上每结算一次 +1，
 ## 实际伤害 = 卡面 `field_vortex_dmg` + 本值（「后续受到的漩涡伤害 +1」）。
 ## 记在单位上（不写回卡面）→ 单位死亡/离场随 Placement 消失；离开漩涡格不清零，
-## 「后续」再站上来仍按已累积的次数递增。结算见 `GameEngine._field_aura_tick`。
+## 「后续」再站上来仍按已累积的次数递增。结算见 `GameEngine._field_owner_tick`。
 var vortex_stacks: int = 0
 var trap_trig_turn: int = -1  # 「最近一次触发工事的全局半回合号」—— 曾由暗影狩猎 9107 记录
 var end_atk: int = 0          # 回合结束成长（地狱猫 8019 / 鲜血堡垒 8020，R55）：按剩余费用永久累加的力量，无上限、不随回合结束清除

@@ -343,7 +343,7 @@
   },
   "8082": {
    "name": "Poison Mire",
-   "effect_text": "Field effect. A unit standing on this tile gains Poison **at the end of its own turn**: it takes 10 damage at the end of each turn for 2 turns. Gaining it again only refreshes the duration; when affected by several kinds of Poison at once, only the one with the highest damage applies."
+   "effect_text": "Field effect. A unit standing on this tile gains Poison **at the end of your turn**: it takes 10 damage at the end of each turn for 2 turns. Gaining it again only refreshes the duration; when affected by several kinds of Poison at once, only the one with the highest damage applies."
   },
   "8084": {
    "name": "Teach",
@@ -1048,7 +1048,7 @@
   },
   "9186": {
    "name": "Vortex",
-   "effect_text": "Field effect. On Use, if there is no unit on this tile, move a random unit at distance 1 from this tile onto it. A unit on this tile takes 15 damage **at the end of its own turn**, and subsequent Vortex damage it takes increases by 1."
+   "effect_text": "Field effect. On Use, if there is no unit on this tile, move a random unit at distance 1 from this tile onto it. A unit on this tile takes 15 damage **at the end of your turn**, and subsequent Vortex damage it takes increases by 1."
   },
   "9187": {
    "name": "Goose",

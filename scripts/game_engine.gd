@@ -1204,7 +1204,9 @@ const FINISHER_LAST_DMG:= 22
 # 它钉在**一个格子**上（FieldState.field_effects，唯一写入口 set_field，每格最多 1 个）。
 # 现存场地只有两族：
 #   * **持续型**（trait「持续场地」）：不因任何经过而触发、也不会消失，按自己的时机结算 ——
-#     清泉 8028 / 维修间 8036 / 改造工厂 8037 / 漩涡 9186 / 毒沼 8082 都走 `_field_aura_tick`；
+#     清泉 8028 / 维修间 8036 / 改造工厂 8037 都走 `_field_aura_tick`；
+#     漩涡 9186 / 毒沼 8082 同属这一族，但 R681 起改由 `_field_owner_tick()` 按
+#     「**使用者回合**」统一结算 —— 见那支的注释，别按白名单把它们当成「漏掉的那两张」；
 #   * **标记**（R503，9224）：暗影刺客的伤害增幅场，同样不触发、不消失，
 #     判据读 `FieldState.mark_cell()`，**同一时刻只存在一个标记**。
 # ⚠️ R503（用户口径「移除暗影刺客所有陷阱 / 场地相关的卡」）：原本那 8 张一次性陷阱
@@ -1239,11 +1241,14 @@ const PLAYER_ONLY_FIELD_TRAIT:= "仅玩家可放置"
 const UPGRADE_FACTORY_ATK:= 1
 const UPGRADE_FACTORY_HP:= 1
 # ── R381：漩涡 9186 / 鹅 9187（森林精魄剧情卡，暂无解锁渠道）──
-# 漩涡（R557 起 3 费场地）：持续型场地（走 `_field_aura_tick`，同清泉 / 维修间那族）。
+# 漩涡（R557 起 3 费场地）：持续型场地（同清泉 / 维修间那族，但结算时点见下）。
 #   * 使用（放置）时：若落格没有单位，随机把一个「与此格距离 1」的单位拉过来 ——
 #     结算口 = `_vortex_pull()`（挂在场地 play 分支、`set_field` 之后）。
-#   * 每回合结束时：对站在上面的单位造成 `field_vortex_dmg + vortex_stacks` 点伤害，
-#     然后 `vortex_stacks +1`（「后续受到的漩涡伤害 +1」）—— 结算在 `_field_aura_tick`。
+#   * **使用者回合结束时**：对格上的单位（**不分敌我**）造成 `field_vortex_dmg + vortex_stacks`
+#     点伤害，然后 `vortex_stacks +1`（「后续受到的漩涡伤害 +1」）—— 结算在 `_field_owner_tick()`。
+#     ⚠️ R681 之前是「谁站在上面就在**谁自己的**回合结束结算」：把漩涡放在敌人脚下要等
+#     敌方回合结束才掉血，玩家放完卡、结束回合看不到任何数字（用户口径「漩涡：应该是
+#     玩家回合结束就结算伤害」，随后定为通则「所有地形效果的回合，如无特殊说明，都按使用者来」）。
 # 鹅（2 费盟友 1/9）：攻击后把目标沿攻击方向击退 1 格、自己前进 1 格（R677 文案同步）。
 # 结算口 = `_goose_lunge()`（挂在 attack 尾部「攻击者还活着」那块里）。
 const GOOSE_TRAIT:= "扑击"
@@ -4277,8 +4282,14 @@ func end_turn() -> void :
 	# 清泉（8028，R83）：持续型场地 —— 本方回合结束时，站在清泉上的本方单位回血。
 	# 放在 `_sleep_tick` 之后：两者都是「本方回合结束的收尾」，挨着才好读。
 	_field_aura_tick(current_side)
-	# 毒沼（8082，R556）：中毒伤害结算 —— 必须排在 `_field_aura_tick` **之后**：
-	# 毒沼在 `_field_aura_tick` 里先给站上去的单位「施加中毒」，这里紧接着结算伤害，
+	# **场地效果的回合按使用者算**（R681 用户口径：「所有地形效果的回合，如无特殊说明，
+	# 都按使用者来」）。判据是 `field_owner == current_side`：玩家放的场地在玩家回合结束
+	# 结算、敌方放的（如有）在敌方回合结束结算，与「站在上面的是谁」无关。
+	# 走这条的是漩涡 9186 / 毒沼 8082；清泉「敌我双方都算」与维修间「己方单位」属于
+	# 卡面另有说明的例外，仍留在 `_field_aura_tick`（按站上单位的所属方回合）。
+	_field_owner_tick(current_side)
+	# 中毒（8082 毒沼）：伤害结算 —— 必须排在 `_field_owner_tick` **之后**：
+	# 那里先给站上去的单位「施加中毒」，这里紧接着结算伤害，
 	# 于是「站上毒沼的当回合结束」就会掉血；离开毒沼后中毒仍按剩余回合继续扣。
 	_poison_tick(current_side)
 	# 自我修复（8035，R87）：「每回合结束回复 4 点生命」—— 同样只结算本方单位。
@@ -15941,6 +15952,8 @@ func _rockfall_overflow(from_cell: Vector2i, side: String, remaining: int,
 func _field_aura_tick(side: String) -> void :
 	## **持续型场地**的回合结束结算（R83 清泉 8028 / R88 维修间 8036 + 改造工厂 8037）
 	## —— 唯一口，挂在 `end_turn()`。
+	## ⚠️ R681 起**漩涡 9186 / 毒沼 8082 不在这里**：卡面没另作说明的地形一律按
+	##    「使用者回合」结算，走 `_field_owner_tick()`，详见那支的注释。
 	##
 	## 口径（用户原话「在此格的单位自己回合结束时回复 2 点生命」）：
 	##   * 只结算**属于 side 这一方的**单位 —— 「自己回合」= 它自己阵营的回合；
@@ -15961,7 +15974,6 @@ func _field_aura_tick(side: String) -> void :
 	## 满血单位跳过回血（避免每回合刷无意义的飘字）—— 但**改造不跳过**（它不是回血）。
 	var healed := 0
 	var upgraded := 0
-	var vortex_cells: Array[Vector2i] = []
 	for cell: Vector2i in state.board.keys():
 		var p: Placement = state.unit_at(cell)
 		if p == null or p.owner != side:
@@ -15969,9 +15981,11 @@ func _field_aura_tick(side: String) -> void :
 		var f: CardData = state.field_at(cell)
 		if f == null or not is_persistent_field(f):
 			continue
-		# 「友」生效的持续场地（维修间 / 改造工厂）只对**我方**单位生效。
-		# 清泉是「双」→ 不受这条限制（它的 trait 是 场地生效·双）。
-		if field_aim(f) == FIELD_AIM_ALLY and side != SIDE_SELF:
+		# 「友」生效的持续场地（维修间 / 改造工厂）只对**使用者自己**的单位生效
+		# （R681 通则：地形效果的回合按使用者算）。清泉是「双」→ 不受这条限制。
+		# ⚠️ 不用行尾续行（GDScript 禁 `\` 续行）：先取出来再比。
+		var field_owner_side:= str(state.field_owner.get(cell, SIDE_SELF))
+		if field_aim(f) == FIELD_AIM_ALLY and field_owner_side != side:
 			continue
 		# ① 治疗：读卡面 field_heal（清泉 3 / 维修间 4 / 其它 0 = 不回血）
 		var heal: int = f.field_heal
@@ -16021,29 +16035,60 @@ func _field_aura_tick(side: String) -> void :
 		# 废弃机器人）站在改造工厂上完全不响应 —— 用户报的就是榴弹击手加不了射程。
 		if f.traits.has(PERSIST_UPGRADE_TRAIT):
 			_on_unit_upgraded(p)
-		# ③ 毒沼（R556）：站在毒沼格上的单位**获得中毒**（先施加，伤害由 `_poison_tick`
-		# 在 `end_turn` 里紧接着结算 —— 所以「站上毒沼的当回合结束」就会掉血）。
-		# 「双」生效 → 敌我双方的单位各自在自己回合结束被施加；「友」限制不适用于它。
-		if f.field_poison_dmg > 0:
-			_apply_poison(p, f.field_poison_dmg, f.field_poison_turns)
-		# ④ 漩涡（R557）：站在漩涡格上 → 只**收集**，循环外结算伤害 —— 直接扣血可能
-		# 致死改 board，不能在遍历里杀（与 `_poison_tick` 同口径）。
-		if f.field_vortex_dmg > 0:
-			vortex_cells.append(cell)
 	if healed > 0:
 		_log("持续型场地：%d 个单位在自己回合结束时回复了生命" % healed)
 	if upgraded > 0:
 		_inspire_tick()   # R300 激发：改造工厂一次结算改多个单位 → 只算一次
 		_log("改造工厂：%d 个单位获得改造（每回合 +%d 力 / +%d 血，可无限叠）" % [
 			upgraded, UPGRADE_FACTORY_ATK, UPGRADE_FACTORY_HP])
-	for vcell: Vector2i in vortex_cells:
-		_vortex_damage(vcell)
+
+
+func _field_owner_tick(side: String) -> void :
+	## **「场地效果的回合按使用者算」的唯一口**（R681 用户口径：
+	## 「所有地形效果的回合，如无特殊说明，都按使用者来」）。
+	##
+	## 判据 = `FieldState.field_owner[cell] == side` —— 看**场地是谁放的**，
+	## 不看站在上面的是谁。由 `end_turn()` 每次回合结束都调，各场地自己按 owner 筛。
+	##
+	## 走这条的（卡面**没有**另作说明）：
+	##   * 漩涡 9186：使用者回合结束时，对格上单位（**不分敌我**）结算
+	##     `field_vortex_dmg + vortex_stacks`；
+	##   * 毒沼 8082：使用者回合结束时，对格上单位（**不分敌我**）施加中毒。
+	## 「不分敌我」是 trait「场地生效·双」的语义（谁站上去都吃），
+	## 和「回合算谁的」是两个维度 —— 别把它们混成一条判据。
+	##
+	## 不走这条的（卡面有明确说明 → 属于「如无特殊说明」里的例外，留在 `_field_aura_tick`）：
+	##   * 清泉 8028：卡面写「（敌我双方都算）」→ 仍按**站上单位的所属方回合**结算；
+	##   * 维修间 8036 / 改造工厂 8037：卡面写「己方盟友或工事」+ 仅玩家可放置
+	##     → 只对使用者自己的单位生效。
+	##
+	## ⚠️ 先收集再结算：`_hit_unit` 可能致死并改动 board，不能在遍历里直接杀
+	## （与 `_poison_tick` 同口径）。
+	var vortex_cells: Array[Vector2i] = []
+	for cell: Vector2i in state.board.keys():
+		var p: Placement = state.unit_at(cell)
+		if p == null or p.health <= 0:
+			continue
+		var f: CardData = state.field_at(cell)
+		if f == null or not is_persistent_field(f):
+			continue
+		if str(state.field_owner.get(cell, SIDE_SELF)) != side:
+			continue
+		# 毒沼：先施加，伤害由 `_poison_tick` 紧接着结算（顺序与旧版一致，
+		# 「站上毒沼的当回合结束就掉血」的体感不变）。
+		if f.field_poison_dmg > 0:
+			_apply_poison(p, f.field_poison_dmg, f.field_poison_turns)
+		# 漩涡：只**收集**，循环外结算（可能致死改 board）
+		if f.field_vortex_dmg > 0:
+			vortex_cells.append(cell)
+	for c: Vector2i in vortex_cells:
+		_vortex_damage(c)
 
 
 func _vortex_damage(cell: Vector2i) -> void :
 	## **漩涡（9186，R557）每回合伤害的唯一结算口**：「每个回合结束时对此格上的单位
-	## 造成 15 点伤害，且后续受到的漩涡伤害 +1」。由 `_field_aura_tick` 在**循环外**调用
-	## （已按 side 过滤过：只结算「属于当前回合方」的单位）。
+	## 造成 15 点伤害，且后续受到的漩涡伤害 +1」。由 `_field_owner_tick()` 在**循环外**调用
+	## （R681 起：**使用者回合**结束时结算，格上单位**不分敌我**，不按站的单位过滤）。
 	##
 	## 口径与边界：
 	##   * 伤害 = 卡面 `field_vortex_dmg`（15）+ 该单位 `vortex_stacks`（已受漩涡伤害次数），

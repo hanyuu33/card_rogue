@@ -343,7 +343,7 @@
   },
   "8082": {
    "name": "Ciénaga Venenosa",
-   "effect_text": "Efecto de campo. Una unidad situada en esta casilla obtiene veneno **al final de su propio turno**: recibe 10 de daño al final de cada turno durante 2 turnos. Volver a obtenerlo solo renueva la duración; si sufre varios tipos de veneno a la vez, solo se aplica el de mayor daño."
+   "effect_text": "Efecto de campo. Una unidad situada en esta casilla obtiene veneno **al final de tu turno**: recibe 10 de daño al final de cada turno durante 2 turnos. Volver a obtenerlo solo renueva la duración; si sufre varios tipos de veneno a la vez, solo se aplica el de mayor daño."
   },
   "8084": {
    "name": "Enseñanza",
@@ -1048,7 +1048,7 @@
   },
   "9186": {
    "name": "Vórtice",
-   "effect_text": "Efecto de campo. Al usarla, si no hay ninguna unidad en esta casilla, mueve a esta casilla una unidad aleatoria situada a distancia 1. Una unidad en esta casilla recibe 15 de daño **al final de su propio turno**, y el daño de Vórtice que reciba posteriormente aumenta en 1."
+   "effect_text": "Efecto de campo. Al usarla, si no hay ninguna unidad en esta casilla, mueve a esta casilla una unidad aleatoria situada a distancia 1. Una unidad en esta casilla recibe 15 de daño **al final de tu turno**, y el daño de Vórtice que reciba posteriormente aumenta en 1."
   },
   "9187": {
    "name": "Ganso",

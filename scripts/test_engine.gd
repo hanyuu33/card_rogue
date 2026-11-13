@@ -42589,6 +42589,36 @@ func _init() -> void:
 
 			% r556_ally.health)
 
+	# R681 通则：「地形效果的回合按使用者算」—— 我方放的毒沼只在我方回合结束施加，
+
+	# 站在上面的**敌方**单位也吃这一次（以前要等敌方自己的回合结束才被施加）。
+
+	var r556_e2 := _new_engine([], 30, 30, -1, false)
+
+	r556_e2.start_game()
+
+	var r556_foe: Placement = r556_e2.state.place(
+
+			_card(8152, "木桩", "盟友", 1, 0, 100), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+
+	r556_e2.state.set_field(CardData.from_dict(r556_swamp.to_dict()),
+
+			Vector2i(1, 1), GameEngine.SIDE_SELF)
+
+	r556_e2.end_turn()   # 我方回合结束：施加中毒（伤害等它自己那半回合才结算）
+
+	check(r556_foe.health == 100 and r556_foe.poison_left == 2 and r556_foe.poison_dmg == 10,
+
+			"R681 毒沼：我方回合结束就给敌方单位挂中毒（血量 %d / 剩 %d 回合）"
+
+			% [r556_foe.health, r556_foe.poison_left])
+
+	r556_e2.end_turn()   # 敌方回合结束：结算中毒伤害（仍按单位所属方）
+
+	check(r556_foe.health == 90 and r556_foe.poison_left == 1,
+
+			"R681 毒沼：中毒伤害仍按**单位所属方**回合结算（100 → %d）" % r556_foe.health)
+
 	# 源码锁
 
 	check_src("func _apply_poison(" in FileAccess.get_file_as_string("res://scripts/game_engine.gd")
@@ -58857,7 +58887,7 @@ func _init() -> void:
 
 
 
-	# ⑥ 每回合结束伤害递增：15 → 16 → 17（「后续受到漩涡伤害 +1」）
+	# ⑥ 玩家回合结束伤害递增：15 → 16 → 17（「后续受到漩涡伤害 +1」）
 
 	var r381_e5 := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
 
@@ -58877,11 +58907,11 @@ func _init() -> void:
 
 			% [r381_vict.health, r381_vict.vortex_stacks])
 
-	r381_e5.end_turn()   # 敌方回合结束（我方单位不结算）
+	r381_e5.end_turn()   # 敌方回合结束：漩涡只在玩家回合结束结算 → 不结算
 
 	check(r381_vict.health == 85,
 
-			"R381 漩涡：敌方回合结束时我方单位不结算（仍 %d 血）" % r381_vict.health)
+			"R681 漩涡：敌方回合结束不结算（仍 %d 血）" % r381_vict.health)
 
 	r381_e5.end_turn()   # 我方回合结束：16 伤
 
@@ -58921,7 +58951,9 @@ func _init() -> void:
 
 
 
-	# ⑦ 敌方单位在敌方回合也被结算（卡面写的就是「场地生效·双」）
+	# ⑦ 敌方单位也在**玩家回合结束**时结算（卡面 trait「场地生效·双」）
+
+	#    ⚠️ R681 改了时点：以前要等敌方自己的回合结束，玩家放完卡结束回合看不到任何数字。
 
 	var r381_e6v := _new_engine(_single_deck(_card(8002, "攻击", "技能", 1, 0, 0)), 40, 40, -1, false)
 
@@ -58933,17 +58965,17 @@ func _init() -> void:
 
 	r381_e6v.state.set_field(CardData.from_dict(r381_v.to_dict()), Vector2i(1, 1), "self")
 
-	r381_e6v.end_turn()   # 我方回合结束（敌方单位不结算）
-
-	check(r381_foe0.health == 100 and r381_foe0.vortex_stacks == 0,
-
-			"R381 漩涡：我方回合结束时敌方单位不结算（仍 100 血）")
-
-	r381_e6v.end_turn()   # 敌方回合结束 → 结算 15 伤
+	r381_e6v.end_turn()   # 我方回合结束 → 立刻结算 15 伤
 
 	check(r381_foe0.health == 85 and r381_foe0.vortex_stacks == 1,
 
-			"R381 漩涡：敌方回合结束时结算（100 → %d）" % r381_foe0.health)
+			"R681 漩涡：我方回合结束就结算敌方单位（100 → %d）" % r381_foe0.health)
+
+	r381_e6v.end_turn()   # 敌方回合结束 → 不再结算（每轮只结一次）
+
+	check(r381_foe0.health == 85 and r381_foe0.vortex_stacks == 1,
+
+			"R681 漩涡：敌方回合结束不重复结算（仍 %d 血）" % r381_foe0.health)
 
 
 

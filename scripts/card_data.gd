@@ -206,13 +206,14 @@ var upgrade_stacks: int = 0
 ## 放卡面而不是引擎常量：**加新的治疗型场地只要填这个数字，引擎一行都不用改**。
 var field_heal: int = 0
 ## **毒沼每跳伤害 / 持续回合数**（R556）：毒沼 8082 = 10 / 2，其余 = 0。
-## 0 = 这张持续型场地不施加中毒（判据：`GameEngine._field_aura_tick` 靠 `field_poison_dmg > 0`
-## 决定要不要施加，`field_poison_turns` 决定持续几回合）。放卡面而不是引擎常量：与 `field_heal` 同族。
+## 0 = 这张持续型场地不施加中毒（判据：`GameEngine._field_owner_tick` 靠 `field_poison_dmg > 0`
+## 决定要不要施加，`field_poison_turns` 决定持续几回合）。施加时点 = **使用者回合结束**
+## （R681 通则「地形效果的回合按使用者来」）；中毒伤害仍按各单位所属方回合结算。放卡面而不是引擎常量：与 `field_heal` 同族。
 ## 「取伤害高」由 `_apply_poison` 结算（刷新时伤害取 max、持续取 max），字段本身只存卡面原值。
 var field_poison_dmg: int = 0
 var field_poison_turns: int = 0
 ## **漩涡每回合结算的基础伤害**（R557）：漩涡 9186 = 15，其余 = 0。
-## 0 = 这张持续型场地不造成漩涡伤害（判据：`GameEngine._field_aura_tick` 靠 `field_vortex_dmg > 0`
+## 0 = 这张持续型场地不造成漩涡伤害（判据：`GameEngine._field_owner_tick` 靠 `field_vortex_dmg > 0`
 ## 决定要不要结算）。实际伤害 = 基础值 + 该单位已受漩涡伤害的次数（`Placement.vortex_stacks`，
 ## 「后续受到的漩涡伤害 +1」），递增记在单位上、不写回卡面。放卡面而不是引擎常量：与 `field_heal` 同族。
 var field_vortex_dmg: int = 0
