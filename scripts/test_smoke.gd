@@ -37,6 +37,8 @@ func _initialize() -> void:
 	ProfileData.set_test_mode()
 	# R378：存档也换独立文件 —— 否则跑一次测试就把玩家正在打的那一局删了
 	RunSave.set_test_mode()
+	# R672：显示模式的源码守卫（headless 没有真窗口，只能锁文本）
+	_check_r672_display_guard()
 	_plan = [
 		["res://scenes/title.tscn", func(): _reset()],
 		# R660：正式版首次语言选择 —— 列表必须是注册表驱动，3 种语言现在刚好排满；
@@ -1105,6 +1107,27 @@ func _check_language_pick(scene: Variant) -> void:
 		return
 	print("SMOKE OK R660：首次语言选择页（注册表 %d 项 / 默认 %s / 列表可滚动）"
 			% [items.size(), sel])
+
+
+func _check_r672_display_guard() -> void:
+	## R672：店长**第二次**报「从故事返回主界面，全屏变窗口」。
+	##   R635 挡的是 FULLSCREEN 被降级，R672 补的是**窗口最大化** —— 玩家嘴里的
+	##   「全屏」在 Windows 上有两种形态，点右上角最大化视觉上几乎一样；
+	##   而 `window_set_mode(WINDOWED)` 会**顺手退出最大化**。
+	## 这条是**源码守卫**：headless 下 DisplayServer 没有真窗口，行为验不了，
+	##   只能锁住「最大化直接 return」这一句。⚠️ 删掉它 = 退回「每次回主界面掉小窗」，
+	##   删的人必须看到这条红。真窗口验证走 `tools/probe_fullscreen_r635.gd -- --maximized`。
+	if _src_guard_skip("R672 显示模式守卫"):
+		return
+	var src := FileAccess.get_file_as_string("res://scripts/game_settings.gd")
+	if not src.contains("if m == DisplayServer.WINDOW_MODE_MAXIMIZED:"):
+		_smoke_fail("R672：apply_display() 丢了「最大化不打回窗口」的分支")
+		return
+	if not src.contains("WINDOW_MODE_MAXIMIZED"):
+		_smoke_fail("R672：全屏判据里没有最大化")
+		return
+	_ok += 1
+	print("SMOKE OK R672：回主界面不许降级显示（FULLSCREEN / MAXIMIZED 都保留）")
 
 
 func _reset() -> void:

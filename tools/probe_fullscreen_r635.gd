@@ -21,6 +21,9 @@ var _phase := 0
 var _m1 := -1
 var _m3 := -1
 var _m4 := -1
+## R672：期望的「全屏」形态。玩家嘴里的全屏有两种 ——
+## 真的 FULLSCREEN，以及**窗口最大化**（Windows 上视觉几乎一样）。
+var _want := DisplayServer.WINDOW_MODE_FULLSCREEN
 
 
 func _mode_text() -> String:
@@ -36,8 +39,23 @@ func _initialize() -> void:
 	#             （= 玩家用 F11 / --fullscreen / 系统层面进的全屏，设置里没存过）
 	if not ("--external" in OS.get_cmdline_user_args()):
 		GameSettings.fullscreen = true
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-	print("[R635] 0 设成全屏后 im=", _mode_text(), " GameSettings.fullscreen=", GameSettings.fullscreen)
+	# R672：--maximized = 玩家点右上角最大化（settings.cfg 里 fullscreen 仍是 false），
+	# 这条才是「全屏变窗口」的真身 —— 窗口最大化 ≠ WINDOW_MODE_FULLSCREEN，
+	# 旧版 apply_display() 一律 window_set_mode(WINDOWED)，而设成 WINDOWED
+	# 会**顺手退出最大化** → 玩家看到的就是「全屏掉成小窗」。
+	if "--maximized" in OS.get_cmdline_user_args():
+		_want = DisplayServer.WINDOW_MODE_MAXIMIZED
+		GameSettings.fullscreen = false
+	_t = 0.0
+	_phase = 0
+
+
+func _setup_window() -> void:
+	## ⚠️ 必须等窗口真的起来再设 mode：`--script` 模式下首帧窗口还没就绪，
+	## `window_set_mode(MAXIMIZED)` 会被直接吞掉（实测设完立刻读回 WINDOWED）。
+	DisplayServer.window_set_mode(_want)
+	print("[R635] 0 设成", _mode_of(_want), "后 im=", _mode_text(),
+			" GameSettings.fullscreen=", GameSettings.fullscreen)
 	change_scene_to_file("res://scenes/story.tscn")
 	_t = 0.0
 	_phase = 1
@@ -45,6 +63,9 @@ func _initialize() -> void:
 
 func _process(delta: float) -> bool:
 	_t += delta
+	if _phase == 0 and _t > 0.35:
+		_setup_window()
+		return false
 	if _phase == 1 and _t > 1.2:
 		_m1 = DisplayServer.window_get_mode()
 		print("[R635] 1 故事界面里 im=", _mode_text(),
@@ -71,10 +92,10 @@ func _process(delta: float) -> bool:
 		GameSettings.apply_display(true)
 		_m4 = DisplayServer.window_get_mode()
 		print("[R635] 4 强制改窗口后 im=", _mode_text())
-		var fs := DisplayServer.WINDOW_MODE_FULLSCREEN
-		var ok := _m1 == fs and _m3 == fs and _m4 == DisplayServer.WINDOW_MODE_WINDOWED
-		print("[R635] 判定：故事界面 %s / 回主界面 %s / 强制关全屏 %s → %s" % [
-				_mode_of(_m1), _mode_of(_m3), _mode_of(_m4), "PASS" if ok else "FAIL"])
+		var ok := _m1 == _want and _m3 == _want and _m4 == DisplayServer.WINDOW_MODE_WINDOWED
+		print("[R635] 判定（期望 %s）：故事界面 %s / 回主界面 %s / 强制关全屏 %s → %s" % [
+				_mode_of(_want), _mode_of(_m1), _mode_of(_m3), _mode_of(_m4),
+				"PASS" if ok else "FAIL"])
 		quit(0 if ok else 1)
 		return true
 	return false

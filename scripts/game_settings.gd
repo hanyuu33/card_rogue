@@ -252,17 +252,32 @@ static func apply_display(force := false) -> void:
 	## 给的（引擎 / 系统层面：F11、`--fullscreen`、窗口管理器），`settings.cfg`
 	## 里仍是 `fullscreen=false` → 每回一次主界面就被打回窗口。
 	##
-	## 所以 `force = false`（启动 / 回主界面）时**先看窗口现状**：已经是全屏就
-	## 什么都不做，只把内存值对齐成 true（不写盘 —— 这是「读到现状」，不是玩家改设置）。
+	## R672（店长再报同一条）—— R635 只挡住了 FULLSCREEN，**漏了窗口最大化**：
+	## 玩家嘴里的「全屏」有两种，Windows 上点右上角最大化视觉上几乎一样。
+	## 旧代码走到 `window_set_mode(WINDOWED)`，而设成 WINDOWED **会顺手退出最大化**
+	## （探针 `-- --maximized` 实测：故事里 MAXIMIZED → 回主界面 WINDOWED）。
+	##
+	## 所以 `force = false`（启动 / 回主界面）改成**只补不降**：
+	##   * 已经是全屏 → 什么都不做，只把内存值对齐成 true（不写盘）；
+	##   * 已经是最大化 → 什么都不做（不许拿「记下来的是关」去否定玩家的窗口现状）；
+	##   * 记着要全屏、窗口却不是 → 补成全屏；
+	##   * 记着不要全屏、窗口也是普通窗口 → 什么都不做。
 	## `force = true`（设置页切换全屏）必须强制落值，否则「关掉全屏」会被现状顶回来。
 	if DisplayServer.get_name() == "headless":
 		return
 	var m := DisplayServer.window_get_mode()
-	var is_fs := (m == DisplayServer.WINDOW_MODE_FULLSCREEN
-			or m == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
-	if not force and is_fs:
+	if force:
+		DisplayServer.window_set_mode(
+				DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen
+				else DisplayServer.WINDOW_MODE_WINDOWED)
+		return
+	if m == DisplayServer.WINDOW_MODE_FULLSCREEN \
+			or m == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
+		# 现状就是全屏 → 对齐内存值（设置页要显示成「开」），窗口一动不动
 		fullscreen = true
 		return
-	DisplayServer.window_set_mode(
-			DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen
-			else DisplayServer.WINDOW_MODE_WINDOWED)
+	if m == DisplayServer.WINDOW_MODE_MAXIMIZED:
+		# ⚠️ 这一行是 R672 的修复本体。删掉它就退回「每次回主界面全屏掉成小窗」。
+		return
+	if fullscreen:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
