@@ -69,7 +69,15 @@
       "ASSEMBLE_DROP_OUTSIDE_SLOTS": "中央の3つのスロットにのみ配置可能：①属性 ②上半 ③下半",
       "ASSEMBLE_FIXED_BASE": "このカードは固定のベースのため、変更できない",
       "ASSEMBLE_PLACED_IN_SLOT_NOTE": "スロットに配置済み",
-      "ASSEMBLE_RESULT_PREVIEW_NOTE": "組み立て結果のプレビュー —— 「組み立てを確定」を押した後に実際に生成される"
+      "ASSEMBLE_RESULT_PREVIEW_NOTE": "組み立て結果のプレビュー —— 「組み立てを確定」を押した後に実際に生成される",
+      "SHOP_MENU_BACK": "買い物を続ける",
+      "SHOP_MENU_SUBTITLE": "謎の商店",
+      "SHOP_MENU_VIEW_DECK": "デッキを見る",
+      "SHOP_MENU_BACK_TITLE": "タイトルへ戻る",
+      "SHOP_MENU_BACK": "買い物を続ける",
+      "SHOP_MENU_SUBTITLE": "謎の商店",
+      "SHOP_MENU_VIEW_DECK": "デッキを見る",
+      "SHOP_MENU_BACK_TITLE": "タイトルへ戻る"
     },
     "reward": {
       "REWARD_TYPE_NORMAL": "通常クリア報酬",

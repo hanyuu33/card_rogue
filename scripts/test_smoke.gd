@@ -309,6 +309,16 @@ func _initialize() -> void:
 				RunState.gold = 500
 				RunState.pending_node = {"type": "shop"},
 			_check_r390_shop_revisit],
+		# R674（用户报「商店界面按 esc 打不开菜单 / 最好右上角也有菜单按钮」）：
+		# 商店是 R148 铺菜单时**唯一漏掉**的界面 —— test_engine 的 R148 名单里没有
+		# shop_scene，所以漏了这么久回归一直是绿的。这里从场景侧再钉一次。
+		["res://scenes/shop.tscn", func():
+				_reset()
+				RunState.run_active = true
+				RunState.start_run(_map())
+				RunState.gold = 500
+				RunState.pending_node = {"type": "shop"},
+			_check_r674_shop_menu],
 		# R206：卡牌三选一「详情条」的排版唯一性 —— 提及块必须画在右栏、预算高度与
 		# 实画行距同源、强调色按真实底色挑。用户口径：「卡片详细效果描述」的排版乱。
 		["res://scenes/event.tscn", func():
@@ -1615,6 +1625,50 @@ func _check_deck_duck_blood(scene: Variant) -> void:
 		return
 	print("SMOKE OK 鸭血卡组编辑：多选上限 2 / 选 3 张保留最新 2 张 / 确定后卡组 %d → %d"
 			% [before, RunState.deck_ids.size()])
+
+
+func _check_r674_shop_menu(scene: Variant) -> void:
+	## R674（用户报「商店界面按 esc 打不开菜单」「最好右上角也有菜单按钮」）。
+	## 断言两条，少一条就是「玩家按 Esc 没反应」：
+	##   ① Esc 真的能把菜单叫出来（不是只挂了个组件在那儿）；
+	##   ② 右上角有齿轮入口 —— 触摸端没有 Esc 键，只挂组件等于没有菜单。
+	var ui: UiMenu = scene._menu
+	if ui == null:
+		_smoke_fail("R674 商店没挂 UiMenu（Esc 打不开菜单）")
+		return
+	if ui.is_open():
+		_smoke_fail("R674 商店一进店菜单就是开着的")
+		return
+	var gb: Button = scene._menu_btn
+	if gb == null:
+		_smoke_fail("R674 商店右上角没有菜单齿轮按钮")
+		return
+	# 齿轮必须真的排在右上角、且**不压**「道具」按钮。
+	# ⚠️ 齿轮是舞台本地坐标（商店 Control），RelicViewer 是 CanvasLayer → 屏幕坐标，
+	#    比矩形前补一个 stage_origin，否则宽屏下定错了位置也看不出来。
+	var sc := scene as Control
+	var ox: float = UiTheme.stage_origin(sc.get_viewport_rect().size).x
+	var gr := Rect2(gb.position + Vector2(ox, 0.0), gb.size)
+	if gr.position.x < sc.size.x * 0.5:
+		_smoke_fail("R674 菜单齿轮不在右上角（屏幕 x=%.0f）" % gr.position.x)
+		return
+	var rv: RelicViewer = scene._relic_view
+	if rv != null and rv._btn_rect().intersects(gr):
+		_smoke_fail("R674 菜单齿轮压住了右上「道具」按钮")
+		return
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	scene._unhandled_input(esc)
+	if not ui.is_open():
+		_smoke_fail("R674 商店按 Esc 没打开菜单")
+		return
+	ui.close()      # 菜单会暂停场景树 —— 别把暂停留给后面的用例
+	if scene.get_tree().paused:
+		scene.get_tree().paused = false
+		_smoke_fail("R674 关掉菜单后场景树仍是暂停状态")
+		return
+	print("SMOKE OK R674 商店 Esc 打开菜单 + 右上齿轮在位（屏幕 x=%.0f）" % gr.position.x)
 
 
 func _check_shop_enchant(scene: Variant) -> void:

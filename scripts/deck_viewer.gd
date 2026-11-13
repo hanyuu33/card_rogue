@@ -127,6 +127,28 @@ func _refresh_btn() -> void:
 	_btn.text = GameI18n.ui("map", "DECK_VIEWER_BUTTON", "牌库 %d") % _shown_n
 
 
+func is_panel_open() -> bool:
+	## R674：给外界面（商店的 Esc 层级）用 —— 面板开着时 Esc 先关面板，别弹菜单。
+	return _open
+
+
+func close_panel() -> void:
+	## R674：**不动 `UiGate`**（与 `_toggle` 不同）—— Esc 收面板时不该顺手把别的层推开。
+	if not _open:
+		return
+	_open = false
+	_panel.visible = false
+	_detail = -1
+	_scroll = 0.0
+	_refresh_btn()
+	_panel.queue_redraw()
+
+
+func toggle_panel() -> void:
+	## R674：商店菜单「查看卡组」走这里 —— 和右上按钮同一个 `_toggle`，不另开分支。
+	_toggle()
+
+
 func _toggle() -> void:
 	_open = not _open
 	_panel.visible = _open

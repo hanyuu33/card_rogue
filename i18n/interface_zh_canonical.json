@@ -519,6 +519,22 @@
       "ASSEMBLE_RESULT_PREVIEW_NOTE": {
         "source": "scripts/assemble_overlay.gd:760",
         "zh": "组合结果预览 —— 按「确认组合」后才会真正生成"
+      },
+      "SHOP_MENU_BACK": {
+        "source": "scripts/shop_scene.gd:403",
+        "zh": "继续购物"
+      },
+      "SHOP_MENU_SUBTITLE": {
+        "source": "scripts/shop_scene.gd:404",
+        "zh": "神秘商店"
+      },
+      "SHOP_MENU_VIEW_DECK": {
+        "source": "scripts/shop_scene.gd:425",
+        "zh": "查看卡组"
+      },
+      "SHOP_MENU_BACK_TITLE": {
+        "source": "scripts/shop_scene.gd:426",
+        "zh": "回到标题"
       }
     },
     "reward": {
@@ -3425,7 +3441,7 @@
     }
   },
   "expected_counts": {
-    "shop": 68,
+    "shop": 72,
     "reward": 120,
     "map": 244,
     "battle": 72,

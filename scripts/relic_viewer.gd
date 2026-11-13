@@ -182,6 +182,23 @@ func _btn_rect() -> Rect2:
 
 # ------------------------------------------------------------ 展开 / 收起
 
+func is_panel_open() -> bool:
+	## R674：商店 Esc 层级用（胶囊浮层开着就先收起来）。
+	return _open
+
+
+func close_panel() -> void:
+	## R674：直接收状态，不走 `_toggle()` —— 后者被 `UiGate.blocked()` 挡着，
+	## 而 Esc 收浮层恰恰可能发生在别的层登记 gate 的时刻。
+	if not _open:
+		return
+	_open = false
+	_hover_chip = -1
+	_chip_scroll = 0.0
+	_hover_layer.visible = false
+	_refresh_btn()
+
+
 func _toggle() -> void:
 	# 被覆盖层盖着时不给展开（看不见的入口不该响应）
 	if UiGate.blocked():

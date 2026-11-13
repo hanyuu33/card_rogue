@@ -15522,7 +15522,7 @@ func _init() -> void:
 
 				"relic_pick_scene", "deck_edit_scene", "record_list_scene",
 
-				"settings_scene", "gallery_scene"]
+				"settings_scene", "gallery_scene", "shop_scene"]
 
 		var r148_missing := ""
 
@@ -15535,6 +15535,17 @@ func _init() -> void:
 		check(r148_missing == "",
 
 				"R148 每个游戏内界面都挂上了主菜单（缺：%s）" % r148_missing)
+
+		# R674（用户报「商店按 Esc 打不开菜单 / 右上角该有菜单按钮」）：
+		# 上面那条只锁 `attach`。商店当时**不在名单里**，所以 R148 铺满全界面时它漏了，
+		# 回归也一直是绿的。这里补两道：① 商店进名单；② 右上角有齿轮入口 ——
+		# 触摸端没有 Esc 键，只挂菜单不给按钮等于没有菜单。
+
+		var r674_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+
+		check(r674_shop.find("_menu_btn") >= 0 and r674_shop.find("UiTheme.draw_gear") >= 0,
+
+				"R674 商店右上角有菜单齿轮（触摸端没有 Esc 键）")
 
 		# R619（用户口径「卡组和地图应该在任何时候都能查看，这个约束不要丢了」）：
 		# 逐场景锁住入口 —— 改版式、挤按钮、换函数名导致任何一处消失，回归立刻红。

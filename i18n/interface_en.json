@@ -69,7 +69,15 @@
       "ASSEMBLE_DROP_OUTSIDE_SLOTS": "Cards can only be placed in the three center slots: ① Stats ② Upper ③ Lower",
       "ASSEMBLE_FIXED_BASE": "This card is the fixed base and cannot be changed",
       "ASSEMBLE_PLACED_IN_SLOT_NOTE": "Placed in a slot",
-      "ASSEMBLE_RESULT_PREVIEW_NOTE": "Assembly result preview — the card is only created after you click \"Confirm Assembly\""
+      "ASSEMBLE_RESULT_PREVIEW_NOTE": "Assembly result preview — the card is only created after you click \"Confirm Assembly\"",
+      "SHOP_MENU_BACK": "Keep Shopping",
+      "SHOP_MENU_SUBTITLE": "Mysterious Shop",
+      "SHOP_MENU_VIEW_DECK": "View Deck",
+      "SHOP_MENU_BACK_TITLE": "Back to Title",
+      "SHOP_MENU_BACK": "Keep Shopping",
+      "SHOP_MENU_SUBTITLE": "Mysterious Shop",
+      "SHOP_MENU_VIEW_DECK": "View Deck",
+      "SHOP_MENU_BACK_TITLE": "Back to Title"
     },
     "reward": {
       "REWARD_TYPE_NORMAL": "Normal Victory Reward",

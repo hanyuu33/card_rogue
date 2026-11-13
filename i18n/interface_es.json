@@ -69,7 +69,15 @@
       "ASSEMBLE_DROP_OUTSIDE_SLOTS": "Solo puedes colocar cartas en las tres ranuras centrales: ① Atributos ② Superior ③ Inferior",
       "ASSEMBLE_FIXED_BASE": "Esta carta es la base fija y no se puede cambiar",
       "ASSEMBLE_PLACED_IN_SLOT_NOTE": "Colocada en una ranura",
-      "ASSEMBLE_RESULT_PREVIEW_NOTE": "Vista previa del ensamblaje: la carta solo se crea al pulsar «Confirmar ensamblaje»"
+      "ASSEMBLE_RESULT_PREVIEW_NOTE": "Vista previa del ensamblaje: la carta solo se crea al pulsar «Confirmar ensamblaje»",
+      "SHOP_MENU_BACK": "Seguir comprando",
+      "SHOP_MENU_SUBTITLE": "Tienda misteriosa",
+      "SHOP_MENU_VIEW_DECK": "Ver mazo",
+      "SHOP_MENU_BACK_TITLE": "Volver al título",
+      "SHOP_MENU_BACK": "Seguir comprando",
+      "SHOP_MENU_SUBTITLE": "Tienda misteriosa",
+      "SHOP_MENU_VIEW_DECK": "Ver mazo",
+      "SHOP_MENU_BACK_TITLE": "Volver al título"
     },
     "reward": {
       "REWARD_TYPE_NORMAL": "Recompensa de victoria normal",

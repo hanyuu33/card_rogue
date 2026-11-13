@@ -56,6 +56,11 @@ const ROW1_GAP := 32.0         # 卡面基准间距
 const ROW1_MIN_W := 100.0      # 卡面最小宽（再窄宁可轻微溢出，也不让卡面糊成一片）
 const ROW2_ITEM_MAX_W := 330.0 # 附魔商品不再横向拉满货架
 const ROW3_ITEM_MAX_W := 250.0 # 服务商品收窄，说明改到底部整宽折行
+# R674：右上那枚菜单齿轮（与 `map_scene` 同尺寸）。`MENU_BTN_RIGHT_GAP` 是**距窗口右缘**
+# 的固定量，口径同 `DeckViewer._right_gap`（该处 16）：248 = 「道具 N」右缘留 136 那一档
+# 再往左让出齿轮宽 + 12 间距 —— 即齿轮永远贴在「道具」按钮左边 12px。
+const MENU_BTN_SIZE := Vector2(40, 32)
+const MENU_BTN_RIGHT_GAP := 248.0
 
 # 附魔定义（id → 元数据）
 const ENCHANTS := [
@@ -101,6 +106,14 @@ var _deck_cards: Array = []    # [{id, name, card}]
 var _hint := ""
 var _hint_t := 0.0
 
+# ---- R674：Esc 主菜单 + 右上齿轮（R148 铺菜单时**漏了商店**）----
+## 用户口径：「商店界面按 esc 打不开菜单」「最好商店右上角也有菜单按钮」。
+## 菜单只放**画面之外**的操作（查看卡组 / 回到标题）；买东西仍旧点货架本身。
+var _menu: UiMenu = null
+var _menu_btn: Button = null
+var _deck_view: DeckViewer = null      # 菜单「查看卡组」要开的就是右上那个面板
+var _relic_view: RelicViewer = null
+
 # ---- R390：商店会话 / 平台分叉 ----
 ## 本次商店对应的地图格子 id（-1 = 演示 / 没有地图）。重进时用它去 RunState 找货架。
 var _shop_node := -1
@@ -138,8 +151,10 @@ func _ready() -> void:
 	# ⚠️ 两个必须**成对**挂：smoke 有「挂了牌库却没有道具 → 直接红」的对等断言。
 	# ⚠️ 位置取默认 / 1044：商店顶部 0~84 是空的（标题居中、金币在左），
 	#    老板立绘从 `_top_h() + 20` 才开始画 —— 两个按钮不会压到立绘或标题。
-	DeckViewer.attach(self)
-	RelicViewer.attach(self, Vector2(1044, 6))
+	# R674：把实例留下来 —— 菜单里的「查看卡组」开的必须是**同一个**面板，
+	# 另开一份会两套滚动状态、按钮张数也对不上。
+	_deck_view = DeckViewer.attach(self)
+	_relic_view = RelicViewer.attach(self, Vector2(1044, 6))
 	# ⚠️ `_setup_shop()` **必须在演示参数之后**（R390）：`--shop` 会造 run 并把
 	# `current_node_id` 从 -1 补成一个有效格子，而 `_setup_shop()` 要拿它当
 	# `_shop_node` 去存取货架状态。放在前面 → `_shop_node` 恒为 -1 → 状态存不下，
@@ -355,7 +370,79 @@ func _ready() -> void:
 			get_tree().quit())
 		add_child(t)
 		t.start()
+	_build_menu()   # R674：齿轮按钮 + Esc 主菜单
 	_ask_redraw()
+
+
+func _build_menu() -> void:
+	## R674：右上角齿轮 + Esc 主菜单，照 `map_scene` 那枚的口径（40×32 chip + 自绘齿轮）。
+	## ⚠️ 位置**只能往左让一格**：商店右上角早被「道具 N」(1044,6) 与「牌库 N」(1150,6)
+	##    占着，齿轮排在它们左边（间距 12，与两枚按钮之间一致）。
+	## ⚠️ 坐标跟**窗口**右缘走，不能写死 992：宽屏下那两枚按钮都贴窗口右缘
+	##    （`DeckViewer._pin_to_window`），写死坐标会让齿轮跟它们越拉越远。
+	_menu_btn = Button.new()
+	_menu_btn.size = MENU_BTN_SIZE
+	_menu_btn.position = _menu_btn_pos()
+	_menu_btn.tooltip_text = ""
+	_menu_btn.pressed.connect(_open_menu)
+	_menu_btn.draw.connect(_draw_menu_gear)
+	UiTheme.apply_chip(_menu_btn, true)
+	add_child(_menu_btn)
+	var wr: WeakRef = weakref(self)
+	get_viewport().size_changed.connect(func() -> void:
+		var s = wr.get_ref()
+		if s != null and s._menu_btn != null:
+			s._menu_btn.position = s._menu_btn_pos())
+	# 菜单项传**函数引用**（每次打开重新求值，见 `UiMenu.attach` 注释）。
+	_menu = UiMenu.attach(self, _menu_items, {
+		"back": GameI18n.ui("shop", "SHOP_MENU_BACK", "继续购物"),
+		"sub": GameI18n.ui("shop", "SHOP_MENU_SUBTITLE", "神秘商店"),
+	})
+
+
+func _menu_btn_pos() -> Vector2:
+	## 齿轮左上角（**舞台本地坐标**）。舞台在宽屏下居中，窗口多出来的宽度要扣掉
+	## （`stage_origin`），否则齿轮停在舞台里、和贴窗口右缘的两枚按钮脱开一截。
+	var vp := get_viewport_rect().size
+	return Vector2(vp.x - MENU_BTN_RIGHT_GAP - MENU_BTN_SIZE.x
+			- UiTheme.stage_origin(vp).x, 6.0)
+
+
+func _open_menu() -> void:
+	if _menu != null:
+		_menu.open()
+
+
+func _menu_items() -> Array:
+	## 商店的菜单项（R674）—— 买东西仍旧点货架，这里只放**画面之外**的操作。
+	## ⚠️ 每次打开菜单都会重新调用本函数（`UiMenu.attach` 传的是函数引用）。
+	return [
+		{"text": GameI18n.ui("shop", "SHOP_MENU_VIEW_DECK", "查看卡组"), "fn": _toggle_deck_view},
+		{"text": GameI18n.ui("shop", "SHOP_MENU_BACK_TITLE", "回到标题"), "fn": _on_back_to_title},
+	]
+
+
+func _toggle_deck_view() -> void:
+	if _deck_view != null:
+		_deck_view.toggle_panel()
+
+
+func _on_back_to_title() -> void:
+	## R674：照地图口径 —— 离开前**先落一份盘**，否则标题页「继续游戏」会退回上一次
+	## 检查点（R377 踩过的那个坑：只清内存不写盘）。出图 / headless 不写盘。
+	if RunState.run_active and DisplayServer.get_name() != "headless":
+		RunSave.save_run()
+	if RunState.run_active:
+		RunState.end_run(false)
+	SceneFx.goto("res://scenes/title.tscn")
+
+
+func _draw_menu_gear() -> void:
+	## 齿轮图标（**自绘** —— 字体里的 ⚙ 不保证有）：hover 提亮，轴孔跟着底板走。
+	var hot := _menu_btn.is_hovered()
+	var col: Color = UiTheme.CHIP_SOLID_TEXT_HOVER if hot else UiTheme.CHIP_SOLID_TEXT
+	var bg: Color = UiTheme.CHIP_SOLID_BG_HOVER if hot else UiTheme.CHIP_SOLID_BG
+	UiTheme.draw_gear(_menu_btn, _menu_btn.size * 0.5, 8.0, col, bg)
 
 
 func _setup_shop() -> void:
@@ -1241,6 +1328,38 @@ func _enchant_ok(ench_id: String, c: CardData, deck_idx: int) -> bool:
 
 # ------------------------------------------------------------ 输入
 
+func _unhandled_input(event: InputEvent) -> void:
+	## R674：Esc 的**层级**（上 → 下）：选卡覆盖层 → 卡组 / 道具浮层 → 主菜单。
+	## ⚠️ 菜单的**打开**交给 `handle_esc`；上层任何一层吃掉事件后必须 return，
+	##    否则「关掉选卡页」的同一次按键又去弹菜单，一下按出两件事。
+	if event is InputEventKey:
+		var k := event as InputEventKey
+		if k.keycode == KEY_ESCAPE and k.pressed and not k.echo:
+			if _enchanting >= 0 or _deleting:
+				_cancel_pick()
+				get_viewport().set_input_as_handled()
+				return
+			if _deck_view != null and _deck_view.is_panel_open():
+				_deck_view.close_panel()
+				get_viewport().set_input_as_handled()
+				return
+			if _relic_view != null and _relic_view.is_panel_open():
+				_relic_view.close_panel()
+				get_viewport().set_input_as_handled()
+				return
+	if _menu != null and _menu.handle_esc(event):
+		return
+
+
+func _cancel_pick() -> void:
+	## 收起选卡覆盖层（附魔 / 删除共用）。R674 起底部「取消」与 Esc 都走这里。
+	_enchanting = -1
+	_deleting = false
+	_hover_enchant_card = -1
+	_sel_pick = -1
+	_ask_redraw()
+
+
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		_on_motion(event.position)
@@ -1523,11 +1642,7 @@ func _on_pick_click(pos: Vector2) -> void:
 		_on_pick_click(_pick_card_rect(_sel_pick).get_center())
 		return
 	if _pick_cancel_rect().has_point(pos):
-		_enchanting = -1
-		_deleting = false
-		_hover_enchant_card = -1
-		_sel_pick = -1
-		_ask_redraw()
+		_cancel_pick()      # R674：Esc 与底部「取消」同源（取消语义只有一份）
 		return
 	var ci := _enchant_card_at(pos)
 	if ci < 0:
