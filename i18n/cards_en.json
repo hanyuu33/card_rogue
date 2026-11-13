@@ -1,0 +1,1270 @@
+{
+ "version": 1,
+ "lang": "en",
+ "source": "i18n/zh_canonical.json",
+ "count": 315,
+ "cards": {
+  "1011": {
+   "name": "Ironwall Guard",
+   "effect_text": "Taunt: enemy units must attack it first. Level Growth: +1 Attack every 2 turns, up to +4 in total."
+  },
+  "1013": {
+   "name": "Ashen Dragon",
+   "effect_text": "At the start of the first turn after it enters the field: deal 4 damage to all enemy units. May act twice per turn. Level Growth: +1 Attack every 2 turns, up to +4 in total."
+  },
+  "1014": {
+   "name": "Young Dragon",
+   "effect_text": "Death: Summon a Dragonkin. Level Growth: +1 Attack every 2 turns, up to +4 in total."
+  },
+  "1031": {
+   "name": "Frost Warlock",
+   "effect_text": "At the start of the first turn after it enters the field: Freeze the **first enemy unit to enter the field this battle**, making it unable to act next turn."
+  },
+  "1050": {
+   "name": "Corrupted Ghoul",
+   "effect_text": "Death: deal 5 damage to the enemy HP. Level Growth: +1 Attack every 2 turns, up to +4 in total."
+  },
+  "1051": {
+   "name": "Undead Lord",
+   "effect_text": "Death: Summon two Skeletons. May act twice per turn. Level Growth: +1 Attack every 2 turns, up to +4 in total."
+  },
+  "1053": {
+   "name": "Skeleton Soldier",
+   "effect_text": "Level Growth: +1 Attack every 2 turns, up to +4 in total."
+  },
+  "1054": {
+   "name": "Skeleton Soldier",
+   "effect_text": "Death: Summon a Skeleton. Level Growth: +1 Attack every 2 turns, up to +4 in total."
+  },
+  "1055": {
+   "name": "Skeleton Soldier",
+   "effect_text": "Taunt: enemy units must attack it first. Level Growth: +1 Attack every 2 turns, up to +4 in total."
+  },
+  "1061": {
+   "name": "Blast Mech",
+   "effect_text": "Death: deal 8 damage to all other units on the field, friend and foe alike. Level Growth: +1 Attack every 2 turns, up to +4 in total."
+  },
+  "1071": {
+   "name": "Lava Giant",
+   "effect_text": "Skill damage taken is capped at 3. May act twice per turn. Level Growth: +1 Attack every 2 turns, up to +4 in total."
+  },
+  "8001": {
+   "name": "Wooden Fence",
+   "effect_text": ""
+  },
+  "8002": {
+   "name": "Strike",
+   "effect_text": "Deal 4 damage to a target."
+  },
+  "8003": {
+   "name": "Treant",
+   "effect_text": ""
+  },
+  "8004": {
+   "name": "Bear",
+   "effect_text": "Activate: instead of acting, restore 6 Health, then tap this card. Can only be activated once while on the field."
+  },
+  "8005": {
+   "name": "Shade",
+   "effect_text": ""
+  },
+  "8006": {
+   "name": "Shadow Cat",
+   "effect_text": "When played, if this is the 3rd card you have played this turn, add a random Skill card from your Deck to your Hand."
+  },
+  "8007": {
+   "name": "Shadow Fiend",
+   "effect_text": "On Use: all Skill cards in your Hand cost 1 less this turn; for each 0-cost Skill card in your Hand, this card gains +3 Health."
+  },
+  "8008": {
+   "name": "Ghost",
+   "effect_text": "At the start of your turn, Destroy this card. When this card is Destroyed, add a random Skill card from your Deck to your Hand."
+  },
+  "8009": {
+   "name": "Shadowlurker",
+   "effect_text": "While on the field, whenever you use a card, this card gains +1 Power; resets after attacking or leaving the field."
+  },
+  "8010": {
+   "name": "Glowgrass",
+   "effect_text": "While on the field, your Skill damage +1. Keyword \"Dimensional\": Banished on leaving the field; does not go to the Discard Pile."
+  },
+  "8018": {
+   "name": "Living Fence",
+   "effect_text": "On Play: draw a card."
+  },
+  "8019": {
+   "name": "Hellcat",
+   "effect_text": "At the end of your turn, for each point of Cost remaining, this card gains +1 Power and +2 Health."
+  },
+  "8020": {
+   "name": "Blood Fortress",
+   "effect_text": "At the end of your turn, for each point of Cost remaining, this card gains +1 Power and +3 Health."
+  },
+  "8021": {
+   "name": "Dark Lord",
+   "effect_text": "After use, you gain 5 Cost at the end of this turn (resolved first).",
+   "lower_effect_note": "at the end of this turn"
+  },
+  "8022": {
+   "name": "Hell Chanter",
+   "effect_text": "When attacking, restore 1 Cost."
+  },
+  "8023": {
+   "name": "Dark Altar",
+   "effect_text": "When attacking, restore 1 Cost."
+  },
+  "8024": {
+   "name": "Pact Signer",
+   "effect_text": "On Play: restore 4 Cost. All cards in your Hand cost +4 this turn."
+  },
+  "8025": {
+   "name": "Chassis",
+   "effect_text": "Not discarded at the end of the turn. Whenever it receives any Upgrade, it additionally gains +1 Health."
+  },
+  "8026": {
+   "name": "Construct",
+   "effect_text": ""
+  },
+  "8027": {
+   "name": "Upgrade",
+   "effect_text": "Upgrade a friendly Ally or Structure, giving it +2 Power and +10 Health. If the target is a Chassis, it also gains an additional +1 Health."
+  },
+  "8028": {
+   "name": "Clear Spring",
+   "effect_text": "Field effect. A unit standing on this tile restores 3 Health **at the end of its own turn** (applies to both sides)."
+  },
+  "8029": {
+   "name": "Combat Skeleton",
+   "effect_text": "When Upgraded, gain +2 Power and +2 Health."
+  },
+  "8030": {
+   "name": "Overload",
+   "effect_text": "Randomly choose an Ally in your Deck that **does not have \"act twice per turn\"** and grant it \"act twice per turn\". If there is no such Ally in the Deck, the effect fizzles."
+  },
+  "8031": {
+   "name": "Mass Upgrade",
+   "effect_text": "All **Allies and Structures** in your **Hand and Deck** gain an Upgrade: +3 Health. If there is no Ally or Structure in either place, the effect fizzles."
+  },
+  "8032": {
+   "name": "Watchtower",
+   "effect_text": "For each stack of Upgrade it has, enemies within its Attack Range take +1 damage. Damage from any source counts."
+  },
+  "8033": {
+   "name": "Energy Barrier",
+   "effect_text": "Randomly Upgrade an Ally or Structure in your Deck that **does not already have Energy Barrier**, making **the first damage it takes become 0**. Then draw 3 cards."
+  },
+  "8034": {
+   "name": "Bastion",
+   "effect_text": "For each stack of Upgrade, this card gains **+3 Health**."
+  },
+  "8035": {
+   "name": "Self-Repair",
+   "effect_text": "Upgrade **a friendly Ally on the field**, granting it +2 max Health and **restoring 4 Health at the end of each turn**."
+  },
+  "8036": {
+   "name": "Repair Bay",
+   "effect_text": "Field effect. A **friendly Ally or Structure** standing on this tile restores 4 Health **at the end of its own turn**."
+  },
+  "8037": {
+   "name": "Upgrade Factory",
+   "effect_text": "Field effect. A **friendly Ally or Structure** standing on this tile gains an Upgrade **at the end of its own turn**: +1 Power and +1 Health. **Resolved every turn and stacks indefinitely**."
+  },
+  "8038": {
+   "name": "Infinite Armor",
+   "effect_text": "**Once per turn**: when this card receives an Upgrade, add an \"Upgrade\" to your Hand; that card **costs 0 while in your Hand** (its original Cost returns after it leaves your Hand)."
+  },
+  "8039": {
+   "name": "System Upgrade",
+   "effect_text": "Choose an Ally or Structure **in your Hand** and apply an Upgrade: **Cost +1, Power +3, Health +6**."
+  },
+  "8040": {
+   "name": "Batch Transfer",
+   "effect_text": "**All Allies and Structures in your Hand** gain an Upgrade: **+1 Power and +4 Health, Cost unchanged**, **then draw 1 card**."
+  },
+  "8041": {
+   "name": "Charging Device",
+   "effect_text": "Friendly Allies and Structures **Linked** to this card (chain conduction between four-directionally adjacent units, **friendly units only**) restore 2 Health **at the end of their own turn**."
+  },
+  "8042": {
+   "name": "Shield Generator",
+   "effect_text": "When a friendly unit **Linked** to this card (chain conduction between four-directionally adjacent units, **friendly units only**) **would take damage**, this card takes it instead. **Excess damage is not resolved further**."
+  },
+  "8043": {
+   "name": "Mimic",
+   "effect_text": "When a friendly Ally **Linked** to this card (chain conduction between four-directionally adjacent units, **friendly units only**) **gains an Upgrade**, this card gains **the same Upgrade**."
+  },
+  "8044": {
+   "name": "Thickened Plating",
+   "effect_text": "Give **a friendly Ally on the field** an Upgrade: +4 Health and -1 damage taken, but it still takes at least 1 damage each time."
+  },
+  "8045": {
+   "name": "Autonomous Upgrade",
+   "effect_text": "**At the start of your turn**, a random Ally or Structure **in your Hand** gains an Upgrade: +1 Attack and +3 Health."
+  },
+  "8046": {
+   "name": "Parts Reclaimer",
+   "effect_text": "When a friendly Ally or Structure **other than a Chassis** **Linked** to this card is **Destroyed**: this card gains Power equal to that card's Power, and add a \"Chassis\" to your Hand."
+  },
+  "8047": {
+   "name": "Chimera Tyrant",
+   "effect_text": "**Taunt**. **On Use**: Destroy all **friendly** cards **Linked** to this card, and add their Power and Health to this card."
+  },
+  "8048": {
+   "name": "Production Order",
+   "effect_text": "Add two \"Chassis\" to your Deck (draw pile); those two cards gain an Upgrade: +1 Power and +4 Health."
+  },
+  "8049": {
+   "name": "Dismantle",
+   "effect_text": "Choose one of your friendly Allies or Structures and **Destroy** it, restore 3 Cost, and add a \"Chassis\" to your Hand. If the target **was Upgraded**, you additionally gain an \"Upgrade\"."
+  },
+  "8050": {
+   "name": "Outdated War Machine",
+   "effect_text": "**Overload**: does not die immediately when its Health drops to 0 or below, and survives with negative Health (damage does not overflow); if its Health is still negative at the end of its own turn, it dies."
+  },
+  "8051": {
+   "name": "Reconstitution",
+   "effect_text": "Choose a friendly unit and restore it to full Health."
+  },
+  "8052": {
+   "name": "Rampart",
+   "effect_text": "**Taunt**. **Overload**: does not die immediately when its Health drops to 0 or below, and survives with negative Health (damage does not overflow); if its Health is still negative at the end of its own turn, it dies."
+  },
+  "8053": {
+   "name": "Beyond the Limit",
+   "effect_text": "Choose a friendly Ally or Structure and give it an Upgrade: Overload. Keyword \"Dimensional\": Banished after being played; does not go to the Discard Pile."
+  },
+  "8054": {
+   "name": "Reboot",
+   "effect_text": "Return a friendly unit on the field to your Hand; its Cost becomes 0 (resets after leaving your Hand)."
+  },
+  "8055": {
+   "name": "Steel Guardian",
+   "effect_text": "Overload; Taunt."
+  },
+  "8056": {
+   "name": "Rescue Construct",
+   "effect_text": "Swap: it can also be placed on a tile already occupied by a friendly unit; the friendly unit originally on that tile returns to your Hand."
+  },
+  "8057": {
+   "name": "Grenadier",
+   "effect_text": "Each time it gains an Upgrade, Attack Range +1."
+  },
+  "8058": {
+   "name": "Heavy Tank",
+   "effect_text": "**Taunt**. For each stack of Upgrade, this card takes -1 damage, but still takes at least 1 damage each time."
+  },
+  "8059": {
+   "name": "Mechbird",
+   "effect_text": "Each time it gains an Upgrade, draw a card."
+  },
+  "8060": {
+   "name": "Daedalus",
+   "effect_text": "Taunt. On Play: for each \"Charged Bombardment\" you have used this battle, this card gains +3 Health. This turn, \"Charged Bombardment\" cards in your Hand cost 0."
+  },
+  "8061": {
+   "name": "Two-Way Teleport",
+   "effect_text": "Choose **two units** on the battlefield and **swap their positions** (either side is allowed; their states are swapped along with them)."
+  },
+  "8062": {
+   "name": "Night Eclipse",
+   "effect_text": "At the end of your turn, restore X Health, where X is your remaining Cost (1 Health per point of remaining Cost, up to your maximum Health)."
+  },
+  "8064": {
+   "name": "Salvage",
+   "effect_text": "**Transform** a card **in your Hand** into a \"Chassis\", and give that \"Chassis\" an Upgrade: **+8 Health**."
+  },
+  "8065": {
+   "name": "Cargo",
+   "effect_text": "Cargo entrusted for delivery: takes damage in place of your HP. Removed from the Deck both when Destroyed and **once delivery is complete**."
+  },
+  "8066": {
+   "name": "Load Shedding",
+   "effect_text": "Choose a card in your Deck and **Banish** it (removed from this battle: it goes to neither your Hand nor the Discard Pile). **Draw an extra card at the start of your next turn**."
+  },
+  "8067": {
+   "name": "Splitting Shade",
+   "effect_text": "At the start of your turn, draw a card."
+  },
+  "8068": {
+   "name": "Lightweighting",
+   "effect_text": "Choose an Ally **in your Hand** and apply an Upgrade: **Cost -1, Move Speed +1**; its Cost cannot drop below 0."
+  },
+  "8069": {
+   "name": "Shared Shield",
+   "effect_text": "Give **a friendly Ally on the field** an Upgrade: Shared Shield - from then on, **when your HP would take damage, it takes that damage instead**."
+  },
+  "8070": {
+   "name": "Ingenuity",
+   "effect_text": "At the start of your turn, choose a card in your Hand and transform it into a random card **that has an extra effect when Upgraded**, then give it an Upgrade: +2 Health."
+  },
+  "8071": {
+   "name": "Scrap",
+   "effect_text": "Transform **all other cards** in your Hand into \"Charged Bombardment\". Those cards cost 0 this turn; their original Cost returns once they leave your Hand. Keyword \"Dimensional\": Banished after being played; does not go to the Discard Pile."
+  },
+  "8072": {
+   "name": "Mnemosyne",
+   "effect_text": "While on the field, **all enemies have -1 Power for each stack of Upgrade**. If this card was **randomly transformed** into being **during battle**, its Cost is -2."
+  },
+  "8073": {
+   "name": "Charged Mech",
+   "effect_text": "On Play: for each \"Charged Bombardment\" you have used this battle, this card gains +1 Power."
+  },
+  "8074": {
+   "name": "Mass-Produced Daedalus",
+   "effect_text": "On Play: choose a card in your Hand and transform it into a \"Charged Bombardment\". If this card was **randomly transformed** into being **during battle**, it gains +2 Power and +2 Health."
+  },
+  "8075": {
+   "name": "Mass-Produced Mnemosyne",
+   "effect_text": "**Once per turn**: when you use a \"Charged Bombardment\", that bombardment deals +7 damage, and the card drawn as a result costs -1."
+  },
+  "8076": {
+   "name": "Modifier",
+   "effect_text": "On Play: Allies in your Hand gain an Upgrade: +4 Health."
+  },
+  "8077": {
+   "name": "Ignition",
+   "effect_text": "Each time one of your cards is Upgraded, deal **3** damage to **2** random enemies. Stacks."
+  },
+  "8078": {
+   "name": "Hidden Power Source",
+   "effect_text": "When a friendly unit enters the field, it gains an Upgrade and gains \"Death\" - when it is Destroyed, deal **8** damage to a random enemy at distance 1."
+  },
+  "8079": {
+   "name": "Surprise Waybill",
+   "effect_text": "At the start of your turn, choose a card in your Deck, transform it into a random card and add it to your Hand."
+  },
+  "8080": {
+   "name": "Painting Robot",
+   "effect_text": "On Play: choose another friendly unit on the field and transform it into a random Mechanical Heart unit."
+  },
+  "8081": {
+   "name": "Snow Leopard",
+   "effect_text": "When attacking, a random card in your Hand costs -1 this turn."
+  },
+  "8082": {
+   "name": "Poison Mire",
+   "effect_text": "Field effect. A unit standing on this tile gains Poison **at the end of its own turn**: it takes 10 damage at the end of each turn for 2 turns. Gaining it again only refreshes the duration; when affected by several kinds of Poison at once, only the one with the highest damage applies."
+  },
+  "8084": {
+   "name": "Teach",
+   "effect_text": "Assemble a card from the all-class card pool. Keyword \"Dimensional\": Banished after being played; does not go to the Discard Pile."
+  },
+  "8085": {
+   "name": "Shadow Bind",
+   "effect_text": "Assemble a card from the all-class card pool. Keyword \"Dimensional\": Banished after being played; does not go to the Discard Pile."
+  },
+  "8086": {
+   "name": "Reconstruct",
+   "effect_text": "Assemble a card from the all-class card pool. Keyword \"Dimensional\": Banished after being played; does not go to the Discard Pile."
+  },
+  "9001": {
+   "name": "Duck Knight",
+   "effect_text": "+2 Attack for each enemy it kills."
+  },
+  "9002": {
+   "name": "Swiftness",
+   "effect_text": "Reduces damage it takes by 2, but still takes at least 1 damage."
+  },
+  "9003": {
+   "name": "Fire Arrow",
+   "effect_text": "Deal 17 damage to a target."
+  },
+  "9004": {
+   "name": "Knockback",
+   "effect_text": "Knock an enemy unit back 2 tiles; it stops if it collides with an obstacle."
+  },
+  "9005": {
+   "name": "Wisdom",
+   "effect_text": "Draw 2 cards."
+  },
+  "9006": {
+   "name": "Chain Lightning",
+   "effect_text": "Lightning arcs between adjacent units, dealing 11 damage to each unit caught in the chain (friend and foe alike)."
+  },
+  "9007": {
+   "name": "Fireball",
+   "effect_text": "Choose a tile and deal 20 damage to that tile and all units in the surrounding ring (friend and foe alike)."
+  },
+  "9008": {
+   "name": "Duck Wizard",
+   "effect_text": "At the start of your turn, if there is no Familiar Duck on the field, Summon one and tap this card (it cannot act again this turn)."
+  },
+  "9009": {
+   "name": "Familiar Duck",
+   "effect_text": "Summoned by Duck Wizard."
+  },
+  "9010": {
+   "name": "Weaken",
+   "effect_text": "Give a unit -9 Attack next turn."
+  },
+  "9011": {
+   "name": "Ice Arrow",
+   "effect_text": "Deal 3 damage to a unit and Freeze it, making it unable to act next turn."
+  },
+  "9012": {
+   "name": "Duck Captain",
+   "effect_text": "May act twice per turn."
+  },
+  "9013": {
+   "name": "Duck Power",
+   "effect_text": "At the start of each turn, all friendly units gain +1 Power (up to +4 per unit)."
+  },
+  "9014": {
+   "name": "Ancient Hollowbone Dragon",
+   "effect_text": "At the start of your turn: deal 5 damage to a random enemy unit; if there are no enemy units on the field, damage the enemy HP instead."
+  },
+  "9015": {
+   "name": "Duck Horn",
+   "effect_text": "Summon a Duck Knight every 3 turns."
+  },
+  "9016": {
+   "name": "Rhino",
+   "effect_text": "Reduces damage taken by 1, but still takes at least 1 damage. At the end of each turn, restore 2 Health.",
+   "upper_effect_passive_text": "Reduces damage taken by 1, but still takes at least 1 damage."
+  },
+  "9017": {
+   "name": "Duck Archer",
+   "effect_text": ""
+  },
+  "9018": {
+   "name": "Metal Dragon",
+   "effect_text": ""
+  },
+  "9019": {
+   "name": "Arrow Tower",
+   "effect_text": ""
+  },
+  "9020": {
+   "name": "Blastflame Duck",
+   "effect_text": "Death: deal 10 damage to each unit in the surrounding ring (friend and foe alike)."
+  },
+  "9021": {
+   "name": "White Magic Duck",
+   "effect_text": "At the start of your turn, restore 5 Health to your most wounded friendly unit. At the start of each turn, +1 Power."
+  },
+  "9022": {
+   "name": "Duck Egg",
+   "effect_text": "Placed in the center of your front row by \"Egg-Laying Duck\" at the start of each battle. If it is still alive at the end of the turn, it becomes a Pet Duck with 3 Attack and 15 Health, taking Health damage in your place. Keyword \"Dimensional\": Banished on leaving the field; does not go to the Discard Pile."
+  },
+  "9023": {
+   "name": "Hero",
+   "effect_text": "Playing it requires discarding 4 additional cards from your Hand."
+  },
+  "9024": {
+   "name": "Hiss",
+   "effect_text": "At the start of your 3rd, 5th and 7th turns, give a friendly unit with the highest current Health that does not already have Double Action the Double Action effect (permanent; units that could already act twice are not chosen)."
+  },
+  "9025": {
+   "name": "Duck Kiln",
+   "effect_text": "At the start of your turn, Summon Ceramic Ducks: while there are fewer than 3 Ceramic Ducks on the field, Summon one on each adjacent empty tile; once there are 3, instead pick 1 adjacent empty tile at random, Summon only 1, and give all Ceramic Ducks +1 Health. The Health of newly fired ducks increases by 1 every 2 turns."
+  },
+  "9026": {
+   "name": "Ceramic Duck",
+   "effect_text": "Fired by Duck Kiln. Its Health increases by 1 every 2 turns."
+  },
+  "9027": {
+   "name": "Night Duck",
+   "effect_text": "At the start of each turn, +1 Power. On **odd-numbered turns**, Move Speed -1 and Attack Range -1."
+  },
+  "9028": {
+   "name": "Dragonkin",
+   "effect_text": "Summoned by the death of Young Dragon."
+  },
+  "9029": {
+   "name": "Skeleton",
+   "effect_text": "Summoned by the death of Undead Lord or Skeleton Soldier."
+  },
+  "9031": {
+   "name": "White Wolf",
+   "effect_text": "May act twice per turn."
+  },
+  "9032": {
+   "name": "Hare",
+   "effect_text": "After use: add an \"Ephemeral Copy\" of this card to your Hand (Dimensional; Banished at the end of the turn)."
+  },
+  "9033": {
+   "name": "Lynx",
+   "effect_text": "After being Destroyed, returns to your Hand and becomes a 1-cost card."
+  },
+  "9034": {
+   "name": "Red Fox",
+   "effect_text": "After use, draw a random Skill card from your Deck; that card costs -1 this turn."
+  },
+  "9035": {
+   "name": "Coordinated Attack",
+   "effect_text": "Deal 14 damage to a target; for each Ally on your side of the field, this card's Cost is -1."
+  },
+  "9036": {
+   "name": "Heart of the Beast",
+   "effect_text": "All your Allies deal +1 damage; when you play an Ally from your Hand, that Ally gains +2 Health. Stacks."
+  },
+  "9037": {
+   "name": "Forest Guardian",
+   "effect_text": "Choose an Ally: when your Health would take damage, it takes that damage instead. The same unit cannot gain this effect more than once."
+  },
+  "9038": {
+   "name": "Tiger",
+   "effect_text": "For each Ally in your Discard Pile, this card's Cost is -1. On Use: your other Allies on the field gain +2 Power."
+  },
+  "9039": {
+   "name": "Crow",
+   "effect_text": "After use, choose an Ally in your Discard Pile and return it to your Hand, except for Crow itself."
+  },
+  "9040": {
+   "name": "Hound",
+   "effect_text": "On Use: +2 Power for each other Ally on your side of the field."
+  },
+  "9041": {
+   "name": "Swift Strike",
+   "effect_text": "This turn, Allies in your Hand cost -1."
+  },
+  "9042": {
+   "name": "Bite",
+   "effect_text": "Choose a friendly Ally: +8 Power this turn."
+  },
+  "9043": {
+   "name": "Ice Wall Spell",
+   "effect_text": "Create three Ice Walls along a horizontal row; the Ice Walls melt at the start of your turn."
+  },
+  "9044": {
+   "name": "Ice Wall",
+   "effect_text": "A wall created by Ice Wall."
+  },
+  "9045": {
+   "name": "Gale Force",
+   "effect_text": "Whenever a friendly Ally enters the battlefield, deal 4 damage to a random enemy."
+  },
+  "9046": {
+   "name": "Giant Rat",
+   "effect_text": "After use, add the lowest-Cost Ally from your Deck to your Hand."
+  },
+  "9047": {
+   "name": "Mechanical Mega Duck",
+   "effect_text": "At the start of each turn, top up the Clockwork Ducks on the field to 2."
+  },
+  "9048": {
+   "name": "Clockwork Duck",
+   "effect_text": "Summoned by Mechanical Mega Duck."
+  },
+  "9049": {
+   "name": "Gear Ascension",
+   "effect_text": "At the start of each turn, all friendly units gain +2 Power (permanent)."
+  },
+  "9050": {
+   "name": "Whale's Wrath",
+   "effect_text": "Deal 11 damage. Choose 2 cards from your Discard Pile and add them to your Hand. Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9051": {
+   "name": "Nature's Force",
+   "effect_text": "Restore 1 Cost. Restore 1 additional Cost for each Ally on your side of the field."
+  },
+  "9052": {
+   "name": "Turtledove",
+   "effect_text": "After use, the next Ally you use this turn costs -1."
+  },
+  "9053": {
+   "name": "Toughness",
+   "effect_text": "All your Allies on the field gain +3 Health."
+  },
+  "9054": {
+   "name": "Dragon Breath",
+   "effect_text": "Deal 4 damage to an enemy unit, repeated 5 times."
+  },
+  "9055": {
+   "name": "Frenzy",
+   "effect_text": "Choose a friendly Ally; it can attack twice (until it leaves the field). No effect if it already has a similar effect. Costs -1 while you have 3 or more Allies on the field."
+  },
+  "9056": {
+   "name": "Mirror Image",
+   "effect_text": "The first time you use an Effect card each turn, add a copy of it to your Deck and draw a card. Multiple copies of this card in the Effect Zone do not stack."
+  },
+  "9057": {
+   "name": "Deterrence",
+   "effect_text": "After each of the first X Effect cards you use each turn, a random enemy gets -10 Power until the start of your next turn. X is the number of copies of this card in the Effect Zone."
+  },
+  "9058": {
+   "name": "Arcane Mastery",
+   "effect_text": "After using an Effect card, restore 1 Cost."
+  },
+  "9059": {
+   "name": "Wisdom Surge",
+   "effect_text": "At the start of your turn, draw a card; if it is an Effect card, this card's Cost is -1."
+  },
+  "9060": {
+   "name": "Storm Barrier",
+   "effect_text": "The first X instances of damage you take this turn become 1, where X is the number of Effect cards you used this turn before activating this card. Only the first copy takes effect each turn."
+  },
+  "9061": {
+   "name": "Endless Blessing",
+   "effect_text": "At the start of your turn, add a random Effect card to your Hand."
+  },
+  "9062": {
+   "name": "Night of Familiars",
+   "effect_text": "Whenever you use an Effect card, add a Crow to your Hand; it costs 0 this turn."
+  },
+  "9063": {
+   "name": "Hurricane Roar",
+   "effect_text": "For each of the first X Effect cards used each turn, deal 4 damage to all enemies. Using this card itself does not trigger it. X is the number of copies of this card in the Effect Zone."
+  },
+  "9064": {
+   "name": "Breeze Guard",
+   "effect_text": "For each of the first X Effect cards used each turn, push a random enemy nearest to your HP back 2 tiles. Using this card itself does not trigger it. X is the number of copies of this card in the Effect Zone."
+  },
+  "9065": {
+   "name": "Self-Heal",
+   "effect_text": "After the battle ends, restore 8 Health to yourself. Multiple copies of this card in the Effect Zone do not stack."
+  },
+  "9066": {
+   "name": "Stoneskin",
+   "effect_text": "The next 2 instances of damage your HP takes become 1 if they would be 2 or more; the number of instances can stack."
+  },
+  "9067": {
+   "name": "Great Tree Guardian",
+   "effect_text": "This card takes HP damage in your place. On Use: +1 Power and +2 Health for each Effect card on your side of the field, up to 5 times."
+  },
+  "9068": {
+   "name": "Water Elemental",
+   "effect_text": "This card's Cost is -1 for each Effect card on your side of the field. On Use: add an Effect card from your Deck to your Hand; its Cost is reduced by 2."
+  },
+  "9069": {
+   "name": "Duck Nest",
+   "effect_text": "Add a \"Duck Egg\" to your Hand. For each of the first X Effect cards used each turn, add a \"Duck Egg\" to your Hand. X is the number of copies of this card in the Effect Zone."
+  },
+  "9070": {
+   "name": "Swarm Assault",
+   "effect_text": "**Linked** units ignore distance when making their own attacks (they can reach the whole field)."
+  },
+  "9071": {
+   "name": "Sturdy Enclosure",
+   "effect_text": "Summon an Iron Fence with 0 Attack and 12 Health at the chosen position. It takes damage in place of your HP; as long as it remains on the field, your HP takes no damage. Each Effect card you use this turn reduces this card's Cost by 1."
+  },
+  "9072": {
+   "name": "Iron Fence",
+   "effect_text": "Takes damage in place of your HP."
+  },
+  "9073": {
+   "name": "Owl",
+   "effect_text": "On Use: add a random Effect card from your Deck to your Hand."
+  },
+  "9074": {
+   "name": "Sprite",
+   "effect_text": "After use, the next Effect card you use costs 2 less."
+  },
+  "9075": {
+   "name": "Magic Tower",
+   "effect_text": "While on the field, damage-dealing Skills gain +1 damage for each point of their original Cost."
+  },
+  "9076": {
+   "name": "Mana Core",
+   "effect_text": "The first Skill card used each turn costs -1 and deals +1 damage. Multiple copies of this card in the Effect Zone do not stack."
+  },
+  "9077": {
+   "name": "Meteor",
+   "effect_text": "This card is not discarded from your Hand at the end of the turn. Deal 40 damage in a cross-shaped area, friend and foe alike. Each time a Skill deals damage, this card's Cost is permanently reduced by 1."
+  },
+  "9078": {
+   "name": "Inherited Memory",
+   "effect_text": "The first friendly Ally to die each turn returns to your Hand with Cost -1. Cards that return to your Hand without entering the Discard Pile, such as Dimensional ones, do not trigger this effect. For each friendly Ally on the field, this card's Cost is -1 while in your Hand."
+  },
+  "9079": {
+   "name": "Golemancy",
+   "effect_text": "Summon a Golem in your half of the field. The first time you use a Skill card each turn, this card in your Hand costs -1 this turn."
+  },
+  "9080": {
+   "name": "Golem",
+   "effect_text": "Summoned by \"Golemancy\". Taunt: enemy units must attack it first. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+  },
+  "9082": {
+   "name": "Wind Elemental",
+   "effect_text": "While this card is on the field, Skill cards cost -1; each time a Skill damages an enemy this battle, this card's Cost is -1."
+  },
+  "9083": {
+   "name": "Meteor Shower",
+   "effect_text": "Deal 8 damage to a random enemy, repeated X times, where X is all the Cost you spent; the target is random each time. Can be used even with no Cost (X is 0 in that case)."
+  },
+  "9084": {
+   "name": "Wall of Fire",
+   "effect_text": "Deal 14 damage to all units in a horizontal row, friend and foe alike. Until the start of your next turn, units passing through that row take 7 damage; the same unit takes at most 14 damage."
+  },
+  "9085": {
+   "name": "Charge Up",
+   "effect_text": "The next Skill you use resolves twice."
+  },
+  "9086": {
+   "name": "Finisher",
+   "effect_text": "Deal 2+X damage to a target, where X is the number of cards you have used this turn."
+  },
+  "9087": {
+   "name": "Flurry",
+   "effect_text": "Deal 4 damage to a target, then add a random 0-cost Skill card from your Deck to your Hand."
+  },
+  "9088": {
+   "name": "Daze",
+   "effect_text": "Deal 3 damage to a target; that target loses 3 Power this turn."
+  },
+  "9089": {
+   "name": "Revolution",
+   "effect_text": "Draw X cards, where X is the number of cards you have used this turn; those cards are not discarded at the end of this turn."
+  },
+  "9090": {
+   "name": "Ambush",
+   "effect_text": "Deal 5 damage; if the target is at full Health, deal 12 damage instead."
+  },
+  "9091": {
+   "name": "Gale",
+   "effect_text": "Whenever you use a card, deal 2 damage to a random enemy."
+  },
+  "9092": {
+   "name": "Lurk",
+   "effect_text": "Draw 1 extra card at the start of your turn; if this card costs 0, draw 1 more."
+  },
+  "9093": {
+   "name": "Chain Trick",
+   "effect_text": "Deal 4 damage to a target. If you have already used 2 other cards this turn, draw 1 card; if you have already used 4 other cards this turn, deal 10 damage instead."
+  },
+  "9094": {
+   "name": "Preparation",
+   "effect_text": "Draw 2 cards; if any of them costs 0, draw 1 more card."
+  },
+  "9095": {
+   "name": "Raging Tide",
+   "effect_text": "Deal 10 damage to a target, then return all 0-cost cards from your Discard Pile to your Hand."
+  },
+  "9096": {
+   "name": "Whirlwind Slash",
+   "effect_text": "Deal 17 damage to enemy units in a cross-shaped area. Can only be used after using 4 or more other cards this turn."
+  },
+  "9097": {
+   "name": "Foresight",
+   "effect_text": "Choose one: add a 0-cost Skill card from your Discard Pile to your Hand; or add a random Skill card with non-zero Cost from your Deck to your Hand. Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9098": {
+   "name": "Defy Fate",
+   "effect_text": "Discard your entire Hand, then add **all 0-cost and 1-cost cards** from your Discard Pile to your Hand in Discard Pile order, up to your Hand limit. Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9099": {
+   "name": "Glimmer",
+   "effect_text": "At the start of your turn, add a Glowgrass to your Hand."
+  },
+  "9100": {
+   "name": "Infiltrate",
+   "effect_text": "Choose an Ally and move it to any empty tile; it gains +4 Power this turn."
+  },
+  "9101": {
+   "name": "Sleepless",
+   "effect_text": "During your turn, whenever you have no cards in your Hand, draw 1 card; 0-cost cards drawn this way cost +1 this turn."
+  },
+  "9102": {
+   "name": "Echo",
+   "effect_text": "Deal 2 damage to all enemies; all enemies lose 1 Power this turn. After use, returns to your Hand with a minimum Cost of 1."
+  },
+  "9103": {
+   "name": "Dodge",
+   "effect_text": "This turn, all friendly units gain Taunt."
+  },
+  "9104": {
+   "name": "Coup de Grace",
+   "effect_text": "Deal 6 damage; if this card is the only card left in your Hand, deal 22 damage instead."
+  },
+  "9110": {
+   "name": "Vitality Transfer",
+   "effect_text": "At the end of your turn, for every 2 Cost remaining, gain 1 extra Cost at the start of your next turn. Multiple copies of this card in the Effect Zone do not stack."
+  },
+  "9111": {
+   "name": "Shadow Blade",
+   "effect_text": "At the end of your turn, deal X damage to a random enemy, where X is the Cost you have spent this turn. Multiple copies of this card in the Effect Zone do not stack."
+  },
+  "9112": {
+   "name": "Shadow Chains",
+   "effect_text": "At the end of your turn, for every 3 Cost remaining, knock a random enemy back 2 tiles. Multiple copies of this card in the Effect Zone do not stack."
+  },
+  "9113": {
+   "name": "Spreading Darkness",
+   "effect_text": "At the end of your turn, for each point of Cost remaining, deal 2 damage to all enemies. Multiple copies of this card in the Effect Zone do not stack."
+  },
+  "9114": {
+   "name": "Endless Darkness",
+   "effect_text": "After drawing cards each turn, you must choose 1 card from your Hand to discard (you cannot skip), then gain 2 Cost. Multiple copies of this card in the Effect Zone do not stack."
+  },
+  "9115": {
+   "name": "Familiar Power",
+   "effect_text": "At the start of each turn, all Familiar Ducks gain +1 Power (permanent)."
+  },
+  "9116": {
+   "name": "Demon Duck",
+   "effect_text": "Starts with Sleep 2: it does not act. Sleep decreases by 1 after each of its own turns, and by 1 each time it takes damage; it resumes acting as soon as Sleep reaches 0. While awake, it gains +1 Power each time it is hurt (permanent)."
+  },
+  "9117": {
+   "name": "Demon Familiar",
+   "effect_text": "At the start of each turn, all Familiar Ducks gain +1 Power (permanent); every 2 turns, Summon a Familiar Duck on a random empty tile (except the player's back row)."
+  },
+  "9118": {
+   "name": "Demon Duck (Vengeance)",
+   "effect_text": "Does not Sleep and can act from the start. For each point of damage it takes, it gains +1 Power this turn (stacking, reset at the end of the turn), and permanently gains +1 Power."
+  },
+  "9119": {
+   "name": "Opening Move",
+   "effect_text": "Deal 4 damage to a target, then draw 1 card."
+  },
+  "9120": {
+   "name": "Shadow Strike",
+   "effect_text": "Deal 8 damage to a target. If you have used 3 cards this turn **including this one**, restore 1 Cost."
+  },
+  "9121": {
+   "name": "Shadowstep",
+   "effect_text": "Deal 8 damage to a target, then return **any card of your choice from the Discard Pile** (any type) to your Hand."
+  },
+  "9122": {
+   "name": "Focus",
+   "effect_text": "**Choose 2 cards** from your Deck; those 2 cards are **Banished** for this battle (they go to neither your Hand nor the Discard Pile)."
+  },
+  "9123": {
+   "name": "Duck Assassin",
+   "effect_text": "While there are units other than \"Duck Assassin\" on your side of the field: it cannot attack the opponent's HP; instead, it may spend one action to **blink** to any empty tile on the battlefield."
+  },
+  "9124": {
+   "name": "Dark Side of the Duck",
+   "effect_text": "When moving, it can **ignore unit blocking** (it can pass through any unit, but cannot stop on it); each living Duck Assassin gives this card **+3 Power and +1 Move Speed**."
+  },
+  "9125": {
+   "name": "Shadow Summoning",
+   "effect_text": "At the **start of battle** and **every 3 turns**, Summon a Duck Assassin."
+  },
+  "9127": {
+   "name": "Rework",
+   "effect_text": "Choose an Ally or Structure from your Discard Pile; that card returns to your Hand and gains a permanent Upgrade: +3 Health."
+  },
+  "9130": {
+   "name": "Helios",
+   "effect_text": "While on the field, \"Mass-Produced Onyae\" on the field may act twice per turn and restore 2 Health each turn."
+  },
+  "9131": {
+   "name": "Mass-Produced Onyae",
+   "effect_text": "At the start of your turn, add an \"Opening\" (2-cost Curse, no effect when played) to the opponent's Deck."
+  },
+  "9132": {
+   "name": "Onyae",
+   "effect_text": "May act twice per turn. At the start of your turn, add an \"Opening\" (2-cost Curse, no effect when played) to the opponent's Deck."
+  },
+  "9133": {
+   "name": "Mass-Produced Hecatoncheires",
+   "effect_text": "Casting: at the end of your turn, the countdown decreases by 1; when it reaches 0, Destroy this unit and raise a \"Steel Fortress\" (5/100, Attack Range 2, Taunt) where it stood. If it is destroyed early, nothing is left behind."
+  },
+  "9134": {
+   "name": "Steel Fortress",
+   "effect_text": "Taunt: enemy units must attack it first."
+  },
+  "9135": {
+   "name": "Hephaestus",
+   "effect_text": "Forge: when it personally kills an enemy, Summon a \"Mass-Produced Onyae\" (5/45) on a random empty tile in your half of the field. Each turn in which it fails to kill any enemy, it permanently gains Attack Range +1 and Power +1. Trample: when its attack kills an enemy unit, the excess damage passes down the same column to the next enemy unit; once the whole column is pierced, it hits the opponent's HP directly. Move Immunity: cannot be knocked back or have its position swapped."
+  },
+  "9136": {
+   "name": "Hecatoncheires",
+   "effect_text": "At the start of your turn, if there are no other friendly units on the field, gain: +2 Power, and attack damage taken is halved."
+  },
+  "9137": {
+   "name": "Mass-Produced Helios",
+   "effect_text": "While on the field, friendly units other than Mass-Produced Helios gain: Skill damage taken is halved (rounded up)."
+  },
+  "9138": {
+   "name": "Mass-Produced Hephaestus",
+   "effect_text": "Mass Forge: when it personally kills an enemy unit, Forge a \"Mass-Produced Onyae\" (5/45) on a random empty tile in your half of the field. Trample: excess damage from a kill passes down the same column to the next friendly unit."
+  },
+  "9139": {
+   "name": "Charged Cannon",
+   "effect_text": "At the start of each of your turns, Destroy a random enemy unit."
+  },
+  "9140": {
+   "name": "Hermes",
+   "effect_text": "May act twice per turn. Every 3 turns, its number of actions increases by 1."
+  },
+  "9141": {
+   "name": "Asclepius",
+   "effect_text": "Gains 20 Armor each turn. If it already had Armor before gaining it, its Armor is reset to 0 and deals damage equal to that Armor to a random enemy unit, then gains +1 Power."
+  },
+  "9142": {
+   "name": "Mass-Produced Argos",
+   "effect_text": "Only once while on the field: when it attacks a unit, Summon a Mass-Produced Onyae in your back row and give it +1 Move Speed."
+  },
+  "9143": {
+   "name": "Invention Expert",
+   "effect_text": "Whenever you **transform** a card, restore **2** Cost (does not stack). Transform: turning one card into another during battle."
+  },
+  "9144": {
+   "name": "Free Assembly",
+   "effect_text": "Transform all cards in your Hand into random cards (drawn from the reward pool, all rarities equally likely). **Ally cards** produced this way cost -1 this turn; their original Cost returns once they leave your Hand."
+  },
+  "9145": {
+   "name": "Charged Bombardment",
+   "effect_text": "Deal **9** damage, then draw a card."
+  },
+  "9146": {
+   "name": "Fill",
+   "effect_text": "Transform a card in your Hand into a \"Charged Bombardment\". Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9147": {
+   "name": "Assembly Line",
+   "effect_text": "Every 3 turns, Summon either a Mass-Produced Onyae or a Mass-Produced Helios at random in your half of the field."
+  },
+  "9148": {
+   "name": "Rebirth",
+   "effect_text": "At the start of your turn, choose a card in your Hand to Banish, then add a random card to your Hand."
+  },
+  "9149": {
+   "name": "Fatigue",
+   "effect_text": "No effect when played. While in your Hand, all Skill cards cost +1."
+  },
+  "9150": {
+   "name": "Life Cycle",
+   "effect_text": "Choose a friendly Ally: it gains \"Dimensional\" and \"Death\" - when it is Destroyed, add a random Ally card to your Hand."
+  },
+  "9151": {
+   "name": "Scavenger",
+   "effect_text": "At the start of your turn, give a friendly unit other than \"Scavenger\" an Upgrade: +3 Power and +5 Health."
+  },
+  "9152": {
+   "name": "Abandoned Robot",
+   "effect_text": "Each time it is Upgraded, deal 1 damage to all enemy units."
+  },
+  "9154": {
+   "name": "Opening",
+   "effect_text": "No effect when played. Dimensional: Banished after being played; does not go to the Discard Pile and does not appear again this battle."
+  },
+  "9155": {
+   "name": "Night Walk",
+   "effect_text": "This turn, all your cards cost nothing to use. Including this card, you may only use 5 cards this turn (whether used before or after this one)."
+  },
+  "9156": {
+   "name": "Charge",
+   "effect_text": "Deal 0 damage. At the end of the turn, for each point of unspent Cost, this card in your Hand gains +3 damage (not reset during this battle)."
+  },
+  "9157": {
+   "name": "Jar",
+   "effect_text": "No effect when played. If this card is still in your Hand at the end of the turn: it is Banished, and Summon an enemy at a random position in the enemy's half of the field. This card cannot be removed from your Deck."
+  },
+  "9160": {
+   "name": "Bouncing Knife",
+   "effect_text": "Deal 5 damage to an enemy, then bounce twice between different enemies at random, with damage reduced by 1 each time."
+  },
+  "9161": {
+   "name": "Runaway Fortress",
+   "effect_text": "On Play: for each card you have transformed this battle, cast a random Mechanical Heart Skill card; targets and landing positions are random, and no Cost is consumed."
+  },
+  "9162": {
+   "name": "Focused Breach",
+   "effect_text": "Deal **10** damage to an enemy. For each stack of Upgrade on friendly units on the field, damage +4."
+  },
+  "9163": {
+   "name": "Impact Cannon",
+   "effect_text": "Deal **10** damage to an enemy and knock it back 1 tile."
+  },
+  "9164": {
+   "name": "Auxiliary Blade",
+   "effect_text": "Give a friendly Ally an Upgrade: **+2 Power**, and it gains \"Death\": when it is Destroyed, add an \"Auxiliary Blade\" to your Hand. Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9165": {
+   "name": "Duplication",
+   "effect_text": "Choose an Ally or Structure on your battlefield and add two copies of it to your Hand (keeping Upgrades and other buffs, with \"Dimensional\"). Those copies cost 0 while in your Hand."
+  },
+  "9166": {
+   "name": "Cluster Battery",
+   "effect_text": "On Play: add two \"Charged Bombardment\" to your Deck. Each time it gains an Upgrade, add a \"Charged Bombardment\" from your Deck to your Hand. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+  },
+  "9167": {
+   "name": "Combine",
+   "effect_text": "Choose a \"Chassis\" in your Deck and **Banish** it (removed from this battle); give a friendly Ally or Structure on the field an Upgrade: its Power and Health each increase by that Chassis's values."
+  },
+  "9168": {
+   "name": "Wish",
+   "effect_text": "Choose a card from your Deck and add it to your Hand. Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9169": {
+   "name": "Sword of Flames",
+   "effect_text": "Deal 10 damage to the foremost enemy in each column."
+  },
+  "9170": {
+   "name": "Emergency Power",
+   "effect_text": "Gain 1 Cost and draw 1 card. All friendly units on the field restore 2 Health. Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9171": {
+   "name": "Rapid",
+   "effect_text": "Draw 2 cards. For each 0-cost card drawn, all enemies take +1 damage this turn."
+  },
+  "9172": {
+   "name": "Laser Sweep",
+   "effect_text": "Deal 9 damage to all enemies."
+  },
+  "9173": {
+   "name": "Agility",
+   "effect_text": "Draw 5 cards. Until the end of this turn, you cannot use Ally or Structure cards."
+  },
+  "9174": {
+   "name": "Eliminate",
+   "effect_text": "Choose an Ally or Structure card from your Deck and transform it into a \"Chassis\". Draw 4 cards."
+  },
+  "9175": {
+   "name": "Funeral",
+   "effect_text": "Whenever a unit on the field is Destroyed, draw 1 card."
+  },
+  "9176": {
+   "name": "Instinct",
+   "effect_text": "Play 3 random Skill cards with Cost 1 or less from your Deck."
+  },
+  "9177": {
+   "name": "Pet Duck",
+   "effect_text": "Hatched from a \"Duck Egg\". Takes HP damage in your place. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+  },
+  "9178": {
+   "name": "Eternal Night",
+   "effect_text": "Night Duck is no longer weakened: it is no longer affected by \"Light Phobia\" (its Attack Range, Move Speed and Power do not drop even on odd-numbered turns)."
+  },
+  "9179": {
+   "name": "Surprise Box",
+   "effect_text": "When attacked, Stun the attacker on its next turn (it cannot act)."
+  },
+  "9180": {
+   "name": "Moon",
+   "effect_text": "After this battle ends: an extra reward is added to the reward screen, allowing you to remove a card from your Deck. This card cannot be removed from your Deck."
+  },
+  "9181": {
+   "name": "Coin",
+   "effect_text": "After this battle ends: gain an extra 40 Gold. This card cannot be removed from your Deck."
+  },
+  "9182": {
+   "name": "Lullaby",
+   "effect_text": "All units cannot act for 1 turn, friend and foe alike. Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9183": {
+   "name": "Friends of the Forest",
+   "effect_text": "Add a random Forest Spirit Ally to your Hand; it costs -2 this turn. Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9184": {
+   "name": "Inventory Sorting",
+   "effect_text": "Randomly transform two cards in your Deck into other random cards, one each."
+  },
+  "9185": {
+   "name": "Paralysis",
+   "effect_text": "Cannot be played. If this card is still in your Hand at the end of the turn: it is Banished."
+  },
+  "9186": {
+   "name": "Vortex",
+   "effect_text": "Field effect. On Use, if there is no unit on this tile, move a random unit at distance 1 from this tile onto it. A unit on this tile takes 15 damage **at the end of its own turn**, and subsequent Vortex damage it takes increases by 1."
+  },
+  "9187": {
+   "name": "Goose",
+   "effect_text": "After attacking an enemy, knock it back 1 tile and advance 1 tile itself (it does not move if blocked)."
+  },
+  "9188": {
+   "name": "Mass-Produced Hermes",
+   "effect_text": ""
+  },
+  "9189": {
+   "name": "Lone Wolf",
+   "effect_text": "Deal 7 damage to an enemy and make it lose 1 Power this turn. Banish a random Ally or Structure from your Hand: its Health is permanently added to this card's damage, and its Power is permanently added to this card's Power reduction."
+  },
+  "9190": {
+   "name": "Cat and Mouse",
+   "effect_text": "Discard your entire Hand. Next turn, your Skill damage is doubled (multiplicative with other increases)."
+  },
+  "9191": {
+   "name": "Dark Fusion",
+   "effect_text": "Assemble a card and give it \"Preserve\", then deal damage equal to its Power to all enemies. Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9192": {
+   "name": "Supporting Fire",
+   "effect_text": "Deal 8 damage and reduce the target's Power by 8 this turn."
+  },
+  "9193": {
+   "name": "Technical Fusion",
+   "effect_text": "Assemble a card using a Construct as the base. Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9200": {
+   "name": "The Revelator",
+   "effect_text": "Three phases: when its remaining Health drops to 2/3 and 1/3, it advances a phase, retreats to the middle of the back row and swaps its field effect. It is immune to forced movement in all three phases. Phase 1 - Cannonade: each turn, bombards a random column, dealing 5 damage to all enemy units in that column; if there is no unit in that column, it hits the player's HP directly instead. Self: +1 Power each turn. Phase 2 - Electromagnetic Barrier: units that attack it take 5 damage; each time it takes Skill damage, add a \"Paralysis\" (0-cost Curse - cannot be played - Banished if still in your Hand at the end of the turn) to your Discard Pile. Self: Trample, Skill damage taken halved, Move Speed -1, may act twice per turn. Phase 3 - Emergency Call: at the start of each of the player's turns, Summon a Mass-Produced unit with +10 Power. Self: On Play, Destroy all other units on the field; may act twice per turn, Attack Range +2, Move Speed 0, immune to all damage except attacks while other friendly units are on the field, and friendly units Linked to it take half of its damage instead."
+  },
+  "9201": {
+   "name": "Cannonade",
+   "effect_text": "Each turn, bombards a random column: all enemy units in that column take 5 damage; if there is no unit in that column, it hits the player's HP directly instead."
+  },
+  "9202": {
+   "name": "Electromagnetic Barrier",
+   "effect_text": "Units that attack The Revelator take 5 damage. Each time The Revelator takes Skill damage, add a \"Paralysis\" (0-cost Curse - cannot be played - Banished if still in your Hand at the end of the turn) to your Discard Pile."
+  },
+  "9203": {
+   "name": "Emergency Call",
+   "effect_text": "At the start of each of the player's turns, Summon a random Mass-Produced enemy with +10 Power."
+  },
+  "9204": {
+   "name": "Bounty Hunter",
+   "effect_text": "First kill of each battle: permanently +1 Power for this run. Gain 20 Gold after the battle ends. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+  },
+  "9205": {
+   "name": "Hunt",
+   "effect_text": "Deal 22 damage to a target. If this card kills an enemy, this card's damage is permanently increased by 4 for this run. Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9206": {
+   "name": "Vulture",
+   "effect_text": "First kill of each battle: permanently +3 Power and +6 Health for this run. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+  },
+  "9207": {
+   "name": "Mass-Produced Asclepius",
+   "effect_text": "Gains 10 Armor each turn. If it already had Armor before gaining it, it gains +1 Power instead."
+  },
+  "9208": {
+   "name": "Mothership",
+   "effect_text": "Immune to all damage. Whenever a friendly unit on the field is Destroyed, Summon an identical unit next to this card and reduce this card's Health by 10. If this card is Destroyed, the opponent wins."
+  },
+  "9209": {
+   "name": "Air Raid",
+   "effect_text": "At the start of the player's turn, mark 5 random tiles. Before the enemy acts, player units on the marked tiles take 5 damage; this damage increases by 1 each turn."
+  },
+  "9210": {
+   "name": "Frost Barrier",
+   "effect_text": "At the start of every 2nd turn, all friendly units gain +1 Power, up to +4 per unit."
+  },
+  "9211": {
+   "name": "Refraction Cannon",
+   "effect_text": "On Play: add a \"Charged Bombardment\" to your Hand. From then on, whenever you use a \"Charged Bombardment\", besides the main target, deal equal damage to one other random enemy unit."
+  },
+  "9212": {
+   "name": "Owlbear's Wrath",
+   "effect_text": "While Owlbear's Health is above half, it takes -1 damage; when its Health drops to half or below, it gains \"Trample\" - when its damage kills a unit, the excess damage continues down the same column; it does not trigger if no unit was attacked."
+  },
+  "9213": {
+   "name": "Owlbear",
+   "effect_text": "Costs X; playing it consumes all of your Cost. On landing, its Power is set to X and its Health to 9X, and neither changes for the rest of this battle; if X is 0, it collapses as soon as it lands. When it acts, it Leaps to an empty tile and deals damage equal to its Power to each enemy unit within distance 1. Cannot make normal attacks."
+  },
+  "9214": {
+   "name": "Owlbear",
+   "effect_text": "Cannot make normal attacks. When it acts, it Leaps to an empty tile and deals damage equal to its Power to each enemy unit within distance 1."
+  },
+  "9215": {
+   "name": "Wild Swings",
+   "effect_text": "Deal 10 damage to each of 2 random enemies (if there are fewer than 2 enemies, hit as many as there are)."
+  },
+  "9216": {
+   "name": "Flying Kick",
+   "effect_text": "Deal 22 damage to an enemy; if this kills it, the excess damage continues down the same column (Trample)."
+  },
+  "9217": {
+   "name": "Charging Punch",
+   "effect_text": "Deal 16 damage to an enemy and knock it back 1 tile; also deal 8 damage to each other enemy."
+  },
+  "9219": {
+   "name": "Pressure Mine",
+   "effect_text": "**Overload**. Death: if this card's Health is negative, deal damage equal to that negative amount to all enemy units."
+  },
+  "9220": {
+   "name": "Position Defender",
+   "effect_text": "When a friendly Ally with \"Overload\" dies from Overload, place a copy of this card from your Deck, Hand or Discard Pile onto its original position."
+  },
+  "9221": {
+   "name": "Combiner",
+   "effect_text": "**Overload**. Can be placed on top of a friendly unit: Destroy that unit, and this card gains the Power and Health printed on its card."
+  },
+  "9222": {
+   "name": "Theseus Engine",
+   "effect_text": "**Overload**. Each time this card's Health drops to 0 or lower, add a \"Charged Bombardment\" to your Hand. Keyword \"Dimensional\": Banished on leaving the field; does not go to the Discard Pile."
+  },
+  "9223": {
+   "name": "Enforcer",
+   "effect_text": "While there is a \"Mass-Produced Onyae\" on your side of the field, damage taken is halved. Whenever a \"Mass-Produced Onyae\" on your side of the field takes damage, +1 Power this turn."
+  },
+  "9224": {
+   "name": "Mark",
+   "effect_text": "Field effect (only one Mark exists on the whole field at a time). Enemies on this tile take +1 damage (fixed; it does not grow with turns). Placing the Mark on a different tile replaces the old one; marking the same tile again does not count as moving it, and the value stays at +1."
+  },
+  "9225": {
+   "name": "Death Omen",
+   "effect_text": "Deal 6 damage to a target, then Mark the tile that target is on."
+  },
+  "9226": {
+   "name": "Lethal",
+   "effect_text": "Marked enemies take 50% more damage from all sources (replacing the Mark's own damage bonus). If there is no Mark on the field when played, Mark a random tile."
+  },
+  "9227": {
+   "name": "Reaper's Arrival",
+   "effect_text": "Deal 14 damage to a target; if the target is Marked, deal 20 damage instead and draw 2 cards."
+  },
+  "9228": {
+   "name": "Dread Shade",
+   "effect_text": "Marked enemies deal half damage to this card."
+  },
+  "9229": {
+   "name": "Dread Projection",
+   "effect_text": "Mark the tile the target is on, and give the target -11 Power this turn. If the target is already Marked, deal 8 damage to it instead. Dimensional: Banished after being played; does not go to the Discard Pile."
+  },
+  "9230": {
+   "name": "Dread Incarnate",
+   "effect_text": "When dealing damage to a Marked enemy, give it -1 Power this turn. If there is no Mark on the field, Mark the position of a random enemy."
+  },
+  "9231": {
+   "name": "Ill Omen",
+   "effect_text": "At the end of your turn, enemies on Marked tiles take 4 damage."
+  },
+  "9232": {
+   "name": "Herald of Doom",
+   "effect_text": "When attacking a Marked enemy, restore 3 Health."
+  },
+  "9233": {
+   "name": "Soul Reaper",
+   "effect_text": "Each time you deal damage to a Marked enemy, this card's Cost is permanently reduced by 1. When this card kills a unit, its Health is fully restored."
+  },
+  "9234": {
+   "name": "Dread Harvest",
+   "effect_text": "Deal 15 damage to a target. In the same turn, after you deal damage to a Marked target for the 3rd time (damage dealt by this card itself does not count), add a \"Dread Harvest\" from your Deck or Discard Pile to your Hand with Cost -1; its original Cost returns after it leaves your Hand."
+  },
+  "9235": {
+   "name": "Earth Elemental",
+   "effect_text": "Taunt: enemy units must attack it first. Not discarded at the end of the turn. On Play, distribute 3X damage among enemy units (X = the number of Allies used this battle, including this card): from nearest to farthest, and whenever one falls, the remainder passes to the next. For each friendly Ally on the field, this card's Cost is reduced by 2 while in your Hand."
+  },
+  "9236": {
+   "name": "Fire Elemental",
+   "effect_text": "On Play: purge all Curses from your Deck, Hand and Discard Pile; for each Curse purged, deal 2 damage to a random enemy."
+  },
+  "9237": {
+   "name": "Balan-Alpha",
+   "effect_text": "Whenever a friendly unit dies, this card gains \"act twice per turn\"."
+  },
+  "9238": {
+   "name": "Anxi-Beta",
+   "effect_text": "Whenever a friendly unit dies, this card gains +1 Attack Range and +1 Move Speed (triggers only once; does not stack)."
+  },
+  "9239": {
+   "name": "Tachini-Gamma",
+   "effect_text": "When a friendly unit dies, gain: at the start of each of your turns, Destroy a random enemy unit; if there are no units on the enemy's field, deal 10 damage to the enemy HP instead."
+  },
+  "9240": {
+   "name": "Wanted Notice",
+   "effect_text": "All units on the enemy's field gain \"Dimensional\". At the end of your 12th turn, Destroy all units on your own field."
+  },
+  "9241": {
+   "name": "Laser Cannon",
+   "effect_text": "Cannot make normal attacks. Sleeps for 2 turns. When it acts, deal damage equal to its Power to the first enemy unit in each column; if there is no target in that column, hit the opponent's HP directly. +1 Power each turn."
+  },
+  "9242": {
+   "name": "Shade of Pronoia",
+   "effect_text": "At the start of each turn, it changes form according to the card type the opponent has used most this turn: Ally or Structure -> Artillery Automaton; Skill or Field -> Shield Automaton; any other type -> Swift Automaton. If it is the only unit on the field, it loses 10 Health to Summon an Automaton; otherwise, the current Automaton transforms into the corresponding form."
+  },
+  "9243": {
+   "name": "Artillery Automaton",
+   "effect_text": "At the start of each turn, give another friendly unit +1 Power."
+  },
+  "9244": {
+   "name": "Shield Automaton",
+   "effect_text": "While this card is on the field, other friendly units take half damage."
+  },
+  "9245": {
+   "name": "Swift Automaton",
+   "effect_text": "May act twice per turn."
+  },
+  "9246": {
+   "name": "Gem Beast",
+   "effect_text": "On death, assemble a card. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+  },
+  "9247": {
+   "name": "Assembly Factory",
+   "effect_text": "At the start of your turn, assemble a card. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+  }
+ }
+}
