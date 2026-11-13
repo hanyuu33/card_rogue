@@ -1244,7 +1244,7 @@ const UPGRADE_FACTORY_HP:= 1
 #     结算口 = `_vortex_pull()`（挂在场地 play 分支、`set_field` 之后）。
 #   * 每回合结束时：对站在上面的单位造成 `field_vortex_dmg + vortex_stacks` 点伤害，
 #     然后 `vortex_stacks +1`（「后续受到的漩涡伤害 +1」）—— 结算在 `_field_aura_tick`。
-# 鹅（2 费盟友 1/9）：攻击后把目标向后击退 1 格、自己前进 1 格。
+# 鹅（2 费盟友 1/9）：攻击后把目标沿攻击方向击退 1 格、自己前进 1 格（R677 文案同步）。
 # 结算口 = `_goose_lunge()`（挂在 attack 尾部「攻击者还活着」那块里）。
 const GOOSE_TRAIT:= "扑击"
 # ── R89：无限装甲 8038（机械之心史诗盟友 4 费 4/18/1/1）──
@@ -13340,7 +13340,7 @@ func _goose_dir(attacker: Placement, src: Vector2i, tgt: Vector2i) -> Vector2i:
 
 
 func _goose_lunge(attacker: Placement, tgt: Vector2i) -> void :
-	## **鹅（9187，R381）的唯一结算口**：「攻击敌人后，将其向后击退 1 格，自己前进 1 格
+	## **鹅（9187，R381）的唯一结算口**：「攻击敌人后，将其沿攻击方向击退 1 格，自己前进 1 格
 	## （被挡住则不动）」。挂在 `attack()` 尾部「攻击者还活着」那块里（`_tap` 之前）。
 	##
 	## 两件事各自独立判：

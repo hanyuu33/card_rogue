@@ -1052,7 +1052,7 @@
   },
   "9187": {
    "name": "Ganso",
-   "effect_text": "Después de atacar a un enemigo, lo empuja 1 casilla hacia atrás y avanza 1 casilla (no se mueve si está bloqueado)."
+   "effect_text": "Después de atacar a un enemigo, lo empuja 1 casilla en la dirección del ataque y avanza 1 casilla (no se mueve si está bloqueado)."
   },
   "9188": {
    "name": "Hermes de Producción en Serie",

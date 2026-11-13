@@ -1052,7 +1052,7 @@
   },
   "9187": {
    "name": "Goose",
-   "effect_text": "After attacking an enemy, knock it back 1 tile and advance 1 tile itself (it does not move if blocked)."
+   "effect_text": "After attacking an enemy, knock it back 1 tile along the attack direction and advance 1 tile itself (it does not move if blocked)."
   },
   "9188": {
    "name": "Mass-Produced Hermes",
