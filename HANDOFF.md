@@ -1,3 +1,14 @@
+## 2026-11-13 R669 图鉴左栏说明溢出：按语言撑高羊皮纸边框
+
+**口径（用户）**：「gallery 左侧，文字明显溢出边框。修复，可以加大边框，或者把文字整段移到下面」。采用**加大边框**，中文版式保持原样。
+
+- **根因**：`gallery.tscn` 里 `Hint` 的 rect 底边（相对 `LeftPanel` 402）本来就超过面板底边（412 - 52 = 360）42px；中文只有 4 行所以看不出来，西语玩家页 7 行 / 敌人页 8 行自动换行后，`La búsqueda incluye nombres /` 起整段画到框外。不是翻译文本或字体问题，是矩形与面板都没跟着语言变。
+- **实测行数**（一次性探针 `_preview/r669_hint_probe.gd`，192px 宽 / 12px 字号 / WORD_SMART）：zh 4、ja 5、en 6、es 玩家 7 / 敌人 8。headless 后端 `get_line_height()` 会放大到 36，窗口实测行距约 19px，因此**不直接用行高定值**。
+- **修复**：`scripts/gallery_scene.gd` 新增 `_fit_hint_panel()`，在 `_rebuild_kinds()` 写完 hint 后 `call_deferred` 调用；中文直接 return（维持场景原值 412 / 402），其余语言按 `hint_label.get_minimum_size().y` 与「行数 × 19px」取大者，撑高 `LeftPanel.offset_bottom` 与 `Hint.offset_bottom`，底部留 14px 呼吸位。`HINT_MIN_LINES`（ja 5 / en 6 / es 8）保证切到敌人页或 minsize 尚未刷新时不会算小。只动两个显示层 offset，不改场景文件、网格、右栏或任何战斗逻辑。
+- **截图证据**（隔离档案 `E:/tmp/r668_*_appdata`）：`_preview/r668_spanish/gallery.png`（西语玩家页，7 行全在框内）、`gallery_enemy.png`（西语敌人页，8 行全在框内）、`gallery_zh.png`（中文对照，仍是原 412px 框、三行完整）。配套 `*_left_zoom.png` 为 2 倍放大裁图。
+- **验证**：`test_i18n.gd` **31/0**、`validate_spanish.py` **21978 checks**、`validate_interface.py` **788 条全过**；`tools/_run_r663_verify.py` → assemble / mana 通过，engine **3786✓ 0✗**、reward **26✓ 0✗**、bgm **39✓ 0✗**、traps **44✓ 0✗**、trapinput **36✓ 0✗**、smoke **70✓ 0✗**，`[RESTORE_VERIFY] OK（70 项）`、`[REGRESSION] GREEN`。engine / traps 计数随并行工作区档案浮动，判据只看 0 失败。
+- **提交边界**：只提交 `scripts/gallery_scene.gd` 与 `HANDOFF.md`；R663/R667 陷阱、9005/9037/9055 机制及并行 engine/shop/map/battle hunks 继续留工作区。
+
 ## 2026-11-13 R668 西班牙语版本：运行时、术语、战斗与图鉴验收
 
 **目标**：交付可选、可运行、可回归的 Español 版本，不停留在静态 JSON。中文权威数据、内部 ID、存档字段、AI 与战斗判断不改；显示层按 `es → en → 调用方中文 fallback` 回退，中文直接返回中文。

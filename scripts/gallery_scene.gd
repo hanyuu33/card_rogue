@@ -32,6 +32,12 @@ const COST_OPTIONS: Array[String] = ["费用不限", "0 费", "1 费", "2 费", 
 const COST_FIRST := 1            # 第一个「具体费用」档 = 0 费 → 该档 cost == idx - COST_FIRST
 const COST_OPEN := 6             # 最后一档 = 5 费以上
 
+## R669：图鉴左栏说明最少行数（按权威文案实测，切换分组时面板不跳动）。
+const HINT_MIN_LINES := {"ja": 5, "en": 6, "es": 8}
+const HINT_FALLBACK_LINES := 8
+const HINT_BOTTOM_PAD := 14.0
+const HINT_LINE_H := 19.0            # 1280x720 窗口实测行距（像素）
+
 var repo: CardRepo
 var _all: Array[CardData] = []
 var _shown: Array[CardData] = []
@@ -271,6 +277,25 @@ func _rebuild_kinds() -> void:
 	title_label.text = GameI18n.ui("map", "GALLERY_TITLE", "卡牌图鉴")
 	UiTheme.autoshrink_label(title_label, title_label.text, 20, 12, Vector2(136.0, 26.0))
 	hint_label.text = _hint_text()
+	call_deferred("_fit_hint_panel")
+
+
+func _fit_hint_panel() -> void:
+	## R669：图鉴左栏说明按语言撑高，避免长译文落到羊皮纸框外。
+	## 根因：gallery.tscn 里 Hint 的 rect 底边（相对面板 402）本来就比
+	## LeftPanel 底边（412 - 52 = 360）低 42px；中文 4 行看不出来，
+	## 英 / 西 6~8 行自动换行后整段画到框外。中文维持场景原值不动。
+	if GameI18n.language() == "zh":
+		return
+	var lang := GameI18n.language()
+	var lines := maxi(hint_label.get_line_count(), int(HINT_MIN_LINES.get(lang, HINT_FALLBACK_LINES)))
+	var panel: Panel = $LeftPanel
+	# minsize 由引擎按当前字体与 autowrap 算好；再用实测行数兜一层下限，
+	# 避免 headless / 窗口字体度量差异或 enemy 页 minsize 尚未刷新时算小。
+	var text_h := maxf(float(hint_label.get_minimum_size().y), float(lines) * HINT_LINE_H)
+	var need := panel.offset_top + hint_label.offset_top + text_h + HINT_BOTTOM_PAD
+	panel.offset_bottom = maxf(panel.offset_bottom, need)
+	hint_label.offset_bottom = panel.offset_bottom - panel.offset_top - 8.0
 
 
 func _match_kind(c: CardData) -> bool:
