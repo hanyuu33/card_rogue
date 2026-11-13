@@ -401,6 +401,7 @@ const STATE_TAUNT := Color("ff8f00")  ## 嘲讽
 const STATE_FROZEN := Color("6ec6ff") ## 冰冻
 const STATE_SLEEP := Color("b07bff")  ## 沉睡
 const STATE_FUSE := Color("ff7043")  ## 铸造倒计时（R149）：橙红，刻意与嘲讽的 ff8f00 拉开
+const STATE_STUN := Color("ffd54f")  ## 眩晕（R654）：亮金，靠「虚线环 + 绕头星点」与其余环形成对区分
 
 # ── 滚动提示（R126）──
 ## 地图「还能上下滚」的半透明双箭头。第一枚亮、第二枚更淡 → 形成层次，

@@ -160,6 +160,7 @@ const COL_TAUNT := UiTheme.STATE_TAUNT              # 嘲讽：战场单位的�
 const COL_FROZEN := UiTheme.STATE_FROZEN             # 冰封（寒冰箭/冻结陷阱/冰冻战吼）：冷蓝脉冲环 + 寒霜（这回合动不了）
 const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（恶魔鸭 9116）：紫脉冲环 + Zzz（还差 N 下挨打就醒）
 const COL_FUSE := UiTheme.STATE_FUSE                # 铸造倒计时（R149）：橙红脉冲环 +「倒数 N」徽标
+const COL_STUN := UiTheme.STATE_STUN                # 眩晕（R341 惊奇盒子 / 摇篮曲 / 组合）：金色虚线环 + 绕头星点
 const COL_FIELD_SELF := Color("ffb03a")         # 场地效果（R74）：我方放的 —— 琥珀色斜纹 + 名字角标
 const COL_FIELD_FOE := Color("ff5d5d")          # 敌方放的场地 —— 红斜纹（一眼分清敌我）
 const COL_FIELD_PERSIST := Color("5ad0e6")      # 持续型场地（R83：清泉）—— 冷青，静止描边（不是陷阱）
@@ -1052,6 +1053,29 @@ func _ready() -> void:
 		engine.state.place(CardData.from_dict(rb_repo.get_card(9001).to_dict()),
 				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 		status_text = "远古虚骨龙 · 龙息 4×5"
+		_clear_hover_state()
+		selection = null
+		queue_redraw()
+	if "--r654stun" in args and engine != null:
+		# R654 出图：眩晕的常驻标记 —— 与冰封、嘲讽同屏对拍，确认形状不撞。
+		# 出图：`battle.tscn -- --screenshot --level 0 --r654stun --shotframe 200`
+		_grid_intro_t = -1.0            # 关掉开场巡场，钉死构图
+		engine.ai_enabled = false
+		engine.state.board.clear()
+		engine.state.hand.clear()
+		var r6_repo := CardRepo.load_json()
+		engine.state.place(CardData.from_dict(r6_repo.get_card(9080).to_dict()),
+				Vector2i(4, 2), GameEngine.SIDE_SELF)          # 魔像：嘲讽
+		var r6_stun: Placement = engine.state.place(
+				CardData.from_dict(r6_repo.get_card(8003).to_dict()),
+				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)      # 树人：眩晕
+		var r6_frozen: Placement = engine.state.place(
+				CardData.from_dict(r6_repo.get_card(8005).to_dict()),
+				Vector2i(2, 2), GameEngine.SIDE_OPPONENT)      # 幽影：冰封（对照）
+		engine._apply_stun(r6_stun, "演示")
+		r6_frozen.frozen = true
+		_banner = {}                    # 收掉「我方回合」大字横幅，别压住卡顶徽标
+		status_text = "R654 眩晕标记：眩晕（金虚线环 + 星点）/ 冰封 / 嘲讽"
 		_clear_hover_state()
 		selection = null
 		queue_redraw()
@@ -7317,6 +7341,11 @@ func _on_hover(pos: Vector2) -> void:
 				tip += "　❄ 冰封（本回合不能行动）"
 			elif p.rooted > 0:
 				tip += "　⊥ 禁足（不能移动，仍可攻击）"
+			# R654：眩晕此前在悬停提示里也是缺的（只有左侧信息栏有），一并补上。
+			if p.stun_left > 0:
+				tip += "　💫 眩晕（下回合不能行动）"
+			# R122：沉睡有**两个**递减口 —— 自己的回合结束 -1（回合口）、每次受伤 -1
+			#（受伤口）。写清「还剩几点」，玩家才知道该不该现在就打。
 			# R122：沉睡有**两个**递减口 —— 自己的回合结束 -1（回合口）、每次受伤 -1
 			#（受伤口）。写清「还剩几点」，玩家才知道该不该现在就打。
 			if p.sleep_left > 0:
@@ -9591,6 +9620,12 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 		# 「下回合不能行动」是**看卡面看不出来**的隐藏状态 → 必须常驻可见。
 		_draw_frozen_aura(center, w, h, _badge_row)
 		_badge_row += 1
+	if p.stun_left > 0:
+		# 眩晕（R654：惊奇盒子 9179 / 摇篮曲 / 组合）：与冰封同属「下回合不能行动」的
+		# **看卡面看不出来** 的隐藏状态 —— 施加那一下只有 1.5 秒飘字，
+		# R613b 拆掉顶部文字条之后这里一直是空的（连注释都写着「会画」）。
+		_draw_stun_aura(center, w, h, _badge_row)
+		_badge_row += 1
 	if p.sleep_left > 0:
 		# 沉睡（R63/R72 补特效；R76 改口径）：恶魔鸭 9116 初始沉睡 2，
 		# 每挨一下 -1、**归零立刻恢复行动**。徽标写出「还差几下」而不是「几回合」。
@@ -9624,7 +9659,54 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	#     早年那版同名文字条在此重复绘制，已删（次元回归 glyph）。
 	#   · 增益 / 减益摘要（Placement.status_badges()）完整逐条列表在**左侧信息栏**，
 	#     顶部不再另画文字芯片（店长：「只留可发动的标签」）。
-	#   带环的「标记」（嘲讽 / 冰封 / 沉睡 / 倒数 / 可发动 F）仍各自在上方绘制。
+	#   带环的「标记」（嘲讽 / 冰封 / 眩晕 / 沉睡 / 倒数 / 可发动 F）仍各自在上方绘制。
+
+func _draw_stun_aura(center: Vector2, w: float, h: float, badge_row: int) -> void:
+	## 眩晕特效（`Placement.stun_left` 的唯一表现口，R654）：**金色虚线环**旋转 +
+	## 环上三颗星 + 顶部「眩晕」徽标。
+	## ⚠️ 刻意**不画实线同心环**：嘲讽（橙）/ 冰封（冷蓝）/ 沉睡（紫）/ 倒数（橙红）/
+	##    可发动（黄绿）已经把实线环这个形状用满，再加一个只能靠颜色分辨；
+	##    虚线 + 绕头星是「晕」的既有语义，形状上就能和那五个一眼分开
+	##    （与「禁足」只改形状、不抢颜色的做法同源）。
+	## ⚠️ 就绪光环（未横置的青色环）**不在这里屏蔽**：眩晕只挡「下一个自己回合」，
+	##    本回合没行动的单位确实还有行动权 —— 屏蔽它会说出与规则相反的话。
+	##    代价是浅色背景上两层环会叠在一起，所以虚线要「暗底 + 亮金」双描才立得住。
+	var t := float(_now()) / 1000.0
+	var base := Vector2(w, h).length() * 0.5
+	var r := base + 3.0
+	# 12 段短划逆时针转：转动本身就是在说「它在晕」
+	var spin := -fposmod(t * 1.1, 1.0) * TAU
+	for i in 12:
+		var a0 := spin + float(i) * TAU / 12.0
+		var a1 := a0 + TAU / 12.0 * 0.55
+		var da := 0.70 + 0.30 * (sin(t * 3.0 + float(i) * 0.7) + 1.0) * 0.5
+		# 只压亮金、不铺暗底：暗底断块在浅色木纹 / 水面上会变成「脏点」。
+		# 半径与就绪光环同圈 —— 虚线直接「切」在青环上，读作「这条环被金线打断」。
+		draw_arc(center, r, a0, a1, 6, Color(COL_STUN.r, COL_STUN.g, COL_STUN.b, da), 2.8)
+	# 三颗星骑在环外侧（相位差 120°），比虚线更亮一档
+	for i in 3:
+		var a := spin + float(i) * TAU / 3.0
+		var pos := center + Vector2(cos(a), sin(a)) * (r + 6.0)
+		_draw_sparkle(pos, 5.2, Color(1.0, 0.96, 0.72))
+	_draw_state_badge(center, w, h, badge_row, "眩晕",
+			Color(0.24, 0.16, 0.02, 0.92), Color(1.0, 0.82, 0.30, 0.95),
+			Color(1.0, 0.96, 0.82), Color(0.14, 0.08, 0.01))
+
+
+func _draw_sparkle(pos: Vector2, r: float, col: Color) -> void:
+	## 四角小星（眩晕绕头的星点）：两枚交错菱形，只用多边形、不引素材。
+	## 不用 `draw_circle`：小圆点在卡面上会糊成一团，看不出「星」。
+	## 先画一圈深色描边（1.5 倍大）再压亮色 —— 星点太小，没有描边在浅背景上会消失。
+	for i in 2:
+		var rr := r * 1.5 if i == 0 else r
+		var cc := Color(0.18, 0.11, 0.02, 0.70) if i == 0 else col
+		draw_colored_polygon(PackedVector2Array([
+				pos + Vector2(0.0, -rr), pos + Vector2(rr * 0.42, 0.0),
+				pos + Vector2(0.0, rr), pos + Vector2(-rr * 0.42, 0.0)]), cc)
+		draw_colored_polygon(PackedVector2Array([
+				pos + Vector2(-rr * 0.72, 0.0), pos + Vector2(0.0, rr * 0.30),
+				pos + Vector2(rr * 0.72, 0.0), pos + Vector2(0.0, -rr * 0.30)]), cc)
+
 
 func _draw_frozen_aura(center: Vector2, w: float, h: float, badge_row: int) -> void:
 	## 冰封特效（`Placement.frozen` 的唯一表现口）：冷蓝双环脉冲 + 顶部「冰封」徽标
@@ -12547,7 +12629,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("❄ %s 被冰封：下回合不能行动" % str(data.get("name", "")))
 		"stun":
 			# R341 惊奇盒子（9179）：攻击者被眩晕 —— 金黄爆点 + 「眩晕」飘字。
-			# 常驻状态本身由 Placement.stun_left 画（状态栏 / 徽标），这里只演「施加的那一下」。
+			# 常驻标记见 `_draw_stun_aura()`（R654 补：此前卡面 / 悬停都没有，只有这一下飘字）。
 			# R460：同上 —— 眩晕也可能由「撞上场地」产生，等滑行落地
 			var st_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var st_at := maxi(n, _slide_floor_at(st_cell)) if st_cell.x >= 0 else n
