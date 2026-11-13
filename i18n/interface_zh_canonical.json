@@ -2340,15 +2340,15 @@
         "zh": "第 %d–%d 段 / 共 %d 段"
       },
       "STORY_GRANTS_CARDS": {
-        "source": "scripts/story_scene.gd:491-494",
+        "source": "scripts/story_scene.gd:794-799",
         "zh": "解锁：卡牌 %d"
       },
       "STORY_GRANTS_RELICS": {
-        "source": "scripts/story_scene.gd:491-494",
+        "source": "scripts/story_scene.gd:794-799",
         "zh": "解锁：道具 %d"
       },
       "STORY_GRANTS_BOTH": {
-        "source": "scripts/story_scene.gd:491-494",
+        "source": "scripts/story_scene.gd:794-799",
         "zh": "解锁：卡牌 %d · 道具 %d"
       },
       "STORY_DETAIL_LOCKED": {
@@ -2363,17 +2363,9 @@
         "source": "scripts/story_scene.gd:544",
         "zh": "看完解锁：卡牌 %d 张 · 道具 %d 件（加入奖励池）"
       },
-      "STORY_CLAIM": {
-        "source": "scripts/story_scene.gd:551",
-        "zh": "收下这一段"
-      },
-      "STORY_ALREADY_READ": {
-        "source": "scripts/story_scene.gd:553",
-        "zh": "已经看过"
-      },
-      "STORY_REQUIREMENT_UNMET": {
-        "source": "scripts/story_scene.gd:555",
-        "zh": "条件未达成"
+      "STORY_DETAIL_CLICK_ANYWHERE": {
+        "source": "scripts/story_scene.gd:848",
+        "zh": "点击任意位置关闭"
       },
       "STORY_REVEAL_CARD_META": {
         "source": "scripts/story_scene.gd:583",
@@ -3445,7 +3437,7 @@
     "reward": 120,
     "map": 244,
     "battle": 72,
-    "shell": 195,
+    "shell": 193,
     "shared": 89
   }
 }

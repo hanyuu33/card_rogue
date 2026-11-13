@@ -47,7 +47,8 @@ func _initialize() -> void:
 				# R590：百科（主界面的二级入口，纯自绘页面 —— 空引用只有冒烟能抓到）
 				["res://scenes/codex.tscn", func(): _reset()],
 		# R346：剧情解锁界面 + 禁卡表（两个都是自绘界面，_draw 里的空引用只有冒烟能抓到）
-		["res://scenes/story.tscn", func(): _reset()],
+		# R682：用户口径「两个按钮都去掉，明暗地显示一段：点击任意位置关闭」——这一页要真点一次。
+		["res://scenes/story.tscn", func(): _reset(), _check_r677_story_detail],
 		["res://scenes/ban.tscn", func(): _reset()],
 		# 角色选择（R43 新增：定角色 → 发专属卡与赠品道具 → 进地图）
 		["res://scenes/class_pick.tscn", func(): _reset()],
@@ -1669,6 +1670,57 @@ func _check_r674_shop_menu(scene: Variant) -> void:
 		_smoke_fail("R674 关掉菜单后场景树仍是暂停状态")
 		return
 	print("SMOKE OK R674 商店 Esc 打开菜单 + 右上齿轮在位（屏幕 x=%.0f）" % gr.position.x)
+
+
+func _check_r677_story_detail(scene: Variant) -> void:
+	## R682（用户口径）：「两个按钮都去掉，明暗地显示一段：点击任意位置关闭」。
+	## 钉三件事：
+	##   ① 面板上真的没有「收下」和右上角 X 了（源码守卫 —— 注意包里读不到 .gd，会跳过）；
+	##   ② 点**任意位置**真的能关掉面板；
+	##   ③ 关掉那一下把这一段**收下**了 —— 只删按钮不管收下，奖励就永远发不出去。
+	var src := FileAccess.get_file_as_string("res://scripts/story_scene.gd")
+	if not src.is_empty():
+		if src.find("_claim_rect") >= 0 or src.find("_detail_close_rect") >= 0:
+			_smoke_fail("R682 故事正文面板不该再有「收下」/ X 的几何口")
+			return
+		if src.find("STORY_DETAIL_CLICK_ANYWHERE") < 0:
+			_smoke_fail("R682 故事正文面板缺「点击任意位置关闭」提示")
+			return
+	var repo: StoryRepo = scene._repo
+	if repo == null or repo.entries.is_empty():
+		_smoke_fail("R682 故事页没读到任何剧情段")
+		return
+	# 测试档案每次都是空的 → 开发版 `is_story_unlocked()` 恒真 → 有正文的段天然是 ready。
+	var eid := str((repo.entries[0] as Dictionary).get("id", ""))
+	scene._refresh()
+	if repo.episode_state(eid) != StoryRepo.STATE_READY:
+		_smoke_fail("R682 造不出 ready 态（%s）" % repo.episode_state(eid))
+		return
+	scene._open_detail(0)
+	if scene._sel != 0:
+		_smoke_fail("R682 正文面板没打开")
+		return
+	# 点面板正中：按下 + 抬起（走真实链路 `_detail_input`，不是直接调 `_close_detail`）。
+	# ⚠️ 不要 `(scene as Control)` 再调 `_detail_rect()`：那是脚本方法，静态类型 Control 上不存在。
+	var c: Vector2 = scene._detail_rect().get_center()
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.position = c
+	scene._detail_input(down)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = c
+	scene._detail_input(up)
+	if scene._sel != -1:
+		_smoke_fail("R682 点正文面板没有关掉")
+		return
+	if not ProfileData.is_story_read(eid):
+		_smoke_fail("R682 关掉面板没有收下这一段（奖励发不出去）")
+		return
+	scene._reveal = []          # 解锁动画别留给后面的帧
+	print("SMOKE OK R682 故事正文点任意位置关闭 + 关闭即收下（%s）" % eid)
 
 
 func _check_shop_enchant(scene: Variant) -> void:

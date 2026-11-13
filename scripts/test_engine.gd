@@ -306,6 +306,16 @@ func _init() -> void:
 
 	RunSave.set_test_mode()
 
+	# R682：**测试档也要每次从零开始**。`set_test_mode()` 只换路径、不清文件 ——
+	# 上一次留下的 `run_save_test.sav` / `run_cleared_test.sav` 会让 R640 / R486 变成
+	# 「同一份代码第一遍红、第二遍绿」的薛定谔回归（本轮实测真的踩到了）。
+	# ⚠️ 长期正解是让 `RunSave.set_test_mode()` 自己删这两份（与 `ProfileData` 对齐），
+	#    但那份文件现在在并行线的改动里，本轮先在这个入口兜住。
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://run_save_test.sav"))
+
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://run_cleared_test.sav"))
+
+
 	print("== 肉鸽引擎规则测试 ==")
 
 	var repo := CardRepo.load_json()
@@ -56014,6 +56024,34 @@ func _init() -> void:
 			and r352_story_src.find("_reveal_finished") >= 0,
 
 			"R352 源码：故事界面有解锁动画（收下后逐个浮现奖励）")
+	# ---- R682：故事正文面板不再有按钮（用户口径：两个都去掉，只留一行压暗提示）----
+
+	# 反向守卫：谁把「收下」或右上角 X 加回来，就在这里吃红。
+
+	check_src(r352_story_src.find("_claim_rect") < 0
+
+			and r352_story_src.find("_detail_close_rect") < 0,
+
+			"R682 源码：故事正文面板没有「收下」/ X 的几何口（按钮已撤）")
+
+	check_src(r352_story_src.find("STORY_DETAIL_CLICK_ANYWHERE") >= 0,
+
+			"R682 源码：故事正文面板有「点击任意位置关闭」提示（四语走 i18n）")
+
+	# 关掉 = 收下：`_close_detail()` 自己判 ready 再调 `_claim()`。
+	# 只删按钮不管收下，奖励就永远发不出去 —— 这是本轮最危险的回归点。
+
+	var r682_close := r352_story_src.find("func _close_detail")
+
+	var r682_close_end := r352_story_src.find("func _claim", r682_close)
+
+	check_src(r682_close >= 0 and r682_close_end > r682_close
+
+			and r352_story_src.substr(r682_close, r682_close_end - r682_close)
+
+			.contains("_claim(idx)"),
+
+			"R682 源码：_close_detail() 关掉时会把 ready 段收下")
 
 	var r352_repo_src := FileAccess.get_file_as_string("res://scripts/card_repo.gd")
 

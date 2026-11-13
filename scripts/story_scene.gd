@@ -17,6 +17,13 @@ extends Control
 ## 用户口径（R346）：「解锁时在故事界面点击查看故事解锁，之后可以解锁一些卡牌/道具
 ## 加入奖励池」—— 所以**条件达成 ≠ 发奖励**，必须在正文面板里点「收下」才发。
 ##
+## ⚠️ R682 用户口径改口：「两个按钮都去掉，明暗地显示一段：点击任意位置关闭」。
+##    正文面板因此**既没有「收下」、也没有右上角 X**，底部只留一行压暗的小字。
+##    「收下」没有取消，只是并进了「关」：点任意位置关掉面板时，这一段若是 ready
+##    就顺手发下来（`_close_detail()` 是唯一口），发的仍是 `ProfileData.claim_episode()`，
+##    解锁动画照播。R346 的「条件达成 ≠ 发奖励」依旧成立 —— 触发点仍然是玩家的
+##    **一次点击**，不是「条件一达成自动到账」。
+##
 ## 六章正文已齐；未来新增空正文段时仍由通用 locked 规则挡住。
 ## 填内容只需要改 `stories.json`，这个界面不用另开特例。
 ##
@@ -356,16 +363,6 @@ func _detail_rect() -> Rect2:
 	return Rect2((size.x - 900.0) / 2.0, 92.0, 900.0, size.y - 150.0)
 
 
-func _detail_close_rect() -> Rect2:
-	var r := _detail_rect()
-	return Rect2(r.end.x - 50.0, r.position.y + 10.0, 36.0, 30.0)
-
-
-func _claim_rect() -> Rect2:
-	var r := _detail_rect()
-	return Rect2(r.end.x - 216.0, r.end.y - 56.0, 192.0, 40.0)
-
-
 # ------------------------------------------------------------ 输入
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -495,12 +492,11 @@ func _detail_input(event: InputEvent) -> void:
 		if dragged or press == Vector2.INF or UiDrag.drag_moved(press, mb.position):
 			queue_redraw()
 			return
-		if _claim_rect().has_point(press):
-			_claim(_sel)
-			return
-		if _detail_close_rect().has_point(press) or not _detail_rect().has_point(press):
-			sfx.play("click")
-			_close_detail()
+		# R682：面板上没有按钮了 —— 点**任意位置**（面板内 / 面板外）都是收尾动作。
+		# 拖正文 / 拖滚动条在上面已被 `_bar_drag` 与 `UiDrag.drag_moved()` 挡掉，
+		# 所以「滑动阅读」不会被误判成一次点击。
+		sfx.play("click")
+		_close_detail()
 		return
 	if event is InputEventKey and event.pressed:
 		var step := 0
@@ -556,8 +552,22 @@ func _open_detail(idx: int) -> void:
 
 
 func _close_detail() -> void:
+	## R682：**关掉就是收下**。面板上已经没有「收下这一段」按钮，玩家读完点任意位置关闭，
+	## 这一次点击同时充当领取动作 —— 否则奖励永远发不下去（R346 的坑不能踩回去）。
+	##   * ready（条件已达成、还没领）→ 关掉 + 发奖励 + 播解锁动画
+	##   * locked / read             → 只是关掉
+	## ⚠️ 先记 idx 再清 `_sel`：`_claim()` 失败弹的是**列表页**的 toast，不该留在面板里。
+	## ⚠️ 幂等：`_sel < 0` 直接返回；`_claim()` 里自己清 `_sel`，不会再绕回来。
+	var idx := _sel
+	if idx < 0:
+		return
 	_sel = -1
 	queue_redraw()
+	if idx >= _episodes.size():
+		return
+	var eid := str((_episodes[idx] as Dictionary).get("id", ""))
+	if _repo.episode_state(eid) == StoryRepo.STATE_READY:
+		_claim(idx)
 
 
 func _claim(idx: int) -> void:
@@ -569,7 +579,8 @@ func _claim(idx: int) -> void:
 		sfx.play("lose")
 		return
 	sfx.play("win")
-	_close_detail()
+	_sel = -1
+	queue_redraw()
 	# R352：不再只弹一行 toast —— 拿到的每一样都会在解锁动画里逐个浮现。
 	_start_reveal(res.get("cards", []), res.get("relics", []))
 
@@ -802,9 +813,6 @@ func _draw_detail() -> void:
 	_draw_state_icon(Vector2(x0 + 11.0, r.position.y + 30.0), st, 0.95)
 	draw_string(_font_bold, Vector2(x0 + 34.0, r.position.y + 38.0), _repo.episode_label(ep),
 			HORIZONTAL_ALIGNMENT_LEFT, w - 94.0, UiTheme.FS_HEADING, UiTheme.PAGE_INK)
-	# 关闭
-	var cr := _detail_close_rect()
-	UiTheme.draw_close(self, cr, cr.has_point(get_local_mouse_position()))
 	draw_line(Vector2(x0, r.position.y + 54.0), Vector2(x1, r.position.y + 54.0),
 			Color("3d424e"), 1.0)
 	# 正文
@@ -831,18 +839,15 @@ func _draw_detail() -> void:
 	var gtxt := GameI18n.ui("shell", "STORY_DETAIL_NO_REWARD", "看完这一段没有额外奖励。")
 	if not cards.is_empty() or not relics.is_empty():
 		gtxt = GameI18n.ui("shell", "STORY_DETAIL_REWARDS", "看完解锁：卡牌 %d 张 · 道具 %d 件（加入奖励池）") % [cards.size(), relics.size()]
-	draw_string(_font, Vector2(x0, gy), gtxt, HORIZONTAL_ALIGNMENT_LEFT, w - 220.0,
+	draw_string(_font, Vector2(x0, gy), gtxt, HORIZONTAL_ALIGNMENT_LEFT, w,
 			UiTheme.FS_LABEL, Color("b9ae8a"))
-	# 收下按钮
-	var br := _claim_rect()
-	var can := st == StoryRepo.STATE_READY
-	var hov := br.has_point(get_local_mouse_position())
-	var btxt := GameI18n.ui("shell", "STORY_CLAIM", "收下这一段")
-	if st == StoryRepo.STATE_READ:
-		btxt = GameI18n.ui("shell", "STORY_ALREADY_READ", "已经看过")
-	elif not can:
-		btxt = GameI18n.ui("shell", "STORY_REQUIREMENT_UNMET", "条件未达成")
-	UiTheme.draw_secondary_btn(self, br, btxt, hov, not can, true)
+	# R682：**这里没有按钮了**。原来「收下这一段」和右上角 X 一起撤掉，只留一行压暗的小字。
+	# ⚠️ 这是 R353「界面不写操作教学」的一处**显式破例**：那条规矩的前提是界面上有可见
+	#    控件去表达可交互性；两个按钮都撤之后，正文面板确实需要一个「怎么出去」的提示。
+	draw_string(_font, Vector2(r.position.x, r.end.y - 30.0),
+			GameI18n.ui("shell", "STORY_DETAIL_CLICK_ANYWHERE", "点击任意位置关闭"),
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL,
+			Color(UiTheme.PAGE_MUTED, 0.88))
 
 
 func _draw_body(eid: String) -> void:
