@@ -126,7 +126,7 @@
    "effect_text": ""
   },
   "8027": {
-   "name": "Upgrade",
+   "name": "Refit",
    "effect_text": "Upgrade a friendly Ally or Structure, giving it +2 Power and +10 Health. If the target is a Chassis, it also gains an additional +1 Health."
   },
   "8028": {

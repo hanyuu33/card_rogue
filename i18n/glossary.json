@@ -155,8 +155,9 @@
       "ja": "変形"
     },
     "升级": {
-      "en": "Level Up",
-      "ja": "レベルアップ"
+      "en": "Refit",
+      "ja": "改修",
+      "note": "R653 定案：8027 卡名。机制「改造」仍为 Upgrade／改造；与 9187 的 advance（前进1格）、9200 的 advance a phase（进一阶）无关"
     },
     "强化": {
       "en": "Enhance",
