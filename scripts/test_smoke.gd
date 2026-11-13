@@ -5224,6 +5224,24 @@ func _check_menu(scene: Variant) -> void:
 	if not UiGate.blocked():
 		_smoke_fail("R148：菜单打开应向 UiGate 登记（下层悬停让位）")
 		return
+	# R657：菜单**整列按钮同号字** —— 店长看 Esc 菜单说「字体大小是不一致吗」：
+	# 主按钮原先 FS_HEADING(24)、次按钮 FS_SUBHEAD(20)，三个 286×46 的按钮并排时
+	# 「返回战斗」明显大一圈。现在统一 20，主按钮只靠深绿底 + 粗体分层次。
+	var fs_list: Array = []
+	var mbox: Variant = menu.get("_box")
+	if mbox == null:
+		_smoke_fail("R657：拿不到菜单容器，无法校验按钮字号")
+		return
+	for c in mbox.get_children():
+		if c is Button:
+			fs_list.append(int(c.get_theme_font_size("font_size")))
+	if fs_list.size() < 2:
+		_smoke_fail("R657：菜单里没凑到按钮（%d 个）" % fs_list.size())
+		return
+	for one in fs_list:
+		if int(one) != int(fs_list[0]):
+			_smoke_fail("R657：菜单按钮字号不一致（%s）—— 同一列必须同号" % str(fs_list))
+			return
 	menu.close()
 	if menu.is_open() or paused:
 		_smoke_fail("R148：菜单关闭必须恢复暂停（is_open=%s paused=%s）"

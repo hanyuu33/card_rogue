@@ -769,13 +769,20 @@ static func _fit_action_button(btn: Button, primary: bool, night := false) -> vo
 	if night:
 		_unify_night_fonts(btn)
 		return
-	var fs := FS_LABEL if compact else (FS_HEADING if primary else FS_SUBHEAD)
+	# 指定过字号的按钮**不吃 compact 分档**：同一列按钮必须同号，否则同为 286×46 的
+	# 两个按钮会因为 primary 不同而一个 24 一个 20（R657 修的就是 Esc 菜单这个）。
+	var ov := int(btn.get_meta("fs_override", 0))
+	var fs := ov if ov > 0 else (FS_LABEL if compact else (FS_HEADING if primary else FS_SUBHEAD))
 	var face := font_bold() if primary else font()
 	while fs > FS_CAPTION and face.get_string_size(btn.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > btn.size.x - (20 if compact else 68):
 		fs -= 1
 	btn.add_theme_font_size_override("font_size", fs)
 
-static func apply_button(btn: Button, primary := false, _on_dark := false) -> void:
+static func apply_button(btn: Button, primary := false, _on_dark := false,
+		fs_override := 0) -> void:
+	## `fs_override > 0` 时**强制**该字号（缩字逻辑也只从这个上限往下走），用于
+	## 「同一列按钮必须同号」的场合 —— Esc 菜单就这么用（R657）。
+	## 不传则沿用老规则：主按钮 FS_HEADING、次按钮 FS_SUBHEAD。
 	if btn == null:
 		return
 	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
@@ -786,7 +793,10 @@ static func apply_button(btn: Button, primary := false, _on_dark := false) -> vo
 		btn.add_theme_color_override(state, ink)
 	btn.add_theme_color_override("font_disabled_color", PAGE_MUTED)
 	btn.add_theme_font_override("font", font_bold() if primary else font())
-	btn.add_theme_font_size_override("font_size", FS_HEADING if primary else FS_SUBHEAD)
+	if fs_override > 0:
+		btn.set_meta("fs_override", fs_override)
+	var fs0: int = fs_override if fs_override > 0 else (FS_HEADING if primary else FS_SUBHEAD)
+	btn.add_theme_font_size_override("font_size", fs0)
 	var fit := _fit_action_button.bind(btn, primary)
 	if not btn.resized.is_connected(fit):
 		btn.resized.connect(fit)

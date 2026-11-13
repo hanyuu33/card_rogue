@@ -1589,3 +1589,15 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - **回归**：assemble 0 / mana PASS / engine **5839✓ 0✗** / reward 26 / bgm 39 / smoke 69-0；存档备份 `E:	mp651_userdata_bk` → `RESTORE_VERIFY OK`。
   ⚠️ 计数口径：同环境用 `git show HEAD:scripts/test_engine.gd` 单跑得 **5837**，本轮 5839 = 恰好 +2 条新断言（R650 记的 5844 是当时档案 / 解锁状态带出来的浮动数，别拿它当基线）。
 - **出图**：`tools/_shot_r651_settings.gd`（探针，SceneTree 自己数帧，避开「浮层暂停 → 战斗帧数走不到截图帧」的死结）→ `_shot_r651_overlay.png`；菜单那张走 `--menu` + `--shotframe`。
+
+## 2026-11-13 R657 Esc 菜单按钮整列同号字（主按钮 24 → 20）
+- **口径（用户）**：「很奇怪，字体大小是不一致吗？」→ 追问后确认指 **Esc 菜单那三个按钮**：`返回战斗` 比 `设置` / `返回标题` 大一圈。
+- **根因（不是手误，是全局规则）**：`UiTheme.apply_button()` 里 `FS_HEADING(24) + bold` 给 primary、`FS_SUBHEAD(20) + regular` 给次按钮；`_fit_action_button()` 里同样一行 `FS_HEADING if primary else FS_SUBHEAD`。菜单三项都是 286×46，尺寸一致 → 差异**纯粹来自「是不是主按钮」**。
+- **改法**：`apply_button(btn, primary, _on_dark, fs_override := 0)` 新增第 4 参，>0 时写进 button meta 并强制该字号；`_fit_action_button()` 读 meta 优先，且**指定过字号的按钮不吃 compact 分档**（否则同尺寸两个按钮又会因 primary 一个 24 一个 20）。`ui_menu._rebuild()` 统一传 `FS_SUBHEAD` → 整列 20 号，主按钮只靠**深绿底 + 粗体**分层次。
+- **影响面**：只有 `UiMenu`（9 个界面的 ESC 菜单）。标题页开始按钮 / 结算重启 / 胜利 / 卡组编辑确认都是各自的**单主按钮**，身边没有次按钮可比，仍 24，不动。
+- **测试**：`test_smoke._check_menu` +1 条 —— 菜单容器里所有 `Button` 的 `font_size` 必须一致（凑不到 2 个视为拿错容器）。
+- **回归**：assemble 0✗ / smoke **69✓ 0✗**；存档 `E:	mp657_userdata_bk` → `RESTORE_VERIFY OK`（69 项）。
+  ⚠️ 本轮**只跑这两套**：并行会话正在改 R656（`battle_scene` / `card_face` / `card_info_boxes` / `test_engine` 在工作区里都是脏的），跑全六套既会跟它抢 `_e.txt` 等中间文件，也会把它的半成品算进我的基线 —— engine / reward / bgm / mana 按「未触及」处理。驱动脚本 `tools/_run_r657_verify.py`。
+- **编号**：开工时 HEAD = R655，并行线已占 R656（工作区有 `tools/_run_r656_verify.py`、`_shot_r656_slots.gd`）→ 本轮让到 **R657**。
+- **出图**：`battle.tscn -- --screenshot --level 0 --menu --shotframe 120`；改前 `_shot_r651_menu.png`、改后 `_shot_r657_menu20.png`，并排对比 `_z_cmp_menu.png`（三个按钮现在等高）。
+- **顺带发现（未改，待定）**：设置页种子框里「随机种子」是 FS_BODY(16)、「下一局种子」是 FS_LABEL(14)，同一框内同级标题差一号，像手误；店长没点名，先记着。

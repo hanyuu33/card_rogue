@@ -274,7 +274,10 @@ func _rebuild() -> void:
 			else:
 				close())
 		# 暗底界面一律 on_dark（本菜单面板就是暗底）
-		UiTheme.apply_button(b, bool(it.get("primary", false)), true)
+		# R657：字号**整列同号**。原先主按钮 FS_HEADING(24)、次按钮 FS_SUBHEAD(20)，
+		# 三个 286×46 的按钮并排时「返回战斗」明显大一圈（店长：很奇怪，字体大小不一致）。
+		# 现在统一 20，主按钮只靠**深绿底 + 粗体**分层次，不再靠字号。
+		UiTheme.apply_button(b, bool(it.get("primary", false)), true, UiTheme.FS_SUBHEAD)
 		_box.add_child(b)
 	# R261：菜单底部**显示本局种子** —— 玩家随时按 Esc 抄下 10 位码，
 	# 下次在角色选择页填进去就能复现这一局。只在进行中的对局里显示。
