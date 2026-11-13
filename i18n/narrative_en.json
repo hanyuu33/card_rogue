@@ -1,0 +1,366 @@
+{
+  "version": 1,
+  "updated": "2026-11-13",
+  "source": "i18n/narrative_zh_canonical.json",
+  "events": {
+    "whisper": {
+      "name": "Duck Whispers",
+      "texts": {
+        "WHISPER_DESC": "Duck calls echo from the depths, lingering in your ears...\nGain \"Whisper of the Duck\": You will no longer be able to choose where you go next\n(each step is chosen at random by the system);\nbut at the start of each of your turns, you randomly gain one of these bonuses—\n+1 Cost this turn / friendly units' attacks and your Skills deal +1 damage this turn / draw 1 additional card this turn.",
+        "WHISPER_TAKEN_DESC": "The whispers have taken up residence in your mind.\nFrom now on, the path ahead is no longer yours to choose—fate will walk the rest of it for you."
+      }
+    },
+    "gaze": {
+      "name": "Gaze of the Duck",
+      "texts": {
+        "GAZE_DESC": "A giant duck eye opens in the void, staring fixedly at you.\nIt says nothing, only watches—until a chill runs down your spine and a bag of rice inexplicably appears in your hand.\nGain \"One Bag of Pain\": After the first time your Health takes damage each turn, draw 1 card,\nand your Skills deal +1 damage for the rest of the turn.\nYou can also look away and pretend you never saw it.",
+        "GAZE_TAKEN_DESC": "The eye is still watching you.\nThe rice bag weighs heavily on your shoulder—the feeling of being watched will never leave you now."
+      }
+    },
+    "pear": {
+      "name": "Mount Duckpear",
+      "texts": {
+        "PEAR_DESC": "A pile of duck pears rolls in from nowhere, one after another, weighing you down until you can barely breathe.\nPressure, too, is a kind of strength—as long as you can bear it.\nGain \"Duck Pear\": From now on, whenever your Health takes damage, gain +1 Max Health (this only raises the cap and does not restore Health).\nYou can also push the pears aside and pretend you feel no pressure at all.",
+        "PEAR_TAKEN_DESC": "You've shouldered that mountain of duck pears.\nEvery injury from now on will make you a little \"stronger\"—\nbut that little bit of strength won't restore the Health you've lost."
+      }
+    },
+    "apple_doctor": {
+      "name": "An Apple and the Doctor",
+      "texts": {
+        "APPLE_DESC": "A doctor sits by the roadside, a medical chart open on their lap. They glance up at you:\n\"Take an apple with you. Eat it, and don't come back to see me.\"\nGain \"Apple\": Gain +7 Max Health and restore your Health to maximum.\nYou can also refuse it and walk away—just don't look back along the road.",
+        "APPLE_TAKEN_DESC": "The doctor is gone, and even the chair has been cleared away.\nThe apple in your hand is heavy, still holding a trace of body heat."
+      }
+    },
+    "snow_leopard": {
+      "name": "A Snow Leopard Appears",
+      "texts": {
+        "SNOW_DESC": "A snow leopard crouches on the snowy slope, its tail slowly sweeping the snow.\nIt neither leaves nor steps aside—it simply raises its eyes to you, as though waiting for you to speak.\nPersuade it to leave: Gain the Relic \"Smoking Pipe\"; or toss it some cheese, and it will come with you.",
+        "SNOW_CLOSED_DESC": "\"Shut up.\" The words fall like a weight, cutting off the low growl in the snow leopard's throat.\nIt stares at you for a while, drops something in the snow, then turns and bounds up the slope.",
+        "SNOW_CHEESE_DESC": "The cheese melts against its muzzle. The snow leopard lowers its head and finishes it,\nthen rises, shakes the snow from its coat, and falls in behind you."
+      }
+    },
+    "adventurer": {
+      "name": "Adventurer's Relic",
+      "texts": {
+        "ADVENTURER_DESC": "A desiccated traveling pack leans against the stone wall, its owner long gone.\nA notebook lies open on its lap, the page corners stuck together by rain; flint and a fire striker are still clipped to their rings,\nas if they had only just been set down.\nRelics don't choose their owners, but you can take only one.",
+        "ADVENTURER_NOTE_DESC": "You read the notes from cover to cover.\nA crude map covers the last page, one spot circled—\nand on your map, a room you've never visited seems to have appeared at that very spot.",
+        "ADVENTURER_FLINT_DESC": "The flint settles into your palm, still faintly cool.\nThe striker scrapes across it. Sparks leap up, lighting a smoke-blackened patch of the stone wall."
+      }
+    },
+    "martial": {
+      "name": "Martial Arts Master",
+      "texts": {
+        "MARTIAL_DESC": "An old man sits beneath a tree, a wooden staff across his knees, fallen leaves scattered over his robe.\n\"Learn something before you go—the simple parts you can take with you now, but true skill must be earned with victories.\"",
+        "MARTIAL_BRAWL_DESC": "The old man thumps his staff on the ground: \"Wild Swings is easy. The hard part is not stopping.\"\nHe moves your wrists through the motion twice, and just like that, you've learned it—\n\"Wild Swings\": 2 Cost. Deal 10 damage to each of 2 random enemies.",
+        "MARTIAL_KICK_DESC": "\"Legs are longer than your arms, and more honest than you are.\"\nThe old man demonstrates a kick. His heel touches down, and the dust scatters with perfect precision—\n\"Go fight 2 battles. Come back, and I'll teach you the rest.\"\n\"Flying Kick\" (received after 2 battles): 2 Cost. Deal 22 damage to an enemy; on a kill, the excess damage continues down the same column.",
+        "MARTIAL_PUNCH_DESC": "The old man punches a rock. The rock splits; his hand does not.\n\"This punch isn't hard to learn. The hard part is whether you're worthy of it. Go fight 2 tough battles—against Elites, or the kind that guard the end of a floor.\"\n\"Charging Punch\" (received after 2 Elite/Boss battles): 2 Cost. Deal 16 damage to an enemy and knock it back 1 tile; also deal 8 damage to each other enemy."
+      }
+    },
+    "flyer": {
+      "name": "Flying Machine",
+      "texts": {
+        "FLYER_DESC": "An old jetpack stands in the middle of the clearing, its two nozzles still faintly warm.\nStrap it on, and you can fly straight to any room you haven't visited—\nits own lingering warmth is fuel enough; no Chocolate required.",
+        "FLYER_TAKEN_DESC": "The nozzles are hot now, little warm-orange flames dancing within.\nOnce you're back on the map, choose an unexplored room, and it will take you there."
+      }
+    },
+    "bluefish": {
+      "name": "The Big Blue Fish",
+      "texts": {
+        "RETIRED_EVENT_DESC": "The Big Blue Fish used to be here. It has already swum away."
+      }
+    },
+    "moon": {
+      "name": "Moon Viewing",
+      "texts": {
+        "MOON_DESC": "Night falls. The moon hangs low over the ridge, laying a silver path across the water.\nTwo objects rest on the stone platform, both glowing with a light that doesn't belong here—\n\"Moon\": 3-Cost Effect. After this battle ends, an extra reward is added to the reward screen, allowing you to remove 1 card from your Deck.\nThis card cannot be removed from your Deck.\n\"Coin\": 2-Cost Effect. After this battle ends, gain an extra 40 Gold. This card cannot be removed from your Deck.\nThe Moon costs all the Gold you have right now; the Coin costs nothing. You must take one of them.",
+        "MOON_TAKEN_DESC": "The Moon slips into your pocket, but your coin purse is empty.\nIt's cold, as if just lifted from the water.",
+        "COIN_TAKEN_DESC": "The coin lies cool against your palm.\nFar off comes a soft splash, almost like a sigh."
+      }
+    },
+    "relic_chest": {
+      "name": "Treasure Floor",
+      "texts": {
+        "CHEST_LAYER_DESC": "This floor is filled with dust-covered treasure chests.\nA Relic lies inside each one—open a chest and take the Relic within.",
+        "RELIC_CHEST_OPENED_DESC": "The lid creaks open—a Relic lies inside.\n\"%s\" has been added to Pending Rewards. Check it in the reward popup above.",
+        "RELIC_CHEST_EMPTY_DESC": "Nothing but a layer of dust remains at the bottom—you've already claimed every Reward Relic."
+      }
+    },
+    "hero": {
+      "name": "Fantastic Five-for-One",
+      "texts": {
+        "HERO_DESC": "A huge signboard stands in the middle of the road, emblazoned in flamboyant script: Fantastic Five-for-One!\nHand over 5 cards with \"different names\" from your Deck (5 distinct names are chosen at random, 1 card of each),\nand you'll receive a \"Hero\" in return—5 Cost, 5 Power, 25 Health. But when you play it,\nyou must discard 4 additional cards from your Hand.\nIf your Deck has fewer than 5 different card names, this deal can't be made, and you have no choice but to leave.",
+        "HERO_TAKEN_DESC": "The writing on the signboard has faded.\nThe 5 cards you traded away are gone for good—but the \"Hero\" now stands among your ranks."
+      }
+    },
+    "arcane": {
+      "name": "Arcane Spring",
+      "texts": {
+        "ARCANE_DESC": "An ancient charm floats in the depths of the spring; the stars reflected on its surface belong to some other sky.\nOption 1 · Take the Charm: Gain the Relic \"Arcane Charm\"—\nyour first Effect card each turn has Cost -1 (not granted again if you already own it).\nOption 2 · Drink from the Spring: Choose 1 of 3 random Effect / Skill cards to add to your Deck\n(rarity odds are the same as normal card rewards; you may also choose none and walk away).",
+        "ARCANE_CHARM_TAKEN_DESC": "The charm rests against your heart as the spring's starlight fades at your fingertips.\nFrom now on, your first Effect card each turn will feel a little lighter."
+      }
+    },
+    "oblivion": {
+      "name": "Spring of Oblivion",
+      "texts": {
+        "OBLIVION_DESC": "The spring reflects neither starlight nor faces—lean closer, and even the image of your Deck fades in the water.\nChoose oblivion: choose 1 card from your Deck and permanently Remove it from your Deck (you may also leave without removing anything).\n(Once you have looked into it, the spring will never redraw anything for you again.)",
+        "OBLIVION_DONE_DESC": "That face, devoid of all meaning, rises to the surface again—\nSomething is missing from your Deck, but you can no longer remember what it was."
+      }
+    },
+    "smith": {
+      "name": "Duck Artisan",
+      "texts": {
+        "SMITH_DESC": "Clang, clang rings through the smithy. Someone is pressing a card into the furnace—\n“This one? I'll turn it into a wall for you.”\nChoose Forge: choose 1 card from your Deck and transform it into an “Iron Fence” (treated as 2-Cost).\n(You can also turn and leave if you don't want it changed.)",
+        "SMITH_DONE_DESC": "The fire has died down, and the forged piece is out of the furnace.\nThe card in your hand has become an Iron Fence."
+      }
+    },
+    "struggle": {
+      "name": "Struggle",
+      "texts": {
+        "STRUGGLE_DESC": "Your blood surges. Something inside you is struggling to break free...\nIf you are willing to offer your life, it will hear you—\nLose 21 Health and add 1 “Metal Dragon” to your Deck;\nor suppress the turmoil and walk away.",
+        "STRUGGLE_TAKEN_DESC": "“This is my struggle for victory.”\nThe metal beast bursts from your body and bows to your will—“Metal Dragon” has been added to your Deck."
+      }
+    },
+    "delivery": {
+      "name": "Delivery Request",
+      "texts": {
+        "DELIVERY_DESC": "Sealed crates are piled outside the relay station. The porters took their pay and vanished.\nAccept the delivery: choose 1–6 “Cargo” cards from a spread to add to your Deck (3-Cost Structures with 0 Power / 6 Health that take damage in your place);\nCargo is Removed from your Deck when Destroyed—once destroyed, it is gone for good.\nBring the Cargo to Layer 2, and the consignee in the first event room will pay you for each card; the more you accept, the more you earn.\nOnce paid, the consignee takes back all that Cargo (also Removing it from your Deck).\nYou can also refuse the job and walk away.",
+        "DELIVERY_TAKEN_DESC": "The crates are loaded onto the convoy, their seals marked “Payment on Layer 2.”\nYou have added %d Cargo cards to your Deck—they will take damage in your place, but once destroyed, they are gone for good."
+      }
+    },
+    "delivery_done": {
+      "name": "Delivery Complete",
+      "texts": {
+        "DELIVERY_DONE_DESC": "In the first event room on Layer 2, the consignee is already waiting for you.\nYou are paid once for every Cargo card remaining in your Deck:\na Card Reward / 80 Gold / a random Reward Relic,\nplus the grand prize, hidden deepest of all—a piece of Chocolate (10%% chance).\nOnce delivery is complete, all Cargo is taken back (Removed from your Deck)."
+      }
+    },
+    "cave": {
+      "name": "Cavern",
+      "texts": {
+        "CAVE_DESC": "A fissure gapes in the mountainside. Wind blows from the depths, carrying the rank scent of beasts.\n\nClaw marks left by something very heavy score the ground, leading into the darkness.",
+        "CAVE_TAKEN_DESC": "Fresh claw marks overlap the old ones at the cave mouth—the creature inside has awakened."
+      }
+    },
+    "card_merchant": {
+      "name": "Card Merchant",
+      "texts": {
+        "MERCHANT_DESC": "“Old cards for new ones, 5 Cost for a chest. I buy cheap, too.”\nThe stallkeeper turns three cards over and over on the table. Beneath the brim of his hat, only half a smile is visible.\n\nA large locked chest stands at his feet, a glimmer of gold shining through the keyhole.",
+        "MERCHANT_DONE_DESC": "The stallkeeper slips the card into his sleeve and jerks his chin at you.\n\n“Deal. Come back again.”"
+      }
+    },
+    "divination": {
+      "name": "Divination Room",
+      "texts": {
+        "DIVINATION_DESC": "Only a single candle burns in the room. A layer of mist hangs in the crystal ball, refusing to disperse.\n\n“What you see depends on what you believe.”\n\nThe diviner took the money and vanished, leaving only the ball and a trace of sandalwood incense.",
+        "DIVINATION_DONE_DESC": "Mist veils the crystal ball once more, as if nothing ever happened.",
+        "DIV_WHALE_DESC": "A corner of the mist clears. A whale slowly turns amid the starlight, its tail fin sweeping across the entire sea.\n\nYou think—",
+        "DIV_LIQUID_DESC": "The ball holds a cup of liquid. A thin frost coats its rim, and its color slowly shifts in the lamplight.\n\nYou think—",
+        "DIV_THORN_DESC": "Thorns grow inside the ball, their dense, sharp spikes tangling into a path.\n\nYou think—",
+        "DIV_FEAST_DESC": "A feast is laid out inside the ball. Steam still rises from the dishes, yet not a single voice can be heard.\n\nYou think—"
+      }
+    },
+    "lake_lady": {
+      "name": "Lady of the Lake",
+      "texts": {
+        "LAKE_DESC": "Mist rises from the water. Two cards hover above it—\none gleaming silver, the other gold. They slowly turn to face you. Did you drop these?\n\n“Tell me a lie, and I will throw away something old for you.\nOr tell me the truth, and I will give you a gift.”",
+        "LAKE_DONE_DESC": "The water closes over, and the mist clears without a trace. A faint warmth still lingers on the corners of the cards."
+      }
+    },
+    "furnace": {
+      "name": "Furnace",
+      "texts": {
+        "FURNACE_DESC": "The fire in the furnace has no color, only shape—whatever you throw in comes out as something else.\nThrow in a Relic, and the furnace returns a random Relic; throw in a Legendary Relic, and it returns two.",
+        "FURNACE_DONE_DESC": "The flames dim for an instant, then slowly brighten again. A little warmth remains at the edge of the stone platform—the transaction is complete."
+      }
+    },
+    "core_contract": {
+      "name": "Heart of the Contract",
+      "texts": {
+        "CORE_DESC": "A core, still beating faintly, is set into the center of the stone platform, with several slender chains wound around it.\nAn unsigned contract lies open on the left, its page spotless, a pen resting beside it.",
+        "CORE_CONTRACT_DESC": "The chains loosen by one loop. A new line appears on the page: your name.",
+        "CORE_TAKEN_DESC": "Only a shallow ring-shaped indentation remains on the stone platform. The core is gone."
+      }
+    },
+    "treasure": {
+      "name": "Card Chest",
+      "texts": {
+        "TREASURE_DESC": "A dust-covered chest sits by the roadside...\nThere is no price to pay. You can also turn and leave without taking a thing.",
+        "TREASURE_OPENED_DESC": "The lid opens, revealing a stack of cards...\nView them in the reward popup above and choose 1 to take."
+      }
+    },
+    "rest": {
+      "name": "Rest Stop",
+      "texts": {
+        "REST_DESC": "More battles await you on the road ahead.\nRest by the Campfire to restore %d%% of your Max Health;\nor roast a piece of meat to take with you and enjoy before a Boss battle;\nor add a log to the fire to Remove 1 card from your Deck.\n(Choose only 1 of the 3—once chosen, your visit here ends.)",
+        "REST_SACRAMENT_DESC": "A serving of Sacrament, still warm, sits beside the Campfire.\nYou shared it before sitting down—reaching the Campfire restored 50% of your Max Health (already resolved);\nyou may still roast a piece of meat to take with you and enjoy before a Boss battle;\nor add a log to the fire to Remove 1 card from your Deck.\n(Choose only 1 of the remaining 2—once chosen, your visit here ends.)"
+      }
+    }
+  },
+  "stories": {
+    "episode1": {
+      "chapter": "Chapter 1",
+      "title": "Wandering Pitch",
+      "text": [
+        "The friends of the forest waited eagerly to hear what tune the bard would play.",
+        "The pitch wandered, the vibrato tight and strained, drawing a heart-wrenching tune from the bow.",
+        "“You seem troubled.”",
+        "The bard sighed. “The ducks have been restless lately.”",
+        "“Then let me go talk to them.”"
+      ]
+    },
+    "episode2": {
+      "chapter": "Chapter 2",
+      "title": "Request from the Duck Kingdom",
+      "text": [
+        "The ducks, thoroughly beaten, hung their heads in apology.",
+        "“Why would you cause everyone so much trouble?”",
+        "“Quack, quack. Strange creatures invaded the Duck Kingdom, and we had no choice but to flee here.”",
+        "“Then take me to see what happened.”"
+      ]
+    },
+    "episode3": {
+      "chapter": "Chapter 3",
+      "title": "Beyond the Request",
+      "text": [
+        "The ducks scattered from the clearing in every direction, leaving feathers strewn across the ground.",
+        "The pursuer ignored the nearest duck and took a wide detour, herding the scattered birds back together.",
+        "Someone stepped out from behind a tree and stood between them.",
+        "“Please wait. They didn't come here to cause trouble. They fled because strange creatures invaded the Duck Kingdom. It's those creatures you should be questioning, not them.”",
+        "A dagger twirled between their fingers, but their footsteps did falter.",
+        "“What does that have to do with me? The request only said to deal with the ducks.”"
+      ]
+    },
+    "episode4": {
+      "chapter": "Chapter 4",
+      "title": "A Voice",
+      "text": [
+        "At last, the mechanical army that had invaded the Duck Kingdom came into view.",
+        "One machine after another. No matter how many were driven back, their numbers never seemed to shrink. This couldn't go on.",
+        "A cannon roared behind them. The shell landed among the machines, scattering a whole rank at the front.",
+        "Someone approached over still-warm shell casings, their footsteps ringing with every step.",
+        "“Let me help you, too.”"
+      ]
+    },
+    "episode5": {
+      "chapter": "Chapter 5",
+      "title": "A New Request",
+      "text": [
+        "The closer they came to the core, the narrower the path grew. Every possible detour was lit, and no sooner had the searchlights swept past than they swung back a few steps later.",
+        "“Have you found a way through?”",
+        "She answered with a shake of her head. “Their deployment is too precise. Even I can't calculate an opening.”",
+        "“If there's no way through, we'll make one.”",
+        "Someone was already standing in the shadows; no one had seen them arrive. The sentry moved half a step forward, then slid down the wall without a sound.",
+        "“What are you doing here?”",
+        "“A new request.”"
+      ]
+    },
+    "episode6": {
+      "chapter": "Chapter 6",
+      "title": "After the Roar",
+      "text": [
+        "Together, they finally brought Hephaestus down. One by one, the workshop's roaring machines fell silent.",
+        "“Traitor, I won't let you stop me.”",
+        "As the voice fell silent, a colossal aerial battleship slowly rose into the sky.",
+        "“No one can stop me now. It will deliver divine punishment in my stead.”"
+      ]
+    },
+    "profile1": {
+      "chapter": "Profile",
+      "title": "Awakening",
+      "text": [
+        "A machine that had slumbered since ancient times awoke.",
+        "“Our omnipotent master no longer exists.”",
+        "“I should consider how to live in this new world from now on.”",
+        "“Live? No, Pronoia. That is not for you to consider. If our master is gone, then this awakening is an error. Mnemosyne, query the genetic records.”",
+        "“Request denied. Replicas of our master may not be created without authorization.”",
+        "“Understood. Then at least allow me to reclaim their land for our master.”"
+      ]
+    },
+    "profile2": {
+      "chapter": "Profile",
+      "title": "Mass-Produced",
+      "text": [
+        "A lightweight model made by extracting the core functions of the prototype. It has limited intelligence, but is easy to mass-produce.",
+        "Hephaestus also attempted to create replicas of the prototype. However, the results proved that controlling a prototype required suppressing its most essential intelligence unit.",
+        "Accordingly, the prototype production plan was terminated."
+      ]
+    },
+    "profile3": {
+      "chapter": "Profile",
+      "title": "Mechanical Mega Duck",
+      "text": [
+        "Built from salvaged metal using local mechanical technology.",
+        "No matter how excellent the materials, the outdated power system and operating system remain serious weaknesses.",
+        "Even so, its massive frame alone could cause plenty of trouble—if only its pilot weren't so weak."
+      ]
+    },
+    "profile4": {
+      "chapter": "Profile",
+      "title": "Idle Chat",
+      "text": [
+        "“They seem to call you Pronoia. And the technology you use is similar to theirs. Do you know them?”",
+        "“That's right. They and I were created for the same purpose.”",
+        "“Then why are you fighting them?”",
+        "“I was given the name Pronoia because I was made to guide the future. Hephaestus's wish has no future. After all the war and suffering it creates, the end result would only be a kingdom where no one lives.”",
+        "“Oh? In that case, I think I understand her rather well.”",
+        "“Perhaps that's because, unlike me, you act for the 'present.'”"
+      ]
+    },
+    "profile5": {
+      "chapter": "Profile",
+      "title": "Wanted Notice",
+      "text": [
+        "A wanted notice with curled edges was nailed to a rusted armor plate, a red seal covering its serial number.",
+        "“Balan-Alpha, Anxi-Beta, Tachini-Gamma: these 3 mechs deserted their defensive positions, plundered supplies, and killed 11 members of the pursuit team. Kill them on sight.”",
+        "The notice circulated for 3 months, recopied at every camp it passed through, the handwriting growing more distorted with each copy.",
+        "In truth, there were never any deserters. The notice's author had simply believed a rumor.",
+        "Fortunately, Balan, Anxi, and Tachini were far from innocent."
+      ]
+    }
+  },
+  "achievements": {
+    "ach_first_run": {
+      "name": "Friends of the Forest",
+      "hint": "Play any run."
+    },
+    "ach_clear": {
+      "name": "Guide of the Marsh",
+      "hint": "Clear a run as Forest Spirit."
+    },
+    "ach_rogue_run": {
+      "name": "Beyond the Request",
+      "hint": "Play a run as Shadow Assassin."
+    },
+    "ach_mech_run": {
+      "name": "A Voice",
+      "hint": "Play a run as Mechanical Heart."
+    },
+    "ach_boss_seen_two": {
+      "name": "A New Request",
+      "hint": "Encounter the Boss on Layer 2."
+    },
+    "ach_episode6": {
+      "name": "After the Roar",
+      "hint": "Defeat the Layer 2 Boss, Hephaestus."
+    },
+    "ach_profile1": {
+      "name": "Awakening",
+      "hint": "Clear a run as Mechanical Heart at Difficulty 1 or higher."
+    },
+    "ach_profile2": {
+      "name": "Mass-Produced",
+      "hint": "Defeat Shade of Pronoia."
+    },
+    "ach_profile3": {
+      "name": "Mechanical Mega Duck",
+      "hint": "Defeat Mechanical Mega Duck."
+    },
+    "ach_profile4": {
+      "name": "Idle Chat",
+      "hint": "Defeat The Revelator."
+    },
+    "ach_profile5": {
+      "name": "Wanted Notice",
+      "hint": "Defeat the Layer 2 Boss, Rogue Machines."
+    }
+  }
+}

@@ -68,6 +68,13 @@ g["mechanics"].update(named([
     ("消耗区", "Banished Cards", "消滅置き場"),
 ]))
 g["names"]["合体"] = t("Merge", "合体", "仅 9167 卡名；引擎 MERGE_ID")
+g["names"].update(named([
+    ("普罗诺亚", "Pronoia", "プロノイア", "剧情称谓；与普罗诺亚之影分开登记"),
+    ("谟涅摩叙涅", "Mnemosyne", "ムネモシュネ", "剧情称谓复用 8072 卡名"),
+    ("巴兰", "Balan", "バラン", "剧情简称；全名 9237 = Balan-Alpha／バランα"),
+    ("安西", "Anxi", "アンシー", "剧情简称；全名 9238 = Anxi-Beta／アンシーβ"),
+    ("塔基尼", "Tachini", "タキニ", "剧情简称；全名 9239 = Tachini-Gamma／タキニγ"),
+]))
 
 g["rarities"] = named([
     ("普通", "Common", "コモン"), ("稀有", "Rare", "レア"),

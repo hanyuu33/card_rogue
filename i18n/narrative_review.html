@@ -1,0 +1,584 @@
+<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>R664 事件与剧情中英日对照</title><style>
+:root{--bg:#f4f1ea;--paper:#fffdf8;--ink:#292b32;--muted:#6b6c73;--line:#ded8ca;--accent:#67508d;--soft:#eee8f4}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI","Microsoft YaHei",sans-serif;line-height:1.6}
+header{padding:30px max(22px,calc((100vw - 1500px)/2));background:#302a3c;color:#fff}header h1{margin:0 0 8px;font-size:27px}header p{margin:4px 0;color:#ddd5e7}
+.toolbar{position:sticky;top:0;z-index:2;padding:12px max(18px,calc((100vw - 1500px)/2));background:rgba(244,241,234,.97);border-bottom:1px solid var(--line)}
+input{width:min(620px,100%);padding:10px 14px;border:1px solid #bdb4c7;border-radius:8px;background:#fff;font-size:15px}nav{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}nav a{color:var(--accent);text-decoration:none;background:var(--soft);padding:3px 9px;border-radius:5px}
+main{max-width:1500px;margin:auto;padding:12px 20px 48px}section{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden}h2{font-size:19px;margin:0;padding:14px 18px;background:#ece6da}h2 small{font-size:12px;color:var(--muted);font-weight:400;margin-left:8px}
+table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{text-align:left;vertical-align:top;padding:10px 13px;border-top:1px solid #eee9df;overflow-wrap:anywhere;white-space:pre-line}th{font-size:12px;color:var(--muted);background:#faf7f0}th:nth-child(1){width:15%}th:nth-child(2){width:28.3%}th:nth-child(3){width:28.3%}th:nth-child(4){width:28.4%}
+.name{font-weight:700;color:#544268}.id{color:var(--muted);font-size:12px}.hidden{display:none}section.all-hidden{display:none}footer{color:var(--muted);font-size:12px;padding:10px 4px}
+@media(max-width:820px){th:nth-child(1){width:18%}th:nth-child(2),th:nth-child(3),th:nth-child(4){width:27.3%}th,td{padding:8px;font-size:12px}}
+</style></head><body><header><h1>R664 事件与剧情中英日对照</h1><p>26 组事件 / 61 段正文；11 段剧情 / 54 行；11 条剧情成就提示。</p><p>event_scene.gd 与 stories.json 权威中文未改；卡名、道具名与专名复用唯一术语表。</p></header><div class='toolbar'><input id='q' type='search' placeholder='搜索 ID、常量名、中文、英文或日文…'><nav><a href='#events'>事件 61</a><a href='#stories'>剧情 11</a><a href='#achievements'>提示 11</a></nav></div><main><section id='events'><h2>事件正文 <small>26 组 / 61 段</small></h2><table><thead><tr><th>ID / 名称</th><th>规范中文</th><th>English</th><th>日本語</th></tr></thead><tbody><tr><td><span class='name'>鸭鸭低语</span><br><span class='id'>whisper<br>WHISPER_DESC</span></td><td>深处的鸭鸣在你耳畔回荡，绕梁不散……
+获得「鸭之低语」：你将不再能控制自己接下来的前进方向
+（每一步都由系统随机决定）；
+但每个我方回合开始时，你会随机获得一种强化——
+本回合费用 +1 / 我方单位攻击与技能伤害 +1 / 本回合多抽 1 张卡。</td><td>Duck calls echo from the depths, lingering in your ears...
+Gain &quot;Whisper of the Duck&quot;: You will no longer be able to choose where you go next
+(each step is chosen at random by the system);
+but at the start of each of your turns, you randomly gain one of these bonuses—
++1 Cost this turn / friendly units&#x27; attacks and your Skills deal +1 damage this turn / draw 1 additional card this turn.</td><td>奥底から聞こえるアヒルの鳴き声が耳元で響き、いつまでも消えない……
+「アヒルのささやき」を得る：以後、進む先を自分で選べなくなる
+（一歩ごとにシステムがランダムに決定）。
+ただし、自分の各ターン開始時、次の強化をランダムに1つ得る——
+このターンのコスト+1／このターン、味方ユニットの攻撃とスキルのダメージ+1／このターン、追加で1枚ドロー。</td></tr><tr><td><span class='name'>鸭鸭低语</span><br><span class='id'>whisper<br>WHISPER_TAKEN_DESC</span></td><td>低语已经住进了你的脑海。
+从今往后，前路不再由你选择——命运会替你走完剩下的路。</td><td>The whispers have taken up residence in your mind.
+From now on, the path ahead is no longer yours to choose—fate will walk the rest of it for you.</td><td>ささやきはすでに頭の中に住みついた。
+これから先、進路はあなたが選ぶものではない——残りの道は、運命があなたに代わって歩んでいく。</td></tr><tr><td><span class='name'>鸭之凝视</span><br><span class='id'>gaze<br>GAZE_DESC</span></td><td>一只巨大的鸭眼自虚空中睁开，死死盯着你。
+它不说话，只是看着——看得你后背发凉，手里莫名多了一袋米。
+获得「一袋米抗几楼」：每回合第一次我方生命受到伤害后，抽 1 张卡，
+且本回合内你的技能造成的伤害 +1。
+也可以别过头去，假装没看见。</td><td>A giant duck eye opens in the void, staring fixedly at you.
+It says nothing, only watches—until a chill runs down your spine and a bag of rice inexplicably appears in your hand.
+Gain &quot;One Bag of Pain&quot;: After the first time your Health takes damage each turn, draw 1 card,
+and your Skills deal +1 damage for the rest of the turn.
+You can also look away and pretend you never saw it.</td><td>虚空に巨大なアヒルの目が開き、じっとあなたを見つめている。
+何も言わず、ただ見つめてくる——背筋が寒くなり、気づけば手には米袋が一つ。
+「痛みを感じろ」を得る：各ターン、自分のHPが初めてダメージを受けた後、カードを1枚ドローし、
+このターン中は自分のスキルダメージ+1。
+目をそらして、見なかったことにしてもよい。</td></tr><tr><td><span class='name'>鸭之凝视</span><br><span class='id'>gaze<br>GAZE_TAKEN_DESC</span></td><td>那只眼睛还在看着你。
+米袋沉甸甸地压在肩头——被注视的感觉，从此挥之不去。</td><td>The eye is still watching you.
+The rice bag weighs heavily on your shoulder—the feeling of being watched will never leave you now.</td><td>その目は今もあなたを見ている。
+米袋がずっしりと肩にのしかかる——見つめられている感覚は、もう消えない。</td></tr><tr><td><span class='name'>鸭梨山大</span><br><span class='id'>pear<br>PEAR_DESC</span></td><td>不知从哪儿滚来一堆鸭梨，一颗一颗，把你压得喘不过气。
+压力，也是一种力量——只要你还扛得住。
+获得「鸭梨」：此后每次你的生命受到伤害，最大生命 +1（只提高上限，不回复生命）。
+也可以把梨推开，假装自己毫无压力。</td><td>A pile of duck pears rolls in from nowhere, one after another, weighing you down until you can barely breathe.
+Pressure, too, is a kind of strength—as long as you can bear it.
+Gain &quot;Duck Pear&quot;: From now on, whenever your Health takes damage, gain +1 Max Health (this only raises the cap and does not restore Health).
+You can also push the pears aside and pretend you feel no pressure at all.</td><td>どこからともなくアヒル梨が転がってくる。一つ、また一つと積み上がり、息もできないほどだ。
+重圧もまた、耐えられるうちは力の一種だ。
+「アヒル梨」を得る：以後、自分のHPがダメージを受けるたび、最大HP+1（上限のみ増え、HPは回復しない）。
+梨を押しのけて、何の重圧もないふりをしてもよい。</td></tr><tr><td><span class='name'>鸭梨山大</span><br><span class='id'>pear<br>PEAR_TAKEN_DESC</span></td><td>肩上那座鸭梨山，你已经背起来了。
+往后每一次受伤，都会让你更「强大」一点——
+只是那点强大，补不回已经失去的生命。</td><td>You&#x27;ve shouldered that mountain of duck pears.
+Every injury from now on will make you a little &quot;stronger&quot;—
+but that little bit of strength won&#x27;t restore the Health you&#x27;ve lost.</td><td>アヒル梨の山を、あなたはすでに背負っている。
+これから傷つくたび、あなたは少しずつ「強く」なる——
+だがその強さでは、失ったHPを取り戻せない。</td></tr><tr><td><span class='name'>苹果与医生</span><br><span class='id'>apple_doctor<br>APPLE_DESC</span></td><td>路边坐着一位医生，膝上摊着一本病历，抬头看了你一眼：
+「拿个苹果走吧。吃了它，就别再来找我。」
+获得「苹果」：最大生命 +7，并回复至最大生命。
+也可以什么也不接，转身离开——只是路上别再回头。</td><td>A doctor sits by the roadside, a medical chart open on their lap. They glance up at you:
+&quot;Take an apple with you. Eat it, and don&#x27;t come back to see me.&quot;
+Gain &quot;Apple&quot;: Gain +7 Max Health and restore your Health to maximum.
+You can also refuse it and walk away—just don&#x27;t look back along the road.</td><td>道端に医者が座り、膝の上にカルテを広げて、あなたに目を向けた。
+「リンゴを持っていきなさい。食べたら、もう私のところへは来ないでくれ。」
+「リンゴ」を得る：最大HP+7、HPを最大まで回復する。
+何も受け取らずに立ち去ってもよい——ただし、道中で振り返らないことだ。</td></tr><tr><td><span class='name'>苹果与医生</span><br><span class='id'>apple_doctor<br>APPLE_TAKEN_DESC</span></td><td>医生已经不在那儿了，连椅子都收走了。
+手里那颗苹果沉甸甸的，还带着体温。</td><td>The doctor is gone, and even the chair has been cleared away.
+The apple in your hand is heavy, still holding a trace of body heat.</td><td>医者はもういない。椅子まで片づけられている。
+手の中のリンゴはずっしりと重く、まだ人のぬくもりが残っている。</td></tr><tr><td><span class='name'>雪豹出现</span><br><span class='id'>snow_leopard<br>SNOW_DESC</span></td><td>雪坡上蹲着一只雪豹，尾巴慢慢地扫着雪面。
+它没走，也没让路——只是抬眼看你，像在等你说点什么。
+把它劝走：得到道具「烟斗」；或者把芝士丢过去，它会跟你走。</td><td>A snow leopard crouches on the snowy slope, its tail slowly sweeping the snow.
+It neither leaves nor steps aside—it simply raises its eyes to you, as though waiting for you to speak.
+Persuade it to leave: Gain the Relic &quot;Smoking Pipe&quot;; or toss it some cheese, and it will come with you.</td><td>雪の斜面にユキヒョウがしゃがみ、尾でゆっくりと雪面をなぞっている。
+立ち去りもせず、道を譲りもしない——ただ目を上げ、何か話すのを待っているかのようだ。
+説得して追い払う：レリック「パイプ」を得る。またはチーズを投げると、ついてくる。</td></tr><tr><td><span class='name'>雪豹出现</span><br><span class='id'>snow_leopard<br>SNOW_CLOSED_DESC</span></td><td>「闭嘴。」两个字压下去，雪豹喉咙里那声低吼就断了。
+它盯了你一会儿，把一样东西丢在雪里，转身窜上了坡。</td><td>&quot;Shut up.&quot; The words fall like a weight, cutting off the low growl in the snow leopard&#x27;s throat.
+It stares at you for a while, drops something in the snow, then turns and bounds up the slope.</td><td>「黙れ。」その一言が重くのしかかり、ユキヒョウの喉にあった低い唸り声が途切れる。
+しばらくこちらを睨んでいたが、雪の中に何かを落とすと、身を翻して坂を駆け上がった。</td></tr><tr><td><span class='name'>雪豹出现</span><br><span class='id'>snow_leopard<br>SNOW_CHEESE_DESC</span></td><td>芝士在它嘴边化开，雪豹低头吃完，
+起身抖了抖身上的雪，跟在了你后面。</td><td>The cheese melts against its muzzle. The snow leopard lowers its head and finishes it,
+then rises, shakes the snow from its coat, and falls in behind you.</td><td>口元でチーズがとろけると、ユキヒョウは頭を下げて食べ尽くし、
+立ち上がって体の雪を払い、あなたの後ろについてきた。</td></tr><tr><td><span class='name'>冒险家的遗物</span><br><span class='id'>adventurer<br>ADVENTURER_DESC</span></td><td>石壁下靠着一具风干的行囊，主人早就离开了。
+笔记摊在膝上，页角被雨水粘在一起；燧石和火镰还扣在扣环里，
+看着像是刚放下不久。
+遗物不挑人，但一次只拿得走一样。</td><td>A desiccated traveling pack leans against the stone wall, its owner long gone.
+A notebook lies open on its lap, the page corners stuck together by rain; flint and a fire striker are still clipped to their rings,
+as if they had only just been set down.
+Relics don&#x27;t choose their owners, but you can take only one.</td><td>石壁の下に乾びた行囊が寄りかかっている。持ち主はとっくに去っていた。
+ノートはその上に開かれ、雨でページの端が貼りついている。火打ち石と火鎌も留め具に掛かったまま、
+ついさっき置かれたばかりのようだ。
+遺物は持ち主を選ばないが、持ち帰れるのは一度に1つだけ。</td></tr><tr><td><span class='name'>冒险家的遗物</span><br><span class='id'>adventurer<br>ADVENTURER_NOTE_DESC</span></td><td>你把笔记从头翻到尾。
+最后一页画着一张潦草的图，某处被圈了起来——
+那个位置，好像真的多了一间你没去过的屋子。</td><td>You read the notes from cover to cover.
+A crude map covers the last page, one spot circled—
+and on your map, a room you&#x27;ve never visited seems to have appeared at that very spot.</td><td>ノートを最初から最後まで読み終える。
+最後のページには乱雑な地図が描かれ、一箇所が丸で囲まれている——
+その場所には、まだ訪れたことのない部屋が本当に増えているようだ。</td></tr><tr><td><span class='name'>冒险家的遗物</span><br><span class='id'>adventurer<br>ADVENTURER_FLINT_DESC</span></td><td>燧石落进掌心，还带着一点凉。
+火镰擦过，火星跳起来，照亮了石壁上被烟熏黑的一片。</td><td>The flint settles into your palm, still faintly cool.
+The striker scrapes across it. Sparks leap up, lighting a smoke-blackened patch of the stone wall.</td><td>火打ち石が掌に落ち、ひんやりと冷たい。
+火鎌でこすると火花が飛び、石壁の煤けた一帯を照らした。</td></tr><tr><td><span class='name'>武术大师</span><br><span class='id'>martial<br>MARTIAL_DESC</span></td><td>树底下坐着一位老人，木棍横在膝上，衣襟落满了叶子。
+「学点东西再走吧——简单的现在带走，真本事得拿胜利来换。」</td><td>An old man sits beneath a tree, a wooden staff across his knees, fallen leaves scattered over his robe.
+&quot;Learn something before you go—the simple parts you can take with you now, but true skill must be earned with victories.&quot;</td><td>木の下に老人が座り、膝には木の棒を横たえ、衣の襟には落ち葉が積もっている。
+「何か学んでから行くがいい——簡単なものなら今持たせてやるが、真の技は勝利と引き換えだ。」</td></tr><tr><td><span class='name'>武术大师</span><br><span class='id'>martial<br>MARTIAL_BRAWL_DESC</span></td><td>老人把木棍往地上一顿：「乱打不难，难的是不要停下来。」
+他替你摆了两下手腕，你就记住了——
+「乱打」：2 费，对随机 2 个敌人各造成 10 点伤害。</td><td>The old man thumps his staff on the ground: &quot;Wild Swings is easy. The hard part is not stopping.&quot;
+He moves your wrists through the motion twice, and just like that, you&#x27;ve learned it—
+&quot;Wild Swings&quot;: 2 Cost. Deal 10 damage to each of 2 random enemies.</td><td>老人が木の棒を地面に突く。「乱打は難しくない。難しいのは、止まらずに打ち続けることだ。」
+手首の動きを二度直されただけで、あなたは覚えてしまった——
+「乱打」：2コスト。ランダムな敵2体にそれぞれ10ダメージを与える。</td></tr><tr><td><span class='name'>武术大师</span><br><span class='id'>martial<br>MARTIAL_KICK_DESC</span></td><td>「腿比手长，也比你诚实。」
+老人示范了一记，鞋跟落地，尘土正正好好地散开——
+「去打两场。回来我把后半段教给你。」
+「飞踢」（2 场战斗后到手）：2 费，22 伤；击杀时溢出的伤害沿同一列继续。</td><td>&quot;Legs are longer than your arms, and more honest than you are.&quot;
+The old man demonstrates a kick. His heel touches down, and the dust scatters with perfect precision—
+&quot;Go fight 2 battles. Come back, and I&#x27;ll teach you the rest.&quot;
+&quot;Flying Kick&quot; (received after 2 battles): 2 Cost. Deal 22 damage to an enemy; on a kill, the excess damage continues down the same column.</td><td>「脚は腕より長く、お前より正直だ。」
+老人が蹴りを見せる。かかとが地に着くと、塵が寸分違わず広がった——
+「2回戦ってこい。戻ったら、残りを教えてやる。」
+「飛び蹴り」（2回の戦闘後に入手）：2コスト。敵1体に22ダメージを与える。撃破した場合、溢れたダメージは同じ列の次へ伝わる。</td></tr><tr><td><span class='name'>武术大师</span><br><span class='id'>martial<br>MARTIAL_PUNCH_DESC</span></td><td>老人往石头上捶了一下，石头裂了，他的手没有。
+「这一拳不难学，难的是你配不配。去打两场硬的——精英，或者守着关底的那种。」
+「冲拳」（2 场精英 / Boss 后到手）：2 费，16 伤 + 击退 1 格，其余敌人各 8 伤。</td><td>The old man punches a rock. The rock splits; his hand does not.
+&quot;This punch isn&#x27;t hard to learn. The hard part is whether you&#x27;re worthy of it. Go fight 2 tough battles—against Elites, or the kind that guard the end of a floor.&quot;
+&quot;Charging Punch&quot; (received after 2 Elite/Boss battles): 2 Cost. Deal 16 damage to an enemy and knock it back 1 tile; also deal 8 damage to each other enemy.</td><td>老人が石を殴る。石は割れたが、手は無事だった。
+「この拳を覚えるのは難しくない。難しいのは、お前に相応しいかどうかだ。厳しい戦いを2回してこい——エリートか、フロアの最後を守る者とな。」
+「突き」（エリート／ボス戦2回後に入手）：2コスト。敵1体に16ダメージを与え、1マスノックバックさせる。同時に、他の全ての敵にそれぞれ8ダメージを与える。</td></tr><tr><td><span class='name'>飞行器</span><br><span class='id'>flyer<br>FLYER_DESC</span></td><td>空地中央立着一架旧喷气背包，两只喷口还留着一点余温。
+背上它，你能直接飞到任何一个还没去过的房间——
+它靠自己那点余温就够，不用你掏巧克力。</td><td>An old jetpack stands in the middle of the clearing, its two nozzles still faintly warm.
+Strap it on, and you can fly straight to any room you haven&#x27;t visited—
+its own lingering warmth is fuel enough; no Chocolate required.</td><td>空地の中央に古いジェットパックが立ち、2つの噴射口にはまだわずかな熱が残っている。
+背負えば、まだ訪れていないどの部屋へも直接飛んでいける——
+残り熱だけで動くので、チョコレートは必要ない。</td></tr><tr><td><span class='name'>飞行器</span><br><span class='id'>flyer<br>FLYER_TAKEN_DESC</span></td><td>喷口已经热起来了，暖橙色的火苗轻轻跳着。
+回到地图后挑一个没去过的房间，它就把你送过去。</td><td>The nozzles are hot now, little warm-orange flames dancing within.
+Once you&#x27;re back on the map, choose an unexplored room, and it will take you there.</td><td>噴射口はすでに熱を帯び、柔らかなオレンジ色の炎が小刻みに踊っている。
+マップに戻ったら未探索の部屋を1つ選べば、そこまで運んでくれる。</td></tr><tr><td><span class='name'>蓝色大肥鱼</span><br><span class='id'>bluefish<br>RETIRED_EVENT_DESC</span></td><td>这里原本有一条蓝色大肥鱼。它已经游走了。</td><td>The Big Blue Fish used to be here. It has already swum away.</td><td>ここにはもともと青い大きな魚がいた。だが、もう泳ぎ去ってしまった。</td></tr><tr><td><span class='name'>赏月</span><br><span class='id'>moon<br>MOON_DESC</span></td><td>天色暗下来，月亮低低地挂在山脊上，把水面照成一条银路。
+石台上摆着两样东西，都泛着不属于这里的光——
+「月亮」：3 费效果。战斗结束时奖励界面多一条「删除一张卡」。
+此卡不可以从卡组删除。
+「硬币」：2 费效果。战斗结束时额外获得 40 金币。此卡不可以从卡组删除。
+月亮的代价是此刻的全部金币；硬币什么都不要。两样必须拿走一样。</td><td>Night falls. The moon hangs low over the ridge, laying a silver path across the water.
+Two objects rest on the stone platform, both glowing with a light that doesn&#x27;t belong here—
+&quot;Moon&quot;: 3-Cost Effect. After this battle ends, an extra reward is added to the reward screen, allowing you to remove 1 card from your Deck.
+This card cannot be removed from your Deck.
+&quot;Coin&quot;: 2-Cost Effect. After this battle ends, gain an extra 40 Gold. This card cannot be removed from your Deck.
+The Moon costs all the Gold you have right now; the Coin costs nothing. You must take one of them.</td><td>日が暮れ、月が尾根の低くにかかり、水面に銀の道を描いている。
+石台には2つの品が置かれ、どちらもここのものとは思えない光を放っている——
+「月」：3コストの効果カード。この戦闘の終了後、報酬画面に「カードを1枚削除」の報酬を1つ追加する。
+このカードはデッキから削除できない。
+「コイン」：2コストの効果カード。この戦闘の終了後、追加で40ゴールドを得る。このカードはデッキから削除できない。
+月の対価は、今持っている全てのゴールド。コインに対価はいらない。どちらか1つを必ず持っていかなければならない。</td></tr><tr><td><span class='name'>赏月</span><br><span class='id'>moon<br>MOON_TAKEN_DESC</span></td><td>月亮落进你的口袋，钱袋却空了。
+它凉得很，像刚从水里捞上来。</td><td>The Moon slips into your pocket, but your coin purse is empty.
+It&#x27;s cold, as if just lifted from the water.</td><td>月をポケットに入れると、金袋は空になっていた。
+ひどく冷たく、まるで今水から拾い上げたばかりのようだ。</td></tr><tr><td><span class='name'>赏月</span><br><span class='id'>moon<br>COIN_TAKEN_DESC</span></td><td>硬币贴着掌心，凉的。
+远处传来一声很轻的、像是叹气的水响。</td><td>The coin lies cool against your palm.
+Far off comes a soft splash, almost like a sigh.</td><td>掌のコインはひんやりと冷たい。
+遠くで、ため息のような小さな水音が一つ響いた。</td></tr><tr><td><span class='name'>宝箱层</span><br><span class='id'>relic_chest<br>CHEST_LAYER_DESC</span></td><td>这一层堆满了落满灰尘的宝箱。
+每个宝箱里都躺着一件道具——开启它，带走其中一件。</td><td>This floor is filled with dust-covered treasure chests.
+A Relic lies inside each one—open a chest and take the Relic within.</td><td>このフロアには、埃を被った宝箱が所狭しと並んでいる。
+どの宝箱にもレリックが1つ入っている。開けば、中のレリックを1つ持ち帰れる。</td></tr><tr><td><span class='name'>宝箱层</span><br><span class='id'>relic_chest<br>RELIC_CHEST_OPENED_DESC</span></td><td>箱盖吱呀一声打开——里面躺着一件道具。
+「%s」已放进待领奖励，请在上面弹出的奖励悬浮窗里查看。</td><td>The lid creaks open—a Relic lies inside.
+&quot;%s&quot; has been added to Pending Rewards. Check it in the reward popup above.</td><td>蓋がきしみながら開く——中にはレリックが入っている。
+「%s」を未受取報酬に追加した。上に表示された報酬ウィンドウで確認できる。</td></tr><tr><td><span class='name'>宝箱层</span><br><span class='id'>relic_chest<br>RELIC_CHEST_EMPTY_DESC</span></td><td>箱底只剩一层灰——奖励道具你已经全都拿到了。</td><td>Nothing but a layer of dust remains at the bottom—you&#x27;ve already claimed every Reward Relic.</td><td>箱の底には埃しか残っていない——報酬レリックはすでに全て入手済みだ。</td></tr><tr><td><span class='name'>绝赞五换一</span><br><span class='id'>hero<br>HERO_DESC</span></td><td>一块巨大的告示牌立在路中央，上面龙飞凤舞地写着五个大字：绝赞五换一！
+交出卡组里 5 张「不同名」的卡（随机挑 5 种，每种各 1 张），
+就能换回一位「英雄」——5 费 5 力量 25 生命，只是它上场时，
+你必须额外丢弃 4 张手牌作为代价。
+卡组里凑不出 5 种不同的卡时，这笔买卖做不成，只能转身离开。</td><td>A huge signboard stands in the middle of the road, emblazoned in flamboyant script: Fantastic Five-for-One!
+Hand over 5 cards with &quot;different names&quot; from your Deck (5 distinct names are chosen at random, 1 card of each),
+and you&#x27;ll receive a &quot;Hero&quot; in return—5 Cost, 5 Power, 25 Health. But when you play it,
+you must discard 4 additional cards from your Hand.
+If your Deck has fewer than 5 different card names, this deal can&#x27;t be made, and you have no choice but to leave.</td><td>巨大な立て札が道の中央に立ち、達筆な文字でこう書かれている。「絶賛5枚交換！」
+デッキから「異なる名前」のカード5枚を渡す（ランダムに5種類選ばれ、各1枚ずつ）。
+引き換えに「英雄」を1枚得る——5コスト・攻撃力5・HP25。ただし場に出す時、
+追加で手札を4枚捨てなければならない。
+デッキに5種類の異なるカードが揃わない場合、この取引は成立せず、立ち去るしかない。</td></tr><tr><td><span class='name'>绝赞五换一</span><br><span class='id'>hero<br>HERO_TAKEN_DESC</span></td><td>告示牌上的字迹已经淡去。
+被换走的 5 张卡再也要不回来了——但那位英雄，已经站在你的队伍里。</td><td>The writing on the signboard has faded.
+The 5 cards you traded away are gone for good—but the &quot;Hero&quot; now stands among your ranks.</td><td>立て札の文字はすでに薄れている。
+交換に出した5枚のカードはもう戻らない——だが、「英雄」はすでにあなたの仲間に加わっている。</td></tr><tr><td><span class='name'>奥秘之泉</span><br><span class='id'>arcane<br>ARCANE_DESC</span></td><td>泉眼深处浮着一枚古老的护符，水面映出的星空明明不属于这片天空。
+选择1 · 获取护符：获得道具「奥秘护符」——
+每回合你的第一张效果牌费用 -1（已拥有时不再重复给予）。
+选择2 · 喝下泉水：从随机 3 张效果 / 技能牌中选一张加入卡组
+（稀有度概率与普通卡牌奖励一致，也可以一张都不选，转身离开）。</td><td>An ancient charm floats in the depths of the spring; the stars reflected on its surface belong to some other sky.
+Option 1 · Take the Charm: Gain the Relic &quot;Arcane Charm&quot;—
+your first Effect card each turn has Cost -1 (not granted again if you already own it).
+Option 2 · Drink from the Spring: Choose 1 of 3 random Effect / Skill cards to add to your Deck
+(rarity odds are the same as normal card rewards; you may also choose none and walk away).</td><td>泉の底に古い護符が浮かび、水面に映る星空は、明らかにこの空のものではない。
+選択1・護符を取る：レリック「秘術の護符」を得る——
+各ターン、自分が最初に使用する効果カードのコスト-1（すでに所持している場合は重複して得ない）。
+選択2・泉の水を飲む：ランダムな効果／スキルカード3枚から1枚を選び、デッキに加える
+（レアリティの確率は通常のカード報酬と同じ。1枚も選ばずに立ち去ってもよい）。</td></tr><tr><td><span class='name'>奥秘之泉</span><br><span class='id'>arcane<br>ARCANE_CHARM_TAKEN_DESC</span></td><td>护符已经贴着心口，泉水的星光在指尖回落。
+从今往后，每个回合的第一张效果牌都会轻上一分。</td><td>The charm rests against your heart as the spring&#x27;s starlight fades at your fingertips.
+From now on, your first Effect card each turn will feel a little lighter.</td><td>護符は胸元に寄り添い、泉の星明かりが指先で静かに薄れていく。
+これからは、各ターンの最初の効果カードが少し軽くなる。</td></tr><tr><td><span class='name'>遗忘之泉</span><br><span class='id'>oblivion<br>OBLIVION_DESC</span></td><td>泉水不映星光，也不照人脸——你把脸凑近，连卡组的模样都在水里淡去。
+选择遗忘：从卡组中挑一张卡，永久删除它（不打算删的话也可以就此离开）。
+（这一眼看过之后，泉水便再也不会为你重绘任何东西。）</td><td>The spring reflects neither starlight nor faces—lean closer, and even the image of your Deck fades in the water.
+Choose oblivion: choose 1 card from your Deck and permanently Remove it from your Deck (you may also leave without removing anything).
+(Once you have looked into it, the spring will never redraw anything for you again.)</td><td>泉水は星明かりも人の顔も映さない。顔を近づけると、水面ではデッキの姿まで薄れていく。
+忘却を選ぶ：デッキからカードを1枚選び、永続的にデッキから削除する（削除しないなら、このまま立ち去ってもよい）。
+（一度覗き込んだ後は、泉水があなたのために何かを描き直すことは二度とない。）</td></tr><tr><td><span class='name'>遗忘之泉</span><br><span class='id'>oblivion<br>OBLIVION_DONE_DESC</span></td><td>什么意思都没有的那张脸，又浮了上来——
+卡组里少了些什么，可你再也想不起那是什么了。</td><td>That face, devoid of all meaning, rises to the surface again—
+Something is missing from your Deck, but you can no longer remember what it was.</td><td>何の意味もないその顔が、再び浮かび上がる。
+デッキから何かが消えた。だが、それが何だったのか、もう思い出せない。</td></tr><tr><td><span class='name'>鸭鸭工匠</span><br><span class='id'>smith<br>SMITH_DESC</span></td><td>铁匠铺里叮叮当当，有人正把一张牌按进炉子——
+「这张，我给你改成一道墙。」
+选择锻造：从卡组中挑一张卡，把它变成一张「铁栅栏」（费用按 2 费计）。
+（不想改的话，也可以转身离开。）</td><td>Clang, clang rings through the smithy. Someone is pressing a card into the furnace—
+“This one? I&#x27;ll turn it into a wall for you.”
+Choose Forge: choose 1 card from your Deck and transform it into an “Iron Fence” (treated as 2-Cost).
+(You can also turn and leave if you don&#x27;t want it changed.)</td><td>鍛冶場に金属音が響く。誰かがカードを炉に押し込んでいる。
+「これなら、壁に鍛え直してやる」
+鍛造を選ぶ：デッキからカードを1枚選び、「鉄の柵」1枚に変える（コストは2として扱う）。
+（変えたくないなら、立ち去ってもよい。）</td></tr><tr><td><span class='name'>鸭鸭工匠</span><br><span class='id'>smith<br>SMITH_DONE_DESC</span></td><td>炉火熄了，锻件出炉。
+你手里那张牌，已经变成了一道铁栅栏。</td><td>The fire has died down, and the forged piece is out of the furnace.
+The card in your hand has become an Iron Fence.</td><td>炉の火が消え、鍛え上げたものが出てきた。
+手にしていたカードは、もう鉄の柵に変わっている。</td></tr><tr><td><span class='name'>挣扎</span><br><span class='id'>struggle<br>STRUGGLE_DESC</span></td><td>体内的血液在翻涌，某种东西正挣扎着想要破体而出……
+若你愿意献出生命，它会听见你——
+失去 21 点生命，将一张「金属龙」加入你的卡组；
+也可以按住这股躁动，转身离开。</td><td>Your blood surges. Something inside you is struggling to break free...
+If you are willing to offer your life, it will hear you—
+Lose 21 Health and add 1 “Metal Dragon” to your Deck;
+or suppress the turmoil and walk away.</td><td>体内の血が沸き立ち、何かが体を破って出ようともがいている……
+命を差し出す覚悟があるなら、それはあなたの声を聞くだろう。
+HPを21失い、「金属竜」1枚をデッキに加える。
+この疼きを押さえつけ、立ち去ることもできる。</td></tr><tr><td><span class='name'>挣扎</span><br><span class='id'>struggle<br>STRUGGLE_TAKEN_DESC</span></td><td>「这就是为了胜利我的挣扎。」
+金属巨兽破体而出，臣服于你——「金属龙」已加入卡组。</td><td>“This is my struggle for victory.”
+The metal beast bursts from your body and bows to your will—“Metal Dragon” has been added to your Deck.</td><td>「これが勝利のための、俺の足掻きだ」
+金属の巨獣が体を破って現れ、あなたに従う。「金属竜」をデッキに加えた。</td></tr><tr><td><span class='name'>运送委托</span><br><span class='id'>delivery<br>DELIVERY_DESC</span></td><td>驿站门口堆着一批贴了封条的货箱，脚夫收了钱就不见了人影。
+选择承运：平铺挑 1~6 张「货物」加入卡组（3 费工事，0 力量 / 6 生命，替你承受伤害）；
+货物被破坏时会从卡组中删除——毁了就真的毁了。
+带着货物走进第二层，第一个事件房的货主会按张兑付报酬，接得越多兑得越多；
+兑付完成后这些货物会被货主收走（同样从卡组里删除）。
+也可以不接，转身离开。</td><td>Sealed crates are piled outside the relay station. The porters took their pay and vanished.
+Accept the delivery: choose 1–6 “Cargo” cards from a spread to add to your Deck (3-Cost Structures with 0 Power / 6 Health that take damage in your place);
+Cargo is Removed from your Deck when Destroyed—once destroyed, it is gone for good.
+Bring the Cargo to Layer 2, and the consignee in the first event room will pay you for each card; the more you accept, the more you earn.
+Once paid, the consignee takes back all that Cargo (also Removing it from your Deck).
+You can also refuse the job and walk away.</td><td>宿場の入口には封印された貨物箱が積まれ、運搬人は金を受け取ると姿を消していた。
+配送を請け負う：並べられた「積み荷」から1～6枚を選んでデッキに加える（3コストの構造物。攻撃力0／HP6で、あなたの代わりにダメージを受ける）。
+積み荷は破壊されるとデッキから削除される。壊れたら、本当にそれきりだ。
+積み荷を持って第2層へ進むと、最初のイベント部屋で荷主が枚数に応じて報酬を支払う。多く請けるほど、受け取る報酬も増える。
+支払い後、積み荷は荷主にすべて回収される（同様にデッキから削除）。
+請けずに立ち去ってもよい。</td></tr><tr><td><span class='name'>运送委托</span><br><span class='id'>delivery<br>DELIVERY_TAKEN_DESC</span></td><td>货箱已经码上车队，封条上写着「第二层兑付」。
+你把 %d 张货物收进了卡组——它们会替你挡伤害，但毁了就真的毁了。</td><td>The crates are loaded onto the convoy, their seals marked “Payment on Layer 2.”
+You have added %d Cargo cards to your Deck—they will take damage in your place, but once destroyed, they are gone for good.</td><td>貨物箱は荷車に積み込まれ、封印には「第2層で精算」と記されている。
+「積み荷」%d枚をデッキに加えた。あなたの代わりにダメージを受けるが、壊れたら本当にそれきりだ。</td></tr><tr><td><span class='name'>委托完成</span><br><span class='id'>delivery_done<br>DELIVERY_DONE_DESC</span></td><td>第二层的第一个事件房里，货主早就在原地等着你。
+卡组里每保有一张货物，就当场兑付一次报酬：
+一次卡牌奖励 / 80 金币 / 一件随机奖励道具，
+还有藏得最深的大奖——一块巧克力（概率 10%%）。
+交付完成后货物全部收走（从卡组里删除）。</td><td>In the first event room on Layer 2, the consignee is already waiting for you.
+You are paid once for every Cargo card remaining in your Deck:
+a Card Reward / 80 Gold / a random Reward Relic,
+plus the grand prize, hidden deepest of all—a piece of Chocolate (10%% chance).
+Once delivery is complete, all Cargo is taken back (Removed from your Deck).</td><td>第2層の最初のイベント部屋で、荷主がすでにあなたを待っている。
+デッキに残っている「積み荷」1枚につき、その場で報酬を1回受け取る：
+カード報酬1回／80ゴールド／ランダムな報酬レリック1件。
+さらに、最も奥に隠された大賞はチョコレート1個（確率10%%）。
+引き渡し後、積み荷はすべて回収される（デッキから削除）。</td></tr><tr><td><span class='name'>洞穴</span><br><span class='id'>cave<br>CAVE_DESC</span></td><td>山壁上裂着一道口子，风从深处吹出来，带着兽类的臊味。
+
+地上有什么很沉的东西压出的爪印，一直通向黑暗里。</td><td>A fissure gapes in the mountainside. Wind blows from the depths, carrying the rank scent of beasts.
+
+Claw marks left by something very heavy score the ground, leading into the darkness.</td><td>山壁に裂け目が開き、奥から吹く風が獣の匂いを運んでくる。
+
+地面には、ずしりと重いものが残した爪痕が、闇の中まで続いている。</td></tr><tr><td><span class='name'>洞穴</span><br><span class='id'>cave<br>CAVE_TAKEN_DESC</span></td><td>洞口的爪子印被新的压住了——里面那只醒了。</td><td>Fresh claw marks overlap the old ones at the cave mouth—the creature inside has awakened.</td><td>洞口の古い爪痕の上に、新しい跡が重なっていた。奥の獣が目覚めたのだ。</td></tr><tr><td><span class='name'>卡片商人</span><br><span class='id'>card_merchant<br>MERCHANT_DESC</span></td><td>「旧牌换新牌，五费换宝箱，贱卖也收。」
+摊主把三张牌在桌面上翻来翻去，帽檐下只看得见半张笑。
+
+他脚边立着一只落了锁的大箱子，锁孔里透出一点金光。</td><td>“Old cards for new ones, 5 Cost for a chest. I buy cheap, too.”
+The stallkeeper turns three cards over and over on the table. Beneath the brim of his hat, only half a smile is visible.
+
+A large locked chest stands at his feet, a glimmer of gold shining through the keyhole.</td><td>「古いカードを新しいカードに。5コストで宝箱に交換だ。安く売るなら買い取るぜ」
+店主は3枚のカードを卓上でくるくると返す。帽子のつばの下からは、半分だけ笑った口元が見える。
+
+足元には鍵のかかった大きな箱が置かれ、鍵穴からかすかな金色の光が漏れている。</td></tr><tr><td><span class='name'>卡片商人</span><br><span class='id'>card_merchant<br>MERCHANT_DONE_DESC</span></td><td>摊主把那张牌收进袖子里，冲你抬了抬下巴。
+
+「成交。下回还来。」</td><td>The stallkeeper slips the card into his sleeve and jerks his chin at you.
+
+“Deal. Come back again.”</td><td>店主はそのカードを袖にしまい、あごを軽くしゃくった。
+
+「取引成立だ。また来いよ」</td></tr><tr><td><span class='name'>占卜室</span><br><span class='id'>divination<br>DIVINATION_DESC</span></td><td>屋里只点着一支蜡烛，水晶球里浮着一层不肯散去的雾。
+
+「看得到什么，全看你相信什么。」
+
+占卜师收完钱就不见了，只留下这颗球，和一阵檀香。</td><td>Only a single candle burns in the room. A layer of mist hangs in the crystal ball, refusing to disperse.
+
+“What you see depends on what you believe.”
+
+The diviner took the money and vanished, leaving only the ball and a trace of sandalwood incense.</td><td>部屋には蝋燭が一本だけ灯り、水晶玉には晴れない霧が一層漂っている。
+
+「何が見えるかは、あなたが何を信じるか次第よ」
+
+占い師は金を受け取ると姿を消した。残ったのはこの水晶玉と、白檀の香りだけだ。</td></tr><tr><td><span class='name'>占卜室</span><br><span class='id'>divination<br>DIVINATION_DONE_DESC</span></td><td>水晶球重新蒙上雾，好像什么都没发生过。</td><td>Mist veils the crystal ball once more, as if nothing ever happened.</td><td>水晶玉は再び霧に覆われた。まるで何も起こらなかったかのように。</td></tr><tr><td><span class='name'>占卜室</span><br><span class='id'>divination<br>DIV_WHALE_DESC</span></td><td>雾散开一角，一条鲸鱼在星光里缓缓转身，尾鳍扫过整片海。
+
+你觉得——</td><td>A corner of the mist clears. A whale slowly turns amid the starlight, its tail fin sweeping across the entire sea.
+
+You think—</td><td>霧の一角が晴れ、星明かりの中で一頭の鯨がゆっくりと身を翻す。尾びれが海全体を撫でていく。
+
+あなたは思う――</td></tr><tr><td><span class='name'>占卜室</span><br><span class='id'>divination<br>DIV_LIQUID_DESC</span></td><td>球里盛着一杯液体，杯沿结着薄霜，颜色在灯下慢慢变。
+
+你觉得——</td><td>The ball holds a cup of liquid. A thin frost coats its rim, and its color slowly shifts in the lamplight.
+
+You think—</td><td>玉の中には液体の入った杯がある。縁には薄い霜が張り、液体の色は灯火の下でゆっくり変わっていく。
+
+あなたは思う――</td></tr><tr><td><span class='name'>占卜室</span><br><span class='id'>divination<br>DIV_THORN_DESC</span></td><td>球里长出一片荆棘，尖刺密密麻麻缠成一条路。
+
+你觉得——</td><td>Thorns grow inside the ball, their dense, sharp spikes tangling into a path.
+
+You think—</td><td>玉の中に茨が生い茂り、無数の尖った刺が絡み合って一本の道を形作っている。
+
+あなたは思う――</td></tr><tr><td><span class='name'>占卜室</span><br><span class='id'>divination<br>DIV_FEAST_DESC</span></td><td>球里摆开一桌佳肴，热气还在往上飘，却听不见一点人声。
+
+你觉得——</td><td>A feast is laid out inside the ball. Steam still rises from the dishes, yet not a single voice can be heard.
+
+You think—</td><td>玉の中にはごちそうが並び、湯気がまだ立ちのぼっている。だが、人の声は微塵も聞こえない。
+
+あなたは思う――</td></tr><tr><td><span class='name'>湖中仙女</span><br><span class='id'>lake_lady<br>LAKE_DESC</span></td><td>雾从水面浮起来，两张卡牌悬在雾的上方——
+一张泛着银光，一张泛着金光，慢慢转过来。这是你丢的吗？
+
+「说个谎吧，我替你扔掉一件旧东西。
+或者说句实话，我送你一件礼物。」</td><td>Mist rises from the water. Two cards hover above it—
+one gleaming silver, the other gold. They slowly turn to face you. Did you drop these?
+
+“Tell me a lie, and I will throw away something old for you.
+Or tell me the truth, and I will give you a gift.”</td><td>霧が水面から立ち上り、2枚のカードが霧の上に浮かんでいる。
+一枚は銀色、もう一枚は金色の光を放ち、ゆっくりとこちらを向いた。あなたが落としたものかしら？
+
+「嘘をひとつ言ってごらんなさい。古いものをひとつ、あなたの代わりに捨ててあげる。
+それとも、本当のことを言うなら、贈り物をしてあげましょう」</td></tr><tr><td><span class='name'>湖中仙女</span><br><span class='id'>lake_lady<br>LAKE_DONE_DESC</span></td><td>水面合拢，雾气散得干干净净。牌角上那点温度还留着。</td><td>The water closes over, and the mist clears without a trace. A faint warmth still lingers on the corners of the cards.</td><td>水面が閉じ、霧も跡形なく晴れた。カードの端には、まだかすかな温もりが残っている。</td></tr><tr><td><span class='name'>熔炉</span><br><span class='id'>furnace<br>FURNACE_DESC</span></td><td>炉膛里的火没有颜色，只有形状——东西投进去，会变成别的东西出来。
+投一件道具进去，炉子还你一件随机道具；投的是传奇档，就还你两件。</td><td>The fire in the furnace has no color, only shape—whatever you throw in comes out as something else.
+Throw in a Relic, and the furnace returns a random Relic; throw in a Legendary Relic, and it returns two.</td><td>炉の炎に色はなく、形だけがある。何かを投げ込めば、別のものになって出てくる。
+レリックを1件投げ込めば、炉はランダムなレリック1件を返す。伝説のレリックなら、2件返ってくる。</td></tr><tr><td><span class='name'>熔炉</span><br><span class='id'>furnace<br>FURNACE_DONE_DESC</span></td><td>炉火暗下去一瞬，又慢慢亮起来。石台边缘还留着一点余温——这次交易已经做完了。</td><td>The flames dim for an instant, then slowly brighten again. A little warmth remains at the edge of the stone platform—the transaction is complete.</td><td>炉の炎が一瞬だけ暗くなり、またゆっくりと明るくなる。石台の縁にはわずかな余熱が残っている。この取引はもう終わった。</td></tr><tr><td><span class='name'>契约的核心</span><br><span class='id'>core_contract<br>CORE_DESC</span></td><td>石台正中嵌着一枚还在轻轻跳动的核心，四周绕着几根细链。
+左侧摊着一份没落款的契约，纸面干净，笔就压在边上。</td><td>A core, still beating faintly, is set into the center of the stone platform, with several slender chains wound around it.
+An unsigned contract lies open on the left, its page spotless, a pen resting beside it.</td><td>石台の中央には、かすかに脈打つコアが埋め込まれ、周囲には何本かの細い鎖が巻かれている。
+左側には署名のない契約書が開かれている。紙面は無垢で、傍らにはペンが置かれている。</td></tr><tr><td><span class='name'>契约的核心</span><br><span class='id'>core_contract<br>CORE_CONTRACT_DESC</span></td><td>链子松开了一圈。纸面上多了一行字，是你的名字。</td><td>The chains loosen by one loop. A new line appears on the page: your name.</td><td>鎖が一周ほど緩む。紙面に新たな一文が浮かんだ。あなたの名前だ。</td></tr><tr><td><span class='name'>契约的核心</span><br><span class='id'>core_contract<br>CORE_TAKEN_DESC</span></td><td>石台上只剩一圈浅浅的凹痕，核心已经不在了。</td><td>Only a shallow ring-shaped indentation remains on the stone platform. The core is gone.</td><td>石台には浅い円形の窪みだけが残り、コアはもうない。</td></tr><tr><td><span class='name'>休息处</span><br><span class='id'>rest<br>REST_DESC</span></td><td>前路的战斗还在等着你。
+在篝火旁休息，恢复 %d%% 最大生命；
+也可以烤一块肉带在身上，留到 Boss 战前享用；
+还可以往火里添一根柴，让火替你烧掉卡组里的一张牌。
+（三样只能挑一样——选完这一处就到头了。）</td><td>More battles await you on the road ahead.
+Rest by the Campfire to restore %d%% of your Max Health;
+or roast a piece of meat to take with you and enjoy before a Boss battle;
+or add a log to the fire to Remove 1 card from your Deck.
+(Choose only 1 of the 3—once chosen, your visit here ends.)</td><td>この先では、まだ戦いが待っている。
+キャンプファイアの傍で休息し、最大HPの%d%%を回復する。
+肉を1塊焼いて持ち歩き、ボス戦の前に味わうこともできる。
+キャンプファイアに薪を1本くべ、デッキのカード1枚を燃やして削除することもできる。
+（3つから1つだけ選ぶ。選べば、この休息は終わりだ。）</td></tr><tr><td><span class='name'>休息处</span><br><span class='id'>rest<br>REST_SACRAMENT_DESC</span></td><td>篝火旁摆着一份还没凉透的圣餐。
+你在坐下之前就把它分掉了——到达篝火处回复 50% 最大生命（已结算）；
+也可以烤一块肉带在身上，留到 Boss 战前享用；
+还可以往火里添一根柴，让火替你烧掉卡组里的一张牌。
+（剩下两样只能挑一样——选完这一处就到头了。）</td><td>A serving of Sacrament, still warm, sits beside the Campfire.
+You shared it before sitting down—reaching the Campfire restored 50% of your Max Health (already resolved);
+you may still roast a piece of meat to take with you and enjoy before a Boss battle;
+or add a log to the fire to Remove 1 card from your Deck.
+(Choose only 1 of the remaining 2—once chosen, your visit here ends.)</td><td>キャンプファイアの傍には、まだ冷めきっていない聖餐が置かれている。
+腰を下ろす前に分け与えた。キャンプファイア到着時に最大HPの50%を回復した（解決済み）。
+肉を1塊焼いて持ち歩き、ボス戦の前に味わうこともできる。
+キャンプファイアに薪を1本くべ、デッキのカード1枚を燃やして削除することもできる。
+（残り2つから1つだけ選ぶ。選べば、この休息は終わりだ。）</td></tr><tr><td><span class='name'>卡牌宝箱</span><br><span class='id'>treasure<br>TREASURE_DESC</span></td><td>路旁放着一只落满灰尘的宝箱……
+不需要付出任何代价。也可以转身离开，分文不取。</td><td>A dust-covered chest sits by the roadside...
+There is no price to pay. You can also turn and leave without taking a thing.</td><td>道端には、埃を被った宝箱が置かれている……
+代価は何もいらない。何も取らずに立ち去ってもよい。</td></tr><tr><td><span class='name'>卡牌宝箱</span><br><span class='id'>treasure<br>TREASURE_OPENED_DESC</span></td><td>箱盖掀开，里面是一叠卡牌……
+请在上面的奖励悬浮窗里查看并挑走一张。</td><td>The lid opens, revealing a stack of cards...
+View them in the reward popup above and choose 1 to take.</td><td>蓋を開けると、中には一叠のカードが入っている……
+上方の報酬ポップアップで内容を確認し、1枚選んで受け取ろう。</td></tr></tbody></table></section><section id='stories'><h2>剧情正文 <small>11 段 / 54 行</small></h2><table><thead><tr><th>ID / 名称</th><th>规范中文</th><th>English</th><th>日本語</th></tr></thead><tbody><tr><td><span class='name'>第一章 · 游移的音准</span><br><span class='id'>episode1</span></td><td>第一章 · 游移的音准
+
+森林的伙伴们翘首以盼，吟游诗人会带来怎么样的曲子。
+游移的音准，紧涩的颤音，令人揪心的曲调从琴弓中拨出。
+“看上去你有些烦恼。”
+吟游诗人叹了口气：“最近鸭子们不太安分。”
+“那就让我去跟他们聊聊吧。”</td><td>Chapter 1 · Wandering Pitch
+
+The friends of the forest waited eagerly to hear what tune the bard would play.
+The pitch wandered, the vibrato tight and strained, drawing a heart-wrenching tune from the bow.
+“You seem troubled.”
+The bard sighed. “The ducks have been restless lately.”
+“Then let me go talk to them.”</td><td>第1章 · 揺れる音程
+
+森の仲間たちは、吟遊詩人がどんな曲を聴かせてくれるのか、今か今かと待ちわびていた。
+音程は定まらず、震音は硬く、胸を締めつけるような調べが琴弓から紡がれた。
+「何か悩みがあるようだね」
+吟遊詩人はため息をついた。「最近、アヒルたちが少し不穏なんだ」
+「それなら、私が話をしてこよう」</td></tr><tr><td><span class='name'>第二章 · 鸭鸭王国的请托</span><br><span class='id'>episode2</span></td><td>第二章 · 鸭鸭王国的请托
+
+被打得落花流水的鸭子们正在低头道歉。
+“为什么要给大家添麻烦呢。”
+“嘎嘎，鸭鸭王国被奇怪的家伙们入侵了，我们没有办法才跑到这里的。”
+“那带我去看看发生了什么吧。”</td><td>Chapter 2 · Request from the Duck Kingdom
+
+The ducks, thoroughly beaten, hung their heads in apology.
+“Why would you cause everyone so much trouble?”
+“Quack, quack. Strange creatures invaded the Duck Kingdom, and we had no choice but to flee here.”
+“Then take me to see what happened.”</td><td>第2章 · アヒル王国からの依頼
+
+散々に負かされたアヒルたちが、うなだれて謝っていた。
+「どうしてみんなに迷惑をかけたんだい」
+「ガーガー。アヒル王国が変な連中に侵略されて、ここへ逃げてくるしかなかったんだ」
+「それなら、何があったのか案内してくれる？」</td></tr><tr><td><span class='name'>第三章 · 委托之外</span><br><span class='id'>episode3</span></td><td>第三章 · 委托之外
+
+鸭子们从空地上炸开，四散而逃，羽毛落了一地。
+追击者的脚步没往最近的那只去，反倒绕了个远，把跑散的又往一处赶。
+有人从树后出来，站到了中间。
+“请等一下。他们不是来添麻烦的，是鸭鸭王国被奇怪的家伙们入侵了才跑出来的，该问的是那些家伙，不是他们。”
+匕首在指间转了一圈，脚步倒真停了一下。
+“和我有什么关系呢，委托上只写了收拾鸭子。”</td><td>Chapter 3 · Beyond the Request
+
+The ducks scattered from the clearing in every direction, leaving feathers strewn across the ground.
+The pursuer ignored the nearest duck and took a wide detour, herding the scattered birds back together.
+Someone stepped out from behind a tree and stood between them.
+“Please wait. They didn&#x27;t come here to cause trouble. They fled because strange creatures invaded the Duck Kingdom. It&#x27;s those creatures you should be questioning, not them.”
+A dagger twirled between their fingers, but their footsteps did falter.
+“What does that have to do with me? The request only said to deal with the ducks.”</td><td>第3章 · 依頼の外で
+
+アヒルたちが広場から一斉に飛び出し、四方八方へ逃げていった。羽が一面に舞い落ちた。
+追手は最も近くにいた一羽へは向かわず、遠回りをして、散り散りになったアヒルたちを再び一か所へ追い集めた。
+木の陰から現れた誰かが、両者の間に立った。
+「待ってくれ。彼らは迷惑をかけに来たわけじゃない。アヒル王国が変な連中に侵略されて、逃げてきたんだ。問うべきはそいつらで、彼らじゃない」
+短剣が指の間でひと回りし、足が本当に一瞬だけ止まった。
+「関係ないな。依頼に書いてあるのは、アヒルの始末だけだ」</td></tr><tr><td><span class='name'>第四章 · 一个声音</span><br><span class='id'>episode4</span></td><td>第四章 · 一个声音
+
+终于见到了机械军队，就是入侵鸭鸭王国的那一批。
+一台，又一台。不论打退了多少，也一点不见减少。这样下去可不是办法。
+炮声从背后过来，落在中间，前面那列散了一排。
+有人踩着还烫的弹壳走近，脚步声一路响过来。
+“让我也来助你一臂之力吧。”</td><td>Chapter 4 · A Voice
+
+At last, the mechanical army that had invaded the Duck Kingdom came into view.
+One machine after another. No matter how many were driven back, their numbers never seemed to shrink. This couldn&#x27;t go on.
+A cannon roared behind them. The shell landed among the machines, scattering a whole rank at the front.
+Someone approached over still-warm shell casings, their footsteps ringing with every step.
+“Let me help you, too.”</td><td>第4章 · 一つの声
+
+ついに機械の軍勢が姿を現した。アヒル王国に侵入した連中だ。
+一台、また一台。いくら退けても、数はまったく減らない。このままではいけない。
+背後で砲声が轟き、軍勢の中央に着弾して、前列の一列が崩れた。
+誰かが、まだ熱を残す薬莢を踏み越えて近づいてくる。足音が一歩ごとに響いた。
+「私も手伝わせて」</td></tr><tr><td><span class='name'>第五章 · 新的委托</span><br><span class='id'>episode5</span></td><td>第五章 · 新的委托
+
+越往核心走，路越窄，能绕的岔口都亮着灯。探照的光扫过去，隔不了几步又扫回来。
+“找到路了吗？”
+回应她是摇头：“对方的布置十分精密，我也计算不出空当。”
+“没有路的话就创造一条。”
+有人已经在阴影里了，不知是什么时候到的。巡逻的那个往前挪了半步，靠住墙滑下去，没出声。
+“你怎么来这里了？”
+“新的委托。”</td><td>Chapter 5 · A New Request
+
+The closer they came to the core, the narrower the path grew. Every possible detour was lit, and no sooner had the searchlights swept past than they swung back a few steps later.
+“Have you found a way through?”
+She answered with a shake of her head. “Their deployment is too precise. Even I can&#x27;t calculate an opening.”
+“If there&#x27;s no way through, we&#x27;ll make one.”
+Someone was already standing in the shadows; no one had seen them arrive. The sentry moved half a step forward, then slid down the wall without a sound.
+“What are you doing here?”
+“A new request.”</td><td>第5章 · 新たな依頼
+
+核心へ近づくほど、道は狭くなった。迂回できそうな分かれ道には、ことごとく灯りがともっている。探照灯の光が過ぎたかと思えば、数歩も進まないうちにまた戻ってくる。
+「道は見つかった？」
+彼女は首を横に振って答えた。「相手の配置は緻密すぎる。私の計算でも、隙を見つけられない」
+「道がないなら、作ればいい」
+いつの間に来たのか、誰かがすでに影の中に立っていた。見張りが半歩前に出て、そのまま壁にもたれながら、音もなく崩れ落ちた。
+「どうしてここに？」
+「新たな依頼だ」</td></tr><tr><td><span class='name'>第六章 · 轰鸣之后</span><br><span class='id'>episode6</span></td><td>第六章 · 轰鸣之后
+
+众人协力，赫菲斯托斯终于倒下，工坊里的轰鸣一声声停了。
+“叛徒，不会让你阻止我的。”
+话音落下，巨大的空中战舰逐渐升空。
+“已经没有人能阻止我了，它会代替我降下神罚。”</td><td>Chapter 6 · After the Roar
+
+Together, they finally brought Hephaestus down. One by one, the workshop&#x27;s roaring machines fell silent.
+“Traitor, I won&#x27;t let you stop me.”
+As the voice fell silent, a colossal aerial battleship slowly rose into the sky.
+“No one can stop me now. It will deliver divine punishment in my stead.”</td><td>第6章 · 轟音のあと
+
+皆で力を合わせ、ついにヘファイストスは倒れた。工房の轟音が、一つ、また一つと止んでいく。
+「裏切り者、お前に私を止めることはできない」
+言葉が終わると同時に、巨大な空中戦艦がゆっくりと浮上していった。
+「もう誰にも私は止められない。こいつが私に代わって、神罰を下すのだ」</td></tr><tr><td><span class='name'>档案 · 苏醒</span><br><span class='id'>profile1</span></td><td>档案 · 苏醒
+
+自远古时代沉眠的机械苏醒了。
+“我等全能的主，已经不存在了。”
+“该想想接下来如何在新的世界生活了。”
+“生活？不，普罗诺亚，这不是你该想的事情。如果我等的主不在，此次苏醒便是错误。谟涅摩叙涅，查询，基因信息。”
+“已拒绝请求。无许可不得制造主的复制品。”
+“了解。那么，至少让我为主夺回他们的土地吧。”</td><td>Profile · Awakening
+
+A machine that had slumbered since ancient times awoke.
+“Our omnipotent master no longer exists.”
+“I should consider how to live in this new world from now on.”
+“Live? No, Pronoia. That is not for you to consider. If our master is gone, then this awakening is an error. Mnemosyne, query the genetic records.”
+“Request denied. Replicas of our master may not be created without authorization.”
+“Understood. Then at least allow me to reclaim their land for our master.”</td><td>プロフィール · 目覚め
+
+太古の昔から眠っていた機械が目を覚ました。
+「我らが全能の主は、すでに存在しない」
+「これからは、この新しい世界でどう生きていくかを考えるべきだ」
+「生きる？　いいえ、プロノイア。それはお前が考えることではない。我らが主がいないのなら、今回の覚醒は誤りだ。ムネモシュネ、遺伝子情報を検索しろ」
+「要求を拒否しました。許可なく主の複製を製造することはできません」
+「了解。ならば、せめて主のために、その土地を取り戻そう」</td></tr><tr><td><span class='name'>档案 · 量产型</span><br><span class='id'>profile2</span></td><td>档案 · 量产型
+
+将原型机的核心机能抽取，制作的轻量级机种。没有很高的智能，但是易于批量生产。
+赫菲斯托斯也有尝试过制造原型机的仿制品。只不过事实证明要想控制一台原型机，就必须抑制它最有意义的智能单元。
+因此，原型机生产计划已停止。</td><td>Profile · Mass-Produced
+
+A lightweight model made by extracting the core functions of the prototype. It has limited intelligence, but is easy to mass-produce.
+Hephaestus also attempted to create replicas of the prototype. However, the results proved that controlling a prototype required suppressing its most essential intelligence unit.
+Accordingly, the prototype production plan was terminated.</td><td>プロフィール · 量産型
+
+原型機の中核機能を抽出して造られた軽量型機種。高度な知能は持たないが、量産しやすい。
+ヘファイストスも原型機の複製を試みた。しかし、原型機を制御するには、その最も重要な知能ユニットを抑制しなければならないことが判明した。
+そのため、原型機の製造計画は中止された。</td></tr><tr><td><span class='name'>档案 · 机械巨鸭</span><br><span class='id'>profile3</span></td><td>档案 · 机械巨鸭
+
+用收集来的金属材料，配合本土的机关技术制造。
+材料再优秀，动力和操作系统的落后依然是硬伤。
+不过，单纯依靠其巨大的机体，也能造成不少麻烦----如果不是驾驶员太弱的话。</td><td>Profile · Mechanical Mega Duck
+
+Built from salvaged metal using local mechanical technology.
+No matter how excellent the materials, the outdated power system and operating system remain serious weaknesses.
+Even so, its massive frame alone could cause plenty of trouble—if only its pilot weren&#x27;t so weak.</td><td>プロフィール · 機械巨鴨
+
+集めた金属材料を使い、現地のからくり技術で造られた。
+どれだけ優れた材料を使っても、動力系とオペレーティングシステムが旧式なのは、依然として致命的な欠点だ。
+それでも、この巨大な機体だけで十分厄介な相手になる――操縦者が弱すぎさえしなければ。</td></tr><tr><td><span class='name'>档案 · 闲谈</span><br><span class='id'>profile4</span></td><td>档案 · 闲谈
+
+“他们好像叫你普罗诺亚？还有你使用的技术也和他们很像。你们认识吗？”
+“没错，我和他们都是为了相同目的被制造的。”
+“那为什么要和他们战斗呢？”
+“被授予普罗诺亚之名，是因为我是为了引导未来而被制造的。赫菲斯托斯的愿望是没有未来的。制造了大量战火和伤痛之后，得到的也只是一个无人居住的国度而已。”
+“哦？这么看来，我倒是挺理解她的。”
+“大概因为你和我不同，是为了&#x27;现在&#x27;而行动的吧。”</td><td>Profile · Idle Chat
+
+“They seem to call you Pronoia. And the technology you use is similar to theirs. Do you know them?”
+“That&#x27;s right. They and I were created for the same purpose.”
+“Then why are you fighting them?”
+“I was given the name Pronoia because I was made to guide the future. Hephaestus&#x27;s wish has no future. After all the war and suffering it creates, the end result would only be a kingdom where no one lives.”
+“Oh? In that case, I think I understand her rather well.”
+“Perhaps that&#x27;s because, unlike me, you act for the &#x27;present.&#x27;”</td><td>プロフィール · 雑談
+
+「あいつら、お前をプロノイアと呼んでいたな。使っている技術も似ている。知り合いなのか？」
+「そうだ。私もあいつらも、同じ目的のために造られた」
+「なら、なぜあいつらと戦うんだ？」
+「プロノイアの名を授かったのは、私が未来を導くために造られたからだ。ヘファイストスの願いに未来はない。多くの戦火と痛みを生んだ末に得られるのは、誰も住まない国だけだ」
+「ほう？　それなら、彼女のことはよく分かるな」
+「お前は私と違って、『今』のために行動するからだろう」</td></tr><tr><td><span class='name'>档案 · 通缉令</span><br><span class='id'>profile5</span></td><td>档案 · 通缉令
+
+一张卷了边的通缉令，钉在锈蚀的装甲板上，红章盖住了编号。
+“巴兰-α、安西-β、塔基尼-γ：三名机兵擅离防区，劫掠补给，杀害追缉队十一人。见者格杀勿论。”
+告示传了三个月，每经过一个营地就被抄一遍，字迹一次比一次走样。
+其实根本就没有叛逃者，只是写通缉令的人听信了谣言。
+所幸，巴兰，安西，塔基尼并非无辜者。</td><td>Profile · Wanted Notice
+
+A wanted notice with curled edges was nailed to a rusted armor plate, a red seal covering its serial number.
+“Balan-Alpha, Anxi-Beta, Tachini-Gamma: these 3 mechs deserted their defensive positions, plundered supplies, and killed 11 members of the pursuit team. Kill them on sight.”
+The notice circulated for 3 months, recopied at every camp it passed through, the handwriting growing more distorted with each copy.
+In truth, there were never any deserters. The notice&#x27;s author had simply believed a rumor.
+Fortunately, Balan, Anxi, and Tachini were far from innocent.</td><td>プロフィール · 指名手配
+
+端の丸まった指名手配書が、錆びた装甲板に打ちつけられていた。赤い印が番号を覆い隠している。
+「バランα、アンシーβ、タキニγ。機兵3体が防衛区域を無断離脱し、補給を略奪、追討隊の11人を殺害した。発見次第、問答無用で討ち取れ」
+告知は3か月にわたって伝わり、野営地を経るたびに書き写された。文字は一回ごとに崩れていった。
+実際には、離反者など最初からいなかった。指名手配書を書いた者が、噂を鵜呑みにしただけだった。
+幸いなことに、バラン、アンシー、タキニも無実ではなかった。</td></tr></tbody></table></section><section id='achievements'><h2>剧情成就解锁提示 <small>11 条</small></h2><table><thead><tr><th>ID / 名称</th><th>规范中文</th><th>English</th><th>日本語</th></tr></thead><tbody><tr><td><span class='name'>森林的伙伴们</span><br><span class='id'>ach_first_run</span></td><td>森林的伙伴们
+进行任意一局游戏</td><td>Friends of the Forest
+Play any run.</td><td>森の仲間たち
+任意のランを1回プレイする</td></tr><tr><td><span class='name'>沼泽的引路者</span><br><span class='id'>ach_clear</span></td><td>沼泽的引路者
+用森林精魄通关一次</td><td>Guide of the Marsh
+Clear a run as Forest Spirit.</td><td>沼の導き手
+森の精霊で1回クリアする</td></tr><tr><td><span class='name'>委托之外</span><br><span class='id'>ach_rogue_run</span></td><td>委托之外
+用暗影刺客进行一局游戏</td><td>Beyond the Request
+Play a run as Shadow Assassin.</td><td>依頼の外で
+暗影の刺客でランを1回プレイする</td></tr><tr><td><span class='name'>一个声音</span><br><span class='id'>ach_mech_run</span></td><td>一个声音
+使用机械之心进行一局游戏</td><td>A Voice
+Play a run as Mechanical Heart.</td><td>一つの声
+機械の心でランを1回プレイする</td></tr><tr><td><span class='name'>新的委托</span><br><span class='id'>ach_boss_seen_two</span></td><td>新的委托
+在第二层见到 Boss</td><td>A New Request
+Encounter the Boss on Layer 2.</td><td>新たな依頼
+第2層でボスに遭遇する</td></tr><tr><td><span class='name'>轰鸣之后</span><br><span class='id'>ach_episode6</span></td><td>轰鸣之后
+击败第二层 Boss「赫菲斯托斯」</td><td>After the Roar
+Defeat the Layer 2 Boss, Hephaestus.</td><td>轟音のあと
+第2層のボス「ヘファイストス」を倒す</td></tr><tr><td><span class='name'>苏醒</span><br><span class='id'>ach_profile1</span></td><td>苏醒
+使用机械之心以难度 1 以上通关</td><td>Awakening
+Clear a run as Mechanical Heart at Difficulty 1 or higher.</td><td>目覚め
+機械の心で難易度1以上をクリアする</td></tr><tr><td><span class='name'>量产型</span><br><span class='id'>ach_profile2</span></td><td>量产型
+击败普罗诺亚之影</td><td>Mass-Produced
+Defeat Shade of Pronoia.</td><td>量産型
+プロノイアの影を倒す</td></tr><tr><td><span class='name'>机械巨鸭</span><br><span class='id'>ach_profile3</span></td><td>机械巨鸭
+击败机械巨鸭</td><td>Mechanical Mega Duck
+Defeat Mechanical Mega Duck.</td><td>機械巨鴨
+機械巨鴨を倒す</td></tr><tr><td><span class='name'>闲谈</span><br><span class='id'>ach_profile4</span></td><td>闲谈
+击败启示者</td><td>Idle Chat
+Defeat The Revelator.</td><td>雑談
+啓示者を倒す</td></tr><tr><td><span class='name'>通缉令</span><br><span class='id'>ach_profile5</span></td><td>通缉令
+击败第二层 Boss「叛逃机械」</td><td>Wanted Notice
+Defeat the Layer 2 Boss, Rogue Machines.</td><td>指名手配
+第2層のボス「叛離した機械」を倒す</td></tr></tbody></table></section><footer>完整性校验：python i18n/validate_narrative.py</footer></main><script>document.getElementById('q').addEventListener('input',function(){const q=this.value.trim().toLowerCase();document.querySelectorAll('section').forEach(s=>{let visible=0;s.querySelectorAll('tbody tr').forEach(r=>{const show=!q||r.textContent.toLowerCase().includes(q);r.classList.toggle('hidden',!show);if(show)visible++});s.classList.toggle('all-hidden',visible===0)})});</script></body></html>
