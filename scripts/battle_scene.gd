@@ -2168,24 +2168,31 @@ func _ready() -> void:
 		queue_redraw()
 	if "--activate" in args and engine != null:
 		# 演示（R142）：场上「可主动发动」的**常驻**提示。两只熊并排 ——
-		# 左边那只**已经发动过**（横置 → 环与徽标都消失），右边那只**现在能发动**
-		# （亮黄绿脉动环 + 四向指向卡面的内箭头 + 顶部「可发动 F」徽标）。
-		# ⚠️ 判据是引擎的 `can_activate()` —— 所以左边那只连徽标都不该有。
+		# 左边那只**已经发动过**（横置 → 环与图标都消失），右边那只**现在能发动**
+		# （亮黄绿脉动环 + 四向指向卡面的内箭头 + 右上角槽位里的「键帽」图标）。
+		# ⚠️ 判据是引擎的 `can_activate()` —— 所以左边那只连图标都不该有。
+		# ⚠️ R656：顶部「可发动 F」文字徽标已取缔，改走卡面右上角槽位（CardFace.badge_slots）。
+		_grid_intro_t = -1.0            # 关掉开场巡场 + 回合大字横幅，否则压住卡面
+		engine.ai_enabled = false
+		_banner = {}
+		_clear_hover_state()
+		selection = null
 		RunState.player_class = PlayerClass.DRUID   # 左栏「角色：」也跟着演示走
 		engine.self_relics = [GameEngine.WILD_FORM_RELIC_ID]
+		engine.state.board.clear()                  # 清掉 --level 自带的敌人，只留对拍的两只熊
 		engine.state.hand.clear()
 		var ab_left := engine.state.place(
 				CardData.from_dict(repo.get_card(GameEngine.BEAR_ID).to_dict()),
-				Vector2i(3, 1), GameEngine.SIDE_SELF)
+				Vector2i(2, 1), GameEngine.SIDE_SELF)
 		ab_left.health = 9
-		engine.activate(Vector2i(3, 1))             # 左：发动 → 横置 + ability_used
+		engine.activate(Vector2i(2, 1))             # 左：发动 → 横置 + ability_used
 		var ab_right := engine.state.place(
 				CardData.from_dict(repo.get_card(GameEngine.BEAR_ID).to_dict()),
-				Vector2i(4, 1), GameEngine.SIDE_SELF)
+				Vector2i(3, 1), GameEngine.SIDE_SELF)
 		ab_right.health = 9
 		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
-				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-		status_text = "R142：左熊已发动（环消失）；右熊可发动（黄绿环 + 内箭头 +「可发动 F」）"
+				Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+		status_text = "R656：左熊已发动（环与图标都消失）；右熊可发动（黄绿环 + 内箭头 + 键帽图标）"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--rhino" in args and engine != null:
@@ -9864,14 +9871,21 @@ func _draw_activatable_aura(center: Vector2, w: float, h: float) -> void:
 		var a0 := spin + float(i) * TAU / 4.0
 		draw_arc(center, r1 + 5.0, a0, a0 + 0.55, 8,
 				Color(0.96, 1.0, 0.72, 0.30 + pulse * 0.35), 2.0)
-	# 四向内箭头：箭头指向卡面中心 = 「对它做点什么」
-	var arm := 4.0 + pulse * 3.5
-	var rr := base + 7.0
+	# 四向内箭头：箭尖朝卡心 = 「对它做点什么」
+	# ⚠️ 必须落在**卡框内侧**：R142 原来摆在 `base + 7.0`，
+	#    正好和上面那圈旋转短弧（`r1 + 5.0` ≈ `base + 6..9`）
+	#    同色同位置重叠，出图四个箭头全被环吃掉了 ——
+	#    注释写着「内箭头」、落点却在环上，等于没画。
+	#    R656 出图返工：挪进卡框 10px，箭尖朝中、底边朝卡边，
+	#    压在深色卡图上才立得住。
+	var arm := 7.0 + pulse * 3.0
+	var inset := 10.0
+	var half := Vector2(w * 0.5, h * 0.5) - Vector2(inset, inset)
 	var dirs: Array[Vector2] = [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]
 	for d: Vector2 in dirs:
-		var tip := center + d * rr
-		var back := tip - d * arm
-		var side := Vector2(-d.y, d.x) * (arm * 0.45)
+		var tip := center + d * Vector2(half.x * absf(d.x), half.y * absf(d.y))
+		var back := tip + d * arm
+		var side := Vector2(-d.y, d.x) * (arm * 0.60)
 		draw_colored_polygon(PackedVector2Array([tip, back + side, back - side]),
 				Color(COL_ACTIVATABLE.r, COL_ACTIVATABLE.g, COL_ACTIVATABLE.b, 0.55 + pulse * 0.40))
 
