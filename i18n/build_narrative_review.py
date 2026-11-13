@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""R664：生成事件、剧情与成就提示的可搜索中英日对照页。"""
+"""R665：生成事件、剧情与成就提示的可搜索中英日对照页。"""
 import html
 import json
 from pathlib import Path
@@ -9,6 +9,9 @@ I18N = ROOT / "i18n"
 ZH = json.loads((I18N / "narrative_zh_canonical.json").read_text(encoding="utf-8"))
 EN = json.loads((I18N / "narrative_en.json").read_text(encoding="utf-8"))
 JA = json.loads((I18N / "narrative_ja.json").read_text(encoding="utf-8"))
+UI_ZH = json.loads((I18N / "event_ui_zh_canonical.json").read_text(encoding="utf-8"))
+UI_EN = json.loads((I18N / "event_ui_en.json").read_text(encoding="utf-8"))
+UI_JA = json.loads((I18N / "event_ui_ja.json").read_text(encoding="utf-8"))
 OUT = I18N / "narrative_review.html"
 
 CSS = """
@@ -70,10 +73,37 @@ def achievement_rows():
     return "".join(rows)
 
 
+def event_ui_rows(section):
+    rows = []
+    if section == "rest_dynamic":
+        groups = {"rest": UI_ZH[section]}
+    else:
+        groups = UI_ZH[section]
+    for group, entries in groups.items():
+        zh_name = ZH["events"].get(group, {}).get("name", group)
+        for key, zh_text in entries.items():
+            en_text = (UI_EN[section][key] if section == "rest_dynamic"
+                       else UI_EN[section][group][key])
+            ja_text = (UI_JA[section][key] if section == "rest_dynamic"
+                       else UI_JA[section][group][key])
+            label = ("<span class='name'>" + esc(zh_name) + "</span><br>"
+                     "<span class='id'>" + esc(section + "." + group) + "<br>" + esc(key) + "</span>")
+            rows.append(row(label, zh_text, en_text, ja_text))
+    return "".join(rows)
+
+
 header = "<thead><tr><th>ID / 名称</th><th>规范中文</th><th>English</th><th>日本語</th></tr></thead>"
 body = (
-    "<section id='events'><h2>事件正文 <small>26 组 / 61 段</small></h2><table>"
+    "<section id='events'><h2>事件正文 <small>26 组 / 64 段</small></h2><table>"
     + header + "<tbody>" + event_rows() + "</tbody></table></section>"
+    + "<section id='options'><h2>事件选项 <small>83 条</small></h2><table>"
+    + header + "<tbody>" + event_ui_rows("options") + "</tbody></table></section>"
+    + "<section id='results'><h2>事件结果模板 <small>64 条</small></h2><table>"
+    + header + "<tbody>" + event_ui_rows("results") + "</tbody></table></section>"
+    + "<section id='pickers'><h2>运送选货页 <small>5 个字段</small></h2><table>"
+    + header + "<tbody>" + event_ui_rows("pickers") + "</tbody></table></section>"
+    + "<section id='dynamic'><h2>篝火动态追加 <small>3 条</small></h2><table>"
+    + header + "<tbody>" + event_ui_rows("rest_dynamic") + "</tbody></table></section>"
     + "<section id='stories'><h2>剧情正文 <small>11 段 / 54 行</small></h2><table>"
     + header + "<tbody>" + story_rows() + "</tbody></table></section>"
     + "<section id='achievements'><h2>剧情成就解锁提示 <small>11 条</small></h2><table>"
@@ -82,13 +112,16 @@ body = (
 doc = (
     "<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'>"
     "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-    "<title>R664 事件与剧情中英日对照</title><style>" + CSS + "</style></head><body>"
-    "<header><h1>R664 事件与剧情中英日对照</h1>"
-    "<p>26 组事件 / 61 段正文；11 段剧情 / 54 行；11 条剧情成就提示。</p>"
-    "<p>event_scene.gd 与 stories.json 权威中文未改；卡名、道具名与专名复用唯一术语表。</p></header>"
+    "<title>R665 事件与剧情中英日对照</title><style>" + CSS + "</style></head><body>"
+    "<header><h1>R665 事件与剧情中英日对照</h1>"
+    "<p>26 组事件 / 64 段正文；83 条选项 / 64 条结果 / 5 个选货字段 / 3 条动态追加。</p>"
+    "<p>11 段剧情 / 54 行；11 条剧情成就提示。event_scene.gd 与 stories.json 权威中文未改。</p>"
+    "<p>卡名、道具名与专名复用唯一术语表；三处已审计规则漂移只修 canonical，不回写源码。</p></header>"
     "<div class='toolbar'><input id='q' type='search' placeholder='搜索 ID、常量名、中文、英文或日文…'>"
-    "<nav><a href='#events'>事件 61</a><a href='#stories'>剧情 11</a><a href='#achievements'>提示 11</a></nav></div>"
-    "<main>" + body + "<footer>完整性校验：python i18n/validate_narrative.py</footer></main>"
+    "<nav><a href='#events'>正文 64</a><a href='#options'>选项 83</a><a href='#results'>结果 64</a>"
+    "<a href='#pickers'>选货 5</a><a href='#dynamic'>动态 3</a><a href='#stories'>剧情 11</a>"
+    "<a href='#achievements'>提示 11</a></nav></div>"
+    "<main>" + body + "<footer>完整性校验：python i18n/validate_narrative.py && python i18n/validate_event_ui.py</footer></main>"
     "<script>document.getElementById('q').addEventListener('input',function(){"
     "const q=this.value.trim().toLowerCase();document.querySelectorAll('section').forEach(s=>{let visible=0;"
     "s.querySelectorAll('tbody tr').forEach(r=>{const show=!q||r.textContent.toLowerCase().includes(q);"
@@ -98,4 +131,6 @@ doc = (
 OUT.write_text(doc, encoding="utf-8", newline="\n")
 print("wrote", OUT.name, "events", len(ZH["events"]), "event texts",
       sum(len(x["texts"]) for x in ZH["events"].values()), "stories", len(ZH["stories"]),
+      "options", sum(len(x) for x in UI_ZH["options"].values()),
+      "results", sum(len(x) for x in UI_ZH["results"].values()),
       "achievements", len(ZH["achievements"]), "bytes", OUT.stat().st_size)

@@ -1,0 +1,279 @@
+{
+  "version": 1,
+  "updated": "2026-11-13",
+  "purpose": "R665 事件选项、结果模板与运送选货页的英日翻译底本；event_scene.gd 权威中文不动。",
+  "source": "scripts/event_scene.gd",
+  "canonical_overrides": {
+    "options.card_merchant.BARTER_FOR_BIG_CHEST": "易物：交出 5 费卡换一个大宝箱",
+    "options.cave.EXPLORE_CAVE": "探索（与枭熊交手，胜利后获得传说卡「枭熊」）",
+    "options.core_contract.CORE_NO_PAIR_DISABLED": "卡组里凑不出两张伤害技能牌",
+    "results.core_contract.CORE_CONTRACT_CORE_GAINED": "「核心」收进了道具栏：战斗中累计失去 %d 点生命后成形，这一场结束时的奖励页里会多出一次兑换 —— 献祭一张伤害技能牌，把它第一段伤害附到另一张技能牌上。用掉之后失效。"
+  },
+  "options": {
+    "common": {
+      "LEAVE": "离开"
+    },
+    "rest": {
+      "REST_HEAL": "在这里休息（回复 %d 生命）",
+      "ADD_FIREWOOD": "添加柴火（从卡组删除一张卡）",
+      "BBQ_AVAILABLE": "烤肉（获得「烤肉」，留到 Boss 战）",
+      "BBQ_OWNED_DISABLED": "已持有「烤肉」（Boss 战时自动消耗）",
+      "LEAVE_WITHOUT_BBQ": "离开（不烤肉）"
+    },
+    "whisper": {
+      "TAKE_WHISPER": "获得「鸭之低语」",
+      "DECLINE_WHISPER": "放弃（不受低语影响）"
+    },
+    "gaze": {
+      "TAKE_RICE": "获得「一袋米抗几楼」",
+      "LOOK_AWAY": "别过头去（放弃）"
+    },
+    "pear": {
+      "TAKE_PEAR": "获得「鸭梨」",
+      "PUSH_PEAR_AWAY": "把梨推开（放弃）"
+    },
+    "apple_doctor": {
+      "TAKE_APPLE": "收下苹果（远离医生）",
+      "LEAVE_WITHOUT_APPLE": "放弃并离开"
+    },
+    "moon": {
+      "TAKE_MOON_FOR_GOLD": "失去 %d 金币，拿走「月亮」",
+      "TAKE_MOON_NO_GOLD_DISABLED": "身上没有金币，换不到「月亮」",
+      "TAKE_COIN": "拿走「硬币」"
+    },
+    "furnace": {
+      "INVEST_RELIC": "投入「%s」",
+      "INVEST_LEGENDARY_RELIC": "投入「%s」（传奇 · 换回 2 件）",
+      "LEAVE_NO_RELICS": "离开（道具栏里没有可投入的东西）",
+      "LEAVE_WITHOUT_INVESTING": "离开（不投入）"
+    },
+    "core_contract": {
+      "SIGN_CONTRACT": "订立契约（获得道具「咒缚」）",
+      "CONTRACT_SIGNED_DISABLED": "契约已经签过了",
+      "TAKE_CORE": "获取核心（收下道具「核心」）",
+      "CORE_FORMED_DISABLED": "核心已经成形（战斗结束时在奖励页兑换）",
+      "CORE_CHARGING_DISABLED": "核心还在酝酿（累计失去 %d / %d 点生命）",
+      "CORE_NO_PAIR_DISABLED": "卡组里凑不出一张可献祭的伤害技能牌和另一张尚未附魔的伤害技能牌",
+      "LEAVE_WITHOUT_TOUCHING": "什么都不碰（离开）"
+    },
+    "hero": {
+      "TRADE_FIVE_FOR_HERO": "换！交出 5 张不同名的卡，获得「英雄」",
+      "TRADE_INSUFFICIENT_DISABLED": "凑不出 %d 种不同的卡",
+      "LEAVE_WITHOUT_HERO_TRADE": "不换（退出事件）",
+      "LEAVE_INSUFFICIENT": "退出事件"
+    },
+    "arcane": {
+      "TAKE_CHARM": "获取护符：获得道具「奥秘护符」",
+      "TAKE_CHARM_OWNED_DISABLED": "继续（已戴护符）",
+      "DRINK_SPRING": "喝下泉水：随机 3 张效果 / 技能牌中选 1 张加入卡组",
+      "LEAVE_WITH_OWNED_CHARM": "离开（不要新的牌）",
+      "LEAVE_WITHOUT_ARCANE_REWARD": "离开（两个都不要）"
+    },
+    "divination": {
+      "START_DIVINATION": "进行占卜",
+      "LEAVE_WITHOUT_DIVINATION": "离开（不占卜）",
+      "LEAVE_WITHOUT_INTERPRETING": "离开（不去解读）",
+      "WHALE_FIGHT": "我会为它而战（获得「鲸鱼之怒」）",
+      "WHALE_COMMAND": "它将听我差遣（获得「许愿」）",
+      "LIQUID_NEED": "你会需要它（获得道具「泉水」）",
+      "LIQUID_DANGER": "它很危险（获得道具「思想钢印」）",
+      "THORN_PATH": "在充满困难的道路上前行（获得「烈火之剑」）",
+      "THORN_EMBRACE": "拥抱伤痛（获得道具「荆棘指环」）",
+      "FEAST_GENEROUS": "是慷慨的赐予（获得道具「圣餐」）",
+      "FEAST_MERCY": "是最后的怜悯（获得道具「雕像」）"
+    },
+    "card_merchant": {
+      "TRANSFORM_CARD": "换卡：选一张卡变成随机本职业奖励卡",
+      "BARTER_FOR_BIG_CHEST": "易物：交出 5 费及以上卡（X 费除外）换一个大宝箱",
+      "BARTER_NO_ELIGIBLE_DISABLED": "易物：（卡组里没有 5 费及以上的卡）",
+      "SELL_RANDOM_CARD": "折价：随机失去一张非诅咒卡换 %d 金币",
+      "SELL_NO_ELIGIBLE_DISABLED": "折价：（卡组里只剩诅咒卡）",
+      "LEAVE_WITHOUT_MERCHANT_TRADE": "离开（什么都不换）"
+    },
+    "lake_lady": {
+      "LIE_LOSE_CARD": "谎言：失去「%s」",
+      "LIE_NO_ELIGIBLE_DISABLED": "谎言：（卡组里没有能失去的卡）",
+      "TRUTH_RANDOM_EPIC": "诚实：获得一张随机史诗卡",
+      "LEAVE_WITHOUT_SPEAKING": "离开（什么也不说）"
+    },
+    "oblivion": {
+      "FORGET_CARD": "遗忘：从卡组中选择一张卡删除",
+      "LEAVE_WITHOUT_DELETING": "离开（不删卡）"
+    },
+    "smith": {
+      "FORGE_CARD": "锻造：把卡组中的一张卡变成 2 费「铁栅栏」",
+      "LEAVE_WITHOUT_FORGING": "离开（不锻造）"
+    },
+    "delivery": {
+      "ACCEPT_CARGO": "承运：平铺挑选 1~%d 张「货物」加入卡组",
+      "DECLINE_CARGO": "不接（转身离开）"
+    },
+    "delivery_done": {
+      "SETTLE_CARGO": "兑付：卡组 %d 张货物 × 各抽一次",
+      "LEAVE_WITHOUT_DELIVERY_REWARD": "不要报酬（离开）"
+    },
+    "relic_chest": {
+      "OPEN_RELIC_CHEST": "开启宝箱（获得 1 个随机奖励道具）",
+      "LEAVE_EMPTY_HANDED": "空手离开"
+    },
+    "snow_leopard": {
+      "SILENCE_FOR_PIPE": "雪豹闭嘴（获得道具「烟斗」）",
+      "FEED_CHEESE_FOR_CARD": "投喂芝士（获得卡片「雪豹」）"
+    },
+    "adventurer": {
+      "READ_NOTE": "查看笔记（获得道具「冒险笔记」）",
+      "TAKE_FLINT": "拿取工具（获得道具「燧石」）"
+    },
+    "martial": {
+      "LEARN_BRAWL": "学点简单的（获得「乱打」）",
+      "LEARN_KICK": "学点真本事（2 场战斗后获得「飞踢」）",
+      "LEARN_PUNCH": "要学就学绝技（2 场精英 / Boss 后获得「冲拳」）",
+      "LEAVE_WITHOUT_LEARNING": "离开（什么都不学）"
+    },
+    "flyer": {
+      "USE_FLYER": "使用飞行器（飞到一个没去过的房间）",
+      "LEAVE_WITHOUT_MOVING": "不移动（离开）"
+    },
+    "cave": {
+      "EXPLORE_CAVE": "探索（与枭熊交手，胜利后获得史诗卡「枭熊」）"
+    },
+    "treasure": {
+      "OPEN_CARD_CHEST": "打开宝箱（获得卡牌奖励）",
+      "LEAVE_WITHOUT_OPENING": "不打开（转身离开）"
+    },
+    "struggle": {
+      "ACCEPT_STRUGGLE": "接受挣扎（失去 %d 生命，获得「金属龙」）",
+      "LEAVE_UNCHANGED": "转身离开（保持现状）"
+    }
+  },
+  "results": {
+    "whisper": {
+      "WHISPER_ALREADY_HEARD": "你已经听见过低语了——前路仍由命运决定。",
+      "WHISPER_RELIC_GAINED": "「鸭之低语」已加入道具栏：%s"
+    },
+    "gaze": {
+      "GAZE_ALREADY_HAVE_RICE": "那袋米你已经扛在肩上了——鸭眼仍在注视，却不再给你更多。",
+      "GAZE_RELIC_GAINED": "「一袋米抗几楼」已加入道具栏：%s"
+    },
+    "pear": {
+      "PEAR_ALREADY_HAVE": "鸭梨已经背在肩上了——往后的每一次受伤，都会让你更「强大」一点。",
+      "PEAR_RELIC_GAINED": "「鸭梨」已加入道具栏：%s"
+    },
+    "apple_doctor": {
+      "APPLE_DOCTOR_ALREADY_HAVE": "苹果你已经收下过了——医生不再理你。",
+      "APPLE_DOCTOR_RELIC_GAINED": "「苹果」已收进道具栏：%s"
+    },
+    "bluefish": {
+      "BLUEFISH_EVENT_REMOVED": "这个事件已经从游戏里移除了。"
+    },
+    "moon": {
+      "MOON_ALREADY_TAKEN": "石台上已经空了——两样东西只剩一样，而你只拿得走一样。",
+      "MOON_CARD_GAINED": "「%s」已加入卡组，%d 金币留在了石台上。",
+      "MOON_COIN_GAINED": "「%s」已加入卡组。"
+    },
+    "hero": {
+      "HERO_TRADE_RESTORE": "交易完成：「英雄」已加入卡组（换走 %d 张）",
+      "HERO_TRADE_AVAILABLE": "卡组现有 %d 种不同的卡——够换。",
+      "HERO_TRADE_UNAVAILABLE": "卡组只有 %d 种不同的卡，这笔买卖做不成（只能退出）。",
+      "HERO_TRADE_COMPLETED": "换走 %d 张（%s）——「%s」已加入卡组"
+    },
+    "card_merchant": {
+      "CARD_MERCHANT_ALREADY_TRADED": "这一处你已经做过一笔交易了。",
+      "CARD_MERCHANT_NO_SELLABLE_CARD": "卡组里没有可以折价的卡（诅咒不算）。",
+      "CARD_MERCHANT_CARD_SOLD": "「%s」被折价收走，换来 %d 金币。"
+    },
+    "lake_lady": {
+      "LAKE_LADY_ALREADY_DONE": "水面已经平静了。",
+      "LAKE_LADY_LIE_RESULT": "谎言应验：「%s」从卡组里消失了。",
+      "LAKE_LADY_TRUTH_RESULT": "实话换来的礼物：「%s」已加入卡组。"
+    },
+    "oblivion": {
+      "OBLIVION_ALREADY_DONE": "你已经在泉里遗忘过一张卡了。"
+    },
+    "smith": {
+      "SMITH_ALREADY_DONE": "你已经在工匠那里锻造过一张卡了。"
+    },
+    "delivery": {
+      "DELIVERY_ACCEPTED_RESTORE": "已接取 %d 张货物——第二层的第一个事件房，货主会按张兑付报酬。",
+      "DELIVERY_ACCEPTED": "已接取 %d 张货物（3 费工事 0/6/0）——第二层第一个事件房兑付报酬。"
+    },
+    "delivery_done": {
+      "DELIVERY_DONE_CARGO_SETTLED": "%d 张货物全部兑付",
+      "DELIVERY_DONE_CARD_REWARDS": "卡牌奖励 ×%d",
+      "DELIVERY_DONE_GOLD_REWARD": "%d 金币",
+      "DELIVERY_DONE_RELIC_REWARDS": "随机道具 ×%d",
+      "DELIVERY_DONE_CHOCOLATE_REWARD": "隐藏大奖·巧克力 ×%d！",
+      "DELIVERY_DONE_CARGO_REMOVED": "%d 张货物已从卡组移除",
+      "DELIVERY_DONE_RESULT_PREFIX": "兑付结果：",
+      "DELIVERY_DONE_PENDING_SUFFIX": "（待领奖励见右上悬浮窗）"
+    },
+    "snow_leopard": {
+      "SNOW_LEOPARD_PIPE_RESTORE": "「烟斗」已收进道具栏——下一场战斗的第一回合生效；之后每次路过篝火都会重新点着。",
+      "SNOW_LEOPARD_CAT_RESTORE": "「雪豹」已加入卡组——它攻击时会把一张手牌的费用压低一个回合。",
+      "SNOW_LEOPARD_PIPE_GAINED": "「烟斗」已收进道具栏：%s",
+      "SNOW_LEOPARD_CAT_GAINED": "「%s」已加入卡组：%s"
+    },
+    "adventurer": {
+      "ADVENTURER_NOTE_SUCCESS": "「冒险笔记」已收进道具栏：地图上一间还没去过的房间变成了大宝箱——回到地图时会看见那格亮着金光。",
+      "ADVENTURER_NOTE_NO_UNEXPLORED_ROOM": "「冒险笔记」已收进道具栏——只是地图上已经没有没去过的房间了，纸上什么也没写。",
+      "ADVENTURER_FLINT_GAINED": "「燧石」已收进道具栏——回到地图后任选一格，把那盏火点起来。"
+    },
+    "martial": {
+      "MARTIAL_BRAWL_GAINED": "「乱打」已加入卡组：2 费，对随机 2 个敌人各造成 10 点伤害。",
+      "MARTIAL_PUNCH_DELAYED": "「冲拳」已经挂在单上：再打赢 %d 场精英 / Boss 战斗就自动加入卡组。",
+      "MARTIAL_KICK_DELAYED": "「飞踢」已经挂在单上：再打赢 %d 场战斗就自动加入卡组。"
+    },
+    "flyer": {
+      "FLYER_READY": "飞行器已就绪——回到地图后，挑一个没去过的房间，它就把你送过去。"
+    },
+    "rest": {
+      "REST_BANDAGE_HEAL_RESULT": "止血绷带：回复 %d 点生命",
+      "REST_HEAL_RESULT": "篝火的温暖涌上心头……回复 %d 点生命（当前 %d / %d）%s",
+      "REST_ENCHANT_MASTER_SUFFIX": "；附魔大师给「%s」附上了「%s」",
+      "REST_BBQ_RESULT": "「烤肉」已收进道具栏——进入 Boss 战时自动享用，回复 25% 最大生命。"
+    },
+    "arcane": {
+      "ARCANE_CHARM_GAINED": "「奥秘护符」已加入道具栏：%s（本次泉水只给一份奖励）",
+      "ARCANE_CHARM_ALREADY_OWNED": "「奥秘护符」你已经戴在身上了——不过泉水还是可以喝（本次只给一份）。",
+      "ARCANE_DRINK_REWARD_PENDING": "「喝下泉水」：请在奖励悬浮窗里从 3 张效果 / 技能牌中挑一张（本次只给一份）。"
+    },
+    "relic_chest": {
+      "RELIC_CHEST_EMPTY": "宝箱是空的（奖励道具已全部拥有）",
+      "RELIC_CHEST_REWARD_PENDING": "开出道具「%s」（待领：见奖励悬浮窗）"
+    },
+    "treasure": {
+      "TREASURE_CARD_REWARD_PENDING": "开出卡牌奖励（待领：见奖励悬浮窗）"
+    },
+    "struggle": {
+      "STRUGGLE_CARD_GAINED": "失去 %d 生命（当前 %d/%d）——「%s」已加入卡组"
+    },
+    "furnace": {
+      "FURNACE_NO_OPTIONS": "炉子盯着你空空的双手，什么也没说。",
+      "FURNACE_RELIC_MISSING": "「%s」已经不在道具栏里了。",
+      "FURNACE_NO_REWARD": "「%s」投进炉里，炉子只吐出一口热气——没有能给你的道具了。",
+      "FURNACE_REWARDS_PENDING": "「%s」投进炉里，炉子吐出 %d 件道具：%s。请在奖励悬浮窗里收下。"
+    },
+    "core_contract": {
+      "CORE_CONTRACT_CURSE_GAINED": "「咒缚」已收进道具栏：%s",
+      "CORE_CONTRACT_CORE_GAINED": "「核心」收进了道具栏：战斗中累计失去 %d 点生命后成形，这一场结束时的奖励页里会多出一次兑换 —— 献祭一张伤害技能牌，把它第一段伤害附到另一张尚未附魔的伤害技能牌上。用掉之后失效。"
+    },
+    "divination": {
+      "DIVINATION_CARD_GAINED": "「%s」已加入卡组。",
+      "DIVINATION_RELIC_GAINED": "「%s」已收进道具栏。"
+    }
+  },
+  "pickers": {
+    "delivery": {
+      "title": "运送委托 · 挑选货物",
+      "note": "点几张收几张（%d~%d 张）；货物被破坏时会从卡组中删除",
+      "confirm_label": "接下货物",
+      "cancel_label": "不接（收起）",
+      "short": "运送委托"
+    }
+  },
+  "rest_dynamic": {
+    "REST_DYNAMIC_SACRAMENT_HEAL": "\n\n【圣餐】回复了 %d 点生命（现 %d / %d）。",
+    "REST_DYNAMIC_BANDAGE_HEAL": "\n\n【止血绷带】回复了 %d 点生命（现 %d / %d）。",
+    "REST_DYNAMIC_PIPE_RELIGHT": "\n\n【烟斗】火光一明一暗——烟斗重新点着了，下一场战斗的第一回合效果恢复。"
+  }
+}

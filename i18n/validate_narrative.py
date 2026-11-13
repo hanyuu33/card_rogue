@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""R664：事件、剧情与剧情成就提示的只读完整性校验。"""
+"""R665：事件、剧情与剧情成就提示的只读完整性校验。"""
 import json
 import re
 import sys
@@ -85,7 +85,7 @@ for aid, source in source_achievement_rows.items():
             errors.append("%s canonical %s 与 stories.json 漂移" % (aid, field))
 
 check(len(ZH["events"]) == 26, "事件页为 26 组（24 常规 + 篝火 + 旧存档兜底）")
-check(sum(len(x["texts"]) for x in ZH["events"].values()) == 61, "事件正文共 61 段")
+check(sum(len(x["texts"]) for x in ZH["events"].values()) == 64, "事件正文共 64 段（含 3 条休息处动态追加）")
 check(len(ZH["stories"]) == 11, "剧情共 11 段")
 check(sum(len(x["text"]) for x in ZH["stories"].values()) == 54, "剧情正文共 54 行")
 check(len(ZH["achievements"]) == 11, "剧情成就提示共 11 条")
@@ -202,6 +202,10 @@ check("50%" in EN["events"]["rest"]["texts"]["REST_SACRAMENT_DESC"] and "50%" in
 check("%s" in EN["events"]["relic_chest"]["texts"]["RELIC_CHEST_OPENED_DESC"] and "%s" in JA["events"]["relic_chest"]["texts"]["RELIC_CHEST_OPENED_DESC"], "宝箱道具名占位符锁定")
 check("%d" in EN["events"]["delivery"]["texts"]["DELIVERY_TAKEN_DESC"] and "%d" in JA["events"]["delivery"]["texts"]["DELIVERY_TAKEN_DESC"], "货物数量占位符锁定")
 check("Legendary" in EN["events"]["furnace"]["texts"]["FURNACE_DESC"] and "伝説" in JA["events"]["furnace"]["texts"]["FURNACE_DESC"], "熔炉传奇档术语锁定")
+check("square root" in EN["events"]["hero"]["texts"]["HERO_DESC"] and "without replacement" in EN["events"]["hero"]["texts"]["HERO_DESC"], "五换一英文为同名数平方根加权且无放回")
+check("平方根" in JA["events"]["hero"]["texts"]["HERO_DESC"] and "重複なく" in JA["events"]["hero"]["texts"]["HERO_DESC"], "五换一日文为同名数平方根加权且无放回")
+check("gain 1 Cost" in EN["events"]["rest"]["texts"]["REST_PIPE_RESULT_DESC"] and "draw 1 additional card" in EN["events"]["rest"]["texts"]["REST_PIPE_RESULT_DESC"], "烟斗重燃英文复用具体效果")
+check("コストを1得て" in JA["events"]["rest"]["texts"]["REST_PIPE_RESULT_DESC"] and "追加で1枚ドロー" in JA["events"]["rest"]["texts"]["REST_PIPE_RESULT_DESC"], "烟斗重燃日文复用具体效果")
 check("Remove" in EN["events"]["oblivion"]["texts"]["OBLIVION_DESC"] and "削除" in JA["events"]["oblivion"]["texts"]["OBLIVION_DESC"], "遗忘之泉是删除而非本场消失")
 
 for lang, data in (("en", EN), ("ja", JA)):
@@ -216,4 +220,4 @@ if errors:
     for error in errors:
         print("  -", error)
     sys.exit(1)
-print("\nNARRATIVE I18N OK: 26 events / 61 texts | 11 stories / 54 lines | 11 achievement hints")
+print("\nNARRATIVE I18N OK: 26 events / 64 texts | 11 stories / 54 lines | 11 achievement hints")

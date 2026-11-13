@@ -1,0 +1,272 @@
+{
+  "version": 1,
+  "updated": "2026-11-13",
+  "source": "i18n/event_ui_zh_canonical.json",
+  "options": {
+    "common": {
+      "LEAVE": "離れる"
+    },
+    "rest": {
+      "REST_HEAL": "ここで休息する（HPを%d回復）",
+      "ADD_FIREWOOD": "薪を追加する（デッキからカードを1枚削除）",
+      "BBQ_AVAILABLE": "肉を焼く（「バーベキュー」を獲得し、ボス戦用に保持）",
+      "BBQ_OWNED_DISABLED": "「バーベキュー」所持済み（ボス戦に入る時に自動消費）",
+      "LEAVE_WITHOUT_BBQ": "離れる（肉を焼かない）"
+    },
+    "whisper": {
+      "TAKE_WHISPER": "「アヒルのささやき」を獲得する",
+      "DECLINE_WHISPER": "見送る（ささやきの影響を受けない）"
+    },
+    "gaze": {
+      "TAKE_RICE": "「痛みを感じろ」を獲得する",
+      "LOOK_AWAY": "目をそらす（見送る）"
+    },
+    "pear": {
+      "TAKE_PEAR": "「アヒル梨」を獲得する",
+      "PUSH_PEAR_AWAY": "梨を押しのける（見送る）"
+    },
+    "apple_doctor": {
+      "TAKE_APPLE": "リンゴを受け取る（医者を遠ざける）",
+      "LEAVE_WITHOUT_APPLE": "見送って離れる"
+    },
+    "moon": {
+      "TAKE_MOON_FOR_GOLD": "%dゴールドを失い、「月」を取る",
+      "TAKE_MOON_NO_GOLD_DISABLED": "ゴールドがなく、「月」を交換できない",
+      "TAKE_COIN": "「コイン」を取る"
+    },
+    "furnace": {
+      "INVEST_RELIC": "「%s」を投入する",
+      "INVEST_LEGENDARY_RELIC": "「%s」を投入する（伝説・レリック2個と交換）",
+      "LEAVE_NO_RELICS": "離れる（所持レリックに投入できるものがない）",
+      "LEAVE_WITHOUT_INVESTING": "離れる（投入しない）"
+    },
+    "core_contract": {
+      "SIGN_CONTRACT": "契約を結ぶ（レリック「呪縛」を獲得）",
+      "CONTRACT_SIGNED_DISABLED": "契約は既に締結済み",
+      "TAKE_CORE": "コアを得る（レリック「コア」を受け取る）",
+      "CORE_FORMED_DISABLED": "コアは既に成形済み（戦闘終了後の報酬ページで交換）",
+      "CORE_CHARGING_DISABLED": "コアはまだ成形中（累計HP喪失：%d / %d）",
+      "CORE_NO_PAIR_DISABLED": "デッキに、生贄にできるダメージスキル1枚と、まだ付呪されていない別のダメージスキル1枚の組がない",
+      "LEAVE_WITHOUT_TOUCHING": "何も触れない（離れる）"
+    },
+    "hero": {
+      "TRADE_FIVE_FOR_HERO": "交換！異なる名前のカード5枚を渡し、「英雄」を獲得",
+      "TRADE_INSUFFICIENT_DISABLED": "異なるカードを%d種類そろえられない",
+      "LEAVE_WITHOUT_HERO_TRADE": "交換しない（イベントを終了）",
+      "LEAVE_INSUFFICIENT": "イベントを終了"
+    },
+    "arcane": {
+      "TAKE_CHARM": "護符を取る：レリック「秘術の護符」を獲得",
+      "TAKE_CHARM_OWNED_DISABLED": "続ける（護符を装着済み）",
+      "DRINK_SPRING": "泉水を飲む：ランダムな効果／スキルカード3枚から1枚を選びデッキに加える",
+      "LEAVE_WITH_OWNED_CHARM": "離れる（新しいカードは取らない）",
+      "LEAVE_WITHOUT_ARCANE_REWARD": "離れる（どちらも取らない）"
+    },
+    "divination": {
+      "START_DIVINATION": "占いを行う",
+      "LEAVE_WITHOUT_DIVINATION": "離れる（占わない）",
+      "LEAVE_WITHOUT_INTERPRETING": "離れる（解釈しない）",
+      "WHALE_FIGHT": "それのために戦う（「鯨の怒り」を獲得）",
+      "WHALE_COMMAND": "それは私に従う（「願い」を獲得）",
+      "LIQUID_NEED": "あなたにはこれが必要になる（レリック「泉水」を獲得）",
+      "LIQUID_DANGER": "これは危険だ（レリック「思想の刻印」を獲得）",
+      "THORN_PATH": "困難に満ちた道を進む（「烈火の剣」を獲得）",
+      "THORN_EMBRACE": "痛みを受け入れる（レリック「茨の指輪」を獲得）",
+      "FEAST_GENEROUS": "それは寛大な贈り物だ（レリック「聖餐」を獲得）",
+      "FEAST_MERCY": "それは最後の慈悲だ（レリック「彫像」を獲得）"
+    },
+    "card_merchant": {
+      "TRANSFORM_CARD": "変化：カード1枚を選び、現在のクラスのランダムな報酬カードに変える",
+      "BARTER_FOR_BIG_CHEST": "物々交換：コスト5以上のカード（Xコストを除く）を大宝箱と交換する",
+      "BARTER_NO_ELIGIBLE_DISABLED": "物々交換：（デッキにコスト5以上のカードがない。Xコストを除く）",
+      "SELL_RANDOM_CARD": "割引売却：ランダムな呪い以外のカード1枚を失い、%dゴールドを得る",
+      "SELL_NO_ELIGIBLE_DISABLED": "割引売却：（デッキに呪いしか残っていない）",
+      "LEAVE_WITHOUT_MERCHANT_TRADE": "離れる（何も交換しない）"
+    },
+    "lake_lady": {
+      "LIE_LOSE_CARD": "嘘：「%s」を失う",
+      "LIE_NO_ELIGIBLE_DISABLED": "嘘：（デッキに失えるカードがない）",
+      "TRUTH_RANDOM_EPIC": "真実：ランダムなエピックカード1枚を獲得",
+      "LEAVE_WITHOUT_SPEAKING": "離れる（何も言わない）"
+    },
+    "oblivion": {
+      "FORGET_CARD": "忘却：デッキからカード1枚を選んで削除する",
+      "LEAVE_WITHOUT_DELETING": "離れる（カードを削除しない）"
+    },
+    "smith": {
+      "FORGE_CARD": "鍛造：デッキのカード1枚を選び、コスト2の「鉄の柵」に変える",
+      "LEAVE_WITHOUT_FORGING": "離れる（鍛造しない）"
+    },
+    "delivery": {
+      "ACCEPT_CARGO": "輸送を請け負う：一覧から「積み荷」1~%d枚を選びデッキに加える",
+      "DECLINE_CARGO": "請け負わない（立ち去る）"
+    },
+    "delivery_done": {
+      "SETTLE_CARGO": "決済：デッキの「積み荷」%d枚 × 各1回ドロー",
+      "LEAVE_WITHOUT_DELIVERY_REWARD": "報酬を受け取らない（離れる）"
+    },
+    "relic_chest": {
+      "OPEN_RELIC_CHEST": "宝箱を開ける（ランダムな報酬レリックを1個獲得）",
+      "LEAVE_EMPTY_HANDED": "手ぶらで離れる"
+    },
+    "snow_leopard": {
+      "SILENCE_FOR_PIPE": "ユキヒョウを黙らせる（レリック「パイプ」を獲得）",
+      "FEED_CHEESE_FOR_CARD": "チーズを与える（カード「ユキヒョウ」を獲得）"
+    },
+    "adventurer": {
+      "READ_NOTE": "ノートを読む（レリック「冒険ノート」を獲得）",
+      "TAKE_FLINT": "工具を取る（レリック「火打ち石」を獲得）"
+    },
+    "martial": {
+      "LEARN_BRAWL": "簡単な技を学ぶ（「乱打」を獲得）",
+      "LEARN_KICK": "真の技を学ぶ（2回の戦闘後に「飛び蹴り」を獲得）",
+      "LEARN_PUNCH": "奥義を学ぶ（エリート／ボス戦2回後に「突き」を獲得）",
+      "LEAVE_WITHOUT_LEARNING": "離れる（何も学ばない）"
+    },
+    "flyer": {
+      "USE_FLYER": "飛行装置を使う（未探索の部屋へ飛ぶ）",
+      "LEAVE_WITHOUT_MOVING": "移動しない（離れる）"
+    },
+    "cave": {
+      "EXPLORE_CAVE": "探索（オウルベアと戦い、勝利するとエピックカード「オウルベア」を獲得）"
+    },
+    "treasure": {
+      "OPEN_CARD_CHEST": "宝箱を開ける（カード報酬を獲得）",
+      "LEAVE_WITHOUT_OPENING": "開けない（立ち去る）"
+    },
+    "struggle": {
+      "ACCEPT_STRUGGLE": "苦闘を受け入れる（HPを%d失い、「金属竜」を獲得）",
+      "LEAVE_UNCHANGED": "立ち去る（現状を維持）"
+    }
+  },
+  "pickers": {
+    "delivery": {
+      "title": "配送依頼・積み荷を選ぶ",
+      "note": "選んだ枚数だけ受け取る（%d~%d枚）。積み荷が破壊された時、デッキから削除される",
+      "confirm_label": "積み荷を請け負う",
+      "cancel_label": "請け負わない（閉じる）",
+      "short": "配送依頼"
+    }
+  },
+  "results": {
+    "whisper": {
+      "WHISPER_ALREADY_HEARD": "ささやきは既に聞いた——この先の道は依然として運命に委ねられている。",
+      "WHISPER_RELIC_GAINED": "「アヒルのささやき」をレリック欄に追加：%s"
+    },
+    "gaze": {
+      "GAZE_ALREADY_HAVE_RICE": "その米袋は既に肩に担いでいる——アヒルの目は見つめ続けるが、これ以上は与えない。",
+      "GAZE_RELIC_GAINED": "「痛みを感じろ」をレリック欄に追加：%s"
+    },
+    "pear": {
+      "PEAR_ALREADY_HAVE": "アヒル梨は既に肩に背負っている——これから受ける傷が、あなたを少しずつ「強く」する。",
+      "PEAR_RELIC_GAINED": "「アヒル梨」をレリック欄に追加：%s"
+    },
+    "apple_doctor": {
+      "APPLE_DOCTOR_ALREADY_HAVE": "リンゴは既に受け取っている——医者はもう相手にしない。",
+      "APPLE_DOCTOR_RELIC_GAINED": "「リンゴ」をレリック欄に収めた：%s"
+    },
+    "bluefish": {
+      "BLUEFISH_EVENT_REMOVED": "このイベントはゲームから削除された。"
+    },
+    "moon": {
+      "MOON_ALREADY_TAKEN": "石台は既に空になっている——2つの品は1つしか残らず、あなたが持ち帰れるのも1つだけだ。",
+      "MOON_CARD_GAINED": "「%s」をデッキに追加し、%dゴールドは石台に残した。",
+      "MOON_COIN_GAINED": "「%s」をデッキに追加した。"
+    },
+    "hero": {
+      "HERO_TRADE_RESTORE": "取引完了：「英雄」はデッキに加わっている（%d枚と交換）。",
+      "HERO_TRADE_AVAILABLE": "デッキには現在%d種類のカードがある——交換に足りる。",
+      "HERO_TRADE_UNAVAILABLE": "デッキには%d種類のカードしかないため、この取引は成立しない（退出のみ可能）。",
+      "HERO_TRADE_COMPLETED": "%d枚（%s）と交換し、「%s」をデッキに追加した。"
+    },
+    "card_merchant": {
+      "CARD_MERCHANT_ALREADY_TRADED": "ここでは既に取引を済ませている。",
+      "CARD_MERCHANT_NO_SELLABLE_CARD": "デッキに買い取り可能なカードがない（呪いは対象外）。",
+      "CARD_MERCHANT_CARD_SOLD": "「%s」を安く買い取られ、%dゴールドを得た。"
+    },
+    "lake_lady": {
+      "LAKE_LADY_ALREADY_DONE": "水面は既に静まっている。",
+      "LAKE_LADY_LIE_RESULT": "嘘が現実になった：「%s」はデッキから削除された。",
+      "LAKE_LADY_TRUTH_RESULT": "真実を話した贈り物：「%s」をデッキに追加した。"
+    },
+    "oblivion": {
+      "OBLIVION_ALREADY_DONE": "この泉では既にカードを1枚忘れている。"
+    },
+    "smith": {
+      "SMITH_ALREADY_DONE": "職人のもとでは既にカードを1枚鍛造している。"
+    },
+    "delivery": {
+      "DELIVERY_ACCEPTED_RESTORE": "積み荷を%d枚受託済み——第2層の最初のイベント部屋で、荷主が枚数に応じて報酬を支払う。",
+      "DELIVERY_ACCEPTED": "積み荷を%d枚受託した（3コスト構造物 0/6/0）——第2層の最初のイベント部屋で報酬を支払う。"
+    },
+    "delivery_done": {
+      "DELIVERY_DONE_CARGO_SETTLED": "積み荷%d枚すべての支払いが完了",
+      "DELIVERY_DONE_CARD_REWARDS": "カード報酬 ×%d",
+      "DELIVERY_DONE_GOLD_REWARD": "%dゴールド",
+      "DELIVERY_DONE_RELIC_REWARDS": "ランダムなレリック ×%d",
+      "DELIVERY_DONE_CHOCOLATE_REWARD": "隠し大賞・チョコレート ×%d！",
+      "DELIVERY_DONE_CARGO_REMOVED": "積み荷%d枚がデッキから削除された",
+      "DELIVERY_DONE_RESULT_PREFIX": "支払い結果：",
+      "DELIVERY_DONE_PENDING_SUFFIX": "（未受取報酬は右上のポップアップを参照）"
+    },
+    "snow_leopard": {
+      "SNOW_LEOPARD_PIPE_RESTORE": "「パイプ」はレリック欄に収まっている——次の戦闘の最初のターンに効果を発揮し、その後はキャンプファイアに到着するたびに再び点火する。",
+      "SNOW_LEOPARD_CAT_RESTORE": "「ユキヒョウ」はデッキに加わっている——攻撃時、手札1枚のコストを1ターンの間下げる。",
+      "SNOW_LEOPARD_PIPE_GAINED": "「パイプ」をレリック欄に収めた：%s",
+      "SNOW_LEOPARD_CAT_GAINED": "「%s」をデッキに追加：%s"
+    },
+    "adventurer": {
+      "ADVENTURER_NOTE_SUCCESS": "「冒険ノート」をレリック欄に収めた：マップ上の未探索の部屋1つが大宝箱に変わった——マップに戻ると、そのマスが金色に光っている。",
+      "ADVENTURER_NOTE_NO_UNEXPLORED_ROOM": "「冒険ノート」をレリック欄に収めた——ただし、マップに未探索の部屋はもうなく、紙には何も書かれなかった。",
+      "ADVENTURER_FLINT_GAINED": "「火打ち石」をレリック欄に収めた——マップに戻った後、任意の1マスを選んで火を灯す。"
+    },
+    "martial": {
+      "MARTIAL_BRAWL_GAINED": "「乱打」をデッキに追加：2コスト、ランダムな敵2体にそれぞれ10ダメージを与える。",
+      "MARTIAL_PUNCH_DELAYED": "「突き」を注文済み：あと%d回のエリート／ボス戦に勝利すると、自動でデッキに追加される。",
+      "MARTIAL_KICK_DELAYED": "「飛び蹴り」を注文済み：あと%d回の戦闘に勝利すると、自動でデッキに追加される。"
+    },
+    "flyer": {
+      "FLYER_READY": "飛行機械の準備ができた——マップに戻った後、未探索の部屋を1つ選ぶと、そこへ運んでくれる。"
+    },
+    "rest": {
+      "REST_BANDAGE_HEAL_RESULT": "止血包帯：HPを%d回復",
+      "REST_HEAL_RESULT": "キャンプファイアの温もりが胸に広がる……HPを%d回復（現在 %d / %d）%s",
+      "REST_ENCHANT_MASTER_SUFFIX": "；付呪の達人が「%s」に「%s」を付与した",
+      "REST_BBQ_RESULT": "「バーベキュー」をレリック欄に収めた——ボス戦に入る時に自動で消費し、最大HPの25%を回復する。"
+    },
+    "arcane": {
+      "ARCANE_CHARM_GAINED": "「秘術の護符」をレリック欄に追加：%s（この泉で得られる報酬は1つのみ）",
+      "ARCANE_CHARM_ALREADY_OWNED": "「秘術の護符」は既に身に着けている——それでも泉の水は飲める（今回の報酬は1つのみ）。",
+      "ARCANE_DRINK_REWARD_PENDING": "「泉水を飲む」：報酬ポップアップで3枚の効果／スキルカードから1枚を選ぶ（今回の報酬は1つのみ）。"
+    },
+    "relic_chest": {
+      "RELIC_CHEST_EMPTY": "宝箱は空だった（報酬レリックをすべて所持済み）",
+      "RELIC_CHEST_REWARD_PENDING": "レリック「%s」が出た。1枚選んでデッキに加える（未受取：報酬ポップアップを参照）"
+    },
+    "treasure": {
+      "TREASURE_CARD_REWARD_PENDING": "カード報酬が出た。1枚選んでデッキに加える（未受取：報酬ポップアップを参照）"
+    },
+    "struggle": {
+      "STRUGGLE_CARD_GAINED": "HPを%d失い（現在 %d/%d）——「%s」をデッキに追加した"
+    },
+    "furnace": {
+      "FURNACE_NO_OPTIONS": "炉はあなたの空っぽの両手を見つめ、何も言わない。",
+      "FURNACE_RELIC_MISSING": "「%s」はもうレリック欄にない。",
+      "FURNACE_NO_REWARD": "「%s」を炉に投げ込んだが、炉は熱気をひと吐きしただけだった——あなたに与えられるレリックはもうない。",
+      "FURNACE_REWARDS_PENDING": "「%s」を炉に投げ込むと、レリックが%d件出てきた：%s。報酬ポップアップで受け取る。"
+    },
+    "core_contract": {
+      "CORE_CONTRACT_CURSE_GAINED": "「呪縛」をレリック欄に収めた：%s",
+      "CORE_CONTRACT_CORE_GAINED": "「コア」をレリック欄に収めた：戦闘中にHPを累計%d失うと成形し、この戦闘の終了時の報酬ページに交換が1回追加される——ダメージスキル1枚を犠牲にしてデッキから永続的に削除し、その1段目のダメージを付呪として、まだ付呪されていない別のダメージスキルに付与する。使用後は無効になる。"
+    },
+    "divination": {
+      "DIVINATION_CARD_GAINED": "「%s」をデッキに追加した。",
+      "DIVINATION_RELIC_GAINED": "「%s」をレリック欄に収めた。"
+    }
+  },
+  "rest_dynamic": {
+    "REST_DYNAMIC_SACRAMENT_HEAL": "\n\n【聖餐】HPを%d回復した（現在 %d / %d）。",
+    "REST_DYNAMIC_BANDAGE_HEAL": "\n\n【止血包帯】HPを%d回復した（現在 %d / %d）。",
+    "REST_DYNAMIC_PIPE_RELIGHT": "\n\n【パイプ】火が明滅し、パイプに再び火が点いた。次の戦闘の最初の自分のターンにコストを1得て、追加で1枚ドローし、HPを最大1失う（最低1は残る）。"
+  }
+}

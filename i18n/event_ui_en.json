@@ -1,0 +1,272 @@
+{
+  "version": 1,
+  "updated": "2026-11-13",
+  "source": "i18n/event_ui_zh_canonical.json",
+  "options": {
+    "common": {
+      "LEAVE": "Leave"
+    },
+    "rest": {
+      "REST_HEAL": "Rest here (restore %d Health)",
+      "ADD_FIREWOOD": "Add firewood (Remove 1 card from your Deck)",
+      "BBQ_AVAILABLE": "Roast meat (gain \"Barbecue\" and save it for the Boss battle)",
+      "BBQ_OWNED_DISABLED": "Already have \"Barbecue\" (automatically consumed when entering a Boss battle)",
+      "LEAVE_WITHOUT_BBQ": "Leave (don't roast meat)"
+    },
+    "whisper": {
+      "TAKE_WHISPER": "Gain \"Whisper of the Duck\"",
+      "DECLINE_WHISPER": "Decline (unaffected by the whisper)"
+    },
+    "gaze": {
+      "TAKE_RICE": "Gain \"One Bag of Pain\"",
+      "LOOK_AWAY": "Look away (decline)"
+    },
+    "pear": {
+      "TAKE_PEAR": "Gain \"Duck Pear\"",
+      "PUSH_PEAR_AWAY": "Push the pear away (decline)"
+    },
+    "apple_doctor": {
+      "TAKE_APPLE": "Take the apple (keep the doctor away)",
+      "LEAVE_WITHOUT_APPLE": "Decline and leave"
+    },
+    "moon": {
+      "TAKE_MOON_FOR_GOLD": "Lose %d Gold and take \"Moon\"",
+      "TAKE_MOON_NO_GOLD_DISABLED": "No Gold to trade for \"Moon\"",
+      "TAKE_COIN": "Take \"Coin\""
+    },
+    "furnace": {
+      "INVEST_RELIC": "Offer \"%s\"",
+      "INVEST_LEGENDARY_RELIC": "Offer \"%s\" (Legendary · get 2 Relics back)",
+      "LEAVE_NO_RELICS": "Leave (no Relics in your inventory to offer)",
+      "LEAVE_WITHOUT_INVESTING": "Leave (don't offer anything)"
+    },
+    "core_contract": {
+      "SIGN_CONTRACT": "Sign the contract (gain the Relic \"Cursebind\")",
+      "CONTRACT_SIGNED_DISABLED": "Contract already signed",
+      "TAKE_CORE": "Claim the Core (take the Relic \"Core\")",
+      "CORE_FORMED_DISABLED": "Core already formed (redeem on the reward screen after battle)",
+      "CORE_CHARGING_DISABLED": "Core still forming (total Health lost: %d / %d)",
+      "CORE_NO_PAIR_DISABLED": "Your Deck lacks a valid pair: one damage Skill that can be sacrificed and another damage Skill with no Enchant",
+      "LEAVE_WITHOUT_TOUCHING": "Touch nothing (leave)"
+    },
+    "hero": {
+      "TRADE_FIVE_FOR_HERO": "Trade! Give 5 cards with different names and gain \"Hero\"",
+      "TRADE_INSUFFICIENT_DISABLED": "Cannot provide %d cards with different names",
+      "LEAVE_WITHOUT_HERO_TRADE": "Don't trade (leave event)",
+      "LEAVE_INSUFFICIENT": "Leave event"
+    },
+    "arcane": {
+      "TAKE_CHARM": "Take the Charm: gain the Relic \"Arcane Charm\"",
+      "TAKE_CHARM_OWNED_DISABLED": "Continue (already wearing a Charm)",
+      "DRINK_SPRING": "Drink from the spring: choose 1 of 3 random Effect / Skill cards to add to your Deck",
+      "LEAVE_WITH_OWNED_CHARM": "Leave (no new card)",
+      "LEAVE_WITHOUT_ARCANE_REWARD": "Leave (take neither)"
+    },
+    "divination": {
+      "START_DIVINATION": "Perform a divination",
+      "LEAVE_WITHOUT_DIVINATION": "Leave (no divination)",
+      "LEAVE_WITHOUT_INTERPRETING": "Leave (skip interpretation)",
+      "WHALE_FIGHT": "I will fight for it (gain \"Whale's Wrath\")",
+      "WHALE_COMMAND": "It will obey my commands (gain \"Wish\")",
+      "LIQUID_NEED": "You will need it (gain the Relic \"Spring Water\")",
+      "LIQUID_DANGER": "It is dangerous (gain the Relic \"Thought Brand\")",
+      "THORN_PATH": "Walk a path of hardship (gain \"Sword of Flames\")",
+      "THORN_EMBRACE": "Embrace the pain (gain the Relic \"Thorn Ring\")",
+      "FEAST_GENEROUS": "It is a generous gift (gain the Relic \"Sacrament\")",
+      "FEAST_MERCY": "It is a final mercy (gain the Relic \"Statue\")"
+    },
+    "card_merchant": {
+      "TRANSFORM_CARD": "Transform: choose 1 card to become a random reward card for your class",
+      "BARTER_FOR_BIG_CHEST": "Barter: trade a card costing 5 or more (X-Cost cards excluded) for a Large Chest",
+      "BARTER_NO_ELIGIBLE_DISABLED": "Barter: (your Deck has no cards costing 5 or more, excluding X-Cost cards)",
+      "SELL_RANDOM_CARD": "Sell at a discount: lose a random non-Curse card for %d Gold",
+      "SELL_NO_ELIGIBLE_DISABLED": "Sell at a discount: (only Curses remain in your Deck)",
+      "LEAVE_WITHOUT_MERCHANT_TRADE": "Leave (trade nothing)"
+    },
+    "lake_lady": {
+      "LIE_LOSE_CARD": "Lie: lose \"%s\"",
+      "LIE_NO_ELIGIBLE_DISABLED": "Lie: (your Deck has no eligible cards to lose)",
+      "TRUTH_RANDOM_EPIC": "Truth: gain a random Epic card",
+      "LEAVE_WITHOUT_SPEAKING": "Leave (say nothing)"
+    },
+    "oblivion": {
+      "FORGET_CARD": "Forget: choose 1 card and Remove it from your Deck",
+      "LEAVE_WITHOUT_DELETING": "Leave (don't Remove any cards)"
+    },
+    "smith": {
+      "FORGE_CARD": "Forge: transform 1 card in your Deck into a 2-Cost \"Iron Fence\"",
+      "LEAVE_WITHOUT_FORGING": "Leave (don't Forge)"
+    },
+    "delivery": {
+      "ACCEPT_CARGO": "Accept cargo: choose 1~%d \"Cargo\" cards from the spread and add them to your Deck",
+      "DECLINE_CARGO": "Decline (turn and leave)"
+    },
+    "delivery_done": {
+      "SETTLE_CARGO": "Settle delivery: %d Cargo cards in your Deck × 1 draw each",
+      "LEAVE_WITHOUT_DELIVERY_REWARD": "No payment (leave)"
+    },
+    "relic_chest": {
+      "OPEN_RELIC_CHEST": "Open the chest (gain 1 random Reward Relic)",
+      "LEAVE_EMPTY_HANDED": "Leave empty-handed"
+    },
+    "snow_leopard": {
+      "SILENCE_FOR_PIPE": "Silence the Snow Leopard (gain the Relic \"Smoking Pipe\")",
+      "FEED_CHEESE_FOR_CARD": "Feed it cheese (gain the card \"Snow Leopard\")"
+    },
+    "adventurer": {
+      "READ_NOTE": "Read the notes (gain the Relic \"Adventure Notes\")",
+      "TAKE_FLINT": "Take the tool (gain the Relic \"Flint\")"
+    },
+    "martial": {
+      "LEARN_BRAWL": "Learn something simple (gain \"Wild Swings\")",
+      "LEARN_KICK": "Learn real skills (gain \"Flying Kick\" after 2 battles)",
+      "LEARN_PUNCH": "Learn the ultimate move (gain \"Charging Punch\" after 2 Elite / Boss battles)",
+      "LEAVE_WITHOUT_LEARNING": "Leave (learn nothing)"
+    },
+    "flyer": {
+      "USE_FLYER": "Use the flying device (fly to an unexplored room)",
+      "LEAVE_WITHOUT_MOVING": "Don't move (leave)"
+    },
+    "cave": {
+      "EXPLORE_CAVE": "Explore (fight an Owlbear and gain the Epic card \"Owlbear\" on victory)"
+    },
+    "treasure": {
+      "OPEN_CARD_CHEST": "Open the chest (gain a Card Reward)",
+      "LEAVE_WITHOUT_OPENING": "Don't open it (turn and leave)"
+    },
+    "struggle": {
+      "ACCEPT_STRUGGLE": "Accept the struggle (lose %d Health and gain \"Metal Dragon\")",
+      "LEAVE_UNCHANGED": "Turn and leave (leave things as they are)"
+    }
+  },
+  "pickers": {
+    "delivery": {
+      "title": "Delivery Request · Choose Cargo",
+      "note": "Take as many as you select (%d~%d cards); when Cargo is Destroyed, it is Removed from your Deck",
+      "confirm_label": "Accept the Cargo",
+      "cancel_label": "Decline (collapse)",
+      "short": "Delivery Request"
+    }
+  },
+  "results": {
+    "whisper": {
+      "WHISPER_ALREADY_HEARD": "You have already heard the whisper—the path ahead remains in fate's hands.",
+      "WHISPER_RELIC_GAINED": "\"Whisper of the Duck\" has been added to your Relic inventory: %s"
+    },
+    "gaze": {
+      "GAZE_ALREADY_HAVE_RICE": "You already have that bag of rice on your shoulder—the Eye of the Duck still watches, but will give you nothing more.",
+      "GAZE_RELIC_GAINED": "\"One Bag of Pain\" has been added to your Relic inventory: %s"
+    },
+    "pear": {
+      "PEAR_ALREADY_HAVE": "You are already carrying the Duck Pear on your shoulder—every injury from now on will make you a little \"stronger\".",
+      "PEAR_RELIC_GAINED": "\"Duck Pear\" has been added to your Relic inventory: %s"
+    },
+    "apple_doctor": {
+      "APPLE_DOCTOR_ALREADY_HAVE": "You have already accepted the Apple—the doctor will pay you no more attention.",
+      "APPLE_DOCTOR_RELIC_GAINED": "\"Apple\" has been added to your Relic inventory: %s"
+    },
+    "bluefish": {
+      "BLUEFISH_EVENT_REMOVED": "This event has been removed from the game."
+    },
+    "moon": {
+      "MOON_ALREADY_TAKEN": "The stone pedestal is already empty—only one of the two items remains, and you can take only one.",
+      "MOON_CARD_GAINED": "\"%s\" has been added to your Deck; %d Gold remains on the stone pedestal.",
+      "MOON_COIN_GAINED": "\"%s\" has been added to your Deck."
+    },
+    "hero": {
+      "HERO_TRADE_RESTORE": "Trade complete: \"Hero\" is in your Deck (%d cards traded away).",
+      "HERO_TRADE_AVAILABLE": "Your Deck now contains %d different card names—enough for the trade.",
+      "HERO_TRADE_UNAVAILABLE": "Your Deck contains only %d different card names, so this trade cannot be made (you can only leave).",
+      "HERO_TRADE_COMPLETED": "Traded away %d cards (%s)—\"%s\" has been added to your Deck."
+    },
+    "card_merchant": {
+      "CARD_MERCHANT_ALREADY_TRADED": "You have already made a trade here.",
+      "CARD_MERCHANT_NO_SELLABLE_CARD": "There are no cards in your Deck that can be sold for value (Curses do not count).",
+      "CARD_MERCHANT_CARD_SOLD": "You sold \"%s\" at a reduced price for %d Gold."
+    },
+    "lake_lady": {
+      "LAKE_LADY_ALREADY_DONE": "The water's surface is calm once more.",
+      "LAKE_LADY_LIE_RESULT": "The lie comes true: \"%s\" has been Removed from your Deck.",
+      "LAKE_LADY_TRUTH_RESULT": "A gift for telling the truth: \"%s\" has been added to your Deck."
+    },
+    "oblivion": {
+      "OBLIVION_ALREADY_DONE": "You have already forgotten a card in the spring."
+    },
+    "smith": {
+      "SMITH_ALREADY_DONE": "You have already forged a card at the smith."
+    },
+    "delivery": {
+      "DELIVERY_ACCEPTED_RESTORE": "You have accepted %d Cargo. The consignee will pay you per card at the first event room on Layer 2.",
+      "DELIVERY_ACCEPTED": "Accepted %d Cargo (3-Cost Structure 0/6/0)—payment will be settled in the first event room on Layer 2."
+    },
+    "delivery_done": {
+      "DELIVERY_DONE_CARGO_SETTLED": "Payment settled for all %d Cargo",
+      "DELIVERY_DONE_CARD_REWARDS": "Card Rewards ×%d",
+      "DELIVERY_DONE_GOLD_REWARD": "%d Gold",
+      "DELIVERY_DONE_RELIC_REWARDS": "Random Relics ×%d",
+      "DELIVERY_DONE_CHOCOLATE_REWARD": "Hidden Grand Prize: Chocolate ×%d!",
+      "DELIVERY_DONE_CARGO_REMOVED": "%d Cargo cards have been Removed from your Deck",
+      "DELIVERY_DONE_RESULT_PREFIX": "Payout Results:",
+      "DELIVERY_DONE_PENDING_SUFFIX": "(Pending rewards: see the pop-up in the upper-right)"
+    },
+    "snow_leopard": {
+      "SNOW_LEOPARD_PIPE_RESTORE": "The Smoking Pipe is in your Relic inventory—it will take effect on the first turn of the next battle; afterward, it will relight each time you reach a Campfire.",
+      "SNOW_LEOPARD_CAT_RESTORE": "\"Snow Leopard\" is in your Deck—when it attacks, one card in your Hand costs less for one turn.",
+      "SNOW_LEOPARD_PIPE_GAINED": "\"Smoking Pipe\" has been added to your Relic inventory: %s",
+      "SNOW_LEOPARD_CAT_GAINED": "\"%s\" has been added to your Deck: %s"
+    },
+    "adventurer": {
+      "ADVENTURER_NOTE_SUCCESS": "\"Adventure Notes\" has been added to your Relic inventory: an unexplored room on the map has become a Large Chest—you will see that tile glowing gold when you return to the map.",
+      "ADVENTURER_NOTE_NO_UNEXPLORED_ROOM": "\"Adventure Notes\" has been added to your Relic inventory—but there are no unexplored rooms left on the map, so nothing was written on the page.",
+      "ADVENTURER_FLINT_GAINED": "\"Flint\" has been added to your Relic inventory—after returning to the map, choose any tile and light its fire."
+    },
+    "martial": {
+      "MARTIAL_BRAWL_GAINED": "\"Wild Swings\" has been added to your Deck: 2 Cost; deals 10 damage to each of 2 random enemies.",
+      "MARTIAL_PUNCH_DELAYED": "\"Charging Punch\" has been ordered: it will automatically be added to your Deck after you win %d more Elite / Boss battles.",
+      "MARTIAL_KICK_DELAYED": "\"Flying Kick\" has been ordered: it will automatically be added to your Deck after you win %d more battles."
+    },
+    "flyer": {
+      "FLYER_READY": "The flying machine is ready—after returning to the map, choose an unexplored room and it will take you there."
+    },
+    "rest": {
+      "REST_BANDAGE_HEAL_RESULT": "Styptic Bandage: restore %d Health",
+      "REST_HEAL_RESULT": "The campfire's warmth fills your heart... restore %d Health (current %d / %d)%s",
+      "REST_ENCHANT_MASTER_SUFFIX": "; the Enchantment Master has enchanted \"%s\" with \"%s\"",
+      "REST_BBQ_RESULT": "\"Barbecue\" has been added to your Relic inventory—it is automatically consumed when you enter a Boss battle, restoring 25% of your Max Health."
+    },
+    "arcane": {
+      "ARCANE_CHARM_GAINED": "\"Arcane Charm\" has been added to your Relic inventory: %s (this spring grants only one reward)",
+      "ARCANE_CHARM_ALREADY_OWNED": "You are already wearing the Arcane Charm—but you can still drink from the spring (only one reward this time).",
+      "ARCANE_DRINK_REWARD_PENDING": "\"Drink the Spring Water\": choose 1 of 3 Effect / Skill cards in the reward pop-up (only one reward this time)."
+    },
+    "relic_chest": {
+      "RELIC_CHEST_EMPTY": "The chest is empty (you already own all reward Relics)",
+      "RELIC_CHEST_REWARD_PENDING": "Found the Relic \"%s\"; choose 1 to add to your Deck (pending: see the reward pop-up)"
+    },
+    "treasure": {
+      "TREASURE_CARD_REWARD_PENDING": "Found a Card Reward; choose 1 to add to your Deck (pending: see the reward pop-up)"
+    },
+    "struggle": {
+      "STRUGGLE_CARD_GAINED": "Lost %d Health (current %d/%d)—\"%s\" has been added to your Deck"
+    },
+    "furnace": {
+      "FURNACE_NO_OPTIONS": "The furnace stares at your empty hands and says nothing.",
+      "FURNACE_RELIC_MISSING": "\"%s\" is no longer in your Relic inventory.",
+      "FURNACE_NO_REWARD": "\"%s\" was thrown into the furnace, but it only breathed out a puff of hot air—there are no Relics left to give you.",
+      "FURNACE_REWARDS_PENDING": "\"%s\" was thrown into the furnace, and it spat out %d Relics: %s. Claim them in the reward pop-up."
+    },
+    "core_contract": {
+      "CORE_CONTRACT_CURSE_GAINED": "\"Cursebind\" has been added to your Relic inventory: %s",
+      "CORE_CONTRACT_CORE_GAINED": "\"Core\" has been added to your Relic inventory: after you have lost a cumulative total of %d Health in battle, it takes shape; an extra exchange becomes available on the reward page when this battle ends—sacrifice 1 damage Skill, permanently Removing it from your Deck, and attach its first instance of damage as an Enchant to another damage Skill with no Enchant. It becomes inactive after use."
+    },
+    "divination": {
+      "DIVINATION_CARD_GAINED": "\"%s\" has been added to your Deck.",
+      "DIVINATION_RELIC_GAINED": "\"%s\" has been added to your Relic inventory."
+    }
+  },
+  "rest_dynamic": {
+    "REST_DYNAMIC_SACRAMENT_HEAL": "\n\n[Sacrament] Restored %d Health (now %d / %d).",
+    "REST_DYNAMIC_BANDAGE_HEAL": "\n\n[Styptic Bandage] Restored %d Health (now %d / %d).",
+    "REST_DYNAMIC_PIPE_RELIGHT": "\n\n[Smoking Pipe] The fire flickers—the Smoking Pipe is lit again. On your first turn of the next battle: gain 1 Cost, draw 1 additional card, and lose up to 1 Health (retain at least 1)."
+  }
+}

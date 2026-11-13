@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "updated": "2026-11-13",
   "source": "i18n/narrative_zh_canonical.json",
   "events": {
@@ -59,7 +59,7 @@
     "flyer": {
       "name": "Flying Machine",
       "texts": {
-        "FLYER_DESC": "An old jetpack stands in the middle of the clearing, its two nozzles still faintly warm.\nStrap it on, and you can fly straight to any room you haven't visited—\nits own lingering warmth is fuel enough; no Chocolate required.",
+        "FLYER_DESC": "An old jetpack stands in the middle of the clearing, its two nozzles still faintly warm.\nStrap it on, and you can fly straight to any room you haven't visited—\nits own lingering warmth is fuel enough; you need not pay any price.",
         "FLYER_TAKEN_DESC": "The nozzles are hot now, little warm-orange flames dancing within.\nOnce you're back on the map, choose an unexplored room, and it will take you there."
       }
     },
@@ -88,7 +88,7 @@
     "hero": {
       "name": "Fantastic Five-for-One",
       "texts": {
-        "HERO_DESC": "A huge signboard stands in the middle of the road, emblazoned in flamboyant script: Fantastic Five-for-One!\nHand over 5 cards with \"different names\" from your Deck (5 distinct names are chosen at random, 1 card of each),\nand you'll receive a \"Hero\" in return—5 Cost, 5 Power, 25 Health. But when you play it,\nyou must discard 4 additional cards from your Hand.\nIf your Deck has fewer than 5 different card names, this deal can't be made, and you have no choice but to leave.",
+        "HERO_DESC": "A huge signboard stands in the middle of the road, emblazoned in flamboyant script: Fantastic Five-for-One!\nHand over 5 cards with \"different names\" from your Deck (the game chooses 5 distinct names without replacement, weighted by the square root of each name's copy count, taking 1 card of each),\nand you'll receive a \"Hero\" in return—5 Cost, 5 Power, 25 Health. But when you play it,\nyou must discard 4 additional cards from your Hand.\nIf your Deck has fewer than 5 different card names, this deal can't be made, and you have no choice but to leave.",
         "HERO_TAKEN_DESC": "The writing on the signboard has faded.\nThe 5 cards you traded away are gone for good—but the \"Hero\" now stands among your ranks."
       }
     },
@@ -116,7 +116,7 @@
     "struggle": {
       "name": "Struggle",
       "texts": {
-        "STRUGGLE_DESC": "Your blood surges. Something inside you is struggling to break free...\nIf you are willing to offer your life, it will hear you—\nLose 21 Health and add 1 “Metal Dragon” to your Deck;\nor suppress the turmoil and walk away.",
+        "STRUGGLE_DESC": "Your blood surges. Something inside you is struggling to break free...\nIf you are willing to offer your life, it will hear you—\nLose 21 Health (you must retain at least 1 Health; you cannot accept if you lack enough Health) and add 1 “Metal Dragon” to your Deck;\nor suppress the turmoil and walk away.",
         "STRUGGLE_TAKEN_DESC": "“This is my struggle for victory.”\nThe metal beast bursts from your body and bows to your will—“Metal Dragon” has been added to your Deck."
       }
     },
@@ -183,7 +183,7 @@
     "treasure": {
       "name": "Card Chest",
       "texts": {
-        "TREASURE_DESC": "A dust-covered chest sits by the roadside...\nThere is no price to pay. You can also turn and leave without taking a thing.",
+        "TREASURE_DESC": "A dust-covered chest sits by the roadside...\nLift the lid to find a stack of cards (choose 1 to add to your Deck).\nThere is no price to pay. You can also turn and leave without taking a thing.",
         "TREASURE_OPENED_DESC": "The lid opens, revealing a stack of cards...\nView them in the reward popup above and choose 1 to take."
       }
     },
@@ -191,7 +191,10 @@
       "name": "Rest Stop",
       "texts": {
         "REST_DESC": "More battles await you on the road ahead.\nRest by the Campfire to restore %d%% of your Max Health;\nor roast a piece of meat to take with you and enjoy before a Boss battle;\nor add a log to the fire to Remove 1 card from your Deck.\n(Choose only 1 of the 3—once chosen, your visit here ends.)",
-        "REST_SACRAMENT_DESC": "A serving of Sacrament, still warm, sits beside the Campfire.\nYou shared it before sitting down—reaching the Campfire restored 50% of your Max Health (already resolved);\nyou may still roast a piece of meat to take with you and enjoy before a Boss battle;\nor add a log to the fire to Remove 1 card from your Deck.\n(Choose only 1 of the remaining 2—once chosen, your visit here ends.)"
+        "REST_SACRAMENT_DESC": "A serving of Sacrament, still warm, sits beside the Campfire.\nYou shared it before sitting down—reaching the Campfire restored 50% of your Max Health (already resolved);\nyou may still roast a piece of meat to take with you and enjoy before a Boss battle;\nor add a log to the fire to Remove 1 card from your Deck.\n(Choose only 1 of the remaining 2—once chosen, your visit here ends.)",
+        "REST_SACRAMENT_RESULT_DESC": "[Sacrament] Restored %d Health (now %d / %d).",
+        "REST_BANDAGE_RESULT_DESC": "[Styptic Bandage] Restored %d Health (now %d / %d).",
+        "REST_PIPE_RESULT_DESC": "[Smoking Pipe] The fire flickers—the Smoking Pipe is lit again. On your first turn of the next battle: gain 1 Cost, draw 1 additional card, and lose up to 1 Health (retain at least 1)."
       }
     }
   },
