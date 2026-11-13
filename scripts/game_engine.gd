@@ -2319,6 +2319,10 @@ func _begin_turn(side: String) -> void :
 	if over:
 		return
 	current_side = side
+	# R662 兜底：GDScript 运行时错误会跳过 `_spell_scope_depth -= 1`，一旦卡在 >0，
+	# 之后所有伤害都会被当成技能伤害（快速符文凭空加倍）。回合开头强制归零。
+	_spell_scope_depth = 0
+	_swift_rune_base_cached = -1
 	turn_total += 1   # 全局半回合计数（双方回合各 +1）
 	if side == SIDE_SELF:
 		turn_number += 1
@@ -9119,7 +9123,8 @@ func _gale_tick(side: String, played: CardData) -> void:
 		var q: Placement = state.unit_at(cell)
 		if q != null and q.owner == foe:
 			cells.append(cell)
-	var amount := _spell_dmg(side, GALE_DMG, null)
+	# R662（店长口径）：疾风是**效果卡**，不算技能伤害 → 不叠加快速符文的 +5%。
+	var amount := _spell_dmg(side, GALE_DMG, null, false)
 	if cells.is_empty():
 		_damage_player(foe, amount, "疾风")
 		_log("疾风：没有敌方单位 → 对方 HP -%d" % amount)
@@ -13065,8 +13070,12 @@ func _bear_on_field(side:= SIDE_SELF) -> bool:
 	return false
 
 
-func _spell_dmg(side: String, base: int, card: CardData = null) -> int:
+func _spell_dmg(side: String, base: int, card: CardData = null,
+		count_rune: bool = true) -> int:
 	## 技能的最终伤害 = base + 各路加成。
+	## R662：`count_rune=false` = 这一笔**不算技能伤害**，不吃快速符文的 +5% 与加倍。
+	## 唯一用途是疾风 9091 这类**效果卡**触发的伤害 —— 它借用本函数拿魔法塔 / 荧光草等
+	## 既有加成，但卡面口径是「效果」，不该被「技能伤害 +N%」放大。
 	## card 传正在结算的技能卡：鸭之眼（6009）与魔法塔（9075）都按这张卡的**原始费用**加成
 	## （刻意用 card.cost 而不是 cost_of()，各类临时减费不会把加成一起吃掉）。
 	var out:= base
@@ -13101,9 +13110,12 @@ func _spell_dmg(side: String, base: int, card: CardData = null) -> int:
 	# ⚠️ 「对不能行动的敌人加倍」不在这里做 —— 那要逐目标判，在 `_hit_unit()` 补。
 	# R661：先把「未加符文、未乘猫鼠」的基数存下来 —— 加倍差额必须按它算，
 	# 否则易伤抬高 amount 后既反推不出基数、也会把易伤也算进加成里。
-	if self_relics.has(SWIFT_RUNE_RELIC_ID):
-		_swift_rune_base_cached = out
-	out += _swift_rune_bonus(out)
+	# R662：`count_rune=false` 时**连基数缓存都不能写** —— 否则会把效果卡的裸值留进
+	# `_swift_rune_base_cached`，下一次真技能结算若没重设就拿错基数算加倍差额。
+	if count_rune:
+		if self_relics.has(SWIFT_RUNE_RELIC_ID):
+			_swift_rune_base_cached = out
+		out += _swift_rune_bonus(out)
 	# R580 猫鼠游戏：所有加算加成吃完后才乘 ——「和其他增加乘算」= (base + 各路加算) × 2。
 	if spell_mult > 1 and _in_spell_scope():
 		out = int(out * spell_mult)
@@ -18776,7 +18788,16 @@ func assemble_combo_commit() -> bool:
 	state.hand.append(result)
 	if was_dark_fusion:
 		result.add_affix("保存")
-		_dark_fusion_aoe(maxi(0, result.power) + was_fusion_bonus)
+		# R662（店长口径）：黑暗嵌合 9191 **算技能伤害** —— 但它要等组合确认才结算，
+		# 此刻 `_run_spell_effect()` 早已返回、作用域已关，所以自己开一次口，才吃得到
+		# 快速符文的 +5% 与「对不能行动敌人加倍」（后者在 `_hit_unit` 里按目标判）。
+		# 传 card=null：附魔 +10 已并进 base，且产物是盟友卡，不能再按卡面 power 并一次。
+		_spell_scope_depth += 1
+		var df_dmg:= _spell_dmg(SIDE_SELF, maxi(0, result.power) + was_fusion_bonus, null)
+		# ⚠️ 全场伤害必须在**作用域内**落地：`_hit_unit` 的「对不能行动敌人加倍」
+		# 要读 `_in_spell_scope()`，放在 `-= 1` 之后补就永远补不上（R662 自测抓到过）。
+		_dark_fusion_aoe(df_dmg)
+		_spell_scope_depth -= 1
 	var label := result.card_name
 	assemble_combo_cancel()
 	_log("传授：组合出「%s」加入手牌" % label)

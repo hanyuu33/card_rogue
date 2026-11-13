@@ -50394,7 +50394,8 @@ func _init() -> void:
 
 	check(r313_d1.cannot_act_next_turn(), "R313 不能行动判据：冰封 → 成立")
 
-	r313_se._hit_unit(r313_d1, 11, "测试")
+	# 10 × 1.15 → 11：伤害要真的过 `_spell_dmg()`，否则「加倍」那条分支拿不到基数缓存。
+	var r313_dmg_ice := r313_se._spell_dmg(GameEngine.SIDE_SELF, 10)
 
 	r313_se._hit_unit(r313_d1, r313_dmg_ice, "测试")
 
@@ -50430,7 +50431,7 @@ func _init() -> void:
 
 	r313_se._spell_scope_depth = 0
 
-	var r313_dmg_ice := r313_se._spell_dmg(GameEngine.SIDE_SELF, 10)   # 10 × 1.15 → 11
+	r313_se._hit_unit(r313_d1, r313_dmg_ice, "测试")
 
 	check(r313_d1.health == 80 - 11,
 
@@ -50553,12 +50554,11 @@ func _init() -> void:
 	var r314_id2 := RunState.roll_reward_relic(true)
 
 	check(r314_id2 > 0 and r314_repo.get_relic(r314_id2).tier == RelicData.TIER_LEGENDARY,
+			"R314 抽取：同一次掷点，大宝箱翻倍到 10%% → 出传奇（%d）" % r314_id2)
 
 	# ================= R661：审计掏出来的实现缺口（卡面写了、代码没做） =================
 
 	# ① 抽牌叠加　② 直击 HP 的免疫/承伤/计数　③ 快速符文单目标路径　④ 圣餐跨层　⑤ 逃跑写回
-
-
 
 	# ---- ① 鸭蹼 6005 + 暗动力 6054：同时持有要**各 +1** ----
 
@@ -50575,8 +50575,6 @@ func _init() -> void:
 			"R661 鸭蹼 + 暗动力：第 1 回合共多抽 2 张（实际 %d）"
 
 				% r660_draw.state.hand.size())
-
-
 
 	# ---- ② lucky 7 6045：生效轮里「普通攻击直击 HP」也要整笔免疫 ----
 
@@ -50599,8 +50597,6 @@ func _init() -> void:
 			"R661 lucky 7：普通攻击直击 HP 也整笔免疫（HP %d，本场受伤 %d）"
 
 				% [r660_l7.state.hp_self, r660_l7.state.self_hp_damage_taken])
-
-
 
 	# ---- ③ 不锈钢盆 6041 代吞 + 受伤计数（止血绷带 6029 / 核心 6059 的判据）----
 
@@ -50627,8 +50623,6 @@ func _init() -> void:
 			"R661 受伤计数：普通攻击直击 HP 也累进本场受伤（%d）"
 
 				% r660_basin.state.self_hp_damage_taken)
-
-
 
 	# ---- ④ 快速符文 6043：单目标技能（不走 _hit_unit）也要吃到「加倍」----
 
@@ -50663,8 +50657,6 @@ func _init() -> void:
 			"R661 快速符文：单目标技能打冰封敌人 = 10 × 1.3 → 13（实际 %d）"
 
 				% (r660_tgt_hp0 - r660_tgt.health))
-
-
 
 	# ---- ⑤ 圣餐 6038：跨层同编号的篝火**必须各回一次** ----
 
@@ -50716,8 +50708,6 @@ func _init() -> void:
 
 	RunState.relics = r660_rel
 
-
-
 	# ---- ⑥ 叠加态的鸭 6013：逃跑那条路也要把「已用掉的复活概率」写回 run ----
 
 	var r660_scene_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
@@ -50727,9 +50717,79 @@ func _init() -> void:
 			"R661 叠加态的鸭：结算面板与**逃跑**两条路都写回复活概率")
 
 
+	# ================= R662（店长口径）：黑暗嵌合**算**技能伤害 / 效果卡**不算** =================
+
+	# ---- ① 黑暗嵌合 9191：组合确认时结算的全体伤害，要吃到快速符文的 +5% ----
+	# 它等 `assemble_combo_commit()` 才出伤，那时 `_run_spell_effect()` 早已返回、作用域已关，
+	# 旧写法直接把裸值丢给 `_dark_fusion_aoe()` → +5% 与加倍全部漏掉。
+	var r662_repo := CardRepo.load_json()
+	var r662_fe := _new_engine([], 20, 20)
+	var r662_foe := r662_fe.state.place(_card(8003, "农民", "盟友", 3, 3, 300, 1, 1),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r662_fe.self_relics = [GameEngine.SWIFT_RUNE_RELIC_ID]
+	r662_fe.state.self_card_plays = 4   # +20%
+	# 产物力量可能只有 1，加水也看不出百分比 —— 用「附魔 +10」把基数垫到 10 以上
+	# （与 R580 同一手法：`_dark_fusion_spell` 把 card.power 当 power_bonus 带进去）。
+	var r662_fb := CardData.from_dict(r662_repo.get_card(9191).to_dict())
+	r662_fb.power = 10
+	r662_fe._dark_fusion_spell(GameEngine.SIDE_SELF, r662_fb)
+	r662_fe.assemble_combo_set_slot("attr", 0)
+	r662_fe.assemble_combo_set_slot("upper", 1)
+	r662_fe.assemble_combo_set_slot("lower", 2)
+	var r662_prev: CardData = r662_fe.assemble_combo_preview()
+	var r662_base := r662_prev.power + 10   # 产物力量 + power_bonus
+	var r662_hp0 := r662_foe.health
+	r662_fe.assemble_combo_commit()
+	check(r662_foe.health == r662_hp0 - (r662_base + (r662_base * 20) / 100),
+			"R662 黑暗嵌合：产物 %d 点按技能伤害吃 +20%% → %d（实际掉 %d）"
+				% [r662_base, r662_base + (r662_base * 20) / 100, r662_hp0 - r662_foe.health])
+
+	# ---- ② 黑暗嵌合 + 冰封敌人：`_hit_unit` 的「加倍」也要认这条路径 ----
+	var r662_be := _new_engine([], 20, 20)
+	var r662_bf := r662_be.state.place(_card(8003, "农民", "盟友", 3, 3, 300, 1, 1),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r662_bf.frozen = true
+	r662_be.self_relics = [GameEngine.SWIFT_RUNE_RELIC_ID]
+	r662_be.state.self_card_plays = 6   # +30%，加倍后 +60%
+	var r662_bfb := CardData.from_dict(r662_repo.get_card(9191).to_dict())
+	r662_bfb.power = 10
+	r662_be._dark_fusion_spell(GameEngine.SIDE_SELF, r662_bfb)
+	r662_be.assemble_combo_set_slot("attr", 0)
+	r662_be.assemble_combo_set_slot("upper", 1)
+	r662_be.assemble_combo_set_slot("lower", 2)
+	var r662_bprev: CardData = r662_be.assemble_combo_preview()
+	var r662_bbase := r662_bprev.power + 10
+	var r662_bhp0 := r662_bf.health
+	r662_be.assemble_combo_commit()
+	check(r662_bf.health == r662_bhp0 - (r662_bbase + (r662_bbase * 60) / 100),
+			"R662 黑暗嵌合：打冰封敌人加成翻倍 +60%% → %d（实际掉 %d）"
+				% [r662_bbase + (r662_bbase * 60) / 100, r662_bhp0 - r662_bf.health])
+
+	# ---- ③ 疾风 9091：效果卡**不算**技能伤害，不吃快速符文的 +5% ----
+	# 用 +50% 才看得出差别：2 点的 50% 正好进位，被加成会变成 3。
+	var r662_ge := _new_engine([], 30, 30)
+	var r662_gt := r662_ge.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
+	r662_ge.self_relics = [GameEngine.SWIFT_RUNE_RELIC_ID]
+	r662_ge.state.self_card_plays = 10   # +50%
+	r662_ge.state.energy = 15
+	r662_ge.state.hand.append(r662_repo.get_card(GameEngine.GALE_ID))
+	r662_ge.use_effect(0)
+	r662_ge._gale_tick(GameEngine.SIDE_SELF, null)
+	check(r662_gt.health == 55 - 2,
+			"R662 疾风：效果卡不吃 +50%%（应 -2，实际 -%d）" % (55 - r662_gt.health))
+	check(r662_ge._spell_dmg(GameEngine.SIDE_SELF, GameEngine.GALE_DMG, null, true) == 3,
+			"R662 对照：同一数值若按技能算会变成 3（证明开关真的在起作用）")
+
+	# ---- ④ 作用域兜底：脚本错误把 `_spell_scope_depth` 卡在 >0 时，回合开头必须归零 ----
+	var r662_le := _new_engine([], 20, 20)
+	r662_le._spell_scope_depth = 3
+	r662_le._begin_turn(GameEngine.SIDE_SELF)
+	check(r662_le._spell_scope_depth == 0,
+			"R662 作用域兜底：回合开始强制归零（实际 %d）" % r662_le._spell_scope_depth)
 
 
-			"R314 抽取：同一次掷点，大宝箱翻倍到 10%% → 出传奇（%d）" % r314_id2)
+
 
 	RunState.current_layer = GameLayers.LAYER_TWO
 
