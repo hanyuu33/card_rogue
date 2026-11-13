@@ -71960,6 +71960,31 @@ func _test_r592b() -> void:
 			glyph_ok = false
 
 	check(glyph_ok, "R656：五个状态 glyph 都有矢量符号（stun/frozen/sleep/fuse/activate）")
+	# R658（店长口径）：「可发动」不进右上角槽位 —— 槽位是「它身上有什么」（状态），
+	# 可发动是「你现在能按它」（邀请）。改走卡框上沿正中的动态图标。
+	check(not bfs.contains("\"glyph\": \"activate\"")
+			and bfs.contains("func _draw_activate_callout(")
+			and bfs.contains("_draw_activate_callout(center, w, h, selected, cell)"),
+			"R658：可发动不进槽位，改由 _draw_activate_callout 画在卡框上沿正中")
+
+	# 源码锁：弹入归位只能在**选区归位口**，不能在绘制里 else 归位 ——
+	# 同一帧里别的可发动单位会以 selected=false 走进来，把记录清成 (-1,-1)，
+	# 选中那张于是每帧都「刚刚开始弹入」，永远长不大（R658 首版的实际故障）。
+	var r658_ci := bfs.find("func _draw_activate_callout(")
+	var r658_ce := bfs.find("\nfunc ", r658_ci + 10)
+	var r658_cb := bfs.substr(r658_ci, r658_ce - r658_ci)
+	check(r658_ci > 0 and not r658_cb.contains("_act_sel_cell = Vector2i(-1, -1)")
+			and r658_cb.contains("if selected and _act_sel_cell != cell:"),
+			"R658：邀请图标的弹入归位不在绘制里（否则同帧别的单位会把进度清掉）")
+	check(bfs.contains("_act_sel_cell = Vector2i(-1, -1)   # R658"),
+			"R658：选区归位口（_clear_selection / _select_board）负责重置弹入")
+
+	# 动效三件套必须在（店长点名「不要静态图标」）：呼吸、轻浮、选中放大
+	check(r658_cb.contains("var breathe := 1.0 + sin(t * speed)")
+			and r658_cb.contains("var bob := sin(t * 1.9)")
+			and r658_cb.contains("var r_sel := h * 0.30"),
+			"R658：邀请图标会呼吸 / 轻浮 / 选中放大到卡心（静态图标不算数）")
+
 
 	# ⑥ 详细描述仍然是「+力/+生命」的唯一展示位
 
