@@ -96,6 +96,10 @@ func _draw_entry_icon(e: Dictionary, center: Vector2) -> void:
 	var key := str(e.get("kind", "cards"))
 	if key == "cards" and bool(e.get("legendary", false)):
 		key = "legendary"
+	# R674：大宝箱二选一（relic_or_key）没有专属图，原来退化成金盾色盾 —— 与同一列表里
+	# 普通道具条目的图标风格打架。改用低难度大宝箱（kind = relic）那个图标。
+	if key == "relic_or_key":
+		key = "relic"
 	var tex := UiAssets.small_icon("reward_icons/" + key, 64)
 	if tex == null:
 		super._draw_entry_icon(e, center)

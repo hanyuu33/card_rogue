@@ -75,14 +75,16 @@ const LEGEND_FX_MS := 1100
 
 const PANEL_W := 1020.0
 const PANEL_H := 584.0
-const PAD := 24.0
+## R674：内容要退到九宫格 34px 角花之内 —— 原来 PAD=24，标题/行卡片/按钮全压在左右边条与
+## 上下花纹带上。54 = 角花 34 + 留白 20。
+const PAD := 54.0
 const ROW_H := 84.0
 const ROW_GAP := 10.0
 ## R531：追加奖励区块的**分隔带**高度 —— 画在 bonus 行**上方**（金线 + 题签 + 暖光）。
 ## 行位置一律走 `_row_top()`：这里多出来的高度必须同时算进滚动上限与点击命中。
 const BONUS_HEAD_H := 52.0
-const HEAD_H := 66.0          # 面板头部高度（标题行之下就是列表）
-const FOOT_H := 66.0          # 面板底部按钮带高度
+const HEAD_H := 76.0          # 面板头部高度（标题行之下就是列表）R674：+10 给标题下移
+const FOOT_H := 92.0          # 面板底部按钮带高度 R674：按钮上移 26，离开下边框花纹带
 
 # 卡牌三选一：版式尺度沿用原 card_reward 场景，玩家看到的位置不变
 const CARD_W := 216.0
@@ -966,9 +968,9 @@ func _draw_list() -> void:
 	_draw_panel_box(r)
 	var total := RunState.pending_rewards.size()
 	var pend := RunState.pending_reward_count()
-	_root.draw_string(_font_bold, Vector2(r.position.x + PAD, r.position.y + 40),
+	_root.draw_string(_font_bold, Vector2(r.position.x + PAD, r.position.y + 60),
 			GameI18n.ui("reward", "REWARD_LIST_TITLE", "✦ 获得奖励"), HORIZONTAL_ALIGNMENT_LEFT, 400, UiTheme.FS_HEADING, UiTheme.INK_900)
-	_root.draw_string(_font, Vector2(r.position.x + 250, r.position.y + 38),
+	_root.draw_string(_font, Vector2(r.position.x + 250, r.position.y + 58),
 			GameI18n.ui("reward", "REWARD_LIST_SUMMARY", "共 %d 件 · 待领 %d 件　（点任意一条查看详情）") % [total, pend],
 			HORIZONTAL_ALIGNMENT_LEFT, PANEL_W - 300, UiTheme.FS_BODY, UiTheme.INK_600)
 
@@ -1261,8 +1263,8 @@ func _draw_relic() -> void:
 					HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_HEADING).x
 			_root.draw_texture_rect(icon577_tex,
 					Rect2(r.position.x + 180 + icon577_tw + 14.0,
-							r.position.y + 6, 56.0, 56.0), false)
-	_root.draw_string(_font_bold, Vector2(r.position.x + 180, r.position.y + 40),
+							r.position.y + 34, 44.0, 44.0), false)
+	_root.draw_string(_font_bold, Vector2(r.position.x + 180, r.position.y + 60),
 			"「%s」" % _entry_name(e), HORIZONTAL_ALIGNMENT_LEFT, 520,
 			UiTheme.FS_HEADING, _entry_name_color(e, UiTheme.INK_900))
 	# R206：改半透明奶油底（透出羊皮卷纹理）+ **高度随内容自适应** —— 与卡牌三选一的
@@ -1315,7 +1317,7 @@ func _draw_key_choice() -> void:
 	var e: Dictionary = RunState.pending_rewards[_sel]
 	var settled := _settled(e)
 	_draw_btn(_btn_back_rect(), "← 返回列表", false, false)
-	_root.draw_string(_font_bold, Vector2(r.position.x + 180, r.position.y + 40),
+	_root.draw_string(_font_bold, Vector2(r.position.x + 180, r.position.y + 60),
 			GameI18n.ui("reward", "REWARD_BIG_CHEST_CHOICE_TITLE", "大宝箱 · 二选一"), HORIZONTAL_ALIGNMENT_LEFT, 520,
 			UiTheme.FS_HEADING, UiTheme.INK_900)
 	_root.draw_string(_font, Vector2(r.position.x + PAD * 2.0, r.position.y + HEAD_H + 30),
@@ -1546,7 +1548,7 @@ func _close_deck_viewer() -> void:
 func _btn_view_deck_rect(pr: Rect2) -> Rect2:
 	## 「卡组」入口：贴面板右上角（列表页 / 卡牌三选一页用同一个几何）。
 	## 两页的标题都是居中或左对齐的短句，右上角这一小块是空的 —— 不抢按钮带。
-	return Rect2(pr.end.x - 30.0 - 104.0, pr.position.y + 14.0, 104.0, 32.0)
+	return Rect2(pr.end.x - PAD - 104.0, pr.position.y + 42.0, 104.0, 32.0)
 
 
 func _btn_view_deck_cards_rect() -> Rect2:
@@ -1997,7 +1999,7 @@ func _draw_btn(r: Rect2, text: String, primary: bool, disabled: bool) -> void:
 
 func _btn_done_rect() -> Rect2:
 	var r := _panel_rect()
-	return Rect2(r.end.x - PAD - 120.0, r.end.y - 52.0, 120.0, 38.0)
+	return Rect2(r.end.x - PAD - 120.0, r.end.y - 78.0, 120.0, 38.0)
 
 
 func _btn_claim_all_rect() -> Rect2:
@@ -2007,12 +2009,12 @@ func _btn_claim_all_rect() -> Rect2:
 
 func _btn_back_rect() -> Rect2:
 	var r := _panel_rect()
-	return Rect2(r.position.x + PAD, r.position.y + 16.0, 130.0, 34.0)
+	return Rect2(r.position.x + PAD, r.position.y + 42.0, 130.0, 34.0)
 
 
 func _btn_claim_rect() -> Rect2:
 	var r := _panel_rect()
-	return Rect2(r.end.x - PAD - 120.0, r.end.y - 52.0, 120.0, 38.0)
+	return Rect2(r.end.x - PAD - 120.0, r.end.y - 78.0, 120.0, 38.0)
 
 
 func _btn_skip_rect() -> Rect2:
@@ -2491,6 +2493,22 @@ func _demo_start() -> void:
 				_open_entry(bidx))
 		add_child(tmb)
 		tmb.start()
+		return
+	# R674：大宝箱「奖励道具 / 生命之种」二选一视图（难度 ≥ 11 才出现）。
+	#   `battle.tscn -- --screenshot --keydemo --shotframe 200`
+	if "--keydemo" in args:
+		RunState.run_active = true
+		RunState.pending_rewards = []
+		RunState.queue_key_choice(6001)
+		var tk := Timer.new()
+		tk.wait_time = 0.25
+		tk.one_shot = true
+		tk.timeout.connect(func():
+			open()
+			if "--keylist" not in args:
+				_open_entry(0))
+		add_child(tk)
+		tk.start()
 		return
 	# R469 出图：月亮 9180 / 精英战的删卡页 —— 卡组里前几张预先贴好附魔，
 	# 核验「附魔标记与附魔数值都在」。两种不同附魔（颜色不同）才看得出确实是附魔。
