@@ -971,7 +971,7 @@
    "effect_text": "On Play: add two \"Charged Bombardment\" to your Deck. Each time it gains an Upgrade, add a \"Charged Bombardment\" from your Deck to your Hand. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
   },
   "9167": {
-   "name": "Combine",
+   "name": "Merge",
    "effect_text": "Choose a \"Chassis\" in your Deck and **Banish** it (removed from this battle); give a friendly Ally or Structure on the field an Upgrade: its Power and Health each increase by that Chassis's values."
   },
   "9168": {

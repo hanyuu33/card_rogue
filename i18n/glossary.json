@@ -1,9 +1,16 @@
 {
-  "version": 1,
+  "version": 2,
   "updated": "2026-11-13",
   "source_lang": "zh-CN",
-  "targets": ["en", "ja"],
-  "brand": { "zh": "嘎嘎乱杀", "en": "Quackill", "ja": "ガーガー乱殺" },
+  "targets": [
+    "en",
+    "ja"
+  ],
+  "brand": {
+    "zh": "嘎嘎乱杀",
+    "en": "Quackill",
+    "ja": "ガーガー乱殺"
+  },
   "rules": [
     "前置铁律（店长 2026-11-13 定）：建术语表之前先统一中文术语；翻译之前先审中文描述——与效果字段逐条对应（不漏次元等词缀、数值不漂移）、无冗余说明。中文底子不干净不得开译。",
     "统一落在 i18n/zh_canonical.json（翻译唯一底本）与 card_text.gd 的 PHRASE_FIXES（显示层）。cards.json 权威原文一律不改：R106/R344/R600 定案，测试按原文断言。",
@@ -18,158 +25,2246 @@
     "日文卡牌正文用简体断言语气（～する／～を与える），说明性长句用「～。」收尾，不用です・ます。",
     "英文统一用祈使或名词短语，回合结束类用 At the end of the turn，避免 you 指代不清时用 the player。",
     "消失 = 本场对战移除（Banish），与弃牌 Discard、移除 Remove 严格区分，不可混译。",
-    "接通 = 伤害转移链接（Link），不可译成 Connect / Connective。"
+    "接通 = 伤害转移链接（Link），不可译成 Connect / Connective。",
+    "合体仅指 9167 技能卡：Merge／合体；组合是 R614 三槽生成卡流程：Assemble／組み立てる。二者不得共用 Combine。",
+    "道具是系统 relic：Relic／レリック；信物是难度 11 的第三层钥匙：Key Relic／キーレリック，二者分开记账，不得混译。",
+    "地图「巧克力」与难度旧文案「行动力」均指向 RunState.chocolate，外译统一 Chocolate／チョコレート；不得另造 Action Points 与单位行动次数混淆。",
+    "消耗区是本战斗消失卡的浏览区：Banished Cards／消滅置き場；不得套用 Exhaust 或 Discard。",
+    "卡牌稀有度只有普通／稀有／史诗／初始／怪物／事件／诅咒；传奇是道具 tier，不得给卡牌另造传说稀有度。",
+    "字段（AFFIX_DEFS）与附魔（ENCHANT_DEFS）是两个命名空间；名称与说明分别按各自真源翻译。",
+    "同名剧情与成就共用译名；非卡牌专名若已有卡名译文，必须复用，不另起一套。"
   ],
   "mechanics": {
-    "嘲讽": { "en": "Taunt", "ja": "挑発" },
-    "改造": { "en": "Upgrade", "ja": "改造", "note": "机械之心的卡牌强化机制，对应 trigger=upgraded" },
-    "素体": { "en": "Chassis", "ja": "素体" },
-    "接通": { "en": "Link", "ja": "リンク", "note": "被链接单位代为承受伤害" },
-    "消失": { "en": "Banish", "ja": "消滅", "note": "本场对战移除，不进弃牌区" },
-    "超负荷": { "en": "Overload", "ja": "オーバーロード" },
-    "超载": { "en": "Overload", "ja": "オーバーロード" },
-    "次元": { "en": "Dimensional", "ja": "次元" },
-    "专注": { "en": "Focus", "ja": "集中" },
-    "沉睡": { "en": "Sleep", "ja": "睡眠" },
-    "睡眠": { "en": "Sleep", "ja": "睡眠" },
-    "践踏": { "en": "Trample", "ja": "踏みつけ" },
-    "破绽": { "en": "Opening", "ja": "隙" },
-    "留手": { "en": "Retain", "ja": "保持" },
-    "自愈": { "en": "Self-Heal", "ja": "自己治癒" },
-    "回春": { "en": "Rejuvenation", "ja": "回春" },
-    "战吼": { "en": "Battlecry", "ja": "雄叫び" },
-    "锻造": { "en": "Forge", "ja": "鍛造" },
-    "位移免疫": { "en": "Move Immunity", "ja": "移動免疫" },
-    "孵化": { "en": "Hatch", "ja": "孵化" },
-    "麻痹": { "en": "Paralysis", "ja": "麻痺" },
-    "中毒": { "en": "Poison", "ja": "毒" },
-    "眩晕": { "en": "Stun", "ja": "スタン" },
-    "召唤": { "en": "Summon", "ja": "召喚" },
-    "消灭": { "en": "Destroy", "ja": "破壊" },
-    "破坏": { "en": "Destroy", "ja": "破壊" },
-    "移除": { "en": "Remove", "ja": "除外" },
-    "复制": { "en": "Copy", "ja": "コピー" },
-    "变形": { "en": "Transform", "ja": "変形" },
-    "升级": { "en": "Level Up", "ja": "レベルアップ" },
-    "强化": { "en": "Enhance", "ja": "強化" },
-    "护甲": { "en": "Armor", "ja": "装甲" },
-    "护盾": { "en": "Shield", "ja": "シールド" },
-    "抽牌": { "en": "Draw", "ja": "ドロー" },
-    "抽取": { "en": "Draw", "ja": "ドロー" },
-    "弃牌": { "en": "Discard", "ja": "捨て札" },
-    "弃牌库": { "en": "Discard Pile", "ja": "捨て札置き場" },
-    "弃牌区": { "en": "Discard Pile", "ja": "捨て札置き場" },
-    "牌库": { "en": "Deck", "ja": "デッキ" },
-    "手牌": { "en": "Hand", "ja": "手札" },
-    "手卡": { "en": "Hand", "ja": "手札" },
-    "回合": { "en": "Turn", "ja": "ターン" },
-    "力量": { "en": "Power", "ja": "攻撃力" },
-    "攻击力": { "en": "Attack", "ja": "攻撃力" },
-    "生命值": { "en": "Health", "ja": "HP" },
-    "血量": { "en": "Health", "ja": "HP" },
-    "生命": { "en": "Health", "ja": "HP" },
-    "费用": { "en": "Cost", "ja": "コスト" },
-    "能量": { "en": "Energy", "ja": "エネルギー" },
-    "金币": { "en": "Gold", "ja": "ゴールド" },
-    "攻击距离": { "en": "Attack Range", "ja": "攻撃射程" },
-    "移动速度": { "en": "Move Speed", "ja": "移動速度" },
-    "移速": { "en": "Move Speed", "ja": "移動速度" },
-    "敌方": { "en": "Enemy", "ja": "敵" },
-    "我方": { "en": "Friendly", "ja": "味方" },
-    "己方": { "en": "Friendly", "ja": "味方" },
-    "友方": { "en": "Friendly", "ja": "味方" },
-    "随机": { "en": "Random", "ja": "ランダム" },
-    "相邻": { "en": "Adjacent", "ja": "隣接" },
-    "入场": { "en": "On Play", "ja": "登場時" },
-    "登场": { "en": "On Play", "ja": "登場時" },
-    "离场": { "en": "On Leave", "ja": "離場時" },
-    "击杀": { "en": "Kill", "ja": "撃破" },
-    "击退": { "en": "Knockback", "ja": "ノックバック" },
-    "疾行": { "en": "Swift", "ja": "疾行", "note": "affix，一回合行动两次，卡面自动显示" },
-    "保存": { "en": "Preserve", "ja": "保存", "note": "affix，回合结束不丢弃" },
-    "每回合可以行动两次": { "en": "act twice per turn", "ja": "毎ターン2回行動可能" },
-    "删除": { "en": "Remove from Deck", "ja": "デッキから削除", "note": "跨战斗的卡组移除，与消失不同" }
+    "嘲讽": {
+      "en": "Taunt",
+      "ja": "挑発"
+    },
+    "改造": {
+      "en": "Upgrade",
+      "ja": "改造",
+      "note": "机械之心的卡牌强化机制，对应 trigger=upgraded"
+    },
+    "素体": {
+      "en": "Chassis",
+      "ja": "素体"
+    },
+    "接通": {
+      "en": "Link",
+      "ja": "リンク",
+      "note": "被链接单位代为承受伤害"
+    },
+    "消失": {
+      "en": "Banish",
+      "ja": "消滅",
+      "note": "本场对战移除，不进弃牌区"
+    },
+    "超负荷": {
+      "en": "Overload",
+      "ja": "オーバーロード"
+    },
+    "超载": {
+      "en": "Overload",
+      "ja": "オーバーロード"
+    },
+    "次元": {
+      "en": "Dimensional",
+      "ja": "次元"
+    },
+    "专注": {
+      "en": "Focus",
+      "ja": "集中"
+    },
+    "沉睡": {
+      "en": "Sleep",
+      "ja": "睡眠"
+    },
+    "睡眠": {
+      "en": "Sleep",
+      "ja": "睡眠"
+    },
+    "践踏": {
+      "en": "Trample",
+      "ja": "踏みつけ"
+    },
+    "破绽": {
+      "en": "Opening",
+      "ja": "隙"
+    },
+    "留手": {
+      "en": "Retain",
+      "ja": "保持"
+    },
+    "自愈": {
+      "en": "Self-Heal",
+      "ja": "自己治癒"
+    },
+    "回春": {
+      "en": "Rejuvenation",
+      "ja": "回春"
+    },
+    "战吼": {
+      "en": "Battlecry",
+      "ja": "雄叫び"
+    },
+    "锻造": {
+      "en": "Forge",
+      "ja": "鍛造"
+    },
+    "位移免疫": {
+      "en": "Move Immunity",
+      "ja": "移動免疫"
+    },
+    "孵化": {
+      "en": "Hatch",
+      "ja": "孵化"
+    },
+    "麻痹": {
+      "en": "Paralysis",
+      "ja": "麻痺"
+    },
+    "中毒": {
+      "en": "Poison",
+      "ja": "毒"
+    },
+    "眩晕": {
+      "en": "Stun",
+      "ja": "スタン"
+    },
+    "召唤": {
+      "en": "Summon",
+      "ja": "召喚"
+    },
+    "消灭": {
+      "en": "Destroy",
+      "ja": "破壊"
+    },
+    "破坏": {
+      "en": "Destroy",
+      "ja": "破壊"
+    },
+    "移除": {
+      "en": "Remove",
+      "ja": "除外"
+    },
+    "复制": {
+      "en": "Copy",
+      "ja": "コピー"
+    },
+    "变形": {
+      "en": "Transform",
+      "ja": "変形"
+    },
+    "升级": {
+      "en": "Level Up",
+      "ja": "レベルアップ"
+    },
+    "强化": {
+      "en": "Enhance",
+      "ja": "強化"
+    },
+    "护甲": {
+      "en": "Armor",
+      "ja": "装甲"
+    },
+    "护盾": {
+      "en": "Shield",
+      "ja": "シールド"
+    },
+    "抽牌": {
+      "en": "Draw",
+      "ja": "ドロー"
+    },
+    "抽取": {
+      "en": "Draw",
+      "ja": "ドロー"
+    },
+    "弃牌": {
+      "en": "Discard",
+      "ja": "捨て札"
+    },
+    "弃牌库": {
+      "en": "Discard Pile",
+      "ja": "捨て札置き場"
+    },
+    "弃牌区": {
+      "en": "Discard Pile",
+      "ja": "捨て札置き場"
+    },
+    "牌库": {
+      "en": "Deck",
+      "ja": "デッキ"
+    },
+    "手牌": {
+      "en": "Hand",
+      "ja": "手札"
+    },
+    "手卡": {
+      "en": "Hand",
+      "ja": "手札"
+    },
+    "回合": {
+      "en": "Turn",
+      "ja": "ターン"
+    },
+    "力量": {
+      "en": "Power",
+      "ja": "攻撃力"
+    },
+    "攻击力": {
+      "en": "Attack",
+      "ja": "攻撃力"
+    },
+    "生命值": {
+      "en": "Health",
+      "ja": "HP"
+    },
+    "血量": {
+      "en": "Health",
+      "ja": "HP"
+    },
+    "生命": {
+      "en": "Health",
+      "ja": "HP"
+    },
+    "费用": {
+      "en": "Cost",
+      "ja": "コスト"
+    },
+    "能量": {
+      "en": "Energy",
+      "ja": "エネルギー"
+    },
+    "金币": {
+      "en": "Gold",
+      "ja": "ゴールド"
+    },
+    "攻击距离": {
+      "en": "Attack Range",
+      "ja": "攻撃射程"
+    },
+    "移动速度": {
+      "en": "Move Speed",
+      "ja": "移動速度"
+    },
+    "移速": {
+      "en": "Move Speed",
+      "ja": "移動速度"
+    },
+    "敌方": {
+      "en": "Enemy",
+      "ja": "敵"
+    },
+    "我方": {
+      "en": "Friendly",
+      "ja": "味方"
+    },
+    "己方": {
+      "en": "Friendly",
+      "ja": "味方"
+    },
+    "友方": {
+      "en": "Friendly",
+      "ja": "味方"
+    },
+    "随机": {
+      "en": "Random",
+      "ja": "ランダム"
+    },
+    "相邻": {
+      "en": "Adjacent",
+      "ja": "隣接"
+    },
+    "入场": {
+      "en": "On Play",
+      "ja": "登場時"
+    },
+    "登场": {
+      "en": "On Play",
+      "ja": "登場時"
+    },
+    "离场": {
+      "en": "On Leave",
+      "ja": "離場時"
+    },
+    "击杀": {
+      "en": "Kill",
+      "ja": "撃破"
+    },
+    "击退": {
+      "en": "Knockback",
+      "ja": "ノックバック"
+    },
+    "疾行": {
+      "en": "Swift",
+      "ja": "疾行",
+      "note": "affix，一回合行动两次，卡面自动显示"
+    },
+    "保存": {
+      "en": "Preserve",
+      "ja": "保存",
+      "note": "affix，回合结束不丢弃"
+    },
+    "每回合可以行动两次": {
+      "en": "act twice per turn",
+      "ja": "毎ターン2回行動可能"
+    },
+    "删除": {
+      "en": "Remove from Deck",
+      "ja": "デッキから削除",
+      "note": "跨战斗的卡组移除，与消失不同"
+    },
+    "组合": {
+      "en": "Assemble",
+      "ja": "組み立てる",
+      "note": "R614 三槽组合生成卡流程，不是 affix"
+    },
+    "幻影": {
+      "en": "Ephemeral",
+      "ja": "幻影"
+    },
+    "交换": {
+      "en": "Swap",
+      "ja": "入れ替え"
+    },
+    "共享护盾": {
+      "en": "Shared Shield",
+      "ja": "共有シールド"
+    },
+    "冰封": {
+      "en": "Freeze",
+      "ja": "氷結"
+    },
+    "禁足": {
+      "en": "Root",
+      "ja": "移動不可"
+    },
+    "惧光": {
+      "en": "Light Phobia",
+      "ja": "光恐怖"
+    },
+    "铸造": {
+      "en": "Casting",
+      "ja": "鋳造",
+      "note": "与锻造 Forge 是不同机制"
+    },
+    "附魔": {
+      "en": "Enchant",
+      "ja": "付呪"
+    },
+    "字段": {
+      "en": "Keyword",
+      "ja": "キーワード"
+    },
+    "起手": {
+      "en": "Opening Hand",
+      "ja": "初期手札"
+    },
+    "伤害": {
+      "en": "Damage",
+      "ja": "ダメージ"
+    },
+    "巧克力": {
+      "en": "Chocolate",
+      "ja": "チョコレート"
+    },
+    "行动力": {
+      "en": "Chocolate",
+      "ja": "チョコレート",
+      "note": "难度旧文案别名；真源同为 RunState.chocolate"
+    },
+    "最大生命": {
+      "en": "Max Health",
+      "ja": "最大HP"
+    },
+    "生命上限": {
+      "en": "Max Health",
+      "ja": "最大HP"
+    },
+    "道具": {
+      "en": "Relic",
+      "ja": "レリック"
+    },
+    "信物": {
+      "en": "Key Relic",
+      "ja": "キーレリック"
+    },
+    "关卡效果": {
+      "en": "Level Effect",
+      "ja": "ステージ効果"
+    },
+    "消耗区": {
+      "en": "Banished Cards",
+      "ja": "消滅置き場"
+    },
+    "死亡": {
+      "en": "Death",
+      "ja": "死亡"
+    }
   },
   "kinds": {
-    "盟友": { "en": "Ally", "ja": "味方" },
-    "工事": { "en": "Structure", "ja": "構造物" },
-    "技能": { "en": "Skill", "ja": "スキル" },
-    "效果": { "en": "Effect", "ja": "効果" },
-    "场地": { "en": "Field", "ja": "フィールド" },
-    "诅咒": { "en": "Curse", "ja": "呪い" }
+    "盟友": {
+      "en": "Ally",
+      "ja": "味方"
+    },
+    "工事": {
+      "en": "Structure",
+      "ja": "構造物"
+    },
+    "技能": {
+      "en": "Skill",
+      "ja": "スキル"
+    },
+    "效果": {
+      "en": "Effect",
+      "ja": "効果"
+    },
+    "场地": {
+      "en": "Field",
+      "ja": "フィールド"
+    },
+    "诅咒": {
+      "en": "Curse",
+      "ja": "呪い"
+    }
   },
   "classes": {
-    "敌人": { "en": "Enemy", "ja": "敵" },
-    "森林精魄": { "en": "Forest Spirit", "ja": "森の精霊" },
-    "暗影刺客": { "en": "Shadow Assassin", "ja": "暗影の刺客" },
-    "机械之心": { "en": "Mechanical Heart", "ja": "機械の心" }
+    "敌人": {
+      "en": "Enemy",
+      "ja": "敵"
+    },
+    "森林精魄": {
+      "en": "Forest Spirit",
+      "ja": "森の精霊"
+    },
+    "暗影刺客": {
+      "en": "Shadow Assassin",
+      "ja": "暗影の刺客"
+    },
+    "机械之心": {
+      "en": "Mechanical Heart",
+      "ja": "機械の心"
+    }
   },
   "colors": {
-    "白": { "en": "White", "ja": "白" },
-    "红": { "en": "Red", "ja": "赤" },
-    "蓝": { "en": "Blue", "ja": "青" },
-    "黑": { "en": "Black", "ja": "黒" },
-    "黄": { "en": "Yellow", "ja": "黄" },
-    "灰": { "en": "Gray", "ja": "灰" },
-    "绿": { "en": "Green", "ja": "緑" },
-    "紫": { "en": "Purple", "ja": "紫" },
-    "金": { "en": "Gold", "ja": "金" },
-    "橙": { "en": "Orange", "ja": "橙" },
-    "棕": { "en": "Brown", "ja": "茶" }
+    "白": {
+      "en": "White",
+      "ja": "白"
+    },
+    "红": {
+      "en": "Red",
+      "ja": "赤"
+    },
+    "蓝": {
+      "en": "Blue",
+      "ja": "青"
+    },
+    "黑": {
+      "en": "Black",
+      "ja": "黒"
+    },
+    "黄": {
+      "en": "Yellow",
+      "ja": "黄"
+    },
+    "灰": {
+      "en": "Gray",
+      "ja": "灰"
+    },
+    "绿": {
+      "en": "Green",
+      "ja": "緑"
+    },
+    "紫": {
+      "en": "Purple",
+      "ja": "紫"
+    },
+    "金": {
+      "en": "Gold",
+      "ja": "金"
+    },
+    "橙": {
+      "en": "Orange",
+      "ja": "橙"
+    },
+    "棕": {
+      "en": "Brown",
+      "ja": "茶"
+    }
   },
   "traits": {
-    "机械": { "en": "Mech", "ja": "機械" },
-    "工事": { "en": "Structure", "ja": "構造物" },
-    "改造": { "en": "Upgrade", "ja": "改造" },
-    "鸭": { "en": "Duck", "ja": "アヒル" },
-    "鹅": { "en": "Goose", "ja": "ガチョウ" },
-    "事件": { "en": "Event", "ja": "イベント" },
-    "亡灵": { "en": "Undead", "ja": "アンデッド" },
-    "持续场地": { "en": "Persistent Field", "ja": "永続フィールド" },
-    "龙": { "en": "Dragon", "ja": "ドラゴン" },
-    "死亡": { "en": "Death", "ja": "死亡" },
-    "离场消失": { "en": "Banish on Leave", "ja": "離場時に消滅" },
-    "栅栏": { "en": "Fence", "ja": "柵" },
-    "火焰": { "en": "Fire", "ja": "炎" },
-    "构状体": { "en": "Automaton", "ja": "構状体", "note": "9243/9244/9245 普罗诺亚之影的变形产物，与 8026 构装体不同" },
-    "战士": { "en": "Warrior", "ja": "戦士" },
-    "守卫": { "en": "Guard", "ja": "衛兵" },
-    "法师": { "en": "Mage", "ja": "魔術師" },
-    "骑士": { "en": "Knight", "ja": "騎士" },
-    "巨人": { "en": "Giant", "ja": "巨人" },
-    "野兽": { "en": "Beast", "ja": "野獣" },
-    "使魔": { "en": "Familiar", "ja": "使い魔" },
-    "使魔成长": { "en": "Familiar Growth", "ja": "使い魔成長" },
-    "恶魔": { "en": "Demon", "ja": "悪魔" },
-    "树人": { "en": "Treant", "ja": "トレント" },
-    "枭熊": { "en": "Owlbear", "ja": "オウルベア" },
-    "幽影": { "en": "Shade", "ja": "幽影" },
-    "犀牛": { "en": "Rhino", "ja": "サイ" },
-    "跳跃": { "en": "Leap", "ja": "跳躍" },
-    "防御": { "en": "Defense", "ja": "防御" },
-    "攻击": { "en": "Attack", "ja": "攻撃" },
-    "技能抗性": { "en": "Skill Resist", "ja": "スキル耐性" },
-    "仅玩家可放置": { "en": "Player Placement Only", "ja": "プレイヤーのみ設置可能" },
-    "场地生效·双": { "en": "Field: Both Sides", "ja": "フィールド効果・双方" },
-    "场地生效·友": { "en": "Field: Friendly", "ja": "フィールド効果・味方" },
-    "锻造": { "en": "Forge", "ja": "鍛造" },
-    "孵化": { "en": "Hatch", "ja": "孵化" },
-    "普罗诺亚": { "en": "Pronoia", "ja": "プロノイア" },
-    "忒修斯奇械": { "en": "Theseus Engine", "ja": "テセウスの機械" }
+    "机械": {
+      "en": "Mech",
+      "ja": "機械"
+    },
+    "工事": {
+      "en": "Structure",
+      "ja": "構造物"
+    },
+    "改造": {
+      "en": "Upgrade",
+      "ja": "改造"
+    },
+    "鸭": {
+      "en": "Duck",
+      "ja": "アヒル"
+    },
+    "鹅": {
+      "en": "Goose",
+      "ja": "ガチョウ"
+    },
+    "事件": {
+      "en": "Event",
+      "ja": "イベント"
+    },
+    "亡灵": {
+      "en": "Undead",
+      "ja": "アンデッド"
+    },
+    "持续场地": {
+      "en": "Persistent Field",
+      "ja": "永続フィールド"
+    },
+    "龙": {
+      "en": "Dragon",
+      "ja": "ドラゴン"
+    },
+    "死亡": {
+      "en": "Death",
+      "ja": "死亡"
+    },
+    "离场消失": {
+      "en": "Banish on Leave",
+      "ja": "離場時に消滅"
+    },
+    "栅栏": {
+      "en": "Fence",
+      "ja": "柵"
+    },
+    "火焰": {
+      "en": "Fire",
+      "ja": "炎"
+    },
+    "构状体": {
+      "en": "Automaton",
+      "ja": "構状体",
+      "note": "9243/9244/9245 普罗诺亚之影的变形产物，与 8026 构装体不同"
+    },
+    "战士": {
+      "en": "Warrior",
+      "ja": "戦士"
+    },
+    "守卫": {
+      "en": "Guard",
+      "ja": "衛兵"
+    },
+    "法师": {
+      "en": "Mage",
+      "ja": "魔術師"
+    },
+    "骑士": {
+      "en": "Knight",
+      "ja": "騎士"
+    },
+    "巨人": {
+      "en": "Giant",
+      "ja": "巨人"
+    },
+    "野兽": {
+      "en": "Beast",
+      "ja": "野獣"
+    },
+    "使魔": {
+      "en": "Familiar",
+      "ja": "使い魔"
+    },
+    "使魔成长": {
+      "en": "Familiar Growth",
+      "ja": "使い魔成長"
+    },
+    "恶魔": {
+      "en": "Demon",
+      "ja": "悪魔"
+    },
+    "树人": {
+      "en": "Treant",
+      "ja": "トレント"
+    },
+    "枭熊": {
+      "en": "Owlbear",
+      "ja": "オウルベア"
+    },
+    "幽影": {
+      "en": "Shade",
+      "ja": "幽影"
+    },
+    "犀牛": {
+      "en": "Rhino",
+      "ja": "サイ"
+    },
+    "跳跃": {
+      "en": "Leap",
+      "ja": "跳躍"
+    },
+    "防御": {
+      "en": "Defense",
+      "ja": "防御"
+    },
+    "攻击": {
+      "en": "Attack",
+      "ja": "攻撃"
+    },
+    "技能抗性": {
+      "en": "Skill Resist",
+      "ja": "スキル耐性"
+    },
+    "仅玩家可放置": {
+      "en": "Player Placement Only",
+      "ja": "プレイヤーのみ設置可能"
+    },
+    "场地生效·双": {
+      "en": "Field: Both Sides",
+      "ja": "フィールド効果・双方"
+    },
+    "场地生效·友": {
+      "en": "Field: Friendly",
+      "ja": "フィールド効果・味方"
+    },
+    "锻造": {
+      "en": "Forge",
+      "ja": "鍛造"
+    },
+    "孵化": {
+      "en": "Hatch",
+      "ja": "孵化"
+    },
+    "普罗诺亚": {
+      "en": "Pronoia",
+      "ja": "プロノイア"
+    },
+    "忒修斯奇械": {
+      "en": "Theseus Engine",
+      "ja": "テセウスの機械"
+    }
   },
   "names": {
-    "量产型": { "en": "Mass-Produced", "ja": "量産型" },
-    "量产型俄倪厄": { "en": "Mass-Produced Onyae", "ja": "量産型オニエ" },
-    "俄倪厄": { "en": "Onyae", "ja": "オニエ" },
-    "赫菲斯托斯": { "en": "Hephaestus", "ja": "ヘファイストス" },
-    "启示者": { "en": "The Revelator", "ja": "啓示者" },
-    "普罗诺亚之影": { "en": "Shade of Pronoia", "ja": "プロノイアの影" },
-    "构装体": { "en": "Construct", "ja": "構装体", "note": "8026 机械之心基础卡" },
-    "炮击构状体": { "en": "Artillery Automaton", "ja": "砲撃構状体" },
-    "护盾构状体": { "en": "Shield Automaton", "ja": "シールド構状体" },
-    "迅捷构状体": { "en": "Swift Automaton", "ja": "迅速構状体" },
-    "聚能炮击": { "en": "Charged Bombardment", "ja": "チャージ砲撃" },
-    "陶瓷鸭": { "en": "Ceramic Duck", "ja": "陶器のアヒル" },
-    "麻痹": { "en": "Paralysis", "ja": "麻痺" }
+    "量产型": {
+      "en": "Mass-Produced",
+      "ja": "量産型"
+    },
+    "量产型俄倪厄": {
+      "en": "Mass-Produced Onyae",
+      "ja": "量産型オニエ"
+    },
+    "俄倪厄": {
+      "en": "Onyae",
+      "ja": "オニエ"
+    },
+    "赫菲斯托斯": {
+      "en": "Hephaestus",
+      "ja": "ヘファイストス"
+    },
+    "启示者": {
+      "en": "The Revelator",
+      "ja": "啓示者"
+    },
+    "普罗诺亚之影": {
+      "en": "Shade of Pronoia",
+      "ja": "プロノイアの影"
+    },
+    "构装体": {
+      "en": "Construct",
+      "ja": "構装体",
+      "note": "8026 机械之心基础卡"
+    },
+    "炮击构状体": {
+      "en": "Artillery Automaton",
+      "ja": "砲撃構状体"
+    },
+    "护盾构状体": {
+      "en": "Shield Automaton",
+      "ja": "シールド構状体"
+    },
+    "迅捷构状体": {
+      "en": "Swift Automaton",
+      "ja": "迅速構状体"
+    },
+    "聚能炮击": {
+      "en": "Charged Bombardment",
+      "ja": "チャージ砲撃"
+    },
+    "陶瓷鸭": {
+      "en": "Ceramic Duck",
+      "ja": "陶器のアヒル"
+    },
+    "麻痹": {
+      "en": "Paralysis",
+      "ja": "麻痺"
+    },
+    "合体": {
+      "en": "Merge",
+      "ja": "合体",
+      "note": "仅 9167 卡名；引擎 MERGE_ID"
+    }
+  },
+  "rarities": {
+    "普通": {
+      "en": "Common",
+      "ja": "コモン"
+    },
+    "稀有": {
+      "en": "Rare",
+      "ja": "レア"
+    },
+    "史诗": {
+      "en": "Epic",
+      "ja": "エピック"
+    },
+    "初始": {
+      "en": "Starter",
+      "ja": "初期"
+    },
+    "怪物": {
+      "en": "Monster",
+      "ja": "モンスター"
+    },
+    "事件": {
+      "en": "Event",
+      "ja": "イベント"
+    },
+    "诅咒": {
+      "en": "Curse",
+      "ja": "呪い"
+    }
+  },
+  "relic_kinds": {
+    "即时": {
+      "en": "Instant",
+      "ja": "即時"
+    },
+    "战斗": {
+      "en": "Battle",
+      "ja": "戦闘"
+    },
+    "持续": {
+      "en": "Persistent",
+      "ja": "永続"
+    }
+  },
+  "relic_sources": {
+    "初始": {
+      "en": "Starting",
+      "ja": "初期"
+    },
+    "奖励": {
+      "en": "Reward",
+      "ja": "報酬"
+    },
+    "事件": {
+      "en": "Event",
+      "ja": "イベント"
+    },
+    "二层": {
+      "en": "Layer 2",
+      "ja": "第2層"
+    },
+    "角色": {
+      "en": "Class",
+      "ja": "クラス"
+    }
+  },
+  "relic_tiers": {
+    "一般": {
+      "en": "Common",
+      "ja": "一般",
+      "note": "道具 tier，与卡牌稀有度普通是不同枚举"
+    },
+    "传奇": {
+      "en": "Legendary",
+      "ja": "伝説",
+      "note": "仅道具 tier，不是卡牌稀有度"
+    }
+  },
+  "key_relics": {
+    "信物": {
+      "en": "Key Relic",
+      "ja": "キーレリック"
+    },
+    "完美螺钉": {
+      "en": "Perfect Screw",
+      "ja": "完璧なネジ",
+      "id": 6061
+    },
+    "生命之种": {
+      "en": "Seed of Life",
+      "ja": "命の種",
+      "id": 6062
+    },
+    "屠戮匕首": {
+      "en": "Slaughter Dagger",
+      "ja": "殺戮の短剣",
+      "id": 6063
+    }
+  },
+  "difficulties": {
+    "轻松": {
+      "en": "Relaxed",
+      "ja": "気楽"
+    },
+    "微恙": {
+      "en": "Mild Ailment",
+      "ja": "微恙"
+    },
+    "严酷": {
+      "en": "Harsh",
+      "ja": "厳酷"
+    },
+    "顽强": {
+      "en": "Tenacious",
+      "ja": "頑強"
+    },
+    "稀缺": {
+      "en": "Scarcity",
+      "ja": "欠乏"
+    },
+    "疲惫": {
+      "en": "Fatigue",
+      "ja": "疲労"
+    },
+    "凶暴": {
+      "en": "Ferocious",
+      "ja": "凶暴"
+    },
+    "贫瘠": {
+      "en": "Barren",
+      "ja": "贫瘠"
+    },
+    "匆忙": {
+      "en": "Haste",
+      "ja": "匆忙"
+    },
+    "虚弱": {
+      "en": "Weakened",
+      "ja": "虚弱"
+    },
+    "噩梦": {
+      "en": "Nightmare",
+      "ja": "悪夢"
+    },
+    "上锁": {
+      "en": "Locked",
+      "ja": "施錠"
+    }
+  },
+  "difficulty_notes": {
+    "无": {
+      "en": "None",
+      "ja": "なし"
+    },
+    "篝火回复生命值降低": {
+      "en": "Reduced Campfire Healing",
+      "ja": "篝火のHP回復量が低下"
+    },
+    "战斗胜利不再回复生命值": {
+      "en": "No Healing after Battle Victories",
+      "ja": "戦闘勝利時にHPを回復しない"
+    },
+    "敌人更加顽强": {
+      "en": "Enemies Are Tougher",
+      "ja": "敵がさらに頑強になる"
+    },
+    "稀有卡牌获取概率降低": {
+      "en": "Lower Rare Card Chance",
+      "ja": "レアカードの入手確率低下"
+    },
+    "行动力低时疲惫": {
+      "en": "Fatigue at Low Chocolate",
+      "ja": "チョコレート低下時に疲労"
+    },
+    "敌人更加凶猛": {
+      "en": "Enemies Are More Ferocious",
+      "ja": "敵がさらに凶暴になる"
+    },
+    "金钱减少": {
+      "en": "Less Gold",
+      "ja": "ゴールド減少"
+    },
+    "行动力降低": {
+      "en": "Less Chocolate",
+      "ja": "チョコレート減少"
+    },
+    "虚弱": {
+      "en": "Weakened",
+      "ja": "虚弱"
+    },
+    "精英出现增多": {
+      "en": "More Elites",
+      "ja": "エリートの出現増加"
+    },
+    "第三层上锁": {
+      "en": "Layer 3 Locked",
+      "ja": "第3層が施錠"
+    }
+  },
+  "rooms": {
+    "战斗": {
+      "en": "Battle",
+      "ja": "戦闘"
+    },
+    "精英战斗": {
+      "en": "Elite Battle",
+      "ja": "エリート戦"
+    },
+    "随机事件": {
+      "en": "Random Event",
+      "ja": "ランダムイベント"
+    },
+    "片刻休息": {
+      "en": "Rest Stop",
+      "ja": "休息"
+    },
+    "不确定的命运": {
+      "en": "Uncertain Fate",
+      "ja": "不確かな運命"
+    },
+    "宝箱": {
+      "en": "Chest",
+      "ja": "宝箱"
+    },
+    "大宝箱": {
+      "en": "Large Chest",
+      "ja": "大宝箱"
+    },
+    "神秘商店": {
+      "en": "Mysterious Shop",
+      "ja": "謎の商店"
+    },
+    "起点": {
+      "en": "Starting Point",
+      "ja": "起点"
+    },
+    "首领战": {
+      "en": "Boss Battle",
+      "ja": "ボス戦"
+    },
+    "精英": {
+      "en": "Elite",
+      "ja": "エリート"
+    },
+    "休息": {
+      "en": "Rest",
+      "ja": "休息"
+    },
+    "篝火": {
+      "en": "Campfire",
+      "ja": "キャンプファイア"
+    },
+    "未知房间": {
+      "en": "Unknown Room",
+      "ja": "不明な部屋"
+    },
+    "迷雾": {
+      "en": "Fog of War",
+      "ja": "フォッグ・オブ・ウォー"
+    },
+    "通路": {
+      "en": "Path",
+      "ja": "通路"
+    },
+    "当前房间": {
+      "en": "Current Room",
+      "ja": "現在の部屋"
+    },
+    "已探索": {
+      "en": "Explored",
+      "ja": "探索済み"
+    },
+    "未探索": {
+      "en": "Unexplored",
+      "ja": "未探索"
+    },
+    "入夜": {
+      "en": "Nightfall",
+      "ja": "夜が来る"
+    },
+    "第一层": {
+      "en": "Layer 1",
+      "ja": "第1層"
+    },
+    "第二层": {
+      "en": "Layer 2",
+      "ja": "第2層"
+    },
+    "第三层": {
+      "en": "Layer 3",
+      "ja": "第3層"
+    }
+  },
+  "statuses": {
+    "冰封": {
+      "en": "Frozen",
+      "ja": "氷結"
+    },
+    "眩晕": {
+      "en": "Stunned",
+      "ja": "スタン"
+    },
+    "沉睡": {
+      "en": "Asleep",
+      "ja": "睡眠"
+    },
+    "禁足": {
+      "en": "Rooted",
+      "ja": "移動不可"
+    },
+    "中毒": {
+      "en": "Poisoned",
+      "ja": "毒"
+    },
+    "护盾": {
+      "en": "Shield",
+      "ja": "シールド"
+    },
+    "护甲": {
+      "en": "Armor",
+      "ja": "装甲"
+    },
+    "额外行动": {
+      "en": "Extra Action",
+      "ja": "追加行動"
+    },
+    "光环": {
+      "en": "Aura",
+      "ja": "オーラ"
+    },
+    "孤军": {
+      "en": "Alone",
+      "ja": "孤軍"
+    },
+    "自我修复": {
+      "en": "Self-Repair",
+      "ja": "自己修復"
+    },
+    "守护": {
+      "en": "Guard",
+      "ja": "守護"
+    },
+    "锻造": {
+      "en": "Forge",
+      "ja": "鍛造"
+    },
+    "铸造": {
+      "en": "Casting",
+      "ja": "鋳造"
+    },
+    "阶段": {
+      "en": "Phase",
+      "ja": "段階"
+    },
+    "惧光": {
+      "en": "Light Phobia",
+      "ja": "光恐怖"
+    },
+    "供能": {
+      "en": "Power Supply",
+      "ja": "供給"
+    },
+    "免疫": {
+      "en": "Immune",
+      "ja": "免疫"
+    }
+  },
+  "enchantments": {
+    "费用 -1": {
+      "en": "Cost -1",
+      "ja": "コスト-1"
+    },
+    "伤害 +10": {
+      "en": "Damage +10",
+      "ja": "ダメージ+10"
+    },
+    "次元之力": {
+      "en": "Dimensional Power",
+      "ja": "次元の力"
+    },
+    "保存": {
+      "en": "Preserve",
+      "ja": "保存"
+    },
+    "起手": {
+      "en": "Opening Hand",
+      "ja": "初期手札"
+    },
+    "抽牌 +1": {
+      "en": "Draw +1",
+      "ja": "ドロー+1"
+    },
+    "契约核心": {
+      "en": "Contract Core",
+      "ja": "契約コア",
+      "note": "动态数值名；与事件契约的核心区分"
+    }
+  },
+  "zones": {
+    "完整卡组": {
+      "en": "Full Deck",
+      "ja": "デッキ全体",
+      "note": "本局构筑，跨战斗"
+    },
+    "卡组": {
+      "en": "Deck",
+      "ja": "デッキ"
+    },
+    "抽牌堆": {
+      "en": "Draw Pile",
+      "ja": "山札",
+      "note": "本场剩余抽牌区"
+    },
+    "弃牌区": {
+      "en": "Discard Pile",
+      "ja": "捨て札置き場"
+    },
+    "消耗区": {
+      "en": "Banished Cards",
+      "ja": "消滅置き場",
+      "note": "void_count 对应的本战斗消失卡"
+    },
+    "手牌": {
+      "en": "Hand",
+      "ja": "手札"
+    }
+  },
+  "rewards": {
+    "获得奖励": {
+      "en": "Rewards",
+      "ja": "報酬を獲得"
+    },
+    "待领奖励": {
+      "en": "Pending Rewards",
+      "ja": "未受取報酬"
+    },
+    "追加奖励": {
+      "en": "Bonus Rewards",
+      "ja": "追加報酬"
+    },
+    "卡牌奖励": {
+      "en": "Card Reward",
+      "ja": "カード報酬"
+    },
+    "卡牌奖励（三选一）": {
+      "en": "Card Reward (Choose 1 of 3)",
+      "ja": "カード報酬（3枚から1枚選択）"
+    },
+    "道具奖励": {
+      "en": "Relic Reward",
+      "ja": "レリック報酬"
+    },
+    "奖励道具": {
+      "en": "Reward Relic",
+      "ja": "報酬レリック"
+    },
+    "领取全部道具": {
+      "en": "Claim All Relics",
+      "ja": "全レリックを受け取る"
+    },
+    "普通过关奖励": {
+      "en": "Normal Victory Reward",
+      "ja": "通常クリア報酬"
+    },
+    "Boss过关奖励": {
+      "en": "Boss Victory Reward",
+      "ja": "ボスクリア報酬"
+    },
+    "史诗卡牌奖励": {
+      "en": "Epic Card Reward",
+      "ja": "エピックカード報酬"
+    },
+    "三选一": {
+      "en": "Choose 1 of 3",
+      "ja": "3択"
+    },
+    "二选一": {
+      "en": "Choose 1 of 2",
+      "ja": "2択"
+    },
+    "放弃这组": {
+      "en": "Skip This Group",
+      "ja": "このグループを見送る"
+    },
+    "不可放弃": {
+      "en": "Cannot Skip",
+      "ja": "見送り不可"
+    },
+    "放弃这次删卡": {
+      "en": "Skip Card Removal",
+      "ja": "今回のカード削除を見送る"
+    },
+    "放弃这次兑换": {
+      "en": "Skip This Exchange",
+      "ja": "今回の交換を見送る"
+    }
+  },
+  "ui": {
+    "开始冒险": {
+      "en": "Start Adventure",
+      "ja": "冒険を始める"
+    },
+    "继续游戏": {
+      "en": "Continue",
+      "ja": "続きから"
+    },
+    "百科": {
+      "en": "Codex",
+      "ja": "百科"
+    },
+    "对战记录": {
+      "en": "Battle Records",
+      "ja": "対戦記録"
+    },
+    "设置": {
+      "en": "Settings",
+      "ja": "設定"
+    },
+    "鸣谢": {
+      "en": "Credits",
+      "ja": "クレジット"
+    },
+    "退出": {
+      "en": "Quit",
+      "ja": "終了"
+    },
+    "返回标题": {
+      "en": "Back to Title",
+      "ja": "タイトルへ戻る"
+    },
+    "返回地图": {
+      "en": "Return to Map",
+      "ja": "マップへ戻る"
+    },
+    "返回百科": {
+      "en": "Back to Codex",
+      "ja": "百科へ戻る"
+    },
+    "查看故事": {
+      "en": "Stories",
+      "ja": "ストーリーを見る"
+    },
+    "卡牌图鉴": {
+      "en": "Card Codex",
+      "ja": "カード図鑑"
+    },
+    "玩家卡牌图鉴": {
+      "en": "Player Card Codex",
+      "ja": "プレイヤーカード図鑑"
+    },
+    "敌人图鉴": {
+      "en": "Enemy Codex",
+      "ja": "敵図鑑"
+    },
+    "查看卡组": {
+      "en": "View Deck",
+      "ja": "デッキを見る"
+    },
+    "回合结束": {
+      "en": "End Turn",
+      "ja": "ターン終了"
+    },
+    "我方回合": {
+      "en": "Your Turn",
+      "ja": "自分のターン"
+    },
+    "敌方回合": {
+      "en": "Enemy Turn",
+      "ja": "敵のターン"
+    },
+    "战斗记录": {
+      "en": "Battle Log",
+      "ja": "戦闘ログ"
+    },
+    "胜利": {
+      "en": "Victory",
+      "ja": "勝利"
+    },
+    "失败": {
+      "en": "Defeat",
+      "ja": "敗北"
+    },
+    "查看奖励": {
+      "en": "View Rewards",
+      "ja": "報酬を見る"
+    },
+    "进入下一层": {
+      "en": "Next Layer",
+      "ja": "次の層へ"
+    },
+    "再来一局": {
+      "en": "Play Again",
+      "ja": "もう一度"
+    },
+    "全部": {
+      "en": "All",
+      "ja": "すべて"
+    },
+    "无归属": {
+      "en": "Unaffiliated",
+      "ja": "所属なし"
+    },
+    "公用初始": {
+      "en": "Shared Starter",
+      "ja": "共通初期"
+    },
+    "玩家": {
+      "en": "Player",
+      "ja": "プレイヤー"
+    },
+    "敌方": {
+      "en": "Enemy",
+      "ja": "敵"
+    },
+    "确认": {
+      "en": "Confirm",
+      "ja": "確定"
+    },
+    "确定": {
+      "en": "Confirm",
+      "ja": "確定"
+    },
+    "取消": {
+      "en": "Cancel",
+      "ja": "キャンセル"
+    },
+    "返回": {
+      "en": "Back",
+      "ja": "戻る"
+    },
+    "完成": {
+      "en": "Done",
+      "ja": "完了"
+    },
+    "详情": {
+      "en": "Details",
+      "ja": "詳細"
+    },
+    "搜索": {
+      "en": "Search",
+      "ja": "検索"
+    },
+    "已解锁": {
+      "en": "Unlocked",
+      "ja": "解放済み"
+    },
+    "未解锁": {
+      "en": "Locked",
+      "ja": "未解放"
+    },
+    "已达成": {
+      "en": "Completed",
+      "ja": "達成済み"
+    },
+    "未达成": {
+      "en": "Incomplete",
+      "ja": "未達成"
+    },
+    "已领取": {
+      "en": "Claimed",
+      "ja": "受取済み"
+    },
+    "已放弃": {
+      "en": "Skipped",
+      "ja": "見送り済み"
+    },
+    "已处理": {
+      "en": "Resolved",
+      "ja": "処理済み"
+    },
+    "已耗尽": {
+      "en": "Depleted",
+      "ja": "消耗済み"
+    },
+    "未获得": {
+      "en": "Not Acquired",
+      "ja": "未入手"
+    },
+    "已获得": {
+      "en": "Acquired",
+      "ja": "入手済み"
+    },
+    "已售罄": {
+      "en": "Sold Out",
+      "ja": "売り切れ"
+    },
+    "购买": {
+      "en": "Buy",
+      "ja": "購入"
+    },
+    "离开商店": {
+      "en": "Leave Shop",
+      "ja": "商店を出る"
+    },
+    "离开": {
+      "en": "Leave",
+      "ja": "離れる"
+    },
+    "休息": {
+      "en": "Rest",
+      "ja": "休息"
+    },
+    "烤肉": {
+      "en": "Roast Meat",
+      "ja": "肉を焼く"
+    },
+    "领取": {
+      "en": "Claim",
+      "ja": "受け取る"
+    },
+    "放弃": {
+      "en": "Skip",
+      "ja": "見送る"
+    },
+    "跳过": {
+      "en": "Skip",
+      "ja": "スキップ"
+    },
+    "刷新": {
+      "en": "Reroll",
+      "ja": "リロール"
+    },
+    "附魔": {
+      "en": "Enchant",
+      "ja": "付呪"
+    },
+    "删除卡牌": {
+      "en": "Remove Card",
+      "ja": "カードを削除"
+    },
+    "音效": {
+      "en": "Sound Effects",
+      "ja": "効果音"
+    },
+    "音效音量": {
+      "en": "SFX Volume",
+      "ja": "効果音音量"
+    },
+    "音乐": {
+      "en": "Music",
+      "ja": "音楽"
+    },
+    "音乐音量": {
+      "en": "Music Volume",
+      "ja": "音楽音量"
+    },
+    "全屏": {
+      "en": "Fullscreen",
+      "ja": "フルスクリーン"
+    },
+    "本局种子": {
+      "en": "Current Run Seed",
+      "ja": "現在のランのシード"
+    },
+    "下一局种子": {
+      "en": "Next Run Seed",
+      "ja": "次のランのシード"
+    },
+    "开": {
+      "en": "On",
+      "ja": "オン"
+    },
+    "关": {
+      "en": "Off",
+      "ja": "オフ"
+    },
+    "复制种子": {
+      "en": "Copy Seed",
+      "ja": "シードをコピー"
+    },
+    "语言": {
+      "en": "Language",
+      "ja": "言語"
+    },
+    "难度": {
+      "en": "Difficulty",
+      "ja": "難易度"
+    },
+    "当前难度": {
+      "en": "Current Difficulty",
+      "ja": "現在の難易度"
+    },
+    "角色": {
+      "en": "Class",
+      "ja": "クラス"
+    },
+    "职业": {
+      "en": "Class",
+      "ja": "クラス"
+    },
+    "选择角色": {
+      "en": "Choose Class",
+      "ja": "クラスを選択"
+    }
+  },
+  "relics": {
+    "类固醇": {
+      "en": "Steroids",
+      "ja": "ステロイド",
+      "id": 6001
+    },
+    "源数之力": {
+      "en": "Numeron Force",
+      "ja": "ヌメロン・フォース",
+      "id": 6002,
+      "note": "《游戏王》专名"
+    },
+    "鸡煲": {
+      "en": "Robochick",
+      "ja": "ロボチキン",
+      "id": 6003,
+      "note": "机宝／机器人昵称与鸭题材的合体名，不直译成鸡锅"
+    },
+    "失忆药水": {
+      "en": "Amnesia Potion",
+      "ja": "健忘のポーション",
+      "id": 6004
+    },
+    "鸭蹼": {
+      "en": "Duck Webbing",
+      "ja": "アヒルの水かき",
+      "id": 6005
+    },
+    "鸭嘴": {
+      "en": "Duck Bill",
+      "ja": "アヒルのくちばし",
+      "id": 6006
+    },
+    "鸭翼": {
+      "en": "Duck Wing",
+      "ja": "アヒルの翼",
+      "id": 6007
+    },
+    "鸭绒": {
+      "en": "Duck Down",
+      "ja": "アヒルの綿毛",
+      "id": 6008
+    },
+    "鸭之眼": {
+      "en": "Eye of the Duck",
+      "ja": "アヒルの目",
+      "id": 6009
+    },
+    "鸭之低语": {
+      "en": "Whisper of the Duck",
+      "ja": "アヒルのささやき",
+      "id": 6010
+    },
+    "烤肉": {
+      "en": "Barbecue",
+      "ja": "バーベキュー",
+      "id": 6011,
+      "note": "道具名；篝火动作烤肉另译 Roast Meat"
+    },
+    "一袋米抗几楼": {
+      "en": "One Bag of Pain",
+      "ja": "痛みを感じろ",
+      "id": 6012,
+      "note": "佩恩台词谐音梗；英文保留 pain／米的双关"
+    },
+    "叠加态的鸭": {
+      "en": "Superposition Duck",
+      "ja": "重ね合わせ状態のアヒル",
+      "id": 6013
+    },
+    "黄桃罐头": {
+      "en": "Canned Yellow Peaches",
+      "ja": "黄桃缶",
+      "id": 6014
+    },
+    "鸭语耳环": {
+      "en": "Duckspeak Earrings",
+      "ja": "アヒル語の耳飾り",
+      "id": 6015
+    },
+    "冰淇淋与汽水": {
+      "en": "Ice Cream & Soda",
+      "ja": "アイスクリームとソーダ",
+      "id": 6016
+    },
+    "重鸭": {
+      "en": "Heavy Duck",
+      "ja": "ヘビーアヒル",
+      "id": 6017
+    },
+    "生蛋鸭": {
+      "en": "Egg-Laying Duck",
+      "ja": "産卵アヒル",
+      "id": 6018,
+      "note": "复用既有卡名"
+    },
+    "鸭梨": {
+      "en": "Duck Pear",
+      "ja": "アヒル梨",
+      "id": 6019,
+      "note": "鸭梨／压力谐音"
+    },
+    "奥秘护符": {
+      "en": "Arcane Charm",
+      "ja": "秘術の護符",
+      "id": 6020
+    },
+    "栅栏修复术": {
+      "en": "Fence Mending",
+      "ja": "柵修復術",
+      "id": 6021
+    },
+    "荒野形态": {
+      "en": "Wild Shape",
+      "ja": "野生の姿",
+      "id": 6022
+    },
+    "幻影斗篷": {
+      "en": "Cloak of Illusions",
+      "ja": "幻影のマント",
+      "id": 6023
+    },
+    "鸭血": {
+      "en": "Duck Blood",
+      "ja": "アヒルの血",
+      "id": 6024
+    },
+    "机械核心": {
+      "en": "Mechanical Core",
+      "ja": "機械のコア",
+      "id": 6025
+    },
+    "鹰哨": {
+      "en": "Eagle Whistle",
+      "ja": "鷹の笛",
+      "id": 6026
+    },
+    "苹果": {
+      "en": "Apple",
+      "ja": "リンゴ",
+      "id": 6027
+    },
+    "牛奶": {
+      "en": "Milk",
+      "ja": "牛乳",
+      "id": 6028
+    },
+    "止血绷带": {
+      "en": "Styptic Bandage",
+      "ja": "止血包帯",
+      "id": 6029
+    },
+    "行囊": {
+      "en": "Traveler's Pack",
+      "ja": "旅の行囊",
+      "id": 6030
+    },
+    "勇气徽章": {
+      "en": "Badge of Courage",
+      "ja": "勇気の徽章",
+      "id": 6031
+    },
+    "陶罐": {
+      "en": "Clay Pot",
+      "ja": "陶罐",
+      "id": 6032
+    },
+    "兼修": {
+      "en": "Dual Training",
+      "ja": "兼修",
+      "id": 6033
+    },
+    "附魔大师": {
+      "en": "Enchantment Master",
+      "ja": "付呪の達人",
+      "id": 6034
+    },
+    "泉水": {
+      "en": "Spring Water",
+      "ja": "泉水",
+      "id": 6035
+    },
+    "思想钢印": {
+      "en": "Thought Brand",
+      "ja": "思想の刻印",
+      "id": 6036
+    },
+    "荆棘指环": {
+      "en": "Thorn Ring",
+      "ja": "茨の指輪",
+      "id": 6037
+    },
+    "圣餐": {
+      "en": "Sacrament",
+      "ja": "聖餐",
+      "id": 6038
+    },
+    "雕像": {
+      "en": "Statue",
+      "ja": "彫像",
+      "id": 6039
+    },
+    "水晶骰子": {
+      "en": "Crystal Die",
+      "ja": "水晶のダイス",
+      "id": 6040
+    },
+    "不锈钢盆": {
+      "en": "Stainless Steel Basin",
+      "ja": "ステンレス盆",
+      "id": 6041
+    },
+    "风妖精": {
+      "en": "Wind Fairy",
+      "ja": "風の妖精",
+      "id": 6042
+    },
+    "快速符文": {
+      "en": "Haste Rune",
+      "ja": "迅速のルーン",
+      "id": 6043
+    },
+    "储物箱": {
+      "en": "Storage Chest",
+      "ja": "収納箱",
+      "id": 6044
+    },
+    "lucky 7": {
+      "en": "Lucky 7",
+      "ja": "ラッキー7",
+      "id": 6045
+    },
+    "爆米花": {
+      "en": "Popcorn",
+      "ja": "ポップコーン",
+      "id": 6046
+    },
+    "惊奇盒子": {
+      "en": "Surprise Box",
+      "ja": "びっくり箱",
+      "id": 6047
+    },
+    "洞窟绳": {
+      "en": "Cave Rope",
+      "ja": "洞窟のロープ",
+      "id": 6048
+    },
+    "鹿首标本": {
+      "en": "Stag Head Trophy",
+      "ja": "鹿の頭の剥製",
+      "id": 6049
+    },
+    "采集刀": {
+      "en": "Gathering Knife",
+      "ja": "採集ナイフ",
+      "id": 6050
+    },
+    "火柴": {
+      "en": "Matchstick",
+      "ja": "マッチ",
+      "id": 6051
+    },
+    "竖琴": {
+      "en": "Harp",
+      "ja": "ハープ",
+      "id": 6052
+    },
+    "骑士剑": {
+      "en": "Knight's Sword",
+      "ja": "騎士の剣",
+      "id": 6053
+    },
+    "暗动力": {
+      "en": "Dark Drive",
+      "ja": "暗黒動力",
+      "id": 6054
+    },
+    "烟斗": {
+      "en": "Smoking Pipe",
+      "ja": "パイプ",
+      "id": 6055
+    },
+    "冒险笔记": {
+      "en": "Adventure Notes",
+      "ja": "冒険ノート",
+      "id": 6056
+    },
+    "燧石": {
+      "en": "Flint",
+      "ja": "火打ち石",
+      "id": 6057
+    },
+    "咒缚": {
+      "en": "Cursebind",
+      "ja": "呪縛",
+      "id": 6058
+    },
+    "核心": {
+      "en": "Core",
+      "ja": "コア",
+      "id": 6059
+    },
+    "三个机器人": {
+      "en": "Three Robots",
+      "ja": "3体のロボット",
+      "id": 6060
+    },
+    "正义背刺": {
+      "en": "Righteous Backstab",
+      "ja": "正義の背刺",
+      "id": 6064
+    },
+    "机械臂": {
+      "en": "Mechanical Arm",
+      "ja": "機械アーム",
+      "id": 6065
+    },
+    "记忆药水": {
+      "en": "Memory Potion",
+      "ja": "記憶のポーション",
+      "id": 6067
+    }
+  },
+  "levels": {
+    "洞穴": {
+      "en": "Cavern",
+      "ja": "洞窟"
+    },
+    "鸭子骑士来袭": {
+      "en": "Duck Knight Attack",
+      "ja": "アヒル騎士の襲来"
+    },
+    "巫师的召唤": {
+      "en": "Wizard's Summons",
+      "ja": "魔術師の召喚"
+    },
+    "寒冰防线": {
+      "en": "Frost Defense Line",
+      "ja": "氷の防衛線"
+    },
+    "亡灵军团": {
+      "en": "Undead Legion",
+      "ja": "アンデッド軍団"
+    },
+    "龙族巢穴": {
+      "en": "Dragon's Lair",
+      "ja": "ドラゴンの巣窟"
+    },
+    "机甲巨兵": {
+      "en": "Colossal Mech",
+      "ja": "巨大機甲"
+    },
+    "远古虚骨龙": {
+      "en": "Ancient Hollowbone Dragon",
+      "ja": "古の虚骨竜"
+    },
+    "恶魔鸭": {
+      "en": "Demon Duck",
+      "ja": "悪魔アヒル"
+    },
+    "恶魔鸭（复仇）": {
+      "en": "Demon Duck (Vengeance)",
+      "ja": "悪魔アヒル（復讐）"
+    },
+    "机械巨鸭": {
+      "en": "Mechanical Mega Duck",
+      "ja": "機械巨鴨"
+    },
+    "叛逃机械": {
+      "en": "Rogue Machines",
+      "ja": "叛離した機械"
+    },
+    "鸭之暗面": {
+      "en": "Dark Side of the Duck",
+      "ja": "鴨の暗黒面"
+    },
+    "赫菲斯托斯工坊": {
+      "en": "Hephaestus's Workshop",
+      "ja": "ヘファイストスの工房"
+    },
+    "启示者": {
+      "en": "The Revelator",
+      "ja": "啓示者"
+    },
+    "废料场": {
+      "en": "Scrapyard",
+      "ja": "スクラップ置き場"
+    },
+    "骑士军团": {
+      "en": "Knight Legion",
+      "ja": "騎士軍団"
+    },
+    "使魔鸭群": {
+      "en": "Familiar Duck Flock",
+      "ja": "使い魔アヒルの群れ"
+    },
+    "骑士冲锋": {
+      "en": "Knight Charge",
+      "ja": "騎士の突撃"
+    },
+    "队长与巫师": {
+      "en": "Captain and Wizard",
+      "ja": "隊長と魔術師"
+    },
+    "弓手与骑士": {
+      "en": "Archer and Knight",
+      "ja": "弓兵と騎士"
+    },
+    "爆炎鸭阵": {
+      "en": "Blastflame Duck Formation",
+      "ja": "爆炎アヒル陣"
+    },
+    "白魔法鸭护阵": {
+      "en": "White Magic Duck Ward",
+      "ja": "白魔法アヒル護陣"
+    },
+    "夜鸭阵": {
+      "en": "Night Duck Formation",
+      "ja": "夜のアヒル陣"
+    },
+    "永夜鸭群": {
+      "en": "Eternal Night Duck Flock",
+      "ja": "永夜のアヒル群"
+    },
+    "哈气骑士团": {
+      "en": "Hissing Knight Order",
+      "ja": "威嚇の騎士団"
+    },
+    "赫尔墨斯的试炼": {
+      "en": "Trial of Hermes",
+      "ja": "ヘルメスの試練"
+    },
+    "母舰空袭": {
+      "en": "Mothership Airstrike",
+      "ja": "母艦空襲"
+    },
+    "执法者的审判": {
+      "en": "Enforcer's Judgment",
+      "ja": "執行者の審判"
+    },
+    "阿斯克勒庇厄斯的试炼": {
+      "en": "Trial of Asclepius",
+      "ja": "アスクレピオスの試練"
+    },
+    "普罗诺亚之影": {
+      "en": "Shade of Pronoia",
+      "ja": "プロノイアの影"
+    },
+    "鸭子窑": {
+      "en": "Duck Kiln",
+      "ja": "アヒル窯"
+    },
+    "太阳熔炉": {
+      "en": "Solar Forge",
+      "ja": "太陽の熔炉"
+    },
+    "百臂工场": {
+      "en": "Hecatoncheires Workshop",
+      "ja": "百臂の工場"
+    },
+    "量产流水线": {
+      "en": "Mass-Production Line",
+      "ja": "量産ライン"
+    },
+    "量产铁砧": {
+      "en": "Mass-Produced Anvils",
+      "ja": "量産の金床"
+    },
+    "百眼动员": {
+      "en": "Argus Mobilization",
+      "ja": "百眼の動員"
+    },
+    "双机炮阵": {
+      "en": "Twin Cannon Formation",
+      "ja": "双機砲陣"
+    },
+    "巨炮防线": {
+      "en": "Great Cannon Line",
+      "ja": "巨砲防衛線"
+    },
+    "钢铁要塞": {
+      "en": "Steel Fortress",
+      "ja": "鋼鉄の要塞"
+    },
+    "鸭子队长登场": {
+      "en": "Enter the Duck Captain",
+      "ja": "アヒル隊長登場"
+    }
+  },
+  "events": {
+    "鸭鸭低语": {
+      "en": "Duck Whispers",
+      "ja": "アヒルのささやき",
+      "key": "whisper"
+    },
+    "挣扎": {
+      "en": "Struggle",
+      "ja": "足掻き",
+      "key": "struggle"
+    },
+    "鸭之凝视": {
+      "en": "Gaze of the Duck",
+      "ja": "アヒルの眼差し",
+      "key": "gaze"
+    },
+    "鸭梨山大": {
+      "en": "Mount Duckpear",
+      "ja": "アヒル梨山",
+      "key": "pear",
+      "note": "压力山大谐音"
+    },
+    "绝赞五换一": {
+      "en": "Fantastic Five-for-One",
+      "ja": "絶賛5枚交換",
+      "key": "hero"
+    },
+    "苹果与医生": {
+      "en": "An Apple and the Doctor",
+      "ja": "リンゴと医者",
+      "key": "apple_doctor"
+    },
+    "奥秘之泉": {
+      "en": "Arcane Spring",
+      "ja": "秘術の泉",
+      "key": "arcane"
+    },
+    "遗忘之泉": {
+      "en": "Spring of Oblivion",
+      "ja": "忘却の泉",
+      "key": "oblivion"
+    },
+    "鸭鸭工匠": {
+      "en": "Duck Artisan",
+      "ja": "アヒル職人",
+      "key": "smith"
+    },
+    "卡片商人": {
+      "en": "Card Merchant",
+      "ja": "カード商人",
+      "key": "card_merchant"
+    },
+    "湖中仙女": {
+      "en": "Lady of the Lake",
+      "ja": "湖の乙女",
+      "key": "lake_lady"
+    },
+    "占卜室": {
+      "en": "Divination Room",
+      "ja": "占いの間",
+      "key": "divination"
+    },
+    "赏月": {
+      "en": "Moon Viewing",
+      "ja": "月見",
+      "key": "moon"
+    },
+    "熔炉": {
+      "en": "Furnace",
+      "ja": "熔炉",
+      "key": "furnace"
+    },
+    "契约的核心": {
+      "en": "Heart of the Contract",
+      "ja": "契約の核心",
+      "key": "core_contract"
+    },
+    "洞穴": {
+      "en": "Cavern",
+      "ja": "洞窟",
+      "key": "cave"
+    },
+    "雪豹出现": {
+      "en": "A Snow Leopard Appears",
+      "ja": "雪豹現る",
+      "key": "snow_leopard"
+    },
+    "冒险家的遗物": {
+      "en": "Adventurer's Relic",
+      "ja": "冒険者の遺物",
+      "key": "adventurer"
+    },
+    "武术大师": {
+      "en": "Martial Arts Master",
+      "ja": "武術の達人",
+      "key": "martial"
+    },
+    "飞行器": {
+      "en": "Flying Machine",
+      "ja": "飛行機械",
+      "key": "flyer"
+    },
+    "运送委托": {
+      "en": "Delivery Request",
+      "ja": "配送依頼",
+      "key": "delivery"
+    },
+    "委托完成": {
+      "en": "Delivery Complete",
+      "ja": "依頼完了",
+      "key": "delivery_done"
+    },
+    "卡牌宝箱": {
+      "en": "Card Chest",
+      "ja": "カード宝箱",
+      "key": "treasure"
+    },
+    "宝箱层": {
+      "en": "Treasure Floor",
+      "ja": "宝箱フロア",
+      "key": "relic_chest"
+    }
+  },
+  "stories": {
+    "游移的音准": {
+      "en": "Wandering Pitch",
+      "ja": "揺れる音程",
+      "id": "episode1"
+    },
+    "鸭鸭王国的请托": {
+      "en": "Request from the Duck Kingdom",
+      "ja": "アヒル王国からの依頼",
+      "id": "episode2"
+    },
+    "委托之外": {
+      "en": "Beyond the Request",
+      "ja": "依頼の外で",
+      "id": "episode3"
+    },
+    "一个声音": {
+      "en": "A Voice",
+      "ja": "一つの声",
+      "id": "episode4"
+    },
+    "新的委托": {
+      "en": "A New Request",
+      "ja": "新たな依頼",
+      "id": "episode5"
+    },
+    "轰鸣之后": {
+      "en": "After the Roar",
+      "ja": "轟音のあと",
+      "id": "episode6"
+    },
+    "苏醒": {
+      "en": "Awakening",
+      "ja": "目覚め",
+      "id": "profile1"
+    },
+    "量产型": {
+      "en": "Mass-Produced",
+      "ja": "量産型",
+      "id": "profile2"
+    },
+    "机械巨鸭": {
+      "en": "Mechanical Mega Duck",
+      "ja": "機械巨鴨",
+      "id": "profile3"
+    },
+    "闲谈": {
+      "en": "Idle Chat",
+      "ja": "雑談",
+      "id": "profile4"
+    },
+    "通缉令": {
+      "en": "Wanted Notice",
+      "ja": "指名手配",
+      "id": "profile5"
+    }
+  },
+  "achievements": {
+    "森林的伙伴们": {
+      "en": "Friends of the Forest",
+      "ja": "森の仲間たち",
+      "id": "ach_first_run"
+    },
+    "沼泽的引路者": {
+      "en": "Guide of the Marsh",
+      "ja": "沼の導き手",
+      "id": "ach_clear"
+    },
+    "委托之外": {
+      "en": "Beyond the Request",
+      "ja": "依頼の外で",
+      "id": "ach_rogue_run"
+    },
+    "一个声音": {
+      "en": "A Voice",
+      "ja": "一つの声",
+      "id": "ach_mech_run"
+    },
+    "新的委托": {
+      "en": "A New Request",
+      "ja": "新たな依頼",
+      "id": "ach_boss_seen_two"
+    },
+    "轰鸣之后": {
+      "en": "After the Roar",
+      "ja": "轟音のあと",
+      "id": "ach_episode6"
+    },
+    "苏醒": {
+      "en": "Awakening",
+      "ja": "目覚め",
+      "id": "ach_profile1"
+    },
+    "量产型": {
+      "en": "Mass-Produced",
+      "ja": "量産型",
+      "id": "ach_profile2"
+    },
+    "机械巨鸭": {
+      "en": "Mechanical Mega Duck",
+      "ja": "機械巨鴨",
+      "id": "ach_profile3"
+    },
+    "闲谈": {
+      "en": "Idle Chat",
+      "ja": "雑談",
+      "id": "ach_profile4"
+    },
+    "通缉令": {
+      "en": "Wanted Notice",
+      "ja": "指名手配",
+      "id": "ach_profile5"
+    },
+    "初次启程": {
+      "en": "First Journey",
+      "ja": "初めての旅",
+      "id": "FIRST_STEP"
+    },
+    "直面恐惧": {
+      "en": "Face Your Fears",
+      "ja": "恐怖に向き合う",
+      "id": "FIRST_BOSS"
+    },
+    "深入腹地": {
+      "en": "Into the Heartland",
+      "ja": "奥地へ",
+      "id": "LAYER2_CLEAR"
+    },
+    "完整通关": {
+      "en": "Full Clear",
+      "ja": "完全クリア",
+      "id": "FULL_CLEAR"
+    },
+    "森林的加冕": {
+      "en": "Coronation of the Forest",
+      "ja": "森の戴冠",
+      "id": "CLEAR_FOREST"
+    },
+    "影中的圆满": {
+      "en": "Fulfillment in the Shadows",
+      "ja": "影の円満",
+      "id": "CLEAR_ROGUE"
+    },
+    "机械的觉醒": {
+      "en": "Awakening of the Machine",
+      "ja": "機械の覚醒",
+      "id": "CLEAR_MECH"
+    },
+    "越难越勇": {
+      "en": "Braver with Every Trial",
+      "ja": "難しいほど勇ましく",
+      "id": "CLEAR_HARD"
+    }
   }
 }
