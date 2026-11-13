@@ -69109,6 +69109,16 @@ func _init() -> void:
 
 			"R545b 源码：_roll_random 只摇 _rand_pick、盲选态不标任何头像")
 
+	# ---- R650：难度档位下方不再绘制数值摘要（源码锁）----
+
+	check_src(r545_cp.find("_summary_rect") < 0
+
+			and r545_cp.find("_wrap_text(RunState.difficulty_summary()") < 0
+
+			and r545_cp.find("RunState.difficulty_note()") >= 0,
+
+			"R650 源码：难度档位下方只留当前档文本，数值摘要整行删除")
+
 	var r545_ms := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
 
 	check_src(r545_ms.find("func _open_deck_view() -> void:") >= 0

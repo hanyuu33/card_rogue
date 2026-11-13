@@ -31,8 +31,6 @@ const DIFF_GAP := 8.0          # 箭头与档位盒的间距
 const DIFF_ROW_W := 272.0      # 整组收窄并居中，箭头不压面板边框
 const NOTE_LINES := 3          # 当前档新增 debuff 文本行数预算（FS_CAPTION 12px / 行距 14）
 const NOTE_LH := 14.0
-const SUM_LINES := 2           # 数值摘要行数预算（FS_MICRO 10px / 行距 12）
-const SUM_LH := 12.0
 
 var _font: Font
 var _font_bold: Font
@@ -140,7 +138,8 @@ func _panel_rect() -> Rect2:
 
 
 # 难度档位行：左箭头 / 档位盒 / 右箭头（R223，原来是三按钮 _diff_rect(i)）。
-# 从面板底边往上排：确认钮(54) -8- 摘要(SUM) -2- 累计文本(NOTE) -6- 档位行(38)。
+# 从面板底边往上排：确认钮(54) -34- 当前档文本(NOTE) -6- 档位行(38)。
+# R650：中间那行数值摘要已删，留出的空档就是文本块与确认钮之间的呼吸。
 func _diff_row_rect() -> Rect2:
 	var p := _panel_rect()
 	return Rect2(p.get_center().x - DIFF_ROW_W * 0.5, p.end.y - 154.0 - DIFF_ROW_H,
@@ -167,12 +166,6 @@ func _note_rect() -> Rect2:
 	var p := _panel_rect()
 	return Rect2(p.position.x + 20.0, p.end.y - 106.0 - NOTE_LINES * NOTE_LH,
 			PANEL_W - 40.0, NOTE_LINES * NOTE_LH)
-
-
-func _summary_rect() -> Rect2:
-	var p := _panel_rect()
-	return Rect2(p.position.x + 20.0, p.end.y - 80.0 - SUM_LINES * SUM_LH,
-			PANEL_W - 40.0, SUM_LINES * SUM_LH)
 
 
 func _confirm_rect() -> Rect2:
@@ -480,8 +473,9 @@ func _diff_set_to(d: int) -> void:
 
 
 func _draw_difficulty_block(x: float, w: float) -> void:
-	## R545：从 _draw_panel 抽出的难度档位 + 摘要 + 确认钮（盲选面板与角色面板共用）。
-	# 难度档位（R223：左箭头 / 档位盒 / 右箭头，0~10 共 11 档，钳制不循环）
+	## R545：从 _draw_panel 抽出的难度档位 + 当前档文本 + 确认钮（盲选面板与角色面板共用）。
+	## R650：数值摘要整行删除（店长口径），区块里只剩一句 debuff 人话。
+	# 难度档位（R223：左箭头 / 档位盒 / 右箭头，0~11 共 12 档，钳制不循环）
 	draw_string(_font_bold, Vector2(x, _diff_row_rect().position.y - 13.0), "难度档位",
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	var cap := _diff_cap()
@@ -526,19 +520,15 @@ func _draw_difficulty_block(x: float, w: float) -> void:
 	draw_string(_font_bold, Vector2(br.position.x + 52, br.position.y + 26.0),
 			RunState.DIFFICULTY_NAMES[d], HORIZONTAL_ALIGNMENT_CENTER, br.size.x - 58,
 			UiTheme.FS_SUBHEAD, Color("c9700f") if locked else UiTheme.PAGE_INK)
-	# 当前档新增 debuff 文本（R224：只写当前档这一条；高档继承的低档 debuff
-	# 由下面那行数值摘要体现 —— 摘要列的都是「实际生效」的数值）
+	# 当前档新增 debuff 文本（R224：只写当前档这一条）
+	# R650：原来下面还有一行「数值摘要」（初始金钱 / 巧克力 / 敌血 / 稀有率 / 敌攻 /
+	# 最大生命 / 精英），店长口径「只删掉更下面的数值摘要」→ 整行删除。数值细节
+	# 由局内界面与卡面承担，这里只留一句人话（`RunState.difficulty_summary` 仍保留给回归与人读）。
 	var ny := _note_rect().position.y + 11.0
 	for line: String in _wrap_text(RunState.difficulty_note(), w, UiTheme.FS_CAPTION):
 		draw_string(_font, Vector2(x, ny), line, HORIZONTAL_ALIGNMENT_LEFT, w,
 				UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED)
 		ny += NOTE_LH
-	# 数值摘要（金钱 / 巧克力恒定显示，其余只在生效时列出）
-	var sy := _summary_rect().position.y + 10.0
-	for line: String in _wrap_text(RunState.difficulty_summary(), w, UiTheme.FS_MICRO):
-		draw_string(_font, Vector2(x, sy), line, HORIZONTAL_ALIGNMENT_LEFT, w,
-				UiTheme.FS_MICRO, UiTheme.PAGE_MUTED)
-		sy += SUM_LH
 	# 确认进入
 	var cr := _confirm_rect()
 	UiTheme.draw_action(self, cr, true)

@@ -1571,3 +1571,10 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - **杂项**：`tools/probe_r633_ban.gd` / `probe_r633_save.gd`（r633 期探针）补入库；`art_src` 两张回归产物（`fire_live.png` 重存、`mana_headless.log` 去掉 exit 泄漏警告）刷新。
 - **回归**：assemble 0 / mana PASS / engine **5843✓** 0✗ / reward 26✓ / bgm 39✓ / smoke 69-0。存档目录 `_bk_r648_userdata` 备份后逐文件还原。
 - **出包**：测试版（非 release）—— Windows 单文件 exe（`_release.py`）+ Android APK（`release/build_apk.sh`）。
+
+## 2026-11-13 R650 角色选择面板：难度档位下方的「数值摘要」整行删除
+- **口径（用户）**：「选择难度 11 时，下方没有把难度 11 的文本追加上去。为了以后考虑，不如干脆把下方完整文本删掉吧」→ 澄清一句后定为「只删掉更下面的数值摘要」：档位下方那句 debuff 文本**保留**，删的是它下面那行「初始金钱 … · 巧克力 … · 敌血 …」。
+- **11 档为什么只有一行**：R224 起 `difficulty_note()` 只返回**当前档新增**这一条，不再把 1..当前档拼起来；11 档新增 = 「第三层上锁」，所以屏幕上就一行 —— 不是漏追加。截图档 `-- --screenshot --diff 11` + `--diff 0` 各拍一张复核过（11 = 「11 上锁 / 第三层上锁」橙色档位框；0 = 「0 轻松 / 无」）。
+- **改动**（`scripts/class_pick_scene.gd`）：`_draw_difficulty_block()` 删掉 `difficulty_summary()` 的绘制循环；连带删除只服务它的 `_summary_rect()` 与 `SUM_LINES` / `SUM_LH` 常量（避免留死代码）。`RunState.difficulty_summary()` **保留** —— 回归仍在断言它的取值，将来想查数值也还有唯一口。区块现在 = 难度档位行 + 当前档文本 + 确认进入，文本底到确认钮之间留 34px 呼吸。
+- **测试**（`scripts/test_engine.gd`，+1 条源码锁）：`_summary_rect` 不得复活、`_wrap_text(RunState.difficulty_summary()` 不得出现在 `class_pick_scene.gd`、当前档文本绘制必须在位。判据刻意收窄到「绘制调用」而不是函数名 —— 首版按 `RunState.difficulty_summary` 判 0 次出现，被同文件注释里的字面误伤，engine 当场红 1 条。
+- **回归**：assemble 0 / mana PASS / engine **5844✓** 0✗（5838 基线 + 本轮 1 条 + 并行线）+ reward 26✓ / bgm 39✓ / smoke 69✓；存档备份 `E:	mp650_userdata_bk` → `RESTORE_VERIFY OK`（71 项）。驱动脚本 `tools/_run_r650_verify.py` 一并入库。
