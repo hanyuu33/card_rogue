@@ -1605,7 +1605,7 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 ## 2026-11-13 R660 / R660c 语言切换（设置分页 + 正式版首次选择）
 - **入口**：设置页「语言」页签里的内嵌列表（R660c 改掉了原先右上角下拉）；正式版第一次启动（片头之后、首页之前）进 `scenes/language_pick.tscn`。测试版不弹，老玩家（有 profile / 存档 / 对战记录）视为已选择，不打断；`--force-language-pick` 可强制出图。
 - **可扩展**：`scripts/l10n.gd` 的 `LANGUAGES` 是唯一注册表（当前 zh / en / ja），列表行由 `scripts/language_menu.gd` 绘制；3 项目前刚好排满，超过可视行数自动出现滚动条，支持滚轮 / ↑↓ / 拖动。新增语言只加注册表 + 文案，不改两个入口。
-- **UI**：设置页按类分页 —— 音频 / 画面 / 语言 / 对局四个页签，每页只摊本类的东西；语言列表内嵌在语言页，种子输入框只在「对局」页显示；画面页顺手把早就存在 `GameSettings.foe_speed` 的「敌人行动速度」搬了上来（和战斗里那颗按钮同一份设置）。首次选择页用一只木牌标题 + 纸卡列表 + 主按钮。背景 `assets/ui/language_bg.png`（1920×1080）由 codex 纯文生图，无文字 / UI；源图与 prompt 在 `art_src/2026-11-13_语言选择_R660/`。
+- **UI**：设置页按类分页 —— 音频 / 画面 / 语言 / 对局四个页签（R660d 起是一条**贴紧等分的整栏**，总宽 = 下方框体 ROW_W，零间隙，整条只画一圈外框），每页只摊本类的东西；语言列表内嵌在语言页，种子输入框只在「对局」页显示；画面页顺手把早就存在 `GameSettings.foe_speed` 的「敌人行动速度」搬了上来（和战斗里那颗按钮同一份设置）。首次选择页用一只木牌标题 + 纸卡列表 + 主按钮。背景 `assets/ui/language_bg.png`（1920×1080）由 codex 纯文生图，无文字 / UI；源图与 prompt 在 `art_src/2026-11-13_语言选择_R660/`。
 - **文案范围**：本批只翻界面骨架（标题页按钮、设置页、语言选择页、页脚）。卡牌 / 道具 / 事件正文仍由并行 i18n 流水线处理，本批**没动** `i18n/cards_*`、`noncard_*` 或 `battle_scene.gd`。
 - **品牌名取值**：非中文标题走 `GameBrand.title_text_localized()`，英文名只在这个函数里读。`title_scene.gd` 直接引用 `NAME_EN` 会踩 R607 源码锁（`test_assemble` 用 `find("NAME_EN") < 0` 硬拦，本轮踩过一次，报 `Combination tests failures: 1`）。
 - **验证**：`python _verify.py` 全绿（assemble 0 失败 / mana PASS / engine 5930✓ 0✗ / reward 26 / bgm 39 / smoke 70）；`test_engine` 有 R660 落盘 / 回退 / 路由 / 12 项滚动 9 条用例；截图 `screenshot_language.png`、`screenshot_settings.png` 及英文 / 日文首页、设置页各一张；`smoke` 新增 R660c 结构用例（4 页签 / 列表与输入框按页显隐）。开发口：`--lang=en`、`--force-language-pick`、`--screenshot --tab=audio|display|language|run`（`--lang-menu` 仍等同 language）。

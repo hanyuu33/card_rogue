@@ -1015,6 +1015,15 @@ func _check_settings(scene: Variant) -> void:
 	if scene.TABS.size() != 4:
 		_smoke_fail("R660c 设置页：页签应有 4 个，实际 %d" % scene.TABS.size())
 		return
+	# R660d：页签是**一条整栏**（等分贴紧、总宽 = ROW_W），不是一排带间隙的按钮。
+	var tabs: Array = scene._tab_rects()
+	var bar_ok := false
+	var seam_ok := true
+	if tabs.size() == 4:
+		bar_ok = absf((tabs[3].end.x - tabs[0].position.x) - scene.ROW_W) < 0.5
+		for i in range(1, tabs.size()):
+			if absf(tabs[i].position.x - tabs[i - 1].end.x) > 0.01:
+				seam_ok = false
 	scene._set_tab(scene.TAB_AUDIO)
 	var audio_rows: Array = scene._rows()
 	var seed_hidden: bool = scene._seed_edit != null and not scene._seed_edit.visible
@@ -1034,10 +1043,15 @@ func _check_settings(scene: Variant) -> void:
 		_smoke_fail("R660c 设置页：语言页没把语言列表显示出来")
 	elif not seed_vis:
 		_smoke_fail("R660c 设置页：对局页没把种子输入框显示出来")
-	elif scene._tab_rects().size() != 4 or scene._tab_rects()[0].size.x < 60.0:
+	elif tabs.size() != 4 or tabs[0].size.x < 60.0:
 		_smoke_fail("R660c 设置页：页签几何无效")
+	elif not bar_ok:
+		_smoke_fail("R660d 设置页：页签整栏宽度应等于下方框体宽（%.1f）" % scene.ROW_W)
+	elif not seam_ok:
+		_smoke_fail("R660d 设置页：页签之间必须贴紧（零间隙），不能是一排散按钮")
 	else:
 		print("SMOKE OK R660c 设置页：4 页签各摊自己的项 · 列表/输入框按页显隐")
+		print("SMOKE OK R660d 设置页：页签等分贴紧，整栏宽 = 框体宽 %.0f" % scene.ROW_W)
 
 
 func _check_record_list(scene: Variant) -> void:

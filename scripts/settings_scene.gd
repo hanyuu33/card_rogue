@@ -27,8 +27,9 @@ const TAB_RUN := 3
 
 const TAB_Y := 126.0
 const TAB_H := 40.0
-const TAB_GAP := 10.0
-const TAB_MIN_W := 92.0
+## R660d：页签**贴紧等分**，整栏宽度 = 下方框体宽度（ROW_W）。原先按文字量各算宽度
+## 再留 10px 间隙，看着是「四个小按钮」；现在是**一条页签栏**，格子之间零间隙。
+const TAB_FONT_MIN := 11
 const CONTENT_Y := 196.0
 const ROW_W := 520.0
 const ROW_H := 54.0
@@ -148,21 +149,16 @@ func _tab_key(i: int) -> String:
 
 
 func _tab_rects() -> Array[Rect2]:
-	## 页签宽度按**当前语言**的文字量算，中文 / 英文 / 日文都能自己撑开，不写死。
-	var widths: Array[float] = []
-	var total := 0.0
-	for i in TABS.size():
-		var w := _font_bold.get_string_size(L10n.t(_tab_key(i)), HORIZONTAL_ALIGNMENT_LEFT,
-				-1, UiTheme.FS_LABEL).x + 44.0
-		w = maxf(w, TAB_MIN_W)
-		widths.append(w)
-		total += w
-	total += TAB_GAP * float(TABS.size() - 1)
-	var x := (size.x - total) * 0.5
+	## R660d：页签**等分贴紧** —— 整栏宽度与下方框体一致（ROW_W，水平居中），
+	## 格与格之间零间隙。这样读起来是一条页签栏，而不是一排按钮。
+	## ⚠️ 等分后单格宽度固定，长文案（日文「オーディオ」）靠 `_draw_tabs` 里
+	##    按可用宽自动缩字号兜底，不靠加宽格子。
+	var n := TABS.size()
+	var w := ROW_W / float(n)
+	var x0 := (size.x - ROW_W) * 0.5
 	var out: Array[Rect2] = []
-	for i in widths.size():
-		out.append(Rect2(x, TAB_Y, widths[i], TAB_H))
-		x += widths[i] + TAB_GAP
+	for i in n:
+		out.append(Rect2(x0 + w * float(i), TAB_Y, w, TAB_H))
 	return out
 
 
@@ -613,25 +609,42 @@ func _draw() -> void:
 
 
 func _draw_tabs() -> void:
-	## 页签：选中 = 深绿底 + 亮金边（和列表里选中行同一套语言），未选 = 半透纸卡。
+	## R660d：**一条页签栏**，不是四颗按钮 —— 整条只画一圈外框，内部只画竖向分隔线。
+	## 每格各画自己的边框时，贴紧后中缝会叠成 2px 粗线，一眼又变回「按钮排」。
 	var rects := _tab_rects()
+	var bar := Rect2(rects[0].position, Vector2(ROW_W, TAB_H))
+	draw_rect(bar, Color(1.0, 1.0, 1.0, 0.34), true)
+	for i in rects.size():
+		if i != _tab and i != _tab_hover:
+			continue
+		draw_rect(rects[i], UiTheme.ADVENTURE_FOREST if i == _tab
+				else Color(1.0, 0.98, 0.90, 0.72), true)
+	# 竖向分隔：跳过选中格两侧 —— 深绿底上留一道金线会显脏。
+	for i in range(1, rects.size()):
+		if i == _tab or i - 1 == _tab:
+			continue
+		var x: float = rects[i].position.x
+		draw_line(Vector2(x, TAB_Y + 9.0), Vector2(x, TAB_Y + TAB_H - 9.0),
+				Color(UiTheme.ADVENTURE_BRASS, 0.45), 1.0)
+	draw_rect(bar, UiTheme.ADVENTURE_BRASS, false, 1.4)
+	# 选中格顶上一道亮金：像被拎起来的那一格，和未选中的平压状态区分开。
+	var sel: Rect2 = rects[_tab]
+	draw_line(sel.position, Vector2(sel.end.x, sel.position.y),
+			UiTheme.ADVENTURE_BRASS_LIT, 2.0)
 	for i in rects.size():
 		var r: Rect2 = rects[i]
 		var active := i == _tab
-		var hov := i == _tab_hover and not active
-		var bg := UiTheme.ADVENTURE_FOREST if active else (
-				Color(1.0, 0.98, 0.90, 0.72) if hov else Color(1.0, 1.0, 1.0, 0.34))
-		draw_rect(r, bg, true)
-		draw_rect(r, UiTheme.ADVENTURE_BRASS_LIT if active else UiTheme.ADVENTURE_BRASS,
-				false, 1.6 if active else 1.0)
-		draw_string(_font_bold, Vector2(r.position.x, r.position.y + 26.0),
-				L10n.t(_tab_key(i)), HORIZONTAL_ALIGNMENT_CENTER, r.size.x,
-				UiTheme.FS_LABEL,
+		var label := L10n.t(_tab_key(i))
+		var avail := r.size.x - 16.0
+		var fs := UiTheme.FS_LABEL
+		var tw := _font_bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		# 等分后单格宽度固定，长文案按可用宽逐档缩字号（日文「オーディオ」最先触线）。
+		while tw > avail and fs > TAB_FONT_MIN:
+			fs -= 1
+			tw = _font_bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		draw_string(_font_bold, Vector2(r.position.x, r.position.y + 27.0), label,
+				HORIZONTAL_ALIGNMENT_CENTER, r.size.x, fs,
 				UiTheme.ADVENTURE_LIGHT if active else UiTheme.PAGE_INK)
-	# 页签下方一条极淡金线，把「页签 / 内容」分开（不画满，两端各留 40）
-	var y := TAB_Y + TAB_H + 10.0
-	draw_line(Vector2(40.0, y), Vector2(size.x - 40.0, y),
-			Color(UiTheme.PAGE_GOLD, 0.30), 1.0)
 
 
 func _draw_language_note() -> void:
