@@ -15537,7 +15537,7 @@ func _init() -> void:
 		# 逐场景锁住入口 —— 改版式、挤按钮、换函数名导致任何一处消失，回归立刻红。
 		var r619_deck_scenes := ["event_scene", "relic_pick_scene", "class_pick_scene",
 
-				"record_list_scene", "shop_scene"]
+				"record_list_scene", "shop_scene", "curtain_scene"]
 
 		var r619_deck_missing := ""
 
