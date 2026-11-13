@@ -1,0 +1,3104 @@
+{
+  "version": 1,
+  "updated": "2026-11-13",
+  "purpose": "R667 界面与共享组件翻译专用规范中文底本。权威 GDScript 中文不改；仅明确审计的规则漂移在 canonical 修正。",
+  "rules": [
+    "卡组是跨战斗完整构筑，抽牌堆是本场待抽区；删除是跨战斗 Remove，消失是本场 Banish。",
+    "卡牌稀有度不使用 Legendary；传奇仅用于道具 tier。",
+    "组合是 Assemble／組み立てる，附魔是 Enchant／付呪，锻造是 Forge／鍛造，铸造是 Casting／鋳造。",
+    "保留所有数字、变量、BBCode、URL、署名、换行与按钮禁用态；已有 l10n/glossary 译名必须复用。",
+    "本批只建立翻译数据、校验与对照页，不接入运行时语言切换。"
+  ],
+  "canonical_overrides": {
+    "map.DECK_VIEWER_BUTTON": "牌库 %d",
+    "shop.SHOP_ENCHANT_INELIGIBLE_CARD": "这张卡不能吃「%s」（已附魔或类型不符）",
+    "map.MAP_FLY_NO_CANDIDATES": "飞行器没有能去的地方：没去过的房间都已经去过了",
+    "map.MAP_FLY_INVALID_CELL": "这一格飞不过去（走过 / 起点 / Boss / 商店 / 空地都不行）",
+    "map.MAP_FLINT_INVALID_CELL": "这一格点不着（当前所站 / 起点 / 商店 / 已经是篝火 / 空地都不行）",
+    "map.MAP_HINT_DEFAULT": "小桥＝通路，全图可见 · 迷雾遮住房间内容，只看得清「下一步」的几间 · 走过的房间可免费返回 · 巧克力用完即打 Boss",
+    "map.MAP_HINT_EAGLE_WHISTLE": "鹰哨：全图迷雾已散，每一格都看得见 · 小桥＝通路 · 巧克力用完即打 Boss",
+    "map.DECK_EDIT_VENDOR_FAILED": "易物失败：这张卡不是 5 费卡",
+    "map.DECK_EDIT_VENDOR_TITLE": "卡片商人 — 交出 5 费卡换大宝箱",
+    "map.DECK_EDIT_VENDOR_HINT": "只能选 5 费及以上的卡。确认后得到：一件道具 + 一组卡牌奖励 + %d 金币。",
+    "map.GALLERY_MENU_SUBTITLE": "卡图鉴",
+    "map.GALLERY_SUMMARY_TEXT_ONLY": "（其中 %d 张卡名不含）",
+    "map.DECK_EDIT_TRANSFORM_TITLE": "源数之力 — 选择一张卡改造",
+    "map.DECK_EDIT_CONFIRM_TRANSFORM": "确定改造「%s」",
+    "reward.REWARD_TYPE_BOSS": "Boss过关奖励",
+    "reward.REWARD_TYPE_LEGENDARY": "传说卡牌",
+    "reward.REWARD_LEGENDARY_CARD_NAME": "传说卡「%s」",
+    "reward.REWARD_LEGENDARY_CARD_FALLBACK": "传说卡",
+    "reward.REWARD_CORE_DESCRIPTION": "献祭一张伤害技能牌 · 把它的第一段伤害变成另一张的附魔（用掉即失效）",
+    "reward.REWARD_CORE_SUBTITLE_SACRIFICE": "这张卡会从卡组里永久删除，它的第一段伤害成为附魔贴到下一张上",
+    "reward.REWARD_CORE_TITLE_TARGET": "核心 —— 选一张接住这段伤害的技能牌",
+    "shared.RUN_SAVE_PENDING_REMOVED_CARDS": "存档的待领奖励里有 %d 张已下架的卡（%s），属于旧版本，不能使用",
+    "shared.RUN_SAVE_INVALID_MAX_HP": "存档的血量上限异常（%d），不能使用"
+  },
+  "l10n_reuse": {
+    "reward.REWARD_RETURN_TITLE": "settings.back_title",
+    "map.DECK_EDIT_MENU_BACK": "title.continue_short",
+    "map.DECK_EDIT_MENU_BACK_TITLE": "settings.back_title",
+    "map.CODEX_MENU_BACK": "title.continue_short",
+    "map.CODEX_MENU_SUBTITLE": "title.codex",
+    "map.CODEX_MENU_BACK_TITLE": "settings.back_title",
+    "map.GALLERY_MENU_RETURN_TITLE": "settings.back_title",
+    "map.CODEX_TITLE": "title.codex",
+    "shell.STORY_MENU_CONTINUE": "title.continue_short",
+    "shell.STORY_MENU_BACK_TITLE": "settings.back_title",
+    "shell.STORY_REVEAL_CONTINUE": "title.continue_short",
+    "shell.CURTAIN_BACK_TITLE": "settings.back_title",
+    "shell.RECORD_MENU_CONTINUE": "title.continue_short",
+    "shell.RECORD_MENU_SUBTITLE": "title.records",
+    "shell.RECORD_MENU_BACK_TITLE": "settings.back_title",
+    "shell.CLASS_PICK_SEED_TITLE": "settings.seed_title",
+    "shell.CLASS_PICK_BACK_TITLE": "settings.back_title",
+    "shell.TITLE_START": "title.start",
+    "shell.TITLE_CONTINUE": "title.continue",
+    "shell.TITLE_CONTINUE_SHORT": "title.continue_short",
+    "shell.TITLE_CODEX": "title.codex",
+    "shell.TITLE_RECORDS": "title.records",
+    "shell.TITLE_SETTINGS": "title.settings",
+    "shell.TITLE_CREDITS": "title.credits",
+    "shell.TITLE_QUIT": "title.quit",
+    "shell.TITLE_TIP_RECORDS": "title.tip_records",
+    "shell.TITLE_TIP_SETTINGS": "title.tip_settings",
+    "shell.TITLE_TIP_CREDITS": "title.tip_credits",
+    "shell.TITLE_FOOTER_GODOT": "title.footer_godot",
+    "shell.TITLE_FOOTER_DEV": "title.footer_dev",
+    "shell.SETTINGS_TITLE": "settings.title",
+    "shell.SETTINGS_AUTOSAVE": "settings.autosave",
+    "shell.SETTINGS_BACK_TITLE": "settings.back_title",
+    "shell.SETTINGS_BACK_BATTLE": "settings.back_battle",
+    "shell.SETTINGS_SFX": "settings.sfx",
+    "shell.SETTINGS_SFX_DESC": "settings.sfx_desc",
+    "shell.SETTINGS_SFX_VOLUME": "settings.sfx_vol",
+    "shell.SETTINGS_SFX_VOLUME_DESC": "settings.sfx_vol_desc",
+    "shell.SETTINGS_MUSIC": "settings.music",
+    "shell.SETTINGS_MUSIC_DESC": "settings.music_desc",
+    "shell.SETTINGS_MUSIC_VOLUME": "settings.music_vol",
+    "shell.SETTINGS_MUSIC_VOLUME_DESC": "settings.music_vol_desc",
+    "shell.SETTINGS_FULLSCREEN": "settings.fullscreen",
+    "shell.SETTINGS_FULLSCREEN_DESC": "settings.fullscreen_desc",
+    "shell.SETTINGS_ON": "settings.on",
+    "shell.SETTINGS_OFF": "settings.off",
+    "shell.SETTINGS_LANGUAGE_CHANGED": "settings.language_changed",
+    "shell.SETTINGS_TAB_AUDIO": "settings.tab_audio",
+    "shell.SETTINGS_TAB_DISPLAY": "settings.tab_display",
+    "shell.SETTINGS_TAB_LANGUAGE": "settings.tab_language",
+    "shell.SETTINGS_TAB_RUN": "settings.tab_run",
+    "shell.SETTINGS_LANGUAGE_NOTE": "settings.language_note",
+    "shell.SETTINGS_FOE_SPEED": "settings.foe_speed",
+    "shell.SETTINGS_FOE_SPEED_DESC": "settings.foe_speed_desc",
+    "shell.SETTINGS_COPY": "settings.copy",
+    "shell.SETTINGS_COPIED": "settings.copied",
+    "shell.SETTINGS_NO_SEED": "settings.no_seed",
+    "shell.SETTINGS_SEED_TITLE": "settings.seed_title",
+    "shell.SETTINGS_SEED_CURRENT": "settings.seed_current",
+    "shell.SETTINGS_SEED_NONE": "settings.seed_none",
+    "shell.SETTINGS_SEED_NEXT": "settings.seed_next",
+    "shell.SETTINGS_SEED_CURRENT_RANDOM": "settings.seed_current_random",
+    "shell.SETTINGS_SEED_CURRENT_CODE": "settings.seed_current_code",
+    "shell.SETTINGS_SEED_PLACEHOLDER": "settings.seed_placeholder",
+    "shell.SETTINGS_SEED_TIP": "settings.seed_tip",
+    "shell.SETTINGS_SEED_FOOTER": "settings.seed_footer",
+    "shell.LANGUAGE_TITLE": "language.title",
+    "shell.LANGUAGE_SUBTITLE": "language.subtitle",
+    "shell.LANGUAGE_CONFIRM": "language.confirm",
+    "shell.LANGUAGE_NOTE": "language.note",
+    "shell.LANGUAGE_SCROLL_HINT": "language.scroll_hint",
+    "shell.UI_MENU_CONTINUE": "title.continue",
+    "shared.BAN_MENU_CONTINUE": "title.continue_short"
+  },
+  "glossary_reuse": {
+    "reward.REWARD_TYPE_NORMAL": "rewards.普通过关奖励",
+    "reward.REWARD_TYPE_BOSS": "rewards.Boss过关奖励",
+    "reward.REWARD_TYPE_EPIC": "rewards.史诗卡牌奖励",
+    "reward.REWARD_PENDING_ENTRY": "rewards.待领奖励",
+    "reward.REWARD_CARD_GROUP_NAME": "rewards.卡牌奖励（三选一）",
+    "reward.REWARD_RELIC_FALLBACK_NAME": "rewards.奖励道具",
+    "reward.REWARD_LIST_TITLE": "rewards.获得奖励",
+    "reward.REWARD_CLAIM_ALL_RELICS": "rewards.领取全部道具",
+    "reward.REWARD_BONUS_HEADING": "rewards.追加奖励",
+    "reward.REWARD_SKIP_DELETE": "rewards.放弃这次删卡",
+    "reward.REWARD_CORE_SKIP": "rewards.放弃这次兑换",
+    "reward.REWARD_CARD_HEADING": "rewards.卡牌奖励",
+    "reward.REWARD_CANNOT_SKIP": "rewards.不可放弃",
+    "reward.REWARD_SKIP_GROUP": "rewards.放弃这组",
+    "map.ROGUE_MAP_TYPE_START": "rooms.起点",
+    "map.ROGUE_MAP_TYPE_BATTLE": "rooms.战斗",
+    "map.ROGUE_MAP_TYPE_ELITE": "rooms.精英",
+    "map.ROGUE_MAP_TYPE_REST": "rooms.休息",
+    "map.ROGUE_MAP_TYPE_EVENT": "rooms.随机事件",
+    "map.ROGUE_MAP_TYPE_CHEST": "rooms.宝箱",
+    "map.ROGUE_MAP_TYPE_BIGCHEST": "rooms.大宝箱",
+    "map.ROGUE_MAP_TYPE_SHOP": "rooms.神秘商店",
+    "map.ROGUE_MAP_TYPE_UNKNOWN": "rooms.未知房间",
+    "map.ROGUE_MAP_TYPE_BOSS": "rooms.首领战",
+    "map.MAP_ENTER_BATTLE": "rooms.战斗",
+    "map.MAP_ENTER_ELITE": "rooms.精英战斗",
+    "map.MAP_ENTER_EVENT": "rooms.随机事件",
+    "map.MAP_ENTER_REST": "rooms.片刻休息",
+    "map.MAP_ENTER_UNKNOWN": "rooms.不确定的命运",
+    "map.MAP_ENTER_CHEST": "rooms.宝箱",
+    "map.MAP_ENTER_BIGCHEST": "rooms.大宝箱",
+    "map.MAP_ENTER_SHOP": "rooms.神秘商店",
+    "map.MAP_ENTER_START": "rooms.起点",
+    "map.MAP_ENTER_BOSS": "rooms.首领战",
+    "map.MAP_LEGEND_START": "rooms.起点",
+    "map.MAP_LEGEND_BATTLE": "rooms.战斗",
+    "map.MAP_LEGEND_ELITE": "rooms.精英",
+    "map.MAP_LEGEND_REST": "rooms.休息",
+    "map.MAP_LEGEND_EVENT": "rooms.随机事件",
+    "map.MAP_LEGEND_CHEST": "rooms.宝箱",
+    "map.MAP_LEGEND_BIGCHEST": "rooms.大宝箱",
+    "map.MAP_LEGEND_UNKNOWN": "rooms.未知房间",
+    "map.MAP_FLASH_BIGCHEST": "rooms.大宝箱",
+    "shared.MENTION_KIND_RELIC": "mechanics.道具",
+    "shared.MENTION_SECTION_EFFECT": "kinds.效果",
+    "shared.MENTION_SECTION_AFFIX": "mechanics.字段",
+    "shared.CARD_FACE_LOCKED": "ui.未解锁",
+    "shared.RELIC_KIND_INSTANT": "relic_kinds.即时",
+    "shared.RELIC_KIND_BATTLE": "relic_kinds.战斗",
+    "shared.RELIC_KIND_PASSIVE": "relic_kinds.持续",
+    "shared.RELIC_SOURCE_INITIAL": "relic_sources.初始",
+    "shared.RELIC_SOURCE_REWARD": "relic_sources.奖励",
+    "shared.RELIC_SOURCE_EVENT": "relic_sources.事件",
+    "shared.RELIC_SOURCE_LAYER2": "relic_sources.二层",
+    "shared.RELIC_SOURCE_CLASS": "relic_sources.角色",
+    "shared.RELIC_TIER_NORMAL": "relic_tiers.一般",
+    "shared.RELIC_TIER_LEGENDARY": "relic_tiers.传奇",
+    "shared.LAYER_ONE_NAME": "rooms.第一层",
+    "shared.LAYER_TWO_NAME": "rooms.第二层",
+    "shared.LAYER_THREE_NAME": "rooms.第三层",
+    "shared.NET_SESSION_DEFAULT_MY_NAME": "ui.玩家",
+    "shell.CURTAIN_SPEAKER": "names.卷卷",
+    "shell.CURTAIN_SPEAKER_SUBTITLE": "names.豚鼠吟游诗人"
+  },
+  "glossary_contains": [
+    "reward.REWARD_PENDING_ENTRY",
+    "reward.REWARD_LIST_TITLE"
+  ],
+  "source_snapshots": {
+    "shop": {
+      "scripts/shop_scene.gd": "3161f11e37d1c0ff2aa726c7072b8ae5763a47872908dd6e8aba8ef73f7fe9e8",
+      "scripts/assemble_overlay.gd": "bdbe1a7e2338367a1f1b899859f2df843f2c2b62b3b85fe2be0e9fd36bb0afa9",
+      "scripts/card_data.gd": "be36dbce66758566b6841505e50f2ee4f9b32ced5d5ff84ef48b6e0664f0b5cf",
+      "scripts/run_state.gd": "0101d902137585791e2153dcf55f1a5f7e0ac0b9b2d9a8327957bf84c2a7c767"
+    },
+    "reward": {
+      "scripts/reward_panel.gd": "dc2bd6893e3dde7e5c0be8483d283b56a448cb4ee927bb9b236311379ed9d486",
+      "scripts/reward_panel_adventure_v2.gd": "8c8815d609b1dc311e94ac8ffa037f02628986a3befbba475a094e51d1cd84a8",
+      "scripts/card_reward.gd": "c37251c64fbff151de0a677b52a1a447af6582380c98541b946117cd5a8f1b0f",
+      "scripts/relic_pick_scene.gd": "9c8e28c5265287cbbb1d9fabd17b8dd0eda9db502c8d98f8eb9cb526592481af",
+      "scripts/ui_card_grant.gd": "55d4a22f3e3086c98931e634ab79ae80eff843af6f6856b20cb1194b1559508c",
+      "scripts/run_state.gd": "0101d902137585791e2153dcf55f1a5f7e0ac0b9b2d9a8327957bf84c2a7c767",
+      "scripts/battle_scene.gd": "b9426e1c9f7a77afc4ef8f20bfb43f9fa33a112a6da24b8363fc76ce9808ea8c",
+      "scripts/event_scene.gd": "ed557759355e27bb5ce9afb7142961a48705c855004110209aab7fed203e4003"
+    },
+    "map": {
+      "scripts/map_scene.gd": "b1af2bdb4b57075bee7f8d0a92da561c47c42dc9b670fa8b525fdccddd358060",
+      "scripts/map_visual.gd": "638358a73bf109dd9629b860e1a794c671c410f8955a26b44f8036b75ec7fc05",
+      "scripts/rogue_map.gd": "634b5d1059ee099fe9ddeeee9a08dc8f083c18daede7cae1a13c25843bf80ba8",
+      "scripts/deck_edit_scene.gd": "cf3a3e281c7a2656ad2e80defd93f4e2e5b4b981952a95c1464cbb4b0c058254",
+      "scripts/deck_viewer.gd": "2d1c7c2534a9e3cc9604a2ff29fba39f7d38d189b976166bda02b8c8518ac522",
+      "scripts/pick_overlay.gd": "970515c94234387f6febdb479e6fb63fbee4a81f98604a9594ce6f447cb94c97",
+      "scripts/card_detail_overlay.gd": "4acede005b3c26ccd65538dbb8afbf396dce3d91903b626e5314b54b68a8307a",
+      "scripts/codex_scene.gd": "6353835a9f08c859b67d834086d349b5b3656120b64994be7accd0fd40a33ca2",
+      "scripts/gallery_scene.gd": "1b030acbff20a8d0ccba74509d9f455be7e5dc4af6ce2f091659f0acd1b6cb2e",
+      "scripts/relic_viewer.gd": "7dff4fbe5a9f756cc9c50aca4a2703cc9fba2420d4cb98186fdd575c0cb682a8"
+    },
+    "shell": {
+      "scripts/story_scene.gd": "762fcab21321976af5bb2ba9372858c8ef9833a6426ce30b0bd9d3f3e3e678e9",
+      "scripts/credits_scene.gd": "dc9000b9f0d1f49afa99c20e7ab245dc466e8935886156957f78cb6f3043263c",
+      "scripts/opening_scene.gd": "4ad46fdf6a5b8b49beae992521535fd0e6ad9fd19bcb3f10c81bedc19f421ba8",
+      "scripts/curtain_scene.gd": "7aee3436b734e851e47309b12d49d88be21e60106899475d4164795ffa0cd0b3",
+      "scripts/curtain_lines.gd": "b770be64aa04619c20b17c5445f34c11efbb4df98899e93a132ba6f3ef76ae32",
+      "scripts/run_summary_scene.gd": "7d953e3c365acba53e58e1bfa5544f700d1e9e3dac9983b8d162c945c2da6a84",
+      "scripts/record_list_scene.gd": "9d2f526ba6584684ea20cb0fc636ced7760494218550cb330242721151c41776",
+      "scripts/run_record.gd": "2f67404ec686693a803741b4318734d6de90a551df223f0a687edefbcf528c3f",
+      "scripts/class_pick_scene.gd": "c502bb1d85ac3eb2fc05e09b644577f18d784fae491150c38674b4dc0b98bdc7",
+      "scripts/title_scene.gd": "c9638095ecbc36b01e1457d27f0dd505ba3922e0a7d9171c4c0d4058d635660b",
+      "scripts/settings_scene.gd": "bc67648c824f465008eea84679c9fc9cac74ed2c77dac57a156e157a989f2e44",
+      "scripts/language_pick_scene.gd": "823011f31ff1a154d3dc3d2320432d0596a322df5b8ac11eccfc471abad78603",
+      "scripts/language_menu.gd": "b5adc1d34cf01674678ca5a809df1862f412f49c99d4685e6807815518bdcaa3",
+      "scripts/top_bar.gd": "2cfabc7381256490ccd281391a08c57955a44ac2ceced4a7276bf829fed3c791",
+      "scripts/ui_menu.gd": "5937cc5cc9cb9d143161b9837eba39c98690e4f0d405a67165633ce3f4c1139f",
+      "scripts/game_brand.gd": "a6e5be3441c9cf7c0fc17e7abc02dadba099920c3b0c942e26409cc0f35471a8",
+      "scripts/l10n.gd": "2174371b190a9ac99681e39ec854842416cce950ae216c712ed268d1cf54e66b"
+    },
+    "shared": {
+      "scripts/ban_scene.gd": "2d0e194301272945c17c1ee26c388946a61c59373f42d92cefb2594cd340b943",
+      "scripts/profile_data.gd": "dc9169d35b21d790d042f3dea69baef38b3367046a8e2f33397868065d0f19f1",
+      "scripts/story_repo.gd": "7e5bc890de9228929d6fa10b7eb13eb7468f6550614359f3d3aff5a28b0709bc",
+      "scripts/game_layers.gd": "f11922e7bc034e0802e57b62d723661f0deec4434273e0787c434e7c3679347b",
+      "scripts/mention.gd": "df1de522bfe52ba503aa2bf13bf61704e542e9fa27107ebfacd4d7208f5e038a",
+      "scripts/card_face.gd": "e4ddaf2108180eb3e4ed2a8b8edddaccecfbf025c1627075933236fe0287060d",
+      "scripts/card_info_boxes.gd": "39df13c1dbde337a558fa0f8f63d155d05242f2ee3941b95bd9e09da2754d94c",
+      "scripts/relic_data.gd": "47d0d31e031e93d542270a34e9b69a719b87deeb6f54a9cfdc197d3fa3ba5319",
+      "scripts/relic_repo.gd": "35e86f45151ff5f576fab3a44ab4339274f872b621ba78ace0294288148addf9",
+      "scripts/ui_theme.gd": "cd77774012095d703b4a4cb7da1a65f9ce975f0c41025ae2bdccba5ae48b02a6",
+      "scripts/top_bar.gd": "2cfabc7381256490ccd281391a08c57955a44ac2ceced4a7276bf829fed3c791",
+      "scripts/run_save.gd": "62f076af6c4869bcf6aa9629dcdd2d869216483ed4403fb8e955a449b455ff61",
+      "scripts/card_morph_fx.gd": "fdb7b9eb305e9a749f9b569a39f5f387d14fc97ac7dae8f34eb206113675fe70",
+      "scripts/info_clip.gd": "fc942361de1e214d5622d82bae2e83af3f162385f90c57e5fb91824a788ff82b",
+      "scripts/net.gd": "b5f37404457acf3137320716c3f5395b2056cebacf830d6c8325875299413467",
+      "scripts/net_session.gd": "6643c044490a003f29eb3d2ca4bf6fc671d15984d209bfd19579719d10684bdc",
+      "scripts/ui_toast.gd": "cffda21772c66286600d9ae0ef83ce5154d1836ff38cee020dd4b4359320189c"
+    }
+  },
+  "scopes": {
+    "shop": {
+      "SHOP_ENCHANT_COSTDOWN_NAME": {
+        "source": "scripts/card_data.gd:112",
+        "zh": "费用 -1"
+      },
+      "SHOP_ENCHANT_COSTDOWN_DESC": {
+        "source": "scripts/shop_scene.gd:69",
+        "zh": "一次性降低 1 点费用，之后一直保持（只能选费用 > 1 且非 X 费的卡）"
+      },
+      "SHOP_ENCHANT_DAMAGE_NAME": {
+        "source": "scripts/card_data.gd:114",
+        "zh": "伤害 +10"
+      },
+      "SHOP_ENCHANT_DAMAGE_DESC": {
+        "source": "scripts/shop_scene.gd:71",
+        "zh": "这张技能卡造成的伤害 +10（只能选能直接造成伤害的技能卡）"
+      },
+      "SHOP_ENCHANT_DIMENSION_NAME": {
+        "source": "scripts/card_data.gd:116",
+        "zh": "次元之力"
+      },
+      "SHOP_ENCHANT_DIMENSION_DESC": {
+        "source": "scripts/shop_scene.gd:73",
+        "zh": "赋字段「次元」+2力+10血，离场消失"
+      },
+      "SHOP_ENCHANT_SAVE_NAME": {
+        "source": "scripts/card_data.gd:118",
+        "zh": "保存"
+      },
+      "SHOP_ENCHANT_SAVE_DESC": {
+        "source": "scripts/shop_scene.gd:75",
+        "zh": "赋予「保存」——回合结束时手牌这张不丢弃"
+      },
+      "SHOP_ENCHANT_OPENING_NAME": {
+        "source": "scripts/card_data.gd:120",
+        "zh": "起手"
+      },
+      "SHOP_ENCHANT_OPENING_DESC": {
+        "source": "scripts/shop_scene.gd:78",
+        "zh": "第一回合必定抽到（任何卡都能选）"
+      },
+      "SHOP_ENCHANT_DRAW_NAME": {
+        "source": "scripts/card_data.gd:125",
+        "zh": "抽牌 +1"
+      },
+      "SHOP_ENCHANT_DRAW_DESC": {
+        "source": "scripts/shop_scene.gd:81",
+        "zh": "打出这张卡后抽一张卡（任何卡都能选）"
+      },
+      "SHOP_SERVICE_DELETE_NAME": {
+        "source": "scripts/shop_scene.gd:412",
+        "zh": "删除一张卡"
+      },
+      "SHOP_SERVICE_DELETE_DESC": {
+        "source": "scripts/shop_scene.gd:412",
+        "zh": "从卡组里删掉一张卡"
+      },
+      "SHOP_SERVICE_MAX_HP_NAME": {
+        "source": "scripts/shop_scene.gd:414",
+        "zh": "+5 最大生命"
+      },
+      "SHOP_SERVICE_MAX_HP_DESC": {
+        "source": "scripts/shop_scene.gd:414",
+        "zh": "最大生命 +5，并回复 5 点生命"
+      },
+      "SHOP_SERVICE_CHOCOLATE_DESC": {
+        "source": "scripts/shop_scene.gd:422",
+        "zh": "获得一块巧克力（行动力 +1）"
+      },
+      "SHOP_TITLE": {
+        "source": "scripts/shop_scene.gd:743",
+        "zh": "神 秘 商 店"
+      },
+      "SHOP_SOLD_OUT": {
+        "source": "scripts/shop_scene.gd:840",
+        "zh": "已售罄"
+      },
+      "SHOP_PRICE_GOLD": {
+        "source": "scripts/shop_scene.gd:1024",
+        "zh": "%d 金币"
+      },
+      "SHOP_LEAVE": {
+        "source": "scripts/shop_scene.gd:1137",
+        "zh": "离开商店"
+      },
+      "SHOP_BASIN_STATUS": {
+        "source": "scripts/shop_scene.gd:1148",
+        "zh": "不锈钢盆 %d 点 · 本次购买优先抵账（不花金币）"
+      },
+      "SHOP_DELETE_PICK_TITLE": {
+        "source": "scripts/shop_scene.gd:1272",
+        "zh": "选择要删除的卡"
+      },
+      "SHOP_DELETE_PICK_WARNING": {
+        "source": "scripts/shop_scene.gd:1274",
+        "zh": "选中的卡会被永久删除。"
+      },
+      "SHOP_ENCHANT_PICK_TITLE": {
+        "source": "scripts/shop_scene.gd:1278",
+        "zh": "选择要附魔的卡 —— %s"
+      },
+      "SHOP_ENCHANT_PICK_DESC": {
+        "source": "scripts/shop_scene.gd:1280",
+        "zh": "给选中的卡附加「%s」。"
+      },
+      "SHOP_ENCHANT_NO_ELIGIBLE_CARDS": {
+        "source": "scripts/shop_scene.gd:1305",
+        "zh": "没有符合这张附魔条件的卡"
+      },
+      "SHOP_DELETE_NO_CARDS": {
+        "source": "scripts/shop_scene.gd:1305",
+        "zh": "卡组里没有卡可删"
+      },
+      "SHOP_CONFIRM": {
+        "source": "scripts/shop_scene.gd:1311",
+        "zh": "确定"
+      },
+      "SHOP_CANCEL": {
+        "source": "scripts/shop_scene.gd:1313",
+        "zh": "取消"
+      },
+      "SHOP_TOUCH_BUY_AGAIN": {
+        "source": "scripts/shop_scene.gd:1459",
+        "zh": "再次点击选中商品购买"
+      },
+      "SHOP_PAID_BY_BASIN": {
+        "source": "scripts/shop_scene.gd:1518",
+        "zh": "不锈钢盆抵账"
+      },
+      "SHOP_INSUFFICIENT_GOLD": {
+        "source": "scripts/shop_scene.gd:1526",
+        "zh": "金币不足（需要 %d）"
+      },
+      "SHOP_CARD_PURCHASED": {
+        "source": "scripts/shop_scene.gd:1532",
+        "zh": "购买「%s」（%s）"
+      },
+      "SHOP_DELETE_BLOCKED_DARK_POWER": {
+        "source": "scripts/shop_scene.gd:1603",
+        "zh": "暗动力：无法在商店删除卡牌"
+      },
+      "SHOP_MAX_HP_GAINED": {
+        "source": "scripts/shop_scene.gd:1622",
+        "zh": "最大生命 +5（并回复 5 点）· %s"
+      },
+      "SHOP_CHOCOLATE_GAINED": {
+        "source": "scripts/shop_scene.gd:1631",
+        "zh": "巧克力 +1 · %s"
+      },
+      "SHOP_DAGGER_OBTAINED": {
+        "source": "scripts/shop_scene.gd:1639",
+        "zh": "获得信物「屠戮匕首」· %s"
+      },
+      "SHOP_SELECT_CARD_FIRST": {
+        "source": "scripts/shop_scene.gd:1648",
+        "zh": "请先点选一张卡"
+      },
+      "SHOP_ENCHANT_INELIGIBLE_CARD": {
+        "source": "scripts/shop_scene.gd:1668",
+        "zh": "这张卡不能吃「%s」（已附魔或不符合此附魔条件）"
+      },
+      "SHOP_DELETE_FAILED": {
+        "source": "scripts/shop_scene.gd:1705",
+        "zh": "删除失败"
+      },
+      "SHOP_CARD_DELETED": {
+        "source": "scripts/shop_scene.gd:1712",
+        "zh": "删除了「%s」（%s）"
+      },
+      "SHOP_ENCHANT_FAILED": {
+        "source": "scripts/shop_scene.gd:1728",
+        "zh": "附魔失败"
+      },
+      "SHOP_ENCHANT_GRANTED": {
+        "source": "scripts/shop_scene.gd:1736",
+        "zh": "「%s」获得附魔「%s」（%s）"
+      },
+      "SHOP_BUY_BUTTON": {
+        "source": "scripts/shop_scene.gd:1832",
+        "zh": "购买 · %d"
+      },
+      "SHOP_REMOVE_CARD_MISSING": {
+        "source": "scripts/run_state.gd:2345",
+        "zh": "卡组里没有这一张"
+      },
+      "SHOP_REMOVE_CARD_LOCKED": {
+        "source": "scripts/run_state.gd:2348",
+        "zh": "「%s」带锁，不能从卡组删除"
+      },
+      "ASSEMBLE_UPPER_HOOK_MISSING": {
+        "source": "scripts/assemble_overlay.gd:282",
+        "zh": "「%s」没有可用的上半钩子 —— 试试拖进③下半"
+      },
+      "ASSEMBLE_LOWER_EFFECT_MISSING": {
+        "source": "scripts/assemble_overlay.gd:283",
+        "zh": "「%s」没有可用的下半效果 —— 试试拖进②上半"
+      },
+      "ASSEMBLE_TITLE": {
+        "source": "scripts/assemble_overlay.gd:334",
+        "zh": "组合"
+      },
+      "ASSEMBLE_CANDIDATES_TITLE": {
+        "source": "scripts/assemble_overlay.gd:337",
+        "zh": "待选卡"
+      },
+      "ASSEMBLE_DRAG_INSTRUCTIONS": {
+        "source": "scripts/assemble_overlay.gd:340",
+        "zh": "拖进中栏 · 拖回可撤回 · 点卡看详情"
+      },
+      "ASSEMBLE_SLOTS_TITLE": {
+        "source": "scripts/assemble_overlay.gd:358",
+        "zh": "拖入槽位"
+      },
+      "ASSEMBLE_CARD_PLACED": {
+        "source": "scripts/assemble_overlay.gd:386",
+        "zh": "已放入"
+      },
+      "ASSEMBLE_PREVIEW_TITLE": {
+        "source": "scripts/assemble_overlay.gd:437",
+        "zh": "结果预览"
+      },
+      "ASSEMBLE_PREVIEW_EMPTY": {
+        "source": "scripts/assemble_overlay.gd:445-447",
+        "zh": "拖满 3 个槽位\n后显示组合卡"
+      },
+      "ASSEMBLE_RESULT_SEAL": {
+        "source": "scripts/assemble_overlay.gd:457",
+        "zh": "组合产物 · 卡面金印为记"
+      },
+      "ASSEMBLE_UPPER_EFFECT_LABEL": {
+        "source": "scripts/assemble_overlay.gd:460",
+        "zh": "上半效果"
+      },
+      "ASSEMBLE_LOWER_EFFECT_LABEL": {
+        "source": "scripts/assemble_overlay.gd:460",
+        "zh": "下半效果"
+      },
+      "ASSEMBLE_CONFIRM": {
+        "source": "scripts/assemble_overlay.gd:512",
+        "zh": "确认组合"
+      },
+      "ASSEMBLE_MUST_COMPLETE": {
+        "source": "scripts/assemble_overlay.gd:573",
+        "zh": "组合一旦开始就必须完成 —— 把 3 个槽位拖满，再点「确认组合」"
+      },
+      "ASSEMBLE_SLOTS_SWAPPED": {
+        "source": "scripts/assemble_overlay.gd:673",
+        "zh": "两个槽位的卡已互换"
+      },
+      "ASSEMBLE_CARD_WITHDRAWN": {
+        "source": "scripts/assemble_overlay.gd:676",
+        "zh": "已撤回，卡回到左栏待选"
+      },
+      "ASSEMBLE_DRAG_BACK_TO_WITHDRAW": {
+        "source": "scripts/assemble_overlay.gd:678",
+        "zh": "拖回左栏可以撤回这张卡"
+      },
+      "ASSEMBLE_DROP_OUTSIDE_SLOTS": {
+        "source": "scripts/assemble_overlay.gd:688",
+        "zh": "拖到中栏三个槽位里才能放：①属性 ②上半 ③下半"
+      },
+      "ASSEMBLE_FIXED_BASE": {
+        "source": "scripts/assemble_overlay.gd:693",
+        "zh": "这一张是固定的底座，不能换"
+      },
+      "ASSEMBLE_PLACED_IN_SLOT_NOTE": {
+        "source": "scripts/assemble_overlay.gd:754",
+        "zh": "已放入槽位"
+      },
+      "ASSEMBLE_RESULT_PREVIEW_NOTE": {
+        "source": "scripts/assemble_overlay.gd:760",
+        "zh": "组合结果预览 —— 按「确认组合」后才会真正生成"
+      }
+    },
+    "reward": {
+      "REWARD_TYPE_NORMAL": {
+        "source": "scripts/card_reward.gd:12",
+        "zh": "普通过关奖励"
+      },
+      "REWARD_TYPE_BOSS": {
+        "source": "scripts/card_reward.gd:12",
+        "zh": "首领过关奖励"
+      },
+      "REWARD_TYPE_EPIC": {
+        "source": "scripts/card_reward.gd:13",
+        "zh": "史诗卡牌奖励"
+      },
+      "REWARD_TYPE_LEGENDARY": {
+        "source": "scripts/card_reward.gd:16",
+        "zh": "史诗卡牌"
+      },
+      "REWARD_PENDING_ENTRY": {
+        "source": "scripts/reward_panel.gd:267",
+        "zh": "✦ 待领奖励 %d"
+      },
+      "REWARD_UNKNOWN_RELIC": {
+        "source": "scripts/reward_panel.gd:311",
+        "zh": "未知道具"
+      },
+      "REWARD_BONUS_RELIC_NAME": {
+        "source": "scripts/reward_panel.gd:314",
+        "zh": "道具：%s"
+      },
+      "REWARD_RELIC_OR_KEY_NAME": {
+        "source": "scripts/reward_panel.gd:317",
+        "zh": "道具 / 生命之种（二选一）"
+      },
+      "REWARD_BONUS_GOLD_NAME": {
+        "source": "scripts/reward_panel.gd:320",
+        "zh": "%d 金币"
+      },
+      "REWARD_BONUS_HP_NAME": {
+        "source": "scripts/reward_panel.gd:322",
+        "zh": "最大生命 +%d"
+      },
+      "REWARD_BONUS_DELETE_NAME": {
+        "source": "scripts/reward_panel.gd:325",
+        "zh": "一次删卡"
+      },
+      "REWARD_DELETE_NAME": {
+        "source": "scripts/reward_panel.gd:325",
+        "zh": "删除卡组中的一张卡"
+      },
+      "REWARD_CORE_NAME": {
+        "source": "scripts/reward_panel.gd:327",
+        "zh": "核心"
+      },
+      "REWARD_LEGENDARY_CARD_NAME": {
+        "source": "scripts/reward_panel.gd:334",
+        "zh": "史诗卡「%s」"
+      },
+      "REWARD_LEGENDARY_CARD_FALLBACK": {
+        "source": "scripts/reward_panel.gd:335",
+        "zh": "史诗卡"
+      },
+      "REWARD_CARD_GROUP_NAME": {
+        "source": "scripts/reward_panel.gd:337",
+        "zh": "卡牌奖励（三选一）"
+      },
+      "REWARD_BONUS_CARD_GROUP_TAG": {
+        "source": "scripts/reward_panel.gd:347",
+        "zh": "一组三选一 · %s"
+      },
+      "REWARD_BONUS_DELETE_TAG": {
+        "source": "scripts/reward_panel.gd:349",
+        "zh": "挑一张卡组里的卡永久移除"
+      },
+      "REWARD_BONUS_RELIC_TAG": {
+        "source": "scripts/reward_panel.gd:352",
+        "zh": "掉落 · %s",
+        "source_parts": [
+          "掉落 · "
+        ]
+      },
+      "REWARD_BONUS_RELIC_FALLBACK_TAG": {
+        "source": "scripts/reward_panel.gd:352",
+        "zh": "掉落 · 道具"
+      },
+      "REWARD_RELIC_FALLBACK_NAME": {
+        "source": "scripts/reward_panel.gd:356",
+        "zh": "奖励道具"
+      },
+      "REWARD_BIG_CHEST_TAG": {
+        "source": "scripts/reward_panel.gd:359",
+        "zh": "大宝箱 · 奖励道具或信物二选一"
+      },
+      "REWARD_GOLD_DIRECT_TAG": {
+        "source": "scripts/reward_panel.gd:361",
+        "zh": "直接进钱袋"
+      },
+      "REWARD_HP_DIRECT_TAG": {
+        "source": "scripts/reward_panel.gd:363",
+        "zh": "生命上限与当前生命一起 +%d"
+      },
+      "REWARD_DELETE_TAG": {
+        "source": "scripts/reward_panel.gd:365",
+        "zh": "卡组操作 · 点它领下，随后挑一张永久删除"
+      },
+      "REWARD_CORE_SETTLED_TAG": {
+        "source": "scripts/reward_panel.gd:370",
+        "zh": "已献祭「%s」→「%s」伤害 +%d"
+      },
+      "REWARD_CORE_DESCRIPTION": {
+        "source": "scripts/reward_panel.gd:372",
+        "zh": "献祭一张伤害技能牌 · 把它的第一段伤害变成另一张尚未附魔的伤害技能牌的附魔（用掉即失效）"
+      },
+      "REWARD_CARD_GROUP_TAG": {
+        "source": "scripts/reward_panel.gd:373",
+        "zh": "卡牌奖励 · %s"
+      },
+      "REWARD_STATE_PENDING_CORE": {
+        "source": "scripts/reward_panel.gd:406",
+        "zh": "待兑换"
+      },
+      "REWARD_STATE_CLAIMED": {
+        "source": "scripts/reward_panel.gd:409",
+        "zh": "已领取"
+      },
+      "REWARD_STATE_SKIPPED": {
+        "source": "scripts/reward_panel.gd:411",
+        "zh": "已放弃"
+      },
+      "REWARD_STATE_PENDING": {
+        "source": "scripts/reward_panel.gd:412",
+        "zh": "待领"
+      },
+      "REWARD_RELIC_DESC_MISSING": {
+        "source": "scripts/reward_panel.gd:422",
+        "zh": "（这件道具的说明缺失）"
+      },
+      "REWARD_RELIC_DESC_WITH_STATE": {
+        "source": "scripts/reward_panel.gd:424",
+        "zh": "%s  （%s）"
+      },
+      "REWARD_DUCK_BLOOD_NO_COPY": {
+        "source": "scripts/reward_panel.gd:708",
+        "zh": "鸭血：没有复制任何卡（卡组不变）"
+      },
+      "REWARD_DUCK_BLOOD_COPIED": {
+        "source": "scripts/reward_panel.gd:710",
+        "zh": "鸭血：复制了「%s」各一份"
+      },
+      "REWARD_LIST_TITLE": {
+        "source": "scripts/reward_panel.gd:970",
+        "zh": "✦ 获得奖励"
+      },
+      "REWARD_LIST_SUMMARY": {
+        "source": "scripts/reward_panel.gd:972",
+        "zh": "共 %d 件 · 待领 %d 件　（点任意一条查看详情）"
+      },
+      "REWARD_CLAIM_ALL_RELICS": {
+        "source": "scripts/reward_panel.gd:1001",
+        "zh": "领取全部道具"
+      },
+      "REWARD_DARK_POWER_MUST_PICK": {
+        "source": "scripts/reward_panel.gd:1006",
+        "zh": "暗动力：必须当场拿取一张卡，不能留到以后领"
+      },
+      "REWARD_CLAIM_ALL_NOTE": {
+        "source": "scripts/reward_panel.gd:1016",
+        "zh": "「领取全部道具」不碰卡牌奖励 —— 卡牌要自己挑一张"
+      },
+      "REWARD_MANUAL_PROCESSING_NOTE": {
+        "source": "scripts/reward_panel.gd:1019",
+        "zh": "卡牌 / 删卡 / 核心奖励要点进去处理（不能一键领取）"
+      },
+      "REWARD_ALL_SETTLED_NOTE": {
+        "source": "scripts/reward_panel.gd:1019",
+        "zh": "全部奖励都已处理，可以点「完成」"
+      },
+      "REWARD_DONE": {
+        "source": "scripts/reward_panel.gd:1020",
+        "zh": "完成"
+      },
+      "REWARD_DECK_BUTTON": {
+        "source": "scripts/reward_panel.gd:1022",
+        "zh": "卡组"
+      },
+      "REWARD_BONUS_HEADING": {
+        "source": "scripts/reward_panel.gd:1078",
+        "zh": "追加奖励"
+      },
+      "REWARD_MILK_TITLE": {
+        "source": "scripts/reward_panel.gd:1187",
+        "zh": "牛奶 —— 随机附魔"
+      },
+      "REWARD_MILK_SUBTITLE": {
+        "source": "scripts/reward_panel.gd:1190",
+        "zh": "这两张卡被贴上了附魔（数值已经生效）"
+      },
+      "REWARD_ENCHANT_CONTINUE": {
+        "source": "scripts/reward_panel.gd:1242",
+        "zh": "继 续"
+      },
+      "REWARD_BACK_TO_LIST": {
+        "source": "scripts/reward_panel.gd:1254",
+        "zh": "← 返回列表"
+      },
+      "REWARD_RELIC_STATUS_LINE": {
+        "source": "scripts/reward_panel.gd:1280",
+        "zh": "%s　·　状态：%s"
+      },
+      "REWARD_SETTLED_RELIC_NOTE": {
+        "source": "scripts/reward_panel.gd:1298",
+        "zh": "这条已经%s了（不可再操作）"
+      },
+      "REWARD_SETTLED_VERB_SKIPPED": {
+        "source": "scripts/reward_panel.gd:1298",
+        "zh": "放弃"
+      },
+      "REWARD_RETURN_KEEPS_REWARD": {
+        "source": "scripts/reward_panel.gd:1301",
+        "zh": "「返回列表」不会丢掉它 —— 可以随时再点进来看、再领取。"
+      },
+      "REWARD_SKIP_THIS": {
+        "source": "scripts/reward_panel.gd:1302",
+        "zh": "放弃这件"
+      },
+      "REWARD_CLAIM": {
+        "source": "scripts/reward_panel.gd:1303",
+        "zh": "领取"
+      },
+      "REWARD_SETTLED_BUTTON": {
+        "source": "scripts/reward_panel.gd:1303",
+        "zh": "已处理"
+      },
+      "REWARD_BIG_CHEST_CHOICE_TITLE": {
+        "source": "scripts/reward_panel.gd:1319",
+        "zh": "大宝箱 · 二选一"
+      },
+      "REWARD_BIG_CHEST_CHOICE_SUBTITLE": {
+        "source": "scripts/reward_panel.gd:1322",
+        "zh": "选择一件带走（道具 / 信物二选一）"
+      },
+      "REWARD_SETTLED_CHOICE_NOTE": {
+        "source": "scripts/reward_panel.gd:1333",
+        "zh": "这条已经处理过了（不可再操作）。"
+      },
+      "REWARD_KEY_CHOICE_HINT": {
+        "source": "scripts/reward_panel.gd:1335",
+        "zh": "点左侧拿奖励道具，点右侧拿「生命之种」信物。"
+      },
+      "REWARD_NO_RELIC_LEFT": {
+        "source": "scripts/reward_panel.gd:1362",
+        "zh": "（奖励道具已全部拿完，只剩生命之种可选）"
+      },
+      "REWARD_LIFE_SEED_NAME": {
+        "source": "scripts/reward_panel.gd:1364",
+        "zh": "生命之种"
+      },
+      "REWARD_DELETE_SUBTITLE": {
+        "source": "scripts/reward_panel.gd:1493",
+        "zh": "点一张直接删 —— 这一局不会再回来；带锁的卡不能删"
+      },
+      "REWARD_NO_DELETABLE_CARDS": {
+        "source": "scripts/reward_panel.gd:1498",
+        "zh": "卡组里没有可删的卡"
+      },
+      "REWARD_SCROLL_MORE": {
+        "source": "scripts/reward_panel.gd:1518",
+        "zh": "滚轮查看更多（%d 张）"
+      },
+      "REWARD_SKIP_DELETE": {
+        "source": "scripts/reward_panel.gd:1521",
+        "zh": "放弃这次删卡"
+      },
+      "REWARD_DECK_COUNT": {
+        "source": "scripts/reward_panel.gd:1572",
+        "zh": "卡组（%d 张）"
+      },
+      "REWARD_DECK_VIEWER_SUBTITLE": {
+        "source": "scripts/reward_panel.gd:1575",
+        "zh": "这一局的整副卡组 —— 滚轮 / 按住拖动查看；这里只是看，不会改动任何一张"
+      },
+      "REWARD_DECK_EMPTY": {
+        "source": "scripts/reward_panel.gd:1579",
+        "zh": "卡组里还没有卡"
+      },
+      "REWARD_BACK": {
+        "source": "scripts/reward_panel.gd:1597",
+        "zh": "← 返回"
+      },
+      "REWARD_DUP_TITLE": {
+        "source": "scripts/reward_panel.gd:1612",
+        "zh": "鸭血 —— 选择最多 %d 张卡复制"
+      },
+      "REWARD_DUP_SUBTITLE": {
+        "source": "scripts/reward_panel.gd:1615",
+        "zh": "选中的卡各复制一份加入卡组（原卡保留、附魔一起带走）｜已选 %d 张"
+      },
+      "REWARD_DUP_EMPTY": {
+        "source": "scripts/reward_panel.gd:1620",
+        "zh": "卡组里没有可复制的卡"
+      },
+      "REWARD_DUP_CONFIRM": {
+        "source": "scripts/reward_panel.gd:1656",
+        "zh": "确定复制（%d/%d）"
+      },
+      "REWARD_CORE_TITLE_SACRIFICE": {
+        "source": "scripts/reward_panel.gd:1750",
+        "zh": "核心 —— 献祭一张伤害技能牌"
+      },
+      "REWARD_CORE_TITLE_TARGET": {
+        "source": "scripts/reward_panel.gd:1752",
+        "zh": "核心 —— 选一张尚未附魔的伤害技能牌接住这段伤害"
+      },
+      "REWARD_CORE_SUBTITLE_SACRIFICE": {
+        "source": "scripts/reward_panel.gd:1756",
+        "zh": "这张卡会从卡组里永久删除，它的第一段伤害成为附魔贴到另一张尚未附魔的伤害技能牌上"
+      },
+      "REWARD_CORE_SUBTITLE_TARGET": {
+        "source": "scripts/reward_panel.gd:1763",
+        "zh": "「%s」的第一段伤害 %d 点 → 变成这张卡的附魔「伤害 +%d」（已有附魔的卡不能选）"
+      },
+      "REWARD_CORE_UNKNOWN_SOURCE_CARD": {
+        "source": "scripts/reward_panel.gd:1764",
+        "zh": "那张卡"
+      },
+      "REWARD_CORE_EMPTY": {
+        "source": "scripts/reward_panel.gd:1770",
+        "zh": "没有可以选的卡"
+      },
+      "REWARD_CORE_SCROLL_MORE": {
+        "source": "scripts/reward_panel.gd:1787",
+        "zh": "滚轮 / 按住拖动查看更多（%d 张）"
+      },
+      "REWARD_CORE_RESELECT": {
+        "source": "scripts/reward_panel.gd:1789",
+        "zh": "← 重选祭品"
+      },
+      "REWARD_CORE_SKIP": {
+        "source": "scripts/reward_panel.gd:1791",
+        "zh": "放弃这次兑换"
+      },
+      "REWARD_CARD_HEADING": {
+        "source": "scripts/reward_panel.gd:1803",
+        "zh": "卡牌奖励"
+      },
+      "REWARD_REROLL_LEFT": {
+        "source": "scripts/reward_panel.gd:1879",
+        "zh": "刷新 · 剩 %d"
+      },
+      "REWARD_REROLL_LEFT_COMPACT": {
+        "source": "scripts/reward_panel.gd:1879",
+        "zh": "刷新 %d"
+      },
+      "REWARD_CANNOT_SKIP": {
+        "source": "scripts/reward_panel.gd:1882",
+        "zh": "不可放弃"
+      },
+      "REWARD_SKIP_GROUP": {
+        "source": "scripts/reward_panel.gd:1882",
+        "zh": "放弃这组"
+      },
+      "REWARD_CONFIRM_CARD": {
+        "source": "scripts/reward_panel.gd:1886",
+        "zh": "确认选择这张"
+      },
+      "REWARD_GROUP_SETTLED": {
+        "source": "scripts/reward_panel.gd:1889",
+        "zh": "这组已经处理过了"
+      },
+      "REWARD_CARD_META": {
+        "source": "scripts/reward_panel.gd:1962",
+        "zh": "%s · %d 费 · %s"
+      },
+      "REWARD_EFFECT_LABEL": {
+        "source": "scripts/reward_panel.gd:1978",
+        "zh": "效果"
+      },
+      "REWARD_STARTING_RELIC_TITLE": {
+        "source": "scripts/relic_pick_scene.gd:34",
+        "zh": "选择你的%s起始道具（三选一）"
+      },
+      "REWARD_STARTING_RELIC_MENU_BACK": {
+        "source": "scripts/relic_pick_scene.gd:58",
+        "zh": "继续选道具"
+      },
+      "REWARD_STARTING_RELIC_MENU_SUBTITLE": {
+        "source": "scripts/relic_pick_scene.gd:59",
+        "zh": "选择起始道具"
+      },
+      "REWARD_STARTING_RELIC_FLAVOR": {
+        "source": "scripts/relic_pick_scene.gd:76",
+        "zh": "起点处的一位行商愿意送你一件随身之物……"
+      },
+      "REWARD_STARTING_RELIC_KIND": {
+        "source": "scripts/relic_pick_scene.gd:91",
+        "zh": "道具 · %s"
+      },
+      "REWARD_SOUND_ON": {
+        "source": "scripts/relic_pick_scene.gd:139",
+        "zh": "音效：开"
+      },
+      "REWARD_SOUND_OFF": {
+        "source": "scripts/relic_pick_scene.gd:139",
+        "zh": "音效：关"
+      },
+      "REWARD_RETURN_TITLE": {
+        "source": "scripts/relic_pick_scene.gd:141",
+        "zh": "返回标题"
+      },
+      "REWARD_CARD_GRANTED": {
+        "source": "scripts/ui_card_grant.gd:233",
+        "zh": "✦ 已加入卡组"
+      },
+      "REWARD_RELIC_STATE_SPENT": {
+        "source": "scripts/run_state.gd:2316",
+        "zh": "已耗尽，效果不再生效。"
+      },
+      "REWARD_RELIC_STATE_REVIVE_CHANCE": {
+        "source": "scripts/run_state.gd:2318",
+        "zh": "当前复活概率 %d%%。"
+      },
+      "REWARD_RELIC_STATE_REROLLS": {
+        "source": "scripts/run_state.gd:2321",
+        "zh": "剩余刷新次数 %d 次。"
+      },
+      "REWARD_RELIC_STATE_LUCKY7_ACTIVE": {
+        "source": "scripts/run_state.gd:2324",
+        "zh": "本回合生效：免疫所有 HP 伤害 + 技能额外 7 点伤害。"
+      },
+      "REWARD_RELIC_STATE_LUCKY7_WAITING": {
+        "source": "scripts/run_state.gd:2325",
+        "zh": "距下次生效还有 %d 个回合。"
+      },
+      "REWARD_VICTORY_GOLD_HEADING": {
+        "source": "scripts/battle_scene.gd:7805",
+        "zh": "获得金币"
+      },
+      "REWARD_VICTORY_VIEW_REWARDS": {
+        "source": "scripts/battle_scene.gd:7870",
+        "zh": "查看奖励"
+      },
+      "REWARD_VICTORY_GOLD_PARTS": {
+        "source": "scripts/battle_scene.gd:7899",
+        "zh": "%s　现有 %d"
+      },
+      "REWARD_VICTORY_ENTER_LAYER": {
+        "source": "scripts/battle_scene.gd:7904",
+        "zh": "进入%s"
+      },
+      "REWARD_VICTORY_RETURN_MAP": {
+        "source": "scripts/battle_scene.gd:7906",
+        "zh": "返回冒险地图 →"
+      },
+      "REWARD_VICTORY_RESTART": {
+        "source": "scripts/battle_scene.gd:7908",
+        "zh": "再来一局"
+      },
+      "REWARD_DARK_POWER_CLAIM_REQUIRED": {
+        "source": "scripts/battle_scene.gd:7990",
+        "zh": "暗动力：卡牌奖励必须领取"
+      },
+      "REWARD_GOLD_PART_BATTLE": {
+        "source": "scripts/battle_scene.gd:8121",
+        "zh": "战斗 %d"
+      },
+      "REWARD_GOLD_PART_COIN": {
+        "source": "scripts/battle_scene.gd:8128",
+        "zh": "硬币 %d"
+      },
+      "REWARD_GOLD_PART_BOUNTY_HUNTER": {
+        "source": "scripts/battle_scene.gd:8137",
+        "zh": "赏金猎人 %d"
+      },
+      "REWARD_GOLD_LEGACY_SUMMARY": {
+        "source": "scripts/battle_scene.gd:17083",
+        "zh": "金币 ＋%d（%s）　现有 %d"
+      },
+      "REWARD_EVENT_ARCANE_TITLE": {
+        "source": "scripts/event_scene.gd:2589",
+        "zh": "奥 秘 之 泉"
+      },
+      "REWARD_EVENT_CORE_TITLE": {
+        "source": "scripts/event_scene.gd:2632",
+        "zh": "契 约 的 核 心"
+      }
+    },
+    "map": {
+      "ROGUE_MAP_TYPE_START": {
+        "source": "scripts/rogue_map.gd:81",
+        "zh": "起点"
+      },
+      "ROGUE_MAP_TYPE_BATTLE": {
+        "source": "scripts/rogue_map.gd:81",
+        "zh": "战斗"
+      },
+      "ROGUE_MAP_TYPE_ELITE": {
+        "source": "scripts/rogue_map.gd:81",
+        "zh": "精英"
+      },
+      "ROGUE_MAP_TYPE_REST": {
+        "source": "scripts/rogue_map.gd:81",
+        "zh": "休息"
+      },
+      "ROGUE_MAP_TYPE_EVENT": {
+        "source": "scripts/rogue_map.gd:82",
+        "zh": "事件"
+      },
+      "ROGUE_MAP_TYPE_CHEST": {
+        "source": "scripts/rogue_map.gd:82",
+        "zh": "宝箱"
+      },
+      "ROGUE_MAP_TYPE_BIGCHEST": {
+        "source": "scripts/rogue_map.gd:82",
+        "zh": "大宝箱"
+      },
+      "ROGUE_MAP_TYPE_SHOP": {
+        "source": "scripts/rogue_map.gd:82",
+        "zh": "商店"
+      },
+      "ROGUE_MAP_TYPE_UNKNOWN": {
+        "source": "scripts/rogue_map.gd:83",
+        "zh": "未知"
+      },
+      "ROGUE_MAP_TYPE_BOSS": {
+        "source": "scripts/rogue_map.gd:83",
+        "zh": "首领"
+      },
+      "ROGUE_MAP_MARK_START": {
+        "source": "scripts/rogue_map.gd:87",
+        "zh": "起"
+      },
+      "ROGUE_MAP_MARK_BATTLE": {
+        "source": "scripts/rogue_map.gd:87",
+        "zh": "战"
+      },
+      "ROGUE_MAP_MARK_ELITE": {
+        "source": "scripts/rogue_map.gd:87",
+        "zh": "英"
+      },
+      "ROGUE_MAP_MARK_REST": {
+        "source": "scripts/rogue_map.gd:87",
+        "zh": "息"
+      },
+      "ROGUE_MAP_MARK_EVENT": {
+        "source": "scripts/rogue_map.gd:88",
+        "zh": "事"
+      },
+      "ROGUE_MAP_MARK_CHEST": {
+        "source": "scripts/rogue_map.gd:88",
+        "zh": "箱"
+      },
+      "ROGUE_MAP_MARK_BIGCHEST": {
+        "source": "scripts/rogue_map.gd:88",
+        "zh": "大"
+      },
+      "ROGUE_MAP_MARK_SHOP": {
+        "source": "scripts/rogue_map.gd:88",
+        "zh": "商"
+      },
+      "ROGUE_MAP_MARK_BOSS": {
+        "source": "scripts/rogue_map.gd:89",
+        "zh": "王"
+      },
+      "MAP_ENTER_BATTLE": {
+        "source": "scripts/map_scene.gd:105",
+        "zh": "战斗"
+      },
+      "MAP_ENTER_ELITE": {
+        "source": "scripts/map_scene.gd:106",
+        "zh": "精英战斗"
+      },
+      "MAP_ENTER_EVENT": {
+        "source": "scripts/map_scene.gd:107",
+        "zh": "随机事件"
+      },
+      "MAP_ENTER_REST": {
+        "source": "scripts/map_scene.gd:108",
+        "zh": "片刻休息"
+      },
+      "MAP_ENTER_UNKNOWN": {
+        "source": "scripts/map_scene.gd:109",
+        "zh": "不确定的命运"
+      },
+      "MAP_ENTER_CHEST": {
+        "source": "scripts/map_scene.gd:110",
+        "zh": "宝箱"
+      },
+      "MAP_ENTER_BIGCHEST": {
+        "source": "scripts/map_scene.gd:111",
+        "zh": "大宝箱"
+      },
+      "MAP_ENTER_SHOP": {
+        "source": "scripts/map_scene.gd:112",
+        "zh": "神秘商店"
+      },
+      "MAP_ENTER_START": {
+        "source": "scripts/map_scene.gd:113",
+        "zh": "起点"
+      },
+      "MAP_ENTER_BOSS": {
+        "source": "scripts/map_scene.gd:114",
+        "zh": "首领战"
+      },
+      "MAP_FULL_DECK_BUTTON": {
+        "source": "scripts/map_scene.gd:388",
+        "zh": "完整卡组"
+      },
+      "MAP_MENU_BACK": {
+        "source": "scripts/map_scene.gd:405",
+        "zh": "返回地图"
+      },
+      "MAP_MENU_SUBTITLE": {
+        "source": "scripts/map_scene.gd:406",
+        "zh": "冒险地图"
+      },
+      "MAP_START_HEAL": {
+        "source": "scripts/map_scene.gd:754",
+        "zh": "起点补给：回复 %d 点生命（%d/%d）"
+      },
+      "MAP_START_HEAL_FULL": {
+        "source": "scripts/map_scene.gd:756",
+        "zh": "起点补给：生命已满（%d/%d）"
+      },
+      "MAP_REVISIT_NOTE_LAYER_THREE": {
+        "source": "scripts/map_scene.gd:761",
+        "zh": "这里是走过的房间，什么都不会发生"
+      },
+      "MAP_REVISIT_NOTE_DEFAULT": {
+        "source": "scripts/map_scene.gd:763",
+        "zh": "这里是走过的房间，什么都不会发生（不消耗巧克力）"
+      },
+      "MAP_SHOP_REVISIT": {
+        "source": "scripts/map_scene.gd:1106",
+        "zh": "可再进店"
+      },
+      "MAP_FLINT_NO_CANDIDATES": {
+        "source": "scripts/map_scene.gd:1160",
+        "zh": "燧石没有用武之地：这张图上没有能点火的地方"
+      },
+      "MAP_FLINT_INVALID_CELL": {
+        "source": "scripts/map_scene.gd:1171",
+        "zh": "这一格点不着（当前所站 / 起点 / 首领 / 固定商店 / 已经是篝火 / 空地都不行）"
+      },
+      "MAP_FLINT_FAILED": {
+        "source": "scripts/map_scene.gd:1175",
+        "zh": "这一格点不着火"
+      },
+      "MAP_FLINT_SUCCESS": {
+        "source": "scripts/map_scene.gd:1184",
+        "zh": "篝火点起来了（第 %d 列第 %d 行）—— 走过去就能休息"
+      },
+      "MAP_FLINT_HINT": {
+        "source": "scripts/map_scene.gd:1263",
+        "zh": "燧石：在地图上任选一格，点着成篝火（走过的会退回未探索）"
+      },
+      "MAP_FLY_NO_CANDIDATES": {
+        "source": "scripts/map_scene.gd:1201",
+        "zh": "飞行器没有能去的地方：没有可供前往的未探索房间"
+      },
+      "MAP_FLY_INVALID_CELL": {
+        "source": "scripts/map_scene.gd:1213",
+        "zh": "这一格飞不过去（走过 / 起点 / 首领 / 固定商店 / 空地都不行）"
+      },
+      "MAP_FLY_FAILED": {
+        "source": "scripts/map_scene.gd:1218",
+        "zh": "这一格飞不过去"
+      },
+      "MAP_FLY_HINT": {
+        "source": "scripts/map_scene.gd:1294",
+        "zh": "飞行器：挑一个没去过的房间，飞过去（不消耗巧克力）"
+      },
+      "MAP_FLASH_BIGCHEST": {
+        "source": "scripts/map_scene.gd:1317",
+        "zh": "大宝箱"
+      },
+      "MAP_HUD_TITLE": {
+        "source": "scripts/map_scene.gd:1337",
+        "zh": "冒险地图"
+      },
+      "MAP_HUD_BOSS": {
+        "source": "scripts/map_scene.gd:1347",
+        "zh": "本层首领：%s"
+      },
+      "MAP_LEGEND_START": {
+        "source": "scripts/map_scene.gd:1530",
+        "zh": "起点"
+      },
+      "MAP_LEGEND_BATTLE": {
+        "source": "scripts/map_scene.gd:1530",
+        "zh": "战斗"
+      },
+      "MAP_LEGEND_ELITE": {
+        "source": "scripts/map_scene.gd:1530",
+        "zh": "精英"
+      },
+      "MAP_LEGEND_REST": {
+        "source": "scripts/map_scene.gd:1530",
+        "zh": "休息"
+      },
+      "MAP_LEGEND_EVENT": {
+        "source": "scripts/map_scene.gd:1531",
+        "zh": "事件"
+      },
+      "MAP_LEGEND_CHEST": {
+        "source": "scripts/map_scene.gd:1531",
+        "zh": "宝箱"
+      },
+      "MAP_LEGEND_BIGCHEST": {
+        "source": "scripts/map_scene.gd:1531",
+        "zh": "大宝箱"
+      },
+      "MAP_LEGEND_UNKNOWN": {
+        "source": "scripts/map_scene.gd:1531",
+        "zh": "未知"
+      },
+      "MAP_HINT_DEFAULT": {
+        "source": "scripts/map_scene.gd:1549",
+        "zh": "小桥＝通路，全图可见 · 迷雾遮住房间内容，只看得清「下一步」的几间 · 走过的房间可免费返回 · 巧克力用完即打首领"
+      },
+      "MAP_HINT_LAYER_THREE": {
+        "source": "scripts/map_scene.gd:1551",
+        "zh": "第三层是一条直道：起点 → 精英 → 商店 → 篝火 → 首领 · 这一层不消耗巧克力 · 走到首领格即开战"
+      },
+      "MAP_HINT_WHISPER": {
+        "source": "scripts/map_scene.gd:1553",
+        "zh": "【鸭之低语】前路已被命运选定，你无法自主选择……"
+      },
+      "MAP_HINT_EAGLE_WHISTLE": {
+        "source": "scripts/map_scene.gd:1555",
+        "zh": "鹰哨：全图迷雾已散，每一格都看得见 · 小桥＝通路 · 巧克力用完即打首领"
+      },
+      "MAP_MARK_PEN": {
+        "source": "scripts/map_scene.gd:1715",
+        "zh": "画图"
+      },
+      "MAP_MARK_FLAG": {
+        "source": "scripts/map_scene.gd:1715",
+        "zh": "标记"
+      },
+      "MAP_MARK_ERASE": {
+        "source": "scripts/map_scene.gd:1715",
+        "zh": "擦除"
+      },
+      "MAP_NIGHT_TITLE": {
+        "source": "scripts/map_scene.gd:1777",
+        "zh": "入 夜 了"
+      },
+      "MAP_NIGHT_SUBTITLE": {
+        "source": "scripts/map_scene.gd:1779",
+        "zh": "强大的敌人来袭"
+      },
+      "MAP_NIGHT_BOSS_TEMPLATE": {
+        "source": "scripts/map_scene.gd:1781",
+        "zh": "—— %s ——"
+      },
+      "MAP_RELIC_SCROLL_HINT": {
+        "source": "scripts/map_scene.gd:1882",
+        "zh": "滚轮浏览道具"
+      },
+      "MAP_RELIC_TOOLTIP_TEMPLATE": {
+        "source": "scripts/map_scene.gd:1925",
+        "zh": "「%s」（%s）：%s%s"
+      },
+      "MAP_RELIC_SPENT_PREFIX": {
+        "source": "scripts/map_scene.gd:1952",
+        "zh": "已耗尽 · "
+      },
+      "MAP_RELIC_NOTE_SUFFIX": {
+        "source": "scripts/map_scene.gd:1948",
+        "zh": "  （%s）"
+      },
+      "MAP_RELIC_ROW_TEMPLATE": {
+        "source": "scripts/map_scene.gd:1951",
+        "zh": "「%s」（%s%s）"
+      },
+      "MAP_KEY_RELIC_LABEL": {
+        "source": "scripts/map_scene.gd:2049",
+        "zh": "信物"
+      },
+      "MAP_KEY_RELIC_TOOLTIP_TEMPLATE": {
+        "source": "scripts/map_scene.gd:2091",
+        "zh": "「%s」：%s"
+      },
+      "MAP_KEY_RELIC_OWNED": {
+        "source": "scripts/map_scene.gd:2093",
+        "zh": "（已获得）"
+      },
+      "MAP_KEY_RELIC_SOURCE": {
+        "source": "scripts/map_scene.gd:2096",
+        "zh": "获取：%s"
+      },
+      "MAP_RELIC_PANEL_TITLE": {
+        "source": "scripts/map_scene.gd:2134",
+        "zh": "我的道具（共 %d 件 · 完整效果）"
+      },
+      "MAP_MENU_BATTLE_RECORDS": {
+        "source": "scripts/map_scene.gd:2168",
+        "zh": "战斗记录"
+      },
+      "MAP_MENU_VIEW_DECK": {
+        "source": "scripts/map_scene.gd:2169",
+        "zh": "查看卡组"
+      },
+      "MAP_MENU_SOUND_ON": {
+        "source": "scripts/map_scene.gd:2170",
+        "zh": "音效：开"
+      },
+      "MAP_MENU_SOUND_OFF": {
+        "source": "scripts/map_scene.gd:2170",
+        "zh": "音效：关"
+      },
+      "MAP_MENU_BACK_TITLE": {
+        "source": "scripts/map_scene.gd:2172",
+        "zh": "回到标题"
+      },
+      "MAP_DECK_VIEW_SHORT": {
+        "source": "scripts/map_scene.gd:2234",
+        "zh": "完整卡组"
+      },
+      "MAP_DECK_VIEW_TITLE": {
+        "source": "scripts/map_scene.gd:2236",
+        "zh": "完整卡组（共 %d 张）"
+      },
+      "MAP_DECK_VIEW_CLOSE": {
+        "source": "scripts/map_scene.gd:2241",
+        "zh": "关闭"
+      },
+      "MAP_RECORDS_TITLE": {
+        "source": "scripts/map_scene.gd:2259",
+        "zh": "战斗记录（共 %d 场）"
+      },
+      "MAP_RECORD_WIN": {
+        "source": "scripts/map_scene.gd:2272",
+        "zh": "胜"
+      },
+      "MAP_RECORD_LOSS": {
+        "source": "scripts/map_scene.gd:2272",
+        "zh": "败"
+      },
+      "MAP_RECORD_LEVEL_TEMPLATE": {
+        "source": "scripts/map_scene.gd:2277",
+        "zh": "%s（%s）"
+      },
+      "MAP_RECORD_FINAL_HP": {
+        "source": "scripts/map_scene.gd:2282",
+        "zh": "最终血量 %d/%d"
+      },
+      "MAP_RECORD_DECK_PREFIX": {
+        "source": "scripts/map_scene.gd:2288",
+        "zh": "卡组："
+      },
+      "MAP_RECORDS_EMPTY": {
+        "source": "scripts/map_scene.gd:2292",
+        "zh": "还没有战斗记录——去打第一场吧！"
+      },
+      "DECK_EDIT_MENU_BACK": {
+        "source": "scripts/deck_edit_scene.gd:213",
+        "zh": "继续"
+      },
+      "DECK_EDIT_MENU_SUBTITLE": {
+        "source": "scripts/deck_edit_scene.gd:214",
+        "zh": "卡组编辑"
+      },
+      "DECK_EDIT_OBLIVION_TITLE": {
+        "source": "scripts/deck_edit_scene.gd:318",
+        "zh": "遗忘之泉 — 选择一张卡遗忘"
+      },
+      "DECK_EDIT_OBLIVION_HINT": {
+        "source": "scripts/deck_edit_scene.gd:319",
+        "zh": "选中的卡会从卡组中永久删除。"
+      },
+      "DECK_EDIT_DELETE_TITLE": {
+        "source": "scripts/deck_edit_scene.gd:321",
+        "zh": "失忆药水 — 选择一张卡删除"
+      },
+      "DECK_EDIT_DELETE_HINT": {
+        "source": "scripts/deck_edit_scene.gd:322",
+        "zh": "选中的卡会被永远删除。"
+      },
+      "DECK_EDIT_TRANSFORM_TITLE": {
+        "source": "scripts/deck_edit_scene.gd:324",
+        "zh": "源数之力 — 选择一张卡转化"
+      },
+      "DECK_EDIT_TRANSFORM_HINT": {
+        "source": "scripts/deck_edit_scene.gd:325",
+        "zh": "选中的卡会变成一张随机奖励卡牌。"
+      },
+      "DECK_EDIT_SMITH_TITLE": {
+        "source": "scripts/deck_edit_scene.gd:327",
+        "zh": "鸭鸭工匠 — 选择一张卡锻造成铁栅栏"
+      },
+      "DECK_EDIT_SMITH_HINT": {
+        "source": "scripts/deck_edit_scene.gd:328",
+        "zh": "选中的卡会被锻造成一张 2 费铁栅栏。"
+      },
+      "DECK_EDIT_TRANSFORM_CLASS_TITLE": {
+        "source": "scripts/deck_edit_scene.gd:330",
+        "zh": "卡片商人 — 选择一张卡换掉"
+      },
+      "DECK_EDIT_TRANSFORM_CLASS_HINT": {
+        "source": "scripts/deck_edit_scene.gd:331",
+        "zh": "选中的卡会变成一张随机本职业奖励卡。"
+      },
+      "DECK_EDIT_VENDOR_TITLE": {
+        "source": "scripts/deck_edit_scene.gd:333",
+        "zh": "卡片商人 — 交出 5 费及以上卡（X 费除外）换大宝箱"
+      },
+      "DECK_EDIT_VENDOR_HINT": {
+        "source": "scripts/deck_edit_scene.gd:334",
+        "zh": "只能选 5 费及以上卡（X 费除外）。确认后得到：一件道具 + 一组卡牌奖励 + %d 金币。"
+      },
+      "DECK_EDIT_DUPLICATE_TITLE": {
+        "source": "scripts/deck_edit_scene.gd:337",
+        "zh": "鸭血 — 选择最多 %d 张卡复制"
+      },
+      "DECK_EDIT_DUPLICATE_HINT": {
+        "source": "scripts/deck_edit_scene.gd:338",
+        "zh": "每张选中的卡都会复制一份加入卡组，原卡保留（可多选，已选 %d/%d；一张都不选也可以）。"
+      },
+      "DECK_EDIT_DEFAULT_TITLE": {
+        "source": "scripts/deck_edit_scene.gd:340",
+        "zh": "卡组编辑"
+      },
+      "DECK_EDIT_DECK_COUNT_SUFFIX": {
+        "source": "scripts/deck_edit_scene.gd:343",
+        "zh": "　（卡组共 %d 张）"
+      },
+      "DECK_EDIT_NO_REMOVE_SUFFIX": {
+        "source": "scripts/deck_edit_scene.gd:345",
+        "zh": "　｜　带锁标记的卡不可以从卡组删除"
+      },
+      "DECK_EDIT_TRANSFORM_COST_SUFFIX": {
+        "source": "scripts/deck_edit_scene.gd:347",
+        "zh": "　｜　代价：失去 %d 点最大生命（已结算）"
+      },
+      "DECK_EDIT_EMPTY": {
+        "source": "scripts/deck_edit_scene.gd:442",
+        "zh": "卡组是空的……"
+      },
+      "DECK_EDIT_EMPTY_CONTINUE": {
+        "source": "scripts/deck_edit_scene.gd:448",
+        "zh": "继 续"
+      },
+      "DECK_EDIT_CARD_META": {
+        "source": "scripts/deck_edit_scene.gd:465",
+        "zh": "%s · %d 费 · %s"
+      },
+      "DECK_EDIT_CARD_GROWTH": {
+        "source": "scripts/deck_edit_scene.gd:472",
+        "zh": "本局永久成长 %s（跨战斗保留）"
+      },
+      "DECK_EDIT_MENU_SOUND_ON": {
+        "source": "scripts/deck_edit_scene.gd:549",
+        "zh": "音效：开"
+      },
+      "DECK_EDIT_MENU_SOUND_OFF": {
+        "source": "scripts/deck_edit_scene.gd:549",
+        "zh": "音效：关"
+      },
+      "DECK_EDIT_MENU_BACK_TITLE": {
+        "source": "scripts/deck_edit_scene.gd:551",
+        "zh": "返回标题"
+      },
+      "DECK_EDIT_SKIP_DUPLICATE": {
+        "source": "scripts/deck_edit_scene.gd:714",
+        "zh": "不复制任何卡（继续）"
+      },
+      "DECK_EDIT_CONFIRM_DUPLICATE": {
+        "source": "scripts/deck_edit_scene.gd:720",
+        "zh": "确定复制 %d 张：%s"
+      },
+      "DECK_EDIT_SELECT_REQUIRED": {
+        "source": "scripts/deck_edit_scene.gd:724",
+        "zh": "请先选择一张卡"
+      },
+      "DECK_EDIT_CONFIRM_FORGET": {
+        "source": "scripts/deck_edit_scene.gd:732",
+        "zh": "确定遗忘「%s」"
+      },
+      "DECK_EDIT_CONFIRM_DELETE": {
+        "source": "scripts/deck_edit_scene.gd:734",
+        "zh": "确定删除「%s」"
+      },
+      "DECK_EDIT_CONFIRM_TRANSFORM": {
+        "source": "scripts/deck_edit_scene.gd:736",
+        "zh": "确定转化「%s」"
+      },
+      "DECK_EDIT_DUPLICATE_DONE": {
+        "source": "scripts/deck_edit_scene.gd:756",
+        "zh": "完成"
+      },
+      "DECK_EDIT_DUPLICATE_NONE": {
+        "source": "scripts/deck_edit_scene.gd:759",
+        "zh": "鸭血：没有复制任何卡（卡组不变）"
+      },
+      "DECK_EDIT_DUPLICATE_RESULT": {
+        "source": "scripts/deck_edit_scene.gd:764",
+        "zh": "鸭血复制了「%s」各一份（卡组 +%d 张）"
+      },
+      "DECK_EDIT_FORGET_RESULT": {
+        "source": "scripts/deck_edit_scene.gd:785",
+        "zh": "「%s」已被遗忘，永远离开了卡组"
+      },
+      "DECK_EDIT_OBLIVION_DELETE_FAILED": {
+        "source": "scripts/deck_edit_scene.gd:787",
+        "zh": "删除失败：卡组里没有这一张"
+      },
+      "DECK_EDIT_DELETE_RESULT": {
+        "source": "scripts/deck_edit_scene.gd:791",
+        "zh": "「%s」已从卡组中删除（失忆药水）"
+      },
+      "DECK_EDIT_DELETE_FAILED": {
+        "source": "scripts/deck_edit_scene.gd:793",
+        "zh": "删除失败：卡组里没有这一张"
+      },
+      "DECK_EDIT_SMITH_RESULT": {
+        "source": "scripts/deck_edit_scene.gd:797",
+        "zh": "「%s」被锻造成了一张 %d 费铁栅栏（卡组里那张的费用按 %d 计）"
+      },
+      "DECK_EDIT_SMITH_FAILED": {
+        "source": "scripts/deck_edit_scene.gd:800",
+        "zh": "锻造失败：卡组里没有这一张"
+      },
+      "DECK_EDIT_TRANSFORM_CLASS_RESULT": {
+        "source": "scripts/deck_edit_scene.gd:804",
+        "zh": "「%s」变成了「%s」（本职业奖励卡）"
+      },
+      "DECK_EDIT_VENDOR_RELIC": {
+        "source": "scripts/deck_edit_scene.gd:810",
+        "zh": "一件道具"
+      },
+      "DECK_EDIT_VENDOR_RELIC_EXHAUSTED": {
+        "source": "scripts/deck_edit_scene.gd:810",
+        "zh": "道具（已全拿完）"
+      },
+      "DECK_EDIT_VENDOR_RESULT": {
+        "source": "scripts/deck_edit_scene.gd:811",
+        "zh": "「%s」换来了大宝箱：%s + 一组卡牌奖励 + %d 金币"
+      },
+      "DECK_EDIT_VENDOR_FAILED": {
+        "source": "scripts/deck_edit_scene.gd:814",
+        "zh": "易物失败：只能交出 5 费及以上卡（X 费除外）"
+      },
+      "DECK_EDIT_TRANSFORM_RESULT": {
+        "source": "scripts/deck_edit_scene.gd:818",
+        "zh": "「%s」变成了「%s」（源数之力）"
+      },
+      "DECK_EDIT_CONFIRM_DONE": {
+        "source": "scripts/deck_edit_scene.gd:828",
+        "zh": "完成"
+      },
+      "DECK_VIEWER_BUTTON": {
+        "source": "scripts/deck_viewer.gd:127",
+        "zh": "卡组 %d"
+      },
+      "DECK_VIEWER_DETAIL_TITLE": {
+        "source": "scripts/deck_viewer.gd:251",
+        "zh": "卡牌详情（左键点空白处返回卡组）"
+      },
+      "DECK_VIEWER_GRID_TITLE": {
+        "source": "scripts/deck_viewer.gd:256",
+        "zh": "我的卡组（共 %d 张 · 相同卡合并）"
+      },
+      "DECK_VIEWER_EMPTY": {
+        "source": "scripts/deck_viewer.gd:259",
+        "zh": "卡组是空的。"
+      },
+      "DECK_VIEWER_PAGE_HINT": {
+        "source": "scripts/deck_viewer.gd:287",
+        "zh": "第 %d/%d 屏（滚轮或按住拖动翻页）"
+      },
+      "DECK_VIEWER_X_COST": {
+        "source": "scripts/deck_viewer.gd:356",
+        "zh": "X 费"
+      },
+      "DECK_VIEWER_COST": {
+        "source": "scripts/deck_viewer.gd:356",
+        "zh": "%d 费"
+      },
+      "DECK_VIEWER_META_TEMPLATE": {
+        "source": "scripts/deck_viewer.gd:357",
+        "zh": "%s · %s · %s · %s"
+      },
+      "DECK_VIEWER_SKILL_DAMAGE": {
+        "source": "scripts/deck_viewer.gd:367",
+        "zh": "造成 %d 点伤害"
+      },
+      "DECK_VIEWER_GROWTH": {
+        "source": "scripts/deck_viewer.gd:378",
+        "zh": "本局永久成长　%s"
+      },
+      "DECK_VIEWER_GROWTH_NOTE": {
+        "source": "scripts/deck_viewer.gd:384",
+        "zh": "跨战斗保留 · 随存档走 · 新开一局才清空"
+      },
+      "DECK_VIEWER_CARD_COUNT": {
+        "source": "scripts/deck_viewer.gd:409",
+        "zh": "卡组中同名同状态共 %d 张"
+      },
+      "DECK_VIEWER_DETAIL_FOOTER": {
+        "source": "scripts/deck_viewer.gd:415",
+        "zh": "左键点空白返回 · 右键关闭"
+      },
+      "PICK_CLOSE": {
+        "source": "scripts/pick_overlay.gd:321",
+        "zh": "关闭"
+      },
+      "PICK_VIEW_BATTLEFIELD": {
+        "source": "scripts/pick_overlay.gd:321",
+        "zh": "看战场"
+      },
+      "PICK_VIEW_COUNT": {
+        "source": "scripts/pick_overlay.gd:340",
+        "zh": "共 %d 张"
+      },
+      "PICK_SELECTED_COUNT": {
+        "source": "scripts/pick_overlay.gd:344",
+        "zh": "已选 %d / %d"
+      },
+      "PICK_CARD_META": {
+        "source": "scripts/pick_overlay.gd:356",
+        "zh": "%s · %d 费 · %s"
+      },
+      "PICK_DETAIL": {
+        "source": "scripts/pick_overlay.gd:370",
+        "zh": "详情"
+      },
+      "PICK_CONFIRM_DEFAULT": {
+        "source": "scripts/pick_overlay.gd:391",
+        "zh": "确认"
+      },
+      "PICK_CONFIRM_COUNT_SUFFIX": {
+        "source": "scripts/pick_overlay.gd:393",
+        "zh": "（%d/%d）"
+      },
+      "PICK_DETAIL_NOTE": {
+        "source": "scripts/pick_overlay.gd:547",
+        "zh": "选卡页的卡面只显示卡名 —— 完整卡面与规则全文在这里"
+      },
+      "CARD_DETAIL_X_COST": {
+        "source": "scripts/card_detail_overlay.gd:122",
+        "zh": "X 费"
+      },
+      "CARD_DETAIL_COST": {
+        "source": "scripts/card_detail_overlay.gd:122",
+        "zh": "%d 费"
+      },
+      "CARD_DETAIL_META_TEMPLATE": {
+        "source": "scripts/card_detail_overlay.gd:123",
+        "zh": "%s · %s · %s · %s"
+      },
+      "CARD_DETAIL_SKILL_DAMAGE": {
+        "source": "scripts/card_detail_overlay.gd:133",
+        "zh": "造成 %d 点伤害"
+      },
+      "CARD_DETAIL_GROWTH": {
+        "source": "scripts/card_detail_overlay.gd:145",
+        "zh": "本局永久成长　%s"
+      },
+      "CARD_DETAIL_GROWTH_NOTE": {
+        "source": "scripts/card_detail_overlay.gd:151",
+        "zh": "跨战斗保留 · 随存档走 · 新开一局才清空"
+      },
+      "CARD_DETAIL_CLOSE_HINT": {
+        "source": "scripts/card_detail_overlay.gd:190",
+        "zh": "点任意处 / 右键 / ESC 关闭"
+      },
+      "CODEX_MENU_BACK": {
+        "source": "scripts/codex_scene.gd:65",
+        "zh": "继续"
+      },
+      "CODEX_MENU_SUBTITLE": {
+        "source": "scripts/codex_scene.gd:66",
+        "zh": "百科"
+      },
+      "CODEX_GALLERY_TITLE": {
+        "source": "scripts/codex_scene.gd:85",
+        "zh": "卡牌图鉴"
+      },
+      "CODEX_GALLERY_SUBTITLE": {
+        "source": "scripts/codex_scene.gd:86",
+        "zh": "玩家卡牌 / 敌人图鉴 · 按种类、费用、职业筛选"
+      },
+      "CODEX_STORY_TITLE": {
+        "source": "scripts/codex_scene.gd:91",
+        "zh": "查看故事"
+      },
+      "CODEX_STORY_SUBTITLE": {
+        "source": "scripts/codex_scene.gd:92",
+        "zh": "成就解锁的剧情 · 看完把卡牌 / 道具加进奖励池"
+      },
+      "CODEX_MENU_SOUND_ON": {
+        "source": "scripts/codex_scene.gd:101",
+        "zh": "音效：开"
+      },
+      "CODEX_MENU_SOUND_OFF": {
+        "source": "scripts/codex_scene.gd:101",
+        "zh": "音效：关"
+      },
+      "CODEX_MENU_BACK_TITLE": {
+        "source": "scripts/codex_scene.gd:103",
+        "zh": "返回标题"
+      },
+      "CODEX_TITLE": {
+        "source": "scripts/codex_scene.gd:180",
+        "zh": "百 科"
+      },
+      "CODEX_SUBTITLE": {
+        "source": "scripts/codex_scene.gd:182",
+        "zh": "卡牌与故事，都收在这里"
+      },
+      "CODEX_BACK": {
+        "source": "scripts/codex_scene.gd:186",
+        "zh": "← 返回"
+      },
+      "CODEX_BADGE_HINT": {
+        "source": "scripts/codex_scene.gd:193",
+        "zh": "金色圆点 = 有已达成、还没点开看过的故事"
+      },
+      "GALLERY_COST_ANY": {
+        "source": "scripts/gallery_scene.gd:31",
+        "zh": "费用不限"
+      },
+      "GALLERY_COST_ZERO": {
+        "source": "scripts/gallery_scene.gd:31",
+        "zh": "0 费"
+      },
+      "GALLERY_COST_ONE": {
+        "source": "scripts/gallery_scene.gd:31",
+        "zh": "1 费"
+      },
+      "GALLERY_COST_TWO": {
+        "source": "scripts/gallery_scene.gd:31",
+        "zh": "2 费"
+      },
+      "GALLERY_COST_THREE": {
+        "source": "scripts/gallery_scene.gd:31",
+        "zh": "3 费"
+      },
+      "GALLERY_COST_FOUR": {
+        "source": "scripts/gallery_scene.gd:31",
+        "zh": "4 费"
+      },
+      "GALLERY_COST_FIVE_PLUS": {
+        "source": "scripts/gallery_scene.gd:31",
+        "zh": "5 费+"
+      },
+      "GALLERY_BACK_CODEX": {
+        "source": "scripts/gallery_scene.gd:113",
+        "zh": "← 返回百科"
+      },
+      "GALLERY_BACK_TITLE": {
+        "source": "scripts/gallery_scene.gd:113",
+        "zh": "← 返回标题"
+      },
+      "GALLERY_MENU_BACK": {
+        "source": "scripts/gallery_scene.gd:175",
+        "zh": "继续看图鉴"
+      },
+      "GALLERY_MENU_SUBTITLE": {
+        "source": "scripts/gallery_scene.gd:176",
+        "zh": "卡牌图鉴"
+      },
+      "GALLERY_MENU_RETURN_CODEX": {
+        "source": "scripts/gallery_scene.gd:184",
+        "zh": "返回百科"
+      },
+      "GALLERY_MENU_RETURN_TITLE": {
+        "source": "scripts/gallery_scene.gd:184",
+        "zh": "返回标题"
+      },
+      "GALLERY_GROUP_PLAYER": {
+        "source": "scripts/gallery_scene.gd:197",
+        "zh": "玩家卡牌图鉴"
+      },
+      "GALLERY_GROUP_ENEMY": {
+        "source": "scripts/gallery_scene.gd:197",
+        "zh": "敌人图鉴（含敌方关卡效果）"
+      },
+      "GALLERY_HINT_ENEMY": {
+        "source": "scripts/gallery_scene.gd:202",
+        "zh": "敌方单位 + 敌方关卡效果（开局即挂在敌方效果区持续生效）。\n搜索匹配卡名 / 效果文 / 特性。\n左键点卡牌查看详情"
+      },
+      "GALLERY_HINT_PLAYER": {
+        "source": "scripts/gallery_scene.gd:203",
+        "zh": "玩家卡牌：初始卡组 / 奖励池 / 事件卡 / 衍生物。\n搜索匹配卡名 / 效果文 / 特性。\n左键点卡牌查看详情"
+      },
+      "GALLERY_KIND_ALL": {
+        "source": "scripts/gallery_scene.gd:211",
+        "zh": "全部"
+      },
+      "GALLERY_KIND_ALLY": {
+        "source": "scripts/gallery_scene.gd:211",
+        "zh": "盟友"
+      },
+      "GALLERY_KIND_STRUCTURE": {
+        "source": "scripts/gallery_scene.gd:211",
+        "zh": "工事"
+      },
+      "GALLERY_KIND_FIELD": {
+        "source": "scripts/gallery_scene.gd:211",
+        "zh": "场地"
+      },
+      "GALLERY_KIND_LEVEL_EFFECT": {
+        "source": "scripts/gallery_scene.gd:211",
+        "zh": "关卡效果"
+      },
+      "GALLERY_KIND_SKILL": {
+        "source": "scripts/gallery_scene.gd:212",
+        "zh": "技能"
+      },
+      "GALLERY_KIND_EFFECT": {
+        "source": "scripts/gallery_scene.gd:212",
+        "zh": "效果"
+      },
+      "GALLERY_KIND_CURSE": {
+        "source": "scripts/gallery_scene.gd:212",
+        "zh": "诅咒"
+      },
+      "GALLERY_CLASS_ALL": {
+        "source": "scripts/gallery_scene.gd:229",
+        "zh": "全部"
+      },
+      "GALLERY_CLASS_NONE": {
+        "source": "scripts/gallery_scene.gd:230",
+        "zh": "无归属"
+      },
+      "GALLERY_TITLE": {
+        "source": "scripts/gallery_scene.gd:252",
+        "zh": "卡牌图鉴"
+      },
+      "GALLERY_DETAIL_KIND_LEVEL_EFFECT": {
+        "source": "scripts/gallery_scene.gd:265",
+        "zh": "关卡效果"
+      },
+      "GALLERY_SUMMARY_RELEASE": {
+        "source": "scripts/gallery_scene.gd:429",
+        "zh": "%s · 已收集 %d / %d"
+      },
+      "GALLERY_SUMMARY_SHOWN": {
+        "source": "scripts/gallery_scene.gd:431",
+        "zh": "（显示 %d 张）"
+      },
+      "GALLERY_SUMMARY_TEST": {
+        "source": "scripts/gallery_scene.gd:433",
+        "zh": "%s · 共 %d 种卡牌"
+      },
+      "GALLERY_SUMMARY_LOCKED": {
+        "source": "scripts/gallery_scene.gd:437",
+        "zh": "（其中 %d 张未解锁）"
+      },
+      "GALLERY_SUMMARY_TEXT_ONLY": {
+        "source": "scripts/gallery_scene.gd:442",
+        "zh": "（其中 %d 张的卡名不含搜索词）"
+      },
+      "GALLERY_EMPTY": {
+        "source": "scripts/gallery_scene.gd:542",
+        "zh": "（无卡牌）"
+      },
+      "GALLERY_EMPTY_UNSEEN": {
+        "source": "scripts/gallery_scene.gd:544",
+        "zh": "还没见过任何卡牌"
+      },
+      "GALLERY_EMPTY_FILTERED": {
+        "source": "scripts/gallery_scene.gd:545",
+        "zh": "（没有符合条件的卡牌）"
+      },
+      "GALLERY_LOCKED_NAME": {
+        "source": "scripts/gallery_scene.gd:564",
+        "zh": "？？？"
+      },
+      "GALLERY_LOCKED_KIND": {
+        "source": "scripts/gallery_scene.gd:565",
+        "zh": "未解锁"
+      },
+      "GALLERY_LOCKED_DESCRIPTION": {
+        "source": "scripts/gallery_scene.gd:569",
+        "zh": "在游戏里见过这张卡后，才会收录进图鉴。"
+      },
+      "GALLERY_CLASS_BASE_COMMON": {
+        "source": "scripts/gallery_scene.gd:578",
+        "zh": "公用初始"
+      },
+      "GALLERY_DETAIL_CLASS_NONE": {
+        "source": "scripts/gallery_scene.gd:578",
+        "zh": "无归属"
+      },
+      "GALLERY_DETAIL_META": {
+        "source": "scripts/gallery_scene.gd:580",
+        "zh": "%s · %s · %d 费 · %s"
+      },
+      "GALLERY_DETAIL_PLAYER": {
+        "source": "scripts/gallery_scene.gd:581",
+        "zh": "玩家"
+      },
+      "GALLERY_DETAIL_ENEMY": {
+        "source": "scripts/gallery_scene.gd:581",
+        "zh": "敌方"
+      },
+      "GALLERY_DETAIL_TRAITS_PREFIX": {
+        "source": "scripts/gallery_scene.gd:585",
+        "zh": "特性："
+      },
+      "GALLERY_DETAIL_TRAITS_NONE": {
+        "source": "scripts/gallery_scene.gd:585",
+        "zh": "无"
+      },
+      "GALLERY_TARGET_REQUIRED": {
+        "source": "scripts/gallery_scene.gd:596",
+        "zh": "需要选择目标"
+      },
+      "RELIC_VIEWER_BUTTON_OVERFLOW": {
+        "source": "scripts/relic_viewer.gd:203",
+        "zh": "道具 %d ▾"
+      },
+      "RELIC_VIEWER_BUTTON": {
+        "source": "scripts/relic_viewer.gd:203",
+        "zh": "道具 %d"
+      },
+      "RELIC_VIEWER_SPENT_PREFIX": {
+        "source": "scripts/relic_viewer.gd:231",
+        "zh": "已耗尽 · "
+      }
+    },
+    "shell": {
+      "STORY_MENU_CONTINUE": {
+        "source": "scripts/story_scene.gd:112",
+        "zh": "继续"
+      },
+      "STORY_MENU_SUBTITLE": {
+        "source": "scripts/story_scene.gd:113",
+        "zh": "故事"
+      },
+      "STORY_SOUND_ON": {
+        "source": "scripts/story_scene.gd:119",
+        "zh": "音效：开"
+      },
+      "STORY_SOUND_OFF": {
+        "source": "scripts/story_scene.gd:119",
+        "zh": "音效：关"
+      },
+      "STORY_MENU_BACK_CODEX": {
+        "source": "scripts/story_scene.gd:122",
+        "zh": "返回百科"
+      },
+      "STORY_MENU_BACK_TITLE": {
+        "source": "scripts/story_scene.gd:122",
+        "zh": "返回标题"
+      },
+      "STORY_CLAIM_UNAVAILABLE": {
+        "source": "scripts/story_scene.gd:289",
+        "zh": "现在还不能解锁"
+      },
+      "STORY_BACK_CODEX": {
+        "source": "scripts/story_scene.gd:330",
+        "zh": "← 返回百科"
+      },
+      "STORY_BACK_TITLE": {
+        "source": "scripts/story_scene.gd:330",
+        "zh": "← 返回标题"
+      },
+      "STORY_TITLE": {
+        "source": "scripts/story_scene.gd:393",
+        "zh": "故 事"
+      },
+      "STORY_EMPTY": {
+        "source": "scripts/story_scene.gd:410",
+        "zh": "还没有任何剧情段（stories.json 是空的）。"
+      },
+      "STORY_RANGE": {
+        "source": "scripts/story_scene.gd:424",
+        "zh": "第 %d–%d 段 / 共 %d 段"
+      },
+      "STORY_GRANTS_CARDS": {
+        "source": "scripts/story_scene.gd:491-494",
+        "zh": "解锁：卡牌 %d"
+      },
+      "STORY_GRANTS_RELICS": {
+        "source": "scripts/story_scene.gd:491-494",
+        "zh": "解锁：道具 %d"
+      },
+      "STORY_GRANTS_BOTH": {
+        "source": "scripts/story_scene.gd:491-494",
+        "zh": "解锁：卡牌 %d · 道具 %d"
+      },
+      "STORY_DETAIL_LOCKED": {
+        "source": "scripts/story_scene.gd:519",
+        "zh": "这一段还没有解锁"
+      },
+      "STORY_DETAIL_NO_REWARD": {
+        "source": "scripts/story_scene.gd:542",
+        "zh": "看完这一段没有额外奖励。"
+      },
+      "STORY_DETAIL_REWARDS": {
+        "source": "scripts/story_scene.gd:544",
+        "zh": "看完解锁：卡牌 %d 张 · 道具 %d 件（加入奖励池）"
+      },
+      "STORY_CLAIM": {
+        "source": "scripts/story_scene.gd:551",
+        "zh": "收下这一段"
+      },
+      "STORY_ALREADY_READ": {
+        "source": "scripts/story_scene.gd:553",
+        "zh": "已经看过"
+      },
+      "STORY_REQUIREMENT_UNMET": {
+        "source": "scripts/story_scene.gd:555",
+        "zh": "条件未达成"
+      },
+      "STORY_REVEAL_CARD_META": {
+        "source": "scripts/story_scene.gd:583",
+        "zh": "%s · %s · %d 费"
+      },
+      "STORY_REVEAL_RELIC_META": {
+        "source": "scripts/story_scene.gd:595",
+        "zh": "道具 · %s"
+      },
+      "STORY_REVEAL_NO_REWARD": {
+        "source": "scripts/story_scene.gd:600",
+        "zh": "已解锁（这一段没有额外奖励）"
+      },
+      "STORY_REVEAL_TITLE": {
+        "source": "scripts/story_scene.gd:620",
+        "zh": "解 锁"
+      },
+      "STORY_REVEAL_SUBTITLE": {
+        "source": "scripts/story_scene.gd:623",
+        "zh": "以下内容已加入奖励池"
+      },
+      "STORY_REVEAL_CONTINUE": {
+        "source": "scripts/story_scene.gd:646",
+        "zh": "继续"
+      },
+      "CREDITS_BODY": {
+        "source": "scripts/credits_scene.gd:20-59",
+        "zh": "[center]\n[font_size=58][color=#ffffff]{name}[/color][/font_size]\n\n\n[font_size=26][color=#9a9a9a]开发[/color][/font_size]\n[font_size=32][color=#ffffff]栗鼠大怪兽[/color][/font_size]\n\n\n[font_size=26][color=#9a9a9a]引擎[/color][/font_size]\n[font_size=32][color=#ffffff]Godot 4.3[/color][/font_size]\n\n\n[font_size=26][color=#9a9a9a]音乐 · PeriTune（CC BY 4.0）[/color][/font_size]\n[font_size=24][color=#c8c8c8]Holy_Place\nPiano_Refreshing\nPoema\nStrategy4\nDramatic\nEpicBattle\nRaid_FolkMetal\nFirmament3\nSoaring\nRapid4\nHavoc[/color][/font_size]\n\n[font_size=20][color=#888888]https://peritune.com/\nLicense: Creative Commons CC BY 4.0\nhttps://creativecommons.org/licenses/by/4.0[/color][/font_size]\n\n\n[font_size=26][color=#9a9a9a]素材说明[/color][/font_size]\n[font_size=22][color=#c8c8c8]本作部分美术素材使用 AI 工具辅助生成[/color][/font_size]\n\n\n[font_size=26][color=#9a9a9a]特别鸣谢[/color][/font_size]\n[font_size=24][color=#c8c8c8]每一位测试与反馈的伙伴[/color][/font_size]\n\n\n[font_size=32][color=#ffffff]感谢游玩[/color][/font_size]\n[/center]"
+      },
+      "OPENING_CONTINUE_HINT": {
+        "source": "scripts/opening_scene.gd:252",
+        "zh": "按任意键继续"
+      },
+      "CURTAIN_MENU_CONTINUE": {
+        "source": "scripts/curtain_scene.gd:127",
+        "zh": "继续这段对话"
+      },
+      "CURTAIN_MENU_SUBTITLE": {
+        "source": "scripts/curtain_scene.gd:128",
+        "zh": "起点"
+      },
+      "CURTAIN_OPTION_EMPTY": {
+        "source": "scripts/curtain_scene.gd:367",
+        "zh": "（空缺）"
+      },
+      "CURTAIN_OPTION_UNKNOWN": {
+        "source": "scripts/curtain_scene.gd:371",
+        "zh": "（未知道具 %d）"
+      },
+      "CURTAIN_OPTION_NAME": {
+        "source": "scripts/curtain_scene.gd:375",
+        "zh": "「%s」"
+      },
+      "CURTAIN_LEAVE": {
+        "source": "scripts/curtain_scene.gd:411",
+        "zh": "离开"
+      },
+      "CURTAIN_ACCEPTED_FALLBACK": {
+        "source": "scripts/curtain_scene.gd:413",
+        "zh": "「%s」收下了——路上小心哦。"
+      },
+      "CURTAIN_RELIC_KIND": {
+        "source": "scripts/curtain_scene.gd:542",
+        "zh": "道具 · %s"
+      },
+      "CURTAIN_LINKED_CARD_TITLE": {
+        "source": "scripts/curtain_scene.gd:579",
+        "zh": "获得卡牌"
+      },
+      "CURTAIN_LINKED_CARD_META": {
+        "source": "scripts/curtain_scene.gd:592",
+        "zh": "%s · %d 费 · %s"
+      },
+      "CURTAIN_SOUND_ON": {
+        "source": "scripts/curtain_scene.gd:609",
+        "zh": "音效：开"
+      },
+      "CURTAIN_SOUND_OFF": {
+        "source": "scripts/curtain_scene.gd:609",
+        "zh": "音效：关"
+      },
+      "CURTAIN_BACK_TITLE": {
+        "source": "scripts/curtain_scene.gd:611",
+        "zh": "返回标题"
+      },
+      "CURTAIN_SPEAKER": {
+        "source": "scripts/curtain_lines.gd:16",
+        "zh": "卷卷"
+      },
+      "CURTAIN_SPEAKER_SUBTITLE": {
+        "source": "scripts/curtain_lines.gd:17",
+        "zh": "豚鼠吟游诗人"
+      },
+      "CURTAIN_GREETING_DEFAULT": {
+        "source": "scripts/curtain_lines.gd:23",
+        "zh": "看看这里有什么能帮到你的。"
+      },
+      "CURTAIN_GREETING_DRUID": {
+        "source": "scripts/curtain_lines.gd:26",
+        "zh": "在这里遇到你真开心。"
+      },
+      "CURTAIN_GREETING_ROGUE": {
+        "source": "scripts/curtain_lines.gd:28",
+        "zh": "这些就当做定金吧。"
+      },
+      "CURTAIN_GREETING_MECH": {
+        "source": "scripts/curtain_lines.gd:30",
+        "zh": "你喜欢音乐吗？"
+      },
+      "CURTAIN_REPLY_DRUID": {
+        "source": "scripts/curtain_lines.gd:45",
+        "zh": "我也是。"
+      },
+      "CURTAIN_REPLY_ROGUE": {
+        "source": "scripts/curtain_lines.gd:47",
+        "zh": "……"
+      },
+      "CURTAIN_REPLY_MECH": {
+        "source": "scripts/curtain_lines.gd:49",
+        "zh": "是的，这个节奏让我安心。"
+      },
+      "CURTAIN_SKIP_LAYER_ONE": {
+        "source": "scripts/curtain_lines.gd:61",
+        "zh": "摇摇头（不拿）"
+      },
+      "CURTAIN_SKIP_LAYER_TWO": {
+        "source": "scripts/curtain_lines.gd:62",
+        "zh": "摆手拒绝（不拿）"
+      },
+      "RUN_SUMMARY_CLASS": {
+        "source": "scripts/run_summary_scene.gd:114",
+        "zh": "使用角色"
+      },
+      "RUN_SUMMARY_DAMAGE": {
+        "source": "scripts/run_summary_scene.gd:115",
+        "zh": "造成伤害"
+      },
+      "RUN_SUMMARY_TIME": {
+        "source": "scripts/run_summary_scene.gd:116",
+        "zh": "花费时间"
+      },
+      "RUN_SUMMARY_BATTLES": {
+        "source": "scripts/run_summary_scene.gd:117",
+        "zh": "战斗胜利"
+      },
+      "RUN_SUMMARY_ELITES": {
+        "source": "scripts/run_summary_scene.gd:118",
+        "zh": "精英胜利"
+      },
+      "RUN_SUMMARY_BATTLES_VALUE": {
+        "source": "scripts/run_summary_scene.gd:117",
+        "zh": "%s 场",
+        "source_parts": [
+          " 场"
+        ]
+      },
+      "RUN_SUMMARY_ELITES_VALUE": {
+        "source": "scripts/run_summary_scene.gd:118",
+        "zh": "%s 场",
+        "source_parts": [
+          " 场"
+        ]
+      },
+      "RUN_SUMMARY_VICTORY": {
+        "source": "scripts/run_summary_scene.gd:227",
+        "zh": "胜  利"
+      },
+      "RUN_SUMMARY_DEFEAT": {
+        "source": "scripts/run_summary_scene.gd:229",
+        "zh": "失  败"
+      },
+      "RUN_SUMMARY_VICTORY_QUESTION": {
+        "source": "scripts/run_summary_scene.gd:231",
+        "zh": "胜利？"
+      },
+      "RUN_SUMMARY_CONFIRM": {
+        "source": "scripts/run_summary_scene.gd:334",
+        "zh": "确 定"
+      },
+      "RUN_SUMMARY_SECONDS": {
+        "source": "scripts/run_summary_scene.gd:418",
+        "zh": "%d 秒"
+      },
+      "RUN_SUMMARY_MINUTES_SECONDS": {
+        "source": "scripts/run_summary_scene.gd:422",
+        "zh": "%d 分 %02d 秒"
+      },
+      "RUN_SUMMARY_HOURS_MINUTES": {
+        "source": "scripts/run_summary_scene.gd:425",
+        "zh": "%d 小时 %02d 分"
+      },
+      "RECORD_MENU_CONTINUE": {
+        "source": "scripts/record_list_scene.gd:56",
+        "zh": "继续"
+      },
+      "RECORD_MENU_SUBTITLE": {
+        "source": "scripts/record_list_scene.gd:57",
+        "zh": "对战记录"
+      },
+      "RECORD_SOUND_ON": {
+        "source": "scripts/record_list_scene.gd:63",
+        "zh": "音效：开"
+      },
+      "RECORD_SOUND_OFF": {
+        "source": "scripts/record_list_scene.gd:63",
+        "zh": "音效：关"
+      },
+      "RECORD_MENU_BACK_TITLE": {
+        "source": "scripts/record_list_scene.gd:65",
+        "zh": "返回标题"
+      },
+      "RECORD_TITLE": {
+        "source": "scripts/record_list_scene.gd:201",
+        "zh": "对 战 记 录"
+      },
+      "RECORD_SUMMARY": {
+        "source": "scripts/record_list_scene.gd:208",
+        "zh": "共 %d 局 · 通关 %d 局（中断 / 中途放弃也会记在这里）"
+      },
+      "RECORD_BACK_TITLE": {
+        "source": "scripts/record_list_scene.gd:214",
+        "zh": "← 返回标题"
+      },
+      "RECORD_CLEAR": {
+        "source": "scripts/record_list_scene.gd:222",
+        "zh": "清空记录"
+      },
+      "RECORD_CLEAR_CONFIRM": {
+        "source": "scripts/record_list_scene.gd:222",
+        "zh": "确认清空？"
+      },
+      "RECORD_EMPTY": {
+        "source": "scripts/record_list_scene.gd:227",
+        "zh": "还没有记录 —— 从标题「开始对战」打一局，结束后这里会有一行结果。"
+      },
+      "RECORD_RANGE": {
+        "source": "scripts/record_list_scene.gd:240",
+        "zh": "第 %d–%d 条 / 共 %d 条"
+      },
+      "RECORD_RELIC_SPENT": {
+        "source": "scripts/record_list_scene.gd:287",
+        "zh": "%s（已耗尽）"
+      },
+      "RECORD_SEED": {
+        "source": "scripts/record_list_scene.gd:342",
+        "zh": "种子：%s"
+      },
+      "RECORD_CLASS_DIFFICULTY_TIME": {
+        "source": "scripts/record_list_scene.gd:345",
+        "zh": "角色：%s · 难度 %d · 用时 %s"
+      },
+      "RECORD_HP": {
+        "source": "scripts/record_list_scene.gd:355",
+        "zh": "生命 %d / %d"
+      },
+      "RECORD_SNAPSHOT_STATS": {
+        "source": "scripts/record_list_scene.gd:358",
+        "zh": "金币 %d · 层数 %d · 战斗胜场 %d（精英 %d）"
+      },
+      "RECORD_BOSS_ITEM": {
+        "source": "scripts/record_list_scene.gd:368",
+        "zh": "第 %d 层 · %s"
+      },
+      "RECORD_BOSS_LIST": {
+        "source": "scripts/record_list_scene.gd:368-371",
+        "zh": "Boss：%s",
+        "source_parts": [
+          "Boss："
+        ]
+      },
+      "RECORD_OLD_NO_SNAPSHOT": {
+        "source": "scripts/record_list_scene.gd:379",
+        "zh": "这条记录是旧版本留下的，没有存最终道具 / 卡组（只记了结果与用时）。"
+      },
+      "RECORD_FINAL_RELICS": {
+        "source": "scripts/record_list_scene.gd:388",
+        "zh": "最终道具（%d）"
+      },
+      "RECORD_NO_RELICS": {
+        "source": "scripts/record_list_scene.gd:393",
+        "zh": "（这一局没有获得道具）"
+      },
+      "RECORD_MORE_RELICS": {
+        "source": "scripts/record_list_scene.gd:405",
+        "zh": "…还有 %d 件"
+      },
+      "RECORD_FINAL_DECK": {
+        "source": "scripts/record_list_scene.gd:413",
+        "zh": "最终卡组（%d 张 / %d 种）"
+      },
+      "RECORD_ENCHANT": {
+        "source": "scripts/record_list_scene.gd:430",
+        "zh": "附魔：%s"
+      },
+      "RECORD_DECK_RANGE": {
+        "source": "scripts/record_list_scene.gd:436",
+        "zh": "卡组 第 %d–%d 行 / 共 %d 行"
+      },
+      "RECORD_ROW_CLASS": {
+        "source": "scripts/record_list_scene.gd:454",
+        "zh": "角色：%s"
+      },
+      "RECORD_ROW_DIFFICULTY_TIME": {
+        "source": "scripts/record_list_scene.gd:460",
+        "zh": "难度 %d · 用时 %s"
+      },
+      "RECORD_ROW_END_TIME": {
+        "source": "scripts/record_list_scene.gd:467",
+        "zh": "结束于 %s"
+      },
+      "RUN_RECORD_VICTORY_QUESTION": {
+        "source": "scripts/run_record.gd:289",
+        "zh": "胜利？"
+      },
+      "RUN_RECORD_WIN": {
+        "source": "scripts/run_record.gd:290",
+        "zh": "通关"
+      },
+      "RUN_RECORD_LOSE": {
+        "source": "scripts/run_record.gd:292",
+        "zh": "失败"
+      },
+      "RUN_RECORD_QUIT": {
+        "source": "scripts/run_record.gd:294",
+        "zh": "中途放弃"
+      },
+      "RUN_RECORD_INTERRUPTED": {
+        "source": "scripts/run_record.gd:296",
+        "zh": "中断"
+      },
+      "RUN_RECORD_UNFINISHED": {
+        "source": "scripts/run_record.gd:297",
+        "zh": "未结束"
+      },
+      "RUN_RECORD_SECONDS": {
+        "source": "scripts/run_record.gd:324",
+        "zh": "%d 秒"
+      },
+      "RUN_RECORD_MINUTES_SECONDS": {
+        "source": "scripts/run_record.gd:325",
+        "zh": "%d 分 %d 秒"
+      },
+      "CLASS_PICK_MENU_CONTINUE": {
+        "source": "scripts/class_pick_scene.gd:93",
+        "zh": "继续选角色"
+      },
+      "CLASS_PICK_MENU_SUBTITLE": {
+        "source": "scripts/class_pick_scene.gd:94",
+        "zh": "选择角色"
+      },
+      "CLASS_PICK_SEED_BLANK": {
+        "source": "scripts/class_pick_scene.gd:197",
+        "zh": "留空 = 每局随机"
+      },
+      "CLASS_PICK_BAN_QUOTA": {
+        "source": "scripts/class_pick_scene.gd:238",
+        "zh": "禁卡表 · 已禁 %d / 名额 %d"
+      },
+      "CLASS_PICK_SEED_TITLE": {
+        "source": "scripts/class_pick_scene.gd:275",
+        "zh": "随机种子"
+      },
+      "CLASS_PICK_SEED_FORMAT_HINT": {
+        "source": "scripts/class_pick_scene.gd:279",
+        "zh": "或填 10 位（A-Z / 0-9）复现同一局"
+      },
+      "CLASS_PICK_SEED_INVALID": {
+        "source": "scripts/class_pick_scene.gd:282",
+        "zh": "种子需 10 位：大写字母 / 数字"
+      },
+      "CLASS_PICK_EMPTY_TITLE": {
+        "source": "scripts/class_pick_scene.gd:302",
+        "zh": "选择与你同行的精灵……"
+      },
+      "CLASS_PICK_EMPTY_HINT": {
+        "source": "scripts/class_pick_scene.gd:304",
+        "zh": "点头像查看该角色，再选难度、确认进入"
+      },
+      "CLASS_PICK_RANDOM": {
+        "source": "scripts/class_pick_scene.gd:351",
+        "zh": "随机"
+      },
+      "CLASS_PICK_RANDOM_PENDING": {
+        "source": "scripts/class_pick_scene.gd:353",
+        "zh": "已随机"
+      },
+      "CLASS_PICK_RANDOM_AGAIN": {
+        "source": "scripts/class_pick_scene.gd:353",
+        "zh": "换一个"
+      },
+      "CLASS_PICK_LOCKED": {
+        "source": "scripts/class_pick_scene.gd:403",
+        "zh": "未解锁"
+      },
+      "CLASS_PICK_LOCKED_HINT": {
+        "source": "scripts/class_pick_scene.gd:405",
+        "zh": "进行游戏解锁"
+      },
+      "CLASS_PICK_HP": {
+        "source": "scripts/class_pick_scene.gd:411",
+        "zh": "生命 %d"
+      },
+      "CLASS_PICK_LOCKED_DESCRIPTION": {
+        "source": "scripts/class_pick_scene.gd:428",
+        "zh": "尚未解锁 —— 进行游戏即可解锁"
+      },
+      "CLASS_PICK_INITIAL_MAX_HP": {
+        "source": "scripts/class_pick_scene.gd:441",
+        "zh": "初始最大生命"
+      },
+      "CLASS_PICK_DIFFICULTY": {
+        "source": "scripts/class_pick_scene.gd:479",
+        "zh": "难度档位"
+      },
+      "CLASS_PICK_CONFIRM": {
+        "source": "scripts/class_pick_scene.gd:535",
+        "zh": "确认进入"
+      },
+      "CLASS_PICK_RANDOM_DESCRIPTION": {
+        "source": "scripts/class_pick_scene.gd:549",
+        "zh": "已随机 —— 确认进入后揭晓角色"
+      },
+      "CLASS_PICK_SOUND_ON": {
+        "source": "scripts/class_pick_scene.gd:562",
+        "zh": "音效：开"
+      },
+      "CLASS_PICK_SOUND_OFF": {
+        "source": "scripts/class_pick_scene.gd:562",
+        "zh": "音效：关"
+      },
+      "CLASS_PICK_BACK_TITLE": {
+        "source": "scripts/class_pick_scene.gd:564",
+        "zh": "返回标题"
+      },
+      "CLASS_PICK_LOCKED_TOAST": {
+        "source": "scripts/class_pick_scene.gd:638",
+        "zh": "尚未解锁"
+      },
+      "TITLE_START": {
+        "source": "scripts/l10n.gd:27",
+        "zh": "开始对战"
+      },
+      "TITLE_CONTINUE": {
+        "source": "scripts/l10n.gd:28",
+        "zh": "继续游戏"
+      },
+      "TITLE_CONTINUE_SHORT": {
+        "source": "scripts/l10n.gd:29",
+        "zh": "继续"
+      },
+      "TITLE_CODEX": {
+        "source": "scripts/l10n.gd:30",
+        "zh": "百科"
+      },
+      "TITLE_RECORDS": {
+        "source": "scripts/l10n.gd:31",
+        "zh": "对战记录"
+      },
+      "TITLE_SETTINGS": {
+        "source": "scripts/l10n.gd:32",
+        "zh": "设置"
+      },
+      "TITLE_CREDITS": {
+        "source": "scripts/l10n.gd:33",
+        "zh": "鸣谢"
+      },
+      "TITLE_QUIT": {
+        "source": "scripts/l10n.gd:34",
+        "zh": "退出"
+      },
+      "TITLE_TIP_RECORDS": {
+        "source": "scripts/l10n.gd:35",
+        "zh": "每局的最终结果（通关 / 失败 / 中断）"
+      },
+      "TITLE_TIP_SETTINGS": {
+        "source": "scripts/l10n.gd:38",
+        "zh": "音效 / 音乐 / 全屏 / 语言"
+      },
+      "TITLE_TIP_CREDITS": {
+        "source": "scripts/l10n.gd:41",
+        "zh": "引擎 / 音乐署名（PeriTune）"
+      },
+      "TITLE_FOOTER_GODOT": {
+        "source": "scripts/l10n.gd:44",
+        "zh": "Godot 4.3 自包含副本"
+      },
+      "TITLE_FOOTER_DEV": {
+        "source": "scripts/l10n.gd:47",
+        "zh": "肉鸽开发版"
+      },
+      "TITLE_VERSION_FOOTER": {
+        "source": "scripts/title_scene.gd:212",
+        "zh": "v%s-rogue · %s"
+      },
+      "TITLE_NEWER_SAVE_NOTICE": {
+        "source": "scripts/title_scene.gd:224-225",
+        "zh": "存档来自更新的版本，本版本不能使用（文件已保留，升级后可继续）"
+      },
+      "TITLE_LOAD_FAILED": {
+        "source": "scripts/title_scene.gd:331",
+        "zh": "存档读取失败（已备份为 run_save.sav.bad）"
+      },
+      "TITLE_LOAD_ERROR_BACKUP": {
+        "source": "scripts/title_scene.gd:333-336",
+        "zh": "%s（原件已备份为 .bad）"
+      },
+      "SETTINGS_TITLE": {
+        "source": "scripts/l10n.gd:51",
+        "zh": "设 置"
+      },
+      "SETTINGS_AUTOSAVE": {
+        "source": "scripts/l10n.gd:52",
+        "zh": "所有设置自动保存"
+      },
+      "SETTINGS_BACK_TITLE": {
+        "source": "scripts/l10n.gd:54",
+        "zh": "返回标题"
+      },
+      "SETTINGS_BACK_BATTLE": {
+        "source": "scripts/l10n.gd:55",
+        "zh": "返回战斗"
+      },
+      "SETTINGS_SFX": {
+        "source": "scripts/l10n.gd:56",
+        "zh": "音效"
+      },
+      "SETTINGS_SFX_DESC": {
+        "source": "scripts/l10n.gd:57",
+        "zh": "点击 / 出牌 / 攻击等提示音"
+      },
+      "SETTINGS_SFX_VOLUME": {
+        "source": "scripts/l10n.gd:60",
+        "zh": "音效音量"
+      },
+      "SETTINGS_SFX_VOLUME_DESC": {
+        "source": "scripts/l10n.gd:61",
+        "zh": "点 − / + 调整"
+      },
+      "SETTINGS_MUSIC": {
+        "source": "scripts/l10n.gd:63",
+        "zh": "音乐"
+      },
+      "SETTINGS_MUSIC_DESC": {
+        "source": "scripts/l10n.gd:64",
+        "zh": "背景音乐（标题 / 地图 / 战斗各自换曲）"
+      },
+      "SETTINGS_MUSIC_VOLUME": {
+        "source": "scripts/l10n.gd:67",
+        "zh": "音乐音量"
+      },
+      "SETTINGS_MUSIC_VOLUME_DESC": {
+        "source": "scripts/l10n.gd:68",
+        "zh": "点 − / + 调整"
+      },
+      "SETTINGS_FULLSCREEN": {
+        "source": "scripts/l10n.gd:70",
+        "zh": "全屏"
+      },
+      "SETTINGS_FULLSCREEN_DESC": {
+        "source": "scripts/l10n.gd:71",
+        "zh": "关掉则使用窗口模式（默认窗口）"
+      },
+      "SETTINGS_ON": {
+        "source": "scripts/l10n.gd:74",
+        "zh": "开"
+      },
+      "SETTINGS_OFF": {
+        "source": "scripts/l10n.gd:75",
+        "zh": "关"
+      },
+      "SETTINGS_LANGUAGE_CHANGED": {
+        "source": "scripts/l10n.gd:77",
+        "zh": "语言已切换"
+      },
+      "SETTINGS_TAB_AUDIO": {
+        "source": "scripts/l10n.gd:80",
+        "zh": "音频"
+      },
+      "SETTINGS_TAB_DISPLAY": {
+        "source": "scripts/l10n.gd:81",
+        "zh": "画面"
+      },
+      "SETTINGS_TAB_LANGUAGE": {
+        "source": "scripts/l10n.gd:82",
+        "zh": "语言"
+      },
+      "SETTINGS_TAB_RUN": {
+        "source": "scripts/l10n.gd:83",
+        "zh": "对局"
+      },
+      "SETTINGS_LANGUAGE_NOTE": {
+        "source": "scripts/l10n.gd:84",
+        "zh": "点一行立刻生效，整页文字跟着换。"
+      },
+      "SETTINGS_FOE_SPEED": {
+        "source": "scripts/l10n.gd:87",
+        "zh": "敌人行动速度"
+      },
+      "SETTINGS_FOE_SPEED_DESC": {
+        "source": "scripts/l10n.gd:89",
+        "zh": "点一下循环 1× / 1.5× / 2×，和战斗里那个按钮同一份设置"
+      },
+      "SETTINGS_COPY": {
+        "source": "scripts/l10n.gd:92",
+        "zh": "复制"
+      },
+      "SETTINGS_COPIED": {
+        "source": "scripts/l10n.gd:93",
+        "zh": "已复制种子 %s"
+      },
+      "SETTINGS_NO_SEED": {
+        "source": "scripts/l10n.gd:95",
+        "zh": "还没有可复制的种子：先开一局，或在下面填「下一局种子」"
+      },
+      "SETTINGS_SEED_TITLE": {
+        "source": "scripts/l10n.gd:98",
+        "zh": "随机种子"
+      },
+      "SETTINGS_SEED_CURRENT": {
+        "source": "scripts/l10n.gd:99",
+        "zh": "本局种子：%s"
+      },
+      "SETTINGS_SEED_NONE": {
+        "source": "scripts/l10n.gd:101",
+        "zh": "本局种子：—（当前没有进行中的对局）"
+      },
+      "SETTINGS_SEED_NEXT": {
+        "source": "scripts/l10n.gd:104",
+        "zh": "下一局种子"
+      },
+      "SETTINGS_SEED_CURRENT_RANDOM": {
+        "source": "scripts/l10n.gd:105",
+        "zh": "当前：随机"
+      },
+      "SETTINGS_SEED_CURRENT_CODE": {
+        "source": "scripts/l10n.gd:107",
+        "zh": "当前：%s"
+      },
+      "SETTINGS_SEED_PLACEHOLDER": {
+        "source": "scripts/l10n.gd:108",
+        "zh": "留空 = 随机（10 位）"
+      },
+      "SETTINGS_SEED_TIP": {
+        "source": "scripts/l10n.gd:110",
+        "zh": "留空 = 每局随机；填入 10 位大写字母 / 数字 → 下一局用同一种子（用一次自动清空）"
+      },
+      "SETTINGS_SEED_FOOTER": {
+        "source": "scripts/l10n.gd:113",
+        "zh": "提示：种子决定整局的地图 / 掉落 / 摇卡；同一种子新开一局可复现同一局。"
+      },
+      "SETTINGS_BACK_LABEL": {
+        "source": "scripts/settings_scene.gd:599",
+        "zh": "← %s"
+      },
+      "SETTINGS_FOE_SPEED_VALUE": {
+        "source": "scripts/settings_scene.gd:749",
+        "zh": "×%.1f"
+      },
+      "SETTINGS_VOLUME_PERCENT": {
+        "source": "scripts/settings_scene.gd:770",
+        "zh": "%d%%"
+      },
+      "LANGUAGE_TITLE": {
+        "source": "scripts/l10n.gd:119",
+        "zh": "选择语言"
+      },
+      "LANGUAGE_SUBTITLE": {
+        "source": "scripts/l10n.gd:121",
+        "zh": "游戏内文字会立刻切换"
+      },
+      "LANGUAGE_CONFIRM": {
+        "source": "scripts/l10n.gd:123",
+        "zh": "进入游戏"
+      },
+      "LANGUAGE_NOTE": {
+        "source": "scripts/l10n.gd:124",
+        "zh": "之后可以随时在设置里更改"
+      },
+      "LANGUAGE_SCROLL_HINT": {
+        "source": "scripts/l10n.gd:127",
+        "zh": "滚轮或拖动浏览更多语言"
+      },
+      "TOP_BAR_HP": {
+        "source": "scripts/top_bar.gd:145",
+        "zh": "生命 %d / %d"
+      },
+      "UI_MENU_CONTINUE": {
+        "source": "scripts/ui_menu.gd:60",
+        "zh": "继续游戏"
+      },
+      "UI_MENU_TITLE": {
+        "source": "scripts/ui_menu.gd:255",
+        "zh": "菜单"
+      },
+      "UI_MENU_SEED": {
+        "source": "scripts/ui_menu.gd:288",
+        "zh": "种子：%s"
+      },
+      "GAME_BRAND_NAME_ZH": {
+        "source": "scripts/game_brand.gd:32",
+        "zh": "嘎嘎乱杀"
+      },
+      "GAME_BRAND_FOOTER": {
+        "source": "scripts/game_brand.gd:49",
+        "zh": "v{v}-rogue · 肉鸽开发版"
+      }
+    },
+    "shared": {
+      "BAN_MENU_CONTINUE": {
+        "source": "scripts/ban_scene.gd:81",
+        "zh": "继续"
+      },
+      "BAN_MENU_SUBTITLE": {
+        "source": "scripts/ban_scene.gd:82",
+        "zh": "禁卡表"
+      },
+      "BAN_SOUND_ON": {
+        "source": "scripts/ban_scene.gd:106",
+        "zh": "音效：开"
+      },
+      "BAN_SOUND_OFF": {
+        "source": "scripts/ban_scene.gd:106",
+        "zh": "音效：关"
+      },
+      "BAN_CLEAR_CLASS": {
+        "source": "scripts/ban_scene.gd:108",
+        "zh": "清空「%s」的禁用"
+      },
+      "BAN_BACK_TO_CLASS_PICK": {
+        "source": "scripts/ban_scene.gd:109",
+        "zh": "返回角色选择"
+      },
+      "BAN_CLASS_CLEARED": {
+        "source": "scripts/ban_scene.gd:122",
+        "zh": "已清空「%s」的禁用"
+      },
+      "BAN_CARD_UNBANNED": {
+        "source": "scripts/ban_scene.gd:226",
+        "zh": "已取消：%s（仅「%s」）"
+      },
+      "BAN_CARD_BANNED": {
+        "source": "scripts/ban_scene.gd:230",
+        "zh": "已禁：%s（「%s」的奖励池不再出现，下一局生效）"
+      },
+      "BAN_NO_QUOTA": {
+        "source": "scripts/ban_scene.gd:233-234",
+        "zh": "「%s」这一档没有剩余名额（先通过剧情解锁更多卡牌）"
+      },
+      "BAN_TITLE": {
+        "source": "scripts/ban_scene.gd:264",
+        "zh": "禁 卡 表"
+      },
+      "BAN_EXPLANATION": {
+        "source": "scripts/ban_scene.gd:266-268",
+        "zh": "禁卡表按职业分别记账：解锁一张职业卡 → 该职业 +1 名额；解锁一张公用卡 → 三个职业各 +1"
+      },
+      "BAN_NO_QUOTA_EXPLANATION": {
+        "source": "scripts/ban_scene.gd:293-295",
+        "zh": "没有任何这个职业能用的禁卡名额 —— 剧情里解锁卡牌后才有（故事界面看完剧情才会有）"
+      },
+      "BAN_BACK_TO_CLASS_PICK_ARROW": {
+        "source": "scripts/ban_scene.gd:300",
+        "zh": "← 返回角色选择"
+      },
+      "BAN_REWARD_POOL_EMPTY": {
+        "source": "scripts/ban_scene.gd:303",
+        "zh": "奖励池是空的。"
+      },
+      "BAN_LIST_RANGE": {
+        "source": "scripts/ban_scene.gd:316-317",
+        "zh": "第 %d–%d 张 / 共 %d 张"
+      },
+      "BAN_CARD_COST": {
+        "source": "scripts/ban_scene.gd:351",
+        "zh": "费用 %d"
+      },
+      "BAN_TAG_AVAILABLE": {
+        "source": "scripts/ban_scene.gd:353",
+        "zh": "禁"
+      },
+      "BAN_TAG_BANNED": {
+        "source": "scripts/ban_scene.gd:356",
+        "zh": "已禁"
+      },
+      "BAN_TAG_NO_QUOTA": {
+        "source": "scripts/ban_scene.gd:362",
+        "zh": "无名额"
+      },
+      "PROFILE_STORY_DATA_MISSING": {
+        "source": "scripts/profile_data.gd:455",
+        "zh": "剧情数据缺失"
+      },
+      "PROFILE_EPISODE_EMPTY": {
+        "source": "scripts/profile_data.gd:460",
+        "zh": "这一段还没有内容"
+      },
+      "PROFILE_REQUIREMENT_UNMET": {
+        "source": "scripts/profile_data.gd:463",
+        "zh": "条件还没达成"
+      },
+      "PROFILE_EPISODE_ALREADY_READ": {
+        "source": "scripts/profile_data.gd:466",
+        "zh": "已经看过了"
+      },
+      "PROFILE_EPISODE_MISSING": {
+        "source": "scripts/profile_data.gd:470",
+        "zh": "没有这一段"
+      },
+      "PROFILE_BAN_SUMMARY_PART": {
+        "source": "scripts/profile_data.gd:619-620",
+        "zh": "%s 已禁 %d / 名额 %d"
+      },
+      "STORY_REQUIREMENT_FALLBACK": {
+        "source": "scripts/story_repo.gd:161",
+        "zh": "达成某个条件"
+      },
+      "STORY_EMPTY_TEXT": {
+        "source": "scripts/story_repo.gd:174",
+        "zh": "（这一段故事还没有写。）"
+      },
+      "STORY_UNLOCK_NOTICE_ONE": {
+        "source": "scripts/story_repo.gd:208",
+        "zh": "✦ 新剧情解锁：%s"
+      },
+      "STORY_UNLOCK_NOTICE_MANY": {
+        "source": "scripts/story_repo.gd:209",
+        "zh": "✦ 新剧情解锁 %d 段（主界面查看）"
+      },
+      "LAYER_ONE_NAME": {
+        "source": "scripts/game_layers.gd:37",
+        "zh": "第一层"
+      },
+      "LAYER_TWO_NAME": {
+        "source": "scripts/game_layers.gd:62",
+        "zh": "第二层"
+      },
+      "LAYER_THREE_NAME": {
+        "source": "scripts/game_layers.gd:102",
+        "zh": "第三层"
+      },
+      "LAYER_FALLBACK_NAME": {
+        "source": "scripts/game_layers.gd:161",
+        "zh": "第 %d 层"
+      },
+      "MENTION_BLOCK_HEAD": {
+        "source": "scripts/mention.gd:40",
+        "zh": "这条文案里提到的"
+      },
+      "MENTION_KIND_CARD": {
+        "source": "scripts/mention.gd:196",
+        "zh": "卡牌"
+      },
+      "MENTION_KIND_RELIC": {
+        "source": "scripts/mention.gd:196",
+        "zh": "道具"
+      },
+      "MENTION_CARD_TIP_META": {
+        "source": "scripts/mention.gd:315-316",
+        "zh": "%s · %d 费 · %s"
+      },
+      "MENTION_SECTION_EFFECT": {
+        "source": "scripts/mention.gd:321",
+        "zh": "效果"
+      },
+      "MENTION_SECTION_AFFIX": {
+        "source": "scripts/mention.gd:326",
+        "zh": "字段"
+      },
+      "MENTION_ENCHANT_WITH_DESC": {
+        "source": "scripts/mention.gd:334-335",
+        "zh": "附魔 · %s：%s"
+      },
+      "MENTION_GRANTED_CARD_HEAD": {
+        "source": "scripts/mention.gd:386",
+        "zh": "获得卡牌"
+      },
+      "MENTION_GRANTED_CARD_META": {
+        "source": "scripts/mention.gd:399-400",
+        "zh": "%s · %d 费 · %s"
+      },
+      "MENTION_CARD_SUMMARY_META": {
+        "source": "scripts/mention.gd:434-435",
+        "zh": "%s · %d 费 · %s%s"
+      },
+      "CARD_FACE_LOCKED": {
+        "source": "scripts/card_face.gd:481",
+        "zh": "未解锁"
+      },
+      "CARD_FACE_ALLY_STATS": {
+        "source": "scripts/card_face.gd:1447-1448",
+        "zh": "力量 %d   生命 %d   射程 %d   速度 %d"
+      },
+      "CARD_FACE_FORT_STATS": {
+        "source": "scripts/card_face.gd:1450",
+        "zh": "力量 %d   生命 %d   射程 %d"
+      },
+      "CARD_FACE_SKILL_STATS": {
+        "source": "scripts/card_face.gd:1452",
+        "zh": "直接使用"
+      },
+      "CARD_FACE_EFFECT_STATS": {
+        "source": "scripts/card_face.gd:1454",
+        "zh": "在效果区持续生效"
+      },
+      "CARD_FACE_GROWTH_POWER": {
+        "source": "scripts/card_face.gd:1468",
+        "zh": "力+%d"
+      },
+      "CARD_FACE_GROWTH_HEALTH": {
+        "source": "scripts/card_face.gd:1470",
+        "zh": "生+%d"
+      },
+      "CARD_FACE_GROWTH_DAMAGE": {
+        "source": "scripts/card_face.gd:1472",
+        "zh": "伤+%d"
+      },
+      "CARD_FACE_KEYWORDS": {
+        "source": "scripts/card_face.gd:1681-1692",
+        "zh": "关键字：%s"
+      },
+      "RELIC_KIND_INSTANT": {
+        "source": "scripts/relic_data.gd:24",
+        "zh": "即时"
+      },
+      "RELIC_KIND_BATTLE": {
+        "source": "scripts/relic_data.gd:25",
+        "zh": "战斗"
+      },
+      "RELIC_KIND_PASSIVE": {
+        "source": "scripts/relic_data.gd:26",
+        "zh": "持续"
+      },
+      "RELIC_SOURCE_INITIAL": {
+        "source": "scripts/relic_data.gd:28",
+        "zh": "初始"
+      },
+      "RELIC_SOURCE_REWARD": {
+        "source": "scripts/relic_data.gd:29",
+        "zh": "奖励"
+      },
+      "RELIC_SOURCE_EVENT": {
+        "source": "scripts/relic_data.gd:30",
+        "zh": "事件"
+      },
+      "RELIC_SOURCE_LAYER2": {
+        "source": "scripts/relic_data.gd:31",
+        "zh": "二层"
+      },
+      "RELIC_SOURCE_CLASS": {
+        "source": "scripts/relic_data.gd:32",
+        "zh": "角色"
+      },
+      "RELIC_TIER_NORMAL": {
+        "source": "scripts/relic_data.gd:34",
+        "zh": "一般"
+      },
+      "RELIC_TIER_LEGENDARY": {
+        "source": "scripts/relic_data.gd:35",
+        "zh": "传奇"
+      },
+      "RELIC_SOURCE_LABEL": {
+        "source": "scripts/relic_data.gd:108",
+        "zh": "%s道具"
+      },
+      "RELIC_TIER_LABEL": {
+        "source": "scripts/relic_data.gd:120",
+        "zh": "%s道具"
+      },
+      "TOP_BAR_HP": {
+        "source": "scripts/top_bar.gd:145",
+        "zh": "生命 %d / %d"
+      },
+      "CARD_MORPH_COMPLETE": {
+        "source": "scripts/card_morph_fx.gd:136",
+        "zh": "源数之力 · 卡牌已被改写"
+      },
+      "INFO_CLIP_SCROLL_UP": {
+        "source": "scripts/info_clip.gd:93",
+        "zh": "▲ 上滑查看"
+      },
+      "NET_UNNAMED_ROOM": {
+        "source": "scripts/net.gd:170",
+        "zh": "未命名房间"
+      },
+      "NET_SESSION_DEFAULT_MY_NAME": {
+        "source": "scripts/net_session.gd:8",
+        "zh": "玩家"
+      },
+      "NET_SESSION_DEFAULT_OPPONENT_NAME": {
+        "source": "scripts/net_session.gd:9",
+        "zh": "对手"
+      },
+      "RUN_SAVE_NEWER_FALLBACK": {
+        "source": "scripts/run_save.gd:236",
+        "zh": "存档来自更新的版本，本版本不能使用"
+      },
+      "RUN_SAVE_MISSING": {
+        "source": "scripts/run_save.gd:426",
+        "zh": "没有可继续的存档"
+      },
+      "RUN_SAVE_CORRUPT": {
+        "source": "scripts/run_save.gd:431",
+        "zh": "存档已损坏，不能使用"
+      },
+      "RUN_SAVE_FINISHED": {
+        "source": "scripts/run_save.gd:445",
+        "zh": "这一局已经结束，不能继续"
+      },
+      "RUN_SAVE_CLEARED": {
+        "source": "scripts/run_save.gd:459",
+        "zh": "这一局已经通关，不能继续"
+      },
+      "RUN_SAVE_INVALID_FALLBACK": {
+        "source": "scripts/run_save.gd:467",
+        "zh": "存档内容不合理，不能使用"
+      },
+      "RUN_SAVE_EMPTY": {
+        "source": "scripts/run_save.gd:686",
+        "zh": "存档内容是空的，不能使用"
+      },
+      "RUN_SAVE_NEWER_VERSION": {
+        "source": "scripts/run_save.gd:689-690",
+        "zh": "存档来自更新的版本（存档 v%d / 本作 v%d），本版本不能使用该存档"
+      },
+      "RUN_SAVE_OLDER_VERSION": {
+        "source": "scripts/run_save.gd:692-693",
+        "zh": "存档版本过旧（存档 v%d / 本作 v%d），不能使用"
+      },
+      "RUN_SAVE_NO_DECK": {
+        "source": "scripts/run_save.gd:697",
+        "zh": "存档里没有卡组，不能使用"
+      },
+      "RUN_SAVE_REMOVED_CARDS": {
+        "source": "scripts/run_save.gd:700-702",
+        "zh": "存档里有 %d 张已下架的卡（%s），属于旧版本，不能使用"
+      },
+      "RUN_SAVE_PENDING_REMOVED_CARDS": {
+        "source": "scripts/run_save.gd:717-719",
+        "zh": "存档的待领奖励或延迟发卡里有 %d 张已下架的卡（%s），属于旧版本，不能使用"
+      },
+      "RUN_SAVE_REMOVED_RELICS": {
+        "source": "scripts/run_save.gd:724-726",
+        "zh": "存档里有 %d 件已下架的道具（%s），属于旧版本，不能使用"
+      },
+      "RUN_SAVE_INVALID_MAX_HP": {
+        "source": "scripts/run_save.gd:729",
+        "zh": "存档的最大生命异常（%d），不能使用"
+      },
+      "RUN_SAVE_NO_MAP": {
+        "source": "scripts/run_save.gd:732",
+        "zh": "存档里没有地图，不能使用"
+      },
+      "RUN_SAVE_INVALID_MAP_CELL": {
+        "source": "scripts/run_save.gd:737",
+        "zh": "存档的地图格子结构损坏，不能使用"
+      },
+      "RUN_SAVE_INVALID_LAYER": {
+        "source": "scripts/run_save.gd:741",
+        "zh": "存档停在不存在的第 %d 层，不能使用"
+      },
+      "RUN_SAVE_INVALID_NODE": {
+        "source": "scripts/run_save.gd:745",
+        "zh": "存档停在地图上不存在的格子（%d），不能使用"
+      }
+    }
+  },
+  "expected_counts": {
+    "shop": 68,
+    "reward": 120,
+    "map": 234,
+    "shell": 195,
+    "shared": 89
+  }
+}
