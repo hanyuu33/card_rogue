@@ -62094,21 +62094,23 @@ func _init() -> void:
 
 			"R393b/R592b 源码：卡面两口都不再挂成长角标")
 
-	# ================= R702：成长卡的正文要写**当前**伤害 =================
+	# =========== R702/R703：成长卡的正文写「当前值（基础＋成长）」 ===========
 
 	# 用户口径：「有一些诸如猎杀之类的卡，成长之后，卡片左侧详细描述里没有写实际伤害，
 
-	#             只写了基础伤害」。猎杀的 effect_text 是死文字（造成 22 点伤害），
+	#             只写了基础伤害」→ 再补一句「应该显示 30（22＋8），其中 30 红色字体」。
 
-	# 本局成长只抬 value / growth_damage → 正文一直是 22，与实际打出的 30 对不上。
+	# 猎杀的 effect_text 是死文字（造成 22 点伤害），本局成长只抬 value / growth_damage
 
-	# 修法：显示层在**翻译之后**把「基础值」换成「当前值」（`CardText.parse_card`）。
+	# → 正文一直是 22。修法：显示层在**翻译之后**按 R349 同一口画「总值（基础＋X）」，
+
+	# 30 用 DMG_NOW（红）、括号用 DMG_CALC（褐）。
 
 	RunState.card_growth = {}
 
-	check(repo.get_card(9205).body_number_swaps().is_empty(),
+	check(repo.get_card(9205).body_growth_note().is_empty(),
 
-			"R702：卡库原型（没有任何成长）不产生数字替换")
+			"R702：卡库原型（没有任何成长）不产生成长标注")
 
 	var r702_ids: Array[int] = [9205]
 
@@ -62124,53 +62126,135 @@ func _init() -> void:
 
 	check(r702_slay.value == 30 and r702_slay.growth_damage == 8
 
-			and r702_slay.body_number_swaps() == {"22": "30"},
+			and r702_slay.body_growth_note() == {"base": 22, "cur": 30, "delta": 8},
 
-			"R702 数据：猎杀烤进 +8 成长后 value=30 / growth_damage=8，替换表 {22:30}（%s）"
+			"R702 数据：猎杀烤进 +8 成长后 value=30 / growth_damage=8，note 给出 {22,30,8}（%s）"
 
-			% str(r702_slay.body_number_swaps()))
+			% str(r702_slay.body_growth_note()))
 
 	var r702_txt := CardText.naturalize_card(r702_slay)
 
-	check(r702_txt.contains("30 点伤害") and not r702_txt.contains("22 点伤害"),
+	check(r702_txt.contains("30（22＋8）") and not r702_txt.contains("造成 22 点伤害"),
 
-			"R702 正文：详细描述写实际伤害 30，不再写基础值 22（%s）" % r702_txt)
+			"R703 正文：详细描述写「30（22＋8）」，不再只写基础值 22（%s）" % r702_txt)
 
-	# 只换**第一次**出现：正文里后面的同数字（回合数 / 次数）不是伤害，不许跟着改
+	# 店长口径：**30 红色字体**，括号用次色（与 R349 的 18（10＋8）同一套）
+	# ⚠️ 颜色只能落在 `col` 上 —— 绘制口（draw_wrapped_hits / wrap_rich / 片段遍历）都读它，
+	#    所以断言片段颜色就等于断言「屏幕上真是红的」。
 
-	check(CardText._apply_number_swaps("造成 22 点伤害，持续 22 回合。", {"22": "30"})
+	var r702_segs: Array = CardText.parse_card(r702_slay)
 
-			== "造成 30 点伤害，持续 22 回合。",
+	var r703_hot := Color(0, 0, 0, 0)
 
-			"R702 替换：只换第一个「22」，后面的 22 回合不动")
+	var r703_calc := Color(0, 0, 0, 0)
+
+	var r703_tag := ""
+
+	for r703_s in r702_segs:
+
+		var r703_st := str(r703_s.get("text", ""))
+
+		if r703_st == "30":
+
+			r703_hot = r703_s.get("col", Color(0, 0, 0, 0))
+
+		elif r703_st.begins_with("（22＋8"):
+
+			r703_calc = r703_s.get("col", Color(0, 0, 0, 0))
+
+			r703_tag = str(r703_s.get("tag", ""))
+
+	check(r703_hot == UiTheme.DMG_NOW and r703_calc == UiTheme.DMG_CALC,
+
+			"R703 配色：30 走 DMG_NOW 红（%s）、（22＋8）走 DMG_CALC（%s）"
+
+			% [r703_hot.to_html(false), r703_calc.to_html(false)])
+
+	check(r703_hot.b > 0.05 and r703_hot.r > 0.6,
+
+			"R703 配色：那个 30 是红的（r=%0.2f b=%0.2f）" % [r703_hot.r, r703_hot.b])
+
+	check(r703_tag == "growth",
+
+			"R703 标记：成长括号盖 growth 戳（本场加成叠上来时据此吃旧括号）")
+
+	# 括号是显示层后插的 —— `hide_parens` 先剥完原文补注才轮到它，不许被一起剥掉
+
+	check(CardText.naturalize_card(r702_slay, true).contains("30（22＋8）"),
+
+			"R703 括号：hide_parens 先剥原文、成长括号是后插的，不会被剥掉")
+
+	# 卡面（with_note=false）：只写 30，不写括号
+
+	var r703_face := CardText.naturalize_card(r702_slay, CardText.HIDE_PARENS, false)
+
+	check(r703_face.contains("造成 30 点伤害") and not r703_face.contains("＋"),
+
+			"R703 卡面：with_note=false → 只写当前值 30、不带成长括号（%s）" % r703_face)
+
+	# 只标**第一次**出现：正文里后面的同数字（回合数 / 次数）不是伤害，不许跟着改
+
+	var r703_once := CardText.growth_segs(
+
+			CardText.parse("对一个目标造成 22 点伤害，持续 22 回合。"),
+
+			{"base": 22, "cur": 30, "delta": 8})
+
+	check(CardText.segments_plain(r703_once) == "对一个目标造成 30（22＋8） 点伤害，持续 22 回合。",
+
+			"R703 替换：只标第一个「22」，后面的 22 回合不动（%s）"
+
+			% CardText.segments_plain(r703_once))
 
 	# 边界：`8` 不许命中 `80`（与 `_find_token_in` 同一口径）
 
-	check(CardText._apply_number_swaps("造成 80 点伤害。再造成 8 点伤害。", {"8": "9"})
+	var r703_edge := CardText.growth_segs(
 
-			== "造成 80 点伤害。再造成 9 点伤害。",
+			CardText.parse("造成 80 点伤害。再造成 8 点伤害。"),
 
-			"R702 替换：token 有右边界，8 不会命中 80")
+			{"base": 8, "cur": 9, "delta": 1})
+
+	var r703_edge_txt := CardText.segments_plain(r703_edge)
+
+	check(r703_edge_txt.begins_with("造成 80 点伤害。") and r703_edge_txt.contains("再造成 9（8＋1）"),
+
+			"R703 替换：token 有右边界，8 不会命中 80（%s）" % r703_edge_txt)
+
+	# 与本场内联（R349）叠加：`30` 会被本场加成重新换掉 → 旧成长括号必须被吃掉，
+	# 否则排出「38（30＋8）（22＋8）」两层括号。
+	# ⚠️ 战斗左栏调 `inline_damage` 时**不传 tag**，所以吞戳必须无条件（按戳判、不看参数）。
+
+	var r703_merged: Array = CardText.inline_damage(CardText.parse_card(r702_slay),
+
+			38, 30, "30＋8")
+
+	var r703_merged_txt := CardText.segments_plain(r703_merged)
+
+	check(r703_merged_txt.contains("38（30＋8）") and not r703_merged_txt.contains("22＋8"),
+
+			"R703 叠加：本场 +8 → 「38（30＋8）」，旧成长括号被吃掉、不留两层（%s）"
+
+			% r703_merged_txt)
 
 	# 非成长卡一个字都不能变（`parse_card` 必须与老路径逐字一致）
 
 	var r702_plain := repo.get_card(9003)
 
-	check(r702_plain.body_number_swaps().is_empty()
+	check(r702_plain.body_growth_note().is_empty()
 
 			and CardText.naturalize_card(r702_plain) == CardText.naturalize(r702_plain.effect_text),
 
-			"R702 正文：普通卡的显示与老路径逐字一致")
+			"R703 正文：普通卡的显示与老路径逐字一致")
 
-	# 缓存不能被两种数值串味（同一段 effect_text、两种 swaps）
+	# 缓存不能被两种数值串味（同一段 effect_text、一张有成长一张没有）
 
 	var r702_a := CardText.naturalize_card(r702_slay)
 
 	var r702_b := CardText.naturalize_card(repo.get_card(9205))
 
-	check(r702_a.contains("30 点伤害") and r702_b.contains("22 点伤害"),
+	check(r702_a.contains("30（22＋8）") and r702_b.contains("造成 22 点伤害"),
 
-			"R702 缓存：成长副本与原型卡各自取到自己的数字（30 / 22）")
+			"R703 缓存：成长副本与原型卡各自取到自己的数字（30（22＋8） / 22）")
 
 	# 源码守卫：所有「左侧详细描述」的渲染口都必须走带成长数值的入口
 
@@ -62192,9 +62276,15 @@ func _init() -> void:
 
 			and r702_dos.find("CardText.naturalize_card(_card)") >= 0
 
-			and r702_cfs.find("CardText.naturalize_card(card)") >= 0,
+			and r702_cfs.find("CardText.naturalize_card(card") >= 0,
 
 			"R702 源码：卡组浏览 / 详情浮层 / 卡面正文同口径")
+
+	# R703：卡面窄 → **不带**括号（多那几个字会挤掉末行），只写当前值
+
+	check_src(r702_cfs.find("CardText.HIDE_PARENS, false)") >= 0,
+
+			"R703 源码：卡面用 with_note=false（只写当前值，括号留给左侧详细面板）")
 
 	# 战斗中击杀 → `growth_damage` 必须同步（只抬 value 的话，面板还印 22）
 
@@ -62205,6 +62295,16 @@ func _init() -> void:
 			and r702_ge.find("card.growth_damage += inc") >= 0,
 
 			"R702 源码：猎杀击杀同时抬 value 与 growth_damage")
+
+	# 数据层只留一个口子：老的「字符串替换表」不许复活（两套口径必然走散）
+
+	var r702_cds := FileAccess.get_file_as_string("res://scripts/card_text.gd")
+
+	check_src(not r702_cds.contains("_apply_number_swaps")
+
+			and not r702_cds.contains("body_number_swaps"),
+
+			"R703 源码：旧的字符串替换表已下线，唯一的数值口是 body_growth_note + growth_segs")
 
 	RunState.end_run()
 

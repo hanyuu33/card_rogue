@@ -1154,7 +1154,10 @@ static func text_zone_layout(card: CardData, rect: Rect2, font: Font, font_bold:
 	var eff_base0: float = base_meta + row_h                 # 效果首行基线
 	# R702：正文走 `naturalize_card()` —— 本局成长（猎杀 +4/击杀）已经把 value 抬上去了，
 	# 这里读 `effect_text` 原文会一直印基础伤害，与左栏详情 / 卡组浏览写两套数。
-	var eff: String = CardText.naturalize_card(card).replace("\n", " ").strip_edges()
+	# ⚠️ R703：卡面**不带**成长括号（`with_note = false`）—— 卡面窄，`30（22＋8）` 多出来的
+	#    那几个字会把末行挤掉（`fit_text_lines` 缩到 6px 也塞不住）；「基础＋成长」的
+	#    溯源交给左侧详细面板，卡面只写当前值。店长口径说的是「左侧详细描述」。
+	var eff: String = CardText.naturalize_card(card, CardText.HIDE_PARENS, false).replace("\n", " ").strip_edges()
 	var eff_sz: int = sz
 	var eff_lines: Array = []
 	var line_h: float = sz * 1.16

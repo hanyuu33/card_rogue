@@ -579,10 +579,11 @@ func strip_inherited_effects() -> void:
 		set(f, 0)
 
 
-func body_number_swaps() -> Dictionary:
-	## R702：本局永久成长会把**正文里的伤害数字**一起抬上去（猎杀「造成 22 点伤害」长到 30）
-	## —— 返回 `{正文原值: 当前值}`，交给 `CardText.parse_card()` 在**翻译之后**替换。
-	## ⚠️ 只在显示层换，**不改 `effect_text`**：i18n 译文是整句硬编码（英文
+func body_growth_note() -> Dictionary:
+	## R702/R703：本局永久成长要把**正文里的伤害数字**一起抬上去（猎杀「造成 22 点伤害」
+	## 长到 30）—— 返回 `{base, cur, delta}`，交给 `CardText.parse_card()` 画成
+	## **`30（22＋8）`**（30 红、括号褐），见 `CardText.growth_segs()`。
+	## ⚠️ 只在显示层算，**不改 `effect_text`**：i18n 译文是整句硬编码（英文
 	##    `Deal 22 damage…`），改写中文原文会让整串查不到译文，非中文环境直接掉回中文。
 	## ⚠️ 基础值用 `value - growth_damage` 反推：附魔走 note 追加、不动 value（R210），
 	##    所以这个差就是卡库原型写着的那个数，不需要再存一份「原文值」。
@@ -590,7 +591,7 @@ func body_number_swaps() -> Dictionary:
 	var base := value - growth_damage
 	if growth_damage <= 0 or base <= 0 or base == value:
 		return {}
-	return {str(base): str(value)}
+	return {"base": base, "cur": value, "delta": growth_damage}
 
 
 func pic_id() -> int:

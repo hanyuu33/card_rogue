@@ -230,19 +230,17 @@ static func strip_parens(s: String) -> String:
 	return out.strip_edges()
 
 
-static func parse(md: String, hide_parens := HIDE_PARENS, swaps: Dictionary = {}) -> Array:
+static func parse(md: String, hide_parens := HIDE_PARENS) -> Array:
 	## 解析极简 Markdown → 片段数组：[{text, bold, italic, code}, ...]
 	## 支持 `**加粗**`、`*斜体*`、`` `代码` ``。标记不成对时按字面保留（不吞字）。
 	## ⚠️ R187：返回的是缓存的**浅副本** —— 片段 Dictionary 请勿原地改写。
 	var ck := GameI18n.language() + "|" + ("1" if hide_parens else "0") + "|" + md
-	if not swaps.is_empty():
-		ck += "|" + str(swaps)     # R702：成长卡的同一段正文有两种数 → 缓存键必须分开
 	if _parse_cache.has(ck):
 		return (_parse_cache[ck] as Array).duplicate()
-	# R702：换数字必须在 `source()` **之后** —— 译文里的数字是硬编码的（Deal 22 damage），
-	# 先换原文会让整串查不到译文。换在译文上则与语言无关（22 → 30 在哪种语言都成立）。
-	var translated := _apply_number_swaps(GameI18n.source(md), swaps)
-	var s: String = clean_meta_notes(naturalize_phrases(translated))
+	# R703：`parse()` **只管翻译与 Markdown**，不碰任何数值 —— 成长卡的数字换算在
+	# `parse_card()` 里、**译文之后**才做（见 `growth_segs()`）。R702 曾在这里做字符串替换，
+	# 但那画不出「30 红、括号褐」，所以挪到片段层了。
+	var s: String = clean_meta_notes(naturalize_phrases(GameI18n.source(md)))
 	if hide_parens:
 		s = strip_parens(s)
 	var segs: Array = []
@@ -347,46 +345,53 @@ static func segments_plain(segs: Array) -> String:
 	return out
 
 
-static func naturalize(md: String, hide_parens := HIDE_PARENS, swaps: Dictionary = {}) -> String:
+static func naturalize(md: String, hide_parens := HIDE_PARENS) -> String:
 	## 纯文本降级：隐藏括号补注 + 去掉 Markdown 标记。给 Label / 单行提示用。
-	return segments_plain(parse(md, hide_parens, swaps))
+	return segments_plain(parse(md, hide_parens))
 
 
-static func parse_card(card: CardData, hide_parens := HIDE_PARENS) -> Array:
-	## R702：**卡面正文的唯一取数口**（含「本局成长」的数值换算）。
+static func parse_card(card: CardData, hide_parens := HIDE_PARENS,
+		with_note := true) -> Array:
+	## R702/R703：**卡面正文的唯一取数口**（含「本局成长」的数值）。
 	## 渲染口一律走这里，别再直接 `parse(card.effect_text)` —— 那样成长卡会一直写基础值
-	## （猎杀长到 30 了、正文还印着 22）。数值只换正文里第一个「基础值」，
-	## 与 R349 的内联（`inline_damage`，本场加成）叠着用：成长后的 base 正好是内联要找的锚。
+	## （猎杀长到 30 了、正文还印着 22）。
+	## 口径：成长后的正文写 `30（22＋8）`（30 红、括号褐），见 `growth_segs()`；
+	## 与 R349 的本场内联（`inline_damage`，本场加成）叠着用，两层不会打架。
 	if card == null:
 		return parse("", hide_parens)
-	return parse(card.effect_text, hide_parens, card.body_number_swaps())
+	return growth_segs(parse(card.effect_text, hide_parens), card.body_growth_note(),
+			with_note)
 
 
-static func naturalize_card(card: CardData, hide_parens := HIDE_PARENS) -> String:
+static func naturalize_card(card: CardData, hide_parens := HIDE_PARENS,
+		with_note := true) -> String:
 	## `parse_card()` 的纯文本版（Label / 单行提示 / 折行工具用）。
 	if card == null:
 		return ""
-	return naturalize(card.effect_text, hide_parens, card.body_number_swaps())
+	return segments_plain(parse_card(card, hide_parens, with_note))
 
 
-static func _apply_number_swaps(text: String, swaps: Dictionary) -> String:
-	## R702：把译文里的「卡库基础值」换成本局成长后的**当前值**。
-	## 每对只换**第一次**出现 —— 卡面正文里那句「造成 N 点伤害」永远是第一个数字，
-	## 再往后出现的同数字（「持续 2 回合」之类）不是伤害，不能跟着改。
-	## 边界判断复用 `_find_token_in`：`8` 不许命中 `80`，`2` 不许命中 `22`。
-	if swaps.is_empty() or text == "":
-		return text
-	var out := text
-	for key in swaps.keys():
-		var from := str(key)
-		var to := str(swaps[key])
-		if from == "" or to == "" or from == to:
-			continue
-		var i := _find_token_in(out, from)
-		if i < 0:
-			continue
-		out = out.substr(0, i) + to + out.substr(i + from.length())
-	return out
+static func growth_segs(segs: Array, note: Dictionary, with_note := true) -> Array:
+	## R703（店长口径）：成长卡的正文写「当前值（基础＋成长）」——
+	##   猎杀 `造成 22 点伤害` → `造成 30（22＋8）点伤害`，其中 **30 是红的**。
+	## 数值口径与 R349 的 `inline_damage()` 同构（都是「总值（基础＋X）」），直接复用那一口，
+	## 只给括号段盖一个 `growth` 戳：
+	##   战斗中还叠着本场加成时，`inline_damage()` 会把 30 重新换成 `38（30＋8）`，
+	##   见到戳就把旧的成长括号吃掉 —— 否则会排出「38（30＋8）（22＋8）」两层括号。
+	## ⚠️ 只标**第一个**基础值（边界规则走 `_find_token_in`：8 不命中 80，2 不命中 22）——
+	##    正文后面同数字的回合数 / 次数不是伤害，不许跟着改。
+	## ⚠️ 只在显示层算，**不改 `effect_text`**：i18n 译文是整句硬编码（英文 `Deal 22 damage…`），
+	##    改中文原文会让整串查不到译文，非中文环境直接掉回中文（R702 踩过）。
+	var base := int(note.get("base", 0))
+	var cur := int(note.get("cur", 0))
+	var delta := int(note.get("delta", 0))
+	if base <= 0 or delta <= 0 or cur <= base:
+		return segs
+	if not with_note:
+		# 卡面那点宽度放不下括号（多出来的字会把末行挤掉、缩到 6px 还看不全）——
+		# 卡面只写当前值，源头信息留给左侧详细面板。
+		return inline_damage(segs, cur, base, "", str(base))
+	return inline_damage(segs, cur, base, "%d＋%d" % [base, delta], "", "growth")
 
 
 static func to_bbcode(md: String, hide_parens := HIDE_PARENS) -> String:
@@ -439,7 +444,7 @@ static func _seg_colored(seg: Dictionary, text: String, col: Color, bold := fals
 
 
 static func inline_damage(segs: Array, dmg: int, base: int, expr: String,
-		anchor := "") -> Array:
+		anchor := "", tag := "") -> Array:
 	## R349（用户口径）：把「现在打出多少伤害」**内联进效果正文**，不再单开一行。
 	##   加成型（expr 非空）→ 把正文里的基础数字换成 `总值（算式）`，例如
 	##       `造成 **10** 点伤害` → `造成 18（10＋8）点伤害`
@@ -448,6 +453,9 @@ static func inline_damage(segs: Array, dmg: int, base: int, expr: String,
 	##      只把**当前生效那一档**染成 DMG_NOW，正文一个字都不改。
 	## ⚠️ 口径：`dmg == base` 一律不动 —— 卡面已经说清了，标出来是噪音（R262 定下的规矩）。
 	## ⚠️ 找不到锚点（正文给不出确数，如蓄势由 value 实时写）→ 原样返回，宁可不标也不标错。
+	## R703：`tag` 是给「本次插入的括号」盖章用的（成长那边盖 `growth`）。
+	##    拼后文时**只要见到 `growth` 戳就跳过**（不看调用方传不传 tag，battle_scene 就不传），
+	##    否则本场加成会把 `30（22＋8）` 再包一层成 `38（30＋8）（22＋8）`。
 	if segs.is_empty() or dmg == base:
 		return segs
 	var token := anchor
@@ -480,12 +488,18 @@ static func inline_damage(segs: Array, dmg: int, base: int, expr: String,
 				out[last_i] = _carry(out[last_i] as Dictionary, last_t + " ")
 		out.append(_seg_colored(seg, str(dmg), UiTheme.DMG_NOW, true))
 		if expr != "":
-			out.append(_seg_colored(seg, "（" + expr + "）", UiTheme.DMG_CALC))
+			var calc := _seg_colored(seg, "（" + expr + "）", UiTheme.DMG_CALC)
+			if tag != "":
+				calc["tag"] = tag
+			out.append(calc)
 		var post := t.substr(i + token.length())
 		if post != "":
 			out.append(_carry(seg, post))
 		for k in range(idx + 1, segs.size()):
-			out.append(segs[k])
+			var nxt: Dictionary = segs[k]
+			if str(nxt.get("tag", "")) == "growth":
+				continue     # R703：旧成长括号已被本层总值覆盖，绝不叠两层（不看调用方传不传 tag）
+			out.append(nxt)
 		return out
 	return segs
 
@@ -500,6 +514,8 @@ static func _carry(seg: Dictionary, text: String) -> Dictionary:
 		d["mention"] = seg["mention"]
 	if seg.has("col"):
 		d["col"] = seg["col"]
+	if seg.has("tag"):
+		d["tag"] = seg["tag"]     # R703：成长括号的戳要跟着折行 / 切片一起走
 	return d
 
 
