@@ -14245,7 +14245,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": _cell_center(ec_cell) + Vector2(0, -20), "sc": _grid_scroll,
 					"text": "力量 +%d" % GameEngine.EMERGENCY_CALL_ATK,
 					"col": Color("e2a03a"), "size": 16, "start": n, "dur": 1500})
-			_say("📣 紧急呼叫：%s 登场（力量 +%d）" % [ec_name, GameEngine.EMERGENCY_CALL_ATK])
+			_say("📣 紧急呼叫：%s 入场（力量 +%d）" % [ec_name, GameEngine.EMERGENCY_CALL_ATK])
 		"revelator_cover":
 			# R356 阶段 3「接通代受」：启示者身边接通的友军替它吃一半（去尾）。
 			var rv_from: Vector2i = data.get("cell", Vector2i(0, 0))

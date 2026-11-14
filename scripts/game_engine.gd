@@ -3203,7 +3203,7 @@ func _emergency_call() -> void:
 	var copy:= CardData.from_dict(proto.to_dict())   # 独立副本：+10 力只属于这一只
 	copy.power += EMERGENCY_CALL_ATK
 	var spawned:= state.place(copy, spot, SIDE_OPPONENT, true)
-	_log("紧急呼叫：%s 力量 +%d 登场（%s）" % [copy.card_name, EMERGENCY_CALL_ATK, spot])
+	_log("紧急呼叫：%s 力量 +%d 入场（%s）" % [copy.card_name, EMERGENCY_CALL_ATK, spot])
 	action.emit("emergency_call", {"cell": spot, "card": copy, "side": SIDE_OPPONENT})
 	if spawned != null:
 		_on_ally_entered(spawned, SIDE_OPPONENT)
@@ -8060,7 +8060,7 @@ func _contractor_enter(p: Placement) -> void :
 	## 挂在 play_from_hand 的「盟友」分支：卡此时已离手，涨价不会算到它自己头上。
 	state.energy += CONTRACTOR_GAIN
 	_raise_hand_cost(CONTRACTOR_RAISE, p.card.card_name, true)
-	_log("%s 登场：费用 +%d；本回合手卡费用 +%d（回合结束失效）" % [
+	_log("%s 入场时：费用 +%d；本回合手卡费用 +%d（回合结束失效）" % [
 		p.card.card_name, CONTRACTOR_GAIN, CONTRACTOR_RAISE])
 	action.emit("contractor", {"cell": _cell_of(p), "energy": CONTRACTOR_GAIN,
 		"raise": CONTRACTOR_RAISE, "name": p.card.card_name})
@@ -12365,7 +12365,7 @@ func _on_ally_entered(p: Placement, side: String) -> void :
 		return
 	if p.card.id == DUCKLING_ID:
 		_duckling_discount(p)   # R692：小鸭入场 → 手卡随机一张效果卡 -1
-	_wind_force_tick(side, "%s 登场" % p.card.card_name)
+	_wind_force_tick(side, "%s 入场" % p.card.card_name)
 
 
 func _hidden_energy_tick(p: Placement, side: String) -> void :
