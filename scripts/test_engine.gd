@@ -9127,7 +9127,7 @@ func _init() -> void:
 
 
 
-	# ---- 技能：闪电链（相连单位 11 伤，不分敌我） ----
+	# ---- 技能：闪电链（目标 + 与他相连的那一串，11 伤，不分敌我） ----
 
 	var eng_l := _new_engine(_single_deck(_card(9006, "闪电链", "技能", 2, 0, 0)), 20, 20, -1, false)
 
@@ -9149,20 +9149,45 @@ func _init() -> void:
 
 	eng_l.state.place(ld, Vector2i(0, 0), GameEngine.SIDE_OPPONENT)  # 孤立（与 C 距离2）
 
-	eng_l.use_spell(0, null)
+	# R730：现在**必须给目标**（target_mode 由 none 改成 unit）。以 A 为目标 → 只有 A/B 这一串吃伤害
+
+	eng_l.use_spell(0, Vector2i(3, 0))
 
 	check(eng_l.state.unit_at(Vector2i(3, 0)) == null
 
 			and eng_l.state.unit_at(Vector2i(3, 1)) == null,
 
-			"闪电链：相连的 A/B 被击破（11 伤）")
+			"闪电链：目标 A 与跟他相连的 B 一起被击破（11 伤）")
 
 	check(eng_l.state.unit_at(Vector2i(0, 2)) != null
 
 			and eng_l.state.unit_at(Vector2i(0, 0)) != null,
 
-			"孤立单位不在链上，不受伤")
+			"闪电链：没连到目标的 C/D 不受伤（旧版全盘扫，R730 已改）")
 
+	# R730 反向：以**孤立单位** C 为目标 —— 目标自己吃这一发（旧版 comp.size()<2 会跳过），
+
+	# 而另一串（我方 A/B）完全不受影响。
+
+	var eng_l2 := _new_engine(_single_deck(_card(9006, "闪电链", "技能", 2, 0, 0)), 20, 20, -1, false)
+
+	eng_l2.start_game()
+
+	eng_l2.state.place(_card(7001, "A", "盟友", 1, 1, 2), Vector2i(3, 0), GameEngine.SIDE_SELF)
+
+	eng_l2.state.place(_card(7002, "B", "工事", 1, 0, 2), Vector2i(3, 1), GameEngine.SIDE_SELF)
+
+	eng_l2.state.place(_card(7003, "C", "盟友", 1, 1, 2), Vector2i(0, 2), GameEngine.SIDE_OPPONENT)
+
+	eng_l2.use_spell(0, Vector2i(0, 2))
+
+	check(eng_l2.state.unit_at(Vector2i(0, 2)) == null
+
+			and eng_l2.state.unit_at(Vector2i(3, 0)) != null
+
+			and eng_l2.state.unit_at(Vector2i(3, 1)) != null,
+
+			"R730 闪电链：目标是孤立单位时只打它自己，另一串（我方 A/B）毫发无伤")
 
 
 	# ---- 技能：火球术（十字范围 20 伤） ----

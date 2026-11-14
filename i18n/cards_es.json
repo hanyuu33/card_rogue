@@ -379,7 +379,7 @@
   },
   "9006": {
    "name": "Rayo en Cadena",
-   "effect_text": "El rayo se propaga entre unidades adyacentes e inflige 11 de daño a cada unidad alcanzada por la cadena (tanto aliadas como enemigas)."
+   "effect_text": "Inflige 11 de daño al objetivo; el rayo se propaga por las unidades adyacentes y todas las unidades alcanzadas reciben el mismo daño (tanto aliadas como enemigas)."
   },
   "9007": {
    "name": "Bola de Fuego",

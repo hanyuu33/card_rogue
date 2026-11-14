@@ -3628,9 +3628,54 @@ func _check_battle(scene: Variant) -> void:
 	_check_r208(scene)
 	_check_enchant_mark(scene)
 	_check_r277_field_tap(scene)
+	_check_r729_drop_out_of_board(scene)
 	_check_speech_bubble(scene)
 	_check_foe_speed(scene)
 
+
+func _check_r729_drop_out_of_board(scene: Variant) -> void:
+	## R730：把卡**拖回手牌区**（光标已经离开棋盘可视窗）松手 = 取消，不做吸附。
+	## 旧版只判 footprint：手牌卡 98.6×119 的上沿会伸进棋盘最后一行，于是「拖到棋盘下方
+	## 放弃」被吸到**自己后排**的单位上，技能直接打在自己人身上（用户实测）。
+	## ⚠️ 同时钉住「棋盘内仍然吸附」—— R117 的「拖拽可用区域加大」不能被这次修复顺手削掉，
+	##    两条断言必须一起守。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("R730：拿不到 engine")
+		return
+	scene._grid_intro_t = -1.0
+	scene._grid_zoom = 1.0
+	scene._grid_scroll = 0.0
+	# 目标格：棋盘**最后一行**里落在可视窗内的那一格（卡从下方拖上来最先够到的就是它）
+	var cell := Vector2i(-1, -1)
+	for r in range(FieldState.BOARD_ROWS - 1, -1, -1):
+		var c2 := Vector2i(r, 0)
+		if scene._cell_in_view(scene._cell_center(c2)):
+			cell = c2
+			break
+	if cell.x < 0:
+		_smoke_fail("R730：棋盘里连一格可视格都找不到")
+		return
+	var cells: Array[Vector2i] = [cell]
+	var below := Vector2(scene._cell_center(cell).x, scene.GRID_Y + scene.GRID_H + 30.0)
+	if scene._cell_in_view(below):
+		_smoke_fail("R730：构造的「棋盘下方」坐标 y=%.1f 仍在可视窗内" % below.y)
+		return
+	# 前提：这张卡的 footprint 真的盖得到那一格 —— 否则旧版也吸不到，断言就白写了
+	if not scene._cell_rect(cell).intersects(scene._drag_footprint(below)):
+		_smoke_fail("R730：构造点离目标格太远，footprint 没盖住 %s，断言无效" % str(cell))
+		return
+	if scene._drop_cell(below, cells) != null:
+		_smoke_fail("R730：拖回棋盘下方（手牌区）仍吸附到了 %s —— 取消卡会误放技能"
+				% str(scene._drop_cell(below, cells)))
+		return
+	# 棋盘内：光标压在相邻一格上、卡身盖住目标格 → 仍然吸附（R117 的可用区域要保住）
+	var inside: Vector2 = scene._cell_center(Vector2i(maxi(0, cell.x - 1), 0))
+	if scene._drop_cell(inside, cells) != cell:
+		_smoke_fail("R730：棋盘内把 footprint 盖过来后没有吸附到 %s（R117 区域被削了）"
+				% str(cell))
+		return
+	print("SMOKE OK R730：拖回手牌区松手 = 取消（不再误吸自己后排），棋盘内吸附照旧")
 
 func _check_foe_speed(scene: Variant) -> void:
 	## R388：顶栏倍速按钮 —— 点一次 1.5×、点两次 2×、第三次回 1×，并落盘；

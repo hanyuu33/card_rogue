@@ -379,7 +379,7 @@
   },
   "9006": {
    "name": "Chain Lightning",
-   "effect_text": "Lightning arcs between adjacent units, dealing 11 damage to each unit caught in the chain (friend and foe alike)."
+   "effect_text": "Deal 11 damage to the target; the bolt arcs through adjacent units, dealing the same damage to every unit caught in the chain (friend and foe alike)."
   },
   "9007": {
    "name": "Fireball",

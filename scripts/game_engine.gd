@@ -11417,7 +11417,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 						m, state.enemy_effects.size(), ws_rb_o]
 			return "对方抽了 %d 张牌" % m
 		9006:
-			return _chain_lightning(_spell_dmg(side, 11, card))
+			return _chain_lightning(_spell_dmg(side, 11, card), target)
 		FIREBALL_ID:
 			return _blast(_spell_dmg(side, 20, card), target, 1)
 		9010:
@@ -13840,18 +13840,27 @@ func _connected_components() -> Array:
 	return comps
 
 
-func _chain_lightning(amount: int) -> String:
+func _chain_lightning(amount: int, target) -> String:
+	## R730：**只打目标所在的那一串**（用户口径「对一个目标和所有与他接通的目标造成伤害」）。
+	## 旧版没有目标、全盘扫 `_connected_components()` → 场上每一串都挨一发。
+	##   ① target 必须是格子且站着单位，否则「（没有目标）」—— 界面侧已拦在拖拽 / 点击之前，
+	##      这层是给联机 / 回放 / 自动出牌兜底（不能打空一发还照扣费）。
+	##   ② 传导走 `_component_of_cell()`：四方向相邻、**隔敌也算连通**、**不分敌我** ——
+	##      与「接通」trait 的差别只在「只算我方」那一条，这里刻意不沿用（R91 起双方一起吃）。
+	##   ③ 目标自己一定在分量里 → **孤立单位现在也会吃这一发**（旧版 `comp.size() < 2` 会跳过）。
+	if not (target is Vector2i):
+		return "（需要一个目标）"
+	var aim: Vector2i = target
+	if state.unit_at(aim) == null:
+		return "（没有目标）"
 	var hits:= 0
 	_begin_hp_once()
-	for comp: Array in _connected_components():
-		if comp.size() < 2:
+	for cell: Vector2i in _component_of_cell(aim):
+		var p:= state.unit_at(cell)
+		if p == null:
 			continue
-		for cell: Vector2i in comp:
-			var p:= state.unit_at(cell)
-			if p == null:
-				continue
-			_hit_unit(p, amount, "闪电")
-			hits += 1
+		_hit_unit(p, amount, "闪电")
+		hits += 1
 	_destroy_dead()
 	_end_hp_once()
 	return "闪电击中 %d 个相连单位" % hits

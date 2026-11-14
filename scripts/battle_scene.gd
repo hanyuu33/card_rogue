@@ -17124,6 +17124,12 @@ func _drop_cell(pos: Vector2, cells: Array) -> Variant:
 	var direct: Variant = _cell_at(pos)
 	if direct != null and cells.has(direct):
 		return direct
+	# R730：**光标已经离开棋盘可视窗**时一概不吸附。最典型的就是「把卡拖回手牌取消」——
+	# 手牌卡 98.6×119 的 footprint 上沿会伸进棋盘最后一行，旧版于是把它吸到自己后排的
+	# 单位上，玩家明明是松手放弃，技能却打在了自己人身上（用户实测）。
+	# 现在 = 明确取消，光圈也不亮（`_drag_hit_cell` 与本函数同源，画的和做的一致）。
+	if not _cell_in_view(pos):
+		return null
 	var sweep := _drag_footprint(pos)
 	var best = null
 	var best_d := INF
