@@ -512,13 +512,18 @@ func _detail_input(event: InputEvent) -> void:
 
 func _drag_rows(event: InputEvent) -> bool:
 	## 「按住内容拖」的公共尾段：像素位移按行高折成整行，余量留着下一次（不丢手感）。
+	## ⚠️ R735：**两种界面两种单位** —— 正文按行距 `BODY_LINE_H`(26) 折行，
+	## 列表按行高 `ROW_H`(76) 折行。R671~R731 两处都写 BODY_LINE_H，于是列表
+	## 「手指走 76px」被算成 2.9 行（安卓模拟器实测：120px 慢拖直接跳 3 行 / 到底），
+	## 手感是「一碰就飞」。改单位而不是改累加量：正文那边 26px 一行本来是对的。
+	var unit := BODY_LINE_H if _sel >= 0 else ROW_H
 	var d := UiDrag.scroll_delta(event, 0.0)
 	if d == 0.0:
 		return false
 	_drag_accum += d
-	var rows := int(_drag_accum / BODY_LINE_H)
+	var rows := int(_drag_accum / unit)
 	if rows != 0:
-		_drag_accum -= float(rows) * BODY_LINE_H
+		_drag_accum -= float(rows) * unit
 		if _sel >= 0:
 			_set_body_scroll(_body_scroll + rows)
 		else:

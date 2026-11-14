@@ -1915,3 +1915,17 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - **修 ④：从弃牌区回手的卡从抽牌堆起飞**。怒涛 9095 / 鲸鱼之怒 9050 / 暗影步 9121 / 乌鸦 9039 / 传承记忆 9078 等都是「弃牌区 → 手牌」，`_play_hand_flyin` 却写死从 `DECK` 起飞，观感是「又凭空抽了一张」。改：`_hand_sync` 新增弃牌区张数快照 `_discard_known`，diff 期间净减少（`dd < 0`）即判为回手；`_play_hand_flyin(added, from_discard)` 从 `DISCARD` 中心起飞。拒绝命运 9098「先丢 N 再捞 M」净值为正判不出来 → 引擎捞回时补 `card_gained{from:"discard"}` 点名（界面 `_gained_from_discard` 一次性标记）。
 - **回归**：assemble 0 / mana PASS / engine **5964✓**（+1：拒绝命运捞回张数全带 `from=discard`）/ reward 26 / bgm 39 / traps **109✓**（+9：唯一口 / side / 错开常量 / 金环只剩 1 处 / 弃牌区起点 / 快照判据 / 点名 / 引擎点名 / 5 个发射点带 side）/ trapinput 36 / smoke **73✓**（+1：喂三条 `deck_added` 量 start 等差 70ms，敌方 side 不排演出）；`RESTORE_VERIFY OK`。
 - **没做的**：批量入库的错开是时序行为，`_shot_pending` 下不播、静态帧也看不出来，所以只上了行为断言（`test_smoke` 直接调 `_on_deck_added` 量差值），没出截图。
+
+## 2026-11-15 R735 故事列表「按住拖」的换算单位（安卓模拟器实测）
+- **口径（用户）**：「重新检查安卓版故事界面是否能下拉，用安卓模拟器试一试。实在不行就改成翻页形式。」
+- **实测结论：能下拉，不需要翻页。** 用的是 SDK 里现成的 AVD `cr_test`（android-34，2340x1080 横屏），
+  装 `dist/DuckCardsRogue.apk` 后 `adb shell input swipe` 真滑：列表 1-7 段 ⇄ 5-11 段双向都到位，滚动条跟着走。
+- **真问题是灵敏度 2.9 倍**：`story_scene._drag_rows()` 列表与正文共用 `BODY_LINE_H`(26) 折行，
+  而列表行高是 `ROW_H`(76)。模拟器上 120px 慢拖直接跳 3 行、500px 就到底，玩家会觉得「一碰就飞 / 抓不住」。
+  改成 `var unit := BODY_LINE_H if _sel >= 0 else ROW_H` 后，同样 120px 正好 1 行。
+- **为什么以前没人发现**：桌面只有滚轮（步进 2 行），触摸拖拽这条路径只有安卓走得到；
+  R671 起「按下只记意图、抬起才执行」把误开修好了，但换算单位一直没人量。
+- **顺带确认**：正文面板最长一篇（档案·闲谈 188 字）在 2340x1080 上仍一屏放得下 → 正文滚动实际用不到，
+  短故事拖不动是正常现象（`_body_max_scroll()` = 0），不是坏了。
+- **回归**：smoke 新增 `_check_r735_story_drag_rows`（喂 76px 拖动必须正好滚 1 行；再喂 38px 只留余量），
+  74✓ 0✗；engine 6070 / 八套全绿；`RESTORE_VERIFY OK`。

@@ -49,6 +49,8 @@ func _initialize() -> void:
 		# R346：剧情解锁界面 + 禁卡表（两个都是自绘界面，_draw 里的空引用只有冒烟能抓到）
 		# R682：用户口径「两个按钮都去掉，明暗地显示一段：点击任意位置关闭」——这一页要真点一次。
 		["res://scenes/story.tscn", func(): _reset(), _check_r677_story_detail],
+		# R735（安卓实测）：故事列表「按住拖」的换算单位 = 行高，不是正文行距。
+		["res://scenes/story.tscn", func(): _reset(), _check_r735_story_drag_rows],
 		["res://scenes/ban.tscn", func(): _reset()],
 		# 角色选择（R43 新增：定角色 → 发专属卡与赠品道具 → 进地图）
 		["res://scenes/class_pick.tscn", func(): _reset()],
@@ -1790,6 +1792,40 @@ func _check_r674_shop_menu(scene: Variant) -> void:
 		return
 	print("SMOKE OK R674 商店 Esc 打开菜单 + 右上齿轮在位（屏幕 x=%.0f）" % gr.position.x)
 
+
+func _check_r735_story_drag_rows(scene: Variant) -> void:
+	## R735（用户口径「安卓故事界面能不能下拉」实测出来的真问题）：能滑，但**太快**。
+	## `_drag_rows()` 以前列表与正文共用 `BODY_LINE_H`(26) 折行，而列表行高是 `ROW_H`(76)，
+	## 于是 76px 的手指位移 = 2.9 行；安卓模拟器上 120px 慢拖直接跳 3 行、500px 就到底。
+	## 这里直接喂一条「正好 76px」的拖动事件：列表必须**正好滚 1 行**。
+	## 正文仍按 26px 折行（溢出才有得滚，短故事滚不动），所以正文侧用源码守卫钉单位。
+	var src := FileAccess.get_file_as_string("res://scripts/story_scene.gd")
+	if not src.is_empty() and src.find("BODY_LINE_H if _sel >= 0 else ROW_H") < 0:
+		_smoke_fail("R735 拖动换算单位丢了：列表要按 ROW_H、正文要按 BODY_LINE_H")
+		return
+	if scene._episodes.size() <= 7:
+		_smoke_fail("R735 故事页列表只有 %d 段，滚不动，测不出换算" % scene._episodes.size())
+		return
+	scene._sel = -1
+	scene._scroll = 0
+	scene._drag_accum = 0.0
+	var ev := InputEventMouseMotion.new()
+	ev.relative = Vector2(0.0, -76.0)      # 手指上滑 76px = 一整行
+	ev.button_mask = MOUSE_BUTTON_MASK_LEFT
+	scene._drag_rows(ev)
+	if scene._scroll != 1:
+		_smoke_fail("R735 列表拖 76px 应滚 1 行，实际 %d 行" % scene._scroll)
+		return
+	# 再喂 38px（半行）：余量要留着，不该再跳一行
+	var half := InputEventMouseMotion.new()
+	half.relative = Vector2(0.0, -38.0)
+	half.button_mask = MOUSE_BUTTON_MASK_LEFT
+	scene._drag_rows(half)
+	if scene._scroll != 1:
+		_smoke_fail("R735 半行位移应留在余量里，实际滚到第 %d 行" % scene._scroll)
+		return
+	scene._scroll = 0
+	scene._drag_accum = 0.0
 
 func _check_r677_story_detail(scene: Variant) -> void:
 	## R682（用户口径）：「两个按钮都去掉，明暗地显示一段：点击任意位置关闭」。
