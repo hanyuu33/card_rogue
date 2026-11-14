@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>R690b 工具文案四语对照</title>
+<style>
+  body { margin:0; padding:28px 24px 40px; background:#f6f7f5; color:#232a2e;
+         font:15px/1.65 "Microsoft YaHei","PingFang SC",system-ui,sans-serif; }
+  h1 { font-size:21px; margin:0 0 6px; }
+  .lede { color:#5d6a70; font-size:13.5px; margin:0 0 20px; max-width:1060px; }
+  .lede b { color:#0f6b3e; }
+  table { width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0;
+          background:#fff; border:1px solid #d8dee2; border-radius:10px; }
+  th { text-align:left; font-size:12.5px; color:#5d6a70; background:#eef1ee;
+       padding:10px 13px; border-bottom:1px solid #d8dee2; font-weight:600; }
+  th:nth-child(1) { width:112px; }
+  td { vertical-align:top; padding:13px; border-bottom:1px solid #e6eaec; word-break:normal;
+       overflow-wrap:anywhere; }
+  tr.place td { background:#f1f8f4; }
+  tr.use   td { background:#fdf6ec; }
+  .cid { font:600 13px/1.4 ui-monospace,Consolas,monospace; color:#5d6a70; }
+  .badge { display:inline-block; margin:5px 0 4px; padding:2px 7px; border-radius:999px;
+           font-size:11px; font-weight:600; color:#fff; }
+  .badge.place { background:#3d7d5a; }
+  .badge.use   { background:#a8661f; }
+  .price { font-size:12px; color:#5d6a70; }
+  .nm { font-weight:700; font-size:14.5px; margin-bottom:3px; }
+  .ds { font-size:13px; color:#404a4f; }
+  .op { color:#0f6b3e; font-weight:700; background:#d8f0e2; border-radius:3px; padding:0 2px; }
+  .note { margin-top:18px; padding:14px 16px; background:#fff; border:1px solid #d8dee2;
+          border-left:3px solid #0f6b3e; border-radius:8px; font-size:13px; color:#404a4f; max-width:1060px; }
+  .note b { color:#232a2e; }
+</style></head>
+<body>
+<h1>工具文案四语对照 · R690b</h1>
+<p class="lede">绿底 = 本轮新写的<b>发动方式</b>：放置型「拖到战场空格上放置」、使用型「轻点即可使用，无需拖到战场格子上」。
+放在句首是有原因的 —— 战斗顶栏那句只有 180px，超长会先缩字号、再省略<b>尾部</b>；操作方式摆第一位，缩了也一定读得到。<br>
+旧的「随后陷阱消失」一律换成「用掉后从工具栏移除」：机制「消失」是 Banish（本场对战移除），工具耗尽不是那回事。</p>
+<table>
+  <thead><tr><th>编号 / 售价</th><th>中文（底本 traps.json）</th><th>English</th><th>日本語</th><th>Español</th></tr></thead>
+  <tbody>
+  <tr class="place"><td class="id"><div class="cid">7001</div><div class="badge place">放置型 · 拖到格子</div><div class="price">30 金</div></td><td><div class="nm">炼金炸弹</div><div class="ds"><span class="op">拖到战场空格上放置。</span>敌人踩到时造成 18 点伤害，用掉后从工具栏移除。</div></td><td><div class="nm">Alchemical Bomb</div><div class="ds"><span class="op">Drag it onto an empty battlefield cell to place it.</span> When an enemy steps on it, it deals 18 damage; the tool is then used up.</div></td><td><div class="nm">錬金爆弾</div><div class="ds"><span class="op">戦場の空きマスにドラッグして設置する。</span>敵が踏むと18ダメージを与える。使用後は消費される。</div></td><td><div class="nm">Bomba Alquímica</div><div class="ds"><span class="op">Arrástrala a una casilla vacía del campo de batalla para colocarla.</span> Cuando un enemigo la pisa, le inflige 18 de daño; después, la herramienta se consume.</div></td></tr>
+  <tr class="place"><td class="id"><div class="cid">7002</div><div class="badge place">放置型 · 拖到格子</div><div class="price">40 金</div></td><td><div class="nm">冰冻陷阱</div><div class="ds"><span class="op">拖到战场空格上放置。</span>敌人踩到时造成 2 点伤害并冻结一回合，用掉后从工具栏移除。</div></td><td><div class="nm">Frost Trap</div><div class="ds"><span class="op">Drag it onto an empty battlefield cell to place it.</span> When an enemy steps on it, it deals 2 damage and inflicts Frozen for 1 turn; the tool is then used up.</div></td><td><div class="nm">氷結トラップ</div><div class="ds"><span class="op">戦場の空きマスにドラッグして設置する。</span>敵が踏むと2ダメージを与え、1ターン氷結させる。使用後は消費される。</div></td><td><div class="nm">Trampa de Hielo</div><div class="ds"><span class="op">Arrástrala a una casilla vacía del campo de batalla para colocarla.</span> Cuando un enemigo la pisa, le inflige 2 de daño y lo Congela durante un turno; después, la herramienta se consume.</div></td></tr>
+  <tr class="place"><td class="id"><div class="cid">7003</div><div class="badge place">放置型 · 拖到格子</div><div class="price">30 金</div></td><td><div class="nm">毒瓶</div><div class="ds"><span class="op">拖到战场空格上放置。</span>敌人踩到时造成 8 点伤害并中毒；之后每个敌人回合结束再受 8 点伤害，共 3 次结算（与毒沼同口径），用掉后从工具栏移除。</div></td><td><div class="nm">Poison Flask</div><div class="ds"><span class="op">Drag it onto an empty battlefield cell to place it.</span> When an enemy steps on it, it deals 8 damage and inflicts Poisoned; afterwards that enemy takes 8 more damage at the end of each enemy turn, for 3 resolutions in total (same rule as Poison Mire); the tool is then used up.</div></td><td><div class="nm">毒瓶</div><div class="ds"><span class="op">戦場の空きマスにドラッグして設置する。</span>敵が踏むと8ダメージを与え、毒にする。その後、敵ターン終了のたびにさらに8ダメージを、計3回まで与える（毒沼と同じ扱い）。使用後は消費される。</div></td><td><div class="nm">Frasco de Veneno</div><div class="ds"><span class="op">Arrástrala a una casilla vacía del campo de batalla para colocarla.</span> Cuando un enemigo la pisa, le inflige 8 de daño y lo Envenena; después, ese enemigo recibe 8 de daño más al final de cada turno enemigo, con 3 resoluciones en total (según las mismas reglas que Ciénaga Venenosa); después, la herramienta se consume.</div></td></tr>
+  <tr class="place"><td class="id"><div class="cid">7004</div><div class="badge place">放置型 · 拖到格子</div><div class="price">40 金</div></td><td><div class="nm">穿刺陷阱</div><div class="ds"><span class="op">拖到战场空格上放置。</span>敌人踩到时造成 10 点伤害并禁足一回合，用掉后从工具栏移除。</div></td><td><div class="nm">Piercing Trap</div><div class="ds"><span class="op">Drag it onto an empty battlefield cell to place it.</span> When an enemy steps on it, it deals 10 damage and inflicts Rooted for 1 turn; the tool is then used up.</div></td><td><div class="nm">穿刺トラップ</div><div class="ds"><span class="op">戦場の空きマスにドラッグして設置する。</span>敵が踏むと10ダメージを与え、1ターン移動不可にする。使用後は消費される。</div></td><td><div class="nm">Trampa Perforante</div><div class="ds"><span class="op">Arrástrala a una casilla vacía del campo de batalla para colocarla.</span> Cuando un enemigo la pisa, le inflige 10 de daño y lo deja Inmovilizado durante un turno; después, la herramienta se consume.</div></td></tr>
+  <tr class="use"><td class="id"><div class="cid">7005</div><div class="badge use">使用型 · 轻点即用</div><div class="price">50 金</div></td><td><div class="nm">小血瓶</div><div class="ds"><span class="op">轻点即可使用，无需拖到战场格子上。</span>立即回复 20% 生命（上限为最大生命），用掉后从工具栏移除。</div></td><td><div class="nm">Minor Health Flask</div><div class="ds"><span class="op">Tap it to use it, no dragging needed.</span> Instantly restores 20% Health (up to max Health); the tool is then used up.</div></td><td><div class="nm">小回復薬</div><div class="ds"><span class="op">タップするだけで使用できる（ドラッグ不要）。</span>HPを最大値の20%回復する。使用後は消費される。</div></td><td><div class="nm">Frasco de Vida Pequeño</div><div class="ds"><span class="op">Tócala para usarla, sin arrastrarla.</span> Recupera al instante un 20% de la vida (hasta el máximo); después, la herramienta se consume.</div></td></tr>
+  <tr class="use"><td class="id"><div class="cid">7006</div><div class="badge use">使用型 · 轻点即用</div><div class="price">35 金</div></td><td><div class="nm">法力药剂</div><div class="ds"><span class="op">轻点即可使用，无需拖到战场格子上。</span>立即回复 2 点费用，用掉后从工具栏移除。</div></td><td><div class="nm">Mana Potion</div><div class="ds"><span class="op">Tap it to use it, no dragging needed.</span> Instantly restores 2 Cost; the tool is then used up.</div></td><td><div class="nm">マナポーション</div><div class="ds"><span class="op">タップするだけで使用できる（ドラッグ不要）。</span>コストを2回復する。使用後は消費される。</div></td><td><div class="nm">Poción de Maná</div><div class="ds"><span class="op">Tócala para usarla, sin arrastrarla.</span> Recupera al instante 2 puntos de coste; después, la herramienta se consume.</div></td></tr>
+  </tbody>
+</table>
+<div class="note">
+  <b>翻译口径</b>：Freeze／氷結、Root／移動不可、Poisoned／毒、Poison Mire／毒沼／Ciénaga Venenosa、Health／HP、Cost／コスト。
+  「用掉」译 <b>used up／消費される／se consume</b>，不与机制「消失」（Banish／消滅）混用。<br>
+  <b>此前的洞</b>：六件工具的文案原先只有西语有文件，英日玩家看到的工具名与说明<b>全是中文回退</b> —— 这轮才补齐。
+</div>
+</body></html>
