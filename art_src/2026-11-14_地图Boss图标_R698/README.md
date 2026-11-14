@@ -38,3 +38,6 @@ v3 的关键是「SIMPLICITY LOCK」：明确写出「这是地图上的小图�
 - 运行时：`UiAssets.node_icon("boss")` 返回非 null（128×128，与其它节点同口径）。
 - 守卫断言：`scripts/test_engine.gd` 里按 `RogueMap.TYPE_LABELS` 逐类型验「取得到图」，
   不再只验路径字符串拼得对。
+- **实机**：`scenes/map.tscn -- --screenshot --whistle --layer 3 --shotwait 1.2`
+  → 见 `验收_第三层地图.png`，第三层最右的 Boss 格已显示王冠骷髅，与左侧精英格（红面具+双剑）
+  并排尺寸协调；同排兵营/商店/篝火都正常。
