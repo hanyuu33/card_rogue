@@ -363,7 +363,7 @@
   },
   "9002": {
    "name": "Deep Echo",
-   "effect_text": "When used, add a copy of "Deep Echo" to your Draw Pile. At the start of your turn, deal 6 damage to a random enemy X times. X is the number of copies of this card in the Effect Zone."
+   "effect_text": "When used, add a copy of it to your Draw Pile. At the start of your turn, deal 6 damage to a random enemy X times. X is the number of copies of this card in the Effect Zone."
   },
   "9003": {
    "name": "Fire Arrow",
@@ -532,7 +532,7 @@
   },
   "9045": {
    "name": "Gale Force",
-   "effect_text": "Whenever a friendly Ally enters the battlefield, deal 4 damage to a random enemy. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "Whenever a friendly Ally enters the battlefield, or whenever you use an Effect card, deal 4 damage to a random enemy. Multiple copies of this card in the Effect Zone do not stack."
   },
   "9046": {
    "name": "Giant Rat",
@@ -632,7 +632,7 @@
   },
   "9070": {
    "name": "Swarm Assault",
-   "effect_text": "**Linked** units ignore distance when making their own attacks (they can reach the whole field). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "**Linked** friendly units can attack from the position of another friendly unit Linked to them. Multiple copies of this card in the Effect Zone do not stack."
   },
   "9071": {
    "name": "Sturdy Enclosure",
@@ -916,7 +916,7 @@
   },
   "9150": {
    "name": "Life Cycle",
-   "effect_text": "Choose a friendly Ally: it gains \"Dimensional\" and \"Death\" - when it is Destroyed, add a random Ally card to your Hand."
+   "effect_text": "When used, all friendly Allies gain \"Dimensional\" and \"Death\" - when Destroyed, add a Seed to your Hand. Multiple copies of this card in the Effect Zone do not stack."
   },
   "9151": {
    "name": "Scavenger",
@@ -1265,6 +1265,14 @@
   "9247": {
    "name": "Assembly Factory",
    "effect_text": "At the start of your turn, assemble a card. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+  },
+  "9248": {
+   "name": "Seed",
+   "effect_text": "At the start of your turn, Destroy this card: randomly gain 1 Cost, or add a random card to your Hand. X is the number of copies of this card in the Effect Zone; each one resolves separately."
+  },
+  "9249": {
+   "name": "The Favored",
+   "effect_text": "Randomly use a copy of an Effect card from your Draw Pile. Restore Cost equal to the number of Effect cards in your Draw Pile."
   }
  }
 }

@@ -1287,7 +1287,7 @@
       "traits": [
         "疾风"
       ],
-      "effect_text": "每个己方盟友进入战场时，随机对一个敌人造成 4 点伤害。效果区多张本卡不可叠加。",
+      "effect_text": "每个己方盟友进入战场时，或使用效果卡时，随机对一个敌人造成 4 点伤害。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 4,
       "color": "绿",
@@ -1807,7 +1807,7 @@
         "群起攻之",
         "接通"
       ],
-      "effect_text": "**接通**的单位在自己攻击时不计算距离（全场可达）。效果区多张本卡不可叠加。",
+      "effect_text": "**接通**的己方单位攻击时，可以用与它接通的其他己方单位的位置发起攻击。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 0,
       "color": "绿",
@@ -4092,19 +4092,21 @@
     {
       "id": 9150,
       "name": "生命循环",
-      "kind": "技能",
-      "cost": 0,
+      "kind": "效果",
+      "cost": 1,
       "power": 0,
       "health": 0,
       "attack_range": 0,
       "move_speed": 0,
-      "rarity": 0,
+      "rarity": 2,
       "group": "player",
       "class": "森林精魄",
-      "traits": [],
+      "traits": [
+        "生命循环"
+      ],
       "affixes": [],
-      "effect_text": "选择一个己方盟友：使它获得「次元」和「死亡」—— 它被破坏时，将一张随机盟友卡加入你的手卡。",
-      "target_mode": "unit",
+      "effect_text": "使用时，己方所有盟友获得「次元」与「死亡」—— 它们被破坏时，将一张种子加入你的手卡。效果区多张本卡不可叠加。",
+      "target_mode": "none",
       "value": 0,
       "color": "绿",
       "image": ""
@@ -6496,6 +6498,50 @@
       "color": "灰",
       "image": "",
       "combo_trigger": "turn_start"
+    },
+    {
+      "id": 9248,
+      "name": "种子",
+      "kind": "效果",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [
+        "种子"
+      ],
+      "affixes": [],
+      "effect_text": "回合开始时，破坏此卡：随机获得 1 点费用，或一张随机卡加入手卡。X 为本卡在效果区的张数，每张各结算一次。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "绿",
+      "image": ""
+    },
+    {
+      "id": 9249,
+      "name": "被眷顾者",
+      "kind": "技能",
+      "cost": 3,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "森林精魄",
+      "traits": [
+        "被眷顾者"
+      ],
+      "affixes": [],
+      "effect_text": "随机将抽牌库的一张效果卡复制并打出。回复等于抽牌库中效果卡张数的费用。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "绿",
+      "image": ""
     },
     {
       "id": 9190,

@@ -532,7 +532,7 @@
   },
   "9045": {
    "name": "Fuerza del Vendaval",
-   "effect_text": "Cada vez que un Aliado aliado entra al campo de batalla, inflige 4 de daño a un enemigo aleatorio. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Cada vez que un Aliado aliado entra al campo de batalla, o cada vez que uses una carta de Efectos, inflige 4 de daño a un enemigo aleatorio. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9046": {
    "name": "Rata Gigante",
@@ -632,7 +632,7 @@
   },
   "9070": {
    "name": "Asalto Colectivo",
-   "effect_text": "Las unidades **vinculadas** ignoran la distancia al realizar sus propios ataques (pueden alcanzar todo el campo). Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Las unidades **vinculadas** aliadas pueden atacar desde la posición de otra unidad aliada vinculada a ellas. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9071": {
    "name": "Cercado Resistente",
@@ -916,7 +916,7 @@
   },
   "9150": {
    "name": "Ciclo de Vida",
-   "effect_text": "Elige un Aliado aliado: obtiene «dimensional» y «Muerte»; cuando sea destruido, añade una carta de Aliado aleatoria a la mano."
+   "effect_text": "Al usarse, todos los Aliados aliados obtienen «dimensional» y «Muerte»: al ser destruidos, añade una Semilla a la mano. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9151": {
    "name": "Carroñero",
@@ -1265,6 +1265,14 @@
   "9247": {
    "name": "Fábrica de Ensamblaje",
    "effect_text": "Al comienzo de tu turno, ensambla una carta. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+  },
+  "9248": {
+   "name": "Semilla",
+   "effect_text": "Al comienzo de tu turno, destruye esta carta: obtén aleatoriamente 1 de Coste o añade una carta aleatoria a la mano. X es el número de copias de esta carta en la zona de Efectos; cada una se resuelve por separado."
+  },
+  "9249": {
+   "name": "El Favorecido",
+   "effect_text": "Usa aleatoriamente una copia de una carta de Efectos de tu pila de robo. Recupera Coste igual al número de cartas de Efectos en tu pila de robo."
   }
  }
 }
