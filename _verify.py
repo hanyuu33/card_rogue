@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""五套回归一键跑（2026-10-01 重建：原文件被早期清理脚本误删）。
+"""八套回归一键跑（2026-10-01 重建；R663 增补 assemble / mana / traps；R667 增补 trapinput）。
 
 用法：python _verify.py
-逐套跑 engine / reward / bgm / smoke，统计 ✓/✗，任一失败则进程退出码 1。
-输出同时落盘 _e.txt / _r.txt / _rp.txt / _b.txt / _s.txt 便于事后检查。
+逐套跑 assemble / mana / engine / reward / bgm / traps / trapinput / smoke，统计 ✓/✗，
+任一失败则进程退出码 1。输出落盘 _*.txt 便于事后检查。
 """
 import os
 import re
@@ -58,6 +58,10 @@ SUITES = [
     #             门禁报  而**看不到任何有用信息**。
     # 已核实 test_smoke.gd **完全不依赖真实渲染**（无 viewport / 截图 / DisplayServer 调用），
     # 所以加 --headless 只是把窗口去掉，断言一条都不会变。
+    # R663：陷阱消耗品专属回归（数据 / 存档 / 放置 / 触发 / 毒瓶统一口径 / 三处 UI 守卫）。
+    ("traps", ["--headless", "--path", ROOT, "--script", "res://scripts/test_traps.gd"], "_traps.txt"),
+    # R667：真实事件注入 —— PC 拖放 / 安卓 ScreenTouch+ScreenDrag / 三种取消 / 底图合一。
+    ("trapinput", ["--headless", "--path", ROOT, "--script", "res://scripts/test_trap_input.gd"], "_trapinput.txt"),
     ("smoke", ["--headless", "--path", ROOT, "--script", "res://scripts/test_smoke.gd"], "_s.txt"),
 ]
 

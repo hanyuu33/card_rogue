@@ -315,7 +315,6 @@ func _init() -> void:
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://run_cleared_test.sav"))
 
-
 	print("== 肉鸽引擎规则测试 ==")
 
 	var repo := CardRepo.load_json()
@@ -5106,7 +5105,7 @@ func _init() -> void:
 
 	eng_fzc.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(3, 0))
 
-	check(eng_fzc.cost_of(fzc) == 1, "狂暴：己方 3 盟友 → 费用 -1（2 → 1）")
+	check(eng_fzc.cost_of(fzc) == 0, "狂暴：己方 3 盟友 → 费用 -2（2 → 0，R663 改为 -2）")
 
 
 
@@ -15551,9 +15550,9 @@ func _init() -> void:
 		# 回归也一直是绿的。这里补两道：① 商店进名单；② 右上角有齿轮入口 ——
 		# 触摸端没有 Esc 键，只挂菜单不给按钮等于没有菜单。
 
-		var r674_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+		var r675_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
 
-		check(r674_shop.find("_menu_btn") >= 0 and r674_shop.find("UiTheme.draw_gear") >= 0,
+		check(r675_shop.find("_menu_btn") >= 0 and r675_shop.find("UiTheme.draw_gear") >= 0,
 
 				"R674 商店右上角有菜单齿轮（触摸端没有 Esc 键）")
 
@@ -50553,8 +50552,7 @@ func _init() -> void:
 
 	check(r313_d1.cannot_act_next_turn(), "R313 不能行动判据：冰封 → 成立")
 
-	# 10 × 1.15 → 11：伤害要真的过 `_spell_dmg()`，否则「加倍」那条分支拿不到基数缓存。
-	var r313_dmg_ice := r313_se._spell_dmg(GameEngine.SIDE_SELF, 10)
+	var r313_dmg_ice := r313_se._spell_dmg(GameEngine.SIDE_SELF, 10)   # 10 × 1.15 → 11
 
 	r313_se._hit_unit(r313_d1, r313_dmg_ice, "测试")
 
@@ -50590,7 +50588,7 @@ func _init() -> void:
 
 	r313_se._spell_scope_depth = 0
 
-	r313_se._hit_unit(r313_d1, r313_dmg_ice, "测试")
+	r313_se._hit_unit(r313_d1, 11, "测试")
 
 	check(r313_d1.health == 80 - 11,
 
@@ -50608,112 +50606,6 @@ func _init() -> void:
 
 
 
-
-
-	# ================= R314：传奇档 / 储物箱 6044 / lucky 7 6045 / 道具高亮 =================
-
-	var r314_repo := RelicRepo.load_json()
-
-	check(r314_repo.get_relic(6040).tier == RelicData.TIER_LEGENDARY
-
-			and r314_repo.get_relic(6044).tier == RelicData.TIER_LEGENDARY
-
-			and r314_repo.get_relic(6045).tier == RelicData.TIER_LEGENDARY,
-
-			"R314 水晶骰子 / 储物箱 / lucky 7 三件都是「传奇」档")
-
-	check(r314_repo.get_relic(6044).relic_name == "储物箱"
-
-			and r314_repo.get_relic(6045).relic_name == "lucky 7",
-
-			"R314 两件新道具名字正确（储物箱 / lucky 7）")
-
-	check(r314_repo.get_relic(6044).desc.contains("不")
-
-			and r314_repo.get_relic(6044).desc.contains("手牌"),
-
-			"R314 储物箱文案：写明回合结束不弃手牌")
-
-	check(r314_repo.get_relic(6045).desc.contains("7")
-
-			and r314_repo.get_relic(6045).desc.contains("免疫"),
-
-			"R314 lucky 7 文案：写明 7 个回合 / 免疫 HP 伤害")
-
-
-
-	# ---- 传奇概率：5% × 当前层数，大宝箱翻倍 ----
-
-	var r314_layer_saved: int = RunState.current_layer
-
-	RunState.current_layer = GameLayers.LAYER_DEFAULT
-
-	check(is_equal_approx(RunState.legendary_chance(), 0.05) \
-
-			and is_equal_approx(RunState.legendary_chance(true), 0.10),
-
-			"R314 传奇概率：第一层 5%%，大宝箱 10%%（%f / %f）"
-
-				% [RunState.legendary_chance(), RunState.legendary_chance(true)])
-
-	RunState.current_layer = GameLayers.LAYER_TWO
-
-	check(is_equal_approx(RunState.legendary_chance(), 0.10) \
-
-			and is_equal_approx(RunState.legendary_chance(true), 0.20),
-
-			"R314 传奇概率：第二层 10%%，大宝箱 20%%（%f / %f）"
-
-				% [RunState.legendary_chance(), RunState.legendary_chance(true)])
-
-
-
-	# ---- 抽取：同一发 randf 落在不同阈值区间，验「层数 / 大宝箱」确实在起作用 ----
-
-	# 找一个「首发 randf 落在 5%~10% 之间」的种子：第一层必出一般，第二层 / 大宝箱必出传奇。
-
-	var r314_relics_saved: Array = RunState.relics.duplicate()
-
-	var r314_skipped_saved: Array = RunState.skipped_relics.duplicate()
-
-	var r314_state_saved: int = RunState.run_rng.state
-
-	RunState.relics = []
-
-	RunState.skipped_relics = []
-
-	var r314_seed := -1
-
-	for s in 4000:
-
-		RunState.run_rng.seed = s
-
-		var v: float = RunState.run_rng.randf()
-
-		if v > 0.06 and v < 0.09:
-
-			r314_seed = s
-
-			break
-
-	check(r314_seed > 0, "R314 抽取：能找到首发 randf 落在 6%%~9%% 的种子（%d）" % r314_seed)
-
-	RunState.current_layer = GameLayers.LAYER_DEFAULT
-
-	RunState.run_rng.seed = r314_seed
-
-	var r314_id1 := RunState.roll_reward_relic()
-
-	check(r314_id1 > 0 and r314_repo.get_relic(r314_id1).tier == RelicData.TIER_NORMAL,
-
-			"R314 抽取：第一层 5%% → 落在 6%%~9%% 的这次不给传奇（%d）" % r314_id1)
-
-	RunState.run_rng.seed = r314_seed
-
-	var r314_id2 := RunState.roll_reward_relic(true)
-
-	check(r314_id2 > 0 and r314_repo.get_relic(r314_id2).tier == RelicData.TIER_LEGENDARY,
-			"R314 抽取：同一次掷点，大宝箱翻倍到 10%% → 出传奇（%d）" % r314_id2)
 
 	# ================= R661：审计掏出来的实现缺口（卡面写了、代码没做） =================
 
@@ -50948,6 +50840,117 @@ func _init() -> void:
 			"R662 作用域兜底：回合开始强制归零（实际 %d）" % r662_le._spell_scope_depth)
 
 
+
+
+
+
+
+
+
+	# ================= R314：传奇档 / 储物箱 6044 / lucky 7 6045 / 道具高亮 =================
+
+	var r314_repo := RelicRepo.load_json()
+
+	check(r314_repo.get_relic(6040).tier == RelicData.TIER_LEGENDARY
+
+			and r314_repo.get_relic(6044).tier == RelicData.TIER_LEGENDARY
+
+			and r314_repo.get_relic(6045).tier == RelicData.TIER_LEGENDARY,
+
+			"R314 水晶骰子 / 储物箱 / lucky 7 三件都是「传奇」档")
+
+	check(r314_repo.get_relic(6044).relic_name == "储物箱"
+
+			and r314_repo.get_relic(6045).relic_name == "lucky 7",
+
+			"R314 两件新道具名字正确（储物箱 / lucky 7）")
+
+	check(r314_repo.get_relic(6044).desc.contains("不")
+
+			and r314_repo.get_relic(6044).desc.contains("手牌"),
+
+			"R314 储物箱文案：写明回合结束不弃手牌")
+
+	check(r314_repo.get_relic(6045).desc.contains("7")
+
+			and r314_repo.get_relic(6045).desc.contains("免疫"),
+
+			"R314 lucky 7 文案：写明 7 个回合 / 免疫 HP 伤害")
+
+
+
+	# ---- 传奇概率：5% × 当前层数，大宝箱翻倍 ----
+
+	var r314_layer_saved: int = RunState.current_layer
+
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
+
+	check(is_equal_approx(RunState.legendary_chance(), 0.05) \
+
+			and is_equal_approx(RunState.legendary_chance(true), 0.10),
+
+			"R314 传奇概率：第一层 5%%，大宝箱 10%%（%f / %f）"
+
+				% [RunState.legendary_chance(), RunState.legendary_chance(true)])
+
+	RunState.current_layer = GameLayers.LAYER_TWO
+
+	check(is_equal_approx(RunState.legendary_chance(), 0.10) \
+
+			and is_equal_approx(RunState.legendary_chance(true), 0.20),
+
+			"R314 传奇概率：第二层 10%%，大宝箱 20%%（%f / %f）"
+
+				% [RunState.legendary_chance(), RunState.legendary_chance(true)])
+
+
+
+	# ---- 抽取：同一发 randf 落在不同阈值区间，验「层数 / 大宝箱」确实在起作用 ----
+
+	# 找一个「首发 randf 落在 5%~10% 之间」的种子：第一层必出一般，第二层 / 大宝箱必出传奇。
+
+	var r314_relics_saved: Array = RunState.relics.duplicate()
+
+	var r314_skipped_saved: Array = RunState.skipped_relics.duplicate()
+
+	var r314_state_saved: int = RunState.run_rng.state
+
+	RunState.relics = []
+
+	RunState.skipped_relics = []
+
+	var r314_seed := -1
+
+	for s in 4000:
+
+		RunState.run_rng.seed = s
+
+		var v: float = RunState.run_rng.randf()
+
+		if v > 0.06 and v < 0.09:
+
+			r314_seed = s
+
+			break
+
+	check(r314_seed > 0, "R314 抽取：能找到首发 randf 落在 6%%~9%% 的种子（%d）" % r314_seed)
+
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
+
+	RunState.run_rng.seed = r314_seed
+
+	var r314_id1 := RunState.roll_reward_relic()
+
+	check(r314_id1 > 0 and r314_repo.get_relic(r314_id1).tier == RelicData.TIER_NORMAL,
+
+			"R314 抽取：第一层 5%% → 落在 6%%~9%% 的这次不给传奇（%d）" % r314_id1)
+
+	RunState.run_rng.seed = r314_seed
+
+	var r314_id2 := RunState.roll_reward_relic(true)
+
+	check(r314_id2 > 0 and r314_repo.get_relic(r314_id2).tier == RelicData.TIER_LEGENDARY,
+			"R314 抽取：同一次掷点，大宝箱翻倍到 10%% → 出传奇（%d）" % r314_id2)
 
 
 	RunState.current_layer = GameLayers.LAYER_TWO
@@ -56024,6 +56027,7 @@ func _init() -> void:
 			and r352_story_src.find("_reveal_finished") >= 0,
 
 			"R352 源码：故事界面有解锁动画（收下后逐个浮现奖励）")
+
 	# ---- R682：故事正文面板不再有按钮（用户口径：两个都去掉，只留一行压暗提示）----
 
 	# 反向守卫：谁把「收下」或右上角 X 加回来，就在这里吃红。
@@ -70921,7 +70925,11 @@ func _init() -> void:
 	_test_r598()
 
 	_test_r600()
+
+	_test_r670()
+	_test_r675()
 	_test_r676()
+	_test_r679()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -72819,6 +72827,298 @@ func _test_r592b() -> void:
 	ProfileData._seen_set.clear()
 
 
+	# ============================================================ R663（2026-11-13）
+	# 用户口径：森林精魄三张卡调整 ——
+	#   ① 狂暴 9055 的减费「-1」改为「-2」；
+	#   ② 森林守护 9037 追加「死亡：抽一张卡」（只在该单位死亡时触发）；
+	#   ③ 智慧 9005 追加「自己效果卡区有至少 2 张卡时，回复 1 点费用」。
+	# 另加一条口径回归：**多个单位都有「替我方 HP 承伤」时，一笔伤害只由一个承担**。
+
+	var r663_repo := CardRepo.load_json()
+
+	# ---- ① 狂暴：卡面 -2，3 盟友时 2 - 2 = 0 费 ----
+
+	var r663_fz := r663_repo.get_card(9055)
+
+	check(r663_fz.effect_text.contains("费用 -2") and not r663_fz.effect_text.contains("费用 -1"),
+			"R663 狂暴：卡面改成「费用 -2」（%s）" % r663_fz.effect_text)
+
+	var r663_fz_e := _new_engine([], 20, 20, -1, false)
+
+	r663_fz_e.start_game(1)
+
+	r663_fz_e.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(4, 0))
+
+	r663_fz_e.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(4, 1))
+
+	check(r663_fz_e.cost_of(r663_fz) == 2, "R663 狂暴：己方 2 盟友 → 仍 2 费")
+
+	r663_fz_e.state.place(_card(8003, "农民", "盟友", 3, 3, 8), Vector2i(4, 2))
+
+	check(r663_fz_e.cost_of(r663_fz) == 0,
+			"R663 狂暴：己方 3 盟友 → 2 - 2 = 0 费（实际 %d）" % r663_fz_e.cost_of(r663_fz))
+
+	# ---- ② 森林守护：守护者死亡 → 抽一张卡 ----
+
+	var r663_gc: CardData = CardData.from_dict(r663_repo.get_card(9037).to_dict())
+
+	check(r663_gc.effect_text.contains("死亡：抽一张卡"),
+			"R663 森林守护：卡面追加「死亡：抽一张卡」")
+
+	var r663_g := _new_engine([], 20, 20, -1, false)
+
+	r663_g.start_game(1)
+
+	var r663_ally: Placement = r663_g.state.place(_card(8003, "农民", "盟友", 3, 3, 8),
+			Vector2i(4, 0))
+
+	r663_g.state.hand = [r663_gc]
+
+	r663_g.state.energy = 9
+
+	var r663_g_ret := r663_g.use_spell(0, Vector2i(4, 0))
+
+	check(r663_ally.guarding and r663_ally.guard_last_word and r663_g_ret.contains("抽 1 张"),
+			"R663 森林守护：指定盟友后同时挂上守护与亡语标记（%s）" % r663_g_ret)
+
+	r663_g.state.deck = [_card(7001, "甲", "盟友", 1, 1, 1), _card(7002, "乙", "盟友", 1, 1, 1),
+			_card(7003, "丙", "盟友", 1, 1, 1)]
+
+	r663_g.state.discard.clear()
+
+	r663_g.state.hand.clear()
+
+	r663_g.state.hp_self = 20
+
+	r663_g._damage_player(GameEngine.SIDE_SELF, 9, "测试")
+
+	check(r663_g.state.unit_at(Vector2i(4, 0)) == null,
+			"R663 森林守护：守护者承受致死伤害后阵亡")
+
+	check(r663_g.state.hand.size() == 1 and r663_g.state.deck.size() == 2,
+			"R663 森林守护：守护者死亡 → 抽 1 张（手 %d / 库 %d）"
+			% [r663_g.state.hand.size(), r663_g.state.deck.size()])
+
+	check(r663_g.state.hp_self == 20, "R663 森林守护：致死那笔的溢出不漏回我方 HP")
+
+	# 只有 guarding、没有 guard_last_word（= 本次改动之前的旧局面 / 旧存档）→ 死亡不抽牌
+
+	var r663_old := _new_engine([], 20, 20, -1, false)
+
+	r663_old.start_game(1)
+
+	var r663_old_u: Placement = r663_old.state.place(_card(8003, "农民", "盟友", 3, 3, 8),
+			Vector2i(4, 0))
+
+	r663_old_u.guarding = true
+
+	r663_old.state.deck = [_card(7001, "甲", "盟友", 1, 1, 1), _card(7002, "乙", "盟友", 1, 1, 1)]
+
+	r663_old.state.discard.clear()
+
+	r663_old.state.hand.clear()
+
+	r663_old._damage_player(GameEngine.SIDE_SELF, 9, "测试")
+
+	check(r663_old.state.unit_at(Vector2i(4, 0)) == null and r663_old.state.hand.size() == 0,
+			"R663 森林守护：只认 guard_last_word 标记 —— 旧局面（只有 guard）死亡不抽牌")
+
+	# ---- ③ 多个承伤者：一笔伤害只由一个承担 ----
+
+	var r663_m := _new_engine([], 20, 20, -1, false)
+
+	r663_m.start_game(1)
+
+	var r663_m1: Placement = r663_m.state.place(_card(8003, "甲", "盟友", 3, 3, 8), Vector2i(4, 0))
+
+	var r663_m2: Placement = r663_m.state.place(_card(8003, "乙", "盟友", 3, 3, 8), Vector2i(4, 1))
+
+	r663_m1.guarding = true
+
+	r663_m2.guarding = true
+
+	r663_m.state.hp_self = 20
+
+	r663_m.state.hand.clear()
+
+	r663_m._damage_player(GameEngine.SIDE_SELF, 3, "测试")
+
+	check(r663_m1.health == 5 and r663_m2.health == 8 and r663_m.state.hp_self == 20,
+			"R663 多守护：一笔伤害只由一个承担（(4,0) 8→5；(4,1) 不动；HP 20）")
+
+	r663_m._damage_player(GameEngine.SIDE_SELF, 3, "测试")
+
+	check(r663_m1.health == 2 and r663_m2.health == 8 and r663_m.state.hp_self == 20,
+			"R663 多守护：继续由同一只承担，不会轮流双扣（(4,0) → 2）")
+
+	r663_m._damage_player(GameEngine.SIDE_SELF, 5, "测试")
+
+	check(r663_m.state.unit_at(Vector2i(4, 0)) == null and r663_m2.health == 8
+			and r663_m.state.hp_self == 20,
+			"R663 多守护：击杀那笔的溢出不再转嫁给下一只（(4,1) 仍 8 血，HP 20）")
+
+	r663_m._damage_player(GameEngine.SIDE_SELF, 4, "测试")
+
+	check(r663_m2.health == 4 and r663_m.state.hp_self == 20,
+			"R663 多守护：前一只阵亡后，下一只才接管（(4,1) 8→4）")
+
+	# ---- ④ 智慧：效果区 >= 2 张才回 1 费 ----
+
+	var r663_w := _new_engine([], 20, 20, -1, false)
+
+	r663_w.start_game(1)
+
+	r663_w.state.deck = []
+
+	for r663_wi in 12:
+
+		r663_w.state.deck.append(_card(7700 + r663_wi, "填充%d" % r663_wi, "盟友", 1, 1, 1))
+
+	r663_w.state.discard.clear()
+
+	r663_w.state.hand = [CardData.from_dict(r663_repo.get_card(9005).to_dict())]
+
+	r663_w.state.effects.clear()
+
+	r663_w.state.energy = 5
+
+	var r663_w1 := r663_w.use_spell(0)
+
+	check(r663_w.state.energy == 4 and not r663_w1.contains("回复"),
+			"R663 智慧：效果区 0 张 → 只抽 2 张、不回费（费用 %d）" % r663_w.state.energy)
+
+	r663_w.state.hand = [CardData.from_dict(r663_repo.get_card(9005).to_dict())]
+
+	r663_w.state.effects.append(_card(7701, "效果甲", "效果", 1, 0, 0))
+
+	r663_w.state.effects.append(_card(7702, "效果乙", "效果", 1, 0, 0))
+
+	r663_w.state.energy = 5
+
+	var r663_w2 := r663_w.use_spell(0)
+
+	check(r663_w.state.energy == 5 and r663_w2.contains("回复 1 点费用"),
+			"R663 智慧：效果区 2 张 → 抽 2 张后回复 1 点费用（5-1+1=5，实际 %d）"
+			% r663_w.state.energy)
+
+	r663_w.state.effects.pop_back()
+
+	r663_w.state.hand = [CardData.from_dict(r663_repo.get_card(9005).to_dict())]
+
+	r663_w.state.energy = 5
+
+	var r663_w3 := r663_w.use_spell(0)
+
+	check(r663_w.state.energy == 4 and not r663_w3.contains("回复"),
+			"R663 智慧：效果区只有 1 张 → 不回费（费用 %d）" % r663_w.state.energy)
+
+	r663_w.state.effects.clear()
+
+	r663_w.state.enemy_effects.append(_card(7703, "敌方效果甲", "效果", 1, 0, 0))
+
+	r663_w.state.enemy_effects.append(_card(7704, "敌方效果乙", "效果", 1, 0, 0))
+
+	r663_w.state.hand = [CardData.from_dict(r663_repo.get_card(9005).to_dict())]
+
+	r663_w.state.energy = 5
+
+	var r663_w4 := r663_w.use_spell(0)
+
+	check(r663_w.state.energy == 4 and not r663_w4.contains("回复"),
+			"R663 智慧：敌方效果区的卡不算「自己的效果卡区」（费用 %d）" % r663_w.state.energy)
+
+	r663_w.state.enemy_effects.clear()
+
+func _test_r670() -> void:
+	# R670：战斗特效素材 + 四处接线守卫。**素材丢了这里必须报红** ——
+	# 之前 fx_flame / 龙息那几张只有真机渲染才看得出缺，回归全绿也会悄悄丢图。
+	# 口径：素材由 codex 纯文生图出黑底发光图，_finish_fx.py 亮度转 alpha 落 assets/fx。
+	var r670_miss: Array[String] = []
+	for r670_nm in FxArt.all_names():
+		if not FileAccess.file_exists(FxArt.path_of(str(r670_nm))):
+			r670_miss.append(str(r670_nm))
+	check(r670_miss.is_empty(), "R670：%d 张战斗特效贴图全部落 assets/fx（缺：%s）"
+			% [FxArt.all_names().size(), ", ".join(r670_miss) if not r670_miss.is_empty() else "无"])
+	var r670_tex_bad: Array[String] = []
+	for r670_nm2 in FxArt.all_names():
+		if FxArt.tex(str(r670_nm2)) == null:
+			r670_tex_bad.append(str(r670_nm2))
+	check(r670_tex_bad.is_empty(), "R670：FxArt 取图口全部可解码（刚落盘未导入也要能读）")
+	check(FxArt.skill_name_for_color("紫") == FxArt.SKILL_SHADOW
+			and FxArt.skill_name_for_color("黑") == FxArt.SKILL_SHADOW,
+			"R670：紫 / 黑 → 暗影通用施法图")
+	check(FxArt.skill_name_for_color("红") == FxArt.SKILL_FIRE
+			and FxArt.skill_name_for_color("橙") == FxArt.SKILL_FIRE,
+			"R670：红 / 橙 → 火焰通用施法图")
+	check(FxArt.skill_name_for_color("蓝") == FxArt.SKILL_ICE, "R670：蓝 → 冰霜通用施法图")
+	check(FxArt.skill_name_for_color("金") == FxArt.SKILL_HOLY
+			and FxArt.skill_name_for_color("白") == FxArt.SKILL_HOLY,
+			"R670：金 / 白 → 圣光通用施法图")
+	check(FxArt.skill_name_for_color("绿") == FxArt.SKILL_NATURE
+			and FxArt.skill_name_for_color("灰") == FxArt.SKILL_NATURE
+			and FxArt.skill_name_for_color("棕") == FxArt.SKILL_NATURE
+			and FxArt.skill_name_for_color("黄") == FxArt.SKILL_NATURE,
+			"R670：绿 / 灰 / 棕 / 黄 → 自然物理通用施法图")
+	var r670_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check(r670_bs.contains("\t\t\"vortex\":") and r670_bs.contains("\t\t\"poison\":")
+			and r670_bs.contains("\t\t\"air_raid_hit\":"),
+			"R670：漩涡 / 中毒 / 空袭命中三个断链已接到界面")
+	check(r670_bs.contains("func _draw_battle_fx(") and r670_bs.contains("FxArt.draw(")
+			and r670_bs.contains("\t_draw_battle_fx()"),
+			"R670：通用特效队列已接绘制口，且真的在 _draw 里被调用")
+	check(r670_bs.contains("_battle_fx.clear()")
+			and r670_bs.contains("_battle_fx = _battle_fx.filter(")
+			and r670_bs.contains("if not _battle_fx.is_empty():"),
+			"R670：通用特效队列有清空 / 收尾 / busy 三件套（漏一样会把回合卡死）")
+	var r670_eng := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(r670_eng.contains("var _spell_card_ctx: CardData = null")
+			and r670_eng.contains("var prev_ctx:= _spell_card_ctx")
+			and r670_eng.contains("_spell_card_ctx = prev_ctx"),
+			"R670：当前施法卡在作用域里成对设置 / 还原（嵌套时不串卡）")
+	check(r670_eng.contains("fi[\"card\"] = _spell_card_ctx")
+			and r670_eng.contains("\"source\": \"技能\", \"side\": p.owner, \"card\": _spell_card_ctx"),
+			"R670：群体与单目标两条受击口都带上了卡（界面才分得清用了哪张牌）")
+
+
+func _test_r675() -> void:
+	# R675：机制类伤害来源（没有技能卡的那些）→ 专属素材图。表里的名字必须与引擎
+	# `_hit_unit()` 的 source 字面量逐字一致 —— 一旦分叉，界面会悄悄退回通用紫爆点，
+	# 回归全绿也看不出来，所以两边都断言。
+	var r675_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r675_eng := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	var r675_src: Array[String] = ["闪电", "噩兆", "疾风之力", "废弃机器人", "护甲爆发", "黑暗嵌合"]
+	var r675_tbl_miss: Array[String] = []
+	var r675_eng_miss: Array[String] = []
+	for r675_k in r675_src:
+		if not r675_bs.contains("\t\t\"%s\":" % r675_k):
+			r675_tbl_miss.append(r675_k)
+		if not r675_eng.contains("\"%s\"" % r675_k):
+			r675_eng_miss.append(r675_k)
+	check(r675_tbl_miss.is_empty(), "R675：六条机制类伤害来源都有专属图映射（缺：%s）"
+			% (", ".join(r675_tbl_miss) if not r675_tbl_miss.is_empty() else "无"))
+	check(r675_eng_miss.is_empty(), "R675：机制表的名字与引擎 source 字面量一致（缺：%s）"
+			% (", ".join(r675_eng_miss) if not r675_eng_miss.is_empty() else "无"))
+	check(r675_bs.contains("func _mech_fx_of(") and r675_bs.contains("_mech_fx_of(fi_src)")
+			and r675_bs.contains("elif fi_seg <= 0:"),
+			"R675：受击口真的按 source 查了机制表（删掉调用 = 退回紫爆点）")
+	check(r675_bs.contains("\"闪电\", \"噩兆\", \"疾风之力\", \"废弃机器人\", \"护甲爆发\", \"黑暗嵌合\"]"),
+			"R675：这六条已进 FX_OWN_SOURCES，不再叠卡色通用图")
+	check(FxArt.path_of(FxArt.BOLT) == "res://assets/fx/bx_bolt.png"
+			and FileAccess.file_exists(FxArt.path_of(FxArt.BOLT))
+			and FxArt.tex(FxArt.BOLT) != null,
+			"R675：闪电有专属素材（bx_bolt.png，可解码）")
+	check(FxArt.all_names().has(FxArt.BOLT) and FxArt.all_names().size() == 11,
+			"R675：bx_ 清单已含 bolt 共 11 张（少了就是素材没落盘）")
+	var r675_arms: Array[String] = ["fear_projection", "fear_incarnate",
+			"harvest_hit", "armor_gain"]
+	var r675_arm_miss: Array[String] = []
+	for r675_a in r675_arms:
+		if not r675_bs.contains("\t\t\"%s\":" % r675_a):
+			r675_arm_miss.append(r675_a)
+	check(r675_arm_miss.is_empty(),
+			"R675：恐惧投射 / 恐惧化身 / 恐惧收割 / 护甲积攒四个空事件已接界面（缺：%s）"
+			% (", ".join(r675_arm_miss) if not r675_arm_miss.is_empty() else "无"))
+
 
 func _test_r676() -> void:
 	# R676：鹅 9187「扑击」的方向感 + 落点合法性（用户实测两条）：
@@ -72887,3 +73187,35 @@ func _test_r676() -> void:
 			"R676：击退方向 / 鹅的攻击方向都收敛到唯一口")
 	check(r676_eng.contains("if not unit_slot_allowed(nxt, attacker.owner):"),
 			"R676：鹅的前进落点真的过了 unit_slot_allowed")
+
+func _test_r679() -> void:
+	# R679：特效收尾五项。前四项是「引擎有事件、界面没演到位」，第五项是纯素材化。
+	# 断言分两类：① 源码里那张表/分支还在（删掉 = 悄悄退回紫爆点，功能测试看不出来）；
+	# ② 取图口的特例真的能解出一张图（路径写错也能过编译）。
+	var r679_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check(FxArt.POISON == "poison"
+			and FxArt.path_of(FxArt.POISON) == "res://assets/fx/trap_fx_7003.png"
+			and FileAccess.file_exists(FxArt.path_of(FxArt.POISON))
+			and FxArt.tex(FxArt.POISON) != null,
+			"R679：中毒借用毒瓶那张毒绿（trap_fx_7003，可解码）")
+	check(not FxArt.all_names().has(FxArt.POISON) and FxArt.all_names().size() == 11,
+			"R679：POISON 不进 bx_ 清单（仍 11 张，别名混进来会撑爆 R670 断言）")
+	check(r679_bs.contains("\t\t\"中毒\":")
+			and FileAccess.get_file_as_string("res://scripts/game_engine.gd").contains("\"中毒\""),
+			"R679：中毒进机制表，且名字与引擎 source 字面量一致")
+	check(r679_bs.contains("if fi_src == \"中毒\":"),
+			"R679：中毒的爆点色改毒绿（否则和别的伤害糊成一片紫）")
+	check(r679_bs.contains("var ftxt_col: Color = UiTheme.SIDE_FOE")
+			and r679_bs.contains("ftxt_col = FxArt.color_of(FxArt.POISON)"),
+			"R679：中毒的掉血数字也换毒绿（`fx_hit` 原本一律写死 SIDE_FOE，"
+			+ "只改 `fi_col` 是改不到数字的）")
+	check(r679_bs.contains("\t\t\"soul_harvest\":")
+			and r679_bs.contains("↑ 回满 %d"),
+			"R679：灵魂收割者从「零臂」变成有演出（暗影图 + 回满飘字）")
+	check(r679_bs.contains("_fx_push_cell(FxArt.BLAST, rs_cell, rs_at, BATTLE_FX_MS, 124.0)"),
+			"R679：折射炮流弹补了命中爆点")
+	check(r679_bs.contains("_fx_push_cell(FxArt.SKILL_SHADOW, hd_t, n, BATTLE_FX_MS, 132.0)"),
+			"R679：隐藏能源补了爆点图形（原来只有飘字）")
+	check(r679_bs.contains("_fx_push_cell(FxArt.SKILL_SHADOW, db_cell, n, BATTLE_FX_MS, 140.0)")
+			and not r679_bs.contains("\"col\": Color(\"6a4aa0\"), \"big\": false}"),
+			"R679：暗影之刃从纯色紫圈换成素材图（且不留双层）")

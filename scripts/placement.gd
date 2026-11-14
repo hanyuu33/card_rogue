@@ -34,6 +34,10 @@ var acts_total: int = 1       # R462：本回合已发放的行动轮数（唯�
 var battlecry_done: bool = false  # 战吼：是否已在「首个回合开始」结算过（每个单位只触发一次）
 var ability_used: bool = false    # 主动发动（熊 8004「回春」）：在场只能发动一次（离场再上场算新单位）
 var guarding: bool = false    # 森林守护：我方 HP 受伤时由它代为承受（同一单位不可重复获得）
+## R663 森林守护（9037）追加的亡语：**这个单位**被破坏时抽一张卡。
+## 单独一个字段而不是复用 AFFIX_DEATH —— 后者只是「它有个死亡效果」的通用标记，
+## 具体内容各卡不同（生命循环 / 辅助刃 / 隐藏能源各认自己的 Placement 标记）。
+var guard_last_word: bool = false
 var last_hit_by: Vector2i = Vector2i(-1, -1)  # 击杀记功：最后一下是谁打的（鸭子骑士靠它 +2 攻击力）
 var atk_buff_turn: int = 0    # 本回合攻击力加成（撕咬 9042：回合结束时由 end_turn 清除）
 var ramp_atk: int = 0         # 潜影者 8009：每用一张牌 +1 的力量累计值（攻击或离场后清零）
@@ -46,6 +50,9 @@ var ramp_atk: int = 0         # 潜影者 8009：每用一张牌 +1 的力量累
 var rooted: int = 0           # 禁足：0 无 / 1 已挂待生效 / 2 生效中（本回合不能移动，仍可攻击）—— 曾由冰霜陷阱 8012 施加
 var poison_left: int = 0      # 中毒剩余结算回合数（所属方回合结束各结算一次）—— R556 由毒沼 8082 施加
 var poison_dmg: int = 0       # 中毒每跳伤害（取高，见 `_apply_poison`）—— R556 由毒沼 8082 施加
+## R663（店长 2026-11-13）：毒瓶与毒沼**统一口径**，共用 poison_left / poison_dmg，
+## 结算统一在所属方回合结束（GameEngine._poison_tick）。曾短暂给毒瓶单开过
+## trap_poison_* 账本，已撤除；老档若还带这两个键，apply_save 会自然忽略。
 ## **已受漩涡伤害的次数**（R557 漩涡 9186）：站在漩涡格上每结算一次 +1，
 ## 实际伤害 = 卡面 `field_vortex_dmg` + 本值（「后续受到的漩涡伤害 +1」）。
 ## 记在单位上（不写回卡面）→ 单位死亡/离场随 Placement 消失；离开漩涡格不清零，
@@ -362,7 +369,10 @@ func status_entries() -> Array[Dictionary]:
 	if dmg_reduce > 0:
 		out.append({"label": "加厚装甲：受伤 -%d" % dmg_reduce, "col": COL_B, "kind": "buff"})
 	if guarding:
-		out.append({"label": "守护：代我方承受伤害", "col": COL_B, "kind": "buff"})
+		var guard_txt:= "守护：代我方承受伤害"
+		if guard_last_word:
+			guard_txt += " · 死亡：抽一张卡"
+		out.append({"label": guard_txt, "col": COL_B, "kind": "buff"})
 	if acts_left > 1:
 		out.append({"label": "额外行动 ×%d" % acts_left, "col": COL_B, "kind": "buff"})
 	if fence_bonus_hp > 0:
@@ -464,7 +474,8 @@ func status_badges() -> Array[Dictionary]:
 const _SAVE_FIELDS: Array[String] = [
 	"tapped", "moved", "did_move", "health", "owner", "entry_seq",
 	"atk_debuff", "debuff_stage", "frozen", "atk_buff", "atk_growth",
-	"acts_left", "acts_total", "battlecry_done", "ability_used", "guarding", "last_hit_by",
+	"acts_left", "acts_total", "battlecry_done", "ability_used", "guarding", "guard_last_word",
+	"last_hit_by",
 	"atk_buff_turn", "ramp_atk", "rooted", "poison_left", "poison_dmg",
 	"vortex_stacks",
 	"trap_trig_turn", "end_atk", "fence_bonus_hp", "upgrade_atk", "upgrade_hp",

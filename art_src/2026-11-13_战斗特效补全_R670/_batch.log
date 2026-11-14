@@ -1,0 +1,33 @@
+[22:43:18] 代理预检 HTTP 200
+[22:43:18] 代理预检 OK：http://127.0.0.1:7897
+[22:43:18] RUN  vortex  纯文生图(无参考图, 黑底)  第1次
+[22:44:42] OK   vortex  <- exec-45a86bfc-d30c-4fbe-810b-e84e78a78ffe.png  (84s, 1227 KB)
+[22:44:43] FINISH vortex E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_finish_fx.py:52: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   vortex        raw 1254x1254 → 裁边 → 256x256  非透光 69.8%  99 KB | done=1 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_review\r670_battle_fx.html
+[22:44:43] RUN  air_raid  纯文生图(无参考图, 黑底)  第1次
+[22:45:52] OK   air_raid  <- exec-f1cf87ae-d057-45c6-948e-d5702b1df3f0.png  (70s, 972 KB)
+[22:45:53] FINISH air_raid E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_finish_fx.py:52: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   air_raid      raw 1254x1254 → 裁边 → 256x256  非透光 54.7%  79 KB | done=2 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_review\r670_battle_fx.html
+[22:45:53] RUN  blast  纯文生图(无参考图, 黑底)  第1次
+[22:46:55] OK   blast  <- exec-9ab1af0c-3bf2-4766-b48c-6e10e1a6c112.png  (62s, 1162 KB)
+[22:46:56] FINISH blast E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_finish_fx.py:52: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   blast         raw 1254x1254 → 裁边 → 256x256  非透光 56.3%  84 KB | done=3 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_review\r670_battle_fx.html
+[22:46:56] RUN  gale  纯文生图(无参考图, 黑底)  第1次
+[22:47:53] OK   gale  <- exec-8a1493b6-ecd8-4e11-974a-8797107a89b1.png  (57s, 718 KB)
+[22:47:53] FINISH gale E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_finish_fx.py:52: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   gale          raw 1536x1024 → 裁边 → 256x256  非透光 22.0%  38 KB | done=4 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_review\r670_battle_fx.html
+[22:47:53] RUN  stun  纯文生图(无参考图, 黑底)  第1次
+[22:49:03] OK   stun  <- exec-5b5b1a62-88d5-49fd-b2f7-80f24ddddc18.png  (70s, 803 KB)
+[22:49:04] FINISH stun E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_finish_fx.py:52: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   stun          raw 1254x1254 → 裁边 → 256x256  非透光 34.2%  58 KB | done=5 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_review\r670_battle_fx.html
+[22:49:04] RUN  skill_fire  纯文生图(无参考图, 黑底)  第1次
+[22:50:06] OK   skill_fire  <- exec-8bd4f920-28a0-4a96-8ebf-b5dcd2725590.png  (62s, 938 KB)
+[22:50:06] FINISH skill_fire E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_finish_fx.py:52: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   skill_fire    raw 1254x1254 → 裁边 → 256x256  非透光 64.4%  84 KB | done=6 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_review\r670_battle_fx.html
+[22:50:06] RUN  skill_ice  纯文生图(无参考图, 黑底)  第1次
+[22:51:04] OK   skill_ice  <- exec-32a57b26-fffe-4cb9-8f76-c11f0ef6969d.png  (58s, 879 KB)
+[22:51:05] FINISH skill_ice E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_finish_fx.py:52: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   skill_ice     raw 1254x1254 → 裁边 → 256x256  非透光 45.9%  75 KB | done=7 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_review\r670_battle_fx.html
+[22:51:05] RUN  skill_shadow  纯文生图(无参考图, 黑底)  第1次
+[22:52:38] OK   skill_shadow  <- exec-5e52397a-c690-4f6c-9d7c-7bc7cb708ed4.png  (93s, 1078 KB)
+[22:52:38] FINISH skill_shadow E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_finish_fx.py:52: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   skill_shadow  raw 1254x1254 → 裁边 → 256x256  非透光 51.8%  86 KB | done=8 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_review\r670_battle_fx.html
+[22:52:38] RUN  skill_holy  纯文生图(无参考图, 黑底)  第1次
+[22:53:39] OK   skill_holy  <- exec-a631a072-b0a2-4110-af5f-ccb665539cae.png  (61s, 998 KB)
+[22:53:39] FINISH skill_holy E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_finish_fx.py:52: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   skill_holy    raw 1254x1254 → 裁边 → 256x256  非透光 69.2%  86 KB | done=9 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_review\r670_battle_fx.html
+[22:53:39] RUN  skill_nature  纯文生图(无参考图, 黑底)  第1次
+[22:54:43] OK   skill_nature  <- exec-c0192b29-a1bd-4f66-b75e-27c86a453e06.png  (64s, 1094 KB)
+[22:54:44] FINISH skill_nature E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_finish_fx.py:52: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   skill_nature  raw 1254x1254 → 裁边 → 256x256  非透光 59.0%  92 KB | done=10 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_战斗特效补全_R670\_review\r670_battle_fx.html
+[22:54:44] === R670 战斗特效补全结束 成功10 / 失败0 []

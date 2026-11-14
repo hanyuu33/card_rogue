@@ -1,0 +1,13 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly ONE image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+A single isolated 2D game SPELL EFFECT sprite: a violent ELECTRIC LIGHTNING BURST detonating at the point of impact. Seen straight on, floating on a PURE BLACK (#000000) FLAT background. This will be converted into a transparent additive-blend sprite, so a clean uniform pure black background is CRITICAL and the effect must GLOW brightly against it.
+
+STYLE: 2D hand-painted anime-fantasy game visual effect, the kind of spell overlay used in a cozy storybook card game. Clean cel-shaded shapes with two or three values only, hard-edged energy shapes, plus fine particle sparks. Vivid glow, strong contrast. Absolutely NO 3D render, NO photorealism, NO photo texture, NO noise grain, NO volumetric fog, NO lens flare.
+
+SHAPE: ONE compact radial lightning detonation, roughly circular, centered. A brilliant white-hot core (about 16% of the frame width) with one hard white highlight, exploding outward into 7 to 9 jagged forked bolts of electric cyan #7FE9FF and #BFEFFF with crisp angular segments, each bolt fraying into 3 or 4 thin branches plus a spray of tiny cyan sparks and stray filaments. The far edges carry a faint #B98CFF violet fringe glow where the air ionises. Strong value contrast: pure white core, bright cyan bolts, deep black gaps between them. The burst fills about 76% of the frame and is fully inside it, nothing cut off.
+
+COMPOSITION: one effect only, dead center, radial crackling star-burst silhouette, straight-on view, no perspective tilt, no rotation, no directional lean. The energy fades into pure black at the outer edges so the sprite blends seamlessly. NO ground, NO floor, NO scenery, NO background objects, NO cast shadow, NO frame, NO border, NO panel, NO card shape, NO second object. The ENTIRE background MUST be uniform pure black #000000: NO gradient, NO texture, NO pattern, NO coloured backdrop.
+
+STRICTLY FORBIDDEN: any text, letters, words, runes, numbers, digits, labels, watermark, logo or signature anywhere; any human figure, face, hands, creature, animal, bird, dragon, skull, ghost body; any weapon, tool, bottle, flask, bomb, spike, prop or object; any UI element, button, icon or card frame.
+
+NO readable text. NO numbers. NO watermark. Pure black background only.

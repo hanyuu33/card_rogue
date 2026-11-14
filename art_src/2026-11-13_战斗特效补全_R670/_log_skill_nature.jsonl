@@ -1,0 +1,7 @@
+WARNING: failed to clean up stale arg0 temp dirs: 拒绝访问。 (os error 5)
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1d566-65b7-7c02-9d5f-8e382d41e8eb"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’m generating one centered natural-force spell burst on a pure black background.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated exactly one earthen natural-force spell effect sprite on a black background."}}
+{"type":"turn.completed","usage":{"input_tokens":38429,"cached_input_tokens":27136,"cache_write_input_tokens":0,"output_tokens":526,"reasoning_output_tokens":0}}

@@ -187,6 +187,47 @@ static func relic_icon(id: int) -> Texture2D:
 	return get_tex("relic_icon_%d" % id)
 
 
+static func trap_icon_path(id: int) -> String:
+	## R663：陷阱图标文件名契约 `assets/ui/trap_icon_<id>.png`。
+	## 缺图时 `trap_icon()` 返回 null → `TrapArt.draw()` 走程序化图案兜底。
+	return path_for("trap_icon_%d" % id)
+
+
+static func trap_icon(id: int) -> Texture2D:
+	## R663：陷阱图标**唯一取图口**。刻意不复用 relic_icon/relic_rim。
+	return get_tex("trap_icon_%d" % id)
+
+
+static func trap_slot_frame() -> Texture2D:
+	## R663：陷阱槽框（战斗 / 地图 / 战场标记共用），缺图返回 null → 程序化底照常画。
+	return get_tex("trap_slot")
+
+
+static func trap_bar_bg() -> Texture2D:
+	## R667：战斗与地图**共用同一张**竖栏底板（店长口径：没必要专门做区别）。
+	## 原 trap_bar_map.png 已停用、移出 assets/ui；缺图返回 null。
+	return get_tex("trap_bar_battle")
+
+
+static func trap_group_tag() -> Texture2D:
+	## R663：商店中行左右分组的题签底；缺图返回 null → 程序化文字照常画。
+	return get_tex("trap_group_tag")
+
+
+static func trap_fx_path(id: int) -> String:
+	## R669：陷阱触发特效贴图文件名契约 `assets/fx/trap_fx_<id>.png`（黑底发光图转透明）。
+	## 与 UI 贴图分目录：它是战斗特效，不是界面元件；缺图返回 null → TrapArt 画程序化光环。
+	return "res://assets/fx/trap_fx_%d.png" % id
+
+
+static func trap_fx(id: int) -> Texture2D:
+	## R669：陷阱触发特效**唯一取图口**；`_load()` 兼容已导入与刚落盘未导入的 PNG。
+	var key := "trap_fx_%d" % id
+	if not _cache.has(key):
+		_cache[key] = _load(trap_fx_path(id))
+	return _cache[key]
+
+
 static func relic_rim_path(id: int) -> String:
 	## R577f：沿图标 alpha 轮廓预生成的「蓝色边缘光」叠加图（128x128 RGBA）。
 	## 文件名即契约；换 rim 只覆盖 assets/ui/relic_rim_<id>.png。

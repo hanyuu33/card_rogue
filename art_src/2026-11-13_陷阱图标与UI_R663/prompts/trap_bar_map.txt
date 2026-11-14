@@ -1,0 +1,13 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly ONE SQUARE image, 1024x1024 if supported (otherwise the most square size available; do NOT generate a wide landscape image). Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+Generate ONE game UI FRAME / PLATE element, isolated on a PURE WHITE (#FFFFFF) FLAT background. This will be cut out into a transparent PNG overlay, so a clean uniform white background is CRITICAL.
+
+STYLE: 2D hand-drawn anime fantasy game UI, deep ink-blue leather (#22304A), warm brass hairline trim (#A58C58), parchment-cream accents (#E9E7E2), flat cel-shaded colour blocks with exactly TWO shading steps, crisp clean outlines, subtle parchment grain only inside the plate, NO 3D render, NO soft glow, NO gradient outside the object.
+
+SUBJECT: a single NARROW VERTICAL rack backplate: a tall rounded rectangle about 1:3, warm parchment-cream paper with a soft grey-brown edge line and small brass corner tabs, three evenly spaced EMPTY PURE WHITE square indentations stacked vertically. Only ONE rack, centered.
+
+COMPOSITION: exactly ONE element, centered, straight-on, no perspective tilt. The element's INTERIOR must be EMPTY PURE WHITE (it becomes transparent; the icon and text are drawn by code later). NO text, NO numbers, NO symbols, NO icon inside. The WHITE background and the WHITE interior must be the SAME pure white. NO cast shadow, NO scenery, NO second object, NO card, NO character.
+
+STRICTLY FORBIDDEN: any text, letters, words, numbers, digits, labels, watermark, logo, signature; any human figure or character; any photorealistic texture, PBR material, photo grain, film grain, airbrush, soft bloom, volumetric fog, god rays; any sparkles or glow outside the element; any other-game UI.
+
+NO readable text. NO numbers. NO watermark. Pure white background only.

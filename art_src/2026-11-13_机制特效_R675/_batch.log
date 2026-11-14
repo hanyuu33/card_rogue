@@ -1,0 +1,6 @@
+[23:12:17] 代理预检 HTTP 200
+[23:12:17] 代理预检 OK：http://127.0.0.1:7897
+[23:12:17] RUN  bolt  纯文生图(无参考图, 黑底)  第1次
+[23:13:20] OK   bolt  <- exec-1bb5630f-9d9d-44fd-99e4-ca25af107574.png  (63s, 1109 KB)
+[23:13:20] FINISH bolt E:\work\card_rogue\art_src\2026-11-13_机制特效_R672\_finish_fx.py:51: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   bolt          raw 1254x1254 → 裁边 → 256x256  非透光 36.8%  76 KB | done=1 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_机制特效_R672\_review\r670_battle_fx.html
+[23:13:20] === R672 机制特效结束 成功1 / 失败0 []

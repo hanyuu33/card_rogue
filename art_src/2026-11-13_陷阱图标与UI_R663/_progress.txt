@@ -1,0 +1,8 @@
+17:04:49	7001	OK
+17:06:41	7002	OK
+17:07:48	7003	OK
+17:08:53	7004	OK
+17:09:57	trap_slot	OK
+17:10:56	trap_bar_battle	OK
+17:11:59	trap_bar_map	OK
+17:13:01	trap_group_tag	OK

@@ -935,6 +935,7 @@ func _draw() -> void:
 	_draw_mark_buttons()   # R177：三个标记模式按钮（最上层，不被任何面板盖）
 	_draw_relics()
 	_draw_key_relics()      # R543：信物图标（难度 ≥11 或已持有信物时，持续显示在左侧）
+	_draw_trap_slots()       # R663：陷阱栏（固定左下，只读）
 	if _relics_visible:
 		_draw_relic_panel()
 	if _records_visible:
@@ -1977,6 +1978,58 @@ const KEY_BADGE_GAP := 8.0
 ## （x≈1054~1256，y 滚动可到屏幕底），信物放左下、道具再多也不撞（R543 补口径）。
 const KEY_BADGE_X := 14.0
 const KEY_BADGE_Y := 240.0
+
+
+# ------------------------------------------------------------ R663 陷阱栏（只读）
+## 左下角信物列之下：信物三格底 388、底部图例带从 686 起，中间 400~610 是真空区。
+## ⚠️ 固定 y=412，**不随信物有无上下移**（信物只在难度 ≥11 显示，R543）。
+const TRAP_BADGE_SIZE := 52.0
+const TRAP_BADGE_GAP := 10.0
+const TRAP_BADGE_X := 14.0
+const TRAP_BADGE_Y := 412.0
+
+
+func _draw_trap_slots() -> void:
+	## 只读一览：名字直接写在槽右侧，不用悬停也看得清（店长口径「方便查看」）。
+	## x 最远到 192 < 棋盘起点 200，不压地图；不提供丢弃入口 —— 杀戮尖塔药水口径，
+	## 栏位满了就先去战斗里用掉，避免误触白丢一个消耗品。
+	if not RunState.run_active:
+		return
+	# R663：整条竖栏底图（缺图时下面每个槽仍各自画程序化深色底）。
+	var bar := Rect2(TRAP_BADGE_X - 8.0, TRAP_BADGE_Y - 8.0,
+			TRAP_BADGE_SIZE + 16.0,
+			3.0 * (TRAP_BADGE_SIZE + TRAP_BADGE_GAP) - TRAP_BADGE_GAP + 16.0)
+	TrapArt.draw_bar_bg(self, bar)
+	var head := Rect2(TRAP_BADGE_X, TRAP_BADGE_Y - 20.0, 176.0, 18.0)
+	draw_rect(head, Color(0.03, 0.04, 0.06, 0.60), true)
+	var filled := 0
+	for i in RunState.TRAP_SLOTS:
+		if RunState.trap_at(i) > 0:
+			filled += 1
+	draw_string(_font, head.position + Vector2(6, 14), "陷阱 %d/%d" % [filled, RunState.TRAP_SLOTS],
+			HORIZONTAL_ALIGNMENT_LEFT, head.size.x - 12.0, 13, Color("e4bd62"))
+	for i in RunState.TRAP_SLOTS:
+		var r := Rect2(TRAP_BADGE_X, TRAP_BADGE_Y + float(i) * (TRAP_BADGE_SIZE + TRAP_BADGE_GAP),
+				TRAP_BADGE_SIZE, TRAP_BADGE_SIZE)
+		var id := RunState.trap_at(i)
+		draw_rect(r, Color(0.06, 0.07, 0.10, 0.82), true)
+		TrapArt.draw_slot_frame(self, r)
+		if id > 0:
+			var col := TrapArt.color_of(id)
+			draw_rect(r, col, false, 2.0)
+			TrapArt.draw(self, r.grow(-5.0), id, false)
+			var td: TrapData = TrapRepo.load_json().get_trap(id)
+			var nm := td.trap_name if td != null else ""
+			var tx := r.end.x + 6.0
+			draw_rect(Rect2(tx, r.position.y + 4.0, 120.0, TRAP_BADGE_SIZE - 8.0),
+					Color(0.03, 0.04, 0.06, 0.55), true)
+			draw_string(_font, Vector2(tx + 6.0, r.get_center().y + 5.0), nm,
+					HORIZONTAL_ALIGNMENT_LEFT, 108.0, 13, Color("f2e6c8"))
+		else:
+			draw_rect(r, Color(0.45, 0.45, 0.48, 0.55), false, 2.0)
+			draw_line(r.position + Vector2(12, r.size.y * 0.5),
+					r.position + Vector2(r.size.x - 12, r.size.y * 0.5),
+					Color(0.55, 0.55, 0.58, 0.35), 1.5, true)
 
 
 func _draw_key_relics() -> void:

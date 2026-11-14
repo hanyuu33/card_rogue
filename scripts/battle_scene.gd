@@ -138,6 +138,17 @@ const VOID_X := DECK_X
 const VOID_Y := DISCARD_Y - ZONE_H - 22.0
 const ZONE_ICON := 62.0     # 区域内图标的绘制边长（正方形素材等比缩进这个方框）
 const ZONE_NAME_H := 18.0   # 区域名压条的厚度（压在方块下沿；R393 14 → 18 配 13px 字）
+# ---- R667 陷阱栏：右侧资源列**正上方**，与卡组/弃牌/消耗同列（同一中轴 x=1200）----
+## 位置账：关卡铭牌 y50~84、消耗区张数徽章 y309.6 起；中间 y96~308 是真空带。
+## 3 槽 56×56 + gap 8 = 184 → y96~280，底部 y298 写「n/3」，两头都不碰。
+## ⚠️ 三块资源方块是 ZONE_W=80（x1160~1240、中轴 1200），真空带只有 212px 高，
+##    放不下 3 个 80×80 方槽（3×80+2×8=256）。所以槽保持 56 方形、整列居中在
+##    80 宽里：x = DECK_X + (ZONE_W - SIZE)/2 = 1172；底板也取 DECK_X / ZONE_W。
+##    别再写 TRAP_BAR_X - 10 那套 grow 窄带 —— 那样中轴会偏 12px，看着就没对齐。
+const TRAP_BAR_Y := 96.0
+const TRAP_BAR_SIZE := 56.0
+const TRAP_BAR_GAP := 8.0
+const TRAP_BAR_X := DECK_X + (ZONE_W - TRAP_BAR_SIZE) * 0.5
 # ---- 手牌：比战场小卡大一号，卡身一路长到窗口下沿之外 ----
 # 空间账：手牌区只有 592~720 这 128px。既然「底部不必完全显示」，
 # 就把卡底往屏幕外沉 HAND_CROP_BOTTOM 像素，省下的位置全换成卡面尺寸：
@@ -428,6 +439,14 @@ var _drag_anywhere := false     # 拖到棋盘任意处即可释放（无目标�
 var _drag_place := false        # 拖拽的是随从/工事：落到自己半场空格放置
 var _drag_place_cells: Array[Vector2i] = []   # 随从/工事的合法放置格（自己半场空格）
 var _drag_to_effects := false   # R106：拖的是效果卡 → 可**直接拖到左侧效果区**启用
+## R663：陷阱栏**独立拖拽状态**。绝不复用 _drag_idx —— `_drag_zone_rect()` /
+## `_finish_drag()` 一开口就拿它当手牌下标索引 engine.state.hand，混进去会读到
+## 一张不存在的卡（或更糟：把真手牌打出去）。
+var _trap_press_slot := -1      # 按下的陷阱槽（-1 = 没按在槽上）
+var _trap_press_pos := Vector2.ZERO
+var _trap_drag_slot := -1       # 正在拖的陷阱槽（-1 = 无）
+var _trap_drag_pos := Vector2.ZERO
+var _trap_drag_cells: Array[Vector2i] = []   # 本次拖放的合法格
 
 
 func _say(text: String) -> void:
@@ -625,6 +644,26 @@ var _lone_hit_cell := Vector2i(-1, -1)
 var _lone_hit_at := 0
 ## 吞卡演出条目：{from, pos, sc, start, dur, hold, name, hp, pw}（全部走 assets/fx 素材）
 var _lone_fx: Array = []
+## R669：陷阱触发特效队列 —— {pos, sc, start, dur, id}；素材图由 TrapArt 取。
+## 起点比 fx_impact 早 ~100ms：先看见机关炸开、再看见伤害数字落下。
+var _trap_fx: Array = []
+## R670：通用战斗特效队列 —— {pos, sc, start, dur, name, size}；素材由 `FxArt` 取。
+## P0 断链（漩涡 / 中毒 / 空袭）、P1 技能通用施法图、P2 的 B 档素材化全走这一条，
+## 不再每个事件各开一份队列。带 `sc` 的跟棋盘滚动补正，不带的是屏幕锚点。
+var _battle_fx: Array = []
+## 同一帧的 fx_impact 靠它认出「这是陷阱那一格」，把通用紫爆点换成陷阱本色。
+var _trap_hit_mark := {"cell": Vector2i(-1, -1), "at": 0, "id": -1}
+const TRAP_FX_MS := 620
+## R670：通用特效的默认时长（与陷阱触发同一节奏：620ms 起、爆开、收）。
+const BATTLE_FX_MS := 620
+## R670：**已经有专属素材图演出**的伤害来源 —— 这些别再叠一张通用施法图，
+## 否则龙息那一格会「紫焰锥 + 通用图」糊成一团。名字与引擎 `_hit_unit()` 的
+## source 字面量逐字一致（含把 source 写成卡名的那几条）。
+const FX_OWN_SOURCES: Array[String] = ["龙息", "流星雨", "舰炮", "灰烬龙", "弹跳飞刀",
+		"陷阱", "独行", "电磁屏障",
+		# R675：机制类伤害（不是卡）也各有专属图，别让卡色分族在它们身上乱贴。
+		# 名字与引擎 `_hit_unit()` 的 source 字面量逐字一致，见 `_mech_fx_of()`。
+		"闪电", "噩兆", "疾风之力", "废弃机器人", "护甲爆发", "黑暗嵌合"]
 ## 吸取段总长（ms）：光柱走到目标位的那一刻。
 const LONE_ABSORB_MS := 340
 ## R629（店长：「吸取到一半就开始吞噬，减少吞噬时间，让总体在1秒内」）：
@@ -4289,6 +4328,8 @@ func _setup_net() -> void:
 	_floaters.clear()
 	_flashes.clear()
 	_bursts.clear()
+	_trap_fx.clear()
+	_battle_fx.clear()
 	_hp_pending.clear()
 	_shake_until = 0
 	_hover_card = null
@@ -4598,6 +4639,8 @@ func load_level(lvl: Dictionary) -> void:
 	# 鸭之低语飘字需要在开场后正常展示（clear 已提前到 start_game 之前）。
 	_flashes.clear()
 	_bursts.clear()
+	_trap_fx.clear()
+	_battle_fx.clear()
 	_hp_pending.clear()
 	_shake_until = 0
 	_hero_pick_idx = -1          # 换关/重开：待付代价的面板一并收掉
@@ -4757,6 +4800,15 @@ func _curse_busy() -> bool:
 
 
 func _gui_input(event: InputEvent) -> void:
+	# R667：安卓触摸松手的兜底结算。ScreenTouch 比 emulate_mouse_from_touch 合成的
+	# MouseButton 更早到，且这条不能受下面「战斗结束 / 演出中」的 early return 影响 ——
+	# 否则手指抬起时拖拽状态会永远挂在屏幕上。只认主触点 index 0，多指不误触发；
+	# 随后到达的合成松手只会空转（_trap_drag_slot 已清空），不会重复放置。
+	if event is InputEventScreenTouch:
+		var st0 := event as InputEventScreenTouch
+		if not st0.pressed and st0.index == 0 and _trap_drag_slot >= 0:
+			_finish_trap_drag(st0.position)
+			queue_redraw()
 	if engine == null or engine.over or _net_locked() or _death_wait() or _curse_busy():
 		return
 	# R136：巡场动画播放中，玩家一按鼠标就停（动画只是提示，绝不吞操作）。
@@ -4777,8 +4829,29 @@ func _gui_input(event: InputEvent) -> void:
 		var sd := event as InputEventScreenDrag
 		if _lp_active and sd.position.distance_to(_lp_pos) > LP_SLOP:
 			_lp_active = false   # 位移超阈值 = 拖拽，不是长按
+		# R667：原生触摸拖动也喂给陷阱拖放 —— 不再只依赖 emulate_mouse_from_touch。
+		# 模拟开启时同一次位移还会来一条 MouseMotion，那条只会重复赋值，无副作用。
+		if sd.index == 0 and _trap_press_slot >= 0 and _trap_drag_slot < 0 and sd.position.distance_to(_trap_press_pos) > DRAG_THRESHOLD:
+			_start_trap_drag(_trap_press_slot, sd.position)
+		if sd.index == 0 and _trap_drag_slot >= 0:
+			_trap_drag_pos = sd.position
+			queue_redraw()
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
+			# R663：陷阱槽优先于手牌/棋盘 —— 槽是自绘的，点它不该走进 _on_left_click
+			# （那会顺手把当前选中清掉）。记下按下槽，等松手 / 拖过阈值再分派。
+			var ts := _trap_slot_at(event.position)
+			if ts >= 0 and RunState.trap_at(ts) > 0:
+				_trap_press_slot = ts
+				_trap_press_pos = event.position
+				_press_idx = -1
+				_grid_drag_arm = false
+				_grid_dragging = false
+				_info_drag_arm = false
+				_info_dragging = false
+				queue_redraw()
+				return
+			_trap_press_slot = -1
 			# 手牌按下：先不触发点击逻辑，等松手判定是点击还是拖拽
 			_press_idx = _hand_index_at(event.position)
 			_press_pos = event.position
@@ -4800,7 +4873,30 @@ func _gui_input(event: InputEvent) -> void:
 					_on_left_click(event.position)
 		else:
 			# 松手：拖拽中 → 落点结算；否则按点击处理
-			if _drag_idx >= 0:
+			if _trap_drag_slot >= 0:
+				_finish_trap_drag(event.position)
+				_grid_drag_arm = false
+				_grid_dragging = false
+				_info_drag_arm = false
+				_info_dragging = false
+				_press_idx = -1
+				queue_redraw()
+				return
+			elif _trap_press_slot >= 0:
+				# 轻点 = 只读看说明（不消耗）；「用了就没」只发生在成功放置那一刻。
+				var tid := RunState.trap_at(_trap_press_slot)
+				var td: TrapData = TrapRepo.load_json().get_trap(tid)
+				if td != null:
+					_say("「%s」：%s" % [td.trap_name, td.desc])
+				_trap_press_slot = -1
+				_grid_drag_arm = false
+				_grid_dragging = false
+				_info_drag_arm = false
+				_info_dragging = false
+				_press_idx = -1
+				queue_redraw()
+				return
+			elif _drag_idx >= 0:
 				_finish_drag(event.position)
 			elif _press_idx >= 0:
 				_on_left_click(event.position)
@@ -4867,6 +4963,13 @@ func _gui_input(event: InputEvent) -> void:
 		queue_redraw()
 		return
 	elif event is InputEventMouseMotion:
+		# R663：陷阱拖动优先。拖过 DRAG_THRESHOLD 才进入拖放，轻点仍走「看说明」。
+		if _trap_press_slot >= 0 and _trap_drag_slot < 0 and event.position.distance_to(_trap_press_pos) > DRAG_THRESHOLD:
+			_start_trap_drag(_trap_press_slot, event.position)
+		if _trap_drag_slot >= 0:
+			_trap_drag_pos = event.position
+			queue_redraw()
+			return
 		# R417：左栏明细滚动拖拽（鼠标拖 / 触屏拖通用 —— 触屏经 emulate_mouse_from_touch 走这条）。
 		# 拖过阈值才进入滚动，轻点仍走 `_on_left_click`（钉提及）。
 		if _info_drag_arm:
@@ -4918,6 +5021,11 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	# 菜单开着时屏蔽其余快捷键。正常路径上 `paused` 已经替我们挡住了（菜单打开会暂停
 	# 场景树，PAUSABLE 的节点收不到输入），这里是**演示模式（不暂停）**的双保险。
 	if _menu != null and _menu.is_open() and k.keycode != KEY_ESCAPE:
+		return
+	# R667：安卓返回键（映射为 KEY_ESCAPE）在拖陷阱途中 = 取消，不弹主菜单。
+	if k.keycode == KEY_ESCAPE and (_trap_drag_slot >= 0 or _trap_press_slot >= 0):
+		_cancel_trap_drag()
+		queue_redraw()
 		return
 	match k.keycode:
 		KEY_ESCAPE:
@@ -7212,6 +7320,11 @@ func _on_board_click(cell: Vector2i) -> void:
 
 
 func _on_right_click() -> void:
+	# R663：拖陷阱途中右键 / 触屏长按 = 取消（不消耗，槽里的东西还在）。
+	if _trap_drag_slot >= 0 or _trap_press_slot >= 0:
+		_cancel_trap_drag()
+		queue_redraw()
+		return
 	_cam_cancel()                  # R288：右键取消 = 玩家要自己看，演出让位
 	# R197：敌方效果开场弹窗开着 → 右键只关弹窗
 	if _ee_popup:
@@ -9212,6 +9325,8 @@ func _draw() -> void:
 	_draw_air_raid_marks()   # R451：空袭标记格（红色准星）—— 在可点高亮之下
 	_draw_highlights()
 	_draw_bursts()
+	_draw_trap_fx()      # R669：陷阱触发素材图（压在卡牌之上、通用光带之下）
+	_draw_battle_fx()    # R670：通用特效素材图（断链 / 技能通用 / B 档）
 	_draw_primal_fx()
 	_draw_cues()          # R288：通用效果演出（脉冲 / 光带 / 卡名）—— 压在卡牌之上才看得见
 	_draw_rev_fx()        # R357：转阶段特效（蜂窝电磁屏障 / 燃烧）—— 盖在启示者卡面上
@@ -9245,6 +9360,7 @@ func _draw() -> void:
 	_draw_end_turn_big()     # R391：道具栏上方的大号「回合结束」
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)  # 结束震动，后续 UI 不抖
 	_draw_level_plate()
+	_draw_trap_bar()             # R663：右侧资源列上方的 3 槽陷阱栏
 	_draw_hand_base()
 	_draw_hand()
 	_draw_hand_fly()
@@ -9262,6 +9378,7 @@ func _draw() -> void:
 	#    只看得见电流、看不见「有一张牌飞进去了」。
 	_draw_paralyze_fx()
 	_draw_drag()
+	_draw_trap_drag()            # R663：陷阱拖拽幽灵图压在最上层
 	_draw_info_panel()
 	_draw_mention_tip()
 	if _log_visible:
@@ -9504,6 +9621,8 @@ func _draw_grid() -> void:
 	if terrain != null:
 		draw_texture_rect(terrain, Rect2(GRID_X, GRID_Y - _grid_scroll, GRID_W, GRID_CONTENT_H), false)
 	_draw_field_markers()
+	if not engine.state.trap_fields.is_empty():
+		_draw_trap_markers()      # R663：已布置的陷阱（非卡牌场地，独立一张表）
 	# 火墙术（9084）：正在燃烧的横行（引擎是唯一数据源，施放方下次回合开始自动熄灭）
 	for fw_row in engine.fire_wall_rows():
 		var fw_rect := Rect2(GRID_X, GRID_Y + fw_row * CELL - _grid_scroll, GRID_W, CELL)
@@ -9524,6 +9643,8 @@ func _draw_grid() -> void:
 func _board_has_pulsing_field() -> bool:
 	## 场上**有没有会脉动的场地**（一次性场地）。R83：持续型场地（清泉）是静止的，
 	## 只有一个清泉在场上时不需要逐帧重绘 —— 这是 `_process` 里的重绘判据。
+	if engine != null and not engine.state.trap_fields.is_empty():
+		return true   # R663：陷阱格带呼吸描边，得逐帧重绘
 	if engine == null or engine.state.field_effects.is_empty():
 		return false
 	for c: Vector2i in engine.state.field_effects:
@@ -9577,6 +9698,141 @@ func _draw_air_raid_marks() -> void:
 	var tag_pos := Vector2(bbox.position.x + bbox.size.x * 0.5,
 			maxf(GRID_Y + 13.0, bbox.position.y - 3.0))
 	_draw_string_box_center(_font_bold, UI_FS_LABEL, tag, tag_pos, Color(1.0, 0.88, 0.82))
+
+
+# ------------------------------------------------------------ R663 陷阱栏 / 拖放
+
+func _trap_slot_rect(i: int) -> Rect2:
+	## 3 槽竖排、与右侧资源列同列同中轴（唯一几何口：绘制与命中都走这里）。
+	return Rect2(TRAP_BAR_X, TRAP_BAR_Y + float(i) * (TRAP_BAR_SIZE + TRAP_BAR_GAP),
+			TRAP_BAR_SIZE, TRAP_BAR_SIZE)
+
+
+func _trap_slot_at(pos: Vector2) -> int:
+	for i in RunState.TRAP_SLOTS:
+		if _trap_slot_rect(i).has_point(pos):
+			return i
+	return -1
+
+
+func _start_trap_drag(slot: int, pos: Vector2) -> void:
+	if engine == null or engine.current_side != GameEngine.SIDE_SELF:
+		_trap_press_slot = -1
+		_say("现在是敌方回合，等对手行动完再布置陷阱")
+		return
+	if RunState.trap_at(slot) <= 0:
+		_trap_press_slot = -1
+		return
+	_clear_selection()          # 与拖手牌同口径：放下当前选中，别留两套高亮
+	_trap_drag_slot = slot
+	_trap_press_slot = -1
+	_trap_drag_pos = pos
+	_lp_active = false   # R667：进入拖放即作废长按计时（14 < 18 的窗口会误取消）
+	_trap_drag_cells = engine.trap_legal_cells()
+	if _trap_drag_cells.is_empty():
+		_say("没有可以布置陷阱的空格")
+	queue_redraw()
+
+
+func _cancel_trap_drag() -> void:
+	_trap_drag_slot = -1
+	_trap_press_slot = -1
+	_trap_drag_cells = []
+	queue_redraw()   # R667：取消后幽灵图 / 合法格高亮立刻消失
+
+
+func _finish_trap_drag(pos: Vector2) -> void:
+	var slot := _trap_drag_slot
+	var cells := _trap_drag_cells   # 先留快照：_cancel_trap_drag 会清空它
+	_cancel_trap_drag()
+	if engine == null or engine.current_side != GameEngine.SIDE_SELF:
+		return
+	var id := RunState.trap_at(slot)
+	if id <= 0:
+		return
+	var cell: Variant = _cell_at(pos)
+	if cell == null or not cells.has(cell):   # 拖到非法区 = 只取消，不消耗
+		_say("陷阱没有布置（松手要落在高亮空格里）")
+		return
+	var c2 := Vector2i(int(cell.x), int(cell.y))
+	if not engine.place_trap(id, c2):
+		_say("这格已经不能布置陷阱了")
+		return
+	RunState.consume_trap(slot)   # 放置那一刻才从栏位移除（R663 口径）
+	var td: TrapData = TrapRepo.load_json().get_trap(id)
+	var nm := td.trap_name if td != null else "陷阱"
+	_say("已布置「%s」，敌人踩到就会触发" % nm)
+	queue_redraw()
+
+
+func _draw_trap_bar() -> void:
+	## 3 个固定槽：**自绘，不挂 Button 节点**（R391：Button 会在拖牌经过时抢走松手事件）。
+	if not RunState.run_active:
+		return
+	# R663：整条竖栏底图（缺图时下面每个槽仍各自画程序化深色底）。
+	# R667：底板与卡组/弃牌/消耗同一 x、同一宽（ZONE_W=80），中轴才不会偏。
+	var bar := Rect2(DECK_X, TRAP_BAR_Y - 10.0,
+			ZONE_W,
+			3.0 * (TRAP_BAR_SIZE + TRAP_BAR_GAP) - TRAP_BAR_GAP + 20.0)
+	TrapArt.draw_bar_bg(self, bar)
+	var filled := 0
+	for i in RunState.TRAP_SLOTS:
+		var r := _trap_slot_rect(i)
+		var id := RunState.trap_at(i)
+		if id > 0:
+			filled += 1
+		draw_rect(r, Color(0.06, 0.07, 0.10, 0.82), true)
+		TrapArt.draw_slot_frame(self, r)
+		var dragging := _trap_drag_slot == i
+		var col := TrapArt.color_of(id) if id > 0 else Color(0.45, 0.45, 0.48)
+		draw_rect(r, col, false, 3.0 if dragging else 2.0)
+		if id > 0 and not dragging:
+			TrapArt.draw(self, r.grow(-5.0), id, false)
+		elif id < 0:
+			draw_line(r.position + Vector2(12, r.size.y * 0.5),
+					r.position + Vector2(r.size.x - 12, r.size.y * 0.5),
+					Color(0.55, 0.55, 0.58, 0.35), 1.5, true)
+	_draw_string_center(_font_bold, 12, "%d/%d" % [filled, RunState.TRAP_SLOTS],
+			Vector2(TRAP_BAR_X + TRAP_BAR_SIZE * 0.5,
+					TRAP_BAR_Y + 3.0 * (TRAP_BAR_SIZE + TRAP_BAR_GAP) + 10.0),
+			Color("e4bd62"), -1)
+
+
+func _draw_trap_drag() -> void:
+	## 跟手幽灵图 + 合法格高亮。排在 `_draw_drag()` 之后，压在所有面板之上（R391 同款理由）。
+	if _trap_drag_slot < 0:
+		return
+	var id := RunState.trap_at(_trap_drag_slot)
+	if id <= 0:
+		return
+	for c in _trap_drag_cells:
+		_hl(c, Color(0.30, 0.88, 0.92, 0.26))
+	var cell: Variant = _cell_at(_trap_drag_pos)
+	if cell != null and _trap_drag_cells.has(cell):
+		var cc := Vector2i(int(cell.x), int(cell.y))
+		draw_arc(_cell_center(cc), minf(CELL, CELL_W) * 0.42, 0, TAU, 32,
+				Color("7ef0ff"), 3.0, true)
+	var ghost := Rect2(_trap_drag_pos - Vector2(TRAP_BAR_SIZE * 0.5, TRAP_BAR_SIZE * 0.5),
+			Vector2(TRAP_BAR_SIZE, TRAP_BAR_SIZE))
+	TrapArt.draw(self, ghost, id, false)
+
+
+func _draw_trap_markers() -> void:
+	## 已布置的陷阱画在格子中心：**不写文字**（R656 口径：图案底 + 小图标）。
+	## 判据只读 engine.state.trap_fields（引擎是唯一数据源）。
+	var t := float(_now()) / 1000.0
+	var pulse := 0.55 + 0.25 * sin(t * 3.0)
+	for cell: Vector2i in engine.state.trap_fields:
+		var id := int(engine.state.trap_fields[cell])
+		if id <= 0:
+			continue
+		var r := _cell_rect(cell)
+		var col := TrapArt.color_of(id)
+		draw_rect(r.grow(-3.0), Color(col.r, col.g, col.b, 0.10 + 0.06 * pulse), true)
+		draw_rect(r.grow(-3.0), Color(col.r, col.g, col.b, 0.45 + 0.35 * pulse), false, 2.0)
+		var s := 30.0
+		TrapArt.draw(self, Rect2(r.get_center() - Vector2(s * 0.5, s * 0.5), Vector2(s, s)),
+				id, false)
 
 
 func _draw_field_markers() -> void:
@@ -11121,6 +11377,10 @@ func _tick_anims() -> bool:
 	_dying = _dying.filter(func(x): return int(x.hide_at) > n)
 	_floaters = _floaters.filter(func(f): return n - int(f.start) < int(f.dur))
 	_bursts = _bursts.filter(func(b): return n - int(b.start) < int(b.dur))
+	# R669：触发贴图按自己的时长收掉，否则 busy 永远为真、回合推进会卡住。
+	_trap_fx = _trap_fx.filter(func(f): return n - int(f.start) < int(f.dur))
+	# R670：通用特效同理 —— 不收掉就会把 busy 永久钉死、回合推不动。
+	_battle_fx = _battle_fx.filter(func(f): return n - int(f["start"]) < int(f["dur"]))
 	_meteors = _meteors.filter(func(m): return n < int(m.land))   # R430：落地即交给爆点
 	if not _naval_beam.is_empty() and n > int(_naval_beam.get("end", 0)):
 		_naval_beam = {}   # R431：光柱淡出后收掉（留着会让 busy 永远为真、队列不走）
@@ -11171,6 +11431,11 @@ func _tick_anims() -> bool:
 	if death_busy and _delayed.is_empty():
 		engine.flush_all_death_effects()
 		death_busy = engine.has_pending_death_effects()
+	# R669：陷阱触发素材图还在播 → 逐帧重绘，别让动画卡在中间一格。
+	if not _trap_fx.is_empty():
+		any = true
+	if not _battle_fx.is_empty():
+		any = true
 	return any or death_busy or not _ghosts.is_empty() or not _floaters.is_empty() \
 			or not _bursts.is_empty() or not _dying.is_empty() \
 			or not _meteors.is_empty() \
@@ -11270,6 +11535,66 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_heal_fx.append({"pos": Vector2(GRID_X + GRID_W + 46, GRID_Y + GRID_H - 20),
 					"start": n + hf_j * 70, "dur": 480, "seed": hf_j})
 	match kind:
+		# ── R670 P0：三个「引擎发了事件、界面一个 case 都没有」的硬断链 ──
+		# 这三条以前是「伤害数字照掉、画面毫无反应」，玩家读成卡了 / 掉帧。
+		"vortex":
+			# 漩涡场地（8012）每回合的吸入伤害。引擎在 `_hit_unit` **之前**发，
+			# 所以先看见漩涡把人往里卷、再看见数字掉。
+			var vx_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			if vx_cell.x >= 0:
+				var vx_at := maxi(n + 60, _slide_floor_at(vx_cell))
+				_fx_push_cell(FxArt.VORTEX, vx_cell, vx_at, BATTLE_FX_MS, 162.0)
+				sfx.play("spell")
+				_shake(2.0, 180)
+		"poison":
+			# 中毒**施加**的那一下（毒沼 8082 / 毒瓶陷阱 7003 共用 `_apply_poison`）。
+			# 店长定案「毒瓶与毒沼统一口径」→ 这里直接借毒瓶那张毒绿飞溅素材，
+			# 不再单独出一张「毒雾」；每回合的毒伤仍走 `_hit_unit("中毒")` 的通用受击。
+			var pz_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			if pz_cell.x >= 0:
+				_trap_fx.append({"pos": _cell_center(pz_cell), "sc": _grid_scroll,
+						"start": n + 40, "dur": TRAP_FX_MS, "id": 7003})
+				sfx.play("spell")
+		"air_raid_hit":
+			# 空袭（9209）真的砸下来。R451 之前只有一格红色准星，命中那一下画面
+			# 毫无反应。事件带 `cells`（全部标记格）与 `hits`（实际有我方单位的格）
+			# → **只演 hits**：空响不必炸一格给玩家看；逐格错峰与其它多目标同口径。
+			var ar_i := 0
+			for ar_c in (data.get("hits", []) as Array):
+				var ar_cell: Vector2i = ar_c
+				_fx_push_cell(FxArt.AIR_RAID, ar_cell,
+						n + 60 + ar_i * FX_MULTI_HIT_GAP_MS, BATTLE_FX_MS, 178.0)
+				ar_i += 1
+			if ar_i > 0:
+				sfx.play("destroy")
+				_shake(5.0, 280)
+				_say("✈ 空袭：%d 格命中，各 -%d" % [ar_i, int(data.get("damage", 0))])
+			else:
+				_say("✈ 空袭：标记格上没有我方单位 —— 空响")
+		"trap_hit":
+			# R669：陷阱触发的素材图演出。敌人是「走完这一步」才踩爆的 ——
+			# 跟着滑行落地一起演，不能人还没到就先炸；伤害数字仍由 fx_impact 照常落。
+			var th_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var th_victim: Vector2i = data.get("victim", th_cell)
+			var th_id := int(data.get("id", -1))
+			if th_cell.x >= 0 and th_id > 0:
+				var th_at := maxi(n + 160, _impact_floor(n))
+				var th_slide := _slide_floor_at(th_victim)
+				if th_slide > th_at:
+					th_at = th_slide
+				_trap_fx.append({"pos": _cell_center(th_cell), "sc": _grid_scroll,
+						"start": maxi(n + 60, th_at - 100), "dur": TRAP_FX_MS,
+						"id": th_id})
+				_trap_hit_mark = {"cell": th_victim, "at": n, "id": th_id}
+				var th_sfx := "spell"
+				var th_shake := 2.5
+				if th_id == 7001:
+					th_sfx = "destroy"
+					th_shake = 4.5
+				elif th_id == 7004:
+					th_sfx = "attack"
+				sfx.play(th_sfx)
+				_shake(th_shake, 260)
 		"out_of_control_fort":
 			# R288 失控要塞：入场随机释放职业技能 —— 这里只报总结果；每张技能自己
 			# 已经走过上面的 "spell" 分支（音效 / 飘字都在那儿）。
@@ -11460,6 +11785,21 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 							# R361：播报跟撞击同一刻（原来 t=0 就写「攻击了」，比动画早 930ms）
 							"say": "⚔ %s 攻击 %s！" % [data.get("atk_name", "?"),
 									data.get("def_name", "?")]}})
+		"soul_harvest":
+			# R679 灵魂收割者 9233：击杀单位后**生命回满**。引擎从 `_reap()` 之后发，
+			# 界面一直是「零臂」—— 玩家只看见自己那张卡的血条突然涨回去，没有任何
+			# 因果提示（R504 上线以来一直如此）。这里补一张暗影图 + 一行飘字。
+			var sh_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			if sh_cell.x >= 0:
+				var sh_pos := _cell_center(sh_cell)
+				_fx_push_cell(FxArt.SKILL_SHADOW, sh_cell, n, BATTLE_FX_MS, 148.0)
+				# ⚠️ 文案必须短：飘字是 `_draw_string_box_center` **居中**画的，
+				# 且 x 方向没有兜底。灵魂收割发生在敌方行，敌方格可能贴着棋盘左沿，
+				# 11 个字的长句会有一半被画到棋盘外（y 那边有 `maxf(pos.y,44)`，
+				# x 这边没有）。「↑ 回满 N」五个字宽 ≈ 60px，最左列也落得下。
+				_floaters.append({"pos": sh_pos + Vector2(0, 6), "sc": _grid_scroll,
+						"text": "↑ 回满 %d" % int(data.get("health", 0)),
+						"col": Color("c07ad0"), "size": 16, "start": n, "dur": 1500})
 		"hp":
 			# 攻击方 side；被打的是对面 → 飘字/爆点落在对应 HP 横幅。
 			# 直击 HP 也让单位「冲锋撞上去」——否则 AI 单位只闪一行数字、毫无动作。
@@ -11759,7 +12099,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					if fi_hold:
 						_freeze_hp(fi_pl, fi_dmg)
 					# R625：独行那一下的颜色 / 文案 / 字号都在这里分叉（普通受击不变）
+					var fi_src := str(data.get("source", ""))
 					var fi_col: Color = METEOR_C_MID if fi_beam > 0 else Color("8f5ad0")
+					# R679：中毒的伤害数字跟着毒绿走（原来混在一堆紫色里，看不出是毒）
+					if fi_src == "中毒":
+						fi_col = FxArt.color_of(FxArt.POISON)
+					# R669：陷阱那一格改用陷阱本色，别在橙 / 冰蓝 / 毒绿的素材图上
+					# 再压一坨紫色爆点；伤害数字与掉血时序完全不变。
+					if fc == _trap_hit_mark.cell and n - int(_trap_hit_mark.at) < 120 and int(_trap_hit_mark.id) > 0:
+						fi_col = TrapArt.color_of(int(_trap_hit_mark.id))
 					if fi_lone:
 						fi_col = Color("9b5cf0")
 					_delayed.append({"at": fi_at, "kind": "fx_hit",
@@ -11769,7 +12117,26 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 							"col": fi_col,
 							"label": "独行 -%d" % fi_dmg if fi_lone else "",
 							"size": 26 if fi_lone else 0}})
-					_push_cue([fc], "", Color("8f5ad0"))
+					_push_cue([fc], "", fi_col)
+					# R670：技能卡（source 写「技能」的那条口）按**卡面 color** 选一张
+					# 通用施法图。29 张伤害技能在此之前只有一坨紫色爆点，玩家看不出
+					# 用的是哪张牌、什么属性。⚠️ 只演首段：多段技能逐段各贴一张会糊成
+					# 一团；带专属演出的（龙息 / 独行 / 陷阱 / 流星 / 舰炮…）各有自己的
+					# 图，这里不掺和（`_fx_claimed` 与 source 判定已经隔开）。
+					var fi_is_skill := fi_seg <= 0 and not FX_OWN_SOURCES.has(fi_src)
+					if fi_is_skill and data.get("card") is CardData:
+						var fi_scard: CardData = data["card"]
+						_fx_push_cell(FxArt.skill_name_for_color(fi_scard.color), fc, fi_at,
+								BATTLE_FX_MS, 150.0)
+
+					# R675：机制类伤害连技能卡都不是（source 写的是机制名），卡色分族对它们
+					# 无从下手 —— 按 source 查表直接指名。只演首段：多段机制伤害逐段各贴
+					# 一张会糊成一团（与上面 P1 同一条纪律）。
+					elif fi_seg <= 0:
+						var mf_art := _mech_fx_of(fi_src)
+						if not mf_art.is_empty():
+							_fx_push_cell(str(mf_art[0]), fc, fi_at, BATTLE_FX_MS,
+									float(mf_art[1]))
 					# R645：龙息 —— 首段（seg=0）拉一道锥形喷流到受影者。
 					# 只在首段起，后面 4 段共用同一条火（一口持续的吐息连烧 5 下），
 					# 每段自己的爆点 / 数字仍由常规受击路径出。
@@ -12462,6 +12829,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var ar_dmg := int(data.get("dmg", 0))
 			var ar_hits := int(data.get("hits", 0))
 			_shake(6.0, 300)
+			# R670：B 档素材化 —— 全体伤害落棋盘中心一张大风刃（事件不带格子，
+			# 逐格贴会变成「随机几格莫名发光」）。
+			_fx_push_pos(FxArt.GALE,
+					Vector2(GRID_X + GRID_W / 2.0, GRID_Y + GRID_H / 2.0), n, 700, 250.0)
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 30),
 					"text": "飓风咆哮 -%d" % ar_dmg,
 					"col": Color("7a3fd0"), "start": n, "dur": 1600, "size": 20})
@@ -12485,6 +12856,37 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"start": _hit_cue_at(), "dur": 1600, "size": 18})
 			_say("石肤：这次伤害变为 1（原本 %d，还剩 %d 次）" % [
 					int(data.get("amount", 0)), sk_left])
+		"fear_projection":
+			# R675：恐惧投射（9229）—— 标记 + 本回合力量 -N；打中已标记才补 8 伤。
+			# 引擎一直有发这个事件，界面却没人接，玩家只看得到一行状态栏文字。
+			var fp_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var fp_debuff := int(data.get("debuff", 0))
+			if fp_cell.x >= 0:
+				_floaters.append({"pos": _cell_center(fp_cell) + Vector2(0, -16),
+						"sc": _grid_scroll, "text": "力量 -%d" % fp_debuff,
+						"col": Color("a06ae0"), "start": n, "dur": 1500, "size": 18})
+			_say("恐惧投射：本回合力量 -%d（现 %d）" % [fp_debuff,
+					int(data.get("power", 0))])
+		"fear_incarnate":
+			# R675：恐惧化身（9235）—— 被标记的敌人挨打后力量再降（效果区几张就 -几）。
+			var fi3_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			if fi3_cell.x >= 0:
+				_floaters.append({"pos": _cell_center(fi3_cell) + Vector2(0, -44),
+						"sc": _grid_scroll, "text": "恐惧 -%d" % int(data.get("debuff", 0)),
+						"col": Color("8f4ad8"), "start": n + 120, "dur": 1400, "size": 17})
+		"harvest_hit":
+			# R675：恐惧收割（9234）计数 —— 本回合第 N 次打中被标记目标，第 3 次发牌。
+			var hh_n := int(data.get("count", 0))
+			var hh_need := maxi(int(data.get("need", 3)), 1)
+			_say("恐惧收割：%d / %d" % [hh_n, hh_need])
+		"armor_gain":
+			# R675：阿斯克勒庇厄斯（9141）每回合 +16 甲 —— 原来一点画面都没有。
+			var ag_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			if ag_cell.x >= 0:
+				_fx_push_cell(FxArt.SKILL_ICE, ag_cell, n, 460, 126.0)
+				_floaters.append({"pos": _cell_center(ag_cell) + Vector2(0, -34),
+						"sc": _grid_scroll, "text": "+%d 护甲" % int(data.get("gained", 0)),
+						"col": Color("9fd8f0"), "start": n, "dur": 1200, "size": 16})
 		"guard_absorb":
 			var ga_name := "?"
 			if data.get("card") is CardData:
@@ -12520,6 +12922,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var ec_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
 			_bursts.append({"pos": ec_pos, "sc": _grid_scroll, "start": n, "dur": 420,
 					"col": Color("8e6cc8"), "big": false})
+			_fx_push_cell(FxArt.SKILL_SHADOW, data.get("cell", Vector2i(-1, -1)), n, 480, 140.0)
 			_floaters.append({"pos": ec_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "回响 -%d / 力量 -%d" % [int(data.get("dmg", 0)),
 							int(data.get("amount", 0))],
@@ -12539,6 +12942,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var fn_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var fn_pos := _cell_center(fn_cell) if fn_cell.x >= 0 \
 					else Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H / 2)
+			_fx_push_cell(FxArt.SKILL_SHADOW, fn_cell, n, 520, 138.0)
 			_floaters.append({"pos": fn_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "收尾 -%d" % int(data.get("dmg", 0)),
 					"col": UiTheme.STAT_POWER if fn_last else Color("6a4aa0"),
@@ -12744,6 +13148,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			for c2 in data.get("cells", []):
 				_bursts.append({"pos": _cell_center(c2 as Vector2i), "sc": _grid_scroll, "start": bwhen,
 						"dur": 620, "col": Color("ff8a3d"), "big": true})
+			# R670：四格爆炸补一张素材图（原来只有 620ms 的程序化橙色爆点）。
+			var b_center: Vector2i = data["center"]
+			_fx_push_cell(FxArt.BLAST, b_center, bwhen, 700, 200.0)
 			var blast_center := _cell_center(data["center"])
 			_floaters.append({"pos": blast_center + Vector2(0, -18), "sc": _grid_scroll,
 					"text": "%s -%d" % [str(data["card"].card_name), int(data.get("amount", 0))],
@@ -12761,6 +13168,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			for mb_c in data.get("cells", []):
 				_bursts.append({"pos": _cell_center(mb_c as Vector2i), "sc": _grid_scroll,
 						"start": mb_when, "dur": 620, "col": Color("ffb03a"), "big": true})
+			# R670：与 blast 同口径 —— 程序化爆点保留，素材图叠在上面。
+			var mb_center: Vector2i = data["center"]
+			_fx_push_cell(FxArt.BLAST, mb_center, mb_when, 700, 200.0)
 			_floaters.append({"pos": _cell_center(data["center"]) + Vector2(0, -18),
 					"sc": _grid_scroll,
 					"text": "%s -%d" % [str(data["card"].card_name), int(data.get("amount", 0))],
@@ -12994,6 +13404,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					int(data.get("cap", GameEngine.FIRE_WALL_CAP))])
 		"fire_wall_hit":
 			# 火墙开场那一炸：橙色爆点 + 伤害飘字
+			# R670：B 档「只有文字/爆点」→ 补一张火焰素材图。
+			_fx_push_cell(FxArt.SKILL_FIRE, data.get("cell", Vector2i(-1, -1)), n, 520, 134.0)
 			var fh_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
 			_bursts.append({"pos": fh_pos, "sc": _grid_scroll, "start": n, "dur": 560,
 					"col": Color("ff6a00"), "big": false})
@@ -13060,6 +13472,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sb_off = Vector2(0, 26)
 			_bursts.append({"pos": sb_pos, "sc": _grid_scroll, "start": sb_at, "dur": 480,
 					"col": Color("ffd54f"), "big": false})
+			# R670：敲晕补一张眩晕星环素材图（金色爆点留着，素材叠在上面）。
+			_fx_push_cell(FxArt.STUN, sb_cell, sb_at, 560, 148.0)
 			_floaters.append({"pos": sb_pos + sb_off, "sc": _grid_scroll,
 					"text": "%s 力量 -%d" % [sb_lab, int(data.get("amount", 0))],
 					"col": UiTheme.STAT_POWER, "start": sb_at, "dur": 1300, "size": 16})
@@ -13068,6 +13482,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var ga_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
 			_bursts.append({"pos": ga_pos, "sc": _grid_scroll, "start": n, "dur": 420,
 					"col": Color("9bdcff"), "big": false})
+			# R670：疾风补一张风刃素材图。
+			_fx_push_cell(FxArt.GALE, data.get("cell", Vector2i(-1, -1)), n, 460, 170.0)
 			_floaters.append({"pos": ga_pos + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "疾风 -%d" % int(data.get("dmg", 0)),
 					"col": Color("2a7ab8"), "start": n, "dur": 1200})
@@ -13087,6 +13503,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"dark_spread":
 			# 黑暗扩散 9113：剩余费用换算的全体敌人伤害
 			var ds_dmg := int(data.get("dmg", 0))
+			# R670：黑暗扩散补一张暗影素材图，落在棋盘正中 —— 事件只带命中数、
+			# 不带格子，逐格贴会变成「随机几格莫名发光」。
+			_fx_push_pos(FxArt.SKILL_SHADOW,
+					Vector2(GRID_X + GRID_W / 2.0, GRID_Y + GRID_H / 2.0), n, 640, 224.0)
 			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 24),
 					"text": "黑暗扩散 · 剩余 %d 费用 → 全体敌人 -%d"
 						% [int(data.get("left", 0)), ds_dmg],
@@ -13127,8 +13547,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": _cell_center(db_cell) + Vector2(0, -12), "sc": _grid_scroll,
 					"text": "暗影之刃 -%d" % int(data.get("dmg", 0)),
 					"col": Color("6a4aa0"), "start": n, "dur": 1600, "size": 17})
-			_bursts.append({"pos": _cell_center(db_cell), "sc": _grid_scroll, "start": n, "dur": 460,
-					"col": Color("6a4aa0"), "big": false})
+			# R679：同族的黑暗扩散 / 噩兆早就用 `skill_shadow` 了，这条还停在纯色紫圈。
+			# 纯色圈留着会和贴图叠成两层，所以直接换掉。
+			_fx_push_cell(FxArt.SKILL_SHADOW, db_cell, n, BATTLE_FX_MS, 140.0)
 			sfx.play("attack")
 		"dark_chain":
 			# 暗影锁链（9112）：击退提示（_knockback 自己会 emit "move" 播移动动画）
@@ -13283,6 +13704,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			sfx.play("spell")
 		"whirl_blade":
 			# 回旋斩（9096）：十字命中提示
+			# R670：原来只有一句播报、画面全空 —— 补一张横贯棋盘的大风刃。
+			_fx_push_pos(FxArt.GALE,
+					Vector2(GRID_X + GRID_W / 2.0, GRID_Y + GRID_H / 2.0), n, 520, 240.0)
 			_say("🌀 回旋斩：命中 %d 个敌方单位（各 %d 伤）" % [
 					int(data.get("hits", 0)), int(data.get("dmg", 0))])
 		"infiltrate":
@@ -13336,6 +13760,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var in_n := int(data.get("count", 0))
 			var in_d := int(data.get("dmg", 0))
 			for ic: Vector2i in (data.get("cells", []) as Array):
+				_fx_push_cell(FxArt.SKILL_SHADOW, ic, n, 520, 132.0)
 				_floaters.append({"pos": _cell_center(ic) + Vector2(0, -24),
 						"sc": _grid_scroll, "text": "激发 -%d" % in_d,
 						"col": Color("b46ae0"), "size": 15, "start": n, "dur": 1400})
@@ -13352,6 +13777,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			sfx.play("attack")
 			var rs_amt := int(data.get("amount", 0))
 			_say("⌁ 折射炮：流弹折射向 %s（-%d）" % [str(data.get("name", "?")), rs_amt])
+			# R679：流弹命中的那一格补一张小爆点。伤害数字仍由 `fx_impact(seq=1)` 画，
+			# 这里**绝不补第二个数字**（R325 那条「一次攻击飘两个数字」的老坑）。
+			# 落地时刻与 fx_impact 同源：撞击帧 + 一个多段间隔 —— 主目标先落地、
+			# 流弹晚 90ms，图形和数字才对得上。
+			if data.get("cell") is Vector2i:
+				var rs_cell: Vector2i = data["cell"]
+				var rs_at := maxi(n + 160, _impact_floor(n)) + FX_MULTI_HIT_GAP_MS
+				_fx_push_cell(FxArt.BLAST, rs_cell, rs_at, BATTLE_FX_MS, 124.0)
 		"reflex":
 			# R317 身法 9173：抽 5 张，但本回合不能再用盟友 / 工事卡。
 			_say("◇ 身法：抽 %d 张 —— 本回合不能再使用盟友和工事卡"
@@ -13375,6 +13808,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var hd_c: CardData = data.get("card", null)
 			var hd_t: Vector2i = data.get("target", Vector2i(0, 0))
 			_say("◈ 隐藏能源：距离 1 的敌人 -%d" % hd_a)
+			# R679：原来只有一行紫飘字、连爆点图形都没有 —— 加了素材图才看得出
+			# 是「炸了一下」，而不只是「屏幕上多了个字」。
+			_fx_push_cell(FxArt.SKILL_SHADOW, hd_t, n, BATTLE_FX_MS, 132.0)
 			_floaters.append({"pos": _cell_center(hd_t), "text": "隐藏能源 -%d" % hd_a,
 					"col": Color("c07ad0"), "size": 16, "start": n, "dur": 1600})
 		"surprise":
@@ -13444,6 +13880,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 「风妖精 · 全体 -4」，玩家打出效果卡（比如激发）刚好凑满第 5 张时，
 			# 会以为是那张卡造成的伤害（实机反馈「激发打出时就掉血」）。
 			for wc: Vector2i in (data.get("cells", []) as Array):
+				_fx_push_cell(FxArt.GALE, wc, n, 520, 140.0)
 				_floaters.append({"pos": _cell_center(wc) + Vector2(0, -24),
 						"sc": _grid_scroll, "text": "风妖精 -%d" % wf_d,
 						"col": Color("7fd2a0"), "size": 15, "start": n, "dur": 1500})
@@ -14467,6 +14904,130 @@ func _draw_bursts() -> void:
 			draw_line(pos + dir * near, pos + dir * far, lcol, 2.0 if big else 1.5)
 
 
+func _draw_trap_fx() -> void:
+	## R669：陷阱触发的**素材图**演出 —— 四张 codex 黑底发光图（亮度转 alpha），
+	## 由 UiAssets.trap_fx(id) / TrapArt.draw_trigger_fx() 取用。店长口径：
+	## 不写「陷阱触发！」这类文字特效，只给画面。位置由 _fx_pos() 跟着棋盘滚动补正。
+	if _trap_fx.is_empty():
+		return
+	var n := _now()
+	for f: Dictionary in _trap_fx:
+		var t := clampf(float(n - int(f.start)) / float(int(f.dur)), 0.0, 1.0)
+		if t <= 0.0:
+			continue
+		var pos: Vector2 = _fx_pos(f)
+		var id := int(f.id)
+		var grow := lerpf(0.62, 1.34, pow(t, 0.45))
+		var size := 156.0 * grow
+		var rect := Rect2(pos - Vector2(size, size) * 0.5, Vector2(size, size))
+		var a := pow(1.0 - t, 1.35) * 0.96
+		# R669b：棋盘底常是绿 / 蓝，浅色发光贴图（尤其毒绿）会糊进背景 ——
+		# 先垫一层柔和深光晕把底色压住，再叠素材图；只改绘制，素材本身不动。
+		if _fx_glow_tex != null:
+			var bs := size * 0.92
+			draw_texture_rect(_fx_glow_tex,
+					Rect2(pos - Vector2(bs, bs) * 0.5, Vector2(bs, bs)), false,
+					Color(0.06, 0.09, 0.11, a * 0.42))
+		if not TrapArt.draw_trigger_fx(self, rect, id, a):
+			var col := TrapArt.color_of(id)
+			col.a = a * 0.85
+			draw_arc(pos, size * 0.34, 0.0, TAU, 28, col, 3.0, true)
+
+
+func _mech_fx_of(src: String) -> Array:
+	## R675：**机制类**伤害来源 → [素材名, 尺寸]；空数组 = 这条 source 没有专属图。
+	## 为什么要单独一张表：R670 的 P1 是「按卡面 color 分五族」，前提是这笔伤害
+	## 带着一张技能卡的 `card`。闪电（充电装置接通链）、噩兆、疾风之力、废弃机器人、
+	## 护甲爆发、黑暗嵌合 全是机制自己算的伤害，没有卡 → 卡色分族无从下手，
+	## 只剩那坨通用紫爆点。这里按 source 直接指名，名字与 `_hit_unit()` 逐字一致。
+	match src:
+		"闪电":
+			return [FxArt.BOLT, 168.0]      # 青紫分叉闪电（codex 单独出的 bx_bolt）
+		"噩兆":
+			return [FxArt.SKILL_SHADOW, 150.0]
+		"疾风之力":
+			return [FxArt.GALE, 150.0]
+		"废弃机器人":
+			return [FxArt.BLAST, 150.0]
+		"护甲爆发":
+			return [FxArt.BLAST, 176.0]     # 攒了几回合的甲一起炸 → 比别处大一圈
+		"黑暗嵌合":
+			return [FxArt.SKILL_SHADOW, 190.0]   # 组合产物扫全场，图也最大
+		"中毒":
+			# R679：每回合 `_poison_tick` 的持续伤害。原来「施加」那一下有毒绿素材、
+			# 每回合掉血却只剩紫爆点 —— 同一个机制两套表现，读起来像两种东西。
+			return [FxArt.POISON, 118.0]
+	return []
+
+
+func _fx_push_cell(name: String, cell: Vector2i, start: int,
+		dur := BATTLE_FX_MS, size := 156.0) -> void:
+	## R670：往通用特效队列里塞一个**格锚**特效。格子坐标存中心点，绘制时由
+	## `_fx_pos()` 按创建时的 `_grid_scroll` 补正 —— 与陷阱触发同一条口径。
+	if cell.x < 0:
+		return
+	var pos := _cell_center(cell)
+	# R670：同一格同一下**只留一张图**。「敲晕」这类牌的伤害走通用技能口、
+	# 降力又单独发 `stun_blow`，两条路各推一张 → 金色星环上再糊一层紫光。
+	# 口径：**专属图压过通用施法图**（通用图让位），反过来则直接不塞。
+	var generic_new := name.begins_with("skill_")
+	for fx_i in range(_battle_fx.size()):
+		var fx: Dictionary = _battle_fx[fx_i]
+		if Vector2(fx["pos"]).distance_to(pos) > 22.0:
+			continue
+		if absi(int(fx["start"]) - start) > 280:
+			continue
+		var generic_old := str(fx["name"]).begins_with("skill_")
+		if generic_old and not generic_new:
+			_battle_fx.remove_at(fx_i)
+			break
+		if not generic_old and generic_new:
+			return
+	_battle_fx.append({"pos": pos, "sc": _grid_scroll,
+			"start": start, "dur": dur, "name": name, "size": size})
+
+
+func _fx_push_pos(name: String, pos: Vector2, start: int,
+		dur := BATTLE_FX_MS, size := 156.0) -> void:
+	## 屏幕锚点版（黑暗扩散那种「全体、但事件不带格子」的场合）。
+	_battle_fx.append({"pos": pos, "start": start, "dur": dur, "name": name, "size": size})
+
+
+func _draw_battle_fx() -> void:
+	## R670：通用战斗特效的**素材图**演出（唯一出口）。P0 断链（漩涡 / 中毒 / 空袭）、
+	## P1 技能通用施法图、P2 的 B 档素材化都排在这条队列上。
+	## 一个名字交给 `FxArt`，缺图自动退回程序化光环 —— 素材没到也绝不会「什么都不画」。
+	## ⚠️ 字典键一律用下标取：`f.size` 会被解析成 Dictionary.size 方法而不是那个键。
+	if _battle_fx.is_empty():
+		return
+	var n := _now()
+	for f: Dictionary in _battle_fx:
+		var start := int(f["start"])
+		var dur := maxi(int(f["dur"]), 1)
+		var t := clampf(float(n - start) / float(dur), 0.0, 1.0)
+		if t <= 0.0:
+			continue
+		var pos: Vector2 = _fx_pos(f)
+		var nm := str(f["name"])
+		# R670b：首版按 0.62→1.28 起手、`pow(1-t, 1.35)` 淡出，实机一眼看过去偏淡
+		# （t=0.24 时只剩 0.69 不透明，落在卡面上几乎被卡图吃掉）。改成起手更大、
+		# 前 1/4 段保持接近满不透明再衰减 —— 与陷阱触发那四张同一观感。
+		var size := float(f["size"]) * lerpf(0.74, 1.40, pow(t, 0.45))
+		var rect := Rect2(pos - Vector2(size, size) * 0.5, Vector2(size, size))
+		var a := clampf(pow(1.0 - t, 1.05) * 1.28, 0.0, 1.0)
+		# 与陷阱触发同一条防糊处理：棋盘底常是绿 / 蓝，浅色发光图会糊进去，
+		# 先垫一层柔和深光晕再叠素材图（只改绘制，素材本身一个像素不动）。
+		if _fx_glow_tex != null:
+			var bs := size * 0.9
+			draw_texture_rect(_fx_glow_tex,
+					Rect2(pos - Vector2(bs, bs) * 0.5, Vector2(bs, bs)), false,
+					Color(0.06, 0.09, 0.11, a * 0.46))
+		if not FxArt.draw(self, nm, rect, a):
+			var col := FxArt.color_of(nm)
+			col.a = a * 0.8
+			draw_arc(pos, size * 0.3, 0.0, TAU, 26, col, 2.5, true)
+
+
 func _draw_lone_fx() -> void:
 	## R628：独行（9189）的「吞卡」演出 —— 全部走 codex 出的素材图：
 	## `assets/fx/fx_lone_column.png`（竖直吸取光柱，绞股灵魂光 + 白芯）／
@@ -14900,9 +15461,15 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 				# R645：多段的第 N 段往右上走一格 —— 时间错开 + 位置错开，两层都做才读得清
 				var fsx := int(d.get("seg", -1))
 				var foff := Vector2.ZERO if fsx < 0 else FX_SEG_FLOAT_STEP * float(fsx)
+				# R679：中毒的掉血数字改毒绿。受击数字原本一律 `SIDE_FOE`（敌方红），
+				# 毒伤混在里面看不出是毒 —— 但只有中毒这一条分叉，其它来源保持原色
+				# （R288 定的「受击数字统一敌方色」不动）。
+				var ftxt_col: Color = UiTheme.SIDE_FOE
+				if str(d.get("source", "")) == "中毒":
+					ftxt_col = FxArt.color_of(FxArt.POISON)
 				_floaters.append({"pos": fpos + Vector2(0, -10) + foff, "sc": _grid_scroll,
 						"text": str(d.get("label", "")) if str(d.get("label", "")) != "" else "-%d" % int(d.get("dmg", 0)),
-						"col": UiTheme.SIDE_FOE,
+						"col": ftxt_col,
 						"start": n, "dur": 1150,
 						"size": int(d.get("size", 0)) if int(d.get("size", 0)) > 0 else 20})
 				_shake(3.0, 180)
@@ -17357,7 +17924,7 @@ func _process(delta: float) -> void:
 	if _demo_pick_sel >= 0 and _pick != null and _pick.visible and _pick.is_picking():
 		_pick._toggle(_demo_pick_sel)
 		_demo_pick_sel = -1
-	if _lp_active and not _lp_fired and _drag_idx < 0 and not _grid_dragging \
+	if _lp_active and not _lp_fired and _drag_idx < 0 and _trap_drag_slot < 0 and not _grid_dragging \
 			and (_pick == null or not _pick.visible) and _now() - _lp_t0 >= LP_MS:
 		_lp_fired = true
 		_lp_active = false

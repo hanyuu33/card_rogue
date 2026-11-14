@@ -19,6 +19,9 @@ export/
 _e.txt
 _r.txt
 _s.txt
+_traps.txt
+_trapinput.log
+_trapinput.txt
 _rp.txt
 _b.txt
 _assemble_test.txt

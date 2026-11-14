@@ -1,0 +1,15 @@
+[20:30:49] 代理预检 HTTP 200
+[20:30:49] 代理预检 OK：http://127.0.0.1:7897
+[20:30:49] RUN  7001  纯文生图(无参考图, 黑底)  第1次
+[20:31:44] OK   7001  <- exec-640e08cc-dc85-4e69-a1db-a1b4b1f0ad07.png  (55s, 1098 KB)
+[20:31:45] FINISH 7001 E:\work\card_rogue\art_src\2026-11-13_陷阱触发特效_R669\_finish_fx.py:41: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   7001  raw 1254x1254 → 裁边 → 256x256  非透光 69.1%  99 KB | done=1 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_陷阱触发特效_R669\_review\r669_trap_fx.html
+[20:31:45] RUN  7002  纯文生图(无参考图, 黑底)  第1次
+[20:32:34] OK   7002  <- exec-cffc1830-6bb8-442d-95c7-abb42e1c242e.png  (50s, 1309 KB)
+[20:32:35] FINISH 7002 E:\work\card_rogue\art_src\2026-11-13_陷阱触发特效_R669\_finish_fx.py:41: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   7002  raw 1254x1254 → 裁边 → 256x256  非透光 62.9%  115 KB | done=2 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_陷阱触发特效_R669\_review\r669_trap_fx.html
+[20:32:35] RUN  7003  纯文生图(无参考图, 黑底)  第1次
+[20:33:24] OK   7003  <- exec-4bd1d337-1603-4cab-9665-89dba3a9f45b.png  (49s, 911 KB)
+[20:33:25] FINISH 7003 E:\work\card_rogue\art_src\2026-11-13_陷阱触发特效_R669\_finish_fx.py:41: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   7003  raw 1254x1254 → 裁边 → 256x256  非透光 40.9%  79 KB | done=3 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_陷阱触发特效_R669\_review\r669_trap_fx.html
+[20:33:25] RUN  7004  纯文生图(无参考图, 黑底)  第1次
+[20:34:17] OK   7004  <- exec-eb6de99d-ab58-4058-a81b-adc360f82f20.png  (53s, 1149 KB)
+[20:34:18] FINISH 7004 E:\work\card_rogue\art_src\2026-11-13_陷阱触发特效_R669\_finish_fx.py:41: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead. |   for r, g, b in im.getdata(): | OK   7004  raw 1254x1254 → 裁边 → 256x256  非透光 41.1%  85 KB | done=4 miss=0 review=E:\work\card_rogue\art_src\2026-11-13_陷阱触发特效_R669\_review\r669_trap_fx.html
+[20:34:18] === R669 陷阱触发特效结束 成功4 / 失败0 []

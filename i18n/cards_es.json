@@ -375,7 +375,7 @@
   },
   "9005": {
    "name": "Sabiduría",
-   "effect_text": "Roba 2 cartas."
+   "effect_text": "Roba 2 cartas. Si tienes al menos 2 cartas en tu zona de Efectos, recupera 1 de Coste."
   },
   "9006": {
    "name": "Rayo en Cadena",
@@ -500,7 +500,7 @@
   },
   "9037": {
    "name": "Guardián del Bosque",
-   "effect_text": "Elige un Aliado: cuando tu Vida fuera a recibir daño, ese Aliado lo recibe en su lugar. La misma unidad no puede obtener este efecto más de una vez."
+   "effect_text": "Elige un Aliado: cuando tu Vida fuera a recibir daño, ese Aliado lo recibe en su lugar. La misma unidad no puede obtener este efecto más de una vez. Muerte: roba 1 carta."
   },
   "9038": {
    "name": "Tigre",
@@ -572,7 +572,7 @@
   },
   "9055": {
    "name": "Frenesí",
-   "effect_text": "Elige un Aliado aliado; puede atacar dos veces (hasta que salga del campo). No tiene efecto si ya posee un efecto similar. Cuesta -1 mientras tengas 3 o más Aliados en el campo."
+   "effect_text": "Elige un Aliado aliado; puede atacar dos veces (hasta que salga del campo). No tiene efecto si ya posee un efecto similar. Cuesta -2 mientras tengas 3 o más Aliados en el campo."
   },
   "9056": {
    "name": "Imagen Especular",

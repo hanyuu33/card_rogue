@@ -92,6 +92,11 @@ var field_effects := {}
 # 每个场地是**谁放的**（SIDE_SELF / SIDE_OPPONENT）。归属判据（场地精通加成按主人的
 # 效果区算、界面按主人配色）都读它，不能按「谁踩上去」取 —— 否则敌方踩我方场地会替我结算。
 var field_owner := {}
+## R663 陷阱：Vector2i -> trap id（traps.json 的 7001+ 段）。
+## **刻意不进 field_effects**：那张表的值是 CardData，会被 _field_aura_tick /
+## _cards_save / 各类「场地数量」判据当成卡牌扫到；陷阱不是卡牌，独立一张表最干净。
+## 与 field_effects 并列：同一格最多一个陷阱、且不与场地卡共存（见 trap_legal_cells）。
+var trap_fields := {}
 # R503 标记（9224）：**同时只存在一个**；R562 起加伤**固定 +1，不再按回合成长**。
 # 存在性由 `mark_cell()` 扫 field_effects 判定（唯一权威），这里只存**数值**：
 # 存进卡面会污染卡库共享实例（set_field 复制的是 CardData，不是附加状态）。
@@ -736,6 +741,7 @@ func save_dict() -> Dictionary:
 		"enemy_effects": _cards_save(enemy_effects),
 		"board": _board_save(),
 		"fields": _fields_save(),
+		"trap_fields": _trap_fields_save(),
 		"air_raid_cells": _air_raid_save(),
 		"air_raid_turns": air_raid_turns,
 		"mark_bonus": mark_bonus,
@@ -805,6 +811,12 @@ func apply_dict(d: Dictionary) -> void:
 			entry_counter = maxi(entry_counter, p.entry_seq)
 	field_effects.clear()
 	field_owner.clear()
+	trap_fields.clear()
+	var tfl: Variant = d.get("trap_fields", [])
+	if tfl is Array:
+		for tf: Variant in tfl:
+			if tf is Dictionary and (tf as Dictionary).has("id"):
+				trap_fields[Vector2i(int(tf["r"]), int(tf["c"]))] = int(tf["id"])
 	var fl: Variant = d.get("fields", [])
 	if fl is Array:
 		for item2: Variant in fl:
@@ -860,6 +872,14 @@ func _air_raid_save() -> Array:
 	var out: Array = []
 	for cell: Vector2i in air_raid_cells:
 		out.append({"r": cell.x, "c": cell.y})
+	return out
+
+
+func _trap_fields_save() -> Array:
+	## R663：只存坐标 + id（陷阱定义是静态数据，不需要把整张表烤进存档）。
+	var out: Array = []
+	for cell: Vector2i in trap_fields:
+		out.append({"r": cell.x, "c": cell.y, "id": int(trap_fields[cell])})
 	return out
 
 

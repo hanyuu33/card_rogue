@@ -61,6 +61,11 @@ const ROW3_ITEM_MAX_W := 250.0 # 服务商品收窄，说明改到底部整宽�
 # 再往左让出齿轮宽 + 12 间距 —— 即齿轮永远贴在「道具」按钮左边 12px。
 const MENU_BTN_SIZE := Vector2(40, 32)
 const MENU_BTN_RIGHT_GAP := 248.0
+# R663：第二行改成「左 3 附魔 + 右 2 陷阱」共 5 格，两组之间留一条固定沟。
+# 沟是**固定像素**，不随件数漂移 —— 卖掉一件时分隔线还在原处（照 ROW1_MAX 固定张数口径）。
+const TRAP_GROUP_GUTTER := 34.0
+const TRAP_GROUP_LEFT := 3       # 左组固定 3 个附魔
+const TRAP_SHOP_COUNT := 2       # 右组固定 2 个陷阱
 
 # 附魔定义（id → 元数据）
 const ENCHANTS := [
@@ -468,12 +473,20 @@ func _setup_shop() -> void:
 		# ⚠️ 结果随 `_sync_shop_state()` 进 `shop_states`，重进商店**不重摇**。
 		var off: bool = RunState.run_rng.randf() < OFF_CHANCE
 		_row1.append({"card": c, "sold": false, "off": off})
-	# 第二行：从全部附魔里随机抽 3 种不重复（R370 起 6 种 → 抽 3）
+	# 第二行（R663）：左 3 附魔 + 右 2 陷阱，共 5 格。
+	# 附魔仍旧从 6 种里抽 3 种不重复（R370）；陷阱从 traps.json 抽 2 种不重复。
+	# ⚠️ 两条摇号都走 RunState.shuffle_rng（本局随机链），别改回 Array.shuffle()（R241）。
 	var pool := ENCHANTS.duplicate()
 	RunState.shuffle_rng(pool)   # R241：`Array.shuffle()` 是全局随机源，这里不能直接用
 	_row2 = []
 	for i in 3:
-		_row2.append({"ench": pool[i], "sold": false})
+		_row2.append({"kind": "enchant", "ench": pool[i],
+				"id": str(pool[i]["id"]), "sold": false})
+	var tpool: Array = TrapRepo.load_json().all_traps()
+	RunState.shuffle_rng(tpool)
+	for j in mini(TRAP_SHOP_COUNT, tpool.size()):
+		var t: TrapData = tpool[j]
+		_row2.append({"kind": "trap", "trap": t, "id": int(t.id), "sold": false})
 	_row3 = _row3_template()
 	_reindex_rows()
 	_sync_shop_state()
@@ -551,10 +564,24 @@ func _restore_shop(st: Dictionary) -> bool:
 		if not (it2 is Array) or (it2 as Array).size() < 2:
 			return false
 		var b: Array = it2
-		var e := _ench_by_id(str(b[0]))
-		if e.is_empty():
-			return false
-		o2.append({"ench": e, "sold": int(b[1]) != 0})
+		# R663 之前的存档是两列 [附魔id, sold]；现在是三列 [kind, id, sold]。
+		var kind2 := "enchant"
+		var idv: Variant = b[0]
+		var soldv := int(b[1])
+		if b.size() > 2:
+			kind2 = str(b[0])
+			idv = b[1]
+			soldv = int(b[2])
+		if kind2 == "trap":
+			var t: TrapData = TrapRepo.load_json().get_trap(int(idv))
+			if t == null:
+				return false
+			o2.append({"kind": "trap", "trap": t, "id": int(t.id), "sold": soldv != 0})
+		else:
+			var e := _ench_by_id(str(idv))
+			if e.is_empty():
+				return false
+			o2.append({"kind": "enchant", "ench": e, "id": str(idv), "sold": soldv != 0})
 	var o3: Array = []
 	for it3: Variant in r3:
 		if not (it3 is Array) or (it3 as Array).size() < 2:
@@ -585,8 +612,9 @@ func _sync_shop_state() -> void:
 				1 if bool(e.get("off", false)) else 0])
 	var r2: Array = []
 	for e2: Dictionary in _row2:
-		var ench: Dictionary = e2["ench"]
-		r2.append([str(ench["id"]), 1 if bool(e2["sold"]) else 0])
+		# R663：三列 [kind, id, sold]；附魔 id 是字符串，陷阱 id 是整数，原样存即可。
+		r2.append([str(e2.get("kind", "enchant")), e2.get("id", -1),
+				1 if bool(e2["sold"]) else 0])
 	var r3: Array = []
 	for e3: Dictionary in _row3:
 		r3.append([str(e3["key"]), 1 if bool(e3["sold"]) else 0])
@@ -896,16 +924,31 @@ func _draw_row1() -> void:
 		if sold:
 			draw_rect(rr, Color(0, 0, 0, 0.55), true)
 			draw_string(_font_bold, rr.position + Vector2(0, rr.size.y / 2),
-					"已售罄", HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_SUBHEAD,
+					GameI18n.ui("shop", "SHOP_SOLD_OUT", "已售罄"), HORIZONTAL_ALIGNMENT_CENTER, rr.size.x, UiTheme.FS_SUBHEAD,
 					UiTheme.PAGE_INK)
 
 
 func _row23_item_rect(row_index: int, i: int) -> Rect2:
 	## 第二/三行商品几何唯一口：限宽后整组居中，绘制与点击必须都走这里。
+	## R663：第二行拆成「左 3 附魔 / 右 2 陷阱」两段，中间一条固定沟；
+	## 第三行仍是原来的单一等分（服务商品不该跟着分组）。
 	var row: Rect2 = _row_rects()[row_index]["row"]
 	var n := _row2.size() if row_index == 1 else _row3.size()
 	var gap := 18.0
 	var max_w := ROW2_ITEM_MAX_W if row_index == 1 else ROW3_ITEM_MAX_W
+	if row_index == 1 and n > TRAP_GROUP_LEFT:
+		var nl := TRAP_GROUP_LEFT
+		var nr := n - nl
+		var inner := float(maxi(0, nl - 1) + maxi(0, nr - 1)) * gap
+		var bw2 := minf((row.size.x - inner - TRAP_GROUP_GUTTER) / maxf(1.0, float(n)), max_w)
+		var total2 := float(n) * bw2 + inner + TRAP_GROUP_GUTTER
+		var x02 := row.position.x + (row.size.x - total2) * 0.5
+		var xi: float
+		if i < nl:
+			xi = x02 + float(i) * (bw2 + gap)
+		else:
+			xi = x02 + float(nl) * (bw2 + gap) + TRAP_GROUP_GUTTER + float(i - nl) * (bw2 + gap)
+		return Rect2(xi, row.position.y, bw2, row.size.y)
 	var bw := minf((row.size.x - maxi(0, n - 1) * gap) / maxi(1, n), max_w)
 	var total := n * bw + maxi(0, n - 1) * gap
 	var x0 := row.position.x + (row.size.x - total) * 0.5
@@ -916,14 +959,61 @@ func _draw_row2() -> void:
 	var n := _row2.size()
 	for i in n:
 		var e: Dictionary = _row2[i]
-		var ench: Dictionary = e["ench"]
 		var sold: bool = e["sold"]
 		var rr := _row23_item_rect(1, i)
-		_draw_goods_box(rr, str(ench["icon"]), _ench_name(ench), str(ench["desc"]),
-				int(ench["price"]), sold, (_sel_goods if _is_touch() else _hover) == _row2_base + i, _enchanting == i and not sold,
-				"enchant")
-		if sold:
+		var is_trap := str(e.get("kind", "enchant")) == "trap"
+		var icon_name := "shop_icon_damage"
+		var nm := ""
+		var desc := ""
+		var price := 0
+		var trap_id := -1
+		if is_trap:
+			var t: TrapData = e["trap"]
+			nm = t.trap_name
+			desc = t.desc
+			price = t.price
+			trap_id = t.id
+		else:
+			var ench: Dictionary = e["ench"]
+			icon_name = str(ench["icon"])
+			nm = _ench_name(ench)
+			desc = GameI18n.source(str(ench["desc"]))
+			price = int(ench["price"])
+		var hovered := (_sel_goods if _is_touch() else _hover) == _row2_base + i
+		_draw_goods_box(rr, icon_name, nm, desc, price, sold, hovered,
+				_enchanting == i and not sold and not is_trap,
+				"trap" if is_trap else "enchant", trap_id)
+		# R663：栏位满了就把陷阱商品置灰（与「已售罄」两套文案，点了给解释）。
+		if is_trap and not sold and RunState.trap_free_slots() <= 0:
+			_draw_block_mask(rr, "栏位已满")
+		elif sold:
 			_draw_sold_mask(rr)
+	_draw_row2_group_labels()
+
+
+func _draw_row2_group_labels() -> void:
+	## R663：两组题签 + 中间竖沟。左右分组光靠间距其实看不出来，
+	## 得有一条明确的缝；标签画在图标上方那截空带（图标是底对齐的）。
+	if _row2.size() <= TRAP_GROUP_LEFT:
+		return
+	var l := _row23_item_rect(1, 0)
+	var r := _row23_item_rect(1, TRAP_GROUP_LEFT)
+	var y := l.position.y + 18.0
+	var col := Color("e4bd62")
+	# R663：题签底图垫在文字下面（缺图时只剩金字，分组仍读得出来）。
+	TrapArt.draw_group_tag(self, Rect2(l.position.x, y - 19.0,
+			minf(l.size.x * 0.62, 132.0), 24.0))
+	TrapArt.draw_group_tag(self, Rect2(r.position.x, y - 19.0,
+			minf(r.size.x * 0.62, 132.0), 24.0))
+	draw_string(_font_bold, Vector2(l.position.x + 4.0, y), "附魔",
+			HORIZONTAL_ALIGNMENT_LEFT, l.size.x - 8.0, 15, col)
+	draw_string(_font_bold, Vector2(r.position.x + 4.0, y), "陷阱",
+			HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 8.0, 15, col)
+	var left_last := _row23_item_rect(1, TRAP_GROUP_LEFT - 1)
+	var right_first := _row23_item_rect(1, TRAP_GROUP_LEFT)
+	var gx := left_last.end.x + (right_first.position.x - left_last.end.x) * 0.5
+	var top := l.position.y + 6.0
+	draw_line(Vector2(gx, top), Vector2(gx, l.end.y - 6.0), Color(0.85, 0.74, 0.42, 0.35), 1.5, true)
 
 
 func _draw_row3() -> void:
@@ -949,13 +1039,16 @@ func _goods_icon_box(rr: Rect2) -> Rect2:
 	## 下压 6% 的理由：图标素材四周自带透明边距，正对着层板顶画会凭空悬空 30px 左右。
 	# 84 → 随行高自适应（84~120）：4:3 窗口（逻辑 1280×960）里商品格高 246，
 	# 固定 84 会让三件商品缩在格子底部、上面空一大片，不像陈列。
-	var side := clampf(rr.size.y * 0.64, 84.0, 120.0)
+	# R663：再加一道**格宽上限**。5 格之后单格约 146，4:3 窗口行高会把 side 顶到 120，
+	# 悬停圈 Ø=0.58*2*side=139 会越界压到邻格；side 收到 <= 格宽-24 后圈恒不越界。
+	var side := minf(clampf(rr.size.y * 0.64, 84.0, 120.0), maxf(48.0, rr.size.x - 24.0))
 	return Rect2(Vector2(rr.get_center().x - side / 2.0,
 			rr.end.y - side + side * 0.06), Vector2(side, side))
 
 
 func _draw_goods_box(rr: Rect2, icon_name: String, name: String, desc: String,
-		price: int, sold: bool, hovered: bool, active: bool, category: String = "service") -> void:
+		price: int, sold: bool, hovered: bool, active: bool, category: String = "service",
+		trap_id: int = -1) -> void:
 	var box := _goods_icon_box(rr)
 	var side := box.size.x
 	# R508：商品像"摆"在层板上，靠两件事 ——
@@ -970,9 +1063,13 @@ func _draw_goods_box(rr: Rect2, icon_name: String, name: String, desc: String,
 	if hovered or active:
 		draw_circle(box.get_center(), side * 0.58, Color(1, 0.85, 0.4, 0.25))
 		draw_arc(box.get_center(), side * 0.58, 0, TAU, 48, Color("e4bd62"), 3, true)
-	var icon: Texture2D = UiAssets.shop_icon(icon_name)
-	if icon != null:
-		draw_texture_rect(icon, box, false)
+	# R663：陷阱没有 shop_icon 素材，走 TrapArt 的程序化图案（贴图落盘后自动切换）。
+	if trap_id > 0:
+		TrapArt.draw(self, box, trap_id, sold)
+	else:
+		var icon: Texture2D = UiAssets.shop_icon(icon_name)
+		if icon != null:
+			draw_texture_rect(icon, box, false)
 
 
 func _draw_goods_popup() -> void:
@@ -983,9 +1080,15 @@ func _draw_goods_popup() -> void:
 	var anchor: Rect2
 	var title: String
 	if hit >= _row2_base and hit < _row3_base:
-		entry = _row2[hit - _row2_base]["ench"]
+		var re: Dictionary = _row2[hit - _row2_base]
 		anchor = _row2_rect(hit - _row2_base)
-		title = _ench_name(entry)
+		if str(re.get("kind", "enchant")) == "trap":
+			var rt: TrapData = re["trap"]
+			entry = {"desc": rt.desc, "price": rt.price}
+			title = rt.trap_name
+		else:
+			entry = re["ench"]
+			title = _ench_name(entry)
 	elif hit >= _row3_base and hit < _row3_base + _row3.size():
 		entry = _row3[hit - _row3_base]
 		anchor = _row3_rect(hit - _row3_base)
@@ -1497,7 +1600,11 @@ func _on_click(pos: Vector2) -> void:
 			_sel_row1 = -1
 			_buy_card(i)
 	elif hit >= _row2_base and hit < _row2_base + _row2.size():
-		_start_enchant(hit - _row2_base)
+		var ri := hit - _row2_base
+		if str(_row2[ri].get("kind", "enchant")) == "trap":
+			_buy_trap(ri)
+		else:
+			_start_enchant(ri)
 	elif hit >= _row3_base and hit < _row3_base + _row3.size():
 		_buy_row3(hit - _row3_base)
 
@@ -1583,6 +1690,26 @@ func _demo_enchant(cand: int, commit: bool, ench_id := "save") -> void:
 	if commit:
 		_on_pick_click(pos)          # 再击同一张 → 成交
 	_ask_redraw()
+
+
+func _buy_trap(i: int) -> void:
+	## R663：买一个陷阱进栏位。杀戮尖塔药水口径 —— 满栏不卖、不吞钱、只给提示，
+	## 想腾位置就先去战斗里用掉一个（不做「丢弃」入口，避免误触白丢消耗品）。
+	var e: Dictionary = _row2[i]
+	if bool(e["sold"]):
+		return
+	var t: TrapData = e["trap"]
+	if RunState.trap_free_slots() <= 0:
+		_set_hint("陷阱栏已满（%d/%d），先在对战里用掉一个" % [
+				RunState.TRAP_SLOTS, RunState.TRAP_SLOTS])
+		return
+	if not _pay(int(t.price)):
+		_set_hint("金币不足（需要 %d）" % int(t.price))
+		return
+	e["sold"] = true
+	_sync_shop_state()      # R390：售罄位要进货架存档，重进店不重摇
+	RunState.gain_trap(int(t.id))
+	_set_hint("获得陷阱「%s」· %s" % [t.trap_name, _paid_tag(int(t.price))])
 
 
 func _buy_row3(i: int) -> void:

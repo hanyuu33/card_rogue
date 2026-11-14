@@ -335,6 +335,14 @@ static var pending_relic := -1               # 等待卡组选择的即时道具
 static var pending_relic_drop := -1          # 精英/Boss 掉落的道具 id（-1 = 无，领取后清空）
 static var pending_fly := false              # R555 飞行器：待在地图上选一格传送（回地图进选格模式）
 
+# ---- R663：陷阱栏（消耗品，杀戮尖塔药水口径）----
+## 与道具 `relics` **完全分开**：道具是本局全部、耗尽画灰且无限堆叠；
+## 陷阱是定长 3 槽、用了就清空，商店靠「还剩几个空位」判断能不能买。
+## ⚠️ 绝不写进 `relics` / `GameEngine.self_relics`：`relic_highlight()` 的闸门是
+##    `self_relics.has(id)`，混进去会串高亮（独立 7001+ 段也是为了这个）。
+const TRAP_SLOTS := 3
+static var traps: Array[int] = [-1, -1, -1]   # -1 = 空槽；其余 = traps.json 的 id
+
 # ---- R119：待领奖励队列（奖励悬浮窗的数据源）----
 ## 「获得奖励」不再当场发放，而是**先入队** → 由 RewardPanel 悬浮窗逐项展示。
 ## 玩家自行决定查看顺序，看过可以退回列表再看、再领取；领取 / 放弃过的那一条置灰。
@@ -1095,6 +1103,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	run_bans = ProfileData.bans_of(player_class)
 	relics = []
 	key_relics = []   # R543：新的一局没有信物
+	traps = [-1, -1, -1]   # R663：新的一局陷阱栏 3 空槽
 	bandage_pending = 0
 	skipped_relics = []
 	pending_relic = -1
@@ -1208,6 +1217,7 @@ static func end_run(clear_save: bool = true) -> void:
 	run_bans = []          # R352：本局结束 → 禁卡快照作废（下一局重新取）
 	relics = []
 	key_relics = []   # R543：本局结束 → 信物清空
+	traps = [-1, -1, -1]   # R663：本局结束 → 陷阱栏清空
 	spent_relics.clear()       # R367：灰显标记随本局一起清掉
 	boss_kills.clear()         # R367：本局 Boss 战果不跨局
 	bandage_pending = 0
@@ -1349,6 +1359,50 @@ static func choose_start_relic(id: int) -> void:
 	## 起点三选一：收下所选道具（relic_pick 场景调用）。
 	gain_relic(id)
 	relic_choice = []
+
+
+# ------------------------------------------------------------ R663 陷阱栏
+
+static func trap_at(slot: int) -> int:
+	## 读某槽的陷阱 id（-1 = 空 / 越界）。绘制与放置都走这里。
+	if slot < 0 or slot >= TRAP_SLOTS or slot >= traps.size():
+		return -1
+	return traps[slot]
+
+
+static func trap_free_slots() -> int:
+	## 商店购买判据的**唯一口**：满栏（0）时商品置灰、点了只给提示。
+	var n := 0
+	for v in traps:
+		if int(v) < 0:
+			n += 1
+	return n
+
+
+static func trap_first_empty() -> int:
+	for i in traps.size():
+		if int(traps[i]) < 0:
+			return i
+	return -1
+
+
+static func gain_trap(id: int) -> bool:
+	## 获得一个陷阱 → 填进第一个空槽。满栏返回 false（不吞掉金币）。
+	var s := trap_first_empty()
+	if s < 0:
+		return false
+	traps[s] = id
+	return true
+
+
+static func consume_trap(slot: int) -> int:
+	## 放置那一刻从栏位移除（R663 口径）；返回被取出的 id，空槽返回 -1。
+	## 之后场上的是独立场地实体，触发后「消失」= 本场对战移除。
+	var id := trap_at(slot)
+	if id < 0:
+		return -1
+	traps[slot] = -1
+	return id
 
 
 static func gain_relic(id: int) -> void:

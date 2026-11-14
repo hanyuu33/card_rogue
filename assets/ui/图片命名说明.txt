@@ -459,3 +459,28 @@ map_icons/{start,battle,elite,rest,event,shop,chest,bigchest,unknown}.png：简�
     `relic_icon()` 对这三个 id 会自动回退到 R543 的图。
   · 源图 / prompt / 去背脚本归档在 art_src/2026-11-11_道具图标_R577/（目录名为历史路径，
     本线原编号 R577 与 Steam AppID 接入撞号，已让位为 R577b，脚本里的目录名不再改）。
+
+2026-11-13（R663）：陷阱消耗品图标与栏位 UI —— 全部由 codex 纯文生图产出，
+  源图 / prompt / 去背脚本在 art_src/2026-11-13_陷阱图标与UI_R663/。
+  trap_icon_<id>.png      4 件陷阱的图标（7001 炼金炸弹 / 7002 冰冻陷阱 /
+                          7003 毒瓶 / 7004 穿刺陷阱），128 × 128 无背景透明 PNG。
+                          唯一取图口 UiAssets.trap_icon(id)；缺图 → TrapArt 程序化图案。
+                          战斗槽 / 拖拽幽灵 / 地图槽 / 商店商品格 / 战场格标记共用。
+  trap_slot.png           通用方形槽框，128 × 128 透明；战斗与地图的每个槽各贴一张。
+  trap_bar_battle.png     竖栏底板，96 × 256 透明。R667 起**战斗右侧资源列上方与
+                          地图左下「信物」下方共用这一张**，不再按场景出两版。
+                          （trap_bar_map.png 已停用、移入出图档案 _unused/ 留档。）
+  trap_group_tag.png      商店中行左右分组的小题签底，256 × 64 透明（文字由代码画）。
+  · 四张 UI 素材一律「深色元件 + 中心留白」，中心留白去背后是透明的，别把文字 /
+    图标画进素材；有素材画素材、缺图一律回退程序化绘制，不空白不报错。
+  · 取图口分别是 UiAssets.trap_slot_frame() / trap_bar_bg() / trap_group_tag()，
+    绘制收在 TrapArt 的三个 draw_* 里，三处界面不各写一份路径。
+
+2026-11-13（R669）：陷阱触发特效贴图 —— 仍由 codex 纯文生图产出，但放在 assets/fx/，
+  不进 assets/ui/（它是战斗特效，不是界面元件）。
+  trap_fx_<id>.png       4 件陷阱各自的触发爆点（7001 橙金爆炎 / 7002 冰蓝六芒 /
+                          7003 毒绿飞溅 / 7004 钢紫尖刺），256 × 256 透明 PNG。
+                          黑底发光图 → 亮度转 alpha；源图 / prompt / 去背脚本归档在
+                          art_src/2026-11-13_陷阱触发特效_R669/。
+  · 唯一取图口 UiAssets.trap_fx_path(id) / trap_fx(id)，绘制口 TrapArt.draw_trigger_fx()；
+    缺图回退程序化纯色光环，不空白不报错。R628 口径：不写文字特效，只用素材图做特效。

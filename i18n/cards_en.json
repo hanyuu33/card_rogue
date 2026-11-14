@@ -375,7 +375,7 @@
   },
   "9005": {
    "name": "Wisdom",
-   "effect_text": "Draw 2 cards."
+   "effect_text": "Draw 2 cards. If your Effect Zone has at least 2 cards, gain 1 Cost."
   },
   "9006": {
    "name": "Chain Lightning",
@@ -500,7 +500,7 @@
   },
   "9037": {
    "name": "Forest Guardian",
-   "effect_text": "Choose an Ally: when your Health would take damage, it takes that damage instead. The same unit cannot gain this effect more than once."
+   "effect_text": "Choose an Ally: when your Health would take damage, it takes that damage instead. The same unit cannot gain this effect more than once. Death: draw a card."
   },
   "9038": {
    "name": "Tiger",
@@ -572,7 +572,7 @@
   },
   "9055": {
    "name": "Frenzy",
-   "effect_text": "Choose a friendly Ally; it can attack twice (until it leaves the field). No effect if it already has a similar effect. Costs -1 while you have 3 or more Allies on the field."
+   "effect_text": "Choose a friendly Ally; it can attack twice (until it leaves the field). No effect if it already has a similar effect. Costs -2 while you have 3 or more Allies on the field."
   },
   "9056": {
    "name": "Mirror Image",

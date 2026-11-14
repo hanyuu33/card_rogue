@@ -7,6 +7,9 @@ signal action(kind: String, data: Dictionary)
 
 const SIDE_SELF:= "self"
 const SIDE_OPPONENT:= "opponent"
+## R663：陷阱默认只布在自己半场（row 3~4）。改 false = 全盘除「敌人进不去的后排」。
+## 单独一个常量而不是散在判据里：店长要放宽时只动这一行，界面高亮自动跟着变。
+const TRAP_SELF_HALF_ONLY := true
 
 const GROW_CAP:= 4
 
@@ -126,6 +129,11 @@ var _hit_land:= Vector2i(-1, -1)
 ## 效果卡 / 陷阱 / 反伤打出来的伤害不享受。
 ## ⚠️ 用深度而不是布尔：回响会嵌套重放同一张技能卡，布尔会在内层退出时提前关掉。
 var _spell_scope_depth:= 0
+## R670：**当前正在结算的技能卡**（`_run_spell_effect` 打开作用域时设置 / 退出时还原）。
+## 界面靠它把 `fx_impact` 里那坨统一的紫色爆点换成「按卡面 color 分的通用施法图」——
+## 29 张伤害技能共用一条 source「技能」，界面本来分不出是哪张牌、什么属性。
+## ⚠️ 纯读取：只进事件载荷，不参与任何数值结算，也不掷随机数 → 回放确定性不受影响。
+var _spell_card_ctx: CardData = null
 ## R661：快速符文「加倍」的**基数缓存** —— `_spell_dmg()` 里「还没加符文、还没乘猫鼠」的值。
 ## ⚠️ 不能从最终数值反推：`_hit_unit()` 里补差额时 amount 已经被侦察塔 / 极速的易伤抬过，
 ##    而 `f(B)=B+floor(B·p/100)` 的像会**跳过一些整数**（p=15 时 f(15)=17，16 无解）——
@@ -750,6 +758,10 @@ const JUSTICE_BACKSTAB_MULT:= 2
 const MECHANICAL_ARM_RELIC_ID:= 6065
 const MECHANICAL_ARM_DISCOUNT:= 1
 const FOREST_GUARD_ID:= 9037
+const FOREST_GUARD_LAST_WORD_DRAW:= 1   # R663 森林守护附带的「死亡：抽一张卡」
+const WISDOM_SPELL_ID:= 9005
+const WISDOM_REBATE_ZONE_MIN:= 2        # R663 智慧：效果区至少几张才回费
+const WISDOM_REBATE_ENERGY:= 1          # R663 智慧：回复几点费用
 const TIGER_ID:= 9038
 const TIGER_ATK_BUFF:= 2
 const CROW_ID:= 9039
@@ -797,7 +809,7 @@ const DRAGON_BREATH_HITS:= 5     # R227：6 → 5
 #   与哈气 9024 / 巴兰-α 同一字段），单位离场即重置（字段随实例一起消失）。
 const FRENZY_ID:= 9055
 const FRENZY_ACTIONS:= 2
-const FRENZY_DISCOUNT:= 1
+const FRENZY_DISCOUNT:= 2   # R663：用户口径「-1 费」改为「-2 费」（2 费卡在 3 盟友时即为 0 费）
 const FRENZY_ALLY_MIN:= 3
 # ---- R227：生命循环（9150，森林精魄 · 稀有 · 0 费技能）----
 # 选一个**己方盟友** → 它获得字段「次元」「死亡」，并在 Placement 上打 `life_cycle`：
@@ -1213,8 +1225,10 @@ const FINISHER_LAST_DMG:= 22
 #    （爆炸 8011 / 冰霜 8012 / 冻结 8013 / 剧毒 8014 / 穿刺 8016 / 巨物 8017 / 黑暗 8063 /
 #    落石 9159）连同「移动经过即触发并停止移动」「场地精通加成」「毒 / 禁足 / 冰冻挂毒」
 #    整套机制**卡与引擎分支一起删干净了**（`_field_trigger` / `_field_block_index` /
-#    `_trap_still_tick` / `_field_mastery` / `_workshop_supply` / `_poison_tick` 全部不存在）。
-#    现在单位踩到场地**不会发生任何事** —— 别再往回加这套链子。
+#    `_trap_still_tick` / `_field_mastery` / `_workshop_supply` 全部不存在；
+#    `_poison_tick` 在 R556 由毒沼 8082 重新激活，R663 起毒瓶与它共用账本）。
+#    ⚠️ R663 已另起一套**陷阱消耗品**（traps.json / RunState.traps / FieldState.trap_fields）：
+#    独立栏位 + 独立场地表，不是把这 8 张卡加回来；旧卡与旧触发链仍保持删除。
 
 # ── R83：清泉（8028）—— 场地卡的**第二个机制类别：持续型** ──
 # 现有 6 张场地（8011~8017）全是「**一次性触发**」：敌人移动经过 → 结算 → 该格消失。
@@ -2595,6 +2609,8 @@ func _begin_turn(side: String) -> void :
 			_endless_dark(SIDE_OPPONENT)
 		_melt_ice_walls(SIDE_OPPONENT)
 		_clear_fire_walls(SIDE_OPPONENT)
+		# R663：毒瓶与毒沼统一中毒口径（_apply_poison / _poison_tick），
+		# 都在所属方回合结束结算；这里不再单开「敌人回合开始」通道。
 		_action_growth_tick(SIDE_OPPONENT)   # R161：先推进成长计数，再刷新 acts_left
 		_haste_pick_tick(SIDE_OPPONENT)      # R479 哈气：第 3/5/7 回合挑一个单位永久双动（必须在 reset 之前）
 		state.reset_units(SIDE_OPPONENT)
@@ -4914,6 +4930,23 @@ func _frenzy_discount(card: CardData, side:= SIDE_SELF) -> int:
 	if card.id != FRENZY_ID:
 		return 0
 	return FRENZY_DISCOUNT if _ally_count(side) >= FRENZY_ALLY_MIN else 0
+
+
+func _wisdom_rebate(side: String) -> int:
+	## R663 智慧（9005）：**自己效果卡区有至少 2 张卡**时，回复 1 点费用。
+	## 判据只看「此刻效果区张数」：技能卡不进效果区（打出时它已离开手牌，也没 append 到
+	## effects），所以这张牌自己不算数，读到的是打出之前的存量。
+	## 敌方 AI 走同一条判定（读 enemy_effects），实现与表现不会两处漂移。
+	var zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
+	if zone.size() < WISDOM_REBATE_ZONE_MIN:
+		return 0
+	if side == SIDE_SELF:
+		state.energy += WISDOM_REBATE_ENERGY
+	else:
+		state.opp_energy += WISDOM_REBATE_ENERGY
+	_log("智慧：效果区 %d 张（≥%d）→ 回复 %d 点费用" % [
+			zone.size(), WISDOM_REBATE_ZONE_MIN, WISDOM_REBATE_ENERGY])
+	return WISDOM_REBATE_ENERGY
 
 
 func _nature_force(side: String) -> String:
@@ -10679,7 +10712,12 @@ func _run_spell_effect(card: CardData, target, side:= SIDE_SELF) -> String:
 	## ⚠️ GDScript 没有 finally → 把函数体整体挪进 `_body`，由这一层无条件收尾，
 	##    否则任何一条 `return` 都会把作用域留在打开状态（后面所有伤害都被误算成技能）。
 	_spell_scope_depth += 1
+	# R670：同一条纪律 —— 作用域开合与「当前施法卡」必须成对，否则界面会拿着一张
+	# 十几秒前的旧卡去选图（重复触发时尤其明显）。嵌套（传授 / 连环）存旧值还原。
+	var prev_ctx:= _spell_card_ctx
+	_spell_card_ctx = card
 	var out_det:= _run_spell_effect_body(card, target, side)
+	_spell_card_ctx = prev_ctx
 	_spell_scope_depth -= 1
 	return out_det
 
@@ -11048,14 +11086,25 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 		9004:
 			return _knockback(side, target, 2)
 		9005:
+			# R663：新增「自己效果卡区有至少 2 张卡时，回复 1 点费用」（先抽牌再加费，
+			# 与卡面语序一致；两种顺序对效果区张数没有影响）。
 			if side == SIDE_SELF:
-				return "抽了 %d 张牌" % _draw_many(2)
+				var ws_got:= _draw_many(2)
+				var ws_rb:= _wisdom_rebate(side)
+				if ws_rb > 0:
+					return "抽了 %d 张牌，效果区 %d 张 → 回复 %d 点费用" % [
+							ws_got, state.effects.size(), ws_rb]
+				return "抽了 %d 张牌" % ws_got
 			var m:= 0
 			for i in 2:
 				if state.opp_deck_count > 0:
 					_assemble_opponent_draw(1)
 					state.opp_deck_count -= 1
 					m += 1
+			var ws_rb_o:= _wisdom_rebate(side)
+			if ws_rb_o > 0:
+				return "对方抽了 %d 张牌（效果区 %d 张 → 回复 %d 点费用）" % [
+						m, state.enemy_effects.size(), ws_rb_o]
 			return "对方抽了 %d 张牌" % m
 		9006:
 			return _chain_lightning(_spell_dmg(side, 11, card))
@@ -12119,8 +12168,33 @@ func _forest_guard(side: String, target) -> String:
 	if p.guarding:
 		return "%s 已拥有森林守护（同一单位不可重复获得）" % p.card.card_name
 	p.guarding = true
-	_log("%s 获得「森林守护」：我方 HP 受伤时由它代为承受" % p.card.card_name)
-	return "%s 获得森林守护" % p.card.card_name
+	# R663：新增「死亡：抽一张卡」—— 走独立 Placement 标记，只在该单位被破坏时触发
+	# （与生命循环 / 辅助刃同口径，不认通用的「死亡」字段）。
+	p.guard_last_word = true
+	_log("%s 获得「森林守护」：我方 HP 受伤时由它代为承受；死亡时抽 1 张卡"
+			% p.card.card_name)
+	return "%s 获得森林守护（死亡抽 1 张）" % p.card.card_name
+
+
+func _forest_guard_last_word(p: Placement, cell: Vector2i) -> void :
+	## R663 森林守护（9037）的「死亡：抽一张卡」。
+	## ⚠️ 只认 Placement 标记 `guard_last_word`：这是**技能指定出来的**亡语，
+	##    不能靠 `AFFIX_DEATH`（那只是通用标记，别的卡也带，内容各看各的卡面）。
+	if p == null or not p.guard_last_word:
+		return
+	if p.owner == SIDE_SELF:
+		var n:= _draw_many(FOREST_GUARD_LAST_WORD_DRAW)
+		_log("森林守护·死亡：%s 被破坏 → 抽 %d 张卡" % [p.card.card_name, n])
+	else:
+		var m:= 0
+		for _i in FOREST_GUARD_LAST_WORD_DRAW:
+			if state.opp_deck_count > 0:
+				_assemble_opponent_draw(1)
+				state.opp_deck_count -= 1
+				m += 1
+		_log("森林守护·死亡：%s 被破坏 → 对手抽 %d 张卡" % [p.card.card_name, m])
+	action.emit("deathrattle", {"cell": cell, "card": p.card, "kind": "draw",
+			"amount": FOREST_GUARD_LAST_WORD_DRAW})
 
 
 func _quick_strike(side: String) -> String:
@@ -12932,6 +13006,10 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 			fi["seg"] = seg     # R645：多段效果 → 界面按段号逐段错开落地（龙息 5 段）
 		if _hit_land.x >= 0:
 			fi["land"] = _hit_land   # R467 枭熊跃击：数字等落地那一帧（R466 同一口径）
+		# R670：技能卡身份一并带出（群体技能也走这条口）→ 界面按卡色选通用施法图。
+		# 非技能来源（攻击 / 陷阱 / 反伤 / 场地）这里是 null，界面照旧只画通用受击。
+		if _spell_card_ctx != null:
+			fi["card"] = _spell_card_ctx
 		action.emit("fx_impact", fi)
 	return dmg
 
@@ -13537,6 +13615,8 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 	# R331 隐藏能源：被本卡挂过「死亡」的单位被破坏 → 距离 1 内随机一个敌人 8 伤。
 	if p.hidden_energy:
 		_hidden_energy_death(p, cell)
+	# R663 森林守护（9037）：被它守护的单位被破坏 → 抽一张卡。
+	_forest_guard_last_word(p, cell)
 	match p.card.id:
 		PRESSURE_MINE_ID:
 			# 压感地雷（9219，R493）：负血死亡 → 把「低于 0 的那部分」炸向敌方全体
@@ -14287,7 +14367,7 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 			# 与 `_hit_unit` 尾部同口径补一条通用受击事件；必须在 `_destroy_dead()` 之前发，
 			# 否则单位已离场，`_cell_of()` 拿不到格子。
 			action.emit("fx_impact", {"cell": _cell_of(p), "amount": amount2,
-					"source": "技能", "side": p.owner})
+					"source": "技能", "side": p.owner, "card": _spell_card_ctx})
 		_log("%s 受到 %d 点效果伤害（剩余 %d）" % [p.card.card_name, amount2, p.health])
 		# R502：单目标技能**不走 `_hit_unit`**（自己扣血），执法者的「小弟挨打 → 力量 +1」
 		# 要在这里补一次，否则玩家用龙息 / 弹跳飞刀打俄倪厄时那条联动整段不触发。
@@ -15009,6 +15089,8 @@ func _death_adds_cards(p: Placement) -> bool:
 		return false
 	if p.life_cycle or p.blade_gift:      # 生命循环 / 辅助刃：加一张手卡
 		return true
+	if p.guard_last_word:                 # R663 森林守护：死亡抽一张卡（会「加卡」）
+		return true
 	match p.card.id:
 		WYVERN_ID, LICH_ID, SKELETON_SUMMON_ID, GHOST_ID:
 			return true
@@ -15327,6 +15409,10 @@ func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void
 	_fire_wall_pass(path)
 	if p.health <= 0:
 		return
+	# R663：陷阱按「移动路径进入过的格子」结算（敌方单位专属），排在火墙之后。
+	_trap_path_check(path, side)
+	if p.health <= 0:
+		return
 
 	if attack_targets(dst, side, p.card).is_empty()\
 	and hp_targets(dst, side, p.card).is_empty():
@@ -15430,6 +15516,8 @@ func _leap(src: Vector2i, dst: Vector2i, side: String) -> void:
 		_log("%s 原地起跳（落地重击）" % p.card.card_name)
 	else:
 		_log("%s 跃向 %s" % [p.card.card_name, dst])
+		# R663：跳跃只有落点一格算「踩到」（path=[起点, 落点]，起点是站着不是经过）。
+		_trap_path_check(path, side)
 		if p.health <= 0:
 			return
 		_fire_wall_pass(path)
@@ -16152,6 +16240,102 @@ func _poison_tick(side: String) -> void :
 			p.poison_dmg = 0
 		_log("中毒：%s 受到 %d 点伤害（还剩 %d 回合）" % [p.card.card_name, dmg, p.poison_left])
 		_hit_unit(p, dmg, "中毒")
+
+
+# ------------------------------------------------------------ R663 陷阱（消耗品）
+## 口径（用户 R663）：陷阱不是卡牌、不是道具；从 RunState.traps 的定长 3 槽里
+## 拖到战场空格上放置，之后是**独立的场地实体**；敌方单位踩到 → 结算 → 「消失」
+## （= 本场对战移除）。我方单位踩到不触发、也不消耗。
+## ⚠️ 与 R503 删掉的旧陷阱卡体系不同：旧的是「移动经过即触发并停止移动」，
+##    这次不打断移动（禁足交给下回合的 rooted），也没有把那 8 张卡加回来。
+
+
+func place_trap(id: int, cell: Vector2i) -> bool:
+	## 放置唯一口（界面拖放调这里；**不走 play_from_hand** —— R484/485 那道闸门是给卡牌的）。
+	var t: TrapData = TrapRepo.load_json().get_trap(id)
+	if t == null or state == null:
+		return false
+	if not trap_legal_cells().has(cell):
+		return false
+	state.trap_fields[cell] = id
+	_log("陷阱布置：「%s」放在 %s" % [t.trap_name, cell])
+	return true
+
+
+func trap_legal_cells() -> Array[Vector2i]:
+	## 合法格唯一口（界面拖放高亮与引擎放置共用，免得两处各算一份）。
+	## 排除三类：① 有单位；② 已有场地卡（沿用「不覆盖」口径）；③ 已有陷阱。
+	## 再排除「敌人进不去的那一行」（forbidden_row_for(SIDE_OPPONENT)）——
+	## 埋在那儿永远踩不到，等于白丢一个消耗品。
+	var out: Array[Vector2i] = []
+	if state == null:
+		return out
+	var dead_row := forbidden_row_for(SIDE_OPPONENT)
+	for x in FieldState.BOARD_ROWS:
+		if x == dead_row:
+			continue
+		if TRAP_SELF_HALF_ONLY and x < FieldState.OPPONENT_ROWS:
+			continue
+		for y in FieldState.BOARD_COLS:
+			var c := Vector2i(x, y)
+			if state.board.has(c) or state.field_effects.has(c) or state.trap_fields.has(c):
+				continue
+			out.append(c)
+	return out
+
+
+func _trap_path_check(path: Array[Vector2i], side: String) -> void:
+	## 移动**结束后**统一结算（与火墙 _fire_wall_pass 同一时序，R466）。
+	## 只认敌方单位；path[0] 是起点（站着不算踩），path[1..] 进过的格子都算。
+	## 不打断移动：禁足 / 冻结是「下回合不能动」，当前这一步已经走完了。
+	if state == null or state.trap_fields.is_empty() or path.size() < 2:
+		return
+	if side != SIDE_OPPONENT:
+		return
+	var dst: Vector2i = path[path.size() - 1]
+	var p: Placement = state.unit_at(dst)
+	if p == null or p.health <= 0:
+		return
+	var hit_cells: Array[Vector2i] = []
+	for i in range(1, path.size()):
+		var c: Vector2i = path[i]
+		if state.trap_fields.has(c):
+			hit_cells.append(c)
+	for hc in hit_cells:
+		if p.health <= 0:
+			break
+		_trigger_trap(hc, p)
+
+
+func _trigger_trap(cell: Vector2i, p: Placement) -> void:
+	var id := int(state.trap_fields.get(cell, -1))
+	if id <= 0:
+		return
+	var t: TrapData = TrapRepo.load_json().get_trap(id)
+	if t == null:
+		state.trap_fields.erase(cell)
+		return
+	# 先摘掉再结算：结算里可能致死 / 召唤改 board，留在表上会被同一次移动重复触发。
+	state.trap_fields.erase(cell)
+	_log("陷阱触发：「%s」在 %s 命中 %s" % [t.trap_name, cell, p.card.card_name])
+	# R669：触发特效的唯一事件口。必须在伤害之前发 —— 界面要先拿到「哪一格、
+	# 哪一种陷阱」，才能把素材图演出和随后 fx_impact 的伤害数字对上（同一帧到达）。
+	# 纯视觉事件：不写 state、不掷随机数，回放确定性不受影响。
+	action.emit("trap_hit", {"cell": cell, "victim": _cell_of(p), "id": id,
+			"name": t.trap_name, "damage": t.damage})
+	_hit_unit(p, t.damage, "陷阱")
+	if t.freeze > 0 and p.health > 0:
+		_apply_frozen(p, "陷阱")
+	if t.root > 0 and p.health > 0:
+		# rooted = 1 是「已挂待生效」：下次 reset_units 转 2 → 那一回合 moved=true 不能移动，
+		# end_turn 再 2→0。直接写 2 会让本回合立刻禁足、和「踩到时那一步」冲突。
+		p.rooted = 1
+		_log("%s 被禁足一回合" % p.card.card_name)
+	if t.poison_turns > 1 and p.health > 0:
+		# R663（店长 2026-11-13）：毒瓶与毒沼**统一口径**，复用 _apply_poison /
+		# _poison_tick，在所属方回合结束结算。踩到时上面已结算 1 次，剩下
+		# poison_turns-1 跳走中毒账本（重复施加取伤害高、只刷新持续时间）。
+		_apply_poison(p, t.damage, t.poison_turns - 1)
 
 
 func _sleep_tick(side: String) -> void :

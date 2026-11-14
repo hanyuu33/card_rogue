@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1d4e4-78d4-7cf3-a037-7b71c377ff2f"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll generate one square frost eruption sprite on a pure black background."}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated exactly one square frost eruption sprite on a black background."}}
+{"type":"turn.completed","usage":{"input_tokens":38379,"cached_input_tokens":34048,"cache_write_input_tokens":0,"output_tokens":453,"reasoning_output_tokens":0}}

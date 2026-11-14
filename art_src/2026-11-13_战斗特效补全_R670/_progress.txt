@@ -1,0 +1,10 @@
+22:44:42	vortex	OK
+22:45:52	air_raid	OK
+22:46:55	blast	OK
+22:47:53	gale	OK
+22:49:03	stun	OK
+22:50:06	skill_fire	OK
+22:51:04	skill_ice	OK
+22:52:38	skill_shadow	OK
+22:53:39	skill_holy	OK
+22:54:43	skill_nature	OK
